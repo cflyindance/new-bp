@@ -1,0 +1,964 @@
+# Toast结构分析
+
+- 分组一
+  - Home
+    - Quick actions
+      - Sales summary
+      - Labor summary
+      - Menu builder
+      - Menu manager
+      - Refund check
+      - O2 Employees
+      - Time entry
+      - management
+      - NEW FROM TOAST
+        - Benchmarking
+        - Instant deposit
+        - Advertising
+        - Credit Card Surcharge
+        - Toast Checking
+        - Device hub
+    - Net sales
+      - Today
+      - Yesterday
+    - Labor cost % of net sales
+      - Today
+      - Yesterday
+    - Discounts
+      - Today
+      - Yesterday
+    - Net sales by item
+      - Item
+      - Net sales
+    - Breakdown
+      - Time
+      - Net sales
+      - Labor cost
+      - Labor %
+    - Financial products
+    - Guest feedback
+    - Toast Online Ordering
+    - Impact
+    - Toast recommends
+  - Reports
+    - REPORTS
+      - Benchmarking
+        - Benchmarking
+        - Menu insights
+        - Service insights
+        - Group overview
+      - Projections
+        - Sales projection
+        - Daily breakdown
+      - Sales
+        - Sales summary
+        - Sales analytics
+        - Sales breakdown
+        - Marketing-driven sales
+        - Digital order sources
+        - Orders
+        - Order details
+        - Paid in total
+        - Deposit sales collected
+        - Location breakdown
+        - Group sales overview
+      - Labor
+        - Employee productivity
+        - Labor summary
+        - Labor cost breakdown
+        - Time entry management
+        - Time entry reporting
+        - Time entry audits
+        - Break entries
+        - Break adherence
+        - Hourly sales
+        - Location overview
+        - Shifts
+        - Manager swipe card log
+        - Pooled tips
+      - Menus
+        - Product mix
+        - Upsell
+        - performance
+        - Top modifiers
+        - Item details
+        - Modifier details
+        - 86 report
+        - Food waste breakdown
+      - Payments
+        - Payments
+        - Payout overview
+        - Reconciliation
+        - Processing statements
+        - Chargebacks
+        - Settled deposits daily
+        - breakdown
+        - Deposits total overview
+        - Daily card activity
+        - House accounts
+        - transactions
+        - Gift card balances
+        - Inactive gift cards
+        - Failed e-gift card delivery
+        - Invoices
+      - Cash & loss management
+        - Cash activity audit
+        - Cash drawer overview
+        - Drawer history
+        - Voided orders
+        - Removed items
+        - Loyalty Misuse
+        - Discounts report
+        - No sale
+        - Unpaid orders
+        - Refunds
+        - Voided payments
+        - Tax exempt
+        - Offline payments
+        - End of day
+        - Check sequence log
+      - Accounts
+        - Accounting overview
+        - Accounting by day
+        - Accounting by location
+        - General Ledger Accounts
+      - Kitchen operations
+        - Tickets by fulfillment
+        - Tickets by hour
+        - Ticket details
+        - Kitchen overview
+      - Marketing
+        - Guestbook
+        - Guest feedback
+        - Guest summary
+        - Guest credits
+        - Rewards accounts
+        - Rewards transactions
+        - Fundraising breakdown
+      - Reservations & waitlist
+        - Guests
+        - Bookings
+    - RELATED
+      - Settings
+        - Hours/services
+        - Data Exports
+        - SSH Keys
+  - Discover products
+- 分组二
+  - Employees
+    - Employee management
+      - Team overview
+      - Employees
+        - Add, edit, and archive employees. Manage employee permissions and passcodes.
+      - Jobs
+      - Sling Scheduling
+        - Build employee schedules and communicate to your team with Sling
+      - Overtime rules
+      - Schedule enforcement
+        - Manage the grace period allowed for shift clock in/out
+      - Hiring Labs: Easy hiring posters
+        - Hire local candidates faster, with posters featuring QR Codes that make it a breeze to apply for jobs straight from a phone. Create your customized hiring poster in minutes!
+    - Access management
+      - Access management setup
+        - Manage employee permissions based on the job
+    - Payroll management
+      - Toast Payroll
+        - Manage employees, approve timesheets, and run payroll
+      - Tip pooling policy
+        - Set up or edit your restaurant’s tip pooling policy
+      - Tip withholding
+        - Reclaim credit card tips/gratuities to cover credit card processing fees
+    - Shift review
+      - Shift review setup
+        - Configure and customize your shift review experience
+      - Advanced shift review setup
+        - View and edit your shift review and report settings
+    - POS report configurations
+      - Shift review report
+        - Configure what appears in the employee shift review report
+      - Manager end of day report
+        - Configure what appears in the manager end of day report
+    - Timesheet management
+      - Time entry management
+        - View and edit your employees' time worked
+      - Time entry reporting
+        - Access time entries with pay information from over a year ago
+      - Break types
+    - Related reports
+      - Employee productivity
+        - Compare performance with top metrics
+      - Labor summary
+        - View hours worked, overtime, pay, and tips
+      - Manager swipe card log
+      - Shifts
+        - Employee shifts, cash, and tips across locations
+      - Pooled tips
+        - Track non-cash tips to distribute to employees based on hours worked
+      - Break entries
+        - Manage all employee break entries, including meal/rest break violations and missed breaks
+      - Break adherence
+        - Monitor break time compliance in real time
+      - Time entry audits
+    - Team Chat
+      - Team Chat settings
+        - View and edit team chat settings
+        - Permissions
+          - Manage in-app chat settings for Sansan RaStreet
+          - Enable chat for all employees
+          - Allow anyone to start a chat
+  - Payroll
+  - Menus
+    - Menu management
+      - Menu manager
+        - Build and manage your menu with improved flat lists of items, modifiers, and price levels.
+      - Menu builder
+        - Create and organize your menu from a single tool
+      - Edit menus
+        - Original menu editing pages that contain all advanced menu features.
+    - Bulk management
+      - Advanced properties
+        - View and edit all your menus on one screen
+      - Price editor
+        - Edit menu group and item prices using the original price editor tool
+      - Items database
+        - View menus, menu groups, and menu items database. Search for archived menu items.
+    - Settings
+      - Open items
+        - Ring up items or services that are not included in the menu
+      - Sales categories
+        - Define broad categories to track sales of related menu items
+      - Item tags
+        - Define tags to track trends in similar menu items
+      - Manage courses
+        - Define courses to be used on menus, menu groups, or items
+      - Pre modifiers
+        - Add optional text before or after a modifier, like ADD, ON SIDE, or EXTRA
+      - Price levels
+        - Define tiered pricing that can be applied to multiple menu items
+      - Barcode config
+        - Enable check digit on the amount is correct
+      - Manage tax rates
+    - Upsells
+      - Menu upsells
+        - Create and manage upsell recommendations
+    - Reports
+      - Product mix
+        - Day-to-day breakdown of menu items sold
+      - Item details
+        - Detailed view of all menu items sold
+    - Catering & Events management
+      - Catering & Events
+        - Manage catering & events with custom BEOs, estimates, and lead management tools
+    - Food waste management
+      - Food waste tracker config
+        - Set up food waste reasons for your staff to start tracking
+      - Food waste reporting
+        - Track, understand, and manage trends in your food waste reduction management
+      - Food waste education hub
+        - Turn food waste insights into action with cost saving strategies
+  - Takeout&delivery
+    - Toast online ordering
+      - Based on average monthly Online Ordering volume, assuming that customers pay 30% commission on third party ordering channels and switch all digital ordering volume to Toast.
+      - Restaurants can save up to $36K a year in commissions* by switching to Toast Online Ordering. Own your guest relationship and maintain your margins by allowing guests to easily order pickup or delivery directly from you – commission-free.
+    - Quote time strategy
+      - Quote times show guests when takeout and delivery orders will be ready. Quote times also control when orders are fired to the kitchen.
+      - Takeout
+        - 1 h
+          - 10 min
+    - Third-party ordering
+      - Reach more guests and ditch the tablets, all while reducing labor costs and order errors. No more double entry.
+    - Online ordering hours
+      - Set your online ordering hours for takeout and delivery. Toast Online Ordering, Toast Delivery Services, Grubhub, DoorDash, and Uber Eats use your Takeout & Third-party delivery hours. First-party deliveries use your First-party delivery hours.
+      - Takeout & Third-party delivery
+        - Mon
+        - Tue
+        - Wed
+        - Thu
+        - Fri
+        - Sat
+        - Sun
+      - Accept orders until
+        - Closing time minus prep time
+        - Closing time
+      - Overrides
+        - Customize your hours on specific days for takeout and/or delivery. This only affects online ordering. Hours must be in increments of 15 minutes.
+    - Availability
+      - Online Ordering
+        - Enable online ordering and customize approval rules, payment methods and more
+      - Takeout/delivery
+        - Manage takeout and delivery, including throttling and delivery range
+      - Prep/delivery times
+        - Control guest facing quote times for Online Ordering
+    - Packaging preferences
+      - Packaging preferences
+        - Specify to your guests what default single-use items will be included in Takeout & delivery
+    - Toast Delivery Services
+      - Activate Toast Delivery Services
+        - Activate Toast Delivery Services to allow your guests to order delivery directly from your restaurant on your Toast Online Ordering channels
+    - Order ready board
+      - Order ready board settings
+        - Displays order statuses on a screen located in a restaurant
+    - Orders Hub
+      - Order ready guest messaging
+        - Send guests a text message when their order is marked Order Ready
+    - Toast order sources
+      - Restaurant info
+        - Customize your branding and restaurant info seen by guests on your website, gift cards, and social media
+    - Offers
+      - Create offers
+        - Choose from pre-set offers designed to help you grow your sales
+      - Manage offers
+        - View and compare performance from active and expired offers
+    - Fundraising campaigns
+      - Create a fundraising campaign
+        - Add a cause and collect contributions from guests in supported ordering channels.
+    - Related reports
+      - Sales summary
+        - Day-to-day top numbers for sales, payments, sales categories, cash and more
+      - Sales analytics
+        - Historical sales trends and top numbers
+  - Catering & events
+    - Overview
+    - Leads
+    - Orders
+      - Customer
+      - Amount
+      - Type
+      - Status
+      - Number
+      - Paid
+      - Dining option
+      - Created from
+      - Company
+      - Location name
+      - Created date
+    - Invoices
+      - Amount
+      - Status
+      - Number
+      - Customer
+      - Company
+      - Location name
+      - Created date
+      - Order date
+    - Calendar
+    - Prep tools
+      - Custom
+        - Start creating prep tools
+        - Download and print order information to assist in preparing orders. Save go-to prep tools for future use or run new ones on the fly.
+      - Standard
+        - Prep list
+          - Items and modifiers with quantities
+        - Invoice
+          - Customer info, menu items, prices, and modifiers
+        - Banquet event order (BEO)
+          - Customer info, all fields, internal notes, menu items, and modifiers
+        - Kitchen sheet
+          - Customer name, selected fields, internal notes, menu items, and modifiers
+        - Pickup summary
+          - Pickup orders by time, status, tip amount, and form fields
+        - Delivery summary
+          - Delivery orders by time, status, tip amount, form fields, driver, and address
+        - Pack sheet
+          - Items and modifiers by customer and prep station
+        - Order summary
+          - Orders by date and time with customer info, items, quantities, and modifiers
+        - CSV export
+          - Order, item, and modifier data in a .csv format
+        - Labels
+          - 2" x 4" labels (10 per sheet) for orders, items, and modifiers
+    - Customers
+      - Name
+      - Company
+      - Total spend
+      - Outstanding balance
+      - Last order
+    - Settings
+      - Order types
+      - Event settings
+      - Location picker
+      - Toast Local
+      - Toast Delivery Services
+      - Notifications
+      - Order & Invoice settings
+      - Invoice settings
+      - Branding
+      - Additional orders
+    - Online ordering
+      - General
+        - Online ordering enabled
+          - Allow guests to place catering orders online. Online ordering will remain on until manually turned off.
+        - Spotlight feature
+          - Show banner message at the top of the catering online ordering page.
+        - Spotlight content
+      - Schedule
+        - Customize your catering hours below to apply to only your catering site. This will not affect your regular restaurant hours.
+        - Takeout
+        -  Delivery
+        - Overrides
+          - Customize your hours on specific days for catering takeout and/or delivery. This only affects catering online ordering. Hours must be in increments of 15 minutes.
+      - Order setup
+        - Default server
+          - Servers are assigned tips for the event. It’s common in catering to use a "tip pool" employee so you can divide tips on payroll easily. If you select a default server, tips will be on by default.
+        - Reporting
+          - Associate your catering online orders with a revenue center to be able to report on volume from this segment of your business. Revenue centers can be added and configured here.
+          - Revenue center
+        - Special requests
+          - Allow special requests when guests add items to their cart.
+        - Special requests message
+      - Takeout setup
+        - Takeout
+          - Allow guests to place catering takeout orders online.
+        - Order type
+          - Fields at checkout & notification settings are based on the order type selected. You can edit and order types within settings.
+        - Dining option
+          - Select a dining option
+        - When can guests place orders? (Lead time & max days ahead)
+          - ASAP - 14 days ahead
+        - Prep time
+          - Takeout orders will fire 1 hour 10 minutes before due time
+        - Min & max order amount
+          - Set a minimum and/or maximum amount per takeout order
+        - Tipping
+          - Allow customers to add a tip when placing a takeout order.
+        - Custom tip percentages
+        - Default tip percentage
+        - Takeout time intervals
+          - Guests can select a takeout time every 15 minutes (ex: 9:00 AM, 9:15 AM, 9:30 AM)
+      - Delivery setup
+      - Service charges
+      - Checkout experience
+      - Menu management
+      - Special menus
+      - Catering capacity
+  - Payments
+    - Transactions & refunds
+      - Find checks & issue refund
+        - Use this page to search for orders, check refund eligibility, issue refunds, and retrieve receipts as needed.
+      - Chargeback challenger
+      - Issue unlinked refund
+        - Submit a refund to a credit card without having to associate it with a check
+      - Void reasons
+      - No sale reasons
+      - Pay Out Reasons
+    - Instant deposit
+      - Instant deposit
+        - Get access to your current closed sales within 30 minutes for a fee
+    - Auto-close orders at end of day
+      - Auto-close orders at end of day
+        - At the end of the store’s business day, handle eligible open orders by either automatically closing them with a dedicated system payment type (“Auto-Close”), or voiding them
+    - Toast Checking
+      - Take control of your cash with a Toast Checking account
+        - Start banking with no monthly fees. Automatically budget with specialized accounts, build savings, and spend with a debit card. Plus, earn high-yield interest on your hard-earned cash.
+    - Payment methods
+      - Payment options
+        - Customize guest payment experience, including pre-auth, tipping, processing, and digital receipts
+      - Other payment options
+        - Accept alternative payment methods like paper gift cards or 3rd party offers
+      - Toast Pay
+        - Customize your QR code payments experience, review your tip, logo, and notification settings.
+      - EBT payments
+        - Accept Electronic Benefits Transfer (EBT) payments for eligible food items, offering a seamless payment experience for customers using SNAP benefits.
+      - House accounts
+        - Manage deferring payment over a billing cycle and send invoices
+      - Customer invoices
+        - Create and send invoices for orders that customers can pay online
+      - Customer credits
+        - Offer credits that can be applied to future orders
+      - Cash overview
+        - Control all configs relating to cash, cash drawers, and cash management
+      - Gift cards
+        - Manage gift card setup, reporting, and ordering
+    - Credit card surcharging
+      - Set up and manage credit card surcharging
+        - Use our automated, compliant solution to surcharge credit cards.
+    - Checks & receipt setup
+      - Service charges and fees
+        - Require additional fees like gratuity, delivery or event charges
+      - Printers and cash drawers
+        - Setup and manage printers and cash drawer
+      - Guest display
+    - Comps and promos
+      - Discounts and promo codes
+        - Manage discounts & comps, including availability, applicable menu items and more
+      - Create & manage offers
+        - Create and track promotional offers based on pre-set recommendations designed to help grow your sales
+      - Discount and food waste reasons
+    - Gift cards
+      - Gift card setup
+        - Set up gift cards and request or disable gift card integration. Find link to purchase or look up gift cards.
+      - Transfer gift cards
+        - Transfer gift card and reward balances.
+    - Related reports
+      - Sales summary
+        - Day-to-day top numbers for sales, payments, sales categories, cash and more
+      - Cash activity audit
+        - All cash drawer activity over time for a selected location
+      - Payments
+        - All payment activity across locations
+  - Financial products
+    - Overview
+    - FINANCE
+      - Toast Checking
+      - Toast Capital Loan
+        - Remaining balance
+        - Amount repaid
+        - Repayment method
+        - Target repayment date
+      - Cash Flow Insights
+        - Cash flow overview
+        - Operating cash flow
+        - Inflow by source
+        - Outflow by
+      - Insurance
+      - Hardware leasing
+    - ACCOUNTING
+      - Activity
+      - Payroll assignments
+      - Connections
+      - Payroll settings
+    - RELATED
+      - Reports
+        - Payments
+        - Payout overview
+        - Reconciliation
+        - Processing statements
+  - Guests
+    - Overview
+      - All guests
+      - Email subscribers
+      - SMS subscribers
+      - Your guest tools
+        - Guestbook
+          - Find, filter, and manage all your guests in one place
+        - Guest insights
+          - Explore trends and behaviors across all guests
+        - Feedback inbox
+          - Review and respond to priority guest feedback
+        - Feedback insights
+          - Uncover what's working and where to improve
+    - GUESTS
+      - Guestbook
+        - All guests
+          - Contact
+          - Last order
+          - Number of orders 
+          - Lifetime spend
+          - Tags
+        - Email subscribers
+          - Contact
+          - Last order
+          - Number of orders 
+          - Lifetime spend
+          - Tags
+        - SMS subscribers
+      - Guest segments
+      - Guest insights
+    - FEEDBACK
+      - Feedback inbox
+      - Feedback insights
+      - Menu item feedback
+    - RELATED
+      - Reports
+        - Guest feedback
+        - Guest summary
+        - Guest credits
+        - Rewards accounts
+      - Settings
+        - Guest feedback settings
+          - Enable Guest Feedback
+            - Click the following Toast Central link to learn more about how to configure new Guest Feedback at your restaurant: Toast Central
+          - Share your Guest Feedback page
+          - Display Feedback on Text & Email Receipts
+            - Show optional feedback options on text & email receipts after payment is complete.
+          - Manager Feedback Notification
+            - Notify manager(s) about guest feedback via text message or email.
+            - Notify for negative feedback only
+            - Notify for all feedback
+            - No notification
+        - Menu item feedback settings
+  - Advertising
+    - Results you can see
+      - Drive growth by launching and managing your third party ads from one place. All without ever needing to leave Toast.
+    - Simple, smart advertising from $15 a day2
+      - Go live in minutes3 with ready-to-use campaigns, AI-powered suggestions, and clear ROI tracking starting at just $15 a day.2
+    - Always know how your ads are performing
+      - Manage all ads and review performance from one dashboard fully integrated with online ordering, catering & events, Toast Tables, and in-store sales.
+  - Marketing
+    - Assistant
+      - Overall insights
+        - Campaign sales
+        - Offer sales
+        - Loyalty orders
+    - Automations
+      - Active automations
+      - More Loyalty automations
+    - Impact
+    - Email marketing
+    - SMS marketing
+    - Offers
+      - Recommended offers 
+        - Recommended offer types are provided based on common performance goals. We use our most effective offer types to help you meet your goal. Results are not guaranteed.
+      - Archived offers
+      - Track & manage
+    - Loyalty
+      - Loyalty members
+      - Account merging
+      - Settings
+      - Loyalty insights
+    - Fundraising
+    - Related reports
+      - Guest summary
+    - Brand hub
+  - Front of house
+    - Toast Tables - Waitlist &Reservations
+      - Settings
+        - Configure your restaurant to accept bookings, including restaurant information and flow control
+    - Pre-shift notes
+      - Display notes and other updates when employees clock into their shift.
+      - Menu item stock
+        - Display out of stock and low stock menu items to employees when they clock into their shift.
+    - Order screen setup
+      - These settings will affect the order screen experience for Table Service and the Quick Order screen. Additional settings unique to Table Service and Quick Order are available below this section.
+      - Individually Hold and Send Items
+        - Give servers full control over meal pacing by allowing them to individually hold and send items on a ticket.
+      - Order by seat
+        - Streamlines order entry by grouping menu item entry by seat and applying seat number based on seat selection in the check
+        - Note: this feature is only available if the New POS Experience is on and if seat numbers are set to Optional or Required. Seat numbers are configured below.
+      - Search bar for POS menu
+      - Timestamps for when order is sent to kitchen
+      - Consolidate discounts
+        - When the same discount is applied to several items, group the items together on the screen, and display the discount once on the order.
+      - Prompt user if they're about to edit another server's check
+      - Promo code search
+      - Send order after check is paid
+        - Orders will only be sent to the kitchen once the check is paid in in full. For Take Out or Delivery dining options, this can be overridden by hitting the Send or Stay buttons.
+        - Note: This feature is not compatible with Text to Pay.
+      - Exit order screen after printing receipt
+      - Manual entry when using a scale
+      - Send user back to passcode screen after completing a task
+        - This would happen after tapping Send or Hold on the order screen, or Done on the payment screen.
+      - Show total quantity of items in an order
+        - Appears at the bottom of check details
+      - Modifying items
+        - Modifying items
+          - Change dining option
+          - Change course
+          - Share plate
+          - Special request
+        - These are extra options on the order screen that let a server change how an individual item is ordered, without affecting the rest of the check.
+      - Special request price entry
+        - When enabled, users can add a price to charge for each Special request.
+      - UI options
+        - Manage more POS settings
+    - Quick order
+      - Which buttons do you want to see on your order screen?
+        - Send
+          - Sends the order to the kitchen and exits the order screen.
+        - Stay
+          - Sends the order to the kitchen, but keeps you on the order screen if you need to add more items.
+        - Hold
+          - Saves items to an order, but won't send them to the kitchen.
+      - Fast cash button
+        - Sends an order and immediately closes it out to cash.
+      - Require a tab name
+        - User is prompted for a tab name when hitting the Send or Pay buttons.
+      - Prompt for dining option
+        - If no default dining option is set for quick order, the user will be asked to select one for each new order.
+      - Seat numbers
+        - Required
+        - Optional
+        - Off
+      - Coursing
+        - Prompt servers to have courses assigned to all items before sending an order to the kitchen.
+        - Required
+        - Optional
+        - Off
+    - Table service
+      - Seat numbers
+        - Required
+        - Optional
+        - Off
+      - Coursing
+        - Prompt servers to have courses assigned to all items before sending an order to the kitchen.
+        - Required
+        - Optional
+        - Off
+    - Service areas & tables
+      - POS table layout
+        - Create your restaurant floor plan
+      - Service areas
+        - Group tables to customize settings for restaurant sections
+      - Revenue centers
+        - Enable tracking sales generated by one or more service areas, tables and devices
+    - Mobile dining solutions
+      - Toast Mobile Order & Pay™ & Digital 
+        - MenusAllow dine-in guests to scan QR codes to view digital menus, order, and pay.
+    - POS notifications
+      - Service prompts
+        - Create and edit prompts for servers to take specific actions on an order
+      - Notification setup
+        - Enable order-related and offline alerts on the POS
+      - Send notifications
+        - Send custom notifications to your employees via the POS
+    - Employee SOS
+      - Text alert
+        - A way for staff to reach a manager when they need help during a shift
+    - Related reports
+      - Sales summary
+        - Day-to-day top numbers for sales, payments, sales categories, cash and more
+      - Drawer history
+        - Cash activity for a single location and day
+  - Kitchen
+    - Printers, tickets, & KDS devices
+      - Kitchen and ticket setup
+        - Set up kitchen displays, prep station and expediter printers, and the information displayed on your tickets
+    - Dining options
+      - Dining options
+        - All the ways you serve your food, from dine in to delivery
+    - Kitchen stations
+      - Prep stations
+      - Assembly Lines
+        - Create and manage fulfillment sequences for prep stations
+      - Item routing
+      - Production items
+        - Create and manage production items
+    - Timing
+      - Prep/delivery times
+        - Change Online Ordering and POS prep times and update delivery times
+    - Pacing
+      - Courses
+        - Create and manage courses
+      - Meal pacing
+        - Set up meal pacing, coursing, and item fire by prep time
+    - Related reports
+      - Tickets by hour
+        - Hourly net sales and average ticket fulfillment time
+      - Ticket details
+        - All ticket and fulfillment details, including time and location
+      - Kitchen overview
+        - Overview of all your configured kitchen devices and settings
+  - xtraCHEF
+  - Waitlist & Reservation
+    - Overview
+    - Calendar
+    - Settings
+      - General
+        - Restaurant profile
+          - Some of the information is pulled in is from your broader Toast settings. You have the option to modify if needed. This information will be used for guest facing experiences for Toast Tables.
+          - Sansan Ramen
+          - Contact number
+          - Contact email
+          - Restaurant website URL
+          - About your restaurant
+          - Add a cover photo
+        - Toast integrations
+          - Toast Tables works better with other features. Enable Integrations to enhance your guest's experience.
+          - Start Order on POS
+            - Toast Tables will start an order on the POS at the table once a party is seated. You will be required to assign a server to each table at time of seating in the host app. Turning this on will tie order and guest data together, allowing you to see guests from Toast Tables in the Guestbook report.
+          - Loyalty Program
+            - Turning this on allows your guest to join your loyalty program through their confirmation link.
+          - Order & Pay
+            - Guests will be texted a link to order once their party is seated in the Toast Tables host app.
+        - Host app permissions
+          - Manage and control key features and actions within the Host app by configuring whether a POS access code is required. This ensures proper permission settings and accurate record keeping for all team member activity.
+          - Payments
+            - Initiate cancellation fee
+            - Waive cancellation fee
+          - Reservations
+            - Create reservation
+            - Edit reservation
+            - Cancel reservation
+        - Dining areas
+          - Dining Areas consist of one or more of your existing Services Areas configured within Toast, allowing guests/hosts to select a particular part of your restaurant to book (e.g. Indoor or Outdoor). Settings like turn times, online availability, and special date settings can be customized by Dining Area.
+          - Your Dining Areas
+            - Drag and drop Service areas within Dining areas. Each Dining area must include at least one Service area to be bookable. The order of your dining areas is the order guests will see when booking.
+        - Table capacity
+          - Configure the capacity of your tables in each dining area. Table capacity will affect table availability based on party sizes entered. Note: Table names are pulled in from POS settings.
+        - Combo tables
+          - Create and manage combinations of tables to accomodate larger parties. This can be for tables you often push together or book together for large groups. Manage availability for combo tables in your designated shifts.
+      - Booking & ticket rules
+        - Prepayment rules
+          - Create and manage all your prepayment rules for reservations.
+        - Deposit rules
+          - Create and manage deposits for reservations. Apply these rules by assigning them to your designated shifts under "Schedules."
+        - Cancellation fee rules
+          - Cancellation fees help reduce no-shows by encouraging guest commitment. Guests will be required to enter a credit card when booking and can be charged a fee for late cancellations or no-shows based on your policy. Simply create a cancellation fee rule and add it to your shifts or experiences.
+      - Guest communication
+        - SMS
+          - Configure your SMS messages that your guests will receive for Reservations and Waitlist.
+          - 2-Way Messaging
+            - Your host will be able to view and reply to text messages from guests within the Host App.This feature is designed for the purpose of sending guests SMS messages about their reservation or waitlist booking with your restaurant, and should not be used for marketing or any other purpose not directly related to such reservation or booking.
+          - Reservations Templates
+            - Reservation Confirmation
+              - This SMS will be sent when your guests book a reservation.
+            - Reservation Reminder
+              - This SMS will be sent to guests 24 hours before their booking time.
+            - Reservation Cancellation
+              - This is the confirmation text your guest receives when their reservation is cancelled.
+            - Reservation Notify
+              - This optional SMS will allow you to send a notification to guests that their table is ready.
+            - Payment Reminder
+              - This SMS will be sent prompting a guest to pay their payment within your configured auto-cancelation time frame.
+          - Waitlist Templates
+            - Joined Waitlist Confirmation
+              - This SMS will be sent when your guest is added to the waitlist via onsite or remote.
+            - Waitlist Notification
+              - This SMS will be sent when your guest is ready to be seated.
+            - Waitlist Cancellation
+              - This is the confirmation text your guest receives when they are removed from the waitlist.
+        - Email templates
+          - Configure emails that your guests will receive for Reservations.
+          - Email Reservation Confirmation
+            - This email will be sent when your guests book a reservation.
+          - Email Reservation Modifications
+            - This email will be sent to guests when there are modifications to their reservations.
+          - Email Reservation Cancellation
+            - This email will be sent to guest when their reservation has been cancelled.
+      - Waitlist
+        - Wait time estimator
+          - Toast will use these settings to determine an estimated wait time for your guests.
+          - Manual Multiplier
+            - Simple linear equation based on place in line, great for keeping your settings simple
+          - Smart Algorithm
+            - Dynamic, great if you seat every party in the app and have set up general settings
+        - Waitlist policy
+          - Customize your restaurant's policy shown to guests added to the waitlist. The guest will see this policy in the link sent via their confirmation SMS.
+        - Online access
+          - Manage global settings for online waitlist.
+          - Guest Facing Options
+            - Show guests an estimated wait time
+              - Let guests know their estimated wait time. Estimation quotes will be based on your Wait Time Estimator settings.
+            - Show guests their place in line
+              - When ON, guests will see the number of parties ahead of them in line. When OFF, this information will be hidden from guests.
+            - Allow guests to join online if there is no wait
+              - When ON, guests will be able to join your online waitlist even if there is no wait. When OFF, guests will need to join in person if there is no wait.
+          - Online Waitlist Third Party Integrations
+            - Select integrations you would like to enable.
+      - Reservations
+        - Reservation controls
+          - Manage global settings for reservations.
+          - Reservations
+            - Enable Reservations Globally
+            - Disabling reservations will remove the reservation list from the host app (including any active reservations) and prevent both employees and guests from creating new reservations.
+          - Online Reservation Third Party Integrations
+            - Select integrations you would like to enable.
+        - Reservation policy
+          - Modify the policy shown to guest when booking a reservation. This policy can be accessed at time of booking and in the guest's reservation confirmation SMS.
+    - Reports
+    - Schedules
+    - Experiences
+    - What's new?
+    - Cheat Sheet
+  - Retail
+  - Scheduling
+    - Create a free scheduling accountSling by Toast helps you build your employees' work schedules in minutes, no matter the size of your business.Set up your account with a click of a button and see your employees, timesheets and sales sync from Toast to Sling. Save time and money with faster and simpler employee scheduling.
+      - 免费创建排班账户
+      - Toast 旗下的 Sling 帮助您在几分钟内制定员工的工作时间表，无论您的企业规模如何。
+      - 只需点击一个按钮即可设置您的帐户，并查看您的员工、考勤表和销售额从 Toast 同步到 Sling。通过更快、更简单的员工排班来节省时间和金钱。
+      - 获得 15 天的免费 Scheduling Pro 试用期。Scheduling Lite 始终免费。
+    - Get a free 15-day trial of Scheduling Pro. Scheduling Lite is always free.
+  - Websites
+  - Manager Log
+    - This week
+      - Today
+      - Monday, April 13th, 2026
+      - Sunday, April 12th, 2026
+    - Last week
+      - Saturday, April 11th, 2026
+      - Friday, April 10th, 2026
+      - Thursday, April 9th, 2026
+      - Wednesday, April 8th, 2026
+      - Tuesday, April 7th, 2026
+      - Monday, April 6th, 2026
+      - Sunday, April 5th, 2026
+- 分组三
+  - Integrations
+    - Integration management
+      - Browse & purchase integrations
+        - Discover and add integrations to your restaurant.
+      - Configure integrations
+        - View and manage your purchased integrations.
+      - Integration audit history
+        - History of integrations added and removed.
+    - Toast API access
+      - Manage credentials
+        - View and manage your Toast API credentials.
+  - Shop
+  - Toast account
+    - Billing
+      - Billing & Invoicing
+        - Access all your monthly invoices for software fees and hardware purchases
+      - Chargeback reports
+        - Disputed credit card transactions and response deadlines
+      - Financial setup
+        - View legal info
+      - Bank accounts
+        - Manage bank accounts for Toast payments and deposits
+    - My Products
+      - Subscriptions
+        - View all software products and services on your account
+    - Business and location management
+      - General information
+        - Manage business description, logo, banner image, and public links
+      - Business information
+        - Manage legal information for your business and owners
+      - Location information
+        - Manage location name, phone, address and billing
+      - Location groups
+        - Organize locations with custom and loyalty groups
+    - Finance
+      - Apply for Toast Capital
+        - Get a loan to help with any improvements, expansions, or repairs
+      - Referral Program
+        - Help a local business and get rewarded for growing the Toast community
+    - Test orders
+      - Archive test orders
+        - Archive orders placed in test mode
+    - Test Kitchen
+      - Test KitchenTest Kitchen
+        - Opt-in to test new features and explore ideas that we’re considering building next
+    - Notifications & alerts
+      - Communication preferences
+        - Manage who should be contacted if your restaurant encounters service or product disruptions
+      - Contact settings (Old)
+        - Manage who receives emails for performance summaries, orders, release notes and finance updates
+    - Groups
+      - Device Groups
+    - Publishing
+      - Publishing Center – History
+        - See what was published at your location(s), when it was published, and who published it
+      - Publish Config
+      - Publish Config V2
+    - Privacy Compliance
+      - Privacy Compliance
+        - Manage various privacy-related obligations, including individual rights requests.
+    - Wi-Fi configuration
+      - Wi-Fi configuration
+        - Your network is managed by Toast.
+      - Network name
+        - SANSAN_RAMEN_SECURE
+        - Password
+  - Support Center
+    - Connect and learn
+      - Toast Community
+        - Share tips and connect with other operators.
+      - Toast Classroom
+        - Get step-by-step guidance and best practices—live and on-demand.
+      - Daily Office Hours
+        - Join a session for quick problem-solving with a Toast Trainer.
+      - Product updates
+        - See the latest fixes, improvements, and new features.
+- 分组四
+  - Internal tools
+    - Menus
+      - Menu cleanup
+      - Menu audit tool
+  - Device hub
+    - Device name
+    - Device status
+    - Alerts
+    - Serial number
+    - Last seen
+    - Enabled connections
+    - IP address
