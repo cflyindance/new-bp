@@ -1,5 +1,5 @@
 /**
- * 将团队管理（方案B）3 组分类写入 docs/项目文档/配置归类-分组映射.csv
+ * 将团队管理 3 组分类写入 docs/项目文档/配置归类-分组映射.csv（方案 B4：68/69 登出规则入考勤与工时）
  * 运行：node scripts/apply-team-settings-mapping.mjs
  */
 import fs from "node:fs";
@@ -22,7 +22,7 @@ const titles = {
 
 const assignMap = {
   scheduling: [74],
-  "time-attendance": [66, 67, 70, 71, 72, 73, 329, 241],
+  "time-attendance": [66, 67, 68, 69, 70, 71, 72, 73, 329, 241],
   "payroll-tips": [186, 306, 309, 310],
 };
 

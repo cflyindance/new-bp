@@ -14,7 +14,29 @@ export const MEMBER_SMS_VERIFICATION_SEQ = 622;
 
 const LINES_STORAGE_ID = "622-sms-verification-lines";
 
-/** 会员登录/注册可触达产线（与支付方式矩阵一致） */
+/** seq 622 短信验证码适用产线（与 623 点单前身份策略产线集一致） */
+export const MEMBER_SMS_VERIFICATION_PRODUCT_LINES = [
+  { id: "kiosk", label: "Kiosk" },
+  { id: "emenu", label: "eMenu" },
+  { id: "cds", label: "CDS" },
+  { id: "sdi", label: "SDI" },
+  { id: "online-order", label: "Online Order" },
+] as const;
+
+export type MemberSmsVerificationProductLineId =
+  (typeof MEMBER_SMS_VERIFICATION_PRODUCT_LINES)[number]["id"];
+
+const ALL_LINE_IDS: MemberSmsVerificationProductLineId[] =
+  MEMBER_SMS_VERIFICATION_PRODUCT_LINES.map((l) => l.id);
+
+/** 旧存储中的产线键 → 新产线（POS/Paypad 已移除） */
+const LEGACY_SMS_LINE_ALIASES: Partial<Record<string, MemberSmsVerificationProductLineId>> = {
+  pos: "kiosk",
+  paypad: "emenu",
+  payPad: "emenu",
+};
+
+/** 供 507/510/509 等仍沿用旧产线矩阵的设置项；622 请用 MEMBER_SMS_VERIFICATION_PRODUCT_LINES */
 export const MEMBER_LOGIN_PRODUCT_LINES = [
   { id: "pos", label: "POS" },
   { id: "kiosk", label: "Kiosk" },
@@ -23,8 +45,6 @@ export const MEMBER_LOGIN_PRODUCT_LINES = [
 ] as const;
 
 export type MemberLoginProductLineId = (typeof MEMBER_LOGIN_PRODUCT_LINES)[number]["id"];
-
-const ALL_LINE_IDS: MemberLoginProductLineId[] = MEMBER_LOGIN_PRODUCT_LINES.map((l) => l.id);
 
 function escapeHtml(s: string): string {
   return s
@@ -42,13 +62,25 @@ function readLegacyToggleOn(seq: number): boolean {
   }
 }
 
-function normalizeLineIds(raw: unknown): MemberLoginProductLineId[] {
-  if (!Array.isArray(raw)) return [];
-  const valid = new Set<string>(ALL_LINE_IDS);
-  return raw.filter((id): id is MemberLoginProductLineId => typeof id === "string" && valid.has(id));
+function resolveSmsLineId(id: string): MemberSmsVerificationProductLineId | null {
+  if (ALL_LINE_IDS.includes(id as MemberSmsVerificationProductLineId)) {
+    return id as MemberSmsVerificationProductLineId;
+  }
+  return LEGACY_SMS_LINE_ALIASES[id] ?? null;
 }
 
-export function readMemberSmsVerificationLines(): MemberLoginProductLineId[] {
+function normalizeLineIds(raw: unknown): MemberSmsVerificationProductLineId[] {
+  if (!Array.isArray(raw)) return [];
+  const seen = new Set<MemberSmsVerificationProductLineId>();
+  for (const item of raw) {
+    if (typeof item !== "string") continue;
+    const resolved = resolveSmsLineId(item);
+    if (resolved) seen.add(resolved);
+  }
+  return ALL_LINE_IDS.filter((id) => seen.has(id));
+}
+
+export function readMemberSmsVerificationLines(): MemberSmsVerificationProductLineId[] {
   const stored = readModuleSettingJson<unknown>(LINES_STORAGE_ID, null);
   const normalized = normalizeLineIds(stored);
   if (normalized.length > 0) return normalized;
@@ -61,7 +93,7 @@ export function readMemberSmsVerificationLines(): MemberLoginProductLineId[] {
   return [];
 }
 
-export function writeMemberSmsVerificationLines(lines: MemberLoginProductLineId[]): void {
+export function writeMemberSmsVerificationLines(lines: MemberSmsVerificationProductLineId[]): void {
   const unique = ALL_LINE_IDS.filter((id) => lines.includes(id));
   writeModuleSettingJson(LINES_STORAGE_ID, unique);
 }
@@ -78,7 +110,7 @@ export function isMemberSmsVerificationSeq(seq: number): boolean {
 
 export function renderMemberSmsVerificationLinesPanelHtml(seq: number, on: boolean): string {
   const selected = new Set(readMemberSmsVerificationLines());
-  const checkboxes = MEMBER_LOGIN_PRODUCT_LINES.map((line) => {
+  const checkboxes = MEMBER_SMS_VERIFICATION_PRODUCT_LINES.map((line) => {
     const checked = selected.has(line.id);
     return `
       <label class="inline-flex cursor-pointer items-center gap-2 text-sm text-foreground">
@@ -123,12 +155,12 @@ export function setMemberSmsVerificationLinesPanelVisible(seq: number, visible: 
   });
 }
 
-function collectLinesFromPanel(panel: HTMLElement): MemberLoginProductLineId[] {
-  const lines: MemberLoginProductLineId[] = [];
+function collectLinesFromPanel(panel: HTMLElement): MemberSmsVerificationProductLineId[] {
+  const lines: MemberSmsVerificationProductLineId[] = [];
   panel.querySelectorAll<HTMLInputElement>("[data-member-sms-verification-line]:checked").forEach((input) => {
     const id = input.getAttribute("data-member-sms-verification-line");
-    if (id && ALL_LINE_IDS.includes(id as MemberLoginProductLineId)) {
-      lines.push(id as MemberLoginProductLineId);
+    if (id && ALL_LINE_IDS.includes(id as MemberSmsVerificationProductLineId)) {
+      lines.push(id as MemberSmsVerificationProductLineId);
     }
   });
   return lines;

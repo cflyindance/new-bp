@@ -6,6 +6,7 @@
   <title>新建屏保 - 屏保</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="assets/common.css" />
+  <script src="assets/embedded-mode.js"></script>
   <script src="assets/toast.js"></script>
   <script src="assets/kiosk-theme-media-idb.js"></script>
   <script src="assets/kiosk-theme-overlap.js"></script>
@@ -714,7 +715,7 @@
               saveThemes(list);
               try { localStorage.setItem('current_theme_id_for_distribute', theme.id); } catch (e1) {}
               var url = redirectUrl.replace('{themeId}', encodeURIComponent(theme.id));
-              window.location.href = url;
+              window.location.href = window.appendMenusifuEmbeddedParam(url);
             } catch (err) {
               console.error('保存失败:', err);
               Toast.error('保存失败，可能是存储空间不足。请尝试删除一些旧的屏保主题后重试。');
@@ -1084,7 +1085,7 @@
             try { localStorage.removeItem('current_theme_id_for_distribute'); } catch (e1) {}
             try { localStorage.removeItem('selected_stores_for_distribute'); } catch (e2) {}
             try { localStorage.removeItem('selected_channels_for_distribute'); } catch (e3) {}
-            window.location.href = 'kiosk-theme-list.html';
+            window.location.href = window.appendMenusifuEmbeddedParam('kiosk-theme-list.html');
           }
           if (refs.length) {
             Promise.all(refs.map(function(r) { return KioskThemeMediaIdb.del(r).catch(function() {}); })).then(go);
@@ -1092,7 +1093,7 @@
             go();
           }
         } else {
-          window.location.href = 'kiosk-theme-list.html';
+          window.location.href = window.appendMenusifuEmbeddedParam('kiosk-theme-list.html');
         }
       }
 

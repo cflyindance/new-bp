@@ -1,6 +1,8 @@
 /**
- * 将素材中心 3 组分类写入 docs/项目文档/配置归类-分组映射.csv
- * 运行：node scripts/apply-assets-settings-mapping.mjs
+ * 将素材中心分组写入 docs/项目文档/配置归类-分组映射.csv
+ * v1.3：433 餐厅 LOGO 迁门店管理；屏显/封面类 seq 已迁营销中心「广告」。
+ * 素材中心设置 catalog 当前无条目（映射脚本仅做迁出清理）。
+ * 运行：node admin-web/scripts/apply-assets-settings-mapping.mjs
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -14,17 +16,12 @@ const mappingPath = [projectDocs, repoDocs]
   .map((d) => path.join(d, "配置归类-分组映射.csv"))
   .find((p) => fs.existsSync(p));
 
-const titles = {
-  "brand-identity-assets": "品牌标识素材",
-  "screen-terminal-assets": "屏显与终端素材",
-  "cover-background-assets": "封面与背景素材",
-};
+/** 已在营销中心「广告」维护，从映射表移除 */
+const REMOVED_FROM_ASSETS_MAPPING = new Set([430, 431, 432, 433, 555, 556]);
 
-const assignMap = {
-  "brand-identity-assets": [433, 434, 556],
-  "screen-terminal-assets": [430, 431],
-  "cover-background-assets": [432, 555],
-};
+const assignMap = {};
+
+const titles = {};
 
 const assetsAssign = new Map();
 for (const [key, seqs] of Object.entries(assignMap)) {
@@ -67,6 +64,7 @@ const text = fs.readFileSync(mappingPath, "utf8");
 const lines = text.split(/\r?\n/);
 const out = [];
 let updated = 0;
+let removed = 0;
 
 for (const line of lines) {
   if (!line.trim()) {
@@ -83,6 +81,10 @@ for (const line of lines) {
     out.push(line);
     continue;
   }
+  if (REMOVED_FROM_ASSETS_MAPPING.has(seq)) {
+    removed++;
+    continue;
+  }
   const next = assetsAssign.get(seq);
   if (next) {
     out.push(`${seq},${escapeCsvCell(next.groupTitle)},${escapeCsvCell(next.groupKey)}`);
@@ -97,4 +99,4 @@ if (updated !== assetsAssign.size) {
 }
 
 fs.writeFileSync(mappingPath, `${out.join("\n")}\n`, "utf8");
-console.log(`Updated ${updated} rows in ${mappingPath}`);
+console.log(`Updated ${updated} rows, removed ${removed} rows in ${mappingPath}`);

@@ -43,6 +43,7 @@ export function renderFinanceProcessorFeeInputHtml(): string {
         max="${MAX_PERCENT}"
         step="0.01"
         data-module-setting-number="${escapeHtml(FINANCE_PROCESSOR_FEE_FIELD_ID)}"
+        data-module-setting-number-precision="2"
         aria-label="信用卡交易手续费比例"
       />
       <span class="text-sm text-muted-foreground">%</span>

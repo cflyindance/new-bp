@@ -6,6 +6,7 @@
   <title>选择门店 - 下发屏保</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="assets/common.css" />
+  <script src="assets/embedded-mode.js"></script>
   <script>
     tailwind.config = { theme: { extend: { colors: { primary: '#1677ff', 'sidebar-bg': '#fafafa', 'sidebar-active': '#e6f4ff' }, borderRadius: { ant: '6px' } } } };
   </script>
@@ -277,7 +278,7 @@
       var params = new URLSearchParams(location.search);
       var fromQ = params.get('from') || '';
       var chUrl = 'channel-select.html' + (fromQ ? ('?from=' + encodeURIComponent(fromQ)) : '');
-      window.location.href = chUrl;
+      window.location.href = window.appendMenusifuEmbeddedParam(chUrl);
     });
   </script>
 </body>

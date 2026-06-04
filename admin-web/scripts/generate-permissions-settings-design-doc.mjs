@@ -6,6 +6,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseConfigMd } from "./lib/parse-bplant-config-md.mjs";
+import { filterRowsForSettingsHub } from "./lib/settings-hub-override.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, "..", "..");
@@ -18,29 +19,19 @@ const HUB = "权限管理中心";
 const titles = {
   "account-security-auth": "账户安全与授权",
   "role-employee-permissions": "角色与员工权限",
-  "order-operation-guardrails": "下单操作限制与授权",
-  "guest-order-limits": "食客下单限制规则",
 };
 
 const reasons = {
   "account-security-auth":
-    "自动登出、登录规则、密码授权触发、关键操作密码门槛；对标 Square/Clover 的登录安全与二次验证策略。",
+    "自动登出、登录规则、iPad 操作密码、企台只读菜、命中下单限制后弹密码；对标 Square/Clover 的登录安全与二次验证策略。",
   "role-employee-permissions":
-    "员工角色、钱箱员工权限、企台登出规则与 iPad 关键权限；对标 Toast/Clover 的岗位权限与员工管理。",
-  "order-operation-guardrails":
-    "可看不可点、积分菜授权、下单前服务员授权、食客改人数/切换品类等流程控制；对标餐饮场景下的前台风控。",
-  "guest-order-limits":
-    "用餐时长、下单次数、每轮菜品数、下单间隔等限流规则；对标 Toast/Square 对订单行为与时序限制。",
+    "门店角色主数据、允许开钱箱的员工；对标 Toast/Clover 的岗位权限与员工管理。",
 };
 
-/** seq → groupKey（权限管理中心 34 条） */
+/** seq → groupKey（权限管理中心 catalog 9 条；B4） */
 const assignMap = {
-  "account-security-auth": [75, 166, 175, 345, 346, 646],
-  "role-employee-permissions": [68, 69, 349, 369, 426],
-  "order-operation-guardrails": [138, 594, 595, 596, 620, 621, 626, 627],
-  "guest-order-limits": [
-    563, 564, 565, 566, 568, 576, 583, 584, 585, 586, 587, 588, 589, 590, 591,
-  ],
+  "account-security-auth": [75, 166, 175, 345, 346, 349, 646],
+  "role-employee-permissions": [369, 426],
 };
 
 const assign = new Map();
@@ -63,13 +54,8 @@ function sceneSummary(scene) {
 }
 
 const md = fs.readFileSync(sourcePath, "utf8");
-const rows = parseConfigMd(md).filter((r) => r.hub === HUB);
-const order = [
-  "account-security-auth",
-  "role-employee-permissions",
-  "order-operation-guardrails",
-  "guest-order-limits",
-];
+const rows = filterRowsForSettingsHub(parseConfigMd(md), HUB);
+const order = ["account-security-auth", "role-employee-permissions"];
 
 const missing = rows.filter((r) => !assign.has(r.seq)).map((r) => r.seq);
 if (missing.length) throw new Error(`未归类 seq: ${missing.join(", ")}`);

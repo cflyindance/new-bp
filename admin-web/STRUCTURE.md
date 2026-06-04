@@ -37,12 +37,12 @@ admin-web/
 | 菜单 | `/menu` | **侧栏**：门店菜单、门店商品、商品配方、门店调味、打印设置、**菜单多语言**、**税种管理**（主区内三级：`MENU_TAX_TYPES_SUBNAV`） |
 | 智能点餐 | `/ordering` | **侧栏**：点击「智能点餐」展开/收起二级（POS、POS GO、PayPad、扫码、eMenu、Kiosk、Online Order、餐厅网站、点餐限制规则）；**POS**、**PayPad**、**eMenu** 与 **Kiosk** 在主内容区均有左侧三级细项导航（见下节） |
 | 外卖平台对接 | `/ordering/delivery-platforms` | 独立一级导航（原隶属「智能点餐」二级） |
-| 后厨系统管理 | `/operations/kitchen-kds` | 默认 Tab：后厨设置（KDS、备餐等） |
+| 后厨系统管理 | `/operations/kitchen-kds` | 侧栏滑层仅「设置」；`#/operations/kitchen-kds` 重定向至 `#/operations/kitchen-kds/settings` |
 | 客显系统管理 | `/operations/customer-display` | **不设顶部 Tab**；主内容区左侧三级 **`CUSTOMER_DISPLAY_SUBNAV`**：封面图、多语言、小费、签名、小票 |
-| 叫号系统管理 | `/operations/queue-call` | 取餐叫号、语音播报等 |
+| 前厅管理中心 | `/operations/queue-call` | 滑层：餐位平面图、菜单下单限制、设置；`#/operations/queue-call` 重定向至餐位平面图 |
 | 预约系统管理 | `/operations/reservations` | 订座、预订 |
 | 等位系统管理 | `/operations/waitlist` | 等位、取号队列 |
-| 设备管理 | `/device-management` | **侧栏**：设备总览、**硬件**、终端管理、绑定与授权、监控告警；选 **硬件** 后，主区内左侧细项见 **`DEVICE_MANAGEMENT_HARDWARE_SUBNAV`**（支付、钱箱、路由器、POS、POS GO、KDS、叫号屏、打印机、电子秤、Kiosk、eMenu）。原一级「设备」`/operations/devices` 已移除，旧链接由 `main.ts` 重定向至本模块 |
+| 设备管理 | `/device-management` | **侧栏**：**硬件**（无「设置」滑层；原 82 条设置 catalog 已迁至「硬件」子页 SSOT）。选 **硬件** 后，主区内左侧细项见 **`DEVICE_MANAGEMENT_HARDWARE_SUBNAV`**（支付设备、钱箱、路由器、POS、POS GO、KDS、叫号屏、打印机、电子秤、Kiosk、eMenu）。`#/device-management/settings` 重定向至对应硬件子路径。原一级「设备」`/operations/devices` 已移除 |
 | 库存管理 | `/operations/inventory-ordering` | **侧栏**：订货与库存、库存变更记录（已从「菜单」迁入；路由前缀仍为 `operations/inventory-ordering`） |
 | 巡店与巡检 | `/operations/store-patrol` | 连锁扩展 |
 | 促销 | `/promotions` | **侧栏**：展开后二级「促销管理」 |
@@ -53,7 +53,7 @@ admin-web/
 | 团队管理 | `/team` | **侧栏**：点击「团队管理」展开/收起二级（角色与员工、休息与加班、员工打卡、小费管理、员工报表、7Shifts、排班与考勤「连锁」、绩效与培训）；其中 **小费管理**、**员工报表**、**排班与考勤** 在主区内有三级细项导航（布局同小费管理：主区左侧竖向细项 + 右侧内容） |
 | 报表与财务 | `/reports` | **侧栏**：展开后二级含收入/明细/餐段/菜品/损耗/钱箱/异常/礼品卡/会员/优惠券/月结/打款费用等（不含资金周转独立一级） |
 | 支付服务 | `/payment-services` | **侧栏**：支付概览、支付渠道、结算与到账、风控与争议 |
-| 消息通知 | `/notifications` | **侧栏**：消息中心、通知设置、模板与订阅 |
+| 消息通知 | `/notifications` | **侧栏**：设置 |
 | 打印模板 | `/print-templates` | **侧栏**（交互同 **智能点餐**）：点击一级「打印模板」展开/收起，二级为模板列表、模板设计 |
 | 资金周转 | `/reports/capital` | 独立一级；路由仍属 `/reports/capital` 前缀；**侧栏顺序**在「权限管理」之上 |
 | 权限管理 | `/permissions` | **侧栏**：权限总览、角色与功能权限、员工授权、权限变更记录；**主导航顺序**：紧邻「设置」上方。用于配置 **角色 → 后台模块/操作**，以及 **员工 → 角色** 绑定（RBAC）。与「设置 → 账号与权限」可并存：本模块侧重可编排权限矩阵与赋权留痕 |
@@ -147,7 +147,7 @@ admin-web/
 | 外卖平台对接 | `/ordering/delivery-platforms` |
 | 后厨系统管理 | `/operations/kitchen-kds` |
 | 客显系统管理 | `/operations/customer-display/cover-image` |
-| 叫号系统管理 | `/operations/queue-call` |
+| 前厅管理中心 | `/operations/queue-call/floor-plan` |
 | 预约系统管理 | `/operations/reservations` |
 | 等位系统管理 | `/operations/waitlist` |
 | 设备管理 | `/device-management/overview` |
@@ -161,7 +161,7 @@ admin-web/
 | 团队管理 | `/team/roles-employees` |
 | 报表与财务 | `/reports/revenue` |
 | 支付服务 | `/payment-services/overview` |
-| 消息通知 | `/notifications/center` |
+| 消息通知 | `/notifications/settings` |
 | 打印模板 | `/print-templates/list` |
 | 资金周转 | `/reports/capital` |
 | 权限管理 | `/permissions/overview` |

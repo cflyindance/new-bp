@@ -1,5 +1,5 @@
 /**
- * 将前厅管理中心 18 组分类写入 docs/项目文档/配置归类-分组映射.csv
+ * 将前厅管理中心 19 组分类写入 docs/项目文档/配置归类-分组映射.csv（含 guest-order-throttle）
  * 运行：node scripts/apply-foh-settings-mapping.mjs
  */
 import fs from "node:fs";
@@ -16,23 +16,26 @@ const mappingPath = [projectDocs, repoDocs]
 
 const titles = {
   "tables-floor": "桌台与餐位",
-  "pos-order-init": "POS 开单流程",
-  "pos-kitchen-send": "POS 送厨流程",
-  "pos-button-visibility": "POS 按钮显隐",
-  "pos-order-toolbar": "POS 点单页工具栏",
-  "pos-order-cart": "POS 点单页展示",
-  "pos-find-order-list": "POS 找单列表",
-  "pos-checkout-entry": "POS 结账入口",
-  "pos-menu-ui": "POS 菜单与布局",
-  "guest-menu-structure": "食客端·菜单结构",
-  "guest-menu-scenarios": "食客端·品类与场景菜单",
-  "guest-menu-global": "食客端·首页与版式",
-  "guest-menu-cart": "食客端·购物车展示",
-  "guest-facing-locale": "食客端·界面语言",
-  "guest-order-rules": "食客端·下单与规则",
+  "pos-shell-landing": "主界面与导航",
+  "pos-order-init": "开单流程",
+  "pos-kitchen-send": "送厨流程",
+  "pos-button-visibility": "操作按钮显隐",
+  "pos-order-toolbar": "点单页工具栏",
+  "pos-order-cart": "点单页展示",
+  "pos-combo-ordering": "套餐点单与展示",
+  "pos-find-order-list": "找单列表",
+  "pos-checkout-entry": "结账入口",
+  "pos-menu-ui": "菜单与布局",
+  "guest-menu-structure": "菜单结构",
+  "guest-menu-scenarios": "品类与场景菜单",
+  "guest-menu-global": "首页与版式",
+  "guest-menu-cart": "购物车展示",
+  "guest-facing-locale": "界面语言",
+  "guest-order-rules": "下单与规则",
+  "guest-order-throttle": "食客下单限流",
+  "tableside-service-call": "桌边·呼叫服务员",
   "guest-notes-fees": "备注与附加服务",
   "wait-time": "等待时长提示",
-  cds: "客显屏",
 };
 
 function range(a, b) {
@@ -42,26 +45,26 @@ function range(a, b) {
 }
 
 const assignMap = {
-  "tables-floor": [169, 534, 107, 533, 619, 643, 644, 592, 642, 351, 347],
-  "pos-order-init": [108, 111, 625],
-  "pos-kitchen-send": [113, 114, 120, 123, 125],
+  "tables-floor": [107, 619, 643, 644, 592, 169, 534, 642, 351, 347],
+  "pos-shell-landing": [165, 346],
+  "pos-order-init": [111, 625, 621],
+  "pos-kitchen-send": [113, 114, 120, 123, 125, 345],
   "pos-button-visibility": [...range(193, 196), ...range(197, 216)],
   "pos-order-toolbar": [196, 110, 483, 484, 485, 486],
-  "pos-order-cart": [132, 133, 135, 136, 137, 121, 122, 178, 222, 223],
-  "pos-find-order-list": [151, 152, 153, 154, 251],
+  "pos-order-cart": [132, 133, 135, 137, 121, 122, 178, 222, 223, 138],
+  "pos-combo-ordering": [139, 145],
+  "pos-find-order-list": [151, 152, 153, 251],
   "pos-checkout-entry": [248, 221],
   "pos-menu-ui": [118, 148, 176, 177, 348, 350, ...range(216, 221)],
   "guest-menu-structure": [515, 516, 517, 518, 519, 520, 524, 525, 526, 528],
   "guest-menu-scenarios": [655, 656, 657, 658, 659, 660, 661],
-  "guest-menu-global": [532, 542, 599, 601, 602, 604, 606, 607, 608, 611, 509, 600, 612, 645],
+  "guest-menu-global": [532, 599, 601, 602, 604, 606, 607, 608, 611, 509, 600, 645],
   "guest-menu-cart": [616, 617, 618],
   "guest-facing-locale": [652, 653],
   "guest-order-rules": [
     94,
-    91,
     443,
     502,
-    567,
     487,
     571,
     572,
@@ -83,7 +86,6 @@ const assignMap = {
     491,
     623,
     622,
-    98,
     503,
     504,
     505,
@@ -91,10 +93,19 @@ const assignMap = {
     507,
     510,
     527,
+    595,
+    596,
+    620,
+    626,
+    627,
+    594,
+    349,
+    646,
   ],
-  "guest-notes-fees": [521, 522, 523, 544, 545],
+  "guest-order-throttle": [588, 589, 590, 591],
+  "tableside-service-call": [629, 641, 640, 333],
+  "guest-notes-fees": [521, 522, 523],
   "wait-time": [535, 536, 537, 538, 539, 540],
-  cds: [461, 462, 466, 10],
 };
 
 const fohAssign = new Map();

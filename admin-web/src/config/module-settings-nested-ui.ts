@@ -175,69 +175,7 @@ const POS_TOOLBAR_196_NESTED: ModuleSettingNestedGroupConfig = {
   ],
 };
 
-/** 备注与附加服务 · 产品备注（522） */
-const GUEST_NOTES_522_NESTED: ModuleSettingNestedGroupConfig = {
-  parentSeq: 522,
-  fields: [
-    {
-      kind: "dish-tags",
-      fieldKey: "remark-dishes",
-      label: "请选择展示备注的菜品",
-      storageFieldId: "522-remark-dishes",
-    },
-  ],
-};
-
-/** 备注与附加服务 · 餐具加收（544） */
-const GUEST_NOTES_544_NESTED: ModuleSettingNestedGroupConfig = {
-  parentSeq: 544,
-  fields: [
-    {
-      kind: "radio",
-      fieldKey: "utensils-fee",
-      radioFieldId: "544-utensils-fee-mode",
-      radioDefault: "free",
-      options: [
-        { value: "free", label: "免费" },
-        { value: "1.5", label: "$1.5" },
-        { value: "other", label: "其他金额" },
-      ],
-    },
-  ],
-};
-
-/** 备注与附加服务 · 打包带加收（545） */
-const GUEST_NOTES_545_NESTED: ModuleSettingNestedGroupConfig = {
-  parentSeq: 545,
-  fields: [
-    {
-      kind: "radio",
-      fieldKey: "packaging-fee",
-      radioFieldId: "545-packaging-fee-mode",
-      radioDefault: "free",
-      options: [
-        { value: "free", label: "免费" },
-        { value: "1.5", label: "$1.5" },
-        { value: "other", label: "其他金额" },
-      ],
-    },
-  ],
-};
-
-/** 食客端·下单与规则 · 点单须知（569） */
-const GUEST_ORDER_569_NESTED: ModuleSettingNestedGroupConfig = {
-  parentSeq: 569,
-  fields: [
-    {
-      kind: "copy-form",
-      fieldKey: "order-notice",
-      titleFieldId: "569-title",
-      contentFieldId: "569-content",
-      titleMaxLength: 20,
-      contentMaxLength: 200,
-    },
-  ],
-};
+/** seq 569 点单须知见 module-settings-guest-order-notice-ui.ts（主开关 + 各产线标题/内容） */
 
 /** 食客端·下单与规则 · 火锅页面提示（570） */
 const GUEST_ORDER_570_NESTED: ModuleSettingNestedGroupConfig = {
@@ -266,86 +204,9 @@ const GUEST_ORDER_598_NESTED: ModuleSettingNestedGroupConfig = {
   fields: [{ kind: "dish-combo-rules", fieldKey: "combo", storageFieldId: "598-combo-rules" }],
 };
 
-/** 食客端·首页与版式 · 菜单图片展示模式（607） */
-const GUEST_MENU_607_NESTED: ModuleSettingNestedGroupConfig = {
-  parentSeq: 607,
-  fields: [
-    {
-      kind: "radio",
-      fieldKey: "image-mode",
-      radioFieldId: "607-image-mode",
-      radioDefault: "small",
-      options: [
-        { value: "original", label: "原始模式" },
-        { value: "small", label: "小图模式" },
-        { value: "large", label: "大图模式" },
-      ],
-    },
-    {
-      kind: "conditional-dish-tags",
-      fieldKey: "small-dishes",
-      label: "请选择大图菜",
-      storageFieldId: "607-small-dishes",
-      whenRadioFieldId: "607-image-mode",
-      whenRadioValue: "small",
-      whenRadioDefault: "small",
-    },
-    {
-      kind: "conditional-dish-tags",
-      fieldKey: "large-dishes",
-      label: "请选择小图菜",
-      storageFieldId: "607-large-dishes",
-      whenRadioFieldId: "607-image-mode",
-      whenRadioValue: "large",
-      whenRadioDefault: "small",
-    },
-  ],
-};
+/** 食客端·首页与版式 · 展示菜详情（608）见 module-settings-guest-dish-detail-display-ui.ts */
 
-/** 食客端·首页与版式 · 展示菜详情（608） */
-const GUEST_MENU_608_NESTED: ModuleSettingNestedGroupConfig = {
-  parentSeq: 608,
-  fields: [
-    {
-      kind: "hint",
-      fieldKey: "detail-hint",
-      text: "只针对仅有图片、名称、价格、描述的菜生效",
-    },
-    {
-      kind: "dish-tags",
-      fieldKey: "no-attr-dishes",
-      label: "请选择无属性的菜",
-      storageFieldId: "608-no-attr-dishes",
-    },
-  ],
-};
-
-/** 食客端·首页与版式 · 菜品名称字体大小（645） */
-const GUEST_MENU_645_NESTED: ModuleSettingNestedGroupConfig = {
-  parentSeq: 645,
-  fields: [
-    {
-      kind: "hint",
-      fieldKey: "font-hint",
-      text: "打开后，你可以设置菜品名称字体大小",
-    },
-    {
-      kind: "inline",
-      fieldKey: "font-size",
-      parts: [
-        {
-          type: "number",
-          fieldId: "645-dish-name-font-px",
-          defaultValue: 16,
-          min: 8,
-          max: 72,
-          widthClass: "w-16",
-        },
-        { type: "text", value: "px" },
-      ],
-    },
-  ],
-};
+/** 食客端·首页与版式 · 菜品名称字体大小（645）见 module-settings-guest-menu-dish-name-font-ui.ts */
 
 /** 促销中心 · 抽奖活动（647） */
 const PROMO_LOTTERY_647_NESTED: ModuleSettingNestedGroupConfig = {
@@ -392,16 +253,9 @@ const NESTED_BY_PARENT_SEQ = new Map<number, ModuleSettingNestedGroupConfig>([
   [535, WAIT_TIME_535_NESTED],
   [536, WAIT_TIME_536_NESTED],
   [196, POS_TOOLBAR_196_NESTED],
-  [522, GUEST_NOTES_522_NESTED],
-  [544, GUEST_NOTES_544_NESTED],
-  [545, GUEST_NOTES_545_NESTED],
-  [569, GUEST_ORDER_569_NESTED],
   [570, GUEST_ORDER_570_NESTED],
   [597, GUEST_ORDER_597_NESTED],
   [598, GUEST_ORDER_598_NESTED],
-  [607, GUEST_MENU_607_NESTED],
-  [608, GUEST_MENU_608_NESTED],
-  [645, GUEST_MENU_645_NESTED],
   [647, PROMO_LOTTERY_647_NESTED],
 ]);
 

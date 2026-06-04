@@ -1,6 +1,7 @@
 /**
- * 将消息中心 3 组分类写入 docs/项目文档/配置归类-分组映射.csv
- * 运行：node scripts/apply-notifications-settings-mapping.mjs
+ * 将消息中心分组写入 docs/项目文档/配置归类-分组映射.csv
+ * v1.1：订单触达拆为「店内员工订单提醒」与「顾客短信与取餐通知」；桌边呼叫在前厅。
+ * 运行：node admin-web/scripts/apply-notifications-settings-mapping.mjs
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -16,14 +17,14 @@ const mappingPath = [projectDocs, repoDocs]
 
 const titles = {
   "notification-basics": "通知基础与渠道",
-  "order-pickup-messages": "订单与取餐通知",
-  "service-call-alerts": "呼叫服务员与现场提醒",
+  "staff-order-alerts": "店内员工订单提醒",
+  "customer-order-sms": "顾客短信与取餐通知",
 };
 
 const assignMap = {
   "notification-basics": [331, 332],
-  "order-pickup-messages": [334, 335, 336, 337, 338, 339, 340, 638, 639],
-  "service-call-alerts": [333, 629, 630, 631, 632, 633, 634, 635, 636, 637, 640, 641],
+  "staff-order-alerts": [638, 639, 637],
+  "customer-order-sms": [334, 335, 336, 337, 338, 339, 340],
 };
 
 const notifAssign = new Map();

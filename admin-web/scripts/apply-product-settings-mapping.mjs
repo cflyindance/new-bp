@@ -1,5 +1,6 @@
 /**
  * 将商品中心设置分类写入 docs/项目文档/配置归类-分组映射.csv
+ * v2.0：139/145 已迁前厅 pos-combo-ordering；商品中心无 settings catalog，本脚本为 no-op。
  * 运行：node scripts/apply-product-settings-mapping.mjs
  */
 import fs from "node:fs";
@@ -14,13 +15,9 @@ const mappingPath = [projectDocs, repoDocs]
   .map((d) => path.join(d, "配置归类-分组映射.csv"))
   .find((p) => fs.existsSync(p));
 
-const titles = {
-  "combo-ordering": "套餐点单与展示",
-};
-
-const assignMap = {
-  "combo-ordering": [139, 145],
-};
+/** 商品中心 settings catalog 已下线；无待写映射 */
+const titles = {};
+const assignMap = {};
 
 const productAssign = new Map();
 for (const [key, seqs] of Object.entries(assignMap)) {
@@ -92,5 +89,11 @@ if (updated !== productAssign.size) {
   throw new Error(`预期更新 ${productAssign.size} 条，实际 ${updated} 条`);
 }
 
-fs.writeFileSync(mappingPath, `${out.join("\n")}\n`, "utf8");
-console.log(`Updated ${updated} rows in ${mappingPath}`);
+if (productAssign.size > 0) {
+  fs.writeFileSync(mappingPath, `${out.join("\n")}\n`, "utf8");
+}
+console.log(
+  productAssign.size > 0
+    ? `Updated ${updated} rows in ${mappingPath}`
+    : `商品中心 settings 映射为空，跳过 CSV 写入`,
+);

@@ -90,6 +90,7 @@ import {
   type ModuleSettingCatalogHub,
   type ModuleSettingCatalogItem,
 } from "./config/module-settings-catalog";
+import { bindPermissionsRbac, isPermissionsRbacPath, renderPermissionsRbacPage } from "./permissions/rbac-ui";
 import {
   getModuleSettingFormRow,
   isModuleSettingGenericFormRowSeq,
@@ -134,8 +135,11 @@ import {
   bindGuestFacingLocaleControls,
   isModuleSettingLocaleDefaultSeq,
   isModuleSettingLocaleSelectSeq,
+  isSystemDefaultLocaleSeq,
   localeCheckboxFieldId,
+  renderLanguageLocalizationGroupIntroHtml,
   renderLocaleDefaultRadiosHtml,
+  renderSystemDefaultLocaleRadiosHtml,
 } from "./config/module-settings-locale-ui";
 import {
   bindModuleSettingMenuGroupPickers,
@@ -143,6 +147,11 @@ import {
   menuGroupStorageFieldId,
   renderMenuGroupPickerHtml,
 } from "./config/module-settings-menu-group-ui";
+import {
+  bindGuestMenuGroupByLineUi,
+  isGuestMenuGroupByLineSeq,
+  renderGuestMenuGroupByLinePanelHtml,
+} from "./config/module-settings-guest-menu-group-by-line-ui";
 import {
   bindPosOrderToolbarGroups,
   isPosOrderToolbarGridHostSeq,
@@ -160,14 +169,443 @@ import {
   renderKitchenOrderTypeMultiselectHtml,
 } from "./config/module-settings-kitchen-order-type-ui";
 import {
+  bindPrintDishCodeByTicketUi,
+  isPrintDishCodeByTicketSeq,
+  renderPrintDishCodeTicketsPanelHtml,
+  setPrintDishCodeTicketsPanelVisible,
+} from "./config/module-settings-print-dish-code-ui";
+import {
+  bindTakeoutEnhancedDisplayUi,
+  isTakeoutEnhancedDisplaySeq,
+  renderTakeoutEnhancedDisplayPanelHtml,
+  setTakeoutEnhancedDisplayPanelVisible,
+} from "./config/module-settings-takeout-enhanced-display-ui";
+import {
+  bindTableSelectionPageUi,
+  ensureTableSelectionPageToggleMigrated,
+  isTableSelectionPageSeq,
+  renderTableSelectionPagePanelHtml,
+  setTableSelectionPagePanelVisible,
+  shouldSkipTableSelectionPageMergedSeq,
+} from "./config/module-settings-table-selection-page-ui";
+import {
+  bindSingleTableNoMultiOrderUi,
+  ensureSingleTableNoMultiOrderToggleMigrated,
+  isSingleTableNoMultiOrderSeq,
+  renderSingleTableNoMultiOrderPanelHtml,
+  setSingleTableNoMultiOrderPanelVisible,
+} from "./config/module-settings-single-table-order-limit-ui";
+import {
+  bindPostPaymentClearTableUi,
+  ensurePostPaymentClearTableToggleMigrated,
+  isPostPaymentClearTableSeq,
+  renderPostPaymentClearTablePanelHtml,
+  setPostPaymentClearTablePanelVisible,
+} from "./config/module-settings-post-payment-clear-table-ui";
+import {
+  bindAutoClearTableUi,
+  ensureAutoClearTableToggleMigrated,
+  isAutoClearTableSeq,
+  renderAutoClearTablePanelHtml,
+  setAutoClearTablePanelVisible,
+} from "./config/module-settings-auto-clear-table-ui";
+import {
+  bindClearTableButtonUi,
+  ensureClearTableButtonToggleMigrated,
+  isClearTableButtonSeq,
+  renderClearTableButtonPanelHtml,
+  syncClearTableButtonLinesWithMaster,
+} from "./config/module-settings-clear-table-button-ui";
+import {
+  bindAllowChangeServerUi,
+  ensureAllowChangeServerToggleMigrated,
+  isAllowChangeServerSeq,
+  renderAllowChangeServerPanelHtml,
+  setAllowChangeServerPanelVisible,
+} from "./config/module-settings-allow-change-server-ui";
+import {
+  bindHomePasswordAuthUi,
+  ensureHomePasswordAuthToggleMigrated,
+  isHomePasswordAuthSeq,
+  renderHomePasswordAuthPanelHtml,
+  setHomePasswordAuthPanelVisible,
+} from "./config/module-settings-home-password-auth-ui";
+import {
+  bindGuestChangePartySizeUi,
+  ensureGuestChangePartySizeToggleMigrated,
+  isGuestChangePartySizeSeq,
+  renderGuestChangePartySizePanelHtml,
+  setGuestChangePartySizePanelVisible,
+} from "./config/module-settings-guest-change-party-size-ui";
+import {
+  isMaxGuestsPerOrderSeq,
+  renderMaxGuestsPerOrderControl,
+} from "./config/module-settings-max-guests-per-order-ui";
+import {
+  isOrderTimeoutReminderSeq,
+  renderOrderTimeoutReminderControl,
+} from "./config/module-settings-order-timeout-reminder-ui";
+import {
+  bindChildExcludedFromOrderLimitUi,
+  ensureChildExcludedFromOrderLimitToggleMigrated,
+  isChildExcludedFromOrderLimitSeq,
+  renderChildExcludedFromOrderLimitPanelHtml,
+  setChildExcludedFromOrderLimitPanelVisible,
+} from "./config/module-settings-child-excluded-from-order-limit-ui";
+import {
+  bindSendKitchenWholeOrderUi,
+  ensureSendKitchenWholeOrderToggleMigrated,
+  isSendKitchenWholeOrderSeq,
+  renderSendKitchenWholeOrderPanelHtml,
+  setSendKitchenWholeOrderPanelVisible,
+} from "./config/module-settings-send-kitchen-whole-order-ui";
+import {
+  bindSendKitchenAfterCheckoutUi,
+  ensureSendKitchenAfterCheckoutToggleMigrated,
+  isSendKitchenAfterCheckoutSeq,
+  renderSendKitchenAfterCheckoutPanelHtml,
+  setSendKitchenAfterCheckoutPanelVisible,
+} from "./config/module-settings-send-kitchen-after-checkout-ui";
+import {
+  bindAutoKitchenSendPaymentUi,
+  ensureAutoKitchenSendPaymentToggleMigrated,
+  isAutoKitchenSendPaymentSeq,
+  renderAutoKitchenSendPaymentPanelHtml,
+  setAutoKitchenSendPaymentPanelVisible,
+} from "./config/module-settings-auto-kitchen-send-payment-ui";
+import {
+  bindGuestNamePageUi,
+  ensureGuestNamePageToggleMigrated,
+  isGuestNamePageSeq,
+  renderGuestNamePagePanelHtml,
+  setGuestNamePagePanelVisible,
+} from "./config/module-settings-guest-name-display-page-ui";
+import {
+  bindGuestPhoneDisplayPageUi,
+  ensureGuestPhoneDisplayPageToggleMigrated,
+  isGuestPhoneDisplayPageSeq,
+  renderGuestPhoneDisplayPagePanelHtml,
+  setGuestPhoneDisplayPagePanelVisible,
+} from "./config/module-settings-guest-phone-display-page-ui";
+import {
+  bindGuestPhoneRequiredUi,
+  isGuestPhoneRequiredSeq,
+  renderGuestPhoneRequiredPanelHtml,
+  setGuestPhoneRequiredPanelVisible,
+} from "./config/module-settings-guest-phone-required-ui";
+import {
+  bindTableDeliveryMealCardUi,
+  isTableDeliveryMealCardSeq,
+  renderTableDeliveryMealCardPanelHtml,
+  setTableDeliveryMealCardPanelVisible,
+} from "./config/module-settings-table-delivery-meal-card-ui";
+import {
+  bindPointsDishAuthOrderUi,
+  isPointsDishAuthOrderSeq,
+  renderPointsDishAuthOrderPanelHtml,
+  setPointsDishAuthOrderPanelVisible,
+} from "./config/module-settings-points-dish-auth-order-ui";
+import {
+  bindRuleHitPasswordAuthUi,
+  ensureRuleHitPasswordAuthToggleMigrated,
+  isRuleHitPasswordAuthSeq,
+  renderRuleHitPasswordAuthPanelHtml,
+  setRuleHitPasswordAuthPanelVisible,
+} from "./config/module-settings-rule-hit-password-auth-ui";
+import {
+  bindGuestEmenuAuthPageUi,
+  ensureGuestEmenuAuthPageToggleMigrated,
+  isGuestEmenuAuthPageSeq,
+  renderGuestEmenuAuthPagePanelHtml,
+  setGuestEmenuAuthPagePanelVisible,
+} from "./config/module-settings-guest-emenu-auth-page-ui";
+import {
+  bindGuestCategoryModeUi,
+  ensureGuestCategoryModeToggleMigrated,
+  isGuestCategoryModeSeq,
+  renderGuestCategoryModePanelHtml,
+  setGuestCategoryModePanelVisible,
+} from "./config/module-settings-guest-category-mode-ui";
+import {
+  bindHotpotBaseRequiredUi,
+  ensureHotpotBaseRequiredToggleMigrated,
+  isHotpotBaseRequiredSeq,
+  renderHotpotBaseRequiredPanelHtml,
+  setHotpotBaseRequiredPanelVisible,
+} from "./config/module-settings-hotpot-base-required-ui";
+import {
+  bindHotpotBaseStillShowUi,
+  ensureHotpotBaseStillShowToggleMigrated,
+  isHotpotBaseStillShowSeq,
+  renderHotpotBaseStillShowPanelHtml,
+  setHotpotBaseStillShowPanelVisible,
+} from "./config/module-settings-hotpot-base-still-show-ui";
+import {
+  bindGuestOrderNoticeUi,
+  ensureGuestOrderNoticeToggleMigrated,
+  isGuestOrderNoticeSeq,
+  renderGuestOrderNoticePanelHtml,
+  setGuestOrderNoticePanelVisible,
+} from "./config/module-settings-guest-order-notice-ui";
+import {
+  bindGuestDishDetailDisplayUi,
+  ensureGuestDishDetailDisplayToggleMigrated,
+  isGuestDishDetailDisplaySeq,
+  renderGuestDishDetailPanelHtml,
+  setGuestDishDetailPanelVisible,
+} from "./config/module-settings-guest-dish-detail-display-ui";
+import {
+  bindGuestDiningDurationUi,
+  ensureGuestDiningDurationToggleMigrated,
+  isGuestDiningDurationSeq,
+  renderGuestDiningDurationPanelHtml,
+  setGuestDiningDurationPanelVisible,
+  type GuestDiningDurationSeq,
+} from "./config/module-settings-guest-dining-duration-ui";
+import {
+  bindGuestOrderPlaceIntervalUi,
+  ensureGuestOrderPlaceIntervalToggleMigrated,
+  isGuestOrderPlaceIntervalSeq,
+  renderGuestOrderPlaceIntervalPanelHtml,
+  setGuestOrderPlaceIntervalPanelVisible,
+} from "./config/module-settings-guest-order-place-interval-ui";
+import {
+  bindGuestOrderIntervalAllowCartUi,
+  isGuestOrderIntervalAllowCartSeq,
+  readGuestOrderPlaceIntervalEnabled,
+  renderGuestOrderIntervalAllowCartPanelHtml,
+  setGuestOrderIntervalAllowCartPanelVisible,
+} from "./config/module-settings-guest-order-interval-allow-cart-ui";
+import {
+  bindGuestMenuOrderIntervalUi,
+  ensureGuestMenuOrderIntervalToggleMigrated,
+  isGuestMenuOrderIntervalSeq,
+  renderGuestMenuOrderIntervalPanelHtml,
+  setGuestMenuOrderIntervalPanelVisible,
+} from "./config/module-settings-guest-menu-order-interval-ui";
+import {
+  bindGuestMenuIntervalAllowCartUi,
+  isGuestMenuIntervalAllowCartSeq,
+  readGuestMenuOrderIntervalEnabled,
+  renderGuestMenuIntervalAllowCartPanelHtml,
+  setGuestMenuIntervalAllowCartPanelVisible,
+} from "./config/module-settings-guest-menu-interval-allow-cart-ui";
+import {
+  bindHotpotBaseOrderModeUi,
+  ensureHotpotBaseOrderModeToggleMigrated,
+  isHotpotBaseOrderModeSeq,
+  renderHotpotBaseOrderModePanelHtml,
+  setHotpotBaseOrderModePanelVisible,
+} from "./config/module-settings-hotpot-base-order-mode-ui";
+import {
+  bindHotpotHalfSurchargeUi,
+  ensureHotpotHalfSurchargeToggleMigrated,
+  isHotpotHalfSurchargeSeq,
+  renderHotpotHalfSurchargePanelHtml,
+  setHotpotHalfSurchargePanelVisible,
+} from "./config/module-settings-hotpot-half-surcharge-ui";
+import {
+  bindGuestKioskFlowPageUi,
+  ensureGuestKioskFlowPageToggleMigrated,
+  isGuestKioskFlowPageSeq,
+  renderGuestKioskFlowPagePanelHtml,
+  setGuestKioskFlowPagePanelVisible,
+} from "./config/module-settings-order-type-selection-page-ui";
+import {
+  bindEmenuServerReadonlyDishUi,
+  ensureEmenuServerReadonlyDishToggleMigrated,
+  isEmenuServerReadonlyDishSeq,
+  renderEmenuServerReadonlyDishPanelHtml,
+  setEmenuServerReadonlyDishPanelVisible,
+} from "./config/module-settings-emenu-server-readonly-dish-ui";
+import {
+  bindViewonlyDishRulesUi,
+  ensureViewonlyDishRuleToggleMigrated,
+  isViewonlyDishRuleSeq,
+  renderViewonlyDishRulePanelHtml,
+  setViewonlyDishRulePanelVisible,
+} from "./config/module-settings-viewonly-dish-rules-ui";
+import {
+  bindGuestMenuCartUi,
+  ensureGuestMenuCartToggleMigrated,
+  isGuestMenuCartSeq,
+  renderGuestMenuCartPanelHtml,
+  setGuestMenuCartPanelVisible,
+} from "./config/module-settings-guest-menu-cart-ui";
+import {
+  bindMenusifuBrandLogoUi,
+  ensureMenusifuBrandLogoToggleMigrated,
+  isMenusifuBrandLogoSeq,
+  renderMenusifuBrandLogoPanelHtml,
+  setMenusifuBrandLogoPanelVisible,
+} from "./config/module-settings-menusifu-brand-logo-ui";
+import {
+  bindGuestMenuClassificationModeUi,
+  ensureGuestMenuClassificationModeToggleMigrated,
+  isGuestMenuClassificationModeSeq,
+  renderGuestMenuClassificationModePanelHtml,
+  setGuestMenuClassificationModePanelVisible,
+} from "./config/module-settings-guest-menu-classification-mode-ui";
+import {
+  bindGuestMenuClassNameDisplayUi,
+  ensureGuestMenuClassNameDisplayToggleMigrated,
+  isGuestMenuClassNameDisplaySeq,
+  renderGuestMenuClassNameDisplayPanelHtml,
+  setGuestMenuClassNameDisplayPanelVisible,
+} from "./config/module-settings-guest-menu-class-name-display-ui";
+import {
+  bindGuestMenuImageModeUi,
+  ensureGuestMenuImageModeToggleMigrated,
+  isGuestMenuImageModeSeq,
+  renderGuestMenuImageModePanelHtml,
+  setGuestMenuImageModePanelVisible,
+} from "./config/module-settings-guest-menu-image-mode-ui";
+import {
+  bindGuestMenuLineToggleUi,
+  ensureGuestMenuLineToggleLinesDefault,
+  ensureGuestMenuLineToggleMigrated,
+  isGuestMenuLineToggleSeq,
+  renderGuestMenuLineTogglePanelHtml,
+  setGuestMenuLineTogglePanelVisible,
+} from "./config/module-settings-guest-menu-line-toggle-ui";
+import {
+  bindGuestMenuDishNameFontUi,
+  ensureGuestMenuDishNameFontLinesDefault,
+  ensureGuestMenuDishNameFontToggleMigrated,
+  isGuestMenuDishNameFontSeq,
+  renderGuestMenuDishNameFontPanelHtml,
+  setGuestMenuDishNameFontPanelVisible,
+} from "./config/module-settings-guest-menu-dish-name-font-ui";
+import {
+  bindOrderRemarkLinesUi,
+  ensureOrderRemarkToggleMigrated,
+  isOrderRemarkSeq,
+  renderOrderRemarkPanelHtml,
+  setOrderRemarkPanelVisible,
+} from "./config/module-settings-order-remark-lines-ui";
+import {
+  bindProductRemarkUi,
+  ensureProductRemarkDishesMigrated,
+  isProductRemarkSeq,
+  renderProductRemarkPanelHtml,
+  setProductRemarkPanelVisible,
+} from "./config/module-settings-product-remark-ui";
+import {
+  bindReceiptSignatureLineUi,
+  ensureReceiptSignatureLineToggleMigrated,
+  isReceiptSignatureLineSeq,
+  renderReceiptSignatureLinePanelHtml,
+  setReceiptSignatureLinePanelVisible,
+} from "./config/module-settings-receipt-signature-line-ui";
+import {
+  bindComboSubitemRemarkLinesUi,
+  ensureComboSubitemRemarkToggleMigrated,
+  isComboSubitemRemarkSeq,
+  renderComboSubitemRemarkPanelHtml,
+  setComboSubitemRemarkPanelVisible,
+} from "./config/module-settings-combo-subitem-remark-lines-ui";
+import {
+  bindPosKitchenSendTriggerUi,
+  ensurePosKitchenSendTriggerToggleMigrated,
+  isPosKitchenSendTriggerSeq,
+  renderPosKitchenSendTriggerPanelHtml,
+  setPosKitchenSendTriggerPanelVisible,
+} from "./config/module-settings-pos-kitchen-send-trigger-ui";
+import {
+  bindDelayedKitchenSendUi,
+  isDelayedKitchenSendSeq,
+  renderDelayedKitchenSendEditorHtml,
+} from "./config/module-settings-delayed-kitchen-send-ui";
+import {
+  bindPostOrderKitchenSendModeUi,
+  isPostOrderKitchenSendModeSeq,
+  renderPostOrderKitchenSendModeRowHtml,
+} from "./config/module-settings-post-order-kitchen-send-mode-ui";
+import {
+  bindKitchenSendPasswordAuthUi,
+  ensureKitchenSendPasswordAuthToggleMigrated,
+  isKitchenSendPasswordAuthSeq,
+  renderKitchenSendPasswordAuthPanelHtml,
+  setKitchenSendPasswordAuthPanelVisible,
+} from "./config/module-settings-kitchen-send-password-auth-ui";
+import {
+  bindOrderDisplaySeatUi,
+  ensureOrderDisplaySeatToggleMigrated,
+  isOrderDisplaySeatSeq,
+  renderOrderDisplaySeatPanelHtml,
+  setOrderDisplaySeatPanelVisible,
+} from "./config/module-settings-order-display-seat-ui";
+import {
+  bindPosButtonVisibilityUi,
+  ensurePosButtonVisibilityToggleMigrated,
+  isPosButtonVisibilitySeq,
+  renderPosButtonVisibilityPanelHtml,
+  setPosButtonVisibilityPanelVisible,
+} from "./config/module-settings-pos-button-visibility-ui";
+import {
+  bindClearTableClientNotificationUi,
+  ensureClearTableClientNotificationToggleMigrated,
+  isClearTableClientNotificationSeq,
+  renderClearTableClientNotificationPanelHtml,
+  setClearTableClientNotificationPanelVisible,
+} from "./config/module-settings-clear-table-client-notification-ui";
+import {
+  bindPartySizeSelectionPageUi,
+  ensurePartySizeSelectionPageToggleMigrated,
+  isPartySizeSelectionPageSeq,
+  renderPartySizeSelectionPagePanelHtml,
+  setPartySizeSelectionPagePanelVisible,
+  shouldSkipPartySizeSelectionPageMergedSeq,
+} from "./config/module-settings-party-size-selection-page-ui";
+import {
+  bindPreOrderTableChangeUi,
+  isPreOrderTableChangeSeq,
+  renderPreOrderTableChangePanelHtml,
+  setPreOrderTableChangePanelVisible,
+} from "./config/module-settings-pre-order-table-change-ui";
+import {
   isLineMergeMatrixHostSeq,
   renderLineMergeMatrixHtml,
   shouldSkipLineMergeMatrixMemberRow,
 } from "./config/module-settings-line-merge-matrix-ui";
 import {
+  bindCourseSequenceModeUi,
+  ensureCourseSequenceModeToggleMigrated,
+  isCourseSequenceModeSeq,
+  renderCourseSequenceModePanelHtml,
+  setCourseSequenceModePanelVisible,
+} from "./config/module-settings-course-sequence-mode-ui";
+import {
+  bindDishSequenceIdDisplayUi,
+  ensureDishSequenceIdDisplayToggleMigrated,
+  isDishSequenceIdDisplaySeq,
+  renderDishSequenceIdDisplayPanelHtml,
+  setDishSequenceIdDisplayPanelVisible,
+} from "./config/module-settings-dish-sequence-id-display-ui";
+import {
+  bindPosOrderCartPosLinesUi,
+  isPosOrderCartPosLinesSeq,
+  renderPosOrderCartPosLinesPanelHtml,
+  setPosOrderCartPosLinesPanelVisible,
+} from "./config/module-settings-pos-order-cart-pos-lines-ui";
+import {
+  bindPosFindOrderListUi,
+  ensurePosFindOrderListLinesDefault,
+  isPosFindOrderListSeq,
+  renderPosFindOrderListPanelHtml,
+  setPosFindOrderListPanelVisible,
+} from "./config/module-settings-pos-find-order-list-ui";
+import {
+  bindPosComboOrderingUi,
+  ensurePosComboOrderingLinesDefault,
+  isPosComboOrderingSeq,
+  renderPosComboOrderingPanelHtml,
+  setPosComboOrderingPanelVisible,
+} from "./config/module-settings-pos-combo-ordering-ui";
+import {
   bindOrderSameDishDisplayRadios,
   isOrderSameDishDisplayHostSeq,
-  renderOrderSameDishDisplayRowHtml,
+  renderOrderSameDishDisplayPanelHtml,
   shouldSkipOrderSameDishDisplayMemberRow,
 } from "./config/module-settings-order-same-dish-display-ui";
 import {
@@ -184,11 +622,13 @@ import {
 import {
   isPaymentBaseTaxRateSeq,
   isPaymentTaxDiscountBaseSeq,
+  isPaymentTaxPolicyToggleSeq,
   renderPaymentBaseTaxRateInputHtml,
   renderPaymentTaxDiscountBaseChoiceHtml,
 } from "./config/module-settings-payment-tax-rules-ui";
 import {
   bindCheckoutTipCollectionModeEditors,
+  bindReceiptTipSuggestionEditors,
   bindTipPercentPresetEditors,
   isCheckoutTipCollectionModeSeq,
   isKioskTipCollectionModeSeq,
@@ -196,12 +636,16 @@ import {
   isTipAlertRatioSeq,
   isTipCollectionModeSeq,
   isTipPercentPresetSeq,
+  isTipReceiptSuggestionSeq,
   renderCheckoutTipCollectionModePanelHtml,
+  renderReceiptTipSuggestionPanelHtml,
   renderTipAlertRatioPanelHtml,
   renderTipCollectionModeChoiceHtml,
   renderTipPercentPresetEditorHtml,
   renderTipPolicyGroupIntroHtml,
+  setReceiptTipSuggestionPanelVisible,
   setTipAlertRatioPanelVisible,
+  shouldSkipTipReceiptPresetMemberRow,
 } from "./config/module-settings-payment-tip-policy-ui";
 import {
   bindPromoLotteryCustomAnimUpload,
@@ -223,19 +667,40 @@ import {
   renderBatchUnbatchedLimitInputHtml,
 } from "./config/module-settings-payment-batch-settlement-ui";
 import {
+  isMenuSourceModeRadioSeq,
+  renderMenuSourceModeRadioHtml,
+} from "./config/module-settings-menu-mode-ui";
+import {
+  bindDefaultMainScreenEditor,
+  isDefaultMainScreenSeq,
+  renderDefaultMainScreenEditorHtml,
+  renderPosShellLandingGroupIntroHtml,
+} from "./config/module-settings-default-main-screen-ui";
+import {
   bindDeliveryRegionEditor,
   isDeliveryRegionSeq,
   renderDeliveryRegionEditorHtml,
 } from "./config/module-settings-delivery-regions-ui";
 import {
+  isDeliveryPlatformSlipsToggleSeq,
+  isDeliveryReceiptCopiesSeq,
+  renderDeliveryReceiptCopiesControl,
+} from "./config/module-settings-delivery-platform-slips-ui";
+import {
   bindCardFeesEditors,
   isCardMinSpendSeq,
   isCardPricingStrategySeq,
   isCardSignatureThresholdSeq,
+  isMemberCardMinSpendSeq,
+  isMerchantcopySignatureRetentionDaysSeq,
+  isReceiptUnpaidPriceDisplaySeq,
   renderCardFeesGroupIntroHtml,
   renderCardMinSpendByLineTableHtml,
   renderCardPricingStrategyHtml,
   renderCardSignatureThresholdInputHtml,
+  renderMemberCardMinSpendByLineTableHtml,
+  renderMerchantcopySignatureRetentionDaysInputHtml,
+  renderReceiptUnpaidPriceDisplayHtml,
 } from "./config/module-settings-payment-card-fees-ui";
 import {
   bindCdsCheckoutEditors,
@@ -259,6 +724,54 @@ import {
   renderCheckoutTipCardOrderGroupIntroHtml,
   renderTipCardOrderByLineTableHtml,
 } from "./config/module-settings-payment-tip-card-order-ui";
+import {
+  isFinanceCashPayDiscountSeq,
+  renderFinanceCashPayDiscountInputHtml,
+} from "./config/module-settings-finance-cash-pay-discount-ui";
+import {
+  isPaymentGatewayHostSeq,
+  renderPaymentGatewaySettingsFormHtml,
+} from "./config/module-settings-payment-gateway-ui";
+import {
+  isLevelUpIntegrationSeq,
+  renderLevelUpIntegrationPanelHtml,
+  setLevelUpIntegrationPanelVisible,
+} from "./config/module-settings-levelup-integration-ui";
+import {
+  isSevenShiftsIntegrationSeq,
+  renderSevenShiftsIntegrationPanelHtml,
+  setSevenShiftsIntegrationPanelVisible,
+} from "./config/module-settings-7shifts-integration-ui";
+import {
+  bindIngenicoBluIntegrationUi,
+  isIngenicoBluIntegrationSeq,
+  renderIngenicoBluIntegrationHtml,
+} from "./config/module-settings-ingenico-blu-integration-ui";
+import {
+  isWorldPayIntegrationSeq,
+} from "./config/module-settings-worldpay-integration-ui";
+import {
+  isDatahubOrderReportSeq,
+  renderDatahubOrderReportPanelHtml,
+} from "./config/module-settings-datahub-integration-ui";
+import {
+  isOnlineOrderServiceInputSeq,
+  renderOnlineOrderServiceInputHtml,
+} from "./config/module-settings-online-order-service-ui";
+import {
+  bindAdvancedServiceSwitchUi,
+  isAdvancedServiceSwitchSeq,
+  renderAdvancedServiceSwitchPanelHtml,
+  setAdvancedServiceSwitchPanelVisible,
+} from "./config/module-settings-advanced-service-switches-ui";
+import {
+  CLOUD_EMPLOYEE_SYNC_SEQ,
+  isCloudEmployeeSyncSeq,
+  isExternalIntegrationsInputSeq,
+  renderExternalIntegrationsGroupIntroHtml,
+  renderExternalIntegrationsInputHtml,
+  syncExternalIntegrationsUrlFields,
+} from "./config/module-settings-external-integrations-ui";
 import {
   isFinanceProcessorFeeRateSeq,
   renderFinanceProcessorFeeInputHtml,
@@ -436,9 +949,49 @@ import {
   renderNotificationVoiceAlertByLineHtml,
 } from "./config/module-settings-notification-voice-alert-ui";
 import {
+  bindWaitlistTicketPrintUi,
+  isWaitlistTicketPrintSeq,
+  renderWaitlistTicketPrintByLineHtml,
+} from "./config/module-settings-waitlist-ticket-print-ui";
+import {
+  bindTablesideServiceCallUi,
+  ensureTablesideServiceCallTogglesMigrated,
+  isTablesideServiceCallCooldownSeq,
+  isTablesideServiceCallToggleSeq,
+  isTablesideServiceRequestTypesSeq,
+  renderServiceCallCooldownControl,
+  renderServiceRequestTypesEditorHtml,
+  renderTablesideServiceCallPanelHtml,
+  setTablesideServiceCallPanelVisible,
+} from "./config/module-settings-tableside-service-call-ui";
+import {
   isNotificationCenterTopicsMultiselectSeq,
   renderNotificationCenterTopicsMultiselectHtml,
 } from "./config/module-settings-notification-topics-ui";
+import {
+  isDurationBillingScenesMultiselectSeq,
+  renderDurationBillingScenesMultiselectHtml,
+} from "./config/module-settings-duration-billing-scenes-ui";
+import {
+  isOrderPickupSmsChannelSeq,
+  isOrderPickupSmsContentSeq,
+  renderOrderPickupSmsChannelMultiselectHtml,
+  renderOrderPickupSmsContentInput,
+} from "./config/module-settings-order-pickup-messages-ui";
+import {
+  isNotificationBasicsGroupIntroSeq,
+  isNotificationCustomerSmsGroupIntroSeq,
+  isNotificationStaffOrderAlertsGroupIntroSeq,
+  renderNotificationBasicsGroupIntroHtml,
+  renderNotificationCustomerSmsGroupIntroHtml,
+  renderNotificationStaffOrderAlertsGroupIntroHtml,
+  wrapModuleSettingGroupIntro,
+} from "./config/module-settings-notification-groups-ui";
+import {
+  bindStaffOrderAlertUi,
+  isStaffOrderAlertSeq,
+  renderStaffOrderAlertByLineHtml,
+} from "./config/module-settings-staff-order-alerts-ui";
 import {
   isTicketNumberSlipCopiesSeq,
   isTicketNumberSlipTriggerMultiselectSeq,
@@ -465,6 +1018,58 @@ import {
   moduleSettingToggleStorageKey,
 } from "./config/module-settings-toggle-ui";
 import { bindFloorPlanEditor, isFloorPlanPath, renderFloorPlanPage } from "./config/floor-plan-ui";
+import {
+  bindFohCategorySettingsUi,
+  FOH_CATEGORY_SETTINGS_BASE,
+  getFohCategorySettingsTabPath,
+  isFohCategorySettingsPath,
+  renderFohCategorySettingsPage,
+} from "./config/foh-category-settings-ui";
+import {
+  bindDeviceManagementEmenuHardware,
+  isDeviceManagementEmenuHardwarePath,
+  renderDeviceManagementEmenuHardwarePage,
+} from "./config/device-management-emenu-hardware-ui";
+import {
+  bindDeviceManagementKioskHardware,
+  isDeviceManagementKioskHardwarePath,
+  renderDeviceManagementKioskHardwarePage,
+} from "./config/device-management-kiosk-hardware-ui";
+import {
+  bindDeviceManagementCdsHardware,
+  isDeviceManagementCdsHardwarePath,
+  renderDeviceManagementCdsHardwarePage,
+} from "./config/device-management-cds-hardware-ui";
+import {
+  bindDeviceManagementPaymentHardware,
+  isDeviceManagementPaymentHardwarePath,
+  renderDeviceManagementPaymentHardwarePage,
+} from "./config/device-management-payment-hardware-ui";
+import {
+  bindDeviceManagementFiscalHardware,
+  isDeviceManagementFiscalHardwarePath,
+  renderDeviceManagementFiscalHardwarePage,
+} from "./config/device-management-fiscal-hardware-ui";
+import {
+  bindDeviceManagementCallerIdHardware,
+  isDeviceManagementCallerIdHardwarePath,
+  renderDeviceManagementCallerIdHardwarePage,
+} from "./config/device-management-caller-id-hardware-ui";
+import {
+  bindDeviceManagementCashDrawerHardware,
+  isDeviceManagementCashDrawerHardwarePath,
+  renderDeviceManagementCashDrawerHardwarePage,
+} from "./config/device-management-cash-drawer-hardware-ui";
+import {
+  bindDeviceManagementPrinterHardware,
+  isDeviceManagementPrinterHardwarePath,
+  renderDeviceManagementPrinterHardwarePage,
+} from "./config/device-management-printer-hardware-ui";
+import {
+  bindHardwareGlobalDefaultDevicePickers,
+  isHardwareGlobalDefaultDeviceSeq,
+  renderHardwareGlobalDefaultDeviceSelect,
+} from "./config/module-settings-hardware-global-defaults-ui";
 import {
   applyUiLocaleToDocument,
   formatNavModuleKicker,
@@ -593,8 +1198,8 @@ const MARKETING_ADS_IFRAME_SRC = "./Configuration%20center/marketing-ads.html?em
 const MARKETING_POSTER_PRO_IFRAME_SRC = "./Configuration%20center/marketing-poster-pro.html?embedded=1";
 /** 素材中心 → 图片素材：复用 Configuration center 图片素材页（主内容区 iframe） */
 const ASSET_CENTER_MATERIALS_IFRAME_SRC = "./Configuration%20center/material.html?embedded=1";
-/** 权限管理 → 下单限制：复用 Configuration center 下单限制配置页（主内容区 iframe） */
-const PERMISSIONS_ORDER_LIMIT_IFRAME_SRC = "./Configuration%20center/order-limit.html?embedded=1";
+/** 前厅管理中心 → 菜单下单限制：复用 Configuration center 下单限制配置页（主内容区 iframe） */
+const FOH_MENU_ORDER_LIMIT_IFRAME_SRC = "./Configuration%20center/order-limit.html?embedded=1";
 /** 报表中心 → 员工报表 → 小费分配：嵌入 TipOut 项目 */
 const REPORTS_TIPS_ALLOCATION_IFRAME_SRC = "./TipOut/index.html?embedded=1";
 /** 团队管理 → 角色与员工：嵌入 TipOut 员工列表 */
@@ -626,8 +1231,11 @@ function isAssetCenterMaterialsIframePath(path: string): boolean {
   return path === "/asset-center/materials" || path.startsWith("/asset-center/materials/");
 }
 
-function isPermissionsOrderLimitIframePath(path: string): boolean {
-  return path === "/permissions/order-limit" || path.startsWith("/permissions/order-limit/");
+function isFohMenuOrderLimitsIframePath(path: string): boolean {
+  return (
+    path === "/operations/queue-call/menu-order-limits" ||
+    path.startsWith("/operations/queue-call/menu-order-limits/")
+  );
 }
 
 function isReportsTipsAllocationIframePath(path: string): boolean {
@@ -727,14 +1335,14 @@ function renderAssetCenterMaterialsIframePanel(): string {
     </div>`;
 }
 
-/** 主区全宽嵌入权限管理下单限制配置页 */
-function renderPermissionsOrderLimitIframePanel(): string {
+/** 主区全宽嵌入前厅管理中心菜单下单限制配置页 */
+function renderFohMenuOrderLimitsIframePanel(): string {
   return `
     <div class="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
       <iframe
-        title="权限管理下单限制配置"
+        title="前厅管理中心菜单下单限制"
         class="block h-full w-full flex-1 border-0"
-        src="${PERMISSIONS_ORDER_LIMIT_IFRAME_SRC}"
+        src="${FOH_MENU_ORDER_LIMIT_IFRAME_SRC}"
         referrerpolicy="no-referrer-when-downgrade"
         allow="clipboard-read; clipboard-write; fullscreen"
       ></iframe>
@@ -856,8 +1464,10 @@ let lastSidebarMountPathForReservationsSheet = "";
 
 /** `subNavPlacement: "sheet"` 的模块：二级滑层打开状态（sessionStorage JSON） */
 const NAV_MODULE_SHEETS_OPEN_KEY = "sidebar-nav-module-sheets-open-json-v1";
-/** 与 `mountPath` 同步：用于在离开各模块站内域时关闭对应滑层 */
+/** 与 `mountPath` 同步：用于在离开各模块站内域时关闭对应滑层（按模块记录上次站内路径） */
 let lastNavHubMountPathByModuleId: Record<string, string> = {};
+/** 本次 mount 前滑层是否已打开，用于避免站内切换子路由时重复播放滑入动画 */
+let navModuleSheetOpenBeforeMount: Record<string, boolean> = {};
 
 /** 侧栏二级滑层：`translate-x-full`→`translate-x-0`（自右向左覆盖一级），缓进缓出 */
 const SIDEBAR_SECONDARY_SHEET_TRANSITION =
@@ -1329,12 +1939,16 @@ function renderProductCenterMainSecondarySheet(hash: string, open: boolean): str
               })}
             </div>
           </section>
-          <section class="${pcmHubSectionRest}">
+          ${
+            PRODUCT_CENTER_MAIN_SHEET_SETTINGS_SUBNAV.length > 0
+              ? `<section class="${pcmHubSectionRest}">
             ${renderPcSheetDarkSubnav(hash, PRODUCT_CENTER_MAIN_SHEET_SETTINGS_SUBNAV, getActiveProductCenterMainSettingsSubPath, pcmSheetNavNoChildPath, {
               brandProductSecondLevel: true,
               sheetGroupedSubnavAriaLabel: `${pick(pcmHubMod.title, pcmHubMod.titleEn)} · ${t("nav.subNavQualifier")}`,
             })}
-          </section>
+          </section>`
+              : ""
+          }
         </div>`;
   return `
     <div
@@ -1363,7 +1977,7 @@ function renderProductCenterMainSecondarySheet(hash: string, open: boolean): str
     </div>`;
 }
 
-/** 与商品中心同交互：侧栏内自右滑入；「营销管理」下为营销活动 / 手动营销 */
+/** 与商品中心同交互：侧栏内自右滑入；「营销管理」下为屏保 / 广告 / 海报 Pro */
 function renderMarketingSecondarySheet(hash: string, open: boolean): string {
   const mktMod = NAV_MODULES.find((x) => x.id === "marketing")!;
   const { dialog: mktDlg, navFunc: mktNavFunc } = sheetModuleAriaFromNav(mktMod);
@@ -1778,12 +2392,19 @@ function renderFinanceSecondarySheet(hash: string, open: boolean): string {
 }
 
 /** 品牌 / 门店 / 团队 / 订单 / 支付 / 评价 / 财务 / 硬件 / 权限 / 素材：与营销中心同交互的二级滑层 */
-function renderNavModuleSecondarySheet(m: NavModule, hash: string, open: boolean): string {
+function renderNavModuleSecondarySheet(
+  m: NavModule,
+  hash: string,
+  open: boolean,
+  skipEnterAnimation = false,
+): string {
   const { dialog: nmDlg, navFunc: nmNavFunc } = sheetModuleAriaFromNav(m);
   const nmGroupedAria = `${pick(m.title, m.titleEn)} · ${t("nav.subNavQualifier")}`;
   const sheetClass = open
     ? "translate-x-0 pointer-events-auto opacity-100"
     : "translate-x-full pointer-events-none opacity-0";
+  const sheetTransition =
+    open && skipEnterAnimation ? "" : SIDEBAR_SECONDARY_SHEET_TRANSITION;
   const chevronBack = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>`;
   const subnav = navModuleChildrenAsSheetSubnav(m);
   const hubBody = `
@@ -1799,7 +2420,7 @@ function renderNavModuleSecondarySheet(m: NavModule, hash: string, open: boolean
   return `
     <div
       id="${sheetId}"
-      class="absolute inset-0 z-[31] flex flex-col ${SBR_DIVIDER_L} bg-sidebar ${SBR_SHEET_SHADOW} ${SIDEBAR_SECONDARY_SHEET_TRANSITION} ${sheetClass}"
+      class="absolute inset-0 z-[31] flex flex-col ${SBR_DIVIDER_L} bg-sidebar ${SBR_SHEET_SHADOW} ${sheetTransition} ${sheetClass}"
       ${open ? "" : "inert"}
       aria-hidden="${open ? "false" : "true"}"
       role="dialog"
@@ -1880,6 +2501,29 @@ function renderInventorySecondarySheet(hash: string, open: boolean): string {
 function findTitle(path: string): { title: string; module?: string } {
   if (path === "/ai-assistant/chat" || path.startsWith("/ai-assistant/")) {
     return { title: t("findTitle.aiChat"), module: t("findTitle.aiModule") };
+  }
+  if (path === "/permissions/overview") {
+    return { title: "权限总览", module: "权限管理中心" };
+  }
+  if (path === "/permissions/roles") {
+    return { title: "角色与权限", module: "权限管理中心" };
+  }
+  if (path === "/permissions/staff") {
+    return { title: "员工授权", module: "权限管理中心" };
+  }
+  if (path === "/permissions/change-log") {
+    return { title: "变更记录", module: "权限管理中心" };
+  }
+  if (path === "/permissions/account-session" || path.startsWith("/permissions/account-session/")) {
+    return { title: "账户与会话安全", module: "权限管理中心" };
+  }
+  if (path === "/permissions/roles/new") {
+    return { title: "新建角色", module: "权限管理中心" };
+  }
+  if (path.startsWith("/permissions/roles/edit/")) {
+    const id = decodeURIComponent(path.replace("/permissions/roles/edit/", ""));
+    const name = id ? `编辑角色 · ${id}` : "编辑角色";
+    return { title: name, module: "权限管理中心" };
   }
   if (path.startsWith("/gift-cards")) {
     const giftMod = NAV_MODULES.find((x) => x.id === "gift-cards")!;
@@ -2053,10 +2697,35 @@ function syncNavModuleSheetsOnRouteChange(mountPath: string): void {
   for (const m of NAV_MODULES) {
     if (m.subNavPlacement !== "sheet") continue;
     const prev = lastNavHubMountPathByModuleId[m.id];
-    if (prev !== undefined && prev !== mountPath && !pathBelongsToModule(mountPath, m)) {
+    if (
+      prev !== undefined &&
+      pathBelongsToModule(prev, m) &&
+      !pathBelongsToModule(mountPath, m)
+    ) {
       setNavModuleSheetOpen(m.id, false);
+      delete lastNavHubMountPathByModuleId[m.id];
     }
-    lastNavHubMountPathByModuleId[m.id] = mountPath;
+    if (pathBelongsToModule(mountPath, m)) {
+      lastNavHubMountPathByModuleId[m.id] = mountPath;
+    }
+  }
+}
+
+/**
+ * 仅当从模块外进入站内域时自动打开滑层；站内切换子路由或用户点返回关闭后不再强制重开。
+ */
+function ensureNavModuleSheetsOpenForPath(
+  mountPath: string,
+  prevHubPaths: Record<string, string> = lastNavHubMountPathByModuleId,
+): void {
+  for (const m of NAV_MODULES) {
+    if (m.subNavPlacement !== "sheet") continue;
+    if (!pathBelongsToModule(mountPath, m)) continue;
+    const prev = prevHubPaths[m.id];
+    const wasInModule = prev !== undefined && pathBelongsToModule(prev, m);
+    if (!wasInModule) {
+      setNavModuleSheetOpen(m.id, true);
+    }
   }
 }
 
@@ -2156,9 +2825,9 @@ function rememberSidebarNavScroll(scrollTop: number): void {
 /** 将 `#/menu`、`#/reports` 等仅一级路径规范为各自 defaultChildPath（单页模块 path===default 时不跳转） */
 function normalizeTabModuleHashes(): void {
   const raw = location.hash.slice(1);
-  /* 侧栏已移除一级「配置中心」，旧书签统一到系统设置 */
+  /* 侧栏已移除一级「配置中心」，旧书签统一到系统设置 · 基础设置 */
   if (raw === "/config-center" || raw.startsWith("/config-center/")) {
-    replaceHashPath("/settings/overview");
+    replaceHashPath("/settings/basic");
     return;
   }
   /* 侧栏已移除一级「商品中心B」，旧书签回到工作台 */
@@ -2193,12 +2862,19 @@ function normalizeTabModuleHashes(): void {
     return;
   }
   if (raw === "/marketing/ai/ads" || raw.startsWith("/marketing/ai/ads/")) {
-    replaceHashPath("/marketing/campaigns");
+    replaceHashPath("/marketing/ads");
     return;
   }
   if (raw === "/marketing" || raw === "/marketing/") {
-    replaceHashPath("/marketing/campaigns");
+    replaceHashPath("/marketing/screensaver");
     return;
+  }
+  const legacyMarketingPaths = ["/marketing/campaigns", "/marketing/manual"];
+  for (const legacy of legacyMarketingPaths) {
+    if (raw === legacy || raw === `${legacy}/` || raw.startsWith(`${legacy}/`)) {
+      replaceHashPath("/marketing/screensaver");
+      return;
+    }
   }
   if (raw === "/marketing/settings" || raw.startsWith("/marketing/settings/")) {
     replaceHashPath("/marketing/ads");
@@ -2232,7 +2908,10 @@ function normalizeTabModuleHashes(): void {
     raw.startsWith("/asset-center/images/") ||
     raw === "/asset-center/templates" ||
     raw === "/asset-center/templates/" ||
-    raw.startsWith("/asset-center/templates/")
+    raw.startsWith("/asset-center/templates/") ||
+    raw === "/asset-center/settings" ||
+    raw === "/asset-center/settings/" ||
+    raw.startsWith("/asset-center/settings/")
   ) {
     replaceHashPath("/asset-center/materials");
     return;
@@ -2281,16 +2960,75 @@ function normalizeTabModuleHashes(): void {
     return;
   }
   if (raw === "/finance" || raw === "/finance/") {
-    replaceHashPath("/finance/overview");
+    replaceHashPath("/finance/register-audit/payments");
+    return;
+  }
+  const legacyFinancePaths = [
+    "/finance/overview",
+    "/finance/cash-flow",
+    "/finance/reconciliation",
+    "/finance/invoices",
+  ];
+  for (const legacy of legacyFinancePaths) {
+    if (raw === legacy || raw === `${legacy}/` || raw.startsWith(`${legacy}/`)) {
+      replaceHashPath("/finance/register-audit/payments");
+      return;
+    }
+  }
+  /* 权限管理 · 旧食客限流入口 → 前厅设置 · 食客下单限流（方案 B） */
+  if (
+    raw === "/permissions/order-limit" ||
+    raw.startsWith("/permissions/order-limit/") ||
+    raw === "/permissions/settings/guest-order-limits" ||
+    raw.startsWith("/permissions/settings/guest-order-limits/")
+  ) {
+    replaceHashPath("/operations/queue-call/settings/guest-order-throttle");
+    return;
+  }
+  /* 权限管理 · 旧门店安全策略路径 → 账户与会话安全 */
+  if (raw === "/permissions/store-security" || raw.startsWith("/permissions/store-security/")) {
+    replaceHashPath("/permissions/account-session");
+    return;
+  }
+  /* 权限管理 · 旧下单操作限制分组 → 账户与会话安全（方案 B2）；流程项已迁前厅 */
+  if (
+    raw === "/permissions/settings/order-operation-guardrails" ||
+    raw.startsWith("/permissions/settings/order-operation-guardrails/")
+  ) {
+    replaceHashPath("/permissions/account-session");
+    return;
+  }
+  if (
+    raw === "/permissions/settings" ||
+    raw === "/permissions/settings/" ||
+    raw.startsWith("/permissions/settings/")
+  ) {
+    replaceHashPath("/permissions/account-session");
     return;
   }
   if (raw === "/product-center-main" || raw === "/product-center-main/") {
     replaceHashPath("/brand-products/products");
     return;
   }
+  if (
+    raw === "/product-center-main/settings" ||
+    raw === "/product-center-main/settings/" ||
+    raw.startsWith("/product-center-main/settings/")
+  ) {
+    replaceHashPath("/brand-products/products");
+    return;
+  }
   /* 信贷中心改为外链新窗口打开，旧 #/reports/capital 书签回到工作台 */
   if (raw === "/reports/capital" || raw === "/reports/capital/" || raw.startsWith("/reports/capital/")) {
     replaceHashPath("/dashboard/overview");
+    return;
+  }
+  /* 门店设置 · 品牌与菜单展示已抽离为与门店状态同级入口 */
+  if (
+    raw === "/stores/settings/brand-menu-presentation" ||
+    raw.startsWith("/stores/settings/brand-menu-presentation/")
+  ) {
+    replaceHashPath("/stores/brand-menu");
     return;
   }
   /* 侧栏已移除：门店信息、智能点餐、支付服务、费用加收 — 旧书签重定向 */
@@ -2317,7 +3055,7 @@ function normalizeTabModuleHashes(): void {
   }
   /* 已移除一级「设备」`/operations/devices`，旧书签重定向到「硬件管理中心」 */
   if (raw === "/operations/devices" || raw === "/operations/devices/") {
-    location.replace("#/device-management/overview");
+    location.replace(`#${getDeviceManagementHardwareDefaultPath()}`);
     return;
   }
   const legacyDev = raw.match(/^\/operations\/devices\/([^/]+)(.*)$/);
@@ -2327,6 +3065,8 @@ function normalizeTabModuleHashes(): void {
     const hw: Record<string, string> = {
       payments: "payments",
       "cash-drawer": "cash-drawer",
+      "caller-id": "caller-id",
+      fiscal: "fiscal",
       router: "router",
       pos: "pos",
       "pos-go": "pos-go",
@@ -2334,6 +3074,7 @@ function normalizeTabModuleHashes(): void {
       "queue-display": "queue-display",
       printers: "printers",
       kiosk: "kiosk",
+      cds: "cds",
       emenu: "emenu",
     };
     const key = hw[seg];
@@ -2341,7 +3082,7 @@ function normalizeTabModuleHashes(): void {
       location.replace(`#/device-management/hardware/${key}${rest}`);
       return;
     }
-    location.replace("#/device-management/overview");
+    location.replace(`#${getDeviceManagementHardwareDefaultPath()}`);
     return;
   }
   /* 主页侧栏已移除快捷入口与多门店切换，旧链接统一到今日概览 */
@@ -2352,7 +3093,7 @@ function normalizeTabModuleHashes(): void {
   }
   /* 侧栏已移除：客显系统管理、巡店与巡检 — 旧书签重定向（`/ordering/*` 已在上方统一处理） */
   if (raw === "/operations/customer-display" || raw.startsWith("/operations/customer-display/")) {
-    location.replace("#/dashboard/overview");
+    location.replace("#/device-management/hardware/cds");
     return;
   }
   if (raw === "/operations/store-patrol" || raw.startsWith("/operations/store-patrol/")) {
@@ -2364,15 +3105,57 @@ function normalizeTabModuleHashes(): void {
     location.replace("#/operations/queue-call/floor-plan");
     return;
   }
+  if (raw === FOH_CATEGORY_SETTINGS_BASE || raw === `${FOH_CATEGORY_SETTINGS_BASE}/`) {
+    replaceHashPath(getFohCategorySettingsTabPath("age-category"));
+    return;
+  }
+  /* 品类与场景菜单已迁至「品类设置」功能页，旧设置分组书签重定向 */
+  if (
+    raw === "/operations/queue-call/settings/guest-menu-scenarios" ||
+    raw.startsWith("/operations/queue-call/settings/guest-menu-scenarios/")
+  ) {
+    replaceHashPath(`${FOH_CATEGORY_SETTINGS_BASE}/age-category`);
+    return;
+  }
   /* AI 助手非侧栏一级，仅顶栏入口；#/ai-assistant 规范到对话页 */
   if (raw === "/ai-assistant" || raw === "/ai-assistant/") {
     location.replace("#/ai-assistant/chat");
     return;
   }
-  /* 订单侧栏仅保留全部/退单/历史，原堂食·在线等 Tab 路径统一到全部订单 */
-  const legacyOrderChannelPaths = ["/orders/dine-in", "/orders/online", "/orders/delivery", "/orders/pickup"];
-  if (legacyOrderChannelPaths.some((p) => raw === p || raw.startsWith(`${p}/`))) {
-    location.replace("#/orders/all");
+  /* 订单中心滑层已移除全部订单/退单/订单历史，旧链接统一到设置 */
+  const legacyOrderPaths = [
+    "/orders/all",
+    "/orders/refunds",
+    "/orders/history",
+    "/orders/dine-in",
+    "/orders/online",
+    "/orders/delivery",
+    "/orders/pickup",
+  ];
+  if (legacyOrderPaths.some((p) => raw === p || raw.startsWith(`${p}/`))) {
+    location.replace("#/orders/settings");
+    return;
+  }
+  /* 支付中心滑层已移除交易流水/支付方式/对账，旧链接统一到设置 */
+  const legacyTransactionPaths = ["/transactions/ledger", "/transactions/payments", "/transactions/reconcile"];
+  if (legacyTransactionPaths.some((p) => raw === p || raw.startsWith(`${p}/`))) {
+    location.replace("#/transactions/settings");
+    return;
+  }
+  /* 系统设置滑层已移除总揽/报表/打印等，旧链接统一到基础设置 */
+  const legacySettingsPaths = [
+    "/settings/overview",
+    "/settings/reports",
+    "/settings/printing",
+    "/settings/tips",
+    "/settings/service-flow",
+    "/settings/security",
+    "/settings/accounts",
+    "/settings/audit-log",
+    "/settings/data-scope",
+  ];
+  if (legacySettingsPaths.some((p) => raw === p || raw.startsWith(`${p}/`))) {
+    location.replace("#/settings/basic");
     return;
   }
   /* 菜单侧栏已移除「菜单与分组」等三项，旧链接统一到默认子路由「门店菜单」 */
@@ -2410,6 +3193,50 @@ function normalizeTabModuleHashes(): void {
   if (raw === "/device-management/hardware" || raw === "/device-management/hardware/") {
     location.replace(`#${getDeviceManagementHardwareDefaultPath()}`);
     return;
+  }
+  if (
+    raw === "/device-management/settings" ||
+    raw === "/device-management/settings/" ||
+    raw.startsWith("/device-management/settings/")
+  ) {
+    const dmSettingsGroupRedirect: Record<string, string> = {
+      "device-integration-basics": "/device-management/hardware/caller-id",
+      "printer-output-devices": "/device-management/hardware/printers",
+      "cash-payment-terminals": "/device-management/hardware/cash-drawer",
+      "client-device-binding": "/device-management/hardware/pos",
+      "fiscal-bluetooth": "/device-management/hardware/fiscal",
+      "emenu-device-display": "/device-management/hardware/emenu",
+    };
+    if (raw === "/device-management/settings" || raw === "/device-management/settings/") {
+      replaceHashPath("/device-management/settings/global-default-devices");
+      return;
+    }
+    const slug = raw.slice("/device-management/settings/".length).split("/")[0] ?? "";
+    let decoded = slug;
+    try {
+      decoded = decodeURIComponent(slug);
+    } catch {
+      /* keep slug */
+    }
+    const key = slugifyModuleSettingsCategory(decoded);
+    const legacyTarget = dmSettingsGroupRedirect[key];
+    if (legacyTarget) {
+      location.replace(`#${legacyTarget}`);
+      return;
+    }
+    return;
+  }
+  const legacyDeviceManagementPaths = [
+    "/device-management/overview",
+    "/device-management/terminals",
+    "/device-management/binding",
+    "/device-management/alerts",
+  ];
+  for (const legacy of legacyDeviceManagementPaths) {
+    if (raw === legacy || raw === `${legacy}/` || raw.startsWith(`${legacy}/`)) {
+      location.replace(`#${getDeviceManagementHardwareDefaultPath()}`);
+      return;
+    }
   }
   if (raw === "/brand-products/seasoning-mgmt" || raw === "/brand-products/seasoning-mgmt/") {
     replaceHashPath(getBrandSeasoningMgmtDefaultPath());
@@ -2806,7 +3633,14 @@ function renderSidebar(): string {
         ${renderReservationsSecondarySheet(hash, reservationsSheetOpen)}
         ${renderFinanceSecondarySheet(hash, readNavModuleSheetOpen("finance-center"))}
         ${NAV_MODULES.filter((m) => m.subNavPlacement === "sheet" && m.id !== "finance-center")
-          .map((m) => renderNavModuleSecondarySheet(m, hash, readNavModuleSheetOpen(m.id)))
+          .map((m) =>
+            renderNavModuleSecondarySheet(
+              m,
+              hash,
+              readNavModuleSheetOpen(m.id),
+              navModuleSheetOpenBeforeMount[m.id] === true,
+            ),
+          )
           .join("")}
       </div>
     </aside>
@@ -3792,6 +4626,39 @@ function renderModuleSettingLocaleDefaultRow(item: ModuleSettingCatalogItem): st
         </li>`;
 }
 
+function renderModuleSettingSystemDefaultLocaleRow(item: ModuleSettingCatalogItem): string {
+  const radios = renderSystemDefaultLocaleRadiosHtml();
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            ${renderLanguageLocalizationGroupIntroHtml()}
+            ${renderModuleSettingTitleBlock(item)}
+            <div class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2" data-system-default-locale-radios role="radiogroup" aria-label="系统默认语言">${radios}</div>
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingDefaultMainScreenRow(item: ModuleSettingCatalogItem): string {
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            ${renderPosShellLandingGroupIntroHtml()}
+            ${renderModuleSettingTitleBlock(item)}
+            <div class="mt-3">${renderDefaultMainScreenEditorHtml()}</div>
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingGuestMenuGroupByLineRow(item: ModuleSettingCatalogItem): string {
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            ${renderModuleSettingTitleBlock(item)}
+            ${renderGuestMenuGroupByLinePanelHtml()}
+          </div>
+        </li>`;
+}
+
 function renderModuleSettingMenuGroupSelectRow(item: ModuleSettingCatalogItem): string {
   const storageId = menuGroupStorageFieldId(item.seq);
   return `
@@ -3930,6 +4797,20 @@ function renderModuleSettingTipAlertRatioRow(item: ModuleSettingCatalogItem): st
         </li>`;
 }
 
+function renderModuleSettingReceiptTipSuggestionRow(item: ModuleSettingCatalogItem): string {
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              ${renderTipPolicyTitleBlock(item)}
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderReceiptTipSuggestionPanelHtml(item.seq, on)}
+          </div>
+        </li>`;
+}
+
 function renderModuleSettingBatchAutoCloseTimeRow(item: ModuleSettingCatalogItem): string {
   return `
         <li class="list-none" data-module-setting-row-seq="${item.seq}">
@@ -3991,11 +4872,23 @@ function renderModuleSettingPaymentBatchToggleRow(item: ModuleSettingCatalogItem
         </li>`;
 }
 
-function renderModuleSettingCardMinSpendRow(item: ModuleSettingCatalogItem): string {
+function renderModuleSettingMemberCardMinSpendRow(item: ModuleSettingCatalogItem): string {
   return `
         <li class="list-none" data-module-setting-row-seq="${item.seq}">
           <div class="border-b border-border px-4 py-3">
             ${renderCardFeesGroupIntroHtml()}
+            ${renderModuleSettingTitleBlock(item)}
+            <div class="mt-3 max-w-lg">
+              ${renderMemberCardMinSpendByLineTableHtml()}
+            </div>
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingCardMinSpendRow(item: ModuleSettingCatalogItem): string {
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
             ${renderModuleSettingTitleBlock(item)}
             <div class="mt-3 max-w-lg">
               ${renderCardMinSpendByLineTableHtml()}
@@ -4023,6 +4916,32 @@ function renderModuleSettingCardSignatureThresholdRow(item: ModuleSettingCatalog
             ${renderModuleSettingTitleBlock(item)}
             <div class="mt-3 max-w-lg">
               ${renderCardSignatureThresholdInputHtml()}
+            </div>
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingMerchantcopySignatureRetentionDaysRow(
+  item: ModuleSettingCatalogItem,
+): string {
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            ${renderModuleSettingTitleBlock(item)}
+            <div class="mt-3 max-w-xl">
+              ${renderMerchantcopySignatureRetentionDaysInputHtml()}
+            </div>
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingReceiptUnpaidPriceDisplayRow(item: ModuleSettingCatalogItem): string {
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            ${renderModuleSettingTitleBlock(item)}
+            <div class="mt-3 max-w-md">
+              ${renderReceiptUnpaidPriceDisplayHtml()}
             </div>
           </div>
         </li>`;
@@ -4078,6 +4997,18 @@ function renderModuleSettingCdsCheckoutCardSlipRow(item: ModuleSettingCatalogIte
   );
 }
 
+function renderModuleSettingFinanceCashPayDiscountRow(item: ModuleSettingCatalogItem): string {
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            ${renderModuleSettingTitleBlock(item)}
+            <div class="mt-3 max-w-xl">
+              ${renderFinanceCashPayDiscountInputHtml()}
+            </div>
+          </div>
+        </li>`;
+}
+
 function renderModuleSettingFinanceProcessorFeeRow(item: ModuleSettingCatalogItem): string {
   return `
         <li class="list-none" data-module-setting-row-seq="${item.seq}">
@@ -4097,6 +5028,18 @@ function renderModuleSettingPaymentTaxDiscountBaseRow(item: ModuleSettingCatalog
             ${renderModuleSettingTitleBlock(item)}
             <div class="mt-3 max-w-xl">
               ${renderPaymentTaxDiscountBaseChoiceHtml()}
+            </div>
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingPaymentTaxPolicyToggleRow(item: ModuleSettingCatalogItem): string {
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
             </div>
           </div>
         </li>`;
@@ -4136,6 +5079,93 @@ function renderModuleSettingMemberSmsVerificationRow(item: ModuleSettingCatalogI
               <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
             </div>
             ${renderMemberSmsVerificationLinesPanelHtml(item.seq, on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingGuestNamePageRow(item: ModuleSettingCatalogItem): string {
+  ensureGuestNamePageToggleMigrated(item.seq);
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderGuestNamePagePanelHtml(item.seq, on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingGuestPhoneDisplayPageRow(item: ModuleSettingCatalogItem): string {
+  ensureGuestPhoneDisplayPageToggleMigrated();
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderGuestPhoneDisplayPagePanelHtml(item.seq, on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingGuestPhoneRequiredRow(item: ModuleSettingCatalogItem): string {
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderGuestPhoneRequiredPanelHtml(item.seq, on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingTableDeliveryMealCardRow(item: ModuleSettingCatalogItem): string {
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderTableDeliveryMealCardPanelHtml(item.seq, on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingPointsDishAuthOrderRow(item: ModuleSettingCatalogItem): string {
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderPointsDishAuthOrderPanelHtml(item.seq, on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingRuleHitPasswordAuthRow(item: ModuleSettingCatalogItem): string {
+  ensureRuleHitPasswordAuthToggleMigrated();
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderRuleHitPasswordAuthPanelHtml(on)}
           </div>
         </li>`;
 }
@@ -4511,6 +5541,142 @@ function renderModuleSettingPackingSlipCopiesRow(item: ModuleSettingCatalogItem)
         </li>`;
 }
 
+function renderModuleSettingDeliveryPlatformSlipsToggleRow(item: ModuleSettingCatalogItem): string {
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingDeliveryReceiptCopiesRow(item: ModuleSettingCatalogItem): string {
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="flex flex-col gap-3 border-b border-border px-4 py-3 sm:flex-row sm:items-start sm:justify-between">
+            <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+            <div class="shrink-0 sm:pt-0.5">${renderDeliveryReceiptCopiesControl()}</div>
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingMaxGuestsPerOrderRow(item: ModuleSettingCatalogItem): string {
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="flex flex-col gap-3 border-b border-border px-4 py-3 sm:flex-row sm:items-start sm:justify-between">
+            <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+            <div class="shrink-0 sm:pt-0.5">${renderMaxGuestsPerOrderControl()}</div>
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingOrderTimeoutReminderRow(item: ModuleSettingCatalogItem): string {
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="flex flex-col gap-3 border-b border-border px-4 py-3 sm:flex-row sm:items-start sm:justify-between">
+            <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+            <div class="shrink-0 sm:pt-0.5">${renderOrderTimeoutReminderControl()}</div>
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingOrderSameDishDisplayRow(item: ModuleSettingCatalogItem): string {
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            ${renderModuleSettingTitleBlock(item)}
+            ${renderOrderSameDishDisplayPanelHtml()}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingCourseSequenceModeRow(item: ModuleSettingCatalogItem): string {
+  ensureCourseSequenceModeToggleMigrated();
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderCourseSequenceModePanelHtml(item.seq, on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingDishSequenceIdDisplayRow(item: ModuleSettingCatalogItem): string {
+  ensureDishSequenceIdDisplayToggleMigrated();
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderDishSequenceIdDisplayPanelHtml(item.seq, on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingPosOrderCartPosLinesRow(item: ModuleSettingCatalogItem): string {
+  if (!isPosOrderCartPosLinesSeq(item.seq)) {
+    return renderModuleSettingRow(item);
+  }
+  const seq = item.seq;
+  const on = readModuleSettingToggleOn(seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderPosOrderCartPosLinesPanelHtml(seq, on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingPosFindOrderListRow(item: ModuleSettingCatalogItem): string {
+  if (!isPosFindOrderListSeq(item.seq)) {
+    return renderModuleSettingRow(item);
+  }
+  const seq = item.seq;
+  const on = readModuleSettingToggleOn(seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderPosFindOrderListPanelHtml(seq, on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingPosComboOrderingRow(item: ModuleSettingCatalogItem): string {
+  if (!isPosComboOrderingSeq(item.seq)) {
+    return renderModuleSettingRow(item);
+  }
+  const seq = item.seq;
+  const on = readModuleSettingToggleOn(seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderPosComboOrderingPanelHtml(seq, on)}
+          </div>
+        </li>`;
+}
+
 function renderModuleSettingPackingSlipPrintToggleRow(item: ModuleSettingCatalogItem): string {
   return `
         <li class="list-none" data-module-setting-row-seq="${item.seq}">
@@ -4537,6 +5703,740 @@ function renderModuleSettingPackingSlipVoidItemStyleRow(item: ModuleSettingCatal
         </li>`;
 }
 
+function renderModuleSettingPrintDishCodeByTicketRow(item: ModuleSettingCatalogItem): string {
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderPrintDishCodeTicketsPanelHtml(item.seq, on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingTakeoutEnhancedDisplayRow(item: ModuleSettingCatalogItem): string {
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderTakeoutEnhancedDisplayPanelHtml(item.seq, on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingTableSelectionPageRow(item: ModuleSettingCatalogItem): string {
+  ensureTableSelectionPageToggleMigrated();
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderTableSelectionPagePanelHtml(item.seq, on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingPartySizeSelectionPageRow(item: ModuleSettingCatalogItem): string {
+  ensurePartySizeSelectionPageToggleMigrated();
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderPartySizeSelectionPagePanelHtml(item.seq, on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingSingleTableNoMultiOrderRow(item: ModuleSettingCatalogItem): string {
+  ensureSingleTableNoMultiOrderToggleMigrated();
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderSingleTableNoMultiOrderPanelHtml(item.seq, on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingPostPaymentClearTableRow(item: ModuleSettingCatalogItem): string {
+  ensurePostPaymentClearTableToggleMigrated();
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderPostPaymentClearTablePanelHtml(item.seq, on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingAutoClearTableRow(item: ModuleSettingCatalogItem): string {
+  ensureAutoClearTableToggleMigrated();
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderAutoClearTablePanelHtml(item.seq, on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingClearTableButtonRow(item: ModuleSettingCatalogItem): string {
+  ensureClearTableButtonToggleMigrated();
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderClearTableButtonPanelHtml(item.seq, on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingClearTableClientNotificationRow(item: ModuleSettingCatalogItem): string {
+  ensureClearTableClientNotificationToggleMigrated();
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderClearTableClientNotificationPanelHtml(item.seq, on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingAllowChangeServerRow(item: ModuleSettingCatalogItem): string {
+  ensureAllowChangeServerToggleMigrated();
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderAllowChangeServerPanelHtml(item.seq, on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingHomePasswordAuthRow(item: ModuleSettingCatalogItem): string {
+  ensureHomePasswordAuthToggleMigrated();
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderHomePasswordAuthPanelHtml(item.seq, on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingGuestChangePartySizeRow(item: ModuleSettingCatalogItem): string {
+  ensureGuestChangePartySizeToggleMigrated();
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderGuestChangePartySizePanelHtml(item.seq, on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingChildExcludedFromOrderLimitRow(item: ModuleSettingCatalogItem): string {
+  ensureChildExcludedFromOrderLimitToggleMigrated();
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderChildExcludedFromOrderLimitPanelHtml(item.seq, on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingSendKitchenWholeOrderRow(item: ModuleSettingCatalogItem): string {
+  ensureSendKitchenWholeOrderToggleMigrated();
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderSendKitchenWholeOrderPanelHtml(item.seq, on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingSendKitchenAfterCheckoutRow(item: ModuleSettingCatalogItem): string {
+  ensureSendKitchenAfterCheckoutToggleMigrated();
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderSendKitchenAfterCheckoutPanelHtml(item.seq, on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingAutoKitchenSendPaymentRow(item: ModuleSettingCatalogItem): string {
+  ensureAutoKitchenSendPaymentToggleMigrated();
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderAutoKitchenSendPaymentPanelHtml(item.seq, on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingGuestEmenuAuthPageRow(item: ModuleSettingCatalogItem): string {
+  ensureGuestEmenuAuthPageToggleMigrated(item.seq);
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderGuestEmenuAuthPagePanelHtml(item.seq, on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingGuestCategoryModeRow(item: ModuleSettingCatalogItem): string {
+  ensureGuestCategoryModeToggleMigrated(item.seq);
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderGuestCategoryModePanelHtml(item.seq, on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingHotpotBaseRequiredRow(item: ModuleSettingCatalogItem): string {
+  ensureHotpotBaseRequiredToggleMigrated();
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderHotpotBaseRequiredPanelHtml(on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingHotpotBaseStillShowRow(item: ModuleSettingCatalogItem): string {
+  ensureHotpotBaseStillShowToggleMigrated();
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderHotpotBaseStillShowPanelHtml(on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingGuestOrderNoticeRow(item: ModuleSettingCatalogItem): string {
+  ensureGuestOrderNoticeToggleMigrated();
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderGuestOrderNoticePanelHtml(on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingGuestDishDetailDisplayRow(item: ModuleSettingCatalogItem): string {
+  ensureGuestDishDetailDisplayToggleMigrated();
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderGuestDishDetailPanelHtml(on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingGuestDiningDurationRow(item: ModuleSettingCatalogItem): string {
+  const seq = item.seq as GuestDiningDurationSeq;
+  ensureGuestDiningDurationToggleMigrated(seq);
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderGuestDiningDurationPanelHtml(seq, on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingGuestOrderPlaceIntervalRow(item: ModuleSettingCatalogItem): string {
+  ensureGuestOrderPlaceIntervalToggleMigrated();
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderGuestOrderPlaceIntervalPanelHtml(on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingGuestOrderIntervalAllowCartRow(item: ModuleSettingCatalogItem): string {
+  const parentOn = readGuestOrderPlaceIntervalEnabled();
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            ${renderModuleSettingTitleBlock(item)}
+            ${renderGuestOrderIntervalAllowCartPanelHtml(parentOn)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingGuestMenuOrderIntervalRow(item: ModuleSettingCatalogItem): string {
+  ensureGuestMenuOrderIntervalToggleMigrated();
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderGuestMenuOrderIntervalPanelHtml(on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingGuestMenuIntervalAllowCartRow(item: ModuleSettingCatalogItem): string {
+  const parentOn = readGuestMenuOrderIntervalEnabled();
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            ${renderModuleSettingTitleBlock(item)}
+            ${renderGuestMenuIntervalAllowCartPanelHtml(parentOn)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingHotpotBaseOrderModeRow(item: ModuleSettingCatalogItem): string {
+  ensureHotpotBaseOrderModeToggleMigrated();
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderHotpotBaseOrderModePanelHtml(on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingHotpotHalfSurchargeRow(item: ModuleSettingCatalogItem): string {
+  ensureHotpotHalfSurchargeToggleMigrated();
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderHotpotHalfSurchargePanelHtml(on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingGuestKioskFlowPageRow(item: ModuleSettingCatalogItem): string {
+  ensureGuestKioskFlowPageToggleMigrated(item.seq);
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderGuestKioskFlowPagePanelHtml(item.seq, on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingEmenuServerReadonlyDishRow(item: ModuleSettingCatalogItem): string {
+  ensureEmenuServerReadonlyDishToggleMigrated();
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderEmenuServerReadonlyDishPanelHtml(item.seq, on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingViewonlyDishRuleRow(item: ModuleSettingCatalogItem): string {
+  ensureViewonlyDishRuleToggleMigrated(item.seq);
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderViewonlyDishRulePanelHtml(item.seq, on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingGuestMenuCartRow(item: ModuleSettingCatalogItem): string {
+  ensureGuestMenuCartToggleMigrated(item.seq);
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderGuestMenuCartPanelHtml(item.seq, on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingMenusifuBrandLogoRow(item: ModuleSettingCatalogItem): string {
+  ensureMenusifuBrandLogoToggleMigrated();
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderMenusifuBrandLogoPanelHtml(on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingGuestMenuClassificationModeRow(item: ModuleSettingCatalogItem): string {
+  ensureGuestMenuClassificationModeToggleMigrated();
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderGuestMenuClassificationModePanelHtml(on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingGuestMenuClassNameDisplayRow(item: ModuleSettingCatalogItem): string {
+  ensureGuestMenuClassNameDisplayToggleMigrated();
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderGuestMenuClassNameDisplayPanelHtml(on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingGuestMenuImageModeRow(item: ModuleSettingCatalogItem): string {
+  ensureGuestMenuImageModeToggleMigrated();
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderGuestMenuImageModePanelHtml(on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingGuestMenuLineToggleRow(item: ModuleSettingCatalogItem): string {
+  ensureGuestMenuLineToggleMigrated(item.seq);
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderGuestMenuLineTogglePanelHtml(item.seq, on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingGuestMenuDishNameFontRow(item: ModuleSettingCatalogItem): string {
+  ensureGuestMenuDishNameFontToggleMigrated();
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderGuestMenuDishNameFontPanelHtml(on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingOrderRemarkRow(item: ModuleSettingCatalogItem): string {
+  ensureOrderRemarkToggleMigrated();
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderOrderRemarkPanelHtml(item.seq, on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingReceiptSignatureLineRow(item: ModuleSettingCatalogItem): string {
+  ensureReceiptSignatureLineToggleMigrated();
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderReceiptSignatureLinePanelHtml(item.seq, on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingProductRemarkRow(item: ModuleSettingCatalogItem): string {
+  ensureProductRemarkDishesMigrated();
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderProductRemarkPanelHtml(item.seq, on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingComboSubitemRemarkRow(item: ModuleSettingCatalogItem): string {
+  ensureComboSubitemRemarkToggleMigrated();
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderComboSubitemRemarkPanelHtml(item.seq, on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingPosKitchenSendTriggerRow(item: ModuleSettingCatalogItem): string {
+  ensurePosKitchenSendTriggerToggleMigrated(item.seq);
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderPosKitchenSendTriggerPanelHtml(item.seq, on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingDelayedKitchenSendRow(item: ModuleSettingCatalogItem): string {
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            ${renderModuleSettingTitleBlock(item)}
+            <div class="mt-3">${renderDelayedKitchenSendEditorHtml(item.seq)}</div>
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingPostOrderKitchenSendModeRow(item: ModuleSettingCatalogItem): string {
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            ${renderModuleSettingTitleBlock(item)}
+            ${renderPostOrderKitchenSendModeRowHtml(item.seq)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingKitchenSendPasswordAuthRow(item: ModuleSettingCatalogItem): string {
+  ensureKitchenSendPasswordAuthToggleMigrated();
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderKitchenSendPasswordAuthPanelHtml(item.seq, on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingOrderDisplaySeatRow(item: ModuleSettingCatalogItem): string {
+  ensureOrderDisplaySeatToggleMigrated();
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderOrderDisplaySeatPanelHtml(on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingPosButtonVisibilityRow(item: ModuleSettingCatalogItem): string {
+  ensurePosButtonVisibilityToggleMigrated(item.seq);
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderPosButtonVisibilityPanelHtml(item.seq, on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingPreOrderTableChangeRow(item: ModuleSettingCatalogItem): string {
+  if (!isPreOrderTableChangeSeq(item.seq)) {
+    return renderModuleSettingRow(item);
+  }
+  const seq = item.seq;
+  const on = readModuleSettingToggleOn(seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderPreOrderTableChangePanelHtml(seq, on)}
+          </div>
+        </li>`;
+}
+
 function renderModuleSettingKitchenTicketMarginRow(item: ModuleSettingCatalogItem): string {
   return `
         <li class="list-none">
@@ -4547,14 +6447,107 @@ function renderModuleSettingKitchenTicketMarginRow(item: ModuleSettingCatalogIte
         </li>`;
 }
 
-function renderModuleSettingNotificationCenterTopicsRow(item: ModuleSettingCatalogItem): string {
+function renderModuleSettingOrderPickupSmsChannelRow(item: ModuleSettingCatalogItem): string {
+  const intro = isNotificationCustomerSmsGroupIntroSeq(item.seq)
+    ? renderNotificationCustomerSmsGroupIntroHtml()
+    : "";
+  const row = `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="w-full shrink-0 sm:max-w-2xl sm:pt-0.5">${renderOrderPickupSmsChannelMultiselectHtml(item.seq)}</div>
+            </div>
+          </div>
+        </li>`;
+  return intro ? wrapModuleSettingGroupIntro(row, intro) : row;
+}
+
+function renderModuleSettingOrderPickupSmsContentRow(item: ModuleSettingCatalogItem): string {
   return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            ${renderModuleSettingTitleBlock(item)}
+            <div class="mt-3">${renderOrderPickupSmsContentInput(item.seq)}</div>
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingNotificationCenterTopicsRow(item: ModuleSettingCatalogItem): string {
+  const intro = isNotificationBasicsGroupIntroSeq(item.seq)
+    ? renderNotificationBasicsGroupIntroHtml()
+    : "";
+  const row = `
         <li class="list-none" data-module-setting-row-seq="${item.seq}">
           <div class="border-b border-border px-4 py-3">
             ${renderModuleSettingTitleBlock(item)}
             <div class="mt-3">
               ${renderNotificationCenterTopicsMultiselectHtml(item.seq)}
             </div>
+          </div>
+        </li>`;
+  return intro ? wrapModuleSettingGroupIntro(row, intro) : row;
+}
+
+function renderModuleSettingDurationBillingScenesRow(item: ModuleSettingCatalogItem): string {
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            ${renderModuleSettingTitleBlock(item)}
+            <div class="mt-3">
+              ${renderDurationBillingScenesMultiselectHtml(item.seq)}
+            </div>
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingStaffOrderAlertRow(item: ModuleSettingCatalogItem): string {
+  const intro = isNotificationStaffOrderAlertsGroupIntroSeq(item.seq)
+    ? renderNotificationStaffOrderAlertsGroupIntroHtml()
+    : "";
+  const row = `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="w-full shrink-0 sm:max-w-3xl">${renderStaffOrderAlertByLineHtml(item.seq)}</div>
+            </div>
+          </div>
+        </li>`;
+  return intro ? wrapModuleSettingGroupIntro(row, intro) : row;
+}
+
+function renderModuleSettingTablesideServiceCallMasterRow(item: ModuleSettingCatalogItem): string {
+  ensureTablesideServiceCallTogglesMigrated();
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderTablesideServiceCallPanelHtml(item.seq, on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingTablesideServiceCallCooldownRow(item: ModuleSettingCatalogItem): string {
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="flex flex-col gap-3 border-b border-border px-4 py-3 sm:flex-row sm:items-start sm:justify-between">
+            <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+            <div class="shrink-0 sm:pt-0.5">${renderServiceCallCooldownControl()}</div>
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingTablesideServiceRequestTypesRow(item: ModuleSettingCatalogItem): string {
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            ${renderModuleSettingTitleBlock(item)}
+            <div class="mt-3">${renderServiceRequestTypesEditorHtml()}</div>
           </div>
         </li>`;
 }
@@ -4566,6 +6559,18 @@ function renderModuleSettingNotificationVoiceAlertRow(item: ModuleSettingCatalog
             <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
               <div class="w-full shrink-0 sm:max-w-3xl">${renderNotificationVoiceAlertByLineHtml()}</div>
+            </div>
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingWaitlistTicketPrintRow(item: ModuleSettingCatalogItem): string {
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="w-full shrink-0 sm:max-w-2xl">${renderWaitlistTicketPrintByLineHtml()}</div>
             </div>
           </div>
         </li>`;
@@ -4799,6 +6804,18 @@ function renderModuleSettingStoreRestaurantModeRow(item: ModuleSettingCatalogIte
         </li>`;
 }
 
+function renderModuleSettingMenuSourceModeRow(item: ModuleSettingCatalogItem): string {
+  return `
+        <li class="list-none">
+          <div class="border-b border-border px-4 py-3">
+            ${renderModuleSettingTitleBlock(item)}
+            <div class="mt-3">
+              ${renderMenuSourceModeRadioHtml(item.seq)}
+            </div>
+          </div>
+        </li>`;
+}
+
 function setStoreBrandSettingPanelVisible(seq: number, visible: boolean): void {
   document.querySelectorAll<HTMLElement>(`[data-store-brand-setting-panel="${seq}"]`).forEach((panel) => {
     panel.classList.toggle("hidden", !visible);
@@ -4837,6 +6854,134 @@ function renderModuleSettingStoreBasicInfoRow(item: ModuleSettingCatalogItem): s
         </li>`;
 }
 
+function renderModuleSettingPaymentGatewayRow(item: ModuleSettingCatalogItem): string {
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            ${renderModuleSettingTitleBlock(item)}
+            ${renderPaymentGatewaySettingsFormHtml()}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingLevelUpIntegrationRow(item: ModuleSettingCatalogItem): string {
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderLevelUpIntegrationPanelHtml(item.seq, on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingSevenShiftsIntegrationRow(item: ModuleSettingCatalogItem): string {
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderSevenShiftsIntegrationPanelHtml(item.seq, on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingIngenicoBluIntegrationRow(item: ModuleSettingCatalogItem): string {
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            ${renderModuleSettingTitleBlock(item)}
+            ${renderIngenicoBluIntegrationHtml()}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingWorldPayIntegrationRow(item: ModuleSettingCatalogItem): string {
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingDatahubOrderReportRow(item: ModuleSettingCatalogItem): string {
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            ${renderModuleSettingTitleBlock(item)}
+            ${renderDatahubOrderReportPanelHtml()}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingOnlineOrderServiceRow(item: ModuleSettingCatalogItem): string {
+  const seq = item.seq;
+  if (!isOnlineOrderServiceInputSeq(seq)) return "";
+  return `
+        <li class="list-none" data-module-setting-row-seq="${seq}">
+          <div class="flex flex-col gap-3 border-b border-border px-4 py-3 sm:flex-row sm:items-start sm:justify-between">
+            <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+            ${renderOnlineOrderServiceInputHtml(seq)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingAdvancedServiceSwitchRow(item: ModuleSettingCatalogItem): string {
+  if (!isAdvancedServiceSwitchSeq(item.seq)) {
+    return renderModuleSettingRow(item);
+  }
+  const seq = item.seq;
+  const on = readModuleSettingToggleOn(seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderAdvancedServiceSwitchPanelHtml(seq, on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingCloudEmployeeSyncRow(item: ModuleSettingCatalogItem): string {
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            ${renderExternalIntegrationsGroupIntroHtml()}
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingExternalIntegrationsInputRow(item: ModuleSettingCatalogItem): string {
+  const seq = item.seq;
+  if (!isExternalIntegrationsInputSeq(seq)) return "";
+  const cloudSyncOn = readModuleSettingToggleOn(CLOUD_EMPLOYEE_SYNC_SEQ);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${seq}">
+          <div class="border-b border-border px-4 py-3">
+            ${renderModuleSettingTitleBlock(item)}
+            <div class="mt-3">
+              ${renderExternalIntegrationsInputHtml(seq, cloudSyncOn)}
+            </div>
+          </div>
+        </li>`;
+}
+
 function renderModuleSettingStoreBrandManagementRow(item: ModuleSettingCatalogItem): string {
   return `
         <li class="list-none">
@@ -4871,6 +7016,12 @@ function renderModuleSettingLineMergeMatrixRow(_item: ModuleSettingCatalogItem):
 }
 
 function renderModuleSettingRow(item: ModuleSettingCatalogItem): string {
+  if (shouldSkipTableSelectionPageMergedSeq(item.seq)) {
+    return "";
+  }
+  if (shouldSkipPartySizeSelectionPageMergedSeq(item.seq)) {
+    return "";
+  }
   if (shouldSkipPosOrderToolbarCatalogRow(item.seq)) {
     return "";
   }
@@ -4887,10 +7038,31 @@ function renderModuleSettingRow(item: ModuleSettingCatalogItem): string {
     return "";
   }
   if (isOrderSameDishDisplayHostSeq(item.seq)) {
-    return renderOrderSameDishDisplayRowHtml(MODULE_SETTING_CONTROL_CLASS, item.sceneDesc);
+    return renderModuleSettingOrderSameDishDisplayRow(item);
+  }
+  if (isCourseSequenceModeSeq(item.seq)) {
+    return renderModuleSettingCourseSequenceModeRow(item);
+  }
+  if (isDishSequenceIdDisplaySeq(item.seq)) {
+    return renderModuleSettingDishSequenceIdDisplayRow(item);
+  }
+  if (isPosOrderCartPosLinesSeq(item.seq)) {
+    return renderModuleSettingPosOrderCartPosLinesRow(item);
+  }
+  if (isPosFindOrderListSeq(item.seq)) {
+    return renderModuleSettingPosFindOrderListRow(item);
+  }
+  if (isPosComboOrderingSeq(item.seq)) {
+    return renderModuleSettingPosComboOrderingRow(item);
+  }
+  if (isOrderTimeoutReminderSeq(item.seq)) {
+    return renderModuleSettingOrderTimeoutReminderRow(item);
   }
   if (isPosOrderToolbarGridHostSeq(item.seq)) {
     return renderPosOrderToolbarGroupsGridHtml();
+  }
+  if (isGuestMenuGroupByLineSeq(item.seq)) {
+    return renderModuleSettingGuestMenuGroupByLineRow(item);
   }
   if (isModuleSettingMenuGroupSelectSeq(item.seq)) {
     return renderModuleSettingMenuGroupSelectRow(item);
@@ -4904,8 +7076,41 @@ function renderModuleSettingRow(item: ModuleSettingCatalogItem): string {
   if (isDiscountSurchargePresetSeq(item.seq)) {
     return renderModuleSettingDiscountSurchargePresetRow(item);
   }
+  if (isPaymentGatewayHostSeq(item.seq)) {
+    return renderModuleSettingPaymentGatewayRow(item);
+  }
+  if (isLevelUpIntegrationSeq(item.seq)) {
+    return renderModuleSettingLevelUpIntegrationRow(item);
+  }
+  if (isSevenShiftsIntegrationSeq(item.seq)) {
+    return renderModuleSettingSevenShiftsIntegrationRow(item);
+  }
+  if (isIngenicoBluIntegrationSeq(item.seq)) {
+    return renderModuleSettingIngenicoBluIntegrationRow(item);
+  }
+  if (isWorldPayIntegrationSeq(item.seq)) {
+    return renderModuleSettingWorldPayIntegrationRow(item);
+  }
+  if (isDatahubOrderReportSeq(item.seq)) {
+    return renderModuleSettingDatahubOrderReportRow(item);
+  }
+  if (isOnlineOrderServiceInputSeq(item.seq)) {
+    return renderModuleSettingOnlineOrderServiceRow(item);
+  }
+  if (isAdvancedServiceSwitchSeq(item.seq)) {
+    return renderModuleSettingAdvancedServiceSwitchRow(item);
+  }
+  if (isCloudEmployeeSyncSeq(item.seq)) {
+    return renderModuleSettingCloudEmployeeSyncRow(item);
+  }
+  if (isExternalIntegrationsInputSeq(item.seq)) {
+    return renderModuleSettingExternalIntegrationsInputRow(item);
+  }
   if (isPaymentMethodsHostSeq(item.seq)) {
     return renderModuleSettingPaymentMethodsRow(item);
+  }
+  if (isPaymentTaxPolicyToggleSeq(item.seq)) {
+    return renderModuleSettingPaymentTaxPolicyToggleRow(item);
   }
   if (isPaymentBaseTaxRateSeq(item.seq)) {
     return renderModuleSettingPaymentBaseTaxRateRow(item);
@@ -4918,6 +7123,12 @@ function renderModuleSettingRow(item: ModuleSettingCatalogItem): string {
   }
   if (isPaymentTipPolicyToggleSeq(item.seq)) {
     return renderModuleSettingTipPolicyToggleRow(item);
+  }
+  if (shouldSkipTipReceiptPresetMemberRow(item.seq)) {
+    return "";
+  }
+  if (isTipReceiptSuggestionSeq(item.seq)) {
+    return renderModuleSettingReceiptTipSuggestionRow(item);
   }
   if (isTipPercentPresetSeq(item.seq)) {
     return renderModuleSettingTipPercentPresetRow(item);
@@ -4950,6 +7161,9 @@ function renderModuleSettingRow(item: ModuleSettingCatalogItem): string {
   if (isPaymentBatchToggleSeq(item.seq)) {
     return renderModuleSettingPaymentBatchToggleRow(item);
   }
+  if (isMemberCardMinSpendSeq(item.seq)) {
+    return renderModuleSettingMemberCardMinSpendRow(item);
+  }
   if (isCardMinSpendSeq(item.seq)) {
     return renderModuleSettingCardMinSpendRow(item);
   }
@@ -4958,6 +7172,12 @@ function renderModuleSettingRow(item: ModuleSettingCatalogItem): string {
   }
   if (isCardSignatureThresholdSeq(item.seq)) {
     return renderModuleSettingCardSignatureThresholdRow(item);
+  }
+  if (isMerchantcopySignatureRetentionDaysSeq(item.seq)) {
+    return renderModuleSettingMerchantcopySignatureRetentionDaysRow(item);
+  }
+  if (isReceiptUnpaidPriceDisplaySeq(item.seq)) {
+    return renderModuleSettingReceiptUnpaidPriceDisplayRow(item);
   }
   if (isTipCardOrderSeq(item.seq)) {
     return renderModuleSettingTipCardOrderRow(item);
@@ -4984,17 +7204,38 @@ function renderModuleSettingRow(item: ModuleSettingCatalogItem): string {
   if (isCdsCheckoutCardSlipSeq(item.seq)) {
     return renderModuleSettingCdsCheckoutCardSlipRow(item);
   }
+  if (isFinanceCashPayDiscountSeq(item.seq)) {
+    return renderModuleSettingFinanceCashPayDiscountRow(item);
+  }
   if (isFinanceProcessorFeeRateSeq(item.seq)) {
     return renderModuleSettingFinanceProcessorFeeRow(item);
   }
   if (isMemberPreOrderLoginPolicySeq(item.seq)) {
     return renderModuleSettingMemberPreOrderLoginPolicyRow(item);
   }
+  if (isGuestNamePageSeq(item.seq)) {
+    return renderModuleSettingGuestNamePageRow(item);
+  }
+  if (isGuestPhoneDisplayPageSeq(item.seq)) {
+    return renderModuleSettingGuestPhoneDisplayPageRow(item);
+  }
+  if (isGuestPhoneRequiredSeq(item.seq)) {
+    return renderModuleSettingGuestPhoneRequiredRow(item);
+  }
+  if (isTableDeliveryMealCardSeq(item.seq)) {
+    return renderModuleSettingTableDeliveryMealCardRow(item);
+  }
   if (isMemberSmsVerificationSeq(item.seq)) {
     return renderModuleSettingMemberSmsVerificationRow(item);
   }
   if (isMemberRegistrationFieldSeq(item.seq)) {
     return renderModuleSettingMemberRegistrationFieldRow(item);
+  }
+  if (isPointsDishAuthOrderSeq(item.seq)) {
+    return renderModuleSettingPointsDishAuthOrderRow(item);
+  }
+  if (isRuleHitPasswordAuthSeq(item.seq)) {
+    return renderModuleSettingRuleHitPasswordAuthRow(item);
   }
   if (isMemberPointsToggleFieldSeq(item.seq)) {
     return renderModuleSettingMemberPointsToggleFieldRow(item);
@@ -5057,6 +7298,12 @@ function renderModuleSettingRow(item: ModuleSettingCatalogItem): string {
     return renderModuleSettingOrderNumberingSelectRow(
       item,
       renderOrderNumberingResetSelectHtml(),
+    );
+  }
+  if (isHardwareGlobalDefaultDeviceSeq(item.seq)) {
+    return renderModuleSettingOrderNumberingSelectRow(
+      item,
+      renderHardwareGlobalDefaultDeviceSelect(item.seq),
     );
   }
   if (isOrderTotalRoundingSeq(item.seq)) {
@@ -5132,11 +7379,35 @@ function renderModuleSettingRow(item: ModuleSettingCatalogItem): string {
       renderOrderReceiptPartialPaymentByLineHtml(),
     );
   }
+  if (isOrderPickupSmsChannelSeq(item.seq)) {
+    return renderModuleSettingOrderPickupSmsChannelRow(item);
+  }
+  if (isOrderPickupSmsContentSeq(item.seq)) {
+    return renderModuleSettingOrderPickupSmsContentRow(item);
+  }
   if (isNotificationCenterTopicsMultiselectSeq(item.seq)) {
     return renderModuleSettingNotificationCenterTopicsRow(item);
   }
+  if (isDurationBillingScenesMultiselectSeq(item.seq)) {
+    return renderModuleSettingDurationBillingScenesRow(item);
+  }
+  if (isStaffOrderAlertSeq(item.seq)) {
+    return renderModuleSettingStaffOrderAlertRow(item);
+  }
   if (isNotificationVoiceAlertSeq(item.seq)) {
     return renderModuleSettingNotificationVoiceAlertRow(item);
+  }
+  if (isWaitlistTicketPrintSeq(item.seq)) {
+    return renderModuleSettingWaitlistTicketPrintRow(item);
+  }
+  if (isTablesideServiceCallCooldownSeq(item.seq)) {
+    return renderModuleSettingTablesideServiceCallCooldownRow(item);
+  }
+  if (isTablesideServiceRequestTypesSeq(item.seq)) {
+    return renderModuleSettingTablesideServiceRequestTypesRow(item);
+  }
+  if (isTablesideServiceCallToggleSeq(item.seq)) {
+    return renderModuleSettingTablesideServiceCallMasterRow(item);
   }
   if (isTicketNumberSlipTriggerMultiselectSeq(item.seq)) {
     return renderModuleSettingTicketNumberSlipTriggerRow(item);
@@ -5146,6 +7417,12 @@ function renderModuleSettingRow(item: ModuleSettingCatalogItem): string {
   }
   if (isPackingSlipOrderTypeMultiselectSeq(item.seq)) {
     return renderModuleSettingPackingSlipOrderTypeRow(item);
+  }
+  if (isDeliveryReceiptCopiesSeq(item.seq)) {
+    return renderModuleSettingDeliveryReceiptCopiesRow(item);
+  }
+  if (isDeliveryPlatformSlipsToggleSeq(item.seq)) {
+    return renderModuleSettingDeliveryPlatformSlipsToggleRow(item);
   }
   if (isDeliveryRegionSeq(item.seq)) {
     return renderModuleSettingDeliveryRegionRow(item);
@@ -5177,11 +7454,149 @@ function renderModuleSettingRow(item: ModuleSettingCatalogItem): string {
   if (isStoreBrandManagementSeq(item.seq)) {
     return renderModuleSettingStoreBrandManagementRow(item);
   }
+  if (isPrintDishCodeByTicketSeq(item.seq)) {
+    return renderModuleSettingPrintDishCodeByTicketRow(item);
+  }
+  if (isTakeoutEnhancedDisplaySeq(item.seq)) {
+    return renderModuleSettingTakeoutEnhancedDisplayRow(item);
+  }
+  if (isTableSelectionPageSeq(item.seq)) {
+    return renderModuleSettingTableSelectionPageRow(item);
+  }
+  if (isSingleTableNoMultiOrderSeq(item.seq)) {
+    return renderModuleSettingSingleTableNoMultiOrderRow(item);
+  }
+  if (isPostPaymentClearTableSeq(item.seq)) {
+    return renderModuleSettingPostPaymentClearTableRow(item);
+  }
+  if (isAutoClearTableSeq(item.seq)) {
+    return renderModuleSettingAutoClearTableRow(item);
+  }
+  if (isClearTableButtonSeq(item.seq)) {
+    return renderModuleSettingClearTableButtonRow(item);
+  }
+  if (isClearTableClientNotificationSeq(item.seq)) {
+    return renderModuleSettingClearTableClientNotificationRow(item);
+  }
+  if (isAllowChangeServerSeq(item.seq)) {
+    return renderModuleSettingAllowChangeServerRow(item);
+  }
+  if (isPartySizeSelectionPageSeq(item.seq)) {
+    return renderModuleSettingPartySizeSelectionPageRow(item);
+  }
+  if (isPreOrderTableChangeSeq(item.seq)) {
+    return renderModuleSettingPreOrderTableChangeRow(item);
+  }
   if (isLineMergeMatrixHostSeq(item.seq)) {
     return renderModuleSettingLineMergeMatrixRow(item);
   }
   if (isModuleSettingLocaleSelectSeq(item.seq)) {
     return renderModuleSettingLocaleSelectRow(item);
+  }
+  if (isSystemDefaultLocaleSeq(item.seq)) {
+    return renderModuleSettingSystemDefaultLocaleRow(item);
+  }
+  if (isDefaultMainScreenSeq(item.seq)) {
+    return renderModuleSettingDefaultMainScreenRow(item);
+  }
+  if (isHomePasswordAuthSeq(item.seq)) {
+    return renderModuleSettingHomePasswordAuthRow(item);
+  }
+  if (isMaxGuestsPerOrderSeq(item.seq)) {
+    return renderModuleSettingMaxGuestsPerOrderRow(item);
+  }
+  if (isGuestChangePartySizeSeq(item.seq)) {
+    return renderModuleSettingGuestChangePartySizeRow(item);
+  }
+  if (isChildExcludedFromOrderLimitSeq(item.seq)) {
+    return renderModuleSettingChildExcludedFromOrderLimitRow(item);
+  }
+  if (isSendKitchenWholeOrderSeq(item.seq)) {
+    return renderModuleSettingSendKitchenWholeOrderRow(item);
+  }
+  if (isSendKitchenAfterCheckoutSeq(item.seq)) {
+    return renderModuleSettingSendKitchenAfterCheckoutRow(item);
+  }
+  if (isAutoKitchenSendPaymentSeq(item.seq)) {
+    return renderModuleSettingAutoKitchenSendPaymentRow(item);
+  }
+  if (isGuestEmenuAuthPageSeq(item.seq)) {
+    return renderModuleSettingGuestEmenuAuthPageRow(item);
+  }
+  if (isGuestCategoryModeSeq(item.seq)) {
+    return renderModuleSettingGuestCategoryModeRow(item);
+  }
+  if (isHotpotBaseRequiredSeq(item.seq)) {
+    return renderModuleSettingHotpotBaseRequiredRow(item);
+  }
+  if (isHotpotBaseStillShowSeq(item.seq)) {
+    return renderModuleSettingHotpotBaseStillShowRow(item);
+  }
+  if (isHotpotBaseOrderModeSeq(item.seq)) {
+    return renderModuleSettingHotpotBaseOrderModeRow(item);
+  }
+  if (isHotpotHalfSurchargeSeq(item.seq)) {
+    return renderModuleSettingHotpotHalfSurchargeRow(item);
+  }
+  if (isGuestKioskFlowPageSeq(item.seq)) {
+    return renderModuleSettingGuestKioskFlowPageRow(item);
+  }
+  if (isEmenuServerReadonlyDishSeq(item.seq)) {
+    return renderModuleSettingEmenuServerReadonlyDishRow(item);
+  }
+  if (isViewonlyDishRuleSeq(item.seq)) {
+    return renderModuleSettingViewonlyDishRuleRow(item);
+  }
+  if (isGuestMenuCartSeq(item.seq)) {
+    return renderModuleSettingGuestMenuCartRow(item);
+  }
+  if (isMenusifuBrandLogoSeq(item.seq)) {
+    return renderModuleSettingMenusifuBrandLogoRow(item);
+  }
+  if (isGuestMenuClassificationModeSeq(item.seq)) {
+    return renderModuleSettingGuestMenuClassificationModeRow(item);
+  }
+  if (isGuestMenuClassNameDisplaySeq(item.seq)) {
+    return renderModuleSettingGuestMenuClassNameDisplayRow(item);
+  }
+  if (isGuestMenuImageModeSeq(item.seq)) {
+    return renderModuleSettingGuestMenuImageModeRow(item);
+  }
+  if (isGuestMenuLineToggleSeq(item.seq)) {
+    return renderModuleSettingGuestMenuLineToggleRow(item);
+  }
+  if (isGuestMenuDishNameFontSeq(item.seq)) {
+    return renderModuleSettingGuestMenuDishNameFontRow(item);
+  }
+  if (isOrderRemarkSeq(item.seq)) {
+    return renderModuleSettingOrderRemarkRow(item);
+  }
+  if (isReceiptSignatureLineSeq(item.seq)) {
+    return renderModuleSettingReceiptSignatureLineRow(item);
+  }
+  if (isProductRemarkSeq(item.seq)) {
+    return renderModuleSettingProductRemarkRow(item);
+  }
+  if (isComboSubitemRemarkSeq(item.seq)) {
+    return renderModuleSettingComboSubitemRemarkRow(item);
+  }
+  if (isPosKitchenSendTriggerSeq(item.seq)) {
+    return renderModuleSettingPosKitchenSendTriggerRow(item);
+  }
+  if (isPostOrderKitchenSendModeSeq(item.seq)) {
+    return renderModuleSettingPostOrderKitchenSendModeRow(item);
+  }
+  if (isDelayedKitchenSendSeq(item.seq)) {
+    return renderModuleSettingDelayedKitchenSendRow(item);
+  }
+  if (isKitchenSendPasswordAuthSeq(item.seq)) {
+    return renderModuleSettingKitchenSendPasswordAuthRow(item);
+  }
+  if (isOrderDisplaySeatSeq(item.seq)) {
+    return renderModuleSettingOrderDisplaySeatRow(item);
+  }
+  if (isMenuSourceModeRadioSeq(item.seq)) {
+    return renderModuleSettingMenuSourceModeRow(item);
   }
   if (isModuleSettingLocaleDefaultSeq(item.seq)) {
     return renderModuleSettingLocaleDefaultRow(item);
@@ -5189,8 +7604,32 @@ function renderModuleSettingRow(item: ModuleSettingCatalogItem): string {
   if (isModuleSettingGenericFormRowSeq(item.seq)) {
     return renderModuleSettingFormRow(item);
   }
+  if (isGuestOrderNoticeSeq(item.seq)) {
+    return renderModuleSettingGuestOrderNoticeRow(item);
+  }
+  if (isGuestDishDetailDisplaySeq(item.seq)) {
+    return renderModuleSettingGuestDishDetailDisplayRow(item);
+  }
+  if (isGuestDiningDurationSeq(item.seq)) {
+    return renderModuleSettingGuestDiningDurationRow(item);
+  }
+  if (isGuestOrderPlaceIntervalSeq(item.seq)) {
+    return renderModuleSettingGuestOrderPlaceIntervalRow(item);
+  }
+  if (isGuestOrderIntervalAllowCartSeq(item.seq)) {
+    return renderModuleSettingGuestOrderIntervalAllowCartRow(item);
+  }
+  if (isGuestMenuOrderIntervalSeq(item.seq)) {
+    return renderModuleSettingGuestMenuOrderIntervalRow(item);
+  }
+  if (isGuestMenuIntervalAllowCartSeq(item.seq)) {
+    return renderModuleSettingGuestMenuIntervalAllowCartRow(item);
+  }
   if (isModuleSettingNestedParentSeq(item.seq)) {
     return renderModuleSettingNestedParentRow(item);
+  }
+  if (isPosButtonVisibilitySeq(item.seq)) {
+    return renderModuleSettingPosButtonVisibilityRow(item);
   }
   const toggleHtml = isModuleSettingToggleSeq(item.seq)
     ? renderModuleSettingToggleSwitch(item)
@@ -5237,6 +7676,23 @@ function bindModuleSettingsToggles(): void {
       btn.title = next ? t("moduleSettings.toggleOn") : t("moduleSettings.toggleOff");
       syncModuleSettingToggleButton(btn);
       writeModuleSettingToggleOn(seq, next);
+      if (isGuestOrderNoticeSeq(seq)) {
+        setGuestOrderNoticePanelVisible(next);
+      }
+      if (isGuestDishDetailDisplaySeq(seq)) {
+        setGuestDishDetailPanelVisible(next);
+      }
+      if (isGuestDiningDurationSeq(seq)) {
+        setGuestDiningDurationPanelVisible(seq, next);
+      }
+      if (isGuestOrderPlaceIntervalSeq(seq)) {
+        setGuestOrderPlaceIntervalPanelVisible(next);
+        setGuestOrderIntervalAllowCartPanelVisible(next);
+      }
+      if (isGuestMenuOrderIntervalSeq(seq)) {
+        setGuestMenuOrderIntervalPanelVisible(next);
+        setGuestMenuIntervalAllowCartPanelVisible(next);
+      }
       if (isModuleSettingNestedParentSeq(seq)) {
         setModuleSettingNestedPanelVisible(seq, next);
       }
@@ -5255,8 +7711,156 @@ function bindModuleSettingsToggles(): void {
       if (isPackingSlipVoidItemStyleSeq(seq)) {
         setPackingSlipVoidStylePanelVisible(seq, next);
       }
+      if (isPrintDishCodeByTicketSeq(seq)) {
+        setPrintDishCodeTicketsPanelVisible(seq, next);
+      }
+      if (isTakeoutEnhancedDisplaySeq(seq)) {
+        setTakeoutEnhancedDisplayPanelVisible(seq, next);
+      }
+      if (isTableSelectionPageSeq(seq)) {
+        setTableSelectionPagePanelVisible(seq, next);
+      }
+      if (isSingleTableNoMultiOrderSeq(seq)) {
+        setSingleTableNoMultiOrderPanelVisible(seq, next);
+      }
+      if (isPostPaymentClearTableSeq(seq)) {
+        setPostPaymentClearTablePanelVisible(seq, next);
+      }
+      if (isAutoClearTableSeq(seq)) {
+        setAutoClearTablePanelVisible(seq, next);
+      }
+      if (isClearTableButtonSeq(seq)) {
+        syncClearTableButtonLinesWithMaster(next);
+      }
+      if (isClearTableClientNotificationSeq(seq)) {
+        setClearTableClientNotificationPanelVisible(seq, next);
+      }
+      if (isAllowChangeServerSeq(seq)) {
+        setAllowChangeServerPanelVisible(seq, next);
+      }
+      if (isHomePasswordAuthSeq(seq)) {
+        setHomePasswordAuthPanelVisible(seq, next);
+      }
+      if (isGuestChangePartySizeSeq(seq)) {
+        setGuestChangePartySizePanelVisible(seq, next);
+      }
+      if (isChildExcludedFromOrderLimitSeq(seq)) {
+        setChildExcludedFromOrderLimitPanelVisible(seq, next);
+      }
+      if (isTablesideServiceCallToggleSeq(seq)) {
+        setTablesideServiceCallPanelVisible(seq, next);
+      }
+      if (isSendKitchenWholeOrderSeq(seq)) {
+        setSendKitchenWholeOrderPanelVisible(seq, next);
+      }
+      if (isSendKitchenAfterCheckoutSeq(seq)) {
+        setSendKitchenAfterCheckoutPanelVisible(seq, next);
+      }
+      if (isAutoKitchenSendPaymentSeq(seq)) {
+        setAutoKitchenSendPaymentPanelVisible(seq, next);
+      }
+      if (isGuestEmenuAuthPageSeq(seq)) {
+        setGuestEmenuAuthPagePanelVisible(seq, next);
+      }
+      if (isGuestCategoryModeSeq(seq)) {
+        setGuestCategoryModePanelVisible(seq, next);
+      }
+      if (isHotpotBaseRequiredSeq(seq)) {
+        setHotpotBaseRequiredPanelVisible(next);
+      }
+      if (isHotpotBaseStillShowSeq(seq)) {
+        setHotpotBaseStillShowPanelVisible(next);
+      }
+      if (isHotpotBaseOrderModeSeq(seq)) {
+        setHotpotBaseOrderModePanelVisible(next);
+      }
+      if (isHotpotHalfSurchargeSeq(seq)) {
+        setHotpotHalfSurchargePanelVisible(next);
+      }
+      if (isGuestKioskFlowPageSeq(seq)) {
+        setGuestKioskFlowPagePanelVisible(seq, next);
+      }
+      if (isEmenuServerReadonlyDishSeq(seq)) {
+        setEmenuServerReadonlyDishPanelVisible(seq, next);
+      }
+      if (isViewonlyDishRuleSeq(seq)) {
+        setViewonlyDishRulePanelVisible(seq, next);
+      }
+      if (isGuestMenuCartSeq(seq)) {
+        setGuestMenuCartPanelVisible(seq, next);
+      }
+      if (isMenusifuBrandLogoSeq(seq)) {
+        setMenusifuBrandLogoPanelVisible(next);
+      }
+      if (isGuestMenuClassificationModeSeq(seq)) {
+        setGuestMenuClassificationModePanelVisible(next);
+      }
+      if (isGuestMenuClassNameDisplaySeq(seq)) {
+        setGuestMenuClassNameDisplayPanelVisible(next);
+      }
+      if (isGuestMenuImageModeSeq(seq)) {
+        setGuestMenuImageModePanelVisible(next);
+      }
+      if (isGuestMenuLineToggleSeq(seq)) {
+        if (next) ensureGuestMenuLineToggleLinesDefault(seq);
+        setGuestMenuLineTogglePanelVisible(seq, next);
+      }
+      if (isGuestMenuDishNameFontSeq(seq)) {
+        if (next) ensureGuestMenuDishNameFontLinesDefault();
+        setGuestMenuDishNameFontPanelVisible(next);
+      }
+      if (isOrderRemarkSeq(seq)) {
+        setOrderRemarkPanelVisible(seq, next);
+      }
+      if (isReceiptSignatureLineSeq(seq)) {
+        setReceiptSignatureLinePanelVisible(seq, next);
+      }
+      if (isProductRemarkSeq(seq)) {
+        setProductRemarkPanelVisible(seq, next);
+      }
+      if (isComboSubitemRemarkSeq(seq)) {
+        setComboSubitemRemarkPanelVisible(seq, next);
+      }
+      if (isPosKitchenSendTriggerSeq(seq)) {
+        setPosKitchenSendTriggerPanelVisible(seq, next);
+      }
+      if (isKitchenSendPasswordAuthSeq(seq)) {
+        setKitchenSendPasswordAuthPanelVisible(seq, next);
+      }
+      if (isOrderDisplaySeatSeq(seq)) {
+        setOrderDisplaySeatPanelVisible(next);
+      }
+      if (isCourseSequenceModeSeq(seq)) {
+        setCourseSequenceModePanelVisible(seq, next);
+      }
+      if (isDishSequenceIdDisplaySeq(seq)) {
+        setDishSequenceIdDisplayPanelVisible(seq, next);
+      }
+      if (isPosOrderCartPosLinesSeq(seq)) {
+        setPosOrderCartPosLinesPanelVisible(seq, next);
+      }
+      if (isPosFindOrderListSeq(seq)) {
+        if (next) ensurePosFindOrderListLinesDefault(seq);
+        setPosFindOrderListPanelVisible(seq, next);
+      }
+      if (isPosComboOrderingSeq(seq)) {
+        if (next) ensurePosComboOrderingLinesDefault(seq);
+        setPosComboOrderingPanelVisible(seq, next);
+      }
+      if (isPosButtonVisibilitySeq(seq)) {
+        setPosButtonVisibilityPanelVisible(seq, next);
+      }
+      if (isPartySizeSelectionPageSeq(seq)) {
+        setPartySizeSelectionPagePanelVisible(seq, next);
+      }
+      if (isPreOrderTableChangeSeq(seq)) {
+        setPreOrderTableChangePanelVisible(seq, next);
+      }
       if (isTipAlertRatioSeq(seq)) {
         setTipAlertRatioPanelVisible(seq, next);
+      }
+      if (isTipReceiptSuggestionSeq(seq)) {
+        setReceiptTipSuggestionPanelVisible(seq, next);
       }
       if (isWaitlistModeSeq(seq)) {
         if (next) ensureWaitlistModeLinesDefault();
@@ -5269,13 +7873,43 @@ function bindModuleSettingsToggles(): void {
       if (isCashDrawerVarianceAlertSeq(seq)) {
         setCashDrawerVarianceAlertPanelVisible(seq, next);
       }
+      if (isGuestNamePageSeq(seq)) {
+        setGuestNamePagePanelVisible(seq, next);
+      }
+      if (isGuestPhoneDisplayPageSeq(seq)) {
+        setGuestPhoneDisplayPagePanelVisible(seq, next);
+      }
+      if (isGuestPhoneRequiredSeq(seq)) {
+        setGuestPhoneRequiredPanelVisible(seq, next);
+      }
+      if (isTableDeliveryMealCardSeq(seq)) {
+        setTableDeliveryMealCardPanelVisible(seq, next);
+      }
       if (isMemberSmsVerificationSeq(seq)) {
         if (next) ensureMemberSmsVerificationLinesDefault();
         setMemberSmsVerificationLinesPanelVisible(seq, next);
       }
+      if (isLevelUpIntegrationSeq(seq)) {
+        setLevelUpIntegrationPanelVisible(seq, next);
+      }
+      if (isCloudEmployeeSyncSeq(seq)) {
+        syncExternalIntegrationsUrlFields(next);
+      }
+      if (isSevenShiftsIntegrationSeq(seq)) {
+        setSevenShiftsIntegrationPanelVisible(seq, next);
+      }
+      if (isAdvancedServiceSwitchSeq(seq)) {
+        setAdvancedServiceSwitchPanelVisible(seq, next);
+      }
       if (isMemberRegistrationFieldSeq(seq)) {
         if (next) ensureMemberRegistrationFieldLinesDefault(seq);
         setMemberRegistrationFieldLinesPanelVisible(seq, next);
+      }
+      if (isPointsDishAuthOrderSeq(seq)) {
+        setPointsDishAuthOrderPanelVisible(seq, next);
+      }
+      if (isRuleHitPasswordAuthSeq(seq)) {
+        setRuleHitPasswordAuthPanelVisible(next);
       }
       if (isMemberPointsToggleFieldSeq(seq)) {
         if (next) ensureMemberPointsToggleFieldLinesDefault(seq);
@@ -5288,7 +7922,10 @@ function bindModuleSettingsToggles(): void {
   });
 }
 
-function syncModuleSettingTextCounter(el: HTMLInputElement | HTMLTextAreaElement): void {
+function syncModuleSettingTextCounter(
+  el: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement,
+): void {
+  if (el.tagName === "SELECT") return;
   const max = Number(el.getAttribute("data-max-length") ?? "0");
   if (!max) return;
   const slot = el.tagName === "TEXTAREA" ? "content" : "title";
@@ -5311,7 +7948,11 @@ function bindModuleSettingsNestedFields(): void {
     input.addEventListener("blur", persist);
   });
 
-  document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>("[data-module-setting-text]").forEach((el) => {
+  document
+    .querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(
+      "[data-module-setting-text]",
+    )
+    .forEach((el) => {
     if (el.dataset.moduleSettingTextBound === "1") return;
     el.dataset.moduleSettingTextBound = "1";
     const fieldId = el.getAttribute("data-module-setting-text");
@@ -5325,6 +7966,7 @@ function bindModuleSettingsNestedFields(): void {
       syncModuleSettingTextCounter(el);
     };
     el.addEventListener("input", persist);
+    el.addEventListener("change", persist);
     el.addEventListener("blur", persist);
   });
 }
@@ -5376,10 +8018,21 @@ function bindModuleSettingsFormControls(): void {
     if (!fieldId) return;
     const min = Number(input.getAttribute("min") ?? "-Infinity");
     const max = Number(input.getAttribute("max") ?? "Infinity");
+    const precisionRaw = input.getAttribute("data-module-setting-number-precision");
+    const precision =
+      precisionRaw != null && Number.isFinite(Number(precisionRaw))
+        ? Math.max(0, Math.min(4, Math.floor(Number(precisionRaw))))
+        : 0;
     const persist = () => {
       const n = Number(input.value);
       if (!Number.isFinite(n)) return;
-      const clamped = Math.min(max, Math.max(min, Math.round(n)));
+      let clamped = Math.min(max, Math.max(min, n));
+      if (precision > 0) {
+        const factor = 10 ** precision;
+        clamped = Math.round(clamped * factor) / factor;
+      } else {
+        clamped = Math.round(clamped);
+      }
       input.value = String(clamped);
       writeModuleSettingNumber(fieldId, clamped);
     };
@@ -5776,22 +8429,24 @@ function renderMain(): string {
   const isMarketingAdsIframe = isMarketingAdsIframePath(path);
   const isMarketingPosterProIframe = isMarketingPosterProIframePath(path);
   const isAssetCenterMaterialsIframe = isAssetCenterMaterialsIframePath(path);
-  const isPermissionsOrderLimitIframe = isPermissionsOrderLimitIframePath(path);
   const isReportsTipsAllocationIframe = isReportsTipsAllocationIframePath(path);
   const isTeamRolesEmployeesIframe = isTeamRolesEmployeesIframePath(path);
   const isTeamTipsManagementIframe = isTeamTipsManagementIframePath(path);
   const isTeamPayrollReportIframe = isTeamPayrollReportIframePath(path);
+  const isFohMenuOrderLimitsIframe = isFohMenuOrderLimitsIframePath(path);
+  const isFohCategorySettings = isFohCategorySettingsPath(path);
   const isFullBleedEmbeddedIframe =
     isMarketingScreensaverIframe ||
     isMarketingAdsIframe ||
     isMarketingPosterProIframe ||
     isAssetCenterMaterialsIframe ||
-    isPermissionsOrderLimitIframe ||
+    isFohMenuOrderLimitsIframe ||
     isReportsTipsAllocationIframe ||
     isTeamRolesEmployeesIframe ||
     isTeamTipsManagementIframe ||
     isTeamPayrollReportIframe;
   const isModuleSettingsCatalog = isModuleHubSettingsCatalogPath(path);
+  const isPermissionsRbac = isPermissionsRbacPath(path);
   const isFinanceRegisterAudit = isFinanceRegisterAuditPath(path);
   const wideContentLayout =
     isAiAssistant ||
@@ -5806,14 +8461,15 @@ function renderMain(): string {
     isMarketingAdsIframe ||
     isMarketingPosterProIframe ||
     isAssetCenterMaterialsIframe ||
-    isPermissionsOrderLimitIframe ||
+    isFohMenuOrderLimitsIframe ||
     isReportsTipsAllocationIframe ||
     isTeamRolesEmployeesIframe ||
     isTeamTipsManagementIframe ||
     isTeamPayrollReportIframe ||
     isGiftCardsFactory ||
     isFinanceRegisterAudit ||
-    isModuleSettingsCatalog;
+    isModuleSettingsCatalog ||
+    isFohCategorySettings;
   const showModuleTabs = shouldShowModuleTabs(tabModule);
 
   const tertiaryRowClass =
@@ -5887,8 +8543,8 @@ function renderMain(): string {
                   ? renderMarketingPosterProIframePanel()
                 : isAssetCenterMaterialsIframe
                   ? renderAssetCenterMaterialsIframePanel()
-                : isPermissionsOrderLimitIframe
-                  ? renderPermissionsOrderLimitIframePanel()
+                : isFohMenuOrderLimitsIframe
+                  ? renderFohMenuOrderLimitsIframePanel()
                 : isReportsTipsAllocationIframe
                   ? renderReportsTipsAllocationIframePanel()
                 : isTeamRolesEmployeesIframe
@@ -5912,7 +8568,25 @@ function renderMain(): string {
                     : isDeviceManagementHardware
                       ? `<div class="${tertiaryRowClass}">
                     ${renderDeviceManagementHardwareSidebar(path)}
-                    <div class="${tertiaryMainClass}">${renderPlaceholder(path, title, tabModule, { deviceManagementHardwareSubnav: true })}</div>
+                    <div class="${tertiaryMainClass}">${
+                      isDeviceManagementPaymentHardwarePath(path)
+                        ? renderDeviceManagementPaymentHardwarePage(path)
+                        : isDeviceManagementFiscalHardwarePath(path)
+                          ? renderDeviceManagementFiscalHardwarePage(path)
+                          : isDeviceManagementCallerIdHardwarePath(path)
+                            ? renderDeviceManagementCallerIdHardwarePage(path)
+                          : isDeviceManagementCashDrawerHardwarePath(path)
+                          ? renderDeviceManagementCashDrawerHardwarePage(path)
+                          : isDeviceManagementEmenuHardwarePath(path)
+                            ? renderDeviceManagementEmenuHardwarePage(path)
+                            : isDeviceManagementKioskHardwarePath(path)
+                              ? renderDeviceManagementKioskHardwarePage(path)
+                              : isDeviceManagementCdsHardwarePath(path)
+                                ? renderDeviceManagementCdsHardwarePage(path)
+                                : isDeviceManagementPrinterHardwarePath(path)
+                                ? renderDeviceManagementPrinterHardwarePage(path)
+                                : renderPlaceholder(path, title, tabModule, { deviceManagementHardwareSubnav: true })
+                    }</div>
                   </div>`
                       : isTeamReportsTertiary
                         ? `<div class="${tertiaryRowClass}">
@@ -5931,6 +8605,8 @@ function renderMain(): string {
                   </div>`
                     : isFloorPlanPath(path)
                       ? renderFloorPlanPage()
+                    : isFohCategorySettingsPath(path)
+                      ? renderFohCategorySettingsPage(path)
                     : isFinanceRegisterAudit
                       ? renderFinanceRegisterAuditPageContent(path)
                     : path === "/settings/overview"
@@ -5940,7 +8616,9 @@ function renderMain(): string {
                     ${renderModuleHubSettingsCategorySidebar(path, title)}
                     <div class="${tertiaryMainClass} module-settings-scroll-host">${renderModuleHubSettingsPage(path, title)}</div>
                   </div>`
-                        : renderPlaceholder(path, title, tabModule)
+                        : isPermissionsRbac
+                          ? renderPermissionsRbacPage(path)
+                          : renderPlaceholder(path, title, tabModule)
             }
           </div>
         </div>
@@ -6053,6 +8731,13 @@ function mount(): void {
   normalizeTabModuleHashes();
   applyUiLocaleToDocument(getUiLocale());
 
+  navModuleSheetOpenBeforeMount = {};
+  for (const m of NAV_MODULES) {
+    if (m.subNavPlacement === "sheet") {
+      navModuleSheetOpenBeforeMount[m.id] = readNavModuleSheetOpen(m.id);
+    }
+  }
+
   const mountPathForSheet = location.hash.slice(1) || "/dashboard/overview";
   if (
     lastSidebarMountPathForInventorySheet !== mountPathForSheet &&
@@ -6126,7 +8811,9 @@ function mount(): void {
   }
   lastSidebarMountPathForReservationsSheet = mountPathForSheet;
 
+  const prevHubPathsForSheets = { ...lastNavHubMountPathByModuleId };
   syncNavModuleSheetsOnRouteChange(mountPathForSheet);
+  ensureNavModuleSheetsOpenForPath(mountPathForSheet, prevHubPathsForSheets);
 
   if (fullscreenIframeModalEscapeHandler) {
     window.removeEventListener("keydown", fullscreenIframeModalEscapeHandler);
@@ -6220,7 +8907,7 @@ function mount(): void {
         setPrintSecondarySheetOpen(false);
         setReservationsSecondarySheetOpen(false);
         setMarketingSecondarySheetOpen(true);
-        replaceHashPath(getModuleDefaultChildPath("marketing", "/marketing/campaigns"));
+        replaceHashPath(getModuleDefaultChildPath("marketing", "/marketing/screensaver"));
         mount();
         return;
       }
@@ -6603,43 +9290,124 @@ function mount(): void {
   });
 
   bindAiAssistantHandlers();
+  bindPermissionsRbac();
   bindHeaderScopeFilters();
   bindGlobalUiLocaleControl();
   ensureInventorySheetEscapeListener();
   restoreModuleSettingsScroll(mountPathForSheet);
   bindFloorPlanEditor(mount);
+  bindFohCategorySettingsUi(mount);
+  bindDeviceManagementPaymentHardware();
+  bindDeviceManagementFiscalHardware();
+  bindDeviceManagementCallerIdHardware();
+  bindDeviceManagementCashDrawerHardware();
+  bindDeviceManagementPrinterHardware();
+  bindDeviceManagementEmenuHardware();
+  bindDeviceManagementKioskHardware();
+  bindDeviceManagementCdsHardware();
+  bindHardwareGlobalDefaultDevicePickers();
   bindModuleSettingsCategoryNav();
   bindModuleSettingsToggles();
   syncDailyCloseCashOptionRowsFromMaster();
+  syncExternalIntegrationsUrlFields(readModuleSettingToggleOn(CLOUD_EMPLOYEE_SYNC_SEQ));
   bindModuleSettingsNestedFields();
   bindModuleSettingsDishRules();
   bindPromoLotteryCustomAnimUpload();
   bindModuleSettingMenuGroupPickers();
+  bindGuestMenuGroupByLineUi();
   bindPosOrderToolbarGroups();
   bindGuestFacingLocaleControls();
   bindKitchenTicketMarginControls();
   bindStoreBusinessHoursControls();
   bindStoreBrandManagementControls();
+  bindIngenicoBluIntegrationUi();
+  bindAdvancedServiceSwitchUi();
   bindDeliveryRegionEditor();
   bindOrderTypeByLineEditor();
   bindModuleSettingsFormControls();
   bindBatchPostPrintChoices();
   bindOrderSameDishDisplayRadios();
+  bindCourseSequenceModeUi();
+  bindDishSequenceIdDisplayUi();
+  bindPosOrderCartPosLinesUi();
+  bindPosFindOrderListUi();
+  bindPosComboOrderingUi();
   bindDiscountSurchargePresetEditors();
   bindPaymentMethodsEditor();
   bindMemberSmsVerificationUi();
   bindOrderReceiptTriggerUi();
+  bindPrintDishCodeByTicketUi();
+  bindTakeoutEnhancedDisplayUi();
+  bindTableSelectionPageUi();
+  bindSingleTableNoMultiOrderUi();
+  bindPostPaymentClearTableUi();
+  bindAutoClearTableUi();
+  bindClearTableButtonUi();
+  bindClearTableClientNotificationUi();
+  bindAllowChangeServerUi();
+  bindHomePasswordAuthUi();
+  bindGuestChangePartySizeUi();
+  bindChildExcludedFromOrderLimitUi();
+  bindTablesideServiceCallUi();
+  bindSendKitchenWholeOrderUi();
+  bindSendKitchenAfterCheckoutUi();
+  bindAutoKitchenSendPaymentUi();
+  bindGuestEmenuAuthPageUi();
+  bindGuestCategoryModeUi();
+  bindHotpotBaseRequiredUi();
+  bindHotpotBaseStillShowUi();
+  bindGuestOrderNoticeUi();
+  bindGuestDishDetailDisplayUi();
+  bindGuestDiningDurationUi();
+  bindGuestOrderPlaceIntervalUi();
+  bindGuestOrderIntervalAllowCartUi();
+  bindGuestMenuOrderIntervalUi();
+  bindGuestMenuIntervalAllowCartUi();
+  bindHotpotBaseOrderModeUi();
+  bindHotpotHalfSurchargeUi();
+  bindPointsDishAuthOrderUi();
+  bindRuleHitPasswordAuthUi();
+  bindGuestKioskFlowPageUi();
+  bindEmenuServerReadonlyDishUi();
+  bindViewonlyDishRulesUi();
+  bindGuestMenuCartUi();
+  bindMenusifuBrandLogoUi();
+  bindGuestMenuClassificationModeUi();
+  bindGuestMenuClassNameDisplayUi();
+  bindGuestMenuImageModeUi();
+  bindOrderRemarkLinesUi();
+  bindReceiptSignatureLineUi();
+  bindProductRemarkUi();
+  bindComboSubitemRemarkLinesUi();
+  bindPosKitchenSendTriggerUi();
+  bindDelayedKitchenSendUi();
+  bindPostOrderKitchenSendModeUi();
+  bindKitchenSendPasswordAuthUi();
+  bindOrderDisplaySeatUi();
+  bindPosButtonVisibilityUi();
+  bindPartySizeSelectionPageUi();
+  bindPreOrderTableChangeUi();
   bindNotificationVoiceAlertUi();
+  bindWaitlistTicketPrintUi();
+  bindStaffOrderAlertUi();
   bindPaymentReceiptFlowUi();
   bindPrintPrinterPickUi();
   bindWaitlistModeUi();
   bindCashDrawerReconciliationUi();
   bindFinanceRegisterAuditUi(mount);
   refreshCashDrawerVarianceAlertThresholdLabels();
+  bindGuestNamePageUi();
+  bindGuestPhoneDisplayPageUi();
+  bindGuestPhoneRequiredUi();
+  bindTableDeliveryMealCardUi();
   bindMemberRegistrationFieldsUi();
   bindMemberPointsRewardsUi();
+  bindGuestMenuLineToggleUi();
+  bindGuestMenuDishNameFontUi();
   bindMemberPreOrderLoginPolicyEditor();
+  bindDefaultMainScreenEditor();
   bindTipPercentPresetEditors();
+  bindReceiptTipSuggestionEditors();
   bindCheckoutTipCollectionModeEditors();
   bindCardFeesEditors();
   bindTipCardOrderEditors();

@@ -76,7 +76,7 @@ const assignMap = {
 
   "daily-close-settlement": [171, 65, 330],
 
-  "fees-tips-expense": [305, 451, 307],
+  "fees-tips-expense": [305, 307],
 
 };
 
@@ -536,7 +536,7 @@ push(
 
   "- `seq` 与终版表行号一致；**64** 存储键保留供 UI 合并读取。",
 
-  "- **451** 小费支出流水仍留「费用折扣与小费支出」，不并入收银稽核。",
+  "- **451** 小费支出流水 catalog exclude，见收银记录与审计业务页（非设置项）。",
 
   "",
 

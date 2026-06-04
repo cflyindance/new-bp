@@ -1,11 +1,13 @@
 /**
  * 生成 docs/项目文档/素材中心-设置二级导航重设计方案.md
- * 运行：node scripts/generate-assets-settings-design-doc.mjs
+ * 运行：node admin-web/scripts/generate-assets-settings-design-doc.mjs
  */
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseConfigMd } from "./lib/parse-bplant-config-md.mjs";
+import { isSettingsCatalogExcluded } from "./lib/settings-catalog-exclusions.mjs";
+import { getSettingsHub } from "./lib/settings-hub-override.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, "..", "..");
@@ -15,27 +17,17 @@ const outPath = path.join(projectDocs, "素材中心-设置二级导航重设计
 
 const HUB = "素材中心";
 
-const titles = {
-  "brand-identity-assets": "品牌标识素材",
-  "screen-terminal-assets": "屏显与终端素材",
-  "cover-background-assets": "封面与背景素材",
-};
+const assignMap = {};
 
-const reasons = {
-  "brand-identity-assets":
-    "统一门店品牌识别素材（LOGO、打印LOGO）；对标 Clover/Square 品牌图片与票据Logo配置。",
-  "screen-terminal-assets":
-    "叫号屏与客显屏专用图片素材；对标 Snackpass/Peblla 的 Kiosk/副屏媒体管理。",
-  "cover-background-assets":
-    "首页封面与公司封面等背景视觉素材；对标竞品的品牌首页与社媒展示封面配置。",
-};
-
-/** seq → groupKey（素材中心 7 条） */
-const assignMap = {
-  "brand-identity-assets": [433, 434, 556],
-  "screen-terminal-assets": [430, 431],
-  "cover-background-assets": [432, 555],
-};
+const excludedFromCatalog = [
+  { seq: 430, title: "叫号屏图片", page: "/marketing/ads" },
+  { seq: 431, title: "客显屏图片", page: "/marketing/ads" },
+  { seq: 432, title: "公司封面图", page: "/marketing/ads" },
+  { seq: 433, title: "餐厅 LOGO", page: "/stores/settings · 门店档案" },
+  { seq: 434, title: "打印小票 LOGO", page: "/print-templates/settings · 打印基础" },
+  { seq: 555, title: "首页封面图", page: "/marketing/ads" },
+  { seq: 556, title: "首页门店 LOGO（未填写）", page: "—（catalog 不展示）" },
+];
 
 const assign = new Map();
 for (const [key, seqs] of Object.entries(assignMap)) {
@@ -45,8 +37,6 @@ for (const [key, seqs] of Object.entries(assignMap)) {
 function inferArea(nav, mod, title) {
   const t = `${nav}${mod}${title}`;
   if (t.includes("LOGO")) return "LOGO";
-  if (t.includes("叫号屏") || t.includes("客显屏") || t.includes("双屏")) return "屏显";
-  if (t.includes("封面") || t.includes("背景")) return "封面";
   return "素材";
 }
 
@@ -56,13 +46,14 @@ function sceneSummary(scene) {
 }
 
 const md = fs.readFileSync(sourcePath, "utf8");
-const rows = parseConfigMd(md).filter((r) => r.hub === HUB);
-const order = ["brand-identity-assets", "screen-terminal-assets", "cover-background-assets"];
+const allRows = parseConfigMd(md).filter((r) => getSettingsHub(r.seq, r.hub) === HUB);
+const rows = allRows.filter((r) => !isSettingsCatalogExcluded(r.seq));
+const order = Object.keys(assignMap);
 
 const missing = rows.filter((r) => !assign.has(r.seq)).map((r) => r.seq);
-if (missing.length) throw new Error(`未归类 seq: ${missing.join(", ")}`);
-const extra = [...assign.keys()].filter((s) => !rows.some((r) => r.seq === s));
-if (extra.length) throw new Error(`映射多余 seq: ${extra.join(", ")}`);
+if (rows.length && missing.length) {
+  throw new Error(`catalog 未归类 seq: ${missing.join(", ")}`);
+}
 
 const by = new Map(order.map((k) => [k, []]));
 for (const r of rows) {
@@ -76,117 +67,116 @@ const push = (...xs) => lines.push(...xs);
 push(
   "# 素材中心 · 设置二级导航重设计方案",
   "",
-  "> 文档版本：v1.1（已确认）  ",
-  "> 数据范围：`docs/项目文档/配置归类-终版.md` 中 **B平台一级导航 = 素材中心** 共 **7** 条功能设置  ",
+  "> 文档版本：v1.4  ",
+  `> 设置 catalog：**${rows.length}** 条；终版 hub 原文 **${parseConfigMd(md).filter((r) => r.hub === HUB).length}** 条，经 hub override 后有效 **${allRows.length}** 条，其余见 §4 迁出说明  `,
   "> 竞品参考：Toast / Clover / Square / Peblla / Snackpass 商家后台结构文档",
   "",
   "---",
   "",
   "## 1. 背景与目标",
   "",
-  "### 1.1 现状问题",
+  "### 1.1 变更说明（v1.4）",
   "",
-  "| 指标 | 现状 | 问题 |",
-  "|------|------|------|",
-  "| 二级分组数 | **4 组** / 7 条 | `图片库`、`封面图`、`LOGO` 命名口径不一致 |",
-  "| 场景混排 | 屏显图片与品牌LOGO混看 | 用户难按“品牌素材 vs 屏显素材”快速定位 |",
-  "| 资产链路 | 首页封面与公司封面割裂 | 背景类素材缺少统一入口 |",
+  "| 调整 | 说明 |",
+  "|------|------|",
+  "| **433 餐厅 LOGO** | → **门店管理** `/stores/settings` · **门店档案**（门店级商户标识） |",
+  "| 设置滑层 | 素材中心 **无 catalog 组**；屏显/封面/打印 LOGO 见 §4 |",
   "",
-  "### 1.2 设计目标",
+  "### 1.2 历史（v1.3 及以前）",
   "",
-  "- 二级导航收敛为 **3 组**，覆盖 7 条，匹配餐饮品牌素材管理场景",
-  "- 输出可写入 `docs/项目文档/配置归类-分组映射.csv` 的 `groupTitle` / `groupKey`",
+  "| 调整 | 说明 |",
+  "|------|------|",
+  "| 430/431/432/555 | → 营销中心 **广告** |",
+  "| 434 打印小票 LOGO | → 打印中心 **打印基础** |",
+  "",
+  "### 1.3 设计目标",
+  "",
+  "- 避免素材中心与门店档案、广告、打印基础 **双入口**",
   "- **不修改** `配置归类-终版.md` 原文",
   "",
   "---",
   "",
-  "## 2. 竞品对照（素材/品牌资产维度）",
+  "## 2. 推荐二级导航结构",
   "",
-  "| 竞品 | 素材设置组织方式 | 本项目借鉴 |",
-  "|------|------------------|------------|",
-  "| **Snackpass** | Kiosk 视频、电子收据图片、品牌主题素材 | 屏显素材与品牌素材分轨 |",
-  "| **Peblla** | 副屏媒体（图/视频）+ 广告图片 | 屏显终端素材独立组 |",
-  "| **Clover** | 支付小票/应用自定义图片、Logo | 品牌标识素材统一入口 |",
-  "| **Square** | 图片库与品牌展示资产 | 封面背景素材单独分组 |",
-  "| **Toast** | 网站/社媒品牌信息统一配置 | 品牌资产口径统一（Logo/封面） |",
+  rows.length === 0
+    ? "当前 **无** 设置 catalog 二级组；各 seq 已迁出至 §4 对应模块。"
+    : "",
   "",
-  "### 2.1 素材设置三维（商户心智）",
-  "",
-  "```text",
-  "品牌标识素材 → 屏显与终端素材 → 封面与背景素材",
-  "```",
-  "",
-  "---",
-  "",
-  "## 3. 推荐二级导航结构（3 组）",
-  "",
-  "| 序号 | groupTitle | groupKey | 条数 | 说明 |",
-  "|------|------------|----------|------|------|",
 );
 
-let total = 0;
-for (let i = 0; i < order.length; i++) {
-  const k = order[i];
-  const n = by.get(k).length;
-  total += n;
-  push(`| ${i + 1} | **${titles[k]}** | \`${k}\` | ${n} | ${reasons[k]} |`);
-}
-push(`| | **合计** | | **${total}** | |`, "", "---", "", "## 4. 分类结果明细", "");
-
-for (let i = 0; i < order.length; i++) {
-  const k = order[i];
-  push(`### 4.${i + 1} ${titles[k]}（\`${k}\`）`, "", `**归类理由**：${reasons[k]}`, "");
-  push("| seq | 场景 | 原导航 | 功能模块 | 功能设置 | 功能场景描述（摘要） |");
-  push("|-----|------|--------|----------|----------|----------------------|");
-  for (const r of [...by.get(k)].sort((a, b) => a.seq - b.seq)) {
-    push(`| ${r.seq} | ${r.area} | ${r.nav} | ${r.moduleName} | ${r.title} | ${sceneSummary(r.sceneDesc)} |`);
+if (rows.length > 0) {
+  push(
+    "| 序号 | groupTitle | groupKey | 条数 | 说明 |",
+    "|------|------------|----------|------|------|",
+  );
+  let total = 0;
+  for (let i = 0; i < order.length; i++) {
+    const k = order[i];
+    const n = by.get(k).length;
+    total += n;
+    push(`| ${i + 1} | **${k}** | \`${k}\` | ${n} | — |`);
   }
-  push("");
+  push(`| | **合计** | | **${total}** | |`);
+}
+
+push("", "---", "", "## 3. 分类结果明细", "");
+
+if (rows.length === 0) {
+  push("（无 catalog 项）", "");
+} else {
+  for (let i = 0; i < order.length; i++) {
+    const k = order[i];
+    push(`### 3.${i + 1}（\`${k}\`）`, "");
+    push("| seq | 场景 | 原导航 | 功能模块 | 功能设置 | 功能场景描述（摘要） |");
+    push("|-----|------|--------|----------|----------|----------------------|");
+    for (const r of [...by.get(k)].sort((a, b) => a.seq - b.seq)) {
+      push(
+        `| ${r.seq} | ${r.area} | ${r.nav} | ${r.moduleName} | ${r.title} | ${sceneSummary(r.sceneDesc)} |`,
+      );
+    }
+    push("");
+  }
 }
 
 push(
   "---",
   "",
-  "## 5. 与旧分组对照",
+  "## 4. 已迁出 catalog",
   "",
-  "| 新 groupTitle | 吸收的旧分组 |",
-  "|---------------|--------------|",
-  "| 品牌标识素材 | 餐厅LOGO、打印Logo、LOGO |",
-  "| 屏显与终端素材 | 叫号屏、双屏 |",
-  "| 封面与背景素材 | 公司封面、封面/背景图 |",
+  "| seq | 功能设置 | 维护入口 |",
+  "|-----|----------|----------|",
+);
+for (const x of excludedFromCatalog) {
+  push(`| ${x.seq} | ${x.title} | \`${x.page}\` |`);
+}
+
+push(
   "",
   "---",
   "",
-  "## 6. 落地步骤",
+  "## 5. 落地步骤",
   "",
-  "1. 确认本方案后运行 `node scripts/apply-assets-settings-mapping.mjs`",
-  "2. `cd admin-web && npm run build:settings-catalog`",
-  "3. 素材中心 → 设置验证",
+  "1. `node admin-web/scripts/apply-assets-settings-mapping.mjs`（清理 433 等映射行）",
+  "2. `node admin-web/scripts/apply-store-settings-mapping.mjs`（433 → store-profile）",
+  "3. `cd admin-web && npm run build:settings-catalog`",
+  "4. 素材中心模块 **无** 设置滑层入口（或隐藏空态）；餐厅 LOGO 在 **门店管理 → 设置 → 门店档案**",
   "",
-  "### 6.1 映射表（CSV）",
+  "### 5.1 映射表（CSV，catalog 项）",
   "",
   "```csv",
   "seq,groupTitle,groupKey",
-);
-
-for (const r of [...rows].sort((a, b) => a.seq - b.seq)) {
-  const key = assign.get(r.seq);
-  lines.push(`${r.seq},${titles[key]},${key}`);
-}
-
-push(
+  "(无)",
   "```",
   "",
   "---",
   "",
-  "## 7. 边界说明",
+  "## 6. 边界说明",
   "",
-  "- 7 条全部保留；`seq` 与终版表行号一致。",
-  "- **与前厅分工（v1.1）**：**555/556/433** 等为 Kiosk、eMenu 等 **C 端首页封面与门店 Logo** 素材维护（默认展示，无显隐开关）；**461/462** 在前厅 **`cds`（客显屏）**，为 **客显结账副屏** 专用配置，**不与本 hub 重复**。",
-  "- **eMenu 品牌露出显隐**（532、612）归前厅 `guest-menu-global`，非素材换图。",
-  "- 确认写入后执行 apply 脚本并重建 catalog。",
+  "- 430/431/432/433/434/555/556 终版 hub 仍为素材中心时，经 `settings-hub-override` 与 exclusions 归入对应模块 catalog。",
+  "- **461/462** 仍在前厅 `cds`（客显结账副屏），与 431 图片库维护路径不同。",
+  "- 屏保、海报 Pro 见营销中心对应功能页，不在本 hub 设置重复展示。",
   "",
 );
 
 fs.writeFileSync(outPath, `${lines.join("\n")}\n`, "utf8");
-console.log(`Wrote ${outPath} (${rows.length} items, ${order.length} groups)`);
+console.log(`Wrote ${outPath} (catalog ${rows.length} items, ${order.length} groups)`);

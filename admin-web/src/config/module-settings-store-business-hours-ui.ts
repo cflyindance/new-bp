@@ -135,23 +135,43 @@ function defaultSchedulesFromLegacy(): StoreBusinessHourSchedule[] {
     return [
       normalizeSchedule({
         id: newScheduleId(),
-        name: "平日营业",
-        openTime: "11:00",
-        closeTime: "22:00",
+        name: "All Day",
+        openTime: "00:00",
+        closeTime: "23:50",
         fromMonth: month,
         toMonth: month,
-        fromDay: "mon",
-        toDay: "fri",
+        fromDay: "sun",
+        toDay: "sat",
       }),
       normalizeSchedule({
         id: newScheduleId(),
-        name: "周末营业",
-        openTime: "10:00",
-        closeTime: "23:00",
+        name: "早上",
+        openTime: "06:00",
+        closeTime: "11:00",
         fromMonth: month,
         toMonth: month,
-        fromDay: "sat",
-        toDay: "sun",
+        fromDay: "sun",
+        toDay: "sat",
+      }),
+      normalizeSchedule({
+        id: newScheduleId(),
+        name: "中午",
+        openTime: "11:00",
+        closeTime: "16:00",
+        fromMonth: month,
+        toMonth: month,
+        fromDay: "sun",
+        toDay: "sat",
+      }),
+      normalizeSchedule({
+        id: newScheduleId(),
+        name: "晚上",
+        openTime: "16:00",
+        closeTime: "24:00",
+        fromMonth: month,
+        toMonth: month,
+        fromDay: "sun",
+        toDay: "sat",
       }),
     ];
   }
@@ -194,6 +214,45 @@ function formatDayRange(fromDay: StoreBusinessHourDay, toDay: StoreBusinessHourD
 
 export function formatScheduleSummary(schedule: StoreBusinessHourSchedule): string {
   return `${formatMonthRange(schedule.fromMonth, schedule.toMonth)} · ${formatDayRange(schedule.fromDay, schedule.toDay)} · ${schedule.openTime}–${schedule.closeTime}`;
+}
+
+/** 产线展示：00:00 to 23:50 */
+export function formatScheduleTimeRange(schedule: StoreBusinessHourSchedule): string {
+  return `${schedule.openTime} to ${schedule.closeTime}`;
+}
+
+const WEEK_DAYS_MON_FIRST: StoreBusinessHourDay[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+
+/** 星期徽章顺序（与产线选择弹窗一致：SUN → SAT） */
+export const STORE_BUSINESS_HOUR_DAY_BADGES: { day: StoreBusinessHourDay; badge: string }[] = [
+  { day: "sun", badge: "SUN" },
+  { day: "mon", badge: "MON" },
+  { day: "tue", badge: "TUE" },
+  { day: "wed", badge: "WED" },
+  { day: "thu", badge: "THU" },
+  { day: "fri", badge: "FRI" },
+  { day: "sat", badge: "SAT" },
+];
+
+/** 展开 fromDay–toDay 为一周内生效的星期（含跨周区间） */
+export function expandScheduleActiveDays(
+  fromDay: StoreBusinessHourDay,
+  toDay: StoreBusinessHourDay,
+): Set<StoreBusinessHourDay> {
+  const fromIdx = WEEK_DAYS_MON_FIRST.indexOf(fromDay);
+  const toIdx = WEEK_DAYS_MON_FIRST.indexOf(toDay);
+  const out = new Set<StoreBusinessHourDay>();
+  if (fromIdx === -1 || toIdx === -1) {
+    WEEK_DAYS_MON_FIRST.forEach((d) => out.add(d));
+    return out;
+  }
+  if (fromIdx <= toIdx) {
+    for (let i = fromIdx; i <= toIdx; i++) out.add(WEEK_DAYS_MON_FIRST[i]!);
+  } else {
+    for (let i = fromIdx; i < WEEK_DAYS_MON_FIRST.length; i++) out.add(WEEK_DAYS_MON_FIRST[i]!);
+    for (let i = 0; i <= toIdx; i++) out.add(WEEK_DAYS_MON_FIRST[i]!);
+  }
+  return out;
 }
 
 function renderDayChoice(

@@ -1,5 +1,6 @@
 /**
- * 将权限管理中心 4 组分类写入 docs/项目文档/配置归类-分组映射.csv
+ * 将权限管理中心「账户与会话安全」分组写入 docs/项目文档/配置归类-分组映射.csv
+ * POS/iPad 操作门禁（345/346/349/646）已迁前厅；369/426 在 RBAC。
  * 运行：node scripts/apply-permissions-settings-mapping.mjs
  */
 import fs from "node:fs";
@@ -15,17 +16,11 @@ const mappingPath = [projectDocs, repoDocs]
   .find((p) => fs.existsSync(p));
 
 const titles = {
-  "account-security-auth": "账户安全与授权",
-  "role-employee-permissions": "角色与员工权限",
-  "order-operation-guardrails": "下单操作限制与授权",
-  "guest-order-limits": "食客下单限制规则",
+  "account-session-security": "账户与会话安全",
 };
 
 const assignMap = {
-  "account-security-auth": [75, 166, 175, 345, 346, 646],
-  "role-employee-permissions": [68, 69, 349, 369, 426],
-  "order-operation-guardrails": [138, 594, 595, 596, 620, 621, 626, 627],
-  "guest-order-limits": [563, 564, 565, 566, 568, 576, 583, 584, 585, 586, 587, 588, 589, 590, 591],
+  "account-session-security": [75, 166, 175],
 };
 
 const permAssign = new Map();

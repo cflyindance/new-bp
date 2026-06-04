@@ -1,5 +1,5 @@
 /**
- * 支付中心 · 卡支付规则与对客加价（242 产线门槛、454 互斥策略、243 签名门槛）。
+ * 支付中心 · 卡支付规则与对客加价（82/242 产线最低消费、454 互斥策略、243 签名门槛）。
  */
 
 import { MODULE_SETTING_CHOICE_CONTROL_CLASS } from "./module-settings-choice-ui";
@@ -10,21 +10,43 @@ import {
 import {
   readModuleSettingJson,
   readModuleSettingNumber,
+  readModuleSettingText,
   writeModuleSettingJson,
+  writeModuleSettingNumber,
+  writeModuleSettingText,
 } from "./module-settings-form-ui";
 
+export const MEMBER_CARD_MIN_SPEND_SEQ = 82;
 export const CARD_MIN_SPEND_SEQ = 242;
 export const CARD_SIGNATURE_THRESHOLD_SEQ = 243;
+export const MERCHANTCOPY_SIGNATURE_RETENTION_DAYS_SEQ = 180;
+export const RECEIPT_UNPAID_PRICE_DISPLAY_SEQ = 172;
 export const CARD_PRICING_STRATEGY_SEQ = 454;
 
+const MEMBER_CARD_MIN_SPEND_STORAGE_ID = "82-member-card-min-spend-by-line";
 const CARD_MIN_SPEND_STORAGE_ID = "242-card-min-spend-by-line";
 const CARD_SIGNATURE_MIN_STORAGE_ID = "243-card-signature-min-by-line";
+export const MERCHANTCOPY_SIGNATURE_RETENTION_DAYS_FIELD_ID =
+  "180-merchantcopy-signature-retention-days";
+const RECEIPT_UNPAID_PRICE_DISPLAY_STORAGE_ID = "172-receipt-unpaid-price-display";
 const CARD_PRICING_STORAGE_ID = "454-card-pricing-strategy";
 
+const MERCHANTCOPY_SIGNATURE_RETENTION_DAYS_DEFAULT = 90;
+const MERCHANTCOPY_SIGNATURE_RETENTION_DAYS_MAX = 365;
+const RECEIPT_UNPAID_PRICE_CUSTOM_LABEL_MAX = 64;
+
+const LEGACY_MEMBER_MIN_SPEND_FIELD_IDS = ["82-member-card-min-spend", "82-card-min-spend"] as const;
 const LEGACY_MIN_SPEND_FIELD_IDS = ["242-card-min-payment", "512-card-min-spend"] as const;
 const LEGACY_SIGNATURE_MIN_FIELD_IDS = ["243-card-signature-min-amount"] as const;
 
 export type CardPricingMode = "none" | "dual-pricing" | "surcharge";
+
+export type ReceiptUnpaidPriceType = "cash" | "card" | "custom";
+
+export type ReceiptUnpaidPriceDisplay = {
+  priceType: ReceiptUnpaidPriceType;
+  customLabel: string;
+};
 
 export type CardPricingStrategy = {
   mode: CardPricingMode;
@@ -39,10 +61,19 @@ export type CardSignatureMinByLine = CardMinSpendByLine;
 const INPUT_CLASS =
   "h-8 w-full min-w-0 rounded-md border border-input bg-background px-2 text-sm tabular-nums text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
+const TEXT_INPUT_CLASS =
+  "h-9 w-full min-w-[12rem] max-w-md rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+
 const CARD_PRICING_MODE_OPTIONS = [
   { value: "none", label: "不加价（现金与卡付同价）" },
   { value: "dual-pricing", label: "双重定价" },
   { value: "surcharge", label: "整单加收" },
+] as const;
+
+const RECEIPT_UNPAID_PRICE_TYPE_OPTIONS = [
+  { value: "cash", label: "现金价" },
+  { value: "card", label: "信用卡价" },
+  { value: "custom", label: "自定义" },
 ] as const;
 
 const MAX_SURCHARGE_PERCENT = 4;
@@ -105,6 +136,14 @@ export function writeCardMinSpendByLine(values: CardMinSpendByLine): void {
   writeAmountByLine(CARD_MIN_SPEND_STORAGE_ID, values);
 }
 
+export function readMemberCardMinSpendByLine(): CardMinSpendByLine {
+  return readAmountByLine(MEMBER_CARD_MIN_SPEND_STORAGE_ID, LEGACY_MEMBER_MIN_SPEND_FIELD_IDS);
+}
+
+export function writeMemberCardMinSpendByLine(values: CardMinSpendByLine): void {
+  writeAmountByLine(MEMBER_CARD_MIN_SPEND_STORAGE_ID, values);
+}
+
 export function readCardSignatureMinByLine(): CardSignatureMinByLine {
   return readAmountByLine(CARD_SIGNATURE_MIN_STORAGE_ID, LEGACY_SIGNATURE_MIN_FIELD_IDS);
 }
@@ -121,6 +160,30 @@ function clampMoney(n: number): number {
 function clampPercent(n: number): number {
   if (!Number.isFinite(n)) return 0;
   return Math.min(MAX_SURCHARGE_PERCENT, Math.max(0, Math.round(n * 100) / 100));
+}
+
+function clampRetentionDays(n: number): number {
+  if (!Number.isFinite(n)) return MERCHANTCOPY_SIGNATURE_RETENTION_DAYS_DEFAULT;
+  return Math.min(
+    MERCHANTCOPY_SIGNATURE_RETENTION_DAYS_MAX,
+    Math.max(0, Math.round(n)),
+  );
+}
+
+export function readMerchantcopySignatureRetentionDays(): number {
+  return clampRetentionDays(
+    readModuleSettingNumber(
+      MERCHANTCOPY_SIGNATURE_RETENTION_DAYS_FIELD_ID,
+      MERCHANTCOPY_SIGNATURE_RETENTION_DAYS_DEFAULT,
+    ),
+  );
+}
+
+export function writeMerchantcopySignatureRetentionDays(days: number): void {
+  writeModuleSettingNumber(
+    MERCHANTCOPY_SIGNATURE_RETENTION_DAYS_FIELD_ID,
+    clampRetentionDays(days),
+  );
 }
 
 function isValidPricingMode(value: string): value is CardPricingMode {
@@ -157,6 +220,50 @@ export function readCardPricingStrategy(): CardPricingStrategy {
 
 export function writeCardPricingStrategy(strategy: CardPricingStrategy): void {
   writeModuleSettingJson(CARD_PRICING_STORAGE_ID, normalizeCardPricingStrategy(strategy));
+}
+
+function isValidReceiptUnpaidPriceType(value: string): value is ReceiptUnpaidPriceType {
+  return value === "cash" || value === "card" || value === "custom";
+}
+
+function normalizeCustomLabel(value: string): string {
+  return value.trim().slice(0, RECEIPT_UNPAID_PRICE_CUSTOM_LABEL_MAX);
+}
+
+function normalizeReceiptUnpaidPriceDisplay(
+  raw: Partial<ReceiptUnpaidPriceDisplay>,
+): ReceiptUnpaidPriceDisplay {
+  const priceType = isValidReceiptUnpaidPriceType(String(raw.priceType ?? ""))
+    ? raw.priceType!
+    : "cash";
+  return {
+    priceType,
+    customLabel: normalizeCustomLabel(String(raw.customLabel ?? "")),
+  };
+}
+
+export function readReceiptUnpaidPriceDisplay(): ReceiptUnpaidPriceDisplay {
+  const raw = readModuleSettingJson<Partial<ReceiptUnpaidPriceDisplay>>(
+    RECEIPT_UNPAID_PRICE_DISPLAY_STORAGE_ID,
+    {},
+  );
+  if (raw && typeof raw === "object" && raw.priceType) {
+    return normalizeReceiptUnpaidPriceDisplay(raw);
+  }
+  const legacyType = readModuleSettingText("172-unpaid-price-type", "").trim();
+  const legacyLabel = readModuleSettingText("172-unpaid-price-custom-label", "").trim();
+  if (isValidReceiptUnpaidPriceType(legacyType)) {
+    return normalizeReceiptUnpaidPriceDisplay({
+      priceType: legacyType,
+      customLabel: legacyLabel,
+    });
+  }
+  return { priceType: "cash", customLabel: "" };
+}
+
+export function writeReceiptUnpaidPriceDisplay(display: ReceiptUnpaidPriceDisplay): void {
+  const normalized = normalizeReceiptUnpaidPriceDisplay(display);
+  writeModuleSettingJson(RECEIPT_UNPAID_PRICE_DISPLAY_STORAGE_ID, normalized);
 }
 
 /** @deprecated 使用 readCardSignatureMinByLine() */
@@ -211,6 +318,10 @@ function renderAmountByLineTableHtml(options: {
     </div>`;
 }
 
+export function isMemberCardMinSpendSeq(seq: number): boolean {
+  return seq === MEMBER_CARD_MIN_SPEND_SEQ;
+}
+
 export function isCardMinSpendSeq(seq: number): boolean {
   return seq === CARD_MIN_SPEND_SEQ;
 }
@@ -223,12 +334,31 @@ export function isCardSignatureThresholdSeq(seq: number): boolean {
   return seq === CARD_SIGNATURE_THRESHOLD_SEQ;
 }
 
+export function isMerchantcopySignatureRetentionDaysSeq(seq: number): boolean {
+  return seq === MERCHANTCOPY_SIGNATURE_RETENTION_DAYS_SEQ;
+}
+
+export function isReceiptUnpaidPriceDisplaySeq(seq: number): boolean {
+  return seq === RECEIPT_UNPAID_PRICE_DISPLAY_SEQ;
+}
+
 export function renderCardFeesGroupIntroHtml(): string {
   return `
     <p class="mb-3 rounded-md border border-border bg-muted/40 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
-      本组配置<strong>能否刷卡</strong>（242 产线最低消费）、<strong>签名金额门槛</strong>（243）与<strong>刷卡是否对顾客加价</strong>（454）。
+      本组配置<strong>会员卡 / 信用卡产线最低消费</strong>（82 / 242）、<strong>签名金额门槛</strong>（243）、<strong>Merchantcopy 电子签名留存天数</strong>（180）、<strong>刷卡是否对顾客加价</strong>（454）与<strong>收据未付价格口径</strong>（172）。
       各终端小费页 / 签名页开关见「结账与交互」463/464；收单通道成本见财务中心。
     </p>`;
+}
+
+export function renderMemberCardMinSpendByLineTableHtml(): string {
+  return renderAmountByLineTableHtml({
+    editorAttr: "data-member-card-min-spend-editor",
+    lineDataAttr: "data-member-card-min-spend-line",
+    values: readMemberCardMinSpendByLine(),
+    valueHeader: "会员卡最低消费",
+    valueAriaSuffix: "最低消费",
+    hint: "订单金额低于该值时，对应产线不可使用会员卡支付。0 表示不限制。",
+  });
 }
 
 export function renderCardMinSpendByLineTableHtml(): string {
@@ -308,24 +438,111 @@ export function renderCardSignatureThresholdInputHtml(): string {
   });
 }
 
-function collectMinSpendFromRoot(root: ParentNode): CardMinSpendByLine {
-  const values = readCardMinSpendByLine();
-  root.querySelectorAll<HTMLInputElement>("[data-card-min-spend-line]").forEach((input) => {
-    const lineId = input.getAttribute("data-card-min-spend-line") as PaymentProductLineId | null;
+export function renderMerchantcopySignatureRetentionDaysInputHtml(): string {
+  const value = readMerchantcopySignatureRetentionDays();
+  return `
+    <div class="flex flex-wrap items-center gap-2">
+      <input
+        type="number"
+        inputmode="numeric"
+        class="h-9 w-24 rounded-md border border-input bg-background px-3 text-sm tabular-nums text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        value="${escapeHtml(String(value))}"
+        min="0"
+        max="${MERCHANTCOPY_SIGNATURE_RETENTION_DAYS_MAX}"
+        data-module-setting-number="${escapeHtml(MERCHANTCOPY_SIGNATURE_RETENTION_DAYS_FIELD_ID)}"
+        aria-label="Merchantcopy 电子签名存储天数"
+      />
+      <span class="text-sm text-muted-foreground">天</span>
+      <span class="text-xs text-muted-foreground">商互联 Merchantcopy 签购单电子签名影像在终端本地的保留时长；0 表示不保留</span>
+    </div>`;
+}
+
+function renderReceiptUnpaidPriceCustomInput(display: ReceiptUnpaidPriceDisplay): string {
+  const disabled = display.priceType !== "custom";
+  return `
+    <div class="space-y-1.5 ${disabled ? "opacity-50" : ""}" data-receipt-unpaid-price-custom-wrap>
+      <label class="text-xs text-muted-foreground" for="receipt-unpaid-price-custom-label">自定义说明</label>
+      <input
+        id="receipt-unpaid-price-custom-label"
+        type="text"
+        class="${TEXT_INPUT_CLASS}"
+        value="${escapeHtml(display.customLabel)}"
+        placeholder="如：牌价、会员价、外卖专享价"
+        data-receipt-unpaid-price-custom-label
+        maxlength="${RECEIPT_UNPAID_PRICE_CUSTOM_LABEL_MAX}"
+        ${disabled ? "disabled" : ""}
+        autocomplete="off"
+        aria-label="收据未付价格自定义说明"
+      />
+      <p class="text-xs text-muted-foreground" data-receipt-unpaid-price-hint>
+        ${disabled ? "选择「自定义」后可输入票面上展示的价格口径说明。" : "该文案将用于收据未付金额旁的价格口径标识。"}
+      </p>
+    </div>`;
+}
+
+export function renderReceiptUnpaidPriceDisplayHtml(): string {
+  const display = readReceiptUnpaidPriceDisplay();
+  const groupName = "receipt-unpaid-price-type";
+  const radios = RECEIPT_UNPAID_PRICE_TYPE_OPTIONS.map((opt) => {
+    const checked = display.priceType === opt.value;
+    return `
+      <label class="flex cursor-pointer items-start gap-2 text-sm text-foreground">
+        <input
+          type="radio"
+          name="${groupName}"
+          value="${escapeHtml(opt.value)}"
+          class="${MODULE_SETTING_CHOICE_CONTROL_CLASS} mt-0.5"
+          ${checked ? "checked" : ""}
+          data-receipt-unpaid-price-type
+          aria-label="${escapeHtml(opt.label)}"
+        />
+        <span>${escapeHtml(opt.label)}</span>
+      </label>`;
+  }).join("");
+
+  return `
+    <div class="space-y-3" data-receipt-unpaid-price-editor>
+      <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-x-4" role="radiogroup" aria-label="收据未付价格口径">${radios}</div>
+      ${renderReceiptUnpaidPriceCustomInput(display)}
+    </div>`;
+}
+
+function collectAmountByLineFromRoot(
+  root: ParentNode,
+  lineDataAttr: string,
+  readValues: () => CardMinSpendByLine,
+): CardMinSpendByLine {
+  const values = readValues();
+  root.querySelectorAll<HTMLInputElement>(`[${lineDataAttr}]`).forEach((input) => {
+    const lineId = input.getAttribute(lineDataAttr) as PaymentProductLineId | null;
     if (!lineId) return;
     values[lineId] = clampMoney(Number(input.value));
   });
   return values;
 }
 
+function collectMinSpendFromRoot(root: ParentNode): CardMinSpendByLine {
+  return collectAmountByLineFromRoot(
+    root,
+    "data-card-min-spend-line",
+    readCardMinSpendByLine,
+  );
+}
+
+function collectMemberMinSpendFromRoot(root: ParentNode): CardMinSpendByLine {
+  return collectAmountByLineFromRoot(
+    root,
+    "data-member-card-min-spend-line",
+    readMemberCardMinSpendByLine,
+  );
+}
+
 function collectSignatureMinFromRoot(root: ParentNode): CardSignatureMinByLine {
-  const values = readCardSignatureMinByLine();
-  root.querySelectorAll<HTMLInputElement>("[data-card-signature-min-line]").forEach((input) => {
-    const lineId = input.getAttribute("data-card-signature-min-line") as PaymentProductLineId | null;
-    if (!lineId) return;
-    values[lineId] = clampMoney(Number(input.value));
-  });
-  return values;
+  return collectAmountByLineFromRoot(
+    root,
+    "data-card-signature-min-line",
+    readCardSignatureMinByLine,
+  );
 }
 
 function readPricingModeFromEditor(editor: HTMLElement): CardPricingMode {
@@ -362,17 +579,74 @@ function persistCardPricingEditor(editor: HTMLElement): void {
   });
 }
 
-export function bindCardMinSpendEditors(root: ParentNode = document): void {
-  root.querySelectorAll<HTMLElement>("[data-card-min-spend-editor]").forEach((editor) => {
-    if (editor.dataset.cardMinSpendEditorBound === "1") return;
-    editor.dataset.cardMinSpendEditorBound = "1";
-    const persist = () => writeCardMinSpendByLine(collectMinSpendFromRoot(editor));
+function readReceiptUnpaidPriceTypeFromEditor(editor: HTMLElement): ReceiptUnpaidPriceType {
+  const checked = editor.querySelector<HTMLInputElement>("[data-receipt-unpaid-price-type]:checked");
+  const value = checked?.value ?? "";
+  return isValidReceiptUnpaidPriceType(value) ? value : "cash";
+}
+
+function syncReceiptUnpaidPriceEditorUi(editor: HTMLElement): void {
+  const priceType = readReceiptUnpaidPriceTypeFromEditor(editor);
+  const customWrap = editor.querySelector<HTMLElement>("[data-receipt-unpaid-price-custom-wrap]");
+  const customInput = editor.querySelector<HTMLInputElement>("[data-receipt-unpaid-price-custom-label]");
+  const hint = editor.querySelector("[data-receipt-unpaid-price-hint]");
+  const disabled = priceType !== "custom";
+  customWrap?.classList.toggle("opacity-50", disabled);
+  if (customInput) customInput.disabled = disabled;
+  if (hint) {
+    hint.textContent = disabled
+      ? "选择「自定义」后可输入票面上展示的价格口径说明。"
+      : "该文案将用于收据未付金额旁的价格口径标识。";
+  }
+}
+
+function persistReceiptUnpaidPriceEditor(editor: HTMLElement): void {
+  const priceType = readReceiptUnpaidPriceTypeFromEditor(editor);
+  const customLabel =
+    editor.querySelector<HTMLInputElement>("[data-receipt-unpaid-price-custom-label]")?.value ?? "";
+  writeReceiptUnpaidPriceDisplay({ priceType, customLabel });
+}
+
+function bindAmountByLineEditors(options: {
+  root: ParentNode;
+  editorSelector: string;
+  lineSelector: string;
+  boundKey: string;
+  persist: (values: CardMinSpendByLine) => void;
+  collect: (root: ParentNode) => CardMinSpendByLine;
+}): void {
+  options.root.querySelectorAll<HTMLElement>(options.editorSelector).forEach((editor) => {
+    if (editor.dataset[options.boundKey] === "1") return;
+    editor.dataset[options.boundKey] = "1";
+    const save = () => options.persist(options.collect(editor));
     editor.addEventListener("input", (e) => {
-      if ((e.target as HTMLElement).matches("[data-card-min-spend-line]")) persist();
+      if ((e.target as HTMLElement).matches(options.lineSelector)) save();
     });
     editor.addEventListener("change", (e) => {
-      if ((e.target as HTMLElement).matches("[data-card-min-spend-line]")) persist();
+      if ((e.target as HTMLElement).matches(options.lineSelector)) save();
     });
+  });
+}
+
+export function bindMemberCardMinSpendEditors(root: ParentNode = document): void {
+  bindAmountByLineEditors({
+    root,
+    editorSelector: "[data-member-card-min-spend-editor]",
+    lineSelector: "[data-member-card-min-spend-line]",
+    boundKey: "memberCardMinSpendEditorBound",
+    persist: writeMemberCardMinSpendByLine,
+    collect: collectMemberMinSpendFromRoot,
+  });
+}
+
+export function bindCardMinSpendEditors(root: ParentNode = document): void {
+  bindAmountByLineEditors({
+    root,
+    editorSelector: "[data-card-min-spend-editor]",
+    lineSelector: "[data-card-min-spend-line]",
+    boundKey: "cardMinSpendEditorBound",
+    persist: writeCardMinSpendByLine,
+    collect: collectMinSpendFromRoot,
   });
 }
 
@@ -399,21 +673,49 @@ export function bindCardPricingStrategyEditors(root: ParentNode = document): voi
 }
 
 export function bindCardSignatureMinEditors(root: ParentNode = document): void {
-  root.querySelectorAll<HTMLElement>("[data-card-signature-min-editor]").forEach((editor) => {
-    if (editor.dataset.cardSignatureMinEditorBound === "1") return;
-    editor.dataset.cardSignatureMinEditorBound = "1";
-    const persist = () => writeCardSignatureMinByLine(collectSignatureMinFromRoot(editor));
-    editor.addEventListener("input", (e) => {
-      if ((e.target as HTMLElement).matches("[data-card-signature-min-line]")) persist();
-    });
+  bindAmountByLineEditors({
+    root,
+    editorSelector: "[data-card-signature-min-editor]",
+    lineSelector: "[data-card-signature-min-line]",
+    boundKey: "cardSignatureMinEditorBound",
+    persist: writeCardSignatureMinByLine,
+    collect: collectSignatureMinFromRoot,
+  });
+}
+
+export function bindReceiptUnpaidPriceDisplayEditors(root: ParentNode = document): void {
+  root.querySelectorAll<HTMLElement>("[data-receipt-unpaid-price-editor]").forEach((editor) => {
+    if (editor.dataset.receiptUnpaidPriceEditorBound === "1") return;
+    editor.dataset.receiptUnpaidPriceEditorBound = "1";
+    syncReceiptUnpaidPriceEditorUi(editor);
     editor.addEventListener("change", (e) => {
-      if ((e.target as HTMLElement).matches("[data-card-signature-min-line]")) persist();
+      const el = e.target as HTMLElement;
+      if (el.matches("[data-receipt-unpaid-price-type]")) {
+        syncReceiptUnpaidPriceEditorUi(editor);
+        persistReceiptUnpaidPriceEditor(editor);
+        return;
+      }
+      if (el.matches("[data-receipt-unpaid-price-custom-label]")) {
+        persistReceiptUnpaidPriceEditor(editor);
+      }
+    });
+    editor.addEventListener("input", (e) => {
+      if ((e.target as HTMLElement).matches("[data-receipt-unpaid-price-custom-label]")) {
+        persistReceiptUnpaidPriceEditor(editor);
+      }
+    });
+    editor.addEventListener("blur", (e) => {
+      if ((e.target as HTMLElement).matches("[data-receipt-unpaid-price-custom-label]")) {
+        persistReceiptUnpaidPriceEditor(editor);
+      }
     });
   });
 }
 
 export function bindCardFeesEditors(root: ParentNode = document): void {
+  bindMemberCardMinSpendEditors(root);
   bindCardMinSpendEditors(root);
   bindCardPricingStrategyEditors(root);
   bindCardSignatureMinEditors(root);
+  bindReceiptUnpaidPriceDisplayEditors(root);
 }

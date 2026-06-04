@@ -183,27 +183,12 @@ const TEAM_PAYROLL_TIP_FORM_ROWS: ModuleSettingFormRowConfig[] = [
   },
 ];
 
-/** 外卖/来取 · 履约方式与取餐流程（489：服务方式多选） */
-const DELIVERY_PICKUP_FORM_ROWS: ModuleSettingFormRowConfig[] = [
-  {
-    seq: 489,
-    kind: "checkbox-group",
-    checkboxes: [
-      { fieldId: "489-service-counter-pickup", label: "柜台自取", defaultChecked: true },
-      { fieldId: "489-service-table-delivery", label: "服务员送餐到桌", defaultChecked: true },
-      { fieldId: "489-service-delivery", label: "外卖配送", defaultChecked: false },
-      { fieldId: "489-service-curbside-pickup", label: "路边取餐（Curbside）", defaultChecked: false },
-    ],
-  },
-];
-
 const MODULE_SETTING_FORM_ROWS: ModuleSettingFormRowConfig[] = [
   ...WAIT_TIME_FORM_ROWS,
   ...GUEST_MENU_STRUCTURE_FORM_ROWS,
   ...POS_MENU_UI_FORM_ROWS,
   ...TEAM_TIME_ATTENDANCE_FORM_ROWS,
   ...TEAM_PAYROLL_TIP_FORM_ROWS,
-  ...DELIVERY_PICKUP_FORM_ROWS,
 ];
 
 const FORM_ROW_BY_SEQ = new Map(MODULE_SETTING_FORM_ROWS.map((r) => [r.seq, r]));

@@ -1,5 +1,5 @@
 /**
- * 将硬件管理中心 6 组分类写入 docs/项目文档/配置归类-分组映射.csv
+ * 硬件管理中心 · 设置 catalog 映射（仅全局默认设备 386–395；其余能力在「硬件」子模块）。
  * 运行：node scripts/apply-hardware-settings-mapping.mjs
  */
 import fs from "node:fs";
@@ -15,32 +15,17 @@ const mappingPath = [projectDocs, repoDocs]
   .find((p) => fs.existsSync(p));
 
 const titles = {
-  "device-integration-basics": "设备接入与基础外设",
-  "printer-output-devices": "打印机与输出设备",
-  "cash-payment-terminals": "钱箱与支付终端",
-  "client-device-binding": "终端设备绑定与区域",
-  "fiscal-bluetooth": "税控与蓝牙外设",
-  "emenu-device-display": "eMenu设备与展示模式",
+  "global-default-devices": "全局设置",
 };
 
 const assignMap = {
-  "device-integration-basics": [1, 11, 15, 184, 185, 228, 379, 380, 381, 382, 383],
-  "printer-output-devices": [
-    352, 353, 354, 355, 356, 357, 358, 359, 360, 361, 362, 363, 372, 373, 374, 375, 376, 385, 386, 387, 388, 389,
-    391, 393, 394, 395, 498, 499,
-  ],
-  "cash-payment-terminals": [
-    254, 255, 364, 365, 366, 367, 368, 377, 390, 392, 396, 397, 398, 399, 400, 401, 402, 403, 404, 405, 668,
-  ],
-  "client-device-binding": [370, 371, 378, 384, 550],
-  "fiscal-bluetooth": [406, 407, 408, 409, 410, 411, 412, 413, 414, 415, 416],
-  "emenu-device-display": [559, 560, 561, 562],
+  "global-default-devices": [386, 387, 388, 389, 390, 391, 392, 393, 394, 395],
 };
 
-const hwAssign = new Map();
+const hardwareAssign = new Map();
 for (const [key, seqs] of Object.entries(assignMap)) {
   for (const seq of seqs) {
-    hwAssign.set(seq, { groupTitle: titles[key], groupKey: key });
+    hardwareAssign.set(seq, { groupTitle: titles[key], groupKey: key });
   }
 }
 
@@ -94,7 +79,7 @@ for (const line of lines) {
     out.push(line);
     continue;
   }
-  const next = hwAssign.get(seq);
+  const next = hardwareAssign.get(seq);
   if (next) {
     out.push(`${seq},${escapeCsvCell(next.groupTitle)},${escapeCsvCell(next.groupKey)}`);
     updated++;
@@ -103,8 +88,8 @@ for (const line of lines) {
   }
 }
 
-if (updated !== hwAssign.size) {
-  throw new Error(`预期更新 ${hwAssign.size} 条，实际 ${updated} 条`);
+if (updated !== hardwareAssign.size) {
+  throw new Error(`预期更新 ${hardwareAssign.size} 条，实际 ${updated} 条`);
 }
 
 fs.writeFileSync(mappingPath, `${out.join("\n")}\n`, "utf8");

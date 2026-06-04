@@ -6,7 +6,10 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseConfigMd, slugify } from "./lib/parse-bplant-config-md.mjs";
-import { isSettingsCatalogExcluded } from "./lib/settings-catalog-exclusions.mjs";
+import {
+  isSettingsCatalogExcluded,
+  isSettingsHubCatalogDisabled,
+} from "./lib/settings-catalog-exclusions.mjs";
 import { buildCatalogSceneDesc, buildCatalogTitle } from "./lib/settings-catalog-scene-supplement.mjs";
 import { getSettingsCatalogPathForSeq } from "./lib/settings-catalog-path-override.mjs";
 import { SETTINGS_CATALOG_VIRTUAL_ITEMS } from "./lib/settings-catalog-virtual-items.mjs";
@@ -17,11 +20,13 @@ import {
   FOH_SETTINGS_GROUP_ORDER,
   INTRA_GROUP_SORT_BY_SEQ,
   INTEGRATIONS_SETTINGS_GROUP_ORDER,
+  NOTIFICATIONS_SETTINGS_GROUP_ORDER,
   KITCHEN_SETTINGS_GROUP_ORDER,
   ORDER_SETTINGS_GROUP_ORDER,
   PAYMENT_SETTINGS_GROUP_ORDER,
   PRINT_SETTINGS_GROUP_ORDER,
-  PRODUCT_SETTINGS_GROUP_ORDER,
+  HARDWARE_SETTINGS_GROUP_ORDER,
+  STORE_BRAND_MENU_GROUP_ORDER,
   STORE_SETTINGS_GROUP_ORDER,
 } from "./lib/settings-intra-group-sort.mjs";
 
@@ -31,13 +36,22 @@ const SETTINGS_GROUP_ORDER_BY_PATH = {
   "/operations/kitchen-kds/settings": KITCHEN_SETTINGS_GROUP_ORDER,
   "/orders/settings": ORDER_SETTINGS_GROUP_ORDER,
   "/transactions/settings": PAYMENT_SETTINGS_GROUP_ORDER,
-  "/product-center-main/settings": PRODUCT_SETTINGS_GROUP_ORDER,
   "/promotions/lottery": ["lottery-activity-settings", "lottery-animation-settings"],
   "/reviews/settings": ["review-content-moderation"],
   "/stores/settings": STORE_SETTINGS_GROUP_ORDER,
+  "/stores/brand-menu": STORE_BRAND_MENU_GROUP_ORDER,
   "/finance/settings": FINANCE_SETTINGS_GROUP_ORDER,
   "/print-templates/settings": PRINT_SETTINGS_GROUP_ORDER,
+  "/device-management/settings": HARDWARE_SETTINGS_GROUP_ORDER,
   "/settings/integrations": INTEGRATIONS_SETTINGS_GROUP_ORDER,
+  "/notifications/settings": NOTIFICATIONS_SETTINGS_GROUP_ORDER,
+  "/permissions/account-session": ["account-session-security"],
+};
+
+/** catalog 页头标题（可与一级导航模块名不同） */
+const HUB_CATALOG_DISPLAY_TITLE_BY_PATH = {
+  "/permissions/account-session": "账户与会话安全",
+  "/device-management/settings": "硬件管理中心",
 };
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -73,14 +87,11 @@ const HUB_SETTINGS_PATH = {
   打印中心: "/print-templates/settings",
   消息中心: "/notifications/settings",
   库存管理中心: "/operations/inventory-ordering/settings",
-  硬件管理中心: "/device-management/settings",
-  权限管理中心: "/permissions/settings",
-  素材中心: "/asset-center/settings",
+  权限管理中心: "/permissions/account-session",
   系统设置: "/settings/basic",
   主页: "/dashboard/settings",
   平台业务中心: "/settings/integrations",
   供应链中心: "/operations/inventory-ordering/settings",
-  设置设备与License的绑定关系: "/device-management/settings",
 };
 
 function parseCsvLine(line) {
@@ -140,7 +151,12 @@ function buildCatalog(rows, mapping) {
       continue;
     }
 
-    const hubDefaultPath = resolveSettingsPath(getSettingsHub(row));
+    const hubName = getSettingsHub(row);
+    if (isSettingsHubCatalogDisabled(hubName)) {
+      continue;
+    }
+
+    const hubDefaultPath = resolveSettingsPath(hubName);
     const settingsPath = getSettingsCatalogPathForSeq(row.seq, hubDefaultPath);
     if (!settingsPath) {
       console.warn(`[build] 未映射一级导航，已跳过: ${row.hub} (seq ${row.seq})`);
@@ -191,6 +207,7 @@ function buildCatalog(rows, mapping) {
 
   const canonicalHubByPath = new Map(Object.entries(HUB_SETTINGS_PATH).map(([hub, p]) => [p, hub]));
   canonicalHubByPath.set("/promotions/lottery", "促销中心");
+  canonicalHubByPath.set("/stores/brand-menu", "门店管理");
 
   let ts = `/** 由 scripts/build-module-settings-catalog.mjs 根据 docs/配置归类-终版.md + docs/配置归类-分组映射.csv 生成，请勿手改 */\n\n`;
   ts += `export interface ModuleSettingCatalogItem {\n`;
@@ -229,7 +246,7 @@ function buildCatalog(rows, mapping) {
 
   for (const settingsPath of paths) {
     const bucket = byPath.get(settingsPath);
-    const hubTitle = canonicalHubByPath.get(settingsPath) ?? settingsPath;
+    const hubTitle = HUB_CATALOG_DISPLAY_TITLE_BY_PATH[settingsPath] ?? canonicalHubByPath.get(settingsPath) ?? settingsPath;
     bucket.items.sort((a, b) => a.seq - b.seq);
     itemCount += bucket.items.length;
 

@@ -1,5 +1,5 @@
 /**
- * 门店管理 · 品牌与菜单展示 · 品牌菜单库（seq 548 数据源）。
+ * 门店管理 · 品牌与菜单展示（/stores/brand-menu）· 品牌菜单库（seq 548 数据源）。
  * 集团/品牌级菜单主数据见「商品中心 → 品牌菜单」；此处为 Location 可选菜单目录原型。
  */
 
@@ -44,6 +44,8 @@ function defaultBrandMenus(): StoreBrandMenu[] {
     normalizeMenu({ id: "menu-dine-in", name: "堂食标准菜单", channelLabel: "堂食 · POS / eMenu" }),
     normalizeMenu({ id: "menu-delivery", name: "外卖菜单", channelLabel: "外卖 / 来取" }),
     normalizeMenu({ id: "menu-breakfast", name: "早餐菜单", channelLabel: "限时 · 06:00–10:30" }),
+    normalizeMenu({ id: "menu-shangben-shiitake", name: "上本香菇锅" }),
+    normalizeMenu({ id: "menu-single-pot", name: "单锅" }),
   ];
 }
 

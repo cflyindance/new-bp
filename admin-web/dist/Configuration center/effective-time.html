@@ -6,6 +6,7 @@
   <title>选择展示生效时间 - 下发屏保</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="assets/common.css" />
+  <script src="assets/embedded-mode.js"></script>
   <script src="assets/toast.js"></script>
   <script src="assets/kiosk-theme-overlap.js"></script>
   <script>
@@ -518,7 +519,7 @@
             }
             try { localStorage.removeItem('current_theme_id_for_distribute'); } catch (e) {}
         }
-        window.location.href = 'kiosk-theme-list.html';
+        window.location.href = window.appendMenusifuEmbeddedParam('kiosk-theme-list.html');
       }
 
       var overlapSaveConfirmModal = document.getElementById('overlapSaveConfirmModal');

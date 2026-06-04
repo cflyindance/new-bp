@@ -4,7 +4,24 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>屏保 - 跳转中</title>
-  <script>window.location.replace('kiosk-theme-list.html');</script>
+  <script>
+    (function () {
+      var params = new URLSearchParams(window.location.search);
+      var embedded = params.get("embedded");
+      var isEmbedded = embedded === "1" || embedded === "true";
+      if (!isEmbedded) {
+        try {
+          isEmbedded = window.self !== window.top;
+        } catch (e) {
+          isEmbedded = false;
+        }
+      }
+      if (isEmbedded) params.set("embedded", "1");
+      var query = params.toString();
+      var target = "kiosk-theme-list.html" + (query ? "?" + query : "");
+      window.location.replace(target);
+    })();
+  </script>
 </head>
 <body>
   <p>正在跳转到屏保…</p>

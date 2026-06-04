@@ -1,74 +1,29 @@
 /**
  * 生成 docs/项目文档/商品中心-设置二级导航重设计方案.md
+ * v2.2：139/145 已迁前厅 pos-combo-ordering；商品中心无 settings catalog。
  * 运行：node scripts/generate-product-settings-design-doc.mjs
  */
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { parseConfigMd } from "./lib/parse-bplant-config-md.mjs";
-import { isSettingsCatalogExcluded } from "./lib/settings-catalog-exclusions.mjs";
-import { filterRowsForSettingsHub } from "./lib/settings-hub-override.mjs";
-import { buildCatalogTitle } from "./lib/settings-catalog-scene-supplement.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, "..", "..");
 const projectDocs = path.join(root, "docs", "项目文档");
-const sourcePath = path.join(projectDocs, "配置归类-终版.md");
 const outPath = path.join(projectDocs, "商品中心-设置二级导航重设计方案.md");
 
-const titles = {
-  "combo-ordering": "套餐点单与展示",
-};
-
-const reasons = {
-  "combo-ordering":
-    "套餐点完流程与子菜价展示（139/145）；终版归属商品中心 SSOT；POS 点单页展示见前厅 `pos-order-cart`，订单分单/促销见各 hub 文档。",
-};
-
-const assignMap = {
-  "combo-ordering": [139, 145],
-};
-
-const assign = new Map();
-for (const [key, seqs] of Object.entries(assignMap)) {
-  for (const seq of seqs) assign.set(seq, key);
-}
-
-function sceneSummary(scene) {
-  const s = scene && scene !== "（未填写）" ? scene : "—";
-  return s.length > 80 ? `${s.slice(0, 77)}...` : s;
-}
-
-const md = fs.readFileSync(sourcePath, "utf8");
-const rows = filterRowsForSettingsHub(parseConfigMd(md), "商品中心").filter(
-  (r) => !isSettingsCatalogExcluded(r.seq),
-);
-const order = ["combo-ordering"];
-
-const missing = rows.filter((r) => !assign.has(r.seq)).map((r) => r.seq);
-if (missing.length) throw new Error(`未归类 seq: ${missing.join(", ")}`);
-const extra = [...assign.keys()].filter((s) => !rows.some((r) => r.seq === s));
-if (extra.length) throw new Error(`映射多余 seq: ${extra.join(", ")}`);
-
-const by = new Map(order.map((k) => [k, []]));
-for (const r of rows) {
-  const key = assign.get(r.seq);
-  by.get(key).push({ ...r, title: buildCatalogTitle(r.seq, r.title) });
-}
-
-const lines = [];
-const push = (...xs) => lines.push(...xs);
-
-push(
+const lines = [
   "# 商品中心 · 设置二级导航重设计方案",
   "",
-  "> 文档版本：v2.1（已确认）  ",
-  "> 数据范围：商品设置 catalog **2** 条（套餐点单 SSOT；其余主数据在商品管理业务页，见 §1.1）  ",
+  "> 文档版本：v2.2（已确认）  ",
+  "> 数据范围：商品设置 catalog **0** 条（主数据在商品管理/品牌菜单/门店管理业务页）  ",
   "> 竞品参考：Toast / Clover / Square / Peblla / Snackpass 商家后台结构文档",
   "",
   "---",
   "",
   "## 1. 背景与目标",
+  "",
+  "商品中心不设独立「设置」滑层 catalog（与硬件中心同模式）。套餐点单行为类配置已迁至 **前厅管理中心 · 套餐点单与展示**（`pos-combo-ordering`）。",
   "",
   "### 1.1 商品管理 vs 设置滑层",
   "",
@@ -80,80 +35,40 @@ push(
   "| 菜谱管理 | 商品管理 · 配方管理 | 476 |",
   "| 按人数默认收费菜品 | 商品管理 · 菜单/商品 | 593 |",
   "",
-  "### 1.2 v2.1 变更（套餐点单归位商品中心）",
+  "### 1.2 v2.2 变更（套餐点单迁出 + 设置滑层下线）",
   "",
-  "自订单中心 `combo-ordering` 迁回 **`combo-ordering`（套餐点单与展示）**：",
-  "",
-  "| seq | 功能设置 | 说明 |",
+  "| seq | 功能设置 | 迁入 |",
   "|-----|----------|------|",
-  "| 139 | 自动点完套餐 | 套餐业务规则 SSOT |",
-  "| 145 | 可调套餐显示子菜价格 | 套餐价格展示规则 |",
+  "| 139 | 自动点完套餐 | 前厅 · `pos-combo-ordering` |",
+  "| 145 | 可调套餐显示子菜价格 | 前厅 · `pos-combo-ordering` |",
+  "",
+  "侧滑层移除「设置」入口；`#/product-center-main/settings` 书签重定向至商品管理。",
   "",
   "---",
   "",
-  "## 2. 推荐二级导航结构（1 组）",
+  "## 2. 推荐二级导航结构",
   "",
-  "| 序号 | groupTitle | groupKey | 条数 | 说明 |",
-  "|------|------------|----------|------|------|",
-);
-
-let total = 0;
-for (let i = 0; i < order.length; i++) {
-  const k = order[i];
-  const n = by.get(k).length;
-  total += n;
-  push(`| ${i + 1} | **${titles[k]}** | \`${k}\` | ${n} | ${reasons[k]} |`);
-}
-push(`| | **合计** | | **${total}** | |`, "");
-
-for (let i = 0; i < order.length; i++) {
-  const k = order[i];
-  push(
-    `### 2.${i + 1} ${titles[k]}（\`${k}\`）`,
-    "",
-    `**归类理由**：${reasons[k]}`,
-    "",
-    "| seq | 功能模块 | 功能设置 | 功能场景描述（摘要） |",
-    "|-----|----------|----------|----------------------|",
-  );
-  for (const r of [...by.get(k)].sort((a, b) => a.seq - b.seq)) {
-    push(`| ${r.seq} | ${r.moduleName} | ${r.title} | ${sceneSummary(r.sceneDesc)} |`);
-  }
-  push("");
-}
-
-push(
+  "**无 catalog 分组。** 见前厅 `docs/项目文档/前厅管理中心-设置二级导航重设计方案.md` · **套餐点单与展示**。",
+  "",
   "---",
   "",
   "## 3. 落地步骤",
   "",
-  "1. `node scripts/apply-product-settings-mapping.mjs`",
-  "2. `cd admin-web && npm run build:settings-catalog`",
-  "3. 商品中心 → 设置 → **套餐点单与展示**",
-  "",
-  "### 3.1 映射表（CSV）",
-  "",
-  "```csv",
-  "seq,groupTitle,groupKey",
-);
-
-for (const r of [...rows].sort((a, b) => a.seq - b.seq)) {
-  const key = assign.get(r.seq);
-  lines.push(`${r.seq},${titles[key]},${key}`);
-}
-
-push(
-  "```",
+  "1. `node scripts/apply-foh-settings-mapping.mjs`（写入 139/145 → pos-combo-ordering）",
+  "2. `settings-hub-override.mjs`：139/145 → 前厅管理中心",
+  "3. `SETTINGS_HUBS_WITHOUT_CATALOG` 增加「商品中心」",
+  "4. `cd admin-web && npm run build:settings-catalog`",
+  "5. 前厅 → 设置 → **套餐点单与展示**",
   "",
   "---",
   "",
   "## 4. 边界说明",
   "",
   "- 112/146/456/476/593 等在商品管理维护，catalog 不重复展示。",
-  "- **139/145** 为套餐点单 SSOT；前厅 `pos-order-cart` 管 POS 行项展示，不重复套餐定义。",
-  "- 订单中心管分单/结账/折扣删退（含 **150 子单促销重算** · `split-merge-edit`）。",
+  "- **139/145** 见前厅 `pos-combo-ordering`；POS 行项展示见 `pos-order-cart`。",
+  "- 食客端套餐 UI（520 步骤导航、523 子项备注）仍在前厅对应分组。",
   "",
-);
+];
 
 fs.writeFileSync(outPath, `${lines.join("\n")}\n`, "utf8");
-console.log(`Wrote ${outPath} (${rows.length} items, ${order.length} groups)`);
+console.log(`Wrote ${outPath} (0 catalog groups)`);

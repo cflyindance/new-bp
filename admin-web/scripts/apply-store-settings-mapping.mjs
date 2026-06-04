@@ -1,5 +1,6 @@
 /**
- * 将门店管理 4 组分类写入 docs/项目文档/配置归类-分组映射.csv
+ * 将门店管理分组写入 docs/项目文档/配置归类-分组映射.csv
+ * v1.1：433 餐厅 LOGO 自素材中心迁入 store-profile。
  * 运行：node scripts/apply-store-settings-mapping.mjs
  */
 import fs from "node:fs";
@@ -22,7 +23,7 @@ const titles = {
 };
 
 const assignMap = {
-  "store-profile": [173, 417],
+  "store-profile": [173, 417, 433],
   "store-hours-operation": [418, 77, 582, 170],
   "brand-menu-presentation": [530, 547, 548],
   "address-data-maintenance": [419, 420],
@@ -69,6 +70,7 @@ const text = fs.readFileSync(mappingPath, "utf8");
 const lines = text.split(/\r?\n/);
 const out = [];
 let updated = 0;
+const seen = new Set();
 
 for (const line of lines) {
   if (!line.trim()) {
@@ -87,11 +89,19 @@ for (const line of lines) {
   }
   const next = storeAssign.get(seq);
   if (next) {
+    seen.add(seq);
     out.push(`${seq},${escapeCsvCell(next.groupTitle)},${escapeCsvCell(next.groupKey)}`);
     updated++;
   } else {
     out.push(line);
   }
+}
+
+for (const [seq, next] of storeAssign) {
+  if (seen.has(seq)) continue;
+  out.push(`${seq},${escapeCsvCell(next.groupTitle)},${escapeCsvCell(next.groupKey)}`);
+  seen.add(seq);
+  updated++;
 }
 
 if (updated !== storeAssign.size) {

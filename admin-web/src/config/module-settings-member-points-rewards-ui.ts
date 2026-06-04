@@ -1,5 +1,6 @@
 /**
- * 会员中心 · 积分规则与兑换商品（509/525/527 开关+产线多选；526 产线矩阵顶部/尾部）。
+ * 会员中心 · 积分规则与兑换商品（525/527 开关+产线多选；526 产线矩阵顶部/尾部）。
+ * seq 509 展示账户积分已迁至 guest-menu-line-toggle-ui（前厅·食客端·首页与版式）。
  */
 
 import { MODULE_SETTING_CHOICE_CONTROL_CLASS } from "./module-settings-choice-ui";
@@ -19,7 +20,6 @@ export const MEMBER_POINTS_DISH_POSITION_SEQ = 526;
 export const MEMBER_POINTS_ONLY_ORDER_SEQ = 527;
 
 export const MEMBER_POINTS_TOGGLE_FIELD_SEQS = [
-  MEMBER_SHOW_ACCOUNT_POINTS_SEQ,
   MEMBER_SHOW_POINTS_DISHES_SEQ,
   MEMBER_POINTS_ONLY_ORDER_SEQ,
 ] as const;
@@ -30,10 +30,6 @@ const TOGGLE_FIELD_CONFIG: Record<
   MemberPointsToggleFieldSeq,
   { linesStorageId: string; panelHint: string }
 > = {
-  [MEMBER_SHOW_ACCOUNT_POINTS_SEQ]: {
-    linesStorageId: "509-show-account-points-lines",
-    panelHint: "勾选产线在会员账户/菜单中展示积分余额。",
-  },
   [MEMBER_SHOW_POINTS_DISHES_SEQ]: {
     linesStorageId: "525-show-points-dishes-lines",
     panelHint: "勾选产线在菜单页展示可积分兑换的商品。",

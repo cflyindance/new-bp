@@ -6,6 +6,7 @@
   <title>屏保 - 营销中心</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="assets/common.css" />
+  <script src="assets/embedded-mode.js"></script>
   <script src="assets/kiosk-theme-media-idb.js"></script>
   <script>
     tailwind.config = { theme: { extend: { colors: { primary: '#1677ff', 'sidebar-bg': '#fafafa', 'sidebar-active': '#e6f4ff' }, borderRadius: { ant: '6px' } } } };
@@ -1200,7 +1201,10 @@
             : '<div class="flex flex-col items-start gap-0.5"><p class="whitespace-nowrap text-sm leading-[22px] text-[rgba(0,0,0,0.65)]">关联门店</p><span class="text-sm leading-[22px] text-[rgba(0,0,0,0.88)]">\u2014</span></div>';
 
           var isPublished = t.publishStatus === 'published';
-          var editRow = '<a href="screensaver-edit.html?id=' + encodeURIComponent(t.id) + '" class="ui-menu-item">' + MENU_ICN.edit + '<span>\u7f16\u8f91</span></a>';
+          var editHref = (window.appendMenusifuEmbeddedParam || function (u) { return u; })(
+            'screensaver-edit.html?id=' + encodeURIComponent(t.id),
+          );
+          var editRow = '<a href="' + editHref + '" class="ui-menu-item">' + MENU_ICN.edit + '<span>\u7f16\u8f91</span></a>';
           var split = '<div class="ui-menu-sep" role="separator" aria-hidden="true"></div>';
           var dropdownParts = [];
           if (!isPublished) {
@@ -1288,7 +1292,9 @@
             hideAllDropdownMenus();
             if (this.getAttribute('data-relist') === '1') {
               try { localStorage.setItem('current_theme_id_for_distribute', id); } catch (e) {}
-              window.location.href = 'store-select.html?themeId=' + encodeURIComponent(id) + '&from=edit';
+              window.location.href = (window.appendMenusifuEmbeddedParam || function (u) { return u; })(
+                'store-select.html?themeId=' + encodeURIComponent(id) + '&from=edit',
+              );
               return;
             }
             var themes = getThemes();

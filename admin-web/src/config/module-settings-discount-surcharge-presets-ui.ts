@@ -1,5 +1,5 @@
 /**
- * 订单 · 折扣与加收：seq 446 折扣预设、447 加收预设（名称 + 百分比/固定金额）。
+ * 订单 · 折扣与加收：seq 446 折扣预设、447 加收预设（名称 + 类型 + 百分比/固定金额）。
  */
 
 import { MODULE_SETTING_CHOICE_CONTROL_CLASS } from "./module-settings-choice-ui";
@@ -12,7 +12,13 @@ export const ORDER_DISCOUNT_PRESET_SEQ = 446;
 export const ORDER_SURCHARGE_PRESET_SEQ = 447;
 
 export type RatePresetKind = "percent" | "fixed";
-export type SurchargeFeeType = "service" | "delivery" | "other";
+export type SurchargeFeeType =
+  | "service"
+  | "delivery"
+  | "utensils"
+  | "packaging-bag"
+  | "packaging-box"
+  | "other";
 
 export type RatePresetItem = {
   id: string;
@@ -80,6 +86,9 @@ const SURCHARGE_DIALOG_ORDER_TYPES: { id: string; label: string }[] = [
 const SURCHARGE_FEE_TYPES: { value: SurchargeFeeType; label: string }[] = [
   { value: "service", label: "服务费" },
   { value: "delivery", label: "送餐费" },
+  { value: "utensils", label: "餐具" },
+  { value: "packaging-bag", label: "打包袋" },
+  { value: "packaging-box", label: "包装盒" },
   { value: "other", label: "其他" },
 ];
 
@@ -104,9 +113,21 @@ function surchargeFeeTypeLabel(type: SurchargeFeeType): string {
 }
 
 function parseSurchargeFeeType(raw: unknown): SurchargeFeeType {
-  if (raw === "service" || raw === "delivery" || raw === "other") return raw;
+  if (
+    raw === "service" ||
+    raw === "delivery" ||
+    raw === "utensils" ||
+    raw === "packaging-bag" ||
+    raw === "packaging-box" ||
+    raw === "other"
+  ) {
+    return raw;
+  }
   if (typeof raw === "string") {
     const text = raw.trim().toLowerCase();
+    if (text.includes("餐具") || text.includes("utensil")) return "utensils";
+    if (text.includes("包装盒") || text.includes("packaging-box")) return "packaging-box";
+    if (text.includes("打包袋") || text.includes("打包带")) return "packaging-bag";
     if (text.includes("送餐") || text.includes("delivery")) return "delivery";
     if (text.includes("其他") || text.includes("other")) return "other";
   }
@@ -225,11 +246,15 @@ function renderPresetRow(seq: number, item: RatePresetItem, namePlaceholder: str
   if (seq === ORDER_SURCHARGE_PRESET_SEQ) {
     const kindLabel = item.kind === "percent" ? "百分比" : "固定金额";
     const valueLabel = item.kind === "percent" ? `${item.value}%` : `${item.value} 元`;
+    const feeTypeLabel = item.surcharge?.feeTypeLabel ?? surchargeFeeTypeLabel("service");
     const enabled = item.surcharge?.enabled !== false;
     return `
     <tr class="border-t border-border" data-rate-preset-row data-preset-id="${escapeHtml(item.id)}">
       <td class="px-3 py-2.5">
         <span class="text-sm text-foreground">${escapeHtml(item.name || "未命名加收")}</span>
+      </td>
+      <td class="px-3 py-2.5">
+        <span class="text-sm text-muted-foreground">${escapeHtml(feeTypeLabel)}</span>
       </td>
       <td class="px-3 py-2.5">
         <span class="text-sm text-muted-foreground">${escapeHtml(kindLabel)}</span>
@@ -306,16 +331,21 @@ function renderPresetTableInner(seq: number, items: RatePresetItem[]): string {
   const cfg = CONFIG_BY_SEQ[seq];
   if (!cfg || items.length === 0) return "";
   const operationColClass = seq === ORDER_SURCHARGE_PRESET_SEQ ? "w-[16rem]" : "w-[4.5rem]";
+  const surchargeTypeHeader =
+    seq === ORDER_SURCHARGE_PRESET_SEQ
+      ? `<th class="px-3 py-2 font-medium w-[6.5rem]">类型</th>`
+      : "";
   const rows = items
     .map((item) => renderPresetRow(seq, item, cfg.namePlaceholder))
     .join("");
 
   return `
     <div class="overflow-x-auto rounded-md border border-border">
-      <table class="w-full min-w-[28rem] border-collapse text-left text-sm">
+      <table class="w-full min-w-[34rem] border-collapse text-left text-sm">
         <thead class="bg-muted/40 text-xs text-muted-foreground">
           <tr>
             <th class="px-3 py-2 font-medium">${escapeHtml(cfg.nameHeader)}</th>
+            ${surchargeTypeHeader}
             <th class="px-3 py-2 font-medium w-[8.5rem]">比例类型</th>
             <th class="px-3 py-2 font-medium w-[10rem]">比例</th>
             <th class="px-3 py-2 text-right font-medium ${operationColClass}">操作</th>
@@ -753,9 +783,12 @@ function openSurchargeEditDialog(editor: HTMLElement, presetId: string): void {
   };
 
   setInputValue("[data-surcharge-dialog-name]", preset.name);
-  setChecked('[data-surcharge-dialog-fee-type][value="service"]', extra.feeType === "service");
-  setChecked('[data-surcharge-dialog-fee-type][value="delivery"]', extra.feeType === "delivery");
-  setChecked('[data-surcharge-dialog-fee-type][value="other"]', extra.feeType === "other");
+  for (const item of SURCHARGE_FEE_TYPES) {
+    setChecked(
+      `[data-surcharge-dialog-fee-type][value="${item.value}"]`,
+      extra.feeType === item.value,
+    );
+  }
   setChecked('[data-surcharge-dialog-kind][value="fixed"]', preset.kind === "fixed");
   setChecked('[data-surcharge-dialog-kind][value="percent"]', preset.kind === "percent");
   setInputValue("[data-surcharge-dialog-value]", String(preset.value));

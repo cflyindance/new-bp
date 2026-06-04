@@ -29,6 +29,10 @@ export const MODULE_SETTING_MOCK_DISHES: DishTag[] = [
   { id: "d-pork-belly", name: "五花肉" },
   { id: "d-combo-1", name: "牛羊组合" },
   { id: "d-combo-2", name: "牛羊组合-1" },
+  { id: "d-pot-single", name: "单锅" },
+  { id: "d-pot-yinyang", name: "鸳鸯锅" },
+  { id: "d-pot-run", name: "奔跑锅" },
+  { id: "d-pot-any", name: "任意锅" },
 ];
 
 const MUTEX_STORAGE_597 = "597-mutex-rules";
@@ -42,7 +46,7 @@ function escapeHtml(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
-function newRuleId(): string {
+export function newRuleId(): string {
   return `r-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 }
 
@@ -127,7 +131,7 @@ export function writeDishTags(storageFieldId: string, tags: DishTag[]): void {
   writeModuleSettingJson(storageFieldId, tags);
 }
 
-function renderDishPicker(
+export function renderDishPicker(
   parentSeq: number,
   ruleId: string,
   role: string,
@@ -224,7 +228,7 @@ function refreshDishSelectOptions(picker: HTMLElement): void {
   select.value = "";
 }
 
-function onDishSelectChange(picker: HTMLElement, select: HTMLSelectElement): void {
+export function onDishSelectChange(picker: HTMLElement, select: HTMLSelectElement): void {
   const dishId = select.value;
   if (!dishId) return;
   const dish = MODULE_SETTING_MOCK_DISHES.find((d) => d.id === dishId);
@@ -256,6 +260,10 @@ function onDishSelectChange(picker: HTMLElement, select: HTMLSelectElement): voi
   }
   const combo = picker.closest<HTMLElement>("[data-combo-rules-editor]");
   if (combo) persistComboEditor(combo);
+  const delayed = picker.closest<HTMLElement>("[data-delayed-kitchen-send-editor]");
+  if (delayed) {
+    delayed.dispatchEvent(new CustomEvent("delayed-kitchen-send-update", { bubbles: false }));
+  }
 }
 
 function renderMutexRuleRow(rule: DishMutexRule, parentSeq: number, isLast: boolean): string {
@@ -354,7 +362,7 @@ function syncDishTagsFromCheckboxes(picker: HTMLElement): void {
   if (tagsWrap) tagsWrap.innerHTML = tags.map(renderDishTag).join("");
 }
 
-function collectTagsFromPicker(picker: Element): DishTag[] {
+export function collectTagsFromPicker(picker: Element): DishTag[] {
   const el = picker as HTMLElement;
   if (el.querySelector("[data-dish-choice]")) return collectTagsFromCheckboxes(el);
   return [...picker.querySelectorAll("[data-dish-tag]")].map((tag) => ({
@@ -363,7 +371,7 @@ function collectTagsFromPicker(picker: Element): DishTag[] {
   }));
 }
 
-function onDishPickerCheckboxChange(picker: HTMLElement): void {
+export function onDishPickerCheckboxChange(picker: HTMLElement): void {
   syncDishTagsFromCheckboxes(picker);
   const standalone = picker.closest<HTMLElement>("[data-standalone-dish-picker]");
   if (standalone) {
@@ -377,9 +385,13 @@ function onDishPickerCheckboxChange(picker: HTMLElement): void {
   }
   const combo = picker.closest<HTMLElement>("[data-combo-rules-editor]");
   if (combo) persistComboEditor(combo);
+  const delayed = picker.closest<HTMLElement>("[data-delayed-kitchen-send-editor]");
+  if (delayed) {
+    delayed.dispatchEvent(new CustomEvent("delayed-kitchen-send-update", { bubbles: false }));
+  }
 }
 
-function onDishTagRemove(picker: HTMLElement, dishId: string): void {
+export function onDishTagRemove(picker: HTMLElement, dishId: string): void {
   const cb = picker.querySelector<HTMLInputElement>(`[data-dish-choice][data-dish-id="${dishId}"]`);
   if (cb) cb.checked = false;
   picker.querySelector(`[data-dish-tag][data-dish-id="${dishId}"]`)?.remove();
@@ -399,6 +411,11 @@ function onDishTagRemove(picker: HTMLElement, dishId: string): void {
     }
     const combo = picker.closest<HTMLElement>("[data-combo-rules-editor]");
     if (combo) persistComboEditor(combo);
+    const delayed = picker.closest<HTMLElement>("[data-delayed-kitchen-send-editor]");
+    if (delayed) {
+      delayed.dispatchEvent(new CustomEvent("delayed-kitchen-send-update", { bubbles: false }));
+      return;
+    }
     return;
   }
   onDishPickerCheckboxChange(picker);

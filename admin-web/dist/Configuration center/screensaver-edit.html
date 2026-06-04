@@ -6,6 +6,7 @@
   <title>编辑主题 - 屏保</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="assets/common.css" />
+  <script src="assets/embedded-mode.js"></script>
   <script src="assets/toast.js"></script>
   <script src="assets/kiosk-theme-media-idb.js"></script>
   <script>
@@ -290,14 +291,14 @@
       }
 
       if (!id) {
-        window.location.href = 'kiosk-theme-list.html';
+        window.location.href = window.appendMenusifuEmbeddedParam('kiosk-theme-list.html');
         throw new Error('missing id');
       }
 
       var list = getThemes();
       var theme = list.find(function(t) { return t.id === id; });
       if (!theme) {
-        window.location.href = 'kiosk-theme-list.html';
+        window.location.href = window.appendMenusifuEmbeddedParam('kiosk-theme-list.html');
         throw new Error('theme not found');
       }
 
@@ -322,7 +323,7 @@
       }
 
       function backToThemeListFromEdit() {
-        window.location.href = 'kiosk-theme-list.html';
+        window.location.href = window.appendMenusifuEmbeddedParam('kiosk-theme-list.html');
       }
 
       setupEditTransitionEffectDropdown();
@@ -991,7 +992,7 @@
                 try { localStorage.removeItem('selected_stores_for_distribute'); } catch (e2) {}
                 try { localStorage.removeItem('selected_channels_for_distribute'); } catch (e3) {}
               }
-              window.location.href = redirectUrl;
+              window.location.href = window.appendMenusifuEmbeddedParam(redirectUrl);
             } catch (err) {
               console.error('保存失败:', err);
               Toast.error('保存失败，可能是存储空间不足。请尝试删除一些旧的屏保主题后重试。');

@@ -6,6 +6,7 @@
   <title>选择渠道 - 下发屏保</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="assets/common.css" />
+  <script src="assets/embedded-mode.js"></script>
   <script>
     tailwind.config = { theme: { extend: { colors: { primary: '#1677ff', 'sidebar-bg': '#fafafa', 'sidebar-active': '#e6f4ff' }, borderRadius: { ant: '6px' } } } };
   </script>
@@ -161,7 +162,9 @@
         var selected = getSelectedChannels();
         if (!selected.length) return;
         var fromPage = new URLSearchParams(location.search).get('from') || '';
-        window.location.href = 'effective-time.html' + (fromPage ? ('?from=' + encodeURIComponent(fromPage)) : '');
+        window.location.href = window.appendMenusifuEmbeddedParam(
+          'effective-time.html' + (fromPage ? ('?from=' + encodeURIComponent(fromPage)) : ''),
+        );
       });
 
       renderChannels();

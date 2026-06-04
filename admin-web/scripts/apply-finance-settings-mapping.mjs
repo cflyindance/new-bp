@@ -24,7 +24,7 @@ const assignMap = {
   /** v1.1：64 合并进 63；449/450 迁财务滑层「收银记录与审计」 */
   "cash-drawer-reconciliation": [63, 76, 181],
   "daily-close-settlement": [171, 65, 330],
-  "fees-tips-expense": [305, 451, 307],
+  "fees-tips-expense": [305, 307],
 };
 
 const financeAssign = new Map();

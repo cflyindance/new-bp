@@ -742,3 +742,11 @@ body.embedded-material-page .main-content {
   background: #fff !important;
   box-sizing: border-box;
 }
+
+html.embedded-marketing-page .main-content,
+body.embedded-marketing-page .main-content {
+  padding: 20px !important;
+  background: #fff !important;
+  box-sizing: border-box;
+  overflow-y: auto;
+}

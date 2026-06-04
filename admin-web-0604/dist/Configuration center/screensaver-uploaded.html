@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>新建屏保 - 已上传 - 屏保</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="assets/common.css" />
+  <script>
+    tailwind.config = { theme: { extend: { colors: { primary: '#1677ff', 'sidebar-bg': '#fafafa', 'sidebar-active': '#e6f4ff' }, borderRadius: { ant: '6px' } } } };
+  </script>
+</head>
+<body class="bg-white text-gray-900 antialiased">
+  <div class="app-layout flex min-h-screen">
+    <aside class="sidebar flex-shrink-0 flex flex-col w-60">
+      <div class="p-4 border-b border-gray-100 flex items-center gap-2">
+        <div class="w-8 h-8 rounded bg-amber-400 flex items-center justify-center text-white font-bold">M</div>
+        <span class="font-medium">MenuSifu</span>
+        <div class="ml-auto flex gap-1">
+          <button type="button" class="p-1 rounded hover:bg-gray-100" aria-label="文档">📄</button>
+          <button type="button" class="p-1 rounded hover:bg-gray-100" aria-label="全屏">⊞</button>
+        </div>
+      </div>
+      <nav class="flex-1 p-3 space-y-1 overflow-auto">
+        <a href="material.html" class="menu-item px-3 py-2 text-gray-600 flex items-center justify-between rounded-ant hover:bg-gray-100"><span>图片素材</span></a>
+        <div class="nav-group">
+          <div class="nav-group-title menu-item px-3 py-2 text-gray-600 flex items-center justify-between cursor-pointer hover:bg-gray-100 rounded-ant" onclick="this.parentElement.classList.toggle('collapsed')">
+            <span>营销中心</span>
+            <span class="nav-arrow text-xs transition-transform">⌄</span>
+          </div>
+          <div class="nav-group-items pl-3 space-y-0.5">
+            <a href="kiosk-theme-list.html" class="menu-item active px-3 py-2 flex items-center rounded-ant bg-sidebar-active text-primary font-medium">屏保</a>
+          </div>
+        </div>
+      </nav>
+      <div class="p-3 border-t border-gray-100 flex items-center gap-2">
+        <button type="button" class="p-1.5 rounded hover:bg-gray-100">📄</button>
+        <span class="w-px h-4 bg-gray-200"></span>
+        <button type="button" class="p-1.5 rounded hover:bg-gray-100">👤</button>
+        <a href="#" class="flex-1 flex items-center justify-between text-gray-600 text-sm"><span>M's Coffee</span><span>→</span></a>
+      </div>
+    </aside>
+    <main class="main-content flex-1 flex flex-col min-w-0">
+      <header class="flex items-center justify-between pb-4 mb-4 border-b-2 border-primary">
+        <div class="flex items-center gap-3">
+          <a href="screensaver-create.html" class="p-2 rounded hover:bg-gray-100 text-gray-600" aria-label="返回">←</a>
+          <h1 class="text-lg font-semibold">新建屏保</h1>
+        </div>
+        <a href="kiosk-theme-list.html" class="px-4 py-2 rounded-ant bg-primary text-white hover:bg-blue-600">确认</a>
+      </header>
+      <div class="max-w-3xl space-y-8">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">主题名称</label>
+          <input type="text" id="themeName" value="圣诞节主题" class="w-full px-3 py-2 border border-gray-200 rounded-ant" placeholder="主题名称 *" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">竖版</label>
+          <div class="flex gap-4 mb-2">
+            <label class="inline-flex items-center gap-2 cursor-pointer">
+              <input type="radio" name="portraitType" value="image" checked class="text-primary" />
+              <span>图片</span>
+            </label>
+            <label class="inline-flex items-center gap-2 cursor-pointer">
+              <input type="radio" name="portraitType" value="video" class="text-primary" />
+              <span>视频</span>
+            </label>
+          </div>
+          <div class="flex flex-wrap gap-4">
+            <div class="flex gap-2">
+              <div class="w-24 h-32 rounded-ant bg-gray-200 flex items-center justify-center text-gray-400 text-xs">图1</div>
+              <div class="w-24 h-32 rounded-ant bg-gray-200 flex items-center justify-center text-gray-400 text-xs">图2</div>
+              <div class="w-24 h-32 rounded-ant border-2 border-dashed border-gray-200 flex items-center justify-center cursor-pointer hover:border-primary text-2xl text-gray-400">+</div>
+            </div>
+            <div class="text-sm text-gray-500 space-y-1">
+              <p>建议尺寸: 1080*1920px</p>
+              <p>图片格式: JPEG、PNG、JPG、GIF</p>
+              <p>图片大小(建议1M以内)</p>
+              <p>视频大小(建议在4M以内)</p>
+            </div>
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">横版</label>
+          <div class="flex gap-4 mb-2">
+            <label class="inline-flex items-center gap-2 cursor-pointer">
+              <input type="radio" name="landscapeType" value="image" checked class="text-primary" />
+              <span>图片</span>
+            </label>
+            <label class="inline-flex items-center gap-2 cursor-pointer">
+              <input type="radio" name="landscapeType" value="video" class="text-primary" />
+              <span>视频</span>
+            </label>
+          </div>
+          <div class="flex flex-wrap gap-4">
+            <div class="flex gap-2">
+              <div class="w-32 h-20 rounded-ant bg-gray-200 flex items-center justify-center text-gray-400 text-xs">图1</div>
+              <div class="w-32 h-20 rounded-ant bg-gray-200 flex items-center justify-center text-gray-400 text-xs">图2</div>
+              <div class="w-32 h-20 rounded-ant border-2 border-dashed border-gray-200 flex items-center justify-center cursor-pointer hover:border-primary text-2xl text-gray-400">+</div>
+            </div>
+            <div class="text-sm text-gray-500 space-y-1">
+              <p>建议尺寸: 1920*1080px</p>
+              <p>图片格式: JPEG、PNG、JPG、GIF</p>
+              <p>图片大小(建议1M以内)</p>
+              <p>视频大小(建议在4M以内)</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script>
+    var params = new URLSearchParams(location.search);
+    var name = params.get('name');
+    if (name) document.getElementById('themeName').value = decodeURIComponent(name);
+  </script>
+</body>
+</html>

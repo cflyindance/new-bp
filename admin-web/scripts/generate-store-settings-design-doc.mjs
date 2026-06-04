@@ -25,7 +25,7 @@ const titles = {
 
 const reasons = {
   "store-profile":
-    "门店静态档案（名称、联系、地址、商户标识、国家/地区）；不含营业规则与对客提醒。",
+    "门店静态档案（名称、联系、地址、国家/地区、餐厅 LOGO）；433 自素材中心迁入；打印小票专用 LOGO 见打印中心。",
   "store-hours-operation":
     "营业时段、营业周期、打烊前提示与餐厅模式；418 与 582 同组配置，减少跨导航查找。",
   "brand-menu-presentation":
@@ -39,7 +39,7 @@ const MERGED_EXCLUDED_SEQS = new Set([548]);
 
 /** seq → groupKey（门店管理设置 catalog 10 条；421 已迁评价中心；548 并入 547） */
 const assignMap = {
-  "store-profile": [173, 417],
+  "store-profile": [173, 417, 433],
   "store-hours-operation": [418, 77, 582, 170],
   "brand-menu-presentation": [530, 547],
   "address-data-maintenance": [419, 420],

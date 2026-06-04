@@ -77,6 +77,12 @@ function escapeCsvCell(value) {
 
 if (!mappingPath) throw new Error("未找到 配置归类-分组映射.csv");
 
+function assignMapTotal() {
+  let n = 0;
+  for (const seqs of Object.values(assignMap)) n += seqs.length;
+  return n;
+}
+
 const text = fs.readFileSync(mappingPath, "utf8");
 const lines = text.split(/\r?\n/);
 const out = [];
@@ -101,13 +107,19 @@ for (const line of lines) {
   if (next) {
     out.push(`${seq},${escapeCsvCell(next.groupTitle)},${escapeCsvCell(next.groupKey)}`);
     updated++;
+    printAssign.delete(seq);
   } else {
     out.push(line);
   }
 }
 
-if (updated !== printAssign.size) {
-  throw new Error(`预期更新 ${printAssign.size} 条，实际 ${updated} 条`);
+for (const [seq, next] of printAssign) {
+  out.push(`${seq},${escapeCsvCell(next.groupTitle)},${escapeCsvCell(next.groupKey)}`);
+  updated++;
+}
+
+if (updated !== assignMapTotal()) {
+  throw new Error(`预期更新 ${assignMapTotal()} 条，实际 ${updated} 条`);
 }
 
 fs.writeFileSync(mappingPath, `${out.join("\n")}\n`, "utf8");

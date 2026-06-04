@@ -27,6 +27,10 @@ export const TIP_PRE_TAX_SEQ = 293;
 export const TIP_PRE_DISCOUNT_SEQ = 294;
 export const TIP_RECEIPT_DEFAULT_SEQ = 295;
 export const TIP_RECEIPT_AFTER_PAID_SEQ = 296;
+/** 收据打印建议小费主开关（开启后多选 295/296 场景并维护预设） */
+export const TIP_RECEIPT_SUGGESTION_SEQ = 266;
+
+export const TIP_RECEIPT_SUGGESTION_TOGGLE_SEQS = [TIP_RECEIPT_SUGGESTION_SEQ] as const;
 /** Kiosk 自助端小费页选项类型（覆盖 237 在 Kiosk 上的展示维度） */
 export const KIOSK_TIP_COLLECTION_MODE_SEQ = 493;
 
@@ -431,6 +435,15 @@ export function isTipReceiptAfterPaidSeq(seq: number): boolean {
   return seq === TIP_RECEIPT_AFTER_PAID_SEQ;
 }
 
+export function isTipReceiptSuggestionSeq(seq: number): boolean {
+  return seq === TIP_RECEIPT_SUGGESTION_SEQ;
+}
+
+/** 295/296 预设表并入 266 面板，不再单独成行 */
+export function shouldSkipTipReceiptPresetMemberRow(seq: number): boolean {
+  return seq === TIP_RECEIPT_DEFAULT_SEQ || seq === TIP_RECEIPT_AFTER_PAID_SEQ;
+}
+
 export function isPaymentTipPolicyToggleSeq(seq: number): boolean {
   return (PAYMENT_TIP_POLICY_TOGGLE_SEQS as readonly number[]).includes(seq);
 }
@@ -813,5 +826,171 @@ export function bindTipPercentPresetEditors(root: ParentNode = document): void {
 
 /** @deprecated 使用 bindTipPercentPresetEditors */
 export function bindTipCheckoutPresetEditor(root: ParentNode = document): void {
+  bindTipPercentPresetEditors(root);
+}
+
+const RECEIPT_TIP_SCENARIOS_STORAGE_ID = "266-receipt-tip-scenarios";
+
+export const RECEIPT_TIP_SCENARIO_OPTIONS = [
+  {
+    key: "not-paid",
+    label: "未付过小费时的小费建议",
+    presetSeq: TIP_RECEIPT_DEFAULT_SEQ,
+  },
+  {
+    key: "after-paid",
+    label: "已经付过小费时的小费建议",
+    presetSeq: TIP_RECEIPT_AFTER_PAID_SEQ,
+  },
+] as const;
+
+export type ReceiptTipScenarioKey = (typeof RECEIPT_TIP_SCENARIO_OPTIONS)[number]["key"];
+
+export type ReceiptTipScenarios = Record<ReceiptTipScenarioKey, boolean>;
+
+function defaultReceiptTipScenarios(): ReceiptTipScenarios {
+  return { "not-paid": false, "after-paid": false };
+}
+
+function normalizeReceiptTipScenarios(raw: unknown): ReceiptTipScenarios {
+  const base = defaultReceiptTipScenarios();
+  if (!raw || typeof raw !== "object") return base;
+  for (const opt of RECEIPT_TIP_SCENARIO_OPTIONS) {
+    const v = (raw as Record<string, unknown>)[opt.key];
+    if (typeof v === "boolean") base[opt.key] = v;
+  }
+  return base;
+}
+
+export function readReceiptTipScenarios(): ReceiptTipScenarios {
+  const stored = readModuleSettingJson<unknown>(RECEIPT_TIP_SCENARIOS_STORAGE_ID, null);
+  if (stored && typeof stored === "object" && Object.keys(stored).length > 0) {
+    return normalizeReceiptTipScenarios(stored);
+  }
+  return { "not-paid": true, "after-paid": true };
+}
+
+export function writeReceiptTipScenarios(values: ReceiptTipScenarios): void {
+  writeModuleSettingJson(
+    RECEIPT_TIP_SCENARIOS_STORAGE_ID,
+    normalizeReceiptTipScenarios(values),
+  );
+}
+
+function receiptTipScenarioBlockSelector(presetSeq: number): string {
+  return `[data-receipt-tip-preset-block="${presetSeq}"]`;
+}
+
+function syncReceiptTipScenarioBlocks(root: ParentNode, masterOn: boolean): void {
+  const scenarios = readReceiptTipScenarios();
+  for (const opt of RECEIPT_TIP_SCENARIO_OPTIONS) {
+    const visible = masterOn && scenarios[opt.key];
+    root.querySelectorAll<HTMLElement>(receiptTipScenarioBlockSelector(opt.presetSeq)).forEach((block) => {
+      block.classList.toggle("hidden", !visible);
+      if (visible) block.removeAttribute("aria-hidden");
+      else block.setAttribute("aria-hidden", "true");
+      block.querySelectorAll<HTMLInputElement | HTMLButtonElement>("input, button, select, textarea").forEach(
+        (el) => {
+          el.disabled = !visible;
+        },
+      );
+    });
+  }
+}
+
+export function renderReceiptTipSuggestionPanelHtml(seq: number, masterOn: boolean): string {
+  const scenarios = readReceiptTipScenarios();
+  const hidden = masterOn ? "" : "hidden";
+  const checkboxes = RECEIPT_TIP_SCENARIO_OPTIONS.map((opt) => {
+    const checked = scenarios[opt.key];
+    return `
+      <label class="inline-flex cursor-pointer items-center gap-2 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground">
+        <input
+          type="checkbox"
+          class="${MODULE_SETTING_CHOICE_CONTROL_CLASS} rounded-sm"
+          data-receipt-tip-scenario="${escapeHtml(opt.key)}"
+          ${checked ? "checked" : ""}
+          ${masterOn ? "" : "disabled"}
+          aria-label="${escapeHtml(opt.label)}"
+        />
+        <span>${escapeHtml(opt.label)}</span>
+      </label>`;
+  }).join("");
+
+  const presetBlocks = RECEIPT_TIP_SCENARIO_OPTIONS.map((opt) => {
+    const blockVisible = masterOn && scenarios[opt.key];
+    return `
+      <div
+        class="space-y-2 ${blockVisible ? "" : "hidden"}"
+        data-receipt-tip-preset-block="${opt.presetSeq}"
+        ${blockVisible ? "" : 'aria-hidden="true"'}
+      >
+        <p class="m-0 text-sm font-medium text-foreground">${escapeHtml(opt.label)}</p>
+        <div class="max-w-md">
+          ${renderTipPercentPresetEditorHtml(opt.presetSeq)}
+        </div>
+      </div>`;
+  }).join("");
+
+  return `
+    <div
+      class="mt-3 space-y-4 rounded-lg bg-muted/50 p-3 ${hidden}"
+      data-receipt-tip-suggestion-panel="${seq}"
+      ${masterOn ? "" : 'aria-hidden="true"'}
+    >
+      <div
+        class="flex flex-wrap gap-2"
+        role="group"
+        aria-label="收据建议小费展示场景"
+        data-receipt-tip-scenarios-editor="${seq}"
+      >
+        ${checkboxes}
+      </div>
+      <div class="space-y-4" data-receipt-tip-preset-blocks>${presetBlocks}</div>
+    </div>`;
+}
+
+export function setReceiptTipSuggestionPanelVisible(seq: number, visible: boolean): void {
+  document.querySelectorAll<HTMLElement>(`[data-receipt-tip-suggestion-panel="${seq}"]`).forEach((panel) => {
+    panel.classList.toggle("hidden", !visible);
+    if (visible) panel.removeAttribute("aria-hidden");
+    else panel.setAttribute("aria-hidden", "true");
+    panel.querySelectorAll<HTMLInputElement>("[data-receipt-tip-scenario]").forEach((input) => {
+      input.disabled = !visible;
+      input.closest("label")?.classList.toggle("cursor-not-allowed", !visible);
+      input.closest("label")?.classList.toggle("opacity-50", !visible);
+      input.closest("label")?.classList.toggle("cursor-pointer", visible);
+    });
+    syncReceiptTipScenarioBlocks(panel, visible);
+  });
+}
+
+function collectReceiptTipScenarios(root: ParentNode): ReceiptTipScenarios {
+  const scenarios = defaultReceiptTipScenarios();
+  root
+    .querySelectorAll<HTMLInputElement>(
+      `[data-receipt-tip-scenarios-editor="${TIP_RECEIPT_SUGGESTION_SEQ}"] [data-receipt-tip-scenario]`,
+    )
+    .forEach((input) => {
+      const key = input.getAttribute("data-receipt-tip-scenario") as ReceiptTipScenarioKey | null;
+      if (key && key in scenarios) scenarios[key] = input.checked;
+    });
+  return scenarios;
+}
+
+export function bindReceiptTipSuggestionEditors(root: ParentNode = document): void {
+  root
+    .querySelectorAll<HTMLElement>(`[data-receipt-tip-scenarios-editor="${TIP_RECEIPT_SUGGESTION_SEQ}"]`)
+    .forEach((editor) => {
+      if (editor.dataset.receiptTipScenariosBound === "1") return;
+      editor.dataset.receiptTipScenariosBound = "1";
+      editor.addEventListener("change", (e) => {
+        const el = e.target as HTMLElement;
+        if (!el.matches("[data-receipt-tip-scenario]")) return;
+        const panel = editor.closest(`[data-receipt-tip-suggestion-panel="${TIP_RECEIPT_SUGGESTION_SEQ}"]`);
+        writeReceiptTipScenarios(collectReceiptTipScenarios(root));
+        if (panel) syncReceiptTipScenarioBlocks(panel, !panel.classList.contains("hidden"));
+      });
+    });
   bindTipPercentPresetEditors(root);
 }

@@ -31,7 +31,7 @@ const titles = {
 
 const reasons = {
   "print-foundation-devices":
-    "页高/Logo/轮打/265 快速打印、269 选机（POS/PayPad/POS Go）；全局打印引擎与设备路由，非票面字段。",
+    "页高、434 打印小票 LOGO 素材、256 是否印 Logo、轮打/265 快速打印、269 选机；全局打印引擎与设备路由，非票面字段。",
   "order-receipt-trigger":
     "654 下单后、500 部分付款后，按产线配置是否在门店收据机自动打订单收据；与支付收据流程分轨。",
   "payment-receipt-flow":
@@ -50,7 +50,7 @@ const reasons = {
 
 /** seq → groupKey（打印中心 catalog 可见条；hub override 后挂载本路径） */
 const assignMap = {
-  "print-foundation-devices": [167, 256, 259, 265, 269],
+  "print-foundation-devices": [167, 434, 256, 259, 265, 269],
   "order-receipt-trigger": [654, 500],
   "payment-receipt-flow": [246, 247, 250, 261, 272],
   "receipt-print-execution": [262, 273],
@@ -83,7 +83,7 @@ const MOVED_OUT = [
   { seq: 245, to: "支付中心 · cds-checkout-ux · 669", note: "信用卡支付打印签购单 → 刷卡签购单产线矩阵" },
   { seq: 249, to: "支付中心 · cds-checkout-ux · 669", note: "签购单联次四选一 → 669 商户/客户联分产线配置" },
   { seq: 172, to: "支付中心 · card-fees", note: "收据未付价格显示属卡付/双轨定价呈现" },
-  { seq: 252, to: "支付中心 · tip-policy", note: "小费在收据上的打印时机" },
+  { seq: 252, to: "（排除）", note: "订单收据小费行打印时机与 266 收据建议小费重叠，支付中心 catalog 不展示" },
   { seq: 266, to: "支付中心 · tip-policy", note: "收据建议小费行；预设见 295/296" },
   { seq: 290, to: "支付中心 · tax-rules", note: "按税别调整折扣/加收在收据上的打印位置" },
   { seq: 94, to: "前厅管理中心 · guest-order-rules", note: "网上点餐确认签名栏，C 端渠道规则" },
@@ -96,6 +96,14 @@ const MOVED_OUT = [
     seq: 265,
     to: "打印中心 · print-foundation-devices",
     note: "快速打印收据模式由「收据打印执行」迁入，与 259 同属打印引擎策略",
+  },
+];
+
+const MOVED_IN = [
+  {
+    seq: 434,
+    from: "素材中心 · 品牌标识素材",
+    note: "打印小票 LOGO 图片素材；与 256「是否打印 Logo」同组维护",
   },
 ];
 
@@ -231,7 +239,7 @@ push(
   "",
   "| 新 groupTitle | 吸收的旧分组 |",
   "|---------------|--------------|",
-  "| 打印基础 | 页高/Logo/轮打/265 快速打印 + 269 选机 |",
+  "| 打印基础 | 页高、434 小票 LOGO 图、256 是否印 Logo、轮打/265、269 选机 |",
   "| 订单收据触发 | 654、500（按产线） |",
   "| 支付收据流程 | 246/261/247/250/272 |",
   "| 收据打印执行 | 262 首打份数、273 重打仅新菜 |",
@@ -256,10 +264,23 @@ push(
   "",
   "---",
   "",
+  "## 6.1 自其它 hub 迁入",
+  "",
+  "| seq | 自 | 说明 |",
+  "|-----|-----|------|",
+);
+for (const m of MOVED_IN) {
+  push(`| ${m.seq} | ${m.from} | ${m.note} |`);
+}
+
+push(
+  "",
+  "---",
+  "",
   "## 7. 落地步骤",
   "",
   "1. `node scripts/apply-print-settings-mapping.mjs`",
-  "2. `node scripts/apply-payment-settings-mapping.mjs`（172/252/266/290）",
+  "2. `node scripts/apply-payment-settings-mapping.mjs`（172/266/290）",
   "3. `node scripts/apply-foh-settings-mapping.mjs`（94）",
   "4. `cd admin-web && node scripts/build-module-settings-catalog.mjs`",
   "5. 打印 / 支付 / 前厅 设置页验证",

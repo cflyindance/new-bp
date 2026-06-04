@@ -1,0 +1,2411 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>屏保 - 营销中心</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="assets/common.css" />
+  <script src="assets/kiosk-theme-media-idb.js"></script>
+  <script>
+    tailwind.config = { theme: { extend: { colors: { primary: '#1677ff', 'sidebar-bg': '#fafafa', 'sidebar-active': '#e6f4ff' }, borderRadius: { ant: '6px' } } } };
+  </script>
+  <style>
+    /* 预览打开时：抽屉高度固定为 max(横/竖在框内所需) 的上限「min(88vh, 800px)」，横竖切换仅内容缩放，外层高度不变 */
+    #previewDrawer[data-preview-fixed-h="1"] {
+      height: min(88vh, 800px);
+      max-height: 800px;
+    }
+    #previewDrawer[data-preview-fixed-h="1"] #previewMediaStage {
+      min-height: 0;
+      flex: 1 1 0%;
+    }
+    #previewDrawer[data-preview-fixed-h="1"] #previewAspectBox {
+      min-height: 0;
+      flex: 1 1 0%;
+    }
+    #previewDrawer[data-preview-fixed-h="1"] #previewZoomTarget {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      max-height: 100%;
+      min-height: 0;
+      touch-action: none;
+    }
+    #previewZoomTarget.preview-pan-dragging {
+      transition: none !important;
+    }
+    #previewAspectBox[data-preview-pan-scale]:not([data-preview-pan-scale="1"]) {
+      cursor: grab;
+    }
+    #previewAspectBox.preview-pan-dragging {
+      cursor: grabbing;
+    }
+    /* 等比缩放以完整落入预览框：contain 不裁切，横竖留白由舞台背景衬托 */
+    #previewDrawer[data-preview-fixed-h="1"] #previewImage,
+    #previewDrawer[data-preview-fixed-h="1"] #previewVideo {
+      width: 100%;
+      height: 100%;
+      max-height: none !important;
+      max-width: none !important;
+      min-width: 0;
+      min-height: 0;
+      object-fit: contain;
+      object-position: center;
+    }
+  </style>
+</head>
+<body class="bg-[#f5f6f7] text-gray-900 antialiased">
+  <div class="app-layout theme-list-page flex min-h-screen">
+    <aside class="sidebar theme-list-sidebar flex-shrink-0 flex flex-col w-[236px]">
+      <div class="p-4 border-b border-gray-100 flex items-center gap-2">
+        <div class="w-8 h-8 rounded bg-amber-400 flex items-center justify-center text-white font-bold">M</div>
+        <span class="font-medium">MenuSifu</span>
+        <div class="ml-auto flex gap-1">
+          <button type="button" class="p-1 rounded hover:bg-gray-100" aria-label="文档">📄</button>
+          <button type="button" class="p-1 rounded hover:bg-gray-100" aria-label="全屏">⊞</button>
+        </div>
+      </div>
+      <nav class="flex-1 p-3 space-y-1 overflow-auto">
+        <a href="material.html" class="menu-item px-3 py-2 text-gray-600 flex items-center justify-between rounded-ant hover:bg-gray-100"><span>图片素材</span></a>
+        <div class="nav-group">
+          <div class="nav-group-title menu-item px-3 py-2 text-gray-600 flex items-center justify-between cursor-pointer hover:bg-gray-100 rounded-ant" onclick="this.parentElement.classList.toggle('collapsed')">
+            <span>营销中心</span>
+            <span class="nav-arrow text-xs transition-transform">⌄</span>
+          </div>
+          <div class="nav-group-items pl-3 space-y-0.5">
+            <a href="kiosk-theme-list.html" class="menu-item active px-3 py-2 flex items-center rounded-ant bg-sidebar-active text-primary font-medium">屏保</a>
+          </div>
+        </div>
+      </nav>
+      <div class="p-3 border-t border-gray-100 flex items-center gap-2">
+        <button type="button" class="p-1.5 rounded hover:bg-gray-100">📄</button>
+        <span class="w-px h-4 bg-gray-200"></span>
+        <button type="button" class="p-1.5 rounded hover:bg-gray-100">👤</button>
+        <a href="#" class="flex-1 flex items-center justify-between text-gray-600 text-sm"><span>M's Coffee</span><span>→</span></a>
+      </div>
+    </aside>
+    <main class="main-content theme-list-main flex-1 flex flex-col min-w-0">
+      <div class="theme-list-shell flex-1 flex min-h-0 flex-col">
+        <div class="theme-list-panel flex-1 flex min-h-0 flex-col">
+      <!-- 空状态：无数据时显示 -->
+      <div id="emptyState" class="theme-list-scroll flex flex-1 flex-col items-center justify-center py-16 px-4 hidden">
+        <div class="empty-illustration w-64 h-48 mb-6 bg-gray-50 rounded-ant flex items-center justify-center text-gray-400 border border-dashed border-gray-200">
+          <div class="text-center">
+            <div class="text-4xl mb-2" aria-hidden="true">🖼️</div>
+            <p class="text-sm text-gray-400">屏保预览占位</p>
+          </div>
+        </div>
+        <h2 class="empty-state-title text-xl font-semibold text-gray-800">暂无屏保</h2>
+        <p class="empty-state-desc text-gray-500">创建屏保主题并下发到门店设备</p>
+        <a href="screensaver-create.html" class="btn-primary inline-flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-ant text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+          <span>+</span> 新建
+        </a>
+      </div>
+      <!-- 列表状态：有数据时显示 -->
+      <div id="listState" class="hidden min-h-0 flex flex-1 flex-col">
+        <div class="theme-list-scroll flex min-h-0 flex-1 flex-col gap-6">
+          <div class="flex shrink-0 flex-col gap-4">
+            <div class="flex w-full flex-wrap items-center justify-between gap-4">
+              <div class="relative h-12 w-full max-w-[360px] shrink-0 rounded-full border border-[#d9d9d9] bg-white px-5 shadow-sm">
+                <span class="pointer-events-none absolute left-5 top-1/2 flex h-4 w-4 -translate-y-1/2 text-[#00000040]" aria-hidden="true">
+                  <svg width="16" height="16" viewBox="0 0 1024 1024" fill="currentColor"><path d="M909.6 854.5L649.9 594.8C690.2 542.7 712.9 480 712.9 412c0-80.2-31.3-155.4-87.9-212.1-56.6-56.7-132-87.9-212.1-87.9s-155.5 31.3-212.1 87.9C143.2 256.5 112 331.8 112 412c0 80.1 31.3 155.5 87.9 212.1C256.5 680.8 331.8 712 412 712c67 0 130.6-21.8 182.7-62l259.7 259.7a8 8 0 0 0 11.3 0l66.6-66.6a8 8 0 0 0 0-11.3zM442 667.8C339.4 667.8 256 584.4 256 482s83.4-185.8 186-185.8S628 379.5 628 482 544.7 667.8 442 667.8z"/></svg>
+                </span>
+                <input type="text" id="filterName" placeholder="主题名称" class="h-full w-full border-0 bg-transparent pl-9 pr-4 text-base leading-6 text-[rgba(0,0,0,0.88)] placeholder:text-[rgba(0,0,0,0.25)] focus:outline-none focus:ring-0" aria-label="按主题名称筛选" />
+              </div>
+              <a href="screensaver-create.html" class="btn-primary inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-xl border border-primary px-5 text-base font-semibold shadow-[0_2px_0_rgba(5,145,255,0.1)] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+                <svg class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+                新建
+              </a>
+            </div>
+            <div class="flex w-full flex-wrap items-center gap-6">
+              <div class="relative h-12 min-w-[140px] max-w-[220px] shrink-0 rounded-full bg-black/[0.04]">
+                <select id="filterShelfStatus" class="ui-select w-full hidden" aria-label="按活动状态筛选">
+                  <option value="" selected>全部</option>
+                  <option value="待上架">待上架</option>
+                  <option value="已上架">已上架</option>
+                  <option value="已下架">已下架</option>
+                </select>
+                <button type="button" id="filterShelfStatusTrigger" class="ui-select-trigger ui-select-trigger--pill" aria-haspopup="listbox" aria-expanded="false" aria-controls="filterShelfStatusMenu" aria-label="按活动状态筛选">
+                  <span class="ui-select-trigger__label" id="filterShelfStatusLabel">全部</span>
+                  <svg class="ui-select-trigger__chev" viewBox="0 0 1024 1024" fill="currentColor" aria-hidden="true"><path d="M884 256h-75c-5.1 0-9.9 2.5-12.6 6.5L512 654.2 227.9 262.6c-2.7-4-7.5-6.5-12.6-6.5h-75c-6.5 0-10.3 7.4-6.5 12.7l352.6 486.1c12.8 17.6 39 17.6 51.7 0l352.6-486.1c3.9-5.3.1-12.7-6.4-12.7z"/></svg>
+                </button>
+                <div id="filterShelfStatusMenu" class="ui-select-menu dropdown-menu theme-list-dropdown-menu theme-list-status-filter-menu ui-action-dropdown absolute left-0 top-[calc(100%+8px)] z-30 hidden bg-white" role="listbox" aria-label="活动状态选项">
+                  <button type="button" class="ui-menu-item" role="option" data-value="" aria-selected="true">全部</button>
+                  <button type="button" class="ui-menu-item" role="option" data-value="待上架" aria-selected="false">待上架</button>
+                  <button type="button" class="ui-menu-item" role="option" data-value="已上架" aria-selected="false">已上架</button>
+                  <button type="button" class="ui-menu-item" role="option" data-value="已下架" aria-selected="false">已下架</button>
+                </div>
+              </div>
+              <div class="flex h-12 w-fit max-w-full shrink-0 flex-wrap items-center gap-2 rounded-full bg-black/[0.04] px-4 sm:flex-nowrap sm:gap-2.5 sm:px-5">
+                <span class="flex shrink-0 text-[#00000073]" aria-hidden="true">
+                  <svg width="16" height="16" viewBox="0 0 1024 1024" fill="currentColor"><path d="M880 184H712v-64c0-4.4-3.6-8-8-8h-56c-4.4 0-8 3.6-8 8v64H384v-64c0-4.4-3.6-8-8-8h-56c-4.4 0-8 3.6-8 8v64H144c-17.7 0-32 14.3-32 32v664c0 17.7 14.3 32 32 32h736c17.7 0 32-14.3 32-32V216c0-17.7-14.3-32-32-32zm-40 656H184V256h128v48c0 4.4 3.6 8 8 8h56c4.4 0 8-3.6 8-8v-48h256v48c0 4.4 3.6 8 8 8h56c4.4 0 8-3.6 8-8v-48h128v584zM688 420h-55.2c-5.1 0-10 2.5-12.8 6.6L512 581.6 406.8 426.6c-2.8-4.1-7.7-6.6-12.8-6.6H336c-6.6 0-10.3 7.3-6.4 12.9l126.8 174.1c.8 1.1 1.9 1.6 3.2 1.6s2.4-.5 3.2-1.6L694.4 433c3.9-5.6.2-12.9-6.4-12.9z"/></svg>
+                </span>
+                <input type="date" id="filterStartDate" class="h-full w-[132px] shrink-0 border-0 bg-transparent text-sm text-[rgba(0,0,0,0.88)] focus:outline-none focus:ring-0 sm:w-[140px] sm:text-base" title="创建开始日期" aria-label="创建开始日期" />
+                <span class="shrink-0 text-[#00000073]" aria-hidden="true">
+                  <svg width="16" height="16" viewBox="0 0 1024 1024" fill="currentColor"><path d="M873.1 596.2l-164-163.9c-4.5-4.5-10.6-7-17-7H442c-13.2 0-24 10.8-24 24v164c0 13.2 10.8 24 24 24h163.9c6.4 0 12.5-2.5 17-7l164-164c9.3-9.3 9.3-24.4 0-33.8z"/></svg>
+                </span>
+                <input type="date" id="filterEndDate" class="h-full w-[132px] shrink-0 border-0 bg-transparent text-sm text-[rgba(0,0,0,0.88)] focus:outline-none focus:ring-0 sm:w-[140px] sm:text-base" title="创建结束日期" aria-label="创建结束日期" />
+              </div>
+              <button type="button" id="filterResetBtn" class="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-xl px-5 text-base font-medium text-primary hover:bg-[#e6f4ff] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1">
+                <svg class="h-4 w-4 shrink-0" viewBox="0 0 1024 1024" fill="currentColor" aria-hidden="true"><path d="M758.2 839.1C851.8 765.9 912 651.9 912 523.9 912 303 733.5 124.3 512.6 124 291.4 123.8 112 302.8 112 523.9c0 125.2 57.5 236.9 147.6 310.2 0 0 .4.4.8.4 21.9 19.2 39.8 46.8 39.8 76.5 0 39.9-32.5 72.4-72.4 72.4-4.4 0-8.8-.4-13.1-1.2C212 866 0 678.1 0 459.9 0 206.1 206.2 0 459.9 0 713.6 0 919.9 206.1 919.9 459.9c0 206.2-149.2 377.4-344.5 408.1-4.4.7-8.9 1-13.4 1-39.8 0-72-32.5-72-72.4 0-29.7 17.9-57.3 39.8-76.5.4-.4.8-.8.8-.8z"/></svg>
+                重置
+              </button>
+            </div>
+          </div>
+          <div id="themeListContainer" class="flex min-h-0 flex-1 flex-col gap-6">
+            <!-- 屏保卡片由 JS 渲染 -->
+          </div>
+        </div>
+        <div id="paginationBar" class="theme-list-footer flex shrink-0 items-center justify-between gap-4 border-t border-[rgba(0,0,0,0.06)] pt-2">
+          <span class="text-sm leading-[22px] text-[rgba(0,0,0,0.45)]">共 <span id="totalCount">0</span> 条</span>
+          <div class="flex flex-wrap items-center gap-4">
+            <div class="flex items-center gap-2">
+              <button type="button" id="prevPageBtn" class="flex h-8 w-8 items-center justify-center rounded-lg border-0 bg-transparent text-[rgba(0,0,0,0.45)] hover:bg-black/[0.04] disabled:pointer-events-none disabled:opacity-40" aria-label="上一页">
+                <svg width="14" height="14" viewBox="0 0 1024 1024" fill="currentColor"><path d="M724 218.3V141c0-6.7-7.7-10.4-12.9-6.3L260.3 486.8c-16.4 12.8-16.4 37.5 0 50.3l450.8 352.1c5.3 4.1 12.9.4 12.9-6.3v-77.3c0-4.9-2.3-9.6-6.1-12.6l-360-281 360-281.1c3.8-3 6.1-7.7 6.1-12.6z"/></svg>
+              </button>
+              <div id="pageNumbers" class="flex items-center gap-2"></div>
+              <button type="button" id="nextPageBtn" class="flex h-8 w-8 items-center justify-center rounded-lg border-0 bg-transparent text-[rgba(0,0,0,0.45)] hover:bg-black/[0.04] disabled:pointer-events-none disabled:opacity-40" aria-label="下一页">
+                <svg width="14" height="14" viewBox="0 0 1024 1024" fill="currentColor"><path d="M765.7 486.8L314.9 134.7c-5.3-4.1-12.9-.4-12.9 6.3v77.3c0 4.9 2.3 9.6 6.1 12.6l360 281.1-360 281.1c-3.8 3-6.1 7.7-6.1 12.6V883c0 6.7 7.7 10.4 12.9 6.3l450.8-352.1c16.4-12.8 16.4-37.6 0-50.4z"/></svg>
+              </button>
+            </div>
+            <select id="pageSizeSelect" class="ui-select ui-select--sm w-[112px]" aria-label="每页条数">
+              <option value="10">10 / page</option>
+              <option value="20" selected>20 / page</option>
+              <option value="50">50 / page</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      </div>
+    </div>
+    </main>
+  </div>
+  <!-- 图片预览：Figma 25:3316 / 46:9866；列表区交互说明 200:37889（竖横分段、翻页、缩放、键盘） -->
+  <div id="imagePreviewModal" class="fixed inset-0 z-50 hidden items-center justify-center p-2.5">
+    <button type="button" id="previewBackdrop" class="absolute inset-0 z-0 block h-full w-full cursor-default border-0 bg-black/80 p-0" aria-label="关闭预览"></button>
+    <div id="previewDrawer" class="pointer-events-auto relative z-10 isolate flex max-h-[800px] w-full max-w-[1000px] flex-col overflow-hidden rounded-2xl border border-[#f0f0f0] bg-[#f5f6f7] shadow-[0_6px_16px_rgba(0,0,0,0.08),0_3px_6px_-4px_rgba(0,0,0,0.12),0_9px_28px_8px_rgba(0,0,0,0.05)]" role="dialog" aria-modal="true" aria-labelledby="previewThemeTitle">
+      <div class="flex shrink-0 items-start gap-4 px-6 pb-4 pt-6">
+        <button type="button" id="previewClose" class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-black/[0.04] text-[rgba(0,0,0,0.45)] hover:bg-black/[0.08] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary" aria-label="关闭">
+          <svg width="20" height="20" viewBox="0 0 1024 1024" fill="currentColor" aria-hidden="true"><path d="M563.8 512l262.5-312.9c4.4-5.2.7-13.1-6.5-13.1h-79.8c-4.7 0-9.2 2.1-12.3 5.8L512 369.8 424.9 191.3c-3-3.7-7.4-5.8-12.3-5.8H203c-6.5 0-10.3 7.4-6.5 12.7l243.2 312.9-243.2 312.9c-3.9 5.3-.1 12.7 6.4 12.7h79.8c4.7 0 9.2-2.1 12.3-5.8L512 654.1l87.1 178.6c3 3.7 7.4 5.8 12.3 5.8h79.8c6.5 0 10.3-7.4 6.5-12.7L563.8 512z"/></svg>
+        </button>
+        <div class="min-w-0 flex-1 pr-2">
+          <h2 id="previewThemeTitle" class="truncate text-xl font-semibold leading-7 text-[rgba(0,0,0,0.88)]">--</h2>
+          <p class="mt-0.5 text-xs leading-5 text-[rgba(0,0,0,0.45)]">屏保素材预览 · 支持版式切换与缩放</p>
+        </div>
+      </div>
+      <div class="flex min-h-0 flex-1 flex-col px-6 pb-6 pt-2">
+        <div id="previewMediaStage" class="relative flex min-h-0 flex-1 flex-col items-center overflow-hidden rounded-2xl px-6 pb-20 pt-2">
+          <div id="previewAspectBox" class="relative flex min-h-0 w-full flex-1 items-center justify-center overflow-hidden overscroll-none">
+            <div id="previewZoomTarget" class="relative flex max-h-full max-w-full items-center justify-center transition-transform duration-200 ease-out will-change-transform" style="transform: translate(0px, 0px) scale(1)">
+              <img id="previewImage" src="" alt="预览大图" draggable="false" class="pointer-events-auto h-full w-full min-h-0 min-w-0 select-none object-contain" />
+              <video id="previewVideo" class="pointer-events-auto hidden h-full w-full min-h-0 min-w-0 object-contain" controls playsinline preload="metadata" aria-label="预览视频"></video>
+            </div>
+          </div>
+          <p id="previewSlideDetail" class="mt-1 hidden max-w-full shrink-0 truncate px-2 text-center text-xs leading-5 text-[rgba(0,0,0,0.45)]" aria-live="polite"></p>
+          <div id="previewBottomToolbar" class="absolute bottom-4 left-1/2 z-20 flex max-w-[calc(100%-2rem)] -translate-x-1/2 flex-wrap items-center justify-center gap-2 rounded-2xl bg-white p-2 shadow-[0_1px_2px_rgba(0,0,0,0.03),0_1px_6px_-1px_rgba(0,0,0,0.02),0_2px_4px_rgba(0,0,0,0.02)]">
+            <div id="previewOrientationSwitch" class="hidden h-12 shrink-0 items-center gap-0.5 rounded-xl bg-[#f5f5f5] p-0.5" role="tablist" aria-label="屏保版式切换">
+              <button type="button" id="previewTabPortrait" role="tab" class="preview-orient-tab inline-flex h-11 items-center justify-center gap-1 rounded-xl px-5 text-base font-medium transition-colors" aria-selected="true">
+                <svg class="h-4 w-4 shrink-0 opacity-80" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M5 2h6a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zm1 2v8h4V4H6z"/></svg>
+                竖版
+              </button>
+              <button type="button" id="previewTabLandscape" role="tab" class="preview-orient-tab inline-flex h-11 items-center justify-center gap-1 rounded-xl px-5 text-base font-medium transition-colors" aria-selected="false">
+                <svg class="h-4 w-4 shrink-0 opacity-80" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M3 6h10a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zm1 2v2h8V8H4z"/></svg>
+                横版
+              </button>
+            </div>
+            <button type="button" id="previewPrev" class="preview-nav-btn inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-[rgba(0,0,0,0.88)] hover:bg-black/[0.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary" aria-label="上一张">
+              <svg width="20" height="20" viewBox="0 0 1024 1024" fill="currentColor" aria-hidden="true"><path d="M724 218.3V141c0-6.5-7.9-10.3-13.5-6.3L260.3 492.8c-4.1 3-4.1 9.2 0 12.3l450.2 351.6c5.7 4.2 13.5.4 13.5-6.3v-77.3c0-4.9-2.3-9.6-6.1-12.6l-204-159.7 204-159.7c3.9-3 6.1-7.7 6.1-12.6z"/></svg>
+            </button>
+            <span id="previewToolbarFraction" class="shrink-0 whitespace-nowrap px-1 text-sm leading-[22px] text-[rgba(0,0,0,0.88)]">1 / 1</span>
+            <button type="button" id="previewNext" class="preview-nav-btn inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-[rgba(0,0,0,0.88)] hover:bg-black/[0.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary" aria-label="下一张">
+              <svg width="20" height="20" viewBox="0 0 1024 1024" fill="currentColor" aria-hidden="true"><path d="M765.7 486.8L301.3 135.1c-5.7-4.2-13.5-.4-13.5 6.3v77.3c0 4.9 2.3 9.6 6.1 12.6l204 159.7-204 159.7c-3.9 3-6.1 7.7-6.1 12.6v77.3c0 6.7 7.8 10.5 13.5 6.3l464.4-351.7a16.02 16.02 0 0 0 0-25.6z"/></svg>
+            </button>
+            <span class="hidden h-4 w-px shrink-0 bg-[#d9d9d9] sm:block" aria-hidden="true" id="previewToolbarDivider"></span>
+            <button type="button" id="previewZoomIn" class="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-[rgba(0,0,0,0.88)] hover:bg-black/[0.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary" aria-label="放大">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-3.5-3.5M11 8v6M8 11h6"/></svg>
+            </button>
+            <button type="button" id="previewZoomOut" class="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-[rgba(0,0,0,0.88)] hover:bg-black/[0.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary" aria-label="缩小">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-3.5-3.5M8 11h6"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- 门店详情：Figma 198:35153 抽屉式弹层 -->
+  <div id="storesModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/[0.45] p-2.5">
+    <div class="flex max-h-[800px] w-full max-w-[1080px] flex-col overflow-hidden rounded-2xl border border-[#f0f0f0] bg-[#f5f6f7] shadow-[0_6px_16px_rgba(0,0,0,0.08),0_3px_6px_-4px_rgba(0,0,0,0.12),0_9px_28px_8px_rgba(0,0,0,0.05)]" role="dialog" aria-modal="true" aria-labelledby="storesModalTitle">
+      <div class="flex shrink-0 items-start gap-4 px-6 pb-4 pt-6">
+        <button type="button" id="storesModalClose" class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-black/[0.04] text-[rgba(0,0,0,0.45)] hover:bg-black/[0.08] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary" aria-label="关闭">
+          <svg width="20" height="20" viewBox="0 0 1024 1024" fill="currentColor" aria-hidden="true"><path d="M563.8 512l262.5-312.9c4.4-5.2.7-13.1-6.5-13.1h-79.8c-4.7 0-9.2 2.1-12.3 5.8L512 369.8 424.9 191.3c-3-3.7-7.4-5.8-12.3-5.8H203c-6.5 0-10.3 7.4-6.5 12.7l243.2 312.9-243.2 312.9c-3.9 5.3-.1 12.7 6.4 12.7h79.8c4.7 0 9.2-2.1 12.3-5.8L512 654.1l87.1 178.6c3 3.7 7.4 5.8 12.3 5.8h79.8c6.5 0 10.3-7.4 6.5-12.7L563.8 512z"/></svg>
+        </button>
+        <h2 id="storesModalTitle" class="text-xl font-semibold leading-7 text-[rgba(0,0,0,0.88)]">关联门店详情</h2>
+      </div>
+      <div class="flex min-h-0 flex-1 flex-col px-6 pb-6 pt-2">
+        <div class="flex min-h-0 flex-1 flex-col gap-6 rounded-2xl bg-white px-6 pb-6 pt-6">
+          <div class="flex shrink-0 flex-wrap items-start gap-x-12 gap-y-3">
+            <div class="flex items-center gap-2 whitespace-nowrap">
+              <span class="text-sm leading-[22px] text-[rgba(0,0,0,0.65)]">总计</span>
+              <span id="storesTotal" class="text-base font-medium leading-6 text-[rgba(0,0,0,0.88)]">0</span>
+            </div>
+            <div class="flex min-w-0 flex-wrap items-center gap-2">
+              <span class="shrink-0 text-sm leading-[22px] text-[rgba(0,0,0,0.65)]">生效时间</span>
+              <span id="storesThemeEffectTime" class="text-base font-medium leading-6 text-[rgba(0,0,0,0.88)]">--</span>
+            </div>
+          </div>
+          <div class="flex shrink-0 flex-col gap-4">
+            <div class="flex w-full flex-wrap items-center gap-3">
+              <div class="relative h-12 w-full max-w-[260px] shrink-0 rounded-[46px] border border-[#d9d9d9] bg-white px-5 shadow-sm">
+                <span class="pointer-events-none absolute left-5 top-1/2 flex h-4 w-4 -translate-y-1/2 text-[#00000040]" aria-hidden="true">
+                  <svg width="16" height="16" viewBox="0 0 1024 1024" fill="currentColor"><path d="M909.6 854.5L649.9 594.8C690.2 542.7 712.9 480 712.9 412c0-80.2-31.3-155.4-87.9-212.1-56.6-56.7-132-87.9-212.1-87.9s-155.5 31.3-212.1 87.9C143.2 256.5 112 331.8 112 412c0 80.1 31.3 155.5 87.9 212.1C256.5 680.8 331.8 712 412 712c67 0 130.6-21.8 182.7-62l259.7 259.7a8 8 0 0 0 11.3 0l66.6-66.6a8 8 0 0 0 0-11.3zM442 667.8C339.4 667.8 256 584.4 256 482s83.4-185.8 186-185.8S628 379.5 628 482 544.7 667.8 442 667.8z"/></svg>
+                </span>
+                <input type="text" id="storesMidSearch" placeholder="门店名称 / MID" class="h-full w-full border-0 bg-transparent pl-9 pr-4 text-base leading-6 text-[rgba(0,0,0,0.88)] placeholder:text-[rgba(0,0,0,0.45)] focus:outline-none focus:ring-0" autocomplete="off" aria-label="按门店名称或 MID 搜索" />
+              </div>
+              <div class="relative h-12 min-w-[140px] max-w-[220px] shrink-0 rounded-full bg-black/[0.04]">
+                <select id="storesEffectStatusFilter" class="ui-select w-full hidden" aria-label="按门店生效状态筛选">
+                  <option value="" selected>全部</option>
+                  <option value="待生效">待生效</option>
+                  <option value="生效中">生效中</option>
+                  <option value="已失效">已失效</option>
+                </select>
+                <button type="button" id="storesEffectStatusTrigger" class="ui-select-trigger ui-select-trigger--pill" aria-haspopup="listbox" aria-expanded="false" aria-controls="storesEffectStatusFilterMenu" aria-label="按门店生效状态筛选">
+                  <span class="ui-select-trigger__label" id="storesEffectStatusFilterLabel">全部</span>
+                  <svg class="ui-select-trigger__chev" viewBox="0 0 1024 1024" fill="currentColor" aria-hidden="true"><path d="M884 256h-75c-5.1 0-9.9 2.5-12.6 6.5L512 654.2 227.9 262.6c-2.7-4-7.5-6.5-12.6-6.5h-75c-6.5 0-10.3 7.4-6.5 12.7l352.6 486.1c12.8 17.6 39 17.6 51.7 0l352.6-486.1c3.9-5.3.1-12.7-6.4-12.7z"/></svg>
+                </button>
+                <div id="storesEffectStatusFilterMenu" class="ui-select-menu dropdown-menu theme-list-dropdown-menu theme-list-status-filter-menu ui-action-dropdown absolute left-0 top-[calc(100%+8px)] z-[60] hidden bg-white" role="listbox" aria-label="门店生效状态选项"></div>
+              </div>
+              <button type="button" id="storesFilterReset" class="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-xl px-5 text-base font-medium text-primary hover:bg-[#e6f4ff] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1">
+                <svg class="h-4 w-4 shrink-0" viewBox="0 0 1024 1024" fill="currentColor" aria-hidden="true"><path d="M758.2 839.1C851.8 765.9 912 651.9 912 523.9 912 303 733.5 124.3 512.6 124 291.4 123.8 112 302.8 112 523.9c0 125.2 57.5 236.9 147.6 310.2 0 0 .4.4.8.4 21.9 19.2 39.8 46.8 39.8 76.5 0 39.9-32.5 72.4-72.4 72.4-4.4 0-8.8-.4-13.1-1.2C212 866 0 678.1 0 459.9 0 206.1 206.2 0 459.9 0 713.6 0 919.9 206.1 919.9 459.9c0 206.2-149.2 377.4-344.5 408.1-4.4.7-8.9 1-13.4 1-39.8 0-72-32.5-72-72.4 0-29.7 17.9-57.3 39.8-76.5.4-.4.8-.8.8-.8z"/></svg>
+                重置
+              </button>
+            </div>
+            <p id="storesFilteredHint" class="hidden text-sm leading-[22px] text-[rgba(0,0,0,0.45)]" aria-live="polite"></p>
+          </div>
+          <div id="storesListContainer" class="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto pr-1"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- 删除屏保二次确认（不使用浏览器 confirm） -->
+  <div id="deleteConfirmModal" class="fixed inset-0 z-[60] hidden items-center justify-center bg-black/[0.45] p-4" aria-hidden="true">
+    <div class="ui-dialog-panel w-full max-w-sm overflow-hidden" role="dialog" aria-modal="true" aria-labelledby="deleteConfirmTitle">
+      <div class="ui-dialog-header">
+        <h3 id="deleteConfirmTitle" class="ui-dialog-title">删除屏保</h3>
+      </div>
+      <p class="ui-dialog-body leading-relaxed">确定删除屏保主题「<strong id="deleteConfirmThemeName" class="font-medium text-[rgba(0,0,0,0.88)]"></strong>」吗？删除后不可恢复。</p>
+      <div class="ui-dialog-footer">
+        <button type="button" id="deleteConfirmCancel" class="ui-dialog-btn">取消</button>
+        <button type="button" id="deleteConfirmOk" class="ui-dialog-btn ui-dialog-btn--danger">删除</button>
+      </div>
+    </div>
+  </div>
+  <!-- 上架拦截：仅与列表为「已上架」的主题在相同门店+渠道上比对时间重叠（不比对待上架、已下架） -->
+  <div id="publishBlockModal" class="fixed inset-0 z-[60] hidden items-center justify-center bg-black/[0.45] p-4" aria-hidden="true">
+    <div class="ui-dialog-panel flex w-full max-w-md flex-col overflow-hidden max-h-[85vh]" role="dialog" aria-modal="true" aria-labelledby="publishBlockTitle">
+      <div class="ui-dialog-header flex-shrink-0">
+        <h3 id="publishBlockTitle" class="ui-dialog-title">无法上架</h3>
+      </div>
+      <div class="min-h-0 max-h-[50vh] overflow-y-auto overscroll-contain px-5 py-4">
+        <p id="publishBlockMessage" class="m-0 text-sm leading-relaxed whitespace-pre-line text-[rgba(0,0,0,0.65)]"></p>
+      </div>
+      <div class="ui-dialog-footer flex-shrink-0">
+        <button type="button" id="publishBlockOk" class="ui-dialog-btn ui-dialog-btn--primary">知道了</button>
+      </div>
+    </div>
+  </div>
+  <script>
+    (function() {
+      var STORAGE_KEY = 'kiosk_themes';
+      var currentPage = 1;
+      var pageSize = 20;
+      var lastFilteredTotal = 0;
+      var pendingDeleteThemeId = null;
+      var listHydrateBlobUrls = [];
+      var previewOpenBlobUrls = [];
+
+      function revokeListHydrateBlobUrls() {
+        listHydrateBlobUrls.forEach(function(u) {
+          try { URL.revokeObjectURL(u); } catch (e) { /* ignore */ }
+        });
+        listHydrateBlobUrls = [];
+      }
+
+      function hydrateThemeListMedia(list) {
+        revokeListHydrateBlobUrls();
+        var idb = window.KioskThemeMediaIdb;
+        if (!idb || !idb.supported()) return Promise.resolve();
+        var tasks = [];
+        list.forEach(function(theme) {
+          [theme.portraitImages, theme.landscapeImages].forEach(function(arr) {
+            if (!arr) return;
+            arr.forEach(function(m) {
+              if (typeof m === 'object' && m.type === 'video' && m.mediaRef) {
+                delete m._displaySrc;
+                tasks.push(
+                  idb.get(m.mediaRef).then(function(blob) {
+                    if (blob) {
+                      var u = URL.createObjectURL(blob);
+                      listHydrateBlobUrls.push(u);
+                      m._displaySrc = u;
+                    }
+                  })
+                );
+              }
+            });
+          });
+        });
+        return Promise.all(tasks);
+      }
+
+      function revokePreviewOpenBlobUrls() {
+        previewOpenBlobUrls.forEach(function(u) {
+          try { URL.revokeObjectURL(u); } catch (e) { /* ignore */ }
+        });
+        previewOpenBlobUrls = [];
+      }
+
+      function hydrateThemeForPreview(theme) {
+        revokePreviewOpenBlobUrls();
+        var idb = window.KioskThemeMediaIdb;
+        if (!idb || !idb.supported()) return Promise.resolve();
+        var tasks = [];
+        function scan(arr) {
+          if (!arr) return;
+          arr.forEach(function(m) {
+            if (typeof m === 'object' && m.type === 'video' && m.mediaRef) {
+              delete m._displaySrc;
+              tasks.push(
+                idb.get(m.mediaRef).then(function(blob) {
+                  if (blob) {
+                    var u = URL.createObjectURL(blob);
+                    previewOpenBlobUrls.push(u);
+                    m._displaySrc = u;
+                  }
+                })
+              );
+            }
+          });
+        }
+        scan(theme.portraitImages);
+        scan(theme.landscapeImages);
+        return Promise.all(tasks);
+      }
+
+      function collectVideoMediaRefs(theme) {
+        var refs = [];
+        function scan(arr) {
+          if (!arr) return;
+          arr.forEach(function(m) {
+            if (m && typeof m === 'object' && m.type === 'video' && m.mediaRef) refs.push(m.mediaRef);
+          });
+        }
+        scan(theme.portraitImages);
+        scan(theme.landscapeImages);
+        return refs;
+      }
+
+      var deleteConfirmModal = document.getElementById('deleteConfirmModal');
+      var deleteConfirmThemeName = document.getElementById('deleteConfirmThemeName');
+      var deleteConfirmCancel = document.getElementById('deleteConfirmCancel');
+      var deleteConfirmOk = document.getElementById('deleteConfirmOk');
+      var publishBlockModal = document.getElementById('publishBlockModal');
+      var publishBlockMessage = document.getElementById('publishBlockMessage');
+      var publishBlockOk = document.getElementById('publishBlockOk');
+
+      function openDeleteConfirmModal() {
+        if (!deleteConfirmModal) return;
+        deleteConfirmModal.classList.remove('hidden');
+        deleteConfirmModal.classList.add('flex');
+        deleteConfirmModal.setAttribute('aria-hidden', 'false');
+        if (deleteConfirmOk) deleteConfirmOk.focus();
+      }
+
+      function closeDeleteConfirmModal() {
+        pendingDeleteThemeId = null;
+        if (!deleteConfirmModal) return;
+        deleteConfirmModal.classList.add('hidden');
+        deleteConfirmModal.classList.remove('flex');
+        deleteConfirmModal.setAttribute('aria-hidden', 'true');
+      }
+
+      function openPublishBlockModal(message) {
+        if (publishBlockMessage) publishBlockMessage.textContent = message || '';
+        if (!publishBlockModal) return;
+        publishBlockModal.classList.remove('hidden');
+        publishBlockModal.classList.add('flex');
+        publishBlockModal.setAttribute('aria-hidden', 'false');
+        if (publishBlockOk) publishBlockOk.focus();
+      }
+
+      function closePublishBlockModal() {
+        if (!publishBlockModal) return;
+        publishBlockModal.classList.add('hidden');
+        publishBlockModal.classList.remove('flex');
+        publishBlockModal.setAttribute('aria-hidden', 'true');
+      }
+
+      function executeDeleteTheme() {
+        if (!pendingDeleteThemeId) return;
+        var id = pendingDeleteThemeId;
+        var all = getThemes();
+        var doomed = all.find(function(t) { return t.id === id; });
+        var refs = doomed && window.KioskThemeMediaIdb && KioskThemeMediaIdb.supported() ? collectVideoMediaRefs(doomed) : [];
+        function applyDelete() {
+          cancelAllChannelDisplayOpTimersForTheme(id);
+          var list = all.filter(function(t) { return t.id !== id; });
+          saveThemes(list);
+          closeDeleteConfirmModal();
+          render();
+        }
+        if (refs.length) {
+          Promise.all(refs.map(function(r) { return KioskThemeMediaIdb.del(r).catch(function() {}); })).then(applyDelete);
+        } else {
+          applyDelete();
+        }
+      }
+
+      function getThemes() {
+        try {
+          var raw = localStorage.getItem(STORAGE_KEY);
+          var list = raw ? JSON.parse(raw) : [];
+          var defaultIds = { 'demo1': true, 'demo2': true };
+          var filtered = list.filter(function(t) { return !defaultIds[t.id]; });
+          if (filtered.length !== list.length) {
+            saveThemes(filtered);
+            list = filtered;
+          }
+          return list;
+        } catch (e) {
+          return [];
+        }
+      }
+
+      function saveThemes(list) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+      }
+
+      function escapeHtml(s) {
+        var d = document.createElement('div');
+        d.textContent = s;
+        return d.innerHTML;
+      }
+
+      function hideAllDropdownMenus() {
+        document.querySelectorAll('.dropdown-menu').forEach(function(m) { m.classList.add('hidden'); });
+        var fst = document.getElementById('filterShelfStatusTrigger');
+        if (fst) fst.setAttribute('aria-expanded', 'false');
+        var sst = document.getElementById('storesEffectStatusTrigger');
+        if (sst) sst.setAttribute('aria-expanded', 'false');
+      }
+
+      function setupFilterShelfStatusDropdown() {
+        var selectEl = document.getElementById('filterShelfStatus');
+        var trigger = document.getElementById('filterShelfStatusTrigger');
+        var label = document.getElementById('filterShelfStatusLabel');
+        var menu = document.getElementById('filterShelfStatusMenu');
+        if (!selectEl || !trigger || !label || !menu) return;
+
+        var LABELS = { '': '全部', '待上架': '待上架', '已上架': '已上架', '已下架': '已下架' };
+
+        function closeMenu() {
+          menu.classList.add('hidden');
+          trigger.setAttribute('aria-expanded', 'false');
+        }
+
+        function syncFromSelect() {
+          var v = selectEl.value;
+          label.textContent = Object.prototype.hasOwnProperty.call(LABELS, v) ? LABELS[v] : (v || '全部');
+          menu.querySelectorAll('[role="option"]').forEach(function(opt) {
+            opt.setAttribute('aria-selected', opt.getAttribute('data-value') === v ? 'true' : 'false');
+          });
+        }
+
+        syncFromSelect();
+
+        trigger.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          var willOpen = menu.classList.contains('hidden');
+          hideAllDropdownMenus();
+          if (willOpen) {
+            menu.classList.remove('hidden');
+            trigger.setAttribute('aria-expanded', 'true');
+          } else {
+            closeMenu();
+          }
+        });
+
+        menu.addEventListener('click', function(e) {
+          var btn = e.target.closest('[role="option"]');
+          if (!btn || !btn.hasAttribute('data-value')) return;
+          e.preventDefault();
+          e.stopPropagation();
+          selectEl.value = btn.getAttribute('data-value');
+          syncFromSelect();
+          closeMenu();
+          selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+
+        document.addEventListener('keydown', function(e) {
+          if (menu.classList.contains('hidden')) return;
+          if (e.key === 'Escape') {
+            e.preventDefault();
+            closeMenu();
+          }
+        });
+
+        window.__syncFilterShelfStatusDropdown = syncFromSelect;
+      }
+
+      function setupStoresEffectStatusDropdown() {
+        var selectEl = document.getElementById('storesEffectStatusFilter');
+        var trigger = document.getElementById('storesEffectStatusTrigger');
+        var label = document.getElementById('storesEffectStatusFilterLabel');
+        var menu = document.getElementById('storesEffectStatusFilterMenu');
+        if (!selectEl || !trigger || !label || !menu) return;
+
+        var LABELS = { '': '全部', '待生效': '待生效', '生效中': '生效中', '已失效': '已失效' };
+
+        function closeMenu() {
+          menu.classList.add('hidden');
+          trigger.setAttribute('aria-expanded', 'false');
+        }
+
+        function syncFromSelect() {
+          var v = selectEl.value;
+          label.textContent = Object.prototype.hasOwnProperty.call(LABELS, v) ? LABELS[v] : (v || '全部');
+          menu.querySelectorAll('[role="option"]').forEach(function(opt) {
+            opt.setAttribute('aria-selected', opt.getAttribute('data-value') === v ? 'true' : 'false');
+          });
+        }
+
+        trigger.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          var willOpen = menu.classList.contains('hidden');
+          hideAllDropdownMenus();
+          if (willOpen) {
+            menu.classList.remove('hidden');
+            trigger.setAttribute('aria-expanded', 'true');
+          } else {
+            closeMenu();
+          }
+        });
+
+        menu.addEventListener('click', function(e) {
+          var btn = e.target.closest('[role="option"]');
+          if (!btn || !btn.hasAttribute('data-value')) return;
+          e.preventDefault();
+          e.stopPropagation();
+          selectEl.value = btn.getAttribute('data-value');
+          syncFromSelect();
+          closeMenu();
+          selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+
+        window.__syncStoresEffectStatusDropdown = syncFromSelect;
+      }
+
+      /** 列表/预览中判断是否为视频素材（与新建/编辑页写入的 { type:'video', dataUrl } 一致） */
+      function isPreviewVideoMedia(item) {
+        if (!item) return false;
+        if (typeof item === 'object' && item.type === 'video') return true;
+        var u = typeof item === 'string' ? item : (item.dataUrl || '');
+        return typeof u === 'string' && u.indexOf('data:video') === 0;
+      }
+
+      function previewMediaSrc(item) {
+        if (!item) return '';
+        if (typeof item === 'object' && item._displaySrc) return item._displaySrc;
+        return typeof item === 'string' ? item : (item.dataUrl || '');
+      }
+
+      function channelChipLabel(name) {
+        if (name == null || name === '') return '—';
+        var s = String(name).trim();
+        var map = { eMenu: 'E-Menu', EMenu: 'E-Menu', Kiosk: 'Kiosk', CDS: 'CDS', OO: 'Online Order', SDI: 'Self Dine In' };
+        return map[s] || s;
+      }
+
+      function buildChannelTagsHtml(theme) {
+        var arr = theme.distributeChannels;
+        if (!arr || !arr.length) return '';
+        return '<div class="mt-auto flex flex-wrap gap-1 pt-1">' + arr.map(function(ch) {
+          return '<span class="inline-flex items-center rounded-lg bg-black/[0.04] px-2 py-px text-xs leading-5 text-[rgba(0,0,0,0.65)]">' + escapeHtml(channelChipLabel(ch)) + '</span>';
+        }).join('') + '</div>';
+      }
+
+      function collectMediaPairs(theme) {
+        var out = [];
+        (theme.portraitImages || []).forEach(function(m, i) { out.push({ m: m, type: 'portrait', index: i }); });
+        (theme.landscapeImages || []).forEach(function(m, i) { out.push({ m: m, type: 'landscape', index: i }); });
+        return out;
+      }
+
+      function thumbCellHtml(item, themeId) {
+        var src = previewMediaSrc(item.m);
+        var safeSrc = escapeHtml(src);
+        var attrs = 'data-theme-id="' + escapeHtml(themeId) + '" data-img-type="' + item.type + '" data-img-index="' + item.index + '"';
+        var innerCls = 'preview-thumb absolute inset-0 h-full w-full cursor-zoom-in rounded object-cover object-center transition-opacity duration-200 hover:opacity-95';
+        var wrapOpen = '<div class="relative min-h-0 min-w-0 flex-1 overflow-hidden rounded-lg bg-white p-0.5 ring-0 transition-shadow duration-200 hover:shadow-[0_0_0_1px_rgba(22,119,255,0.35)]">';
+        if (isPreviewVideoMedia(item.m)) {
+          return wrapOpen + '<video src="' + safeSrc + '" title="点击查看预览" muted playsinline preload="metadata" draggable="false" ' + attrs + ' class="' + innerCls + '"></video></div>';
+        }
+        return wrapOpen + '<img src="' + safeSrc + '" alt="" title="点击查看大图" ' + attrs + ' class="' + innerCls + '" /></div>';
+      }
+
+      function renderThumbStage(theme) {
+        var tid = theme.id;
+        var items = collectMediaPairs(theme);
+        if (!items.length) {
+          return '<div class="flex h-[136px] w-[136px] shrink-0 items-center justify-center overflow-hidden rounded-xl bg-black/[0.06] p-2 text-xs text-[rgba(0,0,0,0.25)]">—</div>';
+        }
+        var outer = 'group flex h-[136px] w-[136px] shrink-0 gap-1 overflow-hidden rounded-xl bg-black/[0.06] p-2 transition-shadow duration-200 hover:shadow-[0_2px_8px_rgba(0,0,0,0.08)]';
+        var n = items.length;
+        if (n === 1) {
+          return '<div class="' + outer + ' min-h-0 min-w-0">' + thumbCellHtml(items[0], tid) + '</div>';
+        }
+        if (n === 2) {
+          return '<div class="' + outer + ' flex-row items-stretch">' + thumbCellHtml(items[0], tid) + thumbCellHtml(items[1], tid) + '</div>';
+        }
+        if (n === 3) {
+          return '<div class="' + outer + ' flex-col items-stretch">' +
+            '<div class="flex min-h-0 flex-1 gap-1">' + thumbCellHtml(items[0], tid) + thumbCellHtml(items[1], tid) + '</div>' +
+            '<div class="flex min-h-0 flex-1 gap-1">' + thumbCellHtml(items[2], tid) + '<div class="min-h-0 flex-1"></div></div></div>';
+        }
+        return '<div class="' + outer + ' flex-col items-stretch">' +
+          '<div class="flex min-h-0 flex-1 gap-1">' + thumbCellHtml(items[0], tid) + thumbCellHtml(items[1], tid) + '</div>' +
+          '<div class="flex min-h-0 flex-1 gap-1">' + thumbCellHtml(items[2], tid) + thumbCellHtml(items[3], tid) + '</div></div>';
+      }
+
+      var MENU_ICN = {
+        cloudUp: '<svg class="h-4 w-4 shrink-0 text-[rgba(0,0,0,0.88)]" width="16" height="16" viewBox="0 0 1024 1024" fill="currentColor" aria-hidden="true"><path d="M518.3 459c-12.2-40.1-49.5-69.3-93.3-69.3-54 0-98 44-98 98s44 98 98 98h312.5c35.5 0 64.3-28.7 64.3-64 0-29.5-20-54.3-47-61.6l-36.5-20.8z"/></svg>',
+        cloudDn: '<svg class="h-4 w-4 shrink-0 text-[rgba(0,0,0,0.88)]" width="16" height="16" viewBox="0 0 1024 1024" fill="currentColor" aria-hidden="true"><path d="M624 706.3h-74.1V464c0-4.4-3.6-8-8-8h-60c-4.4 0-8 3.6-8 8v242.3H400c-6.7 0-10.4 7.7-6.3 12.9l112 141.7c3.2 4.1 9.4 4.1 12.6 0l112-141.7c4.1-5.2.4-12.9-6.3-12.9z"/></svg>',
+        edit: '<svg class="h-4 w-4 shrink-0 text-[rgba(0,0,0,0.88)]" width="16" height="16" viewBox="0 0 1024 1024" fill="currentColor" aria-hidden="true"><path d="M257.7 752c2 0 4-.2 6-.5L431.9 722c2-.4 3.9-1.3 5.3-2.8l423.9-423.9a8.01 8.01 0 0 0 0-11.3l-45.2-45.2a8.01 8.01 0 0 0-11.3 0L444.4 672.7c-1.5 1.4-2.4 3.3-2.8 5.3L263.2 989.5c-.4 2-.6 4-.6 6.1 0 8.8 7.2 16 16 16h-.1z"/></svg>',
+        del: '<svg class="h-4 w-4 shrink-0" width="16" height="16" viewBox="0 0 1024 1024" fill="#ff4d4f" aria-hidden="true"><path d="M864 256H736v-80c0-70.7-57.3-128-128-128H416c-70.7 0-128 57.3-128 128v80H160c-17.7 0-32 14.3-32 32v32c0 4.4 3.6 8 8 8h60.4l24.7 523c1.6 34.1 29.8 61 63.9 61h454c34.2 0 62.3-26.8 63.9-61l24.7-523H888c4.4 0 8-3.6 8-8v-32c0-17.7-14.3-32-32-32z"/></svg>',
+        more: '<svg width="20" height="20" viewBox="0 0 1024 1024" fill="currentColor" class="text-[rgba(0,0,0,0.45)]" aria-hidden="true"><path d="M176 511a56 56 0 1 0 112 0 56 56 0 1 0-112 0zm280 0a56 56 0 1 0 112 0 56 56 0 1 0-112 0zm280 0a56 56 0 1 0 112 0 56 56 0 1 0-112 0z"/></svg>'
+      };
+
+      function menuBtn(cls, iconHtml, label, attrs) {
+        return '<button type="button" class="' + cls + ' ui-menu-item" ' + (attrs || '') + '>' + iconHtml + '<span>' + label + '</span></button>';
+      }
+
+      function menuBtnDanger(cls, label, attrs) {
+        return '<button type="button" class="' + cls + ' ui-menu-item ui-menu-item--danger" ' + (attrs || '') + '>' + MENU_ICN.del + '<span>' + label + '</span></button>';
+      }
+
+      var DEFAULT_STORE_TIMEZONE = 'Asia/Shanghai';
+
+      function parseDateTime(str) {
+        if (!str || str === '--') return null;
+        var normalized = str.replace(/\//g, '-');
+        var d = new Date(normalized);
+        return isNaN(d.getTime()) ? null : d;
+      }
+
+      function normalizeUtcTimestamp(v) {
+        if (v == null || v === '' || v === '--') return null;
+        if (typeof v === 'number') return isFinite(v) ? v : null;
+        var s = String(v).trim();
+        if (!s) return null;
+        if (/^\d+$/.test(s)) {
+          var n = Number(s);
+          return isFinite(n) ? n : null;
+        }
+        var d = new Date(s.replace(/\//g, '-'));
+        var ms = d.getTime();
+        return isNaN(ms) ? null : ms;
+      }
+
+      function computeEffectStatusByRange(startMs, endMs, nowMs) {
+        if (typeof nowMs !== 'number') nowMs = Date.now();
+        if (startMs == null || endMs == null) return null;
+        if (nowMs < startMs) return { text: '待生效', color: 'bg-yellow-100 text-yellow-700' };
+        if (nowMs > endMs) return { text: '已失效', color: 'bg-gray-200 text-gray-600' };
+        return { text: '生效中', color: 'bg-green-100 text-green-700' };
+      }
+
+      function getStoreTimezone(store) {
+        var tz = store && store.timezone ? String(store.timezone).trim() : '';
+        return tz || DEFAULT_STORE_TIMEZONE;
+      }
+
+      /** 兼容旧数据：优先 UTC 字段，其次 effectTime 字符串 */
+      function parseStoredThemeEffectRange(theme) {
+        if (!theme) return null;
+        var startUtc = normalizeUtcTimestamp(theme.effectStartUtc);
+        var endUtc = normalizeUtcTimestamp(theme.effectEndUtc);
+        if (startUtc != null && endUtc != null) {
+          return { start: startUtc, end: endUtc };
+        }
+
+        var et = theme.effectTime;
+        if (!et || et === '--') return null;
+        if (et === '立即生效') {
+          var dist = theme.distributeTime;
+          if (dist && dist !== '--') {
+            var d = new Date(String(dist).replace(/\//g, '-'));
+            if (!isNaN(d.getTime())) return { start: d.getTime(), end: Infinity };
+          }
+          return { start: Date.now(), end: Infinity };
+        }
+        var parts = String(et).split(' - ');
+        if (parts.length !== 2) return null;
+        var start = new Date(parts[0].trim().replace(/\//g, '-'));
+        var end = new Date(parts[1].trim().replace(/\//g, '-'));
+        if (isNaN(start.getTime()) || isNaN(end.getTime())) return null;
+        return { start: start.getTime(), end: end.getTime() };
+      }
+
+      function computeEffectStatus(effectTime) {
+        if (!effectTime || effectTime === '--') return null;
+        if (effectTime === '立即生效') {
+          return { text: '生效中', color: 'bg-green-100 text-green-700' };
+        }
+        var parts = effectTime.split(' - ');
+        if (parts.length !== 2) return null;
+        var startDt = parseDateTime(parts[0].trim());
+        var endDt = parseDateTime(parts[1].trim());
+        if (!startDt || !endDt) return null;
+        return computeEffectStatusByRange(startDt.getTime(), endDt.getTime(), Date.now());
+      }
+
+      function getThemeEffectStatus(theme) {
+        var range = parseStoredThemeEffectRange(theme);
+        if (range) return computeEffectStatusByRange(range.start, range.end, Date.now());
+        return theme ? computeEffectStatus(theme.effectTime) : null;
+      }
+
+      function formatDateTimeInTimezone(ms, timezone) {
+        if (ms == null || !isFinite(ms)) return '';
+        try {
+          var dtf = new Intl.DateTimeFormat('zh-CN', {
+            timeZone: timezone,
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+          });
+          return dtf.format(new Date(ms)).replace(/\//g, '-');
+        } catch (e) {
+          return new Date(ms).toLocaleString('zh-CN', { hour12: false }).replace(/\//g, '-');
+        }
+      }
+
+      function formatThemeEffectRangeForStore(theme, store) {
+        var range = parseStoredThemeEffectRange(theme);
+        if (!range) return theme && theme.effectTime ? String(theme.effectTime) : '--';
+        var tz = getStoreTimezone(store);
+        var startStr = formatDateTimeInTimezone(range.start, tz);
+        if (range.end === Infinity) return startStr ? (startStr + ' 起') : '--';
+        var endStr = formatDateTimeInTimezone(range.end, tz);
+        if (!startStr || !endStr) return '--';
+        return startStr + ' - ' + endStr;
+      }
+
+      function getThemeEffectDisplayText(theme) {
+        if (!theme) return '--';
+        if (theme.effectTime && theme.effectTime !== '--') return String(theme.effectTime);
+        return formatThemeEffectRangeForStore(theme, { timezone: DEFAULT_STORE_TIMEZONE });
+      }
+
+      /** 已上架且生效期已结束 → 展示为已下架 */
+      function getPublishedTimingEffectLabel(theme) {
+        if (!theme || theme.publishStatus !== 'published') return null;
+        var s = getThemeEffectStatus(theme);
+        return s ? s.text : null;
+      }
+
+      /** 上架状态：草稿为待上架；已上架且已失效为已下架；已上架否则为已上架（色板对齐 Figma Tag） */
+      function getListShelfStatus(theme) {
+        if (!theme) return { text: '—', tagClass: 'theme-list-tag-default' };
+        if (theme.publishStatus === 'draft') {
+          return { text: '待上架', tagClass: 'theme-list-tag-orange' };
+        }
+        var timing = getPublishedTimingEffectLabel(theme);
+        if (timing === '已失效') {
+          return { text: '已下架', tagClass: 'theme-list-tag-default' };
+        }
+        return { text: '已上架', tagClass: 'theme-list-tag-green' };
+      }
+
+      /** 上架时间冲突的对手方：仅列表为「已上架」的主题（不含待上架草稿、不含展示为已下架的过期已发布主题） */
+      function isListShelfPublishedForOverlap(other) {
+        return getListShelfStatus(other).text === '已上架';
+      }
+
+      /** 列表展示口径：待上架固定「待生效」；已上架按生效时间计算 */
+      function getListEffectStatus(theme) {
+        if (!theme) return null;
+        if (theme.publishStatus && theme.publishStatus !== 'published') {
+          return { text: '待生效', color: 'bg-yellow-100 text-yellow-700' };
+        }
+        return getThemeEffectStatus(theme);
+      }
+
+      /** 生效时间窗已结束（已失效），用于关联门店详情只读 */
+      function isThemeEffectExpired(theme) {
+        if (!theme) return false;
+        var eff = getThemeEffectStatus(theme);
+        return !!(eff && eff.text === '已失效');
+      }
+
+      function getStoreEffectStatus(theme, store) {
+        // 门店时区用于本地化展示；状态按统一 UTC 时刻计算。
+        getStoreTimezone(store);
+        if (!theme) return null;
+        var shelf = getListShelfStatus(theme);
+        if (shelf.text === '待上架') {
+          return { text: '待生效', color: 'bg-yellow-100 text-yellow-700' };
+        }
+        if (shelf.text === '已下架') {
+          return { text: '已失效', color: 'bg-gray-200 text-gray-600' };
+        }
+        return getThemeEffectStatus(theme);
+      }
+
+      function getStoreEffectFilterOptionsByTheme(theme) {
+        var shelf = getListShelfStatus(theme);
+        if (shelf.text === '待上架') {
+          return ['', '待生效'];
+        }
+        if (shelf.text === '已下架') {
+          return ['', '已失效'];
+        }
+        return ['', '待生效', '生效中', '已失效'];
+      }
+
+      function renderStoresEffectStatusFilter(theme) {
+        if (!storesEffectStatusFilterEl) return;
+        var options = getStoreEffectFilterOptionsByTheme(theme);
+        var current = storesEffectStatusFilterEl.value || '';
+        var labels = { '': '全部', '待生效': '待生效', '生效中': '生效中', '已失效': '已失效' };
+        storesEffectStatusFilterEl.innerHTML = options.map(function(v) {
+          return '<option value="' + escapeHtml(v) + '">' + escapeHtml(labels[v] || v) + '</option>';
+        }).join('');
+        storesEffectStatusFilterEl.value = options.indexOf(current) >= 0 ? current : '';
+        var val = storesEffectStatusFilterEl.value;
+        var menuEl = document.getElementById('storesEffectStatusFilterMenu');
+        if (menuEl) {
+          menuEl.innerHTML = options.map(function(v) {
+            var sel = val === v ? 'true' : 'false';
+            return '<button type="button" class="ui-menu-item" role="option" data-value="' + escapeHtml(v) + '" aria-selected="' + sel + '">' + escapeHtml(labels[v] || v) + '</button>';
+          }).join('');
+          menuEl.classList.add('hidden');
+        }
+        var st = document.getElementById('storesEffectStatusTrigger');
+        if (st) st.setAttribute('aria-expanded', 'false');
+        if (window.__syncStoresEffectStatusDropdown) window.__syncStoresEffectStatusDropdown();
+      }
+
+      /** 门店详情：渠道操作始终可用（点击后立即生效，无中间态） */
+      function isStoreDetailChannelUiOperable(theme, store) {
+        return true;
+      }
+
+      // 旧：不可操作原因提示（已弃用）
+
+      function rangesOverlap(a, b) {
+        if (!a || !b) return false;
+        return a.start < b.end && b.start < a.end;
+      }
+
+      function getThemeStoreChannelPairs(theme) {
+        var pairs = [];
+        var seen = {};
+        var stores = theme && theme.distributedStores ? theme.distributedStores : [];
+        stores.forEach(function(store) {
+          var mid = store && store.mid != null ? String(store.mid) : '';
+          var arr = store && Array.isArray(store.channelStatuses) ? store.channelStatuses : [];
+          arr.forEach(function(cs) {
+            var ch = cs && cs.channel != null ? String(cs.channel) : '';
+            if (!mid || !ch) return;
+            var key = mid + '\x1e' + ch;
+            if (seen[key]) return;
+            seen[key] = true;
+            pairs.push({ mid: mid, channel: ch });
+          });
+        });
+        return pairs;
+      }
+
+      function hasStoreChannelPair(theme, mid, channel) {
+        var m = String(mid);
+        var c = String(channel);
+        var stores = theme && theme.distributedStores ? theme.distributedStores : [];
+        for (var i = 0; i < stores.length; i++) {
+          var st = stores[i];
+          if (String(st.mid) !== m) continue;
+          var arr = st.channelStatuses || [];
+          for (var j = 0; j < arr.length; j++) {
+            if (String(arr[j].channel || '') === c) return true;
+          }
+        }
+        return false;
+      }
+
+      /** 上架前校验：仅与列表上架状态为「已上架」的主题在相同门店+相同渠道上比对生效时间是否重叠（不比对待上架、已下架） */
+      function findShelfTimeConflictsForPublish(candidate, allThemes) {
+        var myRange = parseStoredThemeEffectRange(candidate);
+        if (!myRange) {
+          return {
+            kind: 'no_range',
+            message: '当前主题未配置有效的生效时间，无法上架。请先通过下发流程配置门店、渠道与生效时间。'
+          };
+        }
+        var myPairs = getThemeStoreChannelPairs(candidate);
+        if (!myPairs.length) {
+          return { kind: 'ok' };
+        }
+        var conflicts = [];
+        var seen = {};
+        for (var i = 0; i < allThemes.length; i++) {
+          var other = allThemes[i];
+          if (!other || other.id === candidate.id) continue;
+          if (!isListShelfPublishedForOverlap(other)) continue;
+          var otherRange = parseStoredThemeEffectRange(other);
+          if (!otherRange) continue;
+          if (!rangesOverlap(myRange, otherRange)) continue;
+          var tname = other.name ? String(other.name) : '未命名主题';
+          for (var p = 0; p < myPairs.length; p++) {
+            var pair = myPairs[p];
+            if (!hasStoreChannelPair(other, pair.mid, pair.channel)) continue;
+            var key = String(other.id) + '\x1e' + pair.mid + '\x1e' + pair.channel;
+            if (seen[key]) continue;
+            seen[key] = true;
+            conflicts.push({
+              themeId: other.id,
+              themeName: tname,
+              effectTime: other.effectTime,
+              distributeTime: other.distributeTime,
+              mid: pair.mid,
+              channel: pair.channel
+            });
+          }
+        }
+        if (!conflicts.length) return { kind: 'ok' };
+        return { kind: 'overlap', conflicts: conflicts };
+      }
+
+      function formatPublishOverlapMessage(conflicts, candidate) {
+        function overlapThemeTimeRangeLine(r) {
+          var et = r.effectTime;
+          if (!et || et === '--') return '生效时间段：—';
+          if (et === '立即生效') {
+            if (r.distributeTime && r.distributeTime !== '--') {
+              return '生效时间段：立即生效（记录时间 ' + r.distributeTime + '）';
+            }
+            return '生效时间段：立即生效';
+          }
+          return '生效时间段：' + et;
+        }
+        function lookupStoreName(mid) {
+          var stores = candidate && candidate.distributedStores ? candidate.distributedStores : [];
+          for (var i = 0; i < stores.length; i++) {
+            if (String(stores[i].mid) === String(mid)) {
+              return stores[i].name ? String(stores[i].name).trim() : '';
+            }
+          }
+          return '';
+        }
+
+        var enriched = conflicts.map(function(c) {
+          return {
+            themeId: c.themeId,
+            themeName: c.themeName,
+            effectTime: c.effectTime,
+            distributeTime: c.distributeTime,
+            mid: c.mid,
+            channel: c.channel,
+            storeName: lookupStoreName(c.mid)
+          };
+        });
+
+        var groupMap = {};
+        enriched.forEach(function(c) {
+          var gk = c.storeName ? ('name:' + c.storeName) : ('mid:' + c.mid);
+          if (!groupMap[gk]) groupMap[gk] = { storeName: c.storeName, rows: [] };
+          groupMap[gk].rows.push(c);
+        });
+
+        var gks = Object.keys(groupMap).sort(function(a, b) {
+          var A = groupMap[a];
+          var B = groupMap[b];
+          var an = A.storeName || '';
+          var bn = B.storeName || '';
+          if (an !== bn) return an.localeCompare(bn, 'zh-CN');
+          return a.localeCompare(b);
+        });
+
+        var globalSeen = {};
+        var globalThemes = [];
+        enriched.forEach(function(r) {
+          var id = r.themeId != null ? String(r.themeId) : '';
+          if (id) {
+            if (globalSeen[id]) return;
+            globalSeen[id] = true;
+          } else {
+            var fallback = r.themeName + '\x1e' + String(r.effectTime || '') + '\x1e' + r.mid + '\x1e' + r.channel;
+            if (globalSeen[fallback]) return;
+            globalSeen[fallback] = true;
+          }
+          globalThemes.push(r);
+        });
+        globalThemes.sort(function(a, b) {
+          return String(a.themeName).localeCompare(String(b.themeName), 'zh-CN');
+        });
+
+        var out = [];
+        out.push('在相同门店、相同渠道下，当前主题与其他已上架主题存在生效时间重叠，无法上架。');
+        out.push('');
+        if (globalThemes.length) {
+          out.push('冲突的已上架主题：');
+          globalThemes.forEach(function(r) {
+            out.push('  · 「' + r.themeName + '」');
+            out.push('    ' + overlapThemeTimeRangeLine(r));
+          });
+          out.push('');
+        }
+
+        gks.forEach(function(gk) {
+          var g = groupMap[gk];
+          var mids = {};
+          g.rows.forEach(function(r) { mids[r.mid] = true; });
+          var midStr = Object.keys(mids).join('、');
+
+          var title;
+          if (g.storeName) {
+            title = '「' + g.storeName + '」（MID ' + midStr + '）';
+          } else {
+            title = '（MID ' + midStr + '）';
+          }
+          out.push(title);
+
+          var chanSet = {};
+          g.rows.forEach(function(r) { chanSet[r.channel] = true; });
+          var chSorted = Object.keys(chanSet).sort(function(x, y) {
+            return String(x).localeCompare(String(y), 'zh-CN');
+          });
+          out.push('关联渠道：' + chSorted.join('、'));
+          out.push('');
+        });
+
+        return out.join('\n').trim();
+      }
+
+      function render() {
+        var list = getThemes();
+        var emptyState = document.getElementById('emptyState');
+        var listState = document.getElementById('listState');
+        var container = document.getElementById('themeListContainer');
+        var totalEl = document.getElementById('totalCount');
+        if (!emptyState || !listState) return;
+
+        if (list.length === 0) {
+          lastFilteredTotal = 0;
+          emptyState.classList.remove('hidden');
+          emptyState.classList.add('flex');
+          listState.classList.add('hidden');
+          return;
+        }
+
+        emptyState.classList.add('hidden');
+        listState.classList.remove('hidden');
+        if (!container) return;
+
+        /** 列表排序：仅按生效时间窗（与主题级「下发状态」无关） */
+        function getStatusPriority(theme) {
+          var effTime = theme.effectTime;
+          if (!effTime || effTime === '--') return 6;
+          if (effTime === '立即生效') return 2;
+          var parts = effTime.split(' - ');
+          if (parts.length === 2) {
+            var startDt = new Date(parts[0].trim().replace(/\//g, '-'));
+            var endDt = new Date(parts[1].trim().replace(/\//g, '-'));
+            var now = new Date();
+            if (isNaN(startDt.getTime()) || isNaN(endDt.getTime())) return 6;
+            if (now < startDt) return 1;
+            if (now > endDt) return 5;
+            return 2;
+          }
+          return 6;
+        }
+
+        list.sort(function(a, b) {
+          var pa = getStatusPriority(a);
+          var pb = getStatusPriority(b);
+          if (pa !== pb) return pa - pb;
+          var ta = a.createTime ? new Date(a.createTime.replace(/\//g, '-')) : new Date(0);
+          var tb = b.createTime ? new Date(b.createTime.replace(/\//g, '-')) : new Date(0);
+          return tb - ta;
+        });
+
+        var filterName = (document.getElementById('filterName').value || '').trim().toLowerCase();
+        var filterShelfStatus = document.getElementById('filterShelfStatus').value;
+        var filterStartDate = document.getElementById('filterStartDate').value;
+        var filterEndDate = document.getElementById('filterEndDate').value;
+
+        list = list.filter(function(t) {
+          if (filterName && (!t.name || t.name.toLowerCase().indexOf(filterName) < 0)) return false;
+
+          var shelfSt = getListShelfStatus(t);
+          if (filterShelfStatus && (!shelfSt || shelfSt.text !== filterShelfStatus)) return false;
+
+          if (filterStartDate || filterEndDate) {
+            var createDate = t.createTime ? parseDateTime(t.createTime) : null;
+            if (!createDate) return false;
+            if (filterStartDate) {
+              var startD = new Date(filterStartDate);
+              startD.setHours(0, 0, 0, 0);
+              if (createDate < startD) return false;
+            }
+            if (filterEndDate) {
+              var endD = new Date(filterEndDate);
+              endD.setHours(23, 59, 59, 999);
+              if (createDate > endD) return false;
+            }
+          }
+          return true;
+        });
+
+        lastFilteredTotal = list.length;
+
+        function finalizeListRender() {
+        var totalCount = list.length;
+        var totalPages = Math.ceil(totalCount / pageSize) || 1;
+        if (currentPage > totalPages) currentPage = totalPages;
+        if (currentPage < 1) currentPage = 1;
+        var startIndex = (currentPage - 1) * pageSize;
+        var endIndex = startIndex + pageSize;
+        var pagedList = list.slice(startIndex, endIndex);
+
+        function metaDivider() {
+          return '<div class="flex items-stretch py-1"><div class="w-px min-h-[40px] self-stretch rounded-full bg-[#d9d9d9]"></div></div>';
+        }
+
+        var html = pagedList.map(function(t) {
+          var effectStr = getThemeEffectDisplayText(t);
+          var shelfStatus = getListShelfStatus(t);
+          var shelfStatusBadge = '<span class="inline-flex items-center rounded-lg px-2 py-px text-xs font-normal leading-5 ' + shelfStatus.tagClass + '">' + escapeHtml(shelfStatus.text) + '</span>';
+          var storeCount = t.distributedStores && t.distributedStores.length ? t.distributedStores.length : 0;
+          var storeCol = storeCount
+            ? '<div class="flex flex-col items-start gap-0.5"><p class="whitespace-nowrap text-sm leading-[22px] text-[rgba(0,0,0,0.65)]">关联门店</p>' +
+              '<button type="button" class="view-stores-btn text-left text-sm leading-[22px] text-primary underline decoration-solid" data-theme-id="' + escapeHtml(t.id) + '">Store\uFF1a' + storeCount + '</button></div>'
+            : '<div class="flex flex-col items-start gap-0.5"><p class="whitespace-nowrap text-sm leading-[22px] text-[rgba(0,0,0,0.65)]">关联门店</p><span class="text-sm leading-[22px] text-[rgba(0,0,0,0.88)]">\u2014</span></div>';
+
+          var isPublished = t.publishStatus === 'published';
+          var editRow = '<a href="screensaver-edit.html?id=' + encodeURIComponent(t.id) + '" class="ui-menu-item">' + MENU_ICN.edit + '<span>\u7f16\u8f91</span></a>';
+          var split = '<div class="ui-menu-sep" role="separator" aria-hidden="true"></div>';
+          var dropdownParts = [];
+          if (!isPublished) {
+            dropdownParts.push(menuBtn('publish-btn', MENU_ICN.cloudUp, '\u4e0a\u67b6', 'data-theme-id="' + escapeHtml(t.id) + '"'));
+            dropdownParts.push(editRow);
+            dropdownParts.push(split);
+            dropdownParts.push(menuBtnDanger('delete-btn', '\u5220\u9664'));
+          } else if (shelfStatus.text === '\u5df2\u4e0a\u67b6') {
+            dropdownParts.push(menuBtn('unpublish-btn', MENU_ICN.cloudDn, '\u4e0b\u67b6', 'data-theme-id="' + escapeHtml(t.id) + '"'));
+          } else if (shelfStatus.text === '\u5df2\u4e0b\u67b6') {
+            dropdownParts.push(editRow);
+            dropdownParts.push(split);
+            dropdownParts.push(menuBtnDanger('delete-btn', '\u5220\u9664'));
+          } else {
+            dropdownParts.push(menuBtn('unpublish-btn', MENU_ICN.cloudDn, '\u4e0b\u67b6', 'data-theme-id="' + escapeHtml(t.id) + '"'));
+            dropdownParts.push(editRow);
+            dropdownParts.push(split);
+            dropdownParts.push(menuBtnDanger('delete-btn', '\u5220\u9664'));
+          }
+          var dropdownInner = dropdownParts.join('');
+
+          var metaRow =
+            '<div class="flex flex-wrap items-start gap-x-12 gap-y-3">' +
+              '<div class="flex flex-col gap-0.5">' +
+                '<p class="whitespace-nowrap text-sm leading-[22px] text-[rgba(0,0,0,0.65)]">\u4e0a\u67b6\u72b6\u6001</p>' + shelfStatusBadge + '</div>' +
+              metaDivider() +
+              '<div class="flex flex-col gap-0.5">' +
+                '<p class="whitespace-nowrap text-sm leading-[22px] text-[rgba(0,0,0,0.65)]">\u521b\u5efa\u65f6\u95f4</p>' +
+                '<p class="whitespace-nowrap text-sm leading-[22px] text-[rgba(0,0,0,0.88)]">' + escapeHtml(t.createTime || '\u2014') + '</p></div>' +
+              metaDivider() +
+              '<div class="flex flex-col gap-0.5">' +
+                '<p class="whitespace-nowrap text-sm leading-[22px] text-[rgba(0,0,0,0.65)]">\u751f\u6548\u65f6\u95f4</p>' +
+                '<p class="whitespace-nowrap text-sm leading-[22px] text-[rgba(0,0,0,0.88)]">' + escapeHtml(effectStr) + '</p></div>' +
+              metaDivider() +
+              storeCol +
+            '</div>';
+
+          return '<div class="theme-list-card screensaver-card flex items-center gap-8 px-8 py-6" data-id="' + escapeHtml(t.id) + '">' +
+            renderThumbStage(t) +
+            '<div class="flex min-h-[136px] min-w-0 flex-1 flex-col gap-3">' +
+              '<h3 class="text-xl font-semibold leading-7 text-[rgba(0,0,0,0.88)]">' + escapeHtml(t.name) + '</h3>' +
+              metaRow +
+              buildChannelTagsHtml(t) +
+            '</div>' +
+            '<div class="relative shrink-0 self-start">' +
+              '<button type="button" class="more-btn flex h-12 w-12 items-center justify-center rounded-xl bg-black/[0.06] text-[rgba(0,0,0,0.45)] hover:bg-black/[0.08] focus:outline-none" aria-label="\u66f4\u591a">' + MENU_ICN.more + '</button>' +
+              '<div class="dropdown-menu theme-list-dropdown-menu ui-action-dropdown absolute right-0 top-[calc(100%+8px)] z-20 hidden bg-white">' +
+                dropdownInner +
+              '</div>' +
+            '</div>' +
+          '</div>';
+        }).join('');
+
+        container.innerHTML = html;
+        if (totalEl) totalEl.textContent = String(totalCount);
+
+        renderPagination(totalCount, totalPages);
+
+        container.querySelectorAll('.more-btn').forEach(function(btn) {
+          btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            var menu = this.nextElementSibling;
+            if (!menu || !menu.classList.contains('dropdown-menu')) return;
+            hideAllDropdownMenus();
+            menu.classList.toggle('hidden');
+          });
+        });
+        container.querySelectorAll('.delete-btn').forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            var card = this.closest('.screensaver-card');
+            var id = card && card.getAttribute('data-id');
+            if (!id) return;
+            hideAllDropdownMenus();
+            pendingDeleteThemeId = id;
+            var titleEl = card.querySelector('h3');
+            var nameText = titleEl ? titleEl.textContent.trim() : '';
+            if (deleteConfirmThemeName) deleteConfirmThemeName.textContent = nameText || '未命名主题';
+            openDeleteConfirmModal();
+          });
+        });
+        container.querySelectorAll('.publish-btn').forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            var id = this.getAttribute('data-theme-id');
+            if (!id) return;
+            hideAllDropdownMenus();
+            if (this.getAttribute('data-relist') === '1') {
+              try { localStorage.setItem('current_theme_id_for_distribute', id); } catch (e) {}
+              window.location.href = 'store-select.html?themeId=' + encodeURIComponent(id) + '&from=edit';
+              return;
+            }
+            var themes = getThemes();
+            var th = themes.find(function(x) { return x.id === id; });
+            if (!th) return;
+            var block = findShelfTimeConflictsForPublish(th, themes);
+            if (block.kind === 'no_range') {
+              openPublishBlockModal(block.message);
+              return;
+            }
+            if (block.kind === 'overlap') {
+              openPublishBlockModal(formatPublishOverlapMessage(block.conflicts, th));
+              return;
+            }
+            th.publishStatus = 'published';
+            saveThemes(themes);
+            render();
+          });
+        });
+        container.querySelectorAll('.unpublish-btn').forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            var id = this.getAttribute('data-theme-id');
+            if (!id) return;
+            hideAllDropdownMenus();
+            var themes = getThemes();
+            var th = themes.find(function(x) { return x.id === id; });
+            if (!th) return;
+            th.publishStatus = 'draft';
+            saveThemes(themes);
+            render();
+          });
+        });
+
+        container.querySelectorAll('.preview-thumb').forEach(function(thumb) {
+          thumb.addEventListener('click', function() {
+            var themeId = this.getAttribute('data-theme-id');
+            var imgType = this.getAttribute('data-img-type');
+            var imgIndex = parseInt(this.getAttribute('data-img-index'), 10);
+            openImagePreview(themeId, imgType, imgIndex);
+          });
+        });
+
+        container.querySelectorAll('.view-stores-btn').forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            var themeId = this.getAttribute('data-theme-id');
+            openStoresModal(themeId);
+          });
+        });
+        }
+
+        if (window.KioskThemeMediaIdb && KioskThemeMediaIdb.supported()) {
+          hydrateThemeListMedia(list).then(finalizeListRender).catch(finalizeListRender);
+        } else {
+          finalizeListRender();
+        }
+      }
+
+      var previewModal = document.getElementById('imagePreviewModal');
+      var previewImage = document.getElementById('previewImage');
+      var previewVideo = document.getElementById('previewVideo');
+      var previewThemeTitleEl = document.getElementById('previewThemeTitle');
+      var previewSlideDetailEl = document.getElementById('previewSlideDetail');
+      var previewToolbarFractionEl = document.getElementById('previewToolbarFraction');
+      var previewZoomTargetEl = document.getElementById('previewZoomTarget');
+      var previewZoomInBtn = document.getElementById('previewZoomIn');
+      var previewZoomOutBtn = document.getElementById('previewZoomOut');
+      var previewTabPortrait = document.getElementById('previewTabPortrait');
+      var previewTabLandscape = document.getElementById('previewTabLandscape');
+      var previewOrientationSwitch = document.getElementById('previewOrientationSwitch');
+      var previewPrev = document.getElementById('previewPrev');
+      var previewNext = document.getElementById('previewNext');
+      var previewClose = document.getElementById('previewClose');
+      var currentPreviewSlides = [];
+      var currentIndex = 0;
+      var previewScale = 1;
+      var previewPanX = 0;
+      var previewPanY = 0;
+      var previewPanCandidate = false;
+      var previewPanActive = false;
+      var previewPanPointerId = null;
+      var previewPanLastX = 0;
+      var previewPanLastY = 0;
+      var previewPanStartX = 0;
+      var previewPanStartY = 0;
+      var previewAspectBoxEl = document.getElementById('previewAspectBox');
+
+      var previewSegBase = 'preview-orient-tab inline-flex h-11 shrink-0 items-center justify-center gap-1 rounded-xl px-5 text-base transition-colors ';
+      var previewSegActive = 'bg-white font-medium text-[rgba(0,0,0,0.88)] shadow-[0_1px_2px_rgba(0,0,0,0.03),0_1px_6px_-1px_rgba(0,0,0,0.02),0_2px_4px_rgba(0,0,0,0.02)]';
+      var previewSegInactive = 'bg-transparent font-normal text-[rgba(0,0,0,0.65)] hover:text-[rgba(0,0,0,0.88)]';
+
+      /** 仅当主题同时有竖版与横版素材时展示 Tab，用于快捷切换版式 */
+      function previewShowsOrientationTabs() {
+        return previewHasPortraitImages() && previewHasLandscapeImages();
+      }
+
+      function updatePreviewOrientationTabs() {
+        if (!previewTabPortrait || !previewTabLandscape || !currentPreviewSlides.length) return;
+        if (!previewShowsOrientationTabs()) return;
+        var hasPortrait = previewHasPortraitImages();
+        var hasLandscape = previewHasLandscapeImages();
+        var onPortrait = previewActiveSegment === 'portrait';
+        previewTabPortrait.disabled = !hasPortrait;
+        previewTabLandscape.disabled = !hasLandscape;
+        var disP = previewTabPortrait.disabled ? 'opacity-40 cursor-not-allowed pointer-events-none ' : '';
+        var disL = previewTabLandscape.disabled ? 'opacity-40 cursor-not-allowed pointer-events-none ' : '';
+        previewTabPortrait.className = previewSegBase + disP + (hasPortrait && onPortrait ? previewSegActive : previewSegInactive);
+        previewTabLandscape.className = previewSegBase + disL + (hasLandscape && !onPortrait ? previewSegActive : previewSegInactive);
+        previewTabPortrait.setAttribute('aria-selected', hasPortrait && onPortrait ? 'true' : 'false');
+        previewTabLandscape.setAttribute('aria-selected', hasLandscape && !onPortrait ? 'true' : 'false');
+      }
+
+      function teardownPreviewPanListeners() {
+        if (previewPanActive && previewAspectBoxEl && previewPanPointerId != null) {
+          try {
+            previewAspectBoxEl.releasePointerCapture(previewPanPointerId);
+          } catch (err) { /* ignore */ }
+        }
+        document.removeEventListener('pointermove', onPreviewPanGlobalMove);
+        document.removeEventListener('pointerup', onPreviewPanGlobalUp);
+        document.removeEventListener('pointercancel', onPreviewPanGlobalUp);
+        previewPanCandidate = false;
+        previewPanActive = false;
+        previewPanPointerId = null;
+        if (previewAspectBoxEl) previewAspectBoxEl.classList.remove('preview-pan-dragging');
+        if (previewZoomTargetEl) previewZoomTargetEl.classList.remove('preview-pan-dragging');
+      }
+
+      function clampPreviewPanIntoViewport() {
+        if (!previewZoomTargetEl) return;
+        var stage = previewAspectBoxEl || document.getElementById('previewAspectBox');
+        if (!stage) return;
+        var sRect = stage.getBoundingClientRect();
+        for (var iter = 0; iter < 10; iter++) {
+          previewZoomTargetEl.style.transform = 'translate(' + previewPanX + 'px,' + previewPanY + 'px) scale(' + previewScale + ')';
+          var zRect = previewZoomTargetEl.getBoundingClientRect();
+          var fx = 0;
+          var fy = 0;
+          if (zRect.width >= sRect.width - 0.5) {
+            if (zRect.left > sRect.left + 0.5) fx = sRect.left - zRect.left;
+            else if (zRect.right < sRect.right - 0.5) fx = sRect.right - zRect.right;
+          } else {
+            fx = (sRect.left + sRect.width / 2) - (zRect.left + zRect.width / 2);
+          }
+          if (zRect.height >= sRect.height - 0.5) {
+            if (zRect.top > sRect.top + 0.5) fy = sRect.top - zRect.top;
+            else if (zRect.bottom < sRect.bottom - 0.5) fy = sRect.bottom - zRect.bottom;
+          } else {
+            fy = (sRect.top + sRect.height / 2) - (zRect.top + zRect.height / 2);
+          }
+          if (Math.abs(fx) < 0.15 && Math.abs(fy) < 0.15) break;
+          previewPanX += fx;
+          previewPanY += fy;
+        }
+        previewZoomTargetEl.style.transform = 'translate(' + previewPanX + 'px,' + previewPanY + 'px) scale(' + previewScale + ')';
+      }
+
+      function applyPreviewZoom() {
+        if (previewScale <= 1) {
+          previewPanX = 0;
+          previewPanY = 0;
+          teardownPreviewPanListeners();
+        }
+        clampPreviewPanIntoViewport();
+        if (previewAspectBoxEl) {
+          previewAspectBoxEl.setAttribute('data-preview-pan-scale', String(previewScale));
+        }
+        if (previewZoomInBtn) {
+          previewZoomInBtn.disabled = previewScale >= 3;
+          previewZoomInBtn.classList.toggle('opacity-40', previewScale >= 3);
+          previewZoomInBtn.classList.toggle('cursor-not-allowed', previewScale >= 3);
+        }
+        if (previewZoomOutBtn) {
+          previewZoomOutBtn.disabled = previewScale <= 0.5;
+          previewZoomOutBtn.classList.toggle('opacity-40', previewScale <= 0.5);
+          previewZoomOutBtn.classList.toggle('cursor-not-allowed', previewScale <= 0.5);
+        }
+      }
+
+      /** 仅某一版式下的素材列表（竖版 / 横版分段预览，与产品说明一致） */
+      function buildSegmentSlides(theme, segment) {
+        var imgs = segment === 'portrait' ? (theme.portraitImages || []) : (theme.landscapeImages || []);
+        var orientationLabel = segment === 'portrait' ? '竖版' : '横版';
+        var len = imgs.length;
+        return imgs.map(function(img, i) {
+          return {
+            src: previewMediaSrc(img),
+            kind: isPreviewVideoMedia(img) ? 'video' : 'image',
+            orientation: orientationLabel,
+            groupIndex: i + 1,
+            groupCount: len
+          };
+        });
+      }
+
+      var previewThemeRef = null;
+      var previewActiveSegment = 'portrait';
+
+      function previewHasPortraitImages() {
+        return !!(previewThemeRef && (previewThemeRef.portraitImages || []).length);
+      }
+      function previewHasLandscapeImages() {
+        return !!(previewThemeRef && (previewThemeRef.landscapeImages || []).length);
+      }
+
+      function openImagePreview(themeId, imgType, imgIndex) {
+        var themes = getThemes();
+        var theme = themes.find(function(t) { return t.id === themeId; });
+        if (!theme) return;
+        function openWithTheme(t) {
+          var seg = imgType === 'landscape' ? 'landscape' : 'portrait';
+          var slides = buildSegmentSlides(t, seg);
+          if (!slides.length) return;
+          previewThemeRef = t;
+          previewActiveSegment = seg;
+          currentPreviewSlides = slides;
+          currentIndex = Math.min(Math.max(0, imgIndex), slides.length - 1);
+          previewScale = 1;
+          applyPreviewZoom();
+          if (previewThemeTitleEl) previewThemeTitleEl.textContent = t.name || '未命名主题';
+          updatePreview();
+          previewModal.classList.remove('hidden');
+          previewModal.classList.add('flex');
+        }
+        hydrateThemeForPreview(theme).then(function() {
+          openWithTheme(theme);
+        });
+      }
+
+      function stopPreviewVideo() {
+        if (!previewVideo) return;
+        previewVideo.pause();
+        previewVideo.removeAttribute('src');
+        try {
+          previewVideo.load();
+        } catch (err) { /* ignore */ }
+      }
+
+      function updatePreview() {
+        if (!currentPreviewSlides.length) return;
+        if (typeof updatePreview._idx === 'number' && updatePreview._idx !== currentIndex) {
+          previewScale = 1;
+          applyPreviewZoom();
+        }
+        updatePreview._idx = currentIndex;
+        var slide = currentPreviewSlides[currentIndex];
+        var total = currentPreviewSlides.length;
+        var unit = slide.kind === 'video' ? '段' : '张';
+        var sub = slide.groupCount > 0
+          ? slide.orientation + ' 第 ' + slide.groupIndex + '/' + slide.groupCount + ' ' + unit
+          : slide.orientation;
+        if (previewToolbarFractionEl) {
+          previewToolbarFractionEl.textContent = (currentIndex + 1) + ' / ' + total;
+        }
+        if (previewSlideDetailEl) {
+          var showDetail = total > 1 || (slide.groupCount && slide.groupCount > 1);
+          previewSlideDetailEl.textContent = showDetail ? sub : '';
+          previewSlideDetailEl.classList.toggle('hidden', !showDetail);
+        }
+        var multi = currentPreviewSlides.length > 1;
+        if (previewPrev) {
+          previewPrev.disabled = !multi;
+          previewPrev.classList.toggle('opacity-40', !multi);
+          previewPrev.classList.toggle('cursor-not-allowed', !multi);
+        }
+        if (previewNext) {
+          previewNext.disabled = !multi;
+          previewNext.classList.toggle('opacity-40', !multi);
+          previewNext.classList.toggle('cursor-not-allowed', !multi);
+        }
+        var showOrientTabs = previewShowsOrientationTabs();
+        if (previewOrientationSwitch) {
+          if (showOrientTabs) {
+            previewOrientationSwitch.classList.remove('hidden');
+            previewOrientationSwitch.classList.add('flex');
+            previewOrientationSwitch.setAttribute('aria-hidden', 'false');
+          } else {
+            previewOrientationSwitch.classList.add('hidden');
+            previewOrientationSwitch.classList.remove('flex');
+            previewOrientationSwitch.setAttribute('aria-hidden', 'true');
+          }
+        }
+        if (slide.kind === 'video' && previewVideo) {
+          previewImage.src = '';
+          previewImage.classList.add('hidden');
+          previewVideo.classList.remove('hidden');
+          previewVideo.src = slide.src || '';
+          previewVideo.load();
+          var playAttempt = previewVideo.play();
+          if (playAttempt && typeof playAttempt.catch === 'function') {
+            playAttempt.catch(function() { /* 浏览器可能要求用户再点播放 */ });
+          }
+        } else {
+          stopPreviewVideo();
+          previewVideo.classList.add('hidden');
+          previewImage.classList.remove('hidden');
+          previewImage.src = slide.src || '';
+        }
+        updatePreviewOrientationTabs();
+        syncPreviewFixedHeightLayout();
+      }
+
+      /** 任意横/竖素材：预览区外层高度固定为「最大可用高度」min(88vh,800px)，避免切换图片时整体跳动 */
+      function syncPreviewFixedHeightLayout() {
+        var drawer = document.getElementById('previewDrawer');
+        if (!drawer) return;
+        if (currentPreviewSlides.length > 0) {
+          drawer.setAttribute('data-preview-fixed-h', '1');
+        } else {
+          drawer.removeAttribute('data-preview-fixed-h');
+        }
+      }
+
+      function closePreview() {
+        previewModal.classList.add('hidden');
+        previewModal.classList.remove('flex');
+        stopPreviewVideo();
+        if (previewVideo) previewVideo.classList.add('hidden');
+        previewImage.src = '';
+        previewImage.classList.remove('hidden');
+        revokePreviewOpenBlobUrls();
+        currentPreviewSlides = [];
+        currentIndex = 0;
+        previewThemeRef = null;
+        previewActiveSegment = 'portrait';
+        previewScale = 1;
+        previewPanX = 0;
+        previewPanY = 0;
+        teardownPreviewPanListeners();
+        if (previewZoomTargetEl) previewZoomTargetEl.style.transform = 'translate(0px, 0px) scale(1)';
+        if (previewAspectBoxEl) previewAspectBoxEl.setAttribute('data-preview-pan-scale', '1');
+        applyPreviewZoom();
+        if (previewThemeTitleEl) previewThemeTitleEl.textContent = '--';
+        if (previewSlideDetailEl) {
+          previewSlideDetailEl.textContent = '';
+          previewSlideDetailEl.classList.add('hidden');
+        }
+        if (previewOrientationSwitch) {
+          previewOrientationSwitch.classList.add('hidden');
+          previewOrientationSwitch.classList.remove('flex');
+          previewOrientationSwitch.removeAttribute('aria-hidden');
+        }
+        var previewDrawerLayout = document.getElementById('previewDrawer');
+        if (previewDrawerLayout) previewDrawerLayout.removeAttribute('data-preview-fixed-h');
+        delete updatePreview._idx;
+      }
+
+      var previewBackdrop = document.getElementById('previewBackdrop');
+      previewClose.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        closePreview();
+      });
+      if (previewBackdrop) {
+        previewBackdrop.addEventListener('click', function(e) {
+          e.preventDefault();
+          closePreview();
+        });
+      }
+
+      function onPreviewPanGlobalMove(e) {
+        if (!previewPanCandidate || e.pointerId !== previewPanPointerId) return;
+        if (!previewPanActive) {
+          if (Math.abs(e.clientX - previewPanStartX) + Math.abs(e.clientY - previewPanStartY) < 6) return;
+          previewPanActive = true;
+          if (previewAspectBoxEl) {
+            try {
+              previewAspectBoxEl.setPointerCapture(e.pointerId);
+            } catch (err) { /* ignore */ }
+            previewAspectBoxEl.classList.add('preview-pan-dragging');
+          }
+          if (previewZoomTargetEl) previewZoomTargetEl.classList.add('preview-pan-dragging');
+        }
+        previewPanX += e.clientX - previewPanLastX;
+        previewPanY += e.clientY - previewPanLastY;
+        previewPanLastX = e.clientX;
+        previewPanLastY = e.clientY;
+        clampPreviewPanIntoViewport();
+      }
+
+      function onPreviewPanGlobalUp(e) {
+        if (!previewPanCandidate || e.pointerId !== previewPanPointerId) return;
+        teardownPreviewPanListeners();
+      }
+
+      if (previewAspectBoxEl) {
+        previewAspectBoxEl.addEventListener('pointerdown', function(e) {
+          if (previewModal.classList.contains('hidden')) return;
+          if (previewScale <= 1) return;
+          if (e.pointerType === 'mouse' && e.button !== 0) return;
+          previewPanCandidate = true;
+          previewPanPointerId = e.pointerId;
+          previewPanLastX = previewPanStartX = e.clientX;
+          previewPanLastY = previewPanStartY = e.clientY;
+          document.addEventListener('pointermove', onPreviewPanGlobalMove);
+          document.addEventListener('pointerup', onPreviewPanGlobalUp);
+          document.addEventListener('pointercancel', onPreviewPanGlobalUp);
+        });
+        previewAspectBoxEl.addEventListener('wheel', function(e) {
+          if (previewModal.classList.contains('hidden')) return;
+          if (previewScale > 1) e.preventDefault();
+        }, { passive: false });
+      }
+
+      if (previewTabPortrait) {
+        previewTabPortrait.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (!previewThemeRef || !previewHasPortraitImages()) return;
+          previewActiveSegment = 'portrait';
+          currentPreviewSlides = buildSegmentSlides(previewThemeRef, 'portrait');
+          currentIndex = 0;
+          previewScale = 1;
+          applyPreviewZoom();
+          updatePreview();
+        });
+      }
+      if (previewTabLandscape) {
+        previewTabLandscape.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (!previewThemeRef || !previewHasLandscapeImages()) return;
+          previewActiveSegment = 'landscape';
+          currentPreviewSlides = buildSegmentSlides(previewThemeRef, 'landscape');
+          currentIndex = 0;
+          previewScale = 1;
+          applyPreviewZoom();
+          updatePreview();
+        });
+      }
+      previewPrev.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (currentPreviewSlides.length <= 1) return;
+        currentIndex = (currentIndex - 1 + currentPreviewSlides.length) % currentPreviewSlides.length;
+        updatePreview();
+      });
+      previewNext.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (currentPreviewSlides.length <= 1) return;
+        currentIndex = (currentIndex + 1) % currentPreviewSlides.length;
+        updatePreview();
+      });
+      if (previewZoomInBtn) {
+        previewZoomInBtn.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (previewScale >= 3) return;
+          previewScale = Math.min(3, previewScale + 0.25);
+          applyPreviewZoom();
+        });
+      }
+      if (previewZoomOutBtn) {
+        previewZoomOutBtn.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (previewScale <= 0.5) return;
+          previewScale = Math.max(0.5, previewScale - 0.25);
+          applyPreviewZoom();
+        });
+      }
+      document.addEventListener('keydown', function(e) {
+        if (previewModal.classList.contains('hidden')) return;
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          closePreview();
+          return;
+        }
+        if (e.key === 'ArrowLeft' && currentPreviewSlides.length > 1) {
+          e.preventDefault();
+          currentIndex = (currentIndex - 1 + currentPreviewSlides.length) % currentPreviewSlides.length;
+          updatePreview();
+        }
+        if (e.key === 'ArrowRight' && currentPreviewSlides.length > 1) {
+          e.preventDefault();
+          currentIndex = (currentIndex + 1) % currentPreviewSlides.length;
+          updatePreview();
+        }
+        if ((e.key === '+' || e.key === '=') && !e.ctrlKey && !e.metaKey) {
+          e.preventDefault();
+          if (previewScale < 3) {
+            previewScale = Math.min(3, previewScale + 0.25);
+            applyPreviewZoom();
+          }
+        }
+        if (e.key === '-' && !e.ctrlKey && !e.metaKey) {
+          e.preventDefault();
+          if (previewScale > 0.5) {
+            previewScale = Math.max(0.5, previewScale - 0.25);
+            applyPreviewZoom();
+          }
+        }
+      });
+
+      document.addEventListener('click', function(e) {
+        hideAllDropdownMenus();
+        if (!e.target.closest('[data-store-batch-menu-root]')) {
+          document.querySelectorAll('.store-batch-menu').forEach(function(m) { m.classList.add('hidden'); });
+        }
+      });
+
+      var storesModal = document.getElementById('storesModal');
+      var storesModalClose = document.getElementById('storesModalClose');
+      var storesListContainer = document.getElementById('storesListContainer');
+      var storesTotalEl = document.getElementById('storesTotal');
+      var storesThemeEffectTimeEl = document.getElementById('storesThemeEffectTime');
+
+      var currentModalThemeId = null;
+      var storesMidSearchEl = document.getElementById('storesMidSearch');
+      var storesEffectStatusFilterEl = document.getElementById('storesEffectStatusFilter');
+      var storesFilterResetEl = document.getElementById('storesFilterReset');
+      var storesFilteredHintEl = document.getElementById('storesFilteredHint');
+
+      /**
+       * 渠道「不展示 / 恢复展示」：云端 → Kiosk 执行 → Kiosk 回传执行结果 → 云端更新状态。
+       * 产品：仅当云端收到 Kiosk 回传的「执行成功 / 执行失败」后，配置端才结束执行中或展示失败；
+       * 若云端一直收不到回传，界面**一直执行中**（不因超时而自动判失败）。
+       * 原型用确定性分支模拟：成功 / 设备执行失败（已同步云端）/ 长期无回传（仅演示）。
+       */
+      var channelDisplayOpTimers = {};
+
+      function channelDisplayOpKey(themeId, mid, channelName) {
+        return String(themeId) + '|' + String(mid || '') + '|' + String(channelName || '');
+      }
+
+      function cancelChannelDisplayOpTimer(key) {
+        var t = channelDisplayOpTimers[key];
+        if (!t) return;
+        if (typeof t === 'object') {
+          if (t.success != null) clearTimeout(t.success);
+          if (t.execFail != null) clearTimeout(t.execFail);
+          if (t.fail != null) clearTimeout(t.fail);
+          if (t.ok != null) clearTimeout(t.ok);
+        } else {
+          clearTimeout(t);
+        }
+        delete channelDisplayOpTimers[key];
+      }
+
+      function cancelAllChannelDisplayOpTimersForTheme(themeId) {
+        Object.keys(channelDisplayOpTimers).forEach(function(k) {
+          if (k.indexOf(String(themeId) + '|') === 0) cancelChannelDisplayOpTimer(k);
+        });
+      }
+
+      /** 与 startedAt 绑定，保证同一次 pending 在刷新后原型分支不变 */
+      function channelDisplayDemoOutcome(themeId, mid, channelName, startedAt) {
+        var s = String(themeId) + '\x1e' + String(mid) + '\x1e' + String(channelName) + '\x1e' + String(startedAt);
+        var h = 0;
+        for (var i = 0; i < s.length; i++) {
+          h = ((h << 5) - h) + s.charCodeAt(i);
+          h = h | 0;
+        }
+        var u = Math.abs(h) % 100;
+        if (u < 40) return 'success';
+        if (u < 68) return 'exec_fail';
+        return 'stuck';
+      }
+
+      function findChannelCs(theme, mid, channelName) {
+        if (!theme || !theme.distributedStores) return null;
+        var store = theme.distributedStores.filter(function(s) { return String(s.mid) === String(mid); })[0];
+        if (!store) return null;
+        var cs = (store.channelStatuses || []).filter(function(c) { return String(c.channel || '') === String(channelName); })[0];
+        if (!cs) return null;
+        return { store: store, cs: cs };
+      }
+
+      function applyChannelDisplayOpSuccess(themeId, mid, channelName, action) {
+        var themes = getThemes();
+        var theme = themes.filter(function(t) { return t.id === themeId; })[0];
+        var found = findChannelCs(theme, mid, channelName);
+        if (!found) return;
+        var store = found.store;
+        var cs = found.cs;
+        // 已弃用：渠道切换改为立即生效
+        if (action === 'hide') {
+          cs.shelfStatus = 'off_shelf';
+        } else {
+          delete cs.shelfStatus;
+          if (store.shelfStatus === 'off_shelf') delete store.shelfStatus;
+        }
+        saveThemes(themes);
+        if (storesModal && storesModal.classList.contains('flex') && currentModalThemeId === themeId) {
+          renderStoresModalList();
+        }
+        render();
+      }
+
+      /** Kiosk 执行失败且执行结果已到达云端 → 配置端展示失败 */
+      function applyChannelDisplayOpExecFailure(themeId, mid, channelName, action) {
+        var themes = getThemes();
+        var theme = themes.filter(function(t) { return t.id === themeId; })[0];
+        var found = findChannelCs(theme, mid, channelName);
+        if (!found) return;
+        var cs = found.cs;
+        if (!cs.displaySync || cs.displaySync.state !== 'pending' || cs.displaySync.action !== action) return;
+        // 已弃用：不再展示执行失败/重试等中间态，渠道切换为立即生效
+        delete cs.displaySync;
+        saveThemes(themes);
+        if (storesModal && storesModal.classList.contains('flex') && currentModalThemeId === themeId) {
+          renderStoresModalList();
+        }
+        render();
+      }
+
+      /** 旧原型：计时器模拟设备回传（已弃用，渠道切换改为立即生效） */
+      function armChannelDisplayOpTimers(themeId, mid, channelName, action) {
+        var key = channelDisplayOpKey(themeId, mid, channelName);
+        cancelChannelDisplayOpTimer(key);
+        var themes = getThemes();
+        var theme = themes.filter(function(t) { return t.id === themeId; })[0];
+        var found = findChannelCs(theme, mid, channelName);
+        if (!found || !found.cs.displaySync || found.cs.displaySync.state !== 'pending') return;
+        var cs = found.cs;
+        if (found.cs.displaySync.action !== action) return;
+        if (typeof cs.displaySync.startedAt !== 'number') {
+          cs.displaySync.startedAt = Date.now();
+          saveThemes(themes);
+        }
+        var startedAt = cs.displaySync.startedAt;
+        var outcome = channelDisplayDemoOutcome(themeId, mid, channelName, startedAt);
+        var handles = {};
+        if (outcome === 'stuck') {
+          channelDisplayOpTimers[key] = handles;
+          return;
+        }
+        if (outcome === 'success') {
+          var d = 700 + Math.floor(Math.random() * 1800);
+          handles.success = setTimeout(function() {
+            cancelChannelDisplayOpTimer(key);
+            applyChannelDisplayOpSuccess(themeId, mid, channelName, action);
+          }, d);
+        } else {
+          var d2 = 800 + Math.floor(Math.random() * 1600);
+          handles.execFail = setTimeout(function() {
+            cancelChannelDisplayOpTimer(key);
+            applyChannelDisplayOpExecFailure(themeId, mid, channelName, action);
+          }, d2);
+        }
+        channelDisplayOpTimers[key] = handles;
+      }
+
+      /** 已弃用：不再存在 pending 中间态（渠道切换立即生效） */
+      function resumePendingChannelDisplayOps(themeId) {
+        return;
+      }
+
+      /** 渠道当前为「未展示」：仅依据 shelfStatus（立即生效，无中间态） */
+      function channelIsOffShelf(store, cs) {
+        if (!cs) return false;
+        if (cs.shelfStatus === 'off_shelf') return true;
+        if (store.shelfStatus === 'off_shelf') return true;
+        return false;
+      }
+
+      /** 渠道当前为「展示中」（可点不展示） */
+      function channelIsOnShelf(store, cs) {
+        if (!cs) return false;
+        return !channelIsOffShelf(store, cs);
+      }
+
+      function renderMiniSwitchControl(on, opts) {
+        opts = opts || {};
+        var bg = on ? 'bg-[#1677ff]' : 'bg-[rgba(0,0,0,0.25)]';
+        var justify = on ? ' justify-end' : '';
+        var pend = opts.pending ? ' opacity-60' : '';
+        var dis = opts.disabled ? ' opacity-50' : '';
+        return '<span class="pointer-events-none inline-flex h-4 w-7 shrink-0 items-center rounded-xl p-0.5 ' + bg + justify + pend + dis + '"><span class="block h-3 w-3 rounded-full bg-white shadow-[0_2px_4px_rgba(0,35,11,0.2)]"></span></span>';
+      }
+
+      function storeEffectStatusBadgeHtml(theme, store) {
+        var storeEffectStatus = getStoreEffectStatus(theme, store);
+        if (!storeEffectStatus) {
+          return '<span class="text-sm text-[rgba(0,0,0,0.45)]">\u2014</span>';
+        }
+        var t = storeEffectStatus.text;
+        if (t === '\u751f\u6548\u4e2d') {
+          return '<span class="inline-flex items-center rounded-lg border border-[#91caff] bg-[#e6f4ff] px-2 py-px text-xs font-normal leading-5 text-primary">' + escapeHtml(t) + '</span>';
+        }
+        if (t === '\u5f85\u751f\u6548') {
+          return '<span class="inline-flex items-center rounded-lg border border-[#ffd591] bg-[#fff7e6] px-2 py-px text-xs font-normal leading-5 text-[#fa8c16]">' + escapeHtml(t) + '</span>';
+        }
+        return '<span class="inline-flex items-center rounded-lg border border-[#d9d9d9] bg-[rgba(0,0,0,0.04)] px-2 py-px text-xs font-normal leading-5 text-[rgba(0,0,0,0.88)]">' + escapeHtml(t) + '</span>';
+      }
+
+      function renderOneChannelCell(store, theme, cs, operable) {
+        var midAttr = escapeHtml(String(store.mid || ''));
+        var chLabel = cs.channel != null && cs.channel !== '' ? String(cs.channel) : '\u2014';
+        var chNameAttr = escapeHtml(chLabel);
+        var displayName = escapeHtml(channelChipLabel(chLabel));
+        var on = channelIsOnShelf(store, cs);
+        var cellBg = on ? 'bg-[#e6f4ff]' : 'bg-[rgba(0,0,0,0.06)]';
+        var statColor = on ? 'text-primary' : 'text-[rgba(0,0,0,0.65)]';
+        var statText = on ? '\u5c55\u793a\u4e2d' : '\u672a\u5c55\u793a';
+        var switchOpts = { pending: false, disabled: false };
+        var action = on ? 'off_shelf' : 'on_shelf';
+        var rightBlock =
+          '<button type="button" data-channel-action="' + action + '" data-store-mid="' + midAttr + '" data-channel="' + chNameAttr + '" class="flex shrink-0 items-center gap-1 border-0 bg-transparent p-0 hover:opacity-90 focus:outline-none">' +
+            '<span class="whitespace-nowrap text-sm leading-[22px] ' + statColor + '">' + statText + '</span>' +
+            renderMiniSwitchControl(on, switchOpts) +
+          '</button>';
+        return '<div class="flex min-h-[48px] flex-col justify-center rounded-lg px-3 py-2 ' + cellBg + '">' +
+          '<div class="flex min-w-0 items-center justify-between gap-2">' +
+            '<p class="min-w-0 flex-1 truncate text-base font-medium leading-6 text-[rgba(0,0,0,0.88)]" title="' + chNameAttr + '">' + displayName + '</p>' +
+            '<div class="flex min-w-0 flex-col items-end">' + rightBlock + '</div>' +
+          '</div></div>';
+      }
+
+      function renderChannelGrid(store, theme) {
+        var arr = store.channelStatuses;
+        if (!arr || !arr.length) return '';
+        var operable = isStoreDetailChannelUiOperable(theme, store);
+        var cells = arr.map(function(cs) {
+          return renderOneChannelCell(store, theme, cs, operable);
+        });
+        return '<div class="grid w-full grid-cols-1 gap-2 sm:grid-cols-2 min-[920px]:grid-cols-3">' + cells.join('') + '</div>';
+      }
+
+      function renderStoreBatchDropdown(store, theme) {
+        if (!isStoreDetailChannelUiOperable(theme, store)) return '';
+        var arr = store && Array.isArray(store.channelStatuses) ? store.channelStatuses : [];
+        if (!arr.length) return '';
+        var midAttr = escapeHtml(String(store.mid || ''));
+        var offCount = arr.filter(function(cs) { return channelIsOffShelf(store, cs); }).length;
+        var allOff = offCount === arr.length;
+        var allOn = offCount === 0;
+        var disOff = allOff ? ' disabled aria-disabled="true"' : '';
+        var disOn = allOn ? ' disabled aria-disabled="true"' : '';
+        var menuItems =
+          '<button type="button" data-store-batch-action="all_on_shelf" data-store-mid="' + midAttr + '" class="ui-menu-item"' + disOn + '>全渠道展示</button>' +
+          '<button type="button" data-store-batch-action="all_off_shelf" data-store-mid="' + midAttr + '" class="ui-menu-item"' + disOff + '>全渠道不展示</button>';
+        return '<div class="relative shrink-0" data-store-batch-menu-root>' +
+          '<button type="button" data-store-batch-toggle class="ui-batch-btn flex h-12 items-center gap-2 rounded-xl px-6 text-[18px] font-semibold shadow-[0_10px_24px_rgba(0,0,0,0.06)] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1">' +
+          '<span>\u6279\u91cf</span>' +
+          '<svg width="16" height="16" viewBox="0 0 1024 1024" fill="currentColor" class="shrink-0 opacity-80" aria-hidden="true"><path d="M884 256h-75c-5.1 0-9.9 2.5-12.6 6.5L512 654.2 227.9 262.6c-2.7-4-7.5-6.5-12.6-6.5h-75c-6.5 0-10.3 7.4-6.5 12.7l352.6 486.1c12.8 17.6 39 17.6 51.7 0l352.6-486.1c3.9-5.3.1-12.7-6.4-12.7z"/></svg></button>' +
+          '<div class="store-batch-menu ui-batch-menu dropdown-menu theme-list-dropdown-menu ui-action-dropdown absolute right-0 top-[calc(100%+8px)] z-30 hidden bg-white">' + menuItems + '</div></div>';
+      }
+
+      function renderStoresModalList() {
+        if (!currentModalThemeId || !storesListContainer) return;
+        var themes = getThemes();
+        var theme = themes.find(function(t) { return t.id === currentModalThemeId; });
+        if (!theme || !theme.distributedStores) {
+          storesListContainer.innerHTML = '';
+          if (storesFilteredHintEl) storesFilteredHintEl.classList.add('hidden');
+          return;
+        }
+        renderStoresEffectStatusFilter(theme);
+        var stores = theme.distributedStores;
+        var midQ = (storesMidSearchEl && storesMidSearchEl.value) ? storesMidSearchEl.value.trim().toLowerCase() : '';
+        var effQ = (storesEffectStatusFilterEl && storesEffectStatusFilterEl.value) ? storesEffectStatusFilterEl.value : '';
+        var filtered = stores.filter(function(s) {
+          if (midQ) {
+            var midStr = String(s.mid || '').toLowerCase();
+            var nameStr = String(s.name || '').toLowerCase();
+            if (midStr.indexOf(midQ) < 0 && nameStr.indexOf(midQ) < 0) return false;
+          }
+          if (effQ) {
+            var storeStatus = getStoreEffectStatus(theme, s);
+            if (!storeStatus || storeStatus.text !== effQ) return false;
+          }
+          return true;
+        });
+        var storeCardIcon = '<div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[rgba(0,0,0,0.88)]" aria-hidden="true">' +
+          '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="text-white">' +
+          '<path d="M4 10V20H9V14H15V20H20V10L12 4L4 10Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>' +
+          '<path d="M9 20V12.5H15V20" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>' +
+          '</svg></div>';
+        storesListContainer.innerHTML = filtered.length
+          ? filtered.map(function(store) {
+              var channelBlock = renderChannelGrid(store, theme);
+              var batchBlock = renderStoreBatchDropdown(store, theme);
+              var tz = getStoreTimezone(store);
+              var effectBadge = storeEffectStatusBadgeHtml(theme, store);
+              var metaRow =
+                '<span class="inline-flex items-start gap-1 text-sm leading-[22px] whitespace-nowrap">' +
+                '<span class="shrink-0 text-[rgba(0,0,0,0.65)]">MID：</span>' +
+                '<span class="text-right text-[rgba(0,0,0,0.88)]">' + escapeHtml(String(store.mid != null ? store.mid : '')) + '</span></span>' +
+                '<span class="flex shrink-0 items-center self-stretch py-1" aria-hidden="true"><span class="h-full min-h-[14px] w-px rounded-full bg-[#d9d9d9]"></span></span>' +
+                '<span class="inline-flex items-start gap-1 text-sm leading-[22px] whitespace-nowrap">' +
+                '<span class="shrink-0 text-[rgba(0,0,0,0.65)]">时区：</span>' +
+                '<span class="text-right text-[rgba(0,0,0,0.88)]">' + escapeHtml(tz) + '</span></span>' +
+                '<span class="flex shrink-0 items-center self-stretch py-1" aria-hidden="true"><span class="h-full min-h-[14px] w-px rounded-full bg-[#d9d9d9]"></span></span>' +
+                '<span class="inline-flex flex-wrap items-center gap-1 text-sm leading-[22px]">' +
+                '<span class="shrink-0 text-[rgba(0,0,0,0.65)]">门店生效状态：</span>' + effectBadge + '</span>';
+              var channelSection = channelBlock
+                ? '<div class="mt-6">' + channelBlock + '</div>'
+                : '<div class="mt-6 rounded-lg border border-dashed border-[#d9d9d9] bg-[rgba(0,0,0,0.02)] px-4 py-8 text-center text-sm leading-[22px] text-[rgba(0,0,0,0.45)]">暂无渠道数据</div>';
+              return '<article class="rounded-2xl border border-[#d9d9d9] bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">' +
+                '<div class="flex gap-4">' +
+                storeCardIcon +
+                '<div class="min-w-0 flex-1">' +
+                '<div class="flex flex-wrap items-start justify-between gap-3">' +
+                '<div class="min-w-0 flex-1">' +
+                '<h3 class="text-xl font-semibold leading-7 text-[rgba(0,0,0,0.88)]">' + escapeHtml(store.name || '') + '</h3>' +
+                '<div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">' + metaRow + '</div>' +
+                '</div>' + batchBlock +
+                '</div>' +
+                channelSection +
+                '</div></div></article>';
+            }).join('')
+          : '<p class="py-8 px-2 text-center text-sm text-[rgba(0,0,0,0.45)]">无匹配门店，请调整门店名称或 MID</p>';
+        if (storesFilteredHintEl) {
+          if (filtered.length < stores.length || midQ || effQ) {
+            storesFilteredHintEl.textContent = '当前显示 ' + filtered.length + ' / ' + stores.length + ' 家门店';
+            storesFilteredHintEl.classList.remove('hidden');
+          } else {
+            storesFilteredHintEl.classList.add('hidden');
+          }
+        }
+      }
+
+      function openStoresModal(themeId) {
+        var themes = getThemes();
+        var theme = themes.find(function(t) { return t.id === themeId; });
+        if (!theme || !theme.distributedStores) return;
+        currentModalThemeId = themeId;
+        hideAllDropdownMenus();
+        if (storesMidSearchEl) storesMidSearchEl.value = '';
+        if (storesEffectStatusFilterEl) storesEffectStatusFilterEl.value = '';
+        var stores = theme.distributedStores;
+        storesTotalEl.textContent = stores.length;
+        if (storesThemeEffectTimeEl) {
+          storesThemeEffectTimeEl.textContent = getThemeEffectDisplayText(theme);
+        }
+        document.querySelectorAll('.store-batch-menu').forEach(function(m) { m.classList.add('hidden'); });
+        renderStoresModalList();
+        if (theme && stores.some(function(s) { return isStoreDetailChannelUiOperable(theme, s); })) {
+          resumePendingChannelDisplayOps(themeId);
+        }
+        storesModal.classList.remove('hidden');
+        storesModal.classList.add('flex');
+      }
+
+      if (storesMidSearchEl) {
+        storesMidSearchEl.addEventListener('input', function() {
+          if (storesModal.classList.contains('flex')) renderStoresModalList();
+        });
+      }
+      if (storesEffectStatusFilterEl) {
+        storesEffectStatusFilterEl.addEventListener('change', function() {
+          if (storesModal.classList.contains('flex')) renderStoresModalList();
+        });
+      }
+      if (storesFilterResetEl) {
+        storesFilterResetEl.addEventListener('click', function() {
+          if (storesMidSearchEl) storesMidSearchEl.value = '';
+          if (storesEffectStatusFilterEl) storesEffectStatusFilterEl.value = '';
+          if (window.__syncStoresEffectStatusDropdown) window.__syncStoresEffectStatusDropdown();
+          renderStoresModalList();
+        });
+      }
+
+      function applyStoreBatchChannelAction(themeId, mid, action) {
+        if (!themeId || !mid || (action !== 'hide' && action !== 'show')) return false;
+        var themes = getThemes();
+        var theme = themes.find(function(t) { return t.id === themeId; });
+        if (!theme || !theme.distributedStores) return false;
+        var store = theme.distributedStores.find(function(s) { return String(s.mid) === String(mid); });
+        if (!store) return false;
+        var arr = store.channelStatuses || [];
+        if (!arr.length) return false;
+        var hasValidChannel = false;
+        arr.forEach(function(cs) {
+          var channelName = cs && cs.channel != null ? String(cs.channel) : '';
+          if (!channelName) return;
+          hasValidChannel = true;
+          if (action === 'hide') {
+            cs.shelfStatus = 'off_shelf';
+          } else {
+            delete cs.shelfStatus;
+            if (store.shelfStatus === 'off_shelf') delete store.shelfStatus;
+          }
+        });
+        if (!hasValidChannel) return false;
+
+        saveThemes(themes);
+        return true;
+      }
+
+      storesListContainer.addEventListener('click', function(e) {
+        if (!storesModal.classList.contains('flex')) return;
+        var batchToggle = e.target.closest('[data-store-batch-toggle]');
+        if (batchToggle) {
+          e.preventDefault();
+          e.stopPropagation(); // 防止 document.click 立刻把 dropdown-menu 全部隐藏
+          var root = batchToggle.closest('[data-store-batch-menu-root]');
+          var menu = root && root.querySelector('.store-batch-menu');
+          if (!menu) return;
+          var willOpen = menu.classList.contains('hidden');
+          hideAllDropdownMenus();
+          if (willOpen) menu.classList.remove('hidden');
+          return;
+        }
+        var chBtn = e.target.closest('[data-channel-action]');
+        if (chBtn) {
+          e.stopPropagation();
+          var chAction = chBtn.getAttribute('data-channel-action');
+          var midCh = chBtn.getAttribute('data-store-mid');
+          var chName = chBtn.getAttribute('data-channel');
+          if (!midCh || !currentModalThemeId || chName == null || chName === '') return;
+          var themesCh = getThemes();
+          var themeCh = themesCh.find(function(t) { return t.id === currentModalThemeId; });
+          if (!themeCh || !themeCh.distributedStores) return;
+          var storeCh = themeCh.distributedStores.find(function(s) { return String(s.mid) === String(midCh); });
+          if (!storeCh) return;
+          var arrCh = storeCh.channelStatuses || [];
+          var cs = arrCh.filter(function(c) { return String(c.channel || '') === String(chName); })[0];
+          if (!cs) return;
+          if (chAction === 'off_shelf') {
+            if (!channelIsOnShelf(storeCh, cs)) return;
+            cs.shelfStatus = 'off_shelf';
+            saveThemes(themesCh);
+            renderStoresModalList();
+            render();
+            return;
+          }
+          if (chAction === 'on_shelf') {
+            if (!channelIsOffShelf(storeCh, cs)) return;
+            delete cs.shelfStatus;
+            if (storeCh.shelfStatus === 'off_shelf') delete storeCh.shelfStatus;
+            saveThemes(themesCh);
+            renderStoresModalList();
+            render();
+            return;
+          }
+          return;
+        }
+        var btn = e.target.closest('[data-store-batch-action]');
+        if (!btn) return;
+        e.stopPropagation();
+        var action = btn.getAttribute('data-store-batch-action');
+        var mid = btn.getAttribute('data-store-mid');
+        if (!mid || !currentModalThemeId) return;
+        if (action === 'all_off_shelf') {
+          if (!applyStoreBatchChannelAction(currentModalThemeId, mid, 'hide')) return;
+          document.querySelectorAll('.store-batch-menu').forEach(function(m) { m.classList.add('hidden'); });
+          renderStoresModalList();
+          render();
+          return;
+        }
+        if (action === 'all_on_shelf') {
+          if (!applyStoreBatchChannelAction(currentModalThemeId, mid, 'show')) return;
+          document.querySelectorAll('.store-batch-menu').forEach(function(m) { m.classList.add('hidden'); });
+          renderStoresModalList();
+          render();
+          return;
+        }
+      });
+
+      function closeStoresModal() {
+        hideAllDropdownMenus();
+        storesModal.classList.add('hidden');
+        storesModal.classList.remove('flex');
+      }
+
+      storesModalClose.addEventListener('click', closeStoresModal);
+      storesModal.addEventListener('click', function(e) {
+        if (e.target === storesModal) closeStoresModal();
+      });
+      document.addEventListener('keydown', function(e) {
+        if (e.key !== 'Escape') return;
+        if (storesModal.classList.contains('hidden')) return;
+        var sm = document.getElementById('storesEffectStatusFilterMenu');
+        if (sm && !sm.classList.contains('hidden')) {
+          e.preventDefault();
+          sm.classList.add('hidden');
+          var st = document.getElementById('storesEffectStatusTrigger');
+          if (st) st.setAttribute('aria-expanded', 'false');
+          return;
+        }
+        closeStoresModal();
+      });
+
+      function renderPagination(totalCount, totalPages) {
+        var prevBtn = document.getElementById('prevPageBtn');
+        var nextBtn = document.getElementById('nextPageBtn');
+        var pageNumbersEl = document.getElementById('pageNumbers');
+        var pageSizeSelect = document.getElementById('pageSizeSelect');
+
+        if (!prevBtn || !nextBtn || !pageNumbersEl) return;
+
+        prevBtn.disabled = currentPage <= 1;
+        nextBtn.disabled = currentPage >= totalPages;
+
+        var pageHtml = '';
+        var maxVisiblePages = 5;
+        var startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+        var endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+        if (endPage - startPage + 1 < maxVisiblePages) {
+          startPage = Math.max(1, endPage - maxVisiblePages + 1);
+        }
+
+        if (startPage > 1) {
+          pageHtml += '<button type="button" class="page-num flex h-8 min-w-[32px] items-center justify-center rounded-lg px-1.5 text-sm text-[rgba(0,0,0,0.88)] hover:bg-black/[0.04]" data-page="1">1</button>';
+          if (startPage > 2) {
+            pageHtml += '<span class="px-1 text-sm text-[rgba(0,0,0,0.25)]">...</span>';
+          }
+        }
+
+        for (var i = startPage; i <= endPage; i++) {
+          if (i === currentPage) {
+            pageHtml += '<button type="button" class="page-num flex h-8 min-w-[32px] items-center justify-center rounded-lg bg-black/[0.04] px-1.5 text-sm font-semibold text-primary" data-page="' + i + '">' + i + '</button>';
+          } else {
+            pageHtml += '<button type="button" class="page-num flex h-8 min-w-[32px] items-center justify-center rounded-lg px-1.5 text-sm text-[rgba(0,0,0,0.88)] hover:bg-black/[0.04]" data-page="' + i + '">' + i + '</button>';
+          }
+        }
+
+        if (endPage < totalPages) {
+          if (endPage < totalPages - 1) {
+            pageHtml += '<span class="px-1 text-sm text-[rgba(0,0,0,0.25)]">...</span>';
+          }
+          pageHtml += '<button type="button" class="page-num flex h-8 min-w-[32px] items-center justify-center rounded-lg px-1.5 text-sm text-[rgba(0,0,0,0.88)] hover:bg-black/[0.04]" data-page="' + totalPages + '">' + totalPages + '</button>';
+        }
+
+        pageNumbersEl.innerHTML = pageHtml;
+
+        pageNumbersEl.querySelectorAll('.page-num').forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            var page = parseInt(this.getAttribute('data-page'), 10);
+            if (page !== currentPage) {
+              currentPage = page;
+              render();
+            }
+          });
+        });
+      }
+
+      document.getElementById('prevPageBtn').addEventListener('click', function() {
+        if (currentPage > 1) {
+          currentPage--;
+          render();
+        }
+      });
+
+      document.getElementById('nextPageBtn').addEventListener('click', function() {
+        var totalPages = Math.ceil(lastFilteredTotal / pageSize) || 1;
+        if (currentPage < totalPages) {
+          currentPage++;
+          render();
+        }
+      });
+
+      document.getElementById('pageSizeSelect').addEventListener('change', function() {
+        pageSize = parseInt(this.value, 10);
+        currentPage = 1;
+        render();
+      });
+
+      setupFilterShelfStatusDropdown();
+      setupStoresEffectStatusDropdown();
+
+      document.getElementById('filterName').addEventListener('input', function() {
+        currentPage = 1;
+        render();
+      });
+
+      document.getElementById('filterShelfStatus').addEventListener('change', function() {
+        currentPage = 1;
+        render();
+      });
+
+      document.getElementById('filterStartDate').addEventListener('change', function() {
+        currentPage = 1;
+        render();
+      });
+
+      document.getElementById('filterEndDate').addEventListener('change', function() {
+        currentPage = 1;
+        render();
+      });
+
+      document.getElementById('filterResetBtn').addEventListener('click', function() {
+        document.getElementById('filterName').value = '';
+        document.getElementById('filterShelfStatus').value = '';
+        document.getElementById('filterStartDate').value = '';
+        document.getElementById('filterEndDate').value = '';
+        if (window.__syncFilterShelfStatusDropdown) window.__syncFilterShelfStatusDropdown();
+        currentPage = 1;
+        render();
+      });
+
+      if (deleteConfirmCancel) {
+        deleteConfirmCancel.addEventListener('click', closeDeleteConfirmModal);
+      }
+      if (deleteConfirmOk) {
+        deleteConfirmOk.addEventListener('click', executeDeleteTheme);
+      }
+      if (deleteConfirmModal) {
+        deleteConfirmModal.addEventListener('click', function(e) {
+          if (e.target === deleteConfirmModal) closeDeleteConfirmModal();
+        });
+      }
+      if (publishBlockOk) {
+        publishBlockOk.addEventListener('click', closePublishBlockModal);
+      }
+      if (publishBlockModal) {
+        publishBlockModal.addEventListener('click', function(e) {
+          if (e.target === publishBlockModal) closePublishBlockModal();
+        });
+      }
+      document.addEventListener('keydown', function(e) {
+        if (e.key !== 'Escape') return;
+        if (deleteConfirmModal && !deleteConfirmModal.classList.contains('hidden')) {
+          e.preventDefault();
+          closeDeleteConfirmModal();
+          return;
+        }
+        if (publishBlockModal && !publishBlockModal.classList.contains('hidden')) {
+          e.preventDefault();
+          closePublishBlockModal();
+        }
+      });
+
+      render();
+    })();
+  </script>
+</body>
+</html>
