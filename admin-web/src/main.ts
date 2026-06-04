@@ -1,5 +1,13 @@
 import "./styles/app.css";
 import {
+  bindLoginPage,
+  isAuthenticated,
+  LOGIN_PATH,
+  renderLoginPage,
+} from "./auth/login";
+import { bindHeaderUserCenter, renderHeaderUserCenter } from "./auth/user-center";
+import { bindLoginLogsPage, isLoginLogsPath, renderLoginLogsPage } from "./log-management/login-logs-ui";
+import {
   NAV_MODULES,
   PRODUCT_CENTER_DEEP_NAV,
   type NavModule,
@@ -1151,6 +1159,7 @@ const ICONS: Record<NavModule["icon"], string> = {
   permissionMgmt: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>`,
   assetCenter: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>`,
   configCenter: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" x2="4" y1="21" y2="14"/><line x1="4" x2="4" y1="10" y2="3"/><line x1="12" x2="12" y1="21" y2="12"/><line x1="12" x2="12" y1="8" y2="3"/><line x1="20" x2="20" y1="21" y2="16"/><line x1="20" x2="20" y1="12" y2="3"/><line x1="2" x2="6" y1="14" y2="14"/><line x1="10" x2="14" y1="8" y2="8"/><line x1="18" x2="22" y1="16" y2="16"/></svg>`,
+  logManagement: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 12h4"/><path d="M10 16h4"/><path d="M10 8h1"/></svg>`,
   settings: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>`,
 };
 
@@ -2982,8 +2991,43 @@ function normalizeTabModuleHashes(): void {
     raw === "/permissions/settings/guest-order-limits" ||
     raw.startsWith("/permissions/settings/guest-order-limits/")
   ) {
-    replaceHashPath("/operations/queue-call/settings/guest-order-throttle");
+    replaceHashPath("/operations/queue-call/settings/foh-guest-order-guard");
     return;
+  }
+  /* 前厅设置 · 旧 groupKey 书签 → 方案 D-紧凑 12 组 */
+  const fohSettingsLegacyGroup: Record<string, string> = {
+    "tables-floor": "foh-tables",
+    "pos-shell-landing": "foh-cashier-start",
+    "pos-order-init": "foh-cashier-start",
+    "pos-kitchen-send": "foh-cashier-start",
+    "pos-button-visibility": "foh-order-buttons-core",
+    "pos-order-toolbar": "foh-order-toolbar-extra",
+    "pos-order-cart": "foh-order-cart-combo",
+    "pos-combo-ordering": "foh-order-cart-combo",
+    "pos-find-order-list": "foh-menu-find-pay",
+    "pos-checkout-entry": "foh-menu-find-pay",
+    "pos-menu-ui": "foh-menu-find-pay",
+    "guest-menu-structure": "foh-guest-menu-body",
+    "guest-menu-cart": "foh-guest-menu-body",
+    "guest-menu-global": "foh-guest-menu-shell",
+    "guest-facing-locale": "foh-guest-menu-shell",
+    "guest-order-type": "foh-guest-order-entry",
+    "guest-pre-order-flow": "foh-guest-order-entry",
+    "guest-order-auth": "foh-guest-order-guard",
+    "guest-order-throttle": "foh-guest-order-guard",
+    "guest-channel-kitchen-send": "foh-guest-kitchen-dining",
+    "guest-scenario-dining": "foh-guest-kitchen-dining",
+    "tableside-service-call": "foh-tableside-experience",
+    "guest-notes-fees": "foh-tableside-experience",
+    "wait-time": "foh-tableside-experience",
+    "guest-menu-scenarios": "foh-guest-menu-body",
+  };
+  for (const [legacy, next] of Object.entries(fohSettingsLegacyGroup)) {
+    const legacyBase = `/operations/queue-call/settings/${legacy}`;
+    if (raw === legacyBase || raw.startsWith(`${legacyBase}/`)) {
+      replaceHashPath(`/operations/queue-call/settings/${next}`);
+      return;
+    }
   }
   /* 权限管理 · 旧门店安全策略路径 → 账户与会话安全 */
   if (raw === "/permissions/store-security" || raw.startsWith("/permissions/store-security/")) {
@@ -4021,6 +4065,14 @@ const MODULE_HUB_SETTINGS_EMPTY_PATHS = new Set(["/reviews/settings", "/brand/se
 
 type ModuleSettingsGroup = ReturnType<typeof groupCatalogItemsByCategory>[number];
 const moduleSettingsScrollTopByBasePath = new Map<string, number>();
+/** 滚动联动二级导航：避免与程序化 scroll 争抢高亮 */
+let moduleSettingsScrollSpyActiveKey: string | null | undefined;
+let moduleSettingsScrollSpyPausedUntil = 0;
+
+const MODULE_SETTINGS_SUBNAV_LINK_BASE =
+  "flex min-h-9 items-center rounded-md px-2.5 py-1.5 text-sm transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
+const MODULE_SETTINGS_SUBNAV_LINK_SELECTED = "bg-primary/10 font-medium text-primary";
+const MODULE_SETTINGS_SUBNAV_LINK_IDLE = "text-muted-foreground hover:bg-muted/60 hover:text-foreground";
 
 function isModuleHubSettingsCatalogPath(path: string): boolean {
   if (path === "/settings/overview") return false;
@@ -4072,7 +4124,116 @@ function getModuleSettingsActiveGroup(
   return groups.find((g) => slugifyModuleSettingsCategory(g.groupKey) === slugifyModuleSettingsCategory(slug));
 }
 
+function pauseModuleSettingsScrollSpy(ms = 480): void {
+  moduleSettingsScrollSpyPausedUntil = Date.now() + ms;
+}
+
+function isModuleSettingsScrollSpyPaused(): boolean {
+  return Date.now() < moduleSettingsScrollSpyPausedUntil;
+}
+
+function resolveModuleSettingsActiveGroupFromScroll(
+  scrollHost: HTMLElement,
+  groups: ModuleSettingsGroup[],
+): ModuleSettingsGroup | undefined {
+  if (groups.length === 0) return undefined;
+
+  const nearBottom =
+    scrollHost.scrollTop + scrollHost.clientHeight >= scrollHost.scrollHeight - 8;
+  if (nearBottom) {
+    return groups[groups.length - 1];
+  }
+
+  const hostRect = scrollHost.getBoundingClientRect();
+  const activationY = hostRect.top + 20;
+  let active: ModuleSettingsGroup | undefined;
+  for (const group of groups) {
+    const el = document.getElementById(moduleSettingsCategoryDomId(group.groupKey));
+    if (!el) continue;
+    if (el.getBoundingClientRect().top <= activationY) {
+      active = group;
+    } else if (active) {
+      break;
+    }
+  }
+  return active;
+}
+
+function setModuleSettingsSubnavActiveGroup(groupKey: string | null): void {
+  document
+    .querySelectorAll<HTMLAnchorElement>(".module-settings-subnav a[data-module-settings-group-key]")
+    .forEach((link) => {
+      const key = link.dataset.moduleSettingsGroupKey ?? "";
+      const selected = groupKey !== null && key === groupKey;
+      link.className = `${MODULE_SETTINGS_SUBNAV_LINK_BASE} ${
+        selected ? MODULE_SETTINGS_SUBNAV_LINK_SELECTED : MODULE_SETTINGS_SUBNAV_LINK_IDLE
+      }`;
+      if (selected) {
+        link.setAttribute("aria-current", "page");
+      } else {
+        link.removeAttribute("aria-current");
+      }
+    });
+}
+
+function syncModuleSettingsScrollSpy(
+  scrollHost: HTMLElement,
+  catalog: ModuleSettingCatalogHub,
+  groups: ModuleSettingsGroup[],
+): void {
+  if (isModuleSettingsScrollSpyPaused()) return;
+
+  const active = resolveModuleSettingsActiveGroupFromScroll(scrollHost, groups);
+  const groupKey = active?.groupKey ?? null;
+  if (moduleSettingsScrollSpyActiveKey === groupKey) return;
+
+  moduleSettingsScrollSpyActiveKey = groupKey;
+  setModuleSettingsSubnavActiveGroup(groupKey);
+
+  const nextPath = groupKey
+    ? getModuleSettingsCategoryPath(catalog.settingsPath, groupKey)
+    : catalog.settingsPath;
+  replaceHashPath(nextPath);
+}
+
+function bindModuleSettingsScrollSpy(): void {
+  moduleSettingsScrollSpyActiveKey = undefined;
+
+  const scrollHost = document.querySelector<HTMLElement>(".module-settings-scroll-host");
+  if (!scrollHost) return;
+
+  const path = location.hash.slice(1) || "/dashboard/overview";
+  const catalog = getModuleSettingsCatalog(path);
+  if (!catalog) return;
+
+  const groups = groupCatalogItemsByCategory(catalog.items, catalog.groupOrder);
+  if (groups.length === 0) return;
+
+  const fromPath = getModuleSettingsActiveGroup(path, catalog.settingsPath, groups);
+  moduleSettingsScrollSpyActiveKey = fromPath?.groupKey ?? null;
+
+  const onScroll = (): void => {
+    syncModuleSettingsScrollSpy(scrollHost, catalog, groups);
+  };
+
+  let scrollRaf = 0;
+  scrollHost.addEventListener(
+    "scroll",
+    () => {
+      if (scrollRaf) return;
+      scrollRaf = requestAnimationFrame(() => {
+        scrollRaf = 0;
+        onScroll();
+      });
+    },
+    { passive: true },
+  );
+  scrollHost.addEventListener("scrollend", onScroll);
+  onScroll();
+}
+
 function scrollToModuleSettingsCategory(groupKey: string): void {
+  pauseModuleSettingsScrollSpy(600);
   const targetId = moduleSettingsCategoryDomId(groupKey);
   const run = (): void => {
     const el = document.getElementById(targetId);
@@ -4117,6 +4278,7 @@ function restoreModuleSettingsScroll(path: string): void {
 function bindModuleSettingsCategoryNav(): void {
   document.querySelectorAll<HTMLAnchorElement>(".module-settings-subnav a[href^='#']").forEach((link) => {
     link.addEventListener("click", () => {
+      pauseModuleSettingsScrollSpy(600);
       const href = link.getAttribute("href")?.slice(1);
       if (!href) return;
       const catalog = getModuleSettingsCatalog(href);
@@ -4149,8 +4311,9 @@ function renderModuleHubSettingsCategorySidebar(path: string, pageTitle: string)
             return `
               <li>
                 <a href="#${href}"
-                  class="flex min-h-9 items-center rounded-md px-2.5 py-1.5 text-sm transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
-                    selected ? "bg-primary/10 font-medium text-primary" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                  data-module-settings-group-key="${escapeHtml(group.groupKey)}"
+                  class="${MODULE_SETTINGS_SUBNAV_LINK_BASE} ${
+                    selected ? MODULE_SETTINGS_SUBNAV_LINK_SELECTED : MODULE_SETTINGS_SUBNAV_LINK_IDLE
                   }"
                   ${selected ? 'aria-current="page"' : ""}
                 >
@@ -8447,6 +8610,7 @@ function renderMain(): string {
     isTeamPayrollReportIframe;
   const isModuleSettingsCatalog = isModuleHubSettingsCatalogPath(path);
   const isPermissionsRbac = isPermissionsRbacPath(path);
+  const isLoginLogs = isLoginLogsPath(path);
   const isFinanceRegisterAudit = isFinanceRegisterAuditPath(path);
   const wideContentLayout =
     isAiAssistant ||
@@ -8469,7 +8633,8 @@ function renderMain(): string {
     isGiftCardsFactory ||
     isFinanceRegisterAudit ||
     isModuleSettingsCatalog ||
-    isFohCategorySettings;
+    isFohCategorySettings ||
+    isLoginLogs;
   const showModuleTabs = shouldShowModuleTabs(tabModule);
 
   const tertiaryRowClass =
@@ -8514,6 +8679,7 @@ function renderMain(): string {
           </a>
           ${renderHeaderScopeFilters()}
           ${renderGlobalUiLocaleControl()}
+          ${renderHeaderUserCenter()}
           <button type="button" id="theme-toggle" class="inline-flex size-9 shrink-0 items-center justify-center rounded-md border border-border bg-background text-foreground hover:bg-accent hover:text-accent-foreground transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset sm:size-11" aria-label="${escapeHtml(t("header.themeToggle"))}">
             <svg class="size-5 dark:hidden" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
             <svg class="size-5 hidden dark:block" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
@@ -8618,7 +8784,9 @@ function renderMain(): string {
                   </div>`
                         : isPermissionsRbac
                           ? renderPermissionsRbacPage(path)
-                          : renderPlaceholder(path, title, tabModule)
+                          : isLoginLogs
+                            ? renderLoginLogsPage()
+                            : renderPlaceholder(path, title, tabModule)
             }
           </div>
         </div>
@@ -8727,9 +8895,33 @@ function bindFullscreenIframeModal(dialogId: string, closeButtonId: string): voi
   });
 }
 
+function mountLoginShell(): void {
+  const app = document.getElementById("app");
+  if (!app) return;
+  app.innerHTML = renderLoginPage();
+  bindLoginPage(() => {
+    replaceHashPath("/dashboard/overview");
+    mount();
+  });
+}
+
 function mount(): void {
   normalizeTabModuleHashes();
   applyUiLocaleToDocument(getUiLocale());
+
+  const authPath = location.hash.slice(1) || "";
+  if (!isAuthenticated()) {
+    if (authPath !== LOGIN_PATH) {
+      replaceHashPath(LOGIN_PATH);
+      return;
+    }
+    mountLoginShell();
+    return;
+  }
+  if (authPath === LOGIN_PATH) {
+    replaceHashPath("/dashboard/overview");
+    return;
+  }
 
   navModuleSheetOpenBeforeMount = {};
   for (const m of NAV_MODULES) {
@@ -9289,8 +9481,14 @@ function mount(): void {
     document.querySelector('meta[name="theme-color"]')?.setAttribute("content", dark ? "#0f172a" : "#f8fafc");
   });
 
+  bindHeaderUserCenter(() => {
+    replaceHashPath(LOGIN_PATH);
+    mount();
+  });
+
   bindAiAssistantHandlers();
   bindPermissionsRbac();
+  bindLoginLogsPage(mount);
   bindHeaderScopeFilters();
   bindGlobalUiLocaleControl();
   ensureInventorySheetEscapeListener();
@@ -9415,6 +9613,7 @@ function mount(): void {
   bindOrderNumberingSelects();
   bindOrderNumberingClassificationControls();
   scrollToModuleSettingsCategoryFromPath(mountPathForSheet);
+  bindModuleSettingsScrollSpy();
 }
 
 window.addEventListener("hashchange", mount);

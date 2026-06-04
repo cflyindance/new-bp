@@ -47,7 +47,8 @@ export interface NavModule {
     | "storeMgmt"
     | "permissionMgmt"
     | "assetCenter"
-    | "configCenter";
+    | "configCenter"
+    | "logManagement";
   path: string;
   children: NavItem[];
   /**
@@ -551,6 +552,23 @@ export const NAV_MODULES: NavModule[] = [
     children: [
       { id: "ac-materials", title: "图片素材", titleEn: "Image materials", path: "/asset-center/materials" },
       { id: "ac-videos", title: "视频库", titleEn: "Video library", path: "/asset-center/videos" },
+    ],
+  },
+  {
+    id: "log-management",
+    title: "日志管理",
+    titleEn: "Log management",
+    icon: "logManagement",
+    path: "/log-management",
+    subNavPlacement: "sheet",
+    defaultChildPath: "/log-management/login-logs",
+    children: [
+      {
+        id: "lm-login-logs",
+        title: "系统登录日志",
+        titleEn: "System login logs",
+        path: "/log-management/login-logs",
+      },
     ],
   },
   {
