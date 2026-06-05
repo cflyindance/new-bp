@@ -1,7 +1,10 @@
+import { SYSTEM_SETTINGS_CATALOG_PATH_BY_SEQ } from "./system-settings-groups.mjs";
+
 /**
  * 设置 catalog 挂载路由（覆盖 hub 默认 settingsPath）。
  */
 export const SETTINGS_CATALOG_PATH_BY_SEQ = new Map([
+  ...Object.entries(SYSTEM_SETTINGS_CATALOG_PATH_BY_SEQ).map(([seq, p]) => [Number(seq), p]),
   /** 门店安全策略（349），非 /permissions/account-session */
   [349, "/permissions/store-security"],
   /** 抽奖活动独立功能页，非 /promotions/settings */

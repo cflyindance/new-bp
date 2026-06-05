@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>选择渠道 - 下发屏保</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="assets/common.css" />
+  <script src="assets/embedded-mode.js"></script>
+  <script>
+    tailwind.config = { theme: { extend: { colors: { primary: '#1677ff', 'sidebar-bg': '#fafafa', 'sidebar-active': '#e6f4ff' }, borderRadius: { ant: '6px' } } } };
+  </script>
+</head>
+<body class="min-h-screen bg-[#f5f6f7] text-gray-900 antialiased">
+  <div class="flex min-h-screen flex-col">
+    <header class="flex-shrink-0 border-b border-[#f0f0f0] bg-white">
+      <div class="flex items-center justify-between gap-4 px-6 py-4">
+        <div class="flex min-w-0 flex-1 items-center gap-4">
+          <a href="store-select.html" id="backToStoreSelect" class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-black/[0.04] text-[rgba(0,0,0,0.45)] hover:bg-black/[0.08]" aria-label="返回">
+            <svg width="20" height="20" viewBox="0 0 1024 1024" fill="currentColor" aria-hidden="true"><path d="M872 474H298.7l413.1-413.1c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L201.4 479.7c-6.2 6.2-9.4 14.4-9.4 22.6s3.1 16.4 9.4 22.6l465.1 465.1c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L298.7 550H872c17.7 0 32-14.3 32-32s-14.3-32-32-32z"/></svg>
+          </a>
+          <h1 class="truncate text-xl font-semibold leading-7 text-[rgba(0,0,0,0.88)]">选择渠道</h1>
+        </div>
+        <span id="nextBtn" class="inline-flex h-12 shrink-0 cursor-not-allowed items-center justify-center rounded-xl bg-black/[0.04] px-5 text-base font-medium text-[rgba(0,0,0,0.25)]" aria-disabled="true">下一步</span>
+        <a href="effective-time.html" id="nextBtnActive" class="hidden inline-flex h-12 shrink-0 items-center justify-center rounded-xl bg-primary px-5 text-base font-medium text-white shadow-[0_2px_0_rgba(5,145,255,0.1)] hover:bg-[#4096ff]">下一步</a>
+      </div>
+      <div class="step-progress h-1 w-full bg-[#f0f0f0]">
+        <div class="step-progress-inner h-full" style="width: 67%"></div>
+      </div>
+    </header>
+    <main class="mx-auto w-full max-w-2xl flex-1 p-6">
+      <div class="rounded-2xl border border-[#f0f0f0] bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.03)] lg:p-8">
+        <h2 class="mb-1 text-base font-medium leading-6 text-[rgba(0,0,0,0.88)]">渠道范围</h2>
+        <p class="mb-5 text-sm leading-[22px] text-[rgba(0,0,0,0.45)]">请至少选择一个渠道用于下发屏保</p>
+        <div class="mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-[#f0f0f0] pb-4">
+          <span class="text-sm font-medium text-[rgba(0,0,0,0.65)]">终端类型</span>
+          <label class="inline-flex cursor-pointer select-none items-center gap-2 text-sm text-[rgba(0,0,0,0.88)]">
+            <input type="checkbox" id="checkAllChannels" class="rounded text-primary" />
+            <span>全选</span>
+          </label>
+        </div>
+        <div id="channelGrid" class="grid grid-cols-2 gap-3 sm:grid-cols-3"></div>
+      </div>
+    </main>
+  </div>
+  <script>
+    (function() {
+      var channels = ['Kiosk', 'eMenu', 'CDS', 'OO', 'SDI', '取餐屏'];
+      (function hydrateChannelsFromTheme() {
+        try {
+          var raw = localStorage.getItem('selected_channels_for_distribute');
+          if (raw) {
+            var parsed = JSON.parse(raw);
+            if (Array.isArray(parsed) && parsed.length) return;
+          }
+        } catch (e) {}
+        var themeId = '';
+        try { themeId = localStorage.getItem('current_theme_id_for_distribute') || ''; } catch (e2) {}
+        if (!themeId) return;
+        try {
+          var themes = JSON.parse(localStorage.getItem('kiosk_themes') || '[]');
+          var th = themes.filter(function(t) { return t.id === themeId; })[0];
+          var prefs = th && th.lastDistributePrefs;
+          if (!prefs || !Array.isArray(prefs.channels) || !prefs.channels.length) return;
+          var filtered = prefs.channels.filter(function(ch) { return channels.indexOf(ch) >= 0; });
+          if (filtered.length) {
+            localStorage.setItem('selected_channels_for_distribute', JSON.stringify(filtered));
+          }
+        } catch (e3) {}
+      })();
+      var backToStore = document.getElementById('backToStoreSelect');
+      if (backToStore) {
+        try {
+          var tid = localStorage.getItem('current_theme_id_for_distribute') || '';
+          var fromPage = new URLSearchParams(location.search).get('from') || '';
+          if (tid) {
+            var qs = '?themeId=' + encodeURIComponent(tid);
+            if (fromPage) qs += '&from=' + encodeURIComponent(fromPage);
+            backToStore.href = 'store-select.html' + qs;
+          }
+        } catch (e) {}
+      }
+      var channelGrid = document.getElementById('channelGrid');
+      var nextBtn = document.getElementById('nextBtn');
+      var nextBtnActive = document.getElementById('nextBtnActive');
+      var checkAllChannels = document.getElementById('checkAllChannels');
+
+      function escapeHtml(s) {
+        var d = document.createElement('div');
+        d.textContent = s || '';
+        return d.innerHTML;
+      }
+
+      function getSelectedChannels() {
+        try {
+          var raw = localStorage.getItem('selected_channels_for_distribute');
+          var parsed = raw ? JSON.parse(raw) : [];
+          return Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+          return [];
+        }
+      }
+
+      function saveSelectedChannels(list) {
+        try {
+          localStorage.setItem('selected_channels_for_distribute', JSON.stringify(list));
+        } catch (e) {}
+      }
+
+      function toggleNext(enabled) {
+        if (enabled) {
+          nextBtn.classList.add('hidden');
+          nextBtnActive.classList.remove('hidden');
+        } else {
+          nextBtn.classList.remove('hidden');
+          nextBtnActive.classList.add('hidden');
+        }
+      }
+
+      function updateCheckAll(selected) {
+        checkAllChannels.checked = selected.length === channels.length;
+      }
+
+      function renderChannels() {
+        var selected = getSelectedChannels();
+        channelGrid.innerHTML = channels.map(function(ch) {
+          var checked = selected.indexOf(ch) >= 0;
+          var stateCls = checked
+            ? 'border-primary bg-[#e6f4ff] text-[rgba(0,0,0,0.88)] ring-1 ring-primary/20'
+            : 'border-[#d9d9d9] bg-white hover:border-primary hover:bg-[#fafafa]';
+          return '<label class="flex min-h-[48px] cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 text-sm font-medium transition-colors ' + stateCls + '">' +
+            '<input type="checkbox" class="channel-checkbox rounded text-primary" value="' + escapeHtml(ch) + '"' + (checked ? ' checked' : '') + ' />' +
+            '<span>' + escapeHtml(ch) + '</span>' +
+          '</label>';
+        }).join('');
+
+        document.querySelectorAll('.channel-checkbox').forEach(function(cb) {
+          cb.addEventListener('change', function() {
+            var selectedNow = Array.prototype.slice.call(document.querySelectorAll('.channel-checkbox:checked')).map(function(el) { return el.value; });
+            saveSelectedChannels(selectedNow);
+            toggleNext(selectedNow.length > 0);
+            updateCheckAll(selectedNow);
+            renderChannels();
+          });
+        });
+
+        toggleNext(selected.length > 0);
+        updateCheckAll(selected);
+      }
+
+      checkAllChannels.addEventListener('change', function() {
+        if (this.checked) {
+          saveSelectedChannels(channels.slice());
+        } else {
+          saveSelectedChannels([]);
+        }
+        renderChannels();
+      });
+
+      nextBtnActive.addEventListener('click', function(e) {
+        e.preventDefault();
+        var selected = getSelectedChannels();
+        if (!selected.length) return;
+        var fromPage = new URLSearchParams(location.search).get('from') || '';
+        window.location.href = window.appendMenusifuEmbeddedParam(
+          'effective-time.html' + (fromPage ? ('?from=' + encodeURIComponent(fromPage)) : ''),
+        );
+      });
+
+      renderChannels();
+    })();
+  </script>
+</body>
+</html>

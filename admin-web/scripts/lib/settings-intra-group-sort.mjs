@@ -3,6 +3,8 @@
  * 未列出的 seq 在组内仍按 seq 升序排在已定义项之后。
  */
 
+import { KDS_TERMINAL_INTRA_GROUP_SORT_BY_SEQ } from "./kds-terminal-settings-groups.mjs";
+
 /** POS 操作按钮：主流程显隐 → 工具栏显隐 → 排序集合 */
 const FOH_POS_BUTTONS_SEQ_ORDER = [
   193, 194, 195, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210,
@@ -297,15 +299,31 @@ assignSort(DRAWER_FLOAT_RECONCILE_SEQ_ORDER);
 assignSort(DAILY_CASH_CLOSE_SEQ_ORDER);
 assignSort(PROCESSOR_COST_BASIS_SEQ_ORDER);
 
-/** 平台业务 · 外部系统对接 */
-const INTEGRATIONS_EXTERNAL_SEQ_ORDER = [78, 79, 80, 81];
+/** 系统设置 · 区域与显示 */
+const LOCALE_DISPLAY_SEQ_ORDER = [109, 168];
 
-assignSort(INTEGRATIONS_EXTERNAL_SEQ_ORDER);
+assignSort(LOCALE_DISPLAY_SEQ_ORDER);
 
-/** 系统设置 · 界面与操作偏好 */
-const UI_OPERATION_PREFERENCES_SEQ_ORDER = [168, 174];
+/** 系统设置 · 数据与备份 */
+const DATA_BACKUP_SEQ_ORDER = [423, 422];
 
-assignSort(UI_OPERATION_PREFERENCES_SEQ_ORDER);
+assignSort(DATA_BACKUP_SEQ_ORDER);
+
+/** 系统设置 · 连接与服务 */
+const CONNECTIONS_ONLINE_ORDER_SEQ_ORDER = [93, 95, 96, 97, 99, 100, 101, 102, 103, 104, 105, 106];
+const CONNECTIONS_HR_SCHEDULING_SEQ_ORDER = [78, 79, 80, 81, 458];
+const CONNECTIONS_PAYMENT_ACQUIRING_SEQ_ORDER = [459, 460];
+
+assignSort(CONNECTIONS_ONLINE_ORDER_SEQ_ORDER);
+assignSort(CONNECTIONS_HR_SCHEDULING_SEQ_ORDER);
+assignSort(CONNECTIONS_PAYMENT_ACQUIRING_SEQ_ORDER);
+
+/** 系统设置 · 高级与诊断 */
+const ADVANCED_DEBUG_SEQ_ORDER = [188, 189];
+const ADVANCED_PLATFORM_SEQ_ORDER = [187, 190, 191, 192];
+
+assignSort(ADVANCED_DEBUG_SEQ_ORDER);
+assignSort(ADVANCED_PLATFORM_SEQ_ORDER);
 
 export {
   FINANCE_SETTINGS_GROUP_ORDER,
@@ -406,11 +424,11 @@ for (const seqs of Object.values(PRINT_SETTINGS_INTRA_GROUP_SEQ)) {
 /** 外卖/来取设置页二级导航展示顺序（v2.5） */
 export const DELIVERY_SETTINGS_GROUP_ORDER = [
   "scan-online-basics",
+  "map-address-services",
   "platform-delivery-slips",
   "delivery-packaging",
 ];
 
-/** 平台业务中心设置页二级导航展示顺序（含线上订餐对接） */
 /** 消息中心设置页二级导航展示顺序（v1.1：员工提醒与顾客短信分轨） */
 export const NOTIFICATIONS_SETTINGS_GROUP_ORDER = [
   "notification-basics",
@@ -418,14 +436,21 @@ export const NOTIFICATIONS_SETTINGS_GROUP_ORDER = [
   "customer-order-sms",
 ];
 
-export const INTEGRATIONS_SETTINGS_GROUP_ORDER = [
-  "integrations",
-  "online-order-service",
-  "高级设置",
-  "LevelUp",
-  "7shifts",
-  "Ingenico-Blu",
-  "WorldPay",
-];
+export {
+  LOCALE_DISPLAY_GROUP_ORDER,
+  DATA_BACKUP_GROUP_ORDER,
+  CONNECTIONS_GROUP_ORDER,
+  ADVANCED_GROUP_ORDER,
+  ADVANCED_GROUP_NAV_SECTIONS,
+} from "./system-settings-groups.mjs";
 
 export { FOH_SETTINGS_GROUP_ORDER } from "./foh-settings-groups.mjs";
+
+export {
+  KDS_DISPLAY_SETTINGS_GROUP_ORDER,
+  KDS_WORKFLOW_SETTINGS_GROUP_ORDER,
+} from "./kds-terminal-settings-groups.mjs";
+
+for (const [seq, sort] of Object.entries(KDS_TERMINAL_INTRA_GROUP_SORT_BY_SEQ)) {
+  INTRA_GROUP_SORT_BY_SEQ.set(Number(seq), sort);
+}

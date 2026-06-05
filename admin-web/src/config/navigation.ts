@@ -367,6 +367,18 @@ export const NAV_MODULES: NavModule[] = [
     defaultChildPath: "/operations/kitchen-kds/settings",
     children: [
       { id: "kds-settings", title: "设置", titleEn: "Settings", path: "/operations/kitchen-kds/settings" },
+      {
+        id: "kds-display",
+        title: "KDS 显示与交互",
+        titleEn: "KDS display & interaction",
+        path: "/operations/kitchen-kds/display",
+      },
+      {
+        id: "kds-workflow",
+        title: "KDS 出餐流程",
+        titleEn: "KDS workflow",
+        path: "/operations/kitchen-kds/workflow",
+      },
     ],
   },
   {
@@ -581,10 +593,12 @@ export const NAV_MODULES: NavModule[] = [
     icon: "settings",
     path: "/settings",
     subNavPlacement: "sheet",
-    defaultChildPath: "/settings/basic",
+    defaultChildPath: "/settings/locale-display",
     children: [
-      { id: "set-basic", title: "基础设置", path: "/settings/basic" },
-      { id: "set-integrations", title: "集成与 API", path: "/settings/integrations" },
+      { id: "set-locale-display", title: "区域与显示", titleEn: "Locale & display", path: "/settings/locale-display" },
+      { id: "set-data-backup", title: "数据与备份", titleEn: "Data & backup", path: "/settings/data-backup" },
+      { id: "set-connections", title: "连接与服务", titleEn: "Connections", path: "/settings/connections" },
+      { id: "set-advanced", title: "高级与诊断", titleEn: "Advanced & diagnostics", path: "/settings/advanced" },
     ],
   },
 ];

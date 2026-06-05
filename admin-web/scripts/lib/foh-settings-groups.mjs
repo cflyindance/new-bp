@@ -135,7 +135,7 @@ export const FOH_SETTINGS_ASSIGN_MAP = {
   "foh-table-start-flow": [107, 619, 111, 625, 621, 643, 644, 592],
   "foh-table-clear-ops": [169, 534, 642, 351, 347],
   "foh-pos-shell": [165, 346],
-  "foh-pos-menu-scope": [118, 148, 176, 177, 348],
+  "foh-pos-menu-scope": [118, 174, 148, 176, 177, 348],
   "foh-pos-menu-ui-layout": [216, 217, 218, 220, 219, 350],
   "foh-pos-order-cart": [132, 133, 135, 137, 178, 121, 122, 222, 223],
   "foh-pos-combo-ordering": [138, 139, 145],

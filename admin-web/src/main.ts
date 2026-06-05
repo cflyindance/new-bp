@@ -214,6 +214,44 @@ import {
   renderKitchenSettingsHubIntroHtml,
 } from "./config/module-settings-kitchen-group-ui";
 import {
+  isKdsDisplaySettingsPath,
+  renderKdsDisplaySettingsGroupHintHtml,
+  renderKdsDisplaySettingsHubIntroHtml,
+} from "./config/module-settings-kds-display-group-ui";
+import {
+  isKdsWorkflowSettingsPath,
+  renderKdsWorkflowSettingsGroupHintHtml,
+  renderKdsWorkflowSettingsHubIntroHtml,
+} from "./config/module-settings-kds-workflow-group-ui";
+import {
+  bindKdsTerminalSettingsControls,
+  isKdsCountSuffixSeq,
+  isKdsFlowMapHostSeq,
+  isKdsLayoutSeq,
+  isKdsOrderTypeStyleHostSeq,
+  isKdsPartialCompleteHostSeq,
+  isKdsReminderHostSeq,
+  isKdsRingDefaultHostSeq,
+  isKdsRingInstanceSeq,
+  isKdsStatusPipelineHostSeq,
+  isKdsSubitemFlowHostSeq,
+  isKdsThemeColorSeq,
+  KDS_SUBITEM_FLOW_HOST_SEQ,
+  renderKdsCountSuffixRowHtml,
+  renderKdsFlowMapControlsHtml,
+  renderKdsLayoutRowHtml,
+  renderKdsOrderTypeStylesHtml,
+  renderKdsPartialCompleteFlowHtml,
+  renderKdsReminderLadderHtml,
+  renderKdsRingDefaultHtml,
+  renderKdsRingInstanceRulesHtml,
+  renderKdsStatusPipelineHtml,
+  renderKdsThemeColorRowHtml,
+  setKdsPartialFlowSelectEnabled,
+  setKdsSubitemDisableMainClickVisible,
+  shouldSkipKdsMergedCatalogRow,
+} from "./config/module-settings-kds-terminal-ui";
+import {
   isPrintSettingsPath,
   renderPrintSettingsGroupHintHtml,
   renderPrintSettingsHubIntroHtml,
@@ -2905,9 +2943,17 @@ function rememberSidebarNavScroll(scrollTop: number): void {
 /** 将 `#/menu`、`#/reports` 等仅一级路径规范为各自 defaultChildPath（单页模块 path===default 时不跳转） */
 function normalizeTabModuleHashes(): void {
   const raw = location.hash.slice(1);
-  /* 侧栏已移除一级「配置中心」，旧书签统一到系统设置 · 基础设置 */
+  /* 侧栏已移除一级「配置中心」，旧书签统一到系统设置 · 区域与显示 */
   if (raw === "/config-center" || raw.startsWith("/config-center/")) {
-    replaceHashPath("/settings/basic");
+    replaceHashPath("/settings/locale-display");
+    return;
+  }
+  if (raw === "/settings/basic" || raw.startsWith("/settings/basic/")) {
+    replaceHashPath(raw.replace(/^\/settings\/basic/, "/settings/locale-display"));
+    return;
+  }
+  if (raw === "/settings/integrations" || raw.startsWith("/settings/integrations/")) {
+    replaceHashPath(raw.replace(/^\/settings\/integrations/, "/settings/connections"));
     return;
   }
   /* 侧栏已移除一级「商品中心B」，旧书签回到工作台 */
@@ -3415,7 +3461,7 @@ function normalizeTabModuleHashes(): void {
       return;
     }
   }
-  /* 系统设置滑层已移除总揽/报表/打印等，旧链接统一到基础设置 */
+  /* 系统设置滑层已移除总揽/报表/打印等，旧链接统一到区域与显示 */
   const legacySettingsPaths = [
     "/settings/overview",
     "/settings/reports",
@@ -3428,7 +3474,7 @@ function normalizeTabModuleHashes(): void {
     "/settings/data-scope",
   ];
   if (legacySettingsPaths.some((p) => raw === p || raw.startsWith(`${p}/`))) {
-    location.replace("#/settings/basic");
+    location.replace("#/settings/locale-display");
     return;
   }
   /* 菜单侧栏已移除「菜单与分组」等三项，旧链接统一到默认子路由「门店菜单」 */
@@ -4289,8 +4335,17 @@ let moduleSettingsScrollSpyPausedUntil = 0;
 
 const MODULE_SETTINGS_SUBNAV_LINK_BASE =
   "flex min-h-9 items-center rounded-md px-2.5 py-1.5 text-sm transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
+const MODULE_SETTINGS_SUBNAV_LINK_NESTED = "pl-4";
 const MODULE_SETTINGS_SUBNAV_LINK_SELECTED = "bg-primary/10 font-medium text-primary";
 const MODULE_SETTINGS_SUBNAV_LINK_IDLE = "text-muted-foreground hover:bg-muted/60 hover:text-foreground";
+const MODULE_SETTINGS_SUBNAV_SECTION_HEADING =
+  "px-2.5 pb-1 text-sm font-semibold tracking-tight text-foreground";
+
+/** 设置侧栏分类文案：去掉末尾冗余「设置」（顶栏「设置」与主区卡片标题保持原样） */
+function formatModuleSettingsSubnavLabel(label: string): string {
+  if (label.endsWith("设置") && label.length > 2) return label.slice(0, -2);
+  return label;
+}
 
 function isModuleHubSettingsCatalogPath(path: string): boolean {
   if (path === "/settings/overview") return false;
@@ -4383,7 +4438,8 @@ function setModuleSettingsSubnavActiveGroup(groupKey: string | null): void {
     .forEach((link) => {
       const key = link.dataset.moduleSettingsGroupKey ?? "";
       const selected = groupKey !== null && key === groupKey;
-      link.className = `${MODULE_SETTINGS_SUBNAV_LINK_BASE} ${
+      const nested = link.dataset.moduleSettingsSubnavNested === "1";
+      link.className = `${MODULE_SETTINGS_SUBNAV_LINK_BASE} ${nested ? MODULE_SETTINGS_SUBNAV_LINK_NESTED : ""} ${
         selected ? MODULE_SETTINGS_SUBNAV_LINK_SELECTED : MODULE_SETTINGS_SUBNAV_LINK_IDLE
       }`;
       if (selected) {
@@ -4555,18 +4611,21 @@ function renderModuleSettingsSubnavGroupLink(
   settingsPath: string,
   group: ModuleSettingsGroup,
   selected: boolean,
+  nested = false,
 ): string {
   const href = getModuleSettingsCategoryPath(settingsPath, group.groupKey);
+  const navLabel = formatModuleSettingsSubnavLabel(group.groupTitle);
   return `
               <li>
                 <a href="#${href}"
                   data-module-settings-group-key="${escapeHtml(group.groupKey)}"
-                  class="${MODULE_SETTINGS_SUBNAV_LINK_BASE} ${
+                  ${nested ? 'data-module-settings-subnav-nested="1"' : ""}
+                  class="${MODULE_SETTINGS_SUBNAV_LINK_BASE} ${nested ? MODULE_SETTINGS_SUBNAV_LINK_NESTED : ""} ${
                     selected ? MODULE_SETTINGS_SUBNAV_LINK_SELECTED : MODULE_SETTINGS_SUBNAV_LINK_IDLE
                   }"
                   ${selected ? 'aria-current="page"' : ""}
                 >
-                  <span class="min-w-0 flex-1 truncate">${escapeHtml(group.groupTitle)}</span>
+                  <span class="min-w-0 flex-1 truncate">${escapeHtml(navLabel)}</span>
                   <span class="ml-2 shrink-0 text-xs tabular-nums text-muted-foreground">${group.items.length}</span>
                 </a>
               </li>`;
@@ -4578,15 +4637,16 @@ function renderModuleSettingsSubnavList(
   activeGroup: ModuleSettingsGroup | undefined,
 ): string {
   const groupByKey = new Map(groups.map((g) => [g.groupKey, g]));
-  const renderLink = (group: ModuleSettingsGroup) =>
+  const renderLink = (group: ModuleSettingsGroup, nested = false) =>
     renderModuleSettingsSubnavGroupLink(
       catalog.settingsPath,
       group,
       activeGroup?.groupKey === group.groupKey,
+      nested,
     );
 
   if (!catalog.groupNavSections?.length) {
-    return groups.map(renderLink).join("");
+    return groups.map((group) => renderLink(group)).join("");
   }
 
   const rendered = new Set<string>();
@@ -4599,15 +4659,16 @@ function renderModuleSettingsSubnavList(
         `<li aria-hidden="true" class="my-2 list-none border-t border-border" role="presentation"></li>`,
       );
     }
+    const sectionLabel = formatModuleSettingsSubnavLabel(t(section.labelKey as MessageKey));
     parts.push(`
-              <li class="list-none ${i > 0 ? "pt-1" : ""} pb-1" role="presentation">
-                <p class="px-2.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/80">${escapeHtml(t(section.labelKey as MessageKey))}</p>
+              <li class="list-none ${i > 0 ? "pt-2" : "pt-0.5"} pb-0.5" role="presentation">
+                <p class="${MODULE_SETTINGS_SUBNAV_SECTION_HEADING}">${escapeHtml(sectionLabel)}</p>
               </li>`);
     for (const key of section.groupKeys) {
       const group = groupByKey.get(key);
       if (!group || rendered.has(key)) continue;
       rendered.add(key);
-      parts.push(renderLink(group));
+      parts.push(renderLink(group, true));
     }
   }
 
@@ -4627,7 +4688,6 @@ function renderModuleHubSettingsCategorySidebar(path: string, pageTitle: string)
   const activeGroup = getModuleSettingsActiveGroup(path, catalog.settingsPath, groups);
   return `
     <nav class="module-settings-subnav w-56 shrink-0 border-r border-border pr-4 ${TERTIARY_SUBNAV_SCROLL_CLASSES}" aria-label="${escapeHtml(pageTitle)}">
-      <p class="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">${escapeHtml(pageTitle)}</p>
       <ul class="space-y-0.5" role="list">
         ${renderModuleSettingsSubnavList(catalog, groups, activeGroup)}
       </ul>
@@ -7020,6 +7080,138 @@ function renderModuleSettingPreOrderTableChangeRow(item: ModuleSettingCatalogIte
         </li>`;
 }
 
+function renderModuleSettingKdsLayoutRow(item: ModuleSettingCatalogItem): string {
+  return `
+        <li class="list-none">
+          <div class="border-b border-border px-4 py-3">
+            ${renderModuleSettingTitleBlock(item)}
+            ${renderKdsLayoutRowHtml(item)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingKdsThemeColorRow(item: ModuleSettingCatalogItem): string {
+  return `
+        <li class="list-none">
+          <div class="border-b border-border px-4 py-3">
+            ${renderModuleSettingTitleBlock(item)}
+            ${renderKdsThemeColorRowHtml()}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingKdsCountSuffixRow(item: ModuleSettingCatalogItem): string {
+  return `
+        <li class="list-none">
+          <div class="border-b border-border px-4 py-3">
+            ${renderModuleSettingTitleBlock(item)}
+            ${renderKdsCountSuffixRowHtml()}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingKdsOrderTypeStylesRow(item: ModuleSettingCatalogItem): string {
+  return `
+        <li class="list-none">
+          <div class="border-b border-border px-4 py-3">
+            ${renderModuleSettingTitleBlock(item)}
+            ${renderKdsOrderTypeStylesHtml()}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingKdsReminderRow(item: ModuleSettingCatalogItem): string {
+  return `
+        <li class="list-none">
+          <div class="border-b border-border px-4 py-3">
+            ${renderModuleSettingTitleBlock(item)}
+            ${renderKdsReminderLadderHtml()}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingKdsStatusPipelineRow(item: ModuleSettingCatalogItem): string {
+  return `
+        <li class="list-none">
+          <div class="border-b border-border px-4 py-3">
+            ${renderModuleSettingTitleBlock(item)}
+            ${renderKdsStatusPipelineHtml()}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingKdsFlowMapRow(item: ModuleSettingCatalogItem): string {
+  return `
+        <li class="list-none">
+          <div class="border-b border-border px-4 py-3">
+            ${renderModuleSettingTitleBlock(item)}
+            ${renderKdsFlowMapControlsHtml()}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingKdsPartialCompleteRow(item: ModuleSettingCatalogItem): string {
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              ${renderModuleSettingToggleSwitch(item)}
+            </div>
+            ${renderKdsPartialCompleteFlowHtml(on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingKdsSubitemFlowRow(item: ModuleSettingCatalogItem): string {
+  const subitemOn = readModuleSettingToggleOn(KDS_SUBITEM_FLOW_HOST_SEQ);
+  const disableMainItem: ModuleSettingCatalogItem = {
+    ...item,
+    seq: 718,
+    title: "禁用主菜点击",
+    sceneDesc: "启用子菜流程后，禁止点击主菜行批量推进状态。",
+    groupTitle: item.groupTitle,
+    groupKey: item.groupKey,
+    id: "s718-kds-subitem-disable-main",
+    moduleName: item.moduleName,
+    feature: item.feature,
+  };
+  return `
+        <li class="list-none">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              ${renderModuleSettingToggleSwitch(item)}
+            </div>
+            <div class="mt-3 flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/20 px-3 py-2.5 ${subitemOn ? "" : "hidden"}" data-kds-subitem-disable-main-row>
+              <span class="text-sm text-foreground">禁用主菜点击</span>
+              ${renderModuleSettingToggleSwitch(disableMainItem)}
+            </div>
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingKdsRingDefaultRow(item: ModuleSettingCatalogItem): string {
+  return `
+        <li class="list-none">
+          <div class="border-b border-border px-4 py-3">
+            ${renderModuleSettingTitleBlock(item)}
+            ${renderKdsRingDefaultHtml()}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingKdsRingInstanceRow(item: ModuleSettingCatalogItem): string {
+  return `
+        <li class="list-none">
+          <div class="border-b border-border px-4 py-3">
+            ${renderModuleSettingTitleBlock(item)}
+            ${renderKdsRingInstanceRulesHtml()}
+          </div>
+        </li>`;
+}
+
 function renderModuleSettingKitchenTicketMarginRow(item: ModuleSettingCatalogItem): string {
   return `
         <li class="list-none">
@@ -7619,6 +7811,9 @@ function renderModuleSettingRow(item: ModuleSettingCatalogItem): string {
   if (shouldSkipKitchenTicketMarginRangeRow(item.seq)) {
     return "";
   }
+  if (shouldSkipKdsMergedCatalogRow(item.seq)) {
+    return "";
+  }
   if (shouldSkipLineMergeMatrixMemberRow(item.seq)) {
     return "";
   }
@@ -7905,6 +8100,39 @@ function renderModuleSettingRow(item: ModuleSettingCatalogItem): string {
   }
   if (isKitchenTicketMarginHostSeq(item.seq)) {
     return renderModuleSettingKitchenTicketMarginRow(item);
+  }
+  if (isKdsLayoutSeq(item.seq)) {
+    return renderModuleSettingKdsLayoutRow(item);
+  }
+  if (isKdsThemeColorSeq(item.seq)) {
+    return renderModuleSettingKdsThemeColorRow(item);
+  }
+  if (isKdsCountSuffixSeq(item.seq)) {
+    return renderModuleSettingKdsCountSuffixRow(item);
+  }
+  if (isKdsOrderTypeStyleHostSeq(item.seq)) {
+    return renderModuleSettingKdsOrderTypeStylesRow(item);
+  }
+  if (isKdsReminderHostSeq(item.seq)) {
+    return renderModuleSettingKdsReminderRow(item);
+  }
+  if (isKdsStatusPipelineHostSeq(item.seq)) {
+    return renderModuleSettingKdsStatusPipelineRow(item);
+  }
+  if (isKdsFlowMapHostSeq(item.seq)) {
+    return renderModuleSettingKdsFlowMapRow(item);
+  }
+  if (isKdsPartialCompleteHostSeq(item.seq)) {
+    return renderModuleSettingKdsPartialCompleteRow(item);
+  }
+  if (isKdsSubitemFlowHostSeq(item.seq)) {
+    return renderModuleSettingKdsSubitemFlowRow(item);
+  }
+  if (isKdsRingDefaultHostSeq(item.seq)) {
+    return renderModuleSettingKdsRingDefaultRow(item);
+  }
+  if (isKdsRingInstanceSeq(item.seq)) {
+    return renderModuleSettingKdsRingInstanceRow(item);
   }
   if (isPrintPageHeightSeq(item.seq)) {
     return renderModuleSettingPrintPageHeightRow(item);
@@ -8437,6 +8665,12 @@ function bindModuleSettingsToggles(): void {
       if (isComboSubitemRemarkSeq(seq)) {
         setComboSubitemRemarkPanelVisible(seq, next);
       }
+      if (isKdsPartialCompleteHostSeq(seq)) {
+        setKdsPartialFlowSelectEnabled(next);
+      }
+      if (isKdsSubitemFlowHostSeq(seq)) {
+        setKdsSubitemDisableMainClickVisible(next);
+      }
       if (isPosKitchenSendTriggerSeq(seq)) {
         setPosKitchenSendTriggerPanelVisible(seq, next);
       }
@@ -8673,15 +8907,21 @@ function renderModuleHubSettingsPage(path: string, pageTitle: string): string {
   const groups = groupCatalogItemsByCategory(items, catalogForGroups?.groupOrder);
   const countLabel = tf("moduleSettings.count", { count: String(items.length) });
   const kitchenSettings = isKitchenSettingsPath(path);
+  const kdsDisplaySettings = isKdsDisplaySettingsPath(path);
+  const kdsWorkflowSettings = isKdsWorkflowSettingsPath(path);
   const printSettings = isPrintSettingsPath(path);
   const sections = groups
     .map((group) => {
       const sectionId = moduleSettingsCategoryDomId(group.groupKey);
       const groupHintHtml = kitchenSettings
         ? renderKitchenSettingsGroupHintHtml(group.groupKey)
-        : printSettings
-          ? renderPrintSettingsGroupHintHtml(group.groupKey)
-          : "";
+        : kdsDisplaySettings
+          ? renderKdsDisplaySettingsGroupHintHtml(group.groupKey)
+          : kdsWorkflowSettings
+            ? renderKdsWorkflowSettingsGroupHintHtml(group.groupKey)
+            : printSettings
+              ? renderPrintSettingsGroupHintHtml(group.groupKey)
+              : "";
       const rows = group.items
         .map((item) => renderModuleSettingRow(item))
         .filter((html) => html.trim() !== "")
@@ -8704,9 +8944,13 @@ function renderModuleHubSettingsPage(path: string, pageTitle: string): string {
 
   const introHtml = kitchenSettings
     ? renderKitchenSettingsHubIntroHtml()
-    : printSettings
-      ? renderPrintSettingsHubIntroHtml()
-      : t("moduleSettings.intro");
+    : kdsDisplaySettings
+      ? renderKdsDisplaySettingsHubIntroHtml()
+      : kdsWorkflowSettings
+        ? renderKdsWorkflowSettingsHubIntroHtml()
+        : printSettings
+          ? renderPrintSettingsHubIntroHtml()
+          : t("moduleSettings.intro");
   const teamMigrationHtml =
     path === "/team/settings" ? renderTeamSettingsHubMigrationNoticeHtml() : "";
 
@@ -9999,6 +10243,7 @@ function mount(): void {
   bindPosOrderToolbarGroups();
   bindGuestFacingLocaleControls();
   bindKitchenTicketMarginControls();
+  bindKdsTerminalSettingsControls();
   bindStoreBusinessHoursControls();
   bindStoreBrandManagementControls();
   bindIngenicoBluIntegrationUi();

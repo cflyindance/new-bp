@@ -19,10 +19,16 @@ import {
   DELIVERY_SETTINGS_GROUP_ORDER,
   FINANCE_SETTINGS_GROUP_ORDER,
   FINANCE_SETTINGS_GROUP_NAV_SECTIONS,
+  LOCALE_DISPLAY_GROUP_ORDER,
+  DATA_BACKUP_GROUP_ORDER,
+  CONNECTIONS_GROUP_ORDER,
+  ADVANCED_GROUP_ORDER,
+  ADVANCED_GROUP_NAV_SECTIONS,
   INTRA_GROUP_SORT_BY_SEQ,
-  INTEGRATIONS_SETTINGS_GROUP_ORDER,
   NOTIFICATIONS_SETTINGS_GROUP_ORDER,
   KITCHEN_SETTINGS_GROUP_ORDER,
+  KDS_DISPLAY_SETTINGS_GROUP_ORDER,
+  KDS_WORKFLOW_SETTINGS_GROUP_ORDER,
   ORDER_SETTINGS_GROUP_ORDER,
   ORDER_SETTINGS_GROUP_NAV_SECTIONS,
   PROMOTION_SETTINGS_GROUP_ORDER,
@@ -39,6 +45,8 @@ const SETTINGS_GROUP_ORDER_BY_PATH = {
   "/operations/waitlist/settings": DELIVERY_SETTINGS_GROUP_ORDER,
   "/operations/queue-call/settings": FOH_SETTINGS_GROUP_ORDER,
   "/operations/kitchen-kds/settings": KITCHEN_SETTINGS_GROUP_ORDER,
+  "/operations/kitchen-kds/display": KDS_DISPLAY_SETTINGS_GROUP_ORDER,
+  "/operations/kitchen-kds/workflow": KDS_WORKFLOW_SETTINGS_GROUP_ORDER,
   "/orders/settings": ORDER_SETTINGS_GROUP_ORDER,
   "/transactions/settings": PAYMENT_SETTINGS_GROUP_ORDER,
   "/promotions/settings": PROMOTION_SETTINGS_GROUP_ORDER,
@@ -49,7 +57,10 @@ const SETTINGS_GROUP_ORDER_BY_PATH = {
   "/finance/settings": FINANCE_SETTINGS_GROUP_ORDER,
   "/print-templates/settings": PRINT_SETTINGS_GROUP_ORDER,
   "/device-management/settings": HARDWARE_SETTINGS_GROUP_ORDER,
-  "/settings/integrations": INTEGRATIONS_SETTINGS_GROUP_ORDER,
+  "/settings/locale-display": LOCALE_DISPLAY_GROUP_ORDER,
+  "/settings/data-backup": DATA_BACKUP_GROUP_ORDER,
+  "/settings/connections": CONNECTIONS_GROUP_ORDER,
+  "/settings/advanced": ADVANCED_GROUP_ORDER,
   "/notifications/settings": NOTIFICATIONS_SETTINGS_GROUP_ORDER,
   "/permissions/account-session": ["account-session-security"],
   "/permissions/store-security": ["store-security-policy"],
@@ -61,6 +72,7 @@ const SETTINGS_GROUP_NAV_SECTIONS_BY_PATH = {
   "/transactions/settings": PAYMENT_SETTINGS_GROUP_NAV_SECTIONS,
   "/finance/settings": FINANCE_SETTINGS_GROUP_NAV_SECTIONS,
   "/print-templates/settings": PRINT_SETTINGS_GROUP_NAV_SECTIONS,
+  "/settings/advanced": ADVANCED_GROUP_NAV_SECTIONS,
 };
 
 /** catalog 页头标题（可与一级导航模块名不同） */
@@ -68,6 +80,12 @@ const HUB_CATALOG_DISPLAY_TITLE_BY_PATH = {
   "/permissions/account-session": "账户与会话安全",
   "/permissions/store-security": "门店安全策略",
   "/device-management/settings": "硬件管理中心",
+  "/operations/kitchen-kds/display": "KDS 显示与交互",
+  "/operations/kitchen-kds/workflow": "KDS 出餐流程",
+  "/settings/locale-display": "系统设置",
+  "/settings/data-backup": "系统设置",
+  "/settings/connections": "系统设置",
+  "/settings/advanced": "系统设置",
 };
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -104,9 +122,9 @@ const HUB_SETTINGS_PATH = {
   消息中心: "/notifications/settings",
   库存管理中心: "/operations/inventory-ordering/settings",
   权限管理中心: "/permissions/account-session",
-  系统设置: "/settings/basic",
+  系统设置: "/settings/locale-display",
   主页: "/dashboard/settings",
-  平台业务中心: "/settings/integrations",
+  平台业务中心: "/settings/connections",
   供应链中心: "/operations/inventory-ordering/settings",
 };
 

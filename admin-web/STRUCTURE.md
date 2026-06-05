@@ -37,7 +37,7 @@ admin-web/
 | 菜单 | `/menu` | **侧栏**：门店菜单、门店商品、商品配方、门店调味、打印设置、**菜单多语言**、**税种管理**（主区内三级：`MENU_TAX_TYPES_SUBNAV`） |
 | 智能点餐 | `/ordering` | **侧栏**：点击「智能点餐」展开/收起二级（POS、POS GO、PayPad、扫码、eMenu、Kiosk、Online Order、餐厅网站、点餐限制规则）；**POS**、**PayPad**、**eMenu** 与 **Kiosk** 在主内容区均有左侧三级细项导航（见下节） |
 | 外卖平台对接 | `/ordering/delivery-platforms` | 独立一级导航（原隶属「智能点餐」二级） |
-| 后厨系统管理 | `/operations/kitchen-kds` | 侧栏滑层仅「设置」；`#/operations/kitchen-kds` 重定向至 `#/operations/kitchen-kds/settings` |
+| 后厨系统管理 | `/operations/kitchen-kds` | 侧栏滑层：**设置**（厨打 catalog）、**KDS 显示与交互**、**KDS 出餐流程**；`#/operations/kitchen-kds` 重定向至 `#/operations/kitchen-kds/settings` |
 | 客显系统管理 | `/operations/customer-display` | **不设顶部 Tab**；主内容区左侧三级 **`CUSTOMER_DISPLAY_SUBNAV`**：封面图、多语言、小费、签名、小票 |
 | 前厅管理中心 | `/operations/queue-call` | 滑层：餐位平面图、菜单下单限制、设置；`#/operations/queue-call` 重定向至餐位平面图 |
 | 预约系统管理 | `/operations/reservations` | 订座、预订 |

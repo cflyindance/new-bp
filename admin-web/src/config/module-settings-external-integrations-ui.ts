@@ -1,5 +1,5 @@
 /**
- * 平台业务中心 · 外部系统对接（78 同步云员工开关；79–81 链接/地址输入）。
+ * 系统设置 · 连接与服务 · 人力与排班（78 同步云员工开关；79–81 链接/地址输入）。
  */
 
 import { readModuleSettingText } from "./module-settings-form-ui";

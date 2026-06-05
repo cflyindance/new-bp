@@ -1,5 +1,5 @@
 /**
- * 系统设置 · 集成与 API · 线上订餐服务对接（seq 93、95–97、99–106）。
+ * 系统设置 · 连接与服务 · 线上订餐通道（seq 93、95–97、99–106）。
  */
 
 import { readModuleSettingNumber, readModuleSettingText } from "./module-settings-form-ui";

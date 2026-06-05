@@ -1,7 +1,9 @@
 import {
   buildPermissionModuleGroups,
-  flattenPermissionResources,
+  buildPermissionResourceIndex,
+  flattenPermissionTree,
   parsePermissionAccess,
+  resolveEffectiveGrant,
   type PermissionAccess,
 } from "../config/permission-registry";
 
@@ -10,7 +12,7 @@ export interface RbacRole {
   name: string;
   description: string;
   isSystem: boolean;
-  /** resourceKey → 页面级访问；操作级为 `${key}:create` 等 */
+  /** 稀疏 resourceKey → 显式覆盖；未设则继承父级 */
   grants: Record<string, PermissionAccess>;
   updatedAt: string;
 }
@@ -29,7 +31,8 @@ export interface PermissionChangeLogEntry {
   detail: string;
 }
 
-const STORAGE_KEY = "menusifu:rbac-v1";
+const STORAGE_KEY = "menusifu:rbac-v2";
+const LEGACY_STORAGE_KEY = "menusifu:rbac-v1";
 
 interface RbacStoreSnapshot {
   roles: RbacRole[];
@@ -37,34 +40,46 @@ interface RbacStoreSnapshot {
   changelog: PermissionChangeLogEntry[];
 }
 
-function defaultGrants(access: PermissionAccess): Record<string, PermissionAccess> {
+const resourceIndex = buildPermissionResourceIndex();
+
+function defaultSparseGrants(access: PermissionAccess): Record<string, PermissionAccess> {
   const grants: Record<string, PermissionAccess> = {};
-  for (const r of flattenPermissionResources()) {
-    grants[r.key] = access;
+  for (const g of buildPermissionModuleGroups()) {
+    grants[g.moduleKey] = access;
   }
   return grants;
 }
 
 function seedRoles(): RbacRole[] {
-  const all = defaultGrants("operate");
-  const cashier = defaultGrants("hidden");
-  const modulesCashier = [
-    "orders",
-    "transactions",
-    "queue-call",
-    "product-center-main",
-  ] as const;
-  for (const r of flattenPermissionResources()) {
-    if (modulesCashier.includes(r.moduleId as (typeof modulesCashier)[number])) {
-      if (r.featureId.includes("settings")) cashier[r.key] = "hidden";
-      else if (r.path.includes("refund") || r.path.includes("void")) cashier[r.key] = "view";
-      else cashier[r.key] = "operate";
+  const all = defaultSparseGrants("operate");
+  const flat = flattenPermissionTree();
+
+  const cashier = defaultSparseGrants("hidden");
+  const modulesCashier = ["orders", "transactions", "queue-call", "product-center-main"] as const;
+  for (const g of buildPermissionModuleGroups()) {
+    if (modulesCashier.includes(g.moduleId as (typeof modulesCashier)[number])) {
+      cashier[g.moduleKey] = "operate";
+    }
+  }
+  for (const r of flat) {
+    if (!modulesCashier.includes(r.moduleId as (typeof modulesCashier)[number])) continue;
+    if (r.level === 1) continue;
+    if (r.level === 2) {
+      if (r.path?.includes("settings") || r.featureId?.includes("settings")) {
+        cashier[r.key] = "hidden";
+      } else if (r.path?.includes("refund") || r.path?.includes("void")) {
+        cashier[r.key] = "view";
+      } else {
+        cashier[r.key] = "operate";
+      }
     }
   }
 
-  const manager = { ...defaultGrants("view") };
-  for (const r of flattenPermissionResources()) {
-    if (r.moduleId === "finance" || r.moduleId === "reports-finance") manager[r.key] = "operate";
+  const floorStaff: Record<string, PermissionAccess> = defaultSparseGrants("view");
+  for (const g of buildPermissionModuleGroups()) {
+    if (g.moduleId === "finance" || g.moduleId === "reports-finance") {
+      floorStaff[g.moduleKey] = "operate";
+    }
   }
 
   return [
@@ -79,7 +94,7 @@ function seedRoles(): RbacRole[] {
     {
       id: "cashier",
       name: "收银员",
-      description: "订单、支付、前厅点单；敏感设置仅查看或不可见",
+      description: "订单、支付、前厅点单；设置类入口不可见或仅查看",
       isSystem: true,
       grants: cashier,
       updatedAt: new Date().toISOString(),
@@ -87,9 +102,9 @@ function seedRoles(): RbacRole[] {
     {
       id: "floor-staff",
       name: "楼面",
-      description: "前厅与预约为主，默认仅查看报表",
+      description: "前厅与预约为主，财务模块可操作",
       isSystem: false,
-      grants: manager,
+      grants: floorStaff,
       updatedAt: new Date().toISOString(),
     },
   ];
@@ -103,6 +118,28 @@ function seedStaff(): StaffAssignment[] {
   ];
 }
 
+function migrateLegacySnapshot(legacy: RbacStoreSnapshot): RbacStoreSnapshot {
+  const flat = flattenPermissionTree();
+  const l2Keys = new Set(flat.filter((r) => r.level === 2).map((r) => r.key));
+
+  const roles = legacy.roles.map((role) => {
+    const grants: Record<string, PermissionAccess> = {};
+    for (const [key, access] of Object.entries(role.grants)) {
+      if (l2Keys.has(key)) grants[key] = parsePermissionAccess(access);
+    }
+    for (const g of buildPermissionModuleGroups()) {
+      const l2InModule = flat.filter((r) => r.moduleId === g.moduleId && r.level === 2);
+      const levels = l2InModule.map((r) => parsePermissionAccess(role.grants[r.key]));
+      if (levels.some((a) => a === "operate")) grants[g.moduleKey] = "operate";
+      else if (levels.some((a) => a === "view")) grants[g.moduleKey] = "view";
+      else grants[g.moduleKey] = "hidden";
+    }
+    return { ...role, grants };
+  });
+
+  return { ...legacy, roles };
+}
+
 function loadSnapshot(): RbacStoreSnapshot {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -113,6 +150,21 @@ function loadSnapshot(): RbacStoreSnapshot {
   } catch {
     /* ignore */
   }
+
+  try {
+    const legacyRaw = localStorage.getItem(LEGACY_STORAGE_KEY);
+    if (legacyRaw) {
+      const legacy = JSON.parse(legacyRaw) as RbacStoreSnapshot;
+      if (legacy.roles?.length) {
+        const migrated = migrateLegacySnapshot(legacy);
+        saveRbacSnapshot(migrated);
+        return migrated;
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+
   return {
     roles: seedRoles(),
     staff: seedStaff(),
@@ -122,7 +174,7 @@ function loadSnapshot(): RbacStoreSnapshot {
         at: "2026-06-01T10:00:00",
         actor: "系统",
         action: "初始化",
-        detail: "预置角色：店长、收银员、楼面",
+        detail: "预置角色：店长、收银员、楼面（四级权限树 v2）",
       },
     ],
   };
@@ -212,12 +264,21 @@ export function mergeRoleGrants(
   return { ...base, [key]: parsePermissionAccess(access) };
 }
 
+export function removeRoleGrant(
+  base: Record<string, PermissionAccess>,
+  key: string,
+): Record<string, PermissionAccess> {
+  const next = { ...base };
+  delete next[key];
+  return next;
+}
+
 export function countRoleStats(role: RbacRole): { operate: number; view: number; hidden: number } {
   let operate = 0;
   let view = 0;
   let hidden = 0;
-  for (const r of flattenPermissionResources()) {
-    const a = parsePermissionAccess(role.grants[r.key]);
+  for (const key of resourceIndex.byKey.keys()) {
+    const a = resolveEffectiveGrant(role.grants, key, resourceIndex);
     if (a === "operate") operate++;
     else if (a === "view") view++;
     else hidden++;
@@ -227,4 +288,15 @@ export function countRoleStats(role: RbacRole): { operate: number; view: number;
 
 export function getModuleGroups() {
   return buildPermissionModuleGroups();
+}
+
+export function getPermissionIndex() {
+  return resourceIndex;
+}
+
+export function getEffectiveGrant(
+  grants: Record<string, PermissionAccess>,
+  key: string,
+): PermissionAccess {
+  return resolveEffectiveGrant(grants, key, resourceIndex);
 }

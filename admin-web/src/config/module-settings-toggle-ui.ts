@@ -158,6 +158,11 @@ export const FOH_KITCHEN_LINE_EDIT_TOGGLE_SEQ: readonly number[] = [141];
 /** 后厨 · 删单向厨房通知（155，自订单中心迁入） */
 export const KITCHEN_VOID_NOTIFY_TOGGLE_SEQ: readonly number[] = [155];
 
+/** 后厨 · KDS 终端（简单开关；715/717 宿主行、718 嵌套见 kds-terminal-ui） */
+export const KDS_TERMINAL_SIMPLE_TOGGLE_SEQ: readonly number[] = [
+  704, 705, 706, 710, 711, 715, 717, 718,
+];
+
 /** 促销 · 子单促销自动重算（150，自订单中心迁入） */
 export const PROMO_SPLIT_ORDER_RECALC_TOGGLE_SEQ: readonly number[] = [150];
 
@@ -290,10 +295,10 @@ export const TEAM_CLOCK_LOGOUT_TOGGLE_SEQ: readonly number[] = [68, 69];
 /** 平台业务 · 外部系统对接（79–81 链接输入见 external-integrations-ui） */
 export const EXTERNAL_INTEGRATIONS_TOGGLE_SEQ: readonly number[] = [78];
 
-/** 系统设置 · 界面与操作偏好 */
+/** 系统设置 · 区域与显示 · 日期与时间 */
 export const UI_OPERATION_PREFERENCES_TOGGLE_SEQ: readonly number[] = [168];
 
-/** 系统设置 · 地址与地图服务 */
+/** 外卖/来取 · 外送地址与地图 */
 export const MAP_ADDRESS_SERVICES_TOGGLE_SEQ: readonly number[] = [182, 183];
 
 /** @deprecated 使用 STORE_HOURS_OPERATION_TOGGLE_SEQ */
@@ -312,6 +317,7 @@ export const MODULE_SETTING_TOGGLE_SEQ = new Set([
   ...ORDER_SPLIT_MERGE_EDIT_TOGGLE_SEQ,
   ...FOH_KITCHEN_LINE_EDIT_TOGGLE_SEQ,
   ...KITCHEN_VOID_NOTIFY_TOGGLE_SEQ,
+  ...KDS_TERMINAL_SIMPLE_TOGGLE_SEQ,
   ...PROMO_SPLIT_ORDER_RECALC_TOGGLE_SEQ,
   ...ORDER_VOID_TOGGLE_SEQ,
   ...ORDER_DISCOUNT_TOGGLE_SEQ,
