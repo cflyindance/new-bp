@@ -89,20 +89,6 @@ const WAIT_TIME_FORM_ROWS: ModuleSettingFormRowConfig[] = [
   },
 ];
 
-/** 食客端·菜单结构 · 菜单展示位置（517）：侧边 / 顶部 */
-const GUEST_MENU_STRUCTURE_FORM_ROWS: ModuleSettingFormRowConfig[] = [
-  {
-    seq: 517,
-    kind: "radio-group",
-    radioFieldId: "517-menu-nav-position",
-    radioDefault: "top",
-    radios: [
-      { value: "side", label: "侧边展示" },
-      { value: "top", label: "顶部展示" },
-    ],
-  },
-];
-
 /** POS 菜单与布局 · 类展示 / 菜展示（217 / 218） */
 const POS_MENU_UI_FORM_ROWS: ModuleSettingFormRowConfig[] = [
   {
@@ -185,7 +171,6 @@ const TEAM_PAYROLL_TIP_FORM_ROWS: ModuleSettingFormRowConfig[] = [
 
 const MODULE_SETTING_FORM_ROWS: ModuleSettingFormRowConfig[] = [
   ...WAIT_TIME_FORM_ROWS,
-  ...GUEST_MENU_STRUCTURE_FORM_ROWS,
   ...POS_MENU_UI_FORM_ROWS,
   ...TEAM_TIME_ATTENDANCE_FORM_ROWS,
   ...TEAM_PAYROLL_TIP_FORM_ROWS,

@@ -1,6 +1,6 @@
 /**
- * 将权限管理中心「账户与会话安全」分组写入 docs/项目文档/配置归类-分组映射.csv
- * POS/iPad 操作门禁（345/346/349/646）已迁前厅；369/426 在 RBAC。
+ * 将权限管理中心分组写入 docs/项目文档/配置归类-分组映射.csv
+ * 349 企台点只读菜 → store-security-policy；345/346/646 仍在前厅；369/426 在 RBAC。
  * 运行：node scripts/apply-permissions-settings-mapping.mjs
  */
 import fs from "node:fs";
@@ -17,10 +17,12 @@ const mappingPath = [projectDocs, repoDocs]
 
 const titles = {
   "account-session-security": "账户与会话安全",
+  "store-security-policy": "门店安全策略",
 };
 
 const assignMap = {
   "account-session-security": [75, 166, 175],
+  "store-security-policy": [349],
 };
 
 const permAssign = new Map();

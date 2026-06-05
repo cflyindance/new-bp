@@ -22,7 +22,7 @@ export const FINANCE_REGISTER_AUDIT_PAGES = [
     title: "钱箱登入退出记录",
     titleEn: "Cash drawer session log",
     sceneDesc:
-      "查看收银员开启、关闭钱箱（登入/退出）的操作记录，用于现金内控审计。钱箱容差规则见设置 · 钱箱与现金平账。",
+      "查看收银员开启、关闭钱箱（登入/退出）的操作记录，用于现金内控审计。钱箱容差规则见设置 · 钱箱备款与平账。",
   },
 ] as const;
 

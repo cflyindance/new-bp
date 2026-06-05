@@ -73,6 +73,8 @@ export const SETTINGS_CATALOG_EXCLUDED_BY_SEQ = new Map([
   [252, "订单收据小费行打印时机与 seq 266「收据打印建议小费」能力重叠，支付中心小费政策 catalog 不再单独展示"],
   [31, "已并入 seq 487「选择订单类型」（Kiosk 与服务设置订单类型 SSOT）"],
   [649, "由 seq 648「开启海报」宿主行内子卡片渲染（展示海报按钮）"],
+  [531, "已并入 seq 530「品牌页作为首页」；原「品牌设置」与「品牌页作为首页」合并为单开关 + Kiosk/eMenu/SDI 产线多选"],
+  [551, "屏保已在 /marketing/screensaver 功能页维护，不在主页设置滑层重复展示"],
   [553, "海报 Pro 已在 /marketing/poster-pro 功能页维护，不在设置滑层重复展示"],
   [557, "广告已在 /marketing/ads 功能页维护，不在设置滑层重复展示"],
   [648, "投放位与触发规则已在 /marketing/ads 功能页维护，不在设置滑层重复展示"],
@@ -134,8 +136,25 @@ export const SETTINGS_CATALOG_EXCLUDED_BY_SEQ = new Map([
   [395, "全局默认设备绑定在硬件中心「设置 · 全局设置」（virtual catalog）；不在终版 hub 循环重复展示"],
   [
     566,
-    "菜单下单限制规则主档在前厅 · /operations/queue-call/menu-order-limits（order-limit 设计器）；权限 595/596 为全局授权开关",
+    "菜单下单限制规则主档在前厅 · /operations/queue-call/menu-order-limits（order-limit 设计器）",
   ],
+  [
+    597,
+    "每轮菜品互斥下单已迁前厅 · /operations/queue-call/menu-order-limits/mutex",
+  ],
+  [
+    598,
+    "每轮菜品组合下单已迁前厅 · /operations/queue-call/menu-order-limits/combo",
+  ],
+  [588, "订单下单时间间隔已迁前厅 · /operations/queue-call/menu-order-limits/interval"],
+  [589, "订单间隔内加购已迁前厅 · /operations/queue-call/menu-order-limits/interval"],
+  [590, "菜品下单时间间隔已迁前厅 · /operations/queue-call/menu-order-limits/interval"],
+  [591, "菜品间隔内加购已迁前厅 · /operations/queue-call/menu-order-limits/interval"],
+  [646, "命中任意规则后弹授权已迁前厅 · /operations/queue-call/menu-order-limits/auth"],
+  [595, "可看不可点加购已迁前厅 · /operations/queue-call/menu-order-limits/auth"],
+  [596, "可看不可点弹授权已迁前厅 · /operations/queue-call/menu-order-limits/auth"],
+  [594, "积分菜授权已迁前厅 · /operations/queue-call/menu-order-limits/points"],
+  [527, "纯积分单兑换已迁前厅 · /operations/queue-call/menu-order-limits/points"],
   [
     563,
     "用餐时长限制（设备/桌）已在菜单下单限制设计器维护，不在食客下单限流重复展示",
@@ -178,6 +197,26 @@ export const SETTINGS_CATALOG_EXCLUDED_BY_SEQ = new Map([
   ],
   [369, "允许开钱箱的员工：由 RBAC 角色矩阵 + 员工授权（/permissions/roles、/staff）表达，非账户与会话安全 catalog"],
   [426, "门店角色主数据 SSOT：/permissions/roles；不在「账户与会话安全」catalog 重复"],
+  [
+    336,
+    "顾客短信文案已迁至消息中心「消息模板」+「消息配置」；设置滑层仅保留产线发送开关（334/335）",
+  ],
+  [
+    337,
+    "顾客短信文案已迁至消息中心「消息模板」+「消息配置」；设置滑层仅保留产线发送开关（334/335）",
+  ],
+  [
+    338,
+    "顾客短信文案已迁至消息中心「消息模板」+「消息配置」；设置滑层仅保留产线发送开关（334/335）",
+  ],
+  [
+    339,
+    "顾客短信文案已迁至消息中心「消息模板」+「消息配置」；设置滑层仅保留产线发送开关（334/335）",
+  ],
+  [
+    340,
+    "顾客短信文案已迁至消息中心「消息模板」+「消息配置」；设置滑层仅保留产线发送开关（334/335）",
+  ],
 ]);
 
 /** 不设「设置」滑层 catalog 的一级导航（能力已在业务/硬件子模块维护） */

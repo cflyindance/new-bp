@@ -103,6 +103,17 @@ export const SETTINGS_CATALOG_VIRTUAL_ITEMS = [
     feature: "（未填写）",
   },
   {
+    settingsPath: "/operations/queue-call/settings",
+    seq: 673,
+    groupKey: "foh-wait-time-display",
+    groupTitle: "预计等待时长展示",
+    title: "预计等待时长计算设置",
+    sceneDesc:
+      "全店统一的排队杯数→预计等待时长换算规则；各产线展示开关、区间与样式均依据本设置计算。",
+    moduleName: "等待时长",
+    feature: "（未填写）",
+  },
+  {
     settingsPath: "/device-management/settings",
     seq: 395,
     groupKey: "global-default-devices",

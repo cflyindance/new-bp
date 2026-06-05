@@ -7,7 +7,10 @@ import {
   DELETE_CARD_RECEIPT_PRINT_TOGGLE_SEQS,
   PAYMENT_RECEIPT_FLOW_TOGGLE_SEQS,
 } from "./module-settings-payment-receipt-flow-ui";
-import { TABLESIDE_SERVICE_CALL_TOGGLE_SEQS } from "./module-settings-tableside-service-call-ui";
+import {
+  TABLESIDE_SERVICE_CALL_COOLDOWN_SEQ,
+  TABLESIDE_SERVICE_CALL_TOGGLE_SEQS,
+} from "./module-settings-tableside-service-call-ui";
 import { DELIVERY_PLATFORM_SLIPS_TOGGLE_SEQS } from "./module-settings-delivery-platform-slips-ui";
 import { PAYMENT_TAX_POLICY_TOGGLE_SEQS } from "./module-settings-payment-tax-rules-ui";
 import { TIP_RECEIPT_SUGGESTION_TOGGLE_SEQS } from "./module-settings-payment-tip-policy-ui";
@@ -109,7 +112,7 @@ export const ORDER_REMARK_TOGGLE_SEQ: readonly number[] = [521];
 /** 前厅 · 商品备注（522 按产线选商品见 product-remark-ui） */
 export const PRODUCT_REMARK_TOGGLE_SEQ: readonly number[] = [522];
 
-/** 前厅 · 收据小票确认签名栏（94 按产线见 receipt-signature-line-ui） */
+/** 打印中心 · 支付收据流程 · 收据确认签名栏（94 按产线见 receipt-signature-line-ui） */
 export const RECEIPT_SIGNATURE_LINE_TOGGLE_SEQ: readonly number[] = [94];
 
 /** 前厅 · 套餐子项备注（523 按产线见 combo-subitem-remark-lines-ui） */
@@ -127,30 +130,39 @@ export const KITCHEN_TICKET_GROUPING_TOGGLE_SEQ: readonly number[] = [54, 40, 47
 /** 后厨 · 行级合并矩阵（含打包单 301/302、食客收据 287/288，由矩阵内开关控制） */
 export const KITCHEN_LINE_MERGE_MATRIX_TOGGLE_SEQ: readonly number[] = [52, 53, 287, 288, 301, 302];
 
-/** 后厨 · 厨房单·票面信息（271 主开关+票种多选见 module-settings-print-dish-code-ui） */
+/** 后厨 · 厨房单显示什么（仅厨房单；271/258 见 cross-ticket-fields） */
 export const KITCHEN_TICKET_FIELDS_TOGGLE_SEQ: readonly number[] = [
   35, 42, 45, 46, 48, 49, 50, 55, 56, 57, 58,
 ];
 
-/** 后厨 · 打印菜品编号按票种（271） */
+/** 后厨 · 跨票种显示 · 打印菜品编号（271） */
 export const KITCHEN_PRINT_DISH_CODE_TOGGLE_SEQ: readonly number[] = [271];
 
-/** 后厨 · 外带订单增强显示按票种（258） */
+/** 后厨 · 跨票种显示 · 外带订单增强显示（258） */
 export const KITCHEN_TAKEOUT_ENHANCED_DISPLAY_TOGGLE_SEQ: readonly number[] = [258];
 
-/** 后厨 · 厨房单·版式格式（43+44 合并为边距输入+范围下拉，见 module-settings-kitchen-ticket-margin-ui） */
+/** 后厨 · 厨房单样式（43+44 合并为边距输入+范围下拉，见 module-settings-kitchen-ticket-margin-ui） */
 export const KITCHEN_TICKET_FORMAT_TOGGLE_SEQ: readonly number[] = [38, 41, 33, 59, 60];
 
 /** 后厨 · 打包单（seq 39 为订单类型多选，见 module-settings-packing-slip-order-type-ui） */
 export const KITCHEN_PACKING_SLIP_TOGGLE_SEQ: readonly number[] = [298, 299, 300];
 
-/** 订单 · 分单合单与改单 */
+/** 订单 · 改单与分合单（141/150 已迁前厅、促销中心） */
 export const ORDER_SPLIT_MERGE_EDIT_TOGGLE_SEQ: readonly number[] = [
-  115, 116, 117, 119, 124, 140, 141, 150,
+  115, 116, 117, 119, 124, 140,
 ];
 
-/** 订单 · 删退与作废（seq 156 订单失效原因多选，见 module-settings-order-void-ui） */
-export const ORDER_VOID_TOGGLE_SEQ: readonly number[] = [155, 157, 158, 159];
+/** 前厅 · 送厨后改调味（141，自订单中心迁入） */
+export const FOH_KITCHEN_LINE_EDIT_TOGGLE_SEQ: readonly number[] = [141];
+
+/** 后厨 · 删单向厨房通知（155，自订单中心迁入） */
+export const KITCHEN_VOID_NOTIFY_TOGGLE_SEQ: readonly number[] = [155];
+
+/** 促销 · 子单促销自动重算（150，自订单中心迁入） */
+export const PROMO_SPLIT_ORDER_RECALC_TOGGLE_SEQ: readonly number[] = [150];
+
+/** 订单 · 删单与退款（156 原因多选见 order-void-ui；155 已迁后厨） */
+export const ORDER_VOID_TOGGLE_SEQ: readonly number[] = [157, 158, 159];
 
 /** 前厅 · POS 结账入口（原订单中心 checkout-entry 迁入） */
 export const POS_CHECKOUT_ENTRY_TOGGLE_SEQ: readonly number[] = [248, 221];
@@ -164,16 +176,16 @@ export const ORDER_SURCHARGE_TOGGLE_SEQ: readonly number[] = [149, 161];
 /** 门店 · 营业与运营（seq 170 单选、418 营业时段见各自 UI 模块） */
 export const STORE_HOURS_OPERATION_TOGGLE_SEQ: readonly number[] = [77, 582];
 
-/** 支付中心 · 税务规则（445 税率输入、143 折前/折后单选；开关见 payment-tax-rules-ui） */
+/** 支付中心 · 税务计算（445 税率输入、143 折前/折后单选；开关见 payment-tax-rules-ui） */
 export const PAYMENT_TAX_POLICY_TOGGLE_SEQ = PAYMENT_TAX_POLICY_TOGGLE_SEQS;
 
-/** 支付中心 · 小费政策（293/294/253/244 开关；232 开关+比例面板见 tip-policy-ui） */
+/** 支付中心 · 小费（293/294/253/244 开关；232 开关+比例面板见 tip-policy-ui） */
 export const PAYMENT_TIP_POLICY_TOGGLE_SEQ: readonly number[] = [293, 294, 253, 244];
 
 /** 支付中心 · 小费异常提醒（232 开关 + 开启后比例输入） */
 export const PAYMENT_TIP_ALERT_RATIO_TOGGLE_SEQ: readonly number[] = [232];
 
-/** 支付中心 · BATCH（239/240 开关；238/230/236/235 见 batch-settlement-ui） */
+/** 支付中心 · 卡交易 Batch（239/240 开关；238/230/236/235 见 batch-settlement-ui） */
 export const PAYMENT_BATCH_TOGGLE_SEQ: readonly number[] = [239, 240];
 
 /** 外卖/来取 · 扫码·线上下单基础 */
@@ -263,14 +275,17 @@ export const WAITLIST_QUEUE_RULES_TOGGLE_SEQ: readonly number[] = [12];
 /** 预约等位 · 预约提醒与自动化（341 小时输入见 reservation-automation-ui） */
 export const RESERVATION_AUTOMATION_TOGGLE_SEQ: readonly number[] = [342];
 
-/** 财务 · 日结与结算（171 主开关；65/330 现金班结见 daily-close-settlement-ui） */
+/** 财务 · 现金日结与班结（171 主开关；65/330 见 daily-close-settlement-ui） */
 export const DAILY_CLOSE_SETTLEMENT_TOGGLE_SEQ: readonly number[] = [171, 65, 330];
 
-/** 财务 · 钱箱与现金平账（63/76 数值；181 开关见 cash-drawer-reconciliation-ui） */
+/** 财务 · 钱箱备款与平账（63/76 数值；181 开关见 cash-drawer-reconciliation-ui） */
 export const CASH_DRAWER_RECONCILIATION_TOGGLE_SEQ: readonly number[] = [181];
 
 /** 团队 · 考勤 Batch 门禁 */
 export const TEAM_BATCH_ATTENDANCE_TOGGLE_SEQ: readonly number[] = [241];
+
+/** 团队 · 登出/企台登出条件（迁员工打卡页） */
+export const TEAM_CLOCK_LOGOUT_TOGGLE_SEQ: readonly number[] = [68, 69];
 
 /** 平台业务 · 外部系统对接（79–81 链接输入见 external-integrations-ui） */
 export const EXTERNAL_INTEGRATIONS_TOGGLE_SEQ: readonly number[] = [78];
@@ -295,6 +310,9 @@ export const MODULE_SETTING_TOGGLE_SEQ = new Set([
   ...POS_COMBO_ORDERING_TOGGLE_SEQ,
   ...POS_CHECKOUT_ENTRY_TOGGLE_SEQ,
   ...ORDER_SPLIT_MERGE_EDIT_TOGGLE_SEQ,
+  ...FOH_KITCHEN_LINE_EDIT_TOGGLE_SEQ,
+  ...KITCHEN_VOID_NOTIFY_TOGGLE_SEQ,
+  ...PROMO_SPLIT_ORDER_RECALC_TOGGLE_SEQ,
   ...ORDER_VOID_TOGGLE_SEQ,
   ...ORDER_DISCOUNT_TOGGLE_SEQ,
   ...ORDER_SURCHARGE_TOGGLE_SEQ,
@@ -351,14 +369,21 @@ export const MODULE_SETTING_TOGGLE_SEQ = new Set([
   ...PACKING_SLIP_VOID_STYLE_TOGGLE_SEQS,
   ...TABLESIDE_SERVICE_CALL_TOGGLE_SEQS,
   ...TEAM_BATCH_ATTENDANCE_TOGGLE_SEQ,
+  ...TEAM_CLOCK_LOGOUT_TOGGLE_SEQ,
   ...EXTERNAL_INTEGRATIONS_TOGGLE_SEQ,
   ...UI_OPERATION_PREFERENCES_TOGGLE_SEQ,
   ...MAP_ADDRESS_SERVICES_TOGGLE_SEQ,
-  535, 536, 570, 597, 598,
+  /** 535/536 排队与等待展示（Kiosk 产线多选，见 wait-time-display-ui） */
+  535, 536,
+  570,
+  /** 597/598 每轮菜品互斥/组合：UI 在 menu-order-limits 业务页，见 foh-menu-order-limits-ui */
+  597, 598,
   /** 食客端·购物车展示 616–618（产线 eMenu/SDI，见 guest-menu-cart-ui） */
   616, 617, 618,
   73, 74, 118, 176, 177, 216, 219, 220, 348, 350,
-  515, 516, 518, 519, 520, 524, 528,
+  /** 食客端·菜单结构 515–520、524、528（产线多选，见 guest-menu-structure-ui） */
+  515, 516, 517, 518, 519, 520, 524, 528,
+  /** 530 品牌页作为首页（合并原 531；Kiosk/eMenu/SDI 产线多选） */
   530,
   /** 532 展示 MenuSifu 品牌 LOGO（Kiosk/eMenu，见 menusifu-brand-logo-ui） */
   532,
@@ -405,7 +430,27 @@ export function moduleSettingToggleStorageKey(seq: number): string {
   return `bplant-module-setting-toggle:${seq}`;
 }
 
-/** 默认开启展示 */
+/** 默认开启展示（640 呼叫间隔默认关，见 tableside-service-call-ui 迁移） */
 export function getDefaultModuleSettingToggleOn(seq: number): boolean {
+  if (seq === TABLESIDE_SERVICE_CALL_COOLDOWN_SEQ) return false;
+  if (seq === 74) return false;
   return MODULE_SETTING_TOGGLE_SEQ.has(seq);
+}
+
+export function readModuleSettingToggleOn(seq: number): boolean {
+  try {
+    const raw = localStorage.getItem(moduleSettingToggleStorageKey(seq));
+    if (raw === null) return getDefaultModuleSettingToggleOn(seq);
+    return raw === "1";
+  } catch {
+    return getDefaultModuleSettingToggleOn(seq);
+  }
+}
+
+export function writeModuleSettingToggleOn(seq: number, on: boolean): void {
+  try {
+    localStorage.setItem(moduleSettingToggleStorageKey(seq), on ? "1" : "0");
+  } catch {
+    /* ignore quota */
+  }
 }

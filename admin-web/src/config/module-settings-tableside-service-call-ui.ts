@@ -4,6 +4,7 @@
 
 import { MODULE_SETTING_CHOICE_CONTROL_CLASS } from "./module-settings-choice-ui";
 import {
+  moduleSettingStorageKey,
   readModuleSettingCheckbox,
   readModuleSettingJson,
   readModuleSettingNumber,
@@ -34,6 +35,7 @@ export type TablesideServiceRequestTypeCode =
 export const TABLESIDE_SERVICE_CALL_TOGGLE_SEQS: readonly number[] = [
   TABLESIDE_SERVICE_CALL_MASTER_SEQ,
   TABLESIDE_SERVICE_CALL_BEFORE_ORDER_SEQ,
+  TABLESIDE_SERVICE_CALL_COOLDOWN_SEQ,
 ];
 
 export const TABLESIDE_SERVICE_CALL_PRODUCT_LINES = [
@@ -392,9 +394,33 @@ function linesStorageId(seq: number): string | null {
   return TABLESIDE_SERVICE_CALL_LINES_STORAGE_IDS[seq];
 }
 
+function hasStoredServiceCallCooldownSeconds(): boolean {
+  try {
+    return localStorage.getItem(moduleSettingStorageKey(TABLESIDE_SERVICE_CALL_COOLDOWN_FIELD_ID)) !== null;
+  } catch {
+    return false;
+  }
+}
+
 export function ensureTablesideServiceCallToggleMigrated(seq: number): void {
   if (toggleMigratedSeqs.has(seq)) return;
   toggleMigratedSeqs.add(seq);
+
+  if (seq === TABLESIDE_SERVICE_CALL_COOLDOWN_SEQ) {
+    try {
+      if (localStorage.getItem(moduleSettingToggleStorageKey(seq)) !== null) return;
+    } catch {
+      return;
+    }
+    const shouldOn = hasStoredServiceCallCooldownSeconds() || readLegacyToggleOn(seq);
+    try {
+      localStorage.setItem(moduleSettingToggleStorageKey(seq), shouldOn ? "1" : "0");
+    } catch {
+      /* ignore */
+    }
+    return;
+  }
+
   if (!isTablesideServiceCallLinesSeq(seq)) return;
   try {
     if (localStorage.getItem(moduleSettingToggleStorageKey(seq)) !== null) return;
@@ -629,25 +655,54 @@ export function readServiceCallCooldownSeconds(): number {
   return Math.min(COOLDOWN_MAX, Math.max(COOLDOWN_MIN, Math.round(stored)));
 }
 
-export function renderServiceCallCooldownControl(): string {
+export function renderServiceCallCooldownControl(enabled = true): string {
   const value = readServiceCallCooldownSeconds();
   return `
-    <div class="flex flex-col items-end gap-1">
-      <div class="flex flex-wrap items-center justify-end gap-2">
-        <input
-          type="number"
-          inputmode="numeric"
-          class="${NUMBER_INPUT_CLASS}"
-          value="${escapeHtml(String(value))}"
-          min="${COOLDOWN_MIN}"
-          max="${COOLDOWN_MAX}"
-          step="1"
-          data-module-setting-number="${escapeHtml(TABLESIDE_SERVICE_CALL_COOLDOWN_FIELD_ID)}"
-          aria-label="呼叫服务员重复间隔"
-        />
-        <span class="text-sm text-muted-foreground">秒</span>
-      </div>
-      <span class="text-xs text-muted-foreground">${COOLDOWN_MIN}–${COOLDOWN_MAX} 秒，0 表示不限制</span>
+    <div class="flex flex-wrap items-center gap-2">
+      <span class="text-sm text-muted-foreground">最小间隔</span>
+      <input
+        type="number"
+        inputmode="numeric"
+        class="${NUMBER_INPUT_CLASS}"
+        value="${escapeHtml(String(value))}"
+        min="${COOLDOWN_MIN}"
+        max="${COOLDOWN_MAX}"
+        step="1"
+        data-module-setting-number="${escapeHtml(TABLESIDE_SERVICE_CALL_COOLDOWN_FIELD_ID)}"
+        ${enabled ? "" : "disabled"}
+        aria-label="呼叫服务员重复间隔"
+      />
+      <span class="text-sm text-muted-foreground">秒</span>
+      <span class="text-xs text-muted-foreground">（${COOLDOWN_MIN}–${COOLDOWN_MAX}，0 表示不限制）</span>
     </div>`;
+}
+
+export function renderServiceCallCooldownPanelHtml(on: boolean): string {
+  const hidden = on ? "" : "hidden";
+  return `
+    <div
+      class="mt-3 ${hidden}"
+      data-service-call-cooldown-panel="${TABLESIDE_SERVICE_CALL_COOLDOWN_SEQ}"
+      ${on ? "" : 'aria-hidden="true"'}
+    >
+      <p class="m-0 mb-2 text-xs font-medium text-muted-foreground">时间间隔</p>
+      ${renderServiceCallCooldownControl(on)}
+    </div>`;
+}
+
+export function setServiceCallCooldownPanelVisible(visible: boolean): void {
+  document
+    .querySelectorAll<HTMLElement>(
+      `[data-service-call-cooldown-panel="${TABLESIDE_SERVICE_CALL_COOLDOWN_SEQ}"]`,
+    )
+    .forEach((panel) => {
+      panel.classList.toggle("hidden", !visible);
+      if (visible) panel.removeAttribute("aria-hidden");
+      else panel.setAttribute("aria-hidden", "true");
+
+      panel.querySelectorAll<HTMLInputElement>("[data-module-setting-number]").forEach((input) => {
+        input.disabled = !visible;
+      });
+    });
 }
 

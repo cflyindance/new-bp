@@ -1,6 +1,6 @@
 /**
  * 将消息中心分组写入 docs/项目文档/配置归类-分组映射.csv
- * v1.1：订单触达拆为「店内员工订单提醒」与「顾客短信与取餐通知」；桌边呼叫在前厅。
+ * v1.2（方案 A）：分组重命名为「员工端通知总控 / 员工订单消息 / 顾客短信」；顾客短信组内四象限排序。
  * 运行：node admin-web/scripts/apply-notifications-settings-mapping.mjs
  */
 import fs from "node:fs";
@@ -16,15 +16,15 @@ const mappingPath = [projectDocs, repoDocs]
   .find((p) => fs.existsSync(p));
 
 const titles = {
-  "notification-basics": "通知基础与渠道",
-  "staff-order-alerts": "店内员工订单提醒",
-  "customer-order-sms": "顾客短信与取餐通知",
+  "notification-basics": "员工端通知总控",
+  "staff-order-alerts": "员工订单消息",
+  "customer-order-sms": "顾客短信渠道",
 };
 
 const assignMap = {
   "notification-basics": [331, 332],
   "staff-order-alerts": [638, 639, 637],
-  "customer-order-sms": [334, 335, 336, 337, 338, 339, 340],
+  "customer-order-sms": [334, 335],
 };
 
 const notifAssign = new Map();

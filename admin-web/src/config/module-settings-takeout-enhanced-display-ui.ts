@@ -1,5 +1,5 @@
 /**
- * 后厨 · 厨房单·版式格式：seq 258 外带订单增强显示（主开关 + 打包单/订单收据/厨房单多选）。
+ * 后厨 · 跨票种显示：seq 258 外带订单增强显示（主开关 + 打包单/订单收据/厨房单多选）。
  */
 
 import { readModuleSettingJson, writeModuleSettingJson } from "./module-settings-form-ui";

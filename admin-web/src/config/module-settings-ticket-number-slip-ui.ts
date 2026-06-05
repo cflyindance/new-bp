@@ -1,5 +1,5 @@
 /**
- * 打印中心 · 单号小票（291 触发场景多选；292 打印份数输入）。
+ * 打印中心 · 取餐号小票（291 触发场景多选；292 打印份数输入）。
  */
 
 import { MODULE_SETTING_CHOICE_CONTROL_CLASS } from "./module-settings-choice-ui";
@@ -19,10 +19,10 @@ const NUMBER_INPUT_CLASS =
   "h-8 w-24 rounded-md border border-input bg-background px-2 text-right text-sm tabular-nums text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 export const TICKET_NUMBER_SLIP_TRIGGER_OPTIONS = [
-  { code: "paid", label: "Paid" },
-  { code: "receipt-printed", label: "Receipt printed" },
-  { code: "sent-to-kitchen", label: "Sent to kitchen" },
-  { code: "create-new-order", label: "Create New Order" },
+  { code: "paid", label: "付款完成" },
+  { code: "receipt-printed", label: "收据已打印" },
+  { code: "sent-to-kitchen", label: "送厨后" },
+  { code: "create-new-order", label: "新建订单" },
 ] as const;
 
 export type TicketNumberSlipTriggerCode =

@@ -1,5 +1,6 @@
 /**
- * 消息中心 · 订单与取餐通知（334/335 短信渠道产线多选；336–340 文案输入）。
+ * 消息中心 · 顾客短信渠道（334/335 产线多选）。
+ * 文案与场景关联见消息模板 + 消息配置；336–340 已从设置 catalog 排除。
  */
 
 import { MODULE_SETTING_CHOICE_CONTROL_CLASS } from "./module-settings-choice-ui";
@@ -96,6 +97,17 @@ export function orderPickupSmsContentFieldId(seq: number): string {
 
 export function isOrderPickupSmsContentSeq(seq: number): boolean {
   return (ORDER_PICKUP_SMS_CONTENT_SEQS as readonly number[]).includes(seq);
+}
+
+/** 顾客短信组内小节标题（方案 A：渠道 → 下单确认 → 出餐取餐） */
+export function renderOrderPickupSmsSectionHeaderHtml(seq: number): string {
+  if (seq === ORDER_PICKUP_SMS_ASAP_NON_DELIVERY_SEQ) {
+    return `<p class="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">下单确认文案</p>`;
+  }
+  if (seq === ORDER_PICKUP_SMS_READY_SEQ) {
+    return `<p class="mb-2 mt-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">出餐取餐文案</p>`;
+  }
+  return "";
 }
 
 export function readOrderPickupSmsContent(seq: number): string {

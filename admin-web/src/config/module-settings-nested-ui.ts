@@ -99,7 +99,7 @@ export interface ModuleSettingNestedGroupConfig {
   fields: ModuleSettingNestedField[];
 }
 
-/** 等待时长 · 展示当前订单预计等待时长（535） */
+/** 排队与等待展示 · 展示当前订单预计等待时长（535；产线见 wait-time-display-ui） */
 const WAIT_TIME_535_NESTED: ModuleSettingNestedGroupConfig = {
   parentSeq: 535,
   fields: [
@@ -124,7 +124,7 @@ const WAIT_TIME_535_NESTED: ModuleSettingNestedGroupConfig = {
   ],
 };
 
-/** 等待时长 · 预计等待时长区间设置（536） */
+/** 排队与等待展示 · 预计等待时长区间设置（536） */
 const WAIT_TIME_536_NESTED: ModuleSettingNestedGroupConfig = {
   parentSeq: 536,
   fields: [
@@ -192,17 +192,7 @@ const GUEST_ORDER_570_NESTED: ModuleSettingNestedGroupConfig = {
   ],
 };
 
-/** 食客端·下单与规则 · 每轮菜品互斥下单（597） */
-const GUEST_ORDER_597_NESTED: ModuleSettingNestedGroupConfig = {
-  parentSeq: 597,
-  fields: [{ kind: "dish-mutex-rules", fieldKey: "mutex", storageFieldId: "597-mutex-rules" }],
-};
-
-/** 食客端·下单与规则 · 每轮菜品组合下单（598） */
-const GUEST_ORDER_598_NESTED: ModuleSettingNestedGroupConfig = {
-  parentSeq: 598,
-  fields: [{ kind: "dish-combo-rules", fieldKey: "combo", storageFieldId: "598-combo-rules" }],
-};
+/** 597/598 每轮菜品互斥/组合已迁前厅 menu-order-limits 业务页，见 foh-menu-order-limits-ui.ts */
 
 /** 食客端·首页与版式 · 展示菜详情（608）见 module-settings-guest-dish-detail-display-ui.ts */
 
@@ -254,8 +244,6 @@ const NESTED_BY_PARENT_SEQ = new Map<number, ModuleSettingNestedGroupConfig>([
   [536, WAIT_TIME_536_NESTED],
   [196, POS_TOOLBAR_196_NESTED],
   [570, GUEST_ORDER_570_NESTED],
-  [597, GUEST_ORDER_597_NESTED],
-  [598, GUEST_ORDER_598_NESTED],
   [647, PROMO_LOTTERY_647_NESTED],
 ]);
 

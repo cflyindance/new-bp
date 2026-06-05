@@ -1,5 +1,5 @@
 /**
- * 将主页 2 组分类写入 docs/项目文档/配置归类-分组映射.csv
+ * 主页设置项已全部迁出（551 屏保 → 营销中心；531 品牌页作为首页 → 门店管理品牌与菜单），本脚本保留为空操作。
  * 运行：node scripts/apply-home-settings-mapping.mjs
  */
 import fs from "node:fs";
@@ -14,15 +14,9 @@ const mappingPath = [projectDocs, repoDocs]
   .map((d) => path.join(d, "配置归类-分组映射.csv"))
   .find((p) => fs.existsSync(p));
 
-const titles = {
-  "home-entry-display": "主页入口与展示",
-  "idle-screensaver": "待机屏保",
-};
+const titles = {};
 
-const assignMap = {
-  "home-entry-display": [531],
-  "idle-screensaver": [551],
-};
+const assignMap = {};
 
 const homeAssign = new Map();
 for (const [key, seqs] of Object.entries(assignMap)) {
@@ -94,5 +88,7 @@ if (updated !== homeAssign.size) {
   throw new Error(`预期更新 ${homeAssign.size} 条，实际 ${updated} 条`);
 }
 
-fs.writeFileSync(mappingPath, `${out.join("\n")}\n`, "utf8");
+if (updated > 0) {
+  fs.writeFileSync(mappingPath, `${out.join("\n")}\n`, "utf8");
+}
 console.log(`Updated ${updated} rows in ${mappingPath}`);

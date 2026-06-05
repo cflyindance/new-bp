@@ -18,7 +18,7 @@ const mappingPath = [projectDocs, repoDocs]
 const titles = {
   "store-profile": "门店档案",
   "store-hours-operation": "营业与运营",
-  "brand-menu-presentation": "品牌与菜单展示",
+  "brand-menu-presentation": "品牌与菜单",
   "address-data-maintenance": "地址数据维护",
 };
 

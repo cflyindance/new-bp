@@ -1,5 +1,6 @@
 /**
- * 财务中心 · 现金付费折扣（seq 305，%）。
+ * 支付中心 · 现金付费折扣（seq 305，%）。
+ * 与卡付加价策略 454 并列，构成双轨定价。
  */
 
 import { readModuleSettingNumber } from "./module-settings-form-ui";
@@ -47,6 +48,6 @@ export function renderFinanceCashPayDiscountInputHtml(): string {
         aria-label="现金付费折扣"
       />
       <span class="text-sm text-muted-foreground">%</span>
-      <span class="text-xs text-muted-foreground">使用现金支付时享受的折扣比率；0 表示不折扣。</span>
+      <span class="text-xs text-muted-foreground">使用现金支付时享受的折扣比率，直接影响顾客应付；0 表示不折扣。卡付加价见同组「卡付加价策略」（454）。</span>
     </div>`;
 }

@@ -1,5 +1,5 @@
 /**
- * 后厨 · 厨房单·票面信息：seq 271 打印菜品编号（主开关 + 打包单/订单收据/厨房单多选）。
+ * 后厨 · 跨票种显示：seq 271 打印菜品编号（主开关 + 打包单/订单收据/厨房单多选）。
  */
 
 import { readModuleSettingJson, writeModuleSettingJson } from "./module-settings-form-ui";

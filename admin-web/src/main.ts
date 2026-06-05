@@ -45,10 +45,6 @@ import {
   getTeamReportsDefaultPath,
   getActiveTeamReportsSubPath,
   isTeamReportsTertiaryPath,
-  TEAM_SCHEDULING_SUBNAV,
-  getTeamSchedulingDefaultPath,
-  getActiveTeamSchedulingSubPath,
-  isTeamSchedulingTertiaryPath,
   MARKETING_MGMT_SUBNAV,
   getActiveMarketingMgmtSubPath,
   PRODUCT_CENTER_MAIN_SHEET_SETTINGS_SUBNAV,
@@ -92,6 +88,42 @@ import {
   renderFinanceRegisterAuditPageContent,
   bindFinanceRegisterAuditUi,
 } from "./config/finance-register-audit-pages";
+import {
+  bindNotificationsHubUi,
+  isNotificationsHubFeaturePath,
+  renderNotificationsHubPageContent,
+} from "./config/notifications-hub-pages";
+import {
+  bindTeamShiftSchedulingUi,
+  isTeamShiftSchedulingPath,
+  renderTeamShiftSchedulingPage,
+} from "./config/team-shift-scheduling-ui";
+import {
+  bindTeamBreaksOvertimeUi,
+  isTeamBreaksOvertimePath,
+  renderTeamBreaksOvertimePage,
+  syncTeamBreaksOvertimeSession,
+} from "./config/team-breaks-overtime-ui";
+import {
+  bindTeamClockInUi,
+  isTeamClockInPath,
+  renderTeamClockInPage,
+  requestTeamClockInRecordsTab,
+} from "./config/team-clock-in-ui";
+import {
+  bindTeamTrainingPerformanceUi,
+  isTeamTrainingPerformancePath,
+  renderTeamTrainingPerformancePage,
+} from "./config/team-training-performance-ui";
+import {
+  getTeamSettingItemsBySeqs,
+  renderTeamSettingsEmbedSection,
+  renderTeamSettingsHubMigrationNoticeHtml,
+  renderTeamSettingsTabPanel,
+  TEAM_BREAKS_OVERTIME_SETTING_SEQS,
+  TEAM_CLOCK_IN_SETTING_SEQS,
+  TEAM_SHIFT_SCHEDULING_SETTING_SEQS,
+} from "./config/team-settings-embed-ui";
 import {
   getModuleSettingsCatalog,
   groupCatalogItemsByCategory,
@@ -176,6 +208,16 @@ import {
   isKitchenOrderTypeMultiselectSeq,
   renderKitchenOrderTypeMultiselectHtml,
 } from "./config/module-settings-kitchen-order-type-ui";
+import {
+  isKitchenSettingsPath,
+  renderKitchenSettingsGroupHintHtml,
+  renderKitchenSettingsHubIntroHtml,
+} from "./config/module-settings-kitchen-group-ui";
+import {
+  isPrintSettingsPath,
+  renderPrintSettingsGroupHintHtml,
+  renderPrintSettingsHubIntroHtml,
+} from "./config/module-settings-print-group-ui";
 import {
   bindPrintDishCodeByTicketUi,
   isPrintDishCodeByTicketSeq,
@@ -307,6 +349,28 @@ import {
   renderTableDeliveryMealCardPanelHtml,
   setTableDeliveryMealCardPanelVisible,
 } from "./config/module-settings-table-delivery-meal-card-ui";
+import {
+  bindWaitTimeDisplayUi,
+  ensureWaitTimeDisplayToggleMigrated,
+  isWaitTimeDisplayFormSeq,
+  isWaitTimeDisplayToggleSeq,
+  renderWaitTimeDisplayLinesPanelHtml,
+  setWaitTimeDisplayLinesPanelVisible,
+} from "./config/module-settings-wait-time-display-ui";
+import {
+  isWaitTimeCalculationSeq,
+  renderWaitTimeCalculationEditorHtml,
+} from "./config/module-settings-wait-time-calculation-ui";
+import {
+  bindFohMenuOrderLimitsUi,
+  getMenuOrderLimitTabForSeq,
+  getMenuOrderLimitTabHref,
+  isMenuOrderLimitDishRuleSeq,
+  isMenuOrderLimitPageSettingSeq,
+  MENU_ORDER_LIMITS_BASE,
+  refreshMenuOrderLimitTabBadges,
+  renderFohMenuOrderLimitsPanel,
+} from "./config/foh-menu-order-limits-ui";
 import {
   bindPointsDishAuthOrderUi,
   isPointsDishAuthOrderSeq,
@@ -476,6 +540,14 @@ import {
   renderGuestMenuLineTogglePanelHtml,
   setGuestMenuLineTogglePanelVisible,
 } from "./config/module-settings-guest-menu-line-toggle-ui";
+import {
+  bindGuestMenuStructureUi,
+  ensureGuestMenuStructureLinesDefault,
+  ensureGuestMenuStructureToggleMigrated,
+  isGuestMenuStructureSeq,
+  renderGuestMenuStructurePanelHtml,
+  setGuestMenuStructurePanelVisible,
+} from "./config/module-settings-guest-menu-structure-ui";
 import {
   bindGuestMenuDishNameFontUi,
   ensureGuestMenuDishNameFontLinesDefault,
@@ -729,7 +801,6 @@ import {
 import {
   bindTipCardOrderEditors,
   isTipCardOrderSeq,
-  renderCheckoutTipCardOrderGroupIntroHtml,
   renderTipCardOrderByLineTableHtml,
 } from "./config/module-settings-payment-tip-card-order-ui";
 import {
@@ -782,6 +853,7 @@ import {
 } from "./config/module-settings-external-integrations-ui";
 import {
   isFinanceProcessorFeeRateSeq,
+  renderFinanceProcessorCostBasisIntroHtml,
   renderFinanceProcessorFeeInputHtml,
 } from "./config/module-settings-finance-processor-fee-ui";
 import {
@@ -963,13 +1035,15 @@ import {
 } from "./config/module-settings-waitlist-ticket-print-ui";
 import {
   bindTablesideServiceCallUi,
+  ensureTablesideServiceCallToggleMigrated,
   ensureTablesideServiceCallTogglesMigrated,
   isTablesideServiceCallCooldownSeq,
   isTablesideServiceCallToggleSeq,
   isTablesideServiceRequestTypesSeq,
-  renderServiceCallCooldownControl,
+  renderServiceCallCooldownPanelHtml,
   renderServiceRequestTypesEditorHtml,
   renderTablesideServiceCallPanelHtml,
+  setServiceCallCooldownPanelVisible,
   setTablesideServiceCallPanelVisible,
 } from "./config/module-settings-tableside-service-call-ui";
 import {
@@ -985,6 +1059,7 @@ import {
   isOrderPickupSmsContentSeq,
   renderOrderPickupSmsChannelMultiselectHtml,
   renderOrderPickupSmsContentInput,
+  renderOrderPickupSmsSectionHeaderHtml,
 } from "./config/module-settings-order-pickup-messages-ui";
 import {
   isNotificationBasicsGroupIntroSeq,
@@ -1024,6 +1099,8 @@ import {
   getDefaultModuleSettingToggleOn,
   isModuleSettingToggleSeq,
   moduleSettingToggleStorageKey,
+  readModuleSettingToggleOn,
+  writeModuleSettingToggleOn,
 } from "./config/module-settings-toggle-ui";
 import { bindFloorPlanEditor, isFloorPlanPath, renderFloorPlanPage } from "./config/floor-plan-ui";
 import {
@@ -1082,6 +1159,7 @@ import {
   applyUiLocaleToDocument,
   formatNavModuleKicker,
   getUiLocale,
+  type MessageKey,
   navPrimaryLabel,
   pick,
   setUiLocale,
@@ -1344,18 +1422,10 @@ function renderAssetCenterMaterialsIframePanel(): string {
     </div>`;
 }
 
-/** 主区全宽嵌入前厅管理中心菜单下单限制配置页 */
-function renderFohMenuOrderLimitsIframePanel(): string {
-  return `
-    <div class="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-      <iframe
-        title="前厅管理中心菜单下单限制"
-        class="block h-full w-full flex-1 border-0"
-        src="${FOH_MENU_ORDER_LIMIT_IFRAME_SRC}"
-        referrerpolicy="no-referrer-when-downgrade"
-        allow="clipboard-read; clipboard-write; fullscreen"
-      ></iframe>
-    </div>`;
+/** 前厅管理中心 · 菜单下单限制（数量设计器 + 每轮互斥/组合） */
+function renderFohMenuOrderLimitsPagePanel(): string {
+  const path = location.hash.slice(1) || "/dashboard/overview";
+  return renderFohMenuOrderLimitsPanel(FOH_MENU_ORDER_LIMIT_IFRAME_SRC, path);
 }
 
 /** 主区全宽嵌入报表中心小费分配（TipOut） */
@@ -2526,6 +2596,9 @@ function findTitle(path: string): { title: string; module?: string } {
   if (path === "/permissions/account-session" || path.startsWith("/permissions/account-session/")) {
     return { title: "账户与会话安全", module: "权限管理中心" };
   }
+  if (path === "/permissions/store-security" || path.startsWith("/permissions/store-security/")) {
+    return { title: "门店安全策略", module: "权限管理中心" };
+  }
   if (path === "/permissions/roles/new") {
     return { title: "新建角色", module: "权限管理中心" };
   }
@@ -2659,10 +2732,8 @@ function findTitle(path: string): { title: string; module?: string } {
     const tr = TEAM_REPORTS_SUBNAV.find((x) => x.path === teamRptSub);
     if (tr) return { title: pick(tr.title, tr.titleEn), module: t("findTitle.moduleTeamReports") };
   }
-  const teamSchSub = getActiveTeamSchedulingSubPath(path);
-  if (teamSchSub) {
-    const ts = TEAM_SCHEDULING_SUBNAV.find((x) => x.path === teamSchSub);
-    if (ts) return { title: pick(ts.title, ts.titleEn), module: t("findTitle.moduleTeamScheduling") };
+  if (isTeamShiftSchedulingPath(path)) {
+    return { title: "排班", module: t("findTitle.moduleTeamShifts") };
   }
   if (
     path === "/operations/inventory-ordering/inventory-change-log" ||
@@ -2889,6 +2960,10 @@ function normalizeTabModuleHashes(): void {
     replaceHashPath("/marketing/ads");
     return;
   }
+  if (raw === "/dashboard/settings" || raw.startsWith("/dashboard/settings/")) {
+    replaceHashPath("/stores/brand-menu");
+    return;
+  }
   if (
     raw === "/promotions/settings/lottery-activity" ||
     raw.startsWith("/promotions/settings/lottery-activity/") ||
@@ -2984,43 +3059,109 @@ function normalizeTabModuleHashes(): void {
       return;
     }
   }
-  /* 权限管理 · 旧食客限流入口 → 前厅设置 · 食客下单限流（方案 B） */
+  /* 权限管理 · 旧食客限流入口 → 前厅菜单下单限制 */
   if (
     raw === "/permissions/order-limit" ||
     raw.startsWith("/permissions/order-limit/") ||
     raw === "/permissions/settings/guest-order-limits" ||
     raw.startsWith("/permissions/settings/guest-order-limits/")
   ) {
-    replaceHashPath("/operations/queue-call/settings/foh-guest-order-guard");
+    replaceHashPath("/operations/queue-call/menu-order-limits");
     return;
   }
-  /* 前厅设置 · 旧 groupKey 书签 → 方案 D-紧凑 12 组 */
+  /* 设置滑层旧书签 · 下单规则与授权组 → 菜单下单限制业务页 */
+  if (raw === "/operations/queue-call/settings/foh-guest-order-guard" || raw.startsWith("/operations/queue-call/settings/foh-guest-order-guard/")) {
+    const seqMatch = raw.match(/\/s(\d+)(?:\/|$)/);
+    if (seqMatch) {
+      const tab = getMenuOrderLimitTabForSeq(Number(seqMatch[1]));
+      replaceHashPath(tab ? getMenuOrderLimitTabHref(tab) : MENU_ORDER_LIMITS_BASE);
+      return;
+    }
+    replaceHashPath(MENU_ORDER_LIMITS_BASE);
+    return;
+  }
+  if (raw === "/operations/queue-call/settings/guest-order-auth" || raw.startsWith("/operations/queue-call/settings/guest-order-auth/")) {
+    replaceHashPath(`${MENU_ORDER_LIMITS_BASE}/auth`);
+    return;
+  }
+  if (
+    raw === "/operations/queue-call/settings/guest-order-throttle" ||
+    raw.startsWith("/operations/queue-call/settings/guest-order-throttle/")
+  ) {
+    replaceHashPath(`${MENU_ORDER_LIMITS_BASE}/interval`);
+    return;
+  }
+  if (raw === `${MENU_ORDER_LIMITS_BASE}/quantity` || raw.startsWith(`${MENU_ORDER_LIMITS_BASE}/quantity/`)) {
+    replaceHashPath(MENU_ORDER_LIMITS_BASE);
+    return;
+  }
+  /* 前厅设置 · 旧「点餐首页与语言」组 → 方案 B 三组 */
+  const FOH_MENU_SHELL_SEQ_TO_GROUP: Record<number, string> = {
+    509: "foh-guest-menu-body",
+    606: "foh-guest-menu-body",
+    607: "foh-guest-menu-body",
+    608: "foh-guest-menu-body",
+    645: "foh-guest-menu-body",
+    652: "foh-guest-facing-locale",
+    653: "foh-guest-facing-locale",
+  };
+  if (raw === "/operations/queue-call/settings/foh-guest-menu-shell" || raw.startsWith("/operations/queue-call/settings/foh-guest-menu-shell/")) {
+    const seqMatch = raw.match(/\/s(\d+)(?:\/|$)/);
+    if (seqMatch) {
+      const seq = Number(seqMatch[1]);
+      const group = FOH_MENU_SHELL_SEQ_TO_GROUP[seq] ?? "foh-guest-menu-home";
+      replaceHashPath(`/operations/queue-call/settings/${group}/s${seq}`);
+      return;
+    }
+    replaceHashPath("/operations/queue-call/settings/foh-guest-menu-home");
+    return;
+  }
+  /* 前厅设置 · 旧 groupKey 书签 → 方案 E 十四组（含 v2.0 十二组重定向） */
   const fohSettingsLegacyGroup: Record<string, string> = {
-    "tables-floor": "foh-tables",
-    "pos-shell-landing": "foh-cashier-start",
-    "pos-order-init": "foh-cashier-start",
-    "pos-kitchen-send": "foh-cashier-start",
-    "pos-button-visibility": "foh-order-buttons-core",
-    "pos-order-toolbar": "foh-order-toolbar-extra",
-    "pos-order-cart": "foh-order-cart-combo",
-    "pos-combo-ordering": "foh-order-cart-combo",
-    "pos-find-order-list": "foh-menu-find-pay",
-    "pos-checkout-entry": "foh-menu-find-pay",
-    "pos-menu-ui": "foh-menu-find-pay",
+    "foh-tables-start": "foh-table-start-flow",
+    "tables-floor": "foh-table-start-flow",
+    "pos-shell-landing": "foh-pos-shell",
+    "pos-order-init": "foh-table-start-flow",
+    "table-clear-ops": "foh-table-clear-ops",
+    "pos-kitchen-send": "foh-kitchen-send-timing",
+    "pos-button-visibility": "foh-pos-buttons",
+    "pos-order-toolbar": "foh-pos-buttons",
+    "foh-order-cart-combo": "foh-pos-order-cart",
+    "pos-order-cart": "foh-pos-order-cart",
+    "pos-combo-ordering": "foh-pos-combo-ordering",
+    "foh-find-order-checkout": "foh-pos-find-order-list",
+    "pos-find-order-list": "foh-pos-find-order-list",
+    "pos-checkout-entry": "foh-pos-checkout-entry",
+    "foh-pos-menu-layout": "foh-pos-menu-scope",
+    "pos-menu-ui": "foh-pos-menu-scope",
+    "pos-menu-ui-layout": "foh-pos-menu-ui-layout",
     "guest-menu-structure": "foh-guest-menu-body",
     "guest-menu-cart": "foh-guest-menu-body",
-    "guest-menu-global": "foh-guest-menu-shell",
-    "guest-facing-locale": "foh-guest-menu-shell",
-    "guest-order-type": "foh-guest-order-entry",
-    "guest-pre-order-flow": "foh-guest-order-entry",
-    "guest-order-auth": "foh-guest-order-guard",
-    "guest-order-throttle": "foh-guest-order-guard",
-    "guest-channel-kitchen-send": "foh-guest-kitchen-dining",
-    "guest-scenario-dining": "foh-guest-kitchen-dining",
-    "tableside-service-call": "foh-tableside-experience",
-    "guest-notes-fees": "foh-tableside-experience",
-    "wait-time": "foh-tableside-experience",
+    "guest-menu-global": "foh-guest-menu-home",
+    "guest-facing-locale": "foh-guest-facing-locale",
+    "foh-guest-menu-shell": "foh-guest-menu-home",
+    "foh-guest-order-entry": "foh-guest-order-type",
+    "guest-order-type": "foh-guest-order-type",
+    "guest-pre-order-flow": "foh-guest-pre-order",
+    "guest-registration": "foh-guest-registration",
+    "guest-order-auth": "foh-guest-menu-body",
+    "guest-order-throttle": "foh-guest-menu-body",
+    "foh-guest-scenario-dining": "foh-guest-kitchen-send",
+    "guest-channel-kitchen-send": "foh-guest-kitchen-send",
+    "guest-scenario-dining": "foh-guest-kitchen-send",
+    "guest-hotpot": "foh-guest-hotpot",
+    "guest-duration-scenarios": "foh-guest-duration-scenarios",
+    "tableside-service-call": "foh-tableside-service",
+    "guest-notes-fees": "foh-tableside-service",
+    "wait-time": "foh-wait-time-display",
     "guest-menu-scenarios": "foh-guest-menu-body",
+    "foh-tables": "foh-table-start-flow",
+    "foh-cashier-start": "foh-pos-shell",
+    "foh-order-buttons-core": "foh-pos-buttons",
+    "foh-order-toolbar-extra": "foh-pos-buttons",
+    "foh-menu-find-pay": "foh-pos-menu-scope",
+    "foh-guest-kitchen-dining": "foh-guest-kitchen-send",
+    "foh-tableside-experience": "foh-tableside-service",
   };
   for (const [legacy, next] of Object.entries(fohSettingsLegacyGroup)) {
     const legacyBase = `/operations/queue-call/settings/${legacy}`;
@@ -3028,11 +3169,6 @@ function normalizeTabModuleHashes(): void {
       replaceHashPath(`/operations/queue-call/settings/${next}`);
       return;
     }
-  }
-  /* 权限管理 · 旧门店安全策略路径 → 账户与会话安全 */
-  if (raw === "/permissions/store-security" || raw.startsWith("/permissions/store-security/")) {
-    replaceHashPath("/permissions/account-session");
-    return;
   }
   /* 权限管理 · 旧下单操作限制分组 → 账户与会话安全（方案 B2）；流程项已迁前厅 */
   if (
@@ -3067,7 +3203,7 @@ function normalizeTabModuleHashes(): void {
     replaceHashPath("/dashboard/overview");
     return;
   }
-  /* 门店设置 · 品牌与菜单展示已抽离为与门店状态同级入口 */
+  /* 门店设置 · 品牌与菜单已抽离为与门店状态同级入口 */
   if (
     raw === "/stores/settings/brand-menu-presentation" ||
     raw.startsWith("/stores/settings/brand-menu-presentation/")
@@ -3180,11 +3316,104 @@ function normalizeTabModuleHashes(): void {
     location.replace("#/orders/settings");
     return;
   }
+  /* 订单中心设置 · 迁出项旧书签（方案 A：141/150/155） */
+  const orderSettingsMovedSeqPath: Record<number, string> = {
+    141: "/operations/queue-call/settings/foh-kitchen-send-timing",
+    150: "/promotions/settings/promo-strategy",
+    155: "/operations/kitchen-kds/settings/kitchen-void-notify",
+  };
+  const orderMovedSeqMatch = raw.match(/^\/orders\/settings\/[^/]+\/s(\d+)(?:\/|$)/);
+  if (orderMovedSeqMatch) {
+    const seq = Number(orderMovedSeqMatch[1]);
+    const targetBase = orderSettingsMovedSeqPath[seq];
+    if (targetBase) {
+      replaceHashPath(`${targetBase}/s${seq}`);
+      return;
+    }
+  }
+  /* 订单中心设置 · 旧 groupKey 书签 → 方案 A 六组 */
+  const orderSettingsLegacyGroup: Record<string, string> = {
+    "order-init-scenario": "order-basics",
+    "order-numbering": "order-basics",
+    "split-merge-edit": "order-edit-split-merge",
+    "order-surcharge": "order-surcharge-fees",
+    "order-settlement": "order-settlement-rounding",
+    "order-void": "order-void-refund",
+  };
+  for (const [legacy, next] of Object.entries(orderSettingsLegacyGroup)) {
+    const legacyBase = `/orders/settings/${legacy}`;
+    if (raw === legacyBase || raw.startsWith(`${legacyBase}/`)) {
+      const suffix = raw.slice(legacyBase.length);
+      replaceHashPath(`/orders/settings/${next}${suffix}`);
+      return;
+    }
+  }
   /* 支付中心滑层已移除交易流水/支付方式/对账，旧链接统一到设置 */
   const legacyTransactionPaths = ["/transactions/ledger", "/transactions/payments", "/transactions/reconcile"];
   if (legacyTransactionPaths.some((p) => raw === p || raw.startsWith(`${p}/`))) {
     location.replace("#/transactions/settings");
     return;
+  }
+  /* 支付中心设置 · 迁出/合并项旧书签（方案 A） */
+  const paymentSettingsMovedSeqPath: Record<number, string> = {
+    159: "/orders/settings/order-void-refund",
+    290: "/print-templates/settings/order-receipt",
+  };
+  const paymentMovedSeqMatch = raw.match(/^\/transactions\/settings\/[^/]+\/s(\d+)(?:\/|$)/);
+  if (paymentMovedSeqMatch) {
+    const seq = Number(paymentMovedSeqMatch[1]);
+    const targetBase = paymentSettingsMovedSeqPath[seq];
+    if (targetBase) {
+      replaceHashPath(`${targetBase}/s${seq}`);
+      return;
+    }
+  }
+  const paymentSettingsLegacyGroup: Record<string, string> = {
+    "checkout-tip-card-order": "cds-checkout-ux",
+  };
+  for (const [legacy, next] of Object.entries(paymentSettingsLegacyGroup)) {
+    const legacyBase = `/transactions/settings/${legacy}`;
+    if (raw === legacyBase || raw.startsWith(`${legacyBase}/`)) {
+      const suffix = raw.slice(legacyBase.length);
+      replaceHashPath(`/transactions/settings/${next}${suffix}`);
+      return;
+    }
+  }
+  if (raw === "/transactions/settings/payment-refund-rules" || raw.startsWith("/transactions/settings/payment-refund-rules/")) {
+    const suffix = raw.slice("/transactions/settings/payment-refund-rules".length);
+    replaceHashPath(`/orders/settings/order-void-refund${suffix}`);
+    return;
+  }
+  /* 打印中心设置 · 旧 groupKey 书签 → 票种方案五组 */
+  const printSettingsLegacyGroup: Record<string, string> = {
+    "print-foundation-devices": "print-engine-device",
+    "order-receipt-trigger": "order-receipt",
+    "receipt-print-execution": "order-receipt",
+    "receipt-line-content": "order-receipt",
+    "receipt-layout-format": "order-receipt",
+    "payment-receipt-flow": "payment-signature-slip",
+    "packing-slip-print": "packing-slip",
+    "ticket-number-slip": "pickup-number-slip",
+  };
+  for (const [legacy, next] of Object.entries(printSettingsLegacyGroup)) {
+    const legacyBase = `/print-templates/settings/${legacy}`;
+    if (raw === legacyBase || raw.startsWith(`${legacyBase}/`)) {
+      const suffix = raw.slice(legacyBase.length);
+      replaceHashPath(`/print-templates/settings/${next}${suffix}`);
+      return;
+    }
+  }
+  const printSettingsMovedSeqPath: Record<number, string> = {
+    281: "/print-templates/settings/order-receipt",
+  };
+  const printMovedSeqMatch = raw.match(/^\/print-templates\/settings\/[^/]+\/s(\d+)(?:\/|$)/);
+  if (printMovedSeqMatch) {
+    const seq = Number(printMovedSeqMatch[1]);
+    const targetBase = printSettingsMovedSeqPath[seq];
+    if (targetBase) {
+      replaceHashPath(`${targetBase}/s${seq}`);
+      return;
+    }
   }
   /* 系统设置滑层已移除总揽/报表/打印等，旧链接统一到基础设置 */
   const legacySettingsPaths = [
@@ -3227,7 +3456,16 @@ function normalizeTabModuleHashes(): void {
     return;
   }
   if (raw === "/team/scheduling" || raw === "/team/scheduling/") {
-    replaceHashPath(getTeamSchedulingDefaultPath());
+    replaceHashPath("/team/clock-in");
+    return;
+  }
+  if (raw.startsWith("/team/scheduling/")) {
+    if (raw.startsWith("/team/scheduling/overtime-rules")) {
+      replaceHashPath("/team/breaks-overtime");
+      return;
+    }
+    requestTeamClockInRecordsTab();
+    replaceHashPath("/team/clock-in");
     return;
   }
   if (raw === "/menu/tax-types" || raw === "/menu/tax-types/") {
@@ -3743,32 +3981,6 @@ function renderTeamReportsSidebar(path: string): string {
   `;
 }
 
-function renderTeamSchedulingSidebar(path: string): string {
-  const navLabel = t("tertiaryNav.teamScheduling").replace(/"/g, "&quot;");
-  const activeSub = getActiveTeamSchedulingSubPath(path);
-  return `
-    <nav class="team-scheduling-subnav w-52 shrink-0 border-r border-border pr-4 ${TERTIARY_SUBNAV_SCROLL_CLASSES}" aria-label="${navLabel}">
-      <p class="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">${t("tertiaryNav.teamScheduling")}</p>
-      <ul class="space-y-0.5">
-        ${TEAM_SCHEDULING_SUBNAV.map((item) => {
-          const selected = item.path === activeSub;
-          return `
-        <li>
-          <a href="#${item.path}"
-            class="flex min-h-9 items-center rounded-md px-2.5 py-1.5 text-sm transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
-              selected
-                ? "bg-primary/10 font-medium text-primary"
-                : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-            }"
-            ${selected ? 'aria-current="page"' : ""}
-          >${pick(item.title, item.titleEn)}</a>
-        </li>`;
-        }).join("")}
-      </ul>
-    </nav>
-  `;
-}
-
 /** 侧栏折叠模块：一级行点击仅展开/收起；子项在下方二级链接进入（顺序见 navigation.ts NAV_MODULES） */
 function renderExpandableSidebarModule(m: NavModule, hash: string, expanded: boolean): string {
   const inModule = pathBelongsToModule(hash, m);
@@ -4061,10 +4273,16 @@ function renderModule(m: NavModule, hash: string): string {
 }
 
 /** 滑层「设置」页：无归类条目的 hub（评价中心、品牌设置等） */
-const MODULE_HUB_SETTINGS_EMPTY_PATHS = new Set(["/reviews/settings", "/brand/settings"]);
+const MODULE_HUB_SETTINGS_EMPTY_PATHS = new Set([
+  "/reviews/settings",
+  "/brand/settings",
+  "/dashboard/settings",
+]);
 
 type ModuleSettingsGroup = ReturnType<typeof groupCatalogItemsByCategory>[number];
 const moduleSettingsScrollTopByBasePath = new Map<string, number>();
+/** 设置页左侧二级导航列滚动位置（按 hub settingsPath 记忆，避免点击后重渲染回顶） */
+const moduleSettingsSubnavScrollTopByBasePath = new Map<string, number>();
 /** 滚动联动二级导航：避免与程序化 scroll 争抢高亮 */
 let moduleSettingsScrollSpyActiveKey: string | null | undefined;
 let moduleSettingsScrollSpyPausedUntil = 0;
@@ -4275,6 +4493,40 @@ function restoreModuleSettingsScroll(path: string): void {
   host.scrollTop = Math.min(remembered, maxScroll);
 }
 
+function rememberModuleSettingsSubnavScroll(settingsPath: string, scrollTop: number): void {
+  moduleSettingsSubnavScrollTopByBasePath.set(settingsPath, Math.max(0, Math.floor(scrollTop)));
+}
+
+function restoreModuleSettingsSubnavScroll(path: string): void {
+  const catalog = getModuleSettingsCatalog(path);
+  if (!catalog) return;
+  const remembered = moduleSettingsSubnavScrollTopByBasePath.get(catalog.settingsPath);
+  if (typeof remembered !== "number") return;
+  const run = (): void => {
+    const nav = document.querySelector<HTMLElement>(".module-settings-subnav");
+    if (!nav) return;
+    const maxScroll = Math.max(0, nav.scrollHeight - nav.clientHeight);
+    nav.scrollTop = Math.min(remembered, maxScroll);
+  };
+  requestAnimationFrame(() => requestAnimationFrame(run));
+}
+
+function bindModuleSettingsSubnavScrollMemory(): void {
+  const nav = document.querySelector<HTMLElement>(".module-settings-subnav");
+  if (!nav || nav.dataset.subnavScrollBound === "1") return;
+  nav.dataset.subnavScrollBound = "1";
+  const path = location.hash.slice(1) || "/dashboard/overview";
+  const catalog = getModuleSettingsCatalog(path);
+  if (!catalog) return;
+  nav.addEventListener(
+    "scroll",
+    () => {
+      rememberModuleSettingsSubnavScroll(catalog.settingsPath, nav.scrollTop);
+    },
+    { passive: true },
+  );
+}
+
 function bindModuleSettingsCategoryNav(): void {
   document.querySelectorAll<HTMLAnchorElement>(".module-settings-subnav a[href^='#']").forEach((link) => {
     link.addEventListener("click", () => {
@@ -4283,6 +4535,10 @@ function bindModuleSettingsCategoryNav(): void {
       if (!href) return;
       const catalog = getModuleSettingsCatalog(href);
       if (!catalog) return;
+      const subnav = document.querySelector<HTMLElement>(".module-settings-subnav");
+      if (subnav) {
+        rememberModuleSettingsSubnavScroll(catalog.settingsPath, subnav.scrollTop);
+      }
       const scrollHost = document.querySelector<HTMLElement>(".module-settings-scroll-host");
       if (scrollHost) {
         rememberModuleSettingsScroll(catalog.settingsPath, scrollHost.scrollTop);
@@ -4295,20 +4551,13 @@ function bindModuleSettingsCategoryNav(): void {
   });
 }
 
-function renderModuleHubSettingsCategorySidebar(path: string, pageTitle: string): string {
-  const catalog = getModuleSettingsCatalog(path);
-  if (!catalog || catalog.items.length === 0) return "";
-  const groups = groupCatalogItemsByCategory(catalog.items, catalog.groupOrder);
-  const activeGroup = getModuleSettingsActiveGroup(path, catalog.settingsPath, groups);
+function renderModuleSettingsSubnavGroupLink(
+  settingsPath: string,
+  group: ModuleSettingsGroup,
+  selected: boolean,
+): string {
+  const href = getModuleSettingsCategoryPath(settingsPath, group.groupKey);
   return `
-    <nav class="module-settings-subnav w-56 shrink-0 border-r border-border pr-4 ${TERTIARY_SUBNAV_SCROLL_CLASSES}" aria-label="${escapeHtml(pageTitle)}">
-      <p class="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">${escapeHtml(pageTitle)}</p>
-      <ul class="space-y-0.5" role="list">
-        ${groups
-          .map((group) => {
-            const href = getModuleSettingsCategoryPath(catalog.settingsPath, group.groupKey);
-            const selected = activeGroup?.groupKey === group.groupKey;
-            return `
               <li>
                 <a href="#${href}"
                   data-module-settings-group-key="${escapeHtml(group.groupKey)}"
@@ -4321,29 +4570,113 @@ function renderModuleHubSettingsCategorySidebar(path: string, pageTitle: string)
                   <span class="ml-2 shrink-0 text-xs tabular-nums text-muted-foreground">${group.items.length}</span>
                 </a>
               </li>`;
-          })
-          .join("")}
+}
+
+function renderModuleSettingsSubnavList(
+  catalog: ModuleSettingCatalogHub,
+  groups: ModuleSettingsGroup[],
+  activeGroup: ModuleSettingsGroup | undefined,
+): string {
+  const groupByKey = new Map(groups.map((g) => [g.groupKey, g]));
+  const renderLink = (group: ModuleSettingsGroup) =>
+    renderModuleSettingsSubnavGroupLink(
+      catalog.settingsPath,
+      group,
+      activeGroup?.groupKey === group.groupKey,
+    );
+
+  if (!catalog.groupNavSections?.length) {
+    return groups.map(renderLink).join("");
+  }
+
+  const rendered = new Set<string>();
+  const parts: string[] = [];
+
+  for (let i = 0; i < catalog.groupNavSections.length; i++) {
+    const section = catalog.groupNavSections[i];
+    if (i > 0) {
+      parts.push(
+        `<li aria-hidden="true" class="my-2 list-none border-t border-border" role="presentation"></li>`,
+      );
+    }
+    parts.push(`
+              <li class="list-none ${i > 0 ? "pt-1" : ""} pb-1" role="presentation">
+                <p class="px-2.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/80">${escapeHtml(t(section.labelKey as MessageKey))}</p>
+              </li>`);
+    for (const key of section.groupKeys) {
+      const group = groupByKey.get(key);
+      if (!group || rendered.has(key)) continue;
+      rendered.add(key);
+      parts.push(renderLink(group));
+    }
+  }
+
+  for (const group of groups) {
+    if (!rendered.has(group.groupKey)) {
+      parts.push(renderLink(group));
+    }
+  }
+
+  return parts.join("");
+}
+
+function renderModuleHubSettingsCategorySidebar(path: string, pageTitle: string): string {
+  const catalog = getModuleSettingsCatalog(path);
+  if (!catalog || catalog.items.length === 0) return "";
+  const groups = groupCatalogItemsByCategory(catalog.items, catalog.groupOrder);
+  const activeGroup = getModuleSettingsActiveGroup(path, catalog.settingsPath, groups);
+  return `
+    <nav class="module-settings-subnav w-56 shrink-0 border-r border-border pr-4 ${TERTIARY_SUBNAV_SCROLL_CLASSES}" aria-label="${escapeHtml(pageTitle)}">
+      <p class="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">${escapeHtml(pageTitle)}</p>
+      <ul class="space-y-0.5" role="list">
+        ${renderModuleSettingsSubnavList(catalog, groups, activeGroup)}
       </ul>
     </nav>
   `;
 }
 
-function readModuleSettingToggleOn(seq: number): boolean {
-  try {
-    const raw = localStorage.getItem(moduleSettingToggleStorageKey(seq));
-    if (raw === null) return getDefaultModuleSettingToggleOn(seq);
-    return raw === "1";
-  } catch {
-    return getDefaultModuleSettingToggleOn(seq);
-  }
+function renderModuleSettingRowsHtml(items: ModuleSettingCatalogItem[]): string {
+  return items
+    .map((item) => renderModuleSettingRow(item))
+    .filter((html) => html.trim() !== "")
+    .join("");
 }
 
-function writeModuleSettingToggleOn(seq: number, on: boolean): void {
-  try {
-    localStorage.setItem(moduleSettingToggleStorageKey(seq), on ? "1" : "0");
-  } catch {
-    /* ignore quota */
-  }
+function renderTeamEmbeddedSettingsSuffix(
+  seqs: readonly number[],
+  embedKey: string,
+  description?: string,
+): string {
+  const items = getTeamSettingItemsBySeqs(seqs);
+  if (items.length === 0) return "";
+  return renderTeamSettingsEmbedSection({
+    embedKey,
+    description,
+    rowsHtml: renderModuleSettingRowsHtml(items),
+  });
+}
+
+function renderTeamShiftSchedulingPageWithSettings(): string {
+  return `${renderTeamShiftSchedulingPage()}${renderTeamEmbeddedSettingsSuffix(
+    TEAM_SHIFT_SCHEDULING_SETTING_SEQS,
+    "shift-scheduling",
+    "控制打卡是否必须匹配当日排班；与员工打卡页联动。",
+  )}`;
+}
+
+function renderTeamBreaksOvertimePageWithSettings(path: string): string {
+  const items = getTeamSettingItemsBySeqs(TEAM_BREAKS_OVERTIME_SETTING_SEQS);
+  const rowsHtml = renderModuleSettingRowsHtml(items);
+  return renderTeamBreaksOvertimePage(rowsHtml, path);
+}
+
+function renderTeamClockInPageWithSettings(): string {
+  const items = getTeamSettingItemsBySeqs(TEAM_CLOCK_IN_SETTING_SEQS);
+  const rulesPanel = renderTeamSettingsTabPanel({
+    description: "工时上限、自动收工、登出条件与 Batch 考勤门禁等打卡相关规则。",
+    rowsHtml: renderModuleSettingRowsHtml(items),
+  });
+  return renderTeamClockInPage(rulesPanel);
 }
 
 /** 设置滑层开关：关闭态轨道需与背景区分（避免 bg-input 过浅） */
@@ -4632,6 +4965,44 @@ function renderModuleSettingNestedParentRow(item: ModuleSettingCatalogItem): str
         </li>`;
 }
 
+function renderModuleSettingWaitTimeCalculationRow(item: ModuleSettingCatalogItem): string {
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            ${renderModuleSettingTitleBlock(item)}
+            <div class="mt-3">${renderWaitTimeCalculationEditorHtml()}</div>
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingWaitTimeDisplayToggleRow(item: ModuleSettingCatalogItem): string {
+  ensureWaitTimeDisplayToggleMigrated(item.seq);
+  const nested = getModuleSettingNestedGroup(item.seq);
+  if (!nested) return renderModuleSettingRow(item);
+
+  const on = readModuleSettingToggleOn(item.seq);
+  const panelHidden = on ? "" : "hidden";
+  const fieldsHtml = nested.fields.map((field) => renderModuleSettingNestedField(item.seq, field)).join("");
+
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3 last:border-b-0">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderWaitTimeDisplayLinesPanelHtml(item.seq, on)}
+            <div
+              data-nested-panel="${item.seq}"
+              class="module-setting-nested-panel mt-3 space-y-3 rounded-lg bg-muted/50 p-3 ${panelHidden}"
+              ${on ? "" : 'aria-hidden="true"'}
+            >
+              ${fieldsHtml}
+            </div>
+          </div>
+        </li>`;
+}
+
 function setModuleSettingNestedPanelVisible(parentSeq: number, visible: boolean): void {
   document.querySelectorAll<HTMLElement>(`[data-nested-panel="${parentSeq}"]`).forEach((panel) => {
     panel.classList.toggle("hidden", !visible);
@@ -4671,6 +5042,10 @@ function renderModuleSettingFormRow(item: ModuleSettingCatalogItem): string {
   if (!config) return renderModuleSettingRow(item);
 
   const groupName = `module-setting-radio-${item.seq}`;
+  const waitTimeLinesHtml = isWaitTimeDisplayFormSeq(item.seq)
+    ? renderWaitTimeDisplayLinesPanelHtml(item.seq, true)
+    : "";
+  const waitTimeStacked = waitTimeLinesHtml !== "";
 
   if (config.kind === "checkbox-group" && config.checkboxes) {
     const boxes = config.checkboxes
@@ -4683,6 +5058,16 @@ function renderModuleSettingFormRow(item: ModuleSettingCatalogItem): string {
         </label>`;
       })
       .join("");
+    if (waitTimeStacked) {
+      return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            ${renderModuleSettingTitleBlock(item)}
+            ${waitTimeLinesHtml}
+            <div class="mt-3 flex flex-wrap items-center gap-4">${boxes}</div>
+          </div>
+        </li>`;
+    }
     return `
         <li class="list-none">
           <div class="flex flex-col gap-3 border-b border-border px-4 py-3 sm:flex-row sm:items-start sm:justify-between">
@@ -4694,6 +5079,16 @@ function renderModuleSettingFormRow(item: ModuleSettingCatalogItem): string {
 
   if (config.kind === "radio-group" && config.radios) {
     const radios = config.radios.map((opt) => renderModuleSettingRadioOption(config, opt, groupName)).join("");
+    if (waitTimeStacked) {
+      return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            ${renderModuleSettingTitleBlock(item)}
+            ${waitTimeLinesHtml}
+            <div class="mt-3 flex flex-wrap items-center gap-4">${radios}</div>
+          </div>
+        </li>`;
+    }
     return `
         <li class="list-none">
           <div class="flex flex-col gap-3 border-b border-border px-4 py-3 sm:flex-row sm:items-start sm:justify-between">
@@ -4723,6 +5118,16 @@ function renderModuleSettingFormRow(item: ModuleSettingCatalogItem): string {
         </label>`;
       })
       .join("");
+    if (waitTimeStacked) {
+      return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            ${renderModuleSettingTitleBlock(item)}
+            ${waitTimeLinesHtml}
+            <div class="mt-3 flex flex-wrap items-center gap-4">${radios}</div>
+          </div>
+        </li>`;
+    }
     return `
         <li class="list-none">
           <div class="flex flex-col gap-3 border-b border-border px-4 py-3 sm:flex-row sm:items-start sm:justify-between">
@@ -5039,7 +5444,6 @@ function renderModuleSettingMemberCardMinSpendRow(item: ModuleSettingCatalogItem
   return `
         <li class="list-none" data-module-setting-row-seq="${item.seq}">
           <div class="border-b border-border px-4 py-3">
-            ${renderCardFeesGroupIntroHtml()}
             ${renderModuleSettingTitleBlock(item)}
             <div class="mt-3 max-w-lg">
               ${renderMemberCardMinSpendByLineTableHtml()}
@@ -5064,6 +5468,7 @@ function renderModuleSettingCardPricingStrategyRow(item: ModuleSettingCatalogIte
   return `
         <li class="list-none" data-module-setting-row-seq="${item.seq}">
           <div class="border-b border-border px-4 py-3">
+            ${renderCardFeesGroupIntroHtml()}
             ${renderModuleSettingTitleBlock(item)}
             <div class="mt-3 max-w-xl">
               ${renderCardPricingStrategyHtml()}
@@ -5114,7 +5519,6 @@ function renderModuleSettingTipCardOrderRow(item: ModuleSettingCatalogItem): str
   return `
         <li class="list-none" data-module-setting-row-seq="${item.seq}">
           <div class="border-b border-border px-4 py-3">
-            ${renderCheckoutTipCardOrderGroupIntroHtml()}
             ${renderModuleSettingTitleBlock(item)}
             <div class="mt-3 max-w-2xl">
               ${renderTipCardOrderByLineTableHtml()}
@@ -5176,6 +5580,7 @@ function renderModuleSettingFinanceProcessorFeeRow(item: ModuleSettingCatalogIte
   return `
         <li class="list-none" data-module-setting-row-seq="${item.seq}">
           <div class="border-b border-border px-4 py-3">
+            ${renderFinanceProcessorCostBasisIntroHtml()}
             ${renderModuleSettingTitleBlock(item)}
             <div class="mt-3 max-w-xl">
               ${renderFinanceProcessorFeeInputHtml()}
@@ -6427,6 +6832,21 @@ function renderModuleSettingGuestMenuLineToggleRow(item: ModuleSettingCatalogIte
         </li>`;
 }
 
+function renderModuleSettingGuestMenuStructureRow(item: ModuleSettingCatalogItem): string {
+  ensureGuestMenuStructureToggleMigrated(item.seq);
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderGuestMenuStructurePanelHtml(item.seq, on)}
+          </div>
+        </li>`;
+}
+
 function renderModuleSettingGuestMenuDishNameFontRow(item: ModuleSettingCatalogItem): string {
   ensureGuestMenuDishNameFontToggleMigrated();
   const on = readModuleSettingToggleOn(item.seq);
@@ -6627,9 +7047,11 @@ function renderModuleSettingOrderPickupSmsChannelRow(item: ModuleSettingCatalogI
 }
 
 function renderModuleSettingOrderPickupSmsContentRow(item: ModuleSettingCatalogItem): string {
+  const sectionHeader = renderOrderPickupSmsSectionHeaderHtml(item.seq);
   return `
         <li class="list-none" data-module-setting-row-seq="${item.seq}">
           <div class="border-b border-border px-4 py-3">
+            ${sectionHeader}
             ${renderModuleSettingTitleBlock(item)}
             <div class="mt-3">${renderOrderPickupSmsContentInput(item.seq)}</div>
           </div>
@@ -6696,11 +7118,16 @@ function renderModuleSettingTablesideServiceCallMasterRow(item: ModuleSettingCat
 }
 
 function renderModuleSettingTablesideServiceCallCooldownRow(item: ModuleSettingCatalogItem): string {
+  ensureTablesideServiceCallToggleMigrated(item.seq);
+  const on = readModuleSettingToggleOn(item.seq);
   return `
         <li class="list-none" data-module-setting-row-seq="${item.seq}">
-          <div class="flex flex-col gap-3 border-b border-border px-4 py-3 sm:flex-row sm:items-start sm:justify-between">
-            <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
-            <div class="shrink-0 sm:pt-0.5">${renderServiceCallCooldownControl()}</div>
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderServiceCallCooldownPanelHtml(on)}
           </div>
         </li>`;
 }
@@ -6922,7 +7349,8 @@ function renderStoreBrandSettingProductLinesSelector(seq: number, on: boolean): 
   const hidden = on ? "" : "hidden";
   return `
     <div class="mt-3 rounded-lg bg-muted/50 p-3 ${hidden}" data-store-brand-setting-panel="${seq}" ${on ? "" : 'aria-hidden="true"'}>
-      <p class="m-0 text-xs text-muted-foreground">C端产品线（多选）</p>
+      <p class="m-0 text-xs leading-relaxed text-muted-foreground">开启：所选产线以品牌名称卡片为首页，点餐时先选品牌；关闭：展示常规首页（封面图见营销中心 · 广告）。</p>
+      <p class="mt-2 mb-0 text-xs text-muted-foreground">适用产线（多选）</p>
       <div class="mt-2 flex flex-wrap items-center gap-4">${boxes}</div>
     </div>`;
 }
@@ -7728,6 +8156,9 @@ function renderModuleSettingRow(item: ModuleSettingCatalogItem): string {
   if (isGuestMenuLineToggleSeq(item.seq)) {
     return renderModuleSettingGuestMenuLineToggleRow(item);
   }
+  if (isGuestMenuStructureSeq(item.seq)) {
+    return renderModuleSettingGuestMenuStructureRow(item);
+  }
   if (isGuestMenuDishNameFontSeq(item.seq)) {
     return renderModuleSettingGuestMenuDishNameFontRow(item);
   }
@@ -7787,6 +8218,12 @@ function renderModuleSettingRow(item: ModuleSettingCatalogItem): string {
   }
   if (isGuestMenuIntervalAllowCartSeq(item.seq)) {
     return renderModuleSettingGuestMenuIntervalAllowCartRow(item);
+  }
+  if (isWaitTimeCalculationSeq(item.seq)) {
+    return renderModuleSettingWaitTimeCalculationRow(item);
+  }
+  if (isWaitTimeDisplayToggleSeq(item.seq)) {
+    return renderModuleSettingWaitTimeDisplayToggleRow(item);
   }
   if (isModuleSettingNestedParentSeq(item.seq)) {
     return renderModuleSettingNestedParentRow(item);
@@ -7856,7 +8293,15 @@ function bindModuleSettingsToggles(): void {
         setGuestMenuOrderIntervalPanelVisible(next);
         setGuestMenuIntervalAllowCartPanelVisible(next);
       }
-      if (isModuleSettingNestedParentSeq(seq)) {
+      if (isWaitTimeDisplayToggleSeq(seq)) {
+        setWaitTimeDisplayLinesPanelVisible(seq, next);
+        setModuleSettingNestedPanelVisible(seq, next);
+      } else if (isMenuOrderLimitDishRuleSeq(seq)) {
+        setModuleSettingNestedPanelVisible(seq, next);
+        refreshMenuOrderLimitTabBadges();
+      } else if (isMenuOrderLimitPageSettingSeq(seq)) {
+        refreshMenuOrderLimitTabBadges();
+      } else if (isModuleSettingNestedParentSeq(seq)) {
         setModuleSettingNestedPanelVisible(seq, next);
       }
       if (seq === 530) {
@@ -7911,7 +8356,11 @@ function bindModuleSettingsToggles(): void {
         setChildExcludedFromOrderLimitPanelVisible(seq, next);
       }
       if (isTablesideServiceCallToggleSeq(seq)) {
-        setTablesideServiceCallPanelVisible(seq, next);
+        if (isTablesideServiceCallCooldownSeq(seq)) {
+          setServiceCallCooldownPanelVisible(next);
+        } else {
+          setTablesideServiceCallPanelVisible(seq, next);
+        }
       }
       if (isSendKitchenWholeOrderSeq(seq)) {
         setSendKitchenWholeOrderPanelVisible(seq, next);
@@ -7967,6 +8416,10 @@ function bindModuleSettingsToggles(): void {
       if (isGuestMenuLineToggleSeq(seq)) {
         if (next) ensureGuestMenuLineToggleLinesDefault(seq);
         setGuestMenuLineTogglePanelVisible(seq, next);
+      }
+      if (isGuestMenuStructureSeq(seq)) {
+        if (next) ensureGuestMenuStructureLinesDefault(seq);
+        setGuestMenuStructurePanelVisible(seq, next);
       }
       if (isGuestMenuDishNameFontSeq(seq)) {
         if (next) ensureGuestMenuDishNameFontLinesDefault();
@@ -8219,9 +8672,16 @@ function renderModuleHubSettingsPage(path: string, pageTitle: string): string {
   const catalogForGroups = getModuleSettingsCatalog(path);
   const groups = groupCatalogItemsByCategory(items, catalogForGroups?.groupOrder);
   const countLabel = tf("moduleSettings.count", { count: String(items.length) });
+  const kitchenSettings = isKitchenSettingsPath(path);
+  const printSettings = isPrintSettingsPath(path);
   const sections = groups
     .map((group) => {
       const sectionId = moduleSettingsCategoryDomId(group.groupKey);
+      const groupHintHtml = kitchenSettings
+        ? renderKitchenSettingsGroupHintHtml(group.groupKey)
+        : printSettings
+          ? renderPrintSettingsGroupHintHtml(group.groupKey)
+          : "";
       const rows = group.items
         .map((item) => renderModuleSettingRow(item))
         .filter((html) => html.trim() !== "")
@@ -8236,16 +8696,28 @@ function renderModuleHubSettingsPage(path: string, pageTitle: string): string {
           <h3 class="text-sm font-semibold text-card-foreground">${escapeHtml(group.groupTitle)}</h3>
           <span class="shrink-0 text-xs tabular-nums text-muted-foreground">${group.items.length}</span>
         </div>
+        ${groupHintHtml}
         <ul class="m-0 list-none divide-y divide-border p-0" role="list">${rows}</ul>
       </section>`;
     })
     .join("");
 
+  const introHtml = kitchenSettings
+    ? renderKitchenSettingsHubIntroHtml()
+    : printSettings
+      ? renderPrintSettingsHubIntroHtml()
+      : t("moduleSettings.intro");
+  const teamMigrationHtml =
+    path === "/team/settings" ? renderTeamSettingsHubMigrationNoticeHtml() : "";
+
   return `
     <div class="module-settings-main space-y-4">
-      <div class="rounded-xl border border-border bg-card p-5 shadow-sm">
-        <p class="text-sm leading-relaxed text-muted-foreground">${t("moduleSettings.intro")}</p>
-        <p class="mt-2 text-xs font-medium tabular-nums text-muted-foreground">${escapeHtml(countLabel)}</p>
+      <div class="rounded-xl border border-border bg-card p-5 shadow-sm space-y-4">
+        ${teamMigrationHtml}
+        <div>
+          <p class="text-sm leading-relaxed text-muted-foreground">${introHtml}</p>
+          <p class="mt-2 text-xs font-medium tabular-nums text-muted-foreground">${escapeHtml(countLabel)}</p>
+        </div>
       </div>
       <div class="flex flex-col gap-4">${sections}</div>
     </div>`;
@@ -8585,7 +9057,6 @@ function renderMain(): string {
   const isDeviceManagementHardware = isDeviceManagementHardwarePath(path);
   const isTipsManagementTertiary = isTipsManagementTertiaryPath(path);
   const isTeamReportsTertiary = isTeamReportsTertiaryPath(path);
-  const isTeamSchedulingTertiary = isTeamSchedulingTertiaryPath(path);
   const isGiftCardsFactory = isGiftCardsFactoryPath(path);
   const isInventoryExpiryIframe = isInventoryExpiryIframePath(path);
   const isMarketingScreensaverIframe = isMarketingScreensaverIframePath(path);
@@ -8603,7 +9074,6 @@ function renderMain(): string {
     isMarketingAdsIframe ||
     isMarketingPosterProIframe ||
     isAssetCenterMaterialsIframe ||
-    isFohMenuOrderLimitsIframe ||
     isReportsTipsAllocationIframe ||
     isTeamRolesEmployeesIframe ||
     isTeamTipsManagementIframe ||
@@ -8612,6 +9082,11 @@ function renderMain(): string {
   const isPermissionsRbac = isPermissionsRbacPath(path);
   const isLoginLogs = isLoginLogsPath(path);
   const isFinanceRegisterAudit = isFinanceRegisterAuditPath(path);
+  const isTeamShiftScheduling = isTeamShiftSchedulingPath(path);
+  const isTeamBreaksOvertime = isTeamBreaksOvertimePath(path);
+  const isTeamClockIn = isTeamClockInPath(path);
+  const isTeamTrainingPerformance = isTeamTrainingPerformancePath(path);
+  syncTeamBreaksOvertimeSession(path);
   const wideContentLayout =
     isAiAssistant ||
     isBrandMenuTertiary ||
@@ -8619,7 +9094,6 @@ function renderMain(): string {
     isDeviceManagementHardware ||
     isTipsManagementTertiary ||
     isTeamReportsTertiary ||
-    isTeamSchedulingTertiary ||
     isInventoryExpiryIframe ||
     isMarketingScreensaverIframe ||
     isMarketingAdsIframe ||
@@ -8632,6 +9106,8 @@ function renderMain(): string {
     isTeamPayrollReportIframe ||
     isGiftCardsFactory ||
     isFinanceRegisterAudit ||
+    isTeamShiftScheduling ||
+    isTeamBreaksOvertime ||
     isModuleSettingsCatalog ||
     isFohCategorySettings ||
     isLoginLogs;
@@ -8710,7 +9186,7 @@ function renderMain(): string {
                 : isAssetCenterMaterialsIframe
                   ? renderAssetCenterMaterialsIframePanel()
                 : isFohMenuOrderLimitsIframe
-                  ? renderFohMenuOrderLimitsIframePanel()
+                  ? renderFohMenuOrderLimitsPagePanel()
                 : isReportsTipsAllocationIframe
                   ? renderReportsTipsAllocationIframePanel()
                 : isTeamRolesEmployeesIframe
@@ -8759,11 +9235,6 @@ function renderMain(): string {
                     ${renderTeamReportsSidebar(path)}
                     <div class="${tertiaryMainClass}">${renderPlaceholder(path, title, tabModule, { teamReportsSubnav: true })}</div>
                   </div>`
-                        : isTeamSchedulingTertiary
-                          ? `<div class="${tertiaryRowClass}">
-                    ${renderTeamSchedulingSidebar(path)}
-                    <div class="${tertiaryMainClass}">${renderPlaceholder(path, title, tabModule, { teamSchedulingSubnav: true })}</div>
-                  </div>`
                       : isTipsManagementTertiary
                         ? `<div class="${tertiaryRowClass}">
                     ${renderTipsManagementSidebar(path)}
@@ -8773,8 +9244,18 @@ function renderMain(): string {
                       ? renderFloorPlanPage()
                     : isFohCategorySettingsPath(path)
                       ? renderFohCategorySettingsPage(path)
+                    : isTeamBreaksOvertime
+                      ? renderTeamBreaksOvertimePageWithSettings(path)
+                    : isTeamClockIn
+                      ? renderTeamClockInPageWithSettings()
+                    : isTeamTrainingPerformance
+                      ? renderTeamTrainingPerformancePage()
+                    : isTeamShiftScheduling
+                      ? renderTeamShiftSchedulingPageWithSettings()
                     : isFinanceRegisterAudit
                       ? renderFinanceRegisterAuditPageContent(path)
+                    : isNotificationsHubFeaturePath(path)
+                      ? renderNotificationsHubPageContent(path)
                     : path === "/settings/overview"
                       ? renderSettingsOverview()
                       : isModuleHubSettingsCatalogPath(path)
@@ -8806,7 +9287,6 @@ function renderPlaceholder(
     deviceManagementHardwareSubnav?: boolean;
     tipsManagementSubnav?: boolean;
     teamReportsSubnav?: boolean;
-    teamSchedulingSubnav?: boolean;
   },
 ): string {
   const sidebarSecond = tabModule?.subNavPlacement === "sidebar";
@@ -8817,7 +9297,6 @@ function renderPlaceholder(
   const deviceManagementHardwareSubnav = opts?.deviceManagementHardwareSubnav;
   const tipsManagementSubnav = opts?.tipsManagementSubnav;
   const teamReportsSubnav = opts?.teamReportsSubnav;
-  const teamSchedulingSubnav = opts?.teamSchedulingSubnav;
   const modTitle = tabModule ? pick(tabModule.title, tabModule.titleEn) : "";
   const firstBullet = deviceManagementHardwareSubnav
     ? t("placeholder.bullet.deviceHw")
@@ -8825,9 +9304,7 @@ function renderPlaceholder(
       ? t("placeholder.bullet.tips")
       : teamReportsSubnav
         ? t("placeholder.bullet.teamReports")
-        : teamSchedulingSubnav
-          ? t("placeholder.bullet.teamScheduling")
-          : brandProductsSubnav
+        : brandProductsSubnav
             ? t("placeholder.bullet.brandProducts")
             : brandMenuSubnav
               ? t("placeholder.bullet.brandMenu")
@@ -9493,8 +9970,13 @@ function mount(): void {
   bindGlobalUiLocaleControl();
   ensureInventorySheetEscapeListener();
   restoreModuleSettingsScroll(mountPathForSheet);
+  restoreModuleSettingsSubnavScroll(mountPathForSheet);
   bindFloorPlanEditor(mount);
   bindFohCategorySettingsUi(mount);
+  bindFohMenuOrderLimitsUi((tab) => {
+    replaceHashPath(getMenuOrderLimitTabHref(tab));
+    mount();
+  });
   bindDeviceManagementPaymentHardware();
   bindDeviceManagementFiscalHardware();
   bindDeviceManagementCallerIdHardware();
@@ -9505,6 +9987,7 @@ function mount(): void {
   bindDeviceManagementCdsHardware();
   bindHardwareGlobalDefaultDevicePickers();
   bindModuleSettingsCategoryNav();
+  bindModuleSettingsSubnavScrollMemory();
   bindModuleSettingsToggles();
   syncDailyCloseCashOptionRowsFromMaster();
   syncExternalIntegrationsUrlFields(readModuleSettingToggleOn(CLOUD_EMPLOYEE_SYNC_SEQ));
@@ -9593,14 +10076,21 @@ function mount(): void {
   bindWaitlistModeUi();
   bindCashDrawerReconciliationUi();
   bindFinanceRegisterAuditUi(mount);
+  bindNotificationsHubUi(mount);
+  bindTeamShiftSchedulingUi(mount);
+  bindTeamBreaksOvertimeUi(mount);
+  bindTeamClockInUi(mount);
+  bindTeamTrainingPerformanceUi(mount);
   refreshCashDrawerVarianceAlertThresholdLabels();
   bindGuestNamePageUi();
   bindGuestPhoneDisplayPageUi();
   bindGuestPhoneRequiredUi();
+  bindWaitTimeDisplayUi();
   bindTableDeliveryMealCardUi();
   bindMemberRegistrationFieldsUi();
   bindMemberPointsRewardsUi();
   bindGuestMenuLineToggleUi();
+  bindGuestMenuStructureUi();
   bindGuestMenuDishNameFontUi();
   bindMemberPreOrderLoginPolicyEditor();
   bindDefaultMainScreenEditor();

@@ -149,7 +149,7 @@ export const NAV_MODULES: NavModule[] = [
       { id: "st-status", title: "门店状态", titleEn: "Store status", path: "/stores/status" },
       {
         id: "st-brand-menu",
-        title: "品牌与菜单展示",
+        title: "品牌与菜单",
         titleEn: "Brand & menu",
         path: "/stores/brand-menu",
       },
@@ -168,7 +168,6 @@ export const NAV_MODULES: NavModule[] = [
       { id: "dash-overview", title: "今日概览", path: "/dashboard/overview" },
       { id: "dash-todos", title: "待办", path: "/dashboard/todos" },
       { id: "dash-kpi", title: "关键指标", path: "/dashboard/kpi" },
-      { id: "dash-settings", title: "设置", titleEn: "Settings", path: "/dashboard/settings" },
     ],
   },
   {
@@ -183,16 +182,11 @@ export const NAV_MODULES: NavModule[] = [
       { id: "team-roles", title: "角色与员工", path: "/team/roles-employees" },
       { id: "team-breaks", title: "休息与加班", path: "/team/breaks-overtime" },
       { id: "team-clock", title: "员工打卡", path: "/team/clock-in" },
+      { id: "team-shifts", title: "排班", titleEn: "Shift scheduling", path: "/team/shift-scheduling" },
       { id: "team-tips", title: "小费管理", path: "/team/tips" },
       { id: "team-tax-payroll", title: "报税报表", titleEn: "Tax payroll reports", path: "/team/payroll-report" },
       { id: "team-reports", title: "员工报表", path: "/team/reports" },
       { id: "team-7shifts", title: "7Shifts 对接（排班）", path: "/team/integrations/7shifts" },
-      {
-        id: "team-schedule",
-        title: "排班与考勤",
-        path: "/team/scheduling",
-        chainOnly: true,
-      },
       { id: "team-training", title: "绩效与培训", path: "/team/training-performance" },
       { id: "team-settings", title: "设置", path: "/team/settings" },
     ],
@@ -348,6 +342,7 @@ export const NAV_MODULES: NavModule[] = [
         titleEn: "Table layout",
         path: "/operations/queue-call/floor-plan",
       },
+      { id: "qc-settings", title: "设置", titleEn: "Settings", path: "/operations/queue-call/settings" },
       {
         id: "qc-menu-order-limits",
         title: "菜单下单限制",
@@ -360,7 +355,6 @@ export const NAV_MODULES: NavModule[] = [
         titleEn: "Category settings",
         path: "/operations/queue-call/category-settings",
       },
-      { id: "qc-settings", title: "设置", titleEn: "Settings", path: "/operations/queue-call/settings" },
     ],
   },
   {
@@ -444,8 +438,11 @@ export const NAV_MODULES: NavModule[] = [
     icon: "notifications",
     path: "/notifications",
     subNavPlacement: "sheet",
-    defaultChildPath: "/notifications/settings",
+    defaultChildPath: "/notifications/templates",
     children: [
+      { id: "notif-templates", title: "消息模板", titleEn: "Message templates", path: "/notifications/templates" },
+      { id: "notif-scene-config", title: "消息配置", titleEn: "Message configuration", path: "/notifications/scene-config" },
+      { id: "notif-quota", title: "消息额度", titleEn: "Message quota", path: "/notifications/quota" },
       { id: "notif-settings", title: "设置", titleEn: "Settings", path: "/notifications/settings" },
     ],
   },
@@ -529,6 +526,12 @@ export const NAV_MODULES: NavModule[] = [
         title: "账户与会话安全",
         titleEn: "Account & session security",
         path: "/permissions/account-session",
+      },
+      {
+        id: "perm-store-security",
+        title: "门店安全策略",
+        titleEn: "Store security policy",
+        path: "/permissions/store-security",
       },
     ],
   },
@@ -697,35 +700,6 @@ export function getActiveTeamReportsSubPath(path: string): string {
 
 export function isTeamReportsTertiaryPath(path: string): boolean {
   return getActiveTeamReportsSubPath(path) !== "";
-}
-
-/** 团队管理 →「排班与考勤」：主内容区细项导航（路由 `/team/scheduling/...`） */
-export interface TeamSchedulingSubItem {
-  id: string;
-  title: string;
-  titleEn?: string;
-  path: string;
-}
-
-export const TEAM_SCHEDULING_SUBNAV: TeamSchedulingSubItem[] = [
-  { id: "team-sch-attendance", title: "考勤记录", titleEn: "Attendance records", path: "/team/scheduling/attendance-records" },
-  { id: "team-sch-overtime", title: "加班规则", titleEn: "Overtime rules", path: "/team/scheduling/overtime-rules" },
-];
-
-export function getTeamSchedulingDefaultPath(): string {
-  return TEAM_SCHEDULING_SUBNAV[0]?.path ?? "/team/scheduling/attendance-records";
-}
-
-export function getActiveTeamSchedulingSubPath(path: string): string {
-  const sorted = [...TEAM_SCHEDULING_SUBNAV].sort((a, b) => b.path.length - a.path.length);
-  for (const c of sorted) {
-    if (path === c.path || path.startsWith(`${c.path}/`)) return c.path;
-  }
-  return "";
-}
-
-export function isTeamSchedulingTertiaryPath(path: string): boolean {
-  return getActiveTeamSchedulingSubPath(path) !== "";
 }
 
 /** POS 点餐：智能点餐 Tab 内左侧三级导航（路由 `/ordering/pos/...`） */
@@ -1569,7 +1543,6 @@ export function flattenNavPaths(modules: NavModule[] = NAV_MODULES): string[] {
   for (const d of DEVICE_MANAGEMENT_HARDWARE_SUBNAV) out.push(d.path);
   for (const tips of TIPS_MANAGEMENT_SUBNAV) out.push(tips.path);
   for (const tr of TEAM_REPORTS_SUBNAV) out.push(tr.path);
-  for (const ts of TEAM_SCHEDULING_SUBNAV) out.push(ts.path);
   for (const sm of BRAND_SEASONING_MGMT_SUBNAV) out.push(sm.path);
   for (const tg of BRAND_TAGS_MGMT_SUBNAV) out.push(tg.path);
   for (const rc of BRAND_RECIPES_MGMT_SUBNAV) out.push(rc.path);

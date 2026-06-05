@@ -19,6 +19,12 @@ import { isSettingsCatalogExcluded } from "./lib/settings-catalog-exclusions.mjs
 import { filterRowsForSettingsHub } from "./lib/settings-hub-override.mjs";
 
 import { INTRA_GROUP_SORT_BY_SEQ } from "./lib/settings-intra-group-sort.mjs";
+import {
+  FINANCE_SETTINGS_ASSIGN_MAP,
+  FINANCE_SETTINGS_GROUP_ORDER,
+  FINANCE_SETTINGS_GROUP_TITLES,
+  FINANCE_SETTINGS_GROUP_NAV_SECTIONS,
+} from "./lib/finance-settings-groups.mjs";
 
 
 
@@ -38,47 +44,26 @@ const HUB = "财务中心";
 
 
 
-const titles = {
-
-  "cash-drawer-reconciliation": "钱箱与现金平账",
-
-  "daily-close-settlement": "日结与结算",
-
-  "fees-tips-expense": "费用折扣与小费支出",
-
-};
-
-
+const titles = FINANCE_SETTINGS_GROUP_TITLES;
 
 const reasons = {
 
-  "cash-drawer-reconciliation":
-
-    "现金内控策略 SSOT：开班备款（含可选硬币卷）、平账容差与超差提醒；对标 Clover/Square 现金抽屉班次平账规则。",
-
-  "daily-close-settlement":
+  "daily-cash-close":
 
     "每日日结（现金班结）开关、班结界面展示与完成后现金报表；卡 Batch 调度见支付中心。",
 
-  "fees-tips-expense":
+  "drawer-float-reconcile":
 
-    "现金付费折扣与小费支出等财务费用项；对标 Peblla/Toast 的折扣与小费财务核算。",
+    "现金内控策略 SSOT：开班备款（含可选硬币卷）、平账容差与超差提醒。",
 
-};
+  "processor-cost-basis":
 
-
-
-/** seq → groupKey（财务中心设置 catalog 9 条可见；64 合并进 63；449/450 迁业务页） */
-
-const assignMap = {
-
-  "cash-drawer-reconciliation": [63, 76, 181],
-
-  "daily-close-settlement": [171, 65, 330],
-
-  "fees-tips-expense": [305, 307],
+    "收单通道成本率（仅报表口径）；对客定价见支付中心 305/454。",
 
 };
+
+/** seq → groupKey（财务中心设置 7 条；305 已迁支付中心；449/450 迁业务页） */
+const assignMap = FINANCE_SETTINGS_ASSIGN_MAP;
 
 
 
@@ -138,15 +123,8 @@ const allRows = filterRowsForSettingsHub(parseConfigMd(md), HUB);
 
 const rows = allRows.filter((r) => !isSettingsCatalogExcluded(r.seq));
 
-const order = [
-
-  "cash-drawer-reconciliation",
-
-  "daily-close-settlement",
-
-  "fees-tips-expense",
-
-];
+const order = FINANCE_SETTINGS_GROUP_ORDER;
+const navSections = FINANCE_SETTINGS_GROUP_NAV_SECTIONS;
 
 
 

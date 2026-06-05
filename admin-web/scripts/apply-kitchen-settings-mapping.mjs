@@ -15,20 +15,28 @@ const mappingPath = [projectDocs, repoDocs]
   .find((p) => fs.existsSync(p));
 
 const titles = {
-  "send-routing": "送厨触发与路由",
-  "ticket-grouping": "厨房单·分组与拆单",
-  "line-merge-rules": "行级合并规则",
-  "ticket-fields": "厨房单·票面信息",
-  "ticket-format": "厨房单·版式格式",
+  "kitchen-void-notify": "删单与厨房通知",
+  "kitchen-order-send": "送厨范围",
+  "kitchen-ticket-issue": "厨房单分张",
+  "kitchen-printer-route": "打印机分配",
+  "ticket-grouping": "菜品分区",
+  "line-merge-rules": "相同行合并",
+  "cross-ticket-fields": "多票种共用",
+  "ticket-fields": "票面信息",
+  "ticket-format": "票面版式",
   "packing-slip": "打包单",
 };
 
 const assignMap = {
-  "send-routing": [36, 37, 62, 32, 304],
+  "kitchen-void-notify": [155],
+  "kitchen-order-send": [36, 62],
+  "kitchen-ticket-issue": [304, 32],
+  "kitchen-printer-route": [37],
   "ticket-grouping": [40, 47, 54, 51, 61],
   "line-merge-rules": [52, 53, 287, 288, 301, 302],
-  "ticket-fields": [35, 42, 45, 46, 48, 49, 50, 55, 56, 57, 58, 271],
-  "ticket-format": [43, 44, 38, 41, 33, 59, 60, 258],
+  "cross-ticket-fields": [271, 258],
+  "ticket-fields": [35, 42, 45, 46, 48, 49, 50, 55, 56, 57, 58],
+  "ticket-format": [43, 44, 38, 41, 33, 59, 60],
   "packing-slip": [39, 298, 299, 300],
 };
 

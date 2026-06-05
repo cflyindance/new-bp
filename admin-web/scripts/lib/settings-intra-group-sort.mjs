@@ -3,23 +3,20 @@
  * 未列出的 seq 在组内仍按 seq 升序排在已定义项之后。
  */
 
-/** 点单按钮显隐·主流程（seq 193–195、197–210；196 归工具栏组） */
-const FOH_ORDER_BUTTONS_CORE_SEQ_ORDER = [
+/** POS 操作按钮：主流程显隐 → 工具栏显隐 → 排序集合 */
+const FOH_POS_BUTTONS_SEQ_ORDER = [
   193, 194, 195, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210,
+  196, 110, 211, 212, 213, 214, 215, 483, 484, 485, 486,
 ];
 
-/** 点单工具栏与其他按钮（seq 211–215 + 196 分割线 + 工具栏） */
-const FOH_ORDER_TOOLBAR_EXTRA_SEQ_ORDER = [196, 110, 211, 212, 213, 214, 215, 483, 484, 485, 486];
+/** 菜单查找与时段：搜索/比价 → 堂吃/外食时段 → iPad 时段 */
+const FOH_POS_MENU_SCOPE_SEQ_ORDER = [118, 148, 176, 177, 348];
 
-/**
- * POS 菜单与布局：菜单查找 → 时段菜单 → 点餐界面布局（组/类/菜/样式/价格）→ iPad 扩展
- */
-export const POS_MENU_UI_SEQ_ORDER = [
-  118,
-  176, 177, 348,
-  216, 217, 218, 219, 220,
-  350,
-];
+/** 菜单区界面布局：组 → 类 → 菜 → 价格 → 样式 → iPad 扩展 */
+const FOH_POS_MENU_UI_LAYOUT_SEQ_ORDER = [216, 217, 218, 220, 219, 350];
+
+/** @deprecated 已拆为 foh-pos-menu-scope + foh-pos-menu-ui-layout，保留供文档脚本引用 */
+export const POS_MENU_UI_SEQ_ORDER = [...FOH_POS_MENU_SCOPE_SEQ_ORDER, ...FOH_POS_MENU_UI_LAYOUT_SEQ_ORDER];
 
 /** @type {Map<number, number>} */
 export const INTRA_GROUP_SORT_BY_SEQ = new Map();
@@ -31,60 +28,105 @@ function assignSort(seqList, step = 10) {
   }
 }
 
-assignSort(FOH_ORDER_BUTTONS_CORE_SEQ_ORDER);
-assignSort(FOH_ORDER_TOOLBAR_EXTRA_SEQ_ORDER);
-assignSort(POS_MENU_UI_SEQ_ORDER);
+assignSort(FOH_POS_BUTTONS_SEQ_ORDER);
+assignSort(FOH_POS_MENU_SCOPE_SEQ_ORDER);
+assignSort(FOH_POS_MENU_UI_LAYOUT_SEQ_ORDER);
 
-/** 桌台与餐位：选桌/开单桌台校验 → 清桌与企台 */
-const TABLES_FLOOR_SEQ_ORDER = [107, 619, 643, 644, 592, 169, 534, 642, 351, 347];
+/** 选桌与开台流程：选桌/人数页 → 人数规则 → 开单前桌台约束 */
+const FOH_TABLE_START_FLOW_SEQ_ORDER = [107, 619, 111, 625, 621, 643, 644, 592];
 
-/** 登录开单与送厨：默认首页 → 开单人数 → 送厨时机 */
-const FOH_CASHIER_START_SEQ_ORDER = [165, 346, 111, 625, 621, 113, 114, 120, 123, 125, 345];
+/** 清桌与企台：清桌策略 → iPad 通知与企台 */
+const FOH_TABLE_CLEAR_OPS_SEQ_ORDER = [169, 534, 642, 351, 347];
 
-/** 菜单找单与结账 */
-const FOH_MENU_FIND_PAY_SEQ_ORDER = [
-  118, 148, 176, 177, 348, 350, 216, 217, 218, 219, 220, 151, 152, 153, 251, 248, 221,
+/** @deprecated 已拆为 foh-table-start-flow + foh-table-clear-ops，保留供文档脚本引用 */
+export const FOH_TABLES_START_SEQ_ORDER = [
+  ...FOH_TABLE_START_FLOW_SEQ_ORDER,
+  ...FOH_TABLE_CLEAR_OPS_SEQ_ORDER,
 ];
 
-/** 购物车与套餐 */
-const FOH_ORDER_CART_COMBO_SEQ_ORDER = [132, 133, 135, 137, 121, 122, 178, 222, 223, 138, 139, 145];
+/** 登录与主界面 */
+const FOH_POS_SHELL_SEQ_ORDER = [165, 346];
 
-/** 顾客菜单结构（含购物车展示） */
+/** 送厨时机：延迟参数 → 手动送厨 → 打单/付款/结账链路 → 密码权限 → 送厨后改调味（141） */
+const FOH_KITCHEN_SEND_TIMING_SEQ_ORDER = [125, 113, 123, 114, 120, 345, 141];
+
+/** POS 找单列表 */
+const FOH_POS_FIND_ORDER_LIST_SEQ_ORDER = [153, 151, 152, 251];
+
+/** POS 结账入口 */
+const FOH_POS_CHECKOUT_ENTRY_SEQ_ORDER = [248, 221];
+
+/** 购物车行展示 */
+const FOH_POS_ORDER_CART_SEQ_ORDER = [132, 133, 135, 137, 178, 121, 122, 222, 223];
+
+/** 套餐与自定义点单 */
+const FOH_POS_COMBO_ORDERING_SEQ_ORDER = [138, 139, 145];
+
+/** 权限 · 门店安全策略（349 企台点只读菜） */
+const STORE_SECURITY_POLICY_SEQ_ORDER = [349];
+
+/** 菜单展示与购物车：视觉样式 → 积分露出 → 树形导航 → 购物车展示 */
 const FOH_GUEST_MENU_BODY_SEQ_ORDER = [
-  515, 516, 517, 518, 519, 520, 524, 525, 526, 528, 616, 617, 618,
+  606, 607, 608, 645, 509, 525, 526, 515, 516, 517, 518, 519, 520, 524, 528, 616, 617, 618,
 ];
 
-/** 点餐首页与语言 */
-const FOH_GUEST_MENU_SHELL_SEQ_ORDER = [
-  532, 599, 601, 602, 604, 606, 607, 608, 611, 509, 600, 645, 652, 653,
+/** 点餐首页与入口：菜单组 → 版式 → 浏览结构 → 纯展示 → 入口 → 品牌 */
+const FOH_GUEST_MENU_HOME_SEQ_ORDER = [599, 604, 601, 602, 600, 611, 532];
+
+/** 食客端语言 */
+const FOH_GUEST_FACING_LOCALE_SEQ_ORDER = [652, 653];
+
+/** 订单类型与取餐 */
+const FOH_GUEST_ORDER_TYPE_SEQ_ORDER = [487, 488, 489, 490, 491, 503];
+
+/** 食客登记与会员 */
+const FOH_GUEST_REGISTRATION_SEQ_ORDER = [623, 622, 504, 505, 506, 507, 510];
+
+/** 点单前须知与授权 */
+const FOH_GUEST_PRE_ORDER_SEQ_ORDER = [569, 620, 626, 627];
+
+/** 食客端送厨 */
+const FOH_GUEST_KITCHEN_SEND_SEQ_ORDER = [581, 502, 91, 567];
+
+/** 火锅点餐 */
+const FOH_GUEST_HOTPOT_SEQ_ORDER = [570, 572, 574, 573, 575];
+
+/** 时长与自助餐 */
+const FOH_GUEST_DURATION_SCENARIOS_SEQ_ORDER = [443, 571, 577, 578, 579, 580];
+
+/** @deprecated 已拆为 foh-guest-kitchen-send + foh-guest-hotpot + foh-guest-duration-scenarios */
+export const FOH_GUEST_SCENARIO_DINING_SEQ_ORDER = [
+  ...FOH_GUEST_KITCHEN_SEND_SEQ_ORDER,
+  ...FOH_GUEST_HOTPOT_SEQ_ORDER,
+  ...FOH_GUEST_DURATION_SCENARIOS_SEQ_ORDER,
 ];
 
-/** 用餐方式与下单登记 */
-const FOH_GUEST_ORDER_ENTRY_SEQ_ORDER = [
-  487, 488, 489, 490, 491, 503, 94, 98, 623, 622, 504, 505, 506, 507, 510, 569, 620, 626, 627, 349,
-];
+/** 桌边服务 */
+const FOH_TABLESIDE_SERVICE_SEQ_ORDER = [629, 641, 640, 333, 521, 522, 523];
 
-/** 下单授权与间隔 */
-const FOH_GUEST_ORDER_GUARD_SEQ_ORDER = [646, 595, 596, 594, 527, 597, 598, 588, 589, 590, 591];
+/** 排队与等待展示（产线多选，见 wait-time-display-ui） */
+const FOH_WAIT_TIME_DISPLAY_SEQ_ORDER = [673, 535, 536, 537, 538, 539, 540];
 
-/** 送厨与火锅自助餐 */
-const FOH_GUEST_KITCHEN_DINING_SEQ_ORDER = [
-  581, 502, 91, 567, 443, 571, 572, 574, 575, 573, 570, 577, 578, 579, 580,
-];
-
-/** 桌边服务与体验 */
-const FOH_TABLESIDE_EXPERIENCE_SEQ_ORDER = [629, 641, 640, 333, 521, 522, 523, 535, 536, 537, 538, 539, 540];
-
-assignSort(TABLES_FLOOR_SEQ_ORDER);
-assignSort(FOH_CASHIER_START_SEQ_ORDER);
-assignSort(FOH_MENU_FIND_PAY_SEQ_ORDER);
-assignSort(FOH_ORDER_CART_COMBO_SEQ_ORDER);
+assignSort(FOH_TABLE_START_FLOW_SEQ_ORDER);
+assignSort(FOH_TABLE_CLEAR_OPS_SEQ_ORDER);
+assignSort(FOH_POS_SHELL_SEQ_ORDER);
+assignSort(FOH_KITCHEN_SEND_TIMING_SEQ_ORDER);
+assignSort(FOH_POS_FIND_ORDER_LIST_SEQ_ORDER);
+assignSort(FOH_POS_CHECKOUT_ENTRY_SEQ_ORDER);
+assignSort(FOH_POS_ORDER_CART_SEQ_ORDER);
+assignSort(FOH_POS_COMBO_ORDERING_SEQ_ORDER);
+assignSort(STORE_SECURITY_POLICY_SEQ_ORDER);
 assignSort(FOH_GUEST_MENU_BODY_SEQ_ORDER);
-assignSort(FOH_GUEST_MENU_SHELL_SEQ_ORDER);
-assignSort(FOH_GUEST_ORDER_ENTRY_SEQ_ORDER);
-assignSort(FOH_GUEST_ORDER_GUARD_SEQ_ORDER);
-assignSort(FOH_GUEST_KITCHEN_DINING_SEQ_ORDER);
-assignSort(FOH_TABLESIDE_EXPERIENCE_SEQ_ORDER);
+assignSort(FOH_GUEST_MENU_HOME_SEQ_ORDER);
+assignSort(FOH_GUEST_FACING_LOCALE_SEQ_ORDER);
+assignSort(FOH_GUEST_ORDER_TYPE_SEQ_ORDER);
+assignSort(FOH_GUEST_REGISTRATION_SEQ_ORDER);
+assignSort(FOH_GUEST_PRE_ORDER_SEQ_ORDER);
+assignSort(FOH_GUEST_KITCHEN_SEND_SEQ_ORDER);
+assignSort(FOH_GUEST_HOTPOT_SEQ_ORDER);
+assignSort(FOH_GUEST_DURATION_SCENARIOS_SEQ_ORDER);
+assignSort(FOH_TABLESIDE_SERVICE_SEQ_ORDER);
+assignSort(FOH_WAIT_TIME_DISPLAY_SEQ_ORDER);
 
 /** 外卖/来取 v2.4：线上下单开关 → 外送区域 */
 const DELIVERY_SCAN_ONLINE_SEQ_ORDER = [90, 92];
@@ -97,11 +139,11 @@ const ONLINE_ORDER_SERVICE_SEQ_ORDER = [93, 95, 96, 97, 99, 100, 101, 102, 103, 
 /** 桌边·呼叫服务员：总开关 → 未开单 → 间隔 → 服务类型 */
 const TABLESIDE_SERVICE_CALL_SEQ_ORDER = [629, 641, 640, 333];
 
-/** 消息中心 · 店内员工订单提醒 */
+/** 消息中心 · 员工订单消息 */
 const STAFF_ORDER_ALERTS_SEQ_ORDER = [638, 639, 637];
 
-/** 消息中心 · 顾客短信与取餐通知 */
-const CUSTOMER_ORDER_SMS_SEQ_ORDER = [334, 335, 336, 337, 338, 339, 340];
+/** 消息中心 · 顾客短信渠道（文案/场景关联见消息模板 + 消息配置） */
+const CUSTOMER_ORDER_SMS_SEQ_ORDER = [334, 335];
 
 /** 备注与附加服务：备注 → 餐具/打包附加费 */
 const GUEST_NOTES_FEES_SEQ_ORDER = [521, 522, 523];
@@ -131,62 +173,78 @@ assignSort(DELIVERY_PACKAGING_SEQ_ORDER);
 assignSort(ONLINE_ORDER_SERVICE_SEQ_ORDER);
 assignSort(GUEST_NOTES_FEES_SEQ_ORDER);
 
-/** 支付中心 · 卡支付规则与合规 */
-const PAYMENT_CARD_FEES_SEQ_ORDER = [82, 242, 243, 180, 454, 172];
+/** 支付中心 · 卡付规则与加价 */
+const PAYMENT_CARD_FEES_SEQ_ORDER = [454, 305, 242, 82, 172, 243, 180];
 
-/** 支付中心 · 小费与刷卡顺序（全终端 SSOT） */
-const CHECKOUT_TIP_CARD_ORDER_SEQ_ORDER = [9];
-
-/** 支付中心 · 客显结账：小费 → 签名 → 小票 */
-const CDS_CHECKOUT_UX_SEQ_ORDER = [463, 464, 465, 669];
+/** 支付中心 · 食客结账界面（含小费页、收取方式、刷卡顺序、签名、小票、签购单） */
+const CDS_CHECKOUT_UX_SEQ_ORDER = [463, 493, 9, 464, 465, 669];
 
 assignSort(PAYMENT_CARD_FEES_SEQ_ORDER);
-assignSort(CHECKOUT_TIP_CARD_ORDER_SEQ_ORDER);
 assignSort(CDS_CHECKOUT_UX_SEQ_ORDER);
+
+/** 后厨 · 删单向厨房通知（155，自订单中心迁入） */
+const KITCHEN_VOID_NOTIFY_SEQ_ORDER = [155];
 
 /** 后厨管理中心设置页二级导航展示顺序 */
 export const KITCHEN_SETTINGS_GROUP_ORDER = [
-  "send-routing",
+  "kitchen-order-send",
+  "kitchen-void-notify",
+  "kitchen-ticket-issue",
+  "kitchen-printer-route",
   "ticket-grouping",
   "line-merge-rules",
+  "cross-ticket-fields",
   "ticket-fields",
   "ticket-format",
   "packing-slip",
 ];
 
-/** 送厨触发与路由：类型/路由 → 未付送厨 → 分票 → 首次送厨整单 */
-const KITCHEN_SEND_ROUTING_SEQ_ORDER = [36, 37, 62, 32, 304];
+/** 订单类型与送厨条件：排除单型 → 未付能否送 */
+const KITCHEN_ORDER_SEND_SEQ_ORDER = [36, 62];
+
+/** 分票与首次送厨：首次整单 → 0 元菜分票 */
+const KITCHEN_TICKET_ISSUE_SEQ_ORDER = [304, 32];
+
+/** 厨房打印机路由 */
+const KITCHEN_PRINTER_ROUTE_SEQ_ORDER = [37];
 
 /** 行级合并规则：矩阵宿主 52（53/287/288/301/302 在 UI 中合并展示） */
 const KITCHEN_LINE_MERGE_RULES_SEQ_ORDER = [52, 53, 287, 288, 301, 302];
+
+/** 跨票种显示：271 菜品编号 → 258 外带强调（厨房单/打包单/订单收据） */
+const KITCHEN_CROSS_TICKET_FIELDS_SEQ_ORDER = [271, 258];
 
 /** 厨房单·分组与拆单：分区 → 多语言分行 → 结构拆分（合并规则见 line-merge-rules） */
 const KITCHEN_TICKET_GROUPING_SEQ_ORDER = [54, 40, 47, 51, 61];
 
 /** 厨房单·票面信息：送厨次数 → 价格/序号/顾客/合计 */
-const KITCHEN_TICKET_FIELDS_SEQ_ORDER = [35, 42, 45, 46, 48, 271, 49, 50, 55, 56, 57, 58];
+const KITCHEN_TICKET_FIELDS_SEQ_ORDER = [35, 42, 45, 46, 48, 49, 50, 55, 56, 57, 58];
 
-/** 厨房单·版式格式：边距 → 强调样式 → 行分隔 → 数量与分段序号 */
-const KITCHEN_TICKET_FORMAT_SEQ_ORDER = [43, 44, 38, 258, 41, 33, 59, 60];
+/** 厨房单样式：边距 → 备注/行强调 → 行分隔 → 数量与分段序号 */
+const KITCHEN_TICKET_FORMAT_SEQ_ORDER = [43, 44, 38, 41, 33, 59, 60];
 
 /** 打包单：触发类型 → 票面字段 → 重打 → 分张 */
 const KITCHEN_PACKING_SLIP_SEQ_ORDER = [39, 298, 299, 300];
 
-assignSort(KITCHEN_SEND_ROUTING_SEQ_ORDER);
+assignSort(KITCHEN_VOID_NOTIFY_SEQ_ORDER);
+assignSort(KITCHEN_ORDER_SEND_SEQ_ORDER);
+assignSort(KITCHEN_TICKET_ISSUE_SEQ_ORDER);
+assignSort(KITCHEN_PRINTER_ROUTE_SEQ_ORDER);
 assignSort(KITCHEN_LINE_MERGE_RULES_SEQ_ORDER);
+assignSort(KITCHEN_CROSS_TICKET_FIELDS_SEQ_ORDER);
 assignSort(KITCHEN_TICKET_GROUPING_SEQ_ORDER);
 assignSort(KITCHEN_TICKET_FIELDS_SEQ_ORDER);
 assignSort(KITCHEN_TICKET_FORMAT_SEQ_ORDER);
 assignSort(KITCHEN_PACKING_SLIP_SEQ_ORDER);
 
-/** 门店管理 · 设置滑层二级导航（品牌与菜单展示已抽离为 /stores/brand-menu） */
+/** 门店管理 · 设置滑层二级导航（品牌与菜单已抽离为 /stores/brand-menu） */
 export const STORE_SETTINGS_GROUP_ORDER = [
   "store-profile",
   "store-hours-operation",
   "address-data-maintenance",
 ];
 
-/** 门店管理 · 品牌与菜单展示（与门店状态同级入口） */
+/** 门店管理 · 品牌与菜单（与门店状态同级入口） */
 export const STORE_BRAND_MENU_GROUP_ORDER = ["brand-menu-presentation"];
 
 /** 门店档案：国家/地区 → 基本信息 */
@@ -195,21 +253,25 @@ const STORE_PROFILE_SEQ_ORDER = [173, 417, 433];
 /** 营业与运营：时段 → 周期 → 打烊提示 → 餐厅模式 */
 const STORE_HOURS_OPERATION_SEQ_ORDER = [418, 77, 582, 170];
 
+/** 品牌与菜单：品牌数据 → 品牌页作为首页（含原 531） */
+const STORE_BRAND_MENU_SEQ_ORDER = [547, 530];
+
 assignSort(STORE_PROFILE_SEQ_ORDER);
 assignSort(STORE_HOURS_OPERATION_SEQ_ORDER);
+assignSort(STORE_BRAND_MENU_SEQ_ORDER);
 
 /** 支付中心 · 支付手段：预设清单 → 渠道 → 自定义 → 界面暴露 */
 const PAYMENT_METHODS_SEQ_ORDER = [234];
 
 assignSort(PAYMENT_METHODS_SEQ_ORDER);
 
-/** 支付中心 · 税务规则：税率 → 免税例外 → 税基 → 加收应税 → 服务费计税顺序 */
-const PAYMENT_TAX_RULES_SEQ_ORDER = [445, 144, 143, 142, 160, 290];
+/** 支付中心 · 税务计算：税率 → 税基 → 加收应税 → 免税 → 服务费计税顺序 */
+const PAYMENT_TAX_RULES_SEQ_ORDER = [445, 143, 142, 144, 160];
 
 assignSort(PAYMENT_TAX_RULES_SEQ_ORDER);
 
-/** 支付中心 · 小费政策：收取模式 → 基数 → 预设/收据 → 展示/风控 */
-const PAYMENT_TIP_POLICY_SEQ_ORDER = [231, 293, 294, 253, 237, 493, 295, 296, 266, 244, 232];
+/** 支付中心 · 小费：计算 → POS 录入 → 结账预设 → 收据建议 */
+const PAYMENT_TIP_POLICY_SEQ_ORDER = [293, 294, 253, 232, 231, 244, 237, 266, 295, 296];
 
 assignSort(PAYMENT_TIP_POLICY_SEQ_ORDER);
 
@@ -221,19 +283,19 @@ assignSort(PAYMENT_BATCH_SETTLEMENT_SEQ_ORDER);
 /** 团队 · 考勤：241 Batch 门禁置末 */
 const TEAM_BATCH_ATTENDANCE_SEQ_ORDER = [241];
 
-/** 财务 · 钱箱与现金平账（v1.1：64 合并进 63） */
-const CASH_DRAWER_RECONCILIATION_SEQ_ORDER = [63, 76, 181];
+/** 财务 · 钱箱备款与平账（v2 方案 A；64 合并进 63） */
+const DRAWER_FLOAT_RECONCILE_SEQ_ORDER = [63, 76, 181];
 
-/** 财务 · 日结与结算（v1.1：65 自钱箱组迁入） */
-const DAILY_CLOSE_SETTLEMENT_SEQ_ORDER = [171, 65, 330];
+/** 财务 · 现金日结与班结（v2 方案 A） */
+const DAILY_CASH_CLOSE_SEQ_ORDER = [171, 65, 330];
 
-/** 财务 · 费用折扣与小费支出 */
-const FEES_TIPS_EXPENSE_SEQ_ORDER = [305, 307];
+/** 财务 · 收单成本与报表口径（v2 方案 A；305 已迁支付中心） */
+const PROCESSOR_COST_BASIS_SEQ_ORDER = [307];
 
 assignSort(TEAM_BATCH_ATTENDANCE_SEQ_ORDER);
-assignSort(CASH_DRAWER_RECONCILIATION_SEQ_ORDER);
-assignSort(DAILY_CLOSE_SETTLEMENT_SEQ_ORDER);
-assignSort(FEES_TIPS_EXPENSE_SEQ_ORDER);
+assignSort(DRAWER_FLOAT_RECONCILE_SEQ_ORDER);
+assignSort(DAILY_CASH_CLOSE_SEQ_ORDER);
+assignSort(PROCESSOR_COST_BASIS_SEQ_ORDER);
 
 /** 平台业务 · 外部系统对接 */
 const INTEGRATIONS_EXTERNAL_SEQ_ORDER = [78, 79, 80, 81];
@@ -245,35 +307,23 @@ const UI_OPERATION_PREFERENCES_SEQ_ORDER = [168, 174];
 
 assignSort(UI_OPERATION_PREFERENCES_SEQ_ORDER);
 
-/** 财务中心设置页二级导航展示顺序（449/450 已迁业务页） */
-export const FINANCE_SETTINGS_GROUP_ORDER = [
-  "cash-drawer-reconciliation",
-  "daily-close-settlement",
-  "fees-tips-expense",
-];
+export {
+  FINANCE_SETTINGS_GROUP_ORDER,
+  FINANCE_SETTINGS_GROUP_NAV_SECTIONS,
+} from "./finance-settings-groups.mjs";
 
-/** 支付中心设置页二级导航展示顺序 */
-export const PAYMENT_SETTINGS_GROUP_ORDER = [
-  "payment-gateway",
-  "payment-methods",
-  "tax-rules",
-  "tip-policy",
-  "batch-settlement",
-  "card-fees",
-  "checkout-tip-card-order",
-  "cds-checkout-ux",
-];
+export {
+  PAYMENT_SETTINGS_GROUP_ORDER,
+  PAYMENT_SETTINGS_GROUP_NAV_SECTIONS,
+} from "./payment-settings-groups.mjs";
 
-/** 订单中心设置页二级导航展示顺序 */
-export const ORDER_SETTINGS_GROUP_ORDER = [
-  "order-init-scenario",
-  "order-numbering",
-  "split-merge-edit",
-  "order-discount",
-  "order-surcharge",
-  "order-settlement",
-  "order-void",
-];
+export {
+  ORDER_SETTINGS_GROUP_ORDER,
+  ORDER_SETTINGS_GROUP_NAV_SECTIONS,
+} from "./order-settings-groups.mjs";
+
+/** 促销中心 · /promotions/settings 二级导航（150 子单促销重算等） */
+export const PROMOTION_SETTINGS_GROUP_ORDER = ["promo-strategy", "promo-channel"];
 
 /** 硬件管理中心 · 全局默认设备（386–395，virtual catalog） */
 export const HARDWARE_SETTINGS_GROUP_ORDER = ["global-default-devices"];
@@ -282,11 +332,11 @@ const HARDWARE_GLOBAL_DEFAULT_SEQ_ORDER = [386, 387, 388, 389, 390, 391, 392, 39
 
 assignSort(HARDWARE_GLOBAL_DEFAULT_SEQ_ORDER);
 
-/** 点单页展示：行展示 → 相同菜 → 菜序/时间 → 小数数量 → 单菜序号 → 减菜跳转 → 顾客信息必填 → 自定义点单 */
-const POS_ORDER_CART_SEQ_ORDER = [132, 133, 135, 137, 121, 178, 122, 222, 223, 138];
+/** 点单页展示（与 foh-pos-order-cart 同序；138 已迁 foh-pos-combo-ordering） */
+const POS_ORDER_CART_SEQ_ORDER = [132, 133, 135, 137, 178, 121, 122, 222, 223];
 
-/** 前厅 · 套餐点单与展示（v2.0 自商品中心迁入） */
-const POS_COMBO_ORDERING_SEQ_ORDER = [139, 145];
+/** 前厅 · 套餐与自定义点单（v2.0 自商品中心迁入 + 138） */
+const POS_COMBO_ORDERING_SEQ_ORDER = [138, 139, 145];
 
 /** 会员中心 · 会员账户与卡体系（v1.8 仅 1 组） */
 const MEMBER_ACCOUNT_SYSTEM_SEQ_ORDER = [86, 87, 88, 89];
@@ -295,8 +345,14 @@ assignSort(POS_ORDER_CART_SEQ_ORDER);
 assignSort(POS_COMBO_ORDERING_SEQ_ORDER);
 assignSort(MEMBER_ACCOUNT_SYSTEM_SEQ_ORDER);
 
-/** 分单合单与改单：改应收/部分支付 → 分单展示 → 送厨后改调味 → 合单 → 拆单促销重算 */
-const SPLIT_MERGE_EDIT_SEQ_ORDER = [115, 116, 117, 119, 140, 141, 124, 150];
+/** 订单基础：默认类型 → 单号模式 → 起始/上限 → 分类 → 重置 */
+const ORDER_BASICS_SEQ_ORDER = [126, 129, 128, 127, 130, 131];
+
+/** 改单与分合单：部分支付改单 → 应收编辑 → 合单 → 分单展示 */
+const ORDER_EDIT_SPLIT_MERGE_SEQ_ORDER = [117, 116, 115, 124, 119, 140];
+
+/** 促销中心 · 促销活动与规则（150 子单促销重算） */
+const PROMO_STRATEGY_SEQ_ORDER = [150];
 
 /** 促销中心 · 抽奖活动设置 */
 const LOTTERY_ACTIVITY_SETTINGS_SEQ_ORDER = [647];
@@ -304,20 +360,21 @@ const LOTTERY_ACTIVITY_SETTINGS_SEQ_ORDER = [647];
 /** 促销中心 · 抽奖动画设置 */
 const LOTTERY_ANIMATION_SETTINGS_SEQ_ORDER = [672];
 
+assignSort(PROMO_STRATEGY_SEQ_ORDER);
 assignSort(LOTTERY_ACTIVITY_SETTINGS_SEQ_ORDER);
 assignSort(LOTTERY_ANIMATION_SETTINGS_SEQ_ORDER);
 
 /** 折扣：预设 → 原因策略 */
 const ORDER_DISCOUNT_SEQ_ORDER = [446, 162, 163, 164];
 
-/** 加收：预设 → 合单重算 → 线上服务费 */
-const ORDER_SURCHARGE_SEQ_ORDER = [447, 149, 161];
+/** 附加费与服务费：预设 → 合单重算 → 线上服务费 */
+const ORDER_SURCHARGE_FEES_SEQ_ORDER = [447, 149, 161];
 
-/** 金额结算：总价四舍五入 */
-const ORDER_SETTLEMENT_SEQ_ORDER = [147];
+/** 结算取整：总价四舍五入 */
+const ORDER_SETTLEMENT_ROUNDING_SEQ_ORDER = [147];
 
-/** 删退与作废：厨打联动 → 原因与权限 → 按菜退款 */
-const ORDER_VOID_SEQ_ORDER = [155, 156, 157, 158, 159];
+/** 删单与退款：删未付款 → 按菜退款 → 原因必填 → 原因枚举 */
+const ORDER_VOID_REFUND_SEQ_ORDER = [158, 159, 157, 156];
 
 /** POS 找单列表：展示/筛选 → 打印（154 盘点模式已下线） */
 const POS_FIND_ORDER_LIST_SEQ_ORDER = [151, 152, 153, 251];
@@ -328,39 +385,23 @@ const POS_CHECKOUT_ENTRY_SEQ_ORDER = [248, 221];
 assignSort(POS_ORDER_CART_SEQ_ORDER);
 assignSort(POS_FIND_ORDER_LIST_SEQ_ORDER);
 assignSort(POS_CHECKOUT_ENTRY_SEQ_ORDER);
-assignSort(SPLIT_MERGE_EDIT_SEQ_ORDER);
+assignSort(ORDER_BASICS_SEQ_ORDER);
+assignSort(ORDER_EDIT_SPLIT_MERGE_SEQ_ORDER);
 assignSort(ORDER_DISCOUNT_SEQ_ORDER);
-assignSort(ORDER_SURCHARGE_SEQ_ORDER);
-assignSort(ORDER_SETTLEMENT_SEQ_ORDER);
-assignSort(ORDER_VOID_SEQ_ORDER);
+assignSort(ORDER_SURCHARGE_FEES_SEQ_ORDER);
+assignSort(ORDER_SETTLEMENT_ROUNDING_SEQ_ORDER);
+assignSort(ORDER_VOID_REFUND_SEQ_ORDER);
 
-/** 打印中心设置页二级导航展示顺序（v1.10 版式拆为明细与价格 + 版式与辅助） */
-export const PRINT_SETTINGS_GROUP_ORDER = [
-  "print-foundation-devices",
-  "order-receipt-trigger",
-  "payment-receipt-flow",
-  "receipt-print-execution",
-  "receipt-line-content",
-  "receipt-layout-format",
-  "packing-slip-print",
-  "ticket-number-slip",
-];
+export {
+  PRINT_SETTINGS_GROUP_ORDER,
+  PRINT_SETTINGS_GROUP_NAV_SECTIONS,
+} from "./print-settings-groups.mjs";
 
-const PRINT_FOUNDATION_SEQ_ORDER = [167, 256, 259, 265, 269];
-const ORDER_RECEIPT_TRIGGER_SEQ_ORDER = [654, 500];
-const PAYMENT_RECEIPT_FLOW_SEQ_ORDER = [246, 261, 250, 247, 272];
-const RECEIPT_PRINT_EXECUTION_SEQ_ORDER = [262, 273];
-const RECEIPT_LINE_CONTENT_SEQ_ORDER = [275, 274, 278, 276, 285, 289, 283, 284];
-const RECEIPT_LAYOUT_FORMAT_SEQ_ORDER = [282, 286, 277, 279, 280, 264];
-const PRINT_PACKING_SLIP_PRINT_SEQ_ORDER = [34, 281, 297, 303];
+import { PRINT_SETTINGS_INTRA_GROUP_SEQ } from "./print-settings-groups.mjs";
 
-assignSort(PRINT_FOUNDATION_SEQ_ORDER);
-assignSort(ORDER_RECEIPT_TRIGGER_SEQ_ORDER);
-assignSort(PAYMENT_RECEIPT_FLOW_SEQ_ORDER);
-assignSort(RECEIPT_PRINT_EXECUTION_SEQ_ORDER);
-assignSort(RECEIPT_LINE_CONTENT_SEQ_ORDER);
-assignSort(RECEIPT_LAYOUT_FORMAT_SEQ_ORDER);
-assignSort(PRINT_PACKING_SLIP_PRINT_SEQ_ORDER);
+for (const seqs of Object.values(PRINT_SETTINGS_INTRA_GROUP_SEQ)) {
+  assignSort(seqs);
+}
 
 /** 外卖/来取设置页二级导航展示顺序（v2.5） */
 export const DELIVERY_SETTINGS_GROUP_ORDER = [

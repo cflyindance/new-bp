@@ -1,5 +1,5 @@
 /**
- * 支付中心 · 小费政策与计算（方案 A）：组内排序 + 专用控件。
+ * 支付中心 · 小费：计算规则、POS 录入、结账预设与收据建议。
  */
 
 import {
@@ -451,8 +451,8 @@ export function isPaymentTipPolicyToggleSeq(seq: number): boolean {
 export function renderTipPolicyGroupIntroHtml(): string {
   return `
     <p class="mb-3 rounded-md border border-border bg-muted/40 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
-      本组为结账小费规则（含 POS 服务员录入方式、计算基数与收据建议）。
-      自助端小费页<strong>收取方式</strong>（固定/百分比）见 <strong>493</strong>（CDS / Kiosk / PayPad 分产线）；页内展示细节见「结账与交互」<strong>463</strong>。
+      本组为小费<strong>计算规则</strong>、<strong>POS 服务员录入</strong>、<strong>结账页预设</strong>（237）与<strong>收据建议</strong>（266/295/296）。
+      自助端小费页展示与收取方式见「食客结账界面」<strong>463 / 493</strong>。
     </p>`;
 }
 

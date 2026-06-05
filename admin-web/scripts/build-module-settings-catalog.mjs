@@ -14,17 +14,22 @@ import { buildCatalogSceneDesc, buildCatalogTitle } from "./lib/settings-catalog
 import { getSettingsCatalogPathForSeq } from "./lib/settings-catalog-path-override.mjs";
 import { SETTINGS_CATALOG_VIRTUAL_ITEMS } from "./lib/settings-catalog-virtual-items.mjs";
 import { getSettingsHub } from "./lib/settings-hub-override.mjs";
+import { FOH_SETTINGS_GROUP_ORDER, FOH_SETTINGS_GROUP_NAV_SECTIONS } from "./lib/foh-settings-groups.mjs";
 import {
   DELIVERY_SETTINGS_GROUP_ORDER,
   FINANCE_SETTINGS_GROUP_ORDER,
-  FOH_SETTINGS_GROUP_ORDER,
+  FINANCE_SETTINGS_GROUP_NAV_SECTIONS,
   INTRA_GROUP_SORT_BY_SEQ,
   INTEGRATIONS_SETTINGS_GROUP_ORDER,
   NOTIFICATIONS_SETTINGS_GROUP_ORDER,
   KITCHEN_SETTINGS_GROUP_ORDER,
   ORDER_SETTINGS_GROUP_ORDER,
+  ORDER_SETTINGS_GROUP_NAV_SECTIONS,
+  PROMOTION_SETTINGS_GROUP_ORDER,
   PAYMENT_SETTINGS_GROUP_ORDER,
+  PAYMENT_SETTINGS_GROUP_NAV_SECTIONS,
   PRINT_SETTINGS_GROUP_ORDER,
+  PRINT_SETTINGS_GROUP_NAV_SECTIONS,
   HARDWARE_SETTINGS_GROUP_ORDER,
   STORE_BRAND_MENU_GROUP_ORDER,
   STORE_SETTINGS_GROUP_ORDER,
@@ -36,6 +41,7 @@ const SETTINGS_GROUP_ORDER_BY_PATH = {
   "/operations/kitchen-kds/settings": KITCHEN_SETTINGS_GROUP_ORDER,
   "/orders/settings": ORDER_SETTINGS_GROUP_ORDER,
   "/transactions/settings": PAYMENT_SETTINGS_GROUP_ORDER,
+  "/promotions/settings": PROMOTION_SETTINGS_GROUP_ORDER,
   "/promotions/lottery": ["lottery-activity-settings", "lottery-animation-settings"],
   "/reviews/settings": ["review-content-moderation"],
   "/stores/settings": STORE_SETTINGS_GROUP_ORDER,
@@ -46,11 +52,21 @@ const SETTINGS_GROUP_ORDER_BY_PATH = {
   "/settings/integrations": INTEGRATIONS_SETTINGS_GROUP_ORDER,
   "/notifications/settings": NOTIFICATIONS_SETTINGS_GROUP_ORDER,
   "/permissions/account-session": ["account-session-security"],
+  "/permissions/store-security": ["store-security-policy"],
+};
+
+const SETTINGS_GROUP_NAV_SECTIONS_BY_PATH = {
+  "/operations/queue-call/settings": FOH_SETTINGS_GROUP_NAV_SECTIONS,
+  "/orders/settings": ORDER_SETTINGS_GROUP_NAV_SECTIONS,
+  "/transactions/settings": PAYMENT_SETTINGS_GROUP_NAV_SECTIONS,
+  "/finance/settings": FINANCE_SETTINGS_GROUP_NAV_SECTIONS,
+  "/print-templates/settings": PRINT_SETTINGS_GROUP_NAV_SECTIONS,
 };
 
 /** catalog 页头标题（可与一级导航模块名不同） */
 const HUB_CATALOG_DISPLAY_TITLE_BY_PATH = {
   "/permissions/account-session": "账户与会话安全",
+  "/permissions/store-security": "门店安全策略",
   "/device-management/settings": "硬件管理中心",
 };
 
@@ -231,7 +247,14 @@ function buildCatalog(rows, mapping) {
   ts += `  settingsPath: string;\n`;
   ts += `  /** 二级导航分组展示顺序（可选） */\n`;
   ts += `  groupOrder?: string[];\n`;
+  ts += `  /** 侧栏分段标题与所含 groupKey（可选，如前厅 员工端/食客端） */\n`;
+  ts += `  groupNavSections?: ModuleSettingCatalogNavSection[];\n`;
   ts += `  items: ModuleSettingCatalogItem[];\n`;
+  ts += `}\n\n`;
+  ts += `export interface ModuleSettingCatalogNavSection {\n`;
+  ts += `  /** i18n 键，如 moduleSettings.fohNav.staff */\n`;
+  ts += `  labelKey: string;\n`;
+  ts += `  groupKeys: string[];\n`;
   ts += `}\n\n`;
   ts += `export interface ModuleSettingCatalogGroup {\n`;
   ts += `  groupKey: string;\n`;
@@ -251,11 +274,15 @@ function buildCatalog(rows, mapping) {
     itemCount += bucket.items.length;
 
     const groupOrder = SETTINGS_GROUP_ORDER_BY_PATH[settingsPath];
+    const groupNavSections = SETTINGS_GROUP_NAV_SECTIONS_BY_PATH[settingsPath];
     ts += `  ${JSON.stringify(settingsPath)}: {\n`;
     ts += `    hubTitle: ${JSON.stringify(hubTitle)},\n`;
     ts += `    settingsPath: ${JSON.stringify(settingsPath)},\n`;
     if (groupOrder) {
       ts += `    groupOrder: ${JSON.stringify(groupOrder)},\n`;
+    }
+    if (groupNavSections?.length) {
+      ts += `    groupNavSections: ${JSON.stringify(groupNavSections)},\n`;
     }
     ts += `    items: [\n`;
     for (const it of bucket.items) {
@@ -319,6 +346,19 @@ function buildCatalog(rows, mapping) {
   ts += `    const groupItems = map.get(groupKey)!.slice().sort(compareItemsInSameGroup);\n`;
   ts += `    return { groupKey, groupTitle: groupItems[0]?.groupTitle ?? groupKey, items: groupItems };\n`;
   ts += `  });\n`;
+  ts += `}\n\n`;
+  ts += `/** 按 seq 从全部 hub 中解析设置项（团队等业务页嵌入用） */\n`;
+  ts += `export function getTeamEmbeddedSettingItems(seqs: readonly number[]): ModuleSettingCatalogItem[] {\n`;
+  ts += `  const want = new Set(seqs);\n`;
+  ts += `  const bySeq = new Map<number, ModuleSettingCatalogItem>();\n`;
+  ts += `  for (const hub of Object.values(MODULE_SETTINGS_BY_PATH)) {\n`;
+  ts += `    for (const item of hub.items) {\n`;
+  ts += `      if (want.has(item.seq) && !bySeq.has(item.seq)) bySeq.set(item.seq, item);\n`;
+  ts += `    }\n`;
+  ts += `  }\n`;
+  ts += `  return seqs\n`;
+  ts += `    .map((seq) => bySeq.get(seq))\n`;
+  ts += `    .filter((item): item is ModuleSettingCatalogItem => item !== undefined);\n`;
   ts += `}\n`;
 
   return { ts, itemCount, paths: paths.length, total: rows.length };

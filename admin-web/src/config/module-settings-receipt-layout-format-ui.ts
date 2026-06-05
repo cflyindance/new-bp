@@ -1,5 +1,5 @@
 /**
- * 打印中心 · 收据版式与辅助（282 菜间距、280 加收文案输入；其余为开关）。
+ * 打印中心 · 订单收据 · 票面版式（282 菜间距、280 加收文案输入；其余为开关）。
  */
 
 import { readModuleSettingNumber, readModuleSettingText } from "./module-settings-form-ui";
@@ -10,6 +10,7 @@ export const RECEIPT_PRINT_ORDER_BARCODE_SEQ = 277;
 export const RECEIPT_PRINT_AUTO_SURCHARGE_HINT_SEQ = 279;
 export const RECEIPT_AUTO_SURCHARGE_HINT_TEXT_SEQ = 280;
 export const REPRINT_RECEIPT_SHOW_DATE_SEQ = 264;
+export const RECEIPT_TAX_DISCOUNT_SURCHARGE_POSITION_SEQ = 290;
 
 export const RECEIPT_DISH_SPACING_FIELD_ID = "282-receipt-dish-spacing";
 export const RECEIPT_AUTO_SURCHARGE_HINT_TEXT_FIELD_ID = "280-receipt-auto-surcharge-hint";
@@ -30,6 +31,7 @@ export const RECEIPT_LAYOUT_FORMAT_TOGGLE_SEQS: readonly number[] = [
   RECEIPT_PRINT_ORDER_BARCODE_SEQ,
   RECEIPT_PRINT_AUTO_SURCHARGE_HINT_SEQ,
   REPRINT_RECEIPT_SHOW_DATE_SEQ,
+  RECEIPT_TAX_DISCOUNT_SURCHARGE_POSITION_SEQ,
 ];
 
 function escapeHtml(s: string): string {

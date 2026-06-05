@@ -1,7 +1,7 @@
 /**
  * 前厅 · 品类模式相关设置（主开关 + 产线多选）：
  * — 601 食客端·首页与版式 · 品类模式（eMenu、SDI）；
- * — 571 品类先下单、627 下单前允许食客切换品类（eMenu）。
+ * — 571 品类先下单（eMenu、SDI）、627 下单前允许食客切换品类（eMenu）。
  */
 
 import { readModuleSettingJson, writeModuleSettingJson } from "./module-settings-form-ui";
@@ -29,7 +29,7 @@ const PRODUCT_LINES_BY_SEQ: Record<
   readonly { id: string; label: string }[]
 > = {
   [GUEST_MENU_CATEGORY_MODE_SEQ]: EMENU_SDI_PRODUCT_LINES,
-  [GUEST_CATEGORY_ORDER_FIRST_SEQ]: EMENU_ONLY_PRODUCT_LINES,
+  [GUEST_CATEGORY_ORDER_FIRST_SEQ]: EMENU_SDI_PRODUCT_LINES,
   [GUEST_CATEGORY_SWITCH_BEFORE_ORDER_SEQ]: EMENU_ONLY_PRODUCT_LINES,
 };
 

@@ -1,5 +1,5 @@
 /**
- * 订单 · 删退与作废：seq 156 订单失效原因多选；155/157/158/159 为开关（见 toggle-ui）。
+ * 订单 · 删单与退款：seq 156 订单失效原因多选；157/158/159 为开关（见 toggle-ui）。155 已迁后厨。
  */
 
 import { readModuleSettingCheckbox } from "./module-settings-form-ui";

@@ -1,5 +1,5 @@
 /**
- * 支付中心 · 结账与交互（463 小费页、464 签名页、465 小票、669 刷卡签购单）。
+ * 支付中心 · 食客结账界面（463 小费页、493 收取方式、9 刷卡顺序、464 签名、465 小票、669 签购单）。
  * 463/464 按 CDS / Kiosk / PayPad 产线矩阵；原 492/497/662/664 及 seq 8 已合并。
  */
 
@@ -704,8 +704,8 @@ export function isCdsCheckoutCardSlipSeq(seq: number): boolean {
 export function renderCdsCheckoutGroupIntroHtml(): string {
   return `
     <p class="mb-3 rounded-md border border-border bg-muted/40 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
-      <strong>463 / 464 / 465 / 669</strong> 均按 <strong>CDS、Kiosk、PayPad</strong> 产线独立配置。
-      签名金额门槛见「卡支付规则与合规」；小费与刷卡顺序见「小费与刷卡顺序」。
+      配置客显 / Kiosk / PayPad 结账流程：<strong>小费页 → 收取方式 → 刷卡顺序 → 签名 → 小票 → 签购单</strong>，各产线可独立设置。
+      小费预设见「小费」<strong>237</strong>；签名金额门槛见「卡付规则与加价」<strong>243</strong>。现金班结见财务中心。
     </p>`;
 }
 
@@ -713,7 +713,7 @@ export function renderCdsCheckoutTipPagePanelHtml(): string {
   return `
     <p class="mt-2 text-xs leading-relaxed text-muted-foreground">
       原 seq <strong>492</strong>（Kiosk）、<strong>662</strong>（PayPad）已合并。
-      预设小费选项维护于「小费政策与计算」<strong>237</strong>；各产线收取方式（固定/百分比）见 <strong>493</strong>。
+      预设小费选项维护于「小费」<strong>237</strong>；下方 <strong>493</strong> 配置各产线收取方式（固定/百分比）。
       下方分两项：原 <strong>494</strong>「展示百分比小费的具体金额」、原 <strong>496</strong>「展示 No Tip」，均按产线配置。
     </p>`;
 }
@@ -722,7 +722,7 @@ export function renderCdsCheckoutSignaturePagePanelHtml(): string {
   return `
     <p class="mt-2 text-xs leading-relaxed text-muted-foreground">
       原 seq <strong>497</strong>（Kiosk）、<strong>664</strong>（PayPad）、客显 <strong>8</strong> 已合并。
-      低于「卡支付规则与合规」<strong>243</strong> 产线门槛时可跳过（若门槛 &gt; 0）。
+      低于「卡付规则与加价」<strong>243</strong> 产线门槛时可跳过（若门槛 &gt; 0）。
     </p>`;
 }
 

@@ -35,7 +35,7 @@ const reasons = {
   "order-receipt-trigger":
     "654 下单后、500 部分付款后，按产线配置是否在门店收据机自动打订单收据；与支付收据流程分轨。",
   "payment-receipt-flow":
-    "246 支付方式矩阵（含原 263/268）、261 付款前触发、247/250/272 签购单票面与删卡联次；260/245/249 已并入支付中心 465/669。",
+    "246 支付方式矩阵（含原 263/268）、261 付款前触发、247/250/272 签购单票面与删卡联次、94 收据确认签名栏（按产线）；260/245/249 已并入支付中心 465/669。",
   "receipt-print-execution":
     "262 首打份数、273 重打仅新菜；触发已满足后的收据出纸范围与份数（265 已迁打印基础）。",
   "receipt-line-content":
@@ -52,7 +52,7 @@ const reasons = {
 const assignMap = {
   "print-foundation-devices": [167, 434, 256, 259, 265, 269],
   "order-receipt-trigger": [654, 500],
-  "payment-receipt-flow": [246, 247, 250, 261, 272],
+  "payment-receipt-flow": [246, 247, 250, 261, 272, 94],
   "receipt-print-execution": [262, 273],
   "receipt-line-content": [275, 274, 278, 276, 285, 289, 283, 284],
   "receipt-layout-format": [282, 286, 277, 279, 280, 264],
@@ -67,13 +67,13 @@ const MOVED_OUT = [
   { seq: 267, to: "外卖/来取 · platform-delivery-slips", note: "外送/外卖订单收据打印份数" },
   {
     seq: 258,
-    to: "后厨管理中心 · ticket-format",
-    note: "外带订单厨房单/收据单增强显示；厨房单侧 SSOT 在后厨，收据侧同存储键",
+    to: "后厨管理中心 · cross-ticket-fields",
+    note: "外带订单黑底白字强调（三票种）；配置 SSOT 在后厨",
   },
   {
     seq: 271,
-    to: "后厨管理中心 · ticket-fields",
-    note: "菜品编号三票种矩阵；厨房单列 SSOT 在后厨，打包/收据列见同 seq UI",
+    to: "后厨管理中心 · cross-ticket-fields",
+    note: "菜品编号三票种矩阵；配置 SSOT 在后厨",
   },
   { seq: 301, to: "后厨管理中心 · line-merge-rules", note: "打包单合并相同菜（矩阵列）" },
   { seq: 302, to: "后厨管理中心 · line-merge-rules", note: "打包单合并相同子菜（矩阵列）" },
@@ -86,7 +86,6 @@ const MOVED_OUT = [
   { seq: 252, to: "（排除）", note: "订单收据小费行打印时机与 266 收据建议小费重叠，支付中心 catalog 不展示" },
   { seq: 266, to: "支付中心 · tip-policy", note: "收据建议小费行；预设见 295/296" },
   { seq: 290, to: "支付中心 · tax-rules", note: "按税别调整折扣/加收在收据上的打印位置" },
-  { seq: 94, to: "前厅管理中心 · guest-order-rules", note: "网上点餐确认签名栏，C 端渠道规则" },
   {
     seq: 270,
     to: "打印中心 · print-foundation-devices · 269",

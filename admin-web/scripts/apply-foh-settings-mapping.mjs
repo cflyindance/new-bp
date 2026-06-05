@@ -1,5 +1,5 @@
 /**
- * 将前厅管理中心 12 组分类写入 docs/项目文档/配置归类-分组映射.csv（方案 D-紧凑）
+ * 将前厅管理中心 14 组分类写入 docs/项目文档/配置归类-分组映射.csv（方案 E）
  * 运行：node scripts/apply-foh-settings-mapping.mjs
  */
 import fs from "node:fs";

@@ -1,5 +1,5 @@
 /**
- * 消息中心 · 店内员工订单提醒（637/638/639）— 适用产线多选（各 seq 可选集不同）。
+ * 消息中心 · 员工订单消息（637/638/639）— 适用产线多选（各 seq 可选集不同）。
  */
 
 import { readModuleSettingJson, writeModuleSettingJson } from "./module-settings-form-ui";

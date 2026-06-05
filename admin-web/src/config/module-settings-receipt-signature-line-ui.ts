@@ -1,5 +1,5 @@
 /**
- * 前厅 · 食客端·下单与规则：seq 94 收据小票上打印确认签名栏（主开关 + 按产线多选）。
+ * 打印中心 · 支付收据流程：seq 94 收据小票上打印确认签名栏（主开关 + 按产线多选）。
  */
 
 import { readModuleSettingJson, writeModuleSettingJson } from "./module-settings-form-ui";

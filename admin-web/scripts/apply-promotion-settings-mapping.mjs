@@ -15,11 +15,13 @@ const mappingPath = [projectDocs, repoDocs]
   .find((p) => fs.existsSync(p));
 
 const titles = {
+  "promo-strategy": "促销活动与规则",
   "lottery-activity-settings": "抽奖活动设置",
   "lottery-animation-settings": "抽奖动画设置",
 };
 
 const assignMap = {
+  "promo-strategy": [150],
   "lottery-activity-settings": [647],
 };
 

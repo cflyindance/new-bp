@@ -1,5 +1,5 @@
 /**
- * 财务中心 · 日结与结算（seq 171、65、330）。
+ * 财务中心 · 现金日结与班结（seq 171、65、330）。
  * 171 每日日结总开关；65/330 现金班结体验（依赖 171）。
  * 卡 Batch 日切见支付中心 238；Batch 后打印见 235。
  */
@@ -32,8 +32,8 @@ export function renderDailyCloseSettlementIntroHtml(): string {
   return `
     <p class="m-0 mb-3 text-xs leading-relaxed text-muted-foreground">
       本组配置<strong>门店现金日结/班结</strong>流程：是否按营业日执行班结、班结界面展示与完成后报表输出。
-      <strong>不是</strong>卡交易 Batch 调度——自动关账时刻、收单结算周期、Batch 后打印见支付中心「BATCH与日结」（238、230、235）。
-      钱箱容差与备款见「钱箱与现金平账」（63、76、181）。
+      <strong>不是</strong>卡交易 Batch 调度——自动关账时刻、收单结算周期、Batch 后打印见支付中心「卡交易 Batch 结算」（238、230、235）。
+      钱箱备款与容差见「钱箱备款与平账」（63、76、181）。
     </p>`;
 }
 

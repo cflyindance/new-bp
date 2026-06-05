@@ -1,5 +1,5 @@
 /**
- * 消息中心 · 语音提醒：新单（seq 332）— 适用产线多选。
+ * 消息中心 · 新单语音播报（seq 332）— 适用产线多选。
  */
 
 import { readModuleSettingJson, writeModuleSettingJson } from "./module-settings-form-ui";
@@ -97,7 +97,7 @@ export function renderNotificationVoiceAlertByLineHtml(): string {
       class="flex w-full max-w-3xl overflow-hidden rounded-md border border-border bg-muted/40"
       data-voice-alert-by-line="${NOTIFICATION_VOICE_ALERT_SEQ}"
       role="group"
-      aria-label="语音提醒：新单适用产线"
+      aria-label="新单语音播报适用产线"
     >
       ${cells}
     </div>`;

@@ -1,5 +1,5 @@
 /**
- * 支付中心 · BATCH与日结：调度、Batch 规则与后置打印（241 已归团队考勤）。
+ * 支付中心 · 卡交易 Batch 结算：日切调度、Batch 规则与后置打印（241 已归团队考勤）。
  */
 
 import { renderModuleSettingCheckboxChoiceHtml } from "./module-settings-choice-ui";
@@ -130,8 +130,8 @@ export function isPaymentBatchToggleSeq(seq: number): boolean {
 export function renderBatchSettlementGroupIntroHtml(): string {
   return `
     <p class="mb-3 rounded-md border border-border bg-muted/40 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
-      本组为 Batch 收单与日切关账调度（238 每日关账时刻、230 向收单行结算周期等）。
-      门店<strong>现金日结/班结</strong>（是否启用、班结展示、现金报表打印）见财务中心「日结与结算」（171、65、330）；员工下班卡 Batch 门禁见团队管理「考勤与工时」（241）。
+      本组为<strong>卡交易 Batch</strong>与日切关账（238 每日关账时刻、230 向收单行结算周期等），<strong>不是</strong>现金班结。
+      门店现金日结/班结见财务中心「现金日结与班结」（171、65、330）；员工下班卡 Batch 门禁见团队管理「考勤与工时」（241）。
     </p>`;
 }
 

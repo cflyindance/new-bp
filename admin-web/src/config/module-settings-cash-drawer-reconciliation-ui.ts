@@ -1,5 +1,5 @@
 /**
- * 财务中心 · 钱箱与现金平账（seq 63、76、181）。
+ * 财务中心 · 钱箱备款与平账（seq 63、76、181）。
  * 63 开班备款 + 可选硬币卷（原 64）；76 容差金额；181 超差提醒开关。
  */
 
@@ -132,7 +132,7 @@ export function renderCashDrawerReconciliationIntroHtml(): string {
   return `
     <p class="m-0 mb-3 text-xs leading-relaxed text-muted-foreground">
       本组为<strong>现金内控策略</strong>：开班备款、班结长短款容差与超差提醒。
-      现金日结流程见「日结与结算」（171、65、330）；开钱箱硬件见硬件管理中心。
+      现金日结流程见「现金日结与班结」（171、65、330）；开钱箱硬件见硬件管理中心。
     </p>`;
 }
 
@@ -150,7 +150,7 @@ export function renderCashDrawerFloatAmountInputHtml(): string {
         max="${FLOAT_MAX}"
         step="0.01"
         data-cash-drawer-money-number="${escapeHtml(FLOAT_AMOUNT_FIELD_ID)}"
-        aria-label="现金底金金额"
+        aria-label="开班备款金额"
       />
     </div>`;
 }

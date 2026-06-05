@@ -1,10 +1,14 @@
 /**
- * 将打印中心 5 组分类写入 docs/项目文档/配置归类-分组映射.csv
+ * 将打印中心分类写入 docs/项目文档/配置归类-分组映射.csv
  * 运行：node scripts/apply-print-settings-mapping.mjs
  */
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  PRINT_SETTINGS_GROUP_TITLES,
+  PRINT_SETTINGS_INTRA_GROUP_SEQ,
+} from "./lib/print-settings-groups.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, "..", "..");
@@ -14,36 +18,10 @@ const mappingPath = [projectDocs, repoDocs]
   .map((d) => path.join(d, "配置归类-分组映射.csv"))
   .find((p) => fs.existsSync(p));
 
-const titles = {
-  "print-foundation-devices": "打印基础",
-  "order-receipt-trigger": "订单收据触发",
-  "payment-receipt-flow": "支付收据流程",
-  "receipt-print-execution": "收据打印执行",
-  "receipt-line-content": "收据明细与价格",
-  "receipt-layout-format": "收据版式与辅助",
-  "packing-slip-print": "打包单打印",
-  "ticket-number-slip": "单号小票",
-};
-
-const assignMap = {
-  /** v1.9：265 快速打印迁入；269 选机；270 合并入 269 */
-  "print-foundation-devices": [167, 256, 259, 265, 269],
-  "order-receipt-trigger": [654, 500],
-  "payment-receipt-flow": [246, 247, 250, 261, 272],
-  /** v1.9：首打份数 + 重打仅新菜（265 已迁打印基础） */
-  "receipt-print-execution": [262, 273],
-  /** v1.10：原「收据版式与明细」拆为明细/价格 + 版式/辅助 */
-  "receipt-line-content": [275, 274, 278, 276, 285, 289, 283, 284],
-  "receipt-layout-format": [282, 286, 277, 279, 280, 264],
-  /** v1.7：281 堂食信息（收据+打包单）并入打包组 */
-  "packing-slip-print": [34, 281, 297, 303],
-  "ticket-number-slip": [291, 292],
-};
-
 const printAssign = new Map();
-for (const [key, seqs] of Object.entries(assignMap)) {
+for (const [key, seqs] of Object.entries(PRINT_SETTINGS_INTRA_GROUP_SEQ)) {
   for (const seq of seqs) {
-    printAssign.set(seq, { groupTitle: titles[key], groupKey: key });
+    printAssign.set(seq, { groupTitle: PRINT_SETTINGS_GROUP_TITLES[key], groupKey: key });
   }
 }
 
@@ -79,7 +57,7 @@ if (!mappingPath) throw new Error("未找到 配置归类-分组映射.csv");
 
 function assignMapTotal() {
   let n = 0;
-  for (const seqs of Object.values(assignMap)) n += seqs.length;
+  for (const seqs of Object.values(PRINT_SETTINGS_INTRA_GROUP_SEQ)) n += seqs.length;
   return n;
 }
 

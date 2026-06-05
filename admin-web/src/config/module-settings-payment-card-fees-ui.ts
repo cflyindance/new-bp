@@ -1,5 +1,5 @@
 /**
- * 支付中心 · 卡支付规则与对客加价（82/242 产线最低消费、454 互斥策略、243 签名门槛）。
+ * 支付中心 · 卡付规则与加价（454 策略、82/242 最低消费、172 未付价展示、243 签名门槛、180 留存）。
  */
 
 import { MODULE_SETTING_CHOICE_CONTROL_CLASS } from "./module-settings-choice-ui";
@@ -345,8 +345,8 @@ export function isReceiptUnpaidPriceDisplaySeq(seq: number): boolean {
 export function renderCardFeesGroupIntroHtml(): string {
   return `
     <p class="mb-3 rounded-md border border-border bg-muted/40 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
-      本组配置<strong>会员卡 / 信用卡产线最低消费</strong>（82 / 242）、<strong>签名金额门槛</strong>（243）、<strong>Merchantcopy 电子签名留存天数</strong>（180）、<strong>刷卡是否对顾客加价</strong>（454）与<strong>收据未付价格口径</strong>（172）。
-      各终端小费页 / 签名页开关见「结账与交互」463/464；收单通道成本见财务中心。
+      本组配置<strong>双轨定价</strong>（454 卡付加价、305 现金折扣）、<strong>产线最低消费</strong>（82 / 242）、<strong>收据未付价格展示</strong>（172）、<strong>签名金额门槛</strong>（243）与<strong>电子签名留存</strong>（180）。
+      食客结账界面见「食客结账界面」；对内收单成本率见财务中心「收单成本与报表口径」（307）。
     </p>`;
 }
 

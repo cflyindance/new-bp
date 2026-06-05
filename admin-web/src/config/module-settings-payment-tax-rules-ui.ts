@@ -1,5 +1,5 @@
 /**
- * 支付中心 · 税务规则：445 基础税率、143 税基（折前/折后）；142/144/160/290 为开关项。
+ * 支付中心 · 税务计算：445 基础税率、143 税基（折前/折后）；142/144/160 为开关项。290 已迁打印中心。
  */
 
 import { renderModuleSettingSingleChoiceHtml } from "./module-settings-choice-ui";
@@ -12,7 +12,7 @@ import {
 export const PAYMENT_BASE_TAX_RATE_SEQ = 445;
 export const PAYMENT_TAX_DISCOUNT_BASE_SEQ = 143;
 
-export const PAYMENT_TAX_POLICY_TOGGLE_SEQS = [142, 144, 160, 290] as const;
+export const PAYMENT_TAX_POLICY_TOGGLE_SEQS = [142, 144, 160] as const;
 
 export const PAYMENT_BASE_TAX_RATE_FIELD_ID = "445-base-tax-rate-percent";
 

@@ -137,6 +137,7 @@ export function renderDishPicker(
   role: string,
   dishes: DishTag[],
   pickerUi: "checkbox" | "select" = "checkbox",
+  choiceLayout: "wrap" | "grid" = "wrap",
 ): string {
   if (pickerUi === "select") {
     return renderDishSelectPicker(parentSeq, ruleId, role, dishes);
@@ -154,11 +155,11 @@ export function renderDishPicker(
       "data-dish-id": value,
       "data-dish-name": label,
     }),
-    layout: "wrap",
+    layout: choiceLayout,
   });
   return `
     <div
-      class="module-setting-dish-picker min-w-0 flex-1 space-y-2 rounded-md border border-input bg-background px-2 py-2"
+      class="module-setting-dish-picker min-w-0 w-full space-y-2 rounded-md border border-input bg-background px-3 py-2.5"
       data-dish-picker
       data-picker-role="${escapeHtml(role)}"
       data-parent-seq="${parentSeq}"
@@ -268,15 +269,27 @@ export function onDishSelectChange(picker: HTMLElement, select: HTMLSelectElemen
 
 function renderMutexRuleRow(rule: DishMutexRule, parentSeq: number, isLast: boolean): string {
   return `
-    <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-3" data-mutex-rule-row data-rule-id="${escapeHtml(rule.id)}">
-      <div class="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center">
-        ${renderDishPicker(parentSeq, rule.id, "trigger", rule.trigger)}
-        <span class="shrink-0 text-center text-sm text-muted-foreground sm:px-1">互斥</span>
-        ${renderDishPicker(parentSeq, rule.id, "excluded", rule.excluded)}
+    <div
+      class="space-y-3 rounded-md border border-border/60 bg-background/60 p-3"
+      data-mutex-rule-row
+      data-rule-id="${escapeHtml(rule.id)}"
+    >
+      <div class="space-y-1.5">
+        <span class="text-sm font-medium text-foreground">下单菜品</span>
+        ${renderDishPicker(parentSeq, rule.id, "trigger", rule.trigger, "checkbox", "grid")}
+      </div>
+      <div class="flex items-center gap-2 text-sm text-muted-foreground" aria-hidden="true">
+        <span class="h-px min-w-3 flex-1 bg-border"></span>
+        <span class="shrink-0 font-medium text-foreground">互斥</span>
+        <span class="h-px min-w-3 flex-1 bg-border"></span>
+      </div>
+      <div class="space-y-1.5">
+        <span class="text-sm font-medium text-foreground">不可再下单菜品</span>
+        ${renderDishPicker(parentSeq, rule.id, "excluded", rule.excluded, "checkbox", "grid")}
       </div>
       ${
         isLast
-          ? `<button type="button" class="shrink-0 self-end text-sm font-medium text-primary hover:underline sm:self-center" data-mutex-add-rule>增加</button>`
+          ? `<div class="flex justify-end pt-1"><button type="button" class="text-sm font-medium text-primary hover:underline" data-mutex-add-rule>增加</button></div>`
           : ""
       }
     </div>`;
@@ -320,7 +333,12 @@ export function renderDishMutexRulesHtml(parentSeq: number, storageFieldId: stri
     .map((rule, i) => renderMutexRuleRow(rule, parentSeq, i === rules.length - 1))
     .join("");
   return `
-    <div class="space-y-3" data-mutex-rules-editor data-storage-id="${escapeHtml(storageFieldId)}" data-parent-seq="${parentSeq}">
+    <div
+      class="space-y-4"
+      data-mutex-rules-editor
+      data-storage-id="${escapeHtml(storageFieldId)}"
+      data-parent-seq="${parentSeq}"
+    >
       ${rows}
     </div>`;
 }
