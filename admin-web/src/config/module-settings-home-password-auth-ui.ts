@@ -10,6 +10,7 @@ export const HOME_PASSWORD_AUTH_SEQ = 346;
 const LINES_STORAGE_ID = "346-home-password-auth-lines";
 
 export const HOME_PASSWORD_AUTH_PRODUCT_LINES = [
+  { id: "pos", label: "POS" },
   { id: "pos-go", label: "POS GO" },
   { id: "paypad", label: "PayPad" },
 ] as const;
@@ -98,7 +99,7 @@ function renderLinesMultiselectHtml(enabled: boolean): string {
     const divider = index > 0 ? "border-l border-border" : "";
     return `
       <label
-        class="flex flex-1 flex-col items-center justify-center gap-2 px-4 py-3 text-sm text-foreground sm:px-8 ${enabled ? "cursor-pointer" : "cursor-not-allowed opacity-50"} ${divider}"
+        class="flex flex-1 flex-col items-center justify-center gap-2 px-2 py-3 text-sm text-foreground sm:px-4 ${enabled ? "cursor-pointer" : "cursor-not-allowed opacity-50"} ${divider}"
       >
         <input
           type="checkbox"
@@ -115,7 +116,7 @@ function renderLinesMultiselectHtml(enabled: boolean): string {
 
   return `
     <div
-      class="flex w-full max-w-sm overflow-hidden rounded-md border border-border bg-muted/40"
+      class="flex w-full max-w-xl overflow-hidden rounded-md border border-border bg-muted/40"
       data-home-password-auth-lines="${HOME_PASSWORD_AUTH_SEQ}"
       role="group"
       aria-label="主页密码权限适用产线"

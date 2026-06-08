@@ -5,8 +5,6 @@ import { SYSTEM_SETTINGS_CATALOG_PATH_BY_SEQ } from "./system-settings-groups.mj
  */
 export const SETTINGS_CATALOG_PATH_BY_SEQ = new Map([
   ...Object.entries(SYSTEM_SETTINGS_CATALOG_PATH_BY_SEQ).map(([seq, p]) => [Number(seq), p]),
-  /** 门店安全策略（349），非 /permissions/account-session */
-  [349, "/permissions/store-security"],
   /** 抽奖活动独立功能页，非 /promotions/settings */
   [647, "/promotions/lottery"],
   /** 门店管理：品牌与菜单与门店状态同级，非 /stores/settings 内分组 */

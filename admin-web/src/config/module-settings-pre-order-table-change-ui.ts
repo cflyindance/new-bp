@@ -1,6 +1,6 @@
 /**
  * 前厅 · 桌台与餐位：开单前换桌（643）、开单前必须换桌（644）。
- * 主开关 + 适用产线多选（Kiosk / eMenu / POS / POS GO / PayPad / SDI）。
+ * 主开关 + 适用产线多选（eMenu）。
  */
 
 import { readModuleSettingJson, writeModuleSettingJson } from "./module-settings-form-ui";
@@ -16,14 +16,7 @@ export const PRE_ORDER_TABLE_CHANGE_SEQS = [
 
 export type PreOrderTableChangeSeq = (typeof PRE_ORDER_TABLE_CHANGE_SEQS)[number];
 
-export const PRE_ORDER_TABLE_CHANGE_PRODUCT_LINES = [
-  { id: "kiosk", label: "Kiosk" },
-  { id: "emenu", label: "eMenu" },
-  { id: "pos", label: "POS" },
-  { id: "pos-go", label: "POS GO" },
-  { id: "paypad", label: "PayPad" },
-  { id: "sdi", label: "SDI" },
-] as const;
+export const PRE_ORDER_TABLE_CHANGE_PRODUCT_LINES = [{ id: "emenu", label: "eMenu" }] as const;
 
 export type PreOrderTableChangeProductLineId =
   (typeof PRE_ORDER_TABLE_CHANGE_PRODUCT_LINES)[number]["id"];
@@ -66,7 +59,12 @@ function normalizeLineIds(raw: unknown): PreOrderTableChangeProductLineId[] {
 export function readPreOrderTableChangeLines(seq: PreOrderTableChangeSeq): PreOrderTableChangeProductLineId[] {
   const stored = readModuleSettingJson<unknown>(LINES_STORAGE_ID_BY_SEQ[seq], null);
   const normalized = normalizeLineIds(stored);
-  if (normalized.length > 0) return normalized;
+  if (normalized.length > 0) {
+    if (Array.isArray(stored) && normalized.length !== stored.length) {
+      writePreOrderTableChangeLines(seq, normalized);
+    }
+    return normalized;
+  }
 
   if (readMasterToggleOn(seq)) {
     const all = [...ALL_LINE_IDS];
@@ -113,7 +111,7 @@ function renderLinesMultiselectHtml(seq: PreOrderTableChangeSeq, enabled: boolea
 
   return `
     <div
-      class="flex w-full max-w-3xl overflow-hidden rounded-md border border-border bg-muted/40"
+      class="flex w-full max-w-md overflow-hidden rounded-md border border-border bg-muted/40"
       data-pre-order-table-change-lines="${seq}"
       role="group"
       aria-label="开单前换桌适用产线"

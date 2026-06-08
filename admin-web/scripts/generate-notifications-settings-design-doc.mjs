@@ -18,24 +18,16 @@ const outPath = path.join(projectDocs, "消息中心-设置二级导航重设计
 const HUB = "消息中心";
 
 const titles = {
-  "notification-basics": "员工端通知总控",
-  "staff-order-alerts": "员工订单消息",
   "customer-order-sms": "顾客短信渠道",
 };
 
 const reasons = {
-  "notification-basics":
-    "员工端通知类型总开关与新单语音播报；地基配置，须先于订单提醒与桌边服务主题联动。",
-  "staff-order-alerts":
-    "新单/追单/指定菜品等**店内员工订单消息**（不发顾客短信）；桌边呼叫能力在前厅，Service Request 须在总控主题中勾选。",
   "customer-order-sms":
-    "仅产线发送开关（334/335）；短信文案与场景模板关联已迁至「消息模板」「消息配置」，避免与设置重复。",
+    "仅产线发送开关（334/335）；短信文案与场景模板关联见「消息模板」「消息配置」。POS 员工端通知已迁前厅「POS 通知总控 / 订单消息提醒」。",
 };
 
 /** seq → groupKey（消息中心 catalog） */
 const assignMap = {
-  "notification-basics": [331, 332],
-  "staff-order-alerts": [638, 639, 637],
   "customer-order-sms": [334, 335],
 };
 
@@ -61,7 +53,7 @@ const md = fs.readFileSync(sourcePath, "utf8");
 const rows = filterRowsForSettingsHub(parseConfigMd(md), HUB).filter(
   (r) => !isSettingsCatalogExcluded(r.seq),
 );
-const order = ["notification-basics", "staff-order-alerts", "customer-order-sms"];
+const order = ["customer-order-sms"];
 
 const missing = rows.filter((r) => !assign.has(r.seq)).map((r) => r.seq);
 if (missing.length) throw new Error(`未归类 seq: ${missing.join(", ")}`);
@@ -160,9 +152,7 @@ push(
   "",
   "| groupKey | 组首说明要点 |",
   "|----------|----------------|",
-  "| `notification-basics` | 员工端通知类型 + 新单语音；订单文字消息见「员工订单消息」；桌边呼叫在前厅 |",
-  "| `staff-order-alerts` | 仅店内员工订单消息；不发顾客短信；须在总控启用对应主题 |",
-  "| `customer-order-sms` | 仅产线发送开关；文案见消息模板，场景关联见消息配置 |",
+  "| `customer-order-sms` | 仅产线发送开关；文案见消息模板，场景关联见消息配置；POS 通知见前厅 |",
   "",
   "---",
   "",
@@ -170,19 +160,19 @@ push(
   "",
   "| 新 groupTitle | 吸收的旧分组 |",
   "|---------------|--------------|",
-  "| 员工端通知总控 | 消息中心（331 主题、332 语音） |",
-  "| 员工订单消息 | 消息通知（638/639/637） |",
   "| 顾客短信渠道 | 消息中心设置（334/335）；336–340 迁至消息模板+消息配置 |",
-  "| （已迁出） | 呼叫服务员系列 → 前厅 · 桌边·呼叫服务员 |",
+  "| （已迁出） | 331/332/637–639 → 前厅 · POS 通知总控 / 订单消息提醒 |",
+  "| （已迁出） | 呼叫服务员系列 → 前厅 · 桌边服务 |",
   "",
   "---",
   "",
   "## 7. 落地步骤",
   "",
-  "1. 运行 `node admin-web/scripts/apply-notifications-settings-mapping.mjs`",
-  "2. `cd admin-web && npm run build:settings-catalog`",
-  "3. 可选：`node admin-web/scripts/generate-notifications-settings-design-doc.mjs` 同步本文档",
-  "4. 消息中心 → 设置（`/notifications/settings`）验证组首说明与开关",
+  "1. 运行 `node admin-web/scripts/apply-foh-settings-mapping.mjs`（331/332/637–639）",
+  "2. 运行 `node admin-web/scripts/apply-notifications-settings-mapping.mjs`（334/335）",
+  "3. `cd admin-web && npm run build:settings-catalog`",
+  "4. 可选：`node admin-web/scripts/generate-notifications-settings-design-doc.mjs` 同步本文档",
+  "5. 消息中心 → 设置（`/notifications/settings`）仅顾客短信；前厅 → 设置验证 POS 通知组",
   "",
   "### 7.1 映射表（CSV）",
   "",
@@ -203,9 +193,9 @@ push(
   "",
   "## 8. 边界说明",
   "",
-  "- catalog 条数与终版 `seq` 一致；本次仅重组消息中心设置 catalog 与文案。",
-  "- 637 指定菜品列表维护入口可在菜单/前厅另设，**通知开关**保留本中心。",
-  "- 桌边呼叫：前厅配置能力；员工 Service Request 提醒依赖 331 主题 + 前厅 333 类型。",
+  "- 消息中心 catalog 仅保留顾客短信渠道（334/335）。",
+  "- POS 员工端通知（331/332）与订单消息（637–639）归属前厅设置。",
+  "- 桌边呼叫：前厅配置能力；员工提醒依赖前厅 POS 通知总控主题 + 桌边服务类型。",
   "",
 );
 

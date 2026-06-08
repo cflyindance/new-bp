@@ -2,6 +2,11 @@
  * 前厅 · 桌边·呼叫服务员（方案 A：333 服务类型 SSOT；630–636 已迁并废弃）。
  */
 
+import {
+  FOH_LINE_CONFIG_ROW_ATTR,
+  getFohActiveLineFilterId,
+  isFohLineConfigRowVisible,
+} from "./foh-settings-by-line-filter";
 import { MODULE_SETTING_CHOICE_CONTROL_CLASS } from "./module-settings-choice-ui";
 import {
   moduleSettingStorageKey,
@@ -11,7 +16,11 @@ import {
   writeModuleSettingJson,
 } from "./module-settings-form-ui";
 import { newRuleId } from "./module-settings-dish-rules-ui";
-import { moduleSettingToggleStorageKey } from "./module-settings-toggle-ui";
+
+/** 与 module-settings-toggle-ui 一致；本地定义以避免与 toggle-ui 循环引用 */
+function moduleSettingToggleStorageKey(seq: number): string {
+  return `bplant-module-setting-toggle:${seq}`;
+}
 
 export const TABLESIDE_SERVICE_CALL_MASTER_SEQ = 629;
 export const TABLESIDE_SERVICE_CALL_BEFORE_ORDER_SEQ = 641;
@@ -56,6 +65,16 @@ const TABLESIDE_SERVICE_CALL_LINES_STORAGE_IDS: Record<
 
 const ALL_LINE_IDS: TablesideServiceCallProductLineId[] =
   TABLESIDE_SERVICE_CALL_PRODUCT_LINES.map((l) => l.id);
+
+function visibleTablesideServiceCallProductLines(): ReadonlyArray<
+  (typeof TABLESIDE_SERVICE_CALL_PRODUCT_LINES)[number]
+> {
+  const activeLine = getFohActiveLineFilterId();
+  if (activeLine) {
+    return TABLESIDE_SERVICE_CALL_PRODUCT_LINES.filter((line) => line.id === activeLine);
+  }
+  return TABLESIDE_SERVICE_CALL_PRODUCT_LINES;
+}
 
 const MODULE_SETTING_CONTROL_CLASS =
   "size-4 shrink-0 accent-primary text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50";
@@ -247,7 +266,7 @@ function isTypeOnLine(
 }
 
 function renderTypeLineCheckboxes(typeId: string, config: ServiceRequestTypesConfig): string {
-  return TABLESIDE_SERVICE_CALL_PRODUCT_LINES.map((line) => {
+  return visibleTablesideServiceCallProductLines().map((line) => {
     const checked = isTypeOnLine(config, typeId, line.id);
     return `
       <td class="border-t border-border px-2 py-2 text-center align-middle">
@@ -264,10 +283,13 @@ function renderTypeLineCheckboxes(typeId: string, config: ServiceRequestTypesCon
 }
 
 function renderServiceRequestTypesTable(config: ServiceRequestTypesConfig): string {
-  const headerCells = TABLESIDE_SERVICE_CALL_PRODUCT_LINES.map(
-    (line) =>
-      `<th scope="col" class="px-2 py-2 text-center text-xs font-medium text-muted-foreground whitespace-nowrap">${escapeHtml(line.label)}</th>`,
-  ).join("");
+  const visibleLines = visibleTablesideServiceCallProductLines();
+  const headerCells = visibleLines
+    .map(
+      (line) =>
+        `<th scope="col" class="px-2 py-2 text-center text-xs font-medium text-muted-foreground whitespace-nowrap" ${FOH_LINE_CONFIG_ROW_ATTR}="${escapeHtml(line.id)}">${escapeHtml(line.label)}</th>`,
+    )
+    .join("");
 
   const rows = config.types
     .map((entry) => {
@@ -317,7 +339,16 @@ function renderServiceRequestTypesTable(config: ServiceRequestTypesConfig): stri
 
 function collectServiceRequestTypesFromEditor(editor: HTMLElement): ServiceRequestTypesConfig {
   const config = readServiceRequestTypesConfig();
-  const byId = new Map(config.types.map((t) => [t.id, { ...t, lines: [] as TablesideServiceCallProductLineId[] }]));
+  const visibleLineIds = new Set(visibleTablesideServiceCallProductLines().map((l) => l.id));
+  const byId = new Map(
+    config.types.map((t) => [
+      t.id,
+      {
+        ...t,
+        lines: t.lines.filter((lineId) => !visibleLineIds.has(lineId)),
+      },
+    ]),
+  );
 
   editor
     .querySelectorAll<HTMLInputElement>(
@@ -326,7 +357,7 @@ function collectServiceRequestTypesFromEditor(editor: HTMLElement): ServiceReque
     .forEach((input) => {
       const typeId = input.getAttribute("data-service-request-type-id");
       const lineId = input.getAttribute("data-service-request-type-line");
-      if (!typeId || !lineId || !ALL_LINE_IDS.includes(lineId as TablesideServiceCallProductLineId)) {
+      if (!typeId || !lineId || !visibleLineIds.has(lineId as TablesideServiceCallProductLineId)) {
         return;
       }
       const entry = byId.get(typeId);
@@ -479,7 +510,10 @@ export function writeTablesideServiceCallLines(
 
 function renderLinesMultiselectHtml(seq: number, enabled: boolean): string {
   const selected = new Set(readTablesideServiceCallLines(seq));
-  const cells = TABLESIDE_SERVICE_CALL_PRODUCT_LINES.map((line, index) => {
+  const lines = TABLESIDE_SERVICE_CALL_PRODUCT_LINES.filter((line) =>
+    isFohLineConfigRowVisible(line.id, selected.has(line.id)),
+  );
+  const cells = lines.map((line, index) => {
     const checked = selected.has(line.id);
     const divider = index > 0 ? "border-l border-border" : "";
     return `
@@ -545,12 +579,13 @@ export function setTablesideServiceCallPanelVisible(seq: number, visible: boolea
 }
 
 function collectLinesFromGroup(group: HTMLElement, seq: number): TablesideServiceCallProductLineId[] {
-  const lines: TablesideServiceCallProductLineId[] = [];
+  const visibleLineIds = new Set(visibleTablesideServiceCallProductLines().map((l) => l.id));
+  const lines = readTablesideServiceCallLines(seq).filter((id) => !visibleLineIds.has(id));
   group
     .querySelectorAll<HTMLInputElement>("[data-tableside-service-call-line]:checked")
     .forEach((input) => {
       const id = input.getAttribute("data-tableside-service-call-line");
-      if (id && ALL_LINE_IDS.includes(id as TablesideServiceCallProductLineId)) {
+      if (id && visibleLineIds.has(id as TablesideServiceCallProductLineId)) {
         lines.push(id as TablesideServiceCallProductLineId);
       }
     });
@@ -570,7 +605,7 @@ export function renderServiceRequestTypesEditorHtml(): string {
         data-service-request-type-add
       >新增类型</button>
       <p class="m-0 text-xs leading-relaxed text-muted-foreground">
-        每种类型可独立勾选适用产线（eMenu、SDI）；未勾选任何产线的类型对客人不可见。员工端提醒请在消息中心勾选主题「Service Request」；原 seq 630–636 已合并至本项。
+        每种类型可独立勾选适用产线（eMenu、SDI）；按产线视图下仅展示并配置当前产线列。未勾选任何产线的类型对客人不可见。员工端提醒请在前厅「POS 通知总控」勾选主题「桌边服务请求」；原 seq 630–636 已合并至本项。
       </p>
     </div>`;
 }

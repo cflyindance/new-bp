@@ -11,6 +11,7 @@ import {
   writeMenuGroupTags,
   type MenuGroupTag,
 } from "./module-settings-menu-group-ui";
+import { isFohLineConfigRowVisible } from "./foh-settings-by-line-filter";
 import { readModuleSettingJson, writeModuleSettingJson } from "./module-settings-form-ui";
 
 export const GUEST_MENU_GROUP_BY_LINE_SEQ = 599;
@@ -119,9 +120,11 @@ function renderLineMenuGroupRow(line: (typeof GUEST_MENU_GROUP_BY_LINE_PRODUCT_L
 
 export function renderGuestMenuGroupByLinePanelHtml(): string {
   ensureGuestMenuGroupByLineLegacyMigrated();
-  const rows = GUEST_MENU_GROUP_BY_LINE_PRODUCT_LINES.map((line) =>
-    renderLineMenuGroupRow(line),
-  ).join("");
+  const rows = GUEST_MENU_GROUP_BY_LINE_PRODUCT_LINES.filter((line) =>
+    isFohLineConfigRowVisible(line.id, true),
+  )
+    .map((line) => renderLineMenuGroupRow(line))
+    .join("");
 
   return `
     <div class="mt-3 space-y-4" data-guest-menu-group-by-line-panel="${GUEST_MENU_GROUP_BY_LINE_SEQ}">

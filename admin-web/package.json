@@ -5,10 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build && node scripts/copy-embedded-assets.mjs",
+    "build": "node scripts/stash-emenu-pro-for-build.mjs stash && tsc && vite build && node scripts/copy-embedded-assets.mjs",
     "preview": "vite preview",
     "generate:settings-groups": "node scripts/generate-settings-group-mapping.mjs",
-    "build:settings-catalog": "node scripts/build-module-settings-catalog.mjs"
+    "generate:foh-line-scope": "node scripts/generate-foh-line-scope-matrix.mjs && node scripts/generate-foh-line-storage-registry.mjs",
+    "verify:foh-line-scope": "node scripts/verify-foh-line-scope.mjs",
+    "build:settings-catalog": "node scripts/verify-foh-line-scope.mjs && node scripts/build-module-settings-catalog.mjs",
+    "sync:emenu-pro": "node scripts/sync-emenu-pro-from-dist.mjs",
+    "generate:emenu-pro-icons": "node scripts/generate-emenu-pro-block-icons.mjs"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.0.0",

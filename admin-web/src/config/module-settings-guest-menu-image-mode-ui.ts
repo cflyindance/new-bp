@@ -11,6 +11,7 @@ import {
 } from "./module-settings-form-ui";
 import { readModuleSettingRadio, writeModuleSettingRadio } from "./module-settings-nested-ui";
 import { renderStandaloneDishPickerHtml } from "./module-settings-dish-rules-ui";
+import { isFohLineConfigRowVisible } from "./foh-settings-by-line-filter";
 import { moduleSettingToggleStorageKey } from "./module-settings-toggle-ui";
 
 export const GUEST_MENU_IMAGE_MODE_SEQ = 607;
@@ -294,7 +295,7 @@ function renderLineConfigBlock(
 function renderLineConfigsHtml(panelEnabled: boolean): string {
   const selected = new Set(readGuestMenuImageModeLines());
   return GUEST_MENU_IMAGE_MODE_PRODUCT_LINES.map((line) =>
-    renderLineConfigBlock(line, selected.has(line.id), panelEnabled),
+    renderLineConfigBlock(line, isFohLineConfigRowVisible(line.id, selected.has(line.id)), panelEnabled),
   ).join("");
 }
 
@@ -333,7 +334,9 @@ function syncLineConfigVisibility(editor: HTMLElement): void {
   const selected = new Set(readGuestMenuImageModeLines());
   editor.querySelectorAll<HTMLElement>("[data-menu-image-mode-line-config]").forEach((block) => {
     const lineId = block.getAttribute("data-menu-image-mode-line-config");
-    const show = lineId && selected.has(lineId as GuestMenuImageModeProductLineId);
+    const show =
+      lineId &&
+      isFohLineConfigRowVisible(lineId, selected.has(lineId as GuestMenuImageModeProductLineId));
     block.classList.toggle("hidden", !show);
     if (show) block.removeAttribute("aria-hidden");
     else block.setAttribute("aria-hidden", "true");

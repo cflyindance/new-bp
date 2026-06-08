@@ -9,6 +9,7 @@ import {
   renderStandaloneDishPickerHtml,
   writeDishTags,
 } from "./module-settings-dish-rules-ui";
+import { isFohLineConfigRowVisible } from "./foh-settings-by-line-filter";
 import { readModuleSettingJson, writeModuleSettingJson } from "./module-settings-form-ui";
 import { moduleSettingToggleStorageKey } from "./module-settings-toggle-ui";
 
@@ -187,15 +188,16 @@ function renderLineConfigRow(line: (typeof GUEST_DISH_DETAIL_PRODUCT_LINES)[numb
 
 function renderLineSettingsInnerHtml(): string {
   const selectedIds = readGuestDishDetailLines();
-  if (selectedIds.length === 0) {
+  const visibleLines = GUEST_DISH_DETAIL_PRODUCT_LINES.filter((line) =>
+    isFohLineConfigRowVisible(line.id, selectedIds.includes(line.id)),
+  );
+  if (visibleLines.length === 0) {
     return `
       <p class="m-0 rounded-md border border-dashed border-border bg-muted/30 px-3 py-4 text-center text-xs text-muted-foreground">
         请在上方勾选产线后，再配置对应产线的无属性菜详情展示。
       </p>`;
   }
-  const rows = GUEST_DISH_DETAIL_PRODUCT_LINES.filter((line) => selectedIds.includes(line.id))
-    .map((line) => renderLineConfigRow(line))
-    .join("");
+  const rows = visibleLines.map((line) => renderLineConfigRow(line)).join("");
   return `<div class="space-y-3">${rows}</div>`;
 }
 

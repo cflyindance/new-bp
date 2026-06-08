@@ -1,6 +1,8 @@
-/** 演示登录：Menusifu 企业邮箱 + 固定密码 */
+/** 演示登录：员工维护账号优先，兼容 Menusifu 企业邮箱 + 演示密码 */
 
 import { recordSystemLoginLog } from "./login-log-store";
+import { isMenusifuEmail } from "./email-utils";
+import { getStaffLoginAccountByEmail } from "../permissions/staff-account-store";
 
 export const LOGIN_PATH = "/login";
 
@@ -9,9 +11,6 @@ const AUTH_EMAIL_KEY = "menusifu-admin-auth-email";
 
 /** 演示环境固定密码 */
 export const DEMO_LOGIN_PASSWORD = "Menusifu666";
-
-/** 仅校验后缀为 @menusifu.cn 或 @menusifu.com */
-const MENUSIFU_EMAIL_RE = /^[^\s@]+@menusifu\.(cn|com)$/i;
 
 export function getAuthenticatedEmail(): string | null {
   try {
@@ -50,9 +49,7 @@ export function clearAuthenticated(): void {
   }
 }
 
-export function isMenusifuEmail(email: string): boolean {
-  return MENUSIFU_EMAIL_RE.test(email.trim());
-}
+export { isMenusifuEmail } from "./email-utils";
 
 export function validateLoginCredentials(email: string, password: string): string | null {
   const trimmedEmail = email.trim();
@@ -60,6 +57,14 @@ export function validateLoginCredentials(email: string, password: string): strin
   if (!isMenusifuEmail(trimmedEmail)) {
     return "邮箱格式须为 *@menusifu.cn 或 *@menusifu.com";
   }
+
+  const maintained = getStaffLoginAccountByEmail(trimmedEmail);
+  if (maintained) {
+    if (!maintained.enabled) return "该账号已停用，请联系管理员";
+    if (maintained.password !== password) return "密码不正确";
+    return null;
+  }
+
   if (password !== DEMO_LOGIN_PASSWORD) return "密码不正确";
   return null;
 }
@@ -110,7 +115,7 @@ export function renderLoginPage(): string {
                 class="flex h-10 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 data-login-password
               />
-              <p class="mt-1.5 text-xs text-muted-foreground">密码 ${DEMO_LOGIN_PASSWORD}</p>
+              <p class="mt-1.5 text-xs text-muted-foreground">已配置员工账号请使用管理员分配的密码；未配置账号演示密码为 ${DEMO_LOGIN_PASSWORD}</p>
             </div>
             <p
               class="hidden rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"

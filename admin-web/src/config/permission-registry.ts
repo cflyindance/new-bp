@@ -55,9 +55,6 @@ export interface PermissionModuleGroup {
 
 const RBAC_EXCLUDED_MODULE_IDS = new Set(["permission-mgmt"]);
 
-/** 门店安全策略等不走角色矩阵的 settings path 前缀 */
-const RBAC_EXCLUDED_SETTINGS_PATHS = new Set(["/permissions/store-security"]);
-
 const ACCESS_RANK: Record<PermissionAccess, number> = {
   hidden: 0,
   view: 1,
@@ -93,20 +90,12 @@ function actionKey(moduleId: string, featureId: string, actionId: string): strin
   return `${moduleId}:${featureId}:${actionId}`;
 }
 
-function isExcludedSettingsPath(path: string): boolean {
-  for (const p of RBAC_EXCLUDED_SETTINGS_PATHS) {
-    if (path === p || path.startsWith(`${p}/`)) return true;
-  }
-  return false;
-}
-
 function appendSettingChildren(
   parent: PermissionTreeNode,
   moduleId: string,
   featureId: string,
   featurePath: string,
 ): void {
-  if (isExcludedSettingsPath(featurePath)) return;
   const catalog = getModuleSettingsCatalog(featurePath);
   if (!catalog?.items.length) return;
 

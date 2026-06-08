@@ -130,7 +130,38 @@ import {
   type ModuleSettingCatalogHub,
   type ModuleSettingCatalogItem,
 } from "./config/module-settings-catalog";
+import {
+  bindFohSettingsViewMode,
+  getFohLineViewGroups,
+  getFohSettingsByLineActiveGroup,
+  getFohSettingsByLineCategoryPath,
+  getFohSettingsByLineGroupSlugFromPath,
+  getFohSettingsByLineId,
+  isFohSettingsByLinePath,
+  isFohSettingsPath,
+  readFohSettingsLastLineId,
+  renderFohSettingsByLineIntroCard,
+  renderFohSettingsByLineSidebar,
+  renderFohSettingsViewModeBar,
+  FOH_BY_LINE_PREFIX,
+  FOH_SETTINGS_PATH,
+  FOH_VIEW_MODE_STORAGE_KEY,
+  getFohSettingsByLinePath,
+  type FohLineViewGroup,
+} from "./config/foh-settings-by-line-ui";
+import {
+  applyFohByLineUiSuppressions,
+  getActiveFohByLineIdFromDom,
+  setFohByLineRenderContext,
+  writeFohByLineToggleState,
+} from "./config/foh-settings-by-line-toggle";
+import { fohLineNavLabel, type FohLineNavId } from "./config/foh-settings-line-scope";
 import { bindPermissionsRbac, isPermissionsRbacPath, renderPermissionsRbacPage } from "./permissions/rbac-ui";
+import {
+  bindStaffAccountsPage,
+  isStaffAccountsPath,
+  renderStaffAccountsPage,
+} from "./permissions/staff-accounts-ui";
 import {
   getModuleSettingFormRow,
   isModuleSettingGenericFormRowSeq,
@@ -299,9 +330,11 @@ import {
 } from "./config/module-settings-auto-clear-table-ui";
 import {
   bindClearTableButtonUi,
+  ensureClearTableButtonLinesDefault,
   ensureClearTableButtonToggleMigrated,
   isClearTableButtonSeq,
   renderClearTableButtonPanelHtml,
+  setClearTableButtonPanelVisible,
   syncClearTableButtonLinesWithMaster,
 } from "./config/module-settings-clear-table-button-ui";
 import {
@@ -557,6 +590,14 @@ import {
   setGuestMenuClassificationModePanelVisible,
 } from "./config/module-settings-guest-menu-classification-mode-ui";
 import {
+  bindGuestEmenuProModeUi,
+  ensureGuestEmenuProModeLinesDefault,
+  ensureGuestEmenuProModeToggleMigrated,
+  isGuestEmenuProModeSeq,
+  renderGuestEmenuProModePanelHtml,
+  setGuestEmenuProModePanelVisible,
+} from "./config/module-settings-guest-emenu-pro-mode-ui";
+import {
   bindGuestMenuClassNameDisplayUi,
   ensureGuestMenuClassNameDisplayToggleMigrated,
   isGuestMenuClassNameDisplaySeq,
@@ -630,6 +671,22 @@ import {
   setPosKitchenSendTriggerPanelVisible,
 } from "./config/module-settings-pos-kitchen-send-trigger-ui";
 import {
+  bindKitchenLineEditUi,
+  ensureKitchenLineEditLinesDefault,
+  ensureKitchenLineEditToggleMigrated,
+  isKitchenLineEditSeq,
+  renderKitchenLineEditPanelHtml,
+  setKitchenLineEditPanelVisible,
+} from "./config/module-settings-kitchen-line-edit-ui";
+import {
+  bindPosCheckoutEntryLinesUi,
+  ensurePosCheckoutEntryLinesDefault,
+  ensurePosCheckoutEntryToggleMigrated,
+  isPosCheckoutEntryLinesSeq,
+  renderPosCheckoutEntryLinesPanelHtml,
+  setPosCheckoutEntryLinesPanelVisible,
+} from "./config/module-settings-pos-checkout-entry-lines-ui";
+import {
   bindDelayedKitchenSendUi,
   isDelayedKitchenSendSeq,
   renderDelayedKitchenSendEditorHtml,
@@ -646,6 +703,16 @@ import {
   renderKitchenSendPasswordAuthPanelHtml,
   setKitchenSendPasswordAuthPanelVisible,
 } from "./config/module-settings-kitchen-send-password-auth-ui";
+import {
+  bindPosSessionSecurityUi,
+  ensurePosSessionSecurityToggleMigrated,
+  isAutoLogoutMinutesSeq,
+  isPosSessionSecuritySeq,
+  isPosSessionSecurityToggleSeq,
+  renderAutoLogoutMinutesPanelHtml,
+  renderPosSessionSecurityTogglePanelHtml,
+  setPosSessionSecurityPanelVisible,
+} from "./config/module-settings-pos-session-security-ui";
 import {
   bindOrderDisplaySeatUi,
   ensureOrderDisplaySeatToggleMigrated,
@@ -713,6 +780,21 @@ import {
   renderPosFindOrderListPanelHtml,
   setPosFindOrderListPanelVisible,
 } from "./config/module-settings-pos-find-order-list-ui";
+import {
+  bindPosMenuScopeLinesUi,
+  ensurePosMenuScopeLinesDefault,
+  isPosMenuScopeLinesSeq,
+  renderPosMenuScopeLinesPanelHtml,
+  setPosMenuScopeLinesPanelVisible,
+} from "./config/module-settings-pos-menu-scope-lines-ui";
+import {
+  bindPosMenuUiLayoutLinesUi,
+  ensurePosMenuUiLayoutLinesDefault,
+  ensurePosMenuUiLayoutToggleMigrated,
+  isPosMenuUiLayoutLinesSeq,
+  renderPosMenuUiLayoutLinesPanelHtml,
+  setPosMenuUiLayoutLinesPanelVisible,
+} from "./config/module-settings-pos-menu-ui-layout-lines-ui";
 import {
   bindPosComboOrderingUi,
   ensurePosComboOrderingLinesDefault,
@@ -1100,18 +1182,22 @@ import {
   renderOrderPickupSmsSectionHeaderHtml,
 } from "./config/module-settings-order-pickup-messages-ui";
 import {
-  isNotificationBasicsGroupIntroSeq,
+  isFohPosNotificationControlGroupIntroSeq,
+  isFohPosOrderAlertsGroupIntroSeq,
+  renderFohPosNotificationControlGroupIntroHtml,
+  renderFohPosOrderAlertsGroupIntroHtml,
+} from "./config/foh-pos-notification-groups-ui";
+import {
   isNotificationCustomerSmsGroupIntroSeq,
-  isNotificationStaffOrderAlertsGroupIntroSeq,
-  renderNotificationBasicsGroupIntroHtml,
   renderNotificationCustomerSmsGroupIntroHtml,
-  renderNotificationStaffOrderAlertsGroupIntroHtml,
   wrapModuleSettingGroupIntro,
 } from "./config/module-settings-notification-groups-ui";
 import {
   bindStaffOrderAlertUi,
+  ensureStaffOrderAlertToggleMigrated,
   isStaffOrderAlertSeq,
-  renderStaffOrderAlertByLineHtml,
+  renderStaffOrderAlertPanelHtml,
+  setStaffOrderAlertPanelVisible,
 } from "./config/module-settings-staff-order-alerts-ui";
 import {
   isTicketNumberSlipCopiesSeq,
@@ -1148,6 +1234,13 @@ import {
   isFohCategorySettingsPath,
   renderFohCategorySettingsPage,
 } from "./config/foh-category-settings-ui";
+import {
+  bindFohClassificationSettingsUi,
+  FOH_CLASSIFICATION_SETTINGS_BASE,
+  getFohClassificationSettingsTabPath,
+  isFohClassificationSettingsPath,
+  renderFohClassificationSettingsPage,
+} from "./config/foh-classification-settings-ui";
 import {
   bindDeviceManagementEmenuHardware,
   isDeviceManagementEmenuHardwarePath,
@@ -1325,6 +1418,10 @@ const MARKETING_POSTER_PRO_IFRAME_SRC = "./Configuration%20center/marketing-post
 const ASSET_CENTER_MATERIALS_IFRAME_SRC = "./Configuration%20center/material.html?embedded=1";
 /** 前厅管理中心 → 菜单下单限制：复用 Configuration center 下单限制配置页（主内容区 iframe） */
 const FOH_MENU_ORDER_LIMIT_IFRAME_SRC = "./Configuration%20center/order-limit.html?embedded=1";
+/** 前厅管理中心 → eMenu Pro：嵌入 emenuPro 管理端（主内容区 iframe） */
+const FOH_EMENU_PRO_IFRAME_SRC = "./emenu-pro/index.html?embedded=1";
+/** eMenu Pro iframe 向父页索取的演示 sessionKey（与 embedded-mock-api.js 一致） */
+const FOH_EMENU_PRO_SESSION_KEY = "bplant-emenu-pro-demo";
 /** 报表中心 → 员工报表 → 小费分配：嵌入 TipOut 项目 */
 const REPORTS_TIPS_ALLOCATION_IFRAME_SRC = "./TipOut/index.html?embedded=1";
 /** 团队管理 → 角色与员工：嵌入 TipOut 员工列表 */
@@ -1361,6 +1458,25 @@ function isFohMenuOrderLimitsIframePath(path: string): boolean {
     path === "/operations/queue-call/menu-order-limits" ||
     path.startsWith("/operations/queue-call/menu-order-limits/")
   );
+}
+
+function isFohEmenuProIframePath(path: string): boolean {
+  return path === "/operations/queue-call/emenu-pro" || path.startsWith("/operations/queue-call/emenu-pro/");
+}
+
+let fohEmenuProMessageBridgeBound = false;
+
+/** 响应 eMenu Pro iframe 的 getSessionKey，供模板配置接口使用 */
+function bindFohEmenuProIframeBridge(): void {
+  if (fohEmenuProMessageBridgeBound) return;
+  fohEmenuProMessageBridgeBound = true;
+  window.addEventListener("message", (event) => {
+    const data = event.data as { type?: string } | null;
+    if (!data || data.type !== "getSessionKey") return;
+    const frame = document.querySelector<HTMLIFrameElement>("[data-foh-emenu-pro-frame] iframe");
+    if (!frame?.contentWindow || event.source !== frame.contentWindow) return;
+    frame.contentWindow.postMessage({ type: "sessionKey", data: FOH_EMENU_PRO_SESSION_KEY }, "*");
+  });
 }
 
 function isReportsTipsAllocationIframePath(path: string): boolean {
@@ -1464,6 +1580,20 @@ function renderAssetCenterMaterialsIframePanel(): string {
 function renderFohMenuOrderLimitsPagePanel(): string {
   const path = location.hash.slice(1) || "/dashboard/overview";
   return renderFohMenuOrderLimitsPanel(FOH_MENU_ORDER_LIMIT_IFRAME_SRC, path);
+}
+
+/** 前厅管理中心 · eMenu Pro 设置（嵌入 emenuPro 管理端） */
+function renderFohEmenuProIframePanel(): string {
+  return `
+    <div class="relative flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden" data-foh-emenu-pro-frame>
+      <iframe
+        title="${escapeHtml(t("fohEmenuPro.iframeTitle"))}"
+        class="block h-full min-h-0 w-full flex-1 border-0"
+        src="${FOH_EMENU_PRO_IFRAME_SRC}"
+        referrerpolicy="no-referrer-when-downgrade"
+        allow="clipboard-read; clipboard-write; fullscreen"
+      ></iframe>
+    </div>`;
 }
 
 /** 主区全宽嵌入报表中心小费分配（TipOut） */
@@ -2628,14 +2758,11 @@ function findTitle(path: string): { title: string; module?: string } {
   if (path === "/permissions/staff") {
     return { title: "员工授权", module: "权限管理中心" };
   }
+  if (path === "/permissions/staff-accounts") {
+    return { title: "员工登录账号", module: "权限管理中心" };
+  }
   if (path === "/permissions/change-log") {
     return { title: "变更记录", module: "权限管理中心" };
-  }
-  if (path === "/permissions/account-session" || path.startsWith("/permissions/account-session/")) {
-    return { title: "账户与会话安全", module: "权限管理中心" };
-  }
-  if (path === "/permissions/store-security" || path.startsWith("/permissions/store-security/")) {
-    return { title: "门店安全策略", module: "权限管理中心" };
   }
   if (path === "/permissions/roles/new") {
     return { title: "新建角色", module: "权限管理中心" };
@@ -3162,6 +3289,42 @@ function normalizeTabModuleHashes(): void {
     replaceHashPath("/operations/queue-call/settings/foh-guest-menu-home");
     return;
   }
+  /* 前厅设置 · 记忆上次查看方式（按产线） */
+  if (raw === FOH_SETTINGS_PATH || raw === `${FOH_SETTINGS_PATH}/`) {
+    try {
+      if (localStorage.getItem(FOH_VIEW_MODE_STORAGE_KEY) === "by-line") {
+        replaceHashPath(getFohSettingsByLinePath(readFohSettingsLastLineId()));
+        return;
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+  /* 前厅设置 · 按产线路由补全 / 校验 lineId */
+  if (raw === FOH_BY_LINE_PREFIX || raw === `${FOH_BY_LINE_PREFIX}/`) {
+    replaceHashPath(getFohSettingsByLinePath(readFohSettingsLastLineId()));
+    return;
+  }
+  if (isFohSettingsByLinePath(raw) && !getFohSettingsByLineId(raw)) {
+    replaceHashPath(getFohSettingsByLinePath(readFohSettingsLastLineId()));
+    return;
+  }
+  if (isFohSettingsByLinePath(raw)) {
+    const lineId = getFohSettingsByLineId(raw);
+    const catalog = lineId ? getModuleSettingsCatalog(raw) : undefined;
+    if (lineId && catalog) {
+      const groups = getFohLineViewGroups(catalog, lineId);
+      if (groups.length === 0) {
+        replaceHashPath(FOH_SETTINGS_PATH);
+        return;
+      }
+      const slug = getFohSettingsByLineGroupSlugFromPath(raw);
+      if (!slug || !getFohSettingsByLineActiveGroup(raw, lineId, groups)) {
+        replaceHashPath(getFohSettingsByLineCategoryPath(lineId, groups[0].groupKey));
+        return;
+      }
+    }
+  }
   /* 前厅设置 · 旧 groupKey 书签 → 方案 E 十四组（含 v2.0 十二组重定向） */
   const fohSettingsLegacyGroup: Record<string, string> = {
     "foh-tables-start": "foh-table-start-flow",
@@ -3216,12 +3379,22 @@ function normalizeTabModuleHashes(): void {
       return;
     }
   }
-  /* 权限管理 · 旧下单操作限制分组 → 账户与会话安全（方案 B2）；流程项已迁前厅 */
+  /* 方案 F：权限中心无 settings catalog；旧书签 → 前厅 POS 会话安全或 RBAC 总览 */
+  const FOH_POS_SHELL_SETTINGS = "/operations/queue-call/settings/foh-pos-shell";
+  if (
+    raw === "/permissions/account-session" ||
+    raw.startsWith("/permissions/account-session/") ||
+    raw === "/permissions/store-security" ||
+    raw.startsWith("/permissions/store-security/")
+  ) {
+    replaceHashPath(FOH_POS_SHELL_SETTINGS);
+    return;
+  }
   if (
     raw === "/permissions/settings/order-operation-guardrails" ||
     raw.startsWith("/permissions/settings/order-operation-guardrails/")
   ) {
-    replaceHashPath("/permissions/account-session");
+    replaceHashPath("/operations/queue-call/settings/foh-guest-pre-order");
     return;
   }
   if (
@@ -3229,7 +3402,7 @@ function normalizeTabModuleHashes(): void {
     raw === "/permissions/settings/" ||
     raw.startsWith("/permissions/settings/")
   ) {
-    replaceHashPath("/permissions/account-session");
+    replaceHashPath("/permissions/overview");
     return;
   }
   if (raw === "/product-center-main" || raw === "/product-center-main/") {
@@ -3333,6 +3506,10 @@ function normalizeTabModuleHashes(): void {
   }
   if (raw === FOH_CATEGORY_SETTINGS_BASE || raw === `${FOH_CATEGORY_SETTINGS_BASE}/`) {
     replaceHashPath(getFohCategorySettingsTabPath("age-category"));
+    return;
+  }
+  if (raw === FOH_CLASSIFICATION_SETTINGS_BASE || raw === `${FOH_CLASSIFICATION_SETTINGS_BASE}/`) {
+    replaceHashPath(getFohClassificationSettingsTabPath("category"));
     return;
   }
   /* 品类与场景菜单已迁至「品类设置」功能页，旧设置分组书签重定向 */
@@ -4454,6 +4631,7 @@ function syncModuleSettingsScrollSpy(
   scrollHost: HTMLElement,
   catalog: ModuleSettingCatalogHub,
   groups: ModuleSettingsGroup[],
+  byLineId?: FohLineNavId | null,
 ): void {
   if (isModuleSettingsScrollSpyPaused()) return;
 
@@ -4464,9 +4642,14 @@ function syncModuleSettingsScrollSpy(
   moduleSettingsScrollSpyActiveKey = groupKey;
   setModuleSettingsSubnavActiveGroup(groupKey);
 
-  const nextPath = groupKey
-    ? getModuleSettingsCategoryPath(catalog.settingsPath, groupKey)
-    : catalog.settingsPath;
+  const nextPath =
+    byLineId && groupKey
+      ? getFohSettingsByLineCategoryPath(byLineId, groupKey)
+      : byLineId
+        ? getFohSettingsByLinePath(byLineId)
+        : groupKey
+          ? getModuleSettingsCategoryPath(catalog.settingsPath, groupKey)
+          : catalog.settingsPath;
   replaceHashPath(nextPath);
 }
 
@@ -4480,14 +4663,19 @@ function bindModuleSettingsScrollSpy(): void {
   const catalog = getModuleSettingsCatalog(path);
   if (!catalog) return;
 
-  const groups = groupCatalogItemsByCategory(catalog.items, catalog.groupOrder);
+  const byLineId = isFohSettingsByLinePath(path) ? getFohSettingsByLineId(path) : null;
+  const groups: ModuleSettingsGroup[] = byLineId
+    ? getFohLineViewGroups(catalog, byLineId)
+    : groupCatalogItemsByCategory(catalog.items, catalog.groupOrder);
   if (groups.length === 0) return;
 
-  const fromPath = getModuleSettingsActiveGroup(path, catalog.settingsPath, groups);
+  const fromPath = byLineId
+    ? getFohSettingsByLineActiveGroup(path, byLineId, groups)
+    : getModuleSettingsActiveGroup(path, catalog.settingsPath, groups);
   moduleSettingsScrollSpyActiveKey = fromPath?.groupKey ?? null;
 
   const onScroll = (): void => {
-    syncModuleSettingsScrollSpy(scrollHost, catalog, groups);
+    syncModuleSettingsScrollSpy(scrollHost, catalog, groups, byLineId);
   };
 
   let scrollRaf = 0;
@@ -4528,8 +4716,13 @@ function scrollToModuleSettingsCategory(groupKey: string): void {
 function scrollToModuleSettingsCategoryFromPath(path: string): void {
   const catalog = getModuleSettingsCatalog(path);
   if (!catalog) return;
-  const groups = groupCatalogItemsByCategory(catalog.items, catalog.groupOrder);
-  const active = getModuleSettingsActiveGroup(path, catalog.settingsPath, groups);
+  const byLineId = isFohSettingsByLinePath(path) ? getFohSettingsByLineId(path) : null;
+  const groups = byLineId
+    ? getFohLineViewGroups(catalog, byLineId)
+    : groupCatalogItemsByCategory(catalog.items, catalog.groupOrder);
+  const active = byLineId
+    ? getFohSettingsByLineActiveGroup(path, byLineId, groups)
+    : getModuleSettingsActiveGroup(path, catalog.settingsPath, groups);
   if (!active) return;
   scrollToModuleSettingsCategory(active.groupKey);
 }
@@ -4599,8 +4792,13 @@ function bindModuleSettingsCategoryNav(): void {
       if (scrollHost) {
         rememberModuleSettingsScroll(catalog.settingsPath, scrollHost.scrollTop);
       }
-      const groups = groupCatalogItemsByCategory(catalog.items, catalog.groupOrder);
-      const active = getModuleSettingsActiveGroup(href, catalog.settingsPath, groups);
+      const byLineId = isFohSettingsByLinePath(href) ? getFohSettingsByLineId(href) : null;
+      const groups = byLineId
+        ? getFohLineViewGroups(catalog, byLineId)
+        : groupCatalogItemsByCategory(catalog.items, catalog.groupOrder);
+      const active = byLineId
+        ? getFohSettingsByLineActiveGroup(href, byLineId, groups)
+        : getModuleSettingsActiveGroup(href, catalog.settingsPath, groups);
       if (!active) return;
       window.setTimeout(() => scrollToModuleSettingsCategory(active.groupKey), 0);
     });
@@ -4695,11 +4893,208 @@ function renderModuleHubSettingsCategorySidebar(path: string, pageTitle: string)
   `;
 }
 
+function renderFohByLineSettingsSubnavGroupLink(
+  lineId: FohLineNavId,
+  group: FohLineViewGroup,
+  selected: boolean,
+  nested = false,
+): string {
+  const href = getFohSettingsByLineCategoryPath(lineId, group.groupKey);
+  const navLabel = formatModuleSettingsSubnavLabel(group.groupTitle);
+  return `
+              <li>
+                <a href="#${href}"
+                  data-module-settings-group-key="${escapeHtml(group.groupKey)}"
+                  ${nested ? 'data-module-settings-subnav-nested="1"' : ""}
+                  class="${MODULE_SETTINGS_SUBNAV_LINK_BASE} ${nested ? MODULE_SETTINGS_SUBNAV_LINK_NESTED : ""} ${
+                    selected ? MODULE_SETTINGS_SUBNAV_LINK_SELECTED : MODULE_SETTINGS_SUBNAV_LINK_IDLE
+                  }"
+                  ${selected ? 'aria-current="page"' : ""}
+                >
+                  <span class="min-w-0 flex-1 truncate">${escapeHtml(navLabel)}</span>
+                  <span class="ml-2 shrink-0 text-xs tabular-nums text-muted-foreground">${group.items.length}</span>
+                </a>
+              </li>`;
+}
+
+function renderFohByLineSettingsSubnavList(
+  catalog: ModuleSettingCatalogHub,
+  lineId: FohLineNavId,
+  groups: FohLineViewGroup[],
+  activeGroup: FohLineViewGroup | undefined,
+): string {
+  const groupByKey = new Map(groups.map((g) => [g.groupKey, g]));
+  const renderLink = (group: FohLineViewGroup, nested = false) =>
+    renderFohByLineSettingsSubnavGroupLink(
+      lineId,
+      group,
+      activeGroup?.groupKey === group.groupKey,
+      nested,
+    );
+
+  if (!catalog.groupNavSections?.length) {
+    return groups.map((group) => renderLink(group)).join("");
+  }
+
+  const rendered = new Set<string>();
+  const parts: string[] = [];
+
+  for (let i = 0; i < catalog.groupNavSections.length; i++) {
+    const section = catalog.groupNavSections[i];
+    if (i > 0) {
+      parts.push(
+        `<li aria-hidden="true" class="my-2 list-none border-t border-border" role="presentation"></li>`,
+      );
+    }
+    const sectionLabel = formatModuleSettingsSubnavLabel(t(section.labelKey as MessageKey));
+    parts.push(`
+              <li class="list-none ${i > 0 ? "pt-2" : "pt-0.5"} pb-0.5" role="presentation">
+                <p class="${MODULE_SETTINGS_SUBNAV_SECTION_HEADING}">${escapeHtml(sectionLabel)}</p>
+              </li>`);
+    for (const key of section.groupKeys) {
+      const group = groupByKey.get(key);
+      if (!group || rendered.has(key)) continue;
+      rendered.add(key);
+      parts.push(renderLink(group, true));
+    }
+  }
+
+  for (const group of groups) {
+    if (!rendered.has(group.groupKey)) {
+      parts.push(renderLink(group));
+    }
+  }
+
+  return parts.join("");
+}
+
+function renderFohSettingsByLineGroupSubnav(
+  path: string,
+  catalog: ModuleSettingCatalogHub,
+  lineId: FohLineNavId,
+): string {
+  const groups = getFohLineViewGroups(catalog, lineId);
+  if (groups.length === 0) return "";
+  const activeGroup = getFohSettingsByLineActiveGroup(path, lineId, groups);
+  const ariaLabel = tf("moduleSettings.fohView.byLineGroupNavAria", {
+    line: fohLineNavLabel(lineId),
+  });
+  return `
+    <nav class="foh-by-line-group-subnav module-settings-subnav w-52 shrink-0 border-r border-border pr-4 ${TERTIARY_SUBNAV_SCROLL_CLASSES}" aria-label="${escapeHtml(ariaLabel)}">
+      <ul class="space-y-0.5" role="list">
+        ${renderFohByLineSettingsSubnavList(catalog, lineId, groups, activeGroup)}
+      </ul>
+    </nav>`;
+}
+
+function renderFohSettingsByLineGroupedPage(lineId: FohLineNavId, groups: FohLineViewGroup[]): string {
+  const count = groups.reduce((n, g) => n + g.items.length, 0);
+  const sections = groups
+    .map((group) => {
+      const sectionId = moduleSettingsCategoryDomId(group.groupKey);
+      const rows = renderFohByLineGroupRowsHtml(group.items, lineId);
+      return `
+      <section
+        id="${sectionId}"
+        class="module-settings-category-card scroll-mt-4 rounded-xl border border-border bg-card shadow-sm"
+        aria-label="${escapeHtml(tf("moduleSettings.categoryAria", { category: group.groupTitle }))}"
+      >
+        <div class="flex items-baseline justify-between gap-3 border-b border-border px-4 py-3">
+          <h3 class="text-sm font-semibold text-card-foreground">${escapeHtml(group.groupTitle)}</h3>
+          <span class="shrink-0 text-xs tabular-nums text-muted-foreground">${group.items.length}</span>
+        </div>
+        <ul class="m-0 list-none divide-y divide-border p-0" role="list">${rows}</ul>
+      </section>`;
+    })
+    .join("");
+  return `
+    <div class="module-settings-main space-y-4">
+      ${renderFohSettingsByLineIntroCard(lineId, count)}
+      <div class="flex flex-col gap-4">${sections}</div>
+    </div>`;
+}
+
+function renderFohHubSettingsLayout(
+  path: string,
+  pageTitle: string,
+  tertiaryRowClass: string,
+  tertiaryMainClass: string,
+): string {
+  const catalog = getModuleSettingsCatalog(path);
+  if (!catalog || catalog.items.length === 0) {
+    return renderFohSettingsViewModeBar(path);
+  }
+  const viewBar = renderFohSettingsViewModeBar(path);
+  if (isFohSettingsByLinePath(path)) {
+    const lineId = getFohSettingsByLineId(path) ?? readFohSettingsLastLineId();
+    const groups = getFohLineViewGroups(catalog, lineId);
+    const main = renderFohSettingsByLineGroupedPage(lineId, groups);
+    const lineSidebar = renderFohSettingsByLineSidebar(path, catalog, pageTitle);
+    const groupSubnav = renderFohSettingsByLineGroupSubnav(path, catalog, lineId);
+    return `${viewBar}<div class="${tertiaryRowClass}">
+      ${lineSidebar}
+      <div class="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-hidden sm:flex-row sm:items-stretch">
+        ${groupSubnav}
+        <div class="${tertiaryMainClass} module-settings-scroll-host" data-foh-by-line-view="${escapeHtml(lineId)}">${main}</div>
+      </div>
+    </div>`;
+  }
+  return `${viewBar}<div class="${tertiaryRowClass}">
+    ${renderModuleHubSettingsCategorySidebar(path, pageTitle)}
+    <div class="${tertiaryMainClass} module-settings-scroll-host">${renderModuleHubSettingsPage(path, pageTitle)}</div>
+  </div>`;
+}
+
 function renderModuleSettingRowsHtml(items: ModuleSettingCatalogItem[]): string {
   return items
     .map((item) => renderModuleSettingRow(item))
     .filter((html) => html.trim() !== "")
     .join("");
+}
+
+function renderFohByLineGroupRowsHtml(
+  items: ModuleSettingCatalogItem[],
+  lineId: FohLineNavId,
+): string {
+  setFohByLineRenderContext(lineId);
+  try {
+    return renderModuleSettingRowsHtml(items);
+  } finally {
+    setFohByLineRenderContext(null);
+  }
+}
+
+function runFohByLineToggleSideEffects(seq: number, next: boolean): void {
+  if (isGuestOrderNoticeSeq(seq)) setGuestOrderNoticePanelVisible(next);
+  if (isGuestDishDetailDisplaySeq(seq)) setGuestDishDetailPanelVisible(next);
+  if (isGuestDiningDurationSeq(seq)) setGuestDiningDurationPanelVisible(seq, next);
+  if (isWaitTimeDisplayToggleSeq(seq)) {
+    setModuleSettingNestedPanelVisible(seq, next);
+  } else if (isModuleSettingNestedParentSeq(seq)) {
+    setModuleSettingNestedPanelVisible(seq, next);
+  }
+  if (isPosMenuUiLayoutLinesSeq(seq)) {
+    if (next) ensurePosMenuUiLayoutLinesDefault(seq);
+    setPosMenuUiLayoutLinesPanelVisible(seq, next);
+  }
+  if (isGuestMenuImageModeSeq(seq)) setGuestMenuImageModePanelVisible(next);
+  if (isGuestEmenuProModeSeq(seq)) {
+    if (next) ensureGuestEmenuProModeLinesDefault();
+    setGuestEmenuProModePanelVisible(next);
+  }
+  if (isHotpotHalfSurchargeSeq(seq)) setHotpotHalfSurchargePanelVisible(next);
+  if (isHotpotBaseOrderModeSeq(seq)) setHotpotBaseOrderModePanelVisible(next);
+  if (isOrderDisplaySeatSeq(seq)) setOrderDisplaySeatPanelVisible(next);
+  if (isTablesideServiceCallCooldownSeq(seq)) setServiceCallCooldownPanelVisible(next);
+  if (isPosSessionSecurityToggleSeq(seq)) setPosSessionSecurityPanelVisible(seq, next);
+  if (isClearTableButtonSeq(seq)) {
+    if (next) ensureClearTableButtonLinesDefault();
+    syncClearTableButtonLinesWithMaster(next);
+    setClearTableButtonPanelVisible(seq, next);
+  }
+  if (isStaffOrderAlertSeq(seq)) {
+    setStaffOrderAlertPanelVisible(seq, next);
+  }
 }
 
 function renderTeamEmbeddedSettingsSuffix(
@@ -6287,6 +6682,43 @@ function renderModuleSettingPosFindOrderListRow(item: ModuleSettingCatalogItem):
         </li>`;
 }
 
+function renderModuleSettingPosMenuScopeLinesRow(item: ModuleSettingCatalogItem): string {
+  if (!isPosMenuScopeLinesSeq(item.seq)) {
+    return renderModuleSettingRow(item);
+  }
+  const seq = item.seq;
+  const on = readModuleSettingToggleOn(seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderPosMenuScopeLinesPanelHtml(seq, on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingPosMenuUiLayoutLinesRow(item: ModuleSettingCatalogItem): string {
+  if (!isPosMenuUiLayoutLinesSeq(item.seq)) {
+    return renderModuleSettingRow(item);
+  }
+  ensurePosMenuUiLayoutToggleMigrated(item.seq);
+  const seq = item.seq;
+  const on = readModuleSettingToggleOn(seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderPosMenuUiLayoutLinesPanelHtml(seq, on)}
+          </div>
+        </li>`;
+}
+
 function renderModuleSettingPosComboOrderingRow(item: ModuleSettingCatalogItem): string {
   if (!isPosComboOrderingSeq(item.seq)) {
     return renderModuleSettingRow(item);
@@ -6847,6 +7279,21 @@ function renderModuleSettingGuestMenuClassificationModeRow(item: ModuleSettingCa
         </li>`;
 }
 
+function renderModuleSettingGuestEmenuProModeRow(item: ModuleSettingCatalogItem): string {
+  ensureGuestEmenuProModeToggleMigrated();
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderGuestEmenuProModePanelHtml(on)}
+          </div>
+        </li>`;
+}
+
 function renderModuleSettingGuestMenuClassNameDisplayRow(item: ModuleSettingCatalogItem): string {
   ensureGuestMenuClassNameDisplayToggleMigrated();
   const on = readModuleSettingToggleOn(item.seq);
@@ -6997,6 +7444,40 @@ function renderModuleSettingPosKitchenSendTriggerRow(item: ModuleSettingCatalogI
         </li>`;
 }
 
+function renderModuleSettingKitchenLineEditRow(item: ModuleSettingCatalogItem): string {
+  ensureKitchenLineEditToggleMigrated();
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderKitchenLineEditPanelHtml(item.seq, on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingPosCheckoutEntryLinesRow(item: ModuleSettingCatalogItem): string {
+  if (!isPosCheckoutEntryLinesSeq(item.seq)) {
+    return renderModuleSettingRow(item);
+  }
+  ensurePosCheckoutEntryToggleMigrated(item.seq);
+  const seq = item.seq;
+  const on = readModuleSettingToggleOn(seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderPosCheckoutEntryLinesPanelHtml(seq, on)}
+          </div>
+        </li>`;
+}
+
 function renderModuleSettingDelayedKitchenSendRow(item: ModuleSettingCatalogItem): string {
   return `
         <li class="list-none" data-module-setting-row-seq="${item.seq}">
@@ -7028,6 +7509,30 @@ function renderModuleSettingKitchenSendPasswordAuthRow(item: ModuleSettingCatalo
               <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
             </div>
             ${renderKitchenSendPasswordAuthPanelHtml(item.seq, on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingPosSessionSecurityRow(item: ModuleSettingCatalogItem): string {
+  if (isAutoLogoutMinutesSeq(item.seq)) {
+    return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            ${renderModuleSettingTitleBlock(item)}
+            ${renderAutoLogoutMinutesPanelHtml()}
+          </div>
+        </li>`;
+  }
+  ensurePosSessionSecurityToggleMigrated(item.seq);
+  const on = readModuleSettingToggleOn(item.seq);
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderPosSessionSecurityTogglePanelHtml(item.seq, on)}
           </div>
         </li>`;
 }
@@ -7251,8 +7756,8 @@ function renderModuleSettingOrderPickupSmsContentRow(item: ModuleSettingCatalogI
 }
 
 function renderModuleSettingNotificationCenterTopicsRow(item: ModuleSettingCatalogItem): string {
-  const intro = isNotificationBasicsGroupIntroSeq(item.seq)
-    ? renderNotificationBasicsGroupIntroHtml()
+  const intro = isFohPosNotificationControlGroupIntroSeq(item.seq)
+    ? renderFohPosNotificationControlGroupIntroHtml()
     : "";
   const row = `
         <li class="list-none" data-module-setting-row-seq="${item.seq}">
@@ -7279,16 +7784,19 @@ function renderModuleSettingDurationBillingScenesRow(item: ModuleSettingCatalogI
 }
 
 function renderModuleSettingStaffOrderAlertRow(item: ModuleSettingCatalogItem): string {
-  const intro = isNotificationStaffOrderAlertsGroupIntroSeq(item.seq)
-    ? renderNotificationStaffOrderAlertsGroupIntroHtml()
+  ensureStaffOrderAlertToggleMigrated(item.seq);
+  const on = readModuleSettingToggleOn(item.seq);
+  const intro = isFohPosOrderAlertsGroupIntroSeq(item.seq)
+    ? renderFohPosOrderAlertsGroupIntroHtml()
     : "";
   const row = `
         <li class="list-none" data-module-setting-row-seq="${item.seq}">
           <div class="border-b border-border px-4 py-3">
-            <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div class="flex items-start justify-between gap-3">
               <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
-              <div class="w-full shrink-0 sm:max-w-3xl">${renderStaffOrderAlertByLineHtml(item.seq)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
             </div>
+            ${renderStaffOrderAlertPanelHtml(item.seq, on)}
           </div>
         </li>`;
   return intro ? wrapModuleSettingGroupIntro(row, intro) : row;
@@ -7838,6 +8346,12 @@ function renderModuleSettingRow(item: ModuleSettingCatalogItem): string {
   if (isPosFindOrderListSeq(item.seq)) {
     return renderModuleSettingPosFindOrderListRow(item);
   }
+  if (isPosMenuScopeLinesSeq(item.seq)) {
+    return renderModuleSettingPosMenuScopeLinesRow(item);
+  }
+  if (isPosMenuUiLayoutLinesSeq(item.seq)) {
+    return renderModuleSettingPosMenuUiLayoutLinesRow(item);
+  }
   if (isPosComboOrderingSeq(item.seq)) {
     return renderModuleSettingPosComboOrderingRow(item);
   }
@@ -8375,6 +8889,9 @@ function renderModuleSettingRow(item: ModuleSettingCatalogItem): string {
   if (isGuestMenuClassificationModeSeq(item.seq)) {
     return renderModuleSettingGuestMenuClassificationModeRow(item);
   }
+  if (isGuestEmenuProModeSeq(item.seq)) {
+    return renderModuleSettingGuestEmenuProModeRow(item);
+  }
   if (isGuestMenuClassNameDisplaySeq(item.seq)) {
     return renderModuleSettingGuestMenuClassNameDisplayRow(item);
   }
@@ -8405,6 +8922,12 @@ function renderModuleSettingRow(item: ModuleSettingCatalogItem): string {
   if (isPosKitchenSendTriggerSeq(item.seq)) {
     return renderModuleSettingPosKitchenSendTriggerRow(item);
   }
+  if (isKitchenLineEditSeq(item.seq)) {
+    return renderModuleSettingKitchenLineEditRow(item);
+  }
+  if (isPosCheckoutEntryLinesSeq(item.seq)) {
+    return renderModuleSettingPosCheckoutEntryLinesRow(item);
+  }
   if (isPostOrderKitchenSendModeSeq(item.seq)) {
     return renderModuleSettingPostOrderKitchenSendModeRow(item);
   }
@@ -8413,6 +8936,9 @@ function renderModuleSettingRow(item: ModuleSettingCatalogItem): string {
   }
   if (isKitchenSendPasswordAuthSeq(item.seq)) {
     return renderModuleSettingKitchenSendPasswordAuthRow(item);
+  }
+  if (isPosSessionSecuritySeq(item.seq)) {
+    return renderModuleSettingPosSessionSecurityRow(item);
   }
   if (isOrderDisplaySeatSeq(item.seq)) {
     return renderModuleSettingOrderDisplaySeatRow(item);
@@ -8503,6 +9029,14 @@ function bindModuleSettingsToggles(): void {
       btn.setAttribute("aria-checked", next ? "true" : "false");
       btn.title = next ? t("moduleSettings.toggleOn") : t("moduleSettings.toggleOff");
       syncModuleSettingToggleButton(btn);
+      const byLineId = getActiveFohByLineIdFromDom();
+      const currentPath = location.hash.slice(1) || "/dashboard/overview";
+      if (byLineId && isFohSettingsByLinePath(currentPath)) {
+        writeFohByLineToggleState(seq, byLineId, next);
+        runFohByLineToggleSideEffects(seq, next);
+        requestAnimationFrame(() => applyFohByLineUiSuppressions());
+        return;
+      }
       writeModuleSettingToggleOn(seq, next);
       if (isGuestOrderNoticeSeq(seq)) {
         setGuestOrderNoticePanelVisible(next);
@@ -8562,11 +9096,16 @@ function bindModuleSettingsToggles(): void {
       if (isPostPaymentClearTableSeq(seq)) {
         setPostPaymentClearTablePanelVisible(seq, next);
       }
+      if (isStaffOrderAlertSeq(seq)) {
+        setStaffOrderAlertPanelVisible(seq, next);
+      }
       if (isAutoClearTableSeq(seq)) {
         setAutoClearTablePanelVisible(seq, next);
       }
       if (isClearTableButtonSeq(seq)) {
+        if (next) ensureClearTableButtonLinesDefault();
         syncClearTableButtonLinesWithMaster(next);
+        setClearTableButtonPanelVisible(seq, next);
       }
       if (isClearTableClientNotificationSeq(seq)) {
         setClearTableClientNotificationPanelVisible(seq, next);
@@ -8635,6 +9174,10 @@ function bindModuleSettingsToggles(): void {
       if (isGuestMenuClassificationModeSeq(seq)) {
         setGuestMenuClassificationModePanelVisible(next);
       }
+      if (isGuestEmenuProModeSeq(seq)) {
+        if (next) ensureGuestEmenuProModeLinesDefault();
+        setGuestEmenuProModePanelVisible(next);
+      }
       if (isGuestMenuClassNameDisplaySeq(seq)) {
         setGuestMenuClassNameDisplayPanelVisible(next);
       }
@@ -8674,8 +9217,19 @@ function bindModuleSettingsToggles(): void {
       if (isPosKitchenSendTriggerSeq(seq)) {
         setPosKitchenSendTriggerPanelVisible(seq, next);
       }
+      if (isKitchenLineEditSeq(seq)) {
+        if (next) ensureKitchenLineEditLinesDefault();
+        setKitchenLineEditPanelVisible(seq, next);
+      }
+      if (isPosCheckoutEntryLinesSeq(seq)) {
+        if (next) ensurePosCheckoutEntryLinesDefault(seq);
+        setPosCheckoutEntryLinesPanelVisible(seq, next);
+      }
       if (isKitchenSendPasswordAuthSeq(seq)) {
         setKitchenSendPasswordAuthPanelVisible(seq, next);
+      }
+      if (isPosSessionSecurityToggleSeq(seq)) {
+        setPosSessionSecurityPanelVisible(seq, next);
       }
       if (isOrderDisplaySeatSeq(seq)) {
         setOrderDisplaySeatPanelVisible(next);
@@ -8692,6 +9246,14 @@ function bindModuleSettingsToggles(): void {
       if (isPosFindOrderListSeq(seq)) {
         if (next) ensurePosFindOrderListLinesDefault(seq);
         setPosFindOrderListPanelVisible(seq, next);
+      }
+      if (isPosMenuScopeLinesSeq(seq)) {
+        if (next) ensurePosMenuScopeLinesDefault(seq);
+        setPosMenuScopeLinesPanelVisible(seq, next);
+      }
+      if (isPosMenuUiLayoutLinesSeq(seq)) {
+        if (next) ensurePosMenuUiLayoutLinesDefault(seq);
+        setPosMenuUiLayoutLinesPanelVisible(seq, next);
       }
       if (isPosComboOrderingSeq(seq)) {
         if (next) ensurePosComboOrderingLinesDefault(seq);
@@ -9312,17 +9874,21 @@ function renderMain(): string {
   const isTeamTipsManagementIframe = isTeamTipsManagementIframePath(path);
   const isTeamPayrollReportIframe = isTeamPayrollReportIframePath(path);
   const isFohMenuOrderLimitsIframe = isFohMenuOrderLimitsIframePath(path);
+  const isFohEmenuProIframe = isFohEmenuProIframePath(path);
   const isFohCategorySettings = isFohCategorySettingsPath(path);
+  const isFohClassificationSettings = isFohClassificationSettingsPath(path);
   const isFullBleedEmbeddedIframe =
     isMarketingScreensaverIframe ||
     isMarketingAdsIframe ||
     isMarketingPosterProIframe ||
     isAssetCenterMaterialsIframe ||
+    isFohEmenuProIframe ||
     isReportsTipsAllocationIframe ||
     isTeamRolesEmployeesIframe ||
     isTeamTipsManagementIframe ||
     isTeamPayrollReportIframe;
   const isModuleSettingsCatalog = isModuleHubSettingsCatalogPath(path);
+  const isStaffAccounts = isStaffAccountsPath(path);
   const isPermissionsRbac = isPermissionsRbacPath(path);
   const isLoginLogs = isLoginLogsPath(path);
   const isFinanceRegisterAudit = isFinanceRegisterAuditPath(path);
@@ -9354,6 +9920,7 @@ function renderMain(): string {
     isTeamBreaksOvertime ||
     isModuleSettingsCatalog ||
     isFohCategorySettings ||
+    isFohClassificationSettings ||
     isLoginLogs;
   const showModuleTabs = shouldShowModuleTabs(tabModule);
 
@@ -9381,7 +9948,10 @@ function renderMain(): string {
       : renderModuleTabs(path, tabModule!)
     : "";
 
-  const tabPanelAttrs = wideContentLayout ? ' class="min-h-0 flex-1 flex flex-col overflow-hidden"' : "";
+  const tabPanelAttrs =
+    wideContentLayout || isFullBleedEmbeddedIframe
+      ? ' class="min-h-0 flex-1 flex flex-col overflow-hidden"'
+      : "";
 
   const appHeaderHtml = `<header class="z-40 flex min-h-14 shrink-0 flex-wrap items-center justify-between gap-3 border-b border-border bg-card/95 px-4 py-2 backdrop-blur supports-[backdrop-filter]:bg-card/80 sm:flex-nowrap sm:gap-4 sm:py-0">
         <div class="min-w-0">
@@ -9431,6 +10001,8 @@ function renderMain(): string {
                   ? renderAssetCenterMaterialsIframePanel()
                 : isFohMenuOrderLimitsIframe
                   ? renderFohMenuOrderLimitsPagePanel()
+                : isFohEmenuProIframe
+                  ? renderFohEmenuProIframePanel()
                 : isReportsTipsAllocationIframe
                   ? renderReportsTipsAllocationIframePanel()
                 : isTeamRolesEmployeesIframe
@@ -9488,6 +10060,8 @@ function renderMain(): string {
                       ? renderFloorPlanPage()
                     : isFohCategorySettingsPath(path)
                       ? renderFohCategorySettingsPage(path)
+                    : isFohClassificationSettingsPath(path)
+                      ? renderFohClassificationSettingsPage(path)
                     : isTeamBreaksOvertime
                       ? renderTeamBreaksOvertimePageWithSettings(path)
                     : isTeamClockIn
@@ -9503,13 +10077,17 @@ function renderMain(): string {
                     : path === "/settings/overview"
                       ? renderSettingsOverview()
                       : isModuleHubSettingsCatalogPath(path)
-                        ? `<div class="${tertiaryRowClass}">
+                        ? isFohSettingsPath(path)
+                          ? renderFohHubSettingsLayout(path, title, tertiaryRowClass, tertiaryMainClass)
+                          : `<div class="${tertiaryRowClass}">
                     ${renderModuleHubSettingsCategorySidebar(path, title)}
                     <div class="${tertiaryMainClass} module-settings-scroll-host">${renderModuleHubSettingsPage(path, title)}</div>
                   </div>`
-                        : isPermissionsRbac
-                          ? renderPermissionsRbacPage(path)
-                          : isLoginLogs
+                        : isStaffAccounts
+                          ? renderStaffAccountsPage()
+                          : isPermissionsRbac
+                            ? renderPermissionsRbacPage(path)
+                            : isLoginLogs
                             ? renderLoginLogsPage()
                             : renderPlaceholder(path, title, tabModule)
             }
@@ -9634,13 +10212,13 @@ function mount(): void {
   if (!isAuthenticated()) {
     if (authPath !== LOGIN_PATH) {
       replaceHashPath(LOGIN_PATH);
-      return;
     }
     mountLoginShell();
     return;
   }
   if (authPath === LOGIN_PATH) {
     replaceHashPath("/dashboard/overview");
+    mount();
     return;
   }
 
@@ -10209,6 +10787,7 @@ function mount(): void {
 
   bindAiAssistantHandlers();
   bindPermissionsRbac();
+  bindStaffAccountsPage();
   bindLoginLogsPage(mount);
   bindHeaderScopeFilters();
   bindGlobalUiLocaleControl();
@@ -10217,6 +10796,8 @@ function mount(): void {
   restoreModuleSettingsSubnavScroll(mountPathForSheet);
   bindFloorPlanEditor(mount);
   bindFohCategorySettingsUi(mount);
+  bindFohClassificationSettingsUi(mount);
+  bindFohEmenuProIframeBridge();
   bindFohMenuOrderLimitsUi((tab) => {
     replaceHashPath(getMenuOrderLimitTabHref(tab));
     mount();
@@ -10231,6 +10812,10 @@ function mount(): void {
   bindDeviceManagementCdsHardware();
   bindHardwareGlobalDefaultDevicePickers();
   bindModuleSettingsCategoryNav();
+  bindFohSettingsViewMode();
+  if (isFohSettingsByLinePath(mountPathForSheet)) {
+    requestAnimationFrame(() => applyFohByLineUiSuppressions());
+  }
   bindModuleSettingsSubnavScrollMemory();
   bindModuleSettingsToggles();
   syncDailyCloseCashOptionRowsFromMaster();
@@ -10257,6 +10842,8 @@ function mount(): void {
   bindDishSequenceIdDisplayUi();
   bindPosOrderCartPosLinesUi();
   bindPosFindOrderListUi();
+  bindPosMenuScopeLinesUi();
+  bindPosMenuUiLayoutLinesUi();
   bindPosComboOrderingUi();
   bindDiscountSurchargePresetEditors();
   bindPaymentMethodsEditor();
@@ -10299,6 +10886,7 @@ function mount(): void {
   bindGuestMenuCartUi();
   bindMenusifuBrandLogoUi();
   bindGuestMenuClassificationModeUi();
+  bindGuestEmenuProModeUi();
   bindGuestMenuClassNameDisplayUi();
   bindGuestMenuImageModeUi();
   bindOrderRemarkLinesUi();
@@ -10306,9 +10894,12 @@ function mount(): void {
   bindProductRemarkUi();
   bindComboSubitemRemarkLinesUi();
   bindPosKitchenSendTriggerUi();
+  bindKitchenLineEditUi();
+  bindPosCheckoutEntryLinesUi();
   bindDelayedKitchenSendUi();
   bindPostOrderKitchenSendModeUi();
   bindKitchenSendPasswordAuthUi();
+  bindPosSessionSecurityUi();
   bindOrderDisplaySeatUi();
   bindPosButtonVisibilityUi();
   bindPartySizeSelectionPageUi();

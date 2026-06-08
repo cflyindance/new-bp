@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="./favicon.ico" />
+    <meta name="description" content="Menusifu E-menu Pro Admin" />
+    <title>E-menu Shopping guide template</title>
+    <script>
+      (function () {
+        var params = new URLSearchParams(window.location.search);
+        var embedded = params.get("embedded");
+        var inIframe = false;
+        try {
+          inIframe = window.self !== window.top;
+        } catch (e) {
+          inIframe = true;
+        }
+        if (embedded === "1" || embedded === "true" || inIframe) {
+          document.documentElement.classList.add("menusifu-embedded");
+        }
+      })();
+    </script>
+    <link rel="stylesheet" href="./embedded-shell.css" />
+    <script src="./embedded-mock-api.js"></script>
+    <script src="./embedded-block-icons.js"></script>
+    <script src="./embedded-viewport-fit.js"></script>
+    <script type="module" crossorigin src="./assets/index-4fN21jTT.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-BOKRIb5n.css">
+  </head>
+  <body>
+    <div id="root"></div>
+    <script src="./embedded-header-more.js"></script>
+    <script src="./embedded-resolution-header.js"></script>
+  </body>
+</html>

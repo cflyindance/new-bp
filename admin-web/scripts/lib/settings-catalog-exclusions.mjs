@@ -11,9 +11,9 @@ export const SETTINGS_CATALOG_EXCLUDED_BY_SEQ = new Map([
   [656, "品类菜单关联已迁至前厅「品类设置」/operations/queue-call/category-settings（非设置滑层）"],
   [657, "品类营业时间已迁至前厅「品类设置」/operations/queue-call/category-settings（非设置滑层）"],
   [658, "特殊菜单已迁至前厅「品类设置」/operations/queue-call/category-settings（非设置滑层）"],
-  [659, "场景菜单类别名称已迁至前厅「品类设置」/operations/queue-call/category-settings（非设置滑层）"],
-  [660, "场景菜单设置已迁至前厅「品类设置」/operations/queue-call/category-settings（非设置滑层）"],
-  [661, "场景菜单营业时间已迁至前厅「品类设置」/operations/queue-call/category-settings（非设置滑层）"],
+  [659, "场景菜单类别名称已迁至前厅「分类设置」功能页 /operations/queue-call/classification-settings（非设置滑层）"],
+  [660, "场景菜单设置已迁至前厅「分类设置」/operations/queue-call/classification-settings（非设置滑层）"],
+  [661, "场景菜单营业时间已迁至前厅「分类设置」/operations/queue-call/classification-settings（非设置滑层）"],
   [609, "与 seq 522「商品备注」重复（全局展示设置 vs 服务设置）"],
   [610, "与 seq 521「订单备注」重复（全局展示设置 vs 服务设置）"],
   [603, "与 seq 524「瀑布流模式」重复（全局展示设置 vs 服务设置）"],
@@ -220,7 +220,12 @@ export const SETTINGS_CATALOG_EXCLUDED_BY_SEQ = new Map([
 ]);
 
 /** 不设「设置」滑层 catalog 的一级导航（能力已在业务/硬件子模块维护） */
-export const SETTINGS_HUBS_WITHOUT_CATALOG = new Set(["硬件管理中心", "商品中心"]);
+export const SETTINGS_HUBS_WITHOUT_CATALOG = new Set([
+  "硬件管理中心",
+  "商品中心",
+  /** 方案 F：权限中心仅 RBAC，无 settings catalog */
+  "权限管理中心",
+]);
 
 export function isSettingsCatalogExcluded(seq) {
   return SETTINGS_CATALOG_EXCLUDED_BY_SEQ.has(Number(seq));

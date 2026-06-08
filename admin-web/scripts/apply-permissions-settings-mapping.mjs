@@ -1,6 +1,6 @@
 /**
- * 将权限管理中心分组写入 docs/项目文档/配置归类-分组映射.csv
- * 349 企台点只读菜 → store-security-policy；345/346/646 仍在前厅；369/426 在 RBAC。
+ * 权限管理中心 · 方案 F：无 settings catalog（纯 RBAC）。
+ * 75/166/175/349 已迁前厅 foh-pos-shell；运行 apply-foh-settings-mapping.mjs 维护映射。
  * 运行：node scripts/apply-permissions-settings-mapping.mjs
  */
 import fs from "node:fs";
@@ -15,22 +15,8 @@ const mappingPath = [projectDocs, repoDocs]
   .map((d) => path.join(d, "配置归类-分组映射.csv"))
   .find((p) => fs.existsSync(p));
 
-const titles = {
-  "account-session-security": "账户与会话安全",
-  "store-security-policy": "门店安全策略",
-};
-
-const assignMap = {
-  "account-session-security": [75, 166, 175],
-  "store-security-policy": [349],
-};
-
+/** 方案 F：权限 hub 不再承载 catalog 条目 */
 const permAssign = new Map();
-for (const [key, seqs] of Object.entries(assignMap)) {
-  for (const seq of seqs) {
-    permAssign.set(seq, { groupTitle: titles[key], groupKey: key });
-  }
-}
 
 function parseCsvLine(line) {
   const parts = [];
@@ -91,9 +77,5 @@ for (const line of lines) {
   }
 }
 
-if (updated !== permAssign.size) {
-  throw new Error(`预期更新 ${permAssign.size} 条，实际 ${updated} 条`);
-}
-
 fs.writeFileSync(mappingPath, `${out.join("\n")}\n`, "utf8");
-console.log(`Updated ${updated} rows in ${mappingPath}`);
+console.log(`Permissions hub mapping: ${updated} rows updated (scheme F: 0 expected).`);

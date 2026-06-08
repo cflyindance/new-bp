@@ -1,23 +1,24 @@
 /**
- * 订单中心 · 订单类型可用范围（seq 487）
+ * 前厅 · 订单类型与取餐：订单类型可用范围（seq 487）
  * 支持多产线独立配置可用订单类型（堂吃/外带/来取）。
  */
 
+import { FOH_LINE_CONFIG_ROW_ATTR, getFohActiveLineFilterId } from "./foh-settings-by-line-filter";
 import { MODULE_SETTING_CHOICE_CONTROL_CLASS } from "./module-settings-choice-ui";
 import { readModuleSettingJson, writeModuleSettingJson } from "./module-settings-form-ui";
 
 export const ORDER_TYPE_BY_LINE_SEQ = 487;
 const ORDER_TYPE_BY_LINE_STORAGE_ID = "487-order-type-by-line";
 
-type ProductLineId = "kiosk" | "emenu" | "paypad" | "online-order" | "scan-order";
+type ProductLineId = "kiosk" | "emenu" | "paypad" | "sdi" | "online-order";
 type OrderTypeId = "dine-in" | "to-go" | "pick-up";
 
 const PRODUCT_LINES: ReadonlyArray<{ id: ProductLineId; label: string }> = [
   { id: "kiosk", label: "Kiosk" },
   { id: "emenu", label: "eMenu" },
   { id: "paypad", label: "PayPad" },
+  { id: "sdi", label: "SDI" },
   { id: "online-order", label: "Online Order" },
-  { id: "scan-order", label: "扫码点单" },
 ];
 
 const ORDER_TYPES: ReadonlyArray<{ id: OrderTypeId; label: string }> = [
@@ -47,10 +48,19 @@ function defaultConfig(): OrderTypeByLineConfig {
       kiosk: ["dine-in", "to-go", "pick-up"],
       emenu: ["dine-in", "to-go", "pick-up"],
       paypad: ["dine-in", "to-go", "pick-up"],
+      sdi: ["dine-in", "to-go", "pick-up"],
       "online-order": ["to-go", "pick-up"],
-      "scan-order": ["dine-in", "to-go", "pick-up"],
     },
   };
+}
+
+function migrateLegacyByLineRaw(byLineRaw: Record<string, unknown>): Record<string, unknown> {
+  const out = { ...byLineRaw };
+  if (out["scan-order"] !== undefined && out.sdi === undefined) {
+    out.sdi = out["scan-order"];
+  }
+  delete out["scan-order"];
+  return out;
 }
 
 function normalizeOrderTypeIds(values: unknown): OrderTypeId[] {
@@ -74,11 +84,10 @@ function normalizeConfig(raw: unknown): OrderTypeByLineConfig {
   const byLineRaw = (raw as { byLine?: unknown }).byLine;
   if (!byLineRaw || typeof byLineRaw !== "object") return base;
 
+  const migrated = migrateLegacyByLineRaw(byLineRaw as Record<string, unknown>);
   const byLine = { ...base.byLine };
   for (const lineId of ALL_LINE_IDS) {
-    byLine[lineId] = normalizeOrderTypeIds(
-      (byLineRaw as Record<string, unknown>)[lineId],
-    );
+    byLine[lineId] = normalizeOrderTypeIds(migrated[lineId]);
   }
   return { byLine };
 }
@@ -88,9 +97,13 @@ export function isOrderTypeByLineSeq(seq: number): boolean {
 }
 
 function readOrderTypeByLineConfig(): OrderTypeByLineConfig {
-  return normalizeConfig(
-    readModuleSettingJson<unknown>(ORDER_TYPE_BY_LINE_STORAGE_ID, defaultConfig()),
-  );
+  const raw = readModuleSettingJson<unknown>(ORDER_TYPE_BY_LINE_STORAGE_ID, defaultConfig());
+  const normalized = normalizeConfig(raw);
+  const byLineRaw = raw && typeof raw === "object" ? (raw as { byLine?: unknown }).byLine : null;
+  if (byLineRaw && typeof byLineRaw === "object" && "scan-order" in (byLineRaw as object)) {
+    writeOrderTypeByLineConfig(normalized);
+  }
+  return normalized;
 }
 
 function writeOrderTypeByLineConfig(config: OrderTypeByLineConfig): void {
@@ -107,12 +120,16 @@ function isChecked(
 
 export function renderOrderTypeByLineEditorHtml(): string {
   const config = readOrderTypeByLineConfig();
+  const activeLine = getFohActiveLineFilterId();
+  const visibleLines = activeLine
+    ? PRODUCT_LINES.filter((line) => line.id === activeLine)
+    : PRODUCT_LINES;
   const headCells = ORDER_TYPES.map(
     (o) =>
       `<th scope="col" class="px-2 py-2 text-center text-xs font-medium text-muted-foreground whitespace-nowrap">${escapeHtml(o.label)}</th>`,
   ).join("");
 
-  const rows = PRODUCT_LINES.map((line) => {
+  const rows = visibleLines.map((line) => {
     const cells = ORDER_TYPES.map((type) => {
       const checked = isChecked(config, line.id, type.id);
       return `
@@ -127,7 +144,7 @@ export function renderOrderTypeByLineEditorHtml(): string {
         </td>`;
     }).join("");
     return `
-      <tr data-order-type-row="${escapeHtml(line.id)}">
+      <tr data-order-type-row="${escapeHtml(line.id)}" ${FOH_LINE_CONFIG_ROW_ATTR}="${escapeHtml(line.id)}">
         <th scope="row" class="border-t border-border px-3 py-2 text-left text-sm font-medium text-foreground whitespace-nowrap">${escapeHtml(line.label)}</th>
         ${cells}
       </tr>`;
@@ -160,8 +177,8 @@ export function bindOrderTypeByLineEditor(): void {
         kiosk: [],
         emenu: [],
         paypad: [],
+        sdi: [],
         "online-order": [],
-        "scan-order": [],
       };
       editor
         .querySelectorAll<HTMLInputElement>("[data-order-type-line][data-order-type-id]:checked")

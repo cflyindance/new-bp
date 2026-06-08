@@ -89,31 +89,6 @@ const WAIT_TIME_FORM_ROWS: ModuleSettingFormRowConfig[] = [
   },
 ];
 
-/** POS 菜单与布局 · 类展示 / 菜展示（217 / 218） */
-const POS_MENU_UI_FORM_ROWS: ModuleSettingFormRowConfig[] = [
-  {
-    seq: 217,
-    kind: "radio-group",
-    radioFieldId: "217-category-layout",
-    radioDefault: "horizontal2",
-    radios: [
-      { value: "horizontal2", label: "Horizontal2" },
-      { value: "horizontal3", label: "Horizontal 3" },
-      { value: "vertical1", label: "Vertical 1" },
-    ],
-  },
-  {
-    seq: 218,
-    kind: "radio-group",
-    radioFieldId: "218-item-layout",
-    radioDefault: "regular-buttons",
-    radios: [
-      { value: "regular-buttons", label: "Regular Buttons" },
-      { value: "large-buttons", label: "Large Buttons" },
-    ],
-  },
-];
-
 /** 团队管理 · 下班打卡打印确认小票（70）：三选一 */
 const TEAM_TIME_ATTENDANCE_FORM_ROWS: ModuleSettingFormRowConfig[] = [
   {
@@ -171,7 +146,6 @@ const TEAM_PAYROLL_TIP_FORM_ROWS: ModuleSettingFormRowConfig[] = [
 
 const MODULE_SETTING_FORM_ROWS: ModuleSettingFormRowConfig[] = [
   ...WAIT_TIME_FORM_ROWS,
-  ...POS_MENU_UI_FORM_ROWS,
   ...TEAM_TIME_ATTENDANCE_FORM_ROWS,
   ...TEAM_PAYROLL_TIP_FORM_ROWS,
 ];

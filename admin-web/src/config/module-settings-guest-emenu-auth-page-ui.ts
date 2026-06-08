@@ -79,7 +79,8 @@ function ensureAllGuestEmenuAuthPageTogglesMigrated(): void {
 
 function normalizeLineIds(raw: unknown): GuestEmenuAuthPageProductLineId[] {
   if (!Array.isArray(raw)) return [];
-  return raw.includes(EMENU_LINE_ID) ? [EMENU_LINE_ID] : [];
+  if (raw.includes(EMENU_LINE_ID) || raw.includes("kiosk")) return [EMENU_LINE_ID];
+  return [];
 }
 
 export function readGuestEmenuAuthPageLines(seq: number): GuestEmenuAuthPageProductLineId[] {
@@ -87,7 +88,12 @@ export function readGuestEmenuAuthPageLines(seq: number): GuestEmenuAuthPageProd
   ensureGuestEmenuAuthPageToggleMigrated(seq);
   const stored = readModuleSettingJson<unknown>(linesStorageId(seq), null);
   const normalized = normalizeLineIds(stored);
-  if (normalized.length > 0) return normalized;
+  if (normalized.length > 0) {
+    if (Array.isArray(stored) && stored.includes("kiosk")) {
+      writeGuestEmenuAuthPageLines(seq, normalized);
+    }
+    return normalized;
+  }
 
   if (readLegacyToggleOn(seq)) {
     writeGuestEmenuAuthPageLines(seq, [EMENU_LINE_ID]);

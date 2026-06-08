@@ -43,6 +43,10 @@ const reasons = {
   "foh-pos-find-order-list":
     "POS/PayPad 找单列表默认筛选、汇总展示、批量关单与找单页打印收据类型。",
   "foh-pos-checkout-entry": "条码找单进付款界面、支付前服务员二次确认客户信息。",
+  "foh-pos-notification-control":
+    "POS/员工端通知类型总开关与新单语音播报；地基配置，须先于订单提醒与桌边 Service Request 联动。",
+  "foh-pos-order-alerts":
+    "扫码/线上下单等渠道的店内员工订单消息（不发顾客短信）；新单、追单、指定菜品按产线配置。",
   "foh-guest-order-type":
     "堂吃/外带/来取范围、订单类型与取餐方式页、号码牌与送餐到桌餐牌号；先定怎么吃、怎么取。",
   "foh-guest-registration":

@@ -3,6 +3,10 @@
  * seq 509 展示账户积分已迁至 guest-menu-line-toggle-ui（前厅·食客端·首页与版式）。
  */
 
+import {
+  FOH_LINE_CONFIG_ROW_ATTR,
+  getFohActiveLineFilterId,
+} from "./foh-settings-by-line-filter";
 import { MODULE_SETTING_CHOICE_CONTROL_CLASS } from "./module-settings-choice-ui";
 import {
   readModuleSettingJson,
@@ -209,7 +213,11 @@ export function setMemberPointsToggleFieldLinesPanelVisible(
 
 export function renderMemberPointsDishPositionByLineEditorHtml(): string {
   const values = readMemberPointsDishPositionByLine();
-  const rows = MEMBER_LOGIN_PRODUCT_LINES.map((line) => {
+  const activeLine = getFohActiveLineFilterId();
+  const lines = activeLine
+    ? MEMBER_LOGIN_PRODUCT_LINES.filter((line) => line.id === activeLine)
+    : MEMBER_LOGIN_PRODUCT_LINES;
+  const rows = lines.map((line) => {
     const groupName = `member-points-dish-position-${line.id}`;
     const radios = MEMBER_POINTS_DISH_POSITION_OPTIONS.map((opt) => {
       const checked = values[line.id] === opt.value;
@@ -229,7 +237,7 @@ export function renderMemberPointsDishPositionByLineEditorHtml(): string {
     }).join("");
 
     return `
-    <tr class="border-t border-border">
+    <tr class="border-t border-border" ${FOH_LINE_CONFIG_ROW_ATTR}="${escapeHtml(line.id)}">
       <td class="px-3 py-2.5 text-sm font-medium text-foreground align-top whitespace-nowrap">${escapeHtml(line.label)}</td>
       <td class="px-3 py-2.5">
         <div class="flex flex-wrap items-center gap-x-5 gap-y-2" role="radiogroup" aria-label="${escapeHtml(line.label)} 积分菜展示位置">${radios}</div>

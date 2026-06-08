@@ -15,6 +15,8 @@ export const FOH_SETTINGS_GROUP_ORDER = [
   "foh-kitchen-send-timing",
   "foh-pos-find-order-list",
   "foh-pos-checkout-entry",
+  "foh-pos-notification-control",
+  "foh-pos-order-alerts",
   "foh-table-clear-ops",
   "foh-guest-order-type",
   "foh-guest-registration",
@@ -62,6 +64,8 @@ export const FOH_SETTINGS_GROUP_TITLES = {
   "foh-kitchen-send-timing": "送厨时机",
   "foh-pos-find-order-list": "POS 找单列表",
   "foh-pos-checkout-entry": "POS 结账入口",
+  "foh-pos-notification-control": "POS 通知总控",
+  "foh-pos-order-alerts": "订单消息提醒",
   "foh-guest-order-type": "订单类型与取餐",
   "foh-guest-registration": "食客登记与会员",
   "foh-guest-pre-order": "点单前须知与授权",
@@ -122,6 +126,9 @@ export const FOH_SETTINGS_LEGACY_GROUP_REDIRECT = {
   "foh-menu-find-pay": "foh-pos-menu-scope",
   "foh-guest-kitchen-dining": "foh-guest-kitchen-send",
   "foh-tableside-experience": "foh-tableside-service",
+  /** 消息中心 v1.3：POS 员工端通知迁前厅 */
+  "notification-basics": "foh-pos-notification-control",
+  "staff-order-alerts": "foh-pos-order-alerts",
 };
 
 function range(a, b) {
@@ -134,7 +141,7 @@ function range(a, b) {
 export const FOH_SETTINGS_ASSIGN_MAP = {
   "foh-table-start-flow": [107, 619, 111, 625, 621, 643, 644, 592],
   "foh-table-clear-ops": [169, 534, 642, 351, 347],
-  "foh-pos-shell": [165, 346],
+  "foh-pos-shell": [75, 166, 175, 165, 346, 349],
   "foh-pos-menu-scope": [118, 174, 148, 176, 177, 348],
   "foh-pos-menu-ui-layout": [216, 217, 218, 220, 219, 350],
   "foh-pos-order-cart": [132, 133, 135, 137, 178, 121, 122, 222, 223],
@@ -143,6 +150,8 @@ export const FOH_SETTINGS_ASSIGN_MAP = {
   "foh-kitchen-send-timing": [125, 113, 123, 114, 120, 345, 141],
   "foh-pos-find-order-list": [153, 151, 152, 251],
   "foh-pos-checkout-entry": [248, 221],
+  "foh-pos-notification-control": [331, 332],
+  "foh-pos-order-alerts": [638, 639, 637],
   "foh-guest-order-type": [487, 488, 489, 490, 491, 503],
   "foh-guest-registration": [623, 622, 504, 505, 506, 507, 510],
   "foh-guest-pre-order": [569, 620, 626, 627],

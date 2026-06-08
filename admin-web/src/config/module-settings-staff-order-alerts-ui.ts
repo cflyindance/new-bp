@@ -115,7 +115,49 @@ export function isStaffOrderAlertSeq(seq: number): boolean {
   return (STAFF_ORDER_ALERT_SEQS as readonly number[]).includes(seq);
 }
 
-export function renderStaffOrderAlertByLineHtml(seq: number): string {
+const migratedToggleSeqs = new Set<number>();
+
+function hasStoredStaffAlertLines(seq: number): boolean {
+  const stored = readModuleSettingJson<unknown>(staffAlertLinesStorageId(seq), null);
+  return normalizeLineIds(seq, stored).length > 0;
+}
+
+export function ensureStaffOrderAlertToggleMigrated(seq: number): void {
+  if (!isStaffOrderAlertSeq(seq)) return;
+  if (migratedToggleSeqs.has(seq)) return;
+  migratedToggleSeqs.add(seq);
+  try {
+    if (localStorage.getItem(moduleSettingToggleStorageKey(seq)) !== null) {
+      return;
+    }
+  } catch {
+    return;
+  }
+  if (hasStoredStaffAlertLines(seq) || readLegacyToggleOn(seq)) {
+    try {
+      localStorage.setItem(moduleSettingToggleStorageKey(seq), "1");
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+function ensureAllStaffOrderAlertTogglesMigrated(): void {
+  for (const seq of STAFF_ORDER_ALERT_SEQS) {
+    ensureStaffOrderAlertToggleMigrated(seq);
+  }
+}
+
+const PANEL_HINT_BY_SEQ: Record<number, string> = {
+  [STAFF_ORDER_ALERT_NEW_ORDER_SEQ]:
+    "勾选产线后，该产线有新订单进入店内时向员工发送消息提醒（不发顾客短信）。",
+  [STAFF_ORDER_ALERT_APPEND_SEQ]:
+    "勾选产线后，该产线在追单/加菜时向员工发送消息提醒（不发顾客短信）。",
+  [STAFF_ORDER_ALERT_CUSTOM_MENU_SEQ]:
+    "勾选产线后，订单含指定菜品时向员工发送消息提醒；指定菜品列表配置见业务规则（原型待接）。",
+};
+
+function renderStaffOrderAlertByLineHtml(seq: number, enabled: boolean): string {
   const selected = new Set(readStaffOrderAlertProductLines(seq));
   const lines = getStaffAlertProductLinesForSeq(seq);
   const cells = lines.map((line, index) => {
@@ -123,7 +165,7 @@ export function renderStaffOrderAlertByLineHtml(seq: number): string {
     const divider = index > 0 ? "border-l border-border" : "";
     return `
       <label
-        class="flex flex-1 cursor-pointer flex-col items-center justify-center gap-2 px-2 py-3 text-sm text-foreground sm:px-3 ${divider}"
+        class="flex flex-1 flex-col items-center justify-center gap-2 px-2 py-3 text-sm text-foreground sm:px-3 ${enabled ? "cursor-pointer" : "cursor-not-allowed opacity-50"} ${divider}"
       >
         <input
           type="checkbox"
@@ -132,6 +174,7 @@ export function renderStaffOrderAlertByLineHtml(seq: number): string {
           data-staff-alert-product-line="${escapeHtml(line.id)}"
           data-staff-alert-seq="${seq}"
           ${checked ? "checked" : ""}
+          ${enabled ? "" : "disabled"}
           aria-label="${escapeHtml(line.label)}"
         />
         <span class="text-center leading-tight">${escapeHtml(line.label)}</span>
@@ -149,6 +192,38 @@ export function renderStaffOrderAlertByLineHtml(seq: number): string {
     </div>`;
 }
 
+export function renderStaffOrderAlertPanelHtml(seq: number, on: boolean): string {
+  const hidden = on ? "" : "hidden";
+  const hint = PANEL_HINT_BY_SEQ[seq] ?? "";
+  return `
+    <div
+      class="mt-3 ${hidden}"
+      data-staff-alert-panel="${seq}"
+      ${on ? "" : 'aria-hidden="true"'}
+    >
+      <p class="m-0 mb-2 text-xs font-medium text-muted-foreground">适用产线（多选）</p>
+      ${renderStaffOrderAlertByLineHtml(seq, on)}
+      ${hint ? `<p class="m-0 mt-2 text-xs leading-relaxed text-muted-foreground">${escapeHtml(hint)}</p>` : ""}
+    </div>`;
+}
+
+export function setStaffOrderAlertPanelVisible(seq: number, visible: boolean): void {
+  document.querySelectorAll<HTMLElement>(`[data-staff-alert-panel="${seq}"]`).forEach((panel) => {
+    panel.classList.toggle("hidden", !visible);
+    if (visible) panel.removeAttribute("aria-hidden");
+    else panel.setAttribute("aria-hidden", "true");
+
+    panel.querySelectorAll<HTMLInputElement>("[data-staff-alert-product-line]").forEach((input) => {
+      input.disabled = !visible;
+      const label = input.closest("label");
+      if (!label) return;
+      label.classList.toggle("cursor-not-allowed", !visible);
+      label.classList.toggle("opacity-50", !visible);
+      label.classList.toggle("cursor-pointer", visible);
+    });
+  });
+}
+
 function collectStaffAlertLines(group: HTMLElement, seq: number): void {
   const allowed = new Set(getAllowedLineIds(seq));
   const lines: StaffOrderAlertProductLineId[] = [];
@@ -162,6 +237,7 @@ function collectStaffAlertLines(group: HTMLElement, seq: number): void {
 }
 
 export function bindStaffOrderAlertUi(root: ParentNode = document): void {
+  ensureAllStaffOrderAlertTogglesMigrated();
   root.querySelectorAll<HTMLElement>("[data-staff-alert-by-line]").forEach((group) => {
     if (group.dataset.staffAlertBound === "1") return;
     group.dataset.staffAlertBound = "1";

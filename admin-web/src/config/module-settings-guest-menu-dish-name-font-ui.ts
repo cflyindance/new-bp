@@ -10,6 +10,7 @@ import {
   writeModuleSettingJson,
   writeModuleSettingNumber,
 } from "./module-settings-form-ui";
+import { isFohLineConfigRowVisible } from "./foh-settings-by-line-filter";
 import { moduleSettingToggleStorageKey } from "./module-settings-toggle-ui";
 
 export const GUEST_MENU_DISH_NAME_FONT_SEQ = 645;
@@ -219,7 +220,7 @@ function renderLineConfigBlock(
 function renderLineConfigsHtml(panelEnabled: boolean): string {
   const selected = new Set(readGuestMenuDishNameFontLines());
   return GUEST_MENU_DISH_NAME_FONT_PRODUCT_LINES.map((line) =>
-    renderLineConfigBlock(line, selected.has(line.id), panelEnabled),
+    renderLineConfigBlock(line, isFohLineConfigRowVisible(line.id, selected.has(line.id)), panelEnabled),
   ).join("");
 }
 
@@ -258,7 +259,9 @@ function syncLineConfigVisibility(editor: HTMLElement): void {
   const selected = new Set(readGuestMenuDishNameFontLines());
   editor.querySelectorAll<HTMLElement>("[data-dish-name-font-line-config]").forEach((block) => {
     const lineId = block.getAttribute("data-dish-name-font-line-config");
-    const show = lineId && selected.has(lineId as GuestMenuDishNameFontProductLineId);
+    const show =
+      lineId &&
+      isFohLineConfigRowVisible(lineId, selected.has(lineId as GuestMenuDishNameFontProductLineId));
     block.classList.toggle("hidden", !show);
     if (show) block.removeAttribute("aria-hidden");
     else block.setAttribute("aria-hidden", "true");

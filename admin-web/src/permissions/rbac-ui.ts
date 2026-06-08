@@ -77,8 +77,8 @@ function renderOverviewPage(): string {
         <p class="mt-2 text-sm text-muted-foreground leading-relaxed">
           按 <strong class="text-card-foreground">一级导航 → 二级入口 → 功能分类 → 功能设置</strong> 四级树配置角色权限；
           支持 <strong class="text-card-foreground">不可见 / 仅查看 / 可操作</strong>，子级继承父级并封顶。
-          门店角色与员工绑定在本区维护；全店安全策略见
-          <a href="#/permissions/store-security" class="text-primary hover:underline">门店安全策略</a>（不走角色矩阵）。
+          门店角色、<a href="#/permissions/staff-accounts" class="text-primary hover:underline">员工登录账号</a>与员工绑定在本区维护；POS 会话与操作安全见
+          <a href="#/operations/queue-call/settings/foh-pos-shell" class="text-primary hover:underline">前厅 · 登录与主界面</a>。
         </p>
         <dl class="mt-4 grid gap-3 sm:grid-cols-4 text-sm">
           <div class="rounded-lg border border-border bg-muted/30 px-4 py-3">
@@ -137,7 +137,7 @@ function renderRolesListPage(): string {
   return `
     <div class="space-y-4">
       <div class="flex flex-wrap items-center justify-between gap-3">
-        <p class="text-sm text-muted-foreground">创建角色并配置四级权限树。设置类入口可下钻到<strong>功能分类</strong>与单条<strong>功能设置</strong>（开关/勾选/改值）。</p>
+        <p class="text-sm text-muted-foreground">创建角色并配置四级权限树。员工登录账号在 <a href="#/permissions/staff-accounts" class="text-primary hover:underline">员工登录账号</a> 维护。</p>
         <a href="#/permissions/roles/new" class="inline-flex items-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90">新建角色</a>
       </div>
       <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -326,7 +326,7 @@ function renderStaffPage(): string {
   const { roles, staff } = getRbacSnapshot();
   return `
     <div class="space-y-4">
-      <p class="text-sm text-muted-foreground">为员工分配一个或多个角色；有效权限为多角色 grants 的<strong>并集</strong>（取最高：可操作 &gt; 仅查看 &gt; 不可见），再按树继承封顶。</p>
+      <p class="text-sm text-muted-foreground">为员工分配一个或多个角色；有效权限为多角色 grants 的<strong>并集</strong>（取最高：可操作 &gt; 仅查看 &gt; 不可见），再按树继承封顶。登录邮箱与密码请在 <a href="#/permissions/staff-accounts" class="text-primary hover:underline">员工登录账号</a> 维护。</p>
       <div class="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
         <table class="w-full text-sm">
           <thead class="bg-muted/40 text-left text-muted-foreground">

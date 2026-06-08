@@ -355,6 +355,18 @@ export const NAV_MODULES: NavModule[] = [
         titleEn: "Category settings",
         path: "/operations/queue-call/category-settings",
       },
+      {
+        id: "qc-classification-settings",
+        title: "分类设置",
+        titleEn: "Classification settings",
+        path: "/operations/queue-call/classification-settings",
+      },
+      {
+        id: "qc-emenu-pro",
+        title: "eMenu Pro",
+        titleEn: "eMenu Pro",
+        path: "/operations/queue-call/emenu-pro",
+      },
     ],
   },
   {
@@ -528,22 +540,16 @@ export const NAV_MODULES: NavModule[] = [
         path: "/permissions/staff",
       },
       {
+        id: "perm-staff-accounts",
+        title: "员工登录账号",
+        titleEn: "Staff login accounts",
+        path: "/permissions/staff-accounts",
+      },
+      {
         id: "perm-changelog",
         title: "权限变更记录",
         titleEn: "Permission change log",
         path: "/permissions/change-log",
-      },
-      {
-        id: "perm-account-session",
-        title: "账户与会话安全",
-        titleEn: "Account & session security",
-        path: "/permissions/account-session",
-      },
-      {
-        id: "perm-store-security",
-        title: "门店安全策略",
-        titleEn: "Store security policy",
-        path: "/permissions/store-security",
       },
     ],
   },

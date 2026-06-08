@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -44,5 +45,20 @@ if (!fs.existsSync(distDir)) {
 
 for (const dir of EMBEDDED_DIRS) {
   copyDirToDist(dir);
+}
+
+spawnSync(process.execPath, ["scripts/stash-emenu-pro-for-build.mjs", "restore"], {
+  cwd: projectRoot,
+  stdio: "inherit",
+});
+
+const emenuIconSrc = path.resolve(projectRoot, "dist", "emenu-pro", "images");
+const emenuIconDest = path.resolve(distDir, "kpos", "emenuPro", "images");
+if (fs.existsSync(emenuIconSrc)) {
+  fs.rmSync(emenuIconDest, { recursive: true, force: true });
+  copyRecursive(emenuIconSrc, emenuIconDest);
+  console.log("[copy-embedded-assets] Copied: kpos/emenuPro/images");
+} else {
+  console.warn("[copy-embedded-assets] Skip missing directory: dist/emenu-pro/images");
 }
 

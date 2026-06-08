@@ -23,6 +23,11 @@ import {
   STORE_BUSINESS_HOUR_DAY_BADGES,
   type StoreBusinessHourSchedule,
 } from "./module-settings-store-business-hours-ui";
+import {
+  bindFohSettingsNameDialog,
+  openFohSettingsNameDialog,
+  renderFohSettingsNameDialogShell,
+} from "./foh-settings-name-dialog-ui";
 
 export const FOH_CATEGORY_SETTINGS_BASE = "/operations/queue-call/category-settings";
 
@@ -806,6 +811,7 @@ export function renderFohCategorySettingsPage(path: string): string {
         ${renderTabContent(tabId, state)}
       </div>
       ${renderHoursPickerDialogShell()}
+      ${renderFohSettingsNameDialogShell()}
     </div>`;
 }
 
@@ -895,13 +901,6 @@ function bindFohCategoryHoursPicker(root: HTMLElement, remount: () => void): voi
   });
 }
 
-function promptName(label: string, current = ""): string | null {
-  const v = window.prompt(label, current);
-  if (v === null) return null;
-  const trimmed = v.trim();
-  return trimmed || null;
-}
-
 function remountFohCategorySettings(remount: () => void): void {
   remount();
 }
@@ -937,6 +936,7 @@ export function bindFohCategorySettingsUi(remount: () => void): void {
   const root = document.querySelector<HTMLElement>("[data-foh-category-settings-root]");
   if (!root || root.getAttribute("data-foh-category-bound") === "1") return;
   root.setAttribute("data-foh-category-bound", "1");
+  bindFohSettingsNameDialog(root);
 
   root.addEventListener("input", (e) => {
     const input = e.target as HTMLInputElement;
@@ -973,12 +973,17 @@ export function bindFohCategorySettingsUi(remount: () => void): void {
   });
 
   root.querySelector("[data-foh-category-age-add]")?.addEventListener("click", () => {
-    const name = promptName("请输入年龄阶段名称");
-    if (!name) return;
-    const state = readFohCategorySettingsState();
-    state.ages.push({ id: newId("age"), name, tag: "未标记" });
-    writeFohCategorySettingsState(state);
-    remountFohCategorySettings(remount);
+    openFohSettingsNameDialog(root, {
+      title: "增加年龄",
+      label: "年龄阶段名称",
+      placeholder: "请输入年龄阶段名称",
+      onConfirm: (name) => {
+        const state = readFohCategorySettingsState();
+        state.ages.push({ id: newId("age"), name, tag: "未标记" });
+        writeFohCategorySettingsState(state);
+        remountFohCategorySettings(remount);
+      },
+    });
   });
 
   root.querySelectorAll<HTMLButtonElement>("[data-foh-category-age-edit]").forEach((btn) => {
@@ -988,11 +993,20 @@ export function bindFohCategorySettingsUi(remount: () => void): void {
       const state = readFohCategorySettingsState();
       const row = state.ages.find((a) => a.id === id);
       if (!row) return;
-      const name = promptName("修改年龄阶段名称", row.name);
-      if (!name) return;
-      row.name = name;
-      writeFohCategorySettingsState(state);
-      remountFohCategorySettings(remount);
+      openFohSettingsNameDialog(root, {
+        title: "修改年龄",
+        label: "年龄阶段名称",
+        initialValue: row.name,
+        confirmLabel: "保存",
+        onConfirm: (name) => {
+          const latest = readFohCategorySettingsState();
+          const target = latest.ages.find((a) => a.id === id);
+          if (!target) return;
+          target.name = name;
+          writeFohCategorySettingsState(latest);
+          remountFohCategorySettings(remount);
+        },
+      });
     });
   });
 
@@ -1025,16 +1039,21 @@ export function bindFohCategorySettingsUi(remount: () => void): void {
   });
 
   root.querySelector("[data-foh-category-cat-add]")?.addEventListener("click", () => {
-    const name = promptName("请输入类别名称");
-    if (!name) return;
-    const state = readFohCategorySettingsState();
-    state.categories.push({
-      id: newId("cat"),
-      name,
-      scheduleIds: defaultAllDayScheduleIds(readBusinessHourSchedules()),
+    openFohSettingsNameDialog(root, {
+      title: "增加类别",
+      label: "类别名称",
+      placeholder: "请输入类别名称",
+      onConfirm: (name) => {
+        const state = readFohCategorySettingsState();
+        state.categories.push({
+          id: newId("cat"),
+          name,
+          scheduleIds: defaultAllDayScheduleIds(readBusinessHourSchedules()),
+        });
+        writeFohCategorySettingsState(state);
+        remountFohCategorySettings(remount);
+      },
     });
-    writeFohCategorySettingsState(state);
-    remountFohCategorySettings(remount);
   });
 
   root.querySelectorAll<HTMLButtonElement>("[data-foh-category-cat-edit]").forEach((btn) => {
@@ -1044,11 +1063,20 @@ export function bindFohCategorySettingsUi(remount: () => void): void {
       const state = readFohCategorySettingsState();
       const row = state.categories.find((c) => c.id === id);
       if (!row) return;
-      const name = promptName("修改类别名称", row.name);
-      if (!name) return;
-      row.name = name;
-      writeFohCategorySettingsState(state);
-      remountFohCategorySettings(remount);
+      openFohSettingsNameDialog(root, {
+        title: "修改类别",
+        label: "类别名称",
+        initialValue: row.name,
+        confirmLabel: "保存",
+        onConfirm: (name) => {
+          const latest = readFohCategorySettingsState();
+          const target = latest.categories.find((c) => c.id === id);
+          if (!target) return;
+          target.name = name;
+          writeFohCategorySettingsState(latest);
+          remountFohCategorySettings(remount);
+        },
+      });
     });
   });
 

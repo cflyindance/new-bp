@@ -141,7 +141,10 @@ const ONLINE_ORDER_SERVICE_SEQ_ORDER = [93, 95, 96, 97, 99, 100, 101, 102, 103, 
 /** 桌边·呼叫服务员：总开关 → 未开单 → 间隔 → 服务类型 */
 const TABLESIDE_SERVICE_CALL_SEQ_ORDER = [629, 641, 640, 333];
 
-/** 消息中心 · 员工订单消息 */
+/** 前厅 · POS 通知总控 */
+const FOH_POS_NOTIFICATION_CONTROL_SEQ_ORDER = [331, 332];
+
+/** 前厅 · 订单消息提醒 */
 const STAFF_ORDER_ALERTS_SEQ_ORDER = [638, 639, 637];
 
 /** 消息中心 · 顾客短信渠道（文案/场景关联见消息模板 + 消息配置） */
@@ -167,6 +170,7 @@ const POS_SHELL_LANDING_SEQ_ORDER = [165, 346];
 
 assignSort(POS_SHELL_LANDING_SEQ_ORDER);
 assignSort(TIME_ATTENDANCE_SEQ_ORDER);
+assignSort(FOH_POS_NOTIFICATION_CONTROL_SEQ_ORDER);
 assignSort(STAFF_ORDER_ALERTS_SEQ_ORDER);
 assignSort(CUSTOMER_ORDER_SMS_SEQ_ORDER);
 assignSort(DELIVERY_SCAN_ONLINE_SEQ_ORDER);
@@ -429,12 +433,8 @@ export const DELIVERY_SETTINGS_GROUP_ORDER = [
   "delivery-packaging",
 ];
 
-/** 消息中心设置页二级导航展示顺序（v1.1：员工提醒与顾客短信分轨） */
-export const NOTIFICATIONS_SETTINGS_GROUP_ORDER = [
-  "notification-basics",
-  "staff-order-alerts",
-  "customer-order-sms",
-];
+/** 消息中心设置页二级导航展示顺序（v1.3：仅顾客短信渠道） */
+export const NOTIFICATIONS_SETTINGS_GROUP_ORDER = ["customer-order-sms"];
 
 export {
   LOCALE_DISPLAY_GROUP_ORDER,

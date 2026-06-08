@@ -62,8 +62,6 @@ const SETTINGS_GROUP_ORDER_BY_PATH = {
   "/settings/connections": CONNECTIONS_GROUP_ORDER,
   "/settings/advanced": ADVANCED_GROUP_ORDER,
   "/notifications/settings": NOTIFICATIONS_SETTINGS_GROUP_ORDER,
-  "/permissions/account-session": ["account-session-security"],
-  "/permissions/store-security": ["store-security-policy"],
 };
 
 const SETTINGS_GROUP_NAV_SECTIONS_BY_PATH = {
@@ -77,8 +75,6 @@ const SETTINGS_GROUP_NAV_SECTIONS_BY_PATH = {
 
 /** catalog 页头标题（可与一级导航模块名不同） */
 const HUB_CATALOG_DISPLAY_TITLE_BY_PATH = {
-  "/permissions/account-session": "账户与会话安全",
-  "/permissions/store-security": "门店安全策略",
   "/device-management/settings": "硬件管理中心",
   "/operations/kitchen-kds/display": "KDS 显示与交互",
   "/operations/kitchen-kds/workflow": "KDS 出餐流程",
@@ -121,7 +117,6 @@ const HUB_SETTINGS_PATH = {
   打印中心: "/print-templates/settings",
   消息中心: "/notifications/settings",
   库存管理中心: "/operations/inventory-ordering/settings",
-  权限管理中心: "/permissions/account-session",
   系统设置: "/settings/locale-display",
   主页: "/dashboard/settings",
   平台业务中心: "/settings/connections",

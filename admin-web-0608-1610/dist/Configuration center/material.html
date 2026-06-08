@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>图片素材 - 营销中心</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="assets/common.css" />
+  <script src="assets/toast.js"></script>
+  <script>
+    tailwind.config = { theme: { extend: { colors: { primary: '#1677ff', 'sidebar-bg': '#fafafa', 'sidebar-active': '#e6f4ff' }, borderRadius: { ant: '6px' } } } };
+  </script>
+  <script>
+    (function () {
+      var params = new URLSearchParams(window.location.search);
+      var embedded = params.get("embedded");
+      var isEmbedded = embedded === "1" || embedded === "true";
+      if (!isEmbedded) {
+        try {
+          isEmbedded = window.self !== window.top;
+        } catch (e) {
+          isEmbedded = false;
+        }
+      }
+      if (isEmbedded) {
+        document.documentElement.classList.add("embedded-mode");
+        document.documentElement.classList.add("embedded-material-page");
+      }
+    })();
+  </script>
+</head>
+<body class="bg-white text-gray-900 antialiased">
+  <div class="app-layout flex min-h-screen">
+    <!-- 左侧：仅全局导航（不含分类） -->
+    <aside class="sidebar flex-shrink-0 flex flex-col w-60">
+      <div class="p-4 border-b border-gray-100 flex items-center gap-2">
+        <div class="w-8 h-8 rounded bg-amber-400 flex items-center justify-center text-white font-bold">M</div>
+        <span class="font-medium">MenuSifu</span>
+        <div class="ml-auto flex gap-1">
+          <button type="button" class="p-1 rounded hover:bg-gray-100" aria-label="文档">📄</button>
+          <button type="button" class="p-1 rounded hover:bg-gray-100" aria-label="全屏">⊞</button>
+        </div>
+      </div>
+      <nav class="flex-1 p-3 space-y-1 overflow-auto">
+        <a href="material.html" class="menu-item active px-3 py-2 flex items-center justify-between rounded-ant bg-sidebar-active text-primary font-medium"><span>图片素材</span></a>
+        <div class="nav-group">
+          <div class="nav-group-title menu-item px-3 py-2 text-gray-600 flex items-center justify-between cursor-pointer hover:bg-gray-100 rounded-ant" onclick="this.parentElement.classList.toggle('collapsed')">
+            <span>营销中心</span>
+            <span class="nav-arrow text-xs transition-transform">⌄</span>
+          </div>
+          <div class="nav-group-items pl-3 space-y-0.5">
+            <a href="kiosk-theme-list.html" class="menu-item px-3 py-2 text-gray-600 rounded-ant hover:bg-gray-100 flex items-center">屏保</a>
+          </div>
+        </div>
+      </nav>
+      <div class="p-3 border-t border-gray-100 flex items-center gap-2">
+        <button type="button" class="p-1.5 rounded hover:bg-gray-100">📄</button>
+        <span class="w-px h-4 bg-gray-200"></span>
+        <button type="button" class="p-1.5 rounded hover:bg-gray-100">👤</button>
+        <a href="#" class="flex-1 flex items-center justify-between text-gray-600 text-sm"><span>M's Coffee</span><span>→</span></a>
+      </div>
+    </aside>
+
+    <!-- 右侧主内容：顶部栏 + 分类（左）与图片网格（右） -->
+    <main class="main-content flex-1 flex flex-col min-w-0">
+      <!-- 顶部：标题、搜索、Add -->
+      <div class="flex flex-wrap items-center gap-4 mb-4">
+        <h1 class="text-lg font-semibold text-[rgba(0,0,0,0.88)] shrink-0" id="pageTitle">图片素材</h1>
+        <div class="relative ml-auto h-12 min-w-[200px] max-w-[360px] flex-1 overflow-hidden rounded-full border border-[#d9d9d9] bg-white shadow-sm">
+          <span class="pointer-events-none absolute left-5 top-1/2 flex h-4 w-4 -translate-y-1/2 text-[#00000040]" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 1024 1024" fill="currentColor"><path d="M909.6 854.5L649.9 594.8C690.2 542.7 712.9 480 712.9 412c0-80.2-31.3-155.4-87.9-212.1-56.6-56.7-132-87.9-212.1-87.9s-155.5 31.3-212.1 87.9C143.2 256.5 112 331.8 112 412c0 80.1 31.3 155.5 87.9 212.1C256.5 680.8 331.8 712 412 712c67 0 130.6-21.8 182.7-62l259.7 259.7a8 8 0 0 0 11.3 0l66.6-66.6a8 8 0 0 0 0-11.3zM442 667.8C339.4 667.8 256 584.4 256 482s83.4-185.8 186-185.8S628 379.5 628 482 544.7 667.8 442 667.8z"/></svg>
+          </span>
+          <input type="search" id="searchImage" placeholder="搜索素材名称" class="h-full w-full border-0 bg-transparent pl-9 pr-4 text-base leading-6 text-[rgba(0,0,0,0.88)] placeholder:text-[rgba(0,0,0,0.25)] focus:outline-none focus:ring-0" aria-label="搜索素材" />
+        </div>
+        <button type="button" id="btnAddImage" class="btn-primary inline-flex h-12 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-primary px-5 text-base font-semibold shadow-[0_2px_0_rgba(5,145,255,0.1)] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">+ 添加</button>
+      </div>
+
+      <input type="file" id="fileInput" accept="image/*" multiple class="hidden" />
+
+      <!-- 主体：左侧分类列表 + 右侧图片网格 -->
+      <div class="flex flex-1 min-h-0 gap-6">
+        <!-- 分类列（菜单素材右侧） -->
+        <div class="flex-shrink-0 w-36 flex flex-col">
+          <div id="categoryList" class="space-y-0.5">
+            <!-- 由 JS 渲染：All / 屏保 / 广告 / 其他 等 -->
+          </div>
+          <button type="button" id="btnNewCategory" class="mt-3 text-sm text-primary hover:underline flex items-center gap-1">
+            <span>+</span> 新建分类
+          </button>
+        </div>
+        <!-- 图片网格 -->
+        <div class="flex-1 min-w-0 flex flex-col">
+          <div id="imageGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 content-start overflow-auto">
+            <!-- 图片卡片由 JS 渲染 -->
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between mt-4 pt-4 border-t border-gray-100 flex-shrink-0">
+        <span class="text-gray-500 text-sm">Total <span id="totalCount">0</span> items</span>
+        <div class="flex items-center gap-1">
+          <button type="button" class="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50 pagination-prev" disabled>&lt;</button>
+          <button type="button" class="pagination-num px-2 py-1 rounded bg-primary text-white text-sm">1</button>
+          <button type="button" class="pagination-num px-2 py-1 rounded hover:bg-gray-100 text-sm">2</button>
+          <span class="px-1">...</span>
+          <button type="button" class="pagination-num px-2 py-1 rounded hover:bg-gray-100 text-sm">10</button>
+          <button type="button" class="p-1.5 rounded hover:bg-gray-100 pagination-next">&gt;</button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- 新建分类弹窗 -->
+  <div id="modalNewCategory" class="modal-backdrop fixed inset-0 z-50 hidden items-center justify-center p-4" aria-modal="true" role="dialog" aria-labelledby="modalNewCategoryTitle">
+    <div class="modal-content w-full max-w-sm overflow-hidden">
+      <div class="ui-dialog-header">
+        <h3 id="modalNewCategoryTitle" class="ui-dialog-title">新建分类</h3>
+      </div>
+      <div class="px-5 pb-0 pt-0">
+        <input type="text" id="newCategoryName" placeholder="请输入分类名称" class="mb-4 mt-4 w-full rounded-ant border border-[#d9d9d9] px-3 py-2 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" maxlength="20" aria-label="分类名称" />
+      </div>
+      <div class="ui-dialog-footer">
+        <button type="button" id="modalCancelCategory" class="ui-dialog-btn">取消</button>
+        <button type="button" id="modalConfirmCategory" class="ui-dialog-btn ui-dialog-btn--primary">确定</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 重命名分类弹窗 -->
+  <div id="modalRenameCategory" class="modal-backdrop fixed inset-0 z-50 hidden items-center justify-center p-4" aria-modal="true" role="dialog" aria-labelledby="modalRenameCategoryTitle">
+    <div class="modal-content w-full max-w-sm overflow-hidden">
+      <div class="ui-dialog-header">
+        <h3 id="modalRenameCategoryTitle" class="ui-dialog-title">重命名分类</h3>
+      </div>
+      <div class="px-5 pb-0 pt-0">
+        <input type="text" id="renameCategoryName" placeholder="请输入新名称" class="mb-4 mt-4 w-full rounded-ant border border-[#d9d9d9] px-3 py-2 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" maxlength="20" aria-label="分类新名称" />
+      </div>
+      <div class="ui-dialog-footer">
+        <button type="button" id="modalCancelRename" class="ui-dialog-btn">取消</button>
+        <button type="button" id="modalConfirmRename" class="ui-dialog-btn ui-dialog-btn--primary">确定</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 移动分类弹窗 -->
+  <div id="modalMoveCategory" class="modal-backdrop fixed inset-0 z-50 hidden items-center justify-center p-4" aria-modal="true" role="dialog" aria-labelledby="modalMoveCategoryTitle">
+    <div class="modal-content w-full max-w-sm overflow-hidden">
+      <div class="ui-dialog-header">
+        <h3 id="modalMoveCategoryTitle" class="ui-dialog-title">移动到分类</h3>
+      </div>
+      <div class="px-5 pb-0 pt-0">
+        <p class="mb-3 mt-4 text-sm text-[rgba(0,0,0,0.65)]">将图片 "<span id="moveImageName" class="font-medium text-[rgba(0,0,0,0.88)]"></span>" 移动到：</p>
+        <select id="moveCategorySelect" class="ui-select mb-4 w-full min-h-[48px]" aria-label="选择目标分类">
+          <!-- 分类选项由 JS 渲染 -->
+        </select>
+      </div>
+      <div class="ui-dialog-footer">
+        <button type="button" id="modalCancelMove" class="ui-dialog-btn">取消</button>
+        <button type="button" id="modalConfirmMove" class="ui-dialog-btn ui-dialog-btn--primary">确定</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 裁剪弹窗 -->
+  <div id="modalCrop" class="modal-backdrop fixed inset-0 z-50 hidden items-center justify-center p-4" aria-modal="true" role="dialog" aria-labelledby="modalCropTitle">
+    <div class="modal-content mx-auto flex w-full max-w-3xl flex-col overflow-hidden">
+      <div class="ui-dialog-header-row">
+        <h3 id="modalCropTitle" class="ui-dialog-title">裁剪图片</h3>
+        <button type="button" id="modalCropClose" class="ui-dialog-close" aria-label="关闭">×</button>
+      </div>
+      <p class="m-0 border-b border-[#f0f0f0] px-5 py-2 text-sm text-[rgba(0,0,0,0.45)]">拖动鼠标框选要保留的区域</p>
+      <div class="flex min-h-[280px] max-h-[70vh] items-center justify-center bg-[#f5f5f5] p-4">
+        <canvas id="cropCanvas" class="max-h-[60vh] max-w-full cursor-crosshair rounded-ant bg-[#e8e8e8]"></canvas>
+      </div>
+      <div class="ui-dialog-footer">
+        <button type="button" id="modalCropCancel" class="ui-dialog-btn">取消</button>
+        <button type="button" id="modalCropConfirm" class="ui-dialog-btn ui-dialog-btn--primary">确定裁剪</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 图片预览弹窗 -->
+  <div id="modalPreview" class="modal-backdrop fixed inset-0 z-50 hidden items-center justify-center p-4" aria-modal="true" role="dialog" aria-label="图片预览">
+    <div class="relative inline-block max-h-[90vh] max-w-[90vw]">
+      <button type="button" id="modalPreviewClose" class="ui-dialog-close absolute right-2 top-2 z-10 bg-white/95 shadow-sm" aria-label="关闭">×</button>
+      <div class="modal-content overflow-hidden p-2">
+        <img id="previewImage" src="" alt="预览" class="max-h-[85vh] max-w-[85vw] object-contain" />
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      var STORAGE_CATEGORIES = 'material_categories';
+      var STORAGE_IMAGES = 'material_images';
+
+      var defaultCategories = ['全部', '屏保素材', '广告素材', '其他'];
+
+      function getCategories() {
+        try {
+          var saved = localStorage.getItem(STORAGE_CATEGORIES);
+          return saved ? JSON.parse(saved) : defaultCategories.slice();
+        } catch (e) {
+          return defaultCategories.slice();
+        }
+      }
+
+      function saveCategories(list) {
+        localStorage.setItem(STORAGE_CATEGORIES, JSON.stringify(list));
+      }
+
+      function getImages() {
+        try {
+          var saved = localStorage.getItem(STORAGE_IMAGES);
+          return saved ? JSON.parse(saved) : [];
+        } catch (e) {
+          return [];
+        }
+      }
+
+      function saveImages(list) {
+        localStorage.setItem(STORAGE_IMAGES, JSON.stringify(list));
+      }
+
+      // 初始示例图片（仅当没有任何图片时写入）
+      function ensureDemoImages() {
+        var images = getImages();
+        if (images.length === 0) {
+          var demo = [
+            { id: '1', name: '圣诞节', category: '屏保素材', tagColor: 'blue', url: '' },
+            { id: '2', name: '中秋节', category: '广告素材', tagColor: 'red', url: '' },
+            { id: '3', name: '新年', category: '屏保素材', tagColor: 'blue', url: '' },
+            { id: '4', name: '端午节', category: '广告素材', tagColor: 'red', url: '' },
+            { id: '5', name: '促销图', category: '其他', tagColor: 'green', url: '' },
+          ];
+          saveImages(demo);
+        }
+      }
+
+      function getCurrentCategory() {
+        var hash = (location.hash || '#全部').slice(1);
+        return decodeURIComponent(hash) || '全部';
+      }
+
+      function renderCategorySidebar() {
+        var list = getCategories();
+        var html = list.map(function(cat) {
+          var href = 'material.html#' + encodeURIComponent(cat);
+          if (cat === '全部') {
+            return '<a href="' + href + '" class="category-link block px-3 py-2 rounded-ant text-sm text-gray-700 hover:bg-gray-100" data-category="' + escapeHtml(cat) + '">' + escapeHtml(cat) + '</a>';
+          }
+          return '<div class="category-item flex items-center gap-0.5 group">' +
+            '<a href="' + href + '" class="category-link flex-1 min-w-0 px-3 py-2 rounded-ant text-sm text-gray-700 hover:bg-gray-100 truncate" data-category="' + escapeHtml(cat) + '">' + escapeHtml(cat) + '</a>' +
+            '<span class="category-actions flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center">' +
+              '<button type="button" class="category-edit p-1 rounded hover:bg-gray-200 text-gray-600" data-category="' + escapeHtml(cat) + '" aria-label="重命名">✎</button>' +
+              '<button type="button" class="category-delete p-1 rounded hover:bg-gray-200 text-red-600 hover:text-red-700" data-category="' + escapeHtml(cat) + '" aria-label="删除">×</button>' +
+            '</span></div>';
+        }).join('');
+        document.getElementById('categoryList').innerHTML = html;
+        document.querySelectorAll('.category-link').forEach(function(link) {
+          link.addEventListener('click', function(e) {
+            e.preventDefault();
+            location.hash = encodeURIComponent(this.getAttribute('data-category'));
+            setActiveCategory();
+            renderGrid();
+          });
+        });
+        document.querySelectorAll('.category-edit').forEach(function(btn) {
+          btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            openRenameModal(this.getAttribute('data-category'));
+          });
+        });
+        document.querySelectorAll('.category-delete').forEach(function(btn) {
+          btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            deleteCategory(this.getAttribute('data-category'));
+          });
+        });
+      }
+
+      function setActiveCategory() {
+        var current = getCurrentCategory();
+        document.querySelectorAll('.category-link').forEach(function(link) {
+          if (link.getAttribute('data-category') === current) {
+            link.classList.add('bg-sidebar-active', 'text-primary', 'font-medium');
+            link.classList.remove('text-gray-700');
+          } else {
+            link.classList.remove('bg-sidebar-active', 'text-primary', 'font-medium');
+            link.classList.add('text-gray-700');
+          }
+        });
+        document.getElementById('pageTitle').textContent = current === '全部' ? '图片素材' : current;
+      }
+
+      function escapeHtml(s) {
+        var div = document.createElement('div');
+        div.textContent = s;
+        return div.innerHTML;
+      }
+
+      var tagColors = { blue: 'bg-blue-100 text-blue-700', red: 'bg-red-100 text-red-700', green: 'bg-emerald-100 text-emerald-700', default: 'bg-gray-100 text-gray-700' };
+      var MORE_BTN_SVG = '<svg width="20" height="20" viewBox="0 0 1024 1024" fill="currentColor" class="text-[rgba(0,0,0,0.45)]" aria-hidden="true"><path d="M176 511a56 56 0 1 0 112 0 56 56 0 1 0-112 0zm280 0a56 56 0 1 0 112 0 56 56 0 1 0-112 0zm280 0a56 56 0 1 0 112 0 56 56 0 1 0-112 0z"/></svg>';
+
+      function renderGrid() {
+        var current = getCurrentCategory();
+        var search = (document.getElementById('searchImage').value || '').trim().toLowerCase();
+        var images = getImages();
+        var filtered = images.filter(function(img) {
+          var matchCat = current === '全部' || img.category === current;
+          var matchSearch = !search || (img.name && img.name.toLowerCase().indexOf(search) >= 0);
+          return matchCat && matchSearch;
+        });
+
+        var html = filtered.map(function(img) {
+          var tagCls = tagColors[img.tagColor] || tagColors.default;
+          var imgSrc = img.url || 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="140" viewBox="0 0 200 140"><rect fill="#f3f4f6" width="200" height="140"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#9ca3af" font-size="14">' + escapeHtml(img.name) + '</text></svg>');
+          var tagHtml = img.category ? '<span class="absolute top-2 right-2 px-1.5 py-0.5 rounded text-xs ' + tagCls + '">' + escapeHtml(img.category) + '</span>' : '';
+          return '<div class="screensaver-card border border-gray-100 rounded-ant overflow-hidden group" data-id="' + escapeHtml(img.id) + '">' +
+            '<div class="img-preview-trigger aspect-[4/3] bg-gray-100 relative cursor-pointer">' +
+              '<img src="' + imgSrc + '" alt="" class="w-full h-full object-cover pointer-events-none" />' +
+              tagHtml +
+              '<div class="absolute top-2 ' + (img.category ? 'right-10' : 'right-2') + ' z-10 opacity-0 transition-opacity group-hover:opacity-100">' +
+                '<button type="button" class="img-more flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-black/[0.06] text-[rgba(0,0,0,0.45)] hover:bg-black/[0.08] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary" aria-label="更多">' + MORE_BTN_SVG + '</button>' +
+                '<div class="img-dropdown dropdown-menu theme-list-dropdown-menu ui-action-dropdown absolute right-0 top-[calc(100%+8px)] z-20 hidden bg-white">' +
+                  '<button type="button" class="ui-menu-item img-edit">编辑</button>' +
+                  '<button type="button" class="ui-menu-item img-move">移动到</button>' +
+                  '<button type="button" class="ui-menu-item img-crop">裁剪</button>' +
+                  '<div class="ui-menu-sep" role="separator" aria-hidden="true"></div>' +
+                  '<button type="button" class="ui-menu-item ui-menu-item--danger img-delete">删除</button>' +
+                '</div>' +
+              '</div>' +
+            '</div>' +
+            '<div class="p-2 flex items-center justify-between">' +
+              '<span class="text-sm text-gray-800 truncate flex-1">' + escapeHtml(img.name) + '</span>' +
+              '<button type="button" class="img-more flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-black/[0.06] text-[rgba(0,0,0,0.45)] hover:bg-black/[0.08] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary md:hidden" aria-label="更多">' + MORE_BTN_SVG + '</button>' +
+            '</div>' +
+          '</div>';
+        }).join('');
+
+        document.getElementById('imageGrid').innerHTML = html;
+        document.getElementById('totalCount').textContent = filtered.length;
+
+        document.querySelectorAll('.img-more').forEach(function(btn) {
+          btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            var card = this.closest('.screensaver-card');
+            var dropdown = card.querySelector('.img-dropdown');
+            document.querySelectorAll('.dropdown-menu').forEach(function(d) { d.classList.add('hidden'); });
+            dropdown.classList.toggle('hidden');
+          });
+        });
+        document.querySelectorAll('.img-edit').forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            var id = this.closest('.screensaver-card').getAttribute('data-id');
+            var name = prompt('编辑图片名称', (getImages().find(function(i) { return i.id === id; }) || {}).name);
+            if (name != null && name.trim()) {
+              var list = getImages();
+              var item = list.find(function(i) { return i.id === id; });
+              if (item) { item.name = name.trim(); saveImages(list); renderGrid(); }
+            }
+          });
+        });
+        document.querySelectorAll('.img-delete').forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            var id = this.closest('.screensaver-card').getAttribute('data-id');
+            if (confirm('确定删除该图片？')) {
+              var list = getImages().filter(function(i) { return i.id !== id; });
+              saveImages(list);
+              renderGrid();
+            }
+          });
+        });
+        document.querySelectorAll('.img-move').forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            var id = this.closest('.screensaver-card').getAttribute('data-id');
+            openMoveModal(id);
+          });
+        });
+        document.querySelectorAll('.img-crop').forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            var id = this.closest('.screensaver-card').getAttribute('data-id');
+            openCropModal(id);
+          });
+        });
+        document.querySelectorAll('.img-preview-trigger').forEach(function(el) {
+          el.addEventListener('click', function(e) {
+            if (e.target.closest('.img-more') || e.target.closest('.img-dropdown')) return;
+            var id = this.closest('.screensaver-card').getAttribute('data-id');
+            openPreviewModal(id);
+          });
+        });
+        document.addEventListener('click', function() {
+          document.querySelectorAll('.dropdown-menu').forEach(function(d) { d.classList.add('hidden'); });
+        });
+      }
+
+      var moveImageId = null;
+      var moveModal = document.getElementById('modalMoveCategory');
+
+      function openMoveModal(id) {
+        var images = getImages();
+        var img = images.find(function(i) { return i.id === id; });
+        if (!img) return;
+        moveImageId = id;
+        document.getElementById('moveImageName').textContent = img.name || '未命名';
+        var categories = getCategories().filter(function(c) { return c !== '全部'; });
+        var select = document.getElementById('moveCategorySelect');
+        select.innerHTML = categories.map(function(cat) {
+          var selected = cat === img.category ? ' selected' : '';
+          return '<option value="' + escapeHtml(cat) + '"' + selected + '>' + escapeHtml(cat) + '</option>';
+        }).join('');
+        moveModal.classList.remove('hidden');
+        moveModal.classList.add('flex');
+      }
+
+      function closeMoveModal() {
+        moveModal.classList.add('hidden');
+        moveModal.classList.remove('flex');
+        moveImageId = null;
+      }
+
+      document.getElementById('modalCancelMove').addEventListener('click', closeMoveModal);
+      moveModal.addEventListener('click', function(e) {
+        if (e.target === moveModal) closeMoveModal();
+      });
+      document.getElementById('modalConfirmMove').addEventListener('click', function() {
+        if (!moveImageId) return;
+        var newCategory = document.getElementById('moveCategorySelect').value;
+        if (!newCategory) {
+          Toast.warning('请选择目标分类');
+          return;
+        }
+        var images = getImages();
+        var img = images.find(function(i) { return i.id === moveImageId; });
+        if (img) {
+          img.category = newCategory;
+          var colors = { '屏保素材': 'blue', '广告素材': 'red', '其他': 'green' };
+          img.tagColor = colors[newCategory] || 'default';
+          saveImages(images);
+          Toast.success('已移动到"' + newCategory + '"');
+          renderGrid();
+        }
+        closeMoveModal();
+      });
+
+      // 重命名 / 删除分类
+      var renameModal = document.getElementById('modalRenameCategory');
+      var renameCategoryOldName = null;
+
+      function openRenameModal(oldName) {
+        renameCategoryOldName = oldName;
+        document.getElementById('renameCategoryName').value = oldName;
+        renameModal.classList.remove('hidden');
+        renameModal.classList.add('flex');
+        document.getElementById('renameCategoryName').focus();
+      }
+
+      function closeRenameModal() {
+        renameModal.classList.add('hidden');
+        renameModal.classList.remove('flex');
+        renameCategoryOldName = null;
+      }
+
+      document.getElementById('modalCancelRename').addEventListener('click', closeRenameModal);
+      renameModal.addEventListener('click', function(e) {
+        if (e.target === renameModal) closeRenameModal();
+      });
+      document.getElementById('modalConfirmRename').addEventListener('click', function() {
+        var newName = (document.getElementById('renameCategoryName').value || '').trim();
+        if (!newName) {
+          Toast.warning('请输入分类名称');
+          return;
+        }
+        if (newName === renameCategoryOldName) {
+          closeRenameModal();
+          return;
+        }
+        var list = getCategories();
+        if (list.indexOf(newName) >= 0) {
+          Toast.warning('已存在同名分类');
+          return;
+        }
+        var idx = list.indexOf(renameCategoryOldName);
+        if (idx < 0) {
+          closeRenameModal();
+          return;
+        }
+        list[idx] = newName;
+        saveCategories(list);
+        var images = getImages();
+        images.forEach(function(img) {
+          if (img.category === renameCategoryOldName) img.category = newName;
+        });
+        saveImages(images);
+        var current = getCurrentCategory();
+        if (current === renameCategoryOldName) {
+          location.hash = encodeURIComponent(newName);
+        }
+        Toast.success('已重命名');
+        renderCategorySidebar();
+        setActiveCategory();
+        renderGrid();
+        closeRenameModal();
+      });
+
+      function deleteCategory(name) {
+        if (name === '全部') return;
+        if (!confirm('删除分类「' + name + '」后，该分类下的图片将变为未分类（仅在「全部」中显示）。确定删除？')) return;
+        var list = getCategories().filter(function(c) { return c !== name; });
+        saveCategories(list);
+        var images = getImages();
+        images.forEach(function(img) {
+          if (img.category === name) img.category = '';
+        });
+        saveImages(images);
+        if (getCurrentCategory() === name) {
+          location.hash = '#全部';
+        }
+        Toast.success('已删除分类');
+        renderCategorySidebar();
+        setActiveCategory();
+        renderGrid();
+      }
+
+      // 图片预览
+      var previewModal = document.getElementById('modalPreview');
+      var previewImage = document.getElementById('previewImage');
+
+      function openPreviewModal(id) {
+        var images = getImages();
+        var img = images.find(function(i) { return i.id === id; });
+        if (!img || !img.url) return;
+        previewImage.src = img.url;
+        previewImage.alt = img.name || '预览';
+        previewModal.classList.remove('hidden');
+        previewModal.classList.add('flex');
+      }
+
+      function closePreviewModal() {
+        previewModal.classList.add('hidden');
+        previewModal.classList.remove('flex');
+        previewImage.src = '';
+      }
+
+      document.getElementById('modalPreviewClose').addEventListener('click', closePreviewModal);
+      previewModal.addEventListener('click', function(e) {
+        if (e.target === previewModal) closePreviewModal();
+      });
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && !previewModal.classList.contains('hidden')) closePreviewModal();
+      });
+
+      // 裁剪
+      var cropModal = document.getElementById('modalCrop');
+      var cropCanvas = document.getElementById('cropCanvas');
+      var cropImageId = null;
+      var cropSourceImg = null;
+      var cropScale = 1;
+      var cropBox = { x: 0, y: 0, w: 0, h: 0 };
+      var cropDragging = false;
+      var cropStartX = 0, cropStartY = 0;
+
+      function closeCropModal() {
+        cropModal.classList.add('hidden');
+        cropModal.classList.remove('flex');
+        cropImageId = null;
+        cropSourceImg = null;
+        cropCanvas.onmousedown = null;
+        cropCanvas.onmousemove = null;
+        cropCanvas.onmouseup = null;
+        cropCanvas.onmouseleave = null;
+      }
+
+      function drawCropPreview() {
+        if (!cropSourceImg || !cropSourceImg.complete) return;
+        var ctx = cropCanvas.getContext('2d');
+        var cw = cropCanvas.width;
+        var ch = cropCanvas.height;
+        ctx.drawImage(cropSourceImg, 0, 0, cw, ch);
+        if (cropBox.w > 0 && cropBox.h > 0) {
+          ctx.fillStyle = 'rgba(0,0,0,0.5)';
+          ctx.fillRect(0, 0, cw, cropBox.y);
+          ctx.fillRect(0, cropBox.y, cropBox.x, cropBox.h);
+          ctx.fillRect(cropBox.x + cropBox.w, cropBox.y, cw - cropBox.x - cropBox.w, cropBox.h);
+          ctx.fillRect(0, cropBox.y + cropBox.h, cw, ch - cropBox.y - cropBox.h);
+          ctx.strokeStyle = '#1677ff';
+          ctx.lineWidth = 2;
+          ctx.setLineDash([4, 4]);
+          ctx.strokeRect(cropBox.x, cropBox.y, cropBox.w, cropBox.h);
+          ctx.setLineDash([]);
+        }
+      }
+
+      function openCropModal(id) {
+        var images = getImages();
+        var img = images.find(function(i) { return i.id === id; });
+        if (!img || !img.url) {
+          Toast.warning('该图片无法裁剪');
+          return;
+        }
+        cropImageId = id;
+        var source = new Image();
+        source.onload = function() {
+          cropSourceImg = source;
+          var maxW = 560;
+          var maxH = 360;
+          var scale = Math.min(maxW / source.naturalWidth, maxH / source.naturalHeight, 1);
+          cropScale = scale;
+          cropCanvas.width = Math.round(source.naturalWidth * scale);
+          cropCanvas.height = Math.round(source.naturalHeight * scale);
+          cropBox.x = 0;
+          cropBox.y = 0;
+          cropBox.w = cropCanvas.width;
+          cropBox.h = cropCanvas.height;
+          cropDragging = false;
+          drawCropPreview();
+
+          cropCanvas.onmousedown = function(e) {
+            var r = cropCanvas.getBoundingClientRect();
+            var x = e.clientX - r.left;
+            var y = e.clientY - r.top;
+            cropDragging = true;
+            cropStartX = x;
+            cropStartY = y;
+            cropBox.x = x;
+            cropBox.y = y;
+            cropBox.w = 0;
+            cropBox.h = 0;
+          };
+          cropCanvas.onmousemove = function(e) {
+            if (!cropDragging) return;
+            var r = cropCanvas.getBoundingClientRect();
+            var x = e.clientX - r.left;
+            var y = e.clientY - r.top;
+            cropBox.x = Math.min(cropStartX, x);
+            cropBox.y = Math.min(cropStartY, y);
+            cropBox.w = Math.abs(x - cropStartX);
+            cropBox.h = Math.abs(y - cropStartY);
+            drawCropPreview();
+          };
+          cropCanvas.onmouseup = function(e) {
+            if (!cropDragging) return;
+            cropDragging = false;
+            var r = cropCanvas.getBoundingClientRect();
+            var x = e.clientX - r.left;
+            var y = e.clientY - r.top;
+            cropBox.x = Math.min(cropStartX, x);
+            cropBox.y = Math.min(cropStartY, y);
+            cropBox.w = Math.max(1, Math.abs(x - cropStartX));
+            cropBox.h = Math.max(1, Math.abs(y - cropStartY));
+            drawCropPreview();
+          };
+          cropCanvas.onmouseleave = function() {
+            if (cropDragging) {
+              cropDragging = false;
+              cropBox.w = Math.max(1, cropBox.w);
+              cropBox.h = Math.max(1, cropBox.h);
+              drawCropPreview();
+            }
+          };
+        };
+        source.onerror = function() {
+          Toast.warning('图片加载失败，无法裁剪');
+          cropImageId = null;
+        };
+        source.src = img.url;
+        cropModal.classList.remove('hidden');
+        cropModal.classList.add('flex');
+      }
+
+      document.getElementById('modalCropClose').addEventListener('click', closeCropModal);
+      document.getElementById('modalCropCancel').addEventListener('click', closeCropModal);
+      cropModal.addEventListener('click', function(e) {
+        if (e.target === cropModal) closeCropModal();
+      });
+      document.getElementById('modalCropConfirm').addEventListener('click', function() {
+        if (!cropImageId || !cropSourceImg) return;
+        if (cropBox.w < 2 || cropBox.h < 2) {
+          Toast.warning('请框选要保留的区域');
+          return;
+        }
+        var scale = cropScale;
+        var sx = Math.round(cropBox.x / scale);
+        var sy = Math.round(cropBox.y / scale);
+        var sw = Math.round(cropBox.w / scale);
+        var sh = Math.round(cropBox.h / scale);
+        sx = Math.max(0, Math.min(sx, cropSourceImg.naturalWidth - 1));
+        sy = Math.max(0, Math.min(sy, cropSourceImg.naturalHeight - 1));
+        sw = Math.min(sw, cropSourceImg.naturalWidth - sx);
+        sh = Math.min(sh, cropSourceImg.naturalHeight - sy);
+        if (sw < 1 || sh < 1) {
+          Toast.warning('裁剪区域无效');
+          return;
+        }
+        var out = document.createElement('canvas');
+        out.width = sw;
+        out.height = sh;
+        var ctx = out.getContext('2d');
+        ctx.drawImage(cropSourceImg, sx, sy, sw, sh, 0, 0, sw, sh);
+        var dataUrl = out.toDataURL('image/jpeg', 0.9);
+        var images = getImages();
+        var sourceItem = images.find(function(i) { return i.id === cropImageId; });
+        if (sourceItem) {
+          var maxId = images.reduce(function(max, i) {
+            var n = parseInt(i.id, 10);
+            return isNaN(n) ? max : Math.max(max, n);
+          }, 0);
+          var newId = String(maxId + 1);
+          var newName = (sourceItem.name || '未命名') + '（裁剪副本）';
+          images.unshift({
+            id: newId,
+            name: newName,
+            category: sourceItem.category || '',
+            tagColor: sourceItem.tagColor || 'default',
+            url: dataUrl
+          });
+          saveImages(images);
+          Toast.success('已保存为裁剪副本');
+          renderGrid();
+        }
+        closeCropModal();
+      });
+
+      // 新建分类
+      var modal = document.getElementById('modalNewCategory');
+      document.getElementById('btnNewCategory').addEventListener('click', function() {
+        document.getElementById('newCategoryName').value = '';
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        document.getElementById('newCategoryName').focus();
+      });
+      document.getElementById('modalCancelCategory').addEventListener('click', function() {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      });
+      document.getElementById('modalConfirmCategory').addEventListener('click', function() {
+        var name = (document.getElementById('newCategoryName').value || '').trim();
+        if (!name) {
+          Toast.warning('请输入分类名称');
+          return;
+        }
+        var list = getCategories();
+        if (list.indexOf(name) >= 0) {
+          Toast.warning('该分类已存在');
+          return;
+        }
+        list.push(name);
+        saveCategories(list);
+        renderCategorySidebar();
+        setActiveCategory();
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        location.hash = encodeURIComponent(name);
+        renderGrid();
+      });
+      modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+          modal.classList.add('hidden');
+          modal.classList.remove('flex');
+        }
+      });
+
+      // 上传图片（当前分类）
+      document.getElementById('btnAddImage').addEventListener('click', function() {
+        document.getElementById('fileInput').click();
+      });
+      document.getElementById('fileInput').addEventListener('change', function() {
+        var current = getCurrentCategory();
+        if (current === '全部') {
+          Toast.warning('请先左侧选择或新建一个分类，再上传图片');
+          this.value = '';
+          return;
+        }
+        var files = this.files;
+        if (!files || !files.length) return;
+        var list = getImages();
+        var nextId = String(1 + list.reduce(function(max, i) { var n = parseInt(i.id, 10); return isNaN(n) ? max : Math.max(max, n); }, 0));
+        for (var i = 0; i < files.length; i++) {
+          var file = files[i];
+          if (!file.type.startsWith('image/')) continue;
+          var url = URL.createObjectURL(file);
+          list.push({
+            id: nextId,
+            name: file.name.replace(/\.[^.]+$/, '') || '未命名',
+            category: current,
+            tagColor: 'default',
+            url: url
+          });
+          nextId = String(parseInt(nextId, 10) + 1);
+        }
+        saveImages(list);
+        this.value = '';
+        renderGrid();
+      });
+
+      // 搜索
+      document.getElementById('searchImage').addEventListener('input', function() {
+        renderGrid();
+      });
+
+      // 初始化
+      ensureDemoImages();
+      renderCategorySidebar();
+      setActiveCategory();
+      renderGrid();
+
+      window.addEventListener('hashchange', function() {
+        setActiveCategory();
+        renderGrid();
+      });
+    })();
+  </script>
+</body>
+</html>
