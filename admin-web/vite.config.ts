@@ -2,11 +2,12 @@ import fs from "node:fs";
 import path from "node:path";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig, type Plugin } from "vite";
+import { attachPayrollMockApi } from "./scripts/lib/payroll-mock-api-handler.mjs";
 
-/** 开发态提供 TipOut / Configuration center / dist/emenu-pro 等嵌入静态资源 */
+/** 开发态提供 dist 内嵌静态资源（TipOut / Configuration center / emenu-pro） */
 const EMBEDDED_STATIC_ROUTES = [
-  { route: "TipOut", dir: "TipOut" },
-  { route: "Configuration center", dir: "Configuration center" },
+  { route: "TipOut", dir: path.join("dist", "TipOut") },
+  { route: "Configuration center", dir: path.join("dist", "Configuration center") },
   { route: "emenu-pro", dir: path.join("dist", "emenu-pro") },
 ] as const;
 
@@ -93,14 +94,22 @@ function attachEmbeddedStaticMiddleware(
   });
 }
 
+const usePayrollApiProxy = process.env.PAYROLL_USE_API_PROXY === "1";
+
 function serveEmbeddedStaticDirs(): Plugin {
   return {
     name: "serve-embedded-static-dirs",
     configureServer(server) {
       attachEmbeddedStaticMiddleware(server.middlewares);
+      if (!usePayrollApiProxy) {
+        attachPayrollMockApi(server.middlewares, process.cwd());
+      }
     },
     configurePreviewServer(server) {
       attachEmbeddedStaticMiddleware(server.middlewares);
+      if (!usePayrollApiProxy) {
+        attachPayrollMockApi(server.middlewares, process.cwd());
+      }
     },
   };
 }
@@ -116,6 +125,16 @@ export default defineConfig({
     /** 启动后自动打开系统浏览器（无需再猜端口） */
     open: true,
     strictPort: false,
+    ...(usePayrollApiProxy
+      ? {
+          proxy: {
+            "/api/v1/payroll": {
+              target: "http://127.0.0.1:3010",
+              changeOrigin: true,
+            },
+          },
+        }
+      : {}),
   },
   preview: {
     port: 4173,

@@ -184,7 +184,7 @@ export const NAV_MODULES: NavModule[] = [
       { id: "team-clock", title: "员工打卡", path: "/team/clock-in" },
       { id: "team-shifts", title: "排班", titleEn: "Shift scheduling", path: "/team/shift-scheduling" },
       { id: "team-tips", title: "小费管理", path: "/team/tips" },
-      { id: "team-tax-payroll", title: "报税报表", titleEn: "Tax payroll reports", path: "/team/payroll-report" },
+      { id: "team-tax-payroll", title: "薪酬计算与报税准备", titleEn: "Payroll calculation & tax prep", path: "/team/payroll-report" },
       { id: "team-reports", title: "员工报表", path: "/team/reports" },
       { id: "team-7shifts", title: "7Shifts 对接（排班）", path: "/team/integrations/7shifts" },
       { id: "team-training", title: "绩效与培训", path: "/team/training-performance" },

@@ -126,10 +126,18 @@ import {
 } from "./config/team-settings-embed-ui";
 import {
   getModuleSettingsCatalog,
+  getModuleSettingsCategoryPath,
+  slugifyModuleSettingsGroupKey,
   groupCatalogItemsByCategory,
   type ModuleSettingCatalogHub,
   type ModuleSettingCatalogItem,
 } from "./config/module-settings-catalog";
+import {
+  type AiAssistantReply,
+  processAiAssistantSettingsQuery,
+} from "./config/ai-assistant-settings";
+import type { AiSettingMutation } from "./config/module-settings-ai-editable";
+import { packingSlipOrderTypeCheckboxFieldId } from "./config/module-settings-packing-slip-order-type-ui";
 import {
   bindFohSettingsViewMode,
   getFohLineViewGroups,
@@ -152,6 +160,7 @@ import {
 import {
   applyFohByLineUiSuppressions,
   getActiveFohByLineIdFromDom,
+  readFohByLineToggleState,
   setFohByLineRenderContext,
   writeFohByLineToggleState,
 } from "./config/foh-settings-by-line-toggle";
@@ -237,6 +246,7 @@ import {
 } from "./config/module-settings-kitchen-ticket-margin-ui";
 import {
   isKitchenOrderTypeMultiselectSeq,
+  kitchenOrderTypeCheckboxFieldId,
   renderKitchenOrderTypeMultiselectHtml,
 } from "./config/module-settings-kitchen-order-type-ui";
 import {
@@ -1316,27 +1326,111 @@ function sheetModuleAriaFromNav(mod: NavModule): { dialog: string; navFunc: stri
   return { dialog, navFunc };
 }
 
-/** 演示用：接入大模型与业务 API 后替换为真实推理 */
-function aiAssistantMockReply(query: string): string {
+/** 演示用：设置检索/改配走 catalog；其余意图待接入大模型与业务 API */
+function aiAssistantReply(query: string): AiAssistantReply {
+  const locale = getUiLocale();
+  const settingsReply = processAiAssistantSettingsQuery(query, locale);
+  if (settingsReply) return settingsReply;
+
   const q = query.trim();
-  if (!q) return "";
-  if (/权限|角色|RBAC|员工授权/i.test(q)) {
-    return "【演示】可说明权限矩阵、员工与角色绑定，并在对接后端后协助跳转「权限管理中心」与预填变更。也可回答例如：谁能改价、店长默认可见哪些报表。";
+  if (!q) {
+    return { text: "", html: "" };
   }
-  if (/搜索|查找|搜|哪里有|在哪/i.test(q)) {
-    return "【演示】全站检索由同一智能体完成：可定位侧栏模块、路由、帮助文档与业务对象（订单、门店、商品等）。接入索引与向量库后支持口语化问法。";
+  if (/权限|角色|RBAC|员工授权/i.test(q)) {
+    const text =
+      locale === "en"
+        ? "[Demo] I can explain RBAC and staff roles, and link you to Access management when APIs are connected."
+        : "【演示】可说明权限矩阵、员工与角色绑定，并跳转「权限管理中心」。也可问：谁能改价、店长可见哪些报表。";
+    return { text, html: escapeHtml(text) };
   }
   if (/分析|报表|趋势|统计|营业额|收入/i.test(q)) {
-    return "【演示】可按您描述的时间、门店、品类做对比与摘要；接入数仓后可拉取真实指标、生成图表与下钻链接。";
+    const text =
+      locale === "en"
+        ? "[Demo] Analytics summaries will use your date range and stores once the data warehouse is connected."
+        : "【演示】可按时间、门店、品类做对比与摘要；接入数仓后可拉取真实指标与图表。";
+    return { text, html: escapeHtml(text) };
   }
-  if (/配置|设置|修改|改|打开|关闭/i.test(q)) {
-    return "【演示】配置类意图会解析为「目标模块 + 动作」，走策略校验与（可选）人工审批后再执行。当前壳层仅模拟确认，不写回生产。";
-  }
-  return "【演示】单一智能体持续本对话上下文，接入模型后可执行查数、改配、导表与权限调整（受租户策略约束）。请补充门店、时间范围或要操作的对象。";
+  const fallback =
+    locale === "en"
+      ? '[Demo] Try "search cash close settings" or "enable daily cash settlement". I can search and toggle catalog settings now.'
+      : "【演示】可试「搜索班结相关设置」或「开启启用现金日结班结」——我已支持全站功能设置的检索与开关改配。";
+  return { text: fallback, html: escapeHtml(fallback) };
 }
 
 /** 顶栏全局 AI 入口（非侧栏一级模块，故不放入 NAV_MODULES / ICONS） */
 const AI_ASSISTANT_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></svg>`;
+
+let aiAssistantPanelOpen = false;
+let aiAssistantPanelEscapeHandler: ((e: KeyboardEvent) => void) | null = null;
+type AiAssistantScrollLockEntry = { el: HTMLElement; overflow: string };
+let aiAssistantScrollLockEntries: AiAssistantScrollLockEntry[] | null = null;
+
+function setAiAssistantPanelOpen(open: boolean): void {
+  aiAssistantPanelOpen = open;
+  if (!open && aiAssistantPanelEscapeHandler) {
+    window.removeEventListener("keydown", aiAssistantPanelEscapeHandler);
+    aiAssistantPanelEscapeHandler = null;
+  }
+}
+
+/** 浮层打开时锁定背景可滚动区域，避免底层页面跟着滑 */
+function getAiPanelScrollLockTargets(): HTMLElement[] {
+  const root = document.getElementById("app");
+  if (!root) return [];
+  const targets: HTMLElement[] = [];
+  root.querySelectorAll<HTMLElement>("*").forEach((el) => {
+    if (el.closest("#ai-assistant-overlay")) return;
+    const oy = getComputedStyle(el).overflowY;
+    if (oy === "auto" || oy === "scroll") targets.push(el);
+  });
+  return targets;
+}
+
+function lockAppScrollForAiPanel(): void {
+  if (aiAssistantScrollLockEntries) return;
+  aiAssistantScrollLockEntries = getAiPanelScrollLockTargets().map((el) => ({
+    el,
+    overflow: el.style.overflow,
+  }));
+  for (const entry of aiAssistantScrollLockEntries) {
+    entry.el.style.overflow = "hidden";
+  }
+}
+
+function unlockAppScrollForAiPanel(): void {
+  if (!aiAssistantScrollLockEntries) return;
+  for (const entry of aiAssistantScrollLockEntries) {
+    entry.el.style.overflow = entry.overflow;
+  }
+  aiAssistantScrollLockEntries = null;
+}
+
+function syncAiAssistantOpenButtonUi(): void {
+  document.querySelectorAll<HTMLElement>("[data-ai-assistant-open]").forEach((btn) => {
+    btn.setAttribute("aria-expanded", aiAssistantPanelOpen ? "true" : "false");
+    btn.classList.toggle("ring-2", aiAssistantPanelOpen);
+    btn.classList.toggle("ring-primary/30", aiAssistantPanelOpen);
+  });
+}
+
+/** 仅增删浮层 DOM，避免全量 mount 导致主内容区滚回顶部 */
+function syncAiAssistantPanelDom(): void {
+  const existing = document.getElementById("ai-assistant-overlay");
+  if (!aiAssistantPanelOpen) {
+    existing?.remove();
+    unlockAppScrollForAiPanel();
+    syncAiAssistantOpenButtonUi();
+    return;
+  }
+  syncAiAssistantOpenButtonUi();
+  if (existing) return;
+  const shell = document.querySelector<HTMLElement>("#app > div");
+  if (!shell) return;
+  shell.insertAdjacentHTML("beforeend", renderAiAssistantFloatingPanel());
+  lockAppScrollForAiPanel();
+  bindAiAssistantPanelInteractions();
+  bindAiAssistantHandlers();
+}
 
 const ICONS: Record<NavModule["icon"], string> = {
   home: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`,
@@ -1430,7 +1524,7 @@ const TEAM_ROLES_EMPLOYEES_IFRAME_SRC = "./TipOut/employees.html?embedded=1";
 const TEAM_TIPS_DISTRIBUTION_IFRAME_SRC = "./TipOut/index.html?embedded=1";
 const TEAM_TIPS_DETAILS_IFRAME_SRC = "./TipOut/detail.html?embedded=1";
 const TEAM_TIPS_RULES_IFRAME_SRC = "./TipOut/rules.html?embedded=1";
-/** 团队管理 → 报税报表：嵌入 TipOut Payroll 报表 */
+/** 团队管理 → 薪酬计算与报税准备：嵌入 TipOut Payroll */
 const TEAM_PAYROLL_REPORT_IFRAME_SRC = "./TipOut/payroll.html?embedded=1";
 
 function isInventoryExpiryIframePath(path: string): boolean {
@@ -1639,12 +1733,12 @@ function renderTeamTipsManagementIframePanel(path: string): string {
     </div>`;
 }
 
-/** 主区全宽嵌入团队管理报税报表（TipOut Payroll） */
+/** 主区全宽嵌入团队管理薪酬计算与报税准备（TipOut Payroll） */
 function renderTeamPayrollReportIframePanel(): string {
   return `
     <div class="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
       <iframe
-        title="团队管理报税报表"
+        title="薪酬计算与报税准备"
         class="block h-full w-full flex-1 border-0"
         src="${TEAM_PAYROLL_REPORT_IFRAME_SRC}"
         referrerpolicy="no-referrer-when-downgrade"
@@ -2746,9 +2840,6 @@ function renderInventorySecondarySheet(hash: string, open: boolean): string {
 }
 
 function findTitle(path: string): { title: string; module?: string } {
-  if (path === "/ai-assistant/chat" || path.startsWith("/ai-assistant/")) {
-    return { title: t("findTitle.aiChat"), module: t("findTitle.aiModule") };
-  }
   if (path === "/permissions/overview") {
     return { title: "权限总览", module: "权限管理中心" };
   }
@@ -3520,9 +3611,10 @@ function normalizeTabModuleHashes(): void {
     replaceHashPath(`${FOH_CATEGORY_SETTINGS_BASE}/age-category`);
     return;
   }
-  /* AI 助手非侧栏一级，仅顶栏入口；#/ai-assistant 规范到对话页 */
-  if (raw === "/ai-assistant" || raw === "/ai-assistant/") {
-    location.replace("#/ai-assistant/chat");
+  /* AI 助手：旧书签打开全局浮层，不再占用独立路由页 */
+  if (raw === "/ai-assistant" || raw === "/ai-assistant/" || raw.startsWith("/ai-assistant/")) {
+    setAiAssistantPanelOpen(true);
+    replaceHashPath("/dashboard/overview");
     return;
   }
   /* 订单中心滑层已移除全部订单/退单/订单历史，旧链接统一到设置 */
@@ -3723,7 +3815,7 @@ function normalizeTabModuleHashes(): void {
     } catch {
       /* keep slug */
     }
-    const key = slugifyModuleSettingsCategory(decoded);
+    const key = slugifyModuleSettingsGroupKey(decoded);
     const legacyTarget = dmSettingsGroupRedirect[key];
     if (legacyTarget) {
       location.replace(`#${legacyTarget}`);
@@ -4534,22 +4626,8 @@ function isModuleHubSettingsCatalogPath(path: string): boolean {
   return MODULE_HUB_SETTINGS_EMPTY_PATHS.has(path);
 }
 
-function slugifyModuleSettingsCategory(category: string): string {
-  return (
-    category
-      .toLowerCase()
-      .replace(/[^\w\u4e00-\u9fff]+/g, "-")
-      .replace(/^-|-$/g, "")
-      .slice(0, 48) || "item"
-  );
-}
-
-function getModuleSettingsCategoryPath(settingsPath: string, groupKey: string): string {
-  return `${settingsPath}/${encodeURIComponent(slugifyModuleSettingsCategory(groupKey))}`;
-}
-
 function moduleSettingsCategoryDomId(groupKey: string): string {
-  return `module-settings-cat-${slugifyModuleSettingsCategory(groupKey)}`;
+  return `module-settings-cat-${slugifyModuleSettingsGroupKey(groupKey)}`;
 }
 
 /** 仅当 URL 含归类 slug 时高亮二级导航（根路径 `/…/settings` 不高亮） */
@@ -4571,7 +4649,7 @@ function getModuleSettingsActiveGroup(
   if (groups.length === 0 || path === settingsPath) return undefined;
   const slug = getModuleSettingsCategorySlugFromPath(path, settingsPath);
   if (!slug) return undefined;
-  return groups.find((g) => slugifyModuleSettingsCategory(g.groupKey) === slugifyModuleSettingsCategory(slug));
+  return groups.find((g) => slugifyModuleSettingsGroupKey(g.groupKey) === slugifyModuleSettingsGroupKey(slug));
 }
 
 function pauseModuleSettingsScrollSpy(ms = 480): void {
@@ -9017,27 +9095,18 @@ function syncModuleSettingToggleButton(btn: HTMLButtonElement): void {
   if (onLabel) onLabel.className = moduleSettingToggleOnLabelClass(on);
 }
 
-function bindModuleSettingsToggles(): void {
-  document.querySelectorAll<HTMLButtonElement>("[data-module-setting-toggle]").forEach((btn) => {
-    syncModuleSettingToggleButton(btn);
-    if (btn.dataset.moduleSettingToggleBound === "1") return;
-    btn.dataset.moduleSettingToggleBound = "1";
-    btn.addEventListener("click", () => {
-      const seq = Number(btn.getAttribute("data-module-setting-toggle"));
-      if (!seq) return;
-      const next = btn.getAttribute("aria-checked") !== "true";
-      btn.setAttribute("aria-checked", next ? "true" : "false");
-      btn.title = next ? t("moduleSettings.toggleOn") : t("moduleSettings.toggleOff");
+/** 将指定 seq 的开关 UI 同步为给定状态（设置页、嵌入设置区等） */
+function syncModuleSettingToggleToDom(seq: number, on: boolean): void {
+  document
+    .querySelectorAll<HTMLButtonElement>(`[data-module-setting-toggle="${seq}"]`)
+    .forEach((btn) => {
+      btn.setAttribute("aria-checked", on ? "true" : "false");
+      btn.title = on ? t("moduleSettings.toggleOn") : t("moduleSettings.toggleOff");
       syncModuleSettingToggleButton(btn);
-      const byLineId = getActiveFohByLineIdFromDom();
-      const currentPath = location.hash.slice(1) || "/dashboard/overview";
-      if (byLineId && isFohSettingsByLinePath(currentPath)) {
-        writeFohByLineToggleState(seq, byLineId, next);
-        runFohByLineToggleSideEffects(seq, next);
-        requestAnimationFrame(() => applyFohByLineUiSuppressions());
-        return;
-      }
-      writeModuleSettingToggleOn(seq, next);
+    });
+}
+
+function runModuleSettingToggleSideEffects(seq: number, next: boolean): void {
       if (isGuestOrderNoticeSeq(seq)) {
         setGuestOrderNoticePanelVisible(next);
       }
@@ -9330,6 +9399,130 @@ function bindModuleSettingsToggles(): void {
       if (isPromoLotteryCustomAnimSeq(seq)) {
         setPromoLotteryCustomAnimPanelVisible(seq, next);
       }
+}
+
+/** 持久化开关并联动设置页 UI（设置页点击与 AI 助手共用） */
+function applyModuleSettingToggleChange(seq: number, next: boolean): void {
+  const byLineId = getActiveFohByLineIdFromDom();
+  const currentPath = location.hash.slice(1) || "/dashboard/overview";
+  if (byLineId && isFohSettingsByLinePath(currentPath)) {
+    writeFohByLineToggleState(seq, byLineId, next);
+    runFohByLineToggleSideEffects(seq, next);
+    requestAnimationFrame(() => applyFohByLineUiSuppressions());
+  } else {
+    writeModuleSettingToggleOn(seq, next);
+    runModuleSettingToggleSideEffects(seq, next);
+  }
+  syncModuleSettingToggleToDom(seq, next);
+  window.dispatchEvent(
+    new CustomEvent("menusifu:module-setting-changed", { detail: { seq, on: next } }),
+  );
+}
+
+/** AI 复杂改配后同步设置页表单 / 多选 / 产线等控件 */
+function syncModuleSettingAiMutations(mutations: AiSettingMutation[]): void {
+  for (const m of mutations) {
+    switch (m.kind) {
+      case "toggle":
+        applyModuleSettingToggleChange(m.seq, m.on);
+        break;
+      case "checkbox":
+        document
+          .querySelectorAll<HTMLInputElement>(`[data-module-setting-checkbox="${m.fieldId}"]`)
+          .forEach((input) => {
+            input.checked = m.checked;
+          });
+        break;
+      case "radio": {
+        document
+          .querySelectorAll<HTMLInputElement>(`[data-module-setting-radio="${m.fieldId}"]`)
+          .forEach((input) => {
+            input.checked = input.value === m.value;
+          });
+        syncModuleSettingConditionalPanels(m.fieldId);
+        const checked = document.querySelector<HTMLInputElement>(
+          `[data-module-setting-radio="${m.fieldId}"]:checked`,
+        );
+        if (checked?.name) syncModuleSettingRadioGroupDisabled(checked.name, m.value);
+        break;
+      }
+      case "number":
+        document
+          .querySelectorAll<HTMLInputElement>(
+            `[data-module-setting-number="${m.fieldId}"], [data-module-setting-field="${m.fieldId}"]`,
+          )
+          .forEach((input) => {
+            input.value = String(m.value);
+          });
+        break;
+      case "text":
+        document
+          .querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
+            `[data-module-setting-text="${m.fieldId}"]`,
+          )
+          .forEach((el) => {
+            el.value = m.value;
+            syncModuleSettingTextCounter(el);
+          });
+        break;
+      case "color":
+        document
+          .querySelectorAll<HTMLInputElement>(`[data-module-setting-color="${m.fieldId}"]`)
+          .forEach((input) => {
+            input.value = m.value;
+          });
+        break;
+      case "foh-line": {
+        document
+          .querySelectorAll<HTMLInputElement>(
+            `[data-pos-menu-scope-line="${m.lineId}"][data-pos-menu-scope-lines-seq="${m.seq}"]`,
+          )
+          .forEach((input) => {
+            input.checked = m.on;
+          });
+        const masterOn = readFohByLineToggleState(m.seq, m.lineId as FohLineNavId);
+        runFohByLineToggleSideEffects(m.seq, masterOn);
+        requestAnimationFrame(() => applyFohByLineUiSuppressions());
+        break;
+      }
+      case "order-type": {
+        const fieldId = isKitchenOrderTypeMultiselectSeq(m.seq)
+          ? kitchenOrderTypeCheckboxFieldId(m.seq, m.code)
+          : packingSlipOrderTypeCheckboxFieldId(m.seq, m.code);
+        document
+          .querySelectorAll<HTMLInputElement>(`[data-module-setting-checkbox="${fieldId}"]`)
+          .forEach((input) => {
+            input.checked = m.checked;
+          });
+        break;
+      }
+      case "aviato-scope":
+        document
+          .querySelectorAll<HTMLInputElement>(`[data-aviato-service-scope="${m.scopeId}"]`)
+          .forEach((input) => {
+            input.checked = m.checked;
+          });
+        break;
+    }
+  }
+}
+
+function bindModuleSettingsToggles(): void {
+  document.querySelectorAll<HTMLButtonElement>("[data-module-setting-toggle]").forEach((btn) => {
+    const seq = Number(btn.getAttribute("data-module-setting-toggle"));
+    if (seq) {
+      const on = readModuleSettingToggleOn(seq);
+      btn.setAttribute("aria-checked", on ? "true" : "false");
+      btn.title = on ? t("moduleSettings.toggleOn") : t("moduleSettings.toggleOff");
+    }
+    syncModuleSettingToggleButton(btn);
+    if (btn.dataset.moduleSettingToggleBound === "1") return;
+    btn.dataset.moduleSettingToggleBound = "1";
+    btn.addEventListener("click", () => {
+      const clickSeq = Number(btn.getAttribute("data-module-setting-toggle"));
+      if (!clickSeq) return;
+      const next = btn.getAttribute("aria-checked") !== "true";
+      applyModuleSettingToggleChange(clickSeq, next);
     });
   });
 }
@@ -9562,7 +9755,7 @@ function renderAiAssistantChat(): string {
     "rounded-full border border-border bg-background px-3 py-1.5 text-left text-xs font-medium text-foreground transition-colors hover:border-primary/40 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
   const voiceTitle = escapeHtml(t("ai.voice"));
   return `
-    <div class="flex min-h-0 min-w-0 flex-1 flex-col gap-4" id="ai-assistant-root">
+    <div class="flex min-h-0 min-w-0 flex-1 flex-col gap-3" id="ai-assistant-root">
       <div class="rounded-xl border border-primary/20 bg-primary/[0.06] px-4 py-3 text-sm leading-relaxed text-muted-foreground dark:bg-primary/10">
         <p class="flex items-start gap-2">
           <span class="mt-0.5 shrink-0 text-primary" aria-hidden="true">${AI_ASSISTANT_ICON}</span>
@@ -9570,10 +9763,10 @@ function renderAiAssistantChat(): string {
         </p>
       </div>
       <div class="flex flex-wrap gap-2" role="group" aria-label="${escapeHtml(t("ai.quickAria"))}">
-        <button type="button" class="${quickClass}" data-ai-quick-prompt="帮我查一下权限管理中心里店长和收银员的区别">${escapeHtml(t("ai.quick.permissions"))}</button>
-        <button type="button" class="${quickClass}" data-ai-quick-prompt="搜索一下和打印中心相关的设置在哪里">${escapeHtml(t("ai.quick.search"))}</button>
-        <button type="button" class="${quickClass}" data-ai-quick-prompt="分析一下最近一周各门店营业额趋势">${escapeHtml(t("ai.quick.analysis"))}</button>
-        <button type="button" class="${quickClass}" data-ai-quick-prompt="我想把旗舰店的营业时间改成早上8点到晚上11点">${escapeHtml(t("ai.quick.config"))}</button>
+        <button type="button" class="${quickClass}" data-ai-quick-prompt="打烊结班要在哪配">${escapeHtml(t("ai.quick.search"))}</button>
+        <button type="button" class="${quickClass}" data-ai-quick-prompt="开班备款金额设为500">${escapeHtml(t("ai.quick.config"))}</button>
+        <button type="button" class="${quickClass}" data-ai-quick-prompt="产线Kiosk开启展示订单类型选择页面">${escapeHtml(t("ai.quick.line"))}</button>
+        <button type="button" class="${quickClass}" data-ai-quick-prompt="不需要厨房单的单类勾选外带">${escapeHtml(t("ai.quick.multi"))}</button>
         <a href="#/permissions/overview" class="inline-flex items-center rounded-full border border-dashed border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:border-primary/35 hover:text-foreground">${escapeHtml(t("ai.link.permissions"))}</a>
       </div>
       <div
@@ -9625,6 +9818,49 @@ function renderAiAssistantChat(): string {
   `;
 }
 
+function renderAiAssistantFloatingPanel(): string {
+  if (!aiAssistantPanelOpen) return "";
+  const panelTitle = escapeHtml(t("ai.panelTitle"));
+  const closeLabel = escapeHtml(t("ai.close"));
+  const closeIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>`;
+  return `
+    <div
+      id="ai-assistant-overlay"
+      class="fixed inset-0 z-[60] flex items-end justify-center p-3 sm:items-stretch sm:justify-end sm:p-0"
+      role="dialog"
+      aria-modal="true"
+      aria-label="${panelTitle}"
+      tabindex="-1"
+    >
+      <button
+        type="button"
+        class="absolute inset-0 bg-black/40 backdrop-blur-[1px] transition-opacity"
+        data-ai-assistant-close
+        aria-label="${closeLabel}"
+      ></button>
+      <div class="relative z-[1] flex h-[min(88dvh,40rem)] w-full max-w-lg min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-card shadow-2xl animate-fade-in sm:h-full sm:max-h-none sm:w-[min(100%,28rem)] sm:rounded-none sm:border-l sm:border-t-0 sm:border-r-0 sm:border-b-0 sm:shadow-xl">
+        <div class="flex shrink-0 items-center justify-between gap-3 border-b border-border px-4 py-3">
+          <div class="flex min-w-0 items-center gap-2">
+            <span class="shrink-0 text-primary [&>svg]:block" aria-hidden="true">${AI_ASSISTANT_ICON}</span>
+            <h2 class="truncate text-sm font-semibold text-card-foreground">${panelTitle}</h2>
+          </div>
+          <button
+            type="button"
+            data-ai-assistant-close
+            class="inline-flex size-9 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            aria-label="${closeLabel}"
+          >
+            ${closeIcon}
+          </button>
+        </div>
+        <div class="flex min-h-0 flex-1 flex-col overflow-hidden p-4 pt-3">
+          ${renderAiAssistantChat()}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 function bindAiAssistantHandlers(): void {
   const root = document.getElementById("ai-assistant-root");
   const form = document.getElementById("ai-assistant-form") as HTMLFormElement | null;
@@ -9632,7 +9868,7 @@ function bindAiAssistantHandlers(): void {
   const thread = document.getElementById("ai-assistant-thread");
   if (!root || !form || !input || !thread) return;
 
-  const appendBubble = (role: "user" | "assistant", text: string): void => {
+  const appendBubble = (role: "user" | "assistant", content: string | AiAssistantReply): void => {
     const row = document.createElement("div");
     row.className = role === "user" ? "flex justify-end" : "flex justify-start";
     const bubble = document.createElement("div");
@@ -9640,7 +9876,12 @@ function bindAiAssistantHandlers(): void {
       role === "user"
         ? "max-w-[90%] rounded-2xl rounded-br-md bg-primary px-4 py-2.5 text-sm leading-relaxed text-primary-foreground shadow-sm sm:max-w-[85%]"
         : "max-w-[90%] rounded-2xl rounded-bl-md border border-border bg-card px-4 py-2.5 text-sm leading-relaxed text-card-foreground shadow-sm sm:max-w-[85%]";
-    bubble.innerHTML = escapeHtml(text).replace(/\n/g, "<br/>");
+    if (role === "assistant" && typeof content === "object") {
+      bubble.innerHTML = content.html;
+    } else {
+      const text = typeof content === "string" ? content : content.text;
+      bubble.innerHTML = escapeHtml(text).replace(/\n/g, "<br/>");
+    }
     row.appendChild(bubble);
     thread.appendChild(row);
     thread.scrollTop = thread.scrollHeight;
@@ -9662,7 +9903,15 @@ function bindAiAssistantHandlers(): void {
     if (!text) return;
     appendBubble("user", text);
     input.value = "";
-    window.setTimeout(() => appendBubble("assistant", aiAssistantMockReply(text)), 450);
+    window.setTimeout(() => {
+      const reply = aiAssistantReply(text);
+      appendBubble("assistant", reply);
+      if (reply.mutations && reply.mutations.length > 0) {
+        syncModuleSettingAiMutations(reply.mutations);
+      } else if (reply.changedSeq !== undefined && reply.changedOn !== undefined) {
+        applyModuleSettingToggleChange(reply.changedSeq, reply.changedOn);
+      }
+    }, 450);
   });
 
   input.addEventListener("keydown", (e) => {
@@ -9728,6 +9977,51 @@ function bindAiAssistantHandlers(): void {
       voiceBtn.classList.remove("ring-2", "ring-ring");
     }
   });
+}
+
+function bindAiAssistantPanelInteractions(): void {
+  const closePanel = (): void => {
+    setAiAssistantPanelOpen(false);
+    syncAiAssistantPanelDom();
+  };
+
+  document.querySelectorAll<HTMLElement>("[data-ai-assistant-close]").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      closePanel();
+    });
+  });
+
+  if (aiAssistantPanelEscapeHandler) {
+    window.removeEventListener("keydown", aiAssistantPanelEscapeHandler);
+  }
+  aiAssistantPanelEscapeHandler = (e: KeyboardEvent): void => {
+    if (e.key !== "Escape") return;
+    e.preventDefault();
+    closePanel();
+  };
+  window.addEventListener("keydown", aiAssistantPanelEscapeHandler);
+
+  requestAnimationFrame(() => {
+    document.getElementById("ai-assistant-overlay")?.focus({ preventScroll: true });
+    document.getElementById("ai-assistant-input")?.focus({ preventScroll: true });
+  });
+}
+
+function bindAiAssistantPanel(): void {
+  document.querySelectorAll<HTMLElement>("[data-ai-assistant-open]").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      setAiAssistantPanelOpen(!aiAssistantPanelOpen);
+      syncAiAssistantPanelDom();
+    });
+  });
+
+  if (!aiAssistantPanelOpen) return;
+
+  lockAppScrollForAiPanel();
+  bindAiAssistantPanelInteractions();
+  bindAiAssistantHandlers();
 }
 
 function renderModuleTabs(path: string, tabModule: NavModule): string {
@@ -9856,7 +10150,6 @@ function renderMain(): string {
   const tabModule = getTabModule(path);
   const { title, module } = findTitle(path);
   const headerKicker = tabModule ? formatNavModuleKicker(tabModule) : module ?? "";
-  const isAiAssistant = path.startsWith("/ai-assistant");
   const isBrandProductsTertiary = isBrandProductsTertiaryPath(path);
   const isBrandMenuTertiary = isBrandMenuTertiaryPath(path);
   const isStoreMenuTertiary = isStoreMenuTertiaryPath(path);
@@ -9898,7 +10191,6 @@ function renderMain(): string {
   const isTeamTrainingPerformance = isTeamTrainingPerformancePath(path);
   syncTeamBreaksOvertimeSession(path);
   const wideContentLayout =
-    isAiAssistant ||
     isBrandMenuTertiary ||
     isStoreMenuTertiary ||
     isDeviceManagementHardware ||
@@ -9936,9 +10228,7 @@ function renderMain(): string {
 
   const innerWrapperClass = isFullBleedEmbeddedIframe
     ? "flex w-full min-h-0 min-w-0 flex-1 flex-col"
-    : isAiAssistant
-      ? "mx-auto flex w-full min-h-0 min-w-0 max-w-3xl flex-1 flex-col"
-      : wideContentLayout
+    : wideContentLayout
         ? "mx-auto flex w-full min-h-0 flex-1 flex-col max-w-[90rem]"
         : `mx-auto max-w-6xl space-y-6`;
 
@@ -9959,14 +10249,17 @@ function renderMain(): string {
           <h1 id="main-content" tabindex="-1" class="truncate text-lg font-semibold tracking-tight text-card-foreground">${escapeHtml(title)}</h1>
         </div>
         <div class="flex w-full min-w-0 flex-wrap items-center justify-end gap-2 sm:w-auto sm:flex-nowrap">
-          <a
-            href="#/ai-assistant/chat"
-            class="inline-flex h-9 items-center gap-1.5 rounded-md border border-primary/35 bg-primary/[0.08] px-2.5 text-sm font-medium text-primary transition-colors hover:bg-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset sm:h-10 sm:px-3"
+          <button
+            type="button"
+            data-ai-assistant-open
+            aria-expanded="${aiAssistantPanelOpen ? "true" : "false"}"
+            aria-haspopup="dialog"
+            class="inline-flex h-9 items-center gap-1.5 rounded-md border border-primary/35 bg-primary/[0.08] px-2.5 text-sm font-medium text-primary transition-colors hover:bg-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset sm:h-10 sm:px-3 ${aiAssistantPanelOpen ? "ring-2 ring-primary/30" : ""}"
             title="${escapeHtml(t("header.aiOpenTitle"))}"
           >
             <span class="shrink-0 text-primary [&>svg]:block" aria-hidden="true">${AI_ASSISTANT_ICON}</span>
             <span class="hidden sm:inline">${escapeHtml(t("header.aiShort"))}</span>
-          </a>
+          </button>
           ${renderHeaderScopeFilters()}
           ${renderGlobalUiLocaleControl()}
           ${renderHeaderUserCenter()}
@@ -9985,9 +10278,7 @@ function renderMain(): string {
           ${tabsSection}
           <div role="tabpanel" aria-label="${title.replace(/"/g, "&quot;")}" id="module-tab-panel"${tabPanelAttrs}>
             ${
-              isAiAssistant
-                ? renderAiAssistantChat()
-                : isGiftCardsFactory
+              isGiftCardsFactory
                   ? renderGiftCardsFactoryIframePanel()
                 : isInventoryExpiryIframe
                   ? renderInventoryExpiryIframeSplit()
@@ -10310,13 +10601,20 @@ function mount(): void {
     window.removeEventListener("keydown", fullscreenIframeModalEscapeHandler);
     fullscreenIframeModalEscapeHandler = null;
   }
+  if (aiAssistantPanelEscapeHandler) {
+    window.removeEventListener("keydown", aiAssistantPanelEscapeHandler);
+    aiAssistantPanelEscapeHandler = null;
+  }
 
   const app = document.getElementById("app");
   if (!app) return;
 
+  unlockAppScrollForAiPanel();
+
   /** 全量重绘会替换 #nav-tree：合并 DOM 读值与 session 记忆，避免二次 mount 时读到的 scrollTop 为 0 */
   const prevNavScrollTop = document.getElementById("nav-tree")?.scrollTop ?? 0;
   const targetNavScroll = Math.max(prevNavScrollTop, readSidebarNavScrollMemory());
+  const prevMainScrollTop = document.querySelector<HTMLElement>("#app main")?.scrollTop ?? 0;
 
   app.innerHTML = `
     <div class="relative h-dvh min-h-0 w-full overflow-hidden">
@@ -10324,6 +10622,7 @@ function mount(): void {
         ${renderSidebar()}
         ${renderMain()}
       </div>
+      ${renderAiAssistantFloatingPanel()}
     </div>
   `;
 
@@ -10338,6 +10637,19 @@ function mount(): void {
     applySidebarNavScroll();
     requestAnimationFrame(applySidebarNavScroll);
   });
+
+  if (prevMainScrollTop > 0) {
+    const applyMainScroll = (): void => {
+      const main = document.querySelector<HTMLElement>("#app main");
+      if (!main) return;
+      const maxScroll = Math.max(0, main.scrollHeight - main.clientHeight);
+      main.scrollTop = Math.min(prevMainScrollTop, maxScroll);
+    };
+    requestAnimationFrame(() => {
+      applyMainScroll();
+      requestAnimationFrame(applyMainScroll);
+    });
+  }
 
   document.getElementById("nav-tree")?.addEventListener(
     "scroll",
@@ -10785,7 +11097,7 @@ function mount(): void {
     mount();
   });
 
-  bindAiAssistantHandlers();
+  bindAiAssistantPanel();
   bindPermissionsRbac();
   bindStaffAccountsPage();
   bindLoginLogsPage(mount);

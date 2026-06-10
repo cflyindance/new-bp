@@ -709,6 +709,41 @@ export function getModuleSettingsCatalog(path: string): ModuleSettingCatalogHub 
   return base ? MODULE_SETTINGS_BY_PATH[base] : undefined;
 }
 
+export function slugifyModuleSettingsGroupKey(groupKey: string): string {
+  return (
+    groupKey
+      .toLowerCase()
+      .replace(/[^\w\u4e00-\u9fff]+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 48) || "item"
+  );
+}
+
+export function getModuleSettingsCategoryPath(settingsPath: string, groupKey: string): string {
+  return `${settingsPath}/${encodeURIComponent(slugifyModuleSettingsGroupKey(groupKey))}`;
+}
+
+export function getModuleSettingsItemHref(
+  settingsPath: string,
+  item: Pick<ModuleSettingCatalogItem, "groupKey" | "id">,
+): string {
+  return `${getModuleSettingsCategoryPath(settingsPath, item.groupKey)}#${item.id}`;
+}
+
+export function listAllModuleSettingCatalogEntries(): Array<{
+  hubTitle: string;
+  settingsPath: string;
+  item: ModuleSettingCatalogItem;
+}> {
+  const rows: Array<{ hubTitle: string; settingsPath: string; item: ModuleSettingCatalogItem }> = [];
+  for (const hub of Object.values(MODULE_SETTINGS_BY_PATH)) {
+    for (const item of hub.items) {
+      rows.push({ hubTitle: hub.hubTitle, settingsPath: hub.settingsPath, item });
+    }
+  }
+  return rows;
+}
+
 /** 组内自定义排序（由 scripts/lib/settings-intra-group-sort.mjs 生成） */
 const MODULE_SETTINGS_INTRA_SORT: Record<number, number> = {
   9: 2050,

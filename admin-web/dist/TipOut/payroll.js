@@ -6,6 +6,239 @@
 
   const STORAGE_KEY = "tipout-payroll-state-v4";
   const ROSTER_STORAGE_KEY = "tipout-employees-roster-v1";
+  const DISCLAIMER_ACCEPT_KEY = "tipout-payroll-disclaimer-accepted-v1";
+
+  function getAdpMapping() {
+    return typeof PAYROLL_ADP_MAPPING !== "undefined" && PAYROLL_ADP_MAPPING ? PAYROLL_ADP_MAPPING : null;
+  }
+
+  function applyAdpMappingToData(data) {
+    const m = getAdpMapping();
+    if (m && m.coCode && data) data.coCode = m.coCode;
+  }
+
+  function appendAudit(action, meta) {
+    if (!state.data.auditLog || !Array.isArray(state.data.auditLog)) state.data.auditLog = [];
+    state.data.auditLog.unshift({
+      at: new Date().toISOString(),
+      action,
+      periodId: state.periodId || (meta && meta.periodId) || "",
+      employeeId: state.employeeId || (meta && meta.employeeId) || "",
+      actor: "demo-user",
+      meta: meta || {},
+    });
+    if (state.data.auditLog.length > 200) state.data.auditLog.length = 200;
+  }
+
+  function renderDeclarationText(emp) {
+    const m = getAdpMapping();
+    const tpl =
+      (m && m.declarationBodyEn) ||
+      "Service charge ${svc_amount} and tips ${tips_amount} are from Manage Payroll. Version ${declaration_version}.";
+    const svc = emp && emp.adjustments ? fmtMoney(emp.adjustments.svcw) : "0.00";
+    const tips = emp && emp.adjustments ? fmtMoney(emp.adjustments.tips) : "0.00";
+    const ver = (m && m.declarationVersion) || "demo-v1";
+    return tpl
+      .replace(/\$\{svc_amount\}/g, "$" + svc)
+      .replace(/\$\{tips_amount\}/g, "$" + tips)
+      .replace(/\$\{declaration_version\}/g, ver);
+  }
+
+  function csvEscapeCell(c) {
+    const s = String(c);
+    return s.includes(",") || s.includes('"') || s.includes("\n") ? `"${s.replace(/"/g, '""')}"` : s;
+  }
+
+  function buildAdpCsvContent(rows, header) {
+    const lines = [header.map(csvEscapeCell).join(",")];
+    rows.forEach((row) => lines.push(row.map(csvEscapeCell).join(",")));
+    return lines.join("\r\n");
+  }
+
+  function downloadCsvFile(filename, csv) {
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  let pendingExportAction = null;
+
+  function showExportConfirmDialog(hint) {
+    return new Promise((resolve) => {
+      const modal = $("#payrollExportConfirmModal");
+      const hintEl = $("#payroll-export-confirm-hint");
+      if (hintEl) hintEl.textContent = hint || "";
+      if (!modal) {
+        resolve(true);
+        return;
+      }
+      modal.classList.add("show");
+      const onOk = () => {
+        cleanup();
+        resolve(true);
+      };
+      const onCancel = () => {
+        cleanup();
+        resolve(false);
+      };
+      const cleanup = () => {
+        modal.classList.remove("show");
+        $("#btn-export-confirm-ok")?.removeEventListener("click", onOk);
+        $("#btn-export-confirm-cancel")?.removeEventListener("click", onCancel);
+        $("#btn-export-confirm-close")?.removeEventListener("click", onCancel);
+      };
+      $("#btn-export-confirm-ok")?.addEventListener("click", onOk);
+      $("#btn-export-confirm-cancel")?.addEventListener("click", onCancel);
+      $("#btn-export-confirm-close")?.addEventListener("click", onCancel);
+    });
+  }
+
+  function initDisclaimerModal() {
+    const m = getAdpMapping();
+    const bodyZh = $("#payroll-disclaimer-modal-body");
+    const bodyEn = $("#payroll-disclaimer-modal-body-en");
+    if (bodyZh) bodyZh.textContent = (m && m.disclaimerZh) || "本系统仅提供薪酬计算与报税准备，不构成税务或法律意见。";
+    if (bodyEn) bodyEn.textContent = (m && m.disclaimerEn) || "";
+
+    if (localStorage.getItem(DISCLAIMER_ACCEPT_KEY) === "1") return;
+
+    const modal = $("#payrollDisclaimerModal");
+    const agree = $("#payroll-disclaimer-agree");
+    const acceptBtn = $("#btn-payroll-disclaimer-accept");
+    if (!modal || !agree || !acceptBtn) return;
+
+    modal.classList.add("show");
+    agree.addEventListener("change", () => {
+      acceptBtn.disabled = !agree.checked;
+    });
+    acceptBtn.addEventListener("click", () => {
+      if (!agree.checked) return;
+      localStorage.setItem(DISCLAIMER_ACCEPT_KEY, "1");
+      modal.classList.remove("show");
+    });
+  }
+
+  /** Manage Payroll 字段业务说明（点击 ? 查看） */
+  const FIELD_HELP = {
+    "seg-date": {
+      title: "Date · 工作日期",
+      body: "本薪资周期内员工实际上班的自然日。可与多段 In/Out 打卡对应；修改日期会影响当期考勤汇总与 ADP 导出中的工时归属。",
+      adp: null,
+    },
+    "seg-in": {
+      title: "In · 上班打卡",
+      body: "该日某一段班次的上班时间（时:分）。支持多段 In/Out（例如午休后继续上班）。直接修改可修正考勤，进而影响 Regular / OT / OT2 的填报与金额。",
+      adp: null,
+    },
+    "seg-out": {
+      title: "Out · 下班打卡",
+      body: "与 In 成对的下班时间。系统按 In/Out 计算当日在岗时长；若未启用自动加班规则，Regular / OT / OT2 也可由薪酬专员手工覆盖。",
+      adp: null,
+    },
+    "seg-meal": {
+      title: "Meal · 用餐/休息",
+      body: "当日用餐或强制休息记录（时长或备注，依客户模板）。用于加州等地区的用餐合规核对，并可在员工签字明细中作为休息佐证。",
+      adp: null,
+    },
+    "seg-regular": {
+      title: "Regular · 正常工时",
+      body: "该日按正常时薪计薪的工时（小时）。汇总后进入 Pay Period「工时」区块，并乘以基础 Rate 得到正常工资金额。",
+      adp: "ADP 导出列：Reg Hours",
+    },
+    "seg-ot": {
+      title: "OT · 加班工时（1.5 倍档）",
+      body: "第一层加班工时，通常对应每日超过 8 小时或每周超过 40 小时的部分（具体规则依门店与法规）。金额 = OT 工时 × 加班时薪 OT。",
+      adp: "ADP 导出：Hours 3 code = OHR，Hours 3 amount = OT 工时",
+    },
+    "seg-ot2": {
+      title: "OT2 · 双倍加班工时",
+      body: "更高档加班工时（例如每日超过 12 小时或第 7 天连续工作等场景，依客户规则）。金额 = OT2 工时 × 加班时薪 OT2。",
+      adp: null,
+    },
+    "adp-file": {
+      title: "ADP File# · 员工报税编号",
+      body: "员工在 ADP 系统中的唯一档案编号（FILE#）。必须与 ADP 主档一致，否则无法导出报税 CSV；缺失时导出按钮将禁用。建议与「员工列表」主档保持同步。",
+      adp: "ADP 导出列：FILE #",
+    },
+    "ot-rate": {
+      title: "加班时薪 OT",
+      body: "计算 OT 加班金额的时薪，通常为正常时薪的 1.5 倍（可手工调整）。Pay Period 汇总中「OT 金额」= OT 工时 × 本字段。",
+      adp: null,
+    },
+    "ot2-rate": {
+      title: "加班时薪 OT2",
+      body: "计算 OT2 双倍加班金额的时薪，通常为正常时薪的 2 倍（可手工调整）。Pay Period 汇总中「OT2 金额」= OT2 工时 × 本字段。",
+      adp: null,
+    },
+    exempt: {
+      title: "Exempt · 豁免加班",
+      body: "标识员工是否属于「豁免加班」类别（如部分月薪管理岗）。填写客户 ADP 模板要求的代码或留空；影响 OT 规则是否适用，需与薪酬政策一致。",
+      adp: "依客户 ADP 模板映射",
+    },
+    rate: {
+      title: "Rate · 基础时薪",
+      body: "正常工时（Regular）对应的时薪。Pay Period 中 Regular 金额 = Regular 工时 × Rate；并写入 ADP 导出。",
+      adp: "ADP 导出列：Rate",
+    },
+    incentive: {
+      title: "Incentive · 激励/奖金",
+      body: "本期一次性激励、奖金或非固定津贴金额（美元）。不计入正常工时乘数，按客户 ADP 收益代码单独申报（若模板有对应列）。",
+      adp: "依客户 ADP 收益代码映射",
+    },
+    breakfast: {
+      title: "Breakfast · 早餐班餐次",
+      body: "早餐时段相关的餐次统计或餐补计数（依 KOI/ADP 模板定义）。用于餐段合规或餐补申报，与 Lunch/Dinner 分列填写。",
+      adp: "依客户 ADP 模板映射",
+    },
+    lunch: {
+      title: "Lunch · 午餐班餐次",
+      body: "午餐时段餐次或用餐合规计数。若员工未获得规定用餐休息，可能触发合规提醒；本字段供报税专员按模板填报。",
+      adp: "依客户 ADP 模板映射",
+    },
+    dinner: {
+      title: "Dinner · 晚餐班餐次",
+      body: "晚餐时段餐次或用餐合规计数。与 Breakfast、Lunch 一并构成当期餐休申报数据。",
+      adp: "依客户 ADP 模板映射",
+    },
+    "sick-hours": {
+      title: "Sick Hours · 病假工时",
+      body: "本期带薪病假小时数。与正常出勤工时分开统计，按客户政策决定时薪或固定额，并映射到 ADP 病假收益/扣减列。",
+      adp: "依客户 ADP 模板映射",
+    },
+    svcw: {
+      title: "SVCW · 服务费（Service Charge）",
+      body: "员工本期应申报的服务费/服务附加费分配金额。须与员工签字页声明中的 service charge 一致。可与 TipOut 小费分配结果不同，允许手工覆盖后作为报税最终值。",
+      adp: "ADP 导出：Earnings 3 Code = SVC，Earnings 3 Amount = 本列金额",
+    },
+    tips: {
+      title: "Tips · 小费",
+      body: "员工本期应申报的小费金额（样例中为信用卡小费 CCT）。须与员工签字页声明中的 tips 一致。若 TipOut 分配结果不可用，可手工录入；确认后写入 ADP 与签字明细。",
+      adp: "ADP 导出：Earnings 3 Code = CCT，Earnings 3 Amount = 本列金额",
+    },
+    "child-sup": {
+      title: "Child sup · 子女抚养费扣款",
+      body: "法院裁定或 ADP 配置的子女抚养费代扣金额（美元）。从本期应付中扣除，按客户模板映射为扣款项。",
+      adp: "依客户 ADP 扣款代码映射",
+    },
+    "med-ded": {
+      title: "Med Ded · 医疗保险扣款",
+      body: "员工承担的医疗保险保费扣款（美元）。属于税前或税后扣款依 ADP 设置；本字段为报税专员确认后的本期金额。",
+      adp: "依客户 ADP 扣款代码映射",
+    },
+    eee40: {
+      title: "Eee 40% · 健康险员工分摊",
+      body: "健康保险费用中由员工承担的比例份额（模板示例为 40%）。与 Eer 60% 合计应等于当期健康险总成本分摊，需与福利台账一致。",
+      adp: "依客户 ADP 模板映射",
+    },
+    eer60: {
+      title: "Eer 60% · 健康险雇主分摊",
+      body: "健康保险费用中由雇主承担的比例份额（模板示例为 60%）。主要用于薪酬成本核算与 ADP 雇主成本列对齐。",
+      adp: "依客户 ADP 模板映射",
+    },
+  };
   const DEFAULT_STORE_NAME = "Golden Dragon Chinese Kitchen - Dallas, TX 75231";
   const EXTRA_PAYROLL_STORES = [
     "Lone Star BBQ House - Austin, TX 78701",
@@ -141,6 +374,7 @@
     employees: {
       "p2026-08": buildSeedEmployees(),
     },
+    auditLog: [],
   };
 
   function cloneEmployeesTemplate(list) {
@@ -491,6 +725,8 @@
     if (!data || typeof data !== "object") return;
     if (!data.employees || typeof data.employees !== "object") data.employees = {};
     if (!Array.isArray(data.periods)) data.periods = [];
+    if (!Array.isArray(data.auditLog)) data.auditLog = [];
+    applyAdpMappingToData(data);
     fillPeriods2To5FromPeriod8(data.employees);
     migratePeriods(data);
     syncEmployeesFromUnifiedRoster(data.employees);
@@ -546,32 +782,46 @@
     }
   }
 
-  function loadState() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (parsed && parsed.data) {
-          state.data = parsed.data;
-          try {
-            migratePayrollData(state.data);
-          } catch (_) {
-            state.data = cloneData(DEFAULT_DATA);
-          }
-        }
-        if (parsed && parsed.view) state.view = parsed.view;
-        if (parsed && parsed.periodId) state.periodId = parsed.periodId;
-        if (parsed && parsed.employeeId) state.employeeId = parsed.employeeId;
-        if (parsed && typeof parsed.periodYearFilter === "string") state.periodYearFilter = parsed.periodYearFilter;
-        if (parsed && typeof parsed.periodNumberFilter === "string") state.periodNumberFilter = parsed.periodNumberFilter;
-        if (parsed && typeof parsed.periodStatusFilter === "string") state.periodStatusFilter = parsed.periodStatusFilter;
-        if (parsed && typeof parsed.employeeStoreFilter === "string") state.employeeStoreFilter = parsed.employeeStoreFilter;
-        if (parsed && parsed.activeTab) state.activeTab = parsed.activeTab;
+  let remoteSaveTimer = null;
+  let apiSyncStatus = "local";
+  let pendingTipoutImportPlan = null;
+
+  function buildSnapshot() {
+    return {
+      data: state.data,
+      view: state.view,
+      periodId: state.periodId,
+      employeeId: state.employeeId,
+      periodYearFilter: state.periodYearFilter,
+      periodNumberFilter: state.periodNumberFilter,
+      periodStatusFilter: state.periodStatusFilter,
+      employeeStoreFilter: state.employeeStoreFilter,
+      activeTab: state.activeTab,
+    };
+  }
+
+  function applySnapshot(parsed) {
+    if (!parsed || typeof parsed !== "object") return;
+    if (parsed.data) {
+      state.data = parsed.data;
+      try {
+        migratePayrollData(state.data);
+      } catch (_) {
+        state.data = cloneData(DEFAULT_DATA);
       }
-    } catch (_) {
-      /* ignore */
     }
-    // 读取失败或旧结构异常时，始终保证核心结构存在
+    if (parsed.view) state.view = parsed.view;
+    if (parsed.periodId) state.periodId = parsed.periodId;
+    if (parsed.employeeId) state.employeeId = parsed.employeeId;
+    if (typeof parsed.periodYearFilter === "string") state.periodYearFilter = parsed.periodYearFilter;
+    if (typeof parsed.periodNumberFilter === "string") state.periodNumberFilter = parsed.periodNumberFilter;
+    if (typeof parsed.periodStatusFilter === "string") state.periodStatusFilter = parsed.periodStatusFilter;
+    if (typeof parsed.employeeStoreFilter === "string") state.employeeStoreFilter = parsed.employeeStoreFilter;
+    if (parsed.activeTab) state.activeTab = parsed.activeTab;
+    ensureDataShape();
+  }
+
+  function ensureDataShape() {
     if (!state.data || typeof state.data !== "object") {
       state.data = cloneData(DEFAULT_DATA);
     }
@@ -581,26 +831,203 @@
     if (!state.data.employees || typeof state.data.employees !== "object") {
       state.data.employees = {};
     }
+    if (!Array.isArray(state.data.auditLog)) state.data.auditLog = [];
+  }
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        applySnapshot(JSON.parse(raw));
+      }
+    } catch (_) {
+      /* ignore */
+    }
+    ensureDataShape();
+  }
+
+  function updateApiSyncBadge() {
+    const el = $("#payroll-api-sync-badge");
+    if (!el) return;
+    const labels = { api: "已同步 API", syncing: "同步中…", local: "仅本地" };
+    el.textContent = labels[apiSyncStatus] || labels.local;
+    el.className = "payroll-api-sync-badge payroll-api-sync-badge--" + apiSyncStatus;
+  }
+
+  function scheduleRemoteSave() {
+    if (typeof PayrollApiClient === "undefined") return;
+    apiSyncStatus = "syncing";
+    updateApiSyncBadge();
+    clearTimeout(remoteSaveTimer);
+    remoteSaveTimer = setTimeout(() => {
+      PayrollApiClient.saveSnapshot(buildSnapshot())
+        .then((r) => {
+          apiSyncStatus = r && r.source === "api" ? "api" : "local";
+          updateApiSyncBadge();
+        })
+        .catch(() => {
+          apiSyncStatus = "local";
+          updateApiSyncBadge();
+        });
+    }, 400);
   }
 
   function saveState() {
     try {
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({
-          data: state.data,
-          view: state.view,
-          periodId: state.periodId,
-          employeeId: state.employeeId,
-          periodYearFilter: state.periodYearFilter,
-          periodNumberFilter: state.periodNumberFilter,
-          periodStatusFilter: state.periodStatusFilter,
-          employeeStoreFilter: state.employeeStoreFilter,
-          activeTab: state.activeTab,
-        })
-      );
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(buildSnapshot()));
     } catch (_) {
       /* ignore */
+    }
+    scheduleRemoteSave();
+  }
+
+  function formatAuditTime(iso) {
+    if (!iso) return "—";
+    try {
+      const d = new Date(iso);
+      return d.toLocaleString("zh-CN", { hour12: false });
+    } catch (_) {
+      return iso;
+    }
+  }
+
+  function auditActionLabel(action) {
+    const map = {
+      confirm: "确认本期",
+      export_csv: "导出 ADP",
+      export_batch: "批量导出 ADP",
+      tipout_import: "TipOut 导入",
+      field_change: "字段修改",
+    };
+    return map[action] || action;
+  }
+
+  function renderAuditLogRows(items) {
+    const tbody = $("#payroll-audit-rows");
+    if (!tbody) return;
+    if (!items || items.length === 0) {
+      tbody.innerHTML =
+        '<tr><td colspan="4" style="padding:24px;text-align:center;color:var(--text-tertiary)">暂无操作记录</td></tr>';
+      return;
+    }
+    tbody.innerHTML = items
+      .map((row) => {
+        const meta = row.meta || {};
+        const note = meta.employeeName
+          ? meta.employeeName
+          : meta.count != null
+            ? `共 ${meta.count} 人`
+            : "";
+        return `<tr>
+          <td style="white-space:nowrap">${escapeHtml(formatAuditTime(row.at))}</td>
+          <td>${escapeHtml(auditActionLabel(row.action))}</td>
+          <td style="font-family:ui-monospace,Menlo,monospace;font-size:11px">${escapeHtml(row.periodId || "—")}<br>${escapeHtml(row.employeeId || "")}</td>
+          <td>${escapeHtml(note)}</td>
+        </tr>`;
+      })
+      .join("");
+  }
+
+  function showAuditLogModal() {
+    const modal = $("#payrollAuditLogModal");
+    if (!modal) return;
+    const localItems = Array.isArray(state.data.auditLog) ? state.data.auditLog.slice(0, 50) : [];
+    renderAuditLogRows(localItems);
+    modal.classList.add("show");
+    if (typeof PayrollApiClient !== "undefined") {
+      PayrollApiClient.fetchAuditLog(50).then((remote) => {
+        if (remote && Array.isArray(remote.items) && remote.items.length > 0) {
+          renderAuditLogRows(remote.items);
+        }
+      });
+    }
+  }
+
+  function hideAuditLogModal() {
+    $("#payrollAuditLogModal")?.classList.remove("show");
+  }
+
+  function hideTipoutImportModal() {
+    $("#payrollTipoutImportModal")?.classList.remove("show");
+    pendingTipoutImportPlan = null;
+  }
+
+  function renderTipoutImportPreview(result) {
+    const summary = $("#tipout-import-summary");
+    const tbody = $("#tipout-import-preview-rows");
+    const unmatchedEl = $("#tipout-import-unmatched");
+    if (summary) {
+      summary.textContent = `识别格式：${result.formatId} · 将更新 ${result.plan.length} 名员工的本期 Tips/SVC（导入后仍可手工覆盖）`;
+    }
+    if (tbody) {
+      if (!result.plan.length) {
+        tbody.innerHTML =
+          '<tr><td colspan="5" style="padding:24px;text-align:center;color:var(--text-tertiary)">没有可匹配的员工</td></tr>';
+      } else {
+        tbody.innerHTML = result.plan
+          .map(
+            (p) => `<tr>
+          <td>${escapeHtml(p.employeeName)}</td>
+          <td style="text-align:right;font-family:ui-monospace,Menlo,monospace">${fmtMoney(p.before.tips)}</td>
+          <td style="text-align:right;font-family:ui-monospace,Menlo,monospace;font-weight:600">${fmtMoney(p.after.tips)}</td>
+          <td style="text-align:right;font-family:ui-monospace,Menlo,monospace">${fmtMoney(p.before.svcw)}</td>
+          <td style="text-align:right;font-family:ui-monospace,Menlo,monospace;font-weight:600">${fmtMoney(p.after.svcw)}</td>
+        </tr>`
+          )
+          .join("");
+      }
+    }
+    if (unmatchedEl) {
+      unmatchedEl.textContent =
+        result.unmatched && result.unmatched.length
+          ? `未匹配员工（请检查姓名/ADP File#）：${result.unmatched.join("、")}`
+          : "";
+    }
+  }
+
+  function handleTipoutCsvFile(file) {
+    if (!file || typeof PayrollTipOutImport === "undefined") {
+      alert("导入模块未加载");
+      return;
+    }
+    if (!state.periodId) {
+      alert("请先进入某一 Payroll 期");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = PayrollTipOutImport.parseTipOutCsv(reader.result);
+        const list = state.data.employees[state.periodId] || [];
+        const result = PayrollTipOutImport.buildImportPlan(list, parsed);
+        pendingTipoutImportPlan = result;
+        renderTipoutImportPreview(result);
+        $("#payrollTipoutImportModal")?.classList.add("show");
+      } catch (err) {
+        alert(err && err.message ? err.message : "CSV 解析失败");
+      }
+    };
+    reader.readAsText(file, "UTF-8");
+  }
+
+  function applyTipoutImport() {
+    if (!pendingTipoutImportPlan || !state.periodId) return;
+    const list = state.data.employees[state.periodId] || [];
+    PayrollTipOutImport.applyImportPlan(list, pendingTipoutImportPlan.plan);
+    appendAudit("tipout_import", {
+      count: pendingTipoutImportPlan.plan.length,
+      formatId: pendingTipoutImportPlan.formatId,
+      periodId: state.periodId,
+    });
+    hideTipoutImportModal();
+    saveState();
+    renderEmployees();
+    if (state.view === "workspace" && state.employeeId) {
+      renderManageForm();
+      syncDerived();
+    }
+    if (typeof showNotification === "function") {
+      showNotification(`已导入 ${pendingTipoutImportPlan.plan.length} 名员工的 Tips/SVC`, "success");
     }
   }
 
@@ -910,6 +1337,7 @@
         </tr>`;
       })
       .join("");
+    updatePeriodExportButton();
     saveState();
   }
 
@@ -1297,8 +1725,11 @@
 
     $("#detail-range").textContent = period.rangeLabel;
     $("#detail-name").textContent = emp.name;
-    $("#detail-svc").textContent = fmtMoney(emp.adjustments.svcw);
-    $("#detail-tips").textContent = fmtMoney(emp.adjustments.tips);
+    const declVer = $("#detail-declaration-version");
+    const declBody = $("#detail-declaration-body");
+    const mapping = getAdpMapping();
+    if (declVer) declVer.textContent = mapping && mapping.declarationVersion ? `· ${mapping.declarationVersion}` : "";
+    if (declBody) declBody.textContent = renderDeclarationText(emp);
 
     $("#detail-hours-grid").innerHTML = `
       <div class="payroll-detail-period-summary">
@@ -1335,7 +1766,7 @@
     const adpRow = $("#adp-preview-row");
     if (adpRow) {
       adpRow.innerHTML = `<tr>
-        <td style="font-family:ui-monospace,Menlo,monospace">${escapeHtml(state.data.coCode)}</td>
+        <td style="font-family:ui-monospace,Menlo,monospace">${escapeHtml((getAdpMapping() && getAdpMapping().coCode) || state.data.coCode)}</td>
         <td style="font-family:ui-monospace,Menlo,monospace">${escapeHtml(period.paycheckDate)}</td>
         <td style="font-family:ui-monospace,Menlo,monospace" class="${missingAdpFile ? "text-danger" : ""}">${escapeHtml(emp.adpFile || "—")}</td>
         <td>${escapeHtml(emp.name)}</td>
@@ -1352,7 +1783,17 @@
 
     const exportBtn = $("#btn-export-csv");
     if (exportBtn) exportBtn.disabled = missingAdpFile;
+    updatePeriodExportButton();
     saveState();
+  }
+
+  function updatePeriodExportButton() {
+    const btn = $("#btn-export-period-csv");
+    if (!btn || !state.periodId) return;
+    const list = state.data.employees[state.periodId] || [];
+    const exportable = list.filter((e) => e && e.confirmed && e.adpFile);
+    btn.disabled = exportable.length === 0;
+    btn.title = exportable.length === 0 ? "需至少一名已确认且填写 ADP File# 的员工" : `导出 ${exportable.length} 人`;
   }
 
   function showView(name) {
@@ -1403,25 +1844,86 @@
     if (!emp) return;
     readFormIntoState();
     emp.confirmed = true;
+    emp.confirmedAt = new Date().toISOString();
     state.workspaceConfirmedInSession = true;
     state.workspaceEntrySnapshot = buildEmployeeSnapshot(emp);
+    appendAudit("confirm", { employeeName: emp.name });
     saveState();
     syncDerived();
     if (typeof showNotification === "function") {
-      showNotification("已标记为「已确认」。演示版：可继续修改；生产环境可锁定并留痕。", "success");
+      showNotification("已确认本期数据（报税准备）。发薪与报税请在 ADP/会计师侧完成。", "success");
     } else {
-      alert("已标记为「已确认」。演示版：可继续修改；生产环境可锁定并留痕。");
+      alert("已确认本期数据（报税准备）。发薪与报税请在 ADP/会计师侧完成。");
     }
   }
 
-  function exportAdpCsv() {
-    readFormIntoState();
-    const emp = getEmployee(state.periodId, state.employeeId);
-    const period = getPeriod(state.periodId);
-    if (!emp || !period || !emp.adpFile) return;
+  function showFieldHelp(fieldKey) {
+    const meta = FIELD_HELP[fieldKey];
+    if (!meta) return;
+    const titleEl = $("#field-help-title");
+    const bodyEl = $("#field-help-body");
+    const modal = $("#fieldHelpModal");
+    if (!titleEl || !bodyEl || !modal) return;
+    titleEl.textContent = meta.title;
+    let html = `<p style="margin:0">${escapeHtml(meta.body)}</p>`;
+    if (meta.adp) {
+      html += `<div class="field-help-adp"><strong>ADP 映射：</strong>${escapeHtml(meta.adp)}</div>`;
+    }
+    bodyEl.innerHTML = html;
+    modal.classList.add("show");
+  }
 
+  function hideFieldHelp() {
+    const modal = $("#fieldHelpModal");
+    if (modal) modal.classList.remove("show");
+  }
+
+  function bindFieldHelp() {
+    document.body.addEventListener("click", (e) => {
+      const helpBtn = e.target.closest("[data-field-help]");
+      if (helpBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        const key = helpBtn.getAttribute("data-field-help");
+        if (key) showFieldHelp(key);
+        return;
+      }
+      if (e.target.id === "btn-field-help-close" || e.target.id === "btn-field-help-ok") {
+        hideFieldHelp();
+      }
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") hideFieldHelp();
+    });
+  }
+
+  function buildAdpRow(period, emp) {
+    const m = getAdpMapping();
     const sums = sumSegments(emp);
-    const header = [
+    const coCode = (m && m.coCode) || state.data.coCode;
+    if (m && typeof m.buildRow === "function") {
+      return m.buildRow({ coCode, period, employee: emp, sums });
+    }
+    return [
+      coCode,
+      period.paycheckDate,
+      emp.adpFile,
+      emp.name,
+      String(emp.rate),
+      String(sums.reg),
+      "OHR",
+      String(sums.ot),
+      "CCT",
+      String(emp.adjustments.tips),
+      "SVC",
+      String(emp.adjustments.svcw),
+    ];
+  }
+
+  function getAdpCsvHeader() {
+    const m = getAdpMapping();
+    if (m && Array.isArray(m.csvColumns)) return m.csvColumns.slice();
+    return [
       "CO CODE",
       "BATCH ID",
       "FILE #",
@@ -1435,28 +1937,52 @@
       "Earnings 3 Code",
       "Earnings 3 Amount",
     ];
-    const row = [
-      state.data.coCode,
-      period.paycheckDate,
-      emp.adpFile,
-      emp.name,
-      String(emp.rate),
-      String(sums.reg),
-      "OHR",
-      String(sums.ot),
-      "CCT",
-      String(emp.adjustments.tips),
-      "SVC",
-      String(emp.adjustments.svcw),
-    ];
-    const esc = (c) => (c.includes(",") || c.includes('"') ? `"${c.replace(/"/g, '""')}"` : c);
-    const csv = [header.map(esc).join(","), row.map(esc).join(",")].join("\r\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `ADP_PAYROLL_${period.paycheckDate}_${emp.adpFile}.csv`;
-    a.click();
-    URL.revokeObjectURL(a.href);
+  }
+
+  function exportAdpCsv() {
+    readFormIntoState();
+    const emp = getEmployee(state.periodId, state.employeeId);
+    const period = getPeriod(state.periodId);
+    if (!emp || !period || !emp.adpFile) return;
+
+    showExportConfirmDialog(`将导出 1 名员工：${emp.name}`).then((ok) => {
+      if (!ok) return;
+      const header = getAdpCsvHeader();
+      const row = buildAdpRow(period, emp);
+      const csv = buildAdpCsvContent([row], header);
+      downloadCsvFile(`ADP_PAYROLL_${period.paycheckDate}_${emp.adpFile}.csv`, csv);
+      appendAudit("export_csv", { employeeName: emp.name, batch: false });
+      saveState();
+    });
+  }
+
+  function exportPeriodAdpCsv() {
+    const period = getPeriod(state.periodId);
+    if (!period) return;
+    const list = state.data.employees[state.periodId] || [];
+    const m = getAdpMapping();
+    const policy = (m && m.missingFilePolicy) || "block";
+    let candidates = list.filter((e) => e && e.confirmed);
+    const skipped = candidates.filter((e) => !e.adpFile);
+    if (policy === "block" && skipped.length > 0) {
+      alert(`有 ${skipped.length} 名已确认员工缺少 ADP File#，无法批量导出。请补全或改为单人导出策略。`);
+      return;
+    }
+    candidates = candidates.filter((e) => e.adpFile);
+    if (candidates.length === 0) {
+      alert("没有可导出的员工（需已确认且填写 ADP File#）。");
+      return;
+    }
+    const hint = `将导出 ${candidates.length} 名员工` + (skipped.length && policy === "skip" ? `（跳过 ${skipped.length} 人缺 FILE#）` : "");
+    showExportConfirmDialog(hint).then((ok) => {
+      if (!ok) return;
+      const header = getAdpCsvHeader();
+      const rows = candidates.map((emp) => buildAdpRow(period, emp));
+      const csv = buildAdpCsvContent(rows, header);
+      downloadCsvFile(`ADP_PAYROLL_${period.paycheckDate}_BATCH.csv`, csv);
+      appendAudit("export_batch", { count: candidates.length, periodNumber: period.periodNumber });
+      saveState();
+    });
   }
 
   function bind() {
@@ -1498,6 +2024,18 @@
       }
       if (act === "export-csv") {
         exportAdpCsv();
+      }
+      if (act === "export-period-csv") {
+        exportPeriodAdpCsv();
+      }
+      if (act === "show-audit-log") {
+        showAuditLogModal();
+      }
+      if (act === "import-tipout-csv") {
+        $("#tipout-csv-file")?.click();
+      }
+      if (act === "download-tipout-template") {
+        if (typeof PayrollTipOutImport !== "undefined") PayrollTipOutImport.downloadTemplate();
       }
       if (act === "add-slot-row") {
         const dayIdx = parseInt(btn.getAttribute("data-day-index"), 10);
@@ -1618,16 +2156,59 @@
     });
 
     $("#btn-print-detail")?.addEventListener("click", () => window.print());
+
+    $("#btn-show-audit-log")?.addEventListener("click", () => showAuditLogModal());
+    $("#btn-audit-log-close")?.addEventListener("click", () => hideAuditLogModal());
+    $("#btn-audit-log-ok")?.addEventListener("click", () => hideAuditLogModal());
+
+    $("#tipout-csv-file")?.addEventListener("change", (e) => {
+      const input = e.target;
+      const file = input.files && input.files[0];
+      if (file) handleTipoutCsvFile(file);
+      input.value = "";
+    });
+    $("#btn-tipout-import-close")?.addEventListener("click", () => hideTipoutImportModal());
+    $("#btn-tipout-import-cancel")?.addEventListener("click", () => hideTipoutImportModal());
+    $("#btn-tipout-import-apply")?.addEventListener("click", () => applyTipoutImport());
   }
 
-  loadState();
-  renderPeriods();
-  renderEmployees();
-  bind();
+  function finishBootstrap() {
+    applyAdpMappingToData(state.data);
+    renderPeriods();
+    renderEmployees();
+    bindFieldHelp();
+    bind();
+    initDisclaimerModal();
+    state.view = "periods";
+    state.periodId = null;
+    state.employeeId = null;
+    showView("periods");
+    updateApiSyncBadge();
+  }
 
-  // 进入报税报表页时，始终默认回到 Payroll期 页面
-  state.view = "periods";
-  state.periodId = null;
-  state.employeeId = null;
-  showView("periods");
+  function bootstrapApp() {
+    if (typeof PayrollApiClient === "undefined") {
+      loadState();
+      finishBootstrap();
+      return;
+    }
+    PayrollApiClient.loadSnapshot()
+      .then((result) => {
+        if (result && result.snapshot) {
+          applySnapshot(result.snapshot);
+          apiSyncStatus = result.source === "api" ? "api" : "local";
+        } else {
+          loadState();
+          PayrollApiClient.saveSnapshot(buildSnapshot()).catch(() => {});
+          apiSyncStatus = "local";
+        }
+        finishBootstrap();
+      })
+      .catch(() => {
+        loadState();
+        finishBootstrap();
+      });
+  }
+
+  bootstrapApp();
 })();

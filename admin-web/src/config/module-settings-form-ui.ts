@@ -165,6 +165,56 @@ export function isModuleSettingGenericFormRowSeq(seq: number): boolean {
   return FORM_ROW_BY_SEQ.has(seq);
 }
 
+export function listModuleSettingFormRows(): readonly ModuleSettingFormRowConfig[] {
+  return MODULE_SETTING_FORM_ROWS;
+}
+
+export type ModuleSettingFormFieldDescriptor = {
+  seq: number;
+  fieldId: string;
+  kind: "checkbox" | "radio" | "number" | "color";
+  label: string;
+  radioOptions?: { value: string; label: string }[];
+};
+
+/** 供 AI 助手索引表单类设置项（多选 / 单选 / 颜色 / 附属数字） */
+export function listModuleSettingFormFieldDescriptors(): ModuleSettingFormFieldDescriptor[] {
+  const out: ModuleSettingFormFieldDescriptor[] = [];
+  for (const row of MODULE_SETTING_FORM_ROWS) {
+    if (row.kind === "checkbox-group" && row.checkboxes) {
+      for (const cb of row.checkboxes) {
+        out.push({ seq: row.seq, fieldId: cb.fieldId, kind: "checkbox", label: cb.label });
+      }
+    }
+    if ((row.kind === "radio-group" || row.kind === "radio-color") && row.radioFieldId && row.radios) {
+      const radioOptions = row.radios
+        .filter((r): r is { value: string; label: string } => "label" in r)
+        .map((r) => ({ value: r.value, label: r.label }));
+      out.push({
+        seq: row.seq,
+        fieldId: row.radioFieldId,
+        kind: "radio",
+        label: row.radioFieldId,
+        radioOptions,
+      });
+      for (const r of row.radios) {
+        if ("numberFieldId" in r) {
+          out.push({
+            seq: row.seq,
+            fieldId: r.numberFieldId,
+            kind: "number",
+            label: `${r.labelBefore ?? ""}${r.labelAfter ?? ""}`.trim() || r.numberFieldId,
+          });
+        }
+      }
+    }
+    if (row.kind === "radio-color" && row.colorFieldId) {
+      out.push({ seq: row.seq, fieldId: row.colorFieldId, kind: "color", label: "自定义颜色" });
+    }
+  }
+  return out;
+}
+
 export function moduleSettingStorageKey(fieldId: string): string {
   return `bplant-module-setting-field:${fieldId}`;
 }

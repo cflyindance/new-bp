@@ -1,0 +1,1831 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>下单限制</title>
+  <link rel="stylesheet" href="assets/common.css" />
+  <style>
+    :root {
+      --ol-bg: #f5f7fa;
+      --ol-card: #fff;
+      --ol-border: #e5e7eb;
+      --ol-fg: #111827;
+      --ol-muted: #6b7280;
+      --ol-primary: #1677ff;
+      --ol-primary-soft: #e8f3ff;
+      --ol-danger: #dc2626;
+      --ol-danger-soft: #fee2e2;
+      --ol-success: #16a34a;
+      --ol-success-soft: #dcfce7;
+      --ol-radius: 14px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: var(--ol-fg);
+      background: var(--ol-bg);
+    }
+    .page {
+      min-height: 100vh;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .card {
+      background: var(--ol-card);
+      border: 1px solid var(--ol-border);
+      border-radius: var(--ol-radius);
+      box-shadow: 0 2px 12px rgba(15, 23, 42, .04);
+    }
+    .header-card {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 16px;
+    }
+    .header-title h1 { margin: 0; font-size: 18px; font-weight: 600; }
+    .header-title p { margin: 3px 0 0; font-size: 12px; color: var(--ol-muted); }
+    .header-actions { display: flex; gap: 8px; align-items: center; }
+    .btn {
+      border: 1px solid var(--ol-border);
+      background: #fff;
+      color: var(--ol-fg);
+      border-radius: 10px;
+      padding: 8px 12px;
+      font-size: 13px;
+      line-height: 1.2;
+      cursor: pointer;
+      transition: .15s;
+    }
+    .btn:hover { border-color: #c7ced9; background: #f8fafc; }
+    .btn-primary { background: var(--ol-primary); color: #fff; border-color: var(--ol-primary); }
+    .btn-primary:hover { background: #0f69df; border-color: #0f69df; }
+    .btn-danger { color: var(--ol-danger); border-color: #fecaca; background: #fff5f5; }
+    .btn-danger:hover { background: #fee2e2; }
+    .pill {
+      border-radius: 999px;
+      padding: 7px 12px;
+      font-size: 12px;
+    }
+    .pill.active { background: var(--ol-primary-soft); border-color: #b9d8ff; color: #0d61cb; }
+    .section-card { overflow: hidden; }
+    .section-head {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--ol-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .section-head h2 { margin: 0; font-size: 15px; font-weight: 600; }
+    .section-body { padding: 12px 16px 16px; }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 3px 9px;
+      font-size: 12px;
+      border: 1px solid transparent;
+    }
+    .badge.primary { background: var(--ol-primary-soft); color: #0d61cb; border-color: #b9d8ff; }
+    .badge.ok { background: var(--ol-success-soft); color: #166534; border-color: #bbf7d0; }
+    .badge.off { background: var(--ol-danger-soft); color: #991b1b; border-color: #fecaca; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td {
+      padding: 10px 8px;
+      border-bottom: 1px solid #eef2f7;
+      text-align: left;
+      vertical-align: top;
+    }
+    th { font-size: 12px; color: var(--ol-muted); font-weight: 500; background: #fafcff; }
+    td .sub { margin-top: 4px; font-size: 12px; color: var(--ol-muted); max-width: 240px; }
+    .op-row { display: flex; flex-wrap: wrap; gap: 6px; }
+
+    .sim-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+      gap: 12px;
+    }
+    .sim-config {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .field { display: grid; gap: 4px; }
+    .field label { font-size: 13px; color: var(--ol-muted); }
+    .input, .select, .textarea {
+      width: 100%;
+      border: 1px solid var(--ol-border);
+      border-radius: 10px;
+      background: #fff;
+      padding: 8px 10px;
+      font-size: 13px;
+      line-height: 1.3;
+      outline: none;
+    }
+    .textarea { min-height: 80px; resize: vertical; }
+    .input:focus, .select:focus, .textarea:focus { border-color: #9cc8ff; box-shadow: 0 0 0 3px #e8f3ff; }
+    .hint-bar {
+      margin-bottom: 12px;
+      border: 1px solid #f7dcb0;
+      background: #fff9ee;
+      color: #8a5b16;
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-size: 12px;
+      display: none;
+    }
+    .cat-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+    .cat-pill {
+      border: 1px solid var(--ol-border);
+      background: #fff;
+      border-radius: 999px;
+      padding: 6px 11px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .cat-pill.active { background: var(--ol-primary); border-color: var(--ol-primary); color: #fff; }
+    .dish-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      max-height: 560px;
+      overflow: auto;
+      padding-right: 2px;
+    }
+    .dish-card {
+      border: 1px solid var(--ol-border);
+      border-radius: 12px;
+      padding: 10px;
+      background: #fff;
+      display: grid;
+      gap: 8px;
+      transition: .15s;
+    }
+    .dish-card.blocked { opacity: .6; }
+    .dish-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+    .dish-name { font-size: 13px; font-weight: 600; }
+    .dish-price { color: var(--ol-primary); font-weight: 700; font-size: 14px; }
+    .dish-meta { font-size: 12px; color: var(--ol-muted); }
+    .dish-err { font-size: 12px; color: var(--ol-danger); }
+    .qty-row { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
+    .qty-btn {
+      width: 28px; height: 28px; border-radius: 999px; border: 1px solid var(--ol-border);
+      background: #f8fafc; cursor: pointer;
+    }
+    .qty-btn.primary { background: var(--ol-primary); border-color: var(--ol-primary); color: #fff; }
+    .qty-btn:disabled { opacity: .4; cursor: not-allowed; }
+    .qty-num { min-width: 20px; text-align: center; font-weight: 600; font-size: 13px; }
+
+    .order-card .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin: 10px 0;
+    }
+    .stat {
+      border-radius: 10px;
+      padding: 8px;
+      background: #f8fafc;
+      text-align: center;
+    }
+    .stat.accent { background: var(--ol-primary-soft); }
+    .stat .num { font-size: 22px; font-weight: 700; }
+    .stat .txt { font-size: 12px; color: var(--ol-muted); }
+    .order-list {
+      max-height: 380px;
+      overflow: auto;
+      display: grid;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .order-item {
+      border: 1px solid #edf2f7;
+      border-radius: 9px;
+      padding: 7px 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 12px;
+      background: #fff;
+    }
+    .order-name { font-weight: 500; }
+    .order-cat { color: var(--ol-muted); margin-top: 2px; }
+    .order-empty {
+      color: var(--ol-muted);
+      font-size: 12px;
+      text-align: center;
+      padding: 18px 0;
+    }
+    .order-actions { display: flex; gap: 8px; margin-top: 10px; }
+
+    .modal-mask {
+      position: fixed; inset: 0; z-index: 1000;
+      display: none; align-items: center; justify-content: center;
+      background: rgba(2, 6, 23, .35); padding: 14px;
+    }
+    .modal {
+      width: min(1020px, 100%);
+      max-height: calc(100vh - 30px);
+      overflow: auto;
+      border-radius: 14px;
+      background: #fff;
+      border: 1px solid var(--ol-border);
+      box-shadow: 0 18px 40px rgba(15, 23, 42, .18);
+    }
+    .modal-head {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--ol-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .modal-head h3 { margin: 0; font-size: 16px; font-weight: 600; }
+    .icon-btn {
+      width: 30px; height: 30px; border-radius: 999px;
+      border: 1px solid var(--ol-border);
+      background: #fff;
+      cursor: pointer;
+    }
+    .modal-body { padding: 14px; display: grid; gap: 12px; }
+    .steps { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+    .step {
+      display: grid; justify-items: center; gap: 4px;
+    }
+    .step-dot {
+      width: 26px; height: 26px; border-radius: 999px;
+      display: grid; place-items: center; font-size: 11px; font-weight: 700;
+      background: #f1f5f9; color: #64748b;
+      border: 1px solid #e2e8f0;
+    }
+    .step.done .step-dot { background: #16a34a; border-color: #16a34a; color: #fff; }
+    .step.active .step-dot { background: var(--ol-primary); border-color: var(--ol-primary); color: #fff; }
+    .step-text { font-size: 12px; color: var(--ol-muted); text-align: center; }
+    .wizard-sec { border: 1px solid var(--ol-border); border-radius: 12px; padding: 12px; }
+    .wizard-sec h4 { margin: 0 0 8px; font-size: 15px; font-weight: 600; }
+    .wizard-sec--plain {
+      border: 0;
+      background: transparent;
+      border-radius: 0;
+      padding: 12px;
+    }
+    .choice-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .choice-grid.three { grid-template-columns: repeat(3, 1fr); }
+    .choice {
+      border: 2px solid var(--ol-border);
+      border-radius: 10px;
+      background: #fff;
+      padding: 10px;
+      cursor: pointer;
+      text-align: center;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+    .choice.active { border-color: var(--ol-primary); background: var(--ol-primary-soft); }
+    .round-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+    .round-tab { border-radius: 999px; padding: 6px 10px; font-size: 12px; }
+    .round-tab.active {
+      background: var(--ol-primary-soft);
+      border-color: #b9d8ff;
+      color: #0d61cb;
+      font-weight: 600;
+    }
+    .round-chip { display: inline-flex; align-items: center; gap: 4px; }
+    .round-del {
+      width: 22px;
+      height: 22px;
+      border-radius: 999px;
+      border: 1px solid #fecaca;
+      background: #fff5f5;
+      color: #b91c1c;
+      font-size: 12px;
+      line-height: 1;
+      cursor: pointer;
+    }
+    .round-del:hover { background: #fee2e2; }
+    .entity-grid {
+      max-height: 210px; overflow: auto;
+      border: 1px solid var(--ol-border); border-radius: 10px;
+      padding: 8px;
+      display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px;
+      margin-bottom: 8px;
+    }
+    .entity-item {
+      border: 1px solid var(--ol-border); border-radius: 8px; padding: 6px;
+      display: flex; align-items: center; gap: 6px; font-size: 12px;
+      background: #fff;
+    }
+    .qty-list { display: grid; gap: 6px; max-height: 190px; overflow: auto; }
+    .qty-row2 {
+      display: grid; grid-template-columns: minmax(0,1fr) 110px; gap: 8px; align-items: center;
+      border: 1px solid #edf2f7; border-radius: 8px; padding: 6px 8px;
+      font-size: 12px;
+    }
+    .week-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+    .week-btn { width: 30px; height: 30px; border-radius: 999px; }
+    .week-btn.active { background: var(--ol-primary); border-color: var(--ol-primary); color: #fff; }
+    .weekday-block {
+      border: 1px solid #e8edf3;
+      border-radius: 10px;
+      padding: 10px;
+      background: #fff;
+      display: grid;
+      gap: 8px;
+    }
+    .weekday-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #374151;
+    }
+    .time-row { display: grid; grid-template-columns: 1fr auto 1fr auto; gap: 8px; align-items: center; }
+    .confirm-list { display: grid; gap: 7px; font-size: 13px; }
+    .confirm-item { display: grid; grid-template-columns: 72px minmax(0,1fr); gap: 8px; }
+    .confirm-k { color: var(--ol-muted); }
+    .wizard-note {
+      border-left: 3px solid var(--ol-primary);
+      background: #f8fbff;
+      padding: 8px 10px;
+      border-radius: 6px;
+      font-size: 13px;
+      color: #1e3a5f;
+    }
+    .modal-foot {
+      border-top: 1px solid var(--ol-border);
+      padding: 10px 14px;
+      display: flex; justify-content: space-between; align-items: center; gap: 8px;
+    }
+    .foot-right { display: flex; gap: 8px; }
+
+    @media (max-width: 1100px) {
+      .sim-config { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .dish-grid { grid-template-columns: 1fr; }
+      .entity-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    }
+    @media (max-width: 900px) {
+      .sim-grid { grid-template-columns: 1fr; }
+      .steps { grid-template-columns: repeat(3, 1fr); }
+    }
+  </style>
+  <script>
+    (function () {
+      var params = new URLSearchParams(window.location.search);
+      var embedded = params.get("embedded");
+      var isEmbedded = embedded === "1" || embedded === "true";
+      if (!isEmbedded) {
+        try { isEmbedded = window.self !== window.top; } catch (e) { isEmbedded = false; }
+      }
+      if (isEmbedded) document.documentElement.classList.add("embedded-mode");
+    })();
+  </script>
+</head>
+<body>
+  <div class="page">
+    <section class="card header-card">
+      <div class="header-title">
+        <h1>下单限制</h1>
+        <p>规则字段、向导校验、模拟校验逻辑与 emenuset 对齐（使用同一 localStorage 键）。</p>
+      </div>
+      <div class="header-actions">
+        <button type="button" class="btn pill active" data-tab="rules">规则管理</button>
+        <button type="button" class="btn pill" data-tab="simulator">点菜模拟</button>
+        <button type="button" class="btn btn-primary" id="btnOpenCreate">+ 新建规则</button>
+      </div>
+    </section>
+
+    <section class="card section-card" id="rulesPanel">
+      <div class="section-head">
+        <h2>现有规则</h2>
+        <span class="badge primary" id="ruleCountBadge">共 0 条</span>
+      </div>
+      <div class="section-body">
+        <table>
+          <thead>
+            <tr>
+              <th>规则名称</th>
+              <th>策略</th>
+              <th>人数</th>
+              <th>时间</th>
+              <th>会员</th>
+              <th>关联</th>
+              <th>状态</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="rulesTbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card section-card" id="simulatorPanel" style="display:none">
+      <div class="section-head">
+        <h2>点菜模拟验证</h2>
+        <span class="badge primary">规则实时校验</span>
+      </div>
+      <div class="section-body">
+        <div class="sim-config">
+          <label class="field">
+            <span>测试规则</span>
+            <select class="select" id="simRuleSelect"></select>
+          </label>
+          <label class="field">
+            <span>用餐人数</span>
+            <input class="input" id="simPersonCount" type="number" min="1" max="20" value="4" />
+          </label>
+          <label class="field">
+            <span>会员等级</span>
+            <select class="select" id="simMemberLevel"></select>
+          </label>
+          <div class="field">
+            <span>当前轮次</span>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <button class="btn" id="simPrevRound" type="button">←</button>
+              <div class="input" style="text-align:center;flex:1;"><strong id="simRoundLabel">第 1 轮</strong></div>
+              <button class="btn" id="simNextRound" type="button">→</button>
+            </div>
+          </div>
+        </div>
+        <div class="hint-bar" id="simViolations"></div>
+        <div class="sim-grid">
+          <div>
+            <div class="cat-row" id="simCategoryRow"></div>
+            <div class="dish-grid" id="simDishGrid"></div>
+          </div>
+          <aside class="card order-card" style="padding:10px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <strong style="font-size:14px;">本轮回单</strong>
+              <button class="btn btn-danger" type="button" id="simClearRound">清空本轮</button>
+            </div>
+            <div class="stats">
+              <div class="stat accent"><div class="num" id="simRoundTotal">0</div><div class="txt">本轮份数</div></div>
+              <div class="stat"><div class="num" id="simAllTotal">0</div><div class="txt">总份数</div></div>
+            </div>
+            <div class="order-list" id="simOrderList"></div>
+            <div class="order-actions">
+              <button class="btn btn-danger" type="button" id="simClearAll" style="width:100%;">清空全部轮次</button>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="modal-mask" id="wizardMask">
+    <div class="modal">
+      <div class="modal-head">
+        <h3 id="wizardTitle">新建规则</h3>
+        <button class="icon-btn" id="wizardClose" type="button">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="steps" id="wizardSteps"></div>
+        <div id="wizardContent"></div>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" id="wizardPrev">上一步</button>
+        <div class="foot-right">
+          <button type="button" class="btn" id="wizardCancel">取消</button>
+          <button type="button" class="btn btn-primary" id="wizardNext">下一步</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      var STORAGE_KEY = "restaurantRules";
+      var STEPS = ["规则类型", "详细配置", "时间设置", "会员等级", "确认保存"];
+
+      var weekdays = [
+        { id: "mon", name: "周一", short: "一" },
+        { id: "tue", name: "周二", short: "二" },
+        { id: "wed", name: "周三", short: "三" },
+        { id: "thu", name: "周四", short: "四" },
+        { id: "fri", name: "周五", short: "五" },
+        { id: "sat", name: "周六", short: "六" },
+        { id: "sun", name: "周日", short: "日" }
+      ];
+      var memberLevels = [
+        { id: "platinum", name: "白金会员", icon: "💎", color: "#7c3aed" },
+        { id: "gold", name: "黄金会员", icon: "🥇", color: "#d97706" },
+        { id: "silver", name: "白银会员", icon: "🥈", color: "#64748b" },
+        { id: "bronze", name: "青铜会员", icon: "🥉", color: "#b45309" },
+        { id: "normal", name: "普通会员", icon: "👤", color: "#475569" }
+      ];
+      var dishCategories = [
+        { id: 1, name: "海鲜类", count: 12 },
+        { id: 2, name: "肉类", count: 15 },
+        { id: 3, name: "蔬菜类", count: 20 },
+        { id: 4, name: "主食类", count: 10 },
+        { id: 5, name: "汤品类", count: 8 },
+        { id: 6, name: "甜品类", count: 8 },
+        { id: 7, name: "饮料类", count: 12 },
+        { id: 8, name: "水果类", count: 10 }
+      ];
+      var dishes = [
+        { id: 1, name: "清蒸大闸蟹", category: "海鲜类", price: "¥88", description: "秋季限定，肥美鲜嫩" },
+        { id: 2, name: "蒜蓉粉丝扇贝", category: "海鲜类", price: "¥48", description: "蒜香浓郁，粉丝Q弹" },
+        { id: 3, name: "白灼基围虾", category: "海鲜类", price: "¥68", description: "新鲜活虾，原汁原味" },
+        { id: 4, name: "红烧带鱼", category: "海鲜类", price: "¥45", description: "家常味道，鲜美入味" },
+        { id: 5, name: "清蒸鲈鱼", category: "海鲜类", price: "¥78", description: "刺身级食材，肉质鲜嫩" },
+        { id: 6, name: "椒盐鱿鱼", category: "海鲜类", price: "¥52", description: "外酥里嫩，香辣可口" },
+        { id: 7, name: "酱爆花甲", category: "海鲜类", price: "¥42", description: "酱香浓郁，肉质鲜甜" },
+        { id: 8, name: "蒜蓉生蚝", category: "海鲜类", price: "¥56", description: "鲜嫩多汁，蒜香扑鼻" },
+        { id: 9, name: "红烧黄鱼", category: "海鲜类", price: "¥65", description: "肉质细腻，汤汁浓郁" },
+        { id: 10, name: "清蒸石斑鱼", category: "海鲜类", price: "¥128", description: "高档海鱼，刺身级品质" },
+        { id: 11, name: "油焖大虾", category: "海鲜类", price: "¥72", description: "个大肥美，色泽红亮" },
+        { id: 12, name: "香煎三文鱼", category: "海鲜类", price: "¥88", description: "挪威进口，外酥里嫩" },
+        { id: 13, name: "红烧肉", category: "肉类", price: "¥58", description: "肥而不腻，入口即化" },
+        { id: 14, name: "黑椒牛排", category: "肉类", price: "¥78", description: "澳洲进口，肉质鲜嫩" },
+        { id: 15, name: "口水鸡", category: "肉类", price: "¥42", description: "麻辣鲜香，口感丰富" },
+        { id: 16, name: "宫保鸡丁", category: "肉类", price: "¥38", description: "川菜经典，酸甜微辣" },
+        { id: 17, name: "孜然羊肉", category: "肉类", price: "¥55", description: "西北风味，孜然浓郁" },
+        { id: 18, name: "糖醋排骨", category: "肉类", price: "¥62", description: "酸甜适口，色泽红亮" },
+        { id: 19, name: "回锅肉", category: "肉类", price: "¥45", description: "川菜之首，肥而不腻" },
+        { id: 20, name: "京酱肉丝", category: "肉类", price: "¥42", description: "北京特色，酱香浓郁" },
+        { id: 21, name: "蒜泥白肉", category: "肉类", price: "¥48", description: "四川凉菜，蒜香浓郁" },
+        { id: 22, name: "毛血旺", category: "肉类", price: "¥58", description: "重庆特色，麻辣鲜香" },
+        { id: 23, name: "鱼香肉丝", category: "肉类", price: "¥38", description: "川菜经典，酸甜微辣" },
+        { id: 24, name: "东坡肉", category: "肉类", price: "¥68", description: "杭州名菜，肥而不腻" },
+        { id: 25, name: "可乐鸡翅", category: "肉类", price: "¥45", description: "中西合璧，香甜可口" },
+        { id: 26, name: "小炒黄牛肉", category: "肉类", price: "¥58", description: "湖南特色，鲜嫩爽滑" },
+        { id: 27, name: "梅菜扣肉", category: "肉类", price: "¥55", description: "广东名菜，肥而不腻" },
+        { id: 28, name: "清炒时蔬", category: "蔬菜类", price: "¥28", description: "时令蔬菜，清淡健康" },
+        { id: 29, name: "干煸四季豆", category: "蔬菜类", price: "¥32", description: "川菜经典，外酥里嫩" },
+        { id: 30, name: "麻婆豆腐", category: "蔬菜类", price: "¥28", description: "川菜名菜，麻辣鲜香" },
+        { id: 31, name: "地三鲜", category: "蔬菜类", price: "¥32", description: "东北特色，下饭神器" },
+        { id: 32, name: "上汤娃娃菜", category: "蔬菜类", price: "¥35", description: "汤鲜味美，清淡健康" },
+        { id: 33, name: "酸辣土豆丝", category: "蔬菜类", price: "¥22", description: "家常菜，酸辣爽脆" },
+        { id: 34, name: "蒜蓉西兰花", category: "蔬菜类", price: "¥28", description: "营养丰富，口感清淡" },
+        { id: 35, name: "虎皮青椒", category: "蔬菜类", price: "¥25", description: "川菜特色，外酥里嫩" },
+        { id: 36, name: "干锅花菜", category: "蔬菜类", price: "¥35", description: "川菜风味，麻辣鲜香" },
+        { id: 37, name: "手撕包菜", category: "蔬菜类", price: "¥22", description: "简单美味，健康下饭" },
+        { id: 38, name: "素炒青菜", category: "蔬菜类", price: "¥20", description: "清淡健康，时令新鲜" },
+        { id: 39, name: "香菇油菜", category: "蔬菜类", price: "¥32", description: "营养丰富，口感鲜美" },
+        { id: 40, name: "蒜苔炒肉", category: "蔬菜类", price: "¥38", description: "蒜香浓郁，肉嫩菜鲜" },
+        { id: 41, name: "醋溜白菜", category: "蔬菜类", price: "¥22", description: "酸甜爽口，开胃下饭" },
+        { id: 42, name: "拍黄瓜", category: "蔬菜类", price: "¥18", description: "清爽解腻，简单美味" },
+        { id: 43, name: "凉拌木耳", category: "蔬菜类", price: "¥25", description: "爽脆可口，营养丰富" },
+        { id: 44, name: "油焖茄子", category: "蔬菜类", price: "¥32", description: "酱香浓郁，软糯香甜" },
+        { id: 45, name: "干煸苦瓜", category: "蔬菜类", price: "¥28", description: "清热去火，外酥里嫩" },
+        { id: 46, name: "芹菜炒香干", category: "蔬菜类", price: "¥30", description: "清爽下饭，营养丰富" },
+        { id: 47, name: "干锅土豆片", category: "蔬菜类", price: "¥32", description: "外酥里嫩，香辣下饭" },
+        { id: 48, name: "扬州炒饭", category: "主食类", price: "¥35", description: "淮扬名点，配料丰富" },
+        { id: 49, name: "蛋炒饭", category: "主食类", price: "¥22", description: "简单美味，家常味道" },
+        { id: 50, name: "牛肉炒面", category: "主食类", price: "¥32", description: "面条劲道，牛肉鲜嫩" },
+        { id: 51, name: "担担面", category: "主食类", price: "¥28", description: "四川特色，麻辣鲜香" },
+        { id: 52, name: "小笼包", category: "主食类", price: "¥35", description: "上海特色，皮薄馅鲜" },
+        { id: 53, name: "生煎包", category: "主食类", price: "¥32", description: "上海特色，底脆皮薄" },
+        { id: 54, name: "饺子", category: "主食类", price: "¥28", description: "北方主食，馅料多样" },
+        { id: 55, name: "肉夹馍", category: "主食类", price: "¥25", description: "西安特色，馍脆肉香" },
+        { id: 56, name: "凉皮", category: "主食类", price: "¥22", description: "陕西特色，爽滑筋道" },
+        { id: 57, name: "锅贴", category: "主食类", price: "¥30", description: "外酥里嫩，馅料丰富" },
+        { id: 58, name: "南瓜汤", category: "汤品类", price: "¥25", description: "香甜可口，营养丰富" },
+        { id: 59, name: "西红柿鸡蛋汤", category: "汤品类", price: "¥18", description: "家常汤品，简单美味" },
+        { id: 60, name: "紫菜蛋花汤", category: "汤品类", price: "¥16", description: "清爽解腻，做法简单" },
+        { id: 61, name: "鸡汤", category: "汤品类", price: "¥48", description: "营养丰富，汤鲜味美" },
+        { id: 62, name: "排骨汤", category: "汤品类", price: "¥52", description: "滋补养生，肉烂汤鲜" },
+        { id: 63, name: "酸辣汤", category: "汤品类", price: "¥22", description: "酸辣爽口，开胃暖胃" },
+        { id: 64, name: "冬瓜排骨汤", category: "汤品类", price: "¥45", description: "清淡解腻，营养丰富" },
+        { id: 65, name: "三鲜汤", category: "汤品类", price: "¥38", description: "配料丰富，汤鲜味美" },
+        { id: 66, name: "提拉米苏", category: "甜品类", price: "¥32", description: "意大利经典，入口即化" },
+        { id: 67, name: "芒果布丁", category: "甜品类", price: "¥25", description: "热带水果，香甜爽滑" },
+        { id: 68, name: "红豆沙", category: "甜品类", price: "¥18", description: "中式甜品，香甜软糯" },
+        { id: 69, name: "银耳莲子羹", category: "甜品类", price: "¥22", description: "滋补养生，清甜爽口" },
+        { id: 70, name: "冰淇淋", category: "甜品类", price: "¥28", description: "冰凉解暑，口味多样" },
+        { id: 71, name: "汤圆", category: "甜品类", price: "¥20", description: "传统美食，寓意团圆" },
+        { id: 72, name: "桂花糕", category: "甜品类", price: "¥25", description: "传统糕点，桂花清香" },
+        { id: 73, name: "杨枝甘露", category: "甜品类", price: "¥28", description: "港式甜品，香甜清爽" },
+        { id: 74, name: "鲜榨橙汁", category: "饮料类", price: "¥18", description: "新鲜橙子，维生素C丰富" },
+        { id: 75, name: "可乐", category: "饮料类", price: "¥8", description: "经典可乐，清爽解腻" },
+        { id: 76, name: "雪碧", category: "饮料类", price: "¥8", description: "透心凉，心飞扬" },
+        { id: 77, name: "椰汁", category: "饮料类", price: "¥12", description: "海南椰汁，清甜可口" },
+        { id: 78, name: "酸梅汤", category: "饮料类", price: "¥15", description: "酸甜解腻，传统饮品" },
+        { id: 79, name: "鲜榨西瓜汁", category: "饮料类", price: "¥16", description: "夏季解暑，清爽甜美" },
+        { id: 80, name: "鲜榨苹果汁", category: "饮料类", price: "¥16", description: "新鲜苹果，营养丰富" },
+        { id: 81, name: "冰红茶", category: "饮料类", price: "¥10", description: "清爽解腻，经典口味" },
+        { id: 82, name: "柠檬茶", category: "饮料类", price: "¥12", description: "酸甜清新，解腻佳品" },
+        { id: 83, name: "绿豆沙", category: "饮料类", price: "¥14", description: "清热解暑，传统饮品" },
+        { id: 84, name: "奶茶", category: "饮料类", price: "¥18", description: "台式经典，奶香浓郁" },
+        { id: 85, name: "豆浆", category: "饮料类", price: "¥8", description: "营养早餐，豆香浓郁" },
+        { id: 86, name: "水果拼盘", category: "水果类", price: "¥38", description: "时令水果，营养多样" },
+        { id: 87, name: "西瓜", category: "水果类", price: "¥25", description: "夏季解暑，甜爽多汁" },
+        { id: 88, name: "葡萄", category: "水果类", price: "¥28", description: "新鲜饱满，甘甜可口" },
+        { id: 89, name: "草莓", category: "水果类", price: "¥35", description: "新鲜采摘，香甜诱人" },
+        { id: 90, name: "哈密瓜", category: "水果类", price: "¥30", description: "新疆特产，甜蜜多汁" },
+        { id: 91, name: "车厘子", category: "水果类", price: "¥48", description: "进口水果，品质上乘" },
+        { id: 92, name: "猕猴桃", category: "水果类", price: "¥32", description: "营养丰富，酸甜适中" },
+        { id: 93, name: "火龙果", category: "水果类", price: "¥25", description: "热带水果，清甜爽口" },
+        { id: 94, name: "芒果", category: "水果类", price: "¥28", description: "热带水果，香甜浓郁" },
+        { id: 95, name: "橙子", category: "水果类", price: "¥18", description: "富含维C，酸甜可口" }
+      ];
+
+      function initialRules() {
+        return [
+          {
+            id: 1,
+            name: "海鲜类每轮限购",
+            type: "按桌/订单限购",
+            round: "每轮",
+            method: "按每个分类限购",
+            persons: "1-4人",
+            dishes: "海鲜类(12)",
+            status: "active",
+            created: "2024-01-15",
+            description: "每桌每轮海鲜类菜品限购3份",
+            selectedCategories: [1],
+            quantitySettings: { category_1: 3 },
+            maxSameDishSettings: { category_1: 2 },
+            maxTotalQuantity: 10,
+            maxRounds: 3
+          },
+          {
+            id: 2,
+            name: "招牌菜首轮限购",
+            type: "按人限购",
+            round: "多轮",
+            method: "按每种菜品限购",
+            persons: "5-8人",
+            dishes: "招牌菜品(5)",
+            status: "active",
+            created: "2024-01-10",
+            description: "每人第一轮招牌菜品限购1份",
+            rounds: [
+              {
+                roundName: "第一轮",
+                selectedCategories: [1, 4, 2, 5],
+                selectedDishes: [1, 5, 48, 13, 61],
+                quantitySettings: { dish_1: 1, dish_5: 1, dish_48: 1, dish_13: 1, dish_61: 1 },
+                maxTotalQuantity: 3
+              },
+              { roundName: "第二轮", selectedCategories: [], selectedDishes: [], quantitySettings: {}, maxTotalQuantity: 5 },
+              { roundName: "第三轮", selectedCategories: [], selectedDishes: [], quantitySettings: {}, maxTotalQuantity: 4 }
+            ]
+          },
+          {
+            id: 3,
+            name: "甜品总量限制",
+            type: "按桌/订单限购",
+            round: "与轮次无关",
+            method: "按每个分类限购",
+            persons: "所有人数",
+            dishes: "甜品类(8)",
+            status: "inactive",
+            created: "2024-01-05",
+            description: "每桌整个用餐期间甜品类限购5份",
+            selectedCategories: [6],
+            quantitySettings: { category_6: 5 },
+            maxSameDishSettings: { category_6: 2 }
+          },
+          {
+            id: 4,
+            name: "蔬菜类每轮限购测试",
+            type: "按桌/订单限购",
+            round: "每轮",
+            method: "按每个分类限购",
+            persons: "1-6人",
+            dishes: "蔬菜类(20)",
+            status: "active",
+            created: "2024-01-20",
+            description: "每桌每轮蔬菜类菜品限购5份，其中相同菜品限购2份",
+            selectedCategories: [3],
+            quantitySettings: { category_3: 5 },
+            maxSameDishSettings: { category_3: 2 },
+            maxTotalQuantity: 15
+          }
+        ];
+      }
+
+      function createEmptyDraft() {
+        return {
+          step: 1,
+          type: null,
+          round: null,
+          method: null,
+          name: "",
+          description: "",
+          personRanges: [{ min: 1, max: 4 }],
+          selectedCategories: [],
+          selectedDishes: [],
+          quantitySettings: {},
+          maxSameDishSettings: {},
+          rounds: [],
+          activeRound: 0,
+          enableMemberLevels: false,
+          selectedMemberLevels: [],
+          enableTimeSettings: false,
+          selectedWeekdays: [],
+          timeRanges: [],
+          weekdayTimeRanges: {}
+        };
+      }
+
+      function typeKeyToLabel(type) {
+        if (type === "perTable") return "按桌/订单限购";
+        if (type === "perPerson") return "按人限购";
+        return "";
+      }
+      function roundKeyToLabel(round) {
+        if (round === "perRound") return "每轮";
+        if (round === "multiRound") return "多轮";
+        if (round === "ignoreRound") return "与轮次无关";
+        return "";
+      }
+      function methodKeyToLabel(method) {
+        if (method === "perCategory") return "按每个分类限购";
+        if (method === "perDish") return "按每种菜品限购";
+        return "";
+      }
+      function labelToTypeKey(type) { return type === "按人限购" ? "perPerson" : "perTable"; }
+      function labelToRoundKey(round) {
+        if (round === "多轮") return "multiRound";
+        if (round === "与轮次无关") return "ignoreRound";
+        return "perRound";
+      }
+      function labelToMethodKey(method) { return method === "按每种菜品限购" ? "perDish" : "perCategory"; }
+
+      function parsePersonRanges(persons) {
+        if (persons.indexOf("所有") >= 0) return [{ min: 1, max: 99 }];
+        var parts = persons.split("，");
+        var out = [];
+        for (var i = 0; i < parts.length; i++) {
+          var m = parts[i].match(/(\d+)-(\d+)/);
+          if (m) out.push({ min: Number(m[1]), max: Number(m[2]) });
+        }
+        return out.length ? out : [{ min: 1, max: 4 }];
+      }
+
+      function ruleToDraft(rule) {
+        var weekdayMap = {};
+        if (rule.weekdayTimeRanges && typeof rule.weekdayTimeRanges === "object") {
+          Object.keys(rule.weekdayTimeRanges).forEach(function (dayId) {
+            var ranges = rule.weekdayTimeRanges[dayId] || [];
+            weekdayMap[dayId] = ranges.map(function (t) { return { start: t.start, end: t.end }; });
+          });
+        } else if (rule.enableTimeSettings && rule.weekdays && rule.weekdays.length) {
+          var legacyRanges = (rule.timeRanges || []).map(function (t) { return { start: t.start, end: t.end }; });
+          rule.weekdays.forEach(function (dayId) {
+            weekdayMap[dayId] = legacyRanges.map(function (t) { return { start: t.start, end: t.end }; });
+          });
+        }
+        var selectedWeekdays = Object.keys(weekdayMap).length
+          ? Object.keys(weekdayMap)
+          : (rule.weekdays || []).slice();
+        return {
+          step: 1,
+          type: labelToTypeKey(rule.type),
+          round: labelToRoundKey(rule.round),
+          method: labelToMethodKey(rule.method),
+          name: rule.name,
+          description: rule.description,
+          personRanges: parsePersonRanges(rule.persons),
+          selectedCategories: (rule.selectedCategories || []).slice(),
+          selectedDishes: (rule.selectedDishes || []).slice(),
+          quantitySettings: Object.assign({}, rule.quantitySettings || {}),
+          maxSameDishSettings: Object.assign({}, rule.maxSameDishSettings || {}),
+          minTotalQuantity: rule.minTotalQuantity,
+          maxTotalQuantity: rule.maxTotalQuantity,
+          minPerPersonQuantity: rule.minPerPersonQuantity,
+          maxPerPersonQuantity: rule.maxPerPersonQuantity,
+          minSingleOrder: rule.minSingleOrder,
+          maxSingleOrder: rule.maxSingleOrder,
+          rounds: (rule.rounds || []).map(function (r) {
+            return Object.assign({}, r, { quantitySettings: Object.assign({}, r.quantitySettings || {}) });
+          }),
+          activeRound: 0,
+          enableMemberLevels: !!rule.enableMemberLevels,
+          selectedMemberLevels: (rule.memberLevels || []).slice(),
+          enableTimeSettings: !!rule.enableTimeSettings,
+          selectedWeekdays: selectedWeekdays,
+          timeRanges: (rule.timeRanges || []).map(function (t) { return { start: t.start, end: t.end }; }),
+          weekdayTimeRanges: weekdayMap,
+          maxRounds: rule.maxRounds
+        };
+      }
+
+      function buildDishesSummary(draft) {
+        if (draft.round === "multiRound") {
+          var roundSummary = draft.rounds.map(function (r) {
+            if (draft.method === "perCategory") {
+              var names = r.selectedCategories.map(function (id) {
+                var cat = dishCategories.find(function (c) { return c.id === id; });
+                return cat ? cat.name : "";
+              }).filter(Boolean);
+              return r.roundName + ": " + names.join("，") + "(" + names.length + "个分类)";
+            }
+            var dnames = r.selectedDishes.map(function (id) {
+              var d = dishes.find(function (x) { return x.id === id; });
+              return d ? d.name : "";
+            }).filter(Boolean);
+            return r.roundName + ": " + dnames.join("，") + "(" + dnames.length + "个菜品)";
+          });
+          return draft.rounds.length + "个轮次 - " + roundSummary.join("；");
+        }
+        if (draft.method === "perCategory") {
+          var selected = dishCategories.filter(function (c) { return draft.selectedCategories.indexOf(c.id) >= 0; });
+          return selected.map(function (c) { return c.name; }).join("，") + "(" + selected.length + ")";
+        }
+        var selectedD = dishes.filter(function (d) { return draft.selectedDishes.indexOf(d.id) >= 0; });
+        return "菜品(" + selectedD.length + ")";
+      }
+
+      function draftToRule(draft, existing) {
+        var isMulti = draft.round === "multiRound";
+        var weekdayTimeRanges = undefined;
+        if (draft.enableTimeSettings) {
+          weekdayTimeRanges = {};
+          (draft.selectedWeekdays || []).forEach(function (dayId) {
+            var ranges = (draft.weekdayTimeRanges && draft.weekdayTimeRanges[dayId]) || [];
+            weekdayTimeRanges[dayId] = ranges.map(function (t) { return { start: t.start, end: t.end }; });
+          });
+        }
+        var firstWeekdayRanges = [];
+        if (weekdayTimeRanges && Object.keys(weekdayTimeRanges).length) {
+          var firstDay = Object.keys(weekdayTimeRanges)[0];
+          firstWeekdayRanges = (weekdayTimeRanges[firstDay] || []).map(function (t) { return { start: t.start, end: t.end }; });
+        }
+        return {
+          id: existing ? existing.id : 0,
+          name: draft.name.trim(),
+          type: typeKeyToLabel(draft.type),
+          round: roundKeyToLabel(draft.round),
+          method: methodKeyToLabel(draft.method),
+          persons: (draft.personRanges || []).map(function (r) { return r.min + "-" + r.max + "人"; }).join("，") || "1-4人",
+          dishes: buildDishesSummary(draft),
+          status: existing ? existing.status : "active",
+          created: existing ? existing.created : new Date().toISOString().split("T")[0],
+          description: draft.description.trim() || draft.name.trim(),
+          rounds: isMulti ? draft.rounds : undefined,
+          selectedCategories: !isMulti ? draft.selectedCategories : undefined,
+          selectedDishes: !isMulti ? draft.selectedDishes : undefined,
+          quantitySettings: !isMulti ? draft.quantitySettings : undefined,
+          maxSameDishSettings: !isMulti ? draft.maxSameDishSettings : undefined,
+          minTotalQuantity: !isMulti ? draft.minTotalQuantity : undefined,
+          maxTotalQuantity: !isMulti ? draft.maxTotalQuantity : undefined,
+          minPerPersonQuantity: draft.type === "perTable" && !isMulti ? draft.minPerPersonQuantity : undefined,
+          maxPerPersonQuantity: draft.type === "perTable" && !isMulti ? draft.maxPerPersonQuantity : undefined,
+          minSingleOrder: draft.type === "perTable" && !isMulti ? draft.minSingleOrder : undefined,
+          maxSingleOrder: draft.type === "perTable" && !isMulti ? draft.maxSingleOrder : undefined,
+          enableMemberLevels: !!draft.enableMemberLevels,
+          memberLevels: draft.enableMemberLevels ? draft.selectedMemberLevels : undefined,
+          enableTimeSettings: !!draft.enableTimeSettings,
+          weekdays: draft.enableTimeSettings ? draft.selectedWeekdays : undefined,
+          timeRanges: draft.enableTimeSettings ? firstWeekdayRanges : undefined,
+          weekdayTimeRanges: draft.enableTimeSettings ? weekdayTimeRanges : undefined,
+          maxRounds: draft.maxRounds
+        };
+      }
+
+      function validateDraftStep2(draft) {
+        if (!draft.name.trim()) return "请输入规则名称";
+        if (!draft.personRanges.length) return "请至少设置一个人数区间";
+        if (draft.round === "multiRound") {
+          if (!draft.rounds.length) return "请至少添加一个轮次";
+          for (var i = 0; i < draft.rounds.length; i++) {
+            var round = draft.rounds[i];
+            if (draft.method === "perCategory" && !round.selectedCategories.length) return "第 " + (i + 1) + " 轮请至少选择一个菜品分类";
+            if (draft.method === "perDish" && !round.selectedDishes.length) return "第 " + (i + 1) + " 轮请至少选择一个菜品";
+            var hasQty = Object.values(round.quantitySettings || {}).some(function (v) { return v > 0; });
+            if (!hasQty) return "第 " + (i + 1) + " 轮请至少设置一个限购数量";
+          }
+          return null;
+        }
+        if (draft.method === "perCategory" && !draft.selectedCategories.length) return "请至少选择一个菜品分类";
+        if (draft.method === "perDish" && !draft.selectedDishes.length) return "请至少选择一个菜品";
+        var hasQty2 = Object.values(draft.quantitySettings || {}).some(function (v) { return v > 0; });
+        if (!hasQty2) return "请至少设置一个限购数量";
+        return null;
+      }
+
+      function getCategoryIdByName(name) {
+        var c = dishCategories.find(function (x) { return x.name === name; });
+        return c ? c.id : undefined;
+      }
+      function getRoundSettings(rule, round) {
+        var isMultiRound = rule.round === "多轮";
+        var roundConfig = rule.rounds && rule.rounds[round - 1];
+        if (isMultiRound && roundConfig) {
+          return {
+            roundName: roundConfig.roundName,
+            selectedCategories: roundConfig.selectedCategories || [],
+            selectedDishes: roundConfig.selectedDishes || [],
+            quantitySettings: roundConfig.quantitySettings || {},
+            maxSameDishSettings: roundConfig.maxSameDishSettings,
+            minTotalQuantity: roundConfig.minTotalQuantity,
+            maxTotalQuantity: roundConfig.maxTotalQuantity,
+            minPerPersonQuantity: roundConfig.minPerPersonQuantity,
+            maxPerPersonQuantity: roundConfig.maxPerPersonQuantity,
+            minSingleOrder: roundConfig.minSingleOrder,
+            maxSingleOrder: roundConfig.maxSingleOrder
+          };
+        }
+        return {
+          roundName: "单轮",
+          selectedCategories: rule.selectedCategories || [],
+          selectedDishes: rule.selectedDishes || [],
+          quantitySettings: rule.quantitySettings || {},
+          maxSameDishSettings: rule.maxSameDishSettings,
+          minTotalQuantity: rule.minTotalQuantity,
+          maxTotalQuantity: rule.maxTotalQuantity,
+          minPerPersonQuantity: rule.minPerPersonQuantity,
+          maxPerPersonQuantity: rule.maxPerPersonQuantity,
+          minSingleOrder: rule.minSingleOrder,
+          maxSingleOrder: rule.maxSingleOrder
+        };
+      }
+      function validateOrderItem(rule, newItem, ctx) {
+        var violations = [];
+        var personCount = ctx.personCount;
+        var currentRoundItems = ctx.currentRoundItems;
+        var isPerTable = rule.type === "按桌/订单限购";
+        var settings = getRoundSettings(rule, newItem.round);
+
+        if (rule.maxRounds !== undefined && newItem.round > rule.maxRounds) {
+          violations.push({ type: "error", message: "该规则仅在第 1–" + rule.maxRounds + " 轮生效，当前为第 " + newItem.round + " 轮，无法下单" });
+          return violations;
+        }
+        if (settings.maxTotalQuantity !== undefined) {
+          var currentTotal = currentRoundItems.reduce(function (s, i) { return s + i.quantity; }, 0);
+          var newTotal = currentTotal + newItem.quantity;
+          if (newTotal > settings.maxTotalQuantity) {
+            violations.push({ type: "error", message: "每轮总数量不能超过 " + settings.maxTotalQuantity + " 份（当前 " + currentTotal + " 份，拟加 " + newItem.quantity + " 份）" });
+          }
+        }
+        if (isPerTable && settings.maxPerPersonQuantity !== undefined && personCount > 0) {
+          var cur = currentRoundItems.reduce(function (s, i) { return s + i.quantity; }, 0);
+          var next = cur + newItem.quantity;
+          var perPerson = Math.ceil(next / personCount);
+          if (perPerson > settings.maxPerPersonQuantity) {
+            violations.push({ type: "error", message: "每人每轮不能超过 " + settings.maxPerPersonQuantity + " 份（当前约 " + Math.ceil(cur / personCount) + " 份/人）" });
+          }
+        }
+        if (isPerTable && settings.maxSingleOrder !== undefined && newItem.quantity > settings.maxSingleOrder) {
+          violations.push({ type: "error", message: "单次下单不能超过 " + settings.maxSingleOrder + " 份" });
+        }
+        if (rule.method === "按每种菜品限购") {
+          var maxSameDish = settings.quantitySettings["dish_" + newItem.dishId];
+          if (maxSameDish !== undefined) {
+            var existing = currentRoundItems.find(function (i) { return i.dishId === newItem.dishId; });
+            var currentQ = existing ? existing.quantity : 0;
+            var nextQ = currentQ + newItem.quantity;
+            if (nextQ > maxSameDish) {
+              violations.push({ type: "error", message: newItem.dishName + (isPerTable ? "每桌" : "每人") + "每轮限购 " + maxSameDish + " 份（已点 " + currentQ + " 份）", dishName: newItem.dishName });
+            }
+          }
+        }
+        if (rule.method === "按每个分类限购") {
+          var categoryId = getCategoryIdByName(newItem.category);
+          if (categoryId !== undefined && settings.selectedCategories.indexOf(categoryId) >= 0) {
+            var maxCategory = settings.quantitySettings["category_" + categoryId];
+            if (maxCategory !== undefined) {
+              var categoryTotal = currentRoundItems.filter(function (i) { return i.category === newItem.category; }).reduce(function (s, i) { return s + i.quantity; }, 0);
+              var newCategoryTotal = categoryTotal + newItem.quantity;
+              if (newCategoryTotal > maxCategory) {
+                violations.push({ type: "error", message: newItem.category + " 限购 " + maxCategory + " 份（当前 " + categoryTotal + " 份）" });
+              }
+            }
+            var maxSame = settings.maxSameDishSettings && settings.maxSameDishSettings["category_" + categoryId];
+            if (maxSame !== undefined) {
+              var existing2 = currentRoundItems.find(function (i) { return i.dishId === newItem.dishId; });
+              var currentQ2 = existing2 ? existing2.quantity : 0;
+              var nextQ2 = currentQ2 + newItem.quantity;
+              if (nextQ2 > maxSame) {
+                violations.push({ type: "error", message: newItem.dishName + " 限购 " + maxSame + " 份（已点 " + currentQ2 + " 份）", dishName: newItem.dishName });
+              }
+            }
+          }
+        }
+        return violations;
+      }
+      function canAddDish(rule, newItem, ctx) {
+        if (!rule || rule.status !== "active") return { canAdd: true };
+        var violations = validateOrderItem(rule, newItem, ctx);
+        if (violations.length > 0) return { canAdd: false, reason: violations[0].message };
+        return { canAdd: true };
+      }
+
+      function loadRules() {
+        try {
+          var raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) return initialRules();
+          var parsed = JSON.parse(raw);
+          return Array.isArray(parsed) && parsed.length > 0 ? parsed : initialRules();
+        } catch (e) {
+          return initialRules();
+        }
+      }
+      function saveRules(rules) { localStorage.setItem(STORAGE_KEY, JSON.stringify(rules)); }
+      function nextRuleId(rules) { return rules.reduce(function (m, r) { return Math.max(m, r.id); }, 0) + 1; }
+      function esc(s) {
+        return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+      }
+
+      var state = {
+        tab: "rules",
+        rules: loadRules(),
+        wizardOpen: false,
+        editingRuleId: null,
+        draft: createEmptyDraft(),
+        sim: {
+          selectedRuleId: null,
+          personCount: 4,
+          memberLevel: "normal",
+          currentRound: 1,
+          totalRounds: 5,
+          orderItems: [],
+          activeCategory: "all",
+          violations: []
+        }
+      };
+
+      function getSelectedRule() {
+        return state.rules.find(function (r) { return r.id === state.sim.selectedRuleId; }) || null;
+      }
+      function getActiveRules() {
+        return state.rules.filter(function (r) { return r.status === "active"; });
+      }
+      function buildRulePreview(draft) {
+        if (!draft.type || !draft.round || !draft.method) return { typeText: "", descText: "请选择规则类型" };
+        return {
+          typeText: typeKeyToLabel(draft.type) + " - " + roundKeyToLabel(draft.round) + " - " + methodKeyToLabel(draft.method),
+          descText: draft.method === "perCategory" ? "按菜品分类设置限购数量" : "按具体菜品设置限购数量"
+        };
+      }
+
+      function setTab(tab) {
+        state.tab = tab;
+        document.getElementById("rulesPanel").style.display = tab === "rules" ? "" : "none";
+        document.getElementById("simulatorPanel").style.display = tab === "simulator" ? "" : "none";
+        Array.prototype.forEach.call(document.querySelectorAll(".pill[data-tab]"), function (btn) {
+          btn.classList.toggle("active", btn.getAttribute("data-tab") === tab);
+        });
+      }
+
+      function renderRuleTable() {
+        document.getElementById("ruleCountBadge").textContent = "共 " + state.rules.length + " 条";
+        var tbody = document.getElementById("rulesTbody");
+        if (!state.rules.length) {
+          tbody.innerHTML = "<tr><td colspan='8' style='text-align:center;color:#6b7280;padding:22px;'>暂无规则</td></tr>";
+          return;
+        }
+        tbody.innerHTML = state.rules.map(function (rule) {
+          var timeTxt = rule.enableTimeSettings && rule.weekdays && rule.weekdays.length ? "按时段生效" : "全天生效";
+          var memberTxt = rule.enableMemberLevels && rule.memberLevels && rule.memberLevels.length
+            ? rule.memberLevels.map(function (id) {
+                var lv = memberLevels.find(function (m) { return m.id === id; });
+                return lv ? (lv.icon + " " + lv.name) : id;
+              }).join("、")
+            : "全部";
+          return (
+            "<tr>" +
+              "<td><div style='font-weight:600;'>" + esc(rule.name) + "</div><div class='sub'>" + esc(rule.description || "") + "</div></td>" +
+              "<td><span class='sub' style='font-size:12px;color:#374151;'>" + esc(rule.type + " · " + rule.round + " · " + rule.method) + "</span></td>" +
+              "<td>" + esc(rule.persons) + "</td>" +
+              "<td>" + esc(timeTxt) + "</td>" +
+              "<td style='max-width:160px;'>" + esc(memberTxt) + "</td>" +
+              "<td style='max-width:220px;'><span class='sub'>" + esc(rule.dishes) + "</span></td>" +
+              "<td>" + (rule.status === "active" ? "<span class='badge ok'>启用</span>" : "<span class='badge off'>禁用</span>") + "</td>" +
+              "<td><div class='op-row'>" +
+                "<button class='btn' data-rule-action='edit' data-rule-id='" + rule.id + "'>编辑</button>" +
+                "<button class='btn' data-rule-action='copy' data-rule-id='" + rule.id + "'>复制</button>" +
+                "<button class='btn' data-rule-action='toggle' data-rule-id='" + rule.id + "'>" + (rule.status === "active" ? "禁用" : "启用") + "</button>" +
+                "<button class='btn btn-danger' data-rule-action='delete' data-rule-id='" + rule.id + "'>删除</button>" +
+              "</div></td>" +
+            "</tr>"
+          );
+        }).join("");
+      }
+
+      function renderSimulatorSelectors() {
+        var select = document.getElementById("simRuleSelect");
+        var activeRules = getActiveRules();
+        var disabledRules = state.rules.filter(function (r) { return r.status !== "active"; });
+        var options = ["<option value=''>不应用规则</option>"];
+        activeRules.forEach(function (r) {
+          options.push("<option value='" + r.id + "'" + (state.sim.selectedRuleId === r.id ? " selected" : "") + ">" + esc(r.name) + "</option>");
+        });
+        if (disabledRules.length) {
+          options.push("<optgroup label='已禁用'>");
+          disabledRules.forEach(function (r) {
+            options.push("<option value='" + r.id + "' disabled>" + esc(r.name) + "（禁用）</option>");
+          });
+          options.push("</optgroup>");
+        }
+        select.innerHTML = options.join("");
+
+        var memberSelect = document.getElementById("simMemberLevel");
+        memberSelect.innerHTML = memberLevels.map(function (m) {
+          var sel = state.sim.memberLevel === m.id ? " selected" : "";
+          return "<option value='" + m.id + "'" + sel + ">" + esc(m.icon + " " + m.name) + "</option>";
+        }).join("");
+
+        document.getElementById("simPersonCount").value = String(state.sim.personCount);
+        document.getElementById("simRoundLabel").textContent = "第 " + state.sim.currentRound + " 轮";
+      }
+
+      function renderSimulatorCategories() {
+        var row = document.getElementById("simCategoryRow");
+        var html = [];
+        var allActive = state.sim.activeCategory === "all" ? " active" : "";
+        html.push("<button type='button' class='cat-pill" + allActive + "' data-sim-cat='all'>全部 (" + dishes.length + ")</button>");
+        dishCategories.forEach(function (c) {
+          var active = state.sim.activeCategory === c.name ? " active" : "";
+          html.push("<button type='button' class='cat-pill" + active + "' data-sim-cat='" + esc(c.name) + "'>" + esc(c.name) + " (" + c.count + ")</button>");
+        });
+        row.innerHTML = html.join("");
+      }
+
+      function renderSimulatorDishGrid() {
+        var grid = document.getElementById("simDishGrid");
+        var selectedRule = getSelectedRule();
+        var filtered = state.sim.activeCategory === "all"
+          ? dishes
+          : dishes.filter(function (d) { return d.category === state.sim.activeCategory; });
+        var roundItems = state.sim.orderItems.filter(function (i) { return i.round === state.sim.currentRound; });
+        var html = filtered.map(function (dish) {
+          var existing = roundItems.find(function (i) { return i.dishId === dish.id; });
+          var qty = existing ? existing.quantity : 0;
+          var probe = {
+            dishId: dish.id,
+            dishName: dish.name,
+            category: dish.category,
+            price: dish.price,
+            quantity: 1,
+            round: state.sim.currentRound
+          };
+          var check = canAddDish(selectedRule, probe, { personCount: state.sim.personCount, currentRoundItems: roundItems });
+          var blocked = !!selectedRule && !check.canAdd && qty === 0;
+          return (
+            "<article class='dish-card" + (blocked ? " blocked" : "") + "'>" +
+              "<div class='dish-top'><div><div class='dish-name'>" + esc(dish.name) + "</div><div class='dish-meta'>" + esc(dish.description || "") + "</div></div><div class='dish-price'>" + esc(dish.price) + "</div></div>" +
+              (blocked && check.reason ? "<div class='dish-err'>" + esc(check.reason) + "</div>" : "<div class='dish-meta'>" + esc(dish.category) + "</div>") +
+              "<div class='qty-row'>" +
+                "<button class='qty-btn' data-dish-op='minus' data-dish-id='" + dish.id + "'" + (qty <= 0 ? " disabled" : "") + ">−</button>" +
+                "<span class='qty-num'>" + qty + "</span>" +
+                "<button class='qty-btn primary' data-dish-op='plus' data-dish-id='" + dish.id + "'" + (blocked ? " disabled" : "") + ">+</button>" +
+              "</div>" +
+            "</article>"
+          );
+        });
+        grid.innerHTML = html.join("");
+      }
+
+      function renderSimulatorOrder() {
+        var roundItems = state.sim.orderItems.filter(function (i) { return i.round === state.sim.currentRound; });
+        var roundTotal = roundItems.reduce(function (s, i) { return s + i.quantity; }, 0);
+        var allTotal = state.sim.orderItems.reduce(function (s, i) { return s + i.quantity; }, 0);
+        document.getElementById("simRoundTotal").textContent = String(roundTotal);
+        document.getElementById("simAllTotal").textContent = String(allTotal);
+        var list = document.getElementById("simOrderList");
+        if (!roundItems.length) {
+          list.innerHTML = "<div class='order-empty'>点击 + 开始模拟点菜</div>";
+        } else {
+          list.innerHTML = roundItems.map(function (item) {
+            return (
+              "<div class='order-item'>" +
+                "<div><div class='order-name'>" + esc(item.dishName) + "</div><div class='order-cat'>" + esc(item.category) + "</div></div>" +
+                "<div style='display:flex;align-items:center;gap:6px;'>" +
+                  "<button class='qty-btn' data-order-op='minus' data-dish-id='" + item.dishId + "'>−</button>" +
+                  "<span class='qty-num'>" + item.quantity + "</span>" +
+                  "<button class='qty-btn primary' data-order-op='plus' data-dish-id='" + item.dishId + "'>+</button>" +
+                "</div>" +
+              "</div>"
+            );
+          }).join("");
+        }
+
+        var vBox = document.getElementById("simViolations");
+        if (state.sim.violations.length) {
+          vBox.style.display = "block";
+          vBox.innerHTML = "<strong>无法加购：</strong> " + state.sim.violations.map(function (v) { return esc(v.message); }).join("；");
+        } else {
+          vBox.style.display = "none";
+          vBox.textContent = "";
+        }
+      }
+
+      function renderSimulator() {
+        renderSimulatorSelectors();
+        renderSimulatorCategories();
+        renderSimulatorDishGrid();
+        renderSimulatorOrder();
+      }
+
+      function openWizard(editRule) {
+        state.wizardOpen = true;
+        state.editingRuleId = editRule ? editRule.id : null;
+        state.draft = editRule ? ruleToDraft(editRule) : createEmptyDraft();
+        document.getElementById("wizardTitle").textContent = state.editingRuleId ? "编辑规则" : "新建规则";
+        document.getElementById("wizardMask").style.display = "flex";
+        document.body.style.overflow = "hidden";
+        renderWizard();
+      }
+      function closeWizard() {
+        state.wizardOpen = false;
+        state.editingRuleId = null;
+        document.getElementById("wizardMask").style.display = "none";
+        document.body.style.overflow = "";
+      }
+
+      function renderWizardSteps() {
+        var container = document.getElementById("wizardSteps");
+        container.innerHTML = STEPS.map(function (label, i) {
+          var n = i + 1;
+          var cls = n === state.draft.step ? "step active" : (n < state.draft.step ? "step done" : "step");
+          return "<div class='" + cls + "'><div class='step-dot'>" + (n < state.draft.step ? "✓" : n) + "</div><div class='step-text'>" + esc(label) + "</div></div>";
+        }).join("");
+      }
+
+      function renderStepType() {
+        var draft = state.draft;
+        var preview = buildRulePreview(draft);
+        return (
+          "<div class='wizard-sec wizard-sec--plain'><h4>限购类型</h4><div class='choice-grid'>" +
+            choice("type", "perTable", draft.type, "🍽 按桌/订单", "以每桌为单位限制") +
+            choice("type", "perPerson", draft.type, "👤 按人限购", "以每人为单位限制") +
+          "</div></div>" +
+          "<div class='wizard-sec wizard-sec--plain'><h4>限购轮次</h4><div class='choice-grid three'>" +
+            choice("round", "perRound", draft.round, "每轮", "每轮独立计算") +
+            choice("round", "multiRound", draft.round, "多轮", "各轮不同策略") +
+            choice("round", "ignoreRound", draft.round, "与轮次无关", "全程总量限制") +
+          "</div></div>" +
+          "<div class='wizard-sec wizard-sec--plain'><h4>限购方式</h4><div class='choice-grid'>" +
+            choice("method", "perCategory", draft.method, "按分类限购", "按菜品分类设限") +
+            choice("method", "perDish", draft.method, "按菜品限购", "按具体菜品设限") +
+          "</div></div>" +
+          "<div class='wizard-note'>预览：" + esc(preview.typeText || "未选择") + "<br/>" + esc(preview.descText) + "</div>"
+        );
+      }
+
+      function selectedEntityIds(draft, isMulti, currentRound, method) {
+        if (isMulti && currentRound) {
+          return method === "perCategory" ? currentRound.selectedCategories : currentRound.selectedDishes;
+        }
+        return method === "perCategory" ? draft.selectedCategories : draft.selectedDishes;
+      }
+
+      function getQtyMap(draft, isMulti, currentRound) {
+        return isMulti && currentRound ? currentRound.quantitySettings : draft.quantitySettings;
+      }
+
+      function renderStepConfig() {
+        var draft = state.draft;
+        var isMulti = draft.round === "multiRound";
+        var currentRound = isMulti ? draft.rounds[draft.activeRound] : null;
+        var method = draft.method;
+
+        var roundTabs = "";
+        if (isMulti) {
+          roundTabs =
+            "<div class='round-tabs'>" +
+            draft.rounds.map(function (r, i) {
+              var active = i === draft.activeRound ? " active" : "";
+              return (
+                "<span class='round-chip'>" +
+                  "<button type='button' class='btn round-tab" + active + "' data-round-index='" + i + "'>" + esc(r.roundName) + "</button>" +
+                  "<button type='button' class='round-del' data-round-del='" + i + "' title='删除轮次' aria-label='删除轮次'>×</button>" +
+                "</span>"
+              );
+            }).join("") +
+            "<button type='button' class='btn round-tab' data-round-add='1'>+ 添加轮次</button>" +
+            "</div>";
+        }
+
+        var entity = method === "perCategory" ? dishCategories : dishes;
+        var selected = selectedEntityIds(draft, isMulti, currentRound, method);
+        var qtyMap = getQtyMap(draft, isMulti, currentRound);
+
+        var entityGrid = "<div class='entity-grid'>" + entity.map(function (item) {
+          var id = item.id;
+          var checked = selected.indexOf(id) >= 0 ? " checked" : "";
+          var label = method === "perCategory" ? item.name : item.name;
+          return (
+            "<label class='entity-item'>" +
+              "<input type='checkbox' data-entity-toggle='" + id + "'" + checked + " />" +
+              "<span>" + esc(label) + "</span>" +
+            "</label>"
+          );
+        }).join("") + "</div>";
+
+        var qtyRows = selected.map(function (id) {
+          var item = entity.find(function (x) { return x.id === id; });
+          if (!item) return "";
+          var key = (method === "perCategory" ? "category_" : "dish_") + id;
+          var value = qtyMap[key] || 0;
+          return (
+            "<div class='qty-row2'>" +
+              "<span>" + esc(item.name) + "</span>" +
+              "<input class='input' type='number' min='0' data-qty-key='" + key + "' value='" + value + "' />" +
+            "</div>"
+          );
+        }).join("");
+
+        return (
+          "<div class='wizard-sec'><h4>基础信息</h4>" +
+            "<div class='field'><label>规则名称</label><input class='input' id='wName' value='" + esc(draft.name) + "' /></div>" +
+            "<div class='field'><label>规则描述</label><textarea class='textarea' id='wDesc'>" + esc(draft.description) + "</textarea></div>" +
+            roundTabs +
+          "</div>" +
+          "<div class='wizard-sec'><h4>选择" + (method === "perCategory" ? "菜品分类" : "菜品") + "</h4>" + entityGrid + "</div>" +
+          "<div class='wizard-sec'><h4>限购数量</h4><div class='qty-list'>" + (qtyRows || "<div style='font-size:12px;color:#6b7280;'>请先选择至少一项</div>") + "</div></div>" +
+          (!isMulti
+            ? "<div class='wizard-sec'><h4>附加限制</h4><div style='display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;'>" +
+                "<label class='field'><span>每轮最大总份数</span><input class='input' type='number' min='0' id='wMaxTotal' value='" + esc(draft.maxTotalQuantity || "") + "' /></label>" +
+                "<label class='field'><span>最大生效轮次</span><input class='input' type='number' min='1' id='wMaxRounds' value='" + esc(draft.maxRounds || "") + "' /></label>" +
+                "<label class='field'><span>每人每轮上限</span><input class='input' type='number' min='0' id='wMaxPerPerson' value='" + esc(draft.maxPerPersonQuantity || "") + "' /></label>" +
+                "<label class='field'><span>单次下单上限</span><input class='input' type='number' min='0' id='wMaxSingle' value='" + esc(draft.maxSingleOrder || "") + "' /></label>" +
+              "</div></div>"
+            : "")
+        );
+      }
+
+      function renderStepTime() {
+        var draft = state.draft;
+        var weekBtns = weekdays.map(function (w) {
+          var active = draft.selectedWeekdays.indexOf(w.id) >= 0 ? " active" : "";
+          return "<button type='button' class='btn week-btn" + active + "' data-week-id='" + w.id + "'>" + w.short + "</button>";
+        }).join("");
+        var weekdayBlocks = (draft.selectedWeekdays || []).map(function (dayId) {
+          var week = weekdays.find(function (w) { return w.id === dayId; });
+          var title = week ? week.name : dayId;
+          var ranges = (draft.weekdayTimeRanges && draft.weekdayTimeRanges[dayId]) || [];
+          var rows = ranges.map(function (t, i) {
+            return (
+              "<div class='time-row'>" +
+                "<input class='input' type='time' data-time-start-week='" + dayId + "' data-time-start-index='" + i + "' value='" + esc(t.start) + "' />" +
+                "<span style='font-size:12px;color:#6b7280;'>至</span>" +
+                "<input class='input' type='time' data-time-end-week='" + dayId + "' data-time-end-index='" + i + "' value='" + esc(t.end) + "' />" +
+                "<button type='button' class='btn btn-danger' data-time-del-week='" + dayId + "' data-time-del-index='" + i + "'>删除</button>" +
+              "</div>"
+            );
+          }).join("");
+          return (
+            "<div class='weekday-block'>" +
+              "<div class='weekday-head'>" +
+                "<span>" + esc(title) + "</span>" +
+                "<button class='btn' type='button' data-time-add-week='" + dayId + "'>+ 添加时段</button>" +
+              "</div>" +
+              (rows || "<div style='font-size:12px;color:#6b7280;'>暂无时段，请添加</div>") +
+            "</div>"
+          );
+        }).join("");
+        return (
+          "<div class='wizard-sec'>" +
+            "<label style='display:flex;align-items:center;justify-content:space-between;gap:8px;'>" +
+              "<strong style='font-size:13px;'>启用时间段限制</strong>" +
+              "<input type='checkbox' id='wEnableTime' " + (draft.enableTimeSettings ? "checked" : "") + " />" +
+            "</label>" +
+            (draft.enableTimeSettings
+              ? "<div style='margin-top:10px;display:grid;gap:8px;'><div class='week-row'>" + weekBtns + "</div>" + (weekdayBlocks || "<div style='font-size:12px;color:#6b7280;'>请选择至少一个星期周期</div>") + "</div>"
+              : "") +
+          "</div>"
+        );
+      }
+
+      function renderStepMember() {
+        var draft = state.draft;
+        var levelBtns = memberLevels.map(function (m) {
+          var active = draft.selectedMemberLevels.indexOf(m.id) >= 0 ? " active" : "";
+          return "<button type='button' class='btn round-tab" + active + "' data-member-id='" + m.id + "'>" + esc(m.icon + " " + m.name) + "</button>";
+        }).join("");
+        return (
+          "<div class='wizard-sec'>" +
+            "<label style='display:flex;align-items:center;justify-content:space-between;gap:8px;'>" +
+              "<strong style='font-size:13px;'>按会员等级差异化</strong>" +
+              "<input type='checkbox' id='wEnableMember' " + (draft.enableMemberLevels ? "checked" : "") + " />" +
+            "</label>" +
+            (draft.enableMemberLevels ? "<div style='margin-top:10px;display:flex;flex-wrap:wrap;gap:6px;'>" + levelBtns + "</div>" : "") +
+          "</div>"
+        );
+      }
+
+      function renderStepConfirm() {
+        var draft = state.draft;
+        var rule = draftToRule(draft);
+        return (
+          "<div class='wizard-sec'><div class='confirm-list'>" +
+            cRow("名称", rule.name) +
+            cRow("类型", rule.type + " / " + rule.round + " / " + rule.method) +
+            cRow("人数", rule.persons) +
+            cRow("关联", rule.dishes) +
+            cRow("描述", rule.description) +
+          "</div></div>"
+        );
+      }
+
+      function cRow(k, v) {
+        return "<div class='confirm-item'><span class='confirm-k'>" + esc(k) + "</span><span>" + esc(v || "") + "</span></div>";
+      }
+
+      function choice(field, value, selected, title, desc) {
+        var active = value === selected ? " active" : "";
+        return "<button type='button' class='choice" + active + "' data-choice-field='" + field + "' data-choice-value='" + value + "'><div style='font-weight:600;'>" + esc(title) + "</div><div style='margin-top:2px;color:#6b7280;font-size:11px;'>" + esc(desc) + "</div></button>";
+      }
+
+      function renderWizard() {
+        renderWizardSteps();
+        var content = document.getElementById("wizardContent");
+        if (state.draft.step === 1) content.innerHTML = renderStepType();
+        if (state.draft.step === 2) content.innerHTML = renderStepConfig();
+        if (state.draft.step === 3) content.innerHTML = renderStepTime();
+        if (state.draft.step === 4) content.innerHTML = renderStepMember();
+        if (state.draft.step === 5) content.innerHTML = renderStepConfirm();
+
+        document.getElementById("wizardPrev").disabled = state.draft.step === 1;
+        document.getElementById("wizardNext").textContent = state.draft.step === 5
+          ? (state.editingRuleId != null ? "更新规则" : "保存规则")
+          : "下一步";
+      }
+
+      function wizardNext() {
+        var d = state.draft;
+        if (d.step === 1) {
+          if (!d.type || !d.round || !d.method) { alert("请完成规则类型选择"); return; }
+          if (d.round === "multiRound" && d.rounds.length === 0) {
+            d.rounds = [{ roundName: "第一轮", selectedCategories: [], selectedDishes: [], quantitySettings: {} }];
+            d.activeRound = 0;
+          }
+          d.step = 2;
+          renderWizard();
+          return;
+        }
+        if (d.step === 2) {
+          var err = validateDraftStep2(d);
+          if (err) { alert(err); return; }
+          d.step = 3;
+          renderWizard();
+          return;
+        }
+        if (d.step === 3) { d.step = 4; renderWizard(); return; }
+        if (d.step === 4) { d.step = 5; renderWizard(); return; }
+        if (d.step === 5) {
+          if (state.editingRuleId != null) {
+            state.rules = state.rules.map(function (r) {
+              if (r.id !== state.editingRuleId) return r;
+              var updated = draftToRule(d, r);
+              updated.id = r.id;
+              return updated;
+            });
+          } else {
+            var newRule = draftToRule(d);
+            newRule.id = nextRuleId(state.rules);
+            state.rules.push(newRule);
+          }
+          saveRules(state.rules);
+          closeWizard();
+          renderAll();
+        }
+      }
+
+      function wizardPrev() {
+        if (state.draft.step > 1) {
+          state.draft.step -= 1;
+          renderWizard();
+        }
+      }
+
+      function changeQuantity(dish, delta) {
+        if (delta === 0) return;
+        var sim = state.sim;
+        var existing = sim.orderItems.find(function (i) { return i.dishId === dish.id && i.round === sim.currentRound; });
+        if (delta < 0) {
+          if (!existing) return;
+          var nextQty = existing.quantity + delta;
+          sim.violations = [];
+          if (nextQty <= 0) {
+            sim.orderItems = sim.orderItems.filter(function (i) { return !(i.dishId === dish.id && i.round === sim.currentRound); });
+          } else {
+            sim.orderItems = sim.orderItems.map(function (i) {
+              if (i.dishId === dish.id && i.round === sim.currentRound) return Object.assign({}, i, { quantity: nextQty });
+              return i;
+            });
+          }
+          renderSimulator();
+          return;
+        }
+
+        var newItem = {
+          dishId: dish.id,
+          dishName: dish.name,
+          category: dish.category,
+          price: dish.price,
+          quantity: delta,
+          round: sim.currentRound
+        };
+        var selectedRule = getSelectedRule();
+        if (selectedRule) {
+          var roundItems = sim.orderItems.filter(function (i) { return i.round === sim.currentRound; });
+          var v = validateOrderItem(selectedRule, newItem, { personCount: sim.personCount, currentRoundItems: roundItems });
+          if (v.length) {
+            sim.violations = v;
+            renderSimulator();
+            return;
+          }
+        }
+
+        sim.violations = [];
+        if (existing) {
+          sim.orderItems = sim.orderItems.map(function (i) {
+            if (i.dishId === dish.id && i.round === sim.currentRound) return Object.assign({}, i, { quantity: i.quantity + delta });
+            return i;
+          });
+        } else {
+          sim.orderItems.push(newItem);
+        }
+        renderSimulator();
+      }
+
+      function handleRuleAction(action, id) {
+        var rule = state.rules.find(function (r) { return r.id === id; });
+        if (!rule) return;
+        if (action === "edit") { openWizard(rule); return; }
+        if (action === "copy") {
+          var copy = Object.assign({}, rule, {
+            id: nextRuleId(state.rules),
+            name: rule.name + " (副本)",
+            status: "inactive",
+            created: new Date().toISOString().split("T")[0]
+          });
+          state.rules.push(copy);
+          saveRules(state.rules);
+          renderAll();
+          return;
+        }
+        if (action === "toggle") {
+          rule.status = rule.status === "active" ? "inactive" : "active";
+          saveRules(state.rules);
+          renderAll();
+          return;
+        }
+        if (action === "delete") {
+          if (!window.confirm("确定删除该规则？")) return;
+          state.rules = state.rules.filter(function (r) { return r.id !== id; });
+          saveRules(state.rules);
+          renderAll();
+        }
+      }
+
+      function renderAll() {
+        renderRuleTable();
+        renderSimulator();
+      }
+
+      document.addEventListener("click", function (e) {
+        var tabBtn = e.target.closest(".pill[data-tab]");
+        if (tabBtn) {
+          setTab(tabBtn.getAttribute("data-tab"));
+          return;
+        }
+
+        var openCreate = e.target.closest("#btnOpenCreate");
+        if (openCreate) { openWizard(null); return; }
+
+        var ruleActionBtn = e.target.closest("[data-rule-action]");
+        if (ruleActionBtn) {
+          handleRuleAction(ruleActionBtn.getAttribute("data-rule-action"), Number(ruleActionBtn.getAttribute("data-rule-id")));
+          return;
+        }
+
+        var simCat = e.target.closest("[data-sim-cat]");
+        if (simCat) {
+          state.sim.activeCategory = simCat.getAttribute("data-sim-cat");
+          renderSimulator();
+          return;
+        }
+
+        var dishOp = e.target.closest("[data-dish-op]");
+        if (dishOp) {
+          var did = Number(dishOp.getAttribute("data-dish-id"));
+          var dish = dishes.find(function (d) { return d.id === did; });
+          if (!dish) return;
+          changeQuantity(dish, dishOp.getAttribute("data-dish-op") === "plus" ? 1 : -1);
+          return;
+        }
+
+        var orderOp = e.target.closest("[data-order-op]");
+        if (orderOp) {
+          var did2 = Number(orderOp.getAttribute("data-dish-id"));
+          var dish2 = dishes.find(function (d) { return d.id === did2; });
+          if (!dish2) return;
+          changeQuantity(dish2, orderOp.getAttribute("data-order-op") === "plus" ? 1 : -1);
+          return;
+        }
+
+        var mask = e.target.closest("#wizardMask");
+        if (mask && e.target.id === "wizardMask") {
+          closeWizard();
+          return;
+        }
+
+        if (!state.wizardOpen) return;
+        var d = state.draft;
+        var choiceBtn = e.target.closest("[data-choice-field]");
+        if (choiceBtn) {
+          d[choiceBtn.getAttribute("data-choice-field")] = choiceBtn.getAttribute("data-choice-value");
+          renderWizard();
+          return;
+        }
+        var roundTab = e.target.closest("[data-round-index]");
+        if (roundTab) {
+          d.activeRound = Number(roundTab.getAttribute("data-round-index"));
+          renderWizard();
+          return;
+        }
+        var roundAdd = e.target.closest("[data-round-add]");
+        if (roundAdd) {
+          d.rounds.push({
+            roundName: "第" + (d.rounds.length + 1) + "轮",
+            selectedCategories: [],
+            selectedDishes: [],
+            quantitySettings: {}
+          });
+          d.activeRound = d.rounds.length - 1;
+          renderWizard();
+          return;
+        }
+        var roundDel = e.target.closest("[data-round-del]");
+        if (roundDel) {
+          var delIndex = Number(roundDel.getAttribute("data-round-del"));
+          if (Number.isFinite(delIndex) && delIndex >= 0 && delIndex < d.rounds.length) {
+            d.rounds.splice(delIndex, 1);
+            if (d.rounds.length === 0) {
+              d.activeRound = 0;
+            } else if (d.activeRound >= d.rounds.length) {
+              d.activeRound = d.rounds.length - 1;
+            } else if (delIndex <= d.activeRound && d.activeRound > 0) {
+              d.activeRound -= 1;
+            }
+          }
+          renderWizard();
+          return;
+        }
+        var weekBtn = e.target.closest("[data-week-id]");
+        if (weekBtn) {
+          var wid = weekBtn.getAttribute("data-week-id");
+          var idx = d.selectedWeekdays.indexOf(wid);
+          if (idx >= 0) {
+            d.selectedWeekdays.splice(idx, 1);
+            if (d.weekdayTimeRanges) delete d.weekdayTimeRanges[wid];
+          } else {
+            d.selectedWeekdays.push(wid);
+            if (!d.weekdayTimeRanges) d.weekdayTimeRanges = {};
+            if (!d.weekdayTimeRanges[wid] || !d.weekdayTimeRanges[wid].length) {
+              d.weekdayTimeRanges[wid] = [{ start: "11:00", end: "14:00" }];
+            }
+          }
+          renderWizard();
+          return;
+        }
+        var addTime = e.target.closest("[data-time-add-week]");
+        if (addTime) {
+          var addWeek = addTime.getAttribute("data-time-add-week");
+          if (addWeek) {
+            if (!d.weekdayTimeRanges) d.weekdayTimeRanges = {};
+            if (!d.weekdayTimeRanges[addWeek]) d.weekdayTimeRanges[addWeek] = [];
+            d.weekdayTimeRanges[addWeek].push({ start: "11:00", end: "14:00" });
+          }
+          renderWizard();
+          return;
+        }
+        var delTime = e.target.closest("[data-time-del-week]");
+        if (delTime) {
+          var delWeek = delTime.getAttribute("data-time-del-week");
+          var delIdx = Number(delTime.getAttribute("data-time-del-index"));
+          if (delWeek && d.weekdayTimeRanges && d.weekdayTimeRanges[delWeek]) {
+            d.weekdayTimeRanges[delWeek].splice(delIdx, 1);
+          }
+          renderWizard();
+          return;
+        }
+        var memberBtn = e.target.closest("[data-member-id]");
+        if (memberBtn) {
+          var mid = memberBtn.getAttribute("data-member-id");
+          var mIdx = d.selectedMemberLevels.indexOf(mid);
+          if (mIdx >= 0) d.selectedMemberLevels.splice(mIdx, 1);
+          else d.selectedMemberLevels.push(mid);
+          renderWizard();
+        }
+      });
+
+      document.addEventListener("change", function (e) {
+        if (e.target.id === "simRuleSelect") {
+          var val = e.target.value;
+          state.sim.selectedRuleId = val ? Number(val) : null;
+          renderSimulator();
+          return;
+        }
+        if (e.target.id === "simPersonCount") {
+          state.sim.personCount = Math.max(1, Number(e.target.value) || 1);
+          renderSimulator();
+          return;
+        }
+        if (e.target.id === "simMemberLevel") {
+          state.sim.memberLevel = e.target.value;
+          renderSimulator();
+          return;
+        }
+        if (!state.wizardOpen) return;
+
+        var d = state.draft;
+        if (e.target.id === "wName") d.name = e.target.value;
+        if (e.target.id === "wDesc") d.description = e.target.value;
+        if (e.target.id === "wMaxTotal") d.maxTotalQuantity = e.target.value ? Number(e.target.value) : undefined;
+        if (e.target.id === "wMaxRounds") d.maxRounds = e.target.value ? Number(e.target.value) : undefined;
+        if (e.target.id === "wMaxPerPerson") d.maxPerPersonQuantity = e.target.value ? Number(e.target.value) : undefined;
+        if (e.target.id === "wMaxSingle") d.maxSingleOrder = e.target.value ? Number(e.target.value) : undefined;
+        if (e.target.id === "wEnableTime") d.enableTimeSettings = !!e.target.checked;
+        if (e.target.id === "wEnableMember") {
+          d.enableMemberLevels = !!e.target.checked;
+          d.selectedMemberLevels = d.enableMemberLevels ? memberLevels.map(function (m) { return m.id; }) : [];
+        }
+
+        var toggle = e.target.getAttribute && e.target.getAttribute("data-entity-toggle");
+        if (toggle) {
+          var id = Number(toggle);
+          var isMulti = d.round === "multiRound";
+          var method = d.method;
+          if (isMulti) {
+            var round = d.rounds[d.activeRound];
+            if (!round) return;
+            var arr = method === "perCategory" ? round.selectedCategories : round.selectedDishes;
+            var i = arr.indexOf(id);
+            if (i >= 0) arr.splice(i, 1);
+            else arr.push(id);
+          } else {
+            var arr2 = method === "perCategory" ? d.selectedCategories : d.selectedDishes;
+            var j = arr2.indexOf(id);
+            if (j >= 0) arr2.splice(j, 1);
+            else arr2.push(id);
+          }
+        }
+
+        var qtyKey = e.target.getAttribute && e.target.getAttribute("data-qty-key");
+        if (qtyKey) {
+          var num = Number(e.target.value) || 0;
+          if (d.round === "multiRound") {
+            var r = d.rounds[d.activeRound];
+            if (r) r.quantitySettings[qtyKey] = num;
+          } else d.quantitySettings[qtyKey] = num;
+        }
+
+        var tsWeek = e.target.getAttribute && e.target.getAttribute("data-time-start-week");
+        var tsIdx = e.target.getAttribute && e.target.getAttribute("data-time-start-index");
+        var teWeek = e.target.getAttribute && e.target.getAttribute("data-time-end-week");
+        var teIdx = e.target.getAttribute && e.target.getAttribute("data-time-end-index");
+        if (tsWeek != null && tsIdx != null && d.weekdayTimeRanges && d.weekdayTimeRanges[tsWeek] && d.weekdayTimeRanges[tsWeek][Number(tsIdx)]) {
+          d.weekdayTimeRanges[tsWeek][Number(tsIdx)].start = e.target.value;
+        }
+        if (teWeek != null && teIdx != null && d.weekdayTimeRanges && d.weekdayTimeRanges[teWeek] && d.weekdayTimeRanges[teWeek][Number(teIdx)]) {
+          d.weekdayTimeRanges[teWeek][Number(teIdx)].end = e.target.value;
+        }
+
+        renderWizard();
+      });
+
+      document.getElementById("simPrevRound").addEventListener("click", function () {
+        state.sim.currentRound = Math.max(1, state.sim.currentRound - 1);
+        renderSimulator();
+      });
+      document.getElementById("simNextRound").addEventListener("click", function () {
+        state.sim.currentRound = Math.min(state.sim.totalRounds, state.sim.currentRound + 1);
+        renderSimulator();
+      });
+      document.getElementById("simClearRound").addEventListener("click", function () {
+        state.sim.orderItems = state.sim.orderItems.filter(function (i) { return i.round !== state.sim.currentRound; });
+        state.sim.violations = [];
+        renderSimulator();
+      });
+      document.getElementById("simClearAll").addEventListener("click", function () {
+        state.sim.orderItems = [];
+        state.sim.violations = [];
+        renderSimulator();
+      });
+
+      document.getElementById("wizardClose").addEventListener("click", closeWizard);
+      document.getElementById("wizardCancel").addEventListener("click", closeWizard);
+      document.getElementById("wizardPrev").addEventListener("click", wizardPrev);
+      document.getElementById("wizardNext").addEventListener("click", wizardNext);
+
+      window.addEventListener("keydown", function (e) {
+        if (!state.wizardOpen) return;
+        if (e.key === "Escape") closeWizard();
+      });
+
+      renderAll();
+      setTab("rules");
+    })();
+  </script>
+</body>
+</html>

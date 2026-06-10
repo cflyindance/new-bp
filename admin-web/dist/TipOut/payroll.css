@@ -183,51 +183,157 @@
   border-radius: var(--radius-sm);
 }
 
-.payroll-page .payroll-sum-grid {
+.payroll-page .payroll-period-summary {
+  margin-bottom: 16px;
+}
+
+.payroll-page .payroll-period-summary-title {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.payroll-page .payroll-sum-cards {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  column-gap: 22px;
-  row-gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
 }
 
-.payroll-page .payroll-sum-grid > .payroll-sum-block:nth-child(2) {
-  border-left: 1px solid var(--border-light);
-  padding-left: 14px;
-}
-
-@media (max-width: 640px) {
-  .payroll-page .payroll-sum-grid {
+@media (max-width: 720px) {
+  .payroll-page .payroll-sum-cards {
     grid-template-columns: 1fr;
   }
 }
 
-.payroll-page .payroll-sum-block dt {
-  color: var(--text-tertiary);
-  font-size: 12px;
+.payroll-page .payroll-sum-card {
+  border-radius: 10px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
-.payroll-page .payroll-sum-block dd {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  text-align: right;
+.payroll-page .payroll-sum-card--hours {
+  border: 1px solid rgba(22, 119, 255, 0.18);
+  background: linear-gradient(180deg, rgba(22, 119, 255, 0.06) 0%, var(--card-bg) 48px);
+}
+
+.payroll-page .payroll-sum-card--amount {
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  background: linear-gradient(180deg, rgba(16, 185, 129, 0.07) 0%, var(--card-bg) 48px);
+}
+
+.payroll-page .payroll-sum-card-header {
+  padding: 14px 18px;
+  border-bottom-color: rgba(0, 0, 0, 0.06);
+  background: transparent;
+}
+
+.payroll-page .payroll-sum-card-heading {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.payroll-page .payroll-sum-card-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.payroll-page .payroll-sum-card-badge--hours {
+  color: #1677ff;
+  background: rgba(22, 119, 255, 0.12);
+  border: 1px solid rgba(22, 119, 255, 0.2);
+}
+
+.payroll-page .payroll-sum-card-badge--amount {
+  color: #059669;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.22);
+}
+
+.payroll-page .payroll-sum-card-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.payroll-page .payroll-sum-card-meta {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-tertiary);
+}
+
+.payroll-page .payroll-sum-card-body {
+  padding: 14px 18px 16px;
+}
+
+.payroll-page .payroll-sum-dl {
+  margin: 0;
 }
 
 .payroll-page .payroll-sum-row {
   display: flex;
   justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
   font-size: 13px;
-  padding: 4px 0;
+  padding: 6px 0;
 }
 
-.payroll-page .payroll-sum-row dt,
+.payroll-page .payroll-sum-row dt {
+  margin: 0;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
 .payroll-page .payroll-sum-row dd {
   margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  text-align: right;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.payroll-page .payroll-sum-card--hours .payroll-sum-row dd::after {
+  content: " h";
+  font-size: 11px;
+  color: var(--text-tertiary);
+  font-family: inherit;
+}
+
+.payroll-page .payroll-sum-card--amount .payroll-sum-row dd::before {
+  content: "$";
+  margin-right: 1px;
+  font-size: 12px;
+  color: var(--text-tertiary);
 }
 
 .payroll-page .payroll-sum-row.payroll-sum-total {
-  border-top: 1px solid var(--border-light);
-  margin-top: 8px;
-  padding-top: 8px;
+  border-top: 1px dashed var(--border-light);
+  margin-top: 6px;
+  padding-top: 10px;
   font-weight: 600;
+}
+
+.payroll-page .payroll-sum-row.payroll-sum-total dt {
+  color: var(--text-primary);
+}
+
+.payroll-page .payroll-sum-card--hours .payroll-sum-row.payroll-sum-total dd {
+  color: #1677ff;
+}
+
+.payroll-page .payroll-sum-card--amount .payroll-sum-row.payroll-sum-total dd {
+  color: #059669;
 }
 
 .payroll-page .payroll-detail-print {
@@ -273,6 +379,65 @@
 .payroll-page .payroll-detail-grid .cell {
   font-family: ui-monospace, Menlo, monospace;
   padding: 4px;
+}
+
+.payroll-page .payroll-label-with-help,
+.payroll-page .payroll-th-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.payroll-page .payroll-field-help {
+  cursor: pointer;
+  color: var(--text-tertiary);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.12));
+  border-radius: 50%;
+  background: var(--bg-elevated, #fff);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: color 0.2s, background 0.2s, border-color 0.2s;
+}
+
+.payroll-page .payroll-field-help:hover,
+.payroll-page .payroll-field-help:focus-visible {
+  color: var(--primary);
+  border-color: rgba(22, 119, 255, 0.35);
+  background: rgba(22, 119, 255, 0.08);
+  outline: none;
+}
+
+.payroll-page .payroll-wide-table th {
+  vertical-align: bottom;
+}
+
+.payroll-page .payroll-wide-table .payroll-th-label {
+  justify-content: center;
+  width: 100%;
+}
+
+.payroll-page #fieldHelpModal .field-help-adp {
+  margin-top: 12px;
+  padding: 10px 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  background: rgba(22, 119, 255, 0.06);
+  border: 1px solid rgba(22, 119, 255, 0.15);
+  border-radius: var(--radius-sm);
+}
+
+.payroll-page #fieldHelpModal .field-help-adp strong {
+  color: var(--text-primary);
 }
 
 .payroll-page .payroll-cert-amount {
@@ -439,7 +604,99 @@
   border-top: 1px solid var(--border-light);
 }
 
+.payroll-mode-banner {
+  margin-bottom: 12px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-light);
+  background: rgba(59, 130, 246, 0.06);
+  font-size: 13px;
+  line-height: 1.45;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.payroll-mode-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.payroll-api-sync-badge {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border-light);
+  background: var(--bg-secondary, #f4f4f5);
+  color: var(--text-secondary);
+}
+
+.payroll-api-sync-badge--api {
+  border-color: rgba(34, 197, 94, 0.35);
+  background: rgba(34, 197, 94, 0.1);
+  color: #15803d;
+}
+
+.payroll-api-sync-badge--syncing {
+  border-color: rgba(59, 130, 246, 0.35);
+  background: rgba(59, 130, 246, 0.08);
+  color: #1d4ed8;
+}
+
+.payroll-audit-table {
+  font-size: 12px;
+}
+
+.payroll-audit-table td,
+.payroll-audit-table th {
+  padding: 8px 12px;
+  vertical-align: top;
+}
+
+.payroll-mode-banner-sub {
+  display: block;
+  margin-top: 4px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.payroll-employee-filter-bar {
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.payroll-employee-actions {
+  margin-left: auto;
+}
+
+.payroll-decl-version {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+}
+
+.print-only {
+  display: none;
+}
+
+.payroll-print-disclaimer {
+  margin-top: 24px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-light);
+  font-size: 11px;
+  color: #444;
+}
+
 @media print {
+  .print-only {
+    display: block !important;
+  }
   .no-print {
     display: none !important;
   }
