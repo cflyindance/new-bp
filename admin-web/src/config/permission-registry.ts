@@ -2,8 +2,9 @@
  * B 端 RBAC 权限资源注册表（由 navigation.ts + module-settings-catalog.ts 派生）
  */
 import { NAV_MODULES, PRODUCT_CENTER_DEEP_NAV, type NavModule } from "./navigation";
+import { getVisibleModuleSettingsCatalog } from "./feature-settings-filter";
+import { getVisibleNavModules, isL2FeatureVisible, isTertiaryNavPathVisible } from "./feature-visibility";
 import {
-  getModuleSettingsCatalog,
   groupCatalogItemsByCategory,
   type ModuleSettingCatalogItem,
 } from "./module-settings-catalog";
@@ -96,7 +97,7 @@ function appendSettingChildren(
   featureId: string,
   featurePath: string,
 ): void {
-  const catalog = getModuleSettingsCatalog(featurePath);
+  const catalog = getVisibleModuleSettingsCatalog(featurePath);
   if (!catalog?.items.length) return;
 
   const groups = groupCatalogItemsByCategory(catalog.items, catalog.groupOrder);
@@ -184,7 +185,7 @@ function buildFeatureNode(
     children: [],
   };
 
-  const catalog = getModuleSettingsCatalog(item.path);
+  const catalog = getVisibleModuleSettingsCatalog(item.path);
   if (catalog?.items.length) {
     appendSettingChildren(node, mod.id, item.id, item.path);
   } else {
@@ -197,7 +198,7 @@ function buildFeatureNode(
 export function buildPermissionModuleGroups(): PermissionModuleGroup[] {
   const groups: PermissionModuleGroup[] = [];
 
-  for (const mod of NAV_MODULES) {
+  for (const mod of getVisibleNavModules()) {
     if (RBAC_EXCLUDED_MODULE_IDS.has(mod.id)) continue;
 
     const mKey = moduleKey(mod.id);
@@ -216,12 +217,14 @@ export function buildPermissionModuleGroups(): PermissionModuleGroup[] {
     };
 
     for (const child of mod.children) {
+      if (!isL2FeatureVisible(child.id)) continue;
       moduleNode.children.push(buildFeatureNode(mod, child));
     }
 
     if (mod.id === "product-center-main") {
       for (const deep of PRODUCT_CENTER_DEEP_NAV) {
         if (moduleNode.children.some((c) => c.resource.featureId === deep.id)) continue;
+        if (!isTertiaryNavPathVisible(deep.path)) continue;
         moduleNode.children.push(buildFeatureNode(mod, deep));
       }
     }

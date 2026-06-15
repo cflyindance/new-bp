@@ -1,5 +1,6 @@
 /** 演示登录：员工维护账号优先，兼容 Menusifu 企业邮箱 + 演示密码 */
 
+import { clearApiBearerToken, loginToBplantApi } from "../config/api-client";
 import { recordSystemLoginLog } from "./login-log-store";
 import { isMenusifuEmail } from "./email-utils";
 import { getStaffLoginAccountByEmail } from "../permissions/staff-account-store";
@@ -47,6 +48,7 @@ export function clearAuthenticated(): void {
   } catch {
     /* ignore */
   }
+  clearApiBearerToken();
 }
 
 export { isMenusifuEmail } from "./email-utils";
@@ -151,18 +153,21 @@ export function bindLoginPage(onSuccess: () => void): void {
 
   form.addEventListener("submit", (e) => {
     e.preventDefault();
-    const email = emailInput?.value ?? "";
-    const password = passwordInput?.value ?? "";
-    const err = validateLoginCredentials(email, password);
-    if (err) {
-      showError(err);
-      passwordInput?.focus();
-      return;
-    }
-    showError("");
-    const account = email.trim();
-    setAuthenticated(account);
-    recordSystemLoginLog(account);
-    onSuccess();
+    void (async () => {
+      const email = emailInput?.value ?? "";
+      const password = passwordInput?.value ?? "";
+      const err = validateLoginCredentials(email, password);
+      if (err) {
+        showError(err);
+        passwordInput?.focus();
+        return;
+      }
+      showError("");
+      const account = email.trim();
+      setAuthenticated(account);
+      await loginToBplantApi(account, password);
+      recordSystemLoginLog(account);
+      onSuccess();
+    })();
   });
 }

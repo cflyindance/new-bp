@@ -92,14 +92,6 @@ function seedRoles(): RbacRole[] {
       updatedAt: new Date().toISOString(),
     },
     {
-      id: "hq-admin",
-      name: "总部管理员",
-      description: "连锁总部：品牌/门店/权限/多店汇总",
-      isSystem: true,
-      grants: all,
-      updatedAt: new Date().toISOString(),
-    },
-    {
       id: "cashier",
       name: "收银员",
       description: "订单、支付、前厅点单；设置类入口不可见或仅查看",
@@ -123,7 +115,6 @@ function seedStaff(): StaffAssignment[] {
     { employeeId: "e001", employeeName: "王小明", roleIds: ["store-manager"] },
     { employeeId: "e002", employeeName: "李收银", roleIds: ["cashier"] },
     { employeeId: "e003", employeeName: "张楼面", roleIds: ["floor-staff", "cashier"] },
-    { employeeId: "hq001", employeeName: "陈总部", roleIds: ["hq-admin"] },
   ];
 }
 

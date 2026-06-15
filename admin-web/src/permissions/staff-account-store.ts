@@ -13,8 +13,6 @@ export interface StaffLoginAccount {
   password: string;
   enabled: boolean;
   isSystem?: boolean;
-  /** 组织层级：单店 / 连锁；未设则按 RBAC 角色推断 */
-  orgTier?: "store" | "chain";
   updatedAt: string;
 }
 
@@ -35,7 +33,6 @@ function seedAccounts(): StaffLoginAccount[] {
       password: "Menusifu666",
       enabled: true,
       isSystem: true,
-      orgTier: "store",
       updatedAt: now,
     },
     {
@@ -46,7 +43,6 @@ function seedAccounts(): StaffLoginAccount[] {
       password: "Menusifu666",
       enabled: true,
       isSystem: true,
-      orgTier: "store",
       updatedAt: now,
     },
     {
@@ -57,18 +53,6 @@ function seedAccounts(): StaffLoginAccount[] {
       password: "Menusifu666",
       enabled: true,
       isSystem: true,
-      orgTier: "store",
-      updatedAt: now,
-    },
-    {
-      id: "acct-hq001",
-      employeeId: "hq001",
-      employeeName: "陈总部",
-      loginEmail: "hq.admin@menusifu.cn",
-      password: "Menusifu666",
-      enabled: true,
-      isSystem: true,
-      orgTier: "chain",
       updatedAt: now,
     },
   ];

@@ -10,6 +10,7 @@ import {
   KITCHEN_STANDARD_ORDER_TYPES,
   isKitchenOrderTypeMultiselectSeq,
 } from "./module-settings-kitchen-order-type-ui";
+import { formatAiSettingDescription } from "./module-settings-ai-description";
 import {
   listModuleSettingFormFieldDescriptors,
   readModuleSettingCheckbox,
@@ -30,10 +31,8 @@ import {
 import { getModuleSettingNestedGroup } from "./module-settings-nested-ui";
 import { WAIT_TIME_CALCULATION_FIELDS } from "./module-settings-wait-time-calculation-ui";
 import type { ModuleSettingCatalogItem } from "./module-settings-catalog";
-import {
-  getModuleSettingsItemHref,
-  listAllModuleSettingCatalogEntries,
-} from "./module-settings-catalog";
+import { getModuleSettingsItemHref } from "./module-settings-catalog";
+import { listVisibleModuleSettingCatalogEntries } from "./feature-settings-filter";
 import { isModuleSettingToggleSeq } from "./module-settings-toggle-ui";
 import {
   readAviatoServiceScopes,
@@ -59,17 +58,10 @@ export type AiSettingMutation =
   | { kind: "order-type"; seq: number; code: string; checked: boolean; optionLabel: string }
   | { kind: "aviato-scope"; scopeId: AviatoServiceScopeId; checked: boolean; seq: number; label: string };
 
-import type { AiSettingConfirmAction } from "./ai-assistant-setting-confirm";
-import {
-  buildAiSettingConfirmButtonsHtml,
-  formatSettingSceneDescBlock,
-} from "./ai-assistant-setting-confirm";
-
 export type AiSettingApplyResult = {
   text: string;
   html: string;
-  /** 待用户确认后再写入 localStorage / 同步 DOM */
-  pendingConfirm?: AiSettingConfirmAction;
+  mutations?: AiSettingMutation[];
 };
 
 type IndexedSetting = {
@@ -93,12 +85,14 @@ type TextFieldMeta = {
   label: string;
 };
 
-const SETTING_INDEX: IndexedSetting[] = listAllModuleSettingCatalogEntries().map((row) => ({
-  hubTitle: row.hubTitle,
-  settingsPath: row.settingsPath,
-  item: row.item,
-  href: getModuleSettingsItemHref(row.settingsPath, row.item),
-}));
+function buildSettingIndex(): IndexedSetting[] {
+  return listVisibleModuleSettingCatalogEntries().map((row) => ({
+    hubTitle: row.hubTitle,
+    settingsPath: row.settingsPath,
+    item: row.item,
+    href: getModuleSettingsItemHref(row.settingsPath, row.item),
+  }));
+}
 
 /** 已知数值字段（fieldId 前缀为 seq） */
 const KNOWN_NUMBER_FIELDS: NumberFieldMeta[] = [
@@ -183,7 +177,7 @@ function settingLink(href: string, label: string): string {
 function searchSettingsByPhrase(phrase: string, limit = 5): IndexedSetting[] {
   const q = phrase.trim().toLowerCase();
   if (!q) return [];
-  return SETTING_INDEX.map((row) => {
+  return buildSettingIndex().map((row) => {
     let score = 0;
     const title = row.item.title.toLowerCase();
     if (title === q) score += 120;
@@ -484,28 +478,28 @@ function formatMutationSummary(m: AiSettingMutation, locale: "zh" | "en"): strin
   }
 }
 
+/** 将 AI 解析出的改配写入 localStorage（不含 DOM 同步，由设置页 / 助手 UI 另行刷新） */
+export function applyAiSettingMutations(mutations: AiSettingMutation[]): void {
+  for (const m of mutations) persistMutation(m);
+}
+
 function buildApplyReply(
   indexed: IndexedSetting,
   mutations: AiSettingMutation[],
   locale: "zh" | "en",
 ): AiSettingApplyResult {
-  const { item, href } = indexed;
+  const { item, hubTitle, href } = indexed;
+  const desc = formatAiSettingDescription(item, locale);
   const lines = mutations.map((m) => formatMutationSummary(m, locale)).filter(Boolean);
   const head =
     locale === "en"
-      ? `Confirm changes to "${item.title}"?`
-      : `确认修改「${item.title}」？`;
-  const changeLabel = locale === "en" ? "Planned changes" : "即将变更";
-  const text = `${head}\n${changeLabel}:\n${lines.join("\n")}`;
-  const html = `<p>${escapeHtml(head)}</p><p class="mt-1 text-xs font-medium text-muted-foreground">${escapeHtml(changeLabel)}</p><ul class="mt-1 list-disc space-y-1 pl-4">${lines
+      ? `${hubTitle} · ${item.title}: pending changes — confirm to apply`
+      : `${hubTitle} · ${item.title}：即将更新以下配置，请确认后执行`;
+  const text = `${head}${desc.textSuffix}\n${lines.join("\n")}`;
+  const html = `<p>${escapeHtml(head)}</p>${desc.htmlBlock}<ul class="mt-2 list-disc space-y-1 pl-4">${lines
     .map((l) => `<li>${escapeHtml(l)}</li>`)
-    .join("")}</ul>${formatSettingSceneDescBlock(indexed, locale)}${buildAiSettingConfirmButtonsHtml({ kind: "mutations", mutations }, locale)}<p class="mt-2">${settingLink(href, locale === "en" ? "View in settings" : "在设置页查看")}</p>`;
-  return { text, html, pendingConfirm: { kind: "mutations", mutations } };
-}
-
-/** 确认后持久化复杂改配（localStorage） */
-export function persistAiSettingMutations(mutations: AiSettingMutation[]): void {
-  for (const m of mutations) persistMutation(m);
+    .join("")}</ul><p class="mt-2">${settingLink(href, locale === "en" ? "View in settings" : "在设置页查看")}</p>`;
+  return { text, html, mutations };
 }
 
 /** 解析并应用复杂改配（表单 / 数值 / 产线 / 订单类型多选等） */

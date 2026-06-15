@@ -6,7 +6,7 @@
 import { MODULE_SETTING_CHOICE_CONTROL_CLASS } from "./module-settings-choice-ui";
 import { BUILTIN_PAYMENT_METHODS } from "./module-settings-payment-methods-ui";
 import { readModuleSettingJson, writeModuleSettingJson } from "./module-settings-form-ui";
-import { moduleSettingToggleStorageKey } from "./module-settings-toggle-ui";
+import { moduleSettingToggleStorageKey } from "./module-settings-toggle-storage";
 
 export const RECEIPT_PRINT_BY_METHOD_SEQ = 246;
 export const PRINT_CARDHOLDER_NAME_SEQ = 247;
