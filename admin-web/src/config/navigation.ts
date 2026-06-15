@@ -601,11 +601,11 @@ export const NAV_MODULES: NavModule[] = [
     subNavPlacement: "sheet",
     defaultChildPath: "/settings/locale-display",
     children: [
-      { id: "set-feature-presets", title: "平台预设", titleEn: "Platform presets", path: "/settings/feature-presets" },
       { id: "set-locale-display", title: "区域与显示", titleEn: "Locale & display", path: "/settings/locale-display" },
       { id: "set-data-backup", title: "数据与备份", titleEn: "Data & backup", path: "/settings/data-backup" },
       { id: "set-connections", title: "连接与服务", titleEn: "Connections", path: "/settings/connections" },
       { id: "set-advanced", title: "高级与诊断", titleEn: "Advanced & diagnostics", path: "/settings/advanced" },
+      { id: "set-platform-preset", title: "平台预设", titleEn: "Platform preset", path: "/settings/platform-preset" },
     ],
   },
 ];

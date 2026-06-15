@@ -21,9 +21,6 @@ import { RECEIPT_LINE_CONTENT_TOGGLE_SEQS } from "./module-settings-receipt-line
 import { RECEIPT_PRINT_EXECUTION_TOGGLE_SEQS } from "./module-settings-receipt-print-execution-ui";
 import { getFohByLineRenderContext } from "./foh-settings-by-line-filter";
 import { readFohByLineToggleState } from "./foh-settings-by-line-toggle";
-import { moduleSettingToggleStorageKey } from "./module-settings-toggle-storage";
-
-export { moduleSettingToggleStorageKey };
 
 export {
   DELETE_CARD_RECEIPT_PRINT_TOGGLE_SEQS,
@@ -457,6 +454,10 @@ export const MODULE_SETTING_TOGGLE_SEQ = new Set([
 
 export function isModuleSettingToggleSeq(seq: number): boolean {
   return MODULE_SETTING_TOGGLE_SEQ.has(seq);
+}
+
+export function moduleSettingToggleStorageKey(seq: number): string {
+  return `bplant-module-setting-toggle:${seq}`;
 }
 
 /** 默认开启展示（640 呼叫间隔默认关，见 tableside-service-call-ui 迁移） */

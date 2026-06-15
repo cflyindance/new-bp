@@ -9,7 +9,7 @@ import {
   readModuleSettingNumber,
   writeModuleSettingJson,
 } from "./module-settings-form-ui";
-import { moduleSettingToggleStorageKey } from "./module-settings-toggle-storage";
+import { moduleSettingToggleStorageKey } from "./module-settings-toggle-ui";
 
 export const PRINT_PAGE_HEIGHT_SEQ = 167;
 export const PRINT_LOGO_BY_TICKET_SEQ = 256;

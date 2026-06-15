@@ -3,8 +3,6 @@ import path from "node:path";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig, type Plugin } from "vite";
 import { attachPayrollMockApi } from "./scripts/lib/payroll-mock-api-handler.mjs";
-import { attachBplantDevSupplementalApi } from "./scripts/lib/bplant-api-router.mjs";
-import { attachTenantProfileMockApi } from "./scripts/lib/tenant-profile-mock-api-handler.mjs";
 
 /** 开发态提供 dist 内嵌静态资源（TipOut / Configuration center / emenu-pro） */
 const EMBEDDED_STATIC_ROUTES = [
@@ -97,8 +95,6 @@ function attachEmbeddedStaticMiddleware(
 }
 
 const usePayrollApiProxy = process.env.PAYROLL_USE_API_PROXY === "1";
-const useBplantApiProxy = process.env.BPLANT_API_USE_PROXY === "1";
-const bplantApiTarget = process.env.BPLANT_API_PROXY_TARGET || "http://127.0.0.1:3012";
 
 function serveEmbeddedStaticDirs(): Plugin {
   return {
@@ -108,16 +104,12 @@ function serveEmbeddedStaticDirs(): Plugin {
       if (!usePayrollApiProxy) {
         attachPayrollMockApi(server.middlewares, process.cwd());
       }
-      attachTenantProfileMockApi(server.middlewares, process.cwd());
-      attachBplantDevSupplementalApi(server.middlewares, process.cwd());
     },
     configurePreviewServer(server) {
       attachEmbeddedStaticMiddleware(server.middlewares);
       if (!usePayrollApiProxy) {
         attachPayrollMockApi(server.middlewares, process.cwd());
       }
-      attachTenantProfileMockApi(server.middlewares, process.cwd());
-      attachBplantDevSupplementalApi(server.middlewares, process.cwd());
     },
   };
 }
@@ -125,10 +117,6 @@ function serveEmbeddedStaticDirs(): Plugin {
 export default defineConfig({
   /** 构建产物使用相对路径，便于子目录部署或本地直接打开 dist/index.html（仍建议用静态服务器） */
   base: "./",
-  build: {
-    /** 每次构建清空 dist，避免 index.html 指向新 hash 但浏览器/目录里残留旧 bundle 引发 404 白屏 */
-    emptyOutDir: true,
-  },
   plugins: [tailwindcss(), serveEmbeddedStaticDirs()],
   server: {
     port: 5173,
@@ -137,24 +125,13 @@ export default defineConfig({
     /** 启动后自动打开系统浏览器（无需再猜端口） */
     open: true,
     strictPort: false,
-    ...((usePayrollApiProxy || useBplantApiProxy)
+    ...(usePayrollApiProxy
       ? {
           proxy: {
-            ...(usePayrollApiProxy
-              ? {
-                  "/api/v1/payroll": {
-                    target: "http://127.0.0.1:3010",
-                    changeOrigin: true,
-                  },
-                }
-              : {}),
-            ...(useBplantApiProxy
-              ? {
-                  "/api/v1/auth": { target: bplantApiTarget, changeOrigin: true },
-                  "/api/v1/dashboard": { target: bplantApiTarget, changeOrigin: true },
-                  "/api/v1/tenant-profile": { target: bplantApiTarget, changeOrigin: true },
-                }
-              : {}),
+            "/api/v1/payroll": {
+              target: "http://127.0.0.1:3010",
+              changeOrigin: true,
+            },
           },
         }
       : {}),

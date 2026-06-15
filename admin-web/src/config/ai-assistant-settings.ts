@@ -3,10 +3,10 @@
  */
 
 import type { ModuleSettingCatalogItem } from "./module-settings-catalog";
-import { getModuleSettingsItemHref } from "./module-settings-catalog";
-import { formatAiSettingDescription } from "./module-settings-ai-description";
-import { listVisibleModuleSettingCatalogEntries } from "./feature-settings-filter";
-import { searchVisibleNavEntries } from "./feature-nav-search";
+import {
+  getModuleSettingsItemHref,
+  listAllModuleSettingCatalogEntries,
+} from "./module-settings-catalog";
 import {
   formatMultiOptionGuide,
   processAiAssistantComplexSettingChange,
@@ -19,20 +19,16 @@ import {
   readModuleSettingToggleOn,
 } from "./module-settings-toggle-ui";
 
-import type { AiSettingApplyResult, AiSettingMutation } from "./module-settings-ai-editable";
-
-export type AiAssistantPendingAction = {
-  /** 简单开关改配 */
-  toggle?: { seq: number; on: boolean };
-  /** 复杂改配（表单 / 多选 / 产线 / 数值等） */
-  mutations?: AiSettingMutation[];
-};
+import {
+  buildAiSettingConfirmButtonsHtml,
+  formatSettingSceneDescBlock,
+} from "./ai-assistant-setting-confirm";
 
 export type AiAssistantReply = {
   text: string;
   html: string;
-  /** 待用户确认后才会执行的改配 */
-  pendingAction?: AiAssistantPendingAction;
+  /** 改配前需用户确认（开关 / 复杂改配） */
+  pendingConfirm?: import("./ai-assistant-setting-confirm").AiSettingConfirmAction;
 };
 
 type IndexedSetting = {
@@ -204,32 +200,30 @@ const SEARCH_NOISE_RE =
 
 const MIN_FUZZY_SCORE = 10;
 
-function buildSettingIndex(): IndexedSetting[] {
-  return listVisibleModuleSettingCatalogEntries().map((row) => {
-    const { hubTitle, settingsPath, item } = row;
-    const searchable = [
-      hubTitle,
-      settingsPath,
-      item.groupTitle,
-      item.groupKey,
-      item.title,
-      item.sceneDesc,
-      item.moduleName,
-      item.feature,
-      String(item.seq),
-    ]
-      .join(" ")
-      .toLowerCase();
-    return {
-      hubTitle,
-      settingsPath,
-      item,
-      href: getModuleSettingsItemHref(settingsPath, item),
-      searchable,
-      titleNorm: item.title.toLowerCase(),
-    };
-  });
-}
+const SETTING_INDEX: IndexedSetting[] = listAllModuleSettingCatalogEntries().map((row) => {
+  const { hubTitle, settingsPath, item } = row;
+  const searchable = [
+    hubTitle,
+    settingsPath,
+    item.groupTitle,
+    item.groupKey,
+    item.title,
+    item.sceneDesc,
+    item.moduleName,
+    item.feature,
+    String(item.seq),
+  ]
+    .join(" ")
+    .toLowerCase();
+  return {
+    hubTitle,
+    settingsPath,
+    item,
+    href: getModuleSettingsItemHref(settingsPath, item),
+    searchable,
+    titleNorm: item.title.toLowerCase(),
+  };
+});
 
 function escapeHtml(s: string): string {
   return s
@@ -359,8 +353,7 @@ function scoreSetting(indexed: IndexedSetting, phrase: string): number {
 }
 
 function searchSettings(phrase: string, limit = 6): IndexedSetting[] {
-  const index = buildSettingIndex();
-  const ranked = index.map((row) => ({ row, score: scoreSetting(row, phrase) }))
+  const ranked = SETTING_INDEX.map((row) => ({ row, score: scoreSetting(row, phrase) }))
     .filter((x) => x.score >= MIN_FUZZY_SCORE)
     .sort((a, b) => b.score - a.score);
 
@@ -372,7 +365,7 @@ function searchSettings(phrase: string, limit = 6): IndexedSetting[] {
   const looseTokens = tokenizePhrase(phrase).filter((t) => t.length >= 2);
   if (looseTokens.length === 0) return [];
 
-  return index.map((row) => {
+  return SETTING_INDEX.map((row) => {
     let score = 0;
     for (const token of looseTokens) {
       if (row.titleNorm.includes(token)) score += 15;
@@ -460,24 +453,10 @@ function formatSearchResults(
   locale: "zh" | "en",
 ): AiAssistantReply {
   if (results.length === 0) {
-    const navHits = searchVisibleNavEntries(query, 4);
-    if (navHits.length > 0) {
-      const head =
-        locale === "en"
-          ? `No settings matched, but these modules may help:`
-          : `未找到相关设置项，但以下已开通的功能模块可能相关：`;
-      const lines = navHits.map(
-        (n, i) =>
-          `${i + 1}. ${settingLink(n.path, n.featureId ? `${n.title}` : n.title)}`,
-      );
-      const text = `${head}\n${lines.join("\n")}`;
-      const html = `<p>${escapeHtml(head)}</p><ul class="mt-2 list-inside list-disc space-y-1 text-sm">${lines.map((l) => `<li>${l}</li>`).join("")}</ul>`;
-      return { text, html };
-    }
     const text =
       locale === "en"
-        ? `No matching settings or modules found for "${query}". The feature may be hidden for your business type/product lines — check Feature management in System settings.`
-        : `未找到与「${query}」匹配的功能设置或模块。该能力可能未在当前业态/产线画像中开通，可前往「系统设置 → 平台预设」调整。`;
+        ? `No matching settings found for "${query}". Try shorter keywords, synonyms (e.g. cash close), or a seq number.`
+        : `未找到与「${query}」匹配的功能设置。可换更短关键词、同义词（如班结/日结、小票/打印、加收/服务费），或直接输入 seq 编号。`;
     return { text, html: escapeHtml(text) };
   }
 
@@ -503,13 +482,16 @@ function formatSearchResults(
             : "已关闭"
         : "";
     const stateSuffix = state ? `（${state}${toggleHint}）` : toggleHint;
-    return `${i + 1}. ${row.hubTitle} · ${row.item.groupTitle} · ${settingLink(row.href, row.item.title)}${stateSuffix}`;
+    const desc =
+      row.item.sceneDesc?.trim() ||
+      (locale === "en" ? "No description." : "暂无说明。");
+    return `<li class="space-y-1"><div>${i + 1}. ${row.hubTitle} · ${row.item.groupTitle} · ${settingLink(row.href, row.item.title)}${escapeHtml(stateSuffix)}</div><p class="text-xs leading-relaxed text-muted-foreground pl-4">${escapeHtml(desc)}</p></li>`;
   });
   const tip =
     locale === "en"
-      ? 'Try "enable …", "disable …", or "is … enabled?" for toggle settings.'
-      : "可说「把 xxx 打开」改开关、「开班备款设为 500」改数值、「产线 Kiosk 开启 xxx」改产线、「勾选外带」改多选。";
-  const html = `${escapeHtml(head)}<ul class="mt-2 list-disc space-y-1.5 pl-4">${lines.map((l) => `<li>${l}</li>`).join("")}</ul><p class="mt-2 text-xs text-muted-foreground">${escapeHtml(tip)}</p>`;
+      ? 'Try "enable …", "disable …", or "is … enabled?" Changes require confirmation before apply.'
+      : "可说「把 xxx 打开」改开关、「开班备款设为 500」改数值等；应用前会展示功能说明并需您确认。";
+  const html = `${escapeHtml(head)}<ul class="mt-2 list-none space-y-2 pl-0">${lines.join("")}</ul><p class="mt-2 text-xs text-muted-foreground">${escapeHtml(tip)}</p>`;
   const text = `${head}\n${results.map((r, i) => `${i + 1}. ${r.hubTitle} · ${r.item.title}`).join("\n")}`;
   return { text, html };
 }
@@ -526,14 +508,14 @@ function formatStatusResult(
         locale === "en"
           ? `${hubTitle} · ${item.title}: checked options — ${subSummary}.`
           : `${hubTitle} ·「${item.title}」当前已勾选：${subSummary}。`;
-      const html = `<p>${escapeHtml(text)}</p><p class="mt-2">${settingLink(href, locale === "en" ? "View in settings" : "在设置页查看")}</p>`;
+      const html = `<p>${escapeHtml(text)}</p>${formatSettingSceneDescBlock(indexed, locale)}<p class="mt-2">${settingLink(href, locale === "en" ? "View in settings" : "在设置页查看")}</p>`;
       return { text, html };
     }
     const text =
       locale === "en"
         ? `"${item.title}" is not a simple toggle. Open the settings page for details.`
         : `「${item.title}」不是简单开关项，请在设置页查看详情。`;
-    const html = `${escapeHtml(text)} ${settingLink(href, locale === "en" ? "Open settings" : "打开设置页")}`;
+    const html = `<p>${escapeHtml(text)}</p>${formatSettingSceneDescBlock(indexed, locale)} ${settingLink(href, locale === "en" ? "Open settings" : "打开设置页")}`;
     return { text, html };
   }
   const on = readModuleSettingToggleOn(item.seq);
@@ -548,7 +530,7 @@ function formatStatusResult(
     locale === "en"
       ? `${hubTitle} · ${item.title}: currently ${stateLabel}.`
       : `${hubTitle} · ${item.title}：当前${stateLabel}。`;
-  const html = `<p>${escapeHtml(text)}</p><p class="mt-2">${settingLink(href, locale === "en" ? "View in settings" : "在设置页查看")}</p>`;
+  const html = `<p>${escapeHtml(text)}</p>${formatSettingSceneDescBlock(indexed, locale)}<p class="mt-2">${settingLink(href, locale === "en" ? "View in settings" : "在设置页查看")}</p>`;
   return { text, html };
 }
 
@@ -558,7 +540,6 @@ function applyToggleChange(
   locale: "zh" | "en",
 ): AiAssistantReply {
   const { item, hubTitle, href } = indexed;
-  const desc = formatAiSettingDescription(item, locale);
   if (!isModuleSettingToggleSeq(item.seq)) {
     if (hasSubOptionsForSeq(item.seq)) {
       const guide = formatMultiOptionGuide(indexed, locale);
@@ -573,38 +554,41 @@ function applyToggleChange(
   }
 
   const prev = readModuleSettingToggleOn(item.seq);
-  const stateLabel = on
+  const prevLabel = prev
     ? locale === "en"
-      ? "enabled"
+      ? "On"
       : "已开启"
     : locale === "en"
-      ? "disabled"
+      ? "Off"
       : "已关闭";
+  const targetLabel = on
+    ? locale === "en"
+      ? "On"
+      : "已开启"
+    : locale === "en"
+      ? "Off"
+      : "已关闭";
+
   if (prev === on) {
     const text =
       locale === "en"
-        ? `${hubTitle} · ${item.title}: already ${stateLabel}.${desc.textSuffix}`
-        : `${hubTitle} · ${item.title}：状态未变，仍为${stateLabel}。${desc.textSuffix}`;
-    const html = `<p>${escapeHtml(text.split("\n")[0] ?? text)}</p>${desc.htmlBlock}<p class="mt-2">${settingLink(href, locale === "en" ? "View in settings" : "在设置页查看")}</p>`;
+        ? `${hubTitle} · ${item.title}: already ${targetLabel.toLowerCase()}.`
+        : `${hubTitle} · ${item.title}：当前已是${targetLabel}，无需变更。`;
+    const html = `<p>${escapeHtml(text)}</p>${formatSettingSceneDescBlock(indexed, locale)}<p class="mt-2">${settingLink(href, locale === "en" ? "View in settings" : "在设置页查看")}</p>`;
     return { text, html };
   }
-  const actionLabel =
-    locale === "en" ? (on ? "enable" : "disable") : on ? "开启" : "关闭";
+
   const head =
     locale === "en"
-      ? `${hubTitle} · ${item.title}: will ${actionLabel} — confirm to apply.`
-      : `${hubTitle} · ${item.title}：即将${actionLabel}，请确认后执行。`;
-  const text = `${head}${desc.textSuffix}`;
-  const html = `<p>${escapeHtml(head)}</p>${desc.htmlBlock}<p class="mt-2">${settingLink(href, locale === "en" ? "View in settings" : "在设置页查看")}</p>`;
-  return { text, html, pendingAction: { toggle: { seq: item.seq, on } } };
-}
-
-function wrapPendingMutationsReply(result: AiSettingApplyResult): AiAssistantReply {
-  if (result.mutations?.length) {
-    const { mutations, ...rest } = result;
-    return { ...rest, pendingAction: { mutations } };
-  }
-  return result;
+      ? `Confirm ${on ? "enabling" : "disabling"} "${item.title}"?`
+      : `确认${on ? "开启" : "关闭"}「${item.title}」？`;
+  const changeLine =
+    locale === "en"
+      ? `Current: ${prevLabel} → After apply: ${targetLabel}`
+      : `当前：${prevLabel} → 应用后：${targetLabel}`;
+  const text = `${head}\n${changeLine}`;
+  const html = `<p>${escapeHtml(head)}</p><p class="mt-1 text-sm">${escapeHtml(changeLine)}</p>${formatSettingSceneDescBlock(indexed, locale)}${buildAiSettingConfirmButtonsHtml({ kind: "toggle", seq: item.seq, on }, locale)}<p class="mt-2">${settingLink(href, locale === "en" ? "View in settings" : "在设置页查看")}</p>`;
+  return { text, html, pendingConfirm: { kind: "toggle", seq: item.seq, on } };
 }
 
 /** 处理功能设置相关的检索与开关改配意图 */
@@ -629,12 +613,18 @@ export function processAiAssistantSettingsQuery(
   }
 
   const complex = processAiAssistantComplexSettingChange(q, locale);
-  if (complex) return wrapPendingMutationsReply(complex);
+  if (complex) {
+    return {
+      text: complex.text,
+      html: complex.html,
+      pendingConfirm: complex.pendingConfirm,
+    };
+  }
 
   const configure = parseConfigureIntent(q);
   if (configure && configure.target.length >= 2) {
     const subOptionResult = processSubOptionConfigureIntent(q, configure, locale);
-    if (subOptionResult) return wrapPendingMutationsReply(subOptionResult);
+    if (subOptionResult) return subOptionResult;
     const hits = searchSettings(configure.target, 3);
     if (hits.length === 0) {
       const text =

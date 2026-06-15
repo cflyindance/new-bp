@@ -1,8 +1,3 @@
-import { getApiTenantId, getApiTenantOptions, switchApiTenant } from "../config/api-client";
-import { clearDashboardKpiCache } from "../config/dashboard-kpi-api";
-import { applyActiveTenantPresetSettings } from "../config/feature-presets-setting-apply";
-import { hydrateScopeCatalog } from "../config/tenant-scope-catalog";
-import { refreshTenantProfileForScope } from "../config/tenant-profile-api";
 import { clearAuthenticated, getAuthenticatedEmail } from "./login";
 import { t } from "../i18n";
 
@@ -15,31 +10,6 @@ function escapeHtml(s: string): string {
 }
 
 const USER_CENTER_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
-
-function renderTenantSwitcher(): string {
-  const tenants = getApiTenantOptions();
-  if (tenants.length <= 1) return "";
-  const current = getApiTenantId();
-  const options = tenants
-    .map(
-      (tenant) => `
-        <button
-          type="button"
-          role="menuitem"
-          data-tenant-switch="${escapeHtml(tenant.id)}"
-          class="flex w-full min-h-8 items-center justify-between rounded-md px-3 text-left text-sm transition-colors hover:bg-accent ${tenant.id === current ? "font-medium text-primary" : "text-card-foreground"}"
-        >
-          <span>${escapeHtml(tenant.title)}</span>
-          ${tenant.id === current ? `<span class="text-xs text-muted-foreground">当前</span>` : ""}
-        </button>`,
-    )
-    .join("");
-  return `
-        <div class="border-b border-border px-2 py-2">
-          <p class="px-1 text-xs font-medium text-muted-foreground">切换租户</p>
-          <div class="mt-1 space-y-0.5">${options}</div>
-        </div>`;
-}
 
 export function renderHeaderUserCenter(): string {
   const email = getAuthenticatedEmail();
@@ -67,7 +37,6 @@ export function renderHeaderUserCenter(): string {
           <p class="text-xs font-medium text-muted-foreground">${escapeHtml(t("header.userCenterAccountLabel"))}</p>
           <p class="mt-0.5 truncate text-sm font-medium text-card-foreground" title="${escapeHtml(accountLabel)}">${escapeHtml(accountLabel)}</p>
         </div>
-        ${renderTenantSwitcher()}
         <div class="px-2 pt-1">
           <button
             type="button"
@@ -90,7 +59,7 @@ function setUserCenterOpen(root: HTMLElement, open: boolean): void {
   menu.classList.toggle("hidden", !open);
 }
 
-export function bindHeaderUserCenter(onLogout: () => void, onTenantSwitch?: () => void): void {
+export function bindHeaderUserCenter(onLogout: () => void): void {
   const root = document.querySelector<HTMLElement>("[data-user-center-root]");
   if (!root || root.dataset.userCenterBound === "1") return;
   root.dataset.userCenterBound = "1";
@@ -102,24 +71,6 @@ export function bindHeaderUserCenter(onLogout: () => void, onTenantSwitch?: () =
     e.stopPropagation();
     const open = toggle.getAttribute("aria-expanded") !== "true";
     setUserCenterOpen(root, open);
-  });
-
-  root.querySelectorAll<HTMLButtonElement>("[data-tenant-switch]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const tenantId = btn.dataset.tenantSwitch;
-      if (!tenantId || tenantId === getApiTenantId()) return;
-      void switchApiTenant(tenantId).then((ok) => {
-        if (!ok) return;
-        setUserCenterOpen(root, false);
-        clearDashboardKpiCache();
-        void hydrateScopeCatalog(tenantId, true)
-          .then(() => refreshTenantProfileForScope())
-          .then((profile) => {
-            applyActiveTenantPresetSettings(profile);
-            onTenantSwitch?.();
-          });
-      });
-    });
   });
 
   logoutBtn?.addEventListener("click", () => {
