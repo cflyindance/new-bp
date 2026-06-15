@@ -12,10 +12,10 @@ import {
 import { applyPlatformPresetContext, clearPlatformPresetContext } from "./platform-preset-context";
 import {
   countOnboardingConfirmationModules,
-  getOnboardingConfirmationSections,
+  getOnboardingConfirmationSectionsMerged,
+  type OnboardingConfirmationSection,
 } from "./platform-preset-onboarding-scenarios";
 import {
-  getPublishedSnapshot,
   listCustomBusinessTypes,
   readSelectedBusinessTypeId,
   writeSelectedBusinessTypeId,
@@ -29,8 +29,8 @@ const DRAFT_KEY = "menusifu:platform-preset-onboarding-draft-v1";
 
 export interface OnboardingDraft {
   step: 1 | 2 | 3;
-  businessTypeId: string;
-  productLineId: ProductLineId;
+  businessTypeIds: string[];
+  productLineIds: ProductLineId[];
 }
 
 function escapeHtml(s: string): string {
@@ -39,6 +39,55 @@ function escapeHtml(s: string): string {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+function toggleArrayItem<T>(arr: T[], item: T): T[] {
+  const idx = arr.indexOf(item);
+  if (idx >= 0) {
+    if (arr.length <= 1) return arr;
+    return arr.filter((_, i) => i !== idx);
+  }
+  return [...arr, item];
+}
+
+function normalizeOnboardingDraft(raw: unknown): OnboardingDraft {
+  const fallback: OnboardingDraft = {
+    step: 1,
+    businessTypeIds: [readSelectedBusinessTypeId()],
+    productLineIds: ["pos"],
+  };
+  if (!raw || typeof raw !== "object") return fallback;
+
+  const r = raw as Partial<
+    OnboardingDraft & { businessTypeId?: string; productLineId?: ProductLineId }
+  >;
+
+  const step = r.step === 2 || r.step === 3 ? r.step : 1;
+
+  if (Array.isArray(r.businessTypeIds) && Array.isArray(r.productLineIds)) {
+    return {
+      step,
+      businessTypeIds: r.businessTypeIds.length ? r.businessTypeIds : fallback.businessTypeIds,
+      productLineIds: r.productLineIds.length ? r.productLineIds : fallback.productLineIds,
+    };
+  }
+
+  return {
+    step,
+    businessTypeIds: r.businessTypeId ? [r.businessTypeId] : fallback.businessTypeIds,
+    productLineIds: r.productLineId ? [r.productLineId] : fallback.productLineIds,
+  };
+}
+
+function formatBusinessTypeLabels(ids: string[]): string {
+  const custom = listCustomBusinessTypes();
+  return ids
+    .map((id) => businessTypeLabel(id, custom.find((c) => c.id === id)?.label))
+    .join("、");
+}
+
+function formatProductLineLabels(ids: ProductLineId[]): string {
+  return ids.map((id) => productLineLabel(id)).join("、");
 }
 
 function readCompleteMap(): Record<string, string> {
@@ -85,8 +134,8 @@ export function restartPlatformPresetOnboardingFromStart(): void {
   clearPlatformPresetContext();
   writeOnboardingDraft({
     step: 1,
-    businessTypeId: readSelectedBusinessTypeId(),
-    productLineId: "pos",
+    businessTypeIds: [readSelectedBusinessTypeId()],
+    productLineIds: ["pos"],
   });
 }
 
@@ -102,15 +151,11 @@ function isAuthenticatedOnboardingCheck(): boolean {
 function readOnboardingDraft(): OnboardingDraft {
   try {
     const raw = sessionStorage.getItem(DRAFT_KEY);
-    if (raw) return JSON.parse(raw) as OnboardingDraft;
+    if (raw) return normalizeOnboardingDraft(JSON.parse(raw));
   } catch {
     /* ignore */
   }
-  return {
-    step: 1,
-    businessTypeId: readSelectedBusinessTypeId(),
-    productLineId: "pos",
-  };
+  return normalizeOnboardingDraft(null);
 }
 
 function writeOnboardingDraft(draft: OnboardingDraft): void {
@@ -135,19 +180,22 @@ export function isPlatformPresetOnboardingPath(path: string): boolean {
 
 function renderOnboardingBusinessTypeButton(id: string, label: string, selected: boolean): string {
   return `
-    <button type="button" data-ob-bt="${escapeHtml(id)}"
-      class="rounded-xl border px-4 py-3 text-left text-sm transition-colors ${selected ? "border-primary bg-primary/10 font-medium text-primary" : "border-border hover:bg-muted/50"}">
-      ${escapeHtml(label)}
+    <button type="button" data-ob-bt="${escapeHtml(id)}" aria-pressed="${selected ? "true" : "false"}"
+      class="flex items-start gap-3 rounded-xl border px-4 py-3 text-left text-sm transition-colors ${selected ? "border-primary bg-primary/10 font-medium text-primary" : "border-border hover:bg-muted/50"}">
+      <span class="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border ${selected ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground/40 bg-background"}">
+        ${selected ? `<svg class="h-3 w-3" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2.5 6.2 4.8 8.5 9.5 3.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>` : ""}
+      </span>
+      <span>${escapeHtml(label)}</span>
     </button>`;
 }
 
-function renderOnboardingBusinessTypeSections(selectedId: string): string {
+function renderOnboardingBusinessTypeSections(selectedIds: string[]): string {
   const serviceCards = PLATFORM_PRESET_BUILTIN_BUSINESS_TYPES.filter((b) => b.category === "service-mode")
-    .map((b) => renderOnboardingBusinessTypeButton(b.id, b.label, selectedId === b.id))
+    .map((b) => renderOnboardingBusinessTypeButton(b.id, b.label, selectedIds.includes(b.id)))
     .join("");
 
   const categoryCards = PLATFORM_PRESET_BUILTIN_BUSINESS_TYPES.filter((b) => b.category === "category")
-    .map((b) => renderOnboardingBusinessTypeButton(b.id, b.label, selectedId === b.id))
+    .map((b) => renderOnboardingBusinessTypeButton(b.id, b.label, selectedIds.includes(b.id)))
     .join("");
 
   const customTypes = listCustomBusinessTypes();
@@ -156,12 +204,13 @@ function renderOnboardingBusinessTypeSections(selectedId: string): string {
       ? `<div>
           <p class="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">自定义业态</p>
           <div class="grid gap-2 sm:grid-cols-2">${customTypes
-            .map((c) => renderOnboardingBusinessTypeButton(c.id, c.label, selectedId === c.id))
+            .map((c) => renderOnboardingBusinessTypeButton(c.id, c.label, selectedIds.includes(c.id)))
             .join("")}</div>
         </div>`
       : "";
 
   return `
+    <p class="mb-4 text-sm text-muted-foreground">可多选，至少选择 1 项</p>
     <div class="space-y-5">
       <div>
         <p class="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">按服务方式</p>
@@ -175,11 +224,21 @@ function renderOnboardingBusinessTypeSections(selectedId: string): string {
     </div>`;
 }
 
-function renderOnboardingConfirmationSections(
-  businessTypeId: string,
-  productLineId: ProductLineId,
-): string {
-  const sections = getOnboardingConfirmationSections(businessTypeId, productLineId);
+function renderOnboardingProductLineButton(id: ProductLineId, label: string, selected: boolean): string {
+  return `
+    <button type="button" data-ob-pl="${escapeHtml(id)}" aria-pressed="${selected ? "true" : "false"}"
+      class="flex items-start gap-3 rounded-xl border px-4 py-3 text-left text-sm transition-colors ${selected ? "border-primary bg-primary/10 font-medium text-primary" : "border-border hover:bg-muted/50"}">
+      <span class="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border ${selected ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground/40 bg-background"}">
+        ${selected ? `<svg class="h-3 w-3" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2.5 6.2 4.8 8.5 9.5 3.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>` : ""}
+      </span>
+      <span>
+        <span class="font-medium">${escapeHtml(label)}</span>
+        <span class="mt-0.5 block font-mono text-xs text-muted-foreground">${escapeHtml(id)}</span>
+      </span>
+    </button>`;
+}
+
+function renderOnboardingConfirmationSectionsHtml(sections: OnboardingConfirmationSection[]): string {
   const total = countOnboardingConfirmationModules(sections);
 
   if (total === 0) {
@@ -213,54 +272,52 @@ function renderOnboardingConfirmationSections(
     </div>`;
 }
 
-function presetSourceLabel(businessTypeId: string, productLineId: ProductLineId): string {
-  const published = getPublishedSnapshot(businessTypeId, productLineId);
-  return published ? `平台预设 v${published.version}` : "系统默认预设";
-}
-
 export function renderPlatformPresetOnboardingPage(): string {
   const draft = readOnboardingDraft();
-  const btLabel = businessTypeLabel(
-    draft.businessTypeId,
-    listCustomBusinessTypes().find((c) => c.id === draft.businessTypeId)?.label,
+  const btLabels = formatBusinessTypeLabels(draft.businessTypeIds);
+  const plLabels = formatProductLineLabels(draft.productLineIds);
+  const comboCount = draft.businessTypeIds.length * draft.productLineIds.length;
+  const confirmationSections = getOnboardingConfirmationSectionsMerged(
+    draft.businessTypeIds,
+    draft.productLineIds,
   );
-  const plLabel = productLineLabel(draft.productLineId);
-  const presetSource = presetSourceLabel(draft.businessTypeId, draft.productLineId);
-  const confirmationSections = getOnboardingConfirmationSections(draft.businessTypeId, draft.productLineId);
   const moduleTotal = countOnboardingConfirmationModules(confirmationSections);
 
   const step1 = draft.step === 1;
   const step2 = draft.step === 2;
   const step3 = draft.step === 3;
 
-  const lineCards = PLATFORM_PRESET_PRODUCT_LINES.map(
-    (l) => `
-    <button type="button" data-ob-pl="${escapeHtml(l.id)}"
-      class="rounded-xl border px-4 py-3 text-left text-sm transition-colors ${draft.productLineId === l.id ? "border-primary bg-primary/10 font-medium text-primary" : "border-border hover:bg-muted/50"}">
-      <span class="font-medium">${escapeHtml(l.label)}</span>
-      <span class="mt-0.5 block font-mono text-xs text-muted-foreground">${escapeHtml(l.id)}</span>
-    </button>`,
+  const canNextStep1 = draft.businessTypeIds.length >= 1;
+  const canNextStep2 = draft.productLineIds.length >= 1;
+
+  const lineCards = PLATFORM_PRESET_PRODUCT_LINES.map((l) =>
+    renderOnboardingProductLineButton(l.id, l.label, draft.productLineIds.includes(l.id)),
   ).join("");
 
-  const moduleList = renderOnboardingConfirmationSections(draft.businessTypeId, draft.productLineId);
+  const moduleList = renderOnboardingConfirmationSectionsHtml(confirmationSections);
 
   const stepContent = step1
     ? `<div>
         <h2 class="text-base font-semibold text-card-foreground">请选择经营业态</h2>
-        <div class="mt-4">${renderOnboardingBusinessTypeSections(draft.businessTypeId)}</div>
+        <div class="mt-4">${renderOnboardingBusinessTypeSections(draft.businessTypeIds)}</div>
       </div>`
     : step2
       ? `<div>
         <h2 class="text-base font-semibold text-card-foreground">请选择产线</h2>
-        <p class="mt-1 text-sm text-muted-foreground">业态：<strong class="text-card-foreground">${escapeHtml(btLabel)}</strong></p>
-        <div class="mt-4 grid gap-2 sm:grid-cols-2 md:grid-cols-3">${lineCards}</div>
+        <p class="mt-1 text-sm text-muted-foreground">
+          已选业态（${draft.businessTypeIds.length}）：<strong class="text-card-foreground">${escapeHtml(btLabels)}</strong>
+        </p>
+        <div class="mt-4">
+          <p class="mb-3 text-sm text-muted-foreground">可多选，至少选择 1 项</p>
+          <div class="grid gap-2 sm:grid-cols-2 md:grid-cols-3">${lineCards}</div>
+        </div>
       </div>`
       : `<div>
         <h2 class="text-base font-semibold text-card-foreground">功能确认</h2>
         <p class="mt-1 text-sm text-muted-foreground">
-          将应用 <strong class="text-card-foreground">${escapeHtml(btLabel)}</strong> ·
-          <strong class="text-card-foreground">${escapeHtml(plLabel)}</strong>
-          （${escapeHtml(presetSource)}）
+          将应用 <strong class="text-card-foreground">${escapeHtml(btLabels)}</strong> ·
+          <strong class="text-card-foreground">${escapeHtml(plLabels)}</strong>
+          <span class="text-muted-foreground">（${comboCount} 组预设并集）</span>
         </p>
         <p class="mt-3 text-sm font-medium text-card-foreground">
           将进入系统的一级功能模块
@@ -270,13 +327,15 @@ export function renderPlatformPresetOnboardingPage(): string {
       </div>`;
 
   const backBtn = `<button type="button" data-ob-back class="rounded-lg border border-border px-5 py-2.5 text-sm hover:bg-muted">上一步</button>`;
-  const nextBtn = `<button type="button" data-ob-next class="rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground">下一步</button>`;
+  const nextDisabledClass = "cursor-not-allowed opacity-50";
+  const nextBtnStep1 = `<button type="button" data-ob-next ${canNextStep1 ? "" : "disabled"} class="rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground ${canNextStep1 ? "" : nextDisabledClass}">下一步</button>`;
+  const nextBtnStep2 = `<button type="button" data-ob-next ${canNextStep2 ? "" : "disabled"} class="rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground ${canNextStep2 ? "" : nextDisabledClass}">下一步</button>`;
   const finishBtn = `<button type="button" data-ob-finish class="rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground">进入系统</button>`;
 
   const footerActions = step1
-    ? `<div class="flex justify-end">${nextBtn}</div>`
+    ? `<div class="flex justify-end">${nextBtnStep1}</div>`
     : step2
-      ? `<div class="flex justify-between gap-2">${backBtn}${nextBtn}</div>`
+      ? `<div class="flex justify-between gap-2">${backBtn}${nextBtnStep2}</div>`
       : `<div class="flex justify-between gap-2">${backBtn}${finishBtn}</div>`;
 
   return `
@@ -319,8 +378,11 @@ export function bindPlatformPresetOnboarding(onMount: () => void): void {
 
     const btBtn = target.closest<HTMLElement>("[data-ob-bt]");
     if (btBtn) {
-      draft.businessTypeId = btBtn.dataset.obBt!;
-      writeSelectedBusinessTypeId(draft.businessTypeId);
+      const id = btBtn.dataset.obBt!;
+      draft.businessTypeIds = toggleArrayItem(draft.businessTypeIds, id);
+      if (draft.businessTypeIds.length) {
+        writeSelectedBusinessTypeId(draft.businessTypeIds[0]!);
+      }
       writeOnboardingDraft(draft);
       onMount();
       return;
@@ -328,7 +390,8 @@ export function bindPlatformPresetOnboarding(onMount: () => void): void {
 
     const plBtn = target.closest<HTMLElement>("[data-ob-pl]");
     if (plBtn) {
-      draft.productLineId = plBtn.dataset.obPl! as ProductLineId;
+      const id = plBtn.dataset.obPl! as ProductLineId;
+      draft.productLineIds = toggleArrayItem(draft.productLineIds, id);
       writeOnboardingDraft(draft);
       onMount();
       return;
@@ -342,15 +405,20 @@ export function bindPlatformPresetOnboarding(onMount: () => void): void {
     }
 
     if (target.closest("[data-ob-next]")) {
-      if (draft.step === 1) draft.step = 2;
-      else if (draft.step === 2) draft.step = 3;
+      if (draft.step === 1) {
+        if (draft.businessTypeIds.length < 1) return;
+        draft.step = 2;
+      } else if (draft.step === 2) {
+        if (draft.productLineIds.length < 1) return;
+        draft.step = 3;
+      }
       writeOnboardingDraft(draft);
       onMount();
       return;
     }
 
     if (target.closest("[data-ob-finish]")) {
-      applyPlatformPresetContext(draft.businessTypeId, draft.productLineId);
+      applyPlatformPresetContext(draft.businessTypeIds, draft.productLineIds);
       markPlatformPresetOnboardingComplete();
       location.hash = `#${getFirstAllowedNavPath()}`;
       onMount();

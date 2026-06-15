@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>广告 - 跳转中</title>
+  <script>
+    (function () {
+      var params = new URLSearchParams(window.location.search);
+      var embedded = params.get("embedded");
+      var isEmbedded = embedded === "1" || embedded === "true";
+      if (!isEmbedded) {
+        try { isEmbedded = window.self !== window.top; } catch (e) { isEmbedded = false; }
+      }
+      if (isEmbedded) params.set("embedded", "1");
+      var query = params.toString();
+      var target = "marketing-ads-list.html" + (query ? "?" + query : "");
+      window.location.replace(target);
+    })();
+  </script>
+</head>
+<body>
+  <p>正在跳转到广告…</p>
+  <p>若未自动跳转，请<a href="marketing-ads-list.html">点击这里</a>。</p>
+</body>
+</html>

@@ -137,3 +137,49 @@ export function getOnboardingConfirmationSections(
 export function countOnboardingConfirmationModules(sections: OnboardingConfirmationSection[]): number {
   return sections.reduce((sum, s) => sum + s.modules.length, 0);
 }
+
+/** 多业态 × 多产线：对各组合启用的一级模块取并集后按场景分组 */
+export function getOnboardingConfirmationSectionsMerged(
+  businessTypeIds: string[],
+  productLineIds: ProductLineId[],
+): OnboardingConfirmationSection[] {
+  const moduleById = new Map<string, OnboardingConfirmationModule>();
+
+  for (const businessTypeId of businessTypeIds) {
+    for (const productLineId of productLineIds) {
+      const sections = getOnboardingConfirmationSections(businessTypeId, productLineId);
+      for (const section of sections) {
+        for (const mod of section.modules) {
+          if (!moduleById.has(mod.moduleId)) {
+            moduleById.set(mod.moduleId, mod);
+          }
+        }
+      }
+    }
+  }
+
+  const sectionMap = new Map<string, OnboardingConfirmationSection>();
+  const ensureSection = (group: OnboardingModuleScenarioGroup): OnboardingConfirmationSection => {
+    let section = sectionMap.get(group.id);
+    if (!section) {
+      section = { group, modules: [] };
+      sectionMap.set(group.id, section);
+    }
+    return section;
+  };
+
+  for (const mod of moduleById.values()) {
+    const group = GROUP_BY_MODULE_ID.get(mod.moduleId) ?? FALLBACK_GROUP;
+    ensureSection(group).modules.push(mod);
+  }
+
+  const ordered: OnboardingConfirmationSection[] = [];
+  for (const group of ONBOARDING_MODULE_SCENARIO_GROUPS) {
+    const section = sectionMap.get(group.id);
+    if (section?.modules.length) ordered.push(section);
+  }
+  const other = sectionMap.get(FALLBACK_GROUP.id);
+  if (other?.modules.length) ordered.push(other);
+
+  return ordered;
+}
