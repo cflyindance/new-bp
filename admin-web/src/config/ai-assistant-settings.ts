@@ -19,16 +19,16 @@ import {
   readModuleSettingToggleOn,
 } from "./module-settings-toggle-ui";
 
-import type { AiSettingMutation } from "./module-settings-ai-editable";
+import {
+  buildAiSettingConfirmButtonsHtml,
+  formatSettingSceneDescBlock,
+} from "./ai-assistant-setting-confirm";
 
 export type AiAssistantReply = {
   text: string;
   html: string;
-  /** 若通过 AI 改写了开关，供 UI 同步刷新 */
-  changedSeq?: number;
-  changedOn?: boolean;
-  /** 复杂改配（表单 / 多选 / 产线 / 数值等） */
-  mutations?: AiSettingMutation[];
+  /** 改配前需用户确认（开关 / 复杂改配） */
+  pendingConfirm?: import("./ai-assistant-setting-confirm").AiSettingConfirmAction;
 };
 
 type IndexedSetting = {
@@ -482,13 +482,16 @@ function formatSearchResults(
             : "已关闭"
         : "";
     const stateSuffix = state ? `（${state}${toggleHint}）` : toggleHint;
-    return `${i + 1}. ${row.hubTitle} · ${row.item.groupTitle} · ${settingLink(row.href, row.item.title)}${stateSuffix}`;
+    const desc =
+      row.item.sceneDesc?.trim() ||
+      (locale === "en" ? "No description." : "暂无说明。");
+    return `<li class="space-y-1"><div>${i + 1}. ${row.hubTitle} · ${row.item.groupTitle} · ${settingLink(row.href, row.item.title)}${escapeHtml(stateSuffix)}</div><p class="text-xs leading-relaxed text-muted-foreground pl-4">${escapeHtml(desc)}</p></li>`;
   });
   const tip =
     locale === "en"
-      ? 'Try "enable …", "disable …", or "is … enabled?" for toggle settings.'
-      : "可说「把 xxx 打开」改开关、「开班备款设为 500」改数值、「产线 Kiosk 开启 xxx」改产线、「勾选外带」改多选。";
-  const html = `${escapeHtml(head)}<ul class="mt-2 list-disc space-y-1.5 pl-4">${lines.map((l) => `<li>${l}</li>`).join("")}</ul><p class="mt-2 text-xs text-muted-foreground">${escapeHtml(tip)}</p>`;
+      ? 'Try "enable …", "disable …", or "is … enabled?" Changes require confirmation before apply.'
+      : "可说「把 xxx 打开」改开关、「开班备款设为 500」改数值等；应用前会展示功能说明并需您确认。";
+  const html = `${escapeHtml(head)}<ul class="mt-2 list-none space-y-2 pl-0">${lines.join("")}</ul><p class="mt-2 text-xs text-muted-foreground">${escapeHtml(tip)}</p>`;
   const text = `${head}\n${results.map((r, i) => `${i + 1}. ${r.hubTitle} · ${r.item.title}`).join("\n")}`;
   return { text, html };
 }
@@ -505,14 +508,14 @@ function formatStatusResult(
         locale === "en"
           ? `${hubTitle} · ${item.title}: checked options — ${subSummary}.`
           : `${hubTitle} ·「${item.title}」当前已勾选：${subSummary}。`;
-      const html = `<p>${escapeHtml(text)}</p><p class="mt-2">${settingLink(href, locale === "en" ? "View in settings" : "在设置页查看")}</p>`;
+      const html = `<p>${escapeHtml(text)}</p>${formatSettingSceneDescBlock(indexed, locale)}<p class="mt-2">${settingLink(href, locale === "en" ? "View in settings" : "在设置页查看")}</p>`;
       return { text, html };
     }
     const text =
       locale === "en"
         ? `"${item.title}" is not a simple toggle. Open the settings page for details.`
         : `「${item.title}」不是简单开关项，请在设置页查看详情。`;
-    const html = `${escapeHtml(text)} ${settingLink(href, locale === "en" ? "Open settings" : "打开设置页")}`;
+    const html = `<p>${escapeHtml(text)}</p>${formatSettingSceneDescBlock(indexed, locale)} ${settingLink(href, locale === "en" ? "Open settings" : "打开设置页")}`;
     return { text, html };
   }
   const on = readModuleSettingToggleOn(item.seq);
@@ -527,7 +530,7 @@ function formatStatusResult(
     locale === "en"
       ? `${hubTitle} · ${item.title}: currently ${stateLabel}.`
       : `${hubTitle} · ${item.title}：当前${stateLabel}。`;
-  const html = `<p>${escapeHtml(text)}</p><p class="mt-2">${settingLink(href, locale === "en" ? "View in settings" : "在设置页查看")}</p>`;
+  const html = `<p>${escapeHtml(text)}</p>${formatSettingSceneDescBlock(indexed, locale)}<p class="mt-2">${settingLink(href, locale === "en" ? "View in settings" : "在设置页查看")}</p>`;
   return { text, html };
 }
 
@@ -551,19 +554,41 @@ function applyToggleChange(
   }
 
   const prev = readModuleSettingToggleOn(item.seq);
-  const stateLabel = on
+  const prevLabel = prev
     ? locale === "en"
-      ? "enabled"
+      ? "On"
       : "已开启"
     : locale === "en"
-      ? "disabled"
+      ? "Off"
       : "已关闭";
-  const text =
+  const targetLabel = on
+    ? locale === "en"
+      ? "On"
+      : "已开启"
+    : locale === "en"
+      ? "Off"
+      : "已关闭";
+
+  if (prev === on) {
+    const text =
+      locale === "en"
+        ? `${hubTitle} · ${item.title}: already ${targetLabel.toLowerCase()}.`
+        : `${hubTitle} · ${item.title}：当前已是${targetLabel}，无需变更。`;
+    const html = `<p>${escapeHtml(text)}</p>${formatSettingSceneDescBlock(indexed, locale)}<p class="mt-2">${settingLink(href, locale === "en" ? "View in settings" : "在设置页查看")}</p>`;
+    return { text, html };
+  }
+
+  const head =
     locale === "en"
-      ? `${hubTitle} · ${item.title}: ${prev === on ? "already " : ""}${stateLabel}.`
-      : `${hubTitle} · ${item.title}：${prev === on ? "状态未变，仍为" : "已设为"}${stateLabel}。`;
-  const html = `<p>${escapeHtml(text)}</p><p class="mt-2">${settingLink(href, locale === "en" ? "View in settings" : "在设置页查看")}</p>`;
-  return { text, html, changedSeq: item.seq, changedOn: on };
+      ? `Confirm ${on ? "enabling" : "disabling"} "${item.title}"?`
+      : `确认${on ? "开启" : "关闭"}「${item.title}」？`;
+  const changeLine =
+    locale === "en"
+      ? `Current: ${prevLabel} → After apply: ${targetLabel}`
+      : `当前：${prevLabel} → 应用后：${targetLabel}`;
+  const text = `${head}\n${changeLine}`;
+  const html = `<p>${escapeHtml(head)}</p><p class="mt-1 text-sm">${escapeHtml(changeLine)}</p>${formatSettingSceneDescBlock(indexed, locale)}${buildAiSettingConfirmButtonsHtml({ kind: "toggle", seq: item.seq, on }, locale)}<p class="mt-2">${settingLink(href, locale === "en" ? "View in settings" : "在设置页查看")}</p>`;
+  return { text, html, pendingConfirm: { kind: "toggle", seq: item.seq, on } };
 }
 
 /** 处理功能设置相关的检索与开关改配意图 */
@@ -588,7 +613,13 @@ export function processAiAssistantSettingsQuery(
   }
 
   const complex = processAiAssistantComplexSettingChange(q, locale);
-  if (complex) return complex;
+  if (complex) {
+    return {
+      text: complex.text,
+      html: complex.html,
+      pendingConfirm: complex.pendingConfirm,
+    };
+  }
 
   const configure = parseConfigureIntent(q);
   if (configure && configure.target.length >= 2) {
