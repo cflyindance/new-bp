@@ -59,17 +59,10 @@ export type AiSettingMutation =
   | { kind: "order-type"; seq: number; code: string; checked: boolean; optionLabel: string }
   | { kind: "aviato-scope"; scopeId: AviatoServiceScopeId; checked: boolean; seq: number; label: string };
 
-import type { AiSettingConfirmAction } from "./ai-assistant-setting-confirm";
-import {
-  buildAiSettingConfirmButtonsHtml,
-  formatSettingSceneDescBlock,
-} from "./ai-assistant-setting-confirm";
-
 export type AiSettingApplyResult = {
   text: string;
   html: string;
-  /** 待用户确认后再写入 localStorage / 同步 DOM */
-  pendingConfirm?: AiSettingConfirmAction;
+  mutations?: AiSettingMutation[];
 };
 
 type IndexedSetting = {
@@ -489,23 +482,18 @@ function buildApplyReply(
   mutations: AiSettingMutation[],
   locale: "zh" | "en",
 ): AiSettingApplyResult {
-  const { item, href } = indexed;
+  for (const m of mutations) persistMutation(m);
+  const { item, hubTitle, href } = indexed;
   const lines = mutations.map((m) => formatMutationSummary(m, locale)).filter(Boolean);
   const head =
     locale === "en"
-      ? `Confirm changes to "${item.title}"?`
-      : `确认修改「${item.title}」？`;
-  const changeLabel = locale === "en" ? "Planned changes" : "即将变更";
-  const text = `${head}\n${changeLabel}:\n${lines.join("\n")}`;
-  const html = `<p>${escapeHtml(head)}</p><p class="mt-1 text-xs font-medium text-muted-foreground">${escapeHtml(changeLabel)}</p><ul class="mt-1 list-disc space-y-1 pl-4">${lines
+      ? `${hubTitle} · ${item.title}: updated`
+      : `${hubTitle} · ${item.title}：已更新配置`;
+  const text = `${head}\n${lines.join("\n")}`;
+  const html = `<p>${escapeHtml(head)}</p><ul class="mt-2 list-disc space-y-1 pl-4">${lines
     .map((l) => `<li>${escapeHtml(l)}</li>`)
-    .join("")}</ul>${formatSettingSceneDescBlock(indexed, locale)}${buildAiSettingConfirmButtonsHtml({ kind: "mutations", mutations }, locale)}<p class="mt-2">${settingLink(href, locale === "en" ? "View in settings" : "在设置页查看")}</p>`;
-  return { text, html, pendingConfirm: { kind: "mutations", mutations } };
-}
-
-/** 确认后持久化复杂改配（localStorage） */
-export function persistAiSettingMutations(mutations: AiSettingMutation[]): void {
-  for (const m of mutations) persistMutation(m);
+    .join("")}</ul><p class="mt-2">${settingLink(href, locale === "en" ? "View in settings" : "在设置页查看")}</p>`;
+  return { text, html, mutations };
 }
 
 /** 解析并应用复杂改配（表单 / 数值 / 产线 / 订单类型多选等） */

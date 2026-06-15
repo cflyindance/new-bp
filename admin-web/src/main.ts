@@ -5,21 +5,6 @@ import {
   LOGIN_PATH,
   renderLoginPage,
 } from "./auth/login";
-import {
-  DEFAULT_LOCKED_STORE_ID,
-  DEMO_SCOPE_BRANDS,
-  DEMO_SCOPE_REGIONS,
-  DEMO_SCOPE_STORES,
-  ensureScopeFiltersForLayoutPreset,
-  formatScopeFilterLabel,
-  isChainOrgTier,
-  isStoreScopeLocked,
-  readScopeFilters,
-  shouldShowBrandScopeFilter,
-  shouldShowRegionScopeFilter,
-  syncSessionForAuthenticatedUser,
-  writeScopeFilters,
-} from "./auth/session-scope";
 import { bindHeaderUserCenter, renderHeaderUserCenter } from "./auth/user-center";
 import { bindLoginLogsPage, isLoginLogsPath, renderLoginLogsPage } from "./log-management/login-logs-ui";
 import {
@@ -98,22 +83,6 @@ import {
   getActiveFinanceSettingsSubPath,
 } from "./config/navigation";
 import {
-  getDefaultNavModuleIds,
-  getSidebarOrderedNavModules,
-  hasSavedCustomNavModuleOrder,
-  markSidebarNavLayoutPresetManual,
-  readSidebarMoreExpandedExplicit,
-  readSidebarNavLayoutPreset,
-  readSidebarNavSortMode,
-  splitSidebarNavModules,
-  writeCustomNavModuleOrder,
-  writeSidebarMoreExpanded,
-  writeSidebarNavLayoutPreset,
-  writeSidebarNavSortMode,
-  type SidebarNavLayoutPreset,
-  type SidebarNavSortMode,
-} from "./config/sidebar-nav-order";
-import {
   findFinanceRegisterAuditTitle,
   isFinanceRegisterAuditPath,
   renderFinanceRegisterAuditPageContent,
@@ -167,11 +136,7 @@ import {
   type AiAssistantReply,
   processAiAssistantSettingsQuery,
 } from "./config/ai-assistant-settings";
-import { decodeAiSettingConfirmPayload } from "./config/ai-assistant-setting-confirm";
-import {
-  persistAiSettingMutations,
-  type AiSettingMutation,
-} from "./config/module-settings-ai-editable";
+import type { AiSettingMutation } from "./config/module-settings-ai-editable";
 import { packingSlipOrderTypeCheckboxFieldId } from "./config/module-settings-packing-slip-order-type-ui";
 import {
   bindFohSettingsViewMode,
@@ -201,7 +166,6 @@ import {
 } from "./config/foh-settings-by-line-toggle";
 import { fohLineNavLabel, type FohLineNavId } from "./config/foh-settings-line-scope";
 import { bindPermissionsRbac, isPermissionsRbacPath, renderPermissionsRbacPage } from "./permissions/rbac-ui";
-import { filterVisibleNavModules, isNavModuleVisible } from "./permissions/nav-access";
 import {
   bindStaffAccountsPage,
   isStaffAccountsPath,
@@ -3139,6 +3103,11 @@ function replaceHashPath(path: string): void {
 const SIDEBAR_NAV_SCROLL_KEY = "sidebar-primary-nav-scrollTop";
 
 /** 顶栏品牌 / 区域 / 门店筛选，与 `bindHeaderScopeFilters` 同步 */
+const SCOPE_FILTER_STORAGE_KEYS = {
+  brand: "header-scope-filter-brand",
+  region: "header-scope-filter-region",
+  store: "header-scope-filter-store",
+} as const;
 
 function renderGlobalUiLocaleControl(): string {
   const cur = getUiLocale();
@@ -3155,56 +3124,6 @@ function renderGlobalUiLocaleControl(): string {
         <option value="en" ${cur === "en" ? "selected" : ""}>${escapeHtml(t("locale.optionEn"))}</option>
       </select>
     </div>`;
-}
-
-function renderHeaderNavLayoutPresetControl(): string {
-  const preset = readSidebarNavLayoutPreset();
-  const storeActive = preset === "store";
-  const aria = escapeHtml(t("shell.navLayoutModeAria"));
-  const title = escapeHtml(t("shell.navLayoutLabel"));
-  const hint = escapeHtml(storeActive ? t("shell.navLayoutStoreHint") : t("shell.navLayoutChainHint"));
-  const activeBtn =
-    "rounded px-2 sm:px-2.5 h-8 sm:h-9 text-xs sm:text-sm font-medium bg-primary text-primary-foreground shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset";
-  const inactiveBtn =
-    "rounded px-2 sm:px-2.5 h-8 sm:h-9 text-xs sm:text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset";
-  return `
-    <div
-      class="flex shrink-0 items-center rounded-md border border-border bg-background p-0.5"
-      role="group"
-      aria-label="${aria}"
-      title="${title} · ${hint}"
-      data-header-nav-layout
-    >
-      <button
-        type="button"
-        data-header-nav-layout-preset="store"
-        class="${storeActive ? activeBtn : inactiveBtn}"
-        aria-pressed="${storeActive}"
-      >${escapeHtml(t("shell.navLayoutStore"))}</button>
-      <button
-        type="button"
-        data-header-nav-layout-preset="chain"
-        class="${!storeActive ? activeBtn : inactiveBtn}"
-        aria-pressed="${!storeActive}"
-      >${escapeHtml(t("shell.navLayoutChain"))}</button>
-    </div>`;
-}
-
-function bindHeaderNavLayoutPresetControl(): void {
-  const root = document.querySelector("[data-header-nav-layout]");
-  if (!root || root.getAttribute("data-header-nav-layout-bound") === "1") return;
-  root.setAttribute("data-header-nav-layout-bound", "1");
-  root.querySelectorAll<HTMLButtonElement>("[data-header-nav-layout-preset]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const preset = btn.getAttribute("data-header-nav-layout-preset");
-      if (preset !== "store" && preset !== "chain") return;
-      if (readSidebarNavLayoutPreset() === preset) return;
-      markSidebarNavLayoutPresetManual();
-      writeSidebarNavLayoutPreset(preset);
-      ensureScopeFiltersForLayoutPreset(preset);
-      mount();
-    });
-  });
 }
 
 function bindGlobalUiLocaleControl(): void {
@@ -4262,12 +4181,6 @@ function renderDeviceManagementHardwareSidebar(path: string): string {
 
 function renderSidebar(): string {
   const hash = location.hash.slice(1) || "/dashboard/overview";
-  const sidebarNavModules = filterVisibleNavModules(getSidebarOrderedNavModules());
-  const layoutPreset = readSidebarNavLayoutPreset();
-  const { primary: primaryNavModules, more: moreNavModules } = splitSidebarNavModules(sidebarNavModules, layoutPreset);
-  const moreNavExpanded = getSidebarMoreExpanded(hash, moreNavModules);
-  const navSortMode = readSidebarNavSortMode();
-  const customNavSortMode = navSortMode === "custom";
   const inventorySheetOpen = readInventorySecondarySheetOpen();
   const pcmSheetOpen = readProductCenterMainSecondarySheetOpen();
   const marketingSheetOpen = readMarketingSecondarySheetOpen();
@@ -4304,8 +4217,7 @@ function renderSidebar(): string {
       </div>
       <div class="relative min-h-0 flex flex-1 flex-col overflow-hidden">
         <nav class="sidebar-primary-nav-scroll min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-2 py-3 ${navObscured}" id="nav-tree" aria-label="${escapeHtml(t("shell.navTree"))}">
-          ${renderSidebarNavModuleItems(primaryNavModules, hash, customNavSortMode)}
-          ${renderSidebarMoreGroup(moreNavModules, hash, customNavSortMode, moreNavExpanded)}
+          ${NAV_MODULES.map((m) => renderModule(m, hash)).join("")}
         </nav>
         ${renderInventorySecondarySheet(hash, inventorySheetOpen)}
         ${renderProductCenterMainSecondarySheet(hash, pcmSheetOpen)}
@@ -4328,194 +4240,8 @@ function renderSidebar(): string {
           )
           .join("")}
       </div>
-      ${renderSidebarNavSortFooter(navSortMode)}
     </aside>
   `;
-}
-
-const SIDEBAR_NAV_DRAG_GRIP = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="9" cy="7" r="1.5"/><circle cx="15" cy="7" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="17" r="1.5"/><circle cx="15" cy="17" r="1.5"/></svg>`;
-
-const SIDEBAR_NAV_MORE_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>`;
-
-function getSidebarMoreExpanded(currentPath: string, moreModules: NavModule[]): boolean {
-  if (moreModules.length === 0) return false;
-  const explicit = readSidebarMoreExpandedExplicit();
-  if (explicit != null) return explicit;
-  return moreModules.some((m) => pathBelongsToModule(currentPath, m));
-}
-
-function renderSidebarNavModuleItems(modules: NavModule[], hash: string, customSortMode: boolean): string {
-  return modules.map((m) => wrapSidebarNavModuleRow(renderModule(m, hash), m.id, customSortMode)).join("");
-}
-
-function renderSidebarMoreGroup(
-  moreModules: NavModule[],
-  hash: string,
-  customSortMode: boolean,
-  expanded: boolean,
-): string {
-  if (moreModules.length === 0) return "";
-  const childrenId = "sidebar-nav-more-list";
-  const chevron = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>`;
-  const activeInMore = moreModules.some((m) => pathBelongsToModule(hash, m));
-  const countLabel = escapeHtml(tf("shell.navMoreCount", { count: String(moreModules.length) }));
-  return `
-    <div class="mt-1 border-t border-sidebar-foreground/10 pt-2 dark:border-white/10" data-sidebar-more-group>
-      <button
-        type="button"
-        data-sidebar-more-toggle
-        class="flex w-full min-h-11 items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-active focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar ${activeInMore ? SBR_ACTIVE : SBR_MUTED_ROW}"
-        aria-expanded="${expanded}"
-        aria-controls="${childrenId}"
-        title="${escapeHtml(t("shell.navMoreToggle"))}"
-      >
-        <span class="text-sidebar-active shrink-0 [&>svg]:block" aria-hidden="true">${SIDEBAR_NAV_MORE_ICON}</span>
-        <span class="min-w-0 flex-1 truncate">${escapeHtml(t("shell.navMore"))}</span>
-        <span class="shrink-0 rounded bg-sidebar-active/15 px-1.5 py-px text-[10px] text-sidebar-muted">${countLabel}</span>
-        <span class="shrink-0 text-sidebar-muted transition-transform duration-200 ${expanded ? "" : "-rotate-90"}">${chevron}</span>
-      </button>
-      <div
-        id="${childrenId}"
-        class="mt-1 space-y-0 border-l border-sidebar-foreground/15 pl-2 ml-4 dark:border-white/15 ${expanded ? "" : "hidden"}"
-        ${expanded ? "" : 'aria-hidden="true"'}
-      >
-        ${renderSidebarNavModuleItems(moreModules, hash, customSortMode)}
-      </div>
-    </div>`;
-}
-
-function wrapSidebarNavModuleRow(moduleHtml: string, moduleId: string, customSortMode: boolean): string {
-  if (!customSortMode) return moduleHtml;
-  const handleLabel = escapeHtml(t("shell.navSortDragHandle"));
-  const inner = moduleHtml.replace(/^\s*<div class="mb-1"/, '<div class="mb-0 min-w-0 flex-1"');
-  return `
-    <div class="mb-1 flex items-start gap-0.5" data-nav-module-row="${moduleId}">
-      <button
-        type="button"
-        class="sidebar-nav-drag-handle mt-0.5 flex size-9 shrink-0 cursor-grab items-center justify-center rounded-md text-sidebar-muted hover:bg-sidebar-active/10 hover:text-sidebar-foreground active:cursor-grabbing"
-        draggable="true"
-        data-sidebar-nav-drag-handle="${moduleId}"
-        aria-label="${handleLabel}"
-        title="${handleLabel}"
-      >${SIDEBAR_NAV_DRAG_GRIP}</button>
-      ${inner}
-    </div>`;
-}
-
-function renderSidebarNavSortFooter(sortMode: SidebarNavSortMode): string {
-  const customMode = sortMode === "custom";
-  const systemSortActive = !customMode;
-  const activeBtn =
-    "flex-1 rounded-md bg-sidebar-active px-2 py-1.5 text-xs font-medium text-sidebar-active-fg shadow-sm";
-  const inactiveBtn =
-    "flex-1 rounded-md px-2 py-1.5 text-xs font-medium text-sidebar-muted hover:bg-sidebar-active/10 hover:text-sidebar-foreground";
-  return `
-    <div class="shrink-0 ${SBR_DIVIDER_T} px-3 py-2.5" data-sidebar-nav-footer>
-      <p class="mb-2 text-xs text-sidebar-muted">${escapeHtml(t("shell.navSortLabel"))}</p>
-      <div class="flex rounded-lg border border-sidebar-foreground/10 p-0.5 dark:border-white/10" role="group" aria-label="${escapeHtml(t("shell.navSortModeAria"))}">
-        <button
-          type="button"
-          data-sidebar-nav-sort-mode="system"
-          class="${systemSortActive ? activeBtn : inactiveBtn}"
-          aria-pressed="${systemSortActive}"
-        >${escapeHtml(t("shell.navSortSystem"))}</button>
-        <button
-          type="button"
-          data-sidebar-nav-sort-mode="custom"
-          class="${customMode ? activeBtn : inactiveBtn}"
-          aria-pressed="${customMode}"
-        >${escapeHtml(t("shell.navSortCustom"))}</button>
-      </div>
-      ${
-        customMode
-          ? `<p class="mt-2 text-[11px] leading-snug text-sidebar-muted">${escapeHtml(t("shell.navSortCustomHint"))}</p>`
-          : ""
-      }
-    </div>`;
-}
-
-function reorderSidebarNavRows(list: HTMLElement, dragId: string, targetRow: HTMLElement, clientY: number): void {
-  if (dragId === targetRow.getAttribute("data-nav-module-row")) return;
-  const dragEl = list.querySelector<HTMLElement>(`[data-nav-module-row="${dragId}"]`);
-  if (!dragEl) return;
-  const rect = targetRow.getBoundingClientRect();
-  const after = clientY > rect.top + rect.height / 2;
-  if (after) targetRow.after(dragEl);
-  else targetRow.before(dragEl);
-}
-
-function persistSidebarNavOrderFromDom(): void {
-  const nav = document.getElementById("nav-tree");
-  if (!nav) return;
-  const ids = [...nav.querySelectorAll<HTMLElement>("[data-nav-module-row]")]
-    .map((el) => el.getAttribute("data-nav-module-row"))
-    .filter((id): id is string => !!id);
-  if (ids.length > 0) writeCustomNavModuleOrder(ids);
-}
-
-function bindSidebarNavSortControls(): void {
-  const root = document.querySelector("[data-sidebar-nav-footer]");
-  if (!root || root.getAttribute("data-sidebar-nav-footer-bound") === "1") return;
-  root.setAttribute("data-sidebar-nav-footer-bound", "1");
-
-  root.querySelectorAll<HTMLButtonElement>("[data-sidebar-nav-sort-mode]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const mode = btn.getAttribute("data-sidebar-nav-sort-mode");
-      if (mode !== "system" && mode !== "custom") return;
-      if (readSidebarNavSortMode() === mode) return;
-      writeSidebarNavSortMode(mode);
-      if (mode === "custom" && !hasSavedCustomNavModuleOrder()) {
-        writeCustomNavModuleOrder(getDefaultNavModuleIds());
-      }
-      mount();
-    });
-  });
-}
-
-function bindSidebarNavDragReorder(): void {
-  if (readSidebarNavSortMode() !== "custom") return;
-  const nav = document.getElementById("nav-tree");
-  if (!nav) return;
-
-  let dragId = "";
-
-  nav.addEventListener("dragstart", (e) => {
-    const handle = (e.target as HTMLElement).closest("[data-sidebar-nav-drag-handle]");
-    if (!handle) {
-      e.preventDefault();
-      return;
-    }
-    const row = handle.closest<HTMLElement>("[data-nav-module-row]");
-    dragId = row?.getAttribute("data-nav-module-row") ?? "";
-    if (!dragId) {
-      e.preventDefault();
-      return;
-    }
-    e.dataTransfer?.setData("text/plain", dragId);
-    if (e.dataTransfer) e.dataTransfer.effectAllowed = "move";
-    row?.classList.add("opacity-50");
-  });
-
-  nav.addEventListener("dragend", (e) => {
-    const row = (e.target as HTMLElement).closest<HTMLElement>("[data-nav-module-row]");
-    row?.classList.remove("opacity-50");
-    dragId = "";
-  });
-
-  nav.addEventListener("dragover", (e) => {
-    if (!(e.target as HTMLElement).closest("[data-nav-module-row]")) return;
-    e.preventDefault();
-    if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
-  });
-
-  nav.addEventListener("drop", (e) => {
-    const targetRow = (e.target as HTMLElement).closest<HTMLElement>("[data-nav-module-row]");
-    const id = dragId || e.dataTransfer?.getData("text/plain") || "";
-    if (!id || !targetRow) return;
-    e.preventDefault();
-    reorderSidebarNavRows(nav, id, targetRow, e.clientY);
-    persistSidebarNavOrderFromDom();
-  });
 }
 
 function renderTipsManagementSidebar(path: string): string {
@@ -10162,37 +9888,6 @@ function bindAiAssistantHandlers(): void {
   };
 
   root.addEventListener("click", (e) => {
-    const confirmBtn = (e.target as HTMLElement).closest("[data-ai-setting-confirm]");
-    if (confirmBtn instanceof HTMLElement) {
-      e.preventDefault();
-      const action = decodeAiSettingConfirmPayload(confirmBtn.getAttribute("data-ai-confirm-payload"));
-      if (!action) return;
-      const actionsWrap = confirmBtn.closest("[data-ai-confirm-actions]");
-      actionsWrap?.querySelectorAll("button").forEach((b) => {
-        b.setAttribute("disabled", "true");
-        b.classList.add("opacity-60", "pointer-events-none");
-      });
-      if (action.kind === "toggle") {
-        applyModuleSettingToggleChange(action.seq, action.on);
-      } else {
-        persistAiSettingMutations(action.mutations);
-        syncModuleSettingAiMutations(action.mutations);
-      }
-      appendBubble("assistant", t("ai.confirm.applied"));
-      return;
-    }
-    const cancelBtn = (e.target as HTMLElement).closest("[data-ai-setting-cancel]");
-    if (cancelBtn instanceof HTMLElement) {
-      e.preventDefault();
-      const actionsWrap = cancelBtn.closest("[data-ai-confirm-actions]");
-      actionsWrap?.querySelectorAll("button").forEach((b) => {
-        b.setAttribute("disabled", "true");
-        b.classList.add("opacity-60", "pointer-events-none");
-      });
-      appendBubble("assistant", t("ai.confirm.cancelled"));
-      return;
-    }
-
     const btn = (e.target as HTMLElement).closest("[data-ai-quick-prompt]");
     if (!btn || !(btn instanceof HTMLElement)) return;
     const prompt = btn.getAttribute("data-ai-quick-prompt");
@@ -10211,6 +9906,11 @@ function bindAiAssistantHandlers(): void {
     window.setTimeout(() => {
       const reply = aiAssistantReply(text);
       appendBubble("assistant", reply);
+      if (reply.mutations && reply.mutations.length > 0) {
+        syncModuleSettingAiMutations(reply.mutations);
+      } else if (reply.changedSeq !== undefined && reply.changedOn !== undefined) {
+        applyModuleSettingToggleChange(reply.changedSeq, reply.changedOn);
+      }
     }, 450);
   });
 
@@ -10364,43 +10064,6 @@ function renderModuleTabs(path: string, tabModule: NavModule): string {
 function renderHeaderScopeFilters(): string {
   const sel =
     "h-9 max-w-[9rem] rounded-md border border-border bg-background px-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset sm:max-w-[10.5rem]";
-  const scope = readScopeFilters();
-  const locale = getUiLocale();
-  const pickOpt = (opts: typeof DEMO_SCOPE_BRANDS, value: string) =>
-    opts.find((o) => o.value === value) ?? opts[0];
-
-  if (isStoreScopeLocked()) {
-    const lockedId = scope.store || DEFAULT_LOCKED_STORE_ID;
-    const storeOpt = pickOpt(DEMO_SCOPE_STORES, lockedId);
-    const label = locale === "en" ? storeOpt.labelEn : storeOpt.labelZh;
-    return `
-    <div
-      class="flex max-w-full shrink-0 items-center gap-1.5 rounded-md border border-border bg-muted/40 px-2.5 py-1.5 text-sm text-foreground sm:px-3"
-      title="${escapeHtml(t("header.scopeStoreLockedTitle"))}"
-      aria-label="${escapeHtml(t("header.scopeStoreLockedAria"))}"
-    >
-      <span class="text-xs text-muted-foreground">${escapeHtml(t("header.scopeStore"))}</span>
-      <span class="font-medium">${escapeHtml(label)}</span>
-    </div>`;
-  }
-
-  const renderSelect = (
-    id: string,
-    labelKey: "header.scopeBrand" | "header.scopeRegion" | "header.scopeStore",
-    ariaKey: "header.scopeBrandAria" | "header.scopeRegionAria" | "header.scopeStoreAria",
-    options: typeof DEMO_SCOPE_BRANDS,
-    value: string,
-  ): string =>
-    `<label class="sr-only" for="${id}">${escapeHtml(t(labelKey))}</label>
-      <select id="${id}" class="${sel}" aria-label="${escapeHtml(t(ariaKey))}">
-        ${options
-          .map((o) => {
-            const lab = locale === "en" ? o.labelEn : o.labelZh;
-            return `<option value="${escapeHtml(o.value)}" ${o.value === value ? "selected" : ""}>${escapeHtml(lab)}</option>`;
-          })
-          .join("")}
-      </select>`;
-
   return `
     <div
       class="flex max-w-full flex-wrap items-center justify-end gap-1.5 sm:gap-2"
@@ -10408,42 +10071,77 @@ function renderHeaderScopeFilters(): string {
       aria-label="${escapeHtml(t("header.scopeGroup"))}"
       title="${escapeHtml(t("header.scopeGroupTitle"))}"
     >
-      ${shouldShowBrandScopeFilter() ? renderSelect("scope-brand-select", "header.scopeBrand", "header.scopeBrandAria", DEMO_SCOPE_BRANDS, scope.brand) : ""}
-      ${shouldShowRegionScopeFilter() ? renderSelect("scope-region-select", "header.scopeRegion", "header.scopeRegionAria", DEMO_SCOPE_REGIONS, scope.region) : ""}
-      ${renderSelect("scope-store-select", "header.scopeStore", "header.scopeStoreAria", DEMO_SCOPE_STORES, scope.store)}
+      <label class="sr-only" for="scope-brand-select">${escapeHtml(t("header.scopeBrand"))}</label>
+      <select id="scope-brand-select" class="${sel}" aria-label="${escapeHtml(t("header.scopeBrandAria"))}">
+        <option value="">${escapeHtml(t("header.scopeAllBrands"))}</option>
+        <option value="miju">米聚餐饮集团</option>
+        <option value="menusifu-na">MenuSifu 北美</option>
+      </select>
+      <label class="sr-only" for="scope-region-select">${escapeHtml(t("header.scopeRegion"))}</label>
+      <select id="scope-region-select" class="${sel}" aria-label="${escapeHtml(t("header.scopeRegionAria"))}">
+        <option value="">${escapeHtml(t("header.scopeAllRegions"))}</option>
+        <option value="east-cn">华东大区</option>
+        <option value="south-cn">华南大区</option>
+        <option value="north-cn">华北大区</option>
+        <option value="us-west">美国西海岸</option>
+        <option value="us-east">美国东海岸</option>
+      </select>
+      <label class="sr-only" for="scope-store-select">${escapeHtml(t("header.scopeStore"))}</label>
+      <select id="scope-store-select" class="${sel}" aria-label="${escapeHtml(t("header.scopeStoreAria"))}">
+        <option value="">${escapeHtml(t("header.scopeAllStores"))}</option>
+        <option value="flagship-nyc">旗舰店 · NYC</option>
+        <option value="branch-la">分店 · LA</option>
+        <option value="shanghai-ljz">上海陆家嘴店</option>
+        <option value="guangzhou-tzh">广州天河店</option>
+      </select>
     </div>
   `;
 }
 
 function bindHeaderScopeFilters(): void {
-  if (isStoreScopeLocked()) return;
-
   const brandEl = document.getElementById("scope-brand-select") as HTMLSelectElement | null;
   const regionEl = document.getElementById("scope-region-select") as HTMLSelectElement | null;
   const storeEl = document.getElementById("scope-store-select") as HTMLSelectElement | null;
-  if (!storeEl) return;
+  if (!brandEl || !regionEl || !storeEl) return;
 
   const optionValues = (el: HTMLSelectElement): Set<string> =>
     new Set(Array.from(el.options, (o) => o.value));
 
   const applyStored = (): void => {
-    const scope = readScopeFilters();
-    if (brandEl && scope.brand && optionValues(brandEl).has(scope.brand)) brandEl.value = scope.brand;
-    if (regionEl && scope.region && optionValues(regionEl).has(scope.region)) regionEl.value = scope.region;
-    if (scope.store && optionValues(storeEl).has(scope.store)) storeEl.value = scope.store;
+    try {
+      const b = sessionStorage.getItem(SCOPE_FILTER_STORAGE_KEYS.brand);
+      if (b != null && optionValues(brandEl).has(b)) brandEl.value = b;
+      const r = sessionStorage.getItem(SCOPE_FILTER_STORAGE_KEYS.region);
+      if (r != null && optionValues(regionEl).has(r)) regionEl.value = r;
+      const s = sessionStorage.getItem(SCOPE_FILTER_STORAGE_KEYS.store);
+      if (s != null && optionValues(storeEl).has(s)) storeEl.value = s;
+    } catch {
+      /* ignore */
+    }
   };
   applyStored();
 
   const persistAndNotify = (): void => {
-    writeScopeFilters({
-      brand: brandEl?.value ?? "",
-      region: regionEl?.value ?? "",
-      store: storeEl.value,
-    });
+    try {
+      sessionStorage.setItem(SCOPE_FILTER_STORAGE_KEYS.brand, brandEl.value);
+      sessionStorage.setItem(SCOPE_FILTER_STORAGE_KEYS.region, regionEl.value);
+      sessionStorage.setItem(SCOPE_FILTER_STORAGE_KEYS.store, storeEl.value);
+    } catch {
+      /* ignore */
+    }
+    window.dispatchEvent(
+      new CustomEvent("menusifu:scope-filter-change", {
+        detail: {
+          brand: brandEl.value,
+          region: regionEl.value,
+          store: storeEl.value,
+        },
+      }),
+    );
   };
 
-  brandEl?.addEventListener("change", persistAndNotify);
-  regionEl?.addEventListener("change", persistAndNotify);
+  brandEl.addEventListener("change", persistAndNotify);
+  regionEl.addEventListener("change", persistAndNotify);
   storeEl.addEventListener("change", persistAndNotify);
 }
 
@@ -10451,13 +10149,7 @@ function renderMain(): string {
   const path = location.hash.slice(1) || "/dashboard/overview";
   const tabModule = getTabModule(path);
   const { title, module } = findTitle(path);
-  const headerKickerBase = tabModule ? formatNavModuleKicker(tabModule) : module ?? "";
-  const scopeLabel = formatScopeFilterLabel(readScopeFilters(), getUiLocale());
-  const headerKicker = scopeLabel
-    ? headerKickerBase
-      ? `${headerKickerBase} · ${scopeLabel}`
-      : scopeLabel
-    : headerKickerBase;
+  const headerKicker = tabModule ? formatNavModuleKicker(tabModule) : module ?? "";
   const isBrandProductsTertiary = isBrandProductsTertiaryPath(path);
   const isBrandMenuTertiary = isBrandMenuTertiaryPath(path);
   const isStoreMenuTertiary = isStoreMenuTertiaryPath(path);
@@ -10575,7 +10267,6 @@ function renderMain(): string {
             <svg class="size-5 dark:hidden" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
             <svg class="size-5 hidden dark:block" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
           </button>
-          ${renderHeaderNavLayoutPresetControl()}
         </div>
       </header>`;
 
@@ -10698,51 +10389,6 @@ function renderMain(): string {
   `;
 }
 
-function renderDashboardPanel(path: string, title: string): string {
-  const scopeLabel = formatScopeFilterLabel(readScopeFilters(), getUiLocale());
-  const todoKeys = isChainOrgTier()
-    ? ([
-        "dashboard.todo.chain.permissions",
-        "dashboard.todo.chain.inventory",
-        "dashboard.todo.chain.stores",
-        "dashboard.todo.chain.reports",
-      ] as const)
-    : ([
-        "dashboard.todo.store.close",
-        "dashboard.todo.store.reviews",
-        "dashboard.todo.store.device",
-        "dashboard.todo.store.staff",
-      ] as const);
-  const kpiLabels = [t("placeholder.kpi.sales"), t("placeholder.kpi.orders"), t("placeholder.kpi.staff")];
-  return `
-    <div class="rounded-xl border border-border bg-card p-6 shadow-sm">
-      <p class="text-sm text-muted-foreground leading-relaxed">${escapeHtml(t("placeholder.route"))}<code class="rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-foreground">${path}</code></p>
-      <p class="mt-3 text-sm text-muted-foreground">${escapeHtml(tf("dashboard.scopeNote", { scope: scopeLabel }))}</p>
-      <p class="mt-4 text-base text-card-foreground">${escapeHtml(tf("placeholder.intro", { title }))}</p>
-      <div class="mt-5">
-        <p class="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">${escapeHtml(t("dashboard.todosTitle"))}</p>
-        <ul class="m-0 list-inside list-disc space-y-1.5 text-sm text-muted-foreground">
-          ${todoKeys.map((key) => `<li>${escapeHtml(t(key))}</li>`).join("")}
-        </ul>
-      </div>
-    </div>
-    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      ${kpiLabels
-        .map(
-          (label) =>
-            `<div class="rounded-lg border border-border bg-card p-4 shadow-sm"><p class="text-xs font-medium text-muted-foreground">${escapeHtml(label)}</p><p class="mt-2 text-2xl font-semibold tabular-nums text-card-foreground">—</p></div>`,
-        )
-        .join("")}
-    </div>`;
-}
-
-function guardNavModuleAccess(path: string): void {
-  const mod = getTabModule(path);
-  if (mod && !isNavModuleVisible(mod.id)) {
-    replaceHashPath("/dashboard/overview");
-  }
-}
-
 function renderPlaceholder(
   path: string,
   title: string,
@@ -10764,9 +10410,6 @@ function renderPlaceholder(
   const deviceManagementHardwareSubnav = opts?.deviceManagementHardwareSubnav;
   const tipsManagementSubnav = opts?.tipsManagementSubnav;
   const teamReportsSubnav = opts?.teamReportsSubnav;
-  if (path.startsWith("/dashboard/")) {
-    return renderDashboardPanel(path, title);
-  }
   const modTitle = tabModule ? pick(tabModule.title, tabModule.titleEn) : "";
   const firstBullet = deviceManagementHardwareSubnav
     ? t("placeholder.bullet.deviceHw")
@@ -10847,7 +10490,6 @@ function mountLoginShell(): void {
   if (!app) return;
   app.innerHTML = renderLoginPage();
   bindLoginPage(() => {
-    syncSessionForAuthenticatedUser();
     replaceHashPath("/dashboard/overview");
     mount();
   });
@@ -10870,9 +10512,6 @@ function mount(): void {
     mount();
     return;
   }
-
-  syncSessionForAuthenticatedUser();
-  guardNavModuleAccess(location.hash.slice(1) || "/dashboard/overview");
 
   navModuleSheetOpenBeforeMount = {};
   for (const m of NAV_MODULES) {
@@ -11233,16 +10872,6 @@ function mount(): void {
           if (p && !pathBelongsToModule(p, m)) setNavModuleSheetOpen(m.id, false);
         }
       }
-      const moreToggle = (e.target as HTMLElement).closest("[data-sidebar-more-toggle]");
-      if (moreToggle && moreToggle instanceof HTMLButtonElement) {
-        e.preventDefault();
-        const hashNow = location.hash.slice(1) || "/dashboard/overview";
-        const { more } = splitSidebarNavModules(getSidebarOrderedNavModules(), readSidebarNavLayoutPreset());
-        const cur = getSidebarMoreExpanded(hashNow, more);
-        writeSidebarMoreExpanded(!cur);
-        mount();
-        return;
-      }
       const el = (e.target as HTMLElement).closest("[data-sidebar-toggle]");
       if (!el || !(el instanceof HTMLButtonElement)) return;
       const moduleId = el.getAttribute("data-sidebar-toggle");
@@ -11474,9 +11103,6 @@ function mount(): void {
   bindLoginLogsPage(mount);
   bindHeaderScopeFilters();
   bindGlobalUiLocaleControl();
-  bindHeaderNavLayoutPresetControl();
-  bindSidebarNavSortControls();
-  bindSidebarNavDragReorder();
   ensureInventorySheetEscapeListener();
   restoreModuleSettingsScroll(mountPathForSheet);
   restoreModuleSettingsSubnavScroll(mountPathForSheet);
