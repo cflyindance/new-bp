@@ -1311,7 +1311,10 @@
     if (typeof parsed.periodNumberFilter === "string") state.periodNumberFilter = parsed.periodNumberFilter;
     if (typeof parsed.periodStatusFilter === "string") state.periodStatusFilter = parsed.periodStatusFilter;
     if (typeof parsed.employeeStoreFilter === "string") state.employeeStoreFilter = parsed.employeeStoreFilter;
-    if (parsed.activeTab) state.activeTab = parsed.activeTab;
+    if (parsed.activeTab) {
+      state.activeTab = parsed.activeTab === "detail" ? "manage" : parsed.activeTab;
+      if (state.activeTab !== "manage" && state.activeTab !== "adp") state.activeTab = "manage";
+    }
     ensureDataShape();
   }
 
@@ -1428,6 +1431,77 @@
     $("#payrollAuditLogModal")?.classList.remove("show");
   }
 
+  function showEmployeesDetailModal() {
+    syncDerived();
+    const source = document.querySelector("#tab-panel-detail .payroll-detail-print");
+    const target = $("#employeesDetailModalBody");
+    if (!source || !target) return;
+    const clone = source.cloneNode(true);
+    clone.querySelectorAll("[id]").forEach((el) => el.removeAttribute("id"));
+    target.innerHTML = "";
+    target.appendChild(clone);
+    const modalId = "employeesDetailPreviewModal";
+    if (typeof openModal === "function") openModal(modalId);
+    else {
+      const modal = $("#" + modalId);
+      if (modal) {
+        modal.classList.add("show");
+        document.body.style.overflow = "hidden";
+      }
+    }
+  }
+
+  function hideEmployeesDetailModal() {
+    const modalId = "employeesDetailPreviewModal";
+    if (typeof closeModal === "function") closeModal(modalId);
+    else {
+      const modal = $("#" + modalId);
+      if (modal) {
+        modal.classList.remove("show");
+        document.body.style.overflow = "";
+      }
+    }
+  }
+
+  function showAdpReportModal() {
+    syncDerived();
+    const source = document.querySelector("#tab-panel-adp .payroll-adp-preview-source");
+    const target = $("#adpReportModalBody");
+    if (!source || !target) return;
+    const clone = source.cloneNode(true);
+    clone.querySelectorAll("[id]").forEach((el) => el.removeAttribute("id"));
+    clone.querySelector(".payroll-adp-preview-hint")?.remove();
+    target.innerHTML = "";
+    target.appendChild(clone);
+    const hint = $("#adp-report-modal-hint");
+    const sourceHint = $("#adp-preview-hint");
+    if (hint && sourceHint) hint.textContent = sourceHint.textContent;
+    const emp = getEmployee(state.periodId, state.employeeId);
+    const exportBtn = $("#btn-adp-report-modal-export");
+    if (exportBtn) exportBtn.disabled = !emp || !emp.adpFile;
+    const modalId = "adpReportPreviewModal";
+    if (typeof openModal === "function") openModal(modalId);
+    else {
+      const modal = $("#" + modalId);
+      if (modal) {
+        modal.classList.add("show");
+        document.body.style.overflow = "hidden";
+      }
+    }
+  }
+
+  function hideAdpReportModal() {
+    const modalId = "adpReportPreviewModal";
+    if (typeof closeModal === "function") closeModal(modalId);
+    else {
+      const modal = $("#" + modalId);
+      if (modal) {
+        modal.classList.remove("show");
+        document.body.style.overflow = "";
+      }
+    }
+  }
+
   function $(sel, root) {
     return (root || document).querySelector(sel);
   }
@@ -1468,6 +1542,52 @@
   function getEmployee(periodId, empId) {
     const list = state.data.employees[periodId] || [];
     return list.find((e) => e.id === empId);
+  }
+
+  function formatWorkspaceEmployeeOptionLabel(emp) {
+    if (!emp) return "";
+    const adp = String(emp.adpFile || "").trim();
+    return adp ? `${emp.name} · #${adp}` : emp.name;
+  }
+
+  function renderWorkspaceEmployeeSwitch(selectedId) {
+    const sel = $("#ws-employee-switch");
+    if (!sel) return;
+    const list = state.data.employees[state.periodId] || [];
+    const currentId = selectedId || state.employeeId;
+    sel.innerHTML = list
+      .map((e) => {
+        return `<option value="${escapeHtml(e.id)}">${escapeHtml(formatWorkspaceEmployeeOptionLabel(e))}</option>`;
+      })
+      .join("");
+    if (currentId && list.some((e) => e.id === currentId)) {
+      sel.value = currentId;
+    } else if (list.length > 0) {
+      sel.value = list[0].id;
+    }
+  }
+
+  function navigateWorkspaceEmployee(empId) {
+    if (!empId || empId === state.employeeId) return;
+    const apply = () => {
+      state.employeeId = empId;
+      renderManageForm();
+      markWorkspaceEntrySnapshot();
+      syncDerived();
+    };
+    readFormIntoState();
+    if (hasUnconfirmedWorkspaceChanges()) {
+      showUnsavedConfirmDialog().then((ok) => {
+        if (!ok) {
+          const sel = $("#ws-employee-switch");
+          if (sel) sel.value = state.employeeId;
+          return;
+        }
+        apply();
+      });
+      return;
+    }
+    apply();
   }
 
   function buildEmployeeSnapshot(emp) {
@@ -1517,9 +1637,9 @@
     return changed && !state.workspaceConfirmedInSession;
   }
 
-  /** 仅在 Manage Payroll 页面离开时拦截（切 tab / 跳导航） */
+  /** 离开工作区前拦截未保存修改 */
   function shouldWarnBeforeLeavingManage() {
-    return state.view === "workspace" && state.activeTab === "manage" && hasUnconfirmedWorkspaceChanges();
+    return state.view === "workspace" && hasUnconfirmedWorkspaceChanges();
   }
 
   function showUnsavedConfirmDialog() {
@@ -1617,6 +1737,135 @@
   function getRecentYears() {
     const current = new Date().getFullYear();
     return [String(current), String(current - 1), String(current - 2)];
+  }
+
+  function renderManagePeriodNav() {
+    const grid = $("#manage-period-nav-grid");
+    const yearEl = $("#manage-period-nav-year");
+    if (!grid) return;
+    const current = getPeriod(state.periodId);
+    if (!current) {
+      grid.innerHTML = "";
+      if (yearEl) yearEl.textContent = "—";
+      return;
+    }
+    const year = getPeriodYear(current);
+    if (yearEl) yearEl.textContent = year ? `${year}${T("year.suffix")}` : "—";
+    const periods = (Array.isArray(state.data.periods) ? state.data.periods : [])
+      .filter((p) => getPeriodYear(p) === year)
+      .sort((a, b) => Number(a.periodNumber || 0) - Number(b.periodNumber || 0));
+    if (periods.length === 0) {
+      grid.innerHTML = "";
+      return;
+    }
+    grid.innerHTML = periods
+      .map((p) => {
+        const isActive = p.id === state.periodId;
+        return `<button type="button" class="payroll-manage-period-cell${isActive ? " is-active" : ""}" data-action="switch-workspace-period" data-period-id="${escapeHtml(p.id)}" aria-current="${isActive ? "true" : "false"}" aria-label="${escapeHtml(T("filter.periodN", { n: p.periodNumber != null ? p.periodNumber : "—" }))}">
+          <span class="payroll-manage-period-no">${escapeHtml(String(p.periodNumber != null ? p.periodNumber : "—"))}</span>
+        </button>`;
+      })
+      .join("");
+  }
+
+  function resolveEmployeeIdForPeriod(targetPeriodId, currentEmp) {
+    const list = state.data.employees[targetPeriodId] || [];
+    if (!Array.isArray(list) || list.length === 0) return null;
+    if (!currentEmp) return list[0].id;
+    const adp = String(currentEmp.adpFile || "").trim();
+    if (adp) {
+      const byAdp = list.find((e) => e && String(e.adpFile || "").trim() === adp);
+      if (byAdp) return byAdp.id;
+    }
+    const name = String(currentEmp.name || "").trim().toLowerCase();
+    if (name) {
+      const byName = list.find((e) => e && String(e.name || "").trim().toLowerCase() === name);
+      if (byName) return byName.id;
+    }
+    return list[0].id;
+  }
+
+  function navigateWorkspacePeriod(periodId) {
+    if (!periodId || periodId === state.periodId) return;
+    const apply = () => {
+      const currentEmp = getEmployee(state.periodId, state.employeeId);
+      state.periodId = periodId;
+      state.employeeId = resolveEmployeeIdForPeriod(periodId, currentEmp);
+      renderManagePeriodNav();
+      renderManageForm();
+      markWorkspaceEntrySnapshot();
+      syncDerived();
+    };
+    readFormIntoState();
+    if (hasUnconfirmedWorkspaceChanges()) {
+      showUnsavedConfirmDialog().then((ok) => {
+        if (!ok) {
+          renderManagePeriodNav();
+          return;
+        }
+        apply();
+      });
+      return;
+    }
+    apply();
+  }
+
+  function resolveDefaultPeriodId() {
+    const periods = Array.isArray(state.data.periods) ? state.data.periods : [];
+    if (periods.length === 0) return null;
+    syncPeriodStatuses(periods, state.data.employees);
+    const currentYear = String(new Date().getFullYear());
+    const recentYears = getRecentYears();
+    const targetYear = recentYears.includes(currentYear) ? currentYear : recentYears[0];
+    const yearPeriods = periods
+      .filter((p) => getPeriodYear(p) === targetYear)
+      .sort((a, b) => Number(a.periodNumber || 0) - Number(b.periodNumber || 0));
+    const pool = yearPeriods.length > 0 ? yearPeriods : periods.slice();
+    const today = new Date();
+    for (let i = pool.length - 1; i >= 0; i--) {
+      const p = pool[i];
+      if (!periodHasStarted(p, today)) continue;
+      const list = state.data.employees[p.id];
+      if (Array.isArray(list) && list.length > 0) return p.id;
+    }
+    for (let i = pool.length - 1; i >= 0; i--) {
+      const p = pool[i];
+      const list = state.data.employees[p.id];
+      if (Array.isArray(list) && list.length > 0) return p.id;
+    }
+    return pool[pool.length - 1].id;
+  }
+
+  function resolveDefaultEmployeeId(periodId) {
+    const list = state.data.employees[periodId] || [];
+    if (!Array.isArray(list) || list.length === 0) return null;
+    return list[0].id;
+  }
+
+  /** 进入 Manage Payroll 工作区（侧栏入口默认落点） */
+  function enterManagePayrollWorkspace() {
+    let periodId = state.periodId;
+    if (!periodId || !getPeriod(periodId)) {
+      periodId = resolveDefaultPeriodId();
+    }
+    if (!periodId) return false;
+
+    let employeeId = state.employeeId;
+    if (!employeeId || !getEmployee(periodId, employeeId)) {
+      employeeId = resolveDefaultEmployeeId(periodId);
+    }
+    if (!employeeId) return false;
+
+    state.periodId = periodId;
+    state.employeeId = employeeId;
+    state.view = "workspace";
+    state.employeeStoreFilter = "";
+    renderManagePeriodNav();
+    renderManageForm();
+    markWorkspaceEntrySnapshot();
+    syncDerived();
+    showView("workspace");
+    return true;
   }
 
   function renderPeriods() {
@@ -1719,11 +1968,9 @@
     const period = getPeriod(state.periodId);
     if (!period) return { period: null, filtered: [], exportable: [], skipped: [] };
     const list = state.data.employees[state.periodId] || [];
-    const activeStore = state.employeeStoreFilter;
-    const filtered = activeStore ? list.filter((e) => String(e.store || "").trim() === activeStore) : list;
-    const exportable = filtered.filter((e) => e && String(e.adpFile || "").trim());
-    const skipped = filtered.filter((e) => e && !String(e.adpFile || "").trim());
-    return { period, filtered, exportable, skipped };
+    const exportable = list.filter((e) => e && String(e.adpFile || "").trim());
+    const skipped = list.filter((e) => e && !String(e.adpFile || "").trim());
+    return { period, filtered: list, exportable, skipped };
   }
 
   function updateEmployeeBatchExportButton() {
@@ -2153,11 +2400,12 @@ body{margin:0;padding:24px;background:#fff;}
     const period = getPeriod(state.periodId);
     if (!emp || !period) return;
 
-    $("#ws-employee-title").textContent = emp.name;
     $("#ws-breadcrumb-period").textContent = T("employee.periodTitle", {
       range: period.rangeLabel,
       date: period.paycheckDate,
     });
+    renderWorkspaceEmployeeSwitch(emp.id);
+    renderManagePeriodNav();
     $("#field-adp-file").value = emp.adpFile;
     const hireInput = $("#field-hire-date");
     if (hireInput) hireInput.value = mdyToIsoDateInput(resolveEmployeeHireDate(emp));
@@ -2357,43 +2605,33 @@ body{margin:0;padding:24px;background:#fff;}
       </tr>`;
     }
 
-    const exportBtn = $("#btn-export-csv");
+    const exportBtn = $("#btn-adp-report-modal-export");
     if (exportBtn) exportBtn.disabled = missingAdpFile;
     updateManageWeekSummaries(emp, period);
+    updateEmployeeBatchExportButton();
     saveState();
   }
 
   function showView(name) {
     state.view = name;
     const pageRoot = document.querySelector(".payroll-page");
-    if (pageRoot) pageRoot.classList.toggle("payroll-entered", name === "employees" || name === "workspace");
+    if (pageRoot) {
+      pageRoot.classList.toggle("payroll-entered", name === "employees" || name === "workspace");
+      pageRoot.classList.toggle("payroll-workspace-active", name === "workspace");
+    }
     $("#view-periods").hidden = name !== "periods";
     $("#view-employees").hidden = name !== "employees";
     $("#view-workspace").hidden = name !== "workspace";
     const mainTitle = $("#payroll-main-title");
     const backPeriods = $("#btn-back-periods");
-    const backEmployees = $("#btn-back-employees");
     const backWrap = $("#payroll-heading-back");
+    const headingRow = document.querySelector(".payroll-heading-row");
+    const modeBanner = $("#payroll-mode-banner");
     syncPayrollMainTitle(name);
-    /* Payroll期：不显示任何返回；期数员工：仅「返回期列表」；员工详情：仅「返回员工列表」 */
-    if (backWrap) backWrap.hidden = name === "periods";
+    if (modeBanner) modeBanner.hidden = name === "workspace";
+    if (headingRow) headingRow.hidden = name === "workspace";
+    if (backWrap) backWrap.hidden = name === "periods" || name === "workspace";
     if (backPeriods) backPeriods.hidden = name !== "employees";
-    if (backEmployees) backEmployees.hidden = name !== "workspace";
-    saveState();
-  }
-
-  function setTab(tab) {
-    state.activeTab = tab;
-    const tabs = { manage: $("#tab-panel-manage"), detail: $("#tab-panel-detail"), adp: $("#tab-panel-adp") };
-    Object.keys(tabs).forEach((k) => {
-      if (!tabs[k]) return;
-      tabs[k].hidden = k !== tab;
-    });
-    $all("[data-tab]").forEach((btn) => {
-      const active = btn.getAttribute("data-tab") === tab;
-      btn.setAttribute("aria-selected", active ? "true" : "false");
-      btn.classList.toggle("is-active", active);
-    });
     saveState();
   }
 
@@ -2408,6 +2646,7 @@ body{margin:0;padding:24px;background:#fff;}
     appendAudit("confirm", { employeeName: emp.name });
     saveState();
     syncDerived();
+    renderManagePeriodNav();
     if (typeof showNotification === "function") {
       showNotification(T("confirm.success"), "success");
     } else {
@@ -2556,24 +2795,20 @@ body{margin:0;padding:24px;background:#fff;}
         state.employeeId = btn.getAttribute("data-employee-id");
         renderManageForm();
         markWorkspaceEntrySnapshot();
-        setTab("manage");
         showView("workspace");
         syncDerived();
       }
-      if (act === "back-employees") {
-        if (hasUnconfirmedWorkspaceChanges()) {
-          showUnsavedConfirmDialog().then((ok) => {
-            if (!ok) return;
-            renderEmployees();
-            showView("employees");
-          });
-          return;
-        }
-        renderEmployees();
-        showView("employees");
-      }
       if (act === "confirm-employee") {
         confirmEmployee();
+      }
+      if (act === "preview-employees-detail") {
+        showEmployeesDetailModal();
+      }
+      if (act === "preview-adp-report") {
+        showAdpReportModal();
+      }
+      if (act === "switch-workspace-period") {
+        navigateWorkspacePeriod(btn.getAttribute("data-period-id"));
       }
       if (act === "export-csv") {
         exportAdpCsv();
@@ -2655,19 +2890,8 @@ body{margin:0;padding:24px;background:#fff;}
       syncDerived();
     });
 
-    $all("[data-tab]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const targetTab = btn.getAttribute("data-tab");
-        if (!targetTab || targetTab === state.activeTab) return;
-        if (!shouldWarnBeforeLeavingManage()) {
-          setTab(targetTab);
-          return;
-        }
-        showUnsavedConfirmDialog().then((ok) => {
-          if (!ok) return;
-          setTab(targetTab);
-        });
-      });
+    $("#ws-employee-switch")?.addEventListener("change", (e) => {
+      navigateWorkspaceEmployee(e.target.value);
     });
 
     document.body.addEventListener("click", (e) => {
@@ -2713,6 +2937,10 @@ body{margin:0;padding:24px;background:#fff;}
     $("#btn-show-audit-log")?.addEventListener("click", () => showAuditLogModal());
     $("#btn-audit-log-close")?.addEventListener("click", () => hideAuditLogModal());
     $("#btn-audit-log-ok")?.addEventListener("click", () => hideAuditLogModal());
+    $("#btn-employees-detail-modal-close")?.addEventListener("click", () => hideEmployeesDetailModal());
+    $("#btn-employees-detail-modal-ok")?.addEventListener("click", () => hideEmployeesDetailModal());
+    $("#btn-adp-report-modal-close")?.addEventListener("click", () => hideAdpReportModal());
+    $("#btn-adp-report-modal-ok")?.addEventListener("click", () => hideAdpReportModal());
   }
 
   function refreshPayrollLocale() {
@@ -2721,6 +2949,7 @@ body{margin:0;padding:24px;background:#fff;}
     if (state.view === "workspace" && state.periodId && state.employeeId) {
       renderManageForm();
       syncDerived();
+      renderManagePeriodNav();
     }
     showView(state.view);
     const auditModal = $("#payrollAuditLogModal");
@@ -2761,10 +2990,12 @@ body{margin:0;padding:24px;background:#fff;}
     bindFieldHelp();
     bind();
     initDisclaimerModal();
-    state.view = "periods";
-    state.periodId = null;
-    state.employeeId = null;
-    showView("periods");
+    if (!enterManagePayrollWorkspace()) {
+      state.view = "periods";
+      state.periodId = null;
+      state.employeeId = null;
+      showView("periods");
+    }
   }
 
   function bootstrapApp() {

@@ -68,7 +68,6 @@
         <div class="payroll-heading-row">
           <div id="payroll-heading-back" class="payroll-heading-back no-print" hidden>
             <button type="button" class="btn btn-sm" data-action="back-periods" id="btn-back-periods" hidden>← 返回期列表</button>
-            <button type="button" class="btn btn-sm" data-action="back-employees" id="btn-back-employees" hidden>← 返回员工列表</button>
           </div>
           <div class="payroll-heading-center">
             <h1 id="payroll-main-title" class="payroll-main-title">Payroll 期</h1>
@@ -127,9 +126,6 @@
                 <option value="">全部门店</option>
               </select>
             </div>
-            <div class="payroll-employee-actions">
-              <button type="button" class="btn btn-primary" id="btn-export-batch-adp" data-action="export-batch-adp" disabled>批量导出 ADP CSV</button>
-            </div>
           </div>
           <div class="card">
             <div class="card-body" style="padding:0">
@@ -152,10 +148,17 @@
         </section>
 
         <!-- View: Workspace -->
-        <section id="view-workspace" hidden aria-labelledby="ws-employee-title">
+        <section id="view-workspace" hidden aria-labelledby="ws-employee-switch">
+          <div class="payroll-workspace-layout">
+            <aside class="payroll-workspace-period-nav no-print" aria-label="期数">
+              <p id="manage-period-nav-year" class="payroll-workspace-period-nav-year">2026</p>
+              <p class="payroll-workspace-period-nav-title" id="manage-period-nav-title">期数</p>
+              <div id="manage-period-nav-grid" class="payroll-workspace-period-grid"></div>
+            </aside>
+            <div class="payroll-workspace-main">
           <div class="payroll-workspace-identity no-print">
             <div class="payroll-workspace-identity-main">
-              <h2 id="ws-employee-title" class="payroll-workspace-employee-title"></h2>
+              <select id="ws-employee-switch" class="payroll-workspace-employee-select" aria-label="切换本期员工"></select>
               <p id="ws-breadcrumb-period" class="payroll-period-context"></p>
             </div>
             <div class="payroll-workspace-identity-fields">
@@ -175,13 +178,7 @@
               </div>
             </div>
           </div>
-          <div class="payroll-workspace-tabs no-print" role="tablist" aria-label="报表类型">
-            <button type="button" role="tab" data-tab="manage" class="payroll-subtab is-active" aria-selected="true">① Manage Payroll</button>
-            <button type="button" role="tab" data-tab="detail" class="payroll-subtab" aria-selected="false">② Employees Detail</button>
-            <button type="button" role="tab" data-tab="adp" class="payroll-subtab" aria-selected="false">③ ADP Report</button>
-          </div>
-
-          <div id="tab-panel-manage" role="tabpanel">
+          <div id="tab-panel-manage" class="payroll-workspace-manage-panel">
             <section class="payroll-manage-section payroll-attendance-section" aria-label="考勤明细">
               <h3 class="payroll-manage-section-title" id="manage-timecard-title">考勤明细</h3>
               <div class="card payroll-attendance-card">
@@ -297,11 +294,14 @@
             </section>
 
             <div class="payroll-confirm-fixed no-print">
+              <button type="button" class="btn" data-action="preview-adp-report">ADP Report</button>
+              <button type="button" class="btn" data-action="preview-employees-detail">Employees Detail</button>
+              <button type="button" class="btn" id="btn-export-batch-adp" data-action="export-batch-adp" disabled>批量导出 ADP</button>
               <button type="button" class="btn btn-primary" data-action="confirm-employee">确定并保存</button>
             </div>
           </div>
 
-          <div id="tab-panel-detail" role="tabpanel" hidden class="print-area">
+          <div id="tab-panel-detail" role="tabpanel" hidden class="print-area payroll-detail-source-panel" aria-hidden="true">
             <article class="payroll-detail-print">
               <header class="payroll-detail-print-header">
                 <div class="payroll-detail-print-title-row">
@@ -383,10 +383,11 @@
             </div>
           </div>
 
-          <div id="tab-panel-adp" role="tabpanel" hidden>
+          <div id="tab-panel-adp" hidden class="payroll-adp-source-panel" aria-hidden="true">
+            <div class="payroll-adp-preview-source">
             <div class="card">
               <div class="card-body" style="padding:0;overflow-x:auto">
-                <table class="data-table" style="min-width:900px">
+                <table class="data-table payroll-adp-preview-table" style="min-width:900px">
                   <thead>
                     <tr>
                       <th>CO CODE</th>
@@ -407,9 +408,9 @@
                 </table>
               </div>
             </div>
-            <p class="no-print" style="margin-top:12px;font-size:12px;color:var(--text-tertiary)">若未填写 ADP File#，导出按钮将禁用（模拟校验）。</p>
-            <div class="payroll-adp-export-fixed no-print">
-              <button type="button" id="btn-export-csv" data-action="export-csv" class="btn btn-primary">导出 CSV</button>
+            <p id="adp-preview-hint" class="payroll-adp-preview-hint no-print">若未填写 ADP File#，导出按钮将禁用（模拟校验）。</p>
+            </div>
+          </div>
             </div>
           </div>
         </section>
@@ -526,6 +527,38 @@
       <div class="modal-footer">
         <button type="button" class="btn" id="btn-export-confirm-cancel">取消</button>
         <button type="button" class="btn btn-primary" id="btn-export-confirm-ok">确认导出</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="adpReportPreviewModal">
+    <div class="modal adp-report-preview-modal">
+      <div class="modal-header">
+        <h3 id="adp-report-modal-title">ADP Report</h3>
+        <button type="button" class="modal-close" id="btn-adp-report-modal-close" aria-label="关闭">×</button>
+      </div>
+      <div class="modal-body adp-report-preview-body">
+        <div id="adpReportModalBody" class="payroll-page payroll-entered"></div>
+        <p id="adp-report-modal-hint" class="payroll-adp-preview-hint">若未填写 ADP File#，导出按钮将禁用（模拟校验）。</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" id="btn-adp-report-modal-export" data-action="export-csv">导出 CSV</button>
+        <button type="button" class="btn btn-primary" id="btn-adp-report-modal-ok">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="employeesDetailPreviewModal">
+    <div class="modal employees-detail-preview-modal">
+      <div class="modal-header">
+        <h3 id="employees-detail-modal-title">Employees Payroll Detail</h3>
+        <button type="button" class="modal-close" id="btn-employees-detail-modal-close" aria-label="关闭">×</button>
+      </div>
+      <div class="modal-body employees-detail-preview-body">
+        <div id="employeesDetailModalBody" class="payroll-page payroll-entered"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" id="btn-employees-detail-modal-ok">关闭</button>
       </div>
     </div>
   </div>

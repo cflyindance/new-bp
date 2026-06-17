@@ -45,13 +45,42 @@
   line-height: 1.45;
 }
 
-.payroll-page .payroll-workspace-employee-title {
+.payroll-page .payroll-workspace-employee-title,
+.payroll-page .payroll-workspace-employee-select {
   font-size: 20px;
   font-weight: 600;
   color: var(--text-primary);
   margin: 0;
   line-height: 1.35;
   min-width: 0;
+}
+
+.payroll-page .payroll-workspace-employee-select {
+  display: block;
+  width: 100%;
+  max-width: min(100%, 440px);
+  padding: 4px 36px 4px 8px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background-color: transparent;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M2.5 4.5 6 8l3.5-3.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  appearance: none;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s, background-color 0.15s;
+}
+
+.payroll-page .payroll-workspace-employee-select:hover {
+  border-color: var(--border-color);
+  background-color: #fff;
+}
+
+.payroll-page .payroll-workspace-employee-select:focus {
+  outline: none;
+  border-color: var(--primary, #1677ff);
+  background-color: #fff;
+  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.12);
 }
 
 .payroll-page .payroll-workspace-identity-main {
@@ -206,6 +235,94 @@
   color: var(--primary);
   font-weight: 600;
   border-bottom-color: var(--primary);
+}
+
+.payroll-page .payroll-workspace-layout {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.payroll-page .payroll-workspace-period-nav {
+  flex: 0 0 168px;
+  width: 168px;
+  align-self: flex-start;
+  display: flex;
+  flex-direction: column;
+  max-height: 100%;
+  overflow: hidden;
+  padding: 12px 8px;
+  background: var(--bg-secondary, #fafafa);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+}
+
+.payroll-page .payroll-workspace-period-nav-year {
+  margin: 0 0 6px;
+  padding: 0 4px;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-align: center;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+}
+
+.payroll-page .payroll-workspace-period-nav-title {
+  margin: 0 0 10px;
+  padding: 0 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.payroll-page .payroll-workspace-period-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  min-height: 0;
+}
+
+.payroll-page .payroll-workspace-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.payroll-page .payroll-manage-period-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  padding: 8px 4px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: center;
+  transition: border-color 0.15s, background-color 0.15s, box-shadow 0.15s;
+}
+
+.payroll-page .payroll-manage-period-cell:hover {
+  border-color: var(--primary);
+  background: rgba(22, 119, 255, 0.04);
+}
+
+.payroll-page .payroll-manage-period-cell.is-active {
+  border-color: var(--primary);
+  background: rgba(22, 119, 255, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(22, 119, 255, 0.2);
+}
+
+.payroll-page .payroll-manage-period-no {
+  font-size: 14px;
+  font-weight: 600;
+  font-family: ui-monospace, Menlo, monospace;
+  color: var(--text-primary);
+  line-height: 1.2;
 }
 
 .payroll-page .payroll-seg-wrap {
@@ -836,6 +953,7 @@
   display: flex;
   justify-content: flex-end;
   align-items: center;
+  gap: 12px;
   padding: 12px 24px;
   box-sizing: border-box;
   background: #fff;
@@ -866,6 +984,62 @@ body.tipout-embedded .payroll-page .payroll-detail-export-fixed {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.employees-detail-preview-modal {
+  width: min(980px, 96vw);
+  max-height: min(92vh, 900px);
+  display: flex;
+  flex-direction: column;
+}
+
+.employees-detail-preview-body {
+  overflow: auto;
+  flex: 1;
+  min-height: 0;
+  padding: 16px 20px;
+  background: var(--bg-secondary, #fafafa);
+}
+
+#employeesDetailModalBody.payroll-page {
+  min-height: 0;
+}
+
+#employeesDetailModalBody .payroll-detail-print {
+  margin: 0 auto;
+}
+
+#employeesDetailModalBody .payroll-detail-daily-wrap {
+  overflow-x: auto;
+}
+
+.adp-report-preview-modal {
+  width: min(980px, 96vw);
+  max-height: min(92vh, 900px);
+  display: flex;
+  flex-direction: column;
+}
+
+.adp-report-preview-body {
+  overflow: auto;
+  flex: 1;
+  min-height: 0;
+  padding: 16px 20px;
+  background: var(--bg-secondary, #fafafa);
+}
+
+#adpReportModalBody.payroll-page {
+  min-height: 0;
+}
+
+.payroll-page .payroll-adp-preview-hint {
+  margin: 12px 0 0;
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+.payroll-page .payroll-adp-source-panel {
+  display: none !important;
 }
 
 .payroll-page .export-dropdown {
@@ -941,6 +1115,75 @@ body.tipout-embedded .payroll-page .payroll-detail-export-fixed {
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
+}
+
+.payroll-mode-banner[hidden],
+.payroll-page.payroll-workspace-active #payroll-mode-banner {
+  display: none !important;
+}
+
+/* Manage Payroll：期数区与右侧明细分区滚动 */
+.payroll-page.payroll-workspace-active .main-content {
+  overflow: hidden;
+}
+
+.payroll-page.payroll-workspace-active .content-area {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.payroll-page.payroll-workspace-active .payroll-heading-row {
+  display: none !important;
+}
+
+.payroll-page.payroll-workspace-active .payroll-footer-note {
+  display: none;
+}
+
+.payroll-page.payroll-workspace-active #view-workspace {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.payroll-page.payroll-workspace-active .payroll-workspace-layout {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  align-items: stretch;
+}
+
+.payroll-page.payroll-workspace-active .payroll-workspace-period-nav {
+  align-self: flex-start;
+  max-height: 100%;
+}
+
+.payroll-page.payroll-workspace-active .payroll-workspace-period-grid {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.payroll-page.payroll-workspace-active .payroll-workspace-main {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 76px;
+  box-sizing: border-box;
+}
+
+.payroll-page.payroll-workspace-active #tab-panel-manage {
+  padding-bottom: 0;
 }
 
 .payroll-mode-banner-actions {
