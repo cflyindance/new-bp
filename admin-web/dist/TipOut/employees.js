@@ -9,6 +9,9 @@
   const EXTRA_STORES = [
     "Lone Star BBQ House - Austin, TX 78701",
     "Pacific Bowl & Grill - San Diego, CA 92101",
+    "Nai Cha",
+    "Downtown Branch",
+    "Airport Kiosk",
   ];
   let storeFilter = "";
 
@@ -156,6 +159,27 @@
     },
   ];
 
+  /** 员工报表演示花名册（与 admin-web team-employee-roster.ts 对齐） */
+  const REPORTS_ROSTER_SEEDS = [
+    { id: "rpt-emp-aiym", name: "aiym aitaza", store: "Nai Cha", role: "Cashier", tipType: "deduct", baseTip: 0, tipRate: 0.15, department: "Front", adpFile: "201", rate: 15, otRate: 22.5, ot2Rate: 30 },
+    { id: "rpt-emp-alice", name: "alice wang", store: "Nai Cha", role: "Cashier", tipType: "deduct", baseTip: 0, tipRate: 0.15, department: "Front", adpFile: "202", rate: 15, otRate: 22.5, ot2Rate: 30 },
+    { id: "rpt-emp-kai", name: "kai zheng", store: "Nai Cha", role: "Cashier", tipType: "deduct", baseTip: 0, tipRate: 0.15, department: "Front", adpFile: "203", rate: 14.5, otRate: 21.75, ot2Rate: 29 },
+    { id: "rpt-emp-lu", name: "lu yang", store: "Nai Cha", role: "Cashier", tipType: "deduct", baseTip: 0, tipRate: 0.15, department: "Front", adpFile: "204", rate: 15, otRate: 22.5, ot2Rate: 30 },
+    { id: "rpt-emp-online", name: "online", store: "Nai Cha", role: "Online", tipType: "receive", baseTip: 0, tipRate: 0, department: "Online", adpFile: "", rate: 0, otRate: 0, ot2Rate: 0 },
+    { id: "rpt-emp-rui", name: "rui song", store: "Nai Cha", role: "Cashier", tipType: "deduct", baseTip: 0, tipRate: 0.15, department: "Front", adpFile: "205", rate: 15, otRate: 22.5, ot2Rate: 30 },
+    { id: "rpt-emp-zemou", name: "zemou huang", store: "Nai Cha", role: "Server", tipType: "deduct", baseTip: 0, tipRate: 0.15, department: "Floor", adpFile: "206", rate: 12, otRate: 18, ot2Rate: 24 },
+    { id: "rpt-emp-lucy", name: "lucy boss yang", store: "Nai Cha", role: "Manager", tipType: "deduct", baseTip: 0, tipRate: 0.15, department: "Management", adpFile: "207", rate: 22, otRate: 33, ot2Rate: 44 },
+    { id: "rpt-emp-anthony", name: "anthony liu", store: "Nai Cha", role: "Cashier", tipType: "deduct", baseTip: 0, tipRate: 0.15, department: "Front", adpFile: "208", rate: 15, otRate: 22.5, ot2Rate: 30 },
+    { id: "rpt-emp-cash-in-out", name: "cash in/out", store: "Nai Cha", role: "Manager", tipType: "receive", baseTip: 0, tipRate: 0, department: "Management", adpFile: "", rate: 0, otRate: 0, ot2Rate: 0 },
+    { id: "rpt-emp-copilot", name: "copilot", store: "Nai Cha", role: "", tipType: "receive", baseTip: 0, tipRate: 0, department: "", adpFile: "", rate: 0, otRate: 0, ot2Rate: 0 },
+    { id: "rpt-emp-doordash", name: "doordash", store: "Nai Cha", role: "", tipType: "receive", baseTip: 0, tipRate: 0, department: "Online", adpFile: "", rate: 0, otRate: 0, ot2Rate: 0 },
+    { id: "rpt-emp-dd-delivery", name: "doordash_d_delivery", store: "Nai Cha", role: "Online", tipType: "receive", baseTip: 0, tipRate: 0, department: "Online", adpFile: "", rate: 0, otRate: 0, ot2Rate: 0 },
+    { id: "rpt-emp-maria", name: "Maria Garcia", store: "Downtown Branch", role: "Server", tipType: "deduct", baseTip: 0, tipRate: 0.15, department: "Floor", adpFile: "301", rate: 13, otRate: 19.5, ot2Rate: 26 },
+    { id: "rpt-emp-jason", name: "Jason Chen", store: "Nai Cha", role: "Kitchen", tipType: "receive", baseTip: 0, tipRate: 0, department: "Kitchen", adpFile: "209", rate: 18, otRate: 27, ot2Rate: 36 },
+    { id: "rpt-emp-mike", name: "Mike Johnson", store: "Downtown Branch", role: "Bartender", tipType: "deduct", baseTip: 0, tipRate: 0.15, department: "Bar", adpFile: "302", rate: 18.5, otRate: 27.75, ot2Rate: 37 },
+    { id: "rpt-emp-tom", name: "Tom Wilson", store: "Airport Kiosk", role: "Kitchen", tipType: "receive", baseTip: 0, tipRate: 0, department: "Kitchen", adpFile: "401", rate: 20, otRate: 30, ot2Rate: 40 },
+  ];
+
   function $(sel) {
     return document.querySelector(sel);
   }
@@ -192,6 +216,13 @@
       DEFAULT_ROSTER.forEach((seed) => {
         if (!idSet.has(seed.id)) {
           list.push(structuredClone(seed));
+          changed = true;
+        }
+      });
+      REPORTS_ROSTER_SEEDS.forEach((seed) => {
+        if (!idSet.has(seed.id)) {
+          list.push(structuredClone(seed));
+          idSet.add(seed.id);
           changed = true;
         }
       });

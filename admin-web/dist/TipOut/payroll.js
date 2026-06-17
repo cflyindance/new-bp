@@ -8,6 +8,10 @@
   const ROSTER_STORAGE_KEY = "tipout-employees-roster-v1";
   const DISCLAIMER_ACCEPT_KEY = "tipout-payroll-disclaimer-accepted-v1";
 
+  function T(key, vars) {
+    return typeof payrollT === "function" ? payrollT(key, vars) : key;
+  }
+
   function getAdpMapping() {
     return typeof PAYROLL_ADP_MAPPING !== "undefined" && PAYROLL_ADP_MAPPING ? PAYROLL_ADP_MAPPING : null;
   }
@@ -30,18 +34,50 @@
     if (state.data.auditLog.length > 200) state.data.auditLog.length = 200;
   }
 
-  function renderDeclarationText(emp) {
+  function getDeclarationTemplate() {
     const m = getAdpMapping();
-    const tpl =
+    return (
       (m && m.declarationBodyEn) ||
-      "Service charge ${svc_amount} and tips ${tips_amount} are from Manage Payroll. Version ${declaration_version}.";
+      "Service charge ${svc_amount} and tips ${tips_amount} are from Manage Payroll. Version ${declaration_version}."
+    );
+  }
+
+  function getDeclarationAmounts(emp) {
     const svc = emp && emp.adjustments ? fmtMoney(emp.adjustments.svcw) : "0.00";
     const tips = emp && emp.adjustments ? fmtMoney(emp.adjustments.tips) : "0.00";
+    return { svc: "$" + svc, tips: "$" + tips };
+  }
+
+  function renderDeclarationText(emp) {
+    const m = getAdpMapping();
+    const tpl = getDeclarationTemplate();
+    const { svc, tips } = getDeclarationAmounts(emp);
     const ver = (m && m.declarationVersion) || "demo-v1";
     return tpl
-      .replace(/\$\{svc_amount\}/g, "$" + svc)
-      .replace(/\$\{tips_amount\}/g, "$" + tips)
+      .replace(/\$\{svc_amount\}/g, svc)
+      .replace(/\$\{tips_amount\}/g, tips)
       .replace(/\$\{declaration_version\}/g, ver);
+  }
+
+  /** 声明正文 HTML：gratuity / tips 金额加粗、加大并下划线，便于员工核对 */
+  function renderDeclarationHtml(emp) {
+    const m = getAdpMapping();
+    const tpl = getDeclarationTemplate();
+    const { svc, tips } = getDeclarationAmounts(emp);
+    const ver = (m && m.declarationVersion) || "demo-v1";
+    const SVC_TOKEN = "@@PAYROLL_DECL_SVC@@";
+    const TIPS_TOKEN = "@@PAYROLL_DECL_TIPS@@";
+    const VER_TOKEN = "@@PAYROLL_DECL_VER@@";
+    const marked = tpl
+      .replace(/\$\{svc_amount\}/g, SVC_TOKEN)
+      .replace(/\$\{tips_amount\}/g, TIPS_TOKEN)
+      .replace(/\$\{declaration_version\}/g, VER_TOKEN);
+    const amountHtml = (amount) =>
+      `<span class="payroll-decl-amount">${escapeHtml(amount)}</span>`;
+    return escapeHtml(marked)
+      .replace(SVC_TOKEN, amountHtml(svc))
+      .replace(TIPS_TOKEN, amountHtml(tips))
+      .replace(VER_TOKEN, escapeHtml(ver));
   }
 
   function csvEscapeCell(c) {
@@ -100,8 +136,18 @@
     const m = getAdpMapping();
     const bodyZh = $("#payroll-disclaimer-modal-body");
     const bodyEn = $("#payroll-disclaimer-modal-body-en");
-    if (bodyZh) bodyZh.textContent = (m && m.disclaimerZh) || "本系统仅提供薪酬计算与报税准备，不构成税务或法律意见。";
-    if (bodyEn) bodyEn.textContent = (m && m.disclaimerEn) || "";
+    const isEn = typeof isPayrollEn === "function" && isPayrollEn();
+    if (bodyZh) {
+      bodyZh.textContent =
+        (m && m.disclaimerZh) || "本系统仅提供薪酬报税相关功能，不构成税务或法律意见。";
+      bodyZh.style.display = isEn ? "none" : "";
+    }
+    if (bodyEn) {
+      bodyEn.textContent =
+        (m && m.disclaimerEn) ||
+        "This tool provides payroll calculation and tax prep data only. It does not constitute tax or legal advice.";
+      bodyEn.style.display = isEn ? "" : "none";
+    }
 
     if (localStorage.getItem(DISCLAIMER_ACCEPT_KEY) === "1") return;
 
@@ -121,124 +167,6 @@
     });
   }
 
-  /** Manage Payroll 字段业务说明（点击 ? 查看） */
-  const FIELD_HELP = {
-    "seg-date": {
-      title: "Date · 工作日期",
-      body: "本薪资周期内员工实际上班的自然日。可与多段 In/Out 打卡对应；修改日期会影响当期考勤汇总与 ADP 导出中的工时归属。",
-      adp: null,
-    },
-    "seg-in": {
-      title: "In · 上班打卡",
-      body: "该日某一段班次的上班时间（时:分）。支持多段 In/Out（例如午休后继续上班）。直接修改可修正考勤，进而影响 Regular / OT / OT2 的填报与金额。",
-      adp: null,
-    },
-    "seg-out": {
-      title: "Out · 下班打卡",
-      body: "与 In 成对的下班时间。系统按 In/Out 计算当日在岗时长；若未启用自动加班规则，Regular / OT / OT2 也可由薪酬专员手工覆盖。",
-      adp: null,
-    },
-    "seg-meal": {
-      title: "Meal · 用餐/休息",
-      body: "当日用餐或强制休息记录（时长或备注，依客户模板）。用于加州等地区的用餐合规核对，并可在员工签字明细中作为休息佐证。",
-      adp: null,
-    },
-    "seg-regular": {
-      title: "Regular · 正常工时",
-      body: "该日按正常时薪计薪的工时（小时）。汇总后进入 Pay Period「工时」区块，并乘以基础 Rate 得到正常工资金额。",
-      adp: "ADP 导出列：Reg Hours",
-    },
-    "seg-ot": {
-      title: "OT · 加班工时（1.5 倍档）",
-      body: "第一层加班工时，通常对应每日超过 8 小时或每周超过 40 小时的部分（具体规则依门店与法规）。金额 = OT 工时 × 加班时薪 OT。",
-      adp: "ADP 导出：Hours 3 code = OHR，Hours 3 amount = OT 工时",
-    },
-    "seg-ot2": {
-      title: "OT2 · 双倍加班工时",
-      body: "更高档加班工时（例如每日超过 12 小时或第 7 天连续工作等场景，依客户规则）。金额 = OT2 工时 × 加班时薪 OT2。",
-      adp: null,
-    },
-    "adp-file": {
-      title: "ADP File# · 员工报税编号",
-      body: "员工在 ADP 系统中的唯一档案编号（FILE#）。必须与 ADP 主档一致，否则无法导出报税 CSV；缺失时导出按钮将禁用。建议与「员工列表」主档保持同步。",
-      adp: "ADP 导出列：FILE #",
-    },
-    "ot-rate": {
-      title: "加班时薪 OT",
-      body: "计算 OT 加班金额的时薪，通常为正常时薪的 1.5 倍（可手工调整）。Pay Period 汇总中「OT 金额」= OT 工时 × 本字段。",
-      adp: null,
-    },
-    "ot2-rate": {
-      title: "加班时薪 OT2",
-      body: "计算 OT2 双倍加班金额的时薪，通常为正常时薪的 2 倍（可手工调整）。Pay Period 汇总中「OT2 金额」= OT2 工时 × 本字段。",
-      adp: null,
-    },
-    exempt: {
-      title: "Exempt · 豁免加班",
-      body: "标识员工是否属于「豁免加班」类别（如部分月薪管理岗）。填写客户 ADP 模板要求的代码或留空；影响 OT 规则是否适用，需与薪酬政策一致。",
-      adp: "依客户 ADP 模板映射",
-    },
-    rate: {
-      title: "Rate · 基础时薪",
-      body: "正常工时（Regular）对应的时薪。Pay Period 中 Regular 金额 = Regular 工时 × Rate；并写入 ADP 导出。",
-      adp: "ADP 导出列：Rate",
-    },
-    incentive: {
-      title: "Incentive · 激励/奖金",
-      body: "本期一次性激励、奖金或非固定津贴金额（美元）。不计入正常工时乘数，按客户 ADP 收益代码单独申报（若模板有对应列）。",
-      adp: "依客户 ADP 收益代码映射",
-    },
-    breakfast: {
-      title: "Breakfast · 早餐班餐次",
-      body: "早餐时段相关的餐次统计或餐补计数（依 KOI/ADP 模板定义）。用于餐段合规或餐补申报，与 Lunch/Dinner 分列填写。",
-      adp: "依客户 ADP 模板映射",
-    },
-    lunch: {
-      title: "Lunch · 午餐班餐次",
-      body: "午餐时段餐次或用餐合规计数。若员工未获得规定用餐休息，可能触发合规提醒；本字段供报税专员按模板填报。",
-      adp: "依客户 ADP 模板映射",
-    },
-    dinner: {
-      title: "Dinner · 晚餐班餐次",
-      body: "晚餐时段餐次或用餐合规计数。与 Breakfast、Lunch 一并构成当期餐休申报数据。",
-      adp: "依客户 ADP 模板映射",
-    },
-    "sick-hours": {
-      title: "Sick Hours · 病假工时",
-      body: "本期带薪病假小时数。与正常出勤工时分开统计，按客户政策决定时薪或固定额，并映射到 ADP 病假收益/扣减列。",
-      adp: "依客户 ADP 模板映射",
-    },
-    svcw: {
-      title: "SVCW · 服务费（Service Charge）",
-      body: "员工本期应申报的服务费/服务附加费分配金额。须与员工签字页声明中的 service charge 一致。可与 TipOut 小费分配结果不同，允许手工覆盖后作为报税最终值。",
-      adp: "ADP 导出：Earnings 3 Code = SVC，Earnings 3 Amount = 本列金额",
-    },
-    tips: {
-      title: "Tips · 小费",
-      body: "员工本期应申报的小费金额（样例中为信用卡小费 CCT）。须与员工签字页声明中的 tips 一致。若 TipOut 分配结果不可用，可手工录入；确认后写入 ADP 与签字明细。",
-      adp: "ADP 导出：Earnings 3 Code = CCT，Earnings 3 Amount = 本列金额",
-    },
-    "child-sup": {
-      title: "Child sup · 子女抚养费扣款",
-      body: "法院裁定或 ADP 配置的子女抚养费代扣金额（美元）。从本期应付中扣除，按客户模板映射为扣款项。",
-      adp: "依客户 ADP 扣款代码映射",
-    },
-    "med-ded": {
-      title: "Med Ded · 医疗保险扣款",
-      body: "员工承担的医疗保险保费扣款（美元）。属于税前或税后扣款依 ADP 设置；本字段为报税专员确认后的本期金额。",
-      adp: "依客户 ADP 扣款代码映射",
-    },
-    eee40: {
-      title: "Eee 40% · 健康险员工分摊",
-      body: "健康保险费用中由员工承担的比例份额（模板示例为 40%）。与 Eer 60% 合计应等于当期健康险总成本分摊，需与福利台账一致。",
-      adp: "依客户 ADP 模板映射",
-    },
-    eer60: {
-      title: "Eer 60% · 健康险雇主分摊",
-      body: "健康保险费用中由雇主承担的比例份额（模板示例为 60%）。主要用于薪酬成本核算与 ADP 雇主成本列对齐。",
-      adp: "依客户 ADP 模板映射",
-    },
-  };
   const DEFAULT_STORE_NAME = "Golden Dragon Chinese Kitchen - Dallas, TX 75231";
   const EXTRA_PAYROLL_STORES = [
     "Lone Star BBQ House - Austin, TX 78701",
@@ -258,6 +186,7 @@
   ];
 
   function addDays(base, days) {
+    if (!base) return null;
     const d = new Date(base.getTime());
     d.setDate(d.getDate() + days);
     return d;
@@ -276,31 +205,360 @@
     return `${pad2(d.getMonth() + 1)}/${pad2(d.getDate())}/${d.getFullYear()} (${w})`;
   }
 
-  /** Payroll年度预设 26 期（每期14天） */
-  function buildPresetPeriods() {
-    const start = new Date(2025, 11, 21); // 对齐现有 p2026-08 / p2026-09 / p2026-10
-    const statusMap = { 8: "draft", 9: "confirmed", 10: "draft" };
+  /** Paycheck (Batch) = 薪资区间结束日 + 6 天（ADP BATCH ID 格式 MM.DD.YY） */
+  function buildPaycheckDate(periodEndDate) {
+    return formatMdyDot(addDays(periodEndDate, 6));
+  }
+
+  /** 生成指定自然年的 26 期（双周 Sun–Sat，每期 14 天） */
+  function buildYearPeriods(year, startDate, statusMap) {
     const periods = [];
+    const sm = statusMap && typeof statusMap === "object" ? statusMap : {};
     for (let i = 1; i <= 26; i++) {
-      const s = addDays(start, (i - 1) * 14);
+      const s = addDays(startDate, (i - 1) * 14);
       const e = addDays(s, 13);
       periods.push({
-        id: `p2026-${pad2(i)}`,
+        id: `p${year}-${pad2(i)}`,
+        year,
         periodNumber: i,
         rangeLabel: `${formatRangeDate(s)} – ${formatRangeDate(e)}`,
-        paycheckDate: formatMdyDot(e),
-        status: statusMap[i] || "draft",
+        paycheckDate: buildPaycheckDate(e),
+        status: sm[i] || "draft",
       });
     }
     return periods;
   }
 
-  function buildSeedSegments(idx) {
-    const day1In = `${String(8 + (idx % 3)).padStart(2, "0")}:00`;
-    const day1Out = `${String(16 + (idx % 3)).padStart(2, "0")}:00`;
+  /** Payroll 预设期数：2025 / 2026 各 26 期（自然年、双周 Sun–Sat） */
+  function buildPresetPeriods() {
+    const statusMap2026 = { 8: "draft", 9: "confirmed", 10: "draft" };
     return [
+      ...buildYearPeriods(2025, new Date(2025, 0, 5)), // 2025 第 1 期：01/05/2025 (Sun) – 01/18/2025 (Sat)
+      ...buildYearPeriods(2026, new Date(2026, 0, 4), statusMap2026), // 2026 第 1 期：01/04/2026 (Sun) – 01/17/2026 (Sat)
+    ];
+  }
+
+  function formatMdySlash(d) {
+    return `${pad2(d.getMonth() + 1)}/${pad2(d.getDate())}/${d.getFullYear()}`;
+  }
+
+  function parseMdyDate(dateStr) {
+    if (!dateStr) return null;
+    const m = String(dateStr).trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (!m) return null;
+    const month = parseInt(m[1], 10) - 1;
+    const day = parseInt(m[2], 10);
+    const year = parseInt(m[3], 10);
+    const d = new Date(year, month, day);
+    if (Number.isNaN(d.getTime())) return null;
+    return d;
+  }
+
+  function mdyToIsoDateInput(dateStr) {
+    const d = parseMdyDate(dateStr);
+    if (!d) return "";
+    return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+  }
+
+  function isoDateInputToMdy(isoStr) {
+    const raw = String(isoStr || "").trim();
+    if (!raw) return "";
+    const m = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m) return "";
+    return `${m[2]}/${m[3]}/${m[1]}`;
+  }
+
+  function getPeriodDateRange(rangeLabel) {
+    if (!rangeLabel) return { start: null, end: null };
+    const matches = String(rangeLabel).match(/\d{1,2}\/\d{1,2}\/\d{4}/g) || [];
+    const start = matches[0] ? parseMdyDate(matches[0]) : null;
+    const end = matches[1] ? parseMdyDate(matches[1]) : null;
+    return { start, end };
+  }
+
+  function startOfDay(d) {
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  }
+
+  const BIWEEKLY_DEMO_DAY_OFFSETS = [1, 3, 5, 8, 10, 12];
+
+  function buildBiweeklyDemoSegmentDates(start, end) {
+    if (!start || !end) return [];
+    const endDay = startOfDay(end).getTime();
+    return BIWEEKLY_DEMO_DAY_OFFSETS.map((off) => addDays(start, off))
+      .filter((d) => d && startOfDay(d).getTime() <= endDay)
+      .map(formatMdySlash);
+  }
+
+  function buildDemoSegmentDatesForRange(start, end) {
+    return buildBiweeklyDemoSegmentDates(start, end);
+  }
+
+  function buildDemoSegmentDatesForPeriod(period) {
+    const { start, end } = getPeriodDateRange(period && period.rangeLabel);
+    return buildDemoSegmentDatesForRange(start, end);
+  }
+
+  function periodHasStarted(period, refDate) {
+    const start = getPeriodStartDate(period && period.rangeLabel);
+    if (!start) return false;
+    return startOfDay(start).getTime() <= startOfDay(refDate || new Date()).getTime();
+  }
+
+  function isPayrollYear2026(period) {
+    if (!period) return false;
+    if (String(period.year) === "2026") return true;
+    return /^p2026-/i.test(String(period.id || ""));
+  }
+
+  function segmentsMatchPeriod(segments, start, end) {
+    if (!Array.isArray(segments) || segments.length === 0 || !start || !end) return false;
+    const s = startOfDay(start).getTime();
+    const e = startOfDay(end).getTime();
+    return segments.some((seg) => {
+      const d = parseMdyDate(seg && seg.date);
+      if (!d) return false;
+      const t = startOfDay(d).getTime();
+      return t >= s && t <= e;
+    });
+  }
+
+  function getEmployeesSeedTemplate(employeesMap) {
+    const preferred = ["p2026-08", "p2026-01", "p2026-12"];
+    for (let i = 0; i < preferred.length; i++) {
+      const pid = preferred[i];
+      if (Array.isArray(employeesMap[pid]) && employeesMap[pid].length > 0) return employeesMap[pid];
+    }
+    const any = Object.values(employeesMap).find((arr) => Array.isArray(arr) && arr.length > 0);
+    if (any) return any;
+    const dates = buildDemoSegmentDatesForRange(new Date(2026, 0, 4), addDays(new Date(2026, 0, 4), 13));
+    return buildSeedEmployees(dates);
+  }
+
+  /** 2026 年：当前日期之前及当期（含进行中）的期数均补全员工与考勤演示数据 */
+  function fillElapsed2026PeriodEmployees(employeesMap, periods, refDate) {
+    if (!employeesMap || typeof employeesMap !== "object") return;
+    const today = refDate || new Date();
+    const template = getEmployeesSeedTemplate(employeesMap);
+    const list = Array.isArray(periods) ? periods : [];
+    list.forEach((period) => {
+      if (!isPayrollYear2026(period) || !periodHasStarted(period, today)) return;
+      const { start, end } = getPeriodDateRange(period.rangeLabel);
+      if (!start || !end) return;
+      const dates = buildDemoSegmentDatesForRange(start, end);
+      const pid = period.id;
+      if (!pid) return;
+      const existing = employeesMap[pid];
+      if (!Array.isArray(existing) || existing.length === 0) {
+        employeesMap[pid] = applySegmentDatesToEmployees(cloneEmployeesTemplate(template), dates);
+        return;
+      }
+      const needsRefresh = existing.some((emp) => segmentsNeedBiweeklyRefresh(emp && emp.segments, start, end));
+      if (!needsRefresh) return;
+      employeesMap[pid] = existing.map((emp) => {
+        if (!emp || typeof emp !== "object") return emp;
+        if (!segmentsNeedBiweeklyRefresh(emp.segments, start, end)) return emp;
+        return { ...emp, segments: buildSeedSegments(getEmployeeSeedIndex(emp), dates, emp.rate) };
+      });
+    });
+  }
+
+  function getPeriodStartDate(rangeLabel) {
+    if (!rangeLabel) return null;
+    const m = String(rangeLabel).match(/(\d{1,2}\/\d{1,2}\/\d{4})/);
+    return m ? parseMdyDate(m[1]) : null;
+  }
+
+  function segmentsNeedBiweeklyRefresh(segments, start, end) {
+    if (!segmentsMatchPeriod(segments, start, end)) return true;
+    const periodStart = start;
+    let hasWeek0 = false;
+    let hasWeek1 = false;
+    (segments || []).forEach((seg, dayIdx) => {
+      const wk = resolveWeekIndex(seg && seg.date, periodStart, dayIdx);
+      if (wk === 0) hasWeek0 = true;
+      if (wk === 1) hasWeek1 = true;
+    });
+    return !hasWeek0 || !hasWeek1;
+  }
+
+  function compareSegmentDayDates(a, b) {
+    const da = parseMdyDate(a && a.date);
+    const db = parseMdyDate(b && b.date);
+    if (da && db) return da.getTime() - db.getTime();
+    if (da) return -1;
+    if (db) return 1;
+    return 0;
+  }
+
+  function shouldGroupManageSegmentsByWeek(period) {
+    return periodHasStarted(period, new Date());
+  }
+
+  function buildManageSegmentWeekGroups(segments, period) {
+    const periodStart = getPeriodStartDate(period && period.rangeLabel);
+    const items = (Array.isArray(segments) ? segments : []).map((raw, dayIdx) => ({
+      raw,
+      day: normalizeDay(raw),
+      dayIdx,
+    }));
+    items.sort((a, b) => compareSegmentDayDates(a.day, b.day));
+    const weeks = [[], []];
+    items.forEach((item, sortedIdx) => {
+      const wk = resolveWeekIndex(item.day.date, periodStart, sortedIdx);
+      weeks[wk].push(item);
+    });
+    return weeks;
+  }
+
+  const MANAGE_SEG_ROOT = "#manage-segments-wrap";
+
+  function renderManageSegmentTableHeadHtml() {
+    return `<thead>
+      <tr>
+        <th rowspan="2" scope="col"><span class="payroll-th-label">Date<button type="button" class="payroll-field-help" data-field-help="seg-date" aria-label="Date">?</button></span></th>
+        <th colspan="2" scope="colgroup" style="text-align:center">In/Out</th>
+        <th rowspan="2" scope="col"><span class="payroll-th-label">Meal<button type="button" class="payroll-field-help" data-field-help="seg-meal" aria-label="Meal">?</button></span></th>
+        <th rowspan="2" scope="col" style="text-align:right"><span class="payroll-th-label">Rate<button type="button" class="payroll-field-help" data-field-help="seg-rate" aria-label="Rate">?</button></span></th>
+        <th rowspan="2" scope="col" style="text-align:right"><span class="payroll-th-label">Regular<button type="button" class="payroll-field-help" data-field-help="seg-regular" aria-label="Regular">?</button></span></th>
+        <th rowspan="2" scope="col" style="text-align:right"><span class="payroll-th-label">OT<button type="button" class="payroll-field-help" data-field-help="seg-ot" aria-label="OT">?</button></span></th>
+        <th rowspan="2" scope="col" style="text-align:right"><span class="payroll-th-label">OT2<button type="button" class="payroll-field-help" data-field-help="seg-ot2" aria-label="OT2">?</button></span></th>
+      </tr>
+      <tr>
+        <th style="text-align:center;font-weight:400"><span class="payroll-th-label">In<button type="button" class="payroll-field-help" data-field-help="seg-in" aria-label="In">?</button></span></th>
+        <th style="text-align:center;font-weight:400"><span class="payroll-th-label">Out<button type="button" class="payroll-field-help" data-field-help="seg-out" aria-label="Out">?</button></span></th>
+      </tr>
+    </thead>`;
+  }
+
+  function renderManageWeekTitleHtml(period, weekIndex) {
+    const rangeText = getWeekRangeTextFromPeriod(period && period.rangeLabel, weekIndex);
+    const title = rangeText
+      ? T("detail.weekRange", { n: weekIndex + 1, range: rangeText })
+      : T("detail.weekN", { n: weekIndex + 1 });
+    return `<h4 class="payroll-seg-week-title">${escapeHtml(title)}</h4>`;
+  }
+
+  function sumWeekSegmentTotals(group) {
+    let reg = 0;
+    let ot = 0;
+    let ot2 = 0;
+    (group || []).forEach(({ day }) => {
+      if (!day) return;
+      reg += Number(day.reg) || 0;
+      ot += Number(day.ot) || 0;
+      ot2 += Number(day.ot2) || 0;
+    });
+    return { reg, ot, ot2, total: reg + ot + ot2 };
+  }
+
+  function renderManageWeekSummaryHtml(totals, weekIndex) {
+    return `<div class="payroll-seg-week-summary" data-week-summary="${weekIndex}">
+      <span>${escapeHtml(T("manage.weekTotalHours"))}<strong data-week-total-hours>${fmtMoney(totals.total)}</strong></span>
+      <span>${escapeHtml(T("manage.weekRegular"))}<strong data-week-reg>${fmtMoney(totals.reg)}</strong></span>
+      <span>${escapeHtml(T("manage.weekOt"))}<strong data-week-ot>${fmtMoney(totals.ot)}</strong></span>
+      <span>${escapeHtml(T("manage.weekOt2"))}<strong data-week-ot2>${fmtMoney(totals.ot2)}</strong></span>
+    </div>`;
+  }
+
+  function updateManageWeekSummaries(emp, period) {
+    if (!emp || !period || !shouldGroupManageSegmentsByWeek(period)) return;
+    const weekGroups = buildManageSegmentWeekGroups(emp.segments, period);
+    weekGroups.forEach((group, weekIndex) => {
+      if (!group.length) return;
+      const el = document.querySelector(`${MANAGE_SEG_ROOT} [data-week-summary="${weekIndex}"]`);
+      if (!el) return;
+      const totals = sumWeekSegmentTotals(group);
+      const h = el.querySelector("[data-week-total-hours]");
+      const r = el.querySelector("[data-week-reg]");
+      const o = el.querySelector("[data-week-ot]");
+      const o2 = el.querySelector("[data-week-ot2]");
+      if (h) h.textContent = fmtMoney(totals.total);
+      if (r) r.textContent = fmtMoney(totals.reg);
+      if (o) o.textContent = fmtMoney(totals.ot);
+      if (o2) o2.textContent = fmtMoney(totals.ot2);
+    });
+  }
+
+  function renderManageBiweeklySegmentsHtml(period, weekGroups, emp) {
+    const blocks = [];
+    weekGroups.forEach((group, weekIndex) => {
+      if (!group.length) return;
+      const rowHtml = [];
+      group.forEach(({ day, dayIdx }) => {
+        appendManageSegmentDayRows(rowHtml, day, dayIdx, emp);
+      });
+      const totals = sumWeekSegmentTotals(group);
+      blocks.push(`<section class="payroll-seg-week-block">
+        ${renderManageWeekTitleHtml(period, weekIndex)}
+        <table class="payroll-seg-table">
+          ${renderManageSegmentTableHeadHtml()}
+          <tbody>${rowHtml.join("")}</tbody>
+        </table>
+        ${renderManageWeekSummaryHtml(totals, weekIndex)}
+      </section>`);
+    });
+    return `<div class="payroll-seg-biweekly">${blocks.join("")}</div>`;
+  }
+
+  function renderManageSingleSegmentTableHtml(rowHtml) {
+    return `<table class="payroll-seg-table">
+      ${renderManageSegmentTableHeadHtml()}
+      <tbody id="segment-rows">${rowHtml.join("")}</tbody>
+    </table>`;
+  }
+
+  function appendManageSegmentDayRows(rowHtml, day, dayIdx, emp) {
+    const dayRate = getDayRate(day, emp);
+    const filledSlotIndexes = day.slots
+      .map((sl, idx) => ({ sl, idx }))
+      .filter((x) => hasSlotClock(x.sl))
+      .map((x) => x.idx);
+    const targetRows = Math.max(day.slotRows || 0, filledSlotIndexes.length || 1);
+    const visibleSlotIndexes = filledSlotIndexes.slice(0);
+    for (let i = 0; visibleSlotIndexes.length < targetRows; i++) {
+      if (!visibleSlotIndexes.includes(i)) visibleSlotIndexes.push(i);
+    }
+    const rowsForDay = visibleSlotIndexes.length;
+    visibleSlotIndexes.forEach((slotIdx, renderIdx) => {
+      if (!day.slots[slotIdx]) day.slots[slotIdx] = { in: "", out: "" };
+      const sl = day.slots[slotIdx];
+      const isLastRow = renderIdx === rowsForDay - 1;
+      const actionsHtml = `<div style="display:flex;gap:8px;align-items:center">
+            ${
+              isLastRow
+                ? `<button type="button" class="btn btn-sm" data-action="add-slot-row" data-day-index="${dayIdx}">${escapeHtml(T("seg.addInOut"))}</button>`
+                : ""
+            }
+            <button type="button" class="btn btn-sm" data-action="remove-slot-row" data-day-index="${dayIdx}" data-row-order="${renderIdx}">${escapeHtml(T("seg.removeRow"))}</button>
+          </div>`;
+      if (renderIdx === 0) {
+        rowHtml.push(`<tr data-day-index="${dayIdx}" data-slot-index="${slotIdx}" data-row-order="${renderIdx}" data-primary="1">
+        <td rowspan="${rowsForDay}" style="vertical-align:top">
+          <input type="text" class="field-seg form-control" data-field="date" value="${escapeHtml(day.date)}" aria-label="Date" style="font-family:ui-monospace,Menlo,monospace" />
+        </td>
+        <td><input type="text" class="field-seg form-control" data-field="in" value="${escapeHtml(sl.in)}" placeholder="In" style="font-family:ui-monospace,Menlo,monospace" /></td>
+        <td><div style="display:flex;gap:8px;align-items:center"><input type="text" class="field-seg form-control" data-field="out" value="${escapeHtml(sl.out)}" placeholder="Out" style="font-family:ui-monospace,Menlo,monospace" />${actionsHtml}</div></td>
+        <td rowspan="${rowsForDay}" style="vertical-align:top"><input type="text" class="field-seg form-control" data-field="meal" value="${escapeHtml(day.meal)}" aria-label="Meal" /></td>
+        <td rowspan="${rowsForDay}" style="vertical-align:top"><input type="number" step="0.01" min="0" class="field-seg form-control" data-field="rate" value="${dayRate}" aria-label="Rate" /></td>
+        <td rowspan="${rowsForDay}" style="vertical-align:top"><input type="number" step="0.01" class="field-seg form-control" data-field="reg" value="${day.reg}" aria-label="Regular" /></td>
+        <td rowspan="${rowsForDay}" style="vertical-align:top"><input type="number" step="0.01" class="field-seg form-control" data-field="ot" value="${day.ot}" aria-label="OT" /></td>
+        <td rowspan="${rowsForDay}" style="vertical-align:top"><input type="number" step="0.01" class="field-seg form-control" data-field="ot2" value="${day.ot2}" aria-label="OT2" /></td>
+      </tr>`);
+      } else {
+        rowHtml.push(`<tr data-day-index="${dayIdx}" data-slot-index="${slotIdx}" data-row-order="${renderIdx}" data-primary="0">
+        <td><input type="text" class="field-seg form-control" data-field="in" value="${escapeHtml(sl.in)}" placeholder="In" style="font-family:ui-monospace,Menlo,monospace" /></td>
+        <td><div style="display:flex;gap:8px;align-items:center"><input type="text" class="field-seg form-control" data-field="out" value="${escapeHtml(sl.out)}" placeholder="Out" style="font-family:ui-monospace,Menlo,monospace" />${actionsHtml}</div></td>
+      </tr>`);
+      }
+    });
+  }
+
+  function buildDemoDaySegment(dateStr, empIdx, dayIdx) {
+    const day1In = `${String(8 + (empIdx % 3)).padStart(2, "0")}:00`;
+    const day1Out = `${String(16 + (empIdx % 3)).padStart(2, "0")}:00`;
+    const patterns = [
       {
-        date: "04/01/2026",
         slots: [
           { in: day1In, out: day1Out },
           { in: "", out: "" },
@@ -312,7 +570,6 @@
         ot2: 0,
       },
       {
-        date: "04/03/2026",
         slots: [
           { in: "10:00", out: "18:30" },
           { in: "", out: "" },
@@ -320,11 +577,10 @@
         ],
         meal: "0:30",
         reg: 8,
-        ot: idx % 2 === 0 ? 0.5 : 0,
+        ot: empIdx % 2 === 0 ? 0.5 : 0,
         ot2: 0,
       },
       {
-        date: "04/09/2026",
         slots: [
           { in: "11:00", out: "15:00" },
           { in: "16:00", out: "21:00" },
@@ -332,13 +588,62 @@
         ],
         meal: "0:45",
         reg: 8.25,
-        ot: idx % 3 === 0 ? 1 : 0.25,
+        ot: empIdx % 3 === 0 ? 1 : 0.25,
         ot2: 0,
       },
     ];
+    const p = patterns[dayIdx % patterns.length];
+    return {
+      date: dateStr,
+      slots: p.slots.map((s) => ({ ...s })),
+      meal: p.meal,
+      reg: p.reg,
+      ot: p.ot,
+      ot2: p.ot2,
+      slotRows: 1,
+    };
   }
 
-  function buildSeedEmployees() {
+  function buildSeedSegments(empIdx, dates, baseRate) {
+    const fallbackStart = new Date(2026, 3, 12);
+    const rosterRate = Number(UNIFIED_ROSTER_SEED[empIdx % UNIFIED_ROSTER_SEED.length]?.rate) || 15;
+    const resolvedRate =
+      Number.isFinite(Number(baseRate)) && Number(baseRate) > 0 ? Number(baseRate) : rosterRate;
+    const d =
+      dates && dates.length > 0
+        ? dates
+        : buildBiweeklyDemoSegmentDates(fallbackStart, addDays(fallbackStart, 13));
+    return d.map((dateStr, dayIdx) => ({
+      ...buildDemoDaySegment(dateStr, empIdx, dayIdx),
+      rate: resolvedRate,
+    }));
+  }
+
+  function getEmployeeSeedIndex(emp) {
+    if (!emp) return 0;
+    const adp = String(emp.adpFile || "").trim();
+    if (adp) {
+      const idx = UNIFIED_ROSTER_SEED.findIndex((r) => String(r.adpFile || "").trim() === adp);
+      if (idx >= 0) return idx;
+    }
+    const name = String(emp.name || "").trim().toLowerCase();
+    if (name) {
+      const idx = UNIFIED_ROSTER_SEED.findIndex((r) => String(r.name || "").trim().toLowerCase() === name);
+      if (idx >= 0) return idx;
+    }
+    return 0;
+  }
+
+  function ensureManageBiweeklySegments(emp, period) {
+    if (!emp || !period || !shouldGroupManageSegmentsByWeek(period)) return;
+    const { start, end } = getPeriodDateRange(period.rangeLabel);
+    if (!start || !end) return;
+    if (!segmentsNeedBiweeklyRefresh(emp.segments, start, end)) return;
+    const dates = buildBiweeklyDemoSegmentDates(start, end);
+    emp.segments = buildSeedSegments(getEmployeeSeedIndex(emp), dates, emp.rate);
+  }
+
+  function buildSeedEmployees(dates) {
     const baseAdj = {
       exempt: "",
       incentive: 0,
@@ -359,20 +664,35 @@
       store: r.store || DEFAULT_STORE_NAME,
       adpFile: r.adpFile || "",
       department: r.department || r.role || "Floor",
+      role: r.role || r.department || "Floor",
+      hireDate: r.hireDate || demoHireDateForSeedIndex(idx),
       confirmed: false,
       rate: Number(r.rate) || 0,
       otRate: Number(r.otRate) || 0,
       ot2Rate: Number(r.ot2Rate) || 0,
-      segments: buildSeedSegments(idx),
+      segments: buildSeedSegments(idx, dates, Number(r.rate) || 0),
       adjustments: { ...baseAdj, tips: idx === 0 ? 85 : 0, svcw: idx === 0 ? 120.5 : 0 },
     }));
+  }
+
+  function applySegmentDatesToEmployees(list, dates) {
+    if (!Array.isArray(list) || !dates) return list;
+    return list.map((emp, idx) => {
+      if (!emp || typeof emp !== "object") return emp;
+      return {
+        ...emp,
+        segments: buildSeedSegments(idx, dates, Number(emp.rate) || 0),
+      };
+    });
   }
 
   const DEFAULT_DATA = {
     coCode: "X0L",
     periods: buildPresetPeriods(),
     employees: {
-      "p2026-08": buildSeedEmployees(),
+      "p2026-08": buildSeedEmployees(
+        buildDemoSegmentDatesForRange(addDays(new Date(2026, 0, 4), 7 * 14), addDays(new Date(2026, 0, 4), 7 * 14 + 13))
+      ),
     },
     auditLog: [],
   };
@@ -385,18 +705,6 @@
   function cloneData(obj) {
     if (typeof structuredClone === "function") return structuredClone(obj);
     return JSON.parse(JSON.stringify(obj));
-  }
-
-  /** 按用户要求：将第2-5期按第8期模板补全 */
-  function fillPeriods2To5FromPeriod8(employeesMap) {
-    if (!employeesMap || typeof employeesMap !== "object") return;
-    const template = Array.isArray(employeesMap["p2026-08"]) ? employeesMap["p2026-08"] : [];
-    const targets = ["p2026-02", "p2026-03", "p2026-04", "p2026-05"];
-    targets.forEach((pid) => {
-      if (!Array.isArray(employeesMap[pid]) || employeesMap[pid].length === 0) {
-        employeesMap[pid] = cloneEmployeesTemplate(template);
-      }
-    });
   }
 
   /** 补全“已确认”周期的数据：仅在该期数据为空时按模板填充 */
@@ -421,12 +729,16 @@
   }
 
   /** 补“部分未确认”演示场景：确保某一期出现部分已确认、部分未确认 */
-  function fillPartialConfirmedScenario(employeesMap) {
+  function fillPartialConfirmedScenario(employeesMap, periods, refDate) {
     if (!employeesMap || typeof employeesMap !== "object") return;
     const targetPid = "p2026-10";
-    const template = Array.isArray(employeesMap["p2026-08"]) ? employeesMap["p2026-08"] : [];
+    const periodList = Array.isArray(periods) ? periods : [];
+    const period10 = periodList.find((p) => p && p.id === targetPid);
+    if (period10 && !periodHasStarted(period10, refDate || new Date())) return;
+    const template = getEmployeesSeedTemplate(employeesMap);
     if (!Array.isArray(employeesMap[targetPid]) || employeesMap[targetPid].length === 0) {
-      employeesMap[targetPid] = cloneEmployeesTemplate(template);
+      const dates = period10 ? buildDemoSegmentDatesForPeriod(period10) : buildDemoSegmentDatesForRange(new Date(2026, 4, 10), addDays(new Date(2026, 4, 10), 13));
+      employeesMap[targetPid] = applySegmentDatesToEmployees(cloneEmployeesTemplate(template), dates);
     }
     const list = employeesMap[targetPid];
     if (!Array.isArray(list) || list.length === 0) return;
@@ -463,6 +775,98 @@
     }
   }
 
+  function demoHireDateForSeedIndex(idx) {
+    const base = new Date(2019, 2, 15);
+    return formatMdyDate(addDays(base, (Number(idx) || 0) * 47));
+  }
+
+  function findUnifiedRosterMatch(emp) {
+    if (!emp) return null;
+    const roster = getUnifiedRoster();
+    const adp = String((emp.adpFile || "")).trim();
+    const name = String((emp.name || "")).trim().toLowerCase();
+    if (adp) {
+      const hit = roster.find((r) => String((r && r.adpFile) || "").trim() === adp);
+      if (hit) return hit;
+    }
+    if (name) {
+      const hit = roster.find((r) => String((r && r.name) || "").trim().toLowerCase() === name);
+      if (hit) return hit;
+    }
+    return null;
+  }
+
+  function resolveEmployeeRole(emp) {
+    const match = findUnifiedRosterMatch(emp);
+    if (match && match.role) return String(match.role).trim();
+    if (emp && emp.role) return String(emp.role).trim();
+    if (emp && emp.department) return String(emp.department).trim();
+    return "—";
+  }
+
+  function resolveEmployeeHireDate(emp) {
+    if (emp && emp.hireDate) return String(emp.hireDate).trim();
+    const match = findUnifiedRosterMatch(emp);
+    if (match && match.hireDate) return String(match.hireDate).trim();
+    return demoHireDateForSeedIndex(getEmployeeSeedIndex(emp));
+  }
+
+  function formatPayrollPeriodReportTitle(period) {
+    const n = period && period.periodNumber != null ? period.periodNumber : "—";
+    return T("detail.periodReport", { n });
+  }
+
+  function formatDetailEmployeeDisplay(emp) {
+    const name = String((emp && emp.name) || "").trim();
+    const adp = String((emp && emp.adpFile) || "").trim();
+    if (name && adp) return `${name} · ${adp}`;
+    if (name) return name;
+    if (adp) return adp;
+    return "—";
+  }
+
+  function resolveEmployeeStore(emp) {
+    const match = findUnifiedRosterMatch(emp);
+    if (match && match.store) return String(match.store).trim();
+    if (emp && emp.store) return String(emp.store).trim();
+    return DEFAULT_STORE_NAME;
+  }
+
+  function parseEmployeeStoreLocation(storeStr) {
+    const raw = String(storeStr || "").trim();
+    if (!raw) return { name: "—", address: "—" };
+    const sep = " - ";
+    const idx = raw.indexOf(sep);
+    if (idx === -1) return { name: raw, address: "—" };
+    return {
+      name: raw.slice(0, idx).trim() || raw,
+      address: raw.slice(idx + sep.length).trim() || "—",
+    };
+  }
+
+  function syncDetailSignFooter(emp) {
+    const { name, address } = parseEmployeeStoreLocation(resolveEmployeeStore(emp));
+    const nameEl = $("#detail-store-name");
+    const addrEl = $("#detail-store-address");
+    if (nameEl) nameEl.textContent = name;
+    if (addrEl) addrEl.textContent = address;
+  }
+
+  function syncDetailMetaFields(emp, period) {
+    const roleEl = $("#detail-meta-role");
+    const hireEl = $("#detail-meta-hire-date");
+    const employeeEl = $("#detail-meta-employee");
+    const payDateEl = $("#detail-meta-pay-date");
+    const payPeriodEl = $("#detail-meta-pay-period");
+    const periodReportEl = $("#detail-meta-period-report");
+    if (roleEl) roleEl.textContent = resolveEmployeeRole(emp);
+    if (hireEl) hireEl.textContent = resolveEmployeeHireDate(emp) || "—";
+    if (employeeEl) employeeEl.textContent = formatDetailEmployeeDisplay(emp);
+    if (payDateEl) payDateEl.textContent = (period && period.paycheckDate) || "—";
+    if (payPeriodEl) payPeriodEl.textContent = (period && period.rangeLabel) || "—";
+    if (periodReportEl) periodReportEl.textContent = formatPayrollPeriodReportTitle(period);
+  }
+
   /** 报税报表中的员工姓名/角色(部门)来源统一到员工列表 */
   function syncEmployeesFromUnifiedRoster(employeesMap) {
     if (!employeesMap || typeof employeesMap !== "object") return;
@@ -490,6 +894,10 @@
           store: String((r.store || (existing && existing.store) || DEFAULT_STORE_NAME)).trim() || DEFAULT_STORE_NAME,
           adpFile: rosterAdp || String((existing && existing.adpFile) || "").trim(),
           department: String((r.department || r.role || (existing && existing.department) || "")).trim(),
+          role: String((r.role || (existing && existing.role) || r.department || "")).trim(),
+          hireDate: String(
+            (r.hireDate || (existing && existing.hireDate) || demoHireDateForSeedIndex(idx) || ""),
+          ).trim(),
           confirmed: !!(existing && existing.confirmed),
           rate: Number.isFinite(Number(r.rate)) ? Number(r.rate) : Number((existing && existing.rate) || 0),
           otRate: Number.isFinite(Number(r.otRate)) ? Number(r.otRate) : Number((existing && existing.otRate) || 0),
@@ -538,11 +946,11 @@
     });
   }
 
-  fillPeriods2To5FromPeriod8(DEFAULT_DATA.employees);
+  fillElapsed2026PeriodEmployees(DEFAULT_DATA.employees, DEFAULT_DATA.periods);
   syncEmployeesFromUnifiedRoster(DEFAULT_DATA.employees);
   fillDraftScenario(DEFAULT_DATA.employees);
   fillConfirmedPeriodsData(DEFAULT_DATA.employees, DEFAULT_DATA.periods);
-  fillPartialConfirmedScenario(DEFAULT_DATA.employees);
+  fillPartialConfirmedScenario(DEFAULT_DATA.employees, DEFAULT_DATA.periods);
   syncPeriodStatuses(DEFAULT_DATA.periods, DEFAULT_DATA.employees);
 
   let state = {
@@ -571,12 +979,94 @@
     return !!(cin || cout);
   }
 
-  /** 每日一条：3 行 In/Out + 当日 Meal / Reg / OT / OT2 */
+  function getDayRate(day, emp) {
+    const dayRate = day && day.rate != null && day.rate !== "" ? Number(day.rate) : NaN;
+    if (Number.isFinite(dayRate) && dayRate >= 0) return dayRate;
+    return Number(emp && emp.rate) || 0;
+  }
+
+  function sumSegmentPayAmounts(emp) {
+    let regAmt = 0;
+    let otAmt = 0;
+    let ot2Amt = 0;
+    (emp && emp.segments ? emp.segments : []).forEach((raw) => {
+      const day = normalizeDay(raw);
+      const rate = getDayRate(day, emp);
+      const reg = Number(day.reg) || 0;
+      const ot = Number(day.ot) || 0;
+      const ot2 = Number(day.ot2) || 0;
+      regAmt += reg * rate;
+      otAmt += ot * (Number(emp.otRate) || 0);
+      ot2Amt += ot2 * (Number(emp.ot2Rate) || 0);
+    });
+    return {
+      regAmt,
+      otAmt,
+      ot2Amt,
+      totalAmt: regAmt + otAmt + ot2Amt,
+    };
+  }
+
+  function getEffectiveRegularRate(emp) {
+    const sums = sumSegments(emp);
+    if (!sums.reg) return Number(emp && emp.rate) || 0;
+    return sumSegmentPayAmounts(emp).regAmt / sums.reg;
+  }
+
+  function applyDefaultRateToAllDays(emp, rate) {
+    if (!emp) return;
+    const nextRate = Number(rate) || 0;
+    emp.rate = nextRate;
+    (emp.segments || []).forEach((seg) => {
+      const day = normalizeDay(seg);
+      day.rate = nextRate;
+      Object.assign(seg, day);
+    });
+  }
+
+  const DETAIL_SUMMARY_SEP = " · ";
+
+  function formatDetailLabeledTriplet(regVal, otVal, ot2Val) {
+    return `R: ${fmtMoney(regVal)}${DETAIL_SUMMARY_SEP}OT: ${fmtMoney(otVal)}${DETAIL_SUMMARY_SEP}OT2: ${fmtMoney(ot2Val)}`;
+  }
+
+  function formatDetailRateSummary(emp) {
+    const rates = new Set();
+    (emp.segments || []).forEach((raw) => {
+      rates.add(getDayRate(normalizeDay(raw), emp).toFixed(2));
+    });
+    const otText = fmtMoney(emp.otRate);
+    const ot2Text = fmtMoney(emp.ot2Rate);
+    const regText = rates.size <= 1 ? fmtMoney(emp.rate) : [...rates].map((r) => fmtMoney(Number(r))).join(", ");
+    return `R: ${regText}${DETAIL_SUMMARY_SEP}OT: ${otText}${DETAIL_SUMMARY_SEP}OT2: ${ot2Text}`;
+  }
+
+  function formatDetailWeekAmountSummary(totals) {
+    const regAmt = totals && totals.regAmt != null ? totals.regAmt : 0;
+    const otAmt = totals && totals.otAmt != null ? totals.otAmt : 0;
+    const ot2Amt = totals && totals.ot2Amt != null ? totals.ot2Amt : 0;
+    const total =
+      totals && totals.amount != null ? totals.amount : Number(regAmt) + Number(otAmt) + Number(ot2Amt);
+    return `T: ${fmtMoney(total)}${DETAIL_SUMMARY_SEP}${formatDetailLabeledTriplet(regAmt, otAmt, ot2Amt)}`;
+  }
+
+  function formatDetailWeekHoursSummary(totals) {
+    const reg = totals && totals.reg != null ? totals.reg : 0;
+    const ot = totals && totals.ot != null ? totals.ot : 0;
+    const ot2 = totals && totals.ot2 != null ? totals.ot2 : 0;
+    const total =
+      totals && totals.hours != null ? totals.hours : Number(reg) + Number(ot) + Number(ot2);
+    return `T: ${fmtMoney(total)}${DETAIL_SUMMARY_SEP}${formatDetailLabeledTriplet(reg, ot, ot2)}`;
+  }
+
+  /** 每日一条：3 行 In/Out + 当日 Meal / Rate / Reg / OT / OT2 */
   function normalizeDay(d) {
     const slotRows = Number(d && d.slotRows);
+    const rateRaw = d && d.rate != null && d.rate !== "" ? Number(d.rate) : null;
     const o = {
       date: d && d.date != null ? d.date : "",
       meal: d && d.meal != null ? d.meal : "",
+      rate: Number.isFinite(rateRaw) && rateRaw >= 0 ? rateRaw : null,
       reg: Number(d && d.reg) || 0,
       ot: Number(d && d.ot) || 0,
       ot2: Number(d && d.ot2) || 0,
@@ -615,6 +1105,7 @@
       reg: s.reg ?? 0,
       ot: s.ot ?? 0,
       ot2: s.ot2 ?? 0,
+      rate: s.rate ?? null,
     });
   }
 
@@ -675,7 +1166,7 @@
 
   function writeSegmentRegInputs(emp) {
     if (!emp || !Array.isArray(emp.segments)) return;
-    $all('#segment-rows tr[data-primary="1"]').forEach((row) => {
+    $all(`${MANAGE_SEG_ROOT} tr[data-primary="1"]`).forEach((row) => {
       const d = parseInt(row.getAttribute("data-day-index"), 10);
       const inp = row.querySelector('.field-seg[data-field="reg"]');
       if (inp && emp.segments[d] != null) {
@@ -715,8 +1206,7 @@
       if (!ex || typeof ex !== "object") return p;
       return {
         ...p,
-        ...ex,
-        periodNumber: p.periodNumber,
+        status: ex.status != null ? ex.status : p.status,
       };
     });
   }
@@ -727,12 +1217,12 @@
     if (!Array.isArray(data.periods)) data.periods = [];
     if (!Array.isArray(data.auditLog)) data.auditLog = [];
     applyAdpMappingToData(data);
-    fillPeriods2To5FromPeriod8(data.employees);
+    fillElapsed2026PeriodEmployees(data.employees, data.periods);
     migratePeriods(data);
     syncEmployeesFromUnifiedRoster(data.employees);
     fillDraftScenario(data.employees);
     fillConfirmedPeriodsData(data.employees, data.periods);
-    fillPartialConfirmedScenario(data.employees);
+    fillPartialConfirmedScenario(data.employees, data.periods);
     syncPeriodStatuses(data.periods, data.employees);
     const tipOutStores = getTipOutStores();
     const defaultStore = tipOutStores[0] || DEFAULT_STORE_NAME;
@@ -742,11 +1232,17 @@
       list.forEach((emp) => {
         if (!emp || typeof emp !== "object") return;
         if (Array.isArray(emp.segments)) {
-          emp.segments = emp.segments.map((seg) => migrateLegacySegmentToDay(seg));
+          emp.segments = emp.segments.map((seg) => {
+            const day = migrateLegacySegmentToDay(seg);
+            if (day.rate == null) day.rate = Number(emp.rate) || 0;
+            return day;
+          });
         }
         emp.adjustments = mergeAdjustments(emp.adjustments);
         if (!emp.store || String(emp.store).trim() === "") emp.store = defaultStore;
         if (emp.adjustments.incentive === "" || emp.adjustments.incentive === null) emp.adjustments.incentive = 0;
+        if (!emp.role) emp.role = resolveEmployeeRole(emp);
+        if (!emp.hireDate) emp.hireDate = resolveEmployeeHireDate(emp);
       });
     });
 
@@ -756,11 +1252,11 @@
       const a29 = p.find((e) => e && e.id === "emp-a29");
       if (a29 && a29.name === "A29") a29.name = "小飞鸽";
       if (a29 && Array.isArray(a29.segments)) {
-        const hasWeek2 = a29.segments.some((seg) => seg && seg.date === "04/09/2026");
+        const hasWeek2 = a29.segments.some((seg) => seg && seg.date === "04/22/2026");
         if (!hasWeek2) {
           a29.segments.push(
             migrateLegacySegmentToDay({
-              date: "04/09/2026",
+              date: "04/22/2026",
               slots: [
                 { in: "11:00", out: "15:00" },
                 { in: "16:00", out: "21:00" },
@@ -783,8 +1279,6 @@
   }
 
   let remoteSaveTimer = null;
-  let apiSyncStatus = "local";
-  let pendingTipoutImportPlan = null;
 
   function buildSnapshot() {
     return {
@@ -827,6 +1321,8 @@
     }
     if (!Array.isArray(state.data.periods) || state.data.periods.length === 0) {
       state.data.periods = buildPresetPeriods();
+    } else {
+      migratePeriods(state.data);
     }
     if (!state.data.employees || typeof state.data.employees !== "object") {
       state.data.employees = {};
@@ -846,29 +1342,11 @@
     ensureDataShape();
   }
 
-  function updateApiSyncBadge() {
-    const el = $("#payroll-api-sync-badge");
-    if (!el) return;
-    const labels = { api: "已同步 API", syncing: "同步中…", local: "仅本地" };
-    el.textContent = labels[apiSyncStatus] || labels.local;
-    el.className = "payroll-api-sync-badge payroll-api-sync-badge--" + apiSyncStatus;
-  }
-
   function scheduleRemoteSave() {
     if (typeof PayrollApiClient === "undefined") return;
-    apiSyncStatus = "syncing";
-    updateApiSyncBadge();
     clearTimeout(remoteSaveTimer);
     remoteSaveTimer = setTimeout(() => {
-      PayrollApiClient.saveSnapshot(buildSnapshot())
-        .then((r) => {
-          apiSyncStatus = r && r.source === "api" ? "api" : "local";
-          updateApiSyncBadge();
-        })
-        .catch(() => {
-          apiSyncStatus = "local";
-          updateApiSyncBadge();
-        });
+      PayrollApiClient.saveSnapshot(buildSnapshot()).catch(() => {});
     }, 400);
   }
 
@@ -885,7 +1363,8 @@
     if (!iso) return "—";
     try {
       const d = new Date(iso);
-      return d.toLocaleString("zh-CN", { hour12: false });
+      const loc = typeof getPayrollLocale === "function" && getPayrollLocale() === "en" ? "en-US" : "zh-CN";
+      return d.toLocaleString(loc, { hour12: false });
     } catch (_) {
       return iso;
     }
@@ -893,11 +1372,14 @@
 
   function auditActionLabel(action) {
     const map = {
-      confirm: "确认本期",
-      export_csv: "导出 ADP",
-      export_batch: "批量导出 ADP",
-      tipout_import: "TipOut 导入",
-      field_change: "字段修改",
+      confirm: T("audit.confirm"),
+      export_csv: T("audit.exportCsv"),
+      export_batch: T("audit.exportBatch"),
+      export_detail_pdf: T("audit.exportDetailPdf"),
+      export_detail_csv: T("audit.exportDetailCsv"),
+      export_detail_email: T("audit.exportDetailEmail"),
+      tipout_import: T("audit.tipoutImport"),
+      field_change: T("audit.fieldChange"),
     };
     return map[action] || action;
   }
@@ -906,8 +1388,7 @@
     const tbody = $("#payroll-audit-rows");
     if (!tbody) return;
     if (!items || items.length === 0) {
-      tbody.innerHTML =
-        '<tr><td colspan="4" style="padding:24px;text-align:center;color:var(--text-tertiary)">暂无操作记录</td></tr>';
+      tbody.innerHTML = `<tr><td colspan="4" style="padding:24px;text-align:center;color:var(--text-tertiary)">${escapeHtml(T("audit.empty"))}</td></tr>`;
       return;
     }
     tbody.innerHTML = items
@@ -916,7 +1397,7 @@
         const note = meta.employeeName
           ? meta.employeeName
           : meta.count != null
-            ? `共 ${meta.count} 人`
+            ? T("audit.countPeople", { n: meta.count })
             : "";
         return `<tr>
           <td style="white-space:nowrap">${escapeHtml(formatAuditTime(row.at))}</td>
@@ -947,90 +1428,6 @@
     $("#payrollAuditLogModal")?.classList.remove("show");
   }
 
-  function hideTipoutImportModal() {
-    $("#payrollTipoutImportModal")?.classList.remove("show");
-    pendingTipoutImportPlan = null;
-  }
-
-  function renderTipoutImportPreview(result) {
-    const summary = $("#tipout-import-summary");
-    const tbody = $("#tipout-import-preview-rows");
-    const unmatchedEl = $("#tipout-import-unmatched");
-    if (summary) {
-      summary.textContent = `识别格式：${result.formatId} · 将更新 ${result.plan.length} 名员工的本期 Tips/SVC（导入后仍可手工覆盖）`;
-    }
-    if (tbody) {
-      if (!result.plan.length) {
-        tbody.innerHTML =
-          '<tr><td colspan="5" style="padding:24px;text-align:center;color:var(--text-tertiary)">没有可匹配的员工</td></tr>';
-      } else {
-        tbody.innerHTML = result.plan
-          .map(
-            (p) => `<tr>
-          <td>${escapeHtml(p.employeeName)}</td>
-          <td style="text-align:right;font-family:ui-monospace,Menlo,monospace">${fmtMoney(p.before.tips)}</td>
-          <td style="text-align:right;font-family:ui-monospace,Menlo,monospace;font-weight:600">${fmtMoney(p.after.tips)}</td>
-          <td style="text-align:right;font-family:ui-monospace,Menlo,monospace">${fmtMoney(p.before.svcw)}</td>
-          <td style="text-align:right;font-family:ui-monospace,Menlo,monospace;font-weight:600">${fmtMoney(p.after.svcw)}</td>
-        </tr>`
-          )
-          .join("");
-      }
-    }
-    if (unmatchedEl) {
-      unmatchedEl.textContent =
-        result.unmatched && result.unmatched.length
-          ? `未匹配员工（请检查姓名/ADP File#）：${result.unmatched.join("、")}`
-          : "";
-    }
-  }
-
-  function handleTipoutCsvFile(file) {
-    if (!file || typeof PayrollTipOutImport === "undefined") {
-      alert("导入模块未加载");
-      return;
-    }
-    if (!state.periodId) {
-      alert("请先进入某一 Payroll 期");
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const parsed = PayrollTipOutImport.parseTipOutCsv(reader.result);
-        const list = state.data.employees[state.periodId] || [];
-        const result = PayrollTipOutImport.buildImportPlan(list, parsed);
-        pendingTipoutImportPlan = result;
-        renderTipoutImportPreview(result);
-        $("#payrollTipoutImportModal")?.classList.add("show");
-      } catch (err) {
-        alert(err && err.message ? err.message : "CSV 解析失败");
-      }
-    };
-    reader.readAsText(file, "UTF-8");
-  }
-
-  function applyTipoutImport() {
-    if (!pendingTipoutImportPlan || !state.periodId) return;
-    const list = state.data.employees[state.periodId] || [];
-    PayrollTipOutImport.applyImportPlan(list, pendingTipoutImportPlan.plan);
-    appendAudit("tipout_import", {
-      count: pendingTipoutImportPlan.plan.length,
-      formatId: pendingTipoutImportPlan.formatId,
-      periodId: state.periodId,
-    });
-    hideTipoutImportModal();
-    saveState();
-    renderEmployees();
-    if (state.view === "workspace" && state.employeeId) {
-      renderManageForm();
-      syncDerived();
-    }
-    if (typeof showNotification === "function") {
-      showNotification(`已导入 ${pendingTipoutImportPlan.plan.length} 名员工的 Tips/SVC`, "success");
-    }
-  }
-
   function $(sel, root) {
     return (root || document).querySelector(sel);
   }
@@ -1043,6 +1440,31 @@
     return state.data.periods.find((p) => p.id === id);
   }
 
+  function getPeriodEmployeesNavTitle(periodId) {
+    const period = getPeriod(periodId);
+    const n = period && period.periodNumber != null ? period.periodNumber : "—";
+    return T("nav.periodEmployees", { n });
+  }
+
+  function syncPayrollMainTitle(viewName) {
+    const mainTitle = $("#payroll-main-title");
+    if (!mainTitle) return;
+    if (viewName === "workspace") {
+      mainTitle.hidden = true;
+      return;
+    }
+    mainTitle.hidden = false;
+    if (viewName === "periods") {
+      mainTitle.textContent = T("nav.periods");
+      return;
+    }
+    if (viewName === "employees") {
+      mainTitle.textContent = getPeriodEmployeesNavTitle(state.periodId);
+      return;
+    }
+    mainTitle.textContent = T("nav.employees");
+  }
+
   function getEmployee(periodId, empId) {
     const list = state.data.employees[periodId] || [];
     return list.find((e) => e.id === empId);
@@ -1052,6 +1474,7 @@
     if (!emp) return "";
     const safe = {
       adpFile: emp.adpFile || "",
+      hireDate: emp.hireDate || "",
       confirmed: !!emp.confirmed,
       rate: Number(emp.rate) || 0,
       otRate: Number(emp.otRate) || 0,
@@ -1065,6 +1488,7 @@
               reg: Number(day.reg) || 0,
               ot: Number(day.ot) || 0,
               ot2: Number(day.ot2) || 0,
+              rate: getDayRate(day, emp),
               slots: day.slots.map((s) => ({ in: s.in || "", out: s.out || "" })),
             };
           })
@@ -1175,8 +1599,15 @@
     return x.toFixed(2);
   }
 
+  /** Payroll 年度：以 period.year / id（p2026-01）为准，不按 rangeLabel 日历日期拆分 */
   function getPeriodYear(period) {
-    if (!period || !period.rangeLabel) return "";
+    if (!period) return "";
+    if (period.year != null && String(period.year).trim() !== "") {
+      return String(period.year);
+    }
+    const idMatch = String(period.id || "").match(/^p(\d{4})-/i);
+    if (idMatch) return idMatch[1];
+    if (!period.rangeLabel) return "";
     const m = String(period.rangeLabel).match(/^\s*\d{1,2}\/\d{1,2}\/(\d{4})/);
     if (m && m[1]) return m[1];
     const all = String(period.rangeLabel).match(/\d{4}/g);
@@ -1203,8 +1634,11 @@
     }
     syncPeriodStatuses(periods, state.data.employees);
     const years = getRecentYears();
+    const yearSuffix = T("year.suffix");
     if (yearSelect) {
-      const opts = years.map((y) => `<option value="${escapeHtml(y)}">${escapeHtml(y)}年</option>`).join("");
+      const opts = years
+        .map((y) => `<option value="${escapeHtml(y)}">${escapeHtml(y)}${escapeHtml(yearSuffix)}</option>`)
+        .join("");
       yearSelect.innerHTML = opts;
       if (years.includes(state.periodYearFilter)) {
         yearSelect.value = state.periodYearFilter;
@@ -1227,8 +1661,10 @@
       (a, b) => Number(a) - Number(b)
     );
     if (numberSelect) {
-      const opts = ['<option value="">全部期数</option>']
-        .concat(periodNumbers.map((n) => `<option value="${escapeHtml(n)}">第 ${escapeHtml(n)} 期</option>`))
+      const opts = [`<option value="">${escapeHtml(T("filter.allPeriods"))}</option>`]
+        .concat(
+          periodNumbers.map((n) => `<option value="${escapeHtml(n)}">${escapeHtml(T("filter.periodN", { n }))}</option>`)
+        )
         .join("");
       numberSelect.innerHTML = opts;
       if (state.periodNumberFilter && periodNumbers.includes(state.periodNumberFilter)) {
@@ -1252,7 +1688,7 @@
     }
     if (activeStatus) filtered = filtered.filter((p) => (p && p.status) === activeStatus);
     if (filtered.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="5" style="padding:48px;text-align:center;color:var(--text-tertiary)">当前筛选条件下暂无 Payroll 期数据。</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="5" style="padding:48px;text-align:center;color:var(--text-tertiary)">${escapeHtml(T("empty.periods"))}</td></tr>`;
       saveState();
       return;
     }
@@ -1260,10 +1696,10 @@
       .map((p) => {
         const st =
           p.status === "confirmed"
-            ? '<span class="tag tag-blue">已确认</span>'
+            ? `<span class="tag tag-blue">${escapeHtml(T("status.confirmed"))}</span>`
             : p.status === "partial"
-            ? '<span class="tag tag-green">部分未确认</span>'
-            : '<span class="tag tag-orange">未确认</span>';
+            ? `<span class="tag tag-green">${escapeHtml(T("status.partial"))}</span>`
+            : `<span class="tag tag-orange">${escapeHtml(T("status.draft"))}</span>`;
         return `
         <tr>
           <td style="font-family:ui-monospace,Menlo,monospace">${escapeHtml(String(p.periodNumber || "—"))}</td>
@@ -1271,12 +1707,30 @@
           <td style="font-family:ui-monospace,Menlo,monospace">${escapeHtml(p.paycheckDate)}</td>
           <td>${st}</td>
           <td style="text-align:right">
-            <button type="button" class="btn btn-primary btn-sm" data-action="open-period" data-period-id="${escapeHtml(p.id)}">进入</button>
+            <button type="button" class="btn btn-primary btn-sm" data-action="open-period" data-period-id="${escapeHtml(p.id)}">${escapeHtml(T("table.enter"))}</button>
           </td>
         </tr>`;
       })
       .join("");
     saveState();
+  }
+
+  function getEmployeesForListExport() {
+    const period = getPeriod(state.periodId);
+    if (!period) return { period: null, filtered: [], exportable: [], skipped: [] };
+    const list = state.data.employees[state.periodId] || [];
+    const activeStore = state.employeeStoreFilter;
+    const filtered = activeStore ? list.filter((e) => String(e.store || "").trim() === activeStore) : list;
+    const exportable = filtered.filter((e) => e && String(e.adpFile || "").trim());
+    const skipped = filtered.filter((e) => e && !String(e.adpFile || "").trim());
+    return { period, filtered, exportable, skipped };
+  }
+
+  function updateEmployeeBatchExportButton() {
+    const btn = $("#btn-export-batch-adp");
+    if (!btn) return;
+    const { exportable } = getEmployeesForListExport();
+    btn.disabled = exportable.length === 0;
   }
 
   function renderEmployees() {
@@ -1285,10 +1739,12 @@
     const title = $("#employee-period-title");
     const storeSelect = $("#employee-store-filter");
     if (!period || !tbody) return;
-    if (title) title.textContent = period.rangeLabel + " · Paycheck " + period.paycheckDate;
+    if (title)
+      title.textContent = T("employee.periodTitle", { range: period.rangeLabel, date: period.paycheckDate });
     const list = state.data.employees[state.periodId] || [];
     if (list.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="7" style="padding:48px;text-align:center;color:var(--text-tertiary)">本期暂无员工，可在演示数据中于 payroll.js 添加。</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="7" style="padding:48px;text-align:center;color:var(--text-tertiary)">${escapeHtml(T("empty.employees"))}</td></tr>`;
+      updateEmployeeBatchExportButton();
       return;
     }
     const storesFromTipOut = getTipOutStores();
@@ -1296,7 +1752,7 @@
       ? storesFromTipOut
       : [...new Set(list.map((e) => (e && e.store ? String(e.store).trim() : "")).filter(Boolean))];
     if (storeSelect) {
-      const opts = ['<option value="">全部门店</option>']
+      const opts = [`<option value="">${escapeHtml(T("filter.allStores"))}</option>`]
         .concat(stores.map((s) => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`))
         .join("");
       storeSelect.innerHTML = opts;
@@ -1310,7 +1766,8 @@
     const activeStore = state.employeeStoreFilter;
     const filtered = activeStore ? list.filter((e) => String(e.store || "").trim() === activeStore) : list;
     if (filtered.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="7" style="padding:48px;text-align:center;color:var(--text-tertiary)">该门店暂无员工数据。</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="7" style="padding:48px;text-align:center;color:var(--text-tertiary)">${escapeHtml(T("empty.storeEmployees"))}</td></tr>`;
+      updateEmployeeBatchExportButton();
       saveState();
       return;
     }
@@ -1318,10 +1775,10 @@
       .map((e) => {
         const sums = sumSegments(e);
         const conf = e.confirmed
-          ? '<span style="color:var(--primary);font-size:12px;font-weight:500">已确认</span>'
-          : '<span style="color:var(--text-tertiary);font-size:12px">未确认</span>';
+          ? `<span style="color:var(--primary);font-size:12px;font-weight:500">${escapeHtml(T("employee.confirmed"))}</span>`
+          : `<span style="color:var(--text-tertiary);font-size:12px">${escapeHtml(T("employee.unconfirmed"))}</span>`;
         const adpWarn = !e.adpFile
-          ? '<span class="text-danger" style="margin-left:4px" title="缺少 ADP File#">⚠</span>'
+          ? `<span class="text-danger" style="margin-left:4px" title="${escapeHtml(T("employee.missingAdp"))}">⚠</span>`
           : "";
         return `
         <tr>
@@ -1332,12 +1789,12 @@
           <td>${fmtMoney(sums.reg + sums.ot + sums.ot2)} h</td>
           <td>${conf}</td>
           <td style="text-align:right">
-            <button type="button" class="btn btn-sm" data-action="open-employee" data-employee-id="${escapeHtml(e.id)}">编辑 Payroll</button>
+            <button type="button" class="btn btn-sm" data-action="open-employee" data-employee-id="${escapeHtml(e.id)}">${escapeHtml(T("employee.editPayroll"))}</button>
           </td>
         </tr>`;
       })
       .join("");
-    updatePeriodExportButton();
+    updateEmployeeBatchExportButton();
     saveState();
   }
 
@@ -1356,41 +1813,8 @@
     return [a || "—", b || "—"];
   }
 
-  function parseMdyDate(dateStr) {
-    if (!dateStr) return null;
-    const m = String(dateStr).trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-    if (!m) return null;
-    const month = parseInt(m[1], 10) - 1;
-    const day = parseInt(m[2], 10);
-    const year = parseInt(m[3], 10);
-    const d = new Date(year, month, day);
-    if (Number.isNaN(d.getTime())) return null;
-    return d;
-  }
-
   function createWeekTotals() {
-    return { reg: 0, ot: 0, ot1: 0, hours: 0, amount: 0 };
-  }
-
-  function getPeriodStartDate(rangeLabel) {
-    if (!rangeLabel) return null;
-    const m = String(rangeLabel).match(/(\d{1,2}\/\d{1,2}\/\d{4})/);
-    return m ? parseMdyDate(m[1]) : null;
-  }
-
-  function getPeriodDateRange(rangeLabel) {
-    if (!rangeLabel) return { start: null, end: null };
-    const matches = String(rangeLabel).match(/\d{1,2}\/\d{1,2}\/\d{4}/g) || [];
-    const start = matches[0] ? parseMdyDate(matches[0]) : null;
-    const end = matches[1] ? parseMdyDate(matches[1]) : null;
-    return { start, end };
-  }
-
-  function addDays(date, days) {
-    if (!date) return null;
-    const d = new Date(date.getTime());
-    d.setDate(d.getDate() + days);
-    return d;
+    return { reg: 0, ot: 0, ot2: 0, hours: 0, amount: 0, regAmt: 0, otAmt: 0, ot2Amt: 0 };
   }
 
   function formatMdyDate(date) {
@@ -1423,12 +1847,19 @@
     return fallbackDayIdx <= 6 ? 0 : 1;
   }
 
-  function buildDayRowsHtml(day) {
+  function buildDayRowsHtml(day, emp) {
     const s = day.slots && day.slots.length ? day.slots : emptySlots();
     const regNum = Number(day.reg) || 0;
     const otNum = Number(day.ot) || 0;
-    const ot1Num = Number(day.ot2) || 0;
-    const hoursNum = regNum + otNum + ot1Num;
+    const ot2Num = Number(day.ot2) || 0;
+    const hoursNum = regNum + otNum + ot2Num;
+    const rate = getDayRate(day, emp);
+    const otRate = Number(emp && emp.otRate) || 0;
+    const ot2Rate = Number(emp && emp.ot2Rate) || 0;
+    const regAmtNum = regNum * rate;
+    const otAmtNum = otNum * otRate;
+    const ot2AmtNum = ot2Num * ot2Rate;
+    const totalAmtNum = regAmtNum + otAmtNum + ot2AmtNum;
     const meal = escapeHtml(String(day.meal || "").trim() || "—");
     const visibleSlots = s.filter((slot) => {
       if (!slot) return false;
@@ -1439,10 +1870,15 @@
     const rowsForDay = visibleSlots.length || 1;
     const dateCell = `<td class="payroll-detail-daily-date" rowspan="${rowsForDay}">${escapeHtml(day.date || "—")}</td>`;
     const mealCell = `<td rowspan="${rowsForDay}">${meal}</td>`;
+    const rateCell = `<td class="payroll-detail-num" rowspan="${rowsForDay}">${fmtMoney(rate)}</td>`;
     const regCell = `<td class="payroll-detail-num" rowspan="${rowsForDay}">${fmtMoney(regNum)}</td>`;
     const otCell = `<td class="payroll-detail-num" rowspan="${rowsForDay}">${fmtMoney(otNum)}</td>`;
-    const ot1Cell = `<td class="payroll-detail-num" rowspan="${rowsForDay}">${fmtMoney(ot1Num)}</td>`;
+    const ot2Cell = `<td class="payroll-detail-num" rowspan="${rowsForDay}">${fmtMoney(ot2Num)}</td>`;
     const hoursCell = `<td class="payroll-detail-num" rowspan="${rowsForDay}" style="font-weight:600">${fmtMoney(hoursNum)}</td>`;
+    const regAmtCell = `<td class="payroll-detail-num" rowspan="${rowsForDay}">${fmtMoney(regAmtNum)}</td>`;
+    const otAmtCell = `<td class="payroll-detail-num" rowspan="${rowsForDay}">${fmtMoney(otAmtNum)}</td>`;
+    const ot2AmtCell = `<td class="payroll-detail-num" rowspan="${rowsForDay}">${fmtMoney(ot2AmtNum)}</td>`;
+    const totalAmtCell = `<td class="payroll-detail-num" rowspan="${rowsForDay}" style="font-weight:600">${fmtMoney(totalAmtNum)}</td>`;
     const rows = [];
     for (let i = 0; i < rowsForDay; i++) {
       const [cin, cout] = slotInOutParts(visibleSlots[i]);
@@ -1452,10 +1888,15 @@
       <td class="payroll-detail-clock">${escapeHtml(cin)}</td>
       <td class="payroll-detail-clock">${escapeHtml(cout)}</td>
       ${mealCell}
+      ${rateCell}
       ${regCell}
       ${otCell}
-      ${ot1Cell}
+      ${ot2Cell}
       ${hoursCell}
+      ${regAmtCell}
+      ${otAmtCell}
+      ${ot2AmtCell}
+      ${totalAmtCell}
     </tr>`);
       } else {
         rows.push(`<tr>
@@ -1472,8 +1913,8 @@
     const segments = Array.isArray(emp.segments) ? emp.segments : [];
     if (segments.length === 0) {
       return `<section class="payroll-detail-daily">
-        <h4 class="payroll-detail-daily-title">本期按日考勤明细</h4>
-        <p class="payroll-detail-daily-empty">本期暂无按日打卡记录。</p>
+        <h4 class="payroll-detail-daily-title">${escapeHtml(T("detail.dailyEmptyTitle"))}</h4>
+        <p class="payroll-detail-daily-empty">${escapeHtml(T("detail.dailyEmpty"))}</p>
       </section>`;
     }
 
@@ -1487,62 +1928,224 @@
       const day = normalizeDay(raw);
       const regNum = Number(day.reg) || 0;
       const otNum = Number(day.ot) || 0;
-      const ot1Num = Number(day.ot2) || 0;
-      const hoursNum = regNum + otNum + ot1Num;
-      const amountNum = regNum * (Number(emp.rate) || 0) + otNum * (Number(emp.otRate) || 0) + ot1Num * (Number(emp.ot2Rate) || 0);
+      const ot2Num = Number(day.ot2) || 0;
+      const hoursNum = regNum + otNum + ot2Num;
+      const regAmtNum = regNum * getDayRate(day, emp);
+      const otAmtNum = otNum * (Number(emp.otRate) || 0);
+      const ot2AmtNum = ot2Num * (Number(emp.ot2Rate) || 0);
+      const amountNum = regAmtNum + otAmtNum + ot2AmtNum;
       const weekIdx = resolveWeekIndex(day.date, periodStartDate, dayIdx);
       const wk = weeks[weekIdx];
       wk.items.push({ day, dayIdx });
       wk.totals.reg += regNum;
       wk.totals.ot += otNum;
-      wk.totals.ot1 += ot1Num;
+      wk.totals.ot2 += ot2Num;
       wk.totals.hours += hoursNum;
+      wk.totals.regAmt += regAmtNum;
+      wk.totals.otAmt += otAmtNum;
+      wk.totals.ot2Amt += ot2AmtNum;
       wk.totals.amount += amountNum;
     });
 
-    const rateText = `R ${fmtMoney(emp.rate)} / OT ${fmtMoney(emp.otRate)} / OT1 ${fmtMoney(emp.ot2Rate)}`;
+    const rateText = formatDetailRateSummary(emp);
     const weekBlocks = weeks
       .filter((wk) => wk.items.length > 0)
       .map((wk) => {
-        const body = wk.items.map((it) => buildDayRowsHtml(it.day)).join("");
+        const body = wk.items.map((it) => buildDayRowsHtml(it.day, emp)).join("");
+        const amountText = formatDetailWeekAmountSummary(wk.totals);
+        const hoursText = formatDetailWeekHoursSummary(wk.totals);
         const rangeText = getWeekRangeTextFromPeriod(period && period.rangeLabel, wk.index);
-        const weekTitle = rangeText ? `第${wk.index + 1}周（${rangeText}）` : `第${wk.index + 1}周`;
+        const weekTitle = rangeText
+          ? T("detail.weekRange", { n: wk.index + 1, range: rangeText })
+          : T("detail.weekN", { n: wk.index + 1 });
         return `<section class="payroll-detail-week-block">
           <h5 class="payroll-detail-week-title">${escapeHtml(weekTitle)}</h5>
           <div class="payroll-detail-daily-wrap">
             <table class="data-table payroll-detail-daily-table">
               <thead>
                 <tr>
-                  <th>Date</th>
-                  <th>In</th>
-                  <th>Out</th>
-                  <th>Meal</th>
-                  <th style="text-align:right">Regular (h)</th>
-                  <th style="text-align:right">OT (h)</th>
-                  <th style="text-align:right">OT1 (h)</th>
-                  <th style="text-align:right">Hours (h)</th>
+                  <th rowspan="2">Date</th>
+                  <th rowspan="2">In</th>
+                  <th rowspan="2">Out</th>
+                  <th rowspan="2">Meal</th>
+                  <th rowspan="2" style="text-align:right">${escapeHtml(T("detail.colRate"))}</th>
+                  <th rowspan="2" style="text-align:right">Regular (h)</th>
+                  <th rowspan="2" style="text-align:right">OT (h)</th>
+                  <th rowspan="2" style="text-align:right">OT2 (h)</th>
+                  <th rowspan="2" style="text-align:right">Hours (h)</th>
+                  <th colspan="3" style="text-align:center">${escapeHtml(T("detail.colAmountGroup"))}</th>
+                  <th rowspan="2" style="text-align:right">${escapeHtml(T("detail.colTotalAmt"))}</th>
+                </tr>
+                <tr>
+                  <th style="text-align:right">${escapeHtml(T("detail.colRegAmt"))}</th>
+                  <th style="text-align:right">${escapeHtml(T("detail.colOtAmt"))}</th>
+                  <th style="text-align:right">${escapeHtml(T("detail.colOt2Amt"))}</th>
                 </tr>
               </thead>
               <tbody>${body}</tbody>
             </table>
           </div>
           <div class="payroll-detail-week-summary">
-            <span>总Hours：<strong>${fmtMoney(wk.totals.hours)}</strong></span>
-            <span>总Regular：<strong>${fmtMoney(wk.totals.reg)}</strong></span>
-            <span>总OT：<strong>${fmtMoney(wk.totals.ot)}</strong></span>
-            <span>总OT1：<strong>${fmtMoney(wk.totals.ot1)}</strong></span>
-            <span>Rate：<strong>${escapeHtml(rateText)}</strong></span>
-            <span>Amount：<strong>${fmtMoney(wk.totals.amount)}</strong></span>
+            <span>${escapeHtml(T("detail.sumHoursParts"))}<strong class="payroll-detail-summary-compact">${escapeHtml(hoursText)}</strong></span>
+            <span>${escapeHtml(T("detail.sumRate"))}<strong class="payroll-detail-summary-compact">${escapeHtml(rateText)}</strong></span>
+            <span>${escapeHtml(T("detail.sumAmountParts"))}<strong class="payroll-detail-summary-compact">${escapeHtml(amountText)}</strong></span>
           </div>
         </section>`;
       })
       .join("");
 
     return `<section class="payroll-detail-daily">
-      <h4 class="payroll-detail-daily-title">本期按日考勤明细（按周）</h4>
-      <p class="payroll-detail-daily-hint">按第1周 / 第2周分组展示每日 In/Out 与当日汇总，并在每周末展示该周考勤汇总。</p>
+      <h4 class="payroll-detail-daily-title">${escapeHtml(T("detail.dailyTitle"))}</h4>
+      <p class="payroll-detail-daily-hint">${escapeHtml(T("detail.dailyHint"))}</p>
       ${weekBlocks}
     </section>`;
+  }
+
+  function buildDetailExportPayload(emp, period) {
+    if (!emp || !period) return null;
+    const sums = sumSegments(emp);
+    const payAmounts = sumSegmentPayAmounts(emp);
+    const regAmt = payAmounts.regAmt;
+    const otAmt = payAmounts.otAmt;
+    const ot2Amt = payAmounts.ot2Amt;
+    const totalHours = sums.reg + sums.ot + sums.ot2;
+    const totalAmt = payAmounts.totalAmt;
+    const mapping = getAdpMapping();
+    const segments = Array.isArray(emp.segments) ? emp.segments : [];
+    const periodStartDate = getPeriodStartDate(period.rangeLabel);
+    const dailyRows = [];
+    const weekSummaries = [];
+    const weeks = [
+      { index: 0, totals: createWeekTotals(), items: [] },
+      { index: 1, totals: createWeekTotals(), items: [] },
+    ];
+
+    segments.forEach((raw, dayIdx) => {
+      const day = normalizeDay(raw);
+      const regNum = Number(day.reg) || 0;
+      const otNum = Number(day.ot) || 0;
+      const ot2Num = Number(day.ot2) || 0;
+      const hoursNum = regNum + otNum + ot2Num;
+      const regAmtNum = regNum * getDayRate(day, emp);
+      const dayRate = getDayRate(day, emp);
+      const otAmtNum = otNum * (Number(emp.otRate) || 0);
+      const ot2AmtNum = ot2Num * (Number(emp.ot2Rate) || 0);
+      const amountNum = regAmtNum + otAmtNum + ot2AmtNum;
+      const weekIdx = resolveWeekIndex(day.date, periodStartDate, dayIdx);
+      const wk = weeks[weekIdx];
+      wk.items.push({ day });
+      wk.totals.reg += regNum;
+      wk.totals.ot += otNum;
+      wk.totals.ot2 += ot2Num;
+      wk.totals.hours += hoursNum;
+      wk.totals.regAmt += regAmtNum;
+      wk.totals.otAmt += otAmtNum;
+      wk.totals.ot2Amt += ot2AmtNum;
+      wk.totals.amount += amountNum;
+
+      const slots = day.slots && day.slots.length ? day.slots : emptySlots();
+      const visibleSlots = slots.filter((slot) => hasSlotClock(slot));
+      const rowsForExport = visibleSlots.length ? visibleSlots : [slots[0] || { in: "", out: "" }];
+      rowsForExport.forEach((slot, slotIdx) => {
+        const [cin, cout] = slotInOutParts(slot);
+        dailyRows.push({
+          date: slotIdx === 0 ? day.date || "" : "",
+          in: cin,
+          out: cout,
+          meal: slotIdx === 0 ? String(day.meal || "").trim() : "",
+          rate: slotIdx === 0 ? dayRate : "",
+          reg: slotIdx === 0 ? regNum : "",
+          ot: slotIdx === 0 ? otNum : "",
+          ot2: slotIdx === 0 ? ot2Num : "",
+          hours: slotIdx === 0 ? hoursNum : "",
+          regAmt: slotIdx === 0 ? regAmtNum : "",
+          otAmt: slotIdx === 0 ? otAmtNum : "",
+          ot2Amt: slotIdx === 0 ? ot2AmtNum : "",
+          totalAmt: slotIdx === 0 ? amountNum : "",
+        });
+      });
+    });
+
+    weeks
+      .filter((wk) => wk.items.length > 0)
+      .forEach((wk) => {
+        const rangeText = getWeekRangeTextFromPeriod(period.rangeLabel, wk.index);
+        weekSummaries.push({
+          title: T("detail.weekN", { n: wk.index + 1 }),
+          range: rangeText || "",
+          totalHours: wk.totals.hours,
+          reg: wk.totals.reg,
+          ot: wk.totals.ot,
+          ot2: wk.totals.ot2,
+          regAmt: wk.totals.regAmt,
+          otAmt: wk.totals.otAmt,
+          ot2Amt: wk.totals.ot2Amt,
+          amount: wk.totals.amount,
+        });
+      });
+
+    return {
+      employeeName: emp.name,
+      employeeDisplay: formatDetailEmployeeDisplay(emp),
+      role: resolveEmployeeRole(emp),
+      hireDate: resolveEmployeeHireDate(emp),
+      department: emp.department || "",
+      store: emp.store || "",
+      adpFile: emp.adpFile || "",
+      confirmed: !!emp.confirmed,
+      periodRange: period.rangeLabel,
+      periodNumber: period.periodNumber,
+      paycheckDate: period.paycheckDate,
+      payDate: period.paycheckDate,
+      payPeriod: period.rangeLabel,
+      periodReportTitle: formatPayrollPeriodReportTitle(period),
+      declarationVersion: (mapping && mapping.declarationVersion) || "",
+      declarationText: renderDeclarationText(emp),
+      summary: {
+        regH: sums.reg,
+        otH: sums.ot,
+        ot2H: sums.ot2,
+        totalH: totalHours,
+        regAmt,
+        otAmt,
+        ot2Amt,
+        totalAmt,
+        rate: getEffectiveRegularRate(emp),
+        otRate: emp.otRate,
+        ot2Rate: emp.ot2Rate,
+        svcw: Number(emp.adjustments && emp.adjustments.svcw) || 0,
+        tips: Number(emp.adjustments && emp.adjustments.tips) || 0,
+      },
+      dailyRows,
+      weekSummaries,
+    };
+  }
+
+  /** 与「打印 / PDF」相同：克隆 Employees Detail 打印模板 HTML */
+  function buildPayrollDetailPrintDocumentHtml() {
+    readFormIntoState();
+    syncDerived();
+    const article = document.querySelector(".payroll-detail-print");
+    if (!article) return null;
+    const clone = article.cloneNode(true);
+    clone.querySelectorAll(".print-only").forEach((el) => {
+      el.style.display = "block";
+    });
+    const baseUrl = new URL(".", window.location.href).href;
+    const htmlLang = typeof getPayrollLocale === "function" && getPayrollLocale() === "en" ? "en-US" : "zh-CN";
+    return `<!DOCTYPE html><html lang="${htmlLang}"><head><meta charset="UTF-8"><title>${escapeHtml(T("detail.title"))}</title>
+<link rel="stylesheet" href="${baseUrl}common.css">
+<link rel="stylesheet" href="${baseUrl}payroll.css">
+<style>
+body{margin:0;padding:24px;background:#fff;}
+.payroll-page .payroll-detail-print{max-width:none;width:100%;margin:0;border:none;border-radius:0;box-shadow:none;}
+.payroll-page .payroll-detail-daily-wrap{overflow:visible!important;}
+.payroll-page .payroll-detail-daily-table{min-width:1080px;width:max-content;max-width:none;font-size:11px;}
+.payroll-page .payroll-detail-daily-table th,
+.payroll-page .payroll-detail-daily-table td{padding:6px 8px;white-space:nowrap;}
+.print-only{display:block !important;}
+@media print{body{padding:15px 20px}@page{margin:10mm}}
+</style></head><body class="payroll-page payroll-entered payroll-detail-export-doc">${clone.outerHTML}</body></html>`;
   }
 
   function renderManageForm() {
@@ -1551,61 +2154,34 @@
     if (!emp || !period) return;
 
     $("#ws-employee-title").textContent = emp.name;
-    $("#ws-breadcrumb-period").textContent =
-      period.rangeLabel + " · Paycheck " + period.paycheckDate;
+    $("#ws-breadcrumb-period").textContent = T("employee.periodTitle", {
+      range: period.rangeLabel,
+      date: period.paycheckDate,
+    });
     $("#field-adp-file").value = emp.adpFile;
+    const hireInput = $("#field-hire-date");
+    if (hireInput) hireInput.value = mdyToIsoDateInput(resolveEmployeeHireDate(emp));
     $("#field-ot-rate").value = emp.otRate;
     $("#field-ot2-rate").value = emp.ot2Rate;
 
-    emp.segments = emp.segments.map((seg) => migrateLegacySegmentToDay(seg));
-
-    const segBody = $("#segment-rows");
-    const rowHtml = [];
-    emp.segments.forEach((rawDay, dayIdx) => {
-      const day = normalizeDay(rawDay);
-      const filledSlotIndexes = day.slots
-        .map((sl, idx) => ({ sl, idx }))
-        .filter((x) => hasSlotClock(x.sl))
-        .map((x) => x.idx);
-      const targetRows = Math.max(day.slotRows || 0, filledSlotIndexes.length || 1);
-      const visibleSlotIndexes = filledSlotIndexes.slice(0);
-      for (let i = 0; visibleSlotIndexes.length < targetRows; i++) {
-        if (!visibleSlotIndexes.includes(i)) visibleSlotIndexes.push(i);
-      }
-      const rowsForDay = visibleSlotIndexes.length;
-      visibleSlotIndexes.forEach((slotIdx, renderIdx) => {
-        if (!day.slots[slotIdx]) day.slots[slotIdx] = { in: "", out: "" };
-        const sl = day.slots[slotIdx];
-        const isLastRow = renderIdx === rowsForDay - 1;
-        const actionsHtml = `<div style="display:flex;gap:8px;align-items:center">
-            ${
-              isLastRow
-                ? `<button type="button" class="btn btn-sm" data-action="add-slot-row" data-day-index="${dayIdx}">+ 新增 In/Out</button>`
-                : ""
-            }
-            <button type="button" class="btn btn-sm" data-action="remove-slot-row" data-day-index="${dayIdx}" data-row-order="${renderIdx}">删除</button>
-          </div>`;
-        if (renderIdx === 0) {
-          rowHtml.push(`<tr data-day-index="${dayIdx}" data-slot-index="${slotIdx}" data-row-order="${renderIdx}" data-primary="1">
-        <td rowspan="${rowsForDay}" style="vertical-align:top">
-          <input type="text" class="field-seg form-control" data-field="date" value="${escapeHtml(day.date)}" aria-label="Date" style="font-family:ui-monospace,Menlo,monospace" />
-        </td>
-        <td><input type="text" class="field-seg form-control" data-field="in" value="${escapeHtml(sl.in)}" placeholder="In" style="font-family:ui-monospace,Menlo,monospace" /></td>
-        <td><div style="display:flex;gap:8px;align-items:center"><input type="text" class="field-seg form-control" data-field="out" value="${escapeHtml(sl.out)}" placeholder="Out" style="font-family:ui-monospace,Menlo,monospace" />${actionsHtml}</div></td>
-        <td rowspan="${rowsForDay}" style="vertical-align:top"><input type="text" class="field-seg form-control" data-field="meal" value="${escapeHtml(day.meal)}" aria-label="Meal" /></td>
-        <td rowspan="${rowsForDay}" style="vertical-align:top"><input type="number" step="0.01" class="field-seg form-control" data-field="reg" value="${day.reg}" aria-label="Regular" /></td>
-        <td rowspan="${rowsForDay}" style="vertical-align:top"><input type="number" step="0.01" class="field-seg form-control" data-field="ot" value="${day.ot}" aria-label="OT" /></td>
-        <td rowspan="${rowsForDay}" style="vertical-align:top"><input type="number" step="0.01" class="field-seg form-control" data-field="ot2" value="${day.ot2}" aria-label="OT2" /></td>
-      </tr>`);
-        } else {
-          rowHtml.push(`<tr data-day-index="${dayIdx}" data-slot-index="${slotIdx}" data-row-order="${renderIdx}" data-primary="0">
-        <td><input type="text" class="field-seg form-control" data-field="in" value="${escapeHtml(sl.in)}" placeholder="In" style="font-family:ui-monospace,Menlo,monospace" /></td>
-        <td><div style="display:flex;gap:8px;align-items:center"><input type="text" class="field-seg form-control" data-field="out" value="${escapeHtml(sl.out)}" placeholder="Out" style="font-family:ui-monospace,Menlo,monospace" />${actionsHtml}</div></td>
-      </tr>`);
-        }
-      });
+    emp.segments = emp.segments.map((seg) => {
+      const day = migrateLegacySegmentToDay(seg);
+      if (day.rate == null) day.rate = Number(emp.rate) || 0;
+      return day;
     });
-    segBody.innerHTML = rowHtml.join("");
+    ensureManageBiweeklySegments(emp, period);
+
+    const segWrap = $("#manage-segments-wrap");
+    const rowHtml = [];
+    if (shouldGroupManageSegmentsByWeek(period)) {
+      const weekGroups = buildManageSegmentWeekGroups(emp.segments, period);
+      if (segWrap) segWrap.innerHTML = renderManageBiweeklySegmentsHtml(period, weekGroups, emp);
+    } else {
+      emp.segments.forEach((rawDay, dayIdx) => {
+        appendManageSegmentDayRows(rowHtml, normalizeDay(rawDay), dayIdx, emp);
+      });
+      if (segWrap) segWrap.innerHTML = renderManageSingleSegmentTableHtml(rowHtml);
+    }
 
     emp.segments = emp.segments.map((d) => normalizeDay(d));
     applyAutoRegularHours(emp);
@@ -1615,7 +2191,6 @@
     emp.adjustments = adj;
     const ex = $("#adj-exempt");
     if (ex) ex.value = adj.exempt ?? "";
-    $("#field-rate").value = emp.rate;
     $("#adj-incentive").value = adj.incentive ?? 0;
     $("#adj-svcw").value = adj.svcw;
     $("#adj-tips").value = adj.tips;
@@ -1635,20 +2210,18 @@
     const emp = getEmployee(state.periodId, state.employeeId);
     if (!emp) return;
     emp.adpFile = $("#field-adp-file").value.trim();
-    emp.rate = parseFloat($("#field-rate").value) || 0;
-    emp.otRate = parseFloat($("#field-ot-rate").value) || 0;
-    emp.ot2Rate = parseFloat($("#field-ot2-rate").value) || 0;
+    emp.hireDate = isoDateInputToMdy($("#field-hire-date") && $("#field-hire-date").value);
 
     const dayIdxList = [
       ...new Set(
-        $all("#segment-rows tr[data-day-index]").map((r) => parseInt(r.getAttribute("data-day-index"), 10))
+        $all(`${MANAGE_SEG_ROOT} tr[data-day-index]`).map((r) => parseInt(r.getAttribute("data-day-index"), 10))
       ),
     ]
       .filter((n) => !Number.isNaN(n))
       .sort((a, b) => a - b);
     const nextSegments = [];
     dayIdxList.forEach((dIdx) => {
-      const dayRows = $all(`#segment-rows tr[data-day-index="${dIdx}"]`).sort((a, b) => {
+      const dayRows = $all(`${MANAGE_SEG_ROOT} tr[data-day-index="${dIdx}"]`).sort((a, b) => {
         const ra = parseInt(a.getAttribute("data-row-order"), 10);
         const rb = parseInt(b.getAttribute("data-row-order"), 10);
         if (!Number.isNaN(ra) && !Number.isNaN(rb)) return ra - rb;
@@ -1672,8 +2245,10 @@
           const regEl = row.querySelector('.field-seg[data-field="reg"]');
           const otEl = row.querySelector('.field-seg[data-field="ot"]');
           const ot2El = row.querySelector('.field-seg[data-field="ot2"]');
+          const rateEl = row.querySelector('.field-seg[data-field="rate"]');
           if (dateEl) day.date = dateEl.value;
           if (mealEl) day.meal = mealEl.value;
+          if (rateEl) day.rate = parseFloat(rateEl.value) || 0;
           if (regEl) day.reg = parseFloat(regEl.value) || 0;
           if (otEl) day.ot = parseFloat(otEl.value) || 0;
           if (ot2El) day.ot2 = parseFloat(ot2El.value) || 0;
@@ -1707,11 +2282,12 @@
     if (!emp || !period) return;
 
     const sums = sumSegments(emp);
-    const regAmt = sums.reg * emp.rate;
-    const otAmt = sums.ot * emp.otRate;
-    const ot2Amt = sums.ot2 * emp.ot2Rate;
+    const payAmounts = sumSegmentPayAmounts(emp);
+    const regAmt = payAmounts.regAmt;
+    const otAmt = payAmounts.otAmt;
+    const ot2Amt = payAmounts.ot2Amt;
     const totalHours = sums.reg + sums.ot + sums.ot2;
-    const totalAmt = regAmt + otAmt + ot2Amt;
+    const totalAmt = payAmounts.totalAmt;
 
     $("#sum-reg-h").textContent = fmtMoney(sums.reg);
     $("#sum-ot-h").textContent = fmtMoney(sums.ot);
@@ -1723,32 +2299,32 @@
     $("#sum-ot2-amt").textContent = fmtMoney(ot2Amt);
     $("#sum-total-amt").textContent = fmtMoney(totalAmt);
 
-    $("#detail-range").textContent = period.rangeLabel;
-    $("#detail-name").textContent = emp.name;
+    syncDetailMetaFields(emp, period);
+    syncDetailSignFooter(emp);
     const declVer = $("#detail-declaration-version");
     const declBody = $("#detail-declaration-body");
     const mapping = getAdpMapping();
     if (declVer) declVer.textContent = mapping && mapping.declarationVersion ? `· ${mapping.declarationVersion}` : "";
-    if (declBody) declBody.textContent = renderDeclarationText(emp);
+    if (declBody) declBody.innerHTML = renderDeclarationHtml(emp);
 
     $("#detail-hours-grid").innerHTML = `
       <div class="payroll-detail-period-summary">
-        <h4 class="payroll-detail-daily-title">本周期工时汇总</h4>
+        <h4 class="payroll-detail-daily-title">${escapeHtml(T("detail.periodSummary"))}</h4>
         <div class="payroll-detail-grid">
         <div class="head">Regular</div>
         <div class="head">OT</div>
         <div class="head">OT2</div>
-        <div class="head highlight">合计工时</div>
+        <div class="head highlight">${escapeHtml(T("detail.totalHoursHead"))}</div>
         <div class="cell">${fmtMoney(sums.reg)}</div>
         <div class="cell">${fmtMoney(sums.ot)}</div>
         <div class="cell">${fmtMoney(sums.ot2)}</div>
         <div class="cell" style="font-weight:600">${fmtMoney(totalHours)}</div>
       </div>
       <div class="payroll-detail-grid" style="margin-top:12px">
-        <div style="color:var(--text-tertiary);font-size:12px">金额</div>
-        <div style="color:var(--text-tertiary);font-size:12px">金额</div>
-        <div style="color:var(--text-tertiary);font-size:12px">金额</div>
-        <div style="color:var(--text-tertiary);font-size:12px">合计金额</div>
+        <div style="color:var(--text-tertiary);font-size:12px">${escapeHtml(T("manage.amount"))}</div>
+        <div style="color:var(--text-tertiary);font-size:12px">${escapeHtml(T("manage.amount"))}</div>
+        <div style="color:var(--text-tertiary);font-size:12px">${escapeHtml(T("manage.amount"))}</div>
+        <div style="color:var(--text-tertiary);font-size:12px">${escapeHtml(T("detail.totalAmountHead"))}</div>
         <div class="cell">${fmtMoney(regAmt)}</div>
         <div class="cell">${fmtMoney(otAmt)}</div>
         <div class="cell">${fmtMoney(ot2Amt)}</div>
@@ -1770,7 +2346,7 @@
         <td style="font-family:ui-monospace,Menlo,monospace">${escapeHtml(period.paycheckDate)}</td>
         <td style="font-family:ui-monospace,Menlo,monospace" class="${missingAdpFile ? "text-danger" : ""}">${escapeHtml(emp.adpFile || "—")}</td>
         <td>${escapeHtml(emp.name)}</td>
-        <td style="text-align:right;font-family:ui-monospace,Menlo,monospace">${fmtMoney(emp.rate)}</td>
+        <td style="text-align:right;font-family:ui-monospace,Menlo,monospace">${fmtMoney(getEffectiveRegularRate(emp))}</td>
         <td style="text-align:right;font-family:ui-monospace,Menlo,monospace">${fmtMoney(sums.reg)}</td>
         <td style="font-family:ui-monospace,Menlo,monospace;font-size:12px">OHR</td>
         <td style="text-align:right;font-family:ui-monospace,Menlo,monospace">${fmtMoney(sums.ot)}</td>
@@ -1783,17 +2359,8 @@
 
     const exportBtn = $("#btn-export-csv");
     if (exportBtn) exportBtn.disabled = missingAdpFile;
-    updatePeriodExportButton();
+    updateManageWeekSummaries(emp, period);
     saveState();
-  }
-
-  function updatePeriodExportButton() {
-    const btn = $("#btn-export-period-csv");
-    if (!btn || !state.periodId) return;
-    const list = state.data.employees[state.periodId] || [];
-    const exportable = list.filter((e) => e && e.confirmed && e.adpFile);
-    btn.disabled = exportable.length === 0;
-    btn.title = exportable.length === 0 ? "需至少一名已确认且填写 ADP File# 的员工" : `导出 ${exportable.length} 人`;
   }
 
   function showView(name) {
@@ -1804,20 +2371,11 @@
     $("#view-employees").hidden = name !== "employees";
     $("#view-workspace").hidden = name !== "workspace";
     const mainTitle = $("#payroll-main-title");
-    const workspaceHeading = $("#payroll-workspace-heading");
     const backPeriods = $("#btn-back-periods");
     const backEmployees = $("#btn-back-employees");
     const backWrap = $("#payroll-heading-back");
-    if (mainTitle) {
-      if (name === "workspace") {
-        mainTitle.hidden = true;
-      } else {
-        mainTitle.hidden = false;
-        mainTitle.textContent = name === "periods" ? "Payroll期" : "本期员工";
-      }
-    }
-    if (workspaceHeading) workspaceHeading.hidden = name !== "workspace";
-    /* Payroll期：不显示任何返回；本期员工：仅「返回期列表」；员工详情：仅「返回员工列表」 */
+    syncPayrollMainTitle(name);
+    /* Payroll期：不显示任何返回；期数员工：仅「返回期列表」；员工详情：仅「返回员工列表」 */
     if (backWrap) backWrap.hidden = name === "periods";
     if (backPeriods) backPeriods.hidden = name !== "employees";
     if (backEmployees) backEmployees.hidden = name !== "workspace";
@@ -1851,14 +2409,14 @@
     saveState();
     syncDerived();
     if (typeof showNotification === "function") {
-      showNotification("已确认本期数据（报税准备）。发薪与报税请在 ADP/会计师侧完成。", "success");
+      showNotification(T("confirm.success"), "success");
     } else {
-      alert("已确认本期数据（报税准备）。发薪与报税请在 ADP/会计师侧完成。");
+      alert(T("confirm.success"));
     }
   }
 
   function showFieldHelp(fieldKey) {
-    const meta = FIELD_HELP[fieldKey];
+    const meta = typeof getPayrollFieldHelp === "function" ? getPayrollFieldHelp(fieldKey) : null;
     if (!meta) return;
     const titleEl = $("#field-help-title");
     const bodyEl = $("#field-help-body");
@@ -1867,7 +2425,7 @@
     titleEl.textContent = meta.title;
     let html = `<p style="margin:0">${escapeHtml(meta.body)}</p>`;
     if (meta.adp) {
-      html += `<div class="field-help-adp"><strong>ADP 映射：</strong>${escapeHtml(meta.adp)}</div>`;
+      html += `<div class="field-help-adp"><strong>${escapeHtml(T("fieldHelp.adpMap"))}</strong>${escapeHtml(meta.adp)}</div>`;
     }
     bodyEl.innerHTML = html;
     modal.classList.add("show");
@@ -1901,22 +2459,23 @@
     const m = getAdpMapping();
     const sums = sumSegments(emp);
     const coCode = (m && m.coCode) || state.data.coCode;
+    const adj = mergeAdjustments(emp.adjustments);
     if (m && typeof m.buildRow === "function") {
-      return m.buildRow({ coCode, period, employee: emp, sums });
+      return m.buildRow({ coCode, period, employee: { ...emp, adjustments: adj }, sums });
     }
     return [
       coCode,
       period.paycheckDate,
       emp.adpFile,
       emp.name,
-      String(emp.rate),
+      String(getEffectiveRegularRate(emp)),
       String(sums.reg),
       "OHR",
       String(sums.ot),
       "CCT",
-      String(emp.adjustments.tips),
+      String(adj.tips),
       "SVC",
-      String(emp.adjustments.svcw),
+      String(adj.svcw),
     ];
   }
 
@@ -1939,48 +2498,42 @@
     ];
   }
 
+  function exportBatchAdpCsv() {
+    const { period, exportable, skipped } = getEmployeesForListExport();
+    if (!period || exportable.length === 0) {
+      if (typeof showNotification === "function") showNotification(T("export.batchNoAdp"), "warning");
+      return;
+    }
+    let hint = T("exportConfirm.hintBatch", { n: exportable.length });
+    if (skipped.length > 0) hint += " " + T("exportConfirm.hintBatchSkipped", { n: skipped.length });
+    showExportConfirmDialog(hint).then((ok) => {
+      if (!ok) return;
+      const header = getAdpCsvHeader();
+      const rows = exportable.map((emp) => buildAdpRow(period, emp));
+      const csv = buildAdpCsvContent(rows, header);
+      const periodNo = period.periodNumber != null ? period.periodNumber : "period";
+      downloadCsvFile(`ADP_PAYROLL_P${periodNo}_${period.paycheckDate}_BATCH.csv`, csv);
+      appendAudit("export_batch", { count: exportable.length, skipped: skipped.length });
+      if (typeof showNotification === "function") {
+        showNotification(T("export.batchSuccess", { n: exportable.length }), "success");
+      }
+      saveState();
+    });
+  }
+
   function exportAdpCsv() {
     readFormIntoState();
     const emp = getEmployee(state.periodId, state.employeeId);
     const period = getPeriod(state.periodId);
     if (!emp || !period || !emp.adpFile) return;
 
-    showExportConfirmDialog(`将导出 1 名员工：${emp.name}`).then((ok) => {
+    showExportConfirmDialog(T("exportConfirm.hintSingle", { name: emp.name })).then((ok) => {
       if (!ok) return;
       const header = getAdpCsvHeader();
       const row = buildAdpRow(period, emp);
       const csv = buildAdpCsvContent([row], header);
       downloadCsvFile(`ADP_PAYROLL_${period.paycheckDate}_${emp.adpFile}.csv`, csv);
       appendAudit("export_csv", { employeeName: emp.name, batch: false });
-      saveState();
-    });
-  }
-
-  function exportPeriodAdpCsv() {
-    const period = getPeriod(state.periodId);
-    if (!period) return;
-    const list = state.data.employees[state.periodId] || [];
-    const m = getAdpMapping();
-    const policy = (m && m.missingFilePolicy) || "block";
-    let candidates = list.filter((e) => e && e.confirmed);
-    const skipped = candidates.filter((e) => !e.adpFile);
-    if (policy === "block" && skipped.length > 0) {
-      alert(`有 ${skipped.length} 名已确认员工缺少 ADP File#，无法批量导出。请补全或改为单人导出策略。`);
-      return;
-    }
-    candidates = candidates.filter((e) => e.adpFile);
-    if (candidates.length === 0) {
-      alert("没有可导出的员工（需已确认且填写 ADP File#）。");
-      return;
-    }
-    const hint = `将导出 ${candidates.length} 名员工` + (skipped.length && policy === "skip" ? `（跳过 ${skipped.length} 人缺 FILE#）` : "");
-    showExportConfirmDialog(hint).then((ok) => {
-      if (!ok) return;
-      const header = getAdpCsvHeader();
-      const rows = candidates.map((emp) => buildAdpRow(period, emp));
-      const csv = buildAdpCsvContent(rows, header);
-      downloadCsvFile(`ADP_PAYROLL_${period.paycheckDate}_BATCH.csv`, csv);
-      appendAudit("export_batch", { count: candidates.length, periodNumber: period.periodNumber });
       saveState();
     });
   }
@@ -2025,17 +2578,11 @@
       if (act === "export-csv") {
         exportAdpCsv();
       }
-      if (act === "export-period-csv") {
-        exportPeriodAdpCsv();
+      if (act === "export-batch-adp") {
+        exportBatchAdpCsv();
       }
       if (act === "show-audit-log") {
         showAuditLogModal();
-      }
-      if (act === "import-tipout-csv") {
-        $("#tipout-csv-file")?.click();
-      }
-      if (act === "download-tipout-template") {
-        if (typeof PayrollTipOutImport !== "undefined") PayrollTipOutImport.downloadTemplate();
       }
       if (act === "add-slot-row") {
         const dayIdx = parseInt(btn.getAttribute("data-day-index"), 10);
@@ -2096,13 +2643,16 @@
       if (
         isSeg ||
         t.id === "field-adp-file" ||
-        t.id === "field-rate" ||
-        t.id === "field-ot-rate" ||
-        t.id === "field-ot2-rate" ||
+        t.id === "field-hire-date" ||
         (t.id && t.id.startsWith("adj-"))
       ) {
         syncDerived();
       }
+    });
+
+    $("#field-hire-date")?.addEventListener("change", () => {
+      readFormIntoState();
+      syncDerived();
     });
 
     $all("[data-tab]").forEach((btn) => {
@@ -2155,25 +2705,57 @@
       renderPeriods();
     });
 
-    $("#btn-print-detail")?.addEventListener("click", () => window.print());
+    $("#btn-print-detail")?.addEventListener("click", () => {
+      syncDerived();
+      window.print();
+    });
 
     $("#btn-show-audit-log")?.addEventListener("click", () => showAuditLogModal());
     $("#btn-audit-log-close")?.addEventListener("click", () => hideAuditLogModal());
     $("#btn-audit-log-ok")?.addEventListener("click", () => hideAuditLogModal());
+  }
 
-    $("#tipout-csv-file")?.addEventListener("change", (e) => {
-      const input = e.target;
-      const file = input.files && input.files[0];
-      if (file) handleTipoutCsvFile(file);
-      input.value = "";
-    });
-    $("#btn-tipout-import-close")?.addEventListener("click", () => hideTipoutImportModal());
-    $("#btn-tipout-import-cancel")?.addEventListener("click", () => hideTipoutImportModal());
-    $("#btn-tipout-import-apply")?.addEventListener("click", () => applyTipoutImport());
+  function refreshPayrollLocale() {
+    renderPeriods();
+    renderEmployees();
+    if (state.view === "workspace" && state.periodId && state.employeeId) {
+      renderManageForm();
+      syncDerived();
+    }
+    showView(state.view);
+    const auditModal = $("#payrollAuditLogModal");
+    if (auditModal && auditModal.classList.contains("show")) {
+      const localItems = Array.isArray(state.data.auditLog) ? state.data.auditLog.slice(0, 50) : [];
+      renderAuditLogRows(localItems);
+    }
   }
 
   function finishBootstrap() {
     applyAdpMappingToData(state.data);
+    if (typeof initPayrollI18n === "function") {
+      initPayrollI18n(refreshPayrollLocale);
+    }
+    if (typeof registerPayrollDetailExportCollector === "function") {
+      registerPayrollDetailExportCollector(() => {
+        readFormIntoState();
+        return buildDetailExportPayload(getEmployee(state.periodId, state.employeeId), getPeriod(state.periodId));
+      });
+    }
+    if (typeof registerPayrollDetailPrintDocumentBuilder === "function") {
+      registerPayrollDetailPrintDocumentBuilder(buildPayrollDetailPrintDocumentHtml);
+    }
+    window.onPayrollDetailExported = function (type, data) {
+      const actionMap = {
+        pdf: "export_detail_pdf",
+        csv: "export_detail_csv",
+        email: "export_detail_email",
+      };
+      appendAudit(actionMap[type] || "export_detail", {
+        employeeName: data && data.employeeName,
+        format: type,
+      });
+      saveState();
+    };
     renderPeriods();
     renderEmployees();
     bindFieldHelp();
@@ -2183,7 +2765,6 @@
     state.periodId = null;
     state.employeeId = null;
     showView("periods");
-    updateApiSyncBadge();
   }
 
   function bootstrapApp() {
@@ -2196,11 +2777,9 @@
       .then((result) => {
         if (result && result.snapshot) {
           applySnapshot(result.snapshot);
-          apiSyncStatus = result.source === "api" ? "api" : "local";
         } else {
           loadState();
           PayrollApiClient.saveSnapshot(buildSnapshot()).catch(() => {});
-          apiSyncStatus = "local";
         }
         finishBootstrap();
       })
