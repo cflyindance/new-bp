@@ -1588,7 +1588,7 @@ const TEAM_ROLES_EMPLOYEES_IFRAME_SRC = "./TipOut/employees.html?embedded=1";
 const TEAM_TIPS_DISTRIBUTION_IFRAME_SRC = "./TipOut/index.html?embedded=1";
 const TEAM_TIPS_DETAILS_IFRAME_SRC = "./TipOut/detail.html?embedded=1";
 const TEAM_TIPS_RULES_IFRAME_SRC = "./TipOut/rules.html?embedded=1";
-/** 团队管理 → 薪酬计算与报税准备：嵌入 TipOut Payroll */
+/** 团队管理 → 薪资管理：嵌入 TipOut Payroll */
 const TEAM_PAYROLL_REPORT_IFRAME_SRC = "./TipOut/payroll.html?embedded=1";
 
 function isInventoryExpiryIframePath(path: string): boolean {
@@ -1797,12 +1797,12 @@ function renderTeamTipsManagementIframePanel(path: string): string {
     </div>`;
 }
 
-/** 主区全宽嵌入团队管理薪酬计算与报税准备（TipOut Payroll） */
+/** 主区全宽嵌入团队管理薪资管理（TipOut Payroll） */
 function renderTeamPayrollReportIframePanel(): string {
   return `
     <div class="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
       <iframe
-        title="薪酬计算与报税准备"
+        title="薪资管理"
         class="block h-full w-full flex-1 border-0"
         src="${TEAM_PAYROLL_REPORT_IFRAME_SRC}"
         referrerpolicy="no-referrer-when-downgrade"
