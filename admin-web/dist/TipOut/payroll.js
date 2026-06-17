@@ -1544,10 +1544,40 @@
     return list.find((e) => e.id === empId);
   }
 
+  function formatEmployeeRoleTagHtml(role) {
+    const label = String(role || "").trim();
+    if (!label || label === "—") return "";
+    return `<span class="tag tag-blue payroll-employee-role-tag">${escapeHtml(label)}</span>`;
+  }
+
+  function formatEmployeeListNameCell(emp) {
+    if (!emp) return "—";
+    const name = String(emp.name || "").trim() || "—";
+    const role = resolveEmployeeRole(emp);
+    const adpWarn = !emp.adpFile
+      ? `<span class="text-danger payroll-employee-adp-warn" title="${escapeHtml(T("employee.missingAdp"))}">⚠</span>`
+      : "";
+    return `<div class="payroll-employee-name-cell"><strong class="payroll-employee-name-text">${escapeHtml(name)}</strong>${formatEmployeeRoleTagHtml(role)}${adpWarn}</div>`;
+  }
+
   function formatWorkspaceEmployeeOptionLabel(emp) {
     if (!emp) return "";
     const adp = String(emp.adpFile || "").trim();
     return adp ? `${emp.name} · #${adp}` : emp.name;
+  }
+
+  function syncWorkspaceEmployeeRoleTag(emp) {
+    const tag = $("#ws-employee-role-tag");
+    if (!tag) return;
+    const role = resolveEmployeeRole(emp);
+    if (!role || role === "—") {
+      tag.hidden = true;
+      tag.textContent = "";
+      return;
+    }
+    tag.hidden = false;
+    tag.textContent = role;
+    tag.className = "tag tag-blue payroll-employee-role-tag";
   }
 
   function renderWorkspaceEmployeeSwitch(selectedId) {
@@ -1565,6 +1595,7 @@
     } else if (list.length > 0) {
       sel.value = list[0].id;
     }
+    syncWorkspaceEmployeeRoleTag(getEmployee(state.periodId, sel.value));
   }
 
   function navigateWorkspaceEmployee(empId) {
@@ -2024,12 +2055,9 @@
         const conf = e.confirmed
           ? `<span style="color:var(--primary);font-size:12px;font-weight:500">${escapeHtml(T("employee.confirmed"))}</span>`
           : `<span style="color:var(--text-tertiary);font-size:12px">${escapeHtml(T("employee.unconfirmed"))}</span>`;
-        const adpWarn = !e.adpFile
-          ? `<span class="text-danger" style="margin-left:4px" title="${escapeHtml(T("employee.missingAdp"))}">⚠</span>`
-          : "";
         return `
         <tr>
-          <td><strong>${escapeHtml(e.name)}</strong>${adpWarn}</td>
+          <td>${formatEmployeeListNameCell(e)}</td>
           <td>${escapeHtml(e.store || DEFAULT_STORE_NAME)}</td>
           <td style="color:var(--text-secondary)">${escapeHtml(e.department)}</td>
           <td style="font-family:ui-monospace,Menlo,monospace">${escapeHtml(e.adpFile || "—")}</td>

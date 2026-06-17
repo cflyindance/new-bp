@@ -193,6 +193,33 @@
   margin-bottom: 12px;
 }
 
+.payroll-page .payroll-employee-name-cell {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  line-height: 1.35;
+}
+
+.payroll-page .payroll-employee-name-text {
+  font-weight: 600;
+}
+
+.payroll-page .payroll-employee-role-tag {
+  flex-shrink: 0;
+}
+
+.payroll-page .payroll-employee-adp-warn {
+  margin-left: 0;
+}
+
+.payroll-page .payroll-workspace-identity-name-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
 .payroll-page .payroll-toolbar {
   display: flex;
   flex-wrap: wrap;

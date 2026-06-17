@@ -158,7 +158,10 @@
             <div class="payroll-workspace-main">
           <div class="payroll-workspace-identity no-print">
             <div class="payroll-workspace-identity-main">
-              <select id="ws-employee-switch" class="payroll-workspace-employee-select" aria-label="切换本期员工"></select>
+              <div class="payroll-workspace-identity-name-row">
+                <select id="ws-employee-switch" class="payroll-workspace-employee-select" aria-label="切换本期员工"></select>
+                <span id="ws-employee-role-tag" class="tag tag-blue payroll-employee-role-tag" hidden></span>
+              </div>
               <p id="ws-breadcrumb-period" class="payroll-period-context"></p>
             </div>
             <div class="payroll-workspace-identity-fields">
