@@ -1,0 +1,43 @@
+name: Build GitHub Pages dist
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "admin-web/src/**"
+      - "admin-web/dist/TipOut/**"
+      - "admin-web/dist/Configuration center/**"
+      - "admin-web/dist/emenu-pro/**"
+      - "admin-web/package.json"
+      - "admin-web/package-lock.json"
+      - "admin-web/vite.config.ts"
+      - "admin-web/scripts/**"
+      - ".github/workflows/build-pages.yml"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: admin-web/package-lock.json
+
+      - name: Install dependencies
+        working-directory: admin-web
+        run: npm ci
+
+      - name: Build admin-web dist
+        working-directory: admin-web
+        run: npm run build
+
+      - name: Commit dist if changed
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "build: CI 自动更新 GitHub Pages 构建产物"
+          file_pattern: admin-web/dist/** admin-web/src/generated/build-stamp.ts

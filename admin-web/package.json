@@ -7,7 +7,7 @@
     "dev": "vite",
     "payroll-api": "node server/payroll-api-server.mjs",
     "dev:payroll": "node server/run-payroll-dev.mjs",
-    "build": "node scripts/stash-emenu-pro-for-build.mjs stash && tsc && vite build && node scripts/copy-embedded-assets.mjs",
+    "build": "node scripts/generate-build-stamp.mjs && node scripts/stash-emenu-pro-for-build.mjs stash && tsc && vite build && node scripts/copy-embedded-assets.mjs",
     "preview": "vite preview",
     "generate:settings-groups": "node scripts/generate-settings-group-mapping.mjs",
     "generate:foh-line-scope": "node scripts/generate-foh-line-scope-matrix.mjs && node scripts/generate-foh-line-storage-registry.mjs",

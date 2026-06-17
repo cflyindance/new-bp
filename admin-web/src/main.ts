@@ -1,4 +1,5 @@
 import "./styles/app.css";
+import { BUILD_STAMP } from "./generated/build-stamp";
 import {
   bindLoginPage,
   isAuthenticated,
@@ -1562,34 +1563,39 @@ function renderGiftCardsFactoryIframePanel(): string {
 /** 信贷中心：侧栏点击在新标签页打开 EZ Capital（站内不嵌 iframe） */
 const CAPITAL_EXTERNAL_URL = "https://www.ezcapital.com/zh";
 
+/** 本地嵌入页 URL：附带 embedded 与构建版本，避免 GitHub Pages / 浏览器长期缓存旧 iframe 内容 */
+function embeddedPageSrc(path: string): string {
+  return `${path}?embedded=1&v=${BUILD_STAMP}`;
+}
+
 /** 效期管理：WMS 效期分类（主内容区 iframe） */
 const INVENTORY_EXPIRY_WMS_IFRAME_SRC =
   "https://wms.menusifuchina.com/platform-expiration-category";
 
 /** 营销中心 → 屏保：复用 Configuration center 屏保功能页（主内容区 iframe） */
-const MARKETING_SCREENSAVER_IFRAME_SRC = "./Configuration%20center/kiosk-screensaver.html?embedded=1";
+const MARKETING_SCREENSAVER_IFRAME_SRC = embeddedPageSrc("./Configuration%20center/kiosk-screensaver.html");
 /** 营销中心 → 广告：复用 Configuration center 广告功能页（主内容区 iframe） */
-const MARKETING_ADS_IFRAME_SRC = "./Configuration%20center/marketing-ads.html?embedded=1";
+const MARKETING_ADS_IFRAME_SRC = embeddedPageSrc("./Configuration%20center/marketing-ads.html");
 /** 营销中心 → 海报 Pro */
-const MARKETING_POSTER_PRO_IFRAME_SRC = "./Configuration%20center/marketing-poster-pro.html?embedded=1";
+const MARKETING_POSTER_PRO_IFRAME_SRC = embeddedPageSrc("./Configuration%20center/marketing-poster-pro.html");
 /** 素材中心 → 图片素材：复用 Configuration center 图片素材页（主内容区 iframe） */
-const ASSET_CENTER_MATERIALS_IFRAME_SRC = "./Configuration%20center/material.html?embedded=1";
+const ASSET_CENTER_MATERIALS_IFRAME_SRC = embeddedPageSrc("./Configuration%20center/material.html");
 /** 前厅管理中心 → 菜单下单限制：复用 Configuration center 下单限制配置页（主内容区 iframe） */
-const FOH_MENU_ORDER_LIMIT_IFRAME_SRC = "./Configuration%20center/order-limit.html?embedded=1";
+const FOH_MENU_ORDER_LIMIT_IFRAME_SRC = embeddedPageSrc("./Configuration%20center/order-limit.html");
 /** 前厅管理中心 → eMenu Pro：嵌入 emenuPro 管理端（主内容区 iframe） */
-const FOH_EMENU_PRO_IFRAME_SRC = "./emenu-pro/index.html?embedded=1";
+const FOH_EMENU_PRO_IFRAME_SRC = embeddedPageSrc("./emenu-pro/index.html");
 /** eMenu Pro iframe 向父页索取的演示 sessionKey（与 embedded-mock-api.js 一致） */
 const FOH_EMENU_PRO_SESSION_KEY = "bplant-emenu-pro-demo";
 /** 报表中心 → 员工报表 → 小费分配：嵌入 TipOut 项目 */
-const REPORTS_TIPS_ALLOCATION_IFRAME_SRC = "./TipOut/index.html?embedded=1";
+const REPORTS_TIPS_ALLOCATION_IFRAME_SRC = embeddedPageSrc("./TipOut/index.html");
 /** 团队管理 → 角色与员工：嵌入 TipOut 员工列表 */
-const TEAM_ROLES_EMPLOYEES_IFRAME_SRC = "./TipOut/employees.html?embedded=1";
+const TEAM_ROLES_EMPLOYEES_IFRAME_SRC = embeddedPageSrc("./TipOut/employees.html");
 /** 团队管理 → 小费管理：嵌入 TipOut（默认小费分配） */
-const TEAM_TIPS_DISTRIBUTION_IFRAME_SRC = "./TipOut/index.html?embedded=1";
-const TEAM_TIPS_DETAILS_IFRAME_SRC = "./TipOut/detail.html?embedded=1";
-const TEAM_TIPS_RULES_IFRAME_SRC = "./TipOut/rules.html?embedded=1";
+const TEAM_TIPS_DISTRIBUTION_IFRAME_SRC = embeddedPageSrc("./TipOut/index.html");
+const TEAM_TIPS_DETAILS_IFRAME_SRC = embeddedPageSrc("./TipOut/detail.html");
+const TEAM_TIPS_RULES_IFRAME_SRC = embeddedPageSrc("./TipOut/rules.html");
 /** 团队管理 → 薪资管理：嵌入 TipOut Payroll */
-const TEAM_PAYROLL_REPORT_IFRAME_SRC = "./TipOut/payroll.html?embedded=1";
+const TEAM_PAYROLL_REPORT_IFRAME_SRC = embeddedPageSrc("./TipOut/payroll.html");
 
 function isInventoryExpiryIframePath(path: string): boolean {
   return path === "/operations/inventory-ordering/expiry" || path.startsWith("/operations/inventory-ordering/expiry/");
