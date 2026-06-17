@@ -778,6 +778,7 @@
           <div class="add-option-menu-item" data-type="orderType" onclick="addSurchargeCondition('orderType')">订单类型</div>
           <div class="add-option-menu-item" data-type="hours" onclick="addSurchargeCondition('hours')">营业时间段</div>
           <div class="add-option-menu-item" data-type="tipType" onclick="addSurchargeCondition('tipType')">小费类型</div>
+          <div class="add-option-menu-item" data-type="surchargeType" onclick="addSurchargeCondition('surchargeType')" style="display:none">加收类型</div>
           <div class="add-option-menu-item" data-type="shift" onclick="addSurchargeCondition('shift')">班次</div>
           <div class="add-option-menu-item" data-type="weekday" onclick="addSurchargeCondition('weekday')">周期（星期）</div>
         </div>
@@ -852,6 +853,55 @@
     var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0 };
     var poolRuleConditions = {};
     const existingRules = { sales: false, tips: false, surcharge: false, manual: false, custom: false };
+    /** tip = 小费池；surcharge = 加收服务费池 */
+    var currentPoolKind = 'tip';
+
+    function isSurchargePoolKind() {
+      return currentPoolKind === 'surcharge';
+    }
+
+    function getPoolRuleBaseNames() {
+      return {
+        sales: '销售额',
+        tips: '小费',
+        surcharge: '加收服务费',
+        manual: '手动上报小费',
+        custom: isSurchargePoolKind() ? '自定义加收' : '自定义小费'
+      };
+    }
+
+    function getAllowedPoolRuleTypes() {
+      return isSurchargePoolKind()
+        ? ['surcharge', 'custom']
+        : ['sales', 'tips', 'surcharge', 'manual', 'custom'];
+    }
+
+    function getPoolKindPageTitle(isEdit) {
+      if (isSurchargePoolKind()) {
+        return isEdit ? '编辑加收服务费池分配规则' : '新增加收服务费池分配规则';
+      }
+      return isEdit ? '编辑小费分配规则' : '新增小费分配规则';
+    }
+
+    function applyPoolKindUi(isEdit) {
+      var pt = document.getElementById('pageTitle');
+      if (pt) pt.textContent = getPoolKindPageTitle(!!isEdit);
+      var customItem = document.querySelector('#addOptionMenu .add-option-menu-item[data-type="custom"]');
+      if (customItem) customItem.textContent = getPoolRuleBaseNames().custom;
+      var allowed = getAllowedPoolRuleTypes();
+      document.querySelectorAll('#addOptionMenu .add-option-menu-item').forEach(function(item) {
+        var type = item.dataset.type;
+        item.style.display = allowed.indexOf(type) >= 0 ? '' : 'none';
+      });
+      updateAddMenu();
+      updateSurchargeConditionMenu();
+    }
+
+    function initPoolKindFromParams(params, isEdit) {
+      if (params && params.poolKind === 'surcharge') currentPoolKind = 'surcharge';
+      else currentPoolKind = 'tip';
+      applyPoolKindUi(isEdit);
+    }
 
     var FIELD_DESC_STORAGE_KEY = 'ruleAddFieldDesc';
     function getFieldDesc(fieldId) {
@@ -1114,6 +1164,8 @@
 
     // Load rule into form (edit mode)
     function loadRuleForEdit(rule) {
+      currentPoolKind = rule.poolKind === 'surcharge' ? 'surcharge' : 'tip';
+      applyPoolKindUi(true);
       document.getElementById('ruleName').value = rule.ruleName || '';
       var storeSel = document.getElementById('storeSelect');
       storeSel.value = rule.store || '';
@@ -1169,10 +1221,16 @@
         if (pc && typeof pc === 'object') normalizeConditionsRoleEmployeeExclusive(pc);
       });
       if (allocMode === 'order_tip_then_residual' && document.querySelectorAll('.pool-rule-card').length === 0) {
-        var migPoolId = 'tips_1';
-        addPoolRule('tips', { id: migPoolId, pct: 100, name: '小费' });
-        poolRuleCounter.tips = Math.max(poolRuleCounter.tips || 0, 1);
-        poolRuleConditions[migPoolId] = { tipType: '全部' };
+        if (isSurchargePoolKind()) {
+          var migSurchargeId = 'surcharge_1';
+          addPoolRule('surcharge', { id: migSurchargeId, pct: 100, name: '加收服务费' });
+          poolRuleCounter.surcharge = Math.max(poolRuleCounter.surcharge || 0, 1);
+        } else {
+          var migPoolId = 'tips_1';
+          addPoolRule('tips', { id: migPoolId, pct: 100, name: '小费' });
+          poolRuleCounter.tips = Math.max(poolRuleCounter.tips || 0, 1);
+          poolRuleConditions[migPoolId] = { tipType: '全部' };
+        }
       }
       updateDeductRulesVisibility();
       (rule.poolRules || []).forEach(function(pr) {
@@ -1291,8 +1349,14 @@
     }
 
     function updateAddMenu() {
-      document.querySelectorAll('.add-option-menu-item').forEach(item => {
+      var allowed = getAllowedPoolRuleTypes();
+      document.querySelectorAll('#addOptionMenu .add-option-menu-item').forEach(item => {
         const type = item.dataset.type;
+        if (allowed.indexOf(type) < 0) {
+          item.style.display = 'none';
+          return;
+        }
+        item.style.display = '';
         if (type === 'sales' || type === 'tips' || type === 'surcharge') {
           item.classList.remove('disabled');
         } else if (existingRules[type]) {
@@ -1301,6 +1365,8 @@
           item.classList.remove('disabled');
         }
       });
+      var customItem = document.querySelector('#addOptionMenu .add-option-menu-item[data-type="custom"]');
+      if (customItem) customItem.textContent = getPoolRuleBaseNames().custom;
     }
 
     function toggleAddMenu() {
@@ -1518,7 +1584,7 @@
       }
     }
     function sortPoolConditionLoadKeys(keys) {
-      var preferred = ['role', 'employee', 'area', 'orderType', 'menu', 'revenueType', 'hours', 'tipType', 'containsProduct', 'shift', 'weekdays'];
+      var preferred = ['role', 'employee', 'area', 'orderType', 'menu', 'revenueType', 'hours', 'surchargeType', 'tipType', 'containsProduct', 'shift', 'weekdays'];
       return keys.filter(function(k) { return k !== 'employees' && k !== 'employeeRoles'; }).sort(function(a, b) {
         var ia = preferred.indexOf(a);
         var ib = preferred.indexOf(b);
@@ -2311,6 +2377,18 @@
     }
 
     var tipTypeSelectHtml = '<option value="">请选择</option><option>全部</option><option>Credit Card Tips (信用卡小费)</option><option>Cash Tips (现金小费)</option><option>Auto Gratuity (自动服务费)</option><option>Gift Card Tips</option>';
+    var SURCHARGE_TYPE_OPTIONS = [
+      { value: '商品', label: '商品' },
+      { value: '订单', label: '订单' },
+      { value: '全部', label: '全部' }
+    ];
+    function buildSurchargeTypeRadioHtml(selected) {
+      var sel = selected || '全部';
+      return SURCHARGE_TYPE_OPTIONS.map(function(o) {
+        var checked = sel === o.value ? ' checked' : '';
+        return '<label class="radio-item" style="margin:0"><input type="radio" name="surchargeTypeValue" value="' + o.value + '"' + checked + '> ' + o.label + '</label>';
+      }).join('');
+    }
 
     function toggleAddConditionMenu(drawerId) {
       var menuIdMap = {
@@ -2352,6 +2430,14 @@
     function updateSurchargeConditionMenu() {
       document.querySelectorAll('#surchargeConditionMenu .add-option-menu-item').forEach(function(item) {
         var t = item.dataset.type;
+        if (t === 'tipType' && isSurchargePoolKind()) {
+          item.style.display = 'none';
+          return;
+        }
+        if (t === 'surchargeType' && !isSurchargePoolKind()) {
+          item.style.display = 'none';
+          return;
+        }
         item.style.display = roleEmployeeMenuItemHidden(existingSurchargeConditions, t) ? 'none' : '';
       });
     }
@@ -2568,7 +2654,7 @@
         if (!silent) showNotification('已添加「角色」取值条件时不能同时添加「员工」', 'warning');
         return;
       }
-      var names = { role: '角色', employee: '员工', area: '订单区域', orderType: '订单类型', hours: '营业时间段', tipType: '小费类型', shift: '班次', weekday: '周期（星期）' };
+      var names = { role: '角色', employee: '员工', area: '订单区域', orderType: '订单类型', hours: '营业时间段', tipType: '小费类型', surchargeType: '加收类型', shift: '班次', weekday: '周期（星期）' };
       var cardId = 'surcharge-cond-' + type;
       var body = '';
       if (type === 'role') {
@@ -2587,6 +2673,8 @@
         body = '<div class="drawer-form-row"><label>营业时间段：</label><input type="time" class="form-control" style="width:120px"><span style="color:var(--text-tertiary)">~</span><input type="time" class="form-control" style="width:120px"></div>';
       } else if (type === 'tipType') {
         body = '<div class="drawer-form-row"><label>小费类型：</label><select class="form-control" style="flex:1">' + tipTypeSelectHtml + '</select></div>';
+      } else if (type === 'surchargeType') {
+        body = '<div class="drawer-form-row" style="align-items:flex-start"><label style="padding-top:2px">加收类型：</label><div class="radio-group" style="flex-direction:row;flex-wrap:wrap;gap:16px;flex:1">' + buildSurchargeTypeRadioHtml('全部') + '</div></div>';
       } else if (type === 'shift') {
         body = '<div class="drawer-form-row"><label>班次：</label><div class="multi-select shift-condition-select" id="surchargeShiftConditionSelect" style="flex:1" data-placeholder="请选择班次">' +
           '<div class="multi-select-input" onclick="toggleMultiSelect(\'surchargeShiftConditionSelect\')">' +
@@ -2804,6 +2892,11 @@
       } else if (type === 'area' || type === 'orderType' || type === 'tipType') {
         var sel = card.querySelector('select');
         if (sel && value) sel.value = value;
+      } else if (type === 'surchargeType') {
+        var stVal = value || '全部';
+        card.querySelectorAll('input[name="surchargeTypeValue"]').forEach(function(r) {
+          r.checked = r.value === stVal;
+        });
       } else if (type === 'hours' && value && (value.start || value.end)) {
         var inputs = card.querySelectorAll('input[type="time"]');
         if (inputs[0] && value.start) inputs[0].value = value.start;
@@ -3240,8 +3333,12 @@
     var poolNumChars = ['①','②','③','④','⑤','⑥','⑦','⑧','⑨'];
     function addPoolRule(type, opt) {
       opt = opt || {};
+      if (getAllowedPoolRuleTypes().indexOf(type) < 0) {
+        showNotification('当前池类型不支持该选项', 'error');
+        return;
+      }
       var ruleId;
-      var baseNames = { sales: '销售额', tips: '小费', surcharge: '加收服务费', manual: '手动上报小费', custom: '自定义小费' };
+      var baseNames = getPoolRuleBaseNames();
       if (type === 'sales' || type === 'tips' || type === 'surcharge') {
         ruleId = opt.id || (type + '_' + ((poolRuleCounter[type] || 0) + 1));
         if (!opt.id) poolRuleCounter[type] = (poolRuleCounter[type] || 0) + 1;
@@ -3903,7 +4000,8 @@
       if (Array.isArray(cond.employee) && cond.employee.length) parts.push('员工: ' + cond.employee.join(', '));
       if (cond.area) parts.push('订单区域: ' + cond.area);
       if (cond.orderType) parts.push('订单类型: ' + cond.orderType);
-      if (cond.tipType) parts.push('小费类型: ' + cond.tipType);
+      if (cond.surchargeType) parts.push('加收类型: ' + cond.surchargeType);
+      else if (cond.tipType) parts.push('小费类型: ' + cond.tipType);
       if (cond.hours && (cond.hours.start || cond.hours.end)) parts.push('营业时间段: ' + (cond.hours.start || '') + '-' + (cond.hours.end || ''));
       if (Array.isArray(cond.shift) && cond.shift.length) parts.push('班次: ' + formatShiftSelectionForDisplay(cond.shift));
       if (Array.isArray(cond.weekdays) && cond.weekdays.length) parts.push('周期: ' + formatWeekdaysCondDisplay(cond.weekdays));
@@ -3949,6 +4047,7 @@
         if (Array.isArray(cond.employee) && cond.employee.length) return true;
         if (cond.area) return true;
         if (cond.orderType) return true;
+        if (cond.surchargeType) return true;
         if (cond.tipType) return true;
         if (cond.hours && (cond.hours.start || cond.hours.end)) return true;
         if (Array.isArray(cond.shift) && cond.shift.length) return true;
@@ -4076,6 +4175,9 @@
         } else if (type === 'area' || type === 'orderType' || type === 'tipType') {
           var sel = card.querySelector('select');
           if (sel) cond[type] = sel.value || '';
+        } else if (type === 'surchargeType') {
+          var stRadio = card.querySelector('input[name="surchargeTypeValue"]:checked');
+          if (stRadio) cond.surchargeType = stRadio.value;
         } else if (type === 'hours') {
           var inputs = card.querySelectorAll('input[type="time"]');
           cond.hours = { start: inputs[0] ? inputs[0].value : '', end: inputs[1] ? inputs[1].value : '' };
@@ -4267,13 +4369,13 @@
           var nameInp = card.querySelector('.pool-rule-name');
           var amount = amtInp ? (parseFloat(amtInp.value) || 0) : 0;
           var pct = pctInp ? (parseFloat(pctInp.value) || 100) : 100;
-          var name = (nameInp && nameInp.value && nameInp.value.trim()) || '自定义小费';
+          var name = (nameInp && nameInp.value && nameInp.value.trim()) || getPoolRuleBaseNames().custom;
           poolRules.push({ type: type, id: ruleId, name: name, amount: amount, pct: pct });
         } else {
           var nameInp = card.querySelector('.pool-rule-name');
           var inp = card.querySelector('input[type="number"]:not(.pool-custom-amount):not(.pool-custom-pct)');
           var pct = inp ? (parseFloat(inp.value) || 0) : 0;
-          var baseNames = { sales: '销售额', tips: '小费', surcharge: '加收服务费', manual: '手动上报小费', custom: '自定义小费' };
+          var baseNames = getPoolRuleBaseNames();
           var name = (nameInp && nameInp.value && nameInp.value.trim()) || (ruleId.indexOf('_') >= 0 ? baseNames[type] + ruleId.split('_')[1] : baseNames[type]);
           var pr = { type: type, id: ruleId, name: name, pct: pct };
           if (poolRuleConditions[ruleId]) pr.conditions = poolRuleConditions[ruleId];
@@ -4338,7 +4440,8 @@
         salesConditions: salesConditions,
         tipsConditions: tipsConditions,
         surchargeConditions: surchargeConditions,
-        allocationMode: allocationMode
+        allocationMode: allocationMode,
+        poolKind: currentPoolKind
       };
       if (allocationMode === 'order_tip_then_residual') {
         data.tipClaims = collectTipClaims();
@@ -4390,7 +4493,7 @@
           var type = card.dataset.ruleType || (ruleId || '').split('_')[0];
           if ((type === 'sales' || type === 'tips' || type === 'surcharge' || type === 'manual') && !hasValidConditions(ruleId)) {
             var nameInp = card.querySelector('.pool-rule-name');
-            var baseNames = { sales: '销售额', tips: '小费', surcharge: '加收服务费', manual: '手动上报小费' };
+            var baseNames = getPoolRuleBaseNames();
             var name = (nameInp && nameInp.value && nameInp.value.trim()) || (ruleId.indexOf('_') >= 0 ? baseNames[type] + ruleId.split('_')[1] : baseNames[type]);
             condErr = condErr || name;
           }
@@ -4434,7 +4537,7 @@
           var type = card.dataset.ruleType || (ruleId || '').split('_')[0];
           if ((type === 'sales' || type === 'tips' || type === 'surcharge' || type === 'manual') && !hasValidConditions(ruleId)) {
             var nameInp = card.querySelector('.pool-rule-name');
-            var baseNames = { sales: '销售额', tips: '小费', surcharge: '加收服务费', manual: '手动上报小费' };
+            var baseNames = getPoolRuleBaseNames();
             var name = (nameInp && nameInp.value && nameInp.value.trim()) || (ruleId.indexOf('_') >= 0 ? baseNames[type] + ruleId.split('_')[1] : baseNames[type]);
             condErrOt = condErrOt || name;
           }
@@ -4456,6 +4559,7 @@
           rule.distribution = data.distribution;
           rule.clockin = data.clockin;
           rule.allocationMode = data.allocationMode || 'legacy_pool';
+          rule.poolKind = data.poolKind || 'tip';
           if (rule.allocationMode === 'order_tip_then_residual') {
             rule.poolRules = data.poolRules;
             rule.tipClaims = data.tipClaims;
@@ -4490,7 +4594,8 @@
           store: data.store,
           distribution: data.distribution,
           clockin: data.clockin,
-          allocationMode: data.allocationMode || 'legacy_pool'
+          allocationMode: data.allocationMode || 'legacy_pool',
+          poolKind: data.poolKind || 'tip'
         };
         if (rule.allocationMode === 'order_tip_then_residual') {
           rule.poolRules = data.poolRules;
@@ -4525,9 +4630,9 @@
         var rule = ruleData.getRuleById(params.id);
         if (rule) {
           loadRuleForEdit(rule);
-          var pt = document.getElementById('pageTitle');
-          if (pt) pt.textContent = '编辑小费分配规则';
         }
+      } else {
+        initPoolKindFromParams(params, false);
       }
     })();
 

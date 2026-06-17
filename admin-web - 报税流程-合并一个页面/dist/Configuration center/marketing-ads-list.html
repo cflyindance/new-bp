@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>广告 - 营销中心</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="assets/common.css" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: "#1677ff",
+            "sidebar-bg": "#fafafa",
+            "sidebar-active": "#e6f4ff",
+          },
+          borderRadius: { ant: "6px" },
+        },
+      },
+    };
+  </script>
+  <script>
+    (function () {
+      var params = new URLSearchParams(window.location.search);
+      var embedded = params.get("embedded");
+      var isEmbedded = embedded === "1" || embedded === "true";
+      if (!isEmbedded) {
+        try { isEmbedded = window.self !== window.top; } catch (e) { isEmbedded = false; }
+      }
+      if (isEmbedded) document.documentElement.classList.add("embedded-mode");
+    })();
+  </script>
+</head>
+<body class="bg-[#f5f6f7] text-gray-900 antialiased">
+  <div class="app-layout theme-list-page flex min-h-screen">
+    <aside class="sidebar theme-list-sidebar flex-shrink-0 flex flex-col w-[236px]">
+      <div class="p-4 border-b border-gray-100 flex items-center gap-2">
+        <div class="w-8 h-8 rounded bg-amber-400 flex items-center justify-center text-white font-bold">M</div>
+        <span class="font-medium">MenuSifu</span>
+      </div>
+      <nav class="flex-1 p-3 space-y-1 overflow-auto">
+        <a href="material.html" class="menu-item px-3 py-2 text-gray-600 rounded-ant hover:bg-gray-100"><span>图片素材</span></a>
+        <div class="nav-group">
+          <div class="nav-group-title menu-item px-3 py-2 text-gray-600 flex items-center justify-between cursor-pointer hover:bg-gray-100 rounded-ant" onclick="this.parentElement.classList.toggle('collapsed')">
+            <span>营销中心</span>
+            <span class="nav-arrow text-xs transition-transform">⌄</span>
+          </div>
+          <div class="nav-group-items pl-3 space-y-0.5">
+            <a href="kiosk-theme-list.html" class="menu-item px-3 py-2 text-gray-600 rounded-ant hover:bg-gray-100">屏保</a>
+            <a href="marketing-ads-list.html" class="menu-item active px-3 py-2 flex items-center rounded-ant bg-sidebar-active text-primary font-medium">广告</a>
+            <a href="marketing-poster-pro-settings.html" class="menu-item px-3 py-2 text-gray-600 rounded-ant hover:bg-gray-100">海报Pro</a>
+          </div>
+        </div>
+      </nav>
+    </aside>
+    <main class="main-content theme-list-main flex-1 flex flex-col min-w-0">
+      <div class="theme-list-shell flex-1 flex min-h-0 flex-col">
+        <div class="theme-list-panel flex-1 flex min-h-0 flex-col">
+          <div id="listState" class="min-h-0 flex flex-1 flex-col">
+            <div class="theme-list-scroll flex min-h-0 flex-1 flex-col gap-6 p-4 sm:p-6">
+              <div class="flex w-full flex-wrap items-center justify-between gap-4">
+                <div class="relative h-12 w-full max-w-[360px] shrink-0 rounded-full border border-[#d9d9d9] bg-white px-5 shadow-sm">
+                  <span class="pointer-events-none absolute left-5 top-1/2 flex h-4 w-4 -translate-y-1/2 text-[#00000040]" aria-hidden="true">🔍</span>
+                  <input type="text" id="filterName" placeholder="广告名称" class="h-full w-full border-0 bg-transparent pl-9 pr-4 text-base leading-6 text-[rgba(0,0,0,0.88)] placeholder:text-[rgba(0,0,0,0.25)] focus:outline-none focus:ring-0" aria-label="按广告名称筛选" />
+                </div>
+                <button type="button" id="createAdBtnList" class="btn-primary inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-xl border border-primary px-5 text-base font-semibold shadow-[0_2px_0_rgba(5,145,255,0.1)] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+                  <span aria-hidden="true">+</span> 新建广告
+                </button>
+              </div>
+              <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+                <table class="w-full min-w-[960px] border-collapse text-left text-sm">
+                  <thead class="bg-gray-50 text-xs text-gray-500">
+                    <tr>
+                      <th class="px-4 py-3 font-medium">广告名称</th>
+                      <th class="min-w-[200px] px-4 py-3 font-medium">场景描述</th>
+                      <th class="px-4 py-3 font-medium">产品线</th>
+                      <th class="px-4 py-3 font-medium">类型</th>
+                      <th class="px-4 py-3 font-medium">状态</th>
+                      <th class="px-4 py-3 font-medium">更新时间</th>
+                      <th class="px-4 py-3 text-right font-medium">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody id="adsTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div id="adEditorModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/45 p-4" role="dialog" aria-modal="true" aria-labelledby="adEditorTitle">
+    <div class="w-full max-w-md rounded-xl bg-white shadow-xl">
+      <div class="border-b border-gray-100 px-5 py-4">
+        <h2 id="adEditorTitle" class="text-base font-semibold text-gray-900">新建广告</h2>
+      </div>
+      <div class="space-y-4 px-5 py-4">
+        <div>
+          <label for="adEditorName" class="mb-1.5 block text-sm font-medium text-gray-700">广告名称</label>
+          <input
+            type="text"
+            id="adEditorName"
+            class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500"
+            placeholder="请输入广告名称"
+          />
+          <p id="adEditorNameHint" class="mt-1 hidden text-xs text-gray-500">系统默认广告，名称不可修改</p>
+        </div>
+        <div id="adEditorProductLinesWrap">
+          <p class="mb-2 text-sm font-medium text-gray-700">产品线</p>
+          <p class="mb-2 text-xs text-gray-500">至少选择一个产品线</p>
+          <div id="adEditorProductLines" class="flex flex-wrap gap-3"></div>
+        </div>
+        <p id="adEditorProductLinesReadonly" class="hidden text-sm text-gray-600">
+          <span class="font-medium text-gray-700">产品线：</span><span id="adEditorProductLinesReadonlyValue">eMenu</span>
+        </p>
+      </div>
+      <div class="flex justify-end gap-2 border-t border-gray-100 px-5 py-4">
+        <button type="button" id="adEditorCancel" class="rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">取消</button>
+        <button type="button" id="adEditorSave" class="btn-primary rounded-md px-4 py-2 text-sm font-medium">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="assets/marketing-ads-store.js"></script>
+  <script>
+    (function () {
+      var DEFAULT_AD_ID = MarketingAdsStore.DEFAULT_AD_ID;
+      var PRODUCT_LINES = MarketingAdsStore.PRODUCT_LINES;
+
+      var tableBody = document.getElementById("adsTableBody");
+      var filterName = document.getElementById("filterName");
+      var modal = document.getElementById("adEditorModal");
+      var adEditorTitle = document.getElementById("adEditorTitle");
+      var adEditorName = document.getElementById("adEditorName");
+      var adEditorNameHint = document.getElementById("adEditorNameHint");
+      var adEditorProductLinesWrap = document.getElementById("adEditorProductLinesWrap");
+      var adEditorProductLines = document.getElementById("adEditorProductLines");
+      var adEditorProductLinesReadonly = document.getElementById("adEditorProductLinesReadonly");
+      var adEditorProductLinesReadonlyValue = document.getElementById("adEditorProductLinesReadonlyValue");
+      var editingId = null;
+
+      function escapeHtml(s) {
+        return String(s || "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+      }
+
+      function isSystemDefaultAd(item) {
+        return MarketingAdsStore.isSystemDefaultAd(item);
+      }
+
+      function normalizeProductLines(lines) {
+        if (!Array.isArray(lines)) return [];
+        return lines.filter(function (line) {
+          return PRODUCT_LINES.indexOf(line) >= 0;
+        });
+      }
+
+      function formatProductLines(item) {
+        var lines = normalizeProductLines(item.productLines);
+        if (!lines.length && isSystemDefaultAd(item)) return "eMenu";
+        return lines.length ? lines.join("、") : "—";
+      }
+
+      function formatSceneDescCell(item) {
+        if (!isSystemDefaultAd(item)) {
+          return '<span class="text-gray-400">—</span>';
+        }
+        var system = MarketingAdsStore.getSceneDescSystem(item);
+        var extra = MarketingAdsStore.normalizeSceneDescExtra(item.sceneDescExtra);
+        var html =
+          '<span class="text-gray-600">' + escapeHtml(system) + "</span>" +
+          '<span class="ml-1 inline-flex rounded bg-gray-100 px-1 py-0.5 text-[10px] text-gray-500">系统</span>';
+        if (extra) {
+          html +=
+            '<span class="mt-1 block text-gray-900">' + escapeHtml(extra) + "</span>";
+        }
+        return html;
+      }
+
+      function readAds() {
+        return MarketingAdsStore.readAds();
+      }
+
+      function writeAds(items) {
+        MarketingAdsStore.writeAds(items);
+      }
+
+      function newId() {
+        return "ad-" + Date.now() + "-" + Math.random().toString(36).slice(2, 6);
+      }
+
+      function renderProductLineCheckboxes(selected) {
+        var set = {};
+        (selected || []).forEach(function (line) {
+          set[line] = true;
+        });
+        adEditorProductLines.innerHTML = PRODUCT_LINES.map(function (line) {
+          var checked = set[line] ? " checked" : "";
+          return (
+            '<label class="inline-flex cursor-pointer items-center gap-2 rounded-md border border-gray-200 px-3 py-2 text-sm text-gray-800 hover:border-primary/40">' +
+            '<input type="checkbox" class="rounded text-primary" data-product-line="' + escapeHtml(line) + '"' + checked + " />" +
+            "<span>" + escapeHtml(line) + "</span></label>"
+          );
+        }).join("");
+      }
+
+      function readSelectedProductLines() {
+        var boxes = adEditorProductLines.querySelectorAll("[data-product-line]");
+        var selected = [];
+        boxes.forEach(function (box) {
+          if (box.checked) selected.push(box.getAttribute("data-product-line"));
+        });
+        return normalizeProductLines(selected);
+      }
+
+      function openModal(mode, item) {
+        editingId = mode === "edit" && item ? item.id : null;
+        var locked = item && isSystemDefaultAd(item);
+        adEditorTitle.textContent = mode === "edit" ? "编辑广告" : "新建广告";
+        adEditorName.value = item ? item.name : "";
+        adEditorName.disabled = !!locked;
+        adEditorNameHint.classList.toggle("hidden", !locked);
+        if (locked) {
+          adEditorProductLinesWrap.classList.add("hidden");
+          adEditorProductLinesReadonly.classList.remove("hidden");
+          adEditorProductLinesReadonlyValue.textContent = "eMenu";
+        } else {
+          adEditorProductLinesWrap.classList.remove("hidden");
+          adEditorProductLinesReadonly.classList.add("hidden");
+          var selected = item ? normalizeProductLines(item.productLines) : ["eMenu"];
+          renderProductLineCheckboxes(selected);
+        }
+        modal.classList.remove("hidden");
+        modal.classList.add("flex");
+        if (!locked) adEditorName.focus();
+      }
+
+      function closeModal() {
+        modal.classList.add("hidden");
+        modal.classList.remove("flex");
+        editingId = null;
+        adEditorName.disabled = false;
+      }
+
+      function saveModal() {
+        var items = readAds();
+        var idx = editingId ? items.findIndex(function (item) { return item.id === editingId; }) : -1;
+        var existing = idx >= 0 ? items[idx] : null;
+        var locked = existing && isSystemDefaultAd(existing);
+
+        if (locked) {
+          closeModal();
+          return;
+        }
+
+        var name = (adEditorName.value || "").trim();
+        if (!name) {
+          window.alert("请输入广告名称");
+          adEditorName.focus();
+          return;
+        }
+
+        var productLines = readSelectedProductLines();
+        if (!productLines.length) {
+          window.alert("请至少选择一个产品线");
+          return;
+        }
+
+        if (idx >= 0) {
+          items[idx] = Object.assign({}, items[idx], {
+            name: name,
+            productLines: productLines,
+            updatedAt: MarketingAdsStore.formatNow(),
+          });
+        } else {
+          items.push({
+            id: newId(),
+            name: name,
+            type: "弹框广告",
+            status: "待上架",
+            updatedAt: MarketingAdsStore.formatNow(),
+            productLines: productLines,
+            locked: false,
+          });
+        }
+        writeAds(items);
+        closeModal();
+        refresh();
+      }
+
+      function renderTable(items) {
+        if (!tableBody) return;
+        tableBody.innerHTML = items
+          .map(function (item) {
+            var locked = isSystemDefaultAd(item);
+            var systemOn = locked && MarketingAdsStore.readSystemAdEnabled(item.id);
+            var displayStatus = locked
+              ? MarketingAdsStore.statusFromEnabled(systemOn)
+              : item.status;
+            var statusCls =
+              displayStatus === "已开启" || displayStatus === "已上架"
+                ? "text-emerald-600 bg-emerald-50"
+                : displayStatus === "已关闭" || displayStatus === "已下架"
+                  ? "text-gray-600 bg-gray-100"
+                  : "text-amber-700 bg-amber-50";
+            var spec = locked ? MarketingAdsStore.getSystemAdSpec(item.id) : null;
+            var isMixedMedia = spec && MarketingAdsStore.isMixedMediaKind(spec.kind);
+            var isHomeCover = spec && MarketingAdsStore.isHomeCoverKind(spec.kind);
+            var mediaCount =
+              isMixedMedia && item.mediaItems ? item.mediaItems.length : 0;
+            var cover = isHomeCover ? MarketingAdsStore.normalizeHomeCover(item.homeCover) : null;
+            var hasPortrait = cover && cover.portrait && cover.portrait.imageUrl;
+            var hasLandscape = cover && cover.landscape && cover.landscape.imageUrl;
+            var posterHint =
+              spec && spec.kind === "order-popup" && item.poster && item.poster.imageUrl
+                ? '<span class="ml-1 text-xs text-emerald-600">· 已上传海报</span>'
+                : spec && spec.kind === "order-popup"
+                  ? '<span class="ml-1 text-xs text-gray-400">· 未上传海报</span>'
+                  : isMixedMedia && mediaCount > 0
+                    ? '<span class="ml-1 text-xs text-emerald-600">· 已上传 ' + mediaCount + " 个素材</span>"
+                    : isMixedMedia
+                      ? '<span class="ml-1 text-xs text-gray-400">· 未上传素材</span>'
+                      : isHomeCover && hasPortrait && hasLandscape
+                        ? '<span class="ml-1 text-xs text-emerald-600">· 竖屏/横屏已上传</span>'
+                        : isHomeCover && (hasPortrait || hasLandscape)
+                          ? '<span class="ml-1 text-xs text-amber-600">· 封面未齐全</span>'
+                          : isHomeCover
+                            ? '<span class="ml-1 text-xs text-gray-400">· 未上传封面</span>'
+                            : "";
+            var nameCell = locked
+              ? '<span class="font-medium text-gray-900">' + escapeHtml(item.name) + '</span><span class="ml-2 inline-flex rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-500">系统默认</span>' + posterHint
+              : '<span class="font-medium text-gray-900">' + escapeHtml(item.name) + "</span>";
+            var toggleAction = locked
+              ? systemOn
+                ? '<button type="button" class="text-gray-600 hover:underline" data-ad-system-off="' + escapeHtml(item.id) + '">关闭</button>'
+                : '<button type="button" class="text-primary hover:underline" data-ad-system-on="' + escapeHtml(item.id) + '">开启</button>'
+              : "";
+            var deleteBtn = locked
+              ? '<span class="text-gray-300">删除</span>'
+              : '<button type="button" class="text-destructive hover:underline" data-ad-remove="' + escapeHtml(item.id) + '">删除</button>';
+            var toggleSep = toggleAction ? '<span class="mx-2 text-gray-300">|</span>' : "";
+            var sceneDescCell = formatSceneDescCell(item);
+            return (
+              "<tr class=\"border-t border-gray-100\">" +
+              '<td class="px-4 py-3">' + nameCell + "</td>" +
+              '<td class="px-4 py-3 max-w-xs text-xs leading-relaxed">' + sceneDescCell + "</td>" +
+              '<td class="px-4 py-3 text-gray-600">' + escapeHtml(formatProductLines(item)) + "</td>" +
+              '<td class="px-4 py-3 text-gray-600">' + escapeHtml(item.type) + "</td>" +
+              '<td class="px-4 py-3"><span class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium ' + statusCls + '">' + escapeHtml(displayStatus) + "</span></td>" +
+              '<td class="px-4 py-3 text-gray-500 tabular-nums">' + escapeHtml(item.updatedAt) + "</td>" +
+              '<td class="px-4 py-3 text-right whitespace-nowrap">' +
+              '<button type="button" class="text-primary hover:underline" data-ad-edit="' + escapeHtml(item.id) + '">编辑</button>' +
+              toggleSep +
+              toggleAction +
+              '<span class="mx-2 text-gray-300">|</span>' +
+              deleteBtn +
+              "</td></tr>"
+            );
+          })
+          .join("");
+      }
+
+      function refresh() {
+        var keyword = (filterName && filterName.value ? filterName.value : "").trim().toLowerCase();
+        var items = readAds().filter(function (item) {
+          return !keyword || String(item.name || "").toLowerCase().indexOf(keyword) >= 0;
+        });
+        renderTable(items);
+      }
+
+      function createAd() {
+        openModal("create", null);
+      }
+
+      document.getElementById("createAdBtnList")?.addEventListener("click", createAd);
+      document.getElementById("adEditorCancel")?.addEventListener("click", closeModal);
+      document.getElementById("adEditorSave")?.addEventListener("click", saveModal);
+      modal?.addEventListener("click", function (e) {
+        if (e.target === modal) closeModal();
+      });
+      filterName?.addEventListener("input", refresh);
+
+      tableBody?.addEventListener("click", function (e) {
+        var target = e.target;
+        if (!(target instanceof HTMLElement)) return;
+        var systemOnId = target.getAttribute("data-ad-system-on");
+        if (systemOnId) {
+          MarketingAdsStore.setSystemAdEnabled(systemOnId, true);
+          refresh();
+          return;
+        }
+        var systemOffId = target.getAttribute("data-ad-system-off");
+        if (systemOffId) {
+          var offSpec = MarketingAdsStore.getSystemAdSpec(systemOffId);
+          var offName = offSpec ? offSpec.name : "该广告";
+          if (!window.confirm("关闭后，「" + offName + "」将不再生效。确定关闭？")) return;
+          MarketingAdsStore.setSystemAdEnabled(systemOffId, false);
+          refresh();
+          return;
+        }
+        var removeId = target.getAttribute("data-ad-remove");
+        if (removeId) {
+          var item = readAds().filter(function (ad) { return ad.id === removeId; })[0];
+          if (item && isSystemDefaultAd(item)) {
+            window.alert("系统默认广告不可删除");
+            return;
+          }
+          if (!window.confirm("确定删除该广告？")) return;
+          writeAds(readAds().filter(function (ad) { return ad.id !== removeId; }));
+          refresh();
+          return;
+        }
+        var editId = target.getAttribute("data-ad-edit");
+        if (editId) {
+          var editItem = readAds().filter(function (ad) { return ad.id === editId; })[0];
+          if (!editItem) return;
+          if (isSystemDefaultAd(editItem)) {
+            var url = "marketing-ads-edit.html?id=" + encodeURIComponent(editId);
+            var embedded = new URLSearchParams(window.location.search).get("embedded");
+            if (embedded === "1" || embedded === "true") url += "&embedded=1";
+            window.location.href = url;
+            return;
+          }
+          openModal("edit", editItem);
+        }
+      });
+
+      refresh();
+    })();
+  </script>
+</body>
+</html>

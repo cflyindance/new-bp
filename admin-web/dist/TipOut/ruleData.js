@@ -235,12 +235,20 @@
     return false;
   }
 
+  function getRulePoolKindLabel(rule) {
+    return rule && rule.poolKind === 'surcharge' ? '加收服务费池' : '小费池';
+  }
+
+  function getRulePoolKindTagClass(rule) {
+    return rule && rule.poolKind === 'surcharge' ? 'tag-orange' : 'tag-blue';
+  }
+
   function buildRuleDescription(rule) {
     var parts = [];
     if (rule.allocationMode === 'order_tip_then_residual') {
       if (rule.poolRules && rule.poolRules.length > 0) {
         var poolStrOt = rule.poolRules.map(function(p) {
-          var name = poolTypeNames[p.type] || p.type;
+          var name = p.name || poolTypeNames[p.type] || p.type;
           if (p.type === 'custom') return name + ' $' + (p.amount != null ? p.amount : 0) + ' × ' + (p.pct != null ? p.pct : 100) + '%';
           return p.pct != null ? name + ' × ' + p.pct + '%' : name;
         }).join(' + ');
@@ -264,7 +272,7 @@
     }
     if (rule.poolRules && rule.poolRules.length > 0) {
       var poolStr = rule.poolRules.map(function(p) {
-        var name = poolTypeNames[p.type] || p.type;
+        var name = p.name || poolTypeNames[p.type] || p.type;
         if (p.type === 'custom') return name + ' $' + (p.amount != null ? p.amount : 0) + ' × ' + (p.pct != null ? p.pct : 100) + '%';
         return p.pct != null ? name + ' × ' + p.pct + '%' : name;
       }).join(' + ');
@@ -318,6 +326,8 @@
     buildDeductorContextForStore: buildDeductorContextForStore,
     isEmployeeInDeductorContext: isEmployeeInDeductorContext,
     buildRuleDescription: buildRuleDescription,
+    getRulePoolKindLabel: getRulePoolKindLabel,
+    getRulePoolKindTagClass: getRulePoolKindTagClass,
     poolTypeNames: poolTypeNames,
     distNames: distNames
   };

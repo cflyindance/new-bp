@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>薪酬报税 - BPlant</title>
+  <link rel="stylesheet" href="common.css">
+  <link rel="stylesheet" href="payroll.css">
+</head>
+<body>
+  <div class="layout payroll-page">
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <div class="logo-icon">M</div>
+        <span class="logo-text">MenuSifu</span>
+      </div>
+      <nav class="sidebar-menu">
+        <div class="sidebar-submenu-title open" onclick="this.classList.toggle('open');this.nextElementSibling.style.maxHeight=this.classList.contains('open')?'200px':'0'">
+          <span>Tip Out</span>
+          <svg class="arrow" width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M6 8.825a.5.5 0 0 1-.354-.146l-4-4a.5.5 0 0 1 .708-.708L6 7.617l3.646-3.646a.5.5 0 0 1 .708.708l-4 4A.5.5 0 0 1 6 8.825z"/></svg>
+        </div>
+        <div class="sidebar-submenu-items" style="max-height:200px">
+          <a href="index.html" class="sidebar-menu-item">小费分配</a>
+        </div>
+        <div class="sidebar-submenu-title open" onclick="this.classList.toggle('open');this.nextElementSibling.style.maxHeight=this.classList.contains('open')?'200px':'0'">
+          <span>员工管理</span>
+          <svg class="arrow" width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M6 8.825a.5.5 0 0 1-.354-.146l-4-4a.5.5 0 0 1 .708-.708L6 7.617l3.646-3.646a.5.5 0 0 1 .708.708l-4 4A.5.5 0 0 1 6 8.825z"/></svg>
+        </div>
+        <div class="sidebar-submenu-items" style="max-height:200px">
+          <a href="employees.html" class="sidebar-menu-item">员工列表</a>
+        </div>
+        <div class="sidebar-submenu-title open" onclick="this.classList.toggle('open');this.nextElementSibling.style.maxHeight=this.classList.contains('open')?'200px':'0'">
+          <span>Payroll</span>
+          <svg class="arrow" width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M6 8.825a.5.5 0 0 1-.354-.146l-4-4a.5.5 0 0 1 .708-.708L6 7.617l3.646-3.646a.5.5 0 0 1 .708.708l-4 4A.5.5 0 0 1 6 8.825z"/></svg>
+        </div>
+        <div class="sidebar-submenu-items" style="max-height:200px">
+          <a href="payroll.html" class="sidebar-menu-item active">报税报表</a>
+        </div>
+      </nav>
+    </aside>
+
+    <div class="mobile-overlay" onclick="closeSidebar()"></div>
+
+    <div class="main-content">
+      <header class="header">
+        <div class="header-left">
+          <button type="button" class="mobile-menu-btn" onclick="toggleSidebar()">☰</button>
+        </div>
+        <div class="header-right">
+          <div class="header-user">
+            <div class="avatar">R</div>
+            <span>Robert_W</span>
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M6 8.825a.5.5 0 0 1-.354-.146l-4-4a.5.5 0 0 1 .708-.708L6 7.617l3.646-3.646a.5.5 0 0 1 .708.708l-4 4A.5.5 0 0 1 6 8.825z"/></svg>
+          </div>
+        </div>
+      </header>
+
+      <div class="content-area">
+        <div id="payroll-mode-banner" class="payroll-mode-banner no-print" role="status">
+          <div class="payroll-mode-banner-text">
+            <strong>薪酬报税</strong>
+            <span class="payroll-mode-banner-sub">仅计算 Gross · 不发薪、不代报税 · 导出供 ADP/会计师使用</span>
+          </div>
+          <div class="payroll-mode-banner-actions">
+            <button type="button" class="btn btn-sm" id="btn-show-audit-log" data-action="show-audit-log">操作记录</button>
+          </div>
+        </div>
+        <div class="payroll-heading-row">
+          <div id="payroll-heading-back" class="payroll-heading-back no-print" hidden>
+            <button type="button" class="btn btn-sm" data-action="back-periods" id="btn-back-periods" hidden>← 返回期列表</button>
+          </div>
+          <div class="payroll-heading-center">
+            <h1 id="payroll-main-title" class="payroll-main-title">Payroll 期</h1>
+          </div>
+        </div>
+
+        <!-- View: Period list -->
+        <section id="view-periods" aria-labelledby="payroll-main-title">
+          <div class="filter-bar filter-bar--page payroll-period-filter-bar no-print">
+            <div class="filter-field">
+              <label class="filter-field-label" for="period-year-filter">年度</label>
+              <select id="period-year-filter" class="form-control form-control-lg">
+              </select>
+            </div>
+            <div class="filter-field">
+              <label class="filter-field-label" for="period-number-filter">期数</label>
+              <select id="period-number-filter" class="form-control form-control-lg">
+                <option value="">全部期数</option>
+              </select>
+            </div>
+            <div class="filter-field">
+              <label class="filter-field-label" for="period-status-filter">状态</label>
+              <select id="period-status-filter" class="form-control form-control-lg">
+                <option value="">全部状态</option>
+                <option value="draft">未确认</option>
+                <option value="partial">部分未确认</option>
+                <option value="confirmed">已确认</option>
+              </select>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-body" style="padding:0">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>期数</th>
+                    <th>薪资区间</th>
+                    <th>Paycheck</th>
+                    <th>状态</th>
+                    <th style="text-align:right">操作</th>
+                  </tr>
+                </thead>
+                <tbody id="period-rows"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- View: Employees -->
+        <section id="view-employees" hidden aria-labelledby="payroll-main-title">
+          <p id="employee-period-title" class="payroll-period-context"></p>
+          <div class="filter-bar filter-bar--page payroll-employee-filter-bar no-print">
+            <div class="filter-field">
+              <label class="filter-field-label" for="employee-store-filter">门店</label>
+              <select id="employee-store-filter" class="form-control form-control-lg">
+                <option value="">全部门店</option>
+              </select>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-body" style="padding:0">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>姓名</th>
+                    <th>门店</th>
+                    <th>部门</th>
+                    <th>ADP File#</th>
+                    <th>总工时</th>
+                    <th>确认</th>
+                    <th style="text-align:right">操作</th>
+                  </tr>
+                </thead>
+                <tbody id="employee-rows"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- View: Workspace -->
+        <section id="view-workspace" hidden aria-labelledby="ws-employee-switch">
+          <div class="payroll-workspace-layout">
+            <aside class="payroll-workspace-period-nav no-print" aria-label="期数">
+              <p id="manage-period-nav-year" class="payroll-workspace-period-nav-year">2026</p>
+              <p class="payroll-workspace-period-nav-title" id="manage-period-nav-title">期数</p>
+              <div id="manage-period-nav-grid" class="payroll-workspace-period-grid"></div>
+            </aside>
+            <div class="payroll-workspace-main">
+          <div class="payroll-workspace-identity no-print">
+            <div class="payroll-workspace-identity-main">
+              <select id="ws-employee-switch" class="payroll-workspace-employee-select" aria-label="切换本期员工"></select>
+              <p id="ws-breadcrumb-period" class="payroll-period-context"></p>
+            </div>
+            <div class="payroll-workspace-identity-fields">
+              <div class="payroll-workspace-identity-field">
+                <label class="payroll-workspace-adp-label payroll-label-with-help" for="field-adp-file">
+                  <span>ADP File#</span>
+                  <button type="button" class="payroll-field-help" data-field-help="adp-file" aria-label="ADP File# 字段说明">?</button>
+                </label>
+                <input id="field-adp-file" type="text" class="payroll-workspace-adp-input" autocomplete="off" placeholder="—" />
+              </div>
+              <div class="payroll-workspace-identity-field">
+                <label class="payroll-workspace-adp-label payroll-label-with-help" for="field-hire-date">
+                  <span>Hire Date</span>
+                  <button type="button" class="payroll-field-help" data-field-help="hire-date" aria-label="Hire Date 字段说明">?</button>
+                </label>
+                <input id="field-hire-date" type="date" class="payroll-workspace-date-input" />
+              </div>
+            </div>
+          </div>
+          <div id="tab-panel-manage" class="payroll-workspace-manage-panel">
+            <section class="payroll-manage-section payroll-attendance-section" aria-label="考勤明细">
+              <h3 class="payroll-manage-section-title" id="manage-timecard-title">考勤明细</h3>
+              <div class="card payroll-attendance-card">
+                <div class="payroll-seg-wrap" id="manage-segments-wrap"></div>
+              </div>
+            </section>
+
+            <section class="payroll-manage-section payroll-period-summary" aria-label="Pay Period 汇总">
+              <h3 class="payroll-manage-section-title" id="manage-pay-period-title">Pay Period 汇总</h3>
+              <div class="payroll-sum-cards">
+                <div class="card payroll-sum-card payroll-sum-card--hours">
+                  <div class="card-header payroll-sum-card-header">
+                    <div class="payroll-sum-card-heading">
+                      <span class="payroll-sum-card-badge payroll-sum-card-badge--hours" aria-hidden="true">H</span>
+                      <span class="payroll-sum-card-title">工时</span>
+                    </div>
+                    <span class="payroll-sum-card-meta">小时</span>
+                  </div>
+                  <div class="card-body payroll-sum-card-body">
+                    <dl class="payroll-sum-dl">
+                      <div class="payroll-sum-row"><dt>Regular</dt><dd id="sum-reg-h">0</dd></div>
+                      <div class="payroll-sum-row"><dt>OT</dt><dd id="sum-ot-h">0</dd></div>
+                      <div class="payroll-sum-row"><dt>OT2</dt><dd id="sum-ot2-h">0</dd></div>
+                      <div class="payroll-sum-row payroll-sum-total"><dt>合计</dt><dd id="sum-total-h">0</dd></div>
+                    </dl>
+                  </div>
+                </div>
+                <div class="card payroll-sum-card payroll-sum-card--amount">
+                  <div class="card-header payroll-sum-card-header">
+                    <div class="payroll-sum-card-heading">
+                      <span class="payroll-sum-card-badge payroll-sum-card-badge--amount" aria-hidden="true">$</span>
+                      <span class="payroll-sum-card-title">金额</span>
+                    </div>
+                    <span class="payroll-sum-card-meta">× 时薪</span>
+                  </div>
+                  <div class="card-body payroll-sum-card-body">
+                    <dl class="payroll-sum-dl">
+                      <div class="payroll-sum-row"><dt>Regular</dt><dd id="sum-reg-amt">0</dd></div>
+                      <div class="payroll-sum-row"><dt>OT</dt><dd id="sum-ot-amt">0</dd></div>
+                      <div class="payroll-sum-row"><dt>OT2</dt><dd id="sum-ot2-amt">0</dd></div>
+                      <div class="payroll-sum-row payroll-sum-total"><dt>合计</dt><dd id="sum-total-amt">0</dd></div>
+                    </dl>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="payroll-manage-section payroll-ot-rates-section" aria-label="加班时薪">
+              <h3 class="payroll-manage-section-title" id="manage-ot-rates-title">加班时薪</h3>
+              <div class="card payroll-ot-rates-card">
+                <div class="card-body">
+                  <div class="payroll-ot-rates-row">
+                    <div class="form-group payroll-ot-rates-field">
+                      <label class="form-label payroll-label-with-help" for="field-ot-rate">
+                        <span>加班时薪 OT</span>
+                        <button type="button" class="payroll-field-help" data-field-help="ot-rate" aria-label="加班时薪 OT 字段说明">?</button>
+                      </label>
+                      <input id="field-ot-rate" type="number" step="0.01" class="form-control payroll-field-readonly" readonly tabindex="-1" aria-readonly="true" />
+                    </div>
+                    <div class="form-group payroll-ot-rates-field">
+                      <label class="form-label payroll-label-with-help" for="field-ot2-rate">
+                        <span>加班时薪 OT2</span>
+                        <button type="button" class="payroll-field-help" data-field-help="ot2-rate" aria-label="加班时薪 OT2 字段说明">?</button>
+                      </label>
+                      <input id="field-ot2-rate" type="number" step="0.01" class="form-control payroll-field-readonly" readonly tabindex="-1" aria-readonly="true" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="payroll-manage-section payroll-wide-table-section" aria-label="Manage payroll 宽表">
+              <h3 class="payroll-manage-section-title" id="manage-wide-table-title">Manage payroll 宽表</h3>
+              <p class="payroll-manage-section-hint" id="manage-wide-table-hint">与 Manage Payroll 模板一致的 12 列；均可手工修改</p>
+              <div class="card payroll-wide-table-card">
+                <div class="payroll-wide-table-wrap">
+                <table class="payroll-wide-table">
+                  <thead>
+                    <tr>
+                      <th><span class="payroll-th-label">Exempt<button type="button" class="payroll-field-help" data-field-help="exempt" aria-label="Exempt 字段说明">?</button></span></th>
+                      <th><span class="payroll-th-label">Incentive<button type="button" class="payroll-field-help" data-field-help="incentive" aria-label="Incentive 字段说明">?</button></span></th>
+                      <th><span class="payroll-th-label">Breakfast<button type="button" class="payroll-field-help" data-field-help="breakfast" aria-label="Breakfast 字段说明">?</button></span></th>
+                      <th><span class="payroll-th-label">Lunch<button type="button" class="payroll-field-help" data-field-help="lunch" aria-label="Lunch 字段说明">?</button></span></th>
+                      <th><span class="payroll-th-label">Dinner<button type="button" class="payroll-field-help" data-field-help="dinner" aria-label="Dinner 字段说明">?</button></span></th>
+                      <th><span class="payroll-th-label">Sick Hours<button type="button" class="payroll-field-help" data-field-help="sick-hours" aria-label="Sick Hours 字段说明">?</button></span></th>
+                      <th><span class="payroll-th-label">SVCW<button type="button" class="payroll-field-help" data-field-help="svcw" aria-label="SVCW 字段说明">?</button></span></th>
+                      <th><span class="payroll-th-label">Tips<button type="button" class="payroll-field-help" data-field-help="tips" aria-label="Tips 字段说明">?</button></span></th>
+                      <th><span class="payroll-th-label">Child sup<button type="button" class="payroll-field-help" data-field-help="child-sup" aria-label="Child sup 字段说明">?</button></span></th>
+                      <th><span class="payroll-th-label">Med Ded<button type="button" class="payroll-field-help" data-field-help="med-ded" aria-label="Med Ded 字段说明">?</button></span></th>
+                      <th><span class="payroll-th-label">Eee 40%<button type="button" class="payroll-field-help" data-field-help="eee40" aria-label="Eee 40% 字段说明">?</button></span></th>
+                      <th><span class="payroll-th-label">Eer 60%<button type="button" class="payroll-field-help" data-field-help="eer60" aria-label="Eer 60% 字段说明">?</button></span></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><input id="adj-exempt" type="text" class="field-adj" placeholder="—" /></td>
+                      <td><input id="adj-incentive" type="number" step="0.01" class="field-adj" /></td>
+                      <td><input id="adj-breakfast" type="number" step="1" min="0" class="field-adj" /></td>
+                      <td><input id="adj-lunch" type="number" step="1" min="0" class="field-adj" /></td>
+                      <td><input id="adj-dinner" type="number" step="1" min="0" class="field-adj" /></td>
+                      <td><input id="adj-sick" type="number" step="0.01" class="field-adj" /></td>
+                      <td><input id="adj-svcw" type="number" step="0.01" class="field-adj" /></td>
+                      <td><input id="adj-tips" type="number" step="0.01" class="field-adj" /></td>
+                      <td><input id="adj-child-sup" type="number" step="0.01" class="field-adj" /></td>
+                      <td><input id="adj-med-ded" type="number" step="0.01" class="field-adj" /></td>
+                      <td><input id="adj-eee40" type="number" step="0.01" class="field-adj" /></td>
+                      <td><input id="adj-eer60" type="number" step="0.01" class="field-adj" /></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            </section>
+
+            <div class="payroll-confirm-fixed no-print">
+              <button type="button" class="btn" data-action="preview-adp-report">ADP Report</button>
+              <button type="button" class="btn" data-action="preview-employees-detail">Employees Detail</button>
+              <button type="button" class="btn" id="btn-export-batch-adp" data-action="export-batch-adp" disabled>批量导出 ADP</button>
+              <button type="button" class="btn btn-primary" data-action="confirm-employee">确定并保存</button>
+            </div>
+          </div>
+
+          <div id="tab-panel-detail" role="tabpanel" hidden class="print-area payroll-detail-source-panel" aria-hidden="true">
+            <article class="payroll-detail-print">
+              <header class="payroll-detail-print-header">
+                <div class="payroll-detail-print-title-row">
+                  <h3 class="payroll-detail-print-title">Employees Payroll Detail</h3>
+                  <span id="detail-draft-badge" class="tag tag-orange no-print">未确认预览 · 非最终</span>
+                </div>
+                <dl class="payroll-detail-meta" id="detail-meta-grid">
+                  <div class="payroll-detail-meta-item">
+                    <dt id="detail-meta-label-role">Roles :</dt>
+                    <dd id="detail-meta-role">—</dd>
+                  </div>
+                  <div class="payroll-detail-meta-item">
+                    <dt id="detail-meta-label-hire-date">Hire Date :</dt>
+                    <dd id="detail-meta-hire-date">—</dd>
+                  </div>
+                  <div class="payroll-detail-meta-item">
+                    <dt id="detail-meta-label-employee">员工</dt>
+                    <dd id="detail-meta-employee">—</dd>
+                  </div>
+                  <div class="payroll-detail-meta-item">
+                    <dt id="detail-meta-label-pay-date">Pay Date</dt>
+                    <dd id="detail-meta-pay-date">—</dd>
+                  </div>
+                  <div class="payroll-detail-meta-item">
+                    <dt id="detail-meta-label-pay-period">Pay Period</dt>
+                    <dd id="detail-meta-pay-period">—</dd>
+                  </div>
+                  <div class="payroll-detail-meta-item payroll-detail-meta-item--full">
+                    <dt id="detail-meta-label-period-report">期数：</dt>
+                    <dd id="detail-meta-period-report">—</dd>
+                  </div>
+                </dl>
+              </header>
+              <div id="detail-hours-grid"></div>
+              <div style="margin-top:24px;padding:16px;border:1px dashed var(--border-color);border-radius:var(--radius-md);background:rgba(0,0,0,0.02);font-size:13px;line-height:1.6">
+                <p style="font-weight:600;margin:0 0 4px">声明 <span id="detail-declaration-version" class="payroll-decl-version"></span></p>
+                <p id="detail-declaration-body" style="margin:0;color:var(--text-secondary)"></p>
+              </div>
+              <p class="payroll-print-disclaimer print-only">薪酬报税 — 本页非法定 Pay Stub。实际发薪与报税以 ADP/会计师为准。</p>
+              <footer class="payroll-detail-sign-footer" style="margin-top:48px;border-top:1px solid var(--border-light);padding-top:24px">
+                <div class="payroll-detail-sign-row">
+                  <div class="payroll-detail-sign-col">
+                    <p id="detail-emp-sign-label" class="payroll-detail-sign-label">员工签字</p>
+                    <div class="payroll-detail-sign-line"></div>
+                  </div>
+                  <div class="payroll-detail-sign-col">
+                    <p id="detail-date-line-label" class="payroll-detail-sign-label">日期</p>
+                    <div class="payroll-detail-sign-line"></div>
+                  </div>
+                </div>
+                <p id="detail-store-name" class="payroll-detail-store-name">—</p>
+                <p id="detail-store-address" class="payroll-detail-store-address">—</p>
+              </footer>
+            </article>
+            <div class="payroll-detail-export-fixed no-print">
+              <div class="payroll-detail-export-actions">
+                <div class="payroll-detail-export-dropdown export-dropdown">
+                  <button type="button" class="btn btn-primary btn-lg" onclick="togglePayrollDetailExportMenu()">
+                    导出结果
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" style="margin-left:6px"><path d="M6 8.825a.5.5 0 0 1-.354-.146l-4-4a.5.5 0 0 1 .708-.708L6 7.617l3.646-3.646a.5.5 0 0 1 .708.708l-4 4A.5.5 0 0 1 6 8.825z"/></svg>
+                  </button>
+                  <div class="export-menu" id="payrollDetailExportMenu">
+                    <div class="export-menu-item" onclick="exportPayrollDetailAs('pdf')">
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="flex-shrink:0"><rect x="2" y="1" width="12" height="14" rx="2" stroke="#ff4d4f" stroke-width="1.2"/><text x="8" y="10.5" text-anchor="middle" fill="#ff4d4f" font-size="5" font-weight="600">PDF</text></svg>
+                      导出为 PDF
+                    </div>
+                    <div class="export-menu-item" onclick="exportPayrollDetailAs('csv')">
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="flex-shrink:0"><rect x="2" y="1" width="12" height="14" rx="2" stroke="#52c41a" stroke-width="1.2"/><text x="8" y="10.5" text-anchor="middle" fill="#52c41a" font-size="5" font-weight="600">CSV</text></svg>
+                      导出为 CSV
+                    </div>
+                    <div class="export-menu-item" onclick="openPayrollDetailEmailModal()">
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="flex-shrink:0"><rect x="1.5" y="3" width="13" height="10" rx="2" stroke="#1677ff" stroke-width="1.2"/><path d="M2 4l6 4 6-4" stroke="#1677ff" stroke-width="1.2" stroke-linecap="round"/></svg>
+                      发送到邮箱
+                    </div>
+                  </div>
+                </div>
+                <button type="button" id="btn-print-detail" class="btn btn-lg">打印 / PDF</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="tab-panel-adp" hidden class="payroll-adp-source-panel" aria-hidden="true">
+            <div class="payroll-adp-preview-source">
+            <div class="card">
+              <div class="card-body" style="padding:0;overflow-x:auto">
+                <table class="data-table payroll-adp-preview-table" style="min-width:900px">
+                  <thead>
+                    <tr>
+                      <th>CO CODE</th>
+                      <th>BATCH ID</th>
+                      <th>FILE #</th>
+                      <th>Name</th>
+                      <th style="text-align:right">Rate</th>
+                      <th style="text-align:right">Reg Hrs</th>
+                      <th>H3 code</th>
+                      <th style="text-align:right">H3 amt</th>
+                      <th>E3 code</th>
+                      <th style="text-align:right">E3 amt</th>
+                      <th>E3 code</th>
+                      <th style="text-align:right">E3 amt</th>
+                    </tr>
+                  </thead>
+                  <tbody id="adp-preview-row"></tbody>
+                </table>
+              </div>
+            </div>
+            <p id="adp-preview-hint" class="payroll-adp-preview-hint no-print">若未填写 ADP File#，导出按钮将禁用（模拟校验）。</p>
+            </div>
+          </div>
+            </div>
+          </div>
+        </section>
+
+        <footer class="payroll-footer-note no-print">
+          <span id="payroll-footer-note-prefix">P0 演示 · localStorage · 配置：</span><code>payroll-adp-mapping.js</code>
+        </footer>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="fieldHelpModal">
+    <div class="modal" style="width:min(520px,92vw)">
+      <div class="modal-header">
+        <h3 id="field-help-title">字段说明</h3>
+        <button type="button" class="modal-close" id="btn-field-help-close" aria-label="关闭">×</button>
+      </div>
+      <div class="modal-body" id="field-help-body" style="font-size:14px;line-height:1.65;color:var(--text-secondary)"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" id="btn-field-help-ok">知道了</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="payrollDisclaimerModal">
+    <div class="modal" style="width:min(520px,92vw)">
+      <div class="modal-header">
+        <h3>薪酬报税</h3>
+      </div>
+      <div class="modal-body" style="font-size:14px;line-height:1.65;color:var(--text-secondary)">
+        <p id="payroll-disclaimer-modal-body" style="margin:0 0 12px"></p>
+        <p style="margin:0;font-size:12px;color:var(--text-tertiary)" id="payroll-disclaimer-modal-body-en"></p>
+      </div>
+      <div class="modal-footer" style="flex-direction:column;align-items:stretch;gap:12px">
+        <label style="display:flex;gap:8px;align-items:flex-start;font-size:13px;cursor:pointer">
+          <input type="checkbox" id="payroll-disclaimer-agree" style="margin-top:3px" />
+          <span>本人已阅读并理解：本功能仅用于薪酬计算与报税数据准备，不构成税务或法律意见。</span>
+        </label>
+        <button type="button" class="btn btn-primary" id="btn-payroll-disclaimer-accept" disabled>同意并继续</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="payrollAuditLogModal">
+    <div class="modal" style="width:min(640px,94vw)">
+      <div class="modal-header">
+        <h3>操作记录（审计）</h3>
+        <button type="button" class="modal-close" id="btn-audit-log-close" aria-label="关闭">×</button>
+      </div>
+      <div class="modal-body" style="padding:0;max-height:min(60vh,480px);overflow:auto">
+        <table class="data-table payroll-audit-table">
+          <thead>
+            <tr>
+              <th>时间</th>
+              <th>操作</th>
+              <th>期 / 员工</th>
+              <th>备注</th>
+            </tr>
+          </thead>
+          <tbody id="payroll-audit-rows"></tbody>
+        </table>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" id="btn-audit-log-ok">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="payrollDetailEmailModal">
+    <div class="modal" style="width:480px">
+      <div class="modal-header">
+        <h3>发送到邮箱</h3>
+        <button type="button" class="modal-close" onclick="closeModal('payrollDetailEmailModal')" aria-label="关闭">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">收件邮箱</label>
+          <input type="email" id="payrollDetailExportEmail" class="form-control" placeholder="请输入邮箱地址，多个邮箱用逗号分隔" style="width:100%">
+        </div>
+        <div class="form-group">
+          <label class="form-label">导出格式</label>
+          <div style="display:flex;gap:16px">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:14px">
+              <input type="radio" name="payrollDetailEmailFormat" value="pdf" checked style="accent-color:var(--primary)"> PDF
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:14px">
+              <input type="radio" name="payrollDetailEmailFormat" value="csv" style="accent-color:var(--primary)"> CSV
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" onclick="closeModal('payrollDetailEmailModal')">取消</button>
+        <button type="button" class="btn btn-primary" onclick="sendPayrollDetailEmail()">发送</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="payrollExportConfirmModal">
+    <div class="modal" style="width:min(480px,92vw)">
+      <div class="modal-header">
+        <h3>确认导出 ADP CSV</h3>
+        <button type="button" class="modal-close" id="btn-export-confirm-close" aria-label="关闭">×</button>
+      </div>
+      <div class="modal-body" style="font-size:14px;line-height:1.6;color:var(--text-secondary)">
+        <p style="margin:0 0 8px">导出前请确认：</p>
+        <ul style="margin:0;padding-left:1.2em">
+          <li>金额已与 Manage Payroll 核对</li>
+          <li>ADP File# 与 ADP 主档一致</li>
+          <li>实际报税与发薪将在 ADP/会计师侧完成</li>
+        </ul>
+        <p id="payroll-export-confirm-hint" style="margin:12px 0 0;font-size:12px;color:var(--text-tertiary)"></p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" id="btn-export-confirm-cancel">取消</button>
+        <button type="button" class="btn btn-primary" id="btn-export-confirm-ok">确认导出</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="adpReportPreviewModal">
+    <div class="modal adp-report-preview-modal">
+      <div class="modal-header">
+        <h3 id="adp-report-modal-title">ADP Report</h3>
+        <button type="button" class="modal-close" id="btn-adp-report-modal-close" aria-label="关闭">×</button>
+      </div>
+      <div class="modal-body adp-report-preview-body">
+        <div id="adpReportModalBody" class="payroll-page payroll-entered"></div>
+        <p id="adp-report-modal-hint" class="payroll-adp-preview-hint">若未填写 ADP File#，导出按钮将禁用（模拟校验）。</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" id="btn-adp-report-modal-export" data-action="export-csv">导出 CSV</button>
+        <button type="button" class="btn btn-primary" id="btn-adp-report-modal-ok">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="employeesDetailPreviewModal">
+    <div class="modal employees-detail-preview-modal">
+      <div class="modal-header">
+        <h3 id="employees-detail-modal-title">Employees Payroll Detail</h3>
+        <button type="button" class="modal-close" id="btn-employees-detail-modal-close" aria-label="关闭">×</button>
+      </div>
+      <div class="modal-body employees-detail-preview-body">
+        <div id="employeesDetailModalBody" class="payroll-page payroll-entered"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" id="btn-employees-detail-modal-ok">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="workspaceUnsavedConfirmModal">
+    <div class="modal" style="width:min(460px,92vw)">
+      <div class="modal-header">
+        <h3>确认返回</h3>
+        <button type="button" class="modal-close" id="btn-unsaved-close">×</button>
+      </div>
+      <div class="modal-body" style="font-size:14px;color:var(--text-secondary);line-height:1.6">
+        检测到该员工数据已修改，但尚未点击“确定并保存”。是否仍返回员工列表？
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" id="btn-unsaved-leave">确认返回</button>
+        <button type="button" class="btn btn-primary" id="btn-unsaved-stay">继续编辑</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="common.js"></script>
+  <script src="ruleData.js"></script>
+  <script src="payroll-adp-mapping.js"></script>
+  <script src="payroll-i18n.js"></script>
+  <script src="payroll-detail-export.js"></script>
+  <script src="payroll-api-client.js"></script>
+  <script src="payroll.js"></script>
+</body>
+</html>
