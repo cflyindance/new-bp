@@ -1959,6 +1959,30 @@
     return state.view === "workspace" && hasUnconfirmedWorkspaceChanges();
   }
 
+  /** 放弃当前工作区草稿并恢复为已保存数据 */
+  function discardUnsavedWorkspaceDraft() {
+    initWorkspaceDraft();
+    renderManageForm();
+    syncWorkspaceDirtyBaseline();
+  }
+
+  /** 有未保存修改时弹出提示；确认离开后执行 actionFn，取消时执行 onCancel */
+  function runAfterUnsavedWorkspaceConfirm(actionFn, onCancel) {
+    readFormIntoDraft();
+    if (!shouldWarnBeforeLeavingManage()) {
+      actionFn();
+      return;
+    }
+    showUnsavedConfirmDialog().then((ok) => {
+      if (!ok) {
+        if (typeof onCancel === "function") onCancel();
+        return;
+      }
+      discardUnsavedWorkspaceDraft();
+      actionFn();
+    });
+  }
+
   function showUnsavedConfirmDialog() {
     const modalId = "workspaceUnsavedConfirmModal";
     const modal = $("#" + modalId);
@@ -3170,24 +3194,20 @@ body{margin:0;padding:24px;background:#fff;}
   }
 
   function exportAdpCsv() {
-    if (hasUnconfirmedWorkspaceChanges()) {
-      if (typeof showNotification === "function") {
-        showNotification(T("save.unsavedExportBlocked"), "warning");
-      }
-      return;
-    }
-    const emp = getEmployee(state.periodId, state.employeeId);
-    const period = getPeriod(state.periodId);
-    if (!emp || !period || !emp.adpFile) return;
+    runAfterUnsavedWorkspaceConfirm(() => {
+      const emp = getEmployee(state.periodId, state.employeeId);
+      const period = getPeriod(state.periodId);
+      if (!emp || !period || !emp.adpFile) return;
 
-    showExportConfirmDialog(T("exportConfirm.hintSingle", { name: emp.name })).then((ok) => {
-      if (!ok) return;
-      const header = getAdpCsvHeader();
-      const row = buildAdpRow(period, emp);
-      const csv = buildAdpCsvContent([row], header);
-      downloadCsvFile(`ADP_PAYROLL_${period.paycheckDate}_${emp.adpFile}.csv`, csv);
-      appendAudit("export_csv", { employeeName: emp.name, batch: false });
-      saveState();
+      showExportConfirmDialog(T("exportConfirm.hintSingle", { name: emp.name })).then((ok) => {
+        if (!ok) return;
+        const header = getAdpCsvHeader();
+        const row = buildAdpRow(period, emp);
+        const csv = buildAdpCsvContent([row], header);
+        downloadCsvFile(`ADP_PAYROLL_${period.paycheckDate}_${emp.adpFile}.csv`, csv);
+        appendAudit("export_csv", { employeeName: emp.name, batch: false });
+        saveState();
+      });
     });
   }
 
@@ -3217,10 +3237,10 @@ body{margin:0;padding:24px;background:#fff;}
         confirmEmployee();
       }
       if (act === "preview-employees-detail") {
-        showEmployeesDetailModal();
+        runAfterUnsavedWorkspaceConfirm(() => showEmployeesDetailModal());
       }
       if (act === "preview-adp-report") {
-        showAdpReportModal();
+        runAfterUnsavedWorkspaceConfirm(() => showAdpReportModal());
       }
       if (act === "switch-workspace-period") {
         navigateWorkspacePeriod(btn.getAttribute("data-period-id"));
@@ -3229,7 +3249,7 @@ body{margin:0;padding:24px;background:#fff;}
         exportAdpCsv();
       }
       if (act === "export-batch-adp") {
-        exportBatchAdpCsv();
+        runAfterUnsavedWorkspaceConfirm(() => exportBatchAdpCsv());
       }
       if (act === "show-audit-log") {
         showAuditLogModal();
@@ -3323,10 +3343,21 @@ body{margin:0;padding:24px;background:#fff;}
     });
 
     $("#payroll-store-filter")?.addEventListener("change", (e) => {
+      const select = e.target;
       const list = state.data.employees[state.periodId] || [];
       const stores = getPayrollStoreOptions(list);
-      state.employeeStoreFilter = e.target.value || stores[0] || "";
-      handleEmployeeStoreFilterChange();
+      const newValue = select.value || stores[0] || "";
+      const prevValue = state.employeeStoreFilter;
+
+      runAfterUnsavedWorkspaceConfirm(
+        () => {
+          state.employeeStoreFilter = newValue;
+          handleEmployeeStoreFilterChange();
+        },
+        () => {
+          select.value = prevValue || stores[0] || "";
+        }
+      );
     });
 
     $("#period-year-filter")?.addEventListener("change", (e) => {
