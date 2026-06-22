@@ -124,11 +124,13 @@ function exportPayrollDetailCSV(data) {
 
   lines.push(`"${csvCell(T("detail.meta.employee"))}","${csvCell(data.employeeDisplay || data.employeeName)}"`);
 
+  lines.push(`"${csvCell(T("detail.meta.ssn"))}","${csvCell(data.ssn || "")}"`);
+
   lines.push(`"${csvCell(T("detail.meta.payDate"))}","${csvCell(data.payDate || data.paycheckDate)}"`);
 
-  lines.push(`"${csvCell(T("detail.meta.payPeriod"))}","${csvCell(data.payPeriod || data.periodRange)}"`);
-
   lines.push(`"${csvCell(T("detail.meta.periodNo"))}","${csvCell(data.periodReportTitle || "")}"`);
+
+  lines.push(`"${csvCell(T("detail.meta.payPeriod"))}","${csvCell(data.payPeriod || data.periodRange)}"`);
 
   lines.push(`"Department","${csvCell(data.department)}"`);
 

@@ -74,6 +74,15 @@
           </div>
         </div>
 
+        <div id="payroll-store-bar" class="payroll-store-bar no-print">
+          <div class="payroll-store-bar-inner">
+            <div class="filter-field payroll-store-bar-field">
+              <label class="filter-field-label" for="payroll-store-filter">薪资门店</label>
+              <select id="payroll-store-filter" class="form-control form-control-lg payroll-store-filter-select" aria-label="薪资门店"></select>
+            </div>
+          </div>
+        </div>
+
         <!-- View: Period list -->
         <section id="view-periods" aria-labelledby="payroll-main-title">
           <div class="filter-bar filter-bar--page payroll-period-filter-bar no-print">
@@ -119,13 +128,6 @@
         <!-- View: Employees -->
         <section id="view-employees" hidden aria-labelledby="payroll-main-title">
           <p id="employee-period-title" class="payroll-period-context"></p>
-          <div class="filter-bar filter-bar--page payroll-employee-filter-bar no-print">
-            <div class="filter-field">
-              <label class="filter-field-label" for="employee-store-filter">薪资门店</label>
-              <select id="employee-store-filter" class="form-control form-control-lg">
-              </select>
-            </div>
-          </div>
           <div class="card">
             <div class="card-body" style="padding:0">
               <table class="data-table">
@@ -156,11 +158,6 @@
             </aside>
             <div class="payroll-workspace-main">
           <div class="payroll-workspace-identity no-print">
-            <div class="payroll-workspace-identity-store">
-              <label class="payroll-workspace-store-label" for="ws-store-filter">薪资门店</label>
-              <select id="ws-store-filter" class="payroll-workspace-store-select" aria-label="薪资门店筛选">
-              </select>
-            </div>
             <div class="payroll-workspace-identity-main">
               <div class="payroll-workspace-identity-name-row">
                 <select id="ws-employee-switch" class="payroll-workspace-employee-select" aria-label="切换本期员工"></select>
@@ -267,7 +264,6 @@
 
             <section class="payroll-manage-section payroll-wide-table-section" aria-label="Manage payroll 宽表">
               <h3 class="payroll-manage-section-title" id="manage-wide-table-title">Manage payroll 宽表</h3>
-              <p class="payroll-manage-section-hint" id="manage-wide-table-hint">与 Manage Payroll 模板一致的 12 列；均可手工修改</p>
               <div class="card payroll-wide-table-card">
                 <div class="payroll-wide-table-wrap">
                 <table class="payroll-wide-table">
@@ -341,12 +337,16 @@
                     <dd id="detail-meta-pay-date">—</dd>
                   </div>
                   <div class="payroll-detail-meta-item">
-                    <dt id="detail-meta-label-pay-period">Pay Period</dt>
-                    <dd id="detail-meta-pay-period">—</dd>
+                    <dt id="detail-meta-label-ssn">SSN</dt>
+                    <dd id="detail-meta-ssn">—</dd>
                   </div>
-                  <div class="payroll-detail-meta-item payroll-detail-meta-item--full">
+                  <div class="payroll-detail-meta-item">
                     <dt id="detail-meta-label-period-report">期数：</dt>
                     <dd id="detail-meta-period-report">—</dd>
+                  </div>
+                  <div class="payroll-detail-meta-item">
+                    <dt id="detail-meta-label-pay-period">Pay Period</dt>
+                    <dd id="detail-meta-pay-period">—</dd>
                   </div>
                 </dl>
               </header>

@@ -857,12 +857,14 @@
     const roleEl = $("#detail-meta-role");
     const hireEl = $("#detail-meta-hire-date");
     const employeeEl = $("#detail-meta-employee");
+    const ssnEl = $("#detail-meta-ssn");
     const payDateEl = $("#detail-meta-pay-date");
     const payPeriodEl = $("#detail-meta-pay-period");
     const periodReportEl = $("#detail-meta-period-report");
     if (roleEl) roleEl.textContent = resolveEmployeeRole(emp);
     if (hireEl) hireEl.textContent = resolveEmployeeHireDate(emp) || "—";
     if (employeeEl) employeeEl.textContent = formatDetailEmployeeDisplay(emp);
+    if (ssnEl) ssnEl.textContent = String((emp && emp.ssn) || "").trim() || "—";
     if (payDateEl) payDateEl.textContent = (period && period.paycheckDate) || "—";
     if (payPeriodEl) payPeriodEl.textContent = (period && period.rangeLabel) || "—";
     if (periodReportEl) periodReportEl.textContent = formatPayrollPeriodReportTitle(period);
@@ -1607,6 +1609,7 @@
       state.employeeId = empId;
       markWorkspaceEntrySnapshot();
       renderManageForm();
+      syncWorkspaceDirtyBaseline();
     };
     readFormIntoDraft();
     if (hasUnconfirmedWorkspaceChanges()) {
@@ -1945,6 +1948,19 @@
     return changed && !state.workspaceConfirmedInSession;
   }
 
+  /** 将当前表单/草稿设为「无未保存变更」基线（放弃修改或导航完成后调用） */
+  function syncWorkspaceDirtyBaseline() {
+    readFormIntoDraft();
+    const draftEmp = getDraftAsEmployeeShape();
+    if (!draftEmp) {
+      state.workspaceEntrySnapshot = "";
+      state.workspaceConfirmedInSession = false;
+      return;
+    }
+    state.workspaceEntrySnapshot = buildEmployeeSnapshot(draftEmp);
+    state.workspaceConfirmedInSession = false;
+  }
+
   /** 离开工作区前拦截未保存修改 */
   function shouldWarnBeforeLeavingManage() {
     return state.view === "workspace" && hasUnconfirmedWorkspaceChanges();
@@ -2040,6 +2056,12 @@
     return list.filter((e) => String((e && e.store) || "").trim() === active);
   }
 
+  function getEmployeesForActiveStore(periodId) {
+    const pid = periodId != null ? periodId : state.periodId;
+    const list = (state.data && state.data.employees && state.data.employees[pid]) || [];
+    return filterEmployeesByStore(list, state.employeeStoreFilter);
+  }
+
   function renderEmployeeStoreFilterSelect(selectEl, employeeList) {
     if (!selectEl) return;
     const stores = getPayrollStoreOptions(employeeList);
@@ -2055,8 +2077,7 @@
   }
 
   function syncEmployeeStoreFilterControls(employeeList) {
-    renderEmployeeStoreFilterSelect($("#employee-store-filter"), employeeList);
-    renderEmployeeStoreFilterSelect($("#ws-store-filter"), employeeList);
+    renderEmployeeStoreFilterSelect($("#payroll-store-filter"), employeeList);
   }
 
   function handleEmployeeStoreFilterChange() {
@@ -2065,9 +2086,13 @@
     syncEmployeeStoreFilterControls(list);
     if (state.view === "employees") {
       renderEmployees();
+      saveState();
       return;
     }
-    if (state.view !== "workspace") return;
+    if (state.view !== "workspace") {
+      saveState();
+      return;
+    }
     if (filtered.length === 0) {
       renderWorkspaceEmployeeSwitch(state.employeeId);
       saveState();
@@ -2150,7 +2175,7 @@
   }
 
   function resolveEmployeeIdForPeriod(targetPeriodId, currentEmp) {
-    const list = state.data.employees[targetPeriodId] || [];
+    const list = getEmployeesForActiveStore(targetPeriodId);
     if (!Array.isArray(list) || list.length === 0) return null;
     if (!currentEmp) return list[0].id;
     const adp = String(currentEmp.adpFile || "").trim();
@@ -2175,6 +2200,7 @@
       renderManagePeriodNav();
       markWorkspaceEntrySnapshot();
       renderManageForm();
+      syncWorkspaceDirtyBaseline();
     };
     readFormIntoDraft();
     if (hasUnconfirmedWorkspaceChanges()) {
@@ -2217,7 +2243,7 @@
   }
 
   function resolveDefaultEmployeeId(periodId) {
-    const list = state.data.employees[periodId] || [];
+    const list = getEmployeesForActiveStore(periodId);
     if (!Array.isArray(list) || list.length === 0) return null;
     return list[0].id;
   }
@@ -2242,6 +2268,7 @@
     renderManagePeriodNav();
     markWorkspaceEntrySnapshot();
     renderManageForm();
+    syncWorkspaceDirtyBaseline();
     showView("workspace");
     return true;
   }
@@ -2254,6 +2281,7 @@
     if (!tbody) return;
     if (!state.data || typeof state.data !== "object") state.data = cloneData(DEFAULT_DATA);
     if (!state.data.employees || typeof state.data.employees !== "object") state.data.employees = {};
+    syncEmployeeStoreFilterControls(state.periodId ? state.data.employees[state.periodId] || [] : []);
     let periods = Array.isArray(state.data.periods) ? state.data.periods : [];
     if (periods.length === 0) {
       state.data.periods = buildPresetPeriods();
@@ -2692,6 +2720,7 @@
     return {
       employeeName: emp.name,
       employeeDisplay: formatDetailEmployeeDisplay(emp),
+      ssn: String(emp.ssn || "").trim(),
       role: resolveEmployeeRole(emp),
       hireDate: resolveEmployeeHireDate(emp),
       department: emp.department || "",
@@ -3188,6 +3217,8 @@ body{margin:0;padding:24px;background:#fff;}
       const act = btn.getAttribute("data-action");
       if (act === "open-period") {
         state.periodId = btn.getAttribute("data-period-id");
+        const filtered = getEmployeesForActiveStore(state.periodId);
+        if (filtered.length > 0) state.employeeId = filtered[0].id;
         renderEmployees();
         showView("employees");
       }
@@ -3198,6 +3229,7 @@ body{margin:0;padding:24px;background:#fff;}
         state.employeeId = btn.getAttribute("data-employee-id");
         markWorkspaceEntrySnapshot();
         renderManageForm();
+        syncWorkspaceDirtyBaseline();
         showView("workspace");
       }
       if (act === "confirm-employee") {
@@ -3309,14 +3341,7 @@ body{margin:0;padding:24px;background:#fff;}
       });
     });
 
-    $("#employee-store-filter")?.addEventListener("change", (e) => {
-      const list = state.data.employees[state.periodId] || [];
-      const stores = getPayrollStoreOptions(list);
-      state.employeeStoreFilter = e.target.value || stores[0] || "";
-      handleEmployeeStoreFilterChange();
-    });
-
-    $("#ws-store-filter")?.addEventListener("change", (e) => {
+    $("#payroll-store-filter")?.addEventListener("change", (e) => {
       const list = state.data.employees[state.periodId] || [];
       const stores = getPayrollStoreOptions(list);
       state.employeeStoreFilter = e.target.value || stores[0] || "";

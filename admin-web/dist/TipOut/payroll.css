@@ -392,6 +392,31 @@
   margin-bottom: 12px;
 }
 
+.payroll-page .payroll-store-bar {
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  background: var(--bg-secondary, #fafafa);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+}
+
+.payroll-page .payroll-store-bar-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px 20px;
+}
+
+.payroll-page .payroll-store-bar-field {
+  min-width: min(100%, 280px);
+  max-width: 360px;
+  margin: 0;
+}
+
+.payroll-page .payroll-store-filter-select {
+  min-width: 240px;
+}
+
 .payroll-page .payroll-employee-filter-bar {
   margin-bottom: 12px;
 }
@@ -679,14 +704,6 @@
 
 .payroll-page .payroll-attendance-card .payroll-seg-wrap {
   padding: 12px 16px 16px;
-}
-
-.payroll-page .payroll-manage-section-hint {
-  margin: -6px 0 12px;
-  font-size: 12px;
-  font-weight: 400;
-  color: var(--text-tertiary);
-  line-height: 1.5;
 }
 
 .payroll-page .payroll-wide-table-card {
@@ -1367,6 +1384,11 @@ body.tipout-embedded .payroll-page .payroll-detail-export-fixed {
 
 .payroll-page.payroll-workspace-active .payroll-heading-row {
   display: none !important;
+}
+
+.payroll-page.payroll-workspace-active #payroll-store-bar {
+  flex-shrink: 0;
+  margin-bottom: 12px;
 }
 
 .payroll-page.payroll-workspace-active .payroll-footer-note {
