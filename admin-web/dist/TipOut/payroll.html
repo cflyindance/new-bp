@@ -121,9 +121,8 @@
           <p id="employee-period-title" class="payroll-period-context"></p>
           <div class="filter-bar filter-bar--page payroll-employee-filter-bar no-print">
             <div class="filter-field">
-              <label class="filter-field-label" for="employee-store-filter">门店</label>
+              <label class="filter-field-label" for="employee-store-filter">薪资门店</label>
               <select id="employee-store-filter" class="form-control form-control-lg">
-                <option value="">全部门店</option>
               </select>
             </div>
           </div>
@@ -157,6 +156,11 @@
             </aside>
             <div class="payroll-workspace-main">
           <div class="payroll-workspace-identity no-print">
+            <div class="payroll-workspace-identity-store">
+              <label class="payroll-workspace-store-label" for="ws-store-filter">薪资门店</label>
+              <select id="ws-store-filter" class="payroll-workspace-store-select" aria-label="薪资门店筛选">
+              </select>
+            </div>
             <div class="payroll-workspace-identity-main">
               <div class="payroll-workspace-identity-name-row">
                 <select id="ws-employee-switch" class="payroll-workspace-employee-select" aria-label="切换本期员工"></select>
@@ -165,12 +169,20 @@
               <p id="ws-breadcrumb-period" class="payroll-period-context"></p>
             </div>
             <div class="payroll-workspace-identity-fields">
-              <div class="payroll-workspace-identity-field">
-                <label class="payroll-workspace-adp-label payroll-label-with-help" for="field-adp-file">
-                  <span>ADP File#</span>
-                  <button type="button" class="payroll-field-help" data-field-help="adp-file" aria-label="ADP File# 字段说明">?</button>
-                </label>
-                <input id="field-adp-file" type="text" class="payroll-workspace-adp-input" autocomplete="off" placeholder="—" />
+              <div class="payroll-workspace-identity-field payroll-workspace-identity-field--stack">
+                <div class="payroll-workspace-identity-input-row">
+                  <label class="payroll-workspace-adp-label payroll-label-with-help" for="field-adp-file">
+                    <span>ADP File#</span>
+                    <button type="button" class="payroll-field-help" data-field-help="adp-file" aria-label="ADP File# 字段说明">?</button>
+                  </label>
+                  <input id="field-adp-file" type="text" class="payroll-workspace-adp-input" autocomplete="off" placeholder="—" />
+                </div>
+                <div class="payroll-workspace-identity-input-row">
+                  <label class="payroll-workspace-adp-label" for="field-ssn">
+                    <span>员工 SSN</span>
+                  </label>
+                  <input id="field-ssn" type="text" class="payroll-workspace-adp-input payroll-workspace-ssn-input" autocomplete="off" inputmode="numeric" placeholder="XXX-XX-XXXX" maxlength="11" />
+                </div>
               </div>
               <div class="payroll-workspace-identity-field">
                 <label class="payroll-workspace-adp-label payroll-label-with-help" for="field-hire-date">
@@ -566,17 +578,34 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="workspaceSaveConfirmModal">
+    <div class="modal" style="width:min(680px,94vw)">
+      <div class="modal-header">
+        <h3 id="workspace-save-confirm-title">确认保存变更</h3>
+        <button type="button" class="modal-close" id="btn-save-confirm-close" aria-label="关闭">×</button>
+      </div>
+      <div class="modal-body" style="font-size:14px;line-height:1.6;color:var(--text-secondary)">
+        <p id="workspace-save-confirm-intro" style="margin:0 0 12px">以下变更将在保存后生效。</p>
+        <div id="workspace-save-confirm-body"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" id="btn-save-confirm-cancel">取消</button>
+        <button type="button" class="btn btn-primary" id="btn-save-confirm-ok">确认保存</button>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-overlay" id="workspaceUnsavedConfirmModal">
     <div class="modal" style="width:min(460px,92vw)">
       <div class="modal-header">
-        <h3>确认返回</h3>
+        <h3 id="workspace-unsaved-title">提示</h3>
         <button type="button" class="modal-close" id="btn-unsaved-close">×</button>
       </div>
       <div class="modal-body" style="font-size:14px;color:var(--text-secondary);line-height:1.6">
-        检测到该员工数据已修改，但尚未点击“确定并保存”。是否仍返回员工列表？
+        <p id="workspace-unsaved-body" style="margin:0">未保存的更改将丢失，确定要离开吗？</p>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn" id="btn-unsaved-leave">确认返回</button>
+        <button type="button" class="btn" id="btn-unsaved-leave">确定离开</button>
         <button type="button" class="btn btn-primary" id="btn-unsaved-stay">继续编辑</button>
       </div>
     </div>
@@ -584,6 +613,7 @@
 
   <script src="common.js"></script>
   <script src="ruleData.js"></script>
+  <script src="tipout-payroll-bridge.js"></script>
   <script src="payroll-adp-mapping.js"></script>
   <script src="payroll-i18n.js"></script>
   <script src="payroll-detail-export.js"></script>

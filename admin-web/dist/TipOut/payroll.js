@@ -663,6 +663,7 @@
       name: r.name,
       store: r.store || DEFAULT_STORE_NAME,
       adpFile: r.adpFile || "",
+      ssn: "",
       department: r.department || r.role || "Floor",
       role: r.role || r.department || "Floor",
       hireDate: r.hireDate || demoHireDateForSeedIndex(idx),
@@ -893,6 +894,7 @@
           name: rosterName || ((existing && existing.name) || `员工${idx + 1}`),
           store: String((r.store || (existing && existing.store) || DEFAULT_STORE_NAME)).trim() || DEFAULT_STORE_NAME,
           adpFile: rosterAdp || String((existing && existing.adpFile) || "").trim(),
+          ssn: String((existing && existing.ssn) || "").trim(),
           department: String((r.department || r.role || (existing && existing.department) || "")).trim(),
           role: String((r.role || (existing && existing.role) || r.department || "")).trim(),
           hireDate: String(
@@ -964,6 +966,7 @@
     employeeStoreFilter: "",
     workspaceEntrySnapshot: "",
     workspaceConfirmedInSession: false,
+    workspaceDraft: null,
     activeTab: "manage",
   };
 
@@ -1583,7 +1586,7 @@
   function renderWorkspaceEmployeeSwitch(selectedId) {
     const sel = $("#ws-employee-switch");
     if (!sel) return;
-    const list = state.data.employees[state.periodId] || [];
+    const list = filterEmployeesByStore(state.data.employees[state.periodId] || [], state.employeeStoreFilter);
     const currentId = selectedId || state.employeeId;
     sel.innerHTML = list
       .map((e) => {
@@ -1602,11 +1605,10 @@
     if (!empId || empId === state.employeeId) return;
     const apply = () => {
       state.employeeId = empId;
-      renderManageForm();
       markWorkspaceEntrySnapshot();
-      syncDerived();
+      renderManageForm();
     };
-    readFormIntoState();
+    readFormIntoDraft();
     if (hasUnconfirmedWorkspaceChanges()) {
       showUnsavedConfirmDialog().then((ok) => {
         if (!ok) {
@@ -1625,6 +1627,7 @@
     if (!emp) return "";
     const safe = {
       adpFile: emp.adpFile || "",
+      ssn: emp.ssn || "",
       hireDate: emp.hireDate || "",
       confirmed: !!emp.confirmed,
       rate: Number(emp.rate) || 0,
@@ -1653,18 +1656,292 @@
     const emp = getEmployee(state.periodId, state.employeeId);
     if (!emp) {
       state.workspaceEntrySnapshot = "";
+      state.workspaceDraft = null;
       state.workspaceConfirmedInSession = false;
       return;
     }
     state.workspaceEntrySnapshot = buildEmployeeSnapshot(emp);
+    initWorkspaceDraft();
     state.workspaceConfirmedInSession = false;
+  }
+
+  function initWorkspaceDraft() {
+    const emp = getEmployee(state.periodId, state.employeeId);
+    if (!emp) {
+      state.workspaceDraft = null;
+      return;
+    }
+    const segments = (Array.isArray(emp.segments) ? emp.segments : []).map((seg) => {
+      const day = migrateLegacySegmentToDay(seg);
+      if (day.rate == null) day.rate = Number(emp.rate) || 0;
+      return normalizeDay(day);
+    });
+    state.workspaceDraft = {
+      adpFile: emp.adpFile || "",
+      ssn: emp.ssn || "",
+      hireDate: emp.hireDate || "",
+      segments: cloneData(segments),
+      adjustments: mergeAdjustments(emp.adjustments),
+    };
+  }
+
+  function ensureWorkspaceDraft() {
+    if (!state.workspaceDraft) initWorkspaceDraft();
+    return state.workspaceDraft;
+  }
+
+  function getDraftAsEmployeeShape() {
+    const emp = getEmployee(state.periodId, state.employeeId);
+    if (!emp) return null;
+    const draft = state.workspaceDraft;
+    if (!draft) return emp;
+    return {
+      ...emp,
+      adpFile: draft.adpFile,
+      ssn: draft.ssn,
+      hireDate: draft.hireDate,
+      segments: draft.segments,
+      adjustments: draft.adjustments,
+    };
+  }
+
+  function formatChangeValue(value) {
+    if (value == null || value === "") return "—";
+    if (typeof value === "number") return fmtMoney(value);
+    return String(value);
+  }
+
+  function pushWorkspaceChangeItem(items, time, type, beforeVal, afterVal) {
+    const before = formatChangeValue(beforeVal);
+    const after = formatChangeValue(afterVal);
+    if (before === after) return;
+    items.push({
+      time: String(time || "").trim() || "—",
+      type: String(type || "").trim() || "—",
+      before,
+      after,
+    });
+  }
+
+  function getSaveConfirmPeriodScope() {
+    return T("saveConfirm.periodScope");
+  }
+
+  function getSaveConfirmChangeTypes() {
+    return {
+      adpFile: T("saveConfirm.typeAdpFile"),
+      ssn: T("saveConfirm.typeSsn"),
+      hireDate: T("saveConfirm.typeHireDate"),
+      date: "Date",
+      meal: "Meal",
+      rate: "Rate",
+      reg: "Regular",
+      ot: "OT",
+      ot2: "OT2",
+      in: "In",
+      out: "Out",
+      exempt: "Exempt",
+      incentive: "Incentive",
+      svcw: "SVCW",
+      tips: "Tips",
+      breakfast: "Breakfast",
+      lunch: "Lunch",
+      dinner: "Dinner",
+      sickHours: "Sick",
+      childSup: "Child sup",
+      medDed: "Med Ded",
+      eee40: "Eee 40",
+      eer60: "Eer 60",
+    };
+  }
+
+  function getSaveConfirmTypeTagClass(type) {
+    const t = String(type || "").toLowerCase();
+    if (t === "in" || t === "out" || t.startsWith("in ") || t.startsWith("out ")) return "payroll-save-change-type--clock";
+    if (t === "meal") return "payroll-save-change-type--meal";
+    if (t === "regular" || t === "ot" || t === "ot2") return "payroll-save-change-type--hours";
+    if (t === "rate" || t === "date") return "payroll-save-change-type--meta";
+    if (t === "tips" || t === "svcw") return "payroll-save-change-type--tip";
+    return "payroll-save-change-type--adj";
+  }
+
+  function formatSaveConfirmSlotType(baseType, slotIndex, totalSlots) {
+    if (totalSlots <= 1) return baseType;
+    return `${baseType} ${slotIndex + 1}`;
+  }
+
+  function buildWorkspaceChangeSummary() {
+    readFormIntoDraft();
+    let before;
+    try {
+      before = state.workspaceEntrySnapshot ? JSON.parse(state.workspaceEntrySnapshot) : null;
+    } catch (_) {
+      before = null;
+    }
+    const after = JSON.parse(buildEmployeeSnapshot(getDraftAsEmployeeShape()));
+    const items = [];
+    if (!before) return items;
+
+    const types = getSaveConfirmChangeTypes();
+    const periodScope = getSaveConfirmPeriodScope();
+
+    pushWorkspaceChangeItem(items, periodScope, types.adpFile, before.adpFile, after.adpFile);
+    pushWorkspaceChangeItem(items, periodScope, types.ssn, before.ssn, after.ssn);
+    pushWorkspaceChangeItem(items, periodScope, types.hireDate, before.hireDate, after.hireDate);
+
+    const adjKeys = [
+      "exempt",
+      "incentive",
+      "svcw",
+      "tips",
+      "breakfast",
+      "lunch",
+      "dinner",
+      "sickHours",
+      "childSup",
+      "medDed",
+      "eee40",
+      "eer60",
+    ];
+    adjKeys.forEach((key) => {
+      const bAdj = before.adjustments || {};
+      const aAdj = after.adjustments || {};
+      pushWorkspaceChangeItem(items, periodScope, types[key], bAdj[key], aAdj[key]);
+    });
+
+    const segKeys = ["date", "meal", "rate", "reg", "ot", "ot2"];
+    const maxDays = Math.max((before.segments || []).length, (after.segments || []).length);
+    for (let i = 0; i < maxDays; i++) {
+      const bDay = (before.segments || [])[i] || {};
+      const aDay = (after.segments || [])[i] || {};
+      const dayTime = aDay.date || bDay.date || "—";
+      segKeys.forEach((field) => {
+        pushWorkspaceChangeItem(items, dayTime, types[field], bDay[field], aDay[field]);
+      });
+      const maxSlots = Math.max((bDay.slots || []).length, (aDay.slots || []).length);
+      for (let s = 0; s < maxSlots; s++) {
+        const bSlot = (bDay.slots || [])[s] || {};
+        const aSlot = (aDay.slots || [])[s] || {};
+        pushWorkspaceChangeItem(
+          items,
+          dayTime,
+          formatSaveConfirmSlotType(types.in, s, maxSlots),
+          bSlot.in,
+          aSlot.in
+        );
+        pushWorkspaceChangeItem(
+          items,
+          dayTime,
+          formatSaveConfirmSlotType(types.out, s, maxSlots),
+          bSlot.out,
+          aSlot.out
+        );
+      }
+    }
+    return items;
+  }
+
+  function renderWorkspaceSaveConfirmBody(items) {
+    const bodyEl = $("#workspace-save-confirm-body");
+    if (!bodyEl) return;
+    if (!items || items.length === 0) {
+      bodyEl.innerHTML = `<p class="payroll-save-change-empty">${escapeHtml(T("saveConfirm.noChanges"))}</p>`;
+      return;
+    }
+    bodyEl.innerHTML = `
+      <div class="payroll-save-change-wrap">
+        <table class="payroll-save-change-table">
+          <thead>
+            <tr>
+              <th>${escapeHtml(T("saveConfirm.time"))}</th>
+              <th>${escapeHtml(T("saveConfirm.type"))}</th>
+              <th>${escapeHtml(T("saveConfirm.before"))}</th>
+              <th class="payroll-save-change-arrow-col" aria-hidden="true"></th>
+              <th>${escapeHtml(T("saveConfirm.after"))}</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${items
+              .map((item) => {
+                const tagClass = getSaveConfirmTypeTagClass(item.type);
+                return `<tr>
+                  <td class="payroll-save-change-time">${escapeHtml(item.time)}</td>
+                  <td><span class="payroll-save-change-type ${tagClass}">${escapeHtml(item.type)}</span></td>
+                  <td class="payroll-save-change-val payroll-save-change-val--before">${escapeHtml(item.before)}</td>
+                  <td class="payroll-save-change-arrow-col" aria-hidden="true">→</td>
+                  <td class="payroll-save-change-val payroll-save-change-val--after">${escapeHtml(item.after)}</td>
+                </tr>`;
+              })
+              .join("")}
+          </tbody>
+        </table>
+      </div>
+      <p class="payroll-save-change-footnote">${escapeHtml(T("saveConfirm.changeCount", { n: items.length }))}</p>`;
+  }
+
+  function showWorkspaceSaveConfirmDialog(items) {
+    const modalId = "workspaceSaveConfirmModal";
+    const modal = $("#" + modalId);
+    const btnOk = $("#btn-save-confirm-ok");
+    const btnCancel = $("#btn-save-confirm-cancel");
+    const btnClose = $("#btn-save-confirm-close");
+    if (!modal || !btnOk || !btnCancel || !btnClose) return Promise.resolve(false);
+    renderWorkspaceSaveConfirmBody(items);
+    return new Promise((resolve) => {
+      let settled = false;
+      const finish = (ok) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        if (typeof closeModal === "function") closeModal(modalId);
+        else modal.classList.remove("show");
+        resolve(ok);
+      };
+      const onOk = () => finish(true);
+      const onCancel = () => finish(false);
+      const onOverlay = (e) => {
+        if (e.target === modal) finish(false);
+      };
+      const cleanup = () => {
+        btnOk.removeEventListener("click", onOk);
+        btnCancel.removeEventListener("click", onCancel);
+        btnClose.removeEventListener("click", onCancel);
+        modal.removeEventListener("click", onOverlay);
+      };
+      btnOk.addEventListener("click", onOk);
+      btnCancel.addEventListener("click", onCancel);
+      btnClose.addEventListener("click", onCancel);
+      modal.addEventListener("click", onOverlay);
+      if (typeof openModal === "function") openModal(modalId);
+      else modal.classList.add("show");
+    });
+  }
+
+  function simulatePayrollBackendCalculation(emp) {
+    if (!emp) return;
+    applyAutoRegularHours(emp);
+  }
+
+  function commitDraftToEmployee() {
+    const emp = getEmployee(state.periodId, state.employeeId);
+    const draft = state.workspaceDraft;
+    if (!emp || !draft) return;
+    emp.adpFile = draft.adpFile;
+    emp.ssn = draft.ssn;
+    emp.hireDate = draft.hireDate;
+    emp.segments = cloneData(draft.segments);
+    emp.adjustments = mergeAdjustments(draft.adjustments);
+    simulatePayrollBackendCalculation(emp);
+    initWorkspaceDraft();
   }
 
   function hasUnconfirmedWorkspaceChanges() {
     const emp = getEmployee(state.periodId, state.employeeId);
-    if (!emp) return false;
-    readFormIntoState();
-    const changed = buildEmployeeSnapshot(emp) !== state.workspaceEntrySnapshot;
+    if (!emp || !state.workspaceEntrySnapshot) return false;
+    readFormIntoDraft();
+    const draftEmp = getDraftAsEmployeeShape();
+    if (!draftEmp) return false;
+    const changed = buildEmployeeSnapshot(draftEmp) !== state.workspaceEntrySnapshot;
     return changed && !state.workspaceConfirmedInSession;
   }
 
@@ -1730,6 +2007,79 @@
     });
     if (!seen[DEFAULT_STORE_NAME]) stores.unshift(DEFAULT_STORE_NAME);
     return stores;
+  }
+
+  /** 薪资门店筛选项：小费规则门店 + 员工主档/本期员工门店（去重） */
+  function getPayrollStoreOptions(employeeList) {
+    const seen = {};
+    const stores = [];
+    const push = (s) => {
+      const v = String(s || "").trim();
+      if (!v || seen[v]) return;
+      seen[v] = 1;
+      stores.push(v);
+    };
+    getTipOutStores().forEach(push);
+    UNIFIED_ROSTER_SEED.forEach((r) => push(r.store));
+    (Array.isArray(employeeList) ? employeeList : []).forEach((e) => push(e && e.store));
+    return stores;
+  }
+
+  function resolveEmployeeStoreFilter(employeeList) {
+    const stores = getPayrollStoreOptions(employeeList);
+    const current = String(state.employeeStoreFilter || "").trim();
+    if (current && stores.includes(current)) return current;
+    const next = stores[0] || "";
+    state.employeeStoreFilter = next;
+    return next;
+  }
+
+  function filterEmployeesByStore(list, storeFilter) {
+    const active = String(storeFilter || "").trim();
+    if (!active || !Array.isArray(list)) return list || [];
+    return list.filter((e) => String((e && e.store) || "").trim() === active);
+  }
+
+  function renderEmployeeStoreFilterSelect(selectEl, employeeList) {
+    if (!selectEl) return;
+    const stores = getPayrollStoreOptions(employeeList);
+    const active = resolveEmployeeStoreFilter(employeeList);
+    if (stores.length === 0) {
+      selectEl.innerHTML = "";
+      return;
+    }
+    selectEl.innerHTML = stores
+      .map((s) => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`)
+      .join("");
+    selectEl.value = active;
+  }
+
+  function syncEmployeeStoreFilterControls(employeeList) {
+    renderEmployeeStoreFilterSelect($("#employee-store-filter"), employeeList);
+    renderEmployeeStoreFilterSelect($("#ws-store-filter"), employeeList);
+  }
+
+  function handleEmployeeStoreFilterChange() {
+    const list = state.data.employees[state.periodId] || [];
+    const filtered = filterEmployeesByStore(list, state.employeeStoreFilter);
+    syncEmployeeStoreFilterControls(list);
+    if (state.view === "employees") {
+      renderEmployees();
+      return;
+    }
+    if (state.view !== "workspace") return;
+    if (filtered.length === 0) {
+      renderWorkspaceEmployeeSwitch(state.employeeId);
+      saveState();
+      return;
+    }
+    if (!filtered.some((e) => e.id === state.employeeId)) {
+      state.employeeId = filtered[0].id;
+      renderManageForm();
+    } else {
+      renderWorkspaceEmployeeSwitch(state.employeeId);
+    }
+    saveState();
   }
 
   function sumSegments(emp) {
@@ -1823,11 +2173,10 @@
       state.periodId = periodId;
       state.employeeId = resolveEmployeeIdForPeriod(periodId, currentEmp);
       renderManagePeriodNav();
-      renderManageForm();
       markWorkspaceEntrySnapshot();
-      syncDerived();
+      renderManageForm();
     };
-    readFormIntoState();
+    readFormIntoDraft();
     if (hasUnconfirmedWorkspaceChanges()) {
       showUnsavedConfirmDialog().then((ok) => {
         if (!ok) {
@@ -1890,11 +2239,9 @@
     state.periodId = periodId;
     state.employeeId = employeeId;
     state.view = "workspace";
-    state.employeeStoreFilter = "";
     renderManagePeriodNav();
-    renderManageForm();
     markWorkspaceEntrySnapshot();
-    syncDerived();
+    renderManageForm();
     showView("workspace");
     return true;
   }
@@ -1998,7 +2345,7 @@
   function getEmployeesForListExport() {
     const period = getPeriod(state.periodId);
     if (!period) return { period: null, filtered: [], exportable: [], skipped: [] };
-    const list = state.data.employees[state.periodId] || [];
+    const list = filterEmployeesByStore(state.data.employees[state.periodId] || [], state.employeeStoreFilter);
     const exportable = list.filter((e) => e && String(e.adpFile || "").trim());
     const skipped = list.filter((e) => e && !String(e.adpFile || "").trim());
     return { period, filtered: list, exportable, skipped };
@@ -2015,7 +2362,6 @@
     const period = getPeriod(state.periodId);
     const tbody = $("#employee-rows");
     const title = $("#employee-period-title");
-    const storeSelect = $("#employee-store-filter");
     if (!period || !tbody) return;
     if (title)
       title.textContent = T("employee.periodTitle", { range: period.rangeLabel, date: period.paycheckDate });
@@ -2025,24 +2371,8 @@
       updateEmployeeBatchExportButton();
       return;
     }
-    const storesFromTipOut = getTipOutStores();
-    const stores = storesFromTipOut.length
-      ? storesFromTipOut
-      : [...new Set(list.map((e) => (e && e.store ? String(e.store).trim() : "")).filter(Boolean))];
-    if (storeSelect) {
-      const opts = [`<option value="">${escapeHtml(T("filter.allStores"))}</option>`]
-        .concat(stores.map((s) => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`))
-        .join("");
-      storeSelect.innerHTML = opts;
-      if (stores.includes(state.employeeStoreFilter)) {
-        storeSelect.value = state.employeeStoreFilter;
-      } else {
-        state.employeeStoreFilter = "";
-        storeSelect.value = "";
-      }
-    }
-    const activeStore = state.employeeStoreFilter;
-    const filtered = activeStore ? list.filter((e) => String(e.store || "").trim() === activeStore) : list;
+    syncEmployeeStoreFilterControls(list);
+    const filtered = filterEmployeesByStore(list, state.employeeStoreFilter);
     if (filtered.length === 0) {
       tbody.innerHTML = `<tr><td colspan="7" style="padding:48px;text-align:center;color:var(--text-tertiary)">${escapeHtml(T("empty.storeEmployees"))}</td></tr>`;
       updateEmployeeBatchExportButton();
@@ -2398,7 +2728,6 @@
 
   /** 与「打印 / PDF」相同：克隆 Employees Detail 打印模板 HTML */
   function buildPayrollDetailPrintDocumentHtml() {
-    readFormIntoState();
     syncDerived();
     const article = document.querySelector(".payroll-detail-print");
     if (!article) return null;
@@ -2423,48 +2752,67 @@ body{margin:0;padding:24px;background:#fff;}
 </style></head><body class="payroll-page payroll-entered payroll-detail-export-doc">${clone.outerHTML}</body></html>`;
   }
 
+  function applyTipOutBridgeForCurrentPeriod() {
+    if (typeof TipOutPayrollBridge === "undefined" || !state.data || !state.periodId) return;
+    if (TipOutPayrollBridge.applyBridgeToPeriod(state.data, state.periodId)) {
+      saveState();
+      const emp = getEmployee(state.periodId, state.employeeId);
+      if (emp && state.workspaceDraft) {
+        state.workspaceDraft.adjustments = mergeAdjustments({
+          ...state.workspaceDraft.adjustments,
+          tips: emp.adjustments.tips,
+          svcw: emp.adjustments.svcw,
+        });
+      }
+    }
+  }
+
   function renderManageForm() {
+    applyTipOutBridgeForCurrentPeriod();
     const emp = getEmployee(state.periodId, state.employeeId);
     const period = getPeriod(state.periodId);
     if (!emp || !period) return;
+    ensureWorkspaceDraft();
+    const editEmp = getDraftAsEmployeeShape();
 
     $("#ws-breadcrumb-period").textContent = T("employee.periodTitle", {
       range: period.rangeLabel,
       date: period.paycheckDate,
     });
+    syncEmployeeStoreFilterControls(state.data.employees[state.periodId] || []);
     renderWorkspaceEmployeeSwitch(emp.id);
     renderManagePeriodNav();
-    $("#field-adp-file").value = emp.adpFile;
+    $("#field-adp-file").value = editEmp.adpFile;
+    const ssnInput = $("#field-ssn");
+    if (ssnInput) ssnInput.value = editEmp.ssn || "";
     const hireInput = $("#field-hire-date");
-    if (hireInput) hireInput.value = mdyToIsoDateInput(resolveEmployeeHireDate(emp));
+    if (hireInput) hireInput.value = mdyToIsoDateInput(resolveEmployeeHireDate(editEmp));
     $("#field-ot-rate").value = emp.otRate;
     $("#field-ot2-rate").value = emp.ot2Rate;
 
-    emp.segments = emp.segments.map((seg) => {
+    editEmp.segments = editEmp.segments.map((seg) => {
       const day = migrateLegacySegmentToDay(seg);
-      if (day.rate == null) day.rate = Number(emp.rate) || 0;
+      if (day.rate == null) day.rate = Number(editEmp.rate) || 0;
       return day;
     });
-    ensureManageBiweeklySegments(emp, period);
+    ensureManageBiweeklySegments(editEmp, period);
+    state.workspaceDraft.segments = editEmp.segments.map((d) => normalizeDay(d));
 
     const segWrap = $("#manage-segments-wrap");
     const rowHtml = [];
+    const segments = state.workspaceDraft.segments;
     if (shouldGroupManageSegmentsByWeek(period)) {
-      const weekGroups = buildManageSegmentWeekGroups(emp.segments, period);
-      if (segWrap) segWrap.innerHTML = renderManageBiweeklySegmentsHtml(period, weekGroups, emp);
+      const weekGroups = buildManageSegmentWeekGroups(segments, period);
+      if (segWrap) segWrap.innerHTML = renderManageBiweeklySegmentsHtml(period, weekGroups, editEmp);
     } else {
-      emp.segments.forEach((rawDay, dayIdx) => {
-        appendManageSegmentDayRows(rowHtml, normalizeDay(rawDay), dayIdx, emp);
+      segments.forEach((rawDay, dayIdx) => {
+        appendManageSegmentDayRows(rowHtml, normalizeDay(rawDay), dayIdx, editEmp);
       });
       if (segWrap) segWrap.innerHTML = renderManageSingleSegmentTableHtml(rowHtml);
     }
 
-    emp.segments = emp.segments.map((d) => normalizeDay(d));
-    applyAutoRegularHours(emp);
-    writeSegmentRegInputs(emp);
-
-    const adj = mergeAdjustments(emp.adjustments);
-    emp.adjustments = adj;
+    const adj = mergeAdjustments(state.workspaceDraft.adjustments);
+    state.workspaceDraft.adjustments = adj;
     const ex = $("#adj-exempt");
     if (ex) ex.value = adj.exempt ?? "";
     $("#adj-incentive").value = adj.incentive ?? 0;
@@ -2482,11 +2830,13 @@ body{margin:0;padding:24px;background:#fff;}
     syncDerived();
   }
 
-  function readFormIntoState() {
+  function readFormIntoDraft() {
     const emp = getEmployee(state.periodId, state.employeeId);
     if (!emp) return;
-    emp.adpFile = $("#field-adp-file").value.trim();
-    emp.hireDate = isoDateInputToMdy($("#field-hire-date") && $("#field-hire-date").value);
+    const draft = ensureWorkspaceDraft();
+    draft.adpFile = $("#field-adp-file").value.trim();
+    draft.ssn = ($("#field-ssn") && $("#field-ssn").value.trim()) || "";
+    draft.hireDate = isoDateInputToMdy($("#field-hire-date") && $("#field-hire-date").value);
 
     const dayIdxList = [
       ...new Set(
@@ -2534,28 +2884,31 @@ body{margin:0;padding:24px;background:#fff;}
       if (day.slots.length === 0) day.slots = emptySlots();
       nextSegments.push(day);
     });
-    if (nextSegments.length > 0) emp.segments = nextSegments;
+    if (nextSegments.length > 0) draft.segments = nextSegments;
 
-    emp.adjustments = mergeAdjustments(emp.adjustments);
-    emp.adjustments.exempt = ($("#adj-exempt") && $("#adj-exempt").value.trim()) || "";
-    emp.adjustments.incentive = parseFloat($("#adj-incentive").value) || 0;
-    emp.adjustments.svcw = parseFloat($("#adj-svcw").value) || 0;
-    emp.adjustments.tips = parseFloat($("#adj-tips").value) || 0;
-    emp.adjustments.breakfast = parseFloat($("#adj-breakfast").value) || 0;
-    emp.adjustments.lunch = parseFloat($("#adj-lunch").value) || 0;
-    emp.adjustments.dinner = parseFloat($("#adj-dinner").value) || 0;
-    emp.adjustments.sickHours = parseFloat($("#adj-sick").value) || 0;
-    emp.adjustments.childSup = parseFloat($("#adj-child-sup").value) || 0;
-    emp.adjustments.medDed = parseFloat($("#adj-med-ded").value) || 0;
-    emp.adjustments.eee40 = parseFloat($("#adj-eee40").value) || 0;
-    emp.adjustments.eer60 = parseFloat($("#adj-eer60").value) || 0;
+    draft.adjustments = mergeAdjustments(draft.adjustments);
+    draft.adjustments.exempt = ($("#adj-exempt") && $("#adj-exempt").value.trim()) || "";
+    draft.adjustments.incentive = parseFloat($("#adj-incentive").value) || 0;
+    draft.adjustments.svcw = parseFloat($("#adj-svcw").value) || 0;
+    draft.adjustments.tips = parseFloat($("#adj-tips").value) || 0;
+    draft.adjustments.breakfast = parseFloat($("#adj-breakfast").value) || 0;
+    draft.adjustments.lunch = parseFloat($("#adj-lunch").value) || 0;
+    draft.adjustments.dinner = parseFloat($("#adj-dinner").value) || 0;
+    draft.adjustments.sickHours = parseFloat($("#adj-sick").value) || 0;
+    draft.adjustments.childSup = parseFloat($("#adj-child-sup").value) || 0;
+    draft.adjustments.medDed = parseFloat($("#adj-med-ded").value) || 0;
+    draft.adjustments.eee40 = parseFloat($("#adj-eee40").value) || 0;
+    draft.adjustments.eer60 = parseFloat($("#adj-eer60").value) || 0;
   }
 
   function syncDerived() {
-    readFormIntoState();
-    const emp = getEmployee(state.periodId, state.employeeId);
+    readFormIntoDraft();
+    const emp = getDraftAsEmployeeShape();
     const period = getPeriod(state.periodId);
     if (!emp || !period) return;
+
+    simulatePayrollBackendCalculation(emp);
+    writeSegmentRegInputs(emp);
 
     const sums = sumSegments(emp);
     const payAmounts = sumSegmentPayAmounts(emp);
@@ -2609,11 +2962,6 @@ body{margin:0;padding:24px;background:#fff;}
       </div>
       ${buildEmployeesDetailDailyHtml(emp, period)}`;
 
-    const draftBadge = $("#detail-draft-badge");
-    if (draftBadge) {
-      draftBadge.classList.toggle("hidden", emp.confirmed);
-    }
-
     const missingAdpFile = !emp.adpFile;
     const adpRow = $("#adp-preview-row");
     if (adpRow) {
@@ -2637,7 +2985,14 @@ body{margin:0;padding:24px;background:#fff;}
     if (exportBtn) exportBtn.disabled = missingAdpFile;
     updateManageWeekSummaries(emp, period);
     updateEmployeeBatchExportButton();
-    saveState();
+    const draftBadge = $("#detail-draft-badge");
+    if (draftBadge) {
+      const savedEmp = getEmployee(state.periodId, state.employeeId);
+      draftBadge.classList.toggle(
+        "hidden",
+        !!(savedEmp && savedEmp.confirmed && !hasUnconfirmedWorkspaceChanges())
+      );
+    }
   }
 
   function showView(name) {
@@ -2663,23 +3018,39 @@ body{margin:0;padding:24px;background:#fff;}
     saveState();
   }
 
-  function confirmEmployee() {
+  function applyConfirmEmployeeSave(changeCount) {
     const emp = getEmployee(state.periodId, state.employeeId);
     if (!emp) return;
-    readFormIntoState();
+    commitDraftToEmployee();
     emp.confirmed = true;
     emp.confirmedAt = new Date().toISOString();
     state.workspaceConfirmedInSession = true;
     state.workspaceEntrySnapshot = buildEmployeeSnapshot(emp);
-    appendAudit("confirm", { employeeName: emp.name });
+    initWorkspaceDraft();
+    appendAudit("confirm", { employeeName: emp.name, changeCount: changeCount || 0 });
     saveState();
-    syncDerived();
+    renderManageForm();
     renderManagePeriodNav();
     if (typeof showNotification === "function") {
       showNotification(T("confirm.success"), "success");
     } else {
       alert(T("confirm.success"));
     }
+  }
+
+  function confirmEmployee() {
+    const emp = getEmployee(state.periodId, state.employeeId);
+    if (!emp) return;
+    readFormIntoDraft();
+    const changes = buildWorkspaceChangeSummary();
+    if (changes.length === 0) {
+      applyConfirmEmployeeSave(0);
+      return;
+    }
+    showWorkspaceSaveConfirmDialog(changes).then((ok) => {
+      if (!ok) return;
+      applyConfirmEmployeeSave(changes.length);
+    });
   }
 
   function showFieldHelp(fieldKey) {
@@ -2789,7 +3160,12 @@ body{margin:0;padding:24px;background:#fff;}
   }
 
   function exportAdpCsv() {
-    readFormIntoState();
+    if (hasUnconfirmedWorkspaceChanges()) {
+      if (typeof showNotification === "function") {
+        showNotification(T("save.unsavedExportBlocked"), "warning");
+      }
+      return;
+    }
     const emp = getEmployee(state.periodId, state.employeeId);
     const period = getPeriod(state.periodId);
     if (!emp || !period || !emp.adpFile) return;
@@ -2812,7 +3188,6 @@ body{margin:0;padding:24px;background:#fff;}
       const act = btn.getAttribute("data-action");
       if (act === "open-period") {
         state.periodId = btn.getAttribute("data-period-id");
-        state.employeeStoreFilter = "";
         renderEmployees();
         showView("employees");
       }
@@ -2821,10 +3196,9 @@ body{margin:0;padding:24px;background:#fff;}
       }
       if (act === "open-employee") {
         state.employeeId = btn.getAttribute("data-employee-id");
-        renderManageForm();
         markWorkspaceEntrySnapshot();
+        renderManageForm();
         showView("workspace");
-        syncDerived();
       }
       if (act === "confirm-employee") {
         confirmEmployee();
@@ -2850,24 +3224,23 @@ body{margin:0;padding:24px;background:#fff;}
       if (act === "add-slot-row") {
         const dayIdx = parseInt(btn.getAttribute("data-day-index"), 10);
         if (Number.isNaN(dayIdx) || dayIdx < 0) return;
-        readFormIntoState();
-        const emp = getEmployee(state.periodId, state.employeeId);
-        if (!emp || !Array.isArray(emp.segments) || !emp.segments[dayIdx]) return;
-        const day = normalizeDay(emp.segments[dayIdx]);
+        readFormIntoDraft();
+        const draft = state.workspaceDraft;
+        if (!draft || !Array.isArray(draft.segments) || !draft.segments[dayIdx]) return;
+        const day = normalizeDay(draft.segments[dayIdx]);
         day.slots.push({ in: "", out: "" });
         day.slotRows = Math.max(day.slotRows || 0, day.slots.length);
-        emp.segments[dayIdx] = day;
+        draft.segments[dayIdx] = day;
         renderManageForm();
-        syncDerived();
       }
       if (act === "remove-slot-row") {
         const dayIdx = parseInt(btn.getAttribute("data-day-index"), 10);
         const rowOrder = parseInt(btn.getAttribute("data-row-order"), 10);
         if (Number.isNaN(dayIdx) || dayIdx < 0) return;
-        readFormIntoState();
-        const emp = getEmployee(state.periodId, state.employeeId);
-        if (!emp || !Array.isArray(emp.segments) || !emp.segments[dayIdx]) return;
-        const day = normalizeDay(emp.segments[dayIdx]);
+        readFormIntoDraft();
+        const draft = state.workspaceDraft;
+        if (!draft || !Array.isArray(draft.segments) || !draft.segments[dayIdx]) return;
+        const day = normalizeDay(draft.segments[dayIdx]);
         const removeIndex = !Number.isNaN(rowOrder) && rowOrder >= 0 ? rowOrder : day.slots.length - 1;
         if (day.slots.length <= 1) {
           day.slots = [{ in: "", out: "" }];
@@ -2881,9 +3254,8 @@ body{margin:0;padding:24px;background:#fff;}
           if (day.slots.length === 0) day.slots = [{ in: "", out: "" }];
           day.slotRows = Math.min(Math.max(1, (day.slotRows || day.slots.length) - 1), day.slots.length);
         }
-        emp.segments[dayIdx] = day;
+        draft.segments[dayIdx] = day;
         renderManageForm();
-        syncDerived();
       }
     });
 
@@ -2893,10 +3265,10 @@ body{margin:0;padding:24px;background:#fff;}
       const field = t.getAttribute && t.getAttribute("data-field");
 
       if (isSeg && field && CLOCK_MEAL_FIELDS.has(field)) {
-        readFormIntoState();
-        const emp = getEmployee(state.periodId, state.employeeId);
+        readFormIntoDraft();
+        const emp = getDraftAsEmployeeShape();
         if (emp) {
-          applyAutoRegularHours(emp);
+          simulatePayrollBackendCalculation(emp);
           writeSegmentRegInputs(emp);
         }
         syncDerived();
@@ -2906,6 +3278,7 @@ body{margin:0;padding:24px;background:#fff;}
       if (
         isSeg ||
         t.id === "field-adp-file" ||
+        t.id === "field-ssn" ||
         t.id === "field-hire-date" ||
         (t.id && t.id.startsWith("adj-"))
       ) {
@@ -2914,7 +3287,7 @@ body{margin:0;padding:24px;background:#fff;}
     });
 
     $("#field-hire-date")?.addEventListener("change", () => {
-      readFormIntoState();
+      readFormIntoDraft();
       syncDerived();
     });
 
@@ -2937,8 +3310,17 @@ body{margin:0;padding:24px;background:#fff;}
     });
 
     $("#employee-store-filter")?.addEventListener("change", (e) => {
-      state.employeeStoreFilter = e.target.value || "";
-      renderEmployees();
+      const list = state.data.employees[state.periodId] || [];
+      const stores = getPayrollStoreOptions(list);
+      state.employeeStoreFilter = e.target.value || stores[0] || "";
+      handleEmployeeStoreFilterChange();
+    });
+
+    $("#ws-store-filter")?.addEventListener("change", (e) => {
+      const list = state.data.employees[state.periodId] || [];
+      const stores = getPayrollStoreOptions(list);
+      state.employeeStoreFilter = e.target.value || stores[0] || "";
+      handleEmployeeStoreFilterChange();
     });
 
     $("#period-year-filter")?.addEventListener("change", (e) => {
@@ -2994,7 +3376,7 @@ body{margin:0;padding:24px;background:#fff;}
     }
     if (typeof registerPayrollDetailExportCollector === "function") {
       registerPayrollDetailExportCollector(() => {
-        readFormIntoState();
+        readFormIntoDraft();
         return buildDetailExportPayload(getEmployee(state.periodId, state.employeeId), getPeriod(state.periodId));
       });
     }

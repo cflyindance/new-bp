@@ -433,7 +433,7 @@
           <!-- 小费池计算规则：两种分配模式共用（位于分配模式之上） -->
           <div class="form-section" id="sharedPoolRulesSection">
             <div class="form-section-title">
-              <span class="field-desc-wrap" data-field-id="poolRules">小费池计算规则 <span class="field-desc-icon" data-field-id="poolRules" data-label="小费池计算规则" onclick="event.preventDefault();openFieldDescEditor('poolRules','小费池计算规则')" title="点击编辑字段说明">ⓘ</span></span>
+              <span class="field-desc-wrap" data-field-id="poolRules" data-pool-label="小费池计算规则">小费池计算规则 <span class="field-desc-icon" data-field-id="poolRules" data-label="小费池计算规则" onclick="event.preventDefault();openFieldDescEditor('poolRules','小费池计算规则')" title="点击编辑字段说明">ⓘ</span></span>
             </div>
 
             <div id="poolRulesContainer"></div>
@@ -444,10 +444,10 @@
               </button>
               <div class="add-option-menu" id="addOptionMenu">
                 <div class="add-option-menu-item" data-type="sales" onclick="addPoolRule('sales')">销售额</div>
-                <div class="add-option-menu-item" data-type="tips" onclick="addPoolRule('tips')">小费</div>
+                <div class="add-option-menu-item" data-type="tips" data-pool-label="小费" onclick="addPoolRule('tips')">小费</div>
                 <div class="add-option-menu-item" data-type="surcharge" onclick="addPoolRule('surcharge')">加收服务费</div>
-                <div class="add-option-menu-item" data-type="manual" onclick="addPoolRule('manual')">手动上报小费</div>
-                <div class="add-option-menu-item" data-type="custom" onclick="addPoolRule('custom')">自定义小费</div>
+                <div class="add-option-menu-item" data-type="manual" data-pool-label="手动上报小费" onclick="addPoolRule('manual')">手动上报小费</div>
+                <div class="add-option-menu-item" data-type="custom" data-pool-label="自定义小费" onclick="addPoolRule('custom')">自定义小费</div>
               </div>
             </div>
           </div>
@@ -456,22 +456,24 @@
             <div class="form-section-title">分配模式</div>
             <div class="radio-group">
               <label class="radio-item">
-                <input type="radio" name="allocationMode" value="legacy_pool" checked onchange="onAllocationModeChange(false)"> 小费池汇总分配（默认）
+                <input type="radio" name="allocationMode" value="legacy_pool" checked onchange="onAllocationModeChange(false)">
+                <span data-pool-label="小费池汇总分配（默认）">小费池汇总分配（默认）</span>
               </label>
               <label class="radio-item">
-                <input type="radio" name="allocationMode" value="order_tip_then_residual" onchange="onAllocationModeChange(false)"> 计提小费占比分配
+                <input type="radio" name="allocationMode" value="order_tip_then_residual" onchange="onAllocationModeChange(false)">
+                <span data-pool-label="计提小费占比分配">计提小费占比分配</span>
               </label>
             </div>
-            <p style="font-size:12px;color:var(--text-tertiary);margin:8px 0 0;line-height:1.5">「计提小费占比分配」适用于：按菜单销售额等基数从小费池中按比例计提给不同接收方，剩余再按「剩余小费接收方规则」分配（例如酒保按酒水销售额、后厨按菜品销售额计提，剩余归服务员等）。</p>
+            <p id="allocationModeHint" data-pool-label="「计提小费占比分配」适用于：按菜单销售额等基数从小费池中按比例计提给不同接收方，剩余再按「剩余小费接收方规则」分配（例如酒保按酒水销售额、后厨按菜品销售额计提，剩余归服务员等）。" style="font-size:12px;color:var(--text-tertiary);margin:8px 0 0;line-height:1.5">「计提小费占比分配」适用于：按菜单销售额等基数从小费池中按比例计提给不同接收方，剩余再按「剩余小费接收方规则」分配（例如酒保按酒水销售额、后厨按菜品销售额计提，剩余归服务员等）。</p>
           </div>
 
           <div id="legacyAllocationSections">
           <!-- Deduction Rules -->
           <div class="form-section" id="deductRulesSection" style="display:none">
-            <div class="form-section-title"><span class="field-desc-wrap" data-field-id="deductRoles">小费扣除方规则 <span class="field-desc-icon" data-field-id="deductRoles" data-label="小费扣除方规则" onclick="event.preventDefault();openFieldDescEditor('deductRoles','小费扣除方规则')" title="点击编辑字段说明">ⓘ</span></span></div>
+            <div class="form-section-title"><span class="field-desc-wrap" data-field-id="deductRoles" data-pool-label="小费扣除方规则">小费扣除方规则 <span class="field-desc-icon" data-field-id="deductRoles" data-label="小费扣除方规则" onclick="event.preventDefault();openFieldDescEditor('deductRoles','小费扣除方规则')" title="点击编辑字段说明">ⓘ</span></span></div>
             <div class="deduct-tabs-bar" id="deductTabsBar">
               <button type="button" class="deduct-tab active" data-basis="sales_pct" onclick="switchDeductTab('sales_pct')">按照销售额占比</button>
-              <button type="button" class="deduct-tab" data-basis="tip_income" onclick="switchDeductTab('tip_income')">按照小费收入</button>
+              <button type="button" class="deduct-tab" data-basis="tip_income" data-pool-label="按照小费收入" onclick="switchDeductTab('tip_income')">按照小费收入</button>
             </div>
             <div id="deductRulesContainer"></div>
           </div>
@@ -479,7 +481,7 @@
           <!-- Receiver Rules -->
           <div class="form-section">
             <div class="form-section-title">
-              <span class="field-desc-wrap" data-field-id="receiverRules">小费接收方规则 <span class="field-desc-icon" data-field-id="receiverRules" data-label="小费接收方规则" onclick="event.preventDefault();openFieldDescEditor('receiverRules','小费接收方规则')" title="点击编辑字段说明">ⓘ</span></span>
+              <span class="field-desc-wrap" data-field-id="receiverRules" data-pool-label="小费接收方规则">小费接收方规则 <span class="field-desc-icon" data-field-id="receiverRules" data-label="小费接收方规则" onclick="event.preventDefault();openFieldDescEditor('receiverRules','小费接收方规则')" title="点击编辑字段说明">ⓘ</span></span>
               <span style="font-size:12px;color:var(--text-tertiary);font-weight:400;margin-left:auto">合计: <span id="totalPercent">0</span>%</span>
             </div>
             <table class="receiver-table" id="receiverTable">
@@ -501,14 +503,14 @@
 
           <div id="orderTipAllocationSection" style="display:none">
             <div class="form-section">
-              <div class="form-section-title">计提小费接受方规则</div>
+              <div class="form-section-title" data-pool-label="计提小费接受方规则">计提小费接受方规则</div>
               <div class="tip-claims-table-wrap">
                 <table class="receiver-table" id="tipClaimsTable">
                   <thead>
                     <tr>
                       <th style="width:236px">接收角色</th>
-                      <th style="min-width:110px">小费计提占比(%)</th>
-                      <th style="min-width:148px">员工小费权重</th>
+                      <th style="min-width:110px" data-pool-label="小费计提占比(%)">小费计提占比(%)</th>
+                      <th style="min-width:148px" data-pool-label="员工小费权重">员工小费权重</th>
                       <th style="min-width:200px">取值条件</th>
                       <th style="width:56px">操作</th>
                     </tr>
@@ -520,7 +522,7 @@
             </div>
             <div class="form-section">
               <div class="form-section-title">
-                剩余小费接收方规则
+                <span data-pool-label="剩余小费接收方规则">剩余小费接收方规则</span>
                 <span style="font-size:12px;color:var(--text-tertiary);font-weight:400;margin-left:auto">合计: <span id="orderResidualTotalPercent">0</span>%</span>
               </div>
               <table class="receiver-table" id="orderResidualReceiverTable">
@@ -552,7 +554,7 @@
 
           <!-- Distribution Method -->
           <div class="form-section">
-            <div class="form-section-title"><span class="field-desc-wrap" data-field-id="distribution">小费分配方式（单选） <span class="field-desc-icon" data-field-id="distribution" data-label="小费分配方式" onclick="event.preventDefault();openFieldDescEditor('distribution','小费分配方式')" title="点击编辑字段说明">ⓘ</span></span></div>
+            <div class="form-section-title"><span class="field-desc-wrap" data-field-id="distribution" data-pool-label="小费分配方式（单选）">小费分配方式（单选） <span class="field-desc-icon" data-field-id="distribution" data-label="小费分配方式" onclick="event.preventDefault();openFieldDescEditor('distribution','小费分配方式')" title="点击编辑字段说明">ⓘ</span></span></div>
             <div class="radio-group">
               <label class="radio-item">
                 <input type="radio" name="distribution" value="average" checked> 按员工数量平均分配
@@ -631,7 +633,7 @@
           </thead>
           <tbody id="weightModalBody"></tbody>
         </table>
-        <div id="weightModalEmpty" style="display:none;padding:24px;text-align:center;color:var(--text-tertiary)">请先在小费接收方规则中选择角色</div>
+        <div id="weightModalEmpty" data-pool-label="请先在小费接收方规则中选择角色" style="display:none;padding:24px;text-align:center;color:var(--text-tertiary)">请先在小费接收方规则中选择角色</div>
       </div>
       <div class="modal-footer">
         <button class="btn" onclick="closeModal('weightModal')">取消</button>
@@ -665,7 +667,7 @@
               <span style="color:var(--danger);font-size:12px;margin-left:8px;white-space:nowrap">*</span>
             </div>
             <div class="drawer-form-row" style="margin-bottom:0;align-items:flex-start">
-              <label style="width:88px;flex-shrink:0;padding-top:6px">小费参与</label>
+              <label style="width:88px;flex-shrink:0;padding-top:6px" data-pool-label="小费参与">小费参与</label>
               <div style="flex:1;min-width:0">
                 <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;color:var(--text-secondary)">
                   <span>该班次至少上班打卡</span>
@@ -730,7 +732,7 @@
   <div class="drawer-overlay" id="tipClaimSalesDrawer-overlay"></div>
   <div class="drawer" id="tipClaimSalesDrawer">
     <div class="drawer-header">
-      <h3>计提小费接受方规则 · 取值条件</h3>
+      <h3 data-pool-label="计提小费接受方规则 · 取值条件">计提小费接受方规则 · 取值条件</h3>
       <button class="modal-close" onclick="closeDrawer('tipClaimSalesDrawer')">×</button>
     </div>
     <div class="drawer-body">
@@ -777,7 +779,7 @@
           <div class="add-option-menu-item" data-type="area" onclick="addSurchargeCondition('area')">订单区域</div>
           <div class="add-option-menu-item" data-type="orderType" onclick="addSurchargeCondition('orderType')">订单类型</div>
           <div class="add-option-menu-item" data-type="hours" onclick="addSurchargeCondition('hours')">营业时间段</div>
-          <div class="add-option-menu-item" data-type="tipType" onclick="addSurchargeCondition('tipType')">小费类型</div>
+          <div class="add-option-menu-item" data-type="tipType" data-pool-label="小费类型" onclick="addSurchargeCondition('tipType')">小费类型</div>
           <div class="add-option-menu-item" data-type="surchargeType" onclick="addSurchargeCondition('surchargeType')" style="display:none">加收类型</div>
           <div class="add-option-menu-item" data-type="shift" onclick="addSurchargeCondition('shift')">班次</div>
           <div class="add-option-menu-item" data-type="weekday" onclick="addSurchargeCondition('weekday')">周期（星期）</div>
@@ -809,7 +811,7 @@
           <div class="add-option-menu-item" data-type="area" onclick="addTipsCondition('area')">订单区域</div>
           <div class="add-option-menu-item" data-type="orderType" onclick="addTipsCondition('orderType')">订单类型</div>
           <div class="add-option-menu-item" data-type="hours" onclick="addTipsCondition('hours')">营业时间段</div>
-          <div class="add-option-menu-item" data-type="tipType" onclick="addTipsCondition('tipType')">小费类型</div>
+          <div class="add-option-menu-item" data-type="tipType" data-pool-label="小费类型" onclick="addTipsCondition('tipType')">小费类型</div>
           <div class="add-option-menu-item" data-type="containsProduct" onclick="addTipsCondition('containsProduct')">订单需包含商品</div>
           <div class="add-option-menu-item" data-type="shift" onclick="addTipsCondition('shift')">班次</div>
           <div class="add-option-menu-item" data-type="weekday" onclick="addTipsCondition('weekday')">周期（星期）</div>
@@ -826,7 +828,7 @@
   <div class="drawer-overlay" id="manualDrawer-overlay"></div>
   <div class="drawer" id="manualDrawer">
     <div class="drawer-header">
-      <h3>手动上报小费 · 取值条件</h3>
+      <h3 data-pool-label="手动上报小费 · 取值条件">手动上报小费 · 取值条件</h3>
       <button class="modal-close" onclick="closeDrawer('manualDrawer')">×</button>
     </div>
     <div class="drawer-body">
@@ -860,14 +862,95 @@
       return currentPoolKind === 'surcharge';
     }
 
+    /** 加收服务费池规则页：将小费相关文案替换为加收服务费 */
+    function tipTerm(text) {
+      if (!isSurchargePoolKind() || text == null) return text;
+      return String(text)
+        .replace(/小费池/g, '加收服务费池')
+        .replace(/小费/g, '加收服务费');
+    }
+
+    function getCondTypeNames(extra) {
+      var names = Object.assign({
+        role: '角色', employee: '员工', area: '订单区域', orderType: '订单类型',
+        hours: '营业时间段', tipType: '小费类型', containsProduct: '订单需包含商品',
+        shift: '班次', weekday: '周期（星期）'
+      }, extra || {});
+      if (!isSurchargePoolKind()) return names;
+      var out = {};
+      Object.keys(names).forEach(function(k) { out[k] = tipTerm(names[k]); });
+      return out;
+    }
+
+    function employeeWeightLinkHtml(fontSize, extraStyle) {
+      var fs = fontSize || '13px';
+      var extra = extraStyle || '';
+      return '<a href="javascript:void(0)" class="btn-link weight-link disabled" onclick="openWeightModalForRow(this)" style="font-size:' + fs + ';' + extra + '">' + tipTerm('设置员工小费权重') + '</a>';
+    }
+
+    function getTipTypeSelectHtml() {
+      var html = '<option value="">请选择</option><option>全部</option><option>Credit Card Tips (信用卡小费)</option><option>Cash Tips (现金小费)</option><option>Auto Gratuity (自动服务费)</option><option>Gift Card Tips</option>';
+      return tipTerm(html);
+    }
+
+    function getDeductTipTypeOptionsHtml() {
+      var html =
+        '<label class="multi-select-option"><input type="checkbox" value="Cash Tips (现金小费)" data-tag-label="现金小费"> 现金小费</label>' +
+        '<label class="multi-select-option"><input type="checkbox" value="Credit Card Tips (信用卡小费)" data-tag-label="信用卡小费"> 信用卡小费</label>' +
+        '<label class="multi-select-option"><input type="checkbox" value="Other Tips (其他小费)" data-tag-label="其他小费"> 其他小费</label>';
+      return tipTerm(html);
+    }
+
+    function applyPoolKindLabelEl(el) {
+      if (!el) return;
+      var base = el.getAttribute('data-pool-label');
+      if (!base) return;
+      el.textContent = isSurchargePoolKind() ? tipTerm(base) : base;
+    }
+
+    function applyFieldDescWrapLabels() {
+      document.querySelectorAll('.field-desc-wrap[data-pool-label]').forEach(function(wrap) {
+        var base = wrap.getAttribute('data-pool-label');
+        if (!base) return;
+        var label = isSurchargePoolKind() ? tipTerm(base) : base;
+        var icon = wrap.querySelector('.field-desc-icon');
+        var fieldId = wrap.getAttribute('data-field-id') || '';
+        if (icon) {
+          icon.setAttribute('data-label', label);
+          icon.setAttribute('onclick', "event.preventDefault();openFieldDescEditor('" + fieldId + "','" + label.replace(/'/g, "\\'") + "')");
+        }
+        Array.prototype.slice.call(wrap.childNodes).forEach(function(n) {
+          if (n.nodeType === 3) wrap.removeChild(n);
+        });
+        wrap.insertBefore(document.createTextNode(label + ' '), icon || null);
+      });
+    }
+
+    function applyPoolKindStaticLabels() {
+      document.querySelectorAll('[data-pool-label]').forEach(function(el) {
+        if (el.classList && el.classList.contains('field-desc-wrap')) return;
+        applyPoolKindLabelEl(el);
+      });
+      applyFieldDescWrapLabels();
+      var deductTipTab = document.querySelector('#deductTabsBar .deduct-tab[data-basis="tip_income"]');
+      if (deductTipTab) {
+        var deductBase = deductTipTab.getAttribute('data-pool-label') || '按照小费收入';
+        deductTipTab.textContent = isSurchargePoolKind() ? tipTerm(deductBase) : deductBase;
+      }
+    }
+
     function getPoolRuleBaseNames() {
-      return {
+      var base = {
         sales: '销售额',
         tips: '小费',
         surcharge: '加收服务费',
         manual: '手动上报小费',
         custom: isSurchargePoolKind() ? '自定义加收' : '自定义小费'
       };
+      if (!isSurchargePoolKind()) return base;
+      var out = {};
+      Object.keys(base).forEach(function(k) { out[k] = tipTerm(base[k]); });
+      return out;
     }
 
     function getAllowedPoolRuleTypes() {
@@ -886,12 +969,15 @@
     function applyPoolKindUi(isEdit) {
       var pt = document.getElementById('pageTitle');
       if (pt) pt.textContent = getPoolKindPageTitle(!!isEdit);
+      document.title = getPoolKindPageTitle(!!isEdit) + ' - TipOut';
+      applyPoolKindStaticLabels();
       var customItem = document.querySelector('#addOptionMenu .add-option-menu-item[data-type="custom"]');
       if (customItem) customItem.textContent = getPoolRuleBaseNames().custom;
       var allowed = getAllowedPoolRuleTypes();
       document.querySelectorAll('#addOptionMenu .add-option-menu-item').forEach(function(item) {
         var type = item.dataset.type;
         item.style.display = allowed.indexOf(type) >= 0 ? '' : 'none';
+        if (item.getAttribute('data-pool-label')) applyPoolKindLabelEl(item);
       });
       updateAddMenu();
       updateSurchargeConditionMenu();
@@ -1067,7 +1153,7 @@
         '</div></td>' +
         '<td><input type="number" class="form-control tc-pct" step="0.1" min="0" value="' + (d.pct != null ? d.pct : '') + '" placeholder="10"></td>' +
         '<td><div class="receiver-row-weights" style="font-size:11px;color:var(--text-tertiary);min-height:16px;line-height:1.35"></div>' +
-        '<a href="javascript:void(0)" class="btn-link weight-link disabled" onclick="openWeightModalForRow(this)" style="font-size:12px;margin-top:6px;display:inline-block">设置员工小费权重</a></td>' +
+        employeeWeightLinkHtml('12px', 'margin-top:6px;display:inline-block') + '</td>' +
         '<td><div style="display:flex;flex-direction:column;gap:4px;min-width:160px"><span class="tc-cond-summary" style="font-size:11px;color:var(--text-tertiary);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">未设置</span><button type="button" class="btn btn-sm" onclick="openTipClaimSalesConditionDrawer(this)">设置取值条件</button></div></td>' +
         '<td><button type="button" class="btn btn-sm btn-text-danger" onclick="removeTipClaimRow(this)">删</button></td>';
       tbody.appendChild(tr);
@@ -2376,7 +2462,6 @@
       }).join('\n\n');
     }
 
-    var tipTypeSelectHtml = '<option value="">请选择</option><option>全部</option><option>Credit Card Tips (信用卡小费)</option><option>Cash Tips (现金小费)</option><option>Auto Gratuity (自动服务费)</option><option>Gift Card Tips</option>';
     var SURCHARGE_TYPE_OPTIONS = [
       { value: '商品', label: '商品' },
       { value: '订单', label: '订单' },
@@ -2594,7 +2679,7 @@
         if (!silent) showNotification('已添加「角色」取值条件时不能同时添加「员工」', 'warning');
         return;
       }
-      var names = { role: '角色', employee: '员工', area: '订单区域', orderType: '订单类型', hours: '营业时间段', tipType: '小费类型', containsProduct: '订单需包含商品', shift: '班次', weekday: '周期（星期）' };
+      var names = getCondTypeNames();
       var cardId = 'tips-cond-' + type;
       var body = '';
       if (type === 'role') {
@@ -2612,7 +2697,7 @@
       } else if (type === 'hours') {
         body = '<div class="drawer-form-row"><label>营业时间段：</label><input type="time" class="form-control" style="width:120px"><span style="color:var(--text-tertiary)">~</span><input type="time" class="form-control" style="width:120px"></div>';
       } else if (type === 'tipType') {
-        body = '<div class="drawer-form-row"><label>小费类型：</label><select class="form-control" style="flex:1">' + tipTypeSelectHtml + '</select></div>';
+        body = '<div class="drawer-form-row"><label>' + tipTerm('小费类型：') + '</label><select class="form-control" style="flex:1">' + getTipTypeSelectHtml() + '</select></div>';
       } else if (type === 'containsProduct') {
         body = getMenuCascadeFourRowsHtml({ pl: 'tipsCpPlSelect', group: 'tipsCpGroupSelect', category: 'tipsCpCategorySelect', item: 'tipsCpItemSelect' });
       } else if (type === 'shift') {
@@ -2654,7 +2739,7 @@
         if (!silent) showNotification('已添加「角色」取值条件时不能同时添加「员工」', 'warning');
         return;
       }
-      var names = { role: '角色', employee: '员工', area: '订单区域', orderType: '订单类型', hours: '营业时间段', tipType: '小费类型', surchargeType: '加收类型', shift: '班次', weekday: '周期（星期）' };
+      var names = getCondTypeNames({ surchargeType: '加收类型' });
       var cardId = 'surcharge-cond-' + type;
       var body = '';
       if (type === 'role') {
@@ -2672,7 +2757,7 @@
       } else if (type === 'hours') {
         body = '<div class="drawer-form-row"><label>营业时间段：</label><input type="time" class="form-control" style="width:120px"><span style="color:var(--text-tertiary)">~</span><input type="time" class="form-control" style="width:120px"></div>';
       } else if (type === 'tipType') {
-        body = '<div class="drawer-form-row"><label>小费类型：</label><select class="form-control" style="flex:1">' + tipTypeSelectHtml + '</select></div>';
+        body = '<div class="drawer-form-row"><label>' + tipTerm('小费类型：') + '</label><select class="form-control" style="flex:1">' + getTipTypeSelectHtml() + '</select></div>';
       } else if (type === 'surchargeType') {
         body = '<div class="drawer-form-row" style="align-items:flex-start"><label style="padding-top:2px">加收类型：</label><div class="radio-group" style="flex-direction:row;flex-wrap:wrap;gap:16px;flex:1">' + buildSurchargeTypeRadioHtml('全部') + '</div></div>';
       } else if (type === 'shift') {
@@ -2966,10 +3051,6 @@
       sales_pct: { role: false, employee: false },
       tip_income: { role: false, employee: false }
     };
-    var deductTipTypeOptionsHtml =
-      '<label class="multi-select-option"><input type="checkbox" value="Cash Tips (\u73b0\u91d1\u5c0f\u8d39)" data-tag-label="\u73b0\u91d1\u5c0f\u8d39"> \u73b0\u91d1\u5c0f\u8d39</label>' +
-      '<label class="multi-select-option"><input type="checkbox" value="Credit Card Tips (\u4fe1\u7528\u5361\u5c0f\u8d39)" data-tag-label="\u4fe1\u7528\u5361\u5c0f\u8d39"> \u4fe1\u7528\u5361\u5c0f\u8d39</label>' +
-      '<label class="multi-select-option"><input type="checkbox" value="Other Tips (\u5176\u4ed6\u5c0f\u8d39)" data-tag-label="\u5176\u4ed6\u5c0f\u8d39"> \u5176\u4ed6\u5c0f\u8d39</label>';
 
     function getDeductBasisBlock(basis) {
       return document.getElementById('deduct-panel-' + basis);
@@ -3100,13 +3181,15 @@
     }
 
     function buildDeductTipTypeRowHtml(selectId) {
+      var label = tipTerm('小费类型：');
+      var placeholder = tipTerm('请选择小费类型');
       return '<div class="drawer-form-row" style="margin-bottom:12px">' +
-        '<label>\u5c0f\u8d39\u7c7b\u578b\uff1a</label>' +
-        '<div class="multi-select" id="' + selectId + '" style="flex:1" data-placeholder="\u8bf7\u9009\u62e9\u5c0f\u8d39\u7c7b\u578b">' +
+        '<label>' + label + '</label>' +
+        '<div class="multi-select" id="' + selectId + '" style="flex:1" data-placeholder="' + placeholder + '">' +
         '<div class="multi-select-input" onclick="toggleMultiSelect(\'' + selectId + '\')">' +
-        '<div class="multi-select-tags"><span class="multi-select-placeholder">\u8bf7\u9009\u62e9\u5c0f\u8d39\u7c7b\u578b</span></div>' +
+        '<div class="multi-select-tags"><span class="multi-select-placeholder">' + placeholder + '</span></div>' +
         '<svg class="multi-select-arrow" width="12" height="12" viewBox="0 0 12 12" fill="#999"><path d="M6 8.825a.5.5 0 0 1-.354-.146l-4-4a.5.5 0 0 1 .708-.708L6 7.617l3.646-3.646a.5.5 0 0 1 .708.708l-4 4A.5.5 0 0 1 6 8.825z"/></svg></div>' +
-        '<div class="multi-select-dropdown">' + deductTipTypeOptionsHtml + '</div></div></div>';
+        '<div class="multi-select-dropdown">' + getDeductTipTypeOptionsHtml() + '</div></div></div>';
     }
 
     function addDeductScope(basis, scopeType, silent) {
@@ -3491,7 +3574,7 @@
         '</td>' +
         '<td><input type="number" value="' + (opt.pct != null ? opt.pct : 0) + '" min="0" max="100" step="0.1"> %</td>' +
         '<td>' +
-          '<a href="javascript:void(0)" class="btn-link weight-link disabled" onclick="openWeightModalForRow(this)" style="font-size:12px">设置员工小费权重</a>' +
+          employeeWeightLinkHtml('12px') +
           '<a href="javascript:void(0)" class="btn-link" style="color:var(--danger);font-size:12px;margin-left:6px" onclick="removeReceiverSubRow(this)">删除</a>' +
         '</td>';
       stbody.appendChild(subTr);
@@ -3577,7 +3660,7 @@
         '</td>' +
         '<td><input type="number" value="' + (opt.pct || 0) + '" oninput="calcTotal()"> %</td>' +
         '<td>' +
-          '<a href="javascript:void(0)" class="btn-link weight-link disabled" onclick="openWeightModalForRow(this)" style="font-size:13px">设置员工小费权重</a>' +
+          employeeWeightLinkHtml('13px') +
           '<a href="javascript:void(0)" class="btn-link" style="font-size:13px;margin-left:8px" onclick="toggleReceiverRedistribute(this)">再分配</a>' +
           '<a href="javascript:void(0)" class="btn-link" style="color:var(--danger);font-size:13px;margin-left:8px" onclick="removeReceiverPrimaryRow(this)">删除</a>' +
         '</td>';
@@ -3669,7 +3752,7 @@
         '</td>' +
         '<td><input type="number" value="' + (opt.pct != null ? opt.pct : 0) + '" oninput="calcOrderResidualTotal()"> %</td>' +
         '<td>' +
-          '<a href="javascript:void(0)" class="btn-link weight-link disabled" onclick="openWeightModalForRow(this)" style="font-size:13px">设置员工小费权重</a>' +
+          employeeWeightLinkHtml('13px') +
           '<a href="javascript:void(0)" class="btn-link" style="font-size:13px;margin-left:8px" onclick="toggleReceiverRedistribute(this)">再分配</a>' +
           '<a href="javascript:void(0)" class="btn-link" style="color:var(--danger);font-size:13px;margin-left:8px" onclick="removeReceiverPrimaryRow(this)">删除</a>' +
         '</td>';
@@ -3855,7 +3938,7 @@
           if (empParts.length) parts.push(role + ': ' + empParts.join(', '));
         }
       });
-      wrap.textContent = parts.length ? '员工小费权重: ' + parts.join('；') : '';
+      wrap.textContent = parts.length ? tipTerm('员工小费权重: ') + parts.join('；') : '';
       wrap.style.display = parts.length ? '' : 'none';
     }
 
@@ -3869,7 +3952,7 @@
       if (ms) ms.querySelectorAll('input[type="checkbox"]:checked').forEach(function(cb) { roles.push(cb.value); });
       var tbody = document.getElementById('weightModalBody');
       var emptyEl = document.getElementById('weightModalEmpty');
-      var hintNoRole = isTipClaim ? '请先在计提小费接受方规则中选择接收角色' : '请先在小费接收方规则中选择角色';
+      var hintNoRole = tipTerm(isTipClaim ? '请先在计提小费接受方规则中选择接收角色' : '请先在小费接收方规则中选择角色');
       if (!tbody || roles.length === 0) {
         if (tbody) tbody.innerHTML = '';
         if (emptyEl) { emptyEl.style.display = 'block'; emptyEl.textContent = hintNoRole; }
@@ -3980,7 +4063,7 @@
       if (Array.isArray(cond.employee) && cond.employee.length) parts.push('员工: ' + cond.employee.join(', '));
       if (cond.area) parts.push('订单区域: ' + cond.area);
       if (cond.orderType) parts.push('订单类型: ' + cond.orderType);
-      if (cond.tipType) parts.push('小费类型: ' + cond.tipType);
+      if (cond.tipType) parts.push(tipTerm('小费类型: ') + cond.tipType);
       if (cond.containsProduct && menuCascadeHasAnySelection(cond.containsProduct)) {
         var cpTxt = formatMenuCascadeCond(cond.containsProduct);
         if (cpTxt) parts.push('订单需包含商品: ' + cpTxt);
@@ -4001,7 +4084,7 @@
       if (cond.area) parts.push('订单区域: ' + cond.area);
       if (cond.orderType) parts.push('订单类型: ' + cond.orderType);
       if (cond.surchargeType) parts.push('加收类型: ' + cond.surchargeType);
-      else if (cond.tipType) parts.push('小费类型: ' + cond.tipType);
+      else if (cond.tipType) parts.push(tipTerm('小费类型: ') + cond.tipType);
       if (cond.hours && (cond.hours.start || cond.hours.end)) parts.push('营业时间段: ' + (cond.hours.start || '') + '-' + (cond.hours.end || ''));
       if (Array.isArray(cond.shift) && cond.shift.length) parts.push('班次: ' + formatShiftSelectionForDisplay(cond.shift));
       if (Array.isArray(cond.weekdays) && cond.weekdays.length) parts.push('周期: ' + formatWeekdaysCondDisplay(cond.weekdays));
@@ -4107,7 +4190,7 @@
         updatePoolRuleConditionDisplay(currentEditingRuleId);
       }
       closeDrawer('tipsDrawer');
-      showNotification('小费取值条件保存成功');
+      showNotification(tipTerm('小费取值条件保存成功'));
     }
 
     function saveSurchargeCondition() {
@@ -4127,7 +4210,7 @@
         updatePoolRuleConditionDisplay(currentEditingRuleId);
       }
       closeDrawer('manualDrawer');
-      showNotification('手动上报小费取值条件保存成功');
+      showNotification(tipTerm('手动上报小费取值条件保存成功'));
     }
 
     function collectManualConditions() {
@@ -4472,7 +4555,7 @@
       var allocMode = (document.querySelector('input[name="allocationMode"]:checked') || {}).value || 'legacy_pool';
       if (allocMode === 'legacy_pool') {
         if (document.querySelectorAll('.pool-rule-card').length === 0) {
-          showNotification('请至少添加一项小费池计算规则', 'error');
+          showNotification(tipTerm('请至少添加一项小费池计算规则'), 'error');
           return;
         }
         var receivers = document.querySelectorAll('#receiverTableBody tr.receiver-primary-row');
@@ -4484,7 +4567,7 @@
           if (ms && ms.querySelectorAll('input[type="checkbox"]:checked').length > 0 && pct > 0) hasReceiver = true;
         });
         if (!hasReceiver) {
-          showNotification('请至少添加一条小费接收方规则（角色、占比均需填写）', 'error');
+          showNotification(tipTerm('请至少添加一条小费接收方规则（角色、占比均需填写）'), 'error');
           return;
         }
         var condErr = null;
@@ -4505,7 +4588,7 @@
       } else {
         var tclaims = collectTipClaims();
         if (!tclaims.length) {
-          showNotification('请至少添加一条计提小费接受方规则', 'error');
+          showNotification(tipTerm('请至少添加一条计提小费接受方规则'), 'error');
           return;
         }
         var claimBad = false;
@@ -4513,7 +4596,7 @@
           if (c.pct <= 0 || !c.receiverRoles || !c.receiverRoles.length) claimBad = true;
         });
         if (claimBad) {
-          showNotification('每条计提小费接受方规则须填写大于 0 的计提比例，并在接收角色中至少选择一名角色', 'error');
+          showNotification(tipTerm('每条计提小费接受方规则须填写大于 0 的计提比例，并在接收角色中至少选择一名角色'), 'error');
           return;
         }
         var hasResResidual = false;
@@ -4524,11 +4607,11 @@
           if (ms && ms.querySelectorAll('input[type="checkbox"]:checked').length > 0 && pct > 0) hasResResidual = true;
         });
         if (!hasResResidual) {
-          showNotification('请至少添加一条剩余小费接收方规则（角色、占比均需填写）', 'error');
+          showNotification(tipTerm('请至少添加一条剩余小费接收方规则（角色、占比均需填写）'), 'error');
           return;
         }
         if (document.querySelectorAll('.pool-rule-card').length === 0) {
-          showNotification('请至少添加一项小费池计算规则', 'error');
+          showNotification(tipTerm('请至少添加一项小费池计算规则'), 'error');
           return;
         }
         var condErrOt = null;

@@ -403,6 +403,7 @@
 
   <script src="common.js"></script>
   <script src="ruleData.js"></script>
+  <script src="tipout-payroll-bridge.js"></script>
   <script>
     var ALLOC_KEY = 'tipout_allocated';
     function getAllocatedDates() {
@@ -740,7 +741,18 @@
       dates.forEach(function(k) { allocatedDates.add(k); });
       saveAllocatedDates(allocatedDates);
       renderDayTabs();
-      showNotification('小费分配完成', 'success');
+      if (window.TipOutPayrollBridge && TipOutPayrollBridge.syncAfterAllocation) {
+        var storeSel = document.getElementById('storeSelect');
+        var storeVal = storeSel ? (storeSel.value || '').trim() : '';
+        var ds = document.getElementById('dateStart');
+        var de = document.getElementById('dateEnd');
+        TipOutPayrollBridge.syncAfterAllocation(
+          storeVal,
+          ds ? ds.value : '',
+          de ? de.value : ''
+        );
+      }
+      showNotification('小费分配完成，已同步至薪资管理 Tips/SVCW', 'success');
     }
 
     function doCancelAllocate() {
@@ -749,6 +761,17 @@
       dates.forEach(function(k) { allocatedDates.delete(k); });
       saveAllocatedDates(allocatedDates);
       renderDayTabs();
+      if (window.TipOutPayrollBridge && TipOutPayrollBridge.syncAfterAllocation) {
+        var storeSel = document.getElementById('storeSelect');
+        var storeVal = storeSel ? (storeSel.value || '').trim() : '';
+        var ds = document.getElementById('dateStart');
+        var de = document.getElementById('dateEnd');
+        TipOutPayrollBridge.syncAfterAllocation(
+          storeVal,
+          ds ? ds.value : '',
+          de ? de.value : ''
+        );
+      }
       showNotification('已取消分配，状态已恢复为待分配', 'info');
     }
 
