@@ -80,6 +80,9 @@
               <label class="filter-field-label" for="payroll-store-filter">薪资门店</label>
               <select id="payroll-store-filter" class="form-control form-control-lg payroll-store-filter-select" aria-label="薪资门店"></select>
             </div>
+            <div class="payroll-store-bar-actions">
+              <button type="button" class="btn" id="btn-export-batch-adp" data-action="export-batch-adp" disabled>批量导出 ADP</button>
+            </div>
           </div>
         </div>
 
@@ -307,7 +310,6 @@
             <div class="payroll-confirm-fixed no-print">
               <button type="button" class="btn" data-action="preview-adp-report">ADP Report</button>
               <button type="button" class="btn" data-action="preview-employees-detail">Employees Detail</button>
-              <button type="button" class="btn" id="btn-export-batch-adp" data-action="export-batch-adp" disabled>批量导出 ADP</button>
               <button type="button" class="btn btn-primary" data-action="confirm-employee">确定并保存</button>
             </div>
           </div>
@@ -316,8 +318,12 @@
             <article class="payroll-detail-print">
               <header class="payroll-detail-print-header">
                 <div class="payroll-detail-print-title-row">
-                  <h3 class="payroll-detail-print-title">Employees Payroll Detail</h3>
-                  <span id="detail-draft-badge" class="tag tag-orange no-print">未确认预览 · 非最终</span>
+                  <div class="payroll-detail-head-employee">
+                    <span id="detail-meta-employee" class="payroll-detail-head-employee-value">—</span>
+                  </div>
+                  <div class="payroll-detail-head-period">
+                    <span id="detail-meta-period-report" class="payroll-detail-head-period-value">—</span>
+                  </div>
                 </div>
                 <dl class="payroll-detail-meta" id="detail-meta-grid">
                   <div class="payroll-detail-meta-item">
@@ -325,34 +331,26 @@
                     <dd id="detail-meta-role">—</dd>
                   </div>
                   <div class="payroll-detail-meta-item">
-                    <dt id="detail-meta-label-hire-date">Hire Date :</dt>
-                    <dd id="detail-meta-hire-date">—</dd>
-                  </div>
-                  <div class="payroll-detail-meta-item">
-                    <dt id="detail-meta-label-employee">员工</dt>
-                    <dd id="detail-meta-employee">—</dd>
-                  </div>
-                  <div class="payroll-detail-meta-item">
                     <dt id="detail-meta-label-pay-date">Pay Date</dt>
                     <dd id="detail-meta-pay-date">—</dd>
                   </div>
                   <div class="payroll-detail-meta-item">
-                    <dt id="detail-meta-label-ssn">SSN</dt>
-                    <dd id="detail-meta-ssn">—</dd>
-                  </div>
-                  <div class="payroll-detail-meta-item">
-                    <dt id="detail-meta-label-period-report">期数：</dt>
-                    <dd id="detail-meta-period-report">—</dd>
+                    <dt id="detail-meta-label-hire-date">Hire Date :</dt>
+                    <dd id="detail-meta-hire-date">—</dd>
                   </div>
                   <div class="payroll-detail-meta-item">
                     <dt id="detail-meta-label-pay-period">Pay Period</dt>
                     <dd id="detail-meta-pay-period">—</dd>
                   </div>
+                  <div class="payroll-detail-meta-item">
+                    <dt id="detail-meta-label-ssn">SSN</dt>
+                    <dd id="detail-meta-ssn">—</dd>
+                  </div>
                 </dl>
               </header>
               <div id="detail-hours-grid"></div>
               <div style="margin-top:24px;padding:16px;border:1px dashed var(--border-color);border-radius:var(--radius-md);background:rgba(0,0,0,0.02);font-size:13px;line-height:1.6">
-                <p style="font-weight:600;margin:0 0 4px">声明 <span id="detail-declaration-version" class="payroll-decl-version"></span></p>
+                <p id="detail-declaration-heading" style="font-weight:600;margin:0 0 4px">声明</p>
                 <p id="detail-declaration-body" style="margin:0;color:var(--text-secondary)"></p>
               </div>
               <p class="payroll-print-disclaimer print-only">薪酬报税 — 本页非法定 Pay Stub。实际发薪与报税以 ADP/会计师为准。</p>
@@ -383,13 +381,13 @@
                       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="flex-shrink:0"><rect x="2" y="1" width="12" height="14" rx="2" stroke="#ff4d4f" stroke-width="1.2"/><text x="8" y="10.5" text-anchor="middle" fill="#ff4d4f" font-size="5" font-weight="600">PDF</text></svg>
                       导出为 PDF
                     </div>
-                    <div class="export-menu-item" onclick="exportPayrollDetailAs('csv')">
-                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="flex-shrink:0"><rect x="2" y="1" width="12" height="14" rx="2" stroke="#52c41a" stroke-width="1.2"/><text x="8" y="10.5" text-anchor="middle" fill="#52c41a" font-size="5" font-weight="600">CSV</text></svg>
-                      导出为 CSV
-                    </div>
                     <div class="export-menu-item" onclick="openPayrollDetailEmailModal()">
                       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="flex-shrink:0"><rect x="1.5" y="3" width="13" height="10" rx="2" stroke="#1677ff" stroke-width="1.2"/><path d="M2 4l6 4 6-4" stroke="#1677ff" stroke-width="1.2" stroke-linecap="round"/></svg>
                       发送到邮箱
+                    </div>
+                    <div class="export-menu-item" onclick="exportPayrollDetailAs('csv')">
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="flex-shrink:0"><rect x="2" y="1" width="12" height="14" rx="2" stroke="#52c41a" stroke-width="1.2"/><text x="8" y="10.5" text-anchor="middle" fill="#52c41a" font-size="5" font-weight="600">CSV</text></svg>
+                      导出为 CSV
                     </div>
                   </div>
                 </div>
@@ -573,6 +571,26 @@
         <div id="employeesDetailModalBody" class="payroll-page payroll-entered"></div>
       </div>
       <div class="modal-footer">
+        <div class="export-dropdown employees-detail-export-dropdown">
+          <button type="button" class="btn btn-primary" id="btn-employees-detail-export-toggle">
+            导出结果
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" style="margin-left:6px"><path d="M6 8.825a.5.5 0 0 1-.354-.146l-4-4a.5.5 0 0 1 .708-.708L6 7.617l3.646-3.646a.5.5 0 0 1 .708.708l-4 4A.5.5 0 0 1 6 8.825z"/></svg>
+          </button>
+          <div class="export-menu" id="employeesDetailExportMenu">
+            <div class="export-menu-item" data-export-type="pdf">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="flex-shrink:0"><rect x="2" y="1" width="12" height="14" rx="2" stroke="#ff4d4f" stroke-width="1.2"/><text x="8" y="10.5" text-anchor="middle" fill="#ff4d4f" font-size="5" font-weight="600">PDF</text></svg>
+              导出为 PDF
+            </div>
+            <div class="export-menu-item" data-export-type="email">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="flex-shrink:0"><rect x="1.5" y="3" width="13" height="10" rx="2" stroke="#1677ff" stroke-width="1.2"/><path d="M2 4l6 4 6-4" stroke="#1677ff" stroke-width="1.2" stroke-linecap="round"/></svg>
+              发送到邮箱
+            </div>
+            <div class="export-menu-item" data-export-type="csv">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="flex-shrink:0"><rect x="2" y="1" width="12" height="14" rx="2" stroke="#52c41a" stroke-width="1.2"/><text x="8" y="10.5" text-anchor="middle" fill="#52c41a" font-size="5" font-weight="600">CSV</text></svg>
+              导出为 CSV
+            </div>
+          </div>
+        </div>
         <button type="button" class="btn btn-primary" id="btn-employees-detail-modal-ok">关闭</button>
       </div>
     </div>

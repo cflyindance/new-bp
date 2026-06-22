@@ -38,7 +38,7 @@
     const m = getAdpMapping();
     return (
       (m && m.declarationBodyEn) ||
-      "Service charge ${svc_amount} and tips ${tips_amount} are from Manage Payroll. Version ${declaration_version}."
+      "Service charge ${svc_amount} and tips ${tips_amount} are from Manage Payroll."
     );
   }
 
@@ -49,35 +49,27 @@
   }
 
   function renderDeclarationText(emp) {
-    const m = getAdpMapping();
     const tpl = getDeclarationTemplate();
     const { svc, tips } = getDeclarationAmounts(emp);
-    const ver = (m && m.declarationVersion) || "demo-v1";
     return tpl
       .replace(/\$\{svc_amount\}/g, svc)
-      .replace(/\$\{tips_amount\}/g, tips)
-      .replace(/\$\{declaration_version\}/g, ver);
+      .replace(/\$\{tips_amount\}/g, tips);
   }
 
   /** 声明正文 HTML：gratuity / tips 金额加粗、加大并下划线，便于员工核对 */
   function renderDeclarationHtml(emp) {
-    const m = getAdpMapping();
     const tpl = getDeclarationTemplate();
     const { svc, tips } = getDeclarationAmounts(emp);
-    const ver = (m && m.declarationVersion) || "demo-v1";
     const SVC_TOKEN = "@@PAYROLL_DECL_SVC@@";
     const TIPS_TOKEN = "@@PAYROLL_DECL_TIPS@@";
-    const VER_TOKEN = "@@PAYROLL_DECL_VER@@";
     const marked = tpl
       .replace(/\$\{svc_amount\}/g, SVC_TOKEN)
-      .replace(/\$\{tips_amount\}/g, TIPS_TOKEN)
-      .replace(/\$\{declaration_version\}/g, VER_TOKEN);
+      .replace(/\$\{tips_amount\}/g, TIPS_TOKEN);
     const amountHtml = (amount) =>
       `<span class="payroll-decl-amount">${escapeHtml(amount)}</span>`;
     return escapeHtml(marked)
       .replace(SVC_TOKEN, amountHtml(svc))
-      .replace(TIPS_TOKEN, amountHtml(tips))
-      .replace(VER_TOKEN, escapeHtml(ver));
+      .replace(TIPS_TOKEN, amountHtml(tips));
   }
 
   function csvEscapeCell(c) {
@@ -1457,6 +1449,7 @@
   }
 
   function hideEmployeesDetailModal() {
+    if (typeof closePayrollDetailExportMenus === "function") closePayrollDetailExportMenus();
     const modalId = "employeesDetailPreviewModal";
     if (typeof closeModal === "function") closeModal(modalId);
     else {
@@ -2628,8 +2621,6 @@
       .join("");
 
     return `<section class="payroll-detail-daily">
-      <h4 class="payroll-detail-daily-title">${escapeHtml(T("detail.dailyTitle"))}</h4>
-      <p class="payroll-detail-daily-hint">${escapeHtml(T("detail.dailyHint"))}</p>
       ${weekBlocks}
     </section>`;
   }
@@ -2776,6 +2767,7 @@ body{margin:0;padding:24px;background:#fff;}
 .payroll-page .payroll-detail-daily-table{min-width:1080px;width:max-content;max-width:none;font-size:11px;}
 .payroll-page .payroll-detail-daily-table th,
 .payroll-page .payroll-detail-daily-table td{padding:6px 8px;white-space:nowrap;}
+.payroll-page .payroll-decl-amount{display:inline-block;font-size:1.35em;font-weight:800;color:#111;line-height:1.25;padding:0 2px 3px;border-bottom:2px solid #111;text-decoration:none;letter-spacing:.02em;}
 .print-only{display:block !important;}
 @media print{body{padding:15px 20px}@page{margin:10mm}}
 </style></head><body class="payroll-page payroll-entered payroll-detail-export-doc">${clone.outerHTML}</body></html>`;
@@ -2959,10 +2951,7 @@ body{margin:0;padding:24px;background:#fff;}
 
     syncDetailMetaFields(emp, period);
     syncDetailSignFooter(emp);
-    const declVer = $("#detail-declaration-version");
     const declBody = $("#detail-declaration-body");
-    const mapping = getAdpMapping();
-    if (declVer) declVer.textContent = mapping && mapping.declarationVersion ? `· ${mapping.declarationVersion}` : "";
     if (declBody) declBody.innerHTML = renderDeclarationHtml(emp);
 
     $("#detail-hours-grid").innerHTML = `
@@ -3014,14 +3003,6 @@ body{margin:0;padding:24px;background:#fff;}
     if (exportBtn) exportBtn.disabled = missingAdpFile;
     updateManageWeekSummaries(emp, period);
     updateEmployeeBatchExportButton();
-    const draftBadge = $("#detail-draft-badge");
-    if (draftBadge) {
-      const savedEmp = getEmployee(state.periodId, state.employeeId);
-      draftBadge.classList.toggle(
-        "hidden",
-        !!(savedEmp && savedEmp.confirmed && !hasUnconfirmedWorkspaceChanges())
-      );
-    }
   }
 
   function showView(name) {
@@ -3373,6 +3354,21 @@ body{margin:0;padding:24px;background:#fff;}
     $("#btn-audit-log-close")?.addEventListener("click", () => hideAuditLogModal());
     $("#btn-audit-log-ok")?.addEventListener("click", () => hideAuditLogModal());
     $("#btn-employees-detail-modal-close")?.addEventListener("click", () => hideEmployeesDetailModal());
+    $("#btn-employees-detail-export-toggle")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (typeof toggleEmployeesDetailExportMenu === "function") toggleEmployeesDetailExportMenu();
+    });
+    $("#employeesDetailExportMenu")?.querySelectorAll(".export-menu-item[data-export-type]").forEach((item) => {
+      item.addEventListener("click", () => {
+        syncDerived();
+        const type = item.getAttribute("data-export-type");
+        if (type === "email") {
+          if (typeof openPayrollDetailEmailModal === "function") openPayrollDetailEmailModal();
+        } else if (typeof exportPayrollDetailAs === "function") {
+          exportPayrollDetailAs(type);
+        }
+      });
+    });
     $("#btn-employees-detail-modal-ok")?.addEventListener("click", () => hideEmployeesDetailModal());
     $("#btn-adp-report-modal-close")?.addEventListener("click", () => hideAdpReportModal());
     $("#btn-adp-report-modal-ok")?.addEventListener("click", () => hideAdpReportModal());

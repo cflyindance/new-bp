@@ -62,17 +62,43 @@ function togglePayrollDetailExportMenu() {
 
   document.getElementById("payrollDetailExportMenu")?.classList.toggle("show");
 
+  document.getElementById("employeesDetailExportMenu")?.classList.remove("show");
+
+}
+
+
+
+function toggleEmployeesDetailExportMenu() {
+
+  document.getElementById("employeesDetailExportMenu")?.classList.toggle("show");
+
+  document.getElementById("payrollDetailExportMenu")?.classList.remove("show");
+
+}
+
+
+
+function closePayrollDetailExportMenus() {
+
+  document.getElementById("payrollDetailExportMenu")?.classList.remove("show");
+
+  document.getElementById("employeesDetailExportMenu")?.classList.remove("show");
+
 }
 
 
 
 document.addEventListener("click", function (e) {
 
-  const menu = document.getElementById("payrollDetailExportMenu");
+  if (!e.target.closest(".payroll-detail-export-dropdown")) {
 
-  if (menu && !e.target.closest(".payroll-detail-export-dropdown")) {
+    document.getElementById("payrollDetailExportMenu")?.classList.remove("show");
 
-    menu.classList.remove("show");
+  }
+
+  if (!e.target.closest(".employees-detail-export-dropdown")) {
+
+    document.getElementById("employeesDetailExportMenu")?.classList.remove("show");
 
   }
 
@@ -82,7 +108,7 @@ document.addEventListener("click", function (e) {
 
 function exportPayrollDetailAs(type) {
 
-  document.getElementById("payrollDetailExportMenu")?.classList.remove("show");
+  closePayrollDetailExportMenus();
 
   const data = getPayrollDetailExportData();
 
@@ -758,7 +784,7 @@ function openPayrollDetailPrintWindowAndPrint(docHtml, data) {
 
 function openPayrollDetailEmailModal() {
 
-  document.getElementById("payrollDetailExportMenu")?.classList.remove("show");
+  closePayrollDetailExportMenus();
 
   if (typeof openModal === "function") openModal("payrollDetailEmailModal");
 
