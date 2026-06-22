@@ -955,6 +955,7 @@
     periodId: null,
     employeeId: null,
     periodYearFilter: String(new Date().getFullYear()),
+    workspacePeriodYearFilter: "",
     periodNumberFilter: "",
     periodStatusFilter: "",
     employeeStoreFilter: "",
@@ -1284,6 +1285,7 @@
       periodId: state.periodId,
       employeeId: state.employeeId,
       periodYearFilter: state.periodYearFilter,
+      workspacePeriodYearFilter: state.workspacePeriodYearFilter,
       periodNumberFilter: state.periodNumberFilter,
       periodStatusFilter: state.periodStatusFilter,
       employeeStoreFilter: state.employeeStoreFilter,
@@ -1305,6 +1307,9 @@
     if (parsed.periodId) state.periodId = parsed.periodId;
     if (parsed.employeeId) state.employeeId = parsed.employeeId;
     if (typeof parsed.periodYearFilter === "string") state.periodYearFilter = parsed.periodYearFilter;
+    if (typeof parsed.workspacePeriodYearFilter === "string") {
+      state.workspacePeriodYearFilter = parsed.workspacePeriodYearFilter;
+    }
     if (typeof parsed.periodNumberFilter === "string") state.periodNumberFilter = parsed.periodNumberFilter;
     if (typeof parsed.periodStatusFilter === "string") state.periodStatusFilter = parsed.periodStatusFilter;
     if (typeof parsed.employeeStoreFilter === "string") state.employeeStoreFilter = parsed.employeeStoreFilter;
@@ -2157,9 +2162,38 @@
     return all && all.length ? all[0] : "";
   }
 
-  function getRecentYears() {
+  function getRecentYears(count = 10) {
     const current = new Date().getFullYear();
-    return [String(current), String(current - 1), String(current - 2)];
+    const years = [];
+    const n = Math.max(1, Number(count) || 10);
+    for (let i = 0; i < n; i++) {
+      years.push(String(current - i));
+    }
+    return years;
+  }
+
+  function resolvePeriodIdForYear(year, preferPeriodNumber) {
+    const periods = (Array.isArray(state.data.periods) ? state.data.periods : [])
+      .filter((p) => getPeriodYear(p) === String(year))
+      .sort((a, b) => Number(a.periodNumber || 0) - Number(b.periodNumber || 0));
+    if (periods.length === 0) return null;
+    if (preferPeriodNumber != null && String(preferPeriodNumber).trim() !== "") {
+      const match = periods.find((p) => String(p.periodNumber || "") === String(preferPeriodNumber));
+      if (match) return match.id;
+    }
+    const today = new Date();
+    for (let i = periods.length - 1; i >= 0; i--) {
+      const p = periods[i];
+      if (!periodHasStarted(p, today)) continue;
+      const list = state.data.employees[p.id];
+      if (Array.isArray(list) && list.length > 0) return p.id;
+    }
+    for (let i = periods.length - 1; i >= 0; i--) {
+      const p = periods[i];
+      const list = state.data.employees[p.id];
+      if (Array.isArray(list) && list.length > 0) return p.id;
+    }
+    return periods[0].id;
   }
 
   function renderManagePeriodNav() {
@@ -2167,18 +2201,37 @@
     const yearEl = $("#manage-period-nav-year");
     if (!grid) return;
     const current = getPeriod(state.periodId);
-    if (!current) {
+    const currentYear = current ? getPeriodYear(current) : "";
+    const years = getRecentYears();
+    const yearSuffix = T("year.suffix");
+    let navYear = currentYear || years[0] || "";
+    if (yearEl) {
+      if (yearEl.tagName === "SELECT") {
+        yearEl.innerHTML = years
+          .map((y) => `<option value="${escapeHtml(y)}">${escapeHtml(y)}${escapeHtml(yearSuffix)}</option>`)
+          .join("");
+        const preferred =
+          state.workspacePeriodYearFilter && years.includes(state.workspacePeriodYearFilter)
+            ? state.workspacePeriodYearFilter
+            : currentYear && years.includes(currentYear)
+              ? currentYear
+              : years[0];
+        navYear = preferred;
+        yearEl.value = preferred;
+        state.workspacePeriodYearFilter = preferred;
+      } else {
+        yearEl.textContent = navYear ? `${navYear}${yearSuffix}` : "—";
+      }
+    }
+    if (!current && !navYear) {
       grid.innerHTML = "";
-      if (yearEl) yearEl.textContent = "—";
       return;
     }
-    const year = getPeriodYear(current);
-    if (yearEl) yearEl.textContent = year ? `${year}${T("year.suffix")}` : "—";
     const periods = (Array.isArray(state.data.periods) ? state.data.periods : [])
-      .filter((p) => getPeriodYear(p) === year)
+      .filter((p) => getPeriodYear(p) === navYear)
       .sort((a, b) => Number(a.periodNumber || 0) - Number(b.periodNumber || 0));
     if (periods.length === 0) {
-      grid.innerHTML = "";
+      grid.innerHTML = `<p class="payroll-workspace-period-empty">${escapeHtml(T("empty.periods"))}</p>`;
       return;
     }
     grid.innerHTML = periods
@@ -2214,6 +2267,7 @@
       const currentEmp = getEmployee(state.periodId, state.employeeId);
       state.periodId = periodId;
       state.employeeId = resolveEmployeeIdForPeriod(periodId, currentEmp);
+      state.workspacePeriodYearFilter = getPeriodYear(getPeriod(periodId));
       renderManagePeriodNav();
       markWorkspaceEntrySnapshot();
       renderManageForm();
@@ -2282,6 +2336,7 @@
     state.periodId = periodId;
     state.employeeId = employeeId;
     state.view = "workspace";
+    state.workspacePeriodYearFilter = getPeriodYear(getPeriod(periodId));
     renderManagePeriodNav();
     markWorkspaceEntrySnapshot();
     renderManageForm();
@@ -3228,6 +3283,8 @@ body{margin:0;padding:24px;background:#fff;}
       }
       if (act === "open-employee") {
         state.employeeId = btn.getAttribute("data-employee-id");
+        state.workspacePeriodYearFilter = getPeriodYear(getPeriod(state.periodId));
+        renderManagePeriodNav();
         markWorkspaceEntrySnapshot();
         renderManageForm();
         syncWorkspaceDirtyBaseline();
@@ -3326,6 +3383,53 @@ body{margin:0;padding:24px;background:#fff;}
 
     $("#ws-employee-switch")?.addEventListener("change", (e) => {
       navigateWorkspaceEmployee(e.target.value);
+    });
+
+    $("#manage-period-nav-year")?.addEventListener("change", (e) => {
+      const select = e.target;
+      const year = select.value;
+      const prevYear = state.workspacePeriodYearFilter || getPeriodYear(getPeriod(state.periodId));
+      state.workspacePeriodYearFilter = year;
+      const preferNo = getPeriod(state.periodId)?.periodNumber;
+      const targetPeriodId = resolvePeriodIdForYear(year, preferNo);
+      if (!targetPeriodId) {
+        if (typeof showNotification === "function") showNotification(T("empty.periods"), "warning");
+        state.workspacePeriodYearFilter = prevYear;
+        renderManagePeriodNav();
+        return;
+      }
+      if (targetPeriodId === state.periodId) {
+        renderManagePeriodNav();
+        return;
+      }
+      readFormIntoDraft();
+      if (hasUnconfirmedWorkspaceChanges()) {
+        showUnsavedConfirmDialog().then((ok) => {
+          if (!ok) {
+            state.workspacePeriodYearFilter = prevYear;
+            renderManagePeriodNav();
+            return;
+          }
+          discardUnsavedWorkspaceDraft();
+          const currentEmp = getEmployee(state.periodId, state.employeeId);
+          state.periodId = targetPeriodId;
+          state.employeeId = resolveEmployeeIdForPeriod(targetPeriodId, currentEmp);
+          state.workspacePeriodYearFilter = getPeriodYear(getPeriod(targetPeriodId));
+          renderManagePeriodNav();
+          markWorkspaceEntrySnapshot();
+          renderManageForm();
+          syncWorkspaceDirtyBaseline();
+        });
+        return;
+      }
+      const currentEmp = getEmployee(state.periodId, state.employeeId);
+      state.periodId = targetPeriodId;
+      state.employeeId = resolveEmployeeIdForPeriod(targetPeriodId, currentEmp);
+      state.workspacePeriodYearFilter = getPeriodYear(getPeriod(targetPeriodId));
+      renderManagePeriodNav();
+      markWorkspaceEntrySnapshot();
+      renderManageForm();
+      syncWorkspaceDirtyBaseline();
     });
 
     document.body.addEventListener("click", (e) => {

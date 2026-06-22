@@ -463,6 +463,7 @@
     ["label[for='field-ot2-rate'] span:first-child", "manage.ot2RateLabel"],
     ["#manage-wide-table-title", "manage.wideTable"],
     ["#manage-period-nav-title", "manage.periodNav"],
+    ["#manage-period-nav-year", null, "aria-label", "filter.year"],
     [".payroll-workspace-period-nav", null, "aria-label", "manage.periodNav"],
     ["[data-action='preview-adp-report']", "manage.adpReport"],
     ["[data-action='preview-employees-detail']", "manage.employeesDetail"],

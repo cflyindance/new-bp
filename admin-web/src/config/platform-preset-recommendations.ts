@@ -17,7 +17,7 @@ const T = {
   off: "excluded",
 } as const satisfies Record<string, PresetModuleTier>;
 
-/** 与 permission-registry 一级模块对齐（不含 permission-mgmt） */
+/** 与 permission-registry 一级模块对齐 */
 const ALL_PRESET_L1_MODULE_IDS = [
   "brand-mgmt",
   "store-mgmt",
@@ -44,6 +44,7 @@ const ALL_PRESET_L1_MODULE_IDS = [
   "capital-turnover",
   "asset-center",
   "log-management",
+  "permission-mgmt",
   "settings",
 ] as const;
 
@@ -52,6 +53,7 @@ const CHAIN_PLATFORM_OPT: Partial<Record<string, PresetModuleTier>> = {
   "store-mgmt": T.opt,
   "capital-turnover": T.opt,
   "log-management": T.opt,
+  "permission-mgmt": T.opt,
   "asset-center": T.opt,
 };
 

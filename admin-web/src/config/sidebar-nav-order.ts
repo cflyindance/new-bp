@@ -22,15 +22,15 @@ export const STORE_SIDEBAR_MORE_MODULE_IDS: readonly string[] = [
   "print-templates",
   "notifications",
   "device-management",
-  "permission-mgmt",
   "asset-center",
   "log-management",
+  "permission-mgmt",
   "settings",
   "capital-turnover",
 ];
 
 /**
- * 连锁版：权限、库存提升为 dominant 导航；其余配置类仍在「更多」。
+ * 连锁版：库存提升为 dominant 导航；权限与其余配置类收入「更多」。
  */
 export const CHAIN_SIDEBAR_MORE_MODULE_IDS: readonly string[] = [
   "orders",
@@ -42,6 +42,7 @@ export const CHAIN_SIDEBAR_MORE_MODULE_IDS: readonly string[] = [
   "device-management",
   "asset-center",
   "log-management",
+  "permission-mgmt",
   "settings",
   "capital-turnover",
 ];

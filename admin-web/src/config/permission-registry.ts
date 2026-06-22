@@ -53,8 +53,6 @@ export interface PermissionModuleGroup {
   tree: PermissionTreeNode;
 }
 
-const RBAC_EXCLUDED_MODULE_IDS = new Set(["permission-mgmt"]);
-
 const ACCESS_RANK: Record<PermissionAccess, number> = {
   hidden: 0,
   view: 1,
@@ -198,8 +196,6 @@ export function buildPermissionModuleGroups(): PermissionModuleGroup[] {
   const groups: PermissionModuleGroup[] = [];
 
   for (const mod of NAV_MODULES) {
-    if (RBAC_EXCLUDED_MODULE_IDS.has(mod.id)) continue;
-
     const mKey = moduleKey(mod.id);
     const moduleNode: PermissionTreeNode = {
       resource: {

@@ -53,7 +53,7 @@ export interface NavModule {
   children: NavItem[];
   /**
    * `tabs`：二级在主内容区顶部 Tab（默认）。
-   * `sidebar`：二级在左侧主导航内可折叠展开。一级顺序见 `NAV_MODULES`（品牌→门店→主页→团队→商品中心→订单→支付→外卖/来取→营销→促销→会员→礼品卡→评价→前厅→后厨→预约→报表→财务→打印→消息→库存→硬件→权限；其后为信贷中心、素材中心、系统设置）。**外卖/来取、前厅管理中心、后厨管理中心**与品牌/门店等同为 `sheet` 滑层。重排可运行 `node scripts/reorder-nav-modules.mjs`。
+   * `sidebar`：二级在左侧主导航内可折叠展开。一级顺序见 `NAV_MODULES`（品牌→门店→主页→团队→商品中心→订单→支付→外卖/来取→营销→促销→会员→礼品卡→评价→前厅→后厨→预约→报表→财务→打印→消息→库存→硬件；其后为信贷中心、素材中心、日志管理、权限管理中心、系统设置）。**外卖/来取、前厅管理中心、后厨管理中心**与品牌/门店等同为 `sheet` 滑层。重排可运行 `node scripts/reorder-nav-modules.mjs`。
    * `sheet`：二级在侧栏自右向左滑出层（与营销中心同交互），不在主导航树内展开。
    */
   subNavPlacement?: "sidebar" | "tabs" | "sheet";
@@ -513,6 +513,45 @@ export const NAV_MODULES: NavModule[] = [
     ],
   },
   {
+    id: "capital-turnover",
+    title: "信贷中心",
+    titleEn: "Credit center",
+    icon: "capital",
+    path: "/reports/capital",
+    defaultChildPath: "/reports/capital",
+    children: [{ id: "capital-main", title: "信贷中心", titleEn: "Credit center", path: "/reports/capital" }],
+  },
+  {
+    id: "asset-center",
+    title: "素材中心",
+    titleEn: "Asset center",
+    icon: "assetCenter",
+    path: "/asset-center",
+    subNavPlacement: "sheet",
+    defaultChildPath: "/asset-center/materials",
+    children: [
+      { id: "ac-materials", title: "图片素材", titleEn: "Image materials", path: "/asset-center/materials" },
+      { id: "ac-videos", title: "视频库", titleEn: "Video library", path: "/asset-center/videos" },
+    ],
+  },
+  {
+    id: "log-management",
+    title: "日志管理",
+    titleEn: "Log management",
+    icon: "logManagement",
+    path: "/log-management",
+    subNavPlacement: "sheet",
+    defaultChildPath: "/log-management/login-logs",
+    children: [
+      {
+        id: "lm-login-logs",
+        title: "系统登录日志",
+        titleEn: "System login logs",
+        path: "/log-management/login-logs",
+      },
+    ],
+  },
+  {
     id: "permission-mgmt",
     title: "权限管理中心",
     titleEn: "Access management center",
@@ -550,45 +589,6 @@ export const NAV_MODULES: NavModule[] = [
         title: "权限变更记录",
         titleEn: "Permission change log",
         path: "/permissions/change-log",
-      },
-    ],
-  },
-  {
-    id: "capital-turnover",
-    title: "信贷中心",
-    titleEn: "Credit center",
-    icon: "capital",
-    path: "/reports/capital",
-    defaultChildPath: "/reports/capital",
-    children: [{ id: "capital-main", title: "信贷中心", titleEn: "Credit center", path: "/reports/capital" }],
-  },
-  {
-    id: "asset-center",
-    title: "素材中心",
-    titleEn: "Asset center",
-    icon: "assetCenter",
-    path: "/asset-center",
-    subNavPlacement: "sheet",
-    defaultChildPath: "/asset-center/materials",
-    children: [
-      { id: "ac-materials", title: "图片素材", titleEn: "Image materials", path: "/asset-center/materials" },
-      { id: "ac-videos", title: "视频库", titleEn: "Video library", path: "/asset-center/videos" },
-    ],
-  },
-  {
-    id: "log-management",
-    title: "日志管理",
-    titleEn: "Log management",
-    icon: "logManagement",
-    path: "/log-management",
-    subNavPlacement: "sheet",
-    defaultChildPath: "/log-management/login-logs",
-    children: [
-      {
-        id: "lm-login-logs",
-        title: "系统登录日志",
-        titleEn: "System login logs",
-        path: "/log-management/login-logs",
       },
     ],
   },
