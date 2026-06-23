@@ -30,7 +30,24 @@ export const PLATFORM_PRESET_PRODUCT_LINES = FOH_LINE_NAV_ORDER;
 
 /** 所有业态 × 产线预设默认始终启用的一级模块（不可通过业态推荐等级关闭） */
 
-export const PLATFORM_PRESET_ALWAYS_ENABLED_L1_MODULE_IDS = ["settings"] as const;
+export const PLATFORM_PRESET_ALWAYS_ENABLED_L1_MODULE_IDS = [
+  "settings",
+  "capital-turnover",
+  "asset-center",
+  "log-management",
+  "permission-mgmt",
+  "device-management",
+  "print-templates",
+  "finance-center",
+  "reports-finance",
+  "team",
+  "product-center-main",
+  "orders",
+  "transactions",
+  "promotions",
+  "queue-call",
+  "kitchen-kds",
+] as const;
 
 
 

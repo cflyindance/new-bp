@@ -2,9 +2,10 @@
  * 平台预设 · 业态 × 产线默认推荐画像
  *
  * 默认启用规则（见 resolveDefaultModuleEnabled / defaultEnabledFromRecommendations）：
- * - 「全功能/不确定」→ 编辑树内全部节点默认勾选
+ * - 「全功能/不确定」→ 编辑树内全部 L1～L4 节点默认勾选；运行时与配置预设均保持全选（忽略历史部分发布）
  * - 其他业态 → 一级 core/recommended 模块及其整棵子树默认勾选（产线 excluded 除外）
  * - 产线 core/recommended → 可抬升业态 optional 模块
+ * - `PLATFORM_PRESET_ALWAYS_ENABLED_L1_MODULE_IDS`（系统设置、信贷/素材/日志、权限/硬件/打印/财务/报表/团队/商品/订单/支付/促销/前厅/后厨）任意业态×产线均默认勾选
  */
 import type { ProductLineId } from "./platform-preset-catalog";
 

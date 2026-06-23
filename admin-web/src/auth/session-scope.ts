@@ -59,9 +59,6 @@ export const DEMO_SCOPE_STORES: ScopeOption[] = [
 /** 单店组织层级下侧栏默认隐藏的连锁向一级模块 */
 export const STORE_TIER_HIDDEN_NAV_MODULE_IDS: readonly string[] = [
   "brand-mgmt",
-  "asset-center",
-  "log-management",
-  "capital-turnover",
 ];
 
 const CHAIN_ROLE_IDS = new Set(["hq-admin"]);

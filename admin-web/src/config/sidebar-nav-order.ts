@@ -10,41 +10,31 @@ export const SIDEBAR_NAV_LAYOUT_PRESET_KEY = "sidebar-nav-layout-preset-v1";
 export const SIDEBAR_NAV_LAYOUT_PRESET_MANUAL_KEY = "sidebar-nav-layout-preset-manual-v1";
 
 /**
- * 门店版：面向单店店长/值班经理，配置与平台类模块收入「更多」。
+ * 门店版：面向单店店长/值班经理，低频配置类模块收入「更多」。
  * 详见 docs/侧栏导航布局-门店版与连锁版.md
  */
 export const STORE_SIDEBAR_MORE_MODULE_IDS: readonly string[] = [
-  "orders",
-  "transactions",
   "marketing",
   "gift-cards",
   "inventory-ordering",
-  "print-templates",
   "notifications",
-  "device-management",
   "asset-center",
   "log-management",
   "permission-mgmt",
   "settings",
-  "capital-turnover",
 ];
 
 /**
- * 连锁版：库存提升为 dominant 导航；权限与其余配置类收入「更多」。
+ * 连锁版：低频配置类模块收入「更多」。
  */
 export const CHAIN_SIDEBAR_MORE_MODULE_IDS: readonly string[] = [
-  "orders",
-  "transactions",
   "marketing",
   "gift-cards",
-  "print-templates",
   "notifications",
-  "device-management",
   "asset-center",
   "log-management",
   "permission-mgmt",
   "settings",
-  "capital-turnover",
 ];
 
 /** @deprecated 使用 getSidebarMoreModuleIds()；保留别名指向门店版列表 */

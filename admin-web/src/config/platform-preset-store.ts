@@ -182,6 +182,13 @@ export function getEffectivePresetSnapshot(
   const cached = effectiveSnapshotCache.get(cacheKey);
   if (cached) return cached;
 
+  if (isFullSelectionBusinessType(businessTypeId)) {
+    const published = getPublishedSnapshot(businessTypeId, productLineId);
+    const snap = buildFullSelectionSnapshot(businessTypeId, productLineId, published);
+    effectiveSnapshotCache.set(cacheKey, snap);
+    return snap;
+  }
+
   const published = getPublishedSnapshot(businessTypeId, productLineId);
   const snap =
     published ??
@@ -257,6 +264,21 @@ function defaultSelectionAllEnabled(
   return selection;
 }
 
+/** 「全功能/不确定」：一级～四级预设节点全部启用（不受历史部分发布快照影响） */
+function buildFullSelectionSnapshot(
+  businessTypeId: string,
+  productLineId: ProductLineId,
+  meta?: Pick<PlatformPresetSnapshot, "version" | "publishedAt">,
+): PlatformPresetSnapshot {
+  return {
+    businessTypeId,
+    productLineId,
+    version: meta?.version ?? 0,
+    publishedAt: meta?.publishedAt ?? "",
+    selection: defaultSelectionAllEnabled(productLineId),
+  };
+}
+
 function defaultEnabledFromRecommendations(
   businessTypeId: string,
   productLineId: ProductLineId,
@@ -290,6 +312,12 @@ export function getOrCreateDraftSelection(
   businessTypeId: string,
   productLineId: ProductLineId,
 ): PlatformPresetSnapshot {
+  if (isFullSelectionBusinessType(businessTypeId)) {
+    const key = presetComboKey(businessTypeId, productLineId);
+    const existing = readStore().snapshots[key];
+    return buildFullSelectionSnapshot(businessTypeId, productLineId, existing);
+  }
+
   const key = presetComboKey(businessTypeId, productLineId);
   const existing = readStore().snapshots[key];
   if (existing) return structuredClone(existing);
@@ -301,8 +329,12 @@ export function publishPlatformPresetSnapshot(snapshot: PlatformPresetSnapshot):
   const key = presetComboKey(snapshot.businessTypeId, snapshot.productLineId);
   const nextVersion = (store.snapshots[key]?.version ?? 0) + 1;
   const actor = getAuthenticatedEmail() ?? "system";
+  const selection = isFullSelectionBusinessType(snapshot.businessTypeId)
+    ? defaultSelectionAllEnabled(snapshot.productLineId)
+    : snapshot.selection;
   const published: PlatformPresetSnapshot = {
     ...snapshot,
+    selection,
     version: nextVersion,
     publishedAt: new Date().toISOString(),
   };
