@@ -61,8 +61,9 @@ import {
   getTeamReportsDefaultPath,
   getActiveTeamReportsSubPath,
   isTeamReportsTertiaryPath,
-  MARKETING_MGMT_SUBNAV,
-  getActiveMarketingMgmtSubPath,
+  MARKETING_SHEET_SUBNAV,
+  getActiveMarketingSheetSubPath,
+  findMarketingNavTitle,
   PRODUCT_CENTER_MAIN_SHEET_SETTINGS_SUBNAV,
   getActiveProductCenterMainSettingsSubPath,
   MARKETING_SHEET_SETTINGS_SUBNAV,
@@ -1851,8 +1852,6 @@ const PCM_SHEET_BP_MGMT_EXPAND_KEY = "pcm-sheet-brand-products-mgmt-expanded";
 const PCM_SHEET_BRAND_MENU_EXPAND_KEY = "pcm-sheet-brand-menu-expanded";
 /** 商品中心滑层内「门店管理」下门店商品子导航的展开/收起（sessionStorage） */
 const PCM_SHEET_STORE_MENU_EXPAND_KEY = "pcm-sheet-store-menu-expanded";
-/** 营销中心滑层内「营销管理」子导航的展开/收起（sessionStorage） */
-const MARKETING_SHEET_MGMT_EXPAND_KEY = "marketing-sheet-mgmt-expanded";
 
 /** 与 `mountPath` 同步：用于在 hash 真正切离库存域时关闭滑层，且不误伤「同路径下仅开关滑层」的 mount */
 let lastSidebarMountPathForInventorySheet = "";
@@ -2416,48 +2415,23 @@ function renderProductCenterMainSecondarySheet(hash: string, open: boolean): str
     </div>`;
 }
 
-/** 与商品中心同交互：侧栏内自右滑入；「营销管理」下为屏保 / 广告 / 海报 Pro */
+/** 与促销中心同交互：侧滑层内平铺「营销活动 / 手动营销 / 屏保 / 广告 / 海报 Pro」 */
 function renderMarketingSecondarySheet(hash: string, open: boolean): string {
   const mktMod = NAV_MODULES.find((x) => x.id === "marketing")!;
   const { dialog: mktDlg, navFunc: mktNavFunc } = sheetModuleAriaFromNav(mktMod);
-  const mktMgmt = t("sheet.marketingMgmt");
-  const mktMgmtSheetAria = `${mktMgmt} · ${t("nav.subNavQualifier")}`;
+  const mktSheetAria = `${pick(mktMod.title, mktMod.titleEn)} · ${t("nav.subNavQualifier")}`;
   const sheetClass = open
     ? "translate-x-0 pointer-events-auto opacity-100"
     : "translate-x-full pointer-events-none opacity-0";
   const chevronBack = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>`;
-  const mgmtExpanded = getMarketingSheetMgmtExpanded(hash);
-  const pcmHubSectionFirst = "pt-0";
   const hubBody = `
         <div class="space-y-4">
-          <section class="${pcmHubSectionFirst}">
-            <button
-              type="button"
-              data-marketing-sheet-mgmt-toggle
-              class="mb-2 flex w-full min-h-10 items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm font-semibold tracking-tight ${SBR_SHEET_GROUP_HEAD} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-active focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar"
-              aria-expanded="${mgmtExpanded}"
-              aria-controls="marketing-sheet-mgmt-children"
-            >
-              <span class="min-w-0 flex-1 truncate">${mktMgmt}</span>
-              <span class="shrink-0 text-sidebar-muted transition-transform duration-200 ${mgmtExpanded ? "" : "-rotate-90"}">${PCM_SHEET_GROUP_CHEVRON}</span>
-            </button>
-            <div id="marketing-sheet-mgmt-children" class="${mgmtExpanded ? "" : "hidden"}" ${mgmtExpanded ? "" : 'aria-hidden="true"'}>
-              ${renderPcSheetDarkSubnav(hash, filterSheetSubnavByPlatformPreset("marketing", MARKETING_MGMT_SUBNAV), getActiveMarketingMgmtSubPath, pcmSheetNavNoChildPath, {
-                brandProductSecondLevel: true,
-                sheetGroupedSubnavAriaLabel: mktMgmtSheetAria,
-              })}
-            </div>
-          </section>
-          ${
-            MARKETING_SHEET_SETTINGS_SUBNAV.length > 0
-              ? `<section class="${SBR_DIVIDER_T} pt-3">
-            ${renderPcSheetDarkSubnav(hash, MARKETING_SHEET_SETTINGS_SUBNAV, getActiveMarketingSettingsSubPath, pcmSheetNavNoChildPath, {
+          <section class="pt-0">
+            ${renderPcSheetDarkSubnav(hash, filterSheetSubnavByPlatformPreset("marketing", MARKETING_SHEET_SUBNAV), getActiveMarketingSheetSubPath, pcmSheetNavNoChildPath, {
               brandProductSecondLevel: true,
-              sheetGroupedSubnavAriaLabel: `${pick(mktMod.title, mktMod.titleEn)} · ${t("nav.subNavQualifier")}`,
+              sheetGroupedSubnavAriaLabel: mktSheetAria,
             })}
-          </section>`
-              : ""
-          }
+          </section>
         </div>`;
   return `
     <div
@@ -2559,7 +2533,7 @@ function renderMembersSecondarySheet(hash: string, open: boolean): string {
             })}
           </section>
           <section class="${SBR_DIVIDER_T} pt-3">
-            ${renderPcSheetDarkSubnav(hash, MEMBERS_SHEET_SETTINGS_SUBNAV, getActiveMembersSettingsSubPath, pcmSheetNavNoChildPath, {
+            ${renderPcSheetDarkSubnav(hash, filterSheetSubnavByPlatformPreset("members", MEMBERS_SHEET_SETTINGS_SUBNAV), getActiveMembersSettingsSubPath, pcmSheetNavNoChildPath, {
               brandProductSecondLevel: true,
               sheetGroupedSubnavAriaLabel: `${pick(memMod.title, memMod.titleEn)} · ${t("nav.subNavQualifier")}`,
             })}
@@ -2981,7 +2955,7 @@ function findTitle(path: string): { title: string; module?: string } {
   }
   if (path.startsWith("/members")) {
     const memMod = NAV_MODULES.find((x) => x.id === "members")!;
-    const card = MEMBERS_SHEET_SUBNAV.find((x) => x.id === "mem-card-mgmt");
+    const card = MEMBERS_SHEET_SUBNAV.find((x) => x.id === "mem-card-entry");
     if (card?.sidebarChildren) {
       const sortedM = [...card.sidebarChildren].sort((a, b) => b.path.length - a.path.length);
       for (const c of sortedM) {
@@ -2998,6 +2972,22 @@ function findTitle(path: string): { title: string; module?: string } {
       };
     }
     return { title: pick(memMod.title, memMod.titleEn), module: t("findTitle.moduleMembers") };
+  }
+  const mktNav = findMarketingNavTitle(path);
+  if (mktNav) {
+    const sortedMkt = [...MARKETING_SHEET_SUBNAV].sort((a, b) => b.path.length - a.path.length);
+    let mktMatch: ProductCenterSidebarSubItem | undefined;
+    for (const c of sortedMkt) {
+      if (path === c.path || path.startsWith(`${c.path}/`)) {
+        mktMatch = c;
+        break;
+      }
+    }
+    const mktMod = NAV_MODULES.find((x) => x.id === "marketing")!;
+    return {
+      title: mktMatch ? pick(mktMatch.title, mktMatch.titleEn) : pick(mktMod.title, mktMod.titleEn),
+      module: mktNav.module,
+    };
   }
   if (isReportsCenterHubPath(path)) {
     for (const item of REPORTS_SHEET_SUBNAV) {
@@ -3362,15 +3352,8 @@ function normalizeTabModuleHashes(): void {
     return;
   }
   if (raw === "/marketing" || raw === "/marketing/") {
-    replaceHashPath("/marketing/screensaver");
+    replaceHashPath("/marketing/campaigns");
     return;
-  }
-  const legacyMarketingPaths = ["/marketing/campaigns", "/marketing/manual"];
-  for (const legacy of legacyMarketingPaths) {
-    if (raw === legacy || raw === `${legacy}/` || raw.startsWith(`${legacy}/`)) {
-      replaceHashPath("/marketing/screensaver");
-      return;
-    }
   }
   if (raw === "/marketing/settings" || raw.startsWith("/marketing/settings/")) {
     replaceHashPath("/marketing/ads");
@@ -4136,25 +4119,6 @@ function getPcmSheetStoreMenuExpanded(currentPath: string): boolean {
 function setPcmSheetStoreMenuExpanded(expanded: boolean): void {
   try {
     sessionStorage.setItem(PCM_SHEET_STORE_MENU_EXPAND_KEY, expanded ? "true" : "false");
-  } catch {
-    /* ignore */
-  }
-}
-
-function getMarketingSheetMgmtExpanded(currentPath: string): boolean {
-  try {
-    const raw = sessionStorage.getItem(MARKETING_SHEET_MGMT_EXPAND_KEY);
-    if (raw === "true") return true;
-    if (raw === "false") return false;
-  } catch {
-    /* ignore */
-  }
-  return currentPath.startsWith("/marketing");
-}
-
-function setMarketingSheetMgmtExpanded(expanded: boolean): void {
-  try {
-    sessionStorage.setItem(MARKETING_SHEET_MGMT_EXPAND_KEY, expanded ? "true" : "false");
   } catch {
     /* ignore */
   }
@@ -11220,7 +11184,7 @@ function mount(): void {
         setPrintSecondarySheetOpen(false);
         setReservationsSecondarySheetOpen(false);
         setMarketingSecondarySheetOpen(true);
-        replaceHashPath(getModuleDefaultChildPath("marketing", "/marketing/screensaver"));
+        replaceHashPath(getModuleDefaultChildPath("marketing", "/marketing/campaigns"));
         mount();
         return;
       }
@@ -11463,13 +11427,6 @@ function mount(): void {
     "click",
     (e) => {
       const hit = e.target as HTMLElement;
-      if (hit.closest("[data-marketing-sheet-mgmt-toggle]")) {
-        e.preventDefault();
-        const hash = readAppHashPath();
-        setMarketingSheetMgmtExpanded(!getMarketingSheetMgmtExpanded(hash));
-        mount();
-        return;
-      }
       if (hit.closest("[data-marketing-secondary-close]")) {
         e.preventDefault();
         setMarketingSecondarySheetOpen(false);

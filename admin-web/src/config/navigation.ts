@@ -268,8 +268,10 @@ export const NAV_MODULES: NavModule[] = [
     titleEn: "Marketing center",
     icon: "marketing",
     path: "/marketing",
-    defaultChildPath: "/marketing/screensaver",
+    defaultChildPath: "/marketing/campaigns",
     children: [
+      { id: "mkt-campaigns", title: "营销活动", titleEn: "Marketing campaigns", path: "/marketing/campaigns" },
+      { id: "mkt-manual", title: "手动营销", titleEn: "Manual marketing", path: "/marketing/manual" },
       { id: "mkt-screensaver", title: "屏保", titleEn: "Screensaver", path: "/marketing/screensaver" },
       { id: "mkt-ads", title: "广告", titleEn: "Ads", path: "/marketing/ads" },
       { id: "mkt-poster-pro", title: "海报Pro", titleEn: "Poster Pro", path: "/marketing/poster-pro" },
@@ -1007,12 +1009,17 @@ export const BRAND_MENU_SUBNAV: ProductCenterSidebarSubItem[] = [
   },
 ];
 
-/** 营销中心侧滑层 ·「营销管理」下子导航 */
-export const MARKETING_MGMT_SUBNAV: ProductCenterSidebarSubItem[] = [
+/** 营销中心侧滑层 · 平铺一级导航（id 与 NAV_MODULES children / 平台预设 L2 键一致） */
+export const MARKETING_SHEET_SUBNAV: ProductCenterSidebarSubItem[] = [
+  { id: "mkt-campaigns", title: "营销活动", titleEn: "Marketing campaigns", path: "/marketing/campaigns" },
+  { id: "mkt-manual", title: "手动营销", titleEn: "Manual marketing", path: "/marketing/manual" },
   { id: "mkt-screensaver", title: "屏保", titleEn: "Screensaver", path: "/marketing/screensaver" },
   { id: "mkt-ads", title: "广告", titleEn: "Ads", path: "/marketing/ads" },
   { id: "mkt-poster-pro", title: "海报Pro", titleEn: "Poster Pro", path: "/marketing/poster-pro" },
 ];
+
+/** @deprecated 使用 MARKETING_SHEET_SUBNAV */
+export const MARKETING_MGMT_SUBNAV = MARKETING_SHEET_SUBNAV;
 
 /** 商品中心侧滑层 · 设置（139/145 已迁前厅 pos-combo-ordering，无独立设置入口） */
 export const PRODUCT_CENTER_MAIN_SHEET_SETTINGS_SUBNAV: ProductCenterSidebarSubItem[] = [];
@@ -1075,11 +1082,11 @@ export const RESERVATIONS_SHEET_SUBNAV: ProductCenterSidebarSubItem[] = [
   { id: "res-settings", title: "设置", titleEn: "Settings", path: "/operations/reservations/settings" },
 ];
 
-/** 报表中心侧滑层：营业汇总、可折叠分组（销售汇总 / 商品报表 / 员工报表 / 走势详情）、月度经营分析 */
+/** 报表中心侧滑层：营业汇总、可折叠分组（销售汇总 / 商品报表 / 员工报表 / 走势详情）、月度经营分析（id 与 NAV_MODULES children / 平台预设 L2 键一致） */
 export const REPORTS_SHEET_SUBNAV: ProductCenterSidebarSubItem[] = [
-  { id: "rpt-business-overview", title: "营业汇总", titleEn: "Business summary", path: "/reports/revenue" },
+  { id: "rpt-revenue", title: "营业汇总", titleEn: "Business summary", path: "/reports/revenue" },
   {
-    id: "rpt-sales-summary",
+    id: "rpt-sales",
     title: "销售汇总",
     titleEn: "Sales summary",
     path: "/reports/sales/orders",
@@ -1092,7 +1099,7 @@ export const REPORTS_SHEET_SUBNAV: ProductCenterSidebarSubItem[] = [
     ],
   },
   {
-    id: "rpt-product-reports",
+    id: "rpt-products",
     title: "商品报表",
     titleEn: "Product reports",
     path: "/reports/products/ranking",
@@ -1103,7 +1110,7 @@ export const REPORTS_SHEET_SUBNAV: ProductCenterSidebarSubItem[] = [
     ],
   },
   {
-    id: "rpt-center-staff",
+    id: "rpt-staff",
     title: "员工报表",
     titleEn: "Staff reports",
     path: "/reports/staff/overview",
@@ -1161,10 +1168,10 @@ export function getActiveFinanceSettingsSubPath(path: string): string {
   return "";
 }
 
-/** 会员中心侧滑层 ·「卡券管理」（可展开三级）+「积分配置」 */
+/** 会员中心侧滑层 ·「卡券管理」（可展开三级）+「积分配置」（id 与 NAV_MODULES children / 平台预设 L2 键一致） */
 export const MEMBERS_SHEET_SUBNAV: ProductCenterSidebarSubItem[] = [
   {
-    id: "mem-card-mgmt",
+    id: "mem-card-entry",
     title: "卡券管理",
     titleEn: "Cards & coupons",
     path: "/members/card/coupon-mgmt",
@@ -1268,9 +1275,23 @@ export function getActiveBrandMenuSubPath(path: string): string {
   return getActiveProductCenterSidebarSubPath(path, BRAND_MENU_SUBNAV);
 }
 
-export function getActiveMarketingMgmtSubPath(path: string): string {
+export function getActiveMarketingSheetSubPath(path: string): string {
   if (!path.startsWith("/marketing")) return "";
-  return getActiveProductCenterSidebarSubPath(path, MARKETING_MGMT_SUBNAV);
+  return getActiveProductCenterSidebarSubPath(path, MARKETING_SHEET_SUBNAV);
+}
+
+/** @deprecated 使用 getActiveMarketingSheetSubPath */
+export const getActiveMarketingMgmtSubPath = getActiveMarketingSheetSubPath;
+
+export function findMarketingNavTitle(path: string): { title: string; module: string } | null {
+  if (!path.startsWith("/marketing")) return null;
+  const sorted = [...MARKETING_SHEET_SUBNAV].sort((a, b) => b.path.length - a.path.length);
+  for (const c of sorted) {
+    if (path === c.path || path.startsWith(`${c.path}/`)) {
+      return { title: c.title, module: "营销中心 · Marketing center" };
+    }
+  }
+  return { title: "营销中心", module: "营销中心 · Marketing center" };
 }
 
 export function getActivePromotionsMgmtSubPath(path: string): string {
@@ -1380,7 +1401,7 @@ export function findGiftCardsNavTitle(path: string): { title: string; module: st
 }
 
 export function getMembersSheetSidebarChildActivePath(path: string, item: ProductCenterSidebarSubItem): string {
-  if (item.id !== "mem-card-mgmt" || !item.sidebarChildren?.length) return "";
+  if (item.id !== "mem-card-entry" || !item.sidebarChildren?.length) return "";
   const sorted = [...item.sidebarChildren].sort((a, b) => b.path.length - a.path.length);
   for (const c of sorted) {
     if (path === c.path || path.startsWith(`${c.path}/`)) return c.path;
@@ -1391,7 +1412,7 @@ export function getMembersSheetSidebarChildActivePath(path: string, item: Produc
 /** 会员中心路由 → 主区标题 / 模块副标题 */
 export function findMembersNavTitle(path: string): { title: string; module: string } | null {
   if (!path.startsWith("/members")) return null;
-  const card = MEMBERS_SHEET_SUBNAV.find((x) => x.id === "mem-card-mgmt");
+  const card = MEMBERS_SHEET_SUBNAV.find((x) => x.id === "mem-card-entry");
   if (card?.sidebarChildren) {
     const sorted = [...card.sidebarChildren].sort((a, b) => b.path.length - a.path.length);
     for (const c of sorted) {
