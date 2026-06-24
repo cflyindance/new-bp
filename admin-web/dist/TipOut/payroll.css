@@ -1265,7 +1265,38 @@
   margin-top: 24px;
 }
 
-.payroll-page .payroll-confirm-fixed,
+.payroll-page .payroll-confirm-fixed {
+  position: fixed;
+  left: 264px;
+  right: 0;
+  bottom: 0;
+  z-index: 950;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 24px;
+  box-sizing: border-box;
+  background: #fff;
+  border-top: 1px solid var(--border-light);
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.payroll-page .payroll-confirm-fixed-start {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.payroll-page .payroll-confirm-fixed-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
 .payroll-page .payroll-adp-export-fixed,
 .payroll-page .payroll-detail-export-fixed {
   position: fixed;
@@ -1282,6 +1313,11 @@
   background: #fff;
   border-top: 1px solid var(--border-light);
   box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.payroll-page .payroll-confirm-fixed .btn.is-loading {
+  opacity: 0.72;
+  pointer-events: none;
 }
 
 body.tipout-embedded .payroll-page .payroll-confirm-fixed,

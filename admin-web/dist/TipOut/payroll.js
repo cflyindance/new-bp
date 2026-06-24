@@ -1385,6 +1385,7 @@
       export_detail_email: T("audit.exportDetailEmail"),
       tipout_import: T("audit.tipoutImport"),
       field_change: T("audit.fieldChange"),
+      refresh_employees: T("audit.refreshEmployees"),
     };
     return map[action] || action;
   }
@@ -3142,6 +3143,60 @@ body{margin:0;padding:24px;background:#fff;}
     });
   }
 
+  /** 从第三方员工主数据（演示：员工列表 localStorage）手动拉取并合并到各期员工 */
+  function refreshEmployeeDataFromThirdParty() {
+    runAfterUnsavedWorkspaceConfirm(() => {
+      const btn = document.querySelector("[data-action='refresh-employee-data']");
+      if (btn) {
+        btn.disabled = true;
+        btn.classList.add("is-loading");
+        btn.textContent = T("manage.refreshEmployeeDataRunning");
+      }
+      const finish = (ok) => {
+        if (btn) {
+          btn.disabled = false;
+          btn.classList.remove("is-loading");
+          btn.textContent = T("manage.refreshEmployeeData");
+        }
+        if (typeof showNotification === "function") {
+          showNotification(
+            ok ? T("manage.refreshEmployeeDataSuccess") : T("manage.refreshEmployeeDataFailed"),
+            ok ? "success" : "error",
+          );
+        } else if (ok) {
+          alert(T("manage.refreshEmployeeDataSuccess"));
+        } else {
+          alert(T("manage.refreshEmployeeDataFailed"));
+        }
+      };
+      const applyRefresh = () => {
+        try {
+          syncEmployeesFromUnifiedRoster(state.data.employees);
+          syncPeriodStatuses(state.data.periods, state.data.employees);
+          appendAudit("refresh_employees", {
+            rosterCount: getUnifiedRoster().length,
+            source: "third-party-manual",
+          });
+          saveState();
+          if (state.view === "workspace" && state.periodId && state.employeeId) {
+            initWorkspaceDraft();
+            renderManageForm();
+            renderManagePeriodNav();
+            syncDerived();
+            syncWorkspaceDirtyBaseline();
+          } else if (state.view === "employees") {
+            renderEmployees();
+          }
+          renderPeriods();
+          finish(true);
+        } catch (_) {
+          finish(false);
+        }
+      };
+      window.setTimeout(applyRefresh, 500);
+    });
+  }
+
   function showFieldHelp(fieldKey) {
     const meta = typeof getPayrollFieldHelp === "function" ? getPayrollFieldHelp(fieldKey) : null;
     if (!meta) return;
@@ -3292,6 +3347,9 @@ body{margin:0;padding:24px;background:#fff;}
       }
       if (act === "confirm-employee") {
         confirmEmployee();
+      }
+      if (act === "refresh-employee-data") {
+        refreshEmployeeDataFromThirdParty();
       }
       if (act === "preview-employees-detail") {
         runAfterUnsavedWorkspaceConfirm(() => showEmployeesDetailModal());
