@@ -1271,10 +1271,10 @@
   right: 0;
   bottom: 0;
   z-index: 950;
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 12px;
+  column-gap: 12px;
   padding: 12px 24px;
   box-sizing: border-box;
   background: #fff;
@@ -1285,7 +1285,8 @@
 .payroll-page .payroll-confirm-fixed-start {
   display: flex;
   align-items: center;
-  flex-shrink: 0;
+  justify-self: start;
+  min-width: 0;
 }
 
 .payroll-page .payroll-confirm-fixed-actions {
@@ -1293,7 +1294,7 @@
   align-items: center;
   justify-content: flex-end;
   gap: 12px;
-  margin-left: auto;
+  justify-self: end;
   flex-shrink: 0;
 }
 
