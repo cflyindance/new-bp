@@ -15,11 +15,8 @@ import {
   getOnboardingConfirmationSectionsMerged,
   type OnboardingConfirmationSection,
 } from "./platform-preset-onboarding-scenarios";
-import {
-  listCustomBusinessTypes,
-  readSelectedBusinessTypeId,
-  writeSelectedBusinessTypeId,
-} from "./platform-preset-store";
+import { readSelectedBusinessTypeId, writeSelectedBusinessTypeId } from "./platform-preset-store";
+import { listCustomBusinessTypes } from "./enterprise-platform-preset-store";
 import { getFirstAllowedNavPath } from "./platform-preset-nav-filter";
 
 export const ONBOARDING_PATH = "/onboarding";

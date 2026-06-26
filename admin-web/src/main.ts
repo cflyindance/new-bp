@@ -11,7 +11,6 @@ import {
   DEMO_SCOPE_BRANDS,
   DEMO_SCOPE_REGIONS,
   DEMO_SCOPE_STORES,
-  ensureScopeFiltersForLayoutPreset,
   formatScopeFilterLabel,
   getScopedFilterOptions,
   isChainOrgTier,
@@ -104,14 +103,12 @@ import {
   getDefaultNavModuleIds,
   getSidebarOrderedNavModules,
   hasSavedCustomNavModuleOrder,
-  markSidebarNavLayoutPresetManual,
   readSidebarMoreExpandedExplicit,
   readSidebarNavLayoutPreset,
   readSidebarNavSortMode,
   splitSidebarNavModules,
   writeCustomNavModuleOrder,
   writeSidebarMoreExpanded,
-  writeSidebarNavLayoutPreset,
   writeSidebarNavSortMode,
   type SidebarNavLayoutPreset,
   type SidebarNavSortMode,
@@ -211,6 +208,21 @@ import {
   isPlatformPresetPath,
   renderPlatformPresetPage,
 } from "./config/platform-preset-ui";
+import { MERCHANT_PLATFORM_PRESET_SCOPE, isMPlatformPresetPath } from "./config/platform-preset-scope";
+import {
+  enterMPlatformShell,
+  exitMPlatformShell,
+  isMPlatformShellMode,
+} from "./shell/app-shell-mode";
+import {
+  bindViewSwitchControl,
+  renderViewSwitchControl,
+} from "./shell/view-switch-control";
+import {
+  bindMPlatformShell,
+  M_PLATFORM_PRESET_PATH,
+  mountMPlatformShell,
+} from "./shell/m-platform-shell";
 import {
   filterModuleSettingsGroupsForPreset,
   getFirstAllowedModuleSettingsPath,
@@ -3214,56 +3226,6 @@ function renderGlobalUiLocaleControl(): string {
         <option value="en" ${cur === "en" ? "selected" : ""}>${escapeHtml(t("locale.optionEn"))}</option>
       </select>
     </div>`;
-}
-
-function renderHeaderNavLayoutPresetControl(): string {
-  const preset = readSidebarNavLayoutPreset();
-  const storeActive = preset === "store";
-  const aria = escapeHtml(t("shell.navLayoutModeAria"));
-  const title = escapeHtml(t("shell.navLayoutLabel"));
-  const hint = escapeHtml(storeActive ? t("shell.navLayoutStoreHint") : t("shell.navLayoutChainHint"));
-  const activeBtn =
-    "rounded px-2 sm:px-2.5 h-8 sm:h-9 text-xs sm:text-sm font-medium bg-primary text-primary-foreground shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset";
-  const inactiveBtn =
-    "rounded px-2 sm:px-2.5 h-8 sm:h-9 text-xs sm:text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset";
-  return `
-    <div
-      class="flex shrink-0 items-center rounded-md border border-border bg-background p-0.5"
-      role="group"
-      aria-label="${aria}"
-      title="${title} · ${hint}"
-      data-header-nav-layout
-    >
-      <button
-        type="button"
-        data-header-nav-layout-preset="store"
-        class="${storeActive ? activeBtn : inactiveBtn}"
-        aria-pressed="${storeActive}"
-      >${escapeHtml(t("shell.navLayoutStore"))}</button>
-      <button
-        type="button"
-        data-header-nav-layout-preset="chain"
-        class="${!storeActive ? activeBtn : inactiveBtn}"
-        aria-pressed="${!storeActive}"
-      >${escapeHtml(t("shell.navLayoutChain"))}</button>
-    </div>`;
-}
-
-function bindHeaderNavLayoutPresetControl(): void {
-  const root = document.querySelector("[data-header-nav-layout]");
-  if (!root || root.getAttribute("data-header-nav-layout-bound") === "1") return;
-  root.setAttribute("data-header-nav-layout-bound", "1");
-  root.querySelectorAll<HTMLButtonElement>("[data-header-nav-layout-preset]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const preset = btn.getAttribute("data-header-nav-layout-preset");
-      if (preset !== "store" && preset !== "chain") return;
-      if (readSidebarNavLayoutPreset() === preset) return;
-      markSidebarNavLayoutPresetManual();
-      writeSidebarNavLayoutPreset(preset);
-      ensureScopeFiltersForLayoutPreset(preset);
-      mount();
-    });
-  });
 }
 
 function bindGlobalUiLocaleControl(): void {
@@ -10663,7 +10625,7 @@ function renderMain(): string {
             <svg class="size-5 dark:hidden" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
             <svg class="size-5 hidden dark:block" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
           </button>
-          ${renderHeaderNavLayoutPresetControl()}
+          ${renderViewSwitchControl()}
         </div>
       </header>`;
 
@@ -10767,7 +10729,7 @@ function renderMain(): string {
                       : isNavHomePath(path)
                         ? renderNavHomePanel()
                       : isPlatformPreset
-                        ? renderPlatformPresetPage(path)
+                        ? renderPlatformPresetPage(path, MERCHANT_PLATFORM_PRESET_SCOPE)
                       : isModuleHubSettingsCatalogPath(path)
                         ? isFohSettingsPath(path)
                           ? renderFohHubSettingsLayout(path, title, tertiaryRowClass, tertiaryMainClass)
@@ -10981,6 +10943,25 @@ function mount(): void {
   if (isPlatformPresetOnboardingPath(authPath)) {
     replaceHashPath(APP_NAV_HOME_PATH);
     mount();
+    return;
+  }
+
+  if (isMPlatformShellMode() || isMPlatformPresetPath(authPath)) {
+    if (!isMPlatformPresetPath(authPath)) {
+      replaceHashPath(M_PLATFORM_PRESET_PATH);
+      mount();
+      return;
+    }
+    if (!isMPlatformShellMode()) enterMPlatformShell();
+    const app = document.getElementById("app");
+    if (!app) return;
+    app.innerHTML = mountMPlatformShell(mount, authPath);
+    bindMPlatformShell(mount);
+    bindHeaderUserCenter(() => {
+      exitMPlatformShell();
+      replaceHashPath(LOGIN_PATH);
+      mount();
+    });
     return;
   }
 
@@ -11590,12 +11571,12 @@ function mount(): void {
     });
   });
   bindPermissionsRbac();
-  bindPlatformPreset(mount);
+  bindPlatformPreset(mount, MERCHANT_PLATFORM_PRESET_SCOPE);
+  bindViewSwitchControl(mount);
   bindStaffAccountsPage();
   bindLoginLogsPage(mount);
   bindHeaderScopeFilters();
   bindGlobalUiLocaleControl();
-  bindHeaderNavLayoutPresetControl();
   bindSidebarNavSortControls();
   bindSidebarNavDragReorder();
   ensureInventorySheetEscapeListener();
