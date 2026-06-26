@@ -1,4 +1,4 @@
-import { getRbacSnapshot } from "./rbac-store";
+import { ensureStaffRecord, getRbacSnapshot } from "./rbac-store";
 import {
   createStaffLoginAccount,
   deleteStaffLoginAccount,
@@ -72,15 +72,26 @@ function renderEditorModal(account: StaffLoginAccount | null, employeeOptions: s
                 <input name="employeeName" type="text" required class="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" value="${escapeHtml(account!.employeeName)}" />
               </label>
             </div>`
-            : `<label class="block text-sm">
-              <span class="font-medium text-card-foreground">关联员工</span>
-              <select name="employeePick" required class="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" data-staff-acct-employee-pick>
-                <option value="">选择员工…</option>
-                ${employeeOptions}
-              </select>
-              <input type="hidden" name="employeeId" value="" data-staff-acct-employee-id />
-              <input type="hidden" name="employeeName" value="" data-staff-acct-employee-name />
-            </label>`
+            : `<div class="space-y-3 rounded-lg border border-border bg-muted/20 p-3">
+              <label class="block text-sm">
+                <span class="font-medium text-card-foreground">快速选择员工（可选）</span>
+                <select class="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" data-staff-acct-employee-pick>
+                  <option value="">手动输入新员工…</option>
+                  ${employeeOptions}
+                </select>
+                <p class="mt-1 text-xs text-muted-foreground">选择未绑定账号的员工将自动填入工号与姓名；也可直接手动输入新建。</p>
+              </label>
+              <div class="grid gap-4 sm:grid-cols-2">
+                <label class="block text-sm">
+                  <span class="font-medium text-card-foreground">员工工号</span>
+                  <input name="employeeId" type="text" required pattern="[a-zA-Z0-9_-]+" placeholder="如 e004" class="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm font-mono" data-staff-acct-employee-id />
+                </label>
+                <label class="block text-sm">
+                  <span class="font-medium text-card-foreground">员工姓名</span>
+                  <input name="employeeName" type="text" required placeholder="如 赵新人" class="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" data-staff-acct-employee-name />
+                </label>
+              </div>
+            </div>`
         }
         <label class="block text-sm">
           <span class="font-medium text-card-foreground">登录邮箱</span>
@@ -106,11 +117,11 @@ function renderEditorModal(account: StaffLoginAccount | null, employeeOptions: s
             : `<div class="grid gap-4 sm:grid-cols-2">
               <label class="block text-sm">
                 <span class="font-medium text-card-foreground">登录密码</span>
-                <input name="password" type="password" required autocomplete="new-password" class="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
+                <input name="password" type="password" required autocomplete="new-password" minlength="6" class="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
               </label>
               <label class="block text-sm">
                 <span class="font-medium text-card-foreground">确认密码</span>
-                <input name="confirmPassword" type="password" required autocomplete="new-password" class="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
+                <input name="confirmPassword" type="password" required autocomplete="new-password" minlength="6" class="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
               </label>
             </div>`
         }
@@ -153,9 +164,9 @@ export function renderStaffAccountsPage(): string {
       <div class="flex flex-wrap items-start justify-between gap-3">
         <div class="max-w-2xl text-sm text-muted-foreground leading-relaxed">
           <p>维护员工登录<strong class="text-card-foreground">本系统（B 端管理中心）</strong>的邮箱账号与密码。账号须为 Menusifu 企业邮箱；保存后立即生效。</p>
-          <p class="mt-2">角色权限请在 <a href="#/permissions/staff" class="text-primary hover:underline">员工授权</a> 配置；登录日志见 <a href="#/log-management/login-logs" class="text-primary hover:underline">系统登录日志</a>。</p>
+          <p class="mt-2">新建时可手动输入员工工号与姓名（将同步写入 <a href="#/permissions/staff" class="text-primary hover:underline">员工授权</a>）；角色权限与门店范围请在员工授权中配置。登录日志见 <a href="#/log-management/login-logs" class="text-primary hover:underline">系统登录日志</a>。</p>
         </div>
-        <button type="button" class="shrink-0 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90" data-staff-acct-new ${availableStaff.length ? "" : "disabled title=\"请先在员工授权中添加员工\""}>新建登录账号</button>
+        <button type="button" class="shrink-0 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90" data-staff-acct-new>新建登录账号</button>
       </div>
       <div class="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
         <table class="w-full text-sm">
@@ -170,7 +181,7 @@ export function renderStaffAccountsPage(): string {
             </tr>
           </thead>
           <tbody>
-            ${accounts.length ? accounts.map((a) => renderAccountRow(a, rolesByEmployee.get(a.employeeId) ?? "")).join("") : '<tr><td colspan="6" class="px-4 py-8 text-center text-muted-foreground">暂无登录账号</td></tr>'}
+            ${accounts.length ? accounts.map((a) => renderAccountRow(a, rolesByEmployee.get(a.employeeId) ?? "")).join("") : '<tr><td colspan="6" class="px-4 py-8 text-center text-muted-foreground">暂无登录账号，点击右上角「新建登录账号」添加</td></tr>'}
           </tbody>
         </table>
       </div>
@@ -212,12 +223,25 @@ function bindModal(): void {
   });
 
   const employeePick = form.querySelector<HTMLSelectElement>("[data-staff-acct-employee-pick]");
+  const employeeIdInput = form.querySelector<HTMLInputElement>("[data-staff-acct-employee-id]");
+  const employeeNameInput = form.querySelector<HTMLInputElement>("[data-staff-acct-employee-name]");
+
   employeePick?.addEventListener("change", () => {
     const opt = employeePick.selectedOptions[0];
-    const idInput = form.querySelector<HTMLInputElement>("[data-staff-acct-employee-id]");
-    const nameInput = form.querySelector<HTMLInputElement>("[data-staff-acct-employee-name]");
-    if (idInput) idInput.value = employeePick.value;
-    if (nameInput) nameInput.value = opt?.getAttribute("data-name") ?? "";
+    if (!employeeIdInput || !employeeNameInput) return;
+    if (!employeePick.value) {
+      employeeIdInput.readOnly = false;
+      employeeNameInput.readOnly = false;
+      employeeIdInput.classList.remove("bg-muted/40");
+      employeeNameInput.classList.remove("bg-muted/40");
+      return;
+    }
+    employeeIdInput.value = employeePick.value;
+    employeeNameInput.value = opt?.getAttribute("data-name") ?? "";
+    employeeIdInput.readOnly = true;
+    employeeNameInput.readOnly = true;
+    employeeIdInput.classList.add("bg-muted/40");
+    employeeNameInput.classList.add("bg-muted/40");
   });
 
   const changePw = form.querySelector<HTMLInputElement>("[data-staff-acct-change-pw]");
@@ -230,14 +254,15 @@ function bindModal(): void {
     e.preventDefault();
     showError("");
     const id = (form.querySelector<HTMLInputElement>('input[name="id"]')?.value ?? "").trim();
-    const employeeId =
-      (form.querySelector<HTMLInputElement>("[data-staff-acct-employee-id]")?.value ??
-        form.querySelector<HTMLInputElement>('input[name="employeeId"]')?.value ??
-        "").trim();
-    const employeeName = (form.querySelector<HTMLInputElement>('input[name="employeeName"]')?.value ?? "").trim();
+    const employeeId = (
+      form.querySelector<HTMLInputElement>("[data-staff-acct-employee-id]")?.value ??
+      form.querySelector<HTMLInputElement>('input[name="employeeId"]')?.value ??
+      ""
+    ).trim();
+    const employeeName = (form.querySelector<HTMLInputElement>('[name="employeeName"]')?.value ?? "").trim();
     const loginEmail = (form.querySelector<HTMLInputElement>('input[name="loginEmail"]')?.value ?? "").trim();
-    const password = (form.querySelector<HTMLInputElement>('input[name="password"]')?.value ?? "");
-    const confirmPassword = (form.querySelector<HTMLInputElement>('input[name="confirmPassword"]')?.value ?? "");
+    const password = form.querySelector<HTMLInputElement>('input[name="password"]')?.value ?? "";
+    const confirmPassword = form.querySelector<HTMLInputElement>('input[name="confirmPassword"]')?.value ?? "";
     const enabled = !!form.querySelector<HTMLInputElement>('input[name="enabled"]')?.checked;
 
     try {
@@ -264,10 +289,19 @@ function bindModal(): void {
           ...(changePassword ? { password } : {}),
         });
       } else {
+        if (!employeeId) {
+          showError("请填写员工工号");
+          return;
+        }
+        if (!/^[a-zA-Z0-9_-]+$/.test(employeeId)) {
+          showError("工号仅支持字母、数字、下划线与连字符");
+          return;
+        }
         if (password !== confirmPassword) {
           showError("两次输入的密码不一致");
           return;
         }
+        ensureStaffRecord(employeeId, employeeName);
         createStaffLoginAccount({
           employeeId,
           employeeName,

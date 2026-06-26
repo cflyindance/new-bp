@@ -13,6 +13,7 @@ import {
   DEMO_SCOPE_STORES,
   ensureScopeFiltersForLayoutPreset,
   formatScopeFilterLabel,
+  getScopedFilterOptions,
   isChainOrgTier,
   isStoreScopeLocked,
   readScopeFilters,
@@ -10428,12 +10429,13 @@ function renderHeaderScopeFilters(): string {
     "h-9 max-w-[9rem] rounded-md border border-border bg-background px-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset sm:max-w-[10.5rem]";
   const scope = readScopeFilters();
   const locale = getUiLocale();
+  const scopedOpts = getScopedFilterOptions();
   const pickOpt = (opts: typeof DEMO_SCOPE_BRANDS, value: string) =>
     opts.find((o) => o.value === value) ?? opts[0];
 
   if (isStoreScopeLocked()) {
     const lockedId = scope.store || DEFAULT_LOCKED_STORE_ID;
-    const storeOpt = pickOpt(DEMO_SCOPE_STORES, lockedId);
+    const storeOpt = pickOpt(scopedOpts.stores.length ? scopedOpts.stores : DEMO_SCOPE_STORES, lockedId);
     const label = locale === "en" ? storeOpt.labelEn : storeOpt.labelZh;
     return `
     <div
@@ -10470,9 +10472,9 @@ function renderHeaderScopeFilters(): string {
       aria-label="${escapeHtml(t("header.scopeGroup"))}"
       title="${escapeHtml(t("header.scopeGroupTitle"))}"
     >
-      ${shouldShowBrandScopeFilter() ? renderSelect("scope-brand-select", "header.scopeBrand", "header.scopeBrandAria", DEMO_SCOPE_BRANDS, scope.brand) : ""}
-      ${shouldShowRegionScopeFilter() ? renderSelect("scope-region-select", "header.scopeRegion", "header.scopeRegionAria", DEMO_SCOPE_REGIONS, scope.region) : ""}
-      ${renderSelect("scope-store-select", "header.scopeStore", "header.scopeStoreAria", DEMO_SCOPE_STORES, scope.store)}
+      ${shouldShowBrandScopeFilter() ? renderSelect("scope-brand-select", "header.scopeBrand", "header.scopeBrandAria", scopedOpts.brands, scope.brand) : ""}
+      ${shouldShowRegionScopeFilter() ? renderSelect("scope-region-select", "header.scopeRegion", "header.scopeRegionAria", scopedOpts.regions, scope.region) : ""}
+      ${renderSelect("scope-store-select", "header.scopeStore", "header.scopeStoreAria", scopedOpts.stores, scope.store)}
     </div>
   `;
 }

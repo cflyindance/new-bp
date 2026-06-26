@@ -19,10 +19,28 @@ export type RbacL4EditMode = "editable" | "display-only";
 
 export interface PlatformPresetNodeSelection {
   enabled: boolean;
-  /** 平台预设 L4：是否在设置页展示 */
+  /** @deprecated 与 enabled 同步；勾选即展示，未勾选即不展示 */
   display?: boolean;
   /** RBAC L4：勾选=展示；可选「可编辑」，未勾选可编辑时为只读展示 */
   l4EditMode?: RbacL4EditMode;
+}
+
+/** 勾选即展示：display 始终与 enabled 一致 */
+export function syncNodeDisplayWithEnabled(
+  node: PlatformPresetNodeSelection | undefined,
+  enabled: boolean,
+): PlatformPresetNodeSelection {
+  return { ...node, enabled, display: enabled };
+}
+
+export function syncSelectionDisplayWithEnabled(
+  selection: Record<string, PlatformPresetNodeSelection>,
+): Record<string, PlatformPresetNodeSelection> {
+  const next: Record<string, PlatformPresetNodeSelection> = {};
+  for (const [key, node] of Object.entries(selection)) {
+    next[key] = syncNodeDisplayWithEnabled(node, node.enabled);
+  }
+  return next;
 }
 
 export interface PlatformPresetSnapshot {
@@ -248,9 +266,9 @@ function ensureAlwaysEnabledPresetModules(
   for (const moduleId of PLATFORM_PRESET_ALWAYS_ENABLED_L1_MODULE_IDS) {
     const group = groups.find((g) => g.moduleId === moduleId);
     if (!group) continue;
-    next[group.moduleKey] = { enabled: true, display: next[group.moduleKey]?.display ?? true };
+    next[group.moduleKey] = syncNodeDisplayWithEnabled(next[group.moduleKey], true);
     for (const dk of getDescendantKeys(group.moduleKey)) {
-      next[dk] = { enabled: true, display: next[dk]?.display ?? true };
+      next[dk] = syncNodeDisplayWithEnabled(next[dk], true);
     }
   }
 
@@ -263,7 +281,7 @@ function defaultSelectionAllEnabled(
   const { flat } = buildPlatformPresetIndex(productLineId);
   const selection: Record<string, PlatformPresetNodeSelection> = {};
   for (const n of flat) {
-    selection[n.key] = { enabled: true, display: true };
+    selection[n.key] = syncNodeDisplayWithEnabled(undefined, true);
   }
   return selection;
 }
@@ -298,14 +316,14 @@ function defaultEnabledFromRecommendations(
 
   const selection: Record<string, PlatformPresetNodeSelection> = {};
   for (const n of flat) {
-    selection[n.key] = { enabled: false, display: true };
+    selection[n.key] = syncNodeDisplayWithEnabled(undefined, false);
   }
 
   for (const g of groups) {
     if (!resolveDefaultModuleEnabled(g.moduleId, businessTypeId, productLineId, customTiers)) continue;
-    selection[g.moduleKey] = { enabled: true, display: true };
+    selection[g.moduleKey] = syncNodeDisplayWithEnabled(selection[g.moduleKey], true);
     for (const dk of getDescendantKeys(g.moduleKey)) {
-      selection[dk] = { enabled: true, display: true };
+      selection[dk] = syncNodeDisplayWithEnabled(selection[dk], true);
     }
   }
 
@@ -324,7 +342,12 @@ export function getOrCreateDraftSelection(
 
   const key = presetComboKey(businessTypeId, productLineId);
   const existing = readStore().snapshots[key];
-  if (existing) return structuredClone(existing);
+  if (existing) {
+    return {
+      ...structuredClone(existing),
+      selection: normalizeSelectionForLine(existing.selection, productLineId),
+    };
+  }
   return structuredClone(getEffectivePresetSnapshot(businessTypeId, productLineId));
 }
 
@@ -335,7 +358,7 @@ export function publishPlatformPresetSnapshot(snapshot: PlatformPresetSnapshot):
   const actor = getAuthenticatedEmail() ?? "system";
   const selection = isFullSelectionBusinessType(snapshot.businessTypeId)
     ? defaultSelectionAllEnabled(snapshot.productLineId)
-    : snapshot.selection;
+    : syncSelectionDisplayWithEnabled(snapshot.selection);
   const published: PlatformPresetSnapshot = {
     ...snapshot,
     selection,
@@ -419,9 +442,9 @@ export function cascadeEnableSelection(
 ): Record<string, PlatformPresetNodeSelection> {
   const { getDescendantKeys } = buildPlatformPresetIndex(productLineId);
   const next = { ...selection };
-  next[key] = { ...next[key], enabled, display: next[key]?.display ?? true };
+  next[key] = syncNodeDisplayWithEnabled(next[key], enabled);
   for (const dk of getDescendantKeys(key)) {
-    next[dk] = { enabled, display: next[dk]?.display ?? true };
+    next[dk] = syncNodeDisplayWithEnabled(next[dk], enabled);
   }
   return next;
 }
@@ -440,7 +463,8 @@ export function normalizeSelectionForLine(
   const index = buildPlatformPresetIndex(productLineId);
   const next = { ...selection };
   for (const n of index.flat) {
-    if (!next[n.key]) next[n.key] = { enabled: false, display: true };
+    if (!next[n.key]) next[n.key] = syncNodeDisplayWithEnabled(undefined, false);
+    else next[n.key] = syncNodeDisplayWithEnabled(next[n.key], next[n.key].enabled);
   }
   return ensureAlwaysEnabledPresetModules(next, productLineId, index);
 }

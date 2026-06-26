@@ -5,6 +5,14 @@ import { getAuthenticatedEmail } from "./login";
 import { getStaffLoginAccountByEmail, type StaffLoginAccount } from "../permissions/staff-account-store";
 import { getRbacSnapshot } from "../permissions/rbac-store";
 import {
+  clampScopeToStoreAccess,
+  filterScopeOptionsForAccess,
+} from "../permissions/store-access";
+import {
+  getUserSessionContext,
+  refreshUserSessionContext,
+} from "./session-permissions";
+import {
   applyDefaultLayoutPresetForOrgTier,
   readSidebarNavLayoutPreset,
   type SidebarNavLayoutPreset,
@@ -76,16 +84,18 @@ export function readScopeFilters(): ScopeFilterState {
 }
 
 export function writeScopeFilters(state: ScopeFilterState): void {
+  const ctx = getUserSessionContext();
+  const next = ctx ? clampScopeToStoreAccess(ctx.storeAccess, state) : state;
   try {
-    sessionStorage.setItem(SCOPE_FILTER_STORAGE_KEYS.brand, state.brand);
-    sessionStorage.setItem(SCOPE_FILTER_STORAGE_KEYS.region, state.region);
-    sessionStorage.setItem(SCOPE_FILTER_STORAGE_KEYS.store, state.store);
+    sessionStorage.setItem(SCOPE_FILTER_STORAGE_KEYS.brand, next.brand);
+    sessionStorage.setItem(SCOPE_FILTER_STORAGE_KEYS.region, next.region);
+    sessionStorage.setItem(SCOPE_FILTER_STORAGE_KEYS.store, next.store);
   } catch {
     /* ignore */
   }
   window.dispatchEvent(
     new CustomEvent("menusifu:scope-filter-change", {
-      detail: { ...state },
+      detail: { ...next },
     }),
   );
 }
@@ -143,12 +153,40 @@ export function isStoreScopeLocked(): boolean {
   return !isChainScopeMode();
 }
 
+/** 门店版布局下当前模拟门店（顶栏 scope 锁定值） */
+export function getLayoutContextStoreId(): string {
+  const scope = readScopeFilters();
+  return scope.store || DEFAULT_LOCKED_STORE_ID;
+}
+
+export function isStoreLayoutPreset(): boolean {
+  return readSidebarNavLayoutPreset() === "store";
+}
+
 /** 门店版布局 + 单店账号：锁定为当前门店 */
 export function ensureScopeFiltersForSession(): void {
-  if (isChainScopeMode()) return;
+  const ctx = getUserSessionContext();
+  if (isChainScopeMode()) {
+    if (ctx) {
+      const cur = readScopeFilters();
+      const clamped = clampScopeToStoreAccess(ctx.storeAccess, cur);
+      if (
+        clamped.brand !== cur.brand ||
+        clamped.region !== cur.region ||
+        clamped.store !== cur.store
+      ) {
+        writeScopeFilters(clamped);
+      }
+    }
+    return;
+  }
+  const lockedStore =
+    ctx?.storeAccess.mode === "stores" && ctx.storeAccess.ids.length === 1
+      ? ctx.storeAccess.ids[0]
+      : DEFAULT_LOCKED_STORE_ID;
   const cur = readScopeFilters();
-  if (cur.store === DEFAULT_LOCKED_STORE_ID && !cur.brand && !cur.region) return;
-  writeScopeFilters({ brand: "", region: "", store: DEFAULT_LOCKED_STORE_ID });
+  if (cur.store === lockedStore && !cur.brand && !cur.region) return;
+  writeScopeFilters({ brand: "", region: "", store: lockedStore });
 }
 
 /** 切换门店版/连锁版布局时同步顶栏 scope */
@@ -162,6 +200,11 @@ export function ensureScopeFiltersForLayoutPreset(preset: SidebarNavLayoutPreset
     }
     return;
   }
+  const cur = readScopeFilters();
+  const layoutStore = cur.store || DEFAULT_LOCKED_STORE_ID;
+  if (cur.brand || cur.region || cur.store !== layoutStore) {
+    writeScopeFilters({ brand: "", region: "", store: layoutStore });
+  }
   ensureScopeFiltersForSession();
 }
 
@@ -171,8 +214,31 @@ export function ensureScopeFiltersForOrgTier(tier: AccountOrgTier = getAccountOr
 }
 
 export function syncSessionForAuthenticatedUser(): void {
+  refreshUserSessionContext();
   applyDefaultLayoutPresetForOrgTier(getAccountOrgTier());
   ensureScopeFiltersForSession();
+}
+
+/** 顶栏 scope 下拉选项（按员工 storeAccess 过滤） */
+export function getScopedFilterOptions(): {
+  brands: ScopeOption[];
+  regions: ScopeOption[];
+  stores: ScopeOption[];
+} {
+  const ctx = getUserSessionContext();
+  if (!ctx) {
+    return {
+      brands: DEMO_SCOPE_BRANDS,
+      regions: DEMO_SCOPE_REGIONS,
+      stores: DEMO_SCOPE_STORES,
+    };
+  }
+  return filterScopeOptionsForAccess(
+    ctx.storeAccess,
+    DEMO_SCOPE_BRANDS,
+    DEMO_SCOPE_REGIONS,
+    DEMO_SCOPE_STORES,
+  );
 }
 
 export function isStoreTierHiddenNavModule(moduleId: string): boolean {

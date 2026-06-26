@@ -7,19 +7,11 @@ function mergeNodeSelection(
   a: PlatformPresetNodeSelection | undefined,
   b: PlatformPresetNodeSelection,
 ): PlatformPresetNodeSelection {
-  if (!a) {
-    return { enabled: b.enabled, display: b.display !== false };
-  }
-  const enabled = a.enabled || b.enabled;
-  if (!enabled) {
-    return { enabled: false, display: a.display !== false && b.display !== false };
-  }
-  const display =
-    (a.enabled && a.display !== false) || (b.enabled && b.display !== false);
-  return { enabled: true, display };
+  const enabled = a?.enabled || b.enabled;
+  return { enabled, display: enabled };
 }
 
-/** 多组 selection 并集：节点启用取 OR；L4 展示在已启用时取 OR */
+/** 多组 selection 并集：节点启用取 OR；展示与启用一致 */
 export function mergePresetSelections(
   selections: Record<string, PlatformPresetNodeSelection>[],
 ): Record<string, PlatformPresetNodeSelection> {

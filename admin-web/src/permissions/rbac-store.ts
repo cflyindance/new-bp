@@ -9,6 +9,13 @@ import {
 import { buildPlatformPresetIndex } from "../config/platform-preset-tree";
 import type { PlatformPresetNodeSelection, RbacL4EditMode } from "../config/platform-preset-store";
 import { cascadeEnableSelection } from "../config/platform-preset-store";
+import {
+  inferDefaultStaffStoreAccess,
+  normalizeStaffStoreAccess,
+  type StaffStoreAccess,
+} from "./store-access";
+
+export type { StaffStoreAccess, StaffStoreAccessMode } from "./store-access";
 
 export interface RbacRole {
   id: string;
@@ -26,6 +33,8 @@ export interface StaffAssignment {
   employeeId: string;
   employeeName: string;
   roleIds: string[];
+  /** 数据范围：可访问门店；与功能权限（selection）分离 */
+  storeAccess: StaffStoreAccess;
 }
 
 export interface PermissionChangeLogEntry {
@@ -203,12 +212,75 @@ function seedRoles(): RbacRole[] {
   ];
 }
 
+export function normalizeStaffAssignment(raw: StaffAssignment): StaffAssignment {
+  return {
+    employeeId: raw.employeeId,
+    employeeName: raw.employeeName,
+    roleIds: [...(raw.roleIds ?? [])],
+    storeAccess: normalizeStaffStoreAccess(
+      raw.storeAccess,
+      inferDefaultStaffStoreAccess(raw.employeeId),
+    ),
+  };
+}
+
+/** 多角色功能权限并集（登录时写入会话快照） */
+export function mergeRoleSelections(roleIds: string[]): Record<string, PlatformPresetNodeSelection> {
+  const { roles } = getRbacSnapshot();
+  const index = buildPlatformPresetIndex(RBAC_PRESET_LINE);
+  const merged: Record<string, PlatformPresetNodeSelection> = {};
+
+  for (const roleId of roleIds) {
+    const role = roles.find((r) => r.id === roleId);
+    if (!role) continue;
+    const sel = normalizeRoleSelection(role.selection);
+    for (const n of index.flat) {
+      const cur = sel[n.key];
+      if (!cur) continue;
+      const prev = merged[n.key];
+      if (!prev) {
+        merged[n.key] = { ...cur };
+        continue;
+      }
+      merged[n.key] = {
+        enabled: prev.enabled || cur.enabled,
+        display: (prev.display !== false) || (cur.display !== false),
+        l4EditMode:
+          prev.l4EditMode === "editable" || cur.l4EditMode === "editable"
+            ? "editable"
+            : "display-only",
+      };
+    }
+  }
+  return merged;
+}
+
 function seedStaff(): StaffAssignment[] {
   return [
-    { employeeId: "e001", employeeName: "王小明", roleIds: ["store-manager"] },
-    { employeeId: "e002", employeeName: "李收银", roleIds: ["cashier"] },
-    { employeeId: "e003", employeeName: "张楼面", roleIds: ["floor-staff", "cashier"] },
-    { employeeId: "hq001", employeeName: "陈总部", roleIds: ["hq-admin"] },
+    {
+      employeeId: "e001",
+      employeeName: "王小明",
+      roleIds: ["store-manager"],
+      storeAccess: { mode: "stores", ids: ["shanghai-ljz"] },
+    },
+    {
+      employeeId: "e002",
+      employeeName: "李收银",
+      roleIds: ["cashier"],
+      storeAccess: { mode: "stores", ids: ["shanghai-ljz"] },
+    },
+    {
+      employeeId: "e003",
+      employeeName: "张楼面",
+      roleIds: ["floor-staff", "cashier"],
+      storeAccess: { mode: "stores", ids: ["shanghai-ljz"] },
+    },
+    {
+      employeeId: "hq001",
+      employeeName: "陈总部",
+      roleIds: ["hq-admin"],
+      storeAccess: { mode: "all", ids: [] },
+    },
   ];
 }
 
@@ -241,7 +313,11 @@ function loadSnapshot(): RbacStoreSnapshot {
     if (raw) {
       const parsed = JSON.parse(raw) as RbacStoreSnapshot;
       if (parsed.roles?.length) {
-        return { ...parsed, roles: parsed.roles.map(migrateRoleToSelection) };
+        return {
+          ...parsed,
+          roles: parsed.roles.map(migrateRoleToSelection),
+          staff: (parsed.staff ?? seedStaff()).map(normalizeStaffAssignment),
+        };
       }
     }
   } catch {
@@ -254,6 +330,7 @@ function loadSnapshot(): RbacStoreSnapshot {
       const v2 = JSON.parse(v2Raw) as RbacStoreSnapshot;
       if (v2.roles?.length) {
         const migrated = { ...v2, roles: v2.roles.map(migrateRoleToSelection) };
+        migrated.staff = (migrated.staff ?? seedStaff()).map(normalizeStaffAssignment);
         saveRbacSnapshot(migrated);
         return migrated;
       }
@@ -268,6 +345,7 @@ function loadSnapshot(): RbacStoreSnapshot {
       const legacy = JSON.parse(legacyRaw) as RbacStoreSnapshot;
       if (legacy.roles?.length) {
         const migrated = migrateLegacySnapshot(legacy);
+        migrated.staff = (migrated.staff ?? seedStaff()).map(normalizeStaffAssignment);
         saveRbacSnapshot(migrated);
         return migrated;
       }
@@ -278,7 +356,7 @@ function loadSnapshot(): RbacStoreSnapshot {
 
   return {
     roles: seedRoles(),
-    staff: seedStaff(),
+    staff: seedStaff().map(normalizeStaffAssignment),
     changelog: [
       {
         id: "log-1",
@@ -308,6 +386,11 @@ export function saveRbacSnapshot(next: RbacStoreSnapshot): void {
 
 export function getRoleById(id: string): RbacRole | undefined {
   return snapshot.roles.find((r) => r.id === id);
+}
+
+export function getStaffAssignmentByEmployeeId(employeeId: string): StaffAssignment | undefined {
+  const raw = snapshot.staff.find((s) => s.employeeId === employeeId);
+  return raw ? normalizeStaffAssignment(raw) : undefined;
 }
 
 export function upsertRole(role: RbacRole, logDetail: string, actor = "当前用户"): void {
@@ -350,10 +433,40 @@ export function deleteRole(id: string): boolean {
   return true;
 }
 
+/** 新建登录账号时同步写入员工授权列表（若工号尚不存在） */
+export function ensureStaffRecord(employeeId: string, employeeName: string): StaffAssignment {
+  const trimmedId = employeeId.trim();
+  const trimmedName = employeeName.trim();
+  const existing = snapshot.staff.find((s) => s.employeeId === trimmedId);
+  if (existing) return normalizeStaffAssignment(existing);
+
+  const row = normalizeStaffAssignment({
+    employeeId: trimmedId,
+    employeeName: trimmedName,
+    roleIds: [],
+    storeAccess: inferDefaultStaffStoreAccess(trimmedId),
+  });
+  saveRbacSnapshot({
+    ...snapshot,
+    staff: [...snapshot.staff, row],
+    changelog: [
+      {
+        id: `log-${Date.now()}`,
+        at: new Date().toISOString(),
+        actor: "当前用户",
+        action: "新增员工",
+        detail: `新建员工「${trimmedName}」（${trimmedId}），待配置角色与门店范围`,
+      },
+      ...snapshot.changelog,
+    ].slice(0, 200),
+  });
+  return row;
+}
+
 export function updateStaffAssignments(staff: StaffAssignment[]): void {
   saveRbacSnapshot({
     ...snapshot,
-    staff,
+    staff: staff.map(normalizeStaffAssignment),
     changelog: [
       {
         id: `log-${Date.now()}`,
@@ -409,6 +522,15 @@ export function resolveRoleL4SettingAccess(
   permissionKey: string,
 ): ResolvedL4SettingAccess {
   const sel = normalizeRoleSelection(role.selection)[permissionKey];
+  if (!sel?.enabled) return "denied";
+  return sel.l4EditMode ?? "display-only";
+}
+
+export function resolveSnapshotL4SettingAccess(
+  snapshot: Record<string, PlatformPresetNodeSelection>,
+  permissionKey: string,
+): ResolvedL4SettingAccess {
+  const sel = snapshot[permissionKey];
   if (!sel?.enabled) return "denied";
   return sel.l4EditMode ?? "display-only";
 }

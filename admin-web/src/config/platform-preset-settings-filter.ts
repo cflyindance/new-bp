@@ -75,9 +75,7 @@ export function isPresetL4Visible(
   const selection = getActiveSelection();
   if (!selection) return true;
   const key = l4PresetKey(moduleId, featureId, groupKey, seq);
-  const node = selection[key];
-  if (!node?.enabled) return false;
-  return node.display !== false;
+  return selection[key]?.enabled === true;
 }
 
 export function filterCatalogItemForPreset(

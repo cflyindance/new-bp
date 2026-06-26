@@ -1,4 +1,5 @@
 import { clearAuthenticated, getAuthenticatedEmail } from "./login";
+import { clearUserSessionContext } from "./session-permissions";
 import { t } from "../i18n";
 
 function escapeHtml(s: string): string {
@@ -75,6 +76,7 @@ export function bindHeaderUserCenter(onLogout: () => void): void {
 
   logoutBtn?.addEventListener("click", () => {
     setUserCenterOpen(root, false);
+    clearUserSessionContext();
     clearAuthenticated();
     onLogout();
   });

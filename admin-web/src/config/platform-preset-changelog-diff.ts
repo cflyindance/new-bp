@@ -53,7 +53,7 @@ function formatChangeItem(
   };
 }
 
-/** 对比两次 selection，产出新增/删除启用与展示开关变更（按编辑树全量键） */
+/** 对比两次 selection，产出新增/删除启用变更（按编辑树全量键） */
 export function diffPresetSelections(
   previous: Record<string, PlatformPresetNodeSelection> | undefined,
   next: Record<string, PlatformPresetNodeSelection>,
@@ -70,12 +70,10 @@ export function diffPresetSelections(
   for (const node of index.flat) {
     const key = node.key;
     const prev = previous?.[key];
-    const cur = next[key] ?? { enabled: false, display: true };
+    const cur = next[key] ?? { enabled: false, display: false };
 
     const wasEnabled = prev?.enabled === true;
     const isEnabled = cur.enabled === true;
-    const wasDisplay = prev?.display !== false;
-    const isDisplay = cur.display !== false;
 
     if (!wasEnabled && isEnabled) {
       const item = formatChangeItem(key, index);
@@ -83,16 +81,6 @@ export function diffPresetSelections(
     } else if (wasEnabled && !isEnabled) {
       const item = formatChangeItem(key, index);
       if (item) out.enabledRemoved.push(item);
-    }
-
-    if (wasEnabled && isEnabled && node.level === 4) {
-      if (!wasDisplay && isDisplay) {
-        const item = formatChangeItem(key, index);
-        if (item) out.displayAdded.push(item);
-      } else if (wasDisplay && !isDisplay) {
-        const item = formatChangeItem(key, index);
-        if (item) out.displayRemoved.push(item);
-      }
     }
   }
 
@@ -111,8 +99,6 @@ export function buildPresetChangelogSummary(diff: PresetSelectionDiff, enabledL1
   const parts: string[] = [];
   if (diff.enabledAdded.length) parts.push(`新增启用 ${diff.enabledAdded.length} 项`);
   if (diff.enabledRemoved.length) parts.push(`取消启用 ${diff.enabledRemoved.length} 项`);
-  if (diff.displayAdded.length) parts.push(`开启展示 ${diff.displayAdded.length} 项`);
-  if (diff.displayRemoved.length) parts.push(`关闭展示 ${diff.displayRemoved.length} 项`);
   const detail = parts.length ? parts.join("；") : "无节点变更";
   return `发布，当前启用 ${enabledL1} 个一级导航；${detail}`;
 }

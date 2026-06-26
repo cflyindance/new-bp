@@ -71,7 +71,6 @@ export function renderFourColumnItem(
   options: {
     tier?: BusinessTypeTier;
     level?: number;
-    showDisplay?: boolean;
     showL4AccessMode?: boolean;
     childCount?: number;
     nested?: boolean;
@@ -81,7 +80,6 @@ export function renderFourColumnItem(
   const {
     tier,
     level,
-    showDisplay = false,
     showL4AccessMode = false,
     childCount,
     nested = false,
@@ -92,7 +90,6 @@ export function renderFourColumnItem(
     return "";
   }
   const { checked, indeterminate } = fourColumnCheckboxState(key, selection, index);
-  const displayChecked = selection[key]?.display !== false;
   const countBadge =
     childCount != null && level === 3
       ? `<span class="ml-auto shrink-0 text-xs tabular-nums text-muted-foreground">${childCount}</span>`
@@ -118,7 +115,6 @@ export function renderFourColumnItem(
           <span class="min-w-0 flex-1 truncate ${level === 4 ? "text-muted-foreground" : "font-medium text-card-foreground"}">${escapeHtml(title)}</span>
           ${countBadge}
         </span>
-        ${showDisplay ? `<label class="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground" onclick="event.stopPropagation()"><input type="checkbox" class="pp-display-cb size-3.5 accent-primary" data-pp-display="${escapeHtml(key)}" ${displayChecked ? "checked" : ""} />展示</label>` : ""}
         ${showL4AccessMode ? renderL4EditableCheckbox(key, selection, checked && !indeterminate) : ""}
       </span>
     </button>`;
@@ -194,7 +190,7 @@ export function renderFourColumnMatrix(
         false,
         selection,
         index,
-        { level: 4, showDisplay: matrixMode === "platform-preset", showL4AccessMode: matrixMode === "rbac", filter },
+        { level: 4, showL4AccessMode: matrixMode === "rbac", filter },
       ),
     )
     .filter(Boolean)
@@ -385,13 +381,6 @@ export function bindFourColumnMatrix(
       const key = target.dataset.ppEnable!;
       selection = options.onEnableToggle(selection, key, target.checked);
       rerender();
-      return;
-    }
-
-    if (target.matches("[data-pp-display]")) {
-      const key = target.dataset.ppDisplay!;
-      selection[key] = { ...selection[key], enabled: selection[key]?.enabled ?? false, display: target.checked };
-      writeFourColumnSelection(root, selection);
       return;
     }
 

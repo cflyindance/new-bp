@@ -1,9 +1,19 @@
 import { buildPlatformPresetIndex } from "../config/platform-preset-tree";
+import { refreshSessionIfCurrentEmployee, refreshUserSessionContext } from "../auth/session-permissions";
+import {
+  DEMO_SCOPE_STORES,
+  getLayoutContextStoreId,
+  isStoreLayoutPreset,
+} from "../auth/session-scope";
 import {
   bindFourColumnMatrix,
   renderFourColumnMatrix,
   renderFourColumnMatrixShell,
 } from "../config/permission-four-column-ui";
+import {
+  formatStaffStoreAccessLabel,
+  type StaffStoreAccess,
+} from "./store-access";
 import {
   cascadeRbacEnableSelection,
   countRoleStats,
@@ -215,17 +225,60 @@ function renderRoleEditorPage(path: string): string {
     </div>`;
 }
 
+function renderStaffStoreAccessCell(s: {
+  employeeId: string;
+  storeAccess: StaffStoreAccess;
+}): string {
+  const layoutStoreId = getLayoutContextStoreId();
+  const layoutStoreLabel =
+    DEMO_SCOPE_STORES.find((o) => o.value === layoutStoreId)?.labelZh ?? layoutStoreId;
+
+  if (isStoreLayoutPreset()) {
+    return `<div class="space-y-1">
+      <p class="text-sm font-medium text-card-foreground">${escapeHtml(layoutStoreLabel)}</p>
+      <p class="text-xs text-muted-foreground">门店版仅单店经营，默认可访问当前模拟门店</p>
+      <input type="hidden" class="rbac-staff-store-mode" data-employee="${escapeHtml(s.employeeId)}" value="stores" />
+      <input type="hidden" class="rbac-staff-layout-store" data-employee="${escapeHtml(s.employeeId)}" value="${escapeHtml(layoutStoreId)}" />
+    </div>`;
+  }
+
+  const demoStores = DEMO_SCOPE_STORES.filter((o) => o.value);
+  return `<div class="space-y-2">
+    <select class="rbac-staff-store-mode h-9 rounded-md border border-border bg-background px-2 text-sm" data-employee="${escapeHtml(s.employeeId)}">
+      <option value="all" ${s.storeAccess.mode === "all" ? "selected" : ""}>全部门店</option>
+      <option value="stores" ${s.storeAccess.mode === "stores" ? "selected" : ""}>指定门店</option>
+    </select>
+    <div class="rbac-staff-store-picks flex flex-wrap gap-2 ${s.storeAccess.mode === "all" ? "hidden" : ""}" data-employee="${escapeHtml(s.employeeId)}">
+      ${demoStores
+        .map((o) => {
+          const checked = s.storeAccess.ids.includes(o.value);
+          return `<label class="inline-flex items-center gap-1 text-xs">
+            <input type="checkbox" class="rbac-staff-store-cb" data-employee="${escapeHtml(s.employeeId)}" value="${escapeHtml(o.value)}" ${checked ? "checked" : ""} />
+            ${escapeHtml(o.labelZh)}
+          </label>`;
+        })
+        .join("")}
+    </div>
+    <p class="text-xs text-muted-foreground">${escapeHtml(formatStaffStoreAccessLabel(s.storeAccess))}</p>
+  </div>`;
+}
+
 function renderStaffPage(): string {
   const { roles, staff } = getRbacSnapshot();
+  const storeLayoutHint = isStoreLayoutPreset()
+    ? `<p class="rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">当前为<strong class="text-card-foreground">门店版</strong>模拟：全员默认可访问门店「${escapeHtml(DEMO_SCOPE_STORES.find((o) => o.value === getLayoutContextStoreId())?.labelZh ?? getLayoutContextStoreId())}」。切换顶栏「连锁版」后可配置多店数据范围。</p>`
+    : "";
   return `
     <div class="space-y-4">
-      <p class="text-sm text-muted-foreground">为员工分配一个或多个角色；有效权限为多角色功能勾选的<strong>并集</strong>。登录邮箱与密码请在 <a href="#/permissions/staff-accounts" class="text-primary hover:underline">员工登录账号</a> 维护。</p>
+      ${storeLayoutHint}
+      <p class="text-sm text-muted-foreground">为员工分配角色（功能权限并集）与<strong>可访问门店</strong>（数据范围）。切换顶栏门店只改变数据查询范围，<strong>不会</strong>改变功能权限。登录邮箱与密码请在 <a href="#/permissions/staff-accounts" class="text-primary hover:underline">员工登录账号</a> 维护。</p>
       <div class="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
         <table class="w-full text-sm">
           <thead class="bg-muted/40 text-left text-muted-foreground">
             <tr>
               <th class="px-4 py-2 font-medium">员工</th>
-              <th class="px-4 py-2 font-medium">角色</th>
+              <th class="px-4 py-2 font-medium">角色（功能权限）</th>
+              <th class="px-4 py-2 font-medium">可访问门店（数据范围）</th>
             </tr>
           </thead>
           <tbody>
@@ -246,6 +299,7 @@ function renderStaffPage(): string {
                     .join("")}
                 </div>
               </td>
+              <td class="px-4 py-3">${renderStaffStoreAccessCell(s)}</td>
             </tr>`,
               )
               .join("")}
@@ -341,9 +395,21 @@ export function bindPermissionsRbac(): void {
         },
         `角色「${name}」功能权限已保存`,
       );
+      refreshUserSessionContext();
       location.hash = `#/permissions/roles/edit/${encodeURIComponent(id)}`;
     });
   }
+
+  document.querySelectorAll<HTMLSelectElement>(".rbac-staff-store-mode").forEach((sel) => {
+    sel.addEventListener("change", () => {
+      const employeeId = sel.getAttribute("data-employee");
+      if (!employeeId) return;
+      const picks = document.querySelector<HTMLElement>(
+        `.rbac-staff-store-picks[data-employee="${employeeId}"]`,
+      );
+      if (picks) picks.classList.toggle("hidden", sel.value === "all");
+    });
+  });
 
   document.querySelector<HTMLButtonElement>("[data-rbac-save-staff]")?.addEventListener("click", () => {
     const { staff: prev } = getRbacSnapshot();
@@ -358,9 +424,36 @@ export function bindPermissionsRbac(): void {
           if (r) roleIds.push(r);
         }
       });
-      return { ...s, roleIds };
+
+      const layoutStoreEl = document.querySelector<HTMLInputElement>(
+        `.rbac-staff-layout-store[data-employee="${s.employeeId}"]`,
+      );
+      let storeAccess: StaffStoreAccess;
+      if (layoutStoreEl?.value) {
+        storeAccess = { mode: "stores", ids: [layoutStoreEl.value] };
+      } else {
+        const modeEl = document.querySelector<HTMLSelectElement>(
+          `.rbac-staff-store-mode[data-employee="${s.employeeId}"]`,
+        );
+        const mode = modeEl?.value === "all" ? "all" : "stores";
+        storeAccess = { mode: "all", ids: [] };
+        if (mode === "stores") {
+          const storeIds: string[] = [];
+          document
+            .querySelectorAll<HTMLInputElement>(
+              `.rbac-staff-store-cb[data-employee="${s.employeeId}"]:checked`,
+            )
+            .forEach((cb) => {
+              if (cb.value) storeIds.push(cb.value);
+            });
+          storeAccess = { mode: "stores", ids: storeIds.length ? storeIds : s.storeAccess.ids };
+        }
+      }
+
+      return { ...s, roleIds, storeAccess };
     });
     updateStaffAssignments(next);
-    alert("员工授权已保存（本地演示数据）。");
+    next.forEach((s) => refreshSessionIfCurrentEmployee(s.employeeId));
+    alert("员工授权已保存（本地演示数据）。若修改了当前登录账号，请刷新页面或重新登录以同步顶栏门店选项。");
   });
 }

@@ -279,7 +279,7 @@ function renderPlatformPresetChangelogDialog(
         <div class="flex shrink-0 items-center justify-between gap-3 border-b border-border px-4 py-3">
           <div class="min-w-0">
             <h2 id="pp-changelog-dialog-title" class="truncate text-base font-semibold text-card-foreground">${escapeHtml(title)}</h2>
-            <p class="mt-0.5 text-xs text-muted-foreground">共 ${entries.length} 条记录；点击条目展开新增/删除/展示变更明细</p>
+            <p class="mt-0.5 text-xs text-muted-foreground">共 ${entries.length} 条记录；点击条目展开新增/删除变更明细</p>
           </div>
           <button
             type="button"
@@ -462,6 +462,7 @@ export function renderPlatformPresetEditPage(
         <div class="border-b border-border px-4 py-3">
           <h2 class="text-sm font-semibold text-card-foreground">按导航树配置功能</h2>
           <p class="text-xs text-muted-foreground mt-0.5">配置预设 · ${escapeHtml(btLabel)} · ${escapeHtml(plLabel)}</p>
+          <p class="text-xs text-muted-foreground mt-1">分组内功能 / 设置：勾选即展示，未勾选则不展示。</p>
         </div>
         ${renderFourColumnMatrixShell(col1, col2, col3, col4)}
       </div>
@@ -647,10 +648,5 @@ export function bindPlatformPreset(onMount: () => void): void {
       return;
     }
 
-    if (target.matches("[data-pp-display]")) {
-      const key = target.dataset.ppDisplay!;
-      selection[key] = { ...selection[key], enabled: selection[key]?.enabled ?? false, display: target.checked };
-      writeSelectionToEditor(editor, selection);
-    }
   });
 }

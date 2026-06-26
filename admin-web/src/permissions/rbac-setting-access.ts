@@ -1,14 +1,10 @@
 /**
  * RBAC · 设置页 L4：勾选=展示，可编辑=可改值，否则只读
+ * 读取登录会话 permissionSnapshot，切门店不重算。
  */
+import { getUserSessionContext } from "../auth/session-permissions";
 import { buildPermissionResourceIndex } from "../config/permission-registry";
-import { getAuthenticatedEmail } from "../auth/login";
-import { getStaffLoginAccountByEmail } from "./staff-account-store";
-import {
-  getRbacSnapshot,
-  resolveRoleL4SettingAccess,
-  type ResolvedL4SettingAccess,
-} from "./rbac-store";
+import { resolveSnapshotL4SettingAccess, type ResolvedL4SettingAccess } from "./rbac-store";
 
 const resourceIndex = buildPermissionResourceIndex();
 const settingKeyByPathSeq = new Map<string, string>();
@@ -23,31 +19,11 @@ export function permissionKeyForSetting(settingsPath: string, seq: number): stri
   return settingKeyByPathSeq.get(`${settingsPath}#${seq}`);
 }
 
-function mergeStaffL4SettingAccess(roleIds: string[], permissionKey: string): ResolvedL4SettingAccess {
-  const { roles } = getRbacSnapshot();
-  let hasDisplayOnly = false;
-  for (const roleId of roleIds) {
-    const role = roles.find((r) => r.id === roleId);
-    if (!role) continue;
-    const access = resolveRoleL4SettingAccess(role, permissionKey);
-    if (access === "editable") return "editable";
-    if (access === "display-only") hasDisplayOnly = true;
-  }
-  return hasDisplayOnly ? "display-only" : "denied";
-}
-
 export function resolveCurrentUserL4SettingAccess(permissionKey: string): ResolvedL4SettingAccess {
-  const email = getAuthenticatedEmail();
-  if (!email) return "editable";
-
-  const account = getStaffLoginAccountByEmail(email);
-  if (!account) return "editable";
-
-  const { staff } = getRbacSnapshot();
-  const assignment = staff.find((s) => s.employeeId === account.employeeId);
-  if (!assignment?.roleIds.length) return "editable";
-
-  return mergeStaffL4SettingAccess(assignment.roleIds, permissionKey);
+  const ctx = getUserSessionContext();
+  if (!ctx) return "editable";
+  if (!ctx.roleIds.length) return "editable";
+  return resolveSnapshotL4SettingAccess(ctx.permissionSnapshot, permissionKey);
 }
 
 function setSettingRowReadOnly(row: Element): void {

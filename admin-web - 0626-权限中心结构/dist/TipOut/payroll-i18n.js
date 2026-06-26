@@ -1,0 +1,912 @@
+/* payroll-i18n.js — Payroll UI locale (zh / en), synced with admin-web menusifu-admin-ui-locale */
+
+(function () {
+  "use strict";
+
+  var UI_LOCALE_STORAGE_KEY = "menusifu-admin-ui-locale";
+  var currentLocale = "zh";
+
+  var messages = {
+    zh: {
+      "page.title": "薪酬报税 - BPlant",
+      "banner.title": "薪酬报税",
+      "banner.sub": "仅计算 Gross · 不发薪、不代报税 · 导出供 ADP/会计师使用",
+      "auditLog.btn": "操作记录",
+      "nav.backPeriods": "← 返回期列表",
+      "nav.backEmployees": "← 返回员工列表",
+      "nav.periods": "Payroll 期",
+      "nav.employees": "本期员工",
+      "nav.periodEmployees": "{n}期员工",
+      "filter.year": "年度",
+      "filter.periodNo": "期数",
+      "filter.allPeriods": "全部期数",
+      "filter.periodN": "第 {n} 期",
+      "filter.status": "状态",
+      "filter.allStatus": "全部状态",
+      "status.draft": "未确认",
+      "status.partial": "部分未确认",
+      "status.confirmed": "已确认",
+      "table.periodNo": "期数",
+      "table.payRange": "薪资区间",
+      "table.paycheck": "Paycheck",
+      "table.status": "状态",
+      "table.actions": "操作",
+      "table.enter": "进入",
+      "table.name": "姓名",
+      "table.store": "门店",
+      "table.department": "部门",
+      "table.adpFile": "ADP File#",
+      "table.totalHours": "总工时",
+      "table.confirm": "确认",
+      "filter.payrollStore": "薪资门店",
+      "filter.allStores": "全部门店",
+      "empty.periods": "当前筛选条件下暂无 Payroll 期数据。",
+      "empty.employees": "本期暂无员工，可在演示数据中于 payroll.js 添加。",
+      "empty.storeEmployees": "该门店暂无员工数据。",
+      "employee.editPayroll": "编辑 Payroll",
+      "employee.confirmed": "已确认",
+      "employee.unconfirmed": "未确认",
+      "employee.missingAdp": "缺少 ADP File#",
+      "employee.periodTitle": "{range} · Paycheck {date}",
+      "employee.switchAria": "切换本期员工",
+      "tab.manage": "① Manage Payroll",
+      "tab.detail": "② Employees Detail",
+      "tab.adp": "ADP Report",
+      "tab.aria": "报表类型",
+      "manage.timecard": "考勤明细",
+      "manage.payPeriodSummary": "Pay Period 汇总",
+      "manage.hours": "工时",
+      "manage.hoursUnit": "小时",
+      "manage.amount": "金额",
+      "manage.rateMultiplier": "× 时薪",
+      "manage.total": "合计",
+      "manage.employeeIdRates": "员工标识与加班时薪",
+      "manage.employeeId": "员工标识",
+      "manage.employeeSsn": "员工 SSN",
+      "manage.hireDate": "Hire Date",
+      "manage.otRates": "加班时薪",
+      "manage.otRateLabel": "加班时薪 OT",
+      "manage.ot2RateLabel": "加班时薪 OT2",
+      "manage.wideTable": "Manage payroll 宽表",
+      "manage.confirmSave": "确定并保存",
+      "manage.refreshEmployeeData": "更新员工数据",
+      "manage.refreshEmployeeDataRunning": "正在从第三方系统拉取最新员工数据…",
+      "manage.refreshEmployeeDataSuccess": "员工数据已更新，已同步姓名、门店、部门与费率等主数据。",
+      "manage.refreshEmployeeDataFailed": "员工数据更新失败，请稍后重试。",
+      "manage.pageTitle": "Manage Payroll",
+      "manage.employeesDetail": "Employees Detail",
+      "manage.adpReport": "ADP Report",
+      "manage.periodNav": "期数",
+      "manage.periodNoCol": "期",
+      "manage.periodStatusCol": "状态",
+      "manage.weekTotalHours": "工作总时长：",
+      "manage.weekRegular": "Regular 总时长：",
+      "manage.weekOt": "OT 总时长：",
+      "manage.weekOt2": "OT2 总时长：",
+      "detail.title": "Employees Payroll Detail",
+      "detail.meta.roles": "Roles :",
+      "detail.meta.hireDate": "Hire Date :",
+      "detail.meta.employee": "员工",
+      "detail.meta.ssn": "SSN",
+      "detail.meta.payDate": "Pay Date",
+      "detail.meta.payPeriod": "Pay Period",
+      "detail.meta.periodNo": "期数：",
+      "detail.periodReport": "Payroll #{n} Report",
+      "detail.employeeLabel": "员工：",
+      "detail.declaration": "声明",
+      "detail.disclaimer":
+        "薪酬报税 — 本页非法定 Pay Stub。实际发薪与报税以 ADP/会计师为准。",
+      "detail.empSign": "员工签字",
+      "detail.mgrSign": "主管签字",
+      "detail.dateLine": "日期",
+      "detail.periodSummary": "本周期工时汇总",
+      "detail.dailyEmptyTitle": "本期按日考勤明细",
+      "detail.dailyEmpty": "本期暂无按日打卡记录。",
+      "detail.weekN": "第{n}周",
+      "detail.weekRange": "第{n}周（{range}）",
+      "detail.sumHours": "总Hours：",
+      "detail.sumHoursParts": "Hours：",
+      "detail.sumRegular": "总Regular：",
+      "detail.sumOt": "总OT：",
+      "detail.sumOt2": "总OT2：",
+      "detail.sumRate": "Rate：",
+      "detail.sumAmountParts": "Amount：",
+      "detail.sumRegAmt": "Regular Amount：",
+      "detail.sumOtAmt": "OT Amount：",
+      "detail.sumOt2Amt": "OT2 Amount：",
+      "detail.sumAmount": "Total Amount：",
+      "detail.colRate": "Rate",
+      "detail.colAmountGroup": "Amount",
+      "detail.colRegAmt": "Regular",
+      "detail.colOtAmt": "OT",
+      "detail.colOt2Amt": "OT2",
+      "detail.colTotalAmt": "Total",
+      "detail.amountRow": "金额",
+      "export.results": "导出结果",
+      "export.asPdf": "导出为 PDF",
+      "export.detailPdf": "导出 PDF",
+      "export.asCsv": "导出为 CSV",
+      "export.email": "发送到邮箱",
+      "export.printPdf": "打印 / PDF",
+      "export.adpHint": "若未填写 ADP File#，导出按钮将禁用（模拟校验）。",
+      "export.adpCsv": "导出 CSV",
+      "footer.note": "P0 演示 · localStorage · 配置：",
+      "fieldHelp.title": "字段说明",
+      "fieldHelp.close": "关闭",
+      "fieldHelp.ok": "知道了",
+      "fieldHelp.adpMap": "ADP 映射：",
+      "disclaimer.modalTitle": "薪酬报税",
+      "disclaimer.agree":
+        "本人已阅读并理解：本功能仅用于薪酬报税数据准备，不构成税务或法律意见。",
+      "disclaimer.accept": "同意并继续",
+      "audit.title": "操作记录（审计）",
+      "audit.time": "时间",
+      "audit.action": "操作",
+      "audit.periodEmp": "期 / 员工",
+      "audit.note": "备注",
+      "audit.empty": "暂无操作记录",
+      "audit.countPeople": "共 {n} 人",
+      "email.title": "发送到邮箱",
+      "email.recipients": "收件邮箱",
+      "email.placeholder": "请输入邮箱地址，多个邮箱用逗号分隔",
+      "email.format": "导出格式",
+      "email.cancel": "取消",
+      "email.send": "发送",
+      "exportConfirm.title": "确认导出 ADP CSV",
+      "exportConfirm.intro": "导出前请确认：",
+      "exportConfirm.li1": "金额已与 Manage Payroll 核对",
+      "exportConfirm.li2": "ADP File# 与 ADP 主档一致",
+      "exportConfirm.li3": "实际报税与发薪将在 ADP/会计师侧完成",
+      "exportConfirm.cancel": "取消",
+      "exportConfirm.ok": "确认导出",
+      "unsaved.title": "提示",
+      "unsaved.body": "未保存的更改将丢失，确定要离开吗？",
+      "unsaved.leave": "确定离开",
+      "unsaved.stay": "继续编辑",
+      "confirm.success": "已确认本期数据（报税准备）。发薪与报税请在 ADP/会计师侧完成。",
+      "saveConfirm.title": "确认保存变更",
+      "saveConfirm.intro": "以下变更将在保存后生效。",
+      "saveConfirm.time": "时间",
+      "saveConfirm.type": "类型",
+      "saveConfirm.before": "变更前",
+      "saveConfirm.after": "变更后",
+      "saveConfirm.periodScope": "本期",
+      "saveConfirm.typeAdpFile": "ADP File#",
+      "saveConfirm.typeHireDate": "Hire Date",
+      "saveConfirm.typeSsn": "SSN",
+      "saveConfirm.changeCount": "共 {n} 项变更",
+      "saveConfirm.noChanges": "本次无数据变更，确认保存并标记为已确认？",
+      "saveConfirm.ok": "确认保存",
+      "saveConfirm.cancel": "取消",
+      "save.unsavedExportBlocked": "请先点击「确定并保存」后再导出 ADP。",
+      "seg.addRow": "添加行",
+      "seg.removeRow": "删除行",
+      "seg.addInOut": "+ 新增 In/Out",
+      "detail.totalHoursHead": "合计工时",
+      "detail.totalAmountHead": "合计金额",
+      "exportConfirm.hintSingle": "将导出 1 名员工：{name}",
+      "exportConfirm.hintBatch": "将导出 {n} 名员工的 ADP Report（合并为 1 个 CSV）。",
+      "exportConfirm.hintBatchSkipped": "另有 {n} 人缺少 ADP File# 已跳过。",
+      "export.batchAdp": "批量导出 ADP",
+      "export.batchNoAdp": "当前列表中没有可导出的员工（需填写 ADP File#）",
+      "export.batchSuccess": "已批量导出 {n} 名员工的 ADP Report",
+      "year.suffix": "年",
+      "audit.confirm": "确认本期",
+      "audit.exportCsv": "导出 ADP",
+      "audit.exportBatch": "批量导出 ADP",
+      "audit.exportDetailPdf": "导出 Detail PDF",
+      "audit.exportDetailCsv": "导出 Detail CSV",
+      "audit.exportDetailEmail": "发送 Detail 邮件",
+      "audit.tipoutImport": "TipOut 导入",
+      "audit.fieldChange": "字段修改",
+      "audit.refreshEmployees": "更新员工数据",
+      "export.noData": "没有可导出的数据",
+      "export.notReady": "导出模块未就绪",
+      "export.noPrintContent": "无法获取打印内容",
+      "export.generatingPdf": "正在生成 PDF...",
+      "export.generatingCsv": "正在生成 CSV 文件...",
+      "export.csvSuccess": "CSV 导出成功",
+      "export.pdfSuccess": "PDF 导出成功",
+      "export.printPreview": "正在打开打印预览...",
+      "export.printOpened": "PDF 预览已打开，请选择“另存为 PDF”",
+      "export.popupBlocked": "弹窗被浏览器拦截，请允许弹窗后重试",
+      "email.required": "请输入邮箱地址",
+      "email.invalid": "邮箱格式不正确：{email}",
+      "email.sending": "正在发送 {fmt} 到 {emails} ...",
+      "email.success": "邮件发送成功",
+    },
+    en: {
+      "page.title": "Payroll & Tax - BPlant",
+      "banner.title": "Payroll & Tax",
+      "banner.sub":
+        "Gross pay calculation only · No payroll disbursement or tax filing · Export for ADP / your accountant",
+      "auditLog.btn": "Activity log",
+      "nav.backPeriods": "← Back to pay periods",
+      "nav.backEmployees": "← Back to employee list",
+      "nav.periods": "Pay periods",
+      "nav.employees": "Employees this period",
+      "nav.periodEmployees": "Period {n} employees",
+      "filter.year": "Year",
+      "filter.periodNo": "Period",
+      "filter.allPeriods": "All periods",
+      "filter.periodN": "Period {n}",
+      "filter.status": "Status",
+      "filter.allStatus": "All statuses",
+      "status.draft": "Not confirmed",
+      "status.partial": "Partially confirmed",
+      "status.confirmed": "Confirmed",
+      "table.periodNo": "Period #",
+      "table.payRange": "Pay period dates",
+      "table.paycheck": "Paycheck",
+      "table.status": "Status",
+      "table.actions": "Actions",
+      "table.enter": "Open",
+      "table.name": "Name",
+      "table.store": "Location",
+      "table.department": "Department",
+      "table.adpFile": "ADP File #",
+      "table.totalHours": "Total hours",
+      "table.confirm": "Confirmed",
+      "filter.payrollStore": "Payroll location",
+      "filter.allStores": "All locations",
+      "empty.periods": "No pay periods match your filters.",
+      "empty.employees": "No employees in this period. Add demo data in payroll.js if needed.",
+      "empty.storeEmployees": "No employees at this location.",
+      "employee.editPayroll": "Edit payroll",
+      "employee.confirmed": "Confirmed",
+      "employee.unconfirmed": "Not confirmed",
+      "employee.missingAdp": "Missing ADP File #",
+      "employee.periodTitle": "{range} · Paycheck {date}",
+      "employee.switchAria": "Switch employee in this period",
+      "tab.manage": "① Manage Payroll",
+      "tab.detail": "② Employee Pay Detail",
+      "tab.adp": "ADP Report",
+      "tab.aria": "Report type",
+      "manage.timecard": "Time entries",
+      "manage.payPeriodSummary": "Pay period summary",
+      "manage.hours": "Hours",
+      "manage.hoursUnit": "Hours",
+      "manage.amount": "Pay",
+      "manage.rateMultiplier": "× hourly rate",
+      "manage.total": "Total",
+      "manage.employeeIdRates": "Employee ID & OT rates",
+      "manage.employeeId": "Employee ID",
+      "manage.employeeSsn": "Employee SSN",
+      "manage.hireDate": "Hire Date",
+      "manage.otRates": "OT hourly rates",
+      "manage.otRateLabel": "OT hourly rate",
+      "manage.ot2RateLabel": "Double-time hourly rate",
+      "manage.wideTable": "Manage payroll worksheet",
+      "manage.confirmSave": "Confirm & save",
+      "manage.refreshEmployeeData": "Refresh employee data",
+      "manage.refreshEmployeeDataRunning": "Fetching latest employee data from the third-party system…",
+      "manage.refreshEmployeeDataSuccess": "Employee data updated. Name, store, department, and rates are synced.",
+      "manage.refreshEmployeeDataFailed": "Failed to refresh employee data. Please try again.",
+      "manage.pageTitle": "Manage Payroll",
+      "manage.employeesDetail": "Employees Detail",
+      "manage.adpReport": "ADP Report",
+      "manage.periodNav": "Period",
+      "manage.periodNoCol": "No.",
+      "manage.periodStatusCol": "Status",
+      "manage.weekTotalHours": "Total hours: ",
+      "manage.weekRegular": "Total regular: ",
+      "manage.weekOt": "Total OT: ",
+      "manage.weekOt2": "Total OT2: ",
+      "detail.title": "Employee Payroll Detail",
+      "detail.meta.roles": "Roles:",
+      "detail.meta.hireDate": "Hire Date:",
+      "detail.meta.employee": "Employee",
+      "detail.meta.ssn": "SSN",
+      "detail.meta.payDate": "Pay Date",
+      "detail.meta.payPeriod": "Pay Period",
+      "detail.meta.periodNo": "Period:",
+      "detail.periodReport": "Payroll #{n} Report",
+      "detail.employeeLabel": "Employee: ",
+      "detail.declaration": "Acknowledgment",
+      "detail.disclaimer":
+        "Payroll & tax — This page is not a legal pay stub. Actual pay and tax filing are handled in ADP / by your accountant.",
+      "detail.empSign": "Employee signature",
+      "detail.mgrSign": "Manager signature",
+      "detail.dateLine": "Date",
+      "detail.periodSummary": "Pay period hour summary",
+      "detail.dailyEmptyTitle": "Daily time detail",
+      "detail.dailyEmpty": "No daily clock entries for this period.",
+      "detail.weekN": "Week {n}",
+      "detail.weekRange": "Week {n} ({range})",
+      "detail.sumHours": "Total hours: ",
+      "detail.sumHoursParts": "Hours: ",
+      "detail.sumRegular": "Total regular: ",
+      "detail.sumOt": "Total OT: ",
+      "detail.sumOt2": "Total OT2: ",
+      "detail.sumRate": "Rate: ",
+      "detail.sumAmountParts": "Amount: ",
+      "detail.sumRegAmt": "Regular amount: ",
+      "detail.sumOtAmt": "OT amount: ",
+      "detail.sumOt2Amt": "OT2 amount: ",
+      "detail.sumAmount": "Total amount: ",
+      "detail.colRate": "Rate",
+      "detail.colAmountGroup": "Amount",
+      "detail.colRegAmt": "Regular",
+      "detail.colOtAmt": "OT",
+      "detail.colOt2Amt": "OT2",
+      "detail.colTotalAmt": "Total",
+      "detail.amountRow": "Pay",
+      "export.results": "Export",
+      "export.asPdf": "Export as PDF",
+      "export.detailPdf": "Export PDF",
+      "export.asCsv": "Export as CSV",
+      "export.email": "Send to email",
+      "export.printPdf": "Print / PDF",
+      "export.adpHint": "Export is disabled until ADP File # is entered (demo validation).",
+      "export.adpCsv": "Export CSV",
+      "footer.note": "P0 demo · localStorage · Config: ",
+      "fieldHelp.title": "Field help",
+      "fieldHelp.close": "Close",
+      "fieldHelp.ok": "Got it",
+      "fieldHelp.adpMap": "ADP mapping: ",
+      "disclaimer.modalTitle": "Payroll & Tax",
+      "disclaimer.agree":
+        "I understand this tool is for payroll & tax data preparation only and does not constitute tax or legal advice.",
+      "disclaimer.accept": "Agree and continue",
+      "audit.title": "Activity log (audit)",
+      "audit.time": "Time",
+      "audit.action": "Action",
+      "audit.periodEmp": "Period / employee",
+      "audit.note": "Notes",
+      "audit.empty": "No activity yet",
+      "audit.countPeople": "{n} employees",
+      "email.title": "Send to email",
+      "email.recipients": "Recipient email",
+      "email.placeholder": "Enter one or more emails, separated by commas",
+      "email.format": "File format",
+      "email.cancel": "Cancel",
+      "email.send": "Send",
+      "exportConfirm.title": "Confirm ADP CSV export",
+      "exportConfirm.intro": "Before exporting, confirm:",
+      "exportConfirm.li1": "Amounts match Manage Payroll",
+      "exportConfirm.li2": "ADP File # matches your ADP master file",
+      "exportConfirm.li3": "Actual pay and tax filing will be completed in ADP / by your accountant",
+      "exportConfirm.cancel": "Cancel",
+      "exportConfirm.ok": "Export",
+      "unsaved.title": "Notice",
+      "unsaved.body": "Unsaved changes will be lost. Leave anyway?",
+      "unsaved.leave": "Leave",
+      "unsaved.stay": "Keep editing",
+      "confirm.success":
+        "Period data confirmed for tax prep. Run payroll and file taxes in ADP / with your accountant.",
+      "saveConfirm.title": "Confirm changes",
+      "saveConfirm.intro":
+        "The changes below will take effect after save.",
+      "saveConfirm.time": "Date",
+      "saveConfirm.type": "Type",
+      "saveConfirm.before": "Before",
+      "saveConfirm.after": "After",
+      "saveConfirm.periodScope": "Period",
+      "saveConfirm.typeAdpFile": "ADP File#",
+      "saveConfirm.typeHireDate": "Hire Date",
+      "saveConfirm.typeSsn": "SSN",
+      "saveConfirm.changeCount": "{n} change(s)",
+      "saveConfirm.noChanges": "No data changes. Save and mark as confirmed?",
+      "saveConfirm.ok": "Confirm save",
+      "saveConfirm.cancel": "Cancel",
+      "save.unsavedExportBlocked": "Click Confirm & save before exporting to ADP.",
+      "seg.addRow": "Add row",
+      "seg.removeRow": "Remove row",
+      "seg.addInOut": "+ Add In/Out",
+      "detail.totalHoursHead": "Total hours",
+      "detail.totalAmountHead": "Total pay",
+      "exportConfirm.hintSingle": "Exporting 1 employee: {name}",
+      "exportConfirm.hintBatch": "Exporting ADP reports for {n} employees (combined into one CSV).",
+      "exportConfirm.hintBatchSkipped": "{n} skipped — missing ADP File #.",
+      "export.batchAdp": "Batch export ADP",
+      "export.batchNoAdp": "No exportable employees in this list (ADP File # required).",
+      "export.batchSuccess": "Exported ADP reports for {n} employees",
+      "year.suffix": "",
+      "audit.confirm": "Confirm period",
+      "audit.exportCsv": "Export ADP",
+      "audit.exportBatch": "Batch export ADP",
+      "audit.exportDetailPdf": "Export detail PDF",
+      "audit.exportDetailCsv": "Export detail CSV",
+      "audit.exportDetailEmail": "Email detail",
+      "audit.tipoutImport": "TipOut import",
+      "audit.fieldChange": "Field change",
+      "audit.refreshEmployees": "Refresh employee data",
+      "export.noData": "Nothing to export",
+      "export.notReady": "Export module not ready",
+      "export.noPrintContent": "Unable to load print content",
+      "export.generatingPdf": "Generating PDF...",
+      "export.generatingCsv": "Generating CSV...",
+      "export.csvSuccess": "CSV exported",
+      "export.pdfSuccess": "PDF exported",
+      "export.printPreview": "Opening print preview...",
+      "export.printOpened": 'Print preview opened — choose "Save as PDF"',
+      "export.popupBlocked": "Pop-up blocked. Allow pop-ups and try again.",
+      "email.required": "Enter an email address",
+      "email.invalid": "Invalid email: {email}",
+      "email.sending": "Sending {fmt} to {emails}...",
+      "email.success": "Email sent",
+    },
+  };
+
+  var PAGE_I18N = [
+    ["#payroll-mode-banner .payroll-mode-banner-text strong", "banner.title"],
+    ["#payroll-mode-banner .payroll-mode-banner-sub", "banner.sub"],
+    ["#btn-show-audit-log", "auditLog.btn"],
+    ["#btn-back-periods", "nav.backPeriods"],
+    ["label[for='period-year-filter']", "filter.year"],
+    ["label[for='period-number-filter']", "filter.periodNo"],
+    ["#period-number-filter option[value='']", "filter.allPeriods"],
+    ["label[for='period-status-filter']", "filter.status"],
+    ["#period-status-filter option[value='']", "filter.allStatus"],
+    ["#period-status-filter option[value='draft']", "status.draft"],
+    ["#period-status-filter option[value='partial']", "status.partial"],
+    ["#period-status-filter option[value='confirmed']", "status.confirmed"],
+    ["#view-periods thead th:nth-child(1)", "table.periodNo"],
+    ["#view-periods thead th:nth-child(2)", "table.payRange"],
+    ["#view-periods thead th:nth-child(3)", "table.paycheck"],
+    ["#view-periods thead th:nth-child(4)", "table.status"],
+    ["#view-periods thead th:nth-child(5)", "table.actions"],
+    ["label[for='payroll-store-filter']", "filter.payrollStore"],
+    ["#payroll-store-filter", null, "aria-label", "filter.payrollStore"],
+    ["#btn-export-batch-adp", "export.batchAdp"],
+    ["#ws-employee-switch", null, "aria-label", "employee.switchAria"],
+    ["#view-employees thead th:nth-child(1)", "table.name"],
+    ["#view-employees thead th:nth-child(2)", "table.store"],
+    ["#view-employees thead th:nth-child(3)", "table.department"],
+    ["#view-employees thead th:nth-child(4)", "table.adpFile"],
+    ["#view-employees thead th:nth-child(5)", "table.totalHours"],
+    ["#view-employees thead th:nth-child(6)", "table.confirm"],
+    ["#view-employees thead th:nth-child(7)", "table.actions"],
+    ["#manage-timecard-title", "manage.timecard"],
+    ["#manage-pay-period-title", "manage.payPeriodSummary"],
+    ["#tab-panel-manage .payroll-sum-card--hours .payroll-sum-card-title", "manage.hours"],
+    ["#tab-panel-manage .payroll-sum-card--hours .payroll-sum-card-meta", "manage.hoursUnit"],
+    ["#tab-panel-manage .payroll-sum-card--amount .payroll-sum-card-title", "manage.amount"],
+    ["#tab-panel-manage .payroll-sum-card--amount .payroll-sum-card-meta", "manage.rateMultiplier"],
+    ["#tab-panel-manage .payroll-sum-card--hours .payroll-sum-row.payroll-sum-total dt", "manage.total"],
+    ["#tab-panel-manage .payroll-sum-card--amount .payroll-sum-row.payroll-sum-total dt", "manage.total"],
+    ["label[for='field-adp-file'] > span:first-child", "manage.employeeId"],
+    ["label[for='field-ssn'] > span:first-child", "manage.employeeSsn"],
+    ["label[for='field-hire-date'] > span:first-child", "manage.hireDate"],
+    ["#manage-ot-rates-title", "manage.otRates"],
+    ["label[for='field-ot-rate'] span:first-child", "manage.otRateLabel"],
+    ["label[for='field-ot2-rate'] span:first-child", "manage.ot2RateLabel"],
+    ["#manage-wide-table-title", "manage.wideTable"],
+    ["#manage-period-nav-title", "manage.periodNav"],
+    ["#manage-period-nav-year", null, "aria-label", "filter.year"],
+    [".payroll-workspace-period-nav", null, "aria-label", "manage.periodNav"],
+    ["[data-action='preview-adp-report']", "manage.adpReport"],
+    ["[data-action='preview-employees-detail']", "manage.employeesDetail"],
+    ["[data-action='refresh-employee-data']", "manage.refreshEmployeeData"],
+    ["[data-action='confirm-employee']", "manage.confirmSave"],
+    ["#detail-meta-label-role", "detail.meta.roles"],
+    ["#detail-meta-label-hire-date", "detail.meta.hireDate"],
+    ["#detail-meta-label-ssn", "detail.meta.ssn"],
+    ["#detail-meta-label-pay-date", "detail.meta.payDate"],
+    ["#detail-meta-label-pay-period", "detail.meta.payPeriod"],
+    ["#detail-declaration-heading", "detail.declaration"],
+    [".payroll-print-disclaimer", "detail.disclaimer"],
+    ["#detail-emp-sign-label", "detail.empSign"],
+    ["#detail-date-line-label", "detail.dateLine"],
+    [".payroll-detail-export-actions .btn-primary.btn-lg", "export.results"],
+    ["#payrollDetailExportMenu .export-menu-item:nth-child(1)", "export.asPdf"],
+    ["#payrollDetailExportMenu .export-menu-item:nth-child(2)", "export.email"],
+    ["#payrollDetailExportMenu .export-menu-item:nth-child(3)", "export.asCsv"],
+    ["#btn-print-detail", "export.printPdf"],
+    ["#adp-preview-hint", "export.adpHint"],
+    ["#adp-report-modal-hint", "export.adpHint"],
+    ["#btn-adp-report-modal-export", "export.adpCsv"],
+    ["#adp-report-modal-title", "tab.adp"],
+    ["#payroll-footer-note-prefix", "footer.note"],
+    ["#field-help-title", "fieldHelp.title"],
+    ["#btn-field-help-close", "fieldHelp.close", "aria-label"],
+    ["#btn-field-help-ok", "fieldHelp.ok"],
+    ["#payrollDisclaimerModal .modal-header h3", "disclaimer.modalTitle"],
+    ["#payroll-disclaimer-agree + span, #payrollDisclaimerModal label span", "disclaimer.agree"],
+    ["#btn-payroll-disclaimer-accept", "disclaimer.accept"],
+    ["#payrollAuditLogModal .modal-header h3", "audit.title"],
+    ["#btn-audit-log-close", "fieldHelp.close", "aria-label"],
+    ["#payrollAuditLogModal thead th:nth-child(1)", "audit.time"],
+    ["#payrollAuditLogModal thead th:nth-child(2)", "audit.action"],
+    ["#payrollAuditLogModal thead th:nth-child(3)", "audit.periodEmp"],
+    ["#payrollAuditLogModal thead th:nth-child(4)", "audit.note"],
+    ["#btn-audit-log-ok", "fieldHelp.close"],
+    ["#payrollDetailEmailModal .modal-header h3", "email.title"],
+    ["label[for='payrollDetailExportEmail'], #payrollDetailEmailModal .form-group:first-child .form-label", "email.recipients"],
+    ["#payrollDetailExportEmail", null, "placeholder", "email.placeholder"],
+    ["#payrollDetailEmailModal .form-group:nth-child(2) .form-label", "email.format"],
+    ["#payrollDetailEmailModal .modal-footer .btn:first-child", "email.cancel"],
+    ["#payrollDetailEmailModal .modal-footer .btn-primary", "email.send"],
+    ["#payrollExportConfirmModal .modal-header h3", "exportConfirm.title"],
+    ["#payrollExportConfirmModal .modal-body > p", "exportConfirm.intro"],
+    ["#payrollExportConfirmModal .modal-body li:nth-child(1)", "exportConfirm.li1"],
+    ["#payrollExportConfirmModal .modal-body li:nth-child(2)", "exportConfirm.li2"],
+    ["#payrollExportConfirmModal .modal-body li:nth-child(3)", "exportConfirm.li3"],
+    ["#btn-export-confirm-cancel", "exportConfirm.cancel"],
+    ["#btn-export-confirm-ok", "exportConfirm.ok"],
+    ["#btn-export-confirm-close", "fieldHelp.close", "aria-label"],
+    ["#workspace-unsaved-title", "unsaved.title"],
+    ["#workspace-unsaved-body", "unsaved.body"],
+    ["#btn-unsaved-leave", "unsaved.leave"],
+    ["#btn-unsaved-stay", "unsaved.stay"],
+    ["#btn-unsaved-close", "fieldHelp.close", "aria-label"],
+    ["#workspace-save-confirm-title", "saveConfirm.title"],
+    ["#workspace-save-confirm-intro", "saveConfirm.intro"],
+    ["#btn-save-confirm-cancel", "saveConfirm.cancel"],
+    ["#btn-save-confirm-ok", "saveConfirm.ok"],
+    ["#btn-save-confirm-close", "fieldHelp.close", "aria-label"],
+    ["#employees-detail-modal-title", "detail.title"],
+    ["#btn-employees-detail-export-toggle", "export.results"],
+    ["#employeesDetailExportMenu .export-menu-item:nth-child(1)", "export.asPdf"],
+    ["#employeesDetailExportMenu .export-menu-item:nth-child(2)", "export.email"],
+    ["#employeesDetailExportMenu .export-menu-item:nth-child(3)", "export.asCsv"],
+    ["#btn-employees-detail-modal-ok", "fieldHelp.close"],
+    ["#btn-employees-detail-modal-close", "fieldHelp.close", "aria-label"],
+    ["#btn-adp-report-modal-ok", "fieldHelp.close"],
+    ["#btn-adp-report-modal-close", "fieldHelp.close", "aria-label"],
+  ];
+
+  var FIELD_HELP = {
+    zh: {
+      "seg-date": {
+        title: "Date · 工作日期",
+        body: "本薪资周期内员工实际上班的自然日。可与多段 In/Out 打卡对应；修改日期会影响当期考勤汇总与 ADP 导出中的工时归属。",
+        adp: null,
+      },
+      "seg-in": {
+        title: "In · 上班打卡",
+        body: "该日某一段班次的上班时间（时:分）。支持多段 In/Out（例如午休后继续上班）。直接修改可修正考勤，进而影响 Regular / OT / OT2 的填报与金额。",
+        adp: null,
+      },
+      "seg-out": {
+        title: "Out · 下班打卡",
+        body: "与 In 成对的下班时间。系统按 In/Out 计算当日在岗时长；若未启用自动加班规则，Regular / OT / OT2 也可由薪酬专员手工覆盖。",
+        adp: null,
+      },
+      "seg-meal": {
+        title: "Meal · 用餐/休息",
+        body: "当日用餐或强制休息记录（时长或备注，依客户模板）。用于加州等地区的用餐合规核对，并可在员工签字明细中作为休息佐证。",
+        adp: null,
+      },
+      "seg-rate": {
+        title: "Rate · 当日时薪",
+        body: "该日 Regular 工时的计薪时薪，可与宽表默认 Rate 不同。Regular 金额 = Regular 工时 × 当日 Rate；未填写时沿用宽表默认 Rate。",
+        adp: "ADP 导出：按加权平均或客户映射",
+      },
+      "seg-regular": {
+        title: "Regular · 正常工时",
+        body: "该日按正常时薪计薪的工时（小时）。汇总后进入 Pay Period「工时」区块；Regular 金额按当日 Rate 分别计算后汇总。",
+        adp: "ADP 导出列：Reg Hours",
+      },
+      "seg-ot": {
+        title: "OT · 加班工时（1.5 倍档）",
+        body: "第一层加班工时，通常对应每日超过 8 小时或每周超过 40 小时的部分（具体规则依门店与法规）。金额 = OT 工时 × 加班时薪 OT。",
+        adp: "ADP 导出：Hours 3 code = OHR，Hours 3 amount = OT 工时",
+      },
+      "seg-ot2": {
+        title: "OT2 · 双倍加班工时",
+        body: "更高档加班工时（例如每日超过 12 小时或第 7 天连续工作等场景，依客户规则）。金额 = OT2 工时 × 加班时薪 OT2。",
+        adp: null,
+      },
+      "adp-file": {
+        title: "ADP File# · 员工报税编号",
+        body: "员工在 ADP 系统中的唯一档案编号（FILE#）。必须与 ADP 主档一致，否则无法导出报税 CSV；缺失时导出按钮将禁用。建议与「员工列表」主档保持同步。",
+        adp: "ADP 导出列：FILE #",
+      },
+      "hire-date": {
+        title: "Hire Date · 入职日期",
+        body: "员工入职日期，用于 Employees Detail 表头与打印/导出展示。格式为 MM/DD/YYYY，可通过日期选择器修改；修改后需确认保存本期 Payroll。",
+        adp: "Employees Detail 表头：Hire Date",
+      },
+      "ot-rate": {
+        title: "加班时薪 OT",
+        body: "计算 OT 加班金额的时薪，通常为正常时薪的 1.5 倍（可手工调整）。Pay Period 汇总中「OT 金额」= OT 工时 × 本字段。",
+        adp: null,
+      },
+      "ot2-rate": {
+        title: "加班时薪 OT2",
+        body: "计算 OT2 双倍加班金额的时薪，通常为正常时薪的 2 倍（可手工调整）。Pay Period 汇总中「OT2 金额」= OT2 工时 × 本字段。",
+        adp: null,
+      },
+      exempt: {
+        title: "Exempt · 豁免加班",
+        body: "标识员工是否属于「豁免加班」类别（如部分月薪管理岗）。填写客户 ADP 模板要求的代码或留空；影响 OT 规则是否适用，需与薪酬政策一致。",
+        adp: "依客户 ADP 模板映射",
+      },
+      rate: {
+        title: "Rate · 默认时薪",
+        body: "本期默认正常时薪。修改并失焦后将同步至考勤明细各日的 Rate；若某日需不同时薪，可在考勤明细单独调整。Pay Period Regular 金额 = 各日 Regular 工时 × 当日 Rate 之和。",
+        adp: "ADP 导出列：Rate（多日时可能为加权平均）",
+      },
+      incentive: {
+        title: "Incentive · 激励/奖金",
+        body: "本期一次性激励、奖金或非固定津贴金额（美元）。不计入正常工时乘数，按客户 ADP 收益代码单独申报（若模板有对应列）。",
+        adp: "依客户 ADP 收益代码映射",
+      },
+      breakfast: {
+        title: "Breakfast · 早餐班餐次",
+        body: "早餐时段相关的餐次统计或餐补计数（依 KOI/ADP 模板定义）。用于餐段合规或餐补申报，与 Lunch/Dinner 分列填写。",
+        adp: "依客户 ADP 模板映射",
+      },
+      lunch: {
+        title: "Lunch · 午餐班餐次",
+        body: "午餐时段餐次或用餐合规计数。若员工未获得规定用餐休息，可能触发合规提醒；本字段供报税专员按模板填报。",
+        adp: "依客户 ADP 模板映射",
+      },
+      dinner: {
+        title: "Dinner · 晚餐班餐次",
+        body: "晚餐时段餐次或用餐合规计数。与 Breakfast、Lunch 一并构成当期餐休申报数据。",
+        adp: "依客户 ADP 模板映射",
+      },
+      "sick-hours": {
+        title: "Sick Hours · 病假工时",
+        body: "本期带薪病假小时数。与正常出勤工时分开统计，按客户政策决定时薪或固定额，并映射到 ADP 病假收益/扣减列。",
+        adp: "依客户 ADP 模板映射",
+      },
+      svcw: {
+        title: "SVCW · 服务费（Service Charge）",
+        body: "员工本期应申报的服务费/服务附加费分配金额。须与员工签字页声明中的 service charge 一致。可与 TipOut 小费分配结果不同，允许手工覆盖后作为报税最终值。",
+        adp: "ADP 导出：Earnings 3 Code = SVC，Earnings 3 Amount = 本列金额",
+      },
+      tips: {
+        title: "Tips · 小费",
+        body: "员工本期应申报的小费金额（样例中为信用卡小费 CCT）。须与员工签字页声明中的 tips 一致。若 TipOut 分配结果不可用，可手工录入；确认后写入 ADP 与签字明细。",
+        adp: "ADP 导出：Earnings 3 Code = CCT，Earnings 3 Amount = 本列金额",
+      },
+      "child-sup": {
+        title: "Child sup · 子女抚养费扣款",
+        body: "法院裁定或 ADP 配置的子女抚养费代扣金额（美元）。从本期应付中扣除，按客户模板映射为扣款项。",
+        adp: "依客户 ADP 扣款代码映射",
+      },
+      "med-ded": {
+        title: "Med Ded · 医疗保险扣款",
+        body: "员工承担的医疗保险保费扣款（美元）。属于税前或税后扣款依 ADP 设置；本字段为报税专员确认后的本期金额。",
+        adp: "依客户 ADP 扣款代码映射",
+      },
+      eee40: {
+        title: "Eee 40% · 健康险员工分摊",
+        body: "健康保险费用中由员工承担的比例份额（模板示例为 40%）。与 Eer 60% 合计应等于当期健康险总成本分摊，需与福利台账一致。",
+        adp: "依客户 ADP 模板映射",
+      },
+      eer60: {
+        title: "Eer 60% · 健康险雇主分摊",
+        body: "健康保险费用中由雇主承担的比例份额（模板示例为 60%）。主要用于薪酬成本核算与 ADP 雇主成本列对齐。",
+        adp: "依客户 ADP 模板映射",
+      },
+    },
+    en: {
+      "seg-date": {
+        title: "Date · Work date",
+        body: "The calendar date the employee worked during this pay period. Maps to In/Out punches; changing the date affects period totals and ADP hour allocation.",
+        adp: null,
+      },
+      "seg-in": {
+        title: "In · Clock in",
+        body: "Clock-in time (HH:MM) for a shift segment. Supports multiple In/Out pairs (e.g., after a meal break). Edits update hours and pay.",
+        adp: null,
+      },
+      "seg-out": {
+        title: "Out · Clock out",
+        body: "Clock-out time paired with In. Hours on duty are derived from In/Out unless Regular / OT / OT2 are manually overridden.",
+        adp: null,
+      },
+      "seg-meal": {
+        title: "Meal · Meal / rest break",
+        body: "Meal or mandatory break duration (or note per client template). Used for meal-break compliance (e.g., California) and shown on the signed detail.",
+        adp: null,
+      },
+      "seg-rate": {
+        title: "Rate · Daily hourly wage",
+        body: "Hourly rate for this day's Regular hours; may differ from the worksheet default Rate. Regular pay = Regular hours × this day's Rate; blank falls back to the default Rate.",
+        adp: "ADP export: weighted average or client mapping",
+      },
+      "seg-regular": {
+        title: "Regular · Regular hours",
+        body: "Hours paid at the daily Rate. Rolled into the pay period Hours section; Regular pay is summed per day (Regular hours × that day's Rate).",
+        adp: "ADP export column: Reg Hours",
+      },
+      "seg-ot": {
+        title: "OT · Overtime hours (1.5×)",
+        body: "First-tier overtime, typically daily hours over 8 or weekly hours over 40 (per store rules). Pay = OT hours × OT rate.",
+        adp: "ADP export: Hours 3 code = OHR, Hours 3 amount = OT hours",
+      },
+      "seg-ot2": {
+        title: "OT2 · Double-time hours",
+        body: "Higher-tier overtime (e.g., over 12 hours in a day or 7th consecutive day, per client rules). Pay = OT2 hours × OT2 rate.",
+        adp: null,
+      },
+      "adp-file": {
+        title: "ADP File # · Employee payroll ID",
+        body: "Unique employee file number in ADP (FILE #). Must match ADP master data or CSV export is blocked. Sync with the employee roster when possible.",
+        adp: "ADP export column: FILE #",
+      },
+      "hire-date": {
+        title: "Hire Date",
+        body: "Employee hire date shown on Employees Detail headers and print/export. Use the date picker to edit; confirm payroll to save for this period.",
+        adp: "Employees Detail header: Hire Date",
+      },
+      "ot-rate": {
+        title: "OT hourly rate",
+        body: "Hourly rate used for OT pay, usually 1.5× base (editable). OT pay = OT hours × this rate.",
+        adp: null,
+      },
+      "ot2-rate": {
+        title: "Double-time hourly rate",
+        body: "Hourly rate used for OT2 pay, usually 2× base (editable). OT2 pay = OT2 hours × this rate.",
+        adp: null,
+      },
+      exempt: {
+        title: "Exempt · Overtime exempt",
+        body: "Marks whether the employee is overtime-exempt (e.g., some salaried managers). Use the code required by your ADP template.",
+        adp: "Mapped per client ADP template",
+      },
+      rate: {
+        title: "Rate · Default hourly wage",
+        body: "Default regular hourly rate for this period. On blur, syncs to each day in Time entries; override any day there. Regular pay = sum of (daily Regular hours × that day's Rate).",
+        adp: "ADP export column: Rate (may be weighted average when rates vary)",
+      },
+      incentive: {
+        title: "Incentive · Bonus / incentive",
+        body: "One-time bonus or incentive for this period (USD). Mapped to ADP earnings codes when applicable.",
+        adp: "Mapped per client ADP earnings code",
+      },
+      breakfast: {
+        title: "Breakfast · Breakfast meal count",
+        body: "Breakfast meal or meal-allowance count per client template. Used with Lunch/Dinner for meal compliance reporting.",
+        adp: "Mapped per client ADP template",
+      },
+      lunch: {
+        title: "Lunch · Lunch meal count",
+        body: "Lunch meal or break compliance count. Used by payroll staff per ADP template.",
+        adp: "Mapped per client ADP template",
+      },
+      dinner: {
+        title: "Dinner · Dinner meal count",
+        body: "Dinner meal count for the period, reported with Breakfast and Lunch.",
+        adp: "Mapped per client ADP template",
+      },
+      "sick-hours": {
+        title: "Sick hours · Paid sick time",
+        body: "Paid sick hours for this period, separate from worked hours. Mapped to ADP sick pay/deduction columns per policy.",
+        adp: "Mapped per client ADP template",
+      },
+      svcw: {
+        title: "SVCW · Service charge",
+        body: "Service charge amount allocated to the employee this period. Must match the acknowledgment on the signed detail. May differ from TipOut; manual override allowed.",
+        adp: "ADP export: Earnings 3 Code = SVC, Earnings 3 Amount = this amount",
+      },
+      tips: {
+        title: "Tips · Reported tips",
+        body: "Tips to report this period (sample uses credit-card tips / CCT). Must match the signed detail. Enter manually if TipOut data is unavailable.",
+        adp: "ADP export: Earnings 3 Code = CCT, Earnings 3 Amount = this amount",
+      },
+      "child-sup": {
+        title: "Child sup · Child support withholding",
+        body: "Court-ordered or ADP-configured child support withholding (USD). Mapped to ADP deduction codes.",
+        adp: "Mapped per client ADP deduction code",
+      },
+      "med-ded": {
+        title: "Med Ded · Medical deduction",
+        body: "Employee medical premium withholding (USD). Pre- or post-tax per ADP setup.",
+        adp: "Mapped per client ADP deduction code",
+      },
+      eee40: {
+        title: "Eee 40% · Employee health share",
+        body: "Employee share of health premium (template example: 40%). Should align with Eer 60% and benefits records.",
+        adp: "Mapped per client ADP template",
+      },
+      eer60: {
+        title: "Eer 60% · Employer health share",
+        body: "Employer share of health premium (template example: 60%). Used for employer cost alignment with ADP.",
+        adp: "Mapped per client ADP template",
+      },
+    },
+  };
+
+  function readLocaleFromStorage() {
+    try {
+      var p = new URLSearchParams(window.location.search);
+      var q = (p.get("locale") || p.get("lang") || "").toLowerCase();
+      if (q === "en" || q.startsWith("en-")) return "en";
+      if (q === "zh" || q.startsWith("zh")) return "zh";
+      var v = localStorage.getItem(UI_LOCALE_STORAGE_KEY);
+      if (v === "en" || v === "zh") return v;
+    } catch (e) {
+      /* ignore */
+    }
+    return "zh";
+  }
+
+  function interpolate(text, vars) {
+    if (!vars) return text;
+    return String(text).replace(/\{(\w+)\}/g, function (_, k) {
+      return vars[k] != null ? String(vars[k]) : "";
+    });
+  }
+
+  function payrollT(key, vars) {
+    var loc = currentLocale;
+    var bag = messages[loc] || messages.zh;
+    var text = bag[key];
+    if (text == null) text = messages.zh[key];
+    if (text == null) return key;
+    return interpolate(text, vars);
+  }
+
+  function getPayrollLocale() {
+    return currentLocale;
+  }
+
+  function isPayrollEn() {
+    return currentLocale === "en";
+  }
+
+  function getPayrollFieldHelp(key) {
+    var bag = FIELD_HELP[currentLocale] || FIELD_HELP.zh;
+    return bag[key] || FIELD_HELP.zh[key] || null;
+  }
+
+  function applyPayrollPageI18n() {
+    document.documentElement.lang = currentLocale === "en" ? "en-US" : "zh-CN";
+    document.title = payrollT("page.title");
+    PAGE_I18N.forEach(function (row) {
+      var sel = row[0];
+      var key = row[1];
+      var mode = row[2] || "text";
+      var attrKey = row[3];
+      if (!sel) return;
+      var el = document.querySelector(sel);
+      if (!el) return;
+      var val = key ? payrollT(key) : null;
+      if (mode === "text") {
+        if (val != null) el.textContent = val;
+      } else if (mode === "prefix") {
+        if (val != null) {
+          var nameEl = el.querySelector("span");
+          if (nameEl) el.childNodes[0].textContent = val;
+          else el.textContent = val;
+        }
+      } else if (mode === "placeholder" && attrKey) {
+        el.setAttribute("placeholder", payrollT(attrKey));
+      } else if (mode === "aria-label" && attrKey) {
+        el.setAttribute("aria-label", payrollT(attrKey));
+      } else if (mode === "title" && attrKey) {
+        el.setAttribute("title", payrollT(attrKey));
+      }
+    });
+    document.querySelectorAll("[data-i18n]").forEach(function (el) {
+      el.textContent = payrollT(el.getAttribute("data-i18n"));
+    });
+  }
+
+  function setPayrollLocale(loc, skipRefresh) {
+    var next = loc === "en" ? "en" : "zh";
+    if (next === currentLocale) return;
+    currentLocale = next;
+    applyPayrollPageI18n();
+    if (!skipRefresh && typeof window.__payrollRefreshLocale === "function") {
+      window.__payrollRefreshLocale();
+    }
+  }
+
+  function initPayrollI18n(onRefresh) {
+    currentLocale = readLocaleFromStorage();
+    window.__payrollRefreshLocale = onRefresh || null;
+    applyPayrollPageI18n();
+    window.addEventListener("storage", function (e) {
+      if (e.key === UI_LOCALE_STORAGE_KEY) setPayrollLocale(readLocaleFromStorage());
+    });
+    window.addEventListener("menusifu:ui-locale-change", function (e) {
+      var loc = e && e.detail && e.detail.locale;
+      if (loc === "en" || loc === "zh") setPayrollLocale(loc);
+      else setPayrollLocale(readLocaleFromStorage());
+    });
+  }
+
+  window.payrollT = payrollT;
+  window.getPayrollLocale = getPayrollLocale;
+  window.isPayrollEn = isPayrollEn;
+  window.getPayrollFieldHelp = getPayrollFieldHelp;
+  window.applyPayrollPageI18n = applyPayrollPageI18n;
+  window.initPayrollI18n = initPayrollI18n;
+})();
