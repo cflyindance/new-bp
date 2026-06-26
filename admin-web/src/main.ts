@@ -207,6 +207,7 @@ import {
   findPlatformPresetPageTitle,
   isPlatformPresetPath,
   renderPlatformPresetPage,
+  guardMerchantPlatformPresetPath,
 } from "./config/platform-preset-ui";
 import { MERCHANT_PLATFORM_PRESET_SCOPE, isMPlatformPresetPath } from "./config/platform-preset-scope";
 import {
@@ -10966,6 +10967,20 @@ function mount(): void {
   }
 
   syncSessionForAuthenticatedUser();
+
+  const merchantPresetPath = readAppHashPath();
+  if (isPlatformPresetPath(merchantPresetPath)) {
+    const guard = guardMerchantPlatformPresetPath(merchantPresetPath);
+    if (guard.rejectedEdit) {
+      window.alert("该业态×产线组合不在本店登录引导范围内，无法配置。");
+      if (guard.path !== merchantPresetPath) {
+        replaceHashPath(guard.path);
+        mount();
+        return;
+      }
+    }
+  }
+
   guardNavModuleAccess(readAppHashPath());
 
   navModuleSheetOpenBeforeMount = {};

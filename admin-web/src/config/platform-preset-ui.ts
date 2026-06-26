@@ -19,13 +19,24 @@ import {
 import type { PresetScopeConfig } from "./platform-preset-scope";
 import {
   MERCHANT_PLATFORM_PRESET_SCOPE,
+  canAddCustomBusinessTypes,
   getPresetScopeForPath,
   isAnyPlatformPresetPath,
   isMerchantPlatformPresetPath,
-  listScopedCustomBusinessTypes,
+  listCustomBusinessTypesForScope,
   parsePlatformPresetEditPathForScope,
 } from "./platform-preset-scope";
 import { buildPlatformPresetIndex } from "./platform-preset-tree";
+import {
+  clampSelectedBusinessTypeId,
+  filterProductLinesForMerchantView,
+  formatMerchantViewAppliedAt,
+  formatMerchantViewScopeLabels,
+  isComboInMerchantViewScope,
+  resolveMerchantPresetViewScope,
+  type MerchantPresetViewScope,
+} from "./platform-preset-merchant-view";
+import { ONBOARDING_PATH } from "./platform-preset-onboarding";
 import {
   cascadeEnableSelection,
   normalizeSelectionForLine,
@@ -59,7 +70,7 @@ function renderBusinessTypeNavItem(
   selected: boolean,
   badge?: number,
   custom = false,
-  showCustomEdit = false,
+  allowCustomEdit = false,
 ): string {
   return `
     <li>
@@ -70,7 +81,7 @@ function renderBusinessTypeNavItem(
       >
         <span class="min-w-0 flex-1 truncate">${escapeHtml(label)}</span>
         ${badge != null ? `<span class="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs tabular-nums text-muted-foreground">${badge}</span>` : ""}
-        ${custom && showCustomEdit ? `<span class="shrink-0 text-xs text-muted-foreground" data-pp-custom-actions="${escapeHtml(id)}">编辑</span>` : ""}
+        ${custom && allowCustomEdit ? `<span class="shrink-0 text-xs text-muted-foreground" data-pp-custom-actions="${escapeHtml(id)}">编辑</span>` : ""}
       </button>
     </li>`;
 }
@@ -109,19 +120,70 @@ function renderProductLineCard(
     </article>`;
 }
 
-function renderPlatformPresetListMainPanel(scope: PresetScopeConfig, selectedId: string): string {
+function renderMerchantPresetContextBanner(viewScope: MerchantPresetViewScope): string {
+  const { businessTypes, productLines } = formatMerchantViewScopeLabels(viewScope);
+  const applied = formatMerchantViewAppliedAt(viewScope.appliedAt);
+  return `
+    <div class="rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm">
+      <p class="text-card-foreground">
+        当前门店（来自登录引导）：
+        <strong>${escapeHtml(businessTypes)}</strong>
+        ·
+        <strong>${escapeHtml(productLines)}</strong>
+      </p>
+      <p class="mt-1 text-xs text-muted-foreground">
+        共 ${viewScope.comboCount} 组预设并集${applied ? ` · 上次应用 ${escapeHtml(applied)}` : ""}
+      </p>
+      <button
+        type="button"
+        data-restart-onboarding
+        class="mt-2 text-xs font-medium text-primary hover:underline"
+      >重新引导</button>
+    </div>`;
+}
+
+function renderMerchantPresetNoContextEmpty(): string {
+  return `
+    <div class="flex min-h-0 flex-1 flex-col gap-4" data-pp-list data-pp-scope="merchant">
+      <div class="rounded-xl border border-dashed border-border bg-card p-10 text-center shadow-sm">
+        <h2 class="text-lg font-semibold text-card-foreground">尚未确定本店业态与产线范围</h2>
+        <p class="mt-2 max-w-md mx-auto text-sm text-muted-foreground">
+          平台预设仅展示登录引导中所选的经营业态与产线。请先完成引导，再在此配置各组合的功能范围。
+        </p>
+        <a
+          href="#${ONBOARDING_PATH}"
+          class="mt-6 inline-flex rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90"
+        >去引导</a>
+      </div>
+    </div>`;
+}
+
+function renderPlatformPresetListMainPanel(
+  scope: PresetScopeConfig,
+  selectedId: string,
+  viewScope?: MerchantPresetViewScope,
+): string {
   const store = scope.store;
-  const customTypes = listScopedCustomBusinessTypes(scope);
+  const customTypes = listCustomBusinessTypesForScope(scope);
   const selectedLabel = businessTypeLabel(
     selectedId,
     customTypes.find((c) => c.id === selectedId)?.label,
   );
-  const lineCards = PLATFORM_PRESET_PRODUCT_LINES.map((l) =>
-    renderProductLineCard(scope, selectedId, l.id),
-  ).join("");
-  const recL1 = store.countRecommendedLevel1(selectedId, "pos");
+  const visibleLines =
+    scope.scope === "merchant" && viewScope?.hasContext
+      ? filterProductLinesForMerchantView(viewScope)
+      : PLATFORM_PRESET_PRODUCT_LINES;
+  const lineCards = visibleLines
+    .map((l) => renderProductLineCard(scope, selectedId, l.id))
+    .join("");
+  const recL1 = store.countRecommendedLevel1(selectedId, visibleLines[0]?.id ?? "pos");
+  const contextBanner =
+    scope.scope === "merchant" && viewScope?.hasContext
+      ? renderMerchantPresetContextBanner(viewScope)
+      : "";
 
   return `
+        ${contextBanner ? `<div class="mb-4">${contextBanner}</div>` : ""}
         <div class="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 class="text-lg font-semibold text-card-foreground">${escapeHtml(selectedLabel)} · 产线预设</h2>
@@ -130,7 +192,7 @@ function renderPlatformPresetListMainPanel(scope: PresetScopeConfig, selectedId:
           </div>
           <button type="button" data-pp-list-changelog class="rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted">变更记录</button>
         </div>
-        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">${lineCards}</div>`;
+        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">${lineCards || `<p class="text-sm text-muted-foreground col-span-full">当前引导范围内无产线可配置。</p>`}</div>`;
 }
 
 function syncPlatformPresetBusinessTypeNavSelection(selectedId: string): void {
@@ -150,7 +212,8 @@ export function patchPlatformPresetListSelection(scope: PresetScopeConfig, busin
   root.dataset.selectedBt = businessTypeId;
   syncPlatformPresetBusinessTypeNavSelection(businessTypeId);
   const main = root.querySelector<HTMLElement>("[data-pp-list-main]");
-  if (main) main.innerHTML = renderPlatformPresetListMainPanel(scope, businessTypeId);
+  const viewScope = scope.scope === "merchant" ? resolveMerchantPresetViewScope() : undefined;
+  if (main) main.innerHTML = renderPlatformPresetListMainPanel(scope, businessTypeId, viewScope);
 }
 
 function formatPlatformPresetChangelogTime(at: string): string {
@@ -335,9 +398,30 @@ function bindPlatformPresetChangelogDialog(): void {
 
 export function renderPlatformPresetListPage(scope: PresetScopeConfig): string {
   const store = scope.store;
-  const selectedId = store.readSelectedBusinessTypeId();
+  const viewScope = scope.scope === "merchant" ? resolveMerchantPresetViewScope() : undefined;
 
-  const serviceItems = PLATFORM_PRESET_BUILTIN_BUSINESS_TYPES.filter((b) => b.category === "service-mode")
+  if (scope.scope === "merchant" && !viewScope?.hasContext) {
+    return renderMerchantPresetNoContextEmpty();
+  }
+
+  const allowedBusinessTypeIds =
+    scope.scope === "merchant" && viewScope?.hasContext ? viewScope.businessTypeIds : null;
+
+  let selectedId = store.readSelectedBusinessTypeId();
+  if (allowedBusinessTypeIds) {
+    const clamped = clampSelectedBusinessTypeId(selectedId, allowedBusinessTypeIds);
+    if (clamped !== selectedId) {
+      selectedId = clamped;
+      store.writeSelectedBusinessTypeId(selectedId);
+    }
+  }
+
+  const allowCustomAdd = canAddCustomBusinessTypes(scope);
+  const allowedBtSet = allowedBusinessTypeIds ? new Set(allowedBusinessTypeIds) : null;
+
+  const serviceItems = PLATFORM_PRESET_BUILTIN_BUSINESS_TYPES.filter(
+    (b) => b.category === "service-mode" && (!allowedBtSet || allowedBtSet.has(b.id)),
+  )
     .map((b) =>
       renderBusinessTypeNavItem(
         b.id,
@@ -348,7 +432,9 @@ export function renderPlatformPresetListPage(scope: PresetScopeConfig): string {
     )
     .join("");
 
-  const categoryItems = PLATFORM_PRESET_BUILTIN_BUSINESS_TYPES.filter((b) => b.category === "category")
+  const categoryItems = PLATFORM_PRESET_BUILTIN_BUSINESS_TYPES.filter(
+    (b) => b.category === "category" && (!allowedBtSet || allowedBtSet.has(b.id)),
+  )
     .map((b) =>
       renderBusinessTypeNavItem(
         b.id,
@@ -359,7 +445,9 @@ export function renderPlatformPresetListPage(scope: PresetScopeConfig): string {
     )
     .join("");
 
-  const customTypes = listScopedCustomBusinessTypes(scope);
+  const customTypes = listCustomBusinessTypesForScope(scope).filter(
+    (c) => !allowedBtSet || allowedBtSet.has(c.id),
+  );
   const customItems = customTypes
     .map((c) =>
       renderBusinessTypeNavItem(
@@ -368,22 +456,26 @@ export function renderPlatformPresetListPage(scope: PresetScopeConfig): string {
         c.id === selectedId,
         store.countPublishedLinesForBusinessType(c.id),
         true,
-        scope.allowCustomBusinessTypeManage,
+        allowCustomAdd,
       ),
     )
     .join("");
 
-  const addCustomButton = scope.allowCustomBusinessTypeManage
+  const addButton = allowCustomAdd
     ? `<button type="button" data-pp-add-custom class="rounded-md border border-border px-2 py-1 text-xs hover:bg-muted">+ 新增</button>`
     : "";
+  const merchantHint = allowCustomAdd
+    ? ""
+    : `<p class="mb-3 text-xs text-muted-foreground">业态目录由 M 平台维护，商家后台不支持新增。</p>`;
 
   return `
     <div class="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row lg:items-stretch" data-pp-list data-pp-scope="${scope.scope}" data-selected-bt="${escapeHtml(selectedId)}">
       <aside class="w-full shrink-0 rounded-xl border border-border bg-card p-4 shadow-sm lg:w-72">
         <div class="mb-4 flex items-center justify-between gap-2">
           <h2 class="text-sm font-semibold text-card-foreground">经营业态</h2>
-          ${addCustomButton}
+          ${addButton}
         </div>
+        ${merchantHint}
         <div class="space-y-4 text-sm">
           <div>
             <p class="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">按服务方式</p>
@@ -404,7 +496,7 @@ export function renderPlatformPresetListPage(scope: PresetScopeConfig): string {
         </div>
       </aside>
       <div class="min-w-0 flex-1 space-y-4" data-pp-list-main>
-        ${renderPlatformPresetListMainPanel(scope, selectedId)}
+        ${renderPlatformPresetListMainPanel(scope, selectedId, viewScope)}
       </div>
     </div>`;
 }
@@ -418,7 +510,8 @@ export function renderPlatformPresetEditPage(
   const snapshot = store.getOrCreateDraftSelection(businessTypeId, productLineId);
   const selection = normalizeSelectionForLine(snapshot.selection, productLineId);
   const index = buildPlatformPresetIndex(productLineId);
-  const customTypes = listScopedCustomBusinessTypes(scope);
+  const customTypes = listCustomBusinessTypesForScope(scope);
+  const customTiers = customTypes.find((c) => c.id === businessTypeId)?.moduleTiers;
   const btLabel = businessTypeLabel(
     businessTypeId,
     customTypes.find((c) => c.id === businessTypeId)?.label,
@@ -438,7 +531,7 @@ export function renderPlatformPresetEditPage(
     activeL2,
     activeL3,
     "",
-    (moduleId) => getPresetEditModuleTier(businessTypeId, productLineId, moduleId),
+    (moduleId) => getPresetEditModuleTier(businessTypeId, productLineId, moduleId, customTiers),
   );
 
   const listHref = `#${scope.routePrefix}`;
@@ -500,7 +593,7 @@ export function findPlatformPresetPageTitle(
   if (!path.startsWith(scope.routePrefix)) return null;
   const edit = parsePlatformPresetEditPathForScope(path, scope);
   if (edit) {
-    const customTypes = listScopedCustomBusinessTypes(scope);
+    const customTypes = listCustomBusinessTypesForScope(scope);
     const btLabel = businessTypeLabel(
       edit.businessTypeId,
       customTypes.find((c) => c.id === edit.businessTypeId)?.label,
@@ -514,6 +607,18 @@ export function findPlatformPresetPageTitle(
     return { title: "平台预设", module: scope.moduleLabel };
   }
   return null;
+}
+
+export function guardMerchantPlatformPresetPath(path: string): {
+  path: string;
+  rejectedEdit: boolean;
+} {
+  const edit = parsePlatformPresetEditPathForScope(path, MERCHANT_PLATFORM_PRESET_SCOPE);
+  if (!edit) return { path, rejectedEdit: false };
+  if (isComboInMerchantViewScope(edit.businessTypeId, edit.productLineId)) {
+    return { path, rejectedEdit: false };
+  }
+  return { path: MERCHANT_PLATFORM_PRESET_SCOPE.routePrefix, rejectedEdit: true };
 }
 
 export function renderPlatformPresetPage(path: string, scope: PresetScopeConfig = getPresetScopeForPath(path)): string {
@@ -544,8 +649,9 @@ function rerenderEditorColumns(editor: HTMLElement, scope: PresetScopeConfig): v
   const pl = editor.dataset.pl! as ProductLineId;
   const selection = readSelectionFromEditor(editor);
   const index = buildPlatformPresetIndex(pl);
+  const customTiers = listCustomBusinessTypesForScope(scope).find((c) => c.id === bt)?.moduleTiers;
   rerenderFourColumnMatrix(editor, selection, index, "", (moduleId) =>
-    getPresetEditModuleTier(bt, pl, moduleId),
+    getPresetEditModuleTier(bt, pl, moduleId, customTiers),
   );
 }
 
@@ -591,7 +697,8 @@ export function bindPlatformPreset(onMount: () => void, scope: PresetScopeConfig
       return;
     }
 
-    if (target.closest("[data-pp-add-custom]") && listScope?.scope === scope.scope && scope.allowCustomBusinessTypeManage) {
+    if (target.closest("[data-pp-add-custom]") && listScope?.scope === scope.scope) {
+      if (!canAddCustomBusinessTypes(scope)) return;
       const label = window.prompt("自定义业态名称");
       if (!label?.trim()) return;
       scope.store.upsertCustomBusinessType(label.trim());
@@ -603,7 +710,7 @@ export function bindPlatformPreset(onMount: () => void, scope: PresetScopeConfig
     if (changelogBtn && listScope?.scope === scope.scope) {
       const [bt, pl] = (changelogBtn.dataset.ppChangelog ?? "").split(":");
       if (!bt || !pl) return;
-      const customTypes = listScopedCustomBusinessTypes(scope);
+      const customTypes = listCustomBusinessTypesForScope(scope);
       const btLabel = businessTypeLabel(bt, customTypes.find((c) => c.id === bt)?.label);
       const plLabel = productLineLabel(pl as ProductLineId);
       const entries = scope.store.getChangelogForCombo(bt, pl as ProductLineId);
@@ -613,7 +720,7 @@ export function bindPlatformPreset(onMount: () => void, scope: PresetScopeConfig
 
     if (target.closest("[data-pp-list-changelog]") && listScope?.scope === scope.scope) {
       const selectedId = listRoot?.dataset.selectedBt ?? scope.store.readSelectedBusinessTypeId();
-      const customTypes = listScopedCustomBusinessTypes(scope);
+      const customTypes = listCustomBusinessTypesForScope(scope);
       const btLabel = businessTypeLabel(
         selectedId,
         customTypes.find((c) => c.id === selectedId)?.label,

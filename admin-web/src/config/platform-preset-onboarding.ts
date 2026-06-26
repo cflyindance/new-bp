@@ -9,6 +9,7 @@ import {
   productLineLabel,
   type ProductLineId,
 } from "./platform-preset-catalog";
+import { FULL_SELECTION_BUSINESS_TYPE_ID } from "./platform-preset-recommendations";
 import { applyPlatformPresetContext, clearPlatformPresetContext } from "./platform-preset-context";
 import {
   countOnboardingConfirmationModules,
@@ -20,6 +21,17 @@ import { listCustomBusinessTypes } from "./enterprise-platform-preset-store";
 import { getFirstAllowedNavPath } from "./platform-preset-nav-filter";
 
 export const ONBOARDING_PATH = "/onboarding";
+
+const DEFAULT_ONBOARDING_BUSINESS_TYPE_ID = FULL_SELECTION_BUSINESS_TYPE_ID;
+const DEFAULT_ONBOARDING_PRODUCT_LINE_ID = "pos" satisfies ProductLineId;
+
+function defaultOnboardingDraft(): OnboardingDraft {
+  return {
+    step: 1,
+    businessTypeIds: [DEFAULT_ONBOARDING_BUSINESS_TYPE_ID],
+    productLineIds: [DEFAULT_ONBOARDING_PRODUCT_LINE_ID],
+  };
+}
 
 const COMPLETE_BY_EMAIL_KEY = "menusifu:platform-preset-onboarding-complete-v1";
 const DRAFT_KEY = "menusifu:platform-preset-onboarding-draft-v1";
@@ -48,11 +60,7 @@ function toggleArrayItem<T>(arr: T[], item: T): T[] {
 }
 
 function normalizeOnboardingDraft(raw: unknown): OnboardingDraft {
-  const fallback: OnboardingDraft = {
-    step: 1,
-    businessTypeIds: [readSelectedBusinessTypeId()],
-    productLineIds: ["pos"],
-  };
+  const fallback = defaultOnboardingDraft();
   if (!raw || typeof raw !== "object") return fallback;
 
   const r = raw as Partial<
@@ -129,11 +137,8 @@ export function resetPlatformPresetOnboarding(email: string | null = getAuthenti
 export function restartPlatformPresetOnboardingFromStart(): void {
   resetPlatformPresetOnboarding();
   clearPlatformPresetContext();
-  writeOnboardingDraft({
-    step: 1,
-    businessTypeIds: [readSelectedBusinessTypeId()],
-    productLineIds: ["pos"],
-  });
+  writeSelectedBusinessTypeId(DEFAULT_ONBOARDING_BUSINESS_TYPE_ID);
+  writeOnboardingDraft(defaultOnboardingDraft());
 }
 
 export function needsPlatformPresetOnboarding(): boolean {
@@ -416,6 +421,9 @@ export function bindPlatformPresetOnboarding(onMount: () => void): void {
 
     if (target.closest("[data-ob-finish]")) {
       applyPlatformPresetContext(draft.businessTypeIds, draft.productLineIds);
+      if (draft.businessTypeIds[0]) {
+        writeSelectedBusinessTypeId(draft.businessTypeIds[0]);
+      }
       markPlatformPresetOnboardingComplete();
       location.hash = `#${getFirstAllowedNavPath()}`;
       onMount();

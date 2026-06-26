@@ -69,7 +69,8 @@ export interface CustomBusinessType {
 
 const merchant = createPlatformPresetStore("menusifu:platform-preset-v1", {
   invalidateRuntimeCache: invalidatePlatformPresetRuntimeCache,
-  listCustomBusinessTypes: listEnterpriseCustomBusinessTypes,
+  resolveCustomBusinessType: (businessTypeId) =>
+    listEnterpriseCustomBusinessTypes().find((c) => c.id === businessTypeId),
 });
 
 export const {

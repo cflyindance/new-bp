@@ -2,6 +2,7 @@
  * 平台预设 · 商家级 vs 企业级（M 平台）作用域配置
  */
 import { PLATFORM_PRESET_PRODUCT_LINES, type ProductLineId } from "./platform-preset-catalog";
+import type { CustomBusinessType } from "./platform-preset-store";
 import type { PlatformPresetStoreApi } from "./platform-preset-store-factory";
 import * as merchantStore from "./platform-preset-store";
 import * as enterpriseStore from "./enterprise-platform-preset-store";
@@ -14,19 +15,9 @@ export interface PresetScopeConfig {
   moduleLabel: string;
   listIntro: string;
   editorHint: string;
-  /** 是否允许在本作用域新增/编辑自定义经营业态（仅 M 平台） */
-  allowCustomBusinessTypeManage: boolean;
   publishSuccessMessage: (version: number) => string;
   versionBadge: (version: number, hasPublished: boolean) => string;
   store: PlatformPresetStoreApi;
-}
-
-/** 当前作用域可见的自定义业态（商家后台读取 M 平台配置） */
-export function listScopedCustomBusinessTypes(scope: PresetScopeConfig) {
-  if (scope.scope === "merchant") {
-    return ENTERPRISE_PLATFORM_PRESET_SCOPE.store.listCustomBusinessTypes();
-  }
-  return scope.store.listCustomBusinessTypes();
 }
 
 export const MERCHANT_PLATFORM_PRESET_SCOPE: PresetScopeConfig = {
@@ -34,10 +25,9 @@ export const MERCHANT_PLATFORM_PRESET_SCOPE: PresetScopeConfig = {
   routePrefix: "/settings/platform-preset",
   moduleLabel: "系统设置",
   listIntro:
-    "在左侧选择经营业态后，在此配置该业态下各产线组合的默认功能与设置展示范围。经营业态由 M 平台统一维护，商家后台不可新增。",
+    "列表范围与登录引导所选业态、产线一致；在左侧选择业态后，配置各产线组合的功能与设置展示范围。经营业态由 M 平台统一维护。",
   editorHint:
     "此处勾选不会实时改变侧栏；保存并发布后，请通过顶栏「重新引导」验证效果。",
-  allowCustomBusinessTypeManage: false,
   publishSuccessMessage: (version) =>
     `已发布 v${version}。可通过顶栏「重新引导」选择对应业态与产线，验证预设效果。`,
   versionBadge: (version, hasPublished) =>
@@ -53,7 +43,6 @@ export const ENTERPRISE_PLATFORM_PRESET_SCOPE: PresetScopeConfig = {
     "企业级平台预设：配置后将作为下属商家的默认预设。新商家首次登录引导将同步此处发布的配置。",
   editorHint:
     "此处为企业级默认配置，保存并发布后不会直接改变当前商家侧栏；后续将支持同步到商家后台。",
-  allowCustomBusinessTypeManage: true,
   publishSuccessMessage: (version) =>
     `已发布企业级预设 v${version}。新商家首次引导将默认获取此配置（同步到既有商家为后续能力）。`,
   versionBadge: (version, hasPublished) =>
@@ -76,6 +65,17 @@ export function isAnyPlatformPresetPath(path: string): boolean {
 export function getPresetScopeForPath(path: string): PresetScopeConfig {
   if (isMPlatformPresetPath(path)) return ENTERPRISE_PLATFORM_PRESET_SCOPE;
   return MERCHANT_PLATFORM_PRESET_SCOPE;
+}
+
+/** 仅 M 平台支持新增自定义经营业态 */
+export function canAddCustomBusinessTypes(scope: PresetScopeConfig): boolean {
+  return scope.scope === "enterprise";
+}
+
+/** 商家后台读取 M 平台下发的自定义业态；M 平台读取本作用域存储 */
+export function listCustomBusinessTypesForScope(scope: PresetScopeConfig): CustomBusinessType[] {
+  if (scope.scope === "enterprise") return scope.store.listCustomBusinessTypes();
+  return enterpriseStore.listCustomBusinessTypes();
 }
 
 export function parsePlatformPresetEditPathForScope(

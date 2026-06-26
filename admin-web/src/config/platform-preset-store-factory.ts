@@ -65,8 +65,8 @@ export function createPlatformPresetStore(
   storageKey: string,
   options?: {
     invalidateRuntimeCache?: () => void;
-    /** 覆盖自定义业态来源（商家级读取 M 平台业态清单） */
-    listCustomBusinessTypes?: () => CustomBusinessType[];
+    /** 商家后台等场景：从 M 平台解析自定义业态画像 */
+    resolveCustomBusinessType?: (businessTypeId: string) => CustomBusinessType | undefined;
   },
 ): PlatformPresetStoreApi {
   let memoryStore: PlatformPresetStoreSnapshot | null = null;
@@ -117,11 +117,9 @@ export function createPlatformPresetStore(
     }
   }
 
-  function listCustomBusinessTypesFromStorage(): CustomBusinessType[] {
+  function listCustomBusinessTypes(): CustomBusinessType[] {
     return readStore().customBusinessTypes;
   }
-
-  const listCustomBusinessTypes = options?.listCustomBusinessTypes ?? listCustomBusinessTypesFromStorage;
 
   function ensureAlwaysEnabledPresetModules(
     selection: Record<string, PlatformPresetNodeSelection>,
@@ -178,7 +176,9 @@ export function createPlatformPresetStore(
 
     const index = buildPlatformPresetIndex(productLineId);
     const { flat, getDescendantKeys, groups } = index;
-    const custom = listCustomBusinessTypes().find((c) => c.id === businessTypeId);
+    const custom =
+      options?.resolveCustomBusinessType?.(businessTypeId) ??
+      listCustomBusinessTypes().find((c) => c.id === businessTypeId);
     const customTiers = custom?.moduleTiers;
 
     const selection: Record<string, PlatformPresetNodeSelection> = {};
@@ -264,7 +264,7 @@ export function createPlatformPresetStore(
     getStoreRevision: () => storeRevision,
     readStoreSnapshot: () => readStore(),
     getPlatformPresetStore: () => readStore(),
-    readSelectedBusinessTypeId: () => readStore().selectedBusinessTypeId ?? "fast-food",
+    readSelectedBusinessTypeId: () => readStore().selectedBusinessTypeId ?? "full-service",
     writeSelectedBusinessTypeId: (id: string) => {
       const store = readStore();
       store.selectedBusinessTypeId = id;
