@@ -2,17 +2,18 @@
  * 平台预设 · 列表页与四列编辑页
  */
 import type { PresetChangeItem } from "./platform-preset-changelog-diff";
-import type { PermissionTreeNode } from "./permission-registry";
-import { getModuleSettingsCatalog } from "./module-settings-catalog";
-import { t, type MessageKey } from "../i18n";
+import {
+  renderFourColumnMatrix,
+  renderFourColumnMatrixShell,
+  rerenderFourColumnMatrix,
+  syncFourColumnIndeterminate,
+} from "./permission-four-column-ui";
 import {
   PLATFORM_PRESET_BUILTIN_BUSINESS_TYPES,
   PLATFORM_PRESET_PRODUCT_LINES,
   businessTypeLabel,
   getPresetEditModuleTier,
   productLineLabel,
-  tierBadgeClass,
-  tierBadgeLabel,
   type ProductLineId,
 } from "./platform-preset-catalog";
 import { buildPlatformPresetIndex } from "./platform-preset-tree";
@@ -46,10 +47,6 @@ function escapeHtml(s: string): string {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
-}
-
-function pickZh(title: string, titleEn?: string): string {
-  return title || titleEn || "";
 }
 
 export function isPlatformPresetPath(path: string): boolean {
@@ -411,158 +408,6 @@ export function renderPlatformPresetListPage(_path: string): string {
     </div>`;
 }
 
-function checkboxState(
-  key: string,
-  selection: Record<string, PlatformPresetNodeSelection>,
-  index: ReturnType<typeof buildPlatformPresetIndex>,
-): { checked: boolean; indeterminate: boolean } {
-  const self = selection[key]?.enabled ?? false;
-  const descendants = index.getDescendantKeys(key);
-  if (descendants.length === 0) return { checked: self, indeterminate: false };
-  const enabledCount = descendants.filter((d) => selection[d]?.enabled).length;
-  if (self && enabledCount === descendants.length) return { checked: true, indeterminate: false };
-  if (!self && enabledCount === 0) return { checked: false, indeterminate: false };
-  return { checked: false, indeterminate: true };
-}
-
-function formatPresetGroupNavLabel(label: string): string {
-  if (label.endsWith("设置") && label.length > 2) return label.slice(0, -2);
-  return label;
-}
-
-function renderColumnItem(
-  key: string,
-  title: string,
-  selected: boolean,
-  selection: Record<string, PlatformPresetNodeSelection>,
-  index: ReturnType<typeof buildPlatformPresetIndex>,
-  tier?: string,
-  level?: number,
-  showDisplay = false,
-  childCount?: number,
-  nested = false,
-): string {
-  const { checked, indeterminate } = checkboxState(key, selection, index);
-  const displayChecked = selection[key]?.display !== false;
-  const countBadge =
-    childCount != null && level === 3
-      ? `<span class="ml-auto shrink-0 text-xs tabular-nums text-muted-foreground">${childCount}</span>`
-      : "";
-  return `
-    <button
-      type="button"
-      data-pp-col-select="${escapeHtml(key)}"
-      class="flex w-full items-start gap-2 rounded-lg py-2 text-left text-sm transition-colors ${nested ? "pl-4 pr-2" : "px-2"} ${selected ? "bg-primary/10 ring-1 ring-primary/25" : "hover:bg-muted/50"}"
-    >
-      <input
-        type="checkbox"
-        class="pp-enable-cb mt-0.5 size-4 shrink-0 accent-primary"
-        data-pp-enable="${escapeHtml(key)}"
-        ${checked ? "checked" : ""}
-        ${indeterminate ? 'data-indeterminate="1"' : ""}
-        onclick="event.stopPropagation()"
-      />
-      <span class="min-w-0 flex-1">
-        <span class="flex items-center gap-1">
-          ${tier ? `<span class="rounded px-1.5 py-0.5 text-[10px] font-medium ${tierBadgeClass(tier as "core" | "recommended" | "optional")}">${escapeHtml(tierBadgeLabel(tier as "core" | "recommended" | "optional"))}</span>` : ""}
-          <span class="min-w-0 flex-1 truncate ${level === 4 ? "text-muted-foreground" : "font-medium text-card-foreground"}">${escapeHtml(title)}</span>
-          ${countBadge}
-        </span>
-        ${showDisplay ? `<label class="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground" onclick="event.stopPropagation()"><input type="checkbox" class="pp-display-cb size-3.5 accent-primary" data-pp-display="${escapeHtml(key)}" ${displayChecked ? "checked" : ""} />展示</label>` : ""}
-      </span>
-    </button>`;
-}
-
-function renderPresetL3GroupItem(
-  node: PermissionTreeNode,
-  activeL3: string,
-  selection: Record<string, PlatformPresetNodeSelection>,
-  index: ReturnType<typeof buildPlatformPresetIndex>,
-  nested = false,
-): string {
-  return renderColumnItem(
-    node.resource.key,
-    formatPresetGroupNavLabel(pickZh(node.resource.title, node.resource.titleEn)),
-    node.resource.key === activeL3,
-    selection,
-    index,
-    undefined,
-    3,
-    false,
-    node.children.length,
-    nested,
-  );
-}
-
-/** 三级分组列：按 catalog.groupNavSections 分段（如前厅 员工端/食客端），并展示每组 L4 数量 */
-function renderPresetL3Column(
-  l2Node: PermissionTreeNode | undefined,
-  activeL3: string,
-  selection: Record<string, PlatformPresetNodeSelection>,
-  index: ReturnType<typeof buildPlatformPresetIndex>,
-): string {
-  if (!l2Node?.children.length) return "";
-
-  const l3Nodes = l2Node.children;
-  const catalog = l2Node.resource.path ? getModuleSettingsCatalog(l2Node.resource.path) : undefined;
-
-  if (!catalog?.groupNavSections?.length) {
-    return l3Nodes.map((n) => renderPresetL3GroupItem(n, activeL3, selection, index)).join("");
-  }
-
-  const byGroupKey = new Map<string, PermissionTreeNode>();
-  for (const node of l3Nodes) {
-    if (node.resource.groupKey) byGroupKey.set(node.resource.groupKey, node);
-  }
-
-  const rendered = new Set<string>();
-  const parts: string[] = [];
-
-  for (let i = 0; i < catalog.groupNavSections.length; i++) {
-    const section = catalog.groupNavSections[i]!;
-    if (i > 0) {
-      parts.push('<div class="my-2 border-t border-border" role="presentation"></div>');
-    }
-    parts.push(
-      `<p class="px-2 ${i > 0 ? "pt-1" : "pt-0.5"} pb-1 text-sm font-semibold tracking-tight text-foreground">${escapeHtml(t(section.labelKey as MessageKey))}</p>`,
-    );
-    for (const groupKey of section.groupKeys) {
-      const node = byGroupKey.get(groupKey);
-      if (!node || rendered.has(groupKey)) continue;
-      rendered.add(groupKey);
-      parts.push(renderPresetL3GroupItem(node, activeL3, selection, index, true));
-    }
-  }
-
-  for (const node of l3Nodes) {
-    const groupKey = node.resource.groupKey;
-    if (groupKey && rendered.has(groupKey)) continue;
-    parts.push(renderPresetL3GroupItem(node, activeL3, selection, index));
-  }
-
-  return parts.join("");
-}
-
-function findL2Node(groups: ReturnType<typeof buildPlatformPresetIndex>["groups"], l2Key: string): PermissionTreeNode | undefined {
-  for (const g of groups) {
-    for (const c of g.tree.children) {
-      if (c.resource.key === l2Key) return c;
-    }
-  }
-  return undefined;
-}
-
-function findL3Node(groups: ReturnType<typeof buildPlatformPresetIndex>["groups"], l3Key: string): PermissionTreeNode | undefined {
-  for (const g of groups) {
-    for (const l2 of g.tree.children) {
-      for (const l3 of l2.children) {
-        if (l3.resource.key === l3Key) return l3;
-      }
-    }
-  }
-  return undefined;
-}
-
 export function renderPlatformPresetEditPage(
   businessTypeId: string,
   productLineId: ProductLineId,
@@ -576,58 +421,18 @@ export function renderPlatformPresetEditPage(
   const activeL1 = index.groups[0]?.moduleKey ?? "";
   const activeL2 = index.groups[0]?.tree.children[0]?.resource.key ?? "";
   const activeL3 = index.groups[0]?.tree.children[0]?.children[0]?.resource.key ?? "";
-
-  const col1 = index.groups
-    .map((g) => {
-      const tier = getPresetEditModuleTier(businessTypeId, productLineId, g.moduleId);
-      return renderColumnItem(
-        g.moduleKey,
-        pickZh(g.moduleTitle, g.moduleTitleEn),
-        g.moduleKey === activeL1,
-        selection,
-        index,
-        tier,
-        1,
-      );
-    })
-    .join("");
-
-  const l1Node = index.groups.find((g) => g.moduleKey === activeL1)?.tree;
-  const col2 = (l1Node?.children ?? [])
-    .map((c) =>
-      renderColumnItem(
-        c.resource.key,
-        pickZh(c.resource.title, c.resource.titleEn),
-        c.resource.key === activeL2,
-        selection,
-        index,
-        undefined,
-        2,
-      ),
-    )
-    .join("");
-
-  const l2Node = findL2Node(index.groups, activeL2);
-  const col3 = renderPresetL3Column(l2Node, activeL3, selection, index);
-
-  const l3Node = findL3Node(index.groups, activeL3);
-  const col4 = (l3Node?.children ?? [])
-    .map((c) =>
-      renderColumnItem(
-        c.resource.key,
-        pickZh(c.resource.title, c.resource.titleEn),
-        false,
-        selection,
-        index,
-        undefined,
-        4,
-        true,
-      ),
-    )
-    .join("");
-
   const enabledL1 = countEnabledLevel1({ ...snapshot, selection });
   const recCount = countRecommendedSettings(businessTypeId, productLineId);
+
+  const { col1, col2, col3, col4 } = renderFourColumnMatrix(
+    selection,
+    index,
+    activeL1,
+    activeL2,
+    activeL3,
+    "",
+    (moduleId) => getPresetEditModuleTier(businessTypeId, productLineId, moduleId),
+  );
 
   return `
     <div
@@ -658,24 +463,7 @@ export function renderPlatformPresetEditPage(
           <h2 class="text-sm font-semibold text-card-foreground">按导航树配置功能</h2>
           <p class="text-xs text-muted-foreground mt-0.5">配置预设 · ${escapeHtml(btLabel)} · ${escapeHtml(plLabel)}</p>
         </div>
-        <div class="grid min-h-0 flex-1 grid-cols-1 divide-y divide-border lg:grid-cols-4 lg:divide-x lg:divide-y-0">
-          <div class="flex min-h-0 flex-col">
-            <p class="shrink-0 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground border-b border-border">一级导航</p>
-            <div class="pp-col-scroll min-h-0 flex-1 overflow-y-auto p-1 space-y-0.5" data-pp-col="1">${col1 || `<p class="p-3 text-sm text-muted-foreground">无模块</p>`}</div>
-          </div>
-          <div class="flex min-h-0 flex-col">
-            <p class="shrink-0 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground border-b border-border">二级导航</p>
-            <div class="pp-col-scroll min-h-0 flex-1 overflow-y-auto p-1 space-y-0.5" data-pp-col="2">${col2 || `<p class="p-3 text-sm text-muted-foreground">请选择一级导航</p>`}</div>
-          </div>
-          <div class="flex min-h-0 flex-col">
-            <p class="shrink-0 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground border-b border-border">三级 / 分组</p>
-            <div class="pp-col-scroll min-h-0 flex-1 overflow-y-auto p-1 space-y-0.5" data-pp-col="3">${col3 || `<p class="p-3 text-sm text-muted-foreground">请选择二级导航</p>`}</div>
-          </div>
-          <div class="flex min-h-0 flex-col">
-            <p class="shrink-0 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground border-b border-border">分组内功能 / 设置</p>
-            <div class="pp-col-scroll min-h-0 flex-1 overflow-y-auto p-1 space-y-0.5" data-pp-col="4">${col4 || `<p class="p-3 text-sm text-muted-foreground">请选择分组</p>`}</div>
-          </div>
-        </div>
+        ${renderFourColumnMatrixShell(col1, col2, col3, col4)}
       </div>
       <div class="flex flex-wrap gap-3 shrink-0">
         <button type="button" data-pp-publish class="rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90">
@@ -730,65 +518,16 @@ function rerenderEditorColumns(editor: HTMLElement): void {
   const pl = editor.dataset.pl! as ProductLineId;
   const selection = readSelectionFromEditor(editor);
   const index = buildPlatformPresetIndex(pl);
-  const l1 = editor.dataset.activeL1 ?? index.groups[0]?.moduleKey ?? "";
-  let l2 = editor.dataset.activeL2 ?? "";
-  let l3 = editor.dataset.activeL3 ?? "";
-
-  const l1Node = index.groups.find((g) => g.moduleKey === l1)?.tree;
-  if (!l2 || !l1Node?.children.some((c) => c.resource.key === l2)) {
-    l2 = l1Node?.children[0]?.resource.key ?? "";
-    editor.dataset.activeL2 = l2;
-  }
-  const l2Node = findL2Node(index.groups, l2);
-  if (!l3 || !l2Node?.children.some((c) => c.resource.key === l3)) {
-    l3 = l2Node?.children[0]?.resource.key ?? "";
-    editor.dataset.activeL3 = l3;
-  }
-
-  const col1El = editor.querySelector('[data-pp-col="1"]');
-  const col2El = editor.querySelector('[data-pp-col="2"]');
-  const col3El = editor.querySelector('[data-pp-col="3"]');
-  const col4El = editor.querySelector('[data-pp-col="4"]');
-
-  if (col1El) {
-    col1El.innerHTML = index.groups
-      .map((g) => {
-        const tier = getPresetEditModuleTier(bt, pl, g.moduleId);
-        return renderColumnItem(g.moduleKey, pickZh(g.moduleTitle, g.moduleTitleEn), g.moduleKey === l1, selection, index, tier, 1);
-      })
-      .join("");
-  }
-  if (col2El && l1Node) {
-    col2El.innerHTML = l1Node.children
-      .map((c) =>
-        renderColumnItem(c.resource.key, pickZh(c.resource.title, c.resource.titleEn), c.resource.key === l2, selection, index, undefined, 2),
-      )
-      .join("");
-  }
-  if (col3El && l2Node) {
-    col3El.innerHTML = renderPresetL3Column(l2Node, l3, selection, index);
-  }
-  const l3Node = findL3Node(index.groups, l3);
-  if (col4El) {
-    col4El.innerHTML = (l3Node?.children ?? [])
-      .map((c) =>
-        renderColumnItem(c.resource.key, pickZh(c.resource.title, c.resource.titleEn), false, selection, index, undefined, 4, true),
-      )
-      .join("") || `<p class="p-3 text-sm text-muted-foreground">请选择分组</p>`;
-  }
-
-  editor.querySelectorAll<HTMLInputElement>("[data-indeterminate]").forEach((cb) => {
-    cb.indeterminate = true;
-  });
+  rerenderFourColumnMatrix(editor, selection, index, "", (moduleId) =>
+    getPresetEditModuleTier(bt, pl, moduleId),
+  );
 }
 
 export function bindPlatformPreset(onMount: () => void): void {
   bindPlatformPresetChangelogDialog();
 
   function syncIndeterminateCheckboxes(): void {
-    document.querySelectorAll<HTMLInputElement>(".pp-enable-cb[data-indeterminate]").forEach((cb) => {
-      cb.indeterminate = true;
-    });
+    syncFourColumnIndeterminate(document);
   }
 
   syncIndeterminateCheckboxes();

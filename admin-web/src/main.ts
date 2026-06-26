@@ -203,6 +203,7 @@ import {
 } from "./config/foh-settings-by-line-toggle";
 import { fohLineNavLabel, type FohLineNavId } from "./config/foh-settings-line-scope";
 import { bindPermissionsRbac, isPermissionsRbacPath, renderPermissionsRbacPage } from "./permissions/rbac-ui";
+import { applyModuleSettingsRbacAccess } from "./permissions/rbac-setting-access";
 import {
   bindPlatformPreset,
   findPlatformPresetPageTitle,
@@ -9843,6 +9844,7 @@ function bindModuleSettingsToggles(): void {
     if (btn.dataset.moduleSettingToggleBound === "1") return;
     btn.dataset.moduleSettingToggleBound = "1";
     btn.addEventListener("click", () => {
+      if (btn.disabled) return;
       const clickSeq = Number(btn.getAttribute("data-module-setting-toggle"));
       if (!clickSeq) return;
       const next = btn.getAttribute("aria-checked") !== "true";
@@ -11639,6 +11641,10 @@ function mount(): void {
   bindDeliveryRegionEditor();
   bindOrderTypeByLineEditor();
   bindModuleSettingsFormControls();
+  const settingsCatalogForRbac = getModuleSettingsCatalog(mountPathForSheet);
+  if (settingsCatalogForRbac) {
+    applyModuleSettingsRbacAccess(mountPathForSheet, document);
+  }
   bindBatchPostPrintChoices();
   bindOrderSameDishDisplayRadios();
   bindCourseSequenceModeUi();

@@ -6,15 +6,20 @@ import {
   resolveEffectiveGrant,
   type PermissionAccess,
 } from "../config/permission-registry";
+import { buildPlatformPresetIndex } from "../config/platform-preset-tree";
+import type { PlatformPresetNodeSelection, RbacL4EditMode } from "../config/platform-preset-store";
+import { cascadeEnableSelection } from "../config/platform-preset-store";
 
 export interface RbacRole {
   id: string;
   name: string;
   description: string;
   isSystem: boolean;
-  /** 稀疏 resourceKey → 显式覆盖；未设则继承父级 */
-  grants: Record<string, PermissionAccess>;
+  /** 与平台预设一致：导航节点启用/展示 */
+  selection: Record<string, PlatformPresetNodeSelection>;
   updatedAt: string;
+  /** @deprecated v2 稀疏 grants，加载时迁移为 selection */
+  grants?: Record<string, PermissionAccess>;
 }
 
 export interface StaffAssignment {
@@ -31,8 +36,9 @@ export interface PermissionChangeLogEntry {
   detail: string;
 }
 
-const STORAGE_KEY = "menusifu:rbac-v2";
+const STORAGE_KEY = "menusifu:rbac-v3";
 const LEGACY_STORAGE_KEY = "menusifu:rbac-v1";
+const V2_STORAGE_KEY = "menusifu:rbac-v2";
 
 interface RbacStoreSnapshot {
   roles: RbacRole[];
@@ -41,6 +47,107 @@ interface RbacStoreSnapshot {
 }
 
 const resourceIndex = buildPermissionResourceIndex();
+const RBAC_PRESET_LINE = "pos" as const;
+
+function grantsToSelection(grants: Record<string, PermissionAccess>): Record<string, PlatformPresetNodeSelection> {
+  const index = buildPlatformPresetIndex(RBAC_PRESET_LINE);
+  const selection: Record<string, PlatformPresetNodeSelection> = {};
+  for (const n of index.flat) {
+    const effective = resolveEffectiveGrant(grants, n.key, resourceIndex);
+    if (n.level === 4) {
+      selection[n.key] = {
+        enabled: effective !== "hidden",
+        l4EditMode: effective === "operate" ? "editable" : "display-only",
+      };
+    } else {
+      selection[n.key] = { enabled: effective !== "hidden", display: true };
+    }
+  }
+  return selection;
+}
+
+function defaultL4Selection(enabled: boolean): PlatformPresetNodeSelection {
+  return { enabled, l4EditMode: "display-only" };
+}
+
+export function normalizeRoleSelection(
+  selection: Record<string, PlatformPresetNodeSelection>,
+): Record<string, PlatformPresetNodeSelection> {
+  const index = buildPlatformPresetIndex(RBAC_PRESET_LINE);
+  const next = { ...selection };
+  for (const n of index.flat) {
+    if (!next[n.key]) {
+      next[n.key] = n.level === 4 ? defaultL4Selection(false) : { enabled: false, display: true };
+      continue;
+    }
+    if (n.level === 4) {
+      next[n.key] = {
+        ...next[n.key],
+        l4EditMode: next[n.key].l4EditMode ?? "display-only",
+      };
+    }
+  }
+  return next;
+}
+
+/** RBAC 勾选级联：L4 勾选=展示，默认不可编辑（只读） */
+export function cascadeRbacEnableSelection(
+  selection: Record<string, PlatformPresetNodeSelection>,
+  key: string,
+  enabled: boolean,
+): Record<string, PlatformPresetNodeSelection> {
+  let next = cascadeEnableSelection(selection, key, enabled, RBAC_PRESET_LINE);
+  const index = buildPlatformPresetIndex(RBAC_PRESET_LINE);
+  for (const k of [key, ...index.getDescendantKeys(key)]) {
+    const node = index.byKey.get(k);
+    if (node?.level !== 4) continue;
+    next[k] = {
+      ...next[k],
+      enabled,
+      l4EditMode: enabled ? (next[k]?.l4EditMode ?? "display-only") : (next[k]?.l4EditMode ?? "display-only"),
+    };
+  }
+  return next;
+}
+
+function migrateRoleToSelection(role: RbacRole): RbacRole {
+  if (role.selection && Object.keys(role.selection).length > 0) {
+    return {
+      id: role.id,
+      name: role.name,
+      description: role.description,
+      isSystem: role.isSystem,
+      selection: normalizeRoleSelection(role.selection),
+      updatedAt: role.updatedAt,
+    };
+  }
+  const grants = role.grants ?? {};
+  return {
+    id: role.id,
+    name: role.name,
+    description: role.description,
+    isSystem: role.isSystem,
+    selection: grantsToSelection(grants),
+    updatedAt: role.updatedAt,
+  };
+}
+
+function roleFromGrantsSeed(
+  id: string,
+  name: string,
+  description: string,
+  isSystem: boolean,
+  grants: Record<string, PermissionAccess>,
+): RbacRole {
+  return {
+    id,
+    name,
+    description,
+    isSystem,
+    selection: grantsToSelection(grants),
+    updatedAt: new Date().toISOString(),
+  };
+}
 
 function defaultSparseGrants(access: PermissionAccess): Record<string, PermissionAccess> {
   const grants: Record<string, PermissionAccess> = {};
@@ -83,38 +190,16 @@ function seedRoles(): RbacRole[] {
   }
 
   return [
-    {
-      id: "store-manager",
-      name: "店长",
-      description: "门店全量管理，含财务与报表操作",
-      isSystem: true,
-      grants: all,
-      updatedAt: new Date().toISOString(),
-    },
-    {
-      id: "hq-admin",
-      name: "总部管理员",
-      description: "连锁总部：品牌/门店/权限/多店汇总",
-      isSystem: true,
-      grants: all,
-      updatedAt: new Date().toISOString(),
-    },
-    {
-      id: "cashier",
-      name: "收银员",
-      description: "订单、支付、前厅点单；设置类入口不可见或仅查看",
-      isSystem: true,
-      grants: cashier,
-      updatedAt: new Date().toISOString(),
-    },
-    {
-      id: "floor-staff",
-      name: "楼面",
-      description: "前厅与预约为主，财务模块可操作",
-      isSystem: false,
-      grants: floorStaff,
-      updatedAt: new Date().toISOString(),
-    },
+    roleFromGrantsSeed("store-manager", "店长", "门店全量管理，含财务与报表操作", true, all),
+    roleFromGrantsSeed("hq-admin", "总部管理员", "连锁总部：品牌/门店/权限/多店汇总", true, all),
+    roleFromGrantsSeed(
+      "cashier",
+      "收银员",
+      "订单、支付、前厅点单；设置类入口默认不启用",
+      true,
+      cashier,
+    ),
+    roleFromGrantsSeed("floor-staff", "楼面", "前厅与预约为主，财务模块启用", false, floorStaff),
   ];
 }
 
@@ -132,21 +217,22 @@ function migrateLegacySnapshot(legacy: RbacStoreSnapshot): RbacStoreSnapshot {
   const l2Keys = new Set(flat.filter((r) => r.level === 2).map((r) => r.key));
 
   const roles = legacy.roles.map((role) => {
+    const legacyGrants = role.grants ?? {};
     const grants: Record<string, PermissionAccess> = {};
-    for (const [key, access] of Object.entries(role.grants)) {
+    for (const [key, access] of Object.entries(legacyGrants)) {
       if (l2Keys.has(key)) grants[key] = parsePermissionAccess(access);
     }
     for (const g of buildPermissionModuleGroups()) {
       const l2InModule = flat.filter((r) => r.moduleId === g.moduleId && r.level === 2);
-      const levels = l2InModule.map((r) => parsePermissionAccess(role.grants[r.key]));
+      const levels = l2InModule.map((r) => parsePermissionAccess(legacyGrants[r.key]));
       if (levels.some((a) => a === "operate")) grants[g.moduleKey] = "operate";
       else if (levels.some((a) => a === "view")) grants[g.moduleKey] = "view";
       else grants[g.moduleKey] = "hidden";
     }
-    return { ...role, grants };
+    return { ...role, grants, selection: grantsToSelection(grants) };
   });
 
-  return { ...legacy, roles };
+  return { ...legacy, roles: roles.map(migrateRoleToSelection) };
 }
 
 function loadSnapshot(): RbacStoreSnapshot {
@@ -154,7 +240,23 @@ function loadSnapshot(): RbacStoreSnapshot {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as RbacStoreSnapshot;
-      if (parsed.roles?.length) return parsed;
+      if (parsed.roles?.length) {
+        return { ...parsed, roles: parsed.roles.map(migrateRoleToSelection) };
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+
+  try {
+    const v2Raw = localStorage.getItem(V2_STORAGE_KEY);
+    if (v2Raw) {
+      const v2 = JSON.parse(v2Raw) as RbacStoreSnapshot;
+      if (v2.roles?.length) {
+        const migrated = { ...v2, roles: v2.roles.map(migrateRoleToSelection) };
+        saveRbacSnapshot(migrated);
+        return migrated;
+      }
     }
   } catch {
     /* ignore */
@@ -282,17 +384,33 @@ export function removeRoleGrant(
   return next;
 }
 
-export function countRoleStats(role: RbacRole): { operate: number; view: number; hidden: number } {
-  let operate = 0;
-  let view = 0;
-  let hidden = 0;
-  for (const key of resourceIndex.byKey.keys()) {
-    const a = resolveEffectiveGrant(role.grants, key, resourceIndex);
-    if (a === "operate") operate++;
-    else if (a === "view") view++;
-    else hidden++;
+export function countRoleStats(role: RbacRole): { enabled: number; total: number; enabledL1: number } {
+  const index = buildPlatformPresetIndex(RBAC_PRESET_LINE);
+  const sel = normalizeRoleSelection(role.selection);
+  let enabled = 0;
+  let enabledL1 = 0;
+  for (const n of index.flat) {
+    if (sel[n.key]?.enabled) {
+      enabled++;
+      if (n.level === 1) enabledL1++;
+    }
   }
-  return { operate, view, hidden };
+  return { enabled, total: index.flat.length, enabledL1 };
+}
+
+export function getRbacPresetIndex() {
+  return buildPlatformPresetIndex(RBAC_PRESET_LINE);
+}
+
+export type ResolvedL4SettingAccess = "editable" | "display-only" | "denied";
+
+export function resolveRoleL4SettingAccess(
+  role: RbacRole,
+  permissionKey: string,
+): ResolvedL4SettingAccess {
+  const sel = normalizeRoleSelection(role.selection)[permissionKey];
+  if (!sel?.enabled) return "denied";
+  return sel.l4EditMode ?? "display-only";
 }
 
 export function getModuleGroups() {
@@ -301,11 +419,4 @@ export function getModuleGroups() {
 
 export function getPermissionIndex() {
   return resourceIndex;
-}
-
-export function getEffectiveGrant(
-  grants: Record<string, PermissionAccess>,
-  key: string,
-): PermissionAccess {
-  return resolveEffectiveGrant(grants, key, resourceIndex);
 }

@@ -4,39 +4,33 @@
 import { getAuthenticatedEmail } from "../auth/login";
 import { isStoreTierHiddenNavModule } from "../auth/session-scope";
 import { getStaffLoginAccountByEmail } from "./staff-account-store";
-import {
-  buildPermissionModuleGroups,
-  type PermissionAccess,
-} from "../config/permission-registry";
-import { getEffectiveGrant, getRbacSnapshot } from "./rbac-store";
+import { buildPermissionModuleGroups } from "../config/permission-registry";
+import { getRbacSnapshot, type RbacRole } from "./rbac-store";
 import type { NavModule } from "../config/navigation";
 
-const ACCESS_RANK: Record<PermissionAccess, number> = {
-  hidden: 0,
-  view: 1,
-  operate: 2,
-};
+function isRoleModuleEnabled(role: RbacRole, moduleKey: string): boolean {
+  return role.selection[moduleKey]?.enabled === true;
+}
 
-function mergeStaffModuleGrants(roleIds: string[]): Record<string, PermissionAccess> {
+function mergeStaffModuleEnabled(roleIds: string[]): Record<string, boolean> {
   const { roles } = getRbacSnapshot();
-  const merged: Record<string, PermissionAccess> = {};
+  const merged: Record<string, boolean> = {};
   for (const g of buildPermissionModuleGroups()) {
-    merged[g.moduleKey] = "hidden";
+    merged[g.moduleKey] = false;
   }
   for (const roleId of roleIds) {
     const role = roles.find((r) => r.id === roleId);
     if (!role) continue;
     for (const g of buildPermissionModuleGroups()) {
-      const eff = getEffectiveGrant(role.grants, g.moduleKey);
-      if (ACCESS_RANK[eff] > ACCESS_RANK[merged[g.moduleKey] ?? "hidden"]) {
-        merged[g.moduleKey] = eff;
+      if (isRoleModuleEnabled(role, g.moduleKey)) {
+        merged[g.moduleKey] = true;
       }
     }
   }
   return merged;
 }
 
-function getCurrentUserModuleGrants(): Record<string, PermissionAccess> | null {
+function getCurrentUserModuleEnabled(): Record<string, boolean> | null {
   const email = getAuthenticatedEmail();
   if (!email) return null;
 
@@ -47,17 +41,16 @@ function getCurrentUserModuleGrants(): Record<string, PermissionAccess> | null {
   const assignment = staff.find((s) => s.employeeId === account.employeeId);
   if (!assignment) return null;
 
-  return mergeStaffModuleGrants(assignment.roleIds);
+  return mergeStaffModuleEnabled(assignment.roleIds);
 }
 
 export function isNavModuleVisible(moduleId: string): boolean {
   if (isStoreTierHiddenNavModule(moduleId)) return false;
 
-  const grants = getCurrentUserModuleGrants();
-  if (!grants) return true;
+  const enabledMap = getCurrentUserModuleEnabled();
+  if (!enabledMap) return true;
 
-  const access = grants[moduleId] ?? getEffectiveGrant(grants, moduleId);
-  return access !== "hidden";
+  return enabledMap[moduleId] === true;
 }
 
 export function filterVisibleNavModules(modules: NavModule[]): NavModule[] {

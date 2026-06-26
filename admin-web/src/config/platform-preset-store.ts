@@ -15,10 +15,14 @@ import { buildPresetChangelogSummary, diffPresetSelections } from "./platform-pr
 import { invalidatePlatformPresetRuntimeCache } from "./platform-preset-runtime-cache";
 import { buildPlatformPresetIndex } from "./platform-preset-tree";
 
+export type RbacL4EditMode = "editable" | "display-only";
+
 export interface PlatformPresetNodeSelection {
   enabled: boolean;
-  /** L4：是否在设置页展示 */
+  /** 平台预设 L4：是否在设置页展示 */
   display?: boolean;
+  /** RBAC L4：勾选=展示；可选「可编辑」，未勾选可编辑时为只读展示 */
+  l4EditMode?: RbacL4EditMode;
 }
 
 export interface PlatformPresetSnapshot {
