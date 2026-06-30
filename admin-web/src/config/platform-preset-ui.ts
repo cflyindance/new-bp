@@ -470,32 +470,34 @@ export function renderPlatformPresetListPage(scope: PresetScopeConfig): string {
 
   return `
     <div class="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row lg:items-stretch" data-pp-list data-pp-scope="${scope.scope}" data-selected-bt="${escapeHtml(selectedId)}">
-      <aside class="w-full shrink-0 rounded-xl border border-border bg-card p-4 shadow-sm lg:w-72">
-        <div class="mb-4 flex items-center justify-between gap-2">
+      <aside class="flex w-full min-h-0 shrink-0 flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm lg:w-72 lg:self-stretch">
+        <div class="flex shrink-0 items-center justify-between gap-2 border-b border-border px-4 py-3">
           <h2 class="text-sm font-semibold text-card-foreground">经营业态</h2>
           ${addButton}
         </div>
-        ${merchantHint}
-        <div class="space-y-4 text-sm">
-          <div>
-            <p class="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">按服务方式</p>
-            <ul class="space-y-0.5" role="list">${serviceItems}</ul>
+        <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-3 text-sm max-h-[min(45dvh,22rem)] lg:max-h-none" data-pp-business-type-scroll>
+          ${merchantHint}
+          <div class="space-y-4">
+            <div>
+              <p class="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">按服务方式</p>
+              <ul class="space-y-0.5" role="list">${serviceItems}</ul>
+            </div>
+            <div>
+              <p class="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">按品类</p>
+              <ul class="space-y-0.5" role="list">${categoryItems}</ul>
+            </div>
+            ${
+              customItems
+                ? `<div>
+              <p class="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">自定义业态</p>
+              <ul class="space-y-0.5" role="list">${customItems}</ul>
+            </div>`
+                : ""
+            }
           </div>
-          <div>
-            <p class="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">按品类</p>
-            <ul class="space-y-0.5" role="list">${categoryItems}</ul>
-          </div>
-          ${
-            customItems
-              ? `<div>
-            <p class="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">自定义业态</p>
-            <ul class="space-y-0.5" role="list">${customItems}</ul>
-          </div>`
-              : ""
-          }
         </div>
       </aside>
-      <div class="min-w-0 flex-1 space-y-4" data-pp-list-main>
+      <div class="min-w-0 min-h-0 flex-1 space-y-4 overflow-y-auto" data-pp-list-main>
         ${renderPlatformPresetListMainPanel(scope, selectedId, viewScope)}
       </div>
     </div>`;

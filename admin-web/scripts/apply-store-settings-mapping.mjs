@@ -19,14 +19,12 @@ const titles = {
   "store-profile": "门店档案",
   "store-hours-operation": "营业与运营",
   "brand-menu-presentation": "品牌与菜单",
-  "address-data-maintenance": "地址数据维护",
 };
 
 const assignMap = {
   "store-profile": [173, 417, 433],
-  "store-hours-operation": [418, 77, 582, 170],
-  "brand-menu-presentation": [530, 547, 548],
-  "address-data-maintenance": [419, 420],
+  "store-hours-operation": [418, 582],
+  "brand-menu-presentation": [531, 530, 547, 548],
 };
 
 const storeAssign = new Map();

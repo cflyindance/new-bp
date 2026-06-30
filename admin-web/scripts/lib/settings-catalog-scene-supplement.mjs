@@ -559,8 +559,12 @@ export const SETTINGS_CATALOG_SCENE_OVERRIDE_BY_SEQ = new Map([
   [617, "开启后，在选定产线（eMenu、SDI）购物车中展示订单价格。"],
   [618, "开启后，在选定产线（eMenu、SDI）购物车中自动隐藏已售罄菜品。"],
   [
+    531,
+    "开启后，在选定产线（Kiosk、eMenu、SDI）菜单按多品牌分类展示（先选品牌再点餐）；关闭后使用常规菜单结构。",
+  ],
+  [
     530,
-    "开启后，在选定产线（Kiosk、eMenu、SDI）以门店「品牌管理」中的品牌名称卡片为首页入口，并按多品牌分类展示菜单（先选品牌再点餐）；关闭后展示常规首页（封面图见营销中心「广告」）。",
+    "开启后，在选定产线（Kiosk、eMenu、SDI）以门店「品牌管理」中的品牌名称卡片为首页入口；关闭后展示常规首页（封面图见营销中心「广告」）。",
   ],
   [532, "开启后，在选定产线（Kiosk、eMenu）首页展示 MenuSifu 品牌 LOGO；图片素材在素材中心维护。"],
   [
@@ -619,6 +623,7 @@ export const SETTINGS_CATALOG_SCENE_SUPPLEMENT_BY_SEQ = new Map([
 ]);
 
 export const SETTINGS_CATALOG_TITLE_OVERRIDE_BY_SEQ = new Map([
+  [531, "品牌模式"],
   [530, "品牌页作为首页"],
   [601, "品类模式"],
   [446, "折扣设置"],

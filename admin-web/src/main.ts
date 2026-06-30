@@ -1184,6 +1184,11 @@ import {
   renderStoreBrandManagementHtml,
 } from "./config/module-settings-store-brand-management-ui";
 import {
+  bindStoreRestaurantLogoControls,
+  isStoreRestaurantLogoSeq,
+  renderStoreRestaurantLogoHtml,
+} from "./config/module-settings-store-brand-logo-ui";
+import {
   bindStoreBusinessHoursControls,
   isStoreBusinessHoursSeq,
   renderStoreBusinessHoursHtml,
@@ -3613,7 +3618,7 @@ function normalizeTabModuleHashes(): void {
     replaceHashPath("/dashboard/overview");
     return;
   }
-  /* 门店设置 · 品牌与菜单已抽离为与门店状态同级入口 */
+  /* 门店设置 · 品牌与菜单已抽离为独立入口 */
   if (
     raw === "/stores/settings/brand-menu-presentation" ||
     raw.startsWith("/stores/settings/brand-menu-presentation/")
@@ -3621,9 +3626,24 @@ function normalizeTabModuleHashes(): void {
     replaceHashPath("/stores/brand-menu");
     return;
   }
+  /* 侧栏已移除：门店总览、门店列表、门店状态 — 旧书签重定向 */
+  if (
+    raw === "/stores/overview" ||
+    raw === "/stores/overview/" ||
+    raw.startsWith("/stores/overview/") ||
+    raw === "/stores/list" ||
+    raw === "/stores/list/" ||
+    raw.startsWith("/stores/list/") ||
+    raw === "/stores/status" ||
+    raw === "/stores/status/" ||
+    raw.startsWith("/stores/status/")
+  ) {
+    replaceHashPath("/stores/brand-menu");
+    return;
+  }
   /* 侧栏已移除：门店信息、智能点餐、支付服务、费用加收 — 旧书签重定向 */
   if (raw === "/store" || raw === "/store/" || raw.startsWith("/store/")) {
-    location.replace("#/stores/overview");
+    location.replace("#/stores/brand-menu");
     return;
   }
   if (raw === "/ordering" || raw === "/ordering/" || raw.startsWith("/ordering/")) {
@@ -3640,7 +3660,7 @@ function normalizeTabModuleHashes(): void {
   }
   /* 已移除一级「区域管理」，旧书签统一到门店管理 */
   if (raw === "/regions" || raw === "/regions/" || raw.startsWith("/regions/")) {
-    location.replace("#/stores/overview");
+    location.replace("#/stores/brand-menu");
     return;
   }
   /* 已移除一级「设备」`/operations/devices`，旧书签重定向到「硬件管理中心」 */
@@ -8361,6 +8381,15 @@ const STORE_BRAND_SETTING_PRODUCT_LINES = [
   { fieldId: "530-c-line-emenu", label: "eMenu", defaultChecked: true },
   { fieldId: "530-c-line-sdi", label: "SDI", defaultChecked: true },
 ] as const;
+const STORE_BRAND_MODE_PRODUCT_LINES = [
+  { fieldId: "531-c-line-kiosk", label: "Kiosk", defaultChecked: true },
+  { fieldId: "531-c-line-emenu", label: "eMenu", defaultChecked: true },
+  { fieldId: "531-c-line-sdi", label: "SDI", defaultChecked: true },
+] as const;
+const STORE_BRAND_MENU_TOGGLE_PANEL_HINT: Record<number, string> = {
+  531: "开启：所选产线点餐时先选品牌，再浏览该品牌菜单；关闭：不按品牌分类展示菜单。",
+  530: "开启：所选产线以品牌名称卡片为首页；关闭：展示常规首页（封面图见营销中心 · 广告）。",
+};
 const STORE_CLOSING_ALERT_MINUTES_FIELD_ID = "582-alert-minutes";
 const STORE_CLOSING_ALERT_MINUTES_DEFAULT = 15;
 const STORE_CLOSING_ALERT_MINUTES_MIN = 1;
@@ -8404,8 +8433,12 @@ function renderStoreClosingAlertProductLinesSelector(seq: number, on: boolean): 
     </div>`;
 }
 
-function renderStoreBrandSettingProductLinesSelector(seq: number, on: boolean): string {
-  const boxes = STORE_BRAND_SETTING_PRODUCT_LINES.map((opt) => {
+function renderStoreBrandSettingProductLinesSelector(
+  seq: number,
+  on: boolean,
+  lines: readonly { fieldId: string; label: string; defaultChecked: boolean }[],
+): string {
+  const boxes = lines.map((opt) => {
     const checked = readModuleSettingCheckbox(opt.fieldId, opt.defaultChecked);
     return `
       <label class="inline-flex cursor-pointer items-center gap-2 text-sm text-foreground">
@@ -8413,10 +8446,11 @@ function renderStoreBrandSettingProductLinesSelector(seq: number, on: boolean): 
         <span>${escapeHtml(opt.label)}</span>
       </label>`;
   }).join("");
+  const hint = STORE_BRAND_MENU_TOGGLE_PANEL_HINT[seq] ?? "";
   const hidden = on ? "" : "hidden";
   return `
     <div class="mt-3 rounded-lg bg-muted/50 p-3 ${hidden}" data-store-brand-setting-panel="${seq}" ${on ? "" : 'aria-hidden="true"'}>
-      <p class="m-0 text-xs leading-relaxed text-muted-foreground">开启：所选产线以品牌名称卡片为首页，点餐时先选品牌；关闭：展示常规首页（封面图见营销中心 · 广告）。</p>
+      <p class="m-0 text-xs leading-relaxed text-muted-foreground">${escapeHtml(hint)}</p>
       <p class="mt-2 mb-0 text-xs text-muted-foreground">适用产线（多选）</p>
       <div class="mt-2 flex flex-wrap items-center gap-4">${boxes}</div>
     </div>`;
@@ -8424,6 +8458,7 @@ function renderStoreBrandSettingProductLinesSelector(seq: number, on: boolean): 
 
 function renderModuleSettingStoreBrandSettingRow(item: ModuleSettingCatalogItem): string {
   const on = readModuleSettingToggleOn(item.seq);
+  const lines = item.seq === 531 ? STORE_BRAND_MODE_PRODUCT_LINES : STORE_BRAND_SETTING_PRODUCT_LINES;
   return `
         <li class="list-none">
           <div class="border-b border-border px-4 py-3">
@@ -8431,7 +8466,7 @@ function renderModuleSettingStoreBrandSettingRow(item: ModuleSettingCatalogItem)
               ${renderModuleSettingTitleBlock(item)}
               <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
             </div>
-            ${renderStoreBrandSettingProductLinesSelector(item.seq, on)}
+            ${renderStoreBrandSettingProductLinesSelector(item.seq, on, lines)}
           </div>
         </li>`;
 }
@@ -8446,6 +8481,16 @@ function renderModuleSettingStoreClosingAlertRow(item: ModuleSettingCatalogItem)
               <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
             </div>
             ${renderStoreClosingAlertProductLinesSelector(item.seq, on)}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingStoreRestaurantLogoRow(item: ModuleSettingCatalogItem): string {
+  return `
+        <li class="list-none">
+          <div class="border-b border-border px-4 py-3">
+            ${renderModuleSettingTitleBlock(item)}
+            ${renderStoreRestaurantLogoHtml(item)}
           </div>
         </li>`;
 }
@@ -9133,7 +9178,7 @@ function renderModuleSettingRow(item: ModuleSettingCatalogItem): string {
   if (isTeamTimeInputSeq(item.seq)) {
     return renderModuleSettingTeamTimeInputRow(item);
   }
-  if (item.seq === 530) {
+  if (item.seq === 530 || item.seq === 531) {
     return renderModuleSettingStoreBrandSettingRow(item);
   }
   if (item.seq === 582) {
@@ -9153,6 +9198,9 @@ function renderModuleSettingRow(item: ModuleSettingCatalogItem): string {
   }
   if (isStoreBrandManagementSeq(item.seq)) {
     return renderModuleSettingStoreBrandManagementRow(item);
+  }
+  if (isStoreRestaurantLogoSeq(item.seq)) {
+    return renderModuleSettingStoreRestaurantLogoRow(item);
   }
   if (isPrintDishCodeByTicketSeq(item.seq)) {
     return renderModuleSettingPrintDishCodeByTicketRow(item);
@@ -9424,7 +9472,7 @@ function runModuleSettingToggleSideEffects(seq: number, next: boolean): void {
       } else if (isModuleSettingNestedParentSeq(seq)) {
         setModuleSettingNestedPanelVisible(seq, next);
       }
-      if (seq === 530) {
+      if (seq === 530 || seq === 531) {
         setStoreBrandSettingPanelVisible(seq, next);
       }
       if (seq === 582) {
@@ -11634,6 +11682,7 @@ function mount(): void {
   bindKdsTerminalSettingsControls();
   bindStoreBusinessHoursControls();
   bindStoreBrandManagementControls();
+  bindStoreRestaurantLogoControls();
   bindIngenicoBluIntegrationUi();
   bindAdvancedServiceSwitchUi();
   bindDeliveryRegionEditor();

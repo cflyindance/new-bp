@@ -142,11 +142,8 @@ export const NAV_MODULES: NavModule[] = [
     icon: "storeMgmt",
     path: "/stores",
     subNavPlacement: "sheet",
-    defaultChildPath: "/stores/overview",
+    defaultChildPath: "/stores/brand-menu",
     children: [
-      { id: "st-overview", title: "门店总览", titleEn: "Overview", path: "/stores/overview" },
-      { id: "st-list", title: "门店列表", titleEn: "Store list", path: "/stores/list" },
-      { id: "st-status", title: "门店状态", titleEn: "Store status", path: "/stores/status" },
       {
         id: "st-brand-menu",
         title: "品牌与菜单",

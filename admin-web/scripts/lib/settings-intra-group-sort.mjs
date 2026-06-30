@@ -246,23 +246,27 @@ assignSort(KITCHEN_PACKING_SLIP_SEQ_ORDER);
 /** 门店管理 · 设置滑层二级导航（品牌与菜单已抽离为 /stores/brand-menu） */
 export const STORE_SETTINGS_GROUP_ORDER = [
   "store-profile",
+  "brand-identity-assets",
   "store-hours-operation",
-  "address-data-maintenance",
 ];
 
 /** 门店管理 · 品牌与菜单（与门店状态同级入口） */
 export const STORE_BRAND_MENU_GROUP_ORDER = ["brand-menu-presentation"];
 
 /** 门店档案：国家/地区 → 基本信息 */
-const STORE_PROFILE_SEQ_ORDER = [173, 417, 433];
+const STORE_PROFILE_SEQ_ORDER = [173, 417];
 
-/** 营业与运营：时段 → 周期 → 打烊提示 → 餐厅模式 */
-const STORE_HOURS_OPERATION_SEQ_ORDER = [418, 77, 582, 170];
+/** 品牌标识素材 */
+const STORE_BRAND_IDENTITY_SEQ_ORDER = [433];
 
-/** 品牌与菜单：品牌数据 → 品牌页作为首页（含原 531） */
-const STORE_BRAND_MENU_SEQ_ORDER = [547, 530];
+/** 营业与运营：时段 → 打烊提示 */
+const STORE_HOURS_OPERATION_SEQ_ORDER = [418, 582];
+
+/** 品牌与菜单：品牌数据 → 品牌模式 → 品牌页作为首页 */
+const STORE_BRAND_MENU_SEQ_ORDER = [547, 531, 530];
 
 assignSort(STORE_PROFILE_SEQ_ORDER);
+assignSort(STORE_BRAND_IDENTITY_SEQ_ORDER);
 assignSort(STORE_HOURS_OPERATION_SEQ_ORDER);
 assignSort(STORE_BRAND_MENU_SEQ_ORDER);
 

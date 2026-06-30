@@ -183,8 +183,8 @@ export const ORDER_DISCOUNT_TOGGLE_SEQ: readonly number[] = [162, 163, 164];
 /** 订单 · 加收（447 预设表；147 四舍五入见 order-settlement） */
 export const ORDER_SURCHARGE_TOGGLE_SEQ: readonly number[] = [149, 161];
 
-/** 门店 · 营业与运营（seq 170 单选、418 营业时段见各自 UI 模块） */
-export const STORE_HOURS_OPERATION_TOGGLE_SEQ: readonly number[] = [77, 582];
+/** 门店 · 营业与运营（418 营业时段见 store-business-hours-ui） */
+export const STORE_HOURS_OPERATION_TOGGLE_SEQ: readonly number[] = [582];
 
 /** 支付中心 · 税务计算（445 税率输入、143 折前/折后单选；开关见 payment-tax-rules-ui） */
 export const PAYMENT_TAX_POLICY_TOGGLE_SEQ = PAYMENT_TAX_POLICY_TOGGLE_SEQS;
@@ -410,8 +410,8 @@ export const MODULE_SETTING_TOGGLE_SEQ = new Set([
   73, 74,
   /** 食客端·菜单结构 515–520、524、528（产线多选，见 guest-menu-structure-ui） */
   515, 516, 517, 518, 519, 520, 524, 528,
-  /** 530 品牌页作为首页（合并原 531；Kiosk/eMenu/SDI 产线多选） */
-  530,
+  /** 531 品牌模式、530 品牌页作为首页（Kiosk/eMenu/SDI 产线多选） */
+  531, 530,
   /** 532 展示 MenuSifu 品牌 LOGO（Kiosk/eMenu，见 menusifu-brand-logo-ui） */
   532,
   /** 食客端·首页与版式 509/600/611（产线多选，见 guest-menu-line-toggle-ui） */

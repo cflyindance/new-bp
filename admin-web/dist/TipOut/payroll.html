@@ -267,44 +267,159 @@
 
             <section class="payroll-manage-section payroll-wide-table-section" aria-label="Manage payroll 宽表">
               <h3 class="payroll-manage-section-title" id="manage-wide-table-title">Manage payroll 宽表</h3>
-              <div class="card payroll-wide-table-card">
-                <div class="payroll-wide-table-wrap">
-                <table class="payroll-wide-table">
-                  <thead>
-                    <tr>
-                      <th><span class="payroll-th-label">Exempt<button type="button" class="payroll-field-help" data-field-help="exempt" aria-label="Exempt 字段说明">?</button></span></th>
-                      <th><span class="payroll-th-label">Incentive<button type="button" class="payroll-field-help" data-field-help="incentive" aria-label="Incentive 字段说明">?</button></span></th>
-                      <th><span class="payroll-th-label">Breakfast<button type="button" class="payroll-field-help" data-field-help="breakfast" aria-label="Breakfast 字段说明">?</button></span></th>
-                      <th><span class="payroll-th-label">Lunch<button type="button" class="payroll-field-help" data-field-help="lunch" aria-label="Lunch 字段说明">?</button></span></th>
-                      <th><span class="payroll-th-label">Dinner<button type="button" class="payroll-field-help" data-field-help="dinner" aria-label="Dinner 字段说明">?</button></span></th>
-                      <th><span class="payroll-th-label">Sick Hours<button type="button" class="payroll-field-help" data-field-help="sick-hours" aria-label="Sick Hours 字段说明">?</button></span></th>
-                      <th><span class="payroll-th-label">SVCW<button type="button" class="payroll-field-help" data-field-help="svcw" aria-label="SVCW 字段说明">?</button></span></th>
-                      <th><span class="payroll-th-label">Tips<button type="button" class="payroll-field-help" data-field-help="tips" aria-label="Tips 字段说明">?</button></span></th>
-                      <th><span class="payroll-th-label">Child sup<button type="button" class="payroll-field-help" data-field-help="child-sup" aria-label="Child sup 字段说明">?</button></span></th>
-                      <th><span class="payroll-th-label">Med Ded<button type="button" class="payroll-field-help" data-field-help="med-ded" aria-label="Med Ded 字段说明">?</button></span></th>
-                      <th><span class="payroll-th-label">Eee 40%<button type="button" class="payroll-field-help" data-field-help="eee40" aria-label="Eee 40% 字段说明">?</button></span></th>
-                      <th><span class="payroll-th-label">Eer 60%<button type="button" class="payroll-field-help" data-field-help="eer60" aria-label="Eer 60% 字段说明">?</button></span></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td><input id="adj-exempt" type="text" class="field-adj" placeholder="—" /></td>
-                      <td><input id="adj-incentive" type="number" step="0.01" class="field-adj" /></td>
-                      <td><input id="adj-breakfast" type="number" step="1" min="0" class="field-adj" /></td>
-                      <td><input id="adj-lunch" type="number" step="1" min="0" class="field-adj" /></td>
-                      <td><input id="adj-dinner" type="number" step="1" min="0" class="field-adj" /></td>
-                      <td><input id="adj-sick" type="number" step="0.01" class="field-adj" /></td>
-                      <td><input id="adj-svcw" type="number" step="0.01" class="field-adj" /></td>
-                      <td><input id="adj-tips" type="number" step="0.01" class="field-adj" /></td>
-                      <td><input id="adj-child-sup" type="number" step="0.01" class="field-adj" /></td>
-                      <td><input id="adj-med-ded" type="number" step="0.01" class="field-adj" /></td>
-                      <td><input id="adj-eee40" type="number" step="0.01" class="field-adj" /></td>
-                      <td><input id="adj-eer60" type="number" step="0.01" class="field-adj" /></td>
-                    </tr>
-                  </tbody>
-                </table>
+              <div class="payroll-wide-groups">
+
+                <div class="card payroll-wide-group payroll-wide-group--tips">
+                  <div class="card-header payroll-wide-group-header">
+                    <div class="payroll-wide-group-heading">
+                      <span class="payroll-wide-group-badge payroll-wide-group-badge--tips" aria-hidden="true">$</span>
+                      <h4 class="payroll-wide-group-title" id="wide-group-tips-title">小费与服务费</h4>
+                    </div>
+                    <span class="payroll-wide-group-meta" id="wide-group-tips-meta">ADP · CCT / SVC</span>
+                  </div>
+                  <div class="card-body payroll-wide-group-body">
+                    <div class="payroll-wide-fields payroll-wide-fields--2">
+                      <div class="payroll-wide-field">
+                        <label class="payroll-wide-field-label payroll-label-with-help" for="adj-svcw">
+                          <span>SVCW</span>
+                          <button type="button" class="payroll-field-help" data-field-help="svcw" aria-label="SVCW 字段说明">?</button>
+                        </label>
+                        <input id="adj-svcw" type="number" step="0.01" class="field-adj form-control" />
+                      </div>
+                      <div class="payroll-wide-field">
+                        <label class="payroll-wide-field-label payroll-label-with-help" for="adj-tips">
+                          <span>Tips</span>
+                          <button type="button" class="payroll-field-help" data-field-help="tips" aria-label="Tips 字段说明">?</button>
+                        </label>
+                        <input id="adj-tips" type="number" step="0.01" class="field-adj form-control" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="card payroll-wide-group">
+                  <div class="card-header payroll-wide-group-header">
+                    <div class="payroll-wide-group-heading">
+                      <span class="payroll-wide-group-badge payroll-wide-group-badge--deductions" aria-hidden="true">−</span>
+                      <h4 class="payroll-wide-group-title" id="wide-group-deductions-title">扣款与福利分摊</h4>
+                    </div>
+                  </div>
+                  <div class="card-body payroll-wide-group-body">
+                    <div class="payroll-wide-fields payroll-wide-fields--2">
+                      <div class="payroll-wide-field">
+                        <label class="payroll-wide-field-label payroll-label-with-help" for="adj-child-sup">
+                          <span>Child sup</span>
+                          <button type="button" class="payroll-field-help" data-field-help="child-sup" aria-label="Child sup 字段说明">?</button>
+                        </label>
+                        <input id="adj-child-sup" type="number" step="0.01" class="field-adj form-control" />
+                      </div>
+                      <div class="payroll-wide-field">
+                        <label class="payroll-wide-field-label payroll-label-with-help" for="adj-med-ded">
+                          <span>Med Ded</span>
+                          <button type="button" class="payroll-field-help" data-field-help="med-ded" aria-label="Med Ded 字段说明">?</button>
+                        </label>
+                        <input id="adj-med-ded" type="number" step="0.01" class="field-adj form-control" />
+                      </div>
+                      <div class="payroll-wide-field">
+                        <label class="payroll-wide-field-label payroll-label-with-help" for="adj-eee40">
+                          <span>Eee 40%</span>
+                          <button type="button" class="payroll-field-help" data-field-help="eee40" aria-label="Eee 40% 字段说明">?</button>
+                        </label>
+                        <input id="adj-eee40" type="number" step="0.01" class="field-adj form-control" />
+                      </div>
+                      <div class="payroll-wide-field">
+                        <label class="payroll-wide-field-label payroll-label-with-help" for="adj-eer60">
+                          <span>Eer 60%</span>
+                          <button type="button" class="payroll-field-help" data-field-help="eer60" aria-label="Eer 60% 字段说明">?</button>
+                        </label>
+                        <input id="adj-eer60" type="number" step="0.01" class="field-adj form-control" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="card payroll-wide-group">
+                  <div class="card-header payroll-wide-group-header">
+                    <div class="payroll-wide-group-heading">
+                      <span class="payroll-wide-group-badge payroll-wide-group-badge--meals" aria-hidden="true">M</span>
+                      <h4 class="payroll-wide-group-title" id="wide-group-meals-title">餐休合规</h4>
+                    </div>
+                  </div>
+                  <div class="card-body payroll-wide-group-body">
+                    <div class="payroll-wide-fields payroll-wide-fields--3">
+                      <div class="payroll-wide-field">
+                        <label class="payroll-wide-field-label payroll-label-with-help" for="adj-breakfast">
+                          <span>Breakfast</span>
+                          <button type="button" class="payroll-field-help" data-field-help="breakfast" aria-label="Breakfast 字段说明">?</button>
+                        </label>
+                        <input id="adj-breakfast" type="number" step="1" min="0" class="field-adj form-control" />
+                      </div>
+                      <div class="payroll-wide-field">
+                        <label class="payroll-wide-field-label payroll-label-with-help" for="adj-lunch">
+                          <span>Lunch</span>
+                          <button type="button" class="payroll-field-help" data-field-help="lunch" aria-label="Lunch 字段说明">?</button>
+                        </label>
+                        <input id="adj-lunch" type="number" step="1" min="0" class="field-adj form-control" />
+                      </div>
+                      <div class="payroll-wide-field">
+                        <label class="payroll-wide-field-label payroll-label-with-help" for="adj-dinner">
+                          <span>Dinner</span>
+                          <button type="button" class="payroll-field-help" data-field-help="dinner" aria-label="Dinner 字段说明">?</button>
+                        </label>
+                        <input id="adj-dinner" type="number" step="1" min="0" class="field-adj form-control" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="card payroll-wide-group">
+                  <div class="card-header payroll-wide-group-header">
+                    <div class="payroll-wide-group-heading">
+                      <span class="payroll-wide-group-badge payroll-wide-group-badge--extra" aria-hidden="true">+</span>
+                      <h4 class="payroll-wide-group-title" id="wide-group-extra-title">额外收入</h4>
+                    </div>
+                  </div>
+                  <div class="card-body payroll-wide-group-body">
+                    <div class="payroll-wide-fields payroll-wide-fields--2">
+                      <div class="payroll-wide-field">
+                        <label class="payroll-wide-field-label payroll-label-with-help" for="adj-incentive">
+                          <span>Incentive</span>
+                          <button type="button" class="payroll-field-help" data-field-help="incentive" aria-label="Incentive 字段说明">?</button>
+                        </label>
+                        <input id="adj-incentive" type="number" step="0.01" class="field-adj form-control" />
+                      </div>
+                      <div class="payroll-wide-field">
+                        <label class="payroll-wide-field-label payroll-label-with-help" for="adj-sick">
+                          <span>Sick Hours</span>
+                          <button type="button" class="payroll-field-help" data-field-help="sick-hours" aria-label="Sick Hours 字段说明">?</button>
+                        </label>
+                        <input id="adj-sick" type="number" step="0.01" class="field-adj form-control" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="card payroll-wide-group payroll-wide-group--compact">
+                  <div class="card-header payroll-wide-group-header">
+                    <div class="payroll-wide-group-heading">
+                      <span class="payroll-wide-group-badge payroll-wide-group-badge--exempt" aria-hidden="true">E</span>
+                      <h4 class="payroll-wide-group-title" id="wide-group-exempt-title">计薪属性</h4>
+                    </div>
+                  </div>
+                  <div class="card-body payroll-wide-group-body">
+                    <div class="payroll-wide-fields payroll-wide-fields--1">
+                      <div class="payroll-wide-field">
+                        <label class="payroll-wide-field-label payroll-label-with-help" for="adj-exempt">
+                          <span>Exempt</span>
+                          <button type="button" class="payroll-field-help" data-field-help="exempt" aria-label="Exempt 字段说明">?</button>
+                        </label>
+                        <input id="adj-exempt" type="text" class="field-adj form-control" placeholder="—" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
               </div>
-            </div>
             </section>
 
             <div class="payroll-confirm-fixed no-print">
