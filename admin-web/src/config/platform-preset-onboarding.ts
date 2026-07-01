@@ -11,6 +11,7 @@ import {
 } from "./platform-preset-catalog";
 import { FULL_SELECTION_BUSINESS_TYPE_ID } from "./platform-preset-recommendations";
 import { applyPlatformPresetContext, clearPlatformPresetContext } from "./platform-preset-context";
+import { seedMerchantPresetsFromEnterprise } from "./platform-preset-enterprise-sync";
 import {
   countOnboardingConfirmationModules,
   getOnboardingConfirmationSectionsMerged,
@@ -420,6 +421,7 @@ export function bindPlatformPresetOnboarding(onMount: () => void): void {
     }
 
     if (target.closest("[data-ob-finish]")) {
+      seedMerchantPresetsFromEnterprise(draft.businessTypeIds, draft.productLineIds);
       applyPlatformPresetContext(draft.businessTypeIds, draft.productLineIds);
       if (draft.businessTypeIds[0]) {
         writeSelectedBusinessTypeId(draft.businessTypeIds[0]);

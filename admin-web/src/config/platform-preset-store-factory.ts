@@ -13,17 +13,17 @@ import { isFullSelectionBusinessType, resolveDefaultModuleEnabled } from "./plat
 import type { PresetChangeItem } from "./platform-preset-changelog-diff";
 import { buildPresetChangelogSummary, diffPresetSelections } from "./platform-preset-changelog-diff";
 import { buildPlatformPresetIndex } from "./platform-preset-tree";
+import {
+  syncNodeDisplayWithEnabled,
+  syncSelectionDisplayWithEnabled,
+  type PlatformPresetNodeSelection,
+} from "./platform-preset-node-selection";
+import { normalizeSelectionForLine } from "./platform-preset-selection-normalize";
 import type {
   CustomBusinessType,
   PlatformPresetChangeLogEntry,
-  PlatformPresetNodeSelection,
   PlatformPresetSnapshot,
-} from "./platform-preset-store";
-import {
-  normalizeSelectionForLine,
-  syncNodeDisplayWithEnabled,
-  syncSelectionDisplayWithEnabled,
-} from "./platform-preset-store";
+} from "./platform-preset-types";
 
 interface PlatformPresetStoreSnapshot {
   snapshots: Record<string, PlatformPresetSnapshot>;

@@ -7,6 +7,16 @@ import {
   groupCatalogItemsByCategory,
   type ModuleSettingCatalogItem,
 } from "./module-settings-catalog";
+import {
+  FINANCE_SETTINGS_PATH,
+  normalizeFinanceCatalogItemsForGrouping,
+} from "./finance-settings-group-keys";
+import {
+  ORDER_SETTINGS_PATH,
+  normalizeOrderCatalogItemsForGrouping,
+} from "./order-settings-group-keys";
+import { FOH_SETTINGS_PATH } from "./foh-settings-by-line-ui";
+import { normalizeFohCatalogItemsForGrouping } from "./foh-settings-group-keys";
 
 /** 对某导航/功能的访问级别 */
 export type PermissionAccess = "hidden" | "view" | "operate";
@@ -34,6 +44,10 @@ export interface PermissionResource {
   featureId?: string;
   featureTitle?: string;
   featureTitleEn?: string;
+  /** 自定义 L2：创建配置标签（page → 页面，features → 设置） */
+  customL2MountKind?: "page" | "features";
+  /** 自定义 L3：创建配置标签（page → 页面，features → 设置） */
+  customL3MountKind?: "page" | "features";
   /** L3 业务页标准操作 id（非 settings） */
   actionId?: string;
   chainOnly?: boolean;
@@ -50,6 +64,8 @@ export interface PermissionModuleGroup {
   moduleTitleEn?: string;
   /** L1 资源键 */
   moduleKey: string;
+  /** 自定义 L1：创建配置标签（page → 页面，features → 设置） */
+  customL1MountKind?: "page" | "features";
   tree: PermissionTreeNode;
 }
 
@@ -67,6 +83,15 @@ export const PERMISSION_ACTION_PRESETS = [
   { id: "export", title: "导出", titleEn: "Export" },
   { id: "approve", title: "审核", titleEn: "Approve" },
 ] as const;
+
+/** 平台预设等场景：移除业务页标准操作 L3（新建/编辑/删除/导出/审核），由 RBAC 角色单独管理 */
+export function stripPermissionActionL3Nodes(groups: PermissionModuleGroup[]): void {
+  for (const g of groups) {
+    for (const l2 of g.tree.children) {
+      l2.children = l2.children.filter((c) => !c.resource.actionId);
+    }
+  }
+}
 
 function moduleKey(moduleId: string): string {
   return moduleId;
@@ -97,7 +122,15 @@ function appendSettingChildren(
   const catalog = getModuleSettingsCatalog(featurePath);
   if (!catalog?.items.length) return;
 
-  const groups = groupCatalogItemsByCategory(catalog.items, catalog.groupOrder);
+  const items =
+    featurePath === FINANCE_SETTINGS_PATH
+      ? normalizeFinanceCatalogItemsForGrouping(catalog.items)
+      : featurePath === ORDER_SETTINGS_PATH
+        ? normalizeOrderCatalogItemsForGrouping(catalog.items)
+        : featurePath === FOH_SETTINGS_PATH
+          ? normalizeFohCatalogItemsForGrouping(catalog.items)
+          : catalog.items;
+  const groups = groupCatalogItemsByCategory(items, catalog.groupOrder);
   for (const group of groups) {
     const gKey = groupKeyOf(moduleId, featureId, group.groupKey);
     const groupNode: PermissionTreeNode = {

@@ -42,9 +42,9 @@ export const ENTERPRISE_PLATFORM_PRESET_SCOPE: PresetScopeConfig = {
   listIntro:
     "企业级平台预设：配置后将作为下属商家的默认预设。新商家首次登录引导将同步此处发布的配置。",
   editorHint:
-    "此处为企业级默认配置，保存并发布后不会直接改变当前商家侧栏；后续将支持同步到商家后台。",
+    "此处为企业级默认配置。保存并发布后，可通过「同步到商家后台」下发；新商家首次引导将自动获取企业默认。",
   publishSuccessMessage: (version) =>
-    `已发布企业级预设 v${version}。新商家首次引导将默认获取此配置（同步到既有商家为后续能力）。`,
+    `已发布企业级预设 v${version}。可通过列表页「同步到商家后台」下发至商家。`,
   versionBadge: (version, hasPublished) =>
     version > 0 ? `v${version}${hasPublished ? " · 企业默认" : ""}` : "未发布",
   store: enterpriseStore,

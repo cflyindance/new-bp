@@ -7,6 +7,7 @@ import {
   renderFourColumnMatrixShell,
   rerenderFourColumnMatrix,
   syncFourColumnIndeterminate,
+  resolveFourColumnHeaders,
 } from "./permission-four-column-ui";
 import {
   PLATFORM_PRESET_BUILTIN_BUSINESS_TYPES,
@@ -26,7 +27,11 @@ import {
   listCustomBusinessTypesForScope,
   parsePlatformPresetEditPathForScope,
 } from "./platform-preset-scope";
-import { buildPlatformPresetIndex } from "./platform-preset-tree";
+import {
+  buildPlatformPresetIndex,
+  resolvePlatformPresetTreeOptions,
+  type PlatformPresetTreeOptions,
+} from "./platform-preset-tree";
 import {
   clampSelectedBusinessTypeId,
   filterProductLinesForMerchantView,
@@ -37,6 +42,15 @@ import {
   type MerchantPresetViewScope,
 } from "./platform-preset-merchant-view";
 import { ONBOARDING_PATH } from "./platform-preset-onboarding";
+import {
+  formatMerchantPresetSyncStatusLabel,
+  resolveMerchantPresetSyncStatus,
+  syncEnterprisePresetsToMerchant,
+} from "./platform-preset-enterprise-sync";
+import {
+  formatBlueprintVersionLabel,
+  getActivePublishedBlueprint,
+} from "./nav-blueprint-sync";
 import {
   cascadeEnableSelection,
   normalizeSelectionForLine,
@@ -99,6 +113,16 @@ function renderProductLineCard(
   const version = published?.version ?? 0;
   const comboSlug = `${businessTypeId}:${lineId}`;
   const editHref = `#${scope.routePrefix}/${encodeURIComponent(businessTypeId)}/${encodeURIComponent(lineId)}/edit`;
+  const syncStatus =
+    scope.scope === "merchant"
+      ? formatMerchantPresetSyncStatusLabel(
+          resolveMerchantPresetSyncStatus(businessTypeId, lineId),
+        )
+      : null;
+  const blueprintTag =
+    scope.scope === "enterprise" && published?.blueprintVersion
+      ? ` · 蓝图 v${published.blueprintVersion}`
+      : "";
 
   return `
     <article class="rounded-xl border border-border bg-card p-5 shadow-sm flex flex-col gap-3" data-pp-line-card="${escapeHtml(lineId)}">
@@ -107,11 +131,12 @@ function renderProductLineCard(
           <h3 class="text-base font-semibold text-card-foreground">${escapeHtml(productLineLabel(lineId))}</h3>
           <p class="mt-0.5 font-mono text-xs text-muted-foreground">${escapeHtml(comboSlug)}</p>
         </div>
-        <span class="shrink-0 text-xs tabular-nums text-muted-foreground">${escapeHtml(scope.versionBadge(version, Boolean(published)))}</span>
+        <span class="shrink-0 text-xs tabular-nums text-muted-foreground">${escapeHtml(scope.versionBadge(version, Boolean(published)))}${escapeHtml(blueprintTag)}</span>
       </div>
       <p class="text-sm text-muted-foreground">
         业态推荐 <strong class="text-card-foreground">${recSettings}</strong> 项 ·
         当前启用 <strong class="text-card-foreground">${enabledSettings}</strong> 项
+        ${syncStatus ? `<span class="block mt-1 text-xs">${escapeHtml(syncStatus)}</span>` : ""}
       </p>
       <div class="mt-auto flex flex-wrap gap-2 pt-1">
         <a href="${editHref}" class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90">配置预设</a>
@@ -181,16 +206,32 @@ function renderPlatformPresetListMainPanel(
     scope.scope === "merchant" && viewScope?.hasContext
       ? renderMerchantPresetContextBanner(viewScope)
       : "";
+  const blueprint = scope.scope === "enterprise" ? getActivePublishedBlueprint() : undefined;
+  const enterpriseToolbar =
+    scope.scope === "enterprise"
+      ? `<button type="button" data-pp-sync-merchant class="rounded-lg border border-primary bg-primary/10 px-3 py-2 text-sm font-medium text-primary hover:bg-primary/15">同步到商家后台</button>`
+      : "";
 
   return `
         ${contextBanner ? `<div class="mb-4">${contextBanner}</div>` : ""}
+        ${
+          scope.scope === "enterprise"
+            ? `<div class="mb-4 rounded-xl border border-sky-500/25 bg-sky-500/10 px-4 py-3 text-sm text-muted-foreground">
+          当前导航结构：<strong class="text-card-foreground">${escapeHtml(formatBlueprintVersionLabel(blueprint))}</strong>。
+          菜单路由发布后请同步至平台预设，再下发商家后台。
+        </div>`
+            : ""
+        }
         <div class="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 class="text-lg font-semibold text-card-foreground">${escapeHtml(selectedLabel)} · 产线预设</h2>
             <p class="mt-1 max-w-2xl text-sm text-muted-foreground">${escapeHtml(scope.listIntro)}</p>
             <p class="mt-2 text-xs text-muted-foreground">业态功能画像：核心 ${recL1 || "—"} · 推荐 — · 可选 —</p>
           </div>
-          <button type="button" data-pp-list-changelog class="rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted">变更记录</button>
+          <div class="flex flex-wrap gap-2">
+            ${enterpriseToolbar}
+            <button type="button" data-pp-list-changelog class="rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted">变更记录</button>
+          </div>
         </div>
         <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">${lineCards || `<p class="text-sm text-muted-foreground col-span-full">当前引导范围内无产线可配置。</p>`}</div>`;
 }
@@ -511,7 +552,8 @@ export function renderPlatformPresetEditPage(
   const store = scope.store;
   const snapshot = store.getOrCreateDraftSelection(businessTypeId, productLineId);
   const selection = normalizeSelectionForLine(snapshot.selection, productLineId);
-  const index = buildPlatformPresetIndex(productLineId);
+  const treeOptions = resolvePlatformPresetTreeOptions(scope.scope, snapshot);
+  const index = buildPlatformPresetIndex(productLineId, treeOptions);
   const customTypes = listCustomBusinessTypesForScope(scope);
   const customTiers = customTypes.find((c) => c.id === businessTypeId)?.moduleTiers;
   const btLabel = businessTypeLabel(
@@ -523,8 +565,10 @@ export function renderPlatformPresetEditPage(
   const activeL1 = index.groups[0]?.moduleKey ?? "";
   const activeL2 = index.groups[0]?.tree.children[0]?.resource.key ?? "";
   const activeL3 = index.groups[0]?.tree.children[0]?.children[0]?.resource.key ?? "";
-  const enabledL1 = countEnabledLevel1ForSelection(selection, productLineId);
+  const enabledL1 = countEnabledLevel1ForSelection(selection, productLineId, treeOptions);
   const recCount = store.countRecommendedSettings(businessTypeId, productLineId);
+  const initialL2Node = index.groups[0]?.tree.children[0];
+  const columnHeaders = resolveFourColumnHeaders(initialL2Node);
 
   const { col1, col2, col3, col4 } = renderFourColumnMatrix(
     selection,
@@ -537,6 +581,13 @@ export function renderPlatformPresetEditPage(
   );
 
   const listHref = `#${scope.routePrefix}`;
+  const blueprint = getActivePublishedBlueprint();
+  const navStructureHint =
+    scope.scope === "enterprise" && snapshot.blueprintVersion
+      ? `导航结构：已同步导航蓝图 v${snapshot.blueprintVersion}。`
+      : scope.scope === "enterprise"
+        ? `导航结构：系统默认（发布蓝图后请执行「同步到企业预设」才会更新此处树形）。`
+        : `导航结构：系统默认（不受 M 平台蓝图草稿影响；企业下发后仅同步勾选数据）。`;
 
   return `
     <div
@@ -549,12 +600,15 @@ export function renderPlatformPresetEditPage(
       data-active-l2="${escapeHtml(activeL2)}"
       data-active-l3="${escapeHtml(activeL3)}"
       data-version="${snapshot.version}"
+      data-synced-blueprint-version="${snapshot.blueprintVersion ?? ""}"
     >
       <input type="hidden" data-pp-selection-json value="${escapeHtml(JSON.stringify(selection))}" />
       <div class="rounded-xl border border-sky-500/25 bg-sky-500/10 px-4 py-3 text-sm text-muted-foreground">
         基于<strong class="text-card-foreground">${escapeHtml(btLabel)}</strong>业态，系统默认推荐
         <strong class="text-card-foreground">${recCount}</strong> 项功能设置；带标签项可作为业态分级参考。
         当前已启用 <strong class="text-card-foreground">${enabledL1}</strong> 个一级导航。
+        ${escapeHtml(navStructureHint)}
+        ${scope.scope === "enterprise" ? ` 当前蓝图：${escapeHtml(formatBlueprintVersionLabel(blueprint))}。` : ""}
         ${escapeHtml(scope.editorHint)}
       </div>
       <div class="flex flex-wrap items-center justify-between gap-2">
@@ -569,7 +623,7 @@ export function renderPlatformPresetEditPage(
           <p class="text-xs text-muted-foreground mt-0.5">配置预设 · ${escapeHtml(btLabel)} · ${escapeHtml(plLabel)}</p>
           <p class="text-xs text-muted-foreground mt-1">分组内功能 / 设置：勾选即展示，未勾选则不展示。</p>
         </div>
-        ${renderFourColumnMatrixShell(col1, col2, col3, col4)}
+        ${renderFourColumnMatrixShell(col1, col2, col3, col4, columnHeaders)}
       </div>
       <div class="flex flex-wrap gap-3 shrink-0">
         <button type="button" data-pp-publish class="rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90">
@@ -583,8 +637,9 @@ export function renderPlatformPresetEditPage(
 function countEnabledLevel1ForSelection(
   selection: Record<string, PlatformPresetNodeSelection>,
   productLineId: ProductLineId,
+  treeOptions?: PlatformPresetTreeOptions,
 ): number {
-  const { groups } = buildPlatformPresetIndex(productLineId);
+  const { groups } = buildPlatformPresetIndex(productLineId, treeOptions);
   return groups.filter((g) => selection[g.moduleKey]?.enabled).length;
 }
 
@@ -650,7 +705,13 @@ function rerenderEditorColumns(editor: HTMLElement, scope: PresetScopeConfig): v
   const bt = editor.dataset.bt!;
   const pl = editor.dataset.pl! as ProductLineId;
   const selection = readSelectionFromEditor(editor);
-  const index = buildPlatformPresetIndex(pl);
+  const syncedBv = editor.dataset.syncedBlueprintVersion
+    ? Number(editor.dataset.syncedBlueprintVersion)
+    : undefined;
+  const treeOptions = resolvePlatformPresetTreeOptions(scope.scope, {
+    blueprintVersion: syncedBv && syncedBv > 0 ? syncedBv : undefined,
+  });
+  const index = buildPlatformPresetIndex(pl, treeOptions);
   const customTiers = listCustomBusinessTypesForScope(scope).find((c) => c.id === bt)?.moduleTiers;
   rerenderFourColumnMatrix(editor, selection, index, "", (moduleId) =>
     getPresetEditModuleTier(bt, pl, moduleId, customTiers),
@@ -732,6 +793,17 @@ export function bindPlatformPreset(onMount: () => void, scope: PresetScopeConfig
       return;
     }
 
+    if (target.closest("[data-pp-sync-merchant]") && listScope?.scope === "enterprise" && scope.scope === "enterprise") {
+      const force = window.confirm(
+        "将企业级平台预设同步到商家后台？\n\n· 未自定义的商家组合将被覆盖\n· 已自定义的组合将跳过\n\n确定继续？",
+      );
+      if (!force) return;
+      const result = syncEnterprisePresetsToMerchant();
+      window.alert(`已同步 ${result.updated} 个组合，跳过 ${result.skipped} 个已自定义组合。`);
+      onMount();
+      return;
+    }
+
     const editor = document.querySelector<HTMLElement>(`[data-pp-editor][data-pp-scope="${scope.scope}"]`);
     if (!editor) return;
 
@@ -765,7 +837,13 @@ export function bindPlatformPreset(onMount: () => void, scope: PresetScopeConfig
     const colSelect = target.closest<HTMLElement>("[data-pp-col-select]");
     if (colSelect) {
       const key = colSelect.dataset.ppColSelect!;
-      const index = buildPlatformPresetIndex(editor.dataset.pl! as ProductLineId);
+      const syncedBv = editor.dataset.syncedBlueprintVersion
+        ? Number(editor.dataset.syncedBlueprintVersion)
+        : undefined;
+      const treeOptions = resolvePlatformPresetTreeOptions(scope.scope, {
+        blueprintVersion: syncedBv && syncedBv > 0 ? syncedBv : undefined,
+      });
+      const index = buildPlatformPresetIndex(editor.dataset.pl! as ProductLineId, treeOptions);
       const node = index.byKey.get(key);
       if (!node) return;
       if (node.level === 1) {

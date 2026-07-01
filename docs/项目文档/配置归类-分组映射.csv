@@ -31,40 +31,40 @@ seq,groupTitle,groupKey
 29,支付手段与展示,payment-methods
 30,登录注册与信息校验,login-verification
 31,订单类型与取餐流程,order-type-pickup
-32,送厨触发与路由,send-routing
-33,厨房单·版式格式,ticket-format
-34,打包单打印,packing-slip-print
-35,厨房单·票面信息,ticket-fields
-36,送厨触发与路由,send-routing
-37,送厨触发与路由,send-routing
-38,厨房单·版式格式,ticket-format
+32,厨房单分张,kitchen-ticket-issue
+33,票面版式,ticket-format
+34,打包单,packing-slip
+35,票面信息,ticket-fields
+36,送厨范围,kitchen-order-send
+37,打印机分配,kitchen-printer-route
+38,票面版式,ticket-format
 39,打包单,packing-slip
-40,厨房单·分组与拆单,ticket-grouping
-41,厨房单·版式格式,ticket-format
-42,厨房单·票面信息,ticket-fields
-43,厨房单·版式格式,ticket-format
-44,厨房单·版式格式,ticket-format
-45,厨房单·票面信息,ticket-fields
-46,厨房单·票面信息,ticket-fields
-47,厨房单·分组与拆单,ticket-grouping
-48,厨房单·票面信息,ticket-fields
-49,厨房单·票面信息,ticket-fields
-50,厨房单·票面信息,ticket-fields
-51,厨房单·分组与拆单,ticket-grouping
-52,行级合并规则,line-merge-rules
-53,行级合并规则,line-merge-rules
-54,厨房单·分组与拆单,ticket-grouping
-55,厨房单·票面信息,ticket-fields
-56,厨房单·票面信息,ticket-fields
-57,厨房单·票面信息,ticket-fields
-58,厨房单·票面信息,ticket-fields
-59,厨房单·版式格式,ticket-format
-60,厨房单·版式格式,ticket-format
-61,厨房单·分组与拆单,ticket-grouping
-62,送厨触发与路由,send-routing
-63,钱箱与现金平账,cash-drawer-reconciliation
+40,菜品分区,ticket-grouping
+41,票面版式,ticket-format
+42,票面信息,ticket-fields
+43,票面版式,ticket-format
+44,票面版式,ticket-format
+45,票面信息,ticket-fields
+46,票面信息,ticket-fields
+47,菜品分区,ticket-grouping
+48,票面信息,ticket-fields
+49,票面信息,ticket-fields
+50,票面信息,ticket-fields
+51,菜品分区,ticket-grouping
+52,相同行合并,line-merge-rules
+53,相同行合并,line-merge-rules
+54,菜品分区,ticket-grouping
+55,票面信息,ticket-fields
+56,票面信息,ticket-fields
+57,票面信息,ticket-fields
+58,票面信息,ticket-fields
+59,票面版式,ticket-format
+60,票面版式,ticket-format
+61,菜品分区,ticket-grouping
+62,送厨范围,kitchen-order-send
+63,钱箱备款与平账,drawer-float-reconcile
 64,钱箱与现金平账,cash-drawer-reconciliation
-65,日结与结算,daily-close-settlement
+65,现金日结与班结,daily-cash-close
 66,考勤与工时,time-attendance
 67,考勤与工时,time-attendance
 68,角色与员工权限,role-employee-permissions
@@ -75,7 +75,7 @@ seq,groupTitle,groupKey
 73,考勤与工时,time-attendance
 74,排班,scheduling
 75,账户安全与授权,account-security-auth
-76,钱箱与现金平账,cash-drawer-reconciliation
+76,钱箱备款与平账,drawer-float-reconcile
 77,营业与运营,store-hours-operation
 78,外部系统对接,integrations
 79,外部系统对接,integrations
@@ -93,7 +93,7 @@ seq,groupTitle,groupKey
 91,食客端·下单与规则,guest-order-rules
 92,扫码·线上下单基础,scan-online-basics
 93,线上订餐服务对接,online-order-service
-94,食客端·下单与规则,guest-order-rules
+94,支付签购单,payment-signature-slip
 95,线上订餐服务对接,online-order-service
 96,线上订餐服务对接,online-order-service
 97,线上订餐服务对接,online-order-service
@@ -114,23 +114,23 @@ seq,groupTitle,groupKey
 112,菜品与菜单基础,item-menu-base
 113,POS 送厨流程,pos-kitchen-send
 114,POS 送厨流程,pos-kitchen-send
-115,分单合单与改单,split-merge-edit
-116,分单合单与改单,split-merge-edit
-117,分单合单与改单,split-merge-edit
+115,改单与分合单,order-edit-split-merge
+116,改单与分合单,order-edit-split-merge
+117,改单与分合单,order-edit-split-merge
 118,POS 菜单与布局,pos-menu-ui
-119,分单合单与改单,split-merge-edit
+119,改单与分合单,order-edit-split-merge
 120,POS 送厨流程,pos-kitchen-send
 121,POS 点单页展示,pos-order-cart
 122,POS 点单页展示,pos-order-cart
 123,POS 送厨流程,pos-kitchen-send
-124,分单合单与改单,split-merge-edit
+124,改单与分合单,order-edit-split-merge
 125,POS 送厨流程,pos-kitchen-send
-126,开单·桌台与场景,order-init-scenario
-127,单号规则,order-numbering
-128,单号规则,order-numbering
-129,单号规则,order-numbering
-130,单号规则,order-numbering
-131,单号规则,order-numbering
+126,订单基础,order-basics
+127,订单基础,order-basics
+128,订单基础,order-basics
+129,订单基础,order-basics
+130,订单基础,order-basics
+131,订单基础,order-basics
 132,POS 点单页展示,pos-order-cart
 133,POS 点单页展示,pos-order-cart
 134,点单界面,order-ui
@@ -139,38 +139,38 @@ seq,groupTitle,groupKey
 137,POS 点单页展示,pos-order-cart
 138,下单操作限制与授权,order-operation-guardrails
 139,套餐点单与展示,combo-ordering
-140,分单合单与改单,split-merge-edit
+140,改单与分合单,order-edit-split-merge
 141,分单合单与改单,split-merge-edit
 142,税务规则,tax-rules
 143,税务规则,tax-rules
 144,税务规则,tax-rules
 145,套餐点单与展示,combo-ordering
 146,价格与折扣工具,pricing-tools
-147,金额结算,order-settlement
+147,结算取整,order-settlement-rounding
 148,POS 菜单与布局,pos-menu-ui
-149,加收,order-surcharge
+149,附加费与服务费,order-surcharge-fees
 150,分单合单与改单,split-merge-edit
 151,POS 找单列表,pos-find-order-list
 152,POS 找单列表,pos-find-order-list
 153,POS 找单列表,pos-find-order-list
 154,POS 找单列表,pos-find-order-list
-155,删退与作废,order-void
-156,删退与作废,order-void
-157,删退与作废,order-void
-158,删退与作废,order-void
-159,删退与作废,order-void
+155,删单与厨房通知,kitchen-void-notify
+156,删单与退款,order-void-refund
+157,删单与退款,order-void-refund
+158,删单与退款,order-void-refund
+159,删单与退款,order-void-refund
 160,税务规则,tax-rules
-161,加收,order-surcharge
+161,附加费与服务费,order-surcharge-fees
 162,折扣,order-discount
 163,折扣,order-discount
 164,折扣,order-discount
 165,界面与操作偏好,ui-operation-preferences
 166,账户安全与授权,account-security-auth
-167,打印基础,print-foundation-devices
+167,出纸与设备,print-engine-device
 168,界面与操作偏好,ui-operation-preferences
 169,桌台与餐位,tables-floor
 170,营业与运营,store-hours-operation
-171,日结与结算,daily-close-settlement
+171,现金日结与班结,daily-cash-close
 172,卡支付规则与合规,card-fees
 173,门店档案,store-profile
 174,界面与操作偏好,ui-operation-preferences
@@ -180,7 +180,7 @@ seq,groupTitle,groupKey
 178,POS 点单页展示,pos-order-cart
 179,库存管控规则,inventory-control-rules
 180,卡支付规则与合规,card-fees
-181,钱箱与现金平账,cash-drawer-reconciliation
+181,钱箱备款与平账,drawer-float-reconcile
 182,地址与地图服务,map-address-services
 183,地址与地图服务,map-address-services
 184,设备接入与基础外设,device-integration-basics
@@ -245,68 +245,68 @@ seq,groupTitle,groupKey
 243,卡支付规则与合规,card-fees
 244,小费政策与计算,tip-policy
 245,支付收据流程,payment-receipt-flow
-246,支付收据流程,payment-receipt-flow
-247,支付收据流程,payment-receipt-flow
+246,支付签购单,payment-signature-slip
+247,支付签购单,payment-signature-slip
 248,POS 结账入口,pos-checkout-entry
 249,支付收据流程,payment-receipt-flow
-250,支付收据流程,payment-receipt-flow
+250,支付签购单,payment-signature-slip
 251,POS 找单列表,pos-find-order-list
 252,小费政策与计算,tip-policy
 253,小费政策与计算,tip-policy
 254,钱箱与支付终端,cash-payment-terminals
 255,钱箱与支付终端,cash-payment-terminals
-256,打印基础,print-foundation-devices
+256,出纸与设备,print-engine-device
 257,平台订单与小票,platform-delivery-slips
-258,厨房单·版式格式,ticket-format
-259,打印基础,print-foundation-devices
+258,多票种共用,cross-ticket-fields
+259,出纸与设备,print-engine-device
 260,支付收据流程,payment-receipt-flow
-261,支付收据流程,payment-receipt-flow
-262,收据打印执行,receipt-print-execution
+261,支付签购单,payment-signature-slip
+262,订单收据,order-receipt
 263,支付收据流程,payment-receipt-flow
-264,收据版式与辅助,receipt-layout-format
-265,打印基础,print-foundation-devices
+264,订单收据,order-receipt
+265,出纸与设备,print-engine-device
 266,小费政策与计算,tip-policy
 267,平台订单与小票,platform-delivery-slips
 268,支付收据流程,payment-receipt-flow
-269,打印基础,print-foundation-devices
+269,出纸与设备,print-engine-device
 270,打印基础,print-foundation-devices
-271,厨房单·票面信息,ticket-fields
-272,支付收据流程,payment-receipt-flow
-273,收据打印执行,receipt-print-execution
-274,收据明细与价格,receipt-line-content
-275,收据明细与价格,receipt-line-content
-276,收据明细与价格,receipt-line-content
-277,收据版式与辅助,receipt-layout-format
-278,收据明细与价格,receipt-line-content
-279,收据版式与辅助,receipt-layout-format
-280,收据版式与辅助,receipt-layout-format
-281,打包单打印,packing-slip-print
-282,收据版式与辅助,receipt-layout-format
-283,收据明细与价格,receipt-line-content
-284,收据明细与价格,receipt-line-content
-285,收据明细与价格,receipt-line-content
-286,收据版式与辅助,receipt-layout-format
-287,行级合并规则,line-merge-rules
-288,行级合并规则,line-merge-rules
-289,收据明细与价格,receipt-line-content
-290,税务规则,tax-rules
-291,单号小票,ticket-number-slip
-292,单号小票,ticket-number-slip
+271,多票种共用,cross-ticket-fields
+272,支付签购单,payment-signature-slip
+273,订单收据,order-receipt
+274,订单收据,order-receipt
+275,订单收据,order-receipt
+276,订单收据,order-receipt
+277,订单收据,order-receipt
+278,订单收据,order-receipt
+279,订单收据,order-receipt
+280,订单收据,order-receipt
+281,订单收据,order-receipt
+282,订单收据,order-receipt
+283,订单收据,order-receipt
+284,订单收据,order-receipt
+285,订单收据,order-receipt
+286,订单收据,order-receipt
+287,相同行合并,line-merge-rules
+288,相同行合并,line-merge-rules
+289,订单收据,order-receipt
+290,订单收据,order-receipt
+291,取餐号小票,pickup-number-slip
+292,取餐号小票,pickup-number-slip
 293,小费政策与计算,tip-policy
 294,小费政策与计算,tip-policy
 295,小费政策与计算,tip-policy
 296,小费政策与计算,tip-policy
-297,打包单打印,packing-slip-print
+297,打包单,packing-slip
 298,打包单,packing-slip
 299,打包单,packing-slip
 300,打包单,packing-slip
-301,行级合并规则,line-merge-rules
-302,行级合并规则,line-merge-rules
-303,打包单打印,packing-slip-print
-304,送厨触发与路由,send-routing
+301,相同行合并,line-merge-rules
+302,相同行合并,line-merge-rules
+303,打包单,packing-slip
+304,厨房单分张,kitchen-ticket-issue
 305,费用折扣与小费支出,fees-tips-expense
 306,薪酬与小费,payroll-tips
-307,费用折扣与小费支出,fees-tips-expense
+307,收单成本与报表口径,processor-cost-basis
 308,报表基础口径与导出,report-basics-export
 309,薪酬与小费,payroll-tips
 310,薪酬与小费,payroll-tips
@@ -329,7 +329,7 @@ seq,groupTitle,groupKey
 327,总报表字段与核算项,summary-report-fields
 328,总报表字段与核算项,summary-report-fields
 329,考勤与工时,time-attendance
-330,日结与结算,daily-close-settlement
+330,现金日结与班结,daily-cash-close
 331,通知基础与渠道,notification-basics
 332,通知基础与渠道,notification-basics
 333,呼叫服务员与现场提醒,service-call-alerts
@@ -445,7 +445,7 @@ seq,groupTitle,groupKey
 444,菜品与菜单基础,item-menu-base
 445,税务规则,tax-rules
 446,折扣,order-discount
-447,加收,order-surcharge
+447,附加费与服务费,order-surcharge-fees
 448,支付手段与展示,payment-methods
 449,收银记录与审计,register-audit-records
 450,收银记录与审计,register-audit-records
@@ -498,7 +498,7 @@ seq,groupTitle,groupKey
 497,扫码端·结账交互,guest-self-checkout-ux
 498,打印机与输出设备,printer-output-devices
 499,打印机与输出设备,printer-output-devices
-500,订单收据触发,order-receipt-trigger
+500,订单收据,order-receipt
 501,扫码端·结账交互,guest-self-checkout-ux
 502,食客端·下单与规则,guest-order-rules
 503,食客端·下单与规则,guest-order-rules
@@ -647,7 +647,7 @@ seq,groupTitle,groupKey
 651,营销内容与素材,content-assets
 652,食客端·界面语言,guest-facing-locale
 653,食客端·界面语言,guest-facing-locale
-654,订单收据触发,order-receipt-trigger
+654,订单收据,order-receipt
 655,食客端·品类与场景菜单,guest-menu-scenarios
 656,食客端·品类与场景菜单,guest-menu-scenarios
 657,食客端·品类与场景菜单,guest-menu-scenarios
@@ -664,6 +664,10 @@ seq,groupTitle,groupKey
 668,钱箱与支付终端,cash-payment-terminals
 669,结账与交互,cds-checkout-ux
 670,钱箱与支付终端,cash-payment-terminals
+
+
+
+
 
 
 

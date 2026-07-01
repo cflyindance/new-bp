@@ -4,6 +4,8 @@
 (function (global) {
   var STORAGE_KEY = "bplant-marketing-ads:v1";
   var PRODUCT_LINES = ["eMenu", "Kiosk", "POS", "Paypad", "CDS", "叫号屏"];
+  var AD_TYPE_POPUP = "弹框广告";
+  var AD_TYPE_ANNOUNCEMENT = "公告";
 
   /** 系统默认广告定义（顺序即列表置顶顺序） */
   var SYSTEM_DEFAULT_AD_SPECS = [
@@ -63,7 +65,32 @@
       productLines: ["叫号屏"],
       toggleSeq: null,
     },
+    {
+      id: "ad-default-emenu-menu-announcement",
+      name: "eMenu菜单页公告",
+      kind: "menu-announcement",
+      sceneDescSystem: "开启后，在菜单页顶部展示公告文字",
+      productLines: ["eMenu"],
+      toggleSeq: null,
+    },
+    {
+      id: "ad-default-kiosk-menu-announcement",
+      name: "Kiosk菜单页公告",
+      kind: "menu-announcement",
+      sceneDescSystem: "开启后，在菜单页顶部展示公告文字",
+      productLines: ["Kiosk"],
+      toggleSeq: null,
+    },
   ];
+
+  function isAnnouncementKind(kind) {
+    return kind === "menu-announcement";
+  }
+
+  function resolveAdType(spec) {
+    if (spec && isAnnouncementKind(spec.kind)) return AD_TYPE_ANNOUNCEMENT;
+    return AD_TYPE_POPUP;
+  }
 
   function isMixedMediaKind(kind) {
     return kind === "start-order" || kind === "menu-page" || kind === "emenu-home-cover";
@@ -210,6 +237,19 @@
     };
   }
 
+  function normalizeAnnouncementContent(content) {
+    if (!content || typeof content !== "object") return { zh: "", en: "" };
+    return {
+      zh: typeof content.zh === "string" ? content.zh : "",
+      en: typeof content.en === "string" ? content.en : "",
+    };
+  }
+
+  function hasAnnouncementContent(content) {
+    var normalized = normalizeAnnouncementContent(content);
+    return !!(normalized.zh.trim() || normalized.en.trim());
+  }
+
   function createSystemDefaultAd(spec) {
     var enabled = spec.toggleSeq
       ? readModuleToggle(spec.toggleSeq)
@@ -217,7 +257,7 @@
     var base = {
       id: spec.id,
       name: spec.name,
-      type: "弹框广告",
+      type: resolveAdType(spec),
       status: statusFromEnabled(enabled),
       updatedAt: formatNow(),
       productLines: spec.productLines.slice(),
@@ -233,6 +273,9 @@
     }
     if (isHomeCoverKind(spec.kind)) {
       base.homeCover = emptyHomeCover();
+    }
+    if (isAnnouncementKind(spec.kind)) {
+      base.announcementContent = { zh: "", en: "" };
     }
     return base;
   }
@@ -269,7 +312,7 @@
     var normalized = {
       id: spec.id,
       name: spec.name,
-      type: existing.type || def.type,
+      type: resolveAdType(spec),
       status: statusFromEnabled(enabled),
       updatedAt: existing.updatedAt || def.updatedAt,
       productLines: spec.productLines.slice(),
@@ -285,6 +328,9 @@
     }
     if (isHomeCoverKind(spec.kind)) {
       normalized.homeCover = normalizeHomeCover(existing.homeCover);
+    }
+    if (isAnnouncementKind(spec.kind)) {
+      normalized.announcementContent = normalizeAnnouncementContent(existing.announcementContent);
     }
     return normalized;
   }
@@ -310,6 +356,7 @@
       var normalized = normalizeSystemDefaultAd(existing, spec);
       if (
         existing.name !== normalized.name ||
+        existing.type !== normalized.type ||
         existing.locked !== true ||
         existing.status !== normalized.status ||
         JSON.stringify(existing.productLines) !== JSON.stringify(normalized.productLines) ||
@@ -398,6 +445,8 @@
 
   global.MarketingAdsStore = {
     STORAGE_KEY: STORAGE_KEY,
+    AD_TYPE_POPUP: AD_TYPE_POPUP,
+    AD_TYPE_ANNOUNCEMENT: AD_TYPE_ANNOUNCEMENT,
     SYSTEM_DEFAULT_AD_SPECS: SYSTEM_DEFAULT_AD_SPECS,
     DEFAULT_AD_ID: DEFAULT_AD_ID,
     DEFAULT_AD_NAME: DEFAULT_AD_NAME,
@@ -408,7 +457,9 @@
     formatNow: formatNow,
     getSystemAdSpec: getSystemAdSpec,
     isMixedMediaKind: isMixedMediaKind,
+    isAnnouncementKind: isAnnouncementKind,
     isHomeCoverKind: isHomeCoverKind,
+    resolveAdType: resolveAdType,
     normalizeHomeCover: normalizeHomeCover,
     emptyHomeCover: emptyHomeCover,
     isSystemDefaultAd: isSystemDefaultAd,
@@ -422,6 +473,8 @@
     updateSystemAd: updateSystemAd,
     updateDefaultAd: updateDefaultAd,
     normalizePosterButtonLabels: normalizePosterButtonLabels,
+    normalizeAnnouncementContent: normalizeAnnouncementContent,
+    hasAnnouncementContent: hasAnnouncementContent,
     normalizeSceneDescExtra: normalizeSceneDescExtra,
     normalizeMediaItems: normalizeMediaItems,
     getSceneDescSystem: getSceneDescSystem,

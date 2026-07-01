@@ -10,6 +10,7 @@ import {
   renderL3Column,
   type PermissionModuleGroupLike,
 } from "./permission-four-column-nav";
+import { l2HasCatalogNavSections } from "./module-settings-subnav";
 import type { PlatformPresetNodeSelection } from "./platform-preset-store";
 import { tierBadgeClass, tierBadgeLabel, type BusinessTypeTier } from "./platform-preset-catalog";
 
@@ -21,7 +22,7 @@ function escapeHtml(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
-export type FourColumnMatrixMode = "platform-preset" | "rbac";
+export type FourColumnMatrixMode = "platform-preset" | "rbac" | "nav-blueprint-system";
 
 function renderL4EditableCheckbox(
   key: string,
@@ -48,6 +49,17 @@ export const FOUR_COLUMN_HEADERS = [
   "分组内功能 / 设置",
 ] as const;
 
+export function resolveFourColumnHeaders(
+  l2Node: PermissionTreeNode | undefined,
+  headers: readonly string[] = FOUR_COLUMN_HEADERS,
+): string[] {
+  const out = [...headers];
+  if (l2HasCatalogNavSections(l2Node)) {
+    out[2] = "三级 / 分组 · 侧栏分类";
+  }
+  return out;
+}
+
 export function fourColumnCheckboxState(
   key: string,
   selection: Record<string, PlatformPresetNodeSelection>,
@@ -60,6 +72,16 @@ export function fourColumnCheckboxState(
   if (self && enabledCount === descendants.length) return { checked: true, indeterminate: false };
   if (!self && enabledCount === 0) return { checked: false, indeterminate: false };
   return { checked: false, indeterminate: true };
+}
+
+function mountKindBadgeLabel(kind: "page" | "features"): string {
+  return kind === "page" ? "页面" : "设置";
+}
+
+function mountKindBadgeClass(kind: "page" | "features"): string {
+  return kind === "page"
+    ? "bg-sky-500/15 text-sky-700 dark:text-sky-300"
+    : "bg-amber-500/15 text-amber-800 dark:text-amber-300";
 }
 
 export function renderFourColumnItem(
@@ -75,6 +97,10 @@ export function renderFourColumnItem(
     childCount?: number;
     nested?: boolean;
     filter?: string;
+    mountTag?: "page" | "features";
+    customL1NodeId?: string;
+    /** 只读展示项（无勾选、不可选中） */
+    displayOnly?: boolean;
   } = {},
 ): string {
   const {
@@ -84,6 +110,9 @@ export function renderFourColumnItem(
     childCount,
     nested = false,
     filter = "",
+    mountTag,
+    customL1NodeId,
+    displayOnly = false,
   } = options;
   const q = filter.trim().toLowerCase();
   if (q && !title.toLowerCase().includes(q) && !key.toLowerCase().includes(q)) {
@@ -94,12 +123,26 @@ export function renderFourColumnItem(
     childCount != null && level === 3
       ? `<span class="ml-auto shrink-0 text-xs tabular-nums text-muted-foreground">${childCount}</span>`
       : "";
-  return `
+  const mountBadge = mountTag
+    ? `<span class="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${mountKindBadgeClass(mountTag)}">${escapeHtml(mountKindBadgeLabel(mountTag))}</span>`
+    : "";
+  if (displayOnly) {
+    return `<div class="rounded-lg px-2 py-2 text-sm">
+      <span class="flex items-center gap-1">
+        ${mountBadge}
+        <span class="min-w-0 flex-1 truncate font-medium text-card-foreground">${escapeHtml(title)}</span>
+      </span>
+    </div>`;
+  }
+  const selectBtnClass = customL1NodeId
+    ? `flex min-w-0 flex-1 items-start gap-2 rounded-lg py-2 text-left text-sm transition-colors ${nested ? "pl-4 pr-2" : "px-2"} ${selected ? "bg-primary/10 ring-1 ring-primary/25" : "hover:bg-muted/50"}`
+    : `flex w-full items-start gap-2 rounded-lg py-2 text-left text-sm transition-colors ${nested ? "pl-4 pr-2" : "px-2"} ${selected ? "bg-primary/10 ring-1 ring-primary/25" : "hover:bg-muted/50"}`;
+  const itemBody = `
     <button
       type="button"
       data-pp-col-select="${escapeHtml(key)}"
       data-pp-level="${level ?? ""}"
-      class="flex w-full items-start gap-2 rounded-lg py-2 text-left text-sm transition-colors ${nested ? "pl-4 pr-2" : "px-2"} ${selected ? "bg-primary/10 ring-1 ring-primary/25" : "hover:bg-muted/50"}"
+      class="${selectBtnClass}"
     >
       <input
         type="checkbox"
@@ -112,12 +155,18 @@ export function renderFourColumnItem(
       <span class="min-w-0 flex-1">
         <span class="flex items-center gap-1">
           ${tier ? `<span class="rounded px-1.5 py-0.5 text-[10px] font-medium ${tierBadgeClass(tier)}">${escapeHtml(tierBadgeLabel(tier))}</span>` : ""}
+          ${mountBadge}
           <span class="min-w-0 flex-1 truncate ${level === 4 ? "text-muted-foreground" : "font-medium text-card-foreground"}">${escapeHtml(title)}</span>
           ${countBadge}
         </span>
         ${showL4AccessMode ? renderL4EditableCheckbox(key, selection, checked && !indeterminate) : ""}
       </span>
     </button>`;
+  if (!customL1NodeId) return itemBody;
+  return `<div class="flex w-full items-start gap-0.5">${itemBody}<div class="flex shrink-0 flex-col gap-0.5 py-2 pr-1">
+        <button type="button" data-nb-edit-l1="${escapeHtml(customL1NodeId)}" class="text-xs text-primary hover:underline whitespace-nowrap">编辑</button>
+        <button type="button" data-nb-delete-l1="${escapeHtml(customL1NodeId)}" class="text-xs text-destructive hover:underline whitespace-nowrap">删除</button>
+      </div></div>`;
 }
 
 function renderFourColumnL3(
@@ -126,17 +175,30 @@ function renderFourColumnL3(
   selection: Record<string, PlatformPresetNodeSelection>,
   index: FourColumnTreeIndex,
   filter: string,
+  matrixMode: FourColumnMatrixMode = "platform-preset",
 ): string {
-  return renderL3Column(l2Node, activeL3, (node, nested) =>
-    renderFourColumnItem(
+  return renderL3Column(l2Node, activeL3, (node, nested) => {
+    const isMountedPage =
+      matrixMode === "platform-preset" && node.resource.key.endsWith(":mounted-page-l3");
+    const isCustomL3 =
+      matrixMode === "platform-preset" &&
+      Boolean(node.resource.groupKey?.startsWith("custom-3-") || node.resource.key.includes("custom-3-"));
+    return renderFourColumnItem(
       node.resource.key,
       formatGroupNavLabel(pickNodeTitle(node.resource.title, node.resource.titleEn)),
       node.resource.key === activeL3,
       selection,
       index,
-      { level: 3, childCount: node.children.length, nested, filter },
-    ),
-  );
+      {
+        level: 3,
+        childCount: node.children.length,
+        nested,
+        filter,
+        mountTag: isCustomL3 || isMountedPage ? node.resource.customL3MountKind : undefined,
+        displayOnly: isMountedPage,
+      },
+    );
+  });
 }
 
 export function renderFourColumnMatrix(
@@ -154,35 +216,69 @@ export function renderFourColumnMatrix(
   const l3Node = findL3Node(index.groups, activeL3);
 
   const col1 = index.groups
-    .map((g) =>
-      renderFourColumnItem(
+    .map((g) => {
+      const isCustomL1 = matrixMode === "platform-preset" && g.moduleId.startsWith("custom-1-");
+      return renderFourColumnItem(
         g.moduleKey,
         pickNodeTitle(g.moduleTitle, g.moduleTitleEn),
         g.moduleKey === activeL1,
         selection,
         index,
-        { tier: tierForModule?.(g.moduleId), level: 1, filter },
-      ),
-    )
+        {
+          tier: tierForModule?.(g.moduleId),
+          level: 1,
+          filter,
+          mountTag: g.customL1MountKind,
+          customL1NodeId: isCustomL1 ? g.moduleId : undefined,
+        },
+      );
+    })
     .filter(Boolean)
     .join("");
 
   const col2 = (l1Node?.children ?? [])
-    .map((c) =>
-      renderFourColumnItem(
+    .map((c) => {
+      const isCustomL2 = matrixMode === "platform-preset" && c.resource.key.startsWith("custom-2-");
+      const isMountedPage =
+        matrixMode === "platform-preset" && c.resource.key.endsWith(":mounted-page");
+      return renderFourColumnItem(
         c.resource.key,
         pickNodeTitle(c.resource.title, c.resource.titleEn),
         c.resource.key === activeL2,
         selection,
         index,
-        { level: 2, filter },
-      ),
-    )
+        {
+          level: 2,
+          filter,
+          mountTag: isCustomL2 || isMountedPage ? c.resource.customL2MountKind : undefined,
+          displayOnly: isMountedPage,
+        },
+      );
+    })
     .filter(Boolean)
     .join("");
 
-  const col3 = renderFourColumnL3(l2Node, activeL3, selection, index, filter);
-  const col4 = (l3Node?.children ?? [])
+  const col3Raw = renderFourColumnL3(l2Node, activeL3, selection, index, filter, matrixMode);
+  let col3 = col3Raw;
+  if (
+    matrixMode === "platform-preset" &&
+    l2Node?.resource.key.endsWith(":mounted-page")
+  ) {
+    col3 = col3Raw;
+  } else if (
+    matrixMode === "platform-preset" &&
+    l2Node?.resource.key.startsWith("custom-2-") &&
+    l2Node.resource.customL2MountKind === "page" &&
+    !col3Raw.trim()
+  ) {
+    col3 = col3Raw;
+  } else if (matrixMode === "nav-blueprint-system" && l2Node && !l2Node.children.length) {
+    col3 = `<p class="p-3 text-xs leading-relaxed text-muted-foreground">该入口为业务页面，勾选「二级导航」即可控制是否展示。新建、编辑、删除、导出、审核等操作按钮不在导航蓝图内配置（由权限角色单独管理）。</p>`;
+  } else if (matrixMode === "nav-blueprint-system" && l2Node && l2Node.children.length && !col3Raw.trim()) {
+    col3 = `<p class="p-3 text-xs text-muted-foreground">请选择三级分组</p>`;
+  }
+
+  let col4 = (l3Node?.children ?? [])
     .map((c) =>
       renderFourColumnItem(
         c.resource.key,
@@ -196,6 +292,12 @@ export function renderFourColumnMatrix(
     .filter(Boolean)
     .join("");
 
+  if (matrixMode === "nav-blueprint-system" && l2Node?.children.length && !l3Node) {
+    col4 = `<p class="p-3 text-xs text-muted-foreground">请先选择设置类三级分组</p>`;
+  } else if (matrixMode === "nav-blueprint-system" && l3Node && !col4.trim()) {
+    col4 = `<p class="p-3 text-xs text-muted-foreground">该分组下暂无设置项</p>`;
+  }
+
   return { col1, col2, col3, col4 };
 }
 
@@ -204,24 +306,25 @@ export function renderFourColumnMatrixShell(
   col2: string,
   col3: string,
   col4: string,
+  headers: readonly string[] = FOUR_COLUMN_HEADERS,
 ): string {
   const empty = (text: string) => `<p class="p-3 text-sm text-muted-foreground">${text}</p>`;
   return `
     <div class="grid min-h-0 flex-1 grid-cols-1 divide-y divide-border lg:grid-cols-4 lg:divide-x lg:divide-y-0">
       <div class="flex min-h-0 flex-col">
-        <p class="shrink-0 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground border-b border-border">${FOUR_COLUMN_HEADERS[0]}</p>
+        <p data-pp-col-header="1" class="shrink-0 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground border-b border-border">${headers[0]}</p>
         <div class="pp-col-scroll min-h-0 flex-1 overflow-y-auto p-1 space-y-0.5" data-pp-col="1">${col1 || empty("无模块")}</div>
       </div>
       <div class="flex min-h-0 flex-col">
-        <p class="shrink-0 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground border-b border-border">${FOUR_COLUMN_HEADERS[1]}</p>
+        <p data-pp-col-header="2" class="shrink-0 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground border-b border-border">${headers[1]}</p>
         <div class="pp-col-scroll min-h-0 flex-1 overflow-y-auto p-1 space-y-0.5" data-pp-col="2">${col2 || empty("请选择一级导航")}</div>
       </div>
       <div class="flex min-h-0 flex-col">
-        <p class="shrink-0 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground border-b border-border">${FOUR_COLUMN_HEADERS[2]}</p>
+        <p data-pp-col-header="3" class="shrink-0 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground border-b border-border">${headers[2]}</p>
         <div class="pp-col-scroll min-h-0 flex-1 overflow-y-auto p-1 space-y-0.5" data-pp-col="3">${col3 || empty("请选择二级导航")}</div>
       </div>
       <div class="flex min-h-0 flex-col">
-        <p class="shrink-0 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground border-b border-border">${FOUR_COLUMN_HEADERS[3]}</p>
+        <p data-pp-col-header="4" class="shrink-0 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground border-b border-border">${headers[3]}</p>
         <div class="pp-col-scroll min-h-0 flex-1 overflow-y-auto p-1 space-y-0.5" data-pp-col="4">${col4 || empty("请选择分组")}</div>
       </div>
     </div>`;
@@ -240,21 +343,26 @@ export function rerenderFourColumnMatrix(
   filter: string,
   tierForModule?: (moduleId: string) => BusinessTypeTier | undefined,
   matrixMode: FourColumnMatrixMode = "platform-preset",
+  matrixOpts?: { preserveEmptyL2?: boolean; preserveEmptyL3?: boolean },
 ): void {
   let l1 = root.dataset.activeL1 ?? index.groups[0]?.moduleKey ?? "";
   let l2 = root.dataset.activeL2 ?? "";
   let l3 = root.dataset.activeL3 ?? "";
 
   const l1Node = index.groups.find((g) => g.moduleKey === l1)?.tree;
-  if (!l2 || !l1Node?.children.some((c) => c.resource.key === l2)) {
+  const preserveEmptyL2 = matrixOpts?.preserveEmptyL2 && root.dataset.activeL2 === "";
+  if (!preserveEmptyL2 && (!l2 || !l1Node?.children.some((c) => c.resource.key === l2))) {
     l2 = l1Node?.children[0]?.resource.key ?? "";
     root.dataset.activeL2 = l2;
   }
   const l2Node = findL2Node(index.groups, l2);
-  if (!l3 || !l2Node?.children.some((c) => c.resource.key === l3)) {
+  const preserveEmptyL3 = matrixOpts?.preserveEmptyL3 && root.dataset.activeL3 === "";
+  if (!preserveEmptyL3 && (!l3 || !l2Node?.children.some((c) => c.resource.key === l3))) {
     l3 = l2Node?.children[0]?.resource.key ?? "";
     root.dataset.activeL3 = l3;
   }
+
+  const headers = resolveFourColumnHeaders(l2Node);
 
   const { col1, col2, col3, col4 } = renderFourColumnMatrix(
     selection,
@@ -282,6 +390,9 @@ export function rerenderFourColumnMatrix(
   if (col4El) {
     col4El.innerHTML = col4 || `<p class="p-3 text-sm text-muted-foreground">请选择分组</p>`;
   }
+
+  const col3Header = root.querySelector<HTMLElement>('[data-pp-col-header="3"]');
+  if (col3Header) col3Header.textContent = headers[2] ?? FOUR_COLUMN_HEADERS[2];
 
   syncFourColumnIndeterminate(root);
 }

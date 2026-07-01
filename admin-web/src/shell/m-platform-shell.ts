@@ -3,6 +3,7 @@
  */
 import { t } from "../i18n";
 import {
+  ENTERPRISE_PLATFORM_PRESET_SCOPE,
   getPresetScopeForPath,
   isMPlatformPresetPath,
 } from "../config/platform-preset-scope";
@@ -11,10 +12,23 @@ import {
   findPlatformPresetPageTitle,
   renderPlatformPresetPage,
 } from "../config/platform-preset-ui";
+import {
+  bindNavBlueprint,
+  findNavBlueprintPageTitle,
+  isNavBlueprintPath,
+  renderNavBlueprintPage,
+  NAV_BLUEPRINT_ROUTE_PREFIX,
+} from "../config/nav-blueprint-ui";
 import { exitMPlatformShell } from "./app-shell-mode";
 import { bindViewSwitchControl, renderViewSwitchControl } from "./view-switch-control";
 
-const M_PLATFORM_PRESET_PATH = "/m-platform/platform-preset";
+export const M_PLATFORM_PRESET_PATH = "/m-platform/platform-preset";
+
+export { NAV_BLUEPRINT_ROUTE_PREFIX } from "../config/nav-blueprint-ui";
+
+export function isMPlatformContentPath(path: string): boolean {
+  return isMPlatformPresetPath(path) || isNavBlueprintPath(path);
+}
 
 function escapeHtml(s: string): string {
   return s
@@ -26,6 +40,7 @@ function escapeHtml(s: string): string {
 
 export function renderMPlatformSidebar(path: string): string {
   const presetActive = isMPlatformPresetPath(path);
+  const blueprintActive = isNavBlueprintPath(path);
   const linkClass = (active: boolean) =>
     active
       ? "flex min-h-10 items-center rounded-lg bg-primary/10 px-3 py-2 text-sm font-medium text-primary"
@@ -39,6 +54,9 @@ export function renderMPlatformSidebar(path: string): string {
       </div>
       <nav class="min-h-0 flex-1 overflow-y-auto p-3" aria-label="${escapeHtml(t("shell.mPlatformNavAria"))}">
         <ul class="space-y-0.5" role="list">
+          <li>
+            <a href="#${NAV_BLUEPRINT_ROUTE_PREFIX}" class="${linkClass(blueprintActive)}">${escapeHtml(t("shell.mPlatformNavBlueprint"))}</a>
+          </li>
           <li>
             <a href="#${M_PLATFORM_PRESET_PATH}" class="${linkClass(presetActive)}">${escapeHtml(t("shell.mPlatformNavPreset"))}</a>
           </li>
@@ -54,10 +72,20 @@ export function renderMPlatformSidebar(path: string): string {
     </aside>`;
 }
 
+function resolveMPlatformPageTitle(path: string): { title: string; module: string } {
+  return (
+    findNavBlueprintPageTitle(path) ??
+    findPlatformPresetPageTitle(path, getPresetScopeForPath(path)) ?? {
+      title: t("shell.mPlatformTitle"),
+      module: t("shell.mPlatformKicker"),
+    }
+  );
+}
+
 function renderMPlatformHeader(path: string): string {
-  const titleInfo = findPlatformPresetPageTitle(path, getPresetScopeForPath(path));
-  const title = titleInfo?.title ?? t("shell.mPlatformNavPreset");
-  const kicker = titleInfo?.module ?? t("shell.mPlatformKicker");
+  const titleInfo = resolveMPlatformPageTitle(path);
+  const title = titleInfo.title;
+  const kicker = titleInfo.module;
 
   return `
     <header class="z-40 flex min-h-14 shrink-0 flex-wrap items-center justify-between gap-3 border-b border-border bg-card/95 px-4 py-2 backdrop-blur supports-[backdrop-filter]:bg-card/80 sm:flex-nowrap sm:gap-4 sm:py-0">
@@ -80,22 +108,26 @@ function renderMPlatformHeader(path: string): string {
     </header>`;
 }
 
+function renderMPlatformContent(path: string): string {
+  if (isNavBlueprintPath(path)) return renderNavBlueprintPage(path);
+  return renderPlatformPresetPage(path, ENTERPRISE_PLATFORM_PRESET_SCOPE);
+}
+
 function renderMPlatformMain(path: string): string {
-  const scope = getPresetScopeForPath(path);
   return `
     <div class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
       ${renderMPlatformHeader(path)}
       <main class="min-h-0 flex-1 flex flex-col overflow-hidden p-4 md:p-6 animate-fade-in">
         <div class="mx-auto flex w-full min-h-0 flex-1 flex-col max-w-[90rem]">
           <div role="tabpanel" class="min-h-0 flex-1 flex flex-col overflow-hidden">
-            ${renderPlatformPresetPage(path, scope)}
+            ${renderMPlatformContent(path)}
           </div>
         </div>
       </main>
     </div>`;
 }
 
-export function mountMPlatformShell(onMount: () => void, path: string): string {
+export function mountMPlatformShell(_onMount: () => void, path: string): string {
   return `
     <div class="relative h-dvh min-h-0 w-full overflow-hidden">
       <div class="flex h-full min-h-0 w-full">
@@ -121,7 +153,10 @@ export function bindMPlatformShell(onMount: () => void): void {
   });
 
   bindViewSwitchControl(onMount);
-  bindPlatformPreset(onMount, getPresetScopeForPath(location.hash.slice(1) || M_PLATFORM_PRESET_PATH));
-}
 
-export { M_PLATFORM_PRESET_PATH };
+  const path = location.hash.slice(1) || NAV_BLUEPRINT_ROUTE_PREFIX;
+  bindNavBlueprint(onMount);
+  if (!isNavBlueprintPath(path)) {
+    bindPlatformPreset(onMount, ENTERPRISE_PLATFORM_PRESET_SCOPE);
+  }
+}

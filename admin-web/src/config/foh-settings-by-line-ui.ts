@@ -6,6 +6,7 @@ import {
   groupCatalogItemsByCategory,
   type ModuleSettingCatalogHub,
 } from "./module-settings-catalog";
+import { normalizeFohCatalogItemsForGrouping } from "./foh-settings-group-keys";
 import {
   FOH_LINE_NAV_ORDER,
   fohLineNavLabel,
@@ -81,7 +82,8 @@ export function getFohLineViewGroups(
   catalog: ModuleSettingCatalogHub,
   lineId: FohLineNavId,
 ): FohLineViewGroup[] {
-  const filtered = catalog.items.filter((item) => fohSeqAppliesToLine(item.seq, lineId));
+  const items = normalizeFohCatalogItemsForGrouping(catalog.items);
+  const filtered = items.filter((item) => fohSeqAppliesToLine(item.seq, lineId));
   return groupCatalogItemsByCategory(filtered, catalog.groupOrder);
 }
 
@@ -237,14 +239,22 @@ export function renderFohSettingsByLineIntroCard(lineId: FohLineNavId, count: nu
 const TERTIARY_SUBNAV_SCROLL_CLASSES =
   "tertiary-inline-subnav-scroll min-h-0 max-h-[min(52dvh,26rem)] overflow-y-auto overscroll-y-contain sm:max-h-full sm:self-stretch";
 
+function bindFohSettingsViewModeLink(link: HTMLAnchorElement): void {
+  const persistMode = (): void => {
+    const mode = link.dataset.fohSettingsViewMode;
+    if (mode === "scenario" || mode === "by-line") {
+      writeFohSettingsViewMode(mode);
+    }
+  };
+  link.addEventListener("mousedown", persistMode);
+  link.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") persistMode();
+  });
+}
+
 export function bindFohSettingsViewMode(): void {
   document.querySelectorAll<HTMLAnchorElement>("[data-foh-settings-view-mode]").forEach((link) => {
-    link.addEventListener("click", () => {
-      const mode = link.dataset.fohSettingsViewMode;
-      if (mode === "scenario" || mode === "by-line") {
-        writeFohSettingsViewMode(mode);
-      }
-    });
+    bindFohSettingsViewModeLink(link);
   });
   document.querySelectorAll<HTMLAnchorElement>("[data-foh-settings-line-id]").forEach((link) => {
     link.addEventListener("click", () => {

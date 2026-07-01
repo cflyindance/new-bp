@@ -17,6 +17,8 @@ import {
   isMPlatformShellMode,
 } from "./app-shell-mode";
 
+import { NAV_BLUEPRINT_ROUTE_PREFIX } from "../config/nav-blueprint-ui";
+
 const M_PLATFORM_PRESET_PATH = "/m-platform/platform-preset";
 
 export type ViewSwitchMode = SidebarNavLayoutPreset | "m-platform";
@@ -128,7 +130,7 @@ function applyViewSwitchMode(mode: ViewSwitchMode, onMount: () => void): void {
   if (mode === "m-platform") {
     if (isMPlatformShellMode()) return;
     enterMPlatformShell();
-    location.hash = `#${M_PLATFORM_PRESET_PATH}`;
+    location.hash = `#${NAV_BLUEPRINT_ROUTE_PREFIX}`;
     onMount();
     return;
   }

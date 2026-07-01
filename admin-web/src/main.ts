@@ -192,6 +192,10 @@ import {
   getFohSettingsByLinePath,
   type FohLineViewGroup,
 } from "./config/foh-settings-by-line-ui";
+import { normalizeFohCatalogItemsForGrouping } from "./config/foh-settings-group-keys";
+import { normalizePrintCatalogItemsForGrouping } from "./config/print-settings-group-keys";
+import { normalizeFinanceCatalogItemsForGrouping } from "./config/finance-settings-group-keys";
+import { normalizeOrderCatalogItemsForGrouping } from "./config/order-settings-group-keys";
 import {
   applyFohByLineUiSuppressions,
   getActiveFohByLineIdFromDom,
@@ -221,9 +225,10 @@ import {
 } from "./shell/view-switch-control";
 import {
   bindMPlatformShell,
-  M_PLATFORM_PRESET_PATH,
+  isMPlatformContentPath,
   mountMPlatformShell,
 } from "./shell/m-platform-shell";
+import { NAV_BLUEPRINT_ROUTE_PREFIX } from "./config/nav-blueprint-ui";
 import {
   filterModuleSettingsGroupsForPreset,
   getFirstAllowedModuleSettingsPath,
@@ -4898,9 +4903,19 @@ function buildModuleSettingsGroupsForPreset(
   catalog: ModuleSettingCatalogHub,
   lineId?: FohLineNavId | null,
 ): ModuleSettingsGroup[] {
+  const isFohHub = catalog.settingsPath === FOH_SETTINGS_PATH;
+  const items = isFohHub
+    ? normalizeFohCatalogItemsForGrouping(catalog.items)
+    : isPrintSettingsPath(catalog.settingsPath)
+      ? normalizePrintCatalogItemsForGrouping(catalog.items)
+      : catalog.settingsPath === "/finance/settings"
+        ? normalizeFinanceCatalogItemsForGrouping(catalog.items)
+        : catalog.settingsPath === "/orders/settings"
+          ? normalizeOrderCatalogItemsForGrouping(catalog.items)
+          : catalog.items;
   const base = lineId
     ? getFohLineViewGroups(catalog, lineId)
-    : groupCatalogItemsByCategory(catalog.items, catalog.groupOrder);
+    : groupCatalogItemsByCategory(items, catalog.groupOrder);
   return filterModuleSettingsGroupsForPreset(catalog.settingsPath, base, lineId ?? null);
 }
 const moduleSettingsScrollTopByBasePath = new Map<string, number>();
@@ -10995,9 +11010,9 @@ function mount(): void {
     return;
   }
 
-  if (isMPlatformShellMode() || isMPlatformPresetPath(authPath)) {
-    if (!isMPlatformPresetPath(authPath)) {
-      replaceHashPath(M_PLATFORM_PRESET_PATH);
+  if (isMPlatformShellMode() || isMPlatformContentPath(authPath)) {
+    if (!isMPlatformContentPath(authPath)) {
+      replaceHashPath(NAV_BLUEPRINT_ROUTE_PREFIX);
       mount();
       return;
     }

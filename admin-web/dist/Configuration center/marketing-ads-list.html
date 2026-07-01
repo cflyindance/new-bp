@@ -112,6 +112,10 @@
           <p class="mb-2 text-xs text-gray-500">至少选择一个产品线</p>
           <div id="adEditorProductLines" class="flex flex-wrap gap-3"></div>
         </div>
+        <div id="adEditorTypeWrap">
+          <p class="mb-2 text-sm font-medium text-gray-700">类型</p>
+          <div id="adEditorTypes" class="flex flex-wrap gap-3"></div>
+        </div>
         <p id="adEditorProductLinesReadonly" class="hidden text-sm text-gray-600">
           <span class="font-medium text-gray-700">产品线：</span><span id="adEditorProductLinesReadonlyValue">eMenu</span>
         </p>
@@ -128,6 +132,7 @@
     (function () {
       var DEFAULT_AD_ID = MarketingAdsStore.DEFAULT_AD_ID;
       var PRODUCT_LINES = MarketingAdsStore.PRODUCT_LINES;
+      var AD_TYPES = [MarketingAdsStore.AD_TYPE_POPUP, MarketingAdsStore.AD_TYPE_ANNOUNCEMENT];
 
       var tableBody = document.getElementById("adsTableBody");
       var filterName = document.getElementById("filterName");
@@ -137,6 +142,8 @@
       var adEditorNameHint = document.getElementById("adEditorNameHint");
       var adEditorProductLinesWrap = document.getElementById("adEditorProductLinesWrap");
       var adEditorProductLines = document.getElementById("adEditorProductLines");
+      var adEditorTypeWrap = document.getElementById("adEditorTypeWrap");
+      var adEditorTypes = document.getElementById("adEditorTypes");
       var adEditorProductLinesReadonly = document.getElementById("adEditorProductLinesReadonly");
       var adEditorProductLinesReadonlyValue = document.getElementById("adEditorProductLinesReadonlyValue");
       var editingId = null;
@@ -218,6 +225,24 @@
         return normalizeProductLines(selected);
       }
 
+      function renderTypeRadios(selected) {
+        var value = selected || MarketingAdsStore.AD_TYPE_POPUP;
+        adEditorTypes.innerHTML = AD_TYPES.map(function (type) {
+          var checked = type === value ? " checked" : "";
+          return (
+            '<label class="inline-flex cursor-pointer items-center gap-2 rounded-md border border-gray-200 px-3 py-2 text-sm text-gray-800 hover:border-primary/40">' +
+            '<input type="radio" class="text-primary" name="adEditorType" data-ad-type="' + escapeHtml(type) + '"' + checked + " />" +
+            "<span>" + escapeHtml(type) + "</span></label>"
+          );
+        }).join("");
+      }
+
+      function readSelectedAdType() {
+        var selected = adEditorTypes.querySelector("[data-ad-type]:checked");
+        var type = selected ? selected.getAttribute("data-ad-type") : MarketingAdsStore.AD_TYPE_POPUP;
+        return AD_TYPES.indexOf(type) >= 0 ? type : MarketingAdsStore.AD_TYPE_POPUP;
+      }
+
       function openModal(mode, item) {
         editingId = mode === "edit" && item ? item.id : null;
         var locked = item && isSystemDefaultAd(item);
@@ -227,13 +252,16 @@
         adEditorNameHint.classList.toggle("hidden", !locked);
         if (locked) {
           adEditorProductLinesWrap.classList.add("hidden");
+          adEditorTypeWrap.classList.add("hidden");
           adEditorProductLinesReadonly.classList.remove("hidden");
           adEditorProductLinesReadonlyValue.textContent = "eMenu";
         } else {
           adEditorProductLinesWrap.classList.remove("hidden");
+          adEditorTypeWrap.classList.remove("hidden");
           adEditorProductLinesReadonly.classList.add("hidden");
           var selected = item ? normalizeProductLines(item.productLines) : ["eMenu"];
           renderProductLineCheckboxes(selected);
+          renderTypeRadios(item ? item.type : MarketingAdsStore.AD_TYPE_POPUP);
         }
         modal.classList.remove("hidden");
         modal.classList.add("flex");
@@ -271,9 +299,12 @@
           return;
         }
 
+        var adType = readSelectedAdType();
+
         if (idx >= 0) {
           items[idx] = Object.assign({}, items[idx], {
             name: name,
+            type: adType,
             productLines: productLines,
             updatedAt: MarketingAdsStore.formatNow(),
           });
@@ -281,7 +312,7 @@
           items.push({
             id: newId(),
             name: name,
-            type: "弹框广告",
+            type: adType,
             status: "待上架",
             updatedAt: MarketingAdsStore.formatNow(),
             productLines: productLines,
@@ -311,6 +342,7 @@
             var spec = locked ? MarketingAdsStore.getSystemAdSpec(item.id) : null;
             var isMixedMedia = spec && MarketingAdsStore.isMixedMediaKind(spec.kind);
             var isHomeCover = spec && MarketingAdsStore.isHomeCoverKind(spec.kind);
+            var isAnnouncement = spec && MarketingAdsStore.isAnnouncementKind(spec.kind);
             var mediaCount =
               isMixedMedia && item.mediaItems ? item.mediaItems.length : 0;
             var cover = isHomeCover ? MarketingAdsStore.normalizeHomeCover(item.homeCover) : null;
@@ -321,7 +353,11 @@
                 ? '<span class="ml-1 text-xs text-emerald-600">· 已上传海报</span>'
                 : spec && spec.kind === "order-popup"
                   ? '<span class="ml-1 text-xs text-gray-400">· 未上传海报</span>'
-                  : isMixedMedia && mediaCount > 0
+                  : isAnnouncement && MarketingAdsStore.hasAnnouncementContent(item.announcementContent)
+                    ? '<span class="ml-1 text-xs text-emerald-600">· 已配置公告</span>'
+                    : isAnnouncement
+                      ? '<span class="ml-1 text-xs text-gray-400">· 未配置公告</span>'
+                      : isMixedMedia && mediaCount > 0
                     ? '<span class="ml-1 text-xs text-emerald-600">· 已上传 ' + mediaCount + " 个素材</span>"
                     : isMixedMedia
                       ? '<span class="ml-1 text-xs text-gray-400">· 未上传素材</span>'

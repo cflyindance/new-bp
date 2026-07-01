@@ -12,11 +12,39 @@ import {
 } from "./module-settings-catalog";
 import { fohSeqAppliesToLine } from "./foh-settings-line-scope";
 import type { FohLineNavId } from "./foh-settings-line-scope";
+import { FOH_SETTINGS_PATH } from "./foh-settings-by-line-ui";
+import {
+  fohPresetGroupKeyCandidates,
+  fohPresetGroupKeyCandidatesForGroup,
+  normalizeFohCatalogItemsForGrouping,
+} from "./foh-settings-group-keys";
+import {
+  isPrintSettingsPath,
+  normalizePrintCatalogItemsForGrouping,
+  printPresetGroupKeyCandidates,
+  printPresetGroupKeyCandidatesForGroup,
+} from "./print-settings-group-keys";
+import {
+  isFinanceSettingsPath,
+  financePresetGroupKeyCandidates,
+  financePresetGroupKeyCandidatesForGroup,
+  normalizeFinanceCatalogItemsForGrouping,
+} from "./finance-settings-group-keys";
+import {
+  isOrderSettingsPath,
+  orderPresetGroupKeyCandidates,
+  orderPresetGroupKeyCandidatesForGroup,
+  normalizeOrderCatalogItemsForGrouping,
+} from "./order-settings-group-keys";
 import { readPlatformPresetContext } from "./platform-preset-context";
 import { getRuntimePresetSelection } from "./platform-preset-runtime-cache";
 
 function isSettingsPresetFilterActive(): boolean {
   return readPlatformPresetContext() != null;
+}
+
+function isFohSettingsPath(settingsPath: string): boolean {
+  return settingsPath === FOH_SETTINGS_PATH || settingsPath.startsWith(`${FOH_SETTINGS_PATH}/`);
 }
 
 export interface SettingsFeatureRef {
@@ -54,16 +82,24 @@ export function l4PresetKey(moduleId: string, featureId: string, groupKey: strin
   return `${moduleId}:${featureId}:${groupKey}:s${seq}`;
 }
 
-export function isPresetL3Enabled(moduleId: string, featureId: string, groupKey: string): boolean {
+function l2PresetKey(moduleId: string, featureId: string): string {
+  return `${moduleId}:${featureId}`;
+}
+
+function isPresetL3EnabledWithKeys(
+  moduleId: string,
+  featureId: string,
+  groupKeys: string[],
+): boolean {
   const selection = getActiveSelection();
   if (!selection) return true;
   if (!selection[moduleId]?.enabled) return false;
   if (!selection[l2PresetKey(moduleId, featureId)]?.enabled) return false;
-  return selection[l3PresetKey(moduleId, featureId, groupKey)]?.enabled === true;
+  return groupKeys.some((groupKey) => selection[l3PresetKey(moduleId, featureId, groupKey)]?.enabled === true);
 }
 
-function l2PresetKey(moduleId: string, featureId: string): string {
-  return `${moduleId}:${featureId}`;
+export function isPresetL3Enabled(moduleId: string, featureId: string, groupKey: string): boolean {
+  return isPresetL3EnabledWithKeys(moduleId, featureId, [groupKey]);
 }
 
 export function isPresetL4Visible(
@@ -78,6 +114,17 @@ export function isPresetL4Visible(
   return selection[key]?.enabled === true;
 }
 
+function isPresetL4VisibleWithKeys(
+  moduleId: string,
+  featureId: string,
+  groupKeys: string[],
+  seq: number,
+): boolean {
+  const selection = getActiveSelection();
+  if (!selection) return true;
+  return groupKeys.some((groupKey) => isPresetL4Visible(moduleId, featureId, groupKey, seq));
+}
+
 export function filterCatalogItemForPreset(
   settingsPath: string,
   item: ModuleSettingCatalogItem,
@@ -87,8 +134,19 @@ export function filterCatalogItemForPreset(
   const feat = resolveSettingsFeature(settingsPath);
   if (!feat) return true;
   if (lineId && !fohSeqAppliesToLine(item.seq, lineId)) return false;
-  if (!isPresetL3Enabled(feat.moduleId, feat.featureId, item.groupKey)) return false;
-  return isPresetL4Visible(feat.moduleId, feat.featureId, item.groupKey, item.seq);
+
+  const groupKeys = isFohSettingsPath(settingsPath)
+    ? fohPresetGroupKeyCandidates(item)
+    : isPrintSettingsPath(settingsPath)
+      ? printPresetGroupKeyCandidates(item)
+      : isFinanceSettingsPath(settingsPath)
+        ? financePresetGroupKeyCandidates(item)
+        : isOrderSettingsPath(settingsPath)
+          ? orderPresetGroupKeyCandidates(item)
+          : [item.groupKey];
+
+  if (!isPresetL3EnabledWithKeys(feat.moduleId, feat.featureId, groupKeys)) return false;
+  return isPresetL4VisibleWithKeys(feat.moduleId, feat.featureId, groupKeys, item.seq);
 }
 
 export function filterModuleSettingsGroupsForPreset(
@@ -101,7 +159,18 @@ export function filterModuleSettingsGroupsForPreset(
   if (!feat) return groups;
 
   return groups
-    .filter((g) => isPresetL3Enabled(feat.moduleId, feat.featureId, g.groupKey))
+    .filter((g) => {
+      const groupKeys = isFohSettingsPath(settingsPath)
+        ? fohPresetGroupKeyCandidatesForGroup(g.groupKey, g.items)
+        : isPrintSettingsPath(settingsPath)
+          ? printPresetGroupKeyCandidatesForGroup(g.groupKey, g.items)
+          : isFinanceSettingsPath(settingsPath)
+            ? financePresetGroupKeyCandidatesForGroup(g.groupKey, g.items)
+            : isOrderSettingsPath(settingsPath)
+              ? orderPresetGroupKeyCandidatesForGroup(g.groupKey, g.items)
+              : [g.groupKey];
+      return isPresetL3EnabledWithKeys(feat.moduleId, feat.featureId, groupKeys);
+    })
     .map((g) => ({
       ...g,
       items: g.items.filter((item) => filterCatalogItemForPreset(settingsPath, item, lineId)),
@@ -127,20 +196,67 @@ export function isModuleSettingsPathAllowedByPreset(path: string, catalog: Modul
     : "";
   if (!slug) return true;
 
-  const groups = groupCatalogItemsByCategory(catalog.items, catalog.groupOrder);
-  const group = groups.find(
-    (g) => slugifyModuleSettingsGroupKey(g.groupKey) === slugifyModuleSettingsGroupKey(decodeURIComponent(slug)),
-  );
-  if (group && !isPresetL3Enabled(feat.moduleId, feat.featureId, group.groupKey)) {
+  const items =
+    catalog.settingsPath === FOH_SETTINGS_PATH
+      ? normalizeFohCatalogItemsForGrouping(catalog.items)
+      : isPrintSettingsPath(catalog.settingsPath)
+        ? normalizePrintCatalogItemsForGrouping(catalog.items)
+        : isFinanceSettingsPath(catalog.settingsPath)
+          ? normalizeFinanceCatalogItemsForGrouping(catalog.items)
+          : isOrderSettingsPath(catalog.settingsPath)
+            ? normalizeOrderCatalogItemsForGrouping(catalog.items)
+            : catalog.items;
+  const groups = groupCatalogItemsByCategory(items, catalog.groupOrder);
+  const decodedSlug = decodeURIComponent(slug);
+  const group = groups.find((g) => {
+    const slugKeys = isFohSettingsPath(catalog.settingsPath)
+      ? fohPresetGroupKeyCandidatesForGroup(g.groupKey, g.items)
+      : isPrintSettingsPath(catalog.settingsPath)
+        ? printPresetGroupKeyCandidatesForGroup(g.groupKey, g.items)
+        : isFinanceSettingsPath(catalog.settingsPath)
+          ? financePresetGroupKeyCandidatesForGroup(g.groupKey, g.items)
+          : isOrderSettingsPath(catalog.settingsPath)
+            ? orderPresetGroupKeyCandidatesForGroup(g.groupKey, g.items)
+            : [g.groupKey];
+    return slugKeys.some(
+      (key) => slugifyModuleSettingsGroupKey(key) === slugifyModuleSettingsGroupKey(decodedSlug),
+    );
+  });
+  if (
+    group &&
+    !isPresetL3EnabledWithKeys(
+      feat.moduleId,
+      feat.featureId,
+      isFohSettingsPath(catalog.settingsPath)
+        ? fohPresetGroupKeyCandidatesForGroup(group.groupKey, group.items)
+        : isPrintSettingsPath(catalog.settingsPath)
+          ? printPresetGroupKeyCandidatesForGroup(group.groupKey, group.items)
+          : isFinanceSettingsPath(catalog.settingsPath)
+            ? financePresetGroupKeyCandidatesForGroup(group.groupKey, group.items)
+            : isOrderSettingsPath(catalog.settingsPath)
+              ? orderPresetGroupKeyCandidatesForGroup(group.groupKey, group.items)
+              : [group.groupKey],
+    )
+  ) {
     return false;
   }
   return true;
 }
 
 export function getFirstAllowedModuleSettingsPath(catalog: ModuleSettingCatalogHub): string {
+  const items =
+    catalog.settingsPath === FOH_SETTINGS_PATH
+      ? normalizeFohCatalogItemsForGrouping(catalog.items)
+      : isPrintSettingsPath(catalog.settingsPath)
+        ? normalizePrintCatalogItemsForGrouping(catalog.items)
+        : isFinanceSettingsPath(catalog.settingsPath)
+          ? normalizeFinanceCatalogItemsForGrouping(catalog.items)
+          : isOrderSettingsPath(catalog.settingsPath)
+            ? normalizeOrderCatalogItemsForGrouping(catalog.items)
+            : catalog.items;
   const groups = filterModuleSettingsGroupsForPreset(
     catalog.settingsPath,
-    groupCatalogItemsByCategory(catalog.items, catalog.groupOrder),
+    groupCatalogItemsByCategory(items, catalog.groupOrder),
   );
   const first = groups[0];
   if (!first) return catalog.settingsPath;
