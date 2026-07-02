@@ -46,12 +46,15 @@ import {
   type MerchantLicenseStatus,
   type MerchantOrgType,
   type EnterpriseTenant,
+  type EnterpriseStoreListFilter,
+  type EnterpriseStoreListRow,
 } from "./enterprise-merchant-types";
 import {
   DEFAULT_ENTERPRISE_ID,
   DEMO_ENTERPRISES,
   readActiveEnterpriseId,
 } from "./enterprise-merchant-enterprise-context";
+import { invalidateMPlatformStoreScopeCache } from "../permissions/m-platform-store-scope";
 
 function notifyChainBrandOrgSync(groupId: string): void {
   if (typeof window === "undefined") return;
@@ -1408,6 +1411,7 @@ function writeSnapshot(snapshot: EnterpriseMerchantSnapshot): void {
   } catch {
     /* ignore */
   }
+  invalidateMPlatformStoreScopeCache();
 }
 
 function appendChangelog(
@@ -1613,6 +1617,73 @@ export function getMerchantChangelog(merchantId?: string): MerchantChangeLogEntr
 
 export function countStoresForMerchant(merchantId: string): number {
   return getMerchantStores(merchantId).length;
+}
+
+export function getEnterpriseStoreList(filter: EnterpriseStoreListFilter = {}): EnterpriseStoreListRow[] {
+  const snap = readSnapshot();
+  const all = filter.allEnterprises === true;
+  const eid = activeEnterpriseId();
+  const enterpriseNameById = new Map(snap.enterprises.map((e) => [e.enterpriseId, e.name]));
+  const groupNameById = new Map(snap.groups.map((g) => [g.groupId, g.name]));
+  const merchants = snap.merchants.filter((m) => {
+    if (!all && m.enterpriseId !== eid) return false;
+    if (filter.groupId && m.groupId !== filter.groupId) return false;
+    if (filter.merchantId && m.merchantId !== filter.merchantId) return false;
+    return true;
+  });
+  const regionNameById = new Map(
+    snap.regions.map((r) => [`${r.merchantId}:${r.regionId}`, r.name] as const),
+  );
+  const merchantNameById = new Map(snap.merchants.map((m) => [m.merchantId, m.name] as const));
+  const rows: EnterpriseStoreListRow[] = [];
+
+  for (const merchant of merchants) {
+    for (const store of getMerchantStores(merchant.merchantId)) {
+      if (filter.status && store.status !== filter.status) continue;
+      if (filter.query) {
+        const q = filter.query.trim().toLowerCase();
+        const regionName = regionNameById.get(`${merchant.merchantId}:${store.regionId}`);
+        const linkedName = merchantNameById.get(store.linkedMerchantId);
+        const hay = [
+          store.name,
+          store.code,
+          store.storeId,
+          store.address,
+          merchant.name,
+          merchant.bid,
+          groupNameById.get(merchant.groupId),
+          regionName,
+          linkedName,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        if (!hay.includes(q)) continue;
+      }
+      rows.push({
+        store,
+        enterpriseId: merchant.enterpriseId,
+        enterpriseName: enterpriseNameById.get(merchant.enterpriseId) ?? merchant.enterpriseId,
+        groupId: merchant.groupId,
+        groupName: groupNameById.get(merchant.groupId) ?? merchant.groupId,
+        merchantId: merchant.merchantId,
+        merchantName: merchant.name,
+        merchantBid: merchant.bid,
+        regionName: regionNameById.get(`${merchant.merchantId}:${store.regionId}`),
+        linkedMerchantName:
+          store.linkedMerchantId && store.linkedMerchantId !== merchant.merchantId
+            ? merchantNameById.get(store.linkedMerchantId)
+            : undefined,
+      });
+    }
+  }
+
+  return rows.sort(
+    (a, b) =>
+      a.groupName.localeCompare(b.groupName, "zh-CN") ||
+      a.merchantName.localeCompare(b.merchantName, "zh-CN") ||
+      a.store.name.localeCompare(b.store.name, "zh-CN"),
+  );
 }
 
 export function getMerchantOverviewStats(): {
@@ -2633,6 +2704,7 @@ export const MERCHANT_RESERVED_PATH_SEGMENTS = new Set([
   "groups",
   "new",
   "org-tree",
+  "stores",
   "change-log",
   "requests",
   "reports",

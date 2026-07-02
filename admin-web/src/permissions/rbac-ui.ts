@@ -1,7 +1,6 @@
 import { buildPlatformPresetIndex } from "../config/platform-preset-tree";
 import { refreshSessionIfCurrentEmployee, refreshUserSessionContext } from "../auth/session-permissions";
 import {
-  DEMO_SCOPE_STORES,
   getLayoutContextStoreId,
   isStoreLayoutPreset,
 } from "../auth/session-scope";
@@ -12,8 +11,10 @@ import {
 } from "../config/permission-four-column-ui";
 import {
   formatStaffStoreAccessLabel,
+  getStaffStorePickerOptions,
   type StaffStoreAccess,
 } from "./store-access";
+import { findDemoScopeStoreLabel, migrateLegacyStoreId } from "./m-platform-store-scope";
 import type { RbacRole } from "./rbac-types";
 import {
   MERCHANT_RBAC_SCOPE,
@@ -234,8 +235,7 @@ function renderStaffStoreAccessCell(
 
   if (!scope.isEnterpriseStaff && isStoreLayoutPreset()) {
     const layoutStoreId = getLayoutContextStoreId();
-    const layoutStoreLabel =
-      DEMO_SCOPE_STORES.find((o) => o.value === layoutStoreId)?.labelZh ?? layoutStoreId;
+    const layoutStoreLabel = findDemoScopeStoreLabel(layoutStoreId);
     return `<div class="space-y-1">
       <p class="text-sm font-medium text-card-foreground">${escapeHtml(layoutStoreLabel)}</p>
       <p class="text-xs text-muted-foreground">门店版仅单店经营，默认可访问当前模拟门店</p>
@@ -244,7 +244,7 @@ function renderStaffStoreAccessCell(
     </div>`;
   }
 
-  const demoStores = DEMO_SCOPE_STORES.filter((o) => o.value);
+  const demoStores = getStaffStorePickerOptions();
   return `<div class="space-y-2">
     <select class="rbac-staff-store-mode h-9 rounded-md border border-border bg-background px-2 text-sm" data-employee="${escapeHtml(s.employeeId)}">
       <option value="all" ${s.storeAccess.mode === "all" ? "selected" : ""}>${allLabel}</option>
@@ -253,7 +253,7 @@ function renderStaffStoreAccessCell(
     <div class="rbac-staff-store-picks flex flex-wrap gap-2 ${s.storeAccess.mode === "all" ? "hidden" : ""}" data-employee="${escapeHtml(s.employeeId)}">
       ${demoStores
         .map((o) => {
-          const checked = s.storeAccess.ids.includes(o.value);
+          const checked = s.storeAccess.ids.map(migrateLegacyStoreId).includes(o.value);
           return `<label class="inline-flex items-center gap-1 text-xs">
             <input type="checkbox" class="rbac-staff-store-cb" data-employee="${escapeHtml(s.employeeId)}" value="${escapeHtml(o.value)}" ${checked ? "checked" : ""} />
             ${escapeHtml(o.labelZh)}
@@ -270,7 +270,7 @@ function renderStaffPage(scope: RbacScopeConfig): string {
   const staffAccountsHref = rbacHref(scope, "/staff-accounts");
   const storeLayoutHint =
     !scope.isEnterpriseStaff && isStoreLayoutPreset()
-      ? `<p class="rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">当前为<strong class="text-card-foreground">门店版</strong>模拟：全员默认可访问门店「${escapeHtml(DEMO_SCOPE_STORES.find((o) => o.value === getLayoutContextStoreId())?.labelZh ?? getLayoutContextStoreId())}」。切换顶栏「连锁版」后可配置多店数据范围。</p>`
+      ? `<p class="rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">当前为<strong class="text-card-foreground">门店版</strong>模拟：全员默认可访问门店「${escapeHtml(findDemoScopeStoreLabel(getLayoutContextStoreId()))}」。切换顶栏「连锁版」后可配置多店数据范围。</p>`
       : "";
   return `
     <div class="space-y-4" data-rbac-scope="${escapeHtml(scope.scope)}">

@@ -1,8 +1,19 @@
 /**
- * 员工数据范围（门店访问）校验与演示门店元数据。
+ * 员工数据范围（门店访问）校验与 M 平台门店元数据。
  * 功能权限（RBAC）与数据范围（Scope）分离：切门店只改 scope，不重算权限。
  */
+import type { ChainDataPerspective } from "../auth/merchant-scope-context";
 import type { ScopeFilterState, ScopeOption } from "../auth/session-scope";
+import {
+  DEFAULT_DEMO_BRAND_ID,
+  DEFAULT_DEMO_STORE_ID,
+  buildDemoScopeStoreOptions,
+  getMPlatformStoreScopeMeta,
+  listMPlatformStoreScopeEntries,
+  migrateLegacyBrandId,
+  migrateLegacyRegionId,
+  migrateLegacyStoreId,
+} from "./m-platform-store-scope";
 
 export type StaffStoreAccessMode = "all" | "brands" | "regions" | "stores";
 
@@ -11,15 +22,8 @@ export interface StaffStoreAccess {
   ids: string[];
 }
 
-/** 演示门店 → 品牌 / 区域映射 */
-export const DEMO_STORE_SCOPE_META: Record<string, { brand: string; region: string }> = {
-  "flagship-nyc": { brand: "menusifu-na", region: "us-east" },
-  "branch-la": { brand: "menusifu-na", region: "us-west" },
-  "shanghai-ljz": { brand: "miju", region: "east-cn" },
-  "guangzhou-tzh": { brand: "miju", region: "south-cn" },
-};
-
-const ALL_DEMO_STORE_IDS = Object.keys(DEMO_STORE_SCOPE_META);
+/** @deprecated 使用 getMPlatformStoreScopeMeta；保留空对象避免旧引用报错 */
+export const DEMO_STORE_SCOPE_META: Record<string, { brand: string; region: string }> = {};
 
 const SCOPE_STORE_SESSION_KEY = "header-scope-filter-store";
 const SIDEBAR_LAYOUT_PRESET_KEY = "sidebar-nav-layout-preset-v1";
@@ -34,25 +38,43 @@ function readLayoutPresetFromStorage(): "store" | "chain" {
 
 function readScopeStoreFromSession(): string {
   try {
-    return sessionStorage.getItem(SCOPE_STORE_SESSION_KEY) || "shanghai-ljz";
+    const raw = sessionStorage.getItem(SCOPE_STORE_SESSION_KEY);
+    return migrateLegacyStoreId(raw || DEFAULT_DEMO_STORE_ID);
   } catch {
-    return "shanghai-ljz";
+    return DEFAULT_DEMO_STORE_ID;
   }
+}
+
+function allMPlatformStoreIds(): string[] {
+  return listMPlatformStoreScopeEntries().map((e) => e.storeId);
+}
+
+function migrateAccessIds(access: StaffStoreAccess): StaffStoreAccess {
+  if (access.mode === "all") return { mode: "all", ids: [] };
+  const migrate = (id: string): string => {
+    if (access.mode === "stores") return migrateLegacyStoreId(id);
+    if (access.mode === "brands") return migrateLegacyBrandId(id);
+    if (access.mode === "regions") return migrateLegacyRegionId(id);
+    return id;
+  };
+  return { mode: access.mode, ids: access.ids.map(migrate).filter(Boolean) };
 }
 
 export function inferDefaultStaffStoreAccess(employeeId: string): StaffStoreAccess {
   if (readLayoutPresetFromStorage() === "store") {
     return { mode: "stores", ids: [readScopeStoreFromSession()] };
   }
-  if (employeeId === "hq001") return { mode: "all", ids: [] };
-  return { mode: "stores", ids: ["shanghai-ljz"] };
+  if (employeeId === "hq001" || employeeId === "zj-hq001") {
+    return { mode: "all", ids: [] };
+  }
+  return { mode: "stores", ids: [DEFAULT_DEMO_STORE_ID] };
 }
 
 export function normalizeStaffStoreAccess(
   access?: Partial<StaffStoreAccess> | null,
   fallback?: StaffStoreAccess,
 ): StaffStoreAccess {
-  const fb = fallback ?? { mode: "stores", ids: ["shanghai-ljz"] };
+  const fb = migrateAccessIds(fallback ?? { mode: "stores", ids: [DEFAULT_DEMO_STORE_ID] });
   if (!access) return fb;
   const mode = access.mode;
   if (mode !== "all" && mode !== "brands" && mode !== "regions" && mode !== "stores") {
@@ -61,45 +83,62 @@ export function normalizeStaffStoreAccess(
   if (mode === "all") return { mode: "all", ids: [] };
   const ids = Array.isArray(access.ids) ? access.ids.filter(Boolean) : [];
   if (ids.length === 0) return fb;
-  return { mode, ids };
+  return migrateAccessIds({ mode, ids });
 }
 
 function storeMeta(storeId: string): { brand: string; region: string } | undefined {
-  return DEMO_STORE_SCOPE_META[storeId];
+  const meta = getMPlatformStoreScopeMeta(storeId);
+  if (!meta) return undefined;
+  return { brand: meta.brand, region: meta.region };
 }
 
-/** 当前 access 下允许访问的演示门店 ID 列表 */
+/** 当前 access 下允许访问的门店 ID 列表（M 平台 storeId / BID） */
 export function getAllowedStoreIds(access: StaffStoreAccess): string[] {
-  if (access.mode === "all") return [...ALL_DEMO_STORE_IDS];
+  const allIds = allMPlatformStoreIds();
+  if (access.mode === "all") return allIds;
   if (access.mode === "stores") {
-    return access.ids.filter((id) => ALL_DEMO_STORE_IDS.includes(id));
+    return access.ids.filter((id) => allIds.includes(migrateLegacyStoreId(id)));
   }
   if (access.mode === "brands") {
-    return ALL_DEMO_STORE_IDS.filter((id) => access.ids.includes(storeMeta(id)?.brand ?? ""));
+    const brandIds = new Set(access.ids.map(migrateLegacyBrandId));
+    return allIds.filter((id) => {
+      const meta = storeMeta(id);
+      return meta ? brandIds.has(meta.brand) : false;
+    });
   }
-  return ALL_DEMO_STORE_IDS.filter((id) => access.ids.includes(storeMeta(id)?.region ?? ""));
+  const regionIds = new Set(access.ids.map(migrateLegacyRegionId));
+  return allIds.filter((id) => {
+    const meta = storeMeta(id);
+    return meta ? regionIds.has(meta.region) : false;
+  });
 }
 
 export function isStoreIdAllowed(access: StaffStoreAccess, storeId: string): boolean {
   if (!storeId) return access.mode === "all";
+  const normalized = migrateLegacyStoreId(storeId);
   if (access.mode === "all") return true;
-  if (access.mode === "stores") return access.ids.includes(storeId);
-  const meta = storeMeta(storeId);
+  if (access.mode === "stores") return access.ids.map(migrateLegacyStoreId).includes(normalized);
+  const meta = storeMeta(normalized);
   if (!meta) return false;
-  if (access.mode === "brands") return access.ids.includes(meta.brand);
-  return access.ids.includes(meta.region);
+  if (access.mode === "brands") {
+    return access.ids.map(migrateLegacyBrandId).includes(meta.brand);
+  }
+  return access.ids.map(migrateLegacyRegionId).includes(meta.region);
 }
 
 export function isScopeFilterAllowed(access: StaffStoreAccess, scope: ScopeFilterState): boolean {
   if (access.mode === "all") return true;
-  if (scope.store) return isStoreIdAllowed(access, scope.store);
-  if (scope.region) {
-    if (access.mode === "regions" && access.ids.includes(scope.region)) return true;
-    return getAllowedStoreIds(access).some((id) => storeMeta(id)?.region === scope.region);
+  const brand = scope.brand ? migrateLegacyBrandId(scope.brand) : "";
+  const region = scope.region ? migrateLegacyRegionId(scope.region) : "";
+  const store = scope.store ? migrateLegacyStoreId(scope.store) : "";
+  if (store) return isStoreIdAllowed(access, store);
+  if (region) {
+    if (access.mode === "regions" && access.ids.map(migrateLegacyRegionId).includes(region)) return true;
+    return getAllowedStoreIds(access).some((id) => storeMeta(id)?.region === region);
   }
-  if (scope.brand) {
-    if (access.mode === "brands" && access.ids.includes(scope.brand)) return true;
-    return getAllowedStoreIds(access).some((id) => storeMeta(id)?.brand === scope.brand);
+  if (brand) {
+    if (access.mode === "brands" && access.ids.map(migrateLegacyBrandId).includes(brand)) return true;
+    return getAllowedStoreIds(access).some((id) => storeMeta(id)?.brand === brand);
   }
   return getAllowedStoreIds(access).length > 0;
 }
@@ -109,21 +148,26 @@ export function clampScopeToStoreAccess(
   access: StaffStoreAccess,
   scope: ScopeFilterState,
 ): ScopeFilterState {
-  if (isScopeFilterAllowed(access, scope)) return scope;
+  const normalizedScope: ScopeFilterState = {
+    brand: scope.brand ? migrateLegacyBrandId(scope.brand) : "",
+    region: scope.region ? migrateLegacyRegionId(scope.region) : "",
+    store: scope.store ? migrateLegacyStoreId(scope.store) : "",
+  };
+  if (isScopeFilterAllowed(access, normalizedScope)) return normalizedScope;
 
   const allowed = getAllowedStoreIds(access);
   if (access.mode === "all") {
     return { brand: "", region: "", store: "" };
   }
   if (allowed.length === 1) {
-    const sid = allowed[0];
+    const sid = allowed[0]!;
     const meta = storeMeta(sid);
     return { brand: meta?.brand ?? "", region: meta?.region ?? "", store: sid };
   }
   if (allowed.length > 1) {
     return { brand: "", region: "", store: "" };
   }
-  const sid = allowed[0] ?? "shanghai-ljz";
+  const sid = allowed[0] ?? DEFAULT_DEMO_STORE_ID;
   const meta = storeMeta(sid);
   return { brand: meta?.brand ?? "", region: meta?.region ?? "", store: sid };
 }
@@ -131,7 +175,10 @@ export function clampScopeToStoreAccess(
 export function formatStaffStoreAccessLabel(access: StaffStoreAccess): string {
   if (access.mode === "all") return "全部门店";
   if (access.mode === "stores") {
-    if (access.ids.length === 1) return `指定门店 · ${access.ids[0]}`;
+    if (access.ids.length === 1) {
+      const label = getMPlatformStoreScopeMeta(access.ids[0]!)?.name ?? access.ids[0];
+      return `指定门店 · ${label}`;
+    }
     return `指定门店 · ${access.ids.length} 家`;
   }
   if (access.mode === "brands") return `指定品牌 · ${access.ids.length} 个`;
@@ -154,8 +201,8 @@ export function filterScopeOptionsForAccess(
   for (const sid of allowedStoreIds) {
     const meta = storeMeta(sid);
     if (meta) {
-      allowedBrands.add(meta.brand);
-      allowedRegions.add(meta.region);
+      if (meta.brand) allowedBrands.add(meta.brand);
+      if (meta.region) allowedRegions.add(meta.region);
     }
   }
 
@@ -173,7 +220,33 @@ export function filterScopeOptionsForAccess(
     brands: filterWithEmpty(brands, allowedBrands),
     regions: filterWithEmpty(regions, allowedRegions),
     stores: singleStoreLocked
-      ? stores.filter((o) => o.value && allowedStoreIds.has(o.value))
+      ? stores.filter((o) => o.value && allowedStoreIds.has(migrateLegacyStoreId(o.value)))
       : filterWithEmpty(stores, allowedStoreIds),
   };
+}
+
+const PERSPECTIVE_RANK: Record<ChainDataPerspective, number> = {
+  store: 0,
+  brand: 1,
+  "group-hq": 2,
+};
+
+/** 员工 storeAccess 允许的最高数据视角 */
+export function maxChainDataPerspectiveForAccess(access: StaffStoreAccess): ChainDataPerspective {
+  if (access.mode === "all") return "group-hq";
+  if (access.mode === "brands" || access.mode === "regions") return "brand";
+  return "store";
+}
+
+export function clampChainDataPerspectiveForAccess(
+  access: StaffStoreAccess,
+  perspective: ChainDataPerspective,
+): ChainDataPerspective {
+  const max = maxChainDataPerspectiveForAccess(access);
+  return PERSPECTIVE_RANK[perspective] <= PERSPECTIVE_RANK[max] ? perspective : max;
+}
+
+/** RBAC 员工授权页 · 门店多选列表 */
+export function getStaffStorePickerOptions(): ScopeOption[] {
+  return buildDemoScopeStoreOptions().filter((o) => o.value);
 }

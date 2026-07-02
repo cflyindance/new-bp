@@ -1,7 +1,8 @@
 /**
  * M 平台 · 企业级硬件资产中心 · 页面 UI
  */
-import { DEMO_SCOPE_BRANDS, DEMO_SCOPE_REGIONS, DEMO_SCOPE_STORES } from "../auth/session-scope";
+import { getDemoScopeStores } from "../auth/session-scope";
+import { listMPlatformStoreScopeEntries } from "../permissions/m-platform-store-scope";
 import { getMerchantsForSelect } from "./enterprise-merchant-store";
 import {
   ENTERPRISE_HARDWARE_DEVICES_PATH,
@@ -125,17 +126,25 @@ function renderFilterBar(
       ${select(
         "brandId",
         "品牌",
-        DEMO_SCOPE_BRANDS.map((b) => ({ value: b.value, label: b.labelZh })),
+        [
+          { value: "", label: "全部品牌" },
+          ...getMerchantsForSelect().map((m) => ({ value: m.merchantId, label: m.name })),
+        ],
       )}
       ${select(
         "regionId",
         "区域",
-        DEMO_SCOPE_REGIONS.map((r) => ({ value: r.value, label: r.labelZh })),
+        [
+          { value: "", label: "全部区域" },
+          ...Array.from(
+            new Set(listMPlatformStoreScopeEntries().map((e) => e.regionName).filter(Boolean)),
+          ).map((name) => ({ value: name, label: name })),
+        ],
       )}
       ${select(
         "storeId",
         "门店",
-        [{ value: "", label: "全部门店" }, ...DEMO_SCOPE_STORES.filter((s) => s.value).map((s) => ({ value: s.value, label: s.labelZh }))],
+        getDemoScopeStores().map((s) => ({ value: s.value, label: s.labelZh })),
       )}
       ${select(
         "status",

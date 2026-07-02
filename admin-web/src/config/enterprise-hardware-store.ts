@@ -1,12 +1,11 @@
 /**
  * M 平台 · 企业级硬件资产 · 演示数据与查询
  */
+import { getEnterpriseMerchantSnapshot, getMerchantStoreIdSet } from "./enterprise-merchant-store";
 import {
-  DEMO_SCOPE_BRANDS,
-  DEMO_SCOPE_REGIONS,
-  DEMO_SCOPE_STORES,
-} from "../auth/session-scope";
-import { getMerchantStoreIdSet } from "./enterprise-merchant-store";
+  getMPlatformStoreScopeMeta,
+  migrateLegacyStoreId,
+} from "../permissions/m-platform-store-scope";
 import { DEVICE_MANAGEMENT_HARDWARE_SUBNAV } from "./navigation";
 import type {
   EnterpriseDevice,
@@ -33,26 +32,27 @@ function storeMeta(
   storeId: string,
   storeStatus: EnterpriseHardwareStore["storeStatus"] = "open",
 ): Omit<EnterpriseHardwareStore, "storeId" | "storeName"> & { storeName: string } {
-  const map: Record<
-    string,
-    { brandId: string; regionId: string; storeStatus: EnterpriseHardwareStore["storeStatus"] }
-  > = {
-    "B00000007": { brandId: "miju", regionId: "east-cn", storeStatus: "open" },
-    "B00000008": { brandId: "miju", regionId: "south-cn", storeStatus: "open" },
-    "B00000009": { brandId: "menusifu-na", regionId: "us-east", storeStatus: "open" },
-    "branch-la": { brandId: "menusifu-na", regionId: "us-west", storeStatus: "preparing" },
-  };
-  const meta = map[storeId] ?? { brandId: "miju", regionId: "east-cn", storeStatus };
-  const storeOpt = DEMO_SCOPE_STORES.find((s) => s.value === storeId);
-  const brandOpt = DEMO_SCOPE_BRANDS.find((b) => b.value === meta.brandId);
-  const regionOpt = DEMO_SCOPE_REGIONS.find((r) => r.value === meta.regionId);
+  const normalized = migrateLegacyStoreId(storeId);
+  const mMeta = getMPlatformStoreScopeMeta(normalized);
+  if (mMeta) {
+    const snap = getEnterpriseMerchantSnapshot();
+    const merchant = snap.merchants.find((m) => m.merchantId === mMeta.brand);
+    return {
+      storeName: mMeta.name,
+      brandId: mMeta.brand,
+      brandName: merchant?.name ?? mMeta.brand,
+      regionId: mMeta.region,
+      regionName: mMeta.region,
+      storeStatus,
+    };
+  }
   return {
-    storeName: storeOpt?.labelZh ?? storeId,
-    brandId: meta.brandId,
-    brandName: brandOpt?.labelZh ?? meta.brandId,
-    regionId: meta.regionId,
-    regionName: regionOpt?.labelZh ?? meta.regionId,
-    storeStatus: meta.storeStatus,
+    storeName: normalized,
+    brandId: "",
+    brandName: normalized,
+    regionId: "",
+    regionName: "",
+    storeStatus,
   };
 }
 
@@ -61,7 +61,6 @@ function buildSeedSnapshot(): EnterpriseHardwareSnapshot {
     "B00000007",
     "B00000008",
     "B00000009",
-    "branch-la",
   ].map((storeId) => ({
     storeId,
     ...storeMeta(storeId),

@@ -136,6 +136,32 @@ export const NAV_MODULES: NavModule[] = [
     ],
   },
   {
+    id: "group-store-list",
+    title: "门店列表",
+    titleEn: "Store list",
+    icon: "storeMgmt",
+    path: "/group-stores",
+    subNavPlacement: "sheet",
+    defaultChildPath: "/group-stores/list",
+    children: [
+      { id: "gs-list", title: "门店列表", titleEn: "Store list", path: "/group-stores/list" },
+      { id: "gs-overview", title: "门店概览", titleEn: "Store overview", path: "/group-stores/overview" },
+    ],
+  },
+  {
+    id: "brand-store-list",
+    title: "门店列表",
+    titleEn: "Store list",
+    icon: "storeMgmt",
+    path: "/brand-stores",
+    subNavPlacement: "sheet",
+    defaultChildPath: "/brand-stores/list",
+    children: [
+      { id: "bs-list", title: "门店列表", titleEn: "Store list", path: "/brand-stores/list" },
+      { id: "bs-overview", title: "门店概览", titleEn: "Store overview", path: "/brand-stores/overview" },
+    ],
+  },
+  {
     id: "store-mgmt",
     title: "门店管理",
     titleEn: "Store management",

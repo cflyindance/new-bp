@@ -1,0 +1,696 @@
+  - Clover商家平台-后台结构-英文
+    - Home
+      - Here's an overview of how your business is doing
+      - Sales
+        - Net sales
+        - Paid orders
+        - Average order size
+      - Activity summary
+        - Open orders
+        - Discounts
+        - Refunds
+    - Sales activity
+      - Orders
+        - Orders
+          - Note: This list shows orders created during this time period.
+        - Line Items
+          - Note: This list shows items from orders created during this time period.
+      - Transactions
+        - Payments
+          - Note: This list shows payments created during this time period.
+        - Voids
+          - Note: This list shows voids created during this time period.
+        - Manual Refunds
+          - Note: This list shows manual refunds created during this time period.
+        - Refunds
+          - Note: This list shows refunds created during this time period.
+      - Invoices
+        - Received (YTD)
+        - Received (30 days)
+        - Paid
+        - Total outstanding
+        - Unpaid
+        - Overdue
+        - 列表
+          - Invoices
+          - Reference #
+          - Invoice #
+          - Customer 
+          - Total
+          - Sent date
+          - sort ascending
+          - Due date
+          - sort ascending
+          - Status
+      - Recurring payments
+    - Reports
+      - Sales overview
+      - Sales report
+      - Item sales
+      - Employee sales
+      - Tender&cardtypes
+      - Discounts
+      - Removed items
+      - Order types
+      - Requested reports
+    - Finances
+      - Overview
+        - Here's an overview of how your business is doing
+        - Closeout
+        - Deposits
+      - Closeout
+        - A batch consists of your credit and debit card transactions from a given time period. Funds will be deposited in your account 1-3 business days after you closeout your batch. Your open batch consists of all unprocessed transactions.Learn more about Closeout.
+        - Batch history
+          - Batch
+          - Status
+            - Open
+            - Closed
+          - Transactions
+          - Count
+          - Amount
+          - Details
+      - Deposits
+        - Batch
+          - No deposits made in this time period
+        - Rapid Deposit
+          - Doesn't look like you have Rapid Deposit set up yet.
+      - Statements
+        - Clover Plan & App Statement
+          - View charges related to your Clover service plan, paid apps, additional devices, and active SIM charges.
+          - May 2026infoEstimate for the coming month.
+          - April 2026
+          - March 2026
+          - February 2026
+          - January 2026
+        - Merchant Processing Statement
+          - View your processing fees and adjustments, and any Clover device fees. Learn More
+          - No statements available for this time period.
+      - Taxes
+        - Taxes Report
+          - A table view of taxes and fees collected from your customers. You can also access your 1099-K forms here.
+      - Disputes
+    - Items
+      - Categories
+      - Modifier groups
+      - Printer labels
+      - Revenue classes
+    - Employees
+      - Employees list
+        - Name
+        - Email
+        - ID
+        - Role
+        - Add employee
+          - Personal
+            - Full name*
+            - Nickname
+              - Nickname appears wherever the employee is listed. For example, on receipts.
+            - Hourly rate
+            - Phone number
+            - Email address
+              - Email address is required to give the employee access to the Clover Dashboard.
+            - Role
+              - Roles allow you to control employee permissions. Add new roles or edit existing roles in Employee roles.
+          - Security
+            - Custom ID
+              - Custom IDs allow you to group employees by their location or their function.
+            - Device passcode (6 digits)
+              - If you do not enter a passcode, one will be assigned. Edit passcode requirements in Device passcode.
+              - Passcode cannot include letters or special characters, only numbers.
+    - Customers
+      - Customers list
+        - Name
+        - Email address
+        - Phone number
+        - Add customer
+          - First name
+          - Last name
+          - Business name
+          - Email address 1
+          - Phone number 1
+          - Mailing address 1
+          - Address line 1
+          - Address line 2
+          - Address line 3
+          - City
+          - State / Province
+          - ZIP / Postal code
+          - Country
+          - Birthday
+          - Month
+          - Day
+          - Note
+    - setting
+      - Profile
+        - CHI ZHANG, Admin
+        - +1 201 256 7921 | sansanramen4107@gmail.com
+        - Two-factor authentication is on
+        - Edit your profile
+          - Business owner information
+            - To change ownership of this account for billing or legal purposes, 
+            - contact support.
+            - Full name
+              - Edit
+              - CHI ZHANG
+            - Email address
+              - Edit
+              - This email address is associated with your Clover login credentials for both the dashboard and the Clover Go app. If you change this email, you will be required to log in again. If you're trying to update your customer contact email address, visit Business information instead.
+              - sansanramen4107@gmail.com
+            - Mobile number
+              - Edit
+              - This mobile number is used for two-factor authentication.
+              - (201) 256-7921
+          - Password
+            - Passwords must be renewed every 90 days unless two-factor authentication is turned on.
+            - Edit
+          - Two-factor authentication
+            - SMS phone authentication
+            - Two-factor authentication is On
+            - Turn off
+          - Authentication app
+            - Turn on
+            - Two-factor authentication is Off
+          - Clover Go Authentication
+            - Two-factor authentication is Off
+            - Use the Clover Go app to turn on this authentication method.
+          - Recovery codes
+            - Download
+            - If you don’t have your phone, you can enter a recovery code to securely log in to your Clover account. Select Download to save a set of 10 recovery codes on your device, then store them in a safe location. Enter a unique recovery code each time you log in.
+      - Employees
+        - Employee roles
+        - Employee permissions
+        - Device passcode
+      - About your business
+        - Business information
+          - Customer-facing information
+            - Customer-facing information
+              - This information appears on payment receipts and customer-facing devices. It may or may not be the same as your billing and tax-related business information.
+            - DBA name
+              - Edit
+              - SANSAN RAMEN
+            - Business phone number
+              - Edit
+              - (212) 381-1381
+            - Customer contact email address (optional)
+              - Edit
+              - None
+              - To update the email address tied to your Clover account, update your account owner’s email address.
+            - Business address
+              - Edit
+              - 4107 Cresent St
+              - Long Island City, NY
+              - 11101
+              - US
+            - Website (optional)
+              - Edit
+              - None
+            - Logo
+              - You can also add a custom image for payment receipts and a separate logo for the Clover consumer app.
+              - Edit
+            - Privacy policy
+              - Learn how to stay compliant with California Consumer Privacy Act (CCPA) and include your own privacy policy with Clover’s on your device screen(s) and payment receipts.
+              - Add
+              - None
+          - Billing information
+            - Billing information
+              - Clover uses this information to contact you about invoices and statements. It may or may not be the same as your customer-facing business information.
+            - Business name
+              - SANSAN RAMEN
+            - Business phone number
+              - Edit
+              - (212) 381-1381
+            - Billing address
+              - Edit
+              - Attn: Chi Zhang
+              - 4107 Cresent St
+              - Long Island City, New York
+              - 11101
+              - United States
+            - Locale and currency
+              - Locale
+                - en-US
+              - Currency
+                - USD
+        - Bank information
+        - Rapid Deposit
+        - Merchants
+        - Closeout settings
+          - Closeout is the first step in processing your daily credit and debit card transactions into a deposit. Read Understand closeout settings for more information.
+          - Method and time
+            - Closeout method
+              - Auto-closeout
+              - Call to edit
+              - Your system automatically closes your batch each day.
+            - Closeout time
+              - Edit
+              - Complete all transactions by 9:33 PM EDT
+              - Your system automatically closes your batch between 9:33 PM - 10:23 PM each day.
+        - PCI compliance
+          - Your business is not PCI compliant. Go to Clover Security and complete the required steps in order to avoid non-compliance fees. If you've already done this, you can ignore this message. Compliance status is updated every 7 days.
+          - PCI Compliance
+            - Once a year, you’re required to verify that your business is meeting the security standard set by the top credit card companies, called the Payment Card Industry Data Security Standard (PCI DSS). To learn more about PCI compliance, read our help article.
+          - Details
+            - Go to Clover Security
+            - Go to Clover Security before your verification expires to remain PCI compliant and protect your business and customer data from security breaches.
+            - Expiration date
+              - Not applicable
+            - Compliance status
+              - NON COMPLIANT
+            - Status last updated: April 25, 2026
+      - Billing and statements
+        - Monthly statements
+          - Clover Plan & App Statement
+            - View charges related to your Clover service plan, paid apps, additional devices, and active SIM charges.
+            - April 2026
+              - May 2026infoEstimate for the coming month.
+            - March 2026
+            - February 2026
+            - January 2026
+          - Merchant Processing Statement
+            - View your processing fees and adjustments, and any Clover device fees. Learn More
+            - No statements available for this time period.
+        - Service plan
+          - Information
+            - The bank account associated with your account ending in 8829 will be charged monthly on 11th or the following business day.
+          - Essentials
+            - $29.95
+            - per month
+            - with up to one device.
+            - $11.95 per month for each additional device.*
+            - Highlights:
+              - Order Management
+              - Basic Inventory Management and Reporting
+              - Customer Management
+              - No App Market usage fee
+              - Employee management
+              - Estimates and Invoices
+          - Register
+            - Your plan
+            - $49.95
+            - per month
+            - with one device.
+            - $19.95 per month for each additional device.*
+            - Highlights:
+              - Advanced Inventory Management and Reporting
+              - Customer engagement
+              - Employee management
+              - No App Market usage fee
+          - Retail Growth
+            - $84.95
+            - per month
+            - with one device.
+            - $19.95 per month for each additional device.*
+            - Highlights:
+              - Sales tracking
+              - Advanced Inventory Management and Reporting
+              - Online store
+              - Customer engagement
+              - No App Market usage fee
+              - Advanced employee management
+              - Estimates and Invoices
+          - Services Growth
+            - $84.95
+            - per month
+            - with one device.
+            - $19.95 per month for each additional device.*
+            - Highlights:
+              - Appointment scheduling
+              - Employee management
+              - Branded website
+              - Customer engagement
+              - No App Market usage fee
+              - Advanced employee management
+              - Estimates and Invoices
+          - Restaurant Growth
+            - $89.95
+            - per month
+            - with one device.
+            - $19.95 per month for each additional device.*
+            - Highlights:
+              - Dynamic menu management
+              - Online Ordering and 3rd party delivery integrations
+              - Advanced Inventory Management and Reporting
+              - Table-side ordering and payments
+              - Restaurant-grade hardware (Kiosk, KDS, Flex)
+              - No App Market usage fee
+              - Advanced employee management
+              - Estimates and Invoices
+        - Form 1099-K
+          - Your Form 1099-K reports the sum of your gross reportable sales for the taxable year.  Learn More
+      - Business operations
+        - Notification preferences
+          - Notification preferences
+            - Notifications are sent to the email address and mobile number on your User profile.
+          - Account updates
+            - Password changes and updates to your account information.
+            - Edit
+            - Email: On
+            - Sms: On
+          - Closeout
+            - Batch summary report after each closeout event.
+            - Edit
+            - Email: Off
+          - Disputes
+            - Chargebacks and transaction inquiries, reminders, and dispute decisions.
+            - Edit
+            - Email: On
+          - Items
+            - Updates on low stock items.
+            - Edit
+            - Email: On
+            - Mobile push: On
+        - Online ordering
+          - Partners
+            - Clover Online Ordering
+            - Third-Party Marketplaces
+              - Order with Google
+              - Grubhub
+              - DoorDash
+              - Uber Eats
+          - Settings
+            - Operational information
+              - Food preparation time
+                - Edit
+                - 20 minutes
+              - Scheduled orders
+                - Edit
+                - Customers can place orders
+                - 3 days in advance
+              - Online menus
+                - Edit
+                - Edit your online menus
+              - Online business hours
+                - Edit
+                - Today
+                - Wednesday
+                - 11:00 AM – 8:00 PM
+              - Order printing device
+                - Edit
+                - Flex(3rd Generation)
+        - Clover eCommerce integration
+        - Reporting
+          - Reporting preferences
+            - Reporting hours
+              - Start of day time
+                - Edit
+                - By default, reports will be shown from 12:00 AM to 11:59 PM. View reports.
+                - 12:00 AM
+            - Customize reports
+              - Enable removed items report
+                - On
+                - Edit
+                - This report is for all printed or unprinted items removed by any employee who has access to an order. It increases the security of sales and ensures that you can easily measure employee output.
+              - Show tips payout on Cash report
+                - Enable if you are paying tips out of your cash drawer at the end of your day. This will show amount of tips payout on your Sales Overview and give you an expected deposit amount.
+                - On
+        - Taxes and fees
+          - With the proper taxes and fees set up, each and every transaction will automatically collect the right amounts for your region's requirements.
+          - Taxes & fees may not be used for the purpose of recovering card processing cost, doing so could result in fines or penalties.
+          - Order preferences
+            - Edit
+            - Allow taxes or flat fees to be removed from an order
+            - Off
+          - Tax Rates and fees
+            - Add tax rate or flat fee
+            - Set up the taxes or flat fees you need to charge on your sales. Clover will handle the tax calculations for you.
+            - Name
+            - Tax type
+            - Tax rate
+            - Delete
+          - Rules by order type
+            - Do you sell items that are tax exempt when they're ordered to go? Or when they're for delivery? Create exemption rules for individual items associated with order types.
+            - Add Exemption Rule
+            - Name
+            - Order type
+            - Tax rates or fees not applied
+            - No. of items
+            - Delete
+        - Additional charges
+          - Use a service charge for a miscellaneous charge, like large party 20% gratuity. A service charge may not be used for the purpose of recovering card processing cost, doing so could result in fines or penalties.
+          - Service charges
+            - Edit
+            - Service Charge
+            - On
+          - Delivery fee for Clover Online Orders
+            - Off
+        - Tips
+          - Tip acceptance
+            - Edit
+            - Ask for tip
+              - On
+          - Tip defaults
+            - Edit
+            - Set up to 4 default tips for a customer to choose from when signing on screen (in addition to custom tip and no tip). If you're set up to have customers sign printed receipts, the calculated tip and total for suggestions appears at the bottom of the receipt.
+            - Tip buttons
+              - 15%
+              - 18%
+              - 20%
+          - Tip calculation
+            - Edit
+            - Tip suggestion calculation
+              - Include tax in calculation
+          - Dynamic Tip Configuration
+            - Enable
+            - When enabled, staff can choose the tipping method for each transaction at the point of sale.
+        - Business hours
+          - Hours of operation
+            - Your operating hours are connected to your closeout settings. 
+          - Timezone
+        - Devices and printers
+          - Devices
+          - Printers
+        - Accounting Sync
+          - Sync your data with QuickBooks Online, automatically
+          - Available for existing QuickBooks Online users.
+        - API tokens
+        - Cellular data
+        - Inventory
+          - Stock tracking
+            - Preferences
+              - Track stock
+                - This allows you to set stock counts in Inventory, and displays stock counts in Register. If you do not wish to track stock in any of your locations, uncheck this box.
+                - On
+              - Automatically update item counts
+                - Uncheck this option if you're using a third-party app to track item counts. Track stock must be active.
+                - On
+              - Allow negative stock counts
+                - Stock counts will drop below zero if you sell more items than you have in stock
+        - Enterprise Wi-Fi
+          - Upload and share certificates with devices for Enterprise Wi-Fi networks. This is an advanced network feature that may not be relevant for most businesses.
+          - Common server certificate
+            - Upload a common server certificate to verify your server's identity.
+          - Device certificates
+            - Use device certificates to uniquely identify each device to your network.
+      - Transactions
+        - Orders
+          - Orders Options
+            - Make order taking simple and efficient. Adjust order number and order receipt settings in the Order Receipts page.
+            - Customize orders
+              - Automatically group similar items
+                - Group identical items in an order on one line.
+                  - Edit
+                  - On
+              - Allow notes on orders
+                - Add notes to orders to make them more meaningful.
+                  - On
+              - Stay in category after adding an item to an order
+                - Stay in the same category to continue adding similar items to an order.
+                - On
+            - Track reasons for item removals
+              - Edit
+              - Record the reasons why your employees are removing items from an order or deleting orders. You can use or modify the list for reasons that are relevant to your business.
+              - Reasons captured at time of removing items
+              - Off
+        - Order receipts
+          - Printing preferences
+            - Edit
+            - Require manager passcode to reprint order receipt
+            - Off
+          - Void Receipts
+            - Edit
+            - Print void receipt for items that have been voided
+            - Off
+          - Customization
+          - ￼
+          - Font size
+            - Edit
+            - Large
+          - Order numbers
+            - Set up order prefixes in Devices to avoid duplicating order numbers.
+            - None
+          - Add blank lines to the top of the receipt
+            - Off
+          - Order note
+            - On
+          - Use alternate inventory names
+            - Off
+          - Group line items
+            - On
+          - Show modifier group names
+            - Off
+          - Condense modifiers
+            - Off
+          - Group modifiers
+            - Off
+          - Show customer information
+            - Off
+          - Show barcode
+            - Scan a barcode on receipts to mark orders as ready. A thermal printer is required.
+            - Off
+        - Order types
+          - Print the order type on receipts to instruct cashiers how to prepare and ring up an order, for example, a Takeout versus Dine In order. Clover creates sales reports by order type.
+          - Custom order types
+            - Add Order Type
+            - Name
+            - Default
+            - Delete
+          - Auto-assigned order types
+            - Clover or third party apps automatically create these order types for you and assign them to relevant orders. For example: Clover will create order types for online orders, such as Clover in-store pickup. These order types aren't displayed on your device when you take orders using Register or Clover Dining on device.
+            - Name
+        - Payments
+          - Cash back
+            - Off
+            - Edit
+            - Cash back (on Clover hardware)
+          - Cash Discount
+            - Enable
+            - Automatically offer a discount to your customers when paying with cash. Learn more.
+          - Invoice number
+            - Off
+            - Edit
+            - Use invoice number to identify payment or order
+          - Offline payments
+            - Edit
+            - Continue taking payments when you don't have a network connection. Set preferences for Clover Go and your devices. We do not allow offline payments for more than seven consecutive days for security reasons.
+          - Payment preferences
+            - Edit
+            - Log out after completing payment on each order
+              - Off
+              - Each time a transaction is complete the current cashier or user is logged out of the system.
+            - Fast Pay with Cash
+              - Use the Fast Pay With Cash feature in the Register app to take a cash payment immediately after taking an order.
+              - Off
+            - Tap to Pay
+              - Tap to Pay lets you use your iPhone to accept Apple Pay and other contactless payments with no additional hardware. To make changes, open Clover Go > tap More > Settings.
+              - Off
+          - Payment threshold
+            - Payment threshold amount
+              - Edit
+            - Manager overrides
+              - Managers can override the transaction amount up to the max payment threshold ($999,999.99)
+              - Off
+          - Signature
+            - Edit
+            - Signature requirement
+              - Signature always required
+            - Signature and tip location
+              - Signature and tip location appear together, either on the printed receipt or your device screen. Changing the location here updates all your devices.
+              - Device screen
+          - Tenders
+            - Default tenders
+              - Cash
+              - Credit Card
+              - Cheque
+              - PayPal
+              - Select Customer
+              - Gift Cards
+            - Edit
+          - Track reasons for voids and refunds
+            - Edit
+            - Record the reasons why your employees voided payments or issued refunds. You can create a list of reasons that are relevant to your business.
+              - Off
+        - Payment receipts
+          - To see what updates to your receipt looks like, try printing it out. You can also update your business name, address, and phone number that appears on your receipts on the business information page.
+          - Printing preferences
+            - Edit
+            - Automatically print customer receipt after each order
+              - Off
+            - Skip receipt screen and start next transaction
+              - Off
+            - Mark items as printed when printing a bill
+              - Off
+        - Logo or custom image
+          - Edit
+          - Display logo or custom image
+            - Off
+        - Customize receipt messages
+          - Edit
+          - Custom header text
+            - Off
+          - Custom footer text
+            - Off
+          - Allow customers to opt-in to marketing (digital receipts only)
+            - Allow SANSAN RAMEN to send marketing and other promotional messages to this email address
+        - Additional display preferences
+          - Edit
+          - Hide Street Address
+            - Off
+          - Group items by guest
+            - Off
+          - Order Note
+            - Off
+          - Payment Note
+            - The note included with your payment via Virtual Terminal, Payment Link, Hosted Checkout, or Ecommerce payment APIs.
+            - Off
+          - Cashier name
+            - On
+          - Line items
+            - Show all modifiers
+          - Customer information
+            - Off
+          - Business website
+            - To see what updates to your receipt looks like, try printing it out. You can also update your business name, address, and phone number that appears on your receipts on the business information page.
+            - On
+          - Barcode (printed receipts only)
+            - If an item is returned, scan the barcode to automatically locate the paid order in the Orders app.
+            - Off
+          - Space at bottom of Mini receipts (printed receipts only)
+            - Adds space after the total to ensure that the entire receipt is visible on printed receipts.
+            - On
+      - Ecommerce
+        - Ecommerce payments
+          - Convenience Fees
+            - A convenience fee is a flat fee, you can charge customers for the convenience of paying through a specific channel. Once enabled, convenience fees will be applied to Clover online ordering, hosted checkout, API transactions, and Virtual Terminal.
+            - Enable convenience fees
+          - ￼
+          - Purchasing Cards
+            - Collecting Level 2 and Level 3 data through Virtual Terminal or API may lower the transaction rates.
+            - Do not collect Level 2 or 3 data
+            - Collect Level 2 data
+            - Collect Level 2 and Level 3 data
+          - Apple Pay
+            - IFrame integration
+              - To enable Apple Pay on your website Iframe, begin by verifying your domain(s) here.
+            - API Integration
+              - To process Apple Pay transactions using your personal Apple identifier, start by sharing your Apple Merchant ID with Clover here.
+        - Ecommerce API tokens
+        - Hosted checkout
+          - Customize what your customers will see on your payments page.
+        - Custom fields
+          - Gather unique customer data that can help you track, filter, and group transactions
+        - Payment links
+          - Custom links to your hosted checkout page that you can share with customers.
+        - Fraud tools
+          - Fraud Prevention Tools
+            - Fraud prevention tools allow you to automatically void suspicious non-device payments taken from Virtual Terminal and the ecommerce API. They don’t block payments taken from your device.
+          - Transaction Amount and Velocity Limits
+            - EDIT
+            - Automatically decline transactions that exceed the limits you set.
+          - Card verification Value (CVV)
+            - EDIT
+            - Reduce your risk of fraudulent transactions by verifying a card’s CVV with the customer’s bank.
+          - Address Verification System (AVS)
+            - EDIT
+            - Reduce your risk of fraudulent transactions by checking the billing addresses your customers provide with the customer’s bank.
+          - Risk Score Threshold
+            - EDIT
+            - Automatically decline transactions if they are at or above a certain fraud score.
+          - 3D Secure 2.0 Authentication
+            - Get Started
+            - 3D Secure reduces online card fraud by verifying cardholder identity.
+          - Block List
+            - EDIT
+            - Automatically block transactions that match the rules you set.
+          - Allow List
+            - EDIT
+            - Specify rules to automatically bypass existing fraud checks you set.

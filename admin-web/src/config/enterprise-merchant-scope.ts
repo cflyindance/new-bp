@@ -65,6 +65,10 @@ export function isMerchantListPath(path: string): boolean {
   return path === ENTERPRISE_MERCHANT_ROUTE_PREFIX;
 }
 
+export function isStoreListPath(path: string): boolean {
+  return path === `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/stores`;
+}
+
 export function findMerchantPageTitle(path: string): { title: string; module: string } | null {
   if (!isMPlatformMerchantPath(path)) return null;
   if (path === `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/overview`) {
@@ -83,6 +87,9 @@ export function findMerchantPageTitle(path: string): { title: string; module: st
   }
   if (isMerchantListPath(path)) {
     return { title: "品牌列表", module: ENTERPRISE_MERCHANT_MODULE_LABEL };
+  }
+  if (isStoreListPath(path)) {
+    return { title: "门店列表", module: ENTERPRISE_MERCHANT_MODULE_LABEL };
   }
   if (path === `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/new`) {
     return { title: "新建品牌", module: ENTERPRISE_MERCHANT_MODULE_LABEL };

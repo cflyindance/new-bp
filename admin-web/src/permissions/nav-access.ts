@@ -3,8 +3,20 @@
  * 切门店只改数据 scope，不重算 permissionSnapshot。
  */
 import { getUserSessionContext } from "../auth/session-permissions";
-import { isStoreTierHiddenNavModule } from "../auth/session-scope";
-import { buildPermissionModuleGroups } from "../config/permission-registry";
+import {
+  getAccountOrgTier,
+  isBrandPerspectiveOnlyNavModule,
+  isChainScopeMode,
+  isGroupHqPerspectiveOnlyNavModule,
+  isPerspectiveHiddenNavModule,
+  isStoreTierHiddenNavModule,
+} from "../auth/session-scope";
+import {
+  isBrandDataPerspective,
+  isGroupHqDataPerspective,
+  resolveChainDataPerspective,
+} from "../auth/merchant-scope-context";
+import { buildPermissionModuleGroups, type PermissionModuleGroup } from "../config/permission-registry";
 import { NAV_MODULES, type NavModule } from "../config/navigation";
 import { readSidebarNavLayoutPreset } from "../config/sidebar-nav-order";
 
@@ -20,8 +32,13 @@ function getSessionModuleEnabled(): Record<string, boolean> | null {
 }
 
 export function isNavModuleVisible(moduleId: string): boolean {
-  if (isStoreTierHiddenNavModule(moduleId)) return false;
-  if (moduleId === "brand-mgmt" && readSidebarNavLayoutPreset() === "chain") return true;
+  if (isBrandPerspectiveOnlyNavModule(moduleId)) {
+    return isChainScopeMode() && isBrandDataPerspective();
+  }
+  if (isGroupHqPerspectiveOnlyNavModule(moduleId)) {
+    return isChainScopeMode() && isGroupHqDataPerspective();
+  }
+  if (isPerspectiveHiddenNavModule(moduleId)) return false;
 
   const enabledMap = getSessionModuleEnabled();
   if (!enabledMap) return true;
@@ -30,9 +47,50 @@ export function isNavModuleVisible(moduleId: string): boolean {
 }
 
 export function filterVisibleNavModules(modules: NavModule[]): NavModule[] {
-  const visible = modules.filter((m) => isNavModuleVisible(m.id));
-  if (readSidebarNavLayoutPreset() !== "chain") return visible;
-  if (visible.some((m) => m.id === "brand-mgmt")) return visible;
-  const brand = NAV_MODULES.find((m) => m.id === "brand-mgmt");
-  return brand ? [brand, ...visible] : visible;
+  let visible = modules.filter((m) => isNavModuleVisible(m.id));
+  if (readSidebarNavLayoutPreset() === "chain" && isGroupHqDataPerspective()) {
+    const extras: NavModule[] = [];
+    if (!visible.some((m) => m.id === "brand-mgmt")) {
+      const brand = NAV_MODULES.find((m) => m.id === "brand-mgmt");
+      if (brand) extras.push(brand);
+    }
+    if (!visible.some((m) => m.id === "group-store-list")) {
+      const groupStores = NAV_MODULES.find((m) => m.id === "group-store-list");
+      if (groupStores) extras.push(groupStores);
+    }
+    if (extras.length) {
+      const extraIds = new Set(extras.map((m) => m.id));
+      visible = [...extras, ...visible.filter((m) => !extraIds.has(m.id))];
+    }
+  }
+  if (readSidebarNavLayoutPreset() === "chain" && isBrandDataPerspective()) {
+    if (!visible.some((m) => m.id === "brand-store-list")) {
+      const storeList = NAV_MODULES.find((m) => m.id === "brand-store-list");
+      if (storeList) visible = [storeList, ...visible];
+    }
+  }
+  return visible;
+}
+
+/** RBAC 角色矩阵：一级导航可见性（与侧栏视角规则一致，不按当前角色快照过滤） */
+export function isRbacMatrixNavModuleVisible(moduleId: string): boolean {
+  if (isBrandPerspectiveOnlyNavModule(moduleId)) {
+    return isChainScopeMode() && isBrandDataPerspective();
+  }
+  if (isGroupHqPerspectiveOnlyNavModule(moduleId)) {
+    return isChainScopeMode() && isGroupHqDataPerspective();
+  }
+  if (isPerspectiveHiddenNavModule(moduleId)) return false;
+  if (isStoreTierHiddenNavModule(moduleId)) return false;
+  return true;
+}
+
+export function filterRbacPermissionModuleGroups(
+  groups: PermissionModuleGroup[],
+): PermissionModuleGroup[] {
+  return groups.filter((g) => isRbacMatrixNavModuleVisible(g.moduleId));
+}
+
+export function getRbacNavVisibilityCacheKey(): string {
+  return `${readSidebarNavLayoutPreset()}:${resolveChainDataPerspective()}:${getAccountOrgTier()}`;
 }

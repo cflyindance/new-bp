@@ -13,6 +13,7 @@ import {
 } from "./permission-registry";
 import { fohSeqAppliesToLine } from "./foh-settings-line-scope";
 import type { ProductLineId } from "./platform-preset-catalog";
+import { filterRbacPermissionModuleGroups, getRbacNavVisibilityCacheKey } from "../permissions/nav-access";
 import {
   DEFAULT_NAV_BLUEPRINT_ID,
   getPublishedNavBlueprint,
@@ -169,12 +170,10 @@ type PlatformPresetIndex = {
   getAncestorKeys: (key: string) => string[];
 };
 
-function buildPlatformPresetIndexUncached(
-  productLineId: ProductLineId,
-  options?: PlatformPresetTreeOptions,
+function buildPlatformPresetIndexFromPresetGroups(
+  presetGroups: PlatformPresetModuleTree[],
 ): PlatformPresetIndex {
-  const groups = buildPlatformPresetModuleGroups(productLineId, options);
-  const flat = flattenPlatformPresetTree(groups);
+  const flat = flattenPlatformPresetTree(presetGroups);
   const byKey = new Map(flat.map((n) => [n.key, n]));
   const childrenOf = new Map<string, string[]>();
 
@@ -206,8 +205,33 @@ function buildPlatformPresetIndexUncached(
     return chain;
   }
 
-  return { groups, flat, byKey, getDescendantKeys, getAncestorKeys };
+  return { groups: presetGroups, flat, byKey, getDescendantKeys, getAncestorKeys };
 }
+
+function buildPlatformPresetIndexUncached(
+  productLineId: ProductLineId,
+  options?: PlatformPresetTreeOptions,
+): PlatformPresetIndex {
+  const groups = buildPlatformPresetModuleGroups(productLineId, options);
+  return buildPlatformPresetIndexFromPresetGroups(groups);
+}
+
+/** RBAC 角色矩阵：按门店版/连锁版与数据视角过滤一级导航（避免「门店列表」等重复项） */
+export function buildRbacPlatformPresetIndex(productLineId: ProductLineId = "pos"): PlatformPresetIndex {
+  const cacheKey = `rbac:${productLineId}:${getRbacNavVisibilityCacheKey()}`;
+  const cached = rbacIndexCache.get(cacheKey);
+  if (cached) return cached;
+
+  let groups = buildPermissionModuleGroups();
+  groups = filterRbacPermissionModuleGroups(groups);
+  stripPermissionActionL3Nodes(groups);
+  applyCatalogNavOrderToGroups(groups);
+  const built = buildPlatformPresetIndexFromPresetGroups(mapGroupsToPresetTrees(groups));
+  rbacIndexCache.set(cacheKey, built);
+  return built;
+}
+
+const rbacIndexCache = new Map<string, PlatformPresetIndex>();
 
 export function buildPlatformPresetIndex(
   productLineId: ProductLineId,

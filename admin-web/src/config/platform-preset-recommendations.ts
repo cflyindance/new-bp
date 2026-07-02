@@ -21,6 +21,8 @@ const T = {
 /** 与 permission-registry 一级模块对齐 */
 const ALL_PRESET_L1_MODULE_IDS = [
   "brand-mgmt",
+  "brand-store-list",
+  "group-store-list",
   "store-mgmt",
   "dashboard",
   "team",
@@ -51,6 +53,8 @@ const ALL_PRESET_L1_MODULE_IDS = [
 
 const CHAIN_PLATFORM_OPT: Partial<Record<string, PresetModuleTier>> = {
   "brand-mgmt": T.opt,
+  "brand-store-list": T.opt,
+  "group-store-list": T.opt,
   "store-mgmt": T.opt,
   "capital-turnover": T.opt,
   "log-management": T.opt,

@@ -11,6 +11,7 @@ import {
 import { APP_NAV_HOME_PATH, isNavHomePath } from "./app-routes";
 import { readPlatformPresetContext } from "./platform-preset-context";
 import { readSidebarNavLayoutPreset } from "./sidebar-nav-order";
+import { isBrandDataPerspective, isGroupHqDataPerspective } from "../auth/session-scope";
 import { getModuleSettingsCatalog } from "./module-settings-catalog";
 import { isModuleSettingsPathAllowedByPreset } from "./platform-preset-settings-filter";
 import { getRuntimePresetSelection } from "./platform-preset-runtime-cache";
@@ -70,7 +71,7 @@ export function filterNavModuleByPlatformPreset(m: NavModule): NavModule | null 
 export function filterNavModulesByPlatformPreset(modules: NavModule[]): NavModule[] {
   const selection = getActiveSelection();
   if (!selection) return modules;
-  const filtered = modules
+  let filtered = modules
     .map((m) => {
       if (!isPresetL1EnabledInSelection(selection, m.id)) return null;
       const children = m.children.filter((c) => isPresetL2EnabledInSelection(selection, m.id, c.id));
@@ -80,10 +81,28 @@ export function filterNavModulesByPlatformPreset(modules: NavModule[]): NavModul
       return { ...m, children };
     })
     .filter((m): m is NavModule => m != null);
-  if (readSidebarNavLayoutPreset() !== "chain") return filtered;
-  if (filtered.some((m) => m.id === "brand-mgmt")) return filtered;
-  const brand = NAV_MODULES.find((m) => m.id === "brand-mgmt");
-  return brand ? [brand, ...filtered] : filtered;
+  if (readSidebarNavLayoutPreset() === "chain" && isGroupHqDataPerspective()) {
+    const extras: NavModule[] = [];
+    if (!filtered.some((m) => m.id === "brand-mgmt")) {
+      const brand = NAV_MODULES.find((m) => m.id === "brand-mgmt");
+      if (brand) extras.push(brand);
+    }
+    if (!filtered.some((m) => m.id === "group-store-list")) {
+      const groupStores = NAV_MODULES.find((m) => m.id === "group-store-list");
+      if (groupStores) extras.push(groupStores);
+    }
+    if (extras.length) {
+      const extraIds = new Set(extras.map((m) => m.id));
+      filtered = [...extras, ...filtered.filter((m) => !extraIds.has(m.id))];
+    }
+  }
+  if (readSidebarNavLayoutPreset() === "chain" && isBrandDataPerspective()) {
+    if (!filtered.some((m) => m.id === "brand-store-list")) {
+      const storeList = NAV_MODULES.find((m) => m.id === "brand-store-list");
+      if (storeList) filtered = [storeList, ...filtered];
+    }
+  }
+  return filtered;
 }
 
 export function filterSheetSubnavByPlatformPreset(
@@ -127,7 +146,21 @@ export function isPathAllowedByPlatformPreset(path: string): boolean {
   if (path.startsWith("/settings/platform-preset")) return true;
   if (path === "/login" || path.startsWith("/login/")) return true;
   if (path === "/onboarding" || path.startsWith("/onboarding/")) return true;
-  if ((path === "/brand/overview" || path === "/brand/list") && readSidebarNavLayoutPreset() === "chain") {
+  if ((path === "/brand/overview" || path === "/brand/list") && readSidebarNavLayoutPreset() === "chain" && isGroupHqDataPerspective()) {
+    return true;
+  }
+  if (
+    (path === "/group-stores/list" || path === "/group-stores/overview" || path.startsWith("/group-stores/")) &&
+    readSidebarNavLayoutPreset() === "chain" &&
+    isGroupHqDataPerspective()
+  ) {
+    return true;
+  }
+  if (
+    (path === "/brand-stores/list" || path === "/brand-stores/overview" || path.startsWith("/brand-stores/")) &&
+    readSidebarNavLayoutPreset() === "chain" &&
+    isBrandDataPerspective()
+  ) {
     return true;
   }
 

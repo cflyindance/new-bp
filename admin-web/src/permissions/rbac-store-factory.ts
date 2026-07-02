@@ -6,13 +6,14 @@ import {
   resolveEffectiveGrant,
   type PermissionAccess,
 } from "../config/permission-registry";
-import { buildPlatformPresetIndex } from "../config/platform-preset-tree";
+import { buildPlatformPresetIndex, buildRbacPlatformPresetIndex } from "../config/platform-preset-tree";
 import type { PlatformPresetNodeSelection } from "../config/platform-preset-store";
 import { cascadeEnableSelection } from "../config/platform-preset-store";
 import {
   inferDefaultStaffStoreAccess,
   normalizeStaffStoreAccess,
 } from "./store-access";
+import { DEFAULT_DEMO_STORE_ID } from "./m-platform-store-scope";
 import type {
   PermissionChangeLogEntry,
   RbacRole,
@@ -20,6 +21,7 @@ import type {
   ResolvedL4SettingAccess,
   StaffAssignment,
 } from "./rbac-types";
+import { filterRbacPermissionModuleGroups } from "./nav-access";
 
 export type { RbacRole, StaffAssignment, PermissionChangeLogEntry, RbacStoreSnapshot, ResolvedL4SettingAccess };
 
@@ -261,19 +263,19 @@ export function createMerchantSeedStaff(): StaffAssignment[] {
       employeeId: "e001",
       employeeName: "王小明",
       roleIds: ["store-manager"],
-      storeAccess: { mode: "stores", ids: ["shanghai-ljz"] },
+      storeAccess: { mode: "stores", ids: [DEFAULT_DEMO_STORE_ID] },
     },
     {
       employeeId: "e002",
       employeeName: "李收银",
       roleIds: ["cashier"],
-      storeAccess: { mode: "stores", ids: ["shanghai-ljz"] },
+      storeAccess: { mode: "stores", ids: [DEFAULT_DEMO_STORE_ID] },
     },
     {
       employeeId: "e003",
       employeeName: "张楼面",
       roleIds: ["floor-staff", "cashier"],
-      storeAccess: { mode: "stores", ids: ["shanghai-ljz"] },
+      storeAccess: { mode: "stores", ids: [DEFAULT_DEMO_STORE_ID] },
     },
     {
       employeeId: "hq001",
@@ -553,7 +555,7 @@ export function createRbacStore(options: CreateRbacStoreOptions): RbacStoreApi {
       return merged;
     },
     countRoleStats: (role) => {
-      const index = buildPlatformPresetIndex(presetLine);
+      const index = buildRbacPlatformPresetIndex(presetLine);
       const sel = normalizeRoleSelection(role.selection, presetLine);
       let enabled = 0;
       let enabledL1 = 0;
@@ -565,7 +567,7 @@ export function createRbacStore(options: CreateRbacStoreOptions): RbacStoreApi {
       }
       return { enabled, total: index.flat.length, enabledL1 };
     },
-    getRbacPresetIndex: () => buildPlatformPresetIndex(presetLine),
+    getRbacPresetIndex: () => buildRbacPlatformPresetIndex(presetLine),
     normalizeRoleSelection: (selection) => normalizeRoleSelection(selection, presetLine),
     cascadeRbacEnableSelection: (selection, key, enabled) =>
       cascadeRbacEnableSelection(selection, key, enabled, presetLine),
@@ -583,7 +585,7 @@ export function createRbacStore(options: CreateRbacStoreOptions): RbacStoreApi {
 }
 
 export function getModuleGroups() {
-  return buildPermissionModuleGroups();
+  return filterRbacPermissionModuleGroups(buildPermissionModuleGroups());
 }
 
 export function getPermissionIndex() {

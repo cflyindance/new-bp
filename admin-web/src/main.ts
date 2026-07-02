@@ -10,19 +10,23 @@ import {
   DEFAULT_LOCKED_STORE_ID,
   DEMO_SCOPE_BRANDS,
   DEMO_SCOPE_REGIONS,
-  DEMO_SCOPE_STORES,
+  getDemoScopeStores,
   formatScopeFilterLabel,
   getScopedFilterOptions,
   isChainOrgTier,
   isStoreScopeLocked,
   readScopeFilters,
   shouldShowBrandScopeFilter,
+  shouldShowBrandScopeLockedLabel,
   shouldShowRegionScopeFilter,
   shouldShowMerchantGroupSwitcher,
   resetScopeFiltersForGroupChange,
   syncSessionForAuthenticatedUser,
+  refreshSessionOnMount,
   writeScopeFilters,
 } from "./auth/session-scope";
+import { formatScopeAggregationNote, resolveScopeAggregationMeta } from "./auth/scope-aggregation";
+import { resolveDefaultAnchorBrandId } from "./auth/merchant-scope-context";
 import { bindHeaderUserCenter, renderHeaderUserCenter } from "./auth/user-center";
 import { bindLoginLogsPage, isLoginLogsPath, renderLoginLogsPage } from "./log-management/login-logs-ui";
 import {
@@ -232,6 +236,16 @@ import {
   isChainBrandMgmtPath,
   renderChainBrandMgmtPage,
 } from "./config/merchant-chain-brand-ui";
+import {
+  bindBrandStoreListControls,
+  isBrandStoreListPath,
+  renderBrandStoreListPage,
+} from "./config/merchant-brand-store-list-ui";
+import {
+  bindGroupStoreListControls,
+  isGroupStoreListPath,
+  renderGroupStoreListPage,
+} from "./config/merchant-group-store-list-ui";
 import {
   bindMPlatformShell,
   isMPlatformContentPath,
@@ -10518,7 +10532,7 @@ function renderHeaderScopeFilters(): string {
 
   if (isStoreScopeLocked()) {
     const lockedId = scope.store || DEFAULT_LOCKED_STORE_ID;
-    const storeOpt = pickOpt(scopedOpts.stores.length ? scopedOpts.stores : DEMO_SCOPE_STORES, lockedId);
+    const storeOpt = pickOpt(scopedOpts.stores.length ? scopedOpts.stores : getDemoScopeStores(), lockedId);
     const label = locale === "en" ? storeOpt.labelEn : storeOpt.labelZh;
     return `
     <div
@@ -10548,6 +10562,19 @@ function renderHeaderScopeFilters(): string {
           .join("")}
       </select>`;
 
+  const brandLockedId = resolveDefaultAnchorBrandId() ?? scope.brand;
+  const brandLockedOpt = pickOpt(scopedOpts.brands, brandLockedId);
+  const brandLockedLabel = locale === "en" ? brandLockedOpt.labelEn : brandLockedOpt.labelZh;
+  const brandLockedField = shouldShowBrandScopeLockedLabel()
+    ? `<div
+        class="flex max-w-[9rem] shrink-0 items-center gap-1.5 rounded-md border border-border bg-muted/40 px-2.5 py-1.5 text-sm sm:max-w-[10.5rem]"
+        title="${escapeHtml(t("header.scopeBrandLockedTitle"))}"
+      >
+        <span class="text-xs text-muted-foreground">${escapeHtml(t("header.scopeBrand"))}</span>
+        <span class="truncate font-medium">${escapeHtml(brandLockedLabel)}</span>
+      </div>`
+    : "";
+
   return `
     <div
       class="flex max-w-full flex-wrap items-center justify-end gap-1.5 sm:gap-2"
@@ -10555,7 +10582,7 @@ function renderHeaderScopeFilters(): string {
       aria-label="${escapeHtml(t("header.scopeGroup"))}"
       title="${escapeHtml(t("header.scopeGroupTitle"))}"
     >
-      ${shouldShowBrandScopeFilter() ? renderSelect("scope-brand-select", "header.scopeBrand", "header.scopeBrandAria", scopedOpts.brands, scope.brand) : ""}
+      ${shouldShowBrandScopeFilter() ? renderSelect("scope-brand-select", "header.scopeBrand", "header.scopeBrandAria", scopedOpts.brands, scope.brand) : brandLockedField}
       ${shouldShowRegionScopeFilter() ? renderSelect("scope-region-select", "header.scopeRegion", "header.scopeRegionAria", scopedOpts.regions, scope.region) : ""}
       ${renderSelect("scope-store-select", "header.scopeStore", "header.scopeStoreAria", scopedOpts.stores, scope.store)}
     </div>
@@ -10659,6 +10686,8 @@ function renderMain(): string {
   const isTeamClockIn = isTeamClockInPath(path);
   const isTeamTrainingPerformance = isTeamTrainingPerformancePath(path);
   const isChainBrandMgmt = isChainBrandMgmtPath(path);
+  const isBrandStoreList = isBrandStoreListPath(path);
+  const isGroupStoreList = isGroupStoreListPath(path);
   syncTeamBreaksOvertimeSession(path);
   const wideContentLayout =
     isBrandMenuTertiary ||
@@ -10870,6 +10899,10 @@ function renderMain(): string {
                             ? renderLoginLogsPage()
                             : isChainBrandMgmt
                               ? renderChainBrandMgmtPage(path)
+                            : isBrandStoreList
+                              ? renderBrandStoreListPage(path)
+                            : isGroupStoreList
+                              ? renderGroupStoreListPage(path)
                             : renderPlaceholder(path, title, tabModule)
             }
           </div>
@@ -10881,24 +10914,35 @@ function renderMain(): string {
 
 function renderDashboardPanel(path: string, title: string): string {
   const scopeLabel = formatScopeFilterLabel(readScopeFilters(), getUiLocale());
-  const todoKeys = isChainOrgTier()
-    ? ([
-        "dashboard.todo.chain.permissions",
-        "dashboard.todo.chain.inventory",
-        "dashboard.todo.chain.stores",
-        "dashboard.todo.chain.reports",
-      ] as const)
-    : ([
-        "dashboard.todo.store.close",
-        "dashboard.todo.store.reviews",
-        "dashboard.todo.store.device",
-        "dashboard.todo.store.staff",
-      ] as const);
+  const aggregationNote = formatScopeAggregationNote(getUiLocale());
+  const aggMeta = resolveScopeAggregationMeta();
+  const todoKeys =
+    aggMeta.mode === "store"
+      ? ([
+          "dashboard.todo.store.close",
+          "dashboard.todo.store.reviews",
+          "dashboard.todo.store.device",
+          "dashboard.todo.store.staff",
+        ] as const)
+      : aggMeta.isAggregated
+        ? ([
+            "dashboard.todo.chain.permissions",
+            "dashboard.todo.chain.inventory",
+            "dashboard.todo.chain.stores",
+            "dashboard.todo.chain.reports",
+          ] as const)
+        : ([
+            "dashboard.todo.store.close",
+            "dashboard.todo.store.reviews",
+            "dashboard.todo.store.device",
+            "dashboard.todo.store.staff",
+          ] as const);
   const kpiLabels = [t("placeholder.kpi.sales"), t("placeholder.kpi.orders"), t("placeholder.kpi.staff")];
   return `
     <div class="rounded-xl border border-border bg-card p-6 shadow-sm">
       <p class="text-sm text-muted-foreground leading-relaxed">${escapeHtml(t("placeholder.route"))}<code class="rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-foreground">${path}</code></p>
       <p class="mt-3 text-sm text-muted-foreground">${escapeHtml(tf("dashboard.scopeNote", { scope: scopeLabel }))}</p>
+      <p class="mt-1 text-xs text-muted-foreground">${escapeHtml(aggregationNote)}</p>
       <p class="mt-4 text-base text-card-foreground">${escapeHtml(tf("placeholder.intro", { title }))}</p>
       <div class="mt-5">
         <p class="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">${escapeHtml(t("dashboard.todosTitle"))}</p>
@@ -10920,6 +10964,18 @@ function renderDashboardPanel(path: string, title: string): string {
 function guardNavModuleAccess(path: string): void {
   const mod = getTabModule(path);
   if (mod && !isNavModuleVisible(mod.id)) {
+    replaceHashPath(getFirstAllowedNavPath());
+    return;
+  }
+  if (isChainBrandMgmtPath(path) && !isNavModuleVisible("brand-mgmt")) {
+    replaceHashPath(getFirstAllowedNavPath());
+    return;
+  }
+  if (isBrandStoreListPath(path) && !isNavModuleVisible("brand-store-list")) {
+    replaceHashPath(getFirstAllowedNavPath());
+    return;
+  }
+  if (isGroupStoreListPath(path) && !isNavModuleVisible("group-store-list")) {
     replaceHashPath(getFirstAllowedNavPath());
     return;
   }
@@ -10985,10 +11041,15 @@ function renderPlaceholder(
                           : "";
   const navDocLi = sidebarSecond || sheetSecond ? t("placeholder.navDocLong") : t("placeholder.navDocShort");
   const kpiLabels = [t("placeholder.kpi.sales"), t("placeholder.kpi.orders"), t("placeholder.kpi.staff")];
+  const aggregationNote =
+    tabModule?.id === "reports-finance" || path.startsWith("/reports/")
+      ? `<p class="mt-3 text-sm text-muted-foreground">${escapeHtml(formatScopeAggregationNote(getUiLocale()))}</p>`
+      : "";
   return `
     <div class="rounded-xl border border-border bg-card p-6 shadow-sm">
       <p class="text-sm text-muted-foreground leading-relaxed">${escapeHtml(t("placeholder.route"))}<code class="rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-foreground">${path}</code></p>
       <p class="mt-4 text-base text-card-foreground">${tf("placeholder.intro", { title })}</p>
+      ${aggregationNote}
       <ul class="mt-4 list-inside list-disc space-y-2 text-sm text-muted-foreground">
         ${firstBullet ? `<li>${firstBullet}</li>` : ""}
         <li>${navDocLi}</li>
@@ -11093,7 +11154,7 @@ function mount(): void {
     return;
   }
 
-  syncSessionForAuthenticatedUser();
+  refreshSessionOnMount();
 
   const merchantPresetPath = readAppHashPath();
   if (isPlatformPresetPath(merchantPresetPath)) {
@@ -11716,7 +11777,9 @@ function mount(): void {
   bindPlatformPreset(mount, MERCHANT_PLATFORM_PRESET_SCOPE);
   bindViewSwitchControl(mount);
   bindImpersonationBanner(mount);
-  bindChainBrandMgmtControls();
+  bindChainBrandMgmtControls(mount);
+  bindBrandStoreListControls(mount);
+  bindGroupStoreListControls(mount);
   bindStaffAccountsPage();
   bindLoginLogsPage(mount);
   bindHeaderScopeFilters();

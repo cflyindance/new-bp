@@ -13,6 +13,13 @@ import { syncChainBrandOrgForMerchant, bindChainBrandOrgSyncListener } from "./m
 import type { EnterpriseMerchant } from "./enterprise-merchant-types";
 import { exitMPlatformShell, enterMPlatformShell } from "../shell/app-shell-mode";
 import { merchantDetailHref } from "./enterprise-merchant-scope";
+import { writeChainDataPerspective } from "../auth/merchant-scope-context";
+import {
+  ensureScopeFiltersForLayoutPreset,
+  resetScopeFiltersForPerspectiveChange,
+} from "../auth/session-scope";
+import { writeSidebarNavLayoutPreset } from "./sidebar-nav-order";
+import { clearActiveMerchantGroupOverride } from "./merchant-chain-brand-sync";
 
 const IMPERSONATION_SESSION_KEY = "menusifu:merchant-impersonation-v1";
 const APP_NAV_HOME_PATH = "/nav-home";
@@ -69,6 +76,14 @@ function resolveEntryPath(merchant: EnterpriseMerchant): string {
   return APP_NAV_HOME_PATH;
 }
 
+function applyImpersonationScopeLock(merchant: EnterpriseMerchant): void {
+  clearActiveMerchantGroupOverride();
+  writeSidebarNavLayoutPreset("chain");
+  writeChainDataPerspective("brand", { brandId: merchant.merchantId });
+  ensureScopeFiltersForLayoutPreset("chain");
+  resetScopeFiltersForPerspectiveChange();
+}
+
 function prepareImpersonatedMerchantContext(merchant: EnterpriseMerchant): void {
   const email = merchant.primaryAdminEmail?.trim();
   if (!email) return;
@@ -103,6 +118,7 @@ export function startMerchantImpersonation(
   };
 
   appendImpersonationLogStart(session);
+  applyImpersonationScopeLock(merchant);
   prepareImpersonatedMerchantContext(merchant);
   writeImpersonationSession(session);
   return session;
@@ -144,6 +160,8 @@ export function renderImpersonationBanner(): string {
         操作人 ${escapeHtml(session.operatorEmail)}
         <span class="mx-1.5 text-amber-800/70 dark:text-amber-200/70">·</span>
         模拟 ${escapeHtml(session.impersonatedAsEmail)}
+        <span class="mx-1.5 text-amber-800/70 dark:text-amber-200/70">·</span>
+        <span class="text-xs">已锁定品牌视角</span>
       </p>
       <button
         type="button"

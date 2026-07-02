@@ -244,6 +244,28 @@ export interface GroupFilter {
   allEnterprises?: boolean;
 }
 
+export interface EnterpriseStoreListFilter {
+  groupId?: string;
+  merchantId?: string;
+  status?: MerchantOrgStoreStatus | "";
+  query?: string;
+  /** 为 true 时不按当前 Enterprise 过滤（门店列表展示全部） */
+  allEnterprises?: boolean;
+}
+
+export interface EnterpriseStoreListRow {
+  store: MerchantOrgStore;
+  enterpriseId: string;
+  enterpriseName: string;
+  groupId: string;
+  groupName: string;
+  merchantId: string;
+  merchantName: string;
+  merchantBid?: string;
+  regionName?: string;
+  linkedMerchantName?: string;
+}
+
 export interface UpdateMerchantCapabilityInput {
   businessTypeIds: string[];
   productLineIds: string[];

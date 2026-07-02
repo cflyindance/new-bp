@@ -123,6 +123,7 @@ function renderMerchantsNav(path: string): string {
       path === full ||
       (subpath === "/overview" && path === `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/overview`) ||
       (subpath === "/groups" && isGroupMgmtPath(path)) ||
+      (subpath === "/stores" && path === `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/stores`) ||
       (subpath === "" &&
         (path === ENTERPRISE_MERCHANT_ROUTE_PREFIX ||
           !!parseMerchantDetailPath(path) ||
@@ -136,6 +137,7 @@ function renderMerchantsNav(path: string): string {
     { sub: "/overview", label: t("shell.mPlatformNavMerchantOverview") },
     { sub: "/groups", label: t("shell.mPlatformNavMerchantGroups") },
     { sub: "", label: t("shell.mPlatformNavMerchantList") },
+    { sub: "/stores", label: t("shell.mPlatformNavMerchantStores") },
     { sub: "/org-tree", label: t("shell.mPlatformNavMerchantOrgTree") },
     { sub: "/requests", label: t("shell.mPlatformNavMerchantRequests") },
     { sub: "/reports", label: t("shell.mPlatformNavMerchantReports") },

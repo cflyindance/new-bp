@@ -292,9 +292,17 @@ export function clearActiveMerchantGroupOverride(): void {
   }
 }
 
-/** 切换当前集团：同步 M 平台主数据并通知顶栏 scope 刷新 */
+/** 切换当前集团：同步 M 平台主数据并通知顶栏 scope 刷新（仅集团总部视角、非代登录） */
 export function writeActiveMerchantGroupId(groupId: string): void {
   if (!listMPlatformGroupsForMerchantBackend().some((g) => g.groupId === groupId)) return;
+  if (readActiveImpersonation()) return;
+  if (readSidebarNavLayoutPreset() !== "chain") return;
+  try {
+    const perspective = sessionStorage.getItem("menusifu:chain-data-perspective-v1");
+    if (perspective && perspective !== "group-hq") return;
+  } catch {
+    /* ignore */
+  }
   try {
     sessionStorage.setItem(ACTIVE_MERCHANT_GROUP_KEY, groupId);
   } catch {
@@ -385,6 +393,14 @@ export function loadChainBrandOrgForContext(): ChainBrandOrgSnapshot | null {
 
 export function formatChainStoreStatusLabel(status: MerchantOrgStoreStatus): string {
   return storeStatusLabel(status);
+}
+
+export function listStoreIdsInBrand(snapshot: ChainBrandOrgSnapshot, merchantId: string): string[] {
+  return snapshot.brands.find((b) => b.merchantId === merchantId)?.stores.map((s) => s.storeId) ?? [];
+}
+
+export function listBrandIdsInGroup(snapshot: ChainBrandOrgSnapshot): string[] {
+  return snapshot.brands.map((b) => b.merchantId);
 }
 
 export function bindChainBrandOrgSyncListener(): void {

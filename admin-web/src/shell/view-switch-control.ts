@@ -1,12 +1,20 @@
 /**
- * 顶栏视角切换：门店版 / 连锁版 / M 平台
+ * 顶栏视角切换：门店版 / 连锁版（集团总部·品牌多门店）/ M 平台
  */
 import { t } from "../i18n";
-import { ensureScopeFiltersForLayoutPreset } from "../auth/session-scope";
 import {
-  DEMO_CHAIN_BRAND_GROUP_ID,
-  syncChainBrandOrgForGroup,
-} from "../config/merchant-chain-brand-sync";
+  ensureScopeFiltersForLayoutPreset,
+  isViewSwitchRestricted,
+} from "../auth/session-scope";
+import {
+  canUseChainDataPerspective,
+  clearChainDataPerspectiveState,
+  resolveChainDataPerspective,
+  resolveDefaultAnchorBrandId,
+  writeChainDataPerspective,
+  type ChainDataPerspective,
+} from "../auth/merchant-scope-context";
+import { syncAllActiveMPlatformGroups } from "../config/merchant-chain-brand-sync";
 import {
   markSidebarNavLayoutPresetManual,
   readSidebarNavLayoutPreset,
@@ -21,9 +29,8 @@ import {
 
 import { NAV_BLUEPRINT_ROUTE_PREFIX } from "../config/nav-blueprint-ui";
 
-const M_PLATFORM_PRESET_PATH = "/m-platform/platform-preset";
-
 export type ViewSwitchMode = SidebarNavLayoutPreset | "m-platform";
+export type ChainViewSwitchPerspective = "group-hq" | "brand";
 
 function escapeHtml(s: string): string {
   return s
@@ -38,15 +45,27 @@ function getCurrentViewSwitchMode(): ViewSwitchMode {
   return readSidebarNavLayoutPreset();
 }
 
+function labelForChainPerspective(perspective: ChainDataPerspective): string {
+  if (perspective === "brand") return t("shell.perspectiveBrand");
+  if (perspective === "group-hq") return t("shell.perspectiveGroupHq");
+  return t("shell.navLayoutStore");
+}
+
+function hintForChainPerspective(perspective: ChainDataPerspective): string {
+  if (perspective === "brand") return t("shell.perspectiveBrandHint");
+  if (perspective === "group-hq") return t("shell.perspectiveGroupHqHint");
+  return t("shell.navLayoutStoreHint");
+}
+
 function labelForMode(mode: ViewSwitchMode): string {
   if (mode === "m-platform") return t("shell.mPlatform");
-  if (mode === "chain") return t("shell.navLayoutChain");
+  if (mode === "chain") return labelForChainPerspective(resolveChainDataPerspective());
   return t("shell.navLayoutStore");
 }
 
 function hintForMode(mode: ViewSwitchMode): string {
   if (mode === "m-platform") return t("shell.mPlatformHint");
-  if (mode === "chain") return t("shell.navLayoutChainHint");
+  if (mode === "chain") return hintForChainPerspective(resolveChainDataPerspective());
   return t("shell.navLayoutStoreHint");
 }
 
@@ -54,27 +73,84 @@ const CHEVRON_ICON = `<svg class="size-3.5 shrink-0 opacity-70" xmlns="http://ww
 
 const CHECK_ICON = `<svg class="size-4 shrink-0 text-primary" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>`;
 
-function renderMenuItem(mode: ViewSwitchMode, current: ViewSwitchMode): string {
-  const active = mode === current;
-  const label = escapeHtml(labelForMode(mode));
-  const hint = escapeHtml(hintForMode(mode));
-  const presetAttr =
-    mode === "m-platform" ? 'data-view-switch-option="m-platform"' : `data-view-switch-option="${mode}"`;
+function isChainPerspectiveActive(perspective: ChainViewSwitchPerspective): boolean {
+  return getCurrentViewSwitchMode() === "chain" && resolveChainDataPerspective() === perspective;
+}
+
+function renderStoreMenuItem(current: ViewSwitchMode): string {
+  const active = current === "store";
   return `
     <button
       type="button"
       role="menuitem"
-      ${presetAttr}
+      data-view-switch-option="store"
       class="flex w-full min-h-9 items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${active ? "bg-accent/60 font-medium text-accent-foreground" : "text-foreground"}"
-      title="${hint}"
+      title="${escapeHtml(t("shell.navLayoutStoreHint"))}"
       aria-current="${active ? "true" : "false"}"
+    >
+      <span class="flex size-4 shrink-0 items-center justify-center">${active ? CHECK_ICON : ""}</span>
+      <span class="min-w-0 flex-1 truncate">${escapeHtml(t("shell.navLayoutStore"))}</span>
+    </button>`;
+}
+
+function renderChainPerspectiveItem(perspective: ChainViewSwitchPerspective): string {
+  const allowed = canUseChainDataPerspective(perspective);
+  const active = allowed && isChainPerspectiveActive(perspective);
+  const label = escapeHtml(labelForChainPerspective(perspective));
+  const hint = escapeHtml(
+    allowed ? hintForChainPerspective(perspective) : t("shell.perspectiveRestrictedHint"),
+  );
+  const disabledAttrs = allowed ? "" : ' disabled aria-disabled="true"';
+  const disabledClass = allowed ? "" : " cursor-not-allowed opacity-50";
+  return `
+    <button
+      type="button"
+      role="menuitem"
+      data-view-switch-chain-perspective="${perspective}"
+      class="flex w-full min-h-9 items-center gap-2 rounded-md px-2.5 py-2 pl-6 text-left text-sm transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${active ? "bg-accent/60 font-medium text-accent-foreground" : "text-foreground"}${disabledClass}"
+      title="${hint}"
+      aria-current="${active ? "true" : "false"}"${disabledAttrs}
     >
       <span class="flex size-4 shrink-0 items-center justify-center">${active ? CHECK_ICON : ""}</span>
       <span class="min-w-0 flex-1 truncate">${label}</span>
     </button>`;
 }
 
+function renderMPlatformMenuItem(current: ViewSwitchMode): string {
+  const active = current === "m-platform";
+  return `
+    <button
+      type="button"
+      role="menuitem"
+      data-view-switch-option="m-platform"
+      class="flex w-full min-h-9 items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${active ? "bg-accent/60 font-medium text-accent-foreground" : "text-foreground"}"
+      title="${escapeHtml(t("shell.mPlatformHint"))}"
+      aria-current="${active ? "true" : "false"}"
+    >
+      <span class="flex size-4 shrink-0 items-center justify-center">${active ? CHECK_ICON : ""}</span>
+      <span class="min-w-0 flex-1 truncate">${escapeHtml(t("shell.mPlatform"))}</span>
+    </button>`;
+}
+
 export function renderViewSwitchControl(): string {
+  if (isViewSwitchRestricted()) {
+    const label = escapeHtml(labelForChainPerspective("brand"));
+    const hint = escapeHtml(t("shell.impersonationViewLocked"));
+    const lockedBadge =
+      "inline-flex h-8 sm:h-9 items-center rounded px-2 sm:px-2.5 text-xs sm:text-sm font-medium bg-amber-500/15 text-amber-950 dark:text-amber-100";
+    return `
+    <div class="relative shrink-0" data-view-switch-root data-view-switch-locked="1">
+      <div
+        class="flex items-center gap-0.5 rounded-md border border-amber-500/30 bg-background p-0.5"
+        role="group"
+        aria-label="${escapeHtml(t("shell.viewSwitchAria"))}"
+        title="${hint}"
+      >
+        <span class="${lockedBadge}">${label}</span>
+      </div>
+    </div>`;
+  }
+
   const current = getCurrentViewSwitchMode();
   const currentLabel = escapeHtml(labelForMode(current));
   const currentHint = escapeHtml(hintForMode(current));
@@ -108,13 +184,16 @@ export function renderViewSwitchControl(): string {
         id="view-switch-menu"
         role="menu"
         data-view-switch-menu
-        class="absolute right-0 top-full z-50 mt-1.5 hidden w-44 origin-top-right rounded-lg border border-border bg-card py-1.5 shadow-lg animate-fade-in"
+        class="absolute right-0 top-full z-50 mt-1.5 hidden w-52 origin-top-right rounded-lg border border-border bg-card py-1.5 shadow-lg animate-fade-in"
         aria-label="${escapeHtml(t("shell.viewSwitchMenuAria"))}"
       >
         <div class="px-1.5">
-          ${renderMenuItem("store", current)}
-          ${renderMenuItem("chain", current)}
-          ${renderMenuItem("m-platform", current)}
+          ${renderStoreMenuItem(current)}
+          <div class="px-2.5 py-1.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">${escapeHtml(t("shell.navLayoutChain"))}</div>
+          ${renderChainPerspectiveItem("group-hq")}
+          ${renderChainPerspectiveItem("brand")}
+          <div class="my-1 h-px bg-border" aria-hidden="true"></div>
+          ${renderMPlatformMenuItem(current)}
         </div>
       </div>
     </div>`;
@@ -128,7 +207,27 @@ function setViewSwitchOpen(root: HTMLElement, open: boolean): void {
   menu.classList.toggle("hidden", !open);
 }
 
+function applyChainPerspective(perspective: ChainViewSwitchPerspective, onMount: () => void): void {
+  if (isViewSwitchRestricted()) return;
+
+  if (isMPlatformShellMode()) {
+    exitMPlatformShell();
+    location.hash = "#/nav-home";
+  }
+
+  markSidebarNavLayoutPresetManual();
+  writeSidebarNavLayoutPreset("chain");
+
+  const brandId = perspective === "brand" ? resolveDefaultAnchorBrandId() ?? undefined : undefined;
+  writeChainDataPerspective(perspective, brandId ? { brandId } : undefined);
+  ensureScopeFiltersForLayoutPreset("chain");
+  syncAllActiveMPlatformGroups();
+  onMount();
+}
+
 function applyViewSwitchMode(mode: ViewSwitchMode, onMount: () => void): void {
+  if (isViewSwitchRestricted()) return;
+
   if (mode === "m-platform") {
     if (isMPlatformShellMode()) return;
     enterMPlatformShell();
@@ -137,24 +236,22 @@ function applyViewSwitchMode(mode: ViewSwitchMode, onMount: () => void): void {
     return;
   }
 
-  if (isMPlatformShellMode()) {
-    exitMPlatformShell();
-    location.hash = "#/nav-home";
-    if (readSidebarNavLayoutPreset() === mode) {
-      if (mode === "chain") syncChainBrandOrgForGroup(DEMO_CHAIN_BRAND_GROUP_ID);
-      onMount();
-      return;
-    }
-  } else if (readSidebarNavLayoutPreset() === mode) {
+  if (mode === "chain") {
+    applyChainPerspective("group-hq", onMount);
     return;
   }
 
-  markSidebarNavLayoutPresetManual();
-  writeSidebarNavLayoutPreset(mode);
-  ensureScopeFiltersForLayoutPreset(mode);
-  if (mode === "chain") {
-    syncChainBrandOrgForGroup(DEMO_CHAIN_BRAND_GROUP_ID);
+  if (isMPlatformShellMode()) {
+    exitMPlatformShell();
+    location.hash = "#/nav-home";
   }
+
+  if (readSidebarNavLayoutPreset() === "store") return;
+
+  markSidebarNavLayoutPresetManual();
+  writeSidebarNavLayoutPreset("store");
+  clearChainDataPerspectiveState();
+  ensureScopeFiltersForLayoutPreset("store");
   onMount();
 }
 
@@ -173,9 +270,20 @@ export function bindViewSwitchControl(onMount: () => void): void {
     root.querySelectorAll<HTMLButtonElement>("[data-view-switch-option]").forEach((btn) => {
       btn.addEventListener("click", () => {
         const raw = btn.getAttribute("data-view-switch-option");
-        if (raw !== "store" && raw !== "chain" && raw !== "m-platform") return;
+        if (raw !== "store" && raw !== "m-platform") return;
         setViewSwitchOpen(root, false);
         applyViewSwitchMode(raw, onMount);
+      });
+    });
+
+    root.querySelectorAll<HTMLButtonElement>("[data-view-switch-chain-perspective]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        if (btn.disabled) return;
+        const raw = btn.getAttribute("data-view-switch-chain-perspective");
+        if (raw !== "group-hq" && raw !== "brand") return;
+        if (!canUseChainDataPerspective(raw)) return;
+        setViewSwitchOpen(root, false);
+        applyChainPerspective(raw, onMount);
       });
     });
   });
