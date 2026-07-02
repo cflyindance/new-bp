@@ -12,6 +12,7 @@ import {
 } from "./permission-four-column-nav";
 import { l2HasCatalogNavSections } from "./module-settings-subnav";
 import type { PlatformPresetNodeSelection } from "./platform-preset-store";
+import type { NavBlueprintStructureOrder } from "./nav-blueprint-store";
 import { tierBadgeClass, tierBadgeLabel, type BusinessTypeTier } from "./platform-preset-catalog";
 
 function escapeHtml(s: string): string {
@@ -74,14 +75,27 @@ export function fourColumnCheckboxState(
   return { checked: false, indeterminate: true };
 }
 
-function mountKindBadgeLabel(kind: "page" | "features"): string {
-  return kind === "page" ? "页面" : "设置";
-}
-
 function mountKindBadgeClass(kind: "page" | "features"): string {
   return kind === "page"
     ? "bg-sky-500/15 text-sky-700 dark:text-sky-300"
     : "bg-amber-500/15 text-amber-800 dark:text-amber-300";
+}
+
+function mountKindBadgeLabel(kind: "page" | "features"): string {
+  return kind === "page" ? "页面" : "设置";
+}
+
+export type FourColumnMatrixRenderOpts = {
+  enableSiblingSort?: boolean;
+  structureOrder?: NavBlueprintStructureOrder;
+  seqOrder?: Record<string, number[]>;
+};
+
+function wrapSortableRow(key: string, level: number, innerHtml: string): string {
+  return `<div class="flex items-start gap-0.5" data-nb-draggable-row data-nb-sort-key="${escapeHtml(key)}" data-nb-sort-level="${level}">
+    <button type="button" class="mt-2 shrink-0 cursor-grab touch-none rounded px-0.5 text-muted-foreground hover:bg-muted active:cursor-grabbing" data-nb-drag-handle draggable="true" aria-label="拖动排序" title="拖动排序">⋮⋮</button>
+    <div class="min-w-0 flex-1">${innerHtml}</div>
+  </div>`;
 }
 
 export function renderFourColumnItem(
@@ -101,6 +115,8 @@ export function renderFourColumnItem(
     customL1NodeId?: string;
     /** 只读展示项（无勾选、不可选中） */
     displayOnly?: boolean;
+    /** 导航蓝图：显示拖动手柄 */
+    sortable?: boolean;
   } = {},
 ): string {
   const {
@@ -113,6 +129,7 @@ export function renderFourColumnItem(
     mountTag,
     customL1NodeId,
     displayOnly = false,
+    sortable = false,
   } = options;
   const q = filter.trim().toLowerCase();
   if (q && !title.toLowerCase().includes(q) && !key.toLowerCase().includes(q)) {
@@ -162,11 +179,15 @@ export function renderFourColumnItem(
         ${showL4AccessMode ? renderL4EditableCheckbox(key, selection, checked && !indeterminate) : ""}
       </span>
     </button>`;
-  if (!customL1NodeId) return itemBody;
-  return `<div class="flex w-full items-start gap-0.5">${itemBody}<div class="flex shrink-0 flex-col gap-0.5 py-2 pr-1">
+  if (!customL1NodeId) {
+    const body = itemBody;
+    return sortable && level != null ? wrapSortableRow(key, level, body) : body;
+  }
+  const wrapped = `<div class="flex w-full items-start gap-0.5">${itemBody}<div class="flex shrink-0 flex-col gap-0.5 py-2 pr-1">
         <button type="button" data-nb-edit-l1="${escapeHtml(customL1NodeId)}" class="text-xs text-primary hover:underline whitespace-nowrap">编辑</button>
         <button type="button" data-nb-delete-l1="${escapeHtml(customL1NodeId)}" class="text-xs text-destructive hover:underline whitespace-nowrap">删除</button>
       </div></div>`;
+  return sortable && level != null ? wrapSortableRow(key, level, wrapped) : wrapped;
 }
 
 function renderFourColumnL3(
@@ -176,6 +197,8 @@ function renderFourColumnL3(
   index: FourColumnTreeIndex,
   filter: string,
   matrixMode: FourColumnMatrixMode = "platform-preset",
+  flatOrder?: string[],
+  sortable = false,
 ): string {
   return renderL3Column(l2Node, activeL3, (node, nested) => {
     const isMountedPage =
@@ -196,9 +219,10 @@ function renderFourColumnL3(
         filter,
         mountTag: isCustomL3 || isMountedPage ? node.resource.customL3MountKind : undefined,
         displayOnly: isMountedPage,
+        sortable,
       },
     );
-  });
+  }, flatOrder);
 }
 
 export function renderFourColumnMatrix(
@@ -210,7 +234,11 @@ export function renderFourColumnMatrix(
   filter: string,
   tierForModule?: (moduleId: string) => BusinessTypeTier | undefined,
   matrixMode: FourColumnMatrixMode = "platform-preset",
+  matrixRenderOpts?: FourColumnMatrixRenderOpts,
 ): { col1: string; col2: string; col3: string; col4: string } {
+  const sortable = matrixRenderOpts?.enableSiblingSort ?? false;
+  const l3FlatOrder =
+    sortable && activeL2 ? matrixRenderOpts?.structureOrder?.l3?.[activeL2] : undefined;
   const l1Node = index.groups.find((g) => g.moduleKey === activeL1)?.tree;
   const l2Node = findL2Node(index.groups, activeL2);
   const l3Node = findL3Node(index.groups, activeL3);
@@ -230,6 +258,7 @@ export function renderFourColumnMatrix(
           filter,
           mountTag: g.customL1MountKind,
           customL1NodeId: isCustomL1 ? g.moduleId : undefined,
+          sortable,
         },
       );
     })
@@ -252,13 +281,23 @@ export function renderFourColumnMatrix(
           filter,
           mountTag: isCustomL2 || isMountedPage ? c.resource.customL2MountKind : undefined,
           displayOnly: isMountedPage,
+          sortable: sortable && !isMountedPage,
         },
       );
     })
     .filter(Boolean)
     .join("");
 
-  const col3Raw = renderFourColumnL3(l2Node, activeL3, selection, index, filter, matrixMode);
+  const col3Raw = renderFourColumnL3(
+    l2Node,
+    activeL3,
+    selection,
+    index,
+    filter,
+    matrixMode,
+    l3FlatOrder,
+    sortable,
+  );
   let col3 = col3Raw;
   if (
     matrixMode === "platform-preset" &&
@@ -286,7 +325,7 @@ export function renderFourColumnMatrix(
         false,
         selection,
         index,
-        { level: 4, showL4AccessMode: matrixMode === "rbac", filter },
+        { level: 4, showL4AccessMode: matrixMode === "rbac", filter, sortable },
       ),
     )
     .filter(Boolean)
@@ -343,7 +382,7 @@ export function rerenderFourColumnMatrix(
   filter: string,
   tierForModule?: (moduleId: string) => BusinessTypeTier | undefined,
   matrixMode: FourColumnMatrixMode = "platform-preset",
-  matrixOpts?: { preserveEmptyL2?: boolean; preserveEmptyL3?: boolean },
+  matrixOpts?: { preserveEmptyL2?: boolean; preserveEmptyL3?: boolean } & FourColumnMatrixRenderOpts,
 ): void {
   let l1 = root.dataset.activeL1 ?? index.groups[0]?.moduleKey ?? "";
   let l2 = root.dataset.activeL2 ?? "";
@@ -373,6 +412,7 @@ export function rerenderFourColumnMatrix(
     filter,
     tierForModule,
     matrixMode,
+    matrixOpts,
   );
 
   const col1El = root.querySelector('[data-pp-col="1"]');

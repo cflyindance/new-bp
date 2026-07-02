@@ -95,6 +95,20 @@ export interface NavBlueprintSnapshot {
   seqAssignments?: Record<number, string>;
   /** @deprecated 读取时迁移至 system* / custom* 字段 */
   structureSelection?: Record<string, PlatformPresetNodeSelection>;
+  /** 系统树 · 同级排序覆盖（L1 moduleKey / L2·L3 resource key） */
+  systemStructureOrder?: NavBlueprintStructureOrder;
+  /** 自定义树 · 同级排序覆盖（与 customNodes.sortOrder 互补，L3/L4 用） */
+  customStructureOrder?: NavBlueprintStructureOrder;
+  /** 系统树 · L3 下设置项 seq 顺序 */
+  systemSeqOrder?: Record<string, number[]>;
+  /** 自定义树 · L3 下设置项 seq 顺序 */
+  customSeqOrder?: Record<string, number[]>;
+}
+
+export interface NavBlueprintStructureOrder {
+  l1?: string[];
+  l2?: Record<string, string[]>;
+  l3?: Record<string, string[]>;
 }
 
 interface NavBlueprintStore {
@@ -245,6 +259,10 @@ export function normalizeBlueprintSnapshot(raw: NavBlueprintSnapshot): NavBluepr
     systemStructureSelection: split.systemStructureSelection ?? {},
     customSeqAssignments: split.customSeqAssignments ?? {},
     customStructureSelection: split.customStructureSelection ?? {},
+    systemStructureOrder: split.systemStructureOrder ?? {},
+    customStructureOrder: split.customStructureOrder ?? {},
+    systemSeqOrder: split.systemSeqOrder ?? {},
+    customSeqOrder: split.customSeqOrder ?? {},
   };
 }
 
@@ -280,6 +298,10 @@ function emptyBlueprint(blueprintId: string): NavBlueprintSnapshot {
     systemStructureSelection: {},
     customSeqAssignments: {},
     customStructureSelection: {},
+    systemStructureOrder: {},
+    customStructureOrder: {},
+    systemSeqOrder: {},
+    customSeqOrder: {},
   };
 }
 
@@ -344,6 +366,8 @@ export function restoreNavBlueprintSystemDefault(blueprintId: string): NavBluepr
   const draft = getNavBlueprintDraft(blueprintId);
   draft.systemSeqAssignments = {};
   draft.systemStructureSelection = {};
+  draft.systemStructureOrder = {};
+  draft.systemSeqOrder = {};
   writeNavBlueprintDraft(draft);
   return draft;
 }
@@ -353,6 +377,8 @@ export function restoreNavBlueprintCustomTree(blueprintId: string): NavBlueprint
   draft.customNodes = [];
   draft.customSeqAssignments = {};
   draft.customStructureSelection = {};
+  draft.customStructureOrder = {};
+  draft.customSeqOrder = {};
   writeNavBlueprintDraft(draft);
   return draft;
 }
@@ -1098,6 +1124,15 @@ export function assignSeqToL3(
   const draft = getNavBlueprintDraft(blueprintId);
   if (module === "custom") draft.customSeqAssignments[seq] = l3Key;
   else draft.systemSeqAssignments[seq] = l3Key;
+  if (module === "custom") {
+    draft.customSeqOrder = draft.customSeqOrder ?? {};
+    if (!draft.customSeqOrder[l3Key]) draft.customSeqOrder[l3Key] = [];
+    if (!draft.customSeqOrder[l3Key]!.includes(seq)) draft.customSeqOrder[l3Key]!.push(seq);
+  } else {
+    draft.systemSeqOrder = draft.systemSeqOrder ?? {};
+    if (!draft.systemSeqOrder[l3Key]) draft.systemSeqOrder[l3Key] = [];
+    if (!draft.systemSeqOrder[l3Key]!.includes(seq)) draft.systemSeqOrder[l3Key]!.push(seq);
+  }
   writeNavBlueprintDraft(draft);
 }
 
@@ -1107,8 +1142,100 @@ export function unassignSeq(
   module: "system" | "custom" = "system",
 ): void {
   const draft = getNavBlueprintDraft(blueprintId);
+  const assignments = module === "custom" ? draft.customSeqAssignments : draft.systemSeqAssignments;
+  const l3Key = assignments[seq];
   if (module === "custom") delete draft.customSeqAssignments[seq];
   else delete draft.systemSeqAssignments[seq];
+  if (module === "custom" && l3Key && draft.customSeqOrder?.[l3Key]) {
+    draft.customSeqOrder[l3Key] = draft.customSeqOrder[l3Key]!.filter((s) => s !== seq);
+    if (!draft.customSeqOrder[l3Key]!.length) delete draft.customSeqOrder[l3Key];
+  } else if (l3Key && draft.systemSeqOrder?.[l3Key]) {
+    draft.systemSeqOrder[l3Key] = draft.systemSeqOrder[l3Key]!.filter((s) => s !== seq);
+    if (!draft.systemSeqOrder[l3Key]!.length) delete draft.systemSeqOrder[l3Key];
+  }
+  writeNavBlueprintDraft(draft);
+}
+
+function customL3CompositeKey(node: NavBlueprintCustomNode): string {
+  return `${node.parentKey}:${node.groupKey ?? node.id}`;
+}
+
+function appendMissingKeys(ordered: string[], allKeys: string[]): string[] {
+  const next = [...ordered];
+  for (const key of allKeys) {
+    if (!next.includes(key)) next.push(key);
+  }
+  return next;
+}
+
+/** 自定义树 · 重排同级 L1/L2/L3（L3 使用 composite key 或 node id） */
+export function reorderNavBlueprintCustomSiblings(
+  blueprintId: string,
+  level: 1 | 2 | 3,
+  parentKey: string | null,
+  orderedKeys: string[],
+): void {
+  const draft = getNavBlueprintDraft(blueprintId);
+  const siblings =
+    level === 1
+      ? draft.customNodes.filter((n) => n.level === 1)
+      : level === 2
+        ? draft.customNodes.filter((n) => n.level === 2 && n.parentKey === parentKey)
+        : draft.customNodes.filter((n) => n.level === 3 && n.parentKey === parentKey);
+
+  const keyOf = (n: NavBlueprintCustomNode): string =>
+    level === 3 ? customL3CompositeKey(n) : n.id;
+
+  const allKeys = siblings.map(keyOf);
+  const normalizedKeys = appendMissingKeys(
+    orderedKeys.filter((k) => allKeys.includes(k) || siblings.some((n) => n.id === k)),
+    allKeys,
+  );
+
+  normalizedKeys.forEach((key, idx) => {
+    const node = siblings.find((n) => keyOf(n) === key || n.id === key);
+    if (node) node.sortOrder = idx;
+  });
+
+  writeNavBlueprintDraft(draft);
+}
+
+/** 系统树 · 重排同级结构 */
+export function reorderNavBlueprintSystemStructure(
+  blueprintId: string,
+  level: 1 | 2 | 3,
+  parentKey: string | null,
+  orderedKeys: string[],
+): void {
+  const draft = getNavBlueprintDraft(blueprintId);
+  draft.systemStructureOrder = draft.systemStructureOrder ?? {};
+  if (level === 1) {
+    draft.systemStructureOrder.l1 = orderedKeys;
+  } else if (level === 2 && parentKey) {
+    draft.systemStructureOrder.l2 = draft.systemStructureOrder.l2 ?? {};
+    draft.systemStructureOrder.l2[parentKey] = orderedKeys;
+  } else if (level === 3 && parentKey) {
+    draft.systemStructureOrder.l3 = draft.systemStructureOrder.l3 ?? {};
+    draft.systemStructureOrder.l3[parentKey] = orderedKeys;
+  }
+  writeNavBlueprintDraft(draft);
+}
+
+/** 重排 L3 下设置项（seq）顺序 */
+export function reorderNavBlueprintSeqInL3(
+  blueprintId: string,
+  module: "system" | "custom",
+  l3Key: string,
+  orderedSeqs: number[],
+): void {
+  const draft = getNavBlueprintDraft(blueprintId);
+  if (module === "custom") {
+    draft.customSeqOrder = draft.customSeqOrder ?? {};
+    draft.customSeqOrder[l3Key] = orderedSeqs;
+  } else {
+    draft.systemSeqOrder = draft.systemSeqOrder ?? {};
+    draft.systemSeqOrder[l3Key] = orderedSeqs;
+  }
   writeNavBlueprintDraft(draft);
 }
 

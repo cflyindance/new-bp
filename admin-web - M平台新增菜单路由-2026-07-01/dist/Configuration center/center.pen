@@ -1,0 +1,303 @@
+{
+  "version": "2.8",
+  "children": [
+    {
+      "type": "frame",
+      "id": "bi8Au",
+      "x": -1039,
+      "y": -1534,
+      "name": "素材管理",
+      "clip": true,
+      "width": 1440,
+      "height": 900,
+      "fill": "#FFFFFF",
+      "layout": "none",
+      "children": [
+        {
+          "type": "rectangle",
+          "id": "nqcCp",
+          "x": 0,
+          "y": 0,
+          "fill": {
+            "type": "image",
+            "enabled": true,
+            "url": "./素材管理.png",
+            "mode": "fill"
+          },
+          "width": 1440,
+          "height": 900
+        },
+        {
+          "type": "rectangle",
+          "id": "zl0ai",
+          "x": 10,
+          "y": 125,
+          "fill": "#f5f6f7ff",
+          "width": 219,
+          "height": 107
+        },
+        {
+          "type": "rectangle",
+          "id": "zBXhJ",
+          "x": 187,
+          "y": 85,
+          "fill": "#f5f6f7ff",
+          "width": 36,
+          "height": 24
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "syQ8V",
+      "x": -1039,
+      "y": -159,
+      "name": "Kiosk屏保",
+      "clip": true,
+      "width": 1440,
+      "height": 900,
+      "fill": "#FFFFFF",
+      "layout": "none",
+      "children": [
+        {
+          "type": "rectangle",
+          "id": "J97Bo",
+          "x": 0,
+          "y": 0,
+          "fill": {
+            "type": "image",
+            "enabled": true,
+            "url": "./Kiosk屏保.png",
+            "mode": "fill"
+          },
+          "width": 1440,
+          "height": 900
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "mVFk2",
+      "x": 2218,
+      "y": -159,
+      "name": "已上传屏保",
+      "clip": true,
+      "width": 1440,
+      "height": 900,
+      "fill": "#FFFFFF",
+      "layout": "none",
+      "children": [
+        {
+          "type": "rectangle",
+          "id": "j9cCO",
+          "x": 0,
+          "y": 0,
+          "fill": {
+            "type": "image",
+            "enabled": true,
+            "url": "./已上传屏保.png",
+            "mode": "fill"
+          },
+          "width": 1440,
+          "height": 900
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "n7E5S",
+      "x": 567,
+      "y": -159,
+      "name": "新建屏保",
+      "clip": true,
+      "width": 1440,
+      "height": 900,
+      "fill": "#FFFFFF",
+      "layout": "none",
+      "children": [
+        {
+          "type": "rectangle",
+          "id": "5Bfgv",
+          "x": 0,
+          "y": 0,
+          "fill": {
+            "type": "image",
+            "enabled": true,
+            "url": "./新建屏保.png",
+            "mode": "fill"
+          },
+          "width": 1440,
+          "height": 900
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "TYnUN",
+      "x": -1039,
+      "y": 1025,
+      "name": "已创建主题",
+      "clip": true,
+      "width": 1440,
+      "height": 900,
+      "fill": "#FFFFFF",
+      "layout": "none",
+      "children": [
+        {
+          "type": "rectangle",
+          "id": "cHRIF",
+          "x": 0,
+          "y": 0,
+          "fill": {
+            "type": "image",
+            "enabled": true,
+            "url": "./已创建主题.png",
+            "mode": "fill"
+          },
+          "width": 1440,
+          "height": 900
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "sex09",
+      "x": 567,
+      "y": 1025,
+      "name": "编辑主题",
+      "clip": true,
+      "width": 1440,
+      "height": 900,
+      "fill": "#FFFFFF",
+      "layout": "none",
+      "children": [
+        {
+          "type": "rectangle",
+          "id": "EyPds",
+          "x": 0,
+          "y": 0,
+          "fill": {
+            "type": "image",
+            "enabled": true,
+            "url": "./编辑主题.png",
+            "mode": "fill"
+          },
+          "width": 1440,
+          "height": 900
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "RTEZy",
+      "x": 2218,
+      "y": 1025,
+      "name": "选择门店-未选择",
+      "clip": true,
+      "width": 1440,
+      "height": 900,
+      "fill": "#FFFFFF",
+      "layout": "none",
+      "children": [
+        {
+          "type": "rectangle",
+          "id": "hdURc",
+          "x": 0,
+          "y": 0,
+          "fill": {
+            "type": "image",
+            "enabled": true,
+            "url": "./选择门店-未选择.png",
+            "mode": "fill"
+          },
+          "width": 1440,
+          "height": 900
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "T5s7J",
+      "x": 3824,
+      "y": 1025,
+      "name": "选择门店-已选择",
+      "clip": true,
+      "width": 1440,
+      "height": 900,
+      "fill": "#FFFFFF",
+      "layout": "none",
+      "children": [
+        {
+          "type": "rectangle",
+          "id": "0Sf2o",
+          "x": 0,
+          "y": 0,
+          "fill": {
+            "type": "image",
+            "enabled": true,
+            "url": "./选择门店-已选择.png",
+            "mode": "fill"
+          },
+          "width": 1440,
+          "height": 900
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "PFIn4",
+      "x": 5383,
+      "y": 1025,
+      "name": "选择下发时间",
+      "clip": true,
+      "width": 1440,
+      "height": 900,
+      "fill": "#FFFFFF",
+      "layout": "none",
+      "children": [
+        {
+          "type": "rectangle",
+          "id": "fOyUD",
+          "x": 0,
+          "y": 0,
+          "fill": {
+            "type": "image",
+            "enabled": true,
+            "url": "./选择下发时间.png",
+            "mode": "fill"
+          },
+          "width": 1440,
+          "height": 1001
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "gLwPN",
+      "x": 7006,
+      "y": 1025,
+      "name": "选择生效时间",
+      "clip": true,
+      "width": 1440,
+      "height": 900,
+      "fill": "#FFFFFF",
+      "layout": "none",
+      "children": [
+        {
+          "type": "rectangle",
+          "id": "n9zAL",
+          "x": 0,
+          "y": 0,
+          "fill": {
+            "type": "image",
+            "enabled": true,
+            "url": "./选择生效时间.png",
+            "mode": "fill"
+          },
+          "width": 1440,
+          "height": 1001
+        }
+      ]
+    }
+  ]
+}

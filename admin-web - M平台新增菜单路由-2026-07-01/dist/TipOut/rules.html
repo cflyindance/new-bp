@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>小费分配规则 - TipOut</title>
+  <link rel="stylesheet" href="common.css">
+  <style>
+    .pool-type-options {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .pool-type-option {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 14px 16px;
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-lg);
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+    }
+    .pool-type-option:hover {
+      border-color: var(--primary);
+      background: rgba(22, 119, 255, 0.04);
+    }
+    .pool-type-option.selected {
+      border-color: var(--primary);
+      background: rgba(22, 119, 255, 0.08);
+      box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1);
+    }
+    .pool-type-option input {
+      margin-top: 3px;
+      accent-color: var(--primary);
+      flex-shrink: 0;
+    }
+    .pool-type-option-text strong {
+      display: block;
+      font-size: 14px;
+      margin-bottom: 4px;
+      color: var(--text-primary);
+    }
+    .pool-type-option-text span {
+      font-size: 12px;
+      color: var(--text-tertiary);
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <div class="logo-icon">M</div>
+        <span class="logo-text">MenuSifu</span>
+      </div>
+      <nav class="sidebar-menu">
+        <div class="sidebar-submenu-title open" onclick="this.classList.toggle('open');this.nextElementSibling.style.maxHeight=this.classList.contains('open')?'200px':'0'">
+          <span>Tip Out</span>
+          <svg class="arrow" width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M6 8.825a.5.5 0 0 1-.354-.146l-4-4a.5.5 0 0 1 .708-.708L6 7.617l3.646-3.646a.5.5 0 0 1 .708.708l-4 4A.5.5 0 0 1 6 8.825z"/></svg>
+        </div>
+        <div class="sidebar-submenu-items" style="max-height:200px">
+          <a href="index.html" class="sidebar-menu-item active">小费分配</a>
+        </div>
+        <div class="sidebar-submenu-title open" onclick="this.classList.toggle('open');this.nextElementSibling.style.maxHeight=this.classList.contains('open')?'200px':'0'">
+          <span>员工管理</span>
+          <svg class="arrow" width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M6 8.825a.5.5 0 0 1-.354-.146l-4-4a.5.5 0 0 1 .708-.708L6 7.617l3.646-3.646a.5.5 0 0 1 .708.708l-4 4A.5.5 0 0 1 6 8.825z"/></svg>
+        </div>
+        <div class="sidebar-submenu-items" style="max-height:200px">
+          <a href="employees.html" class="sidebar-menu-item">员工列表</a>
+        </div>
+        <div class="sidebar-submenu-title open" onclick="this.classList.toggle('open');this.nextElementSibling.style.maxHeight=this.classList.contains('open')?'200px':'0'">
+          <span>Payroll</span>
+          <svg class="arrow" width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M6 8.825a.5.5 0 0 1-.354-.146l-4-4a.5.5 0 0 1 .708-.708L6 7.617l3.646-3.646a.5.5 0 0 1 .708.708l-4 4A.5.5 0 0 1 6 8.825z"/></svg>
+        </div>
+        <div class="sidebar-submenu-items" style="max-height:200px">
+          <a href="payroll.html" class="sidebar-menu-item">报税报表</a>
+        </div>
+      </nav>
+    </aside>
+
+    <div class="mobile-overlay"></div>
+
+    <div class="main-content">
+      <header class="header">
+        <div class="header-left">
+          <button class="mobile-menu-btn" onclick="toggleSidebar()">☰</button>
+        </div>
+        <div class="header-right">
+          <div class="header-user">
+            <div class="avatar">R</div>
+            <span>Robert_W</span>
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M6 8.825a.5.5 0 0 1-.354-.146l-4-4a.5.5 0 0 1 .708-.708L6 7.617l3.646-3.646a.5.5 0 0 1 .708.708l-4 4A.5.5 0 0 1 6 8.825z"/></svg>
+          </div>
+        </div>
+      </header>
+
+      <div class="page-tabs">
+        <a href="index.html" class="page-tab">小费分配</a>
+        <a href="detail.html" class="page-tab">小费分配明细</a>
+        <a href="rules.html" class="page-tab active">小费分配规则</a>
+      </div>
+
+      <div class="content-area">
+        <!-- Filter + Add（移动端：纵向堆叠 + 全宽触控） -->
+        <div class="page-toolbar">
+          <div class="filter-bar">
+            <div class="filter-field">
+              <label class="filter-field-label" for="storeFilter">门店</label>
+              <select class="form-control form-control-lg" id="storeFilter" onchange="renderRulesTable()">
+                <option value="">全部门店</option>
+              </select>
+            </div>
+          </div>
+          <button type="button" class="btn btn-primary page-toolbar-action" onclick="openAddRuleModal()">新增规则</button>
+        </div>
+
+        <!-- Rules Table -->
+        <div class="card">
+          <div class="card-body" style="padding:0">
+            <table class="data-table" id="rulesTable">
+              <thead>
+                <tr>
+                  <th style="width:22%">门店</th>
+                  <th style="width:14%">小费池类型</th>
+                  <th style="width:18%">规则名称</th>
+                  <th style="width:28%">规则</th>
+                  <th style="width:18%">操作</th>
+                </tr>
+              </thead>
+              <tbody id="rulesTableBody">
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="poolTypeModal">
+    <div class="modal" style="width:min(480px,92vw)">
+      <div class="modal-header">
+        <h3>选择小费池类型</h3>
+        <button type="button" class="modal-close" onclick="closePoolTypeModal()" aria-label="关闭">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="pool-type-options">
+          <label class="pool-type-option selected" data-pool-type="tip">
+            <input type="radio" name="poolType" value="tip" checked>
+            <div class="pool-type-option-text">
+              <strong>小费池</strong>
+              <span>配置小费、销售额等来源的小费分配规则</span>
+            </div>
+          </label>
+          <label class="pool-type-option" data-pool-type="surcharge">
+            <input type="radio" name="poolType" value="surcharge">
+            <div class="pool-type-option-text">
+              <strong>加收服务费池</strong>
+              <span>配置现金/信用卡加收服务费的分配规则</span>
+            </div>
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" onclick="closePoolTypeModal()">取消</button>
+        <button type="button" class="btn btn-primary" onclick="confirmPoolTypeSelection()">下一步</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="common.js"></script>
+  <script src="ruleData.js"></script>
+  <script>
+    function initStoreFilter() {
+      var sel = document.getElementById('storeFilter');
+      if (!sel) return;
+      var rules = ruleData.getRules();
+      var seen = {};
+      var stores = [];
+      rules.forEach(function(r) {
+        var s = (r.store || '').trim();
+        if (s && !seen[s]) { seen[s] = 1; stores.push(s); }
+      });
+      sel.innerHTML = '<option value="">全部门店</option>' + stores.map(function(s) {
+        return '<option value="' + s + '">' + s + '</option>';
+      }).join('');
+    }
+
+    function renderRulesTable() {
+      var rules = ruleData.getRules();
+      var storeFilter = document.getElementById('storeFilter');
+      var filterStore = storeFilter ? storeFilter.value : '';
+      if (filterStore) {
+        rules = rules.filter(function(r) { return r.store === filterStore; });
+      }
+      var tbody = document.getElementById('rulesTableBody');
+      tbody.innerHTML = '';
+      if (rules.length === 0) {
+        var tr = document.createElement('tr');
+        tr.innerHTML = '<td colspan="5" style="padding:48px;text-align:center;color:var(--text-tertiary)">暂无规则，请点击「新增规则」创建</td>';
+        tbody.appendChild(tr);
+        return;
+      }
+      rules.forEach(function(rule) {
+        var desc = ruleData.buildRuleDescription(rule);
+        var tr = document.createElement('tr');
+        tr.setAttribute('data-rule-id', rule.id);
+        var editUrl = 'rule-add.html?mode=edit&id=' + rule.id;
+        if (rule.poolKind === 'surcharge') editUrl += '&poolKind=surcharge';
+        var poolKindLabel = ruleData.getRulePoolKindLabel(rule);
+        var poolKindTagClass = ruleData.getRulePoolKindTagClass(rule);
+        tr.innerHTML =
+          '<td>' + (rule.store || '') + '</td>' +
+          '<td><span class="' + poolKindTagClass + '">' + poolKindLabel + '</span></td>' +
+          '<td>' + (rule.ruleName || '') + '</td>' +
+          '<td>' + desc + '</td>' +
+          '<td class="action-links">' +
+            '<a href="' + editUrl + '">编辑</a>' +
+            '<a href="javascript:void(0)" onclick="deleteRule(this)">删除</a>' +
+            '<a href="javascript:void(0)" onclick="copyRule(this)">复制</a>' +
+          '</td>';
+        tbody.appendChild(tr);
+      });
+    }
+
+    function deleteRule(el) {
+      confirmAction('确定要删除该规则吗？此操作不可恢复。', function() {
+        var row = el.closest('tr');
+        var id = row.getAttribute('data-rule-id');
+        ruleData.deleteRuleById(id);
+        row.style.opacity = '0';
+        row.style.transition = 'opacity 0.3s';
+        setTimeout(function() { renderRulesTable(); }, 300);
+        showNotification('规则已删除');
+      });
+    }
+
+    function openAddRuleModal() {
+      resetPoolTypeSelection();
+      openModal('poolTypeModal');
+    }
+
+    function closePoolTypeModal() {
+      closeModal('poolTypeModal');
+    }
+
+    function resetPoolTypeSelection() {
+      document.querySelectorAll('#poolTypeModal .pool-type-option').forEach(function(el) {
+        var isTip = el.getAttribute('data-pool-type') === 'tip';
+        el.classList.toggle('selected', isTip);
+        var radio = el.querySelector('input[type="radio"]');
+        if (radio) radio.checked = isTip;
+      });
+    }
+
+    function syncPoolTypeOptionStyles() {
+      document.querySelectorAll('#poolTypeModal .pool-type-option').forEach(function(el) {
+        var radio = el.querySelector('input[type="radio"]');
+        el.classList.toggle('selected', !!(radio && radio.checked));
+      });
+    }
+
+    function getSelectedPoolType() {
+      var checked = document.querySelector('#poolTypeModal input[name="poolType"]:checked');
+      return checked ? checked.value : 'tip';
+    }
+
+    function buildRuleAddUrl(poolType) {
+      var params = [];
+      if (poolType) params.push('poolKind=' + encodeURIComponent(poolType));
+      try {
+        var embedded = new URLSearchParams(window.location.search).get('embedded');
+        if (embedded) params.push('embedded=' + encodeURIComponent(embedded));
+      } catch (e) {}
+      return params.length ? ('rule-add.html?' + params.join('&')) : 'rule-add.html';
+    }
+
+    function confirmPoolTypeSelection() {
+      var type = getSelectedPoolType();
+      if (type === 'tip' || type === 'surcharge') {
+        location.href = buildRuleAddUrl(type);
+        return;
+      }
+    }
+
+    document.querySelectorAll('#poolTypeModal .pool-type-option').forEach(function(el) {
+      el.addEventListener('click', function(e) {
+        if (e.target.tagName === 'INPUT') return;
+        var radio = el.querySelector('input[type="radio"]');
+        if (radio) radio.checked = true;
+        syncPoolTypeOptionStyles();
+      });
+      var radio = el.querySelector('input[type="radio"]');
+      if (radio) {
+        radio.addEventListener('change', syncPoolTypeOptionStyles);
+      }
+    });
+
+    function copyRule(el) {
+      var row = el.closest('tr');
+      var id = row.getAttribute('data-rule-id');
+      var rule = ruleData.getRuleById(id);
+      if (!rule) return;
+      var rules = ruleData.getRules();
+      var newRule = JSON.parse(JSON.stringify(rule));
+      newRule.id = ruleData.getNextRuleId();
+      newRule.ruleName = (rule.ruleName || '') + ' (副本)';
+      rules.push(newRule);
+      ruleData.saveRules(rules);
+      renderRulesTable();
+      showNotification('规则复制成功');
+    }
+
+    initStoreFilter();
+    renderRulesTable();
+  </script>
+</body>
+</html>

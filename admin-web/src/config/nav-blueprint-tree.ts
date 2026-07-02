@@ -23,6 +23,7 @@ import {
   isCustomL1MountedPageL2Key,
   type NavBlueprintCustomNode,
   type NavBlueprintSnapshot,
+  type NavBlueprintStructureOrder,
 } from "./nav-blueprint-store";
 import { resolveNavRouteTitleByPath } from "./nav-route-registry";
 
@@ -232,17 +233,89 @@ function applySeqAssignments(
   groups: PermissionModuleGroup[],
   seqAssignments: Record<number, string>,
   l4Pool?: L4Entry[],
+  seqOrder?: Record<string, number[]>,
 ): void {
   const entries = l4Pool ?? collectL4Entries(groups);
   stripL4Children(groups);
 
+  const byL3 = new Map<string, L4Entry[]>();
   for (const entry of entries) {
     const targetL3 = seqAssignments[entry.seq] ?? entry.defaultL3Key;
-    const parent = findNodeByKey(groups, targetL3);
+    const list = byL3.get(targetL3) ?? [];
+    list.push(entry);
+    byL3.set(targetL3, list);
+  }
+
+  for (const [l3Key, list] of byL3) {
+    const parent = findNodeByKey(groups, l3Key);
     if (!parent) continue;
-    const child = structuredClone(entry.node);
-    child.resource.parentKey = targetL3;
-    parent.children.push(child);
+    const order = seqOrder?.[l3Key];
+    const sorted =
+      order && order.length
+        ? [...list].sort((a, b) => {
+            const ai = order.indexOf(a.seq);
+            const bi = order.indexOf(b.seq);
+            if (ai === -1 && bi === -1) return a.seq - b.seq;
+            if (ai === -1) return 1;
+            if (bi === -1) return -1;
+            return ai - bi;
+          })
+        : list;
+    for (const entry of sorted) {
+      const child = structuredClone(entry.node);
+      child.resource.parentKey = l3Key;
+      parent.children.push(child);
+    }
+  }
+}
+
+function reorderNodesByKeys(
+  nodes: PermissionTreeNode[],
+  order: string[],
+): PermissionTreeNode[] {
+  const byKey = new Map(nodes.map((n) => [n.resource.key, n]));
+  const next: PermissionTreeNode[] = [];
+  for (const key of order) {
+    const node = byKey.get(key);
+    if (node) {
+      next.push(node);
+      byKey.delete(key);
+    }
+  }
+  for (const node of byKey.values()) next.push(node);
+  return next;
+}
+
+function applyStructureOrderToGroups(
+  groups: PermissionModuleGroup[],
+  order?: NavBlueprintStructureOrder,
+): void {
+  if (!order) return;
+
+  if (order.l1?.length) {
+    const byModuleKey = new Map(groups.map((g) => [g.moduleKey, g]));
+    const reordered: PermissionModuleGroup[] = [];
+    for (const key of order.l1) {
+      const g = byModuleKey.get(key);
+      if (g) {
+        reordered.push(g);
+        byModuleKey.delete(key);
+      }
+    }
+    for (const g of byModuleKey.values()) reordered.push(g);
+    groups.splice(0, groups.length, ...reordered);
+  }
+
+  for (const g of groups) {
+    if (order.l2?.[g.moduleKey]?.length) {
+      g.tree.children = reorderNodesByKeys(g.tree.children, order.l2[g.moduleKey]!);
+    }
+    for (const l2 of g.tree.children) {
+      const l2Key = l2.resource.key;
+      if (order.l3?.[l2Key]?.length) {
+        l2.children = reorderNodesByKeys(l2.children, order.l3[l2Key]!);
+      }
+    }
   }
 }
 
@@ -293,8 +366,9 @@ export function buildSystemNavBlueprintGroups(snapshot: NavBlueprintSnapshot): P
   const normalized = normalizeBlueprintSnapshot(snapshot);
   const groups = cloneGroups(buildPermissionModuleGroups());
   stripPermissionActionL3Nodes(groups);
-  applySeqAssignments(groups, normalized.systemSeqAssignments);
+  applySeqAssignments(groups, normalized.systemSeqAssignments, undefined, normalized.systemSeqOrder);
   applyCatalogNavOrderToSystemGroups(groups);
+  applyStructureOrderToGroups(groups, normalized.systemStructureOrder);
   return groups;
 }
 
@@ -303,7 +377,12 @@ export function buildCustomNavBlueprintGroups(snapshot: NavBlueprintSnapshot): P
   const normalized = normalizeBlueprintSnapshot(snapshot);
   const groups: PermissionModuleGroup[] = [];
   injectCustomNodes(groups, normalized.customNodes);
-  applySeqAssignments(groups, normalized.customSeqAssignments, systemL4Pool());
+  applySeqAssignments(
+    groups,
+    normalized.customSeqAssignments,
+    systemL4Pool(),
+    normalized.customSeqOrder,
+  );
   return groups;
 }
 

@@ -716,7 +716,7 @@ function renderRoutePickerSection(
     <div class="space-y-3">
       <div>
         <h4 class="text-sm font-medium text-card-foreground">${escapeHtml(opts.title)}</h4>
-        <p class="mt-0.5 text-xs text-muted-foreground">${escapeHtml(opts.hint)}</p>
+        ${opts.hint ? `<p class="mt-0.5 text-xs text-muted-foreground">${escapeHtml(opts.hint)}</p>` : ""}
       </div>
       <input type="search" class="${INPUT_CLASS} max-w-xs" data-nb-route-search value="${escapeHtml(state.routeSearch)}" placeholder="搜索页面名称或路径…" />
       <div class="max-h-48 overflow-y-auto rounded-lg border border-border bg-muted/20 p-2" data-nb-route-list>
@@ -740,11 +740,7 @@ function renderConfigModeSection(state: AddL1DialogState): string {
     <div class="${isPage ? "" : "hidden"} space-y-3" data-nb-l1-page-panel>
       ${renderRoutePickerSection(state, {
         title: "选择挂载页面",
-        hint: addingL3
-          ? "三级分组点击后直接进入该页面，不创建四级子项"
-          : addingL2
-            ? "二级导航点击后直接进入该页面，不创建三级子导航"
-            : "一级导航点击后直接进入该页面，不创建二级子导航",
+        hint: "",
         manualLabel: "页面路径（可手动输入，优先于上方选择）",
       })}
     </div>`;
@@ -753,13 +749,6 @@ function renderConfigModeSection(state: AddL1DialogState): string {
     <div class="${isFeatures ? "" : "hidden"} space-y-3" data-nb-l1-features-panel>
       <div>
         <h4 class="text-sm font-medium text-card-foreground">选择功能/设置</h4>
-        <p class="mt-0.5 text-xs text-muted-foreground">${
-          addingL3
-            ? "与平台预设「配置预设」第四列「分组内功能/设置」同源；勾选后自动生成三级分组"
-            : addingL2
-              ? "与平台预设「配置预设」第四列「分组内功能/设置」同源；勾选后自动生成二级入口"
-              : "与平台预设「配置预设」第四列「分组内功能/设置」同源；勾选后自动生成二级入口，点击一级默认进入首个功能/设置页"
-        }</p>
       </div>
       <input type="search" class="${INPUT_CLASS} max-w-md" data-nb-preset-item-search value="${escapeHtml(state.presetItemSearch)}" placeholder="搜索名称、描述、模块、seq 或路径…" />
       <div class="max-h-64 overflow-y-auto rounded-lg border border-border bg-muted/20 p-2" data-nb-preset-item-list>
@@ -769,13 +758,6 @@ function renderConfigModeSection(state: AddL1DialogState): string {
 
   const manualL2Block = `
     <div class="${isManualL2 ? "" : "hidden"} space-y-3" data-nb-l1-manual-l2-panel>
-      <p class="text-sm text-muted-foreground">${
-        addingL3
-          ? "创建三级分组后，可在自定义导航树中继续配置四级设置项归属。"
-          : addingL2
-            ? "创建二级导航后，可在自定义导航树中通过「+ 三级分组」继续配置三级结构。"
-            : "创建一级导航后，可在自定义导航树中通过「+ 二级导航」继续配置二级结构。"
-      }</p>
     </div>`;
 
   const pageModeLabel = addingL3
@@ -1016,13 +998,10 @@ function renderDialog(state: AddL1DialogState, errors: string[] = []): string {
       : editing
         ? "编辑一级导航"
         : "新增一级导航";
-  const subtitle = addingL3
-    ? `挂载到「${state.parentL2Label ?? ""}」下；填写名称并选择挂载方式：直接挂页面、挂载平台预设功能/设置，或手动配置四级设置项`
-    : addingL2
-      ? `挂载到「${state.parentL1Label ?? ""}」下；填写名称并选择挂载方式：直接挂页面、挂载平台预设功能/设置，或手动配置三级导航`
-      : editing
-        ? "修改名称、配置方式及挂载内容，保存后更新自定义导航树"
-        : "填写名称并选择挂载方式：直接挂页面、挂载平台预设功能/设置，或手动配置二级导航";
+  const subtitle =
+    editing && !addingL2 && !addingL3
+      ? "修改名称、配置方式及挂载内容，保存后更新自定义导航树"
+      : "";
   const submitLabel = addingL3
     ? "创建三级分组"
     : addingL2
@@ -1056,7 +1035,7 @@ function renderDialog(state: AddL1DialogState, errors: string[] = []): string {
         <div class="flex shrink-0 items-center justify-between gap-3 border-b border-border px-4 py-3">
           <div>
             <h2 id="nb-add-l1-title" class="text-base font-semibold text-card-foreground">${title}</h2>
-            <p class="mt-0.5 text-xs text-muted-foreground">${escapeHtml(subtitle)}</p>
+            ${subtitle ? `<p class="mt-0.5 text-xs text-muted-foreground">${escapeHtml(subtitle)}</p>` : ""}
           </div>
           <button type="button" data-nb-add-l1-close class="inline-flex size-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted" aria-label="关闭">✕</button>
         </div>

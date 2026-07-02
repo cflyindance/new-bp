@@ -51,7 +51,18 @@ export function renderL3Column(
   l2Node: PermissionTreeNode | undefined,
   activeL3: string,
   renderItem: (node: PermissionTreeNode, nested: boolean) => string,
+  flatOrder?: string[],
 ): string {
+  if (flatOrder?.length && l2Node?.children.length) {
+    const byKey = new Map(l2Node.children.map((n) => [n.resource.key, n]));
+    const ordered = flatOrder
+      .map((k) => byKey.get(k))
+      .filter((n): n is PermissionTreeNode => !!n);
+    for (const n of l2Node.children) {
+      if (!flatOrder.includes(n.resource.key)) ordered.push(n);
+    }
+    return ordered.map((n) => renderItem(n, false)).join("");
+  }
   return renderCatalogSectionedL3Column(l2Node, { activeKey: activeL3, renderItem });
 }
 

@@ -16,7 +16,10 @@ import {
 
   syncFourColumnIndeterminate,
 
+  type FourColumnMatrixRenderOpts,
+
 } from "./permission-four-column-ui";
+import { bindNavBlueprintDragSort } from "./nav-blueprint-drag-sort";
 
 import { findL2Node } from "./permission-four-column-nav";
 
@@ -418,6 +421,19 @@ function resolveActiveTreeKeys(
 
 
 
+function buildNavBlueprintMatrixRenderOpts(
+  snapshot: NavBlueprintSnapshot,
+  module: "system" | "custom",
+): FourColumnMatrixRenderOpts {
+  return {
+    enableSiblingSort: true,
+    structureOrder: module === "custom" ? snapshot.customStructureOrder : snapshot.systemStructureOrder,
+    seqOrder: module === "custom" ? snapshot.customSeqOrder : snapshot.systemSeqOrder,
+  };
+}
+
+
+
 function renderTreeModulePanel(
 
   snapshot: NavBlueprintSnapshot,
@@ -467,6 +483,8 @@ function renderTreeModulePanel(
     undefined,
 
     matrixMode,
+
+    buildNavBlueprintMatrixRenderOpts(snapshot, module),
 
   );
 
@@ -1004,7 +1022,10 @@ function rerenderTreePanel(
     "",
     undefined,
     matrixModeForTreeModule(module),
-    preserveL1Focus ? { preserveEmptyL2: true, preserveEmptyL3: true } : undefined,
+    {
+      ...(preserveL1Focus ? { preserveEmptyL2: true, preserveEmptyL3: true } : {}),
+      ...buildNavBlueprintMatrixRenderOpts(snap, module),
+    },
   );
 
   syncFourColumnIndeterminate(panel);
@@ -1508,6 +1529,13 @@ export function bindNavBlueprint(onMount: () => void): void {
 
     }
 
+  });
+
+  bindNavBlueprintDragSort((panel, snapshot) => {
+    const editor = panel.closest<HTMLElement>("[data-nb-editor]");
+    if (!editor) return;
+    const module = panel.dataset.nbTreePanel === "custom" ? "custom" : "system";
+    rerenderTreePanel(editor, module, snapshot);
   });
 
 }

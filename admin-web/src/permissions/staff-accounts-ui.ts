@@ -1,12 +1,11 @@
-import { ensureStaffRecord, getRbacSnapshot } from "./rbac-store";
+import type { StaffLoginAccount } from "./staff-account-store-factory";
 import {
-  createStaffLoginAccount,
-  deleteStaffLoginAccount,
-  getStaffLoginAccountById,
-  listStaffLoginAccounts,
-  updateStaffLoginAccount,
-  type StaffLoginAccount,
-} from "./staff-account-store";
+  MERCHANT_RBAC_SCOPE,
+  rbacHref,
+  type RbacScopeConfig,
+} from "./rbac-scope";
+
+let activeScope: RbacScopeConfig = MERCHANT_RBAC_SCOPE;
 
 function escapeHtml(s: string): string {
   return s
@@ -139,9 +138,11 @@ function renderEditorModal(account: StaffLoginAccount | null, employeeOptions: s
   </div>`;
 }
 
-export function renderStaffAccountsPage(): string {
-  const accounts = listStaffLoginAccounts();
-  const { roles, staff } = getRbacSnapshot();
+export function renderStaffAccountsPage(scope: RbacScopeConfig = MERCHANT_RBAC_SCOPE): string {
+  activeScope = scope;
+  const accountsApi = scope.staffAccounts;
+  const accounts = accountsApi.listStaffLoginAccounts();
+  const { roles, staff } = scope.rbac.getRbacSnapshot();
   const roleNameById = new Map(roles.map((r) => [r.id, r.name]));
   const rolesByEmployee = new Map(
     staff.map((s) => [
@@ -159,12 +160,21 @@ export function renderStaffAccountsPage(): string {
     )
     .join("");
 
+  const staffHref = rbacHref(scope, "/staff");
+  const detailHtml = scope.staffAccountsDetail.replace(
+    "员工授权",
+    `<a href="${staffHref}" class="text-primary hover:underline">员工授权</a>`,
+  );
+  const logExtra = scope.isEnterpriseStaff
+    ? ""
+    : ` 登录日志见 <a href="#/log-management/login-logs" class="text-primary hover:underline">系统登录日志</a>。`;
+
   return `
-    <div class="space-y-4" data-staff-accounts-page>
+    <div class="space-y-4" data-staff-accounts-page data-rbac-scope="${escapeHtml(scope.scope)}">
       <div class="flex flex-wrap items-start justify-between gap-3">
         <div class="max-w-2xl text-sm text-muted-foreground leading-relaxed">
-          <p>维护员工登录<strong class="text-card-foreground">本系统（B 端管理中心）</strong>的邮箱账号与密码。账号须为 Menusifu 企业邮箱；保存后立即生效。</p>
-          <p class="mt-2">新建时可手动输入员工工号与姓名（将同步写入 <a href="#/permissions/staff" class="text-primary hover:underline">员工授权</a>）；角色权限与门店范围请在员工授权中配置。登录日志见 <a href="#/log-management/login-logs" class="text-primary hover:underline">系统登录日志</a>。</p>
+          <p>${scope.staffAccountsIntro}</p>
+          <p class="mt-2">${detailHtml}${logExtra}</p>
         </div>
         <button type="button" class="shrink-0 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90" data-staff-acct-new>新建登录账号</button>
       </div>
@@ -172,7 +182,7 @@ export function renderStaffAccountsPage(): string {
         <table class="w-full text-sm">
           <thead class="bg-muted/40 text-left text-muted-foreground">
             <tr>
-              <th class="px-4 py-2 font-medium">员工</th>
+              <th class="px-4 py-2 font-medium">${scope.isEnterpriseStaff ? "企业级员工" : "员工"}</th>
               <th class="px-4 py-2 font-medium">工号</th>
               <th class="px-4 py-2 font-medium">登录邮箱</th>
               <th class="px-4 py-2 font-medium">已授权角色</th>
@@ -198,7 +208,8 @@ function closeModal(): void {
 function openEditorModal(accountId: string | null): void {
   const host = document.querySelector<HTMLElement>("[data-staff-acct-modal-host]");
   if (!host) return;
-  const account = accountId ? (getStaffLoginAccountById(accountId) ?? null) : null;
+  const accountsApi = activeScope.staffAccounts;
+  const account = accountId ? (accountsApi.getStaffLoginAccountById(accountId) ?? null) : null;
   const optionsTpl = document.querySelector<HTMLTemplateElement>("[data-staff-acct-employee-options]");
   const employeeOptions = optionsTpl?.innerHTML ?? "";
   host.innerHTML = renderEditorModal(account, employeeOptions);
@@ -209,6 +220,9 @@ function bindModal(): void {
   const modal = document.querySelector<HTMLElement>("[data-staff-acct-modal]");
   const form = document.querySelector<HTMLFormElement>("[data-staff-acct-form]");
   if (!modal || !form) return;
+
+  const accountsApi = activeScope.staffAccounts;
+  const { ensureStaffRecord } = activeScope.rbac;
 
   const errorEl = form.querySelector<HTMLElement>("[data-staff-acct-error]");
   const showError = (msg: string) => {
@@ -282,7 +296,7 @@ function bindModal(): void {
             return;
           }
         }
-        updateStaffLoginAccount(id, {
+        accountsApi.updateStaffLoginAccount(id, {
           employeeName,
           loginEmail,
           enabled,
@@ -302,7 +316,7 @@ function bindModal(): void {
           return;
         }
         ensureStaffRecord(employeeId, employeeName);
-        createStaffLoginAccount({
+        accountsApi.createStaffLoginAccount({
           employeeId,
           employeeName,
           loginEmail,
@@ -318,7 +332,10 @@ function bindModal(): void {
   });
 }
 
-export function bindStaffAccountsPage(): void {
+export function bindStaffAccountsPage(scope: RbacScopeConfig = MERCHANT_RBAC_SCOPE): void {
+  activeScope = scope;
+  const accountsApi = scope.staffAccounts;
+
   const page = document.querySelector("[data-staff-accounts-page]");
   if (!page || page.getAttribute("data-bound") === "1") return;
   page.setAttribute("data-bound", "1");
@@ -343,7 +360,7 @@ export function bindStaffAccountsPage(): void {
         return;
       }
       try {
-        updateStaffLoginAccount(id, { password: pw });
+        accountsApi.updateStaffLoginAccount(id, { password: pw });
         alert("密码已重置");
       } catch (err) {
         alert(err instanceof Error ? err.message : "重置失败");
@@ -356,7 +373,7 @@ export function bindStaffAccountsPage(): void {
       const id = btn.getAttribute("data-staff-acct-delete");
       if (!id) return;
       if (!confirm("确定删除该登录账号？删除后员工将无法以此邮箱登录。")) return;
-      if (deleteStaffLoginAccount(id)) location.reload();
+      if (accountsApi.deleteStaffLoginAccount(id)) location.reload();
       else alert("无法删除：账号不存在或为系统预置账号。");
     });
   });

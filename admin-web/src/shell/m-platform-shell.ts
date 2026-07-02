@@ -19,15 +19,26 @@ import {
   renderNavBlueprintPage,
   NAV_BLUEPRINT_ROUTE_PREFIX,
 } from "../config/nav-blueprint-ui";
+import {
+  ENTERPRISE_RBAC_SCOPE,
+  findRbacPageTitle,
+  isMPlatformPermissionsPath,
+  rbacHref,
+} from "../permissions/rbac-scope";
+import { bindPermissionsRbac, renderPermissionsRbacPage } from "../permissions/rbac-ui";
+import { bindStaffAccountsPage, renderStaffAccountsPage } from "../permissions/staff-accounts-ui";
 import { exitMPlatformShell } from "./app-shell-mode";
 import { bindViewSwitchControl, renderViewSwitchControl } from "./view-switch-control";
 
 export const M_PLATFORM_PRESET_PATH = "/m-platform/platform-preset";
+export const M_PLATFORM_PERMISSIONS_PATH = "/m-platform/permissions/overview";
+const M_PLATFORM_PERMISSIONS_NAV_EXPANDED_KEY = "menusifu:m-platform-permissions-nav-expanded";
+const M_PLATFORM_PERMISSIONS_SUBNAV_ID = "m-platform-permissions-subnav";
 
 export { NAV_BLUEPRINT_ROUTE_PREFIX } from "../config/nav-blueprint-ui";
 
 export function isMPlatformContentPath(path: string): boolean {
-  return isMPlatformPresetPath(path) || isNavBlueprintPath(path);
+  return isMPlatformPresetPath(path) || isNavBlueprintPath(path) || isMPlatformPermissionsPath(path);
 }
 
 function escapeHtml(s: string): string {
@@ -36,6 +47,75 @@ function escapeHtml(s: string): string {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+function readPermissionsNavExpanded(path: string): boolean {
+  try {
+    const stored = sessionStorage.getItem(M_PLATFORM_PERMISSIONS_NAV_EXPANDED_KEY);
+    if (stored === "1") return true;
+    if (stored === "0") return false;
+  } catch {
+    /* ignore */
+  }
+  return isMPlatformPermissionsPath(path);
+}
+
+function renderPermissionsNav(path: string): string {
+  const prefix = ENTERPRISE_RBAC_SCOPE.routePrefix;
+  const permissionsActive = isMPlatformPermissionsPath(path);
+  const expanded = readPermissionsNavExpanded(path);
+  const l1Class = permissionsActive
+    ? "flex min-h-10 w-full items-center gap-2 rounded-lg bg-primary/10 px-3 py-2 text-sm font-medium text-primary"
+    : "flex min-h-10 w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground transition-colors hover:bg-muted/60";
+
+  const subLinkClass = (subpath: string) => {
+    const full = `${prefix}${subpath}`;
+    const active = path === full || (subpath === "/overview" && path === prefix);
+    return active
+      ? "flex min-h-9 items-center rounded-lg bg-primary/10 pl-6 pr-3 py-1.5 text-sm font-medium text-primary"
+      : "flex min-h-9 items-center rounded-lg pl-6 pr-3 py-1.5 text-sm text-foreground transition-colors hover:bg-muted/60";
+  };
+
+  const items = [
+    { sub: "/overview", label: t("shell.mPlatformNavPermOverview") },
+    { sub: "/roles", label: t("shell.mPlatformNavPermRoles") },
+    { sub: "/staff", label: t("shell.mPlatformNavPermStaff") },
+    { sub: "/staff-accounts", label: t("shell.mPlatformNavPermAccounts") },
+    { sub: "/change-log", label: t("shell.mPlatformNavPermChangelog") },
+  ];
+
+  return `
+    <li>
+      <button
+        type="button"
+        data-m-platform-permissions-toggle
+        class="${l1Class}"
+        aria-expanded="${expanded ? "true" : "false"}"
+        aria-controls="${M_PLATFORM_PERMISSIONS_SUBNAV_ID}"
+        aria-label="${escapeHtml(t("shell.mPlatformNavPermissionsToggle"))}"
+      >
+        <span class="min-w-0 flex-1 truncate text-left">${escapeHtml(t("shell.mPlatformNavPermissions"))}</span>
+        <span
+          data-m-platform-permissions-chevron
+          class="shrink-0 text-xs text-muted-foreground transition-transform duration-200 ${expanded ? "" : "-rotate-90"}"
+          aria-hidden="true"
+        >▼</span>
+      </button>
+      <ul
+        id="${M_PLATFORM_PERMISSIONS_SUBNAV_ID}"
+        class="mt-0.5 space-y-0.5 ${expanded ? "" : "hidden"}"
+        role="list"
+        ${expanded ? "" : 'aria-hidden="true"'}
+      >
+        ${items
+          .map(
+            (item) => `<li>
+          <a href="${rbacHref(ENTERPRISE_RBAC_SCOPE, item.sub)}" class="${subLinkClass(item.sub)}" tabindex="${expanded ? "0" : "-1"}">${escapeHtml(item.label)}</a>
+        </li>`,
+          )
+          .join("")}
+      </ul>
+    </li>`;
 }
 
 export function renderMPlatformSidebar(path: string): string {
@@ -60,6 +140,7 @@ export function renderMPlatformSidebar(path: string): string {
           <li>
             <a href="#${M_PLATFORM_PRESET_PATH}" class="${linkClass(presetActive)}">${escapeHtml(t("shell.mPlatformNavPreset"))}</a>
           </li>
+          ${renderPermissionsNav(path)}
         </ul>
       </nav>
       <div class="border-t border-border p-3">
@@ -75,6 +156,7 @@ export function renderMPlatformSidebar(path: string): string {
 function resolveMPlatformPageTitle(path: string): { title: string; module: string } {
   return (
     findNavBlueprintPageTitle(path) ??
+    findRbacPageTitle(path, ENTERPRISE_RBAC_SCOPE) ??
     findPlatformPresetPageTitle(path, getPresetScopeForPath(path)) ?? {
       title: t("shell.mPlatformTitle"),
       module: t("shell.mPlatformKicker"),
@@ -110,6 +192,12 @@ function renderMPlatformHeader(path: string): string {
 
 function renderMPlatformContent(path: string): string {
   if (isNavBlueprintPath(path)) return renderNavBlueprintPage(path);
+  if (isMPlatformPermissionsPath(path)) {
+    if (path === `${ENTERPRISE_RBAC_SCOPE.routePrefix}/staff-accounts`) {
+      return renderStaffAccountsPage(ENTERPRISE_RBAC_SCOPE);
+    }
+    return renderPermissionsRbacPage(path, ENTERPRISE_RBAC_SCOPE);
+  }
   return renderPlatformPresetPage(path, ENTERPRISE_PLATFORM_PRESET_SCOPE);
 }
 
@@ -154,9 +242,39 @@ export function bindMPlatformShell(onMount: () => void): void {
 
   bindViewSwitchControl(onMount);
 
+  document.querySelectorAll<HTMLButtonElement>("[data-m-platform-permissions-toggle]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const expanded = btn.getAttribute("aria-expanded") === "true";
+      const next = !expanded;
+      try {
+        sessionStorage.setItem(M_PLATFORM_PERMISSIONS_NAV_EXPANDED_KEY, next ? "1" : "0");
+      } catch {
+        /* ignore */
+      }
+      btn.setAttribute("aria-expanded", next ? "true" : "false");
+      const list = document.getElementById(M_PLATFORM_PERMISSIONS_SUBNAV_ID);
+      const chevron = btn.querySelector<HTMLElement>("[data-m-platform-permissions-chevron]");
+      if (list) {
+        list.classList.toggle("hidden", !next);
+        if (next) list.removeAttribute("aria-hidden");
+        else list.setAttribute("aria-hidden", "true");
+        list.querySelectorAll<HTMLAnchorElement>("a").forEach((link) => {
+          link.tabIndex = next ? 0 : -1;
+        });
+      }
+      chevron?.classList.toggle("-rotate-90", !next);
+    });
+  });
+
   const path = location.hash.slice(1) || NAV_BLUEPRINT_ROUTE_PREFIX;
   bindNavBlueprint(onMount);
-  if (!isNavBlueprintPath(path)) {
+  if (isMPlatformPermissionsPath(path)) {
+    if (path === `${ENTERPRISE_RBAC_SCOPE.routePrefix}/staff-accounts`) {
+      bindStaffAccountsPage(ENTERPRISE_RBAC_SCOPE);
+    } else {
+      bindPermissionsRbac(ENTERPRISE_RBAC_SCOPE);
+    }
+  } else if (!isNavBlueprintPath(path)) {
     bindPlatformPreset(onMount, ENTERPRISE_PLATFORM_PRESET_SCOPE);
   }
 }

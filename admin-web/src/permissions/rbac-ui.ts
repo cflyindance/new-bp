@@ -14,20 +14,14 @@ import {
   formatStaffStoreAccessLabel,
   type StaffStoreAccess,
 } from "./store-access";
+import type { RbacRole } from "./rbac-types";
 import {
-  cascadeRbacEnableSelection,
-  countRoleStats,
-  deleteRole,
-  getModuleGroups,
-  getPermissionIndex,
-  getRbacPresetIndex,
-  getRbacSnapshot,
-  getRoleById,
-  normalizeRoleSelection,
-  updateStaffAssignments,
-  upsertRole,
-  type RbacRole,
-} from "./rbac-store";
+  MERCHANT_RBAC_SCOPE,
+  rbacHref,
+  stripRbacRoutePrefix,
+  isMerchantPermissionsPath,
+  type RbacScopeConfig,
+} from "./rbac-scope";
 
 function escapeHtml(s: string): string {
   return s
@@ -38,38 +32,38 @@ function escapeHtml(s: string): string {
 }
 
 export function isPermissionsRbacPath(path: string): boolean {
-  return (
-    path === "/permissions/overview" ||
-    path === "/permissions/roles" ||
-    path.startsWith("/permissions/roles/") ||
-    path === "/permissions/staff" ||
-    path === "/permissions/change-log"
-  );
+  return isMerchantPermissionsPath(path);
 }
 
-export function renderPermissionsRbacPage(path: string): string {
-  if (path === "/permissions/overview") return renderOverviewPage();
-  if (path === "/permissions/roles") return renderRolesListPage();
-  if (path === "/permissions/roles/new" || path.startsWith("/permissions/roles/edit/")) {
-    return renderRoleEditorPage(path);
+export function renderPermissionsRbacPage(
+  path: string,
+  scope: RbacScopeConfig = MERCHANT_RBAC_SCOPE,
+): string {
+  const sub = stripRbacRoutePrefix(path, scope);
+  if (sub === "/overview" || sub === "") return renderOverviewPage(scope);
+  if (sub === "/roles") return renderRolesListPage(scope);
+  if (sub === "/roles/new" || sub.startsWith("/roles/edit/")) {
+    return renderRoleEditorPage(path, scope);
   }
-  if (path === "/permissions/staff") return renderStaffPage();
-  if (path === "/permissions/change-log") return renderChangelogPage();
-  return renderOverviewPage();
+  if (sub === "/staff") return renderStaffPage(scope);
+  if (sub === "/change-log") return renderChangelogPage(scope);
+  return renderOverviewPage(scope);
 }
 
-function renderOverviewPage(): string {
-  const { roles, staff } = getRbacSnapshot();
-  const groups = getModuleGroups();
-  const index = getPermissionIndex();
+function renderOverviewPage(scope: RbacScopeConfig): string {
+  const { roles, staff } = scope.rbac.getRbacSnapshot();
+  const groups = scope.rbac.getModuleGroups();
+  const index = scope.rbac.getPermissionIndex();
+  const staffAccountsHref = rbacHref(scope, "/staff-accounts");
   return `
-    <div class="space-y-6">
+    <div class="space-y-6" data-rbac-scope="${escapeHtml(scope.scope)}">
       <div class="rounded-xl border border-border bg-card p-6 shadow-sm">
         <h2 class="text-lg font-semibold text-card-foreground">权限总览</h2>
         <p class="mt-2 text-sm text-muted-foreground leading-relaxed">
-          按 <strong class="text-card-foreground">一级导航 → 二级导航 → 三级分组 → 功能设置</strong> 四级树配置角色权限；
-          通过<strong class="text-card-foreground">勾选导航功能</strong>启用或关闭访问（与平台预设 · 配置预设交互一致）。
-          门店角色、<a href="#/permissions/staff-accounts" class="text-primary hover:underline">员工登录账号</a>与员工绑定在本区维护。
+          ${scope.overviewIntro.replace(
+            "员工登录账号",
+            `<a href="${staffAccountsHref}" class="text-primary hover:underline">员工登录账号</a>`,
+          )}
         </p>
         <dl class="mt-4 grid gap-3 sm:grid-cols-4 text-sm">
           <div class="rounded-lg border border-border bg-muted/30 px-4 py-3">
@@ -85,7 +79,7 @@ function renderOverviewPage(): string {
             <dd class="mt-1 text-2xl font-semibold tabular-nums text-card-foreground">${roles.length}</dd>
           </div>
           <div class="rounded-lg border border-border bg-muted/30 px-4 py-3">
-            <dt class="text-muted-foreground">已授权员工</dt>
+            <dt class="text-muted-foreground">${scope.isEnterpriseStaff ? "已授权企业级员工" : "已授权员工"}</dt>
             <dd class="mt-1 text-2xl font-semibold tabular-nums text-card-foreground">${staff.length}</dd>
           </div>
         </dl>
@@ -104,13 +98,13 @@ function renderOverviewPage(): string {
           <tbody>
             ${roles
               .map((r) => {
-                const s = countRoleStats(r);
+                const s = scope.rbac.countRoleStats(r);
                 return `<tr class="border-t border-border">
                   <td class="px-4 py-3 font-medium text-card-foreground">${escapeHtml(r.name)}${r.isSystem ? '<span class="ml-2 text-xs text-muted-foreground">系统</span>' : ""}</td>
                   <td class="px-4 py-3 tabular-nums">${s.enabled} / ${s.total}</td>
                   <td class="px-4 py-3 tabular-nums">${s.enabledL1}</td>
                   <td class="px-4 py-3 text-right">
-                    <a href="#/permissions/roles/edit/${encodeURIComponent(r.id)}" class="text-primary hover:underline">编辑矩阵</a>
+                    <a href="${rbacHref(scope, `/roles/edit/${encodeURIComponent(r.id)}`)}" class="text-primary hover:underline">编辑矩阵</a>
                   </td>
                 </tr>`;
               })
@@ -121,18 +115,22 @@ function renderOverviewPage(): string {
     </div>`;
 }
 
-function renderRolesListPage(): string {
-  const { roles } = getRbacSnapshot();
+function renderRolesListPage(scope: RbacScopeConfig): string {
+  const { roles } = scope.rbac.getRbacSnapshot();
+  const staffAccountsHref = rbacHref(scope, "/staff-accounts");
   return `
-    <div class="space-y-4">
+    <div class="space-y-4" data-rbac-scope="${escapeHtml(scope.scope)}">
       <div class="flex flex-wrap items-center justify-between gap-3">
-        <p class="text-sm text-muted-foreground">创建角色并按四级导航树勾选功能权限（与平台预设 · 配置预设一致）。员工登录账号在 <a href="#/permissions/staff-accounts" class="text-primary hover:underline">员工登录账号</a> 维护。</p>
-        <a href="#/permissions/roles/new" class="inline-flex items-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90">新建角色</a>
+        <p class="text-sm text-muted-foreground">${scope.rolesIntro.replace(
+          "员工登录账号",
+          `<a href="${staffAccountsHref}" class="text-primary hover:underline">员工登录账号</a>`,
+        )}</p>
+        <a href="${rbacHref(scope, "/roles/new")}" class="inline-flex items-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90">新建角色</a>
       </div>
       <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         ${roles
           .map((r) => {
-            const s = countRoleStats(r);
+            const s = scope.rbac.countRoleStats(r);
             return `<article class="rounded-xl border border-border bg-card p-5 shadow-sm">
               <div class="flex items-start justify-between gap-2">
                 <h3 class="font-semibold text-card-foreground">${escapeHtml(r.name)}</h3>
@@ -141,7 +139,7 @@ function renderRolesListPage(): string {
               <p class="mt-2 text-sm text-muted-foreground line-clamp-2">${escapeHtml(r.description || "—")}</p>
               <p class="mt-3 text-xs text-muted-foreground">已启用 ${s.enabled} 项 · 一级导航 ${s.enabledL1} 个</p>
               <div class="mt-4 flex gap-2">
-                <a href="#/permissions/roles/edit/${encodeURIComponent(r.id)}" class="text-sm font-medium text-primary hover:underline">编辑权限</a>
+                <a href="${rbacHref(scope, `/roles/edit/${encodeURIComponent(r.id)}`)}" class="text-sm font-medium text-primary hover:underline">编辑权限</a>
                 ${r.isSystem ? "" : `<button type="button" class="text-sm text-destructive hover:underline" data-rbac-delete-role="${escapeHtml(r.id)}">删除</button>`}
               </div>
             </article>`;
@@ -151,10 +149,11 @@ function renderRolesListPage(): string {
     </div>`;
 }
 
-function renderRoleEditorPage(path: string): string {
-  const isNew = path === "/permissions/roles/new";
-  const roleId = isNew ? "" : decodeURIComponent(path.replace("/permissions/roles/edit/", ""));
-  const existing = roleId ? getRoleById(roleId) : undefined;
+function renderRoleEditorPage(path: string, scope: RbacScopeConfig): string {
+  const sub = stripRbacRoutePrefix(path, scope);
+  const isNew = sub === "/roles/new";
+  const roleId = isNew ? "" : decodeURIComponent(sub.replace("/roles/edit/", ""));
+  const existing = roleId ? scope.rbac.getRoleById(roleId) : undefined;
   const role: RbacRole = existing ?? {
     id: "",
     name: "",
@@ -164,8 +163,8 @@ function renderRoleEditorPage(path: string): string {
     updatedAt: new Date().toISOString(),
   };
 
-  const index = getRbacPresetIndex();
-  const selection = normalizeRoleSelection(role.selection);
+  const index = scope.rbac.getRbacPresetIndex();
+  const selection = scope.rbac.normalizeRoleSelection(role.selection);
   const activeL1 = index.groups[0]?.moduleKey ?? "";
   const activeL2 = index.groups[0]?.tree.children[0]?.resource.key ?? "";
   const activeL3 = index.groups[0]?.tree.children[0]?.children[0]?.resource.key ?? "";
@@ -179,10 +178,10 @@ function renderRoleEditorPage(path: string): string {
     undefined,
     "rbac",
   );
-  const enabledL1 = countRoleStats(role).enabledL1;
+  const enabledL1 = scope.rbac.countRoleStats(role).enabledL1;
 
   return `
-    <div class="space-y-4" data-rbac-editor>
+    <div class="space-y-4" data-rbac-editor data-rbac-scope="${escapeHtml(scope.scope)}">
       <div class="rounded-xl border border-border bg-card p-5 shadow-sm">
         <div class="grid gap-4 md:grid-cols-2">
           <label class="block text-sm">
@@ -207,6 +206,7 @@ function renderRoleEditorPage(path: string): string {
         data-active-l1="${escapeHtml(activeL1)}"
         data-active-l2="${escapeHtml(activeL2)}"
         data-active-l3="${escapeHtml(activeL3)}"
+        data-rbac-route-prefix="${escapeHtml(scope.routePrefix)}"
       >
         <input type="hidden" data-pp-selection-json value="${escapeHtml(JSON.stringify(selection))}" />
         <div class="border-b border-border px-4 py-3">
@@ -220,20 +220,22 @@ function renderRoleEditorPage(path: string): string {
       </div>
       <div class="flex flex-wrap gap-3">
         <button type="button" data-rbac-save-role class="rounded-lg bg-primary px-5 py-2 text-sm font-medium text-primary-foreground hover:opacity-90">保存角色</button>
-        <a href="#/permissions/roles" class="rounded-lg border border-border px-5 py-2 text-sm hover:bg-muted">取消</a>
+        <a href="${rbacHref(scope, "/roles")}" class="rounded-lg border border-border px-5 py-2 text-sm hover:bg-muted">取消</a>
       </div>
     </div>`;
 }
 
-function renderStaffStoreAccessCell(s: {
-  employeeId: string;
-  storeAccess: StaffStoreAccess;
-}): string {
-  const layoutStoreId = getLayoutContextStoreId();
-  const layoutStoreLabel =
-    DEMO_SCOPE_STORES.find((o) => o.value === layoutStoreId)?.labelZh ?? layoutStoreId;
+function renderStaffStoreAccessCell(
+  s: { employeeId: string; storeAccess: StaffStoreAccess },
+  scope: RbacScopeConfig,
+): string {
+  const allLabel = scope.isEnterpriseStaff ? "全企业" : "全部门店";
+  const storesLabel = scope.isEnterpriseStaff ? "指定范围" : "指定门店";
 
-  if (isStoreLayoutPreset()) {
+  if (!scope.isEnterpriseStaff && isStoreLayoutPreset()) {
+    const layoutStoreId = getLayoutContextStoreId();
+    const layoutStoreLabel =
+      DEMO_SCOPE_STORES.find((o) => o.value === layoutStoreId)?.labelZh ?? layoutStoreId;
     return `<div class="space-y-1">
       <p class="text-sm font-medium text-card-foreground">${escapeHtml(layoutStoreLabel)}</p>
       <p class="text-xs text-muted-foreground">门店版仅单店经营，默认可访问当前模拟门店</p>
@@ -245,8 +247,8 @@ function renderStaffStoreAccessCell(s: {
   const demoStores = DEMO_SCOPE_STORES.filter((o) => o.value);
   return `<div class="space-y-2">
     <select class="rbac-staff-store-mode h-9 rounded-md border border-border bg-background px-2 text-sm" data-employee="${escapeHtml(s.employeeId)}">
-      <option value="all" ${s.storeAccess.mode === "all" ? "selected" : ""}>全部门店</option>
-      <option value="stores" ${s.storeAccess.mode === "stores" ? "selected" : ""}>指定门店</option>
+      <option value="all" ${s.storeAccess.mode === "all" ? "selected" : ""}>${allLabel}</option>
+      <option value="stores" ${s.storeAccess.mode === "stores" ? "selected" : ""}>${storesLabel}</option>
     </select>
     <div class="rbac-staff-store-picks flex flex-wrap gap-2 ${s.storeAccess.mode === "all" ? "hidden" : ""}" data-employee="${escapeHtml(s.employeeId)}">
       ${demoStores
@@ -263,22 +265,27 @@ function renderStaffStoreAccessCell(s: {
   </div>`;
 }
 
-function renderStaffPage(): string {
-  const { roles, staff } = getRbacSnapshot();
-  const storeLayoutHint = isStoreLayoutPreset()
-    ? `<p class="rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">当前为<strong class="text-card-foreground">门店版</strong>模拟：全员默认可访问门店「${escapeHtml(DEMO_SCOPE_STORES.find((o) => o.value === getLayoutContextStoreId())?.labelZh ?? getLayoutContextStoreId())}」。切换顶栏「连锁版」后可配置多店数据范围。</p>`
-    : "";
+function renderStaffPage(scope: RbacScopeConfig): string {
+  const { roles, staff } = scope.rbac.getRbacSnapshot();
+  const staffAccountsHref = rbacHref(scope, "/staff-accounts");
+  const storeLayoutHint =
+    !scope.isEnterpriseStaff && isStoreLayoutPreset()
+      ? `<p class="rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">当前为<strong class="text-card-foreground">门店版</strong>模拟：全员默认可访问门店「${escapeHtml(DEMO_SCOPE_STORES.find((o) => o.value === getLayoutContextStoreId())?.labelZh ?? getLayoutContextStoreId())}」。切换顶栏「连锁版」后可配置多店数据范围。</p>`
+      : "";
   return `
-    <div class="space-y-4">
+    <div class="space-y-4" data-rbac-scope="${escapeHtml(scope.scope)}">
       ${storeLayoutHint}
-      <p class="text-sm text-muted-foreground">为员工分配角色（功能权限并集）与<strong>可访问门店</strong>（数据范围）。切换顶栏门店只改变数据查询范围，<strong>不会</strong>改变功能权限。登录邮箱与密码请在 <a href="#/permissions/staff-accounts" class="text-primary hover:underline">员工登录账号</a> 维护。</p>
+      <p class="text-sm text-muted-foreground">${scope.staffIntro.replace(
+        "员工登录账号",
+        `<a href="${staffAccountsHref}" class="text-primary hover:underline">员工登录账号</a>`,
+      )}</p>
       <div class="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
         <table class="w-full text-sm">
           <thead class="bg-muted/40 text-left text-muted-foreground">
             <tr>
-              <th class="px-4 py-2 font-medium">员工</th>
+              <th class="px-4 py-2 font-medium">${scope.isEnterpriseStaff ? "企业级员工" : "员工"}</th>
               <th class="px-4 py-2 font-medium">角色（功能权限）</th>
-              <th class="px-4 py-2 font-medium">可访问门店（数据范围）</th>
+              <th class="px-4 py-2 font-medium">${escapeHtml(scope.staffDataScopeColumn)}</th>
             </tr>
           </thead>
           <tbody>
@@ -299,7 +306,7 @@ function renderStaffPage(): string {
                     .join("")}
                 </div>
               </td>
-              <td class="px-4 py-3">${renderStaffStoreAccessCell(s)}</td>
+              <td class="px-4 py-3">${renderStaffStoreAccessCell(s, scope)}</td>
             </tr>`,
               )
               .join("")}
@@ -310,10 +317,10 @@ function renderStaffPage(): string {
     </div>`;
 }
 
-function renderChangelogPage(): string {
-  const { changelog } = getRbacSnapshot();
+function renderChangelogPage(scope: RbacScopeConfig): string {
+  const { changelog } = scope.rbac.getRbacSnapshot();
   return `
-    <div class="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+    <div class="rounded-xl border border-border bg-card shadow-sm overflow-hidden" data-rbac-scope="${escapeHtml(scope.scope)}">
       <table class="w-full text-sm">
         <thead class="bg-muted/40 text-left text-muted-foreground">
           <tr>
@@ -339,13 +346,15 @@ function renderChangelogPage(): string {
     </div>`;
 }
 
-export function bindPermissionsRbac(): void {
+export function bindPermissionsRbac(scope: RbacScopeConfig = MERCHANT_RBAC_SCOPE): void {
+  const routePrefix = scope.routePrefix;
+
   document.querySelectorAll<HTMLButtonElement>("[data-rbac-delete-role]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const id = btn.getAttribute("data-rbac-delete-role");
       if (!id) return;
       if (!confirm("确定删除该角色？已绑定员工的角色无法删除。")) return;
-      if (deleteRole(id)) location.hash = "#/permissions/roles";
+      if (scope.rbac.deleteRole(id)) location.hash = `#${routePrefix}/roles`;
       else alert("无法删除：角色不存在、为系统角色或仍有关联员工。");
     });
   });
@@ -358,7 +367,7 @@ export function bindPermissionsRbac(): void {
       getIndex: () => buildPlatformPresetIndex("pos"),
       matrixMode: "rbac",
       onEnableToggle: (selection, key, enabled) =>
-        cascadeRbacEnableSelection(selection, key, enabled),
+        scope.rbac.cascadeRbacEnableSelection(selection, key, enabled),
     });
 
     document.querySelector<HTMLButtonElement>("[data-rbac-save-role]")?.addEventListener("click", () => {
@@ -379,24 +388,24 @@ export function bindPermissionsRbac(): void {
         alert("请填写角色名称与 ID。");
         return;
       }
-      const existing = getRoleById(id);
+      const existing = scope.rbac.getRoleById(id);
       if (isNew && existing) {
         alert("角色 ID 已存在。");
         return;
       }
-      upsertRole(
+      scope.rbac.upsertRole(
         {
           id,
           name,
           description: description.trim(),
           isSystem: existing?.isSystem ?? false,
-          selection: normalizeRoleSelection(matrixApi.getSelection()),
+          selection: scope.rbac.normalizeRoleSelection(matrixApi.getSelection()),
           updatedAt: new Date().toISOString(),
         },
         `角色「${name}」功能权限已保存`,
       );
-      refreshUserSessionContext();
-      location.hash = `#/permissions/roles/edit/${encodeURIComponent(id)}`;
+      if (!scope.isEnterpriseStaff) refreshUserSessionContext();
+      location.hash = `#${routePrefix}/roles/edit/${encodeURIComponent(id)}`;
     });
   }
 
@@ -412,7 +421,7 @@ export function bindPermissionsRbac(): void {
   });
 
   document.querySelector<HTMLButtonElement>("[data-rbac-save-staff]")?.addEventListener("click", () => {
-    const { staff: prev } = getRbacSnapshot();
+    const { staff: prev } = scope.rbac.getRbacSnapshot();
     const next = prev.map((s) => {
       const boxes = document.querySelectorAll<HTMLInputElement>(
         `.rbac-staff-role-cb[data-employee="${s.employeeId}"]`,
@@ -452,8 +461,10 @@ export function bindPermissionsRbac(): void {
 
       return { ...s, roleIds, storeAccess };
     });
-    updateStaffAssignments(next);
-    next.forEach((s) => refreshSessionIfCurrentEmployee(s.employeeId));
-    alert("员工授权已保存（本地演示数据）。若修改了当前登录账号，请刷新页面或重新登录以同步顶栏门店选项。");
+    scope.rbac.updateStaffAssignments(next);
+    if (!scope.isEnterpriseStaff) {
+      next.forEach((s) => refreshSessionIfCurrentEmployee(s.employeeId));
+    }
+    alert(scope.saveStaffSuccessMessage);
   });
 }
