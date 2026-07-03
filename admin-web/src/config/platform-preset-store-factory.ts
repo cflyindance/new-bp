@@ -12,13 +12,17 @@ import {
 import { isFullSelectionBusinessType, resolveDefaultModuleEnabled } from "./platform-preset-recommendations";
 import type { PresetChangeItem } from "./platform-preset-changelog-diff";
 import { buildPresetChangelogSummary, diffPresetSelections } from "./platform-preset-changelog-diff";
-import { buildPlatformPresetIndex } from "./platform-preset-tree";
+import {
+  buildPlatformPresetIndex,
+  resolvePlatformPresetTreeOptionsFromSnapshot,
+  type PlatformPresetTreeOptions,
+} from "./platform-preset-tree";
 import {
   syncNodeDisplayWithEnabled,
   syncSelectionDisplayWithEnabled,
   type PlatformPresetNodeSelection,
 } from "./platform-preset-node-selection";
-import { normalizeSelectionForLine } from "./platform-preset-selection-normalize";
+import { normalizeSelectionForSnapshot } from "./platform-preset-selection-normalize";
 import type {
   CustomBusinessType,
   PlatformPresetChangeLogEntry,
@@ -124,7 +128,8 @@ export function createPlatformPresetStore(
   function ensureAlwaysEnabledPresetModules(
     selection: Record<string, PlatformPresetNodeSelection>,
     productLineId: ProductLineId,
-    index = buildPlatformPresetIndex(productLineId),
+    treeOptions?: PlatformPresetTreeOptions,
+    index = buildPlatformPresetIndex(productLineId, treeOptions),
   ): Record<string, PlatformPresetNodeSelection> {
     const { groups, getDescendantKeys } = index;
     const next = { ...selection };
@@ -143,8 +148,9 @@ export function createPlatformPresetStore(
 
   function defaultSelectionAllEnabled(
     productLineId: ProductLineId,
+    treeOptions?: PlatformPresetTreeOptions,
   ): Record<string, PlatformPresetNodeSelection> {
-    const { flat } = buildPlatformPresetIndex(productLineId);
+    const { flat } = buildPlatformPresetIndex(productLineId, treeOptions);
     const selection: Record<string, PlatformPresetNodeSelection> = {};
     for (const n of flat) {
       selection[n.key] = syncNodeDisplayWithEnabled(undefined, true);
@@ -169,12 +175,13 @@ export function createPlatformPresetStore(
   function defaultEnabledFromRecommendations(
     businessTypeId: string,
     productLineId: ProductLineId,
+    treeOptions?: PlatformPresetTreeOptions,
   ): Record<string, PlatformPresetNodeSelection> {
     if (isFullSelectionBusinessType(businessTypeId)) {
-      return defaultSelectionAllEnabled(productLineId);
+      return defaultSelectionAllEnabled(productLineId, treeOptions);
     }
 
-    const index = buildPlatformPresetIndex(productLineId);
+    const index = buildPlatformPresetIndex(productLineId, treeOptions);
     const { flat, getDescendantKeys, groups } = index;
     const custom =
       options?.resolveCustomBusinessType?.(businessTypeId) ??
@@ -194,7 +201,7 @@ export function createPlatformPresetStore(
       }
     }
 
-    return ensureAlwaysEnabledPresetModules(selection, productLineId, index);
+    return ensureAlwaysEnabledPresetModules(selection, productLineId, treeOptions, index);
   }
 
   function getPublishedSnapshot(
@@ -205,7 +212,7 @@ export function createPlatformPresetStore(
     if (!snap) return undefined;
     return {
       ...snap,
-      selection: normalizeSelectionForLine(snap.selection, productLineId),
+      selection: normalizeSelectionForSnapshot(snap),
     };
   }
 
@@ -315,7 +322,7 @@ export function createPlatformPresetStore(
       if (existing) {
         return {
           ...structuredClone(existing),
-          selection: normalizeSelectionForLine(existing.selection, productLineId),
+          selection: normalizeSelectionForSnapshot(existing),
         };
       }
       return structuredClone(getEffectivePresetSnapshot(businessTypeId, productLineId));
@@ -325,8 +332,9 @@ export function createPlatformPresetStore(
       const key = presetComboKey(snapshot.businessTypeId, snapshot.productLineId);
       const nextVersion = (store.snapshots[key]?.version ?? 0) + 1;
       const actor = getAuthenticatedEmail() ?? "system";
+      const treeOptions = resolvePlatformPresetTreeOptionsFromSnapshot(snapshot);
       const selection = isFullSelectionBusinessType(snapshot.businessTypeId)
-        ? defaultSelectionAllEnabled(snapshot.productLineId)
+        ? defaultSelectionAllEnabled(snapshot.productLineId, treeOptions)
         : syncSelectionDisplayWithEnabled(snapshot.selection);
       const published: PlatformPresetSnapshot = {
         ...snapshot,
@@ -336,11 +344,16 @@ export function createPlatformPresetStore(
       };
 
       const enabledL1 = (() => {
-        const { groups } = buildPlatformPresetIndex(snapshot.productLineId);
+        const { groups } = buildPlatformPresetIndex(snapshot.productLineId, treeOptions);
         return groups.filter((g) => published.selection[g.moduleKey]?.enabled).length;
       })();
       const previous = store.snapshots[key];
-      const diff = diffPresetSelections(previous?.selection, published.selection, snapshot.productLineId);
+      const diff = diffPresetSelections(
+        previous?.selection,
+        published.selection,
+        snapshot.productLineId,
+        treeOptions,
+      );
 
       store.snapshots[key] = published;
       store.changelog.unshift({
@@ -369,7 +382,8 @@ export function createPlatformPresetStore(
       const cacheKey = `${snapshot.businessTypeId}:${snapshot.productLineId}:${snapshot.version}:${storeRevision}`;
       const cached = enabledSettingsCountCache.get(cacheKey);
       if (cached != null) return cached;
-      const { flat } = buildPlatformPresetIndex(snapshot.productLineId);
+      const treeOptions = resolvePlatformPresetTreeOptionsFromSnapshot(snapshot);
+      const { flat } = buildPlatformPresetIndex(snapshot.productLineId, treeOptions);
       const count = flat.filter((n) => n.level === 4 && snapshot.selection[n.key]?.enabled).length;
       enabledSettingsCountCache.set(cacheKey, count);
       return count;
@@ -390,7 +404,10 @@ export function createPlatformPresetStore(
       ),
     getChangelogForBusinessType: (businessTypeId: string) =>
       readStore().changelog.filter((e) => e.businessTypeId === businessTypeId),
-    restoreBusinessRecommendationDefaults: (businessTypeId: string, productLineId: ProductLineId) =>
-      defaultEnabledFromRecommendations(businessTypeId, productLineId),
+    restoreBusinessRecommendationDefaults: (businessTypeId: string, productLineId: ProductLineId) => {
+      const published = readStore().snapshots[presetComboKey(businessTypeId, productLineId)];
+      const treeOptions = resolvePlatformPresetTreeOptionsFromSnapshot(published);
+      return defaultEnabledFromRecommendations(businessTypeId, productLineId, treeOptions);
+    },
   };
 }

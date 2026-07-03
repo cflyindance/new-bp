@@ -9,13 +9,19 @@ import {
   syncNodeDisplayWithEnabled,
   type PlatformPresetNodeSelection,
 } from "./platform-preset-node-selection";
-import { buildPlatformPresetIndex } from "./platform-preset-tree";
+import type { PlatformPresetSnapshot } from "./platform-preset-types";
+import {
+  buildPlatformPresetIndex,
+  resolvePlatformPresetTreeOptionsFromSnapshot,
+  type PlatformPresetTreeOptions,
+} from "./platform-preset-tree";
 
 export function normalizeSelectionForLine(
   selection: Record<string, PlatformPresetNodeSelection>,
   productLineId: ProductLineId,
+  treeOptions?: PlatformPresetTreeOptions,
 ): Record<string, PlatformPresetNodeSelection> {
-  const index = buildPlatformPresetIndex(productLineId);
+  const index = buildPlatformPresetIndex(productLineId, treeOptions);
   const { groups, getDescendantKeys } = index;
   const next = { ...selection };
   for (const n of index.flat) {
@@ -31,4 +37,11 @@ export function normalizeSelectionForLine(
     }
   }
   return next;
+}
+
+export function normalizeSelectionForSnapshot(
+  snapshot: Pick<PlatformPresetSnapshot, "productLineId" | "selection" | "blueprintVersion">,
+): Record<string, PlatformPresetNodeSelection> {
+  const treeOptions = resolvePlatformPresetTreeOptionsFromSnapshot(snapshot);
+  return normalizeSelectionForLine(snapshot.selection, snapshot.productLineId, treeOptions);
 }

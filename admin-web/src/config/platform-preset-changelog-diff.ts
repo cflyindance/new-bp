@@ -3,7 +3,7 @@
  */
 import type { ProductLineId } from "./platform-preset-catalog";
 import type { PlatformPresetNodeSelection } from "./platform-preset-store";
-import { buildPlatformPresetIndex, type PlatformPresetNodeLevel } from "./platform-preset-tree";
+import { buildPlatformPresetIndex, type PlatformPresetNodeLevel, type PlatformPresetTreeOptions } from "./platform-preset-tree";
 
 const LEVEL_LABEL: Record<PlatformPresetNodeLevel, string> = {
   1: "一级导航",
@@ -58,8 +58,9 @@ export function diffPresetSelections(
   previous: Record<string, PlatformPresetNodeSelection> | undefined,
   next: Record<string, PlatformPresetNodeSelection>,
   productLineId: ProductLineId,
+  treeOptions?: PlatformPresetTreeOptions,
 ): PresetSelectionDiff {
-  const index = buildPlatformPresetIndex(productLineId);
+  const index = buildPlatformPresetIndex(productLineId, treeOptions);
   const out: PresetSelectionDiff = {
     enabledAdded: [],
     enabledRemoved: [],

@@ -1,9 +1,9 @@
 /**
- * 平台预设 · 四级功能树（只读派生自 permission-registry，编辑页展示 catalog 全量节点）
+ * 平台预设 · 四级功能树（只读派生自 permission-registry 或已发布导航蓝图）
  *
  * 产线 scope（fohSeqAppliesToLine）仅用于运行时设置页过滤，不在此处裁剪树结构。
- * 商家后台（B 平台）始终使用系统默认树；M 平台导航蓝图仅经「同步到企业预设」后，
- * 且快照 blueprintVersion 与已发布蓝图一致时，企业预设编辑页才展示蓝图树。
+ * 企业/商家配置预设编辑页：快照 blueprintVersion 与已发布导航蓝图版本一致时展示蓝图树，
+ * 否则回退系统 registry 全量树。
  */
 import {
   buildPermissionModuleGroups,
@@ -93,7 +93,7 @@ function buildPlatformPresetModuleGroupsFromRegistry(): PlatformPresetModuleTree
 }
 
 export interface PlatformPresetTreeOptions {
-  /** 仅 M 平台企业预设且已通过蓝图同步时使用 */
+  /** 快照已绑定蓝图且版本与已发布蓝图一致时使用 */
   useSyncedBlueprint?: boolean;
   /** 预设快照上记录的 blueprintVersion，须与已发布蓝图版本一致 */
   syncedBlueprintVersion?: number;
@@ -112,16 +112,65 @@ function resolveSyncedBlueprint(options?: PlatformPresetTreeOptions): NavBluepri
   return published;
 }
 
-/** 根据作用域与快照解析是否使用蓝图树（商家后台恒为系统默认） */
+/** 根据快照解析是否使用已发布导航蓝图树（企业/商家共用） */
 export function resolvePlatformPresetTreeOptions(
-  scope: "merchant" | "enterprise",
+  _scope: "merchant" | "enterprise",
   snapshot?: Pick<{ blueprintVersion?: number }, "blueprintVersion">,
 ): PlatformPresetTreeOptions {
-  if (scope !== "enterprise") return {};
   if (!snapshot?.blueprintVersion || snapshot.blueprintVersion <= 0) return {};
   return {
     useSyncedBlueprint: true,
     syncedBlueprintVersion: snapshot.blueprintVersion,
+  };
+}
+
+export function resolvePlatformPresetTreeOptionsFromSnapshot(
+  snapshot?: Pick<{ blueprintVersion?: number }, "blueprintVersion">,
+): PlatformPresetTreeOptions {
+  return resolvePlatformPresetTreeOptions("merchant", snapshot);
+}
+
+/** 配置预设编辑页 · 导航结构来源说明 */
+export function describePlatformPresetTreeSource(
+  snapshot?: Pick<{ blueprintVersion?: number }, "blueprintVersion">,
+): { usingBlueprint: boolean; hint: string } {
+  const treeOptions = resolvePlatformPresetTreeOptionsFromSnapshot(snapshot);
+  const published = getPublishedNavBlueprint(DEFAULT_NAV_BLUEPRINT_ID);
+  const boundVersion = snapshot?.blueprintVersion;
+
+  if (treeOptions.useSyncedBlueprint && published) {
+    const sourceLabel =
+      published.navigationSource === "custom" ? "自定义导航蓝图" : "系统默认导航蓝图";
+    return {
+      usingBlueprint: true,
+      hint: `导航结构：已同步导航蓝图 v${published.version}（${sourceLabel}）。`,
+    };
+  }
+
+  if (boundVersion && boundVersion > 0 && published && published.version > boundVersion) {
+    return {
+      usingBlueprint: false,
+      hint: `导航结构：系统默认（快照绑定蓝图 v${boundVersion}，当前已发布 v${published.version}，请同步企业默认）。`,
+    };
+  }
+
+  if (boundVersion && boundVersion > 0 && (!published || published.version <= 0)) {
+    return {
+      usingBlueprint: false,
+      hint: `导航结构：系统默认（绑定的导航蓝图 v${boundVersion} 未发布或已失效）。`,
+    };
+  }
+
+  if (boundVersion && boundVersion > 0) {
+    return {
+      usingBlueprint: false,
+      hint: `导航结构：系统默认（蓝图 v${boundVersion} 与当前发布版本不一致）。`,
+    };
+  }
+
+  return {
+    usingBlueprint: false,
+    hint: "导航结构：系统默认（尚未绑定导航蓝图，同步企业预设后将展示蓝图结构）。",
   };
 }
 

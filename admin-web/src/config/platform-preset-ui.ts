@@ -29,6 +29,7 @@ import {
 } from "./platform-preset-scope";
 import {
   buildPresetEditorPlatformPresetIndex,
+  describePlatformPresetTreeSource,
   resolvePlatformPresetTreeOptions,
   type PlatformPresetTreeOptions,
 } from "./platform-preset-tree";
@@ -53,7 +54,7 @@ import {
 } from "./nav-blueprint-sync";
 import {
   cascadeEnableSelection,
-  normalizeSelectionForLine,
+  normalizeSelectionForSnapshot,
   type PlatformPresetChangeLogEntry,
   type PlatformPresetNodeSelection,
   type PlatformPresetSnapshot,
@@ -120,7 +121,7 @@ function renderProductLineCard(
         )
       : null;
   const blueprintTag =
-    scope.scope === "enterprise" && published?.blueprintVersion
+    published?.blueprintVersion
       ? ` · 蓝图 v${published.blueprintVersion}`
       : "";
 
@@ -551,7 +552,7 @@ export function renderPlatformPresetEditPage(
 ): string {
   const store = scope.store;
   const snapshot = store.getOrCreateDraftSelection(businessTypeId, productLineId);
-  const selection = normalizeSelectionForLine(snapshot.selection, productLineId);
+  const selection = normalizeSelectionForSnapshot(snapshot);
   const treeOptions = resolvePlatformPresetTreeOptions(scope.scope, snapshot);
   const index = buildPresetEditorPlatformPresetIndex(productLineId, treeOptions);
   const customTypes = listCustomBusinessTypesForScope(scope);
@@ -582,12 +583,7 @@ export function renderPlatformPresetEditPage(
 
   const listHref = `#${scope.routePrefix}`;
   const blueprint = getActivePublishedBlueprint();
-  const navStructureHint =
-    scope.scope === "enterprise" && snapshot.blueprintVersion
-      ? `导航结构：已同步导航蓝图 v${snapshot.blueprintVersion}。`
-      : scope.scope === "enterprise"
-        ? `导航结构：系统默认（发布蓝图后请执行「同步到企业预设」才会更新此处树形）。`
-        : `导航结构：系统默认（不受 M 平台蓝图草稿影响；企业下发后仅同步勾选数据）。`;
+  const { hint: navStructureHint } = describePlatformPresetTreeSource(snapshot);
 
   return `
     <div
@@ -819,12 +815,21 @@ export function bindPlatformPreset(onMount: () => void, scope: PresetScopeConfig
     if (target.closest("[data-pp-publish]")) {
       const bt = editor.dataset.bt!;
       const pl = editor.dataset.pl! as ProductLineId;
-      const selection = normalizeSelectionForLine(readSelectionFromEditor(editor), pl);
+      const syncedBv = editor.dataset.syncedBlueprintVersion
+        ? Number(editor.dataset.syncedBlueprintVersion)
+        : undefined;
+      const blueprintVersion = syncedBv && syncedBv > 0 ? syncedBv : undefined;
+      const selection = normalizeSelectionForSnapshot({
+        productLineId: pl,
+        blueprintVersion,
+        selection: readSelectionFromEditor(editor),
+      });
       const snapshot: PlatformPresetSnapshot = {
         businessTypeId: bt,
         productLineId: pl,
         version: Number(editor.dataset.version ?? 0),
         publishedAt: "",
+        blueprintVersion,
         selection,
       };
       const published = scope.store.publishPlatformPresetSnapshot(snapshot);
@@ -870,7 +875,13 @@ export function bindPlatformPreset(onMount: () => void, scope: PresetScopeConfig
 
     if (target.matches("[data-pp-enable]")) {
       const key = target.dataset.ppEnable!;
-      selection = cascadeEnableSelection(selection, key, target.checked, pl);
+      const syncedBv = editor.dataset.syncedBlueprintVersion
+        ? Number(editor.dataset.syncedBlueprintVersion)
+        : undefined;
+      const treeOptions = resolvePlatformPresetTreeOptions(scope.scope, {
+        blueprintVersion: syncedBv && syncedBv > 0 ? syncedBv : undefined,
+      });
+      selection = cascadeEnableSelection(selection, key, target.checked, pl, treeOptions);
       writeSelectionToEditor(editor, selection);
       rerenderEditorColumns(editor, scope);
       syncIndeterminateCheckboxes();

@@ -9,7 +9,7 @@ import {
   getPublishedSnapshot as getEnterprisePublishedSnapshot,
   listCustomBusinessTypes as listEnterpriseCustomBusinessTypes,
 } from "./enterprise-platform-preset-store";
-import { buildPlatformPresetIndex } from "./platform-preset-tree";
+import { buildPlatformPresetIndex, resolvePlatformPresetTreeOptionsFromSnapshot, type PlatformPresetTreeOptions } from "./platform-preset-tree";
 import {
   syncNodeDisplayWithEnabled,
   type PlatformPresetNodeSelection,
@@ -24,7 +24,7 @@ import type {
 export type { RbacL4EditMode, PlatformPresetNodeSelection } from "./platform-preset-node-selection";
 export type { CustomBusinessType, PlatformPresetChangeLogEntry, PlatformPresetSnapshot } from "./platform-preset-types";
 export { syncNodeDisplayWithEnabled, syncSelectionDisplayWithEnabled } from "./platform-preset-node-selection";
-export { normalizeSelectionForLine } from "./platform-preset-selection-normalize";
+export { normalizeSelectionForLine, normalizeSelectionForSnapshot } from "./platform-preset-selection-normalize";
 
 const merchant = createPlatformPresetStore("menusifu:platform-preset-v1", {
   invalidateRuntimeCache: invalidatePlatformPresetRuntimeCache,
@@ -71,7 +71,8 @@ export function getEffectivePresetSnapshot(
 }
 
 export function countEnabledLevel1(snapshot: PlatformPresetSnapshot): number {
-  const { groups } = buildPlatformPresetIndex(snapshot.productLineId);
+  const treeOptions = resolvePlatformPresetTreeOptionsFromSnapshot(snapshot);
+  const { groups } = buildPlatformPresetIndex(snapshot.productLineId, treeOptions);
   return groups.filter((g) => snapshot.selection[g.moduleKey]?.enabled).length;
 }
 
@@ -80,8 +81,9 @@ export function cascadeEnableSelection(
   key: string,
   enabled: boolean,
   productLineId: ProductLineId,
+  treeOptions?: PlatformPresetTreeOptions,
 ): Record<string, PlatformPresetNodeSelection> {
-  const { getDescendantKeys } = buildPlatformPresetIndex(productLineId);
+  const { getDescendantKeys } = buildPlatformPresetIndex(productLineId, treeOptions);
   const next = { ...selection };
   next[key] = syncNodeDisplayWithEnabled(next[key], enabled);
   for (const dk of getDescendantKeys(key)) {
