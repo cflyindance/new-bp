@@ -214,6 +214,16 @@ export const MODULE_SETTINGS_BY_PATH: Record<string, ModuleSettingCatalogHub> = 
       { id: "s721-kds-workflow-alert-应用实例配置", groupTitle: "提醒与响铃", groupKey: "kds-workflow-alert", sceneDesc: "按应用实例配置响铃次数与响铃类型；可添加多条规则，未配置的实例继承门店默认。", moduleName: "KDS 流程配置", feature: "（未填写）", title: "应用实例配置", seq: 721 },
     ],
   },
+  "/operations/queue-call/brand-menu": {
+    hubTitle: "前厅管理中心",
+    settingsPath: "/operations/queue-call/brand-menu",
+    groupOrder: ["brand-menu-presentation"],
+    items: [
+      { id: "s530-brand-menu-presentation-品牌页作为首页", groupTitle: "品牌与菜单展示", groupKey: "brand-menu-presentation", sceneDesc: "开启后，在选定产线（Kiosk、eMenu、SDI）以门店「品牌管理」中的品牌名称卡片为首页入口；关闭后展示常规首页（封面图见营销中心「广告」）。", moduleName: "展示设置", feature: "（未填写）", title: "品牌页作为首页", seq: 530 },
+      { id: "s531-brand-menu-presentation-品牌模式", groupTitle: "品牌与菜单展示", groupKey: "brand-menu-presentation", sceneDesc: "开启后，在选定产线（Kiosk、eMenu、SDI）菜单按多品牌分类展示（先选品牌再点餐）；关闭后使用常规菜单结构。", moduleName: "展示设置", feature: "（未填写）", title: "品牌模式", seq: 531 },
+      { id: "s547-brand-menu-presentation-品牌管理", groupTitle: "品牌与菜单展示", groupKey: "brand-menu-presentation", sceneDesc: "配置一个门店有哪些品牌，并为每个品牌绑定营业时间与菜单（原 seq 548 并入）", moduleName: "品牌管理", feature: "（未填写）", title: "品牌管理", seq: 547 },
+    ],
+  },
   "/operations/queue-call/settings": {
     hubTitle: "前厅管理中心",
     settingsPath: "/operations/queue-call/settings",
@@ -603,16 +613,6 @@ export const MODULE_SETTINGS_BY_PATH: Record<string, ModuleSettingCatalogHub> = 
     items: [
       { id: "s109-language-localization-系统默认语言", groupTitle: "语言与本地化", groupKey: "language-localization", sceneDesc: "当前登录账号在店员端（POS）的默认界面语言；支持中文、English、Español 等，新会话或未单独设置时生效。", moduleName: "基础设置", feature: "（未填写）", title: "系统默认语言", seq: 109 },
       { id: "s168-ui-operation-preferences-时间显示24小时制", groupTitle: "界面与操作偏好", groupKey: "ui-operation-preferences", sceneDesc: "设置时间显示是否是24小时制", moduleName: "基本设置", feature: "（未填写）", title: "时间显示24小时制", seq: 168 },
-    ],
-  },
-  "/stores/brand-menu": {
-    hubTitle: "门店管理",
-    settingsPath: "/stores/brand-menu",
-    groupOrder: ["brand-menu-presentation"],
-    items: [
-      { id: "s530-brand-menu-presentation-品牌页作为首页", groupTitle: "品牌与菜单展示", groupKey: "brand-menu-presentation", sceneDesc: "开启后，在选定产线（Kiosk、eMenu、SDI）以门店「品牌管理」中的品牌名称卡片为首页入口；关闭后展示常规首页（封面图见营销中心「广告」）。", moduleName: "展示设置", feature: "（未填写）", title: "品牌页作为首页", seq: 530 },
-      { id: "s531-brand-menu-presentation-品牌模式", groupTitle: "品牌与菜单展示", groupKey: "brand-menu-presentation", sceneDesc: "开启后，在选定产线（Kiosk、eMenu、SDI）菜单按多品牌分类展示（先选品牌再点餐）；关闭后使用常规菜单结构。", moduleName: "展示设置", feature: "（未填写）", title: "品牌模式", seq: 531 },
-      { id: "s547-brand-menu-presentation-品牌管理", groupTitle: "品牌与菜单展示", groupKey: "brand-menu-presentation", sceneDesc: "配置一个门店有哪些品牌，并为每个品牌绑定营业时间与菜单（原 seq 548 并入）", moduleName: "品牌管理", feature: "（未填写）", title: "品牌管理", seq: 547 },
     ],
   },
   "/stores/settings": {

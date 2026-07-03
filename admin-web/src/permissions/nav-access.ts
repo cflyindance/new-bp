@@ -19,6 +19,13 @@ import {
 import { buildPermissionModuleGroups, type PermissionModuleGroup } from "../config/permission-registry";
 import { NAV_MODULES, type NavModule } from "../config/navigation";
 import { readSidebarNavLayoutPreset } from "../config/sidebar-nav-order";
+import {
+  isMvpProductVersion,
+  MVP_BRAND_PERSPECTIVE_HIDDEN_NAV_MODULE_IDS,
+  MVP_GLOBAL_HIDDEN_NAV_MODULE_IDS,
+  MVP_GROUP_HQ_HIDDEN_NAV_MODULE_IDS,
+  MVP_HIDDEN_SETTINGS_NAV_CHILD_IDS,
+} from "../config/product-version";
 
 function getSessionModuleEnabled(): Record<string, boolean> | null {
   const ctx = getUserSessionContext();
@@ -31,7 +38,57 @@ function getSessionModuleEnabled(): Record<string, boolean> | null {
   return merged;
 }
 
+/** MVP 版本下按规则隐藏的一级导航（仅隐藏，不删除配置） */
+export function isMvpHiddenNavModule(moduleId: string): boolean {
+  if (!isMvpProductVersion()) return false;
+  if ((MVP_GLOBAL_HIDDEN_NAV_MODULE_IDS as readonly string[]).includes(moduleId)) {
+    return true;
+  }
+  if (readSidebarNavLayoutPreset() !== "chain") return false;
+  if (
+    isGroupHqDataPerspective() &&
+    (MVP_GROUP_HQ_HIDDEN_NAV_MODULE_IDS as readonly string[]).includes(moduleId)
+  ) {
+    return true;
+  }
+  if (
+    isBrandDataPerspective() &&
+    (MVP_BRAND_PERSPECTIVE_HIDDEN_NAV_MODULE_IDS as readonly string[]).includes(moduleId)
+  ) {
+    return true;
+  }
+  return false;
+}
+
+/** MVP 版本下系统设置内隐藏的二级导航项 */
+export function isMvpHiddenSettingsNavChild(childId: string): boolean {
+  return (
+    isMvpProductVersion() &&
+    (MVP_HIDDEN_SETTINGS_NAV_CHILD_IDS as readonly string[]).includes(childId)
+  );
+}
+
+export function filterNavModuleChildrenForMvp(module: NavModule): NavModule {
+  if (!isMvpProductVersion() || module.id !== "settings" || module.children.length === 0) {
+    return module;
+  }
+  const children = module.children.filter((c) => !isMvpHiddenSettingsNavChild(c.id));
+  if (children.length === module.children.length) return module;
+  return { ...module, children };
+}
+
+/** 侧栏展示用：过滤 MVP 隐藏的一级模块，并裁剪系统设置子导航 */
+export function applyMvpNavPresentationFilters(modules: NavModule[]): NavModule[] {
+  return modules.filter((m) => !isMvpHiddenNavModule(m.id)).map(filterNavModuleChildrenForMvp);
+}
+
+/** @deprecated 使用 isMvpHiddenNavModule */
+export function isMvpGroupHqHiddenNavModule(moduleId: string): boolean {
+  return isMvpHiddenNavModule(moduleId);
+}
+
 export function isNavModuleVisible(moduleId: string): boolean {
+  if (isMvpHiddenNavModule(moduleId)) return false;
   if (isBrandPerspectiveOnlyNavModule(moduleId)) {
     return isChainScopeMode() && isBrandDataPerspective();
   }
@@ -48,7 +105,7 @@ export function isNavModuleVisible(moduleId: string): boolean {
 
 export function filterVisibleNavModules(modules: NavModule[]): NavModule[] {
   let visible = modules.filter((m) => isNavModuleVisible(m.id));
-  if (readSidebarNavLayoutPreset() === "chain" && isGroupHqDataPerspective()) {
+  if (readSidebarNavLayoutPreset() === "chain" && isGroupHqDataPerspective() && !isMvpProductVersion()) {
     const extras: NavModule[] = [];
     if (!visible.some((m) => m.id === "brand-mgmt")) {
       const brand = NAV_MODULES.find((m) => m.id === "brand-mgmt");
@@ -63,13 +120,13 @@ export function filterVisibleNavModules(modules: NavModule[]): NavModule[] {
       visible = [...extras, ...visible.filter((m) => !extraIds.has(m.id))];
     }
   }
-  if (readSidebarNavLayoutPreset() === "chain" && isBrandDataPerspective()) {
+  if (readSidebarNavLayoutPreset() === "chain" && isBrandDataPerspective() && !isMvpProductVersion()) {
     if (!visible.some((m) => m.id === "brand-store-list")) {
       const storeList = NAV_MODULES.find((m) => m.id === "brand-store-list");
       if (storeList) visible = [storeList, ...visible];
     }
   }
-  return visible;
+  return applyMvpNavPresentationFilters(visible);
 }
 
 /** RBAC 角色矩阵：一级导航可见性（与侧栏视角规则一致，不按当前角色快照过滤） */

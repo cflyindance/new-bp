@@ -19,6 +19,7 @@ import {
   shouldShowBrandScopeFilter,
   shouldShowBrandScopeLockedLabel,
   shouldShowRegionScopeFilter,
+  ensureMvpBrandPerspectiveRegionScopeCleared,
   shouldShowMerchantGroupSwitcher,
   resetScopeFiltersForGroupChange,
   syncSessionForAuthenticatedUser,
@@ -220,7 +221,7 @@ import {
   renderPlatformPresetPage,
   guardMerchantPlatformPresetPath,
 } from "./config/platform-preset-ui";
-import { MERCHANT_PLATFORM_PRESET_SCOPE, isMPlatformPresetPath } from "./config/platform-preset-scope";
+import { MERCHANT_PLATFORM_PRESET_SCOPE, isMerchantPlatformPresetPath, isMPlatformPresetPath } from "./config/platform-preset-scope";
 import {
   enterMPlatformShell,
   exitMPlatformShell,
@@ -228,8 +229,15 @@ import {
 } from "./shell/app-shell-mode";
 import {
   bindViewSwitchControl,
+  ensureMvpGroupHqViewSwitchHidden,
+  ensureMvpMPlatformViewSwitchHidden,
   renderViewSwitchControl,
 } from "./shell/view-switch-control";
+import {
+  bindVersionSwitchControl,
+  renderVersionSwitchControl,
+} from "./shell/version-switch-control";
+import { shouldShowAiAssistantControl, shouldShowMPlatformViewSwitchOption, shouldShowRestartOnboardingControl } from "./config/product-version";
 import { bindImpersonationBanner, renderImpersonationBanner } from "./config/enterprise-merchant-impersonate";
 import { bindChainBrandOrgSyncListener, listMPlatformGroupsForMerchantBackend, resolveChainBrandContext, writeActiveMerchantGroupId } from "./config/merchant-chain-brand-sync";
 import {
@@ -259,13 +267,14 @@ import {
   isModuleSettingsPathAllowedByPreset,
 } from "./config/platform-preset-settings-filter";
 import {
+  ensureMvpDefaultPlatformPresetOnboardingSkipped,
   isPlatformPresetOnboardingPath,
   mountPlatformPresetOnboardingShell,
   needsPlatformPresetOnboarding,
   ONBOARDING_PATH,
   restartPlatformPresetOnboardingFromStart,
 } from "./config/platform-preset-onboarding";
-import { filterVisibleNavModules, isNavModuleVisible } from "./permissions/nav-access";
+import { filterVisibleNavModules, isMvpHiddenSettingsNavChild, isNavModuleVisible } from "./permissions/nav-access";
 import {
   filterNavItemsByPlatformPreset,
   filterNavModulesByPlatformPreset,
@@ -1530,6 +1539,12 @@ function syncAiAssistantOpenButtonUi(): void {
 
 /** 仅增删浮层 DOM，避免全量 mount 导致主内容区滚回顶部 */
 function syncAiAssistantPanelDom(): void {
+  if (!shouldShowAiAssistantControl()) {
+    if (aiAssistantPanelOpen) setAiAssistantPanelOpen(false);
+    document.getElementById("ai-assistant-overlay")?.remove();
+    unlockAppScrollForAiPanel();
+    return;
+  }
   const existing = document.getElementById("ai-assistant-overlay");
   if (!aiAssistantPanelOpen) {
     existing?.remove();
@@ -3359,7 +3374,7 @@ function normalizeTabModuleHashes(): void {
     return;
   }
   if (raw === "/dashboard/settings" || raw.startsWith("/dashboard/settings/")) {
-    replaceHashPath("/stores/brand-menu");
+    replaceHashPath("/operations/queue-call/brand-menu");
     return;
   }
   if (
@@ -3647,12 +3662,16 @@ function normalizeTabModuleHashes(): void {
     replaceHashPath("/dashboard/overview");
     return;
   }
-  /* 门店设置 · 品牌与菜单已抽离为独立入口 */
+  /* 品牌与菜单已迁前厅管理中心；旧门店管理书签重定向 */
+  if (raw === "/stores/brand-menu" || raw === "/stores/brand-menu/" || raw.startsWith("/stores/brand-menu/")) {
+    replaceHashPath(raw.replace(/^\/stores\/brand-menu/, "/operations/queue-call/brand-menu"));
+    return;
+  }
   if (
     raw === "/stores/settings/brand-menu-presentation" ||
     raw.startsWith("/stores/settings/brand-menu-presentation/")
   ) {
-    replaceHashPath("/stores/brand-menu");
+    replaceHashPath("/operations/queue-call/brand-menu");
     return;
   }
   /* 侧栏已移除：门店总览、门店列表、门店状态 — 旧书签重定向 */
@@ -3667,12 +3686,12 @@ function normalizeTabModuleHashes(): void {
     raw === "/stores/status/" ||
     raw.startsWith("/stores/status/")
   ) {
-    replaceHashPath("/stores/brand-menu");
+    replaceHashPath("/stores/settings");
     return;
   }
   /* 侧栏已移除：门店信息、智能点餐、支付服务、费用加收 — 旧书签重定向 */
   if (raw === "/store" || raw === "/store/" || raw.startsWith("/store/")) {
-    location.replace("#/stores/brand-menu");
+    location.replace("#/stores/settings");
     return;
   }
   if (raw === "/ordering" || raw === "/ordering/" || raw.startsWith("/ordering/")) {
@@ -3687,9 +3706,9 @@ function normalizeTabModuleHashes(): void {
     location.replace("#/dashboard/overview");
     return;
   }
-  /* 已移除一级「区域管理」，旧书签统一到门店管理 */
+  /* 已移除一级「区域管理」，旧书签统一到门店管理设置 */
   if (raw === "/regions" || raw === "/regions/" || raw.startsWith("/regions/")) {
-    location.replace("#/stores/brand-menu");
+    location.replace("#/stores/settings");
     return;
   }
   /* 已移除一级「设备」`/operations/devices`，旧书签重定向到「硬件管理中心」 */
@@ -3762,7 +3781,9 @@ function normalizeTabModuleHashes(): void {
   }
   /* AI 助手：旧书签打开全局浮层，不再占用独立路由页 */
   if (raw === "/ai-assistant" || raw === "/ai-assistant/" || raw.startsWith("/ai-assistant/")) {
-    setAiAssistantPanelOpen(true);
+    if (shouldShowAiAssistantControl()) {
+      setAiAssistantPanelOpen(true);
+    }
     replaceHashPath("/dashboard/overview");
     return;
   }
@@ -10254,7 +10275,7 @@ function renderAiAssistantChat(): string {
 }
 
 function renderAiAssistantFloatingPanel(): string {
-  if (!aiAssistantPanelOpen) return "";
+  if (!aiAssistantPanelOpen || !shouldShowAiAssistantControl()) return "";
   const panelTitle = escapeHtml(t("ai.panelTitle"));
   const closeLabel = escapeHtml(t("ai.close"));
   const closeIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>`;
@@ -10759,13 +10780,8 @@ function renderMain(): string {
 
   const impersonationBannerHtml = renderImpersonationBanner();
 
-  const appHeaderHtml = `<header class="z-40 flex min-h-14 shrink-0 flex-wrap items-center justify-between gap-3 border-b border-border bg-card/95 px-4 py-2 backdrop-blur supports-[backdrop-filter]:bg-card/80 sm:flex-nowrap sm:gap-4 sm:py-0">
-        <div class="min-w-0">
-          <p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">${headerKicker}</p>
-          <h1 id="main-content" tabindex="-1" class="truncate text-lg font-semibold tracking-tight text-card-foreground">${escapeHtml(title)}</h1>
-        </div>
-        <div class="flex w-full min-w-0 flex-wrap items-center justify-end gap-2 sm:w-auto sm:flex-nowrap">
-          <button
+  const restartOnboardingBtn = shouldShowRestartOnboardingControl()
+    ? `<button
             type="button"
             data-restart-onboarding
             class="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-background px-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset sm:h-10 sm:px-3"
@@ -10773,8 +10789,11 @@ function renderMain(): string {
           >
             <span class="hidden sm:inline">${escapeHtml(t("header.restartOnboarding"))}</span>
             <span class="sm:hidden">${escapeHtml(t("header.restartOnboarding"))}</span>
-          </button>
-          <button
+          </button>`
+    : "";
+
+  const aiAssistantBtn = shouldShowAiAssistantControl()
+    ? `<button
             type="button"
             data-ai-assistant-open
             aria-expanded="${aiAssistantPanelOpen ? "true" : "false"}"
@@ -10784,7 +10803,17 @@ function renderMain(): string {
           >
             <span class="shrink-0 text-primary [&>svg]:block" aria-hidden="true">${AI_ASSISTANT_ICON}</span>
             <span class="hidden sm:inline">${escapeHtml(t("header.aiShort"))}</span>
-          </button>
+          </button>`
+    : "";
+
+  const appHeaderHtml = `<header class="z-40 flex min-h-14 shrink-0 flex-wrap items-center justify-between gap-3 border-b border-border bg-card/95 px-4 py-2 backdrop-blur supports-[backdrop-filter]:bg-card/80 sm:flex-nowrap sm:gap-4 sm:py-0">
+        <div class="min-w-0">
+          <p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">${headerKicker}</p>
+          <h1 id="main-content" tabindex="-1" class="truncate text-lg font-semibold tracking-tight text-card-foreground">${escapeHtml(title)}</h1>
+        </div>
+        <div class="flex w-full min-w-0 flex-wrap items-center justify-end gap-2 sm:w-auto sm:flex-nowrap">
+          ${restartOnboardingBtn}
+          ${aiAssistantBtn}
           ${renderHeaderScopeFilters()}
           ${renderGlobalUiLocaleControl()}
           ${renderHeaderUserCenter()}
@@ -10792,7 +10821,10 @@ function renderMain(): string {
             <svg class="size-5 dark:hidden" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
             <svg class="size-5 hidden dark:block" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
           </button>
-          ${renderViewSwitchControl()}
+          <div class="flex shrink-0 items-center gap-2" data-shell-perspective-controls>
+            ${renderViewSwitchControl()}
+            ${renderVersionSwitchControl()}
+          </div>
         </div>
       </header>`;
 
@@ -10995,6 +11027,10 @@ function guardNavModuleAccess(path: string): void {
     replaceHashPath(getFirstAllowedNavPath());
     return;
   }
+  if (isMerchantPlatformPresetPath(path) && isMvpHiddenSettingsNavChild("set-platform-preset")) {
+    replaceHashPath(getFirstAllowedNavPath());
+    return;
+  }
   const settingsCatalog = getModuleSettingsCatalog(path);
   if (settingsCatalog && !isModuleSettingsPathAllowedByPreset(path, settingsCatalog)) {
     replaceHashPath(getFirstAllowedModuleSettingsPath(settingsCatalog));
@@ -11133,6 +11169,13 @@ function mount(): void {
     mountLoginShell();
     return;
   }
+  ensureMvpDefaultPlatformPresetOnboardingSkipped();
+  ensureMvpBrandPerspectiveRegionScopeCleared();
+  if (!shouldShowAiAssistantControl()) {
+    setAiAssistantPanelOpen(false);
+  }
+  if (ensureMvpGroupHqViewSwitchHidden(mount)) return;
+  if (ensureMvpMPlatformViewSwitchHidden(mount)) return;
   if (authPath === LOGIN_PATH) {
     replaceHashPath(needsPlatformPresetOnboarding() ? ONBOARDING_PATH : APP_NAV_HOME_PATH);
     mount();
@@ -11152,6 +11195,12 @@ function mount(): void {
   }
 
   if (isMPlatformShellMode() || isMPlatformContentPath(authPath)) {
+    if (!shouldShowMPlatformViewSwitchOption()) {
+      exitMPlatformShell();
+      replaceHashPath(APP_NAV_HOME_PATH);
+      mount();
+      return;
+    }
     if (!isMPlatformContentPath(authPath)) {
       replaceHashPath(NAV_BLUEPRINT_ROUTE_PREFIX);
       mount();
@@ -11792,6 +11841,7 @@ function mount(): void {
   bindPermissionsRbac();
   bindPlatformPreset(mount, MERCHANT_PLATFORM_PRESET_SCOPE);
   bindViewSwitchControl(mount);
+  bindVersionSwitchControl(mount);
   bindImpersonationBanner(mount);
   bindChainBrandMgmtControls(mount);
   bindBrandStoreListControls(mount);

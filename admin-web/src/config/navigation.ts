@@ -168,14 +168,8 @@ export const NAV_MODULES: NavModule[] = [
     icon: "storeMgmt",
     path: "/stores",
     subNavPlacement: "sheet",
-    defaultChildPath: "/stores/brand-menu",
+    defaultChildPath: "/stores/settings",
     children: [
-      {
-        id: "st-brand-menu",
-        title: "品牌与菜单",
-        titleEn: "Brand & menu",
-        path: "/stores/brand-menu",
-      },
       { id: "st-settings", title: "设置", path: "/stores/settings" },
     ],
   },
@@ -366,6 +360,12 @@ export const NAV_MODULES: NavModule[] = [
         title: "餐位平面图",
         titleEn: "Table layout",
         path: "/operations/queue-call/floor-plan",
+      },
+      {
+        id: "qc-brand-menu",
+        title: "品牌与菜单",
+        titleEn: "Brand & menu",
+        path: "/operations/queue-call/brand-menu",
       },
       { id: "qc-settings", title: "设置", titleEn: "Settings", path: "/operations/queue-call/settings" },
       {

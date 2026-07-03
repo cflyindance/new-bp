@@ -27,6 +27,8 @@ import {
   isMPlatformShellMode,
 } from "./app-shell-mode";
 
+import { shouldShowGroupHqViewSwitchOption, shouldShowMPlatformViewSwitchOption } from "../config/product-version";
+import { APP_NAV_HOME_PATH } from "../config/app-routes";
 import { NAV_BLUEPRINT_ROUTE_PREFIX } from "../config/nav-blueprint-ui";
 
 export type ViewSwitchMode = SidebarNavLayoutPreset | "m-platform";
@@ -190,10 +192,10 @@ export function renderViewSwitchControl(): string {
         <div class="px-1.5">
           ${renderStoreMenuItem(current)}
           <div class="px-2.5 py-1.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">${escapeHtml(t("shell.navLayoutChain"))}</div>
-          ${renderChainPerspectiveItem("group-hq")}
+          ${shouldShowGroupHqViewSwitchOption() ? renderChainPerspectiveItem("group-hq") : ""}
           ${renderChainPerspectiveItem("brand")}
-          <div class="my-1 h-px bg-border" aria-hidden="true"></div>
-          ${renderMPlatformMenuItem(current)}
+          ${shouldShowMPlatformViewSwitchOption() ? `<div class="my-1 h-px bg-border" aria-hidden="true"></div>
+          ${renderMPlatformMenuItem(current)}` : ""}
         </div>
       </div>
     </div>`;
@@ -209,6 +211,7 @@ function setViewSwitchOpen(root: HTMLElement, open: boolean): void {
 
 function applyChainPerspective(perspective: ChainViewSwitchPerspective, onMount: () => void): void {
   if (isViewSwitchRestricted()) return;
+  if (perspective === "group-hq" && !shouldShowGroupHqViewSwitchOption()) return;
 
   if (isMPlatformShellMode()) {
     exitMPlatformShell();
@@ -229,6 +232,7 @@ function applyViewSwitchMode(mode: ViewSwitchMode, onMount: () => void): void {
   if (isViewSwitchRestricted()) return;
 
   if (mode === "m-platform") {
+    if (!shouldShowMPlatformViewSwitchOption()) return;
     if (isMPlatformShellMode()) return;
     enterMPlatformShell();
     location.hash = `#${NAV_BLUEPRINT_ROUTE_PREFIX}`;
@@ -255,6 +259,31 @@ function applyViewSwitchMode(mode: ViewSwitchMode, onMount: () => void): void {
   onMount();
 }
 
+/** MVP 下若当前为集团总部视角，自动切至品牌多门店（或门店版） */
+export function ensureMvpGroupHqViewSwitchHidden(onMount: () => void): boolean {
+  if (shouldShowGroupHqViewSwitchOption()) return false;
+  if (readSidebarNavLayoutPreset() !== "chain") return false;
+  if (resolveChainDataPerspective() !== "group-hq") return false;
+
+  if (canUseChainDataPerspective("brand")) {
+    applyChainPerspective("brand", onMount);
+  } else {
+    applyViewSwitchMode("store", onMount);
+  }
+  return true;
+}
+
+/** MVP 下若当前在 M 平台视角，自动退回商家后台 */
+export function ensureMvpMPlatformViewSwitchHidden(onMount: () => void): boolean {
+  if (shouldShowMPlatformViewSwitchOption()) return false;
+  if (!isMPlatformShellMode()) return false;
+
+  exitMPlatformShell();
+  location.hash = `#${APP_NAV_HOME_PATH}`;
+  onMount();
+  return true;
+}
+
 export function bindViewSwitchControl(onMount: () => void): void {
   document.querySelectorAll<HTMLElement>("[data-view-switch-root]").forEach((root) => {
     if (root.dataset.viewSwitchBound === "1") return;
@@ -263,6 +292,13 @@ export function bindViewSwitchControl(onMount: () => void): void {
     const toggle = root.querySelector<HTMLButtonElement>("[data-view-switch-toggle]");
     toggle?.addEventListener("click", (e) => {
       e.stopPropagation();
+      document.querySelectorAll<HTMLElement>("[data-version-switch-root]").forEach((versionRoot) => {
+        const versionToggle = versionRoot.querySelector<HTMLButtonElement>("[data-version-switch-toggle]");
+        const versionMenu = versionRoot.querySelector<HTMLElement>("[data-version-switch-menu]");
+        if (!versionToggle || !versionMenu) return;
+        versionToggle.setAttribute("aria-expanded", "false");
+        versionMenu.classList.add("hidden");
+      });
       const open = toggle.getAttribute("aria-expanded") !== "true";
       setViewSwitchOpen(root, open);
     });
@@ -271,6 +307,7 @@ export function bindViewSwitchControl(onMount: () => void): void {
       btn.addEventListener("click", () => {
         const raw = btn.getAttribute("data-view-switch-option");
         if (raw !== "store" && raw !== "m-platform") return;
+        if (raw === "m-platform" && !shouldShowMPlatformViewSwitchOption()) return;
         setViewSwitchOpen(root, false);
         applyViewSwitchMode(raw, onMount);
       });
@@ -281,6 +318,7 @@ export function bindViewSwitchControl(onMount: () => void): void {
         if (btn.disabled) return;
         const raw = btn.getAttribute("data-view-switch-chain-perspective");
         if (raw !== "group-hq" && raw !== "brand") return;
+        if (raw === "group-hq" && !shouldShowGroupHqViewSwitchOption()) return;
         if (!canUseChainDataPerspective(raw)) return;
         setViewSwitchOpen(root, false);
         applyChainPerspective(raw, onMount);

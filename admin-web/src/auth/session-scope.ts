@@ -29,6 +29,7 @@ import {
 } from "../config/sidebar-nav-order";
 import { loadChainBrandOrgForContext, syncChainBrandOrgForGroup, clearActiveMerchantGroupOverride, syncAllActiveMPlatformGroups, listMPlatformGroupsForMerchantBackend, resolveChainBrandContext, type ChainBrandOrgSnapshot, type ChainBrandView, type ChainStoreView } from "../config/merchant-chain-brand-sync";
 import { readActiveImpersonation } from "../config/enterprise-merchant-impersonate";
+import { shouldShowBrandPerspectiveRegionScopeFilter } from "../config/product-version";
 import { buildDemoScopeStoreOptions, DEFAULT_DEMO_STORE_ID } from "../permissions/m-platform-store-scope";
 import {
   clearChainDataPerspectiveState,
@@ -201,7 +202,18 @@ export function shouldShowBrandScopeFilter(): boolean {
 }
 
 export function shouldShowRegionScopeFilter(): boolean {
-  return isChainScopeMode() && (isGroupHqDataPerspective() || isBrandDataPerspective());
+  if (!isChainScopeMode()) return false;
+  if (isBrandDataPerspective() && !shouldShowBrandPerspectiveRegionScopeFilter()) return false;
+  return isGroupHqDataPerspective() || isBrandDataPerspective();
+}
+
+/** MVP + 品牌视角：隐藏区域筛选时清空已选区域 */
+export function ensureMvpBrandPerspectiveRegionScopeCleared(): void {
+  if (shouldShowBrandPerspectiveRegionScopeFilter()) return;
+  if (!isChainScopeMode() || !isBrandDataPerspective()) return;
+  const scope = readScopeFilters();
+  if (!scope.region) return;
+  writeScopeFilters({ ...scope, region: "" });
 }
 
 /** 品牌多门店视角：顶栏品牌为只读标签（仅授权单品牌时） */

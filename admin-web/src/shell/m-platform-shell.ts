@@ -45,7 +45,8 @@ import {
   parseMerchantDetailPath,
 } from "../config/enterprise-merchant-scope";
 import { bindEnterpriseMerchant, renderEnterpriseMerchantPage } from "../config/enterprise-merchant-ui";
-import { exitMPlatformShell } from "./app-shell-mode";
+import { consumeMPlatformEntryNoticePending, exitMPlatformShell } from "./app-shell-mode";
+import { showMPlatformEntryNoticeDialog } from "./m-platform-entry-notice-dialog";
 import { bindViewSwitchControl, renderViewSwitchControl } from "./view-switch-control";
 
 export const M_PLATFORM_PRESET_PATH = "/m-platform/platform-preset";
@@ -414,6 +415,10 @@ export function mountMPlatformShell(_onMount: () => void, path: string): string 
 }
 
 export function bindMPlatformShell(onMount: () => void): void {
+  if (consumeMPlatformEntryNoticePending()) {
+    showMPlatformEntryNoticeDialog();
+  }
+
   document.querySelectorAll<HTMLElement>("[data-exit-m-platform]").forEach((btn) => {
     btn.addEventListener("click", () => {
       exitMPlatformShell();

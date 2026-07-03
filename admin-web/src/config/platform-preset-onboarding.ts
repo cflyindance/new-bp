@@ -20,6 +20,7 @@ import {
 import { readSelectedBusinessTypeId, writeSelectedBusinessTypeId } from "./platform-preset-store";
 import { listCustomBusinessTypes } from "./enterprise-platform-preset-store";
 import { getFirstAllowedNavPath } from "./platform-preset-nav-filter";
+import { isMvpProductVersion } from "./product-version";
 
 export const ONBOARDING_PATH = "/onboarding";
 
@@ -142,7 +143,25 @@ export function restartPlatformPresetOnboardingFromStart(): void {
   writeOnboardingDraft(defaultOnboardingDraft());
 }
 
+/** MVP：跳过首次登录引导，直接应用默认业态×产线（全功能/不确定 + POS） */
+export function ensureMvpDefaultPlatformPresetOnboardingSkipped(): void {
+  if (!isMvpProductVersion()) return;
+  const email = getAuthenticatedEmail();
+  if (!email || isPlatformPresetOnboardingComplete(email)) return;
+  const draft = defaultOnboardingDraft();
+  seedMerchantPresetsFromEnterprise(draft.businessTypeIds, draft.productLineIds);
+  applyPlatformPresetContext(draft.businessTypeIds, draft.productLineIds);
+  if (draft.businessTypeIds[0]) {
+    writeSelectedBusinessTypeId(draft.businessTypeIds[0]);
+  }
+  markPlatformPresetOnboardingComplete(email);
+}
+
 export function needsPlatformPresetOnboarding(): boolean {
+  if (isMvpProductVersion()) {
+    ensureMvpDefaultPlatformPresetOnboardingSkipped();
+    return false;
+  }
   return isAuthenticatedOnboardingCheck();
 }
 

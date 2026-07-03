@@ -11,7 +11,9 @@ import {
 import { APP_NAV_HOME_PATH, isNavHomePath } from "./app-routes";
 import { readPlatformPresetContext } from "./platform-preset-context";
 import { readSidebarNavLayoutPreset } from "./sidebar-nav-order";
-import { isBrandDataPerspective, isGroupHqDataPerspective } from "../auth/session-scope";
+import { isBrandDataPerspective, isGroupHqDataPerspective } from "../auth/merchant-scope-context";
+import { applyMvpNavPresentationFilters, isMvpHiddenSettingsNavChild } from "../permissions/nav-access";
+import { isMvpProductVersion } from "./product-version";
 import { getModuleSettingsCatalog } from "./module-settings-catalog";
 import { isModuleSettingsPathAllowedByPreset } from "./platform-preset-settings-filter";
 import { getRuntimePresetSelection } from "./platform-preset-runtime-cache";
@@ -70,7 +72,7 @@ export function filterNavModuleByPlatformPreset(m: NavModule): NavModule | null 
 
 export function filterNavModulesByPlatformPreset(modules: NavModule[]): NavModule[] {
   const selection = getActiveSelection();
-  if (!selection) return modules;
+  if (!selection) return applyMvpNavPresentationFilters(modules);
   let filtered = modules
     .map((m) => {
       if (!isPresetL1EnabledInSelection(selection, m.id)) return null;
@@ -81,7 +83,7 @@ export function filterNavModulesByPlatformPreset(modules: NavModule[]): NavModul
       return { ...m, children };
     })
     .filter((m): m is NavModule => m != null);
-  if (readSidebarNavLayoutPreset() === "chain" && isGroupHqDataPerspective()) {
+  if (readSidebarNavLayoutPreset() === "chain" && isGroupHqDataPerspective() && !isMvpProductVersion()) {
     const extras: NavModule[] = [];
     if (!filtered.some((m) => m.id === "brand-mgmt")) {
       const brand = NAV_MODULES.find((m) => m.id === "brand-mgmt");
@@ -96,13 +98,13 @@ export function filterNavModulesByPlatformPreset(modules: NavModule[]): NavModul
       filtered = [...extras, ...filtered.filter((m) => !extraIds.has(m.id))];
     }
   }
-  if (readSidebarNavLayoutPreset() === "chain" && isBrandDataPerspective()) {
+  if (readSidebarNavLayoutPreset() === "chain" && isBrandDataPerspective() && !isMvpProductVersion()) {
     if (!filtered.some((m) => m.id === "brand-store-list")) {
       const storeList = NAV_MODULES.find((m) => m.id === "brand-store-list");
       if (storeList) filtered = [storeList, ...filtered];
     }
   }
-  return filtered;
+  return applyMvpNavPresentationFilters(filtered);
 }
 
 export function filterSheetSubnavByPlatformPreset(
@@ -186,5 +188,9 @@ export function getFirstAllowedNavPath(): string {
 
 /** 滑层子导航（与 navModuleChildrenAsSheetSubnav 一致并过滤） */
 export function getFilteredNavModuleSheetSubnav(m: NavModule): ProductCenterSidebarSubItem[] {
-  return filterSheetSubnavByPlatformPreset(m.id, navModuleChildrenAsSheetSubnav(m));
+  let items = filterSheetSubnavByPlatformPreset(m.id, navModuleChildrenAsSheetSubnav(m));
+  if (m.id === "settings") {
+    items = items.filter((item) => !isMvpHiddenSettingsNavChild(item.id));
+  }
+  return items;
 }

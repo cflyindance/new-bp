@@ -43,6 +43,7 @@ import {
   type MerchantPresetViewScope,
 } from "./platform-preset-merchant-view";
 import { ONBOARDING_PATH } from "./platform-preset-onboarding";
+import { shouldShowRestartOnboardingControl } from "./product-version";
 import {
   formatMerchantPresetSyncStatusLabel,
   resolveMerchantPresetSyncStatus,
@@ -160,11 +161,15 @@ function renderMerchantPresetContextBanner(viewScope: MerchantPresetViewScope): 
       <p class="mt-1 text-xs text-muted-foreground">
         共 ${viewScope.comboCount} 组预设并集${applied ? ` · 上次应用 ${escapeHtml(applied)}` : ""}
       </p>
-      <button
+      ${
+        shouldShowRestartOnboardingControl()
+          ? `<button
         type="button"
         data-restart-onboarding
         class="mt-2 text-xs font-medium text-primary hover:underline"
-      >重新引导</button>
+      >重新引导</button>`
+          : ""
+      }
     </div>`;
 }
 

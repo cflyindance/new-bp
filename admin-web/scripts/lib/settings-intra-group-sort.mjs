@@ -243,7 +243,7 @@ assignSort(KITCHEN_TICKET_FIELDS_SEQ_ORDER);
 assignSort(KITCHEN_TICKET_FORMAT_SEQ_ORDER);
 assignSort(KITCHEN_PACKING_SLIP_SEQ_ORDER);
 
-/** 门店管理 · 设置滑层二级导航（品牌与菜单已抽离为 /stores/brand-menu） */
+/** 门店管理 · 设置滑层二级导航 */
 export const STORE_SETTINGS_GROUP_ORDER = [
   "store-profile",
   "brand-identity-assets",

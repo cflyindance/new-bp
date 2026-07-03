@@ -53,7 +53,7 @@ const SETTINGS_GROUP_ORDER_BY_PATH = {
   "/promotions/lottery": ["lottery-activity-settings", "lottery-animation-settings"],
   "/reviews/settings": ["review-content-moderation"],
   "/stores/settings": STORE_SETTINGS_GROUP_ORDER,
-  "/stores/brand-menu": STORE_BRAND_MENU_GROUP_ORDER,
+  "/operations/queue-call/brand-menu": STORE_BRAND_MENU_GROUP_ORDER,
   "/finance/settings": FINANCE_SETTINGS_GROUP_ORDER,
   "/print-templates/settings": PRINT_SETTINGS_GROUP_ORDER,
   "/device-management/settings": HARDWARE_SETTINGS_GROUP_ORDER,
@@ -236,7 +236,7 @@ function buildCatalog(rows, mapping) {
 
   const canonicalHubByPath = new Map(Object.entries(HUB_SETTINGS_PATH).map(([hub, p]) => [p, hub]));
   canonicalHubByPath.set("/promotions/lottery", "促销中心");
-  canonicalHubByPath.set("/stores/brand-menu", "门店管理");
+  canonicalHubByPath.set("/operations/queue-call/brand-menu", "前厅管理中心");
 
   let ts = `/** 由 scripts/build-module-settings-catalog.mjs 根据 docs/配置归类-终版.md + docs/配置归类-分组映射.csv 生成，请勿手改 */\n\n`;
   ts += `export interface ModuleSettingCatalogItem {\n`;
