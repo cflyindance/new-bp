@@ -1,0 +1,2498 @@
+## Square商家平台-后台结构-英文
+
+- Home
+  - 门店选择
+  - Performance
+    - 筛选条件
+      - Date
+        - Today
+        - Yesterday
+        - This week
+        - Last week
+        - This month
+        - Last month
+        - This year
+        - Last year
+        - Custom
+      - Prior to day
+        - Prior to day
+        - Prior to Thursday
+        - 4 weeks prior
+        - 52 weeks prior
+        - Prior to year
+      - Bills
+        - All
+        - Open
+        - Closed
+    - Net sales
+    - Gross sales
+    - Transactions
+    - Labour % of net sales
+    - Average sale
+    - Comps & discounts
+    - Tips
+  - Locations
+    - Name
+    - Net sales
+    - Transactions
+    - Labour %
+- Items & menus
+  - Items
+    - Item library
+      - 筛选条件
+      - 列表
+        - Item
+        - GTIN
+        - SKU
+        - Reporting category
+        - Locations
+        - Sold by
+        - Stock on hand
+        - Availability
+        - Status
+        - Price
+        - Weight
+    - Channel listings
+    - Service library
+      - Name
+      - Reporting category
+      - Locations
+      - Duration
+      - Price
+    - Image library
+    - Resources
+    - Modifiers
+    - Categories
+    - Discounts
+    - Options
+    - Units
+    - Custom attributes
+    - Settings
+      - Item defaults
+        - 描述
+          - Configure default settings for new items that you create in Item Library or the Point of Sale app.
+        - 设置
+          - Item type
+            - 描述
+              - Prepared food and beverage
+            - 编辑
+              - Physical good
+                - Best for retail items such as clothing or jewelry.
+              - Prepared food and beverage
+                - Best for restaurants or other food venues. Add nutritional information and identify food allergens for a better online ordering experience.
+              - Event
+                - Sell tickets to events and include location address as well as times.
+              - Digital
+                - Lets you provide a digital file for download.
+              - Other
+                - Best for items you will fulfill manually.
+              - Donation
+                - Allow site visitors to select from charitable donation amounts.
+          - Channels
+            - 描述
+              - SanSan Ramen
+            - 编辑
+              - 渠道A
+                - 1232-104854.square.site
+              - 渠道B
+                - restaurant-103611.square.site
+          - Site visibility
+            - 描述
+              - Visible
+            - 编辑
+              - Visible
+                - This item will be visible and available for purchase on all sites where it is added.
+              - Hidden
+                - This item will be available for purchase, but hidden from Shop All/Order Online pages on all sites that the item is added to. Learn more
+              - Unavailable
+                - This item will be unavailable for purchase and will not be displayed on all of your sites.
+      - Dining options
+        - 门店列表
+          - Option
+            - To Go
+            - Delivery
+            - Pick Up
+            - Dineln
+          - Default Dining Option
+        - Edit Dining Options
+          - New dining options are enabled on all locations by default.
+          - If you delete a dining option, it will be deleted from every location.
+      - Comp and void
+        - Comp Reasons
+          - Name
+          - Create Comp Reason
+        - Void Reasons
+          - Name
+          - Create Void Reason
+      - Inventory
+        - Inventory management for invoices
+          - Adjust inventory levels through invoices
+          - Automatically decrease stock levels for items in an invoice once it has been paid. Applies to selected locations.
+        - Applicable locations
+        - All locations
+          - Edit applicable locations
+            - Locations
+            - Hunan Garden
+            - Restaurant
+            - SanSan A
+            - Enable for all future locations
+      - Payment links
+        - Choose purpose
+          - Take a payment
+          - Sell an item
+          - Sell an event or class
+          - Accept a donation
+  - Menus
+    - 描述
+      - Use menus to sell your items on kiosks, delivery apps, online ordering sites and any restaurant POS modes.
+    - 列表
+      - Name
+      - Locations
+      - Channels
+    - Create a menu
+  - Inventory management
+    - History
+      - Stock history
+      - Keep track of your entire inventory with a log that records stock adjustments, sales, and returns.
+      - Manage your entire inventory with cost tracking, stock history, vendors, reporting, and selling by multiple units.
+    - Suppliers
+      - Vendors
+      - Stay organized and control your costs of goods sold by maintaining a directory of all your vendors, including their items and associated unit costs.
+    - Ingredient tracking
+  - Order guide
+    - Square’s AI-powered tool that centralizes vendor data so you can compare prices, uncover savings, and make smarter ingredient purchases.
+    - Get started
+      - Select a plan
+  - Gift cards
+    - Overview
+    - EGift cards
+      - Configure
+        - EGift cards
+          - 描述
+            - Sell digital gift cards effortlessly with Square eGift Cards. Ideal for last-minute shoppers and distant customers. They’re free to set up; fees only apply when funds are loaded to a card.
+          - 设置项
+            - Square Point of Sale app
+              - Sell eGift cards in-store
+            - Online
+              - Sell eGift cards Online
+              - Allow bulk eGift card ordering
+                - Allow customers to purchase multiple eGift cards in a single order
+              - Let customers send eGift cards by text message
+                - Customers can choose to send eGift cards by text or email.
+              - Show a link to my eGift cards in public directories
+                - This includes giveandgetlocal.com and the websites of Square partners.
+            - Active Designs
+              - Drag and drop to arrange designs in the order that you prefer your customers to see them.
+              - Manage Designs
+      - Discounts
+        - Discounts
+          - Offer online discounts on your eGift cards.Learn more
+          - Create Discount
+            - Discount Amount
+            - Minimum Load
+        - Discount Codes
+          - Offer exclusive online discount codes on your eGift cards.Learn more
+          - Create Code
+            - Discount Code
+            - Discount Amount
+            - Minimum Load
+            - Expiry date
+    - Plastic gift cards
+      - 描述
+        - Gain 10× new customers in a given year when using gift cards
+        - Choose from Square’s wide selection of dynamic templates or create a custom look for your brand, starting from just 50¢ per card. Pay up to a 2.5% load fee when funds are added to a card. Learn more
+      - Order physical gift cards
+        - *Based on sales data from US sellers using Square Gift Cards.
+    - Promotional tools
+      - Online
+        - Share links on your website or social media pages to allow customers to purchase eGift cards or check their gift card balances.
+        - eGift card order page
+          - Your customers can purchase single, multiple or group eGift cards from this page.Check balance page
+        - Check balance page
+          - Your customers can check their gift card balance on this page.
+      - Email
+        - Email is a great way to communicate with customers, especially to let them know about your gift cards. Learn more
+        - Let your 4 customers know about your gift cards and promotions
+          - Advertise your gift cards to existing customers by sending an email marketing campaign
+    - Settings
+      - Check Balance Online
+        - Your customers can check the balance of their Gift Cards online.
+      - Enable Apple Wallet integration for eGift cards
+        - Allow customers to add their eGift cards to Apple Wallet for fast and easy redemption. You’ll need a device with a camera or scanner to use this feature.
+      - Plastic Gift Card Amounts
+        - Amount 1
+        - Amount 2
+        - Amount 3
+        - Amount 4
+        - Amount 5
+        - These will be the default amounts that appear in the Point of Sale.
+        - Allow custom plastic Gift Card amounts
+      - EGift card amounts
+        - Amount 1
+        - Amount 2
+        - Amount 3
+        - Amount 4
+        - Minimum Load Amount
+        - Maximum Load Amount
+        - These will be the default amounts that appear on the order page and in the Point of Sale.
+      - Redemption Policy
+        - EGift card policy
+          - Value does not expire.
+        - Additional Policy
+          - Add business name, address, contact information and any other information required by law or any additional policy specific to your gift card programme here. Limited to 1000 characters
+      - Enable Third Party Gift Card Integration
+        - Use a third party gift card provider integration. This will disable any existing Square gift card program you are currently using.
+  - Subscription plans
+    - Create your first plan
+      - Generate recurring revenue for your business by offering plans like memberships or a monthly service.
+    - Create a plan
+      - Plan details
+        - Plan name will not be displayed to customers. For internal use only.
+      - Items
+        - To sell subscriptions through your Square Online site, please upgrade today.
+        - Select items from your catalogue that will use these plan settings when purchased as a subscription. To create new items
+        - Assign items
+          - Items
+          - SKU
+          - Price
+      - Frequency options
+        - Add one or more frequency options to this plan. For example, subscribers can choose from a weekly, fortnightly or monthly option.
+        - Add frequency option
+          - Billing details
+            - The subscription price will be determined by the item price plus any discounts set for this frequency.
+            - Daily
+            - Billing date
+            - Subscription ends
+            - Discount
+          - Additional settings
+            - Pause subscriptions
+              - Allow customers to pause their subscriptions to this plan.
+- Orders & payments
+  - Transactions
+    - 筛选条件
+      - 时间段
+      - Payment Methods
+        - All Payment Methods
+        - Card
+        - Cash
+        - Gift Card
+        - eCommerce Integrations
+        - Other
+      - Types
+        - All
+        - Payments
+        - Refunds
+      - Statuses
+        - All Statuses
+        - Complete
+        - Partially Paid
+        - Awaiting Capture
+      - locations
+        - All locations
+        - Hunan Garden
+        - Restaurant
+        - SanSan A
+      - Sources
+        - All Sources
+      - Team Members
+        - All Team Members
+      - Fees
+        - All Fees
+        - Free processing
+      - Others
+        - Card #
+        - Item
+        - Receipt #
+        - Note
+        - Ticket Name
+        - Device
+        - Dining Option
+        - Total
+        - Discount
+        - Customer
+  - Orders
+    - All orders
+      - 状态
+        - All
+        - Active
+        - Scheduled
+        - Completed
+        - Canceled
+      - 筛选条件
+        - Search
+        - 时间段
+        - Type
+          - Select all
+          - Pickup
+          - Managed deliver
+          - Shipment
+          - Other
+          - Delivery
+          - Curbside
+          - Check/Ticket
+          - In store
+        - Payment status
+          - Select all
+          - Unpaid
+          - Paid
+          - Partially paid
+          - Authorized
+        - Channels
+          - Select all
+        - Location
+          - Select all
+          - Hunan Garden
+          - Restaurant
+          - SanSan A
+        - Order Sources
+          - Select all
+      - 列表
+        - Name
+        - Source
+        - Type
+        - Items
+        - Channel
+        - Location
+        - Order Date
+        - Fill by
+        - Payment Status
+        - Status
+    - Deliveries
+      - 描述
+        - You can now create shipping labels on the Shipments page
+        - Choose from USPS rates, with additional carriers coming soon! With the new Shipments page, you can also:
+        - Manage orders created in Websites, Square Point of Sale, and Square for Retail
+        - Track package delivery status
+        - Split orders into multiple shipments
+      - Shipments
+        - To-do
+          - No shipment orders yet.
+            - We'll let you know when a shipment is ready to be fulfilled.
+          - 筛选条件
+            - 搜索
+            - Order status
+              - Select all
+              - New
+              - In progress
+            - Fulfillment locations
+              - Select all
+              - Hunan Garden
+              - Restaurant
+              - SanSan A
+        - Shipped
+          - No shipments fulfilled yet.
+            - Looks like you haven't marked anything as shipped.
+            - When you do, that shipment will show up here.
+          - 筛选条件
+            - 搜索
+            - Fulfillment locations
+              - Select all
+              - Hunan Garden
+              - Restaurant
+              - SanSan A
+    - Order partners
+      - Featured order partners
+        - Offer delivery and order fulfilment from your business to reach more customers and grow your sales.
+        - DoorDash for Square for Restaurants
+          - Manage DoorDash menus, prices, and orders all within Square.
+          - 30-day free trial.
+        - Flash Order
+          - Drive thru, kiosk, web, app, and KDS solutions with one easy integration.
+          - From $50 per month
+        - Popmenu
+          - Marketing technology platform designed to make growing your restaurant easy.
+          - Contact us for a quote
+        - Chowly
+          - Reduce 3rd-party commissions while boosting direct sales and profits.
+          - Contact us for a quote
+        - ChowNow
+          - Commission-free online ordering, marketing, and ops—branded to your business.
+          - From $129 per month
+        - Craver
+          - Custom-branded apps, web ordering, and engagement technology for restaurants.
+          - From $249 per month
+        - Deliverect
+          - Simplify your online order management.
+          - 30-day free trial
+        - Lumina Kiosk
+          - Self-ordering kiosks for busy restaurants.
+          - 30d free trial.
+      - Accept pickup and delivery orders on your Point of Sale.
+        - Connect pickup and delivery partners to accept and fulfil online orders directly in your Restaurants Point of Sale. To view all online order partners, visit the App Marketplace.
+        - Online orders enabled on
+          - 4 devices
+          - Manage
+            - Enable Online Orders
+              - Select where you want to manage Online Orders
+                - Select which Square Restaurant POS devices you would like to view, and manage online orders from. These can be changed at any time.
+    - Fulfilment settings
+    - Instant payouts
+  - Invoices
+    - Overview
+    - Projects
+      - Create project
+        - Customers
+          - Add customers related to this project. Later, you’ll be able to share this project with any of the customers listed.
+        - Details
+          - Project name
+          - Project name
+          - Phase
+            - Inquiry
+            - Proposal
+            - Booked
+            - In progress
+            - Complete
+          - Date and time (optional)
+            - Description (optional)
+            - This might be event time, total working time or a deliverable due date.
+          - Estimated value (optional)
+          - Win confidence (optional)
+        - Location (optional)
+          - Location name
+          - Address line 1
+          - Address line 2
+          - City
+          - State
+          - ZIP code
+    - Invoices
+      - Create your first invoice
+        - Create invoices and get paid online with Square.
+        - Invoices are always free to send. Pay 3.3% + 30¢ per invoice when customers pay with credit or debit online. Or subscribe to Invoices Plus and enjoy advanced, time-saving features as well as a reduced card processing fee of 2.9% + 30¢ per transaction.
+      - Create invoice
+        - Details
+          - Add customer
+            - Customer
+              - Start by adding a new customer or add yourself as a customer to send a test invoice.
+          - Invoice title
+          - Service date
+          - Invoice ID
+          - Message
+        - Line items
+          - Add an item
+            - Add a product or service and hit enter to start adding line items to your invoice.
+            - Item
+            - Qty
+            - Price
+            - Total
+          - Price
+            - Add discount
+            - Subtotal
+            - Tax
+            - Add shipping fee or service charge
+            - Total
+            - Add late fee
+        - Attachments and custom fields
+          - Attachments
+            - Attach up to 10 files totalling 25 MB. Supported file types: JPG, PNG, GIF, TIFF, BMP, and PDF.
+          - Custom fields
+            - Add custom data that will be displayed on the invoice presented to your customer
+          - Square Contracts
+            - Add an existing contract to your invoice or create a new one
+        - Settings at a glance
+          - Square invoice settings applied.
+          - Adjust settings
+            - Adjust your settings for this invoice. To create or adjust template settings, go to Invoices settings.
+          - Schedule
+            - Send immediately; Due today
+          - Accepted payment methods
+            - Credit or debit card
+              - Try out Invoices Plus and pay only 2.9% + 30¢ per transaction.
+            - Bank transfer
+              - 1.0% with a minimum of $1 per transaction.
+              - Try out Invoices Plus and get a $10 fee cap.
+            - Cash App Pay
+              - 2.9% + 30¢ per transaction.
+            - Clearpay
+              - 6.0% + 30¢ per transaction.
+            - Gift card
+              - Only pay processing when a customer buys a gift card from yo
+          - Payment options
+            - No payment method on file; Partial payments off
+            - Payment method on file
+              - Save a customer’s card in your customer directory to immediately process invoice payments.
+              - Add Card on File
+                - Add a customer before adding a payment method on file.
+            - Partial payments
+              - Let customers enter a payment amount of their choice, even if it’s less than the full balance. Learn more
+          - Customer actions
+            - Tipping off; Save payment method off; Goods and services confirmation off
+            - Tipping
+            - Save payment method
+              - Allow customers to save payments details for future use.
+            - Goods and services confirmation
+              - In order to pay, your customer is required to confirm they accept the goods and services with satisfaction. This only covers final payments taken after goods and services have been delivered.
+          - Share via
+            - Email
+            - Text message
+            - Share link
+          - Reminders
+            - 4 reminders
+              - Send customers reminders for their invoice
+          - Shipping
+            - Create order for shipping
+              - If selected, this order will be added to Shipping Manager once the customer pays the invoice. Learn more
+        - Preview
+          - Preview your completed invoice to see what your customer will see prior to sending.Learn more
+    - Recurring series
+      - Your recurring series
+        - Create recurring invoices and process repeat payments with Square.
+        - Invoices are always free to send. Pay 3.3% + 30¢ per invoice when customers pay with credit or debit online. Or subscribe to Invoices Plus and enjoy advanced, time-saving features as well as a reduced card processing fee of 2.9% + 30¢ per transaction.
+      - Create recurring series
+    - Estimates
+      - Create your first estimate
+        - Close more sales with free online estimates.
+      - Create estimate
+        - Customer information
+          - Customer
+          - Add additional recipient
+        - Estimate details
+          - Title
+          - ID
+          - Message
+            - We look forward to working with you.
+          - Contracts
+            - Attach a Square contract
+          - Attachments
+            - Add attachment
+        - Automatically convert estimate to invoice when customer accepts
+          - This will convert the estimate to an invoice using the delivery method of the estimate.
+        - Automatically create a new project for this estimate
+          - This will add a new project to your pipeline with this estimate attached for tracking.
+    - Reports
+    - Apps
+    - Settings
+      - Invoices
+        - Templates
+          - Templates are pre-defined invoices. Create customised templates to make client communication easy. You can always make edits on the fly. You can set a default template which will always show up as your first choice when creating an invoice, as well as rearrange the order of the rest of your templates.
+          - To use multiple templates, upgrade to a paid subscription.
+        - Create new template
+          - Single
+          - Recurring
+        - Invoice management
+          - Branding
+            - Update your logo, brand colour and business information in Account & Settings.
+          - Inventory
+            - Enable inventory management for invoices in Items Settings
+          - Permissions
+            - Customise each of your team member’s permissions and access to creating invoices in Team Management
+          - Notification settings
+            - Manage the notifications you receive for changes to invoices and estimates in Account & Settings
+          - Free processing
+            - When a customer uses your link to activate a Square account, you’ll both receive free processing on up to $1,000 in sales over the next 180 days.
+          - Show referral banner on receipts
+          - Text us button
+            - Allow customers to text you directly from your invoices, estimates, projects and contracts.
+          - Invoice
+        - Invoices Plus management
+          - Interested in learning more about Square Invoice’s advanced features?
+      - Estimates
+        - Estimate settings
+          - Configure the default settings for new estimates. These settings can be overridden on individual estimates.
+          - Title
+          - Message
+          - Delivery method
+            - Send estimate by email
+            - Send estimate by text message
+            - Share estimate manually
+          - Send
+            - Immediately
+            - In 7 days
+            - In 14 days
+            - In 30 days
+          - Expires
+            - Never
+            - In 7 days
+            - In 14 days
+            - In 30 days
+      - Customisation
+        - Branding
+          - Customise your customer-facing touchpoints like receipts, invoices, appointment booking flow and checkout screens with your brand’s colour and logo.
+        - Customisation
+          - Customising the look and feel of your invoices can enhance your brand and help you make a strong impression on your customers.
+        - Layouts and language
+          - Select the layout you’d like to apply to your invoice PDFs when printing or downloading an invoice.
+          - Original
+            - The original Square invoice
+          - Modern
+            - Stand out with a bold look
+          - Classic
+            - A fresh take on the traditional invoice
+        - Customise the language that appears on your invoices and estimates so that it matches the way you talk to your customers about your work.
+  - Bill Pay
+    - Pay bills
+      - 介绍
+        - Pay your way. Stay in control.
+          - Manage all your bills in one place. Pay with your Square checking account, bank account (coming soon), or credit card - and let your vendors choose how they get paid.
+        - Pay however you want
+          - Use your Square Checking Account for free, link an external bank, or pay by credit card to earn rewards and extend your float - even when vendors do not accept cards.
+        - Let your vendors choose
+          - Your vendors receive payments their way: ACH bank transfer, digital check, or mailed paper check. Manage all vendor details in one place.
+        - Spend less time on manual work
+          - Upload invoices or forward them via email and all invoice details will be automatically populated. Track open, paid, and overdue bills across all your devices without switching logins.
+        - Pay a bill
+          - Introducing recurring payments
+            - Now you can auto pay weekly and monthly business expenses.
+    - Suppliers
+    - Settings
+      - Payment methods
+        - Payment methods
+          - Pay vendors using a card, bank account, or Square Checking Account.
+        - Add
+          - Square Checking
+            - Pay from your Square checking account. Arrives in 1-2 business days.
+          - Debit card
+            - Pay with your debit card with no additional fee. Arrives in 1-2 business days.
+          - Credit card
+            - Pay with your credit card - earn rewards and extend your float. Arrives in 1-2 business days.
+      - Notifications
+        - Get emails for important changes
+          - All notifications enabled
+        - Payment initiated
+        - Paid
+        - Overdue
+        - Payment failed
+      - Email forwarding
+        - Email forwarding address
+          - Email your bills to your unique bill pay address and automatically add them to your bill list for review. You may share your forwarding address with others, including vendors.
+        - Forwarding email address
+          - sansanramen_f9019@invoices.squareup.com
+          - Bill Pay scans your forwarded email and attachments to automatically add bill details. Supported file types include PDF, JPEG, or PNG.
+        - Allow email forwarding
+          - Permit bill forwarding from your unique email address
+  - Virtual Terminal
+    - Overview
+      - Take and record payments from your computer
+        - Square Virtual Terminal makes it quick and easy to take payments from anywhere.
+        - Pay your company’s custom price per keyed-in transaction.
+      - Take a Payment
+        - Quick charge
+          - Transaction details
+            - Amount
+            - Tax
+            - Total
+            - Note
+          - Payment details
+            - Manually enter card
+            - Manually enter gift card
+            - Record cash payment
+            - Record other payment
+            - Send payment link
+            - Add a customer
+          - Fulfillment details
+            - Add pickup
+              - Pickup details
+        - Itemized sale
+    - Settings
+      - Virtual Terminal Settings
+        - Configure transaction and tipping settings for transactions processed through Square’s Virtual Terminal.
+        - Default transaction type
+          - Quick charge
+            - A transaction created from a single amount with no items.
+          - Itemised sale
+            - A transaction created from both amounts and items in your library. You can even create items on the fly.
+        - Payment methods
+          - New! Payment Method Customisation
+            - Enable the payment types you accept and arrange them in the order you’d like them to be displayed. The payment types you enable and disable will be reflected on the transaction form in Virtual Terminal.
+          - Square Terminal
+            - Buyers can pay using: Insert, Tap, Swipe, Apple Pay, Google Pay, Clearpay. Manage Settings
+          - Manually Enter Card
+          - Customer Card on File
+          - Swipe Card
+          - Manually Enter Gift Card
+          - Record Cash Payment
+          - Record Other Payment
+          - Send Payment Link
+            - Buyers can pay using: Payment Links, Apple Pay, Google Pay, Cash App Pay, Clearpay. Manage Settings
+        - Service charges
+          - Allow service charges
+        - Tipping
+          - Collect tips
+          - Tipping percentage amounts
+            - Amount 1
+            - Amount 2
+            - Amount 3
+          - Smart tip amounts
+            - Payments under $10 enable tip choices in whole amounts, and payments over $10 enable tipping by percentages.
+        - Devices
+          - Device Settings are applied at the account level. Enter a sale on your computer and send it to Square Terminal for your customer to pay.
+  - Payment links
+    - Payment links
+      - Take a payment
+      - Sell an item
+      - Sell an event or class
+      - Accept a donation
+    - Settings
+      - General
+        - Payments
+          - See your transaction fees
+          - Credit card
+            - Apple Pay
+            - Google Pay
+            - Cash App
+        - Instalments
+          - 6% + 30p per transaction fee. Let customers pay in instalments and get paid in full straight away.
+            - Clearpay
+              - Enabled
+              - Edit in Account settings
+          - Clearpay eligibility range
+            - Orders ($10.00 - $2,000.00), Items ($10.00 - $2,000.00)
+        - Email notifications
+          - Get an email notification after each transaction
+          - Dashboard or mobile add-on links
+          - Dashboard or mobile add-on links
+            - Point of Sale or Virtual Terminal links
+        - Location settings
+          - Configure settings and Square Payment Links for this location. You can create and manage links for multiple locations.
+          - Tipping
+            - Tip options
+            - Smart tips
+          - Tip amounts
+            - 15% (default), 20% 25% and $1.00 (default), $2.00, $3.00
+          - Service charges
+            - Variable service charges cannot be applied
+          - Vouchers
+            - Enable vouchers
+            - Edit vouchers in Marketing
+          - Customer information
+            - Enable customer notes
+            - Display a text box for customers to leave an optional note in checkout
+          - Merchant policies
+            - These policies are only displayed on your payment link
+            - Edit policies displayed on your receipt in Receipts
+            - Add
+          - Fulfilment
+            - These settings only apply to links selling items. Pickup is not available for events or subscriptions.
+            - Enable shipping
+              - Set delivery rates in Delivery Rate Profiles
+            - Enable pickup
+      - Branding
+        - Branding
+          - Location
+            - Hunan Garden
+          - Logo
+          - Button
+            - Colour
+          - Shape
+            - Round
+          - Buy button
+            - Button text
+          - Font
+            - SQ Market
+          - Image
+          - Title
+          - Price
+  - Subscriptions
+    - Get your subscriptions business started
+      - Learn how to set up your first plan, make items subscribable and start selling subscriptions to your customers.
+    - Create your first plan
+      - Generate recurring revenue for your business by offering plans like memberships or a monthly service.
+      - Create a plan
+        - Plan details
+          - Name
+          - Plan name will not be displayed to customers. For internal use only.
+        - Items
+          - To sell subscriptions through your Square Online site, please upgrade today.
+          - Select items from your catalogue that will use these plan settings when purchased as a subscription. To create new items, go to Items.
+          - Assign items
+        - Frequency options
+          - Add one or more frequency options to this plan. For example, subscribers can choose from a weekly, fortnightly or monthly option.
+          - Add frequency option
+  - Disputes
+    - Performance
+      - Cardholders have filed 0 disputes over the last 3 months for a total of US$0.00.
+      - Disputed funds vs total sales
+    - Insight
+      - Show clear proof of delivered goods or services by collecting customer confirmation through Square Invoices. Acknowledgement helps demonstrate that items or services were delivered as agreed.
+    - 列表
+      - Needs response
+      - In review
+      - Resolved
+  - Risk Manager
+    - Overview
+    - Analytics
+      - Key metrics
+        - The rules you create may affect your business volume. Select a key metric to track the performance and impact on your online revenue.
+        - 列表
+          - Alerts
+          - Alerted volume
+          - Impact rate
+      - Active rules
+        - Select an active rule to view its performance and impact on your online revenue. Note: We currently do not support rule analytics for 3DS rules.
+    - Alerts
+      - Alerts are generated by your Risk Manager rules. Filter to adjust your view, or click on individual payments to refund, block, allow and dismiss alerts.Learn more about alerts
+      - 筛选条件
+        - 时间
+          - Today
+          - Last 7 days
+          - Last 14 days
+          - Last 30 days
+          - Month to date
+          - Year to date
+          - Last year
+        - locations
+          - All locations
+          - Hunan Garden
+          - Restaurant
+          - SanSan A
+        - Read and unread
+          - Read and unread
+          - Unread
+          - Dismissed
+        - rules
+          - All rules
+          - Default rule: Authenticate with 3DS when payment is moderate risk
+          - Default rule: Authenticate with 3DS when the card origin is out of the country and amount is more than $50.00
+          - High risk
+          - Moderate risk
+        - statuses
+          - All statuses
+          - Pending
+          - Processed
+          - Refunded
+          - Disputed
+      - 列表
+        - Date
+        - Rule
+        - Card
+        - Amount
+        - Status
+        - Payment source
+        - Billing address
+        - Bill/Deliver
+        - Issued
+    - Rules
+      - Rules allow you to choose what happens to a payment if certain conditions are met. You can add a recommended rule or create your own.
+      - Active rules
+        - Default rule: Authenticate with 3DS when payment is moderate risk
+          - Online
+          - EGift card
+          - All locations
+          - 3DS
+        - Default rule: Authenticate with 3DS when the card origin is out of the country and amount is more than $50.00Default rule: Authenticate with 3DS when the card origin is out of the country and amount is m…
+          - Online
+          - EGift card
+          - All locations
+          - 3DS
+        - High risk
+          - Online
+          - EGift card
+          - One location
+          - Alert
+        - Moderate risk
+          - Online
+          - EGift card
+          - One location
+          - Alert
+        - ￼
+      - Recommended rules
+        - Receive an alert when the card origin is out of the country and payment is high risk
+        - Receive an alert when the billing address does not match and payment is high risk
+        - Authenticate with 3DS when the card origin is out of the country
+    - Block List
+      - Contains all payment cards, emails and IP addresses you’ve manually blocked. Customers are never notified and can be unblocked at any time.Learn more about Block List
+      - 筛选条件
+        - All Team Members
+        - All identifiers
+      - 列表
+        - Added
+        - Blocked by
+        - Blocked identifier
+        - Reason
+        - Expecting results? Try adjusting your filter settings above or create a new block
+    - Allowlist
+      - These cards will process payments at all your locations and will override your rules and Block List. You can add or remove a card from your allowlist at any time.Learn more
+      - 列表
+        - Added
+        - Allowed by
+        - Allowed identifier
+        - Reason
+        - Cards added to your allowlist will show up here. Add a card
+    - Blocked payments
+      - 筛选条件
+        - 日期
+        - locations
+          - Hunan Garden
+          - Restaurant
+          - SanSan A
+        - sources
+          - All sources
+          - Square
+          - Bank
+          - Block List
+          - Decline rules
+          - 3-D Secure rules
+        - Card
+          - Card #
+          - Total
+      - 列表
+        - Date
+        - Card
+        - Amount
+        - Blocked by
+        - Reason
+    - Allowed payments
+      - These payments match an entity on your allowlist or have successfully passed 3-D Secure.Learn more
+      - 筛选条件
+        - 日期
+        - locations
+          - Hunan Garden
+          - Restaurant
+          - SanSan A
+        - sources
+          - All sources
+          - Square
+          - Bank
+          - Block List
+          - Decline rules
+          - 3-D Secure rules
+        - Card
+          - Card #
+          - Total
+      - 列表
+        - Date
+        - Card
+        - Amount
+        - Allowed by
+        - Reason
+    - Settings
+      - Notifications
+        - Turn on notifications to receive new risk alerts at sansanramen4107@gmail.com
+        - Alert notifications
+      - Locations
+        - Select which locations are enrolled in Risk Manager.
+        - Hunan Garden
+        - Restaurant
+        - SanSan A
+      - Not sure how to use Risk Manager?
+        - Spend two minutes to take the tour.
+- Online
+  - Ordering profile
+    - Menu
+      - Menus
+      - Pickup
+      - Delivery
+    - Brand
+      - Name
+      - Cashtag
+      - Brand
+      - About
+    - Increase orders
+  - QR codes
+    - Download, print and manage QR codes customers can scan in-store to order from your online profile.
+  - Channels
+  - Settings
+    - Profile
+      - Branding
+        - Configure primary colour shown in local profile
+      - Basic info
+        - Configure the name and the info shown on your Cash App profile
+      - About
+        - Configure about description shown in local profile
+    - Menu
+      - Configure how your menu appears.
+    - Pickup
+      - Offer nearby customers a way to pick up their orders directly from your business
+    - Delivery
+      - On-demand delivery connects your business with professional courier services through Square’s delivery partners. The delivery fee varies based on distance, order size and courier availability at checkout.
+    - Checkout
+      - Order tipping
+        - Configure tipping for your online orders
+      - Allow customers to leave notes
+        - Display a text box for customers to leave a note during checkout
+      - Enhance payment verification
+        - Require customers to complete an extra security step when payment seems suspicious. If they can’t, the payment is blocked, helping protect your business from fraud.
+    - Taxes
+      - Manage tax for online pickup and delivery orders.
+    - Service charges
+      - Manage service charges for online orders. Service charges – like bag fees or delivery fees – help cover operational costs.
+    - Store policies
+      - Show customers the policies they should know before placing an order
+  - Websites
+    - Overview
+    - Editor
+    - Domains
+    - Forms
+    - SEO
+    - Website settings
+      - Site preferences
+        - Customize your website settings to your needs. Note that changes to settings take effect immediately
+      - Pop-ups
+        - Set up and manage pop-ups here.
+      - Email and text alerts
+        - Manage the email and text alerts you send to customers
+      - Order with Google
+        - Allows you to highlight your Square website in Google search results and encourage customers to order direcly from you. Save money on third-party commission fees and strengthen your direct customer relationships.
+        - Learn more about setting up and managing Order with Google in this help article.
+      - Tracking tools
+        - Add tracking tools and analytics to your website's code for better insights & targeted marketing.
+        - Google Analytics
+      - Customer Reviews
+        - Let customers leave feedback on your items with reviews, their own item photos and star ratings
+        - Upgrade
+      - Messenger
+        - Get started with Facebook Messenger
+        - Add live chat to your site by adding a Facebook Messenger button.
+      - Language
+        - Site language
+        - This is the language for your public-facing website
+      - FB Food Ordering
+        - Set up food ordering for Facebook and Instagram
+        - Help customers discover your site and place direct orders for pickup and delivery
+      - QR code ordering
+        - QR code ordering
+        - Allow customers to order using QR codes for increased efficiency, order accuracy, and improved customer experience. Learn more.
+      - Notifications
+        - Control how and where your team gets notified of new activity
+        - New order emails
+          - Choose where to send emails for each new order
+      - Customer accounts
+        - Drive repeat sales with a more personalized online experience.
+      - Checkout
+        - Accept online orders
+        - You can toggle online ordering on or off. When off, items will still be on your sites but not available for purchase.
+      - Item preferences
+- Customers
+  - Customer directory
+    - Directory
+      - All Your Customers in One Place
+        - The directory is where you can view & manage your customers and all their activity at your business.
+      - Search, Sort, Filter and Group Your Customers
+        - Quickly find the customers you need, and organise them however you prefer. You can even save filtered groups to keep track of your VIPs, Most Recent customers, and more.
+      - Direct Messaging
+        - Send a direct message to a customer, straight from their profile, when you need to follow up on an order, or let a customer know they left something in your store.
+    - Feedback
+    - Insights
+      - Visits
+        - New vs returning customer visits
+        - Visit frequency
+      - Satisfaction ratings
+        - Quality
+        - Environment
+        - Waiting time
+        - Customer Service
+        - Undelivered
+        - Unknown Charge
+        - Other
+        - Unspecified
+        - Not Satisfied
+        - Satisfied
+    - Settings
+      - Configure profiles
+        - Create custom field
+          - Custom fields help you store additional information for all of your customers.
+          - Field name
+          - Field type
+            - Text input
+            - Toggle switch
+            - Address
+            - Date
+            - Selection
+            - Email address
+            - Number input
+            - Phone number
+      - Feedback
+        - Feedback Settings
+          - Collect feedback from your digital receipts
+          - Locations
+        - Feedback Notifications
+          - Receive customer feedback notifications
+          - Specified recipients will receive an email each time a buyer provides feedback.
+        - Feedback Recipients
+          - sansanramen4107@gmail.com
+          - Add
+            - Add Feedback Recipient
+              - Email Address
+              - Notification
+                - All Feedback
+                - Negative Only
+              - Location Settings
+                - All Locations
+                - Select Locations
+      - Email collection
+        - Point of Sale Settings
+          - In the Square Point of Sale app, you can add a screen after checkout inviting customers to sign up for your mailing list if they have not signed up for email receipts. Enable this screen by tapping Email Collection within the Settings menu.Learn more
+        - Hosted Signup Page
+          - Copy and paste this link anywhere online to invite customers to join your mailing list. After clicking, your customers will be sent to a dedicated landing page to sign up, and collected information will be added to your directory.Learn more
+          - If you are logged in to Dashboard and testing the link, please open the link in an incognito window.
+        - Embedded Signup Form
+          - Copy and paste this code into your website to embed a form for collecting email addresses. Collected email addresses will be added to your Directory.Learn more
+      - Card on file
+        - Print and File Customer Authorisation
+        - You need your customer’s signed authorisation to save their card and protect you from chargeback liability. Have your customer fill out and sign this form, then store it securely in accordance with PCI-DSS and data privacy requirements.
+  - Contracts
+    - Contracts
+      - Send your first contract!
+      - Did you know that businesses using contracts are 60% more likely to win a dispute? We make it easy to protect your business using personalised, professional contracts that are simple to create. Learn more
+    - Templates
+      - Create a template
+        - We’ll save your created templates here for easy access.
+        - Create a template
+          - Personalise a reusable contract template to fit your needs.
+      - Customise an existing template
+        - Pick a template below to start creating a contract, or personalise a template to fit your business needs.
+        - Credit card authorization
+          - Saves your customer’s credit card information on file for future use.
+          - Template
+            - Give your template a name and a short description. Only you can see this information. You can always come back and edit this template later.
+            - Template name
+            - Template description
+          - Contract
+            - Give your contract a name (it can be the same as template name) and add an optional message and description that your customer can see. We’ll include the message in the email when you send the contract.
+            - Contract name
+            - Description
+            - Message
+        - Service agreement
+          - Sets the terms for a service provided between you and your customer.
+        - Sale of goods
+          - Sets the expectations for physical or digital goods being sold.
+        - Completion of services
+          - Confirms that the services provided were completed in full.
+        - Confirmation of delivery
+          - Designed to be used once the goods sold have been delivered in full.
+        - COVID-19 agreement
+          - Sets clear expectations about safety and liability before meeting in person.
+    - Clauses
+      - Custom clause library
+      - Create clauses here that can be added to any contract you create. These clauses can only be edited from this page.
+      - Add new clause
+        - Add new clause
+          - Use AI to start writing. You’ll be able to edit at every stage.
+          - Dismiss
+          - Clause title
+          - Description
+          - Require customer initials
+  - Marketing
+    - Overview
+    - Campaigns
+    - Automations
+    - Google Reviews
+    - Vouchers
+    - Assistant
+    - Contact collection
+    - Settings
+  - Loyalty
+    - Overview
+    - Reports
+      - Visits
+      - Sales
+      - Top customers
+    - Activity
+      - All activity
+      - Suspicious activity
+    - Marketing
+      - Email
+        - Email marketing
+          - Email is a great way to communicate with customers, especially to let them know about your loyalty programme if they haven’t enrolled.Learn more
+          - One-time campaigns
+            - Let your 4 customers know about your loyalty programme
+              - Advertise your loyalty programme to existing customers by sending an email marketing campaign
+            - Send an update to my loyalty subscribers
+              - Use the audience smart groups filter to send an update message to your loyalty customers
+            - Announce a loyalty promotion
+              - Tell your customers about an opportunity to earn extra points on their purchases.
+          - Automations
+            - Remind about nearing a loyalty reward
+              - Turn on this campaign to automatically remind your loyalty subscribers who are nearing their first reward.
+            - Remind about available rewards
+              - Loyalty subscribers will automatically receive an email 14 days after they have enough points to redeem a loyalty reward.
+            - Celebrate customers’ loyalty anniversaries
+              - Automatically send an offer to your loyalty subscribers 1 week before their anniversary of enrolment into your programme.
+      - Text message
+        - Text message marketing
+          - Encourage loyalty customers to continue coming back with automated text message marketing campaigns.How it works
+        - Automations
+          - Remind about nearing a loyalty reward
+            - Turn on this campaign to automatically remind your loyalty subscribers who are nearing their first reward.
+          - Remind about available rewards
+            - Loyalty subscribers will automatically receive a text message 14 days after they have enough points to redeem a loyalty reward.
+          - Celebrate customers’ loyalty anniversaries
+            - Automatically send an offer to your loyalty subscribers 1 week before their anniversary of enrolment into your programme.
+          - ￼
+        - One-time campaigns
+          - Send a text message campaign to your loyalty subscribers
+            - Send a voucher and message to all loyalty subscribers who have opted in to receive marketing texts.
+      - Other
+        - In-store marketing
+          - Print out free in-store signage to advertise your loyalty programme in your shop.
+          - Collect loyalty enrolment not tied to purchase
+            - Print a sign with a unique QR code to allow customers to sign up for loyalty and marketing.
+          - Printable table tent
+            - Print out a free table tent to advertise your loyalty programme in your shop, two sizes available.
+        - Online marketing
+          - Share links on your website or social media pages to allow customers to check their loyalty status or enrol in your loyalty programme.Learn more
+          - SanSan Ramen customer loyalty status and enrolment
+    - Promotions
+      - Increase engagement with your loyalty program
+        - Create a promotion where customers can earn extra points when they shop at designated times — perfect for happy hour or holidays.
+      - Choose a template
+        - AI-powered templates will get you started by auto-generating a promotion that's optimized for your business, or you can create your own promotion from scratch.
+        - By selecting an AI template, you agree that Square may share your business name, business type, store locations, and aggregated transaction data with OpenAI.
+        - Boost for slow hours
+          - Use AI to identify slow times and suggest a promotion to bring in customers.
+        - Holiday special
+          - Attract customers to your business during an upcoming holiday celebration.
+        - Item spotlight
+          - Offer customers extra points for buying featured items.
+        - Category showcase
+          - Promote purchases for an entire category of items.
+        - Create your own
+          - Set up all of the promotion details on your own.
+    - Tiers
+      - Bring your loyalty program to the next level with tiers
+        - Motivate your customers to engage even more with your business by adding tiers to your loyalty program. The more they shop with you, the higher the reward-earning potential for them.
+      - Build your tiers
+        - When customers enroll in your loyalty program, they’ll start in the base tier and move up through your tiers as they earn more points. Once they reach a tier, they’ll enjoy that status for the next 12 months.
+    - Settings
+      - Set up your rewards
+      - Create up to 15 rewards that your customers can earn.
+      - Create another reward
+        - Discount on entire sale
+        - Discount on item in specific categories
+        - Discount on specific items
+        - Free item
+  - House accounts
+    - Overview
+    - Reports
+      - Name
+      - Location
+      - Starting balance
+      - Net sales
+      - Net payments
+      - Ending balance
+    - Settings
+      - Account creation
+        - Customize defaults for spending limit and reporting location when creating house accounts.
+        - Spending limit
+        - Reporting location
+- Reports
+  - Sales
+    - Sales summary
+      - No Transactions in this Timeframe
+      - No transactions took place during the timeframe you selected.
+    - Item sales
+    - Sales trends
+    - Category sales
+    - Team sales
+    - Modifier sales
+    - Gift cards
+    - Section sales
+    - Supplier sales
+  - Accounting
+    - Taxes
+    - Fees
+    - Service charges
+    - Reconciliation
+  - Payments
+    - Payment methods
+    - Transaction status
+    - Discounts
+    - Comps
+    - Voids
+    - Cash drawers
+  - Operations
+    - Activity log
+    - Labour vs sales
+    - Kitchen performance
+  - Online
+    - Traffic&sources
+    - Purchase funnel
+  - Inventory
+    - Cost of goods sold
+  - Custom
+    - Custom item report
+    - Custom reports
+  - Settings
+    - Reporting timeframes
+      - Set the hours for your reporting day, and add custom timeframes for filtering reports.
+      - Set name
+      - Time
+      - Time zone
+      - Add
+        - Add custom timeframe
+          - Set a timeframe to use for reporting.
+        - Timeframe name
+        - Start time
+        - End time
+        - Time zone
+      - Align bank deposits with reporting day
+        - Update your transfer schedule to match your default reporting day.
+- Staff
+  - Team
+    - Team members
+      - Add team member
+        - Profile
+          - Enter your team member’s phone number or email to send them an invitation to access Team app and other Square services.
+          - Preferred name
+          - Last name
+          - Phone number
+          - Email
+          - Team member ID (optional)
+      - 筛选条件
+        - Search
+        - Job
+          - 服务员
+          - Cashier
+          - Kea Tech
+          - Mangaer
+          - Owner
+        - Status
+          - All current
+            - Active, invited, invite expired, and incomplete
+          - Deactivated
+            - Deactivated from Square
+        - Location
+        - Appointments
+          - Bookable
+          - Not bookable
+      - 列表
+        - Name
+        - Job
+        - Location
+        - Appointments
+        - Status
+    - Permissions
+  - Scheduling
+    - Rota
+      - Add shift
+        - Hua’s availability hasn’t been set. Add availability
+      - Team member
+      - Job
+      - Location
+      - Start Date
+      - Start Time
+      - End Date
+      - End Time
+      - Notes
+      - Repeat shift
+    - Availability
+      - Available all day
+        - Start Time
+        - Add availability
+        - End Time
+        - Repeat on
+          - Sunday
+          - Monday
+          - Tuesday
+          - Wednesday
+          - Thursday
+          - Friday
+          - Saturday
+          - Save
+    - Time off
+      - Allow team members to submit time off requests
+        - Turn on the “Time off requests” setting to enable your team members to submit time off requests.
+      - No time offs scheduled
+        - No team members have time offs scheduled.
+      - 状态
+        - All
+        - Requested
+        - Approved
+        - Declined
+        - Cancelled
+  - Time tracking
+    - Working day
+      - No shifts in this time range
+        - There are no shifts in the timeframe you have selected. Please select a different range.
+      - Add New shift
+        - TOTAL HOURS
+        - PAID HOURS
+        - UNPAID HOURS
+        - LABOUR COST
+        - Team member details
+          - Name
+          - Location
+          - Job
+          - Hourly rate
+          - Changes to hourly rate will only be applied to this shift.
+        - Recorded hours
+          - Add break
+            - Times are shown in the location’s local time zone
+          - Clock in
+          - Clock out
+    - Timecards
+      - ￼
+      - No shifts in this time range
+        - There are no shifts in the timeframe you have selected. Please select a different range.
+  - Payroll
+  - Announcements
+    - Streamline your team’s connections
+    - Now you and your team can send messages and share information to work smarter and thrive together.
+  - Settings
+    - Rota
+      - Your working week and working day affect how overtime is calculated.Learn more
+      - Start of working week
+        - If your business is open past midnight, consider customising your working day hours.
+      - Allow your team to manage their hours using the Team app.
+        - Shift swaps and covers
+          - Allow team members to request shift swaps and covers with each other.
+        - Time-off requests
+          - Allow team members to request time off.
+    - Clock in/out
+      - Clock in/out
+        - Customise how your team members can track their hours worked.
+      - Track time on POS
+        - Manage on Square Point of Sale app > Settings > Shifts > Track team member time.
+        - Edit POS settings
+      - Team app
+        - Team members can clock in/out on their phone using the Square Team app.
+        - Clock in/out from Team app
+          - Allow team members across all locations to use the Team app to clock in and out.
+        - Geofencing
+          - Use location data to restrict clock-ins to within a set radius of the work location.
+        - Timecard editing
+          - Allow team members across all locations to request changes to timecards.
+      - Schedule enforcement
+        - Enforce location specific clock in and out settings.
+        - Block early and unscheduled clock-ins
+        - Automatically clock out at the end of a shift
+    - Breaks
+      - Breaks
+        - It is your responsibility to ensure that these settings are accurate and comply with the relevant labour laws.
+      - Default breaks
+        - Restore default breaks
+        - No default breaks
+          - Restore default meal and rest breaks based on your business location.
+      - Custom breaks
+        - No custom breaks
+        - Custom breaks are added alongside your default breaks.
+        - Add new break
+          - Add new break
+            - Break name
+            - Duration (minutes)
+            - Compensation
+              - Paid
+              - Unpaid
+            - Mandatory break
+              - Shows a missed break timecard alert if a team member doesn’t take this break.
+      - Break rules
+        - Block ending breaks early
+        - Convert excess time from a paid break to an unpaid break
+        - Apply to
+          - All locations
+    - Overtime
+      - Overtime settings
+        - Review your state’s overtime rules to confirm your settings are accurate for your business.
+      - New York
+        - Daily overtime
+        - Weekly overtime
+        - After working (hours)
+        - Daily double time
+        - 7th day overtime
+          - On the seventh consecutive day of work, team members will earn overtime pay for their first eight hours and double time thereafter.
+    - Messaging
+      - File sharing
+        - Allow team members to share media (images, videos) in conversations.
+      - GIF sharing
+        - Allow team members to share GIFs in conversations.
+    - Tips
+      - Location
+      - Tip allocation
+      - edit
+        - Tip allocation
+          - Recipient keeps tips
+            - Each team member keeps 100% of the tips they collect.
+          - Team pool tips
+            - Tips are added to a pool and split among the team based on hours worked.
+            - Configure how your team pool and split their tips.
+            - Create tip pool
+              - How often are tips tallied up?
+                - Per transaction
+                - Daily
+                - Weekly
+                - Tips will be pooled among team members who are clocked in at the same time.
+              - How are tips split?
+                - Equal split
+                  - Show example
+                    - Tips are pooled and split equally among team members in all selected jobs based on the hours they worked.
+                    - Tips are pooled and split equally among team members based on hours worked.
+                    - 模块2
+                      - Total transaction tips
+                      - Total hours worked by team members
+                      - Total earned per hour
+                    - 模块1
+                      - Name
+                      - Hours worked
+                      - Tips earned
+                  - Who receives tips?
+                    - Job
+                    - Owner
+                  - Apply to additional locations
+                    - Location(s)
+                  - Effective date
+                    - Date
+                  - Monday, 27 April 2026
+                - Fixed percentage
+                  - Show example
+                    - Each job is assigned a percentage of the tip pool, no matter how many team members work that job.
+                    - Each job’s percentage of the pool is split among team members based on hours worked.
+                    - Tips are pooled and split first among selected jobs according to the fixed percentage assigned.
+                    - Then tips are split among team members within each job according to the number of hours worked.
+                    - Job
+                    - Percentage
+                    - Tips earned
+                  - Who receives tips?
+                    - Job
+                    - Owner
+                  - Apply to additional locations
+                    - Location(s)
+                  - Effective date
+                    - Date
+                  - Monday, 27 April 2026
+        - Cash tip management
+          - Declare cash tips
+            - Team members enter cash tips during or after their shifts for easier tracking and reporting.
+    - Commissions
+      - Commission tracking
+        - Set the commission rates of team members to have their sales commissions automatically calculated. Commission is assigned to team members based on sale attribution, and is summarised in the Team Sales Report.
+        - Learn more about commission >
+        - Commission on services
+          - Set up service commissions
+            - Set the commission structure for all locations
+            - Commission type
+              - None
+                - Team members earn no commission on services
+              - Flat rate per team member
+                - Team members each have one rate across all services
+              - Tiers
+                - Commission rates change based on team member sales
+            - Effective date
+        - Commission on item sales
+          - Set up item commissions
+            - Set the commission structure for all locations
+            - Commission type
+              - None
+                - Team members earn no commission on items
+              - Flat rate per team member
+                - Team members each have one rate across all items
+              - Tiers
+                - Commission rates change based on team member sales
+            - Effective date
+    - Alerts
+      - Manage alerts that appear on team member timecards.
+      - Alert types
+        - Overtime
+        - Job mismatches
+        - No-shows
+        - Unscheduled shifts
+        - Early shift clock-ins
+        - Late shift clock-ins
+        - Early shift clock-outs
+        - Late shift clock-outs
+        - Early break clock-ins
+        - Late break clock-ins
+        - Missed break
+        - Automatic clock-outs
+- Banking
+  - Overview
+    - Total balance
+  - Balances
+    - Available
+    - Transfer now
+    - Link a bank account to transfer funds.
+      - Link account
+    - Upcoming transfers
+      - Your next scheduled transfer will appear once you begin taking payments. View your Transfers to check funds that have already been sent to your bank account.
+      - Transfer settings
+      - View all transfers
+    - Square Checking
+      - Get instant access to your sales. No monthly fees or minimums.
+  - Transfers
+    - Date
+    - Type
+    - Location
+    - Amount
+  - Current account
+    - Date
+    - Type
+    - Location
+    - Amount
+  - Savings
+  - Loans
+  - Card
+  - Bill Pay
+    - Pay bills
+      - Pay your way. Stay in control.
+        - Manage all your bills in one place. Pay with your Square checking account, bank account (coming soon), or credit card - and let your vendors choose how they get paid.
+      - Pay however you want
+        - Use your Square Checking Account for free, link an external bank, or pay by credit card to earn rewards and extend your float - even when vendors do not accept cards.
+      - Let your vendors choose
+        - Your vendors receive payments their way: ACH bank transfer, digital check, or mailed paper check. Manage all vendor details in one place.
+      - Spend less time on manual work
+        - Upload invoices or forward them via email and all invoice details will be automatically populated. Track open, paid, and overdue bills across all your devices without switching logins.
+      - Pay a bill
+    - Suppliers
+      - You haven’t added any vendors yet
+        - This is where you can manage the vendors associated with your bill payments.
+      - Create vendor
+        - Create vendor
+          - Details
+            - Vendor
+              - Vendor name
+              - Additional vendor notes
+            - Contact
+              - Contact name
+              - Phone
+              - Email address
+            - Address (optional)
+              - Address
+              - Apt, suite, etc. (optional)
+              - City
+              - State
+              - ZIP
+        - Payment details
+          - Vendor bank account details
+            - Request your vendor’s bank account information or add the details below. Transfers can only take place after verification.
+            - Request vendor account details
+          - Account holder name
+          - Account type
+          - Bank account number
+          - Bank routing number
+          - Additional information
+            - Default Category
+            - Bills from this vendor will default to this accounting category. You can always edit this later.
+    - Settings
+      - Payment methods
+        - Payment methods
+          - Pay vendors using a card, bank account, or Square Checking Account.
+          - Add
+            - Square Checking
+              - Pay from your Square checking account. Arrives in 1-2 business days.
+            - Debit card
+              - Pay with your debit card with no additional fee. Arrives in 1-2 business days.
+            - Credit card
+              - Pay with your credit card - earn rewards and extend your float. Arrives in 1-2 business days.
+      - Notifications
+        - Notifications
+          - Get emails for important changes
+            - All notifications enabled
+          - Payment initiated
+          - Paid
+          - Overdue
+          - Payment failed
+      - Email forwarding
+        - Email forwarding address
+          - Email your bills to your unique bill pay address and automatically add them to your bill list for review. You may share your forwarding address with others, including vendors.
+        - Forwarding email address
+          - sansanramen_f9019@invoices.squareup.com
+          - Bill Pay scans your forwarded email and attachments to automatically add bill details. Supported file types include PDF, JPEG, or PNG.
+        - Allow email forwarding
+          - Permit bill forwarding from your unique email address
+  - Bitcoin
+- Settings
+  - Account&settings
+    - Personal information
+      - Sign-in&security
+        - Sign in
+          - Email
+            - sansanramen4107@gmail.com
+            - Verified
+            - Update
+          - Phone
+            - Verified
+            - (•••) •••-6789
+            - Update
+            - Remove
+          - Password
+            - Last changed Jun 19, 2024
+            - Update
+          - Personal POS Passcode for SanSan Ramen
+            - Your personal POS passcode is used to log in and clock in on the SanSan Ramen point of sale. Please don't share this passcode with anyone.
+            - 6789
+              - Owner at SanSan Ramen
+              - Update
+          - Passkeys
+            - 1/5 Synced
+            - Sign in quickly and securely with passkeys. No passwords are required. Just use your fingerprint, face, or PIN. Passkeys are safe from phishing and password breaches, and your biometrics stay private. Sync up to five passkeys across devices.
+            - Google Password Manager
+              - Created: Chrome on Windows NT, Apr 23, 2026, 8:57 a.m.
+              - Rename
+              - Remove
+            - Create a new passkey
+          - Two-step verification
+            - Enabled
+            - An extra layer to boost your Square account security. A verification code will be required in addition to your password each time you sign in. Learn more
+            - (•••) •••-7921
+              - Protecting account since 2025/5/21
+            - (•••) •••-6789
+              - Protecting account since 2024/6/20
+            - Manage two-step verification
+          - Sign out everywhere
+            - If you lost a device or left logged in a public computer, you can sign out everywhere except your current browser.
+            - Sign out everywhere
+        - Security
+          - Ways to verify it's you
+            - Square can contact you if there’s unusual activity in your account, help you access and recover your account, and send you other transactional messages about your account.
+            - Add (•••) •••-7921 as a recovery phone number?
+              - Add phone number
+          - Add phone number
+            - Add new recovery phone number
+            - The number can be used to help you access and recover your account, Square can contact you if there’s unusual activity in your account, and send you other transactional messages about your account.
+          - Add email address
+      - Preferences
+        - Account preferences
+          - Language
+            - US English
+            - Español estadounidense
+          - Time Zone
+            - Eastern Time Zone
+            - Central Time Zone
+            - Mountain Time Zone
+            - Mountain Time Zone - Arizona
+            - Pacific Time Zone
+            - Alaska Time Zone
+            - Hawaii-Aleutian Time Zone
+            - Samoa Time Zone
+    - My business
+      - About
+        - About
+          - Manage your business account and settings.
+          - Display business name
+            - Edit
+            - SanSan Ramen
+          - Preferred business owner name
+            - Hejing Cui
+          - Language
+            - Edit
+        - Branding
+          - Customise your customer-facing touchpoints like receipts, invoices, appointment booking flow and checkout screens by adding your brand’s colour and logo.
+          - Restaurant
+            - Applied to 3 locations
+              - Edit Restaurant
+          - Create new
+        - Transfer business
+          - This transfers the business to a new person within your organisation. To process payments, Square needs to verify their identity. Don’t worry, you’ll still be able to process payments during the transfer process.
+          - NOTE: This feature is not supported when selling a business.
+          - Transfer business
+        - Deactivate your business
+          - Deactivating your business means that you will be unable to receive or recover any of your payment history or account information.
+          - Deactivate your business
+      - Security
+        - Business two-step verification
+          - An extra layer to boost your team members account security. A verification code will be required in addition to password each time you sign in.Learn more
+          - Two-step verification for team members at SanSan Ramen
+            - Team members must enable their own verification methods.
+        - Authorised representatives
+          - The following team members are authorised to contact Customer Support on behalf of your business regarding sensitive account information and transaction details. Learn more.
+        - All locations
+          - Name
+          - Locations
+          - View all team members
+        - Assign authorised representative
+          - Add new team member
+          - Select existing team member
+        - Team Permissions
+          - Team Permissions allow you to set up restrictions for team members using your account. These permissions apply to all access points.
+          - Team Permissions
+            - Edit Permissions
+          - Access
+          - Team Passcode
+      - Locations
+        - Add your business to Google
+          - Reach new and existing customers by letting them find your business on Google Maps and Google Search.
+        - 列表
+          - Nickname
+          - Location type
+          - Address
+          - City, State
+          - Phone
+          - Email
+        - Create location
+    - Pricing & subscriptions
+      - Pricing & Subscriptions
+        - Credit Card
+          - Visa ending in 8425
+          - Update payment method
+      - New Square plans now available
+      - Subscriptions
+        - Square Online Free Plan
+          - Manage
+        - Square for Restaurants Free
+          - Manage
+        - Additional Restaurants POS
+          - Manage
+        - Advanced Access
+          - Manage
+        - Square KDS
+          - Manage
+        - Square Appointments Plus
+          - Re-subscribe
+      - *One or more of your subscriptions has been provided with special pricing. Contact support for questions or to discuss pricing changes.
+      - Bills
+        - Date
+        - Service
+        - Amount
+      - Monthly Summaries
+        - Date
+        - Service
+        - Amount
+      - Optional Programmes
+        - CBD
+        - If you wish to sell CBD products with Square, you must first complete identity verification, after which we’ll collect additional information about your business and the products you intend to sell.
+        - Apply to sell CBD products
+    - Payments
+      - Receipts
+        - Branding
+          - To display your custom branding, please upload your logo and select your brand colour. Changes will be reflected across all of Square. Upload images less than 10 MB in size, that are either pngs or jpegs.
+          - Restaurant
+        - Printed
+          - Collapse
+          - Printed logos are converted to black and white. Please test print your receipt to confirm actual print quality.
+        - Items and total
+          - Collapse
+          - Show item description
+          - Show total savings row when more than one discount is applied
+          - Show basket-level discounts on the item level
+        - Business
+          - Edit details
+          - Location Business Name
+          - Address
+          - Show location
+        - Contact
+          - Edit details
+          - Website
+          - X
+          - Instagram
+          - Facebook
+          - Phone
+        - Additional text
+          - Collapse
+          - Return Policy
+          - Custom Text
+        - Show referral banner
+          - When a customer uses your receipt link to activate a Square account, you’ll both receive free processing on up to $1,000 in sales over the next 180 days. Learn more about free processing
+      - Taxes
+        - Sales taxes
+          - Square provides tools that help you create and manage taxes quickly and efficiently. It is your responsibility to accurately configure, charge, collect, and remit applicable taxes on your orders. We recommend consulting a tax advisor to ensure taxes are applied and filed correctly. Once taxes are configured in your Websites Dashboard or Square App, they will be automatically applied to your POS and online orders. Tax collection is enabled by default for online orders.
+          - No sales taxes exist
+            - Sales tax created in Square Dashboard will sync to all devices signed in to this account. The tax amount will be automatically calculated at purchase.
+            - Set up your taxes
+        - Tax enrolments
+          - Tax enrolment retrieves the applicable tax rate based on your inputs during the order process but does not constitute registration with any tax authority. You should consult with your tax adviser to determine what, if any, registrations are required for your situation.
+          - Active tax enrolment
+            - New York
+            - Manage
+        - Online delivery and pickup tax overrides
+          - Manage settings
+          - Delivery tax
+            - Taxes on all local delivery orders.
+            - Automatically applied taxes
+          - QR code sales
+            - Taxes on all QR code orders.
+            - Automatically applied taxes
+          - Pickup
+            - Taxes on all pickup orders.
+            - Automatically applied taxes
+        - Delivery & nonphysical tax overrides
+          - Manage settings
+          - Domestic delivery and nonphysical taxes
+            - Taxes for all general tangible goods made through point of sale, Square Online or online ordering profiles that are shipped to the customer, as well as sales of digital downloads, events, services, donations and memberships.
+            - Automatically applied taxes
+          - International shipping & nonphysical taxes
+            - Taxes for all international delivery sales made through Square Online and online ordering profiles.
+            - Manually applied VAT
+      - Service charges
+        - Create service charges to apply at checkout
+          - Service charges, like shipping fees, bag fees or pass-through fees help offset your operational costs.
+          - Learn more
+          - Create service charge
+        - Create an automatic card surcharge Beta
+          - Offset card-processing fees by adding a surcharge to in-person card payments and Square Invoices. This will be applied automatically at checkout to anyone who uses a card.
+          - Learn more
+          - Create card surcharge
+      - Payment methods
+        - Activate and manage payment methods for online and in-person sales.
+        - Standard payment methods
+          - Payment method
+          - Type
+          - Status
+          - Channels
+        - Custom payment methods
+          - You haven’t created any custom payment methods
+          - Use custom payment methods to track payments processed outside of Square, like Uber Eats or DoorDash, so you can keep all your sales in one place.
+          - Add payment method
+            - Add custom payment method
+              - Use custom payment methods to track payments processed outside of Square, like Uber Eats or DoorDash, so you can keep all your sales in one place.
+              - Due to reporting purposes, custom payment methods cannot be edited or removed once created. Make sure you have typed the name as you intend to see it represented on your reports.
+              - Payment method name
+              - Activate on Point of Sale
+                - Enable if you want to accept tips on custom payment method transactions
+      - Bill settlement
+        - Bill settlement
+          - Choose a time that allows staff to add tips. Summary emails will be sent after this time.
+        - When should bills automatically settle?
+          - End of reporting day
+            - Settled at 11:59 PM, once your reporting day ends. Tips must be added by that time.
+            - Schedule
+              - In each location’s own time zone
+              - Day
+              - Reporting day
+              - Settlement time
+          - End of working day
+            - Settle at 1:30 or 1 hr 30 mins after close. Tips must be added by that time.
+            - Schedule
+              - Location
+                - Hunan Garden
+              - Day
+              - Opening hours
+              - Settlement time
+          - 36 hours after bill opened
+            - Provides more time to add tips, but delays finalised transfers and reporting.
+    - Banking
+      - Bank accounts
+        - Manage the bank accounts you use for standard transfers. Accounts must be verified before you can send or receive money.
+        - All locations
+          - Automatic transfers take place after the close of business each day and can take up to 2 business days, depending on the transfer speed.
+          - Hunan Garden
+            - Automatic transfer
+            - Link an account
+          - Restaurant
+            - Automatic transfer
+            - Link an account
+          - SanSan A
+            - Automatic transfer
+            - Link an account
+      - Transfers
+    - Notifications
+      - Account
+        - Email notifications
+          - Learn about new products or features and receive updates on how your business is performing. Automatically sent to your account email.
+        - Summary emails
+          - Daily sales summary
+            - Receive emails about your sales at the end of each day.
+            - Add additional recipients
+          - Monthly and annual sales summaries
+            - Receive email about your sales at the end of each month and year.
+        - Product or feature emails
+          - Product updates
+            - Stay up to date with new products, features, announcements for sellers and beta testing opportunities.Customise which products you follow
+          - Programmes and events
+            - Hear about special offers and upcoming events, and receive business-specific messages from Square.
+          - New to Square
+            - Learn about how to get started with Square.
+          - Government programmes
+            - See what kind of assistance is available to help with your business.
+          - Square Loans payments
+            - Receive an email showing your daily Square Loans progress.
+          - Inventory Alerts
+            - Receive a daily email of items that are low or out of stock.
+          - Square marketing
+            - Receive summaries of the email communication you have with your customers.
+        - Transactional emails
+          - Per payment
+            - Receive an email after every completed transaction.
+          - Per refund
+            - Receive an email every time a refund is issued.
+          - Per transfer
+            - Receive an email after every initiated transfer.
+      - Service disruptions
+        - Service disruption notifications
+          - Manage the email addresses and phone numbers that need to get Square Alerts. You’ll only get alerts for the products you use.
+        - Email notifications
+          - Add an email address to receive service disruption notifications.
+          - Add email address
+        - SMS notifications
+          - Add a phone number to receive text message alerts.
+          - Add phone number
+          - Message and data rates may apply. Message frequency varies. Reply HELP for help or STOP to cancel. View our Terms and Privacy Policy.
+        - Device notifications
+          - Choose how you would like to receive notifications in your device.
+          - In-app notifications
+            - Delivered inside the app (Dashboard mobile app)
+          - Push notifications
+            - Pushed to your device immediately (Dashboard mobile app iOS version 6.49+)
+      - Invoices
+        - Push & email notifications
+          - These notifications help keep track of changes to invoices and estimates. Only owners and employees with an Admin role will receive these notifications and any changes you make here will only impact your own notifications.
+        - Invoices
+          - Notifications
+            - Viewed
+            - Sent
+            - Updated
+            - Paid
+            - Canceled
+            - Reminders Sent
+        - Estimates
+          - Notifications
+            - Viewed
+            - Sent
+            - Updated
+            - Accepted
+            - Canceled
+      - Staff
+        - Notifications
+          - Manage emails and dashboard notifications you receive related to scheduling activity.
+        - Notification types
+          - Availability conflicts
+          - Email
+            - On
+          - Dashboard
+        - Notification types
+          - Open shift requests
+          - Shift swap requests
+          - Time-off requests
+          - Timecard edit requests
+          - Email
+          - Dashboard
+      - Disputes
+        - Disputes notification settings
+          - Settings applied here will only impact your own notifications and will apply to all locations.
+          - SMS notifications
+            - New disputes and dispute reminders
+          - Email notifications
+            - New disputes, status changes and dispute summaries
+            - Required for employees with your permissions
+    - Tax forms
+      - Tax forms
+        - You didn’t qualify for a 2025 Form 1099-K. Learn how to calculate your year-end sales report and view your fees here .
+      - Taxpayer Information
+        - Hunan Garden
+        - Restaurant
+        - SanSan A
+      - 1099 Forms
+        - Restaurant
+        - 2024
+        - 1099-K
+        - Download
+      - Resources
+        - Need to update your Form 1099-K?
+        - Notice that something needs to be updated for a previously issued Form 1099-K? You can request a Form 1099-K correction at the link below. It can take up to 30 working days for your new Form 1099-K to be ready if approved.
+    - CCPA
+      - CCPA
+        - Square is committed to helping our sellers comply with their data protection obligations. If you are part of our Franchise Suite, every franchisee in your franchise will need to fulfil each buyer’s request in their CCPA Dashboard tool to account for all locations where the buyer’s data could be stored. Using this CCPA Dashboard tool, you will be able to fulfil your buyer’s requests under CCPA with respect to the data that Square processes on your behalf and download a report to document your compliance. Learn more about how to handle these types of requests. For any other CCPA requests, go to our Support Centre.
+      - Fulfil Buyer Request
+        - Use this tool to fulfil a buyer’s request for access, update, delete, opt out of sale and export.
+        - Fulfil Buyer Request
+      - Download Report
+        - All requests you fulfil using the tool above will be logged here. You can use this log to document the actions you took to fulfil a buyer’s request, so you have proof you complied with it.
+    - Fulfilment methods
+      - Point of sale
+        - Point of sale fulfillment methods
+          - Manage by location
+          - Set up fulfillment methods to define how orders are sorted and capture the customer details you need for each order. Learn more
+          - Status tracking is not available for open orders.
+        - Delivery
+          - Order tracking off • Used in 1 locations
+          - Edit
+        - DineIn
+          - Order tracking off • Used in 3 locations
+          - Edit
+        - For Here
+          - Order tracking off • Used in 3 locations
+          - Edit
+        - Pick Up
+          - Order tracking off • Used in 3 locations
+          - Edit
+        - To Go
+          - Order tracking off • Used in 3 locations
+          - Edit
+        - ￼
+      - Online pickup&delivery
+        - 门店列表
+          - 位置
+          - 地址
+          - 网站可见性
+          - 取货
+          - 配送
+          - 门店设置
+        - 高级的设置
+          - 大宗订单设置
+            - 设置数量限制以防止出现意外的大宗取货或配送订单。还可包含自定义说明来告知客户如果超出数量限制应该如何下单。
+            - 设置取货或配送订单的货品数量限制
+          - POS到达通知
+            - Texts from customers go to your POS app
+            - 允许客户通过短信回复“已到”来通知您其已到达
+      - Shipping
+        - Shipment settings
+          - Shipping labels
+          - Get started
+          - Create labels through Square
+          - Streamline your label workflow across Square services. Print labels, ship orders and track shipments all in one place.
+        - Shipping locations
+          - Manage where your shipments are fulfilled. This is usually the location where inventory is stored and picked up for final delivery. It is also used for tax calculation at checkout for customers.
+        - Ship From Address
+          - Map Websites to Shipping Locations
+        - Shipping rate profiles
+          - Choose rates for your customers
+          - Create profiles that determine how much your customers pay for shipping
+          - Add profile
+      - Nonphysical
+        - Non-Physical Fulfillment
+          - Control whether digital items, donations, memberships, events and services are available for purchase worldwide
+        - Item type
+          - Digital
+          - Donation
+          - Event
+          - Other
+        - Item availability
+    - Order tickets
+      - Ticket number assignment
+      - To auto-assign ticket numbers from your POS and kiosks, enable the feature in Settings > Checkout > Order Tickets on your POS or your Square Dashboard under Settings > Device Management > Modes.
+    - Square hardware
+      - Order Square hardware
+      - My orders
+    - Information requests
+      - Complete an active request or check the status on information submitted to Square for review.
+      - Active requests
+        - There are no active information requests at this time.
+      - Request history
+        - There are no closed information requests at this time.
+    - Get free processing
+      - Referrals & rewards
+        - Learn more about referrals
+        - Get rewarded for sharing Square
+        - Refer a business and you’ll both get to choose a reward when they take their first payment – US$1,000 in free processing or US$20 off hardware.
+      - Rewards
+        - View past rewards
+        - You’ll see rewards here after your referee takes their first payment.
+      - Referral activity
+        - Learn more
+        - You’ll see referral activity here once you’ve shared your link.
+      - Referral settings
+        - Include your referral link to receipts to reach more potential referrals.
+        - Add your referral link to Square receipts
+  - Device management
+    - Devices
+      - 操作
+        - Add device
+          - How many device codes do you need?
+          - You can create up to 100 codes at a time. If you need more, you will need to repeat this process.
+          - Number of device codes
+        - Search
+      - 筛选条件
+        - Status
+          - Select all
+          - OnlineConnected
+          - Needs attention
+          - Critical issue
+          - Offline
+        - Location
+        - Device type
+          - Select all
+          - Terminal
+          - Handheld
+          - Register
+          - iOS
+          - Android
+          - Cash Drawer
+          - Printer
+          - Reader
+          - Scale
+          - Barcode Scanner
+          - Scanner-scale
+          - Stand
+        - Square model
+          - Select all
+          - Square Register (1st Gen, v1)
+          - Square Register (1st Gen, v2)
+          - Square Terminal (1st Gen, v1)
+          - Square Terminal (1st Gen, v2)
+        - Installed apps
+          - Select all
+          - Square Appointments
+          - Square Invoices
+          - Square KDS
+          - Square Kiosk
+          - Square Reader SDK
+          - Square for Restaurants
+          - Square for Retail
+          - Square Point of Sale
+          - Connected Square Terminal
+        - Mode
+          - All
+          - Wei-Menusifu's Settings
+          - Main POS
+          - Adler's Settings
+          - Liz’s iPhone's Settings
+      - 列表
+        - Name
+        - Status
+        - Battery
+        - Location
+        - Active mode
+        - Last updated
+        - Nickname
+        - Device ID
+        - Last active app
+        - Installed apps
+        - 操作
+          - Reboot
+          - Switch mode
+          - Forget
+    - Device codes
+      - 筛选条件
+        - Location
+        - Status
+          - Expired
+          - Paired
+          - Unpaired
+      - 列表
+        - Device code
+        - Location
+        - Status
+        - Last login
+        - Created on
+      - 操作
+        - Bulk import
+        - Create
+          - How many device codes do you need?
+          - You can create up to 100 codes at a time. If you need more, you will need to repeat this process.
+          - Number of device codes
+        - Search
+    - Modes
+      - Name
+      - Active devices
+      - Date created
+      - 操作
+        - Edit mode name
+        - Duplicate mode
+        - Add mode
+          - Select a mode
+            - Based on what you sell
+              - Standard
+              - Start taking payments quickly with a flexible setup to manage your business.
+            - Other options
+              - Quick service
+                - Speed up service with quick order entry and multichannel menus.
+              - Full service
+                - Optimise restaurant service with open bills, coursing and floor plans.
+              - Bar
+                - Place orders using conversational modifiers.
+              - Retail
+                - Manage shop operations with inventory, orders and customer management.
+              - Bookings
+                - Streamline appointments and class bookings and protect against no-shows.
+              - Services
+                - Manage projects, send invoices and take payments anytime, anywhere.
+    - Printer profiles
+      - Easily manage printer settings across multiple devices and locations with printer profiles. Learn more about printer profiles.
+      - Name
+      - Linked printers
+      - Printed categories
+      - Create profile
+        - Create profile
+          - Profile name
+          - Printer job types
+            - Select the items you want to print with this profile. All printers inheriting this profile will only print those items.
+        - Printer profiles can show across one or multiple locations.
+        - Receipts
+          - When on, this printer will also print bills, reports and open cash drawers.
+        - In-person order ticket
+          - Use order tickets to send orders to prep stations. Order tickets will print automatically after checkout.
+        - Online order tickets
+          - Use online order tickets to send online orders to prep stations.
+        - Order ticket stubs
+          - Give customers a stub for their order. Order ticket stubs only print after an in-person order ticket is printed.
+        - Void tickets
+        - Barcode labels
+    - Kitchen displays
+      - Kitchen displays
+        - Add device
+        - To configure individual Kitchen Displays’ settings, go to Settings → Device Management → Devices, and filter by Square KDS.
+      - Kitchen settings
+        - Manage location-specific KDS settings from Dashboard.
+        - Automatically send order updates
+          - Automatically update order status to ready by completing the ticket using Expeditor mode on your kitchen display.Create expeditor device
+        - Combine identical items
+          - Identical items, such as the same item with identical or no modifications, will be automatically combined together into a single line item on tickets.
+      - Kitchen routing categories
+        - Set up categories to send your menu items to different Kitchen Displays. These categories will not affect your menu or reporting settings.
+        - Auto assign
+        - No kitchen routing categories yet
+        - Create kitchen specific categories to route items based on your set up.
+    - Kiosk
+      - Get Square Kiosk
+        - Keep your labor costs in line — not your diners. Square Kiosk offers a visual menu that updates in real-time, self-serve ordering and payment, order-ready texts, and more. Let customers order for themselves and free up your staff to focus on hospitality.
+      - Kiosk Settings
+        - Add a Kiosk device
+        - Manage your kiosk experience
+        - Kiosk set up
+          - Learn more about setting up and using Square Kiosk.
+          - View details
+      - Edit settings and devices
+        - Manage your assigned kiosk devices, or make changes to kiosk setting profiles.
+        - Manage devices
+        - Edit settings
+          - Checkout
+          - Fulfillment methods
+            - For Here, To Go
+          - Payment
+            - Allow gift cards
+          - Signature and receipt
+            - Off
+          - Tipping
+            - Smart tipping
+              - General
+                - Collect tips
+                - Tip amounts
+              - Smart tip amounts
+                - Payments under $10 enable tip choices in whole amounts, and payments over $10 enable tipping by percentage. Tip amounts are recorded in your transactions.
+              - Set percentage amounts
+                - Tip amounts are recorded in your transactions.
+              - Calculate tip
+                - After taxes
+                - Before taxes
+              - Other settings
+                - Allow custom amounts
+                - Allow round-up tipping
+                - Allocate tips to staff
+                  - Customize how tips are allocated to your team members
+                  - Edit tip settings
+          - Order ready notification
+            - Diner’s name
+          - Sold out items
+      - Edit menu
+        - To manage what is visible on your kiosk, make sure the kiosk channel is on for both the menu or menus you choose.
+        - Edit menus
+      - Branding
+        - Kiosk uses your brand colors in business settings. Edit the branding that appears on your device to change.
+        - Edit branding
+      - Download the kiosk app
+        - Review the instructions on how to download the Square Kiosk app to set up your device.
+        - View instructions
+  - Restaurant settings
+    - Floor plans
+      - Floor plans are displayed on devices with open bills and floor plans enabled.
+      - Create a floor plan
+        - Floor plan details
+          - Floor plan name
+          - Location
+    - Sections
+      - Sections are displayed on devices with open bills and floor plans enabled.
+      - Create a Section
+        - Use Sections to group tables and generate sales reports.
+          - Section name
+          - Location
+        - Tables
+          - Create tables that can be added to the floor plan.
+          - Naming
+            - Automatic table names
+            - Custom table names
+          - Label
+          - Number of tables
+          - Tables
+    - Service settings
+      - Closing procedures
+        - Closing procedures
+          - Run close-of-day and team-member-shift reports from Restaurants POS to provide an audit of your daily sales activity and team-member tip payouts.
+        - Close of day reports
+          - Close open bills, clock out employees, adjust card tips and pull up employee shift reports before you call it a night.
+          - Close-of-day settings
+            - Customise the actions required before running the close of day.
+          - Close all open bills
+            - All bills must be closed before running the close of day.
+          - Adjust all card tips
+            - All card tips must be entered on the POS before running the close of day.
+          - End all cash drawers
+            - All cash drawers must be ended on each POS before running close of day.
+          - Clock out all team members
+            - All team members must be clocked out before running close of day.
+          - Customise which fields appear in printed and emailed close of day reports. A basic sales summary will always appear.
+            - Print on report
+              - Discounts section
+              - Individual item sales
+              - Category sales
+        - Shift report settings
+          - Customise the actions required before team members run their shift report.
+          - Team members must close all bills
+            - Team members with bills assigned to them will be blocked from clocking out until all bills are closed or reassigned to another team member.
+          - Team members must adjust all card tips
+            - Team members with card sales without tips added will be blocked from clocking out until all card tips have been adjusted.
+          - Display ‘Cash owed to employee’ and ‘Cash owed to house’ in shift report
+            - These values can be helpful if the business pays out non-cash tips with cash sales from the same day. This does not affect payroll calculations in Square Payroll.
+          - Customise which fields appear and how tips are calculated in team member shift reports. A basic sales summary will always appear.
+            - Print on report
+              - Category sales
+              - Individual item sales
+              - Discounts section
+            - Service charge payout
+              - Service charge is paid out as cash tips
+              - Service charge is not paid out as cash tips
+      - Seated status
+        - Seated status
+          - A new bill will be opened and the table will turn purple when a guest is seated on your reservation platform. Selected locations with reservations will display seated tables on floor plan and bills.
+        - Seated status
+          - This location doesn’t have reservations
+      - Bar tabs pre-auth
+        - Bar tabs pre-authorisation
+        - Temporarily pre-authorise a card for a set amount. This helps make sure that a customer’s card is valid and able to pay for their bill. Pre-authorisation only guarantees final payment up to the amount authorised.
+        - Enable bar tabs pre-authorisation
+          - Bar tabs pre-authorisation is not currently enabled at this location.
+          - Enable bar tabs pre-auth
+      - Menu behaviour
+        - Customise order entry flows and menu navigation behaviour on Restaurants POS.
+        - After adding an item
+          - Return to home screen
+            - After adding an item, you will return to the home screen of the menu.
+          - Stay in place
+            - After adding an item, you will return to the last screen you viewed before adding the item.
+      - Printed receipt
+        - Printed receipt options
+          - Other receipt options like restaurant logo and details can be edited in Accounts & Settings >
+          - Receipt length
+            - Show all items and modifiers
+              - All items and modifiers will be printed individually on the receipt.
+            - Minimise receipt length
+              - Same items with different modifiers will appear as one line item. Only priced modifiers will appear on the receipt.
+      - Service charge
+        - A fixed-percentage tip can be applied to bills manually, automatically or based on group size. Go to Service charges in Account & Settings to configure service charges.
+        - Allow service charge
+      - Tip adjustment
+        - Customise which team member adjusts tips.
+        - Tip adjustment
+          - Team member who opened the bill
+            - The team member who opened the bill receives the tip. The team member who closes the bill must save the tip in the POS once the payment is captured.
+          - Team member who closed the bill
+            - The team member who took payment for a bill adjusts the tip.
+      - Courses
+        - Courses are used to organise bills and kitchen tickets so items can be prepared and served at the right time. You can customise coursing settings for each of your devices as well by going to Devices > Points of Sale > POS devices. Learn more >
+        - Course management
+          - Need to add items to courses and manage course pacing?
+          - Get started
+        - Name
+          - Straight fire
+          - Starters
+          - Mains
+          - Desserts
+          - Add course
+      - Reopen bills
+        - Reopen closed bills
+          - Need to reopen a bill to make an adjustment, like comping or voiding an accidental item?
+          - Get started
+        - Reopen method
+          - Reopen and keep payment method
+            - Reopen a closed bill and keep the original payment method used.
+          - Reopen and remove payment method
+            - Reopen a closed bill and remove the original payment method. This will require a refund.
+        - Customise who has permission to reopen bills by editing team member permissions.
+        - Reopening a closed bill and preserving the authorisation of a payment method will delay when the final bill amount is settled. Your reporting and item sales will be impacted.
+  - App integrations
+  - Early feature access
+    - Early feature access
+      - Get a head start on accessing upcoming features. Install them on select devices for testing and training, or on all devices so they’re ready to go at a time that works best for your business.
+    - Cash rounding
+      - Requires version 6.94 and above of the Square Point of Sale app
+      - Automatically round cash payments to the nearest 5¢.
+      - Card and digital payments are not affected.
+      - Install
+      - View details
+  - Open tickets
+    - Open Tickets is moving to the redesigned Order Manager
+      - The redesigned Order Manager will consolidate your in-store and online orders to help you work faster and avoid mistakes.
+      - Your POS will automatically update to this new experience after February 25 between 3 and 5 AM local time.
+      - More information can be found in ourRelease Manager.
+- Add more
+- 全局工具栏
+  - Take payment
+    - Charge card
+    - Send invoice
+    - Send payment link
+  - Notifications
+  - Messages
+  - Setup Guide
+  - Support
+  - Square Al
+  - Search
+
+## 说明
+
+- 本文件由 `.mm` 思维导图导出，节点文案为导图内原文。

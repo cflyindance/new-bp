@@ -1,0 +1,448 @@
+- Snackpass商家平台-后台结构-英文
+  - Search
+  - Onboarding
+  - What's New
+  - Store
+    - Dashboard
+    - Orders
+    - Menu
+      - Items
+      - Menus
+      - Third Party
+      - Ingredients
+  - Marketing
+    - Promotions
+    - Guestbook
+    - Conversations
+    - SMS Campaigns
+    - Gift Cards
+      - Gift Card Settings
+        - Gift Cards
+          - Sell digital gift cards to customers on online ordering. Customize and order traditional physical gift cards to sell from your register.
+          - Sell Gift Cards
+            - Digital Gift Cards
+              - Customers can purchase digital gift cards on Online Ordering
+            - Physical Gift Cards
+              - Traditional plastic gift cards for customers to purchase at the Register
+            - Promotions
+              - Create and edit existing promotions on gift cards on the Gift Card shortcut in Promotions.
+            - Participating Locations
+              - Locations where gift cards can be purchased and used. Please contact support to update gift card locations and turn on chain gift card.
+              - Dimsum World (Ocean Township)
+          - Payout Method
+            - For Gift Card liability and pooled transaction history see Reports
+            - Single Account
+              - Gift Card purchases (less processing) are paid out immediately to the specified bank account. Snackpass is not responsible for transferring funds between locations.
+            - Purchase Location
+              - Gift card purchases (less processing) are paid out immediately to the location where the gift card was purchased. Snackpass is not responsible for transferring funds between locations.
+      - Import Gift Cards
+  - Data
+    - Sales
+      - Reports
+        - Sales, tips, and other essential transactions. Breakdown by day, month, or year.
+      - Hourly
+        - Hourly breakdown of tips and sales.
+      - Period Comparisons
+      - Payouts
+    - Labor
+      - Time Cards
+        - View time cards for employees.
+      - Tips
+        - Report for just tips.
+    - More Reports
+      - Customers
+        - View and analyze customer data and ordering patterns
+      - Menu
+        - Items
+        - Categories
+      - Order Audit
+        - An audit of sensitive order actions including employee activity
+      - Third Parties
+        - Connect third party platforms to see reports for all of your orders in one place.
+      - Promotions
+      - Gift Cards
+        - Overview
+        - Balances
+        - Transactions
+        - Liabilities
+      - Cash
+        - Audit log of cash drawer transactions.
+      - Locations
+        - Sales
+        - Categories
+        - Items
+  - Tools
+    - Buy Hardware
+    - Online Ordering
+    - QR Codes
+    - Website
+    - Catering
+      - Manage catering orders and settings for your store.
+    - Invoices
+    - Integrations
+      - Connect third party delivery platforms to see all of your orders in one place.
+  - Settings
+    - Store
+      - Business Info
+        - Manage the information you display about your store.
+        - Store ID
+          - This is your store's ID on Snackpass. Support may ask for it when troubleshooting.
+        - Location
+          - This is how your store will appear to customers.
+        - Store Name
+          - How you want your store to appear to your customers.
+        - Store Address
+          - Customers will see this address on your ordering and app page.
+        - Store Phone Number
+          - Customers will be able to contact this number for help with their order.
+        - Store Email Address
+          - This email will be used for account information including subscriptions, billing and tax purposes.
+        - Store Hours
+          - This is when your store is open to accept orders.
+          - Store Timezone
+        - Regular Hours
+          - Let customers know when you're open.
+        - Special Hours
+          - These hours will override regular hours.
+    - Team
+      - Manage and set permissions for your employees, admins and team.
+      - 列表
+        - Name
+        - Identifier
+        - Job Title
+        - Email
+        - Phone
+        - PIN
+        - Wage
+        - Date Added
+      - 操作
+        - Invite User
+    - Devices
+      - 列表
+        - Device Name
+        - Snack ID
+        - Serial
+        - Device Type
+        - Last Active
+        - Installed
+      - 操作
+        - Add Device
+    - Front of House
+      - Brand and Appearance
+        - Customize logo, color, kiosk video and more.
+        - Brand Color
+          - This color is used for buttons on your kiosk and your punchcard in the Snackpass App.
+        - Logo
+          - Help customers recognize your brand in the app, kiosk, and online ordering.
+        - Bio
+          - Describe your store to help customers learn about your unique offerings and atmosphere.
+        - Emoji
+          - Choose an emoji that best represents your cuisine.
+        - Cover Photo
+          - Appears at the top of your app and online ordering page.
+        - Digital Receipt Image
+          - Add a custom background for your virtual loyalty card that appears on receipts.
+        - Kiosk Splash Screen
+          - Play a custom video when Kiosk is idle.
+          - Overlay Text
+            - Add "Tap to Order" text overlay to the Kiosk Splash Screen.
+        - Register Splash Screen
+          - Add an image or video for your Register.
+        - Username
+          - Your store's username is used in the URL for your online ordering and custom website.
+          - Username
+            - Only lowercase alphanumeric characters allowed.
+          - Custom Website
+          - Custom Website Permanent Link
+          - Online Ordering Link
+          - Online Ordering Permanent Link
+        - Corporate Settings
+          - Manage your corporate map and icon settings.
+          - Corporate Map
+            - Use Corporate Map for Online Ordering.
+          - Map Icon
+            - Map icon that displays on online ordering.
+      - Tipping
+        - Specify tipping rules.
+        - Rules
+          - Tipping rules will apply to all channels (mobile, online, kiosk, and register).
+        - Collect Tip
+          - Allow customers to tip when ordering. Available on SnackOS 1.0 only. Not yet supported on SnackOS 2.0.
+        - Tip Type
+          - Choose between percentage or flat rate tip.
+          - Percentage
+        - Show "No tip" option
+          - Customers can select "No Tip" when checking out.
+        - Preset Amounts
+          - Set percentage amounts customers can select. Customers will also be able to enter a custom amount.
+          - Tip Presets
+          - Default Tip
+            - This option will be pre-selected for customers.
+        - Tip Screen Customization
+          - Personalize the images and messages shown to customers while tipping.
+          - Tip Screen Image
+            - Upload an image to be shown to customers on the kiosk and register tipping screens. On SnackOS 2.0, this setting is supported on the kiosk only.
+          - Tip Message
+            - Customize the tip message shown to customers on the kiosk, register, and online ordering. Available on SnackOS 1.0 only. Not yet supported on SnackOS 2.0.
+      - All Orders
+        - Configure settings that affect all channels, including mobile, online, kiosk and register.
+        - Receipt
+          - Smart receipt customer message
+            - This message will appear on the receipt for all customers.
+        - Order Notes
+          - Disable item and order notes
+            - When enabled, customers will not be able to add item or order notes.
+        - Bag Fee
+          - Default bag in cart
+            - When enabled, a bag will be automatically added to all orders.
+          - Bag fee amount
+            - Set the amount customers will be charged for a bag.
+          - Bag fee is taxable
+            - When enabled, the bag fee will be subject to tax.
+        - External Review
+          - External review URL
+            - Enter a URL where customers can leave reviews (e.g. your Google review link). This will be included in receipts and order confirmations. Yelp review links are not permitted per Yelp's guidelines.
+      - Online Orders
+        - Configurations that only apply to mobile and online ordering.
+        - Pickup
+          - Configure your Pick-Up settings for App and Online Ordering
+          - Pickup
+            - Enables Pickup
+          - Directions
+            - Direct customers to where they can find their order.
+          - Pickup Minimum
+            - Set the minimum amount customers must spend for mobile and online pickup orders.
+          - ASAP Orders
+            - Allow customers to order ASAP in pickup orders.
+        - Dine In
+          - Configure your dine-in settings for App and Online Ordering
+          - Dine In
+            - Reminder: go to the Menu tab to select dine-in on your desired dine-in menu items.
+          - Require Table Number
+            - Prompt the customer for table number during checkout.
+        - Menu
+          - Configurations that only apply to mobile and online ordering.
+          - Menu Store Message
+            - Add an announcement for customers that appears at the top of your store menu page.
+          - Hide Popular Items Section
+            - Hide the "Popular" section from the online ordering.
+        - Schedule Ahead
+          - Manage how orders scheduled ahead are handled.
+          - Schedule Ahead Orders
+            - Allow customers to schedule orders in advance.
+          - POS Fire Time
+            - This is the duration before the scheduled order time when the order will be dispatched to the KDS. Scheduled Orders will immediately show up in the SnackOS Orders.
+          - Schedule Ahead Minimum Lead Time
+            - This is the minimum time required before a customer can schedule an order in advance. For example, if set to 1440 minutes (24 hours), customers must place their order at least one full day in advance.
+          - First Time Slot Buffer
+            - This is the duration added to the first available time slot for scheduling ahead orders. The first time slot for scheduled orders is when your store opens.
+          - Time Slot Interval
+            - Set the interval between time slots for scheduled orders. Example: if set to 30, the time slots will be 30 minutes apart. At 10:00, 10:30, 11:00, etc.
+          - Enable Max Orders per Time Slot
+            - Limit the number of orders that can be placed in each time slot.
+          - Max Orders per Time Slot
+            - Set the maximum number of orders that can be placed in each time slot. Example: 10 means that up to 10 orders can be placed in each time slot.
+        - Delivery
+          - Store delivery is disabled. Contact support to adjust delivery settings
+          - Delivery Cart Minimum
+            - Set the minimum amount customers must spend for delivery orders.
+          - Enable Special Delivery Hours
+            - Setup delivery on special dates and hours.
+          - Special Delivery Hours
+            - Time zone: Eastern Standard Time
+        - Wait Time
+          - Choose the wait time that customers see.
+          - Manual Time
+            - Choose a specific wait (10 min) or a range (10-15 min).
+          - Lower bound
+          - Upper bound
+      - Kiosk and Register
+        - Configure your in-store ordering experience for kiosk and register orders.
+        - Pickup
+          - Configure your pickup order settings.
+          - Enable Pickup
+            - Allow customers to pickup from store.
+          - Directions
+            - Direct customers to where they can find their order.
+        - Dine In
+          - Configure your dine-in settings.
+          - Enable Dine-in
+            - Reminder: go to the Menu tab to select dine-in on your desired dine-in menu items.
+          - Require Table Number
+            - Prompt the customer for table number during checkout.
+        - Rewards
+          - Manage your store's rewards system.
+          - Show Rewards Banner on Kiosk
+            - Show a banner on the menu screen for your rewards and let people login to see their points.
+          - Register Rewards
+            - Allow customers to redeem rewards on the register.
+          - Phone Number Blocklist
+            - Exclude specific phone numbers from your store's rewards program. For example, a phone number given to customers who don't want to provide their own.
+        - Kiosk Only
+          - Visit Devices → Kiosks to manage device-specific settings.
+          - Popular Category
+            - Show the 5 most frequently ordered items in a section at the top of your menu.
+          - Menu Face
+            - Give your menu a different look by selecting a menu face that matches your products.
+        - Register Only
+          - Manually enter third-party orders on the register.
+          - Available Providers
+            - Choose available third-party providers.
+    - Back of House
+      - Order Flow
+        - Configure settings that affect how orders are processed
+        - Orders
+          - Manage logistics for new orders.
+          - Receipt Start Number
+            - Set the starting number for receipts. (Example: entering 100 will make first order of the day #101). Changes take effect the following day.
+          - Auto Accept Orders
+            - Order Hub tablet will automatically start and print new orders as they are received. Available on SnackOS 1.0 only. Not yet supported on SnackOS 2.0.
+          - Custom Pickup Times
+            - Sets preparation times when 'Auto Accept Orders' is off. Enter values separated by commas (e.g., 5, 10, 15). Available on SnackOS 1.0 only. Not yet supported on SnackOS 2.0.
+          - Skip Confirmation for Payment Type: Other
+            - Purchases paid with payment type: other will be automatically confirmed. Available on SnackOS 1.0 only. Not yet supported on SnackOS 2.0.
+        - Deprecated Settings
+          - These settings are being phased out and can only be disabled.
+          - View Total Tips on Register
+            - Daily tip totals will be made visible in register settings.
+          - Require Employee Pin Entry
+            - Requires employees to enter a unique pin each time they execute auditable tasks, such as issuing refunds. Activation of this setting is a prerequisite for enabling custom PINs. Employee pins are set here.
+          - Use Default Pin (Deprecated)
+            - When 'Require Employee Pin Entry' is off there will still be a single pin to protect employee only screens from being seen by customers.
+          - Use ETA To Mark Orders Ready
+            - This setting is deprecated and can only be turned off. This setting will mark orders as ready for pickup based on the estimated pickup time.
+      - Prep Stations
+        - Route orders to the correct prep station based on channel or menu category
+      - Table Editor
+        - Sections define groups of tables within your floor plan
+      - Clock In and Out
+        - Manage pay period, shift breaks, and overtime rules.
+        - SMS Notifications
+          - Choose when to be notified via text message.
+          - Employee Clock Out
+            - Receive a notification anytime an employee ends a shift.
+          - Shift Edit
+            - Receive a notification anytime an admin edits a completed shift.
+        - Pay Period
+          - Choose when employees receive payment.
+          - Weekly
+            - Payday is once a week on selected day.
+          - Bi-Weekly
+            - Payday is every two weeks on selected day.
+          - Semi-Monthly
+            - Payday is twice a month on the 15th and the last day of the month.
+          - Monthly
+            - Payday is once a month on the selected day.
+          - Start period on...
+        - Daily Overtime Rules
+          - Choose if and when to offer daily overtime pay.
+          - Enable Daily Overtime
+          - After...
+            - Hours worked before overtime starts.
+          - Hourly pay is
+            - This option will be pre-selected for employees.
+        - Daily Double Overtime Rules
+          - Choose if and when to offer double overtime pay.
+          - Enable Daily Double Overtime
+          - After...
+            - Hours worked before double overtime starts.
+          - Hourly pay is
+            - This option will be pre-selected for employees.
+        - Weekly Overtime Rules
+          - Choose if and when to offer weekly overtime pay.
+          - Enable Weekly Overtime
+          - After...
+            - Hours worked before weekly overtime starts.
+          - Hourly pay is
+            - This option will be pre-selected for employees.
+        - Default Break Options
+          - Set preset durations for paid or unpaid breaks.
+          - Unpaid
+            - Add break (minutes)
+          - Paid
+            - Add break (minutes)
+      - Machines
+        - Route orders to the correct machine based on channel or menu category. Machines are currently only supported in SnackOS 1.0.
+        - Add Machine
+    - Account&Tax
+      - Bank Account
+        - Manage your required company and bank account information for payouts.
+        - Verify your identity
+          - This page contains sensitive information. For your security, we want to make sure it's really you by sending a code to your email address.
+      - Payout Schedule
+        - Manage how frequently your store is paid
+        - Current Schedule
+          - Changes to your schedule do not take place immediately. Please read the payout schedule support page prior to making changes.
+          - Active
+            - Daily
+          - Pending
+            - None
+        - Schedule Management
+          - Make changes to your active payout schedule
+          - Schedule
+            - The selected payout schedule will become pending
+      - Tax Rates
+        - Important
+          - It is the duty of partners to configure tax rates accurately, and it is important to consult local regulations before modifying or updating these rates.
+        - Taxes
+          - Set the tax rates for your store.
+          - Default Tax Rate
+            - Choose a store wide tax rate between 0% - 15%
+          - Specify Tax Rate by Fulfillment
+            - Override the default tax rate with fulfillment-specific tax rates.
+            - Dine In
+            - Pickup
+            - Delivery
+      - Tax Forms
+        - Verify your identity
+        - This page contains sensitive information. For your security, we want to make sure it's really you by sending a code to your email address.
+      - Billing
+        - Manage payment methods and view invoice history.
+        - 支付方式
+        - 账单信息
+        - 账单记录
+        - 发布日期
+    - Other
+      - Products
+        - Enable Snackpass products for your store
+        - Front of House
+          - Give your customers more ways to order.
+          - Kiosk
+            - Streamline ordering with large screen self-service kiosks. Learn more
+          - Register
+            - Process payments and manage your menu efficiently from our POS system.
+          - Online Ordering
+            - Order online with our customizable, mobile friendly, web-based platform.
+          - Invoices
+            - Create, send, and manage invoices that your customers can easily pay online. Learn more
+          - Snackpass App
+            - Reach more customers by adding your store to the Snackpass marketplace App.
+          - Pickup Board
+            - Notify customers when their orders are ready for pickup with a live display. Learn more
+          - Menu Board
+            - Highlight featured menu items and promotions with a dynamic menu screen that adapts to your needs.
+        - Back of House
+          - Keep your kitchen in sync.
+          - Simple Clock In
+            - Track employee hours and labor costs with our clock in clock out system.
+          - Kitchen Display System (KDS)
+            - Manage order tickets and optimize your kitchen workflow without a printer.
+          - Delivery Marketplace Integration
+            - Connect orders from Doordash, Uber Eats, and more directly to your POS.
+        - Marketing
+          - Reach customers and grow your business.
+          - Gift Cards
+            - Offer digital and physical gift cards, an ideal gifting solution for your valued customers. Set up
+          - Website
+            - A lightweight, branded website perfect for adding to social media profiles.
+        - Payments
+          - Ensure smooth, secure, and versatile transactions.
+          - Payments
+            - Seamlessly accept and process payments for a smooth transaction experience.
+          - Alcohol Payment Processing
+            - Changes Payment Processor configuration as described in the Restaurant Terms of Service.
+      - Legal
+        - Select a Document to View
+        - Privacy Center
+        - Terms of Service
+        - Hardware Warranty

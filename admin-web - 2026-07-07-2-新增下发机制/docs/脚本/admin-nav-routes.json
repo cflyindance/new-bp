@@ -1,0 +1,36 @@
+{
+  "source": "docs/餐饮商家后台-导航与目录结构建议.md §八、§8.1",
+  "generatedFor": "admin-web/src/config/navigation.ts",
+  "modules": [
+    { "id": "dashboard", "title": "主页", "titleEn": "Dashboard", "path": "/dashboard" },
+    { "id": "orders", "title": "订单", "titleEn": "Orders", "path": "/orders" },
+    { "id": "transactions", "title": "交易", "titleEn": "Transactions", "path": "/transactions" },
+    { "id": "store-info", "title": "门店信息", "titleEn": "Store information", "path": "/store" },
+    { "id": "menu", "title": "菜单", "titleEn": "Menu", "path": "/menu" },
+    { "id": "ordering-channels", "title": "智能点餐", "titleEn": "Smart ordering", "path": "/ordering" },
+    { "id": "floor-plan", "title": "桌台平面图", "titleEn": "Table floor plan", "path": "/operations/floor-plan" },
+    { "id": "kitchen-kds", "title": "厨显", "titleEn": "Kitchen display", "path": "/operations/kitchen-kds" },
+    { "id": "customer-display", "title": "客显", "titleEn": "Customer display", "path": "/operations/customer-display" },
+    { "id": "queue-call", "title": "叫号", "titleEn": "Queue & calling", "path": "/operations/queue-call" },
+    { "id": "reservations", "title": "预约", "titleEn": "Reservations", "path": "/operations/reservations" },
+    { "id": "waitlist", "title": "排队", "titleEn": "Waitlist", "path": "/operations/waitlist" },
+    { "id": "device-management", "title": "设备管理", "titleEn": "Device management", "path": "/device-management" },
+    { "id": "inventory-ordering", "title": "库存管理", "titleEn": "Inventory management", "path": "/operations/inventory-ordering" },
+    { "id": "store-patrol", "title": "巡店与巡检", "titleEn": "Store patrol", "path": "/operations/store-patrol" },
+    { "id": "promotions", "title": "促销", "titleEn": "Promotions", "path": "/promotions" },
+    { "id": "marketing", "title": "营销", "titleEn": "Marketing", "path": "/marketing" },
+    { "id": "members", "title": "会员", "titleEn": "Loyalty", "path": "/members" },
+    { "id": "reviews", "title": "评价", "titleEn": "Reviews", "path": "/reviews" },
+    { "id": "gift-cards", "title": "礼品卡", "titleEn": "Gift Cards", "path": "/gift-cards" },
+    { "id": "team", "title": "团队管理", "titleEn": "Team", "path": "/team" },
+    { "id": "reports-finance", "title": "报表与财务", "titleEn": "Reports & Finance", "path": "/reports" },
+    { "id": "capital-turnover", "title": "资金周转", "titleEn": "Capital", "path": "/reports/capital" },
+    { "id": "settings", "title": "设置", "titleEn": "Settings", "path": "/settings" }
+  ],
+  "chainOnlyPaths": [
+    "/operations/inventory-ordering",
+    "/operations/store-patrol",
+    "/team/scheduling",
+    "/settings/data-scope"
+  ]
+}

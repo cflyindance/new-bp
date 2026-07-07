@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>屏保状态与操作说明 — Mermaid 图示</title>
+  <style>
+    body { font-family: system-ui, "Segoe UI", sans-serif; margin: 0; padding: 1.5rem; background: #f8fafc; color: #1e293b; }
+    h1 { font-size: 1.25rem; margin-bottom: 0.5rem; }
+    p.intro { font-size: 0.875rem; color: #64748b; margin-bottom: 1.5rem; max-width: 48rem; }
+    section { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 1.25rem; max-width: 56rem; }
+    h2 { font-size: 1rem; margin: 0 0 0.75rem; color: #0f172a; }
+    .mermaid { display: flex; justify-content: center; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <h1>屏保状态与操作说明 — Mermaid 图示</h1>
+  <p class="intro">与 <code>屏保状态与操作说明.md</code> 中 §7.7 一致（已不含列表主题级「下发状态」图）。若下图空白，请检查网络能否访问 jsDelivr CDN；内网请改为本地引入 mermaid.min.js。</p>
+
+  <section>
+    <h2>7.7.1 生效状态（自定义时段）</h2>
+    <div class="mermaid">
+stateDiagram-v2
+  [*] --> 待生效: now小于开始
+  待生效 --> 已生效: now进入时间窗
+  已生效 --> 已失效: now大于结束
+    </div>
+  </section>
+
+  <section>
+    <h2>7.7.2 历史「立即生效」下的生效状态（旧数据）</h2>
+    <div class="mermaid">
+stateDiagram-v2
+  [*] --> 已生效: effectTime为立即生效
+    </div>
+  </section>
+
+  <section>
+    <h2>7.7.3 屏保展示在架 / 展示下架</h2>
+    <div class="mermaid">
+stateDiagram-v2
+  direction TB
+  逻辑已生效_展示在架: 已生效且未effectShelfStatus off
+  逻辑已生效_展示已下架: 已生效且effectShelfStatus off
+  逻辑已生效_展示在架 --> 逻辑已生效_展示已下架: 屏保下架
+  逻辑已生效_展示已下架 --> 逻辑已生效_展示在架: 屏保重新上架
+    </div>
+  </section>
+
+  <section>
+    <h2>7.7.4 渠道已展示 / 已不展示（按渠道）</h2>
+    <div class="mermaid">
+stateDiagram-v2
+  direction LR
+  ch_on: 渠道已展示
+  ch_off: 渠道已不展示
+  ch_on --> ch_off: 不展示
+  ch_off --> ch_on: 恢复展示
+  note right of ch_off: 关联门店详情中可删除门店（与渠道是否已不展示无关）
+  note left of ch_on: 不展示/恢复展示经云端与 Kiosk 异步闭环，图中为稳态；中间可有长期「执行中」见关联门店详情说明
+    </div>
+  </section>
+
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'neutral',
+      securityLevel: 'loose',
+      fontFamily: 'system-ui, "Microsoft YaHei", sans-serif'
+    });
+  </script>
+</body>
+</html>
