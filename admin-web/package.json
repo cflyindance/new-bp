@@ -17,7 +17,8 @@
   "verify:foh-platform-preset-l3": "npx tsx scripts/verify-foh-platform-preset-l3.ts",
     "generate:platform-preset-tree": "npx tsx scripts/generate-platform-preset-tree-export.ts",
     "sync:emenu-pro": "node scripts/sync-emenu-pro-from-dist.mjs",
-    "generate:emenu-pro-icons": "node scripts/generate-emenu-pro-block-icons.mjs"
+    "generate:emenu-pro-icons": "node scripts/generate-emenu-pro-block-icons.mjs",
+    "generate:default-material-images": "npx tsx scripts/generate-default-material-images-js.mjs"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.0.0",

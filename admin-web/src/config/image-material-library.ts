@@ -2,6 +2,8 @@
  * 图片素材库 localStorage（与 Configuration center / material.html、屏保页共用键名）。
  */
 
+import { DEFAULT_MATERIAL_IMAGES } from "./default-material-images";
+
 export const MATERIAL_IMAGES_STORAGE_KEY = "material_images";
 export const MATERIAL_CATEGORIES_STORAGE_KEY = "material_categories";
 
@@ -28,6 +30,7 @@ export function readMaterialCategories(): string[] {
 }
 
 export function readMaterialImages(): MaterialImageRecord[] {
+  ensureDefaultMaterialImages();
   try {
     const raw = localStorage.getItem(MATERIAL_IMAGES_STORAGE_KEY);
     if (!raw) return [];
@@ -46,6 +49,32 @@ export function writeMaterialImages(images: MaterialImageRecord[]): void {
     localStorage.setItem(MATERIAL_IMAGES_STORAGE_KEY, JSON.stringify(images));
   } catch {
     /* ignore quota */
+  }
+}
+
+/** 素材库为空或仅有无 URL 占位项时，写入默认演示图片。 */
+export function ensureDefaultMaterialImages(): void {
+  let images: MaterialImageRecord[] = [];
+  try {
+    const raw = localStorage.getItem(MATERIAL_IMAGES_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as unknown;
+      if (Array.isArray(parsed)) {
+        images = parsed
+          .map((item) => normalizeMaterialImage(item))
+          .filter((item): item is MaterialImageRecord => item !== null);
+      }
+    }
+  } catch {
+    images = [];
+  }
+  if (images.length === 0) {
+    writeMaterialImages(DEFAULT_MATERIAL_IMAGES);
+    return;
+  }
+  const hasValidUrl = images.some((img) => img.url.length > 0);
+  if (!hasValidUrl) {
+    writeMaterialImages(DEFAULT_MATERIAL_IMAGES);
   }
 }
 

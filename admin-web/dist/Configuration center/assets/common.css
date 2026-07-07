@@ -736,11 +736,41 @@ body.embedded-mode .theme-list-main .theme-list-footer {
 }
 
 /* 嵌入态：图片素材页白色背景内保留 20px 内边距（不影响屏保等页） */
+html.embedded-material-page,
+body.embedded-material-page {
+  height: 100%;
+  min-height: 0;
+}
+html.embedded-material-page .app-layout,
+body.embedded-material-page .app-layout {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
 html.embedded-material-page .main-content,
 body.embedded-material-page .main-content {
   padding: 20px !important;
   background: #fff !important;
   box-sizing: border-box;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 图片素材卡片：底部名称行不被角标遮挡，长名称可截断 */
+.material-image-card .material-card-footer {
+  min-height: 40px;
+}
+.material-image-card .material-card-name {
+  line-height: 1.25rem;
+}
+.material-image-card .material-card-category {
+  flex-shrink: 0;
+}
+.material-image-grid {
+  align-content: start;
 }
 
 html.embedded-marketing-page .main-content,

@@ -7,6 +7,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="assets/common.css" />
   <script src="assets/toast.js"></script>
+  <script src="assets/default-material-images.js"></script>
   <script>
     tailwind.config = { theme: { extend: { colors: { primary: '#1677ff', 'sidebar-bg': '#fafafa', 'sidebar-active': '#e6f4ff' }, borderRadius: { ant: '6px' } } } };
   </script>
@@ -89,8 +90,8 @@
           </button>
         </div>
         <!-- 图片网格 -->
-        <div class="flex-1 min-w-0 flex flex-col">
-          <div id="imageGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 content-start overflow-auto">
+        <div class="flex-1 min-w-0 min-h-0 flex flex-col">
+          <div id="imageGrid" class="material-image-grid grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 content-start flex-1 min-h-0 overflow-auto pb-1">
             <!-- 图片卡片由 JS 渲染 -->
           </div>
         </div>
@@ -222,18 +223,10 @@
         localStorage.setItem(STORAGE_IMAGES, JSON.stringify(list));
       }
 
-      // 初始示例图片（仅当没有任何图片时写入）
+      // 初始示例图片（仅当没有任何图片或均为空 URL 时写入）
       function ensureDemoImages() {
-        var images = getImages();
-        if (images.length === 0) {
-          var demo = [
-            { id: '1', name: '圣诞节', category: '屏保素材', tagColor: 'blue', url: '' },
-            { id: '2', name: '中秋节', category: '广告素材', tagColor: 'red', url: '' },
-            { id: '3', name: '新年', category: '屏保素材', tagColor: 'blue', url: '' },
-            { id: '4', name: '端午节', category: '广告素材', tagColor: 'red', url: '' },
-            { id: '5', name: '促销图', category: '其他', tagColor: 'green', url: '' },
-          ];
-          saveImages(demo);
+        if (typeof ensureDefaultMaterialImages === 'function') {
+          ensureDefaultMaterialImages();
         }
       }
 
@@ -317,12 +310,14 @@
         var html = filtered.map(function(img) {
           var tagCls = tagColors[img.tagColor] || tagColors.default;
           var imgSrc = img.url || 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="140" viewBox="0 0 200 140"><rect fill="#f3f4f6" width="200" height="140"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#9ca3af" font-size="14">' + escapeHtml(img.name) + '</text></svg>');
-          var tagHtml = img.category ? '<span class="absolute top-2 right-2 px-1.5 py-0.5 rounded text-xs ' + tagCls + '">' + escapeHtml(img.category) + '</span>' : '';
-          return '<div class="screensaver-card border border-gray-100 rounded-ant overflow-hidden group" data-id="' + escapeHtml(img.id) + '">' +
+          var showCategoryInFooter = current === '全部' && img.category;
+          var footerTagHtml = showCategoryInFooter
+            ? '<span class="material-card-category shrink-0 max-w-[5.5rem] truncate rounded px-1.5 py-0.5 text-[10px] leading-4 ' + tagCls + '" title="' + escapeHtml(img.category) + '">' + escapeHtml(img.category) + '</span>'
+            : '';
+          return '<div class="screensaver-card material-image-card border border-gray-100 rounded-ant overflow-hidden group" data-id="' + escapeHtml(img.id) + '">' +
             '<div class="img-preview-trigger aspect-[4/3] bg-gray-100 relative cursor-pointer">' +
               '<img src="' + imgSrc + '" alt="" class="w-full h-full object-cover pointer-events-none" />' +
-              tagHtml +
-              '<div class="absolute top-2 ' + (img.category ? 'right-10' : 'right-2') + ' z-10 opacity-0 transition-opacity group-hover:opacity-100">' +
+              '<div class="absolute top-2 right-2 z-10 opacity-0 transition-opacity group-hover:opacity-100">' +
                 '<button type="button" class="img-more flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-black/[0.06] text-[rgba(0,0,0,0.45)] hover:bg-black/[0.08] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary" aria-label="更多">' + MORE_BTN_SVG + '</button>' +
                 '<div class="img-dropdown dropdown-menu theme-list-dropdown-menu ui-action-dropdown absolute right-0 top-[calc(100%+8px)] z-20 hidden bg-white">' +
                   '<button type="button" class="ui-menu-item img-edit">编辑</button>' +
@@ -333,9 +328,12 @@
                 '</div>' +
               '</div>' +
             '</div>' +
-            '<div class="p-2 flex items-center justify-between">' +
-              '<span class="text-sm text-gray-800 truncate flex-1">' + escapeHtml(img.name) + '</span>' +
-              '<button type="button" class="img-more flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-black/[0.06] text-[rgba(0,0,0,0.45)] hover:bg-black/[0.08] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary md:hidden" aria-label="更多">' + MORE_BTN_SVG + '</button>' +
+            '<div class="material-card-footer border-t border-gray-50 bg-white px-2 py-2">' +
+              '<div class="flex min-w-0 items-center gap-1.5">' +
+                footerTagHtml +
+                '<span class="material-card-name min-w-0 flex-1 truncate text-sm text-gray-800" title="' + escapeHtml(img.name) + '">' + escapeHtml(img.name) + '</span>' +
+                '<button type="button" class="img-more material-card-more-mobile flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-black/[0.04] text-[rgba(0,0,0,0.45)] hover:bg-black/[0.08] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary md:hidden" aria-label="更多">' + MORE_BTN_SVG + '</button>' +
+              '</div>' +
             '</div>' +
           '</div>';
         }).join('');

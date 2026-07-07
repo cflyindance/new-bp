@@ -19,7 +19,8 @@ export const STORE_RESTAURANT_LOGO_SEQ = 433;
 export const STORE_RESTAURANT_LOGO_FIELD_ID = "433-restaurant-logo";
 
 const ASSET_CENTER_MATERIALS_PATH = "/asset-center/materials";
-const LOGO_MAX_BYTES = 5 * 1024 * 1024;
+const LOGO_MAX_BYTES = 1 * 1024 * 1024;
+const LOGO_ALLOWED_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/gif"]);
 
 export type StoreRestaurantLogoValue = {
   dataUrl: string;
@@ -139,15 +140,15 @@ function renderMaterialLibraryModal(): string {
       data-store-logo-library-modal
       aria-hidden="true"
     >
-      <div class="flex max-h-[80vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg border border-border bg-card shadow-lg" role="dialog" aria-modal="true" aria-labelledby="store-logo-library-title">
+      <div class="flex max-h-[85vh] w-full max-w-5xl flex-col overflow-hidden rounded-lg border border-border bg-card shadow-lg" role="dialog" aria-modal="true" aria-labelledby="store-logo-library-title">
         <div class="flex shrink-0 items-center justify-between border-b border-border px-4 py-3">
           <h3 id="store-logo-library-title" class="text-sm font-semibold text-foreground">选择素材</h3>
           <button type="button" class="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground" data-store-logo-library-close aria-label="关闭">×</button>
         </div>
         <div class="flex min-h-0 flex-1">
-          <div class="w-36 shrink-0 overflow-auto border-r border-border p-2" data-store-logo-library-categories></div>
+          <div class="w-40 shrink-0 overflow-auto border-r border-border p-2" data-store-logo-library-categories></div>
           <div class="min-h-0 flex-1 overflow-auto p-4">
-            <div class="grid grid-cols-3 gap-3" data-store-logo-library-grid></div>
+            <div class="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5" data-store-logo-library-grid></div>
             <div class="hidden py-12 text-center text-sm text-muted-foreground" data-store-logo-library-empty>
               <p class="m-0">该分类暂无素材</p>
               <p class="mt-2 m-0 text-xs">
@@ -178,8 +179,8 @@ export function renderStoreRestaurantLogoHtml(_item: ModuleSettingCatalogItem): 
         <button type="button" class="${BTN_PRIMARY}" data-store-logo-change>${logo ? "更换 LOGO" : "上传 LOGO"}</button>
         ${logo ? `<button type="button" class="${BTN_GHOST}" data-store-logo-clear>清除</button>` : ""}
       </div>
-      <p class="m-0 text-xs text-muted-foreground">支持 JPG、PNG、GIF、WebP，单张不超过 5MB。可从本地上传或图片素材库选择。</p>
-      <input type="file" accept="image/jpeg,image/png,image/gif,image/webp" class="hidden" data-store-logo-file-input />
+      <p class="m-0 text-xs text-muted-foreground">支持 JPG、JPEG、PNG、GIF，单张不超过 1MB。</p>
+      <input type="file" accept="image/jpeg,image/png,image/gif" class="hidden" data-store-logo-file-input />
       ${renderUploadSourceModal()}
       ${renderMaterialLibraryModal()}
     </div>`;
@@ -286,12 +287,12 @@ function updateLibrarySelectedCount(host: HTMLElement, count: number): void {
 }
 
 async function applyLocalLogoFile(host: HTMLElement, file: File): Promise<void> {
-  if (!file.type.startsWith("image/")) {
-    window.alert("请选择图片文件");
+  if (!LOGO_ALLOWED_MIME_TYPES.has(file.type)) {
+    window.alert("仅支持 JPG、JPEG、PNG、GIF 格式");
     return;
   }
   if (file.size > LOGO_MAX_BYTES) {
-    window.alert("图片大小不能超过 5MB");
+    window.alert("图片大小不能超过 1MB");
     return;
   }
   let dataUrl: string;
