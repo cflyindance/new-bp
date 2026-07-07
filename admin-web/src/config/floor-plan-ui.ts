@@ -2,6 +2,7 @@
  * 前厅 · 餐位平面图（seq 428 能力页，非设置滑层项）
  * 原型：localStorage 持久化区域与桌位布局
  */
+import { notifyConfigSaved } from "./deployment-auto-trigger";
 
 export const FLOOR_PLAN_PATH = "/operations/queue-call/floor-plan";
 
@@ -119,6 +120,7 @@ function readState(): FloorPlanState {
 
 function writeState(state: FloorPlanState): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  notifyConfigSaved(FLOOR_PLAN_PATH);
 }
 
 export function isFloorPlanPath(path: string): boolean {

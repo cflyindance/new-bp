@@ -3,6 +3,7 @@
  * 路径：/team/breaks-overtime
  * 布局：左侧快捷导航 + 右侧滚动内容（对齐设置页 module-settings 交互）
  */
+import { notifyConfigSaved } from "./deployment-auto-trigger";
 
 export const TEAM_BREAKS_OVERTIME_PATH = "/team/breaks-overtime";
 
@@ -218,6 +219,7 @@ function readConfig(): BreaksOvertimeConfig {
 
 function writeConfig(config: BreaksOvertimeConfig): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+  notifyConfigSaved(TEAM_BREAKS_OVERTIME_PATH);
 }
 
 function getDraft(): BreaksOvertimeConfig {

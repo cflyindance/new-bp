@@ -8,6 +8,7 @@ import {
   readModuleSettingToggleOn,
   writeModuleSettingToggleOn,
 } from "./module-settings-toggle-ui";
+import { notifyConfigSaved } from "./deployment-auto-trigger";
 import { TEAM_SHIFT_SCHEDULING_SETTING_SEQS } from "./team-settings-embed-ui";
 
 export const TEAM_CLOCK_IN_PATH = "/team/clock-in";
@@ -244,6 +245,7 @@ function readSettings(): ClockSettings {
 
 function writeSettings(settings: ClockSettings): void {
   localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+  notifyConfigSaved(TEAM_CLOCK_IN_PATH);
 }
 
 function readPunches(): PunchRecord[] {
@@ -270,6 +272,7 @@ function readPunches(): PunchRecord[] {
 
 function writePunches(punches: PunchRecord[]): void {
   localStorage.setItem(PUNCHES_STORAGE_KEY, JSON.stringify(punches));
+  notifyConfigSaved(TEAM_CLOCK_IN_PATH);
 }
 
 function seedDemoPunches(): PunchRecord[] {

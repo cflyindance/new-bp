@@ -1,6 +1,7 @@
 /**
  * 设置滑层：整行表单控件（多选 / 单选 / 颜色），原型 localStorage。
  */
+import { notifyConfigSaved } from "./deployment-auto-trigger";
 
 export type ModuleSettingCheckboxOption = {
   fieldId: string;
@@ -232,6 +233,7 @@ export function readModuleSettingCheckbox(fieldId: string, defaultChecked: boole
 export function writeModuleSettingCheckbox(fieldId: string, checked: boolean): void {
   try {
     localStorage.setItem(moduleSettingStorageKey(fieldId), checked ? "1" : "0");
+    notifyConfigSaved();
   } catch {
     /* ignore */
   }
@@ -250,6 +252,7 @@ export function readModuleSettingRadio(fieldId: string, defaultValue: string): s
 export function writeModuleSettingRadio(fieldId: string, value: string): void {
   try {
     localStorage.setItem(moduleSettingStorageKey(fieldId), value);
+    notifyConfigSaved();
   } catch {
     /* ignore */
   }
@@ -268,6 +271,7 @@ export function readModuleSettingColor(fieldId: string, defaultValue: string): s
 export function writeModuleSettingColor(fieldId: string, value: string): void {
   try {
     localStorage.setItem(moduleSettingStorageKey(fieldId), value);
+    notifyConfigSaved();
   } catch {
     /* ignore */
   }
@@ -287,6 +291,7 @@ export function readModuleSettingNumber(fieldId: string, defaultValue: number): 
 export function writeModuleSettingNumber(fieldId: string, value: number): void {
   try {
     localStorage.setItem(moduleSettingStorageKey(fieldId), String(value));
+    notifyConfigSaved();
   } catch {
     /* ignore */
   }
@@ -305,6 +310,7 @@ export function readModuleSettingText(fieldId: string, defaultValue = ""): strin
 export function writeModuleSettingText(fieldId: string, value: string): void {
   try {
     localStorage.setItem(moduleSettingStorageKey(fieldId), value);
+    notifyConfigSaved();
   } catch {
     /* ignore */
   }
@@ -323,6 +329,7 @@ export function readModuleSettingJson<T>(fieldId: string, defaultValue: T): T {
 export function writeModuleSettingJson(fieldId: string, value: unknown): void {
   try {
     localStorage.setItem(moduleSettingStorageKey(fieldId), JSON.stringify(value));
+    notifyConfigSaved();
   } catch {
     /* ignore */
   }

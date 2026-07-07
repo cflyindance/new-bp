@@ -221,6 +221,13 @@ import {
   renderPlatformPresetPage,
   guardMerchantPlatformPresetPath,
 } from "./config/platform-preset-ui";
+import {
+  bindDeploymentUi,
+  isDeploymentLogPath,
+  renderDeploymentLogPage,
+  resolveLegacyDistributionLogRedirect,
+} from "./config/deployment-ui";
+import { bindDeploymentAutoTrigger } from "./config/deployment-auto-trigger";
 import { MERCHANT_PLATFORM_PRESET_SCOPE, isMerchantPlatformPresetPath, isMPlatformPresetPath } from "./config/platform-preset-scope";
 import {
   enterMPlatformShell,
@@ -10716,6 +10723,7 @@ function renderMain(): string {
     isTeamTipsManagementIframe ||
     isTeamPayrollReportIframe;
   const isModuleSettingsCatalog = isModuleHubSettingsCatalogPath(path);
+  const isDeploymentLog = isDeploymentLogPath(path);
   const isStaffAccounts = isStaffAccountsPath(path);
   const isPermissionsRbac = isPermissionsRbacPath(path);
   const isPlatformPreset = isPlatformPresetPath(path);
@@ -10866,12 +10874,16 @@ function renderMain(): string {
                   ? renderTeamTipsManagementIframePanel(path)
                 : isTeamPayrollReportIframe
                   ? renderTeamPayrollReportIframePanel()
+                : isDeploymentLog
+                  ? renderDeploymentLogPage(path)
                 : isBrandProductsTertiary
                   ? renderPlaceholder(path, title, tabModule, { brandProductsSubnav: true })
                 : isBrandMenuTertiary
                   ? `<div class="${tertiaryRowClass}">
                     ${renderBrandMenuSidebar(path)}
-                    <div class="${tertiaryMainClass}">${renderPlaceholder(path, title, tabModule, { brandMenuSubnav: true })}</div>
+                    <div class="${tertiaryMainClass}">
+                      ${renderPlaceholder(path, title, tabModule, { brandMenuSubnav: true })}
+                    </div>
                   </div>`
                 : isStoreMenuTertiary
                   ? `<div class="${tertiaryRowClass}">
@@ -10879,28 +10891,31 @@ function renderMain(): string {
                     <div class="${tertiaryMainClass}">${renderPlaceholder(path, title, tabModule, { storeMenuSubnav: true })}</div>
                   </div>`
                     : isDeviceManagementHardware
-                      ? `<div class="${tertiaryRowClass}">
+                      ? (() => {
+                          const hardwareMain = isDeviceManagementPaymentHardwarePath(path)
+                            ? renderDeviceManagementPaymentHardwarePage(path)
+                            : isDeviceManagementFiscalHardwarePath(path)
+                              ? renderDeviceManagementFiscalHardwarePage(path)
+                              : isDeviceManagementCallerIdHardwarePath(path)
+                                ? renderDeviceManagementCallerIdHardwarePage(path)
+                                : isDeviceManagementCashDrawerHardwarePath(path)
+                                  ? renderDeviceManagementCashDrawerHardwarePage(path)
+                                  : isDeviceManagementEmenuHardwarePath(path)
+                                    ? renderDeviceManagementEmenuHardwarePage(path)
+                                    : isDeviceManagementKioskHardwarePath(path)
+                                      ? renderDeviceManagementKioskHardwarePage(path)
+                                      : isDeviceManagementCdsHardwarePath(path)
+                                        ? renderDeviceManagementCdsHardwarePage(path)
+                                        : isDeviceManagementPrinterHardwarePath(path)
+                                          ? renderDeviceManagementPrinterHardwarePage(path)
+                                          : renderPlaceholder(path, title, tabModule, {
+                                              deviceManagementHardwareSubnav: true,
+                                            });
+                          return `<div class="${tertiaryRowClass}">
                     ${renderDeviceManagementHardwareSidebar(path)}
-                    <div class="${tertiaryMainClass}">${
-                      isDeviceManagementPaymentHardwarePath(path)
-                        ? renderDeviceManagementPaymentHardwarePage(path)
-                        : isDeviceManagementFiscalHardwarePath(path)
-                          ? renderDeviceManagementFiscalHardwarePage(path)
-                          : isDeviceManagementCallerIdHardwarePath(path)
-                            ? renderDeviceManagementCallerIdHardwarePage(path)
-                          : isDeviceManagementCashDrawerHardwarePath(path)
-                          ? renderDeviceManagementCashDrawerHardwarePage(path)
-                          : isDeviceManagementEmenuHardwarePath(path)
-                            ? renderDeviceManagementEmenuHardwarePage(path)
-                            : isDeviceManagementKioskHardwarePath(path)
-                              ? renderDeviceManagementKioskHardwarePage(path)
-                              : isDeviceManagementCdsHardwarePath(path)
-                                ? renderDeviceManagementCdsHardwarePage(path)
-                                : isDeviceManagementPrinterHardwarePath(path)
-                                ? renderDeviceManagementPrinterHardwarePage(path)
-                                : renderPlaceholder(path, title, tabModule, { deviceManagementHardwareSubnav: true })
-                    }</div>
-                  </div>`
+                    <div class="${tertiaryMainClass} min-h-0 overflow-y-auto">${hardwareMain}</div>
+                  </div>`;
+                        })()
                       : isTeamReportsTertiary
                         ? `<div class="${tertiaryRowClass}">
                     ${renderTeamReportsSidebar(path)}
@@ -10940,7 +10955,9 @@ function renderMain(): string {
                           ? renderFohHubSettingsLayout(path, title, tertiaryRowClass, tertiaryMainClass)
                           : `<div class="${tertiaryRowClass}">
                     ${renderModuleHubSettingsCategorySidebar(path, title)}
-                    <div class="${tertiaryMainClass} module-settings-scroll-host">${renderModuleHubSettingsPage(path, title)}</div>
+                    <div class="${tertiaryMainClass} module-settings-scroll-host flex flex-col">
+                      ${renderModuleHubSettingsPage(path, title)}
+                    </div>
                   </div>`
                         : isStaffAccounts
                           ? renderStaffAccountsPage()
@@ -11227,6 +11244,12 @@ function mount(): void {
   refreshSessionOnMount();
 
   const merchantPresetPath = readAppHashPath();
+  const legacyDeploymentLogRedirect = resolveLegacyDistributionLogRedirect(merchantPresetPath);
+  if (legacyDeploymentLogRedirect) {
+    replaceHashPath(legacyDeploymentLogRedirect);
+    mount();
+    return;
+  }
   if (isPlatformPresetPath(merchantPresetPath)) {
     const guard = guardMerchantPlatformPresetPath(merchantPresetPath);
     if (guard.rejectedEdit) {
@@ -11853,6 +11876,8 @@ function mount(): void {
   bindGroupStoreListControls(mount);
   bindStaffAccountsPage();
   bindLoginLogsPage(mount);
+  bindDeploymentUi(mount);
+  bindDeploymentAutoTrigger();
   bindHeaderScopeFilters();
   bindEffectiveScopeChangeListener(mount);
   bindSidebarGroupSwitcher();

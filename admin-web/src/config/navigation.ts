@@ -631,6 +631,7 @@ export const NAV_MODULES: NavModule[] = [
       { id: "set-connections", title: "连接与服务", titleEn: "Connections", path: "/settings/connections" },
       { id: "set-advanced", title: "高级与诊断", titleEn: "Advanced & diagnostics", path: "/settings/advanced" },
       { id: "set-platform-preset", title: "平台预设", titleEn: "Platform preset", path: "/settings/platform-preset" },
+      { id: "set-deployment-log", title: "下发记录", titleEn: "Deployment log", path: "/settings/deployment-log" },
     ],
   },
 ];

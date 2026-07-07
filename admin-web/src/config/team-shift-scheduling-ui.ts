@@ -2,6 +2,7 @@
  * 团队管理 · 排班（员工排班表，seq 437）
  * 路径：/team/shift-scheduling
  */
+import { notifyConfigSaved } from "./deployment-auto-trigger";
 
 export const TEAM_SHIFT_SCHEDULING_PATH = "/team/shift-scheduling";
 
@@ -207,6 +208,7 @@ function readShiftTypes(): ShiftType[] {
 
 function writeShiftTypes(types: ShiftType[]): void {
   localStorage.setItem(SHIFT_TYPES_STORAGE_KEY, JSON.stringify(types));
+  notifyConfigSaved(TEAM_SHIFT_SCHEDULING_PATH);
 }
 
 function normalizeAssignment(raw: Partial<ShiftAssignment>): ShiftAssignment | null {
@@ -246,6 +248,7 @@ function readAssignments(): ShiftAssignment[] {
 
 function writeAssignments(assignments: ShiftAssignment[]): void {
   localStorage.setItem(ASSIGNMENTS_STORAGE_KEY, JSON.stringify(assignments));
+  notifyConfigSaved(TEAM_SHIFT_SCHEDULING_PATH);
 }
 
 function readEmployees(): RosterEmployee[] {
