@@ -8536,8 +8536,7 @@ function renderStoreClosingAlertProductLinesSelector(seq: number, on: boolean): 
         />
         <p class="m-0 text-xs text-muted-foreground">分钟进行提示</p>
       </div>
-      <p class="m-0 text-xs text-muted-foreground">C端产品线（多选）</p>
-      <div class="mt-2 flex flex-wrap items-center gap-4">${boxes}</div>
+      <div class="mt-3 flex flex-wrap items-center gap-4">${boxes}</div>
     </div>`;
 }
 
@@ -8597,7 +8596,7 @@ function renderModuleSettingStoreRestaurantLogoRow(item: ModuleSettingCatalogIte
   return `
         <li class="list-none">
           <div class="border-b border-border px-4 py-3">
-            ${renderModuleSettingTitleBlock(item)}
+            <span class="text-sm font-medium text-card-foreground">${escapeHtml(item.title)}</span>
             ${renderStoreRestaurantLogoHtml(item)}
           </div>
         </li>`;
@@ -8659,7 +8658,7 @@ function renderModuleSettingStoreBasicInfoRow(item: ModuleSettingCatalogItem): s
   return `
         <li class="list-none">
           <div class="border-b border-border px-4 py-3">
-            ${renderModuleSettingTitleBlock(item)}
+            <span class="text-sm font-medium text-card-foreground">${escapeHtml(item.title)}</span>
             ${renderStoreBasicInfoFormHtml()}
           </div>
         </li>`;
@@ -8803,11 +8802,10 @@ function renderModuleSettingStoreBrandManagementRow(item: ModuleSettingCatalogIt
         </li>`;
 }
 
-function renderModuleSettingStoreBusinessHoursRow(item: ModuleSettingCatalogItem): string {
+function renderModuleSettingStoreBusinessHoursRow(_item: ModuleSettingCatalogItem): string {
   return `
         <li class="list-none">
           <div class="border-b border-border px-4 py-3">
-            ${renderModuleSettingTitleBlock(item)}
             ${renderStoreBusinessHoursHtml()}
           </div>
         </li>`;
@@ -10005,6 +10003,7 @@ function bindModuleSettingsNestedFields(): void {
     )
     .forEach((el) => {
     if (el.dataset.moduleSettingTextBound === "1") return;
+    if (el.hasAttribute("data-module-setting-readonly")) return;
     el.dataset.moduleSettingTextBound = "1";
     const fieldId = el.getAttribute("data-module-setting-text");
     if (!fieldId) return;
@@ -10164,16 +10163,22 @@ function renderModuleHubSettingsPage(path: string, pageTitle: string): string {
           : t("moduleSettings.intro");
   const teamMigrationHtml =
     path === "/team/settings" ? renderTeamSettingsHubMigrationNoticeHtml() : "";
+  const isStoreSettingsHub =
+    path === "/stores/settings" || path.startsWith("/stores/settings/");
 
   return `
     <div class="module-settings-main space-y-4">
-      <div class="rounded-xl border border-border bg-card p-5 shadow-sm space-y-4">
+      ${
+        isStoreSettingsHub
+          ? ""
+          : `<div class="rounded-xl border border-border bg-card p-5 shadow-sm space-y-4">
         ${teamMigrationHtml}
         <div>
           <p class="text-sm leading-relaxed text-muted-foreground">${introHtml}</p>
           <p class="mt-2 text-xs font-medium tabular-nums text-muted-foreground">${escapeHtml(countLabel)}</p>
         </div>
-      </div>
+      </div>`
+      }
       <div class="flex flex-col gap-4">${sections}</div>
     </div>`;
 }

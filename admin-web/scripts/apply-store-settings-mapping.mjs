@@ -22,7 +22,7 @@ const titles = {
 };
 
 const assignMap = {
-  "store-profile": [173, 417, 433],
+  "store-profile": [417, 433],
   "store-hours-operation": [418, 582],
   "brand-menu-presentation": [531, 530, 547, 548],
 };

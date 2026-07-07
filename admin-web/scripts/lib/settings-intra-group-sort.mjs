@@ -253,8 +253,8 @@ export const STORE_SETTINGS_GROUP_ORDER = [
 /** 门店管理 · 品牌与菜单（与门店状态同级入口） */
 export const STORE_BRAND_MENU_GROUP_ORDER = ["brand-menu-presentation"];
 
-/** 门店档案：国家/地区 → 基本信息 */
-const STORE_PROFILE_SEQ_ORDER = [173, 417];
+/** 门店档案：基本信息 */
+const STORE_PROFILE_SEQ_ORDER = [417];
 
 /** 品牌标识素材 */
 const STORE_BRAND_IDENTITY_SEQ_ORDER = [433];

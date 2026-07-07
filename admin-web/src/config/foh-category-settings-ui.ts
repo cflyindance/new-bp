@@ -17,8 +17,8 @@ import {
   type MenuGroupTag,
 } from "./module-settings-menu-group-ui";
 import {
-  expandScheduleActiveDays,
   formatScheduleTimeRange,
+  getScheduleActiveDays,
   readBusinessHourSchedules,
   STORE_BUSINESS_HOUR_DAY_BADGES,
   type StoreBusinessHourSchedule,
@@ -582,7 +582,7 @@ function renderMenuPanel(state: FohCategorySettingsState): string {
 }
 
 function renderScheduleDayBadges(schedule: StoreBusinessHourSchedule): string {
-  const active = expandScheduleActiveDays(schedule.fromDay, schedule.toDay);
+  const active = getScheduleActiveDays(schedule);
   return STORE_BUSINESS_HOUR_DAY_BADGES.map(({ day, badge }) => {
     const on = active.has(day);
     return `<span
