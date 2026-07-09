@@ -1241,6 +1241,12 @@ import {
   renderStoreBusinessHoursHtml,
 } from "./config/module-settings-store-business-hours-ui";
 import {
+  bindStoreClosingAlertUi,
+  isStoreClosingAlertSeq,
+  renderStoreClosingAlertPanelHtml,
+  setStoreClosingAlertPanelVisible,
+} from "./config/module-settings-store-closing-alert-ui";
+import {
   isStoreCountryRegionRadioSeq,
   renderStoreCountryRegionRadioHtml,
 } from "./config/module-settings-store-profile-ui";
@@ -8488,11 +8494,6 @@ function renderModuleSettingTeamTimeHhmmRow(item: ModuleSettingCatalogItem): str
         </li>`;
 }
 
-const STORE_CLOSING_ALERT_PRODUCT_LINES = [
-  { fieldId: "582-c-line-kiosk", label: "Kiosk", defaultChecked: true },
-  { fieldId: "582-c-line-emenu", label: "eMenu", defaultChecked: true },
-  { fieldId: "582-c-line-sdi", label: "SDI", defaultChecked: true },
-] as const;
 const STORE_BRAND_SETTING_PRODUCT_LINES = [
   { fieldId: "530-c-line-kiosk", label: "Kiosk", defaultChecked: true },
   { fieldId: "530-c-line-emenu", label: "eMenu", defaultChecked: true },
@@ -8507,48 +8508,6 @@ const STORE_BRAND_MENU_TOGGLE_PANEL_HINT: Record<number, string> = {
   531: "开启：所选产线点餐时先选品牌，再浏览该品牌菜单；关闭：不按品牌分类展示菜单。",
   530: "开启：所选产线以品牌名称卡片为首页；关闭：展示常规首页（封面图见营销中心 · 广告）。",
 };
-const STORE_CLOSING_ALERT_MINUTES_FIELD_ID = "582-alert-minutes";
-const STORE_CLOSING_ALERT_MINUTES_DEFAULT = 15;
-const STORE_CLOSING_ALERT_MINUTES_MIN = 1;
-const STORE_CLOSING_ALERT_MINUTES_MAX = 180;
-
-function renderStoreClosingAlertProductLinesSelector(seq: number, on: boolean): string {
-  const boxes = STORE_CLOSING_ALERT_PRODUCT_LINES.map((opt) => {
-    const checked = readModuleSettingCheckbox(opt.fieldId, opt.defaultChecked);
-    return `
-      <label class="inline-flex cursor-pointer items-center gap-2 text-sm text-foreground">
-        <input type="checkbox" class="${MODULE_SETTING_CONTROL_CLASS} rounded-sm" ${checked ? "checked" : ""} data-module-setting-checkbox="${escapeHtml(opt.fieldId)}" />
-        <span>${escapeHtml(opt.label)}</span>
-      </label>`;
-  }).join("");
-  const minutes = readModuleSettingNumber(
-    STORE_CLOSING_ALERT_MINUTES_FIELD_ID,
-    STORE_CLOSING_ALERT_MINUTES_DEFAULT,
-  );
-  const safeMinutes = Math.min(
-    STORE_CLOSING_ALERT_MINUTES_MAX,
-    Math.max(STORE_CLOSING_ALERT_MINUTES_MIN, Math.round(minutes)),
-  );
-  const hidden = on ? "" : "hidden";
-  return `
-    <div class="mt-3 rounded-lg bg-muted/50 p-3 ${hidden}" data-store-closing-alert-panel="${seq}" ${on ? "" : 'aria-hidden="true"'}>
-      <div class="flex flex-wrap items-center gap-2">
-        <p class="m-0 text-xs text-muted-foreground">结束前</p>
-        <input
-          type="number"
-          inputmode="numeric"
-          class="h-8 w-20 rounded-md border border-input bg-background px-2 text-center text-sm tabular-nums text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          value="${escapeHtml(String(safeMinutes))}"
-          min="${STORE_CLOSING_ALERT_MINUTES_MIN}"
-          max="${STORE_CLOSING_ALERT_MINUTES_MAX}"
-          data-module-setting-number="${STORE_CLOSING_ALERT_MINUTES_FIELD_ID}"
-        />
-        <p class="m-0 text-xs text-muted-foreground">分钟进行提示</p>
-      </div>
-      <div class="mt-3 flex flex-wrap items-center gap-4">${boxes}</div>
-    </div>`;
-}
-
 function renderStoreBrandSettingProductLinesSelector(
   seq: number,
   on: boolean,
@@ -8596,7 +8555,7 @@ function renderModuleSettingStoreClosingAlertRow(item: ModuleSettingCatalogItem)
               ${renderModuleSettingTitleBlock(item)}
               <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
             </div>
-            ${renderStoreClosingAlertProductLinesSelector(item.seq, on)}
+            ${renderStoreClosingAlertPanelHtml(item.seq, on)}
           </div>
         </li>`;
 }
@@ -8637,14 +8596,6 @@ function renderModuleSettingMenuSourceModeRow(item: ModuleSettingCatalogItem): s
 
 function setStoreBrandSettingPanelVisible(seq: number, visible: boolean): void {
   document.querySelectorAll<HTMLElement>(`[data-store-brand-setting-panel="${seq}"]`).forEach((panel) => {
-    panel.classList.toggle("hidden", !visible);
-    if (visible) panel.removeAttribute("aria-hidden");
-    else panel.setAttribute("aria-hidden", "true");
-  });
-}
-
-function setStoreClosingAlertPanelVisible(seq: number, visible: boolean): void {
-  document.querySelectorAll<HTMLElement>(`[data-store-closing-alert-panel="${seq}"]`).forEach((panel) => {
     panel.classList.toggle("hidden", !visible);
     if (visible) panel.removeAttribute("aria-hidden");
     else panel.setAttribute("aria-hidden", "true");
@@ -9296,7 +9247,7 @@ function renderModuleSettingRow(item: ModuleSettingCatalogItem): string {
   if (item.seq === 530 || item.seq === 531) {
     return renderModuleSettingStoreBrandSettingRow(item);
   }
-  if (item.seq === 582) {
+  if (isStoreClosingAlertSeq(item.seq)) {
     return renderModuleSettingStoreClosingAlertRow(item);
   }
   if (isStoreRestaurantModeRadioSeq(item.seq)) {
@@ -9590,7 +9541,7 @@ function runModuleSettingToggleSideEffects(seq: number, next: boolean): void {
       if (seq === 530 || seq === 531) {
         setStoreBrandSettingPanelVisible(seq, next);
       }
-      if (seq === 582) {
+      if (isStoreClosingAlertSeq(seq)) {
         setStoreClosingAlertPanelVisible(seq, next);
       }
       if (isOrderDiscountReasonSeq(seq)) {
@@ -12001,6 +11952,7 @@ function mount(): void {
   bindSingleTableNoMultiOrderUi();
   bindPostPaymentClearTableUi();
   bindAutoClearTableUi();
+  bindStoreClosingAlertUi();
   bindClearTableButtonUi();
   bindClearTableClientNotificationUi();
   bindAllowChangeServerUi();
