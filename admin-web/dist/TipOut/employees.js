@@ -6,6 +6,8 @@
 
   const STORAGE_KEY = "tipout-employees-roster-v1";
   const ROLES_STORAGE_KEY = "tipout-employee-role-options-v1";
+  const ROLE_MULTI_SELECT_ID = "field-role";
+  const ROLE_DROPDOWN_PORTAL_CLASS = "employees-role-dropdown-portal";
   const DEFAULT_STORE_NAME = "Golden Dragon Chinese Kitchen - Dallas, TX 75231";
   const DEFAULT_ROLE_OPTIONS = [
     "Server",
@@ -48,15 +50,214 @@
     localStorage.setItem(ROLES_STORAGE_KEY, JSON.stringify(roles));
   }
 
+  function parseRoleValues(raw) {
+    if (Array.isArray(raw)) return raw.map(normalizeRoleName).filter(Boolean);
+    const text = String(raw || "").trim();
+    if (!text) return [];
+    return text
+      .split(/[,，、]/)
+      .map(normalizeRoleName)
+      .filter(Boolean);
+  }
+
+  function formatRoleValues(roles) {
+    return parseRoleValues(roles).join(", ");
+  }
+
+  function getPrimaryRole(raw) {
+    const roles = parseRoleValues(raw);
+    return roles[0] || "";
+  }
+
+  function roleValuesEqual(a, b) {
+    return normalizeRoleName(a).toLowerCase() === normalizeRoleName(b).toLowerCase();
+  }
+
+  function getRoleMultiSelectEl() {
+    return document.getElementById(ROLE_MULTI_SELECT_ID);
+  }
+
+  function getRoleDropdownEl() {
+    return (
+      document.querySelector(`.${ROLE_DROPDOWN_PORTAL_CLASS}`) ||
+      getRoleMultiSelectEl()?.querySelector(".multi-select-dropdown") ||
+      null
+    );
+  }
+
+  function getRoleOptionsContainer() {
+    return getRoleDropdownEl()?.querySelector(".employees-role-options") || null;
+  }
+
+  function getRoleSearchInput() {
+    return getRoleDropdownEl()?.querySelector(".employees-role-search") || null;
+  }
+
+  function mountRoleDropdownPortal() {
+    const el = getRoleMultiSelectEl();
+    const dropdown = el?.querySelector(".multi-select-dropdown");
+    if (!el || !dropdown || dropdown.classList.contains(ROLE_DROPDOWN_PORTAL_CLASS)) return;
+    dropdown.classList.add(ROLE_DROPDOWN_PORTAL_CLASS);
+    document.body.appendChild(dropdown);
+    positionRoleDropdown();
+  }
+
+  function unmountRoleDropdownPortal() {
+    const el = getRoleMultiSelectEl();
+    const dropdown = document.querySelector(`.${ROLE_DROPDOWN_PORTAL_CLASS}`);
+    if (!el || !dropdown) return;
+    dropdown.classList.remove(ROLE_DROPDOWN_PORTAL_CLASS);
+    dropdown.style.top = "";
+    dropdown.style.left = "";
+    dropdown.style.width = "";
+    dropdown.style.position = "";
+    dropdown.style.zIndex = "";
+    dropdown.style.display = "";
+    dropdown.style.maxHeight = "";
+    el.appendChild(dropdown);
+  }
+
+  function closeRoleMultiSelect() {
+    const el = getRoleMultiSelectEl();
+    if (!el) return;
+    el.classList.remove("open");
+    const trigger = el.querySelector(".multi-select-input");
+    if (trigger) trigger.setAttribute("aria-expanded", "false");
+    unmountRoleDropdownPortal();
+    const search = getRoleSearchInput();
+    if (search) search.value = "";
+    filterRoleOptions("");
+  }
+
+  function positionRoleDropdown() {
+    const el = getRoleMultiSelectEl();
+    const dropdown = getRoleDropdownEl();
+    const input = el?.querySelector(".multi-select-input");
+    if (!el || !dropdown || !input || !el.classList.contains("open")) return;
+
+    const rect = input.getBoundingClientRect();
+    const viewportGap = 8;
+    const preferredMaxHeight = 260;
+    const spaceBelow = window.innerHeight - rect.bottom - viewportGap;
+    const spaceAbove = rect.top - viewportGap;
+    const openUpward = spaceBelow < 180 && spaceAbove > spaceBelow;
+    const maxHeight = Math.max(120, Math.min(preferredMaxHeight, openUpward ? spaceAbove - 4 : spaceBelow - 4));
+
+    dropdown.style.position = "fixed";
+    dropdown.style.left = `${Math.max(viewportGap, Math.min(rect.left, window.innerWidth - rect.width - viewportGap))}px`;
+    dropdown.style.width = `${rect.width}px`;
+    dropdown.style.zIndex = "1300";
+    dropdown.style.display = "flex";
+    dropdown.style.maxHeight = `${maxHeight}px`;
+
+    if (openUpward) {
+      dropdown.style.top = `${Math.max(viewportGap, rect.top - maxHeight - 4)}px`;
+    } else {
+      dropdown.style.top = `${rect.bottom + 4}px`;
+    }
+  }
+
+  function toggleRoleMultiSelect() {
+    const el = getRoleMultiSelectEl();
+    if (!el) return;
+    const willOpen = !el.classList.contains("open");
+    closeRoleMultiSelect();
+    if (!willOpen) return;
+    el.classList.add("open");
+    const trigger = el.querySelector(".multi-select-input");
+    if (trigger) trigger.setAttribute("aria-expanded", "true");
+    mountRoleDropdownPortal();
+    setTimeout(() => getRoleSearchInput()?.focus(), 0);
+  }
+
+  function refreshRoleMultiTags() {
+    const el = getRoleMultiSelectEl();
+    if (!el) return;
+    const tagsEl = el.querySelector(".multi-select-tags");
+    if (!tagsEl) return;
+    const checked = Array.from(getRoleOptionsContainer()?.querySelectorAll("input[type='checkbox']:checked") || []);
+    const placeholder = (el.dataset && el.dataset.placeholder) || "请选择岗位";
+    tagsEl.innerHTML = "";
+    if (checked.length === 0) {
+      tagsEl.innerHTML = `<span class="multi-select-placeholder">${escapeHtml(placeholder)}</span>`;
+      return;
+    }
+    checked.forEach((cb) => {
+      const tag = document.createElement("span");
+      tag.className = "multi-select-tag";
+      tag.appendChild(document.createTextNode(cb.value + "\u00a0"));
+      const close = document.createElement("i");
+      close.textContent = "×";
+      close.setAttribute("aria-label", `移除 ${cb.value}`);
+      close.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        cb.checked = false;
+        cb.closest(".multi-select-option")?.classList.remove("is-checked");
+        refreshRoleMultiTags();
+      });
+      tag.appendChild(close);
+      tagsEl.appendChild(tag);
+    });
+  }
+
+  function getSelectedRoles() {
+    const el = getRoleMultiSelectEl();
+    if (!el) return [];
+    return Array.from(getRoleOptionsContainer()?.querySelectorAll("input[type='checkbox']:checked") || []).map((cb) => cb.value);
+  }
+
+  function filterRoleOptions(query) {
+    const optionsContainer = getRoleOptionsContainer();
+    const dropdown = getRoleDropdownEl();
+    if (!optionsContainer || !dropdown) return;
+    const q = String(query || "")
+      .trim()
+      .toLowerCase();
+    let visible = 0;
+    optionsContainer.querySelectorAll(".multi-select-option").forEach((opt) => {
+      const label = String(opt.textContent || "").trim().toLowerCase();
+      const show = !q || label.includes(q);
+      opt.style.display = show ? "" : "none";
+      if (show) visible += 1;
+    });
+    let emptyEl = dropdown.querySelector(".employees-role-empty");
+    if (visible === 0) {
+      if (!emptyEl) {
+        emptyEl = document.createElement("div");
+        emptyEl.className = "employees-role-empty";
+        optionsContainer.appendChild(emptyEl);
+      }
+      emptyEl.textContent = q ? "没有匹配的岗位" : "暂无岗位选项";
+      emptyEl.style.display = "";
+    } else if (emptyEl) {
+      emptyEl.style.display = "none";
+    }
+  }
+
+  function buildRoleOptionsHtml(roles, selectedRoles) {
+    if (!roles.length) {
+      return '<div class="employees-role-empty">暂无岗位选项</div>';
+    }
+    return roles
+      .map((r) => {
+        const checked = selectedRoles.some((s) => roleValuesEqual(s, r));
+        const checkedAttr = checked ? " checked" : "";
+        const checkedClass = checked ? " is-checked" : "";
+        return `<label class="multi-select-option${checkedClass}"><input type="checkbox" value="${escapeHtml(r)}"${checkedAttr}> ${escapeHtml(r)}</label>`;
+      })
+      .join("");
+  }
+
   function collectRolesFromRoster(list) {
     const roles = [];
     const seen = {};
     (list || []).forEach((e) => {
-      const r = normalizeRoleName(e && e.role);
-      if (r && !seen[r]) {
-        seen[r] = 1;
-        roles.push(r);
-      }
+      parseRoleValues(e && e.role).forEach((r) => {
+        if (r && !seen[r]) {
+          seen[r] = 1;
+          roles.push(r);
+        }
+      });
     });
     return roles;
   }
@@ -77,21 +278,24 @@
   }
 
   function populateRoleSelect(selected) {
-    const sel = $("#field-role");
-    if (!sel) return;
+    const el = getRoleMultiSelectEl();
+    if (!el) return;
     const roles = getRoleOptions();
-    const value = normalizeRoleName(selected) || roles[0] || "Server";
-    sel.innerHTML = roles.map((r) => `<option value="${escapeHtml(r)}">${escapeHtml(r)}</option>`).join("");
-    if (roles.some((r) => r.toLowerCase() === value.toLowerCase())) {
-      const hit = roles.find((r) => r.toLowerCase() === value.toLowerCase());
-      sel.value = hit || value;
-    } else if (value) {
-      const opt = document.createElement("option");
-      opt.value = value;
-      opt.textContent = value;
-      sel.appendChild(opt);
-      sel.value = value;
+    let selectedRoles = parseRoleValues(selected);
+    if (selectedRoles.length === 0 && roles.length) {
+      selectedRoles = [roles.includes("Server") ? "Server" : roles[0]];
     }
+    selectedRoles.forEach((r) => {
+      if (r && !roles.some((x) => roleValuesEqual(x, r))) roles.push(r);
+    });
+    roles.sort((a, b) => a.localeCompare(b, "en"));
+    const dropdown = getRoleDropdownEl();
+    const optionsEl = dropdown?.querySelector(".employees-role-options");
+    if (optionsEl) optionsEl.innerHTML = buildRoleOptionsHtml(roles, selectedRoles);
+    const search = getRoleSearchInput();
+    if (search) search.value = "";
+    refreshRoleMultiTags();
+    filterRoleOptions("");
   }
 
   function addCustomRole(name) {
@@ -135,15 +339,19 @@
       else alert("请输入岗位名称");
       return;
     }
-    const exists = getRoleOptions().some((r) => r.toLowerCase() === name.toLowerCase());
+    const exists = getRoleOptions().some((r) => roleValuesEqual(r, name));
     if (exists) {
-      populateRoleSelect(name);
+      const current = getSelectedRoles();
+      if (!current.some((r) => roleValuesEqual(r, name))) current.push(name);
+      populateRoleSelect(formatRoleValues(current));
       hideRoleAddModal();
       if (typeof showNotification === "function") showNotification("该岗位已存在，已为您选中", "info");
       return;
     }
     addCustomRole(name);
-    populateRoleSelect(name);
+    const current = getSelectedRoles();
+    current.push(name);
+    populateRoleSelect(formatRoleValues(current));
     hideRoleAddModal();
     if (typeof showNotification === "function") showNotification(`已添加岗位「${name}」`, "success");
   }
@@ -165,6 +373,62 @@
         hideRoleAddModal();
       }
     });
+  }
+
+  function bindRoleMultiSelect() {
+    const el = getRoleMultiSelectEl();
+    if (!el || el.dataset.roleMultiBound === "1") return;
+    el.dataset.roleMultiBound = "1";
+
+    el.querySelector(".multi-select-input")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      toggleRoleMultiSelect();
+    });
+    el.querySelector(".multi-select-input")?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        toggleRoleMultiSelect();
+      } else if (e.key === "Escape") {
+        closeRoleMultiSelect();
+      }
+    });
+    const dropdown = getRoleDropdownEl();
+    dropdown?.querySelector(".employees-role-search")?.addEventListener("input", (e) => {
+      filterRoleOptions(e.target.value);
+    });
+    dropdown?.querySelector(".employees-role-search")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+    });
+    dropdown?.querySelector(".employees-role-options")?.addEventListener("change", (e) => {
+      const cb = e.target;
+      if (!cb || cb.type !== "checkbox") return;
+      cb.closest(".multi-select-option")?.classList.toggle("is-checked", cb.checked);
+      refreshRoleMultiTags();
+    });
+    dropdown?.querySelector(".employees-role-options")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+    });
+
+    document.addEventListener("click", (e) => {
+      const target = e.target;
+      if (
+        target.closest(`#${ROLE_MULTI_SELECT_ID}`) ||
+        target.closest(`.${ROLE_DROPDOWN_PORTAL_CLASS}`)
+      ) {
+        return;
+      }
+      closeRoleMultiSelect();
+    });
+    window.addEventListener("resize", () => {
+      if (el.classList.contains("open")) positionRoleDropdown();
+    });
+    window.addEventListener(
+      "scroll",
+      () => {
+        if (el.classList.contains("open")) positionRoleDropdown();
+      },
+      true
+    );
   }
 
   function filterListByGlobalScope(list) {
@@ -271,10 +535,10 @@
       entry.payAmount = Number(entry.rate) || 0;
     }
     if (!entry.earliestClockIn) entry.earliestClockIn = "06:00";
-    if (entry.requireClockIn == null) entry.requireClockIn = entry.role !== "Manager";
-    if (entry.requireBatchClose == null) entry.requireBatchClose = entry.role === "Cashier";
+    if (entry.requireClockIn == null) entry.requireClockIn = getPrimaryRole(entry.role) !== "Manager";
+    if (entry.requireBatchClose == null) entry.requireBatchClose = parseRoleValues(entry.role).some((r) => r === "Cashier");
     if (entry.requireCashTipReport == null) {
-      entry.requireCashTipReport = ["Server", "Bartender", "Floor"].includes(String(entry.role || ""));
+      entry.requireCashTipReport = parseRoleValues(entry.role).some((r) => ["Server", "Bartender", "Floor"].includes(r));
     }
     if (!entry.phone && idx % 3 === 0) entry.phone = `(555) ${String(200 + idx).padStart(3, "0")}-${String(1000 + idx).slice(-4)}`;
     if (!entry.email || String(entry.email).trim() === "") {
@@ -379,7 +643,8 @@
 
   function collectFormPayload(existing) {
     const name = ($("#field-name") && $("#field-name").value.trim()) || "";
-    const role = ($("#field-role") && $("#field-role").value) || "Server";
+    const selectedRoles = getSelectedRoles();
+    const role = selectedRoles.length ? formatRoleValues(selectedRoles) : "Server";
     const tipOut = resolveTipOutFields(existing);
     const store = ($("#field-store") && $("#field-store").value.trim()) || DEFAULT_STORE_NAME;
     const department = (existing && existing.department) || "";
@@ -781,6 +1046,7 @@
     if (f) f.reset();
 
     hideRoleAddModal();
+    closeRoleMultiSelect();
 
     if (editingEmployeeId) {
       const emp = loadRoster().find((e) => e.id === editingEmployeeId);
@@ -904,6 +1170,7 @@
 
   bindPayTypeRateLinkage();
   bindRoleQuickAdd();
+  bindRoleMultiSelect();
   updateBasePayLabel();
 
   $("#btn-add-employee")?.addEventListener("click", openAddModal);
@@ -923,5 +1190,16 @@
   });
 
   bindEmployeeDeleteConfirm();
+  const addEmployeeModal = $("#addEmployeeModal");
+  if (addEmployeeModal && addEmployeeModal.dataset.roleDropdownLifecycleBound !== "1") {
+    addEmployeeModal.dataset.roleDropdownLifecycleBound = "1";
+    addEmployeeModal.addEventListener("click", (e) => {
+      if (e.target === addEmployeeModal) closeRoleMultiSelect();
+    });
+    const modalObserver = new MutationObserver(() => {
+      if (!addEmployeeModal.classList.contains("show")) closeRoleMultiSelect();
+    });
+    modalObserver.observe(addEmployeeModal, { attributes: true, attributeFilter: ["class"] });
+  }
   renderTable();
 })();

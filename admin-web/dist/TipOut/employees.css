@@ -228,20 +228,215 @@
   color: var(--text-primary);
 }
 
-.employees-page .employees-role-field {
+.employees-role-field {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
 }
 
-.employees-page .employees-role-field .form-control {
+.employees-role-field .employees-role-multi-select {
   flex: 1;
   min-width: 0;
 }
 
-.employees-page .employees-role-add-btn {
+.employees-role-add-btn {
   flex-shrink: 0;
   white-space: nowrap;
+  margin-top: 2px;
+}
+
+/* 岗位多选 — 与 TipOut 规则页 multi-select 一致，并适配员工弹窗（modal 在 .employees-page 外） */
+.employees-role-multi-select.multi-select {
+  position: relative;
+}
+
+.employees-role-multi-select .multi-select-input {
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 4px 32px 4px 6px;
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: var(--radius-md);
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  position: relative;
+}
+
+.employees-role-multi-select .multi-select-input:hover {
+  border-color: var(--primary);
+}
+
+.employees-role-multi-select.open .multi-select-input {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1);
+}
+
+.employees-role-multi-select .multi-select-arrow {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  transition: transform 0.2s;
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
+.employees-role-multi-select.open .multi-select-arrow {
+  transform: translateY(-50%) rotate(180deg);
+}
+
+.employees-role-multi-select .multi-select-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex: 1;
+  min-height: 26px;
+  align-items: center;
+}
+
+.employees-role-multi-select .multi-select-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px 2px 10px;
+  background: rgba(22, 119, 255, 0.08);
+  border: 1px solid rgba(22, 119, 255, 0.22);
+  border-radius: 999px;
+  font-size: 12px;
+  line-height: 20px;
+  color: var(--primary);
+  font-weight: 500;
+  max-width: min(100%, 160px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.employees-role-multi-select .multi-select-tag i {
+  font-style: normal;
+  cursor: pointer;
+  color: rgba(22, 119, 255, 0.55);
+  font-size: 14px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.employees-role-multi-select .multi-select-tag i:hover {
+  color: var(--primary);
+}
+
+.employees-role-multi-select .multi-select-placeholder {
+  color: var(--text-tertiary);
+  font-size: 13px;
+  padding: 0 4px;
+}
+
+.employees-role-multi-select .multi-select-dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: var(--radius-lg);
+  padding: 6px;
+  box-shadow: var(--shadow-md, 0 8px 24px rgba(0, 0, 0, 0.12));
+  z-index: 1200;
+  max-height: 260px;
+  overflow: hidden;
+  flex-direction: column;
+}
+
+.employees-role-multi-select.open .multi-select-dropdown {
+  display: flex;
+}
+
+.employees-role-dropdown-portal {
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: var(--radius-lg);
+  padding: 6px;
+  box-shadow: var(--shadow-md, 0 8px 24px rgba(0, 0, 0, 0.12));
+  overflow: hidden;
+}
+
+.employees-role-dropdown-portal .employees-role-options {
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.employees-role-search-wrap {
+  padding: 2px 2px 6px;
+  flex-shrink: 0;
+}
+
+.employees-role-search {
+  width: 100%;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.employees-role-search:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1);
+}
+
+.employees-role-options {
+  overflow-y: auto;
+  max-height: 200px;
+  flex: 1;
+  min-height: 0;
+}
+
+.employees-role-multi-select .multi-select-option,
+.employees-role-dropdown-portal .multi-select-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.15s;
+}
+
+.employees-role-multi-select .multi-select-option:hover,
+.employees-role-dropdown-portal .multi-select-option:hover {
+  background: rgba(22, 119, 255, 0.06);
+}
+
+.employees-role-multi-select .multi-select-option.is-checked,
+.employees-role-dropdown-portal .multi-select-option.is-checked {
+  background: rgba(22, 119, 255, 0.08);
+  color: var(--primary);
+  font-weight: 500;
+}
+
+.employees-role-multi-select .multi-select-option input[type="checkbox"],
+.employees-role-dropdown-portal .multi-select-option input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: var(--primary);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.employees-role-empty {
+  padding: 12px 10px;
+  font-size: 13px;
+  color: var(--text-tertiary);
+  text-align: center;
 }
 
 .employees-role-add-modal-overlay {
