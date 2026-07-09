@@ -16,9 +16,30 @@
     return typeof PAYROLL_ADP_MAPPING !== "undefined" && PAYROLL_ADP_MAPPING ? PAYROLL_ADP_MAPPING : null;
   }
 
-  function applyAdpMappingToData(data) {
+  /** 与 admin-web `STORE_ADP_CO_CODE_FIELD_ID`（417-adp-co-code）同源 */
+  const STORE_ADP_CO_CODE_STORAGE_KEY = "bplant-module-setting-field:417-adp-co-code";
+
+  function readStoreAdpCoCode() {
+    try {
+      const raw = localStorage.getItem(STORE_ADP_CO_CODE_STORAGE_KEY);
+      if (raw != null && String(raw).trim() !== "") return String(raw).trim();
+    } catch (e) {
+      /* ignore */
+    }
+    return "";
+  }
+
+  function resolveCoCode() {
+    const storeCode = readStoreAdpCoCode();
+    if (storeCode) return storeCode;
     const m = getAdpMapping();
-    if (m && m.coCode && data) data.coCode = m.coCode;
+    if (m && m.coCode) return m.coCode;
+    return (state && state.data && state.data.coCode) || "X0L";
+  }
+
+  function applyAdpMappingToData(data) {
+    const coCode = readStoreAdpCoCode() || (getAdpMapping() && getAdpMapping().coCode);
+    if (coCode && data) data.coCode = coCode;
   }
 
   function appendAudit(action, meta) {
@@ -605,10 +626,18 @@
       dates && dates.length > 0
         ? dates
         : buildBiweeklyDemoSegmentDates(fallbackStart, addDays(fallbackStart, 13));
-    return d.map((dateStr, dayIdx) => ({
-      ...buildDemoDaySegment(dateStr, empIdx, dayIdx),
-      rate: resolvedRate,
-    }));
+    return d.map((dateStr, dayIdx) => {
+      const seg = {
+        ...buildDemoDaySegment(dateStr, empIdx, dayIdx),
+        rate: resolvedRate,
+      };
+      // 演示：Maria Garcia 同期兼任 Server / Bartender，ADP Report 按角色拆行
+      if (empIdx === 1) {
+        seg.role = dayIdx % 2 === 0 ? "Server" : "Bartender";
+        if (seg.role === "Bartender") seg.rate = 18.5;
+      }
+      return seg;
+    });
   }
 
   function getEmployeeSeedIndex(emp) {
@@ -624,6 +653,18 @@
       if (idx >= 0) return idx;
     }
     return 0;
+  }
+
+  /** 演示数据：Maria Garcia 同期多角色考勤，用于 ADP Report 按角色拆行 */
+  function ensureDemoMultiRoleSegments(emp) {
+    if (!emp || getEmployeeSeedIndex(emp) !== 1 || !Array.isArray(emp.segments)) return;
+    emp.segments = emp.segments.map((seg, dayIdx) => {
+      const day = migrateLegacySegmentToDay(seg);
+      if (String(day.role || "").trim()) return day;
+      day.role = dayIdx % 2 === 0 ? "Server" : "Bartender";
+      if (day.role === "Bartender") day.rate = 18.5;
+      return day;
+    });
   }
 
   function ensureManageBiweeklySegments(emp, period) {
@@ -655,7 +696,8 @@
       name: r.name,
       store: r.store || DEFAULT_STORE_NAME,
       adpFile: r.adpFile || "",
-      ssn: "",
+      ssn: r.ssn || "",
+      email: r.email || "",
       department: r.department || r.role || "Floor",
       role: r.role || r.department || "Floor",
       hireDate: r.hireDate || demoHireDateForSeedIndex(idx),
@@ -804,6 +846,59 @@
     return demoHireDateForSeedIndex(getEmployeeSeedIndex(emp));
   }
 
+  function resolveEmployeeSsn(emp) {
+    if (emp && emp.ssn) return String(emp.ssn).trim();
+    const match = findUnifiedRosterMatch(emp);
+    if (match && match.ssn) return String(match.ssn).trim();
+    return "";
+  }
+
+  function resolveRosterEmail(entry) {
+    const direct = String((entry && entry.email) || "").trim();
+    if (direct) return direct;
+    const slug = String((entry && entry.name) || "")
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, ".")
+      .replace(/^\.+|\.+$/g, "");
+    return slug ? `${slug}@menusifu.demo` : "";
+  }
+
+  function resolveEmployeeEmail(emp) {
+    if (emp && emp.email) return String(emp.email).trim();
+    const match = findUnifiedRosterMatch(emp);
+    if (match) return resolveRosterEmail(match);
+    return resolveRosterEmail(emp);
+  }
+
+  function updateUnifiedRosterFromEmployee(emp) {
+    if (!emp) return;
+    try {
+      const raw = localStorage.getItem(ROSTER_STORAGE_KEY);
+      if (!raw) return;
+      const list = JSON.parse(raw);
+      if (!Array.isArray(list)) return;
+      const adp = String((emp.adpFile || "")).trim();
+      const name = String((emp.name || "")).trim().toLowerCase();
+      let idx = -1;
+      if (adp) {
+        idx = list.findIndex((r) => String((r && r.adpFile) || "").trim() === adp);
+      }
+      if (idx < 0 && name) {
+        idx = list.findIndex((r) => String((r && r.name) || "").trim().toLowerCase() === name);
+      }
+      if (idx < 0) return;
+      const ssn = String(emp.ssn || "").trim();
+      const hireDate = String(emp.hireDate || "").trim();
+      if (ssn) list[idx].ssn = ssn;
+      if (hireDate) list[idx].hireDate = hireDate;
+      localStorage.setItem(ROSTER_STORAGE_KEY, JSON.stringify(list));
+      window.dispatchEvent(new CustomEvent("tipout-roster-updated"));
+    } catch (_) {
+      /* ignore */
+    }
+  }
+
   function formatPayrollPeriodReportTitle(period) {
     const n = period && period.periodNumber != null ? period.periodNumber : "—";
     return T("detail.periodReport", { n });
@@ -856,7 +951,7 @@
     if (roleEl) roleEl.textContent = resolveEmployeeRole(emp);
     if (hireEl) hireEl.textContent = resolveEmployeeHireDate(emp) || "—";
     if (employeeEl) employeeEl.textContent = formatDetailEmployeeDisplay(emp);
-    if (ssnEl) ssnEl.textContent = String((emp && emp.ssn) || "").trim() || "—";
+    if (ssnEl) ssnEl.textContent = resolveEmployeeSsn(emp) || "—";
     if (payDateEl) payDateEl.textContent = (period && period.paycheckDate) || "—";
     if (payPeriodEl) payPeriodEl.textContent = (period && period.rangeLabel) || "—";
     if (periodReportEl) periodReportEl.textContent = formatPayrollPeriodReportTitle(period);
@@ -888,7 +983,8 @@
           name: rosterName || ((existing && existing.name) || `员工${idx + 1}`),
           store: String((r.store || (existing && existing.store) || DEFAULT_STORE_NAME)).trim() || DEFAULT_STORE_NAME,
           adpFile: rosterAdp || String((existing && existing.adpFile) || "").trim(),
-          ssn: String((existing && existing.ssn) || "").trim(),
+          email: resolveRosterEmail(r) || String((existing && existing.email) || "").trim(),
+          ssn: String((r.ssn || (existing && existing.ssn) || "")).trim(),
           department: String((r.department || r.role || (existing && existing.department) || "")).trim(),
           role: String((r.role || (existing && existing.role) || r.department || "")).trim(),
           hireDate: String(
@@ -1064,6 +1160,7 @@
     const o = {
       date: d && d.date != null ? d.date : "",
       meal: d && d.meal != null ? d.meal : "",
+      role: d && d.role != null ? String(d.role).trim() : "",
       rate: Number.isFinite(rateRaw) && rateRaw >= 0 ? rateRaw : null,
       reg: Number(d && d.reg) || 0,
       ot: Number(d && d.ot) || 0,
@@ -1100,6 +1197,7 @@
       date: s.date || "",
       slots,
       meal: s.meal ?? "",
+      role: s.role ?? "",
       reg: s.reg ?? 0,
       ot: s.ot ?? 0,
       ot2: s.ot2 ?? 0,
@@ -1241,6 +1339,8 @@
         if (emp.adjustments.incentive === "" || emp.adjustments.incentive === null) emp.adjustments.incentive = 0;
         if (!emp.role) emp.role = resolveEmployeeRole(emp);
         if (!emp.hireDate) emp.hireDate = resolveEmployeeHireDate(emp);
+        if (!emp.ssn) emp.ssn = resolveEmployeeSsn(emp);
+        ensureDemoMultiRoleSegments(emp);
       });
     });
 
@@ -1680,8 +1780,8 @@
     });
     state.workspaceDraft = {
       adpFile: emp.adpFile || "",
-      ssn: emp.ssn || "",
-      hireDate: emp.hireDate || "",
+      ssn: resolveEmployeeSsn(emp),
+      hireDate: resolveEmployeeHireDate(emp),
       segments: cloneData(segments),
       adjustments: mergeAdjustments(emp.adjustments),
     };
@@ -1931,6 +2031,7 @@
     emp.adpFile = draft.adpFile;
     emp.ssn = draft.ssn;
     emp.hireDate = draft.hireDate;
+    updateUnifiedRosterFromEmployee(emp);
     emp.segments = cloneData(draft.segments);
     emp.adjustments = mergeAdjustments(draft.adjustments);
     simulatePayrollBackendCalculation(emp);
@@ -2066,6 +2167,18 @@
 
   function resolveEmployeeStoreFilter(employeeList) {
     const stores = getPayrollStoreOptions(employeeList);
+    if (window.TipOutGlobalScopeFilter && typeof TipOutGlobalScopeFilter.readGlobalScopeFilter === "function") {
+      const scope = TipOutGlobalScopeFilter.readGlobalScopeFilter();
+      if (scope.isAllStores) {
+        const next = stores[0] || "";
+        state.employeeStoreFilter = next;
+        return next;
+      }
+      const hit = stores.find((s) => TipOutGlobalScopeFilter.rosterStoreMatchesGlobalScope(s, scope));
+      const next = hit || "";
+      state.employeeStoreFilter = next;
+      return next;
+    }
     const current = String(state.employeeStoreFilter || "").trim();
     if (current && stores.includes(current)) return current;
     const next = stores[0] || "";
@@ -2074,6 +2187,9 @@
   }
 
   function filterEmployeesByStore(list, storeFilter) {
+    if (window.TipOutGlobalScopeFilter && typeof TipOutGlobalScopeFilter.filterRosterByGlobalScope === "function") {
+      return TipOutGlobalScopeFilter.filterRosterByGlobalScope(list);
+    }
     const active = String(storeFilter || "").trim();
     if (!active || !Array.isArray(list)) return list || [];
     return list.filter((e) => String((e && e.store) || "").trim() === active);
@@ -2085,22 +2201,8 @@
     return filterEmployeesByStore(list, state.employeeStoreFilter);
   }
 
-  function renderEmployeeStoreFilterSelect(selectEl, employeeList) {
-    if (!selectEl) return;
-    const stores = getPayrollStoreOptions(employeeList);
-    const active = resolveEmployeeStoreFilter(employeeList);
-    if (stores.length === 0) {
-      selectEl.innerHTML = "";
-      return;
-    }
-    selectEl.innerHTML = stores
-      .map((s) => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`)
-      .join("");
-    selectEl.value = active;
-  }
-
   function syncEmployeeStoreFilterControls(employeeList) {
-    renderEmployeeStoreFilterSelect($("#payroll-store-filter"), employeeList);
+    resolveEmployeeStoreFilter(employeeList);
   }
 
   function handleEmployeeStoreFilterChange() {
@@ -2140,6 +2242,109 @@
       },
       { reg: 0, ot: 0, ot2: 0 }
     );
+  }
+
+  function roleRecordHours(rec) {
+    return (Number(rec.reg) || 0) + (Number(rec.ot) || 0) + (Number(rec.ot2) || 0);
+  }
+
+  function allocateAdpAdjustmentsToRoleRecords(records, adj) {
+    const tips = Number(adj && adj.tips) || 0;
+    const svcw = Number(adj && adj.svcw) || 0;
+    const list = (Array.isArray(records) ? records : []).map((r) => ({ ...r }));
+    const totalHours = list.reduce((sum, rec) => sum + roleRecordHours(rec), 0);
+    return list.map((rec, idx) => {
+      const hours = roleRecordHours(rec);
+      const ratio = totalHours > 0 ? hours / totalHours : idx === 0 ? 1 : 0;
+      return {
+        ...rec,
+        tips: tips * ratio,
+        svcw: svcw * ratio,
+      };
+    });
+  }
+
+  function aggregateEmployeeHoursByRole(emp) {
+    const map = new Map();
+    let hasExplicitRole = false;
+    (emp && emp.segments ? emp.segments : []).forEach((raw) => {
+      const day = normalizeDay(raw);
+      const segRole = String(day.role || "").trim();
+      if (segRole) hasExplicitRole = true;
+      const role = segRole || resolveEmployeeRole(emp) || "—";
+      if (!map.has(role)) {
+        map.set(role, { role, reg: 0, ot: 0, ot2: 0, rateTotal: 0, rateWeight: 0 });
+      }
+      const rec = map.get(role);
+      rec.reg += Number(day.reg) || 0;
+      rec.ot += Number(day.ot) || 0;
+      rec.ot2 += Number(day.ot2) || 0;
+      const dayRate = getDayRate(day, emp);
+      const weight = roleRecordHours(day) || 1;
+      rec.rateTotal += dayRate * weight;
+      rec.rateWeight += weight;
+    });
+    if (!hasExplicitRole || map.size <= 1) return null;
+    return Array.from(map.values()).map((rec) => ({
+      role: rec.role,
+      reg: rec.reg,
+      ot: rec.ot,
+      ot2: rec.ot2,
+      rate: rec.rateWeight > 0 ? rec.rateTotal / rec.rateWeight : getEffectiveRegularRate(emp),
+    }));
+  }
+
+  function resolveEmployeeAdpRoleRecords(emp) {
+    const adj = mergeAdjustments(emp.adjustments);
+    if (emp && Array.isArray(emp.roleRecords) && emp.roleRecords.length > 0) {
+      const records = emp.roleRecords.map((r) => ({
+        role: String((r && r.role) || "").trim() || resolveEmployeeRole(emp),
+        reg: Number(r && r.reg) || 0,
+        ot: Number(r && r.ot) || 0,
+        ot2: Number(r && r.ot2) || 0,
+        rate:
+          r && r.rate != null && r.rate !== ""
+            ? Number(r.rate)
+            : getEffectiveRegularRate(emp),
+      }));
+      return allocateAdpAdjustmentsToRoleRecords(records, adj);
+    }
+    const byRole = aggregateEmployeeHoursByRole(emp);
+    if (byRole && byRole.length > 1) {
+      return allocateAdpAdjustmentsToRoleRecords(byRole, adj);
+    }
+    const sums = sumSegments(emp);
+    return [
+      {
+        role: resolveEmployeeRole(emp),
+        reg: sums.reg,
+        ot: sums.ot,
+        ot2: sums.ot2,
+        rate: getEffectiveRegularRate(emp),
+        tips: Number(adj.tips) || 0,
+        svcw: Number(adj.svcw) || 0,
+      },
+    ];
+  }
+
+  function renderAdpPreviewRowHtml(period, emp, roleRecord, missingAdpFile) {
+    const coCode = resolveCoCode();
+    const rate = roleRecord.rate != null ? roleRecord.rate : getEffectiveRegularRate(emp);
+    return `<tr>
+        <td style="font-family:ui-monospace,Menlo,monospace">${escapeHtml(coCode)}</td>
+        <td style="font-family:ui-monospace,Menlo,monospace">${escapeHtml(period.paycheckDate)}</td>
+        <td style="font-family:ui-monospace,Menlo,monospace" class="${missingAdpFile ? "text-danger" : ""}">${escapeHtml(emp.adpFile || "—")}</td>
+        <td>${escapeHtml(emp.name)}</td>
+        <td>${escapeHtml(roleRecord.role || "—")}</td>
+        <td style="text-align:right;font-family:ui-monospace,Menlo,monospace">${fmtMoney(rate)}</td>
+        <td style="text-align:right;font-family:ui-monospace,Menlo,monospace">${fmtMoney(roleRecord.reg)}</td>
+        <td style="font-family:ui-monospace,Menlo,monospace;font-size:12px">OHR</td>
+        <td style="text-align:right;font-family:ui-monospace,Menlo,monospace">${fmtMoney(roleRecord.ot)}</td>
+        <td style="font-family:ui-monospace,Menlo,monospace;font-size:12px">CCT</td>
+        <td style="text-align:right;font-family:ui-monospace,Menlo,monospace">${fmtMoney(roleRecord.tips)}</td>
+        <td style="font-family:ui-monospace,Menlo,monospace;font-size:12px">SVC</td>
+        <td style="text-align:right;font-family:ui-monospace,Menlo,monospace">${fmtMoney(roleRecord.svcw)}</td>
+      </tr>`;
   }
 
   function fmtMoney(n) {
@@ -2791,6 +2996,7 @@
     return {
       employeeName: emp.name,
       employeeDisplay: formatDetailEmployeeDisplay(emp),
+      employeeEmail: resolveEmployeeEmail(emp),
       ssn: String(emp.ssn || "").trim(),
       role: resolveEmployeeRole(emp),
       hireDate: resolveEmployeeHireDate(emp),
@@ -2885,7 +3091,7 @@ body{margin:0;padding:24px;background:#fff;}
     renderManagePeriodNav();
     $("#field-adp-file").value = editEmp.adpFile;
     const ssnInput = $("#field-ssn");
-    if (ssnInput) ssnInput.value = editEmp.ssn || "";
+    if (ssnInput) ssnInput.value = resolveEmployeeSsn(editEmp);
     const hireInput = $("#field-hire-date");
     if (hireInput) hireInput.value = mdyToIsoDateInput(resolveEmployeeHireDate(editEmp));
     $("#field-ot-rate").value = emp.otRate;
@@ -3063,20 +3269,10 @@ body{margin:0;padding:24px;background:#fff;}
     const missingAdpFile = !emp.adpFile;
     const adpRow = $("#adp-preview-row");
     if (adpRow) {
-      adpRow.innerHTML = `<tr>
-        <td style="font-family:ui-monospace,Menlo,monospace">${escapeHtml((getAdpMapping() && getAdpMapping().coCode) || state.data.coCode)}</td>
-        <td style="font-family:ui-monospace,Menlo,monospace">${escapeHtml(period.paycheckDate)}</td>
-        <td style="font-family:ui-monospace,Menlo,monospace" class="${missingAdpFile ? "text-danger" : ""}">${escapeHtml(emp.adpFile || "—")}</td>
-        <td>${escapeHtml(emp.name)}</td>
-        <td style="text-align:right;font-family:ui-monospace,Menlo,monospace">${fmtMoney(getEffectiveRegularRate(emp))}</td>
-        <td style="text-align:right;font-family:ui-monospace,Menlo,monospace">${fmtMoney(sums.reg)}</td>
-        <td style="font-family:ui-monospace,Menlo,monospace;font-size:12px">OHR</td>
-        <td style="text-align:right;font-family:ui-monospace,Menlo,monospace">${fmtMoney(sums.ot)}</td>
-        <td style="font-family:ui-monospace,Menlo,monospace;font-size:12px">CCT</td>
-        <td style="text-align:right;font-family:ui-monospace,Menlo,monospace">${fmtMoney(emp.adjustments.tips)}</td>
-        <td style="font-family:ui-monospace,Menlo,monospace;font-size:12px">SVC</td>
-        <td style="text-align:right;font-family:ui-monospace,Menlo,monospace">${fmtMoney(emp.adjustments.svcw)}</td>
-      </tr>`;
+      const roleRecords = resolveEmployeeAdpRoleRecords(emp);
+      adpRow.innerHTML = roleRecords
+        .map((rec) => renderAdpPreviewRowHtml(period, emp, rec, missingAdpFile))
+        .join("");
     }
 
     const exportBtn = $("#btn-adp-report-modal-export");
@@ -3237,28 +3433,55 @@ body{margin:0;padding:24px;background:#fff;}
     });
   }
 
-  function buildAdpRow(period, emp) {
+  function buildAdpRow(period, emp, roleRecord) {
     const m = getAdpMapping();
-    const sums = sumSegments(emp);
-    const coCode = (m && m.coCode) || state.data.coCode;
+    const coCode = resolveCoCode();
     const adj = mergeAdjustments(emp.adjustments);
+    const rec =
+      roleRecord ||
+      (() => {
+        const sums = sumSegments(emp);
+        return {
+          role: resolveEmployeeRole(emp),
+          reg: sums.reg,
+          ot: sums.ot,
+          ot2: sums.ot2,
+          rate: getEffectiveRegularRate(emp),
+          tips: adj.tips,
+          svcw: adj.svcw,
+        };
+      })();
+    const sums = { reg: rec.reg, ot: rec.ot, ot2: rec.ot2 };
+    const rowAdj = { ...adj, tips: rec.tips != null ? rec.tips : adj.tips, svcw: rec.svcw != null ? rec.svcw : adj.svcw };
     if (m && typeof m.buildRow === "function") {
-      return m.buildRow({ coCode, period, employee: { ...emp, adjustments: adj }, sums });
+      return m.buildRow({
+        coCode,
+        period,
+        employee: { ...emp, adjustments: rowAdj },
+        sums,
+        role: rec.role,
+        rate: rec.rate != null ? rec.rate : getEffectiveRegularRate(emp),
+      });
     }
     return [
       coCode,
       period.paycheckDate,
       emp.adpFile,
       emp.name,
-      String(getEffectiveRegularRate(emp)),
+      String(rec.role || ""),
+      String(rec.rate != null ? rec.rate : getEffectiveRegularRate(emp)),
       String(sums.reg),
       "OHR",
       String(sums.ot),
       "CCT",
-      String(adj.tips),
+      String(rowAdj.tips),
       "SVC",
-      String(adj.svcw),
+      String(rowAdj.svcw),
     ];
+  }
+
+  function buildAdpRows(period, emp) {
+    return resolveEmployeeAdpRoleRecords(emp).map((rec) => buildAdpRow(period, emp, rec));
   }
 
   function getAdpCsvHeader() {
@@ -3269,6 +3492,7 @@ body{margin:0;padding:24px;background:#fff;}
       "BATCH ID",
       "FILE #",
       "Employee Name",
+      "Role",
       "Rate",
       "Reg Hours",
       "Hours 3 code",
@@ -3291,7 +3515,7 @@ body{margin:0;padding:24px;background:#fff;}
     showExportConfirmDialog(hint).then((ok) => {
       if (!ok) return;
       const header = getAdpCsvHeader();
-      const rows = exportable.map((emp) => buildAdpRow(period, emp));
+      const rows = exportable.flatMap((emp) => buildAdpRows(period, emp));
       const csv = buildAdpCsvContent(rows, header);
       const periodNo = period.periodNumber != null ? period.periodNumber : "period";
       downloadCsvFile(`ADP_PAYROLL_P${periodNo}_${period.paycheckDate}_BATCH.csv`, csv);
@@ -3312,8 +3536,8 @@ body{margin:0;padding:24px;background:#fff;}
       showExportConfirmDialog(T("exportConfirm.hintSingle", { name: emp.name })).then((ok) => {
         if (!ok) return;
         const header = getAdpCsvHeader();
-        const row = buildAdpRow(period, emp);
-        const csv = buildAdpCsvContent([row], header);
+        const rows = buildAdpRows(period, emp);
+        const csv = buildAdpCsvContent(rows, header);
         downloadCsvFile(`ADP_PAYROLL_${period.paycheckDate}_${emp.adpFile}.csv`, csv);
         appendAudit("export_csv", { employeeName: emp.name, batch: false });
         saveState();
@@ -3504,24 +3728,6 @@ body{margin:0;padding:24px;background:#fff;}
       });
     });
 
-    $("#payroll-store-filter")?.addEventListener("change", (e) => {
-      const select = e.target;
-      const list = state.data.employees[state.periodId] || [];
-      const stores = getPayrollStoreOptions(list);
-      const newValue = select.value || stores[0] || "";
-      const prevValue = state.employeeStoreFilter;
-
-      runAfterUnsavedWorkspaceConfirm(
-        () => {
-          state.employeeStoreFilter = newValue;
-          handleEmployeeStoreFilterChange();
-        },
-        () => {
-          select.value = prevValue || stores[0] || "";
-        }
-      );
-    });
-
     $("#period-year-filter")?.addEventListener("change", (e) => {
       state.periodYearFilter = e.target.value || "";
       state.periodNumberFilter = "";
@@ -3613,6 +3819,8 @@ body{margin:0;padding:24px;background:#fff;}
     renderEmployees();
     bindFieldHelp();
     bind();
+    bindRosterSyncListener();
+    bindGlobalScopeFilterListener();
     initDisclaimerModal();
     if (!enterManagePayrollWorkspace()) {
       state.view = "periods";
@@ -3620,6 +3828,57 @@ body{margin:0;padding:24px;background:#fff;}
       state.employeeId = null;
       showView("periods");
     }
+  }
+
+  function applyRosterSyncFromEvent() {
+    try {
+      syncEmployeesFromUnifiedRoster(state.data.employees);
+      syncPeriodStatuses(state.data.periods, state.data.employees);
+      saveState();
+      if (state.view === "workspace" && state.periodId && state.employeeId) {
+        initWorkspaceDraft();
+        renderManageForm();
+        renderManagePeriodNav();
+        syncDerived();
+        syncWorkspaceDirtyBaseline();
+      } else if (state.view === "employees") {
+        renderEmployees();
+      }
+      renderPeriods();
+    } catch (_) {
+      /* ignore */
+    }
+  }
+
+  function bindRosterSyncListener() {
+    window.addEventListener("tipout-roster-updated", () => {
+      applyRosterSyncFromEvent();
+    });
+    window.addEventListener("storage", (e) => {
+      if (e.key === ROSTER_STORAGE_KEY) applyRosterSyncFromEvent();
+    });
+  }
+
+  function handleGlobalScopeFilterChange() {
+    const apply = () => {
+      const list = state.data.employees[state.periodId] || [];
+      resolveEmployeeStoreFilter(list);
+      handleEmployeeStoreFilterChange();
+    };
+    if (state.view === "workspace" && shouldWarnBeforeLeavingManage()) {
+      runAfterUnsavedWorkspaceConfirm(apply);
+      return;
+    }
+    apply();
+  }
+
+  function bindGlobalScopeFilterListener() {
+    if (!window.TipOutGlobalScopeFilter || typeof TipOutGlobalScopeFilter.bindGlobalScopeFilterListener !== "function") {
+      return;
+    }
+    TipOutGlobalScopeFilter.bindGlobalScopeFilterListener(() => {
+      handleGlobalScopeFilterChange();
+    });
   }
 
   function bootstrapApp() {

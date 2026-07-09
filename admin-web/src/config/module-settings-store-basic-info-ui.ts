@@ -12,6 +12,9 @@ import {
 
 export const STORE_BASIC_INFO_HOST_SEQ = 417;
 
+/** Payroll ADP 导出用门店公司代码（seq 417 · 门店档案） */
+export const STORE_ADP_CO_CODE_FIELD_ID = "417-adp-co-code";
+
 const INPUT_CLASS =
   "h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
@@ -67,6 +70,11 @@ export const STORE_BASIC_INFO_SECTIONS: StoreBasicInfoSection[] = [
       { fieldId: "417-store-no", label: "门店编号", placeholder: "Store #" },
       { fieldId: "417-merchant-group-no", label: "商家组编号", placeholder: "Merchant group #" },
       { fieldId: "417-merchant-code", label: "商家代号", placeholder: "Merchant code" },
+      {
+        fieldId: STORE_ADP_CO_CODE_FIELD_ID,
+        label: "ADP CO CODE",
+        placeholder: "如：X0L",
+      },
     ],
   },
 ];

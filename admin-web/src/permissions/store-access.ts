@@ -153,19 +153,36 @@ export function clampScopeToStoreAccess(
     region: scope.region ? migrateLegacyRegionId(scope.region) : "",
     store: scope.store ? migrateLegacyStoreId(scope.store) : "",
   };
-  if (isScopeFilterAllowed(access, normalizedScope)) return normalizedScope;
+  if (isScopeFilterAllowed(access, normalizedScope)) {
+    /** 顶栏门店仅支持单选，不允许「全部门店」空值 */
+    if (normalizedScope.store) return normalizedScope;
+    const allowed = getAllowedStoreIds(access);
+    const sid = allowed[0] ?? DEFAULT_DEMO_STORE_ID;
+    const meta = storeMeta(sid);
+    return {
+      brand: normalizedScope.brand || meta?.brand || "",
+      region: normalizedScope.region || meta?.region || "",
+      store: sid,
+    };
+  }
 
   const allowed = getAllowedStoreIds(access);
-  if (access.mode === "all") {
-    return { brand: "", region: "", store: "" };
-  }
   if (allowed.length === 1) {
     const sid = allowed[0]!;
     const meta = storeMeta(sid);
     return { brand: meta?.brand ?? "", region: meta?.region ?? "", store: sid };
   }
   if (allowed.length > 1) {
-    return { brand: "", region: "", store: "" };
+    const preferred =
+      normalizedScope.store && allowed.includes(normalizedScope.store)
+        ? normalizedScope.store
+        : allowed[0]!;
+    const meta = storeMeta(preferred);
+    return {
+      brand: normalizedScope.brand || meta?.brand || "",
+      region: normalizedScope.region || meta?.region || "",
+      store: preferred,
+    };
   }
   const sid = allowed[0] ?? DEFAULT_DEMO_STORE_ID;
   const meta = storeMeta(sid);

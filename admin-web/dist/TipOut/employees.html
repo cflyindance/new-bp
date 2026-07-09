@@ -63,32 +63,30 @@
           <button type="button" class="btn btn-primary" id="btn-add-employee">新增员工</button>
         </div>
 
-        <div class="filter-bar filter-bar--page employees-filter-bar">
-          <div class="filter-field">
-            <label class="filter-field-label" for="employee-store-filter">门店</label>
-            <select id="employee-store-filter" class="form-control form-control-lg">
-              <option value="">全部门店</option>
-            </select>
-          </div>
-        </div>
-
         <div class="card">
-          <div class="card-body" style="padding:0">
-            <table class="data-table">
+          <div class="card-body employees-table-wrap">
+            <table class="data-table employees-table">
               <thead>
+                <tr class="employees-table-group-row">
+                  <th colspan="3">基本信息</th>
+                  <th colspan="2">联系</th>
+                  <th colspan="2">薪酬</th>
+                  <th colspan="3">POS · 考勤收银</th>
+                  <th colspan="1">Payroll</th>
+                  <th rowspan="2" class="employees-table-actions-head">操作</th>
+                </tr>
                 <tr>
                   <th>姓名</th>
                   <th>门店</th>
                   <th>岗位</th>
-                  <th>小费类型</th>
-                  <th style="text-align:right">基数</th>
-                  <th style="text-align:right">费率</th>
-                  <th>部门</th>
-                  <th>ADP File#</th>
-                  <th style="text-align:right">基本时薪</th>
-                  <th style="text-align:right">OT 时薪</th>
-                  <th style="text-align:right">OT2 时薪</th>
-                  <th style="text-align:right">操作</th>
+                  <th>电话</th>
+                  <th>入职</th>
+                  <th>类型</th>
+                  <th style="text-align:right">金额</th>
+                  <th>打卡</th>
+                  <th>扎帐</th>
+                  <th>上报现金小费</th>
+                  <th>ADP#</th>
                 </tr>
               </thead>
               <tbody id="employeesTableBody"></tbody>
@@ -100,72 +98,159 @@
   </div>
 
   <div class="modal-overlay" id="addEmployeeModal">
-    <div class="modal" style="width:min(560px,96vw);max-height:90vh;display:flex;flex-direction:column">
+    <div class="modal employees-modal" style="width:min(760px,96vw);max-height:92vh;display:flex;flex-direction:column">
       <div class="modal-header">
-        <h3>新增员工</h3>
+        <h3 id="employee-modal-title">新增员工</h3>
         <button type="button" class="modal-close" onclick="closeModal('addEmployeeModal')">×</button>
       </div>
-      <div class="modal-body" style="overflow-y:auto;flex:1;min-height:0">
+      <div class="modal-body employees-modal-body">
         <form id="form-add-employee" onsubmit="return false">
-          <div class="form-grid-add">
-            <div class="form-group form-group-full">
-              <label class="form-label" for="field-name">姓名 <span class="text-danger">*</span></label>
-              <input type="text" id="field-name" class="form-control" required autocomplete="name" placeholder="与 Payroll / 小费分配展示一致" />
+          <section class="employee-form-section">
+            <h4 class="employee-form-section-title">基本信息</h4>
+            <div class="form-grid-add">
+              <div class="form-group form-group-full">
+                <label class="form-label" for="field-name">姓名 <span class="text-danger">*</span></label>
+                <input type="text" id="field-name" class="form-control" required autocomplete="name" />
+              </div>
+              <div class="form-group form-group-full">
+                <label class="form-label" for="field-store-display">门店</label>
+                <input type="hidden" id="field-store" value="" />
+                <input type="text" id="field-store-display" class="form-control" readonly tabindex="-1" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="field-role">岗位</label>
+                <div class="employees-role-field">
+                  <select id="field-role" class="form-control"></select>
+                  <button type="button" class="btn btn-sm employees-role-add-btn" id="btn-add-role-option">新增岗位</button>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="field-hire-date">入职时间</label>
+                <input type="date" id="field-hire-date" class="form-control" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="field-age">年龄</label>
+                <input type="number" id="field-age" class="form-control" min="16" max="99" step="1" placeholder="可选" />
+              </div>
+              <div class="form-group form-group-full">
+                <label class="form-label" for="field-notes">备注</label>
+                <textarea id="field-notes" class="form-control" rows="2" placeholder="内部备注"></textarea>
+              </div>
             </div>
-            <div class="form-group form-group-full">
-              <label class="form-label" for="field-store">门店</label>
-              <select id="field-store" class="form-control"></select>
+          </section>
+
+          <section class="employee-form-section">
+            <h4 class="employee-form-section-title">联系与地址</h4>
+            <div class="form-grid-add">
+              <div class="form-group form-group-full">
+                <label class="form-label" for="field-email">员工邮箱</label>
+                <input type="email" id="field-email" class="form-control" autocomplete="email" placeholder="name@example.com" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="field-phone">电话</label>
+                <input type="tel" id="field-phone" class="form-control" autocomplete="tel" placeholder="(555) 123-4567" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="field-phone2">电话 2</label>
+                <input type="tel" id="field-phone2" class="form-control" autocomplete="tel" placeholder="备用号码" />
+              </div>
+              <div class="form-group form-group-full">
+                <label class="form-label" for="field-street">街道</label>
+                <input type="text" id="field-street" class="form-control" autocomplete="street-address" placeholder="123 Main St" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="field-city">城市</label>
+                <input type="text" id="field-city" class="form-control" autocomplete="address-level2" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="field-state">州 / 省</label>
+                <input type="text" id="field-state" class="form-control" autocomplete="address-level1" placeholder="TX" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="field-zip">邮编</label>
+                <input type="text" id="field-zip" class="form-control" autocomplete="postal-code" inputmode="numeric" />
+              </div>
             </div>
-            <div class="form-group">
-              <label class="form-label" for="field-role">岗位（Tip Out）</label>
-              <select id="field-role" class="form-control">
-                <option value="Server">Server</option>
-                <option value="Bartender">Bartender</option>
-                <option value="Kitchen">Kitchen</option>
-                <option value="Busser">Busser</option>
-                <option value="Cashier">Cashier</option>
-                <option value="Runner">Runner</option>
-                <option value="Host">Host</option>
-                <option value="Floor">Floor</option>
-              </select>
+          </section>
+
+          <section class="employee-form-section">
+            <h4 class="employee-form-section-title">POS 登录与刷卡</h4>
+            <div class="form-grid-add">
+              <div class="form-group">
+                <label class="form-label" for="field-password">密码</label>
+                <input type="password" id="field-password" class="form-control" autocomplete="new-password" placeholder="POS 登录密码" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="field-card-swipe">刷卡数据</label>
+                <input type="text" id="field-card-swipe" class="form-control mono-input" placeholder="员工卡 / 磁条编码" />
+              </div>
             </div>
-            <div class="form-group">
-              <label class="form-label" for="field-tip-type">小费类型</label>
-              <select id="field-tip-type" class="form-control">
-                <option value="deduct">扣款（参与分配）</option>
-                <option value="receive">接收</option>
-              </select>
+          </section>
+
+          <section class="employee-form-section">
+            <h4 class="employee-form-section-title">考勤与收银</h4>
+            <div class="form-grid-add">
+              <div class="form-group">
+                <label class="form-label" for="field-earliest-clock-in">最早打卡时间</label>
+                <input type="time" id="field-earliest-clock-in" class="form-control" />
+              </div>
+              <div class="form-group employee-check-stack">
+                <label class="employee-check-item">
+                  <input type="checkbox" id="field-require-clock-in" />
+                  <span>需要打卡</span>
+                </label>
+                <label class="employee-check-item">
+                  <input type="checkbox" id="field-require-batch-close" />
+                  <span>需要收银扎帐</span>
+                </label>
+                <label class="employee-check-item">
+                  <input type="checkbox" id="field-require-cash-tip" />
+                  <span>需要上报现金小费</span>
+                </label>
+              </div>
             </div>
-            <div class="form-group">
-              <label class="form-label" for="field-base-tip">基数（Tip Out）</label>
-              <input type="number" id="field-base-tip" class="form-control" min="0" step="0.01" placeholder="0" />
+          </section>
+
+          <section class="employee-form-section">
+            <h4 class="employee-form-section-title">薪酬</h4>
+            <div class="form-grid-add">
+              <div class="form-group">
+                <label class="form-label" for="field-pay-type">薪酬类型</label>
+                <select id="field-pay-type" class="form-control">
+                  <option value="hourly">时薪</option>
+                  <option value="weekly">周薪</option>
+                  <option value="biweekly">双周薪</option>
+                  <option value="monthly">月薪</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="field-rate" id="field-rate-label">基本时薪</label>
+                <input type="number" id="field-rate" class="form-control" min="0" step="0.01" placeholder="0.00" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="field-ot-rate">加班时薪 OT</label>
+                <input type="number" id="field-ot-rate" class="form-control" min="0" step="0.01" placeholder="0" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="field-ot2-rate">加班时薪 OT2</label>
+                <input type="number" id="field-ot2-rate" class="form-control" min="0" step="0.01" placeholder="0" />
+              </div>
             </div>
-            <div class="form-group">
-              <label class="form-label" for="field-tip-rate">费率（Tip Out）</label>
-              <input type="number" id="field-tip-rate" class="form-control" min="0" max="1" step="0.01" placeholder="0.15 或填 15 在下方说明" />
-              <span style="font-size:12px;color:var(--text-tertiary)">填小数如 0.15；若填大于 1 则视为百分比（15 表示 15%）</span>
+          </section>
+
+          <section class="employee-form-section">
+            <h4 class="employee-form-section-title">薪资报税（Payroll）</h4>
+            <div class="form-grid-add">
+              <div class="form-group">
+                <label class="form-label" for="field-adp">ADP File#</label>
+                <input type="text" id="field-adp" class="form-control mono-input" placeholder="可选" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="field-ssn">SSN</label>
+                <input type="text" id="field-ssn" class="form-control mono-input" autocomplete="off" inputmode="numeric" placeholder="XXX-XX-XXXX" maxlength="11" />
+              </div>
             </div>
-            <div class="form-group">
-              <label class="form-label" for="field-dept">部门（Payroll）</label>
-              <input type="text" id="field-dept" class="form-control" placeholder="如 Floor / Kitchen" />
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="field-adp">ADP File#（Payroll）</label>
-              <input type="text" id="field-adp" class="form-control" style="font-family:ui-monospace,Menlo,monospace" placeholder="可选" />
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="field-rate">基本时薪（Payroll）</label>
-              <input type="number" id="field-rate" class="form-control" min="0" step="0.01" placeholder="0" />
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="field-ot-rate">加班时薪 OT（Payroll）</label>
-              <input type="number" id="field-ot-rate" class="form-control" min="0" step="0.01" placeholder="0" />
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="field-ot2-rate">加班时薪 OT2（Payroll）</label>
-              <input type="number" id="field-ot2-rate" class="form-control" min="0" step="0.01" placeholder="0" />
-            </div>
-          </div>
+          </section>
         </form>
       </div>
       <div class="modal-footer">
@@ -175,7 +260,46 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="employeeDeleteConfirmModal">
+    <div class="modal employees-delete-modal" style="width:min(420px,92vw)">
+      <div class="modal-header">
+        <h3>删除员工</h3>
+        <button type="button" class="modal-close" id="btn-employee-delete-close" aria-label="关闭">×</button>
+      </div>
+      <div class="modal-body">
+        <p id="employee-delete-confirm-message" style="margin:0;font-size:14px;line-height:1.65;color:var(--text-secondary)">
+          确定删除该员工？此操作不可恢复。
+        </p>
+        <p id="employee-delete-confirm-name" class="employees-delete-confirm-name"></p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" id="btn-employee-delete-cancel">取消</button>
+        <button type="button" class="btn btn-danger" id="btn-employee-delete-confirm">删除</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay employees-role-add-modal-overlay" id="employeeRoleAddModal">
+    <div class="modal employees-role-add-modal" style="width:min(420px,92vw)">
+      <div class="modal-header">
+        <h3>新增岗位</h3>
+        <button type="button" class="modal-close" id="btn-employee-role-add-close" aria-label="关闭">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group" style="margin:0">
+          <label class="form-label" for="field-new-role">岗位名称</label>
+          <input type="text" id="field-new-role" class="form-control" placeholder="请输入岗位名称" maxlength="40" autocomplete="off" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" id="btn-cancel-new-role">取消</button>
+        <button type="button" class="btn btn-primary" id="btn-confirm-new-role">添加</button>
+      </div>
+    </div>
+  </div>
+
   <script src="common.js"></script>
+  <script src="global-scope-filter.js"></script>
   <script src="ruleData.js"></script>
   <script src="employees.js"></script>
 </body>

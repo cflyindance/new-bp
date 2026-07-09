@@ -13,17 +13,62 @@
   font-size: 20px;
   font-weight: 600;
   color: var(--text-primary);
-  margin: 0 0 8px;
+  margin: 0 0 4px;
 }
 
 .employees-page .employees-page-subtitle {
-  margin: 0 0 16px;
+  margin: 0;
   font-size: 13px;
   color: var(--text-secondary);
 }
 
 .employees-page .employees-filter-bar {
-  margin-bottom: 12px;
+  display: none;
+}
+
+.employees-page .employees-table-wrap {
+  padding: 0;
+  overflow-x: auto;
+}
+
+.employees-page .employees-table {
+  min-width: 1080px;
+}
+
+.employees-page .employees-table-group-row th {
+  background: var(--bg-secondary, #f8fafc);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-align: center;
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+}
+
+.employees-page .employees-table-actions-head {
+  vertical-align: middle;
+  text-align: right;
+  min-width: 7rem;
+}
+
+.employees-page .employee-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.employees-page .employee-badge--on {
+  background: rgba(34, 197, 94, 0.12);
+  color: #15803d;
+}
+
+.employees-page .employee-badge--off {
+  background: rgba(148, 163, 184, 0.16);
+  color: var(--text-tertiary);
 }
 
 .employees-page .form-grid-add {
@@ -44,4 +89,161 @@
 
 .employees-page .text-danger {
   color: var(--danger);
+}
+
+.employees-page .mono-input {
+  font-family: ui-monospace, Menlo, monospace;
+}
+
+.employees-page .field-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+.employees-page .employee-form-section {
+  padding-bottom: 18px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+}
+
+.employees-page .employee-form-section:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+/* 与薪资管理 Date 等字段问号一致（payroll.css · payroll-field-help） */
+.employees-page .payroll-label-with-help,
+.employees-page .payroll-th-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.employees-page label.form-label.payroll-label-with-help {
+  display: inline-flex;
+}
+
+.employees-page .payroll-field-help {
+  cursor: pointer;
+  color: var(--text-tertiary);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.12));
+  border-radius: 50%;
+  background: var(--bg-elevated, #fff);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: color 0.2s, background 0.2s, border-color 0.2s;
+}
+
+.employees-page .payroll-field-help:hover,
+.employees-page .payroll-field-help:focus-visible {
+  color: var(--primary);
+  border-color: rgba(22, 119, 255, 0.35);
+  background: rgba(22, 119, 255, 0.08);
+  outline: none;
+}
+
+.employees-page #employeeFieldHelpModal .field-help-sync {
+  margin-top: 12px;
+  padding: 10px 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  background: rgba(22, 119, 255, 0.06);
+  border: 1px solid rgba(22, 119, 255, 0.15);
+  border-radius: var(--radius-sm);
+}
+
+.employees-page #employeeFieldHelpModal .field-help-sync strong {
+  color: var(--text-primary);
+}
+
+.employees-page .employee-form-section-title {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.employees-page .employee-check-item .payroll-field-help {
+  margin-left: 2px;
+}
+
+.employees-page .employee-form-section-desc {
+  display: none;
+}
+
+.employees-page .employees-modal-body {
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  padding-top: 4px;
+}
+
+.employees-page .employee-check-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  justify-content: center;
+  padding-top: 24px;
+}
+
+.employees-page .employee-check-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--text-primary);
+  cursor: pointer;
+  user-select: none;
+}
+
+.employees-page .employee-check-item input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+
+.employees-page #field-store-display {
+  background: var(--bg-secondary, #f8fafc);
+  color: var(--text-primary);
+  cursor: default;
+}
+
+.employees-page .employees-delete-confirm-name {
+  margin: 10px 0 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.employees-page .employees-role-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.employees-page .employees-role-field .form-control {
+  flex: 1;
+  min-width: 0;
+}
+
+.employees-page .employees-role-add-btn {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.employees-role-add-modal-overlay {
+  z-index: 1200;
 }

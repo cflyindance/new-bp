@@ -4,6 +4,7 @@
  * 布局：左侧快捷导航 + 右侧滚动内容（对齐设置页 module-settings 交互）
  */
 import { notifyConfigSaved } from "./deployment-auto-trigger";
+import { MODULE_SETTINGS_SUBNAV_SECTION_HEADING_CLASS } from "./module-settings-subnav";
 
 export const TEAM_BREAKS_OVERTIME_PATH = "/team/breaks-overtime";
 
@@ -105,7 +106,8 @@ const BREAKS_OVERTIME_NAV_GROUPS: NavGroup[] = [
 
 const SUBNAV_SCROLL_CLASSES = "max-h-[min(70vh,100%)] overflow-y-auto overscroll-y-contain";
 const SUBNAV_LINK_BASE =
-  "flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
+  "flex min-h-9 items-center rounded-md px-2.5 py-1.5 text-sm transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
+const SUBNAV_LINK_NESTED = "pl-4";
 const SUBNAV_LINK_SELECTED = "bg-primary/10 font-medium text-primary";
 const SUBNAV_LINK_IDLE = "text-muted-foreground hover:bg-muted/60 hover:text-foreground";
 
@@ -458,8 +460,8 @@ function renderBreaksOvertimeSubnav(activeKey: string, hasGlobalRules: boolean):
       parts.push(`<li aria-hidden="true" class="my-2 list-none border-t border-border" role="presentation"></li>`);
     }
     parts.push(`
-      <li class="list-none ${groupIndex > 0 ? "pt-1" : ""} pb-1" role="presentation">
-        <p class="px-2.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/80">${escapeHtml(group.label)}</p>
+      <li class="list-none ${groupIndex > 0 ? "pt-2" : "pt-0.5"} pb-0.5" role="presentation">
+        <p class="${MODULE_SETTINGS_SUBNAV_SECTION_HEADING_CLASS}">${escapeHtml(group.label)}</p>
       </li>`);
     for (const item of group.items) {
       const selected = activeKey === item.key;
@@ -467,7 +469,8 @@ function renderBreaksOvertimeSubnav(activeKey: string, hasGlobalRules: boolean):
       <li>
         <a href="#${TEAM_BREAKS_OVERTIME_PATH}/${item.key}"
           data-breaks-nav="${escapeHtml(item.key)}"
-          class="${SUBNAV_LINK_BASE} ${selected ? SUBNAV_LINK_SELECTED : SUBNAV_LINK_IDLE}"
+          data-breaks-subnav-nested="1"
+          class="${SUBNAV_LINK_BASE} ${SUBNAV_LINK_NESTED} ${selected ? SUBNAV_LINK_SELECTED : SUBNAV_LINK_IDLE}"
           ${selected ? 'aria-current="true"' : ""}
         >
           <span class="min-w-0 flex-1 truncate">${escapeHtml(item.title)}</span>
@@ -478,7 +481,6 @@ function renderBreaksOvertimeSubnav(activeKey: string, hasGlobalRules: boolean):
 
   return `
     <nav class="breaks-overtime-subnav module-settings-subnav w-56 shrink-0 border-r border-border pr-4 ${SUBNAV_SCROLL_CLASSES}" aria-label="休息与加班">
-      <p class="mb-2 px-2.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">快捷导航</p>
       <ul class="space-y-0.5" role="list">${parts.join("")}</ul>
     </nav>`;
 }
@@ -525,14 +527,9 @@ export function renderTeamBreaksOvertimePage(globalRulesRowsHtml = "", path?: st
 
   return `
     <div class="team-breaks-overtime-page flex min-h-0 flex-1 flex-col gap-4" data-team-breaks-overtime-page data-breaks-view="full">
-      <div class="flex shrink-0 flex-wrap items-start justify-between gap-3">
-        <div class="min-w-0">
-          <p class="text-sm text-muted-foreground">配置休息预设、自定义休息与加班规则，应用于打卡考勤与薪资核算。</p>
-        </div>
-        <div class="flex shrink-0 items-center gap-2">
-          ${toast}
-          <button type="button" data-breaks-overtime-save class="h-9 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">保存</button>
-        </div>
+      <div class="flex shrink-0 flex-wrap items-center justify-end gap-2">
+        ${toast}
+        <button type="button" data-breaks-overtime-save class="h-9 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">保存</button>
       </div>
       <div class="flex min-h-0 flex-1 flex-col gap-6 overflow-hidden sm:flex-row sm:items-stretch">
         ${renderBreaksOvertimeSubnav(activeBreaksNavKey, hasGlobalRules)}
@@ -656,7 +653,7 @@ function syncBreaksOvertimeSubnavActive(root: HTMLElement, key: string): void {
   root.querySelectorAll<HTMLAnchorElement>("[data-breaks-nav]").forEach((link) => {
     const linkKey = link.getAttribute("data-breaks-nav");
     const selected = linkKey === key;
-    link.className = `${SUBNAV_LINK_BASE} ${selected ? SUBNAV_LINK_SELECTED : SUBNAV_LINK_IDLE}`;
+    link.className = `${SUBNAV_LINK_BASE} ${SUBNAV_LINK_NESTED} ${selected ? SUBNAV_LINK_SELECTED : SUBNAV_LINK_IDLE}`;
     if (selected) link.setAttribute("aria-current", "true");
     else link.removeAttribute("aria-current");
   });

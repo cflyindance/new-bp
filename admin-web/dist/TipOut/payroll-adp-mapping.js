@@ -22,6 +22,7 @@
       "BATCH ID",
       "FILE #",
       "Employee Name",
+      "Role",
       "Rate",
       "Reg Hours",
       "Hours 3 code",
@@ -32,14 +33,17 @@
       "Earnings 3 Amount",
     ],
     buildRow(ctx) {
-      const { coCode, period, employee, sums } = ctx;
+      const { coCode, period, employee, sums, role, rate } = ctx;
       const adj = employee.adjustments || {};
+      const rowRate = rate != null && rate !== "" ? rate : employee.rate;
+      const rowRole = role != null && String(role).trim() !== "" ? role : employee.role || "";
       return [
         coCode,
         period.paycheckDate,
         employee.adpFile,
         employee.name,
-        String(employee.rate),
+        String(rowRole),
+        String(rowRate),
         String(sums.reg),
         "OHR",
         String(sums.ot),

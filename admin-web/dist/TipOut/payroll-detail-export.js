@@ -786,6 +786,48 @@ function openPayrollDetailEmailModal() {
 
   closePayrollDetailExportMenus();
 
+  const data = getPayrollDetailExportData();
+
+  const input = document.getElementById("payrollDetailExportEmail");
+
+  const hint = document.getElementById("payrollDetailExportEmailHint");
+
+  if (input) {
+
+    const email = data && data.employeeEmail ? String(data.employeeEmail).trim() : "";
+
+    input.value = email;
+
+  }
+
+  if (hint) {
+
+    const name = data && data.employeeName ? String(data.employeeName).trim() : "";
+
+    const email = data && data.employeeEmail ? String(data.employeeEmail).trim() : "";
+
+    if (name && email) {
+
+      hint.textContent = `将向员工「${name}」的邮箱 ${email} 发送 ADP 报表，可自行修改或补充多个收件人。`;
+
+      hint.style.display = "block";
+
+    } else if (name) {
+
+      hint.textContent = `员工「${name}」尚未填写邮箱，请在下方输入收件邮箱。`;
+
+      hint.style.display = "block";
+
+    } else {
+
+      hint.textContent = "";
+
+      hint.style.display = "none";
+
+    }
+
+  }
+
   if (typeof openModal === "function") openModal("payrollDetailEmailModal");
 
 }

@@ -254,21 +254,13 @@ export function buildDemoScopeStoreOptions(): ScopeOption[] {
 
     return [
 
-      { value: "", labelZh: "全部门店", labelEn: "All stores" },
-
       { value: DEFAULT_DEMO_STORE_ID, labelZh: "上海陆家嘴店", labelEn: "Shanghai Lujiazui" },
 
     ];
 
   }
 
-  return [
-
-    { value: "", labelZh: "全部门店", labelEn: "All stores" },
-
-    ...entries.map((e) => ({ value: e.storeId, labelZh: e.storeName, labelEn: e.storeName })),
-
-  ];
+  return entries.map((e) => ({ value: e.storeId, labelZh: e.storeName, labelEn: e.storeName }));
 
 }
 

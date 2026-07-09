@@ -75,11 +75,7 @@
         </div>
 
         <div id="payroll-store-bar" class="payroll-store-bar no-print">
-          <div class="payroll-store-bar-inner">
-            <div class="filter-field payroll-store-bar-field">
-              <label class="filter-field-label" for="payroll-store-filter">薪资门店</label>
-              <select id="payroll-store-filter" class="form-control form-control-lg payroll-store-filter-select" aria-label="薪资门店"></select>
-            </div>
+          <div class="payroll-store-bar-inner payroll-store-bar-inner--actions-only">
             <div class="payroll-store-bar-actions">
               <button type="button" class="btn" id="btn-export-batch-adp" data-action="export-batch-adp" disabled>批量导出 ADP</button>
             </div>
@@ -527,6 +523,7 @@
                       <th>BATCH ID</th>
                       <th>FILE #</th>
                       <th>Name</th>
+                      <th>Role</th>
                       <th style="text-align:right">Rate</th>
                       <th style="text-align:right">Reg Hrs</th>
                       <th>H3 code</th>
@@ -619,9 +616,11 @@
         <button type="button" class="modal-close" onclick="closeModal('payrollDetailEmailModal')" aria-label="关闭">×</button>
       </div>
       <div class="modal-body">
+        <p id="payrollDetailExportEmailHint" class="payroll-email-export-hint" style="display:none;margin:0 0 12px;font-size:13px;line-height:1.6;color:var(--text-secondary)"></p>
         <div class="form-group">
-          <label class="form-label">收件邮箱</label>
+          <label class="form-label" for="payrollDetailExportEmail">收件邮箱</label>
           <input type="email" id="payrollDetailExportEmail" class="form-control" placeholder="请输入邮箱地址，多个邮箱用逗号分隔" style="width:100%">
+          <p class="payroll-email-export-note" style="margin:8px 0 0;font-size:12px;color:var(--text-tertiary)">默认读取员工列表中的员工邮箱，可修改或补充多个收件人。</p>
         </div>
         <div class="form-group">
           <label class="form-label">导出格式</label>
@@ -750,6 +749,7 @@
   </div>
 
   <script src="common.js"></script>
+  <script src="global-scope-filter.js"></script>
   <script src="ruleData.js"></script>
   <script src="tipout-payroll-bridge.js"></script>
   <script src="payroll-adp-mapping.js"></script>

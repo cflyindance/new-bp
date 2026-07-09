@@ -24,8 +24,10 @@ import {
   resetScopeFiltersForGroupChange,
   syncSessionForAuthenticatedUser,
   refreshSessionOnMount,
+  syncScopeFilterMetaForEmbeddedPages,
   writeScopeFilters,
 } from "./auth/session-scope";
+import { TEAM_EMPLOYEE_ROSTER_STORAGE_KEY } from "./config/team-employee-roster-scope";
 import { formatScopeAggregationNote, resolveScopeAggregationMeta } from "./auth/scope-aggregation";
 import { bindEffectiveScopeChangeListener, describeEffectiveScope, resolveEffectiveScope } from "./auth/effective-scope-api";
 import { resolveDefaultAnchorBrandId, isBrandDataPerspective, writeChainDataPerspective } from "./auth/merchant-scope-context";
@@ -10609,8 +10611,14 @@ function renderHeaderScopeFilters(): string {
       </div>`
     : "";
 
+  const storeSelectValue =
+    scope.store && scopedOpts.stores.some((o) => o.value === scope.store)
+      ? scope.store
+      : scopedOpts.stores[0]?.value || DEFAULT_LOCKED_STORE_ID;
+
   return `
     <div
+      data-header-scope-filters
       class="flex max-w-full flex-wrap items-center justify-end gap-1.5 sm:gap-2"
       role="group"
       aria-label="${escapeHtml(t("header.scopeGroup"))}"
@@ -10618,9 +10626,33 @@ function renderHeaderScopeFilters(): string {
     >
       ${shouldShowBrandScopeFilter() ? renderSelect("scope-brand-select", "header.scopeBrand", "header.scopeBrandAria", scopedOpts.brands, scope.brand) : brandLockedField}
       ${shouldShowRegionScopeFilter() ? renderSelect("scope-region-select", "header.scopeRegion", "header.scopeRegionAria", scopedOpts.regions, scope.region) : ""}
-      ${renderSelect("scope-store-select", "header.scopeStore", "header.scopeStoreAria", scopedOpts.stores, scope.store)}
+      ${renderSelect("scope-store-select", "header.scopeStore", "header.scopeStoreAria", scopedOpts.stores, storeSelectValue)}
     </div>
   `;
+}
+
+function refreshHeaderScopeFilters(): void {
+  const host = document.querySelector("[data-header-scope-filters]");
+  if (!host) return;
+  const wrapper = document.createElement("div");
+  wrapper.innerHTML = renderHeaderScopeFilters().trim();
+  const next = wrapper.firstElementChild;
+  if (!next) return;
+  host.replaceWith(next);
+  bindHeaderScopeFilters();
+  syncScopeFilterMetaForEmbeddedPages();
+}
+
+function bindEmployeeRosterScopeRefresh(): void {
+  if (typeof window === "undefined") return;
+  const win = window as Window & { __menusifuRosterScopeRefreshBound?: boolean };
+  if (win.__menusifuRosterScopeRefreshBound) return;
+  win.__menusifuRosterScopeRefreshBound = true;
+  window.addEventListener("storage", (e) => {
+    if (e.key === TEAM_EMPLOYEE_ROSTER_STORAGE_KEY) {
+      refreshHeaderScopeFilters();
+    }
+  });
 }
 
 function bindHeaderScopeFilters(): void {
@@ -10638,7 +10670,19 @@ function bindHeaderScopeFilters(): void {
     const scope = readScopeFilters();
     if (brandEl && scope.brand && optionValues(brandEl).has(scope.brand)) brandEl.value = scope.brand;
     if (regionEl && scope.region && optionValues(regionEl).has(scope.region)) regionEl.value = scope.region;
-    if (scope.store && optionValues(storeEl).has(scope.store)) storeEl.value = scope.store;
+    const storeValues = optionValues(storeEl);
+    if (scope.store && storeValues.has(scope.store)) {
+      storeEl.value = scope.store;
+    } else if (storeEl.options.length > 0) {
+      storeEl.value = storeEl.options[0]!.value;
+      if (storeEl.value !== scope.store) {
+        writeScopeFilters({
+          brand: brandEl?.value ?? scope.brand,
+          region: regionEl?.value ?? scope.region,
+          store: storeEl.value,
+        });
+      }
+    }
   };
   applyStored();
 
@@ -10654,10 +10698,12 @@ function bindHeaderScopeFilters(): void {
     if (isBrandDataPerspective() && shouldShowBrandScopeFilter()) {
       const brandId = brandEl.value;
       writeChainDataPerspective("brand", brandId ? { brandId } : undefined);
+      const stores = getScopedFilterOptions().stores.filter((o) => !!o.value);
+      const nextStore = stores[0]?.value || DEFAULT_LOCKED_STORE_ID;
       writeScopeFilters({
         brand: brandId,
         region: "",
-        store: "",
+        store: nextStore,
       });
       mount();
       return;
@@ -11879,6 +11925,8 @@ function mount(): void {
   bindDeploymentUi(mount);
   bindDeploymentAutoTrigger();
   bindHeaderScopeFilters();
+  bindEmployeeRosterScopeRefresh();
+  syncScopeFilterMetaForEmbeddedPages();
   bindEffectiveScopeChangeListener(mount);
   bindSidebarGroupSwitcher();
   bindGlobalUiLocaleControl();

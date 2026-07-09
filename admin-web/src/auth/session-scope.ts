@@ -31,6 +31,7 @@ import { loadChainBrandOrgForContext, syncChainBrandOrgForGroup, clearActiveMerc
 import { readActiveImpersonation } from "../config/enterprise-merchant-impersonate";
 import { shouldShowBrandPerspectiveRegionScopeFilter } from "../config/product-version";
 import { buildDemoScopeStoreOptions, DEFAULT_DEMO_STORE_ID } from "../permissions/m-platform-store-scope";
+import { mergeEmployeeRosterStoresIntoScopeOptions } from "../config/team-employee-roster-scope";
 import {
   clearChainDataPerspectiveState,
   ensureChainPerspectiveForCurrentLayout,
@@ -142,11 +143,38 @@ export function writeScopeFilters(state: ScopeFilterState): void {
   } catch {
     /* ignore */
   }
+  syncScopeFilterMetaForEmbeddedPages(next);
   window.dispatchEvent(
     new CustomEvent("menusifu:scope-filter-change", {
       detail: { ...next },
     }),
   );
+}
+
+/** 供 TipOut 等内嵌页读取顶栏门店筛选（与 sessionStorage scope 同步） */
+export function syncScopeFilterMetaForEmbeddedPages(
+  state: ScopeFilterState = readScopeFilters(),
+): void {
+  if (typeof window === "undefined") return;
+  const scoped = getScopedFilterOptions();
+  const storeOpt = scoped.stores.find((o) => o.value === state.store);
+  const brandOpt = scoped.brands.find((o) => o.value === state.brand);
+  const regionOpt = scoped.regions.find((o) => o.value === state.region);
+  const meta = {
+    storeId: state.store,
+    storeLabel: storeOpt ? storeOpt.labelZh : "",
+    storeLabelEn: storeOpt ? storeOpt.labelEn : "",
+    brandId: state.brand,
+    brandLabel: brandOpt ? brandOpt.labelZh : "",
+    regionId: state.region,
+    regionLabel: regionOpt ? regionOpt.labelZh : "",
+  };
+  try {
+    localStorage.setItem("menusifu-scope-filter-meta", JSON.stringify(meta));
+  } catch {
+    /* ignore */
+  }
+  window.dispatchEvent(new CustomEvent("menusifu:scope-store-meta-updated", { detail: meta }));
 }
 
 function scopeOptionLabel(opt: ScopeOption | undefined, locale: "zh" | "en"): string {
@@ -243,14 +271,26 @@ export function resetScopeFiltersForGroupChange(): void {
   resetScopeFiltersForPerspectiveChange();
 }
 
+function resolveDefaultSingleStoreId(preferredStoreId = ""): string {
+  const scoped = getScopedFilterOptions().stores.filter((o) => !!o.value);
+  if (preferredStoreId && scoped.some((o) => o.value === preferredStoreId)) {
+    return preferredStoreId;
+  }
+  const cur = preferredStoreId || readScopeFilters().store;
+  if (cur && scoped.some((o) => o.value === cur)) return cur;
+  const anchor = readChainAnchorStoreId();
+  if (anchor && scoped.some((o) => o.value === anchor)) return anchor;
+  return scoped[0]?.value || DEFAULT_LOCKED_STORE_ID;
+}
+
 export function resetScopeFiltersForPerspectiveChange(): void {
   const perspective = resolveChainDataPerspective();
   if (perspective === "brand") {
     const brandId = resolveDefaultAnchorBrandId() ?? "";
-    writeScopeFilters({ brand: brandId, region: "", store: "" });
+    writeScopeFilters({ brand: brandId, region: "", store: resolveDefaultSingleStoreId() });
     return;
   }
-  writeScopeFilters({ brand: "", region: "", store: "" });
+  writeScopeFilters({ brand: "", region: "", store: resolveDefaultSingleStoreId() });
 }
 
 export function isStoreScopeLocked(): boolean {
@@ -274,12 +314,15 @@ export function ensureScopeFiltersForSession(): void {
     if (ctx) {
       const cur = readScopeFilters();
       const clamped = clampScopeToStoreAccess(ctx.storeAccess, cur);
-      if (
-        clamped.brand !== cur.brand ||
-        clamped.region !== cur.region ||
-        clamped.store !== cur.store
-      ) {
-        writeScopeFilters(clamped);
+      const nextStore = clamped.store || resolveDefaultSingleStoreId(clamped.store);
+      const next = { ...clamped, store: nextStore };
+      if (next.brand !== cur.brand || next.region !== cur.region || next.store !== cur.store) {
+        writeScopeFilters(next);
+      }
+    } else {
+      const cur = readScopeFilters();
+      if (!cur.store) {
+        writeScopeFilters({ ...cur, store: resolveDefaultSingleStoreId() });
       }
     }
     return;
@@ -339,6 +382,7 @@ export function refreshSessionOnMount(): void {
     }
   }
   loadChainBrandOrgForContext();
+  syncScopeFilterMetaForEmbeddedPages();
 }
 
 function buildScopeOptionsFromChainSnapshot(snapshot: ChainBrandOrgSnapshot): {
@@ -351,7 +395,7 @@ function buildScopeOptionsFromChainSnapshot(snapshot: ChainBrandOrgSnapshot): {
     ...snapshot.brands.map((b) => ({ value: b.merchantId, labelZh: b.name, labelEn: b.name })),
   ];
   const regionMap = new Map<string, ScopeOption>();
-  const stores: ScopeOption[] = [{ value: "", labelZh: "全部门店", labelEn: "All stores" }];
+  const stores: ScopeOption[] = [];
   for (const brand of snapshot.brands) {
     for (const store of brand.stores) {
       if (store.regionName) {
@@ -384,7 +428,7 @@ function cropScopeOptionsByPerspective(
 
   if (perspective === "brand") {
     const regionMap = new Map<string, ScopeOption>();
-    const stores: ScopeOption[] = [{ value: "", labelZh: "全部门店", labelEn: "All stores" }];
+    const stores: ScopeOption[] = [];
     for (const store of brand.stores) {
       if (store.regionName) {
         const key = store.regionName;
@@ -443,7 +487,7 @@ function buildBrandPerspectiveMultiBrandScopeOptions(
     : snapshot.brands.filter((b) => authorizedBrandIds.has(b.merchantId));
 
   const regionMap = new Map<string, ScopeOption>();
-  const stores: ScopeOption[] = [{ value: "", labelZh: "全部门店", labelEn: "All stores" }];
+  const stores: ScopeOption[] = [];
 
   for (const brand of relevantBrands) {
     for (const store of brand.stores) {
@@ -472,6 +516,15 @@ export function getScopedFilterOptions(): {
   regions: ScopeOption[];
   stores: ScopeOption[];
 } {
+  const withRosterStores = (result: {
+    brands: ScopeOption[];
+    regions: ScopeOption[];
+    stores: ScopeOption[];
+  }) => ({
+    ...result,
+    stores: mergeEmployeeRosterStoresIntoScopeOptions(result.stores).filter((o) => !!o.value),
+  });
+
   const chainOrg = isChainScopeMode() ? loadChainBrandOrgForContext() : null;
   const perspective = resolveChainDataPerspective();
   const base = chainOrg
@@ -482,21 +535,23 @@ export function getScopedFilterOptions(): {
         stores: getDemoScopeStores(),
       };
   const ctx = getUserSessionContext();
-  if (!ctx) return base;
+  if (!ctx) return withRosterStores(base);
 
   if (
     perspective === "brand" &&
     countAuthorizedBrands(ctx.storeAccess) > 1 &&
     chainOrg
   ) {
-    return buildBrandPerspectiveMultiBrandScopeOptions(
-      chainOrg,
-      ctx.storeAccess,
-      readScopeFilters(),
+    return withRosterStores(
+      buildBrandPerspectiveMultiBrandScopeOptions(
+        chainOrg,
+        ctx.storeAccess,
+        readScopeFilters(),
+      ),
     );
   }
 
-  return filterScopeOptionsForAccess(ctx.storeAccess, base.brands, base.regions, base.stores);
+  return withRosterStores(filterScopeOptionsForAccess(ctx.storeAccess, base.brands, base.regions, base.stores));
 }
 
 /** 业务页统一数据范围（集团 / 视角 / 品牌·门店 ID） */
@@ -735,15 +790,16 @@ export function formatScopeFilterLabel(
     const parts: string[] = [];
     if (brand) parts.push(scopeOptionLabel(brand, locale));
     const region = find(scoped.regions, state.region);
-    const store = find(scoped.stores, state.store);
+    const storeId = state.store || resolveDefaultSingleStoreId();
+    const store = find(scoped.stores, storeId);
     if (state.region && region) parts.push(scopeOptionLabel(region, locale));
-    if (state.store && store) parts.push(scopeOptionLabel(store, locale));
+    if (store) parts.push(scopeOptionLabel(store, locale));
     if (parts.length === 0) {
       return brand
-        ? `${scopeOptionLabel(brand, locale)} · ${locale === "en" ? "All stores" : "全部门店"}`
+        ? scopeOptionLabel(brand, locale)
         : locale === "en"
-          ? "Brand · All stores"
-          : "当前品牌 · 全部门店";
+          ? "Brand"
+          : "当前品牌";
     }
     return parts.join(locale === "en" ? " · " : " · ");
   }
@@ -751,14 +807,15 @@ export function formatScopeFilterLabel(
   const parts: string[] = [];
   const brand = find(scoped.brands, state.brand);
   const region = find(scoped.regions, state.region);
-  const store = find(scoped.stores, state.store);
+  const storeId = state.store || resolveDefaultSingleStoreId();
+  const store = find(scoped.stores, storeId);
 
   if (state.brand && brand) parts.push(scopeOptionLabel(brand, locale));
   if (state.region && region) parts.push(scopeOptionLabel(region, locale));
-  if (state.store && store) parts.push(scopeOptionLabel(store, locale));
+  if (store) parts.push(scopeOptionLabel(store, locale));
 
   if (parts.length === 0) {
-    return locale === "en" ? "All brands · All regions · All stores" : "全部品牌 · 全部区域 · 全部门店";
+    return locale === "en" ? "All brands · All regions" : "全部品牌 · 全部区域";
   }
   return parts.join(locale === "en" ? " · " : " · ");
 }
