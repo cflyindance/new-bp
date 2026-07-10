@@ -627,7 +627,7 @@
 
 .payroll-page .payroll-seg-table {
   width: 100%;
-  min-width: 42rem;
+  min-width: 52rem;
   border-collapse: collapse;
   font-size: 13px;
 }
@@ -862,35 +862,13 @@
   padding: 12px 16px 16px;
 }
 
-
-.payroll-page .payroll-ot-rates-row {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px 24px;
-}
-
-.payroll-page .payroll-ot-rates-field {
-  margin: 0;
-  min-width: 0;
-}
-
-.payroll-page .payroll-ot-rates-field .form-control {
-  max-width: 12rem;
-}
-
-@media (max-width: 640px) {
-  .payroll-page .payroll-ot-rates-row {
-    grid-template-columns: 1fr;
-  }
-}
-
 .payroll-page .payroll-sum-cards {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
 }
 
-@media (max-width: 720px) {
+@media (max-width: 960px) {
   .payroll-page .payroll-sum-cards {
     grid-template-columns: 1fr;
   }
@@ -909,6 +887,11 @@
 .payroll-page .payroll-sum-card--amount {
   border: 1px solid rgba(16, 185, 129, 0.2);
   background: linear-gradient(180deg, rgba(16, 185, 129, 0.07) 0%, var(--card-bg) 48px);
+}
+
+.payroll-page .payroll-sum-card--income {
+  border: 1px solid rgba(217, 119, 6, 0.22);
+  background: linear-gradient(180deg, rgba(245, 158, 11, 0.08) 0%, var(--card-bg) 48px);
 }
 
 .payroll-page .payroll-sum-card-header {
@@ -947,6 +930,12 @@
   color: #059669;
   background: rgba(16, 185, 129, 0.12);
   border: 1px solid rgba(16, 185, 129, 0.22);
+}
+
+.payroll-page .payroll-sum-card-badge--income {
+  color: #d97706;
+  background: rgba(245, 158, 11, 0.14);
+  border: 1px solid rgba(217, 119, 6, 0.24);
 }
 
 .payroll-page .payroll-sum-card-title {
@@ -1024,6 +1013,10 @@
 
 .payroll-page .payroll-sum-card--amount .payroll-sum-row.payroll-sum-total dd {
   color: #059669;
+}
+
+.payroll-page .payroll-sum-card--income .payroll-sum-row.payroll-sum-total dd {
+  color: #d97706;
 }
 
 .payroll-page .payroll-detail-print {

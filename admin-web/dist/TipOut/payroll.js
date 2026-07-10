@@ -435,7 +435,9 @@
         <th rowspan="2" scope="col" style="text-align:right"><span class="payroll-th-label">Rate<button type="button" class="payroll-field-help" data-field-help="seg-rate" aria-label="Rate">?</button></span></th>
         <th rowspan="2" scope="col" style="text-align:right"><span class="payroll-th-label">Regular<button type="button" class="payroll-field-help" data-field-help="seg-regular" aria-label="Regular">?</button></span></th>
         <th rowspan="2" scope="col" style="text-align:right"><span class="payroll-th-label">OT<button type="button" class="payroll-field-help" data-field-help="seg-ot" aria-label="OT">?</button></span></th>
+        <th rowspan="2" scope="col" style="text-align:right"><span class="payroll-th-label">${escapeHtml(T("manage.segOtRateLabel"))}<button type="button" class="payroll-field-help" data-field-help="seg-ot-rate" aria-label="${escapeHtml(T("manage.segOtRateLabel"))}">?</button></span></th>
         <th rowspan="2" scope="col" style="text-align:right"><span class="payroll-th-label">OT2<button type="button" class="payroll-field-help" data-field-help="seg-ot2" aria-label="OT2">?</button></span></th>
+        <th rowspan="2" scope="col" style="text-align:right"><span class="payroll-th-label">${escapeHtml(T("manage.segOt2RateLabel"))}<button type="button" class="payroll-field-help" data-field-help="seg-ot2-rate" aria-label="${escapeHtml(T("manage.segOt2RateLabel"))}">?</button></span></th>
       </tr>
       <tr>
         <th style="text-align:center;font-weight:400"><span class="payroll-th-label">In<button type="button" class="payroll-field-help" data-field-help="seg-in" aria-label="In">?</button></span></th>
@@ -523,6 +525,8 @@
 
   function appendManageSegmentDayRows(rowHtml, day, dayIdx, emp) {
     const dayRate = getDayRate(day, emp);
+    const dayOtRate = getDayOtRate(day, emp);
+    const dayOt2Rate = getDayOt2Rate(day, emp);
     const filledSlotIndexes = day.slots
       .map((sl, idx) => ({ sl, idx }))
       .filter((x) => hasSlotClock(x.sl))
@@ -556,7 +560,9 @@
         <td rowspan="${rowsForDay}" style="vertical-align:top"><input type="number" step="0.01" min="0" class="field-seg form-control" data-field="rate" value="${dayRate}" aria-label="Rate" /></td>
         <td rowspan="${rowsForDay}" style="vertical-align:top"><input type="number" step="0.01" class="field-seg form-control" data-field="reg" value="${day.reg}" aria-label="Regular" /></td>
         <td rowspan="${rowsForDay}" style="vertical-align:top"><input type="number" step="0.01" class="field-seg form-control" data-field="ot" value="${day.ot}" aria-label="OT" /></td>
+        <td rowspan="${rowsForDay}" style="vertical-align:top"><input type="number" step="0.01" min="0" class="field-seg form-control" data-field="ot-rate" value="${dayOtRate}" aria-label="${escapeHtml(T("manage.segOtRateLabel"))}" /></td>
         <td rowspan="${rowsForDay}" style="vertical-align:top"><input type="number" step="0.01" class="field-seg form-control" data-field="ot2" value="${day.ot2}" aria-label="OT2" /></td>
+        <td rowspan="${rowsForDay}" style="vertical-align:top"><input type="number" step="0.01" min="0" class="field-seg form-control" data-field="ot2-rate" value="${dayOt2Rate}" aria-label="${escapeHtml(T("manage.segOt2RateLabel"))}" /></td>
       </tr>`);
       } else {
         rowHtml.push(`<tr data-day-index="${dayIdx}" data-slot-index="${slotIdx}" data-row-order="${renderIdx}" data-primary="0">
@@ -1079,6 +1085,18 @@
     return Number(emp && emp.rate) || 0;
   }
 
+  function getDayOtRate(day, emp) {
+    const dayOtRate = day && day.otRate != null && day.otRate !== "" ? Number(day.otRate) : NaN;
+    if (Number.isFinite(dayOtRate) && dayOtRate >= 0) return dayOtRate;
+    return Number(emp && emp.otRate) || 0;
+  }
+
+  function getDayOt2Rate(day, emp) {
+    const dayOt2Rate = day && day.ot2Rate != null && day.ot2Rate !== "" ? Number(day.ot2Rate) : NaN;
+    if (Number.isFinite(dayOt2Rate) && dayOt2Rate >= 0) return dayOt2Rate;
+    return Number(emp && emp.ot2Rate) || 0;
+  }
+
   function sumSegmentPayAmounts(emp) {
     let regAmt = 0;
     let otAmt = 0;
@@ -1090,8 +1108,8 @@
       const ot = Number(day.ot) || 0;
       const ot2 = Number(day.ot2) || 0;
       regAmt += reg * rate;
-      otAmt += ot * (Number(emp.otRate) || 0);
-      ot2Amt += ot2 * (Number(emp.ot2Rate) || 0);
+      otAmt += ot * getDayOtRate(day, emp);
+      ot2Amt += ot2 * getDayOt2Rate(day, emp);
     });
     return {
       regAmt,
@@ -1126,12 +1144,19 @@
 
   function formatDetailRateSummary(emp) {
     const rates = new Set();
+    const otRates = new Set();
+    const ot2Rates = new Set();
     (emp.segments || []).forEach((raw) => {
-      rates.add(getDayRate(normalizeDay(raw), emp).toFixed(2));
+      const day = normalizeDay(raw);
+      rates.add(getDayRate(day, emp).toFixed(2));
+      otRates.add(getDayOtRate(day, emp).toFixed(2));
+      ot2Rates.add(getDayOt2Rate(day, emp).toFixed(2));
     });
-    const otText = fmtMoney(emp.otRate);
-    const ot2Text = fmtMoney(emp.ot2Rate);
     const regText = rates.size <= 1 ? fmtMoney(emp.rate) : [...rates].map((r) => fmtMoney(Number(r))).join(", ");
+    const otText =
+      otRates.size <= 1 ? fmtMoney(emp.otRate) : [...otRates].map((r) => fmtMoney(Number(r))).join(", ");
+    const ot2Text =
+      ot2Rates.size <= 1 ? fmtMoney(emp.ot2Rate) : [...ot2Rates].map((r) => fmtMoney(Number(r))).join(", ");
     return `R: ${regText}${DETAIL_SUMMARY_SEP}OT: ${otText}${DETAIL_SUMMARY_SEP}OT2: ${ot2Text}`;
   }
 
@@ -1153,15 +1178,19 @@
     return `T: ${fmtMoney(total)}${DETAIL_SUMMARY_SEP}${formatDetailLabeledTriplet(reg, ot, ot2)}`;
   }
 
-  /** 每日一条：3 行 In/Out + 当日 Meal / Rate / Reg / OT / OT2 */
+  /** 每日一条：3 行 In/Out + 当日 Meal / Rate / Reg / OT / OT Rate / OT2 / OT2 Rate */
   function normalizeDay(d) {
     const slotRows = Number(d && d.slotRows);
     const rateRaw = d && d.rate != null && d.rate !== "" ? Number(d.rate) : null;
+    const otRateRaw = d && d.otRate != null && d.otRate !== "" ? Number(d.otRate) : null;
+    const ot2RateRaw = d && d.ot2Rate != null && d.ot2Rate !== "" ? Number(d.ot2Rate) : null;
     const o = {
       date: d && d.date != null ? d.date : "",
       meal: d && d.meal != null ? d.meal : "",
       role: d && d.role != null ? String(d.role).trim() : "",
       rate: Number.isFinite(rateRaw) && rateRaw >= 0 ? rateRaw : null,
+      otRate: Number.isFinite(otRateRaw) && otRateRaw >= 0 ? otRateRaw : null,
+      ot2Rate: Number.isFinite(ot2RateRaw) && ot2RateRaw >= 0 ? ot2RateRaw : null,
       reg: Number(d && d.reg) || 0,
       ot: Number(d && d.ot) || 0,
       ot2: Number(d && d.ot2) || 0,
@@ -1202,6 +1231,8 @@
       ot: s.ot ?? 0,
       ot2: s.ot2 ?? 0,
       rate: s.rate ?? null,
+      otRate: s.otRate ?? null,
+      ot2Rate: s.ot2Rate ?? null,
     });
   }
 
@@ -1745,6 +1776,8 @@
               ot: Number(day.ot) || 0,
               ot2: Number(day.ot2) || 0,
               rate: getDayRate(day, emp),
+              otRate: getDayOtRate(day, emp),
+              ot2Rate: getDayOt2Rate(day, emp),
               slots: day.slots.map((s) => ({ in: s.in || "", out: s.out || "" })),
             };
           })
@@ -2765,8 +2798,8 @@
     const ot2Num = Number(day.ot2) || 0;
     const hoursNum = regNum + otNum + ot2Num;
     const rate = getDayRate(day, emp);
-    const otRate = Number(emp && emp.otRate) || 0;
-    const ot2Rate = Number(emp && emp.ot2Rate) || 0;
+    const otRate = getDayOtRate(day, emp);
+    const ot2Rate = getDayOt2Rate(day, emp);
     const regAmtNum = regNum * rate;
     const otAmtNum = otNum * otRate;
     const ot2AmtNum = ot2Num * ot2Rate;
@@ -2784,7 +2817,9 @@
     const rateCell = `<td class="payroll-detail-num" rowspan="${rowsForDay}">${fmtMoney(rate)}</td>`;
     const regCell = `<td class="payroll-detail-num" rowspan="${rowsForDay}">${fmtMoney(regNum)}</td>`;
     const otCell = `<td class="payroll-detail-num" rowspan="${rowsForDay}">${fmtMoney(otNum)}</td>`;
+    const otRateCell = `<td class="payroll-detail-num" rowspan="${rowsForDay}">${fmtMoney(otRate)}</td>`;
     const ot2Cell = `<td class="payroll-detail-num" rowspan="${rowsForDay}">${fmtMoney(ot2Num)}</td>`;
+    const ot2RateCell = `<td class="payroll-detail-num" rowspan="${rowsForDay}">${fmtMoney(ot2Rate)}</td>`;
     const hoursCell = `<td class="payroll-detail-num" rowspan="${rowsForDay}" style="font-weight:600">${fmtMoney(hoursNum)}</td>`;
     const regAmtCell = `<td class="payroll-detail-num" rowspan="${rowsForDay}">${fmtMoney(regAmtNum)}</td>`;
     const otAmtCell = `<td class="payroll-detail-num" rowspan="${rowsForDay}">${fmtMoney(otAmtNum)}</td>`;
@@ -2802,7 +2837,9 @@
       ${rateCell}
       ${regCell}
       ${otCell}
+      ${otRateCell}
       ${ot2Cell}
+      ${ot2RateCell}
       ${hoursCell}
       ${regAmtCell}
       ${otAmtCell}
@@ -2842,8 +2879,8 @@
       const ot2Num = Number(day.ot2) || 0;
       const hoursNum = regNum + otNum + ot2Num;
       const regAmtNum = regNum * getDayRate(day, emp);
-      const otAmtNum = otNum * (Number(emp.otRate) || 0);
-      const ot2AmtNum = ot2Num * (Number(emp.ot2Rate) || 0);
+      const otAmtNum = otNum * getDayOtRate(day, emp);
+      const ot2AmtNum = ot2Num * getDayOt2Rate(day, emp);
       const amountNum = regAmtNum + otAmtNum + ot2AmtNum;
       const weekIdx = resolveWeekIndex(day.date, periodStartDate, dayIdx);
       const wk = weeks[weekIdx];
@@ -2882,7 +2919,9 @@
                   <th rowspan="2" style="text-align:right">${escapeHtml(T("detail.colRate"))}</th>
                   <th rowspan="2" style="text-align:right">Regular (h)</th>
                   <th rowspan="2" style="text-align:right">OT (h)</th>
+                  <th rowspan="2" style="text-align:right">${escapeHtml(T("manage.segOtRateLabel"))}</th>
                   <th rowspan="2" style="text-align:right">OT2 (h)</th>
+                  <th rowspan="2" style="text-align:right">${escapeHtml(T("manage.segOt2RateLabel"))}</th>
                   <th rowspan="2" style="text-align:right">Hours (h)</th>
                   <th colspan="3" style="text-align:center">${escapeHtml(T("detail.colAmountGroup"))}</th>
                   <th rowspan="2" style="text-align:right">${escapeHtml(T("detail.colTotalAmt"))}</th>
@@ -2937,8 +2976,10 @@
       const hoursNum = regNum + otNum + ot2Num;
       const regAmtNum = regNum * getDayRate(day, emp);
       const dayRate = getDayRate(day, emp);
-      const otAmtNum = otNum * (Number(emp.otRate) || 0);
-      const ot2AmtNum = ot2Num * (Number(emp.ot2Rate) || 0);
+      const dayOtRate = getDayOtRate(day, emp);
+      const dayOt2Rate = getDayOt2Rate(day, emp);
+      const otAmtNum = otNum * dayOtRate;
+      const ot2AmtNum = ot2Num * dayOt2Rate;
       const amountNum = regAmtNum + otAmtNum + ot2AmtNum;
       const weekIdx = resolveWeekIndex(day.date, periodStartDate, dayIdx);
       const wk = weeks[weekIdx];
@@ -2963,6 +3004,8 @@
           out: cout,
           meal: slotIdx === 0 ? String(day.meal || "").trim() : "",
           rate: slotIdx === 0 ? dayRate : "",
+          otRate: slotIdx === 0 ? dayOtRate : "",
+          ot2Rate: slotIdx === 0 ? dayOt2Rate : "",
           reg: slotIdx === 0 ? regNum : "",
           ot: slotIdx === 0 ? otNum : "",
           ot2: slotIdx === 0 ? ot2Num : "",
@@ -3094,12 +3137,12 @@ body{margin:0;padding:24px;background:#fff;}
     if (ssnInput) ssnInput.value = resolveEmployeeSsn(editEmp);
     const hireInput = $("#field-hire-date");
     if (hireInput) hireInput.value = mdyToIsoDateInput(resolveEmployeeHireDate(editEmp));
-    $("#field-ot-rate").value = emp.otRate;
-    $("#field-ot2-rate").value = emp.ot2Rate;
 
     editEmp.segments = editEmp.segments.map((seg) => {
       const day = migrateLegacySegmentToDay(seg);
       if (day.rate == null) day.rate = Number(editEmp.rate) || 0;
+      if (day.otRate == null) day.otRate = Number(editEmp.otRate) || 0;
+      if (day.ot2Rate == null) day.ot2Rate = Number(editEmp.ot2Rate) || 0;
       return day;
     });
     ensureManageBiweeklySegments(editEmp, period);
@@ -3178,6 +3221,8 @@ body{margin:0;padding:24px;background:#fff;}
           const regEl = row.querySelector('.field-seg[data-field="reg"]');
           const otEl = row.querySelector('.field-seg[data-field="ot"]');
           const ot2El = row.querySelector('.field-seg[data-field="ot2"]');
+          const otRateEl = row.querySelector('.field-seg[data-field="ot-rate"]');
+          const ot2RateEl = row.querySelector('.field-seg[data-field="ot2-rate"]');
           const rateEl = row.querySelector('.field-seg[data-field="rate"]');
           if (dateEl) day.date = dateEl.value;
           if (mealEl) day.meal = mealEl.value;
@@ -3185,6 +3230,8 @@ body{margin:0;padding:24px;background:#fff;}
           if (regEl) day.reg = parseFloat(regEl.value) || 0;
           if (otEl) day.ot = parseFloat(otEl.value) || 0;
           if (ot2El) day.ot2 = parseFloat(ot2El.value) || 0;
+          if (otRateEl) day.otRate = parseFloat(otRateEl.value) || 0;
+          if (ot2RateEl) day.ot2Rate = parseFloat(ot2RateEl.value) || 0;
         }
       });
       day.slotRows = Math.max(1, dayRows.length);
@@ -3234,6 +3281,18 @@ body{margin:0;padding:24px;background:#fff;}
     $("#sum-ot-amt").textContent = fmtMoney(otAmt);
     $("#sum-ot2-amt").textContent = fmtMoney(ot2Amt);
     $("#sum-total-amt").textContent = fmtMoney(totalAmt);
+
+    const svcw = Number(emp.adjustments && emp.adjustments.svcw) || 0;
+    const tips = Number(emp.adjustments && emp.adjustments.tips) || 0;
+    const totalIncome = totalAmt + svcw + tips;
+    const attendanceIncomeEl = $("#sum-attendance-income");
+    const svcwIncomeEl = $("#sum-svcw-income");
+    const tipsIncomeEl = $("#sum-tips-income");
+    const totalIncomeEl = $("#sum-total-income");
+    if (attendanceIncomeEl) attendanceIncomeEl.textContent = fmtMoney(totalAmt);
+    if (svcwIncomeEl) svcwIncomeEl.textContent = fmtMoney(svcw);
+    if (tipsIncomeEl) tipsIncomeEl.textContent = fmtMoney(tips);
+    if (totalIncomeEl) totalIncomeEl.textContent = fmtMoney(totalIncome);
 
     syncDetailMetaFields(emp, period);
     syncDetailSignFooter(emp);

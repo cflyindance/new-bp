@@ -16,9 +16,12 @@ const preserveNames = new Set([
   "embedded-shell.css",
   "embedded-mock-api.js",
   "embedded-block-icons.js",
+  "embedded-page-component-groups.js",
+  "embedded-default-product-binding.js",
   "embedded-viewport-fit.js",
   "embedded-header-more.js",
   "embedded-resolution-header.js",
+  "embedded-product-binding.js",
   "images",
 ]);
 
@@ -104,6 +107,9 @@ const indexHtml = `<!doctype html>
     <div id="root"></div>
     <script src="./embedded-header-more.js"></script>
     <script src="./embedded-resolution-header.js"></script>
+    <script src="./embedded-page-component-groups.js"></script>
+    <script src="./embedded-default-product-binding.js"></script>
+    <script src="./embedded-product-binding.js"></script>
   </body>
 </html>
 `;
@@ -113,5 +119,5 @@ fs.writeFileSync(path.join(targetDir, "index.html"), indexHtml, "utf8");
 console.log(`[sync-emenu-pro] Synced from: ${sourceDist}`);
 console.log(`[sync-emenu-pro] Target: ${targetDir}`);
 console.log(
-  "[sync-emenu-pro] Preserved: embedded-shell.css, embedded-mock-api.js, embedded-block-icons.js, embedded-viewport-fit.js, embedded-header-more.js, embedded-resolution-header.js, images/"
+  "[sync-emenu-pro] Preserved: embedded-shell.css, embedded-mock-api.js, embedded-block-icons.js, embedded-page-component-groups.js, embedded-default-product-binding.js, embedded-viewport-fit.js, embedded-header-more.js, embedded-resolution-header.js, embedded-product-binding.js, images/"
 );

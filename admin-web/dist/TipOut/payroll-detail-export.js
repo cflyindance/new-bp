@@ -190,7 +190,7 @@ function exportPayrollDetailCSV(data) {
 
   lines.push("");
 
-  lines.push("Date,In,Out,Meal,Rate,Regular (h),OT (h),OT2 (h),Hours (h),Regular Amount,OT Amount,OT2 Amount,Total Amount");
+  lines.push("Date,In,Out,Meal,Rate,Regular (h),OT (h),Overtime Rate OT,OT2 (h),Overtime Rate OT2,Hours (h),Regular Amount,OT Amount,OT2 Amount,Total Amount");
 
 
 
@@ -214,7 +214,11 @@ function exportPayrollDetailCSV(data) {
 
         num(row.ot),
 
+        num(row.otRate),
+
         num(row.ot2),
+
+        num(row.ot2Rate),
 
         num(row.hours),
 
