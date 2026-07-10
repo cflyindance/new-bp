@@ -773,7 +773,7 @@
     var message = "已添加 " + created + " 个组件";
     if (replaced) message += "，替换 " + replaced + " 个冲突组件";
     showToast(message);
-    renderModal();
+    closeModal();
   }
 
   function batchRemoveComponents() {
