@@ -98,13 +98,13 @@ const indexHtml = `<!doctype html>
     </script>
     <link rel="stylesheet" href="./embedded-shell.css" />
     <script src="./embedded-mock-api.js"></script>
-    <script src="./embedded-block-icons.js"></script>
     <script src="./embedded-viewport-fit.js"></script>
     <script type="module" crossorigin src="./assets/${entryJs}"></script>
     <link rel="stylesheet" crossorigin href="./assets/${entryCss}">
   </head>
   <body>
     <div id="root"></div>
+    <script src="./embedded-block-icons.js"></script>
     <script src="./embedded-header-more.js"></script>
     <script src="./embedded-resolution-header.js"></script>
     <script src="./embedded-page-component-groups.js"></script>

@@ -494,6 +494,11 @@
   var BLOCK_ICON_FILES = {
     "addToCart.png": "addToCart.svg",
     "soldOut.png": "soldOut.svg",
+    "video.png": "video.svg",
+    "carousel.png": "carousel.svg",
+    "dishName.png": "dishName.svg",
+    "salePrice.png": "salePrice.svg",
+    "memberPrice.png": "memberPrice.svg",
     "shoppingCart.png": "shoppingCart.svg",
     "home.png": "home.svg",
     "memberLogin.png": "memberLogin.svg",
@@ -504,6 +509,7 @@
     "changePartySize.png": "changePartySize.svg",
     "switchTable.png": "switchTable.svg",
     "memberPriceIcon.png": "memberPriceIcon.svg",
+    "batteryWifi.png": "batteryWifi.svg",
     "expand_vertical.png": "expand_vertical.svg",
     "narrow_vertical.png": "narrow_vertical.svg",
   };
@@ -515,7 +521,7 @@
 
     var fileName = match[1];
     var mapped = BLOCK_ICON_FILES[fileName] || fileName.replace(/\.png$/i, ".svg");
-    return new URL("./images/" + mapped, window.location.href).href;
+    return new URL("./images/" + mapped + "?v=2", window.location.href).href;
   }
 
   function resolveMockImageSrc(src) {

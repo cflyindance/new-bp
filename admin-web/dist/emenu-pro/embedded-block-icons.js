@@ -29,21 +29,42 @@
   };
 
   function iconUrl(name) {
-    return new URL("./images/" + name + ".svg", window.location.href).href;
+    return new URL("./images/" + name + ".svg?v=2", window.location.href).href;
+  }
+
+  var ICON_DECOR_VERSION = "4";
+
+  function isDecorated(el) {
+    return !!el.querySelector(".emenu-block-item-icon-wrap");
+  }
+
+  function readLabel(el) {
+    var labelEl = el.querySelector(".emenu-block-item-label");
+    if (labelEl) return labelEl.textContent.trim();
+    return el.textContent.trim();
   }
 
   function decorateBlockItem(el) {
-    if (!el || el.dataset.iconReady === "1") return;
+    if (!el || !el.id || el.id.indexOf("blockItem-") !== 0) return;
 
     var component = el.id.replace(/^blockItem-/, "");
     var iconName = COMPONENT_ICONS[component];
     if (!iconName) return;
 
-    el.dataset.iconReady = "1";
+    if (isDecorated(el)) {
+      el.dataset.iconReady = ICON_DECOR_VERSION;
+      return;
+    }
+
+    var labelText = readLabel(el);
+
     el.classList.add("emenu-block-item-with-icon");
     if (component === "CountDown" || component === "OrderInterval") {
       el.classList.add("emenu-block-item-matched-icon");
     }
+
+    var wrap = document.createElement("span");
+    wrap.className = "emenu-block-item-icon-wrap emenu-icon-circle-wrap";
 
     var img = document.createElement("img");
     img.className = "emenu-block-item-icon";
@@ -53,11 +74,13 @@
 
     var label = document.createElement("span");
     label.className = "emenu-block-item-label";
-    label.textContent = el.textContent.trim();
+    label.textContent = labelText;
 
+    wrap.appendChild(img);
     el.textContent = "";
-    el.appendChild(img);
+    el.appendChild(wrap);
     el.appendChild(label);
+    el.dataset.iconReady = ICON_DECOR_VERSION;
   }
 
   function scanBlockItems() {
@@ -67,12 +90,16 @@
     }
   }
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", scanBlockItems);
-  } else {
+  function boot() {
     scanBlockItems();
+    var observer = new MutationObserver(scanBlockItems);
+    observer.observe(document.body, { childList: true, subtree: true });
+    window.setInterval(scanBlockItems, 1500);
   }
 
-  var observer = new MutationObserver(scanBlockItems);
-  observer.observe(document.body, { childList: true, subtree: true });
+  if (document.body) {
+    boot();
+  } else {
+    document.addEventListener("DOMContentLoaded", boot);
+  }
 })();

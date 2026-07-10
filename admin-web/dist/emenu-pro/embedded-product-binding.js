@@ -129,7 +129,7 @@
   }
 
   function iconUrl(name) {
-    return new URL("./images/" + name + ".svg", window.location.href).href;
+    return new URL("./images/" + name + ".svg?v=2", window.location.href).href;
   }
 
   function findReduxStore() {
@@ -588,9 +588,10 @@
         '" ' +
         (checked ? "checked" : "") +
         " />" +
+        '<span class="emenu-icon-circle-wrap emenu-product-binding-row-icon-wrap">' +
         '<img class="emenu-product-binding-row-icon" alt="" src="' +
         iconUrl(meta.icon) +
-        '" />' +
+        '" /></span>' +
         '<span class="emenu-product-binding-row-label">' +
         meta.label +
         "</span>" +
