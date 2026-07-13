@@ -75,7 +75,17 @@
         </div>
 
         <div id="payroll-store-bar" class="payroll-store-bar no-print">
-          <div class="payroll-store-bar-inner payroll-store-bar-inner--actions-only">
+          <div class="payroll-store-bar-inner">
+            <div class="payroll-store-bar-field">
+              <label class="payroll-store-filter-label" for="payroll-store-filter">门店</label>
+              <select
+                id="payroll-store-filter"
+                class="form-control payroll-store-filter-select"
+                aria-label="门店筛选"
+              >
+                <option value="">请选择门店</option>
+              </select>
+            </div>
             <div class="payroll-store-bar-actions">
               <button type="button" class="btn" id="btn-export-batch-adp" data-action="export-batch-adp" disabled>批量导出 ADP</button>
             </div>

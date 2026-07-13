@@ -1,15 +1,14 @@
 /**
  * 配置保存后自动触发模拟下发（静默，无确认/进度弹窗）
+ * 每次操作独立产生一条下发记录。
  */
 import { resolveDomainsForPath, resolveOriginNavFromPath } from "./deployment-config-domains";
-import { resolveDeploymentScopeOptions } from "./deployment-mock-devices";
+import { consumeNextConfigChange } from "./deployment-change-buffer";
+import { resolveAutoDeploymentScope } from "./deployment-mock-devices";
 import { createDeploymentFromPath } from "./deployment-store";
 import { readAppHashPath } from "./app-routes";
+import type { DeploymentConfigChange, DeploymentScopeOption } from "./deployment-types";
 
-const DEBOUNCE_MS = 800;
-
-let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-let pendingPath: string | null = null;
 let bound = false;
 
 function scheduleIdleTask(task: () => void): void {
@@ -29,10 +28,12 @@ export function shouldAutoDeployForPath(path: string): boolean {
   return false;
 }
 
-function runAutoDeployment(path: string): void {
+function runAutoDeployment(
+  path: string,
+  scope: DeploymentScopeOption,
+  change: DeploymentConfigChange,
+): void {
   if (!shouldAutoDeployForPath(path)) return;
-  const scope = resolveDeploymentScopeOptions()[0];
-  if (!scope) return;
   const originNav = resolveOriginNavFromPath(path);
   createDeploymentFromPath(
     path,
@@ -42,27 +43,37 @@ function runAutoDeployment(path: string): void {
     scope.brandName,
     originNav,
     "auto",
+    [change],
   );
 }
 
-/** 配置已保存，调度自动下发（可指定页面路径，默认当前 hash 路径） */
+function resolveDeploymentPath(change: DeploymentConfigChange, explicitPath?: string): string {
+  const current = readAppHashPath();
+  const base = change.settingsPath ?? explicitPath;
+  if (base && (current === base || current.startsWith(`${base}/`))) {
+    return current;
+  }
+  return base ?? current;
+}
+
+/** 配置已保存，立即调度一次下发（每次操作一条记录） */
 export function notifyConfigSaved(path?: string): void {
-  const p = path ?? readAppHashPath();
-  pendingPath = p;
-  if (debounceTimer) clearTimeout(debounceTimer);
-  debounceTimer = setTimeout(() => {
-    debounceTimer = null;
-    const target = pendingPath;
-    pendingPath = null;
-    if (target) scheduleIdleTask(() => runAutoDeployment(target));
-  }, DEBOUNCE_MS);
+  const change = consumeNextConfigChange();
+  if (!change) return;
+
+  const p = resolveDeploymentPath(change, path);
+  const scope = resolveAutoDeploymentScope();
+  if (!scope) return;
+
+  scheduleIdleTask(() => runAutoDeployment(p, scope, change));
 }
 
 export function bindDeploymentAutoTrigger(): void {
   if (bound) return;
   bound = true;
 
-  window.addEventListener("menusifu:module-setting-changed", () => {
-    notifyConfigSaved();
+  window.addEventListener("menusifu:module-setting-changed", (e) => {
+    const detail = (e as CustomEvent<{ settingsPath?: string }>).detail;
+    notifyConfigSaved(detail?.settingsPath);
   });
 }

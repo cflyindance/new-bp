@@ -63,8 +63,19 @@
   <div class="flex min-h-screen flex-col">
     <header class="flex-shrink-0 border-b border-gray-200 bg-white px-4 py-3 sm:px-6">
       <div class="flex items-center justify-between gap-4">
-        <a id="backLink" href="marketing-ads-list.html" class="text-sm text-gray-600 hover:text-primary">返回</a>
-        <h1 class="text-base font-semibold text-gray-900 sm:text-lg">海报 Pro 设置</h1>
+        <div class="flex min-w-0 flex-1 flex-wrap items-center gap-3">
+          <div id="posterStoreFilter" class="flex h-9 shrink-0 items-center gap-2 rounded-md border border-gray-300 bg-white px-3" hidden>
+            <label for="poster-store-filter" class="shrink-0 text-sm text-gray-500">门店</label>
+            <select
+              id="poster-store-filter"
+              class="h-8 min-w-[10rem] max-w-[16rem] border-0 bg-transparent text-sm text-gray-900 focus:outline-none focus:ring-0"
+              aria-label="门店筛选"
+            >
+              <option value="">请选择门店</option>
+            </select>
+          </div>
+          <h1 class="text-base font-semibold text-gray-900 sm:text-lg">海报 Pro 设置</h1>
+        </div>
         <div class="flex items-center gap-2">
           <button type="button" id="deactivateBtn" class="rounded-md border border-red-200 bg-white px-3 py-1.5 text-sm text-red-600 hover:bg-red-50">停用</button>
           <button type="button" id="saveBtn" class="rounded-md bg-brand px-3 py-1.5 text-sm font-medium text-gray-900 hover:bg-brand-dark hover:text-white">保存</button>
@@ -164,6 +175,7 @@
     </main>
   </div>
 
+  <script src="../TipOut/global-scope-filter.js"></script>
   <script src="assets/marketing-poster-pro-store.js"></script>
   <script>
     (function () {
@@ -180,12 +192,116 @@
       var bgPlaceholder = document.getElementById("bgPlaceholder");
       var propsPanel = document.getElementById("propsPanel");
       var palettePanel = document.getElementById("palettePanel");
+      var posterStoreFilter = document.getElementById("posterStoreFilter");
+      var posterStoreSelect = document.getElementById("poster-store-filter");
+      var saveBtn = document.getElementById("saveBtn");
+      var deactivateBtn = document.getElementById("deactivateBtn");
 
       function scaleX() { return canvasEl.clientWidth / CW; }
       function scaleY() { return canvasEl.clientHeight / CH; }
 
       function escapeHtml(s) {
         return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+      }
+
+      function shouldShowPosterStoreFilter() {
+        return !!(S.usesInPageStorePicker && S.usesInPageStorePicker());
+      }
+
+      function reloadStateFromStore() {
+        state = S.readState();
+        selectedId = null;
+        renderAll();
+      }
+
+      function syncPosterStoreFilterUi() {
+        if (!posterStoreFilter || !posterStoreSelect) return;
+        var show = shouldShowPosterStoreFilter();
+        posterStoreFilter.hidden = !show;
+        if (!show) {
+          if (saveBtn) saveBtn.disabled = false;
+          if (deactivateBtn) deactivateBtn.disabled = false;
+          return;
+        }
+        var options =
+          window.TipOutGlobalScopeFilter && typeof TipOutGlobalScopeFilter.listScopedStoreOptions === "function"
+            ? TipOutGlobalScopeFilter.listScopedStoreOptions()
+            : [];
+        var scoped =
+          window.TipOutGlobalScopeFilter && typeof TipOutGlobalScopeFilter.readGlobalScopeFilter === "function"
+            ? TipOutGlobalScopeFilter.readGlobalScopeFilter()
+            : { storeId: "", storeLabel: "", isAllStores: true };
+
+        if (!options.length) {
+          posterStoreSelect.innerHTML = '<option value="">暂无可用门店</option>';
+          posterStoreSelect.value = "";
+          if (saveBtn) saveBtn.disabled = true;
+          if (deactivateBtn) deactivateBtn.disabled = true;
+          return;
+        }
+
+        posterStoreSelect.innerHTML = options
+          .map(function (o) {
+            return (
+              '<option value="' +
+              escapeHtml(o.value) +
+              '">' +
+              escapeHtml(o.labelZh || o.value) +
+              "</option>"
+            );
+          })
+          .join("");
+
+        var selected =
+          scoped.storeId && options.some(function (o) { return o.value === scoped.storeId; })
+            ? scoped.storeId
+            : options[0].value;
+
+        posterStoreSelect.value = selected;
+        if (saveBtn) saveBtn.disabled = !selected;
+        if (deactivateBtn) deactivateBtn.disabled = !selected;
+
+        if (selected && selected !== scoped.storeId) {
+          var opt = options.filter(function (o) { return o.value === selected; })[0];
+          var label = opt ? String(opt.labelZh || opt.value) : selected;
+          if (
+            window.TipOutGlobalScopeFilter &&
+            typeof TipOutGlobalScopeFilter.writeGlobalStoreFilter === "function"
+          ) {
+            TipOutGlobalScopeFilter.writeGlobalStoreFilter(selected, label);
+          }
+        }
+      }
+
+      function bindPosterStoreFilter() {
+        if (!posterStoreSelect || posterStoreSelect.dataset.bound === "1") return;
+        posterStoreSelect.dataset.bound = "1";
+        posterStoreSelect.addEventListener("change", function () {
+          var storeId = posterStoreSelect.value;
+          if (!storeId) {
+            syncPosterStoreFilterUi();
+            reloadStateFromStore();
+            return;
+          }
+          var opt = posterStoreSelect.options[posterStoreSelect.selectedIndex];
+          var label = opt ? String(opt.textContent || "").trim() : "";
+          if (
+            window.TipOutGlobalScopeFilter &&
+            typeof TipOutGlobalScopeFilter.writeGlobalStoreFilter === "function"
+          ) {
+            TipOutGlobalScopeFilter.writeGlobalStoreFilter(storeId, label);
+          }
+          reloadStateFromStore();
+        });
+        if (
+          window.TipOutGlobalScopeFilter &&
+          typeof TipOutGlobalScopeFilter.bindGlobalScopeFilterListener === "function"
+        ) {
+          TipOutGlobalScopeFilter.bindGlobalScopeFilterListener(function () {
+            syncPosterStoreFilterUi();
+            reloadStateFromStore();
+          });
+        }
       }
 
       function findComponent(id) {
@@ -456,27 +572,29 @@
       });
 
       document.getElementById("saveBtn").addEventListener("click", function () {
+        if (S.requiresStoreSelection && S.requiresStoreSelection()) {
+          window.alert("请先选择门店");
+          return;
+        }
         applyPropsFromPanel();
         S.writeState(state);
         window.alert("海报 Pro 配置已保存");
       });
 
       document.getElementById("deactivateBtn").addEventListener("click", function () {
+        if (S.requiresStoreSelection && S.requiresStoreSelection()) {
+          window.alert("请先选择门店");
+          return;
+        }
         state.active = !state.active;
         updateDeactivateBtn();
         S.writeState(state);
       });
 
-      var backLink = document.getElementById("backLink");
-      if (backLink) {
-        var embedded = new URLSearchParams(location.search).get("embedded");
-        if (embedded === "1" || embedded === "true") {
-          backLink.href = "marketing-ads-list.html?embedded=1";
-        }
-      }
-
       window.addEventListener("resize", renderComponents);
-      renderAll();
+      bindPosterStoreFilter();
+      syncPosterStoreFilterUi();
+      reloadStateFromStore();
     })();
   </script>
 </body>

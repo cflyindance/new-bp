@@ -86,18 +86,17 @@ function rollupItem(item: DeploymentItem): void {
     return;
   }
   const allSuccess = targets.every((t) => t.status === "success");
-  const anySuccess = targets.some((t) => t.status === "success");
   const allTerminal = targets.every((t) => ["success", "failed", "offline"].includes(t.status));
 
   if (!allTerminal) return;
 
   if (allSuccess) {
     item.status = "success";
-  } else if (!anySuccess) {
-    item.status = "failed";
-    item.errorMessage = targets.find((t) => t.errorDetail)?.errorDetail;
   } else {
-    item.status = "success";
+    item.status = "failed";
+    item.errorMessage =
+      targets.find((t) => t.errorDetail)?.errorDetail ??
+      (targets.some((t) => t.status === "offline") ? "部分终端离线" : "部分终端同步失败");
   }
   item.completedAt = new Date().toISOString();
 }

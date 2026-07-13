@@ -63,6 +63,17 @@
           <button type="button" class="btn btn-primary" id="btn-add-employee">新增员工</button>
         </div>
 
+        <div class="employees-store-filter" id="employeesStoreFilter" hidden>
+          <label class="employees-store-filter-label" for="employees-store-select">门店筛选</label>
+          <select
+            id="employees-store-select"
+            class="employees-store-filter-select"
+            aria-label="门店筛选"
+          >
+            <option value="">请选择门店</option>
+          </select>
+        </div>
+
         <div class="card">
           <div class="card-body employees-table-wrap">
             <table class="data-table employees-table">
@@ -113,9 +124,10 @@
                 <input type="text" id="field-name" class="form-control" required autocomplete="name" />
               </div>
               <div class="form-group form-group-full">
-                <label class="form-label" for="field-store-display">门店</label>
-                <input type="hidden" id="field-store" value="" />
-                <input type="text" id="field-store-display" class="form-control" readonly tabindex="-1" />
+                <label class="form-label" for="field-store">门店</label>
+                <select id="field-store" class="form-control" aria-label="选择门店">
+                  <option value="">请选择门店</option>
+                </select>
               </div>
               <div class="form-group form-group-full employees-role-form-group">
                 <label class="form-label" for="field-role-trigger">岗位</label>

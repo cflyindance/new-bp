@@ -2220,12 +2220,17 @@
   }
 
   function filterEmployeesByStore(list, storeFilter) {
-    if (window.TipOutGlobalScopeFilter && typeof TipOutGlobalScopeFilter.filterRosterByGlobalScope === "function") {
-      return TipOutGlobalScopeFilter.filterRosterByGlobalScope(list);
-    }
+    if (!Array.isArray(list)) return [];
     const active = String(storeFilter || "").trim();
-    if (!active || !Array.isArray(list)) return list || [];
-    return list.filter((e) => String((e && e.store) || "").trim() === active);
+    if (!active) return list;
+    const key = active.toLowerCase();
+    return list.filter((e) => {
+      const s = String((e && e.store) || "")
+        .trim()
+        .toLowerCase();
+      if (!s) return false;
+      return s === key || s.indexOf(key) !== -1 || key.indexOf(s) !== -1;
+    });
   }
 
   function getEmployeesForActiveStore(periodId) {
@@ -2235,13 +2240,90 @@
   }
 
   function syncEmployeeStoreFilterControls(employeeList) {
-    resolveEmployeeStoreFilter(employeeList);
+    const select = $("#payroll-store-filter");
+    const active = resolveEmployeeStoreFilter(employeeList);
+    if (!select) return;
+
+    const stores = getPayrollStoreOptions(employeeList);
+    if (
+      window.TipOutGlobalScopeFilter &&
+      typeof TipOutGlobalScopeFilter.listScopedStoreOptions === "function"
+    ) {
+      TipOutGlobalScopeFilter.listScopedStoreOptions().forEach((o) => {
+        const label = String((o && (o.labelZh || o.value)) || "").trim();
+        if (label && stores.indexOf(label) === -1) stores.push(label);
+      });
+    }
+
+    const prev = select.value;
+    select.innerHTML =
+      stores.map((s) => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join("") ||
+      '<option value="">请选择门店</option>';
+    const next =
+      active && stores.indexOf(active) !== -1
+        ? active
+        : prev && stores.indexOf(prev) !== -1
+          ? prev
+          : stores[0] || "";
+    select.value = next;
+    state.employeeStoreFilter = next;
+
+    if (next && (!active || active !== next)) {
+      if (
+        window.TipOutGlobalScopeFilter &&
+        typeof TipOutGlobalScopeFilter.writeGlobalStoreFilter === "function"
+      ) {
+        let storeId = "";
+        let storeLabel = next;
+        if (typeof TipOutGlobalScopeFilter.listScopedStoreOptions === "function") {
+          const hit = TipOutGlobalScopeFilter.listScopedStoreOptions().find((o) => {
+            const label = String((o && (o.labelZh || o.value)) || "").trim();
+            return label === next || String(o.value || "") === next;
+          });
+          if (hit) {
+            storeId = String(hit.value || "");
+            storeLabel = String(hit.labelZh || next);
+          }
+        }
+        if (!storeId) storeId = "roster-store:" + encodeURIComponent(next);
+        TipOutGlobalScopeFilter.writeGlobalStoreFilter(storeId, storeLabel);
+      }
+    }
+
+    if (select.dataset.bound !== "1") {
+      select.dataset.bound = "1";
+      select.addEventListener("change", () => {
+        const storeName = String(select.value || "").trim();
+        state.employeeStoreFilter = storeName;
+        if (
+          storeName &&
+          window.TipOutGlobalScopeFilter &&
+          typeof TipOutGlobalScopeFilter.writeGlobalStoreFilter === "function"
+        ) {
+          let storeId = "";
+          let storeLabel = storeName;
+          if (typeof TipOutGlobalScopeFilter.listScopedStoreOptions === "function") {
+            const hit = TipOutGlobalScopeFilter.listScopedStoreOptions().find((o) => {
+              const label = String((o && (o.labelZh || o.value)) || "").trim();
+              return label === storeName || String(o.value || "") === storeName;
+            });
+            if (hit) {
+              storeId = String(hit.value || "");
+              storeLabel = String(hit.labelZh || storeName);
+            }
+          }
+          if (!storeId) storeId = "roster-store:" + encodeURIComponent(storeName);
+          TipOutGlobalScopeFilter.writeGlobalStoreFilter(storeId, storeLabel);
+        }
+        handleEmployeeStoreFilterChange();
+        updateEmployeeBatchExportButton();
+      });
+    }
   }
 
   function handleEmployeeStoreFilterChange() {
     const list = state.data.employees[state.periodId] || [];
     const filtered = filterEmployeesByStore(list, state.employeeStoreFilter);
-    syncEmployeeStoreFilterControls(list);
     if (state.view === "employees") {
       renderEmployees();
       saveState();

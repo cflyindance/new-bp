@@ -4,11 +4,25 @@
  */
 
 import {
+  getScopedFilterOptions,
+  readScopeFilters,
+  ensureInPageDefaultStoreSelected,
+  resolveDefaultScopedStoreId,
+  usesInPageStorePicker,
+  writeScopeFilters,
+} from "../auth/session-scope";
+import { getUiLocale, t } from "../i18n";
+import { parseRosterStoreScopeId } from "./team-employee-roster-scope";
+import {
   moduleSettingToggleStorageKey,
   readModuleSettingToggleOn,
   writeModuleSettingToggleOn,
 } from "./module-settings-toggle-ui";
 import { notifyConfigSaved } from "./deployment-auto-trigger";
+import {
+  formatConfigDisplayValue,
+  recordDeploymentConfigChange,
+} from "./deployment-change-buffer";
 import { TEAM_SHIFT_SCHEDULING_SETTING_SEQS } from "./team-settings-embed-ui";
 
 export const TEAM_CLOCK_IN_PATH = "/team/clock-in";
@@ -42,6 +56,7 @@ type RosterEmployee = {
   id: string;
   name: string;
   role?: string;
+  store?: string;
 };
 
 type ShiftType = {
@@ -244,7 +259,14 @@ function readSettings(): ClockSettings {
 }
 
 function writeSettings(settings: ClockSettings): void {
+  const before = readSettings();
+  if (JSON.stringify(before) === JSON.stringify(settings)) return;
   localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+  recordDeploymentConfigChange({
+    label: "员工打卡设置",
+    before: formatConfigDisplayValue(before),
+    after: formatConfigDisplayValue(settings),
+  });
   notifyConfigSaved(TEAM_CLOCK_IN_PATH);
 }
 
@@ -305,10 +327,91 @@ function readEmployees(): RosterEmployee[] {
     if (!raw) return [...DEFAULT_EMPLOYEES];
     const parsed = JSON.parse(raw) as RosterEmployee[];
     if (!Array.isArray(parsed) || parsed.length === 0) return [...DEFAULT_EMPLOYEES];
-    return parsed.map((e) => ({ id: e.id, name: e.name, role: e.role }));
+    return parsed.map((e) => ({
+      id: e.id,
+      name: e.name,
+      role: e.role,
+      store: e.store ? String(e.store) : undefined,
+    }));
   } catch {
     return [...DEFAULT_EMPLOYEES];
   }
+}
+
+function normalizeStoreText(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+function employeeMatchesSelectedStore(emp: RosterEmployee): boolean {
+  if (!usesInPageStorePicker()) return true;
+  const scope = readScopeFilters();
+  if (!scope.store) return true;
+  const storeOpt = getScopedFilterOptions().stores.find((o) => o.value === scope.store);
+  const matchers = [
+    storeOpt?.labelZh,
+    storeOpt?.labelEn,
+    parseRosterStoreScopeId(scope.store) ?? undefined,
+    scope.store,
+  ]
+    .map((v) => normalizeStoreText(String(v || "")))
+    .filter(Boolean);
+  if (!matchers.length) return true;
+  const empStore = normalizeStoreText(emp.store || "");
+  if (!empStore) return true;
+  return matchers.some((m) => empStore === m || empStore.includes(m) || m.includes(empStore));
+}
+
+function readScopedEmployees(): RosterEmployee[] {
+  return readEmployees().filter(employeeMatchesSelectedStore);
+}
+
+/** 精简门店筛选：仅标签 + 下拉 */
+function renderCompactStoreFilter(): string {
+  if (!usesInPageStorePicker()) return "";
+  const locale = getUiLocale();
+  const stores = getScopedFilterOptions().stores.filter((o) => !!o.value);
+  const selected = resolveDefaultScopedStoreId();
+  const options = stores
+    .map((o) => {
+      const lab = escapeHtml(locale === "en" ? o.labelEn : o.labelZh);
+      const sel = o.value === selected ? " selected" : "";
+      return `<option value="${escapeHtml(o.value)}"${sel}>${lab}</option>`;
+    })
+    .join("");
+
+  return `
+    <div class="flex items-center gap-2" data-clock-store-filter-wrap>
+      <label for="clock-store-filter" class="shrink-0 text-sm text-muted-foreground">${escapeHtml(t("header.scopeStore"))}</label>
+      <select
+        id="clock-store-filter"
+        data-clock-store-filter
+        class="${FORM_INPUT} w-auto min-w-[10rem] max-w-[16rem]"
+        aria-label="${escapeHtml(t("header.scopeStoreAria"))}"
+      >
+        ${
+          stores.length
+            ? options
+            : `<option value="">${escapeHtml(t("pageStorePicker.placeholder"))}</option>`
+        }
+      </select>
+    </div>`;
+}
+
+function bindCompactStoreFilter(root: HTMLElement, remount: () => void): void {
+  if (ensureInPageDefaultStoreSelected()) {
+    remount();
+    return;
+  }
+  const select = root.querySelector<HTMLSelectElement>("[data-clock-store-filter]");
+  if (!select || select.dataset.bound === "1") return;
+  select.dataset.bound = "1";
+  select.addEventListener("change", () => {
+    const storeId = select.value;
+    if (!storeId) return;
+    const scope = readScopeFilters();
+    writeScopeFilters({ ...scope, store: storeId });
+    remount();
+  });
 }
 
 function readShiftTypes(): ShiftType[] {
@@ -602,27 +705,26 @@ function renderSummaryCards(rows: { status: TimecardStatus }[]): string {
     .join("");
 }
 
-function renderStatusFilterTabs(): string {
+function renderStatusFilterSelect(): string {
   const tabs: { key: StatusFilter; label: string }[] = [
-    { key: "all", label: "全部" },
+    { key: "all", label: "全部状态" },
     { key: "off", label: "未打卡" },
     { key: "working", label: "在岗" },
     { key: "break", label: "休息中" },
     { key: "done", label: "已下班" },
   ];
-  return tabs
+  const options = tabs
     .map((tab) => {
-      const selected = pageState.statusFilter === tab.key;
-      return `
-      <button type="button"
-        data-clock-status-filter="${tab.key}"
-        class="rounded-md px-3 py-1.5 text-sm transition-colors ${
-          selected ? "bg-primary/10 font-medium text-primary" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-        }"
-        ${selected ? 'aria-current="true"' : ""}
-      >${tab.label}</button>`;
+      const selected = pageState.statusFilter === tab.key ? " selected" : "";
+      return `<option value="${tab.key}"${selected}>${escapeHtml(tab.label)}</option>`;
     })
     .join("");
+  return `
+    <select
+      data-clock-status-filter
+      class="h-9 w-auto min-w-[8rem] shrink-0 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      aria-label="按打卡状态筛选"
+    >${options}</select>`;
 }
 
 function renderClockRow(
@@ -820,7 +922,7 @@ function renderClockTabBar(): string {
 
 function renderLiveClockPanel(): string {
   const settings = readSettings();
-  const employees = readEmployees();
+  const employees = readScopedEmployees();
   const filteredEmployees = pageState.employeeFilter
     ? employees.filter((e) => e.id === pageState.employeeFilter)
     : employees;
@@ -831,23 +933,29 @@ function renderLiveClockPanel(): string {
       ? rowData
       : rowData.filter((r) => r.status === pageState.statusFilter);
 
-  const tableRows =
-    statusFiltered.length > 0
+  const needsStore =
+    usesInPageStorePicker() && !readScopeFilters().store;
+  const tableRows = needsStore
+    ? `<tr><td colspan="8" class="px-4 py-10 text-center text-sm text-muted-foreground">请先选择门店</td></tr>`
+    : statusFiltered.length > 0
       ? statusFiltered.map((r) => r.html).join("")
       : `<tr><td colspan="8" class="px-4 py-10 text-center text-sm text-muted-foreground">暂无符合筛选条件的员工</td></tr>`;
 
   return `
     <div class="flex min-h-0 flex-1 flex-col gap-4" data-clock-live-panel>
       <div class="flex shrink-0 flex-wrap items-center gap-3">
-        <div class="flex items-center gap-2 rounded-md border border-input bg-background px-2 py-1">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="shrink-0 text-muted-foreground" aria-hidden="true"><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
-          <input type="date" data-clock-date value="${escapeHtml(pageState.date)}" class="h-8 border-0 bg-transparent text-sm focus-visible:outline-none" />
+        ${renderCompactStoreFilter()}
+        <div class="flex min-w-0 flex-nowrap items-center gap-3">
+          <div class="flex shrink-0 items-center gap-2 rounded-md border border-input bg-background px-2 py-1">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="shrink-0 text-muted-foreground" aria-hidden="true"><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+            <input type="date" data-clock-date value="${escapeHtml(pageState.date)}" class="h-8 border-0 bg-transparent text-sm focus-visible:outline-none" />
+          </div>
+          <select data-clock-employee-filter class="h-9 w-auto min-w-[10rem] shrink-0 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">${renderEmployeeFilterOptions(employees, pageState.employeeFilter, "全部员工")}</select>
+          ${renderStatusFilterSelect()}
         </div>
-        <select data-clock-employee-filter class="${FORM_INPUT} w-auto min-w-[10rem]">${renderEmployeeFilterOptions(employees, pageState.employeeFilter, "全部员工")}</select>
-        <div class="flex flex-wrap gap-1 rounded-md border border-border bg-muted/30 p-1">${renderStatusFilterTabs()}</div>
       </div>
 
-      <div class="grid shrink-0 grid-cols-2 gap-3 sm:grid-cols-4">${renderSummaryCards(rowData)}</div>
+      <div class="grid shrink-0 grid-cols-2 gap-3 sm:grid-cols-4">${renderSummaryCards(needsStore ? [] : rowData)}</div>
 
       <div class="rounded-xl border border-border bg-card shadow-sm">
         <div class="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">
@@ -895,22 +1003,24 @@ function enumerateDates(from: string, to: string): string[] {
 }
 
 function renderAttendanceRecordsPanel(): string {
-  const employees = readEmployees();
+  const employees = readScopedEmployees();
   const dates = enumerateDates(attendancePageState.dateFrom, attendancePageState.dateTo);
   const rows: string[] = [];
+  const needsStore = usesInPageStorePicker() && !readScopeFilters().store;
 
-  for (const date of dates) {
-    const dayPunches = readPunches().filter((p) => {
-      if (p.timestamp.slice(0, 10) !== date) return false;
-      if (attendancePageState.employeeFilter && p.employeeId !== attendancePageState.employeeFilter) return false;
-      return true;
-    });
-    for (const emp of employees) {
-      if (attendancePageState.employeeFilter && emp.id !== attendancePageState.employeeFilter) continue;
-      const punches = dayPunches.filter((p) => p.employeeId === emp.id);
-      if (punches.length === 0) continue;
-      const timecard = computeTimecard(punches.sort((a, b) => a.timestamp.localeCompare(b.timestamp)));
-      rows.push(`
+  if (!needsStore) {
+    for (const date of dates) {
+      const dayPunches = readPunches().filter((p) => {
+        if (p.timestamp.slice(0, 10) !== date) return false;
+        if (attendancePageState.employeeFilter && p.employeeId !== attendancePageState.employeeFilter) return false;
+        return true;
+      });
+      for (const emp of employees) {
+        if (attendancePageState.employeeFilter && emp.id !== attendancePageState.employeeFilter) continue;
+        const punches = dayPunches.filter((p) => p.employeeId === emp.id);
+        if (punches.length === 0) continue;
+        const timecard = computeTimecard(punches.sort((a, b) => a.timestamp.localeCompare(b.timestamp)));
+        rows.push(`
         <tr class="border-b border-border/60 hover:bg-muted/20">
           <td class="px-3 py-2.5 text-sm">${escapeHtml(date)}</td>
           <td class="px-3 py-2.5 text-sm font-medium">${escapeHtml(emp.name)}</td>
@@ -921,23 +1031,28 @@ function renderAttendanceRecordsPanel(): string {
           <td class="px-3 py-2.5 text-sm tabular-nums text-muted-foreground">${formatDuration(timecard.breakMinutes)}</td>
           <td class="px-3 py-2.5 text-sm tabular-nums">${punches.length}</td>
         </tr>`);
+      }
     }
   }
 
-  const tableBody =
-    rows.length > 0
+  const tableBody = needsStore
+    ? `<tr><td colspan="8" class="px-4 py-10 text-center text-sm text-muted-foreground">请先选择门店</td></tr>`
+    : rows.length > 0
       ? rows.join("")
       : `<tr><td colspan="8" class="px-4 py-10 text-center text-sm text-muted-foreground">所选日期范围内暂无考勤记录</td></tr>`;
 
   return `
     <div class="flex min-h-0 flex-1 flex-col gap-4" data-clock-records-panel>
       <div class="flex shrink-0 flex-wrap items-center gap-3">
-        <div class="flex items-center gap-2 rounded-md border border-input bg-background px-2 py-1">
-          <input type="date" data-attendance-date-from value="${escapeHtml(attendancePageState.dateFrom)}" class="h-8 border-0 bg-transparent text-sm focus-visible:outline-none" />
-          <span class="text-muted-foreground">→</span>
-          <input type="date" data-attendance-date-to value="${escapeHtml(attendancePageState.dateTo)}" class="h-8 border-0 bg-transparent text-sm focus-visible:outline-none" />
+        ${renderCompactStoreFilter()}
+        <div class="flex min-w-0 flex-nowrap items-center gap-3">
+          <div class="flex shrink-0 items-center gap-2 rounded-md border border-input bg-background px-2 py-1">
+            <input type="date" data-attendance-date-from value="${escapeHtml(attendancePageState.dateFrom)}" class="h-8 border-0 bg-transparent text-sm focus-visible:outline-none" />
+            <span class="text-muted-foreground">→</span>
+            <input type="date" data-attendance-date-to value="${escapeHtml(attendancePageState.dateTo)}" class="h-8 border-0 bg-transparent text-sm focus-visible:outline-none" />
+          </div>
+          <select data-attendance-employee-filter class="h-9 w-auto min-w-[10rem] shrink-0 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">${renderEmployeeFilterOptions(employees, attendancePageState.employeeFilter, "全部员工")}</select>
         </div>
-        <select data-attendance-employee-filter class="${FORM_INPUT} w-auto min-w-[10rem]">${renderEmployeeFilterOptions(employees, attendancePageState.employeeFilter, "全部员工")}</select>
       </div>
       <div class="overflow-x-auto rounded-xl border border-border bg-card shadow-sm">
         <table class="w-full min-w-[48rem] text-left text-sm">
@@ -963,7 +1078,18 @@ export function renderTeamClockInPage(rulesPanelHtml = ""): string {
   consumeClockTabFromStorage();
   const livePanel = clockTab === "live" ? renderLiveClockPanel() : "";
   const recordsPanel = clockTab === "records" ? renderAttendanceRecordsPanel() : "";
-  const rulesPanel = clockTab === "rules" ? rulesPanelHtml : "";
+  const rulesPanel =
+    clockTab === "rules"
+      ? `
+    <div class="flex min-h-0 flex-1 flex-col gap-4" data-clock-rules-wrap>
+      <div class="flex shrink-0 flex-wrap items-center gap-3">${renderCompactStoreFilter()}</div>
+      ${
+        usesInPageStorePicker() && !readScopeFilters().store
+          ? `<div class="rounded-xl border border-dashed border-border bg-muted/20 px-4 py-10 text-center text-sm text-muted-foreground">请先选择门店后再配置规则</div>`
+          : rulesPanelHtml
+      }
+    </div>`
+      : "";
 
   return `
     <div class="team-clock-in-page flex min-h-0 flex-1 flex-col gap-4" data-team-clock-in-page>
@@ -1058,6 +1184,7 @@ export function bindTeamClockInUi(remount: () => void): void {
   });
 
   bindAttendanceRecordsPanel(root, remount);
+  bindCompactStoreFilter(root, remount);
 
   root.querySelector("[data-clock-date]")?.addEventListener("change", () => {
     const el = root.querySelector<HTMLInputElement>("[data-clock-date]");
@@ -1070,14 +1197,13 @@ export function bindTeamClockInUi(remount: () => void): void {
     remount();
   });
 
-  root.querySelectorAll("[data-clock-status-filter]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const key = btn.getAttribute("data-clock-status-filter") as StatusFilter;
-      if (key) {
-        pageState.statusFilter = key;
-        remount();
-      }
-    });
+  root.querySelector("[data-clock-status-filter]")?.addEventListener("change", () => {
+    const el = root.querySelector<HTMLSelectElement>("[data-clock-status-filter]");
+    const key = (el?.value || "all") as StatusFilter;
+    if (key === "all" || key === "off" || key === "working" || key === "break" || key === "done") {
+      pageState.statusFilter = key;
+      remount();
+    }
   });
 
   root.querySelector("[data-clock-late-grace]")?.addEventListener("change", () => {

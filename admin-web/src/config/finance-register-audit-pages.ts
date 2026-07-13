@@ -1,7 +1,17 @@
 /**
  * 财务中心 · 收银记录与审计（方案 A：滑层一级 + 业务查询页）。
  * seq 449 付款记录；seq 450 钱箱登入退出记录。
+ * 品牌多门店视角：精简门店筛选置于时间选择器左侧（不走外层 page-store-picker）。
  */
+import {
+  getScopedFilterOptions,
+  readScopeFilters,
+  ensureInPageDefaultStoreSelected,
+  resolveDefaultScopedStoreId,
+  usesInPageStorePicker,
+  writeScopeFilters,
+} from "../auth/session-scope";
+import { getUiLocale, t } from "../i18n";
 
 export const FINANCE_REGISTER_AUDIT_PAYMENTS_PATH = "/finance/register-audit/payments";
 export const FINANCE_REGISTER_AUDIT_CASH_DRAWER_PATH = "/finance/register-audit/cash-drawer";
@@ -34,6 +44,8 @@ type PaymentRecord = {
   operator: string;
   drawer: string;
   voided: boolean;
+  /** 归属门店；空表示未绑定（演示种子可被任意已选门店看到） */
+  storeId: string;
 };
 
 type CashDrawerSessionRecord = {
@@ -46,6 +58,7 @@ type CashDrawerSessionRecord = {
   to: string | null;
   /** 登入/登出金额不一致时的说明备注 */
   amountMismatchRemark: string | null;
+  storeId: string;
 };
 
 const MOCK_EMPLOYEES = ["张三", "李四", "王五"];
@@ -60,6 +73,7 @@ let paymentRecords: PaymentRecord[] = [
     operator: "李四",
     drawer: "1号钱箱",
     voided: false,
+    storeId: "",
   },
 ];
 
@@ -73,8 +87,52 @@ let cashDrawerSessions: CashDrawerSessionRecord[] = [
     from: "2026-06-03T09:00",
     to: null,
     amountMismatchRemark: null,
+    storeId: "",
   },
 ];
+
+function selectedStoreId(): string {
+  return readScopeFilters().store?.trim() || "";
+}
+
+function recordMatchesSelectedStore(storeId: string): boolean {
+  if (!usesInPageStorePicker()) return true;
+  const selected = selectedStoreId();
+  if (!selected) return false;
+  return !storeId || storeId === selected;
+}
+
+/** 精简门店筛选：仅标签 + 下拉，置于时间选择器左侧 */
+function renderCompactStoreFilter(): string {
+  if (!usesInPageStorePicker()) return "";
+  const locale = getUiLocale();
+  const stores = getScopedFilterOptions().stores.filter((o) => !!o.value);
+  const selected = resolveDefaultScopedStoreId();
+  const options = stores
+    .map((o) => {
+      const lab = escapeHtml(locale === "en" ? o.labelEn : o.labelZh);
+      const sel = o.value === selected ? " selected" : "";
+      return `<option value="${escapeHtml(o.value)}"${sel}>${lab}</option>`;
+    })
+    .join("");
+
+  return `
+    <div class="mb-1.5 flex shrink-0 items-center gap-2" data-register-audit-store-filter-wrap>
+      <label for="register-audit-store-filter" class="shrink-0 text-sm text-muted-foreground">${escapeHtml(t("header.scopeStore"))}</label>
+      <select
+        id="register-audit-store-filter"
+        data-register-audit-store-filter
+        class="h-9 w-auto min-w-[10rem] max-w-[16rem] shrink-0 rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        aria-label="${escapeHtml(t("header.scopeStoreAria"))}"
+      >
+        ${
+          stores.length
+            ? options
+            : `<option value="">${escapeHtml(t("pageStorePicker.placeholder"))}</option>`
+        }
+      </select>
+    </div>`;
+}
 
 type AuditFilterState = {
   dateFrom: string;
@@ -133,6 +191,7 @@ export function findFinanceRegisterAuditTitle(
 
 function filterPayments(): PaymentRecord[] {
   return paymentRecords.filter((r) => {
+    if (!recordMatchesSelectedStore(r.storeId)) return false;
     if (r.date < filterState.dateFrom || r.date > filterState.dateTo) return false;
     if (filterState.employee && r.payee !== filterState.employee) return false;
     if (!filterState.showVoided && r.voided) return false;
@@ -142,6 +201,7 @@ function filterPayments(): PaymentRecord[] {
 
 function filterCashDrawerSessions(): CashDrawerSessionRecord[] {
   return cashDrawerSessions.filter((r) => {
+    if (!recordMatchesSelectedStore(r.storeId)) return false;
     const day = r.from.slice(0, 10);
     if (day < filterState.dateFrom || day > filterState.dateTo) return false;
     if (filterState.employee && r.name !== filterState.employee) return false;
@@ -352,6 +412,7 @@ export function renderFinanceRegisterAuditPageContent(path: string): string {
 
   const paymentRows = filterPayments();
   const drawerRows = filterCashDrawerSessions();
+  const needsStore = usesInPageStorePicker() && !selectedStoreId();
 
   const tableHead = isPayments
     ? `<tr class="bg-primary text-primary-foreground">
@@ -372,7 +433,12 @@ export function renderFinanceRegisterAuditPageContent(path: string): string {
         <th class="px-4 py-2.5 text-left text-sm font-medium">不一致备注</th>
       </tr>`;
 
-  const tableBody = isPayments ? renderPaymentsTable(paymentRows) : renderCashDrawerTable(drawerRows);
+  const emptyColspan = isPayments ? 6 : 7;
+  const tableBody = needsStore
+    ? `<tr><td colspan="${emptyColspan}" class="px-4 py-10 text-center text-sm text-muted-foreground">请先选择门店</td></tr>`
+    : isPayments
+      ? renderPaymentsTable(paymentRows)
+      : renderCashDrawerTable(drawerRows);
 
   return `
     <div class="finance-register-audit-page flex min-h-0 flex-1 flex-col gap-4" data-register-audit-page="${isPayments ? "payments" : "cash-drawer"}">
@@ -381,6 +447,7 @@ export function renderFinanceRegisterAuditPageContent(path: string): string {
       </div>
 
       <div class="flex shrink-0 flex-wrap items-end gap-3">
+        ${renderCompactStoreFilter()}
         <label class="text-sm">
           <span class="mb-1 block text-xs text-muted-foreground">从</span>
           <input type="date" data-register-audit-date-from value="${escapeHtml(filterState.dateFrom)}" class="h-9 rounded-md border border-input bg-background px-3 text-sm" />
@@ -404,8 +471,8 @@ export function renderFinanceRegisterAuditPageContent(path: string): string {
             : ""
         }
         <div class="flex items-end gap-2">
-          <button type="button" data-register-audit-query class="h-9 min-w-[7rem] rounded-md bg-foreground px-4 text-sm font-medium text-background hover:bg-foreground/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">查询</button>
-          <button type="button" data-register-audit-add class="h-9 min-w-[7rem] rounded-md border border-foreground bg-background px-4 text-sm font-medium text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">新增</button>
+          <button type="button" data-register-audit-query class="h-9 min-w-[7rem] rounded-md bg-foreground px-4 text-sm font-medium text-background hover:bg-foreground/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"${needsStore ? " disabled" : ""}>查询</button>
+          <button type="button" data-register-audit-add class="h-9 min-w-[7rem] rounded-md border border-foreground bg-background px-4 text-sm font-medium text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"${needsStore ? " disabled" : ""}>新增</button>
         </div>
       </div>
 
@@ -416,7 +483,7 @@ export function renderFinanceRegisterAuditPageContent(path: string): string {
         </table>
       </div>
 
-      ${renderAddDialog(active)}
+      ${needsStore ? "" : renderAddDialog(active)}
     </div>`;
 }
 
@@ -453,12 +520,30 @@ export function bindFinanceRegisterAuditUi(remount: () => void): void {
   const root = document.querySelector<HTMLElement>("[data-register-audit-page]");
   if (!root) return;
 
+  if (ensureInPageDefaultStoreSelected()) {
+    remount();
+    return;
+  }
+
+  const storeSelect = root.querySelector<HTMLSelectElement>("[data-register-audit-store-filter]");
+  if (storeSelect && storeSelect.dataset.bound !== "1") {
+    storeSelect.dataset.bound = "1";
+    storeSelect.addEventListener("change", () => {
+      const storeId = storeSelect.value;
+      if (!storeId) return;
+      const scope = readScopeFilters();
+      writeScopeFilters({ ...scope, store: storeId });
+      remount();
+    });
+  }
+
   root.querySelector("[data-register-audit-query]")?.addEventListener("click", () => {
     readFilterFromDom(root);
     remount();
   });
 
   root.querySelector("[data-register-audit-add]")?.addEventListener("click", () => {
+    if (usesInPageStorePicker() && !selectedStoreId()) return;
     openRegisterAuditAddDialog();
     const form = root.querySelector<HTMLFormElement>('[data-register-audit-add-form="cash-drawer"]');
     if (form) syncCashDrawerMismatchRemarkField(form);
@@ -486,6 +571,7 @@ export function bindFinanceRegisterAuditUi(remount: () => void): void {
     e.preventDefault();
     const mode = form.getAttribute("data-register-audit-add-form");
     const fd = new FormData(form);
+    const storeId = selectedStoreId();
     if (mode === "payments") {
       paymentRecords.unshift({
         id: `p${Date.now()}`,
@@ -495,6 +581,7 @@ export function bindFinanceRegisterAuditUi(remount: () => void): void {
         operator: String(fd.get("operator") ?? ""),
         drawer: String(fd.get("drawer") ?? ""),
         voided: fd.get("voided") === "on",
+        storeId,
       });
     } else {
       const logoutRaw = fd.get("logoutAmount");
@@ -515,6 +602,7 @@ export function bindFinanceRegisterAuditUi(remount: () => void): void {
         from: String(fd.get("from") ?? ""),
         to: toRaw ? String(toRaw) : null,
         amountMismatchRemark: cashDrawerAmountsMismatch(loginAmount, logoutAmount) ? remarkRaw : null,
+        storeId,
       });
     }
     closeRegisterAuditAddDialog();

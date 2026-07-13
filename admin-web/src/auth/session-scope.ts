@@ -160,6 +160,13 @@ export function syncScopeFilterMetaForEmbeddedPages(
   const storeOpt = scoped.stores.find((o) => o.value === state.store);
   const brandOpt = scoped.brands.find((o) => o.value === state.brand);
   const regionOpt = scoped.regions.find((o) => o.value === state.region);
+  const storeOptions = scoped.stores
+    .filter((o) => !!o.value)
+    .map((o) => ({
+      value: o.value,
+      labelZh: o.labelZh,
+      labelEn: o.labelEn,
+    }));
   const meta = {
     storeId: state.store,
     storeLabel: storeOpt ? storeOpt.labelZh : "",
@@ -168,6 +175,9 @@ export function syncScopeFilterMetaForEmbeddedPages(
     brandLabel: brandOpt ? brandOpt.labelZh : "",
     regionId: state.region,
     regionLabel: regionOpt ? regionOpt.labelZh : "",
+    /** 品牌多门店视角：内嵌页自行展示门店筛选 */
+    usesInPageStorePicker: usesInPageStorePicker(),
+    stores: storeOptions,
   };
   try {
     localStorage.setItem("menusifu-scope-filter-meta", JSON.stringify(meta));
@@ -216,6 +226,16 @@ export function isChainOrgTier(): boolean {
 /** 顶栏展示品牌/区域/门店三级筛选：连锁账号，或手动选择连锁版布局 */
 export function isChainScopeMode(): boolean {
   return isChainOrgTier() || readSidebarNavLayoutPreset() === "chain";
+}
+
+/** 品牌多门店视角：门店选择在页内而非顶栏 */
+export function usesInPageStorePicker(): boolean {
+  return isChainScopeMode() && isBrandDataPerspective();
+}
+
+/** 顶栏是否展示门店筛选（品牌多门店视角下隐藏，改由页内选择） */
+export function shouldShowHeaderStoreScopeFilter(): boolean {
+  return !usesInPageStorePicker();
 }
 
 export function shouldShowBrandScopeFilter(): boolean {
@@ -283,10 +303,31 @@ function resolveDefaultSingleStoreId(preferredStoreId = ""): string {
   return scoped[0]?.value || DEFAULT_LOCKED_STORE_ID;
 }
 
+/** 对外：解析当前可见门店列表中的默认门店 */
+export function resolveDefaultScopedStoreId(preferredStoreId = ""): string {
+  return resolveDefaultSingleStoreId(preferredStoreId);
+}
+
+/**
+ * 品牌多门店视角：若尚未选店（或已选无效），写入默认门店。
+ * 返回是否发生了写入。
+ */
+export function ensureInPageDefaultStoreSelected(): boolean {
+  if (!usesInPageStorePicker()) return false;
+  const stores = getScopedFilterOptions().stores.filter((o) => !!o.value);
+  if (!stores.length) return false;
+  const cur = readScopeFilters();
+  const nextStore = resolveDefaultSingleStoreId(cur.store);
+  if (!nextStore || cur.store === nextStore) return false;
+  writeScopeFilters({ ...cur, store: nextStore });
+  return true;
+}
+
 export function resetScopeFiltersForPerspectiveChange(): void {
   const perspective = resolveChainDataPerspective();
   if (perspective === "brand") {
     const brandId = resolveDefaultAnchorBrandId() ?? "";
+    // 品牌多门店与其它视角一致：初始化即默认选中一家门店
     writeScopeFilters({ brand: brandId, region: "", store: resolveDefaultSingleStoreId() });
     return;
   }
@@ -314,6 +355,7 @@ export function ensureScopeFiltersForSession(): void {
     if (ctx) {
       const cur = readScopeFilters();
       const clamped = clampScopeToStoreAccess(ctx.storeAccess, cur);
+      // 品牌多门店也需默认选店，避免各页选择器初始化为空
       const nextStore = clamped.store || resolveDefaultSingleStoreId(clamped.store);
       const next = { ...clamped, store: nextStore };
       if (next.brand !== cur.brand || next.region !== cur.region || next.store !== cur.store) {

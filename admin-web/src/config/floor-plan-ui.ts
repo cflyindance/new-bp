@@ -1,12 +1,17 @@
 /**
  * 前厅 · 餐位平面图（seq 428 能力页，非设置滑层项）
- * 原型：localStorage 持久化区域与桌位布局
+ * 原型：localStorage 按门店隔离持久化区域与桌位布局
  */
+import { getScopedFilterOptions, readScopeFilters } from "../auth/session-scope";
 import { notifyConfigSaved } from "./deployment-auto-trigger";
+import { recordDeploymentConfigChange } from "./deployment-change-buffer";
 
 export const FLOOR_PLAN_PATH = "/operations/queue-call/floor-plan";
 
-const STORAGE_KEY = "bplant-floor-plan:v1";
+const STORAGE_KEY_PREFIX = "bplant-floor-plan:v1";
+/** 旧版未按门店隔离的存储键，首次读取时迁移到当前门店 */
+const LEGACY_STORAGE_KEY = "bplant-floor-plan:v1";
+const DEFAULT_STORE_BUCKET = "__default__";
 
 export type FloorPlanTableShape = "rectangle" | "circle" | "oval";
 export type FloorPlanTableCategory = "standard" | "booth" | "bar" | "private";
@@ -60,6 +65,38 @@ function newId(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 }
 
+/** 当前页内/顶栏所选门店；无选择时落入默认桶 */
+function resolveFloorPlanStoreId(): string {
+  const storeId = readScopeFilters().store?.trim() || "";
+  return storeId || DEFAULT_STORE_BUCKET;
+}
+
+function storageKeyForStore(storeId: string): string {
+  return `${STORAGE_KEY_PREFIX}:store:${encodeURIComponent(storeId)}`;
+}
+
+function resolveFloorPlanStoreLabel(storeId: string): string {
+  if (!storeId || storeId === DEFAULT_STORE_BUCKET) return "当前门店";
+  const opt = getScopedFilterOptions().stores.find((o) => o.value === storeId);
+  return (opt?.labelZh || opt?.labelEn || storeId).trim() || "当前门店";
+}
+
+function migrateLegacyFloorPlanIfNeeded(storeId: string): void {
+  if (typeof window === "undefined") return;
+  const key = storageKeyForStore(storeId);
+  try {
+    if (localStorage.getItem(key)) return;
+    const legacy = localStorage.getItem(LEGACY_STORAGE_KEY);
+    if (!legacy) return;
+    const parsed = JSON.parse(legacy) as { areas?: unknown };
+    if (!Array.isArray(parsed?.areas)) return;
+    localStorage.setItem(key, legacy);
+    localStorage.removeItem(LEGACY_STORAGE_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
 function defaultState(): FloorPlanState {
   return {
     areas: [],
@@ -93,10 +130,9 @@ function getDialogTable(state: FloorPlanState): FloorPlanTable | null {
   return area?.tables.find((t) => t.id === dialog.tableId) ?? null;
 }
 
-function readState(): FloorPlanState {
+function parseFloorPlanState(raw: string | null): FloorPlanState {
+  if (!raw) return defaultState();
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return defaultState();
     const parsed = JSON.parse(raw) as FloorPlanState;
     if (!Array.isArray(parsed?.areas)) return defaultState();
     const areas = parsed.areas;
@@ -118,8 +154,38 @@ function readState(): FloorPlanState {
   }
 }
 
+function readState(): FloorPlanState {
+  const storeId = resolveFloorPlanStoreId();
+  migrateLegacyFloorPlanIfNeeded(storeId);
+  try {
+    return parseFloorPlanState(localStorage.getItem(storageKeyForStore(storeId)));
+  } catch {
+    return defaultState();
+  }
+}
+
+function summarizeFloorPlan(state: FloorPlanState): string {
+  const areaCount = state.areas.length;
+  const tableCount = state.areas.reduce((sum, area) => sum + area.tables.length, 0);
+  if (areaCount === 0) return "暂无区域与桌位";
+  return `${areaCount} 个区域，${tableCount} 张桌位`;
+}
+
 function writeState(state: FloorPlanState): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  const storeId = resolveFloorPlanStoreId();
+  const key = storageKeyForStore(storeId);
+  const before = readState();
+  const beforePayload = JSON.stringify(before.areas);
+  const afterPayload = JSON.stringify(state.areas);
+  // 始终持久化完整状态（含弹窗/选中），否则「新增区域」等仅改 UI 态的操作会在 remount 后丢失
+  localStorage.setItem(key, JSON.stringify(state));
+  if (beforePayload === afterPayload) return;
+  const storeLabel = resolveFloorPlanStoreLabel(storeId);
+  recordDeploymentConfigChange({
+    label: `餐位平面图 · ${storeLabel}`,
+    before: summarizeFloorPlan(before),
+    after: summarizeFloorPlan(state),
+  });
   notifyConfigSaved(FLOOR_PLAN_PATH);
 }
 
@@ -421,6 +487,7 @@ function renderAreaEditorDialog(state: FloorPlanState): string {
     dialog.mode === "edit" ? state.areas.find((a) => a.id === dialog.areaId) : null;
   const title = isCreate ? "新增区域" : `编辑区域 · ${area?.name ?? ""}`;
   const nameValue = isCreate ? "" : (area?.name ?? "");
+  const storeLabel = resolveFloorPlanStoreLabel(resolveFloorPlanStoreId());
 
   return `
     <div
@@ -450,7 +517,14 @@ function renderAreaEditorDialog(state: FloorPlanState): string {
             aria-label="关闭"
           >×</button>
         </header>
-        <div class="px-5 py-4">
+        <div class="space-y-4 px-5 py-4">
+          <div class="block space-y-1">
+            <span class="text-xs text-muted-foreground">归属门店</span>
+            <p
+              class="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm font-medium text-foreground"
+              data-floor-plan-area-store
+            >${escapeHtml(storeLabel)}</p>
+          </div>
           <label class="block space-y-1">
             <span class="text-xs text-muted-foreground">区域名称</span>
             <input
@@ -513,16 +587,24 @@ function readAreaNameFromDialog(): string {
   return input?.value.trim() ?? "";
 }
 
+function renderStoreOwnershipHint(): string {
+  const storeLabel = resolveFloorPlanStoreLabel(resolveFloorPlanStoreId());
+  return `<p class="text-xs text-muted-foreground" title="新增区域与桌子将归属此门店">归属门店：<span class="font-medium text-foreground">${escapeHtml(storeLabel)}</span></p>`;
+}
+
 function renderSidebarPanel(state: FloorPlanState, active: FloorPlanArea | null): string {
   if (!state.areas.length) {
     return `
-      <div class="rounded-xl border border-dashed border-border bg-muted/30 p-4 text-center">
-        <p class="text-sm text-muted-foreground">请先创建就餐区域，再布置桌位</p>
-        <button
-          type="button"
-          class="mt-3 w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90"
-          data-floor-plan-area-add
-        >新增区域</button>
+      <div class="space-y-3">
+        ${renderStoreOwnershipHint()}
+        <div class="rounded-xl border border-dashed border-border bg-muted/30 p-4 text-center">
+          <p class="text-sm text-muted-foreground">请先创建就餐区域，再布置桌位（将归属当前所选门店）</p>
+          <button
+            type="button"
+            class="mt-3 w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90"
+            data-floor-plan-area-add
+          >新增区域</button>
+        </div>
       </div>`;
   }
 
@@ -564,6 +646,7 @@ function renderSidebarPanel(state: FloorPlanState, active: FloorPlanArea | null)
 
   return `
     <div class="space-y-4">
+      ${renderStoreOwnershipHint()}
       <div class="space-y-2">
         <h3 class="text-xs font-medium uppercase tracking-wide text-muted-foreground">当前区域</h3>
         <div class="flex flex-wrap gap-2" role="tablist" aria-label="区域">${areaTabs}</div>
@@ -692,8 +775,9 @@ export function renderFloorPlanPage(): string {
       .map((t) => renderTableOnCanvas(t, t.id === state.selectedTableId))
       .join("") ?? "";
 
+  const storeLabel = resolveFloorPlanStoreLabel(resolveFloorPlanStoreId());
   const canvasEmpty = !hasAreas
-    ? `<p class="absolute inset-0 flex items-center justify-center px-6 text-center text-sm text-muted-foreground">请先点击右侧「新增区域」创建楼层或分区</p>`
+    ? `<p class="absolute inset-0 flex items-center justify-center px-6 text-center text-sm text-muted-foreground">请先点击右侧「新增区域」创建楼层或分区（归属「${escapeHtml(storeLabel)}」）</p>`
     : !tablesHtml
       ? `<p class="absolute inset-0 flex items-center justify-center px-6 text-center text-sm text-muted-foreground">当前区域暂无桌位，请点击右侧「新增桌子」</p>`
       : "";

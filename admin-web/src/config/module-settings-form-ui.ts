@@ -2,6 +2,10 @@
  * 设置滑层：整行表单控件（多选 / 单选 / 颜色），原型 localStorage。
  */
 import { notifyConfigSaved } from "./deployment-auto-trigger";
+import {
+  recordModuleSettingDeploymentChange,
+  type ModuleSettingChangeKind,
+} from "./module-settings-deployment-change";
 
 export type ModuleSettingCheckboxOption = {
   fieldId: string;
@@ -231,9 +235,17 @@ export function readModuleSettingCheckbox(fieldId: string, defaultChecked: boole
 }
 
 export function writeModuleSettingCheckbox(fieldId: string, checked: boolean): void {
+  const before = readModuleSettingCheckbox(fieldId, checked);
+  if (before === checked) return;
   try {
     localStorage.setItem(moduleSettingStorageKey(fieldId), checked ? "1" : "0");
-    notifyConfigSaved();
+    const settingsPath = recordModuleSettingDeploymentChange({
+      fieldId,
+      kind: "checkbox",
+      before,
+      after: checked,
+    });
+    notifyConfigSaved(settingsPath);
   } catch {
     /* ignore */
   }
@@ -250,9 +262,17 @@ export function readModuleSettingRadio(fieldId: string, defaultValue: string): s
 }
 
 export function writeModuleSettingRadio(fieldId: string, value: string): void {
+  const before = readModuleSettingRadio(fieldId, value);
+  if (before === value) return;
   try {
     localStorage.setItem(moduleSettingStorageKey(fieldId), value);
-    notifyConfigSaved();
+    const settingsPath = recordModuleSettingDeploymentChange({
+      fieldId,
+      kind: "radio",
+      before,
+      after: value,
+    });
+    notifyConfigSaved(settingsPath);
   } catch {
     /* ignore */
   }
@@ -269,9 +289,17 @@ export function readModuleSettingColor(fieldId: string, defaultValue: string): s
 }
 
 export function writeModuleSettingColor(fieldId: string, value: string): void {
+  const before = readModuleSettingColor(fieldId, value);
+  if (before === value) return;
   try {
     localStorage.setItem(moduleSettingStorageKey(fieldId), value);
-    notifyConfigSaved();
+    const settingsPath = recordModuleSettingDeploymentChange({
+      fieldId,
+      kind: "color",
+      before,
+      after: value,
+    });
+    notifyConfigSaved(settingsPath);
   } catch {
     /* ignore */
   }
@@ -289,9 +317,17 @@ export function readModuleSettingNumber(fieldId: string, defaultValue: number): 
 }
 
 export function writeModuleSettingNumber(fieldId: string, value: number): void {
+  const before = readModuleSettingNumber(fieldId, value);
+  if (before === value) return;
   try {
     localStorage.setItem(moduleSettingStorageKey(fieldId), String(value));
-    notifyConfigSaved();
+    const settingsPath = recordModuleSettingDeploymentChange({
+      fieldId,
+      kind: "number",
+      before,
+      after: value,
+    });
+    notifyConfigSaved(settingsPath);
   } catch {
     /* ignore */
   }
@@ -308,9 +344,17 @@ export function readModuleSettingText(fieldId: string, defaultValue = ""): strin
 }
 
 export function writeModuleSettingText(fieldId: string, value: string): void {
+  const before = readModuleSettingText(fieldId, value);
+  if (before === value) return;
   try {
     localStorage.setItem(moduleSettingStorageKey(fieldId), value);
-    notifyConfigSaved();
+    const settingsPath = recordModuleSettingDeploymentChange({
+      fieldId,
+      kind: "text",
+      before,
+      after: value,
+    });
+    notifyConfigSaved(settingsPath);
   } catch {
     /* ignore */
   }
@@ -326,11 +370,31 @@ export function readModuleSettingJson<T>(fieldId: string, defaultValue: T): T {
   }
 }
 
-export function writeModuleSettingJson(fieldId: string, value: unknown): void {
+export function writeModuleSettingJson(fieldId: string, value: unknown, kind: ModuleSettingChangeKind = "json"): void {
+  const before = readModuleSettingJson<unknown>(fieldId, null);
+  const afterStr = JSON.stringify(value);
+  const beforeStr = before === null ? null : JSON.stringify(before);
+  if (beforeStr === afterStr) return;
   try {
-    localStorage.setItem(moduleSettingStorageKey(fieldId), JSON.stringify(value));
-    notifyConfigSaved();
+    localStorage.setItem(moduleSettingStorageKey(fieldId), afterStr);
+    const resolvedKind =
+      kind === "json" && isProductLineJsonField(fieldId, value) ? "product_line" : kind;
+    const settingsPath = recordModuleSettingDeploymentChange({
+      fieldId,
+      kind: resolvedKind,
+      before,
+      after: value,
+    });
+    notifyConfigSaved(settingsPath);
   } catch {
     /* ignore */
   }
+}
+
+function isProductLineJsonField(fieldId: string, value: unknown): boolean {
+  if (!fieldId.includes("-lines") && !fieldId.endsWith("lines")) return false;
+  if (!Array.isArray(value)) return false;
+  if (value.length === 0) return true;
+  const known = new Set(["pos", "emenu", "kiosk", "cds", "paypad", "sdi", "online-order"]);
+  return value.every((v) => typeof v === "string" && known.has(v.toLowerCase()));
 }

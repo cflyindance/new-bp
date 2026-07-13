@@ -67,6 +67,12 @@ export function inferDefaultStaffStoreAccess(employeeId: string): StaffStoreAcce
   if (employeeId === "hq001" || employeeId === "zj-hq001") {
     return { mode: "all", ids: [] };
   }
+  if (employeeId === "zj-brand-ops") {
+    return { mode: "brands", ids: ["merchant-zhangji", "merchant-zhangji-skewers"] };
+  }
+  if (employeeId === "zj-brand-single") {
+    return { mode: "brands", ids: ["merchant-zhangji"] };
+  }
   return { mode: "stores", ids: [DEFAULT_DEMO_STORE_ID] };
 }
 

@@ -46,6 +46,19 @@ export interface DeploymentOriginNav {
   pagePath: string;
 }
 
+/** 单次配置变更快照（修改前 → 修改后） */
+export interface DeploymentConfigChange {
+  fieldKey?: string;
+  /** 功能设置名称（含子项，如「展示清桌按钮 · 适用产线」） */
+  label: string;
+  /** 操作类型（如「勾选产线 eMenu」「修改数值」） */
+  operation?: string;
+  before: string;
+  after: string;
+  /** 发起菜单路径（用于配置域与导航解析） */
+  settingsPath?: string;
+}
+
 export interface DeploymentSimulatorMeta {
   startedAt?: string;
   completedAt?: string;
@@ -87,6 +100,8 @@ export interface DeploymentBatch {
   isMock: true;
 
   triggeredBy: string;
+  /** 操作人姓名（创建时快照，与 triggeredBy 邮箱对应） */
+  triggeredByName?: string;
   triggeredAt: string;
   triggerSource: DeploymentTriggerSource;
 
@@ -94,9 +109,13 @@ export interface DeploymentBatch {
   brandId?: string;
   brandName?: string;
   storeIds: string[];
+  /** 下发目标门店名称（创建时快照，便于记录页展示） */
+  targetStoreNames?: string[];
 
   configVersions: Record<string, number>;
   originNav: DeploymentOriginNav;
+  /** 本次下发关联的配置变更明细 */
+  configChanges?: DeploymentConfigChange[];
 
   status: DeploymentBatchStatus;
   totalItems: number;
@@ -135,6 +154,7 @@ export interface CreateDeploymentInput {
   brandId?: string;
   brandName?: string;
   triggerSource?: DeploymentTriggerSource;
+  configChanges?: DeploymentConfigChange[];
 }
 
 export interface DeploymentScopeOption {

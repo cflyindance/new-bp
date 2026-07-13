@@ -4,6 +4,10 @@
  * 布局：左侧快捷导航 + 右侧滚动内容（对齐设置页 module-settings 交互）
  */
 import { notifyConfigSaved } from "./deployment-auto-trigger";
+import {
+  formatConfigDisplayValue,
+  recordDeploymentConfigChange,
+} from "./deployment-change-buffer";
 import { MODULE_SETTINGS_SUBNAV_SECTION_HEADING_CLASS } from "./module-settings-subnav";
 
 export const TEAM_BREAKS_OVERTIME_PATH = "/team/breaks-overtime";
@@ -220,7 +224,16 @@ function readConfig(): BreaksOvertimeConfig {
 }
 
 function writeConfig(config: BreaksOvertimeConfig): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+  const before = readConfig();
+  const beforeStr = JSON.stringify(before);
+  const afterStr = JSON.stringify(config);
+  if (beforeStr === afterStr) return;
+  localStorage.setItem(STORAGE_KEY, afterStr);
+  recordDeploymentConfigChange({
+    label: "休息与加班规则",
+    before: formatConfigDisplayValue(before),
+    after: formatConfigDisplayValue(config),
+  });
   notifyConfigSaved(TEAM_BREAKS_OVERTIME_PATH);
 }
 

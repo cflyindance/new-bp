@@ -2,7 +2,21 @@
  * 团队管理 · 排班（员工排班表，seq 437）
  * 路径：/team/shift-scheduling
  */
+import {
+  getScopedFilterOptions,
+  readScopeFilters,
+  ensureInPageDefaultStoreSelected,
+  resolveDefaultScopedStoreId,
+  usesInPageStorePicker,
+  writeScopeFilters,
+} from "../auth/session-scope";
+import { getUiLocale, t } from "../i18n";
 import { notifyConfigSaved } from "./deployment-auto-trigger";
+import {
+  formatConfigDisplayValue,
+  recordDeploymentConfigChange,
+} from "./deployment-change-buffer";
+import { parseRosterStoreScopeId } from "./team-employee-roster-scope";
 
 export const TEAM_SHIFT_SCHEDULING_PATH = "/team/shift-scheduling";
 
@@ -20,6 +34,8 @@ type ShiftType = {
   startTime: string;
   endTime: string;
   color: string;
+  /** 所属门店 ID；空表示全部门店通用 */
+  storeId?: string;
   /** 上班提前打卡（分钟） */
   earlyClockInMinutes: number;
   /** 是否启用下班自动打卡延迟 */
@@ -122,6 +138,8 @@ const REPEAT_WEEKDAY_OPTIONS: { day: number; label: string }[] = [
 let shiftConfigDialogOpen = false;
 /** 班次配置弹窗内的编辑草稿（取消时不写回） */
 let shiftConfigDraft: ShiftType[] | null = null;
+/** 班次配置弹窗内的门店筛选（storeId） */
+let shiftConfigStoreFilter = "";
 let shiftConfigSelectedId: string | null = null;
 let cellEditor: {
   date: string;
@@ -176,12 +194,14 @@ function initDefaultDateRange(): void {
 if (!pageState.dateFrom) initDefaultDateRange();
 
 function normalizeShiftType(raw: Partial<ShiftType> & Pick<ShiftType, "id" | "name" | "startTime" | "endTime">): ShiftType {
+  const storeId = typeof raw.storeId === "string" ? raw.storeId.trim() : "";
   return {
     id: raw.id,
     name: raw.name,
     startTime: raw.startTime,
     endTime: raw.endTime,
     color: raw.color?.startsWith("#") ? raw.color : "#dbeafe",
+    storeId: storeId || undefined,
     earlyClockInMinutes:
       typeof raw.earlyClockInMinutes === "number" && raw.earlyClockInMinutes >= 0 ? raw.earlyClockInMinutes : 15,
     autoClockOutDelayEnabled: !!raw.autoClockOutDelayEnabled,
@@ -190,6 +210,54 @@ function normalizeShiftType(raw: Partial<ShiftType> & Pick<ShiftType, "id" | "na
         ? raw.autoClockOutDelayMinutes
         : 30,
   };
+}
+
+function shiftMatchesStoreFilter(shift: ShiftType, storeId: string): boolean {
+  if (!storeId) return true;
+  if (!shift.storeId) return true;
+  return shift.storeId === storeId;
+}
+
+function filterShiftTypesByStore(types: ShiftType[], storeId: string): ShiftType[] {
+  if (!storeId) return types;
+  return types.filter((t) => shiftMatchesStoreFilter(t, storeId));
+}
+
+function listShiftStoreOptions(): { value: string; label: string }[] {
+  const locale = getUiLocale();
+  return getScopedFilterOptions()
+    .stores.filter((o) => !!o.value)
+    .map((o) => ({
+      value: o.value,
+      label: locale === "en" ? o.labelEn : o.labelZh,
+    }));
+}
+
+function renderShiftStoreFilterSelect(
+  selectedStoreId: string,
+  opts: { id: string; dataAttr: string; allowAll?: boolean; className?: string },
+): string {
+  const stores = listShiftStoreOptions();
+  const allowAll = opts.allowAll === true;
+  const preferred = selectedStoreId || resolveDefaultScopedStoreId();
+  const selected =
+    preferred && stores.some((o) => o.value === preferred) ? preferred : stores[0]?.value || "";
+  const options = [
+    ...(allowAll
+      ? [`<option value="">${escapeHtml(t("pageStorePicker.placeholder"))}</option>`]
+      : []),
+    ...stores.map((o) => {
+      const sel = o.value === selected ? " selected" : "";
+      return `<option value="${escapeHtml(o.value)}"${sel}>${escapeHtml(o.label)}</option>`;
+    }),
+  ].join("");
+  return `
+    <select
+      id="${escapeHtml(opts.id)}"
+      ${opts.dataAttr}
+      class="${opts.className ?? "h-9 w-auto min-w-[10rem] max-w-[16rem] shrink-0 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"}"
+      aria-label="${escapeHtml(t("header.scopeStoreAria"))}"
+    >${options || `<option value="">${escapeHtml(t("pageStorePicker.placeholder"))}</option>`}</select>`;
 }
 
 function readShiftTypes(): ShiftType[] {
@@ -207,7 +275,14 @@ function readShiftTypes(): ShiftType[] {
 }
 
 function writeShiftTypes(types: ShiftType[]): void {
+  const before = readShiftTypes();
+  if (JSON.stringify(before) === JSON.stringify(types)) return;
   localStorage.setItem(SHIFT_TYPES_STORAGE_KEY, JSON.stringify(types));
+  recordDeploymentConfigChange({
+    label: "班次类型",
+    before: formatConfigDisplayValue(before),
+    after: formatConfigDisplayValue(types),
+  });
   notifyConfigSaved(TEAM_SHIFT_SCHEDULING_PATH);
 }
 
@@ -247,7 +322,14 @@ function readAssignments(): ShiftAssignment[] {
 }
 
 function writeAssignments(assignments: ShiftAssignment[]): void {
+  const before = readAssignments();
+  if (JSON.stringify(before) === JSON.stringify(assignments)) return;
   localStorage.setItem(ASSIGNMENTS_STORAGE_KEY, JSON.stringify(assignments));
+  recordDeploymentConfigChange({
+    label: "排班安排",
+    before: formatConfigDisplayValue(before),
+    after: formatConfigDisplayValue(assignments),
+  });
   notifyConfigSaved(TEAM_SHIFT_SCHEDULING_PATH);
 }
 
@@ -266,6 +348,65 @@ function readEmployees(): RosterEmployee[] {
   } catch {
     return [...DEFAULT_EMPLOYEES];
   }
+}
+
+function normalizeStoreText(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+function employeeMatchesSelectedStore(emp: RosterEmployee): boolean {
+  if (!usesInPageStorePicker()) return true;
+  const scope = readScopeFilters();
+  if (!scope.store) return true;
+  const storeOpt = getScopedFilterOptions().stores.find((o) => o.value === scope.store);
+  const matchers = [
+    storeOpt?.labelZh,
+    storeOpt?.labelEn,
+    parseRosterStoreScopeId(scope.store) ?? undefined,
+    scope.store,
+  ]
+    .map((v) => normalizeStoreText(String(v || "")))
+    .filter(Boolean);
+  if (!matchers.length) return true;
+  const empStore = normalizeStoreText(emp.store || "");
+  if (!empStore) return true;
+  return matchers.some((m) => empStore === m || empStore.includes(m) || m.includes(empStore));
+}
+
+function readScopedEmployees(): RosterEmployee[] {
+  return readEmployees().filter(employeeMatchesSelectedStore);
+}
+
+/** 精简门店筛选：仅标签 + 下拉，置于日期选择器左侧 */
+function renderCompactStoreFilter(): string {
+  if (!usesInPageStorePicker()) return "";
+  const locale = getUiLocale();
+  const stores = getScopedFilterOptions().stores.filter((o) => !!o.value);
+  const selected = resolveDefaultScopedStoreId();
+  const options = stores
+    .map((o) => {
+      const lab = escapeHtml(locale === "en" ? o.labelEn : o.labelZh);
+      const sel = o.value === selected ? " selected" : "";
+      return `<option value="${escapeHtml(o.value)}"${sel}>${lab}</option>`;
+    })
+    .join("");
+
+  return `
+    <div class="flex shrink-0 items-center gap-2" data-shift-store-filter-wrap>
+      <label for="shift-store-filter" class="shrink-0 text-sm text-muted-foreground">${escapeHtml(t("header.scopeStore"))}</label>
+      <select
+        id="shift-store-filter"
+        data-shift-store-filter
+        class="h-9 w-auto min-w-[10rem] max-w-[16rem] shrink-0 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        aria-label="${escapeHtml(t("header.scopeStoreAria"))}"
+      >
+        ${
+          stores.length
+            ? options
+            : `<option value="">${escapeHtml(t("pageStorePicker.placeholder"))}</option>`
+        }
+      </select>
+    </div>`;
 }
 
 
@@ -638,6 +779,11 @@ const SHIFT_FORM_NUMBER_UNIT =
 function renderShiftTypeDetailForm(t: ShiftType): string {
   const delayDisabled = t.autoClockOutDelayEnabled ? "" : " disabled";
   const hours = formatWorkHoursDisplay(t.startTime, t.endTime);
+  const storeSelect = renderShiftStoreFilterSelect(t.storeId ?? "", {
+    id: `shift-type-store-${t.id}`,
+    dataAttr: 'data-shift-type-store',
+    className: `${SHIFT_FORM_INPUT} sm:max-w-md`,
+  });
   return `
     <div class="space-y-4" data-shift-config-detail data-shift-type-row="${escapeHtml(t.id)}">
       <div class="flex items-center gap-2 border-b border-border pb-3">
@@ -646,6 +792,10 @@ function renderShiftTypeDetailForm(t: ShiftType): string {
         <span class="text-xs tabular-nums text-muted-foreground">${escapeHtml(t.startTime)}–${escapeHtml(t.endTime)} · ${escapeHtml(hours)}</span>
       </div>
       <div class="space-y-3">
+        <div class="flex flex-col gap-1 sm:flex-row sm:items-start sm:gap-3">
+          <span class="${SHIFT_FORM_LABEL}"><span class="text-destructive">*</span> 门店:</span>
+          ${storeSelect}
+        </div>
         <div class="flex flex-col gap-1 sm:flex-row sm:items-start sm:gap-3">
           <span class="${SHIFT_FORM_LABEL}">名字:</span>
           <input type="text" value="${escapeHtml(t.name)}" data-shift-type-name placeholder="班次名称" class="${SHIFT_FORM_INPUT} sm:max-w-md" />
@@ -713,15 +863,27 @@ function renderShiftConfigListItem(t: ShiftType, selected: boolean): string {
 function renderShiftConfigDialog(types: ShiftType[]): string {
   if (!shiftConfigDialogOpen) return "";
   const draft = shiftConfigDraft ?? types;
+  const filtered = filterShiftTypesByStore(draft, shiftConfigStoreFilter);
   const selectedId =
-    shiftConfigSelectedId && draft.some((t) => t.id === shiftConfigSelectedId)
+    shiftConfigSelectedId && filtered.some((t) => t.id === shiftConfigSelectedId)
       ? shiftConfigSelectedId
-      : draft[0]?.id ?? null;
+      : filtered[0]?.id ?? null;
+  shiftConfigSelectedId = selectedId;
   const selected = selectedId ? draft.find((t) => t.id === selectedId) : undefined;
-  const listItems = draft.map((t) => renderShiftConfigListItem(t, t.id === selectedId)).join("");
+  const listItems = filtered.map((t) => renderShiftConfigListItem(t, t.id === selectedId)).join("");
   const detailPanel = selected
     ? renderShiftTypeDetailForm(selected)
-    : `<div class="flex h-full min-h-[16rem] flex-col items-center justify-center text-sm text-muted-foreground">暂无班次，请点击左侧「新增班次」</div>`;
+    : `<div class="flex h-full min-h-[16rem] flex-col items-center justify-center text-sm text-muted-foreground">${
+        shiftConfigStoreFilter ? "当前门店暂无班次，请点击左侧「新增班次」" : "暂无班次，请点击左侧「新增班次」"
+      }</div>`;
+  const storeFilter = `
+    <div class="flex flex-wrap items-center gap-2">
+      <label for="shift-config-store-filter" class="shrink-0 text-sm text-muted-foreground">${escapeHtml(t("header.scopeStore"))}</label>
+      ${renderShiftStoreFilterSelect(shiftConfigStoreFilter, {
+        id: "shift-config-store-filter",
+        dataAttr: "data-shift-config-store-filter",
+      })}
+    </div>`;
 
   return `
     <div class="fixed inset-0 z-50 flex items-center justify-center p-4" data-shift-config-dialog role="dialog" aria-modal="true" aria-labelledby="shift-config-title">
@@ -729,11 +891,12 @@ function renderShiftConfigDialog(types: ShiftType[]): string {
       <div class="relative z-10 flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-border bg-card shadow-lg">
         <div class="border-b border-border px-5 py-4">
           <h2 id="shift-config-title" class="text-base font-semibold text-foreground">班次配置</h2>
-          <p class="mt-1 text-xs text-muted-foreground">左侧选择班次，右侧编辑详情；保存后应用于排班表。</p>
+          <p class="mt-1 text-xs text-muted-foreground">先选择门店，再在左侧选择班次、右侧编辑详情；保存后应用于排班表。</p>
+          <div class="mt-3">${storeFilter}</div>
         </div>
         <div class="flex min-h-0 flex-1 flex-col sm:flex-row">
           <aside class="flex w-full shrink-0 flex-col border-b border-border sm:w-56 sm:border-b-0 sm:border-r">
-            <div class="min-h-0 flex-1 space-y-0.5 overflow-auto p-2" data-shift-config-list role="list">${listItems}</div>
+            <div class="min-h-0 flex-1 space-y-0.5 overflow-auto p-2" data-shift-config-list role="list">${listItems || `<p class="px-2 py-6 text-center text-xs text-muted-foreground">暂无班次</p>`}</div>
             <div class="shrink-0 border-t border-border p-2">
               <button type="button" data-shift-type-add class="flex w-full items-center justify-center gap-1 rounded-md border border-dashed border-border px-3 py-2 text-sm font-medium text-primary hover:bg-muted/50">+ 新增班次</button>
             </div>
@@ -914,11 +1077,15 @@ function refreshEmployeeAddSelectOptions(dialog: HTMLElement): void {
 
 function renderCellEditDialog(types: ShiftType[]): string {
   if (!cellEditor) return "";
-  const employees = readEmployees();
+  const pageStoreId = readScopeFilters().store;
+  const scopedTypes = filterShiftTypesByStore(types, pageStoreId);
+  const employees = readScopedEmployees();
   const selectedEmployeeIds = cellEditor.employeeIds.filter((id) => employees.some((e) => e.id === id));
   const primaryEmployeeId = selectedEmployeeIds[0] ?? cellEditor.employeeIds[0] ?? "";
   const assignment = primaryEmployeeId ? getAssignment(primaryEmployeeId, cellEditor.date) : undefined;
-  const shift = assignment ? types.find((t) => t.id === assignment.shiftId) : undefined;
+  const shift =
+    (assignment ? scopedTypes.find((t) => t.id === assignment.shiftId) : undefined) ||
+    (assignment ? types.find((t) => t.id === assignment.shiftId) : undefined);
   const hasAnyAssignment = selectedEmployeeIds.some((id) => getAssignment(id, cellEditor!.date));
 
   const startTime = shift && assignment ? getEffectiveTimes(assignment, shift).startTime : shift?.startTime ?? "";
@@ -958,7 +1125,7 @@ function renderCellEditDialog(types: ShiftType[]): string {
           <div class="flex flex-col gap-1 sm:flex-row sm:items-start sm:gap-3">
             <span class="${SHIFT_FORM_LABEL}"><span class="text-destructive">*</span> 班次选择:</span>
             <select data-shift-edit-shift class="${SHIFT_FORM_INPUT} sm:max-w-md" required>
-              ${renderShiftSelectOptions(types, assignment?.shiftId ?? "")}
+              ${renderShiftSelectOptions(scopedTypes, assignment?.shiftId ?? "")}
             </select>
           </div>
           <div class="flex flex-col gap-1 sm:flex-row sm:items-start sm:gap-3">
@@ -1038,7 +1205,8 @@ export function isTeamShiftSchedulingPath(path: string): boolean {
 export function renderTeamShiftSchedulingPage(): string {
   const shiftTypes = readShiftTypes();
   const typeMap = new Map(shiftTypes.map((t) => [t.id, t]));
-  const employees = readEmployees();
+  const employees = readScopedEmployees();
+  const needsStore = usesInPageStorePicker() && !readScopeFilters().store;
   const filtered = pageState.employeeFilter
     ? employees.filter((e) => e.id === pageState.employeeFilter)
     : employees;
@@ -1052,34 +1220,43 @@ export function renderTeamShiftSchedulingPage(): string {
     )
     .join("");
 
-  const bodyRows = filtered
-    .map((emp) => {
-      const hours = employeeTotalHours(emp.id, dates);
-      const cells = dates
-        .map((d) => {
-          const a = getAssignment(emp.id, d);
-          const shift = a ? typeMap.get(a.shiftId) : undefined;
-          return renderShiftCell(emp.id, d, a, shift, isWeekend(d));
-        })
-        .join("");
-      return `<tr class="border-b border-border/60">
+  const bodyRows = needsStore
+    ? ""
+    : filtered
+        .map((emp) => {
+          const hours = employeeTotalHours(emp.id, dates);
+          const cells = dates
+            .map((d) => {
+              const a = getAssignment(emp.id, d);
+              const shift = a ? typeMap.get(a.shiftId) : undefined;
+              return renderShiftCell(emp.id, d, a, shift, isWeekend(d));
+            })
+            .join("");
+          return `<tr class="border-b border-border/60">
         <td class="sticky left-0 z-[1] min-w-[8rem] border border-border/60 bg-card px-3 py-2 text-sm">
           <span class="font-medium text-foreground">${escapeHtml(emp.name)}</span>
           <span class="mt-0.5 block text-xs tabular-nums text-muted-foreground">${hours} 小时</span>
         </td>
         ${cells}
       </tr>`;
-    })
-    .join("");
+        })
+        .join("");
+
+  const emptyMessage = needsStore
+    ? "请先选择门店"
+    : "暂无员工数据，请先在「角色与员工」中添加员工。";
 
   return `
     <div class="team-shift-scheduling-page flex min-h-0 flex-1 flex-col gap-3" data-shift-scheduling-page>
       <div class="flex shrink-0 flex-wrap items-center gap-3">
-        <div class="flex items-center gap-2 rounded-md border border-input bg-background px-2 py-1">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="shrink-0 text-muted-foreground" aria-hidden="true"><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
-          <input type="date" data-shift-date-from value="${escapeHtml(pageState.dateFrom)}" class="h-8 border-0 bg-transparent text-sm focus-visible:outline-none" />
-          <span class="text-muted-foreground">→</span>
-          <input type="date" data-shift-date-to value="${escapeHtml(pageState.dateTo)}" class="h-8 border-0 bg-transparent text-sm focus-visible:outline-none" />
+        <div class="flex min-w-0 flex-nowrap items-center gap-3">
+          ${renderCompactStoreFilter()}
+          <div class="flex shrink-0 items-center gap-2 rounded-md border border-input bg-background px-2 py-1">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="shrink-0 text-muted-foreground" aria-hidden="true"><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+            <input type="date" data-shift-date-from value="${escapeHtml(pageState.dateFrom)}" class="h-8 border-0 bg-transparent text-sm focus-visible:outline-none" />
+            <span class="text-muted-foreground">→</span>
+            <input type="date" data-shift-date-to value="${escapeHtml(pageState.dateTo)}" class="h-8 border-0 bg-transparent text-sm focus-visible:outline-none" />
+          </div>
         </div>
         <div class="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">${renderQuickPresetButtons()}</div>
         <button type="button" data-shift-config-open class="h-9 shrink-0 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">班次配置</button>
@@ -1105,7 +1282,7 @@ export function renderTeamShiftSchedulingPage(): string {
               ${headerCells}
             </tr>
           </thead>
-          <tbody>${bodyRows || `<tr><td colspan="${dates.length + 1}" class="px-4 py-8 text-center text-sm text-muted-foreground">暂无员工数据，请先在「角色与员工」中添加员工。</td></tr>`}</tbody>
+          <tbody>${bodyRows || `<tr><td colspan="${dates.length + 1}" class="px-4 py-8 text-center text-sm text-muted-foreground">${escapeHtml(emptyMessage)}</td></tr>`}</tbody>
         </table>
       </div>
 
@@ -1140,6 +1317,10 @@ function syncAutoClockOutDelayField(row: HTMLElement): void {
 
 function collectShiftTypeFromDetail(root: HTMLElement, id: string): ShiftType | null {
   const name = root.querySelector<HTMLInputElement>("[data-shift-type-name]")?.value.trim() ?? "";
+  const storeId =
+    root.querySelector<HTMLSelectElement>("[data-shift-type-store]")?.value.trim() ||
+    shiftConfigStoreFilter ||
+    "";
   const startTime = root.querySelector<HTMLInputElement>("[data-shift-type-start]")?.value ?? "09:00";
   const endTime = root.querySelector<HTMLInputElement>("[data-shift-type-end]")?.value ?? "17:00";
   const color = root.querySelector<HTMLInputElement>("[data-shift-type-color]")?.value ?? "#dbeafe";
@@ -1157,6 +1338,7 @@ function collectShiftTypeFromDetail(root: HTMLElement, id: string): ShiftType | 
   return normalizeShiftType({
     id,
     name,
+    storeId,
     startTime,
     endTime,
     color,
@@ -1211,6 +1393,7 @@ function bindShiftConfigDetailPanel(remount: () => void): void {
     syncShiftConfigListItemPreview(dialog);
   };
   detail.querySelector("[data-shift-type-name]")?.addEventListener("input", onFieldChange);
+  detail.querySelector("[data-shift-type-store]")?.addEventListener("change", onFieldChange);
   detail.querySelector("[data-shift-type-start]")?.addEventListener("input", onFieldChange);
   detail.querySelector("[data-shift-type-end]")?.addEventListener("input", onFieldChange);
   detail.querySelector("[data-shift-type-start]")?.addEventListener("change", onFieldChange);
@@ -1228,11 +1411,14 @@ function closeShiftConfigDialog(): void {
   shiftConfigDialogOpen = false;
   shiftConfigDraft = null;
   shiftConfigSelectedId = null;
+  shiftConfigStoreFilter = "";
 }
 
 function openShiftConfigDialog(): void {
   shiftConfigDraft = readShiftTypes().map((t) => ({ ...t }));
-  shiftConfigSelectedId = shiftConfigDraft[0]?.id ?? null;
+  shiftConfigStoreFilter = resolveDefaultScopedStoreId() || readScopeFilters().store || "";
+  const filtered = filterShiftTypesByStore(shiftConfigDraft, shiftConfigStoreFilter);
+  shiftConfigSelectedId = filtered[0]?.id ?? shiftConfigDraft[0]?.id ?? null;
   shiftConfigDialogOpen = true;
 }
 
@@ -1242,6 +1428,16 @@ function bindShiftConfigDialog(remount: () => void): void {
   dialog.dataset.shiftConfigDialogBound = "1";
 
   bindShiftConfigDetailPanel(remount);
+
+  dialog.querySelector("[data-shift-config-store-filter]")?.addEventListener("change", () => {
+    persistShiftConfigDetailToDraft();
+    const el = dialog.querySelector<HTMLSelectElement>("[data-shift-config-store-filter]");
+    shiftConfigStoreFilter = el?.value ?? "";
+    const draft = shiftConfigDraft ?? readShiftTypes();
+    const filtered = filterShiftTypesByStore(draft, shiftConfigStoreFilter);
+    shiftConfigSelectedId = filtered[0]?.id ?? null;
+    remount();
+  });
 
   dialog.querySelectorAll("[data-shift-config-select]").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -1263,6 +1459,13 @@ function bindShiftConfigDialog(remount: () => void): void {
   });
   dialog.querySelector("[data-shift-config-save]")?.addEventListener("click", () => {
     const types = collectShiftTypesFromDialog();
+    const missingStore = types.find((t) => !t.storeId);
+    if (missingStore) {
+      window.alert(`班次「${missingStore.name}」尚未选择门店，请先选择门店后再保存。`);
+      shiftConfigSelectedId = missingStore.id;
+      remount();
+      return;
+    }
     writeShiftTypes(types);
     closeShiftConfigDialog();
     remount();
@@ -1270,9 +1473,14 @@ function bindShiftConfigDialog(remount: () => void): void {
   dialog.querySelector("[data-shift-type-add]")?.addEventListener("click", () => {
     persistShiftConfigDetailToDraft();
     if (!shiftConfigDraft) shiftConfigDraft = readShiftTypes().map((t) => ({ ...t }));
+    if (!shiftConfigStoreFilter) {
+      window.alert("请先选择门店，再新增班次。");
+      return;
+    }
     const newType = normalizeShiftType({
       id: newShiftId(),
       name: "新班次",
+      storeId: shiftConfigStoreFilter,
       startTime: "09:00",
       endTime: "17:00",
       color: "#e0e7ff",
@@ -1456,6 +1664,23 @@ function bindCellEditDialog(remount: () => void): void {
 export function bindTeamShiftSchedulingUi(remount: () => void): void {
   const root = document.querySelector<HTMLElement>("[data-shift-scheduling-page]");
   if (!root) return;
+
+  if (ensureInPageDefaultStoreSelected()) {
+    remount();
+    return;
+  }
+
+  const storeSelect = root.querySelector<HTMLSelectElement>("[data-shift-store-filter]");
+  if (storeSelect && storeSelect.dataset.bound !== "1") {
+    storeSelect.dataset.bound = "1";
+    storeSelect.addEventListener("change", () => {
+      const storeId = storeSelect.value;
+      if (!storeId) return;
+      const scope = readScopeFilters();
+      writeScopeFilters({ ...scope, store: storeId });
+      remount();
+    });
+  }
 
   root.querySelector("[data-shift-date-from]")?.addEventListener("change", () => {
     readPageStateFromDom(root);

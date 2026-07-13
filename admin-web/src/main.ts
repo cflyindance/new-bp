@@ -18,6 +18,7 @@ import {
   readScopeFilters,
   shouldShowBrandScopeFilter,
   shouldShowBrandScopeLockedLabel,
+  shouldShowHeaderStoreScopeFilter,
   shouldShowRegionScopeFilter,
   ensureMvpBrandPerspectiveRegionScopeCleared,
   shouldShowMerchantGroupSwitcher,
@@ -25,9 +26,11 @@ import {
   syncSessionForAuthenticatedUser,
   refreshSessionOnMount,
   syncScopeFilterMetaForEmbeddedPages,
+  ensureInPageDefaultStoreSelected,
   writeScopeFilters,
 } from "./auth/session-scope";
-import { TEAM_EMPLOYEE_ROSTER_STORAGE_KEY } from "./config/team-employee-roster-scope";
+import { bindPageStorePicker, wrapPageStoreConfigContent } from "./shell/page-store-picker";
+import { TEAM_EMPLOYEE_ROSTER_STORAGE_KEY, ensurePresetEmployeesForScopeStores } from "./config/team-employee-roster-scope";
 import { formatScopeAggregationNote, resolveScopeAggregationMeta } from "./auth/scope-aggregation";
 import { bindEffectiveScopeChangeListener, describeEffectiveScope, resolveEffectiveScope } from "./auth/effective-scope-api";
 import { resolveDefaultAnchorBrandId, isBrandDataPerspective, writeChainDataPerspective } from "./auth/merchant-scope-context";
@@ -230,6 +233,14 @@ import {
   resolveLegacyDistributionLogRedirect,
 } from "./config/deployment-ui";
 import { bindDeploymentAutoTrigger } from "./config/deployment-auto-trigger";
+import { getSettingTitleBySeq } from "./config/deployment-change-buffer";
+import {
+  formatProductLineList,
+  recordModuleSettingDeploymentChange,
+  resolveSettingsPathForChange,
+  resolveSettingsPathForSeq,
+} from "./config/module-settings-deployment-change";
+import { getModuleSettingsBasePath } from "./config/module-settings-catalog";
 import { MERCHANT_PLATFORM_PRESET_SCOPE, isMerchantPlatformPresetPath, isMPlatformPresetPath } from "./config/platform-preset-scope";
 import {
   enterMPlatformShell,
@@ -1723,6 +1734,26 @@ function bindFohEmenuProIframeBridge(): void {
   });
 }
 
+let tipOutScopeStoreBridgeBound = false;
+
+/** 响应 TipOut 员工列表页内门店筛选，写入全局 scope */
+function bindTipOutScopeStoreBridge(): void {
+  if (tipOutScopeStoreBridgeBound) return;
+  tipOutScopeStoreBridgeBound = true;
+  window.addEventListener("message", (event) => {
+    const data = event.data as { type?: string; storeId?: string } | null;
+    if (!data || data.type !== "menusifu:set-scope-store") return;
+    const storeId = typeof data.storeId === "string" ? data.storeId.trim() : "";
+    if (!storeId) return;
+    const scope = readScopeFilters();
+    if (scope.store === storeId) {
+      syncScopeFilterMetaForEmbeddedPages({ ...scope, store: storeId });
+      return;
+    }
+    writeScopeFilters({ ...scope, store: storeId });
+  });
+}
+
 function isReportsTipsAllocationIframePath(path: string): boolean {
   return path === "/reports/staff/tips-allocation" || path.startsWith("/reports/staff/tips-allocation/");
 }
@@ -1856,6 +1887,8 @@ function renderReportsTipsAllocationIframePanel(): string {
 
 /** 主区全宽嵌入团队管理角色与员工（TipOut 员工列表） */
 function renderTeamRolesEmployeesIframePanel(): string {
+  ensureInPageDefaultStoreSelected();
+  syncScopeFilterMetaForEmbeddedPages();
   return `
     <div class="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
       <iframe
@@ -9808,6 +9841,12 @@ function runModuleSettingToggleSideEffects(seq: number, next: boolean): void {
 function applyModuleSettingToggleChange(seq: number, next: boolean): void {
   const byLineId = getActiveFohByLineIdFromDom();
   const currentPath = readAppHashPath();
+  const before =
+    byLineId && isFohSettingsByLinePath(currentPath)
+      ? readFohByLineToggleState(seq, byLineId)
+      : readModuleSettingToggleOn(seq);
+  if (before === next) return;
+
   if (byLineId && isFohSettingsByLinePath(currentPath)) {
     writeFohByLineToggleState(seq, byLineId, next);
     runFohByLineToggleSideEffects(seq, next);
@@ -9816,9 +9855,30 @@ function applyModuleSettingToggleChange(seq: number, next: boolean): void {
     writeModuleSettingToggleOn(seq, next);
     runModuleSettingToggleSideEffects(seq, next);
   }
+  const lineLabel = byLineId
+    ? formatProductLineList([byLineId]).replace("（无）", byLineId)
+    : undefined;
+  const fullLabel = byLineId
+    ? `${getSettingTitleBySeq(seq)}（${lineLabel} 产线）`
+    : undefined;
+  const settingsPath =
+    currentPath.startsWith("/operations/queue-call/settings")
+      ? getModuleSettingsBasePath(currentPath) ?? "/operations/queue-call/settings"
+      : resolveSettingsPathForSeq(seq) ?? resolveSettingsPathForChange(String(seq));
+
+  recordModuleSettingDeploymentChange({
+    seq,
+    fullLabel,
+    kind: "toggle",
+    before,
+    after: next,
+    settingsPath,
+  });
   syncModuleSettingToggleToDom(seq, next);
   window.dispatchEvent(
-    new CustomEvent("menusifu:module-setting-changed", { detail: { seq, on: next } }),
+    new CustomEvent("menusifu:module-setting-changed", {
+      detail: { seq, on: next, settingsPath },
+    }),
   );
 }
 
@@ -10577,7 +10637,7 @@ function renderHeaderScopeFilters(): string {
     >
       ${shouldShowBrandScopeFilter() ? renderSelect("scope-brand-select", "header.scopeBrand", "header.scopeBrandAria", scopedOpts.brands, scope.brand) : brandLockedField}
       ${shouldShowRegionScopeFilter() ? renderSelect("scope-region-select", "header.scopeRegion", "header.scopeRegionAria", scopedOpts.regions, scope.region) : ""}
-      ${renderSelect("scope-store-select", "header.scopeStore", "header.scopeStoreAria", scopedOpts.stores, storeSelectValue)}
+      ${shouldShowHeaderStoreScopeFilter() ? renderSelect("scope-store-select", "header.scopeStore", "header.scopeStoreAria", scopedOpts.stores, storeSelectValue) : ""}
     </div>
   `;
 }
@@ -10611,8 +10671,10 @@ function bindHeaderScopeFilters(): void {
 
   const brandEl = document.getElementById("scope-brand-select") as HTMLSelectElement | null;
   const regionEl = document.getElementById("scope-region-select") as HTMLSelectElement | null;
-  const storeEl = document.getElementById("scope-store-select") as HTMLSelectElement | null;
-  if (!storeEl) return;
+  const storeEl = shouldShowHeaderStoreScopeFilter()
+    ? (document.getElementById("scope-store-select") as HTMLSelectElement | null)
+    : null;
+  if (!brandEl && !regionEl && !storeEl) return;
 
   const optionValues = (el: HTMLSelectElement): Set<string> =>
     new Set(Array.from(el.options, (o) => o.value));
@@ -10621,6 +10683,7 @@ function bindHeaderScopeFilters(): void {
     const scope = readScopeFilters();
     if (brandEl && scope.brand && optionValues(brandEl).has(scope.brand)) brandEl.value = scope.brand;
     if (regionEl && scope.region && optionValues(regionEl).has(scope.region)) regionEl.value = scope.region;
+    if (!storeEl) return;
     const storeValues = optionValues(storeEl);
     if (scope.store && storeValues.has(scope.store)) {
       storeEl.value = scope.store;
@@ -10641,7 +10704,7 @@ function bindHeaderScopeFilters(): void {
     writeScopeFilters({
       brand: brandEl?.value ?? "",
       region: regionEl?.value ?? "",
-      store: storeEl.value,
+      store: storeEl?.value ?? readScopeFilters().store,
     });
   };
 
@@ -10662,7 +10725,7 @@ function bindHeaderScopeFilters(): void {
     persistAndNotify();
   });
   regionEl?.addEventListener("change", persistAndNotify);
-  storeEl.addEventListener("change", persistAndNotify);
+  storeEl?.addEventListener("change", persistAndNotify);
 }
 
 function renderNavHomePanel(): string {
@@ -10838,6 +10901,130 @@ function renderMain(): string {
         </div>
       </header>`;
 
+  const merchantTabPanelBody =
+    isGiftCardsFactory
+      ? renderGiftCardsFactoryIframePanel()
+      : isInventoryExpiryIframe
+        ? renderInventoryExpiryIframeSplit()
+        : isMarketingScreensaverIframe
+          ? renderMarketingScreensaverIframePanel()
+          : isMarketingAdsIframe
+            ? renderMarketingAdsIframePanel()
+            : isMarketingPosterProIframe
+              ? renderMarketingPosterProIframePanel()
+              : isAssetCenterMaterialsIframe
+                ? renderAssetCenterMaterialsIframePanel()
+                : isFohMenuOrderLimitsIframe
+                  ? renderFohMenuOrderLimitsPagePanel()
+                  : isFohEmenuProIframe
+                    ? renderFohEmenuProIframePanel()
+                    : isReportsTipsAllocationIframe
+                      ? renderReportsTipsAllocationIframePanel()
+                      : isTeamRolesEmployeesIframe
+                        ? renderTeamRolesEmployeesIframePanel()
+                        : isTeamTipsManagementIframe
+                          ? renderTeamTipsManagementIframePanel(path)
+                          : isTeamPayrollReportIframe
+                            ? renderTeamPayrollReportIframePanel()
+                            : isDeploymentLog
+                              ? renderDeploymentLogPage(path)
+                              : isBrandProductsTertiary
+                                ? renderPlaceholder(path, title, tabModule, { brandProductsSubnav: true })
+                                : isBrandMenuTertiary
+                                  ? `<div class="${tertiaryRowClass}">
+                    ${renderBrandMenuSidebar(path)}
+                    <div class="${tertiaryMainClass}">
+                      ${renderPlaceholder(path, title, tabModule, { brandMenuSubnav: true })}
+                    </div>
+                  </div>`
+                                  : isStoreMenuTertiary
+                                    ? `<div class="${tertiaryRowClass}">
+                    ${renderStoreMenuSidebar(path)}
+                    <div class="${tertiaryMainClass}">${renderPlaceholder(path, title, tabModule, { storeMenuSubnav: true })}</div>
+                  </div>`
+                                    : isDeviceManagementHardware
+                                      ? (() => {
+                                          const hardwareMain = isDeviceManagementPaymentHardwarePath(path)
+                                            ? renderDeviceManagementPaymentHardwarePage(path)
+                                            : isDeviceManagementFiscalHardwarePath(path)
+                                              ? renderDeviceManagementFiscalHardwarePage(path)
+                                              : isDeviceManagementCallerIdHardwarePath(path)
+                                                ? renderDeviceManagementCallerIdHardwarePage(path)
+                                                : isDeviceManagementCashDrawerHardwarePath(path)
+                                                  ? renderDeviceManagementCashDrawerHardwarePage(path)
+                                                  : isDeviceManagementEmenuHardwarePath(path)
+                                                    ? renderDeviceManagementEmenuHardwarePage(path)
+                                                    : isDeviceManagementKioskHardwarePath(path)
+                                                      ? renderDeviceManagementKioskHardwarePage(path)
+                                                      : isDeviceManagementCdsHardwarePath(path)
+                                                        ? renderDeviceManagementCdsHardwarePage(path)
+                                                        : isDeviceManagementPrinterHardwarePath(path)
+                                                          ? renderDeviceManagementPrinterHardwarePage(path)
+                                                          : renderPlaceholder(path, title, tabModule, {
+                                                              deviceManagementHardwareSubnav: true,
+                                                            });
+                                          return `<div class="${tertiaryRowClass}">
+                    ${renderDeviceManagementHardwareSidebar(path)}
+                    <div class="${tertiaryMainClass} min-h-0 overflow-y-auto">${hardwareMain}</div>
+                  </div>`;
+                                        })()
+                                      : isTeamReportsTertiary
+                                        ? `<div class="${tertiaryRowClass}">
+                    ${renderTeamReportsSidebar(path)}
+                    <div class="${tertiaryMainClass}">${renderPlaceholder(path, title, tabModule, { teamReportsSubnav: true })}</div>
+                  </div>`
+                                        : isTipsManagementTertiary
+                                          ? `<div class="${tertiaryRowClass}">
+                    ${renderTipsManagementSidebar(path)}
+                    <div class="${tertiaryMainClass}">${renderPlaceholder(path, title, tabModule, { tipsManagementSubnav: true })}</div>
+                  </div>`
+                                          : isFloorPlanPath(path)
+                                            ? renderFloorPlanPage()
+                                            : isFohCategorySettingsPath(path)
+                                              ? renderFohCategorySettingsPage(path)
+                                              : isFohClassificationSettingsPath(path)
+                                                ? renderFohClassificationSettingsPage(path)
+                                                : isTeamBreaksOvertime
+                                                  ? renderTeamBreaksOvertimePageWithSettings(path)
+                                                  : isTeamClockIn
+                                                    ? renderTeamClockInPageWithSettings()
+                                                    : isTeamTrainingPerformance
+                                                      ? renderTeamTrainingPerformancePage()
+                                                      : isTeamShiftScheduling
+                                                        ? renderTeamShiftSchedulingPageWithSettings()
+                                                        : isFinanceRegisterAudit
+                                                          ? renderFinanceRegisterAuditPageContent(path)
+                                                          : isNotificationsHubFeaturePath(path)
+                                                            ? renderNotificationsHubPageContent(path)
+                                                            : path === "/settings/overview"
+                                                              ? renderSettingsOverview()
+                                                              : isNavHomePath(path)
+                                                                ? renderNavHomePanel()
+                                                                : isPlatformPreset
+                                                                  ? renderPlatformPresetPage(path, MERCHANT_PLATFORM_PRESET_SCOPE)
+                                                                  : isModuleHubSettingsCatalogPath(path)
+                                                                    ? isFohSettingsPath(path)
+                                                                      ? renderFohHubSettingsLayout(path, title, tertiaryRowClass, tertiaryMainClass)
+                                                                      : `<div class="${tertiaryRowClass}">
+                    ${renderModuleHubSettingsCategorySidebar(path, title)}
+                    <div class="${tertiaryMainClass} module-settings-scroll-host flex flex-col">
+                      ${renderModuleHubSettingsPage(path, title)}
+                    </div>
+                  </div>`
+                                                                    : isStaffAccounts
+                                                                      ? renderStaffAccountsPage()
+                                                                      : isPermissionsRbac
+                                                                        ? renderPermissionsRbacPage(path)
+                                                                        : isLoginLogs
+                                                                          ? renderLoginLogsPage()
+                                                                          : isChainBrandMgmt
+                                                                            ? renderChainBrandMgmtPage(path)
+                                                                            : isBrandStoreList
+                                                                              ? renderBrandStoreListPage(path)
+                                                                              : isGroupStoreList
+                                                                                ? renderGroupStoreListPage(path)
+                                                                                : renderPlaceholder(path, title, tabModule);
+
   return `
     <div class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
       ${impersonationBannerHtml}
@@ -10846,130 +11033,7 @@ function renderMain(): string {
         <div class="${innerWrapperClass}">
           ${tabsSection}
           <div role="tabpanel" aria-label="${title.replace(/"/g, "&quot;")}" id="module-tab-panel"${tabPanelAttrs}>
-            ${
-              isGiftCardsFactory
-                  ? renderGiftCardsFactoryIframePanel()
-                : isInventoryExpiryIframe
-                  ? renderInventoryExpiryIframeSplit()
-                : isMarketingScreensaverIframe
-                  ? renderMarketingScreensaverIframePanel()
-                : isMarketingAdsIframe
-                  ? renderMarketingAdsIframePanel()
-                : isMarketingPosterProIframe
-                  ? renderMarketingPosterProIframePanel()
-                : isAssetCenterMaterialsIframe
-                  ? renderAssetCenterMaterialsIframePanel()
-                : isFohMenuOrderLimitsIframe
-                  ? renderFohMenuOrderLimitsPagePanel()
-                : isFohEmenuProIframe
-                  ? renderFohEmenuProIframePanel()
-                : isReportsTipsAllocationIframe
-                  ? renderReportsTipsAllocationIframePanel()
-                : isTeamRolesEmployeesIframe
-                  ? renderTeamRolesEmployeesIframePanel()
-                : isTeamTipsManagementIframe
-                  ? renderTeamTipsManagementIframePanel(path)
-                : isTeamPayrollReportIframe
-                  ? renderTeamPayrollReportIframePanel()
-                : isDeploymentLog
-                  ? renderDeploymentLogPage(path)
-                : isBrandProductsTertiary
-                  ? renderPlaceholder(path, title, tabModule, { brandProductsSubnav: true })
-                : isBrandMenuTertiary
-                  ? `<div class="${tertiaryRowClass}">
-                    ${renderBrandMenuSidebar(path)}
-                    <div class="${tertiaryMainClass}">
-                      ${renderPlaceholder(path, title, tabModule, { brandMenuSubnav: true })}
-                    </div>
-                  </div>`
-                : isStoreMenuTertiary
-                  ? `<div class="${tertiaryRowClass}">
-                    ${renderStoreMenuSidebar(path)}
-                    <div class="${tertiaryMainClass}">${renderPlaceholder(path, title, tabModule, { storeMenuSubnav: true })}</div>
-                  </div>`
-                    : isDeviceManagementHardware
-                      ? (() => {
-                          const hardwareMain = isDeviceManagementPaymentHardwarePath(path)
-                            ? renderDeviceManagementPaymentHardwarePage(path)
-                            : isDeviceManagementFiscalHardwarePath(path)
-                              ? renderDeviceManagementFiscalHardwarePage(path)
-                              : isDeviceManagementCallerIdHardwarePath(path)
-                                ? renderDeviceManagementCallerIdHardwarePage(path)
-                                : isDeviceManagementCashDrawerHardwarePath(path)
-                                  ? renderDeviceManagementCashDrawerHardwarePage(path)
-                                  : isDeviceManagementEmenuHardwarePath(path)
-                                    ? renderDeviceManagementEmenuHardwarePage(path)
-                                    : isDeviceManagementKioskHardwarePath(path)
-                                      ? renderDeviceManagementKioskHardwarePage(path)
-                                      : isDeviceManagementCdsHardwarePath(path)
-                                        ? renderDeviceManagementCdsHardwarePage(path)
-                                        : isDeviceManagementPrinterHardwarePath(path)
-                                          ? renderDeviceManagementPrinterHardwarePage(path)
-                                          : renderPlaceholder(path, title, tabModule, {
-                                              deviceManagementHardwareSubnav: true,
-                                            });
-                          return `<div class="${tertiaryRowClass}">
-                    ${renderDeviceManagementHardwareSidebar(path)}
-                    <div class="${tertiaryMainClass} min-h-0 overflow-y-auto">${hardwareMain}</div>
-                  </div>`;
-                        })()
-                      : isTeamReportsTertiary
-                        ? `<div class="${tertiaryRowClass}">
-                    ${renderTeamReportsSidebar(path)}
-                    <div class="${tertiaryMainClass}">${renderPlaceholder(path, title, tabModule, { teamReportsSubnav: true })}</div>
-                  </div>`
-                      : isTipsManagementTertiary
-                        ? `<div class="${tertiaryRowClass}">
-                    ${renderTipsManagementSidebar(path)}
-                    <div class="${tertiaryMainClass}">${renderPlaceholder(path, title, tabModule, { tipsManagementSubnav: true })}</div>
-                  </div>`
-                    : isFloorPlanPath(path)
-                      ? renderFloorPlanPage()
-                    : isFohCategorySettingsPath(path)
-                      ? renderFohCategorySettingsPage(path)
-                    : isFohClassificationSettingsPath(path)
-                      ? renderFohClassificationSettingsPage(path)
-                    : isTeamBreaksOvertime
-                      ? renderTeamBreaksOvertimePageWithSettings(path)
-                    : isTeamClockIn
-                      ? renderTeamClockInPageWithSettings()
-                    : isTeamTrainingPerformance
-                      ? renderTeamTrainingPerformancePage()
-                    : isTeamShiftScheduling
-                      ? renderTeamShiftSchedulingPageWithSettings()
-                    : isFinanceRegisterAudit
-                      ? renderFinanceRegisterAuditPageContent(path)
-                    : isNotificationsHubFeaturePath(path)
-                      ? renderNotificationsHubPageContent(path)
-                    : path === "/settings/overview"
-                      ? renderSettingsOverview()
-                      : isNavHomePath(path)
-                        ? renderNavHomePanel()
-                      : isPlatformPreset
-                        ? renderPlatformPresetPage(path, MERCHANT_PLATFORM_PRESET_SCOPE)
-                      : isModuleHubSettingsCatalogPath(path)
-                        ? isFohSettingsPath(path)
-                          ? renderFohHubSettingsLayout(path, title, tertiaryRowClass, tertiaryMainClass)
-                          : `<div class="${tertiaryRowClass}">
-                    ${renderModuleHubSettingsCategorySidebar(path, title)}
-                    <div class="${tertiaryMainClass} module-settings-scroll-host flex flex-col">
-                      ${renderModuleHubSettingsPage(path, title)}
-                    </div>
-                  </div>`
-                        : isStaffAccounts
-                          ? renderStaffAccountsPage()
-                          : isPermissionsRbac
-                            ? renderPermissionsRbacPage(path)
-                            : isLoginLogs
-                            ? renderLoginLogsPage()
-                            : isChainBrandMgmt
-                              ? renderChainBrandMgmtPage(path)
-                            : isBrandStoreList
-                              ? renderBrandStoreListPage(path)
-                            : isGroupStoreList
-                              ? renderGroupStoreListPage(path)
-                            : renderPlaceholder(path, title, tabModule)
-            }
+            ${wrapPageStoreConfigContent(path, merchantTabPanelBody)}
           </div>
         </div>
       </main>
@@ -11876,7 +11940,9 @@ function mount(): void {
   bindDeploymentUi(mount);
   bindDeploymentAutoTrigger();
   bindHeaderScopeFilters();
+  bindPageStorePicker(mount);
   bindEmployeeRosterScopeRefresh();
+  ensurePresetEmployeesForScopeStores(getScopedFilterOptions().stores);
   syncScopeFilterMetaForEmbeddedPages();
   bindEffectiveScopeChangeListener(mount);
   bindSidebarGroupSwitcher();
@@ -11890,6 +11956,7 @@ function mount(): void {
   bindFohCategorySettingsUi(mount);
   bindFohClassificationSettingsUi(mount);
   bindFohEmenuProIframeBridge();
+  bindTipOutScopeStoreBridge();
   bindFohMenuOrderLimitsUi((tab) => {
     replaceHashPath(getMenuOrderLimitTabHref(tab));
     mount();

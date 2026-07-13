@@ -1,11 +1,111 @@
 /**
  * 营销中心 · 广告列表 localStorage（列表页与编辑页共用）
+ * 品牌多门店视角下按当前所选门店分桶存储。
  */
 (function (global) {
-  var STORAGE_KEY = "bplant-marketing-ads:v1";
+  var STORAGE_KEY_PREFIX = "bplant-marketing-ads:v1";
+  var LEGACY_STORAGE_KEY = "bplant-marketing-ads:v1";
   var PRODUCT_LINES = ["eMenu", "Kiosk", "POS", "Paypad", "CDS", "叫号屏"];
   var AD_TYPE_POPUP = "弹框广告";
   var AD_TYPE_ANNOUNCEMENT = "公告";
+
+  function usesInPageStorePicker() {
+    try {
+      return !!(
+        global.TipOutGlobalScopeFilter &&
+        typeof TipOutGlobalScopeFilter.usesInPageStorePicker === "function" &&
+        TipOutGlobalScopeFilter.usesInPageStorePicker()
+      );
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function getActiveStoreId() {
+    try {
+      if (!usesInPageStorePicker()) return "";
+      if (!global.TipOutGlobalScopeFilter || typeof TipOutGlobalScopeFilter.readGlobalScopeFilter !== "function") {
+        return "";
+      }
+      var scoped = TipOutGlobalScopeFilter.readGlobalScopeFilter();
+      return scoped && scoped.storeId ? String(scoped.storeId).trim() : "";
+    } catch (_) {
+      return "";
+    }
+  }
+
+  function resolveStorageKey() {
+    if (!usesInPageStorePicker()) return LEGACY_STORAGE_KEY;
+    var storeId = getActiveStoreId();
+    if (!storeId) return STORAGE_KEY_PREFIX + ":store:__none__";
+    return storageKeyForStore(storeId);
+  }
+
+  function storageKeyForStore(storeId) {
+    return STORAGE_KEY_PREFIX + ":store:" + encodeURIComponent(String(storeId || "").trim());
+  }
+
+  function migrateLegacyAdsIfNeeded(key) {
+    if (!key || key === LEGACY_STORAGE_KEY || key.indexOf(":store:__none__") >= 0) return;
+    try {
+      if (global.localStorage.getItem(key)) return;
+      var legacy = global.localStorage.getItem(LEGACY_STORAGE_KEY);
+      if (!legacy) return;
+      var parsed = JSON.parse(legacy);
+      if (!Array.isArray(parsed)) return;
+      global.localStorage.setItem(key, legacy);
+      global.localStorage.removeItem(LEGACY_STORAGE_KEY);
+    } catch (_) {
+      /* ignore */
+    }
+  }
+
+  function requiresStoreSelection() {
+    return usesInPageStorePicker() && !getActiveStoreId();
+  }
+
+  function listScopedStoreIds() {
+    try {
+      if (!global.TipOutGlobalScopeFilter || typeof TipOutGlobalScopeFilter.listScopedStoreOptions !== "function") {
+        return [];
+      }
+      return TipOutGlobalScopeFilter.listScopedStoreOptions()
+        .map(function (o) {
+          return o && o.value ? String(o.value).trim() : "";
+        })
+        .filter(Boolean);
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /** 为指定门店桶确保系统默认广告存在（每个门店各自一份） */
+  function ensureSystemDefaultsForStore(storeId) {
+    var id = String(storeId || "").trim();
+    if (!id) return [];
+    var key = storageKeyForStore(id);
+    migrateLegacyAdsIfNeeded(key);
+    try {
+      var raw = global.localStorage.getItem(key);
+      var parsed = raw ? JSON.parse(raw) : [];
+      var list = Array.isArray(parsed) ? parsed : [];
+      return ensureSystemDefaultAds(list, true, key);
+    } catch (_) {
+      return ensureSystemDefaultAds([], true, key);
+    }
+  }
+
+  /** 品牌多门店：为当前可见的每个门店预置系统默认广告 */
+  function ensureSystemDefaultsForAllScopedStores() {
+    if (!usesInPageStorePicker()) {
+      readAds();
+      return;
+    }
+    var storeIds = listScopedStoreIds();
+    storeIds.forEach(function (id) {
+      ensureSystemDefaultsForStore(id);
+    });
+  }
 
   /** 系统默认广告定义（顺序即列表置顶顺序） */
   var SYSTEM_DEFAULT_AD_SPECS = [
@@ -335,7 +435,7 @@
     return normalized;
   }
 
-  function ensureSystemDefaultAds(list, persist) {
+  function ensureSystemDefaultAds(list, persist, persistKey) {
     var items = list.slice();
     var changed = false;
 
@@ -375,25 +475,31 @@
     });
 
     if (persist && changed) {
-      global.localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+      global.localStorage.setItem(persistKey || resolveStorageKey(), JSON.stringify(items));
     }
     return items;
   }
 
   function readAds() {
+    if (requiresStoreSelection()) return [];
     try {
-      var raw = global.localStorage.getItem(STORAGE_KEY);
+      var key = resolveStorageKey();
+      migrateLegacyAdsIfNeeded(key);
+      var raw = global.localStorage.getItem(key);
       var parsed = raw ? JSON.parse(raw) : [];
       var list = Array.isArray(parsed) ? parsed : [];
-      return ensureSystemDefaultAds(list, true);
+      return ensureSystemDefaultAds(list, true, key);
     } catch (e) {
-      return ensureSystemDefaultAds([], true);
+      return ensureSystemDefaultAds([], true, resolveStorageKey());
     }
   }
 
   function writeAds(items) {
-    var normalized = ensureSystemDefaultAds(items, false);
-    global.localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
+    if (requiresStoreSelection()) return;
+    var key = resolveStorageKey();
+    migrateLegacyAdsIfNeeded(key);
+    var normalized = ensureSystemDefaultAds(items, false, key);
+    global.localStorage.setItem(key, JSON.stringify(normalized));
   }
 
   function updateSystemAd(adId, patch) {
@@ -444,7 +550,7 @@
   }
 
   global.MarketingAdsStore = {
-    STORAGE_KEY: STORAGE_KEY,
+    STORAGE_KEY: LEGACY_STORAGE_KEY,
     AD_TYPE_POPUP: AD_TYPE_POPUP,
     AD_TYPE_ANNOUNCEMENT: AD_TYPE_ANNOUNCEMENT,
     SYSTEM_DEFAULT_AD_SPECS: SYSTEM_DEFAULT_AD_SPECS,
@@ -467,9 +573,15 @@
     createDefaultAd: createDefaultAd,
     createSystemDefaultAd: createSystemDefaultAd,
     ensureSystemDefaultAds: ensureSystemDefaultAds,
+    ensureSystemDefaultsForStore: ensureSystemDefaultsForStore,
+    ensureSystemDefaultsForAllScopedStores: ensureSystemDefaultsForAllScopedStores,
     ensureDefaultAd: ensureDefaultAd,
     readAds: readAds,
     writeAds: writeAds,
+    requiresStoreSelection: requiresStoreSelection,
+    getActiveStoreId: getActiveStoreId,
+    usesInPageStorePicker: usesInPageStorePicker,
+    listScopedStoreIds: listScopedStoreIds,
     updateSystemAd: updateSystemAd,
     updateDefaultAd: updateDefaultAd,
     normalizePosterButtonLabels: normalizePosterButtonLabels,

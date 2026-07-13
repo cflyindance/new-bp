@@ -398,6 +398,7 @@
     </main>
   </div>
 
+  <script src="../TipOut/global-scope-filter.js"></script>
   <script src="assets/marketing-ads-store.js"></script>
   <script>
     (function () {
@@ -1124,6 +1125,11 @@
       });
 
       var ad = getAd();
+      if (MarketingAdsStore.requiresStoreSelection && MarketingAdsStore.requiresStoreSelection()) {
+        window.alert("请先选择门店");
+        if (backLink) window.location.href = backLink.href;
+        return;
+      }
       adSpec = ad ? MarketingAdsStore.getSystemAdSpec(ad.id) : null;
       if (!ad || !adSpec) {
         window.alert("仅支持编辑系统默认广告");

@@ -5,8 +5,8 @@ export type ProductVersion = "mvp" | "future";
 
 const STORAGE_KEY = "menusifu:product-version-v1";
 
-/** MVP 下全视角隐藏的一级导航（仅隐藏，不删除配置） */
-export const MVP_GLOBAL_HIDDEN_NAV_MODULE_IDS = ["log-management"] as const;
+/** MVP 下全视角隐藏的一级导航（仅隐藏，不删除配置；当前无全局隐藏项） */
+export const MVP_GLOBAL_HIDDEN_NAV_MODULE_IDS = [] as const;
 
 /** MVP + 集团总部视角下仅隐藏、不删除的一级导航 */
 export const MVP_GROUP_HQ_HIDDEN_NAV_MODULE_IDS = ["brand-mgmt", "group-store-list"] as const;
@@ -69,3 +69,8 @@ export function shouldShowMPlatformViewSwitchOption(): boolean {
 export function shouldShowBrandPerspectiveRegionScopeFilter(): boolean {
   return !isMvpProductVersion();
 }
+
+/**
+ * MVP + 品牌多门店视角：顶栏品牌是否可切换（非 MVP 行为相同）。
+ * 授权 ≥2 个品牌时展示下拉；仅 1 个品牌时只读锁定。见 session-scope.shouldShowBrandScopeFilter。
+ */

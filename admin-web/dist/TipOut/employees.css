@@ -22,8 +22,44 @@
   color: var(--text-secondary);
 }
 
-.employees-page .employees-filter-bar {
-  display: none;
+/* 门店筛选：仅保留标签 + 下拉 */
+.employees-page .employees-store-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  margin: 0 0 16px;
+}
+
+.employees-page .employees-store-filter[hidden] {
+  display: none !important;
+}
+
+.employees-page .employees-store-filter-label {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.employees-page .employees-store-filter-select {
+  width: min(100%, 16rem);
+  min-width: 12rem;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--text-primary);
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.employees-page .employees-store-filter-select:focus {
+  outline: none;
+  border-color: var(--primary, #1677ff);
+  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.12);
 }
 
 .employees-page .employees-table-wrap {
@@ -215,10 +251,8 @@
   margin: 0;
 }
 
-.employees-page #field-store-display {
-  background: var(--bg-secondary, #f8fafc);
-  color: var(--text-primary);
-  cursor: default;
+.employees-page #field-store {
+  max-width: 100%;
 }
 
 .employees-page .employees-delete-confirm-name {

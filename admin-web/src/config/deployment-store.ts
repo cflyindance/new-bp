@@ -2,6 +2,7 @@
  * 模拟下发 · localStorage 存储
  */
 import { getAuthenticatedEmail } from "../auth/login";
+import { getStaffLoginAccountByEmail } from "../permissions/staff-account-store";
 import { resolveChainBrandContext } from "./merchant-chain-brand-sync";
 import {
   formatDeploymentDomainLabel,
@@ -9,15 +10,20 @@ import {
   resolveDomainsForPath,
 } from "./deployment-config-domains";
 import {
-  inferScopeLevelFromStoreCount,
   listMockDevicesForStore,
   listMockStoresByIds,
 } from "./deployment-mock-devices";
-import { ensureDeploymentSeedData } from "./deployment-seed";
+import {
+  ensureDefaultVisibleDeploymentSeeds,
+  ensureDeploymentSeedData,
+  seedFullDeploymentDemoData,
+} from "./deployment-seed";
+import { consumeNextConfigChange } from "./deployment-change-buffer";
 import { startDeploymentSimulation } from "./deployment-simulator";
 import type {
   CreateDeploymentInput,
   DeploymentBatch,
+  DeploymentConfigChange,
   DeploymentItem,
   DeploymentListFilter,
   DeploymentTarget,
@@ -99,13 +105,11 @@ function rollupBatchCounts(batch: DeploymentBatch): void {
   batch.totalItems = batch.items.length;
 
   if (batch.pendingCount > 0) {
-    if (batch.status !== "pending") batch.status = "in_progress";
-  } else if (batch.failedCount === 0) {
-    batch.status = "success";
-  } else if (batch.successCount === 0) {
+    batch.status = "in_progress";
+  } else if (batch.failedCount > 0) {
     batch.status = "failed";
   } else {
-    batch.status = "partial_success";
+    batch.status = "success";
   }
 }
 
@@ -113,6 +117,14 @@ export function ensureDeploymentStoreReady(): void {
   const batches = readBatchesRaw();
   if (batches.length === 0) {
     ensureDeploymentSeedData();
+    return;
+  }
+
+  const missingDefaults = ensureDefaultVisibleDeploymentSeeds(batches);
+  if (missingDefaults.length === 0) return;
+
+  for (const batch of missingDefaults) {
+    saveDeploymentBatch(batch);
   }
 }
 
@@ -128,10 +140,23 @@ export function listDeploymentBatches(filter?: DeploymentListFilter): Deployment
     );
   }
   if (filter?.status) {
-    rows = rows.filter((b) => b.status === filter.status);
+    if (filter.status === "in_progress") {
+      rows = rows.filter((b) => b.status === "in_progress" || b.status === "pending");
+    } else if (filter.status === "failed") {
+      rows = rows.filter((b) => b.status === "failed" || b.status === "partial_success");
+    } else {
+      rows = rows.filter((b) => b.status === filter.status);
+    }
   }
   if (filter?.storeId) {
-    rows = rows.filter((b) => b.storeIds.includes(filter.storeId!));
+    const sid = filter.storeId;
+    rows = rows.filter(
+      (b) =>
+        b.storeIds.includes(sid) ||
+        b.items.some((i) => i.storeId === sid) ||
+        (b.targetStoreNames?.length === 1 &&
+          listMockStoresByIds([sid])[0]?.storeName === b.targetStoreNames[0]),
+    );
   }
   if (filter?.keyword?.trim()) {
     const kw = filter.keyword.trim().toLowerCase();
@@ -140,6 +165,13 @@ export function listDeploymentBatches(filter?: DeploymentListFilter): Deployment
         b.id.toLowerCase().includes(kw) ||
         b.originNav.l2Title.toLowerCase().includes(kw) ||
         b.triggeredBy.toLowerCase().includes(kw) ||
+        (b.triggeredByName ?? "").toLowerCase().includes(kw) ||
+        (b.configChanges ?? []).some(
+          (c) =>
+            c.label.toLowerCase().includes(kw) ||
+            c.before.toLowerCase().includes(kw) ||
+            c.after.toLowerCase().includes(kw),
+        ) ||
         b.items.some((i) => i.domainDisplayName.toLowerCase().includes(kw)),
     );
   }
@@ -201,9 +233,20 @@ function buildTargets(storeId: string, productLines: string[]): DeploymentTarget
   }));
 }
 
+export function resolveDeploymentOperator(): { email: string; name?: string } {
+  const email = getAuthenticatedEmail() ?? "demo@menusifu.com";
+  const account = getStaffLoginAccountByEmail(email);
+  return {
+    email,
+    name: account?.employeeName,
+  };
+}
+
 export function createDeploymentBatch(input: CreateDeploymentInput): DeploymentBatch {
   ensureDeploymentStoreReady();
-  const stores = listMockStoresByIds(input.storeIds);
+  // 下发记录按单店维度：每次仅下发当前配置门店
+  const storeIds = input.storeIds.filter(Boolean).slice(0, 1);
+  const stores = listMockStoresByIds(storeIds);
   const merchantId = resolveChainBrandContext()?.anchorMerchantId ?? "demo-merchant";
   const configVersions: Record<string, number> = {};
 
@@ -229,20 +272,33 @@ export function createDeploymentBatch(input: CreateDeploymentInput): DeploymentB
     }
   }
 
+  const configChanges =
+    input.configChanges && input.configChanges.length > 0
+      ? [input.configChanges[0]!]
+      : (() => {
+          const next = consumeNextConfigChange();
+          return next ? [next] : [];
+        })();
+
+  const operator = resolveDeploymentOperator();
+
   const batch: DeploymentBatch = {
     id: newId("DEP"),
     merchantId,
     isMock: true,
-    triggeredBy: getAuthenticatedEmail() ?? "demo@menusifu.com",
+    triggeredBy: operator.email,
+    triggeredByName: operator.name,
     triggeredAt: new Date().toISOString(),
     triggerSource: input.triggerSource ?? "manual",
-    scopeLevel: inferScopeLevelFromStoreCount(stores.length, input.scopeLevel),
+    scopeLevel: "store",
     brandId: input.brandId,
     brandName: input.brandName,
-    storeIds: input.storeIds,
+    storeIds,
+    targetStoreNames: stores.map((s) => s.storeName).slice(0, 1),
     configVersions,
     originNav: input.originNav,
-    status: "pending",
+    configChanges: configChanges.length > 0 ? configChanges : undefined,
+    status: "in_progress",
     totalItems: items.length,
     successCount: 0,
     failedCount: 0,
@@ -270,6 +326,7 @@ export function createDeploymentFromPath(
   brandName?: string,
   originNav?: CreateDeploymentInput["originNav"],
   triggerSource: CreateDeploymentInput["triggerSource"] = "manual",
+  configChanges?: DeploymentConfigChange[],
 ): DeploymentBatch {
   const domains = resolveDomainsForPath(path);
   const domainKeys =
@@ -288,6 +345,7 @@ export function createDeploymentFromPath(
     brandId,
     brandName,
     triggerSource,
+    configChanges,
   });
 }
 
@@ -331,7 +389,7 @@ export function clearAllDeploymentBatches(): void {
 
 export function seedDeploymentDemoData(): void {
   clearAllDeploymentBatches();
-  ensureDeploymentSeedData();
+  seedFullDeploymentDemoData();
 }
 
 export { rollupBatchCounts };

@@ -82,6 +82,19 @@ const merchantStaffAccounts = createStaffAccountStore({
         anchorMerchantId: "merchant-zhangji",
         updatedAt: now,
       },
+      {
+        id: "acct-zj-brand-single",
+        employeeId: "zj-brand-single",
+        employeeName: "王张记运营",
+        loginEmail: "brand.ops.single@menusifu.cn",
+        password: "Menusifu666",
+        enabled: true,
+        isSystem: true,
+        orgTier: "chain",
+        groupId: "group-zhangji-holdings",
+        anchorMerchantId: "merchant-zhangji",
+        updatedAt: now,
+      },
     ];
   },
 });

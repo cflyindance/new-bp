@@ -8,7 +8,7 @@
   const ROLES_STORAGE_KEY = "tipout-employee-role-options-v1";
   const ROLE_MULTI_SELECT_ID = "field-role";
   const ROLE_DROPDOWN_PORTAL_CLASS = "employees-role-dropdown-portal";
-  const DEFAULT_STORE_NAME = "Golden Dragon Chinese Kitchen - Dallas, TX 75231";
+  const DEFAULT_STORE_NAME = "上海陆家嘴店";
   const DEFAULT_ROLE_OPTIONS = [
     "Server",
     "Bartender",
@@ -28,6 +28,28 @@
     "Downtown Branch",
     "Airport Kiosk",
   ];
+  
+  function canonicalStoreDisplayName(storeName) {
+    if (window.TipOutGlobalScopeFilter && typeof TipOutGlobalScopeFilter.canonicalRosterStoreDisplayName === "function") {
+      return TipOutGlobalScopeFilter.canonicalRosterStoreDisplayName(storeName);
+    }
+    const map = {
+      "golden dragon chinese kitchen - dallas, tx 75231": "上海陆家嘴店",
+      "sakura sushi & ramen house - dallas, tx 75247": "广州天河店",
+      "张记火锅": "上海陆家嘴店",
+    };
+    const key = String(storeName || "").trim().toLowerCase();
+    return map[key] || String(storeName || "").trim();
+  }
+
+  function isSuppressedStoreAlias(storeName) {
+    if (window.TipOutGlobalScopeFilter && typeof TipOutGlobalScopeFilter.isSuppressedRosterStoreAlias === "function") {
+      return TipOutGlobalScopeFilter.isSuppressedRosterStoreAlias(storeName);
+    }
+    const trimmed = String(storeName || "").trim();
+    return !!trimmed && canonicalStoreDisplayName(trimmed) !== trimmed;
+  }
+
   let editingEmployeeId = null;
   let pendingDeleteRow = null;
 
@@ -431,32 +453,154 @@
     );
   }
 
-  function filterListByGlobalScope(list) {
+  function filterListByGlobalScope(list, scopeOverride) {
     if (window.TipOutGlobalScopeFilter && typeof TipOutGlobalScopeFilter.filterRosterByGlobalScope === "function") {
-      return TipOutGlobalScopeFilter.filterRosterByGlobalScope(list);
+      return TipOutGlobalScopeFilter.filterRosterByGlobalScope(list, scopeOverride);
     }
     return list;
   }
 
+  function shouldShowEmployeesStoreFilter() {
+    if (!window.TipOutGlobalScopeFilter) return false;
+    const options =
+      typeof TipOutGlobalScopeFilter.listScopedStoreOptions === "function"
+        ? TipOutGlobalScopeFilter.listScopedStoreOptions()
+        : [];
+    if (options.length > 1) return true;
+    if (typeof TipOutGlobalScopeFilter.usesInPageStorePicker === "function") {
+      return TipOutGlobalScopeFilter.usesInPageStorePicker();
+    }
+    return false;
+  }
+
+  function syncEmployeesStoreFilterUi() {
+    const wrap = $("#employeesStoreFilter");
+    const select = $("#employees-store-select");
+    const addBtn = $("#btn-add-employee");
+    if (!wrap || !select) return;
+
+    const show = shouldShowEmployeesStoreFilter();
+    wrap.hidden = !show;
+    if (!show) {
+      if (addBtn) addBtn.disabled = false;
+      return;
+    }
+
+    const options =
+      typeof TipOutGlobalScopeFilter.listScopedStoreOptions === "function"
+        ? TipOutGlobalScopeFilter.listScopedStoreOptions()
+        : [];
+    const scoped =
+      typeof TipOutGlobalScopeFilter.readGlobalScopeFilter === "function"
+        ? TipOutGlobalScopeFilter.readGlobalScopeFilter()
+        : { storeId: "", storeLabel: "", isAllStores: true };
+
+    const prev = select.value;
+    select.innerHTML =
+      options
+        .map((o) => {
+          const label = escapeHtml(canonicalStoreDisplayName(o.labelZh || o.value));
+          return '<option value="' + escapeHtml(o.value) + '">' + label + "</option>";
+        })
+        .join("") || '<option value="">请选择门店</option>';
+
+    // 优先保留当前下拉选中值，避免切换后门店被旧 scope 覆盖回去
+    const selected =
+      prev && options.some((o) => o.value === prev)
+        ? prev
+        : scoped.storeId && options.some((o) => o.value === scoped.storeId)
+          ? scoped.storeId
+          : options[0]
+            ? options[0].value
+            : "";
+    select.value = selected;
+    if (addBtn) addBtn.disabled = !selected;
+
+    if (selected && selected !== scoped.storeId) {
+      const opt = options.find((o) => o.value === selected);
+      const label = opt ? canonicalStoreDisplayName(String(opt.labelZh || opt.value)) : selected;
+      if (
+        window.TipOutGlobalScopeFilter &&
+        typeof TipOutGlobalScopeFilter.writeGlobalStoreFilter === "function"
+      ) {
+        TipOutGlobalScopeFilter.writeGlobalStoreFilter(selected, label);
+      }
+    }
+  }
+
+  function bindEmployeesStoreFilter() {
+    const select = $("#employees-store-select");
+    if (!select || select.dataset.bound === "1") return;
+    select.dataset.bound = "1";
+    select.addEventListener("change", () => {
+      const storeId = select.value;
+      if (!storeId) return;
+      const opt = select.options[select.selectedIndex];
+      const label = canonicalStoreDisplayName(opt ? String(opt.textContent || "").trim() : "");
+      if (
+        window.TipOutGlobalScopeFilter &&
+        typeof TipOutGlobalScopeFilter.writeGlobalStoreFilter === "function"
+      ) {
+        TipOutGlobalScopeFilter.writeGlobalStoreFilter(storeId, label);
+      }
+      renderTable();
+    });
+  }
+
+  function resolveEmployeesListFilterScope() {
+    if (shouldShowEmployeesStoreFilter()) {
+      const select = $("#employees-store-select");
+      const storeId = select && select.value ? String(select.value).trim() : "";
+      if (!storeId) {
+        return { storeId: "", storeLabel: "", isAllStores: true };
+      }
+      const opt = select.options[select.selectedIndex];
+      const storeLabel = canonicalStoreDisplayName(opt ? String(opt.textContent || "").trim() : "");
+      if (
+        window.TipOutGlobalScopeFilter &&
+        typeof TipOutGlobalScopeFilter.scopeFromStoreSelection === "function"
+      ) {
+        return TipOutGlobalScopeFilter.scopeFromStoreSelection(storeId, storeLabel);
+      }
+      return { storeId, storeLabel, isAllStores: false };
+    }
+    if (window.TipOutGlobalScopeFilter && typeof TipOutGlobalScopeFilter.readGlobalScopeFilter === "function") {
+      return TipOutGlobalScopeFilter.readGlobalScopeFilter();
+    }
+    return { storeId: "", storeLabel: "", isAllStores: true };
+  }
+
   function resolveLockedStoreForForm() {
-    const stores = getTipOutStores();
+    const stores = getFormStoreOptions();
     if (window.TipOutGlobalScopeFilter) {
       const scoped =
         typeof TipOutGlobalScopeFilter.readGlobalScopeFilter === "function"
           ? TipOutGlobalScopeFilter.readGlobalScopeFilter()
           : null;
       if (scoped && scoped.storeLabel && String(scoped.storeLabel).trim()) {
-        const label = String(scoped.storeLabel).trim();
+        const label = canonicalStoreDisplayName(String(scoped.storeLabel).trim());
         if (stores.includes(label)) return label;
         if (scoped.storeId && String(scoped.storeId).indexOf("roster-store:") === 0) {
           try {
             const decoded = decodeURIComponent(String(scoped.storeId).slice("roster-store:".length));
-            if (decoded) return decoded;
+            if (decoded) {
+              const canon = canonicalStoreDisplayName(decoded);
+              if (stores.includes(canon)) return canon;
+              return canon || label;
+            }
           } catch (_) {
             /* ignore */
           }
         }
         return label;
+      }
+      // 页内门店筛选当前选中
+      const filterSelect = $("#employees-store-select");
+      if (filterSelect && filterSelect.value) {
+        const opt = filterSelect.options[filterSelect.selectedIndex];
+        const fromFilter = canonicalStoreDisplayName(opt ? String(opt.textContent || "").trim() : "");
+        if (fromFilter && stores.includes(fromFilter)) return fromFilter;
+        if (fromFilter) return fromFilter;
       }
       if (typeof TipOutGlobalScopeFilter.resolveDefaultRosterStore === "function") {
         return TipOutGlobalScopeFilter.resolveDefaultRosterStore(stores, DEFAULT_STORE_NAME);
@@ -465,12 +609,54 @@
     return stores[0] || DEFAULT_STORE_NAME;
   }
 
+  function getFormStoreOptions() {
+    const seen = {};
+    const stores = [];
+    const push = (name) => {
+      const raw = String(name || "").trim();
+      if (!raw || isSuppressedStoreAlias(raw)) return;
+      const t = canonicalStoreDisplayName(raw);
+      if (!t || seen[t]) return;
+      seen[t] = 1;
+      stores.push(t);
+    };
+    getTipOutStores().forEach(push);
+    if (
+      window.TipOutGlobalScopeFilter &&
+      typeof TipOutGlobalScopeFilter.listScopedStoreOptions === "function"
+    ) {
+      TipOutGlobalScopeFilter.listScopedStoreOptions().forEach((o) => {
+        push(o && (o.labelZh || o.value));
+      });
+    }
+    try {
+      loadRoster().forEach((e) => push(e && e.store));
+    } catch (_) {
+      /* ignore */
+    }
+    push(DEFAULT_STORE_NAME);
+    return stores;
+  }
+
+  /** 填充新增/编辑员工门店下拉 */
+  function populateStoreSelect(selectedStore) {
+    const select = $("#field-store");
+    if (!select || select.tagName !== "SELECT") return;
+    const stores = getFormStoreOptions();
+    const preferred = canonicalStoreDisplayName(String(selectedStore || "").trim());
+    if (preferred && !stores.includes(preferred)) stores.unshift(preferred);
+    select.innerHTML =
+      '<option value="">请选择门店</option>' +
+      stores.map((s) => '<option value="' + escapeHtml(s) + '">' + escapeHtml(s) + "</option>").join("");
+    select.value = preferred && stores.includes(preferred) ? preferred : "";
+  }
+
+  function setFormStoreValue(storeName) {
+    populateStoreSelect(storeName || resolveLockedStoreForForm());
+  }
+
   function setFormStoreLocked(storeName) {
-    const store = String(storeName || "").trim() || DEFAULT_STORE_NAME;
-    const hidden = $("#field-store");
-    const display = $("#field-store-display");
-    if (hidden) hidden.value = store;
-    if (display) display.value = store;
+    setFormStoreValue(storeName);
   }
 
   function addDays(date, days) {
@@ -700,7 +886,7 @@
   function fillFormFromEmployee(emp) {
     if (!emp) return;
     if ($("#field-name")) $("#field-name").value = emp.name || "";
-    setFormStoreLocked(emp.store || resolveLockedStoreForForm());
+    setFormStoreValue(emp.store || resolveLockedStoreForForm());
     if ($("#field-role")) populateRoleSelect(emp.role || "Server");
     if ($("#field-adp")) $("#field-adp").value = emp.adpFile || "";
     if ($("#field-hire-date")) $("#field-hire-date").value = mdyToIsoDateInput(emp.hireDate || "");
@@ -735,7 +921,7 @@
     {
       id: "roster-seed-1",
       name: "小飞鸽",
-      store: "Golden Dragon Chinese Kitchen - Dallas, TX 75231",
+      store: "上海陆家嘴店",
       role: "Floor",
       tipType: "deduct",
       baseTip: 160,
@@ -749,7 +935,7 @@
     {
       id: "roster-seed-2",
       name: "Maria Garcia",
-      store: "Golden Dragon Chinese Kitchen - Dallas, TX 75231",
+      store: "上海陆家嘴店",
       role: "Server",
       tipType: "deduct",
       baseTip: 185,
@@ -763,7 +949,7 @@
     {
       id: "roster-seed-3",
       name: "Jason Chen",
-      store: "Sakura Sushi & Ramen House - Dallas, TX 75247",
+      store: "广州天河店",
       role: "Server",
       tipType: "deduct",
       baseTip: 168,
@@ -777,7 +963,7 @@
     {
       id: "roster-seed-4",
       name: "Emily Watson",
-      store: "Sakura Sushi & Ramen House - Dallas, TX 75247",
+      store: "广州天河店",
       role: "Server",
       tipType: "deduct",
       baseTip: 155,
@@ -791,7 +977,7 @@
     {
       id: "roster-seed-5",
       name: "Mike Johnson",
-      store: "Golden Dragon Chinese Kitchen - Dallas, TX 75231",
+      store: "上海陆家嘴店",
       role: "Bartender",
       tipType: "deduct",
       baseTip: 156,
@@ -805,7 +991,7 @@
     {
       id: "roster-seed-6",
       name: "Tom Wilson",
-      store: "Sakura Sushi & Ramen House - Dallas, TX 75247",
+      store: "广州天河店",
       role: "Kitchen",
       tipType: "receive",
       baseTip: 0,
@@ -903,23 +1089,19 @@
     const rules = window.ruleData && typeof ruleData.getRules === "function" ? ruleData.getRules() : [];
     const seen = {};
     const stores = [];
-    rules.forEach((r) => {
-      const s = String((r && r.store) || "").trim();
-      if (s && !seen[s]) {
-        seen[s] = 1;
-        stores.push(s);
-      }
-    });
-    EXTRA_STORES.forEach((s) => {
-      if (s && !seen[s]) {
-        seen[s] = 1;
-        stores.push(s);
-      }
-    });
-    if (!seen[DEFAULT_STORE_NAME]) stores.unshift(DEFAULT_STORE_NAME);
+    const push = (name) => {
+      const raw = String(name || "").trim();
+      if (!raw || isSuppressedStoreAlias(raw)) return;
+      const t = canonicalStoreDisplayName(raw);
+      if (!t || seen[t]) return;
+      seen[t] = 1;
+      stores.push(t);
+    };
+    rules.forEach((r) => push(r && r.store));
+    EXTRA_STORES.forEach(push);
+    push(DEFAULT_STORE_NAME);
     return stores;
   }
-
   function loadRoster() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -966,8 +1148,16 @@
   function renderTable() {
     const tbody = $("#employeesTableBody");
     if (!tbody) return;
+    syncEmployeesStoreFilterUi();
     const fullList = loadRoster();
-    const list = filterListByGlobalScope(fullList);
+    const inPagePicker = shouldShowEmployeesStoreFilter();
+    const scoped = resolveEmployeesListFilterScope();
+    if (inPagePicker && scoped.isAllStores) {
+      tbody.innerHTML =
+        '<tr><td colspan="12" style="padding:48px;text-align:center;color:var(--text-tertiary)">请先在上方选择门店，再查看与管理该店员工。</td></tr>';
+      return;
+    }
+    const list = filterListByGlobalScope(fullList, scoped);
     if (fullList.length === 0) {
       tbody.innerHTML =
         '<tr><td colspan="12" style="padding:48px;text-align:center;color:var(--text-tertiary)">暂无员工，请点击「新增员工」添加</td></tr>';
@@ -975,7 +1165,7 @@
     }
     if (list.length === 0) {
       tbody.innerHTML =
-        '<tr><td colspan="12" style="padding:48px;text-align:center;color:var(--text-tertiary)">当前顶栏门店筛选下暂无员工数据，请切换「全部门店」或调整全局门店。</td></tr>';
+        '<tr><td colspan="12" style="padding:48px;text-align:center;color:var(--text-tertiary)">当前门店筛选下暂无员工数据，请切换门店或新增员工。</td></tr>';
       return;
     }
     tbody.innerHTML = list
@@ -983,24 +1173,25 @@
         const adp = e.adpFile != null && String(e.adpFile).trim() !== "" ? escapeHtml(String(e.adpFile)) : "—";
         const hireDate = e.hireDate && String(e.hireDate).trim() !== "" ? escapeHtml(String(e.hireDate)) : "—";
         const phone = e.phone && String(e.phone).trim() !== "" ? escapeHtml(String(e.phone)) : "—";
-        return `<tr data-id="${escapeHtml(e.id)}">
-          <td><strong>${escapeHtml(e.name)}</strong></td>
-          <td>${escapeHtml(e.store || DEFAULT_STORE_NAME)}</td>
-          <td>${escapeHtml(e.role || "—")}</td>
-          <td>${phone}</td>
-          <td>${hireDate}</td>
-          <td>${escapeHtml(payTypeLabel(e.payType))}</td>
-          <td style="text-align:right">${escapeHtml(formatPayAmount(e))}</td>
-          <td>${boolBadge(e.requireClockIn !== false, "是", "否")}</td>
-          <td>${boolBadge(!!e.requireBatchClose, "是", "否")}</td>
-          <td>${boolBadge(!!e.requireCashTipReport, "是", "否")}</td>
-          <td style="font-family:ui-monospace,Menlo,monospace">${adp}</td>
-          <td class="action-links" style="text-align:right;white-space:nowrap">
-            <a href="javascript:void(0)" data-act="edit">编辑</a>
-            <span style="color:var(--text-tertiary);margin:0 4px">|</span>
-            <a href="javascript:void(0)" data-act="del">删除</a>
-          </td>
-        </tr>`;
+        const storeLabel = canonicalStoreDisplayName(e.store || DEFAULT_STORE_NAME);
+        return '<tr data-id="' + escapeHtml(e.id) + '">' +
+          '<td><strong>' + escapeHtml(e.name) + '</strong></td>' +
+          '<td>' + escapeHtml(storeLabel) + '</td>' +
+          '<td>' + escapeHtml(e.role || "—") + '</td>' +
+          '<td>' + phone + '</td>' +
+          '<td>' + hireDate + '</td>' +
+          '<td>' + escapeHtml(payTypeLabel(e.payType)) + '</td>' +
+          '<td style="text-align:right">' + escapeHtml(formatPayAmount(e)) + '</td>' +
+          '<td>' + boolBadge(e.requireClockIn !== false, "是", "否") + '</td>' +
+          '<td>' + boolBadge(!!e.requireBatchClose, "是", "否") + '</td>' +
+          '<td>' + boolBadge(!!e.requireCashTipReport, "是", "否") + '</td>' +
+          '<td style="font-family:ui-monospace,Menlo,monospace">' + adp + '</td>' +
+          '<td class="action-links" style="text-align:right;white-space:nowrap">' +
+            '<a href="javascript:void(0)" data-act="edit">编辑</a>' +
+            '<span style="color:var(--text-tertiary);margin:0 4px">|</span>' +
+            '<a href="javascript:void(0)" data-act="del">删除</a>' +
+          '</td>' +
+        '</tr>';
       })
       .join("");
   }
@@ -1053,7 +1244,7 @@
       populateRoleSelect(emp && emp.role ? emp.role : "Server");
       fillFormFromEmployee(emp);
     } else {
-      setFormStoreLocked(resolveLockedStoreForForm());
+      setFormStoreValue(resolveLockedStoreForForm());
       populateRoleSelect("Server");
       setCheckbox("#field-require-clock-in", true);
       setCheckbox("#field-require-batch-close", false);
@@ -1071,6 +1262,13 @@
     if (!name) {
       if (typeof showNotification === "function") showNotification("请填写姓名", "error");
       else alert("请填写姓名");
+      return;
+    }
+    const store = ($("#field-store") && $("#field-store").value.trim()) || "";
+    if (!store) {
+      if (typeof showNotification === "function") showNotification("请选择门店", "error");
+      else alert("请选择门店");
+      $("#field-store")?.focus();
       return;
     }
 
@@ -1175,6 +1373,9 @@
 
   $("#btn-add-employee")?.addEventListener("click", openAddModal);
   $("#btn-submit-employee")?.addEventListener("click", submitAdd);
+
+  bindEmployeesStoreFilter();
+  syncEmployeesStoreFilterUi();
 
   if (window.TipOutGlobalScopeFilter && typeof TipOutGlobalScopeFilter.bindGlobalScopeFilterListener === "function") {
     TipOutGlobalScopeFilter.bindGlobalScopeFilterListener(() => {

@@ -219,12 +219,24 @@ export function createMerchantSeedRoles(): RbacRole[] {
     roleFromGrantsSeed(
       "brand-ops-east",
       "华东品牌运营",
-      "华东区域品牌管理：张记、茶语等品牌",
+      "张记餐饮集团内多品牌运营：张记火锅、张记串串",
       false,
       all,
       "pos",
       {
-        defaultStoreAccess: { mode: "brands", ids: ["merchant-zhangji", "merchant-tea-one"] },
+        defaultStoreAccess: { mode: "brands", ids: ["merchant-zhangji", "merchant-zhangji-skewers"] },
+        maxPerspective: "brand",
+      },
+    ),
+    roleFromGrantsSeed(
+      "brand-ops-single",
+      "单品牌运营",
+      "仅管理张记火锅一个品牌",
+      false,
+      all,
+      "pos",
+      {
+        defaultStoreAccess: { mode: "brands", ids: ["merchant-zhangji"] },
         maxPerspective: "brand",
       },
     ),
@@ -330,7 +342,13 @@ export function createMerchantSeedStaff(): StaffAssignment[] {
       employeeId: "zj-brand-ops",
       employeeName: "李华东运营",
       roleIds: ["brand-ops-east"],
-      storeAccess: { mode: "brands", ids: ["merchant-zhangji", "merchant-tea-one"] },
+      storeAccess: { mode: "brands", ids: ["merchant-zhangji", "merchant-zhangji-skewers"] },
+    },
+    {
+      employeeId: "zj-brand-single",
+      employeeName: "王张记运营",
+      roleIds: ["brand-ops-single"],
+      storeAccess: { mode: "brands", ids: ["merchant-zhangji"] },
     },
     {
       employeeId: "zj-hq001",

@@ -639,6 +639,8 @@ function buildSeedSnapshot(): EnterpriseMerchantSnapshot {
   const brands: MerchantOrgBrand[] = [
     { brandId: "brand-zhangji", merchantId: "merchant-zhangji", name: "张记火锅", code: "zhangji", status: "active" },
     { brandId: "brand-zhangji-noodle", merchantId: "merchant-zhangji", name: "张记小面", code: "zhangji-noodle", status: "active" },
+    { brandId: "brand-zhangji-skewers", merchantId: "merchant-zhangji-skewers", name: "张记串串", code: "zhangji-skewers", status: "active" },
+    { brandId: "brand-hz-bj", merchantId: "merchant-store-hz-bj", name: "杭城小笼", code: "hangcheng-xiaolong", status: "active" },
     { brandId: "brand-tea-one", merchantId: "merchant-tea-one", name: "茶语一家", code: "tea-one", status: "active" },
     { brandId: "brand-menusifu-na", merchantId: "merchant-menusifu-na", name: "MenuSifu NA", code: "menusifu-na", status: "active" },
     { brandId: "brand-xiangwei", merchantId: "merchant-expired-demo", name: "湘味小厨", code: "xiangwei", status: "active" },
@@ -649,6 +651,8 @@ function buildSeedSnapshot(): EnterpriseMerchantSnapshot {
   const regions: MerchantOrgRegion[] = [
     { regionId: "region-zj-east", merchantId: "merchant-zhangji", brandId: "brand-zhangji", name: "华东大区", code: "east-cn" },
     { regionId: "region-zj-south", merchantId: "merchant-zhangji", brandId: "brand-zhangji", name: "华南大区", code: "south-cn" },
+    { regionId: "region-zj-skewers-west", merchantId: "merchant-zhangji-skewers", brandId: "brand-zhangji-skewers", name: "西南大区", code: "west-cn" },
+    { regionId: "region-hz-bj-default", merchantId: "merchant-store-hz-bj", brandId: "brand-hz-bj", name: "默认区域", code: "default" },
     { regionId: "region-tea-default", merchantId: "merchant-tea-one", brandId: "brand-tea-one", name: "默认区域", code: "default" },
     { regionId: "region-na-east", merchantId: "merchant-menusifu-na", brandId: "brand-menusifu-na", name: "美国东海岸", code: "us-east" },
     { regionId: "region-na-west", merchantId: "merchant-menusifu-na", brandId: "brand-menusifu-na", name: "美国西海岸", code: "us-west" },
@@ -746,6 +750,32 @@ function buildSeedSnapshot(): EnterpriseMerchantSnapshot {
       address: "Chicago, IL",
       mountedAt: "2025-02-01T00:00:00.000Z",
     },
+    {
+      storeId: "M00000008",
+      merchantId: "merchant-zhangji-skewers",
+      linkedMerchantId: "merchant-zhangji-skewers",
+      brandId: "brand-zhangji-skewers",
+      regionId: "region-zj-skewers-west",
+      name: "成都春熙店",
+      code: "cd-cx",
+      status: "open",
+      address: "成都市锦江区春熙路",
+      openedAt: "2022-05-01",
+      mountedAt: "2022-05-01T00:00:00.000Z",
+    },
+    {
+      storeId: "M00000009",
+      merchantId: "merchant-zhangji-skewers",
+      linkedMerchantId: "merchant-zhangji-skewers",
+      brandId: "brand-zhangji-skewers",
+      regionId: "region-zj-skewers-west",
+      name: "重庆解放碑店",
+      code: "cq-jfb",
+      status: "open",
+      address: "重庆市渝中区解放碑",
+      openedAt: "2023-08-15",
+      mountedAt: "2023-08-15T00:00:00.000Z",
+    },
   ];
 
   const capabilities: MerchantCapabilitySnapshot[] = [
@@ -765,6 +795,37 @@ function buildSeedSnapshot(): EnterpriseMerchantSnapshot {
         { serviceId: "svc-api-open", enabled: false, storeScope: "all" },
       ],
       syncedPresetAt: "2026-06-01T00:00:00.000Z",
+    },
+    {
+      merchantId: "merchant-zhangji-skewers",
+      businessTypeIds: ["skewers", "full-service"],
+      productLineIds: ["pos", "kiosk", "emenu"],
+      presetCombos: [
+        { businessTypeId: "skewers", productLineId: "pos", version: 1 },
+        { businessTypeId: "skewers", productLineId: "emenu", version: 1 },
+      ],
+      services: [
+        { serviceId: "svc-advanced-report", enabled: true, storeScope: "all" },
+        { serviceId: "svc-member-plus", enabled: true, storeScope: "all" },
+        { serviceId: "svc-hardware-monitor", enabled: false, storeScope: "all" },
+        { serviceId: "svc-delivery-hub", enabled: true, storeScope: "all" },
+        { serviceId: "svc-api-open", enabled: false, storeScope: "all" },
+      ],
+      syncedPresetAt: "2026-06-01T00:00:00.000Z",
+    },
+    {
+      merchantId: "merchant-store-hz-bj",
+      businessTypeIds: ["dim-sum", "full-service"],
+      productLineIds: ["pos"],
+      presetCombos: [{ businessTypeId: "dim-sum", productLineId: "pos", version: 1 }],
+      services: [
+        { serviceId: "svc-member-plus", enabled: true, storeScope: "all" },
+        { serviceId: "svc-advanced-report", enabled: false, storeScope: "all" },
+        { serviceId: "svc-hardware-monitor", enabled: false, storeScope: "all" },
+        { serviceId: "svc-delivery-hub", enabled: false, storeScope: "all" },
+        { serviceId: "svc-api-open", enabled: false, storeScope: "all" },
+      ],
+      syncedPresetAt: "2026-06-19T08:00:00.000Z",
     },
     {
       merchantId: "merchant-tea-one",
