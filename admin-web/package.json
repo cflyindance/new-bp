@@ -18,7 +18,8 @@
     "generate:platform-preset-tree": "npx tsx scripts/generate-platform-preset-tree-export.ts",
     "sync:emenu-pro": "node scripts/sync-emenu-pro-from-dist.mjs",
     "generate:emenu-pro-icons": "node scripts/generate-emenu-pro-block-icons.mjs",
-    "generate:default-material-images": "npx tsx scripts/generate-default-material-images-js.mjs"
+    "generate:default-material-images": "npx tsx scripts/generate-default-material-images-js.mjs",
+    "verify:order-list-columns": "npx tsx scripts/verify-order-list-columns.ts"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.0.0",
