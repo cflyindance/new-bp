@@ -83,6 +83,20 @@
       else if (pr.type === 'surcharge') base = surchargeCount > 0 ? surcharge / surchargeCount : surcharge;
       else if (pr.type === 'manual') base = manual;
       else if (pr.type === 'custom') base = pr.amount != null ? Number(pr.amount) || 0 : 0;
+      else if (pr.type === 'personal_sales') {
+        var empSales = ctx.employeeSales;
+        var personalApi =
+          typeof global.TipOutPersonalSalesDeduct !== 'undefined'
+            ? global.TipOutPersonalSalesDeduct
+            : null;
+        if (personalApi && personalApi.calcPersonalSalesPoolCard && empSales && empSales.length) {
+          var card = personalApi.calcPersonalSalesPoolCard(pr, empSales);
+          pool += roundMoney(card.contribution || 0);
+          return;
+        }
+        // 无按人员拆额时：退回按总销售额×占比（兼容演示）
+        base = sales;
+      }
       pool += roundMoney((base * (Number(pr.pct) || 0)) / 100);
     });
     return roundMoney(pool);
@@ -249,12 +263,227 @@
     return { residualRoles: fallback };
   }
 
-  global.TipAllocation = {
+  /**
+   * legacy_pool 扣除流水：接入 personalSalesPct（A1）。
+   * tipIncome 并存时：先按个人销售额实扣，再对剩余小费按 tipIncomeRate（默认 tipRate）抽成。
+   *
+   * @param {object} rule
+   * @param {Array<{ id?: string, name?: string, role?: string, salesAmount: number, tipBefore: number, tipRate?: number }>} employees
+   * @param {{ tipIncomeRate?: number }} [opts] tipIncomeRate 未传则用各员工 tipRate
+   */
+  function runDeductPipeline(rule, employees, opts) {
+    opts = opts || {};
+    var list = employees || [];
+    var personalApi =
+      typeof global.TipOutPersonalSalesDeduct !== 'undefined'
+        ? global.TipOutPersonalSalesDeduct
+        : null;
+    var personal =
+      personalApi && personalApi.applyPersonalSalesDeductFromRule
+        ? personalApi.applyPersonalSalesDeductFromRule(rule, list)
+        : { active: false, rows: [], totalDue: 0, totalActual: 0, totalShortfall: 0, poolContribution: 0 };
+
+    var tipIncomeEntries = [];
+    if (rule && rule.deductConfig && rule.deductConfig.tipIncome) {
+      var rawTip = rule.deductConfig.tipIncome;
+      tipIncomeEntries = Array.isArray(rawTip) ? rawTip.filter(Boolean) : [rawTip];
+    }
+    tipIncomeEntries = tipIncomeEntries.filter(function (entry) {
+      return personalApi && personalApi.entryHasScope
+        ? personalApi.entryHasScope(entry)
+        : !!(entry && entry.scopeType);
+    });
+    var tipIncomeActive = tipIncomeEntries.length > 0;
+
+    var byKey = {};
+    var employeeResults = [];
+    var tipIncomeTotalActual = 0;
+
+    list.forEach(function (emp, idx) {
+      emp = emp || {};
+      var key = emp.id != null && emp.id !== '' ? String(emp.id) : String(emp.name || idx);
+      var tipBefore = roundMoney(Number(emp.tipBefore) || 0);
+      var personalRow =
+        (personal.rows || []).find(function (r) {
+          if (emp.id != null && r.id != null && String(r.id) === String(emp.id)) return true;
+          if (emp.name != null && r.name != null && String(r.name) === String(emp.name)) return true;
+          return false;
+        }) || null;
+
+      var personalActual = personalRow && personalRow.matched ? roundMoney(personalRow.actual) : 0;
+      var personalDue = personalRow && personalRow.matched ? roundMoney(personalRow.due) : 0;
+      var remainingAfterPersonal = roundMoney(Math.max(0, tipBefore - personalActual));
+
+      var tipIncomeDue = 0;
+      var tipIncomeActual = 0;
+      if (tipIncomeActive && personalApi) {
+        tipIncomeEntries.forEach(function (tipIncomeEntry) {
+          if (!personalApi.employeeMatchesScope(emp, tipIncomeEntry)) return;
+          var rate =
+            opts.tipIncomeRate != null
+              ? Number(opts.tipIncomeRate)
+              : tipIncomeEntry && tipIncomeEntry.rate != null
+                ? Number(tipIncomeEntry.rate)
+                : Number(emp.tipRate);
+          if (!isFinite(rate) || rate < 0) rate = 0;
+          if (rate > 1) rate = rate / 100;
+          tipIncomeDue = roundMoney(tipIncomeDue + tipBefore * rate);
+        });
+        tipIncomeActual = roundMoney(Math.min(tipIncomeDue, remainingAfterPersonal));
+        tipIncomeTotalActual = roundMoney(tipIncomeTotalActual + tipIncomeActual);
+      }
+
+      var deducted = roundMoney(personalActual + tipIncomeActual);
+      var tipAfterDeduct = roundMoney(Math.max(0, tipBefore - deducted));
+      var shortfall = roundMoney(
+        (personalRow && personalRow.matched ? personalRow.shortfall : 0) +
+          Math.max(0, tipIncomeDue - tipIncomeActual)
+      );
+
+      var result = {
+        id: emp.id,
+        name: emp.name,
+        role: emp.role,
+        tipBefore: tipBefore,
+        salesAmount: personalRow ? personalRow.salesAmount : roundMoney(Number(emp.salesAmount) || 0),
+        personalDue: personalDue,
+        personalActual: personalActual,
+        tipIncomeDue: tipIncomeDue,
+        tipIncomeActual: tipIncomeActual,
+        due: roundMoney(personalDue + tipIncomeDue),
+        deducted: deducted,
+        shortfall: shortfall,
+        tipAfterDeduct: tipAfterDeduct,
+        personalMatched: !!(personalRow && personalRow.matched)
+      };
+      byKey[key] = result;
+      employeeResults.push(result);
+    });
+
+    var poolContribution = roundMoney(
+      (personal.poolContribution || 0) + tipIncomeTotalActual
+    );
+
+    return {
+      personal: personal,
+      tipIncomeActive: tipIncomeActive,
+      employeeResults: employeeResults,
+      byKey: byKey,
+      poolContribution: poolContribution,
+      totalDeducted: poolContribution
+    };
+  }
+
+  /**
+   * 将 poolContribution 按 receivers 行占比分给角色，再按模式在角色员工间切开。
+   * @param {number} poolAmount
+   * @param {object} rule - { receivers: [{roles,pct}], distribution? }
+   * @param {Array<{ name?: string, role?: string }>} employees - 接收方候选（通常为当日在岗）
+   */
+  function distributePoolToReceivers(poolAmount, rule, employees) {
+    var amount = roundMoney(Number(poolAmount) || 0);
+    var receivedByName = {};
+    (employees || []).forEach(function (e) {
+      if (e && e.name) receivedByName[e.name] = 0;
+    });
+    if (amount <= 0) return { receivedByName: receivedByName, roleAmounts: {} };
+
+    var receivers = (rule && rule.receivers) || [];
+    var valid = receivers.filter(function (r) {
+      return (r.roles || []).length > 0 && Number(r.pct) > 0;
+    });
+    if (!valid.length) return { receivedByName: receivedByName, roleAmounts: {} };
+
+    var sumPct = 0;
+    valid.forEach(function (r) {
+      sumPct += Number(r.pct) || 0;
+    });
+    if (sumPct <= 0) return { receivedByName: receivedByName, roleAmounts: {} };
+
+    var roleAmounts = {};
+    var allocated = 0;
+    valid.forEach(function (rec, idx) {
+      var rowAmt =
+        idx === valid.length - 1
+          ? roundMoney(amount - allocated)
+          : roundMoney((amount * (Number(rec.pct) || 0)) / sumPct);
+      allocated = roundMoney(allocated + rowAmt);
+      distributeEqualAmongRoles(rowAmt, rec.roles || [], roleAmounts);
+    });
+
+    var mode = (rule && rule.distribution) || 'average';
+    Object.keys(roleAmounts).forEach(function (role) {
+      var roleAmt = roleAmounts[role] || 0;
+      var members = (employees || []).filter(function (e) {
+        return e && String(e.role || '').trim() === role;
+      });
+      if (!members.length || roleAmt <= 0) return;
+      if (mode === 'hours' || mode === 'orders') {
+        // 演示期无工时/订单权重时与 average 相同
+      }
+      var n = members.length;
+      var base = roundMoney(roleAmt / n);
+      var used = 0;
+      members.forEach(function (m, i) {
+        var piece = i === n - 1 ? roundMoney(roleAmt - used) : base;
+        used = roundMoney(used + piece);
+        if (m.name) receivedByName[m.name] = roundMoney((receivedByName[m.name] || 0) + piece);
+      });
+    });
+
+    return { receivedByName: receivedByName, roleAmounts: roleAmounts };
+  }
+
+  /**
+   * 一日完整 legacy 扣除+接收流水（含 personalSalesPct）
+   * @param {object} rule
+   * @param {Array<{ id?, name, role, salesAmount, tipBefore, tipRate? }>} employees
+   * @param {{ tipIncomeRate?: number }} [opts]
+   */
+  function runLegacyDayPipeline(rule, employees, opts) {
+    var deduct = runDeductPipeline(rule, employees, opts);
+    var dist = distributePoolToReceivers(deduct.poolContribution, rule, employees);
+    var rows = (deduct.employeeResults || []).map(function (r) {
+      var received = roundMoney((dist.receivedByName && r.name && dist.receivedByName[r.name]) || 0);
+      var tipAfter = roundMoney(r.tipBefore - r.deducted + received);
+      return {
+        id: r.id,
+        name: r.name,
+        role: r.role,
+        before: r.tipBefore,
+        salesAmount: r.salesAmount,
+        deducted: r.deducted,
+        due: r.due,
+        shortfall: r.shortfall,
+        received: received,
+        after: tipAfter,
+        personalMatched: r.personalMatched,
+        personalActual: r.personalActual,
+        tipIncomeActual: r.tipIncomeActual
+      };
+    });
+    return {
+      deduct: deduct,
+      distribution: dist,
+      rows: rows,
+      byName: rows.reduce(function (acc, row) {
+        if (row.name) acc[row.name] = row;
+        return acc;
+      }, {})
+    };
+  }
+
+  var api = {
     roundMoney: roundMoney,
     lineMatchesFilter: lineMatchesFilter,
     categorySalesFromLines: categorySalesFromLines,
     orderTipWallet: orderTipWallet,
     orderTipPoolFromPoolRules: orderTipPoolFromPoolRules,
-    allocateOrderTipResidual: allocateOrderTipResidual
+    allocateOrderTipResidual: allocateOrderTipResidual,
+    runDeductPipeline: runDeductPipeline,
+    distributePoolToReceivers: distributePoolToReceivers,
+    runLegacyDayPipeline: runLegacyDayPipeline
   };
-})(typeof window !== 'undefined' ? window : this);
+  global.TipAllocation = api;
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+})(typeof window !== 'undefined' ? window : globalThis);

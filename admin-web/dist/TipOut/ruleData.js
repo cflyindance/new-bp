@@ -66,6 +66,7 @@
 
   var poolTypeNames = {
     sales: '销售额',
+    personal_sales: '按个人销售额',
     tips: '小费',
     surcharge: '加收服务费',
     manual: '手动上报小费',
@@ -150,6 +151,15 @@
     return false;
   }
 
+  function asDeductEntryList(val) {
+    if (!val) return [];
+    return Array.isArray(val) ? val.filter(Boolean) : [val];
+  }
+
+  function anyDeductEntryHasScope(val) {
+    return asDeductEntryList(val).some(deductEntryHasScope);
+  }
+
   function mergeDeductEntryIntoContext(entry, roles, names) {
     if (!entry || !deductEntryHasScope(entry)) return;
     if (entry.scopeType === 'role') {
@@ -169,14 +179,23 @@
     }
   }
 
+  function mergeDeductConfigField(val, roles, names) {
+    asDeductEntryList(val).forEach(function(entry) {
+      mergeDeductEntryIntoContext(entry, roles, names);
+    });
+  }
+
   /** 规则是否配置了小费扣除方（角色或指定员工） */
   function ruleHasDeductors(rule) {
-    if (!rule || !ruleHasSalesPool(rule)) return false;
+    if (!rule) return false;
     if ((rule.allocationMode || 'legacy_pool') === 'order_tip_then_residual') return false;
     var cfg = rule.deductConfig;
+    // A1 个人销售额扣除：不依赖销售额池
+    if (cfg && anyDeductEntryHasScope(cfg.personalSalesPct)) return true;
+    if (!ruleHasSalesPool(rule)) return false;
     if (cfg) {
-      if (cfg.salesPct && deductEntryHasScope(cfg.salesPct)) return true;
-      if (cfg.tipIncome && deductEntryHasScope(cfg.tipIncome)) return true;
+      if (anyDeductEntryHasScope(cfg.salesPct)) return true;
+      if (anyDeductEntryHasScope(cfg.tipIncome)) return true;
       return false;
     }
     if (rule.deductRoles && rule.deductRoles.length > 0) return true;
@@ -197,8 +216,9 @@
       hasDeductors = true;
       var cfg = rule.deductConfig;
       if (cfg) {
-        mergeDeductEntryIntoContext(cfg.salesPct, roles, names);
-        mergeDeductEntryIntoContext(cfg.tipIncome, roles, names);
+        mergeDeductConfigField(cfg.personalSalesPct, roles, names);
+        mergeDeductConfigField(cfg.salesPct, roles, names);
+        mergeDeductConfigField(cfg.tipIncome, roles, names);
         return;
       }
       (rule.deductRoles || []).forEach(function(r) {
@@ -279,16 +299,29 @@
       parts.push('Tip Pool = ' + poolStr);
     }
     var cfg = rule.deductConfig;
-    if (cfg && (cfg.salesPct || cfg.tipIncome)) {
-      if (cfg.salesPct && deductEntryHasScope(cfg.salesPct)) {
-        if (cfg.salesPct.scopeType === 'role') parts.push('扣除方(销售额) ' + (cfg.salesPct.roles || []).join('/'));
-        else parts.push('扣除方(销售额) 指定员工');
-      }
-      if (cfg.tipIncome && deductEntryHasScope(cfg.tipIncome)) {
-        var ttList = (cfg.tipIncome.tipTypes || []).filter(function(t) { return t && t !== '全部'; });
+    if (cfg && (cfg.personalSalesPct || cfg.salesPct || cfg.tipIncome)) {
+      asDeductEntryList(cfg.personalSalesPct).forEach(function(psp) {
+        if (!deductEntryHasScope(psp)) return;
+        var pspRate = psp.rate != null ? (Math.round(Number(psp.rate) * 10000) / 100) + '%' : '';
+        if (psp.scopeType === 'role') {
+          parts.push('扣除方(个人销售额' + (pspRate ? ' ' + pspRate : '') + ') ' + (psp.roles || []).join('/'));
+        } else {
+          parts.push('扣除方(个人销售额' + (pspRate ? ' ' + pspRate : '') + ') 指定员工');
+        }
+      });
+      asDeductEntryList(cfg.salesPct).forEach(function(sp) {
+        if (!deductEntryHasScope(sp)) return;
+        var salesRate = sp.rate != null ? (Math.round(Number(sp.rate) * 10000) / 100) + '%' : '';
+        if (sp.scopeType === 'role') parts.push('扣除方(销售额' + (salesRate ? ' ' + salesRate : '') + ') ' + (sp.roles || []).join('/'));
+        else parts.push('扣除方(销售额' + (salesRate ? ' ' + salesRate : '') + ') 指定员工');
+      });
+      asDeductEntryList(cfg.tipIncome).forEach(function(ti) {
+        if (!deductEntryHasScope(ti)) return;
+        var tipRateStr = ti.rate != null ? (Math.round(Number(ti.rate) * 10000) / 100) + '%' : '';
+        var ttList = (ti.tipTypes || []).filter(function(t) { return t && t !== '全部'; });
         var tt = ttList.length ? ttList.join('/') : '未指定';
-        parts.push('扣除方(小费收入 ' + tt + ')');
-      }
+        parts.push('扣除方(小费收入' + (tipRateStr ? ' ' + tipRateStr : '') + ' ' + tt + ')');
+      });
     } else if (rule.deductRoles && rule.deductRoles.length > 0) {
       parts.push('扣除方 ' + rule.deductRoles.join('/'));
     } else if (rule.deductEmployees) {

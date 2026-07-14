@@ -275,6 +275,7 @@
 
   <script src="common.js"></script>
   <script src="ruleData.js"></script>
+  <script src="personalSalesDeduct.js"></script>
   <script src="tipAllocation.js"></script>
   <script>
     var ALLOC_KEY = 'tipout_allocated';
@@ -356,15 +357,27 @@
         else if (pr.type === 'tips') tipsCount++;
         else if (pr.type === 'surcharge') surchargeCount++;
       });
+      var demoEmployees = [
+        { name: 'ServerA', role: 'Server', salesAmount: +(sales * 0.45).toFixed(2) },
+        { name: 'BartenderB', role: 'Bartender', salesAmount: +(sales * 0.2).toFixed(2) },
+        { name: 'OtherC', role: 'Cashier', salesAmount: +(sales * 0.35).toFixed(2) }
+      ];
       (poolRules || []).forEach(function(pr) {
         var base = 0;
-        if (pr.type === 'sales') base = salesCount > 0 ? sales / salesCount : sales;
-        else if (pr.type === 'tips') base = tipsCount > 0 ? tips / tipsCount : tips;
-        else if (pr.type === 'surcharge') base = surchargeCount > 0 ? surcharge / surchargeCount : surcharge;
-        else if (pr.type === 'manual') base = manual;
-        else if (pr.type === 'custom') base = pr.amount != null ? pr.amount : custom;
-        var ruleAmt = +(base * (pr.pct != null ? pr.pct : 0) / 100).toFixed(2);
+        var ruleAmt = 0;
         var rid = pr.id || pr.type;
+        if (pr.type === 'personal_sales' && window.TipOutPersonalSalesDeduct && TipOutPersonalSalesDeduct.calcPersonalSalesPoolCard) {
+          var card = TipOutPersonalSalesDeduct.calcPersonalSalesPoolCard(pr, demoEmployees);
+          base = card.matchedSales || 0;
+          ruleAmt = card.contribution || 0;
+        } else {
+          if (pr.type === 'sales') base = salesCount > 0 ? sales / salesCount : sales;
+          else if (pr.type === 'tips') base = tipsCount > 0 ? tips / tipsCount : tips;
+          else if (pr.type === 'surcharge') base = surchargeCount > 0 ? surcharge / surchargeCount : surcharge;
+          else if (pr.type === 'manual') base = manual;
+          else if (pr.type === 'custom') base = pr.amount != null ? pr.amount : custom;
+          ruleAmt = +(base * (pr.pct != null ? pr.pct : 0) / 100).toFixed(2);
+        }
         poolByRule[rid] = ruleAmt;
         pool += ruleAmt;
       });
@@ -374,9 +387,15 @@
         var rid = pr.id || pr.type;
         var amt = poolByRule[rid] || 0;
         var p = pr.pct != null ? pr.pct : 0;
-        poolBaseByRule[rid] = p > 0 ? +(amt * 100 / p).toFixed(2) : 0;
+        if (pr.type === 'personal_sales') {
+          poolBaseByRule[rid] = (window.TipOutPersonalSalesDeduct && TipOutPersonalSalesDeduct.calcPersonalSalesPoolCard)
+            ? (TipOutPersonalSalesDeduct.calcPersonalSalesPoolCard(pr, demoEmployees).matchedSales || 0)
+            : (p > 0 ? +(amt * 100 / p).toFixed(2) : 0);
+        } else {
+          poolBaseByRule[rid] = p > 0 ? +(amt * 100 / p).toFixed(2) : 0;
+        }
       });
-      return { sales: sales, tips: tips, surcharge: surcharge, manual: manual, custom: custom, pool: pool, poolRules: poolRules, poolByRule: poolByRule, poolBaseByRule: poolBaseByRule };
+      return { sales: sales, tips: tips, surcharge: surcharge, manual: manual, custom: custom, pool: pool, poolRules: poolRules, poolByRule: poolByRule, poolBaseByRule: poolBaseByRule, employeeSales: demoEmployees };
     }
 
     function renderDetailPage() {
@@ -474,7 +493,7 @@
         }).join('；');
       }
       var poolNote = (rule.poolRules && rule.poolRules.length)
-        ? '<p style="font-size:12px;color:var(--text-tertiary);margin:4px 0 0;line-height:1.5">订单小费钱包 = 按「小费池计算规则」对单笔订单基数（销售额/小费/加收/手动/自定义等）加权合计，口径与「小费池汇总分配」一致。</p>'
+        ? '<p style="font-size:12px;color:var(--text-tertiary);margin:4px 0 0;line-height:1.5">订单小费钱包 = 按「小费池贡献规则」对单笔订单基数（销售额/小费/加收/手动/自定义等）加权合计，口径与「小费池汇总分配」一致。</p>'
         : '';
       var safeRidJs = String(rid).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
       return '<div class="formula-rule-section" data-rule-id="' + escHtml(rid) + '">' +
@@ -736,6 +755,18 @@
         }
       }
       if (cond.revenueType) parts.push('营业额类型: ' + cond.revenueType);
+      if (cond.orderTipStatus === 'has_tip') parts.push('订单小费状态: 含小费');
+      else if (cond.orderTipStatus === 'no_tip') parts.push('订单小费状态: 不含小费');
+      if (Array.isArray(cond.paymentMethods) && cond.paymentMethods.length) {
+        var pmMap = {
+          cash: '现金', credit_card: '信用卡', gift_card: '礼品卡', member_card: '会员卡',
+          alipay: 'ALIPAY', wechatpay: 'WECHATPAY', custom: '自定义支付方式',
+          doordash_d_pay: 'DOORDASH_D-PAY（自定义）', uber_eats_d_pay: 'UBER_EATS_D-PAY（自定义）',
+          coupon: '券抵扣', points: '积分抵扣', other: '其他'
+        };
+        var pmTxt = cond.paymentMethods.map(function(v) { return pmMap[v] || v; }).join('、');
+        if (pmTxt) parts.push('支付方式: ' + pmTxt);
+      }
       if (cond.hours && (cond.hours.start || cond.hours.end)) parts.push('营业时间: ' + (cond.hours.start || '') + '-' + (cond.hours.end || ''));
       if (Array.isArray(cond.shift) && cond.shift.length) parts.push('班次: ' + detailFormatShiftNames(cond.shift));
       if (Array.isArray(cond.weekdays) && cond.weekdays.length) parts.push('周期: ' + detailFormatWeekdays(cond.weekdays));
@@ -759,23 +790,54 @@
       return '';
     }
 
+    function formatDeductEntryBlock(entry, kind) {
+      if (!entry || !entry.scopeType) return '';
+      var ratePct = entry.rate != null ? (Math.round(Number(entry.rate) * 10000) / 100) : '';
+      var scopeLine = formatDeductScopeLine(entry);
+      if (kind === 'personal') {
+        var rev = (entry.salesConditions && entry.salesConditions.revenueType) || 'Net Sales';
+        var pspParts = ['按个人销售额占比'];
+        if (ratePct !== '' && isFinite(ratePct)) pspParts.push(ratePct + '%');
+        pspParts.push(rev);
+        if (scopeLine) pspParts.push(scopeLine);
+        return pspParts.join(' · ');
+      }
+      if (kind === 'sales') {
+        var salesPrefix = '按照销售额占比';
+        if (ratePct !== '' && isFinite(ratePct)) salesPrefix += ' ' + ratePct + '%';
+        return scopeLine ? salesPrefix + ' → ' + scopeLine : salesPrefix;
+      }
+      var tipTypes = (entry.tipTypes && entry.tipTypes.length)
+        ? entry.tipTypes.filter(function(t) { return t !== '全部'; }).join(', ')
+        : '未指定';
+      var prefix = '按照小费收入占比';
+      if (ratePct !== '' && isFinite(ratePct)) prefix += ' ' + ratePct + '%';
+      prefix += '（' + tipTypes + '）';
+      return scopeLine ? prefix + ' → ' + scopeLine : prefix;
+    }
+
+    function asDeductEntryList(val) {
+      if (!val) return [];
+      return Array.isArray(val) ? val.filter(Boolean) : [val];
+    }
+
     function formatDeductRulesDisplay(rule) {
       if (!rule) return '—';
       var cfg = rule.deductConfig;
-      if (cfg && (cfg.salesPct || cfg.tipIncome)) {
+      if (cfg && (cfg.personalSalesPct || cfg.salesPct || cfg.tipIncome)) {
         var blocks = [];
-        if (cfg.salesPct) {
-          var line = formatDeductScopeLine(cfg.salesPct);
-          if (line) blocks.push('按照销售额占比 → ' + line);
-        }
-        if (cfg.tipIncome) {
-          var tipLine = formatDeductScopeLine(cfg.tipIncome);
-          var tipTypes = (cfg.tipIncome.tipTypes && cfg.tipIncome.tipTypes.length)
-            ? cfg.tipIncome.tipTypes.filter(function(t) { return t !== '全部'; }).join(', ')
-            : '未指定';
-          var prefix = '按照小费收入（' + tipTypes + '）';
-          blocks.push(tipLine ? prefix + ' → ' + tipLine : prefix);
-        }
+        asDeductEntryList(cfg.personalSalesPct).forEach(function(psp) {
+          var line = formatDeductEntryBlock(psp, 'personal');
+          if (line) blocks.push(line);
+        });
+        asDeductEntryList(cfg.salesPct).forEach(function(sp) {
+          var line = formatDeductEntryBlock(sp, 'sales');
+          if (line) blocks.push(line);
+        });
+        asDeductEntryList(cfg.tipIncome).forEach(function(ti) {
+          var line = formatDeductEntryBlock(ti, 'tip');
+          if (line) blocks.push(line);
+        });
         if (blocks.length) return blocks.join('<br>');
       }
       var de = rule.deductEmployees;
@@ -801,13 +863,13 @@
       }
       if ((rule.allocationMode || 'legacy_pool') === 'order_tip_then_residual') {
         var distNames2 = (window.ruleData && ruleData.distNames) || { average: '按员工数量平均分配', hours: '按工作时长占比分配', orders: '按订单占比分配' };
-        var poolTypeNames2 = (window.ruleData && ruleData.poolTypeNames) || { sales: '销售额', tips: '小费', surcharge: '加收服务费', manual: '手动上报小费', custom: '自定义小费' };
+        var poolTypeNames2 = (window.ruleData && ruleData.poolTypeNames) || { sales: '销售额', personal_sales: '按个人销售额', tips: '小费', surcharge: '加收服务费', manual: '手动上报小费', custom: '自定义小费' };
         var store = document.getElementById('storeSelect');
         var storeVal = store ? store.value : rule.store || '';
         var htmlOt = '<div class="rule-detail-item"><div class="label">规则名称</div><div class="value">' + (rule.ruleName || '') + '</div></div>' +
           '<div class="rule-detail-item"><div class="label">门店</div><div class="value">' + (storeVal || rule.store || '') + '</div></div>' +
           '<div class="rule-detail-item"><div class="label">分配模式</div><div class="value">计提小费占比分配</div></div>' +
-          '<div class="divider"></div><h4 style="margin-bottom:12px;font-size:14px">小费池计算规则（订单小费钱包口径与汇总分配一致）</h4>';
+          '<div class="divider"></div><h4 style="margin-bottom:12px;font-size:14px">小费池贡献规则（订单小费钱包口径与汇总分配一致）</h4>';
         (rule.poolRules || []).forEach(function(pr) {
           var name = pr.name || poolTypeNames2[pr.type] || pr.type;
           var valStr = '';
@@ -815,7 +877,7 @@
             valStr = '金额 $' + (pr.amount != null ? pr.amount : 0) + ' | 占比 ' + (pr.pct != null ? pr.pct : 100) + '%';
           } else {
             valStr = '占比 ' + (pr.pct || 0) + '%';
-            var cond = pr.conditions || (pr.type === 'sales' && rule.salesConditions) || (pr.type === 'tips' && rule.tipsConditions) || (pr.type === 'surcharge' && rule.surchargeConditions);
+            var cond = pr.conditions || (pr.type === 'sales' && rule.salesConditions) || (pr.type === 'personal_sales' && rule.salesConditions) || (pr.type === 'tips' && rule.tipsConditions) || (pr.type === 'surcharge' && rule.surchargeConditions);
             if (cond && (pr.type === 'surcharge' || pr.type === 'tips')) valStr += ' | ' + formatSurchargeConditions(cond);
             else if (cond && typeof cond === 'object' && Object.keys(cond).length) valStr += ' | ' + formatConditions(cond, true);
           }
@@ -870,13 +932,13 @@
         body.innerHTML = htmlOt;
         return;
       }
-      var poolTypeNames = (window.ruleData && ruleData.poolTypeNames) || { sales: '销售额', tips: '小费', surcharge: '加收服务费', manual: '手动上报小费', custom: '自定义小费' };
+      var poolTypeNames = (window.ruleData && ruleData.poolTypeNames) || { sales: '销售额', personal_sales: '按个人销售额', tips: '小费', surcharge: '加收服务费', manual: '手动上报小费', custom: '自定义小费' };
       var distNames = (window.ruleData && ruleData.distNames) || { average: '按员工数量平均分配', hours: '按工作时长占比分配', orders: '按订单占比分配' };
       var store = document.getElementById('storeSelect');
       var storeVal = store ? store.value : rule.store || '';
       var html = '<div class="rule-detail-item"><div class="label">规则名称</div><div class="value">' + (rule.ruleName || '') + '</div></div>' +
         '<div class="rule-detail-item"><div class="label">门店</div><div class="value">' + (storeVal || rule.store || '') + '</div></div>' +
-        '<div class="divider"></div><h4 style="margin-bottom:12px;font-size:14px">小费池计算规则</h4>';
+        '<div class="divider"></div><h4 style="margin-bottom:12px;font-size:14px">小费池贡献规则</h4>';
       var poolRuleNames = {};
       (rule.poolRules || []).forEach(function(pr) {
         poolRuleNames[pr.id || pr.type] = pr.name || poolTypeNames[pr.type] || pr.type;
@@ -888,7 +950,7 @@
           valStr = '金额 $' + (pr.amount != null ? pr.amount : 0) + ' | 占比 ' + (pr.pct != null ? pr.pct : 100) + '%';
         } else {
           valStr = '占比 ' + (pr.pct || 0) + '%';
-          var cond = pr.conditions || (pr.type === 'sales' && rule.salesConditions) || (pr.type === 'tips' && rule.tipsConditions) || (pr.type === 'surcharge' && rule.surchargeConditions);
+          var cond = pr.conditions || (pr.type === 'sales' && rule.salesConditions) || (pr.type === 'personal_sales' && rule.salesConditions) || (pr.type === 'tips' && rule.tipsConditions) || (pr.type === 'surcharge' && rule.surchargeConditions);
           if (cond && (pr.type === 'surcharge' || pr.type === 'tips')) valStr += ' | ' + formatSurchargeConditions(cond);
           else if (cond && typeof cond === 'object' && Object.keys(cond).length) valStr += ' | ' + formatConditions(cond, true);
         }
@@ -907,7 +969,7 @@
       body.innerHTML = html;
     }
 
-    var poolTypeNames = { sales: '销售额', tips: '小费', surcharge: '加收服务费', manual: '手动上报小费', custom: '自定义小费' };
+    var poolTypeNames = { sales: '销售额', personal_sales: '按个人销售额', tips: '小费', surcharge: '加收服务费', manual: '手动上报小费', custom: '自定义小费' };
 
     function openFormulaRuleModal(rid) {
       var storeSel = document.getElementById('storeSelect');
@@ -978,6 +1040,7 @@
         var base = poolBaseByRule[prid];
         if (base == null) {
           if (pr.type === 'sales') base = data.sales || 0;
+          else if (pr.type === 'personal_sales') base = (data.poolBaseByRule && data.poolBaseByRule[prid] != null) ? data.poolBaseByRule[prid] : (data.sales || 0);
           else if (pr.type === 'tips') base = data.tips || 0;
           else if (pr.type === 'surcharge') base = data.surcharge || 0;
           else if (pr.type === 'manual') base = data.manual || 0;
@@ -1000,6 +1063,14 @@
         );
       });
       var formulaHtml = blocks.length ? blocks.join('') : '<div class="formula-block"><span class="val">$0.00</span><span class="lbl">暂无池规则</span></div>';
+      var personalNote = '';
+      var psp = rule && rule.deductConfig && rule.deductConfig.personalSalesPct;
+      if (psp && window.TipOutPersonalSalesDeduct && TipOutPersonalSalesDeduct.entryHasScope(psp)) {
+        var ratePct = psp.rate != null ? (Math.round(Number(psp.rate) * 10000) / 100) : '';
+        personalNote = '<p style="font-size:12px;color:var(--text-tertiary);margin:8px 0 0;line-height:1.5">按个人销售额占比扣除已接入分配流水：每人应扣 = 本人 Net Sale × ' +
+          (ratePct !== '' && isFinite(ratePct) ? ratePct + '%' : '占比') +
+          '，实扣封顶分配前小费；实扣合计进入可分配池再按接收方规则分得（引擎：TipAllocation.runLegacyDayPipeline）。</p>';
+      }
       return '<div class="formula-rule-section formula-section" data-rule-id="' + escHtml(rid) + '">' +
         '<h4 class="detail-rule-block-title">' + escHtml(rule.ruleName || '未命名规则') + '</h4>' +
         '<p class="detail-rule-meta">小费池汇总分配</p>' +
@@ -1007,7 +1078,7 @@
           '<div class="formula-block"><span class="lbl">小费池总金额</span><span class="val formula-pool-val">' + money(data.pool || 0) + '</span></div>' +
           '<span class="formula-operator">=</span>' + formulaHtml +
           '<div class="formula-link"><a href="javascript:void(0)" class="btn-link" onclick="openFormulaRuleModal(\'' + safeRidJs + '\')" style="font-size:14px">公式详情</a></div>' +
-        '</div></div>';
+        '</div>' + personalNote + '</div>';
     }
 
     function buildRoleConfigFromRule(rule) {

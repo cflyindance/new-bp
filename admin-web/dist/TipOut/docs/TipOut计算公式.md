@@ -14,6 +14,37 @@
 
 **符合条件的总销售额** = 在「销售额取值条件」里**被选中的所有员工**（可跨多个角色）的符合条件销售额之和。
 
+### 订单小费状态（可选）
+
+若销售额取值条件配置了 `orderTipStatus`：
+
+- `has_tip`：仅统计卡小费或现金小费 > 0 的订单（已付小费营业总额）
+- `no_tip`：仅统计卡且现金小费均为 0 的订单（未付小费营业总额）
+- 未配置：不按小费过滤（与历史行为一致）
+
+判定**不**将加收服务费（Service Charge）视为小费。
+
+计算引擎汇总销售额 `S` 时：对每笔候选订单调用 `matchOrderTipStatus(order, salesConditions.orderTipStatus)`（见 `orderTipStatus.js`）。
+
+「符合条件」= 既有条件（角色/区域/时间/菜单/营业额类型…）∧ 可选 `orderTipStatus`。
+
+### 支付方式（可选，金额分摊）
+
+若配置了 `paymentMethods`（多选；销售额与 Tip Claim 取值条件均可配置）：
+
+```
+S_order = R × (P_sel / P_all)
+```
+
+- `R`：本单营业额类型金额
+- `P_sel` / `P_all`：所选 / 全部支付方式的含小费实付
+- 未配置：`S_order = R`
+- `P_all ≤ 0` 或 `P_sel = 0` 或无 tender 明细：`S_order = 0`
+
+与 `orderTipStatus` 组合：先整单过滤，再对通过订单做支付分摊。
+
+实现：`paymentMethodApportion.js` → `apportionRevenueByPaymentMethods`。
+
 > **示例**：选中 A、B、C、D 四人 → 100 + 200 + 300 + 400 = **1000**  
 > 计提占比 10% → 小费池销售额金额 = 1000 × 10% = **100**
 
@@ -104,3 +135,38 @@ D（Bartender）会进入第一步的总销售额（1000），但不会出现在
 | 扣除小费 | 作为扣除方，按规则从小费池中计提并扣减的金额 |
 | 分得小费 | 作为接收方，从小费分配规则中分到的金额 |
 | 分配后小费 | 上述三项计算后的实际金额 |
+
+---
+
+## 按个人销售额占比扣除（可选口径）
+
+与「先凑总销售额再抽成再切开」不同：每人扣额只依赖本人销售额。
+
+```
+应扣_i = S_i × r
+实扣_i = min(应扣_i, 分配前小费_i)
+分配后小费_i = 分配前小费_i − 实扣_i
+未扣足_i = 应扣_i − 实扣_i
+```
+
+- 不依赖「销售额」池规则卡片即可配置（`deductConfig.personalSalesPct`）
+- 与旧口径 `salesPct`（总池再分摊）互斥，避免双扣
+- 验收：A 销售额 1000、占比 3%、小费前 100 → 应扣 30、小费后 70；改 B 的销售额不影响 A 的应扣
+- **分配流水**：`TipAllocation.runDeductPipeline` / `runLegacyDayPipeline` 调用 `applyPersonalSalesDeductFromRule`；实扣合计 `poolContribution` 再按 `receivers` 分得；可与 `tipIncome` 并存（先个人实扣，再对剩余小费按 tipRate 抽）
+
+实现：`personalSalesDeduct.js` → `calcPersonalSalesDeduct` / `applyPersonalSalesDeductFromRule`；`tipAllocation.js` → `runLegacyDayPipeline`。
+
+---
+
+## 小费池 · 按个人销售额贡献（可选池项）
+
+与旧「销售额」总池卡片不同：可配置**多条** `personal_sales` 卡片，每条自带占比与取值条件（条件同销售额抽屉），用于多档费率：
+
+```
+卡片贡献 = Σ(命中该卡片条件的员工 S_i × 该卡片占比%)
+小费池本口径合计 = Σ 各 personal_sales 卡片贡献
+```
+
+示例：Server 卡片 3%（A 销售 1000 → 30）+ Bartender 卡片 2%（B 销售 200 → 4）→ 进池 34。
+
+实现：`calcPersonalSalesPoolCard` / `calcPersonalSalesPoolFromRules`。

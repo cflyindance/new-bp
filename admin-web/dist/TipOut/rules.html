@@ -234,7 +234,7 @@
         row.style.transition = 'opacity 0.3s';
         setTimeout(function() { renderRulesTable(); }, 300);
         showNotification('规则已删除');
-      });
+      }, { title: '删除规则', okText: '删除', okClass: 'btn btn-danger' });
     }
 
     function openAddRuleModal() {

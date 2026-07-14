@@ -2,6 +2,8 @@
  * 支付中心 · 卡付规则与加价（454 策略、82/242 最低消费、172 未付价展示、243 签名门槛、180 留存）。
  */
 
+import { readScopeFilters } from "../auth/session-scope";
+import { DEFAULT_DEMO_STORE_ID } from "../permissions/m-platform-store-scope";
 import { MODULE_SETTING_CHOICE_CONTROL_CLASS } from "./module-settings-choice-ui";
 import {
   PAYMENT_PRODUCT_LINES,
@@ -15,6 +17,9 @@ import {
   writeModuleSettingNumber,
   writeModuleSettingText,
 } from "./module-settings-form-ui";
+import { isMidLockedBySfdc, isStoreLockedBySfdc } from "./dual-pricing-store";
+
+const DUAL_PRICING_SETTINGS_HREF = "#/transactions/dual-pricing";
 
 export const MEMBER_CARD_MIN_SPEND_SEQ = 82;
 export const CARD_MIN_SPEND_SEQ = 242;
@@ -84,6 +89,26 @@ function escapeHtml(s: string): string {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+/**
+ * 当前作用域门店是否由 SFDC Dual Pricing 任务锁定 454/172。
+ * Demo：默认门店 ID 与种子上海店对齐。
+ */
+export function readCardPricingLockedBySfdc(): boolean {
+  const storeId = readScopeFilters().store?.trim() || DEFAULT_DEMO_STORE_ID;
+  if (isStoreLockedBySfdc(storeId)) return true;
+  /* 部分场景门店选择器 value 即为 MID */
+  if (isMidLockedBySfdc(storeId)) return true;
+  return false;
+}
+
+function renderSfdcLockNoticeHtml(): string {
+  return `
+    <p class="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs leading-relaxed text-foreground" data-card-pricing-sfdc-lock-notice>
+      由 Dual Pricing 任务管理，设置页不可手改。
+      <a href="${DUAL_PRICING_SETTINGS_HREF}" class="font-medium text-primary underline-offset-2 hover:underline">前往 Dual Pricing</a>
+    </p>`;
 }
 
 function defaultAmountByLine(): CardMinSpendByLine {
@@ -372,8 +397,8 @@ export function renderCardMinSpendByLineTableHtml(): string {
   });
 }
 
-function renderCardPricingPercentInput(strategy: CardPricingStrategy): string {
-  const disabled = strategy.mode === "none";
+function renderCardPricingPercentInput(strategy: CardPricingStrategy, locked: boolean): string {
+  const disabled = locked || strategy.mode === "none";
   return `
     <div class="flex flex-wrap items-center gap-2 ${disabled ? "opacity-50" : ""}">
       <input
@@ -394,11 +419,12 @@ function renderCardPricingPercentInput(strategy: CardPricingStrategy): string {
 
 export function renderCardPricingStrategyHtml(): string {
   const strategy = readCardPricingStrategy();
+  const locked = readCardPricingLockedBySfdc();
   const groupName = "card-pricing-strategy-mode";
   const radios = CARD_PRICING_MODE_OPTIONS.map((opt) => {
     const checked = strategy.mode === opt.value;
     return `
-      <label class="flex cursor-pointer items-start gap-2 text-sm text-foreground">
+      <label class="flex items-start gap-2 text-sm text-foreground ${locked ? "cursor-not-allowed opacity-70" : "cursor-pointer"}">
         <input
           type="radio"
           name="${groupName}"
@@ -406,6 +432,7 @@ export function renderCardPricingStrategyHtml(): string {
           class="${MODULE_SETTING_CHOICE_CONTROL_CLASS} mt-0.5"
           ${checked ? "checked" : ""}
           data-card-pricing-mode
+          ${locked ? "disabled" : ""}
           aria-label="${escapeHtml(opt.label)}"
         />
         <span>${escapeHtml(opt.label)}</span>
@@ -420,9 +447,10 @@ export function renderCardPricingStrategyHtml(): string {
         : "现金与信用卡支付使用同一应付金额。";
 
   return `
-    <div class="space-y-3" data-card-pricing-editor>
+    <div class="space-y-3" data-card-pricing-editor${locked ? ' data-card-pricing-sfdc-locked="1"' : ""}>
+      ${locked ? renderSfdcLockNoticeHtml() : ""}
       <div class="flex flex-col gap-2" role="radiogroup" aria-label="卡付加价策略">${radios}</div>
-      ${renderCardPricingPercentInput(strategy)}
+      ${renderCardPricingPercentInput(strategy, locked)}
       <p class="text-xs text-muted-foreground" data-card-pricing-hint>${escapeHtml(modeHint)}</p>
     </div>`;
 }
@@ -457,8 +485,11 @@ export function renderMerchantcopySignatureRetentionDaysInputHtml(): string {
     </div>`;
 }
 
-function renderReceiptUnpaidPriceCustomInput(display: ReceiptUnpaidPriceDisplay): string {
-  const disabled = display.priceType !== "custom";
+function renderReceiptUnpaidPriceCustomInput(
+  display: ReceiptUnpaidPriceDisplay,
+  locked: boolean,
+): string {
+  const disabled = locked || display.priceType !== "custom";
   return `
     <div class="space-y-1.5 ${disabled ? "opacity-50" : ""}" data-receipt-unpaid-price-custom-wrap>
       <label class="text-xs text-muted-foreground" for="receipt-unpaid-price-custom-label">自定义说明</label>
@@ -475,18 +506,25 @@ function renderReceiptUnpaidPriceCustomInput(display: ReceiptUnpaidPriceDisplay)
         aria-label="收据未付价格自定义说明"
       />
       <p class="text-xs text-muted-foreground" data-receipt-unpaid-price-hint>
-        ${disabled ? "选择「自定义」后可输入票面上展示的价格口径说明。" : "该文案将用于收据未付金额旁的价格口径标识。"}
+        ${
+          locked
+            ? "由 Dual Pricing 任务管理。"
+            : disabled
+              ? "选择「自定义」后可输入票面上展示的价格口径说明。"
+              : "该文案将用于收据未付金额旁的价格口径标识。"
+        }
       </p>
     </div>`;
 }
 
 export function renderReceiptUnpaidPriceDisplayHtml(): string {
   const display = readReceiptUnpaidPriceDisplay();
+  const locked = readCardPricingLockedBySfdc();
   const groupName = "receipt-unpaid-price-type";
   const radios = RECEIPT_UNPAID_PRICE_TYPE_OPTIONS.map((opt) => {
     const checked = display.priceType === opt.value;
     return `
-      <label class="flex cursor-pointer items-start gap-2 text-sm text-foreground">
+      <label class="flex items-start gap-2 text-sm text-foreground ${locked ? "cursor-not-allowed opacity-70" : "cursor-pointer"}">
         <input
           type="radio"
           name="${groupName}"
@@ -494,6 +532,7 @@ export function renderReceiptUnpaidPriceDisplayHtml(): string {
           class="${MODULE_SETTING_CHOICE_CONTROL_CLASS} mt-0.5"
           ${checked ? "checked" : ""}
           data-receipt-unpaid-price-type
+          ${locked ? "disabled" : ""}
           aria-label="${escapeHtml(opt.label)}"
         />
         <span>${escapeHtml(opt.label)}</span>
@@ -501,9 +540,10 @@ export function renderReceiptUnpaidPriceDisplayHtml(): string {
   }).join("");
 
   return `
-    <div class="space-y-3" data-receipt-unpaid-price-editor>
+    <div class="space-y-3" data-receipt-unpaid-price-editor${locked ? ' data-card-pricing-sfdc-locked="1"' : ""}>
+      ${locked ? renderSfdcLockNoticeHtml() : ""}
       <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-x-4" role="radiogroup" aria-label="收据未付价格口径">${radios}</div>
-      ${renderReceiptUnpaidPriceCustomInput(display)}
+      ${renderReceiptUnpaidPriceCustomInput(display, locked)}
     </div>`;
 }
 
@@ -552,11 +592,12 @@ function readPricingModeFromEditor(editor: HTMLElement): CardPricingMode {
 }
 
 function syncCardPricingEditorUi(editor: HTMLElement): void {
+  const locked = editor.getAttribute("data-card-pricing-sfdc-locked") === "1";
   const mode = readPricingModeFromEditor(editor);
   const percentInput = editor.querySelector<HTMLInputElement>("[data-card-pricing-percent]");
   const hint = editor.querySelector("[data-card-pricing-hint]");
   if (percentInput) {
-    const disabled = mode === "none";
+    const disabled = locked || mode === "none";
     percentInput.disabled = disabled;
     percentInput.closest("div")?.classList.toggle("opacity-50", disabled);
   }
@@ -571,6 +612,7 @@ function syncCardPricingEditorUi(editor: HTMLElement): void {
 }
 
 function persistCardPricingEditor(editor: HTMLElement): void {
+  if (editor.getAttribute("data-card-pricing-sfdc-locked") === "1") return;
   const mode = readPricingModeFromEditor(editor);
   const percent = Number(editor.querySelector<HTMLInputElement>("[data-card-pricing-percent]")?.value);
   writeCardPricingStrategy({
@@ -586,21 +628,25 @@ function readReceiptUnpaidPriceTypeFromEditor(editor: HTMLElement): ReceiptUnpai
 }
 
 function syncReceiptUnpaidPriceEditorUi(editor: HTMLElement): void {
+  const locked = editor.getAttribute("data-card-pricing-sfdc-locked") === "1";
   const priceType = readReceiptUnpaidPriceTypeFromEditor(editor);
   const customWrap = editor.querySelector<HTMLElement>("[data-receipt-unpaid-price-custom-wrap]");
   const customInput = editor.querySelector<HTMLInputElement>("[data-receipt-unpaid-price-custom-label]");
   const hint = editor.querySelector("[data-receipt-unpaid-price-hint]");
-  const disabled = priceType !== "custom";
+  const disabled = locked || priceType !== "custom";
   customWrap?.classList.toggle("opacity-50", disabled);
   if (customInput) customInput.disabled = disabled;
   if (hint) {
-    hint.textContent = disabled
-      ? "选择「自定义」后可输入票面上展示的价格口径说明。"
-      : "该文案将用于收据未付金额旁的价格口径标识。";
+    hint.textContent = locked
+      ? "由 Dual Pricing 任务管理。"
+      : disabled
+        ? "选择「自定义」后可输入票面上展示的价格口径说明。"
+        : "该文案将用于收据未付金额旁的价格口径标识。";
   }
 }
 
 function persistReceiptUnpaidPriceEditor(editor: HTMLElement): void {
+  if (editor.getAttribute("data-card-pricing-sfdc-locked") === "1") return;
   const priceType = readReceiptUnpaidPriceTypeFromEditor(editor);
   const customLabel =
     editor.querySelector<HTMLInputElement>("[data-receipt-unpaid-price-custom-label]")?.value ?? "";
@@ -654,6 +700,7 @@ export function bindCardPricingStrategyEditors(root: ParentNode = document): voi
   root.querySelectorAll<HTMLElement>("[data-card-pricing-editor]").forEach((editor) => {
     if (editor.dataset.cardPricingEditorBound === "1") return;
     editor.dataset.cardPricingEditorBound = "1";
+    if (editor.getAttribute("data-card-pricing-sfdc-locked") === "1") return;
     syncCardPricingEditorUi(editor);
     editor.addEventListener("change", (e) => {
       const el = e.target as HTMLElement;
@@ -687,6 +734,7 @@ export function bindReceiptUnpaidPriceDisplayEditors(root: ParentNode = document
   root.querySelectorAll<HTMLElement>("[data-receipt-unpaid-price-editor]").forEach((editor) => {
     if (editor.dataset.receiptUnpaidPriceEditorBound === "1") return;
     editor.dataset.receiptUnpaidPriceEditorBound = "1";
+    if (editor.getAttribute("data-card-pricing-sfdc-locked") === "1") return;
     syncReceiptUnpaidPriceEditorUi(editor);
     editor.addEventListener("change", (e) => {
       const el = e.target as HTMLElement;

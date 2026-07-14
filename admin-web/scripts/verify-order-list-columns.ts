@@ -1,10 +1,11 @@
 /**
- * 订单列表表头字段 / 金额口径校验（设计方案 v1.1）
+ * 订单列表表头字段 / 金额口径校验（设计方案 v1.5）
  * 运行：npx tsx scripts/verify-order-list-columns.ts
  * 或：npm run verify:order-list-columns
  */
 import assert from "node:assert/strict";
 import {
+  ORDER_LIST_CHANNELS,
   ORDER_LIST_COLUMNS,
   getDefaultVisibleColumns,
   getOptionalColumns,
@@ -19,6 +20,7 @@ const expectedKeys = [
   "orderNumber",
   "status",
   "orderType",
+  "orderChannel",
   "tableOrPickupNo",
   "subtotal",
   "totalDue",
@@ -37,7 +39,7 @@ const expectedKeys = [
   "storeName",
 ] as const;
 
-assert.equal(ORDER_LIST_COLUMNS.length, 19, "字段全集应为 19 列");
+assert.equal(ORDER_LIST_COLUMNS.length, 20, "字段全集应为 20 列");
 assert.deepEqual(
   ORDER_LIST_COLUMNS.map((c) => c.key),
   [...expectedKeys],
@@ -46,12 +48,12 @@ assert.deepEqual(
 assert.deepEqual(
   ORDER_LIST_COLUMNS.map((c) => c.order),
   expectedKeys.map((_, i) => i + 1),
-  "order 须为 1..19",
+  "order 须为 1..20",
 );
 
 const defaults = getDefaultVisibleColumns();
 const optionals = getOptionalColumns();
-assert.equal(defaults.length, 13, "默认显示应为 13 列");
+assert.equal(defaults.length, 14, "默认显示应为 14 列");
 assert.equal(optionals.length, 6, "可选应为 6 列");
 assert.deepEqual(
   defaults.map((c) => c.key),
@@ -59,6 +61,7 @@ assert.deepEqual(
     "orderNumber",
     "status",
     "orderType",
+    "orderChannel",
     "tableOrPickupNo",
     "subtotal",
     "totalDue",
@@ -76,6 +79,12 @@ assert.deepEqual(
   ["closerName", "closedAt", "paymentMethodSummary", "discount", "guestCount", "storeName"],
 );
 
+assert.deepEqual(
+  [...ORDER_LIST_CHANNELS],
+  ["KIOSK", "EMENU", "OO", "SDI", "POS", "PAYPAD", "POS GO", "三方外卖"],
+);
+
+assert.ok(ORDER_LIST_COLUMNS.some((c) => c.key === "orderChannel"));
 assert.ok(ORDER_LIST_COLUMNS.some((c) => c.key === "serverName"));
 assert.ok(ORDER_LIST_COLUMNS.some((c) => c.key === "closerName"));
 assert.ok(ORDER_LIST_COLUMNS.some((c) => c.key === "openedAt"));

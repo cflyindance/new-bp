@@ -269,7 +269,7 @@
               </div>
               <div class="filter-field">
                 <label class="filter-field-label" for="storeSelect">门店</label>
-                <select id="storeSelect" class="form-control form-control-lg" onchange="renderDayTabs()">
+                <select id="storeSelect" class="form-control form-control-lg" onchange="invalidateDayPipelineCache();renderDayTabs()">>
                   <option value="">请选择门店</option>
                 </select>
               </div>
@@ -403,6 +403,8 @@
 
   <script src="common.js"></script>
   <script src="ruleData.js"></script>
+  <script src="personalSalesDeduct.js"></script>
+  <script src="tipAllocation.js"></script>
   <script src="tipout-payroll-bridge.js"></script>
   <script>
     var ALLOC_KEY = 'tipout_allocated';
@@ -598,7 +600,96 @@
       return { hasDeductors: false, roles: {}, names: {} };
     }
 
+    function getLegacyRulesForCurrentStore() {
+      var storeSel = document.getElementById('storeSelect');
+      var store = storeSel ? (storeSel.value || '').trim() : '';
+      if (!window.ruleData || !ruleData.getRulesForStore) return [];
+      return ruleData.getRulesForStore(store).filter(function(r) {
+        return (r.allocationMode || 'legacy_pool') === 'legacy_pool';
+      });
+    }
+
+    function getPersonalSalesPctRule() {
+      var rules = getLegacyRulesForCurrentStore();
+      for (var i = 0; i < rules.length; i++) {
+        var cfg = rules[i].deductConfig;
+        if (cfg && cfg.personalSalesPct && window.TipOutPersonalSalesDeduct &&
+            TipOutPersonalSalesDeduct.entryHasScope(cfg.personalSalesPct)) {
+          return rules[i];
+        }
+      }
+      return null;
+    }
+
+    /** 演示期：由日期+姓名种子生成 Net Sales，隔离于他人销售额 */
+    function genPersonalNetSales(emp, dateKey) {
+      var seed = dateKey.split('-').reduce(function(a, b) { return a * 31 + parseInt(b, 10); }, 0) +
+        emp.name.length * 13 + emp.name.charCodeAt(0) * 17;
+      var rng = seedRandom(seed + 991);
+      var dayOfWeek = new Date(dateKey + 'T00:00:00').getDay();
+      var weekendBoost = (dayOfWeek === 5 || dayOfWeek === 6) ? 1.35 : 1.0;
+      return roundTip((700 + rng() * 1600) * weekendBoost);
+    }
+
+    var dayPipelineCache = {};
+    function invalidateDayPipelineCache() { dayPipelineCache = {}; }
+
+    function ensureDayPipeline(dateKey) {
+      if (dayPipelineCache[dateKey]) return dayPipelineCache[dateKey];
+      var rule = getPersonalSalesPctRule();
+      if (!rule || !window.TipAllocation || !TipAllocation.runLegacyDayPipeline) {
+        dayPipelineCache[dateKey] = null;
+        return null;
+      }
+      var dayEmps = employees.map(function(emp) {
+        var seed = dateKey.split('-').reduce(function(a, b) { return a * 31 + parseInt(b, 10); }, 0) +
+          emp.name.length * 7 + emp.name.charCodeAt(0);
+        var rng = seedRandom(seed);
+        var dayOfWeek = new Date(dateKey + 'T00:00:00').getDay();
+        var weekendBoost = (dayOfWeek === 5 || dayOfWeek === 6) ? 1.35 : 1.0;
+        var tipBefore;
+        var deductCtx = getAllocationDeductorContext();
+        var shouldDeduct = window.ruleData && ruleData.isEmployeeInDeductorContext
+          ? ruleData.isEmployeeInDeductorContext(emp, deductCtx)
+          : false;
+        if (shouldDeduct || (emp.tipType || '') === 'deduct') {
+          tipBefore = roundTip(emp.baseTip * (0.8 + rng() * 0.5) * weekendBoost);
+        } else {
+          var baseBefore = Number(emp.baseTip) > 0
+            ? emp.baseTip * (0.8 + rng() * 0.5)
+            : (5 + rng() * 12);
+          tipBefore = roundTip(baseBefore * weekendBoost);
+        }
+        return {
+          id: emp.name,
+          name: emp.name,
+          role: emp.role,
+          tipBefore: tipBefore,
+          tipRate: emp.tipRate || 0,
+          salesAmount: genPersonalNetSales(emp, dateKey)
+        };
+      });
+      var pipeline = TipAllocation.runLegacyDayPipeline(rule, dayEmps);
+      dayPipelineCache[dateKey] = pipeline;
+      return pipeline;
+    }
+
     function genDailyTip(emp, dateKey) {
+      var pipeline = ensureDayPipeline(dateKey);
+      if (pipeline && pipeline.byName && pipeline.byName[emp.name]) {
+        var row = pipeline.byName[emp.name];
+        return {
+          date: dateKey,
+          before: row.before,
+          deducted: row.deducted,
+          received: row.received,
+          after: row.after,
+          due: row.due,
+          shortfall: row.shortfall,
+          salesAmount: row.salesAmount
+        };
+      }
+
       const seed = dateKey.split('-').reduce((a, b) => a * 31 + parseInt(b), 0) + emp.name.length * 7 + emp.name.charCodeAt(0);
       const rng = seedRandom(seed);
       const dayOfWeek = new Date(dateKey + 'T00:00:00').getDay();
@@ -736,6 +827,7 @@
         setTimeout(function() { window.location.href = 'rules.html'; }, 1500);
         return;
       }
+      invalidateDayPipelineCache();
       var dates = getDateRange();
       var allocatedDates = getAllocatedDates();
       dates.forEach(function(k) { allocatedDates.add(k); });
@@ -756,6 +848,7 @@
     }
 
     function doCancelAllocate() {
+      invalidateDayPipelineCache();
       var dates = getDateRange();
       var allocatedDates = getAllocatedDates();
       dates.forEach(function(k) { allocatedDates.delete(k); });
