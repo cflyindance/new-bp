@@ -1,8 +1,26 @@
 /**
- * 支付中心 · 卡付规则与加价（454 策略、82/242 最低消费、172 未付价展示、243 签名门槛、180 留存）。
+ * 支付中心 · 卡付规则与加价（454 双重定价只读、543 卡加价策略、82/242 最低消费、172 未付价展示、243 签名门槛、180 留存）。
  */
 
 import { MODULE_SETTING_CHOICE_CONTROL_CLASS } from "./module-settings-choice-ui";
+import {
+  formatDualPricingSyncSceneLabel,
+  getDualPricingSyncedRate,
+  getDualPricingUpstreamSnapshot,
+  isDualPricingActiveFromUpstream,
+  simulateDualPricingSyncFailed,
+  simulateDualPricingSyncSuccess,
+  simulateDualPricingUpstreamNotConfigured,
+} from "./dual-pricing-upstream";
+import {
+  DP_TASK_STATUS_LABEL_ZH,
+  DP_TASK_TYPE_LABEL_ZH,
+  isDpTaskRetryable,
+  listDualPricingTasks,
+  retryDualPricingTask,
+  type DpTaskListItem,
+  type DpTaskListStatus,
+} from "./dual-pricing-tasks";
 import {
   PAYMENT_PRODUCT_LINES,
   type PaymentProductLineId,
@@ -16,12 +34,18 @@ import {
   writeModuleSettingText,
 } from "./module-settings-form-ui";
 
+
 export const MEMBER_CARD_MIN_SPEND_SEQ = 82;
 export const CARD_MIN_SPEND_SEQ = 242;
 export const CARD_SIGNATURE_THRESHOLD_SEQ = 243;
 export const MERCHANTCOPY_SIGNATURE_RETENTION_DAYS_SEQ = 180;
 export const RECEIPT_UNPAID_PRICE_DISPLAY_SEQ = 172;
-export const CARD_PRICING_STRATEGY_SEQ = 454;
+/** 双重定价比例（上游同步，设置页只读） */
+export const DUAL_PRICING_RATE_SEQ = 454;
+/** 卡加价策略：不加价 / 整单加收（双重定价生效时隐藏） */
+export const CARD_PRICING_STRATEGY_SEQ = 543;
+/** @deprecated 使用 DUAL_PRICING_RATE_SEQ；保留别名避免旧引用断裂 */
+export const CARD_PRICING_STRATEGY_LEGACY_SEQ = 454;
 
 const MEMBER_CARD_MIN_SPEND_STORAGE_ID = "82-member-card-min-spend-by-line";
 const CARD_MIN_SPEND_STORAGE_ID = "242-card-min-spend-by-line";
@@ -29,6 +53,7 @@ const CARD_SIGNATURE_MIN_STORAGE_ID = "243-card-signature-min-by-line";
 export const MERCHANTCOPY_SIGNATURE_RETENTION_DAYS_FIELD_ID =
   "180-merchantcopy-signature-retention-days";
 const RECEIPT_UNPAID_PRICE_DISPLAY_STORAGE_ID = "172-receipt-unpaid-price-display";
+/** 历史字段名保留，避免已有 localStorage 丢失；语义改为 none|surcharge */
 const CARD_PRICING_STORAGE_ID = "454-card-pricing-strategy";
 
 const MERCHANTCOPY_SIGNATURE_RETENTION_DAYS_DEFAULT = 90;
@@ -39,7 +64,8 @@ const LEGACY_MEMBER_MIN_SPEND_FIELD_IDS = ["82-member-card-min-spend", "82-card-
 const LEGACY_MIN_SPEND_FIELD_IDS = ["242-card-min-payment", "512-card-min-spend"] as const;
 const LEGACY_SIGNATURE_MIN_FIELD_IDS = ["243-card-signature-min-amount"] as const;
 
-export type CardPricingMode = "none" | "dual-pricing" | "surcharge";
+/** 设置页可编辑的策略；双重定价不在此枚举 */
+export type CardPricingMode = "none" | "surcharge";
 
 export type ReceiptUnpaidPriceType = "cash" | "card" | "custom";
 
@@ -66,7 +92,6 @@ const TEXT_INPUT_CLASS =
 
 const CARD_PRICING_MODE_OPTIONS = [
   { value: "none", label: "不加价（现金与卡付同价）" },
-  { value: "dual-pricing", label: "双重定价" },
   { value: "surcharge", label: "整单加收" },
 ] as const;
 
@@ -187,27 +212,35 @@ export function writeMerchantcopySignatureRetentionDays(days: number): void {
 }
 
 function isValidPricingMode(value: string): value is CardPricingMode {
-  return value === "none" || value === "dual-pricing" || value === "surcharge";
+  return value === "none" || value === "surcharge";
 }
 
 function readLegacy543SurchargeEnabled(): boolean {
   return readModuleSettingNumber("543-card-surcharge-enabled", 0) > 0;
 }
 
-function normalizeCardPricingStrategy(raw: Partial<CardPricingStrategy>): CardPricingStrategy {
-  const mode = isValidPricingMode(String(raw.mode ?? "")) ? raw.mode! : "none";
+function normalizeCardPricingStrategy(raw: Partial<CardPricingStrategy> & { mode?: string }): CardPricingStrategy {
+  const rawMode = String(raw.mode ?? "");
+  // 遗留 dual-pricing：设置页不再可编辑；无上游开通时回落不加价
+  const mode: CardPricingMode =
+    rawMode === "surcharge" || isValidPricingMode(rawMode)
+      ? (rawMode === "surcharge" ? "surcharge" : "none")
+      : "none";
   return { mode, percent: clampPercent(Number(raw.percent)) };
 }
 
 export function readCardPricingStrategy(): CardPricingStrategy {
-  const raw = readModuleSettingJson<Partial<CardPricingStrategy>>(CARD_PRICING_STORAGE_ID, {});
+  const raw = readModuleSettingJson<Partial<CardPricingStrategy> & { mode?: string }>(
+    CARD_PRICING_STORAGE_ID,
+    {},
+  );
   if (raw && typeof raw === "object" && raw.mode) {
+    if (String(raw.mode) === "dual-pricing") {
+      return { mode: "none", percent: 0 };
+    }
     return normalizeCardPricingStrategy(raw);
   }
-  const legacy454 = readModuleSettingNumber("454-dual-pricing-percent", NaN);
-  if (Number.isFinite(legacy454) && legacy454 > 0) {
-    return { mode: "dual-pricing", percent: clampPercent(legacy454) };
-  }
+  // 旧 454 百分比仅作历史遗留；费率改由上游 Snapshot 展示，不再推导 dual 模式
   const legacy543 = readModuleSettingNumber("543-surcharge-percent", NaN);
   if (readLegacy543SurchargeEnabled() || (Number.isFinite(legacy543) && legacy543 > 0)) {
     return {
@@ -326,8 +359,20 @@ export function isCardMinSpendSeq(seq: number): boolean {
   return seq === CARD_MIN_SPEND_SEQ;
 }
 
+export function isDualPricingRateSeq(seq: number): boolean {
+  return seq === DUAL_PRICING_RATE_SEQ;
+}
+
 export function isCardPricingStrategySeq(seq: number): boolean {
   return seq === CARD_PRICING_STRATEGY_SEQ;
+}
+
+/** 上游已开通双重定价时，从设置列表中隐藏「卡加价策略」行 */
+export function filterCardFeesCatalogItemsForDualPricing<T extends { seq: number }>(
+  items: readonly T[],
+): T[] {
+  if (!isDualPricingActiveFromUpstream()) return items.slice();
+  return items.filter((item) => item.seq !== CARD_PRICING_STRATEGY_SEQ);
 }
 
 export function isCardSignatureThresholdSeq(seq: number): boolean {
@@ -343,11 +388,7 @@ export function isReceiptUnpaidPriceDisplaySeq(seq: number): boolean {
 }
 
 export function renderCardFeesGroupIntroHtml(): string {
-  return `
-    <p class="mb-3 rounded-md border border-border bg-muted/40 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
-      本组配置<strong>双轨定价</strong>（454 卡付加价、305 现金折扣）、<strong>产线最低消费</strong>（82 / 242）、<strong>收据未付价格展示</strong>（172）、<strong>签名金额门槛</strong>（243）与<strong>电子签名留存</strong>（180）。
-      食客结账界面见「食客结账界面」；对内收单成本率见财务中心「收单成本与报表口径」（307）。
-    </p>`;
+  return "";
 }
 
 export function renderMemberCardMinSpendByLineTableHtml(): string {
@@ -386,9 +427,188 @@ function renderCardPricingPercentInput(strategy: CardPricingStrategy): string {
         step="0.01"
         data-card-pricing-percent
         ${disabled ? "disabled" : ""}
-        aria-label="卡付加价比例"
+        aria-label="整单加收比例"
       />
       <span class="text-sm text-muted-foreground">%</span>
+    </div>`;
+}
+
+function statusBadgeClassForTask(status: DpTaskListStatus): string {
+  if (status === "dispatch_ok") return "text-emerald-700 dark:text-emerald-400";
+  if (status === "config_failed" || status === "dispatch_failed") return "text-destructive";
+  return "text-muted-foreground";
+}
+
+function formatTaskUpdatedAtCell(updatedAt: string): string {
+  const parts = updatedAt.trim().split(/\s+/);
+  if (parts.length >= 2) {
+    return `<span class="inline-block leading-tight">${escapeHtml(parts[0]!)}<br />${escapeHtml(parts.slice(1).join(" "))}</span>`;
+  }
+  return escapeHtml(updatedAt);
+}
+
+function renderDpTaskTableRows(rows: DpTaskListItem[]): string {
+  if (!rows.length) {
+    return `
+      <tr>
+        <td colspan="7" class="px-4 py-12 text-center text-sm text-muted-foreground">暂无 Dual Pricing 任务</td>
+      </tr>`;
+  }
+  return rows
+    .map((t) => {
+      const retryable = isDpTaskRetryable(t);
+      const op = retryable
+        ? `<button type="button" class="font-medium text-primary underline-offset-2 hover:underline" data-dp-task-retry="${escapeHtml(t.taskId)}">更新</button>`
+        : `<span class="text-muted-foreground">/</span>`;
+      return `
+      <tr class="border-b border-border/60 hover:bg-muted/30">
+        <td class="px-4 py-2.5 text-center text-sm tabular-nums">${escapeHtml(t.taskId)}</td>
+        <td class="px-4 py-2.5 text-center text-sm tabular-nums">${escapeHtml(t.caseNumber)}</td>
+        <td class="px-4 py-2.5 text-center text-sm">${escapeHtml(DP_TASK_TYPE_LABEL_ZH[t.type])}</td>
+        <td class="px-4 py-2.5 text-center text-sm tabular-nums">${escapeHtml(`${t.rate}%`)}</td>
+        <td class="px-4 py-2.5 text-center text-sm ${statusBadgeClassForTask(t.status)}">${escapeHtml(DP_TASK_STATUS_LABEL_ZH[t.status])}</td>
+        <td class="px-4 py-2.5 text-center text-sm">${formatTaskUpdatedAtCell(t.updatedAt)}</td>
+        <td class="px-4 py-2.5 text-center text-sm">${op}</td>
+      </tr>`;
+    })
+    .join("");
+}
+
+function renderDualPricingTaskListDialogHtml(): string {
+  const rows = listDualPricingTasks();
+  return `
+    <div class="fixed inset-0 z-[80] flex items-center justify-center p-4" data-dp-task-list-overlay>
+      <button type="button" class="absolute inset-0 bg-black/40" data-dp-task-list-close aria-label="关闭"></button>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="dp-task-list-title"
+        class="relative z-[1] flex max-h-[min(85vh,40rem)] w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-border bg-card shadow-xl"
+        data-dp-task-list-dialog
+      >
+        <div class="flex shrink-0 items-center justify-between gap-3 border-b border-border px-4 py-3">
+          <h2 id="dp-task-list-title" class="text-base font-semibold text-foreground">任务列表</h2>
+          <button type="button" class="rounded-md px-2 py-1 text-sm text-muted-foreground hover:bg-muted hover:text-foreground" data-dp-task-list-close>关闭</button>
+        </div>
+        <div class="min-h-0 flex-1 overflow-auto p-4">
+          <div class="overflow-auto rounded-lg border border-border">
+            <table class="w-full min-w-[800px] border-collapse">
+              <thead class="sticky top-0 z-[1]">
+                <tr class="bg-muted text-foreground">
+                  <th class="px-4 py-2.5 text-center text-sm font-medium">任务ID</th>
+                  <th class="px-4 py-2.5 text-center text-sm font-medium">case number</th>
+                  <th class="px-4 py-2.5 text-center text-sm font-medium">类型</th>
+                  <th class="px-4 py-2.5 text-center text-sm font-medium">rate</th>
+                  <th class="px-4 py-2.5 text-center text-sm font-medium">状态</th>
+                  <th class="px-4 py-2.5 text-center text-sm font-medium">更新时间</th>
+                  <th class="px-4 py-2.5 text-center text-sm font-medium">操作</th>
+                </tr>
+              </thead>
+              <tbody data-dp-task-list-tbody>${renderDpTaskTableRows(rows)}</tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function refreshDualPricingTaskListTable(): void {
+  const tbody = document.querySelector("[data-dp-task-list-tbody]");
+  if (tbody) tbody.innerHTML = renderDpTaskTableRows(listDualPricingTasks());
+}
+
+function closeDualPricingTaskListDialog(): void {
+  document.querySelector("[data-dp-task-list-overlay]")?.remove();
+  if (dpTaskListEscHandler) {
+    document.removeEventListener("keydown", dpTaskListEscHandler);
+    dpTaskListEscHandler = null;
+  }
+}
+
+let dpTaskListEscHandler: ((e: KeyboardEvent) => void) | null = null;
+
+export function openDualPricingTaskListDialog(): void {
+  closeDualPricingTaskListDialog();
+  document.body.insertAdjacentHTML("beforeend", renderDualPricingTaskListDialogHtml());
+  const overlay = document.querySelector("[data-dp-task-list-overlay]");
+  if (!overlay) return;
+
+  dpTaskListEscHandler = (e: KeyboardEvent) => {
+    if (e.key === "Escape") closeDualPricingTaskListDialog();
+  };
+  document.addEventListener("keydown", dpTaskListEscHandler);
+
+  overlay.addEventListener("click", (e) => {
+    const t = e.target as HTMLElement;
+    if (t.closest("[data-dp-task-list-close]")) {
+      closeDualPricingTaskListDialog();
+      return;
+    }
+    const retryBtn = t.closest<HTMLElement>("[data-dp-task-retry]");
+    if (retryBtn) {
+      const id = retryBtn.getAttribute("data-dp-task-retry");
+      if (id) retryDualPricingTask(id);
+      refreshDualPricingTaskListTable();
+    }
+  });
+}
+
+export function renderDualPricingRateReadonlyHtml(): string {
+  const snap = getDualPricingUpstreamSnapshot();
+  const scene = snap?.scene ?? "upstream_not_configured";
+  const rate = getDualPricingSyncedRate();
+  const display = rate == null || Number.isNaN(rate) ? "/" : `${rate}%`;
+  const sceneLabel = formatDualPricingSyncSceneLabel(scene);
+  const statusOnly = scene === "upstream_not_configured" || scene === "sync_failed";
+  const showTaskListLink = scene === "sync_failed";
+
+  const btnClass =
+    "inline-flex h-8 items-center justify-center rounded-md border border-border bg-background px-3 text-xs font-medium text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+
+  const taskListLink = showTaskListLink
+    ? `<button type="button" class="text-sm font-medium text-primary underline-offset-2 hover:underline" data-dp-open-task-list>任务列表</button>`
+    : "";
+
+  const statusRow = statusOnly
+    ? `<span
+          class="inline-flex h-9 min-w-[6rem] items-center rounded-md border border-input bg-muted/40 px-3 text-sm text-muted-foreground"
+          aria-label="双重定价状态"
+          data-dual-pricing-scene
+        >${escapeHtml(sceneLabel)}</span>
+        ${taskListLink}`
+    : `<span
+          class="inline-flex h-9 min-w-[6rem] items-center rounded-md border border-input bg-muted/40 px-3 text-sm tabular-nums text-foreground"
+          aria-label="双重定价比例（只读）"
+          data-dual-pricing-scene
+        >${escapeHtml(display)}</span>`;
+
+  const receiptBlock =
+    scene === "synced"
+      ? `
+      <div class="space-y-3 border-t border-border pt-4" data-dp-receipt-unpaid-synced>
+        <div class="min-w-0 flex flex-col gap-1">
+          <span class="text-sm font-medium text-card-foreground">Receipt (Unpaid) Display</span>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <span
+            class="inline-flex h-9 min-w-[6rem] items-center rounded-md border border-input bg-muted/40 px-3 text-sm text-foreground"
+            aria-label="Receipt Unpaid Display（只读）"
+          >Card Price</span>
+        </div>
+      </div>`
+      : "";
+
+  return `
+    <div class="space-y-3" data-dual-pricing-rate-readonly>
+      <div class="flex flex-wrap items-center gap-2">
+        ${statusRow}
+      </div>
+      ${receiptBlock}
+      <div class="flex flex-wrap gap-2 pt-1" role="group" aria-label="双重定价同步演示">
+        <button type="button" class="${btnClass}" data-dp-sim="upstream-not-configured">模拟：上游未配置</button>
+        <button type="button" class="${btnClass}" data-dp-sim="sync-failed">模拟：上游同步失败</button>
+        <button type="button" class="${btnClass}" data-dp-sim="sync-success">模拟：同步成功并下发</button>
+      </div>
     </div>`;
 }
 
@@ -413,15 +633,13 @@ export function renderCardPricingStrategyHtml(): string {
   }).join("");
 
   const modeHint =
-    strategy.mode === "dual-pricing"
-      ? "卡付价 = 现金价 × (1 + 比例)；菜单/小票需合规披露现金价与卡价。"
-      : strategy.mode === "surcharge"
-        ? "仅在选择信用卡支付时，在订单总额上加收该比例；与订单中心「加收」预设（447）不同。"
-        : "现金与信用卡支付使用同一应付金额。";
+    strategy.mode === "surcharge"
+      ? "仅在选择信用卡支付时，在订单总额上加收该比例；与订单中心「加收」预设（447）不同。"
+      : "现金与信用卡支付使用同一应付金额。双重定价由上游同步，见同组「双重定价」。";
 
   return `
     <div class="space-y-3" data-card-pricing-editor>
-      <div class="flex flex-col gap-2" role="radiogroup" aria-label="卡付加价策略">${radios}</div>
+      <div class="flex flex-col gap-2" role="radiogroup" aria-label="卡加价策略">${radios}</div>
       ${renderCardPricingPercentInput(strategy)}
       <p class="text-xs text-muted-foreground" data-card-pricing-hint>${escapeHtml(modeHint)}</p>
     </div>`;
@@ -562,11 +780,9 @@ function syncCardPricingEditorUi(editor: HTMLElement): void {
   }
   if (hint) {
     hint.textContent =
-      mode === "dual-pricing"
-        ? "卡付价 = 现金价 × (1 + 比例)；菜单/小票需合规披露现金价与卡价。"
-        : mode === "surcharge"
-          ? "仅在选择信用卡支付时，在订单总额上加收该比例；与订单中心「加收」预设（447）不同。"
-          : "现金与信用卡支付使用同一应付金额。";
+      mode === "surcharge"
+        ? "仅在选择信用卡支付时，在订单总额上加收该比例；与订单中心「加收」预设（447）不同。"
+        : "现金与信用卡支付使用同一应付金额。双重定价由上游同步，见同组「双重定价」。";
   }
 }
 
@@ -712,10 +928,44 @@ export function bindReceiptUnpaidPriceDisplayEditors(root: ParentNode = document
   });
 }
 
-export function bindCardFeesEditors(root: ParentNode = document): void {
+export function bindDualPricingUpstreamSimButtons(
+  root: ParentNode = document,
+  remount?: () => void,
+): void {
+  root.querySelectorAll<HTMLElement>("[data-dual-pricing-rate-readonly]").forEach((wrap) => {
+    if (wrap.dataset.dpSimBound === "1") return;
+    wrap.dataset.dpSimBound = "1";
+    wrap.addEventListener("click", (e) => {
+      const t = e.target as HTMLElement;
+      if (t.closest("[data-dp-open-task-list]")) {
+        e.preventDefault();
+        openDualPricingTaskListDialog();
+        return;
+      }
+      const btn = t.closest<HTMLElement>("[data-dp-sim]");
+      if (!btn || !wrap.contains(btn)) return;
+      e.preventDefault();
+      const action = btn.getAttribute("data-dp-sim");
+      if (action === "upstream-not-configured") {
+        simulateDualPricingUpstreamNotConfigured();
+      } else if (action === "sync-failed") {
+        simulateDualPricingSyncFailed();
+      } else if (action === "sync-success") {
+        simulateDualPricingSyncSuccess();
+        writeReceiptUnpaidPriceDisplay({ priceType: "card", customLabel: "" });
+      } else {
+        return;
+      }
+      remount?.();
+    });
+  });
+}
+
+export function bindCardFeesEditors(root: ParentNode = document, remount?: () => void): void {
   bindMemberCardMinSpendEditors(root);
   bindCardMinSpendEditors(root);
   bindCardPricingStrategyEditors(root);
   bindCardSignatureMinEditors(root);
   bindReceiptUnpaidPriceDisplayEditors(root);
+  bindDualPricingUpstreamSimButtons(root, remount);
 }

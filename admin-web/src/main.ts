@@ -1037,16 +1037,18 @@ import {
 } from "./config/module-settings-delivery-platform-slips-ui";
 import {
   bindCardFeesEditors,
+  filterCardFeesCatalogItemsForDualPricing,
   isCardMinSpendSeq,
   isCardPricingStrategySeq,
   isCardSignatureThresholdSeq,
+  isDualPricingRateSeq,
   isMemberCardMinSpendSeq,
   isMerchantcopySignatureRetentionDaysSeq,
   isReceiptUnpaidPriceDisplaySeq,
-  renderCardFeesGroupIntroHtml,
   renderCardMinSpendByLineTableHtml,
   renderCardPricingStrategyHtml,
   renderCardSignatureThresholdInputHtml,
+  renderDualPricingRateReadonlyHtml,
   renderMemberCardMinSpendByLineTableHtml,
   renderMerchantcopySignatureRetentionDaysInputHtml,
   renderReceiptUnpaidPriceDisplayHtml,
@@ -5053,7 +5055,9 @@ function buildModuleSettingsGroupsForPreset(
         ? normalizeFinanceCatalogItemsForGrouping(catalog.items)
         : catalog.settingsPath === "/orders/settings"
           ? normalizeOrderCatalogItemsForGrouping(catalog.items)
-          : catalog.items;
+          : catalog.settingsPath === "/transactions/settings"
+            ? filterCardFeesCatalogItemsForDualPricing(catalog.items)
+            : catalog.items;
   const base = lineId
     ? getFohLineViewGroups(catalog, lineId)
     : groupCatalogItemsByCategory(items, catalog.groupOrder);
@@ -5065,6 +5069,8 @@ const moduleSettingsSubnavScrollTopByBasePath = new Map<string, number>();
 /** 滚动联动二级导航：避免与程序化 scroll 争抢高亮 */
 let moduleSettingsScrollSpyActiveKey: string | null | undefined;
 let moduleSettingsScrollSpyPausedUntil = 0;
+/** remount 后跳过一次「滚到当前分组」，用于双重定价模拟等操作保持视口 */
+let skipNextModuleSettingsCategoryScroll = false;
 
 const MODULE_SETTINGS_SUBNAV_LINK_BASE =
   "flex min-h-9 items-center rounded-md px-2.5 py-1.5 text-sm transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
@@ -5272,6 +5278,23 @@ function scrollToModuleSettingsCategoryFromPath(path: string): void {
 
 function rememberModuleSettingsScroll(settingsPath: string, scrollTop: number): void {
   moduleSettingsScrollTopByBasePath.set(settingsPath, Math.max(0, Math.floor(scrollTop)));
+}
+
+/** 记住当前设置主区滚动后再 remount，且不触发分组定位动画 */
+function remountModuleSettingsPreservingScroll(): void {
+  const path = readAppHashPath();
+  const catalog = getModuleSettingsCatalog(path);
+  const scrollHost = document.querySelector<HTMLElement>(".module-settings-scroll-host");
+  if (catalog && scrollHost) {
+    rememberModuleSettingsScroll(catalog.settingsPath, scrollHost.scrollTop);
+  }
+  const subnav = document.querySelector<HTMLElement>(".module-settings-subnav");
+  if (catalog && subnav) {
+    rememberModuleSettingsSubnavScroll(catalog.settingsPath, subnav.scrollTop);
+  }
+  skipNextModuleSettingsCategoryScroll = true;
+  pauseModuleSettingsScrollSpy(800);
+  mount();
 }
 
 function restoreModuleSettingsScroll(path: string): void {
@@ -6462,11 +6485,22 @@ function renderModuleSettingCardMinSpendRow(item: ModuleSettingCatalogItem): str
         </li>`;
 }
 
+function renderModuleSettingDualPricingRateRow(item: ModuleSettingCatalogItem): string {
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            ${renderModuleSettingTitleBlock(item)}
+            <div class="mt-3 max-w-xl">
+              ${renderDualPricingRateReadonlyHtml()}
+            </div>
+          </div>
+        </li>`;
+}
+
 function renderModuleSettingCardPricingStrategyRow(item: ModuleSettingCatalogItem): string {
   return `
         <li class="list-none" data-module-setting-row-seq="${item.seq}">
           <div class="border-b border-border px-4 py-3">
-            ${renderCardFeesGroupIntroHtml()}
             ${renderModuleSettingTitleBlock(item)}
             <div class="mt-3 max-w-xl">
               ${renderCardPricingStrategyHtml()}
@@ -8977,6 +9011,9 @@ function renderModuleSettingRow(item: ModuleSettingCatalogItem): string {
   }
   if (isCardMinSpendSeq(item.seq)) {
     return renderModuleSettingCardMinSpendRow(item);
+  }
+  if (isDualPricingRateSeq(item.seq)) {
+    return renderModuleSettingDualPricingRateRow(item);
   }
   if (isCardPricingStrategySeq(item.seq)) {
     return renderModuleSettingCardPricingStrategyRow(item);
@@ -12098,12 +12135,17 @@ function mount(): void {
   bindTipPercentPresetEditors();
   bindReceiptTipSuggestionEditors();
   bindCheckoutTipCollectionModeEditors();
-  bindCardFeesEditors();
+  bindCardFeesEditors(document, remountModuleSettingsPreservingScroll);
   bindTipCardOrderEditors();
   bindCdsCheckoutEditors();
   bindOrderNumberingSelects();
   bindOrderNumberingClassificationControls();
-  scrollToModuleSettingsCategoryFromPath(mountPathForSheet);
+  if (skipNextModuleSettingsCategoryScroll) {
+    skipNextModuleSettingsCategoryScroll = false;
+    // restoreModuleSettingsScroll 已在上方执行；此处仅跳过滚到分组，避免视口跳动
+  } else {
+    scrollToModuleSettingsCategoryFromPath(mountPathForSheet);
+  }
   bindModuleSettingsScrollSpy();
 }
 

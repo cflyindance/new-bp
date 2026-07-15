@@ -55,6 +55,6 @@ export function renderFinanceProcessorFeeInputHtml(): string {
         aria-label="收单通道成本率"
       />
       <span class="text-sm text-muted-foreground">%</span>
-      <span class="text-xs text-muted-foreground">仅用于报表与成本核算，不改变顾客应付；对客加价见支付中心「卡付加价策略」（454）。</span>
+      <span class="text-xs text-muted-foreground">仅用于报表与成本核算，不改变顾客应付；对客加价见支付中心「双重定价」（454）/「卡加价策略」（543）。</span>
     </div>`;
 }

@@ -73,6 +73,14 @@ export const DEMO_CONFIG_DOMAINS: DeploymentConfigDomain[] = [
     pagePaths: [],
   },
   {
+    domainKey: "payment.card-pricing",
+    displayName: "卡付定价（双重定价 / 加价）",
+    navRefs: [{ l1Key: "transactions", l2Key: "tx-settings" }],
+    productLines: ["POS", "Kiosk", "eMenu", "PayPad"],
+    granularity: "store",
+    pagePaths: ["/transactions/settings", "/transactions/settings/card-fees"],
+  },
+  {
     domainKey: "team.roles-employees",
     displayName: "角色与员工",
     navRefs: [{ l1Key: "team", l2Key: "team-roles" }],
