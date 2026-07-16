@@ -21,6 +21,7 @@ import { RECEIPT_LINE_CONTENT_TOGGLE_SEQS } from "./module-settings-receipt-line
 import { RECEIPT_PRINT_EXECUTION_TOGGLE_SEQS } from "./module-settings-receipt-print-execution-ui";
 import { getFohByLineRenderContext } from "./foh-settings-by-line-filter";
 import { readFohByLineToggleState } from "./foh-settings-by-line-toggle";
+import { readPageDraftToggleForCurrentPath } from "./page-settings-draft";
 
 export {
   DELETE_CARD_RECEIPT_PRINT_TOGGLE_SEQS,
@@ -471,6 +472,8 @@ export function getDefaultModuleSettingToggleOn(seq: number): boolean {
 export function readModuleSettingToggleOn(seq: number): boolean {
   const lineId = getFohByLineRenderContext();
   if (lineId) return readFohByLineToggleState(seq, lineId);
+  const draft = readPageDraftToggleForCurrentPath(seq);
+  if (draft !== undefined) return draft;
   try {
     const raw = localStorage.getItem(moduleSettingToggleStorageKey(seq));
     if (raw === null) return getDefaultModuleSettingToggleOn(seq);

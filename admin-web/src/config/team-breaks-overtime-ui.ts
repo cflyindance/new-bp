@@ -3,11 +3,12 @@
  * 路径：/team/breaks-overtime
  * 布局：左侧快捷导航 + 右侧滚动内容（对齐设置页 module-settings 交互）
  */
-import { notifyConfigSaved } from "./deployment-auto-trigger";
+import { formatConfigDisplayValue } from "./deployment-change-buffer";
+import { recordPageOrImmediateConfigChange } from "./page-config-change";
 import {
-  formatConfigDisplayValue,
-  recordDeploymentConfigChange,
-} from "./deployment-change-buffer";
+  registerPageSaveDirtyProbe,
+  registerPageSavePreCommit,
+} from "./page-save-registry";
 import { MODULE_SETTINGS_SUBNAV_SECTION_HEADING_CLASS } from "./module-settings-subnav";
 
 export const TEAM_BREAKS_OVERTIME_PATH = "/team/breaks-overtime";
@@ -146,7 +147,6 @@ const DEFAULT_CONFIG: BreaksOvertimeConfig = {
 };
 
 let draftConfig: BreaksOvertimeConfig | null = null;
-let saveToastVisible = false;
 let activeBreaksNavKey = "default-breaks";
 
 function escapeHtml(s: string): string {
@@ -229,12 +229,11 @@ function writeConfig(config: BreaksOvertimeConfig): void {
   const afterStr = JSON.stringify(config);
   if (beforeStr === afterStr) return;
   localStorage.setItem(STORAGE_KEY, afterStr);
-  recordDeploymentConfigChange({
+  recordPageOrImmediateConfigChange(TEAM_BREAKS_OVERTIME_PATH, {
     label: "休息与加班规则",
     before: formatConfigDisplayValue(before),
     after: formatConfigDisplayValue(config),
   });
-  notifyConfigSaved(TEAM_BREAKS_OVERTIME_PATH);
 }
 
 function getDraft(): BreaksOvertimeConfig {
@@ -534,16 +533,8 @@ export function renderTeamBreaksOvertimePage(globalRulesRowsHtml = "", path?: st
     activeBreaksNavKey = validKeys[0] ?? "default-breaks";
   }
 
-  const toast = saveToastVisible
-    ? `<div class="rounded-md border border-primary/30 bg-primary/10 px-3 py-2 text-sm text-primary" role="status">已保存</div>`
-    : "";
-
   return `
     <div class="team-breaks-overtime-page flex min-h-0 flex-1 flex-col gap-4" data-team-breaks-overtime-page data-breaks-view="full">
-      <div class="flex shrink-0 flex-wrap items-center justify-end gap-2">
-        ${toast}
-        <button type="button" data-breaks-overtime-save class="h-9 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">保存</button>
-      </div>
       <div class="flex min-h-0 flex-1 flex-col gap-6 overflow-hidden sm:flex-row sm:items-stretch">
         ${renderBreaksOvertimeSubnav(activeBreaksNavKey, hasGlobalRules)}
         ${renderBreaksOvertimeMainContent(config, globalRulesRowsHtml)}
@@ -735,6 +726,8 @@ function bindBreaksOvertimeSubnav(root: HTMLElement): void {
 }
 
 export function bindTeamBreaksOvertimeUi(remount: () => void): void {
+  ensureBreaksOvertimePageSaveRegistry();
+
   const root = document.querySelector<HTMLElement>("[data-team-breaks-overtime-page]");
   if (!root || root.dataset.breaksOvertimeBound === "1") return;
   root.dataset.breaksOvertimeBound = "1";
@@ -797,27 +790,59 @@ export function bindTeamBreaksOvertimeUi(remount: () => void): void {
     syncOvertimeRuleDisabled(card);
   });
 
-  root.querySelector("[data-breaks-overtime-save]")?.addEventListener("click", () => {
-    const config = collectConfigFromDom(root);
-    writeConfig(config);
-    draftConfig = config;
-    saveToastVisible = true;
-    remount();
-    window.setTimeout(() => {
-      saveToastVisible = false;
-      remount();
-    }, 2000);
+  root.addEventListener("input", () => {
+    window.dispatchEvent(
+      new CustomEvent("menusifu:page-settings-dirty", {
+        detail: { pageKey: TEAM_BREAKS_OVERTIME_PATH },
+      }),
+    );
+  });
+  root.addEventListener("change", () => {
+    window.dispatchEvent(
+      new CustomEvent("menusifu:page-settings-dirty", {
+        detail: { pageKey: TEAM_BREAKS_OVERTIME_PATH },
+      }),
+    );
   });
 }
 
 let breaksOvertimeSessionPath = "";
+let breaksOvertimeRegistryBound = false;
+
+function ensureBreaksOvertimePageSaveRegistry(): void {
+  if (breaksOvertimeRegistryBound) return;
+  breaksOvertimeRegistryBound = true;
+
+  registerPageSavePreCommit(TEAM_BREAKS_OVERTIME_PATH, () => {
+    const root = document.querySelector<HTMLElement>("[data-team-breaks-overtime-page]");
+    if (!root) return false;
+    const config = collectConfigFromDom(root);
+    writeConfig(config);
+    draftConfig = config;
+    return true;
+  });
+
+  registerPageSaveDirtyProbe(TEAM_BREAKS_OVERTIME_PATH, () => {
+    try {
+      return JSON.stringify(getDraft()) !== JSON.stringify(readConfig());
+    } catch {
+      return false;
+    }
+  });
+
+  window.addEventListener("menusifu:page-settings-discard", (event) => {
+    const pageKey = (event as CustomEvent<{ pageKey?: string }>).detail?.pageKey;
+    if (pageKey === TEAM_BREAKS_OVERTIME_PATH) {
+      resetDraft();
+    }
+  });
+}
 
 /** 路由切换时维护编辑会话：离开页面则丢弃未保存草稿 */
 export function syncTeamBreaksOvertimeSession(path: string): void {
   const active = isTeamBreaksOvertimePath(path);
   if (!active) {
     resetDraft();
-    saveToastVisible = false;
     breaksOvertimeSessionPath = "";
     activeBreaksNavKey = "default-breaks";
   } else if (!breaksOvertimeSessionPath) {
@@ -828,7 +853,6 @@ export function syncTeamBreaksOvertimeSession(path: string): void {
 /** 页面卸载或离开路由时丢弃未保存草稿 */
 export function resetTeamBreaksOvertimeDraft(): void {
   resetDraft();
-  saveToastVisible = false;
   breaksOvertimeSessionPath = "";
   activeBreaksNavKey = "default-breaks";
 }

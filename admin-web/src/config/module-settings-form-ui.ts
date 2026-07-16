@@ -4,8 +4,16 @@
 import { notifyConfigSaved } from "./deployment-auto-trigger";
 import {
   recordModuleSettingDeploymentChange,
+  resolveSettingsPathForChange,
   type ModuleSettingChangeKind,
 } from "./module-settings-deployment-change";
+import { readAppHashPath } from "./app-routes";
+import {
+  isPageBatchSavePath,
+  readPageDraftFieldForCurrentPath,
+  resolvePageSaveKey,
+  setPageDraftField,
+} from "./page-settings-draft";
 
 export type ModuleSettingCheckboxOption = {
   fieldId: string;
@@ -225,6 +233,8 @@ export function moduleSettingStorageKey(fieldId: string): string {
 }
 
 export function readModuleSettingCheckbox(fieldId: string, defaultChecked: boolean): boolean {
+  const draft = readPageDraftFieldForCurrentPath(fieldId);
+  if (draft !== undefined) return draft === "1";
   try {
     const raw = localStorage.getItem(moduleSettingStorageKey(fieldId));
     if (raw === null) return defaultChecked;
@@ -234,9 +244,42 @@ export function readModuleSettingCheckbox(fieldId: string, defaultChecked: boole
   }
 }
 
+function resolveDeferPageKey(fieldId: string): string | undefined {
+  const currentPath = readAppHashPath();
+  const pageKeyFromPath = resolvePageSaveKey(currentPath);
+  if (isPageBatchSavePath(pageKeyFromPath)) return pageKeyFromPath;
+  const settingsPath = resolveSettingsPathForChange(fieldId);
+  if (settingsPath && isPageBatchSavePath(settingsPath)) {
+    return resolvePageSaveKey(settingsPath);
+  }
+  return undefined;
+}
+
+function deferFieldWrite(
+  fieldId: string,
+  storageValue: string,
+  kind: ModuleSettingChangeKind,
+  before: unknown,
+  after: unknown,
+): boolean {
+  const pageKey = resolveDeferPageKey(fieldId);
+  if (!pageKey) return false;
+  setPageDraftField(pageKey, fieldId, storageValue);
+  recordModuleSettingDeploymentChange({
+    fieldId,
+    kind,
+    before,
+    after,
+    settingsPath: pageKey,
+  });
+  notifyConfigSaved(pageKey);
+  return true;
+}
+
 export function writeModuleSettingCheckbox(fieldId: string, checked: boolean): void {
   const before = readModuleSettingCheckbox(fieldId, checked);
   if (before === checked) return;
+  if (deferFieldWrite(fieldId, checked ? "1" : "0", "checkbox", before, checked)) return;
   try {
     localStorage.setItem(moduleSettingStorageKey(fieldId), checked ? "1" : "0");
     const settingsPath = recordModuleSettingDeploymentChange({
@@ -252,6 +295,8 @@ export function writeModuleSettingCheckbox(fieldId: string, checked: boolean): v
 }
 
 export function readModuleSettingRadio(fieldId: string, defaultValue: string): string {
+  const draft = readPageDraftFieldForCurrentPath(fieldId);
+  if (draft !== undefined) return draft;
   try {
     const raw = localStorage.getItem(moduleSettingStorageKey(fieldId));
     if (raw === null || raw === "") return defaultValue;
@@ -264,6 +309,7 @@ export function readModuleSettingRadio(fieldId: string, defaultValue: string): s
 export function writeModuleSettingRadio(fieldId: string, value: string): void {
   const before = readModuleSettingRadio(fieldId, value);
   if (before === value) return;
+  if (deferFieldWrite(fieldId, value, "radio", before, value)) return;
   try {
     localStorage.setItem(moduleSettingStorageKey(fieldId), value);
     const settingsPath = recordModuleSettingDeploymentChange({
@@ -279,6 +325,8 @@ export function writeModuleSettingRadio(fieldId: string, value: string): void {
 }
 
 export function readModuleSettingColor(fieldId: string, defaultValue: string): string {
+  const draft = readPageDraftFieldForCurrentPath(fieldId);
+  if (draft !== undefined) return draft;
   try {
     const raw = localStorage.getItem(moduleSettingStorageKey(fieldId));
     if (raw === null || raw === "") return defaultValue;
@@ -291,6 +339,7 @@ export function readModuleSettingColor(fieldId: string, defaultValue: string): s
 export function writeModuleSettingColor(fieldId: string, value: string): void {
   const before = readModuleSettingColor(fieldId, value);
   if (before === value) return;
+  if (deferFieldWrite(fieldId, value, "color", before, value)) return;
   try {
     localStorage.setItem(moduleSettingStorageKey(fieldId), value);
     const settingsPath = recordModuleSettingDeploymentChange({
@@ -306,6 +355,11 @@ export function writeModuleSettingColor(fieldId: string, value: string): void {
 }
 
 export function readModuleSettingNumber(fieldId: string, defaultValue: number): number {
+  const draft = readPageDraftFieldForCurrentPath(fieldId);
+  if (draft !== undefined) {
+    const n = Number(draft);
+    return Number.isFinite(n) ? n : defaultValue;
+  }
   try {
     const raw = localStorage.getItem(moduleSettingStorageKey(fieldId));
     if (raw === null || raw === "") return defaultValue;
@@ -319,6 +373,7 @@ export function readModuleSettingNumber(fieldId: string, defaultValue: number): 
 export function writeModuleSettingNumber(fieldId: string, value: number): void {
   const before = readModuleSettingNumber(fieldId, value);
   if (before === value) return;
+  if (deferFieldWrite(fieldId, String(value), "number", before, value)) return;
   try {
     localStorage.setItem(moduleSettingStorageKey(fieldId), String(value));
     const settingsPath = recordModuleSettingDeploymentChange({
@@ -334,6 +389,8 @@ export function writeModuleSettingNumber(fieldId: string, value: number): void {
 }
 
 export function readModuleSettingText(fieldId: string, defaultValue = ""): string {
+  const draft = readPageDraftFieldForCurrentPath(fieldId);
+  if (draft !== undefined) return draft;
   try {
     const raw = localStorage.getItem(moduleSettingStorageKey(fieldId));
     if (raw === null) return defaultValue;
@@ -346,6 +403,7 @@ export function readModuleSettingText(fieldId: string, defaultValue = ""): strin
 export function writeModuleSettingText(fieldId: string, value: string): void {
   const before = readModuleSettingText(fieldId, value);
   if (before === value) return;
+  if (deferFieldWrite(fieldId, value, "text", before, value)) return;
   try {
     localStorage.setItem(moduleSettingStorageKey(fieldId), value);
     const settingsPath = recordModuleSettingDeploymentChange({
@@ -375,10 +433,11 @@ export function writeModuleSettingJson(fieldId: string, value: unknown, kind: Mo
   const afterStr = JSON.stringify(value);
   const beforeStr = before === null ? null : JSON.stringify(before);
   if (beforeStr === afterStr) return;
+  const resolvedKind =
+    kind === "json" && isProductLineJsonField(fieldId, value) ? "product_line" : kind;
+  if (deferFieldWrite(fieldId, afterStr, resolvedKind, before, value)) return;
   try {
     localStorage.setItem(moduleSettingStorageKey(fieldId), afterStr);
-    const resolvedKind =
-      kind === "json" && isProductLineJsonField(fieldId, value) ? "product_line" : kind;
     const settingsPath = recordModuleSettingDeploymentChange({
       fieldId,
       kind: resolvedKind,

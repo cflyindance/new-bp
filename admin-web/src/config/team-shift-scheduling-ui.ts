@@ -11,11 +11,8 @@ import {
   writeScopeFilters,
 } from "../auth/session-scope";
 import { getUiLocale, t } from "../i18n";
-import { notifyConfigSaved } from "./deployment-auto-trigger";
-import {
-  formatConfigDisplayValue,
-  recordDeploymentConfigChange,
-} from "./deployment-change-buffer";
+import { formatConfigDisplayValue } from "./deployment-change-buffer";
+import { recordPageOrImmediateConfigChange } from "./page-config-change";
 import { parseRosterStoreScopeId } from "./team-employee-roster-scope";
 
 export const TEAM_SHIFT_SCHEDULING_PATH = "/team/shift-scheduling";
@@ -278,12 +275,11 @@ function writeShiftTypes(types: ShiftType[]): void {
   const before = readShiftTypes();
   if (JSON.stringify(before) === JSON.stringify(types)) return;
   localStorage.setItem(SHIFT_TYPES_STORAGE_KEY, JSON.stringify(types));
-  recordDeploymentConfigChange({
+  recordPageOrImmediateConfigChange(TEAM_SHIFT_SCHEDULING_PATH, {
     label: "班次类型",
     before: formatConfigDisplayValue(before),
     after: formatConfigDisplayValue(types),
   });
-  notifyConfigSaved(TEAM_SHIFT_SCHEDULING_PATH);
 }
 
 function normalizeAssignment(raw: Partial<ShiftAssignment>): ShiftAssignment | null {
@@ -325,12 +321,11 @@ function writeAssignments(assignments: ShiftAssignment[]): void {
   const before = readAssignments();
   if (JSON.stringify(before) === JSON.stringify(assignments)) return;
   localStorage.setItem(ASSIGNMENTS_STORAGE_KEY, JSON.stringify(assignments));
-  recordDeploymentConfigChange({
+  recordPageOrImmediateConfigChange(TEAM_SHIFT_SCHEDULING_PATH, {
     label: "排班安排",
     before: formatConfigDisplayValue(before),
     after: formatConfigDisplayValue(assignments),
   });
-  notifyConfigSaved(TEAM_SHIFT_SCHEDULING_PATH);
 }
 
 function readEmployees(): RosterEmployee[] {

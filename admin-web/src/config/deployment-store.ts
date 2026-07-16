@@ -274,7 +274,7 @@ export function createDeploymentBatch(input: CreateDeploymentInput): DeploymentB
 
   const configChanges =
     input.configChanges && input.configChanges.length > 0
-      ? [input.configChanges[0]!]
+      ? input.configChanges
       : (() => {
           const next = consumeNextConfigChange();
           return next ? [next] : [];

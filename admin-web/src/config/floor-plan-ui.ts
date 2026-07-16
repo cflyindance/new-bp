@@ -3,8 +3,7 @@
  * 原型：localStorage 按门店隔离持久化区域与桌位布局
  */
 import { getScopedFilterOptions, readScopeFilters } from "../auth/session-scope";
-import { notifyConfigSaved } from "./deployment-auto-trigger";
-import { recordDeploymentConfigChange } from "./deployment-change-buffer";
+import { recordPageOrImmediateConfigChange } from "./page-config-change";
 
 export const FLOOR_PLAN_PATH = "/operations/queue-call/floor-plan";
 
@@ -181,12 +180,11 @@ function writeState(state: FloorPlanState): void {
   localStorage.setItem(key, JSON.stringify(state));
   if (beforePayload === afterPayload) return;
   const storeLabel = resolveFloorPlanStoreLabel(storeId);
-  recordDeploymentConfigChange({
+  recordPageOrImmediateConfigChange(FLOOR_PLAN_PATH, {
     label: `餐位平面图 · ${storeLabel}`,
     before: summarizeFloorPlan(before),
     after: summarizeFloorPlan(state),
   });
-  notifyConfigSaved(FLOOR_PLAN_PATH);
 }
 
 export function isFloorPlanPath(path: string): boolean {

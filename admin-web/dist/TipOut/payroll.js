@@ -426,12 +426,18 @@
 
   const MANAGE_SEG_ROOT = "#manage-segments-wrap";
 
+  function renderManageSegThLabel(i18nKey, helpId) {
+    const label = T(i18nKey);
+    return `<span class="payroll-th-label">${escapeHtml(label)}<button type="button" class="payroll-field-help" data-field-help="${helpId}" aria-label="${escapeHtml(label)}">?</button></span>`;
+  }
+
   function renderManageSegmentTableHeadHtml() {
     return `<thead>
       <tr>
         <th rowspan="2" scope="col"><span class="payroll-th-label">Date<button type="button" class="payroll-field-help" data-field-help="seg-date" aria-label="Date">?</button></span></th>
         <th colspan="2" scope="colgroup" style="text-align:center">In/Out</th>
-        <th rowspan="2" scope="col"><span class="payroll-th-label">Meal<button type="button" class="payroll-field-help" data-field-help="seg-meal" aria-label="Meal">?</button></span></th>
+        <th rowspan="2" scope="col">${renderManageSegThLabel("manage.segPaidMealBreakLabel", "seg-paid-meal-break")}</th>
+        <th rowspan="2" scope="col">${renderManageSegThLabel("manage.segUnpaidMealBreakLabel", "seg-unpaid-meal-break")}</th>
         <th rowspan="2" scope="col" style="text-align:right"><span class="payroll-th-label">Rate<button type="button" class="payroll-field-help" data-field-help="seg-rate" aria-label="Rate">?</button></span></th>
         <th rowspan="2" scope="col" style="text-align:right"><span class="payroll-th-label">Regular<button type="button" class="payroll-field-help" data-field-help="seg-regular" aria-label="Regular">?</button></span></th>
         <th rowspan="2" scope="col" style="text-align:right"><span class="payroll-th-label">OT<button type="button" class="payroll-field-help" data-field-help="seg-ot" aria-label="OT">?</button></span></th>
@@ -556,7 +562,8 @@
         </td>
         <td><input type="text" class="field-seg form-control" data-field="in" value="${escapeHtml(sl.in)}" placeholder="In" style="font-family:ui-monospace,Menlo,monospace" /></td>
         <td><div style="display:flex;gap:8px;align-items:center"><input type="text" class="field-seg form-control" data-field="out" value="${escapeHtml(sl.out)}" placeholder="Out" style="font-family:ui-monospace,Menlo,monospace" />${actionsHtml}</div></td>
-        <td rowspan="${rowsForDay}" style="vertical-align:top"><input type="text" class="field-seg form-control" data-field="meal" value="${escapeHtml(day.meal)}" aria-label="Meal" /></td>
+        <td rowspan="${rowsForDay}" style="vertical-align:top"><input type="text" class="field-seg form-control" data-field="paid-meal-break" value="${escapeHtml(day.paidMealBreak)}" aria-label="${escapeHtml(T("manage.segPaidMealBreakLabel"))}" /></td>
+        <td rowspan="${rowsForDay}" style="vertical-align:top"><input type="text" class="field-seg form-control" data-field="unpaid-meal-break" value="${escapeHtml(day.unpaidMealBreak)}" aria-label="${escapeHtml(T("manage.segUnpaidMealBreakLabel"))}" /></td>
         <td rowspan="${rowsForDay}" style="vertical-align:top"><input type="number" step="0.01" min="0" class="field-seg form-control" data-field="rate" value="${dayRate}" aria-label="Rate" /></td>
         <td rowspan="${rowsForDay}" style="vertical-align:top"><input type="number" step="0.01" class="field-seg form-control" data-field="reg" value="${day.reg}" aria-label="Regular" /></td>
         <td rowspan="${rowsForDay}" style="vertical-align:top"><input type="number" step="0.01" class="field-seg form-control" data-field="ot" value="${day.ot}" aria-label="OT" /></td>
@@ -583,7 +590,8 @@
           { in: "", out: "" },
           { in: "", out: "" },
         ],
-        meal: "0:30",
+        paidMealBreak: "0:30",
+        unpaidMealBreak: "",
         reg: 7.5,
         ot: 0,
         ot2: 0,
@@ -594,7 +602,8 @@
           { in: "", out: "" },
           { in: "", out: "" },
         ],
-        meal: "0:30",
+        paidMealBreak: "0:30",
+        unpaidMealBreak: "",
         reg: 8,
         ot: empIdx % 2 === 0 ? 0.5 : 0,
         ot2: 0,
@@ -605,7 +614,8 @@
           { in: "16:00", out: "21:00" },
           { in: "", out: "" },
         ],
-        meal: "0:45",
+        paidMealBreak: "0:45",
+        unpaidMealBreak: "",
         reg: 8.25,
         ot: empIdx % 3 === 0 ? 1 : 0.25,
         ot2: 0,
@@ -615,7 +625,8 @@
     return {
       date: dateStr,
       slots: p.slots.map((s) => ({ ...s })),
-      meal: p.meal,
+      paidMealBreak: p.paidMealBreak,
+      unpaidMealBreak: p.unpaidMealBreak,
       reg: p.reg,
       ot: p.ot,
       ot2: p.ot2,
@@ -1178,15 +1189,23 @@
     return `T: ${fmtMoney(total)}${DETAIL_SUMMARY_SEP}${formatDetailLabeledTriplet(reg, ot, ot2)}`;
   }
 
-  /** 每日一条：3 行 In/Out + 当日 Meal / Rate / Reg / OT / OT Rate / OT2 / OT2 Rate */
+  /** 每日一条：3 行 In/Out + 当日带薪/无薪餐休 + Rate / Reg / OT / OT Rate / OT2 / OT2 Rate */
   function normalizeDay(d) {
     const slotRows = Number(d && d.slotRows);
     const rateRaw = d && d.rate != null && d.rate !== "" ? Number(d.rate) : null;
     const otRateRaw = d && d.otRate != null && d.otRate !== "" ? Number(d.otRate) : null;
     const ot2RateRaw = d && d.ot2Rate != null && d.ot2Rate !== "" ? Number(d.ot2Rate) : null;
+    const paidMealBreak =
+      d && d.paidMealBreak != null
+        ? d.paidMealBreak
+        : d && d.meal != null
+          ? d.meal
+          : "";
+    const unpaidMealBreak = d && d.unpaidMealBreak != null ? d.unpaidMealBreak : "";
     const o = {
       date: d && d.date != null ? d.date : "",
-      meal: d && d.meal != null ? d.meal : "",
+      paidMealBreak,
+      unpaidMealBreak,
       role: d && d.role != null ? String(d.role).trim() : "",
       rate: Number.isFinite(rateRaw) && rateRaw >= 0 ? rateRaw : null,
       otRate: Number.isFinite(otRateRaw) && otRateRaw >= 0 ? otRateRaw : null,
@@ -1225,7 +1244,8 @@
     return normalizeDay({
       date: s.date || "",
       slots,
-      meal: s.meal ?? "",
+      paidMealBreak: s.paidMealBreak ?? s.meal ?? "",
+      unpaidMealBreak: s.unpaidMealBreak ?? "",
       role: s.role ?? "",
       reg: s.reg ?? 0,
       ot: s.ot ?? 0,
@@ -1259,7 +1279,7 @@
     return d;
   }
 
-  /** Meal：支持 "1:00"、"0:30"；纯数字按「分钟」计（如 30） */
+  /** 餐休时长：支持 "1:00"、"0:30"；纯数字按「分钟」计（如 30） */
   function mealMinutes(str) {
     if (str == null || String(str).trim() === "") return 0;
     const s = String(str).trim();
@@ -1273,14 +1293,14 @@
     return Number.isNaN(n) ? 0 : Math.round(n);
   }
 
-  /** 根据当日 3 组 In/Out 与 Meal 计算 Regular（小时，两位小数） */
+  /** 根据当日 3 组 In/Out 与无薪餐休计算 Regular（小时，两位小数） */
   function computeRegularHoursFromDay(day) {
     let work = 0;
     day.slots.forEach((sl) => {
       work += pairNetMinutes(sl.in, sl.out);
     });
-    const meal = mealMinutes(day.meal);
-    const net = Math.max(0, work - meal);
+    const unpaidMeal = mealMinutes(day.unpaidMealBreak);
+    const net = Math.max(0, work - unpaidMeal);
     return Math.round((net / 60) * 100) / 100;
   }
 
@@ -1302,7 +1322,7 @@
     });
   }
 
-  const CLOCK_MEAL_FIELDS = new Set(["in", "out", "meal"]);
+  const CLOCK_MEAL_FIELDS = new Set(["in", "out", "paid-meal-break", "unpaid-meal-break"]);
 
   const DEFAULT_ADJUSTMENTS = {
     exempt: "",
@@ -1391,7 +1411,8 @@
                 { in: "16:00", out: "21:00" },
                 { in: "", out: "" },
               ],
-              meal: "0:45",
+              paidMealBreak: "0:45",
+              unpaidMealBreak: "",
               reg: 8.25,
               ot: 1,
               ot2: 0,
@@ -1771,7 +1792,8 @@
             const day = normalizeDay(d);
             return {
               date: day.date || "",
-              meal: day.meal || "",
+              paidMealBreak: day.paidMealBreak || "",
+              unpaidMealBreak: day.unpaidMealBreak || "",
               reg: Number(day.reg) || 0,
               ot: Number(day.ot) || 0,
               ot2: Number(day.ot2) || 0,
@@ -1868,7 +1890,8 @@
       ssn: T("saveConfirm.typeSsn"),
       hireDate: T("saveConfirm.typeHireDate"),
       date: "Date",
-      meal: "Meal",
+      paidMealBreak: T("saveConfirm.typePaidMealBreak"),
+      unpaidMealBreak: T("saveConfirm.typeUnpaidMealBreak"),
       rate: "Rate",
       reg: "Regular",
       ot: "OT",
@@ -1893,7 +1916,9 @@
   function getSaveConfirmTypeTagClass(type) {
     const t = String(type || "").toLowerCase();
     if (t === "in" || t === "out" || t.startsWith("in ") || t.startsWith("out ")) return "payroll-save-change-type--clock";
-    if (t === "meal") return "payroll-save-change-type--meal";
+    if (t === "paid meal break" || t === "unpaid meal break" || t === "meal" || t.includes("用餐休息") || t.includes("meal break")) {
+      return "payroll-save-change-type--meal";
+    }
     if (t === "regular" || t === "ot" || t === "ot2") return "payroll-save-change-type--hours";
     if (t === "rate" || t === "date") return "payroll-save-change-type--meta";
     if (t === "tips" || t === "svcw") return "payroll-save-change-type--tip";
@@ -1944,7 +1969,7 @@
       pushWorkspaceChangeItem(items, periodScope, types[key], bAdj[key], aAdj[key]);
     });
 
-    const segKeys = ["date", "meal", "rate", "reg", "ot", "ot2"];
+    const segKeys = ["date", "paidMealBreak", "unpaidMealBreak", "rate", "reg", "ot", "ot2"];
     const maxDays = Math.max((before.segments || []).length, (after.segments || []).length);
     for (let i = 0; i < maxDays; i++) {
       const bDay = (before.segments || [])[i] || {};
@@ -2886,7 +2911,8 @@
     const otAmtNum = otNum * otRate;
     const ot2AmtNum = ot2Num * ot2Rate;
     const totalAmtNum = regAmtNum + otAmtNum + ot2AmtNum;
-    const meal = escapeHtml(String(day.meal || "").trim() || "—");
+    const paidMealBreak = escapeHtml(String(day.paidMealBreak || "").trim() || "—");
+    const unpaidMealBreak = escapeHtml(String(day.unpaidMealBreak || "").trim() || "—");
     const visibleSlots = s.filter((slot) => {
       if (!slot) return false;
       const cin = String(slot.in != null ? slot.in : "").trim();
@@ -2895,7 +2921,8 @@
     });
     const rowsForDay = visibleSlots.length || 1;
     const dateCell = `<td class="payroll-detail-daily-date" rowspan="${rowsForDay}">${escapeHtml(day.date || "—")}</td>`;
-    const mealCell = `<td rowspan="${rowsForDay}">${meal}</td>`;
+    const paidMealBreakCell = `<td rowspan="${rowsForDay}">${paidMealBreak}</td>`;
+    const unpaidMealBreakCell = `<td rowspan="${rowsForDay}">${unpaidMealBreak}</td>`;
     const rateCell = `<td class="payroll-detail-num" rowspan="${rowsForDay}">${fmtMoney(rate)}</td>`;
     const regCell = `<td class="payroll-detail-num" rowspan="${rowsForDay}">${fmtMoney(regNum)}</td>`;
     const otCell = `<td class="payroll-detail-num" rowspan="${rowsForDay}">${fmtMoney(otNum)}</td>`;
@@ -2915,7 +2942,8 @@
       ${dateCell}
       <td class="payroll-detail-clock">${escapeHtml(cin)}</td>
       <td class="payroll-detail-clock">${escapeHtml(cout)}</td>
-      ${mealCell}
+      ${paidMealBreakCell}
+      ${unpaidMealBreakCell}
       ${rateCell}
       ${regCell}
       ${otCell}
@@ -2997,7 +3025,8 @@
                   <th rowspan="2">Date</th>
                   <th rowspan="2">In</th>
                   <th rowspan="2">Out</th>
-                  <th rowspan="2">Meal</th>
+                  <th rowspan="2">${escapeHtml(T("detail.colPaidMealBreak"))}</th>
+                  <th rowspan="2">${escapeHtml(T("detail.colUnpaidMealBreak"))}</th>
                   <th rowspan="2" style="text-align:right">${escapeHtml(T("detail.colRate"))}</th>
                   <th rowspan="2" style="text-align:right">Regular (h)</th>
                   <th rowspan="2" style="text-align:right">OT (h)</th>
@@ -3084,7 +3113,8 @@
           date: slotIdx === 0 ? day.date || "" : "",
           in: cin,
           out: cout,
-          meal: slotIdx === 0 ? String(day.meal || "").trim() : "",
+          paidMealBreak: slotIdx === 0 ? String(day.paidMealBreak || "").trim() : "",
+          unpaidMealBreak: slotIdx === 0 ? String(day.unpaidMealBreak || "").trim() : "",
           rate: slotIdx === 0 ? dayRate : "",
           otRate: slotIdx === 0 ? dayOtRate : "",
           ot2Rate: slotIdx === 0 ? dayOt2Rate : "",
@@ -3299,7 +3329,8 @@ body{margin:0;padding:24px;background:#fff;}
         day.slots.push(slotValue);
         if (row.getAttribute("data-primary") === "1") {
           const dateEl = row.querySelector('.field-seg[data-field="date"]');
-          const mealEl = row.querySelector('.field-seg[data-field="meal"]');
+          const paidMealBreakEl = row.querySelector('.field-seg[data-field="paid-meal-break"]');
+          const unpaidMealBreakEl = row.querySelector('.field-seg[data-field="unpaid-meal-break"]');
           const regEl = row.querySelector('.field-seg[data-field="reg"]');
           const otEl = row.querySelector('.field-seg[data-field="ot"]');
           const ot2El = row.querySelector('.field-seg[data-field="ot2"]');
@@ -3307,7 +3338,8 @@ body{margin:0;padding:24px;background:#fff;}
           const ot2RateEl = row.querySelector('.field-seg[data-field="ot2-rate"]');
           const rateEl = row.querySelector('.field-seg[data-field="rate"]');
           if (dateEl) day.date = dateEl.value;
-          if (mealEl) day.meal = mealEl.value;
+          if (paidMealBreakEl) day.paidMealBreak = paidMealBreakEl.value;
+          if (unpaidMealBreakEl) day.unpaidMealBreak = unpaidMealBreakEl.value;
           if (rateEl) day.rate = parseFloat(rateEl.value) || 0;
           if (regEl) day.reg = parseFloat(regEl.value) || 0;
           if (otEl) day.ot = parseFloat(otEl.value) || 0;

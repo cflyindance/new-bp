@@ -21,6 +21,11 @@ import {
   isFohLineConfigRowVisible,
   setFohByLineRenderContext,
 } from "./foh-settings-by-line-filter";
+import {
+  isPageBatchSavePath,
+  readPageDraftFohToggleForCurrentPath,
+  resolvePageSaveKey,
+} from "./page-settings-draft";
 
 export {
   FOH_LINE_CONFIG_ROW_ATTR,
@@ -108,6 +113,14 @@ function migrateLinesFromGlobalToggle(seq: number): string[] {
 
 /** 按产线视图下：主开关 = 当前产线是否在 lines 存储中启用 */
 export function readFohByLineToggleState(seq: number, lineId: FohLineNavId): boolean {
+  if (typeof window !== "undefined") {
+    const pageKey = resolvePageSaveKey(window.location.hash.replace(/^#/, "") || "/");
+    if (isPageBatchSavePath(pageKey)) {
+      const draft = readPageDraftFohToggleForCurrentPath(seq, lineId);
+      if (draft !== undefined) return draft;
+    }
+  }
+
   if (!fohSeqAppliesToLine(seq, lineId)) return false;
 
   if (lineId === "store-wide") {

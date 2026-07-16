@@ -1,12 +1,15 @@
 /**
- * 配置保存后自动触发模拟下发（静默，无确认/进度弹窗）
- * 每次操作独立产生一条下发记录。
+ * 配置保存后触发下发：批量保存页仅标记脏状态，其他页保持即时下发。
  */
 import { resolveDomainsForPath, resolveOriginNavFromPath } from "./deployment-config-domains";
 import { consumeNextConfigChange } from "./deployment-change-buffer";
 import { resolveAutoDeploymentScope } from "./deployment-mock-devices";
 import { createDeploymentFromPath } from "./deployment-store";
 import { readAppHashPath } from "./app-routes";
+import {
+  isPageBatchSavePath,
+  resolvePageSaveKey,
+} from "./page-settings-draft";
 import type { DeploymentConfigChange, DeploymentScopeOption } from "./deployment-types";
 
 let bound = false;
@@ -20,6 +23,7 @@ function scheduleIdleTask(task: () => void): void {
 }
 
 export function shouldAutoDeployForPath(path: string): boolean {
+  if (isPageBatchSavePath(path)) return false;
   if (path.startsWith("/settings/deployment-log")) return false;
   if (path.includes("distribution-log")) return false;
   const domains = resolveDomainsForPath(path);
@@ -56,8 +60,17 @@ function resolveDeploymentPath(change: DeploymentConfigChange, explicitPath?: st
   return base ?? current;
 }
 
-/** 配置已保存，立即调度一次下发（每次操作一条记录） */
+/** 配置已保存：批量保存页仅刷新保存栏，其他页立即调度下发 */
 export function notifyConfigSaved(path?: string): void {
+  const current = path ?? readAppHashPath();
+  const pageKey = resolvePageSaveKey(current);
+  if (isPageBatchSavePath(pageKey)) {
+    window.dispatchEvent(
+      new CustomEvent("menusifu:page-settings-dirty", { detail: { pageKey } }),
+    );
+    return;
+  }
+
   const change = consumeNextConfigChange();
   if (!change) return;
 

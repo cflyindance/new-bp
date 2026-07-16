@@ -4,6 +4,11 @@
 import { readAppHashPath } from "./app-routes";
 import { recordDeploymentConfigChange } from "./deployment-change-buffer";
 import type { DeploymentConfigChange } from "./deployment-types";
+import {
+  isPageBatchSavePath,
+  resolvePageSaveKey,
+  trackPageConfigChange,
+} from "./page-settings-draft";
 import { getModuleSettingsBasePath } from "./module-settings-catalog";
 import {
   getSettingTitleBySeq,
@@ -372,6 +377,13 @@ export function buildModuleSettingDeploymentChange(
 export function recordModuleSettingDeploymentChange(input: ModuleSettingChangeInput): string | undefined {
   const built = buildModuleSettingDeploymentChange(input);
   if (built.before === built.after) return built.settingsPath;
+
+  const settingsPath = built.settingsPath;
+  if (settingsPath && isPageBatchSavePath(settingsPath)) {
+    trackPageConfigChange(resolvePageSaveKey(settingsPath), settingsPath, built);
+    return settingsPath;
+  }
+
   recordDeploymentConfigChange({
     fieldKey: built.fieldKey,
     label: built.label,

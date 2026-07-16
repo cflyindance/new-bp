@@ -1,10 +1,12 @@
 /**
- * 配置变更缓冲：保存时写入，自动/手动下发时消费。
+ * 配置变更缓冲：按页面分桶（批量保存）+ 全局 FIFO（即时下发页）
  */
 import type { DeploymentConfigChange } from "./deployment-types";
 import { listAllModuleSettingCatalogEntries } from "./module-settings-catalog";
 
 const pendingChanges: DeploymentConfigChange[] = [];
+const pageBuckets = new Map<string, Map<string, DeploymentConfigChange>>();
+
 let titleBySeqCache: Map<number, string> | null = null;
 
 function ensureSettingTitleCache(): Map<number, string> {
@@ -52,7 +54,30 @@ export function formatConfigDisplayValue(value: unknown): string {
   return String(value);
 }
 
-/** 记录一次配置变更（无实际差异或重复则忽略） */
+function changeDedupeKey(change: DeploymentConfigChange): string {
+  return change.fieldKey ?? change.label;
+}
+
+function upsertChange(
+  store: Map<string, DeploymentConfigChange>,
+  change: DeploymentConfigChange,
+): void {
+  if (change.before === change.after) return;
+  const key = changeDedupeKey(change);
+  const existing = store.get(key);
+  if (existing) {
+    const merged: DeploymentConfigChange = { ...change, before: existing.before };
+    if (merged.before === merged.after) {
+      store.delete(key);
+      return;
+    }
+    store.set(key, merged);
+    return;
+  }
+  store.set(key, { ...change });
+}
+
+/** 记录一次配置变更（无实际差异或重复则忽略）— 即时下发页 */
 export function recordDeploymentConfigChange(change: DeploymentConfigChange): void {
   if (change.before === change.after) return;
   const dup = pendingChanges.some(
@@ -63,7 +88,46 @@ export function recordDeploymentConfigChange(change: DeploymentConfigChange): vo
   pendingChanges.push({ ...change });
 }
 
-/** 取出下一条待下发的配置变更 */
+/** 按页面记录变更（批量保存页） */
+export function recordPageConfigChange(pageKey: string, change: DeploymentConfigChange): void {
+  if (change.before === change.after) return;
+  let bucket = pageBuckets.get(pageKey);
+  if (!bucket) {
+    bucket = new Map();
+    pageBuckets.set(pageKey, bucket);
+  }
+  upsertChange(bucket, change);
+}
+
+export function isPageDirty(pageKey: string): boolean {
+  const bucket = pageBuckets.get(pageKey);
+  return (bucket?.size ?? 0) > 0;
+}
+
+export function getPageChangeCount(pageKey: string): number {
+  return pageBuckets.get(pageKey)?.size ?? 0;
+}
+
+/** 取出下一条待下发的配置变更（即时下发页） */
 export function consumeNextConfigChange(): DeploymentConfigChange | undefined {
   return pendingChanges.shift();
+}
+
+/** 取出页面全部待下发变更 */
+export function consumePageConfigChanges(pageKey: string): DeploymentConfigChange[] {
+  const bucket = pageBuckets.get(pageKey);
+  if (!bucket || bucket.size === 0) return [];
+  const changes = [...bucket.values()];
+  pageBuckets.delete(pageKey);
+  return changes;
+}
+
+export function clearPageConfigChanges(pageKey: string): void {
+  pageBuckets.delete(pageKey);
+}
+
+export function peekPageConfigChanges(pageKey: string): DeploymentConfigChange[] {
+  const bucket = pageBuckets.get(pageKey);
+  if (!bucket) return [];
+  return [...bucket.values()];
 }

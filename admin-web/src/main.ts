@@ -232,7 +232,7 @@ import {
   renderDeploymentLogPage,
   resolveLegacyDistributionLogRedirect,
 } from "./config/deployment-ui";
-import { bindDeploymentAutoTrigger } from "./config/deployment-auto-trigger";
+import { bindDeploymentAutoTrigger, notifyConfigSaved } from "./config/deployment-auto-trigger";
 import { getSettingTitleBySeq } from "./config/deployment-change-buffer";
 import {
   formatProductLineList,
@@ -241,6 +241,19 @@ import {
   resolveSettingsPathForSeq,
 } from "./config/module-settings-deployment-change";
 import { getModuleSettingsBasePath } from "./config/module-settings-catalog";
+import {
+  bindPageSaveBar,
+  renderPageSaveBar,
+  shouldRenderPageSaveBar,
+  wrapPageWithSaveBar,
+} from "./config/page-save-bar-ui";
+import { bindPageSaveGuard, syncPageSaveGuardPath } from "./config/page-save-guard";
+import {
+  isPageBatchSavePath,
+  resolvePageSaveKey,
+  setPageDraftFohToggle,
+  setPageDraftToggle,
+} from "./config/page-settings-draft";
 import { MERCHANT_PLATFORM_PRESET_SCOPE, isMerchantPlatformPresetPath, isMPlatformPresetPath } from "./config/platform-preset-scope";
 import {
   enterMPlatformShell,
@@ -5597,17 +5610,26 @@ function renderFohHubSettingsLayout(
     const main = renderFohSettingsByLineGroupedPage(lineId, groups);
     const lineSidebar = renderFohSettingsByLineSidebar(path, catalog, pageTitle);
     const groupSubnav = renderFohSettingsByLineGroupSubnav(path, catalog, lineId);
+    const saveBar = renderPageSaveBar(path);
     return `${viewBar}<div class="${tertiaryRowClass}">
       ${lineSidebar}
       <div class="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-hidden sm:flex-row sm:items-stretch">
         ${groupSubnav}
-        <div class="${tertiaryMainClass} module-settings-scroll-host" data-foh-by-line-view="${escapeHtml(lineId)}">${main}</div>
+        <div class="${tertiaryMainClass} flex min-h-0 min-w-0 flex-1 flex-col">
+          <div class="module-settings-scroll-host min-h-0 flex-1 overflow-y-auto" data-foh-by-line-view="${escapeHtml(lineId)}">${main}</div>
+          ${saveBar}
+        </div>
       </div>
     </div>`;
   }
   return `${viewBar}<div class="${tertiaryRowClass}">
     ${renderModuleHubSettingsCategorySidebar(path, pageTitle)}
-    <div class="${tertiaryMainClass} module-settings-scroll-host">${renderModuleHubSettingsPage(path, pageTitle)}</div>
+    <div class="${tertiaryMainClass} flex min-h-0 flex-col">
+      <div class="module-settings-scroll-host min-h-0 flex-1 overflow-y-auto">
+        ${renderModuleHubSettingsPage(path, pageTitle)}
+      </div>
+      ${renderPageSaveBar(path)}
+    </div>
   </div>`;
 }
 
@@ -5678,17 +5700,20 @@ function renderTeamEmbeddedSettingsSuffix(
 }
 
 function renderTeamShiftSchedulingPageWithSettings(): string {
-  return `${renderTeamShiftSchedulingPage()}${renderTeamEmbeddedSettingsSuffix(
-    TEAM_SHIFT_SCHEDULING_SETTING_SEQS,
-    "shift-scheduling",
-    "控制打卡是否必须匹配当日排班；与员工打卡页联动。",
-  )}`;
+  return wrapPageWithSaveBar(
+    "/team/shift-scheduling",
+    `${renderTeamShiftSchedulingPage()}${renderTeamEmbeddedSettingsSuffix(
+      TEAM_SHIFT_SCHEDULING_SETTING_SEQS,
+      "shift-scheduling",
+      "控制打卡是否必须匹配当日排班；与员工打卡页联动。",
+    )}`,
+  );
 }
 
 function renderTeamBreaksOvertimePageWithSettings(path: string): string {
   const items = getTeamSettingItemsBySeqs(TEAM_BREAKS_OVERTIME_SETTING_SEQS);
   const rowsHtml = renderModuleSettingRowsHtml(items);
-  return renderTeamBreaksOvertimePage(rowsHtml, path);
+  return wrapPageWithSaveBar(path, renderTeamBreaksOvertimePage(rowsHtml, path));
 }
 
 function renderTeamClockInPageWithSettings(): string {
@@ -5697,7 +5722,7 @@ function renderTeamClockInPageWithSettings(): string {
     description: "工时上限、自动收工、登出条件与 Batch 考勤门禁等打卡相关规则。",
     rowsHtml: renderModuleSettingRowsHtml(items),
   });
-  return renderTeamClockInPage(rulesPanel);
+  return wrapPageWithSaveBar("/team/clock-in", renderTeamClockInPage(rulesPanel));
 }
 
 /** 设置滑层开关：关闭态轨道需与背景区分（避免 bg-input 过浅） */
@@ -9884,6 +9909,45 @@ function applyModuleSettingToggleChange(seq: number, next: boolean): void {
       : readModuleSettingToggleOn(seq);
   if (before === next) return;
 
+  const pageKeyFromCurrent = resolvePageSaveKey(currentPath);
+  const settingsPath = isPageBatchSavePath(pageKeyFromCurrent)
+    ? pageKeyFromCurrent
+    : currentPath.startsWith("/operations/queue-call/settings")
+      ? getModuleSettingsBasePath(currentPath) ?? "/operations/queue-call/settings"
+      : resolveSettingsPathForSeq(seq) ?? resolveSettingsPathForChange(String(seq));
+
+  const lineLabel = byLineId
+    ? formatProductLineList([byLineId]).replace("（无）", byLineId)
+    : undefined;
+  const fullLabel = byLineId
+    ? `${getSettingTitleBySeq(seq)}（${lineLabel} 产线）`
+    : undefined;
+
+  const deferBatchSave = settingsPath && isPageBatchSavePath(settingsPath);
+
+  if (deferBatchSave) {
+    const pageKey = resolvePageSaveKey(settingsPath);
+    if (byLineId && isFohSettingsByLinePath(currentPath)) {
+      setPageDraftFohToggle(pageKey, seq, byLineId, next);
+      runFohByLineToggleSideEffects(seq, next);
+      requestAnimationFrame(() => applyFohByLineUiSuppressions());
+    } else {
+      setPageDraftToggle(pageKey, seq, next);
+      runModuleSettingToggleSideEffects(seq, next);
+    }
+    recordModuleSettingDeploymentChange({
+      seq,
+      fullLabel,
+      kind: "toggle",
+      before,
+      after: next,
+      settingsPath,
+    });
+    syncModuleSettingToggleToDom(seq, next);
+    notifyConfigSaved(settingsPath);
+    return;
+  }
+
   if (byLineId && isFohSettingsByLinePath(currentPath)) {
     writeFohByLineToggleState(seq, byLineId, next);
     runFohByLineToggleSideEffects(seq, next);
@@ -9892,16 +9956,6 @@ function applyModuleSettingToggleChange(seq: number, next: boolean): void {
     writeModuleSettingToggleOn(seq, next);
     runModuleSettingToggleSideEffects(seq, next);
   }
-  const lineLabel = byLineId
-    ? formatProductLineList([byLineId]).replace("（无）", byLineId)
-    : undefined;
-  const fullLabel = byLineId
-    ? `${getSettingTitleBySeq(seq)}（${lineLabel} 产线）`
-    : undefined;
-  const settingsPath =
-    currentPath.startsWith("/operations/queue-call/settings")
-      ? getModuleSettingsBasePath(currentPath) ?? "/operations/queue-call/settings"
-      : resolveSettingsPathForSeq(seq) ?? resolveSettingsPathForChange(String(seq));
 
   recordModuleSettingDeploymentChange({
     seq,
@@ -11016,7 +11070,7 @@ function renderMain(): string {
                     <div class="${tertiaryMainClass}">${renderPlaceholder(path, title, tabModule, { tipsManagementSubnav: true })}</div>
                   </div>`
                                           : isFloorPlanPath(path)
-                                            ? renderFloorPlanPage()
+                                            ? wrapPageWithSaveBar(path, renderFloorPlanPage())
                                             : isFohCategorySettingsPath(path)
                                               ? renderFohCategorySettingsPage(path)
                                               : isFohClassificationSettingsPath(path)
@@ -11042,7 +11096,17 @@ function renderMain(): string {
                                                                   : isModuleHubSettingsCatalogPath(path)
                                                                     ? isFohSettingsPath(path)
                                                                       ? renderFohHubSettingsLayout(path, title, tertiaryRowClass, tertiaryMainClass)
-                                                                      : `<div class="${tertiaryRowClass}">
+                                                                      : shouldRenderPageSaveBar(path)
+                                                                        ? `<div class="${tertiaryRowClass}">
+                    ${renderModuleHubSettingsCategorySidebar(path, title)}
+                    <div class="${tertiaryMainClass} flex min-h-0 flex-col">
+                      <div class="module-settings-scroll-host min-h-0 flex-1 overflow-y-auto">
+                        ${renderModuleHubSettingsPage(path, title)}
+                      </div>
+                      ${renderPageSaveBar(path)}
+                    </div>
+                  </div>`
+                                                                        : `<div class="${tertiaryRowClass}">
                     ${renderModuleHubSettingsCategorySidebar(path, title)}
                     <div class="${tertiaryMainClass} module-settings-scroll-host flex flex-col">
                       ${renderModuleHubSettingsPage(path, title)}
@@ -11976,6 +12040,9 @@ function mount(): void {
   bindLoginLogsPage(mount);
   bindDeploymentUi(mount);
   bindDeploymentAutoTrigger();
+  bindPageSaveGuard();
+  bindPageSaveBar(mount);
+  syncPageSaveGuardPath(mountPathForSheet);
   bindHeaderScopeFilters();
   bindPageStorePicker(mount);
   bindEmployeeRosterScopeRefresh();
