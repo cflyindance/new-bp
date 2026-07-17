@@ -1,5 +1,5 @@
 /**
- * 前厅管理中心 · 品牌与菜单（/operations/queue-call/brand-menu）· 品牌管理（seq 547）。
+ * 前厅管理中心 · 店中店设置（/operations/queue-call/brand-menu）· 品牌管理（seq 547）。
  * 本店品牌列表、新增/编辑品牌；品牌营业时间引用 seq 418，品牌菜单引用 seq 548 菜单库。
  */
 

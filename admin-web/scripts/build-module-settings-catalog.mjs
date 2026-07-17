@@ -75,6 +75,7 @@ const SETTINGS_GROUP_NAV_SECTIONS_BY_PATH = {
 
 /** catalog 页头标题（可与一级导航模块名不同） */
 const HUB_CATALOG_DISPLAY_TITLE_BY_PATH = {
+  "/stores/settings": "门店信息",
   "/device-management/settings": "硬件管理中心",
   "/operations/kitchen-kds/display": "KDS 显示与交互",
   "/operations/kitchen-kds/workflow": "KDS 出餐流程",
@@ -100,6 +101,7 @@ const outPath = path.join(root, "src", "config", "module-settings-catalog.ts");
 const HUB_SETTINGS_PATH = {
   品牌管理: "/brand/settings",
   门店管理: "/stores/settings",
+  门店信息: "/stores/settings",
   团队管理: "/team/settings",
   商品中心: "/product-center-main/settings",
   订单中心: "/orders/settings",

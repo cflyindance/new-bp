@@ -162,7 +162,7 @@ export const DEMO_CONFIG_DOMAINS: DeploymentConfigDomain[] = [
   },
   {
     domainKey: "foh.brand-menu",
-    displayName: "品牌与菜单",
+    displayName: "店中店设置",
     navRefs: [{ l1Key: "queue-call", l2Key: "qc-brand-menu" }],
     productLines: ["POS", "Kiosk", "eMenu"],
     granularity: "store",

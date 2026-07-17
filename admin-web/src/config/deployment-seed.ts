@@ -305,7 +305,7 @@ function buildDeploymentSeedBatches(
       ],
       originNav: {
         l1Key: "store-mgmt",
-        l1Title: "门店管理",
+        l1Title: "门店信息",
         l2Key: "store-hours",
         l2Title: "营业时间",
         pagePath: "/stores/hours",

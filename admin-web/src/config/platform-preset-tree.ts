@@ -267,7 +267,7 @@ function buildPlatformPresetIndexUncached(
   return buildPlatformPresetIndexFromPresetGroups(groups);
 }
 
-/** RBAC 角色矩阵：按门店版/连锁版与数据视角过滤一级导航（避免「门店列表」等重复项） */
+/** RBAC 角色矩阵：按门店版/连锁版与数据视角过滤一级导航（避免「门店管理」等重复项） */
 export function buildRbacPlatformPresetIndex(productLineId: ProductLineId = "pos"): PlatformPresetIndex {
   const cacheKey = `rbac:${productLineId}:${getRbacNavVisibilityCacheKey()}`;
   const cached = rbacIndexCache.get(cacheKey);
@@ -285,7 +285,7 @@ export function buildRbacPlatformPresetIndex(productLineId: ProductLineId = "pos
 const rbacIndexCache = new Map<string, PlatformPresetIndex>();
 const presetEditorIndexCache = new Map<string, PlatformPresetIndex>();
 
-/** 平台预设 · 配置预设编辑页：按视角过滤一级导航（避免「门店列表」等重复项） */
+/** 平台预设 · 配置预设编辑页：按视角过滤一级导航（避免「门店管理」等重复项） */
 export function buildPresetEditorPlatformPresetIndex(
   productLineId: ProductLineId,
   options?: PlatformPresetTreeOptions,

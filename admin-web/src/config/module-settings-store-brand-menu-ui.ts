@@ -1,5 +1,5 @@
 /**
- * 前厅管理中心 · 品牌与菜单（/operations/queue-call/brand-menu）· 品牌菜单库（seq 548 数据源）。
+ * 前厅管理中心 · 店中店设置（/operations/queue-call/brand-menu）· 品牌菜单库（seq 548 数据源）。
  * 集团/品牌级菜单主数据见「商品中心 → 品牌菜单」；此处为 Location 可选菜单目录原型。
  */
 

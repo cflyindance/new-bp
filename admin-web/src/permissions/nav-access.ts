@@ -144,7 +144,7 @@ export function isRbacMatrixNavModuleVisible(moduleId: string): boolean {
 
 const RBAC_STORE_LIST_MODULE_IDS = ["group-store-list", "brand-store-list"] as const;
 
-/** 四级矩阵编辑页（RBAC / 平台预设）：按视角过滤一级导航，避免「门店列表」等重复项 */
+/** 四级矩阵编辑页（RBAC / 平台预设）：按视角过滤一级导航，避免「门店管理」等重复项 */
 export function filterMatrixNavModuleGroups<T extends { moduleId: string }>(groups: T[]): T[] {
   const filtered = groups.filter((g) => isRbacMatrixNavModuleVisible(g.moduleId));
   const storeListModules = filtered.filter((g) =>

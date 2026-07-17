@@ -616,7 +616,7 @@ export const MODULE_SETTINGS_BY_PATH: Record<string, ModuleSettingCatalogHub> = 
     ],
   },
   "/stores/settings": {
-    hubTitle: "门店管理",
+    hubTitle: "门店信息",
     settingsPath: "/stores/settings",
     groupOrder: ["store-profile","brand-identity-assets","store-hours-operation"],
     items: [

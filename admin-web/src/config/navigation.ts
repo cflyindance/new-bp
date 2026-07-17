@@ -137,8 +137,8 @@ export const NAV_MODULES: NavModule[] = [
   },
   {
     id: "group-store-list",
-    title: "门店列表",
-    titleEn: "Store list",
+    title: "门店管理",
+    titleEn: "Store management",
     icon: "storeMgmt",
     path: "/group-stores",
     subNavPlacement: "sheet",
@@ -150,8 +150,8 @@ export const NAV_MODULES: NavModule[] = [
   },
   {
     id: "brand-store-list",
-    title: "门店列表",
-    titleEn: "Store list",
+    title: "门店管理",
+    titleEn: "Store management",
     icon: "storeMgmt",
     path: "/brand-stores",
     subNavPlacement: "sheet",
@@ -163,8 +163,8 @@ export const NAV_MODULES: NavModule[] = [
   },
   {
     id: "store-mgmt",
-    title: "门店管理",
-    titleEn: "Store management",
+    title: "门店信息",
+    titleEn: "Store information",
     icon: "storeMgmt",
     path: "/stores",
     subNavPlacement: "sheet",
@@ -363,8 +363,8 @@ export const NAV_MODULES: NavModule[] = [
       },
       {
         id: "qc-brand-menu",
-        title: "品牌与菜单",
-        titleEn: "Brand & menu",
+        title: "店中店设置",
+        titleEn: "Shop-in-shop settings",
         path: "/operations/queue-call/brand-menu",
       },
       { id: "qc-settings", title: "设置", titleEn: "Settings", path: "/operations/queue-call/settings" },

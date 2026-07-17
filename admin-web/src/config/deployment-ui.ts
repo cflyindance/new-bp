@@ -11,7 +11,10 @@ import {
 } from "../auth/session-scope";
 import { getUiLocale, t } from "../i18n";
 import { readAppHashPath } from "./app-routes";
-import { getSettingTitleBySeq } from "./deployment-change-buffer";
+import {
+  normalizeChangeForDisplay,
+  renderChangePreviewDialog,
+} from "./deployment-change-preview";
 import { resolveDomainsForPath } from "./deployment-config-domains";
 import { listMockStoresByIds } from "./deployment-mock-devices";
 import {
@@ -25,12 +28,6 @@ import type {
   DeploymentBatchStatus,
   DeploymentConfigChange,
 } from "./deployment-types";
-import {
-  formatStoreClosingAlertByLineForDeployment,
-  STORE_CLOSING_ALERT_BY_LINE_FIELD_ID,
-} from "./module-settings-deployment-change";
-
-const STORE_CLOSING_ALERT_SEQ = 582;
 
 let listFilterStatus: DeploymentBatchStatus | "" = "";
 
@@ -226,47 +223,34 @@ function renderOperatorCell(batch: DeploymentBatch): string {
   return `<span class="text-card-foreground">${escapeHtml(email)}</span>`;
 }
 
-function isClosingAlertChange(change: DeploymentConfigChange): boolean {
-  const fieldKey = change.fieldKey?.trim() ?? "";
-  return (
-    fieldKey === STORE_CLOSING_ALERT_BY_LINE_FIELD_ID ||
-    fieldKey === String(STORE_CLOSING_ALERT_SEQ) ||
-    fieldKey.startsWith(`${STORE_CLOSING_ALERT_SEQ}-`) ||
-    change.label.includes("营业时间即将结束提示")
-  );
-}
-
-function normalizeChangeForDisplay(change: DeploymentConfigChange): DeploymentConfigChange {
-  if (!isClosingAlertChange(change)) return change;
-  return {
-    ...change,
-    label: getSettingTitleBySeq(STORE_CLOSING_ALERT_SEQ),
-    before: formatStoreClosingAlertByLineForDeployment(change.before) ?? change.before,
-    after: formatStoreClosingAlertByLineForDeployment(change.after) ?? change.after,
-  };
-}
-
 function renderMultilineValue(value: string): string {
   return escapeHtml(value || "—").replace(/\n/g, "<br />");
 }
 
-function renderChangeSummaryCell(batch: DeploymentBatch): string {
-  const raw = batch.configChanges?.[0];
-  if (!raw) return `<span class="text-muted-foreground">—</span>`;
-  const change = normalizeChangeForDisplay(raw);
-  return `
-    <div class="min-w-[14rem] max-w-[22rem] space-y-1.5 leading-snug">
-      <div class="font-medium text-card-foreground">${escapeHtml(change.label)}</div>
-      ${change.operation ? `<div class="text-xs text-muted-foreground">${escapeHtml(change.operation)}</div>` : ""}
-      <div>
-        <div class="text-xs font-medium text-muted-foreground">修改前</div>
-        <div class="text-muted-foreground">${renderMultilineValue(change.before)}</div>
-      </div>
-      <div>
-        <div class="text-xs font-medium text-muted-foreground">修改后</div>
-        <div class="text-card-foreground">${renderMultilineValue(change.after)}</div>
-      </div>
-    </div>`;
+function renderDeploymentChangeDialog(batch: DeploymentBatch): string {
+  return renderChangePreviewDialog({
+    mode: "view",
+    changes: batch.configChanges ?? [],
+    dialogId: "deployment-change-dialog",
+    closeAttr: "data-deployment-change-close",
+    backdropAttr: "data-deployment-change-backdrop",
+  });
+}
+
+function closeDeploymentChangeDialog(): void {
+  document.getElementById("deployment-change-dialog")?.remove();
+}
+
+function openDeploymentChangeDialog(batchId: string): void {
+  const batch = getDeploymentBatch(batchId);
+  if (!batch) return;
+  closeDeploymentChangeDialog();
+  const host = document.createElement("div");
+  host.innerHTML = renderDeploymentChangeDialog(batch);
+  const dialog = host.firstElementChild;
+  if (!dialog) return;
+  document.body.appendChild(dialog);
+  (dialog as HTMLElement).focus({ preventScroll: true });
 }
 
 function renderConfigChangesTable(changes: DeploymentConfigChange[]): string {
@@ -307,14 +291,14 @@ function renderListRow(batch: DeploymentBatch): string {
     <tr class="border-b border-border last:border-0 hover:bg-muted/30" data-deployment-row="${escapeHtml(batch.id)}">
       <td class="whitespace-nowrap px-4 py-3 text-sm text-card-foreground">${escapeHtml(formatDateTime(batch.triggeredAt))}</td>
       <td class="max-w-[20rem] px-4 py-3 text-sm text-card-foreground">${escapeHtml(configModuleLabel(batch))}</td>
-      <td class="px-4 py-3 text-sm">${renderChangeSummaryCell(batch)}</td>
       <td class="px-4 py-3 text-sm text-card-foreground">${escapeHtml(targetStoreLabel(batch))}</td>
       <td class="px-4 py-3 text-sm">${renderOperatorCell(batch)}</td>
       <td class="whitespace-nowrap px-4 py-3">
         <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${statusBadgeClass(batch.status)}">${escapeHtml(statusLabel(batch.status))}</span>
       </td>
       <td class="whitespace-nowrap px-4 py-3 text-right text-sm">
-        <a href="#${escapeHtml(batch.originNav.pagePath)}" class="font-medium text-primary hover:underline">源配置</a>
+        <button type="button" data-deployment-changelog="${escapeHtml(batch.id)}" class="font-medium text-primary hover:underline">变更记录</button>
+        <a href="#${escapeHtml(batch.originNav.pagePath)}" class="ml-3 font-medium text-primary hover:underline">源配置</a>
         ${canRetry ? `<button type="button" data-deployment-retry="${escapeHtml(batch.id)}" class="ml-3 font-medium text-primary hover:underline">重试</button>` : ""}
       </td>
     </tr>`;
@@ -422,7 +406,7 @@ function renderDetailPage(batch: DeploymentBatch): string {
 function renderEmptyRow(): string {
   return `
     <tr>
-      <td colspan="7" class="px-4 py-10 text-center text-sm text-muted-foreground">暂无下发记录。修改配置并保存后，系统将自动触发下发并在此展示。</td>
+      <td colspan="6" class="px-4 py-10 text-center text-sm text-muted-foreground">暂无下发记录。修改配置并保存后，系统将自动触发下发并在此展示。</td>
     </tr>`;
 }
 
@@ -452,12 +436,11 @@ function renderListPage(): string {
       </div>
       <div class="min-h-0 flex-1 overflow-hidden rounded-xl border border-border bg-card shadow-sm">
         <div class="module-settings-scroll-host max-h-full overflow-auto">
-          <table class="w-full min-w-[72rem] border-collapse text-left" data-deployment-table>
+          <table class="w-full min-w-[56rem] border-collapse text-left" data-deployment-table>
             <thead class="sticky top-0 z-[1] border-b border-border bg-muted/80 backdrop-blur">
               <tr>
                 <th class="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">下发时间</th>
                 <th class="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">配置模块</th>
-                <th class="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">变更内容</th>
                 <th class="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">目标门店</th>
                 <th class="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">操作账号</th>
                 <th class="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">状态</th>
@@ -552,6 +535,15 @@ export function bindDeploymentUi(onRefresh: () => void): void {
 
   document.body.addEventListener("click", (ev) => {
     const target = ev.target as HTMLElement;
+    if (target.closest("[data-deployment-change-close]") || target.closest("[data-deployment-change-backdrop]")) {
+      closeDeploymentChangeDialog();
+      return;
+    }
+    const changelogButton = target.closest<HTMLElement>("[data-deployment-changelog]");
+    if (changelogButton?.dataset.deploymentChangelog) {
+      openDeploymentChangeDialog(changelogButton.dataset.deploymentChangelog);
+      return;
+    }
     const retryButton = target.closest<HTMLElement>("[data-deployment-retry]");
     if (retryButton?.dataset.deploymentRetry) {
       retryDeploymentFailedItems(retryButton.dataset.deploymentRetry);
@@ -566,6 +558,12 @@ export function bindDeploymentUi(onRefresh: () => void): void {
       seedDeploymentDemoData();
       refreshDeploymentUi(onRefresh);
     }
+  });
+
+  document.addEventListener("keydown", (ev) => {
+    if (ev.key !== "Escape") return;
+    if (!document.getElementById("deployment-change-dialog")) return;
+    closeDeploymentChangeDialog();
   });
 
   document.body.addEventListener("change", (ev) => {

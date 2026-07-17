@@ -3,31 +3,15 @@
  */
 import { resolveOriginNavFromPath } from "./deployment-config-domains";
 import { createDeploymentFromPath } from "./deployment-store";
-import { resolveAutoDeploymentScope } from "./deployment-mock-devices";
-import {
-  openPageSaveConfirmDialog,
-  shouldShowPageSaveConfirmDialog,
-} from "./page-save-confirm-dialog";
-import {
-  runPageSavePreCommit,
-} from "./page-save-registry";
+import { openPageSaveConfirmDialog } from "./page-save-confirm-dialog";
+import { runPageSavePreCommit } from "./page-save-registry";
 import { showPageSaveSuccessToast } from "./page-save-toast";
 import {
   commitPageDraft,
   resolvePageSaveKey,
 } from "./page-settings-draft";
 import { getPageChangeCount } from "./deployment-change-buffer";
-import type { DeploymentBatch, DeploymentScopeOption } from "./deployment-types";
-
-function resolveScopeForDeploy(
-  pageKey: string,
-  changeCount: number,
-): Promise<DeploymentScopeOption | null> {
-  if (shouldShowPageSaveConfirmDialog()) {
-    return openPageSaveConfirmDialog(pageKey, changeCount);
-  }
-  return Promise.resolve(resolveAutoDeploymentScope());
-}
+import type { DeploymentBatch } from "./deployment-types";
 
 export async function confirmAndTriggerPageSaveAndDeploy(
   pageKey: string,
@@ -39,7 +23,7 @@ export async function confirmAndTriggerPageSaveAndDeploy(
   const changeCount = getPageChangeCount(key);
   if (changeCount === 0) return null;
 
-  const scope = await resolveScopeForDeploy(key, changeCount);
+  const scope = await openPageSaveConfirmDialog(key);
   if (!scope) return null;
 
   const changes = commitPageDraft(key);
