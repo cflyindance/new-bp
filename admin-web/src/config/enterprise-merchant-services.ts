@@ -232,3 +232,125 @@ export function cascadeMerchantServiceSelection(
 export function countEnabledL1(selection: Record<string, PlatformPresetNodeSelection>, index: FourColumnTreeIndex): number {
   return index.groups.filter((g) => selection[g.moduleKey]?.enabled).length;
 }
+
+/** 从 selection 提取已启用的节点键 */
+export function enabledKeysFromSelection(
+  selection: Record<string, PlatformPresetNodeSelection>,
+): string[] {
+  return Object.entries(selection)
+    .filter(([, node]) => node.enabled)
+    .map(([key]) => key);
+}
+
+/** 品牌显式已开通的键（不含自动展开的子孙） */
+export function brandCapabilityCeilingKeys(
+  cap: MerchantCapabilitySnapshot,
+  productLineId: ProductLineId,
+): Set<string> {
+  const { included, paid } = capabilityToServiceSelections(cap, productLineId);
+  return new Set([...enabledKeysFromSelection(included), ...enabledKeysFromSelection(paid)]);
+}
+
+/**
+ * 门店可选上限：品牌已开通键 + 其全部子孙节点。
+ * 品牌若只开通一级，门店仍可在该一级下对二/三/四级逐项勾选。
+ */
+export function brandStoreSelectableCeiling(
+  cap: MerchantCapabilitySnapshot,
+  productLineId: ProductLineId,
+): Set<string> {
+  return expandCeilingWithDescendants(brandCapabilityCeilingKeys(cap, productLineId), productLineId);
+}
+
+/** 将已开通键扩展为包含全树子孙，供门店四级勾选 */
+export function expandCeilingWithDescendants(
+  baseCeiling: Set<string>,
+  productLineId: ProductLineId,
+): Set<string> {
+  if (baseCeiling.size === 0) return new Set();
+  const indexes = [buildIncludedServiceTreeIndex(productLineId), buildPaidServiceTreeIndex(productLineId)];
+  const expanded = new Set(baseCeiling);
+  for (const index of indexes) {
+    for (const key of baseCeiling) {
+      for (const dk of index.getDescendantKeys(key)) {
+        expanded.add(dk);
+      }
+    }
+  }
+  return expanded;
+}
+
+/**
+ * 仅保留品牌已开通范围内的一级模块；
+ * getDescendantKeys 返回上限内的全部子孙，保证二～四级可勾选与级联。
+ */
+export function filterIndexByCeiling(
+  index: FourColumnTreeIndex,
+  ceiling: Set<string>,
+): FourColumnTreeIndex {
+  const groups = index.groups.filter(
+    (g) => ceiling.has(g.moduleKey) || index.getDescendantKeys(g.moduleKey).some((k) => ceiling.has(k)),
+  );
+  return {
+    groups,
+    getDescendantKeys: (key: string) => index.getDescendantKeys(key).filter((k) => ceiling.has(k)),
+  };
+}
+
+/** 门店开启键 → selection；仅 ceiling 内键可生效；默认全关 */
+export function storeEnabledKeysToSelections(
+  enabledKeys: string[],
+  productLineId: ProductLineId,
+  ceiling: Set<string>,
+): {
+  included: Record<string, PlatformPresetNodeSelection>;
+  paid: Record<string, PlatformPresetNodeSelection>;
+  includedIndex: FourColumnTreeIndex;
+  paidIndex: FourColumnTreeIndex;
+} {
+  const includedIndex = filterIndexByCeiling(buildIncludedServiceTreeIndex(productLineId), ceiling);
+  const paidIndex = filterIndexByCeiling(buildPaidServiceTreeIndex(productLineId), ceiling);
+  const allowed = new Set(enabledKeys.filter((k) => ceiling.has(k)));
+
+  const included = emptySelectionForIndex(includedIndex);
+  const paid = emptySelectionForIndex(paidIndex);
+  for (const key of allowed) {
+    if (included[key] !== undefined) included[key] = syncNodeDisplayWithEnabled(included[key], true);
+    if (paid[key] !== undefined) paid[key] = syncNodeDisplayWithEnabled(paid[key], true);
+  }
+  return { included, paid, includedIndex, paidIndex };
+}
+
+/** 门店勾选结果 ∩ 品牌上限 → enabledKeys */
+export function storeSelectionsToEnabledKeys(
+  included: Record<string, PlatformPresetNodeSelection>,
+  paid: Record<string, PlatformPresetNodeSelection>,
+  ceiling: Set<string>,
+): string[] {
+  const keys = [...enabledKeysFromSelection(included), ...enabledKeysFromSelection(paid)];
+  return [...new Set(keys.filter((k) => ceiling.has(k)))].sort();
+}
+
+/**
+ * 级联勾选：在品牌上限内对当前节点及子孙启停。
+ * 允许对一～四级任意节点勾选（须落在 ceiling 内）。
+ */
+export function cascadeStoreServiceSelection(
+  selection: Record<string, PlatformPresetNodeSelection>,
+  key: string,
+  enabled: boolean,
+  index: FourColumnTreeIndex,
+  ceiling: Set<string>,
+): Record<string, PlatformPresetNodeSelection> {
+  if (enabled && !ceiling.has(key)) return selection;
+  const next = { ...selection };
+  next[key] = syncNodeDisplayWithEnabled(next[key], enabled);
+  for (const dk of index.getDescendantKeys(key)) {
+    if (!ceiling.has(dk)) {
+      if (enabled) next[dk] = syncNodeDisplayWithEnabled(next[dk], false);
+      continue;
+    }
+    next[dk] = syncNodeDisplayWithEnabled(next[dk], enabled);
+  }
+  return next;
+}

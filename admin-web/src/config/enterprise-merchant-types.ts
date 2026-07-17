@@ -124,10 +124,31 @@ export interface MerchantCapabilitySnapshot {
   syncedPresetAt?: string;
 }
 
+/**
+ * 门店级能力与服务：仅存本店已开启的服务键。
+ * 有效开通 = enabledKeys ∩ 品牌已开通集合；未配置时默认全关。
+ */
+export interface StoreCapabilitySnapshot {
+  storeId: string;
+  merchantId: string;
+  /** 本店勾选开启的 nodeKey / serviceId（须落在品牌上限内） */
+  enabledKeys: string[];
+  updatedAt?: string;
+  updatedBy?: string;
+}
+
+export interface UpdateStoreCapabilityInput {
+  enabledKeys?: string[];
+  includedSelection?: Record<string, import("./platform-preset-node-selection").PlatformPresetNodeSelection>;
+  paidSelection?: Record<string, import("./platform-preset-node-selection").PlatformPresetNodeSelection>;
+}
+
 export interface MerchantChangeLogEntry {
   id: string;
   enterpriseId?: string;
   merchantId: string;
+  /** 门店级变更时填写 MID，便于门店详情过滤 */
+  storeId?: string;
   action: string;
   operatorEmail: string;
   detail: string;
@@ -219,6 +240,8 @@ export interface EnterpriseMerchantSnapshot {
   regions: MerchantOrgRegion[];
   stores: MerchantOrgStore[];
   capabilities: MerchantCapabilitySnapshot[];
+  /** 门店级能力与服务（按 MID） */
+  storeCapabilities?: StoreCapabilitySnapshot[];
   changelog: MerchantChangeLogEntry[];
   requests: MerchantProvisioningRequest[];
   posStoreRequests: PosStoreProvisioningRequest[];

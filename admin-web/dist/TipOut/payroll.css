@@ -1158,7 +1158,7 @@
 
 .payroll-page .payroll-detail-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 8px;
   text-align: center;
   font-size: 13px;

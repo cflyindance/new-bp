@@ -170,23 +170,23 @@ function exportPayrollDetailCSV(data) {
 
   lines.push("Summary");
 
-  lines.push("Metric,Regular,OT,OT2,Total");
+  lines.push("Metric,Regular,Paid Break,OT,OT2,Total");
 
   lines.push(
 
-    `"Hours",${num(data.summary.regH)},${num(data.summary.otH)},${num(data.summary.ot2H)},${num(data.summary.totalH)}`
+    `"Hours",${num(data.summary.regH)},${num(data.summary.paidBreakH)},${num(data.summary.otH)},${num(data.summary.ot2H)},${num(data.summary.totalH)}`
 
   );
 
   lines.push(
 
-    `"Amount",${num(data.summary.regAmt)},${num(data.summary.otAmt)},${num(data.summary.ot2Amt)},${num(data.summary.totalAmt)}`
+    `"Amount",${num(data.summary.regAmt)},${num(data.summary.paidBreakAmt)},${num(data.summary.otAmt)},${num(data.summary.ot2Amt)},${num(data.summary.totalAmt)}`
 
   );
 
-  lines.push(`"Service Charge",,,,${num(data.summary.svcw)}`);
+  lines.push(`"Service Charge",,,,,${num(data.summary.svcw)}`);
 
-  lines.push(`"Tips",,,,${num(data.summary.tips)}`);
+  lines.push(`"Tips",,,,,${num(data.summary.tips)}`);
 
   lines.push("");
 
@@ -246,7 +246,7 @@ function exportPayrollDetailCSV(data) {
 
     lines.push("");
 
-    lines.push("Week,Range,Total Hours,Regular,OT,OT2,Regular Amount,OT Amount,OT2 Amount,Total Amount");
+    lines.push("Week,Range,Total Hours,Regular,Paid Break,OT,OT2,Regular Amount,Paid Break Amount,OT Amount,OT2 Amount,Total Amount");
 
     data.weekSummaries.forEach(function (wk) {
 
@@ -262,11 +262,15 @@ function exportPayrollDetailCSV(data) {
 
           num(wk.reg),
 
+          num(wk.paidBreak),
+
           num(wk.ot),
 
           num(wk.ot2),
 
           num(wk.regAmt),
+
+          num(wk.paidBreakAmt),
 
           num(wk.otAmt),
 

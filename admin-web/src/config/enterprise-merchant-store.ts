@@ -11,8 +11,12 @@ import {
 } from "./platform-preset-enterprise-sync";
 import { markPlatformPresetOnboardingComplete } from "./platform-preset-onboarding";
 import {
+  brandCapabilityCeilingKeys,
+  brandStoreSelectableCeiling,
   migrateLegacyMerchantServices,
+  resolveMerchantServiceProductLine,
   serviceSelectionsToSubscriptions,
+  storeSelectionsToEnabledKeys,
 } from "./enterprise-merchant-services";
 import { formatBid, generateNextBid, generateNextMid, isMidFormat, migrateLegacyStoreIdToMid, normalizeBid } from "./enterprise-merchant-bid";
 import {
@@ -24,6 +28,8 @@ import {
   type EnterpriseMerchant,
   type EnterpriseMerchantSnapshot,
   type MerchantCapabilitySnapshot,
+  type StoreCapabilitySnapshot,
+  type UpdateStoreCapabilityInput,
   type MerchantChangeLogEntry,
   type MerchantFilter,
   type MerchantOrgBrand,
@@ -979,9 +985,9 @@ function buildSeedSnapshot(): EnterpriseMerchantSnapshot {
   ];
 
   const slaMetrics = merchants.map((m) => buildDefaultSlaMetrics(m.merchantId));
-  enrichLicenseFields({ enterprises, groups, merchants, brands, regions, stores, capabilities, changelog, requests, posStoreRequests, bidSeq, midSeq: 8, impersonationLogs: [], slaMetrics });
+  enrichLicenseFields({ enterprises, groups, merchants, brands, regions, stores, capabilities, storeCapabilities: [], changelog, requests, posStoreRequests, bidSeq, midSeq: 8, impersonationLogs: [], slaMetrics });
 
-  return { enterprises, groups, merchants, brands, regions, stores, capabilities, changelog, requests, posStoreRequests, bidSeq, midSeq: 8, impersonationLogs: [], slaMetrics };
+  return { enterprises, groups, merchants, brands, regions, stores, capabilities, storeCapabilities: [], changelog, requests, posStoreRequests, bidSeq, midSeq: 8, impersonationLogs: [], slaMetrics };
 }
 
 function normalizeSnapshot(raw: EnterpriseMerchantSnapshot): EnterpriseMerchantSnapshot {
@@ -993,6 +999,7 @@ function normalizeSnapshot(raw: EnterpriseMerchantSnapshot): EnterpriseMerchantS
     regions: raw.regions ?? [],
     stores: raw.stores ?? [],
     capabilities: raw.capabilities ?? [],
+    storeCapabilities: raw.storeCapabilities ?? [],
     changelog: raw.changelog ?? [],
     requests: raw.requests ?? [],
     posStoreRequests: raw.posStoreRequests ?? [],
@@ -1766,6 +1773,95 @@ export function getMerchantCapability(merchantId: string): MerchantCapabilitySna
   return { ...cap, services: migrateLegacyMerchantServices(cap.services) };
 }
 
+export function getStoreById(storeId: string): MerchantOrgStore | undefined {
+  return readSnapshot().stores.find((s) => s.storeId === storeId);
+}
+
+export function getStoreCapability(storeId: string): StoreCapabilitySnapshot | undefined {
+  const list = readSnapshot().storeCapabilities ?? [];
+  return list.find((c) => c.storeId === storeId);
+}
+
+/** 按品牌上限裁剪该品牌下各门店的 enabledKeys */
+function pruneStoreCapabilitiesForMerchant(
+  snap: EnterpriseMerchantSnapshot,
+  merchantId: string,
+  ceiling: Set<string>,
+): number {
+  if (!snap.storeCapabilities) snap.storeCapabilities = [];
+  let pruned = 0;
+  for (const sc of snap.storeCapabilities) {
+    if (sc.merchantId !== merchantId) continue;
+    const next = sc.enabledKeys.filter((k) => ceiling.has(k));
+    if (next.length !== sc.enabledKeys.length) {
+      sc.enabledKeys = next;
+      sc.updatedAt = nowIso();
+      pruned += 1;
+    }
+  }
+  return pruned;
+}
+
+export function saveStoreCapability(
+  storeId: string,
+  input: UpdateStoreCapabilityInput,
+  operatorEmail = DEMO_OPERATOR,
+): StoreCapabilitySnapshot | null {
+  const snap = readSnapshot();
+  const store = snap.stores.find((s) => s.storeId === storeId);
+  if (!store) return null;
+
+  const brandCap = snap.capabilities.find((c) => c.merchantId === store.merchantId);
+  if (!brandCap) return null;
+
+  const productLineId = resolveMerchantServiceProductLine(brandCap.productLineIds);
+  const ceiling = brandStoreSelectableCeiling(
+    { ...brandCap, services: migrateLegacyMerchantServices(brandCap.services) },
+    productLineId,
+  );
+
+  let enabledKeys: string[];
+  if (input.includedSelection && input.paidSelection) {
+    enabledKeys = storeSelectionsToEnabledKeys(input.includedSelection, input.paidSelection, ceiling);
+  } else {
+    enabledKeys = [...new Set((input.enabledKeys ?? []).filter((k) => ceiling.has(k)))].sort();
+  }
+
+  if (!snap.storeCapabilities) snap.storeCapabilities = [];
+  let sc = snap.storeCapabilities.find((c) => c.storeId === storeId);
+  const prevKeys = sc ? [...sc.enabledKeys] : [];
+  if (!sc) {
+    sc = {
+      storeId,
+      merchantId: store.merchantId,
+      enabledKeys: [],
+    };
+    snap.storeCapabilities.push(sc);
+  }
+  sc.enabledKeys = enabledKeys;
+  sc.merchantId = store.merchantId;
+  sc.updatedAt = nowIso();
+  sc.updatedBy = operatorEmail;
+
+  const prevSet = new Set(prevKeys);
+  const nextSet = new Set(enabledKeys);
+  const added = enabledKeys.filter((k) => !prevSet.has(k));
+  const removed = prevKeys.filter((k) => !nextSet.has(k));
+  const diffParts: string[] = [`${prevKeys.length} → ${enabledKeys.length} 项`];
+  if (added.length > 0) diffParts.push(`新增 ${added.length}`);
+  if (removed.length > 0) diffParts.push(`关闭 ${removed.length}`);
+
+  appendChangelog(snap, {
+    merchantId: store.merchantId,
+    storeId,
+    action: "store.capability.update",
+    operatorEmail,
+    detail: `更新门店「${store.name}」能力与服务（${diffParts.join(" · ")}）`,
+  });
+  writeSnapshot(snap);
+  return { ...sc };
+}
+
 export function getMerchantChangelog(merchantId?: string): MerchantChangeLogEntry[] {
   const snap = readSnapshot();
   const eid = activeEnterpriseId();
@@ -1773,6 +1869,19 @@ export function getMerchantChangelog(merchantId?: string): MerchantChangeLogEntr
   let logs = snap.changelog.filter((l) => l.enterpriseId === eid || ids.has(l.merchantId) || l.merchantId === "enterprise");
   if (!merchantId) return logs;
   return logs.filter((l) => l.merchantId === merchantId);
+}
+
+/** 门店能力相关变更记录（按 MID 过滤；兼容旧日志用 detail 含 MID 匹配） */
+export function getStoreChangelog(storeId: string): MerchantChangeLogEntry[] {
+  const snap = readSnapshot();
+  const store = snap.stores.find((s) => s.storeId === storeId);
+  const merchantId = store?.merchantId;
+  return snap.changelog.filter((l) => {
+    if (l.storeId === storeId) return true;
+    if (!l.action.startsWith("store.capability")) return false;
+    if (l.detail.includes(`（${storeId}）`) || l.detail.includes(storeId)) return true;
+    return Boolean(merchantId && l.merchantId === merchantId && l.detail.includes(storeId));
+  });
 }
 
 export function countStoresForMerchant(merchantId: string): number {
@@ -2237,13 +2346,20 @@ export function saveMerchantCapability(
   const merchant = snap.merchants.find((m) => m.merchantId === merchantId);
   if (merchant) merchant.updatedAt = nowIso();
 
+  const productLineId = resolveMerchantServiceProductLine(cap.productLineIds);
+  const ceiling = brandStoreSelectableCeiling(
+    { ...cap, services: migrateLegacyMerchantServices(cap.services) },
+    productLineId,
+  );
+  const prunedStores = pruneStoreCapabilitiesForMerchant(snap, merchantId, ceiling);
+
   appendChangelog(snap, {
     merchantId,
     action: "capability.update",
     operatorEmail,
     detail: `更新能力与服务（业态 ${input.businessTypeIds.length} · 产线 ${input.productLineIds.length} · 基础服务 ${includedCount} · 增值 ${paidCount}）${
       syncResult ? `；平台预设同步：更新 ${syncResult.updated} · 跳过 ${syncResult.skipped}` : ""
-    }`,
+    }${prunedStores > 0 ? `；已裁剪 ${prunedStores} 家门店超出上限的开通项` : ""}`,
   });
   writeSnapshot(snap);
   return { capability: cap, syncResult };

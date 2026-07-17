@@ -1,12 +1,13 @@
 /**
  * M 平台 · 品牌管理中心 · 路由
  */
-import { getMerchantById, getGroupById, MERCHANT_RESERVED_PATH_SEGMENTS } from "./enterprise-merchant-store";
+import { getMerchantById, getGroupById, getStoreById, MERCHANT_RESERVED_PATH_SEGMENTS } from "./enterprise-merchant-store";
 
 export const ENTERPRISE_MERCHANT_ROUTE_PREFIX = "/m-platform/merchants";
 export const ENTERPRISE_MERCHANT_MODULE_LABEL = "品牌管理中心";
 
 export type MerchantDetailTab = "overview" | "org" | "capabilities" | "changelog";
+export type StoreDetailTab = "overview" | "capabilities" | "changelog";
 
 export function isMPlatformMerchantPath(path: string): boolean {
   return path === ENTERPRISE_MERCHANT_ROUTE_PREFIX || path.startsWith(`${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/`);
@@ -21,6 +22,11 @@ export function merchantHref(subpath: string): string {
 export function merchantDetailHref(merchantId: string, tab: MerchantDetailTab = "overview"): string {
   if (tab === "overview") return merchantHref(`/${encodeURIComponent(merchantId)}`);
   return merchantHref(`/${encodeURIComponent(merchantId)}/${tab}`);
+}
+
+export function storeDetailHref(storeId: string, tab: StoreDetailTab = "overview"): string {
+  if (tab === "overview") return merchantHref(`/stores/${encodeURIComponent(storeId)}`);
+  return merchantHref(`/stores/${encodeURIComponent(storeId)}/${tab}`);
 }
 
 export function merchantGroupEditHref(groupId: string): string {
@@ -61,6 +67,19 @@ export function parseMerchantDetailPath(path: string): { merchantId: string; tab
   return { merchantId: head, tab };
 }
 
+export function parseStoreDetailPath(path: string): { storeId: string; tab: StoreDetailTab } | null {
+  const prefix = `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/stores/`;
+  if (!path.startsWith(prefix)) return null;
+  const rest = path.slice(prefix.length);
+  const parts = rest.split("/").filter(Boolean);
+  if (parts.length === 0) return null;
+  const storeId = decodeURIComponent(parts[0]!);
+  const tabRaw = parts[1];
+  const tab: StoreDetailTab =
+    tabRaw === "capabilities" ? "capabilities" : tabRaw === "changelog" ? "changelog" : "overview";
+  return { storeId, tab };
+}
+
 export function isMerchantListPath(path: string): boolean {
   return path === ENTERPRISE_MERCHANT_ROUTE_PREFIX;
 }
@@ -90,6 +109,18 @@ export function findMerchantPageTitle(path: string): { title: string; module: st
   }
   if (isStoreListPath(path)) {
     return { title: "门店列表", module: ENTERPRISE_MERCHANT_MODULE_LABEL };
+  }
+  const storeDetail = parseStoreDetailPath(path);
+  if (storeDetail) {
+    const store = getStoreById(storeDetail.storeId);
+    const name = store?.name ?? storeDetail.storeId;
+    const tabTitle =
+      storeDetail.tab === "capabilities"
+        ? "能力与服务"
+        : storeDetail.tab === "changelog"
+          ? "变更记录"
+          : "概览";
+    return { title: `${name} · ${tabTitle}`, module: ENTERPRISE_MERCHANT_MODULE_LABEL };
   }
   if (path === `${ENTERPRISE_MERCHANT_ROUTE_PREFIX}/new`) {
     return { title: "新建品牌", module: ENTERPRISE_MERCHANT_MODULE_LABEL };

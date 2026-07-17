@@ -464,13 +464,16 @@
     let reg = 0;
     let ot = 0;
     let ot2 = 0;
+    let paidBreak = 0;
     (group || []).forEach(({ day }) => {
       if (!day) return;
-      reg += Number(day.reg) || 0;
-      ot += Number(day.ot) || 0;
-      ot2 += Number(day.ot2) || 0;
+      const d = normalizeDay(day);
+      reg += Number(d.reg) || 0;
+      ot += Number(d.ot) || 0;
+      ot2 += Number(d.ot2) || 0;
+      paidBreak += paidBreakHoursFromDay(d);
     });
-    return { reg, ot, ot2, total: reg + ot + ot2 };
+    return { reg, ot, ot2, paidBreak, total: reg + paidBreak + ot + ot2 };
   }
 
   function renderManageWeekSummaryHtml(totals, weekIndex) {
@@ -1108,8 +1111,17 @@
     return Number(emp && emp.ot2Rate) || 0;
   }
 
+  function paidBreakHoursFromDay(day) {
+    return Math.round((mealMinutes(day && day.paidMealBreak) / 60) * 100) / 100;
+  }
+
+  function paidBreakAmtFromDay(day, emp) {
+    return paidBreakHoursFromDay(day) * getDayRate(day, emp);
+  }
+
   function sumSegmentPayAmounts(emp) {
     let regAmt = 0;
+    let paidBreakAmt = 0;
     let otAmt = 0;
     let ot2Amt = 0;
     (emp && emp.segments ? emp.segments : []).forEach((raw) => {
@@ -1118,15 +1130,18 @@
       const reg = Number(day.reg) || 0;
       const ot = Number(day.ot) || 0;
       const ot2 = Number(day.ot2) || 0;
+      const paidBreakH = paidBreakHoursFromDay(day);
       regAmt += reg * rate;
+      paidBreakAmt += paidBreakH * rate;
       otAmt += ot * getDayOtRate(day, emp);
       ot2Amt += ot2 * getDayOt2Rate(day, emp);
     });
     return {
       regAmt,
+      paidBreakAmt,
       otAmt,
       ot2Amt,
-      totalAmt: regAmt + otAmt + ot2Amt,
+      totalAmt: regAmt + paidBreakAmt + otAmt + ot2Amt,
     };
   }
 
@@ -1173,19 +1188,25 @@
 
   function formatDetailWeekAmountSummary(totals) {
     const regAmt = totals && totals.regAmt != null ? totals.regAmt : 0;
+    const paidBreakAmt = totals && totals.paidBreakAmt != null ? totals.paidBreakAmt : 0;
     const otAmt = totals && totals.otAmt != null ? totals.otAmt : 0;
     const ot2Amt = totals && totals.ot2Amt != null ? totals.ot2Amt : 0;
     const total =
-      totals && totals.amount != null ? totals.amount : Number(regAmt) + Number(otAmt) + Number(ot2Amt);
+      totals && totals.amount != null
+        ? totals.amount
+        : Number(regAmt) + Number(paidBreakAmt) + Number(otAmt) + Number(ot2Amt);
     return `T: ${fmtMoney(total)}${DETAIL_SUMMARY_SEP}${formatDetailLabeledTriplet(regAmt, otAmt, ot2Amt)}`;
   }
 
   function formatDetailWeekHoursSummary(totals) {
     const reg = totals && totals.reg != null ? totals.reg : 0;
+    const paidBreak = totals && totals.paidBreak != null ? totals.paidBreak : 0;
     const ot = totals && totals.ot != null ? totals.ot : 0;
     const ot2 = totals && totals.ot2 != null ? totals.ot2 : 0;
     const total =
-      totals && totals.hours != null ? totals.hours : Number(reg) + Number(ot) + Number(ot2);
+      totals && totals.hours != null
+        ? totals.hours
+        : Number(reg) + Number(paidBreak) + Number(ot) + Number(ot2);
     return `T: ${fmtMoney(total)}${DETAIL_SUMMARY_SEP}${formatDetailLabeledTriplet(reg, ot, ot2)}`;
   }
 
@@ -1293,14 +1314,15 @@
     return Number.isNaN(n) ? 0 : Math.round(n);
   }
 
-  /** 根据当日 3 组 In/Out 与无薪餐休计算 Regular（小时，两位小数） */
+  /** 根据当日 In/Out、无薪餐休与带薪休息计算 Regular（小时，两位小数；不含带薪休息） */
   function computeRegularHoursFromDay(day) {
     let work = 0;
     day.slots.forEach((sl) => {
       work += pairNetMinutes(sl.in, sl.out);
     });
     const unpaidMeal = mealMinutes(day.unpaidMealBreak);
-    const net = Math.max(0, work - unpaidMeal);
+    const paidBreak = mealMinutes(day.paidMealBreak);
+    const net = Math.max(0, work - unpaidMeal - paidBreak);
     return Math.round((net / 60) * 100) / 100;
   }
 
@@ -2373,14 +2395,16 @@
   }
 
   function sumSegments(emp) {
-    return emp.segments.reduce(
+    return (emp && emp.segments ? emp.segments : []).reduce(
       (acc, s) => {
-        acc.reg += Number(s.reg) || 0;
-        acc.ot += Number(s.ot) || 0;
-        acc.ot2 += Number(s.ot2) || 0;
+        const day = normalizeDay(s);
+        acc.reg += Number(day.reg) || 0;
+        acc.ot += Number(day.ot) || 0;
+        acc.ot2 += Number(day.ot2) || 0;
+        acc.paidBreak += paidBreakHoursFromDay(day);
         return acc;
       },
-      { reg: 0, ot: 0, ot2: 0 }
+      { reg: 0, ot: 0, ot2: 0, paidBreak: 0 }
     );
   }
 
@@ -2865,7 +2889,18 @@
   }
 
   function createWeekTotals() {
-    return { reg: 0, ot: 0, ot2: 0, hours: 0, amount: 0, regAmt: 0, otAmt: 0, ot2Amt: 0 };
+    return {
+      reg: 0,
+      paidBreak: 0,
+      ot: 0,
+      ot2: 0,
+      hours: 0,
+      amount: 0,
+      regAmt: 0,
+      paidBreakAmt: 0,
+      otAmt: 0,
+      ot2Amt: 0,
+    };
   }
 
   function formatMdyDate(date) {
@@ -2901,16 +2936,18 @@
   function buildDayRowsHtml(day, emp) {
     const s = day.slots && day.slots.length ? day.slots : emptySlots();
     const regNum = Number(day.reg) || 0;
+    const paidBreakH = paidBreakHoursFromDay(day);
     const otNum = Number(day.ot) || 0;
     const ot2Num = Number(day.ot2) || 0;
-    const hoursNum = regNum + otNum + ot2Num;
+    const hoursNum = regNum + paidBreakH + otNum + ot2Num;
     const rate = getDayRate(day, emp);
     const otRate = getDayOtRate(day, emp);
     const ot2Rate = getDayOt2Rate(day, emp);
     const regAmtNum = regNum * rate;
+    const paidBreakAmtNum = paidBreakH * rate;
     const otAmtNum = otNum * otRate;
     const ot2AmtNum = ot2Num * ot2Rate;
-    const totalAmtNum = regAmtNum + otAmtNum + ot2AmtNum;
+    const totalAmtNum = regAmtNum + paidBreakAmtNum + otAmtNum + ot2AmtNum;
     const paidMealBreak = escapeHtml(String(day.paidMealBreak || "").trim() || "—");
     const unpaidMealBreak = escapeHtml(String(day.unpaidMealBreak || "").trim() || "—");
     const visibleSlots = s.filter((slot) => {
@@ -2985,21 +3022,25 @@
     segments.forEach((raw, dayIdx) => {
       const day = normalizeDay(raw);
       const regNum = Number(day.reg) || 0;
+      const paidBreakH = paidBreakHoursFromDay(day);
       const otNum = Number(day.ot) || 0;
       const ot2Num = Number(day.ot2) || 0;
-      const hoursNum = regNum + otNum + ot2Num;
+      const hoursNum = regNum + paidBreakH + otNum + ot2Num;
       const regAmtNum = regNum * getDayRate(day, emp);
+      const paidBreakAmtNum = paidBreakAmtFromDay(day, emp);
       const otAmtNum = otNum * getDayOtRate(day, emp);
       const ot2AmtNum = ot2Num * getDayOt2Rate(day, emp);
-      const amountNum = regAmtNum + otAmtNum + ot2AmtNum;
+      const amountNum = regAmtNum + paidBreakAmtNum + otAmtNum + ot2AmtNum;
       const weekIdx = resolveWeekIndex(day.date, periodStartDate, dayIdx);
       const wk = weeks[weekIdx];
       wk.items.push({ day, dayIdx });
       wk.totals.reg += regNum;
+      wk.totals.paidBreak += paidBreakH;
       wk.totals.ot += otNum;
       wk.totals.ot2 += ot2Num;
       wk.totals.hours += hoursNum;
       wk.totals.regAmt += regAmtNum;
+      wk.totals.paidBreakAmt += paidBreakAmtNum;
       wk.totals.otAmt += otAmtNum;
       wk.totals.ot2Amt += ot2AmtNum;
       wk.totals.amount += amountNum;
@@ -3065,9 +3106,10 @@
     const sums = sumSegments(emp);
     const payAmounts = sumSegmentPayAmounts(emp);
     const regAmt = payAmounts.regAmt;
+    const paidBreakAmt = payAmounts.paidBreakAmt;
     const otAmt = payAmounts.otAmt;
     const ot2Amt = payAmounts.ot2Amt;
-    const totalHours = sums.reg + sums.ot + sums.ot2;
+    const totalHours = sums.reg + sums.paidBreak + sums.ot + sums.ot2;
     const totalAmt = payAmounts.totalAmt;
     const mapping = getAdpMapping();
     const segments = Array.isArray(emp.segments) ? emp.segments : [];
@@ -3082,24 +3124,28 @@
     segments.forEach((raw, dayIdx) => {
       const day = normalizeDay(raw);
       const regNum = Number(day.reg) || 0;
+      const paidBreakH = paidBreakHoursFromDay(day);
       const otNum = Number(day.ot) || 0;
       const ot2Num = Number(day.ot2) || 0;
-      const hoursNum = regNum + otNum + ot2Num;
-      const regAmtNum = regNum * getDayRate(day, emp);
+      const hoursNum = regNum + paidBreakH + otNum + ot2Num;
       const dayRate = getDayRate(day, emp);
       const dayOtRate = getDayOtRate(day, emp);
       const dayOt2Rate = getDayOt2Rate(day, emp);
+      const regAmtNum = regNum * dayRate;
+      const paidBreakAmtNum = paidBreakH * dayRate;
       const otAmtNum = otNum * dayOtRate;
       const ot2AmtNum = ot2Num * dayOt2Rate;
-      const amountNum = regAmtNum + otAmtNum + ot2AmtNum;
+      const amountNum = regAmtNum + paidBreakAmtNum + otAmtNum + ot2AmtNum;
       const weekIdx = resolveWeekIndex(day.date, periodStartDate, dayIdx);
       const wk = weeks[weekIdx];
       wk.items.push({ day });
       wk.totals.reg += regNum;
+      wk.totals.paidBreak += paidBreakH;
       wk.totals.ot += otNum;
       wk.totals.ot2 += ot2Num;
       wk.totals.hours += hoursNum;
       wk.totals.regAmt += regAmtNum;
+      wk.totals.paidBreakAmt += paidBreakAmtNum;
       wk.totals.otAmt += otAmtNum;
       wk.totals.ot2Amt += ot2AmtNum;
       wk.totals.amount += amountNum;
@@ -3139,9 +3185,11 @@
           range: rangeText || "",
           totalHours: wk.totals.hours,
           reg: wk.totals.reg,
+          paidBreak: wk.totals.paidBreak,
           ot: wk.totals.ot,
           ot2: wk.totals.ot2,
           regAmt: wk.totals.regAmt,
+          paidBreakAmt: wk.totals.paidBreakAmt,
           otAmt: wk.totals.otAmt,
           ot2Amt: wk.totals.ot2Amt,
           amount: wk.totals.amount,
@@ -3169,10 +3217,12 @@
       declarationText: renderDeclarationText(emp),
       summary: {
         regH: sums.reg,
+        paidBreakH: sums.paidBreak,
         otH: sums.ot,
         ot2H: sums.ot2,
         totalH: totalHours,
         regAmt,
+        paidBreakAmt,
         otAmt,
         ot2Amt,
         totalAmt,
@@ -3381,31 +3431,36 @@ body{margin:0;padding:24px;background:#fff;}
     const sums = sumSegments(emp);
     const payAmounts = sumSegmentPayAmounts(emp);
     const regAmt = payAmounts.regAmt;
+    const paidBreakAmt = payAmounts.paidBreakAmt;
     const otAmt = payAmounts.otAmt;
     const ot2Amt = payAmounts.ot2Amt;
-    const totalHours = sums.reg + sums.ot + sums.ot2;
+    const totalHours = sums.reg + sums.paidBreak + sums.ot + sums.ot2;
     const totalAmt = payAmounts.totalAmt;
 
     $("#sum-reg-h").textContent = fmtMoney(sums.reg);
+    const sumPaidBreakH = $("#sum-paid-break-h");
+    if (sumPaidBreakH) sumPaidBreakH.textContent = fmtMoney(sums.paidBreak);
     $("#sum-ot-h").textContent = fmtMoney(sums.ot);
     $("#sum-ot2-h").textContent = fmtMoney(sums.ot2);
     $("#sum-total-h").textContent = fmtMoney(totalHours);
 
     $("#sum-reg-amt").textContent = fmtMoney(regAmt);
+    const sumPaidBreakAmt = $("#sum-paid-break-amt");
+    if (sumPaidBreakAmt) sumPaidBreakAmt.textContent = fmtMoney(paidBreakAmt);
     $("#sum-ot-amt").textContent = fmtMoney(otAmt);
     $("#sum-ot2-amt").textContent = fmtMoney(ot2Amt);
     $("#sum-total-amt").textContent = fmtMoney(totalAmt);
 
-    const svcw = Number(emp.adjustments && emp.adjustments.svcw) || 0;
-    const tips = Number(emp.adjustments && emp.adjustments.tips) || 0;
-    const totalIncome = totalAmt + svcw + tips;
+    const totalIncome = totalAmt;
     const attendanceIncomeEl = $("#sum-attendance-income");
-    const svcwIncomeEl = $("#sum-svcw-income");
-    const tipsIncomeEl = $("#sum-tips-income");
+    const paidBreakIncomeEl = $("#sum-paid-break-income");
+    const otIncomeEl = $("#sum-ot-income");
+    const ot2IncomeEl = $("#sum-ot2-income");
     const totalIncomeEl = $("#sum-total-income");
-    if (attendanceIncomeEl) attendanceIncomeEl.textContent = fmtMoney(totalAmt);
-    if (svcwIncomeEl) svcwIncomeEl.textContent = fmtMoney(svcw);
-    if (tipsIncomeEl) tipsIncomeEl.textContent = fmtMoney(tips);
+    if (attendanceIncomeEl) attendanceIncomeEl.textContent = fmtMoney(regAmt);
+    if (paidBreakIncomeEl) paidBreakIncomeEl.textContent = fmtMoney(paidBreakAmt);
+    if (otIncomeEl) otIncomeEl.textContent = fmtMoney(otAmt);
+    if (ot2IncomeEl) ot2IncomeEl.textContent = fmtMoney(ot2Amt);
     if (totalIncomeEl) totalIncomeEl.textContent = fmtMoney(totalIncome);
 
     syncDetailMetaFields(emp, period);
@@ -3413,15 +3468,18 @@ body{margin:0;padding:24px;background:#fff;}
     const declBody = $("#detail-declaration-body");
     if (declBody) declBody.innerHTML = renderDeclarationHtml(emp);
 
+    const paidBreakLabel = escapeHtml(T("manage.paidBreak"));
     $("#detail-hours-grid").innerHTML = `
       <div class="payroll-detail-period-summary">
         <h4 class="payroll-detail-daily-title">${escapeHtml(T("detail.periodSummary"))}</h4>
         <div class="payroll-detail-grid">
         <div class="head">Regular</div>
+        <div class="head">${paidBreakLabel}</div>
         <div class="head">OT</div>
         <div class="head">OT2</div>
         <div class="head highlight">${escapeHtml(T("detail.totalHoursHead"))}</div>
         <div class="cell">${fmtMoney(sums.reg)}</div>
+        <div class="cell">${fmtMoney(sums.paidBreak)}</div>
         <div class="cell">${fmtMoney(sums.ot)}</div>
         <div class="cell">${fmtMoney(sums.ot2)}</div>
         <div class="cell" style="font-weight:600">${fmtMoney(totalHours)}</div>
@@ -3430,8 +3488,10 @@ body{margin:0;padding:24px;background:#fff;}
         <div style="color:var(--text-tertiary);font-size:12px">${escapeHtml(T("manage.amount"))}</div>
         <div style="color:var(--text-tertiary);font-size:12px">${escapeHtml(T("manage.amount"))}</div>
         <div style="color:var(--text-tertiary);font-size:12px">${escapeHtml(T("manage.amount"))}</div>
+        <div style="color:var(--text-tertiary);font-size:12px">${escapeHtml(T("manage.amount"))}</div>
         <div style="color:var(--text-tertiary);font-size:12px">${escapeHtml(T("detail.totalAmountHead"))}</div>
         <div class="cell">${fmtMoney(regAmt)}</div>
+        <div class="cell">${fmtMoney(paidBreakAmt)}</div>
         <div class="cell">${fmtMoney(otAmt)}</div>
         <div class="cell">${fmtMoney(ot2Amt)}</div>
         <div class="cell" style="font-weight:600">${fmtMoney(totalAmt)}</div>
