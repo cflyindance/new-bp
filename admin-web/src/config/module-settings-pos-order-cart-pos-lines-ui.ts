@@ -1,17 +1,22 @@
 /**
  * 前厅 · 点单页展示：主开关 + POS / POS GO / PayPad 产线多选。
- * seq 122 减菜后自动重定向、222 客户姓名必填、223 客户电话必填、138 自定义点单。
+ * seq 121 订单数量支持小数、137 显示 ASAP 订单时间、
+ * 122 减菜后自动重定向、222 客户姓名必填、223 客户电话必填、138 自定义点单。
  */
 
 import { readModuleSettingJson, writeModuleSettingJson } from "./module-settings-form-ui";
 import { moduleSettingToggleStorageKey } from "./module-settings-toggle-ui";
 
+export const ORDER_QTY_DECIMAL_SEQ = 121;
+export const SHOW_ASAP_ORDER_TIME_SEQ = 137;
 export const REDUCE_DISH_AUTO_REDIRECT_SEQ = 122;
 export const CUSTOMER_NAME_REQUIRED_SEQ = 222;
 export const CUSTOMER_PHONE_REQUIRED_SEQ = 223;
 export const CUSTOM_ORDER_SEQ = 138;
 
 export const POS_ORDER_CART_POS_LINES_SEQS = [
+  ORDER_QTY_DECIMAL_SEQ,
+  SHOW_ASAP_ORDER_TIME_SEQ,
   REDUCE_DISH_AUTO_REDIRECT_SEQ,
   CUSTOMER_NAME_REQUIRED_SEQ,
   CUSTOMER_PHONE_REQUIRED_SEQ,
@@ -34,6 +39,8 @@ const ALL_LINE_IDS: PosOrderCartPosProductLineId[] = POS_ORDER_CART_POS_PRODUCT_
 );
 
 const LINES_STORAGE_ID_BY_SEQ: Record<PosOrderCartPosLinesSeq, string> = {
+  [ORDER_QTY_DECIMAL_SEQ]: "121-order-qty-decimal-lines",
+  [SHOW_ASAP_ORDER_TIME_SEQ]: "137-show-asap-order-time-lines",
   [REDUCE_DISH_AUTO_REDIRECT_SEQ]: "122-reduce-dish-auto-redirect-lines",
   [CUSTOMER_NAME_REQUIRED_SEQ]: "222-customer-name-required-lines",
   [CUSTOMER_PHONE_REQUIRED_SEQ]: "223-customer-phone-required-lines",
@@ -41,6 +48,8 @@ const LINES_STORAGE_ID_BY_SEQ: Record<PosOrderCartPosLinesSeq, string> = {
 };
 
 const LINES_GROUP_ARIA_BY_SEQ: Record<PosOrderCartPosLinesSeq, string> = {
+  [ORDER_QTY_DECIMAL_SEQ]: "订单数量支持小数适用产线",
+  [SHOW_ASAP_ORDER_TIME_SEQ]: "显示 ASAP 订单时间适用产线",
   [REDUCE_DISH_AUTO_REDIRECT_SEQ]: "减菜后自动重定向适用产线",
   [CUSTOMER_NAME_REQUIRED_SEQ]: "客户姓名必填适用产线",
   [CUSTOMER_PHONE_REQUIRED_SEQ]: "客户电话必填适用产线",
@@ -95,6 +104,12 @@ export function writePosOrderCartPosLines(
   writeModuleSettingJson(LINES_STORAGE_ID_BY_SEQ[seq], unique);
 }
 
+export function ensurePosOrderCartPosLinesDefault(seq: PosOrderCartPosLinesSeq): void {
+  if (readPosOrderCartPosLines(seq).length === 0) {
+    writePosOrderCartPosLines(seq, [...ALL_LINE_IDS]);
+  }
+}
+
 export function isPosOrderCartPosLinesSeq(seq: number): seq is PosOrderCartPosLinesSeq {
   return (POS_ORDER_CART_POS_LINES_SEQS as readonly number[]).includes(seq);
 }
@@ -141,7 +156,6 @@ export function renderPosOrderCartPosLinesPanelHtml(seq: PosOrderCartPosLinesSeq
       data-pos-order-cart-pos-lines-panel="${seq}"
       ${on ? "" : 'aria-hidden="true"'}
     >
-      <p class="m-0 mb-2 text-xs font-medium text-muted-foreground">适用产线（多选）</p>
       ${renderLinesMultiselectHtml(seq, on)}
     </div>`;
 }

@@ -1,26 +1,29 @@
 /**
- * 前厅管理中心 · 品类设置（自助餐场景：年龄/类别、菜单、营业时间、特殊菜单）
+ * 前厅管理中心 · 品类管理（自助餐场景：年龄/类别、菜单、特殊品类、设置）
  * 路径：/operations/queue-call/category-settings/*
  */
 
 import {
-  readDishTags,
-  renderStandaloneDishPickerHtml,
-  type DishTag,
-} from "./module-settings-dish-rules-ui";
+  bindBrandMenuStructurePicker,
+  formatBrandMenuStructureSummary,
+  readBrandMenuStructureKeysFromPicker,
+  renderBrandMenuStructurePickerHtml,
+} from "./brand-menu-structure-picker-ui";
+import {
+  bindImageSourcePicker,
+  openImageSourcePicker,
+  renderImageSourcePickerModalsHtml,
+} from "./image-source-picker-ui";
 import { readModuleSettingJson, writeModuleSettingJson } from "./module-settings-form-ui";
 import {
-  bindMenuGroupDropdownPickers,
-  collectMenuGroupsFromDropdownWithCatalog,
-  ensureMenuGroupDropdownDocumentCloseListener,
-  renderMenuGroupDropdownHtml,
-  type MenuGroupTag,
-} from "./module-settings-menu-group-ui";
+  ensureGuestCategoryModeToggleMigrated,
+  GUEST_MENU_CATEGORY_MODE_SEQ,
+  renderGuestCategoryModePanelHtml,
+} from "./module-settings-guest-category-mode-ui";
+import { writeModuleSettingToggleOn } from "./module-settings-toggle-ui";
 import {
-  formatScheduleTimeRange,
-  getScheduleActiveDays,
+  formatScheduleSummary,
   readBusinessHourSchedules,
-  STORE_BUSINESS_HOUR_DAY_BADGES,
   type StoreBusinessHourSchedule,
 } from "./module-settings-store-business-hours-ui";
 import {
@@ -31,33 +34,30 @@ import {
 
 export const FOH_CATEGORY_SETTINGS_BASE = "/operations/queue-call/category-settings";
 
-/** 与设置目录 seq 655 对齐，供菜品选择器原型使用 */
-const FOH_MENU_PARENT_SEQ = 655;
-
 export const FOH_CATEGORY_SETTINGS_TABS = [
   {
     id: "age-category",
-    title: "类别设置",
-    titleEn: "Age & category",
+    title: "品类类别",
+    titleEn: "Category types",
     path: `${FOH_CATEGORY_SETTINGS_BASE}/age-category`,
   },
   {
     id: "menu",
-    title: "菜单设置",
-    titleEn: "Menu settings",
+    title: "品类菜单",
+    titleEn: "Category menus",
     path: `${FOH_CATEGORY_SETTINGS_BASE}/menu`,
   },
   {
-    id: "hours",
-    title: "营业时间",
-    titleEn: "Business hours",
-    path: `${FOH_CATEGORY_SETTINGS_BASE}/hours`,
+    id: "special-menu",
+    title: "特殊品类",
+    titleEn: "Special category",
+    path: `${FOH_CATEGORY_SETTINGS_BASE}/special-menu`,
   },
   {
-    id: "special-menu",
-    title: "特殊菜单",
-    titleEn: "Special menu",
-    path: `${FOH_CATEGORY_SETTINGS_BASE}/special-menu`,
+    id: "settings",
+    title: "品类设置",
+    titleEn: "Category settings",
+    path: `${FOH_CATEGORY_SETTINGS_BASE}/settings`,
   },
 ] as const;
 
@@ -67,10 +67,14 @@ const STORAGE_ID = "foh-category-settings:v1";
 
 const AGE_TAG_OPTIONS = ["成人", "儿童", "长者", "未标记"] as const;
 
-const STORE_BUSINESS_HOURS_PATH = "/store/business-hours";
-
 type AgeBand = { id: string; name: string; tag: string };
-type MealCategory = { id: string; name: string; /** 引用的门店营业时段 id（seq 418） */ scheduleIds: string[] };
+type MealCategory = {
+  id: string;
+  name: string;
+  imageDataUrl?: string;
+  /** 引用的门店营业时段 id（seq 418） */
+  scheduleIds: string[];
+};
 
 export type MenuComboKey = string;
 
@@ -79,6 +83,10 @@ export type MenuComboConfig = {
   viewOnlyMode: "dish" | "category";
   /** 其他年龄×类别组合的 key（仅 viewOnlyMode=category 时） */
   viewOnlyCategoryKeys: MenuComboKey[];
+  /** 可看可下单：组/类/菜结构 key */
+  orderableStructureKeys: string[];
+  /** 仅可查看 · 按菜配置：组/类/菜结构 key */
+  viewOnlyStructureKeys: string[];
 };
 
 export type ComboDefinition = {
@@ -91,16 +99,25 @@ export type ComboDefinition = {
 export type FohSpecialMenuEntry = {
   id: string;
   name: string;
-  /** 绑定的品牌菜单（seq 548 菜单库） */
-  menus: MenuGroupTag[];
+  imageDataUrl?: string;
+  /** 组/类/菜三级结构 key（对齐分类管理菜单选择） */
+  structureKeys: string[];
 };
+
+type SpecialMenuLineId = "emenu" | "sdi";
+
+const SPECIAL_MENU_PRODUCT_LINES = [
+  { id: "emenu" as const, label: "eMenu" },
+  { id: "sdi" as const, label: "SDI" },
+];
 
 type FohCategorySettingsState = {
   ages: AgeBand[];
   categories: MealCategory[];
   menuByCombo: Record<MenuComboKey, MenuComboConfig>;
   hoursNote: string;
-  specialMenuEnabled: boolean;
+  /** 特殊品类适用产线；有勾选即视为已开启 */
+  specialMenuLines: SpecialMenuLineId[];
   specialMenus: FohSpecialMenuEntry[];
 };
 
@@ -112,42 +129,43 @@ const DEFAULT_STATE: FohCategorySettingsState = {
   categories: [],
   menuByCombo: {},
   hoursNote: "",
-  specialMenuEnabled: false,
+  specialMenuLines: [],
   specialMenus: [],
 };
-
-const FOH_SPECIAL_MENU_TOGGLE_TRACK_ON =
-  "bg-primary border-primary shadow-sm";
-const FOH_SPECIAL_MENU_TOGGLE_TRACK_OFF =
-  "bg-neutral-300 border-neutral-400/80 shadow-inner dark:bg-neutral-600 dark:border-neutral-500";
-const FOH_SPECIAL_MENU_TOGGLE_KNOB =
-  "bg-white shadow-md ring-1 ring-black/10 dark:bg-neutral-100 dark:ring-white/15";
 
 function newSpecialMenuId(): string {
   return `sm-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 }
 
-function normalizeSpecialMenuEntry(raw: Partial<FohSpecialMenuEntry>): FohSpecialMenuEntry | null {
+function normalizeSpecialMenuEntry(
+  raw: Partial<FohSpecialMenuEntry> & { menus?: unknown },
+): FohSpecialMenuEntry | null {
   if (!raw?.id) return null;
-  const menus = Array.isArray(raw.menus)
-    ? raw.menus.filter((m): m is MenuGroupTag => !!m && typeof m.id === "string" && typeof m.name === "string")
-    : [];
   return {
     id: raw.id,
     name: typeof raw.name === "string" ? raw.name : "",
-    menus,
+    imageDataUrl:
+      typeof raw.imageDataUrl === "string" && raw.imageDataUrl.trim()
+        ? raw.imageDataUrl.trim()
+        : undefined,
+    structureKeys: normalizeStructureKeys(raw.structureKeys),
   };
 }
 
-function defaultSpecialMenuDemoEntry(): FohSpecialMenuEntry {
-  return {
-    id: newSpecialMenuId(),
-    name: "",
-    menus: [
-      { id: "menu-shangben-shiitake", name: "上本香菇锅" },
-      { id: "menu-single-pot", name: "单锅" },
-    ],
-  };
+function normalizeSpecialMenuLines(raw: unknown, legacyEnabled?: boolean): SpecialMenuLineId[] {
+  const valid = new Set<SpecialMenuLineId>(["emenu", "sdi"]);
+  if (Array.isArray(raw)) {
+    const lines = raw.filter(
+      (id): id is SpecialMenuLineId => typeof id === "string" && valid.has(id as SpecialMenuLineId),
+    );
+    return uniqueStrings(lines) as SpecialMenuLineId[];
+  }
+  if (legacyEnabled) return ["emenu", "sdi"];
+  return [];
+}
+
+function isSpecialMenuEnabled(state: FohCategorySettingsState): boolean {
+  return state.specialMenuLines.length > 0;
 }
 
 const MODULE_SETTING_CONTROL_CLASS =
@@ -196,6 +214,10 @@ function normalizeCategory(raw: Partial<MealCategory> & { hours?: string }): Mea
   return {
     id: raw.id,
     name: raw.name,
+    imageDataUrl:
+      typeof raw.imageDataUrl === "string" && raw.imageDataUrl.trim()
+        ? raw.imageDataUrl.trim()
+        : undefined,
     scheduleIds: normalizeCategoryScheduleIds(raw, schedules),
   };
 }
@@ -245,12 +267,34 @@ export function listMenuCombinations(state: FohCategorySettingsState): ComboDefi
   return out;
 }
 
-function orderableStorageId(comboKeyValue: MenuComboKey): string {
-  return `foh-menu-${comboKeyValue}-orderable`;
+const BTN_PRIMARY =
+  "inline-flex h-9 shrink-0 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90";
+
+const BTN_GHOST =
+  "inline-flex h-9 shrink-0 items-center justify-center rounded-md border border-border bg-background px-4 text-sm font-medium text-foreground shadow-sm hover:bg-muted";
+
+const BTN_DESTRUCTIVE =
+  "inline-flex h-9 shrink-0 items-center justify-center rounded-md bg-destructive px-4 text-sm font-medium text-destructive-foreground shadow-sm hover:bg-destructive/90";
+
+const BTN_LINK = "text-sm font-medium text-primary hover:underline";
+
+const INPUT_CLASS =
+  "h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+
+function uniqueStrings(values: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const value of values) {
+    if (seen.has(value)) continue;
+    seen.add(value);
+    out.push(value);
+  }
+  return out;
 }
 
-function viewDishStorageId(comboKeyValue: MenuComboKey): string {
-  return `foh-menu-${comboKeyValue}-view-dishes`;
+function normalizeStructureKeys(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  return uniqueStrings(raw.filter((id): id is string => typeof id === "string" && id.length > 0));
 }
 
 function defaultMenuConfig(age: AgeBand, category: MealCategory): MenuComboConfig {
@@ -258,6 +302,8 @@ function defaultMenuConfig(age: AgeBand, category: MealCategory): MenuComboConfi
     displayName: `${age.name}${category.name}-1`,
     viewOnlyMode: "category",
     viewOnlyCategoryKeys: [],
+    orderableStructureKeys: [],
+    viewOnlyStructureKeys: [],
   };
 }
 
@@ -281,6 +327,8 @@ function normalizeMenuByCombo(
           : defaultMenuConfig(combo.age, combo.category).displayName,
       viewOnlyMode: mode,
       viewOnlyCategoryKeys: keys.filter((k) => k !== combo.key && validKeys.has(k)),
+      orderableStructureKeys: normalizeStructureKeys(prev?.orderableStructureKeys),
+      viewOnlyStructureKeys: normalizeStructureKeys(prev?.viewOnlyStructureKeys),
     };
   }
   return out;
@@ -299,7 +347,10 @@ function normalizeState(raw: unknown): FohCategorySettingsState {
     base.menuByCombo = normalizeMenuByCombo({}, combos);
     return base;
   }
-  const o = raw as Partial<FohCategorySettingsState> & { menuNote?: string };
+  const o = raw as Partial<FohCategorySettingsState> & {
+    menuNote?: string;
+    specialMenuEnabled?: boolean;
+  };
   const ages = Array.isArray(o.ages)
     ? o.ages.filter((a): a is AgeBand => !!a && typeof a.id === "string" && typeof a.name === "string")
     : [...DEFAULT_STATE.ages];
@@ -316,7 +367,7 @@ function normalizeState(raw: unknown): FohCategorySettingsState {
     categories: resolvedCategories,
     menuByCombo: {},
     hoursNote: typeof o.hoursNote === "string" ? o.hoursNote : "",
-    specialMenuEnabled: o.specialMenuEnabled === true,
+    specialMenuLines: normalizeSpecialMenuLines(o.specialMenuLines, o.specialMenuEnabled === true),
     specialMenus: Array.isArray(o.specialMenus)
       ? o.specialMenus
           .map((e) => normalizeSpecialMenuEntry(e as Partial<FohSpecialMenuEntry>))
@@ -351,30 +402,159 @@ export function getFohCategorySettingsTabPath(tabId: FohCategorySettingsTabId): 
   return FOH_CATEGORY_SETTINGS_TABS.find((t) => t.id === tabId)?.path ?? FOH_CATEGORY_SETTINGS_TABS[0].path;
 }
 
-function renderSidebarNav(activePath: string): string {
+function renderTabBar(activePath: string): string {
   const items = FOH_CATEGORY_SETTINGS_TABS.map((tab) => {
-    const active = activePath === tab.path || activePath.startsWith(`${tab.path}/`);
+    const selected = activePath === tab.path || activePath.startsWith(`${tab.path}/`);
     return `
       <a
         href="#${tab.path}"
-        class="block border-b border-border px-4 py-3 text-sm transition-colors ${
-          active
-            ? "bg-primary/10 font-medium text-primary"
-            : "text-foreground hover:bg-muted/60"
-        }"
+        role="tab"
         data-foh-category-settings-tab="${tab.id}"
-        ${active ? 'aria-current="page"' : ""}
+        class="min-h-10 border-b-2 px-4 text-sm font-medium transition-colors ${
+          selected
+            ? "border-primary text-primary"
+            : "border-transparent text-muted-foreground hover:border-border hover:text-foreground"
+        }"
+        ${selected ? 'aria-selected="true" aria-current="page"' : 'aria-selected="false"'}
       >${escapeHtml(tab.title)}</a>`;
   }).join("");
 
   return `
-    <nav
-      class="w-full shrink-0 self-start overflow-hidden rounded-xl border border-border bg-card sm:sticky sm:top-0 sm:w-44"
-      aria-label="品类设置"
+    <div
+      class="flex shrink-0 gap-1 border-b border-border"
+      role="tablist"
+      aria-label="品类管理"
       data-foh-category-settings-nav
     >
       ${items}
-    </nav>`;
+    </div>`;
+}
+
+function renderAgeCategoryDeleteDialog(): string {
+  return `
+    <div
+      class="fixed inset-0 z-[110] hidden items-center justify-center p-4"
+      data-foh-age-cat-delete-dialog
+      data-mode=""
+      data-kind=""
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="foh-age-cat-delete-dialog-title"
+    >
+      <button type="button" class="absolute inset-0 bg-black/45 backdrop-blur-[1px]" data-foh-age-cat-delete-backdrop aria-label="关闭"></button>
+      <div class="relative z-10 w-full max-w-sm overflow-hidden rounded-xl border border-border bg-card shadow-xl">
+        <div class="border-b border-border px-5 py-4">
+          <h3 id="foh-age-cat-delete-dialog-title" class="text-base font-semibold text-card-foreground" data-foh-age-cat-delete-title>确认删除</h3>
+        </div>
+        <div class="px-5 py-4">
+          <input type="hidden" data-foh-age-cat-delete-target-id value="" />
+          <p class="m-0 text-sm text-foreground" data-foh-age-cat-delete-message>确定删除？</p>
+        </div>
+        <div class="flex justify-end gap-2 border-t border-border px-5 py-4">
+          <button type="button" class="${BTN_GHOST}" data-foh-age-cat-delete-cancel>取消</button>
+          <button type="button" class="${BTN_DESTRUCTIVE}" data-foh-age-cat-delete-confirm>删除</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function showAgeCategoryDeleteDialog(root: HTMLElement): void {
+  const dialog = root.querySelector<HTMLElement>("[data-foh-age-cat-delete-dialog]");
+  if (!dialog) return;
+  dialog.classList.remove("hidden");
+  dialog.classList.add("flex");
+}
+
+function hideAgeCategoryDeleteDialog(root: HTMLElement): void {
+  const dialog = root.querySelector<HTMLElement>("[data-foh-age-cat-delete-dialog]");
+  if (!dialog) return;
+  dialog.classList.add("hidden");
+  dialog.classList.remove("flex");
+  dialog.setAttribute("data-mode", "");
+  dialog.setAttribute("data-kind", "");
+  const idInput = dialog.querySelector<HTMLInputElement>("[data-foh-age-cat-delete-target-id]");
+  if (idInput) idInput.value = "";
+}
+
+function openAgeCategoryDeleteConfirm(
+  root: HTMLElement,
+  kind: "age" | "category",
+  targetId: string,
+  name: string,
+): void {
+  const dialog = root.querySelector<HTMLElement>("[data-foh-age-cat-delete-dialog]");
+  const titleEl = dialog?.querySelector<HTMLElement>("[data-foh-age-cat-delete-title]");
+  const messageEl = dialog?.querySelector<HTMLElement>("[data-foh-age-cat-delete-message]");
+  const idInput = dialog?.querySelector<HTMLInputElement>("[data-foh-age-cat-delete-target-id]");
+  const cancelBtn = dialog?.querySelector<HTMLElement>("[data-foh-age-cat-delete-cancel]");
+  const confirmBtn = dialog?.querySelector<HTMLButtonElement>("[data-foh-age-cat-delete-confirm]");
+  if (!dialog || !messageEl || !idInput || !confirmBtn) return;
+  dialog.setAttribute("data-mode", "confirm");
+  dialog.setAttribute("data-kind", kind);
+  idInput.value = targetId;
+  if (titleEl) titleEl.textContent = "确认删除";
+  const label = name ? `「${name}」` : kind === "age" ? "该年龄阶段" : "该类别";
+  messageEl.textContent = `确定删除${label}？相关菜单组合将一并移除。`;
+  cancelBtn?.classList.remove("hidden");
+  confirmBtn.textContent = "删除";
+  confirmBtn.className = BTN_DESTRUCTIVE;
+  showAgeCategoryDeleteDialog(root);
+}
+
+function openAgeCategoryNotice(root: HTMLElement, message: string): void {
+  const dialog = root.querySelector<HTMLElement>("[data-foh-age-cat-delete-dialog]");
+  const titleEl = dialog?.querySelector<HTMLElement>("[data-foh-age-cat-delete-title]");
+  const messageEl = dialog?.querySelector<HTMLElement>("[data-foh-age-cat-delete-message]");
+  const idInput = dialog?.querySelector<HTMLInputElement>("[data-foh-age-cat-delete-target-id]");
+  const cancelBtn = dialog?.querySelector<HTMLElement>("[data-foh-age-cat-delete-cancel]");
+  const confirmBtn = dialog?.querySelector<HTMLButtonElement>("[data-foh-age-cat-delete-confirm]");
+  if (!dialog || !messageEl || !idInput || !confirmBtn) return;
+  dialog.setAttribute("data-mode", "notice");
+  dialog.setAttribute("data-kind", "");
+  idInput.value = "";
+  if (titleEl) titleEl.textContent = "提示";
+  messageEl.textContent = message;
+  cancelBtn?.classList.add("hidden");
+  confirmBtn.textContent = "确定";
+  confirmBtn.className = BTN_PRIMARY;
+  showAgeCategoryDeleteDialog(root);
+}
+
+function confirmAgeCategoryDelete(root: HTMLElement, remount: () => void): void {
+  const dialog = root.querySelector<HTMLElement>("[data-foh-age-cat-delete-dialog]");
+  if (!dialog) return;
+  const mode = dialog.getAttribute("data-mode") || "";
+  if (mode === "notice") {
+    hideAgeCategoryDeleteDialog(root);
+    return;
+  }
+  const kind = dialog.getAttribute("data-kind") || "";
+  const targetId =
+    dialog.querySelector<HTMLInputElement>("[data-foh-age-cat-delete-target-id]")?.value.trim() ||
+    "";
+  if (!targetId || (kind !== "age" && kind !== "category")) {
+    hideAgeCategoryDeleteDialog(root);
+    return;
+  }
+  const state = readFohCategorySettingsState();
+  if (kind === "age") {
+    if (state.ages.length <= 1) {
+      hideAgeCategoryDeleteDialog(root);
+      openAgeCategoryNotice(root, "至少保留一个年龄阶段。");
+      return;
+    }
+    state.ages = state.ages.filter((a) => a.id !== targetId);
+  } else {
+    if (state.categories.length <= 1) {
+      hideAgeCategoryDeleteDialog(root);
+      openAgeCategoryNotice(root, "至少保留一个类别。");
+      return;
+    }
+    state.categories = state.categories.filter((c) => c.id !== targetId);
+  }
+  writeFohCategorySettingsState(state);
+  hideAgeCategoryDeleteDialog(root);
+  remountFohCategorySettings(remount);
 }
 
 function renderAgeCategoryPanel(state: FohCategorySettingsState): string {
@@ -401,50 +581,145 @@ function renderAgeCategoryPanel(state: FohCategorySettingsState): string {
     })
     .join("");
 
+  const schedules = readBusinessHourSchedules();
   const categoryRows = state.categories
-    .map(
-      (cat) => `
+    .map((cat) => {
+      const hoursLabel = formatCategoryHoursLabel(cat.scheduleIds, schedules);
+      const imageCell = cat.imageDataUrl
+        ? `<img src="${escapeHtml(cat.imageDataUrl)}" alt="" class="size-10 rounded border border-border object-cover" />`
+        : `<div class="flex size-10 items-center justify-center rounded border border-dashed border-border bg-muted/40 text-[10px] text-muted-foreground">NO IMAGE</div>`;
+      return `
         <tr class="border-b border-border last:border-0" data-foh-category-cat-row="${escapeHtml(cat.id)}">
           <td class="px-3 py-2.5 text-sm">${escapeHtml(cat.name)}</td>
+          <td class="px-3 py-2.5">${imageCell}</td>
+          <td class="px-3 py-2.5 text-xs text-muted-foreground">${escapeHtml(hoursLabel)}</td>
           <td class="px-3 py-2.5 text-right whitespace-nowrap">
-            <button type="button" class="text-xs text-primary hover:underline" data-foh-category-cat-edit="${escapeHtml(cat.id)}">修改</button>
+            <button type="button" class="text-xs text-primary hover:underline" data-foh-category-cat-edit="${escapeHtml(cat.id)}">编辑</button>
             <span class="mx-1 text-muted-foreground">|</span>
             <button type="button" class="text-xs text-destructive hover:underline" data-foh-category-cat-delete="${escapeHtml(cat.id)}">删除</button>
           </td>
-        </tr>`,
-    )
+        </tr>`;
+    })
     .join("");
 
-  const comboCount = listMenuCombinations(state).length;
-
   return `
-    <div class="grid min-h-[360px] gap-4 md:grid-cols-2" data-foh-category-settings-panel="age-category">
+    <div class="flex flex-col gap-4" data-foh-category-settings-panel="age-category">
       <section class="flex flex-col overflow-hidden rounded-xl border border-border bg-card">
-        <header class="border-b border-border bg-muted/40 px-4 py-2.5 text-center text-sm font-medium">年龄</header>
+        <header class="flex items-center justify-between gap-3 border-b border-border bg-muted/40 px-4 py-2.5">
+          <span class="text-sm font-medium text-foreground">年龄</span>
+          <button type="button" class="${BTN_PRIMARY}" data-foh-category-age-add>增加</button>
+        </header>
         <div class="min-h-0 flex-1 overflow-auto">
           <table class="w-full">
             <tbody>${ageRows}</tbody>
           </table>
         </div>
-        <div class="border-t border-border p-3">
-          <button type="button" class="w-full rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90" data-foh-category-age-add>增加</button>
-        </div>
       </section>
       <section class="flex flex-col overflow-hidden rounded-xl border border-border bg-card">
-        <header class="border-b border-border bg-muted/40 px-4 py-2.5 text-center text-sm font-medium">类别</header>
+        <header class="flex items-center justify-between gap-3 border-b border-border bg-muted/40 px-4 py-2.5">
+          <span class="text-sm font-medium text-foreground">类别</span>
+          <button type="button" class="${BTN_PRIMARY}" data-foh-category-cat-add>增加</button>
+        </header>
         <div class="min-h-0 flex-1 overflow-auto">
           <table class="w-full">
-            <tbody>${categoryRows}</tbody>
+            <thead>
+              <tr class="border-b border-border text-left text-xs text-muted-foreground">
+                <th class="px-3 py-2 font-medium">名称</th>
+                <th class="px-3 py-2 font-medium">图片</th>
+                <th class="px-3 py-2 font-medium">营业时间</th>
+                <th class="px-3 py-2 text-right font-medium">操作</th>
+              </tr>
+            </thead>
+            <tbody>${categoryRows || `<tr><td colspan="4" class="px-3 py-8 text-center text-sm text-muted-foreground">暂无类别</td></tr>`}</tbody>
           </table>
         </div>
-        <div class="border-t border-border p-3">
-          <button type="button" class="w-full rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90" data-foh-category-cat-add>增加</button>
-        </div>
       </section>
-    </div>
-    <p class="mt-3 text-xs text-muted-foreground">
-      菜单设置将按「年龄 × 类别」自动生成 ${comboCount} 组配置（标题格式：年龄名-类别名）。修改本页后请前往「菜单设置」查看。
-    </p>`;
+    </div>`;
+}
+
+function renderCategoryScheduleOption(schedule: StoreBusinessHourSchedule, selectedIds: string[]): string {
+  const checked = selectedIds.includes(schedule.id);
+  return `
+    <label
+      class="flex cursor-pointer items-start gap-3 rounded-md border border-border px-3 py-2.5 hover:bg-muted/30 has-[:checked]:border-primary/40 has-[:checked]:bg-primary/5"
+    >
+      <input
+        type="checkbox"
+        class="mt-0.5 size-4 shrink-0 accent-primary"
+        data-foh-cat-dialog-schedule
+        value="${escapeHtml(schedule.id)}"
+        ${checked ? "checked" : ""}
+      />
+      <span class="min-w-0">
+        <span class="block text-sm font-medium text-foreground">${escapeHtml(schedule.name)}</span>
+        <span class="block text-xs tabular-nums text-muted-foreground">${escapeHtml(formatScheduleSummary(schedule))}</span>
+      </span>
+    </label>`;
+}
+
+function renderCategorySchedulePicker(selectedIds: string[]): string {
+  const schedules = readBusinessHourSchedules();
+  if (schedules.length === 0) {
+    return `
+      <div class="rounded-md border border-dashed border-border bg-muted/20 px-3 py-4 text-sm text-muted-foreground">
+        暂无可用营业时间，请先在「营业与运营 → 营业时段」中新建营业时间规则。
+      </div>`;
+  }
+  return `
+    <div class="space-y-2" data-foh-cat-dialog-schedule-picker>
+      ${schedules.map((s) => renderCategoryScheduleOption(s, selectedIds)).join("")}
+    </div>`;
+}
+
+function renderCategoryFormDialogShell(): string {
+  return `
+    <div
+      class="fixed inset-0 z-[100] hidden items-center justify-center p-4"
+      data-foh-cat-form-dialog
+      data-editing-id=""
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="foh-cat-form-dialog-title"
+    >
+      <button type="button" class="absolute inset-0 bg-black/40" data-foh-cat-form-backdrop aria-label="关闭"></button>
+      <div class="relative z-10 flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-lg border border-border bg-card shadow-lg">
+        <div class="flex shrink-0 items-start justify-between gap-3 border-b border-border px-5 py-4">
+          <h3 id="foh-cat-form-dialog-title" class="text-base font-semibold text-card-foreground" data-foh-cat-form-title>编辑类别</h3>
+          <button type="button" class="text-muted-foreground hover:text-foreground" data-foh-cat-form-close aria-label="关闭">×</button>
+        </div>
+        <div class="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4">
+          <div class="space-y-1.5">
+            <label class="block text-sm font-medium text-foreground" for="foh-cat-form-name">类别名称</label>
+            <input id="foh-cat-form-name" type="text" maxlength="50" class="${INPUT_CLASS}" data-foh-cat-form-name value="" />
+          </div>
+          <div class="space-y-1.5">
+            <label class="block text-sm font-medium text-foreground">类别图片</label>
+            <p class="text-xs text-muted-foreground">支持 PNG、JPG、JPEG；1MB 以内</p>
+            <div class="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
+              <div
+                class="mx-auto flex h-24 w-24 items-center justify-center rounded border border-dashed border-border bg-muted/30 text-xs text-muted-foreground"
+                data-foh-cat-image-preview
+              >NO IMAGES</div>
+              <button type="button" class="${BTN_GHOST}" data-foh-cat-image-pick>选择图片</button>
+            </div>
+          </div>
+          <div class="space-y-2">
+            <p class="text-sm font-medium text-foreground">营业时间</p>
+            <div data-foh-cat-form-schedule-host></div>
+          </div>
+        </div>
+        <div class="flex shrink-0 justify-end gap-2 border-t border-border bg-card px-5 py-4">
+          <button type="button" class="${BTN_GHOST}" data-foh-cat-form-cancel>取消</button>
+          <button type="button" class="${BTN_PRIMARY}" data-foh-cat-form-save>确定</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+type MenuEditScope = "orderable" | "viewOnly";
+
+function parseMenuEditScope(raw: string | null | undefined): MenuEditScope {
+  return raw === "viewOnly" ? "viewOnly" : "orderable";
 }
 
 function renderViewOnlyCategoryPicker(
@@ -454,7 +729,7 @@ function renderViewOnlyCategoryPicker(
 ): string {
   const others = allCombos.filter((c) => c.key !== combo.key);
   if (others.length === 0) {
-    return `<p class="m-0 text-xs text-muted-foreground">暂无其他组合可选；请先在类别设置中增加年龄或类别。</p>`;
+    return `<p class="m-0 text-xs text-muted-foreground">暂无其他组合可选；请先在品类类别中增加年龄或类别。</p>`;
   }
   const selected = new Set(cfg.viewOnlyCategoryKeys);
   const chips = others
@@ -470,7 +745,7 @@ function renderViewOnlyCategoryPicker(
             type="checkbox"
             class="${MODULE_SETTING_CONTROL_CLASS} rounded-sm"
             value="${escapeHtml(other.key)}"
-            data-foh-menu-view-category-key="${escapeHtml(combo.key)}"
+            data-foh-menu-view-category-key
             ${checked ? "checked" : ""}
           />
           <span>${escapeHtml(other.title)}</span>
@@ -478,85 +753,110 @@ function renderViewOnlyCategoryPicker(
     })
     .join("");
 
-  return `<div class="flex flex-wrap gap-2" data-foh-menu-view-category-picker="${escapeHtml(combo.key)}">${chips}</div>`;
+  return `<div class="flex flex-wrap gap-2" data-foh-menu-view-category-picker>${chips}</div>`;
 }
 
-function renderMenuComboBlock(
+function renderMenuEditDialogBody(
   combo: ComboDefinition,
   allCombos: ComboDefinition[],
   cfg: MenuComboConfig,
+  scope: MenuEditScope,
 ): string {
   const dishMode = cfg.viewOnlyMode === "dish";
   const categoryMode = cfg.viewOnlyMode === "category";
-  const orderablePicker = renderStandaloneDishPickerHtml(
-    FOH_MENU_PARENT_SEQ,
-    `orderable-${combo.key}`,
-    orderableStorageId(combo.key),
-    "select",
-  );
-  const viewDishPicker = renderStandaloneDishPickerHtml(
-    FOH_MENU_PARENT_SEQ,
-    `view-dish-${combo.key}`,
-    viewDishStorageId(combo.key),
-    "select",
-  );
-
+  if (scope === "orderable") {
+    return `
+      <div class="space-y-4" data-foh-menu-edit-config="${escapeHtml(combo.key)}" data-edit-scope="orderable">
+        <div>
+          <p class="m-0 mb-2 text-sm font-medium text-foreground">可下单的菜</p>
+          <div data-foh-menu-orderable-structure>
+            ${renderBrandMenuStructurePickerHtml(cfg.orderableStructureKeys)}
+          </div>
+        </div>
+      </div>`;
+  }
   return `
-    <section
-      class="relative rounded-xl border border-border bg-card p-4 shadow-sm"
-      data-foh-menu-combo-block="${escapeHtml(combo.key)}"
+    <div class="space-y-4" data-foh-menu-edit-config="${escapeHtml(combo.key)}" data-edit-scope="viewOnly">
+      <div>
+        <p class="m-0 mb-2 text-sm font-medium text-foreground">不可下单的菜</p>
+        <div class="mb-3 flex flex-wrap items-center gap-4 text-sm">
+          <label class="inline-flex cursor-pointer items-center gap-2">
+            <input
+              type="radio"
+              name="foh-menu-view-mode-${escapeHtml(combo.key)}"
+              value="dish"
+              class="${MODULE_SETTING_CONTROL_CLASS}"
+              data-foh-menu-view-mode
+              ${dishMode ? "checked" : ""}
+            />
+            <span>按菜配置</span>
+          </label>
+          <label class="inline-flex cursor-pointer items-center gap-2">
+            <input
+              type="radio"
+              name="foh-menu-view-mode-${escapeHtml(combo.key)}"
+              value="category"
+              class="${MODULE_SETTING_CONTROL_CLASS}"
+              data-foh-menu-view-mode
+              ${categoryMode ? "checked" : ""}
+            />
+            <span>按类别配置</span>
+          </label>
+        </div>
+        <div class="${dishMode ? "" : "hidden"}" data-foh-menu-view-dish-panel>
+          <div data-foh-menu-view-structure>
+            ${renderBrandMenuStructurePickerHtml(cfg.viewOnlyStructureKeys)}
+          </div>
+        </div>
+        <div class="${categoryMode ? "" : "hidden"}" data-foh-menu-view-category-panel>
+          <p class="m-0 mb-2 text-xs text-muted-foreground">勾选其他「年龄-类别」组合，食客在本套餐下仅可查看对应类别菜单（不可下单）。</p>
+          ${renderViewOnlyCategoryPicker(combo, allCombos, cfg)}
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderMenuEditDialogShell(): string {
+  return `
+    <div
+      class="fixed inset-0 z-[100] hidden items-center justify-center p-4"
+      data-foh-menu-edit-dialog
+      data-combo-key=""
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="foh-menu-edit-dialog-title"
     >
-      <p class="absolute right-4 top-3 m-0 text-sm font-semibold text-primary">${escapeHtml(combo.title)}</p>
-      <div class="mb-4 max-w-md pr-28">
-        <input
-          type="text"
-          class="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          value="${escapeHtml(cfg.displayName)}"
-          data-foh-menu-display-name="${escapeHtml(combo.key)}"
-          aria-label="${escapeHtml(combo.title)} 套餐名称"
-        />
-      </div>
-      <div class="space-y-4">
-        <div>
-          <p class="m-0 mb-2 text-sm font-medium text-foreground">可看可下单的菜</p>
-          ${orderablePicker}
+      <button type="button" class="absolute inset-0 bg-black/40" data-foh-menu-edit-backdrop aria-label="关闭"></button>
+      <div class="relative z-10 flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-lg border border-border bg-card shadow-lg">
+        <div class="flex shrink-0 items-start justify-between gap-3 border-b border-border px-5 py-4">
+          <h3 id="foh-menu-edit-dialog-title" class="text-base font-semibold text-card-foreground" data-foh-menu-edit-title>编辑菜单</h3>
+          <button type="button" class="text-muted-foreground hover:text-foreground" data-foh-menu-edit-close aria-label="关闭">×</button>
         </div>
-        <div>
-          <p class="m-0 mb-2 text-sm font-medium text-foreground">仅可查看类别的菜</p>
-          <div class="mb-3 flex flex-wrap items-center gap-4 text-sm">
-            <label class="inline-flex cursor-pointer items-center gap-2">
-              <input
-                type="radio"
-                name="foh-menu-view-mode-${escapeHtml(combo.key)}"
-                value="dish"
-                class="${MODULE_SETTING_CONTROL_CLASS}"
-                data-foh-menu-view-mode="${escapeHtml(combo.key)}"
-                ${dishMode ? "checked" : ""}
-              />
-              <span>按照菜配置</span>
-            </label>
-            <label class="inline-flex cursor-pointer items-center gap-2">
-              <input
-                type="radio"
-                name="foh-menu-view-mode-${escapeHtml(combo.key)}"
-                value="category"
-                class="${MODULE_SETTING_CONTROL_CLASS}"
-                data-foh-menu-view-mode="${escapeHtml(combo.key)}"
-                ${categoryMode ? "checked" : ""}
-              />
-              <span>按照类别配置</span>
-            </label>
-          </div>
-          <div class="${dishMode ? "" : "hidden"}" data-foh-menu-view-dish-panel="${escapeHtml(combo.key)}">
-            ${viewDishPicker}
-          </div>
-          <div class="${categoryMode ? "" : "hidden"}" data-foh-menu-view-category-panel="${escapeHtml(combo.key)}">
-            <p class="m-0 mb-2 text-xs text-muted-foreground">勾选其他「年龄-类别」组合，食客在本套餐下仅可查看对应类别菜单（不可下单）。</p>
-            ${renderViewOnlyCategoryPicker(combo, allCombos, cfg)}
-          </div>
+        <div class="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4" data-foh-menu-edit-body></div>
+        <div class="flex shrink-0 justify-end gap-2 border-t border-border bg-card px-5 py-4">
+          <button type="button" class="${BTN_GHOST}" data-foh-menu-edit-cancel>取消</button>
+          <button type="button" class="${BTN_PRIMARY}" data-foh-menu-edit-save>确定</button>
         </div>
       </div>
-    </section>`;
+    </div>`;
+}
+
+function renderMenuComboRow(
+  combo: ComboDefinition,
+  schedules: StoreBusinessHourSchedule[],
+): string {
+  const hoursLabel = formatCategoryHoursLabel(combo.category.scheduleIds, schedules);
+  return `
+    <tr class="border-t border-border" data-foh-menu-combo-row="${escapeHtml(combo.key)}">
+      <td class="py-3 pr-3 text-sm font-medium text-foreground">${escapeHtml(combo.title)}</td>
+      <td class="py-3 pr-3 text-xs text-muted-foreground">${escapeHtml(hoursLabel)}</td>
+      <td class="py-3 pr-3 text-sm">
+        <button type="button" class="${BTN_LINK}" data-foh-menu-detail="orderable" data-foh-menu-combo-key="${escapeHtml(combo.key)}">详情</button>
+      </td>
+      <td class="py-3 pr-3 text-sm">
+        <button type="button" class="${BTN_LINK}" data-foh-menu-detail="viewOnly" data-foh-menu-combo-key="${escapeHtml(combo.key)}">详情</button>
+      </td>
+    </tr>`;
 }
 
 function renderMenuPanel(state: FohCategorySettingsState): string {
@@ -564,217 +864,206 @@ function renderMenuPanel(state: FohCategorySettingsState): string {
   if (combos.length === 0) {
     return `
       <div class="rounded-xl border border-dashed border-border bg-muted/20 p-8 text-center text-sm text-muted-foreground" data-foh-category-settings-panel="menu">
-        请先在「类别设置」中配置至少一个年龄与一个类别，系统将自动生成菜单配置块。
+        请先在「品类类别」中配置至少一个年龄与一个类别，系统将自动生成菜单配置。
       </div>`;
   }
 
-  const blocks = combos
-    .map((combo) => renderMenuComboBlock(combo, combos, state.menuByCombo[combo.key]))
-    .join("");
-
-  return `
-    <div class="space-y-4" data-foh-category-settings-panel="menu">
-      <p class="m-0 text-sm text-muted-foreground">
-        以下 ${combos.length} 组配置由「类别设置」中的年龄与类别组合生成；右上角标题为 <strong>年龄-类别</strong> 条件组合。
-      </p>
-      <div class="space-y-6">${blocks}</div>
-    </div>`;
-}
-
-function renderScheduleDayBadges(schedule: StoreBusinessHourSchedule): string {
-  const active = getScheduleActiveDays(schedule);
-  return STORE_BUSINESS_HOUR_DAY_BADGES.map(({ day, badge }) => {
-    const on = active.has(day);
-    return `<span
-      class="inline-flex h-6 min-w-[1.75rem] items-center justify-center rounded-sm px-0.5 text-[10px] font-semibold tracking-wide ${
-        on ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-      }"
-      aria-hidden="true"
-    >${badge}</span>`;
-  }).join("");
-}
-
-function renderHoursPickerScheduleRow(
-  schedule: StoreBusinessHourSchedule,
-  checked: boolean,
-): string {
-  return `
-    <label
-      class="flex cursor-pointer flex-wrap items-center gap-x-4 gap-y-2 rounded-md border border-transparent px-1 py-2 transition-colors hover:bg-muted/40"
-      data-foh-hours-picker-row
-    >
-      <input
-        type="checkbox"
-        class="${MODULE_SETTING_CONTROL_CLASS} rounded-sm"
-        data-foh-hours-picker-schedule="${escapeHtml(schedule.id)}"
-        ${checked ? "checked" : ""}
-      />
-      <span class="w-16 shrink-0 text-sm font-medium text-foreground">${escapeHtml(schedule.name)}</span>
-      <span class="shrink-0 text-sm tabular-nums text-muted-foreground">${escapeHtml(formatScheduleTimeRange(schedule))}</span>
-      <span class="flex flex-wrap gap-0.5">${renderScheduleDayBadges(schedule)}</span>
-    </label>`;
-}
-
-function renderHoursPickerDialogBody(scheduleIds: string[]): string {
   const schedules = readBusinessHourSchedules();
-  const selected = new Set(scheduleIds);
-  if (schedules.length === 0) {
-    return `
-      <p class="m-0 text-sm text-muted-foreground">请先在门店设置中维护营业时段。</p>
-      <a href="#${STORE_BUSINESS_HOURS_PATH}" class="mt-3 inline-flex text-sm font-medium text-primary hover:underline">前往门店 · 营业时间</a>`;
-  }
-  return `<div class="space-y-1" data-foh-hours-picker-list>${schedules
-    .map((s) => renderHoursPickerScheduleRow(s, selected.has(s.id)))
-    .join("")}</div>`;
-}
-
-function renderHoursPickerDialogShell(): string {
-  return `
-    <div
-      class="fixed inset-0 z-[100] hidden items-center justify-center p-4"
-      data-foh-hours-picker
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="foh-hours-picker-title"
-    >
-      <button
-        type="button"
-        class="absolute inset-0 bg-black/40"
-        data-foh-hours-picker-backdrop
-        aria-label="关闭"
-      ></button>
-      <div class="relative z-10 flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg border border-border bg-card shadow-lg">
-        <div class="border-b border-border px-6 py-4">
-          <h3 id="foh-hours-picker-title" class="text-lg font-semibold text-card-foreground">营业时间</h3>
-          <p class="m-0 mt-1 text-xs text-muted-foreground">选项来自门店设置 · 营业时段，可多选。</p>
-        </div>
-        <div class="min-h-0 flex-1 overflow-y-auto px-6 py-4" data-foh-hours-picker-body></div>
-        <div class="flex justify-end gap-2 border-t border-border px-6 py-4">
-          <button
-            type="button"
-            class="inline-flex h-9 items-center justify-center rounded-md border border-border bg-background px-5 text-sm font-medium text-foreground hover:bg-muted"
-            data-foh-hours-picker-cancel
-          >取消</button>
-          <button
-            type="button"
-            class="inline-flex h-9 items-center justify-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-            data-foh-hours-picker-confirm
-          >确定</button>
-        </div>
-      </div>
-    </div>`;
-}
-
-function renderHoursPanel(state: FohCategorySettingsState): string {
-  const schedules = readBusinessHourSchedules();
-  const rows = state.categories
-    .map((cat) => {
-      const label = formatCategoryHoursLabel(cat.scheduleIds, schedules);
-      const italic = label === "All Day" || /^[A-Za-z]/.test(label);
-      return `
-        <tr class="border-b border-border last:border-0" data-foh-category-hours-row="${escapeHtml(cat.id)}">
-          <td class="px-4 py-3 text-sm text-foreground">${escapeHtml(cat.name)}</td>
-          <td class="px-4 py-3 text-sm text-foreground ${italic ? "italic" : ""}">${escapeHtml(label)}</td>
-          <td class="px-4 py-3 text-right whitespace-nowrap">
-            <button type="button" class="text-sm text-primary hover:underline" data-foh-category-hours-edit="${escapeHtml(cat.id)}">编辑</button>
-          </td>
-        </tr>`;
-    })
-    .join("");
+  const rows = combos.map((combo) => renderMenuComboRow(combo, schedules)).join("");
 
   return `
-    <section class="overflow-hidden rounded-xl border border-border bg-card" data-foh-category-settings-panel="hours">
-      <div class="overflow-x-auto">
-        <table class="w-full min-w-[320px] text-left">
-          <thead>
-            <tr class="border-b border-border bg-muted/40 text-sm font-medium text-foreground">
-              <th class="px-4 py-2.5 font-medium">品牌/品类名称</th>
-              <th class="px-4 py-2.5 font-medium">营业时间</th>
-              <th class="px-4 py-2.5 text-right font-medium">操作</th>
+    <div class="space-y-3" data-foh-category-settings-panel="menu">
+      <div class="overflow-x-auto rounded-md border border-border">
+        <table class="w-full min-w-[28rem] border-collapse text-left text-sm">
+          <thead class="bg-muted/40 text-xs text-muted-foreground">
+            <tr>
+              <th class="px-3 py-2 font-medium">菜单组合</th>
+              <th class="px-3 py-2 font-medium">营业时间</th>
+              <th class="px-3 py-2 font-medium">可下单</th>
+              <th class="px-3 py-2 font-medium">不可下单</th>
             </tr>
           </thead>
           <tbody>${rows}</tbody>
         </table>
       </div>
-      <p class="border-t border-border px-4 py-2.5 text-xs text-muted-foreground">
-        按品类绑定门店营业时段；点击「编辑」可多选时段。
-        <a href="#${STORE_BUSINESS_HOURS_PATH}" class="text-primary hover:underline">维护门店营业时段</a>
-      </p>
-    </section>`;
+    </div>`;
 }
 
-function renderSpecialMenuToggle(enabled: boolean): string {
-  const knobClass = enabled ? "translate-x-5" : "translate-x-0.5";
-  const trackClass = enabled ? FOH_SPECIAL_MENU_TOGGLE_TRACK_ON : FOH_SPECIAL_MENU_TOGGLE_TRACK_OFF;
-  return `
-    <button
-      type="button"
-      role="switch"
-      aria-checked="${enabled ? "true" : "false"}"
-      aria-label="开启特殊菜单"
-      data-foh-category-special-enabled
-      class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${trackClass}"
-    >
-      <span
-        class="pointer-events-none block size-5 ${knobClass} ${FOH_SPECIAL_MENU_TOGGLE_KNOB} rounded-full transition-transform duration-200"
-        aria-hidden="true"
-      ></span>
-    </button>`;
-}
-
-function renderSpecialMenuEntry(entry: FohSpecialMenuEntry): string {
-  const storageId = `foh-special-menu-${entry.id}`;
-  return `
-    <article
-      class="space-y-3 rounded-lg border border-border bg-muted/20 p-4"
-      data-foh-special-menu-entry="${escapeHtml(entry.id)}"
-    >
-      <div class="flex items-center gap-3">
-        <label class="shrink-0 text-sm text-foreground" for="foh-special-menu-name-${escapeHtml(entry.id)}">名称</label>
+function renderSpecialMenuLinesHtml(selectedLines: SpecialMenuLineId[]): string {
+  const selected = new Set(selectedLines);
+  const cells = SPECIAL_MENU_PRODUCT_LINES.map((line, index) => {
+    const checked = selected.has(line.id);
+    const divider = index > 0 ? "border-l border-border" : "";
+    return `
+      <label
+        class="flex flex-1 flex-col items-center justify-center gap-2 px-2 py-3 text-sm text-foreground cursor-pointer sm:px-4 ${divider}"
+      >
         <input
-          id="foh-special-menu-name-${escapeHtml(entry.id)}"
-          type="text"
-          class="h-9 min-w-0 flex-1 rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          value="${escapeHtml(entry.name)}"
-          data-foh-special-menu-name="${escapeHtml(entry.id)}"
-          placeholder=""
+          type="checkbox"
+          class="${MODULE_SETTING_CONTROL_CLASS} rounded-sm"
+          value="${escapeHtml(line.id)}"
+          data-foh-special-menu-line="${escapeHtml(line.id)}"
+          ${checked ? "checked" : ""}
+          aria-label="${escapeHtml(line.label)}"
         />
-        <button
-          type="button"
-          class="shrink-0 text-sm text-primary hover:underline"
-          data-foh-special-menu-delete="${escapeHtml(entry.id)}"
-        >删除</button>
+        <span class="text-center leading-tight">${escapeHtml(line.label)}</span>
+      </label>`;
+  }).join("");
+
+  return `
+    <div
+      class="mt-3 flex w-full max-w-md overflow-hidden rounded-md border border-border bg-muted/40"
+      data-foh-special-menu-lines
+      role="group"
+      aria-label="特殊品类适用产线"
+    >
+      ${cells}
+    </div>`;
+}
+
+function renderSpecialMenuImageCell(entry: FohSpecialMenuEntry): string {
+  if (entry.imageDataUrl) {
+    return `<img src="${escapeHtml(entry.imageDataUrl)}" alt="" class="size-12 rounded border border-border object-cover" />`;
+  }
+  return `<div class="flex size-12 items-center justify-center rounded border border-dashed border-border bg-muted/40 text-[10px] text-muted-foreground">NO IMAGE</div>`;
+}
+
+function renderSpecialMenuTable(entries: FohSpecialMenuEntry[]): string {
+  if (entries.length === 0) {
+    return `<p class="rounded-md border border-dashed border-border px-3 py-6 text-center text-sm text-muted-foreground">暂无特殊品类，请点击「新增特殊品类」</p>`;
+  }
+  const rows = entries
+    .map(
+      (entry) => `
+      <tr class="border-t border-border" data-foh-special-menu-row data-foh-special-menu-id="${escapeHtml(entry.id)}">
+        <td class="py-3 pr-3 text-sm text-foreground">${escapeHtml(entry.name || "未命名")}</td>
+        <td class="py-3 pr-3">${renderSpecialMenuImageCell(entry)}</td>
+        <td class="py-3 pr-3 text-sm text-muted-foreground">${escapeHtml(formatBrandMenuStructureSummary(entry.structureKeys))}</td>
+        <td class="py-3 text-right text-sm whitespace-nowrap">
+          <button type="button" class="${BTN_LINK} mr-3" data-foh-special-menu-edit="${escapeHtml(entry.id)}">编辑</button>
+          <button type="button" class="text-sm font-medium text-destructive hover:underline" data-foh-special-menu-delete="${escapeHtml(entry.id)}">删除</button>
+        </td>
+      </tr>`,
+    )
+    .join("");
+  return `
+    <div class="overflow-x-auto rounded-md border border-border">
+      <table class="w-full min-w-[32rem] border-collapse text-left text-sm">
+        <thead class="bg-muted/40 text-xs text-muted-foreground">
+          <tr>
+            <th class="px-3 py-2 font-medium">名称</th>
+            <th class="px-3 py-2 font-medium">图片</th>
+            <th class="px-3 py-2 font-medium">菜单</th>
+            <th class="px-3 py-2 text-right font-medium">操作</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+function renderSpecialMenuDialogShell(): string {
+  return `
+    <div
+      class="fixed inset-0 z-[100] hidden items-center justify-center p-4"
+      data-foh-special-menu-dialog
+      data-editing-id=""
+      data-entry-id=""
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="foh-special-menu-dialog-title"
+    >
+      <button type="button" class="absolute inset-0 bg-black/40" data-foh-special-menu-dialog-backdrop aria-label="关闭"></button>
+      <div class="relative z-10 flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-lg border border-border bg-card shadow-lg">
+        <div class="flex shrink-0 items-start justify-between gap-3 border-b border-border px-5 py-4">
+          <h3 id="foh-special-menu-dialog-title" class="text-base font-semibold text-card-foreground" data-foh-special-menu-dialog-title>新增特殊品类</h3>
+          <button type="button" class="text-muted-foreground hover:text-foreground" data-foh-special-menu-dialog-close aria-label="关闭">×</button>
+        </div>
+        <div class="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4" data-foh-special-menu-dialog-body></div>
+        <div class="flex shrink-0 justify-end gap-2 border-t border-border bg-card px-5 py-4">
+          <button type="button" class="${BTN_GHOST}" data-foh-special-menu-dialog-cancel>取消</button>
+          <button type="button" class="${BTN_PRIMARY}" data-foh-special-menu-dialog-save>确定</button>
+        </div>
       </div>
-      <div data-foh-special-menu-menus="${escapeHtml(entry.id)}">
-        ${renderMenuGroupDropdownHtml(storageId, entry.menus, "brand")}
+    </div>`;
+}
+
+function renderSpecialMenuDialogBody(
+  entryId: string,
+  name: string,
+  structureKeys: string[],
+  imageDataUrl?: string,
+): string {
+  const imagePreview = imageDataUrl
+    ? `<img src="${escapeHtml(imageDataUrl)}" alt="" class="mx-auto max-h-24 rounded border border-border object-contain" data-foh-special-menu-image-preview />`
+    : `<div class="mx-auto flex h-24 w-24 items-center justify-center rounded border border-dashed border-border bg-muted/30 text-xs text-muted-foreground" data-foh-special-menu-image-preview>NO IMAGES</div>`;
+  return `
+    <div class="space-y-4" data-foh-special-menu-entry="${escapeHtml(entryId)}">
+      <div class="space-y-1.5">
+        <label class="block text-sm font-medium text-foreground" for="foh-special-menu-name-input">名称</label>
+        <input
+          id="foh-special-menu-name-input"
+          type="text"
+          maxlength="50"
+          class="${INPUT_CLASS}"
+          data-foh-special-menu-name
+          value="${escapeHtml(name)}"
+        />
       </div>
-    </article>`;
+      <div class="space-y-1.5">
+        <label class="block text-sm font-medium text-foreground">图片</label>
+        <p class="text-xs text-muted-foreground">支持 PNG、JPG、JPEG；1MB 以内</p>
+        <div class="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
+          ${imagePreview}
+          <button type="button" class="${BTN_GHOST}" data-foh-special-menu-image-pick>选择图片</button>
+        </div>
+      </div>
+      <div class="space-y-1.5">
+        <p class="m-0 mb-2 text-sm font-medium text-foreground">菜单</p>
+        <div data-foh-special-menu-structure>
+          ${renderBrandMenuStructurePickerHtml(structureKeys)}
+        </div>
+      </div>
+    </div>`;
 }
 
 function renderSpecialMenuPanel(state: FohCategorySettingsState): string {
-  const entries =
-    state.specialMenus.length > 0
-      ? state.specialMenus.map(renderSpecialMenuEntry).join("")
-      : `<p class="m-0 rounded-md border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground">暂无特殊菜单，点击右上角「增加」添加。</p>`;
-  const listHidden = state.specialMenuEnabled ? "" : "hidden";
+  if (!isSpecialMenuEnabled(state)) {
+    return `
+      <div class="space-y-6" data-foh-category-settings-panel="special-menu">
+        <div class="rounded-xl border border-dashed border-border bg-muted/20 p-8 text-center text-sm text-muted-foreground">
+          特殊品类未展示。请前往「品类设置」勾选适用产线后，再在此配置特殊品类。
+        </div>
+      </div>`;
+  }
 
   return `
-    <div class="space-y-6" data-foh-category-settings-panel="special-menu">
+    <div class="mt-1 space-y-3" data-foh-category-settings-panel="special-menu">
+      <div class="flex flex-wrap items-center justify-end gap-2">
+        <button type="button" class="${BTN_PRIMARY}" data-foh-special-menu-add>新增特殊品类</button>
+      </div>
+      <div data-foh-special-menu-table-wrap>${renderSpecialMenuTable(state.specialMenus)}</div>
+    </div>`;
+}
+
+function renderSettingsPanel(state: FohCategorySettingsState): string {
+  ensureGuestCategoryModeToggleMigrated(GUEST_MENU_CATEGORY_MODE_SEQ);
+  writeModuleSettingToggleOn(GUEST_MENU_CATEGORY_MODE_SEQ, true);
+  return `
+    <div class="space-y-6" data-foh-category-settings-panel="settings">
       <section class="rounded-xl border border-border bg-card px-4 py-4">
-        <div class="flex items-start justify-between gap-4">
-          <div class="min-w-0 flex-1">
-            <p class="m-0 text-sm font-medium text-foreground">开启特殊菜单</p>
-            <p class="m-0 mt-1 text-xs text-muted-foreground">开启后，可在品类模式中选择特殊菜单</p>
-          </div>
-          ${renderSpecialMenuToggle(state.specialMenuEnabled)}
+        <div class="min-w-0">
+          <h3 class="m-0 text-sm font-semibold text-card-foreground">展示特殊品类</h3>
+          <p class="m-0 mt-1 text-xs leading-relaxed text-muted-foreground">根据选定产线展示特殊品类，可在「特殊品类」中配置，并在对应产线的品类模式中选择。</p>
         </div>
+        ${renderSpecialMenuLinesHtml(state.specialMenuLines)}
       </section>
-      <section class="rounded-xl border border-border bg-card p-4 ${listHidden}" data-foh-special-menu-list-section>
-        <div class="mb-4 flex items-center justify-between gap-3">
-          <h4 class="m-0 text-sm font-semibold text-foreground">特殊菜单设置</h4>
-          <button type="button" class="text-sm font-medium text-primary hover:underline" data-foh-special-menu-add>增加</button>
+      <section class="rounded-xl border border-border bg-card px-4 py-4">
+        <div class="min-w-0">
+          <h3 class="m-0 text-sm font-semibold text-card-foreground">品类模式</h3>
+          <p class="m-0 mt-1 text-xs leading-relaxed text-muted-foreground">根据选定产线，使用品类先分类再选菜的点单形式（非普通扁平菜单）。</p>
         </div>
-        <div class="space-y-4" data-foh-special-menu-list>${entries}</div>
+        ${renderGuestCategoryModePanelHtml(GUEST_MENU_CATEGORY_MODE_SEQ, true)}
       </section>
     </div>`;
 }
@@ -783,10 +1072,10 @@ function renderTabContent(tabId: FohCategorySettingsTabId, state: FohCategorySet
   switch (tabId) {
     case "menu":
       return renderMenuPanel(state);
-    case "hours":
-      return renderHoursPanel(state);
     case "special-menu":
       return renderSpecialMenuPanel(state);
+    case "settings":
+      return renderSettingsPanel(state);
     default:
       return renderAgeCategoryPanel(state);
   }
@@ -799,104 +1088,290 @@ export function renderFohCategorySettingsPage(path: string): string {
 
   return `
     <div
-      class="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden sm:flex-row sm:items-stretch"
+      class="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden"
       data-foh-category-settings-root
     >
-      ${renderSidebarNav(tabPath)}
+      ${renderTabBar(tabPath)}
       <div
         class="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain"
         data-foh-category-settings-main
         data-active-tab="${tabId}"
+        role="tabpanel"
       >
         ${renderTabContent(tabId, state)}
       </div>
-      ${renderHoursPickerDialogShell()}
+      ${renderMenuEditDialogShell()}
+      ${renderCategoryFormDialogShell()}
+      ${renderSpecialMenuDialogShell()}
+      ${renderAgeCategoryDeleteDialog()}
       ${renderFohSettingsNameDialogShell()}
+      ${renderImageSourcePickerModalsHtml()}
     </div>`;
 }
 
-let fohHoursPickerCategoryId: string | null = null;
-
-function showFohHoursPicker(root: HTMLElement): void {
-  const dialog = root.querySelector<HTMLElement>("[data-foh-hours-picker]");
+function showCategoryFormDialog(root: HTMLElement): void {
+  const dialog = root.querySelector<HTMLElement>("[data-foh-cat-form-dialog]");
   if (!dialog) return;
   dialog.classList.remove("hidden");
   dialog.classList.add("flex");
 }
 
-function hideFohHoursPicker(root: HTMLElement): void {
-  const dialog = root.querySelector<HTMLElement>("[data-foh-hours-picker]");
+function hideCategoryFormDialog(root: HTMLElement): void {
+  const dialog = root.querySelector<HTMLElement>("[data-foh-cat-form-dialog]");
   if (!dialog) return;
   dialog.classList.add("hidden");
   dialog.classList.remove("flex");
-  fohHoursPickerCategoryId = null;
+  dialog.setAttribute("data-editing-id", "");
 }
 
-function refreshFohHoursPickerBody(root: HTMLElement, scheduleIds: string[]): void {
-  const body = root.querySelector<HTMLElement>("[data-foh-hours-picker-body]");
-  if (!body) return;
-  body.innerHTML = renderHoursPickerDialogBody(scheduleIds);
-  const confirm = root.querySelector<HTMLButtonElement>("[data-foh-hours-picker-confirm]");
-  if (confirm) confirm.disabled = readBusinessHourSchedules().length === 0;
+function setCategoryFormImagePreview(dialog: HTMLElement, imageDataUrl?: string): void {
+  const previewHost = dialog.querySelector<HTMLElement>("[data-foh-cat-image-preview]");
+  if (!previewHost) return;
+  if (imageDataUrl) {
+    const img = document.createElement("img");
+    img.src = imageDataUrl;
+    img.alt = "";
+    img.className = "mx-auto max-h-24 rounded border border-border object-contain";
+    img.dataset.fohCatImagePreview = "";
+    previewHost.replaceWith(img);
+    return;
+  }
+  if (previewHost.tagName === "IMG") {
+    const placeholder = document.createElement("div");
+    placeholder.className =
+      "mx-auto flex h-24 w-24 items-center justify-center rounded border border-dashed border-border bg-muted/30 text-xs text-muted-foreground";
+    placeholder.dataset.fohCatImagePreview = "";
+    placeholder.textContent = "NO IMAGES";
+    previewHost.replaceWith(placeholder);
+  }
 }
 
-function openFohCategoryHoursPicker(root: HTMLElement, categoryId: string): void {
+function applyFohCatImagePreview(root: HTMLElement, dataUrl: string): void {
+  const dialog = root.querySelector<HTMLElement>("[data-foh-cat-form-dialog]");
+  if (!dialog) return;
+  setCategoryFormImagePreview(dialog, dataUrl);
+}
+
+function setFohCatImagePickError(root: HTMLElement, message: string): void {
+  const dialog = root.querySelector<HTMLElement>("[data-foh-cat-form-dialog]");
+  if (!dialog) return;
+  let tip = dialog.querySelector<HTMLElement>("[data-foh-cat-image-error]");
+  if (!tip) {
+    tip = document.createElement("p");
+    tip.className = "m-0 text-xs text-destructive";
+    tip.dataset.fohCatImageError = "";
+    const pickBtn = dialog.querySelector("[data-foh-cat-image-pick]");
+    pickBtn?.parentElement?.insertAdjacentElement("afterend", tip);
+  }
+  tip.textContent = message;
+}
+
+function clearFohCatImagePickError(root: HTMLElement): void {
+  root.querySelector("[data-foh-cat-image-error]")?.remove();
+}
+
+function setSpecialMenuImagePreview(dialog: HTMLElement, imageDataUrl?: string): void {
+  const previewHost = dialog.querySelector<HTMLElement>("[data-foh-special-menu-image-preview]");
+  if (!previewHost) return;
+  if (imageDataUrl) {
+    const img = document.createElement("img");
+    img.src = imageDataUrl;
+    img.alt = "";
+    img.className = "mx-auto max-h-24 rounded border border-border object-contain";
+    img.dataset.fohSpecialMenuImagePreview = "";
+    previewHost.replaceWith(img);
+    return;
+  }
+  if (previewHost.tagName === "IMG") {
+    const placeholder = document.createElement("div");
+    placeholder.className =
+      "mx-auto flex h-24 w-24 items-center justify-center rounded border border-dashed border-border bg-muted/30 text-xs text-muted-foreground";
+    placeholder.dataset.fohSpecialMenuImagePreview = "";
+    placeholder.textContent = "NO IMAGES";
+    previewHost.replaceWith(placeholder);
+  }
+}
+
+function applySpecialMenuImagePreview(root: HTMLElement, dataUrl: string): void {
+  const dialog = root.querySelector<HTMLElement>("[data-foh-special-menu-dialog]");
+  if (!dialog || dialog.classList.contains("hidden")) return;
+  setSpecialMenuImagePreview(dialog, dataUrl);
+}
+
+function setSpecialMenuImagePickError(root: HTMLElement, message: string): void {
+  const dialog = root.querySelector<HTMLElement>("[data-foh-special-menu-dialog]");
+  if (!dialog) return;
+  let tip = dialog.querySelector<HTMLElement>("[data-foh-special-menu-image-error]");
+  if (!tip) {
+    tip = document.createElement("p");
+    tip.className = "m-0 text-xs text-destructive";
+    tip.dataset.fohSpecialMenuImageError = "";
+    const pickBtn = dialog.querySelector("[data-foh-special-menu-image-pick]");
+    pickBtn?.parentElement?.insertAdjacentElement("afterend", tip);
+  }
+  tip.textContent = message;
+}
+
+function clearSpecialMenuImagePickError(root: HTMLElement): void {
+  root.querySelector("[data-foh-special-menu-image-error]")?.remove();
+}
+
+function isDialogVisible(dialog: HTMLElement | null): boolean {
+  return !!dialog && !dialog.classList.contains("hidden");
+}
+
+function applyImagePickerResult(root: HTMLElement, dataUrl: string): void {
+  const specialDialog = root.querySelector<HTMLElement>("[data-foh-special-menu-dialog]");
+  if (isDialogVisible(specialDialog)) {
+    clearSpecialMenuImagePickError(root);
+    applySpecialMenuImagePreview(root, dataUrl);
+    return;
+  }
+  clearFohCatImagePickError(root);
+  applyFohCatImagePreview(root, dataUrl);
+}
+
+function setImagePickerError(root: HTMLElement, message: string): void {
+  const specialDialog = root.querySelector<HTMLElement>("[data-foh-special-menu-dialog]");
+  if (isDialogVisible(specialDialog)) {
+    setSpecialMenuImagePickError(root, message);
+    return;
+  }
+  setFohCatImagePickError(root, message);
+}
+
+function openCategoryFormDialog(root: HTMLElement, editingId: string | null): void {
+  const dialog = root.querySelector<HTMLElement>("[data-foh-cat-form-dialog]");
+  const titleEl = dialog?.querySelector<HTMLElement>("[data-foh-cat-form-title]");
+  const nameInput = dialog?.querySelector<HTMLInputElement>("[data-foh-cat-form-name]");
+  const scheduleHost = dialog?.querySelector<HTMLElement>("[data-foh-cat-form-schedule-host]");
+  if (!dialog || !nameInput || !scheduleHost) return;
+
   const state = readFohCategorySettingsState();
-  const row = state.categories.find((c) => c.id === categoryId);
-  if (!row) return;
-  fohHoursPickerCategoryId = categoryId;
-  refreshFohHoursPickerBody(root, row.scheduleIds);
-  showFohHoursPicker(root);
+  const editing = editingId ? state.categories.find((c) => c.id === editingId) : null;
+  const schedules = readBusinessHourSchedules();
+  const validIds = new Set(schedules.map((s) => s.id));
+  dialog.setAttribute("data-editing-id", editingId ?? "");
+  if (titleEl) titleEl.textContent = editing ? "编辑类别" : "增加类别";
+  nameInput.value = editing?.name ?? "";
+  clearFohCatImagePickError(root);
+  setCategoryFormImagePreview(dialog, editing?.imageDataUrl);
+  let selectedIds = (editing?.scheduleIds ?? []).filter((id) => validIds.has(id));
+  if (selectedIds.length === 0) selectedIds = defaultAllDayScheduleIds(schedules);
+  scheduleHost.innerHTML = renderCategorySchedulePicker(selectedIds);
+  showCategoryFormDialog(root);
+  nameInput.focus();
 }
 
-function bindFohCategoryHoursPicker(root: HTMLElement, remount: () => void): void {
-  if (root.getAttribute("data-foh-hours-picker-bound") === "1") return;
-  root.setAttribute("data-foh-hours-picker-bound", "1");
+function saveCategoryFormDialog(root: HTMLElement, remount: () => void): void {
+  const dialog = root.querySelector<HTMLElement>("[data-foh-cat-form-dialog]");
+  if (!dialog) return;
+  const name = dialog.querySelector<HTMLInputElement>("[data-foh-cat-form-name]")?.value.trim() ?? "";
+  if (!name) {
+    dialog.querySelector<HTMLInputElement>("[data-foh-cat-form-name]")?.focus();
+    return;
+  }
+  const scheduleIds = [
+    ...dialog.querySelectorAll<HTMLInputElement>("[data-foh-cat-dialog-schedule]:checked"),
+  ].map((input) => input.value);
+  const schedules = readBusinessHourSchedules();
+  if (scheduleIds.length === 0 && schedules.length > 0) {
+    window.alert("请至少选择一个营业时段。");
+    return;
+  }
+  const preview = dialog.querySelector<HTMLImageElement>("[data-foh-cat-image-preview]");
+  const imageDataUrl = preview?.tagName === "IMG" ? preview.src : undefined;
+  const editingId = dialog.getAttribute("data-editing-id") || "";
+  const state = readFohCategorySettingsState();
+  const nextScheduleIds =
+    scheduleIds.length > 0 ? [...scheduleIds] : defaultAllDayScheduleIds(schedules);
+
+  if (editingId) {
+    const idx = state.categories.findIndex((c) => c.id === editingId);
+    if (idx >= 0) {
+      state.categories[idx] = {
+        ...state.categories[idx]!,
+        name,
+        imageDataUrl,
+        scheduleIds: nextScheduleIds,
+      };
+    } else {
+      state.categories.push({
+        id: editingId,
+        name,
+        imageDataUrl,
+        scheduleIds: nextScheduleIds,
+      });
+    }
+  } else {
+    state.categories.push({
+      id: newId("cat"),
+      name,
+      imageDataUrl,
+      scheduleIds: nextScheduleIds,
+    });
+  }
+  writeFohCategorySettingsState({
+    ...state,
+    categories: state.categories.map((c) => ({ ...c, scheduleIds: [...c.scheduleIds] })),
+  });
+  hideCategoryFormDialog(root);
+  remountFohCategorySettings(remount);
+}
+
+function bindFohCategoryFormDialog(root: HTMLElement, remount: () => void): void {
+  if (root.getAttribute("data-foh-cat-form-bound") === "1") return;
+  root.setAttribute("data-foh-cat-form-bound", "1");
+
+  bindImageSourcePicker(root, {
+    onSelect: (result) => applyImagePickerResult(root, result.dataUrl),
+    onError: (message) => setImagePickerError(root, message),
+  });
 
   root.addEventListener("click", (e) => {
     const target = e.target as HTMLElement;
-    const editBtn = target.closest<HTMLButtonElement>("[data-foh-category-hours-edit]");
+    if (target.closest("[data-foh-category-cat-add]")) {
+      openCategoryFormDialog(root, null);
+      return;
+    }
+    const editBtn = target.closest<HTMLButtonElement>("[data-foh-category-cat-edit]");
     if (editBtn) {
-      const id = editBtn.getAttribute("data-foh-category-hours-edit");
-      if (id) openFohCategoryHoursPicker(root, id);
+      const id = editBtn.getAttribute("data-foh-category-cat-edit");
+      if (id) openCategoryFormDialog(root, id);
+      return;
+    }
+    if (target.closest("[data-foh-cat-image-pick]")) {
+      clearFohCatImagePickError(root);
+      openImageSourcePicker(root);
       return;
     }
     if (
-      target.closest("[data-foh-hours-picker-cancel]") ||
-      target.closest("[data-foh-hours-picker-backdrop]")
+      target.closest("[data-foh-cat-form-cancel]") ||
+      target.closest("[data-foh-cat-form-close]") ||
+      target.closest("[data-foh-cat-form-backdrop]")
     ) {
-      hideFohHoursPicker(root);
+      hideCategoryFormDialog(root);
       return;
     }
-    if (target.closest("[data-foh-hours-picker-confirm]")) {
-      if (!fohHoursPickerCategoryId) {
-        hideFohHoursPicker(root);
-        return;
-      }
-      const schedules = readBusinessHourSchedules();
-      if (schedules.length === 0) {
-        hideFohHoursPicker(root);
-        return;
-      }
-      const ids: string[] = [];
-      root
-        .querySelectorAll<HTMLInputElement>("[data-foh-hours-picker-schedule]:checked")
-        .forEach((input) => {
-          const sid = input.getAttribute("data-foh-hours-picker-schedule");
-          if (sid) ids.push(sid);
-        });
-      if (ids.length === 0) {
-        window.alert("请至少选择一个营业时段。");
-        return;
-      }
-      const state = readFohCategorySettingsState();
-      const row = state.categories.find((c) => c.id === fohHoursPickerCategoryId);
-      if (row) {
-        row.scheduleIds = ids;
-        writeFohCategorySettingsState(state);
-        remountFohCategorySettings(remount);
-      }
-      hideFohHoursPicker(root);
+    if (target.closest("[data-foh-cat-form-save]")) {
+      saveCategoryFormDialog(root, remount);
+    }
+  });
+
+  root.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    const uploadModal = root.querySelector<HTMLElement>("[data-image-source-upload-modal]");
+    const libraryModal = root.querySelector<HTMLElement>("[data-image-source-library-modal]");
+    if (
+      (uploadModal && !uploadModal.classList.contains("hidden")) ||
+      (libraryModal && !libraryModal.classList.contains("hidden"))
+    ) {
+      return;
+    }
+    const dialog = root.querySelector<HTMLElement>("[data-foh-cat-form-dialog]");
+    if (dialog && !dialog.classList.contains("hidden")) {
+      e.preventDefault();
+      hideCategoryFormDialog(root);
     }
   });
 }
@@ -905,31 +1380,155 @@ function remountFohCategorySettings(remount: () => void): void {
   remount();
 }
 
-function updateMenuComboConfig(
-  comboKeyValue: MenuComboKey,
-  patch: Partial<MenuComboConfig>,
-): void {
+function syncMenuEditViewOnlyPanels(dialog: HTMLElement, mode: "dish" | "category"): void {
+  dialog.querySelector("[data-foh-menu-view-dish-panel]")?.classList.toggle("hidden", mode !== "dish");
+  dialog
+    .querySelector("[data-foh-menu-view-category-panel]")
+    ?.classList.toggle("hidden", mode !== "category");
+}
+
+function showMenuEditDialog(root: HTMLElement): void {
+  const dialog = root.querySelector<HTMLElement>("[data-foh-menu-edit-dialog]");
+  if (!dialog) return;
+  dialog.classList.remove("hidden");
+  dialog.classList.add("flex");
+}
+
+function hideMenuEditDialog(root: HTMLElement): void {
+  const dialog = root.querySelector<HTMLElement>("[data-foh-menu-edit-dialog]");
+  if (!dialog) return;
+  dialog.classList.add("hidden");
+  dialog.classList.remove("flex");
+  dialog.setAttribute("data-combo-key", "");
+  dialog.setAttribute("data-edit-scope", "");
+  const body = dialog.querySelector<HTMLElement>("[data-foh-menu-edit-body]");
+  if (body) body.innerHTML = "";
+}
+
+function openMenuEditDialog(root: HTMLElement, comboKeyValue: MenuComboKey, scope: MenuEditScope): void {
   const state = readFohCategorySettingsState();
-  const cfg = state.menuByCombo[comboKeyValue];
-  if (!cfg) return;
-  Object.assign(cfg, patch);
-  writeFohCategorySettingsState(state);
-}
-
-function syncViewOnlyPanels(block: HTMLElement, mode: "dish" | "category"): void {
-  const key = block.getAttribute("data-foh-menu-combo-block");
-  if (!key) return;
-  block.querySelector(`[data-foh-menu-view-dish-panel="${key}"]`)?.classList.toggle("hidden", mode !== "dish");
-  block.querySelector(`[data-foh-menu-view-category-panel="${key}"]`)?.classList.toggle("hidden", mode !== "category");
-}
-
-function collectViewOnlyCategoryKeys(comboKeyValue: MenuComboKey, picker: HTMLElement): string[] {
-  const keys: string[] = [];
-  picker.querySelectorAll<HTMLInputElement>(`[data-foh-menu-view-category-key="${comboKeyValue}"]:checked`).forEach((input) => {
-    const v = input.value;
-    if (v && v !== comboKeyValue) keys.push(v);
+  const combos = listMenuCombinations(state);
+  const combo = combos.find((c) => c.key === comboKeyValue);
+  if (!combo) return;
+  const cfg = state.menuByCombo[comboKeyValue] ?? defaultMenuConfig(combo.age, combo.category);
+  const dialog = root.querySelector<HTMLElement>("[data-foh-menu-edit-dialog]");
+  const body = dialog?.querySelector<HTMLElement>("[data-foh-menu-edit-body]");
+  const titleEl = dialog?.querySelector<HTMLElement>("[data-foh-menu-edit-title]");
+  if (!dialog || !body) return;
+  dialog.setAttribute("data-combo-key", comboKeyValue);
+  dialog.setAttribute("data-edit-scope", scope);
+  if (titleEl) {
+    titleEl.textContent =
+      scope === "orderable" ? `可下单 · ${combo.title}` : `不可下单 · ${combo.title}`;
+  }
+  body.innerHTML = renderMenuEditDialogBody(combo, combos, cfg, scope);
+  body.querySelectorAll<HTMLElement>("[data-brand-menu-structure-picker]").forEach((picker) => {
+    bindBrandMenuStructurePicker(picker);
   });
-  return keys;
+  showMenuEditDialog(root);
+}
+
+function collectMenuConfigFromEditDialog(
+  dialog: HTMLElement,
+  comboKeyValue: MenuComboKey,
+  prev: MenuComboConfig,
+  scope: MenuEditScope,
+): MenuComboConfig {
+  if (scope === "orderable") {
+    const orderablePicker = dialog.querySelector<HTMLElement>(
+      "[data-foh-menu-orderable-structure] [data-brand-menu-structure-picker]",
+    );
+    return {
+      ...prev,
+      orderableStructureKeys: orderablePicker
+        ? readBrandMenuStructureKeysFromPicker(orderablePicker)
+        : [],
+    };
+  }
+  const modeRadio = dialog.querySelector<HTMLInputElement>("[data-foh-menu-view-mode]:checked");
+  const viewOnlyMode = modeRadio?.value === "dish" ? "dish" : "category";
+  const viewOnlyCategoryKeys = [
+    ...dialog.querySelectorAll<HTMLInputElement>("[data-foh-menu-view-category-key]:checked"),
+  ]
+    .map((input) => input.value)
+    .filter((k) => k && k !== comboKeyValue);
+  const viewPicker = dialog.querySelector<HTMLElement>(
+    "[data-foh-menu-view-structure] [data-brand-menu-structure-picker]",
+  );
+  return {
+    ...prev,
+    viewOnlyMode,
+    viewOnlyCategoryKeys,
+    viewOnlyStructureKeys: viewPicker
+      ? readBrandMenuStructureKeysFromPicker(viewPicker)
+      : prev.viewOnlyStructureKeys,
+  };
+}
+
+function saveMenuEditDialog(root: HTMLElement): void {
+  const dialog = root.querySelector<HTMLElement>("[data-foh-menu-edit-dialog]");
+  if (!dialog) return;
+  const comboKeyValue = dialog.getAttribute("data-combo-key") || "";
+  if (!comboKeyValue) return;
+  const scope = parseMenuEditScope(dialog.getAttribute("data-edit-scope"));
+  const state = readFohCategorySettingsState();
+  const prev = state.menuByCombo[comboKeyValue];
+  if (!prev) return;
+  state.menuByCombo[comboKeyValue] = collectMenuConfigFromEditDialog(
+    dialog,
+    comboKeyValue,
+    prev,
+    scope,
+  );
+  writeFohCategorySettingsState(state);
+  hideMenuEditDialog(root);
+}
+
+function bindFohCategoryMenuEditDialog(root: HTMLElement, remount: () => void): void {
+  if (root.getAttribute("data-foh-menu-edit-bound") === "1") return;
+  root.setAttribute("data-foh-menu-edit-bound", "1");
+
+  root.addEventListener("click", (e) => {
+    const target = e.target as HTMLElement;
+    const detailBtn = target.closest<HTMLButtonElement>("[data-foh-menu-detail]");
+    if (detailBtn) {
+      const key = detailBtn.getAttribute("data-foh-menu-combo-key");
+      const scope = parseMenuEditScope(detailBtn.getAttribute("data-foh-menu-detail"));
+      if (key) openMenuEditDialog(root, key, scope);
+      return;
+    }
+    if (
+      target.closest("[data-foh-menu-edit-cancel]") ||
+      target.closest("[data-foh-menu-edit-close]") ||
+      target.closest("[data-foh-menu-edit-backdrop]")
+    ) {
+      hideMenuEditDialog(root);
+      return;
+    }
+    if (target.closest("[data-foh-menu-edit-save]")) {
+      saveMenuEditDialog(root);
+      remountFohCategorySettings(remount);
+    }
+  });
+
+  root.addEventListener("change", (e) => {
+    const target = e.target as HTMLElement;
+    const dialog = target.closest<HTMLElement>("[data-foh-menu-edit-dialog]");
+    if (!dialog || dialog.classList.contains("hidden")) return;
+    const modeRadio = target.closest<HTMLInputElement>("[data-foh-menu-view-mode]");
+    if (modeRadio?.checked) {
+      syncMenuEditViewOnlyPanels(dialog, modeRadio.value === "dish" ? "dish" : "category");
+    }
+  });
+
+  root.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    const dialog = root.querySelector<HTMLElement>("[data-foh-menu-edit-dialog]");
+    if (dialog && !dialog.classList.contains("hidden")) {
+      e.preventDefault();
+      hideMenuEditDialog(root);
+    }
+  });
 }
 
 export function bindFohCategorySettingsUi(remount: () => void): void {
@@ -937,40 +1536,8 @@ export function bindFohCategorySettingsUi(remount: () => void): void {
   if (!root || root.getAttribute("data-foh-category-bound") === "1") return;
   root.setAttribute("data-foh-category-bound", "1");
   bindFohSettingsNameDialog(root);
-
-  root.addEventListener("input", (e) => {
-    const input = e.target as HTMLInputElement;
-    if (!input.matches("[data-foh-menu-display-name]")) return;
-    const key = input.getAttribute("data-foh-menu-display-name");
-    if (!key) return;
-    updateMenuComboConfig(key, { displayName: input.value.trim() });
-  });
-
-  root.addEventListener("change", (e) => {
-    const target = e.target as HTMLElement;
-
-    const modeRadio = target.closest<HTMLInputElement>("[data-foh-menu-view-mode]");
-    if (modeRadio?.checked) {
-      const key = modeRadio.getAttribute("data-foh-menu-view-mode");
-      const mode = modeRadio.value === "dish" ? "dish" : "category";
-      if (key) {
-        updateMenuComboConfig(key, { viewOnlyMode: mode });
-        const block = root.querySelector<HTMLElement>(`[data-foh-menu-combo-block="${key}"]`);
-        if (block) syncViewOnlyPanels(block, mode);
-      }
-      return;
-    }
-
-    if (target.matches("[data-foh-menu-view-category-key]")) {
-      const key = (target as HTMLInputElement).getAttribute("data-foh-menu-view-category-key");
-      const picker = target.closest<HTMLElement>("[data-foh-menu-view-category-picker]");
-      if (key && picker) {
-        updateMenuComboConfig(key, {
-          viewOnlyCategoryKeys: collectViewOnlyCategoryKeys(key, picker),
-        });
-      }
-    }
-  });
+  bindFohCategoryMenuEditDialog(root, remount);
+  bindFohCategoryFormDialog(root, remount);
 
   root.querySelector("[data-foh-category-age-add]")?.addEventListener("click", () => {
     openFohSettingsNameDialog(root, {
@@ -1016,13 +1583,11 @@ export function bindFohCategorySettingsUi(remount: () => void): void {
       if (!id) return;
       const state = readFohCategorySettingsState();
       if (state.ages.length <= 1) {
-        window.alert("至少保留一个年龄阶段。");
+        openAgeCategoryNotice(root, "至少保留一个年龄阶段。");
         return;
       }
-      if (!window.confirm("确定删除该年龄阶段？相关菜单组合将一并移除。")) return;
-      state.ages = state.ages.filter((a) => a.id !== id);
-      writeFohCategorySettingsState(state);
-      remountFohCategorySettings(remount);
+      const row = state.ages.find((a) => a.id === id);
+      openAgeCategoryDeleteConfirm(root, "age", id, row?.name ?? "");
     });
   });
 
@@ -1038,150 +1603,208 @@ export function bindFohCategorySettingsUi(remount: () => void): void {
     });
   });
 
-  root.querySelector("[data-foh-category-cat-add]")?.addEventListener("click", () => {
-    openFohSettingsNameDialog(root, {
-      title: "增加类别",
-      label: "类别名称",
-      placeholder: "请输入类别名称",
-      onConfirm: (name) => {
-        const state = readFohCategorySettingsState();
-        state.categories.push({
-          id: newId("cat"),
-          name,
-          scheduleIds: defaultAllDayScheduleIds(readBusinessHourSchedules()),
-        });
-        writeFohCategorySettingsState(state);
-        remountFohCategorySettings(remount);
-      },
-    });
-  });
-
-  root.querySelectorAll<HTMLButtonElement>("[data-foh-category-cat-edit]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const id = btn.getAttribute("data-foh-category-cat-edit");
-      if (!id) return;
-      const state = readFohCategorySettingsState();
-      const row = state.categories.find((c) => c.id === id);
-      if (!row) return;
-      openFohSettingsNameDialog(root, {
-        title: "修改类别",
-        label: "类别名称",
-        initialValue: row.name,
-        confirmLabel: "保存",
-        onConfirm: (name) => {
-          const latest = readFohCategorySettingsState();
-          const target = latest.categories.find((c) => c.id === id);
-          if (!target) return;
-          target.name = name;
-          writeFohCategorySettingsState(latest);
-          remountFohCategorySettings(remount);
-        },
-      });
-    });
-  });
-
   root.querySelectorAll<HTMLButtonElement>("[data-foh-category-cat-delete]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const id = btn.getAttribute("data-foh-category-cat-delete");
       if (!id) return;
       const state = readFohCategorySettingsState();
       if (state.categories.length <= 1) {
-        window.alert("至少保留一个类别。");
+        openAgeCategoryNotice(root, "至少保留一个类别。");
         return;
       }
-      if (!window.confirm("确定删除该类别？相关菜单组合将一并移除。")) return;
-      state.categories = state.categories.filter((c) => c.id !== id);
-      writeFohCategorySettingsState(state);
-      remountFohCategorySettings(remount);
+      const row = state.categories.find((c) => c.id === id);
+      openAgeCategoryDeleteConfirm(root, "category", id, row?.name ?? "");
     });
   });
 
-  bindFohCategoryHoursPicker(root, remount);
+  root.addEventListener("click", (e) => {
+    const target = e.target as HTMLElement;
+    if (
+      target.closest("[data-foh-age-cat-delete-cancel]") ||
+      target.closest("[data-foh-age-cat-delete-backdrop]")
+    ) {
+      hideAgeCategoryDeleteDialog(root);
+      return;
+    }
+    if (target.closest("[data-foh-age-cat-delete-confirm]")) {
+      confirmAgeCategoryDelete(root, remount);
+    }
+  });
+
+  root.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    const dialog = root.querySelector<HTMLElement>("[data-foh-age-cat-delete-dialog]");
+    if (dialog && !dialog.classList.contains("hidden")) {
+      e.preventDefault();
+      hideAgeCategoryDeleteDialog(root);
+    }
+  });
+
   bindFohCategorySpecialMenuUi(root, remount);
 }
 
-function persistSpecialMenusFromDom(root: HTMLElement): FohSpecialMenuEntry[] {
-  const entries: FohSpecialMenuEntry[] = [];
-  root.querySelectorAll<HTMLElement>("[data-foh-special-menu-entry]").forEach((article) => {
-    const id = article.getAttribute("data-foh-special-menu-entry");
-    if (!id) return;
-    const name =
-      article.querySelector<HTMLInputElement>(`[data-foh-special-menu-name="${id}"]`)?.value.trim() ?? "";
-    const dropdown = article.querySelector<HTMLElement>("[data-menu-group-dropdown]");
-    const menus = dropdown ? collectMenuGroupsFromDropdownWithCatalog(dropdown) : [];
-    entries.push({ id, name, menus });
+function showSpecialMenuDialog(root: HTMLElement): void {
+  const dialog = root.querySelector<HTMLElement>("[data-foh-special-menu-dialog]");
+  if (!dialog) return;
+  dialog.classList.remove("hidden");
+  dialog.classList.add("flex");
+}
+
+function hideSpecialMenuDialog(root: HTMLElement): void {
+  const dialog = root.querySelector<HTMLElement>("[data-foh-special-menu-dialog]");
+  if (!dialog) return;
+  dialog.classList.add("hidden");
+  dialog.classList.remove("flex");
+  dialog.setAttribute("data-editing-id", "");
+  dialog.setAttribute("data-entry-id", "");
+  clearSpecialMenuImagePickError(root);
+  const body = dialog.querySelector<HTMLElement>("[data-foh-special-menu-dialog-body]");
+  if (body) body.innerHTML = "";
+}
+
+function openSpecialMenuDialog(root: HTMLElement, editingId: string | null): void {
+  const state = readFohCategorySettingsState();
+  const editing = editingId ? state.specialMenus.find((e) => e.id === editingId) : null;
+  const entryId = editing?.id ?? newSpecialMenuId();
+  const dialog = root.querySelector<HTMLElement>("[data-foh-special-menu-dialog]");
+  const body = dialog?.querySelector<HTMLElement>("[data-foh-special-menu-dialog-body]");
+  const titleEl = dialog?.querySelector<HTMLElement>("[data-foh-special-menu-dialog-title]");
+  if (!dialog || !body) return;
+  dialog.setAttribute("data-editing-id", editing ? entryId : "");
+  dialog.setAttribute("data-entry-id", entryId);
+  if (titleEl) titleEl.textContent = editing ? "编辑特殊品类" : "新增特殊品类";
+  clearSpecialMenuImagePickError(root);
+  body.innerHTML = renderSpecialMenuDialogBody(
+    entryId,
+    editing?.name ?? "",
+    editing?.structureKeys ?? [],
+    editing?.imageDataUrl,
+  );
+  body.querySelectorAll<HTMLElement>("[data-brand-menu-structure-picker]").forEach((picker) => {
+    bindBrandMenuStructurePicker(picker);
   });
-  return entries;
+  showSpecialMenuDialog(root);
+  body.querySelector<HTMLInputElement>("[data-foh-special-menu-name]")?.focus();
+}
+
+function saveSpecialMenuDialog(root: HTMLElement): void {
+  const dialog = root.querySelector<HTMLElement>("[data-foh-special-menu-dialog]");
+  if (!dialog) return;
+  const entryId = dialog.getAttribute("data-entry-id") || "";
+  const editingId = dialog.getAttribute("data-editing-id") || "";
+  if (!entryId) return;
+  const name =
+    dialog.querySelector<HTMLInputElement>("[data-foh-special-menu-name]")?.value.trim() ?? "";
+  if (!name) {
+    dialog.querySelector<HTMLInputElement>("[data-foh-special-menu-name]")?.focus();
+    return;
+  }
+  const preview = dialog.querySelector<HTMLImageElement>("[data-foh-special-menu-image-preview]");
+  const imageDataUrl = preview?.tagName === "IMG" ? preview.src : undefined;
+  const picker = dialog.querySelector<HTMLElement>(
+    "[data-foh-special-menu-structure] [data-brand-menu-structure-picker]",
+  );
+  const structureKeys = picker ? readBrandMenuStructureKeysFromPicker(picker) : [];
+  const nextEntry: FohSpecialMenuEntry = { id: entryId, name, imageDataUrl, structureKeys };
+  const state = readFohCategorySettingsState();
+  if (editingId) {
+    const idx = state.specialMenus.findIndex((e) => e.id === editingId);
+    if (idx >= 0) state.specialMenus[idx] = nextEntry;
+    else state.specialMenus.push(nextEntry);
+  } else {
+    state.specialMenus.push(nextEntry);
+  }
+  writeFohCategorySettingsState(state);
+  hideSpecialMenuDialog(root);
 }
 
 function bindFohCategorySpecialMenuUi(root: HTMLElement, remount: () => void): void {
   if (root.getAttribute("data-foh-special-menu-bound") === "1") return;
   root.setAttribute("data-foh-special-menu-bound", "1");
-  ensureMenuGroupDropdownDocumentCloseListener();
-  bindMenuGroupDropdownPickers(root);
 
-  const persistAndRemount = (): void => {
+  root.addEventListener("change", (e) => {
+    const target = e.target as HTMLElement;
+    const lineInput = target.closest<HTMLInputElement>("[data-foh-special-menu-line]");
+    if (!lineInput) return;
+    const group = lineInput.closest<HTMLElement>("[data-foh-special-menu-lines]");
+    if (!group) return;
+    const valid = new Set<SpecialMenuLineId>(["emenu", "sdi"]);
+    const lines: SpecialMenuLineId[] = [];
+    group.querySelectorAll<HTMLInputElement>("[data-foh-special-menu-line]").forEach((input) => {
+      if (!input.checked) return;
+      const id = input.getAttribute("data-foh-special-menu-line");
+      if (id && valid.has(id as SpecialMenuLineId)) {
+        lines.push(id as SpecialMenuLineId);
+      }
+    });
     const state = readFohCategorySettingsState();
-    state.specialMenus = persistSpecialMenusFromDom(root);
+    state.specialMenuLines = uniqueStrings(lines) as SpecialMenuLineId[];
     writeFohCategorySettingsState(state);
     remountFohCategorySettings(remount);
-  };
+  });
 
   root.addEventListener("click", (e) => {
     const target = e.target as HTMLElement;
-    const toggle = target.closest<HTMLButtonElement>("[data-foh-category-special-enabled]");
-    if (toggle) {
-      const state = readFohCategorySettingsState();
-      const next = toggle.getAttribute("aria-checked") !== "true";
-      state.specialMenuEnabled = next;
-      if (next && state.specialMenus.length === 0) {
-        state.specialMenus = [defaultSpecialMenuDemoEntry()];
-      }
-      writeFohCategorySettingsState(state);
-      remountFohCategorySettings(remount);
+    if (target.closest("[data-foh-special-menu-add]")) {
+      openSpecialMenuDialog(root, null);
       return;
     }
-    if (target.closest("[data-foh-special-menu-add]")) {
-      const state = readFohCategorySettingsState();
-      state.specialMenuEnabled = true;
-      state.specialMenus = [...persistSpecialMenusFromDom(root), { id: newSpecialMenuId(), name: "", menus: [] }];
-      writeFohCategorySettingsState(state);
-      remountFohCategorySettings(remount);
+    const editBtn = target.closest<HTMLButtonElement>("[data-foh-special-menu-edit]");
+    if (editBtn) {
+      const id = editBtn.getAttribute("data-foh-special-menu-edit");
+      if (id) openSpecialMenuDialog(root, id);
       return;
     }
     const deleteBtn = target.closest<HTMLButtonElement>("[data-foh-special-menu-delete]");
     if (deleteBtn) {
       const id = deleteBtn.getAttribute("data-foh-special-menu-delete");
       if (!id) return;
-      if (!window.confirm("确定删除该特殊菜单？")) return;
+      if (!window.confirm("确定删除该特殊品类？")) return;
       const state = readFohCategorySettingsState();
-      state.specialMenus = persistSpecialMenusFromDom(root).filter((entry) => entry.id !== id);
+      state.specialMenus = state.specialMenus.filter((entry) => entry.id !== id);
       writeFohCategorySettingsState(state);
+      remountFohCategorySettings(remount);
+      return;
+    }
+    if (target.closest("[data-foh-special-menu-image-pick]")) {
+      clearSpecialMenuImagePickError(root);
+      openImageSourcePicker(root);
+      return;
+    }
+    if (
+      target.closest("[data-foh-special-menu-dialog-cancel]") ||
+      target.closest("[data-foh-special-menu-dialog-close]") ||
+      target.closest("[data-foh-special-menu-dialog-backdrop]")
+    ) {
+      hideSpecialMenuDialog(root);
+      return;
+    }
+    if (target.closest("[data-foh-special-menu-dialog-save]")) {
+      saveSpecialMenuDialog(root);
       remountFohCategorySettings(remount);
     }
   });
 
-  root.addEventListener("change", (e) => {
-    const target = e.target as HTMLElement;
-    if (target.closest("[data-menu-group-dropdown-choice]") && target.closest("[data-foh-special-menu-entry]")) {
-      persistAndRemount();
+  root.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    const uploadModal = root.querySelector<HTMLElement>("[data-image-source-upload-modal]");
+    const libraryModal = root.querySelector<HTMLElement>("[data-image-source-library-modal]");
+    if (
+      (uploadModal && !uploadModal.classList.contains("hidden")) ||
+      (libraryModal && !libraryModal.classList.contains("hidden"))
+    ) {
+      return;
+    }
+    const dialog = root.querySelector<HTMLElement>("[data-foh-special-menu-dialog]");
+    if (dialog && !dialog.classList.contains("hidden")) {
+      e.preventDefault();
+      hideSpecialMenuDialog(root);
     }
   });
-
-  root.addEventListener(
-    "input",
-    (e) => {
-      const input = e.target as HTMLInputElement;
-      if (!input.matches("[data-foh-special-menu-name]")) return;
-      const state = readFohCategorySettingsState();
-      state.specialMenus = persistSpecialMenusFromDom(root);
-      writeFohCategorySettingsState(state);
-    },
-    { passive: true },
-  );
 }
 
-/** 解析某组合下已选可看可下单菜品（供调试或后续 API 对接） */
-export function readMenuComboOrderableDishes(comboKeyValue: MenuComboKey): DishTag[] {
-  return readDishTags(orderableStorageId(comboKeyValue));
+/** 解析某组合下已选可看可下单菜单结构 key（供调试或后续 API 对接） */
+export function readMenuComboOrderableStructureKeys(comboKeyValue: MenuComboKey): string[] {
+  const state = readFohCategorySettingsState();
+  return state.menuByCombo[comboKeyValue]?.orderableStructureKeys ?? [];
 }

@@ -91,15 +91,6 @@ const LINES_GROUP_ARIA_BY_SEQ: Record<PosMenuUiLayoutLinesSeq, string> = {
   [EMENU_CUSTOM_MESSAGE_SEQ]: "电子菜单自定义消息适用产线",
 };
 
-const PANEL_HINT_BY_SEQ: Record<PosMenuUiLayoutLinesSeq, string> = {
-  [MENU_GROUP_FLAT_DISPLAY_SEQ]: "勾选产线后，点单页菜单组以平铺方式展示。",
-  [CATEGORY_LAYOUT_SEQ]: "按产线独立配置分类展示布局。",
-  [ITEM_LAYOUT_SEQ]: "按产线独立配置菜品按钮展示布局。",
-  [BUTTON_COLOR_FULL_FILL_SEQ]: "勾选产线后，点单页菜单按钮颜色铺满按钮区域。",
-  [SHOW_DISH_PRICE_SEQ]: "勾选产线后，点单页菜单区展示菜品价格。",
-  [EMENU_CUSTOM_MESSAGE_SEQ]: "勾选产线后，允许配置电子菜单自定义消息。",
-};
-
 const CATEGORY_BY_LINE_STORAGE_ID = "217-category-layout-by-line";
 const ITEM_BY_LINE_STORAGE_ID = "218-item-layout-by-line";
 
@@ -414,7 +405,6 @@ function renderCategoryLayoutByLineEditorHtml(seq: PosMenuUiLayoutRadioSeq): str
 
   return `
     <div data-pos-menu-ui-layout-category-editor="${seq}" class="mt-3 space-y-2">
-      <p class="m-0 text-xs font-medium text-muted-foreground">各产线分类布局（单选）</p>
       <div class="overflow-x-auto rounded-md border border-border">
         <table class="w-full min-w-[24rem] border-collapse text-left text-sm">
           <thead class="bg-muted/40 text-xs text-muted-foreground">
@@ -464,7 +454,6 @@ function renderItemLayoutByLineEditorHtml(seq: PosMenuUiLayoutRadioSeq): string 
 
   return `
     <div data-pos-menu-ui-layout-item-editor="${seq}" class="mt-3 space-y-2">
-      <p class="m-0 text-xs font-medium text-muted-foreground">各产线菜品按钮布局（单选）</p>
       <div class="overflow-x-auto rounded-md border border-border">
         <table class="w-full min-w-[24rem] border-collapse text-left text-sm">
           <thead class="bg-muted/40 text-xs text-muted-foreground">
@@ -493,11 +482,7 @@ export function renderPosMenuUiLayoutLinesPanelHtml(seq: PosMenuUiLayoutLinesSeq
   const linesMultiselect = isRadioSeq(seq)
     ? ""
     : `
-      <p class="m-0 mb-2 text-xs font-medium text-muted-foreground">适用产线（多选）</p>
       ${renderLinesMultiselectHtml(seq, on)}`;
-  const hint = PANEL_HINT_BY_SEQ[seq]
-    ? `<p class="m-0 ${isRadioSeq(seq) ? "mb-2" : "mt-2"} text-xs leading-relaxed text-muted-foreground">${escapeHtml(PANEL_HINT_BY_SEQ[seq])}</p>`
-    : "";
   return `
     <div
       class="mt-3 ${hidden}"
@@ -505,7 +490,6 @@ export function renderPosMenuUiLayoutLinesPanelHtml(seq: PosMenuUiLayoutLinesSeq
       ${on ? "" : 'aria-hidden="true"'}
     >
       ${linesMultiselect}
-      ${hint}
       ${radioExtra}
     </div>`;
 }

@@ -101,7 +101,6 @@ export function renderGuestPhoneRequiredPanelHtml(seq: number, on: boolean): str
       data-guest-phone-required-panel="${seq}"
       ${on ? "" : 'aria-hidden="true"'}
     >
-      <p class="m-0 mb-2 text-xs font-medium text-muted-foreground">适用产线（多选）</p>
       ${renderLinesMultiselectHtml(on)}
       <p class="m-0 mt-2 text-xs leading-relaxed text-muted-foreground">
         勾选产线在输入手机号页面要求手机号必填（取餐联络等；须与 seq 504 展示页同轨）。

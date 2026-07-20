@@ -203,7 +203,6 @@ export const NAV_MODULES: NavModule[] = [
       { id: "team-tips", title: "小费管理", path: "/team/tips" },
       { id: "team-tax-payroll", title: "薪资管理", titleEn: "Manage Payroll", path: "/team/payroll-report" },
       { id: "team-reports", title: "员工报表", path: "/team/reports" },
-      { id: "team-7shifts", title: "7Shifts 对接（排班）", path: "/team/integrations/7shifts" },
       { id: "team-training", title: "绩效与培训", path: "/team/training-performance" },
       { id: "team-settings", title: "设置", path: "/team/settings" },
     ],
@@ -363,8 +362,8 @@ export const NAV_MODULES: NavModule[] = [
       },
       {
         id: "qc-brand-menu",
-        title: "店中店设置",
-        titleEn: "Shop-in-shop settings",
+        title: "店中店管理",
+        titleEn: "Shop-in-shop management",
         path: "/operations/queue-call/brand-menu",
       },
       { id: "qc-settings", title: "设置", titleEn: "Settings", path: "/operations/queue-call/settings" },
@@ -376,14 +375,14 @@ export const NAV_MODULES: NavModule[] = [
       },
       {
         id: "qc-category-settings",
-        title: "品类设置",
-        titleEn: "Category settings",
+        title: "品类管理",
+        titleEn: "Category management",
         path: "/operations/queue-call/category-settings",
       },
       {
         id: "qc-classification-settings",
-        title: "分类设置",
-        titleEn: "Classification settings",
+        title: "分类管理",
+        titleEn: "Classification management",
         path: "/operations/queue-call/classification-settings",
       },
       {
@@ -727,14 +726,15 @@ export interface TeamReportsSubItem {
 }
 
 export const TEAM_REPORTS_SUBNAV: TeamReportsSubItem[] = [
-  { id: "team-rpt-overview", title: "概览", titleEn: "Overview", path: "/team/reports/overview" },
-  { id: "team-rpt-tips", title: "小费", titleEn: "Tips", path: "/team/reports/tips" },
+  { id: "team-rpt-summary", title: "汇总", titleEn: "Summary", path: "/team/reports/summary" },
+  { id: "team-rpt-tip-summary", title: "小费汇总表", titleEn: "Tip summary", path: "/team/reports/tip-summary" },
+  { id: "team-rpt-tip-detail", title: "小费明细表", titleEn: "Tip details", path: "/team/reports/tip-detail" },
   { id: "team-rpt-performance", title: "绩效", titleEn: "Performance", path: "/team/reports/performance" },
   { id: "team-rpt-payroll", title: "薪资", titleEn: "Payroll", path: "/team/reports/payroll" },
 ];
 
 export function getTeamReportsDefaultPath(): string {
-  return TEAM_REPORTS_SUBNAV[0]?.path ?? "/team/reports/overview";
+  return TEAM_REPORTS_SUBNAV[0]?.path ?? "/team/reports/summary";
 }
 
 export function getActiveTeamReportsSubPath(path: string): string {

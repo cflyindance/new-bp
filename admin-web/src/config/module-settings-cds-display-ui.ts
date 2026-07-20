@@ -4,6 +4,10 @@
  */
 
 import { moduleSettingToggleStorageKey } from "./module-settings-toggle-ui";
+import {
+  bindModuleSettingSceneDescHelp,
+  renderSettingTitleWithHelpHtml,
+} from "./module-settings-scene-desc-help-ui";
 
 export const CDS_JOIN_MEMBER_SEQ = 10;
 export const CDS_SHOW_COVER_SEQ = 461;
@@ -171,8 +175,13 @@ function renderToggleRow(
   return `
     <div class="flex items-start justify-between gap-3 border-b border-border py-3 last:border-b-0" data-cds-display-setting-row>
       <div class="min-w-0 flex-1">
-        <p class="text-sm font-medium text-foreground">${escapeHtml(item.title)}</p>
-        <p class="mt-0.5 text-xs text-muted-foreground">${escapeHtml(item.sceneDesc)}</p>
+        ${renderSettingTitleWithHelpHtml({
+          id: item.seq,
+          title: item.title,
+          sceneDesc: item.sceneDesc,
+          titleTag: "p",
+          titleClass: "text-sm font-medium text-foreground",
+        })}
         ${assetNote}
       </div>
       <div class="flex shrink-0 items-center gap-2" data-cds-display-toggle-group>
@@ -223,6 +232,7 @@ export function collectCdsDisplaySettingsFromForm(form: HTMLElement): CdsDisplay
 }
 
 export function bindCdsDisplaySettingsToggles(root: ParentNode = document): void {
+  bindModuleSettingSceneDescHelp(root);
   root.querySelectorAll<HTMLButtonElement>("[data-cds-display-toggle]").forEach((btn) => {
     syncCdsDisplayToggleButton(btn);
     if (btn.dataset.cdsDisplayToggleBound === "1") return;

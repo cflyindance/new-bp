@@ -123,7 +123,6 @@ export function renderRuleHitPasswordAuthPanelHtml(on: boolean): string {
       data-rule-hit-password-auth-panel="${RULE_HIT_PASSWORD_AUTH_SEQ}"
       ${on ? "" : 'aria-hidden="true"'}
     >
-      <p class="m-0 mb-2 text-xs font-medium text-muted-foreground">适用产线（多选）</p>
       ${renderLinesMultiselectHtml(on)}
       <p class="m-0 mt-2 text-xs leading-relaxed text-muted-foreground">
         勾选产线后，食客下单命中任意限制规则时须服务员输入密码授权。

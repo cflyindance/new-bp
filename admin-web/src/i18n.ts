@@ -222,6 +222,9 @@ const messages = {
     "moduleSettings.toggleOff": "已关闭展示",
     "moduleSettings.toggleOffLabel": "关闭",
     "moduleSettings.toggleOnLabel": "开启",
+    "moduleSettings.helpAria": "查看「{name}」功能说明",
+    "moduleSettings.helpClose": "关闭",
+    "moduleSettings.helpGotIt": "知道了",
     "moduleSettings.fohNav.staff": "员工端",
     "moduleSettings.fohNav.guest": "食客端",
     "moduleSettings.fohView.modeAria": "前厅设置查看方式",
@@ -251,7 +254,7 @@ const messages = {
     "placeholder.bullet.tips":
       "<strong class=\"text-card-foreground\">团队管理 · 小费管理</strong>：在左侧主导航点击「团队管理」打开<strong class=\"text-card-foreground\">右滑二级导航</strong>后选择 <strong class=\"text-card-foreground\">小费管理</strong>；本区域左侧为细项（小费分配、分配明细、分配规则），交互同本后台其它三级侧栏。",
     "placeholder.bullet.teamReports":
-      "<strong class=\"text-card-foreground\">团队管理 · 员工报表</strong>：在左侧主导航点击「团队管理」打开<strong class=\"text-card-foreground\">右滑二级导航</strong>后选择 <strong class=\"text-card-foreground\">员工报表</strong>；本区域左侧为细项（概览、小费、绩效、薪资），交互同小费管理。",
+      "<strong class=\"text-card-foreground\">团队管理 · 员工报表</strong>：在左侧主导航点击「团队管理」打开<strong class=\"text-card-foreground\">右滑二级导航</strong>后选择 <strong class=\"text-card-foreground\">员工报表</strong>；本区域左侧为细项（汇总、小费汇总表、小费明细表、绩效、薪资），交互同小费管理。",
     "placeholder.bullet.teamScheduling":
       "<strong class=\"text-card-foreground\">团队管理 · 排班与考勤</strong>：在左侧主导航点击「团队管理」打开<strong class=\"text-card-foreground\">右滑二级导航</strong>后选择 <strong class=\"text-card-foreground\">排班与考勤</strong>；本区域左侧为细项（考勤记录、加班规则），交互同小费管理。",
     "placeholder.bullet.brandProducts":
@@ -493,6 +496,9 @@ const messages = {
     "moduleSettings.toggleOff": "Hidden",
     "moduleSettings.toggleOffLabel": "Off",
     "moduleSettings.toggleOnLabel": "On",
+    "moduleSettings.helpAria": "Show description for “{name}”",
+    "moduleSettings.helpClose": "Close",
+    "moduleSettings.helpGotIt": "Got it",
     "moduleSettings.fohNav.staff": "Staff",
     "moduleSettings.fohNav.guest": "Guest",
     "moduleSettings.fohView.modeAria": "Front-of-house settings view mode",
@@ -522,7 +528,7 @@ const messages = {
     "placeholder.bullet.tips":
       "<strong class=\"text-card-foreground\">Team · Tips</strong>: open Team from the sidebar, use the sheet, pick <strong class=\"text-card-foreground\">Tips</strong>. Left column covers allocation, details, and rules.",
     "placeholder.bullet.teamReports":
-      "<strong class=\"text-card-foreground\">Team · Staff reports</strong>: open Team → <strong class=\"text-card-foreground\">Staff reports</strong> from the sheet. Left column: overview, tips, performance, payroll.",
+      "<strong class=\"text-card-foreground\">Team · Staff reports</strong>: open Team → <strong class=\"text-card-foreground\">Staff reports</strong> from the sheet. Left column: summary, tip summary, tip details, performance, payroll.",
     "placeholder.bullet.teamScheduling":
       "<strong class=\"text-card-foreground\">Team · Scheduling & attendance</strong>: open Team → <strong class=\"text-card-foreground\">Scheduling</strong> from the sheet. Left column: attendance log and overtime rules.",
     "placeholder.bullet.brandProducts":

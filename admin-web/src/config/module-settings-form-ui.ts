@@ -419,6 +419,15 @@ export function writeModuleSettingText(fieldId: string, value: string): void {
 }
 
 export function readModuleSettingJson<T>(fieldId: string, defaultValue: T): T {
+  const draft = readPageDraftFieldForCurrentPath(fieldId);
+  if (draft !== undefined) {
+    try {
+      if (draft === "") return defaultValue;
+      return JSON.parse(draft) as T;
+    } catch {
+      return defaultValue;
+    }
+  }
   try {
     const raw = localStorage.getItem(moduleSettingStorageKey(fieldId));
     if (raw === null || raw === "") return defaultValue;

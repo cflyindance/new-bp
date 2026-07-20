@@ -154,7 +154,7 @@ export function renderMenuGroupPickerHtml(seq: number, storageFieldId: string): 
     </div>`;
 }
 
-/** 触发区：brand 等多选场景在框内展示可换行标签（对齐特殊菜单设置产线） */
+/** 触发区：brand 等多选场景在框内展示可换行标签（对齐特殊品类设置产线） */
 function renderMenuGroupDropdownTriggerLabel(groups: MenuGroupTag[], catalogKey: MenuGroupCatalogKey): string {
   if (groups.length === 0) {
     const placeholder = catalogKey === "brand" ? "请选择菜单" : "请选择菜单组";

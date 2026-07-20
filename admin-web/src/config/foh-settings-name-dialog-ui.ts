@@ -1,5 +1,5 @@
 /**
- * 前厅 · 品类/分类设置 — 名称输入模态框（替代 window.prompt）
+ * 前厅 · 品类/分类管理 — 名称输入模态框（替代 window.prompt）
  */
 
 const INPUT_CLASS =

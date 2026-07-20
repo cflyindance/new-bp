@@ -164,7 +164,6 @@ export function renderPartySizeSelectionPagePanelHtml(seq: number, on: boolean):
       data-party-size-selection-page-panel="${seq}"
       ${on ? "" : 'aria-hidden="true"'}
     >
-      <p class="m-0 mb-2 text-xs font-medium text-muted-foreground">适用产线（多选）</p>
       ${renderLinesMultiselectHtml(on)}
     </div>`;
 }

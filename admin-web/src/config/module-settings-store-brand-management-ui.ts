@@ -1,19 +1,27 @@
 /**
- * 前厅管理中心 · 店中店设置（/operations/queue-call/brand-menu）· 品牌管理（seq 547）。
- * 本店品牌列表、新增/编辑品牌；品牌营业时间引用 seq 418，品牌菜单引用 seq 548 菜单库。
+ * 前厅管理中心 · 店中店管理（/operations/queue-call/brand-menu）· 品牌管理（seq 547）。
+ * 本店品牌列表、新增/编辑品牌；品牌营业时间引用 seq 418；品牌菜单为组/类/菜三级选择。
  */
 
 import {
-  formatBrandMenuSummary,
-  readBrandMenus,
-  type StoreBrandMenu,
-} from "./module-settings-store-brand-menu-ui";
+  bindBrandMenuStructurePicker,
+  dishKey,
+  formatBrandMenuStructureSummary,
+  readBrandMenuStructureKeysFromPicker,
+  renderBrandMenuStructurePickerHtml,
+} from "./brand-menu-structure-picker-ui";
 import {
   formatScheduleSummary,
   readBusinessHourSchedules,
   type StoreBusinessHourSchedule,
 } from "./module-settings-store-business-hours-ui";
-import { readModuleSettingJson, writeModuleSettingJson } from "./module-settings-form-ui";
+import { writeModuleSettingJson, moduleSettingStorageKey } from "./module-settings-form-ui";
+import { readPageDraftFieldForCurrentPath } from "./page-settings-draft";
+import {
+  bindImageSourcePicker,
+  openImageSourcePicker,
+  renderImageSourcePickerModalsHtml,
+} from "./image-source-picker-ui";
 
 export const STORE_BRAND_MANAGEMENT_SEQ = 547;
 
@@ -25,8 +33,8 @@ export type StoreBrandRecord = {
   imageDataUrl?: string;
   /** 引用的 seq 418 营业时间规则 id 列表 */
   scheduleIds: string[];
-  /** 引用的 seq 548 品牌菜单 id 列表 */
-  menuIds: string[];
+  /** 组/类/菜选中节点 key（g: / c: / d:） */
+  menuStructureKeys: string[];
 };
 
 const INPUT_CLASS =
@@ -37,6 +45,9 @@ const BTN_PRIMARY =
 
 const BTN_GHOST =
   "inline-flex h-9 shrink-0 items-center justify-center rounded-md border border-border bg-background px-4 text-sm font-medium text-foreground shadow-sm hover:bg-muted";
+
+const BTN_DESTRUCTIVE =
+  "inline-flex h-9 shrink-0 items-center justify-center rounded-md bg-destructive px-4 text-sm font-medium text-destructive-foreground shadow-sm hover:bg-destructive/90";
 
 const BTN_LINK =
   "text-sm font-medium text-primary hover:underline";
@@ -69,53 +80,72 @@ function normalizeScheduleIds(raw: unknown): string[] {
   return uniqueStrings(raw.filter((id): id is string => typeof id === "string" && id.length > 0));
 }
 
-function normalizeMenuIds(raw: unknown): string[] {
+function normalizeMenuStructureKeys(raw: unknown): string[] {
   if (!Array.isArray(raw)) return [];
   return uniqueStrings(raw.filter((id): id is string => typeof id === "string" && id.length > 0));
 }
 
-function normalizeBrand(raw: Partial<StoreBrandRecord> & { businessHours?: unknown }): StoreBrandRecord {
+function normalizeBrand(
+  raw: Partial<StoreBrandRecord> & { businessHours?: unknown; menuIds?: unknown },
+): StoreBrandRecord {
   const scheduleIds = normalizeScheduleIds(raw.scheduleIds);
-  const menuIds = normalizeMenuIds(raw.menuIds);
+  // 兼容旧数据 menuIds：忽略，新开默认空结构选中
+  const menuStructureKeys = normalizeMenuStructureKeys(raw.menuStructureKeys);
   return {
     id: raw.id ?? newBrandId(),
     name: raw.name ?? "",
     imageDataUrl: raw.imageDataUrl,
     scheduleIds,
-    menuIds,
+    menuStructureKeys,
   };
 }
 
 function defaultBrands(): StoreBrandRecord[] {
   const schedules = readBusinessHourSchedules();
-  const menus = readBrandMenus();
   const firstScheduleId = schedules[0]?.id;
   const secondScheduleIds = schedules.slice(0, 2).map((s) => s.id);
-  const firstMenuId = menus[0]?.id;
-  const secondMenuIds = menus.slice(0, 2).map((m) => m.id);
+  const sampleKeys = [
+    dishKey("g-hotpot", "c-hotpot-meat", "d-beef-premium"),
+    dishKey("g-hotpot", "c-hotpot-base", "d-pot-yinyang"),
+  ];
   return [
     normalizeBrand({
-      id: newBrandId(),
+      id: "brand-preset-yangguofu",
       name: "杨国富麻辣烫",
       scheduleIds: firstScheduleId ? [firstScheduleId] : [],
-      menuIds: firstMenuId ? [firstMenuId] : [],
+      menuStructureKeys: sampleKeys,
     }),
     normalizeBrand({
-      id: newBrandId(),
+      id: "brand-preset-zhangliang",
       name: "张亮麻辣烫",
       scheduleIds: secondScheduleIds.length > 0 ? secondScheduleIds : firstScheduleId ? [firstScheduleId] : [],
-      menuIds: secondMenuIds.length > 0 ? secondMenuIds : firstMenuId ? [firstMenuId] : [],
+      menuStructureKeys: [dishKey("g-chinese", "c-chinese-hot", "d-kungpao")],
     }),
   ];
 }
 
+/** 无持久化数据时返回系统预设（稳定 id）；显式存过空数组则返回空列表 */
 export function readStoreBrands(): StoreBrandRecord[] {
-  const raw = readModuleSettingJson<(Partial<StoreBrandRecord> & { businessHours?: unknown })[]>(
-    STORE_BRANDS_FIELD_ID,
-    [],
-  );
-  if (!Array.isArray(raw) || raw.length === 0) return defaultBrands();
-  return raw.map((b) => normalizeBrand(b));
+  const draft = readPageDraftFieldForCurrentPath(STORE_BRANDS_FIELD_ID);
+  let storedRaw: string | null = null;
+  try {
+    storedRaw = localStorage.getItem(moduleSettingStorageKey(STORE_BRANDS_FIELD_ID));
+  } catch {
+    storedRaw = null;
+  }
+
+  const source = draft !== undefined ? draft : storedRaw;
+  if (source === null || source === undefined || source === "") {
+    return defaultBrands();
+  }
+  try {
+    const parsed = JSON.parse(source) as unknown;
+    if (!Array.isArray(parsed)) return defaultBrands();
+    if (parsed.length === 0) return [];
+    return parsed.map((b) => normalizeBrand(b as Partial<StoreBrandRecord>));
+  } catch {
+    return defaultBrands();
+  }
 }
 
 export function writeStoreBrands(brands: StoreBrandRecord[]): void {
@@ -131,11 +161,7 @@ export function formatBrandBusinessHoursSummary(brand: StoreBrandRecord): string
 }
 
 export function formatBrandMenusSummary(brand: StoreBrandRecord): string {
-  const menus = readBrandMenus();
-  const names = brand.menuIds
-    .map((id) => menus.find((m) => m.id === id)?.name)
-    .filter((name): name is string => !!name);
-  return names.length > 0 ? uniqueStrings(names).join(" / ") : "—";
+  return formatBrandMenuStructureSummary(brand.menuStructureKeys);
 }
 
 function renderBrandImageCell(brand: StoreBrandRecord): string {
@@ -216,41 +242,6 @@ function renderSchedulePicker(selectedIds: string[]): string {
     </div>`;
 }
 
-function renderMenuOption(menu: StoreBrandMenu, selectedIds: string[]): string {
-  const checked = selectedIds.includes(menu.id);
-  return `
-    <label
-      class="flex cursor-pointer items-start gap-3 rounded-md border border-border px-3 py-2.5 hover:bg-muted/30 has-[:checked]:border-primary/40 has-[:checked]:bg-primary/5"
-      data-brand-menu-option
-    >
-      <input
-        type="checkbox"
-        class="mt-0.5 size-4 shrink-0 accent-primary"
-        data-brand-menu-id
-        value="${escapeHtml(menu.id)}"
-        ${checked ? "checked" : ""}
-      />
-      <span class="min-w-0">
-        <span class="block text-sm font-medium text-foreground">${escapeHtml(menu.name)}</span>
-        <span class="block text-xs text-muted-foreground">${escapeHtml(formatBrandMenuSummary(menu))}</span>
-      </span>
-    </label>`;
-}
-
-function renderMenuPicker(selectedIds: string[]): string {
-  const menus = readBrandMenus();
-  if (menus.length === 0) {
-    return `
-      <div class="rounded-md border border-dashed border-border bg-muted/20 px-3 py-4 text-sm text-muted-foreground">
-        暂无可用品牌菜单，请先在「商品中心 → 品牌菜单」中创建菜单。
-      </div>`;
-  }
-  return `
-    <div class="space-y-2" data-brand-menu-picker>
-      ${menus.map((m) => renderMenuOption(m, selectedIds)).join("")}
-    </div>`;
-}
-
 function renderBrandDialog(brands: StoreBrandRecord[], editingId: string | null): string {
   const editing = editingId ? brands.find((b) => b.id === editingId) : null;
   const title = editing ? "编辑品牌" : "新增品牌";
@@ -259,7 +250,7 @@ function renderBrandDialog(brands: StoreBrandRecord[], editingId: string | null)
     ? `<img src="${escapeHtml(editing.imageDataUrl)}" alt="" class="mx-auto max-h-24 rounded border border-border object-contain" data-brand-image-preview />`
     : `<div class="mx-auto flex h-24 w-24 items-center justify-center rounded border border-dashed border-border bg-muted/30 text-xs text-muted-foreground" data-brand-image-preview>NO IMAGES</div>`;
   const selectedScheduleIds = editing?.scheduleIds ?? [];
-  const selectedMenuIds = editing?.menuIds ?? [];
+  const selectedStructureKeys = editing?.menuStructureKeys ?? [];
 
   return `
     <div
@@ -271,38 +262,62 @@ function renderBrandDialog(brands: StoreBrandRecord[], editingId: string | null)
       aria-labelledby="brand-dialog-title"
     >
       <button type="button" class="absolute inset-0 bg-black/40" data-brand-dialog-backdrop aria-label="关闭"></button>
-      <div class="relative z-10 max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg border border-border bg-card p-5 shadow-lg">
-        <div class="flex items-start justify-between gap-3">
+      <div class="relative z-10 flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-lg border border-border bg-card shadow-lg">
+        <div class="flex shrink-0 items-start justify-between gap-3 border-b border-border px-5 py-4">
           <h3 id="brand-dialog-title" class="text-base font-semibold text-card-foreground">${title}</h3>
           <button type="button" class="text-muted-foreground hover:text-foreground" data-brand-dialog-close aria-label="关闭">×</button>
         </div>
-        <div class="mt-4 space-y-4">
+        <div class="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4">
           <div class="space-y-1.5">
             <label class="block text-sm font-medium text-foreground" for="brand-create-name">品牌名称</label>
             <input id="brand-create-name" type="text" maxlength="50" class="${INPUT_CLASS}" data-brand-name value="${escapeHtml(name)}" />
           </div>
           <div class="space-y-1.5">
             <label class="block text-sm font-medium text-foreground">品牌图片</label>
-            <p class="text-xs text-muted-foreground">支持 PNG、JPG、JPEG；比例 1:1，建议 500×500，1MB 以内</p>
+            <p class="text-xs text-muted-foreground">支持 PNG、JPG、JPEG；1MB 以内</p>
             <div class="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
               ${imagePreview}
-              <input type="file" accept="image/png,image/jpeg,image/jpg" class="text-sm text-foreground" data-brand-image-input />
+              <button type="button" class="${BTN_GHOST}" data-brand-image-pick>选择图片</button>
             </div>
           </div>
           <div class="space-y-2">
             <p class="text-sm font-medium text-foreground">品牌营业时间</p>
-            <p class="text-xs text-muted-foreground">从已创建的营业时间规则中选择（可多选）</p>
             ${renderSchedulePicker(selectedScheduleIds)}
           </div>
           <div class="space-y-2">
             <p class="text-sm font-medium text-foreground">品牌菜单</p>
-            <p class="text-xs text-muted-foreground">从已创建的品牌菜单中选择（可多选）</p>
-            ${renderMenuPicker(selectedMenuIds)}
+            ${renderBrandMenuStructurePickerHtml(selectedStructureKeys)}
           </div>
         </div>
-        <div class="mt-6 flex justify-end gap-2">
+        <div class="flex shrink-0 justify-end gap-2 border-t border-border bg-card px-5 py-4">
           <button type="button" class="${BTN_GHOST}" data-brand-dialog-cancel>取消</button>
           <button type="button" class="${BTN_PRIMARY}" data-brand-dialog-save>确定</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderDeleteConfirmDialog(): string {
+  return `
+    <div
+      class="fixed inset-0 z-[110] hidden items-center justify-center p-4"
+      data-brand-delete-dialog
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="brand-delete-dialog-title"
+    >
+      <button type="button" class="absolute inset-0 bg-black/45 backdrop-blur-[1px]" data-brand-delete-backdrop aria-label="关闭"></button>
+      <div class="relative z-10 w-full max-w-sm overflow-hidden rounded-xl border border-border bg-card shadow-xl">
+        <div class="border-b border-border px-5 py-4">
+          <h3 id="brand-delete-dialog-title" class="text-base font-semibold text-card-foreground">确认删除</h3>
+        </div>
+        <div class="px-5 py-4">
+          <input type="hidden" data-brand-delete-target-id value="" />
+          <p class="m-0 text-sm text-foreground" data-brand-delete-message>确定删除该品牌？删除后无法恢复。</p>
+        </div>
+        <div class="flex justify-end gap-2 border-t border-border px-5 py-4">
+          <button type="button" class="${BTN_GHOST}" data-brand-delete-cancel>取消</button>
+          <button type="button" class="${BTN_DESTRUCTIVE}" data-brand-delete-confirm>删除</button>
         </div>
       </div>
     </div>`;
@@ -316,13 +331,26 @@ export function renderStoreBrandManagementHtml(): string {
   const brands = readStoreBrands();
   return `
     <div class="mt-3 space-y-3" data-store-brand-management>
-      <div class="flex flex-wrap items-center justify-between gap-2">
-        <p class="text-xs text-muted-foreground">配置本店启用的品牌；品牌主数据见「品牌管理」hub，此处为 Location 级启用、营业时间与菜单绑定。</p>
+      <div class="flex flex-wrap items-center justify-end gap-2">
         <button type="button" class="${BTN_PRIMARY}" data-brand-create>新增品牌</button>
       </div>
       <div data-brand-table-wrap>${renderBrandTable(brands)}</div>
       ${renderBrandDialog(brands, null)}
+      ${renderDeleteConfirmDialog()}
+      ${renderImageSourcePickerModalsHtml()}
     </div>`;
+}
+
+function showDialog(dialog: HTMLElement | null): void {
+  if (!dialog) return;
+  dialog.classList.remove("hidden");
+  dialog.classList.add("flex");
+}
+
+function hideDialog(dialog: HTMLElement | null): void {
+  if (!dialog) return;
+  dialog.classList.add("hidden");
+  dialog.classList.remove("flex");
 }
 
 function refreshBrandPanel(panel: HTMLElement, editingId: string | null = null): void {
@@ -332,13 +360,30 @@ function refreshBrandPanel(panel: HTMLElement, editingId: string | null = null):
   const oldDialog = panel.querySelector("[data-brand-dialog]");
   oldDialog?.remove();
   panel.insertAdjacentHTML("beforeend", renderBrandDialog(brands, editingId));
+  if (!panel.querySelector("[data-brand-delete-dialog]")) {
+    panel.insertAdjacentHTML("beforeend", renderDeleteConfirmDialog());
+  }
 }
 
 function showBrandDialog(panel: HTMLElement, editingId: string | null): void {
-  refreshBrandPanel(panel, editingId);
+  // 先按当前列表数据打开，保证预设品牌 id 稳定且表单回填完整
+  const brands = readStoreBrands();
+  const editing = editingId ? brands.find((b) => b.id === editingId) : null;
+  if (editingId && !editing) {
+    // id 异常时仍打开空表单，避免白屏
+    refreshBrandPanel(panel, null);
+  } else {
+    refreshBrandPanel(panel, editingId);
+  }
   const dialog = panel.querySelector<HTMLElement>("[data-brand-dialog]");
   dialog?.classList.remove("hidden");
   dialog?.classList.add("flex");
+  if (editingId && editing) {
+    dialog?.setAttribute("data-editing-id", editingId);
+  }
+  dialog?.querySelectorAll<HTMLElement>("[data-brand-menu-structure-picker]").forEach((picker) => {
+    bindBrandMenuStructurePicker(picker);
+  });
   dialog?.querySelector<HTMLInputElement>("[data-brand-name]")?.focus();
 }
 
@@ -356,10 +401,10 @@ function collectScheduleIdsFromDialog(dialog: HTMLElement): string[] {
   );
 }
 
-function collectMenuIdsFromDialog(dialog: HTMLElement): string[] {
-  return [...dialog.querySelectorAll<HTMLInputElement>("[data-brand-menu-id]:checked")].map(
-    (input) => input.value,
-  );
+function collectMenuStructureKeysFromDialog(dialog: HTMLElement): string[] {
+  const picker = dialog.querySelector<HTMLElement>("[data-brand-menu-structure-picker]");
+  if (!picker) return [];
+  return readBrandMenuStructureKeysFromPicker(picker);
 }
 
 function saveBrandFromDialog(panel: HTMLElement): void {
@@ -374,15 +419,25 @@ function saveBrandFromDialog(panel: HTMLElement): void {
   const preview = dialog.querySelector<HTMLImageElement>("[data-brand-image-preview]");
   const imageDataUrl = preview?.tagName === "IMG" ? preview.src : undefined;
   const scheduleIds = collectScheduleIdsFromDialog(dialog);
-  const menuIds = collectMenuIdsFromDialog(dialog);
+  const menuStructureKeys = collectMenuStructureKeysFromDialog(dialog);
   const brands = readStoreBrands();
+  const nextRecord: StoreBrandRecord = {
+    id: editingId || newBrandId(),
+    name,
+    imageDataUrl,
+    scheduleIds,
+    menuStructureKeys,
+  };
   if (editingId) {
     const idx = brands.findIndex((b) => b.id === editingId);
     if (idx >= 0) {
-      brands[idx] = { ...brands[idx], name, imageDataUrl, scheduleIds, menuIds };
+      brands[idx] = { ...brands[idx], ...nextRecord };
+    } else {
+      // 预设品牌首次落库：按编辑 id 写入，避免丢失更新
+      brands.push(nextRecord);
     }
   } else {
-    brands.push({ id: newBrandId(), name, imageDataUrl, scheduleIds, menuIds });
+    brands.push({ ...nextRecord, id: newBrandId() });
   }
   writeStoreBrands(brands);
   hideBrandDialog(panel);
@@ -394,10 +449,73 @@ function deleteBrand(panel: HTMLElement, brandId: string): void {
   refreshBrandPanel(panel, null);
 }
 
+function openDeleteBrandDialog(panel: HTMLElement, brandId: string, brandName: string): void {
+  const dialog = panel.querySelector<HTMLElement>("[data-brand-delete-dialog]");
+  const idInput = panel.querySelector<HTMLInputElement>("[data-brand-delete-target-id]");
+  const messageEl = panel.querySelector<HTMLElement>("[data-brand-delete-message]");
+  if (!dialog || !idInput || !messageEl) return;
+  idInput.value = brandId;
+  const label = brandName ? `「${brandName}」` : "该品牌";
+  messageEl.textContent = `确定删除${label}？删除后无法恢复。`;
+  showDialog(dialog);
+}
+
+function hideDeleteBrandDialog(panel: HTMLElement): void {
+  const dialog = panel.querySelector<HTMLElement>("[data-brand-delete-dialog]");
+  const idInput = panel.querySelector<HTMLInputElement>("[data-brand-delete-target-id]");
+  if (idInput) idInput.value = "";
+  hideDialog(dialog);
+}
+
+function confirmDeleteBrand(panel: HTMLElement): void {
+  const brandId = panel.querySelector<HTMLInputElement>("[data-brand-delete-target-id]")?.value.trim();
+  if (!brandId) return;
+  deleteBrand(panel, brandId);
+  hideDeleteBrandDialog(panel);
+}
+
+function applyBrandImagePreview(panel: HTMLElement, dataUrl: string): void {
+  const dialog = panel.querySelector<HTMLElement>("[data-brand-dialog]");
+  const previewHost = dialog?.querySelector<HTMLElement>("[data-brand-image-preview]");
+  if (!previewHost) return;
+  const img = document.createElement("img");
+  img.src = dataUrl;
+  img.alt = "";
+  img.className = "mx-auto max-h-24 rounded border border-border object-contain";
+  img.dataset.brandImagePreview = "";
+  previewHost.replaceWith(img);
+}
+
+function setBrandImagePickError(panel: HTMLElement, message: string): void {
+  const dialog = panel.querySelector<HTMLElement>("[data-brand-dialog]");
+  if (!dialog) return;
+  let tip = dialog.querySelector<HTMLElement>("[data-brand-image-error]");
+  if (!tip) {
+    tip = document.createElement("p");
+    tip.className = "m-0 text-xs text-destructive";
+    tip.dataset.brandImageError = "";
+    const pickBtn = dialog.querySelector("[data-brand-image-pick]");
+    pickBtn?.parentElement?.insertAdjacentElement("afterend", tip);
+  }
+  tip.textContent = message;
+}
+
+function clearBrandImagePickError(panel: HTMLElement): void {
+  panel.querySelector("[data-brand-image-error]")?.remove();
+}
+
 export function bindStoreBrandManagementControls(): void {
   document.querySelectorAll<HTMLElement>("[data-store-brand-management]").forEach((panel) => {
     if (panel.dataset.storeBrandBound === "1") return;
     panel.dataset.storeBrandBound = "1";
+
+    bindImageSourcePicker(panel, {
+      onSelect: (result) => {
+        clearBrandImagePickError(panel);
+        applyBrandImagePreview(panel, result.dataUrl);
+      },
+      onError: (message) => setBrandImagePickError(panel, message),
+    });
 
     panel.addEventListener("click", (e) => {
       const target = e.target as HTMLElement;
@@ -413,7 +531,25 @@ export function bindStoreBrandManagementControls(): void {
       const deleteBtn = target.closest<HTMLElement>("[data-brand-delete]");
       if (deleteBtn) {
         const id = deleteBtn.getAttribute("data-brand-id");
-        if (id) deleteBrand(panel, id);
+        if (!id) return;
+        const brand = readStoreBrands().find((b) => b.id === id);
+        openDeleteBrandDialog(panel, id, brand?.name ?? "");
+        return;
+      }
+      if (
+        target.closest("[data-brand-delete-cancel]") ||
+        target.closest("[data-brand-delete-backdrop]")
+      ) {
+        hideDeleteBrandDialog(panel);
+        return;
+      }
+      if (target.closest("[data-brand-delete-confirm]")) {
+        confirmDeleteBrand(panel);
+        return;
+      }
+      if (target.closest("[data-brand-image-pick]")) {
+        clearBrandImagePickError(panel);
+        openImageSourcePicker(panel);
         return;
       }
       if (
@@ -429,27 +565,22 @@ export function bindStoreBrandManagementControls(): void {
       }
     });
 
-    panel.addEventListener("change", (e) => {
-      const input = e.target as HTMLInputElement;
-      if (!input.matches("[data-brand-image-input]")) return;
-      const file = input.files?.[0];
-      const dialog = panel.querySelector<HTMLElement>("[data-brand-dialog]");
-      const previewHost = dialog?.querySelector<HTMLElement>("[data-brand-image-preview]");
-      if (!file || !previewHost) return;
-      const reader = new FileReader();
-      reader.onload = () => {
-        const img = document.createElement("img");
-        img.src = String(reader.result);
-        img.alt = "";
-        img.className = "mx-auto max-h-24 rounded border border-border object-contain";
-        img.dataset.brandImagePreview = "";
-        previewHost.replaceWith(img);
-      };
-      reader.readAsDataURL(file);
-    });
-
     panel.addEventListener("keydown", (e) => {
       if (e.key !== "Escape") return;
+      const uploadModal = panel.querySelector<HTMLElement>("[data-image-source-upload-modal]");
+      const libraryModal = panel.querySelector<HTMLElement>("[data-image-source-library-modal]");
+      if (
+        (uploadModal && !uploadModal.classList.contains("hidden")) ||
+        (libraryModal && !libraryModal.classList.contains("hidden"))
+      ) {
+        return;
+      }
+      const deleteDialog = panel.querySelector<HTMLElement>("[data-brand-delete-dialog]");
+      if (deleteDialog && !deleteDialog.classList.contains("hidden")) {
+        e.preventDefault();
+        hideDeleteBrandDialog(panel);
+        return;
+      }
       const dialog = panel.querySelector<HTMLElement>("[data-brand-dialog]");
       if (dialog && !dialog.classList.contains("hidden")) {
         e.preventDefault();

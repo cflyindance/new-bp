@@ -184,7 +184,6 @@ export function renderPosFindOrderListPanelHtml(seq: PosFindOrderListSeq, on: bo
       data-pos-find-order-list-panel="${seq}"
       ${on ? "" : 'aria-hidden="true"'}
     >
-      <p class="m-0 mb-2 text-xs font-medium text-muted-foreground">适用产线（多选）</p>
       ${renderLinesMultiselectHtml(seq, on)}
       <p class="m-0 mt-2 text-xs leading-relaxed text-muted-foreground">${escapeHtml(PANEL_HINT_BY_SEQ[seq])}</p>
     </div>`;

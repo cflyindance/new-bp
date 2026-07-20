@@ -4,11 +4,17 @@
 import { getSettingTitleBySeq } from "./deployment-change-buffer";
 import type { DeploymentConfigChange } from "./deployment-types";
 import {
+  formatAutoLogoutByLineForDeployment,
+  formatMaxGuestsByLineForDeployment,
   formatStoreClosingAlertByLineForDeployment,
+  AUTO_LOGOUT_BY_LINE_FIELD_ID,
+  MAX_GUESTS_BY_LINE_FIELD_ID,
   STORE_CLOSING_ALERT_BY_LINE_FIELD_ID,
 } from "./module-settings-deployment-change";
 
 const STORE_CLOSING_ALERT_SEQ = 582;
+const AUTO_LOGOUT_MINUTES_SEQ = 75;
+const MAX_GUESTS_PER_ORDER_SEQ = 111;
 
 function escapeHtml(s: string): string {
   return s
@@ -28,14 +34,52 @@ function isClosingAlertChange(change: DeploymentConfigChange): boolean {
   );
 }
 
+function isAutoLogoutByLineChange(change: DeploymentConfigChange): boolean {
+  const fieldKey = change.fieldKey?.trim() ?? "";
+  return (
+    fieldKey === AUTO_LOGOUT_BY_LINE_FIELD_ID ||
+    fieldKey === String(AUTO_LOGOUT_MINUTES_SEQ) ||
+    fieldKey.startsWith(`${AUTO_LOGOUT_MINUTES_SEQ}-`) ||
+    change.label.includes("自动登出时间")
+  );
+}
+
+function isMaxGuestsByLineChange(change: DeploymentConfigChange): boolean {
+  const fieldKey = change.fieldKey?.trim() ?? "";
+  return (
+    fieldKey === MAX_GUESTS_BY_LINE_FIELD_ID ||
+    fieldKey === String(MAX_GUESTS_PER_ORDER_SEQ) ||
+    fieldKey.startsWith(`${MAX_GUESTS_PER_ORDER_SEQ}-`) ||
+    change.label.includes("每单最多客人")
+  );
+}
+
 export function normalizeChangeForDisplay(change: DeploymentConfigChange): DeploymentConfigChange {
-  if (!isClosingAlertChange(change)) return change;
-  return {
-    ...change,
-    label: getSettingTitleBySeq(STORE_CLOSING_ALERT_SEQ),
-    before: formatStoreClosingAlertByLineForDeployment(change.before) ?? change.before,
-    after: formatStoreClosingAlertByLineForDeployment(change.after) ?? change.after,
-  };
+  if (isClosingAlertChange(change)) {
+    return {
+      ...change,
+      label: getSettingTitleBySeq(STORE_CLOSING_ALERT_SEQ),
+      before: formatStoreClosingAlertByLineForDeployment(change.before) ?? change.before,
+      after: formatStoreClosingAlertByLineForDeployment(change.after) ?? change.after,
+    };
+  }
+  if (isAutoLogoutByLineChange(change)) {
+    return {
+      ...change,
+      label: getSettingTitleBySeq(AUTO_LOGOUT_MINUTES_SEQ),
+      before: formatAutoLogoutByLineForDeployment(change.before) ?? change.before,
+      after: formatAutoLogoutByLineForDeployment(change.after) ?? change.after,
+    };
+  }
+  if (isMaxGuestsByLineChange(change)) {
+    return {
+      ...change,
+      label: getSettingTitleBySeq(MAX_GUESTS_PER_ORDER_SEQ),
+      before: formatMaxGuestsByLineForDeployment(change.before) ?? change.before,
+      after: formatMaxGuestsByLineForDeployment(change.after) ?? change.after,
+    };
+  }
+  return change;
 }
 
 function renderMultilineValue(value: string): string {

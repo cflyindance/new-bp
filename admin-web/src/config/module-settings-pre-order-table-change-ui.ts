@@ -1,6 +1,6 @@
 /**
  * 前厅 · 桌台与餐位：开单前换桌（643）、开单前必须换桌（644）。
- * 主开关 + 适用产线多选（eMenu）。
+ * 主开关 + 适用产线多选（POS / POS GO / PayPad / eMenu）。
  */
 
 import { readModuleSettingJson, writeModuleSettingJson } from "./module-settings-form-ui";
@@ -16,7 +16,12 @@ export const PRE_ORDER_TABLE_CHANGE_SEQS = [
 
 export type PreOrderTableChangeSeq = (typeof PRE_ORDER_TABLE_CHANGE_SEQS)[number];
 
-export const PRE_ORDER_TABLE_CHANGE_PRODUCT_LINES = [{ id: "emenu", label: "eMenu" }] as const;
+export const PRE_ORDER_TABLE_CHANGE_PRODUCT_LINES = [
+  { id: "pos", label: "POS" },
+  { id: "pos-go", label: "POS GO" },
+  { id: "paypad", label: "PayPad" },
+  { id: "emenu", label: "eMenu" },
+] as const;
 
 export type PreOrderTableChangeProductLineId =
   (typeof PRE_ORDER_TABLE_CHANGE_PRODUCT_LINES)[number]["id"];
@@ -111,7 +116,7 @@ function renderLinesMultiselectHtml(seq: PreOrderTableChangeSeq, enabled: boolea
 
   return `
     <div
-      class="flex w-full max-w-md overflow-hidden rounded-md border border-border bg-muted/40"
+      class="flex w-full max-w-xl overflow-hidden rounded-md border border-border bg-muted/40"
       data-pre-order-table-change-lines="${seq}"
       role="group"
       aria-label="开单前换桌适用产线"
@@ -128,7 +133,6 @@ export function renderPreOrderTableChangePanelHtml(seq: PreOrderTableChangeSeq, 
       data-pre-order-table-change-panel="${seq}"
       ${on ? "" : 'aria-hidden="true"'}
     >
-      <p class="m-0 mb-2 text-xs font-medium text-muted-foreground">适用产线（多选）</p>
       ${renderLinesMultiselectHtml(seq, on)}
     </div>`;
 }

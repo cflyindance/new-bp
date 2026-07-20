@@ -119,7 +119,7 @@ function renderLinesMultiselectHtml(enabled: boolean): string {
       class="flex w-full max-w-xl overflow-hidden rounded-md border border-border bg-muted/40"
       data-home-password-auth-lines="${HOME_PASSWORD_AUTH_SEQ}"
       role="group"
-      aria-label="主页密码权限适用产线"
+      aria-label="企台主页密码权限适用产线"
     >
       ${cells}
     </div>`;
@@ -133,7 +133,6 @@ export function renderHomePasswordAuthPanelHtml(seq: number, on: boolean): strin
       data-home-password-auth-panel="${seq}"
       ${on ? "" : 'aria-hidden="true"'}
     >
-      <p class="m-0 mb-2 text-xs font-medium text-muted-foreground">适用产线（多选）</p>
       ${renderLinesMultiselectHtml(on)}
     </div>`;
 }

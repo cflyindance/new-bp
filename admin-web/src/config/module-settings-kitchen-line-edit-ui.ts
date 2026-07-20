@@ -140,7 +140,6 @@ export function renderKitchenLineEditPanelHtml(seq: number, on: boolean): string
       data-kitchen-line-edit-panel="${seq}"
       ${on ? "" : 'aria-hidden="true"'}
     >
-      <p class="m-0 mb-2 text-xs font-medium text-muted-foreground">适用产线（多选）</p>
       ${renderLinesMultiselectHtml(on)}
       <p class="m-0 mt-2 text-xs leading-relaxed text-muted-foreground">勾选产线后，已送厨菜品行仍允许修改调味/加料。</p>
     </div>`;

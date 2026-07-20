@@ -189,7 +189,6 @@ export function renderMemberPointsToggleFieldLinesPanelHtml(
       data-member-points-toggle-field-panel="${seq}"
       ${on ? "" : 'aria-hidden="true"'}
     >
-      <p class="m-0 mb-2 text-xs font-medium text-muted-foreground">适用产线（多选）</p>
       <div class="flex flex-wrap items-center gap-x-5 gap-y-2" role="group" aria-label="适用产线">
         ${checkboxes}
       </div>

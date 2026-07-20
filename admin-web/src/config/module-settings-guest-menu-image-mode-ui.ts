@@ -303,7 +303,6 @@ function renderEditorInnerHtml(panelEnabled: boolean): string {
   return `
     <div class="space-y-4" data-menu-image-mode-editor="${GUEST_MENU_IMAGE_MODE_SEQ}">
       <div>
-        <p class="m-0 mb-2 text-xs font-medium text-muted-foreground">适用产线（多选）</p>
         ${renderLinesMultiselectHtml(panelEnabled)}
       </div>
       <div>

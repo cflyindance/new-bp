@@ -131,7 +131,7 @@ export function renderBatchSettlementGroupIntroHtml(): string {
   return `
     <p class="mb-3 rounded-md border border-border bg-muted/40 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
       本组为<strong>卡交易 Batch</strong>与日切关账（238 每日关账时刻、230 向收单行结算周期等），<strong>不是</strong>现金班结。
-      门店现金日结/班结见财务中心「现金日结与班结」（171、65、330）；员工下班卡 Batch 门禁见团队管理「考勤与工时」（241）。
+      门店现金日结/班结见财务中心「现金日结与班结」（171、65、330）；员工下班卡 Batch 门禁见「员工打卡 → 规则设置」（241）。
     </p>`;
 }
 

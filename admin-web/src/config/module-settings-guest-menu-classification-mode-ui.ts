@@ -135,11 +135,7 @@ export function renderGuestMenuClassificationModePanelHtml(on: boolean): string 
       data-guest-menu-classification-mode-panel="${GUEST_MENU_CLASSIFICATION_MODE_SEQ}"
       ${on ? "" : 'aria-hidden="true"'}
     >
-      <p class="m-0 mb-2 text-xs font-medium text-muted-foreground">适用产线（多选）</p>
       ${renderLinesMultiselectHtml(on)}
-      <p class="m-0 mt-2 text-xs leading-relaxed text-muted-foreground">
-        开启后，食客先按菜单分类浏览再选菜（非普通扁平菜单）；与「品类模式」不同，本项按菜单树分类层级展示。
-      </p>
     </div>`;
 }
 

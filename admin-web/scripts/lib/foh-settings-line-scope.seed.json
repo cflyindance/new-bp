@@ -48,7 +48,8 @@
       "pos-go",
       "paypad"
     ],
-    "source": "group-default"
+    "source": "ui-module",
+    "module": "module-settings-max-guests-per-order-ui.ts"
   },
   "113": {
     "groupKey": "foh-kitchen-send-timing",

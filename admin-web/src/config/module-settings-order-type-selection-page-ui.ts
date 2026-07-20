@@ -175,7 +175,6 @@ export function renderGuestKioskFlowPagePanelHtml(seq: number, on: boolean): str
       data-guest-kiosk-flow-page-panel="${seq}"
       ${on ? "" : 'aria-hidden="true"'}
     >
-      <p class="m-0 mb-2 text-xs font-medium text-muted-foreground">适用产线（多选）</p>
       ${renderLinesMultiselectHtml(seq, on)}
     </div>`;
 }

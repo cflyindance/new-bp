@@ -135,7 +135,6 @@ export function renderEmenuServerReadonlyDishPanelHtml(seq: number, on: boolean)
       data-emenu-server-readonly-dish-panel="${seq}"
       ${on ? "" : 'aria-hidden="true"'}
     >
-      <p class="m-0 mb-2 text-xs font-medium text-muted-foreground">适用产线（多选）</p>
       ${renderLinesMultiselectHtml(on)}
     </div>`;
 }

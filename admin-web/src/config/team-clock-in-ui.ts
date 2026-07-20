@@ -26,7 +26,7 @@ export const TEAM_CLOCK_IN_PATH = "/team/clock-in";
 const CLOCK_TAB_STORAGE_KEY = "team-clock-in-tab";
 const REQUIRE_SHIFT_SEQ = TEAM_SHIFT_SCHEDULING_SETTING_SEQS[0];
 
-const PUNCHES_STORAGE_KEY = "bplant-team-clock-punches-v1";
+const PUNCHES_STORAGE_KEY = "bplant-team-clock-punches-v4";
 const SETTINGS_STORAGE_KEY = "bplant-team-clock-settings-v1";
 const SHIFT_TYPES_STORAGE_KEY = "bplant-team-shift-types-v1";
 const ASSIGNMENTS_STORAGE_KEY = "bplant-team-shift-assignments-v1";
@@ -81,7 +81,10 @@ type TimecardState = {
   openBreakStart: string | null;
   status: TimecardStatus;
   workedMinutes: number;
+  /** 休息合计（无薪 + 带薪） */
   breakMinutes: number;
+  unpaidBreakMinutes: number;
+  paidBreakMinutes: number;
   punches: PunchRecord[];
 };
 
@@ -89,6 +92,7 @@ type StatusFilter = "all" | "off" | "working" | "break" | "done";
 
 type PageState = {
   date: string;
+  roleFilter: string;
   employeeFilter: string;
   statusFilter: StatusFilter;
 };
@@ -96,6 +100,7 @@ type PageState = {
 type AttendancePageState = {
   dateFrom: string;
   dateTo: string;
+  roleFilter: string;
   employeeFilter: string;
 };
 
@@ -120,6 +125,7 @@ const DEFAULT_SETTINGS: ClockSettings = {
 
 const pageState: PageState = {
   date: "",
+  roleFilter: "",
   employeeFilter: "",
   statusFilter: "all",
 };
@@ -127,6 +133,7 @@ const pageState: PageState = {
 const attendancePageState: AttendancePageState = {
   dateFrom: "",
   dateTo: "",
+  roleFilter: "",
   employeeFilter: "",
 };
 
@@ -153,6 +160,11 @@ export function requestTeamClockInRecordsTab(): void {
   } catch {
     clockTab = "records";
   }
+}
+
+/** 仅「规则设置」Tab 需要页脚保存栏；实时打卡 / 考勤记录为操作与查询，不展示 */
+export function shouldShowTeamClockInSaveBar(): boolean {
+  return clockTab === "rules";
 }
 
 function todayIso(): string {
@@ -272,17 +284,28 @@ function readPunches(): PunchRecord[] {
     if (!raw) return seedDemoPunches();
     const parsed = JSON.parse(raw) as Partial<PunchRecord>[];
     if (!Array.isArray(parsed)) return seedDemoPunches();
-    return parsed
+    const punches: PunchRecord[] = parsed
       .filter((p) => p?.id && p?.employeeId && p?.timestamp && p?.type)
-      .map((p) => ({
-        id: String(p.id),
-        employeeId: String(p.employeeId),
-        timestamp: String(p.timestamp),
-        type: p.type as PunchType,
-        source: p.source === "terminal" || p.source === "auto" ? p.source : "manager",
-        note: typeof p.note === "string" ? p.note : undefined,
-        breakLabel: typeof p.breakLabel === "string" ? p.breakLabel : undefined,
-      }));
+      .map((p) => {
+        const source: PunchRecord["source"] =
+          p.source === "terminal" ? "terminal" : p.source === "auto" ? "auto" : "manager";
+        return {
+          id: String(p.id),
+          employeeId: String(p.employeeId),
+          timestamp: String(p.timestamp),
+          type: p.type as PunchType,
+          source,
+          note: typeof p.note === "string" ? p.note : undefined,
+          breakLabel: typeof p.breakLabel === "string" ? p.breakLabel : undefined,
+        };
+      });
+    if (punches.length === 0) return seedDemoPunches();
+    // 旧演示数据用 emp-demo-*，与花名册 roster-preset-* 对不上时重新灌入
+    const empIds = new Set(readEmployees().map((e) => e.id));
+    if (empIds.size > 0 && !punches.some((p) => empIds.has(p.employeeId))) {
+      return seedDemoPunches();
+    }
+    return punches;
   } catch {
     return seedDemoPunches();
   }
@@ -292,26 +315,123 @@ function writePunches(punches: PunchRecord[]): void {
   localStorage.setItem(PUNCHES_STORAGE_KEY, JSON.stringify(punches));
 }
 
+/** 本地日期 + 时分 → ISO（与打卡展示/按日筛选一致） */
+function punchAt(date: string, hour: number, minute: number): string {
+  const d = new Date(`${date}T00:00:00`);
+  d.setHours(hour, minute, 0, 0);
+  return d.toISOString();
+}
+
+function dateOffsetIso(daysAgo: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - daysAgo);
+  return d.toISOString().slice(0, 10);
+}
+
+/** 用真实花名册员工生成演示打卡（无花名册时回退 DEFAULT_EMPLOYEES） */
+function pickSeedEmployees(): RosterEmployee[] {
+  const fromRoster = readEmployees().filter((e) => e.id && e.id !== "emp-boss");
+  if (fromRoster.length > 0) return fromRoster;
+  return DEFAULT_EMPLOYEES.filter((e) => e.id !== "emp-boss");
+}
+
+/**
+ * 近 7 天考勤演示数据：按花名册员工生成完整班次 / 休息 / 进行中 / 补卡等，
+ * 覆盖「考勤记录」默认日期范围，并与门店筛选下的员工 id 对齐。
+ */
 function seedDemoPunches(): PunchRecord[] {
-  const date = todayIso();
-  const morning = new Date();
-  morning.setHours(8, 55, 0, 0);
-  const demo: PunchRecord[] = [
-    {
-      id: "demo-punch-1",
-      employeeId: "emp-demo-1",
-      timestamp: morning.toISOString(),
-      type: "in" as const,
-      source: "terminal" as const,
-    },
-    {
-      id: "demo-punch-2",
-      employeeId: "emp-demo-3",
-      timestamp: new Date(morning.getTime() + 8 * 3600000).toISOString(),
-      type: "in" as const,
-      source: "terminal" as const,
-    },
-  ].filter((p) => p.timestamp.slice(0, 10) === date);
+  const employees = pickSeedEmployees();
+  const demo: PunchRecord[] = [];
+  let seq = 0;
+  const now = new Date();
+  const push = (
+    employeeId: string,
+    date: string,
+    hour: number,
+    minute: number,
+    type: PunchType,
+    source: PunchRecord["source"] = "terminal",
+    extra?: Pick<PunchRecord, "note" | "breakLabel">,
+  ) => {
+    const ts = punchAt(date, hour, minute);
+    // 今日不写入未来时刻，避免演示数据“穿越”
+    if (date === todayIso() && new Date(ts).getTime() > now.getTime()) return;
+    demo.push({
+      id: `demo-punch-${++seq}`,
+      employeeId,
+      timestamp: ts,
+      type,
+      source,
+      ...extra,
+    });
+  };
+
+  for (let daysAgo = 6; daysAgo >= 0; daysAgo--) {
+    const date = dateOffsetIso(daysAgo);
+    const isToday = daysAgo === 0;
+    const weekday = new Date(`${date}T12:00:00`).getDay(); // 0 Sun … 6 Sat
+    const isWeekend = weekday === 0 || weekday === 6;
+
+    employees.forEach((emp, index) => {
+      const pattern = index % 4;
+
+      if (pattern === 0) {
+        // 早班 + 午餐；今日仍在岗
+        if (isWeekend) return;
+        push(emp.id, date, 8, 52, "in");
+        push(emp.id, date, 12, 5, "break-start", "terminal", { breakLabel: "用餐休息" });
+        push(emp.id, date, 12, 35, "break-end");
+        if (!isToday) push(emp.id, date, 17, 8, "out");
+        return;
+      }
+
+      if (pattern === 1) {
+        // 晚班（周一三五；今日过开班时刻后记为在岗）
+        if (!(weekday === 1 || weekday === 3 || weekday === 5)) return;
+        if (isToday) {
+          push(emp.id, date, 16, 50, "in");
+        } else {
+          push(emp.id, date, 16, 55, "in");
+          push(emp.id, date, 19, 30, "break-start", "terminal", { breakLabel: "用餐休息" });
+          push(emp.id, date, 20, 0, "break-end");
+          push(emp.id, date, 23, 5, "out");
+        }
+        return;
+      }
+
+      if (pattern === 2) {
+        // 早班；含迟到补卡日 / 今日未下班
+        if (isWeekend) return;
+        if (daysAgo === 2) {
+          push(emp.id, date, 9, 25, "in", "manager", { note: "迟到补卡" });
+          push(emp.id, date, 17, 0, "out", "manager", { note: "手动下班" });
+        } else if (isToday) {
+          push(emp.id, date, 9, 2, "in");
+        } else {
+          push(emp.id, date, 8, 58, "in");
+          push(emp.id, date, 14, 0, "break-start", "terminal", { breakLabel: "短休" });
+          push(emp.id, date, 14, 20, "break-end");
+          push(emp.id, date, 17, 2, "out");
+        }
+        return;
+      }
+
+      // pattern === 3：后厨；周末短班 / 今日休息中
+      if (isWeekend) {
+        push(emp.id, date, 10, 0, "in");
+        push(emp.id, date, 15, 0, "out");
+      } else if (!isToday) {
+        push(emp.id, date, 8, 45, "in");
+        push(emp.id, date, 11, 30, "break-start", "terminal", { breakLabel: "短休" });
+        push(emp.id, date, 11, 45, "break-end");
+        push(emp.id, date, 16, 50, "out");
+      } else {
+        push(emp.id, date, 8, 48, "in");
+        push(emp.id, date, 11, 30, "break-start", "terminal", { breakLabel: "短休" });
+      }
+    });
+  }
+
   writePunches(demo);
   return demo;
 }
@@ -443,29 +563,104 @@ function readAssignments(): ShiftAssignment[] {
   }
 }
 
-function readBreakOptions(): { label: string; minutes: number }[] {
+function writeAssignmentsQuiet(assignments: ShiftAssignment[]): void {
+  localStorage.setItem(ASSIGNMENTS_STORAGE_KEY, JSON.stringify(assignments));
+}
+
+function pickDemoShiftPair(): { morning: ShiftType; evening: ShiftType } | null {
+  const shifts = readShiftTypes();
+  if (!shifts.length) return null;
+  const morning =
+    shifts.find((s) => /早|morning/i.test(s.name) || s.id.includes("morning")) ?? shifts[0]!;
+  const evening =
+    shifts.find((s) => /晚|evening/i.test(s.name) || s.id.includes("evening")) ??
+    shifts[Math.min(1, shifts.length - 1)]!;
+  return { morning, evening };
+}
+
+/**
+ * 打卡管理所选日期若尚无排班，按员工补齐演示排班，使「排班」列可展示。
+ * 当日已有任意排班时不覆盖，避免干扰用户手动排班。
+ */
+function ensureDemoAssignmentsForDate(date: string): void {
+  if (!date) return;
+  const employees = readScopedEmployees().filter((e) => e.id && e.id !== "emp-boss");
+  if (!employees.length) return;
+  const pair = pickDemoShiftPair();
+  if (!pair) return;
+
+  const assignments = readAssignments();
+  const empIds = new Set(employees.map((e) => e.id));
+  const hasAnyForDate = assignments.some((a) => a.date === date && empIds.has(a.employeeId));
+  if (hasAnyForDate) return;
+
+  const weekday = new Date(`${date}T12:00:00`).getDay();
+  const isWeekend = weekday === 0 || weekday === 6;
+  const next = [...assignments];
+
+  employees.forEach((emp, index) => {
+    const pattern = index % 4;
+    let shiftId: string | null = null;
+    if (pattern === 0 || pattern === 2) {
+      if (!isWeekend) shiftId = pair.morning.id;
+    } else if (pattern === 1) {
+      if (weekday === 1 || weekday === 3 || weekday === 5) shiftId = pair.evening.id;
+    } else {
+      shiftId = pair.morning.id;
+    }
+    if (!shiftId) return;
+    next.push({ employeeId: emp.id, date, shiftId });
+  });
+
+  if (next.length !== assignments.length) writeAssignmentsQuiet(next);
+}
+
+function formatScheduleText(employeeId: string, date: string): string {
+  const assignment = getAssignment(employeeId, date);
+  if (!assignment) return "—";
+  const shift = readShiftTypes().find((t) => t.id === assignment.shiftId);
+  if (shift) {
+    const times = getEffectiveShiftTimes(assignment, shift);
+    return `${shift.name} ${times.start}–${times.end}`;
+  }
+  if (assignment.overrideStartTime && assignment.overrideEndTime) {
+    return `${assignment.overrideStartTime}–${assignment.overrideEndTime}`;
+  }
+  return "已排班";
+}
+
+function readBreakOptions(): { label: string; minutes: number; compensation: "paid" | "unpaid" }[] {
   try {
     const raw = localStorage.getItem(BREAKS_STORAGE_KEY);
-    if (!raw) return [
-      { label: "用餐休息", minutes: 30 },
-      { label: "短休", minutes: 10 },
-    ];
+    if (!raw) {
+      return [
+        { label: "用餐休息", minutes: 30, compensation: "unpaid" },
+        { label: "短休", minutes: 10, compensation: "paid" },
+      ];
+    }
     const parsed = JSON.parse(raw) as {
-      customBreaks?: { name: string; durationMinutes: number }[];
-      unpaidPresets?: number[];
-      paidPresets?: number[];
+      customBreaks?: { name: string; durationMinutes: number; compensation?: string }[];
     };
-    const opts: { label: string; minutes: number }[] = [];
+    const opts: { label: string; minutes: number; compensation: "paid" | "unpaid" }[] = [];
     for (const b of parsed.customBreaks ?? []) {
-      if (b?.name) opts.push({ label: b.name, minutes: b.durationMinutes || 10 });
+      if (b?.name) {
+        opts.push({
+          label: b.name,
+          minutes: b.durationMinutes || 10,
+          compensation: b.compensation === "paid" ? "paid" : "unpaid",
+        });
+      }
     }
-    for (const m of [...(parsed.unpaidPresets ?? []), ...(parsed.paidPresets ?? [])]) {
-      opts.push({ label: `${m} 分钟休息`, minutes: m });
-    }
-    return opts.length > 0 ? opts : [{ label: "休息", minutes: 15 }];
+    return opts.length > 0 ? opts : [{ label: "休息", minutes: 15, compensation: "unpaid" }];
   } catch {
-    return [{ label: "休息", minutes: 15 }];
+    return [{ label: "休息", minutes: 15, compensation: "unpaid" }];
   }
+}
+
+function resolveBreakCompensation(label?: string): "paid" | "unpaid" {
+  if (!label) return "unpaid";
+  const hit = readBreakOptions().find((o) => o.label === label);
+  return hit?.compensation ?? "unpaid";
 }
 
 function getAssignment(employeeId: string, date: string): ShiftAssignment | undefined {
@@ -489,10 +684,17 @@ function computeTimecard(punches: PunchRecord[]): TimecardState {
   let clockIn: string | null = null;
   let clockOut: string | null = null;
   let openBreakStart: string | null = null;
+  let openBreakCompensation: "paid" | "unpaid" = "unpaid";
   let status: TimecardStatus = "off";
   let workedMinutes = 0;
-  let breakMinutes = 0;
+  let unpaidBreakMinutes = 0;
+  let paidBreakMinutes = 0;
   let segmentStart: string | null = null;
+
+  const addBreakMinutes = (mins: number, compensation: "paid" | "unpaid") => {
+    if (compensation === "paid") paidBreakMinutes += mins;
+    else unpaidBreakMinutes += mins;
+  };
 
   const closeSegment = (endIso: string) => {
     if (segmentStart) {
@@ -516,11 +718,12 @@ function computeTimecard(punches: PunchRecord[]): TimecardState {
           segmentStart = null;
         }
         openBreakStart = p.timestamp;
+        openBreakCompensation = resolveBreakCompensation(p.breakLabel);
         status = "break";
         break;
       case "break-end":
         if (openBreakStart) {
-          breakMinutes += minutesBetween(openBreakStart, p.timestamp);
+          addBreakMinutes(minutesBetween(openBreakStart, p.timestamp), openBreakCompensation);
           openBreakStart = null;
         }
         if (clockIn && !clockOut) {
@@ -530,7 +733,7 @@ function computeTimecard(punches: PunchRecord[]): TimecardState {
         break;
       case "out":
         if (status === "break" && openBreakStart) {
-          breakMinutes += minutesBetween(openBreakStart, p.timestamp);
+          addBreakMinutes(minutesBetween(openBreakStart, p.timestamp), openBreakCompensation);
           openBreakStart = null;
         }
         closeSegment(p.timestamp);
@@ -544,9 +747,10 @@ function computeTimecard(punches: PunchRecord[]): TimecardState {
     workedMinutes += minutesBetween(segmentStart, nowIso());
   }
   if (status === "break" && openBreakStart) {
-    breakMinutes += minutesBetween(openBreakStart, nowIso());
+    addBreakMinutes(minutesBetween(openBreakStart, nowIso()), openBreakCompensation);
   }
 
+  const breakMinutes = unpaidBreakMinutes + paidBreakMinutes;
   return {
     clockIn,
     clockOut,
@@ -554,6 +758,8 @@ function computeTimecard(punches: PunchRecord[]): TimecardState {
     status,
     workedMinutes,
     breakMinutes,
+    unpaidBreakMinutes,
+    paidBreakMinutes,
     punches,
   };
 }
@@ -680,6 +886,37 @@ function renderEmployeeFilterOptions(employees: RosterEmployee[], selected: stri
   return opts.join("");
 }
 
+function collectRoleOptions(employees: RosterEmployee[]): string[] {
+  const seen = new Set<string>();
+  const roles: string[] = [];
+  for (const e of employees) {
+    const role = String(e.role || "").trim();
+    if (!role) continue;
+    const key = role.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    roles.push(role);
+  }
+  return roles.sort((a, b) => a.localeCompare(b, "zh-CN"));
+}
+
+function renderRoleFilterOptions(employees: RosterEmployee[], selected: string): string {
+  const opts = [`<option value="">全部角色</option>`];
+  for (const role of collectRoleOptions(employees)) {
+    const sel = role === selected ? " selected" : "";
+    opts.push(`<option value="${escapeHtml(role)}"${sel}>${escapeHtml(role)}</option>`);
+  }
+  return opts.join("");
+}
+
+function employeesMatchingRole(employees: RosterEmployee[], roleFilter: string): RosterEmployee[] {
+  if (!roleFilter) return employees;
+  return employees.filter((e) => String(e.role || "").trim() === roleFilter);
+}
+
+const FILTER_SELECT_CLASS =
+  "h-9 w-auto min-w-[10rem] shrink-0 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+
 function renderSummaryCards(rows: { status: TimecardStatus }[]): string {
   const counts = { off: 0, working: 0, break: 0, done: 0 };
   for (const r of rows) counts[r.status]++;
@@ -730,21 +967,12 @@ function renderClockRow(
   const punches = getEmployeePunches(emp.id, date);
   const timecard = computeTimecard(punches);
   const alerts = computeAlerts(emp.id, date, timecard, settings);
-  const assignment = getAssignment(emp.id, date);
-  const shift = assignment ? readShiftTypes().find((t) => t.id === assignment.shiftId) : undefined;
-  const scheduleText = shift && assignment
-    ? `${shift.name} ${getEffectiveShiftTimes(assignment, shift).start}–${getEffectiveShiftTimes(assignment, shift).end}`
-    : "—";
+  const scheduleText = formatScheduleText(emp.id, date);
 
   const alertHtml =
     alerts.length > 0
       ? alerts.map((a) => `<span class="mr-1 inline-flex rounded bg-destructive/10 px-1.5 py-0.5 text-xs text-destructive">${escapeHtml(a)}</span>`).join("")
       : `<span class="text-xs text-muted-foreground">—</span>`;
-
-  const canIn = timecard.status === "off";
-  const canOut = timecard.status === "working" || timecard.status === "break";
-  const canBreakStart = timecard.status === "working";
-  const canBreakEnd = timecard.status === "break";
 
   const html = `
     <tr class="border-b border-border/60 hover:bg-muted/20" data-clock-row="${escapeHtml(emp.id)}">
@@ -762,10 +990,6 @@ function renderClockRow(
       <td class="px-3 py-2.5">${alertHtml}</td>
       <td class="px-3 py-2.5">
         <div class="flex flex-wrap gap-1">
-          <button type="button" data-clock-punch="in" data-clock-employee="${escapeHtml(emp.id)}" class="rounded border border-border px-2 py-1 text-xs hover:bg-muted disabled:opacity-40"${canIn ? "" : " disabled"}>上班</button>
-          <button type="button" data-clock-punch="out" data-clock-employee="${escapeHtml(emp.id)}" class="rounded border border-border px-2 py-1 text-xs hover:bg-muted disabled:opacity-40"${canOut ? "" : " disabled"}>下班</button>
-          <button type="button" data-clock-punch="break-start" data-clock-employee="${escapeHtml(emp.id)}" class="rounded border border-border px-2 py-1 text-xs hover:bg-muted disabled:opacity-40"${canBreakStart ? "" : " disabled"}>休息</button>
-          <button type="button" data-clock-punch="break-end" data-clock-employee="${escapeHtml(emp.id)}" class="rounded border border-border px-2 py-1 text-xs hover:bg-muted disabled:opacity-40"${canBreakEnd ? "" : " disabled"}>结束休息</button>
           <button type="button" data-clock-adjust="${escapeHtml(emp.id)}" class="rounded border border-border px-2 py-1 text-xs text-primary hover:bg-muted">补卡</button>
           <button type="button" data-clock-history="${escapeHtml(emp.id)}" class="rounded border border-border px-2 py-1 text-xs hover:bg-muted">记录</button>
         </div>
@@ -916,11 +1140,17 @@ function renderClockTabBar(): string {
 }
 
 function renderLiveClockPanel(): string {
+  ensureDemoAssignmentsForDate(pageState.date);
   const settings = readSettings();
   const employees = readScopedEmployees();
+  const roleFiltered = employeesMatchingRole(employees, pageState.roleFilter);
+  // 角色变更后若当前员工不在范围内，忽略员工筛选
+  const employeeStillValid =
+    !pageState.employeeFilter || roleFiltered.some((e) => e.id === pageState.employeeFilter);
+  if (!employeeStillValid) pageState.employeeFilter = "";
   const filteredEmployees = pageState.employeeFilter
-    ? employees.filter((e) => e.id === pageState.employeeFilter)
-    : employees;
+    ? roleFiltered.filter((e) => e.id === pageState.employeeFilter)
+    : roleFiltered;
 
   const rowData = filteredEmployees.map((emp) => renderClockRow(emp, pageState.date, settings));
   const statusFiltered =
@@ -945,7 +1175,8 @@ function renderLiveClockPanel(): string {
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="shrink-0 text-muted-foreground" aria-hidden="true"><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
             <input type="date" data-clock-date value="${escapeHtml(pageState.date)}" class="h-8 border-0 bg-transparent text-sm focus-visible:outline-none" />
           </div>
-          <select data-clock-employee-filter class="h-9 w-auto min-w-[10rem] shrink-0 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">${renderEmployeeFilterOptions(employees, pageState.employeeFilter, "全部员工")}</select>
+          <select data-clock-role-filter class="${FILTER_SELECT_CLASS}" aria-label="按角色筛选">${renderRoleFilterOptions(employees, pageState.roleFilter)}</select>
+          <select data-clock-employee-filter class="${FILTER_SELECT_CLASS}" aria-label="按员工筛选">${renderEmployeeFilterOptions(roleFiltered, pageState.employeeFilter, "全部员工")}</select>
           ${renderStatusFilterSelect()}
         </div>
       </div>
@@ -999,22 +1230,31 @@ function enumerateDates(from: string, to: string): string[] {
 
 function renderAttendanceRecordsPanel(): string {
   const employees = readScopedEmployees();
+  const roleFiltered = employeesMatchingRole(employees, attendancePageState.roleFilter);
+  const employeeStillValid =
+    !attendancePageState.employeeFilter ||
+    roleFiltered.some((e) => e.id === attendancePageState.employeeFilter);
+  if (!employeeStillValid) attendancePageState.employeeFilter = "";
+  const filteredEmployees = attendancePageState.employeeFilter
+    ? roleFiltered.filter((e) => e.id === attendancePageState.employeeFilter)
+    : roleFiltered;
   const dates = enumerateDates(attendancePageState.dateFrom, attendancePageState.dateTo);
   const rows: string[] = [];
   const needsStore = usesInPageStorePicker() && !readScopeFilters().store;
 
   if (!needsStore) {
+    const allowedIds = new Set(filteredEmployees.map((e) => e.id));
     for (const date of dates) {
       const dayPunches = readPunches().filter((p) => {
         if (p.timestamp.slice(0, 10) !== date) return false;
-        if (attendancePageState.employeeFilter && p.employeeId !== attendancePageState.employeeFilter) return false;
+        if (!allowedIds.has(p.employeeId)) return false;
         return true;
       });
-      for (const emp of employees) {
-        if (attendancePageState.employeeFilter && emp.id !== attendancePageState.employeeFilter) continue;
+      for (const emp of filteredEmployees) {
         const punches = dayPunches.filter((p) => p.employeeId === emp.id);
         if (punches.length === 0) continue;
         const timecard = computeTimecard(punches.sort((a, b) => a.timestamp.localeCompare(b.timestamp)));
+        const totalMinutes = timecard.workedMinutes + timecard.breakMinutes;
         rows.push(`
         <tr class="border-b border-border/60 hover:bg-muted/20">
           <td class="px-3 py-2.5 text-sm">${escapeHtml(date)}</td>
@@ -1023,7 +1263,9 @@ function renderAttendanceRecordsPanel(): string {
           <td class="px-3 py-2.5 text-sm tabular-nums">${formatTime(timecard.clockIn)}</td>
           <td class="px-3 py-2.5 text-sm tabular-nums">${formatTime(timecard.clockOut)}</td>
           <td class="px-3 py-2.5 text-sm tabular-nums">${formatDuration(timecard.workedMinutes)}</td>
-          <td class="px-3 py-2.5 text-sm tabular-nums text-muted-foreground">${formatDuration(timecard.breakMinutes)}</td>
+          <td class="px-3 py-2.5 text-sm tabular-nums text-muted-foreground">${formatDuration(timecard.unpaidBreakMinutes)}</td>
+          <td class="px-3 py-2.5 text-sm tabular-nums text-muted-foreground">${formatDuration(timecard.paidBreakMinutes)}</td>
+          <td class="px-3 py-2.5 text-sm tabular-nums font-medium">${formatDuration(totalMinutes)}</td>
           <td class="px-3 py-2.5 text-sm tabular-nums">${punches.length}</td>
         </tr>`);
       }
@@ -1031,10 +1273,10 @@ function renderAttendanceRecordsPanel(): string {
   }
 
   const tableBody = needsStore
-    ? `<tr><td colspan="8" class="px-4 py-10 text-center text-sm text-muted-foreground">请先选择门店</td></tr>`
+    ? `<tr><td colspan="10" class="px-4 py-10 text-center text-sm text-muted-foreground">请先选择门店</td></tr>`
     : rows.length > 0
       ? rows.join("")
-      : `<tr><td colspan="8" class="px-4 py-10 text-center text-sm text-muted-foreground">所选日期范围内暂无考勤记录</td></tr>`;
+      : `<tr><td colspan="10" class="px-4 py-10 text-center text-sm text-muted-foreground">所选日期范围内暂无考勤记录</td></tr>`;
 
   return `
     <div class="flex min-h-0 flex-1 flex-col gap-4" data-clock-records-panel>
@@ -1046,11 +1288,12 @@ function renderAttendanceRecordsPanel(): string {
             <span class="text-muted-foreground">→</span>
             <input type="date" data-attendance-date-to value="${escapeHtml(attendancePageState.dateTo)}" class="h-8 border-0 bg-transparent text-sm focus-visible:outline-none" />
           </div>
-          <select data-attendance-employee-filter class="h-9 w-auto min-w-[10rem] shrink-0 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">${renderEmployeeFilterOptions(employees, attendancePageState.employeeFilter, "全部员工")}</select>
+          <select data-attendance-role-filter class="${FILTER_SELECT_CLASS}" aria-label="按角色筛选">${renderRoleFilterOptions(employees, attendancePageState.roleFilter)}</select>
+          <select data-attendance-employee-filter class="${FILTER_SELECT_CLASS}" aria-label="按员工筛选">${renderEmployeeFilterOptions(roleFiltered, attendancePageState.employeeFilter, "全部员工")}</select>
         </div>
       </div>
       <div class="overflow-x-auto rounded-xl border border-border bg-card shadow-sm">
-        <table class="w-full min-w-[48rem] text-left text-sm">
+        <table class="w-full min-w-[56rem] text-left text-sm">
           <thead class="border-b border-border bg-muted/30 text-xs text-muted-foreground">
             <tr>
               <th class="px-3 py-2.5 font-medium">日期</th>
@@ -1059,7 +1302,9 @@ function renderAttendanceRecordsPanel(): string {
               <th class="px-3 py-2.5 font-medium">上班</th>
               <th class="px-3 py-2.5 font-medium">下班</th>
               <th class="px-3 py-2.5 font-medium">工时</th>
-              <th class="px-3 py-2.5 font-medium">休息</th>
+              <th class="px-3 py-2.5 font-medium">无薪休息</th>
+              <th class="px-3 py-2.5 font-medium">带薪休息</th>
+              <th class="px-3 py-2.5 font-medium">总时长</th>
               <th class="px-3 py-2.5 font-medium">打卡次数</th>
             </tr>
           </thead>
@@ -1157,6 +1402,11 @@ function bindAttendanceRecordsPanel(root: HTMLElement, remount: () => void): voi
       root.querySelector<HTMLInputElement>("[data-attendance-date-to]")?.value ?? attendancePageState.dateTo;
     remount();
   });
+  root.querySelector("[data-attendance-role-filter]")?.addEventListener("change", () => {
+    attendancePageState.roleFilter =
+      root.querySelector<HTMLSelectElement>("[data-attendance-role-filter]")?.value ?? "";
+    remount();
+  });
   root.querySelector("[data-attendance-employee-filter]")?.addEventListener("change", () => {
     attendancePageState.employeeFilter =
       root.querySelector<HTMLSelectElement>("[data-attendance-employee-filter]")?.value ?? "";
@@ -1187,6 +1437,11 @@ export function bindTeamClockInUi(remount: () => void): void {
     remount();
   });
 
+  root.querySelector("[data-clock-role-filter]")?.addEventListener("change", () => {
+    pageState.roleFilter = root.querySelector<HTMLSelectElement>("[data-clock-role-filter]")?.value ?? "";
+    remount();
+  });
+
   root.querySelector("[data-clock-employee-filter]")?.addEventListener("change", () => {
     pageState.employeeFilter = root.querySelector<HTMLSelectElement>("[data-clock-employee-filter]")?.value ?? "";
     remount();
@@ -1203,24 +1458,6 @@ export function bindTeamClockInUi(remount: () => void): void {
 
   root.querySelector("[data-clock-late-grace]")?.addEventListener("change", () => {
     persistClockSettingsFromDom(root);
-  });
-
-  root.querySelectorAll("[data-clock-punch]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const type = btn.getAttribute("data-clock-punch") as PunchType;
-      const employeeId = btn.getAttribute("data-clock-employee");
-      if (!type || !employeeId) return;
-      if (type === "break-start") {
-        breakDialog = { employeeId, date: pageState.date };
-        remount();
-        return;
-      }
-      if (!addPunch(employeeId, type)) {
-        window.alert(type === "in" && isRequireScheduledShiftEnabled() ? "该员工今日无排班，无法上班打卡。" : "当前状态无法执行此操作。");
-        return;
-      }
-      remount();
-    });
   });
 
   root.querySelectorAll("[data-clock-adjust]").forEach((btn) => {

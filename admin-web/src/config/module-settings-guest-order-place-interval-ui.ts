@@ -188,7 +188,6 @@ export function renderGuestOrderPlaceIntervalPanelHtml(on: boolean): string {
         ${renderIntervalInputHtml(on)}
       </div>
       <div>
-        <p class="m-0 mb-2 text-xs font-medium text-muted-foreground">适用产线（多选）</p>
         ${renderLinesMultiselectHtml(on)}
       </div>
     </div>`;

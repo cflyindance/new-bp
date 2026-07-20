@@ -42,11 +42,6 @@ const LINES_GROUP_ARIA_BY_SEQ: Record<PosComboOrderingSeq, string> = {
   [POS_COMBO_SHOW_SUBITEM_PRICE_SEQ]: "可调套餐显示子菜价格适用产线",
 };
 
-const PANEL_HINT_BY_SEQ: Record<PosComboOrderingSeq, string> = {
-  [POS_COMBO_AUTO_FINISH_SEQ]: "勾选产线后，点选套餐时自动完成套餐内必选子项的点单流程。",
-  [POS_COMBO_SHOW_SUBITEM_PRICE_SEQ]: "勾选产线后，当套餐价格为可调整规则时，在套餐点单界面展示子菜价格。",
-};
-
 const MODULE_SETTING_CONTROL_CLASS =
   "size-4 shrink-0 accent-primary text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50";
 
@@ -174,9 +169,7 @@ export function renderPosComboOrderingPanelHtml(seq: PosComboOrderingSeq, on: bo
       data-pos-combo-ordering-panel="${seq}"
       ${on ? "" : 'aria-hidden="true"'}
     >
-      <p class="m-0 mb-2 text-xs font-medium text-muted-foreground">适用产线（多选）</p>
       ${renderLinesMultiselectHtml(seq, on)}
-      <p class="m-0 mt-2 text-xs leading-relaxed text-muted-foreground">${escapeHtml(PANEL_HINT_BY_SEQ[seq])}</p>
     </div>`;
 }
 

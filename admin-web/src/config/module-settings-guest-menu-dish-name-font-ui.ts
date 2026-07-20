@@ -228,7 +228,6 @@ function renderEditorInnerHtml(panelEnabled: boolean): string {
   return `
     <div class="space-y-4" data-dish-name-font-editor="${GUEST_MENU_DISH_NAME_FONT_SEQ}">
       <div>
-        <p class="m-0 mb-2 text-xs font-medium text-muted-foreground">适用产线（多选）</p>
         ${renderLinesMultiselectHtml(panelEnabled)}
       </div>
       <div>

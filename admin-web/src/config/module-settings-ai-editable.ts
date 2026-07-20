@@ -22,6 +22,10 @@ import {
   writeModuleSettingRadio,
   writeModuleSettingText,
 } from "./module-settings-form-ui";
+import { writeAutoLogoutMinutes } from "./module-settings-pos-session-security-ui";
+import { writeMaxGuestsPerOrder } from "./module-settings-max-guests-per-order-ui";
+import { writeOrderTimeoutReminderMinutes } from "./module-settings-order-timeout-reminder-ui";
+import { writeCustomDividerName } from "./module-settings-custom-divider-name-ui";
 import {
   packingSlipOrderTypeCheckboxFieldId,
   PACKING_SLIP_ORDER_TYPE_OPTIONS,
@@ -111,9 +115,9 @@ const KNOWN_NUMBER_FIELDS: NumberFieldMeta[] = [
   })),
   { seq: 63, fieldId: "63-cash-drawer-float-amount", label: "开班备款金额", min: 0, max: 10000 },
   { seq: 76, fieldId: "76-cash-reconciliation-tolerance", label: "长短款容差", min: 0, max: 500 },
-  { seq: 111, fieldId: "111-max-guests-per-order", label: "每单最大人数" },
-  { seq: 110, fieldId: "110-order-timeout-reminder-minutes", label: "订单超时提醒" },
-  { seq: 75, fieldId: "75-auto-logout-minutes", label: "自动登出分钟" },
+  { seq: 111, fieldId: "111-max-guests-per-order", label: "每单最大人数", min: 1, max: 99 },
+  { seq: 110, fieldId: "110-order-timeout-reminder-minutes", label: "订单超时提醒", min: 1, max: 999 },
+  { seq: 75, fieldId: "75-auto-logout-minutes", label: "自动登出分钟", min: 1, max: 999 },
   { seq: 230, fieldId: "230-settlement-days", label: "结算天数" },
   { seq: 236, fieldId: "236-unbatched-order-limit", label: "未batch订单上限" },
   { seq: 232, fieldId: "232-tip-alert-ratio-percent", label: "小费提醒比例" },
@@ -202,7 +206,7 @@ function listNestedNumberTextFields(): Array<
   NumberFieldMeta | (TextFieldMeta & { kind: "text" })
 > {
   const out: Array<NumberFieldMeta | (TextFieldMeta & { kind: "text" })> = [];
-  for (const seq of [535, 536, 196, 570, 647]) {
+  for (const seq of [535, 536, 570, 647]) {
     const group = getModuleSettingNestedGroup(seq);
     if (!group) continue;
     for (const field of group.fields) {
@@ -410,10 +414,22 @@ function persistMutation(m: AiSettingMutation): void {
       writeModuleSettingRadio(m.fieldId, m.value);
       break;
     case "number":
-      writeModuleSettingNumber(m.fieldId, m.value);
+      if (m.fieldId === "75-auto-logout-minutes") {
+        writeAutoLogoutMinutes(m.value);
+      } else if (m.fieldId === "111-max-guests-per-order") {
+        writeMaxGuestsPerOrder(m.value);
+      } else if (m.fieldId === "110-order-timeout-reminder-minutes") {
+        writeOrderTimeoutReminderMinutes(m.value);
+      } else {
+        writeModuleSettingNumber(m.fieldId, m.value);
+      }
       break;
     case "text":
-      writeModuleSettingText(m.fieldId, m.value);
+      if (m.fieldId === "196-custom-divider-name") {
+        writeCustomDividerName(m.value);
+      } else {
+        writeModuleSettingText(m.fieldId, m.value);
+      }
       break;
     case "color":
       writeModuleSettingColor(m.fieldId, m.value);

@@ -51,11 +51,6 @@ const LINES_ARIA_LABEL_BY_SEQ: Record<number, string> = {
   [GUEST_CATEGORY_SWITCH_BEFORE_ORDER_SEQ]: "下单前允许食客切换品类适用产线",
 };
 
-const PANEL_HINT_BY_SEQ: Partial<Record<number, string>> = {
-  [GUEST_MENU_CATEGORY_MODE_SEQ]:
-    "开启后，食客先按品类分类浏览再选菜（非普通扁平菜单）；仅对勾选产线生效。",
-};
-
 const MODULE_SETTING_CONTROL_CLASS =
   "size-4 shrink-0 accent-primary text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50";
 
@@ -185,19 +180,13 @@ function renderLinesMultiselectHtml(seq: number, enabled: boolean): string {
 
 export function renderGuestCategoryModePanelHtml(seq: number, on: boolean): string {
   const hidden = on ? "" : "hidden";
-  const hint = PANEL_HINT_BY_SEQ[seq];
-  const hintHtml = hint
-    ? `<p class="m-0 mt-2 text-xs leading-relaxed text-muted-foreground">${escapeHtml(hint)}</p>`
-    : "";
   return `
     <div
       class="mt-3 ${hidden}"
       data-guest-category-mode-panel="${seq}"
       ${on ? "" : 'aria-hidden="true"'}
     >
-      <p class="m-0 mb-2 text-xs font-medium text-muted-foreground">适用产线（多选）</p>
       ${renderLinesMultiselectHtml(seq, on)}
-      ${hintHtml}
     </div>`;
 }
 

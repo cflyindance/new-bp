@@ -10,6 +10,9 @@ export const CHILD_EXCLUDED_FROM_ORDER_LIMIT_SEQ = 625;
 const LINES_STORAGE_ID = "625-child-excluded-from-order-limit-lines";
 
 export const CHILD_EXCLUDED_FROM_ORDER_LIMIT_PRODUCT_LINES = [
+  { id: "pos", label: "POS" },
+  { id: "pos-go", label: "POS GO" },
+  { id: "paypad", label: "PayPad" },
   { id: "emenu", label: "eMenu" },
   { id: "sdi", label: "SDI" },
 ] as const;
@@ -124,7 +127,7 @@ function renderLinesMultiselectHtml(enabled: boolean): string {
 
   return `
     <div
-      class="flex w-full max-w-md overflow-hidden rounded-md border border-border bg-muted/40"
+      class="flex w-full max-w-2xl overflow-hidden rounded-md border border-border bg-muted/40"
       data-child-excluded-from-order-limit-lines="${CHILD_EXCLUDED_FROM_ORDER_LIMIT_SEQ}"
       role="group"
       aria-label="儿童不计入下单限制规则人数适用产线"
@@ -141,7 +144,6 @@ export function renderChildExcludedFromOrderLimitPanelHtml(seq: number, on: bool
       data-child-excluded-from-order-limit-panel="${seq}"
       ${on ? "" : 'aria-hidden="true"'}
     >
-      <p class="m-0 mb-2 text-xs font-medium text-muted-foreground">适用产线（多选）</p>
       ${renderLinesMultiselectHtml(on)}
     </div>`;
 }

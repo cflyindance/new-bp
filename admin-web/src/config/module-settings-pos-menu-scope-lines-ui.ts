@@ -1,10 +1,10 @@
 /**
- * 前厅 · 菜单查找与时段：主开关 + POS / POS GO / PayPad 产线多选
- * — 118 搜索菜单
- * — 148 比价功能模式
- * — 176 按时段显示菜单:堂吃菜单
- * — 177 按时段显示菜单:外食菜单
- * — 348 按照时段显示菜单
+ * 前厅 · 菜单查找与时段：主开关 + 产线多选
+ * — 118 搜索菜单（POS / POS GO / PayPad / Kiosk / eMenu / SDI）
+ * — 148 比价功能模式（POS / POS GO / PayPad）
+ * — 176 按时段显示菜单:堂吃菜单（POS / POS GO / PayPad）
+ * — 177 按时段显示菜单:外食菜单（POS / POS GO / PayPad）
+ * — 348 按照时段显示菜单（POS / POS GO / PayPad）
  */
 
 import { readModuleSettingJson, writeModuleSettingJson } from "./module-settings-form-ui";
@@ -26,15 +26,38 @@ export const POS_MENU_SCOPE_LINES_SEQS = [
 
 export type PosMenuScopeLinesSeq = (typeof POS_MENU_SCOPE_LINES_SEQS)[number];
 
+/** 本组默认产线（除搜索菜单外） */
 export const POS_MENU_SCOPE_PRODUCT_LINES = [
   { id: "pos", label: "POS" },
   { id: "pos-go", label: "POS GO" },
   { id: "paypad", label: "PayPad" },
 ] as const;
 
-export type PosMenuScopeProductLineId = (typeof POS_MENU_SCOPE_PRODUCT_LINES)[number]["id"];
+/** 搜索菜单额外产线 */
+const MENU_SEARCH_EXTRA_PRODUCT_LINES = [
+  { id: "kiosk", label: "Kiosk" },
+  { id: "emenu", label: "eMenu" },
+  { id: "sdi", label: "SDI" },
+] as const;
 
-const ALL_LINE_IDS: PosMenuScopeProductLineId[] = POS_MENU_SCOPE_PRODUCT_LINES.map((l) => l.id);
+export const MENU_SEARCH_PRODUCT_LINES = [
+  ...POS_MENU_SCOPE_PRODUCT_LINES,
+  ...MENU_SEARCH_EXTRA_PRODUCT_LINES,
+] as const;
+
+export type PosMenuScopeProductLineId =
+  | (typeof POS_MENU_SCOPE_PRODUCT_LINES)[number]["id"]
+  | (typeof MENU_SEARCH_EXTRA_PRODUCT_LINES)[number]["id"];
+
+type PosMenuScopeProductLine = { id: PosMenuScopeProductLineId; label: string };
+
+function productLinesForSeq(seq: PosMenuScopeLinesSeq): readonly PosMenuScopeProductLine[] {
+  return seq === MENU_SEARCH_SEQ ? MENU_SEARCH_PRODUCT_LINES : POS_MENU_SCOPE_PRODUCT_LINES;
+}
+
+function allLineIdsForSeq(seq: PosMenuScopeLinesSeq): PosMenuScopeProductLineId[] {
+  return productLinesForSeq(seq).map((l) => l.id);
+}
 
 const LINES_STORAGE_ID_BY_SEQ: Record<PosMenuScopeLinesSeq, string> = {
   [MENU_SEARCH_SEQ]: "118-menu-search-lines",
@@ -50,14 +73,6 @@ const LINES_GROUP_ARIA_BY_SEQ: Record<PosMenuScopeLinesSeq, string> = {
   [TIMED_MENU_DINEIN_SEQ]: "按时段显示堂吃菜单适用产线",
   [TIMED_MENU_TAKEOUT_SEQ]: "按时段显示外食菜单适用产线",
   [TIMED_MENU_DISPLAY_SEQ]: "按照时段显示菜单适用产线",
-};
-
-const PANEL_HINT_BY_SEQ: Record<PosMenuScopeLinesSeq, string> = {
-  [MENU_SEARCH_SEQ]: "勾选产线后，点单页支持菜单搜索。",
-  [PRICE_COMPARE_MODE_SEQ]: "勾选产线后，点单页启用比价功能模式。",
-  [TIMED_MENU_DINEIN_SEQ]: "勾选产线后，堂吃订单按时段切换菜单。",
-  [TIMED_MENU_TAKEOUT_SEQ]: "勾选产线后，外食订单按时段切换菜单。",
-  [TIMED_MENU_DISPLAY_SEQ]: "勾选产线后，按配置时段展示对应菜单。",
 };
 
 const MODULE_SETTING_CONTROL_CLASS =
@@ -105,9 +120,12 @@ export function ensurePosMenuScopeToggleMigrated(seq: number): void {
   }
 }
 
-function normalizeLineIds(raw: unknown): PosMenuScopeProductLineId[] {
+function normalizeLineIds(
+  seq: PosMenuScopeLinesSeq,
+  raw: unknown,
+): PosMenuScopeProductLineId[] {
   if (!Array.isArray(raw)) return [];
-  const valid = new Set<string>(ALL_LINE_IDS);
+  const valid = new Set<string>(allLineIdsForSeq(seq));
   return raw.filter(
     (id): id is PosMenuScopeProductLineId => typeof id === "string" && valid.has(id),
   );
@@ -116,11 +134,16 @@ function normalizeLineIds(raw: unknown): PosMenuScopeProductLineId[] {
 export function readPosMenuScopeLines(seq: PosMenuScopeLinesSeq): PosMenuScopeProductLineId[] {
   ensurePosMenuScopeToggleMigrated(seq);
   const stored = readModuleSettingJson<unknown>(LINES_STORAGE_ID_BY_SEQ[seq], null);
-  const normalized = normalizeLineIds(stored);
-  if (normalized.length > 0) return normalized;
+  const normalized = normalizeLineIds(seq, stored);
+  if (normalized.length > 0) {
+    if (Array.isArray(stored) && normalized.length !== stored.length) {
+      writePosMenuScopeLines(seq, normalized);
+    }
+    return normalized;
+  }
 
   if (readLegacyToggleOn(seq)) {
-    const all = [...ALL_LINE_IDS];
+    const all = allLineIdsForSeq(seq);
     writePosMenuScopeLines(seq, all);
     return all;
   }
@@ -131,13 +154,14 @@ export function writePosMenuScopeLines(
   seq: PosMenuScopeLinesSeq,
   lines: PosMenuScopeProductLineId[],
 ): void {
-  const unique = ALL_LINE_IDS.filter((id) => lines.includes(id));
+  const allowed = allLineIdsForSeq(seq);
+  const unique = allowed.filter((id) => lines.includes(id));
   writeModuleSettingJson(LINES_STORAGE_ID_BY_SEQ[seq], unique);
 }
 
 export function ensurePosMenuScopeLinesDefault(seq: PosMenuScopeLinesSeq): void {
   if (readPosMenuScopeLines(seq).length === 0) {
-    writePosMenuScopeLines(seq, [...ALL_LINE_IDS]);
+    writePosMenuScopeLines(seq, allLineIdsForSeq(seq));
   }
 }
 
@@ -147,10 +171,12 @@ export function isPosMenuScopeLinesSeq(seq: number): seq is PosMenuScopeLinesSeq
 
 function renderLinesMultiselectHtml(seq: PosMenuScopeLinesSeq, enabled: boolean): string {
   const selected = new Set(readPosMenuScopeLines(seq));
-  const cells = POS_MENU_SCOPE_PRODUCT_LINES.map((line, index) => {
-    const checked = selected.has(line.id);
-    const divider = index > 0 ? "border-l border-border" : "";
-    return `
+  const lines = productLinesForSeq(seq);
+  const cells = lines
+    .map((line, index) => {
+      const checked = selected.has(line.id);
+      const divider = index > 0 ? "border-l border-border" : "";
+      return `
       <label
         class="flex flex-1 flex-col items-center justify-center gap-2 px-2 py-3 text-sm text-foreground sm:px-4 ${enabled ? "cursor-pointer" : "cursor-not-allowed opacity-50"} ${divider}"
       >
@@ -166,11 +192,13 @@ function renderLinesMultiselectHtml(seq: PosMenuScopeLinesSeq, enabled: boolean)
         />
         <span class="text-center leading-tight">${escapeHtml(line.label)}</span>
       </label>`;
-  }).join("");
+    })
+    .join("");
 
+  const maxWidth = seq === MENU_SEARCH_SEQ ? "max-w-3xl" : "max-w-xl";
   return `
     <div
-      class="flex w-full max-w-xl overflow-hidden rounded-md border border-border bg-muted/40"
+      class="flex w-full ${maxWidth} overflow-hidden rounded-md border border-border bg-muted/40"
       data-pos-menu-scope-lines="${seq}"
       role="group"
       aria-label="${escapeHtml(LINES_GROUP_ARIA_BY_SEQ[seq])}"
@@ -187,9 +215,7 @@ export function renderPosMenuScopeLinesPanelHtml(seq: PosMenuScopeLinesSeq, on: 
       data-pos-menu-scope-lines-panel="${seq}"
       ${on ? "" : 'aria-hidden="true"'}
     >
-      <p class="m-0 mb-2 text-xs font-medium text-muted-foreground">适用产线（多选）</p>
       ${renderLinesMultiselectHtml(seq, on)}
-      <p class="m-0 mt-2 text-xs leading-relaxed text-muted-foreground">${escapeHtml(PANEL_HINT_BY_SEQ[seq])}</p>
     </div>`;
 }
 
@@ -215,6 +241,7 @@ function collectLinesFromGroup(
   group: HTMLElement,
   seq: PosMenuScopeLinesSeq,
 ): PosMenuScopeProductLineId[] {
+  const allowed = new Set(allLineIdsForSeq(seq));
   const lines: PosMenuScopeProductLineId[] = [];
   group
     .querySelectorAll<HTMLInputElement>(
@@ -222,7 +249,7 @@ function collectLinesFromGroup(
     )
     .forEach((input) => {
       const id = input.getAttribute("data-pos-menu-scope-line");
-      if (id && ALL_LINE_IDS.includes(id as PosMenuScopeProductLineId)) {
+      if (id && allowed.has(id as PosMenuScopeProductLineId)) {
         lines.push(id as PosMenuScopeProductLineId);
       }
     });

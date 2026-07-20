@@ -162,7 +162,7 @@ export const DEMO_CONFIG_DOMAINS: DeploymentConfigDomain[] = [
   },
   {
     domainKey: "foh.brand-menu",
-    displayName: "店中店设置",
+    displayName: "店中店管理",
     navRefs: [{ l1Key: "queue-call", l2Key: "qc-brand-menu" }],
     productLines: ["POS", "Kiosk", "eMenu"],
     granularity: "store",
@@ -186,7 +186,7 @@ export const DEMO_CONFIG_DOMAINS: DeploymentConfigDomain[] = [
   },
   {
     domainKey: "foh.category-settings",
-    displayName: "品类设置",
+    displayName: "品类管理",
     navRefs: [{ l1Key: "queue-call", l2Key: "qc-category-settings" }],
     productLines: ["POS", "Kiosk", "eMenu"],
     granularity: "store",
@@ -194,7 +194,7 @@ export const DEMO_CONFIG_DOMAINS: DeploymentConfigDomain[] = [
   },
   {
     domainKey: "foh.classification-settings",
-    displayName: "分类设置",
+    displayName: "分类管理",
     navRefs: [{ l1Key: "queue-call", l2Key: "qc-classification-settings" }],
     productLines: ["POS", "Kiosk", "eMenu"],
     granularity: "store",

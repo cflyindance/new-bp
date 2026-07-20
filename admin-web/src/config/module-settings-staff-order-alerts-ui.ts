@@ -201,7 +201,6 @@ export function renderStaffOrderAlertPanelHtml(seq: number, on: boolean): string
       data-staff-alert-panel="${seq}"
       ${on ? "" : 'aria-hidden="true"'}
     >
-      <p class="m-0 mb-2 text-xs font-medium text-muted-foreground">适用产线（多选）</p>
       ${renderStaffOrderAlertByLineHtml(seq, on)}
       ${hint ? `<p class="m-0 mt-2 text-xs leading-relaxed text-muted-foreground">${escapeHtml(hint)}</p>` : ""}
     </div>`;

@@ -1,9 +1,11 @@
 /**
- * 前厅 · 登录与主界面：seq 75 自动登出时间、166 每次操作后登出、175 登录忽略特殊符号。
- * 75：分钟数 + 产线多选；166/175：主开关 + 产线多选（POS / POS GO / PayPad）。
+ * 前厅 · 登录与主界面：seq 75 自动登出时间（按产线启用+分钟）、166 每次操作后登出、175 企台登录忽略特殊符号。
+ * 75：对齐 seq 582 表格（产线 | 启用 | 分钟）；166/175：主开关 + 产线多选（POS / POS GO / PayPad）。
  */
 
+import { FOH_LINE_CONFIG_ROW_ATTR } from "./foh-settings-by-line-filter";
 import {
+  moduleSettingStorageKey,
   readModuleSettingJson,
   readModuleSettingNumber,
   writeModuleSettingJson,
@@ -29,6 +31,11 @@ export const POS_SESSION_SECURITY_PRODUCT_LINES = [
 export type PosSessionSecurityProductLineId =
   (typeof POS_SESSION_SECURITY_PRODUCT_LINES)[number]["id"];
 
+export type AutoLogoutLineConfig = {
+  enabled: boolean;
+  minutes: number;
+};
+
 const ALL_LINE_IDS: PosSessionSecurityProductLineId[] =
   POS_SESSION_SECURITY_PRODUCT_LINES.map((l) => l.id);
 
@@ -38,18 +45,25 @@ const LINES_STORAGE_ID_BY_SEQ = {
   175: "175-login-ignore-special-chars-lines",
 } as const;
 
+export const AUTO_LOGOUT_BY_LINE_FIELD_ID = "75-auto-logout-by-line";
 const AUTO_LOGOUT_MINUTES_FIELD_ID = "75-auto-logout-minutes";
+const AUTO_LOGOUT_LINES_STORAGE_ID = LINES_STORAGE_ID_BY_SEQ[75];
+
 const MINUTES_DEFAULT = 15;
-const MINUTES_MIN = 0;
+const MINUTES_MIN = 1;
 const MINUTES_MAX = 999;
 
 const MODULE_SETTING_CONTROL_CLASS =
   "size-4 shrink-0 accent-primary text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50";
 
+const CHECKBOX_CLASS =
+  "size-4 shrink-0 rounded border-input text-primary accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+
 const NUMBER_INPUT_CLASS =
-  "h-8 w-24 rounded-md border border-input bg-background px-2 text-right text-sm tabular-nums text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
+  "h-8 w-20 rounded-md border border-input bg-background px-2 text-center text-sm tabular-nums text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
 
 const toggleMigrated = new Set<number>();
+let autoLogoutMigrated = false;
 
 function escapeHtml(s: string): string {
   return s
@@ -99,9 +113,161 @@ function normalizeLineIds(raw: unknown): PosSessionSecurityProductLineId[] {
   );
 }
 
+function clampAutoLogoutMinutes(raw: unknown): number {
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return MINUTES_DEFAULT;
+  return Math.min(MINUTES_MAX, Math.max(MINUTES_MIN, Math.round(n)));
+}
+
+function defaultLineConfig(enabled: boolean): AutoLogoutLineConfig {
+  return { enabled, minutes: MINUTES_DEFAULT };
+}
+
+function defaultAutoLogoutByLine(): Record<PosSessionSecurityProductLineId, AutoLogoutLineConfig> {
+  return Object.fromEntries(
+    POS_SESSION_SECURITY_PRODUCT_LINES.map((line) => [line.id, defaultLineConfig(true)]),
+  ) as Record<PosSessionSecurityProductLineId, AutoLogoutLineConfig>;
+}
+
+function normalizeAutoLogoutByLine(
+  raw: Partial<Record<string, Partial<AutoLogoutLineConfig>>>,
+): Record<PosSessionSecurityProductLineId, AutoLogoutLineConfig> {
+  const base = defaultAutoLogoutByLine();
+  for (const line of POS_SESSION_SECURITY_PRODUCT_LINES) {
+    const item = raw[line.id];
+    if (!item || typeof item !== "object") continue;
+    base[line.id] = {
+      enabled: item.enabled === true,
+      minutes: clampAutoLogoutMinutes(item.minutes ?? base[line.id].minutes),
+    };
+  }
+  return base;
+}
+
+function syncAutoLogoutLegacyFields(
+  config: Record<PosSessionSecurityProductLineId, AutoLogoutLineConfig>,
+): void {
+  const enabledLines = ALL_LINE_IDS.filter((id) => config[id].enabled);
+  writeModuleSettingJson(AUTO_LOGOUT_LINES_STORAGE_ID, enabledLines);
+  const firstEnabled = POS_SESSION_SECURITY_PRODUCT_LINES.find((line) => config[line.id].enabled);
+  if (firstEnabled) {
+    writeModuleSettingNumber(AUTO_LOGOUT_MINUTES_FIELD_ID, config[firstEnabled.id].minutes);
+  }
+}
+
+function readLegacyMinutesRaw(): number {
+  const stored = readModuleSettingNumber(AUTO_LOGOUT_MINUTES_FIELD_ID, MINUTES_DEFAULT);
+  if (!Number.isFinite(stored)) return MINUTES_DEFAULT;
+  return Math.round(stored);
+}
+
+function ensureAutoLogoutByLineMigrated(): void {
+  if (autoLogoutMigrated) return;
+  autoLogoutMigrated = true;
+
+  const raw = readModuleSettingJson<Partial<Record<string, Partial<AutoLogoutLineConfig>>>>(
+    AUTO_LOGOUT_BY_LINE_FIELD_ID,
+    {},
+  );
+  if (raw && typeof raw === "object" && Object.keys(raw).length > 0) {
+    writeAutoLogoutByLine(normalizeAutoLogoutByLine(raw));
+    return;
+  }
+
+  const hasLegacyMinutes = (() => {
+    try {
+      return localStorage.getItem(moduleSettingStorageKey(AUTO_LOGOUT_MINUTES_FIELD_ID)) !== null;
+    } catch {
+      return false;
+    }
+  })();
+  const hasLegacyLines = (() => {
+    try {
+      return localStorage.getItem(moduleSettingStorageKey(AUTO_LOGOUT_LINES_STORAGE_ID)) !== null;
+    } catch {
+      return false;
+    }
+  })();
+
+  if (!hasLegacyMinutes && !hasLegacyLines) {
+    writeAutoLogoutByLine(defaultAutoLogoutByLine());
+    return;
+  }
+
+  const minutesLegacy = readLegacyMinutesRaw();
+  const linesRaw = readModuleSettingJson<unknown>(AUTO_LOGOUT_LINES_STORAGE_ID, null);
+  const normalizedLines = normalizeLineIds(linesRaw);
+  const linesLegacy =
+    normalizedLines.length > 0 ? normalizedLines : ([...ALL_LINE_IDS] as PosSessionSecurityProductLineId[]);
+  const selected = new Set(linesLegacy);
+
+  const config = defaultAutoLogoutByLine();
+  for (const line of POS_SESSION_SECURITY_PRODUCT_LINES) {
+    if (!selected.has(line.id)) {
+      config[line.id] = { enabled: false, minutes: MINUTES_DEFAULT };
+      continue;
+    }
+    if (minutesLegacy > 0) {
+      config[line.id] = {
+        enabled: true,
+        minutes: clampAutoLogoutMinutes(minutesLegacy),
+      };
+    } else {
+      config[line.id] = { enabled: false, minutes: MINUTES_DEFAULT };
+    }
+  }
+  writeAutoLogoutByLine(config);
+}
+
+export function readAutoLogoutByLine(): Record<
+  PosSessionSecurityProductLineId,
+  AutoLogoutLineConfig
+> {
+  ensureAutoLogoutByLineMigrated();
+  const raw = readModuleSettingJson<Partial<Record<string, Partial<AutoLogoutLineConfig>>>>(
+    AUTO_LOGOUT_BY_LINE_FIELD_ID,
+    {},
+  );
+  if (raw && typeof raw === "object" && Object.keys(raw).length > 0) {
+    return normalizeAutoLogoutByLine(raw);
+  }
+  return defaultAutoLogoutByLine();
+}
+
+export function writeAutoLogoutByLine(
+  config: Record<PosSessionSecurityProductLineId, AutoLogoutLineConfig>,
+): void {
+  const normalized = normalizeAutoLogoutByLine(config);
+  writeModuleSettingJson(AUTO_LOGOUT_BY_LINE_FIELD_ID, normalized);
+  syncAutoLogoutLegacyFields(normalized);
+}
+
+/** FOH 写 lines 后回写 by-line.enabled，避免开关与表格漂移 */
+export function syncAutoLogoutEnabledFromLines(lines: readonly string[]): void {
+  ensureAutoLogoutByLineMigrated();
+  const config = readAutoLogoutByLine();
+  const selected = new Set(
+    lines.filter((id): id is PosSessionSecurityProductLineId =>
+      ALL_LINE_IDS.includes(id as PosSessionSecurityProductLineId),
+    ),
+  );
+  for (const id of ALL_LINE_IDS) {
+    config[id] = {
+      ...config[id],
+      enabled: selected.has(id),
+    };
+  }
+  writeAutoLogoutByLine(config);
+}
+
 export function readPosSessionSecurityLines(seq: number): PosSessionSecurityProductLineId[] {
   const storageId = linesStorageId(seq);
   if (!storageId) return [];
+
+  if (seq === AUTO_LOGOUT_MINUTES_SEQ) {
+    const config = readAutoLogoutByLine();
+    return ALL_LINE_IDS.filter((id) => config[id].enabled);
+  }
 
   if (POS_SESSION_SECURITY_TOGGLE_SEQS.includes(seq as (typeof POS_SESSION_SECURITY_TOGGLE_SEQS)[number])) {
     ensurePosSessionSecurityToggleMigrated(seq);
@@ -110,12 +276,6 @@ export function readPosSessionSecurityLines(seq: number): PosSessionSecurityProd
   const stored = readModuleSettingJson<unknown>(storageId, null);
   const normalized = normalizeLineIds(stored);
   if (normalized.length > 0) return normalized;
-
-  if (seq === AUTO_LOGOUT_MINUTES_SEQ) {
-    const all = [...ALL_LINE_IDS];
-    writePosSessionSecurityLines(seq, all);
-    return all;
-  }
 
   if (readLegacyToggleOn(seq)) {
     const all = [...ALL_LINE_IDS];
@@ -132,17 +292,38 @@ export function writePosSessionSecurityLines(
   const storageId = linesStorageId(seq);
   if (!storageId) return;
   const unique = ALL_LINE_IDS.filter((id) => lines.includes(id));
+
+  if (seq === AUTO_LOGOUT_MINUTES_SEQ) {
+    syncAutoLogoutEnabledFromLines(unique);
+    return;
+  }
+
   writeModuleSettingJson(storageId, unique);
 }
 
 export function readAutoLogoutMinutes(): number {
+  const config = readAutoLogoutByLine();
+  const firstEnabled = POS_SESSION_SECURITY_PRODUCT_LINES.find((line) => config[line.id].enabled);
+  if (firstEnabled) return config[firstEnabled.id].minutes;
   const stored = readModuleSettingNumber(AUTO_LOGOUT_MINUTES_FIELD_ID, MINUTES_DEFAULT);
   if (!Number.isFinite(stored)) return MINUTES_DEFAULT;
-  return Math.min(MINUTES_MAX, Math.max(MINUTES_MIN, Math.round(stored)));
+  return clampAutoLogoutMinutes(stored);
 }
 
 export function writeAutoLogoutMinutes(minutes: number): void {
-  const value = Math.min(MINUTES_MAX, Math.max(MINUTES_MIN, Math.round(minutes)));
+  const value = clampAutoLogoutMinutes(minutes);
+  const config = readAutoLogoutByLine();
+  let changed = false;
+  for (const id of ALL_LINE_IDS) {
+    if (config[id].enabled) {
+      config[id] = { ...config[id], minutes: value };
+      changed = true;
+    }
+  }
+  if (changed) {
+    writeAutoLogoutByLine(config);
+    return;
+  }
   writeModuleSettingNumber(AUTO_LOGOUT_MINUTES_FIELD_ID, value);
 }
 
@@ -159,9 +340,8 @@ export function isPosSessionSecuritySeq(seq: number): boolean {
 }
 
 function panelAriaLabel(seq: number): string {
-  if (seq === AUTO_LOGOUT_MINUTES_SEQ) return "自动登出时间适用产线";
-  if (seq === AUTO_LOGOUT_AFTER_OPERATION_SEQ) return "每次操作后自动登出适用产线";
-  return "登录忽略特殊符号适用产线";
+  if (seq === AUTO_LOGOUT_AFTER_OPERATION_SEQ) return "企台完成每次操作后账号自动登出适用产线";
+  return "企台登录忽略特殊符号适用产线";
 }
 
 function renderLinesMultiselectHtml(seq: number, enabled: boolean): string {
@@ -198,37 +378,67 @@ function renderLinesMultiselectHtml(seq: number, enabled: boolean): string {
     </div>`;
 }
 
-function renderMinutesInputHtml(): string {
-  const value = readAutoLogoutMinutes();
+function renderAutoLogoutByLineEditorHtml(): string {
+  const config = readAutoLogoutByLine();
+  const rows = POS_SESSION_SECURITY_PRODUCT_LINES.map((line) => {
+    const item = config[line.id];
+    const rowEnabled = item.enabled;
+    return `
+    <tr class="border-t border-border" ${FOH_LINE_CONFIG_ROW_ATTR}="${escapeHtml(line.id)}">
+      <td class="px-3 py-2.5 text-sm font-medium text-foreground align-middle whitespace-nowrap">${escapeHtml(line.label)}</td>
+      <td class="px-3 py-2.5 align-middle">
+        <label class="inline-flex cursor-pointer items-center gap-2">
+          <input
+            type="checkbox"
+            class="${CHECKBOX_CLASS}"
+            ${item.enabled ? "checked" : ""}
+            data-auto-logout-line-enabled="${escapeHtml(line.id)}"
+            aria-label="${escapeHtml(line.label)} 启用自动登出"
+          />
+        </label>
+      </td>
+      <td class="px-3 py-2.5">
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-xs text-muted-foreground">无操作</span>
+          <input
+            type="number"
+            inputmode="numeric"
+            class="${NUMBER_INPUT_CLASS}"
+            value="${escapeHtml(String(item.minutes))}"
+            min="${MINUTES_MIN}"
+            max="${MINUTES_MAX}"
+            step="1"
+            data-auto-logout-line-minutes="${escapeHtml(line.id)}"
+            ${rowEnabled ? "" : "disabled"}
+            aria-label="${escapeHtml(line.label)} 自动登出分钟数"
+          />
+          <span class="text-xs text-muted-foreground">分钟</span>
+        </div>
+      </td>
+    </tr>`;
+  }).join("");
+
   return `
-    <div class="flex flex-wrap items-center gap-2">
-      <input
-        type="number"
-        inputmode="numeric"
-        class="${NUMBER_INPUT_CLASS}"
-        value="${escapeHtml(String(value))}"
-        min="${MINUTES_MIN}"
-        max="${MINUTES_MAX}"
-        step="1"
-        data-auto-logout-minutes="${AUTO_LOGOUT_MINUTES_SEQ}"
-        aria-label="自动登出时间"
-      />
-      <span class="text-sm text-muted-foreground">分钟</span>
-      <span class="text-xs text-muted-foreground">（${MINUTES_MIN} 表示不自动登出，${MINUTES_MIN + 1}–${MINUTES_MAX}）</span>
+    <div data-auto-logout-by-line-editor="${AUTO_LOGOUT_MINUTES_SEQ}" class="space-y-2">
+      <div class="overflow-x-auto rounded-md border border-border">
+        <table class="w-full min-w-[24rem] border-collapse text-left text-sm">
+          <thead class="bg-muted/40 text-xs text-muted-foreground">
+            <tr>
+              <th class="px-3 py-2 font-medium w-[5.5rem]">产线</th>
+              <th class="px-3 py-2 font-medium w-[4.5rem]">启用</th>
+              <th class="px-3 py-2 font-medium">无操作超时</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
     </div>`;
 }
 
 export function renderAutoLogoutMinutesPanelHtml(): string {
   return `
     <div class="mt-3 space-y-4" data-pos-session-security-panel="${AUTO_LOGOUT_MINUTES_SEQ}">
-      <div>
-        <p class="m-0 mb-2 text-xs font-medium text-muted-foreground">无操作超时</p>
-        ${renderMinutesInputHtml()}
-      </div>
-      <div>
-        <p class="m-0 mb-2 text-xs font-medium text-muted-foreground">适用产线（多选）</p>
-        ${renderLinesMultiselectHtml(AUTO_LOGOUT_MINUTES_SEQ, true)}
-      </div>
+      ${renderAutoLogoutByLineEditorHtml()}
     </div>`;
 }
 
@@ -240,9 +450,20 @@ export function renderPosSessionSecurityTogglePanelHtml(seq: number, on: boolean
       data-pos-session-security-panel="${seq}"
       ${on ? "" : 'aria-hidden="true"'}
     >
-      <p class="m-0 mb-2 text-xs font-medium text-muted-foreground">适用产线（多选）</p>
       ${renderLinesMultiselectHtml(seq, on)}
     </div>`;
+}
+
+function syncAutoLogoutMinutesInputDisabled(editor: HTMLElement): void {
+  editor.querySelectorAll<HTMLInputElement>("[data-auto-logout-line-enabled]").forEach((checkbox) => {
+    const lineId = checkbox.getAttribute("data-auto-logout-line-enabled");
+    if (!lineId) return;
+    const minutes = editor.querySelector<HTMLInputElement>(
+      `[data-auto-logout-line-minutes="${lineId}"]`,
+    );
+    if (!minutes) return;
+    minutes.disabled = !checkbox.checked;
+  });
 }
 
 export function setPosSessionSecurityPanelVisible(seq: number, visible: boolean): void {
@@ -277,20 +498,47 @@ function collectLinesFromGroup(group: HTMLElement): void {
   writePosSessionSecurityLines(seq, lines);
 }
 
+function collectAutoLogoutFromEditor(editor: HTMLElement): void {
+  const config = readAutoLogoutByLine();
+  editor.querySelectorAll<HTMLInputElement>("[data-auto-logout-line-enabled]").forEach((checkbox) => {
+    const lineId = checkbox.getAttribute("data-auto-logout-line-enabled");
+    if (!lineId || !ALL_LINE_IDS.includes(lineId as PosSessionSecurityProductLineId)) return;
+    config[lineId as PosSessionSecurityProductLineId].enabled = checkbox.checked;
+  });
+  editor.querySelectorAll<HTMLInputElement>("[data-auto-logout-line-minutes]").forEach((input) => {
+    const lineId = input.getAttribute("data-auto-logout-line-minutes");
+    if (!lineId || !ALL_LINE_IDS.includes(lineId as PosSessionSecurityProductLineId)) return;
+    config[lineId as PosSessionSecurityProductLineId].minutes = clampAutoLogoutMinutes(input.value);
+  });
+  writeAutoLogoutByLine(config);
+  syncAutoLogoutMinutesInputDisabled(editor);
+}
+
 export function bindPosSessionSecurityUi(root: ParentNode = document): void {
   for (const seq of POS_SESSION_SECURITY_TOGGLE_SEQS) {
     ensurePosSessionSecurityToggleMigrated(seq);
   }
+  ensureAutoLogoutByLineMigrated();
 
-  root.querySelectorAll<HTMLInputElement>("[data-auto-logout-minutes]").forEach((input) => {
-    if (input.dataset.autoLogoutMinutesBound === "1") return;
-    input.dataset.autoLogoutMinutesBound = "1";
-    const persist = () => {
-      const n = Number(input.value);
-      if (Number.isFinite(n)) writeAutoLogoutMinutes(n);
-    };
-    input.addEventListener("change", persist);
-    input.addEventListener("blur", persist);
+  root.querySelectorAll<HTMLElement>("[data-auto-logout-by-line-editor]").forEach((editor) => {
+    if (editor.dataset.autoLogoutByLineEditorBound === "1") return;
+    editor.dataset.autoLogoutByLineEditorBound = "1";
+
+    syncAutoLogoutMinutesInputDisabled(editor);
+
+    const persist = () => collectAutoLogoutFromEditor(editor);
+    editor.addEventListener("change", (e) => {
+      const target = e.target as HTMLElement;
+      if (
+        target.matches("[data-auto-logout-line-enabled]") ||
+        target.matches("[data-auto-logout-line-minutes]")
+      ) {
+        persist();
+      }
+    });
+    editor.addEventListener("input", (e) => {
+      if ((e.target as HTMLElement).matches("[data-auto-logout-line-minutes]")) persist();
+    });
   });
 
   root.querySelectorAll<HTMLElement>("[data-pos-session-security-lines]").forEach((group) => {

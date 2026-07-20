@@ -137,7 +137,6 @@ export function renderGuestMenuClassNameDisplayPanelHtml(on: boolean): string {
       data-guest-menu-class-name-display-panel="${GUEST_MENU_CLASS_NAME_DISPLAY_SEQ}"
       ${on ? "" : 'aria-hidden="true"'}
     >
-      <p class="m-0 mb-2 text-xs font-medium text-muted-foreground">适用产线（多选）</p>
       ${renderLinesMultiselectHtml(on)}
     </div>`;
 }

@@ -160,21 +160,6 @@ const WAIT_TIME_536_NESTED: ModuleSettingNestedGroupConfig = {
   ],
 };
 
-/** POS 点单页工具栏 · 自定义分割线名称（196） */
-const POS_TOOLBAR_196_NESTED: ModuleSettingNestedGroupConfig = {
-  parentSeq: 196,
-  fields: [
-    {
-      kind: "text-input",
-      fieldKey: "divider-name",
-      textFieldId: "196-custom-divider-name",
-      label: "分割线名称",
-      placeholder: "请输入 POS 点单页自定义分割线名称",
-      maxLength: 40,
-    },
-  ],
-};
-
 /** seq 569 点单须知见 module-settings-guest-order-notice-ui.ts（主开关 + 各产线标题/内容） */
 
 /** 食客端·下单与规则 · 火锅页面提示（570） */
@@ -242,7 +227,6 @@ const PROMO_LOTTERY_647_NESTED: ModuleSettingNestedGroupConfig = {
 const NESTED_BY_PARENT_SEQ = new Map<number, ModuleSettingNestedGroupConfig>([
   [535, WAIT_TIME_535_NESTED],
   [536, WAIT_TIME_536_NESTED],
-  [196, POS_TOOLBAR_196_NESTED],
   [570, GUEST_ORDER_570_NESTED],
   [647, PROMO_LOTTERY_647_NESTED],
 ]);

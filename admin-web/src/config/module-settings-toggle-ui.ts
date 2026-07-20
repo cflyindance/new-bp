@@ -21,6 +21,8 @@ import { RECEIPT_LINE_CONTENT_TOGGLE_SEQS } from "./module-settings-receipt-line
 import { RECEIPT_PRINT_EXECUTION_TOGGLE_SEQS } from "./module-settings-receipt-print-execution-ui";
 import { getFohByLineRenderContext } from "./foh-settings-by-line-filter";
 import { readFohByLineToggleState } from "./foh-settings-by-line-toggle";
+import { FOH_SETTINGS_PATH } from "./foh-settings-by-line-ui";
+import { MODULE_SETTINGS_BY_PATH } from "./module-settings-catalog";
 import { readPageDraftToggleForCurrentPath } from "./page-settings-draft";
 
 export {
@@ -49,7 +51,7 @@ export const TABLE_SELECTION_PAGE_TOGGLE_SEQ: readonly number[] = [107];
 /** 前厅 · 人数选择（619 合并 108；产线多选见 party-size-selection-page-ui） */
 export const PARTY_SIZE_SELECTION_PAGE_TOGGLE_SEQ: readonly number[] = [619];
 
-/** 前厅 · 开单前换桌 / 开单前必须换桌（643/644；eMenu 产线多选见 pre-order-table-change-ui） */
+/** 前厅 · 开单前换桌 / 开单前必须换桌（643/644；产线多选见 pre-order-table-change-ui） */
 export const PRE_ORDER_TABLE_CHANGE_TOGGLE_SEQ: readonly number[] = [643, 644];
 
 /** 前厅 · 不允许一桌多单（592 按产线见 single-table-order-limit-ui） */
@@ -75,6 +77,9 @@ export const HOME_PASSWORD_AUTH_TOGGLE_SEQ: readonly number[] = [346];
 
 /** 前厅 · 会话安全（166/175 主开关 + 产线，见 pos-session-security-ui） */
 export const POS_SESSION_SECURITY_TOGGLE_SEQ: readonly number[] = [166, 175];
+
+/** 前厅 · 默认主界面（165 主开关 + 按产线单选，见 default-main-screen-ui） */
+export const DEFAULT_MAIN_SCREEN_TOGGLE_SEQ: readonly number[] = [165];
 
 /** 前厅 · 允许食客更改人数（621 按产线见 guest-change-party-size-ui） */
 export const GUEST_CHANGE_PARTY_SIZE_TOGGLE_SEQ: readonly number[] = [621];
@@ -103,8 +108,8 @@ export const COURSE_SEQUENCE_MODE_TOGGLE_SEQ: readonly number[] = [135];
 /** 前厅 · 显示单菜序号（178 按产线见 dish-sequence-id-display-ui） */
 export const DISH_SEQUENCE_ID_DISPLAY_TOGGLE_SEQ: readonly number[] = [178];
 
-/** 前厅 · 减菜重定向/客户信息必填/自定义点单（122/222/223/138 按产线见 pos-order-cart-pos-lines-ui） */
-export const POS_ORDER_CART_POS_LINES_TOGGLE_SEQ: readonly number[] = [122, 222, 223, 138];
+/** 前厅 · 减菜重定向/客户信息必填/自定义点单/数量小数/ASAP（121/137/122/222/223/138 按产线见 pos-order-cart-pos-lines-ui） */
+export const POS_ORDER_CART_POS_LINES_TOGGLE_SEQ: readonly number[] = [121, 137, 122, 222, 223, 138];
 
 /** 前厅 · 允许企台在电子菜单上点只读菜（349 按产线见 emenu-server-readonly-dish-ui） */
 export const EMENU_SERVER_READONLY_DISH_TOGGLE_SEQ: readonly number[] = [349];
@@ -124,8 +129,8 @@ export const RECEIPT_SIGNATURE_LINE_TOGGLE_SEQ: readonly number[] = [94];
 /** 前厅 · 套餐子项备注（523 按产线见 combo-subitem-remark-lines-ui） */
 export const COMBO_SUBITEM_REMARK_TOGGLE_SEQ: readonly number[] = [523];
 
-/** 前厅 · 点单页展示简单开关 */
-export const POS_ORDER_CART_SIMPLE_TOGGLE_SEQ: readonly number[] = [121, 137];
+/** 前厅 · 点单页展示简单开关（121/137 已并入产线多选） */
+export const POS_ORDER_CART_SIMPLE_TOGGLE_SEQ: readonly number[] = [];
 
 /** 后厨 · 送厨触发与路由（seq 36 为订单类型多选，见 module-settings-kitchen-order-type-ui） */
 export const KITCHEN_SEND_ROUTING_TOGGLE_SEQ: readonly number[] = [32, 37, 62, 304];
@@ -214,10 +219,10 @@ export const GUEST_KIOSK_FLOW_PAGE_TOGGLE_SEQ: readonly number[] = [488, 489, 49
 /** 前厅 · eMenu 授权/开单限制（620/626 主开关 + eMenu 产线，见 guest-emenu-auth-page-ui） */
 export const GUEST_EMENU_AUTH_PAGE_TOGGLE_SEQ: readonly number[] = [620, 626];
 
-/** 前厅 · 品类模式（601/571/627 主开关 + 产线多选；601 含 eMenu/SDI，见 guest-category-mode-ui） */
+/** 前厅 · 品类模式（601/571/627 主开关 + 产线多选；601 UI 已迁品类管理·品类设置，见 foh-category-settings-ui / guest-category-mode-ui） */
 export const GUEST_CATEGORY_MODE_TOGGLE_SEQ: readonly number[] = [601, 571, 627];
 
-/** 前厅 · 菜单分类模式（602 主开关 + eMenu/SDI 产线，见 guest-menu-classification-mode-ui） */
+/** 前厅 · 菜单分类模式（602 主开关 + eMenu/SDI 产线；602 UI 已迁分类管理·分类设置，见 foh-classification-settings-ui / guest-menu-classification-mode-ui） */
 export const GUEST_MENU_CLASSIFICATION_MODE_TOGGLE_SEQ: readonly number[] = [602];
 
 /** 前厅 · 展示菜单类名称（606 主开关 + Kiosk/eMenu/SDI/Online Order，见 guest-menu-class-name-display-ui） */
@@ -433,6 +438,7 @@ export const MODULE_SETTING_TOGGLE_SEQ = new Set([
   ...ALLOW_CHANGE_SERVER_TOGGLE_SEQ,
   ...HOME_PASSWORD_AUTH_TOGGLE_SEQ,
   ...POS_SESSION_SECURITY_TOGGLE_SEQ,
+  ...DEFAULT_MAIN_SCREEN_TOGGLE_SEQ,
   ...GUEST_CHANGE_PARTY_SIZE_TOGGLE_SEQ,
   ...CHILD_EXCLUDED_FROM_ORDER_LIMIT_TOGGLE_SEQ,
   ...SEND_KITCHEN_WHOLE_ORDER_TOGGLE_SEQ,
@@ -457,21 +463,35 @@ export function isModuleSettingToggleSeq(seq: number): boolean {
   return MODULE_SETTING_TOGGLE_SEQ.has(seq);
 }
 
+/** 前厅管理中心 · 设置页（/operations/queue-call/settings）内的全部 seq */
+const FOH_HUB_SETTING_SEQS = new Set(
+  (MODULE_SETTINGS_BY_PATH[FOH_SETTINGS_PATH]?.items ?? []).map((item) => item.seq),
+);
+
+/** 是否为前厅「设置」页中的开关项 */
+export function isFohHubSettingToggleSeq(seq: number): boolean {
+  return FOH_HUB_SETTING_SEQS.has(seq) && MODULE_SETTING_TOGGLE_SEQ.has(seq);
+}
+
 export function moduleSettingToggleStorageKey(seq: number): string {
   return `bplant-module-setting-toggle:${seq}`;
 }
 
-/** 默认开启展示（640 呼叫间隔默认关，见 tableside-service-call-ui 迁移） */
+/** 默认开启展示（前厅设置开关一律默认开；其它 hub 保留个别默认关） */
 export function getDefaultModuleSettingToggleOn(seq: number): boolean {
+  if (isFohHubSettingToggleSeq(seq)) return true;
   if (seq === TABLESIDE_SERVICE_CALL_COOLDOWN_SEQ) return false;
   if (seq === 74) return false;
   if ((STAFF_ORDER_ALERT_TOGGLE_SEQ as readonly number[]).includes(seq)) return false;
+  if (seq === 601 || seq === 602) return true;
   return MODULE_SETTING_TOGGLE_SEQ.has(seq);
 }
 
 export function readModuleSettingToggleOn(seq: number): boolean {
   const lineId = getFohByLineRenderContext();
   if (lineId) return readFohByLineToggleState(seq, lineId);
+  /** 前厅设置主视图：开关固定开启（开启态不展示开关按钮） */
+  if (isFohHubSettingToggleSeq(seq)) return true;
   const draft = readPageDraftToggleForCurrentPath(seq);
   if (draft !== undefined) return draft;
   try {

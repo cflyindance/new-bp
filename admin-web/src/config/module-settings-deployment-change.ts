@@ -54,13 +54,35 @@ const FIELD_SUFFIX_LABELS: Record<string, string> = {
 export const STORE_CLOSING_ALERT_BY_LINE_FIELD_ID = "582-closing-alert-by-line";
 const STORE_CLOSING_ALERT_SEQ = 582;
 
+/** 自动登出时间 · 按产线配置 fieldId */
+export const AUTO_LOGOUT_BY_LINE_FIELD_ID = "75-auto-logout-by-line";
+const AUTO_LOGOUT_MINUTES_SEQ = 75;
+
+/** 每单最多客人数量 · 按产线配置 fieldId */
+export const MAX_GUESTS_BY_LINE_FIELD_ID = "111-max-guests-by-line";
+const MAX_GUESTS_PER_ORDER_SEQ = 111;
+
 const CLOSING_ALERT_LINES = [
   { id: "kiosk", label: "Kiosk" },
   { id: "emenu", label: "eMenu" },
   { id: "sdi", label: "SDI" },
 ] as const;
 
+const AUTO_LOGOUT_LINES = [
+  { id: "pos", label: "POS" },
+  { id: "pos-go", label: "POS GO" },
+  { id: "paypad", label: "PayPad" },
+] as const;
+
+const MAX_GUESTS_LINES = [
+  { id: "pos", label: "POS" },
+  { id: "pos-go", label: "POS GO" },
+  { id: "paypad", label: "PayPad" },
+] as const;
+
 type ClosingAlertLineConfig = { enabled: boolean; minutes: number };
+type AutoLogoutLineConfig = { enabled: boolean; minutes: number };
+type MaxGuestsLineConfig = { enabled: boolean; guests: number };
 
 function clampClosingAlertMinutes(raw: unknown): number {
   const n = Number(raw);
@@ -68,36 +90,103 @@ function clampClosingAlertMinutes(raw: unknown): number {
   return Math.min(180, Math.max(1, Math.round(n)));
 }
 
-/**
- * 将「营业时间即将结束提示」按产线配置格式化为下发记录可读文案。
- * 例：`Kiosk：启用，结束前 15 分钟`
- */
-export function formatStoreClosingAlertByLineForDeployment(value: unknown): string | null {
+function clampAutoLogoutMinutes(raw: unknown): number {
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return 15;
+  return Math.min(999, Math.max(1, Math.round(n)));
+}
+
+function clampMaxGuests(raw: unknown): number {
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return 20;
+  return Math.min(99, Math.max(1, Math.round(n)));
+}
+
+function parseByLineConfigObject(value: unknown): Record<string, Partial<ClosingAlertLineConfig>> | null {
   let raw: unknown = value;
   if (typeof value === "string") {
     const trimmed = value.trim();
-    if (!trimmed || trimmed === "（未设置）" || trimmed === "（空）") return trimmed || null;
+    if (!trimmed || trimmed === "（未设置）" || trimmed === "（空）") return null;
     if (trimmed.startsWith("{")) {
       try {
         raw = JSON.parse(trimmed);
       } catch {
         return null;
       }
-    } else if (trimmed.includes("：启用") || trimmed.includes("：未启用")) {
-      return trimmed;
     } else {
       return null;
     }
   }
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  return raw as Record<string, Partial<ClosingAlertLineConfig>>;
+}
 
-  const obj = raw as Record<string, Partial<ClosingAlertLineConfig>>;
+/**
+ * 将「营业时间即将结束提示」按产线配置格式化为下发记录可读文案。
+ * 例：`Kiosk：启用，结束前 15 分钟`
+ */
+export function formatStoreClosingAlertByLineForDeployment(value: unknown): string | null {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed || trimmed === "（未设置）" || trimmed === "（空）") return trimmed || null;
+    if ((trimmed.includes("：启用") || trimmed.includes("：未启用")) && !trimmed.startsWith("{")) {
+      return trimmed;
+    }
+  }
+  const obj = parseByLineConfigObject(value);
+  if (!obj) return null;
   return CLOSING_ALERT_LINES.map((line) => {
     const item = obj[line.id];
     const enabled = item?.enabled === true;
     const minutes = clampClosingAlertMinutes(item?.minutes ?? 15);
     if (!enabled) return `${line.label}：未启用`;
     return `${line.label}：启用，结束前 ${minutes} 分钟`;
+  }).join("\n");
+}
+
+/**
+ * 将「自动登出时间」按产线配置格式化为下发记录可读文案。
+ * 例：`POS：启用，无操作 15 分钟`
+ */
+export function formatAutoLogoutByLineForDeployment(value: unknown): string | null {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed || trimmed === "（未设置）" || trimmed === "（空）") return trimmed || null;
+    if ((trimmed.includes("：启用") || trimmed.includes("：未启用")) && !trimmed.startsWith("{")) {
+      return trimmed;
+    }
+  }
+  const obj = parseByLineConfigObject(value) as Record<string, Partial<AutoLogoutLineConfig>> | null;
+  if (!obj) return null;
+  return AUTO_LOGOUT_LINES.map((line) => {
+    const item = obj[line.id];
+    const enabled = item?.enabled === true;
+    const minutes = clampAutoLogoutMinutes(item?.minutes ?? 15);
+    if (!enabled) return `${line.label}：未启用`;
+    return `${line.label}：启用，无操作 ${minutes} 分钟`;
+  }).join("\n");
+}
+
+/**
+ * 将「每单最多客人数量」按产线配置格式化为下发记录可读文案。
+ * 例：`POS：启用，最多 20 人`
+ */
+export function formatMaxGuestsByLineForDeployment(value: unknown): string | null {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed || trimmed === "（未设置）" || trimmed === "（空）") return trimmed || null;
+    if ((trimmed.includes("：启用") || trimmed.includes("：未启用")) && !trimmed.startsWith("{")) {
+      return trimmed;
+    }
+  }
+  const obj = parseByLineConfigObject(value) as Record<string, Partial<MaxGuestsLineConfig>> | null;
+  if (!obj) return null;
+  return MAX_GUESTS_LINES.map((line) => {
+    const item = obj[line.id];
+    const enabled = item?.enabled === true;
+    const guests = clampMaxGuests(item?.guests ?? 20);
+    if (!enabled) return `${line.label}：未启用`;
+    return `${line.label}：启用，最多 ${guests} 人`;
   }).join("\n");
 }
 
@@ -269,6 +358,12 @@ function inferOperation(
       if (fieldId === STORE_CLOSING_ALERT_BY_LINE_FIELD_ID) {
         return inferClosingAlertByLineOperation(before, after);
       }
+      if (fieldId === AUTO_LOGOUT_BY_LINE_FIELD_ID) {
+        return inferAutoLogoutByLineOperation(before, after);
+      }
+      if (fieldId === MAX_GUESTS_BY_LINE_FIELD_ID) {
+        return inferMaxGuestsByLineOperation(before, after);
+      }
       if (fieldId && isProductLineStorageField(fieldId, after)) {
         if (Array.isArray(before) && Array.isArray(after)) {
           return inferProductLineOperation(before, after);
@@ -287,6 +382,12 @@ function formatValueForKind(
 ): string {
   if (fieldId === STORE_CLOSING_ALERT_BY_LINE_FIELD_ID) {
     return formatStoreClosingAlertByLineForDeployment(value) ?? formatConfigDisplayValue(value);
+  }
+  if (fieldId === AUTO_LOGOUT_BY_LINE_FIELD_ID) {
+    return formatAutoLogoutByLineForDeployment(value) ?? formatConfigDisplayValue(value);
+  }
+  if (fieldId === MAX_GUESTS_BY_LINE_FIELD_ID) {
+    return formatMaxGuestsByLineForDeployment(value) ?? formatConfigDisplayValue(value);
   }
   if (kind === "product_line" || (kind === "json" && fieldId && isProductLineIdArray(value))) {
     return formatProductLineList(value);
@@ -317,6 +418,44 @@ function inferClosingAlertByLineOperation(before: unknown, after: unknown): stri
   if (changed.length === 1) return `调整 ${changed[0]} 提示`;
   if (changed.length > 1) return `调整 ${changed.join("、")} 提示`;
   return "调整产线提示";
+}
+
+function inferAutoLogoutByLineOperation(before: unknown, after: unknown): string {
+  const beforeText = formatAutoLogoutByLineForDeployment(before);
+  const afterText = formatAutoLogoutByLineForDeployment(after);
+  if (!beforeText || !afterText) return "调整产线登出时间";
+
+  const beforeLines = beforeText.split("\n");
+  const afterLines = afterText.split("\n");
+  const changed: string[] = [];
+  for (let i = 0; i < Math.max(beforeLines.length, afterLines.length); i++) {
+    if (beforeLines[i] !== afterLines[i] && afterLines[i]) {
+      const lineName = afterLines[i]!.split("：")[0];
+      if (lineName) changed.push(lineName);
+    }
+  }
+  if (changed.length === 1) return `调整 ${changed[0]} 登出时间`;
+  if (changed.length > 1) return `调整 ${changed.join("、")} 登出时间`;
+  return "调整产线登出时间";
+}
+
+function inferMaxGuestsByLineOperation(before: unknown, after: unknown): string {
+  const beforeText = formatMaxGuestsByLineForDeployment(before);
+  const afterText = formatMaxGuestsByLineForDeployment(after);
+  if (!beforeText || !afterText) return "调整产线最多客人";
+
+  const beforeLines = beforeText.split("\n");
+  const afterLines = afterText.split("\n");
+  const changed: string[] = [];
+  for (let i = 0; i < Math.max(beforeLines.length, afterLines.length); i++) {
+    if (beforeLines[i] !== afterLines[i] && afterLines[i]) {
+      const lineName = afterLines[i]!.split("：")[0];
+      if (lineName) changed.push(lineName);
+    }
+  }
+  if (changed.length === 1) return `调整 ${changed[0]} 最多客人`;
+  if (changed.length > 1) return `调整 ${changed.join("、")} 最多客人`;
+  return "调整产线最多客人";
 }
 
 export interface ModuleSettingChangeInput {
@@ -351,6 +490,12 @@ export function buildModuleSettingDeploymentChange(
     input.fullLabel ??
     (fieldId === STORE_CLOSING_ALERT_BY_LINE_FIELD_ID || seq === STORE_CLOSING_ALERT_SEQ
       ? getSettingTitleBySeq(STORE_CLOSING_ALERT_SEQ)
+      : undefined) ??
+    (fieldId === AUTO_LOGOUT_BY_LINE_FIELD_ID || seq === AUTO_LOGOUT_MINUTES_SEQ
+      ? getSettingTitleBySeq(AUTO_LOGOUT_MINUTES_SEQ)
+      : undefined) ??
+    (fieldId === MAX_GUESTS_BY_LINE_FIELD_ID || seq === MAX_GUESTS_PER_ORDER_SEQ
+      ? getSettingTitleBySeq(MAX_GUESTS_PER_ORDER_SEQ)
       : undefined) ??
     (seq != null ? buildSettingLabel(seq, subLabel) : subLabel ?? fieldId ?? "功能设置");
 

@@ -133,7 +133,6 @@ export function renderMenusifuBrandLogoPanelHtml(on: boolean): string {
       data-menusifu-brand-logo-panel="${MENUSIFU_BRAND_LOGO_SEQ}"
       ${on ? "" : 'aria-hidden="true"'}
     >
-      <p class="m-0 mb-2 text-xs font-medium text-muted-foreground">适用产线（多选）</p>
       ${renderLinesMultiselectHtml(on)}
       <p class="m-0 mt-2 text-xs leading-relaxed text-muted-foreground">
         LOGO 图片素材请在素材中心维护；本项仅控制是否在选定产线首页展示 MenuSifu 品牌标识。

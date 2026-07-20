@@ -3573,56 +3573,100 @@ body{margin:0;padding:24px;background:#fff;}
   }
 
   /** 从第三方员工主数据（演示：员工列表 localStorage）手动拉取并合并到各期员工 */
-  function refreshEmployeeDataFromThirdParty() {
-    runAfterUnsavedWorkspaceConfirm(() => {
-      const btn = document.querySelector("[data-action='refresh-employee-data']");
-      if (btn) {
-        btn.disabled = true;
-        btn.classList.add("is-loading");
-        btn.textContent = T("manage.refreshEmployeeDataRunning");
+  function showRefreshEmployeeDataConfirmDialog() {
+    return new Promise((resolve) => {
+      const modal = $("#payrollRefreshEmployeeConfirmModal");
+      if (!modal) {
+        resolve(
+          window.confirm(
+            [
+              T("manage.refreshEmployeeConfirmLi1"),
+              T("manage.refreshEmployeeConfirmLi2"),
+              T("manage.refreshEmployeeConfirmLi3"),
+            ].join("\n"),
+          ),
+        );
+        return;
       }
-      const finish = (ok) => {
+      modal.classList.add("show");
+      const onOk = () => {
+        cleanup();
+        resolve(true);
+      };
+      const onCancel = () => {
+        cleanup();
+        resolve(false);
+      };
+      const onOverlay = (e) => {
+        if (e.target === modal) onCancel();
+      };
+      const cleanup = () => {
+        modal.classList.remove("show");
+        $("#btn-refresh-employee-confirm-ok")?.removeEventListener("click", onOk);
+        $("#btn-refresh-employee-confirm-cancel")?.removeEventListener("click", onCancel);
+        $("#btn-refresh-employee-confirm-close")?.removeEventListener("click", onCancel);
+        modal.removeEventListener("click", onOverlay);
+      };
+      $("#btn-refresh-employee-confirm-ok")?.addEventListener("click", onOk);
+      $("#btn-refresh-employee-confirm-cancel")?.addEventListener("click", onCancel);
+      $("#btn-refresh-employee-confirm-close")?.addEventListener("click", onCancel);
+      modal.addEventListener("click", onOverlay);
+    });
+  }
+
+  function refreshEmployeeDataFromThirdParty() {
+    showRefreshEmployeeDataConfirmDialog().then((confirmed) => {
+      if (!confirmed) return;
+      runAfterUnsavedWorkspaceConfirm(() => {
+        const btn = document.querySelector("[data-action='refresh-employee-data']");
         if (btn) {
-          btn.disabled = false;
-          btn.classList.remove("is-loading");
-          btn.textContent = T("manage.refreshEmployeeData");
+          btn.disabled = true;
+          btn.classList.add("is-loading");
+          btn.textContent = T("manage.refreshEmployeeDataRunning");
         }
-        if (typeof showNotification === "function") {
-          showNotification(
-            ok ? T("manage.refreshEmployeeDataSuccess") : T("manage.refreshEmployeeDataFailed"),
-            ok ? "success" : "error",
-          );
-        } else if (ok) {
-          alert(T("manage.refreshEmployeeDataSuccess"));
-        } else {
-          alert(T("manage.refreshEmployeeDataFailed"));
-        }
-      };
-      const applyRefresh = () => {
-        try {
-          syncEmployeesFromUnifiedRoster(state.data.employees);
-          syncPeriodStatuses(state.data.periods, state.data.employees);
-          appendAudit("refresh_employees", {
-            rosterCount: getUnifiedRoster().length,
-            source: "third-party-manual",
-          });
-          saveState();
-          if (state.view === "workspace" && state.periodId && state.employeeId) {
-            initWorkspaceDraft();
-            renderManageForm();
-            renderManagePeriodNav();
-            syncDerived();
-            syncWorkspaceDirtyBaseline();
-          } else if (state.view === "employees") {
-            renderEmployees();
+        const finish = (ok) => {
+          if (btn) {
+            btn.disabled = false;
+            btn.classList.remove("is-loading");
+            btn.textContent = T("manage.refreshEmployeeData");
           }
-          renderPeriods();
-          finish(true);
-        } catch (_) {
-          finish(false);
-        }
-      };
-      window.setTimeout(applyRefresh, 500);
+          if (typeof showNotification === "function") {
+            showNotification(
+              ok ? T("manage.refreshEmployeeDataSuccess") : T("manage.refreshEmployeeDataFailed"),
+              ok ? "success" : "error",
+            );
+          } else if (ok) {
+            alert(T("manage.refreshEmployeeDataSuccess"));
+          } else {
+            alert(T("manage.refreshEmployeeDataFailed"));
+          }
+        };
+        const applyRefresh = () => {
+          try {
+            syncEmployeesFromUnifiedRoster(state.data.employees);
+            syncPeriodStatuses(state.data.periods, state.data.employees);
+            appendAudit("refresh_employees", {
+              rosterCount: getUnifiedRoster().length,
+              source: "third-party-manual",
+            });
+            saveState();
+            if (state.view === "workspace" && state.periodId && state.employeeId) {
+              initWorkspaceDraft();
+              renderManageForm();
+              renderManagePeriodNav();
+              syncDerived();
+              syncWorkspaceDirtyBaseline();
+            } else if (state.view === "employees") {
+              renderEmployees();
+            }
+            renderPeriods();
+            finish(true);
+          } catch (_) {
+            finish(false);
+          }
+        };
+        window.setTimeout(applyRefresh, 500);
+      });
     });
   }
 

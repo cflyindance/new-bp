@@ -141,7 +141,6 @@ export function renderClearTableClientNotificationPanelHtml(seq: number, on: boo
       data-clear-table-client-notification-panel="${seq}"
       ${on ? "" : 'aria-hidden="true"'}
     >
-      <p class="m-0 mb-2 text-xs font-medium text-muted-foreground">适用产线（多选）</p>
       ${renderLinesMultiselectHtml(on)}
     </div>`;
 }

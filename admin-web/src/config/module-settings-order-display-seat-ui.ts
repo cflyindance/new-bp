@@ -230,9 +230,6 @@ export function renderOrderDisplaySeatPanelHtml(on: boolean): string {
       data-order-display-seat-panel
       ${on ? "" : 'aria-hidden="true"'}
     >
-      <p class="m-0 mb-2 text-xs leading-relaxed text-muted-foreground">
-        为各产线分别选择需显示座位的订单类型（Dinein、Delivery、Pick Up、ToGo）；未勾选任何类型的产线不生效。
-      </p>
       ${renderOrderTypesByLineTableHtml(on)}
     </div>`;
 }

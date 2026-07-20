@@ -141,7 +141,6 @@ export function renderGuestEmenuProModePanelHtml(on: boolean): string {
       data-guest-emenu-pro-mode-panel="${GUEST_EMENU_PRO_MODE_SEQ}"
       ${on ? "" : 'aria-hidden="true"'}
     >
-      <p class="m-0 mb-2 text-xs font-medium text-muted-foreground">适用产线（多选）</p>
       ${renderLinesMultiselectHtml(on)}
       <p class="m-0 mt-2 text-xs leading-relaxed text-muted-foreground">
         勾选 eMenu 产线后，菜单页以 eMenu Pro 高级设计稿形式展示（未勾选时使用普通菜单）。

@@ -101,7 +101,6 @@ export function renderTableDeliveryMealCardPanelHtml(seq: number, on: boolean): 
       data-table-delivery-meal-card-panel="${seq}"
       ${on ? "" : 'aria-hidden="true"'}
     >
-      <p class="m-0 mb-2 text-xs font-medium text-muted-foreground">适用产线（多选）</p>
       ${renderLinesMultiselectHtml(on)}
       <p class="m-0 mt-2 text-xs leading-relaxed text-muted-foreground">
         开启后，在勾选产线的送餐到桌流程中配置餐牌号获取方式（实体号码牌或虚拟订单号）。

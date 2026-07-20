@@ -249,7 +249,7 @@ function defaultSchedulesFromLegacy(): StoreBusinessHourSchedule[] {
   if (!legacy) {
     return [
       normalizeSchedule({
-        id: newId("bh"),
+        id: "bh-preset-all-day",
         name: "All Day",
         openTime: "00:00",
         closeTime: "23:50",
@@ -259,7 +259,7 @@ function defaultSchedulesFromLegacy(): StoreBusinessHourSchedule[] {
         toDay: "sat",
       }),
       normalizeSchedule({
-        id: newId("bh"),
+        id: "bh-preset-morning",
         name: "早上",
         openTime: "06:00",
         closeTime: "11:00",
@@ -269,7 +269,7 @@ function defaultSchedulesFromLegacy(): StoreBusinessHourSchedule[] {
         toDay: "sat",
       }),
       normalizeSchedule({
-        id: newId("bh"),
+        id: "bh-preset-noon",
         name: "中午",
         openTime: "11:00",
         closeTime: "16:00",
@@ -279,7 +279,7 @@ function defaultSchedulesFromLegacy(): StoreBusinessHourSchedule[] {
         toDay: "sat",
       }),
       normalizeSchedule({
-        id: newId("bh"),
+        id: "bh-preset-evening",
         name: "晚上",
         openTime: "16:00",
         closeTime: "24:00",
@@ -292,7 +292,7 @@ function defaultSchedulesFromLegacy(): StoreBusinessHourSchedule[] {
   }
   return [
     normalizeSchedule({
-      id: newId("bh"),
+      id: "bh-preset-default",
       name: "默认营业时间",
       openTime: "09:00",
       closeTime: "22:00",
@@ -311,7 +311,12 @@ export function readBusinessHourSchedules(): StoreBusinessHourSchedule[] {
     STORE_BUSINESS_HOUR_SCHEDULES_FIELD_ID,
     [],
   );
-  if (!Array.isArray(raw) || raw.length === 0) return defaultSchedulesFromLegacy();
+  if (!Array.isArray(raw) || raw.length === 0) {
+    const defaults = defaultSchedulesFromLegacy();
+    // 首次读取即落库，避免每次生成新 id 导致关联配置（品类/分类/品牌）回显为「未设置」
+    writeBusinessHourSchedules(defaults);
+    return defaults;
+  }
   return raw.filter((s) => s?.id && s?.name).map((s) => normalizeSchedule(s));
 }
 

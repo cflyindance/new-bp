@@ -138,6 +138,12 @@ import {
   renderNotificationsHubPageContent,
 } from "./config/notifications-hub-pages";
 import {
+  bindFohBrandMenuUi,
+  isFohBrandMenuPath,
+  renderFohBrandMenuPage,
+  FOH_BRAND_MENU_PATH,
+} from "./config/foh-brand-menu-settings-ui";
+import {
   bindTeamShiftSchedulingUi,
   isTeamShiftSchedulingPath,
   renderTeamShiftSchedulingPage,
@@ -153,6 +159,7 @@ import {
   isTeamClockInPath,
   renderTeamClockInPage,
   requestTeamClockInRecordsTab,
+  shouldShowTeamClockInSaveBar,
 } from "./config/team-clock-in-ui";
 import {
   bindTeamTrainingPerformanceUi,
@@ -162,9 +169,9 @@ import {
 import {
   getTeamSettingItemsBySeqs,
   renderTeamSettingsEmbedSection,
-  renderTeamSettingsHubMigrationNoticeHtml,
   renderTeamSettingsTabPanel,
   TEAM_BREAKS_OVERTIME_SETTING_SEQS,
+  TEAM_CLOCK_IN_GROUP_ORDER,
   TEAM_CLOCK_IN_SETTING_SEQS,
   TEAM_SHIFT_SCHEDULING_SETTING_SEQS,
 } from "./config/team-settings-embed-ui";
@@ -522,12 +529,19 @@ import {
 } from "./config/module-settings-guest-change-party-size-ui";
 import {
   isMaxGuestsPerOrderSeq,
-  renderMaxGuestsPerOrderControl,
+  renderMaxGuestsPerOrderPanelHtml,
+  bindMaxGuestsPerOrderUi,
 } from "./config/module-settings-max-guests-per-order-ui";
 import {
   isOrderTimeoutReminderSeq,
-  renderOrderTimeoutReminderControl,
+  renderOrderTimeoutReminderPanelHtml,
+  bindOrderTimeoutReminderUi,
 } from "./config/module-settings-order-timeout-reminder-ui";
+import {
+  isCustomDividerNameSeq,
+  renderCustomDividerNamePanelHtml,
+  bindCustomDividerNameUi,
+} from "./config/module-settings-custom-divider-name-ui";
 import {
   bindChildExcludedFromOrderLimitUi,
   ensureChildExcludedFromOrderLimitToggleMigrated,
@@ -931,6 +945,7 @@ import {
 } from "./config/module-settings-dish-sequence-id-display-ui";
 import {
   bindPosOrderCartPosLinesUi,
+  ensurePosOrderCartPosLinesDefault,
   isPosOrderCartPosLinesSeq,
   renderPosOrderCartPosLinesPanelHtml,
   setPosOrderCartPosLinesPanelVisible,
@@ -1034,9 +1049,12 @@ import {
 } from "./config/module-settings-menu-mode-ui";
 import {
   bindDefaultMainScreenEditor,
+  ensureDefaultMainScreenLinesDefault,
+  ensureDefaultMainScreenToggleMigrated,
   isDefaultMainScreenSeq,
-  renderDefaultMainScreenEditorHtml,
+  renderDefaultMainScreenPanelHtml,
   renderPosShellLandingGroupIntroHtml,
+  setDefaultMainScreenPanelVisible,
 } from "./config/module-settings-default-main-screen-ui";
 import {
   bindDeliveryRegionEditor,
@@ -1157,6 +1175,10 @@ import {
   renderOrderNumberingNumberControl,
   renderOrderNumberingResetSelectHtml,
 } from "./config/module-settings-order-numbering-ui";
+import {
+  bindModuleSettingSceneDescHelp,
+  renderSettingTitleWithHelpHtml,
+} from "./config/module-settings-scene-desc-help-ui";
 import {
   isCallerScreenDisplayModeSeq,
   isCallerScreenNumberInputSeq,
@@ -1396,6 +1418,7 @@ import {
 } from "./config/module-settings-payment-receipt-flow-ui";
 import {
   getDefaultModuleSettingToggleOn,
+  isFohHubSettingToggleSeq,
   isModuleSettingToggleSeq,
   moduleSettingToggleStorageKey,
   readModuleSettingToggleOn,
@@ -1943,6 +1966,11 @@ function renderTeamPayrollReportIframePanel(): string {
         allow="clipboard-read; clipboard-write; fullscreen"
       ></iframe>
     </div>`;
+}
+
+/** 员工报表主内容：小费汇总/明细与薪资均为独立统计维度，不嵌入小费管理 / 薪资管理 */
+function renderTeamReportsMainPanel(path: string, title: string, tabModule?: NavModule): string {
+  return renderPlaceholder(path, title, tabModule, { teamReportsSubnav: true });
 }
 
 /** 非侧栏二级且仅一条子路由时不渲染顶部 Tab（避免单子模块出现一条 Tab） */
@@ -3830,11 +3858,25 @@ function normalizeTabModuleHashes(): void {
     replaceHashPath(getFohCategorySettingsTabPath("age-category"));
     return;
   }
-  if (raw === FOH_CLASSIFICATION_SETTINGS_BASE || raw === `${FOH_CLASSIFICATION_SETTINGS_BASE}/`) {
+  if (
+    raw === `${FOH_CATEGORY_SETTINGS_BASE}/hours` ||
+    raw.startsWith(`${FOH_CATEGORY_SETTINGS_BASE}/hours/`)
+  ) {
+    replaceHashPath(getFohCategorySettingsTabPath("age-category"));
+    return;
+  }
+  if (
+    raw === `${FOH_CLASSIFICATION_SETTINGS_BASE}/category` ||
+    raw === `${FOH_CLASSIFICATION_SETTINGS_BASE}/menu` ||
+    raw === `${FOH_CLASSIFICATION_SETTINGS_BASE}/hours` ||
+    raw.startsWith(`${FOH_CLASSIFICATION_SETTINGS_BASE}/category/`) ||
+    raw.startsWith(`${FOH_CLASSIFICATION_SETTINGS_BASE}/menu/`) ||
+    raw.startsWith(`${FOH_CLASSIFICATION_SETTINGS_BASE}/hours/`)
+  ) {
     replaceHashPath(getFohClassificationSettingsTabPath("category"));
     return;
   }
-  /* 品类与场景菜单已迁至「品类设置」功能页，旧设置分组书签重定向 */
+  /* 品类与场景菜单已迁至「品类管理」功能页，旧设置分组书签重定向 */
   if (
     raw === "/operations/queue-call/settings/guest-menu-scenarios" ||
     raw.startsWith("/operations/queue-call/settings/guest-menu-scenarios/")
@@ -4001,6 +4043,14 @@ function normalizeTabModuleHashes(): void {
   }
   if (raw === "/team/reports" || raw === "/team/reports/") {
     replaceHashPath(getTeamReportsDefaultPath());
+    return;
+  }
+  if (raw === "/team/reports/overview" || raw.startsWith("/team/reports/overview/")) {
+    replaceHashPath("/team/reports/summary");
+    return;
+  }
+  if (raw === "/team/reports/tips" || raw.startsWith("/team/reports/tips/")) {
+    replaceHashPath("/team/reports/tip-summary");
     return;
   }
   if (raw === "/team/scheduling" || raw === "/team/scheduling/") {
@@ -5103,6 +5153,7 @@ function isModuleHubSettingsCatalogPath(path: string): boolean {
   if (path === "/settings/overview") return false;
   if (isPlatformPresetPath(path)) return false;
   if (path === "/menu/tax-types/settings") return false;
+  if (isFohBrandMenuPath(path)) return false;
   const catalog = getModuleSettingsCatalog(path);
   if (catalog) {
     return path === catalog.settingsPath || path.startsWith(`${catalog.settingsPath}/`);
@@ -5665,6 +5716,10 @@ function runFohByLineToggleSideEffects(seq: number, next: boolean): void {
     if (next) ensurePosMenuUiLayoutLinesDefault(seq);
     setPosMenuUiLayoutLinesPanelVisible(seq, next);
   }
+  if (isDefaultMainScreenSeq(seq)) {
+    if (next) ensureDefaultMainScreenLinesDefault();
+    setDefaultMainScreenPanelVisible(next);
+  }
   if (isGuestMenuImageModeSeq(seq)) setGuestMenuImageModePanelVisible(next);
   if (isGuestEmenuProModeSeq(seq)) {
     if (next) ensureGuestEmenuProModeLinesDefault();
@@ -5700,29 +5755,113 @@ function renderTeamEmbeddedSettingsSuffix(
 }
 
 function renderTeamShiftSchedulingPageWithSettings(): string {
-  return wrapPageWithSaveBar(
-    "/team/shift-scheduling",
-    `${renderTeamShiftSchedulingPage()}${renderTeamEmbeddedSettingsSuffix(
-      TEAM_SHIFT_SCHEDULING_SETTING_SEQS,
-      "shift-scheduling",
-      "控制打卡是否必须匹配当日排班；与员工打卡页联动。",
-    )}`,
-  );
+  const items = getTeamSettingItemsBySeqs(TEAM_SHIFT_SCHEDULING_SETTING_SEQS);
+  const rulesPanel = renderTeamSettingsTabPanel({
+    description: "控制打卡是否必须匹配当日排班；与员工打卡页联动。",
+    rowsHtml: renderModuleSettingRowsHtml(items),
+  });
+  return wrapPageWithSaveBar("/team/shift-scheduling", renderTeamShiftSchedulingPage(rulesPanel));
 }
 
 function renderTeamBreaksOvertimePageWithSettings(path: string): string {
   const items = getTeamSettingItemsBySeqs(TEAM_BREAKS_OVERTIME_SETTING_SEQS);
   const rowsHtml = renderModuleSettingRowsHtml(items);
-  return wrapPageWithSaveBar(path, renderTeamBreaksOvertimePage(rowsHtml, path));
+  const page = renderTeamBreaksOvertimePage(rowsHtml, path);
+  const bar = renderPageSaveBar(path);
+  // 勿用 wrapPageWithSaveBar：其外层 overflow-y-auto 会让三级导航与四级内容同步滚动
+  if (!bar) return page;
+  return `<div class="flex min-h-0 flex-1 flex-col overflow-hidden">
+    ${page}
+    ${bar}
+  </div>`;
+}
+
+function renderTeamClockInRulesSectionsHtml(items: ModuleSettingCatalogItem[]): string {
+  return TEAM_CLOCK_IN_GROUP_ORDER.map((groupKey) => {
+    const groupItems = items.filter((item) => item.groupKey === groupKey);
+    if (groupItems.length === 0) return "";
+    const groupTitle = groupItems[0]?.groupTitle ?? groupKey;
+    const sectionId = moduleSettingsCategoryDomId(groupKey);
+    const rows = renderModuleSettingRowsHtml(groupItems);
+    return `
+      <section
+        id="${sectionId}"
+        class="module-settings-category-card scroll-mt-4 rounded-xl border border-border bg-background shadow-sm"
+        aria-label="${escapeHtml(tf("moduleSettings.categoryAria", { category: groupTitle }))}"
+      >
+        <div class="flex items-baseline justify-between gap-3 border-b border-border px-4 py-3">
+          <h3 class="text-sm font-semibold text-card-foreground">${escapeHtml(groupTitle)}</h3>
+          <span class="shrink-0 text-xs tabular-nums text-muted-foreground">${groupItems.length}</span>
+        </div>
+        <ul class="m-0 list-none divide-y divide-border p-0" role="list">${rows}</ul>
+      </section>`;
+  }).join("");
 }
 
 function renderTeamClockInPageWithSettings(): string {
   const items = getTeamSettingItemsBySeqs(TEAM_CLOCK_IN_SETTING_SEQS);
   const rulesPanel = renderTeamSettingsTabPanel({
-    description: "工时上限、自动收工、登出条件与 Batch 考勤门禁等打卡相关规则。",
-    rowsHtml: renderModuleSettingRowsHtml(items),
+    description: "按开收工、登出门禁与打卡凭证分组配置；修改后需保存并下发。",
+    sectionsHtml: renderTeamClockInRulesSectionsHtml(items),
   });
-  return wrapPageWithSaveBar("/team/clock-in", renderTeamClockInPage(rulesPanel));
+  const page = renderTeamClockInPage(rulesPanel);
+  // 考勤记录 / 实时打卡不需要底部保存栏；规则设置仍走页脚保存并下发
+  if (!shouldShowTeamClockInSaveBar()) return page;
+  return wrapPageWithSaveBar("/team/clock-in", page);
+}
+
+function renderFohBrandMenuGroupCard(
+  groupTitle: string,
+  groupKey: string,
+  items: ModuleSettingCatalogItem[],
+  opts?: { hideHeader?: boolean },
+): string {
+  if (items.length === 0) return "";
+  const sectionId = moduleSettingsCategoryDomId(groupKey);
+  const rows = renderModuleSettingRowsHtml(items);
+  const headerHtml = opts?.hideHeader
+    ? ""
+    : `<div class="flex items-baseline justify-between gap-3 border-b border-border px-4 py-3">
+        <h3 class="text-sm font-semibold text-card-foreground">${escapeHtml(groupTitle)}</h3>
+        <span class="shrink-0 text-xs tabular-nums text-muted-foreground">${items.length}</span>
+      </div>`;
+  return `
+    <section
+      id="${sectionId}"
+      class="module-settings-category-card scroll-mt-4 rounded-xl border border-border bg-card shadow-sm"
+      aria-label="${escapeHtml(tf("moduleSettings.categoryAria", { category: groupTitle }))}"
+    >
+      ${headerHtml}
+      <ul class="m-0 list-none divide-y divide-border p-0" role="list">${rows}</ul>
+    </section>`;
+}
+
+function renderFohBrandMenuPageWithSettings(): string {
+  const catalog = getModuleSettingsCatalog(FOH_BRAND_MENU_PATH);
+  const items = catalog?.items ?? [];
+  const brandsItems = items.filter((item) => item.groupKey === "brand-menu-presentation");
+  const settingsItems = items
+    .filter((item) => item.groupKey === "brand-menu-settings")
+    .slice()
+    .sort((a, b) => {
+      // 品牌模式(531) → 品牌页作为首页(530)
+      if (a.seq === 531 && b.seq === 530) return -1;
+      if (a.seq === 530 && b.seq === 531) return 1;
+      return a.seq - b.seq;
+    });
+
+  const brandsPanelHtml = renderFohBrandMenuGroupCard(
+    "品牌管理",
+    "brand-menu-presentation",
+    brandsItems,
+    { hideHeader: true },
+  );
+  const settingsPanelHtml = renderFohBrandMenuGroupCard("设置", "brand-menu-settings", settingsItems);
+
+  return wrapPageWithSaveBar(
+    FOH_BRAND_MENU_PATH,
+    renderFohBrandMenuPage({ brandsPanelHtml, settingsPanelHtml }),
+  );
 }
 
 /** 设置滑层开关：关闭态轨道需与背景区分（避免 bg-input 过浅） */
@@ -5743,6 +5882,8 @@ function moduleSettingToggleOnLabelClass(on: boolean): string {
 
 function renderModuleSettingToggleSwitch(item: ModuleSettingCatalogItem): string {
   const on = readModuleSettingToggleOn(item.seq);
+  /** 前厅设置：开启态不展示开关（主视图固定开启；按产线视图仅关闭时展示以便开启） */
+  if (isFohHubSettingToggleSeq(item.seq) && on) return "";
   const ariaLabel = tf("moduleSettings.toggleAria", { name: item.title });
   const stateHint = on ? t("moduleSettings.toggleOn") : t("moduleSettings.toggleOff");
   const trackClass = on ? MODULE_SETTING_TOGGLE_TRACK_ON : MODULE_SETTING_TOGGLE_TRACK_OFF;
@@ -5768,19 +5909,12 @@ function renderModuleSettingToggleSwitch(item: ModuleSettingCatalogItem): string
     </div>`;
 }
 
-function renderModuleSettingSceneDescHtml(item: ModuleSettingCatalogItem): string {
-  const sceneLine = item.sceneDesc.trim();
-  if (!sceneLine) return "";
-  return `<p class="m-0 text-xs leading-relaxed text-muted-foreground">${escapeHtml(sceneLine)}</p>`;
-}
-
 function renderModuleSettingTitleBlock(item: ModuleSettingCatalogItem): string {
-  const descHtml = renderModuleSettingSceneDescHtml(item);
-  return `
-    <div class="min-w-0 flex flex-col gap-1">
-      <span class="text-sm font-medium text-card-foreground">${escapeHtml(item.title)}</span>
-      ${descHtml}
-    </div>`;
+  return renderSettingTitleWithHelpHtml({
+    id: item.seq,
+    title: item.title,
+    sceneDesc: item.sceneDesc,
+  });
 }
 
 const MODULE_SETTING_CONTROL_CLASS =
@@ -6253,12 +6387,17 @@ function renderModuleSettingSystemDefaultLocaleRow(item: ModuleSettingCatalogIte
 }
 
 function renderModuleSettingDefaultMainScreenRow(item: ModuleSettingCatalogItem): string {
+  ensureDefaultMainScreenToggleMigrated();
+  const on = readModuleSettingToggleOn(item.seq);
   return `
         <li class="list-none" data-module-setting-row-seq="${item.seq}">
           <div class="border-b border-border px-4 py-3">
             ${renderPosShellLandingGroupIntroHtml()}
-            ${renderModuleSettingTitleBlock(item)}
-            <div class="mt-3">${renderDefaultMainScreenEditorHtml()}</div>
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderDefaultMainScreenPanelHtml(on)}
           </div>
         </li>`;
 }
@@ -7191,9 +7330,9 @@ function renderModuleSettingDeliveryReceiptCopiesRow(item: ModuleSettingCatalogI
 function renderModuleSettingMaxGuestsPerOrderRow(item: ModuleSettingCatalogItem): string {
   return `
         <li class="list-none" data-module-setting-row-seq="${item.seq}">
-          <div class="flex flex-col gap-3 border-b border-border px-4 py-3 sm:flex-row sm:items-start sm:justify-between">
-            <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
-            <div class="shrink-0 sm:pt-0.5">${renderMaxGuestsPerOrderControl()}</div>
+          <div class="border-b border-border px-4 py-3">
+            ${renderModuleSettingTitleBlock(item)}
+            ${renderMaxGuestsPerOrderPanelHtml()}
           </div>
         </li>`;
 }
@@ -7201,9 +7340,9 @@ function renderModuleSettingMaxGuestsPerOrderRow(item: ModuleSettingCatalogItem)
 function renderModuleSettingOrderTimeoutReminderRow(item: ModuleSettingCatalogItem): string {
   return `
         <li class="list-none" data-module-setting-row-seq="${item.seq}">
-          <div class="flex flex-col gap-3 border-b border-border px-4 py-3 sm:flex-row sm:items-start sm:justify-between">
-            <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
-            <div class="shrink-0 sm:pt-0.5">${renderOrderTimeoutReminderControl()}</div>
+          <div class="border-b border-border px-4 py-3">
+            ${renderModuleSettingTitleBlock(item)}
+            ${renderOrderTimeoutReminderPanelHtml()}
           </div>
         </li>`;
 }
@@ -8596,13 +8735,8 @@ const STORE_BRAND_MODE_PRODUCT_LINES = [
   { fieldId: "531-c-line-emenu", label: "eMenu", defaultChecked: true },
   { fieldId: "531-c-line-sdi", label: "SDI", defaultChecked: true },
 ] as const;
-const STORE_BRAND_MENU_TOGGLE_PANEL_HINT: Record<number, string> = {
-  531: "开启：所选产线点餐时先选品牌，再浏览该品牌菜单；关闭：不按品牌分类展示菜单。",
-  530: "开启：所选产线以品牌名称卡片为首页；关闭：展示常规首页（封面图见营销中心 · 广告）。",
-};
 function renderStoreBrandSettingProductLinesSelector(
   seq: number,
-  on: boolean,
   lines: readonly { fieldId: string; label: string; defaultChecked: boolean }[],
 ): string {
   const boxes = lines.map((opt) => {
@@ -8613,27 +8747,19 @@ function renderStoreBrandSettingProductLinesSelector(
         <span>${escapeHtml(opt.label)}</span>
       </label>`;
   }).join("");
-  const hint = STORE_BRAND_MENU_TOGGLE_PANEL_HINT[seq] ?? "";
-  const hidden = on ? "" : "hidden";
   return `
-    <div class="mt-3 rounded-lg bg-muted/50 p-3 ${hidden}" data-store-brand-setting-panel="${seq}" ${on ? "" : 'aria-hidden="true"'}>
-      <p class="m-0 text-xs leading-relaxed text-muted-foreground">${escapeHtml(hint)}</p>
-      <p class="mt-2 mb-0 text-xs text-muted-foreground">适用产线（多选）</p>
-      <div class="mt-2 flex flex-wrap items-center gap-4">${boxes}</div>
+    <div class="mt-3 rounded-lg bg-muted/50 p-3" data-store-brand-setting-panel="${seq}">
+      <div class="flex flex-wrap items-center gap-4">${boxes}</div>
     </div>`;
 }
 
 function renderModuleSettingStoreBrandSettingRow(item: ModuleSettingCatalogItem): string {
-  const on = readModuleSettingToggleOn(item.seq);
   const lines = item.seq === 531 ? STORE_BRAND_MODE_PRODUCT_LINES : STORE_BRAND_SETTING_PRODUCT_LINES;
   return `
         <li class="list-none">
           <div class="border-b border-border px-4 py-3">
-            <div class="flex items-start justify-between gap-3">
-              ${renderModuleSettingTitleBlock(item)}
-              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
-            </div>
-            ${renderStoreBrandSettingProductLinesSelector(item.seq, on, lines)}
+            ${renderModuleSettingTitleBlock(item)}
+            ${renderStoreBrandSettingProductLinesSelector(item.seq, lines)}
           </div>
         </li>`;
 }
@@ -8684,14 +8810,6 @@ function renderModuleSettingMenuSourceModeRow(item: ModuleSettingCatalogItem): s
             </div>
           </div>
         </li>`;
-}
-
-function setStoreBrandSettingPanelVisible(seq: number, visible: boolean): void {
-  document.querySelectorAll<HTMLElement>(`[data-store-brand-setting-panel="${seq}"]`).forEach((panel) => {
-    panel.classList.toggle("hidden", !visible);
-    if (visible) panel.removeAttribute("aria-hidden");
-    else panel.setAttribute("aria-hidden", "true");
-  });
 }
 
 function renderModuleSettingStoreCountryRegionRow(item: ModuleSettingCatalogItem): string {
@@ -8844,11 +8962,10 @@ function renderModuleSettingExternalIntegrationsInputRow(item: ModuleSettingCata
         </li>`;
 }
 
-function renderModuleSettingStoreBrandManagementRow(item: ModuleSettingCatalogItem): string {
+function renderModuleSettingStoreBrandManagementRow(_item: ModuleSettingCatalogItem): string {
   return `
         <li class="list-none">
-          <div class="border-b border-border px-4 py-3">
-            ${renderModuleSettingTitleBlock(item)}
+          <div class="px-4 py-3">
             ${renderStoreBrandManagementHtml()}
           </div>
         </li>`;
@@ -9014,6 +9131,7 @@ function renderModuleSettingRow(item: ModuleSettingCatalogItem): string {
       item,
       renderModuleSettingToggleSwitch,
       readModuleSettingToggleOn,
+      renderModuleSettingTitleBlock,
     );
   }
   if (isBatchAutoCloseTimeSeq(item.seq)) {
@@ -9165,7 +9283,7 @@ function renderModuleSettingRow(item: ModuleSettingCatalogItem): string {
     );
   }
   if (isOrderNumberingClassificationSeq(item.seq)) {
-    return renderOrderNumberingClassificationSettingHtml(item.title, item.sceneDesc);
+    return renderOrderNumberingClassificationSettingHtml(item.seq, item.title, item.sceneDesc);
   }
   if (isOrderNumberingResetSeq(item.seq)) {
     return renderModuleSettingOrderNumberingSelectRow(
@@ -9555,6 +9673,15 @@ function renderModuleSettingRow(item: ModuleSettingCatalogItem): string {
   if (isWaitTimeDisplayToggleSeq(item.seq)) {
     return renderModuleSettingWaitTimeDisplayToggleRow(item);
   }
+  if (isCustomDividerNameSeq(item.seq)) {
+    return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            ${renderModuleSettingTitleBlock(item)}
+            ${renderCustomDividerNamePanelHtml()}
+          </div>
+        </li>`;
+  }
   if (isModuleSettingNestedParentSeq(item.seq)) {
     return renderModuleSettingNestedParentRow(item);
   }
@@ -9632,9 +9759,6 @@ function runModuleSettingToggleSideEffects(seq: number, next: boolean): void {
         refreshMenuOrderLimitTabBadges();
       } else if (isModuleSettingNestedParentSeq(seq)) {
         setModuleSettingNestedPanelVisible(seq, next);
-      }
-      if (seq === 530 || seq === 531) {
-        setStoreBrandSettingPanelVisible(seq, next);
       }
       if (isStoreClosingAlertSeq(seq)) {
         setStoreClosingAlertPanelVisible(seq, next);
@@ -9808,6 +9932,7 @@ function runModuleSettingToggleSideEffects(seq: number, next: boolean): void {
         setDishSequenceIdDisplayPanelVisible(seq, next);
       }
       if (isPosOrderCartPosLinesSeq(seq)) {
+        if (next) ensurePosOrderCartPosLinesDefault(seq);
         setPosOrderCartPosLinesPanelVisible(seq, next);
       }
       if (isPosFindOrderListSeq(seq)) {
@@ -9821,6 +9946,10 @@ function runModuleSettingToggleSideEffects(seq: number, next: boolean): void {
       if (isPosMenuUiLayoutLinesSeq(seq)) {
         if (next) ensurePosMenuUiLayoutLinesDefault(seq);
         setPosMenuUiLayoutLinesPanelVisible(seq, next);
+      }
+      if (isDefaultMainScreenSeq(seq)) {
+        if (next) ensureDefaultMainScreenLinesDefault();
+        setDefaultMainScreenPanelVisible(next);
       }
       if (isPosComboOrderingSeq(seq)) {
         if (next) ensurePosComboOrderingLinesDefault(seq);
@@ -10272,18 +10401,19 @@ function renderModuleHubSettingsPage(path: string, pageTitle: string): string {
         : printSettings
           ? renderPrintSettingsHubIntroHtml()
           : t("moduleSettings.intro");
-  const teamMigrationHtml =
-    path === "/team/settings" ? renderTeamSettingsHubMigrationNoticeHtml() : "";
   const isStoreSettingsHub =
     path === "/stores/settings" || path.startsWith("/stores/settings/");
+  const isTeamSettingsHub = path === "/team/settings";
+  const isFohBrandMenuSettings =
+    path === "/operations/queue-call/brand-menu" ||
+    path.startsWith("/operations/queue-call/brand-menu/");
 
   return `
     <div class="module-settings-main space-y-4">
       ${
-        isStoreSettingsHub
+        isStoreSettingsHub || isTeamSettingsHub || isFohBrandMenuSettings
           ? ""
           : `<div class="rounded-xl border border-border bg-card p-5 shadow-sm space-y-4">
-        ${teamMigrationHtml}
         <div>
           <p class="text-sm leading-relaxed text-muted-foreground">${introHtml}</p>
           <p class="mt-2 text-xs font-medium tabular-nums text-muted-foreground">${escapeHtml(countLabel)}</p>
@@ -10884,6 +11014,7 @@ function renderMain(): string {
   const isTeamBreaksOvertime = isTeamBreaksOvertimePath(path);
   const isTeamClockIn = isTeamClockInPath(path);
   const isTeamTrainingPerformance = isTeamTrainingPerformancePath(path);
+  const isFohBrandMenu = isFohBrandMenuPath(path);
   const isChainBrandMgmt = isChainBrandMgmtPath(path);
   const isBrandStoreList = isBrandStoreListPath(path);
   const isGroupStoreList = isGroupStoreListPath(path);
@@ -10908,6 +11039,7 @@ function renderMain(): string {
     isFinanceRegisterAudit ||
     isTeamShiftScheduling ||
     isTeamBreaksOvertime ||
+    isFohBrandMenu ||
     isModuleSettingsCatalog ||
     isFohCategorySettings ||
     isFohClassificationSettings ||
@@ -11062,7 +11194,7 @@ function renderMain(): string {
                                       : isTeamReportsTertiary
                                         ? `<div class="${tertiaryRowClass}">
                     ${renderTeamReportsSidebar(path)}
-                    <div class="${tertiaryMainClass}">${renderPlaceholder(path, title, tabModule, { teamReportsSubnav: true })}</div>
+                    <div class="${tertiaryMainClass} min-h-0 overflow-hidden">${renderTeamReportsMainPanel(path, title, tabModule)}</div>
                   </div>`
                                         : isTipsManagementTertiary
                                           ? `<div class="${tertiaryRowClass}">
@@ -11071,18 +11203,20 @@ function renderMain(): string {
                   </div>`
                                           : isFloorPlanPath(path)
                                             ? wrapPageWithSaveBar(path, renderFloorPlanPage())
-                                            : isFohCategorySettingsPath(path)
-                                              ? renderFohCategorySettingsPage(path)
-                                              : isFohClassificationSettingsPath(path)
-                                                ? renderFohClassificationSettingsPage(path)
-                                                : isTeamBreaksOvertime
-                                                  ? renderTeamBreaksOvertimePageWithSettings(path)
-                                                  : isTeamClockIn
-                                                    ? renderTeamClockInPageWithSettings()
-                                                    : isTeamTrainingPerformance
-                                                      ? renderTeamTrainingPerformancePage()
-                                                      : isTeamShiftScheduling
-                                                        ? renderTeamShiftSchedulingPageWithSettings()
+                                            : isFohBrandMenu
+                                              ? renderFohBrandMenuPageWithSettings()
+                                              : isFohCategorySettingsPath(path)
+                                                ? renderFohCategorySettingsPage(path)
+                                                : isFohClassificationSettingsPath(path)
+                                                  ? renderFohClassificationSettingsPage(path)
+                                                  : isTeamBreaksOvertime
+                                                    ? renderTeamBreaksOvertimePageWithSettings(path)
+                                                    : isTeamClockIn
+                                                      ? renderTeamClockInPageWithSettings()
+                                                      : isTeamTrainingPerformance
+                                                        ? renderTeamTrainingPerformancePage()
+                                                        : isTeamShiftScheduling
+                                                          ? renderTeamShiftSchedulingPageWithSettings()
                                                         : isFinanceRegisterAudit
                                                           ? renderFinanceRegisterAuditPageContent(path)
                                                           : isNotificationsHubFeaturePath(path)
@@ -12081,6 +12215,7 @@ function mount(): void {
   }
   bindModuleSettingsSubnavScrollMemory();
   bindModuleSettingsToggles();
+  bindModuleSettingSceneDescHelp();
   syncDailyCloseCashOptionRowsFromMaster();
   syncExternalIntegrationsUrlFields(readModuleSettingToggleOn(CLOUD_EMPLOYEE_SYNC_SEQ));
   bindModuleSettingsNestedFields();
@@ -12094,6 +12229,7 @@ function mount(): void {
   bindKdsTerminalSettingsControls();
   bindStoreBusinessHoursControls();
   bindStoreBrandManagementControls();
+  bindFohBrandMenuUi(mount);
   bindStoreRestaurantLogoControls();
   bindIngenicoBluIntegrationUi();
   bindAdvancedServiceSwitchUi();
@@ -12169,6 +12305,9 @@ function mount(): void {
   bindPostOrderKitchenSendModeUi();
   bindKitchenSendPasswordAuthUi();
   bindPosSessionSecurityUi();
+  bindMaxGuestsPerOrderUi();
+  bindOrderTimeoutReminderUi();
+  bindCustomDividerNameUi();
   bindOrderDisplaySeatUi();
   bindPosButtonVisibilityUi();
   bindPartySizeSelectionPageUi();

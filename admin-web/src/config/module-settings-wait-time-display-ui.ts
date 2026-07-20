@@ -128,7 +128,6 @@ export function renderWaitTimeDisplayLinesPanelHtml(seq: number, enabled: boolea
       data-wait-time-display-panel="${seq}"
       ${enabled ? "" : 'aria-hidden="true"'}
     >
-      <p class="m-0 mb-2 text-xs font-medium text-muted-foreground">适用产线（多选）</p>
       ${renderLinesMultiselectHtml(seq, enabled)}
     </div>`;
 }

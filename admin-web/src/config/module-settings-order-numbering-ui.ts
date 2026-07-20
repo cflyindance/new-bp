@@ -10,6 +10,7 @@ import {
   writeModuleSettingRadio,
   writeModuleSettingText,
 } from "./module-settings-form-ui";
+import { renderSettingTitleWithHelpHtml } from "./module-settings-scene-desc-help-ui";
 
 export const ORDER_NUMBER_MAX_SEQ = 127;
 export const ORDER_NUMBER_START_SEQ = 128;
@@ -240,6 +241,7 @@ export function syncOrderNumberClassificationPanels(root: ParentNode = document)
 }
 
 export function renderOrderNumberingClassificationSettingHtml(
+  seq: number,
   title: string,
   sceneDesc: string,
 ): string {
@@ -249,13 +251,8 @@ export function renderOrderNumberingClassificationSettingHtml(
     <li class="list-none" data-order-classification-setting>
       <div class="border-b border-border px-4 py-3">
         <div class="flex items-start justify-between gap-3">
-          <div class="min-w-0 flex-1 space-y-1">
-            <p class="text-sm font-medium text-card-foreground">${escapeHtml(title)}</p>
-            ${
-              sceneDesc
-                ? `<p class="text-xs leading-relaxed text-muted-foreground">${escapeHtml(sceneDesc)}</p>`
-                : ""
-            }
+          <div class="min-w-0 flex-1">
+            ${renderSettingTitleWithHelpHtml({ id: seq, title, sceneDesc })}
           </div>
           <button
             type="button"

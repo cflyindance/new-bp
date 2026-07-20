@@ -73,7 +73,8 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
       "pos-go",
       "paypad"
     ],
-    "source": "group-default"
+    "source": "ui-module",
+    "module": "module-settings-max-guests-per-order-ui.ts"
   },
   "113": {
     "groupKey": "foh-kitchen-send-timing",
@@ -98,7 +99,10 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
     "lines": [
       "pos",
       "pos-go",
-      "paypad"
+      "paypad",
+      "kiosk",
+      "emenu",
+      "sdi"
     ],
     "source": "ui-module",
     "module": "module-settings-pos-menu-scope-lines-ui.ts"
@@ -1430,6 +1434,9 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
   "625": {
     "groupKey": "foh-table-start-flow",
     "lines": [
+      "pos",
+      "pos-go",
+      "paypad",
       "emenu",
       "sdi"
     ],
@@ -1526,6 +1533,9 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
   "643": {
     "groupKey": "foh-table-start-flow",
     "lines": [
+      "pos",
+      "pos-go",
+      "paypad",
       "emenu"
     ],
     "source": "ui-module",
@@ -1534,6 +1544,9 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
   "644": {
     "groupKey": "foh-table-start-flow",
     "lines": [
+      "pos",
+      "pos-go",
+      "paypad",
       "emenu"
     ],
     "source": "ui-module",

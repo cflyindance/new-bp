@@ -43,6 +43,7 @@ import {
   getDefaultModuleSettingToggleOn,
   moduleSettingToggleStorageKey,
 } from "./module-settings-toggle-ui";
+import { renderSettingTitleWithHelpHtml, bindModuleSettingSceneDescHelp } from "./module-settings-scene-desc-help-ui";
 import {
   ensureViewonlyDishRuleToggleMigrated,
   VIEWONLY_DISH_AUTH_SEQ,
@@ -326,9 +327,13 @@ function renderToggleSwitch(seq: number, title: string): string {
 }
 
 function renderSettingTitleBlock(meta: SettingMeta): string {
-  return `
-    <h3 class="text-sm font-semibold text-card-foreground">${escapeHtml(meta.title)}</h3>
-    <p class="m-0 mt-1 text-xs leading-relaxed text-muted-foreground">${escapeHtml(meta.sceneDesc)}</p>`;
+  return renderSettingTitleWithHelpHtml({
+    id: meta.seq,
+    title: meta.title,
+    sceneDesc: meta.sceneDesc,
+    titleTag: "h3",
+    titleClass: "text-sm font-semibold text-card-foreground",
+  });
 }
 
 function renderSettingBodyHtml(meta: SettingMeta): string {
@@ -469,8 +474,13 @@ function renderDishRuleTabPanel(
       <div class="shrink-0 border-b border-border px-4 py-3">
         <div class="flex flex-wrap items-start justify-between gap-3">
           <div class="min-w-0 flex-1">
-            <h2 class="text-base font-semibold text-card-foreground">${escapeHtml(meta.title)}</h2>
-            <p class="m-0 mt-1 text-xs leading-relaxed text-muted-foreground">${escapeHtml(meta.sceneDesc)}</p>
+            ${renderSettingTitleWithHelpHtml({
+              id: seq,
+              title: meta.title,
+              sceneDesc: meta.sceneDesc,
+              titleTag: "h2",
+              titleClass: "text-base font-semibold text-card-foreground",
+            })}
           </div>
           <div class="shrink-0 pt-0.5">${renderToggleSwitch(seq, meta.title)}</div>
         </div>
@@ -546,6 +556,7 @@ export function bindFohMenuOrderLimitsUi(remountToTab: (tab: MenuOrderLimitTabId
   const root = document.querySelector<HTMLElement>("[data-foh-menu-order-limits-root]");
   if (!root || root.getAttribute("data-foh-menu-limits-bound") === "1") return;
   root.setAttribute("data-foh-menu-limits-bound", "1");
+  bindModuleSettingSceneDescHelp(root);
 
   const navigate = (tab: MenuOrderLimitTabId): void => {
     const path = location.hash.slice(1) || "/dashboard/overview";

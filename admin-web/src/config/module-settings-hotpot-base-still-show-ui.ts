@@ -133,7 +133,6 @@ export function renderHotpotBaseStillShowPanelHtml(on: boolean): string {
       data-hotpot-base-still-show-panel="${HOTPOT_BASE_STILL_SHOW_SEQ}"
       ${on ? "" : 'aria-hidden="true"'}
     >
-      <p class="m-0 mb-2 text-xs font-medium text-muted-foreground">适用产线（多选）</p>
       ${renderLinesMultiselectHtml(on)}
       <p class="m-0 mt-2 text-xs leading-relaxed text-muted-foreground">
         勾选产线在锅底下单后，菜单中仍展示火锅锅底品类。

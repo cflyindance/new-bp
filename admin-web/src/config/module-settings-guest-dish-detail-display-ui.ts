@@ -212,7 +212,6 @@ export function renderGuestDishDetailPanelHtml(on: boolean): string {
       ${on ? "" : 'aria-hidden="true"'}
     >
       <div>
-        <p class="m-0 mb-2 text-xs font-medium text-muted-foreground">适用产线（多选）</p>
         ${renderLinesMultiselectHtml(on)}
       </div>
       <div class="space-y-2" data-guest-dish-detail-line-settings-wrap>

@@ -6,7 +6,7 @@ import { FOH_CLASSIFICATION_SETTINGS_BASE } from "./foh-classification-settings-
 import { MENU_ORDER_LIMITS_BASE } from "./foh-menu-order-limits-ui";
 import { FLOOR_PLAN_PATH } from "./floor-plan-ui";
 
-/** 店中店设置 */
+/** 店中店管理 */
 export const FOH_BRAND_MENU_PATH = "/operations/queue-call/brand-menu";
 
 /** eMenu Pro */

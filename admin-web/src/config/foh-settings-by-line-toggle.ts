@@ -4,6 +4,7 @@
 import { readModuleSettingJson, writeModuleSettingJson } from "./module-settings-form-ui";
 import {
   getDefaultModuleSettingToggleOn,
+  isFohHubSettingToggleSeq,
   moduleSettingToggleStorageKey,
 } from "./module-settings-toggle-ui";
 import {
@@ -26,6 +27,26 @@ import {
   readPageDraftFohToggleForCurrentPath,
   resolvePageSaveKey,
 } from "./page-settings-draft";
+import {
+  AUTO_LOGOUT_MINUTES_SEQ,
+  readAutoLogoutByLine,
+  syncAutoLogoutEnabledFromLines,
+} from "./module-settings-pos-session-security-ui";
+import {
+  MAX_GUESTS_PER_ORDER_SEQ,
+  readMaxGuestsByLine,
+  syncMaxGuestsEnabledFromLines,
+} from "./module-settings-max-guests-per-order-ui";
+import {
+  ORDER_TIMEOUT_REMINDER_SEQ,
+  readOrderTimeoutByLine,
+  syncOrderTimeoutEnabledFromLines,
+} from "./module-settings-order-timeout-reminder-ui";
+import {
+  CUSTOM_DIVIDER_NAME_SEQ,
+  readCustomDividerByLine,
+  syncCustomDividerEnabledFromLines,
+} from "./module-settings-custom-divider-name-ui";
 
 export {
   FOH_LINE_CONFIG_ROW_ATTR,
@@ -73,6 +94,8 @@ function readGlobalToggleRaw(seq: number): boolean | null {
 }
 
 function readGlobalToggleOn(seq: number): boolean {
+  /** 前厅设置：全局主开关固定开启，空产线列表会迁移为全选 */
+  if (isFohHubSettingToggleSeq(seq)) return true;
   const raw = readGlobalToggleRaw(seq);
   if (raw === null) return getDefaultModuleSettingToggleOn(seq);
   return raw;
@@ -128,6 +151,15 @@ export function readFohByLineToggleState(seq: number, lineId: FohLineNavId): boo
   }
 
   if (hasFohLineStorage(seq)) {
+    if (seq === AUTO_LOGOUT_MINUTES_SEQ) {
+      readAutoLogoutByLine();
+    } else if (seq === MAX_GUESTS_PER_ORDER_SEQ) {
+      readMaxGuestsByLine();
+    } else if (seq === ORDER_TIMEOUT_REMINDER_SEQ) {
+      readOrderTimeoutByLine();
+    } else if (seq === CUSTOM_DIVIDER_NAME_SEQ) {
+      readCustomDividerByLine();
+    }
     const lines = readStoredLines(seq);
     if (lines.length > 0) return lines.includes(lineId);
     return migrateLinesFromGlobalToggle(seq).includes(lineId);
@@ -158,7 +190,18 @@ export function writeFohByLineToggleState(seq: number, lineId: FohLineNavId, on:
   } else {
     lines = lines.filter((id) => id !== lineId);
   }
-  writeStoredLines(seq, lines);
+
+  if (seq === AUTO_LOGOUT_MINUTES_SEQ) {
+    syncAutoLogoutEnabledFromLines(lines);
+  } else if (seq === MAX_GUESTS_PER_ORDER_SEQ) {
+    syncMaxGuestsEnabledFromLines(lines);
+  } else if (seq === ORDER_TIMEOUT_REMINDER_SEQ) {
+    syncOrderTimeoutEnabledFromLines(lines);
+  } else if (seq === CUSTOM_DIVIDER_NAME_SEQ) {
+    syncCustomDividerEnabledFromLines(lines);
+  } else {
+    writeStoredLines(seq, lines);
+  }
 
   try {
     localStorage.setItem(moduleSettingToggleStorageKey(seq), lines.length > 0 ? "1" : "0");
@@ -178,7 +221,7 @@ const LINE_LABEL_BY_ID: Record<string, string> = {
   cds: "CDS",
 };
 
-/** 隐藏「适用产线（多选）」区域，保留按产线子配置（如 217/218 布局表） */
+/** 按产线视图：隐藏适用产线多选控件，保留按产线子配置（如 217/218 布局表） */
 export function applyFohByLineUiSuppressions(root: ParentNode = document): void {
   const container =
     root instanceof Document
@@ -190,34 +233,14 @@ export function applyFohByLineUiSuppressions(root: ParentNode = document): void 
   const lineId = container.getAttribute("data-foh-by-line-view");
   const lineLabel = lineId ? (LINE_LABEL_BY_ID[lineId] ?? lineId) : null;
 
-  container.querySelectorAll("p").forEach((p) => {
-    if (p.textContent?.trim() !== "适用产线（多选）") return;
-    p.classList.add("hidden");
-    let sib = p.nextElementSibling;
-    while (sib) {
-      if (sib.matches('[role="group"]') || sib.hasAttribute("data-pos-menu-scope-lines")) {
-        sib.classList.add("hidden");
-        sib.setAttribute("aria-hidden", "true");
-        sib = sib.nextElementSibling;
-        continue;
-      }
-      if (
-        sib.matches("p") &&
-        sib.classList.contains("text-muted-foreground") &&
-        sib.classList.contains("text-xs")
-      ) {
-        sib.classList.add("hidden");
-        break;
-      }
-      break;
-    }
-  });
-
   container.querySelectorAll<HTMLElement>('[role="group"][aria-label*="适用产线"]').forEach((group) => {
-    const wrap = group.parentElement;
-    if (wrap?.querySelector("p")?.textContent?.trim() === "适用产线（多选）") return;
     group.classList.add("hidden");
     group.setAttribute("aria-hidden", "true");
+  });
+
+  container.querySelectorAll<HTMLElement>("[data-pos-menu-scope-lines]").forEach((el) => {
+    el.classList.add("hidden");
+    el.setAttribute("aria-hidden", "true");
   });
 
   if (lineId) {

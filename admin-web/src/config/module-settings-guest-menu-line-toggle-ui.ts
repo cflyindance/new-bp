@@ -216,7 +216,6 @@ export function renderGuestMenuLineTogglePanelHtml(seq: number, on: boolean): st
       data-guest-menu-line-toggle-panel="${seq}"
       ${on ? "" : 'aria-hidden="true"'}
     >
-      <p class="m-0 mb-2 text-xs font-medium text-muted-foreground">适用产线（多选）</p>
       ${renderLinesMultiselectHtml(seq, on)}
       <p class="m-0 mt-2 text-xs leading-relaxed text-muted-foreground">${escapeHtml(cfg.panelHint)}</p>
     </div>`;

@@ -134,7 +134,6 @@ export function renderMemberSmsVerificationLinesPanelHtml(seq: number, on: boole
       data-member-sms-verification-panel="${seq}"
       ${on ? "" : 'aria-hidden="true"'}
     >
-      <p class="m-0 mb-2 text-xs font-medium text-muted-foreground">适用产线（多选）</p>
       <div class="flex flex-wrap items-center gap-x-5 gap-y-2" role="group" aria-label="短信验证码适用产线">
         ${checkboxes}
       </div>

@@ -173,7 +173,6 @@ export function renderWaitlistModeLinesPanelHtml(seq: number, on: boolean): stri
       data-waitlist-mode-panel="${seq}"
       ${on ? "" : 'aria-hidden="true"'}
     >
-      <p class="m-0 mb-2 text-xs font-medium text-muted-foreground">适用产线（多选）</p>
       <div class="flex flex-wrap items-center gap-x-5 gap-y-2" role="group" aria-label="等位模式适用产线">
         ${checkboxes}
       </div>

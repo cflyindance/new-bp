@@ -1,14 +1,20 @@
 /**
  * 前厅管理中心 · 主界面与导航 · 默认主界面（seq 165）。
- * 门店兜底：员工登录 POS / POS GO / PayPad 后的默认落地页。
+ * 形式对齐「类展示」(217)：主开关 + 各产线独立单选（MAIN / TABLE / ORDER / RECALL）。
  */
 
-import { MODULE_SETTING_CHOICE_CONTROL_CLASS } from "./module-settings-choice-ui";
-import { readModuleSettingJson, writeModuleSettingJson } from "./module-settings-form-ui";
+import { FOH_LINE_CONFIG_ROW_ATTR } from "./foh-settings-by-line-filter";
+import {
+  moduleSettingStorageKey,
+  readModuleSettingJson,
+  writeModuleSettingJson,
+} from "./module-settings-form-ui";
+import { moduleSettingToggleStorageKey } from "./module-settings-toggle-ui";
 
 export const DEFAULT_MAIN_SCREEN_SEQ = 165;
 
 const DEFAULT_MAIN_SCREEN_BY_LINE_STORAGE_ID = "165-default-main-screen-by-line";
+const LINES_STORAGE_ID = "165-default-main-screen-lines";
 
 export const STAFF_TERMINAL_PRODUCT_LINES = [
   { id: "pos", label: "POS" },
@@ -31,8 +37,13 @@ export type DefaultMainScreenByLine = Record<StaffTerminalProductLineId, Default
 
 const DEFAULT_SCREEN: DefaultMainScreen = "ORDER";
 
-const ALL_LINE_IDS = STAFF_TERMINAL_PRODUCT_LINES.map((l) => l.id);
+const ALL_LINE_IDS: StaffTerminalProductLineId[] = STAFF_TERMINAL_PRODUCT_LINES.map((l) => l.id);
 const VALID_SCREENS = new Set<string>(DEFAULT_MAIN_SCREEN_OPTIONS.map((o) => o.value));
+
+const MODULE_SETTING_CONTROL_CLASS =
+  "size-4 shrink-0 accent-primary text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50";
+
+let toggleMigrated = false;
 
 function escapeHtml(s: string): string {
   return s
@@ -59,7 +70,82 @@ function normalizeMainScreenByLine(raw: Partial<DefaultMainScreenByLine>): Defau
   return base;
 }
 
+function normalizeLineIds(raw: unknown): StaffTerminalProductLineId[] {
+  if (!Array.isArray(raw)) return [];
+  const valid = new Set<string>(ALL_LINE_IDS);
+  return raw.filter(
+    (id): id is StaffTerminalProductLineId => typeof id === "string" && valid.has(id),
+  );
+}
+
+function readLegacyToggleOn(): boolean {
+  try {
+    return localStorage.getItem(moduleSettingToggleStorageKey(DEFAULT_MAIN_SCREEN_SEQ)) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function hasByLineStorage(): boolean {
+  try {
+    return localStorage.getItem(moduleSettingStorageKey(DEFAULT_MAIN_SCREEN_BY_LINE_STORAGE_ID)) !== null;
+  } catch {
+    return false;
+  }
+}
+
+export function ensureDefaultMainScreenToggleMigrated(): void {
+  if (toggleMigrated) return;
+  toggleMigrated = true;
+  try {
+    if (localStorage.getItem(moduleSettingToggleStorageKey(DEFAULT_MAIN_SCREEN_SEQ)) !== null) {
+      return;
+    }
+  } catch {
+    return;
+  }
+  if (readLegacyToggleOn() || hasByLineStorage()) {
+    try {
+      localStorage.setItem(moduleSettingToggleStorageKey(DEFAULT_MAIN_SCREEN_SEQ), "1");
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+export function readDefaultMainScreenLines(): StaffTerminalProductLineId[] {
+  ensureDefaultMainScreenToggleMigrated();
+  const stored = readModuleSettingJson<unknown>(LINES_STORAGE_ID, null);
+  const normalized = normalizeLineIds(stored);
+  if (normalized.length > 0) return normalized;
+  if (readLegacyToggleOn() || hasByLineStorage()) {
+    const all = [...ALL_LINE_IDS];
+    writeDefaultMainScreenLines(all);
+    return all;
+  }
+  return [];
+}
+
+export function writeDefaultMainScreenLines(lines: StaffTerminalProductLineId[]): void {
+  const unique = ALL_LINE_IDS.filter((id) => lines.includes(id));
+  writeModuleSettingJson(LINES_STORAGE_ID, unique);
+}
+
+export function ensureDefaultMainScreenLinesDefault(): void {
+  if (readDefaultMainScreenLines().length === 0) {
+    writeDefaultMainScreenLines([...ALL_LINE_IDS]);
+  }
+}
+
+function ensureLineStored(lineId: StaffTerminalProductLineId): void {
+  const lines = readDefaultMainScreenLines();
+  if (!lines.includes(lineId)) {
+    writeDefaultMainScreenLines([...lines, lineId]);
+  }
+}
+
 export function readDefaultMainScreenByLine(): DefaultMainScreenByLine {
+  ensureDefaultMainScreenToggleMigrated();
   const raw = readModuleSettingJson<Partial<DefaultMainScreenByLine>>(
     DEFAULT_MAIN_SCREEN_BY_LINE_STORAGE_ID,
     {},
@@ -81,64 +167,90 @@ export function isDefaultMainScreenSeq(seq: number): boolean {
 }
 
 export function renderPosShellLandingGroupIntroHtml(): string {
-  return `
-    <p class="mb-3 rounded-md border border-border bg-muted/40 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
-      本组配置店员端终端登录后的<strong>默认主界面（壳层路由）</strong>。
-      作用于员工登录 <strong>POS / POS GO / PayPad</strong> 后的首个落地页；为<strong>门店 × 产线</strong>兜底，未单独配置角色/员工时生效。
-    </p>`;
+  return "";
 }
 
-export function renderDefaultMainScreenEditorHtml(): string {
+function renderByLineEditorHtml(): string {
   const values = readDefaultMainScreenByLine();
-  const optionHeaders = DEFAULT_MAIN_SCREEN_OPTIONS.map(
-    (opt) => `<th class="px-2 py-2 font-medium text-center">${escapeHtml(opt.value)}</th>`,
-  ).join("");
-
   const rows = STAFF_TERMINAL_PRODUCT_LINES.map((line) => {
     const groupName = `default-main-screen-${line.id}`;
-    const cells = DEFAULT_MAIN_SCREEN_OPTIONS.map((opt) => {
+    const radios = DEFAULT_MAIN_SCREEN_OPTIONS.map((opt) => {
       const checked = values[line.id] === opt.value;
       return `
-        <td class="px-2 py-2 text-center">
+        <label class="inline-flex cursor-pointer items-center gap-2 text-sm text-foreground">
           <input
             type="radio"
             name="${escapeHtml(groupName)}"
             value="${escapeHtml(opt.value)}"
-            class="${MODULE_SETTING_CHOICE_CONTROL_CLASS}"
-            ${checked ? "checked" : ""}
+            class="${MODULE_SETTING_CONTROL_CLASS}"
             data-default-main-screen-line="${escapeHtml(line.id)}"
+            ${checked ? "checked" : ""}
             aria-label="${escapeHtml(line.label)} ${escapeHtml(opt.label)}"
           />
-        </td>`;
+          <span>${escapeHtml(opt.label)}</span>
+        </label>`;
     }).join("");
 
     return `
-    <tr class="border-t border-border">
-      <td class="px-3 py-2.5 text-sm font-medium text-foreground whitespace-nowrap">${escapeHtml(line.label)}</td>
-      ${cells}
+    <tr class="border-t border-border" ${FOH_LINE_CONFIG_ROW_ATTR}="${escapeHtml(line.id)}">
+      <td class="px-3 py-2.5 text-sm font-medium text-foreground align-top whitespace-nowrap">${escapeHtml(line.label)}</td>
+      <td class="px-3 py-2.5">
+        <div class="flex flex-wrap items-center gap-4" role="radiogroup" aria-label="${escapeHtml(line.label)} 默认主界面">${radios}</div>
+      </td>
     </tr>`;
   }).join("");
 
   return `
-    <div data-default-main-screen-editor class="space-y-2">
-      <p class="m-0 text-xs leading-relaxed text-muted-foreground">
-        设置员工登录对应终端后，门店兜底的默认主界面：<strong>MAIN</strong> 主页、<strong>TABLE</strong> 桌台、<strong>ORDER</strong> 点单、<strong>RECALL</strong> 找单；各产线独立配置。
-      </p>
+    <div data-default-main-screen-editor="${DEFAULT_MAIN_SCREEN_SEQ}" class="mt-3 space-y-2">
       <div class="overflow-x-auto rounded-md border border-border">
         <table class="w-full min-w-[24rem] border-collapse text-left text-sm">
           <thead class="bg-muted/40 text-xs text-muted-foreground">
             <tr>
-              <th class="px-3 py-2 font-medium">产线</th>
-              ${optionHeaders}
+              <th class="px-3 py-2 font-medium w-[5.5rem]">产线</th>
+              <th class="px-3 py-2 font-medium">默认主界面</th>
             </tr>
           </thead>
           <tbody>${rows}</tbody>
         </table>
       </div>
-      <p class="m-0 text-xs text-muted-foreground">
-        MAIN / TABLE / ORDER / RECALL 为 POS 壳层路由标识；员工仍可在会话内切换页面。
-      </p>
     </div>`;
+}
+
+export function renderDefaultMainScreenPanelHtml(on: boolean): string {
+  if (on) ensureDefaultMainScreenLinesDefault();
+  const hidden = on ? "" : "hidden";
+  return `
+    <div
+      class="mt-3 ${hidden}"
+      data-default-main-screen-panel="${DEFAULT_MAIN_SCREEN_SEQ}"
+      ${on ? "" : 'aria-hidden="true"'}
+    >
+      ${renderByLineEditorHtml()}
+    </div>`;
+}
+
+/** @deprecated 使用 renderDefaultMainScreenPanelHtml */
+export function renderDefaultMainScreenEditorHtml(): string {
+  return renderDefaultMainScreenPanelHtml(true);
+}
+
+export function setDefaultMainScreenPanelVisible(visible: boolean): void {
+  document
+    .querySelectorAll<HTMLElement>(`[data-default-main-screen-panel="${DEFAULT_MAIN_SCREEN_SEQ}"]`)
+    .forEach((panel) => {
+      panel.classList.toggle("hidden", !visible);
+      if (visible) panel.removeAttribute("aria-hidden");
+      else panel.setAttribute("aria-hidden", "true");
+
+      panel.querySelectorAll<HTMLInputElement>("[data-default-main-screen-line]").forEach((input) => {
+        input.disabled = !visible;
+        const label = input.closest("label");
+        if (!label) return;
+        label.classList.toggle("cursor-not-allowed", !visible);
+        label.classList.toggle("opacity-50", !visible);
+        label.classList.toggle("cursor-pointer", visible);
+      });
+    });
 }
 
 function collectMainScreenByLineFromEditor(editor: HTMLElement): DefaultMainScreenByLine {
@@ -147,13 +259,15 @@ function collectMainScreenByLineFromEditor(editor: HTMLElement): DefaultMainScre
     if (!input.checked) return;
     const lineId = input.getAttribute("data-default-main-screen-line") as StaffTerminalProductLineId | null;
     const value = input.value;
-    if (!lineId || !isValidMainScreen(value)) return;
+    if (!lineId || !ALL_LINE_IDS.includes(lineId) || !isValidMainScreen(value)) return;
     values[lineId] = value;
+    ensureLineStored(lineId);
   });
   return values;
 }
 
 export function bindDefaultMainScreenEditor(root: ParentNode = document): void {
+  ensureDefaultMainScreenToggleMigrated();
   root.querySelectorAll<HTMLElement>("[data-default-main-screen-editor]").forEach((editor) => {
     if (editor.dataset.defaultMainScreenEditorBound === "1") return;
     editor.dataset.defaultMainScreenEditorBound = "1";

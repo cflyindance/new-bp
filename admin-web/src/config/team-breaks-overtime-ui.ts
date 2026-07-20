@@ -25,14 +25,25 @@ type CustomBreak = {
   mandatory: boolean;
 };
 
-type OvertimeRuleType = "daily" | "daily-double" | "weekly" | "seventh-day";
+/** 计算口径（影响考勤/薪资核算逻辑） */
+type OvertimeScope = "daily" | "daily-double" | "weekly" | "nth-day";
 
 type OvertimeRule = {
-  type: OvertimeRuleType;
-  enabled: boolean;
+  id: string;
+  name: string;
+  scope: OvertimeScope;
   hoursBeforeOvertime: number;
   wageMultiplier: number;
+  /** 仅「第 N 天」口径：连续工作第几天，默认 7 */
+  dayNumber?: number;
+  /** 仅「第 N 天」：第二档工时阈值，默认 8 */
+  secondaryHoursBeforeOvertime?: number;
+  /** 仅「第 N 天」：第二档工资倍率，默认 2 */
+  secondaryWageMultiplier?: number;
 };
+
+type OvertimeRuleEditor = { mode: "create" } | { mode: "edit"; id: string };
+type CustomBreakEditor = { mode: "create" } | { mode: "edit"; id: string };
 
 type BreaksOvertimeConfig = {
   unpaidPresets: number[];
@@ -47,33 +58,38 @@ type BreaksOvertimeConfig = {
 type NavItem = { key: string; title: string };
 type NavGroup = { label: string; items: NavItem[] };
 
-const OVERTIME_RULE_META: Record<
-  OvertimeRuleType,
+const OVERTIME_SCOPES: OvertimeScope[] = ["daily", "daily-double", "weekly", "nth-day"];
+const DEFAULT_NTH_DAY = 7;
+const DEFAULT_NTH_DAY_TIER1 = { hours: 8, multiplier: 1.5 };
+const DEFAULT_NTH_DAY_TIER2 = { hours: 8, multiplier: 2 };
+
+const OVERTIME_SCOPE_META: Record<
+  OvertimeScope,
   { title: string; desc: string; defaultHours: number; defaultMultiplier: number }
 > = {
   daily: {
-    title: "每日加班",
+    title: "每日",
     desc: "单日工时超过阈值后，超出部分按加班倍率计薪。",
     defaultHours: 8,
     defaultMultiplier: 1.5,
   },
   "daily-double": {
-    title: "每日双倍加班",
+    title: "每日双倍",
     desc: "单日工时超过更高阈值后，超出部分按双倍计薪。",
     defaultHours: 12,
     defaultMultiplier: 2,
   },
   weekly: {
-    title: "每周加班",
+    title: "每周",
     desc: "自然周内累计工时超过阈值后，超出部分按加班倍率计薪。",
     defaultHours: 40,
     defaultMultiplier: 1.5,
   },
-  "seventh-day": {
-    title: "第 7 天加班",
-    desc: "连续工作第 7 天时，前 8 小时按加班计薪，之后按双倍计薪（以当地法规为准）。",
-    defaultHours: 8,
-    defaultMultiplier: 1.5,
+  "nth-day": {
+    title: "第 N 天",
+    desc: "连续工作第 N 天时，按两档工时阈值与工资倍率计薪（如前 8 小时 1.5×，之后 2×）。",
+    defaultHours: DEFAULT_NTH_DAY_TIER1.hours,
+    defaultMultiplier: DEFAULT_NTH_DAY_TIER1.multiplier,
   },
 };
 
@@ -91,7 +107,6 @@ const BREAKS_OVERTIME_NAV_GROUPS: NavGroup[] = [
   {
     label: "休息",
     items: [
-      { key: "default-breaks", title: "默认休息选项" },
       { key: "custom-breaks", title: "自定义休息" },
       { key: "break-rules", title: "休息规则" },
     ],
@@ -109,7 +124,9 @@ const BREAKS_OVERTIME_NAV_GROUPS: NavGroup[] = [
   },
 ];
 
-const SUBNAV_SCROLL_CLASSES = "max-h-[min(70vh,100%)] overflow-y-auto overscroll-y-contain";
+/** 与 main.ts 三级侧栏一致：仅侧栏自身过长时可滚，不随右侧四级内容同步滚动 */
+const SUBNAV_SCROLL_CLASSES =
+  "tertiary-inline-subnav-scroll min-h-0 max-h-[min(52dvh,26rem)] overflow-y-auto overscroll-y-contain sm:max-h-full sm:self-stretch";
 const SUBNAV_LINK_BASE =
   "flex min-h-9 items-center rounded-md px-2.5 py-1.5 text-sm transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
 const SUBNAV_LINK_NESTED = "pl-4";
@@ -138,16 +155,58 @@ const DEFAULT_CONFIG: BreaksOvertimeConfig = {
   blockEarlyEnd: true,
   convertExcessPaidToUnpaid: false,
   workWeekStartDay: 1,
-  overtimeRules: (["daily", "daily-double", "weekly", "seventh-day"] as OvertimeRuleType[]).map((type) => ({
-    type,
-    enabled: type === "daily" || type === "weekly",
-    hoursBeforeOvertime: OVERTIME_RULE_META[type].defaultHours,
-    wageMultiplier: OVERTIME_RULE_META[type].defaultMultiplier,
-  })),
+  /** 默认不预置规则，由用户新增 */
+  overtimeRules: [],
 };
 
+/** 系统默认休息：名称固定不可改，可改时长/补偿/强制 */
+const SYSTEM_CUSTOM_BREAKS: ReadonlyArray<Pick<CustomBreak, "id" | "name">> = [
+  { id: "break-meal", name: "用餐休息" },
+  { id: "break-rest", name: "短休" },
+];
+const SYSTEM_CUSTOM_BREAK_IDS = new Set(SYSTEM_CUSTOM_BREAKS.map((b) => b.id));
+const SYSTEM_CUSTOM_BREAK_NAME_BY_ID = Object.fromEntries(
+  SYSTEM_CUSTOM_BREAKS.map((b) => [b.id, b.name]),
+) as Record<string, string>;
+
+function isSystemCustomBreak(id: string): boolean {
+  return SYSTEM_CUSTOM_BREAK_IDS.has(id);
+}
+
+function ensureSystemCustomBreaks(breaks: CustomBreak[]): CustomBreak[] {
+  const byId = new Map(breaks.map((b) => [b.id, b]));
+  const result: CustomBreak[] = [];
+
+  for (const sys of SYSTEM_CUSTOM_BREAKS) {
+    const existing = byId.get(sys.id);
+    if (existing) {
+      result.push({ ...existing, id: sys.id, name: sys.name });
+      byId.delete(sys.id);
+    } else {
+      const fromDefault = DEFAULT_CONFIG.customBreaks.find((b) => b.id === sys.id);
+      result.push(fromDefault ? { ...fromDefault } : { ...sys, durationMinutes: 15, compensation: "unpaid", mandatory: false });
+    }
+  }
+
+  for (const b of byId.values()) {
+    if (SYSTEM_CUSTOM_BREAK_IDS.has(b.id)) continue;
+    result.push(b);
+  }
+  return result;
+}
+
 let draftConfig: BreaksOvertimeConfig | null = null;
-let activeBreaksNavKey = "default-breaks";
+let activeBreaksNavKey = "custom-breaks";
+let overtimeRuleEditor: OvertimeRuleEditor | null = null;
+let customBreakEditor: CustomBreakEditor | null = null;
+
+function markBreaksOvertimeDirty(): void {
+  window.dispatchEvent(
+    new CustomEvent("menusifu:page-settings-dirty", {
+      detail: { pageKey: TEAM_BREAKS_OVERTIME_PATH },
+    }),
+  );
+}
 
 function escapeHtml(s: string): string {
   return s
@@ -161,45 +220,159 @@ function newBreakId(): string {
   return `break-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 }
 
+function newOvertimeRuleId(): string {
+  return `ot-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+}
+
+function isOvertimeScope(value: unknown): value is OvertimeScope {
+  return typeof value === "string" && (OVERTIME_SCOPES as string[]).includes(value);
+}
+
+/** 兼容旧值 seventh-day → nth-day */
+function resolveOvertimeScope(value: unknown): OvertimeScope | null {
+  if (isOvertimeScope(value)) return value;
+  if (value === "seventh-day") return "nth-day";
+  return null;
+}
+
+function normalizeDayNumber(value: unknown, scope: OvertimeScope): number | undefined {
+  if (scope !== "nth-day") return undefined;
+  const n = Math.round(Number(value));
+  if (Number.isFinite(n) && n >= 1) return Math.min(n, 365);
+  return DEFAULT_NTH_DAY;
+}
+
+function normalizeSecondaryHours(value: unknown, scope: OvertimeScope): number | undefined {
+  if (scope !== "nth-day") return undefined;
+  return Math.max(0.5, Number(value) || DEFAULT_NTH_DAY_TIER2.hours);
+}
+
+function normalizeSecondaryMultiplier(value: unknown, scope: OvertimeScope): number | undefined {
+  if (scope !== "nth-day") return undefined;
+  return Math.max(1, Number(value) || DEFAULT_NTH_DAY_TIER2.multiplier);
+}
+
+function formatOvertimeScopeLabel(rule: OvertimeRule): string {
+  if (rule.scope === "nth-day") {
+    const day = rule.dayNumber ?? DEFAULT_NTH_DAY;
+    return `第 ${day} 天`;
+  }
+  return OVERTIME_SCOPE_META[rule.scope].title;
+}
+
+function formatOvertimeHoursLabel(rule: OvertimeRule): string {
+  if (rule.scope === "nth-day") {
+    const h2 = rule.secondaryHoursBeforeOvertime ?? DEFAULT_NTH_DAY_TIER2.hours;
+    return `${rule.hoursBeforeOvertime} / ${h2}`;
+  }
+  return String(rule.hoursBeforeOvertime);
+}
+
+function formatOvertimeMultiplierLabel(rule: OvertimeRule): string {
+  if (rule.scope === "nth-day") {
+    const m2 = rule.secondaryWageMultiplier ?? DEFAULT_NTH_DAY_TIER2.multiplier;
+    return `${rule.wageMultiplier}× / ${m2}×`;
+  }
+  return `${rule.wageMultiplier}×`;
+}
+
+/** 每种计算口径最多一条：排除已被其他规则占用的口径（编辑时保留当前规则自身口径） */
+function getAvailableOvertimeScopes(
+  rules: OvertimeRule[],
+  excludeRuleId?: string,
+): OvertimeScope[] {
+  const taken = new Set(
+    rules.filter((r) => r.id !== excludeRuleId).map((r) => r.scope),
+  );
+  return OVERTIME_SCOPES.filter((s) => !taken.has(s));
+}
+
+function buildOvertimeRuleFromRaw(
+  item: Partial<OvertimeRule> & { type?: unknown; enabled?: unknown },
+  forceEnabledCheck = false,
+): OvertimeRule | null {
+  if (forceEnabledCheck && !item.enabled) return null;
+  const scope = resolveOvertimeScope(item.scope) ?? resolveOvertimeScope(item.type);
+  if (!scope) return null;
+  const meta = OVERTIME_SCOPE_META[scope];
+  const name =
+    typeof item.name === "string" && item.name.trim() ? item.name.trim() : meta.title;
+  const rule: OvertimeRule = {
+    id: typeof item.id === "string" && item.id ? item.id : newOvertimeRuleId(),
+    name,
+    scope,
+    hoursBeforeOvertime: Math.max(0.5, Number(item.hoursBeforeOvertime) || meta.defaultHours),
+    wageMultiplier: Math.max(1, Number(item.wageMultiplier) || meta.defaultMultiplier),
+  };
+  const dayNumber = normalizeDayNumber(item.dayNumber, scope);
+  if (dayNumber !== undefined) rule.dayNumber = dayNumber;
+  const secondaryHours = normalizeSecondaryHours(item.secondaryHoursBeforeOvertime, scope);
+  if (secondaryHours !== undefined) rule.secondaryHoursBeforeOvertime = secondaryHours;
+  const secondaryMultiplier = normalizeSecondaryMultiplier(item.secondaryWageMultiplier, scope);
+  if (secondaryMultiplier !== undefined) rule.secondaryWageMultiplier = secondaryMultiplier;
+  return rule;
+}
+
+/** 旧版固定四类卡片 → 仅迁移当时 enabled 的项；全新格式保留列表（可为空） */
+function normalizeOvertimeRules(raw: unknown): OvertimeRule[] {
+  if (!Array.isArray(raw)) return [];
+
+  const legacy =
+    raw.length > 0 &&
+    raw.every(
+      (r) =>
+        r != null &&
+        typeof r === "object" &&
+        "type" in r &&
+        "enabled" in r &&
+        !("name" in r && typeof (r as { name?: unknown }).name === "string"),
+    );
+
+  if (legacy) {
+    return raw
+      .map((r) => buildOvertimeRuleFromRaw(r as Partial<OvertimeRule> & { type?: unknown; enabled?: unknown }, true))
+      .filter((r): r is OvertimeRule => r != null);
+  }
+
+  return raw
+    .map((r) =>
+      r && typeof r === "object"
+        ? buildOvertimeRuleFromRaw(r as Partial<OvertimeRule> & { type?: unknown })
+        : null,
+    )
+    .filter((r): r is OvertimeRule => r != null);
+}
+
 function normalizeConfig(raw: Partial<BreaksOvertimeConfig> | null): BreaksOvertimeConfig {
-  const base = { ...DEFAULT_CONFIG, ...raw };
   const presets = (arr: unknown, fallback: number[]) =>
     Array.isArray(arr) ? arr.map((n) => Math.max(1, Math.round(Number(n)) || 1)).filter((n) => n > 0) : fallback;
 
-  const customBreaks: CustomBreak[] = Array.isArray(raw?.customBreaks)
+  const customBreaksRaw: CustomBreak[] = Array.isArray(raw?.customBreaks)
     ? raw!.customBreaks!
-        .map((b): CustomBreak => ({
-          id: typeof b.id === "string" ? b.id : newBreakId(),
-          name: typeof b.name === "string" && b.name.trim() ? b.name.trim() : "未命名休息",
-          durationMinutes: Math.max(1, Math.round(Number(b.durationMinutes)) || 10),
-          compensation: b.compensation === "paid" ? "paid" : "unpaid",
-          mandatory: !!b.mandatory,
-        }))
+        .map((b): CustomBreak => {
+          const id = typeof b.id === "string" && b.id ? b.id : newBreakId();
+          const lockedName = SYSTEM_CUSTOM_BREAK_NAME_BY_ID[id];
+          return {
+            id,
+            name: lockedName
+              ? lockedName
+              : typeof b.name === "string" && b.name.trim()
+                ? b.name.trim()
+                : "未命名休息",
+            durationMinutes: Math.max(1, Math.round(Number(b.durationMinutes)) || 10),
+            compensation: b.compensation === "paid" ? "paid" : "unpaid",
+            mandatory: !!b.mandatory,
+          };
+        })
         .filter((b) => b.name)
     : DEFAULT_CONFIG.customBreaks.map((b) => ({ ...b }));
-
-  const overtimeRules: OvertimeRule[] = (["daily", "daily-double", "weekly", "seventh-day"] as OvertimeRuleType[]).map(
-    (type) => {
-      const found = Array.isArray(raw?.overtimeRules)
-        ? raw!.overtimeRules!.find((r) => r.type === type)
-        : undefined;
-      const meta = OVERTIME_RULE_META[type];
-      return {
-        type,
-        enabled: found ? !!found.enabled : type === "daily" || type === "weekly",
-        hoursBeforeOvertime: Math.max(
-          0.5,
-          Number(found?.hoursBeforeOvertime) || meta.defaultHours,
-        ),
-        wageMultiplier: Math.max(1, Number(found?.wageMultiplier) || meta.defaultMultiplier),
-      };
-    },
-  );
 
   return {
     unpaidPresets: presets(raw?.unpaidPresets, DEFAULT_CONFIG.unpaidPresets),
     paidPresets: presets(raw?.paidPresets, DEFAULT_CONFIG.paidPresets),
-    customBreaks: customBreaks.length > 0 ? customBreaks : DEFAULT_CONFIG.customBreaks.map((b) => ({ ...b })),
+    customBreaks: ensureSystemCustomBreaks(
+      customBreaksRaw.length > 0 ? customBreaksRaw : DEFAULT_CONFIG.customBreaks.map((b) => ({ ...b })),
+    ),
     blockEarlyEnd: raw?.blockEarlyEnd !== undefined ? !!raw.blockEarlyEnd : DEFAULT_CONFIG.blockEarlyEnd,
     convertExcessPaidToUnpaid:
       raw?.convertExcessPaidToUnpaid !== undefined
@@ -209,7 +382,7 @@ function normalizeConfig(raw: Partial<BreaksOvertimeConfig> | null): BreaksOvert
       typeof raw?.workWeekStartDay === "number" && raw.workWeekStartDay >= 0 && raw.workWeekStartDay <= 6
         ? raw.workWeekStartDay
         : DEFAULT_CONFIG.workWeekStartDay,
-    overtimeRules,
+    overtimeRules: normalizeOvertimeRules(raw?.overtimeRules),
   };
 }
 
@@ -243,6 +416,8 @@ function getDraft(): BreaksOvertimeConfig {
 
 function resetDraft(): void {
   draftConfig = null;
+  overtimeRuleEditor = null;
+  customBreakEditor = null;
 }
 
 const FORM_INPUT =
@@ -253,75 +428,195 @@ const SECTION_CARD =
 const SECTION_TITLE = "text-sm font-semibold text-foreground";
 const SECTION_DESC = "mt-1 text-xs text-muted-foreground";
 
-function renderPresetChips(presets: number[], compensation: BreakCompensation): string {
-  if (presets.length === 0) {
-    return `<p class="text-xs text-muted-foreground">暂无预设，可在下方添加。</p>`;
-  }
-  return presets
-    .map(
-      (min) => `
-    <span class="inline-flex items-center gap-1 rounded-full border border-border bg-muted/40 px-2.5 py-1 text-xs tabular-nums">
-      ${min} 分钟
-      <button type="button" data-break-preset-remove="${compensation}" data-break-preset-minutes="${min}" class="rounded-full px-0.5 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="移除 ${min} 分钟">×</button>
-    </span>`,
-    )
-    .join("");
+function renderCustomBreakDialog(config: BreaksOvertimeConfig): string {
+  if (!customBreakEditor) return "";
+  const editor = customBreakEditor;
+  const editing =
+    editor.mode === "edit" ? config.customBreaks.find((b) => b.id === editor.id) : undefined;
+  const title = editor.mode === "edit" ? "编辑休息" : "添加休息";
+  const systemLocked = editor.mode === "edit" && editing ? isSystemCustomBreak(editing.id) : false;
+  const name = systemLocked
+    ? (SYSTEM_CUSTOM_BREAK_NAME_BY_ID[editing!.id] ?? editing!.name)
+    : (editing?.name ?? "");
+  const durationMinutes = editing?.durationMinutes ?? 15;
+  const compensation: BreakCompensation = editing?.compensation ?? "unpaid";
+  const mandatory = editing?.mandatory ?? false;
+  const unpaidSel = compensation === "unpaid" ? " selected" : "";
+  const paidSel = compensation === "paid" ? " selected" : "";
+  const nameReadonly = systemLocked
+    ? ` readonly class="${FORM_INPUT} cursor-not-allowed bg-muted/50 text-muted-foreground"`
+    : ` class="${FORM_INPUT}" placeholder="如：用餐休息" maxlength="40"`;
+
+  return `
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4" data-custom-break-dialog role="dialog" aria-modal="true" aria-labelledby="custom-break-dialog-title">
+      <button type="button" class="absolute inset-0 bg-black/40" data-custom-break-backdrop aria-label="关闭"></button>
+      <div class="relative z-10 w-full max-w-md rounded-xl border border-border bg-card p-5 shadow-lg">
+        <h2 id="custom-break-dialog-title" class="text-base font-semibold">${escapeHtml(title)}</h2>
+        <div class="mt-4 space-y-3">
+          <label class="block text-sm">
+            <span class="mb-1 block text-xs text-muted-foreground">休息名称${systemLocked ? "（系统默认，不可修改）" : ""}</span>
+            <input type="text" value="${escapeHtml(name)}" data-custom-break-dialog-name${nameReadonly} />
+          </label>
+          <label class="block text-sm">
+            <span class="mb-1 block text-xs text-muted-foreground">时长（分钟）</span>
+            <input type="number" min="1" step="1" value="${durationMinutes}" data-custom-break-dialog-duration class="${FORM_INPUT} tabular-nums" />
+          </label>
+          <label class="block text-sm">
+            <span class="mb-1 block text-xs text-muted-foreground">补偿</span>
+            <select data-custom-break-dialog-compensation class="${FORM_SELECT}">
+              <option value="unpaid"${unpaidSel}>无薪</option>
+              <option value="paid"${paidSel}>带薪</option>
+            </select>
+          </label>
+          <label class="flex cursor-pointer items-center gap-2 text-sm">
+            <input type="checkbox" data-custom-break-dialog-mandatory class="size-4 accent-primary"${mandatory ? " checked" : ""} />
+            <span>强制休息</span>
+            <span class="text-xs text-muted-foreground">（未休息时触发合规提醒）</span>
+          </label>
+        </div>
+        <div class="mt-5 flex justify-end gap-2">
+          <button type="button" data-custom-break-cancel class="rounded-md border border-border px-4 py-2 text-sm hover:bg-muted">取消</button>
+          <button type="button" data-custom-break-save class="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">保存</button>
+        </div>
+      </div>
+    </div>`;
 }
 
 function renderCustomBreakRow(b: CustomBreak): string {
-  const paidSel = b.compensation === "paid" ? " selected" : "";
-  const unpaidSel = b.compensation === "unpaid" ? " selected" : "";
+  const system = isSystemCustomBreak(b.id);
+  const name = system ? (SYSTEM_CUSTOM_BREAK_NAME_BY_ID[b.id] ?? b.name) : b.name;
+  const compensationLabel = b.compensation === "paid" ? "带薪" : "无薪";
+  const mandatoryLabel = b.mandatory ? "是" : "否";
+  const deleteBtn = system
+    ? `<span class="text-xs text-muted-foreground">系统默认</span>`
+    : `<button type="button" data-custom-break-remove="${escapeHtml(b.id)}" class="text-xs text-destructive hover:underline">删除</button>`;
   return `
     <tr class="border-b border-border/60" data-custom-break-row="${escapeHtml(b.id)}">
-      <td class="px-2 py-2">
-        <input type="text" value="${escapeHtml(b.name)}" data-custom-break-name class="${FORM_INPUT} min-w-[7rem]" placeholder="休息名称" />
+      <td class="px-2 py-2 font-medium text-foreground">
+        ${escapeHtml(name)}
+        ${system ? '<span class="ml-1 text-[10px] text-muted-foreground">系统</span>' : ""}
       </td>
-      <td class="px-2 py-2">
-        <div class="relative max-w-[6rem]">
-          <input type="number" min="1" step="1" value="${b.durationMinutes}" data-custom-break-duration class="${FORM_INPUT} pr-10 tabular-nums" />
-          <span class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">分</span>
-        </div>
-      </td>
-      <td class="px-2 py-2">
-        <select data-custom-break-compensation class="${FORM_SELECT} max-w-[6.5rem]">
-          <option value="unpaid"${unpaidSel}>无薪</option>
-          <option value="paid"${paidSel}>带薪</option>
-        </select>
-      </td>
-      <td class="px-2 py-2 text-center">
-        <input type="checkbox" data-custom-break-mandatory class="size-4 accent-primary"${b.mandatory ? " checked" : ""} title="强制休息：未休息时触发合规提醒" />
-      </td>
+      <td class="px-2 py-2 tabular-nums text-muted-foreground">${b.durationMinutes} 分</td>
+      <td class="px-2 py-2 text-muted-foreground">${compensationLabel}</td>
+      <td class="px-2 py-2 text-center text-muted-foreground">${mandatoryLabel}</td>
       <td class="px-2 py-2 text-right">
-        <button type="button" data-custom-break-remove="${escapeHtml(b.id)}" class="text-xs text-destructive hover:underline">删除</button>
+        <button type="button" data-custom-break-edit="${escapeHtml(b.id)}" class="mr-2 text-xs text-primary hover:underline">编辑</button>
+        ${deleteBtn}
       </td>
     </tr>`;
 }
 
-function renderOvertimeRuleCard(rule: OvertimeRule): string {
-  const meta = OVERTIME_RULE_META[rule.type];
-  const disabledCls = rule.enabled ? "" : " opacity-60";
+function renderOvertimeRuleRow(rule: OvertimeRule): string {
+  const scopeLabel = formatOvertimeScopeLabel(rule);
   return `
-    <div class="rounded-lg border border-border/80 p-4${disabledCls}" data-overtime-rule="${rule.type}">
-      <div class="flex flex-wrap items-start justify-between gap-3">
-        <div class="min-w-0 flex-1">
-          <label class="flex cursor-pointer items-center gap-2">
-            <input type="checkbox" data-overtime-enabled class="size-4 accent-primary"${rule.enabled ? " checked" : ""} />
-            <span class="text-sm font-medium text-foreground">${escapeHtml(meta.title)}</span>
+    <tr class="border-b border-border/60" data-overtime-rule-row="${escapeHtml(rule.id)}">
+      <td class="px-2 py-2 font-medium text-foreground">${escapeHtml(rule.name)}</td>
+      <td class="px-2 py-2 text-muted-foreground">${escapeHtml(scopeLabel)}</td>
+      <td class="px-2 py-2 tabular-nums">${escapeHtml(formatOvertimeHoursLabel(rule))}</td>
+      <td class="px-2 py-2 tabular-nums">${escapeHtml(formatOvertimeMultiplierLabel(rule))}</td>
+      <td class="px-2 py-2 text-right">
+        <button type="button" data-overtime-rule-edit="${escapeHtml(rule.id)}" class="mr-2 text-xs text-primary hover:underline">编辑</button>
+        <button type="button" data-overtime-rule-remove="${escapeHtml(rule.id)}" class="text-xs text-destructive hover:underline">删除</button>
+      </td>
+    </tr>`;
+}
+
+function renderOvertimeRuleDialog(config: BreaksOvertimeConfig): string {
+  if (!overtimeRuleEditor) return "";
+  const editor = overtimeRuleEditor;
+  const editing =
+    editor.mode === "edit" ? config.overtimeRules.find((r) => r.id === editor.id) : undefined;
+  const availableScopes = getAvailableOvertimeScopes(
+    config.overtimeRules,
+    editor.mode === "edit" ? editor.id : undefined,
+  );
+  if (availableScopes.length === 0) return "";
+
+  const title = editor.mode === "edit" ? "编辑加班规则" : "新增加班规则";
+  const scope: OvertimeScope =
+    editing && availableScopes.includes(editing.scope)
+      ? editing.scope
+      : availableScopes[0]!;
+  const name = editing?.name ?? "";
+  const isNthDay = scope === "nth-day";
+  const hours =
+    editing?.hoursBeforeOvertime ??
+    (isNthDay ? DEFAULT_NTH_DAY_TIER1.hours : OVERTIME_SCOPE_META[scope].defaultHours);
+  const multiplier =
+    editing?.wageMultiplier ??
+    (isNthDay ? DEFAULT_NTH_DAY_TIER1.multiplier : OVERTIME_SCOPE_META[scope].defaultMultiplier);
+  const hours2 = editing?.secondaryHoursBeforeOvertime ?? DEFAULT_NTH_DAY_TIER2.hours;
+  const multiplier2 = editing?.secondaryWageMultiplier ?? DEFAULT_NTH_DAY_TIER2.multiplier;
+  const dayNumber = editing?.dayNumber ?? DEFAULT_NTH_DAY;
+  const scopeOpts = availableScopes
+    .map((s) => {
+      const selected = s === scope ? " selected" : "";
+      return `<option value="${s}"${selected}>${escapeHtml(OVERTIME_SCOPE_META[s].title)}</option>`;
+    })
+    .join("");
+  const scopeDesc = OVERTIME_SCOPE_META[scope].desc;
+
+  return `
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4" data-overtime-rule-dialog role="dialog" aria-modal="true" aria-labelledby="overtime-rule-dialog-title">
+      <button type="button" class="absolute inset-0 bg-black/40" data-overtime-rule-backdrop aria-label="关闭"></button>
+      <div class="relative z-10 w-full max-w-md rounded-xl border border-border bg-card p-5 shadow-lg">
+        <h2 id="overtime-rule-dialog-title" class="text-base font-semibold">${escapeHtml(title)}</h2>
+        <div class="mt-4 space-y-3">
+          <label class="block text-sm">
+            <span class="mb-1 block text-xs text-muted-foreground">名称</span>
+            <input type="text" value="${escapeHtml(name)}" data-overtime-dialog-name class="${FORM_INPUT}" placeholder="如：平日加班" maxlength="40" />
           </label>
-          <p class="mt-1 text-xs text-muted-foreground">${escapeHtml(meta.desc)}</p>
-        </div>
-      </div>
-      <div class="mt-3 grid gap-3 sm:grid-cols-2">
-        <div>
-          <label class="mb-1 block text-xs text-muted-foreground">工时超过（小时）</label>
-          <input type="number" min="0.5" step="0.5" value="${rule.hoursBeforeOvertime}" data-overtime-hours class="${FORM_INPUT} max-w-xs tabular-nums"${rule.enabled ? "" : " disabled"} />
-        </div>
-        <div>
-          <label class="mb-1 block text-xs text-muted-foreground">工资倍率</label>
-          <div class="relative max-w-xs">
-            <input type="number" min="1" step="0.1" value="${rule.wageMultiplier}" data-overtime-multiplier class="${FORM_INPUT} pr-8 tabular-nums"${rule.enabled ? "" : " disabled"} />
-            <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">×</span>
+          <label class="block text-sm">
+            <span class="mb-1 block text-xs text-muted-foreground">计算口径</span>
+            <select data-overtime-dialog-scope class="${FORM_SELECT}">${scopeOpts}</select>
+            <p class="mt-1 text-xs text-muted-foreground" data-overtime-dialog-scope-desc>${escapeHtml(scopeDesc)}</p>
+          </label>
+          <label class="block text-sm${isNthDay ? "" : " hidden"}" data-overtime-dialog-day-wrap>
+            <span class="mb-1 block text-xs text-muted-foreground">天数 N</span>
+            <div class="relative max-w-[10rem]">
+              <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">第</span>
+              <input type="number" min="1" max="365" step="1" value="${dayNumber}" data-overtime-dialog-day class="${FORM_INPUT} px-8 tabular-nums" />
+              <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">天</span>
+            </div>
+          </label>
+          <div class="space-y-3" data-overtime-dialog-tiers>
+            <div class="rounded-lg border border-border/70 p-3" data-overtime-dialog-tier="1">
+              <p class="mb-2 text-xs font-medium text-muted-foreground" data-overtime-dialog-tier1-label>${isNthDay ? "档位 1" : "加班阈值"}</p>
+              <div class="grid gap-3 sm:grid-cols-2">
+                <label class="block text-sm">
+                  <span class="mb-1 block text-xs text-muted-foreground">工时超过（小时）</span>
+                  <input type="number" min="0.5" step="0.5" value="${hours}" data-overtime-dialog-hours class="${FORM_INPUT} tabular-nums" />
+                </label>
+                <label class="block text-sm">
+                  <span class="mb-1 block text-xs text-muted-foreground">工资倍率</span>
+                  <div class="relative">
+                    <input type="number" min="1" step="0.1" value="${multiplier}" data-overtime-dialog-multiplier class="${FORM_INPUT} pr-8 tabular-nums" />
+                    <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">×</span>
+                  </div>
+                </label>
+              </div>
+            </div>
+            <div class="rounded-lg border border-border/70 p-3${isNthDay ? "" : " hidden"}" data-overtime-dialog-tier="2">
+              <p class="mb-2 text-xs font-medium text-muted-foreground">档位 2</p>
+              <div class="grid gap-3 sm:grid-cols-2">
+                <label class="block text-sm">
+                  <span class="mb-1 block text-xs text-muted-foreground">工时超过（小时）</span>
+                  <input type="number" min="0.5" step="0.5" value="${hours2}" data-overtime-dialog-hours-2 class="${FORM_INPUT} tabular-nums" />
+                </label>
+                <label class="block text-sm">
+                  <span class="mb-1 block text-xs text-muted-foreground">工资倍率</span>
+                  <div class="relative">
+                    <input type="number" min="1" step="0.1" value="${multiplier2}" data-overtime-dialog-multiplier-2 class="${FORM_INPUT} pr-8 tabular-nums" />
+                    <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">×</span>
+                  </div>
+                </label>
+              </div>
+            </div>
           </div>
+        </div>
+        <div class="mt-5 flex justify-end gap-2">
+          <button type="button" data-overtime-rule-cancel class="rounded-md border border-border px-4 py-2 text-sm hover:bg-muted">取消</button>
+          <button type="button" data-overtime-rule-save class="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">保存</button>
         </div>
       </div>
     </div>`;
@@ -339,34 +634,6 @@ function renderSectionShell(sectionKey: string, title: string, desc: string, bod
       <p class="${SECTION_DESC}">${escapeHtml(desc)}</p>
       ${bodyHtml}
     </section>`;
-}
-
-function renderDefaultBreaksSection(config: BreaksOvertimeConfig): string {
-  const body = `
-      <div class="mt-4 space-y-4">
-        <div>
-          <p class="mb-2 text-xs font-medium text-muted-foreground">无薪休息</p>
-          <div class="flex flex-wrap gap-2" data-break-unpaid-presets>${renderPresetChips(config.unpaidPresets, "unpaid")}</div>
-          <div class="mt-2 flex max-w-xs items-center gap-2">
-            <input type="number" min="1" step="1" placeholder="分钟" data-break-unpaid-add class="${FORM_INPUT} tabular-nums" />
-            <button type="button" data-break-unpaid-add-btn class="shrink-0 rounded-md border border-border px-3 py-2 text-xs hover:bg-muted">添加</button>
-          </div>
-        </div>
-        <div>
-          <p class="mb-2 text-xs font-medium text-muted-foreground">带薪休息</p>
-          <div class="flex flex-wrap gap-2" data-break-paid-presets>${renderPresetChips(config.paidPresets, "paid")}</div>
-          <div class="mt-2 flex max-w-xs items-center gap-2">
-            <input type="number" min="1" step="1" placeholder="分钟" data-break-paid-add class="${FORM_INPUT} tabular-nums" />
-            <button type="button" data-break-paid-add-btn class="shrink-0 rounded-md border border-border px-3 py-2 text-xs hover:bg-muted">添加</button>
-          </div>
-        </div>
-      </div>`;
-  return renderSectionShell(
-    "default-breaks",
-    "默认休息选项",
-    "设置常用休息时长预设，排班与打卡时可快速选用。",
-    body,
-  );
 }
 
 function renderCustomBreaksSection(config: BreaksOvertimeConfig): string {
@@ -392,7 +659,7 @@ function renderCustomBreaksSection(config: BreaksOvertimeConfig): string {
   return renderSectionShell(
     "custom-breaks",
     "自定义休息",
-    "与默认预设一并生效；可标记为强制休息以启用合规提醒。",
+    "「用餐休息」「短休」为系统默认（名称不可改）；可通过弹窗修改时长、补偿与是否强制。新增休息同样使用弹窗。",
     body,
   );
 }
@@ -436,12 +703,37 @@ function renderWorkWeekSection(config: BreaksOvertimeConfig): string {
 }
 
 function renderOvertimeRulesSection(config: BreaksOvertimeConfig): string {
-  const ruleCards = config.overtimeRules.map(renderOvertimeRuleCard).join("");
-  const body = `<div class="mt-4 space-y-3">${ruleCards}</div>`;
+  const rows = config.overtimeRules.map(renderOvertimeRuleRow).join("");
+  const canAdd = getAvailableOvertimeScopes(config.overtimeRules).length > 0;
+  const listBody =
+    config.overtimeRules.length === 0
+      ? `<p class="mt-4 text-sm text-muted-foreground">暂无加班规则，点击下方按钮新增。</p>`
+      : `<div class="mt-3 overflow-x-auto">
+        <table class="w-full min-w-[32rem] text-left text-sm">
+          <thead>
+            <tr class="border-b border-border text-xs text-muted-foreground">
+              <th class="px-2 py-2 font-medium">名称</th>
+              <th class="px-2 py-2 font-medium">计算口径</th>
+              <th class="px-2 py-2 font-medium">工时超过（小时）</th>
+              <th class="px-2 py-2 font-medium">工资倍率</th>
+              <th class="px-2 py-2 text-right font-medium">操作</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+  const addBtn = canAdd
+    ? `<button type="button" data-overtime-rule-add class="rounded-md border border-dashed border-border px-3 py-1.5 text-xs font-medium text-primary hover:bg-muted/50">+ 新增加班规则</button>`
+    : `<button type="button" disabled class="cursor-not-allowed rounded-md border border-dashed border-border px-3 py-1.5 text-xs font-medium text-muted-foreground opacity-60" title="四种计算口径均已配置">+ 新增加班规则</button>`;
+  const body = `
+      ${listBody}
+      <div class="mt-3 flex flex-wrap items-center justify-end gap-2">
+        ${addBtn}
+      </div>`;
   return renderSectionShell(
     "overtime-rules",
     "加班规则",
-    "请根据当地劳动法配置每日/每周加班阈值与工资倍率；保存后用于考勤与薪资核算。",
+    "请根据当地劳动法配置每日/每周加班阈值与工资倍率；每种计算口径仅可配置一条规则。",
     body,
   );
 }
@@ -500,7 +792,6 @@ function renderBreaksOvertimeSubnav(activeKey: string, hasGlobalRules: boolean):
 function renderBreaksOvertimeMainContent(config: BreaksOvertimeConfig, globalRulesRowsHtml: string): string {
   return `
     <div class="breaks-overtime-scroll-host module-settings-scroll-host min-w-0 min-h-0 flex-1 space-y-4 overflow-y-auto">
-      ${renderDefaultBreaksSection(config)}
       ${renderCustomBreaksSection(config)}
       ${renderBreakRulesSection(config)}
       ${renderWorkWeekSection(config)}
@@ -530,74 +821,31 @@ export function renderTeamBreaksOvertimePage(globalRulesRowsHtml = "", path?: st
   const navGroups = getBreaksOvertimeNavGroups(hasGlobalRules);
   const validKeys = navGroups.flatMap((g) => g.items.map((i) => i.key));
   if (!validKeys.includes(activeBreaksNavKey)) {
-    activeBreaksNavKey = validKeys[0] ?? "default-breaks";
+    activeBreaksNavKey = validKeys[0] ?? "custom-breaks";
   }
 
   return `
-    <div class="team-breaks-overtime-page flex min-h-0 flex-1 flex-col gap-4" data-team-breaks-overtime-page data-breaks-view="full">
+    <div class="team-breaks-overtime-page flex min-h-0 flex-1 flex-col overflow-hidden" data-team-breaks-overtime-page data-breaks-view="full">
       <div class="flex min-h-0 flex-1 flex-col gap-6 overflow-hidden sm:flex-row sm:items-stretch">
         ${renderBreaksOvertimeSubnav(activeBreaksNavKey, hasGlobalRules)}
         ${renderBreaksOvertimeMainContent(config, globalRulesRowsHtml)}
       </div>
+      ${renderCustomBreakDialog(config)}
+      ${renderOvertimeRuleDialog(config)}
     </div>`;
 }
 
-function collectPresetsFromDom(root: HTMLElement, compensation: BreakCompensation): number[] {
-  const container = root.querySelector<HTMLElement>(
-    compensation === "paid" ? "[data-break-paid-presets]" : "[data-break-unpaid-presets]",
-  );
-  if (!container) return compensation === "paid" ? getDraft().paidPresets : getDraft().unpaidPresets;
-  const mins: number[] = [];
-  container.querySelectorAll<HTMLElement>("[data-break-preset-minutes]").forEach((el) => {
-    const n = Number(el.getAttribute("data-break-preset-minutes"));
-    if (n > 0) mins.push(Math.round(n));
-  });
-  return [...new Set(mins)].sort((a, b) => a - b);
-}
-
-function collectCustomBreaksFromDom(root: HTMLElement): CustomBreak[] {
-  const rows: CustomBreak[] = [];
-  root.querySelectorAll<HTMLElement>("[data-custom-break-row]").forEach((row) => {
-    const id = row.getAttribute("data-custom-break-row") ?? newBreakId();
-    const name = row.querySelector<HTMLInputElement>("[data-custom-break-name]")?.value.trim() ?? "";
-    const durationMinutes = Math.max(
-      1,
-      Number(row.querySelector<HTMLInputElement>("[data-custom-break-duration]")?.value) || 10,
-    );
-    const compensation =
-      row.querySelector<HTMLSelectElement>("[data-custom-break-compensation]")?.value === "paid"
-        ? "paid"
-        : "unpaid";
-    const mandatory = row.querySelector<HTMLInputElement>("[data-custom-break-mandatory]")?.checked ?? false;
-    if (name) rows.push({ id, name, durationMinutes, compensation, mandatory });
-  });
-  return rows;
-}
-
-function collectOvertimeRulesFromDom(root: HTMLElement): OvertimeRule[] {
-  return (["daily", "daily-double", "weekly", "seventh-day"] as OvertimeRuleType[]).map((type) => {
-    const card = root.querySelector<HTMLElement>(`[data-overtime-rule="${type}"]`);
-    const enabled = card?.querySelector<HTMLInputElement>("[data-overtime-enabled]")?.checked ?? false;
-    const hoursBeforeOvertime = Math.max(
-      0.5,
-      Number(card?.querySelector<HTMLInputElement>("[data-overtime-hours]")?.value) ||
-        OVERTIME_RULE_META[type].defaultHours,
-    );
-    const wageMultiplier = Math.max(
-      1,
-      Number(card?.querySelector<HTMLInputElement>("[data-overtime-multiplier]")?.value) ||
-        OVERTIME_RULE_META[type].defaultMultiplier,
-    );
-    return { type, enabled, hoursBeforeOvertime, wageMultiplier };
-  });
+function collectCustomBreaksFromDom(_root: HTMLElement): CustomBreak[] {
+  /** 列表只读展示，数据以草稿为准（弹窗保存时写入 draft） */
+  return ensureSystemCustomBreaks(getDraft().customBreaks.map((b) => ({ ...b })));
 }
 
 function collectConfigFromDom(root: HTMLElement): BreaksOvertimeConfig {
   const view = root.getAttribute("data-breaks-view") ?? "full";
   const current = getDraft();
   return normalizeConfig({
-    unpaidPresets: view === "full" ? collectPresetsFromDom(root, "unpaid") : current.unpaidPresets,
-    paidPresets: view === "full" ? collectPresetsFromDom(root, "paid") : current.paidPresets,
+    unpaidPresets: current.unpaidPresets,
+    paidPresets: current.paidPresets,
     customBreaks: view === "full" ? collectCustomBreaksFromDom(root) : current.customBreaks,
     blockEarlyEnd:
       view === "full"
@@ -609,46 +857,8 @@ function collectConfigFromDom(root: HTMLElement): BreaksOvertimeConfig {
           current.convertExcessPaidToUnpaid)
         : current.convertExcessPaidToUnpaid,
     workWeekStartDay: Number(root.querySelector<HTMLSelectElement>("[data-overtime-week-start]")?.value) || 1,
-    overtimeRules: collectOvertimeRulesFromDom(root),
-  });
-}
-
-function syncOvertimeRuleDisabled(card: HTMLElement): void {
-  const enabled = card.querySelector<HTMLInputElement>("[data-overtime-enabled]")?.checked ?? false;
-  card.classList.toggle("opacity-60", !enabled);
-  card.querySelectorAll<HTMLInputElement>("[data-overtime-hours], [data-overtime-multiplier]").forEach((input) => {
-    input.disabled = !enabled;
-  });
-}
-
-function addPresetMinutes(root: HTMLElement, compensation: BreakCompensation, minutes: number): void {
-  const config = collectConfigFromDom(root);
-  const key = compensation === "paid" ? "paidPresets" : "unpaidPresets";
-  if (config[key].includes(minutes)) return;
-  config[key] = [...config[key], minutes].sort((a, b) => a - b);
-  draftConfig = config;
-}
-
-function bindPresetAdd(root: HTMLElement, compensation: BreakCompensation, remount: () => void): void {
-  const inputSel = compensation === "paid" ? "[data-break-paid-add]" : "[data-break-unpaid-add]";
-  const btnSel = compensation === "paid" ? "[data-break-paid-add-btn]" : "[data-break-unpaid-add-btn]";
-  const tryAdd = () => {
-    const input = root.querySelector<HTMLInputElement>(inputSel);
-    const minutes = Math.max(1, Math.round(Number(input?.value) || 0));
-    if (!minutes) {
-      input?.focus();
-      return;
-    }
-    addPresetMinutes(root, compensation, minutes);
-    if (input) input.value = "";
-    remount();
-  };
-  root.querySelector(btnSel)?.addEventListener("click", tryAdd);
-  root.querySelector<HTMLInputElement>(inputSel)?.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      tryAdd();
-    }
+    /** 加班规则仅通过弹窗维护，列表只读展示 */
+    overtimeRules: current.overtimeRules,
   });
 }
 
@@ -740,70 +950,256 @@ export function bindTeamBreaksOvertimeUi(remount: () => void): void {
     requestAnimationFrame(() => scrollToBreaksOvertimeSection(root, sectionKey));
   }
 
-  bindPresetAdd(root, "unpaid", remount);
-  bindPresetAdd(root, "paid", remount);
-
-  root.querySelectorAll("[data-break-preset-remove]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const compensation = btn.getAttribute("data-break-preset-remove") as BreakCompensation;
-      const minutes = Number(btn.getAttribute("data-break-preset-minutes"));
-      const config = collectConfigFromDom(root);
-      const key = compensation === "paid" ? "paidPresets" : "unpaidPresets";
-      config[key] = config[key].filter((m) => m !== minutes);
-      draftConfig = config;
-      remount();
-    });
+  root.querySelector("[data-custom-break-add]")?.addEventListener("click", () => {
+    draftConfig = collectConfigFromDom(root);
+    customBreakEditor = { mode: "create" };
+    remount();
   });
 
-  root.querySelector("[data-custom-break-add]")?.addEventListener("click", () => {
-    const config = collectConfigFromDom(root);
-    const newBreak: CustomBreak = {
-      id: newBreakId(),
-      name: "新休息",
-      durationMinutes: 15,
-      compensation: "unpaid",
-      mandatory: false,
-    };
-    config.customBreaks = [...config.customBreaks, newBreak];
-    draftConfig = config;
-    remount();
+  root.querySelectorAll("[data-custom-break-edit]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const id = btn.getAttribute("data-custom-break-edit");
+      if (!id) return;
+      draftConfig = collectConfigFromDom(root);
+      customBreakEditor = { mode: "edit", id };
+      remount();
+    });
   });
 
   root.querySelectorAll("[data-custom-break-remove]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const id = btn.getAttribute("data-custom-break-remove");
-      if (!id) return;
+      if (!id || isSystemCustomBreak(id)) return;
       const config = collectConfigFromDom(root);
-      config.customBreaks = config.customBreaks.filter((b) => b.id !== id);
-      if (config.customBreaks.length === 0) {
-        config.customBreaks = [{ id: newBreakId(), name: "短休", durationMinutes: 10, compensation: "paid", mandatory: false }];
-      }
+      config.customBreaks = ensureSystemCustomBreaks(
+        config.customBreaks.filter((b) => b.id !== id),
+      );
       draftConfig = config;
+      markBreaksOvertimeDirty();
       remount();
     });
   });
 
-  root.querySelectorAll<HTMLElement>("[data-overtime-rule]").forEach((card) => {
-    card.querySelector("[data-overtime-enabled]")?.addEventListener("change", () => {
-      syncOvertimeRuleDisabled(card);
-    });
-    syncOvertimeRuleDisabled(card);
-  });
+  bindCustomBreakDialog(root, remount);
+  bindOvertimeRulesUi(root, remount);
 
   root.addEventListener("input", () => {
-    window.dispatchEvent(
-      new CustomEvent("menusifu:page-settings-dirty", {
-        detail: { pageKey: TEAM_BREAKS_OVERTIME_PATH },
-      }),
-    );
+    markBreaksOvertimeDirty();
   });
   root.addEventListener("change", () => {
-    window.dispatchEvent(
-      new CustomEvent("menusifu:page-settings-dirty", {
-        detail: { pageKey: TEAM_BREAKS_OVERTIME_PATH },
-      }),
-    );
+    markBreaksOvertimeDirty();
   });
+}
+
+function closeCustomBreakDialog(remount: () => void): void {
+  customBreakEditor = null;
+  remount();
+}
+
+function bindCustomBreakDialog(root: HTMLElement, remount: () => void): void {
+  const dialog = root.querySelector<HTMLElement>("[data-custom-break-dialog]");
+  if (!dialog) return;
+
+  const close = () => closeCustomBreakDialog(remount);
+  dialog.querySelector("[data-custom-break-backdrop]")?.addEventListener("click", close);
+  dialog.querySelector("[data-custom-break-cancel]")?.addEventListener("click", close);
+
+  const nameInput = dialog.querySelector<HTMLInputElement>("[data-custom-break-dialog-name]");
+  const durationInput = dialog.querySelector<HTMLInputElement>("[data-custom-break-dialog-duration]");
+  const compensationSelect = dialog.querySelector<HTMLSelectElement>("[data-custom-break-dialog-compensation]");
+  const mandatoryInput = dialog.querySelector<HTMLInputElement>("[data-custom-break-dialog-mandatory]");
+
+  dialog.querySelector("[data-custom-break-save]")?.addEventListener("click", () => {
+    if (!customBreakEditor) return;
+    const config = collectConfigFromDom(root);
+    const editingId = customBreakEditor.mode === "edit" ? customBreakEditor.id : null;
+    const systemLocked = editingId ? isSystemCustomBreak(editingId) : false;
+    const lockedName = editingId ? SYSTEM_CUSTOM_BREAK_NAME_BY_ID[editingId] : undefined;
+    const name = systemLocked
+      ? (lockedName ?? nameInput?.value.trim() ?? "")
+      : (nameInput?.value.trim() ?? "");
+    if (!name) {
+      nameInput?.focus();
+      return;
+    }
+    const durationMinutes = Math.max(1, Math.round(Number(durationInput?.value) || 15));
+    const compensation: BreakCompensation =
+      compensationSelect?.value === "paid" ? "paid" : "unpaid";
+    const mandatory = mandatoryInput?.checked ?? false;
+    const next: CustomBreak = {
+      id: editingId ?? newBreakId(),
+      name,
+      durationMinutes,
+      compensation,
+      mandatory,
+    };
+
+    if (customBreakEditor.mode === "edit") {
+      config.customBreaks = ensureSystemCustomBreaks(
+        config.customBreaks.map((b) => (b.id === next.id ? next : b)),
+      );
+    } else {
+      config.customBreaks = ensureSystemCustomBreaks([...config.customBreaks, next]);
+    }
+
+    draftConfig = config;
+    customBreakEditor = null;
+    markBreaksOvertimeDirty();
+    remount();
+  });
+
+  requestAnimationFrame(() => {
+    if (nameInput && !nameInput.readOnly) nameInput.focus();
+    else durationInput?.focus();
+  });
+}
+
+function closeOvertimeRuleDialog(remount: () => void): void {
+  overtimeRuleEditor = null;
+  remount();
+}
+
+function bindOvertimeRulesUi(root: HTMLElement, remount: () => void): void {
+  root.querySelector("[data-overtime-rule-add]")?.addEventListener("click", () => {
+    draftConfig = collectConfigFromDom(root);
+    if (getAvailableOvertimeScopes(draftConfig.overtimeRules).length === 0) return;
+    overtimeRuleEditor = { mode: "create" };
+    remount();
+  });
+
+  root.querySelectorAll("[data-overtime-rule-edit]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const id = btn.getAttribute("data-overtime-rule-edit");
+      if (!id) return;
+      draftConfig = collectConfigFromDom(root);
+      overtimeRuleEditor = { mode: "edit", id };
+      remount();
+    });
+  });
+
+  root.querySelectorAll("[data-overtime-rule-remove]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const id = btn.getAttribute("data-overtime-rule-remove");
+      if (!id) return;
+      const config = collectConfigFromDom(root);
+      config.overtimeRules = config.overtimeRules.filter((r) => r.id !== id);
+      draftConfig = config;
+      markBreaksOvertimeDirty();
+      remount();
+    });
+  });
+
+  const dialog = root.querySelector<HTMLElement>("[data-overtime-rule-dialog]");
+  if (!dialog) return;
+
+  const close = () => closeOvertimeRuleDialog(remount);
+  dialog.querySelector("[data-overtime-rule-backdrop]")?.addEventListener("click", close);
+  dialog.querySelector("[data-overtime-rule-cancel]")?.addEventListener("click", close);
+
+  const scopeSelect = dialog.querySelector<HTMLSelectElement>("[data-overtime-dialog-scope]");
+  const scopeDesc = dialog.querySelector<HTMLElement>("[data-overtime-dialog-scope-desc]");
+  const dayWrap = dialog.querySelector<HTMLElement>("[data-overtime-dialog-day-wrap]");
+  const dayInput = dialog.querySelector<HTMLInputElement>("[data-overtime-dialog-day]");
+  const tier1Label = dialog.querySelector<HTMLElement>("[data-overtime-dialog-tier1-label]");
+  const tier2 = dialog.querySelector<HTMLElement>('[data-overtime-dialog-tier="2"]');
+  const hoursInput = dialog.querySelector<HTMLInputElement>("[data-overtime-dialog-hours]");
+  const multiplierInput = dialog.querySelector<HTMLInputElement>("[data-overtime-dialog-multiplier]");
+  const hours2Input = dialog.querySelector<HTMLInputElement>("[data-overtime-dialog-hours-2]");
+  const multiplier2Input = dialog.querySelector<HTMLInputElement>("[data-overtime-dialog-multiplier-2]");
+  const nameInput = dialog.querySelector<HTMLInputElement>("[data-overtime-dialog-name]");
+
+  const syncNthDayFields = (scope: OvertimeScope): void => {
+    const isNthDay = scope === "nth-day";
+    dayWrap?.classList.toggle("hidden", !isNthDay);
+    tier2?.classList.toggle("hidden", !isNthDay);
+    if (tier1Label) tier1Label.textContent = isNthDay ? "档位 1" : "加班阈值";
+    if (isNthDay && dayInput && (!dayInput.value || Number(dayInput.value) < 1)) {
+      dayInput.value = String(DEFAULT_NTH_DAY);
+    }
+  };
+
+  scopeSelect?.addEventListener("change", () => {
+    const fallback = (scopeSelect.options[0]?.value as OvertimeScope | undefined) ?? "daily";
+    const scope = isOvertimeScope(scopeSelect.value) ? scopeSelect.value : fallback;
+    const meta = OVERTIME_SCOPE_META[scope];
+    if (scopeDesc) scopeDesc.textContent = meta.desc;
+    syncNthDayFields(scope);
+    if (overtimeRuleEditor?.mode === "create") {
+      if (scope === "nth-day") {
+        if (hoursInput) hoursInput.value = String(DEFAULT_NTH_DAY_TIER1.hours);
+        if (multiplierInput) multiplierInput.value = String(DEFAULT_NTH_DAY_TIER1.multiplier);
+        if (hours2Input) hours2Input.value = String(DEFAULT_NTH_DAY_TIER2.hours);
+        if (multiplier2Input) multiplier2Input.value = String(DEFAULT_NTH_DAY_TIER2.multiplier);
+        if (dayInput) dayInput.value = String(DEFAULT_NTH_DAY);
+      } else {
+        if (hoursInput) hoursInput.value = String(meta.defaultHours);
+        if (multiplierInput) multiplierInput.value = String(meta.defaultMultiplier);
+      }
+      if (nameInput && !nameInput.value.trim()) nameInput.value = meta.title;
+    }
+  });
+
+  dialog.querySelector("[data-overtime-rule-save]")?.addEventListener("click", () => {
+    if (!overtimeRuleEditor) return;
+    const name = nameInput?.value.trim() ?? "";
+    if (!name) {
+      nameInput?.focus();
+      return;
+    }
+    const config = collectConfigFromDom(root);
+    const excludeId = overtimeRuleEditor.mode === "edit" ? overtimeRuleEditor.id : undefined;
+    const available = getAvailableOvertimeScopes(config.overtimeRules, excludeId);
+    if (available.length === 0) {
+      close();
+      return;
+    }
+    const fallback = available[0]!;
+    const scope = isOvertimeScope(scopeSelect?.value) && available.includes(scopeSelect!.value)
+      ? scopeSelect!.value
+      : fallback;
+    const meta = OVERTIME_SCOPE_META[scope];
+    const hoursBeforeOvertime = Math.max(
+      0.5,
+      Number(hoursInput?.value) ||
+        (scope === "nth-day" ? DEFAULT_NTH_DAY_TIER1.hours : meta.defaultHours),
+    );
+    const wageMultiplier = Math.max(
+      1,
+      Number(multiplierInput?.value) ||
+        (scope === "nth-day" ? DEFAULT_NTH_DAY_TIER1.multiplier : meta.defaultMultiplier),
+    );
+    const dayNumber = normalizeDayNumber(dayInput?.value, scope);
+    const secondaryHoursBeforeOvertime = normalizeSecondaryHours(hours2Input?.value, scope);
+    const secondaryWageMultiplier = normalizeSecondaryMultiplier(multiplier2Input?.value, scope);
+    const nextRule: OvertimeRule = {
+      id: overtimeRuleEditor.mode === "edit" ? overtimeRuleEditor.id : newOvertimeRuleId(),
+      name,
+      scope,
+      hoursBeforeOvertime,
+      wageMultiplier,
+    };
+    if (dayNumber !== undefined) nextRule.dayNumber = dayNumber;
+    if (secondaryHoursBeforeOvertime !== undefined) {
+      nextRule.secondaryHoursBeforeOvertime = secondaryHoursBeforeOvertime;
+    }
+    if (secondaryWageMultiplier !== undefined) {
+      nextRule.secondaryWageMultiplier = secondaryWageMultiplier;
+    }
+
+    if (overtimeRuleEditor.mode === "edit") {
+      const id = overtimeRuleEditor.id;
+      config.overtimeRules = config.overtimeRules.map((r) => (r.id === id ? nextRule : r));
+    } else {
+      config.overtimeRules = [...config.overtimeRules, nextRule];
+    }
+
+    draftConfig = config;
+    overtimeRuleEditor = null;
+    markBreaksOvertimeDirty();
+    remount();
+  });
+
+  requestAnimationFrame(() => nameInput?.focus());
 }
 
 let breaksOvertimeSessionPath = "";
@@ -844,7 +1240,7 @@ export function syncTeamBreaksOvertimeSession(path: string): void {
   if (!active) {
     resetDraft();
     breaksOvertimeSessionPath = "";
-    activeBreaksNavKey = "default-breaks";
+    activeBreaksNavKey = "custom-breaks";
   } else if (!breaksOvertimeSessionPath) {
     breaksOvertimeSessionPath = path;
   }
@@ -854,5 +1250,5 @@ export function syncTeamBreaksOvertimeSession(path: string): void {
 export function resetTeamBreaksOvertimeDraft(): void {
   resetDraft();
   breaksOvertimeSessionPath = "";
-  activeBreaksNavKey = "default-breaks";
+  activeBreaksNavKey = "custom-breaks";
 }

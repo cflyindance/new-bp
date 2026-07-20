@@ -144,7 +144,6 @@ export function renderMemberPrivacyDefaultPanelHtml(seq: number, on: boolean): s
       data-member-privacy-default-panel="${seq}"
       ${on ? "" : 'aria-hidden="true"'}
     >
-      <p class="m-0 mb-2 text-xs font-medium text-muted-foreground">适用产线（多选）</p>
       ${renderLinesMultiselectHtml(on)}
       <p class="m-0 mt-2 text-xs leading-relaxed text-muted-foreground">
         勾选产线在输入手机号页面的隐私条款默认勾选（食客仍可取消）。

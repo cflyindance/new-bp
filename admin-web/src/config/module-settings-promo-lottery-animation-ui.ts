@@ -298,20 +298,14 @@ export function renderPromoLotteryCustomAnimRowHtml(
   item: ModuleSettingCatalogItem,
   renderToggleSwitch: (item: ModuleSettingCatalogItem) => string,
   readToggleOn: (seq: number) => boolean,
+  renderTitleBlock: (item: ModuleSettingCatalogItem) => string,
 ): string {
   const on = readToggleOn(item.seq);
   return `
         <li class="list-none" data-module-setting-row-seq="${item.seq}">
           <div class="border-b border-border px-4 py-3">
             <div class="flex items-start justify-between gap-3">
-              <div class="min-w-0 flex flex-col gap-1">
-                <span class="text-sm font-medium text-card-foreground">${escapeHtml(item.title)}</span>
-                ${
-                  item.sceneDesc.trim()
-                    ? `<p class="m-0 text-xs leading-relaxed text-muted-foreground">${escapeHtml(item.sceneDesc.trim())}</p>`
-                    : ""
-                }
-              </div>
+              <div class="min-w-0 flex-1">${renderTitleBlock(item)}</div>
               <div class="shrink-0 pt-0.5">${renderToggleSwitch(item)}</div>
             </div>
             ${renderPromoLotteryCustomAnimPanelHtml(item.seq, on)}
