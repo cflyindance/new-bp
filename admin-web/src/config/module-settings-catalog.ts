@@ -217,11 +217,11 @@ export const MODULE_SETTINGS_BY_PATH: Record<string, ModuleSettingCatalogHub> = 
   "/operations/queue-call/brand-menu": {
     hubTitle: "前厅管理中心",
     settingsPath: "/operations/queue-call/brand-menu",
-    groupOrder: ["brand-menu-presentation"],
+    groupOrder: ["brand-menu-presentation", "brand-menu-settings"],
     items: [
-      { id: "s530-brand-menu-presentation-品牌页作为首页", groupTitle: "品牌与菜单展示", groupKey: "brand-menu-presentation", sceneDesc: "开启后，在选定产线（Kiosk、eMenu、SDI）以门店「品牌管理」中的品牌名称卡片为首页入口；关闭后展示常规首页（封面图见营销中心「广告」）。", moduleName: "展示设置", feature: "（未填写）", title: "品牌页作为首页", seq: 530 },
-      { id: "s531-brand-menu-presentation-品牌模式", groupTitle: "品牌与菜单展示", groupKey: "brand-menu-presentation", sceneDesc: "开启后，在选定产线（Kiosk、eMenu、SDI）菜单按多品牌分类展示（先选品牌再点餐）；关闭后使用常规菜单结构。", moduleName: "展示设置", feature: "（未填写）", title: "品牌模式", seq: 531 },
       { id: "s547-brand-menu-presentation-品牌管理", groupTitle: "品牌与菜单展示", groupKey: "brand-menu-presentation", sceneDesc: "配置一个门店有哪些品牌，并为每个品牌绑定营业时间与菜单（原 seq 548 并入）", moduleName: "品牌管理", feature: "（未填写）", title: "品牌管理", seq: 547 },
+      { id: "s531-brand-menu-settings-品牌模式", groupTitle: "设置", groupKey: "brand-menu-settings", sceneDesc: "开启后，在选定产线（Kiosk、eMenu、SDI）菜单按多品牌分类展示（先选品牌再点餐）；关闭后使用常规菜单结构。", moduleName: "展示设置", feature: "（未填写）", title: "品牌模式", seq: 531 },
+      { id: "s530-brand-menu-settings-品牌页作为首页", groupTitle: "设置", groupKey: "brand-menu-settings", sceneDesc: "开启后，在选定产线（Kiosk、eMenu、SDI）以门店「品牌管理」中的品牌名称卡片为首页入口；关闭后展示常规首页（封面图见营销中心「广告」）。", moduleName: "展示设置", feature: "（未填写）", title: "品牌页作为首页", seq: 530 },
     ],
   },
   "/operations/queue-call/settings": {
