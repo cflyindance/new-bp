@@ -366,13 +366,6 @@ export const NAV_MODULES: NavModule[] = [
         titleEn: "Shop-in-shop management",
         path: "/operations/queue-call/brand-menu",
       },
-      { id: "qc-settings", title: "设置", titleEn: "Settings", path: "/operations/queue-call/settings" },
-      {
-        id: "qc-menu-order-limits",
-        title: "菜单下单限制",
-        titleEn: "Menu order limits",
-        path: "/operations/queue-call/menu-order-limits",
-      },
       {
         id: "qc-category-settings",
         title: "品类管理",
@@ -391,6 +384,13 @@ export const NAV_MODULES: NavModule[] = [
         titleEn: "eMenu Pro",
         path: "/operations/queue-call/emenu-pro",
       },
+      {
+        id: "qc-menu-order-limits",
+        title: "菜单下单限制",
+        titleEn: "Menu order limits",
+        path: "/operations/queue-call/menu-order-limits",
+      },
+      { id: "qc-settings", title: "设置", titleEn: "Settings", path: "/operations/queue-call/settings" },
     ],
   },
   {

@@ -1,8 +1,7 @@
 /**
- * 消息中心 · 员工端通知类型（seq 331）— 通知主题多选（按语义子分类展示）。
+ * 消息中心 · 员工端通知类型（seq 331）— 通知主题多选（按语义子分类表格展示，对齐点单显示座位）。
  */
 
-import { MODULE_SETTING_CHOICE_CONTROL_CLASS } from "./module-settings-choice-ui";
 import { readModuleSettingCheckbox } from "./module-settings-form-ui";
 
 export const NOTIFICATION_CENTER_TOPICS_SEQ = 331;
@@ -56,6 +55,9 @@ export const NOTIFICATION_CENTER_TOPIC_OPTIONS = NOTIFICATION_CENTER_TOPIC_CATEG
   (cat) => cat.topics.map((t) => ({ code: t.code, label: t.label })),
 );
 
+const MODULE_SETTING_CONTROL_CLASS =
+  "size-4 shrink-0 accent-primary text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
+
 function escapeHtml(s: string): string {
   return s
     .replace(/&/g, "&amp;")
@@ -72,43 +74,58 @@ export function notificationCenterTopicCheckboxFieldId(seq: number, code: string
   return `${seq}-notification-topic-${code}`;
 }
 
-export function renderNotificationCenterTopicsMultiselectHtml(seq: number): string {
-  const sections = NOTIFICATION_CENTER_TOPIC_CATEGORIES.map((cat) => {
-    const cells = cat.topics
-      .map((opt) => {
-        const fieldId = notificationCenterTopicCheckboxFieldId(seq, opt.code);
-        const checked = readModuleSettingCheckbox(fieldId, false);
-        return `
-      <label class="inline-flex cursor-pointer items-center gap-2 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground">
+function renderTopicCheckboxesForCategory(
+  seq: number,
+  categoryLabel: string,
+  topics: ReadonlyArray<{ code: string; label: string; hint: string }>,
+): string {
+  const inputs = topics
+    .map((opt) => {
+      const fieldId = notificationCenterTopicCheckboxFieldId(seq, opt.code);
+      const checked = readModuleSettingCheckbox(fieldId, false);
+      return `
+      <label class="inline-flex cursor-pointer items-center gap-1.5 text-sm text-foreground" title="${escapeHtml(opt.hint)}">
         <input
           type="checkbox"
-          class="${MODULE_SETTING_CHOICE_CONTROL_CLASS} rounded-sm"
+          class="${MODULE_SETTING_CONTROL_CLASS} rounded-sm"
           ${checked ? "checked" : ""}
           data-module-setting-checkbox="${escapeHtml(fieldId)}"
-          aria-label="${escapeHtml(opt.label)}"
+          aria-label="${escapeHtml(categoryLabel)} ${escapeHtml(opt.label)}"
         />
-        <span class="leading-tight">
-          <span>${escapeHtml(opt.label)}</span>
-          <span class="ml-1 text-xs text-muted-foreground">${escapeHtml(opt.hint)}</span>
-        </span>
+        <span>${escapeHtml(opt.label)}</span>
       </label>`;
-      })
-      .join("");
+    })
+    .join("");
 
-    return `
-    <div class="space-y-2" data-notification-topic-category="${escapeHtml(cat.id)}">
-      <p class="text-xs font-medium text-muted-foreground">${escapeHtml(cat.label)}</p>
-      <div class="flex flex-wrap gap-2">${cells}</div>
-    </div>`;
-  }).join("");
+  return `<div class="flex flex-wrap items-center gap-x-3 gap-y-2">${inputs}</div>`;
+}
+
+export function renderNotificationCenterTopicsMultiselectHtml(seq: number): string {
+  const rows = NOTIFICATION_CENTER_TOPIC_CATEGORIES.map(
+    (cat) => `
+    <tr class="border-t border-border" data-notification-topic-category="${escapeHtml(cat.id)}">
+      <td class="px-3 py-2.5 text-sm font-medium text-foreground whitespace-nowrap align-top">${escapeHtml(cat.label)}</td>
+      <td class="px-3 py-2.5">
+        ${renderTopicCheckboxesForCategory(seq, cat.label, cat.topics)}
+      </td>
+    </tr>`,
+  ).join("");
 
   return `
     <div
-      class="flex max-w-3xl flex-col gap-4"
+      class="max-w-2xl overflow-x-auto rounded-md border border-border"
       data-notification-center-topics-multiselect="${seq}"
       role="group"
       aria-label="员工端通知类型"
     >
-      ${sections}
+      <table class="w-full min-w-[20rem] border-collapse text-left text-sm">
+        <thead class="bg-muted/40 text-xs text-muted-foreground">
+          <tr>
+            <th class="px-3 py-2 font-medium w-[7.5rem]">分类</th>
+            <th class="px-3 py-2 font-medium">通知类型（多选）</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
     </div>`;
 }

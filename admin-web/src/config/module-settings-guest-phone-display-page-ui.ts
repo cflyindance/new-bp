@@ -1,5 +1,5 @@
 /**
- * 前厅 · 食客端·下单与规则：seq 504 展示输入手机号（主开关 + Kiosk 产线多选）。
+ * 前厅 · 食客端·下单与规则：seq 504 展示输入手机号页面（主开关 + Kiosk 产线多选）。
  */
 
 import { readModuleSettingJson, writeModuleSettingJson } from "./module-settings-form-ui";
@@ -112,7 +112,7 @@ function renderLinesMultiselectHtml(enabled: boolean): string {
       class="flex w-full max-w-xs overflow-hidden rounded-md border border-border bg-muted/40"
       data-guest-phone-display-page-lines="${GUEST_PHONE_DISPLAY_PAGE_SEQ}"
       role="group"
-      aria-label="展示输入手机号适用产线"
+      aria-label="展示输入手机号页面适用产线"
     >
       ${cells}
     </div>`;

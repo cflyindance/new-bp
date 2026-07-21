@@ -1,6 +1,6 @@
 /**
- * 前厅 · 食客端·首页与版式：seq 604 eMenu Pro 模式
- * （主开关 + eMenu 产线多选）。
+ * 前厅 · 食客端·首页与版式：seq 604 Menu Pro 模式
+ * （主开关 + Kiosk / eMenu 产线多选）。
  */
 
 import { readModuleSettingJson, writeModuleSettingJson } from "./module-settings-form-ui";
@@ -10,7 +10,10 @@ export const GUEST_EMENU_PRO_MODE_SEQ = 604;
 
 const LINES_STORAGE_ID = "604-emenu-pro-mode-lines";
 
-export const GUEST_EMENU_PRO_MODE_PRODUCT_LINES = [{ id: "emenu", label: "eMenu" }] as const;
+export const GUEST_EMENU_PRO_MODE_PRODUCT_LINES = [
+  { id: "kiosk", label: "Kiosk" },
+  { id: "emenu", label: "eMenu" },
+] as const;
 
 export type GuestEmenuProModeProductLineId =
   (typeof GUEST_EMENU_PRO_MODE_PRODUCT_LINES)[number]["id"];
@@ -127,7 +130,7 @@ function renderLinesMultiselectHtml(enabled: boolean): string {
       class="flex w-full max-w-md overflow-hidden rounded-md border border-border bg-muted/40"
       data-guest-emenu-pro-mode-lines="${GUEST_EMENU_PRO_MODE_SEQ}"
       role="group"
-      aria-label="eMenu Pro 模式适用产线"
+      aria-label="Menu Pro 模式适用产线"
     >
       ${cells}
     </div>`;
@@ -142,9 +145,6 @@ export function renderGuestEmenuProModePanelHtml(on: boolean): string {
       ${on ? "" : 'aria-hidden="true"'}
     >
       ${renderLinesMultiselectHtml(on)}
-      <p class="m-0 mt-2 text-xs leading-relaxed text-muted-foreground">
-        勾选 eMenu 产线后，菜单页以 eMenu Pro 高级设计稿形式展示（未勾选时使用普通菜单）。
-      </p>
     </div>`;
 }
 

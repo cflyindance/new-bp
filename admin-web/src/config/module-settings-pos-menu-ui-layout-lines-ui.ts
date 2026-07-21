@@ -1,7 +1,9 @@
 /**
- * 前厅 · 菜单区界面布局：主开关 + POS / PayPad 产线多选
- * — 216 组平铺展示、219 按钮颜色满铺、220 显示菜品价格、350 电子菜单自定义消息（仅产线多选）
- * — 217 类展示、218 菜展示（产线多选 + 各产线独立布局单选）
+ * 前厅 · 菜单区界面布局：主开关 + 产线多选
+ * — 216 组平铺展示、219 按钮颜色满铺（POS / PayPad）
+ * — 220 显示菜品价格（POS / POS GO / PayPad）
+ * — 217 类展示、218 菜展示（产线多选 + 各产线独立布局单选；POS / PayPad）
+ * — 350 电子菜单自定义消息已迁至 module-settings-emenu-custom-message-ui.ts
  */
 
 import {
@@ -18,13 +20,11 @@ export const CATEGORY_LAYOUT_SEQ = 217;
 export const ITEM_LAYOUT_SEQ = 218;
 export const BUTTON_COLOR_FULL_FILL_SEQ = 219;
 export const SHOW_DISH_PRICE_SEQ = 220;
-export const EMENU_CUSTOM_MESSAGE_SEQ = 350;
 
 export const POS_MENU_UI_LAYOUT_TOGGLE_ONLY_SEQS = [
   MENU_GROUP_FLAT_DISPLAY_SEQ,
   BUTTON_COLOR_FULL_FILL_SEQ,
   SHOW_DISH_PRICE_SEQ,
-  EMENU_CUSTOM_MESSAGE_SEQ,
 ] as const;
 
 export const POS_MENU_UI_LAYOUT_RADIO_SEQS = [CATEGORY_LAYOUT_SEQ, ITEM_LAYOUT_SEQ] as const;
@@ -35,23 +35,40 @@ export const POS_MENU_UI_LAYOUT_LINES_SEQS = [
   ITEM_LAYOUT_SEQ,
   BUTTON_COLOR_FULL_FILL_SEQ,
   SHOW_DISH_PRICE_SEQ,
-  EMENU_CUSTOM_MESSAGE_SEQ,
 ] as const;
 
 export type PosMenuUiLayoutLinesSeq = (typeof POS_MENU_UI_LAYOUT_LINES_SEQS)[number];
 export type PosMenuUiLayoutToggleOnlySeq = (typeof POS_MENU_UI_LAYOUT_TOGGLE_ONLY_SEQS)[number];
 export type PosMenuUiLayoutRadioSeq = (typeof POS_MENU_UI_LAYOUT_RADIO_SEQS)[number];
 
+/** 本组默认产线（除显示菜品价格外） */
 export const POS_MENU_UI_LAYOUT_PRODUCT_LINES = [
   { id: "pos", label: "POS" },
   { id: "paypad", label: "PayPad" },
 ] as const;
 
-export type PosMenuUiLayoutProductLineId = (typeof POS_MENU_UI_LAYOUT_PRODUCT_LINES)[number]["id"];
+export const SHOW_DISH_PRICE_PRODUCT_LINES = [
+  { id: "pos", label: "POS" },
+  { id: "pos-go", label: "POS GO" },
+  { id: "paypad", label: "PayPad" },
+] as const;
 
-const ALL_LINE_IDS: PosMenuUiLayoutProductLineId[] = POS_MENU_UI_LAYOUT_PRODUCT_LINES.map(
-  (l) => l.id,
-);
+export type PosMenuUiLayoutBaseLineId = (typeof POS_MENU_UI_LAYOUT_PRODUCT_LINES)[number]["id"];
+export type PosMenuUiLayoutProductLineId =
+  | PosMenuUiLayoutBaseLineId
+  | (typeof SHOW_DISH_PRICE_PRODUCT_LINES)[number]["id"];
+
+type PosMenuUiLayoutProductLine = { id: PosMenuUiLayoutProductLineId; label: string };
+
+function productLinesForSeq(seq: PosMenuUiLayoutLinesSeq): readonly PosMenuUiLayoutProductLine[] {
+  return seq === SHOW_DISH_PRICE_SEQ ? SHOW_DISH_PRICE_PRODUCT_LINES : POS_MENU_UI_LAYOUT_PRODUCT_LINES;
+}
+
+function allLineIdsForSeq(seq: PosMenuUiLayoutLinesSeq): PosMenuUiLayoutProductLineId[] {
+  return productLinesForSeq(seq).map((l) => l.id);
+}
+
+const BASE_LINE_IDS: PosMenuUiLayoutBaseLineId[] = POS_MENU_UI_LAYOUT_PRODUCT_LINES.map((l) => l.id);
 
 const LEGACY_CATEGORY_LAYOUT_FIELD_ID = "217-category-layout";
 const LEGACY_ITEM_LAYOUT_FIELD_ID = "218-item-layout";
@@ -79,7 +96,6 @@ const LINES_STORAGE_ID_BY_SEQ: Record<PosMenuUiLayoutLinesSeq, string> = {
   [ITEM_LAYOUT_SEQ]: "218-item-layout-lines",
   [BUTTON_COLOR_FULL_FILL_SEQ]: "219-button-color-full-fill-lines",
   [SHOW_DISH_PRICE_SEQ]: "220-show-dish-price-lines",
-  [EMENU_CUSTOM_MESSAGE_SEQ]: "350-emenu-custom-message-lines",
 };
 
 const LINES_GROUP_ARIA_BY_SEQ: Record<PosMenuUiLayoutLinesSeq, string> = {
@@ -88,7 +104,6 @@ const LINES_GROUP_ARIA_BY_SEQ: Record<PosMenuUiLayoutLinesSeq, string> = {
   [ITEM_LAYOUT_SEQ]: "菜展示适用产线",
   [BUTTON_COLOR_FULL_FILL_SEQ]: "按钮颜色满铺适用产线",
   [SHOW_DISH_PRICE_SEQ]: "显示菜品价格适用产线",
-  [EMENU_CUSTOM_MESSAGE_SEQ]: "电子菜单自定义消息适用产线",
 };
 
 const CATEGORY_BY_LINE_STORAGE_ID = "217-category-layout-by-line";
@@ -108,11 +123,11 @@ function escapeHtml(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
-function categoryLayoutFieldId(lineId: PosMenuUiLayoutProductLineId): string {
+function categoryLayoutFieldId(lineId: PosMenuUiLayoutBaseLineId): string {
   return `217-${lineId}-category-layout`;
 }
 
-function itemLayoutFieldId(lineId: PosMenuUiLayoutProductLineId): string {
+function itemLayoutFieldId(lineId: PosMenuUiLayoutBaseLineId): string {
   return `218-${lineId}-item-layout`;
 }
 
@@ -174,9 +189,12 @@ export function ensurePosMenuUiLayoutToggleMigrated(seq: number): void {
   }
 }
 
-function normalizeLineIds(raw: unknown): PosMenuUiLayoutProductLineId[] {
+function normalizeLineIds(
+  seq: PosMenuUiLayoutLinesSeq,
+  raw: unknown,
+): PosMenuUiLayoutProductLineId[] {
   if (!Array.isArray(raw)) return [];
-  const valid = new Set<string>(ALL_LINE_IDS);
+  const valid = new Set<string>(allLineIdsForSeq(seq));
   return raw.filter(
     (id): id is PosMenuUiLayoutProductLineId => typeof id === "string" && valid.has(id),
   );
@@ -185,11 +203,16 @@ function normalizeLineIds(raw: unknown): PosMenuUiLayoutProductLineId[] {
 export function readPosMenuUiLayoutLines(seq: PosMenuUiLayoutLinesSeq): PosMenuUiLayoutProductLineId[] {
   ensurePosMenuUiLayoutToggleMigrated(seq);
   const stored = readModuleSettingJson<unknown>(LINES_STORAGE_ID_BY_SEQ[seq], null);
-  const normalized = normalizeLineIds(stored);
-  if (normalized.length > 0) return normalized;
+  const normalized = normalizeLineIds(seq, stored);
+  if (normalized.length > 0) {
+    if (Array.isArray(stored) && normalized.length !== stored.length) {
+      writePosMenuUiLayoutLines(seq, normalized);
+    }
+    return normalized;
+  }
 
   if (readLegacyToggleOn(seq)) {
-    const all = [...ALL_LINE_IDS];
+    const all = allLineIdsForSeq(seq);
     writePosMenuUiLayoutLines(seq, all);
     return all;
   }
@@ -200,35 +223,36 @@ export function writePosMenuUiLayoutLines(
   seq: PosMenuUiLayoutLinesSeq,
   lines: PosMenuUiLayoutProductLineId[],
 ): void {
-  const unique = ALL_LINE_IDS.filter((id) => lines.includes(id));
+  const allowed = allLineIdsForSeq(seq);
+  const unique = allowed.filter((id) => lines.includes(id));
   writeModuleSettingJson(LINES_STORAGE_ID_BY_SEQ[seq], unique);
 }
 
 export function ensurePosMenuUiLayoutLinesDefault(seq: PosMenuUiLayoutLinesSeq): void {
   if (readPosMenuUiLayoutLines(seq).length === 0) {
-    writePosMenuUiLayoutLines(seq, [...ALL_LINE_IDS]);
+    writePosMenuUiLayoutLines(seq, allLineIdsForSeq(seq));
   }
 }
 
 function defaultCategoryByLine(
   mode: CategoryLayoutValue = DEFAULT_CATEGORY_LAYOUT,
-): Record<PosMenuUiLayoutProductLineId, CategoryLayoutValue> {
+): Record<PosMenuUiLayoutBaseLineId, CategoryLayoutValue> {
   return { pos: mode, paypad: mode };
 }
 
 function defaultItemByLine(
   mode: ItemLayoutValue = DEFAULT_ITEM_LAYOUT,
-): Record<PosMenuUiLayoutProductLineId, ItemLayoutValue> {
+): Record<PosMenuUiLayoutBaseLineId, ItemLayoutValue> {
   return { pos: mode, paypad: mode };
 }
 
-function migrateLegacyCategoryByLine(): Record<PosMenuUiLayoutProductLineId, CategoryLayoutValue> {
+function migrateLegacyCategoryByLine(): Record<PosMenuUiLayoutBaseLineId, CategoryLayoutValue> {
   const legacy = readModuleSettingRadio(LEGACY_CATEGORY_LAYOUT_FIELD_ID, DEFAULT_CATEGORY_LAYOUT);
   const mode = isValidCategoryLayout(legacy) ? legacy : DEFAULT_CATEGORY_LAYOUT;
   return defaultCategoryByLine(mode);
 }
 
-function migrateLegacyItemByLine(): Record<PosMenuUiLayoutProductLineId, ItemLayoutValue> {
+function migrateLegacyItemByLine(): Record<PosMenuUiLayoutBaseLineId, ItemLayoutValue> {
   const legacy = readModuleSettingRadio(LEGACY_ITEM_LAYOUT_FIELD_ID, DEFAULT_ITEM_LAYOUT);
   const mode = isValidItemLayout(legacy) ? legacy : DEFAULT_ITEM_LAYOUT;
   return defaultItemByLine(mode);
@@ -236,7 +260,7 @@ function migrateLegacyItemByLine(): Record<PosMenuUiLayoutProductLineId, ItemLay
 
 function normalizeCategoryByLine(
   raw: Partial<Record<string, unknown>>,
-): Record<PosMenuUiLayoutProductLineId, CategoryLayoutValue> {
+): Record<PosMenuUiLayoutBaseLineId, CategoryLayoutValue> {
   const base = defaultCategoryByLine();
   for (const line of POS_MENU_UI_LAYOUT_PRODUCT_LINES) {
     const v = raw[line.id];
@@ -249,7 +273,7 @@ function normalizeCategoryByLine(
 
 function normalizeItemByLine(
   raw: Partial<Record<string, unknown>>,
-): Record<PosMenuUiLayoutProductLineId, ItemLayoutValue> {
+): Record<PosMenuUiLayoutBaseLineId, ItemLayoutValue> {
   const base = defaultItemByLine();
   for (const line of POS_MENU_UI_LAYOUT_PRODUCT_LINES) {
     const v = raw[line.id];
@@ -264,7 +288,7 @@ function migratePerLineRadioFromLegacy(seq: PosMenuUiLayoutRadioSeq): void {
   if (legacyRadioMigrated.has(seq)) return;
   legacyRadioMigrated.add(seq);
 
-  const hasPerLine = ALL_LINE_IDS.some((lineId) => {
+  const hasPerLine = BASE_LINE_IDS.some((lineId) => {
     const fieldId =
       seq === CATEGORY_LAYOUT_SEQ ? categoryLayoutFieldId(lineId) : itemLayoutFieldId(lineId);
     return hasLegacyStorageKey(fieldId);
@@ -274,7 +298,7 @@ function migratePerLineRadioFromLegacy(seq: PosMenuUiLayoutRadioSeq): void {
   if (seq === CATEGORY_LAYOUT_SEQ) {
     const migrated = migrateLegacyCategoryByLine();
     writeCategoryLayoutByLine(migrated);
-    for (const lineId of ALL_LINE_IDS) {
+    for (const lineId of BASE_LINE_IDS) {
       writeModuleSettingRadio(categoryLayoutFieldId(lineId), migrated[lineId]);
     }
     return;
@@ -282,12 +306,12 @@ function migratePerLineRadioFromLegacy(seq: PosMenuUiLayoutRadioSeq): void {
 
   const migrated = migrateLegacyItemByLine();
   writeItemLayoutByLine(migrated);
-  for (const lineId of ALL_LINE_IDS) {
+  for (const lineId of BASE_LINE_IDS) {
     writeModuleSettingRadio(itemLayoutFieldId(lineId), migrated[lineId]);
   }
 }
 
-export function readCategoryLayoutByLine(): Record<PosMenuUiLayoutProductLineId, CategoryLayoutValue> {
+export function readCategoryLayoutByLine(): Record<PosMenuUiLayoutBaseLineId, CategoryLayoutValue> {
   migratePerLineRadioFromLegacy(CATEGORY_LAYOUT_SEQ);
   const raw = readModuleSettingJson<Partial<Record<string, unknown>>>(CATEGORY_BY_LINE_STORAGE_ID, {});
   if (raw && typeof raw === "object" && Object.keys(raw).length > 0) {
@@ -299,12 +323,12 @@ export function readCategoryLayoutByLine(): Record<PosMenuUiLayoutProductLineId,
 }
 
 export function writeCategoryLayoutByLine(
-  values: Record<PosMenuUiLayoutProductLineId, CategoryLayoutValue>,
+  values: Record<PosMenuUiLayoutBaseLineId, CategoryLayoutValue>,
 ): void {
   writeModuleSettingJson(CATEGORY_BY_LINE_STORAGE_ID, normalizeCategoryByLine(values));
 }
 
-export function readItemLayoutByLine(): Record<PosMenuUiLayoutProductLineId, ItemLayoutValue> {
+export function readItemLayoutByLine(): Record<PosMenuUiLayoutBaseLineId, ItemLayoutValue> {
   migratePerLineRadioFromLegacy(ITEM_LAYOUT_SEQ);
   const raw = readModuleSettingJson<Partial<Record<string, unknown>>>(ITEM_BY_LINE_STORAGE_ID, {});
   if (raw && typeof raw === "object" && Object.keys(raw).length > 0) {
@@ -316,7 +340,7 @@ export function readItemLayoutByLine(): Record<PosMenuUiLayoutProductLineId, Ite
 }
 
 export function writeItemLayoutByLine(
-  values: Record<PosMenuUiLayoutProductLineId, ItemLayoutValue>,
+  values: Record<PosMenuUiLayoutBaseLineId, ItemLayoutValue>,
 ): void {
   writeModuleSettingJson(ITEM_BY_LINE_STORAGE_ID, normalizeItemByLine(values));
 }
@@ -331,10 +355,12 @@ export function isPosMenuUiLayoutRadioSeq(seq: number): seq is PosMenuUiLayoutRa
 
 function renderLinesMultiselectHtml(seq: PosMenuUiLayoutLinesSeq, enabled: boolean): string {
   const selected = new Set(readPosMenuUiLayoutLines(seq));
-  const cells = POS_MENU_UI_LAYOUT_PRODUCT_LINES.map((line, index) => {
-    const checked = selected.has(line.id);
-    const divider = index > 0 ? "border-l border-border" : "";
-    return `
+  const lines = productLinesForSeq(seq);
+  const cells = lines
+    .map((line, index) => {
+      const checked = selected.has(line.id);
+      const divider = index > 0 ? "border-l border-border" : "";
+      return `
       <label
         class="flex flex-1 flex-col items-center justify-center gap-2 px-2 py-3 text-sm text-foreground sm:px-4 ${enabled ? "cursor-pointer" : "cursor-not-allowed opacity-50"} ${divider}"
       >
@@ -350,11 +376,13 @@ function renderLinesMultiselectHtml(seq: PosMenuUiLayoutLinesSeq, enabled: boole
         />
         <span class="text-center leading-tight">${escapeHtml(line.label)}</span>
       </label>`;
-  }).join("");
+    })
+    .join("");
 
+  const maxWidth = seq === SHOW_DISH_PRICE_SEQ ? "max-w-xl" : "max-w-md";
   return `
     <div
-      class="flex w-full max-w-md overflow-hidden rounded-md border border-border bg-muted/40"
+      class="flex w-full ${maxWidth} overflow-hidden rounded-md border border-border bg-muted/40"
       data-pos-menu-ui-layout-lines="${seq}"
       role="group"
       aria-label="${escapeHtml(LINES_GROUP_ARIA_BY_SEQ[seq])}"
@@ -363,7 +391,7 @@ function renderLinesMultiselectHtml(seq: PosMenuUiLayoutLinesSeq, enabled: boole
     </div>`;
 }
 
-function ensureRadioSeqLineStored(seq: PosMenuUiLayoutRadioSeq, lineId: PosMenuUiLayoutProductLineId): void {
+function ensureRadioSeqLineStored(seq: PosMenuUiLayoutRadioSeq, lineId: PosMenuUiLayoutBaseLineId): void {
   const lines = readPosMenuUiLayoutLines(seq);
   if (!lines.includes(lineId)) {
     writePosMenuUiLayoutLines(seq, [...lines, lineId]);
@@ -543,6 +571,7 @@ function collectLinesFromGroup(
   group: HTMLElement,
   seq: PosMenuUiLayoutLinesSeq,
 ): PosMenuUiLayoutProductLineId[] {
+  const allowed = new Set(allLineIdsForSeq(seq));
   const lines: PosMenuUiLayoutProductLineId[] = [];
   group
     .querySelectorAll<HTMLInputElement>(
@@ -550,7 +579,7 @@ function collectLinesFromGroup(
     )
     .forEach((input) => {
       const id = input.getAttribute("data-pos-menu-ui-layout-line");
-      if (id && ALL_LINE_IDS.includes(id as PosMenuUiLayoutProductLineId)) {
+      if (id && allowed.has(id as PosMenuUiLayoutProductLineId)) {
         lines.push(id as PosMenuUiLayoutProductLineId);
       }
     });
@@ -569,11 +598,11 @@ function collectCategoryLayoutFromEditor(editor: HTMLElement): void {
     if (!input.checked) return;
     const lineId = input.getAttribute("data-pos-menu-ui-layout-category-line");
     const value = input.value;
-    if (!lineId || !ALL_LINE_IDS.includes(lineId as PosMenuUiLayoutProductLineId)) return;
+    if (!lineId || !BASE_LINE_IDS.includes(lineId as PosMenuUiLayoutBaseLineId)) return;
     if (!isValidCategoryLayout(value)) return;
-    values[lineId as PosMenuUiLayoutProductLineId] = value;
-    writeModuleSettingRadio(categoryLayoutFieldId(lineId as PosMenuUiLayoutProductLineId), value);
-    ensureRadioSeqLineStored(CATEGORY_LAYOUT_SEQ, lineId as PosMenuUiLayoutProductLineId);
+    values[lineId as PosMenuUiLayoutBaseLineId] = value;
+    writeModuleSettingRadio(categoryLayoutFieldId(lineId as PosMenuUiLayoutBaseLineId), value);
+    ensureRadioSeqLineStored(CATEGORY_LAYOUT_SEQ, lineId as PosMenuUiLayoutBaseLineId);
   });
   writeCategoryLayoutByLine(values);
 }
@@ -584,11 +613,11 @@ function collectItemLayoutFromEditor(editor: HTMLElement): void {
     if (!input.checked) return;
     const lineId = input.getAttribute("data-pos-menu-ui-layout-item-line");
     const value = input.value;
-    if (!lineId || !ALL_LINE_IDS.includes(lineId as PosMenuUiLayoutProductLineId)) return;
+    if (!lineId || !BASE_LINE_IDS.includes(lineId as PosMenuUiLayoutBaseLineId)) return;
     if (!isValidItemLayout(value)) return;
-    values[lineId as PosMenuUiLayoutProductLineId] = value;
-    writeModuleSettingRadio(itemLayoutFieldId(lineId as PosMenuUiLayoutProductLineId), value);
-    ensureRadioSeqLineStored(ITEM_LAYOUT_SEQ, lineId as PosMenuUiLayoutProductLineId);
+    values[lineId as PosMenuUiLayoutBaseLineId] = value;
+    writeModuleSettingRadio(itemLayoutFieldId(lineId as PosMenuUiLayoutBaseLineId), value);
+    ensureRadioSeqLineStored(ITEM_LAYOUT_SEQ, lineId as PosMenuUiLayoutBaseLineId);
   });
   writeItemLayoutByLine(values);
 }

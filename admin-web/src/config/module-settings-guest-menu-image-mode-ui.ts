@@ -1,17 +1,29 @@
 /**
- * 前厅 · 食客端·首页与版式：seq 607 菜单图片展示模式
- * （主开关 → 先选产线 Kiosk/eMenu/SDI → 再按产线配置原始/小图/大图及例外菜品）。
+ * 前厅 · 食客端·首页与版式：seq 607 菜单图片大小展示模式
+ * （主开关 → 产线表格：产线 + 模式 + 菜单设置；菜单设置以对话框选择组/类/菜，对齐品牌管理）。
  */
 
-import { readDishTags, writeDishTags } from "./module-settings-dish-rules-ui";
+import {
+  bindBrandMenuStructurePicker,
+  BRAND_MENU_STRUCTURE_BY_LINE,
+  BRAND_MENU_STRUCTURE_TREE,
+  formatBrandMenuStructureSummary,
+  isBrandMenuLineId,
+  readBrandMenuStructureKeysFromPicker,
+  renderBrandMenuStructurePickerHtml,
+  type BrandMenuGroupNode,
+  type BrandMenuLineId,
+} from "./brand-menu-structure-picker-ui";
 import {
   moduleSettingStorageKey,
   readModuleSettingJson,
   writeModuleSettingJson,
 } from "./module-settings-form-ui";
 import { readModuleSettingRadio, writeModuleSettingRadio } from "./module-settings-nested-ui";
-import { renderStandaloneDishPickerHtml } from "./module-settings-dish-rules-ui";
-import { isFohLineConfigRowVisible } from "./foh-settings-by-line-filter";
+import {
+  FOH_LINE_CONFIG_ROW_ATTR,
+  getFohActiveLineFilterId,
+} from "./foh-settings-by-line-filter";
 import { moduleSettingToggleStorageKey } from "./module-settings-toggle-ui";
 
 export const GUEST_MENU_IMAGE_MODE_SEQ = 607;
@@ -19,13 +31,11 @@ export const GUEST_MENU_IMAGE_MODE_SEQ = 607;
 const LINES_STORAGE_ID = "607-menu-image-mode-lines";
 
 const LEGACY_MODE_FIELD_ID = "607-image-mode";
-const LEGACY_SMALL_DISHES_ID = "607-small-dishes";
-const LEGACY_LARGE_DISHES_ID = "607-large-dishes";
 
 export const GUEST_MENU_IMAGE_MODE_PRODUCT_LINES = [
+  { id: "kiosk", label: "Kiosk" },
   { id: "emenu", label: "eMenu" },
   { id: "sdi", label: "SDI" },
-  { id: "kiosk", label: "Kiosk" },
 ] as const;
 
 export type GuestMenuImageModeProductLineId =
@@ -47,8 +57,14 @@ const DEFAULT_MODE: GuestMenuImageMode = "small";
 const MODULE_SETTING_CONTROL_CLASS =
   "size-4 shrink-0 accent-primary text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50";
 
-const LINE_CHECKBOX_CLASS =
-  "size-4 shrink-0 accent-primary text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 rounded-sm";
+const BTN_PRIMARY =
+  "inline-flex h-8 shrink-0 items-center justify-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50";
+
+const BTN_GHOST =
+  "inline-flex h-9 shrink-0 items-center justify-center rounded-md border border-border bg-background px-4 text-sm font-medium text-foreground shadow-sm hover:bg-muted";
+
+const BTN_DIALOG_PRIMARY =
+  "inline-flex h-9 shrink-0 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90";
 
 let toggleMigrated = false;
 let legacyMigrated = false;
@@ -75,6 +91,22 @@ function largeDishesFieldId(lineId: GuestMenuImageModeProductLineId): string {
 
 function isValidMode(value: string): value is GuestMenuImageMode {
   return MODE_OPTIONS.some((o) => o.value === value);
+}
+
+function structureTreeForLine(lineId: GuestMenuImageModeProductLineId): BrandMenuGroupNode[] {
+  return isBrandMenuLineId(lineId)
+    ? BRAND_MENU_STRUCTURE_BY_LINE[lineId as BrandMenuLineId]
+    : BRAND_MENU_STRUCTURE_TREE;
+}
+
+function readStructureKeys(storageId: string): string[] {
+  const raw = readModuleSettingJson<unknown>(storageId, []);
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((k): k is string => typeof k === "string");
+}
+
+function writeStructureKeys(storageId: string, keys: string[]): void {
+  writeModuleSettingJson(storageId, keys);
 }
 
 function readLegacyToggleOn(): boolean {
@@ -109,8 +141,6 @@ function migrateLegacyGlobalToLines(): void {
   legacyMigrated = true;
 
   const legacyMode = readModuleSettingRadio(LEGACY_MODE_FIELD_ID, DEFAULT_MODE);
-  const legacySmall = readDishTags(LEGACY_SMALL_DISHES_ID);
-  const legacyLarge = readDishTags(LEGACY_LARGE_DISHES_ID);
 
   const hasPerLine = ALL_LINE_IDS.some((lineId) => {
     try {
@@ -125,8 +155,6 @@ function migrateLegacyGlobalToLines(): void {
   const mode = isValidMode(legacyMode) ? legacyMode : DEFAULT_MODE;
   for (const lineId of ALL_LINE_IDS) {
     writeModuleSettingRadio(imageModeFieldId(lineId), mode);
-    if (legacySmall.length > 0) writeDishTags(smallDishesFieldId(lineId), legacySmall);
-    if (legacyLarge.length > 0) writeDishTags(largeDishesFieldId(lineId), legacyLarge);
   }
 }
 
@@ -136,6 +164,16 @@ function normalizeLineIds(raw: unknown): GuestMenuImageModeProductLineId[] {
   return raw.filter(
     (id): id is GuestMenuImageModeProductLineId => typeof id === "string" && valid.has(id),
   );
+}
+
+export function writeGuestMenuImageModeLines(lines: GuestMenuImageModeProductLineId[]): void {
+  const unique = ALL_LINE_IDS.filter((id) => lines.includes(id));
+  writeModuleSettingJson(LINES_STORAGE_ID, unique);
+}
+
+/** 表格展示全部产线；开启后默认全部生效 */
+export function ensureGuestMenuImageModeLinesDefault(): void {
+  writeGuestMenuImageModeLines([...ALL_LINE_IDS]);
 }
 
 export function readGuestMenuImageModeLines(): GuestMenuImageModeProductLineId[] {
@@ -154,11 +192,6 @@ export function readGuestMenuImageModeLines(): GuestMenuImageModeProductLineId[]
   return [];
 }
 
-export function writeGuestMenuImageModeLines(lines: GuestMenuImageModeProductLineId[]): void {
-  const unique = ALL_LINE_IDS.filter((id) => lines.includes(id));
-  writeModuleSettingJson(LINES_STORAGE_ID, unique);
-}
-
 export function readGuestMenuImageModeForLine(lineId: GuestMenuImageModeProductLineId): GuestMenuImageMode {
   migrateLegacyGlobalToLines();
   const mode = readModuleSettingRadio(imageModeFieldId(lineId), DEFAULT_MODE);
@@ -169,37 +202,10 @@ export function isGuestMenuImageModeSeq(seq: number): boolean {
   return seq === GUEST_MENU_IMAGE_MODE_SEQ;
 }
 
-function renderLinesMultiselectHtml(enabled: boolean): string {
-  const selected = new Set(readGuestMenuImageModeLines());
-  const cells = GUEST_MENU_IMAGE_MODE_PRODUCT_LINES.map((line, index) => {
-    const checked = selected.has(line.id);
-    const divider = index > 0 ? "border-l border-border" : "";
-    return `
-      <label
-        class="flex flex-1 flex-col items-center justify-center gap-2 px-2 py-3 text-sm text-foreground sm:px-4 ${enabled ? "cursor-pointer" : "cursor-not-allowed opacity-50"} ${divider}"
-      >
-        <input
-          type="checkbox"
-          class="${LINE_CHECKBOX_CLASS}"
-          value="${escapeHtml(line.id)}"
-          data-menu-image-mode-line="${escapeHtml(line.id)}"
-          ${checked ? "checked" : ""}
-          ${enabled ? "" : "disabled"}
-          aria-label="${escapeHtml(line.label)}"
-        />
-        <span class="text-center leading-tight">${escapeHtml(line.label)}</span>
-      </label>`;
-  }).join("");
-
-  return `
-    <div
-      class="flex w-full max-w-md overflow-hidden rounded-md border border-border bg-muted/40"
-      data-menu-image-mode-lines="${GUEST_MENU_IMAGE_MODE_SEQ}"
-      role="group"
-      aria-label="菜单图片展示模式适用产线"
-    >
-      ${cells}
-    </div>`;
+function visibleProductLines(): (typeof GUEST_MENU_IMAGE_MODE_PRODUCT_LINES)[number][] {
+  const activeLine = getFohActiveLineFilterId();
+  if (!activeLine) return [...GUEST_MENU_IMAGE_MODE_PRODUCT_LINES];
+  return GUEST_MENU_IMAGE_MODE_PRODUCT_LINES.filter((line) => line.id === activeLine);
 }
 
 function renderModeRadiosHtml(lineId: GuestMenuImageModeProductLineId, enabled: boolean): string {
@@ -226,7 +232,37 @@ function renderModeRadiosHtml(lineId: GuestMenuImageModeProductLineId, enabled: 
       </label>`;
   }).join("");
 
-  return `<div class="flex flex-wrap items-center gap-4">${options}</div>`;
+  return `<div class="flex flex-wrap items-center gap-4" role="radiogroup" aria-label="图片展示模式">${options}</div>`;
+}
+
+function renderDishPickTrigger(
+  lineId: GuestMenuImageModeProductLineId,
+  whenMode: GuestMenuImageMode,
+  pickerLabel: string,
+  storageId: string,
+): string {
+  const keys = readStructureKeys(storageId);
+  const summary = formatBrandMenuStructureSummary(keys, structureTreeForLine(lineId));
+  const dishCount = keys.filter((k) => k.startsWith("d:")).length;
+  const countLabel = dishCount > 0 ? `已选 ${dishCount} 道菜` : "未选择商品";
+
+  return `
+    <div class="space-y-1.5">
+      <p class="m-0 text-xs text-muted-foreground">${escapeHtml(pickerLabel)}</p>
+      <div class="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          class="${BTN_PRIMARY}"
+          data-menu-image-mode-pick-dishes
+          data-line-id="${escapeHtml(lineId)}"
+          data-when-mode="${escapeHtml(whenMode)}"
+          data-storage-id="${escapeHtml(storageId)}"
+          data-picker-label="${escapeHtml(pickerLabel)}"
+        >选择商品</button>
+        <span class="text-xs text-muted-foreground" data-menu-image-mode-pick-count="${escapeHtml(storageId)}">${escapeHtml(countLabel)}</span>
+      </div>
+      <p class="m-0 text-xs leading-relaxed text-muted-foreground" data-menu-image-mode-pick-summary="${escapeHtml(storageId)}">${escapeHtml(summary)}</p>
+    </div>`;
 }
 
 function renderConditionalDishPicker(
@@ -235,8 +271,6 @@ function renderConditionalDishPicker(
   whenMode: GuestMenuImageMode,
   pickerLabel: string,
   storageId: string,
-  fieldKey: string,
-  enabled: boolean,
 ): string {
   const hidden = mode !== whenMode ? "hidden" : "";
   const radioFieldId = imageModeFieldId(lineId);
@@ -249,97 +283,111 @@ function renderConditionalDishPicker(
       data-menu-image-mode-line-panel="${escapeHtml(lineId)}"
       ${mode !== whenMode ? 'aria-hidden="true"' : ""}
     >
-      <p class="m-0 text-xs text-muted-foreground">${escapeHtml(pickerLabel)}</p>
-      ${renderStandaloneDishPickerHtml(GUEST_MENU_IMAGE_MODE_SEQ, fieldKey, storageId)}
+      ${renderDishPickTrigger(lineId, whenMode, pickerLabel, storageId)}
     </div>`;
 }
 
-function renderLineConfigBlock(
-  line: (typeof GUEST_MENU_IMAGE_MODE_PRODUCT_LINES)[number],
-  lineEnabled: boolean,
-  panelEnabled: boolean,
-): string {
-  const enabled = panelEnabled && lineEnabled;
-  const hidden = lineEnabled ? "" : "hidden";
-  const mode = readGuestMenuImageModeForLine(line.id);
-
+function renderMenuSettingsCell(lineId: GuestMenuImageModeProductLineId, mode: GuestMenuImageMode): string {
   return `
-    <div
-      class="space-y-3 rounded-md border border-border/60 bg-muted/20 p-3 ${hidden}"
-      data-menu-image-mode-line-config="${escapeHtml(line.id)}"
-      ${lineEnabled ? "" : 'aria-hidden="true"'}
-    >
-      <p class="m-0 text-sm font-medium text-foreground">${escapeHtml(line.label)}</p>
-      ${renderModeRadiosHtml(line.id, enabled)}
+    <div class="min-w-[14rem] space-y-2" data-menu-image-mode-menu-settings="${escapeHtml(lineId)}">
+      <p class="m-0 text-sm text-muted-foreground ${mode === "original" ? "" : "hidden"}" data-menu-image-mode-original-hint="${escapeHtml(lineId)}">无需例外菜品</p>
       ${renderConditionalDishPicker(
-        line.id,
+        lineId,
         mode,
         "small",
-        "请选择大图菜",
-        smallDishesFieldId(line.id),
-        `small-dishes-${line.id}`,
-        enabled,
+        "请选择需要大图展示的菜",
+        smallDishesFieldId(lineId),
       )}
       ${renderConditionalDishPicker(
-        line.id,
+        lineId,
         mode,
         "large",
-        "请选择小图菜",
-        largeDishesFieldId(line.id),
-        `large-dishes-${line.id}`,
-        enabled,
+        "请选择需要小图展示的菜",
+        largeDishesFieldId(lineId),
       )}
     </div>`;
 }
 
-function renderLineConfigsHtml(panelEnabled: boolean): string {
-  const selected = new Set(readGuestMenuImageModeLines());
-  return GUEST_MENU_IMAGE_MODE_PRODUCT_LINES.map((line) =>
-    renderLineConfigBlock(line, isFohLineConfigRowVisible(line.id, selected.has(line.id)), panelEnabled),
-  ).join("");
+function renderLineRow(
+  line: (typeof GUEST_MENU_IMAGE_MODE_PRODUCT_LINES)[number],
+  enabled: boolean,
+): string {
+  const mode = readGuestMenuImageModeForLine(line.id);
+  return `
+    <tr
+      class="border-t border-border"
+      ${FOH_LINE_CONFIG_ROW_ATTR}="${escapeHtml(line.id)}"
+      data-menu-image-mode-line-config="${escapeHtml(line.id)}"
+    >
+      <td class="px-3 py-2.5 text-sm font-medium text-foreground whitespace-nowrap align-top">${escapeHtml(line.label)}</td>
+      <td class="px-3 py-2.5 align-top">${renderModeRadiosHtml(line.id, enabled)}</td>
+      <td class="px-3 py-2.5 align-top">${renderMenuSettingsCell(line.id, mode)}</td>
+    </tr>`;
+}
+
+function renderDishPickDialog(): string {
+  return `
+    <div
+      class="fixed inset-0 z-[110] hidden items-center justify-center p-4"
+      data-menu-image-mode-dish-dialog
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="menu-image-mode-dish-dialog-title"
+      data-line-id=""
+      data-storage-id=""
+    >
+      <button type="button" class="absolute inset-0 bg-black/40" data-menu-image-mode-dish-dialog-backdrop aria-label="关闭"></button>
+      <div class="relative z-10 flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-lg border border-border bg-card shadow-lg">
+        <div class="flex shrink-0 items-start justify-between gap-3 border-b border-border px-5 py-4">
+          <h3 id="menu-image-mode-dish-dialog-title" class="text-base font-semibold text-card-foreground">选择商品</h3>
+          <button type="button" class="text-muted-foreground hover:text-foreground" data-menu-image-mode-dish-dialog-close aria-label="关闭">×</button>
+        </div>
+        <div class="min-h-0 flex-1 space-y-2 overflow-y-auto px-5 py-4" data-menu-image-mode-dish-dialog-body>
+          <p class="m-0 text-xs text-muted-foreground">按组 / 类 / 菜勾选需要例外展示的商品（结构对齐品牌管理）</p>
+        </div>
+        <div class="flex shrink-0 justify-end gap-2 border-t border-border bg-card px-5 py-4">
+          <button type="button" class="${BTN_GHOST}" data-menu-image-mode-dish-dialog-cancel>取消</button>
+          <button type="button" class="${BTN_DIALOG_PRIMARY}" data-menu-image-mode-dish-dialog-save>确定</button>
+        </div>
+      </div>
+    </div>`;
 }
 
 function renderEditorInnerHtml(panelEnabled: boolean): string {
+  ensureGuestMenuImageModeLinesDefault();
+  const rows = visibleProductLines()
+    .map((line) => renderLineRow(line, panelEnabled))
+    .join("");
+
   return `
-    <div class="space-y-4" data-menu-image-mode-editor="${GUEST_MENU_IMAGE_MODE_SEQ}">
-      <div>
-        ${renderLinesMultiselectHtml(panelEnabled)}
-      </div>
-      <div>
-        <p class="m-0 mb-2 text-xs font-medium text-muted-foreground">按产线配置展示模式</p>
-        <div class="space-y-3" data-menu-image-mode-line-configs>
-          ${renderLineConfigsHtml(panelEnabled)}
-        </div>
-      </div>
-      <p class="m-0 text-xs leading-relaxed text-muted-foreground">
-        先勾选要生效的产线，再分别为各产线选择默认图片展示方式；小图/大图模式下可指定例外菜品。
-      </p>
-    </div>`;
+    <div
+      class="overflow-x-auto rounded-md border border-border"
+      data-menu-image-mode-editor="${GUEST_MENU_IMAGE_MODE_SEQ}"
+    >
+      <table class="w-full min-w-[40rem] border-collapse text-left text-sm">
+        <thead class="bg-muted/40 text-xs text-muted-foreground">
+          <tr>
+            <th class="px-3 py-2 font-medium w-[5.5rem]">产线</th>
+            <th class="px-3 py-2 font-medium w-[16rem]">模式</th>
+            <th class="px-3 py-2 font-medium">菜单设置</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    ${renderDishPickDialog()}`;
 }
 
 export function renderGuestMenuImageModePanelHtml(on: boolean): string {
   const hidden = on ? "" : "hidden";
   return `
     <div
-      class="mt-3 max-w-2xl ${hidden}"
+      class="mt-3 max-w-4xl ${hidden}"
       data-menu-image-mode-panel="${GUEST_MENU_IMAGE_MODE_SEQ}"
       ${on ? "" : 'aria-hidden="true"'}
     >
       ${renderEditorInnerHtml(on)}
     </div>`;
-}
-
-function syncLineConfigVisibility(editor: HTMLElement): void {
-  const selected = new Set(readGuestMenuImageModeLines());
-  editor.querySelectorAll<HTMLElement>("[data-menu-image-mode-line-config]").forEach((block) => {
-    const lineId = block.getAttribute("data-menu-image-mode-line-config");
-    const show =
-      lineId &&
-      isFohLineConfigRowVisible(lineId, selected.has(lineId as GuestMenuImageModeProductLineId));
-    block.classList.toggle("hidden", !show);
-    if (show) block.removeAttribute("aria-hidden");
-    else block.setAttribute("aria-hidden", "true");
-  });
 }
 
 function syncConditionalPanelsForLine(lineId: GuestMenuImageModeProductLineId): void {
@@ -360,6 +408,12 @@ function syncConditionalPanelsForLine(lineId: GuestMenuImageModeProductLineId): 
       if (show) panel.removeAttribute("aria-hidden");
       else panel.setAttribute("aria-hidden", "true");
     });
+
+  document
+    .querySelectorAll<HTMLElement>(`[data-menu-image-mode-original-hint="${lineId}"]`)
+    .forEach((hint) => {
+      hint.classList.toggle("hidden", current !== "original");
+    });
 }
 
 function syncAllConditionalPanelsInEditor(editor: HTMLElement): void {
@@ -371,6 +425,19 @@ function syncAllConditionalPanelsInEditor(editor: HTMLElement): void {
   });
 }
 
+function setEditorInteractive(editor: HTMLElement, enabled: boolean): void {
+  editor.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLButtonElement>(
+    "input, select, button",
+  ).forEach((el) => {
+    el.disabled = !enabled;
+  });
+  editor.querySelectorAll("label").forEach((label) => {
+    label.classList.toggle("cursor-not-allowed", !enabled);
+    label.classList.toggle("opacity-50", !enabled);
+    label.classList.toggle("cursor-pointer", enabled);
+  });
+}
+
 export function setGuestMenuImageModePanelVisible(visible: boolean): void {
   document
     .querySelectorAll<HTMLElement>(`[data-menu-image-mode-panel="${GUEST_MENU_IMAGE_MODE_SEQ}"]`)
@@ -379,57 +446,144 @@ export function setGuestMenuImageModePanelVisible(visible: boolean): void {
       if (visible) panel.removeAttribute("aria-hidden");
       else panel.setAttribute("aria-hidden", "true");
 
-      panel.querySelectorAll<HTMLInputElement>("input, select, button").forEach((el) => {
-        el.disabled = !visible;
-      });
-      panel.querySelectorAll("label").forEach((label) => {
-        label.classList.toggle("cursor-not-allowed", !visible);
-        label.classList.toggle("opacity-50", !visible);
-        label.classList.toggle("cursor-pointer", visible);
-      });
+      if (visible) ensureGuestMenuImageModeLinesDefault();
 
       const editor = panel.querySelector<HTMLElement>(`[data-menu-image-mode-editor]`);
-      if (editor && visible) {
-        syncLineConfigVisibility(editor);
-        syncAllConditionalPanelsInEditor(editor);
+      if (editor) {
+        setEditorInteractive(editor, visible);
+        if (visible) syncAllConditionalPanelsInEditor(editor);
       }
+      if (!visible) closeDishPickDialog(panel);
     });
 }
 
-function collectLinesFromGroup(group: HTMLElement): GuestMenuImageModeProductLineId[] {
-  const lines: GuestMenuImageModeProductLineId[] = [];
-  group.querySelectorAll<HTMLInputElement>("[data-menu-image-mode-line]:checked").forEach((input) => {
-    const id = input.getAttribute("data-menu-image-mode-line");
-    if (id && ALL_LINE_IDS.includes(id as GuestMenuImageModeProductLineId)) {
-      lines.push(id as GuestMenuImageModeProductLineId);
-    }
-  });
-  writeGuestMenuImageModeLines(lines);
-  return lines;
+function showDishPickDialog(dialog: HTMLElement): void {
+  dialog.classList.remove("hidden");
+  dialog.classList.add("flex");
 }
 
-function bindMenuImageModeEditor(editor: HTMLElement): void {
-  if (editor.dataset.menuImageModeEditorBound === "1") return;
-  editor.dataset.menuImageModeEditorBound = "1";
+function hideDishPickDialog(dialog: HTMLElement): void {
+  dialog.classList.add("hidden");
+  dialog.classList.remove("flex");
+  dialog.setAttribute("data-line-id", "");
+  dialog.setAttribute("data-storage-id", "");
+  const body = dialog.querySelector<HTMLElement>("[data-menu-image-mode-dish-dialog-body]");
+  if (body) {
+    body.innerHTML =
+      `<p class="m-0 text-xs text-muted-foreground">按组 / 类 / 菜勾选需要例外展示的商品（结构对齐品牌管理）</p>`;
+  }
+}
 
-  const linesGroup = editor.querySelector<HTMLElement>("[data-menu-image-mode-lines]");
-  if (linesGroup) {
-    linesGroup.addEventListener("change", (e) => {
-      const el = e.target as HTMLElement;
-      if (!el.matches("[data-menu-image-mode-line]")) return;
-      collectLinesFromGroup(linesGroup);
-      syncLineConfigVisibility(editor);
+function closeDishPickDialog(host: HTMLElement): void {
+  const dialog = host.querySelector<HTMLElement>("[data-menu-image-mode-dish-dialog]");
+  if (dialog) hideDishPickDialog(dialog);
+}
+
+function refreshPickSummary(host: HTMLElement, lineId: GuestMenuImageModeProductLineId, storageId: string): void {
+  const keys = readStructureKeys(storageId);
+  const summary = formatBrandMenuStructureSummary(keys, structureTreeForLine(lineId));
+  const dishCount = keys.filter((k) => k.startsWith("d:")).length;
+  const countLabel = dishCount > 0 ? `已选 ${dishCount} 道菜` : "未选择商品";
+
+  host
+    .querySelectorAll<HTMLElement>(`[data-menu-image-mode-pick-summary="${storageId}"]`)
+    .forEach((el) => {
+      el.textContent = summary;
+    });
+  host
+    .querySelectorAll<HTMLElement>(`[data-menu-image-mode-pick-count="${storageId}"]`)
+    .forEach((el) => {
+      el.textContent = countLabel;
+    });
+}
+
+function openDishPickDialog(
+  host: HTMLElement,
+  lineId: GuestMenuImageModeProductLineId,
+  storageId: string,
+  pickerLabel: string,
+): void {
+  const dialog = host.querySelector<HTMLElement>("[data-menu-image-mode-dish-dialog]");
+  const body = dialog?.querySelector<HTMLElement>("[data-menu-image-mode-dish-dialog-body]");
+  const titleEl = dialog?.querySelector<HTMLElement>("#menu-image-mode-dish-dialog-title");
+  if (!dialog || !body) return;
+
+  dialog.setAttribute("data-line-id", lineId);
+  dialog.setAttribute("data-storage-id", storageId);
+  if (titleEl) titleEl.textContent = pickerLabel || "选择商品";
+
+  const keys = readStructureKeys(storageId);
+  const treeLineId = isBrandMenuLineId(lineId) ? (lineId as BrandMenuLineId) : undefined;
+  body.innerHTML = `
+    <p class="m-0 text-xs text-muted-foreground">按组 / 类 / 菜勾选需要例外展示的商品（结构对齐品牌管理）</p>
+    ${renderBrandMenuStructurePickerHtml(keys, undefined, undefined, {
+      treeLineId,
+    })}`;
+  body.querySelectorAll<HTMLElement>("[data-brand-menu-structure-picker]").forEach((picker) => {
+    bindBrandMenuStructurePicker(picker);
+  });
+  showDishPickDialog(dialog);
+}
+
+function saveDishPickDialog(host: HTMLElement): void {
+  const dialog = host.querySelector<HTMLElement>("[data-menu-image-mode-dish-dialog]");
+  if (!dialog) return;
+  const lineId = dialog.getAttribute("data-line-id") as GuestMenuImageModeProductLineId | null;
+  const storageId = dialog.getAttribute("data-storage-id") ?? "";
+  const picker = dialog.querySelector<HTMLElement>("[data-brand-menu-structure-picker]");
+  if (!lineId || !storageId || !ALL_LINE_IDS.includes(lineId)) {
+    hideDishPickDialog(dialog);
+    return;
+  }
+  const keys = picker ? readBrandMenuStructureKeysFromPicker(picker) : [];
+  writeStructureKeys(storageId, keys);
+  refreshPickSummary(host, lineId, storageId);
+  hideDishPickDialog(dialog);
+}
+
+function bindMenuImageModePanel(panel: HTMLElement): void {
+  if (panel.dataset.menuImageModePanelBound === "1") return;
+  panel.dataset.menuImageModePanelBound = "1";
+
+  const editor = panel.querySelector<HTMLElement>(`[data-menu-image-mode-editor]`);
+  if (editor) {
+    editor.addEventListener("change", (e) => {
+      const target = e.target as HTMLElement;
+      const lineRadio = target.closest<HTMLInputElement>("[data-menu-image-mode-line-radio]");
+      if (lineRadio?.checked) {
+        const lineId = lineRadio.getAttribute("data-menu-image-mode-line-radio");
+        if (lineId && ALL_LINE_IDS.includes(lineId as GuestMenuImageModeProductLineId)) {
+          syncConditionalPanelsForLine(lineId as GuestMenuImageModeProductLineId);
+        }
+      }
     });
   }
 
-  editor.addEventListener("change", (e) => {
+  panel.addEventListener("click", (e) => {
     const target = e.target as HTMLElement;
-    const lineRadio = target.closest<HTMLInputElement>("[data-menu-image-mode-line-radio]");
-    if (lineRadio?.checked) {
-      const lineId = lineRadio.getAttribute("data-menu-image-mode-line-radio");
-      if (lineId && ALL_LINE_IDS.includes(lineId as GuestMenuImageModeProductLineId)) {
-        syncConditionalPanelsForLine(lineId as GuestMenuImageModeProductLineId);
+
+    const pickBtn = target.closest<HTMLElement>("[data-menu-image-mode-pick-dishes]");
+    if (pickBtn) {
+      const lineId = pickBtn.getAttribute("data-line-id") as GuestMenuImageModeProductLineId | null;
+      const storageId = pickBtn.getAttribute("data-storage-id") ?? "";
+      const pickerLabel = pickBtn.getAttribute("data-picker-label") ?? "选择商品";
+      if (lineId && storageId && ALL_LINE_IDS.includes(lineId)) {
+        openDishPickDialog(panel, lineId, storageId, pickerLabel);
       }
+      return;
+    }
+
+    if (
+      target.closest("[data-menu-image-mode-dish-dialog-close]") ||
+      target.closest("[data-menu-image-mode-dish-dialog-cancel]") ||
+      target.closest("[data-menu-image-mode-dish-dialog-backdrop]")
+    ) {
+      closeDishPickDialog(panel);
+      return;
+    }
+
+    if (target.closest("[data-menu-image-mode-dish-dialog-save]")) {
+      saveDishPickDialog(panel);
     }
   });
 }
@@ -438,9 +592,9 @@ export function bindGuestMenuImageModeUi(root: ParentNode = document): void {
   ensureGuestMenuImageModeToggleMigrated();
   migrateLegacyGlobalToLines();
 
-  root.querySelectorAll<HTMLElement>(`[data-menu-image-mode-editor="${GUEST_MENU_IMAGE_MODE_SEQ}"]`).forEach((editor) => {
-    bindMenuImageModeEditor(editor);
-    syncLineConfigVisibility(editor);
-    syncAllConditionalPanelsInEditor(editor);
+  root.querySelectorAll<HTMLElement>(`[data-menu-image-mode-panel="${GUEST_MENU_IMAGE_MODE_SEQ}"]`).forEach((panel) => {
+    bindMenuImageModePanel(panel);
+    const editor = panel.querySelector<HTMLElement>(`[data-menu-image-mode-editor]`);
+    if (editor) syncAllConditionalPanelsInEditor(editor);
   });
 }

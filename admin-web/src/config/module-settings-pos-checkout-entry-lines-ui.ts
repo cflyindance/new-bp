@@ -40,11 +40,6 @@ const LINES_GROUP_ARIA_BY_SEQ: Record<PosCheckoutEntryLinesSeq, string> = {
   [PRE_PAYMENT_CONFIRM_CUSTOMER_SEQ]: "支付前确认客户信息适用产线",
 };
 
-const PANEL_HINT_BY_SEQ: Record<PosCheckoutEntryLinesSeq, string> = {
-  [BARCODE_FIND_OPEN_PAYMENT_SEQ]: "勾选产线后，扫描条形码找单时直接进入该单付款界面。",
-  [PRE_PAYMENT_CONFIRM_CUSTOMER_SEQ]: "勾选产线后，支付前需服务员二次确认客户信息。",
-};
-
 const MODULE_SETTING_CONTROL_CLASS =
   "size-4 shrink-0 accent-primary text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50";
 
@@ -173,7 +168,6 @@ export function renderPosCheckoutEntryLinesPanelHtml(seq: PosCheckoutEntryLinesS
       ${on ? "" : 'aria-hidden="true"'}
     >
       ${renderLinesMultiselectHtml(seq, on)}
-      <p class="m-0 mt-2 text-xs leading-relaxed text-muted-foreground">${escapeHtml(PANEL_HINT_BY_SEQ[seq])}</p>
     </div>`;
 }
 

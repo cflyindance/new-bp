@@ -1,10 +1,9 @@
 /**
  * 前厅 · 订单类型与取餐：订单类型可用范围（seq 487）
- * 支持多产线独立配置可用订单类型（堂吃/外带/来取）。
+ * 支持多产线独立配置可用订单类型（堂吃/外带/来取）；样式对齐点单显示座位。
  */
 
 import { FOH_LINE_CONFIG_ROW_ATTR, getFohActiveLineFilterId } from "./foh-settings-by-line-filter";
-import { MODULE_SETTING_CHOICE_CONTROL_CLASS } from "./module-settings-choice-ui";
 import { readModuleSettingJson, writeModuleSettingJson } from "./module-settings-form-ui";
 
 export const ORDER_TYPE_BY_LINE_SEQ = 487;
@@ -33,6 +32,9 @@ type OrderTypeByLineConfig = {
 
 const ALL_ORDER_TYPE_IDS = ORDER_TYPES.map((o) => o.id);
 const ALL_LINE_IDS = PRODUCT_LINES.map((p) => p.id);
+
+const MODULE_SETTING_CONTROL_CLASS =
+  "size-4 shrink-0 accent-primary text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
 
 function escapeHtml(s: string): string {
   return s
@@ -118,52 +120,61 @@ function isChecked(
   return (config.byLine[lineId] ?? []).includes(typeId);
 }
 
+function renderOrderTypeCheckboxesForLine(
+  config: OrderTypeByLineConfig,
+  lineId: ProductLineId,
+  lineLabel: string,
+): string {
+  const inputs = ORDER_TYPES.map((type) => {
+    const checked = isChecked(config, lineId, type.id);
+    return `
+      <label class="inline-flex cursor-pointer items-center gap-1.5 text-sm text-foreground">
+        <input
+          type="checkbox"
+          class="${MODULE_SETTING_CONTROL_CLASS} rounded-sm"
+          value="${escapeHtml(type.id)}"
+          data-order-type-line="${escapeHtml(lineId)}"
+          data-order-type-id="${escapeHtml(type.id)}"
+          ${checked ? "checked" : ""}
+          aria-label="${escapeHtml(lineLabel)} ${escapeHtml(type.label)}"
+        />
+        <span>${escapeHtml(type.label)}</span>
+      </label>`;
+  }).join("");
+
+  return `<div class="flex flex-wrap items-center gap-x-3 gap-y-2">${inputs}</div>`;
+}
+
 export function renderOrderTypeByLineEditorHtml(): string {
   const config = readOrderTypeByLineConfig();
   const activeLine = getFohActiveLineFilterId();
   const visibleLines = activeLine
     ? PRODUCT_LINES.filter((line) => line.id === activeLine)
     : PRODUCT_LINES;
-  const headCells = ORDER_TYPES.map(
-    (o) =>
-      `<th scope="col" class="px-2 py-2 text-center text-xs font-medium text-muted-foreground whitespace-nowrap">${escapeHtml(o.label)}</th>`,
-  ).join("");
 
-  const rows = visibleLines.map((line) => {
-    const cells = ORDER_TYPES.map((type) => {
-      const checked = isChecked(config, line.id, type.id);
-      return `
-        <td class="border-t border-border px-2 py-2 text-center align-middle">
-          <input
-            type="checkbox"
-            class="${MODULE_SETTING_CHOICE_CONTROL_CLASS} rounded-sm"
-            ${checked ? "checked" : ""}
-            data-order-type-line="${escapeHtml(line.id)}"
-            data-order-type-id="${escapeHtml(type.id)}"
-          />
-        </td>`;
-    }).join("");
-    return `
-      <tr data-order-type-row="${escapeHtml(line.id)}" ${FOH_LINE_CONFIG_ROW_ATTR}="${escapeHtml(line.id)}">
-        <th scope="row" class="border-t border-border px-3 py-2 text-left text-sm font-medium text-foreground whitespace-nowrap">${escapeHtml(line.label)}</th>
-        ${cells}
-      </tr>`;
-  }).join("");
+  const rows = visibleLines
+    .map(
+      (line) => `
+    <tr class="border-t border-border" data-order-type-row="${escapeHtml(line.id)}" ${FOH_LINE_CONFIG_ROW_ATTR}="${escapeHtml(line.id)}">
+      <td class="px-3 py-2.5 text-sm font-medium text-foreground whitespace-nowrap align-top">${escapeHtml(line.label)}</td>
+      <td class="px-3 py-2.5">
+        ${renderOrderTypeCheckboxesForLine(config, line.id, line.label)}
+      </td>
+    </tr>`,
+    )
+    .join("");
 
   return `
-    <div class="space-y-2" data-order-type-by-line-editor>
-      <div class="overflow-x-auto rounded-md border border-border">
-        <table class="w-full min-w-[34rem] border-collapse">
-          <thead class="bg-muted/40">
-            <tr>
-              <th class="px-3 py-2 text-left text-xs font-medium text-muted-foreground">产线 \\ 订单类型</th>
-              ${headCells}
-            </tr>
-          </thead>
-          <tbody>${rows}</tbody>
-        </table>
-      </div>
-      <p class="text-xs text-muted-foreground">可按产线独立设置可用订单类型（堂吃/外带/来取）。</p>
+    <div data-order-type-by-line-editor class="overflow-x-auto rounded-md border border-border">
+      <table class="w-full min-w-[20rem] border-collapse text-left text-sm">
+        <thead class="bg-muted/40 text-xs text-muted-foreground">
+          <tr>
+            <th class="px-3 py-2 font-medium w-[7.5rem]">产线</th>
+            <th class="px-3 py-2 font-medium">可用订单类型（多选）</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
     </div>`;
 }
 
@@ -204,4 +215,3 @@ export function bindOrderTypeByLineEditor(): void {
     });
   });
 }
-

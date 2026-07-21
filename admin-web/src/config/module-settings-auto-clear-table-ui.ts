@@ -235,9 +235,7 @@ function renderMinutesByLineEditorHtml(enabled: boolean): string {
   }).join("");
 
   return `
-    <div data-auto-clear-table-minutes-editor="${AUTO_CLEAR_TABLE_SEQ}" class="space-y-2">
-      <p class="m-0 text-xs font-medium text-muted-foreground">各产线占用超时（分钟）</p>
-      <p class="m-0 text-xs leading-relaxed text-muted-foreground">为各产线设置桌台占用超过多少分钟后自动清桌；填 0 表示该产线不启用。</p>
+    <div data-auto-clear-table-minutes-editor="${AUTO_CLEAR_TABLE_SEQ}">
       <div class="overflow-x-auto rounded-md border border-border">
         <table class="w-full min-w-[20rem] border-collapse text-left text-sm">
           <thead class="bg-muted/40 text-xs text-muted-foreground">

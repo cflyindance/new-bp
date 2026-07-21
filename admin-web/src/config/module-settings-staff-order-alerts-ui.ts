@@ -148,15 +148,6 @@ function ensureAllStaffOrderAlertTogglesMigrated(): void {
   }
 }
 
-const PANEL_HINT_BY_SEQ: Record<number, string> = {
-  [STAFF_ORDER_ALERT_NEW_ORDER_SEQ]:
-    "勾选产线后，该产线有新订单进入店内时向员工发送消息提醒（不发顾客短信）。",
-  [STAFF_ORDER_ALERT_APPEND_SEQ]:
-    "勾选产线后，该产线在追单/加菜时向员工发送消息提醒（不发顾客短信）。",
-  [STAFF_ORDER_ALERT_CUSTOM_MENU_SEQ]:
-    "勾选产线后，订单含指定菜品时向员工发送消息提醒；指定菜品列表配置见业务规则（原型待接）。",
-};
-
 function renderStaffOrderAlertByLineHtml(seq: number, enabled: boolean): string {
   const selected = new Set(readStaffOrderAlertProductLines(seq));
   const lines = getStaffAlertProductLinesForSeq(seq);
@@ -194,7 +185,6 @@ function renderStaffOrderAlertByLineHtml(seq: number, enabled: boolean): string 
 
 export function renderStaffOrderAlertPanelHtml(seq: number, on: boolean): string {
   const hidden = on ? "" : "hidden";
-  const hint = PANEL_HINT_BY_SEQ[seq] ?? "";
   return `
     <div
       class="mt-3 ${hidden}"
@@ -202,7 +192,6 @@ export function renderStaffOrderAlertPanelHtml(seq: number, on: boolean): string
       ${on ? "" : 'aria-hidden="true"'}
     >
       ${renderStaffOrderAlertByLineHtml(seq, on)}
-      ${hint ? `<p class="m-0 mt-2 text-xs leading-relaxed text-muted-foreground">${escapeHtml(hint)}</p>` : ""}
     </div>`;
 }
 

@@ -192,10 +192,7 @@ export function renderMemberPreOrderLoginPolicyByLineEditorHtml(): string {
   }).join("");
 
   return `
-    <div data-member-login-policy-editor class="space-y-2">
-      <p class="m-0 text-xs leading-relaxed text-muted-foreground">
-        每条产线独立配置，且只能选一种策略；与 seq 622 短信验证码产线范围可不同。
-      </p>
+    <div data-member-login-policy-editor>
       <div class="overflow-x-auto rounded-md border border-border">
         <table class="w-full min-w-[28rem] border-collapse text-left text-sm">
           <thead class="bg-muted/40 text-xs text-muted-foreground">

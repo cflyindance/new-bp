@@ -8,7 +8,6 @@ import {
   PAYMENT_RECEIPT_FLOW_TOGGLE_SEQS,
 } from "./module-settings-payment-receipt-flow-ui";
 import {
-  TABLESIDE_SERVICE_CALL_COOLDOWN_SEQ,
   TABLESIDE_SERVICE_CALL_TOGGLE_SEQS,
 } from "./module-settings-tableside-service-call-ui";
 import { DELIVERY_PLATFORM_SLIPS_TOGGLE_SEQS } from "./module-settings-delivery-platform-slips-ui";
@@ -120,7 +119,7 @@ export const VIEWONLY_DISH_RULES_TOGGLE_SEQ: readonly number[] = [595, 596];
 /** 前厅 · 订单备注（521 按产线见 order-remark-lines-ui） */
 export const ORDER_REMARK_TOGGLE_SEQ: readonly number[] = [521];
 
-/** 前厅 · 商品备注（522 按产线选商品见 product-remark-ui） */
+/** 前厅 · 商品备注（522 按产线选商品见 product-remark-ui，结构对齐展示菜详情 608） */
 export const PRODUCT_REMARK_TOGGLE_SEQ: readonly number[] = [522];
 
 /** 打印中心 · 支付收据流程 · 收据确认签名栏（94 按产线见 receipt-signature-line-ui） */
@@ -216,11 +215,14 @@ export const AUTO_KITCHEN_SEND_PAYMENT_TOGGLE_SEQ: readonly number[] = [502];
 /** 前厅 · Kiosk 履约展示页（488–491 主开关 + Kiosk 产线，见 order-type-selection-page-ui） */
 export const GUEST_KIOSK_FLOW_PAGE_TOGGLE_SEQ: readonly number[] = [488, 489, 490, 491];
 
-/** 前厅 · eMenu 授权/开单限制（620/626 主开关 + eMenu 产线，见 guest-emenu-auth-page-ui） */
+/** 前厅 · eMenu/SDI 授权/开单限制（620/626 主开关 + 产线多选，见 guest-emenu-auth-page-ui） */
 export const GUEST_EMENU_AUTH_PAGE_TOGGLE_SEQ: readonly number[] = [620, 626];
 
 /** 前厅 · 品类模式（601/571/627 主开关 + 产线多选；601 UI 已迁品类管理·品类设置，见 foh-category-settings-ui / guest-category-mode-ui） */
 export const GUEST_CATEGORY_MODE_TOGGLE_SEQ: readonly number[] = [601, 571, 627];
+
+/** 前厅 · 按照时长收费（443 主开关 + 场景多选，见 duration-billing-scenes-ui） */
+export const DURATION_BILLING_TOGGLE_SEQ: readonly number[] = [443];
 
 /** 前厅 · 菜单分类模式（602 主开关 + eMenu/SDI 产线；602 UI 已迁分类管理·分类设置，见 foh-classification-settings-ui / guest-menu-classification-mode-ui） */
 export const GUEST_MENU_CLASSIFICATION_MODE_TOGGLE_SEQ: readonly number[] = [602];
@@ -228,7 +230,7 @@ export const GUEST_MENU_CLASSIFICATION_MODE_TOGGLE_SEQ: readonly number[] = [602
 /** 前厅 · 展示菜单类名称（606 主开关 + Kiosk/eMenu/SDI/Online Order，见 guest-menu-class-name-display-ui） */
 export const GUEST_MENU_CLASS_NAME_DISPLAY_TOGGLE_SEQ: readonly number[] = [606];
 
-/** 前厅 · 菜单图片展示模式（607 主开关 + 按产线配置，见 guest-menu-image-mode-ui） */
+/** 前厅 · 菜单图片大小展示模式（607 主开关 + 按产线配置，见 guest-menu-image-mode-ui） */
 export const GUEST_MENU_IMAGE_MODE_TOGGLE_SEQ: readonly number[] = [607];
 
 /** 前厅 · 火锅锅底必选（572 主开关 + eMenu/SDI 产线，见 hotpot-base-required-ui） */
@@ -236,9 +238,6 @@ export const HOTPOT_BASE_REQUIRED_TOGGLE_SEQ: readonly number[] = [572];
 
 /** 前厅 · 火锅锅底下单后仍展示锅底（573 主开关 + eMenu/SDI 产线，见 hotpot-base-still-show-ui） */
 export const HOTPOT_BASE_STILL_SHOW_TOGGLE_SEQ: readonly number[] = [573];
-
-/** 前厅 · 点单须知（569 主开关 + 各产线标题/内容，见 guest-order-notice-ui） */
-export const GUEST_ORDER_NOTICE_TOGGLE_SEQ: readonly number[] = [569];
 
 /** 前厅 · 用餐时长（577–580 主开关 + eMenu 产线，见 guest-dining-duration-ui） */
 export const GUEST_DINING_DURATION_TOGGLE_SEQ: readonly number[] = [577, 578, 579, 580];
@@ -261,10 +260,10 @@ export const POINTS_DISH_AUTH_ORDER_TOGGLE_SEQ: readonly number[] = [594];
 /** 前厅 · 命中任意规则后弹出密码授权（646 主开关 + eMenu 产线，见 rule-hit-password-auth-ui） */
 export const RULE_HIT_PASSWORD_AUTH_TOGGLE_SEQ: readonly number[] = [646];
 
-/** 前厅 · 展示输入手机号（504 主开关 + Kiosk 产线，见 guest-phone-display-page-ui） */
+/** 前厅 · 展示输入手机号页面（504 主开关 + Kiosk 产线，见 guest-phone-display-page-ui） */
 export const GUEST_PHONE_DISPLAY_PAGE_TOGGLE_SEQ: readonly number[] = [504];
 
-/** 前厅 · 输入姓名/姓名必填（506/507 主开关 + Kiosk 产线，见 guest-name-display-page-ui） */
+/** 前厅 · 展示输入姓名页面/姓名必填（506/507 主开关 + Kiosk 产线，见 guest-name-display-page-ui） */
 export const GUEST_NAME_PAGE_TOGGLE_SEQ: readonly number[] = [506, 507];
 
 /** 前厅 · 默认选中隐私条款（510 主开关 + 多产线，见 member-registration-fields-ui） */
@@ -323,9 +322,9 @@ export const POS_MENU_SCOPE_LINES_TOGGLE_SEQ: readonly number[] = [
   118, 148, 176, 177, 348,
 ];
 
-/** 前厅 · 菜单区界面布局（216–220/350 主开关 + 产线，见 pos-menu-ui-layout-lines-ui） */
+/** 前厅 · 菜单区界面布局（216–220 主开关 + 产线，见 pos-menu-ui-layout-lines-ui；350 见 emenu-custom-message-ui） */
 export const POS_MENU_UI_LAYOUT_LINES_TOGGLE_SEQ: readonly number[] = [
-  216, 217, 218, 219, 220, 350,
+  216, 217, 218, 219, 220,
 ];
 
 /** 前厅 · 套餐点单与展示（139/145 主开关 + 产线，见 pos-combo-ordering-ui） */
@@ -369,12 +368,12 @@ export const MODULE_SETTING_TOGGLE_SEQ = new Set([
   ...GUEST_KIOSK_FLOW_PAGE_TOGGLE_SEQ,
   ...GUEST_EMENU_AUTH_PAGE_TOGGLE_SEQ,
   ...GUEST_CATEGORY_MODE_TOGGLE_SEQ,
+  ...DURATION_BILLING_TOGGLE_SEQ,
   ...GUEST_MENU_CLASSIFICATION_MODE_TOGGLE_SEQ,
   ...GUEST_MENU_CLASS_NAME_DISPLAY_TOGGLE_SEQ,
   ...GUEST_MENU_IMAGE_MODE_TOGGLE_SEQ,
   ...HOTPOT_BASE_REQUIRED_TOGGLE_SEQ,
   ...HOTPOT_BASE_STILL_SHOW_TOGGLE_SEQ,
-  ...GUEST_ORDER_NOTICE_TOGGLE_SEQ,
   ...GUEST_DINING_DURATION_TOGGLE_SEQ,
   ...GUEST_ORDER_PLACE_INTERVAL_TOGGLE_SEQ,
   ...GUEST_MENU_ORDER_INTERVAL_TOGGLE_SEQ,
@@ -406,25 +405,21 @@ export const MODULE_SETTING_TOGGLE_SEQ = new Set([
   ...EXTERNAL_INTEGRATIONS_TOGGLE_SEQ,
   ...UI_OPERATION_PREFERENCES_TOGGLE_SEQ,
   ...MAP_ADDRESS_SERVICES_TOGGLE_SEQ,
-  /** 535/536 排队与等待展示（Kiosk 产线多选，见 wait-time-display-ui） */
-  535, 536,
-  570,
+  /** 535/536 排队与等待展示已改为按产线表格（见 wait-time-display-ui） */
   /** 597/598 每轮菜品互斥/组合：UI 在 menu-order-limits 业务页，见 foh-menu-order-limits-ui */
   597, 598,
   /** 食客端·购物车展示 616–618（产线 eMenu/SDI，见 guest-menu-cart-ui） */
   616, 617, 618,
   73, 74,
-  /** 食客端·菜单结构 515–520、524、528（产线多选，见 guest-menu-structure-ui） */
-  515, 516, 517, 518, 519, 520, 524, 528,
+  /** 食客端·菜单结构 515–516、518–520、524、528（产线多选；517 无总开关，见 guest-menu-structure-ui） */
+  515, 516, 518, 519, 520, 524, 528,
   /** 531 品牌模式、530 品牌页作为首页（Kiosk/eMenu/SDI 产线多选） */
   531, 530,
   /** 532 展示 MenuSifu 品牌 LOGO（Kiosk/eMenu，见 menusifu-brand-logo-ui） */
   532,
   /** 食客端·首页与版式 509/600/611（产线多选，见 guest-menu-line-toggle-ui） */
   509, 600, 611,
-  /** 645 菜品名称字体大小（Kiosk/eMenu/SDI 按产线，见 guest-menu-dish-name-font-ui） */
-  645,
-  /** 604 eMenu Pro 模式（eMenu 产线多选，见 guest-emenu-pro-mode-ui） */
+  /** 604 Menu Pro 模式（Kiosk / eMenu 产线多选，见 guest-emenu-pro-mode-ui） */
   604,
   608, 647, 672,
   ...TABLE_SELECTION_PAGE_TOGGLE_SEQ,
@@ -480,7 +475,6 @@ export function moduleSettingToggleStorageKey(seq: number): string {
 /** 默认开启展示（前厅设置开关一律默认开；其它 hub 保留个别默认关） */
 export function getDefaultModuleSettingToggleOn(seq: number): boolean {
   if (isFohHubSettingToggleSeq(seq)) return true;
-  if (seq === TABLESIDE_SERVICE_CALL_COOLDOWN_SEQ) return false;
   if (seq === 74) return false;
   if ((STAFF_ORDER_ALERT_TOGGLE_SEQ as readonly number[]).includes(seq)) return false;
   if (seq === 601 || seq === 602) return true;

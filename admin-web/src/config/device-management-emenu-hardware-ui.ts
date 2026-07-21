@@ -449,10 +449,10 @@ function renderEditPage(device: EmenuHardwareDevice): string {
         </section>
 
         <section class="space-y-3">
-          <h2 class="text-base font-semibold text-card-foreground">eMenu Pro 模式</h2>
+          <h2 class="text-base font-semibold text-card-foreground">Menu Pro 模式</h2>
           <div class="flex items-center justify-between rounded-lg border border-border bg-card px-4 py-3 shadow-sm">
-            <span class="text-sm font-medium text-card-foreground">eMenu Pro 模式</span>
-            ${renderToggleSwitch("emenuProMode", device.display.emenuProMode, "eMenu Pro 模式")}
+            <span class="text-sm font-medium text-card-foreground">Menu Pro 模式</span>
+            ${renderToggleSwitch("emenuProMode", device.display.emenuProMode, "Menu Pro 模式")}
           </div>
         </section>
 

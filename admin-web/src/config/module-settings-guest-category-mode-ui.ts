@@ -1,7 +1,7 @@
 /**
  * 前厅 · 品类模式相关设置（主开关 + 产线多选）：
  * — 601 食客端·首页与版式 · 品类模式（eMenu、SDI）；
- * — 571 品类先下单（eMenu、SDI）、627 下单前允许食客切换品类（eMenu）。
+ * — 571 品类先下单（eMenu、SDI）、627 下单前允许食客切换品类（eMenu、SDI）。
  */
 
 import { readModuleSettingJson, writeModuleSettingJson } from "./module-settings-form-ui";
@@ -22,7 +22,8 @@ const EMENU_SDI_PRODUCT_LINES = [
   { id: "sdi", label: "SDI" },
 ] as const;
 
-const EMENU_ONLY_PRODUCT_LINES = [{ id: "emenu", label: "eMenu" }] as const;
+/** 供产线矩阵抽取；601/571/627 均为 eMenu + SDI */
+export const GUEST_CATEGORY_MODE_PRODUCT_LINES = EMENU_SDI_PRODUCT_LINES;
 
 const PRODUCT_LINES_BY_SEQ: Record<
   number,
@@ -30,13 +31,13 @@ const PRODUCT_LINES_BY_SEQ: Record<
 > = {
   [GUEST_MENU_CATEGORY_MODE_SEQ]: EMENU_SDI_PRODUCT_LINES,
   [GUEST_CATEGORY_ORDER_FIRST_SEQ]: EMENU_SDI_PRODUCT_LINES,
-  [GUEST_CATEGORY_SWITCH_BEFORE_ORDER_SEQ]: EMENU_ONLY_PRODUCT_LINES,
+  [GUEST_CATEGORY_SWITCH_BEFORE_ORDER_SEQ]: EMENU_SDI_PRODUCT_LINES,
 };
 
 export type GuestCategoryModeProductLineId = "emenu" | "sdi";
 
 function productLinesForSeq(seq: number): readonly { id: string; label: string }[] {
-  return PRODUCT_LINES_BY_SEQ[seq] ?? EMENU_ONLY_PRODUCT_LINES;
+  return PRODUCT_LINES_BY_SEQ[seq] ?? EMENU_SDI_PRODUCT_LINES;
 }
 
 function allLineIdsForSeq(seq: number): GuestCategoryModeProductLineId[] {

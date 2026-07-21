@@ -1,5 +1,6 @@
 /**
  * 前厅 · POS 点单页工具栏：seq 196 自定义分割线名称（按产线启用 + 名称，对齐 seq 111）。
+ * 适用产线：POS / POS GO / PayPad / eMenu / SDI。
  */
 
 import { FOH_LINE_CONFIG_ROW_ATTR } from "./foh-settings-by-line-filter";
@@ -21,6 +22,8 @@ export const CUSTOM_DIVIDER_PRODUCT_LINES = [
   { id: "pos", label: "POS" },
   { id: "pos-go", label: "POS GO" },
   { id: "paypad", label: "PayPad" },
+  { id: "emenu", label: "eMenu" },
+  { id: "sdi", label: "SDI" },
 ] as const;
 
 export type CustomDividerProductLineId = (typeof CUSTOM_DIVIDER_PRODUCT_LINES)[number]["id"];
@@ -68,7 +71,9 @@ function defaultByLineConfig(): Record<CustomDividerProductLineId, CustomDivider
 function normalizeByLineConfig(
   raw: Partial<Record<string, Partial<CustomDividerLineConfig>>>,
 ): Record<CustomDividerProductLineId, CustomDividerLineConfig> {
-  const base = defaultByLineConfig();
+  const base = Object.fromEntries(
+    CUSTOM_DIVIDER_PRODUCT_LINES.map((line) => [line.id, defaultLineConfig(false)]),
+  ) as Record<CustomDividerProductLineId, CustomDividerLineConfig>;
   for (const line of CUSTOM_DIVIDER_PRODUCT_LINES) {
     const item = raw[line.id];
     if (!item || typeof item !== "object") continue;

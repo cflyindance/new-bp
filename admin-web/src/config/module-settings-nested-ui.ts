@@ -20,7 +20,7 @@ export type ModuleSettingNestedRadioField = {
   options: { value: string; label: string }[];
 };
 
-/** 标题 + 内容文案（如点单须知、火锅页面提示） */
+/** 标题 + 内容文案（copy-form） */
 export type ModuleSettingNestedCopyFormField = {
   kind: "copy-form";
   fieldKey: string;
@@ -99,84 +99,6 @@ export interface ModuleSettingNestedGroupConfig {
   fields: ModuleSettingNestedField[];
 }
 
-/** 排队与等待展示 · 展示当前订单预计等待时长（535；产线见 wait-time-display-ui） */
-const WAIT_TIME_535_NESTED: ModuleSettingNestedGroupConfig = {
-  parentSeq: 535,
-  fields: [
-    {
-      kind: "inline",
-      fieldKey: "auto-close-minutes",
-      parts: [
-        { type: "text", value: "当前下单预计等待时间大于" },
-        { type: "number", fieldId: "535-auto-close-minutes", defaultValue: 30, min: 0, widthClass: "w-16" },
-        { type: "text", value: "分钟后，自动关闭提示" },
-      ],
-    },
-    {
-      kind: "inline",
-      fieldKey: "menu-popup-minutes",
-      parts: [
-        { type: "text", value: "当前下单预计等待时间大于" },
-        { type: "number", fieldId: "535-menu-popup-minutes", defaultValue: 10, min: 0, widthClass: "w-16" },
-        { type: "text", value: "分钟后，菜单页自动展示弹框提示" },
-      ],
-    },
-  ],
-};
-
-/** 排队与等待展示 · 预计等待时长区间设置（536） */
-const WAIT_TIME_536_NESTED: ModuleSettingNestedGroupConfig = {
-  parentSeq: 536,
-  fields: [
-    {
-      kind: "inline",
-      fieldKey: "cups-or-minutes",
-      parts: [
-        { type: "text", value: "当杯数大于" },
-        { type: "number", fieldId: "536-cups-threshold", defaultValue: 10, min: 0, widthClass: "w-16" },
-        { type: "text", value: "杯，或者当预计等待时长大于" },
-        { type: "number", fieldId: "536-minutes-threshold", defaultValue: 10, min: 0, widthClass: "w-16" },
-        { type: "text", value: "分钟" },
-      ],
-    },
-    {
-      kind: "inline",
-      fieldKey: "range-start-offset",
-      parts: [
-        { type: "text", value: "区间开始：在原固定时长上减" },
-        { type: "number", fieldId: "536-range-start-minus", defaultValue: 2, min: 0, widthClass: "w-16" },
-        { type: "text", value: "分钟" },
-      ],
-    },
-    {
-      kind: "inline",
-      fieldKey: "range-end-offset",
-      parts: [
-        { type: "text", value: "区间结束：在原固定时长上加" },
-        { type: "number", fieldId: "536-range-end-plus", defaultValue: 2, min: 0, widthClass: "w-16" },
-        { type: "text", value: "分钟" },
-      ],
-    },
-  ],
-};
-
-/** seq 569 点单须知见 module-settings-guest-order-notice-ui.ts（主开关 + 各产线标题/内容） */
-
-/** 食客端·下单与规则 · 火锅页面提示（570） */
-const GUEST_ORDER_570_NESTED: ModuleSettingNestedGroupConfig = {
-  parentSeq: 570,
-  fields: [
-    {
-      kind: "copy-form",
-      fieldKey: "hotpot-tip",
-      titleFieldId: "570-title",
-      contentFieldId: "570-content",
-      titleMaxLength: 20,
-      contentMaxLength: 200,
-    },
-  ],
-};
-
 /** 597/598 每轮菜品互斥/组合已迁前厅 menu-order-limits 业务页，见 foh-menu-order-limits-ui.ts */
 
 /** 食客端·首页与版式 · 展示菜详情（608）见 module-settings-guest-dish-detail-display-ui.ts */
@@ -225,9 +147,6 @@ const PROMO_LOTTERY_647_NESTED: ModuleSettingNestedGroupConfig = {
 };
 
 const NESTED_BY_PARENT_SEQ = new Map<number, ModuleSettingNestedGroupConfig>([
-  [535, WAIT_TIME_535_NESTED],
-  [536, WAIT_TIME_536_NESTED],
-  [570, GUEST_ORDER_570_NESTED],
   [647, PROMO_LOTTERY_647_NESTED],
 ]);
 

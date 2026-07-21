@@ -133,9 +133,7 @@ export function renderClearTableButtonPanelHtml(seq: number, on: boolean): strin
       data-clear-table-button-panel="${seq}"
       ${on ? "" : 'aria-hidden="true"'}
     >
-      <p class="m-0 mb-2 text-xs font-medium text-muted-foreground">适用产线</p>
       ${renderLinesMultiselectHtml(on)}
-      <p class="m-0 mt-2 text-xs leading-relaxed text-muted-foreground">目前仅 eMenu 产线支持展示清桌按钮。</p>
     </div>`;
 }
 

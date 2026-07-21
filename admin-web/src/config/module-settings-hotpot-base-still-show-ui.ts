@@ -134,9 +134,6 @@ export function renderHotpotBaseStillShowPanelHtml(on: boolean): string {
       ${on ? "" : 'aria-hidden="true"'}
     >
       ${renderLinesMultiselectHtml(on)}
-      <p class="m-0 mt-2 text-xs leading-relaxed text-muted-foreground">
-        勾选产线在锅底下单后，菜单中仍展示火锅锅底品类。
-      </p>
     </div>`;
 }
 

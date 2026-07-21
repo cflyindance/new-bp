@@ -5,9 +5,16 @@
 
 import {
   bindBrandMenuStructurePicker,
-  formatBrandMenuStructureSummary,
-  readBrandMenuStructureKeysFromPicker,
+  BRAND_MENU_LINE_OPTIONS,
+  coerceBrandMenuStructureByLine,
+  countBrandMenuStructureDishesByLine,
+  emptyBrandMenuStructureByLine,
+  flattenBrandMenuStructureByLine,
+  isBrandMenuLineId,
+  readBrandMenuStructureByLineFromPicker,
   renderBrandMenuStructurePickerHtml,
+  type BrandMenuLineId,
+  type BrandMenuStructureByLine,
 } from "./brand-menu-structure-picker-ui";
 import {
   bindImageSourcePicker,
@@ -67,14 +74,24 @@ const STORAGE_ID = "foh-category-settings:v1";
 
 const AGE_TAG_OPTIONS = ["成人", "儿童", "长者", "未标记"] as const;
 
-type AgeBand = { id: string; name: string; tag: string };
+type AgeBand = {
+  id: string;
+  name: string;
+  tag: string;
+  /** 在哪些渠道展示该年龄（Kiosk / eMenu / SDI） */
+  displayChannels: BrandMenuLineId[];
+};
 type MealCategory = {
   id: string;
   name: string;
   imageDataUrl?: string;
   /** 引用的门店营业时段 id（seq 418） */
   scheduleIds: string[];
+  /** 在哪些渠道展示该类别（Kiosk / eMenu / SDI） */
+  displayChannels: BrandMenuLineId[];
 };
+
+const ALL_DISPLAY_CHANNELS: BrandMenuLineId[] = BRAND_MENU_LINE_OPTIONS.map((l) => l.id);
 
 export type MenuComboKey = string;
 
@@ -83,10 +100,10 @@ export type MenuComboConfig = {
   viewOnlyMode: "dish" | "category";
   /** 其他年龄×类别组合的 key（仅 viewOnlyMode=category 时） */
   viewOnlyCategoryKeys: MenuComboKey[];
-  /** 可看可下单：组/类/菜结构 key */
-  orderableStructureKeys: string[];
-  /** 仅可查看 · 按菜配置：组/类/菜结构 key */
-  viewOnlyStructureKeys: string[];
+  /** 可看可下单：按产线组/类/菜结构 */
+  orderableStructureByLine: BrandMenuStructureByLine;
+  /** 仅可查看 · 按菜配置：按产线组/类/菜结构 */
+  viewOnlyStructureByLine: BrandMenuStructureByLine;
 };
 
 export type ComboDefinition = {
@@ -100,8 +117,10 @@ export type FohSpecialMenuEntry = {
   id: string;
   name: string;
   imageDataUrl?: string;
-  /** 组/类/菜三级结构 key（对齐分类管理菜单选择） */
-  structureKeys: string[];
+  /** 在哪些渠道展示该特殊品类（Kiosk / eMenu / SDI） */
+  displayChannels: BrandMenuLineId[];
+  /** 按产线组/类/菜结构（对齐品牌菜单） */
+  structureByLine: BrandMenuStructureByLine;
 };
 
 type SpecialMenuLineId = "emenu" | "sdi";
@@ -123,8 +142,8 @@ type FohCategorySettingsState = {
 
 const DEFAULT_STATE: FohCategorySettingsState = {
   ages: [
-    { id: "age-adult", name: "成人", tag: "成人" },
-    { id: "age-child", name: "儿童", tag: "儿童" },
+    { id: "age-adult", name: "成人", tag: "成人", displayChannels: [...ALL_DISPLAY_CHANNELS] },
+    { id: "age-child", name: "儿童", tag: "儿童", displayChannels: [...ALL_DISPLAY_CHANNELS] },
   ],
   categories: [],
   menuByCombo: {},
@@ -138,7 +157,7 @@ function newSpecialMenuId(): string {
 }
 
 function normalizeSpecialMenuEntry(
-  raw: Partial<FohSpecialMenuEntry> & { menus?: unknown },
+  raw: Partial<FohSpecialMenuEntry> & { menus?: unknown; structureKeys?: unknown },
 ): FohSpecialMenuEntry | null {
   if (!raw?.id) return null;
   return {
@@ -148,7 +167,8 @@ function normalizeSpecialMenuEntry(
       typeof raw.imageDataUrl === "string" && raw.imageDataUrl.trim()
         ? raw.imageDataUrl.trim()
         : undefined,
-    structureKeys: normalizeStructureKeys(raw.structureKeys),
+    displayChannels: normalizeDisplayChannels(raw.displayChannels),
+    structureByLine: coerceBrandMenuStructureByLine(raw.structureByLine, raw.structureKeys),
   };
 }
 
@@ -208,6 +228,63 @@ function normalizeCategoryScheduleIds(
   return defaultAllDayScheduleIds(schedules);
 }
 
+function normalizeDisplayChannels(raw: unknown): BrandMenuLineId[] {
+  if (!Array.isArray(raw)) return [...ALL_DISPLAY_CHANNELS];
+  const ids = uniqueStrings(
+    raw.filter((id): id is string => typeof id === "string" && isBrandMenuLineId(id)),
+  ) as BrandMenuLineId[];
+  return ALL_DISPLAY_CHANNELS.filter((id) => ids.includes(id));
+}
+
+function formatDisplayChannelsSummary(channels: BrandMenuLineId[]): string {
+  if (channels.length === 0) return "—";
+  const labels = BRAND_MENU_LINE_OPTIONS.filter((l) => channels.includes(l.id)).map((l) => l.label);
+  return labels.length > 0 ? labels.join("、") : "—";
+}
+
+function renderDisplayChannelPickerHtml(
+  selectedChannels: BrandMenuLineId[],
+  dataAttr: string,
+): string {
+  const options = BRAND_MENU_LINE_OPTIONS.map((line) => {
+    const checked = selectedChannels.includes(line.id);
+    return `
+    <label
+      class="flex cursor-pointer items-center gap-2.5 rounded-md border border-border px-3 py-2.5 hover:bg-muted/30 has-[:checked]:border-primary/40 has-[:checked]:bg-primary/5"
+    >
+      <input
+        type="checkbox"
+        class="size-4 shrink-0 accent-primary"
+        ${dataAttr}
+        value="${escapeHtml(line.id)}"
+        ${checked ? "checked" : ""}
+      />
+      <span class="text-sm font-medium text-foreground">${escapeHtml(line.label)}</span>
+    </label>`;
+  }).join("");
+  return `
+    <div class="grid grid-cols-1 gap-2 sm:grid-cols-3" data-foh-display-channel-picker>
+      ${options}
+    </div>`;
+}
+
+function collectDisplayChannelsFromRoot(root: ParentNode, selector: string): BrandMenuLineId[] {
+  const checked = [...root.querySelectorAll<HTMLInputElement>(`${selector}:checked`)]
+    .map((input) => input.value)
+    .filter(isBrandMenuLineId);
+  return ALL_DISPLAY_CHANNELS.filter((id) => checked.includes(id));
+}
+
+function normalizeAgeBand(raw: Partial<AgeBand>): AgeBand | null {
+  if (!raw?.id || typeof raw.name !== "string") return null;
+  return {
+    id: raw.id,
+    name: raw.name,
+    tag: typeof raw.tag === "string" && raw.tag ? raw.tag : "未标记",
+    displayChannels: normalizeDisplayChannels(raw.displayChannels),
+  };
+}
+
 function normalizeCategory(raw: Partial<MealCategory> & { hours?: string }): MealCategory | null {
   if (!raw?.id || !raw?.name) return null;
   const schedules = readBusinessHourSchedules();
@@ -219,6 +296,7 @@ function normalizeCategory(raw: Partial<MealCategory> & { hours?: string }): Mea
         ? raw.imageDataUrl.trim()
         : undefined,
     scheduleIds: normalizeCategoryScheduleIds(raw, schedules),
+    displayChannels: normalizeDisplayChannels(raw.displayChannels),
   };
 }
 
@@ -241,7 +319,12 @@ function seedDefaultCategories(schedules: StoreBusinessHourSchedule[]): MealCate
     "cat-dinner-hotpot",
     "cat-dinner-combo",
   ];
-  return names.map((name, i) => ({ id: ids[i]!, name, scheduleIds: [...defaultIds] }));
+  return names.map((name, i) => ({
+    id: ids[i]!,
+    name,
+    scheduleIds: [...defaultIds],
+    displayChannels: [...ALL_DISPLAY_CHANNELS],
+  }));
 }
 
 export function comboKey(ageId: string, categoryId: string): MenuComboKey {
@@ -292,18 +375,13 @@ function uniqueStrings(values: string[]): string[] {
   return out;
 }
 
-function normalizeStructureKeys(raw: unknown): string[] {
-  if (!Array.isArray(raw)) return [];
-  return uniqueStrings(raw.filter((id): id is string => typeof id === "string" && id.length > 0));
-}
-
 function defaultMenuConfig(age: AgeBand, category: MealCategory): MenuComboConfig {
   return {
     displayName: `${age.name}${category.name}-1`,
     viewOnlyMode: "category",
     viewOnlyCategoryKeys: [],
-    orderableStructureKeys: [],
-    viewOnlyStructureKeys: [],
+    orderableStructureByLine: emptyBrandMenuStructureByLine(),
+    viewOnlyStructureByLine: emptyBrandMenuStructureByLine(),
   };
 }
 
@@ -311,7 +389,16 @@ function normalizeMenuByCombo(
   raw: unknown,
   combos: ComboDefinition[],
 ): Record<MenuComboKey, MenuComboConfig> {
-  const src = raw && typeof raw === "object" ? (raw as Record<string, Partial<MenuComboConfig>>) : {};
+  const src =
+    raw && typeof raw === "object"
+      ? (raw as Record<
+          string,
+          Partial<MenuComboConfig> & {
+            orderableStructureKeys?: unknown;
+            viewOnlyStructureKeys?: unknown;
+          }
+        >)
+      : {};
   const out: Record<MenuComboKey, MenuComboConfig> = {};
   for (const combo of combos) {
     const prev = src[combo.key];
@@ -327,8 +414,14 @@ function normalizeMenuByCombo(
           : defaultMenuConfig(combo.age, combo.category).displayName,
       viewOnlyMode: mode,
       viewOnlyCategoryKeys: keys.filter((k) => k !== combo.key && validKeys.has(k)),
-      orderableStructureKeys: normalizeStructureKeys(prev?.orderableStructureKeys),
-      viewOnlyStructureKeys: normalizeStructureKeys(prev?.viewOnlyStructureKeys),
+      orderableStructureByLine: coerceBrandMenuStructureByLine(
+        prev?.orderableStructureByLine,
+        prev?.orderableStructureKeys,
+      ),
+      viewOnlyStructureByLine: coerceBrandMenuStructureByLine(
+        prev?.viewOnlyStructureByLine,
+        prev?.viewOnlyStructureKeys,
+      ),
     };
   }
   return out;
@@ -352,7 +445,9 @@ function normalizeState(raw: unknown): FohCategorySettingsState {
     specialMenuEnabled?: boolean;
   };
   const ages = Array.isArray(o.ages)
-    ? o.ages.filter((a): a is AgeBand => !!a && typeof a.id === "string" && typeof a.name === "string")
+    ? o.ages
+        .map((a) => normalizeAgeBand(a as Partial<AgeBand>))
+        .filter((a): a is AgeBand => a !== null)
     : [...DEFAULT_STATE.ages];
   const schedules = readBusinessHourSchedules();
   const categories = Array.isArray(o.categories)
@@ -567,6 +662,7 @@ function renderAgeCategoryPanel(state: FohCategorySettingsState): string {
       return `
         <tr class="border-b border-border last:border-0" data-foh-category-age-row="${escapeHtml(age.id)}">
           <td class="px-3 py-2.5 text-sm">${escapeHtml(age.name)}</td>
+          <td class="px-3 py-2.5 text-xs text-muted-foreground">${escapeHtml(formatDisplayChannelsSummary(age.displayChannels))}</td>
           <td class="px-3 py-2.5 text-right whitespace-nowrap">
             <button type="button" class="text-xs text-primary hover:underline" data-foh-category-age-edit="${escapeHtml(age.id)}">修改</button>
             <span class="mx-1 text-muted-foreground">|</span>
@@ -592,6 +688,7 @@ function renderAgeCategoryPanel(state: FohCategorySettingsState): string {
         <tr class="border-b border-border last:border-0" data-foh-category-cat-row="${escapeHtml(cat.id)}">
           <td class="px-3 py-2.5 text-sm">${escapeHtml(cat.name)}</td>
           <td class="px-3 py-2.5">${imageCell}</td>
+          <td class="px-3 py-2.5 text-xs text-muted-foreground">${escapeHtml(formatDisplayChannelsSummary(cat.displayChannels))}</td>
           <td class="px-3 py-2.5 text-xs text-muted-foreground">${escapeHtml(hoursLabel)}</td>
           <td class="px-3 py-2.5 text-right whitespace-nowrap">
             <button type="button" class="text-xs text-primary hover:underline" data-foh-category-cat-edit="${escapeHtml(cat.id)}">编辑</button>
@@ -611,6 +708,13 @@ function renderAgeCategoryPanel(state: FohCategorySettingsState): string {
         </header>
         <div class="min-h-0 flex-1 overflow-auto">
           <table class="w-full">
+            <thead>
+              <tr class="border-b border-border text-left text-xs text-muted-foreground">
+                <th class="px-3 py-2 font-medium">名称</th>
+                <th class="px-3 py-2 font-medium">展示渠道</th>
+                <th class="px-3 py-2 text-right font-medium">操作</th>
+              </tr>
+            </thead>
             <tbody>${ageRows}</tbody>
           </table>
         </div>
@@ -626,11 +730,12 @@ function renderAgeCategoryPanel(state: FohCategorySettingsState): string {
               <tr class="border-b border-border text-left text-xs text-muted-foreground">
                 <th class="px-3 py-2 font-medium">名称</th>
                 <th class="px-3 py-2 font-medium">图片</th>
+                <th class="px-3 py-2 font-medium">展示渠道</th>
                 <th class="px-3 py-2 font-medium">营业时间</th>
                 <th class="px-3 py-2 text-right font-medium">操作</th>
               </tr>
             </thead>
-            <tbody>${categoryRows || `<tr><td colspan="4" class="px-3 py-8 text-center text-sm text-muted-foreground">暂无类别</td></tr>`}</tbody>
+            <tbody>${categoryRows || `<tr><td colspan="5" class="px-3 py-8 text-center text-sm text-muted-foreground">暂无类别</td></tr>`}</tbody>
           </table>
         </div>
       </section>
@@ -704,6 +809,11 @@ function renderCategoryFormDialogShell(): string {
             </div>
           </div>
           <div class="space-y-2">
+            <p class="text-sm font-medium text-foreground">展示渠道</p>
+            <p class="text-xs text-muted-foreground">勾选后，该类别仅在对应渠道展示</p>
+            <div data-foh-cat-form-channels-host></div>
+          </div>
+          <div class="space-y-2">
             <p class="text-sm font-medium text-foreground">营业时间</p>
             <div data-foh-cat-form-schedule-host></div>
           </div>
@@ -769,8 +879,12 @@ function renderMenuEditDialogBody(
       <div class="space-y-4" data-foh-menu-edit-config="${escapeHtml(combo.key)}" data-edit-scope="orderable">
         <div>
           <p class="m-0 mb-2 text-sm font-medium text-foreground">可下单的菜</p>
+          <p class="m-0 mb-2 text-xs text-muted-foreground">先选产线，再勾选该产线对应的组 / 类 / 菜</p>
           <div data-foh-menu-orderable-structure>
-            ${renderBrandMenuStructurePickerHtml(cfg.orderableStructureKeys)}
+            ${renderBrandMenuStructurePickerHtml([], undefined, undefined, {
+              enableLines: true,
+              selectionByLine: cfg.orderableStructureByLine,
+            })}
           </div>
         </div>
       </div>`;
@@ -804,8 +918,12 @@ function renderMenuEditDialogBody(
           </label>
         </div>
         <div class="${dishMode ? "" : "hidden"}" data-foh-menu-view-dish-panel>
+          <p class="m-0 mb-2 text-xs text-muted-foreground">先选产线，再勾选该产线对应的组 / 类 / 菜</p>
           <div data-foh-menu-view-structure>
-            ${renderBrandMenuStructurePickerHtml(cfg.viewOnlyStructureKeys)}
+            ${renderBrandMenuStructurePickerHtml([], undefined, undefined, {
+              enableLines: true,
+              selectionByLine: cfg.viewOnlyStructureByLine,
+            })}
           </div>
         </div>
         <div class="${categoryMode ? "" : "hidden"}" data-foh-menu-view-category-panel>
@@ -827,7 +945,7 @@ function renderMenuEditDialogShell(): string {
       aria-labelledby="foh-menu-edit-dialog-title"
     >
       <button type="button" class="absolute inset-0 bg-black/40" data-foh-menu-edit-backdrop aria-label="关闭"></button>
-      <div class="relative z-10 flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-lg border border-border bg-card shadow-lg">
+      <div class="relative z-10 flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-lg border border-border bg-card shadow-lg">
         <div class="flex shrink-0 items-start justify-between gap-3 border-b border-border px-5 py-4">
           <h3 id="foh-menu-edit-dialog-title" class="text-base font-semibold text-card-foreground" data-foh-menu-edit-title>编辑菜单</h3>
           <button type="button" class="text-muted-foreground hover:text-foreground" data-foh-menu-edit-close aria-label="关闭">×</button>
@@ -841,20 +959,32 @@ function renderMenuEditDialogShell(): string {
     </div>`;
 }
 
+function formatMenuDetailButtonLabel(count: number): string {
+  return `详情（${count}）`;
+}
+
+function countViewOnlyConfigured(cfg: MenuComboConfig): number {
+  if (cfg.viewOnlyMode === "category") return cfg.viewOnlyCategoryKeys.length;
+  return countBrandMenuStructureDishesByLine(cfg.viewOnlyStructureByLine);
+}
+
 function renderMenuComboRow(
   combo: ComboDefinition,
   schedules: StoreBusinessHourSchedule[],
+  cfg: MenuComboConfig,
 ): string {
   const hoursLabel = formatCategoryHoursLabel(combo.category.scheduleIds, schedules);
+  const orderableCount = countBrandMenuStructureDishesByLine(cfg.orderableStructureByLine);
+  const viewOnlyCount = countViewOnlyConfigured(cfg);
   return `
     <tr class="border-t border-border" data-foh-menu-combo-row="${escapeHtml(combo.key)}">
       <td class="py-3 pr-3 text-sm font-medium text-foreground">${escapeHtml(combo.title)}</td>
       <td class="py-3 pr-3 text-xs text-muted-foreground">${escapeHtml(hoursLabel)}</td>
       <td class="py-3 pr-3 text-sm">
-        <button type="button" class="${BTN_LINK}" data-foh-menu-detail="orderable" data-foh-menu-combo-key="${escapeHtml(combo.key)}">详情</button>
+        <button type="button" class="${BTN_LINK}" data-foh-menu-detail="orderable" data-foh-menu-combo-key="${escapeHtml(combo.key)}">${formatMenuDetailButtonLabel(orderableCount)}</button>
       </td>
       <td class="py-3 pr-3 text-sm">
-        <button type="button" class="${BTN_LINK}" data-foh-menu-detail="viewOnly" data-foh-menu-combo-key="${escapeHtml(combo.key)}">详情</button>
+        <button type="button" class="${BTN_LINK}" data-foh-menu-detail="viewOnly" data-foh-menu-combo-key="${escapeHtml(combo.key)}">${formatMenuDetailButtonLabel(viewOnlyCount)}</button>
       </td>
     </tr>`;
 }
@@ -869,7 +999,15 @@ function renderMenuPanel(state: FohCategorySettingsState): string {
   }
 
   const schedules = readBusinessHourSchedules();
-  const rows = combos.map((combo) => renderMenuComboRow(combo, schedules)).join("");
+  const rows = combos
+    .map((combo) =>
+      renderMenuComboRow(
+        combo,
+        schedules,
+        state.menuByCombo[combo.key] ?? defaultMenuConfig(combo.age, combo.category),
+      ),
+    )
+    .join("");
 
   return `
     <div class="space-y-3" data-foh-category-settings-panel="menu">
@@ -933,18 +1071,22 @@ function renderSpecialMenuTable(entries: FohSpecialMenuEntry[]): string {
     return `<p class="rounded-md border border-dashed border-border px-3 py-6 text-center text-sm text-muted-foreground">暂无特殊品类，请点击「新增特殊品类」</p>`;
   }
   const rows = entries
-    .map(
-      (entry) => `
+    .map((entry) => {
+      const dishCount = countBrandMenuStructureDishesByLine(entry.structureByLine);
+      return `
       <tr class="border-t border-border" data-foh-special-menu-row data-foh-special-menu-id="${escapeHtml(entry.id)}">
         <td class="py-3 pr-3 text-sm text-foreground">${escapeHtml(entry.name || "未命名")}</td>
         <td class="py-3 pr-3">${renderSpecialMenuImageCell(entry)}</td>
-        <td class="py-3 pr-3 text-sm text-muted-foreground">${escapeHtml(formatBrandMenuStructureSummary(entry.structureKeys))}</td>
+        <td class="py-3 pr-3 text-sm text-muted-foreground">${escapeHtml(formatDisplayChannelsSummary(entry.displayChannels))}</td>
+        <td class="py-3 pr-3 text-sm">
+          <button type="button" class="${BTN_LINK}" data-foh-special-menu-detail="${escapeHtml(entry.id)}">${formatMenuDetailButtonLabel(dishCount)}</button>
+        </td>
         <td class="py-3 text-right text-sm whitespace-nowrap">
           <button type="button" class="${BTN_LINK} mr-3" data-foh-special-menu-edit="${escapeHtml(entry.id)}">编辑</button>
           <button type="button" class="text-sm font-medium text-destructive hover:underline" data-foh-special-menu-delete="${escapeHtml(entry.id)}">删除</button>
         </td>
-      </tr>`,
-    )
+      </tr>`;
+    })
     .join("");
   return `
     <div class="overflow-x-auto rounded-md border border-border">
@@ -953,6 +1095,7 @@ function renderSpecialMenuTable(entries: FohSpecialMenuEntry[]): string {
           <tr>
             <th class="px-3 py-2 font-medium">名称</th>
             <th class="px-3 py-2 font-medium">图片</th>
+            <th class="px-3 py-2 font-medium">展示渠道</th>
             <th class="px-3 py-2 font-medium">菜单</th>
             <th class="px-3 py-2 text-right font-medium">操作</th>
           </tr>
@@ -974,7 +1117,7 @@ function renderSpecialMenuDialogShell(): string {
       aria-labelledby="foh-special-menu-dialog-title"
     >
       <button type="button" class="absolute inset-0 bg-black/40" data-foh-special-menu-dialog-backdrop aria-label="关闭"></button>
-      <div class="relative z-10 flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-lg border border-border bg-card shadow-lg">
+      <div class="relative z-10 flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-lg border border-border bg-card shadow-lg">
         <div class="flex shrink-0 items-start justify-between gap-3 border-b border-border px-5 py-4">
           <h3 id="foh-special-menu-dialog-title" class="text-base font-semibold text-card-foreground" data-foh-special-menu-dialog-title>新增特殊品类</h3>
           <button type="button" class="text-muted-foreground hover:text-foreground" data-foh-special-menu-dialog-close aria-label="关闭">×</button>
@@ -988,10 +1131,34 @@ function renderSpecialMenuDialogShell(): string {
     </div>`;
 }
 
+function renderSpecialMenuViewDialogShell(): string {
+  return `
+    <div
+      class="fixed inset-0 z-[100] hidden items-center justify-center p-4"
+      data-foh-special-menu-view-dialog
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="foh-special-menu-view-dialog-title"
+    >
+      <button type="button" class="absolute inset-0 bg-black/40" data-foh-special-menu-view-backdrop aria-label="关闭"></button>
+      <div class="relative z-10 flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-lg border border-border bg-card shadow-lg">
+        <div class="flex shrink-0 items-start justify-between gap-3 border-b border-border px-5 py-4">
+          <h3 id="foh-special-menu-view-dialog-title" class="text-base font-semibold text-card-foreground" data-foh-special-menu-view-title>菜单</h3>
+          <button type="button" class="text-muted-foreground hover:text-foreground" data-foh-special-menu-view-close aria-label="关闭">×</button>
+        </div>
+        <div class="min-h-0 flex-1 space-y-2 overflow-y-auto px-5 py-4" data-foh-special-menu-view-body></div>
+        <div class="flex shrink-0 justify-end gap-2 border-t border-border bg-card px-5 py-4">
+          <button type="button" class="${BTN_PRIMARY}" data-foh-special-menu-view-close>关闭</button>
+        </div>
+      </div>
+    </div>`;
+}
+
 function renderSpecialMenuDialogBody(
   entryId: string,
   name: string,
-  structureKeys: string[],
+  structureByLine: BrandMenuStructureByLine,
+  displayChannels: BrandMenuLineId[],
   imageDataUrl?: string,
 ): string {
   const imagePreview = imageDataUrl
@@ -1018,10 +1185,19 @@ function renderSpecialMenuDialogBody(
           <button type="button" class="${BTN_GHOST}" data-foh-special-menu-image-pick>选择图片</button>
         </div>
       </div>
+      <div class="space-y-2">
+        <p class="text-sm font-medium text-foreground">展示渠道</p>
+        <p class="text-xs text-muted-foreground">勾选后，该特殊品类仅在对应渠道展示</p>
+        ${renderDisplayChannelPickerHtml(displayChannels, "data-foh-special-menu-display-channel")}
+      </div>
       <div class="space-y-1.5">
         <p class="m-0 mb-2 text-sm font-medium text-foreground">菜单</p>
+        <p class="m-0 mb-2 text-xs text-muted-foreground">先选产线，再勾选该产线对应的组 / 类 / 菜</p>
         <div data-foh-special-menu-structure>
-          ${renderBrandMenuStructurePickerHtml(structureKeys)}
+          ${renderBrandMenuStructurePickerHtml([], undefined, undefined, {
+            enableLines: true,
+            selectionByLine: structureByLine,
+          })}
         </div>
       </div>
     </div>`;
@@ -1103,6 +1279,7 @@ export function renderFohCategorySettingsPage(path: string): string {
       ${renderMenuEditDialogShell()}
       ${renderCategoryFormDialogShell()}
       ${renderSpecialMenuDialogShell()}
+      ${renderSpecialMenuViewDialogShell()}
       ${renderAgeCategoryDeleteDialog()}
       ${renderFohSettingsNameDialogShell()}
       ${renderImageSourcePickerModalsHtml()}
@@ -1245,7 +1422,8 @@ function openCategoryFormDialog(root: HTMLElement, editingId: string | null): vo
   const titleEl = dialog?.querySelector<HTMLElement>("[data-foh-cat-form-title]");
   const nameInput = dialog?.querySelector<HTMLInputElement>("[data-foh-cat-form-name]");
   const scheduleHost = dialog?.querySelector<HTMLElement>("[data-foh-cat-form-schedule-host]");
-  if (!dialog || !nameInput || !scheduleHost) return;
+  const channelsHost = dialog?.querySelector<HTMLElement>("[data-foh-cat-form-channels-host]");
+  if (!dialog || !nameInput || !scheduleHost || !channelsHost) return;
 
   const state = readFohCategorySettingsState();
   const editing = editingId ? state.categories.find((c) => c.id === editingId) : null;
@@ -1259,6 +1437,10 @@ function openCategoryFormDialog(root: HTMLElement, editingId: string | null): vo
   let selectedIds = (editing?.scheduleIds ?? []).filter((id) => validIds.has(id));
   if (selectedIds.length === 0) selectedIds = defaultAllDayScheduleIds(schedules);
   scheduleHost.innerHTML = renderCategorySchedulePicker(selectedIds);
+  channelsHost.innerHTML = renderDisplayChannelPickerHtml(
+    editing?.displayChannels ?? [...ALL_DISPLAY_CHANNELS],
+    "data-foh-cat-display-channel",
+  );
   showCategoryFormDialog(root);
   nameInput.focus();
 }
@@ -1281,6 +1463,7 @@ function saveCategoryFormDialog(root: HTMLElement, remount: () => void): void {
   }
   const preview = dialog.querySelector<HTMLImageElement>("[data-foh-cat-image-preview]");
   const imageDataUrl = preview?.tagName === "IMG" ? preview.src : undefined;
+  const displayChannels = collectDisplayChannelsFromRoot(dialog, "[data-foh-cat-display-channel]");
   const editingId = dialog.getAttribute("data-editing-id") || "";
   const state = readFohCategorySettingsState();
   const nextScheduleIds =
@@ -1294,6 +1477,7 @@ function saveCategoryFormDialog(root: HTMLElement, remount: () => void): void {
         name,
         imageDataUrl,
         scheduleIds: nextScheduleIds,
+        displayChannels,
       };
     } else {
       state.categories.push({
@@ -1301,6 +1485,7 @@ function saveCategoryFormDialog(root: HTMLElement, remount: () => void): void {
         name,
         imageDataUrl,
         scheduleIds: nextScheduleIds,
+        displayChannels,
       });
     }
   } else {
@@ -1309,11 +1494,16 @@ function saveCategoryFormDialog(root: HTMLElement, remount: () => void): void {
       name,
       imageDataUrl,
       scheduleIds: nextScheduleIds,
+      displayChannels,
     });
   }
   writeFohCategorySettingsState({
     ...state,
-    categories: state.categories.map((c) => ({ ...c, scheduleIds: [...c.scheduleIds] })),
+    categories: state.categories.map((c) => ({
+      ...c,
+      scheduleIds: [...c.scheduleIds],
+      displayChannels: [...c.displayChannels],
+    })),
   });
   hideCategoryFormDialog(root);
   remountFohCategorySettings(remount);
@@ -1440,9 +1630,9 @@ function collectMenuConfigFromEditDialog(
     );
     return {
       ...prev,
-      orderableStructureKeys: orderablePicker
-        ? readBrandMenuStructureKeysFromPicker(orderablePicker)
-        : [],
+      orderableStructureByLine: orderablePicker
+        ? readBrandMenuStructureByLineFromPicker(orderablePicker)
+        : emptyBrandMenuStructureByLine(),
     };
   }
   const modeRadio = dialog.querySelector<HTMLInputElement>("[data-foh-menu-view-mode]:checked");
@@ -1459,9 +1649,9 @@ function collectMenuConfigFromEditDialog(
     ...prev,
     viewOnlyMode,
     viewOnlyCategoryKeys,
-    viewOnlyStructureKeys: viewPicker
-      ? readBrandMenuStructureKeysFromPicker(viewPicker)
-      : prev.viewOnlyStructureKeys,
+    viewOnlyStructureByLine: viewPicker
+      ? readBrandMenuStructureByLineFromPicker(viewPicker)
+      : prev.viewOnlyStructureByLine,
   };
 }
 
@@ -1544,9 +1734,15 @@ export function bindFohCategorySettingsUi(remount: () => void): void {
       title: "增加年龄",
       label: "年龄阶段名称",
       placeholder: "请输入年龄阶段名称",
-      onConfirm: (name) => {
+      enableDisplayChannels: true,
+      onConfirm: (name, extras) => {
         const state = readFohCategorySettingsState();
-        state.ages.push({ id: newId("age"), name, tag: "未标记" });
+        state.ages.push({
+          id: newId("age"),
+          name,
+          tag: "未标记",
+          displayChannels: extras?.displayChannels ?? [...ALL_DISPLAY_CHANNELS],
+        });
         writeFohCategorySettingsState(state);
         remountFohCategorySettings(remount);
       },
@@ -1565,11 +1761,14 @@ export function bindFohCategorySettingsUi(remount: () => void): void {
         label: "年龄阶段名称",
         initialValue: row.name,
         confirmLabel: "保存",
-        onConfirm: (name) => {
+        enableDisplayChannels: true,
+        initialDisplayChannels: row.displayChannels,
+        onConfirm: (name, extras) => {
           const latest = readFohCategorySettingsState();
           const target = latest.ages.find((a) => a.id === id);
           if (!target) return;
           target.name = name;
+          target.displayChannels = extras?.displayChannels ?? [...ALL_DISPLAY_CHANNELS];
           writeFohCategorySettingsState(latest);
           remountFohCategorySettings(remount);
         },
@@ -1662,6 +1861,44 @@ function hideSpecialMenuDialog(root: HTMLElement): void {
   if (body) body.innerHTML = "";
 }
 
+function showSpecialMenuViewDialog(root: HTMLElement): void {
+  const dialog = root.querySelector<HTMLElement>("[data-foh-special-menu-view-dialog]");
+  if (!dialog) return;
+  dialog.classList.remove("hidden");
+  dialog.classList.add("flex");
+}
+
+function hideSpecialMenuViewDialog(root: HTMLElement): void {
+  const dialog = root.querySelector<HTMLElement>("[data-foh-special-menu-view-dialog]");
+  if (!dialog) return;
+  dialog.classList.add("hidden");
+  dialog.classList.remove("flex");
+  const body = dialog.querySelector<HTMLElement>("[data-foh-special-menu-view-body]");
+  if (body) body.innerHTML = "";
+}
+
+function openSpecialMenuViewDialog(root: HTMLElement, entryId: string): void {
+  const state = readFohCategorySettingsState();
+  const entry = state.specialMenus.find((e) => e.id === entryId);
+  if (!entry) return;
+  const dialog = root.querySelector<HTMLElement>("[data-foh-special-menu-view-dialog]");
+  const titleEl = dialog?.querySelector<HTMLElement>("[data-foh-special-menu-view-title]");
+  const body = dialog?.querySelector<HTMLElement>("[data-foh-special-menu-view-body]");
+  if (!dialog || !body) return;
+  if (titleEl) titleEl.textContent = `菜单 · ${entry.name || "未命名"}`;
+  body.innerHTML = `
+    <p class="m-0 text-xs text-muted-foreground">按产线查看已配置的组 / 类 / 菜（只读）</p>
+    ${renderBrandMenuStructurePickerHtml([], undefined, undefined, {
+      enableLines: true,
+      selectionByLine: entry.structureByLine,
+      readOnly: true,
+    })}`;
+  body.querySelectorAll<HTMLElement>("[data-brand-menu-structure-picker]").forEach((picker) => {
+    bindBrandMenuStructurePicker(picker);
+  });
+  showSpecialMenuViewDialog(root);
+}
+
 function openSpecialMenuDialog(root: HTMLElement, editingId: string | null): void {
   const state = readFohCategorySettingsState();
   const editing = editingId ? state.specialMenus.find((e) => e.id === editingId) : null;
@@ -1677,7 +1914,8 @@ function openSpecialMenuDialog(root: HTMLElement, editingId: string | null): voi
   body.innerHTML = renderSpecialMenuDialogBody(
     entryId,
     editing?.name ?? "",
-    editing?.structureKeys ?? [],
+    editing?.structureByLine ?? emptyBrandMenuStructureByLine(),
+    editing?.displayChannels ?? [...ALL_DISPLAY_CHANNELS],
     editing?.imageDataUrl,
   );
   body.querySelectorAll<HTMLElement>("[data-brand-menu-structure-picker]").forEach((picker) => {
@@ -1704,8 +1942,20 @@ function saveSpecialMenuDialog(root: HTMLElement): void {
   const picker = dialog.querySelector<HTMLElement>(
     "[data-foh-special-menu-structure] [data-brand-menu-structure-picker]",
   );
-  const structureKeys = picker ? readBrandMenuStructureKeysFromPicker(picker) : [];
-  const nextEntry: FohSpecialMenuEntry = { id: entryId, name, imageDataUrl, structureKeys };
+  const structureByLine = picker
+    ? readBrandMenuStructureByLineFromPicker(picker)
+    : emptyBrandMenuStructureByLine();
+  const displayChannels = collectDisplayChannelsFromRoot(
+    dialog,
+    "[data-foh-special-menu-display-channel]",
+  );
+  const nextEntry: FohSpecialMenuEntry = {
+    id: entryId,
+    name,
+    imageDataUrl,
+    displayChannels,
+    structureByLine,
+  };
   const state = readFohCategorySettingsState();
   if (editingId) {
     const idx = state.specialMenus.findIndex((e) => e.id === editingId);
@@ -1755,6 +2005,19 @@ function bindFohCategorySpecialMenuUi(root: HTMLElement, remount: () => void): v
       if (id) openSpecialMenuDialog(root, id);
       return;
     }
+    const detailBtn = target.closest<HTMLButtonElement>("[data-foh-special-menu-detail]");
+    if (detailBtn) {
+      const id = detailBtn.getAttribute("data-foh-special-menu-detail");
+      if (id) openSpecialMenuViewDialog(root, id);
+      return;
+    }
+    if (
+      target.closest("[data-foh-special-menu-view-close]") ||
+      target.closest("[data-foh-special-menu-view-backdrop]")
+    ) {
+      hideSpecialMenuViewDialog(root);
+      return;
+    }
     const deleteBtn = target.closest<HTMLButtonElement>("[data-foh-special-menu-delete]");
     if (deleteBtn) {
       const id = deleteBtn.getAttribute("data-foh-special-menu-delete");
@@ -1799,12 +2062,27 @@ function bindFohCategorySpecialMenuUi(root: HTMLElement, remount: () => void): v
     if (dialog && !dialog.classList.contains("hidden")) {
       e.preventDefault();
       hideSpecialMenuDialog(root);
+      return;
+    }
+    const viewDialog = root.querySelector<HTMLElement>("[data-foh-special-menu-view-dialog]");
+    if (viewDialog && !viewDialog.classList.contains("hidden")) {
+      e.preventDefault();
+      hideSpecialMenuViewDialog(root);
     }
   });
 }
 
-/** 解析某组合下已选可看可下单菜单结构 key（供调试或后续 API 对接） */
-export function readMenuComboOrderableStructureKeys(comboKeyValue: MenuComboKey): string[] {
+/** 解析某组合下已选可看可下单菜单结构（按产线；供调试或后续 API 对接） */
+export function readMenuComboOrderableStructureByLine(
+  comboKeyValue: MenuComboKey,
+): BrandMenuStructureByLine {
   const state = readFohCategorySettingsState();
-  return state.menuByCombo[comboKeyValue]?.orderableStructureKeys ?? [];
+  return (
+    state.menuByCombo[comboKeyValue]?.orderableStructureByLine ?? emptyBrandMenuStructureByLine()
+  );
+}
+
+/** @deprecated 返回三产线扁平合并；优先用 readMenuComboOrderableStructureByLine */
+export function readMenuComboOrderableStructureKeys(comboKeyValue: MenuComboKey): string[] {
+  return flattenBrandMenuStructureByLine(readMenuComboOrderableStructureByLine(comboKeyValue));
 }

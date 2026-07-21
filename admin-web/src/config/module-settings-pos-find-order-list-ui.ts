@@ -50,13 +50,6 @@ const LINES_GROUP_ARIA_BY_SEQ: Record<PosFindOrderListSeq, string> = {
   [POS_FIND_ORDER_PRINT_RECEIPT_TYPE_SEQ]: "找单界面打印所选收据类型适用产线",
 };
 
-const PANEL_HINT_BY_SEQ: Record<PosFindOrderListSeq, string> = {
-  [POS_FIND_ORDER_SHOW_TOTAL_SEQ]: "勾选产线后，找单列表页展示所有订单的总价合计。",
-  [POS_FIND_ORDER_CLOSE_ALL_BTN_SEQ]: "勾选产线后，找单列表展示「关闭以下全部单子」操作按钮。",
-  [POS_FIND_ORDER_UNTIPPED_DEFAULT_SEQ]: "勾选产线后，找单列表默认筛选展示未加小费的订单。",
-  [POS_FIND_ORDER_PRINT_RECEIPT_TYPE_SEQ]: "勾选产线后，找单页打印时可选择收据类型。",
-};
-
 const MODULE_SETTING_CONTROL_CLASS =
   "size-4 shrink-0 accent-primary text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50";
 
@@ -185,7 +178,6 @@ export function renderPosFindOrderListPanelHtml(seq: PosFindOrderListSeq, on: bo
       ${on ? "" : 'aria-hidden="true"'}
     >
       ${renderLinesMultiselectHtml(seq, on)}
-      <p class="m-0 mt-2 text-xs leading-relaxed text-muted-foreground">${escapeHtml(PANEL_HINT_BY_SEQ[seq])}</p>
     </div>`;
 }
 

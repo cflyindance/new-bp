@@ -170,10 +170,8 @@ const MANUAL = {
   592: { lines: GUEST_DEFAULT, source: "group-default" },
   620: { lines: GUEST_DEFAULT, source: "group-default" },
   626: { lines: GUEST_DEFAULT, source: "group-default" },
-  629: { lines: GUEST_DEFAULT, source: "group-default" },
   640: { lines: GUEST_DEFAULT, source: "group-default" },
   641: { lines: GUEST_DEFAULT, source: "group-default" },
-  522: { lines: GUEST_DEFAULT, source: "group-default" },
   523: { lines: GUEST_DEFAULT, source: "group-default" },
 };
 

@@ -1,14 +1,16 @@
 /**
  * 登录/注册短信验证码（seq 622；合并原 508）。
- * Catalog hub：前厅 · guest-order-rules；紧挨 623；主开关 + 适用产线多选。
+ * Catalog hub：前厅 · guest-order-rules；紧挨 623；默认开启，无主开关，仅配置适用产线。
  */
 
-import { MODULE_SETTING_CHOICE_CONTROL_CLASS } from "./module-settings-choice-ui";
 import {
   readModuleSettingJson,
   writeModuleSettingJson,
 } from "./module-settings-form-ui";
-import { moduleSettingToggleStorageKey } from "./module-settings-toggle-ui";
+import { writeModuleSettingToggleOn } from "./module-settings-toggle-ui";
+
+const MODULE_SETTING_CONTROL_CLASS =
+  "size-4 shrink-0 accent-primary text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50";
 
 export const MEMBER_SMS_VERIFICATION_SEQ = 622;
 
@@ -54,14 +56,6 @@ function escapeHtml(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
-function readLegacyToggleOn(seq: number): boolean {
-  try {
-    return localStorage.getItem(moduleSettingToggleStorageKey(seq)) === "1";
-  } catch {
-    return false;
-  }
-}
-
 function resolveSmsLineId(id: string): MemberSmsVerificationProductLineId | null {
   if (ALL_LINE_IDS.includes(id as MemberSmsVerificationProductLineId)) {
     return id as MemberSmsVerificationProductLineId;
@@ -85,12 +79,9 @@ export function readMemberSmsVerificationLines(): MemberSmsVerificationProductLi
   const normalized = normalizeLineIds(stored);
   if (normalized.length > 0) return normalized;
 
-  const enabled = readLegacyToggleOn(MEMBER_SMS_VERIFICATION_SEQ) || readLegacyToggleOn(508);
-  if (enabled) {
-    writeMemberSmsVerificationLines(ALL_LINE_IDS);
-    return [...ALL_LINE_IDS];
-  }
-  return [];
+  // 默认开启：无存储或旧数据为空时，默认全产线勾选
+  writeMemberSmsVerificationLines([...ALL_LINE_IDS]);
+  return [...ALL_LINE_IDS];
 }
 
 export function writeMemberSmsVerificationLines(lines: MemberSmsVerificationProductLineId[]): void {
@@ -99,59 +90,56 @@ export function writeMemberSmsVerificationLines(lines: MemberSmsVerificationProd
 }
 
 export function ensureMemberSmsVerificationLinesDefault(): void {
-  if (readMemberSmsVerificationLines().length === 0) {
-    writeMemberSmsVerificationLines(ALL_LINE_IDS);
+  writeModuleSettingToggleOn(MEMBER_SMS_VERIFICATION_SEQ, true);
+  if (readModuleSettingJson<unknown>(LINES_STORAGE_ID, null) == null) {
+    writeMemberSmsVerificationLines([...ALL_LINE_IDS]);
+    return;
   }
+  // 触发一次读取以补齐空数组为默认全选
+  readMemberSmsVerificationLines();
 }
 
 export function isMemberSmsVerificationSeq(seq: number): boolean {
   return seq === MEMBER_SMS_VERIFICATION_SEQ;
 }
 
-export function renderMemberSmsVerificationLinesPanelHtml(seq: number, on: boolean): string {
+export function renderMemberSmsVerificationLinesPanelHtml(seq: number): string {
   const selected = new Set(readMemberSmsVerificationLines());
-  const checkboxes = MEMBER_SMS_VERIFICATION_PRODUCT_LINES.map((line) => {
+  const cells = MEMBER_SMS_VERIFICATION_PRODUCT_LINES.map((line, index) => {
     const checked = selected.has(line.id);
+    const divider = index > 0 ? "border-l border-border" : "";
     return `
-      <label class="inline-flex cursor-pointer items-center gap-2 text-sm text-foreground">
+      <label
+        class="flex flex-1 flex-col items-center justify-center gap-2 px-3 py-3 text-sm text-foreground cursor-pointer sm:px-6 ${divider}"
+      >
         <input
           type="checkbox"
-          class="${MODULE_SETTING_CHOICE_CONTROL_CLASS}"
+          class="${MODULE_SETTING_CONTROL_CLASS} rounded-sm"
           value="${escapeHtml(line.id)}"
           data-member-sms-verification-line="${escapeHtml(line.id)}"
           ${checked ? "checked" : ""}
-          ${on ? "" : "disabled"}
           aria-label="${escapeHtml(line.label)}"
         />
-        <span>${escapeHtml(line.label)}</span>
+        <span class="text-center leading-tight">${escapeHtml(line.label)}</span>
       </label>`;
   }).join("");
 
-  const hidden = on ? "" : "hidden";
   return `
-    <div
-      class="mt-3 rounded-lg border border-border bg-muted/40 px-3 py-3 ${hidden}"
-      data-member-sms-verification-panel="${seq}"
-      ${on ? "" : 'aria-hidden="true"'}
-    >
-      <div class="flex flex-wrap items-center gap-x-5 gap-y-2" role="group" aria-label="短信验证码适用产线">
-        ${checkboxes}
+    <div class="mt-3" data-member-sms-verification-panel="${seq}">
+      <div
+        class="flex w-full max-w-2xl overflow-hidden rounded-md border border-border bg-muted/40"
+        data-member-sms-verification-lines="${seq}"
+        role="group"
+        aria-label="短信验证码适用产线"
+      >
+        ${cells}
       </div>
-      <p class="m-0 mt-2 text-xs leading-relaxed text-muted-foreground">
-        仅对勾选的产线生效；关闭主开关后，所有产线均不要求短信验证码。
-      </p>
     </div>`;
 }
 
-export function setMemberSmsVerificationLinesPanelVisible(seq: number, visible: boolean): void {
-  document.querySelectorAll<HTMLElement>(`[data-member-sms-verification-panel="${seq}"]`).forEach((panel) => {
-    panel.classList.toggle("hidden", !visible);
-    if (visible) panel.removeAttribute("aria-hidden");
-    else panel.setAttribute("aria-hidden", "true");
-    panel.querySelectorAll<HTMLInputElement>("[data-member-sms-verification-line]").forEach((input) => {
-      input.disabled = !visible;
-    });
-  });
+/** @deprecated 已默认开启且无主开关，保留空实现以免旧调用报错 */
+export function setMemberSmsVerificationLinesPanelVisible(_seq: number, _visible: boolean): void {
+  /* no-op */
 }
 
 function collectLinesFromPanel(panel: HTMLElement): MemberSmsVerificationProductLineId[] {
@@ -166,6 +154,7 @@ function collectLinesFromPanel(panel: HTMLElement): MemberSmsVerificationProduct
 }
 
 export function bindMemberSmsVerificationUi(root: ParentNode = document): void {
+  ensureMemberSmsVerificationLinesDefault();
   root.querySelectorAll<HTMLElement>("[data-member-sms-verification-panel]").forEach((panel) => {
     if (panel.dataset.memberSmsVerificationPanelBound === "1") return;
     panel.dataset.memberSmsVerificationPanelBound = "1";

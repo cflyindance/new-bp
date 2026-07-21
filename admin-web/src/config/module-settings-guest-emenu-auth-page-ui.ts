@@ -1,5 +1,5 @@
 /**
- * 前厅 · 食客端·下单与规则：eMenu 授权类展示/限制（主开关 + eMenu 产线）
+ * 前厅 · 食客端·下单与规则：授权类展示/限制（主开关 + eMenu / SDI 产线）
  * — 620 限制食客提前开单、626 下单前需要服务员授权。
  */
 
@@ -14,12 +14,16 @@ export const GUEST_EMENU_AUTH_PAGE_SEQS: readonly number[] = [
   GUEST_PRE_ORDER_SERVER_AUTH_SEQ,
 ];
 
-const EMENU_AUTH_PAGE_PRODUCT_LINES = [{ id: "emenu", label: "eMenu" }] as const;
+export const GUEST_EMENU_AUTH_PAGE_PRODUCT_LINES = [
+  { id: "emenu", label: "eMenu" },
+  { id: "sdi", label: "SDI" },
+] as const;
 
 export type GuestEmenuAuthPageProductLineId =
-  (typeof EMENU_AUTH_PAGE_PRODUCT_LINES)[number]["id"];
+  (typeof GUEST_EMENU_AUTH_PAGE_PRODUCT_LINES)[number]["id"];
 
-const EMENU_LINE_ID: GuestEmenuAuthPageProductLineId = "emenu";
+const ALL_LINE_IDS: GuestEmenuAuthPageProductLineId[] =
+  GUEST_EMENU_AUTH_PAGE_PRODUCT_LINES.map((l) => l.id);
 
 const LINES_ARIA_LABEL_BY_SEQ: Record<number, string> = {
   [GUEST_PREORDER_RESTRICT_SEQ]: "限制食客提前开单适用产线",
@@ -77,10 +81,24 @@ function ensureAllGuestEmenuAuthPageTogglesMigrated(): void {
   }
 }
 
+function resolveLineId(id: string): GuestEmenuAuthPageProductLineId | null {
+  if (ALL_LINE_IDS.includes(id as GuestEmenuAuthPageProductLineId)) {
+    return id as GuestEmenuAuthPageProductLineId;
+  }
+  // 旧数据曾用 kiosk 占位，迁移到 eMenu
+  if (id === "kiosk") return "emenu";
+  return null;
+}
+
 function normalizeLineIds(raw: unknown): GuestEmenuAuthPageProductLineId[] {
   if (!Array.isArray(raw)) return [];
-  if (raw.includes(EMENU_LINE_ID) || raw.includes("kiosk")) return [EMENU_LINE_ID];
-  return [];
+  const seen = new Set<GuestEmenuAuthPageProductLineId>();
+  for (const item of raw) {
+    if (typeof item !== "string") continue;
+    const resolved = resolveLineId(item);
+    if (resolved) seen.add(resolved);
+  }
+  return ALL_LINE_IDS.filter((id) => seen.has(id));
 }
 
 export function readGuestEmenuAuthPageLines(seq: number): GuestEmenuAuthPageProductLineId[] {
@@ -89,15 +107,15 @@ export function readGuestEmenuAuthPageLines(seq: number): GuestEmenuAuthPageProd
   const stored = readModuleSettingJson<unknown>(linesStorageId(seq), null);
   const normalized = normalizeLineIds(stored);
   if (normalized.length > 0) {
-    if (Array.isArray(stored) && stored.includes("kiosk")) {
+    if (Array.isArray(stored) && stored.some((id) => id === "kiosk")) {
       writeGuestEmenuAuthPageLines(seq, normalized);
     }
     return normalized;
   }
 
   if (readLegacyToggleOn(seq)) {
-    writeGuestEmenuAuthPageLines(seq, [EMENU_LINE_ID]);
-    return [EMENU_LINE_ID];
+    writeGuestEmenuAuthPageLines(seq, ["emenu"]);
+    return ["emenu"];
   }
   return [];
 }
@@ -107,8 +125,8 @@ export function writeGuestEmenuAuthPageLines(
   lines: GuestEmenuAuthPageProductLineId[],
 ): void {
   if (!isGuestEmenuAuthPageSeq(seq)) return;
-  const enabled = lines.includes(EMENU_LINE_ID);
-  writeModuleSettingJson(linesStorageId(seq), enabled ? [EMENU_LINE_ID] : []);
+  const unique = ALL_LINE_IDS.filter((id) => lines.includes(id));
+  writeModuleSettingJson(linesStorageId(seq), unique);
 }
 
 export function isGuestEmenuAuthPageSeq(seq: number): boolean {
@@ -117,11 +135,12 @@ export function isGuestEmenuAuthPageSeq(seq: number): boolean {
 
 function renderLinesMultiselectHtml(seq: number, enabled: boolean): string {
   const selected = new Set(readGuestEmenuAuthPageLines(seq));
-  const cells = EMENU_AUTH_PAGE_PRODUCT_LINES.map((line) => {
+  const cells = GUEST_EMENU_AUTH_PAGE_PRODUCT_LINES.map((line, index) => {
     const checked = selected.has(line.id);
+    const divider = index > 0 ? "border-l border-border" : "";
     return `
       <label
-        class="flex flex-1 flex-col items-center justify-center gap-2 px-4 py-3 text-sm text-foreground sm:px-8 ${enabled ? "cursor-pointer" : "cursor-not-allowed opacity-50"}"
+        class="flex flex-1 flex-col items-center justify-center gap-2 px-3 py-3 text-sm text-foreground sm:px-6 ${enabled ? "cursor-pointer" : "cursor-not-allowed opacity-50"} ${divider}"
       >
         <input
           type="checkbox"
@@ -140,7 +159,7 @@ function renderLinesMultiselectHtml(seq: number, enabled: boolean): string {
 
   return `
     <div
-      class="flex w-full max-w-xs overflow-hidden rounded-md border border-border bg-muted/40"
+      class="flex w-full max-w-md overflow-hidden rounded-md border border-border bg-muted/40"
       data-guest-emenu-auth-page-lines="${seq}"
       role="group"
       aria-label="${escapeHtml(ariaLabel)}"
@@ -185,8 +204,8 @@ function collectLinesFromGroup(group: HTMLElement): GuestEmenuAuthPageProductLin
   const lines: GuestEmenuAuthPageProductLineId[] = [];
   group.querySelectorAll<HTMLInputElement>("[data-guest-emenu-auth-page-line]:checked").forEach((input) => {
     const id = input.getAttribute("data-guest-emenu-auth-page-line");
-    if (id === EMENU_LINE_ID) {
-      lines.push(EMENU_LINE_ID);
+    if (id && ALL_LINE_IDS.includes(id as GuestEmenuAuthPageProductLineId)) {
+      lines.push(id as GuestEmenuAuthPageProductLineId);
     }
   });
   writeGuestEmenuAuthPageLines(seq, lines);

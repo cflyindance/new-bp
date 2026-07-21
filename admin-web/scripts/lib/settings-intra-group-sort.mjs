@@ -5,11 +5,17 @@
 
 import { KDS_TERMINAL_INTRA_GROUP_SORT_BY_SEQ } from "./kds-terminal-settings-groups.mjs";
 
-/** POS 操作按钮：主流程显隐 → 工具栏显隐 → 排序集合 */
+/** POS 操作按钮显隐（收入「更多」） */
 const FOH_POS_BUTTONS_SEQ_ORDER = [
   193, 194, 195, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210,
-  196, 110, 211, 212, 213, 214, 215, 483, 484, 485, 486,
+  211, 212, 213, 214, 215,
 ];
+
+/** 分割线名称与点单超时提醒 */
+const FOH_POS_ORDER_EXTRAS_SEQ_ORDER = [196, 110];
+
+/** 点单页工具栏配置（四区按钮排序/显隐） */
+const FOH_POS_ORDER_TOOLBAR_SEQ_ORDER = [483, 484, 485, 486];
 
 /** 菜单查找与时段：搜索/比价 → 堂吃/外食时段 → iPad 时段 */
 const FOH_POS_MENU_SCOPE_SEQ_ORDER = [118, 148, 176, 177, 348];
@@ -31,6 +37,8 @@ function assignSort(seqList, step = 10) {
 }
 
 assignSort(FOH_POS_BUTTONS_SEQ_ORDER);
+assignSort(FOH_POS_ORDER_EXTRAS_SEQ_ORDER);
+assignSort(FOH_POS_ORDER_TOOLBAR_SEQ_ORDER);
 assignSort(FOH_POS_MENU_SCOPE_SEQ_ORDER);
 assignSort(FOH_POS_MENU_UI_LAYOUT_SEQ_ORDER);
 
@@ -85,13 +93,13 @@ const FOH_GUEST_ORDER_TYPE_SEQ_ORDER = [487, 488, 489, 490, 491, 503];
 const FOH_GUEST_REGISTRATION_SEQ_ORDER = [623, 622, 504, 505, 506, 507, 510];
 
 /** 点单前须知与授权 */
-const FOH_GUEST_PRE_ORDER_SEQ_ORDER = [569, 620, 626, 627];
+const FOH_GUEST_PRE_ORDER_SEQ_ORDER = [620, 626, 627];
 
 /** 食客端送厨 */
 const FOH_GUEST_KITCHEN_SEND_SEQ_ORDER = [581, 502, 91, 567];
 
 /** 火锅点餐 */
-const FOH_GUEST_HOTPOT_SEQ_ORDER = [570, 572, 574, 573, 575];
+const FOH_GUEST_HOTPOT_SEQ_ORDER = [572, 574, 573, 575];
 
 /** 时长与自助餐 */
 const FOH_GUEST_DURATION_SCENARIOS_SEQ_ORDER = [443, 571, 577, 578, 579, 580];
@@ -104,7 +112,7 @@ export const FOH_GUEST_SCENARIO_DINING_SEQ_ORDER = [
 ];
 
 /** 桌边服务 */
-const FOH_TABLESIDE_SERVICE_SEQ_ORDER = [629, 641, 640, 333, 521, 522, 523];
+const FOH_TABLESIDE_SERVICE_SEQ_ORDER = [641, 640, 333, 521, 522, 523];
 
 /** 排队与等待展示（产线多选，见 wait-time-display-ui） */
 const FOH_WAIT_TIME_DISPLAY_SEQ_ORDER = [673, 535, 536, 537, 538, 539, 540];
@@ -138,8 +146,8 @@ const DELIVERY_PACKAGING_SEQ_ORDER = [429];
 /** 平台业务中心 · 线上订餐对接（host/callback） */
 const ONLINE_ORDER_SERVICE_SEQ_ORDER = [93, 95, 96, 97, 99, 100, 101, 102, 103, 104, 105, 106];
 
-/** 桌边·呼叫服务员：总开关 → 未开单 → 间隔 → 服务类型 */
-const TABLESIDE_SERVICE_CALL_SEQ_ORDER = [629, 641, 640, 333];
+/** 桌边服务：未开单 → 间隔 → 服务类型 */
+const TABLESIDE_SERVICE_CALL_SEQ_ORDER = [641, 640, 333];
 
 /** 前厅 · POS 通知总控 */
 const FOH_POS_NOTIFICATION_CONTROL_SEQ_ORDER = [331, 332];

@@ -1,14 +1,21 @@
 /**
  * 前厅管理中心 · 店中店管理（/operations/queue-call/brand-menu）· 品牌管理（seq 547）。
- * 本店品牌列表、新增/编辑品牌；品牌营业时间引用 seq 418；品牌菜单为组/类/菜三级选择。
+ * 本店品牌列表、新增/编辑品牌；品牌营业时间引用 seq 418；展示渠道控制品牌可见产线；品牌菜单为产线 + 组/类/菜选择。
  */
 
 import {
   bindBrandMenuStructurePicker,
+  BRAND_MENU_LINE_OPTIONS,
+  countBrandMenuStructureDishesByLine,
   dishKey,
-  formatBrandMenuStructureSummary,
-  readBrandMenuStructureKeysFromPicker,
+  emptyBrandMenuStructureByLine,
+  formatBrandMenuStructureByLineSummary,
+  isBrandMenuLineId,
+  normalizeBrandMenuStructureByLine,
+  readBrandMenuStructureByLineFromPicker,
   renderBrandMenuStructurePickerHtml,
+  type BrandMenuLineId,
+  type BrandMenuStructureByLine,
 } from "./brand-menu-structure-picker-ui";
 import {
   formatScheduleSummary,
@@ -33,9 +40,13 @@ export type StoreBrandRecord = {
   imageDataUrl?: string;
   /** 引用的 seq 418 营业时间规则 id 列表 */
   scheduleIds: string[];
-  /** 组/类/菜选中节点 key（g: / c: / d:） */
-  menuStructureKeys: string[];
+  /** 在哪些渠道展示本品牌（Kiosk / eMenu / SDI） */
+  displayChannels: BrandMenuLineId[];
+  /** 按产线（Kiosk / eMenu / SDI）的组/类/菜选中节点 key（g: / c: / d:） */
+  menuStructureByLine: BrandMenuStructureByLine;
 };
+
+const ALL_DISPLAY_CHANNELS: BrandMenuLineId[] = BRAND_MENU_LINE_OPTIONS.map((l) => l.id);
 
 const INPUT_CLASS =
   "h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
@@ -85,18 +96,52 @@ function normalizeMenuStructureKeys(raw: unknown): string[] {
   return uniqueStrings(raw.filter((id): id is string => typeof id === "string" && id.length > 0));
 }
 
+function normalizeMenuStructureByLine(
+  raw: unknown,
+  legacyKeys?: unknown,
+): BrandMenuStructureByLine {
+  const byLine = normalizeBrandMenuStructureByLine(raw);
+  const hasAny = Object.values(byLine).some((keys) => keys.length > 0);
+  if (hasAny) return byLine;
+  const legacy = normalizeMenuStructureKeys(legacyKeys);
+  if (legacy.length === 0) return emptyBrandMenuStructureByLine();
+  // 旧版全局 menuStructureKeys → 复制到三产线，避免丢勾选
+  return { kiosk: [...legacy], emenu: [...legacy], sdi: [...legacy] };
+}
+
+function normalizeDisplayChannels(raw: unknown): BrandMenuLineId[] {
+  if (!Array.isArray(raw)) {
+    // 旧数据无字段：默认全渠道展示，避免品牌「消失」
+    return [...ALL_DISPLAY_CHANNELS];
+  }
+  const ids = uniqueStrings(
+    raw.filter((id): id is string => typeof id === "string" && isBrandMenuLineId(id)),
+  ) as BrandMenuLineId[];
+  // 按固定顺序输出
+  return ALL_DISPLAY_CHANNELS.filter((id) => ids.includes(id));
+}
+
 function normalizeBrand(
-  raw: Partial<StoreBrandRecord> & { businessHours?: unknown; menuIds?: unknown },
+  raw: Partial<StoreBrandRecord> & {
+    businessHours?: unknown;
+    menuIds?: unknown;
+    menuStructureKeys?: unknown;
+  },
 ): StoreBrandRecord {
   const scheduleIds = normalizeScheduleIds(raw.scheduleIds);
-  // 兼容旧数据 menuIds：忽略，新开默认空结构选中
-  const menuStructureKeys = normalizeMenuStructureKeys(raw.menuStructureKeys);
+  const displayChannels = normalizeDisplayChannels(raw.displayChannels);
+  // 兼容旧数据 menuIds：忽略；menuStructureKeys 迁入按产线结构
+  const menuStructureByLine = normalizeMenuStructureByLine(
+    raw.menuStructureByLine,
+    raw.menuStructureKeys,
+  );
   return {
     id: raw.id ?? newBrandId(),
     name: raw.name ?? "",
     imageDataUrl: raw.imageDataUrl,
     scheduleIds,
-    menuStructureKeys,
+    displayChannels,
+    menuStructureByLine,
   };
 }
 
@@ -104,22 +149,31 @@ function defaultBrands(): StoreBrandRecord[] {
   const schedules = readBusinessHourSchedules();
   const firstScheduleId = schedules[0]?.id;
   const secondScheduleIds = schedules.slice(0, 2).map((s) => s.id);
-  const sampleKeys = [
-    dishKey("g-hotpot", "c-hotpot-meat", "d-beef-premium"),
-    dishKey("g-hotpot", "c-hotpot-base", "d-pot-yinyang"),
-  ];
   return [
     normalizeBrand({
       id: "brand-preset-yangguofu",
       name: "杨国富麻辣烫",
       scheduleIds: firstScheduleId ? [firstScheduleId] : [],
-      menuStructureKeys: sampleKeys,
+      displayChannels: ["kiosk", "emenu", "sdi"],
+      menuStructureByLine: {
+        kiosk: [
+          dishKey("g-hotpot", "c-hotpot-meat", "d-beef-premium"),
+          dishKey("g-hotpot", "c-hotpot-base", "d-pot-yinyang"),
+        ],
+        emenu: [dishKey("g-chinese", "c-chinese-hot", "d-kungpao")],
+        sdi: [dishKey("g-drink", "c-drink-cold", "d-cola")],
+      },
     }),
     normalizeBrand({
       id: "brand-preset-zhangliang",
       name: "张亮麻辣烫",
       scheduleIds: secondScheduleIds.length > 0 ? secondScheduleIds : firstScheduleId ? [firstScheduleId] : [],
-      menuStructureKeys: [dishKey("g-chinese", "c-chinese-hot", "d-kungpao")],
+      displayChannels: ["kiosk", "emenu"],
+      menuStructureByLine: {
+        kiosk: [dishKey("g-drink", "c-drink-hot", "d-tea")],
+        emenu: [dishKey("g-chinese", "c-chinese-hot", "d-kungpao")],
+        sdi: [],
+      },
     }),
   ];
 }
@@ -161,7 +215,19 @@ export function formatBrandBusinessHoursSummary(brand: StoreBrandRecord): string
 }
 
 export function formatBrandMenusSummary(brand: StoreBrandRecord): string {
-  return formatBrandMenuStructureSummary(brand.menuStructureKeys);
+  return formatBrandMenuStructureByLineSummary(brand.menuStructureByLine);
+}
+
+export function formatBrandDisplayChannelsSummary(brand: StoreBrandRecord): string {
+  if (brand.displayChannels.length === 0) return "—";
+  const labels = BRAND_MENU_LINE_OPTIONS.filter((l) => brand.displayChannels.includes(l.id)).map(
+    (l) => l.label,
+  );
+  return labels.length > 0 ? labels.join("、") : "—";
+}
+
+function formatBrandMenuDetailButtonLabel(count: number): string {
+  return `详情（${count}）`;
 }
 
 function renderBrandImageCell(brand: StoreBrandRecord): string {
@@ -176,28 +242,33 @@ function renderBrandTable(brands: StoreBrandRecord[]): string {
     return `<p class="rounded-md border border-dashed border-border px-3 py-6 text-center text-sm text-muted-foreground">暂无品牌，请点击「新增品牌」</p>`;
   }
   const rows = brands
-    .map(
-      (brand) => `
+    .map((brand) => {
+      const menuCount = countBrandMenuStructureDishesByLine(brand.menuStructureByLine);
+      return `
       <tr class="border-t border-border" data-brand-row data-brand-id="${escapeHtml(brand.id)}">
         <td class="py-3 pr-3 text-sm text-foreground">${escapeHtml(brand.name)}</td>
         <td class="py-3 pr-3">${renderBrandImageCell(brand)}</td>
         <td class="py-3 pr-3 text-sm text-muted-foreground">${escapeHtml(formatBrandBusinessHoursSummary(brand))}</td>
-        <td class="py-3 pr-3 text-sm text-muted-foreground">${escapeHtml(formatBrandMenusSummary(brand))}</td>
+        <td class="py-3 pr-3 text-sm text-muted-foreground">${escapeHtml(formatBrandDisplayChannelsSummary(brand))}</td>
+        <td class="py-3 pr-3 text-sm">
+          <button type="button" class="${BTN_LINK}" data-brand-menu-detail data-brand-id="${escapeHtml(brand.id)}">${formatBrandMenuDetailButtonLabel(menuCount)}</button>
+        </td>
         <td class="py-3 text-right text-sm whitespace-nowrap">
           <button type="button" class="${BTN_LINK} mr-3" data-brand-edit data-brand-id="${escapeHtml(brand.id)}">编辑</button>
           <button type="button" class="text-sm font-medium text-destructive hover:underline" data-brand-delete data-brand-id="${escapeHtml(brand.id)}">删除</button>
         </td>
-      </tr>`,
-    )
+      </tr>`;
+    })
     .join("");
   return `
     <div class="overflow-x-auto rounded-md border border-border">
-      <table class="w-full min-w-[32rem] border-collapse text-left text-sm">
+      <table class="w-full min-w-[36rem] border-collapse text-left text-sm">
         <thead class="bg-muted/40 text-xs text-muted-foreground">
           <tr>
             <th class="px-3 py-2 font-medium">品牌名称</th>
             <th class="px-3 py-2 font-medium">品牌图片</th>
             <th class="px-3 py-2 font-medium">品牌营业时间</th>
+            <th class="px-3 py-2 font-medium">展示渠道</th>
             <th class="px-3 py-2 font-medium">品牌菜单</th>
             <th class="px-3 py-2 text-right font-medium">操作</th>
           </tr>
@@ -242,6 +313,29 @@ function renderSchedulePicker(selectedIds: string[]): string {
     </div>`;
 }
 
+function renderDisplayChannelPicker(selectedChannels: BrandMenuLineId[]): string {
+  const options = BRAND_MENU_LINE_OPTIONS.map((line) => {
+    const checked = selectedChannels.includes(line.id);
+    return `
+    <label
+      class="flex cursor-pointer items-center gap-2.5 rounded-md border border-border px-3 py-2.5 hover:bg-muted/30 has-[:checked]:border-primary/40 has-[:checked]:bg-primary/5"
+    >
+      <input
+        type="checkbox"
+        class="size-4 shrink-0 accent-primary"
+        data-brand-display-channel
+        value="${escapeHtml(line.id)}"
+        ${checked ? "checked" : ""}
+      />
+      <span class="text-sm font-medium text-foreground">${escapeHtml(line.label)}</span>
+    </label>`;
+  }).join("");
+  return `
+    <div class="grid grid-cols-1 gap-2 sm:grid-cols-3" data-brand-display-channel-picker>
+      ${options}
+    </div>`;
+}
+
 function renderBrandDialog(brands: StoreBrandRecord[], editingId: string | null): string {
   const editing = editingId ? brands.find((b) => b.id === editingId) : null;
   const title = editing ? "编辑品牌" : "新增品牌";
@@ -250,7 +344,8 @@ function renderBrandDialog(brands: StoreBrandRecord[], editingId: string | null)
     ? `<img src="${escapeHtml(editing.imageDataUrl)}" alt="" class="mx-auto max-h-24 rounded border border-border object-contain" data-brand-image-preview />`
     : `<div class="mx-auto flex h-24 w-24 items-center justify-center rounded border border-dashed border-border bg-muted/30 text-xs text-muted-foreground" data-brand-image-preview>NO IMAGES</div>`;
   const selectedScheduleIds = editing?.scheduleIds ?? [];
-  const selectedStructureKeys = editing?.menuStructureKeys ?? [];
+  const selectedChannels = editing?.displayChannels ?? [...ALL_DISPLAY_CHANNELS];
+  const selectedByLine = editing?.menuStructureByLine ?? emptyBrandMenuStructureByLine();
 
   return `
     <div
@@ -262,7 +357,7 @@ function renderBrandDialog(brands: StoreBrandRecord[], editingId: string | null)
       aria-labelledby="brand-dialog-title"
     >
       <button type="button" class="absolute inset-0 bg-black/40" data-brand-dialog-backdrop aria-label="关闭"></button>
-      <div class="relative z-10 flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-lg border border-border bg-card shadow-lg">
+      <div class="relative z-10 flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-lg border border-border bg-card shadow-lg">
         <div class="flex shrink-0 items-start justify-between gap-3 border-b border-border px-5 py-4">
           <h3 id="brand-dialog-title" class="text-base font-semibold text-card-foreground">${title}</h3>
           <button type="button" class="text-muted-foreground hover:text-foreground" data-brand-dialog-close aria-label="关闭">×</button>
@@ -285,8 +380,17 @@ function renderBrandDialog(brands: StoreBrandRecord[], editingId: string | null)
             ${renderSchedulePicker(selectedScheduleIds)}
           </div>
           <div class="space-y-2">
+            <p class="text-sm font-medium text-foreground">展示渠道</p>
+            <p class="text-xs text-muted-foreground">勾选后，本品牌仅在对应渠道展示</p>
+            ${renderDisplayChannelPicker(selectedChannels)}
+          </div>
+          <div class="space-y-2">
             <p class="text-sm font-medium text-foreground">品牌菜单</p>
-            ${renderBrandMenuStructurePickerHtml(selectedStructureKeys)}
+            <p class="text-xs text-muted-foreground">先选产线，再勾选该产线对应的组 / 类 / 菜</p>
+            ${renderBrandMenuStructurePickerHtml([], undefined, undefined, {
+              enableLines: true,
+              selectionByLine: selectedByLine,
+            })}
           </div>
         </div>
         <div class="flex shrink-0 justify-end gap-2 border-t border-border bg-card px-5 py-4">
@@ -323,6 +427,29 @@ function renderDeleteConfirmDialog(): string {
     </div>`;
 }
 
+function renderBrandMenuViewDialog(): string {
+  return `
+    <div
+      class="fixed inset-0 z-[110] hidden items-center justify-center p-4"
+      data-brand-menu-view-dialog
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="brand-menu-view-dialog-title"
+    >
+      <button type="button" class="absolute inset-0 bg-black/40" data-brand-menu-view-backdrop aria-label="关闭"></button>
+      <div class="relative z-10 flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-lg border border-border bg-card shadow-lg">
+        <div class="flex shrink-0 items-start justify-between gap-3 border-b border-border px-5 py-4">
+          <h3 id="brand-menu-view-dialog-title" class="text-base font-semibold text-card-foreground" data-brand-menu-view-title>品牌菜单</h3>
+          <button type="button" class="text-muted-foreground hover:text-foreground" data-brand-menu-view-close aria-label="关闭">×</button>
+        </div>
+        <div class="min-h-0 flex-1 space-y-2 overflow-y-auto px-5 py-4" data-brand-menu-view-body></div>
+        <div class="flex shrink-0 justify-end gap-2 border-t border-border bg-card px-5 py-4">
+          <button type="button" class="${BTN_PRIMARY}" data-brand-menu-view-close>关闭</button>
+        </div>
+      </div>
+    </div>`;
+}
+
 export function isStoreBrandManagementSeq(seq: number): boolean {
   return seq === STORE_BRAND_MANAGEMENT_SEQ;
 }
@@ -337,6 +464,7 @@ export function renderStoreBrandManagementHtml(): string {
       <div data-brand-table-wrap>${renderBrandTable(brands)}</div>
       ${renderBrandDialog(brands, null)}
       ${renderDeleteConfirmDialog()}
+      ${renderBrandMenuViewDialog()}
       ${renderImageSourcePickerModalsHtml()}
     </div>`;
 }
@@ -362,6 +490,9 @@ function refreshBrandPanel(panel: HTMLElement, editingId: string | null = null):
   panel.insertAdjacentHTML("beforeend", renderBrandDialog(brands, editingId));
   if (!panel.querySelector("[data-brand-delete-dialog]")) {
     panel.insertAdjacentHTML("beforeend", renderDeleteConfirmDialog());
+  }
+  if (!panel.querySelector("[data-brand-menu-view-dialog]")) {
+    panel.insertAdjacentHTML("beforeend", renderBrandMenuViewDialog());
   }
 }
 
@@ -401,10 +532,17 @@ function collectScheduleIdsFromDialog(dialog: HTMLElement): string[] {
   );
 }
 
-function collectMenuStructureKeysFromDialog(dialog: HTMLElement): string[] {
+function collectDisplayChannelsFromDialog(dialog: HTMLElement): BrandMenuLineId[] {
+  const checked = [...dialog.querySelectorAll<HTMLInputElement>("[data-brand-display-channel]:checked")]
+    .map((input) => input.value)
+    .filter(isBrandMenuLineId);
+  return ALL_DISPLAY_CHANNELS.filter((id) => checked.includes(id));
+}
+
+function collectMenuStructureByLineFromDialog(dialog: HTMLElement): BrandMenuStructureByLine {
   const picker = dialog.querySelector<HTMLElement>("[data-brand-menu-structure-picker]");
-  if (!picker) return [];
-  return readBrandMenuStructureKeysFromPicker(picker);
+  if (!picker) return emptyBrandMenuStructureByLine();
+  return readBrandMenuStructureByLineFromPicker(picker);
 }
 
 function saveBrandFromDialog(panel: HTMLElement): void {
@@ -419,14 +557,16 @@ function saveBrandFromDialog(panel: HTMLElement): void {
   const preview = dialog.querySelector<HTMLImageElement>("[data-brand-image-preview]");
   const imageDataUrl = preview?.tagName === "IMG" ? preview.src : undefined;
   const scheduleIds = collectScheduleIdsFromDialog(dialog);
-  const menuStructureKeys = collectMenuStructureKeysFromDialog(dialog);
+  const displayChannels = collectDisplayChannelsFromDialog(dialog);
+  const menuStructureByLine = collectMenuStructureByLineFromDialog(dialog);
   const brands = readStoreBrands();
   const nextRecord: StoreBrandRecord = {
     id: editingId || newBrandId(),
     name,
     imageDataUrl,
     scheduleIds,
-    menuStructureKeys,
+    displayChannels,
+    menuStructureByLine,
   };
   if (editingId) {
     const idx = brands.findIndex((b) => b.id === editingId);
@@ -464,6 +604,34 @@ function hideDeleteBrandDialog(panel: HTMLElement): void {
   const dialog = panel.querySelector<HTMLElement>("[data-brand-delete-dialog]");
   const idInput = panel.querySelector<HTMLInputElement>("[data-brand-delete-target-id]");
   if (idInput) idInput.value = "";
+  hideDialog(dialog);
+}
+
+function openBrandMenuViewDialog(panel: HTMLElement, brandId: string): void {
+  const brand = readStoreBrands().find((b) => b.id === brandId);
+  if (!brand) return;
+  const dialog = panel.querySelector<HTMLElement>("[data-brand-menu-view-dialog]");
+  const titleEl = dialog?.querySelector<HTMLElement>("[data-brand-menu-view-title]");
+  const body = dialog?.querySelector<HTMLElement>("[data-brand-menu-view-body]");
+  if (!dialog || !body) return;
+  if (titleEl) titleEl.textContent = `品牌菜单 · ${brand.name}`;
+  body.innerHTML = `
+    <p class="m-0 text-xs text-muted-foreground">按产线查看已配置的组 / 类 / 菜（只读）</p>
+    ${renderBrandMenuStructurePickerHtml([], undefined, undefined, {
+      enableLines: true,
+      selectionByLine: brand.menuStructureByLine,
+      readOnly: true,
+    })}`;
+  body.querySelectorAll<HTMLElement>("[data-brand-menu-structure-picker]").forEach((picker) => {
+    bindBrandMenuStructurePicker(picker);
+  });
+  showDialog(dialog);
+}
+
+function hideBrandMenuViewDialog(panel: HTMLElement): void {
+  const dialog = panel.querySelector<HTMLElement>("[data-brand-menu-view-dialog]");
+  const body = dialog?.querySelector<HTMLElement>("[data-brand-menu-view-body]");
+  if (body) body.innerHTML = "";
   hideDialog(dialog);
 }
 
@@ -528,6 +696,19 @@ export function bindStoreBrandManagementControls(): void {
         showBrandDialog(panel, editBtn.getAttribute("data-brand-id"));
         return;
       }
+      const menuDetailBtn = target.closest<HTMLElement>("[data-brand-menu-detail]");
+      if (menuDetailBtn) {
+        const id = menuDetailBtn.getAttribute("data-brand-id");
+        if (id) openBrandMenuViewDialog(panel, id);
+        return;
+      }
+      if (
+        target.closest("[data-brand-menu-view-close]") ||
+        target.closest("[data-brand-menu-view-backdrop]")
+      ) {
+        hideBrandMenuViewDialog(panel);
+        return;
+      }
       const deleteBtn = target.closest<HTMLElement>("[data-brand-delete]");
       if (deleteBtn) {
         const id = deleteBtn.getAttribute("data-brand-id");
@@ -579,6 +760,12 @@ export function bindStoreBrandManagementControls(): void {
       if (deleteDialog && !deleteDialog.classList.contains("hidden")) {
         e.preventDefault();
         hideDeleteBrandDialog(panel);
+        return;
+      }
+      const menuViewDialog = panel.querySelector<HTMLElement>("[data-brand-menu-view-dialog]");
+      if (menuViewDialog && !menuViewDialog.classList.contains("hidden")) {
+        e.preventDefault();
+        hideBrandMenuViewDialog(panel);
         return;
       }
       const dialog = panel.querySelector<HTMLElement>("[data-brand-dialog]");

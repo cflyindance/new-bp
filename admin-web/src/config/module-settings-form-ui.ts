@@ -47,61 +47,6 @@ export interface ModuleSettingFormRowConfig {
   colorDefault?: string;
 }
 
-const WAIT_TIME_FORM_ROWS: ModuleSettingFormRowConfig[] = [
-  {
-    seq: 537,
-    kind: "checkbox-group",
-    checkboxes: [
-      { fieldId: "537-queue-count", label: "展示排队数量", defaultChecked: true },
-      { fieldId: "537-wait-time", label: "展示等待时间", defaultChecked: true },
-    ],
-  },
-  {
-    seq: 538,
-    kind: "radio-group",
-    radioFieldId: "538-font-size-mode",
-    radioDefault: "system",
-    radios: [
-      { value: "system", label: "系统默认大小" },
-      {
-        value: "multiplier",
-        labelBefore: "系统默认大小的",
-        numberFieldId: "538-font-size-multiplier",
-        numberDefault: 1,
-        labelAfter: "倍",
-        numberMin: 0.1,
-        numberMax: 10,
-      },
-    ],
-  },
-  {
-    seq: 539,
-    kind: "radio-color",
-    radioFieldId: "539-font-bg-mode",
-    radioDefault: "system",
-    customColorValue: "custom",
-    colorFieldId: "539-font-bg-color",
-    colorDefault: "#9ca3af",
-    radios: [
-      { value: "system", label: "系统默认背景色" },
-      { value: "custom", label: "自定义背景色" },
-    ],
-  },
-  {
-    seq: 540,
-    kind: "radio-color",
-    radioFieldId: "540-font-color-mode",
-    radioDefault: "system",
-    customColorValue: "custom",
-    colorFieldId: "540-font-color",
-    colorDefault: "#ffffff",
-    radios: [
-      { value: "system", label: "系统默认颜色" },
-      { value: "custom", label: "自定义颜色" },
-    ],
-  },
-];
-
 /** 团队管理 · 下班打卡打印确认小票（70）：三选一 */
 const TEAM_TIME_ATTENDANCE_FORM_ROWS: ModuleSettingFormRowConfig[] = [
   {
@@ -158,7 +103,6 @@ const TEAM_PAYROLL_TIP_FORM_ROWS: ModuleSettingFormRowConfig[] = [
 ];
 
 const MODULE_SETTING_FORM_ROWS: ModuleSettingFormRowConfig[] = [
-  ...WAIT_TIME_FORM_ROWS,
   ...TEAM_TIME_ATTENDANCE_FORM_ROWS,
   ...TEAM_PAYROLL_TIP_FORM_ROWS,
 ];

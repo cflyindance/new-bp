@@ -2,13 +2,21 @@
  * 前厅管理中心 · 分类管理
  * 路径：/operations/queue-call/classification-settings
  * 展示/交互对齐店中店「品牌与菜单」（单列表 + 弹窗），保留原菜单能力：
- * 可看可下单、仅可查看（按菜 / 按类别）、营业时间；菜品选用组/类/菜三级结构。
+ * 可看可下单、仅可查看（按菜 / 按类别）、展示渠道、营业时间；菜品选用产线 + 组/类/菜结构。
  */
 
 import {
   bindBrandMenuStructurePicker,
-  readBrandMenuStructureKeysFromPicker,
+  BRAND_MENU_LINE_OPTIONS,
+  coerceBrandMenuStructureByLine,
+  countBrandMenuStructureDishesByLine,
+  emptyBrandMenuStructureByLine,
+  flattenBrandMenuStructureByLine,
+  isBrandMenuLineId,
+  readBrandMenuStructureByLineFromPicker,
   renderBrandMenuStructurePickerHtml,
+  type BrandMenuLineId,
+  type BrandMenuStructureByLine,
 } from "./brand-menu-structure-picker-ui";
 import {
   bindImageSourcePicker,
@@ -59,10 +67,10 @@ export type CategoryMenuConfig = {
   displayName: string;
   viewOnlyMode: "dish" | "category";
   viewOnlyCategoryIds: string[];
-  /** 可看可下单：组/类/菜结构 key */
-  orderableStructureKeys: string[];
-  /** 仅可查看 · 按菜配置：组/类/菜结构 key */
-  viewOnlyStructureKeys: string[];
+  /** 可看可下单：按产线组/类/菜结构 */
+  orderableStructureByLine: BrandMenuStructureByLine;
+  /** 仅可查看 · 按菜配置：按产线组/类/菜结构 */
+  viewOnlyStructureByLine: BrandMenuStructureByLine;
 };
 
 export type ClassificationCategoryRecord = {
@@ -70,7 +78,11 @@ export type ClassificationCategoryRecord = {
   name: string;
   imageDataUrl?: string;
   scheduleIds: string[];
+  /** 在哪些渠道展示该分类（Kiosk / eMenu / SDI） */
+  displayChannels: BrandMenuLineId[];
 };
+
+const ALL_DISPLAY_CHANNELS: BrandMenuLineId[] = BRAND_MENU_LINE_OPTIONS.map((l) => l.id);
 
 type FohClassificationSettingsState = {
   categories: ClassificationCategoryRecord[];
@@ -129,6 +141,43 @@ function defaultAllDayScheduleIds(schedules: StoreBusinessHourSchedule[]): strin
   return schedules.length > 0 ? [schedules[0]!.id] : [];
 }
 
+function normalizeDisplayChannels(raw: unknown): BrandMenuLineId[] {
+  if (!Array.isArray(raw)) return [...ALL_DISPLAY_CHANNELS];
+  const ids = uniqueStrings(
+    raw.filter((id): id is string => typeof id === "string" && isBrandMenuLineId(id)),
+  ) as BrandMenuLineId[];
+  return ALL_DISPLAY_CHANNELS.filter((id) => ids.includes(id));
+}
+
+function formatDisplayChannelsSummary(channels: BrandMenuLineId[]): string {
+  if (channels.length === 0) return "—";
+  const labels = BRAND_MENU_LINE_OPTIONS.filter((l) => channels.includes(l.id)).map((l) => l.label);
+  return labels.length > 0 ? labels.join("、") : "—";
+}
+
+function renderDisplayChannelPicker(selectedChannels: BrandMenuLineId[]): string {
+  const options = BRAND_MENU_LINE_OPTIONS.map((line) => {
+    const checked = selectedChannels.includes(line.id);
+    return `
+    <label
+      class="flex cursor-pointer items-center gap-2.5 rounded-md border border-border px-3 py-2.5 hover:bg-muted/30 has-[:checked]:border-primary/40 has-[:checked]:bg-primary/5"
+    >
+      <input
+        type="checkbox"
+        class="size-4 shrink-0 accent-primary"
+        data-cls-display-channel
+        value="${escapeHtml(line.id)}"
+        ${checked ? "checked" : ""}
+      />
+      <span class="text-sm font-medium text-foreground">${escapeHtml(line.label)}</span>
+    </label>`;
+  }).join("");
+  return `
+    <div class="grid grid-cols-1 gap-2 sm:grid-cols-3" data-cls-display-channel-picker>
+      ${options}
+    </div>`;
+}
+
 function normalizeCategory(
   raw: Partial<ClassificationCategoryRecord> & { hours?: string; menuStructureKeys?: unknown },
 ): ClassificationCategoryRecord | null {
@@ -151,12 +200,8 @@ function normalizeCategory(
         ? raw.imageDataUrl.trim()
         : undefined,
     scheduleIds,
+    displayChannels: normalizeDisplayChannels(raw.displayChannels),
   };
-}
-
-function normalizeStructureKeys(raw: unknown): string[] {
-  if (!Array.isArray(raw)) return [];
-  return uniqueStrings(raw.filter((id): id is string => typeof id === "string" && id.length > 0));
 }
 
 function defaultMenuConfig(category: ClassificationCategoryRecord): CategoryMenuConfig {
@@ -164,8 +209,8 @@ function defaultMenuConfig(category: ClassificationCategoryRecord): CategoryMenu
     displayName: category.name,
     viewOnlyMode: "category",
     viewOnlyCategoryIds: [],
-    orderableStructureKeys: [],
-    viewOnlyStructureKeys: [],
+    orderableStructureByLine: emptyBrandMenuStructureByLine(),
+    viewOnlyStructureByLine: emptyBrandMenuStructureByLine(),
   };
 }
 
@@ -173,7 +218,16 @@ function normalizeMenuByCategory(
   raw: unknown,
   categories: ClassificationCategoryRecord[],
 ): Record<string, CategoryMenuConfig> {
-  const src = raw && typeof raw === "object" ? (raw as Record<string, Partial<CategoryMenuConfig>>) : {};
+  const src =
+    raw && typeof raw === "object"
+      ? (raw as Record<
+          string,
+          Partial<CategoryMenuConfig> & {
+            orderableStructureKeys?: unknown;
+            viewOnlyStructureKeys?: unknown;
+          }
+        >)
+      : {};
   const validIds = new Set(categories.map((c) => c.id));
   const out: Record<string, CategoryMenuConfig> = {};
   for (const category of categories) {
@@ -189,8 +243,14 @@ function normalizeMenuByCategory(
           : defaultMenuConfig(category).displayName,
       viewOnlyMode: mode,
       viewOnlyCategoryIds: ids.filter((id) => id !== category.id && validIds.has(id)),
-      orderableStructureKeys: normalizeStructureKeys(prev?.orderableStructureKeys),
-      viewOnlyStructureKeys: normalizeStructureKeys(prev?.viewOnlyStructureKeys),
+      orderableStructureByLine: coerceBrandMenuStructureByLine(
+        prev?.orderableStructureByLine,
+        prev?.orderableStructureKeys,
+      ),
+      viewOnlyStructureByLine: coerceBrandMenuStructureByLine(
+        prev?.viewOnlyStructureByLine,
+        prev?.viewOnlyStructureKeys,
+      ),
     };
   }
   return out;
@@ -200,8 +260,18 @@ function defaultCategories(): ClassificationCategoryRecord[] {
   const schedules = readBusinessHourSchedules();
   const defaultIds = defaultAllDayScheduleIds(schedules);
   return [
-    { id: "cls-preset-lunch-hotpot", name: "午餐火锅", scheduleIds: [...defaultIds] },
-    { id: "cls-preset-dinner-bbq", name: "晚餐烧烤", scheduleIds: [...defaultIds] },
+    {
+      id: "cls-preset-lunch-hotpot",
+      name: "午餐火锅",
+      scheduleIds: [...defaultIds],
+      displayChannels: [...ALL_DISPLAY_CHANNELS],
+    },
+    {
+      id: "cls-preset-dinner-bbq",
+      name: "晚餐烧烤",
+      scheduleIds: [...defaultIds],
+      displayChannels: [...ALL_DISPLAY_CHANNELS],
+    },
   ];
 }
 
@@ -440,8 +510,12 @@ function renderMenuConfigSection(
       <div class="space-y-4" data-cls-menu-config="${escapeHtml(categoryId)}" data-edit-scope="orderable">
         <div>
           <p class="m-0 mb-2 text-sm font-medium text-foreground">可下单的菜</p>
+          <p class="m-0 mb-2 text-xs text-muted-foreground">先选产线，再勾选该产线对应的组 / 类 / 菜</p>
           <div data-cls-orderable-structure>
-            ${renderBrandMenuStructurePickerHtml(cfg.orderableStructureKeys)}
+            ${renderBrandMenuStructurePickerHtml([], undefined, undefined, {
+              enableLines: true,
+              selectionByLine: cfg.orderableStructureByLine,
+            })}
           </div>
         </div>
       </div>`;
@@ -475,8 +549,12 @@ function renderMenuConfigSection(
           </label>
         </div>
         <div class="${dishMode ? "" : "hidden"}" data-cls-view-dish-panel>
+          <p class="m-0 mb-2 text-xs text-muted-foreground">先选产线，再勾选该产线对应的组 / 类 / 菜</p>
           <div data-cls-view-structure>
-            ${renderBrandMenuStructurePickerHtml(cfg.viewOnlyStructureKeys)}
+            ${renderBrandMenuStructurePickerHtml([], undefined, undefined, {
+              enableLines: true,
+              selectionByLine: cfg.viewOnlyStructureByLine,
+            })}
           </div>
         </div>
         <div class="${categoryMode ? "" : "hidden"}" data-cls-view-category-panel>
@@ -487,6 +565,15 @@ function renderMenuConfigSection(
     </div>`;
 }
 
+function formatMenuDetailButtonLabel(count: number): string {
+  return `详情（${count}）`;
+}
+
+function countViewOnlyConfigured(cfg: CategoryMenuConfig): number {
+  if (cfg.viewOnlyMode === "category") return cfg.viewOnlyCategoryIds.length;
+  return countBrandMenuStructureDishesByLine(cfg.viewOnlyStructureByLine);
+}
+
 function renderCategoryImageCell(category: ClassificationCategoryRecord): string {
   if (category.imageDataUrl) {
     return `<img src="${escapeHtml(category.imageDataUrl)}" alt="" class="size-12 rounded border border-border object-cover" />`;
@@ -494,22 +581,29 @@ function renderCategoryImageCell(category: ClassificationCategoryRecord): string
   return `<div class="flex size-12 items-center justify-center rounded border border-dashed border-border bg-muted/40 text-[10px] text-muted-foreground">NO IMAGE</div>`;
 }
 
-function renderCategoryTable(categories: ClassificationCategoryRecord[]): string {
+function renderCategoryTable(
+  categories: ClassificationCategoryRecord[],
+  menuByCategory: Record<string, CategoryMenuConfig> = {},
+): string {
   if (categories.length === 0) {
     return `<p class="rounded-md border border-dashed border-border px-3 py-6 text-center text-sm text-muted-foreground">暂无分类，请点击「新增分类」</p>`;
   }
   const rows = categories
     .map((cat) => {
+      const cfg = menuByCategory[cat.id] ?? defaultMenuConfig(cat);
+      const orderableCount = countBrandMenuStructureDishesByLine(cfg.orderableStructureByLine);
+      const viewOnlyCount = countViewOnlyConfigured(cfg);
       return `
       <tr class="border-t border-border" data-cls-row data-cls-id="${escapeHtml(cat.id)}">
         <td class="py-3 pr-3 text-sm text-foreground">${escapeHtml(cat.name)}</td>
         <td class="py-3 pr-3">${renderCategoryImageCell(cat)}</td>
+        <td class="py-3 pr-3 text-sm text-muted-foreground">${escapeHtml(formatDisplayChannelsSummary(cat.displayChannels))}</td>
         <td class="py-3 pr-3 text-sm text-muted-foreground">${escapeHtml(formatCategoryHoursSummary(cat))}</td>
         <td class="py-3 pr-3 text-sm">
-          <button type="button" class="${BTN_LINK}" data-cls-menu-detail="orderable" data-cls-id="${escapeHtml(cat.id)}">详情</button>
+          <button type="button" class="${BTN_LINK}" data-cls-menu-detail="orderable" data-cls-id="${escapeHtml(cat.id)}">${formatMenuDetailButtonLabel(orderableCount)}</button>
         </td>
         <td class="py-3 pr-3 text-sm">
-          <button type="button" class="${BTN_LINK}" data-cls-menu-detail="viewOnly" data-cls-id="${escapeHtml(cat.id)}">详情</button>
+          <button type="button" class="${BTN_LINK}" data-cls-menu-detail="viewOnly" data-cls-id="${escapeHtml(cat.id)}">${formatMenuDetailButtonLabel(viewOnlyCount)}</button>
         </td>
         <td class="py-3 text-right text-sm whitespace-nowrap">
           <button type="button" class="${BTN_LINK} mr-3" data-cls-edit data-cls-id="${escapeHtml(cat.id)}">编辑</button>
@@ -520,11 +614,12 @@ function renderCategoryTable(categories: ClassificationCategoryRecord[]): string
     .join("");
   return `
     <div class="overflow-x-auto rounded-md border border-border">
-      <table class="w-full min-w-[36rem] border-collapse text-left text-sm">
+      <table class="w-full min-w-[40rem] border-collapse text-left text-sm">
         <thead class="bg-muted/40 text-xs text-muted-foreground">
           <tr>
             <th class="px-3 py-2 font-medium">分类名称</th>
             <th class="px-3 py-2 font-medium">分类图片</th>
+            <th class="px-3 py-2 font-medium">展示渠道</th>
             <th class="px-3 py-2 font-medium">营业时间</th>
             <th class="px-3 py-2 font-medium">可下单</th>
             <th class="px-3 py-2 font-medium">不可下单</th>
@@ -549,6 +644,16 @@ function renderCategoryDialog(
     ? `<img src="${escapeHtml(editing.imageDataUrl)}" alt="" class="mx-auto max-h-24 rounded border border-border object-contain" data-cls-image-preview />`
     : `<div class="mx-auto flex h-24 w-24 items-center justify-center rounded border border-dashed border-border bg-muted/30 text-xs text-muted-foreground" data-cls-image-preview>NO IMAGES</div>`;
   const selectedScheduleIds = editing?.scheduleIds ?? defaultAllDayScheduleIds(readBusinessHourSchedules());
+  const selectedChannels = editing?.displayChannels ?? [...ALL_DISPLAY_CHANNELS];
+  const state = readFohClassificationSettingsState();
+  const menuCfg =
+    (!isCreate && editingId ? state.menuByCategory[editingId] : undefined) ??
+    defaultMenuConfig({
+      id: categoryId,
+      name: name || "新分类",
+      scheduleIds: selectedScheduleIds,
+      displayChannels: selectedChannels,
+    });
 
   return `
     <div
@@ -561,7 +666,7 @@ function renderCategoryDialog(
       aria-labelledby="cls-dialog-title"
     >
       <button type="button" class="absolute inset-0 bg-black/40" data-cls-dialog-backdrop aria-label="关闭"></button>
-      <div class="relative z-10 flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-lg border border-border bg-card shadow-lg">
+      <div class="relative z-10 flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-lg border border-border bg-card shadow-lg">
         <div class="flex shrink-0 items-start justify-between gap-3 border-b border-border px-5 py-4">
           <h3 id="cls-dialog-title" class="text-base font-semibold text-card-foreground">${title}</h3>
           <button type="button" class="text-muted-foreground hover:text-foreground" data-cls-dialog-close aria-label="关闭">×</button>
@@ -580,8 +685,19 @@ function renderCategoryDialog(
             </div>
           </div>
           <div class="space-y-2">
+            <p class="text-sm font-medium text-foreground">展示渠道</p>
+            <p class="text-xs text-muted-foreground">勾选后，该分类仅在对应渠道展示</p>
+            ${renderDisplayChannelPicker(selectedChannels)}
+          </div>
+          <div class="space-y-2">
             <p class="text-sm font-medium text-foreground">营业时间</p>
             ${renderSchedulePicker(selectedScheduleIds)}
+          </div>
+          <div class="space-y-2 border-t border-border pt-4">
+            ${renderMenuConfigSection(categoryId, categories, menuCfg, "orderable")}
+          </div>
+          <div class="space-y-2 border-t border-border pt-4">
+            ${renderMenuConfigSection(categoryId, categories, menuCfg, "viewOnly")}
           </div>
         </div>
         <div class="flex shrink-0 justify-end gap-2 border-t border-border bg-card px-5 py-4">
@@ -604,7 +720,7 @@ function renderMenuEditDialogShell(): string {
       aria-labelledby="cls-menu-edit-dialog-title"
     >
       <button type="button" class="absolute inset-0 bg-black/40" data-cls-menu-edit-backdrop aria-label="关闭"></button>
-      <div class="relative z-10 flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-lg border border-border bg-card shadow-lg">
+      <div class="relative z-10 flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-lg border border-border bg-card shadow-lg">
         <div class="flex shrink-0 items-start justify-between gap-3 border-b border-border px-5 py-4">
           <h3 id="cls-menu-edit-dialog-title" class="text-base font-semibold text-card-foreground" data-cls-menu-edit-title>编辑菜单</h3>
           <button type="button" class="text-muted-foreground hover:text-foreground" data-cls-menu-edit-close aria-label="关闭">×</button>
@@ -668,7 +784,7 @@ function refreshClassificationPanel(
 ): void {
   const state = readFohClassificationSettingsState();
   const tableWrap = panel.querySelector<HTMLElement>("[data-cls-table-wrap]");
-  if (tableWrap) tableWrap.innerHTML = renderCategoryTable(state.categories);
+  if (tableWrap) tableWrap.innerHTML = renderCategoryTable(state.categories, state.menuByCategory);
   panel.querySelector("[data-cls-dialog]")?.remove();
   panel.insertAdjacentHTML(
     "beforeend",
@@ -694,6 +810,9 @@ function showCategoryDialog(panel: HTMLElement, editingId: string | null): void 
   const dialog = panel.querySelector<HTMLElement>("[data-cls-dialog]");
   dialog?.classList.remove("hidden");
   dialog?.classList.add("flex");
+  dialog?.querySelectorAll<HTMLElement>("[data-brand-menu-structure-picker]").forEach((picker) => {
+    bindBrandMenuStructurePicker(picker);
+  });
   dialog?.querySelector<HTMLInputElement>("[data-cls-name]")?.focus();
 }
 
@@ -723,9 +842,9 @@ function collectMenuConfigFromMenuDialog(
     );
     return {
       ...prev,
-      orderableStructureKeys: orderablePicker
-        ? readBrandMenuStructureKeysFromPicker(orderablePicker)
-        : [],
+      orderableStructureByLine: orderablePicker
+        ? readBrandMenuStructureByLineFromPicker(orderablePicker)
+        : emptyBrandMenuStructureByLine(),
     };
   }
   const modeRadio = dialog.querySelector<HTMLInputElement>("[data-cls-view-mode]:checked");
@@ -742,9 +861,9 @@ function collectMenuConfigFromMenuDialog(
     ...prev,
     viewOnlyMode,
     viewOnlyCategoryIds,
-    viewOnlyStructureKeys: viewPicker
-      ? readBrandMenuStructureKeysFromPicker(viewPicker)
-      : prev.viewOnlyStructureKeys,
+    viewOnlyStructureByLine: viewPicker
+      ? readBrandMenuStructureByLineFromPicker(viewPicker)
+      : prev.viewOnlyStructureByLine,
   };
 }
 
@@ -809,6 +928,22 @@ function saveMenuEditDialog(panel: HTMLElement): void {
   refreshClassificationPanel(panel, null, false);
 }
 
+function collectDisplayChannelsFromDialog(dialog: HTMLElement): BrandMenuLineId[] {
+  const checked = [...dialog.querySelectorAll<HTMLInputElement>("[data-cls-display-channel]:checked")]
+    .map((input) => input.value)
+    .filter(isBrandMenuLineId);
+  return ALL_DISPLAY_CHANNELS.filter((id) => checked.includes(id));
+}
+
+function collectFullMenuConfigFromCategoryDialog(
+  dialog: HTMLElement,
+  categoryId: string,
+  prev: CategoryMenuConfig,
+): CategoryMenuConfig {
+  const withOrderable = collectMenuConfigFromMenuDialog(dialog, categoryId, prev, "orderable");
+  return collectMenuConfigFromMenuDialog(dialog, categoryId, withOrderable, "viewOnly");
+}
+
 function saveCategoryFromDialog(panel: HTMLElement): void {
   const dialog = panel.querySelector<HTMLElement>("[data-cls-dialog]");
   if (!dialog) return;
@@ -820,6 +955,7 @@ function saveCategoryFromDialog(panel: HTMLElement): void {
   const editingId = dialog.getAttribute("data-editing-id") || "";
   const categoryId = dialog.getAttribute("data-category-id") || editingId || newCategoryId();
   const scheduleIds = collectScheduleIdsFromDialog(dialog);
+  const displayChannels = collectDisplayChannelsFromDialog(dialog);
   const preview = dialog.querySelector<HTMLImageElement>("[data-cls-image-preview]");
   const imageDataUrl = preview?.tagName === "IMG" ? preview.src : undefined;
   const state = readFohClassificationSettingsState();
@@ -828,22 +964,27 @@ function saveCategoryFromDialog(panel: HTMLElement): void {
     name,
     imageDataUrl,
     scheduleIds,
+    displayChannels,
+  };
+  const prevMenu =
+    (editingId ? state.menuByCategory[editingId] : state.menuByCategory[categoryId]) ??
+    defaultMenuConfig(nextRecord);
+  const nextMenu: CategoryMenuConfig = {
+    ...collectFullMenuConfigFromCategoryDialog(dialog, categoryId, prevMenu),
+    displayName: name,
   };
   if (editingId) {
     const idx = state.categories.findIndex((c) => c.id === editingId);
     if (idx >= 0) {
       state.categories[idx] = { ...state.categories[idx], ...nextRecord, id: editingId };
-      const existingMenu = state.menuByCategory[editingId];
-      state.menuByCategory[editingId] = existingMenu
-        ? { ...existingMenu, displayName: name }
-        : defaultMenuConfig({ ...nextRecord, id: editingId });
+      state.menuByCategory[editingId] = nextMenu;
     } else {
       state.categories.push(nextRecord);
-      state.menuByCategory[categoryId] = defaultMenuConfig(nextRecord);
+      state.menuByCategory[categoryId] = nextMenu;
     }
   } else {
     state.categories.push(nextRecord);
-    state.menuByCategory[categoryId] = defaultMenuConfig(nextRecord);
+    state.menuByCategory[categoryId] = nextMenu;
   }
   writeClassificationState(state.categories, state.menuByCategory);
   hideCategoryDialog(panel);
@@ -932,7 +1073,7 @@ export function renderFohClassificationSettingsPage(path: string): string {
           <div class="flex flex-wrap items-center justify-end gap-2">
             <button type="button" class="${BTN_PRIMARY}" data-cls-create>新增分类</button>
           </div>
-          <div data-cls-table-wrap>${renderCategoryTable(state.categories)}</div>
+          <div data-cls-table-wrap>${renderCategoryTable(state.categories, state.menuByCategory)}</div>
         </div>
         ${renderCategoryDialog(state.categories, null, true)}
         ${renderMenuEditDialogShell()}
@@ -1036,11 +1177,13 @@ export function bindFohClassificationSettingsUi(_remount: () => void): void {
 
     panel.addEventListener("change", (e) => {
       const target = e.target as HTMLElement;
-      const menuDialog = target.closest<HTMLElement>("[data-cls-menu-edit-dialog]");
-      if (!menuDialog || menuDialog.classList.contains("hidden")) return;
+      const host =
+        target.closest<HTMLElement>("[data-cls-menu-edit-dialog]") ||
+        target.closest<HTMLElement>("[data-cls-dialog]");
+      if (!host || host.classList.contains("hidden")) return;
       const modeRadio = target.closest<HTMLInputElement>("[data-cls-view-mode]");
       if (modeRadio?.checked) {
-        syncViewOnlyPanels(menuDialog, modeRadio.value === "dish" ? "dish" : "category");
+        syncViewOnlyPanels(host, modeRadio.value === "dish" ? "dish" : "category");
       }
     });
 
@@ -1075,8 +1218,19 @@ export function bindFohClassificationSettingsUi(_remount: () => void): void {
   });
 }
 
-/** 解析某分类下已选可看可下单菜单结构 key（供调试或后续 API 对接） */
-export function readClassificationCategoryOrderableStructureKeys(categoryId: string): string[] {
+/** 解析某分类下已选可看可下单菜单结构（按产线） */
+export function readClassificationCategoryOrderableStructureByLine(
+  categoryId: string,
+): BrandMenuStructureByLine {
   const state = readFohClassificationSettingsState();
-  return state.menuByCategory[categoryId]?.orderableStructureKeys ?? [];
+  return (
+    state.menuByCategory[categoryId]?.orderableStructureByLine ?? emptyBrandMenuStructureByLine()
+  );
+}
+
+/** @deprecated 返回三产线扁平合并；优先用 readClassificationCategoryOrderableStructureByLine */
+export function readClassificationCategoryOrderableStructureKeys(categoryId: string): string[] {
+  return flattenBrandMenuStructureByLine(
+    readClassificationCategoryOrderableStructureByLine(categoryId),
+  );
 }

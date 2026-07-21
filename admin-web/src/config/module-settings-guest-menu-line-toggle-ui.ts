@@ -2,7 +2,7 @@
  * 前厅 · 食客端·首页与版式：主开关 + 适用产线多选
  * — 611 展示开始按钮（eMenu）
  * — 509 展示账户积分（eMenu / Kiosk / SDI / Online Order / CDS）
- * — 600 纯展示模式（eMenu / SDI）
+ * — 600 纯展示模式（Kiosk / eMenu / SDI）
  */
 
 import { readModuleSettingJson, writeModuleSettingJson } from "./module-settings-form-ui";
@@ -22,7 +22,8 @@ type GuestMenuLineToggleSeq = (typeof GUEST_MENU_LINE_TOGGLE_SEQS)[number];
 
 type ProductLineDef = { readonly id: string; readonly label: string };
 
-const EMENU_SDI_LINES: ProductLineDef[] = [
+const PURE_DISPLAY_LINES: ProductLineDef[] = [
+  { id: "kiosk", label: "Kiosk" },
   { id: "emenu", label: "eMenu" },
   { id: "sdi", label: "SDI" },
 ];
@@ -37,25 +38,22 @@ const ACCOUNT_POINTS_LINES: ProductLineDef[] = [
 
 const CONFIG_BY_SEQ: Record<
   GuestMenuLineToggleSeq,
-  { lines: ProductLineDef[]; linesStorageId: string; linesAriaLabel: string; panelHint: string }
+  { lines: ProductLineDef[]; linesStorageId: string; linesAriaLabel: string }
 > = {
   [GUEST_MENU_START_BUTTON_SEQ]: {
     lines: [{ id: "emenu", label: "eMenu" }],
     linesStorageId: "611-guest-menu-start-button-lines",
     linesAriaLabel: "展示开始按钮适用产线",
-    panelHint: "勾选产线后，在首页展示「开始点单」入口。",
   },
   [GUEST_MENU_ACCOUNT_POINTS_SEQ]: {
     lines: ACCOUNT_POINTS_LINES,
     linesStorageId: "509-show-account-points-lines",
     linesAriaLabel: "展示账户积分适用产线",
-    panelHint: "勾选产线在食客端展示会员账户积分余额。",
   },
   [GUEST_MENU_PURE_DISPLAY_SEQ]: {
-    lines: EMENU_SDI_LINES,
+    lines: PURE_DISPLAY_LINES,
     linesStorageId: "600-guest-menu-pure-display-lines",
     linesAriaLabel: "纯展示模式适用产线",
-    panelHint: "勾选产线后，菜单为纯展示（不可加购）。",
   },
 };
 
@@ -208,7 +206,6 @@ function renderLinesMultiselectHtml(seq: GuestMenuLineToggleSeq, enabled: boolea
 
 export function renderGuestMenuLineTogglePanelHtml(seq: number, on: boolean): string {
   if (!isSeqInGuestMenuLineToggleGroup(seq)) return "";
-  const cfg = getConfig(seq);
   const hidden = on ? "" : "hidden";
   return `
     <div
@@ -217,7 +214,6 @@ export function renderGuestMenuLineTogglePanelHtml(seq: number, on: boolean): st
       ${on ? "" : 'aria-hidden="true"'}
     >
       ${renderLinesMultiselectHtml(seq, on)}
-      <p class="m-0 mt-2 text-xs leading-relaxed text-muted-foreground">${escapeHtml(cfg.panelHint)}</p>
     </div>`;
 }
 

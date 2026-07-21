@@ -1,8 +1,9 @@
 /**
  * 前厅 · 食客端·首页与版式：seq 645 菜品名称字体大小
- * （主开关 → 先选产线 Kiosk/eMenu/SDI → 再按产线配置字号 px，默认 16）。
+ * （按产线启用 + 字号，表格结构对齐「每单最多客人数量」111）。
  */
 
+import { FOH_LINE_CONFIG_ROW_ATTR } from "./foh-settings-by-line-filter";
 import {
   moduleSettingStorageKey,
   readModuleSettingJson,
@@ -10,11 +11,10 @@ import {
   writeModuleSettingJson,
   writeModuleSettingNumber,
 } from "./module-settings-form-ui";
-import { isFohLineConfigRowVisible } from "./foh-settings-by-line-filter";
-import { moduleSettingToggleStorageKey } from "./module-settings-toggle-ui";
 
 export const GUEST_MENU_DISH_NAME_FONT_SEQ = 645;
 
+export const DISH_NAME_FONT_BY_LINE_FIELD_ID = "645-dish-name-font-by-line";
 const LINES_STORAGE_ID = "645-dish-name-font-lines";
 const LEGACY_FONT_FIELD_ID = "645-dish-name-font-px";
 
@@ -31,17 +31,21 @@ export const GUEST_MENU_DISH_NAME_FONT_PRODUCT_LINES = [
 export type GuestMenuDishNameFontProductLineId =
   (typeof GUEST_MENU_DISH_NAME_FONT_PRODUCT_LINES)[number]["id"];
 
+export type DishNameFontLineConfig = {
+  enabled: boolean;
+  fontPx: number;
+};
+
 const ALL_LINE_IDS: GuestMenuDishNameFontProductLineId[] =
   GUEST_MENU_DISH_NAME_FONT_PRODUCT_LINES.map((l) => l.id);
 
-const LINE_CHECKBOX_CLASS =
-  "size-4 shrink-0 accent-primary text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 rounded-sm";
+const CHECKBOX_CLASS =
+  "size-4 shrink-0 rounded border-input text-primary accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 const NUMBER_INPUT_CLASS =
-  "h-9 w-16 rounded-md border border-input bg-background px-2 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
+  "h-8 w-20 rounded-md border border-input bg-background px-2 text-center text-sm tabular-nums text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
 
-let toggleMigrated = false;
-let legacyMigrated = false;
+let migrated = false;
 
 function escapeHtml(s: string): string {
   return s
@@ -51,46 +55,76 @@ function escapeHtml(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
-function fontPxFieldId(lineId: GuestMenuDishNameFontProductLineId): string {
-  return `645-${lineId}-dish-name-font-px`;
-}
-
-function clampFontPx(n: number): number {
+function clampFontPx(raw: unknown): number {
+  const n = Number(raw);
   if (!Number.isFinite(n)) return FONT_DEFAULT;
   return Math.min(FONT_MAX, Math.max(FONT_MIN, Math.round(n)));
 }
 
-function readLegacyToggleOn(): boolean {
-  try {
-    return localStorage.getItem(moduleSettingToggleStorageKey(GUEST_MENU_DISH_NAME_FONT_SEQ)) === "1";
-  } catch {
-    return false;
+function defaultLineConfig(enabled: boolean): DishNameFontLineConfig {
+  return { enabled, fontPx: FONT_DEFAULT };
+}
+
+function defaultByLineConfig(): Record<GuestMenuDishNameFontProductLineId, DishNameFontLineConfig> {
+  return Object.fromEntries(
+    GUEST_MENU_DISH_NAME_FONT_PRODUCT_LINES.map((line) => [line.id, defaultLineConfig(true)]),
+  ) as Record<GuestMenuDishNameFontProductLineId, DishNameFontLineConfig>;
+}
+
+function normalizeByLineConfig(
+  raw: Partial<Record<string, Partial<DishNameFontLineConfig>>>,
+): Record<GuestMenuDishNameFontProductLineId, DishNameFontLineConfig> {
+  const base = defaultByLineConfig();
+  for (const line of GUEST_MENU_DISH_NAME_FONT_PRODUCT_LINES) {
+    const item = raw[line.id];
+    if (!item || typeof item !== "object") continue;
+    base[line.id] = {
+      enabled: item.enabled === true,
+      fontPx: clampFontPx(item.fontPx ?? base[line.id].fontPx),
+    };
+  }
+  return base;
+}
+
+function fontPxFieldId(lineId: GuestMenuDishNameFontProductLineId): string {
+  return `645-${lineId}-dish-name-font-px`;
+}
+
+function syncLegacyFields(
+  config: Record<GuestMenuDishNameFontProductLineId, DishNameFontLineConfig>,
+): void {
+  const enabledLines = ALL_LINE_IDS.filter((id) => config[id].enabled);
+  writeModuleSettingJson(LINES_STORAGE_ID, enabledLines);
+  const firstEnabled = GUEST_MENU_DISH_NAME_FONT_PRODUCT_LINES.find((line) => config[line.id].enabled);
+  if (firstEnabled) {
+    writeModuleSettingNumber(LEGACY_FONT_FIELD_ID, config[firstEnabled.id].fontPx);
+    writeModuleSettingNumber(fontPxFieldId(firstEnabled.id), config[firstEnabled.id].fontPx);
+  }
+  for (const lineId of ALL_LINE_IDS) {
+    writeModuleSettingNumber(fontPxFieldId(lineId), config[lineId].fontPx);
   }
 }
 
-export function ensureGuestMenuDishNameFontToggleMigrated(): void {
-  if (toggleMigrated) return;
-  toggleMigrated = true;
-  try {
-    if (localStorage.getItem(moduleSettingToggleStorageKey(GUEST_MENU_DISH_NAME_FONT_SEQ)) !== null) {
-      return;
-    }
-  } catch {
+function ensureDishNameFontByLineMigrated(): void {
+  if (migrated) return;
+  migrated = true;
+
+  const raw = readModuleSettingJson<Partial<Record<string, Partial<DishNameFontLineConfig>>>>(
+    DISH_NAME_FONT_BY_LINE_FIELD_ID,
+    {},
+  );
+  if (raw && typeof raw === "object" && Object.keys(raw).length > 0) {
+    writeDishNameFontByLine(normalizeByLineConfig(raw));
     return;
   }
-  if (readLegacyToggleOn()) {
+
+  const hasLegacyFont = (() => {
     try {
-      localStorage.setItem(moduleSettingToggleStorageKey(GUEST_MENU_DISH_NAME_FONT_SEQ), "1");
+      return localStorage.getItem(moduleSettingStorageKey(LEGACY_FONT_FIELD_ID)) !== null;
     } catch {
-      /* ignore */
+      return false;
     }
-  }
-}
-
-function migrateLegacyGlobalToLines(): void {
-  if (legacyMigrated) return;
-  legacyMigrated = true;
-
+  })();
   const hasPerLine = ALL_LINE_IDS.some((lineId) => {
     try {
       return localStorage.getItem(moduleSettingStorageKey(fontPxFieldId(lineId))) !== null;
@@ -98,239 +132,212 @@ function migrateLegacyGlobalToLines(): void {
       return false;
     }
   });
-  if (hasPerLine) return;
+  const hasLegacyLines = (() => {
+    try {
+      return localStorage.getItem(moduleSettingStorageKey(LINES_STORAGE_ID)) !== null;
+    } catch {
+      return false;
+    }
+  })();
 
-  const legacyPx = clampFontPx(readModuleSettingNumber(LEGACY_FONT_FIELD_ID, FONT_DEFAULT));
-  for (const lineId of ALL_LINE_IDS) {
-    writeModuleSettingNumber(fontPxFieldId(lineId), legacyPx);
+  if (!hasLegacyFont && !hasPerLine && !hasLegacyLines) {
+    writeDishNameFontByLine(defaultByLineConfig());
+    return;
   }
+
+  const linesRaw = readModuleSettingJson<unknown>(LINES_STORAGE_ID, null);
+  const normalizedLines = Array.isArray(linesRaw)
+    ? linesRaw.filter(
+        (id): id is GuestMenuDishNameFontProductLineId =>
+          typeof id === "string" && ALL_LINE_IDS.includes(id as GuestMenuDishNameFontProductLineId),
+      )
+    : [];
+  const linesLegacy =
+    normalizedLines.length > 0
+      ? normalizedLines
+      : ([...ALL_LINE_IDS] as GuestMenuDishNameFontProductLineId[]);
+  const selected = new Set(linesLegacy);
+
+  const config = defaultByLineConfig();
+  for (const line of GUEST_MENU_DISH_NAME_FONT_PRODUCT_LINES) {
+    const perLinePx = clampFontPx(readModuleSettingNumber(fontPxFieldId(line.id), FONT_DEFAULT));
+    const legacyPx = clampFontPx(readModuleSettingNumber(LEGACY_FONT_FIELD_ID, FONT_DEFAULT));
+    const hasThisLine = (() => {
+      try {
+        return localStorage.getItem(moduleSettingStorageKey(fontPxFieldId(line.id))) !== null;
+      } catch {
+        return false;
+      }
+    })();
+    config[line.id] = {
+      enabled: selected.has(line.id),
+      fontPx: hasThisLine ? perLinePx : legacyPx,
+    };
+  }
+  writeDishNameFontByLine(config);
 }
 
-function normalizeLineIds(raw: unknown): GuestMenuDishNameFontProductLineId[] {
-  if (!Array.isArray(raw)) return [];
-  const valid = new Set<string>(ALL_LINE_IDS);
-  return raw.filter(
-    (id): id is GuestMenuDishNameFontProductLineId => typeof id === "string" && valid.has(id),
+export function readDishNameFontByLine(): Record<
+  GuestMenuDishNameFontProductLineId,
+  DishNameFontLineConfig
+> {
+  ensureDishNameFontByLineMigrated();
+  const raw = readModuleSettingJson<Partial<Record<string, Partial<DishNameFontLineConfig>>>>(
+    DISH_NAME_FONT_BY_LINE_FIELD_ID,
+    {},
   );
-}
-
-export function readGuestMenuDishNameFontLines(): GuestMenuDishNameFontProductLineId[] {
-  ensureGuestMenuDishNameFontToggleMigrated();
-  migrateLegacyGlobalToLines();
-
-  const stored = readModuleSettingJson<unknown>(LINES_STORAGE_ID, null);
-  const normalized = normalizeLineIds(stored);
-  if (normalized.length > 0) return normalized;
-
-  if (readLegacyToggleOn()) {
-    const all = [...ALL_LINE_IDS];
-    writeGuestMenuDishNameFontLines(all);
-    return all;
+  if (raw && typeof raw === "object" && Object.keys(raw).length > 0) {
+    return normalizeByLineConfig(raw);
   }
-  return [];
+  return defaultByLineConfig();
 }
 
-export function writeGuestMenuDishNameFontLines(lines: GuestMenuDishNameFontProductLineId[]): void {
-  const unique = ALL_LINE_IDS.filter((id) => lines.includes(id));
-  writeModuleSettingJson(LINES_STORAGE_ID, unique);
+export function writeDishNameFontByLine(
+  config: Record<GuestMenuDishNameFontProductLineId, DishNameFontLineConfig>,
+): void {
+  const normalized = normalizeByLineConfig(config);
+  writeModuleSettingJson(DISH_NAME_FONT_BY_LINE_FIELD_ID, normalized);
+  syncLegacyFields(normalized);
+}
+
+/** FOH 写 lines 后回写 by-line.enabled */
+export function syncDishNameFontEnabledFromLines(lines: readonly string[]): void {
+  ensureDishNameFontByLineMigrated();
+  const config = readDishNameFontByLine();
+  const selected = new Set(
+    lines.filter((id): id is GuestMenuDishNameFontProductLineId =>
+      ALL_LINE_IDS.includes(id as GuestMenuDishNameFontProductLineId),
+    ),
+  );
+  for (const id of ALL_LINE_IDS) {
+    config[id] = {
+      ...config[id],
+      enabled: selected.has(id),
+    };
+  }
+  writeDishNameFontByLine(config);
 }
 
 export function readGuestMenuDishNameFontPxForLine(
   lineId: GuestMenuDishNameFontProductLineId,
 ): number {
-  migrateLegacyGlobalToLines();
-  return clampFontPx(readModuleSettingNumber(fontPxFieldId(lineId), FONT_DEFAULT));
-}
-
-export function ensureGuestMenuDishNameFontLinesDefault(): void {
-  if (readGuestMenuDishNameFontLines().length === 0) {
-    writeGuestMenuDishNameFontLines([...ALL_LINE_IDS]);
-  }
+  return readDishNameFontByLine()[lineId].fontPx;
 }
 
 export function isGuestMenuDishNameFontSeq(seq: number): boolean {
   return seq === GUEST_MENU_DISH_NAME_FONT_SEQ;
 }
 
-function renderLinesMultiselectHtml(enabled: boolean): string {
-  const selected = new Set(readGuestMenuDishNameFontLines());
-  const cells = GUEST_MENU_DISH_NAME_FONT_PRODUCT_LINES.map((line, index) => {
-    const checked = selected.has(line.id);
-    const divider = index > 0 ? "border-l border-border" : "";
+function syncFontInputDisabled(editor: HTMLElement): void {
+  editor.querySelectorAll<HTMLInputElement>("[data-dish-name-font-line-enabled]").forEach((checkbox) => {
+    const lineId = checkbox.getAttribute("data-dish-name-font-line-enabled");
+    if (!lineId) return;
+    const input = editor.querySelector<HTMLInputElement>(
+      `[data-dish-name-font-line-px="${lineId}"]`,
+    );
+    if (!input) return;
+    input.disabled = !checkbox.checked;
+  });
+}
+
+function collectFromEditor(editor: HTMLElement): void {
+  const config = readDishNameFontByLine();
+  editor.querySelectorAll<HTMLInputElement>("[data-dish-name-font-line-enabled]").forEach((checkbox) => {
+    const lineId = checkbox.getAttribute("data-dish-name-font-line-enabled");
+    if (!lineId || !ALL_LINE_IDS.includes(lineId as GuestMenuDishNameFontProductLineId)) return;
+    config[lineId as GuestMenuDishNameFontProductLineId].enabled = checkbox.checked;
+  });
+  editor.querySelectorAll<HTMLInputElement>("[data-dish-name-font-line-px]").forEach((input) => {
+    const lineId = input.getAttribute("data-dish-name-font-line-px");
+    if (!lineId || !ALL_LINE_IDS.includes(lineId as GuestMenuDishNameFontProductLineId)) return;
+    config[lineId as GuestMenuDishNameFontProductLineId].fontPx = clampFontPx(input.value);
+  });
+  writeDishNameFontByLine(config);
+  syncFontInputDisabled(editor);
+}
+
+function renderByLineEditorHtml(): string {
+  const config = readDishNameFontByLine();
+  const rows = GUEST_MENU_DISH_NAME_FONT_PRODUCT_LINES.map((line) => {
+    const item = config[line.id];
     return `
-      <label
-        class="flex flex-1 flex-col items-center justify-center gap-2 px-2 py-3 text-sm text-foreground sm:px-4 ${enabled ? "cursor-pointer" : "cursor-not-allowed opacity-50"} ${divider}"
-      >
-        <input
-          type="checkbox"
-          class="${LINE_CHECKBOX_CLASS}"
-          value="${escapeHtml(line.id)}"
-          data-dish-name-font-line="${escapeHtml(line.id)}"
-          ${checked ? "checked" : ""}
-          ${enabled ? "" : "disabled"}
-          aria-label="${escapeHtml(line.label)}"
-        />
-        <span class="text-center leading-tight">${escapeHtml(line.label)}</span>
-      </label>`;
+    <tr class="border-t border-border" ${FOH_LINE_CONFIG_ROW_ATTR}="${escapeHtml(line.id)}" data-dish-name-font-line-config="${escapeHtml(line.id)}">
+      <td class="px-3 py-2.5 text-sm font-medium text-foreground align-middle whitespace-nowrap">${escapeHtml(line.label)}</td>
+      <td class="px-3 py-2.5 align-middle">
+        <label class="inline-flex cursor-pointer items-center gap-2">
+          <input
+            type="checkbox"
+            class="${CHECKBOX_CLASS}"
+            ${item.enabled ? "checked" : ""}
+            data-dish-name-font-line-enabled="${escapeHtml(line.id)}"
+            aria-label="${escapeHtml(line.label)} 启用菜品名称字体大小"
+          />
+        </label>
+      </td>
+      <td class="px-3 py-2.5">
+        <div class="flex flex-wrap items-center gap-2">
+          <input
+            type="number"
+            inputmode="numeric"
+            class="${NUMBER_INPUT_CLASS}"
+            value="${escapeHtml(String(item.fontPx))}"
+            min="${FONT_MIN}"
+            max="${FONT_MAX}"
+            step="1"
+            data-dish-name-font-line-px="${escapeHtml(line.id)}"
+            ${item.enabled ? "" : "disabled"}
+            aria-label="${escapeHtml(line.label)} 菜品名称字号"
+          />
+          <span class="text-xs text-muted-foreground">px（${FONT_MIN}–${FONT_MAX}，默认 ${FONT_DEFAULT}）</span>
+        </div>
+      </td>
+    </tr>`;
   }).join("");
 
   return `
-    <div
-      class="flex w-full max-w-md overflow-hidden rounded-md border border-border bg-muted/40"
-      data-dish-name-font-lines="${GUEST_MENU_DISH_NAME_FONT_SEQ}"
-      role="group"
-      aria-label="菜品名称字体大小适用产线"
-    >
-      ${cells}
-    </div>`;
-}
-
-function renderLineConfigBlock(
-  line: (typeof GUEST_MENU_DISH_NAME_FONT_PRODUCT_LINES)[number],
-  lineEnabled: boolean,
-  panelEnabled: boolean,
-): string {
-  const enabled = panelEnabled && lineEnabled;
-  const hidden = lineEnabled ? "" : "hidden";
-  const px = readGuestMenuDishNameFontPxForLine(line.id);
-  const fieldId = fontPxFieldId(line.id);
-
-  return `
-    <div
-      class="flex flex-wrap items-center gap-2 rounded-md border border-border/60 bg-muted/20 px-3 py-2.5 ${hidden}"
-      data-dish-name-font-line-config="${escapeHtml(line.id)}"
-      ${lineEnabled ? "" : 'aria-hidden="true"'}
-    >
-      <span class="min-w-[4.5rem] text-sm font-medium text-foreground">${escapeHtml(line.label)}</span>
-      <input
-        type="number"
-        class="${NUMBER_INPUT_CLASS}"
-        value="${px}"
-        min="${FONT_MIN}"
-        max="${FONT_MAX}"
-        step="1"
-        ${enabled ? "" : "disabled"}
-        data-module-setting-number="${escapeHtml(fieldId)}"
-        aria-label="${escapeHtml(line.label)} 菜品名称字号"
-      />
-      <span class="text-sm text-muted-foreground">px</span>
-    </div>`;
-}
-
-function renderLineConfigsHtml(panelEnabled: boolean): string {
-  const selected = new Set(readGuestMenuDishNameFontLines());
-  return GUEST_MENU_DISH_NAME_FONT_PRODUCT_LINES.map((line) =>
-    renderLineConfigBlock(line, isFohLineConfigRowVisible(line.id, selected.has(line.id)), panelEnabled),
-  ).join("");
-}
-
-function renderEditorInnerHtml(panelEnabled: boolean): string {
-  return `
-    <div class="space-y-4" data-dish-name-font-editor="${GUEST_MENU_DISH_NAME_FONT_SEQ}">
-      <div>
-        ${renderLinesMultiselectHtml(panelEnabled)}
+    <div data-dish-name-font-by-line-editor="${GUEST_MENU_DISH_NAME_FONT_SEQ}" class="space-y-2">
+      <div class="overflow-x-auto rounded-md border border-border">
+        <table class="w-full min-w-[24rem] border-collapse text-left text-sm">
+          <thead class="bg-muted/40 text-xs text-muted-foreground">
+            <tr>
+              <th class="px-3 py-2 font-medium w-[5.5rem]">产线</th>
+              <th class="px-3 py-2 font-medium w-[4.5rem]">启用</th>
+              <th class="px-3 py-2 font-medium">字体大小</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
       </div>
-      <div>
-        <p class="m-0 mb-2 text-xs font-medium text-muted-foreground">按产线配置字号</p>
-        <div class="space-y-2" data-dish-name-font-line-configs>
-          ${renderLineConfigsHtml(panelEnabled)}
-        </div>
-      </div>
-      <p class="m-0 text-xs leading-relaxed text-muted-foreground">
-        先勾选要生效的产线，再分别为各产线设置菜单中菜品名称的字号（${FONT_MIN}–${FONT_MAX}px，默认 ${FONT_DEFAULT}）。
-      </p>
     </div>`;
 }
 
-export function renderGuestMenuDishNameFontPanelHtml(on: boolean): string {
-  const hidden = on ? "" : "hidden";
+export function renderGuestMenuDishNameFontPanelHtml(): string {
   return `
-    <div
-      class="mt-3 max-w-2xl ${hidden}"
-      data-dish-name-font-panel="${GUEST_MENU_DISH_NAME_FONT_SEQ}"
-      ${on ? "" : 'aria-hidden="true"'}
-    >
-      ${renderEditorInnerHtml(on)}
+    <div class="mt-3 space-y-4" data-dish-name-font-panel="${GUEST_MENU_DISH_NAME_FONT_SEQ}">
+      ${renderByLineEditorHtml()}
     </div>`;
-}
-
-function syncLineConfigVisibility(editor: HTMLElement): void {
-  const selected = new Set(readGuestMenuDishNameFontLines());
-  editor.querySelectorAll<HTMLElement>("[data-dish-name-font-line-config]").forEach((block) => {
-    const lineId = block.getAttribute("data-dish-name-font-line-config");
-    const show =
-      lineId &&
-      isFohLineConfigRowVisible(lineId, selected.has(lineId as GuestMenuDishNameFontProductLineId));
-    block.classList.toggle("hidden", !show);
-    if (show) block.removeAttribute("aria-hidden");
-    else block.setAttribute("aria-hidden", "true");
-
-    block.querySelectorAll<HTMLInputElement>("input").forEach((input) => {
-      const panel = editor.closest<HTMLElement>(`[data-dish-name-font-panel]`);
-      const panelOn = panel && !panel.classList.contains("hidden");
-      input.disabled = !(panelOn && show);
-    });
-  });
-}
-
-export function setGuestMenuDishNameFontPanelVisible(visible: boolean): void {
-  document
-    .querySelectorAll<HTMLElement>(`[data-dish-name-font-panel="${GUEST_MENU_DISH_NAME_FONT_SEQ}"]`)
-    .forEach((panel) => {
-      panel.classList.toggle("hidden", !visible);
-      if (visible) panel.removeAttribute("aria-hidden");
-      else panel.setAttribute("aria-hidden", "true");
-
-      panel.querySelectorAll<HTMLInputElement>("input").forEach((el) => {
-        if (el.matches("[data-dish-name-font-line]")) {
-          el.disabled = !visible;
-        }
-      });
-      panel.querySelectorAll("label").forEach((label) => {
-        if (!label.querySelector("[data-dish-name-font-line]")) return;
-        label.classList.toggle("cursor-not-allowed", !visible);
-        label.classList.toggle("opacity-50", !visible);
-        label.classList.toggle("cursor-pointer", visible);
-      });
-
-      const editor = panel.querySelector<HTMLElement>(`[data-dish-name-font-editor]`);
-      if (editor && visible) syncLineConfigVisibility(editor);
-    });
-}
-
-function collectLinesFromGroup(group: HTMLElement): GuestMenuDishNameFontProductLineId[] {
-  const lines: GuestMenuDishNameFontProductLineId[] = [];
-  group.querySelectorAll<HTMLInputElement>("[data-dish-name-font-line]:checked").forEach((input) => {
-    const id = input.getAttribute("data-dish-name-font-line");
-    if (id && ALL_LINE_IDS.includes(id as GuestMenuDishNameFontProductLineId)) {
-      lines.push(id as GuestMenuDishNameFontProductLineId);
-    }
-  });
-  writeGuestMenuDishNameFontLines(lines);
-  return lines;
-}
-
-function bindDishNameFontEditor(editor: HTMLElement): void {
-  if (editor.dataset.dishNameFontEditorBound === "1") return;
-  editor.dataset.dishNameFontEditorBound = "1";
-
-  const linesGroup = editor.querySelector<HTMLElement>("[data-dish-name-font-lines]");
-  if (linesGroup) {
-    linesGroup.addEventListener("change", (e) => {
-      const el = e.target as HTMLElement;
-      if (!el.matches("[data-dish-name-font-line]")) return;
-      collectLinesFromGroup(linesGroup);
-      syncLineConfigVisibility(editor);
-    });
-  }
 }
 
 export function bindGuestMenuDishNameFontUi(root: ParentNode = document): void {
-  ensureGuestMenuDishNameFontToggleMigrated();
-  migrateLegacyGlobalToLines();
+  ensureDishNameFontByLineMigrated();
+  root.querySelectorAll<HTMLElement>("[data-dish-name-font-by-line-editor]").forEach((editor) => {
+    if (editor.dataset.dishNameFontByLineEditorBound === "1") return;
+    editor.dataset.dishNameFontByLineEditorBound = "1";
 
-  root.querySelectorAll<HTMLElement>(`[data-dish-name-font-editor="${GUEST_MENU_DISH_NAME_FONT_SEQ}"]`).forEach((editor) => {
-    bindDishNameFontEditor(editor);
-    syncLineConfigVisibility(editor);
+    syncFontInputDisabled(editor);
+
+    const persist = () => collectFromEditor(editor);
+    editor.addEventListener("change", (e) => {
+      const target = e.target as HTMLElement;
+      if (
+        target.matches("[data-dish-name-font-line-enabled]") ||
+        target.matches("[data-dish-name-font-line-px]")
+      ) {
+        persist();
+      }
+    });
+    editor.addEventListener("input", (e) => {
+      if ((e.target as HTMLElement).matches("[data-dish-name-font-line-px]")) persist();
+    });
   });
 }

@@ -33,8 +33,16 @@ export const STAFF_GROUPS = new Set([
 export const SCOPE_MANUAL_OVERRIDES = {
   165: { lines: STAFF_DEFAULT, source: "ui-module", module: "module-settings-default-main-screen-ui.ts" },
   443: { lines: STORE_WIDE, source: "store-wide" },
-  652: { lines: ["kiosk", "emenu", "sdi", "cds"], source: "manual" },
-  653: { lines: ["kiosk", "emenu", "sdi", "cds"], source: "manual" },
+  652: {
+    lines: ["kiosk", "emenu", "sdi", "cds"],
+    source: "ui-module",
+    module: "module-settings-locale-ui.ts",
+  },
+  653: {
+    lines: ["kiosk", "emenu", "sdi", "cds"],
+    source: "ui-module",
+    module: "module-settings-locale-ui.ts",
+  },
   333: { lines: STORE_WIDE, source: "store-wide" },
   673: { lines: STORE_WIDE, source: "store-wide" },
   110: { lines: STAFF_DEFAULT, source: "group-default" },
@@ -78,12 +86,26 @@ export const SCOPE_MANUAL_OVERRIDES = {
   581: { lines: GUEST_DEFAULT, source: "group-default" },
   502: { lines: ["kiosk"], source: "manual" },
   592: { lines: GUEST_DEFAULT, source: "group-default" },
-  620: { lines: GUEST_DEFAULT, source: "group-default" },
-  626: { lines: GUEST_DEFAULT, source: "group-default" },
-  629: { lines: GUEST_DEFAULT, source: "group-default" },
-  640: { lines: GUEST_DEFAULT, source: "group-default" },
-  641: { lines: GUEST_DEFAULT, source: "group-default" },
-  522: { lines: GUEST_DEFAULT, source: "group-default" },
+  620: {
+    lines: ["emenu", "sdi"],
+    source: "ui-module",
+    module: "module-settings-guest-emenu-auth-page-ui.ts",
+  },
+  626: {
+    lines: ["emenu", "sdi"],
+    source: "ui-module",
+    module: "module-settings-guest-emenu-auth-page-ui.ts",
+  },
+  640: {
+    lines: ["emenu", "sdi"],
+    source: "ui-module",
+    module: "module-settings-tableside-service-call-ui.ts",
+  },
+  641: {
+    lines: ["emenu", "sdi"],
+    source: "ui-module",
+    module: "module-settings-tableside-service-call-ui.ts",
+  },
   523: { lines: GUEST_DEFAULT, source: "group-default" },
   642: { lines: ["emenu"], source: "ui-module", module: "module-settings-clear-table-button-ui.ts" },
   534: {
@@ -91,12 +113,15 @@ export const SCOPE_MANUAL_OVERRIDES = {
     source: "ui-module",
     module: "module-settings-auto-clear-table-ui.ts",
   },
-  600: { lines: ["emenu", "sdi"], source: "ui-module", module: "module-settings-guest-menu-line-toggle-ui.ts" },
-  570: { lines: ["emenu", "sdi"], source: "ui-module", module: "module-settings-nested-ui.ts" },
+  600: { lines: ["kiosk", "emenu", "sdi"], source: "ui-module", module: "module-settings-guest-menu-line-toggle-ui.ts" },
   571: { lines: ["emenu", "sdi"], source: "ui-module", module: "module-settings-guest-category-mode-ui.ts" },
   575: { lines: ["emenu", "sdi"], source: "ui-module", module: "module-settings-hotpot-half-surcharge-ui.ts" },
   601: { lines: ["emenu", "sdi"], source: "ui-module", module: "module-settings-guest-category-mode-ui.ts" },
-  627: { lines: ["emenu"], source: "ui-module", module: "module-settings-guest-category-mode-ui.ts" },
+  627: {
+    lines: ["emenu", "sdi"],
+    source: "ui-module",
+    module: "module-settings-guest-category-mode-ui.ts",
+  },
   /** POS 通知总控 / 订单消息提醒（迁自消息中心） */
   331: { lines: STORE_WIDE, source: "store-wide" },
   332: {
@@ -119,6 +144,10 @@ export const SCOPE_MANUAL_OVERRIDES = {
 
 export const STORAGE_MANUAL_SUPPLEMENT = {
   572: "572-hotpot-base-required-lines",
+  517: "517-guest-menu-nav-position-by-line",
+  640: "640-service-call-cooldown-lines",
+  652: "652-guest-facing-locales-by-line",
+  653: "653-default-locale-by-line",
 };
 
 /** @returns {{ allSeqs: number[], seqToGroup: Map<number, string> }} */

@@ -1,7 +1,8 @@
 /**
- * 前厅 · 点单页展示：主开关 + POS / POS GO / PayPad 产线多选。
+ * 前厅 · 点单页展示：主开关 + 产线多选。
  * seq 121 订单数量支持小数、137 显示 ASAP 订单时间、
  * 122 减菜后自动重定向、222 客户姓名必填、223 客户电话必填、138 自定义点单。
+ * — 137 额外支持 Kiosk / eMenu / SDI / Online Order
  */
 
 import { readModuleSettingJson, writeModuleSettingJson } from "./module-settings-form-ui";
@@ -25,18 +26,40 @@ export const POS_ORDER_CART_POS_LINES_SEQS = [
 
 export type PosOrderCartPosLinesSeq = (typeof POS_ORDER_CART_POS_LINES_SEQS)[number];
 
+/** 本组默认产线（除显示 ASAP 外） */
 export const POS_ORDER_CART_POS_PRODUCT_LINES = [
   { id: "pos", label: "POS" },
   { id: "pos-go", label: "POS GO" },
   { id: "paypad", label: "PayPad" },
 ] as const;
 
-export type PosOrderCartPosProductLineId =
-  (typeof POS_ORDER_CART_POS_PRODUCT_LINES)[number]["id"];
+const SHOW_ASAP_EXTRA_PRODUCT_LINES = [
+  { id: "kiosk", label: "Kiosk" },
+  { id: "emenu", label: "eMenu" },
+  { id: "sdi", label: "SDI" },
+  { id: "online-order", label: "Online Order" },
+] as const;
 
-const ALL_LINE_IDS: PosOrderCartPosProductLineId[] = POS_ORDER_CART_POS_PRODUCT_LINES.map(
-  (l) => l.id,
-);
+export const SHOW_ASAP_ORDER_TIME_PRODUCT_LINES = [
+  ...POS_ORDER_CART_POS_PRODUCT_LINES,
+  ...SHOW_ASAP_EXTRA_PRODUCT_LINES,
+] as const;
+
+export type PosOrderCartPosProductLineId =
+  | (typeof POS_ORDER_CART_POS_PRODUCT_LINES)[number]["id"]
+  | (typeof SHOW_ASAP_EXTRA_PRODUCT_LINES)[number]["id"];
+
+type PosOrderCartPosProductLine = { id: PosOrderCartPosProductLineId; label: string };
+
+function productLinesForSeq(seq: PosOrderCartPosLinesSeq): readonly PosOrderCartPosProductLine[] {
+  return seq === SHOW_ASAP_ORDER_TIME_SEQ
+    ? SHOW_ASAP_ORDER_TIME_PRODUCT_LINES
+    : POS_ORDER_CART_POS_PRODUCT_LINES;
+}
+
+function allLineIdsForSeq(seq: PosOrderCartPosLinesSeq): PosOrderCartPosProductLineId[] {
+  return productLinesForSeq(seq).map((l) => l.id);
+}
 
 const LINES_STORAGE_ID_BY_SEQ: Record<PosOrderCartPosLinesSeq, string> = {
   [ORDER_QTY_DECIMAL_SEQ]: "121-order-qty-decimal-lines",
@@ -75,9 +98,12 @@ function readMasterToggleOn(seq: PosOrderCartPosLinesSeq): boolean {
   }
 }
 
-function normalizeLineIds(raw: unknown): PosOrderCartPosProductLineId[] {
+function normalizeLineIds(
+  seq: PosOrderCartPosLinesSeq,
+  raw: unknown,
+): PosOrderCartPosProductLineId[] {
   if (!Array.isArray(raw)) return [];
-  const valid = new Set<string>(ALL_LINE_IDS);
+  const valid = new Set<string>(allLineIdsForSeq(seq));
   return raw.filter(
     (id): id is PosOrderCartPosProductLineId => typeof id === "string" && valid.has(id),
   );
@@ -85,11 +111,16 @@ function normalizeLineIds(raw: unknown): PosOrderCartPosProductLineId[] {
 
 export function readPosOrderCartPosLines(seq: PosOrderCartPosLinesSeq): PosOrderCartPosProductLineId[] {
   const stored = readModuleSettingJson<unknown>(LINES_STORAGE_ID_BY_SEQ[seq], null);
-  const normalized = normalizeLineIds(stored);
-  if (normalized.length > 0) return normalized;
+  const normalized = normalizeLineIds(seq, stored);
+  if (normalized.length > 0) {
+    if (Array.isArray(stored) && normalized.length !== stored.length) {
+      writePosOrderCartPosLines(seq, normalized);
+    }
+    return normalized;
+  }
 
   if (readMasterToggleOn(seq)) {
-    const all = [...ALL_LINE_IDS];
+    const all = allLineIdsForSeq(seq);
     writePosOrderCartPosLines(seq, all);
     return all;
   }
@@ -100,13 +131,14 @@ export function writePosOrderCartPosLines(
   seq: PosOrderCartPosLinesSeq,
   lines: PosOrderCartPosProductLineId[],
 ): void {
-  const unique = ALL_LINE_IDS.filter((id) => lines.includes(id));
+  const allowed = allLineIdsForSeq(seq);
+  const unique = allowed.filter((id) => lines.includes(id));
   writeModuleSettingJson(LINES_STORAGE_ID_BY_SEQ[seq], unique);
 }
 
 export function ensurePosOrderCartPosLinesDefault(seq: PosOrderCartPosLinesSeq): void {
   if (readPosOrderCartPosLines(seq).length === 0) {
-    writePosOrderCartPosLines(seq, [...ALL_LINE_IDS]);
+    writePosOrderCartPosLines(seq, allLineIdsForSeq(seq));
   }
 }
 
@@ -116,10 +148,12 @@ export function isPosOrderCartPosLinesSeq(seq: number): seq is PosOrderCartPosLi
 
 function renderLinesMultiselectHtml(seq: PosOrderCartPosLinesSeq, enabled: boolean): string {
   const selected = new Set(readPosOrderCartPosLines(seq));
-  const cells = POS_ORDER_CART_POS_PRODUCT_LINES.map((line, index) => {
-    const checked = selected.has(line.id);
-    const divider = index > 0 ? "border-l border-border" : "";
-    return `
+  const lines = productLinesForSeq(seq);
+  const cells = lines
+    .map((line, index) => {
+      const checked = selected.has(line.id);
+      const divider = index > 0 ? "border-l border-border" : "";
+      return `
       <label
         class="flex flex-1 flex-col items-center justify-center gap-2 px-2 py-3 text-sm text-foreground sm:px-4 ${enabled ? "cursor-pointer" : "cursor-not-allowed opacity-50"} ${divider}"
       >
@@ -135,11 +169,13 @@ function renderLinesMultiselectHtml(seq: PosOrderCartPosLinesSeq, enabled: boole
         />
         <span class="text-center leading-tight">${escapeHtml(line.label)}</span>
       </label>`;
-  }).join("");
+    })
+    .join("");
 
+  const maxWidth = seq === SHOW_ASAP_ORDER_TIME_SEQ ? "max-w-3xl" : "max-w-xl";
   return `
     <div
-      class="flex w-full max-w-xl overflow-hidden rounded-md border border-border bg-muted/40"
+      class="flex w-full ${maxWidth} overflow-hidden rounded-md border border-border bg-muted/40"
       data-pos-order-cart-pos-lines="${seq}"
       role="group"
       aria-label="${escapeHtml(LINES_GROUP_ARIA_BY_SEQ[seq])}"
@@ -170,6 +206,7 @@ export function setPosOrderCartPosLinesPanelVisible(
     else panel.setAttribute("aria-hidden", "true");
 
     panel.querySelectorAll<HTMLInputElement>("[data-pos-order-cart-pos-line]").forEach((input) => {
+      if (Number(input.getAttribute("data-pos-order-cart-pos-lines-seq")) !== seq) return;
       input.disabled = !visible;
       const label = input.closest("label");
       if (!label) return;
@@ -184,6 +221,7 @@ function collectLinesFromGroup(
   group: HTMLElement,
   seq: PosOrderCartPosLinesSeq,
 ): PosOrderCartPosProductLineId[] {
+  const allowed = new Set(allLineIdsForSeq(seq));
   const lines: PosOrderCartPosProductLineId[] = [];
   group
     .querySelectorAll<HTMLInputElement>(
@@ -191,7 +229,7 @@ function collectLinesFromGroup(
     )
     .forEach((input) => {
       const id = input.getAttribute("data-pos-order-cart-pos-line");
-      if (id && ALL_LINE_IDS.includes(id as PosOrderCartPosProductLineId)) {
+      if (id && allowed.has(id as PosOrderCartPosProductLineId)) {
         lines.push(id as PosOrderCartPosProductLineId);
       }
     });

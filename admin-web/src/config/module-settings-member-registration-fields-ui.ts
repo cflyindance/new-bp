@@ -145,9 +145,6 @@ export function renderMemberPrivacyDefaultPanelHtml(seq: number, on: boolean): s
       ${on ? "" : 'aria-hidden="true"'}
     >
       ${renderLinesMultiselectHtml(on)}
-      <p class="m-0 mt-2 text-xs leading-relaxed text-muted-foreground">
-        勾选产线在输入手机号页面的隐私条款默认勾选（食客仍可取消）。
-      </p>
     </div>`;
 }
 

@@ -38,6 +38,30 @@ import {
   syncMaxGuestsEnabledFromLines,
 } from "./module-settings-max-guests-per-order-ui";
 import {
+  WAIT_TIME_DISPLAY_CURRENT_ORDER_SEQ,
+  WAIT_TIME_DISPLAY_RANGE_SEQ,
+  readWaitTimeDisplayCurrentOrderByLine,
+  readWaitTimeDisplayRangeByLine,
+  syncWaitTimeDisplayCurrentOrderEnabledFromLines,
+  syncWaitTimeDisplayRangeEnabledFromLines,
+} from "./module-settings-wait-time-display-ui";
+import {
+  isWaitTimeDisplayStyleSeq,
+  readWaitTimeStyleEnabledLines,
+  syncWaitTimeStyleEnabledFromLines,
+  ensureWaitTimeStyleMigrated,
+} from "./module-settings-wait-time-style-ui";
+import {
+  TABLESIDE_SERVICE_CALL_COOLDOWN_SEQ,
+  readServiceCallCooldownByLine,
+  syncServiceCallCooldownEnabledFromLines,
+} from "./module-settings-tableside-service-call-ui";
+import {
+  GUEST_MENU_DISH_NAME_FONT_SEQ,
+  readDishNameFontByLine,
+  syncDishNameFontEnabledFromLines,
+} from "./module-settings-guest-menu-dish-name-font-ui";
+import {
   ORDER_TIMEOUT_REMINDER_SEQ,
   readOrderTimeoutByLine,
   syncOrderTimeoutEnabledFromLines,
@@ -47,6 +71,11 @@ import {
   readCustomDividerByLine,
   syncCustomDividerEnabledFromLines,
 } from "./module-settings-custom-divider-name-ui";
+import {
+  EMENU_CUSTOM_MESSAGE_SEQ,
+  readEmenuCustomMessageByLine,
+  syncEmenuCustomMessageEnabledFromLines,
+} from "./module-settings-emenu-custom-message-ui";
 
 export {
   FOH_LINE_CONFIG_ROW_ATTR,
@@ -65,6 +94,7 @@ const FOH_LINE_CONFIG_BLOCK_SELECTORS: ReadonlyArray<{
   { selector: "[data-menu-image-mode-line-config]", lineIdAttr: "data-menu-image-mode-line-config" },
   { selector: "[data-dish-name-font-line-config]", lineIdAttr: "data-dish-name-font-line-config" },
   { selector: "[data-guest-dish-detail-line-row]", lineIdAttr: "data-guest-dish-detail-line-row" },
+  { selector: "[data-product-remark-line-row]", lineIdAttr: "data-product-remark-line-row" },
   { selector: "[data-guest-menu-group-by-line-row]", lineIdAttr: "data-guest-menu-group-by-line-row" },
   { selector: "[data-order-type-row]", lineIdAttr: "data-order-type-row" },
   { selector: `[${FOH_LINE_CONFIG_ROW_ATTR}]`, lineIdAttr: FOH_LINE_CONFIG_ROW_ATTR },
@@ -155,10 +185,23 @@ export function readFohByLineToggleState(seq: number, lineId: FohLineNavId): boo
       readAutoLogoutByLine();
     } else if (seq === MAX_GUESTS_PER_ORDER_SEQ) {
       readMaxGuestsByLine();
+    } else if (seq === WAIT_TIME_DISPLAY_CURRENT_ORDER_SEQ) {
+      readWaitTimeDisplayCurrentOrderByLine();
+    } else if (seq === WAIT_TIME_DISPLAY_RANGE_SEQ) {
+      readWaitTimeDisplayRangeByLine();
+    } else if (isWaitTimeDisplayStyleSeq(seq)) {
+      ensureWaitTimeStyleMigrated(seq);
+      readWaitTimeStyleEnabledLines(seq);
+    } else if (seq === TABLESIDE_SERVICE_CALL_COOLDOWN_SEQ) {
+      readServiceCallCooldownByLine();
+    } else if (seq === GUEST_MENU_DISH_NAME_FONT_SEQ) {
+      readDishNameFontByLine();
     } else if (seq === ORDER_TIMEOUT_REMINDER_SEQ) {
       readOrderTimeoutByLine();
     } else if (seq === CUSTOM_DIVIDER_NAME_SEQ) {
       readCustomDividerByLine();
+    } else if (seq === EMENU_CUSTOM_MESSAGE_SEQ) {
+      readEmenuCustomMessageByLine();
     }
     const lines = readStoredLines(seq);
     if (lines.length > 0) return lines.includes(lineId);
@@ -195,10 +238,22 @@ export function writeFohByLineToggleState(seq: number, lineId: FohLineNavId, on:
     syncAutoLogoutEnabledFromLines(lines);
   } else if (seq === MAX_GUESTS_PER_ORDER_SEQ) {
     syncMaxGuestsEnabledFromLines(lines);
+  } else if (seq === WAIT_TIME_DISPLAY_CURRENT_ORDER_SEQ) {
+    syncWaitTimeDisplayCurrentOrderEnabledFromLines(lines);
+  } else if (seq === WAIT_TIME_DISPLAY_RANGE_SEQ) {
+    syncWaitTimeDisplayRangeEnabledFromLines(lines);
+  } else if (isWaitTimeDisplayStyleSeq(seq)) {
+    syncWaitTimeStyleEnabledFromLines(seq, lines);
+  } else if (seq === TABLESIDE_SERVICE_CALL_COOLDOWN_SEQ) {
+    syncServiceCallCooldownEnabledFromLines(lines);
+  } else if (seq === GUEST_MENU_DISH_NAME_FONT_SEQ) {
+    syncDishNameFontEnabledFromLines(lines);
   } else if (seq === ORDER_TIMEOUT_REMINDER_SEQ) {
     syncOrderTimeoutEnabledFromLines(lines);
   } else if (seq === CUSTOM_DIVIDER_NAME_SEQ) {
     syncCustomDividerEnabledFromLines(lines);
+  } else if (seq === EMENU_CUSTOM_MESSAGE_SEQ) {
+    syncEmenuCustomMessageEnabledFromLines(lines);
   } else {
     writeStoredLines(seq, lines);
   }

@@ -32,13 +32,6 @@ const ALL_LINE_IDS: GuestDiningDurationProductLineId[] =
 const MODULE_SETTING_CONTROL_CLASS =
   "size-4 shrink-0 accent-primary text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50";
 
-const SEQ_PANEL_HINT: Record<GuestDiningDurationSeq, string> = {
-  [GUEST_SHOW_DINING_DURATION_SEQ]: "勾选产线在订单下单后展示用餐时长。",
-  [GUEST_DINING_DURATION_COUNTDOWN_SEQ]: "勾选产线将用餐时长以倒计时方式展示（未勾选产线为正计时）。",
-  [GUEST_DINING_REMAINING_ALERT_SEQ]: "勾选产线在剩余用餐时长达到阈值时弹出提示（阈值配置见业务规则）。",
-  [GUEST_DINING_BLOCK_ORDER_AFTER_ALERT_SEQ]: "勾选产线在用餐剩余时长提示后禁止食客自助下单。",
-};
-
 const migratedToggleSeqs = new Set<number>();
 
 function escapeHtml(s: string): string {
@@ -155,7 +148,6 @@ function renderLinesMultiselectHtml(seq: GuestDiningDurationSeq, enabled: boolea
 
 export function renderGuestDiningDurationPanelHtml(seq: GuestDiningDurationSeq, on: boolean): string {
   const hidden = on ? "" : "hidden";
-  const hint = SEQ_PANEL_HINT[seq];
   return `
     <div
       class="mt-3 ${hidden}"
@@ -163,7 +155,6 @@ export function renderGuestDiningDurationPanelHtml(seq: GuestDiningDurationSeq, 
       ${on ? "" : 'aria-hidden="true"'}
     >
       ${renderLinesMultiselectHtml(seq, on)}
-      <p class="m-0 mt-2 text-xs leading-relaxed text-muted-foreground">${escapeHtml(hint)}</p>
     </div>`;
 }
 

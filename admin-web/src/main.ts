@@ -370,14 +370,13 @@ import {
   renderStandaloneDishPickerHtml,
 } from "./config/module-settings-dish-rules-ui";
 import {
-  GUEST_FACING_LOCALES,
   bindGuestFacingLocaleControls,
   isModuleSettingLocaleDefaultSeq,
   isModuleSettingLocaleSelectSeq,
   isSystemDefaultLocaleSeq,
-  localeCheckboxFieldId,
+  renderGuestFacingLocaleDefaultEditorHtml,
+  renderGuestFacingLocaleSelectEditorHtml,
   renderLanguageLocalizationGroupIntroHtml,
-  renderLocaleDefaultRadiosHtml,
   renderSystemDefaultLocaleRadiosHtml,
 } from "./config/module-settings-locale-ui";
 import {
@@ -543,6 +542,11 @@ import {
   bindCustomDividerNameUi,
 } from "./config/module-settings-custom-divider-name-ui";
 import {
+  isEmenuCustomMessageSeq,
+  renderEmenuCustomMessagePanelHtml,
+  bindEmenuCustomMessageUi,
+} from "./config/module-settings-emenu-custom-message-ui";
+import {
   bindChildExcludedFromOrderLimitUi,
   ensureChildExcludedFromOrderLimitToggleMigrated,
   isChildExcludedFromOrderLimitSeq,
@@ -598,12 +602,18 @@ import {
 } from "./config/module-settings-table-delivery-meal-card-ui";
 import {
   bindWaitTimeDisplayUi,
-  ensureWaitTimeDisplayToggleMigrated,
-  isWaitTimeDisplayFormSeq,
+  isWaitTimeDisplayCurrentOrderSeq,
+  isWaitTimeDisplayRangeSeq,
   isWaitTimeDisplayToggleSeq,
-  renderWaitTimeDisplayLinesPanelHtml,
+  renderWaitTimeDisplayCurrentOrderPanelHtml,
+  renderWaitTimeDisplayRangePanelHtml,
   setWaitTimeDisplayLinesPanelVisible,
 } from "./config/module-settings-wait-time-display-ui";
+import {
+  bindWaitTimeDisplayStyleUi,
+  isWaitTimeDisplayStyleSeq,
+  renderWaitTimeDisplayStylePanelHtml,
+} from "./config/module-settings-wait-time-style-ui";
 import {
   isWaitTimeCalculationSeq,
   renderWaitTimeCalculationEditorHtml,
@@ -659,13 +669,6 @@ import {
   renderHotpotBaseStillShowPanelHtml,
   setHotpotBaseStillShowPanelVisible,
 } from "./config/module-settings-hotpot-base-still-show-ui";
-import {
-  bindGuestOrderNoticeUi,
-  ensureGuestOrderNoticeToggleMigrated,
-  isGuestOrderNoticeSeq,
-  renderGuestOrderNoticePanelHtml,
-  setGuestOrderNoticePanelVisible,
-} from "./config/module-settings-guest-order-notice-ui";
 import {
   bindGuestDishDetailDisplayUi,
   ensureGuestDishDetailDisplayToggleMigrated,
@@ -799,17 +802,16 @@ import {
   bindGuestMenuStructureUi,
   ensureGuestMenuStructureLinesDefault,
   ensureGuestMenuStructureToggleMigrated,
+  isGuestMenuNavPositionSeq,
   isGuestMenuStructureSeq,
+  renderGuestMenuNavPositionByLineEditorHtml,
   renderGuestMenuStructurePanelHtml,
   setGuestMenuStructurePanelVisible,
 } from "./config/module-settings-guest-menu-structure-ui";
 import {
   bindGuestMenuDishNameFontUi,
-  ensureGuestMenuDishNameFontLinesDefault,
-  ensureGuestMenuDishNameFontToggleMigrated,
   isGuestMenuDishNameFontSeq,
   renderGuestMenuDishNameFontPanelHtml,
-  setGuestMenuDishNameFontPanelVisible,
 } from "./config/module-settings-guest-menu-dish-name-font-ui";
 import {
   bindOrderRemarkLinesUi,
@@ -821,6 +823,7 @@ import {
 import {
   bindProductRemarkUi,
   ensureProductRemarkDishesMigrated,
+  ensureProductRemarkToggleMigrated,
   isProductRemarkSeq,
   renderProductRemarkPanelHtml,
   setProductRemarkPanelVisible,
@@ -1236,7 +1239,6 @@ import {
   ensureMemberSmsVerificationLinesDefault,
   isMemberSmsVerificationSeq,
   renderMemberSmsVerificationLinesPanelHtml,
-  setMemberSmsVerificationLinesPanelVisible,
 } from "./config/module-settings-member-sms-verification-ui";
 import {
   bindMemberRegistrationFieldsUi,
@@ -1251,8 +1253,10 @@ import {
   ensureMemberPointsToggleFieldLinesDefault,
   isMemberPointsDishPositionSeq,
   isMemberPointsToggleFieldSeq,
+  isMemberShowPointsDishesSeq,
   renderMemberPointsDishPositionByLineEditorHtml,
   renderMemberPointsToggleFieldLinesPanelHtml,
+  renderMemberShowPointsDishesPanelHtml,
   setMemberPointsToggleFieldLinesPanelVisible,
   type MemberPointsToggleFieldSeq,
 } from "./config/module-settings-member-points-rewards-ui";
@@ -1352,6 +1356,7 @@ import {
 } from "./config/module-settings-waitlist-ticket-print-ui";
 import {
   bindTablesideServiceCallUi,
+  ensureTablesideServiceCallLinesDefault,
   ensureTablesideServiceCallToggleMigrated,
   ensureTablesideServiceCallTogglesMigrated,
   isTablesideServiceCallCooldownSeq,
@@ -1360,7 +1365,6 @@ import {
   renderServiceCallCooldownPanelHtml,
   renderServiceRequestTypesEditorHtml,
   renderTablesideServiceCallPanelHtml,
-  setServiceCallCooldownPanelVisible,
   setTablesideServiceCallPanelVisible,
 } from "./config/module-settings-tableside-service-call-ui";
 import {
@@ -1369,7 +1373,10 @@ import {
 } from "./config/module-settings-notification-topics-ui";
 import {
   isDurationBillingScenesMultiselectSeq,
-  renderDurationBillingScenesMultiselectHtml,
+  ensureDurationBillingToggleMigrated,
+  renderDurationBillingPanelHtml,
+  setDurationBillingPanelVisible,
+  bindDurationBillingUi,
 } from "./config/module-settings-duration-billing-scenes-ui";
 import {
   isOrderPickupSmsChannelSeq,
@@ -3665,7 +3672,7 @@ function normalizeTabModuleHashes(): void {
     "table-clear-ops": "foh-table-clear-ops",
     "pos-kitchen-send": "foh-kitchen-send-timing",
     "pos-button-visibility": "foh-pos-buttons",
-    "pos-order-toolbar": "foh-pos-buttons",
+    "pos-order-toolbar": "foh-pos-order-toolbar",
     "foh-order-cart-combo": "foh-pos-order-cart",
     "pos-order-cart": "foh-pos-order-cart",
     "pos-combo-ordering": "foh-pos-combo-ordering",
@@ -3698,7 +3705,7 @@ function normalizeTabModuleHashes(): void {
     "foh-tables": "foh-table-start-flow",
     "foh-cashier-start": "foh-pos-shell",
     "foh-order-buttons-core": "foh-pos-buttons",
-    "foh-order-toolbar-extra": "foh-pos-buttons",
+    "foh-order-toolbar-extra": "foh-pos-order-extras",
     "foh-menu-find-pay": "foh-pos-menu-scope",
     "foh-guest-kitchen-dining": "foh-guest-kitchen-send",
     "foh-tableside-experience": "foh-tableside-service",
@@ -5704,7 +5711,6 @@ function renderFohByLineGroupRowsHtml(
 }
 
 function runFohByLineToggleSideEffects(seq: number, next: boolean): void {
-  if (isGuestOrderNoticeSeq(seq)) setGuestOrderNoticePanelVisible(next);
   if (isGuestDishDetailDisplaySeq(seq)) setGuestDishDetailPanelVisible(next);
   if (isGuestDiningDurationSeq(seq)) setGuestDiningDurationPanelVisible(seq, next);
   if (isWaitTimeDisplayToggleSeq(seq)) {
@@ -5728,7 +5734,10 @@ function runFohByLineToggleSideEffects(seq: number, next: boolean): void {
   if (isHotpotHalfSurchargeSeq(seq)) setHotpotHalfSurchargePanelVisible(next);
   if (isHotpotBaseOrderModeSeq(seq)) setHotpotBaseOrderModePanelVisible(next);
   if (isOrderDisplaySeatSeq(seq)) setOrderDisplaySeatPanelVisible(next);
-  if (isTablesideServiceCallCooldownSeq(seq)) setServiceCallCooldownPanelVisible(next);
+  if (isTablesideServiceCallToggleSeq(seq)) {
+    if (next) ensureTablesideServiceCallLinesDefault(seq);
+    setTablesideServiceCallPanelVisible(seq, next);
+  }
   if (isPosSessionSecurityToggleSeq(seq)) setPosSessionSecurityPanelVisible(seq, next);
   if (isClearTableButtonSeq(seq)) {
     if (next) ensureClearTableButtonLinesDefault();
@@ -6155,30 +6164,32 @@ function renderModuleSettingWaitTimeCalculationRow(item: ModuleSettingCatalogIte
         </li>`;
 }
 
-function renderModuleSettingWaitTimeDisplayToggleRow(item: ModuleSettingCatalogItem): string {
-  ensureWaitTimeDisplayToggleMigrated(item.seq);
-  const nested = getModuleSettingNestedGroup(item.seq);
-  if (!nested) return renderModuleSettingRow(item);
-
-  const on = readModuleSettingToggleOn(item.seq);
-  const panelHidden = on ? "" : "hidden";
-  const fieldsHtml = nested.fields.map((field) => renderModuleSettingNestedField(item.seq, field)).join("");
-
+function renderModuleSettingWaitTimeDisplayCurrentOrderRow(item: ModuleSettingCatalogItem): string {
   return `
         <li class="list-none" data-module-setting-row-seq="${item.seq}">
-          <div class="border-b border-border px-4 py-3 last:border-b-0">
-            <div class="flex items-start justify-between gap-3">
-              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
-              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
-            </div>
-            ${renderWaitTimeDisplayLinesPanelHtml(item.seq, on)}
-            <div
-              data-nested-panel="${item.seq}"
-              class="module-setting-nested-panel mt-3 space-y-3 rounded-lg bg-muted/50 p-3 ${panelHidden}"
-              ${on ? "" : 'aria-hidden="true"'}
-            >
-              ${fieldsHtml}
-            </div>
+          <div class="border-b border-border px-4 py-3">
+            ${renderModuleSettingTitleBlock(item)}
+            ${renderWaitTimeDisplayCurrentOrderPanelHtml()}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingWaitTimeDisplayRangeRow(item: ModuleSettingCatalogItem): string {
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            ${renderModuleSettingTitleBlock(item)}
+            ${renderWaitTimeDisplayRangePanelHtml()}
+          </div>
+        </li>`;
+}
+
+function renderModuleSettingWaitTimeDisplayStyleRow(item: ModuleSettingCatalogItem): string {
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            ${renderModuleSettingTitleBlock(item)}
+            ${renderWaitTimeDisplayStylePanelHtml(item.seq)}
           </div>
         </li>`;
 }
@@ -6222,10 +6233,6 @@ function renderModuleSettingFormRow(item: ModuleSettingCatalogItem): string {
   if (!config) return renderModuleSettingRow(item);
 
   const groupName = `module-setting-radio-${item.seq}`;
-  const waitTimeLinesHtml = isWaitTimeDisplayFormSeq(item.seq)
-    ? renderWaitTimeDisplayLinesPanelHtml(item.seq, true)
-    : "";
-  const waitTimeStacked = waitTimeLinesHtml !== "";
 
   if (config.kind === "checkbox-group" && config.checkboxes) {
     const boxes = config.checkboxes
@@ -6238,16 +6245,6 @@ function renderModuleSettingFormRow(item: ModuleSettingCatalogItem): string {
         </label>`;
       })
       .join("");
-    if (waitTimeStacked) {
-      return `
-        <li class="list-none" data-module-setting-row-seq="${item.seq}">
-          <div class="border-b border-border px-4 py-3">
-            ${renderModuleSettingTitleBlock(item)}
-            ${waitTimeLinesHtml}
-            <div class="mt-3 flex flex-wrap items-center gap-4">${boxes}</div>
-          </div>
-        </li>`;
-    }
     return `
         <li class="list-none">
           <div class="flex flex-col gap-3 border-b border-border px-4 py-3 sm:flex-row sm:items-start sm:justify-between">
@@ -6259,16 +6256,6 @@ function renderModuleSettingFormRow(item: ModuleSettingCatalogItem): string {
 
   if (config.kind === "radio-group" && config.radios) {
     const radios = config.radios.map((opt) => renderModuleSettingRadioOption(config, opt, groupName)).join("");
-    if (waitTimeStacked) {
-      return `
-        <li class="list-none" data-module-setting-row-seq="${item.seq}">
-          <div class="border-b border-border px-4 py-3">
-            ${renderModuleSettingTitleBlock(item)}
-            ${waitTimeLinesHtml}
-            <div class="mt-3 flex flex-wrap items-center gap-4">${radios}</div>
-          </div>
-        </li>`;
-    }
     return `
         <li class="list-none">
           <div class="flex flex-col gap-3 border-b border-border px-4 py-3 sm:flex-row sm:items-start sm:justify-between">
@@ -6298,16 +6285,6 @@ function renderModuleSettingFormRow(item: ModuleSettingCatalogItem): string {
         </label>`;
       })
       .join("");
-    if (waitTimeStacked) {
-      return `
-        <li class="list-none" data-module-setting-row-seq="${item.seq}">
-          <div class="border-b border-border px-4 py-3">
-            ${renderModuleSettingTitleBlock(item)}
-            ${waitTimeLinesHtml}
-            <div class="mt-3 flex flex-wrap items-center gap-4">${radios}</div>
-          </div>
-        </li>`;
-    }
     return `
         <li class="list-none">
           <div class="flex flex-col gap-3 border-b border-border px-4 py-3 sm:flex-row sm:items-start sm:justify-between">
@@ -6335,41 +6312,25 @@ function syncModuleSettingRadioGroupDisabled(groupName: string, selectedValue: s
 }
 
 function renderModuleSettingLocaleSelectRow(item: ModuleSettingCatalogItem): string {
-  const boxes = GUEST_FACING_LOCALES.map((locale) => {
-    const fieldId = localeCheckboxFieldId(locale.code);
-    const checked = readModuleSettingCheckbox(
-      fieldId,
-      locale.code === "en" || locale.code === "zh-Hans",
-    );
-    return `
-        <label class="inline-flex cursor-pointer items-center gap-2 text-sm text-foreground">
-          <input
-            type="checkbox"
-            class="${MODULE_SETTING_CONTROL_CLASS} rounded-sm"
-            ${checked ? "checked" : ""}
-            data-locale-select-checkbox
-            data-locale-code="${escapeHtml(locale.code)}"
-            data-module-setting-checkbox="${escapeHtml(fieldId)}"
-          />
-          <span>${escapeHtml(locale.label)}</span>
-        </label>`;
-  }).join("");
   return `
-        <li class="list-none">
-          <div class="flex flex-col gap-3 border-b border-border px-4 py-3 sm:flex-row sm:items-start sm:justify-between">
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
             ${renderModuleSettingTitleBlock(item)}
-            <div class="flex max-w-2xl flex-wrap items-center gap-x-4 gap-y-2 sm:pt-0.5">${boxes}</div>
+            <div class="mt-3 max-w-4xl">
+              ${renderGuestFacingLocaleSelectEditorHtml()}
+            </div>
           </div>
         </li>`;
 }
 
 function renderModuleSettingLocaleDefaultRow(item: ModuleSettingCatalogItem): string {
-  const radios = renderLocaleDefaultRadiosHtml();
   return `
-        <li class="list-none">
-          <div class="flex flex-col gap-3 border-b border-border px-4 py-3 sm:flex-row sm:items-start sm:justify-between">
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
             ${renderModuleSettingTitleBlock(item)}
-            <div class="flex flex-wrap items-center gap-4 sm:pt-0.5" data-locale-default-radios>${radios}</div>
+            <div class="mt-3 max-w-3xl">
+              ${renderGuestFacingLocaleDefaultEditorHtml()}
+            </div>
           </div>
         </li>`;
 }
@@ -6834,15 +6795,12 @@ function renderModuleSettingMemberPreOrderLoginPolicyRow(item: ModuleSettingCata
 }
 
 function renderModuleSettingMemberSmsVerificationRow(item: ModuleSettingCatalogItem): string {
-  const on = readModuleSettingToggleOn(item.seq);
+  ensureMemberSmsVerificationLinesDefault();
   return `
         <li class="list-none" data-module-setting-row-seq="${item.seq}">
           <div class="border-b border-border px-4 py-3">
-            <div class="flex items-start justify-between gap-3">
-              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
-              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
-            </div>
-            ${renderMemberSmsVerificationLinesPanelHtml(item.seq, on)}
+            ${renderModuleSettingTitleBlock(item)}
+            ${renderMemberSmsVerificationLinesPanelHtml(item.seq)}
           </div>
         </li>`;
 }
@@ -6949,6 +6907,16 @@ function renderModuleSettingMemberRegistrationFieldRow(item: ModuleSettingCatalo
         </li>`;
 }
 
+function renderModuleSettingMemberShowPointsDishesRow(item: ModuleSettingCatalogItem): string {
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            ${renderModuleSettingTitleBlock(item)}
+            ${renderMemberShowPointsDishesPanelHtml()}
+          </div>
+        </li>`;
+}
+
 function renderModuleSettingMemberPointsToggleFieldRow(item: ModuleSettingCatalogItem): string {
   const seq = item.seq as MemberPointsToggleFieldSeq;
   const on = readModuleSettingToggleOn(item.seq);
@@ -6993,7 +6961,7 @@ function renderModuleSettingOrderTypeByLineRow(item: ModuleSettingCatalogItem): 
         <li class="list-none">
           <div class="border-b border-border px-4 py-3">
             ${renderModuleSettingTitleBlock(item)}
-            <div class="mt-3 max-w-4xl">
+            <div class="mt-3 max-w-2xl">
               ${renderOrderTypeByLineEditorHtml()}
             </div>
           </div>
@@ -7802,21 +7770,6 @@ function renderModuleSettingHotpotBaseStillShowRow(item: ModuleSettingCatalogIte
         </li>`;
 }
 
-function renderModuleSettingGuestOrderNoticeRow(item: ModuleSettingCatalogItem): string {
-  ensureGuestOrderNoticeToggleMigrated();
-  const on = readModuleSettingToggleOn(item.seq);
-  return `
-        <li class="list-none" data-module-setting-row-seq="${item.seq}">
-          <div class="border-b border-border px-4 py-3">
-            <div class="flex items-start justify-between gap-3">
-              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
-              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
-            </div>
-            ${renderGuestOrderNoticePanelHtml(on)}
-          </div>
-        </li>`;
-}
-
 function renderModuleSettingGuestDishDetailDisplayRow(item: ModuleSettingCatalogItem): string {
   ensureGuestDishDetailDisplayToggleMigrated();
   const on = readModuleSettingToggleOn(item.seq);
@@ -8080,6 +8033,18 @@ function renderModuleSettingGuestMenuLineToggleRow(item: ModuleSettingCatalogIte
         </li>`;
 }
 
+function renderModuleSettingGuestMenuNavPositionRow(item: ModuleSettingCatalogItem): string {
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            ${renderModuleSettingTitleBlock(item)}
+            <div class="mt-3 max-w-4xl">
+              ${renderGuestMenuNavPositionByLineEditorHtml()}
+            </div>
+          </div>
+        </li>`;
+}
+
 function renderModuleSettingGuestMenuStructureRow(item: ModuleSettingCatalogItem): string {
   ensureGuestMenuStructureToggleMigrated(item.seq);
   const on = readModuleSettingToggleOn(item.seq);
@@ -8096,16 +8061,11 @@ function renderModuleSettingGuestMenuStructureRow(item: ModuleSettingCatalogItem
 }
 
 function renderModuleSettingGuestMenuDishNameFontRow(item: ModuleSettingCatalogItem): string {
-  ensureGuestMenuDishNameFontToggleMigrated();
-  const on = readModuleSettingToggleOn(item.seq);
   return `
         <li class="list-none" data-module-setting-row-seq="${item.seq}">
           <div class="border-b border-border px-4 py-3">
-            <div class="flex items-start justify-between gap-3">
-              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
-              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
-            </div>
-            ${renderGuestMenuDishNameFontPanelHtml(on)}
+            ${renderModuleSettingTitleBlock(item)}
+            ${renderGuestMenuDishNameFontPanelHtml()}
           </div>
         </li>`;
 }
@@ -8141,6 +8101,7 @@ function renderModuleSettingReceiptSignatureLineRow(item: ModuleSettingCatalogIt
 }
 
 function renderModuleSettingProductRemarkRow(item: ModuleSettingCatalogItem): string {
+  ensureProductRemarkToggleMigrated();
   ensureProductRemarkDishesMigrated();
   const on = readModuleSettingToggleOn(item.seq);
   return `
@@ -8150,7 +8111,7 @@ function renderModuleSettingProductRemarkRow(item: ModuleSettingCatalogItem): st
               <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
               <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
             </div>
-            ${renderProductRemarkPanelHtml(item.seq, on)}
+            ${renderProductRemarkPanelHtml(on)}
           </div>
         </li>`;
 }
@@ -8513,13 +8474,16 @@ function renderModuleSettingNotificationCenterTopicsRow(item: ModuleSettingCatal
 }
 
 function renderModuleSettingDurationBillingScenesRow(item: ModuleSettingCatalogItem): string {
+  ensureDurationBillingToggleMigrated();
+  const on = readModuleSettingToggleOn(item.seq);
   return `
         <li class="list-none" data-module-setting-row-seq="${item.seq}">
           <div class="border-b border-border px-4 py-3">
-            ${renderModuleSettingTitleBlock(item)}
-            <div class="mt-3">
-              ${renderDurationBillingScenesMultiselectHtml(item.seq)}
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
             </div>
+            ${renderDurationBillingPanelHtml(on)}
           </div>
         </li>`;
 }
@@ -8559,16 +8523,11 @@ function renderModuleSettingTablesideServiceCallMasterRow(item: ModuleSettingCat
 }
 
 function renderModuleSettingTablesideServiceCallCooldownRow(item: ModuleSettingCatalogItem): string {
-  ensureTablesideServiceCallToggleMigrated(item.seq);
-  const on = readModuleSettingToggleOn(item.seq);
   return `
         <li class="list-none" data-module-setting-row-seq="${item.seq}">
           <div class="border-b border-border px-4 py-3">
-            <div class="flex items-start justify-between gap-3">
-              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
-              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
-            </div>
-            ${renderServiceCallCooldownPanelHtml(on)}
+            ${renderModuleSettingTitleBlock(item)}
+            ${renderServiceCallCooldownPanelHtml()}
           </div>
         </li>`;
 }
@@ -8578,7 +8537,7 @@ function renderModuleSettingTablesideServiceRequestTypesRow(item: ModuleSettingC
         <li class="list-none" data-module-setting-row-seq="${item.seq}">
           <div class="border-b border-border px-4 py-3">
             ${renderModuleSettingTitleBlock(item)}
-            <div class="mt-3">${renderServiceRequestTypesEditorHtml()}</div>
+            ${renderServiceRequestTypesEditorHtml()}
           </div>
         </li>`;
 }
@@ -8587,10 +8546,8 @@ function renderModuleSettingNotificationVoiceAlertRow(item: ModuleSettingCatalog
   return `
         <li class="list-none" data-module-setting-row-seq="${item.seq}">
           <div class="border-b border-border px-4 py-3">
-            <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
-              <div class="w-full shrink-0 sm:max-w-3xl">${renderNotificationVoiceAlertByLineHtml()}</div>
-            </div>
+            ${renderModuleSettingTitleBlock(item)}
+            <div class="mt-3">${renderNotificationVoiceAlertByLineHtml()}</div>
           </div>
         </li>`;
 }
@@ -9228,6 +9185,9 @@ function renderModuleSettingRow(item: ModuleSettingCatalogItem): string {
   if (isRuleHitPasswordAuthSeq(item.seq)) {
     return renderModuleSettingRuleHitPasswordAuthRow(item);
   }
+  if (isMemberShowPointsDishesSeq(item.seq)) {
+    return renderModuleSettingMemberShowPointsDishesRow(item);
+  }
   if (isMemberPointsToggleFieldSeq(item.seq)) {
     return renderModuleSettingMemberPointsToggleFieldRow(item);
   }
@@ -9595,6 +9555,9 @@ function renderModuleSettingRow(item: ModuleSettingCatalogItem): string {
   if (isGuestMenuLineToggleSeq(item.seq)) {
     return renderModuleSettingGuestMenuLineToggleRow(item);
   }
+  if (isGuestMenuNavPositionSeq(item.seq)) {
+    return renderModuleSettingGuestMenuNavPositionRow(item);
+  }
   if (isGuestMenuStructureSeq(item.seq)) {
     return renderModuleSettingGuestMenuStructureRow(item);
   }
@@ -9646,9 +9609,6 @@ function renderModuleSettingRow(item: ModuleSettingCatalogItem): string {
   if (isModuleSettingGenericFormRowSeq(item.seq)) {
     return renderModuleSettingFormRow(item);
   }
-  if (isGuestOrderNoticeSeq(item.seq)) {
-    return renderModuleSettingGuestOrderNoticeRow(item);
-  }
   if (isGuestDishDetailDisplaySeq(item.seq)) {
     return renderModuleSettingGuestDishDetailDisplayRow(item);
   }
@@ -9670,8 +9630,17 @@ function renderModuleSettingRow(item: ModuleSettingCatalogItem): string {
   if (isWaitTimeCalculationSeq(item.seq)) {
     return renderModuleSettingWaitTimeCalculationRow(item);
   }
+  if (isWaitTimeDisplayCurrentOrderSeq(item.seq)) {
+    return renderModuleSettingWaitTimeDisplayCurrentOrderRow(item);
+  }
+  if (isWaitTimeDisplayRangeSeq(item.seq)) {
+    return renderModuleSettingWaitTimeDisplayRangeRow(item);
+  }
+  if (isWaitTimeDisplayStyleSeq(item.seq)) {
+    return renderModuleSettingWaitTimeDisplayStyleRow(item);
+  }
   if (isWaitTimeDisplayToggleSeq(item.seq)) {
-    return renderModuleSettingWaitTimeDisplayToggleRow(item);
+    return renderModuleSettingRow(item);
   }
   if (isCustomDividerNameSeq(item.seq)) {
     return `
@@ -9679,6 +9648,15 @@ function renderModuleSettingRow(item: ModuleSettingCatalogItem): string {
           <div class="border-b border-border px-4 py-3">
             ${renderModuleSettingTitleBlock(item)}
             ${renderCustomDividerNamePanelHtml()}
+          </div>
+        </li>`;
+  }
+  if (isEmenuCustomMessageSeq(item.seq)) {
+    return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            ${renderModuleSettingTitleBlock(item)}
+            ${renderEmenuCustomMessagePanelHtml()}
           </div>
         </li>`;
   }
@@ -9732,9 +9710,6 @@ function syncModuleSettingToggleToDom(seq: number, on: boolean): void {
 }
 
 function runModuleSettingToggleSideEffects(seq: number, next: boolean): void {
-      if (isGuestOrderNoticeSeq(seq)) {
-        setGuestOrderNoticePanelVisible(next);
-      }
       if (isGuestDishDetailDisplaySeq(seq)) {
         setGuestDishDetailPanelVisible(next);
       }
@@ -9814,11 +9789,8 @@ function runModuleSettingToggleSideEffects(seq: number, next: boolean): void {
         setChildExcludedFromOrderLimitPanelVisible(seq, next);
       }
       if (isTablesideServiceCallToggleSeq(seq)) {
-        if (isTablesideServiceCallCooldownSeq(seq)) {
-          setServiceCallCooldownPanelVisible(next);
-        } else {
-          setTablesideServiceCallPanelVisible(seq, next);
-        }
+        if (next) ensureTablesideServiceCallLinesDefault(seq);
+        setTablesideServiceCallPanelVisible(seq, next);
       }
       if (isSendKitchenWholeOrderSeq(seq)) {
         setSendKitchenWholeOrderPanelVisible(seq, next);
@@ -9834,6 +9806,9 @@ function runModuleSettingToggleSideEffects(seq: number, next: boolean): void {
       }
       if (isGuestCategoryModeSeq(seq)) {
         setGuestCategoryModePanelVisible(seq, next);
+      }
+      if (isDurationBillingScenesMultiselectSeq(seq)) {
+        setDurationBillingPanelVisible(next);
       }
       if (isHotpotBaseRequiredSeq(seq)) {
         setHotpotBaseRequiredPanelVisible(next);
@@ -9883,10 +9858,6 @@ function runModuleSettingToggleSideEffects(seq: number, next: boolean): void {
         if (next) ensureGuestMenuStructureLinesDefault(seq);
         setGuestMenuStructurePanelVisible(seq, next);
       }
-      if (isGuestMenuDishNameFontSeq(seq)) {
-        if (next) ensureGuestMenuDishNameFontLinesDefault();
-        setGuestMenuDishNameFontPanelVisible(next);
-      }
       if (isOrderRemarkSeq(seq)) {
         setOrderRemarkPanelVisible(seq, next);
       }
@@ -9894,7 +9865,7 @@ function runModuleSettingToggleSideEffects(seq: number, next: boolean): void {
         setReceiptSignatureLinePanelVisible(seq, next);
       }
       if (isProductRemarkSeq(seq)) {
-        setProductRemarkPanelVisible(seq, next);
+        setProductRemarkPanelVisible(next);
       }
       if (isComboSubitemRemarkSeq(seq)) {
         setComboSubitemRemarkPanelVisible(seq, next);
@@ -9992,10 +9963,6 @@ function runModuleSettingToggleSideEffects(seq: number, next: boolean): void {
       }
       if (isTableDeliveryMealCardSeq(seq)) {
         setTableDeliveryMealCardPanelVisible(seq, next);
-      }
-      if (isMemberSmsVerificationSeq(seq)) {
-        if (next) ensureMemberSmsVerificationLinesDefault();
-        setMemberSmsVerificationLinesPanelVisible(seq, next);
       }
       if (isLevelUpIntegrationSeq(seq)) {
         setLevelUpIntegrationPanelVisible(seq, next);
@@ -12272,9 +12239,9 @@ function mount(): void {
   bindAutoKitchenSendPaymentUi();
   bindGuestEmenuAuthPageUi();
   bindGuestCategoryModeUi();
+  bindDurationBillingUi();
   bindHotpotBaseRequiredUi();
   bindHotpotBaseStillShowUi();
-  bindGuestOrderNoticeUi();
   bindGuestDishDetailDisplayUi();
   bindGuestDiningDurationUi();
   bindGuestOrderPlaceIntervalUi();
@@ -12308,6 +12275,7 @@ function mount(): void {
   bindMaxGuestsPerOrderUi();
   bindOrderTimeoutReminderUi();
   bindCustomDividerNameUi();
+  bindEmenuCustomMessageUi();
   bindOrderDisplaySeatUi();
   bindPosButtonVisibilityUi();
   bindPartySizeSelectionPageUi();
@@ -12330,6 +12298,7 @@ function mount(): void {
   bindGuestPhoneDisplayPageUi();
   bindGuestPhoneRequiredUi();
   bindWaitTimeDisplayUi();
+  bindWaitTimeDisplayStyleUi();
   bindTableDeliveryMealCardUi();
   bindMemberRegistrationFieldsUi();
   bindMemberPointsRewardsUi();

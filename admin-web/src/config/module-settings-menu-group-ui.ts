@@ -1,5 +1,5 @@
 /**
- * 设置滑层：菜单组多选（560 设备级 checkbox；599 见 guest-menu-group-by-line-ui 下拉 + 产线）。
+ * 设置滑层：菜单组多选（560 设备级 checkbox；599 见 guest-menu-group-by-line-ui 按产线对话框选择，对齐展示菜详情）。
  */
 
 import { renderModuleSettingCheckboxChoiceHtml } from "./module-settings-choice-ui";

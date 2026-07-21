@@ -127,7 +127,13 @@ const KNOWN_NUMBER_FIELDS: NumberFieldMeta[] = [
   { seq: 34, fieldId: "34-packing-slip-copies", label: "打包单份数" },
   { seq: 267, fieldId: "267-delivery-receipt-copies", label: "外卖小票份数" },
   { seq: 282, fieldId: "282-receipt-dish-spacing", label: "收据菜品间距" },
-  { seq: 640, fieldId: "640-service-call-cooldown-seconds", label: "呼叫间隔秒数" },
+  { seq: 640, fieldId: "640-service-call-cooldown-by-line", label: "呼叫间隔（按产线）" },
+  { seq: 535, fieldId: "535-wait-time-display-by-line", label: "展示预计等待时长（按产线）" },
+  { seq: 536, fieldId: "536-wait-time-display-by-line", label: "预计等待时长区间（按产线）" },
+  { seq: 537, fieldId: "537-wait-time-display-by-line", label: "等待时长展示类型（按产线）" },
+  { seq: 538, fieldId: "538-wait-time-display-by-line", label: "字体大小（按产线）" },
+  { seq: 539, fieldId: "539-wait-time-display-by-line", label: "字体背景色（按产线）" },
+  { seq: 540, fieldId: "540-wait-time-display-by-line", label: "字体颜色（按产线）" },
   { seq: 645, fieldId: "645-dish-name-font-px", label: "菜品名字体大小" },
   { seq: 341, fieldId: "341-reservation-reminder-hours", label: "预约提醒小时" },
   { seq: 3, fieldId: "3-caller-ticket-display-minutes", label: "叫号展示分钟" },
@@ -206,7 +212,7 @@ function listNestedNumberTextFields(): Array<
   NumberFieldMeta | (TextFieldMeta & { kind: "text" })
 > {
   const out: Array<NumberFieldMeta | (TextFieldMeta & { kind: "text" })> = [];
-  for (const seq of [535, 536, 570, 647]) {
+  for (const seq of [647]) {
     const group = getModuleSettingNestedGroup(seq);
     if (!group) continue;
     for (const field of group.fields) {

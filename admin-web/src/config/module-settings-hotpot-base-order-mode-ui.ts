@@ -198,9 +198,6 @@ export function renderHotpotBaseOrderModeByLineEditorHtml(): string {
 
   return `
     <div data-hotpot-base-order-mode-editor class="space-y-2">
-      <p class="m-0 text-xs leading-relaxed text-muted-foreground">
-        每条产线独立配置，且只能选一种下单方式；须与 seq 572 火锅锅底必选同轨产线配合使用。
-      </p>
       <div class="overflow-x-auto rounded-md border border-border">
         <table class="w-full min-w-[28rem] border-collapse text-left text-sm">
           <thead class="bg-muted/40 text-xs text-muted-foreground">

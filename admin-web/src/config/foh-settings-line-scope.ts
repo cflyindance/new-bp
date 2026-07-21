@@ -58,7 +58,7 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
     "module": "module-settings-table-selection-page-ui.ts"
   },
   "110": {
-    "groupKey": "foh-pos-buttons",
+    "groupKey": "foh-pos-order-extras",
     "lines": [
       "pos",
       "pos-go",
@@ -73,8 +73,7 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
       "pos-go",
       "paypad"
     ],
-    "source": "ui-module",
-    "module": "module-settings-max-guests-per-order-ui.ts"
+    "source": "group-default"
   },
   "113": {
     "groupKey": "foh-kitchen-send-timing",
@@ -99,13 +98,9 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
     "lines": [
       "pos",
       "pos-go",
-      "paypad",
-      "kiosk",
-      "emenu",
-      "sdi"
+      "paypad"
     ],
-    "source": "ui-module",
-    "module": "module-settings-pos-menu-scope-lines-ui.ts"
+    "source": "group-default"
   },
   "120": {
     "groupKey": "foh-kitchen-send-timing",
@@ -391,7 +386,7 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
     "source": "group-default"
   },
   "196": {
-    "groupKey": "foh-pos-buttons",
+    "groupKey": "foh-pos-order-extras",
     "lines": [
       "pos",
       "pos-go",
@@ -610,6 +605,7 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
     "groupKey": "foh-pos-menu-ui-layout",
     "lines": [
       "pos",
+      "pos-go",
       "paypad"
     ],
     "source": "ui-module",
@@ -749,7 +745,7 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
       "paypad"
     ],
     "source": "ui-module",
-    "module": "module-settings-pos-menu-ui-layout-lines-ui.ts"
+    "module": "module-settings-emenu-custom-message-ui.ts"
   },
   "351": {
     "groupKey": "foh-table-clear-ops",
@@ -769,7 +765,7 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
     "source": "store-wide"
   },
   "483": {
-    "groupKey": "foh-pos-buttons",
+    "groupKey": "foh-pos-order-toolbar",
     "lines": [
       "pos",
       "pos-go",
@@ -778,7 +774,7 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
     "source": "group-default"
   },
   "484": {
-    "groupKey": "foh-pos-buttons",
+    "groupKey": "foh-pos-order-toolbar",
     "lines": [
       "pos",
       "pos-go",
@@ -787,7 +783,7 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
     "source": "group-default"
   },
   "485": {
-    "groupKey": "foh-pos-buttons",
+    "groupKey": "foh-pos-order-toolbar",
     "lines": [
       "pos",
       "pos-go",
@@ -796,7 +792,7 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
     "source": "group-default"
   },
   "486": {
-    "groupKey": "foh-pos-buttons",
+    "groupKey": "foh-pos-order-toolbar",
     "lines": [
       "pos",
       "pos-go",
@@ -913,7 +909,8 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
       "sdi",
       "online-order"
     ],
-    "source": "group-default"
+    "source": "ui-module",
+    "module": "module-settings-member-points-rewards-ui.ts"
   },
   "510": {
     "groupKey": "foh-guest-registration",
@@ -1012,7 +1009,8 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
       "sdi",
       "online-order"
     ],
-    "source": "group-default"
+    "source": "ui-module",
+    "module": "module-settings-product-remark-ui.ts"
   },
   "523": {
     "groupKey": "foh-tableside-service",
@@ -1043,7 +1041,8 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
       "sdi",
       "online-order"
     ],
-    "source": "group-default"
+    "source": "ui-module",
+    "module": "module-settings-member-points-rewards-ui.ts"
   },
   "526": {
     "groupKey": "foh-guest-menu-body",
@@ -1053,7 +1052,8 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
       "sdi",
       "online-order"
     ],
-    "source": "group-default"
+    "source": "ui-module",
+    "module": "module-settings-member-points-rewards-ui.ts"
   },
   "528": {
     "groupKey": "foh-guest-menu-body",
@@ -1110,7 +1110,7 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
       "kiosk"
     ],
     "source": "ui-module",
-    "module": "module-settings-wait-time-display-ui.ts"
+    "module": "module-settings-wait-time-style-ui.ts"
   },
   "538": {
     "groupKey": "foh-wait-time-display",
@@ -1118,7 +1118,7 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
       "kiosk"
     ],
     "source": "ui-module",
-    "module": "module-settings-wait-time-display-ui.ts"
+    "module": "module-settings-wait-time-style-ui.ts"
   },
   "539": {
     "groupKey": "foh-wait-time-display",
@@ -1126,7 +1126,7 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
       "kiosk"
     ],
     "source": "ui-module",
-    "module": "module-settings-wait-time-display-ui.ts"
+    "module": "module-settings-wait-time-style-ui.ts"
   },
   "540": {
     "groupKey": "foh-wait-time-display",
@@ -1134,7 +1134,7 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
       "kiosk"
     ],
     "source": "ui-module",
-    "module": "module-settings-wait-time-display-ui.ts"
+    "module": "module-settings-wait-time-style-ui.ts"
   },
   "567": {
     "groupKey": "foh-guest-kitchen-send",
@@ -1145,26 +1145,6 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
       "online-order"
     ],
     "source": "group-default"
-  },
-  "569": {
-    "groupKey": "foh-guest-pre-order",
-    "lines": [
-      "kiosk",
-      "emenu",
-      "sdi",
-      "online-order"
-    ],
-    "source": "ui-module",
-    "module": "module-settings-guest-order-notice-ui.ts"
-  },
-  "570": {
-    "groupKey": "foh-guest-hotpot",
-    "lines": [
-      "emenu",
-      "sdi"
-    ],
-    "source": "ui-module",
-    "module": "module-settings-nested-ui.ts"
   },
   "571": {
     "groupKey": "foh-guest-duration-scenarios",
@@ -1266,8 +1246,10 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
   "599": {
     "groupKey": "foh-guest-menu-home",
     "lines": [
+      "kiosk",
       "emenu",
-      "sdi"
+      "sdi",
+      "online-order"
     ],
     "source": "ui-module",
     "module": "module-settings-guest-menu-group-by-line-ui.ts"
@@ -1275,6 +1257,7 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
   "600": {
     "groupKey": "foh-guest-menu-home",
     "lines": [
+      "kiosk",
       "emenu",
       "sdi"
     ],
@@ -1302,6 +1285,7 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
   "604": {
     "groupKey": "foh-guest-menu-home",
     "lines": [
+      "kiosk",
       "emenu"
     ],
     "source": "ui-module",
@@ -1321,9 +1305,9 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
   "607": {
     "groupKey": "foh-guest-menu-body",
     "lines": [
+      "kiosk",
       "emenu",
-      "sdi",
-      "kiosk"
+      "sdi"
     ],
     "source": "ui-module",
     "module": "module-settings-guest-menu-image-mode-ui.ts"
@@ -1331,9 +1315,9 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
   "608": {
     "groupKey": "foh-guest-menu-body",
     "lines": [
+      "kiosk",
       "emenu",
       "sdi",
-      "kiosk",
       "online-order"
     ],
     "source": "ui-module",
@@ -1392,12 +1376,11 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
   "620": {
     "groupKey": "foh-guest-pre-order",
     "lines": [
-      "kiosk",
       "emenu",
-      "sdi",
-      "online-order"
+      "sdi"
     ],
-    "source": "group-default"
+    "source": "ui-module",
+    "module": "module-settings-guest-emenu-auth-page-ui.ts"
   },
   "621": {
     "groupKey": "foh-table-start-flow",
@@ -1446,30 +1429,20 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
   "626": {
     "groupKey": "foh-guest-pre-order",
     "lines": [
-      "kiosk",
       "emenu",
-      "sdi",
-      "online-order"
+      "sdi"
     ],
-    "source": "group-default"
+    "source": "ui-module",
+    "module": "module-settings-guest-emenu-auth-page-ui.ts"
   },
   "627": {
     "groupKey": "foh-guest-pre-order",
     "lines": [
-      "emenu"
+      "emenu",
+      "sdi"
     ],
     "source": "ui-module",
     "module": "module-settings-guest-category-mode-ui.ts"
-  },
-  "629": {
-    "groupKey": "foh-tableside-service",
-    "lines": [
-      "kiosk",
-      "emenu",
-      "sdi",
-      "online-order"
-    ],
-    "source": "group-default"
   },
   "637": {
     "groupKey": "foh-pos-order-alerts",
@@ -1505,22 +1478,20 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
   "640": {
     "groupKey": "foh-tableside-service",
     "lines": [
-      "kiosk",
       "emenu",
-      "sdi",
-      "online-order"
+      "sdi"
     ],
-    "source": "group-default"
+    "source": "ui-module",
+    "module": "module-settings-tableside-service-call-ui.ts"
   },
   "641": {
     "groupKey": "foh-tableside-service",
     "lines": [
-      "kiosk",
       "emenu",
-      "sdi",
-      "online-order"
+      "sdi"
     ],
-    "source": "group-default"
+    "source": "ui-module",
+    "module": "module-settings-tableside-service-call-ui.ts"
   },
   "642": {
     "groupKey": "foh-table-clear-ops",
@@ -1570,7 +1541,8 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
       "sdi",
       "cds"
     ],
-    "source": "manual"
+    "source": "ui-module",
+    "module": "module-settings-locale-ui.ts"
   },
   "653": {
     "groupKey": "foh-guest-facing-locale",
@@ -1580,7 +1552,8 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
       "sdi",
       "cds"
     ],
-    "source": "manual"
+    "source": "ui-module",
+    "module": "module-settings-locale-ui.ts"
   },
   "673": {
     "groupKey": "foh-wait-time-display",

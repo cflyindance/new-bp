@@ -1,6 +1,6 @@
 /**
  * 前厅 · 食客端·下单与规则：食客端姓名输入页（主开关 + Kiosk 产线）
- * — 506 输入姓名（展示输入姓名页）、507 姓名必填。
+ * — 506 展示输入姓名页面、507 姓名必填。
  */
 
 import { readModuleSettingJson, writeModuleSettingJson } from "./module-settings-form-ui";
@@ -21,7 +21,7 @@ export type GuestNamePageProductLineId = (typeof KIOSK_FLOW_PAGE_PRODUCT_LINES)[
 const KIOSK_LINE_ID: GuestNamePageProductLineId = "kiosk";
 
 const LINES_ARIA_LABEL_BY_SEQ: Record<number, string> = {
-  [GUEST_NAME_DISPLAY_PAGE_SEQ]: "输入姓名页适用产线",
+  [GUEST_NAME_DISPLAY_PAGE_SEQ]: "展示输入姓名页面适用产线",
   [GUEST_NAME_REQUIRED_SEQ]: "姓名必填适用产线",
 };
 
@@ -136,10 +136,6 @@ function renderLinesMultiselectHtml(seq: number, enabled: boolean): string {
   }).join("");
 
   const ariaLabel = LINES_ARIA_LABEL_BY_SEQ[seq] ?? "适用产线";
-  const hint =
-    seq === GUEST_NAME_REQUIRED_SEQ
-      ? "勾选产线在输入姓名页面要求姓名必填（叫号等）；须与「输入姓名」展示页配套。"
-      : "勾选产线展示输入食客姓名页面。";
 
   return `
     <div
@@ -149,8 +145,7 @@ function renderLinesMultiselectHtml(seq: number, enabled: boolean): string {
       aria-label="${escapeHtml(ariaLabel)}"
     >
       ${cells}
-    </div>
-    <p class="m-0 mt-2 text-xs leading-relaxed text-muted-foreground">${escapeHtml(hint)}</p>`;
+    </div>`;
 }
 
 export function renderGuestNamePagePanelHtml(seq: number, on: boolean): string {

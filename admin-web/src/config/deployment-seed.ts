@@ -70,7 +70,7 @@ function buildDeploymentSeedBatches(
       configVersions: { "module.settings": 9 },
       configChanges: [
         {
-          label: "展示输入手机号",
+          label: "展示输入手机号页面",
           before: "关闭",
           after: "开启",
         },
@@ -405,7 +405,7 @@ function buildDeploymentSeedBatches(
       configVersions: { "module.settings": 2 },
       configChanges: [
         {
-          label: "展示输入手机号",
+          label: "展示输入手机号页面",
           before: "开启",
           after: "关闭",
         },

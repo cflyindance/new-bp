@@ -134,9 +134,6 @@ export function renderMenusifuBrandLogoPanelHtml(on: boolean): string {
       ${on ? "" : 'aria-hidden="true"'}
     >
       ${renderLinesMultiselectHtml(on)}
-      <p class="m-0 mt-2 text-xs leading-relaxed text-muted-foreground">
-        LOGO 图片素材请在素材中心维护；本项仅控制是否在选定产线首页展示 MenuSifu 品牌标识。
-      </p>
     </div>`;
 }
 
