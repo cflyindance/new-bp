@@ -1,5 +1,6 @@
 /**
- * 打印中心 · 支付收据流程：seq 94 收据小票上打印确认签名栏（主开关 + 按产线多选）。
+ * 打印中心 · 支付收据流程：seq 94 收据小票上打印确认签名栏。
+ * 默认开启、无主开关；产线多选结构对齐跳过选桌 / 订单收据触发项。
  */
 
 import { readModuleSettingJson, writeModuleSettingJson } from "./module-settings-form-ui";
@@ -22,10 +23,10 @@ export type ReceiptSignatureLineProductLineId =
 const ALL_LINE_IDS: ReceiptSignatureLineProductLineId[] =
   RECEIPT_SIGNATURE_LINE_PRODUCT_LINES.map((l) => l.id);
 
+const DEFAULT_LINES: ReceiptSignatureLineProductLineId[] = [...ALL_LINE_IDS];
+
 const MODULE_SETTING_CONTROL_CLASS =
   "size-4 shrink-0 accent-primary text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50";
-
-let toggleMigrated = false;
 
 function escapeHtml(s: string): string {
   return s
@@ -35,30 +36,11 @@ function escapeHtml(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
-function readLegacyToggleOn(seq: number): boolean {
+function writeMasterToggleOn(on: boolean): void {
   try {
-    return localStorage.getItem(moduleSettingToggleStorageKey(seq)) === "1";
+    localStorage.setItem(moduleSettingToggleStorageKey(RECEIPT_SIGNATURE_LINE_SEQ), on ? "1" : "0");
   } catch {
-    return false;
-  }
-}
-
-export function ensureReceiptSignatureLineToggleMigrated(): void {
-  if (toggleMigrated) return;
-  toggleMigrated = true;
-  try {
-    if (localStorage.getItem(moduleSettingToggleStorageKey(RECEIPT_SIGNATURE_LINE_SEQ)) !== null) {
-      return;
-    }
-  } catch {
-    return;
-  }
-  if (readLegacyToggleOn(RECEIPT_SIGNATURE_LINE_SEQ)) {
-    try {
-      localStorage.setItem(moduleSettingToggleStorageKey(RECEIPT_SIGNATURE_LINE_SEQ), "1");
-    } catch {
-      /* ignore */
-    }
+    /* ignore */
   }
 }
 
@@ -71,36 +53,38 @@ function normalizeLineIds(raw: unknown): ReceiptSignatureLineProductLineId[] {
 }
 
 export function readReceiptSignatureLineLines(): ReceiptSignatureLineProductLineId[] {
-  ensureReceiptSignatureLineToggleMigrated();
   const stored = readModuleSettingJson<unknown>(LINES_STORAGE_ID, null);
-  const normalized = normalizeLineIds(stored);
-  if (normalized.length > 0) return normalized;
-
-  if (readLegacyToggleOn(RECEIPT_SIGNATURE_LINE_SEQ)) {
-    const all = [...ALL_LINE_IDS];
-    writeReceiptSignatureLineLines(all);
-    return all;
+  if (stored == null) {
+    writeReceiptSignatureLineLines(DEFAULT_LINES);
+    return [...DEFAULT_LINES];
   }
-  return [];
+  return normalizeLineIds(stored);
 }
 
 export function writeReceiptSignatureLineLines(lines: ReceiptSignatureLineProductLineId[]): void {
   const unique = ALL_LINE_IDS.filter((id) => lines.includes(id));
   writeModuleSettingJson(LINES_STORAGE_ID, unique);
+  writeMasterToggleOn(unique.length > 0);
+}
+
+/** 默认开启：首次无数据时勾选全部适用产线 */
+export function ensureReceiptSignatureLineDefault(): void {
+  void readReceiptSignatureLineLines();
 }
 
 export function isReceiptSignatureLineSeq(seq: number): boolean {
   return seq === RECEIPT_SIGNATURE_LINE_SEQ;
 }
 
-function renderLinesMultiselectHtml(enabled: boolean): string {
+export function renderReceiptSignatureLineByLineHtml(): string {
+  ensureReceiptSignatureLineDefault();
   const selected = new Set(readReceiptSignatureLineLines());
   const cells = RECEIPT_SIGNATURE_LINE_PRODUCT_LINES.map((line, index) => {
     const checked = selected.has(line.id);
     const divider = index > 0 ? "border-l border-border" : "";
     return `
       <label
-        class="flex flex-1 flex-col items-center justify-center gap-2 px-2 py-3 text-sm text-foreground sm:px-3 ${enabled ? "cursor-pointer" : "cursor-not-allowed opacity-50"} ${divider}"
+        class="flex flex-1 cursor-pointer flex-col items-center justify-center gap-2 px-2 py-3 text-sm text-foreground sm:px-3 ${divider}"
       >
         <input
           type="checkbox"
@@ -108,7 +92,6 @@ function renderLinesMultiselectHtml(enabled: boolean): string {
           value="${escapeHtml(line.id)}"
           data-receipt-signature-line="${escapeHtml(line.id)}"
           ${checked ? "checked" : ""}
-          ${enabled ? "" : "disabled"}
           aria-label="${escapeHtml(line.label)}"
         />
         <span class="text-center leading-tight">${escapeHtml(line.label)}</span>
@@ -126,37 +109,6 @@ function renderLinesMultiselectHtml(enabled: boolean): string {
     </div>`;
 }
 
-export function renderReceiptSignatureLinePanelHtml(seq: number, on: boolean): string {
-  const hidden = on ? "" : "hidden";
-  return `
-    <div
-      class="mt-3 ${hidden}"
-      data-receipt-signature-line-panel="${seq}"
-      ${on ? "" : 'aria-hidden="true"'}
-    >
-      ${renderLinesMultiselectHtml(on)}
-    </div>`;
-}
-
-export function setReceiptSignatureLinePanelVisible(seq: number, visible: boolean): void {
-  document
-    .querySelectorAll<HTMLElement>(`[data-receipt-signature-line-panel="${seq}"]`)
-    .forEach((panel) => {
-      panel.classList.toggle("hidden", !visible);
-      if (visible) panel.removeAttribute("aria-hidden");
-      else panel.setAttribute("aria-hidden", "true");
-
-      panel.querySelectorAll<HTMLInputElement>("[data-receipt-signature-line]").forEach((input) => {
-        input.disabled = !visible;
-        const label = input.closest("label");
-        if (!label) return;
-        label.classList.toggle("cursor-not-allowed", !visible);
-        label.classList.toggle("opacity-50", !visible);
-        label.classList.toggle("cursor-pointer", visible);
-      });
-    });
-}
-
 function collectLinesFromGroup(group: HTMLElement): ReceiptSignatureLineProductLineId[] {
   const lines: ReceiptSignatureLineProductLineId[] = [];
   group.querySelectorAll<HTMLInputElement>("[data-receipt-signature-line]:checked").forEach((input) => {
@@ -170,7 +122,7 @@ function collectLinesFromGroup(group: HTMLElement): ReceiptSignatureLineProductL
 }
 
 export function bindReceiptSignatureLineUi(root: ParentNode = document): void {
-  ensureReceiptSignatureLineToggleMigrated();
+  ensureReceiptSignatureLineDefault();
   root.querySelectorAll<HTMLElement>("[data-receipt-signature-line-lines]").forEach((group) => {
     if (group.dataset.receiptSignatureLineBound === "1") return;
     group.dataset.receiptSignatureLineBound = "1";

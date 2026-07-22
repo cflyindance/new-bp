@@ -170,7 +170,8 @@ import {
   getTeamSettingItemsBySeqs,
   renderTeamSettingsEmbedSection,
   renderTeamSettingsTabPanel,
-  TEAM_BREAKS_OVERTIME_SETTING_SEQS,
+  TEAM_BREAKS_OVERTIME_GLOBAL_SETTING_SEQS,
+  TEAM_BREAKS_OVERTIME_BREAK_RULES_SETTING_SEQS,
   TEAM_CLOCK_IN_GROUP_ORDER,
   TEAM_CLOCK_IN_SETTING_SEQS,
   TEAM_SHIFT_SCHEDULING_SETTING_SEQS,
@@ -361,6 +362,7 @@ import {
   type ModuleSettingNestedField,
   type ModuleSettingNestedFieldPart,
   type ModuleSettingNestedHintField,
+  type ModuleSettingNestedMenuStructureByLineField,
   type ModuleSettingNestedTextInputField,
 } from "./config/module-settings-nested-ui";
 import {
@@ -368,6 +370,7 @@ import {
   renderDishComboRulesHtml,
   renderDishMutexRulesHtml,
   renderStandaloneDishPickerHtml,
+  renderStandaloneMenuStructureByLinePickerHtml,
 } from "./config/module-settings-dish-rules-ui";
 import {
   bindGuestFacingLocaleControls,
@@ -458,14 +461,12 @@ import {
 import {
   bindPrintDishCodeByTicketUi,
   isPrintDishCodeByTicketSeq,
-  renderPrintDishCodeTicketsPanelHtml,
-  setPrintDishCodeTicketsPanelVisible,
+  renderPrintDishCodeTicketsMultiselectHtml,
 } from "./config/module-settings-print-dish-code-ui";
 import {
   bindTakeoutEnhancedDisplayUi,
   isTakeoutEnhancedDisplaySeq,
-  renderTakeoutEnhancedDisplayPanelHtml,
-  setTakeoutEnhancedDisplayPanelVisible,
+  renderTakeoutEnhancedDisplayMultiselectHtml,
 } from "./config/module-settings-takeout-enhanced-display-ui";
 import {
   bindTableSelectionPageUi,
@@ -537,9 +538,11 @@ import {
   bindOrderTimeoutReminderUi,
 } from "./config/module-settings-order-timeout-reminder-ui";
 import {
+  bindCustomDividerNameUi,
+  ensureCustomDividerNameToggleMigrated,
   isCustomDividerNameSeq,
   renderCustomDividerNamePanelHtml,
-  bindCustomDividerNameUi,
+  setCustomDividerNamePanelVisible,
 } from "./config/module-settings-custom-divider-name-ui";
 import {
   isEmenuCustomMessageSeq,
@@ -830,10 +833,8 @@ import {
 } from "./config/module-settings-product-remark-ui";
 import {
   bindReceiptSignatureLineUi,
-  ensureReceiptSignatureLineToggleMigrated,
   isReceiptSignatureLineSeq,
-  renderReceiptSignatureLinePanelHtml,
-  setReceiptSignatureLinePanelVisible,
+  renderReceiptSignatureLineByLineHtml,
 } from "./config/module-settings-receipt-signature-line-ui";
 import {
   bindComboSubitemRemarkLinesUi,
@@ -929,6 +930,7 @@ import {
 } from "./config/module-settings-pre-order-table-change-ui";
 import {
   isLineMergeMatrixHostSeq,
+  bindLineMergeMatrixUi,
   renderLineMergeMatrixHtml,
   shouldSkipLineMergeMatrixMemberRow,
 } from "./config/module-settings-line-merge-matrix-ui";
@@ -1162,9 +1164,11 @@ import {
   renderFinanceProcessorFeeInputHtml,
 } from "./config/module-settings-finance-processor-fee-ui";
 import {
+  bindOrderDiscountReasonEditors,
+  isOrderDiscountReasonRequireSeq,
   isOrderDiscountReasonSeq,
-  renderOrderDiscountReasonValuePanel,
-  setOrderDiscountReasonPanelVisible,
+  renderOrderDiscountReasonEditorHtml,
+  renderOrderDiscountReasonRequireSelectHtml,
 } from "./config/module-settings-order-discount-reason-ui";
 import {
   bindOrderNumberingClassificationControls,
@@ -1173,8 +1177,7 @@ import {
   isOrderNumberingModeSeq,
   isOrderNumberingNumberInputSeq,
   isOrderNumberingResetSeq,
-  renderOrderNumberingClassificationSettingHtml,
-  renderOrderNumberingModeSelectHtml,
+  renderOrderNumberingModeWithClassificationHtml,
   renderOrderNumberingNumberControl,
   renderOrderNumberingResetSelectHtml,
 } from "./config/module-settings-order-numbering-ui";
@@ -1193,12 +1196,13 @@ import {
   renderReservationReminderHoursControl,
 } from "./config/module-settings-reservation-automation-ui";
 import {
-  isDailyCloseCashOptionSeq,
   isDailySettlementEnableSeq,
-  renderDailyCloseCrossRefPanelHtml,
+  bindDailyCloseSettlementUi,
+  renderDailyCloseOptionsPanelHtml,
   renderDailyCloseSettlementIntroHtml,
   setDailyCloseCashOptionRowsEnabled,
   setDailyCloseEnabledPanelVisible,
+  shouldSkipDailyCloseCashOptionCatalogRow,
   syncDailyCloseCashOptionRowsFromMaster,
 } from "./config/module-settings-daily-close-settlement-ui";
 import {
@@ -1216,14 +1220,12 @@ import {
 } from "./config/module-settings-cash-drawer-reconciliation-ui";
 import {
   bindWaitlistModeUi,
-  ensureWaitlistModeLinesDefault,
   isWaitlistModeSeq,
   isWaitlistPartyIdentifierSeq,
   isWaitlistPartySizeOptionsSeq,
   renderWaitlistModeLinesPanelHtml,
   renderWaitlistPartyIdentifierChoiceHtml,
   renderWaitlistPartySizeOptionsInputHtml,
-  setWaitlistModeLinesPanelVisible,
 } from "./config/module-settings-waitlist-queue-rules-ui";
 import {
   isDefaultNewOrderTypeSeq,
@@ -5773,9 +5775,11 @@ function renderTeamShiftSchedulingPageWithSettings(): string {
 }
 
 function renderTeamBreaksOvertimePageWithSettings(path: string): string {
-  const items = getTeamSettingItemsBySeqs(TEAM_BREAKS_OVERTIME_SETTING_SEQS);
-  const rowsHtml = renderModuleSettingRowsHtml(items);
-  const page = renderTeamBreaksOvertimePage(rowsHtml, path);
+  const globalItems = getTeamSettingItemsBySeqs(TEAM_BREAKS_OVERTIME_GLOBAL_SETTING_SEQS);
+  const breakRulesItems = getTeamSettingItemsBySeqs(TEAM_BREAKS_OVERTIME_BREAK_RULES_SETTING_SEQS);
+  const globalRowsHtml = renderModuleSettingRowsHtml(globalItems);
+  const paidBreakRowsHtml = renderModuleSettingRowsHtml(breakRulesItems);
+  const page = renderTeamBreaksOvertimePage(globalRowsHtml, path, paidBreakRowsHtml);
   const bar = renderPageSaveBar(path);
   // 勿用 wrapPageWithSaveBar：其外层 overflow-y-auto 会让三级导航与四级内容同步滚动
   if (!bar) return page;
@@ -5871,6 +5875,24 @@ function renderFohBrandMenuPageWithSettings(): string {
     FOH_BRAND_MENU_PATH,
     renderFohBrandMenuPage({ brandsPanelHtml, settingsPanelHtml }),
   );
+}
+
+/** 品类/分类管理：页内已有滚动容器，勿用 wrapPageWithSaveBar 的外层 overflow-y-auto */
+function renderFohFeaturePageWithSaveBar(path: string, pageHtml: string): string {
+  const bar = renderPageSaveBar(path);
+  if (!bar) return pageHtml;
+  return `<div class="flex min-h-0 flex-1 flex-col overflow-hidden">
+    ${pageHtml}
+    ${bar}
+  </div>`;
+}
+
+function renderFohCategorySettingsPageWithSaveBar(path: string): string {
+  return renderFohFeaturePageWithSaveBar(path, renderFohCategorySettingsPage(path));
+}
+
+function renderFohClassificationSettingsPageWithSaveBar(path: string): string {
+  return renderFohFeaturePageWithSaveBar(path, renderFohClassificationSettingsPage(path));
 }
 
 /** 设置滑层开关：关闭态轨道需与背景区分（避免 bg-input 过浅） */
@@ -6043,6 +6065,18 @@ function renderModuleSettingNestedDishTagsField(
     </div>`;
 }
 
+function renderModuleSettingNestedMenuStructureByLineField(
+  field: ModuleSettingNestedMenuStructureByLineField,
+): string {
+  return `
+    <div class="space-y-1.5">
+      <p class="m-0 text-sm font-medium text-foreground">${escapeHtml(field.label)}</p>
+      ${renderStandaloneMenuStructureByLinePickerHtml(field.storageFieldId, {
+        dialogTitle: field.label,
+      })}
+    </div>`;
+}
+
 function renderModuleSettingNestedConditionalDishTagsField(
   parentSeq: number,
   field: ModuleSettingNestedConditionalDishTagsField,
@@ -6106,6 +6140,9 @@ function renderModuleSettingNestedField(parentSeq: number, field: ModuleSettingN
   }
   if (field.kind === "dish-tags") {
     return renderModuleSettingNestedDishTagsField(parentSeq, field);
+  }
+  if (field.kind === "menu-structure-by-line") {
+    return renderModuleSettingNestedMenuStructureByLineField(field);
   }
   if (field.kind === "conditional-dish-tags") {
     return renderModuleSettingNestedConditionalDishTagsField(parentSeq, field);
@@ -6969,15 +7006,13 @@ function renderModuleSettingOrderTypeByLineRow(item: ModuleSettingCatalogItem): 
 }
 
 function renderModuleSettingWaitlistModeRow(item: ModuleSettingCatalogItem): string {
-  const on = readModuleSettingToggleOn(item.seq);
   return `
         <li class="list-none" data-module-setting-row-seq="${item.seq}">
           <div class="border-b border-border px-4 py-3">
-            <div class="flex items-start justify-between gap-3">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
-              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+              <div class="w-full shrink-0 sm:max-w-xs">${renderWaitlistModeLinesPanelHtml()}</div>
             </div>
-            ${renderWaitlistModeLinesPanelHtml(item.seq, on)}
           </div>
         </li>`;
 }
@@ -7022,17 +7057,7 @@ function renderModuleSettingDailySettlementRow(item: ModuleSettingCatalogItem): 
               <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
               <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
             </div>
-            ${renderDailyCloseCrossRefPanelHtml(on)}
-          </div>
-        </li>`;
-}
-
-function renderModuleSettingDailyCloseCashOptionRow(item: ModuleSettingCatalogItem): string {
-  return `
-        <li class="list-none" data-daily-close-cash-option data-module-setting-row-seq="${item.seq}">
-          <div class="flex items-start justify-between gap-3 border-b border-border px-4 py-3">
-            <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
-            <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            ${renderDailyCloseOptionsPanelHtml(on)}
           </div>
         </li>`;
 }
@@ -7122,18 +7147,20 @@ function renderModuleSettingOrderNumberingSelectRow(
         </li>`;
 }
 
-function renderModuleSettingOrderDiscountReasonRow(item: ModuleSettingCatalogItem): string {
-  const on = readModuleSettingToggleOn(item.seq);
+function renderModuleSettingOrderDiscountReasonRequireRow(item: ModuleSettingCatalogItem): string {
   return `
-        <li class="list-none">
-          <div class="border-b border-border px-4 py-3">
-            <div class="flex items-start justify-between gap-3">
-              ${renderModuleSettingTitleBlock(item)}
-              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="flex flex-col gap-3 border-b border-border px-4 py-3 sm:flex-row sm:items-start sm:justify-between">
+            <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+            <div class="w-full shrink-0 sm:max-w-md sm:pt-0.5">
+              ${renderOrderDiscountReasonRequireSelectHtml()}
             </div>
-            ${renderOrderDiscountReasonValuePanel(item.seq, on)}
           </div>
         </li>`;
+}
+
+function renderModuleSettingOrderDiscountReasonRow(item: ModuleSettingCatalogItem): string {
+  return renderOrderDiscountReasonEditorHtml(renderModuleSettingTitleBlock(item));
 }
 
 function renderModuleSettingPrintPageHeightRow(item: ModuleSettingCatalogItem): string {
@@ -7473,29 +7500,25 @@ function renderModuleSettingPackingSlipVoidItemStyleRow(item: ModuleSettingCatal
 }
 
 function renderModuleSettingPrintDishCodeByTicketRow(item: ModuleSettingCatalogItem): string {
-  const on = readModuleSettingToggleOn(item.seq);
   return `
-        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+        <li class="list-none">
           <div class="border-b border-border px-4 py-3">
-            <div class="flex items-start justify-between gap-3">
-              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
-              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            ${renderModuleSettingTitleBlock(item)}
+            <div class="mt-3">
+              ${renderPrintDishCodeTicketsMultiselectHtml(item.seq)}
             </div>
-            ${renderPrintDishCodeTicketsPanelHtml(item.seq, on)}
           </div>
         </li>`;
 }
 
 function renderModuleSettingTakeoutEnhancedDisplayRow(item: ModuleSettingCatalogItem): string {
-  const on = readModuleSettingToggleOn(item.seq);
   return `
-        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+        <li class="list-none">
           <div class="border-b border-border px-4 py-3">
-            <div class="flex items-start justify-between gap-3">
-              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
-              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            ${renderModuleSettingTitleBlock(item)}
+            <div class="mt-3">
+              ${renderTakeoutEnhancedDisplayMultiselectHtml(item.seq)}
             </div>
-            ${renderTakeoutEnhancedDisplayPanelHtml(item.seq, on)}
           </div>
         </li>`;
 }
@@ -8086,16 +8109,13 @@ function renderModuleSettingOrderRemarkRow(item: ModuleSettingCatalogItem): stri
 }
 
 function renderModuleSettingReceiptSignatureLineRow(item: ModuleSettingCatalogItem): string {
-  ensureReceiptSignatureLineToggleMigrated();
-  const on = readModuleSettingToggleOn(item.seq);
   return `
         <li class="list-none" data-module-setting-row-seq="${item.seq}">
           <div class="border-b border-border px-4 py-3">
-            <div class="flex items-start justify-between gap-3">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
-              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+              <div class="w-full shrink-0 sm:max-w-2xl">${renderReceiptSignatureLineByLineHtml()}</div>
             </div>
-            ${renderReceiptSignatureLinePanelHtml(item.seq, on)}
           </div>
         </li>`;
 }
@@ -8941,10 +8961,6 @@ function renderModuleSettingLineMergeMatrixRow(_item: ModuleSettingCatalogItem):
   return `
         <li class="list-none">
           <div class="border-b border-border px-4 py-3">
-            <div class="min-w-0">
-              <p class="m-0 text-sm font-medium text-foreground">行级合并规则</p>
-              <p class="m-0 mt-1 text-xs leading-relaxed text-muted-foreground">按票据类型分别配置是否将相同主菜/子菜合并为一行并汇总数量。厨房单、打包单、食客收据可独立开关。</p>
-            </div>
             ${renderLineMergeMatrixHtml(readModuleSettingToggleOn)}
           </div>
         </li>`;
@@ -8964,6 +8980,9 @@ function renderModuleSettingRow(item: ModuleSettingCatalogItem): string {
     return "";
   }
   if (shouldSkipKdsMergedCatalogRow(item.seq)) {
+    return "";
+  }
+  if (shouldSkipDailyCloseCashOptionCatalogRow(item.seq)) {
     return "";
   }
   if (shouldSkipLineMergeMatrixMemberRow(item.seq)) {
@@ -9224,9 +9243,6 @@ function renderModuleSettingRow(item: ModuleSettingCatalogItem): string {
   if (isDailySettlementEnableSeq(item.seq)) {
     return renderModuleSettingDailySettlementRow(item);
   }
-  if (isDailyCloseCashOptionSeq(item.seq)) {
-    return renderModuleSettingDailyCloseCashOptionRow(item);
-  }
   if (isCashDrawerFloatSeq(item.seq)) {
     return renderModuleSettingCashDrawerFloatRow(item);
   }
@@ -9237,13 +9253,18 @@ function renderModuleSettingRow(item: ModuleSettingCatalogItem): string {
     return renderModuleSettingCashDrawerVarianceAlertRow(item);
   }
   if (isOrderNumberingModeSeq(item.seq)) {
-    return renderModuleSettingOrderNumberingSelectRow(
+    return renderOrderNumberingModeWithClassificationHtml(
       item,
-      renderOrderNumberingModeSelectHtml(),
+      {
+        title: "分类单号设置",
+        sceneDesc: "设置单号模式下，不同分类单号的展示规则",
+      },
+      renderModuleSettingTitleBlock(item),
     );
   }
   if (isOrderNumberingClassificationSeq(item.seq)) {
-    return renderOrderNumberingClassificationSettingHtml(item.seq, item.title, item.sceneDesc);
+    // 已并入「单号模式」行，仅 CLASSIFICATION 时展示
+    return "";
   }
   if (isOrderNumberingResetSeq(item.seq)) {
     return renderModuleSettingOrderNumberingSelectRow(
@@ -9259,6 +9280,9 @@ function renderModuleSettingRow(item: ModuleSettingCatalogItem): string {
   }
   if (isOrderTotalRoundingSeq(item.seq)) {
     return renderModuleSettingOrderTotalRoundingRow(item);
+  }
+  if (isOrderDiscountReasonRequireSeq(item.seq)) {
+    return renderModuleSettingOrderDiscountReasonRequireRow(item);
   }
   if (isOrderDiscountReasonSeq(item.seq)) {
     return renderModuleSettingOrderDiscountReasonRow(item);
@@ -9643,11 +9667,16 @@ function renderModuleSettingRow(item: ModuleSettingCatalogItem): string {
     return renderModuleSettingRow(item);
   }
   if (isCustomDividerNameSeq(item.seq)) {
+    ensureCustomDividerNameToggleMigrated();
+    const on = readModuleSettingToggleOn(item.seq);
     return `
         <li class="list-none" data-module-setting-row-seq="${item.seq}">
           <div class="border-b border-border px-4 py-3">
-            ${renderModuleSettingTitleBlock(item)}
-            ${renderCustomDividerNamePanelHtml()}
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
+              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
+            </div>
+            ${renderCustomDividerNamePanelHtml(on)}
           </div>
         </li>`;
   }
@@ -9707,6 +9736,16 @@ function syncModuleSettingToggleToDom(seq: number, on: boolean): void {
       btn.title = on ? t("moduleSettings.toggleOn") : t("moduleSettings.toggleOff");
       syncModuleSettingToggleButton(btn);
     });
+  document
+    .querySelectorAll<HTMLInputElement>(`[data-line-merge-ticket-seq="${seq}"]`)
+    .forEach((input) => {
+      input.checked = on;
+    });
+  document
+    .querySelectorAll<HTMLInputElement>(`[data-daily-close-cash-option-seq="${seq}"]`)
+    .forEach((input) => {
+      input.checked = on;
+    });
 }
 
 function runModuleSettingToggleSideEffects(seq: number, next: boolean): void {
@@ -9738,20 +9777,11 @@ function runModuleSettingToggleSideEffects(seq: number, next: boolean): void {
       if (isStoreClosingAlertSeq(seq)) {
         setStoreClosingAlertPanelVisible(seq, next);
       }
-      if (isOrderDiscountReasonSeq(seq)) {
-        setOrderDiscountReasonPanelVisible(seq, next);
-      }
       if (isDeleteCardReceiptPrintSeq(seq)) {
         setDeleteCardReceiptCopiesPanelVisible(seq, next);
       }
       if (isPackingSlipVoidItemStyleSeq(seq)) {
         setPackingSlipVoidStylePanelVisible(seq, next);
-      }
-      if (isPrintDishCodeByTicketSeq(seq)) {
-        setPrintDishCodeTicketsPanelVisible(seq, next);
-      }
-      if (isTakeoutEnhancedDisplaySeq(seq)) {
-        setTakeoutEnhancedDisplayPanelVisible(seq, next);
       }
       if (isTableSelectionPageSeq(seq)) {
         setTableSelectionPagePanelVisible(seq, next);
@@ -9861,9 +9891,6 @@ function runModuleSettingToggleSideEffects(seq: number, next: boolean): void {
       if (isOrderRemarkSeq(seq)) {
         setOrderRemarkPanelVisible(seq, next);
       }
-      if (isReceiptSignatureLineSeq(seq)) {
-        setReceiptSignatureLinePanelVisible(seq, next);
-      }
       if (isProductRemarkSeq(seq)) {
         setProductRemarkPanelVisible(next);
       }
@@ -9929,6 +9956,9 @@ function runModuleSettingToggleSideEffects(seq: number, next: boolean): void {
       if (isPosButtonVisibilitySeq(seq)) {
         setPosButtonVisibilityPanelVisible(seq, next);
       }
+      if (isCustomDividerNameSeq(seq)) {
+        setCustomDividerNamePanelVisible(seq, next);
+      }
       if (isPartySizeSelectionPageSeq(seq)) {
         setPartySizeSelectionPagePanelVisible(seq, next);
       }
@@ -9940,10 +9970,6 @@ function runModuleSettingToggleSideEffects(seq: number, next: boolean): void {
       }
       if (isTipReceiptSuggestionSeq(seq)) {
         setReceiptTipSuggestionPanelVisible(seq, next);
-      }
-      if (isWaitlistModeSeq(seq)) {
-        if (next) ensureWaitlistModeLinesDefault();
-        setWaitlistModeLinesPanelVisible(seq, next);
       }
       if (isDailySettlementEnableSeq(seq)) {
         setDailyCloseEnabledPanelVisible(seq, next);
@@ -11173,9 +11199,9 @@ function renderMain(): string {
                                             : isFohBrandMenu
                                               ? renderFohBrandMenuPageWithSettings()
                                               : isFohCategorySettingsPath(path)
-                                                ? renderFohCategorySettingsPage(path)
+                                                ? renderFohCategorySettingsPageWithSaveBar(path)
                                                 : isFohClassificationSettingsPath(path)
-                                                  ? renderFohClassificationSettingsPage(path)
+                                                  ? renderFohClassificationSettingsPageWithSaveBar(path)
                                                   : isTeamBreaksOvertime
                                                     ? renderTeamBreaksOvertimePageWithSettings(path)
                                                     : isTeamClockIn
@@ -12184,6 +12210,7 @@ function mount(): void {
   bindModuleSettingsToggles();
   bindModuleSettingSceneDescHelp();
   syncDailyCloseCashOptionRowsFromMaster();
+  bindDailyCloseSettlementUi();
   syncExternalIntegrationsUrlFields(readModuleSettingToggleOn(CLOUD_EMPLOYEE_SYNC_SEQ));
   bindModuleSettingsNestedFields();
   bindModuleSettingsDishRules();
@@ -12217,6 +12244,7 @@ function mount(): void {
   bindPosMenuUiLayoutLinesUi();
   bindPosComboOrderingUi();
   bindDiscountSurchargePresetEditors();
+  bindOrderDiscountReasonEditors();
   bindPaymentMethodsEditor();
   bindMemberSmsVerificationUi();
   bindOrderReceiptTriggerUi();
@@ -12277,6 +12305,7 @@ function mount(): void {
   bindCustomDividerNameUi();
   bindEmenuCustomMessageUi();
   bindOrderDisplaySeatUi();
+  bindLineMergeMatrixUi();
   bindPosButtonVisibilityUi();
   bindPartySizeSelectionPageUi();
   bindPreOrderTableChangeUi();

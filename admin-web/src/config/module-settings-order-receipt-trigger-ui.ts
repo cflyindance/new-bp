@@ -89,11 +89,7 @@ export function isOrderReceiptPartialPaymentSeq(seq: number): boolean {
   return seq === ORDER_RECEIPT_PARTIAL_PAYMENT_SEQ;
 }
 
-function renderTriggerByLineHtml(
-  seq: number,
-  ariaLabel: string,
-  hint: string,
-): string {
+function renderTriggerByLineHtml(seq: number, ariaLabel: string): string {
   const selected = new Set(readOrderReceiptTriggerLines(seq));
   const cells = ORDER_RECEIPT_TRIGGER_PRODUCT_LINES.map((line, index) => {
     const checked = selected.has(line.id);
@@ -116,16 +112,13 @@ function renderTriggerByLineHtml(
   }).join("");
 
   return `
-    <div class="flex flex-col items-end gap-2">
-      <div
-        class="flex w-full max-w-xl overflow-hidden rounded-md border border-border bg-muted/40"
-        data-order-receipt-trigger-by-line="${seq}"
-        role="group"
-        aria-label="${escapeHtml(ariaLabel)}"
-      >
-        ${cells}
-      </div>
-      <p class="max-w-xl text-right text-xs text-muted-foreground">${escapeHtml(hint)}</p>
+    <div
+      class="flex w-full max-w-xl overflow-hidden rounded-md border border-border bg-muted/40"
+      data-order-receipt-trigger-by-line="${seq}"
+      role="group"
+      aria-label="${escapeHtml(ariaLabel)}"
+    >
+      ${cells}
     </div>`;
 }
 
@@ -133,7 +126,6 @@ export function renderOrderReceiptAfterSubmitByLineHtml(): string {
   return renderTriggerByLineHtml(
     ORDER_RECEIPT_AFTER_SUBMIT_SEQ,
     "下单后自动打印纸质订单收据适用产线",
-    "订单提交成功后，在门店绑定的收据打印机出纸；eMenu 等为渠道下单，非平板本地打印。",
   );
 }
 
@@ -141,7 +133,6 @@ export function renderOrderReceiptPartialPaymentByLineHtml(): string {
   return renderTriggerByLineHtml(
     ORDER_RECEIPT_PARTIAL_PAYMENT_SEQ,
     "部分付款后自动打印纸质订单收据适用产线",
-    "订单发生部分付款后出纸；输出为订单收据（非支付签购单）。与支付收据流程中的「支付后打印」不同。",
   );
 }
 

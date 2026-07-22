@@ -2,6 +2,16 @@
  * 设置滑层：每轮菜品互斥 / 组合规则（原型，localStorage JSON）。
  */
 
+import {
+  bindBrandMenuStructurePicker,
+  countBrandMenuStructureDishesByLine,
+  emptyBrandMenuStructureByLine,
+  formatBrandMenuStructureByLineSummary,
+  normalizeBrandMenuStructureByLine,
+  readBrandMenuStructureByLineFromPicker,
+  renderBrandMenuStructurePickerHtml,
+  type BrandMenuStructureByLine,
+} from "./brand-menu-structure-picker-ui";
 import { renderModuleSettingCheckboxChoiceHtml } from "./module-settings-choice-ui";
 import {
   readModuleSettingJson,
@@ -513,6 +523,146 @@ export function renderStandaloneDishPickerHtml(
     </div>`;
 }
 
+/** 独立「产线 + 组/类/菜」选品（对齐店中店品牌菜单，如抽奖排除/奖池） */
+const BTN_MENU_STRUCTURE_ADD =
+  "inline-flex h-8 shrink-0 items-center justify-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90";
+const BTN_MENU_STRUCTURE_GHOST =
+  "inline-flex h-9 shrink-0 items-center justify-center rounded-md border border-border bg-background px-4 text-sm font-medium text-foreground shadow-sm hover:bg-muted";
+const BTN_MENU_STRUCTURE_SAVE =
+  "inline-flex h-9 shrink-0 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90";
+
+function readStandaloneMenuStructureByLine(storageFieldId: string): BrandMenuStructureByLine {
+  return normalizeBrandMenuStructureByLine(
+    readModuleSettingJson(storageFieldId, emptyBrandMenuStructureByLine()),
+  );
+}
+
+function menuStructureCountLabel(byLine: BrandMenuStructureByLine): string {
+  const dishCount = countBrandMenuStructureDishesByLine(byLine);
+  return dishCount > 0 ? `已选 ${dishCount} 道菜` : "未选择商品";
+}
+
+function renderMenuStructurePickDialog(dialogTitle: string): string {
+  return `
+    <div
+      class="fixed inset-0 z-[110] hidden items-center justify-center p-4"
+      data-menu-structure-pick-dialog
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="menu-structure-pick-dialog-title"
+    >
+      <button type="button" class="absolute inset-0 bg-black/40" data-menu-structure-pick-backdrop aria-label="关闭"></button>
+      <div class="relative z-10 flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-lg border border-border bg-card shadow-lg">
+        <div class="flex shrink-0 items-start justify-between gap-3 border-b border-border px-5 py-4">
+          <h3 id="menu-structure-pick-dialog-title" class="text-base font-semibold text-card-foreground" data-menu-structure-pick-title>${escapeHtml(dialogTitle)}</h3>
+          <button type="button" class="text-muted-foreground hover:text-foreground" data-menu-structure-pick-close aria-label="关闭">×</button>
+        </div>
+        <div class="min-h-0 flex-1 space-y-2 overflow-y-auto px-5 py-4" data-menu-structure-pick-body></div>
+        <div class="flex shrink-0 justify-end gap-2 border-t border-border bg-card px-5 py-4">
+          <button type="button" class="${BTN_MENU_STRUCTURE_GHOST}" data-menu-structure-pick-cancel>取消</button>
+          <button type="button" class="${BTN_MENU_STRUCTURE_SAVE}" data-menu-structure-pick-save>确定</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+export function renderStandaloneMenuStructureByLinePickerHtml(
+  storageFieldId: string,
+  options?: { dialogTitle?: string },
+): string {
+  const byLine = readStandaloneMenuStructureByLine(storageFieldId);
+  const summary = formatBrandMenuStructureByLineSummary(byLine);
+  const countLabel = menuStructureCountLabel(byLine);
+  const dialogTitle = options?.dialogTitle ?? "添加商品";
+  return `
+    <div data-standalone-menu-structure-picker data-storage-id="${escapeHtml(storageFieldId)}">
+      <div class="flex flex-wrap items-center gap-2">
+        <button type="button" class="${BTN_MENU_STRUCTURE_ADD}" data-menu-structure-pick-open>添加商品</button>
+        <span class="text-xs text-muted-foreground" data-menu-structure-pick-count>${escapeHtml(countLabel)}</span>
+      </div>
+      <p class="m-0 mt-1.5 text-xs leading-relaxed text-muted-foreground" data-menu-structure-pick-summary>${escapeHtml(summary)}</p>
+      ${renderMenuStructurePickDialog(dialogTitle)}
+    </div>`;
+}
+
+function showMenuStructurePickDialog(dialog: HTMLElement): void {
+  dialog.classList.remove("hidden");
+  dialog.classList.add("flex");
+}
+
+function hideMenuStructurePickDialog(dialog: HTMLElement): void {
+  dialog.classList.add("hidden");
+  dialog.classList.remove("flex");
+  const body = dialog.querySelector<HTMLElement>("[data-menu-structure-pick-body]");
+  if (body) body.innerHTML = "";
+}
+
+function refreshStandaloneMenuStructureSummary(wrap: HTMLElement): void {
+  const storageId = wrap.getAttribute("data-storage-id");
+  if (!storageId) return;
+  const byLine = readStandaloneMenuStructureByLine(storageId);
+  const summaryEl = wrap.querySelector<HTMLElement>("[data-menu-structure-pick-summary]");
+  const countEl = wrap.querySelector<HTMLElement>("[data-menu-structure-pick-count]");
+  if (summaryEl) summaryEl.textContent = formatBrandMenuStructureByLineSummary(byLine);
+  if (countEl) countEl.textContent = menuStructureCountLabel(byLine);
+}
+
+function openStandaloneMenuStructurePickDialog(wrap: HTMLElement): void {
+  const storageId = wrap.getAttribute("data-storage-id");
+  const dialog = wrap.querySelector<HTMLElement>("[data-menu-structure-pick-dialog]");
+  const body = dialog?.querySelector<HTMLElement>("[data-menu-structure-pick-body]");
+  if (!storageId || !dialog || !body) return;
+
+  const byLine = readStandaloneMenuStructureByLine(storageId);
+  body.innerHTML = renderBrandMenuStructurePickerHtml([], undefined, undefined, {
+    enableLines: true,
+    selectionByLine: byLine,
+  });
+  body.querySelectorAll<HTMLElement>("[data-brand-menu-structure-picker]").forEach((picker) => {
+    bindBrandMenuStructurePicker(picker);
+  });
+  showMenuStructurePickDialog(dialog);
+}
+
+function saveStandaloneMenuStructurePickDialog(wrap: HTMLElement): void {
+  const storageId = wrap.getAttribute("data-storage-id");
+  const dialog = wrap.querySelector<HTMLElement>("[data-menu-structure-pick-dialog]");
+  if (!storageId || !dialog) return;
+  const picker = dialog.querySelector<HTMLElement>("[data-brand-menu-structure-picker]");
+  writeModuleSettingJson(
+    storageId,
+    picker ? readBrandMenuStructureByLineFromPicker(picker) : emptyBrandMenuStructureByLine(),
+  );
+  refreshStandaloneMenuStructureSummary(wrap);
+  hideMenuStructurePickDialog(dialog);
+}
+
+function bindStandaloneMenuStructureByLinePickers(): void {
+  document.querySelectorAll<HTMLElement>("[data-standalone-menu-structure-picker]").forEach((wrap) => {
+    if (wrap.dataset.menuStructurePickerBound === "1") return;
+    wrap.dataset.menuStructurePickerBound = "1";
+    wrap.addEventListener("click", (e) => {
+      const target = e.target as HTMLElement;
+      if (target.closest("[data-menu-structure-pick-open]")) {
+        openStandaloneMenuStructurePickDialog(wrap);
+        return;
+      }
+      if (
+        target.closest("[data-menu-structure-pick-close]") ||
+        target.closest("[data-menu-structure-pick-cancel]") ||
+        target.closest("[data-menu-structure-pick-backdrop]")
+      ) {
+        const dialog = wrap.querySelector<HTMLElement>("[data-menu-structure-pick-dialog]");
+        if (dialog) hideMenuStructurePickDialog(dialog);
+        return;
+      }
+      if (target.closest("[data-menu-structure-pick-save]")) {
+        saveStandaloneMenuStructurePickDialog(wrap);
+      }
+    });
+  });
+}
+
 function persistStandaloneDishPicker(picker: HTMLElement): void {
   const wrap = picker.closest<HTMLElement>("[data-standalone-dish-picker]");
   const storageId = wrap?.getAttribute("data-storage-id");
@@ -549,6 +699,7 @@ function bindStandaloneDishPickers(): void {
 
 export function bindModuleSettingsDishRules(): void {
   bindStandaloneDishPickers();
+  bindStandaloneMenuStructureByLinePickers();
   document.querySelectorAll<HTMLElement>("[data-mutex-rules-editor]").forEach((editor) => {
     if (editor.dataset.dishRulesBound === "1") return;
     editor.dataset.dishRulesBound = "1";

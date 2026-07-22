@@ -28,10 +28,10 @@ export const ORDER_SETTINGS_GROUP_TITLES: Record<string, string> = {
 
 /** 各组内 seq（与 scripts/lib/settings-intra-group-sort.mjs 同步） */
 const ORDER_SETTINGS_INTRA_GROUP_SEQ: Record<string, readonly number[]> = {
-  "order-basics": [126, 129, 128, 127, 130, 131],
+  "order-basics": [126, 127, 128, 129, 130, 131],
   "order-edit-split-merge": [117, 116, 115, 124, 119, 140],
   "order-void-refund": [158, 159, 157, 156],
-  "order-discount": [446, 162, 163, 164],
+  "order-discount": [446, 162, 163],
   "order-surcharge-fees": [447, 149, 161],
   "order-settlement-rounding": [147],
 };

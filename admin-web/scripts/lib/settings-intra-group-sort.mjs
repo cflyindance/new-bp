@@ -380,7 +380,7 @@ assignSort(POS_COMBO_ORDERING_SEQ_ORDER);
 assignSort(MEMBER_ACCOUNT_SYSTEM_SEQ_ORDER);
 
 /** 订单基础：默认类型 → 单号模式 → 起始/上限 → 分类 → 重置 */
-const ORDER_BASICS_SEQ_ORDER = [126, 129, 128, 127, 130, 131];
+const ORDER_BASICS_SEQ_ORDER = [126, 127, 128, 129, 130, 131];
 
 /** 改单与分合单：部分支付改单 → 应收编辑 → 合单 → 分单展示 */
 const ORDER_EDIT_SPLIT_MERGE_SEQ_ORDER = [117, 116, 115, 124, 119, 140];
@@ -399,7 +399,7 @@ assignSort(LOTTERY_ACTIVITY_SETTINGS_SEQ_ORDER);
 assignSort(LOTTERY_ANIMATION_SETTINGS_SEQ_ORDER);
 
 /** 折扣：预设 → 原因策略 */
-const ORDER_DISCOUNT_SEQ_ORDER = [446, 162, 163, 164];
+const ORDER_DISCOUNT_SEQ_ORDER = [446, 162, 163];
 
 /** 附加费与服务费：预设 → 合单重算 → 线上服务费 */
 const ORDER_SURCHARGE_FEES_SEQ_ORDER = [447, 149, 161];

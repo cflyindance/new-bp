@@ -1,14 +1,19 @@
 /**
  * 财务中心 · 现金日结与班结（seq 171、65、330）。
- * 171 每日日结总开关；65/330 现金班结体验（依赖 171）。
+ * 171 每日日结总开关；开启后以复选框配置 65/330（结构对齐主开关 + 子项多选）。
  * 卡 Batch 日切见支付中心 238；Batch 后打印见 235。
  */
+
+import {
+  readModuleSettingToggleOn,
+  writeModuleSettingToggleOn,
+} from "./module-settings-toggle-ui";
 
 export const DAILY_SETTLEMENT_ENABLE_SEQ = 171;
 export const CASH_CLOSE_SHOW_SALES_SEQ = 65;
 export const CASH_CLOSE_AUTO_PRINT_SEQ = 330;
 
-/** 171 主开关；65/330 现金班结子项 */
+/** 171 主开关；65/330 现金班结子项（嵌套复选，仍走 toggle 存储） */
 export const DAILY_CLOSE_SETTLEMENT_TOGGLE_SEQS: readonly number[] = [
   DAILY_SETTLEMENT_ENABLE_SEQ,
   CASH_CLOSE_SHOW_SALES_SEQ,
@@ -20,6 +25,28 @@ export const DAILY_CLOSE_CASH_OPTION_SEQS: readonly number[] = [
   CASH_CLOSE_AUTO_PRINT_SEQ,
 ];
 
+const DAILY_CLOSE_CASH_OPTIONS = [
+  {
+    seq: CASH_CLOSE_SHOW_SALES_SEQ,
+    label: "班结时显示系统现金销售额",
+  },
+  {
+    seq: CASH_CLOSE_AUTO_PRINT_SEQ,
+    label: "班结完成后自动打印现金报表",
+  },
+] as const;
+
+const MODULE_SETTING_CONTROL_CLASS =
+  "size-4 shrink-0 accent-primary text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50";
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 export function isDailySettlementEnableSeq(seq: number): boolean {
   return seq === DAILY_SETTLEMENT_ENABLE_SEQ;
 }
@@ -28,31 +55,43 @@ export function isDailyCloseCashOptionSeq(seq: number): boolean {
   return (DAILY_CLOSE_CASH_OPTION_SEQS as readonly number[]).includes(seq);
 }
 
-export function renderDailyCloseSettlementIntroHtml(): string {
-  return `
-    <p class="m-0 mb-3 text-xs leading-relaxed text-muted-foreground">
-      本组配置<strong>门店现金日结/班结</strong>流程：是否按营业日执行班结、班结界面展示与完成后报表输出。
-      <strong>不是</strong>卡交易 Batch 调度——自动关账时刻、收单结算周期、Batch 后打印见支付中心「卡交易 Batch 结算」（238、230、235）。
-      钱箱备款与容差见「钱箱备款与平账」（63、76、181）。
-    </p>`;
+/** 65/330 已嵌套在 171 面板内，catalog 行不再单独渲染 */
+export function shouldSkipDailyCloseCashOptionCatalogRow(seq: number): boolean {
+  return isDailyCloseCashOptionSeq(seq);
 }
 
-export function renderDailyCloseCrossRefPanelHtml(on: boolean): string {
+export function renderDailyCloseSettlementIntroHtml(): string {
+  return "";
+}
+
+export function renderDailyCloseOptionsPanelHtml(on: boolean): string {
   const hidden = on ? "" : "hidden";
+  const checkboxes = DAILY_CLOSE_CASH_OPTIONS.map((opt) => {
+    const checked = readModuleSettingToggleOn(opt.seq);
+    return `
+      <label class="inline-flex items-center gap-2 text-sm text-foreground ${on ? "cursor-pointer" : "cursor-not-allowed opacity-50"}">
+        <input
+          type="checkbox"
+          class="${MODULE_SETTING_CONTROL_CLASS} rounded-sm"
+          value="${opt.seq}"
+          data-daily-close-cash-option-seq="${opt.seq}"
+          ${checked ? "checked" : ""}
+          ${on ? "" : "disabled"}
+          aria-label="${escapeHtml(opt.label)}"
+        />
+        <span>${escapeHtml(opt.label)}</span>
+      </label>`;
+  }).join("");
+
   return `
     <div
       class="mt-3 rounded-lg border border-border bg-muted/40 px-3 py-3 ${hidden}"
       data-daily-close-enabled-panel="${DAILY_SETTLEMENT_ENABLE_SEQ}"
       ${on ? "" : 'aria-hidden="true"'}
     >
-      <p class="m-0 mb-2 text-xs font-medium text-muted-foreground">开启后可配置的现金班结项</p>
-      <ul class="m-0 list-disc space-y-1 pl-4 text-xs leading-relaxed text-muted-foreground">
-        <li><strong>65</strong> 班结界面是否展示系统现金销售总额</li>
-        <li><strong>330</strong> 班结完成后是否自动打印备款/现金结算报表</li>
-      </ul>
-      <p class="m-0 mt-2 text-xs leading-relaxed text-muted-foreground">
-        关闭主开关后，65/330 不可用；不影响支付中心 Batch 关账时刻（238）。
-      </p>
+      <div class="flex flex-col gap-2.5" role="group" aria-label="现金班结关联设置" data-daily-close-cash-options>
+        ${checkboxes}
+      </div>
     </div>`;
 }
 
@@ -61,27 +100,47 @@ export function setDailyCloseEnabledPanelVisible(seq: number, visible: boolean):
     panel.classList.toggle("hidden", !visible);
     if (visible) panel.removeAttribute("aria-hidden");
     else panel.setAttribute("aria-hidden", "true");
-  });
-}
 
-export function setDailyCloseCashOptionRowsEnabled(enabled: boolean): void {
-  document.querySelectorAll<HTMLElement>("[data-daily-close-cash-option]").forEach((row) => {
-    row.classList.toggle("opacity-50", !enabled);
-    row.querySelectorAll<HTMLButtonElement>("[data-module-setting-toggle]").forEach((btn) => {
-      btn.disabled = !enabled;
-      if (!enabled) btn.setAttribute("aria-disabled", "true");
-      else btn.removeAttribute("aria-disabled");
+    panel.querySelectorAll<HTMLInputElement>("[data-daily-close-cash-option-seq]").forEach((input) => {
+      input.disabled = !visible;
+      const label = input.closest("label");
+      if (!label) return;
+      label.classList.toggle("cursor-not-allowed", !visible);
+      label.classList.toggle("opacity-50", !visible);
+      label.classList.toggle("cursor-pointer", visible);
     });
   });
 }
 
+/** @deprecated 子项已改为面板内复选框；保留空实现以免旧调用报错 */
+export function setDailyCloseCashOptionRowsEnabled(_enabled: boolean): void {
+  /* no-op：catalog 行已跳过 */
+}
+
 export function syncDailyCloseCashOptionRowsFromMaster(): void {
-  try {
-    const key = `bplant-module-setting-toggle:${DAILY_SETTLEMENT_ENABLE_SEQ}`;
-    const on = localStorage.getItem(key) === "1";
-    setDailyCloseCashOptionRowsEnabled(on);
-    setDailyCloseEnabledPanelVisible(DAILY_SETTLEMENT_ENABLE_SEQ, on);
-  } catch {
-    setDailyCloseCashOptionRowsEnabled(true);
-  }
+  setDailyCloseEnabledPanelVisible(
+    DAILY_SETTLEMENT_ENABLE_SEQ,
+    readModuleSettingToggleOn(DAILY_SETTLEMENT_ENABLE_SEQ),
+  );
+}
+
+export function bindDailyCloseSettlementUi(root: ParentNode = document): void {
+  root.querySelectorAll<HTMLElement>("[data-daily-close-cash-options]").forEach((group) => {
+    if (group.dataset.dailyCloseOptionsBound === "1") return;
+    group.dataset.dailyCloseOptionsBound = "1";
+    group.addEventListener("change", (e) => {
+      const input = (e.target as HTMLElement).closest<HTMLInputElement>(
+        "[data-daily-close-cash-option-seq]",
+      );
+      if (!input || input.disabled) return;
+      const seq = Number(input.getAttribute("data-daily-close-cash-option-seq"));
+      if (!seq) return;
+      writeModuleSettingToggleOn(seq, input.checked);
+      window.dispatchEvent(
+        new CustomEvent("menusifu:module-setting-changed", {
+          detail: { seq, on: input.checked },
+        }),
+      );
+    });
+  });
 }

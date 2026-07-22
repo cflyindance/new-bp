@@ -1,9 +1,9 @@
 /**
  * 预约等位 · 等位排队规则（seq 12–14、529）。
- * 529 主开关 + 产线多选；12 开关；13 团体人数（文本）；14 团体代号（单选）。
+ * 529 等位模式：默认开启、无主开关，产线多选结构对齐跳过选桌（107），仅 Kiosk；
+ * 12 开关；13 团体人数（文本）；14 团体代号（单选）。
  */
 
-import { MODULE_SETTING_CHOICE_CONTROL_CLASS } from "./module-settings-choice-ui";
 import { renderModuleSettingSingleChoiceHtml } from "./module-settings-choice-ui";
 import {
   readModuleSettingJson,
@@ -20,12 +20,8 @@ export const WAITLIST_SPLIT_BY_PARTY_SIZE_SEQ = 12;
 export const WAITLIST_PARTY_SIZE_OPTIONS_SEQ = 13;
 export const WAITLIST_PARTY_IDENTIFIER_SEQ = 14;
 
-/** 等位取号可触达产线（529 主开关 + 多选） */
-export const WAITLIST_PRODUCT_LINES = [
-  { id: "kiosk", label: "Kiosk" },
-  { id: "emenu", label: "eMenu" },
-  { id: "pos", label: "POS" },
-] as const;
+/** 等位取号可触达产线（仅 Kiosk） */
+export const WAITLIST_PRODUCT_LINES = [{ id: "kiosk", label: "Kiosk" }] as const;
 
 export type WaitlistProductLineId = (typeof WAITLIST_PRODUCT_LINES)[number]["id"];
 
@@ -52,6 +48,10 @@ export type WaitlistPartyIdentifier =
 const PARTY_IDENTIFIER_FALLBACK: WaitlistPartyIdentifier = "queue_number";
 
 const ALL_LINE_IDS: WaitlistProductLineId[] = WAITLIST_PRODUCT_LINES.map((l) => l.id);
+const DEFAULT_LINES: WaitlistProductLineId[] = ["kiosk"];
+
+const MODULE_SETTING_CONTROL_CLASS =
+  "size-4 shrink-0 accent-primary text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50";
 
 const TEXT_INPUT_CLASS =
   "h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
@@ -64,11 +64,11 @@ function escapeHtml(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
-function readLegacyToggleOn(seq: number): boolean {
+function writeMasterToggleOn(on: boolean): void {
   try {
-    return localStorage.getItem(moduleSettingToggleStorageKey(seq)) === "1";
+    localStorage.setItem(moduleSettingToggleStorageKey(WAITLIST_MODE_SEQ), on ? "1" : "0");
   } catch {
-    return false;
+    /* ignore */
   }
 }
 
@@ -79,27 +79,29 @@ function normalizeLineIds(raw: unknown): WaitlistProductLineId[] {
 }
 
 export function readWaitlistModeLines(): WaitlistProductLineId[] {
-  const normalized = normalizeLineIds(
-    readModuleSettingJson<unknown>(WAITLIST_MODE_LINES_STORAGE_ID, null),
-  );
-  if (normalized.length > 0) return normalized;
-
-  if (readLegacyToggleOn(WAITLIST_MODE_SEQ)) {
-    writeWaitlistModeLines(ALL_LINE_IDS);
-    return [...ALL_LINE_IDS];
+  const stored = readModuleSettingJson<unknown>(WAITLIST_MODE_LINES_STORAGE_ID, null);
+  if (stored == null) {
+    writeWaitlistModeLines(DEFAULT_LINES);
+    return [...DEFAULT_LINES];
   }
-  return [];
+  const normalized = normalizeLineIds(stored);
+  // 旧版可能含 eMenu/POS；过滤后为空则回落默认 Kiosk
+  if (Array.isArray(stored) && stored.length > 0 && normalized.length === 0) {
+    writeWaitlistModeLines(DEFAULT_LINES);
+    return [...DEFAULT_LINES];
+  }
+  return normalized;
 }
 
 export function writeWaitlistModeLines(lines: WaitlistProductLineId[]): void {
   const unique = ALL_LINE_IDS.filter((id) => lines.includes(id));
   writeModuleSettingJson(WAITLIST_MODE_LINES_STORAGE_ID, unique);
+  writeMasterToggleOn(unique.length > 0);
 }
 
+/** 等位模式默认开启：首次无数据时勾选 Kiosk */
 export function ensureWaitlistModeLinesDefault(): void {
-  if (readWaitlistModeLines().length === 0) {
-    writeWaitlistModeLines(ALL_LINE_IDS);
-  }
+  void readWaitlistModeLines();
 }
 
 export function isWaitlistModeSeq(seq: number): boolean {
@@ -146,73 +148,63 @@ export function writeWaitlistPartyIdentifier(value: WaitlistPartyIdentifier): vo
   writeModuleSettingRadio(WAITLIST_PARTY_IDENTIFIER_FIELD_ID, value);
 }
 
-export function renderWaitlistModeLinesPanelHtml(seq: number, on: boolean): string {
+/** 结构对齐跳过选桌（107）产线分栏多选；无主开关，默认展示 */
+export function renderWaitlistModeLinesPanelHtml(): string {
+  ensureWaitlistModeLinesDefault();
   const selected = new Set(readWaitlistModeLines());
-  const checkboxes = WAITLIST_PRODUCT_LINES.map((line) => {
+  const cells = WAITLIST_PRODUCT_LINES.map((line, index) => {
     const checked = selected.has(line.id);
+    const divider = index > 0 ? "border-l border-border" : "";
     return `
-      <label class="inline-flex cursor-pointer items-center gap-2 text-sm text-foreground">
+      <label
+        class="flex flex-1 cursor-pointer flex-col items-center justify-center gap-2 px-2 py-3 text-sm text-foreground sm:px-3 ${divider}"
+      >
         <input
           type="checkbox"
-          class="${MODULE_SETTING_CHOICE_CONTROL_CLASS}"
+          class="${MODULE_SETTING_CONTROL_CLASS} rounded-sm"
           value="${escapeHtml(line.id)}"
-          data-waitlist-mode-line="${seq}"
           data-waitlist-mode-line-id="${escapeHtml(line.id)}"
           ${checked ? "checked" : ""}
-          ${on ? "" : "disabled"}
           aria-label="${escapeHtml(line.label)}"
         />
-        <span>${escapeHtml(line.label)}</span>
+        <span class="text-center leading-tight">${escapeHtml(line.label)}</span>
       </label>`;
   }).join("");
 
-  const hidden = on ? "" : "hidden";
   return `
     <div
-      class="mt-3 rounded-lg border border-border bg-muted/40 px-3 py-3 ${hidden}"
-      data-waitlist-mode-panel="${seq}"
-      ${on ? "" : 'aria-hidden="true"'}
+      class="flex w-full max-w-xs overflow-hidden rounded-md border border-border bg-muted/40"
+      data-waitlist-mode-lines="${WAITLIST_MODE_SEQ}"
+      role="group"
+      aria-label="等位模式适用产线"
     >
-      <div class="flex flex-wrap items-center gap-x-5 gap-y-2" role="group" aria-label="等位模式适用产线">
-        ${checkboxes}
-      </div>
-      <p class="m-0 mt-2 text-xs leading-relaxed text-muted-foreground">
-        开启后，仅在勾选的产线展示等位排队取号能力；关闭主开关后所有产线均不可用。
-      </p>
+      ${cells}
     </div>`;
 }
 
-export function setWaitlistModeLinesPanelVisible(seq: number, visible: boolean): void {
-  document.querySelectorAll<HTMLElement>(`[data-waitlist-mode-panel="${seq}"]`).forEach((panel) => {
-    panel.classList.toggle("hidden", !visible);
-    if (visible) panel.removeAttribute("aria-hidden");
-    else panel.setAttribute("aria-hidden", "true");
-    panel.querySelectorAll<HTMLInputElement>("[data-waitlist-mode-line]").forEach((input) => {
-      input.disabled = !visible;
-    });
-  });
-}
-
-function collectLinesFromPanel(panel: HTMLElement): WaitlistProductLineId[] {
+function collectLinesFromGroup(group: HTMLElement): WaitlistProductLineId[] {
   const lines: WaitlistProductLineId[] = [];
-  panel.querySelectorAll<HTMLInputElement>("[data-waitlist-mode-line]:checked").forEach((input) => {
-    const id = input.getAttribute("data-waitlist-mode-line-id");
-    if (id && ALL_LINE_IDS.includes(id as WaitlistProductLineId)) {
-      lines.push(id as WaitlistProductLineId);
-    }
-  });
+  group
+    .querySelectorAll<HTMLInputElement>("[data-waitlist-mode-line-id]:checked")
+    .forEach((input) => {
+      const id = input.getAttribute("data-waitlist-mode-line-id");
+      if (id && ALL_LINE_IDS.includes(id as WaitlistProductLineId)) {
+        lines.push(id as WaitlistProductLineId);
+      }
+    });
+  writeWaitlistModeLines(lines);
   return lines;
 }
 
 export function bindWaitlistModeUi(root: ParentNode = document): void {
-  root.querySelectorAll<HTMLElement>("[data-waitlist-mode-panel]").forEach((panel) => {
-    if (panel.dataset.waitlistModePanelBound === "1") return;
-    panel.dataset.waitlistModePanelBound = "1";
-
-    panel.addEventListener("change", (e) => {
+  ensureWaitlistModeLinesDefault();
+  root.querySelectorAll<HTMLElement>("[data-waitlist-mode-lines]").forEach((group) => {
+    if (group.dataset.waitlistModeBound === "1") return;
+    group.dataset.waitlistModeBound = "1";
+    group.addEventListener("change", (e) => {
       const el = e.target as HTMLElement;
-      if (!el.matches("[data-waitlist-mode-line]")) return;
-      writeWaitlistModeLines(collectLinesFromPanel(panel));
+      if (!el.matches("[data-waitlist-mode-line-id]")) return;
+      collectLinesFromGroup(group);
     });
   });
 }

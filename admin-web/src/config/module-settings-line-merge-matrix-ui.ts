@@ -1,7 +1,9 @@
 /**
- * 行级合并规则：厨房单 / 打包单 / 食客收据 三列矩阵（后厨设置 SSOT 展示）。
+ * 行级合并规则：按规则行勾选适用票种（结构对齐点单显示座位，无产线列）。
  * 存储沿用各 seq 的 module-setting-toggle localStorage。
  */
+
+import { writeModuleSettingToggleOn } from "./module-settings-toggle-ui";
 
 export const LINE_MERGE_MATRIX_HOST_SEQ = 52;
 
@@ -23,6 +25,12 @@ export const LINE_MERGE_MATRIX_ROWS = [
   },
 ] as const;
 
+const LINE_MERGE_TICKET_OPTIONS = [
+  { key: "kitchen", label: "厨房单", seqKey: "kitchenSeq" },
+  { key: "packing", label: "打包单", seqKey: "packingSeq" },
+  { key: "receipt", label: "食客收据", seqKey: "receiptSeq" },
+] as const;
+
 /** @type {number[]} */
 const LINE_MERGE_MATRIX_MEMBER_SEQ_LIST = LINE_MERGE_MATRIX_ROWS.flatMap((r) => [
   r.kitchenSeq,
@@ -34,11 +42,8 @@ const LINE_MERGE_MATRIX_SKIP_SEQS = new Set<number>(
   LINE_MERGE_MATRIX_MEMBER_SEQ_LIST.filter((s) => s !== LINE_MERGE_MATRIX_HOST_SEQ),
 );
 
-const COLUMN_LABELS = [
-  { key: "kitchen", label: "厨房单" },
-  { key: "packing", label: "打包单" },
-  { key: "receipt", label: "食客收据" },
-] as const;
+const MODULE_SETTING_CONTROL_CLASS =
+  "size-4 shrink-0 accent-primary text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50";
 
 function escapeHtml(s: string): string {
   return s
@@ -56,56 +61,73 @@ export function shouldSkipLineMergeMatrixMemberRow(seq: number): boolean {
   return LINE_MERGE_MATRIX_SKIP_SEQS.has(seq);
 }
 
-/** @param {(seq: number) => boolean} readToggle */
-export function renderLineMergeMatrixHtml(readToggle: (seq: number) => boolean): string {
-  const headerCells = COLUMN_LABELS.map(
-    (col) =>
-      `<th scope="col" class="px-3 py-2 text-center text-xs font-medium text-muted-foreground">${escapeHtml(col.label)}</th>`,
-  ).join("");
-
-  const bodyRows = LINE_MERGE_MATRIX_ROWS.map((row) => {
-    const seqs: number[] = [row.kitchenSeq, row.packingSeq, row.receiptSeq];
-    const cells = seqs
-      .map((seq) => {
-        const on = readToggle(seq);
-        const ariaLabel = `${row.label} · seq ${seq}`;
-        const trackClass = on
-          ? "bg-primary border-primary"
-          : "bg-muted border-border";
-        const knobClass = on ? "translate-x-5" : "translate-x-0.5";
-        return `
-        <td class="border-t border-border px-3 py-2.5 text-center align-middle">
-          <button
-            type="button"
-            role="switch"
-            aria-checked="${on ? "true" : "false"}"
-            aria-label="${escapeHtml(ariaLabel)}"
-            data-module-setting-toggle="${seq}"
-            class="module-setting-toggle relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${trackClass}"
-          >
-            <span class="pointer-events-none block size-5 rounded-full bg-background shadow transition-transform duration-200 ${knobClass}" aria-hidden="true"></span>
-          </button>
-        </td>`;
-      })
-      .join("");
-
+function renderTicketCheckboxesForRow(
+  row: (typeof LINE_MERGE_MATRIX_ROWS)[number],
+  readToggle: (seq: number) => boolean,
+): string {
+  const inputs = LINE_MERGE_TICKET_OPTIONS.map((ticket) => {
+    const seq = row[ticket.seqKey];
+    const checked = readToggle(seq);
     return `
-      <tr>
-        <th scope="row" class="border-t border-border px-3 py-2.5 text-left text-sm font-medium text-foreground">${escapeHtml(row.label)}</th>
-        ${cells}
-      </tr>`;
+      <label class="inline-flex cursor-pointer items-center gap-1.5 text-sm text-foreground">
+        <input
+          type="checkbox"
+          class="${MODULE_SETTING_CONTROL_CLASS} rounded-sm"
+          value="${seq}"
+          data-line-merge-ticket-seq="${seq}"
+          ${checked ? "checked" : ""}
+          aria-label="${escapeHtml(row.label)} ${escapeHtml(ticket.label)}"
+        />
+        <span>${escapeHtml(ticket.label)}</span>
+      </label>`;
   }).join("");
 
+  return `<div class="flex flex-wrap items-center gap-x-3 gap-y-2">${inputs}</div>`;
+}
+
+/** @param {(seq: number) => boolean} readToggle */
+export function renderLineMergeMatrixHtml(readToggle: (seq: number) => boolean): string {
+  const rows = LINE_MERGE_MATRIX_ROWS.map(
+    (row) => `
+    <tr class="border-t border-border">
+      <td class="px-3 py-2.5 text-sm font-medium text-foreground whitespace-nowrap align-top">${escapeHtml(row.label)}</td>
+      <td class="px-3 py-2.5">
+        ${renderTicketCheckboxesForRow(row, readToggle)}
+      </td>
+    </tr>`,
+  ).join("");
+
   return `
-    <div class="mt-3 overflow-x-auto rounded-md border border-border" data-line-merge-matrix>
-      <table class="w-full min-w-[20rem] border-collapse text-sm">
-        <thead>
-          <tr class="bg-muted/40">
-            <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-muted-foreground">规则</th>
-            ${headerCells}
+    <div data-line-merge-matrix class="overflow-x-auto rounded-md border border-border">
+      <table class="w-full min-w-[20rem] border-collapse text-left text-sm">
+        <thead class="bg-muted/40 text-xs text-muted-foreground">
+          <tr>
+            <th class="px-3 py-2 font-medium w-[7.5rem]">规则</th>
+            <th class="px-3 py-2 font-medium">适用票种（多选）</th>
           </tr>
         </thead>
-        <tbody>${bodyRows}</tbody>
+        <tbody>${rows}</tbody>
       </table>
     </div>`;
+}
+
+export function bindLineMergeMatrixUi(root: ParentNode = document): void {
+  root.querySelectorAll<HTMLElement>("[data-line-merge-matrix]").forEach((editor) => {
+    if (editor.dataset.lineMergeMatrixBound === "1") return;
+    editor.dataset.lineMergeMatrixBound = "1";
+    editor.addEventListener("change", (e) => {
+      const input = (e.target as HTMLElement).closest<HTMLInputElement>(
+        "[data-line-merge-ticket-seq]",
+      );
+      if (!input) return;
+      const seq = Number(input.getAttribute("data-line-merge-ticket-seq"));
+      if (!seq) return;
+      writeModuleSettingToggleOn(seq, input.checked);
+      window.dispatchEvent(
+        new CustomEvent("menusifu:module-setting-changed", {
+          detail: { seq, on: input.checked },
+        }),
+      );
+    });
+  });
 }

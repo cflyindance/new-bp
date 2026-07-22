@@ -65,7 +65,7 @@ export const ORDER_SETTINGS_ASSIGN_MAP = {
   "order-basics": [126, 127, 128, 129, 130, 131],
   "order-edit-split-merge": [115, 116, 117, 119, 124, 140],
   "order-void-refund": [156, 157, 158, 159],
-  "order-discount": [446, 162, 163, 164],
+  "order-discount": [446, 162, 163],
   "order-surcharge-fees": [447, 149, 161],
   "order-settlement-rounding": [147],
 };

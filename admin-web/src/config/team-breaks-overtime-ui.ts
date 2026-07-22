@@ -10,10 +10,14 @@ import {
   registerPageSavePreCommit,
 } from "./page-save-registry";
 import { MODULE_SETTINGS_SUBNAV_SECTION_HEADING_CLASS } from "./module-settings-subnav";
+import { readModuleSettingNumber } from "./module-settings-form-ui";
 
 export const TEAM_BREAKS_OVERTIME_PATH = "/team/breaks-overtime";
 
 const STORAGE_KEY = "bplant-team-breaks-overtime-v1";
+/** 与 main.ts TEAM_TIME_INPUT_ROWS[329] 一致：员工报表 · 带薪休息时长 */
+const PAID_BREAK_MINUTES_FIELD_ID = "329-paid-break-minutes";
+const PAID_BREAK_MINUTES_DEFAULT = 10;
 
 type BreakCompensation = "paid" | "unpaid";
 
@@ -173,6 +177,25 @@ function isSystemCustomBreak(id: string): boolean {
   return SYSTEM_CUSTOM_BREAK_IDS.has(id);
 }
 
+/** 读取「员工报表:带薪休息时长(分钟)」；优先取页内输入框当前值 */
+function readPaidBreakMinutes(root?: HTMLElement | null): number {
+  const live = root?.querySelector<HTMLInputElement>(
+    `[data-module-setting-number="${PAID_BREAK_MINUTES_FIELD_ID}"]`,
+  );
+  if (live) {
+    const n = Math.round(Number(live.value));
+    return Number.isFinite(n) ? Math.max(0, n) : 0;
+  }
+  return Math.max(0, Math.round(readModuleSettingNumber(PAID_BREAK_MINUTES_FIELD_ID, PAID_BREAK_MINUTES_DEFAULT)));
+}
+
+/** 已设置带薪休息时长（>0）后，才允许开启「超时转为无薪」 */
+function isPaidBreakDurationConfigured(root?: HTMLElement | null): boolean {
+  const pageRoot =
+    root ?? document.querySelector<HTMLElement>("[data-team-breaks-overtime-page]");
+  return readPaidBreakMinutes(pageRoot) > 0;
+}
+
 function ensureSystemCustomBreaks(breaks: CustomBreak[]): CustomBreak[] {
   const byId = new Map(breaks.map((b) => [b.id, b]));
   const result: CustomBreak[] = [];
@@ -199,6 +222,8 @@ let draftConfig: BreaksOvertimeConfig | null = null;
 let activeBreaksNavKey = "custom-breaks";
 let overtimeRuleEditor: OvertimeRuleEditor | null = null;
 let customBreakEditor: CustomBreakEditor | null = null;
+/** 删除休息确认弹窗中的休息 id；null 表示关闭 */
+let customBreakDeleteConfirmId: string | null = null;
 
 function markBreaksOvertimeDirty(): void {
   window.dispatchEvent(
@@ -375,9 +400,10 @@ function normalizeConfig(raw: Partial<BreaksOvertimeConfig> | null): BreaksOvert
     ),
     blockEarlyEnd: raw?.blockEarlyEnd !== undefined ? !!raw.blockEarlyEnd : DEFAULT_CONFIG.blockEarlyEnd,
     convertExcessPaidToUnpaid:
-      raw?.convertExcessPaidToUnpaid !== undefined
+      isPaidBreakDurationConfigured() &&
+      (raw?.convertExcessPaidToUnpaid !== undefined
         ? !!raw.convertExcessPaidToUnpaid
-        : DEFAULT_CONFIG.convertExcessPaidToUnpaid,
+        : DEFAULT_CONFIG.convertExcessPaidToUnpaid),
     workWeekStartDay:
       typeof raw?.workWeekStartDay === "number" && raw.workWeekStartDay >= 0 && raw.workWeekStartDay <= 6
         ? raw.workWeekStartDay
@@ -418,6 +444,7 @@ function resetDraft(): void {
   draftConfig = null;
   overtimeRuleEditor = null;
   customBreakEditor = null;
+  customBreakDeleteConfirmId = null;
 }
 
 const FORM_INPUT =
@@ -482,13 +509,35 @@ function renderCustomBreakDialog(config: BreaksOvertimeConfig): string {
     </div>`;
 }
 
+function renderCustomBreakDeleteConfirmDialog(config: BreaksOvertimeConfig): string {
+  if (!customBreakDeleteConfirmId) return "";
+  const target = config.customBreaks.find((b) => b.id === customBreakDeleteConfirmId);
+  const name = target?.name || "未命名休息";
+  return `
+    <div class="fixed inset-0 z-[60] flex items-center justify-center p-4" data-custom-break-delete-dialog role="dialog" aria-modal="true" aria-labelledby="custom-break-delete-title">
+      <button type="button" class="absolute inset-0 bg-black/40" data-custom-break-delete-backdrop aria-label="关闭"></button>
+      <div class="relative z-10 w-full max-w-sm overflow-hidden rounded-xl border border-border bg-card shadow-lg">
+        <div class="border-b border-border px-5 py-4">
+          <h2 id="custom-break-delete-title" class="text-base font-semibold text-foreground">确认删除</h2>
+        </div>
+        <div class="px-5 py-4 text-sm text-muted-foreground">
+          确定删除休息「<span class="font-medium text-foreground">${escapeHtml(name)}</span>」？删除后不可恢复。
+        </div>
+        <div class="flex items-center justify-end gap-2 border-t border-border px-5 py-3">
+          <button type="button" data-custom-break-delete-cancel class="rounded-md border border-border px-4 py-2 text-sm hover:bg-muted">取消</button>
+          <button type="button" data-custom-break-delete-ok class="rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground hover:bg-destructive/90">删除</button>
+        </div>
+      </div>
+    </div>`;
+}
+
 function renderCustomBreakRow(b: CustomBreak): string {
   const system = isSystemCustomBreak(b.id);
   const name = system ? (SYSTEM_CUSTOM_BREAK_NAME_BY_ID[b.id] ?? b.name) : b.name;
   const compensationLabel = b.compensation === "paid" ? "带薪" : "无薪";
   const mandatoryLabel = b.mandatory ? "是" : "否";
   const deleteBtn = system
-    ? `<span class="text-xs text-muted-foreground">系统默认</span>`
+    ? ""
     : `<button type="button" data-custom-break-remove="${escapeHtml(b.id)}" class="text-xs text-destructive hover:underline">删除</button>`;
   return `
     <tr class="border-b border-border/60" data-custom-break-row="${escapeHtml(b.id)}">
@@ -500,7 +549,7 @@ function renderCustomBreakRow(b: CustomBreak): string {
       <td class="px-2 py-2 text-muted-foreground">${compensationLabel}</td>
       <td class="px-2 py-2 text-center text-muted-foreground">${mandatoryLabel}</td>
       <td class="px-2 py-2 text-right">
-        <button type="button" data-custom-break-edit="${escapeHtml(b.id)}" class="mr-2 text-xs text-primary hover:underline">编辑</button>
+        <button type="button" data-custom-break-edit="${escapeHtml(b.id)}" class="${system ? "" : "mr-2 "}text-xs text-primary hover:underline">编辑</button>
         ${deleteBtn}
       </td>
     </tr>`;
@@ -623,6 +672,9 @@ function renderOvertimeRuleDialog(config: BreaksOvertimeConfig): string {
 }
 
 function renderSectionShell(sectionKey: string, title: string, desc: string, bodyHtml: string): string {
+  const descHtml = desc
+    ? `<p class="${SECTION_DESC}">${escapeHtml(desc)}</p>`
+    : "";
   return `
     <section
       id="breaks-section-${escapeHtml(sectionKey)}"
@@ -631,7 +683,7 @@ function renderSectionShell(sectionKey: string, title: string, desc: string, bod
       aria-labelledby="breaks-section-heading-${escapeHtml(sectionKey)}"
     >
       <h2 id="breaks-section-heading-${escapeHtml(sectionKey)}" class="${SECTION_TITLE}">${escapeHtml(title)}</h2>
-      <p class="${SECTION_DESC}">${escapeHtml(desc)}</p>
+      ${descHtml}
       ${bodyHtml}
     </section>`;
 }
@@ -656,32 +708,28 @@ function renderCustomBreaksSection(config: BreaksOvertimeConfig): string {
           <tbody data-custom-break-tbody>${customRows}</tbody>
         </table>
       </div>`;
-  return renderSectionShell(
-    "custom-breaks",
-    "自定义休息",
-    "「用餐休息」「短休」为系统默认（名称不可改）；可通过弹窗修改时长、补偿与是否强制。新增休息同样使用弹窗。",
-    body,
-  );
+  return renderSectionShell("custom-breaks", "自定义休息", "", body);
 }
 
-function renderBreakRulesSection(config: BreaksOvertimeConfig): string {
+function renderBreakRulesSection(config: BreaksOvertimeConfig, paidBreakRowsHtml = ""): string {
+  const canConvertExcess = isPaidBreakDurationConfigured();
+  const convertChecked = canConvertExcess && config.convertExcessPaidToUnpaid;
+  const paidBreakBlock = paidBreakRowsHtml.trim()
+    ? `<ul class="mt-3 m-0 list-none divide-y divide-border overflow-hidden rounded-lg border border-border/70 p-0" role="list">${paidBreakRowsHtml}</ul>`
+    : "";
   const body = `
+      ${paidBreakBlock}
       <div class="mt-3 space-y-2">
+        <label class="flex cursor-pointer items-start gap-2 text-sm${canConvertExcess ? "" : " hidden"}" data-break-convert-excess-label>
+          <input type="checkbox" data-break-convert-excess class="mt-0.5 size-4 accent-primary"${convertChecked ? " checked" : ""} />
+          <span>带薪休息超时部分转为无薪</span>
+        </label>
         <label class="flex cursor-pointer items-start gap-2 text-sm">
           <input type="checkbox" data-break-block-early class="mt-0.5 size-4 accent-primary"${config.blockEarlyEnd ? " checked" : ""} />
           <span>禁止提前结束休息</span>
         </label>
-        <label class="flex cursor-pointer items-start gap-2 text-sm">
-          <input type="checkbox" data-break-convert-excess class="mt-0.5 size-4 accent-primary"${config.convertExcessPaidToUnpaid ? " checked" : ""} />
-          <span>带薪休息超时部分转为无薪</span>
-        </label>
       </div>`;
-  return renderSectionShell(
-    "break-rules",
-    "休息规则",
-    "控制员工提前结束休息及带薪休息超额时的处理方式。",
-    body,
-  );
+  return renderSectionShell("break-rules", "休息规则", "", body);
 }
 
 function renderWorkWeekSection(config: BreaksOvertimeConfig): string {
@@ -694,12 +742,7 @@ function renderWorkWeekSection(config: BreaksOvertimeConfig): string {
         <label class="mb-1 block text-xs text-muted-foreground">工作周开始于</label>
         <select data-overtime-week-start class="${FORM_SELECT}">${weekOpts}</select>
       </div>`;
-  return renderSectionShell(
-    "work-week",
-    "工作周设置",
-    "工作周起始日影响每周加班的计算口径，请与薪资周期保持一致。",
-    body,
-  );
+  return renderSectionShell("work-week", "工作周设置", "", body);
 }
 
 function renderOvertimeRulesSection(config: BreaksOvertimeConfig): string {
@@ -745,7 +788,7 @@ function renderGlobalRulesSection(globalRulesRowsHtml: string): string {
   return renderSectionShell(
     "global-rules",
     "全局休息规则",
-    "强制休息时长与带薪休息时长等全店统一参数；与上方休息预设配合使用。",
+    "强制休息时长等全店统一参数；与上方休息规则配合使用。",
     body,
   );
 }
@@ -789,11 +832,15 @@ function renderBreaksOvertimeSubnav(activeKey: string, hasGlobalRules: boolean):
     </nav>`;
 }
 
-function renderBreaksOvertimeMainContent(config: BreaksOvertimeConfig, globalRulesRowsHtml: string): string {
+function renderBreaksOvertimeMainContent(
+  config: BreaksOvertimeConfig,
+  globalRulesRowsHtml: string,
+  paidBreakRowsHtml = "",
+): string {
   return `
     <div class="breaks-overtime-scroll-host module-settings-scroll-host min-w-0 min-h-0 flex-1 space-y-4 overflow-y-auto">
       ${renderCustomBreaksSection(config)}
-      ${renderBreakRulesSection(config)}
+      ${renderBreakRulesSection(config, paidBreakRowsHtml)}
       ${renderWorkWeekSection(config)}
       ${renderOvertimeRulesSection(config)}
       ${renderGlobalRulesSection(globalRulesRowsHtml)}
@@ -812,7 +859,11 @@ export function getTeamBreaksOvertimeActiveSectionKey(path: string): string | un
   return allKeys.includes(suffix) ? suffix : undefined;
 }
 
-export function renderTeamBreaksOvertimePage(globalRulesRowsHtml = "", path?: string): string {
+export function renderTeamBreaksOvertimePage(
+  globalRulesRowsHtml = "",
+  path?: string,
+  paidBreakRowsHtml = "",
+): string {
   const config = getDraft();
   const sectionFromPath = path ? getTeamBreaksOvertimeActiveSectionKey(path) : undefined;
   if (sectionFromPath) activeBreaksNavKey = sectionFromPath;
@@ -828,9 +879,10 @@ export function renderTeamBreaksOvertimePage(globalRulesRowsHtml = "", path?: st
     <div class="team-breaks-overtime-page flex min-h-0 flex-1 flex-col overflow-hidden" data-team-breaks-overtime-page data-breaks-view="full">
       <div class="flex min-h-0 flex-1 flex-col gap-6 overflow-hidden sm:flex-row sm:items-stretch">
         ${renderBreaksOvertimeSubnav(activeBreaksNavKey, hasGlobalRules)}
-        ${renderBreaksOvertimeMainContent(config, globalRulesRowsHtml)}
+        ${renderBreaksOvertimeMainContent(config, globalRulesRowsHtml, paidBreakRowsHtml)}
       </div>
       ${renderCustomBreakDialog(config)}
+      ${renderCustomBreakDeleteConfirmDialog(config)}
       ${renderOvertimeRuleDialog(config)}
     </div>`;
 }
@@ -853,9 +905,10 @@ function collectConfigFromDom(root: HTMLElement): BreaksOvertimeConfig {
         : current.blockEarlyEnd,
     convertExcessPaidToUnpaid:
       view === "full"
-        ? (root.querySelector<HTMLInputElement>("[data-break-convert-excess]")?.checked ??
-          current.convertExcessPaidToUnpaid)
-        : current.convertExcessPaidToUnpaid,
+        ? isPaidBreakDurationConfigured(root) &&
+          (root.querySelector<HTMLInputElement>("[data-break-convert-excess]")?.checked ??
+            current.convertExcessPaidToUnpaid)
+        : isPaidBreakDurationConfigured() && current.convertExcessPaidToUnpaid,
     workWeekStartDay: Number(root.querySelector<HTMLSelectElement>("[data-overtime-week-start]")?.value) || 1,
     /** 加班规则仅通过弹窗维护，列表只读展示 */
     overtimeRules: current.overtimeRules,
@@ -943,6 +996,7 @@ export function bindTeamBreaksOvertimeUi(remount: () => void): void {
   root.dataset.breaksOvertimeBound = "1";
 
   bindBreaksOvertimeSubnav(root);
+  bindPaidBreakMinutesConvertExcessLink(root);
 
   const path = location.hash.slice(1) || "/dashboard/overview";
   const sectionKey = getTeamBreaksOvertimeActiveSectionKey(path);
@@ -970,17 +1024,14 @@ export function bindTeamBreaksOvertimeUi(remount: () => void): void {
     btn.addEventListener("click", () => {
       const id = btn.getAttribute("data-custom-break-remove");
       if (!id || isSystemCustomBreak(id)) return;
-      const config = collectConfigFromDom(root);
-      config.customBreaks = ensureSystemCustomBreaks(
-        config.customBreaks.filter((b) => b.id !== id),
-      );
-      draftConfig = config;
-      markBreaksOvertimeDirty();
+      draftConfig = collectConfigFromDom(root);
+      customBreakDeleteConfirmId = id;
       remount();
     });
   });
 
   bindCustomBreakDialog(root, remount);
+  bindCustomBreakDeleteDialog(root, remount);
   bindOvertimeRulesUi(root, remount);
 
   root.addEventListener("input", () => {
@@ -991,9 +1042,67 @@ export function bindTeamBreaksOvertimeUi(remount: () => void): void {
   });
 }
 
+function syncConvertExcessAvailability(root: HTMLElement): void {
+  const enabled = isPaidBreakDurationConfigured(root);
+  const checkbox = root.querySelector<HTMLInputElement>("[data-break-convert-excess]");
+  const label = root.querySelector<HTMLElement>("[data-break-convert-excess-label]");
+  if (!checkbox || !label) return;
+
+  label.classList.toggle("hidden", !enabled);
+  if (!enabled) {
+    checkbox.checked = false;
+    if (draftConfig) draftConfig = { ...draftConfig, convertExcessPaidToUnpaid: false };
+  }
+}
+
+function bindPaidBreakMinutesConvertExcessLink(root: HTMLElement): void {
+  syncConvertExcessAvailability(root);
+  const paidInput = root.querySelector<HTMLInputElement>(
+    `[data-module-setting-number="${PAID_BREAK_MINUTES_FIELD_ID}"]`,
+  );
+  if (!paidInput || paidInput.dataset.convertExcessLinkBound === "1") return;
+  paidInput.dataset.convertExcessLinkBound = "1";
+
+  const sync = () => {
+    syncConvertExcessAvailability(root);
+    markBreaksOvertimeDirty();
+  };
+  paidInput.addEventListener("input", sync);
+  paidInput.addEventListener("change", sync);
+}
+
 function closeCustomBreakDialog(remount: () => void): void {
   customBreakEditor = null;
   remount();
+}
+
+function closeCustomBreakDeleteDialog(remount: () => void): void {
+  customBreakDeleteConfirmId = null;
+  remount();
+}
+
+function bindCustomBreakDeleteDialog(root: HTMLElement, remount: () => void): void {
+  const dialog = root.querySelector<HTMLElement>("[data-custom-break-delete-dialog]");
+  if (!dialog || !customBreakDeleteConfirmId) return;
+
+  const close = () => closeCustomBreakDeleteDialog(remount);
+  dialog.querySelector("[data-custom-break-delete-backdrop]")?.addEventListener("click", close);
+  dialog.querySelector("[data-custom-break-delete-cancel]")?.addEventListener("click", close);
+  dialog.querySelector("[data-custom-break-delete-ok]")?.addEventListener("click", () => {
+    const id = customBreakDeleteConfirmId;
+    if (!id || isSystemCustomBreak(id)) {
+      close();
+      return;
+    }
+    const config = collectConfigFromDom(root);
+    config.customBreaks = ensureSystemCustomBreaks(
+      config.customBreaks.filter((b) => b.id !== id),
+    );
+    draftConfig = config;
+    customBreakDeleteConfirmId = null;
+    markBreaksOvertimeDirty();
+    remount();
+  });
 }
 
 function bindCustomBreakDialog(root: HTMLElement, remount: () => void): void {

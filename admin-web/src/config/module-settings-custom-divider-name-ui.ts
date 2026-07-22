@@ -1,20 +1,16 @@
 /**
- * 前厅 · POS 点单页工具栏：seq 196 自定义分割线名称（按产线启用 + 名称，对齐 seq 111）。
- * 适用产线：POS / POS GO / PayPad / eMenu / SDI。
+ * 前厅 · POS 点单页工具栏：seq 196 自定义分割线名称。
+ * 结构对齐 seq 215（来取/外送历史订单界面:将「复制」隐藏）：主开关 + 产线多选，仅保留产线。
+ * 适用产线：POS / POS GO / PayPad。
  */
 
-import { FOH_LINE_CONFIG_ROW_ATTR } from "./foh-settings-by-line-filter";
-import {
-  moduleSettingStorageKey,
-  readModuleSettingJson,
-  readModuleSettingText,
-  writeModuleSettingJson,
-  writeModuleSettingText,
-} from "./module-settings-form-ui";
+import { readModuleSettingJson, writeModuleSettingJson, writeModuleSettingText } from "./module-settings-form-ui";
+import { moduleSettingToggleStorageKey } from "./module-settings-toggle-ui";
 
 export const CUSTOM_DIVIDER_NAME_SEQ = 196;
 
 export const CUSTOM_DIVIDER_NAME_FIELD_ID = "196-custom-divider-name";
+/** @deprecated 兼容旧按产线名称表；新 UI 仅写 lines */
 export const CUSTOM_DIVIDER_BY_LINE_FIELD_ID = "196-custom-divider-by-line";
 const LINES_STORAGE_ID = "196-custom-divider-name-lines";
 
@@ -22,8 +18,6 @@ export const CUSTOM_DIVIDER_PRODUCT_LINES = [
   { id: "pos", label: "POS" },
   { id: "pos-go", label: "POS GO" },
   { id: "paypad", label: "PayPad" },
-  { id: "emenu", label: "eMenu" },
-  { id: "sdi", label: "SDI" },
 ] as const;
 
 export type CustomDividerProductLineId = (typeof CUSTOM_DIVIDER_PRODUCT_LINES)[number]["id"];
@@ -38,11 +32,8 @@ const ALL_LINE_IDS: CustomDividerProductLineId[] = CUSTOM_DIVIDER_PRODUCT_LINES.
 const NAME_DEFAULT = "";
 const NAME_MAX_LENGTH = 40;
 
-const CHECKBOX_CLASS =
-  "size-4 shrink-0 rounded border-input text-primary accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
-
-const TEXT_INPUT_CLASS =
-  "h-8 w-full min-w-[10rem] max-w-xs rounded-md border border-input bg-background px-2 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
+const MODULE_SETTING_CONTROL_CLASS =
+  "size-4 shrink-0 accent-primary text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50";
 
 let migrated = false;
 
@@ -58,130 +49,125 @@ function normalizeName(raw: unknown): string {
   return String(raw ?? "").trim().slice(0, NAME_MAX_LENGTH);
 }
 
-function defaultLineConfig(enabled: boolean, name = NAME_DEFAULT): CustomDividerLineConfig {
-  return { enabled, name: normalizeName(name) };
+function normalizeLineIds(raw: unknown): CustomDividerProductLineId[] {
+  if (!Array.isArray(raw)) return [];
+  const valid = new Set<string>(ALL_LINE_IDS);
+  return raw.filter(
+    (id): id is CustomDividerProductLineId => typeof id === "string" && valid.has(id),
+  );
 }
 
-function defaultByLineConfig(): Record<CustomDividerProductLineId, CustomDividerLineConfig> {
-  return Object.fromEntries(
-    CUSTOM_DIVIDER_PRODUCT_LINES.map((line) => [line.id, defaultLineConfig(true)]),
-  ) as Record<CustomDividerProductLineId, CustomDividerLineConfig>;
+function readLegacyToggleOn(): boolean {
+  try {
+    return localStorage.getItem(moduleSettingToggleStorageKey(CUSTOM_DIVIDER_NAME_SEQ)) === "1";
+  } catch {
+    return false;
+  }
 }
 
-function normalizeByLineConfig(
-  raw: Partial<Record<string, Partial<CustomDividerLineConfig>>>,
+function writeMasterToggleOn(on: boolean): void {
+  try {
+    localStorage.setItem(moduleSettingToggleStorageKey(CUSTOM_DIVIDER_NAME_SEQ), on ? "1" : "0");
+  } catch {
+    /* ignore */
+  }
+}
+
+function defaultByLineConfig(
+  enabledLines: CustomDividerProductLineId[] = [...ALL_LINE_IDS],
+  name = NAME_DEFAULT,
 ): Record<CustomDividerProductLineId, CustomDividerLineConfig> {
-  const base = Object.fromEntries(
-    CUSTOM_DIVIDER_PRODUCT_LINES.map((line) => [line.id, defaultLineConfig(false)]),
+  const selected = new Set(enabledLines);
+  return Object.fromEntries(
+    CUSTOM_DIVIDER_PRODUCT_LINES.map((line) => [
+      line.id,
+      { enabled: selected.has(line.id), name: normalizeName(name) },
+    ]),
   ) as Record<CustomDividerProductLineId, CustomDividerLineConfig>;
-  for (const line of CUSTOM_DIVIDER_PRODUCT_LINES) {
-    const item = raw[line.id];
-    if (!item || typeof item !== "object") continue;
-    base[line.id] = {
-      enabled: item.enabled === true,
-      name: normalizeName(item.name ?? base[line.id].name),
-    };
-  }
-  return base;
 }
 
-function syncLegacyFields(config: Record<CustomDividerProductLineId, CustomDividerLineConfig>): void {
-  const enabledLines = ALL_LINE_IDS.filter((id) => config[id].enabled);
-  writeModuleSettingJson(LINES_STORAGE_ID, enabledLines);
-  const firstEnabled = CUSTOM_DIVIDER_PRODUCT_LINES.find((line) => config[line.id].enabled);
-  if (firstEnabled) {
-    writeModuleSettingText(CUSTOM_DIVIDER_NAME_FIELD_ID, config[firstEnabled.id].name);
-  }
+function syncLegacyByLine(lines: CustomDividerProductLineId[], name?: string): void {
+  const sharedName = normalizeName(name ?? NAME_DEFAULT);
+  writeModuleSettingJson(CUSTOM_DIVIDER_BY_LINE_FIELD_ID, defaultByLineConfig(lines, sharedName));
+  if (sharedName) writeModuleSettingText(CUSTOM_DIVIDER_NAME_FIELD_ID, sharedName);
 }
 
-function ensureMigrated(): void {
+export function ensureCustomDividerNameToggleMigrated(): void {
   if (migrated) return;
   migrated = true;
 
-  const raw = readModuleSettingJson<Partial<Record<string, Partial<CustomDividerLineConfig>>>>(
+  const storedLines = normalizeLineIds(readModuleSettingJson<unknown>(LINES_STORAGE_ID, null));
+  if (storedLines.length > 0) {
+    writeMasterToggleOn(true);
+    syncLegacyByLine(storedLines);
+    return;
+  }
+
+  const rawByLine = readModuleSettingJson<Partial<Record<string, Partial<CustomDividerLineConfig>>>>(
     CUSTOM_DIVIDER_BY_LINE_FIELD_ID,
     {},
   );
-  if (raw && typeof raw === "object" && Object.keys(raw).length > 0) {
-    writeCustomDividerByLine(normalizeByLineConfig(raw));
+  if (rawByLine && typeof rawByLine === "object" && Object.keys(rawByLine).length > 0) {
+    const lines = ALL_LINE_IDS.filter((id) => rawByLine[id]?.enabled === true);
+    const name =
+      ALL_LINE_IDS.map((id) => normalizeName(rawByLine[id]?.name)).find((n) => n.length > 0) ??
+      NAME_DEFAULT;
+    writeCustomDividerLines(lines.length > 0 ? lines : [...ALL_LINE_IDS]);
+    if (name) writeModuleSettingText(CUSTOM_DIVIDER_NAME_FIELD_ID, name);
+    writeMasterToggleOn(lines.length > 0);
     return;
   }
 
-  const hasLegacyName = (() => {
-    try {
-      return localStorage.getItem(moduleSettingStorageKey(CUSTOM_DIVIDER_NAME_FIELD_ID)) !== null;
-    } catch {
-      return false;
-    }
-  })();
-  const hasLegacyLines = (() => {
-    try {
-      return localStorage.getItem(moduleSettingStorageKey(LINES_STORAGE_ID)) !== null;
-    } catch {
-      return false;
-    }
-  })();
-
-  if (!hasLegacyName && !hasLegacyLines) {
-    writeCustomDividerByLine(defaultByLineConfig());
-    return;
+  if (readLegacyToggleOn()) {
+    writeCustomDividerLines([...ALL_LINE_IDS]);
+    writeMasterToggleOn(true);
   }
-
-  const nameLegacy = normalizeName(readModuleSettingText(CUSTOM_DIVIDER_NAME_FIELD_ID, NAME_DEFAULT));
-  const linesRaw = readModuleSettingJson<unknown>(LINES_STORAGE_ID, null);
-  const normalizedLines = Array.isArray(linesRaw)
-    ? linesRaw.filter(
-        (id): id is CustomDividerProductLineId =>
-          typeof id === "string" && ALL_LINE_IDS.includes(id as CustomDividerProductLineId),
-      )
-    : [];
-  const linesLegacy =
-    normalizedLines.length > 0
-      ? normalizedLines
-      : ([...ALL_LINE_IDS] as CustomDividerProductLineId[]);
-  const selected = new Set(linesLegacy);
-
-  const config = defaultByLineConfig();
-  for (const line of CUSTOM_DIVIDER_PRODUCT_LINES) {
-    config[line.id] = selected.has(line.id)
-      ? { enabled: true, name: nameLegacy }
-      : { enabled: false, name: NAME_DEFAULT };
-  }
-  writeCustomDividerByLine(config);
 }
 
-export function readCustomDividerByLine(): Record<CustomDividerProductLineId, CustomDividerLineConfig> {
-  ensureMigrated();
-  const raw = readModuleSettingJson<Partial<Record<string, Partial<CustomDividerLineConfig>>>>(
-    CUSTOM_DIVIDER_BY_LINE_FIELD_ID,
-    {},
-  );
-  if (raw && typeof raw === "object" && Object.keys(raw).length > 0) {
-    return normalizeByLineConfig(raw);
+export function readCustomDividerLines(): CustomDividerProductLineId[] {
+  ensureCustomDividerNameToggleMigrated();
+  const stored = readModuleSettingJson<unknown>(LINES_STORAGE_ID, null);
+  const normalized = normalizeLineIds(stored);
+  if (normalized.length > 0) return normalized;
+
+  if (readLegacyToggleOn()) {
+    const all = [...ALL_LINE_IDS];
+    writeCustomDividerLines(all);
+    return all;
   }
-  return defaultByLineConfig();
+  return [];
+}
+
+export function writeCustomDividerLines(lines: CustomDividerProductLineId[]): void {
+  const unique = ALL_LINE_IDS.filter((id) => lines.includes(id));
+  writeModuleSettingJson(LINES_STORAGE_ID, unique);
+  syncLegacyByLine(unique);
+}
+
+/** 供按产线视图同步 enabled */
+export function readCustomDividerByLine(): Record<CustomDividerProductLineId, CustomDividerLineConfig> {
+  ensureCustomDividerNameToggleMigrated();
+  const lines = readCustomDividerLines();
+  return defaultByLineConfig(lines);
 }
 
 export function writeCustomDividerByLine(
   config: Record<CustomDividerProductLineId, CustomDividerLineConfig>,
 ): void {
-  const normalized = normalizeByLineConfig(config);
-  writeModuleSettingJson(CUSTOM_DIVIDER_BY_LINE_FIELD_ID, normalized);
-  syncLegacyFields(normalized);
+  const lines = ALL_LINE_IDS.filter((id) => config[id]?.enabled === true);
+  const name =
+    ALL_LINE_IDS.map((id) => normalizeName(config[id]?.name)).find((n) => n.length > 0) ??
+    NAME_DEFAULT;
+  writeCustomDividerLines(lines);
+  if (name) writeModuleSettingText(CUSTOM_DIVIDER_NAME_FIELD_ID, name);
 }
 
 export function syncCustomDividerEnabledFromLines(lines: readonly string[]): void {
-  ensureMigrated();
-  const config = readCustomDividerByLine();
-  const selected = new Set(
-    lines.filter((id): id is CustomDividerProductLineId =>
-      ALL_LINE_IDS.includes(id as CustomDividerProductLineId),
-    ),
+  ensureCustomDividerNameToggleMigrated();
+  const selected = lines.filter((id): id is CustomDividerProductLineId =>
+    ALL_LINE_IDS.includes(id as CustomDividerProductLineId),
   );
-  for (const id of ALL_LINE_IDS) {
-    config[id] = { ...config[id], enabled: selected.has(id) };
-  }
-  writeCustomDividerByLine(config);
+  writeCustomDividerLines(selected);
 }
 
 export function isCustomDividerNameSeq(seq: number): boolean {
@@ -189,125 +175,95 @@ export function isCustomDividerNameSeq(seq: number): boolean {
 }
 
 export function writeCustomDividerName(name: string): void {
-  const value = normalizeName(name);
-  const config = readCustomDividerByLine();
-  let changed = false;
-  for (const id of ALL_LINE_IDS) {
-    if (config[id].enabled) {
-      config[id] = { ...config[id], name: value };
-      changed = true;
-    }
-  }
-  if (changed) {
-    writeCustomDividerByLine(config);
-    return;
-  }
-  writeModuleSettingText(CUSTOM_DIVIDER_NAME_FIELD_ID, value);
+  writeModuleSettingText(CUSTOM_DIVIDER_NAME_FIELD_ID, normalizeName(name));
 }
 
-function syncNameInputDisabled(editor: HTMLElement): void {
-  editor.querySelectorAll<HTMLInputElement>("[data-custom-divider-line-enabled]").forEach((checkbox) => {
-    const lineId = checkbox.getAttribute("data-custom-divider-line-enabled");
-    if (!lineId) return;
-    const input = editor.querySelector<HTMLInputElement>(
-      `[data-custom-divider-line-name="${lineId}"]`,
-    );
-    if (!input) return;
-    input.disabled = !checkbox.checked;
-  });
-}
-
-function collectFromEditor(editor: HTMLElement): void {
-  const config = readCustomDividerByLine();
-  editor.querySelectorAll<HTMLInputElement>("[data-custom-divider-line-enabled]").forEach((checkbox) => {
-    const lineId = checkbox.getAttribute("data-custom-divider-line-enabled");
-    if (!lineId || !ALL_LINE_IDS.includes(lineId as CustomDividerProductLineId)) return;
-    config[lineId as CustomDividerProductLineId].enabled = checkbox.checked;
-  });
-  editor.querySelectorAll<HTMLInputElement>("[data-custom-divider-line-name]").forEach((input) => {
-    const lineId = input.getAttribute("data-custom-divider-line-name");
-    if (!lineId || !ALL_LINE_IDS.includes(lineId as CustomDividerProductLineId)) return;
-    config[lineId as CustomDividerProductLineId].name = normalizeName(input.value);
-  });
-  writeCustomDividerByLine(config);
-  syncNameInputDisabled(editor);
-}
-
-function renderByLineEditorHtml(): string {
-  const config = readCustomDividerByLine();
-  const rows = CUSTOM_DIVIDER_PRODUCT_LINES.map((line) => {
-    const item = config[line.id];
+function renderLinesMultiselectHtml(enabled: boolean): string {
+  const selected = new Set(readCustomDividerLines());
+  const cells = CUSTOM_DIVIDER_PRODUCT_LINES.map((line, index) => {
+    const checked = selected.has(line.id);
+    const divider = index > 0 ? "border-l border-border" : "";
     return `
-    <tr class="border-t border-border" ${FOH_LINE_CONFIG_ROW_ATTR}="${escapeHtml(line.id)}">
-      <td class="px-3 py-2.5 text-sm font-medium text-foreground align-middle whitespace-nowrap">${escapeHtml(line.label)}</td>
-      <td class="px-3 py-2.5 align-middle">
-        <label class="inline-flex cursor-pointer items-center gap-2">
-          <input
-            type="checkbox"
-            class="${CHECKBOX_CLASS}"
-            ${item.enabled ? "checked" : ""}
-            data-custom-divider-line-enabled="${escapeHtml(line.id)}"
-            aria-label="${escapeHtml(line.label)} 启用自定义分割线名称"
-          />
-        </label>
-      </td>
-      <td class="px-3 py-2.5">
+      <label
+        class="flex flex-1 flex-col items-center justify-center gap-2 px-2 py-3 text-sm text-foreground sm:px-4 ${enabled ? "cursor-pointer" : "cursor-not-allowed opacity-50"} ${divider}"
+      >
         <input
-          type="text"
-          class="${TEXT_INPUT_CLASS}"
-          value="${escapeHtml(item.name)}"
-          maxlength="${NAME_MAX_LENGTH}"
-          placeholder="请输入分割线名称"
-          data-custom-divider-line-name="${escapeHtml(line.id)}"
-          ${item.enabled ? "" : "disabled"}
-          aria-label="${escapeHtml(line.label)} 分割线名称"
+          type="checkbox"
+          class="${MODULE_SETTING_CONTROL_CLASS} rounded-sm"
+          value="${escapeHtml(line.id)}"
+          data-custom-divider-line="${escapeHtml(line.id)}"
+          ${checked ? "checked" : ""}
+          ${enabled ? "" : "disabled"}
+          aria-label="${escapeHtml(line.label)}"
         />
-      </td>
-    </tr>`;
+        <span class="text-center leading-tight">${escapeHtml(line.label)}</span>
+      </label>`;
   }).join("");
 
   return `
-    <div data-custom-divider-by-line-editor="${CUSTOM_DIVIDER_NAME_SEQ}" class="space-y-2">
-      <div class="overflow-x-auto rounded-md border border-border">
-        <table class="w-full min-w-[24rem] border-collapse text-left text-sm">
-          <thead class="bg-muted/40 text-xs text-muted-foreground">
-            <tr>
-              <th class="px-3 py-2 font-medium w-[5.5rem]">产线</th>
-              <th class="px-3 py-2 font-medium w-[4.5rem]">启用</th>
-              <th class="px-3 py-2 font-medium">分割线名称</th>
-            </tr>
-          </thead>
-          <tbody>${rows}</tbody>
-        </table>
-      </div>
+    <div
+      class="flex w-full max-w-xl overflow-hidden rounded-md border border-border bg-muted/40"
+      data-custom-divider-lines="${CUSTOM_DIVIDER_NAME_SEQ}"
+      role="group"
+      aria-label="自定义分割线名称适用产线"
+    >
+      ${cells}
     </div>`;
 }
 
-export function renderCustomDividerNamePanelHtml(): string {
+export function renderCustomDividerNamePanelHtml(on: boolean): string {
+  ensureCustomDividerNameToggleMigrated();
+  const hidden = on ? "" : "hidden";
   return `
-    <div class="mt-3 space-y-4" data-custom-divider-name-panel="${CUSTOM_DIVIDER_NAME_SEQ}">
-      ${renderByLineEditorHtml()}
+    <div
+      class="mt-3 ${hidden}"
+      data-custom-divider-name-panel="${CUSTOM_DIVIDER_NAME_SEQ}"
+      ${on ? "" : 'aria-hidden="true"'}
+    >
+      ${renderLinesMultiselectHtml(on)}
     </div>`;
+}
+
+export function setCustomDividerNamePanelVisible(seq: number, visible: boolean): void {
+  document
+    .querySelectorAll<HTMLElement>(`[data-custom-divider-name-panel="${seq}"]`)
+    .forEach((panel) => {
+      panel.classList.toggle("hidden", !visible);
+      if (visible) panel.removeAttribute("aria-hidden");
+      else panel.setAttribute("aria-hidden", "true");
+
+      panel.querySelectorAll<HTMLInputElement>("[data-custom-divider-line]").forEach((input) => {
+        input.disabled = !visible;
+        const label = input.closest("label");
+        if (!label) return;
+        label.classList.toggle("cursor-not-allowed", !visible);
+        label.classList.toggle("opacity-50", !visible);
+        label.classList.toggle("cursor-pointer", visible);
+      });
+    });
+}
+
+function collectLinesFromGroup(group: HTMLElement): CustomDividerProductLineId[] {
+  const lines: CustomDividerProductLineId[] = [];
+  group.querySelectorAll<HTMLInputElement>("[data-custom-divider-line]:checked").forEach((input) => {
+    const id = input.getAttribute("data-custom-divider-line");
+    if (id && ALL_LINE_IDS.includes(id as CustomDividerProductLineId)) {
+      lines.push(id as CustomDividerProductLineId);
+    }
+  });
+  writeCustomDividerLines(lines);
+  return lines;
 }
 
 export function bindCustomDividerNameUi(root: ParentNode = document): void {
-  ensureMigrated();
-  root.querySelectorAll<HTMLElement>("[data-custom-divider-by-line-editor]").forEach((editor) => {
-    if (editor.dataset.customDividerByLineEditorBound === "1") return;
-    editor.dataset.customDividerByLineEditorBound = "1";
-    syncNameInputDisabled(editor);
-    const persist = () => collectFromEditor(editor);
-    editor.addEventListener("change", (e) => {
-      const target = e.target as HTMLElement;
-      if (
-        target.matches("[data-custom-divider-line-enabled]") ||
-        target.matches("[data-custom-divider-line-name]")
-      ) {
-        persist();
-      }
-    });
-    editor.addEventListener("input", (e) => {
-      if ((e.target as HTMLElement).matches("[data-custom-divider-line-name]")) persist();
+  ensureCustomDividerNameToggleMigrated();
+  root.querySelectorAll<HTMLElement>("[data-custom-divider-lines]").forEach((group) => {
+    if (group.dataset.customDividerBound === "1") return;
+    group.dataset.customDividerBound = "1";
+    group.addEventListener("change", (e) => {
+      const el = e.target as HTMLElement;
+      if (!el.matches("[data-custom-divider-line]")) return;
+      collectLinesFromGroup(group);
     });
   });
 }

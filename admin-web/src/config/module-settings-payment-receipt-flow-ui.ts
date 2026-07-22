@@ -220,15 +220,12 @@ export function renderReceiptPrintByMethodHtml(): string {
 
   return `
     <div
-      class="flex max-w-xl flex-col items-end gap-2"
+      class="flex max-w-xl flex-wrap justify-end gap-2"
       data-receipt-print-by-method-editor="${RECEIPT_PRINT_BY_METHOD_SEQ}"
+      role="group"
+      aria-label="按支付方式打印收据：使用以下支付方式时打印收据小票"
     >
-      <div class="flex flex-wrap justify-end gap-2" role="group" aria-label="按支付方式打印收据：使用以下支付方式时打印收据小票">
-        ${rows}
-      </div>
-      <p class="text-right text-xs text-muted-foreground">
-        原「一键付款/信用卡」「微信/阿里」打印已并入本项（seq 263/268）。
-      </p>
+      ${rows}
     </div>`;
 }
 

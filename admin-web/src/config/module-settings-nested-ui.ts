@@ -52,7 +52,7 @@ export type ModuleSettingNestedHintField = {
   text: string;
 };
 
-/** 独立菜品多选（如展示菜详情、大图菜、抽奖排除/奖池） */
+/** 独立菜品多选（如展示菜详情、大图菜） */
 export type ModuleSettingNestedDishTagsField = {
   kind: "dish-tags";
   fieldKey: string;
@@ -60,6 +60,18 @@ export type ModuleSettingNestedDishTagsField = {
   storageFieldId: string;
   /** checkbox：平铺多选；select：下拉添加（默认 checkbox） */
   pickerUi?: "checkbox" | "select";
+};
+
+/**
+ * 按产线 + 组/类/菜结构选商品（对齐店中店品牌菜单）
+ * 存储值为 BrandMenuStructureByLine
+ */
+export type ModuleSettingNestedMenuStructureByLineField = {
+  kind: "menu-structure-by-line";
+  fieldKey: string;
+  label: string;
+  storageFieldId: string;
+  hint?: string;
 };
 
 /** 随单选值显隐的菜品多选（如大图模式下的「请选择大图菜」） */
@@ -91,6 +103,7 @@ export type ModuleSettingNestedField =
   | ModuleSettingNestedDishComboField
   | ModuleSettingNestedHintField
   | ModuleSettingNestedDishTagsField
+  | ModuleSettingNestedMenuStructureByLineField
   | ModuleSettingNestedConditionalDishTagsField
   | ModuleSettingNestedTextInputField;
 
@@ -121,11 +134,10 @@ const PROMO_LOTTERY_647_NESTED: ModuleSettingNestedGroupConfig = {
       ],
     },
     {
-      kind: "dish-tags",
+      kind: "menu-structure-by-line",
       fieldKey: "excluded-dishes",
       label: "不参与计算的菜品",
       storageFieldId: "647-excluded-dishes",
-      pickerUi: "select",
     },
     {
       kind: "inline",
@@ -137,11 +149,10 @@ const PROMO_LOTTERY_647_NESTED: ModuleSettingNestedGroupConfig = {
       ],
     },
     {
-      kind: "dish-tags",
+      kind: "menu-structure-by-line",
       fieldKey: "prize-pool",
       label: "奖励池商品",
       storageFieldId: "647-prize-pool-dishes",
-      pickerUi: "select",
     },
   ],
 };

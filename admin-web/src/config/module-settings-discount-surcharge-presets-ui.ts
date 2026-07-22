@@ -1,5 +1,5 @@
 /**
- * 订单 · 折扣与加收：seq 446 折扣预设、447 加收预设（名称 + 类型 + 百分比/固定金额）。
+ * 订单 · 折扣与加收：seq 446 折扣预设、447 加收预设（列表只读 + 对话框新增/编辑）。
  */
 
 import { MODULE_SETTING_CHOICE_CONTROL_CLASS } from "./module-settings-choice-ui";
@@ -212,40 +212,11 @@ export function isDiscountSurchargePresetSeq(seq: number): boolean {
   return PRESET_SEQ.has(seq);
 }
 
-function valueSuffix(kind: RatePresetKind): string {
-  return kind === "fixed" ? "元" : "%";
-}
+function renderPresetRow(seq: number, item: RatePresetItem, _namePlaceholder: string): string {
+  const kindLabel = item.kind === "percent" ? "百分比" : "固定金额";
+  const valueLabel = item.kind === "percent" ? `${item.value}%` : `${item.value} 元`;
 
-function renderPresetKindRadios(item: RatePresetItem): string {
-  const groupName = `rate-preset-kind-${escapeHtml(item.id)}`;
-  const kinds: { value: RatePresetKind; label: string }[] = [
-    { value: "percent", label: "百分比" },
-    { value: "fixed", label: "固定金额" },
-  ];
-  return kinds
-    .map((k) => {
-      const checked = item.kind === k.value;
-      return `
-        <label class="inline-flex cursor-pointer items-center gap-1.5 text-sm text-foreground">
-          <input
-            type="radio"
-            name="${groupName}"
-            value="${k.value}"
-            class="${MODULE_SETTING_CHOICE_CONTROL_CLASS}"
-            ${checked ? "checked" : ""}
-            data-rate-preset-kind
-            aria-label="${escapeHtml(k.label)}"
-          />
-          <span>${escapeHtml(k.label)}</span>
-        </label>`;
-    })
-    .join("");
-}
-
-function renderPresetRow(seq: number, item: RatePresetItem, namePlaceholder: string): string {
   if (seq === ORDER_SURCHARGE_PRESET_SEQ) {
-    const kindLabel = item.kind === "percent" ? "百分比" : "固定金额";
-    const valueLabel = item.kind === "percent" ? `${item.value}%` : `${item.value} 元`;
     const feeTypeLabel = item.surcharge?.feeTypeLabel ?? surchargeFeeTypeLabel("service");
     const enabled = item.surcharge?.enabled !== false;
     return `
@@ -283,45 +254,31 @@ function renderPresetRow(seq: number, item: RatePresetItem, namePlaceholder: str
       </td>
     </tr>`;
   }
-  const suffix = valueSuffix(item.kind);
-  const maxAttr = item.kind === "percent" ? ' max="100"' : "";
+
   return `
     <tr class="border-t border-border" data-rate-preset-row data-preset-id="${escapeHtml(item.id)}">
       <td class="px-3 py-2.5">
-        <input
-          type="text"
-          class="${INPUT_CLASS}"
-          value="${escapeHtml(item.name)}"
-          placeholder="${escapeHtml(namePlaceholder)}"
-          data-rate-preset-name
-        />
+        <span class="text-sm text-foreground">${escapeHtml(item.name || "未命名折扣")}</span>
       </td>
       <td class="px-3 py-2.5">
-        <div class="flex flex-col gap-1.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3" role="radiogroup" aria-label="比例类型">
-          ${renderPresetKindRadios(item)}
-        </div>
+        <span class="text-sm text-muted-foreground">${escapeHtml(kindLabel)}</span>
       </td>
       <td class="px-3 py-2.5">
-        <div class="flex items-center gap-1.5">
-          <input
-            type="number"
-            inputmode="decimal"
-            class="${INPUT_CLASS} max-w-[8rem] tabular-nums"
-            value="${escapeHtml(String(item.value))}"
-            min="0"
-            step="0.01"${maxAttr}
-            data-rate-preset-value
-            aria-label="比例数值"
-          />
-          <span class="shrink-0 text-sm text-muted-foreground" data-rate-preset-suffix>${escapeHtml(suffix)}</span>
-        </div>
+        <span class="text-sm tabular-nums text-foreground">${escapeHtml(valueLabel)}</span>
       </td>
       <td class="px-3 py-2.5 text-right whitespace-nowrap">
-        <button
-          type="button"
-          class="text-sm font-medium text-destructive hover:underline"
-          data-rate-preset-remove
-        >删除</button>
+        <div class="inline-flex items-center gap-2">
+          <button
+            type="button"
+            class="text-xs font-medium text-foreground hover:underline"
+            data-discount-row-edit
+          >编辑</button>
+          <button
+            type="button"
+            class="text-xs font-medium text-destructive hover:underline"
+            data-rate-preset-remove
+          >删除</button>
+        </div>
       </td>
     </tr>`;
 }
@@ -330,7 +287,7 @@ function renderPresetRow(seq: number, item: RatePresetItem, namePlaceholder: str
 function renderPresetTableInner(seq: number, items: RatePresetItem[]): string {
   const cfg = CONFIG_BY_SEQ[seq];
   if (!cfg || items.length === 0) return "";
-  const operationColClass = seq === ORDER_SURCHARGE_PRESET_SEQ ? "w-[16rem]" : "w-[4.5rem]";
+  const operationColClass = seq === ORDER_SURCHARGE_PRESET_SEQ ? "w-[16rem]" : "w-[8rem]";
   const surchargeTypeHeader =
     seq === ORDER_SURCHARGE_PRESET_SEQ
       ? `<th class="px-3 py-2 font-medium w-[6.5rem]">类型</th>`
@@ -365,6 +322,59 @@ function renderPresetTableWrap(seq: number, items: RatePresetItem[]): string {
       class="${visible ? "" : "hidden"}"
       ${visible ? "" : 'aria-hidden="true"'}
     >${inner}</div>`;
+}
+
+function renderDiscountCreateDialog(): string {
+  return `
+    <div class="fixed inset-0 z-[10040] hidden items-start justify-center overflow-y-auto p-4 sm:items-center" data-discount-create-dialog aria-hidden="true">
+      <button type="button" class="absolute inset-0 bg-black/45" data-discount-dialog-close aria-label="关闭"></button>
+      <div class="relative z-10 my-6 flex max-h-[calc(100vh-3rem)] w-full max-w-lg flex-col overflow-hidden rounded-xl border border-border bg-card p-0 shadow-xl" role="dialog" aria-modal="true" aria-labelledby="discount-create-dialog-title">
+        <div class="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-card px-5 py-4">
+          <h3 id="discount-create-dialog-title" class="text-base font-semibold text-foreground" data-discount-dialog-title>新增折扣</h3>
+          <button type="button" class="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground" data-discount-dialog-close aria-label="关闭">×</button>
+        </div>
+        <div class="flex-1 overflow-y-auto px-5 py-4">
+          <div class="space-y-4">
+            <label class="block space-y-1.5">
+              <span class="text-sm text-foreground">折扣名称</span>
+              <input class="${INPUT_CLASS}" type="text" maxlength="50" placeholder="不能为空" data-discount-dialog-name />
+            </label>
+            <div class="space-y-2">
+              <span class="text-sm text-foreground">比例类型</span>
+              <div class="flex flex-wrap items-center gap-4">
+                <label class="inline-flex items-center gap-1.5 text-sm text-foreground">
+                  <input type="radio" name="discount-dialog-kind" value="percent" class="${MODULE_SETTING_CHOICE_CONTROL_CLASS}" checked data-discount-dialog-kind />
+                  <span>百分比</span>
+                </label>
+                <label class="inline-flex items-center gap-1.5 text-sm text-foreground">
+                  <input type="radio" name="discount-dialog-kind" value="fixed" class="${MODULE_SETTING_CHOICE_CONTROL_CLASS}" data-discount-dialog-kind />
+                  <span>固定金额</span>
+                </label>
+              </div>
+            </div>
+            <div class="space-y-2">
+              <span class="text-sm text-foreground" data-discount-dialog-value-label>数值（百分比）</span>
+              <div class="flex items-center gap-2">
+                <input
+                  class="${INPUT_CLASS} max-w-[16rem]"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  value="10"
+                  data-discount-dialog-value
+                />
+                <span class="text-sm text-muted-foreground" data-discount-dialog-value-suffix>%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="sticky bottom-0 z-20 flex items-center justify-end gap-2 border-t border-border bg-card px-5 py-4">
+          <button type="button" class="rounded-md border border-border px-4 py-2 text-sm hover:bg-muted" data-discount-dialog-cancel>取消</button>
+          <button type="button" class="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90" data-discount-dialog-save>保存</button>
+        </div>
+      </div>
+    </div>`;
 }
 
 function renderSurchargeCreateDialog(): string {
@@ -522,7 +532,12 @@ export function renderDiscountSurchargePresetEditorHtml(seq: number): string {
   const cfg = CONFIG_BY_SEQ[seq];
   if (!cfg) return "";
   const items = readRatePresets(seq);
-  const surchargeDialog = seq === ORDER_SURCHARGE_PRESET_SEQ ? renderSurchargeCreateDialog() : "";
+  const dialogHtml =
+    seq === ORDER_SURCHARGE_PRESET_SEQ
+      ? renderSurchargeCreateDialog()
+      : seq === ORDER_DISCOUNT_PRESET_SEQ
+        ? renderDiscountCreateDialog()
+        : "";
   return `
     <div
       class="space-y-3"
@@ -538,54 +553,8 @@ export function renderDiscountSurchargePresetEditorHtml(seq: number): string {
           data-rate-preset-add
         >${escapeHtml(cfg.addLabel)}</button>
       </div>
-      ${surchargeDialog}
+      ${dialogHtml}
     </div>`;
-}
-
-function readRowKind(row: HTMLElement): RatePresetKind {
-  const checked = row.querySelector<HTMLInputElement>("[data-rate-preset-kind]:checked");
-  return checked?.value === "fixed" ? "fixed" : "percent";
-}
-
-function syncRowKindUi(row: HTMLElement): void {
-  const kind = readRowKind(row);
-  const suffix = row.querySelector("[data-rate-preset-suffix]");
-  if (suffix) suffix.textContent = valueSuffix(kind);
-  const valueInput = row.querySelector<HTMLInputElement>("[data-rate-preset-value]");
-  if (!valueInput) return;
-  if (kind === "percent") {
-    valueInput.setAttribute("max", "100");
-    const n = Number(valueInput.value);
-    if (Number.isFinite(n) && n > 100) valueInput.value = "100";
-  } else {
-    valueInput.removeAttribute("max");
-  }
-}
-
-function collectPresetsFromEditor(editor: HTMLElement): RatePresetItem[] {
-  const items: RatePresetItem[] = [];
-  editor.querySelectorAll<HTMLElement>("[data-rate-preset-row]").forEach((row) => {
-    const id = row.getAttribute("data-preset-id") ?? newPresetId();
-    const name =
-      row.querySelector<HTMLInputElement>("[data-rate-preset-name]")?.value.trim() ?? "";
-    const kind = readRowKind(row);
-    const value = Number(row.querySelector<HTMLInputElement>("[data-rate-preset-value]")?.value);
-    items.push(
-      normalizePreset({
-        id,
-        name,
-        kind,
-        value: Number.isFinite(value) ? value : 0,
-      }),
-    );
-  });
-  return items;
-}
-
-function persistEditor(editor: HTMLElement): void {
-  const seq = Number(editor.getAttribute("data-preset-seq"));
-  if (!PRESET_SEQ.has(seq)) return;
-  writeRatePresets(seq, collectPresetsFromEditor(editor));
 }
 
 function rerenderEditor(editor: HTMLElement): void {
@@ -605,24 +574,124 @@ function rerenderEditor(editor: HTMLElement): void {
   wrap.innerHTML = renderPresetTableInner(seq, items);
   wrap.classList.remove("hidden");
   wrap.removeAttribute("aria-hidden");
-  wrap.querySelectorAll<HTMLElement>("[data-rate-preset-row]").forEach(syncRowKindUi);
 }
 
-function appendPreset(editor: HTMLElement): void {
+function setDiscountDialogMode(editor: HTMLElement, mode: "create" | "edit", editId = ""): void {
+  const dialog = editor.querySelector<HTMLElement>("[data-discount-create-dialog]");
+  if (!dialog) return;
+  dialog.dataset.dialogMode = mode;
+  dialog.dataset.editPresetId = editId;
+  const title = dialog.querySelector<HTMLElement>("[data-discount-dialog-title]");
+  if (title) title.textContent = mode === "edit" ? "编辑折扣" : "新增折扣";
+  const saveBtn = dialog.querySelector<HTMLElement>("[data-discount-dialog-save]");
+  if (saveBtn) saveBtn.textContent = mode === "edit" ? "保存修改" : "保存";
+}
+
+function syncDiscountDialogKindUi(editor: HTMLElement): void {
+  const kind = readCheckedRadioValue(editor, "[data-discount-dialog-kind]", "percent");
+  const isPercent = kind !== "fixed";
+  const label = editor.querySelector<HTMLElement>("[data-discount-dialog-value-label]");
+  if (label) label.textContent = isPercent ? "数值（百分比）" : "数值（固定金额）";
+  const suffix = editor.querySelector<HTMLElement>("[data-discount-dialog-value-suffix]");
+  if (suffix) suffix.textContent = isPercent ? "%" : "元";
+
+  const input = editor.querySelector<HTMLInputElement>("[data-discount-dialog-value]");
+  if (!input) return;
+  if (isPercent) {
+    input.setAttribute("max", "100");
+    const n = Number(input.value);
+    if (Number.isFinite(n) && n > 100) input.value = "100";
+  } else {
+    input.removeAttribute("max");
+  }
+}
+
+function openDiscountDialog(editor: HTMLElement): void {
+  const dialog = editor.querySelector<HTMLElement>("[data-discount-create-dialog]");
+  if (!dialog) return;
+  const nameInput = dialog.querySelector<HTMLInputElement>("[data-discount-dialog-name]");
+  const valueInput = dialog.querySelector<HTMLInputElement>("[data-discount-dialog-value]");
+  const percentRadio = dialog.querySelector<HTMLInputElement>('[data-discount-dialog-kind][value="percent"]');
+  const fixedRadio = dialog.querySelector<HTMLInputElement>('[data-discount-dialog-kind][value="fixed"]');
+  if (nameInput) nameInput.value = "";
+  if (valueInput) valueInput.value = "10";
+  if (percentRadio) percentRadio.checked = true;
+  if (fixedRadio) fixedRadio.checked = false;
+  setDiscountDialogMode(editor, "create");
+  syncDiscountDialogKindUi(editor);
+  dialog.classList.remove("hidden");
+  dialog.classList.add("flex");
+  dialog.setAttribute("aria-hidden", "false");
+  nameInput?.focus();
+}
+
+function closeDiscountDialog(editor: HTMLElement): void {
+  const dialog = editor.querySelector<HTMLElement>("[data-discount-create-dialog]");
+  if (!dialog) return;
+  dialog.classList.add("hidden");
+  dialog.classList.remove("flex");
+  dialog.setAttribute("aria-hidden", "true");
+  setDiscountDialogMode(editor, "create");
+}
+
+function openDiscountEditDialog(editor: HTMLElement, presetId: string): void {
   const seq = Number(editor.getAttribute("data-preset-seq"));
-  if (!PRESET_SEQ.has(seq)) return;
+  if (seq !== ORDER_DISCOUNT_PRESET_SEQ) return;
+  const dialog = editor.querySelector<HTMLElement>("[data-discount-create-dialog]");
+  if (!dialog) return;
+  const preset = readRatePresets(seq).find((item) => item.id === presetId);
+  if (!preset) return;
+
+  const nameInput = dialog.querySelector<HTMLInputElement>("[data-discount-dialog-name]");
+  const valueInput = dialog.querySelector<HTMLInputElement>("[data-discount-dialog-value]");
+  const percentRadio = dialog.querySelector<HTMLInputElement>('[data-discount-dialog-kind][value="percent"]');
+  const fixedRadio = dialog.querySelector<HTMLInputElement>('[data-discount-dialog-kind][value="fixed"]');
+  if (nameInput) nameInput.value = preset.name;
+  if (valueInput) valueInput.value = String(preset.value);
+  if (percentRadio) percentRadio.checked = preset.kind === "percent";
+  if (fixedRadio) fixedRadio.checked = preset.kind === "fixed";
+
+  setDiscountDialogMode(editor, "edit", presetId);
+  syncDiscountDialogKindUi(editor);
+  dialog.classList.remove("hidden");
+  dialog.classList.add("flex");
+  dialog.setAttribute("aria-hidden", "false");
+}
+
+function addDiscountFromDialog(editor: HTMLElement): void {
+  const seq = Number(editor.getAttribute("data-preset-seq"));
+  if (seq !== ORDER_DISCOUNT_PRESET_SEQ) return;
+  const name = editor.querySelector<HTMLInputElement>("[data-discount-dialog-name]")?.value.trim() ?? "";
+  if (!name) {
+    alert("请输入折扣名称");
+    editor.querySelector<HTMLInputElement>("[data-discount-dialog-name]")?.focus();
+    return;
+  }
+
+  const kindValue = readCheckedRadioValue(editor, "[data-discount-dialog-kind]", "percent");
+  const kind: RatePresetKind = kindValue === "fixed" ? "fixed" : "percent";
+  const valueRaw = Number(editor.querySelector<HTMLInputElement>("[data-discount-dialog-value]")?.value);
+  const value = Number.isFinite(valueRaw) ? valueRaw : 0;
+
+  const dialog = editor.querySelector<HTMLElement>("[data-discount-create-dialog]");
+  const editId = dialog?.dataset.dialogMode === "edit" ? dialog.dataset.editPresetId ?? "" : "";
+  const nextPreset = normalizePreset(
+    {
+      id: editId || newPresetId(),
+      name,
+      kind,
+      value,
+    },
+    seq,
+  );
+
   const items = readRatePresets(seq);
-  items.push({
-    id: newPresetId(),
-    name: "",
-    kind: "percent",
-    value: 10,
-  });
-  writeRatePresets(seq, items);
+  const nextItems = editId
+    ? items.map((item) => (item.id === editId ? nextPreset : item))
+    : [...items, nextPreset];
+  writeRatePresets(seq, nextItems);
   rerenderEditor(editor);
-  const rows = editor.querySelectorAll("[data-rate-preset-row]");
-  const last = rows[rows.length - 1];
-  last?.querySelector<HTMLInputElement>("[data-rate-preset-name]")?.focus();
+  closeDiscountDialog(editor);
 }
 
 function setSurchargeDialogMode(editor: HTMLElement, mode: "create" | "edit", editId = ""): void {
@@ -910,17 +979,33 @@ export function bindDiscountSurchargePresetEditors(root: ParentNode = document):
     if (editor.dataset.ratePresetEditorBound === "1") return;
     editor.dataset.ratePresetEditorBound = "1";
 
-    editor.querySelectorAll<HTMLElement>("[data-rate-preset-row]").forEach(syncRowKindUi);
-
     editor.addEventListener("click", (e) => {
       const target = e.target as HTMLElement;
       if (target.closest("[data-rate-preset-add]")) {
         const seq = Number(editor.getAttribute("data-preset-seq"));
         if (seq === ORDER_SURCHARGE_PRESET_SEQ) {
           openSurchargeDialog(editor);
-        } else {
-          appendPreset(editor);
+        } else if (seq === ORDER_DISCOUNT_PRESET_SEQ) {
+          openDiscountDialog(editor);
         }
+        return;
+      }
+      if (
+        target.closest("[data-discount-dialog-cancel]") ||
+        target.closest("[data-discount-dialog-close]")
+      ) {
+        closeDiscountDialog(editor);
+        return;
+      }
+      if (target.closest("[data-discount-dialog-save]")) {
+        addDiscountFromDialog(editor);
+        return;
+      }
+      const discountEditBtn = target.closest("[data-discount-row-edit]");
+      if (discountEditBtn) {
+        const row = discountEditBtn.closest<HTMLElement>("[data-rate-preset-row]");
+        const presetId = row?.getAttribute("data-preset-id");
+        if (presetId) openDiscountEditDialog(editor, presetId);
         return;
       }
       if (
@@ -955,31 +1040,10 @@ export function bindDiscountSurchargePresetEditors(root: ParentNode = document):
       }
     });
 
-    editor.addEventListener("input", (e) => {
-      const el = e.target as HTMLElement;
-      if (
-        el.matches("[data-rate-preset-name]") ||
-        el.matches("[data-rate-preset-value]")
-      ) {
-        persistEditor(editor);
-      }
-    });
-
     editor.addEventListener("change", (e) => {
       const el = e.target as HTMLElement;
-      if (el.matches("[data-rate-preset-kind]")) {
-        const row = el.closest<HTMLElement>("[data-rate-preset-row]");
-        if (row) syncRowKindUi(row);
-        persistEditor(editor);
-        return;
-      }
-      if (
-        el.matches("[data-rate-preset-name]") ||
-        el.matches("[data-rate-preset-value]")
-      ) {
-        const row = el.closest<HTMLElement>("[data-rate-preset-row]");
-        if (row) syncRowKindUi(row);
-        persistEditor(editor);
+      if (el.matches("[data-discount-dialog-kind]")) {
+        syncDiscountDialogKindUi(editor);
         return;
       }
       if (el.matches("[data-surcharge-dialog-fee-type]")) {
@@ -1003,6 +1067,12 @@ export function bindDiscountSurchargePresetEditors(root: ParentNode = document):
     });
 
     editor.addEventListener("keydown", (e) => {
+      const discountDialog = editor.querySelector<HTMLElement>("[data-discount-create-dialog]");
+      if (discountDialog && !discountDialog.classList.contains("hidden") && e.key === "Escape") {
+        e.preventDefault();
+        closeDiscountDialog(editor);
+        return;
+      }
       const dialog = editor.querySelector<HTMLElement>("[data-surcharge-create-dialog]");
       if (!dialog || dialog.classList.contains("hidden")) return;
       if (e.key === "Escape") {

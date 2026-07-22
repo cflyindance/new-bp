@@ -48,7 +48,7 @@ const assignMap = {
   "order-init-scenario": [126],
   "order-numbering": [127, 128, 129, 130, 131],
   "split-merge-edit": [115, 116, 117, 119, 124, 140, 141, 150],
-  "order-discount": [446, 162, 163, 164],
+  "order-discount": [446, 162, 163],
   "order-surcharge": [447, 149, 161, 546],
   "order-settlement": [147],
   "order-void": [155, 156, 157, 158, 159],

@@ -36,6 +36,8 @@ export const PAGE_BATCH_SAVE_FEATURE_PATHS = new Set<string>([
   "/team/shift-scheduling",
   "/team/breaks-overtime",
   "/operations/queue-call/floor-plan",
+  "/operations/queue-call/category-settings",
+  "/operations/queue-call/classification-settings",
 ]);
 
 /** 全部模块设置 Hub 启用页面批量保存 */

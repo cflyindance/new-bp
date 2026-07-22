@@ -31,11 +31,7 @@ export function isFinanceProcessorFeeRateSeq(seq: number): boolean {
 }
 
 export function renderFinanceProcessorCostBasisIntroHtml(): string {
-  return `
-    <p class="m-0 mb-3 text-xs leading-relaxed text-muted-foreground">
-      本组为<strong>对内核算口径</strong>：录入收单通道成本率，供报表与毛利分析使用，<strong>不会</strong>改变顾客结账应付。
-      对客现金折扣与卡付加价见支付中心「卡付规则与加价」（305、454）。
-    </p>`;
+  return "";
 }
 
 export function renderFinanceProcessorFeeInputHtml(): string {
@@ -55,6 +51,5 @@ export function renderFinanceProcessorFeeInputHtml(): string {
         aria-label="收单通道成本率"
       />
       <span class="text-sm text-muted-foreground">%</span>
-      <span class="text-xs text-muted-foreground">仅用于报表与成本核算，不改变顾客应付；对客加价见支付中心「双重定价」（454）/「卡加价策略」（543）。</span>
     </div>`;
 }

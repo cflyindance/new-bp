@@ -71,9 +71,6 @@ const INPUT_CONFIG: Record<number, OrderNumberingInputConfig> = {
 const NUMBER_INPUT_CLASS =
   "h-8 w-28 rounded-md border border-input bg-background px-2 text-center text-sm tabular-nums text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
-const TEXT_INPUT_CLASS =
-  "h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
-
 function escapeHtml(s: string): string {
   return s
     .replace(/&/g, "&amp;")
@@ -232,73 +229,192 @@ export function isOrderNumberClassificationModeActive(): boolean {
   return readOrderNumberMode() === "classification";
 }
 
-/** 单号模式切换后刷新提示文案（分类单号行始终展示） */
+/** 单号模式切换后：仅 CLASSIFICATION 时展示分类单号面板 */
 export function syncOrderNumberClassificationPanels(root: ParentNode = document): void {
   const active = isOrderNumberClassificationModeActive();
-  root.querySelectorAll<HTMLElement>("[data-classification-mode-hint]").forEach((hint) => {
-    hint.classList.toggle("hidden", active);
+  root.querySelectorAll<HTMLElement>("[data-order-classification-panel]").forEach((panel) => {
+    panel.classList.toggle("hidden", !active);
+    if (active) panel.removeAttribute("aria-hidden");
+    else panel.setAttribute("aria-hidden", "true");
   });
 }
 
-export function renderOrderNumberingClassificationSettingHtml(
-  seq: number,
+function parseClassificationNumbers(csv: string): string[] {
+  return csv
+    .split(",")
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0);
+}
+
+function joinClassificationNumbers(values: string[]): string {
+  return values
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0)
+    .join(",");
+}
+
+function renderClassificationNumberChip(value: string): string {
+  return `
+    <span
+      class="inline-flex max-w-full items-center gap-1 rounded-md border border-border bg-background px-2 py-1 text-sm tabular-nums text-foreground"
+      data-classification-number-chip
+      data-classification-number-value="${escapeHtml(value)}"
+    >
+      <span class="truncate">${escapeHtml(value)}</span>
+      <button
+        type="button"
+        class="inline-flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
+        data-classification-number-remove
+        aria-label="删除 ${escapeHtml(value)}"
+      >×</button>
+    </span>`;
+}
+
+function renderClassificationNumberChips(values: string[]): string {
+  return values.map((value) => renderClassificationNumberChip(value)).join("");
+}
+
+/** 嵌在「单号模式」下方的分类单号编辑面板（仅 CLASSIFICATION 可见） */
+export function renderOrderNumberingClassificationPanelHtml(
   title: string,
   sceneDesc: string,
 ): string {
   const active = isOrderNumberClassificationModeActive();
-  const value = readOrderNumberClassificationCsv();
+  const csv = readOrderNumberClassificationCsv();
+  const values = parseClassificationNumbers(csv);
+  const hidden = active ? "" : "hidden";
   return `
-    <li class="list-none" data-order-classification-setting>
+    <div
+      class="mt-3 space-y-3 rounded-lg bg-muted/50 p-3 ${hidden}"
+      data-order-classification-panel
+      data-classification-numbers-editor
+      ${active ? "" : 'aria-hidden="true"'}
+    >
+      <div class="min-w-0">
+        ${renderSettingTitleWithHelpHtml({
+          id: ORDER_NUMBER_CLASSIFICATION_SEQ,
+          title,
+          sceneDesc,
+        })}
+      </div>
+      <input
+        type="hidden"
+        value="${escapeHtml(csv)}"
+        data-module-setting-text="${escapeHtml(ORDER_NUMBER_CLASSIFICATION_FIELD_ID)}"
+        data-classification-numbers-storage
+      />
+      <div
+        class="flex min-h-8 flex-wrap gap-1.5"
+        data-classification-number-list
+        ${values.length === 0 ? 'data-empty="1"' : ""}
+      >
+        ${
+          values.length > 0
+            ? renderClassificationNumberChips(values)
+            : `<span class="text-xs text-muted-foreground" data-classification-number-empty>暂无分类单号，请在下方添加</span>`
+        }
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <input
+          type="text"
+          inputmode="numeric"
+          class="${NUMBER_INPUT_CLASS}"
+          placeholder="输入单号"
+          data-classification-number-draft
+          aria-label="新增分类单号"
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <button
+          type="button"
+          class="inline-flex h-8 items-center rounded-md border border-border bg-background px-3 text-sm font-medium text-foreground shadow-sm hover:bg-muted"
+          data-classification-number-add
+        >添加</button>
+      </div>
+    </div>`;
+}
+
+/** @deprecated 分类单号已并入单号模式行；保留空实现避免旧调用报错 */
+export function renderOrderNumberingClassificationSettingHtml(
+  _seq: number,
+  _title: string,
+  _sceneDesc: string,
+): string {
+  return "";
+}
+
+export function renderOrderNumberingModeWithClassificationHtml(
+  modeItem: { seq: number; title: string; sceneDesc: string },
+  classification: { title: string; sceneDesc: string },
+  titleBlockHtml: string,
+): string {
+  return `
+    <li class="list-none" data-order-number-mode-setting data-module-setting-row-seq="${modeItem.seq}">
       <div class="border-b border-border px-4 py-3">
-        <div class="flex items-start justify-between gap-3">
-          <div class="min-w-0 flex-1">
-            ${renderSettingTitleWithHelpHtml({ id: seq, title, sceneDesc })}
-          </div>
-          <button
-            type="button"
-            class="inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-border bg-muted/60 text-muted-foreground hover:bg-muted"
-            data-classification-collapse-toggle
-            aria-expanded="true"
-            aria-label="展开或收起分类单号输入"
-            title="收起"
-          >
-            <svg class="size-4 transition-transform" data-classification-chevron viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-              <path d="M6 9l6 6 6-6"/>
-            </svg>
-          </button>
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div class="min-w-0 flex-1">${titleBlockHtml}</div>
+          <div class="w-full shrink-0 sm:max-w-md sm:pt-0.5">${renderOrderNumberingModeSelectHtml()}</div>
         </div>
-        <div class="mt-3" data-classification-input-panel>
-          <input
-            type="text"
-            class="${TEXT_INPUT_CLASS}"
-            value="${escapeHtml(value)}"
-            placeholder="${escapeHtml(ORDER_NUMBER_CLASSIFICATION_DEFAULT)}"
-            data-module-setting-text="${escapeHtml(ORDER_NUMBER_CLASSIFICATION_FIELD_ID)}"
-            aria-label="分类单号列表"
-            autocomplete="off"
-            spellcheck="false"
-          />
-          <p class="mt-1.5 text-xs text-muted-foreground">多个分类单号请用英文逗号分隔，例如 10,20,30</p>
-          <p
-            class="mt-1 text-xs text-muted-foreground ${active ? "hidden" : ""}"
-            data-classification-mode-hint
-          >生效需将上方「单号模式」设为 CLASSIFICATION</p>
-        </div>
+        ${renderOrderNumberingClassificationPanelHtml(classification.title, classification.sceneDesc)}
       </div>
     </li>`;
 }
 
-function setClassificationPanelCollapsed(panel: HTMLElement, collapsed: boolean): void {
-  panel.classList.toggle("hidden", collapsed);
-  const btn = panel
-    .closest("[data-order-classification-setting]")
-    ?.querySelector<HTMLButtonElement>("[data-classification-collapse-toggle]");
-  const chevron = btn?.querySelector("[data-classification-chevron]");
-  if (btn) {
-    btn.setAttribute("aria-expanded", collapsed ? "false" : "true");
-    btn.title = collapsed ? "展开" : "收起";
+function collectClassificationNumbersFromEditor(editor: HTMLElement): string[] {
+  const values: string[] = [];
+  editor.querySelectorAll<HTMLElement>("[data-classification-number-chip]").forEach((chip) => {
+    const value = chip.getAttribute("data-classification-number-value")?.trim() ?? "";
+    if (value) values.push(value);
+  });
+  return values;
+}
+
+function persistClassificationNumbersEditor(editor: HTMLElement): void {
+  const csv = joinClassificationNumbers(collectClassificationNumbersFromEditor(editor));
+  const storage = editor.querySelector<HTMLInputElement>("[data-classification-numbers-storage]");
+  if (storage) storage.value = csv;
+  writeOrderNumberClassificationCsv(csv);
+}
+
+function syncClassificationNumberEmptyState(editor: HTMLElement): void {
+  const list = editor.querySelector<HTMLElement>("[data-classification-number-list]");
+  if (!list) return;
+  const chips = list.querySelectorAll("[data-classification-number-chip]");
+  const emptyHint = list.querySelector("[data-classification-number-empty]");
+  if (chips.length === 0) {
+    if (!emptyHint) {
+      list.insertAdjacentHTML(
+        "afterbegin",
+        `<span class="text-xs text-muted-foreground" data-classification-number-empty>暂无分类单号，请在下方添加</span>`,
+      );
+    }
+    list.setAttribute("data-empty", "1");
+  } else {
+    emptyHint?.remove();
+    list.removeAttribute("data-empty");
   }
-  if (chevron) chevron.classList.toggle("rotate-180", collapsed);
+}
+
+function addClassificationNumberFromDraft(editor: HTMLElement): void {
+  const draft = editor.querySelector<HTMLInputElement>("[data-classification-number-draft]");
+  const list = editor.querySelector("[data-classification-number-list]");
+  if (!draft || !list) return;
+  const value = draft.value.trim();
+  if (!value) {
+    draft.focus();
+    return;
+  }
+  const existing = collectClassificationNumbersFromEditor(editor);
+  if (existing.includes(value)) {
+    alert("该分类单号已存在");
+    draft.select();
+    return;
+  }
+  list.insertAdjacentHTML("beforeend", renderClassificationNumberChip(value));
+  draft.value = "";
+  syncClassificationNumberEmptyState(editor);
+  persistClassificationNumbersEditor(editor);
+  draft.focus();
 }
 
 export function bindOrderNumberingSelects(root: ParentNode = document): void {
@@ -311,21 +427,44 @@ export function bindOrderNumberingSelects(root: ParentNode = document): void {
       if (input.dataset.orderNumberModeSyncBound === "1") return;
       input.dataset.orderNumberModeSyncBound = "1";
       input.addEventListener("change", () => {
-        if (input.checked) syncOrderNumberClassificationPanels(root);
+        if (!input.checked) return;
+        const active = input.value === "classification";
+        root.querySelectorAll<HTMLElement>("[data-order-classification-panel]").forEach((panel) => {
+          panel.classList.toggle("hidden", !active);
+          if (active) panel.removeAttribute("aria-hidden");
+          else panel.setAttribute("aria-hidden", "true");
+        });
       });
     });
 }
 
 export function bindOrderNumberingClassificationControls(root: ParentNode = document): void {
-  root.querySelectorAll<HTMLButtonElement>("[data-classification-collapse-toggle]").forEach((btn) => {
-    if (btn.dataset.classificationCollapseBound === "1") return;
-    btn.dataset.classificationCollapseBound = "1";
-    btn.addEventListener("click", () => {
-      const wrap = btn.closest("[data-order-classification-setting]");
-      const panel = wrap?.querySelector<HTMLElement>("[data-classification-input-panel]");
-      if (!panel) return;
-      const collapsed = panel.classList.contains("hidden");
-      setClassificationPanelCollapsed(panel, !collapsed);
+  root.querySelectorAll<HTMLElement>("[data-classification-numbers-editor]").forEach((editor) => {
+    if (editor.dataset.classificationNumbersBound === "1") return;
+    editor.dataset.classificationNumbersBound = "1";
+
+    editor.addEventListener("click", (e) => {
+      const target = e.target as HTMLElement;
+      if (target.closest("[data-classification-number-add]")) {
+        addClassificationNumberFromDraft(editor);
+        return;
+      }
+      const removeBtn = target.closest("[data-classification-number-remove]");
+      if (removeBtn) {
+        const chip = removeBtn.closest("[data-classification-number-chip]");
+        chip?.remove();
+        syncClassificationNumberEmptyState(editor);
+        persistClassificationNumbersEditor(editor);
+      }
+    });
+
+    editor.addEventListener("keydown", (e) => {
+      const el = e.target as HTMLElement;
+      if (!el.matches("[data-classification-number-draft]")) return;
+      if (e.key === "Enter") {
+        e.preventDefault();
+        addClassificationNumberFromDraft(editor);
+      }
     });
   });
 }

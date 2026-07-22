@@ -129,11 +129,7 @@ export function isCashDrawerVarianceAlertSeq(seq: number): boolean {
 }
 
 export function renderCashDrawerReconciliationIntroHtml(): string {
-  return `
-    <p class="m-0 mb-3 text-xs leading-relaxed text-muted-foreground">
-      本组为<strong>现金内控策略</strong>：开班备款、班结长短款容差与超差提醒。
-      现金日结流程见「现金日结与班结」（171、65、330）；开钱箱硬件见硬件管理中心。
-    </p>`;
+  return "";
 }
 
 export function renderCashDrawerFloatAmountInputHtml(): string {
@@ -218,20 +214,8 @@ export function renderCashReconciliationToleranceInputHtml(): string {
     </div>`;
 }
 
-export function renderCashDrawerVarianceAlertHintPanelHtml(seq: number, on: boolean): string {
-  const tolerance = readCashReconciliationTolerance();
-  const hidden = on ? "" : "hidden";
-  return `
-    <div
-      class="mt-3 rounded-lg bg-muted/50 px-3 py-3 ${hidden}"
-      data-cash-drawer-variance-alert-panel="${seq}"
-      ${on ? "" : 'aria-hidden="true"'}
-    >
-      <p class="m-0 text-xs leading-relaxed text-muted-foreground">
-        实点与系统应有现金之差超过 <strong data-cash-drawer-variance-alert-threshold>$${escapeHtml(tolerance.toFixed(2))}</strong> 时在 POS 提醒。
-        容差金额在上方「现金平账允许误差值」修改。
-      </p>
-    </div>`;
+export function renderCashDrawerVarianceAlertHintPanelHtml(_seq: number, _on: boolean): string {
+  return "";
 }
 
 export function setCashDrawerVarianceAlertPanelVisible(seq: number, visible: boolean): void {

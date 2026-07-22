@@ -61,17 +61,113 @@ type CashDrawerSessionRecord = {
   storeId: string;
 };
 
-const MOCK_EMPLOYEES = ["张三", "李四", "王五"];
+const MOCK_EMPLOYEES = ["张三", "李四", "王五", "赵六"];
 const MOCK_DRAWERS = ["1号钱箱", "2号钱箱", "Bar"];
+
+function pad2(n: number): string {
+  return String(n).padStart(2, "0");
+}
+
+/** 相对今天的本地日期 YYYY-MM-DD（演示种子用） */
+function offsetIsoDate(dayOffset: number): string {
+  const d = new Date();
+  d.setHours(12, 0, 0, 0);
+  d.setDate(d.getDate() + dayOffset);
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
+function offsetIsoDateTime(dayOffset: number, hour: number, minute: number): string {
+  return `${offsetIsoDate(dayOffset)}T${pad2(hour)}:${pad2(minute)}`;
+}
 
 let paymentRecords: PaymentRecord[] = [
   {
     id: "p1",
     payee: "张三",
-    date: "2026-06-03",
+    date: offsetIsoDate(0),
     amount: 128.5,
     operator: "李四",
     drawer: "1号钱箱",
+    voided: false,
+    storeId: "",
+  },
+  {
+    id: "p2",
+    payee: "李四",
+    date: offsetIsoDate(0),
+    amount: 56.0,
+    operator: "张三",
+    drawer: "1号钱箱",
+    voided: false,
+    storeId: "",
+  },
+  {
+    id: "p3",
+    payee: "王五",
+    date: offsetIsoDate(0),
+    amount: 210.75,
+    operator: "赵六",
+    drawer: "2号钱箱",
+    voided: false,
+    storeId: "",
+  },
+  {
+    id: "p4",
+    payee: "张三",
+    date: offsetIsoDate(0),
+    amount: 18.0,
+    operator: "李四",
+    drawer: "Bar",
+    voided: true,
+    storeId: "",
+  },
+  {
+    id: "p5",
+    payee: "赵六",
+    date: offsetIsoDate(-1),
+    amount: 342.2,
+    operator: "王五",
+    drawer: "1号钱箱",
+    voided: false,
+    storeId: "",
+  },
+  {
+    id: "p6",
+    payee: "李四",
+    date: offsetIsoDate(-1),
+    amount: 89.99,
+    operator: "张三",
+    drawer: "2号钱箱",
+    voided: false,
+    storeId: "",
+  },
+  {
+    id: "p7",
+    payee: "王五",
+    date: offsetIsoDate(-2),
+    amount: 45.5,
+    operator: "李四",
+    drawer: "Bar",
+    voided: false,
+    storeId: "",
+  },
+  {
+    id: "p8",
+    payee: "张三",
+    date: offsetIsoDate(-3),
+    amount: 520.0,
+    operator: "赵六",
+    drawer: "1号钱箱",
+    voided: true,
+    storeId: "",
+  },
+  {
+    id: "p9",
+    payee: "赵六",
+    date: offsetIsoDate(-5),
+    amount: 16.8,
+    operator: "王五",
+    drawer: "2号钱箱",
     voided: false,
     storeId: "",
   },
@@ -84,8 +180,85 @@ let cashDrawerSessions: CashDrawerSessionRecord[] = [
     drawer: "1号钱箱",
     loginAmount: 200,
     logoutAmount: null,
-    from: "2026-06-03T09:00",
+    from: offsetIsoDateTime(0, 9, 0),
     to: null,
+    amountMismatchRemark: null,
+    storeId: "",
+  },
+  {
+    id: "d2",
+    name: "李四",
+    drawer: "2号钱箱",
+    loginAmount: 150,
+    logoutAmount: 148.5,
+    from: offsetIsoDateTime(0, 8, 30),
+    to: offsetIsoDateTime(0, 14, 15),
+    amountMismatchRemark: "午市找零短缺，已补差",
+    storeId: "",
+  },
+  {
+    id: "d3",
+    name: "王五",
+    drawer: "Bar",
+    loginAmount: 100,
+    logoutAmount: 100,
+    from: offsetIsoDateTime(0, 10, 0),
+    to: offsetIsoDateTime(0, 16, 45),
+    amountMismatchRemark: null,
+    storeId: "",
+  },
+  {
+    id: "d4",
+    name: "赵六",
+    drawer: "1号钱箱",
+    loginAmount: 200,
+    logoutAmount: 205,
+    from: offsetIsoDateTime(-1, 9, 10),
+    to: offsetIsoDateTime(-1, 17, 20),
+    amountMismatchRemark: "多收现金未入账，已登记",
+    storeId: "",
+  },
+  {
+    id: "d5",
+    name: "张三",
+    drawer: "2号钱箱",
+    loginAmount: 180,
+    logoutAmount: 180,
+    from: offsetIsoDateTime(-1, 11, 0),
+    to: offsetIsoDateTime(-1, 19, 0),
+    amountMismatchRemark: null,
+    storeId: "",
+  },
+  {
+    id: "d6",
+    name: "李四",
+    drawer: "1号钱箱",
+    loginAmount: 200,
+    logoutAmount: null,
+    from: offsetIsoDateTime(-2, 8, 45),
+    to: null,
+    amountMismatchRemark: null,
+    storeId: "",
+  },
+  {
+    id: "d7",
+    name: "王五",
+    drawer: "Bar",
+    loginAmount: 80,
+    logoutAmount: 75.25,
+    from: offsetIsoDateTime(-3, 12, 0),
+    to: offsetIsoDateTime(-3, 20, 30),
+    amountMismatchRemark: "吧台零钞盘点差异",
+    storeId: "",
+  },
+  {
+    id: "d8",
+    name: "赵六",
+    drawer: "2号钱箱",
+    loginAmount: 220,
+    logoutAmount: 220,
+    from: offsetIsoDateTime(-5, 9, 0),
+    to: offsetIsoDateTime(-5, 18, 0),
     amountMismatchRemark: null,
     storeId: "",
   },
@@ -142,8 +315,8 @@ type AuditFilterState = {
 };
 
 const filterState: AuditFilterState = {
-  dateFrom: new Date().toISOString().slice(0, 10),
-  dateTo: new Date().toISOString().slice(0, 10),
+  dateFrom: offsetIsoDate(-7),
+  dateTo: offsetIsoDate(0),
   employee: "",
   showVoided: false,
 };

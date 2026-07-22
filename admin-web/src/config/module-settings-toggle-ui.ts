@@ -43,6 +43,9 @@ export const POS_BUTTON_VISIBILITY_TOGGLE_SEQ: readonly number[] = [
   ...Array.from({ length: 19 }, (_, i) => 197 + i),
 ];
 
+/** 前厅 · 自定义分割线名称（196 产线多选，结构对齐 215，见 custom-divider-name-ui） */
+export const CUSTOM_DIVIDER_NAME_TOGGLE_SEQ: readonly number[] = [196];
+
 /** 桌台与餐位：清桌、企台等运营策略（平面图 seq 428 见餐位平面图功能页） */
 /** 前厅 · 选桌页面（107 合并 533；产线多选见 table-selection-page-ui） */
 export const TABLE_SELECTION_PAGE_TOGGLE_SEQ: readonly number[] = [107];
@@ -122,8 +125,8 @@ export const ORDER_REMARK_TOGGLE_SEQ: readonly number[] = [521];
 /** 前厅 · 商品备注（522 按产线选商品见 product-remark-ui，结构对齐展示菜详情 608） */
 export const PRODUCT_REMARK_TOGGLE_SEQ: readonly number[] = [522];
 
-/** 打印中心 · 支付收据流程 · 收据确认签名栏（94 按产线见 receipt-signature-line-ui） */
-export const RECEIPT_SIGNATURE_LINE_TOGGLE_SEQ: readonly number[] = [94];
+/** 打印中心 · 支付收据流程 · 收据确认签名栏（94 默认开启无主开关，见 receipt-signature-line-ui） */
+export const RECEIPT_SIGNATURE_LINE_TOGGLE_SEQ: readonly number[] = [];
 
 /** 前厅 · 套餐子项备注（523 按产线见 combo-subitem-remark-lines-ui） */
 export const COMBO_SUBITEM_REMARK_TOGGLE_SEQ: readonly number[] = [523];
@@ -140,16 +143,10 @@ export const KITCHEN_TICKET_GROUPING_TOGGLE_SEQ: readonly number[] = [54, 40, 47
 /** 后厨 · 行级合并矩阵（含打包单 301/302、食客收据 287/288，由矩阵内开关控制） */
 export const KITCHEN_LINE_MERGE_MATRIX_TOGGLE_SEQ: readonly number[] = [52, 53, 287, 288, 301, 302];
 
-/** 后厨 · 厨房单显示什么（仅厨房单；271/258 见 cross-ticket-fields） */
+/** 后厨 · 厨房单显示什么（仅厨房单；271/258 为票种多选，见 print-dish-code / takeout-enhanced-display） */
 export const KITCHEN_TICKET_FIELDS_TOGGLE_SEQ: readonly number[] = [
   35, 42, 45, 46, 48, 49, 50, 55, 56, 57, 58,
 ];
-
-/** 后厨 · 跨票种显示 · 打印菜品编号（271） */
-export const KITCHEN_PRINT_DISH_CODE_TOGGLE_SEQ: readonly number[] = [271];
-
-/** 后厨 · 跨票种显示 · 外带订单增强显示（258） */
-export const KITCHEN_TAKEOUT_ENHANCED_DISPLAY_TOGGLE_SEQ: readonly number[] = [258];
 
 /** 后厨 · 厨房单样式（43+44 合并为边距输入+范围下拉，见 module-settings-kitchen-ticket-margin-ui） */
 export const KITCHEN_TICKET_FORMAT_TOGGLE_SEQ: readonly number[] = [38, 41, 33, 59, 60];
@@ -182,8 +179,8 @@ export const ORDER_VOID_TOGGLE_SEQ: readonly number[] = [157, 158, 159];
 /** 前厅 · POS 结账入口（248/221 主开关 + 产线，见 pos-checkout-entry-lines-ui） */
 export const POS_CHECKOUT_ENTRY_TOGGLE_SEQ: readonly number[] = [248, 221];
 
-/** 订单 · 折扣（446 预设表；163 开关+输入见 order-discount-reason-ui） */
-export const ORDER_DISCOUNT_TOGGLE_SEQ: readonly number[] = [162, 163, 164];
+/** 订单 · 折扣（446 预设表；162 单选 / 163 列表见 order-discount-reason-ui；164 已下线） */
+export const ORDER_DISCOUNT_TOGGLE_SEQ: readonly number[] = [];
 
 /** 订单 · 加收（447 预设表；147 四舍五入见 order-settlement） */
 export const ORDER_SURCHARGE_TOGGLE_SEQ: readonly number[] = [149, 161];
@@ -284,13 +281,13 @@ export const ORDER_TYPE_SELECTION_PAGE_TOGGLE_SEQ = GUEST_KIOSK_FLOW_PAGE_TOGGLE
 /** 预约等位 · 叫号屏开关（3/4/5 数值、7 单选见 caller-screen-display-ui） */
 export const CALLER_SCREEN_DISPLAY_TOGGLE_SEQ: readonly number[] = [2, 6];
 
-/** 预约等位 · 等位排队规则（12 开关；529 主开关+产线见 waitlist-queue-rules-ui） */
+/** 预约等位 · 等位排队规则（12 开关；529 等位模式默认开启无主开关，见 waitlist-queue-rules-ui） */
 export const WAITLIST_QUEUE_RULES_TOGGLE_SEQ: readonly number[] = [12];
 
 /** 预约等位 · 预约提醒与自动化（341 小时输入见 reservation-automation-ui） */
 export const RESERVATION_AUTOMATION_TOGGLE_SEQ: readonly number[] = [342];
 
-/** 财务 · 现金日结与班结（171 主开关；65/330 见 daily-close-settlement-ui） */
+/** 财务 · 现金日结与班结（171 主开关；65/330 嵌套复选见 daily-close-settlement-ui） */
 export const DAILY_CLOSE_SETTLEMENT_TOGGLE_SEQ: readonly number[] = [171, 65, 330];
 
 /** 财务 · 钱箱备款与平账（63/76 数值；181 开关见 cash-drawer-reconciliation-ui） */
@@ -352,8 +349,6 @@ export const MODULE_SETTING_TOGGLE_SEQ = new Set([
   ...KITCHEN_TICKET_GROUPING_TOGGLE_SEQ,
   ...KITCHEN_LINE_MERGE_MATRIX_TOGGLE_SEQ,
   ...KITCHEN_TICKET_FIELDS_TOGGLE_SEQ,
-  ...KITCHEN_PRINT_DISH_CODE_TOGGLE_SEQ,
-  ...KITCHEN_TAKEOUT_ENHANCED_DISPLAY_TOGGLE_SEQ,
   ...KITCHEN_TICKET_FORMAT_TOGGLE_SEQ,
   ...KITCHEN_PACKING_SLIP_TOGGLE_SEQ,
   ...STORE_OPERATION_MODE_ALERTS_TOGGLE_SEQ,
@@ -452,6 +447,7 @@ export const MODULE_SETTING_TOGGLE_SEQ = new Set([
   ...COMBO_SUBITEM_REMARK_TOGGLE_SEQ,
   ...POS_ORDER_CART_SIMPLE_TOGGLE_SEQ,
   ...POS_BUTTON_VISIBILITY_TOGGLE_SEQ,
+  ...CUSTOM_DIVIDER_NAME_TOGGLE_SEQ,
 ]);
 
 export function isModuleSettingToggleSeq(seq: number): boolean {

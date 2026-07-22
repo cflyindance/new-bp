@@ -144,7 +144,7 @@ const KNOWN_NUMBER_FIELDS: NumberFieldMeta[] = [
 
 const KNOWN_TEXT_FIELDS: TextFieldMeta[] = [
   { seq: 280, fieldId: "280-receipt-auto-surcharge-hint", label: "自动加收提示文案" },
-  { seq: 163, fieldId: "163-discount-reason-default", label: "折扣原因默认值" },
+  { seq: 163, fieldId: "163-discount-reasons", label: "自定义折扣原因" },
 ];
 
 const LINE_ALIAS: Readonly<Record<string, string>> = {
