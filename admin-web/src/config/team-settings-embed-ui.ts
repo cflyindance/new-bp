@@ -10,12 +10,9 @@ import {
 
 export const TEAM_SHIFT_SCHEDULING_SETTING_SEQS = [74] as const;
 
-/** 休息与加班 · 全局休息规则（强制休息时长等） */
-export const TEAM_BREAKS_OVERTIME_GLOBAL_SETTING_SEQS = [66] as const;
 /** 休息与加班 · 休息规则（带薪休息时长，与超时转无薪联动） */
 export const TEAM_BREAKS_OVERTIME_BREAK_RULES_SETTING_SEQS = [329] as const;
 export const TEAM_BREAKS_OVERTIME_SETTING_SEQS = [
-  ...TEAM_BREAKS_OVERTIME_GLOBAL_SETTING_SEQS,
   ...TEAM_BREAKS_OVERTIME_BREAK_RULES_SETTING_SEQS,
 ] as const;
 

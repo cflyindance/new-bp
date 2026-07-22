@@ -46,6 +46,14 @@ export interface DeploymentOriginNav {
   pagePath: string;
 }
 
+/** 变更预览结构化子行（逐行改前 → 改后） */
+export interface ChangeDetailRow {
+  key: string;
+  label: string;
+  before: string;
+  after: string;
+}
+
 /** 单次配置变更快照（修改前 → 修改后） */
 export interface DeploymentConfigChange {
   fieldKey?: string;
@@ -57,6 +65,10 @@ export interface DeploymentConfigChange {
   after: string;
   /** 发起菜单路径（用于配置域与导航解析） */
   settingsPath?: string;
+  /** 导航分组路径，如 ["前厅管理中心", "设置", "账户安全与授权"] */
+  groupPath?: string[];
+  /** 结构化子行；预览优先使用 */
+  details?: ChangeDetailRow[];
 }
 
 export interface DeploymentSimulatorMeta {

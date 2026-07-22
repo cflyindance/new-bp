@@ -122,10 +122,6 @@ const BREAKS_OVERTIME_NAV_GROUPS: NavGroup[] = [
       { key: "overtime-rules", title: "加班规则" },
     ],
   },
-  {
-    label: "全局规则",
-    items: [{ key: "global-rules", title: "全局休息规则" }],
-  },
 ];
 
 /** 与 main.ts 三级侧栏一致：仅侧栏自身过长时可滚，不随右侧四级内容同步滚动 */
@@ -224,6 +220,8 @@ let overtimeRuleEditor: OvertimeRuleEditor | null = null;
 let customBreakEditor: CustomBreakEditor | null = null;
 /** 删除休息确认弹窗中的休息 id；null 表示关闭 */
 let customBreakDeleteConfirmId: string | null = null;
+/** 删除加班规则确认弹窗中的规则 id；null 表示关闭 */
+let overtimeRuleDeleteConfirmId: string | null = null;
 
 function markBreaksOvertimeDirty(): void {
   window.dispatchEvent(
@@ -445,6 +443,7 @@ function resetDraft(): void {
   overtimeRuleEditor = null;
   customBreakEditor = null;
   customBreakDeleteConfirmId = null;
+  overtimeRuleDeleteConfirmId = null;
 }
 
 const FORM_INPUT =
@@ -553,6 +552,28 @@ function renderCustomBreakRow(b: CustomBreak): string {
         ${deleteBtn}
       </td>
     </tr>`;
+}
+
+function renderOvertimeRuleDeleteConfirmDialog(config: BreaksOvertimeConfig): string {
+  if (!overtimeRuleDeleteConfirmId) return "";
+  const target = config.overtimeRules.find((r) => r.id === overtimeRuleDeleteConfirmId);
+  const name = target?.name || "未命名规则";
+  return `
+    <div class="fixed inset-0 z-[60] flex items-center justify-center p-4" data-overtime-rule-delete-dialog role="dialog" aria-modal="true" aria-labelledby="overtime-rule-delete-title">
+      <button type="button" class="absolute inset-0 bg-black/40" data-overtime-rule-delete-backdrop aria-label="关闭"></button>
+      <div class="relative z-10 w-full max-w-sm overflow-hidden rounded-xl border border-border bg-card shadow-lg">
+        <div class="border-b border-border px-5 py-4">
+          <h2 id="overtime-rule-delete-title" class="text-base font-semibold text-foreground">确认删除</h2>
+        </div>
+        <div class="px-5 py-4 text-sm text-muted-foreground">
+          确定删除加班规则「<span class="font-medium text-foreground">${escapeHtml(name)}</span>」？删除后不可恢复。
+        </div>
+        <div class="flex items-center justify-end gap-2 border-t border-border px-5 py-3">
+          <button type="button" data-overtime-rule-delete-cancel class="rounded-md border border-border px-4 py-2 text-sm hover:bg-muted">取消</button>
+          <button type="button" data-overtime-rule-delete-ok class="rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground hover:bg-destructive/90">删除</button>
+        </div>
+      </div>
+    </div>`;
 }
 
 function renderOvertimeRuleRow(rule: OvertimeRule): string {
@@ -773,33 +794,11 @@ function renderOvertimeRulesSection(config: BreaksOvertimeConfig): string {
       <div class="mt-3 flex flex-wrap items-center justify-end gap-2">
         ${addBtn}
       </div>`;
-  return renderSectionShell(
-    "overtime-rules",
-    "加班规则",
-    "请根据当地劳动法配置每日/每周加班阈值与工资倍率；每种计算口径仅可配置一条规则。",
-    body,
-  );
+  return renderSectionShell("overtime-rules", "加班规则", "", body);
 }
 
-function renderGlobalRulesSection(globalRulesRowsHtml: string): string {
-  if (!globalRulesRowsHtml.trim()) return "";
-  const body = `
-      <ul class="mt-3 m-0 list-none divide-y divide-border p-0" role="list">${globalRulesRowsHtml}</ul>`;
-  return renderSectionShell(
-    "global-rules",
-    "全局休息规则",
-    "强制休息时长等全店统一参数；与上方休息规则配合使用。",
-    body,
-  );
-}
-
-function getBreaksOvertimeNavGroups(hasGlobalRules: boolean): NavGroup[] {
-  if (hasGlobalRules) return BREAKS_OVERTIME_NAV_GROUPS;
-  return BREAKS_OVERTIME_NAV_GROUPS.filter((g) => g.label !== "全局规则");
-}
-
-function renderBreaksOvertimeSubnav(activeKey: string, hasGlobalRules: boolean): string {
-  const groups = getBreaksOvertimeNavGroups(hasGlobalRules);
+function renderBreaksOvertimeSubnav(activeKey: string): string {
+  const groups = BREAKS_OVERTIME_NAV_GROUPS;
   const parts: string[] = [];
 
   groups.forEach((group, groupIndex) => {
@@ -832,18 +831,13 @@ function renderBreaksOvertimeSubnav(activeKey: string, hasGlobalRules: boolean):
     </nav>`;
 }
 
-function renderBreaksOvertimeMainContent(
-  config: BreaksOvertimeConfig,
-  globalRulesRowsHtml: string,
-  paidBreakRowsHtml = "",
-): string {
+function renderBreaksOvertimeMainContent(config: BreaksOvertimeConfig, paidBreakRowsHtml = ""): string {
   return `
     <div class="breaks-overtime-scroll-host module-settings-scroll-host min-w-0 min-h-0 flex-1 space-y-4 overflow-y-auto">
       ${renderCustomBreaksSection(config)}
       ${renderBreakRulesSection(config, paidBreakRowsHtml)}
       ${renderWorkWeekSection(config)}
       ${renderOvertimeRulesSection(config)}
-      ${renderGlobalRulesSection(globalRulesRowsHtml)}
     </div>`;
 }
 
@@ -859,18 +853,12 @@ export function getTeamBreaksOvertimeActiveSectionKey(path: string): string | un
   return allKeys.includes(suffix) ? suffix : undefined;
 }
 
-export function renderTeamBreaksOvertimePage(
-  globalRulesRowsHtml = "",
-  path?: string,
-  paidBreakRowsHtml = "",
-): string {
+export function renderTeamBreaksOvertimePage(path?: string, paidBreakRowsHtml = ""): string {
   const config = getDraft();
   const sectionFromPath = path ? getTeamBreaksOvertimeActiveSectionKey(path) : undefined;
   if (sectionFromPath) activeBreaksNavKey = sectionFromPath;
 
-  const hasGlobalRules = globalRulesRowsHtml.trim().length > 0;
-  const navGroups = getBreaksOvertimeNavGroups(hasGlobalRules);
-  const validKeys = navGroups.flatMap((g) => g.items.map((i) => i.key));
+  const validKeys = BREAKS_OVERTIME_NAV_GROUPS.flatMap((g) => g.items.map((i) => i.key));
   if (!validKeys.includes(activeBreaksNavKey)) {
     activeBreaksNavKey = validKeys[0] ?? "custom-breaks";
   }
@@ -878,12 +866,13 @@ export function renderTeamBreaksOvertimePage(
   return `
     <div class="team-breaks-overtime-page flex min-h-0 flex-1 flex-col overflow-hidden" data-team-breaks-overtime-page data-breaks-view="full">
       <div class="flex min-h-0 flex-1 flex-col gap-6 overflow-hidden sm:flex-row sm:items-stretch">
-        ${renderBreaksOvertimeSubnav(activeBreaksNavKey, hasGlobalRules)}
-        ${renderBreaksOvertimeMainContent(config, globalRulesRowsHtml, paidBreakRowsHtml)}
+        ${renderBreaksOvertimeSubnav(activeBreaksNavKey)}
+        ${renderBreaksOvertimeMainContent(config, paidBreakRowsHtml)}
       </div>
       ${renderCustomBreakDialog(config)}
       ${renderCustomBreakDeleteConfirmDialog(config)}
       ${renderOvertimeRuleDialog(config)}
+      ${renderOvertimeRuleDeleteConfirmDialog(config)}
     </div>`;
 }
 
@@ -1168,6 +1157,33 @@ function closeOvertimeRuleDialog(remount: () => void): void {
   remount();
 }
 
+function closeOvertimeRuleDeleteDialog(remount: () => void): void {
+  overtimeRuleDeleteConfirmId = null;
+  remount();
+}
+
+function bindOvertimeRuleDeleteDialog(root: HTMLElement, remount: () => void): void {
+  const dialog = root.querySelector<HTMLElement>("[data-overtime-rule-delete-dialog]");
+  if (!dialog || !overtimeRuleDeleteConfirmId) return;
+
+  const close = () => closeOvertimeRuleDeleteDialog(remount);
+  dialog.querySelector("[data-overtime-rule-delete-backdrop]")?.addEventListener("click", close);
+  dialog.querySelector("[data-overtime-rule-delete-cancel]")?.addEventListener("click", close);
+  dialog.querySelector("[data-overtime-rule-delete-ok]")?.addEventListener("click", () => {
+    const id = overtimeRuleDeleteConfirmId;
+    if (!id) {
+      close();
+      return;
+    }
+    const config = collectConfigFromDom(root);
+    config.overtimeRules = config.overtimeRules.filter((r) => r.id !== id);
+    draftConfig = config;
+    overtimeRuleDeleteConfirmId = null;
+    markBreaksOvertimeDirty();
+    remount();
+  });
+}
+
 function bindOvertimeRulesUi(root: HTMLElement, remount: () => void): void {
   root.querySelector("[data-overtime-rule-add]")?.addEventListener("click", () => {
     draftConfig = collectConfigFromDom(root);
@@ -1190,13 +1206,13 @@ function bindOvertimeRulesUi(root: HTMLElement, remount: () => void): void {
     btn.addEventListener("click", () => {
       const id = btn.getAttribute("data-overtime-rule-remove");
       if (!id) return;
-      const config = collectConfigFromDom(root);
-      config.overtimeRules = config.overtimeRules.filter((r) => r.id !== id);
-      draftConfig = config;
-      markBreaksOvertimeDirty();
+      draftConfig = collectConfigFromDom(root);
+      overtimeRuleDeleteConfirmId = id;
       remount();
     });
   });
+
+  bindOvertimeRuleDeleteDialog(root, remount);
 
   const dialog = root.querySelector<HTMLElement>("[data-overtime-rule-dialog]");
   if (!dialog) return;

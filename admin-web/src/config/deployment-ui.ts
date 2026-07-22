@@ -12,8 +12,8 @@ import {
 import { getUiLocale, t } from "../i18n";
 import { readAppHashPath } from "./app-routes";
 import {
-  normalizeChangeForDisplay,
   renderChangePreviewDialog,
+  renderChangePreviewSections,
 } from "./deployment-change-preview";
 import { resolveDomainsForPath } from "./deployment-config-domains";
 import { listMockStoresByIds } from "./deployment-mock-devices";
@@ -223,10 +223,6 @@ function renderOperatorCell(batch: DeploymentBatch): string {
   return `<span class="text-card-foreground">${escapeHtml(email)}</span>`;
 }
 
-function renderMultilineValue(value: string): string {
-  return escapeHtml(value || "—").replace(/\n/g, "<br />");
-}
-
 function renderDeploymentChangeDialog(batch: DeploymentBatch): string {
   return renderChangePreviewDialog({
     mode: "view",
@@ -254,35 +250,7 @@ function openDeploymentChangeDialog(batchId: string): void {
 }
 
 function renderConfigChangesTable(changes: DeploymentConfigChange[]): string {
-  if (changes.length === 0) {
-    return `<p class="m-0 text-sm text-muted-foreground">（无变更明细）</p>`;
-  }
-  const rows = changes
-    .map((raw) => {
-      const change = normalizeChangeForDisplay(raw);
-      return `
-        <tr class="border-b border-border last:border-0 align-top">
-          <td class="px-4 py-2.5 font-medium text-card-foreground">${escapeHtml(change.label)}</td>
-          <td class="px-4 py-2.5 text-muted-foreground">${escapeHtml(change.operation ?? "—")}</td>
-          <td class="px-4 py-2.5 text-muted-foreground">${renderMultilineValue(change.before)}</td>
-          <td class="px-4 py-2.5 text-card-foreground">${renderMultilineValue(change.after)}</td>
-        </tr>`;
-    })
-    .join("");
-  return `
-    <div class="overflow-x-auto rounded-xl border border-border">
-      <table class="w-full min-w-[36rem] border-collapse text-left text-sm">
-        <thead class="border-b border-border bg-muted/50">
-          <tr>
-            <th class="px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">功能</th>
-            <th class="px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">操作</th>
-            <th class="px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">修改前</th>
-            <th class="px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">修改后</th>
-          </tr>
-        </thead>
-        <tbody>${rows}</tbody>
-      </table>
-    </div>`;
+  return `<div class="space-y-5">${renderChangePreviewSections(changes)}</div>`;
 }
 
 function renderListRow(batch: DeploymentBatch): string {

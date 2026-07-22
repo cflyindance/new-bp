@@ -2,24 +2,30 @@
  * 功能设置变更 → 下发记录（可读标签、操作类型、修改前后）
  */
 import { readAppHashPath } from "./app-routes";
-import { recordDeploymentConfigChange } from "./deployment-change-buffer";
-import type { DeploymentConfigChange } from "./deployment-types";
+import {
+  buildChangeDetailRows,
+  formatConfigDisplayValue,
+  getSettingTitleBySeq,
+  changeHasDiff,
+  recordDeploymentConfigChange,
+  summarizeChangeDetails,
+} from "./deployment-change-buffer";
+import { resolveOriginNavFromPath } from "./deployment-config-domains";
+import type { ChangeDetailRow, DeploymentConfigChange } from "./deployment-types";
 import {
   isPageBatchSavePath,
   resolvePageSaveKey,
   trackPageConfigChange,
 } from "./page-settings-draft";
-import { getModuleSettingsBasePath } from "./module-settings-catalog";
 import {
-  getSettingTitleBySeq,
-  formatConfigDisplayValue,
-} from "./deployment-change-buffer";
+  getModuleSettingsBasePath,
+  listAllModuleSettingCatalogEntries,
+} from "./module-settings-catalog";
 import {
   listModuleSettingFormFieldDescriptors,
   listModuleSettingFormRows,
 } from "./module-settings-form-ui";
 import { getCatalogItemBySeq } from "./nav-setting-registry";
-import { listAllModuleSettingCatalogEntries } from "./module-settings-catalog";
 import { GUEST_FACING_LOCALES, STAFF_SYSTEM_DEFAULT_LOCALES } from "./module-settings-locale-ui";
 
 export type ModuleSettingChangeKind =
@@ -188,6 +194,129 @@ export function formatMaxGuestsByLineForDeployment(value: unknown): string | nul
     if (!enabled) return `${line.label}：未启用`;
     return `${line.label}：启用，最多 ${guests} 人`;
   }).join("\n");
+}
+
+function formatClosingAlertLineText(item: Record<string, unknown> | undefined): string {
+  const enabled = item?.enabled === true;
+  const minutes = clampClosingAlertMinutes(item?.minutes ?? 15);
+  if (!enabled) return "未启用";
+  return `启用，结束前 ${minutes} 分钟`;
+}
+
+function formatAutoLogoutLineText(item: Record<string, unknown> | undefined): string {
+  const enabled = item?.enabled === true;
+  const minutes = clampAutoLogoutMinutes(item?.minutes ?? 15);
+  if (!enabled) return "未启用";
+  return `启用，无操作 ${minutes} 分钟`;
+}
+
+function formatMaxGuestsLineText(item: Record<string, unknown> | undefined): string {
+  const enabled = item?.enabled === true;
+  const guests = clampMaxGuests(item?.guests ?? 20);
+  if (!enabled) return "未启用";
+  return `启用，最多 ${guests} 人`;
+}
+
+function buildByLineDetailRows(
+  before: unknown,
+  after: unknown,
+  lines: readonly { id: string; label: string }[],
+  formatLine: (item: Record<string, unknown> | undefined) => string,
+): ChangeDetailRow[] {
+  const beforeObj = parseByLineConfigObject(before) ?? {};
+  const afterObj = parseByLineConfigObject(after) ?? {};
+  const rows: ChangeDetailRow[] = [];
+  for (const line of lines) {
+    const beforeText = formatLine(beforeObj[line.id] as Record<string, unknown> | undefined);
+    const afterText = formatLine(afterObj[line.id] as Record<string, unknown> | undefined);
+    if (beforeText === afterText) continue;
+    rows.push({
+      key: line.id,
+      label: line.label,
+      before: beforeText,
+      after: afterText,
+    });
+  }
+  return rows;
+}
+
+function buildDetailsForKind(
+  kind: ModuleSettingChangeKind,
+  before: unknown,
+  after: unknown,
+  fieldId?: string,
+  rootLabel?: string,
+): ChangeDetailRow[] {
+  if (fieldId === STORE_CLOSING_ALERT_BY_LINE_FIELD_ID) {
+    return buildByLineDetailRows(before, after, CLOSING_ALERT_LINES, formatClosingAlertLineText);
+  }
+  if (fieldId === AUTO_LOGOUT_BY_LINE_FIELD_ID) {
+    return buildByLineDetailRows(before, after, AUTO_LOGOUT_LINES, formatAutoLogoutLineText);
+  }
+  if (fieldId === MAX_GUESTS_BY_LINE_FIELD_ID) {
+    return buildByLineDetailRows(before, after, MAX_GUESTS_LINES, formatMaxGuestsLineText);
+  }
+  if (kind === "product_line" || (kind === "json" && fieldId && isProductLineIdArray(after))) {
+    const beforeText = formatProductLineList(before);
+    const afterText = formatProductLineList(after);
+    if (beforeText === afterText) return [];
+    return [
+      {
+        key: "lines",
+        label: "适用产线",
+        before: beforeText,
+        after: afterText,
+      },
+    ];
+  }
+  if (
+    kind === "toggle" ||
+    kind === "checkbox" ||
+    kind === "number" ||
+    kind === "text" ||
+    kind === "color" ||
+    kind === "radio"
+  ) {
+    const beforeText = formatValueForKind(kind, before, fieldId);
+    const afterText = formatValueForKind(kind, after, fieldId);
+    if (beforeText === afterText) return [];
+    return [
+      {
+        key: fieldId ?? "value",
+        label: rootLabel ?? "配置值",
+        before: beforeText,
+        after: afterText,
+      },
+    ];
+  }
+  return buildChangeDetailRows(before, after, {
+    rootKey: fieldId ?? "value",
+    rootLabel: rootLabel ?? "配置值",
+  });
+}
+
+/** settingsPath + seq → 导航分组路径 */
+export function resolveChangeGroupPath(
+  settingsPath?: string,
+  seq?: number,
+): string[] | undefined {
+  if (!settingsPath && seq == null) return undefined;
+  const path = settingsPath ?? resolveSettingsPathForSeq(seq!);
+  if (!path) return undefined;
+
+  const nav = resolveOriginNavFromPath(path);
+  const parts: string[] = [];
+  if (nav.l1Title) parts.push(nav.l1Title);
+  if (nav.l2Title && nav.l2Title !== nav.l1Title) parts.push(nav.l2Title);
+
+  if (seq != null) {
+    const catalogItem = getCatalogItemBySeq(seq);
+    if (catalogItem?.groupTitle && !parts.includes(catalogItem.groupTitle)) {
+      parts.push(catalogItem.groupTitle);
+    }
+  }
+
+  return parts.length > 0 ? parts : undefined;
 }
 
 const KNOWN_LINE_IDS = new Set(Object.keys(PRODUCT_LINE_LABELS));
@@ -508,20 +637,26 @@ export function buildModuleSettingDeploymentChange(
     (seq != null ? resolveSettingsPathForSeq(seq) : undefined) ??
     (fieldId ? resolveSettingsPathForChange(fieldId) : resolveSettingsPathForChange());
 
+  const details = buildDetailsForKind(kind, input.before, input.after, fieldId, subLabel ?? label);
+  const summary = details.length > 0 ? summarizeChangeDetails(details) : null;
+  const groupPath = resolveChangeGroupPath(settingsPath, seq);
+
   return {
     fieldKey: fieldId ?? (seq != null ? String(seq) : undefined),
     label,
     operation,
-    before: beforeStr,
-    after: afterStr,
+    before: summary?.before ?? beforeStr,
+    after: summary?.after ?? afterStr,
     settingsPath,
+    groupPath,
+    details: details.length > 0 ? details : undefined,
   };
 }
 
 /** 记录功能设置变更并返回下发路径（供 notifyConfigSaved 使用） */
 export function recordModuleSettingDeploymentChange(input: ModuleSettingChangeInput): string | undefined {
   const built = buildModuleSettingDeploymentChange(input);
-  if (built.before === built.after) return built.settingsPath;
+  if (!changeHasDiff(built)) return built.settingsPath;
 
   const settingsPath = built.settingsPath;
   if (settingsPath && isPageBatchSavePath(settingsPath)) {
@@ -536,6 +671,8 @@ export function recordModuleSettingDeploymentChange(input: ModuleSettingChangeIn
     before: built.before,
     after: built.after,
     settingsPath: built.settingsPath,
+    groupPath: built.groupPath,
+    details: built.details,
   });
   return built.settingsPath;
 }

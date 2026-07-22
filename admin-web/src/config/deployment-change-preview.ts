@@ -1,12 +1,17 @@
 /**
  * 配置变更前后对比预览（下发记录 / 保存并下发确认共用）
  */
-import { getSettingTitleBySeq } from "./deployment-change-buffer";
-import type { DeploymentConfigChange } from "./deployment-types";
+import {
+  buildChangeDetailRows,
+  getSettingTitleBySeq,
+} from "./deployment-change-buffer";
+import { resolveOriginNavFromPath } from "./deployment-config-domains";
+import type { ChangeDetailRow, DeploymentConfigChange } from "./deployment-types";
 import {
   formatAutoLogoutByLineForDeployment,
   formatMaxGuestsByLineForDeployment,
   formatStoreClosingAlertByLineForDeployment,
+  resolveChangeGroupPath,
   AUTO_LOGOUT_BY_LINE_FIELD_ID,
   MAX_GUESTS_BY_LINE_FIELD_ID,
   STORE_CLOSING_ALERT_BY_LINE_FIELD_ID,
@@ -54,7 +59,109 @@ function isMaxGuestsByLineChange(change: DeploymentConfigChange): boolean {
   );
 }
 
+function tryParseJsonObject(text: string): Record<string, unknown> | null {
+  const trimmed = text.trim();
+  if (!trimmed.startsWith("{") || !trimmed.endsWith("}")) return null;
+  try {
+    const parsed = JSON.parse(trimmed) as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    return parsed as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
+function splitLabeledLines(text: string): ChangeDetailRow[] | null {
+  const lines = text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (lines.length < 1) return null;
+  const rows: ChangeDetailRow[] = [];
+  for (const line of lines) {
+    const idx = line.indexOf("：");
+    if (idx <= 0) return null;
+    const label = line.slice(0, idx).trim();
+    const value = line.slice(idx + 1).trim();
+    if (!label) return null;
+    rows.push({ key: label, label, before: value, after: value });
+  }
+  return rows.length > 0 ? rows : null;
+}
+
+function mergeLabeledLineDetails(beforeText: string, afterText: string): ChangeDetailRow[] | null {
+  const beforeRows = splitLabeledLines(beforeText);
+  const afterRows = splitLabeledLines(afterText);
+  if (!beforeRows && !afterRows) return null;
+  const map = new Map<string, ChangeDetailRow>();
+  for (const row of beforeRows ?? []) {
+    map.set(row.key, { ...row, after: "—" });
+  }
+  for (const row of afterRows ?? []) {
+    const prev = map.get(row.key);
+    if (prev) {
+      map.set(row.key, { ...prev, after: row.after });
+    } else {
+      map.set(row.key, { ...row, before: "—" });
+    }
+  }
+  return [...map.values()].filter((row) => row.before !== row.after);
+}
+
+/** 旧历史回退：无 details 时尽量拆成结构化行 */
+export function resolveChangeDetails(change: DeploymentConfigChange): ChangeDetailRow[] {
+  if (change.details?.length) {
+    return change.details.filter((row) => row.before !== row.after);
+  }
+
+  if (isClosingAlertChange(change)) {
+    const before =
+      formatStoreClosingAlertByLineForDeployment(change.before) ?? change.before;
+    const after = formatStoreClosingAlertByLineForDeployment(change.after) ?? change.after;
+    const labeled = mergeLabeledLineDetails(before, after);
+    if (labeled?.length) return labeled;
+  }
+  if (isAutoLogoutByLineChange(change)) {
+    const before = formatAutoLogoutByLineForDeployment(change.before) ?? change.before;
+    const after = formatAutoLogoutByLineForDeployment(change.after) ?? change.after;
+    const labeled = mergeLabeledLineDetails(before, after);
+    if (labeled?.length) return labeled;
+  }
+  if (isMaxGuestsByLineChange(change)) {
+    const before = formatMaxGuestsByLineForDeployment(change.before) ?? change.before;
+    const after = formatMaxGuestsByLineForDeployment(change.after) ?? change.after;
+    const labeled = mergeLabeledLineDetails(before, after);
+    if (labeled?.length) return labeled;
+  }
+
+  const labeled = mergeLabeledLineDetails(change.before, change.after);
+  if (labeled?.length) return labeled;
+
+  const beforeObj = tryParseJsonObject(change.before);
+  const afterObj = tryParseJsonObject(change.after);
+  if (beforeObj || afterObj) {
+    return buildChangeDetailRows(beforeObj ?? change.before, afterObj ?? change.after, {
+      rootLabel: "配置值",
+      rootKey: change.fieldKey ?? "value",
+    });
+  }
+
+  if (change.before !== change.after) {
+    return [
+      {
+        key: change.fieldKey ?? "value",
+        label: "配置值",
+        before: change.before || "—",
+        after: change.after || "—",
+      },
+    ];
+  }
+  return [];
+}
+
 export function normalizeChangeForDisplay(change: DeploymentConfigChange): DeploymentConfigChange {
+  if (change.details?.length) return change;
+
   if (isClosingAlertChange(change)) {
     return {
       ...change,
@@ -82,10 +189,6 @@ export function normalizeChangeForDisplay(change: DeploymentConfigChange): Deplo
   return change;
 }
 
-function renderMultilineValue(value: string): string {
-  return escapeHtml(value || "—").replace(/\n/g, "<br />");
-}
-
 function isBlankChangeValue(value: string | undefined): boolean {
   const trimmed = (value ?? "").trim();
   return !trimmed || trimmed === "—" || trimmed === "-";
@@ -93,7 +196,14 @@ function isBlankChangeValue(value: string | undefined): boolean {
 
 type ChangePreviewKind = "add" | "edit" | "delete";
 
-function resolveChangePreviewKind(change: DeploymentConfigChange): ChangePreviewKind {
+function resolveChangePreviewKind(change: DeploymentConfigChange, details: ChangeDetailRow[]): ChangePreviewKind {
+  if (details.length > 0) {
+    const allAdd = details.every((d) => isBlankChangeValue(d.before) && !isBlankChangeValue(d.after));
+    const allDelete = details.every((d) => !isBlankChangeValue(d.before) && isBlankChangeValue(d.after));
+    if (allAdd) return "add";
+    if (allDelete) return "delete";
+    return "edit";
+  }
   const beforeEmpty = isBlankChangeValue(change.before);
   const afterEmpty = isBlankChangeValue(change.after);
   if (beforeEmpty && !afterEmpty) return "add";
@@ -113,106 +223,98 @@ function changePreviewKindBadgeClass(kind: ChangePreviewKind): string {
   return "bg-blue-500/15 text-blue-700 dark:text-blue-400";
 }
 
-const CHANGE_ARROW_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>`;
+const CHANGE_ARROW_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>`;
 
 export const CHANGE_CLOSE_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>`;
 
-function renderChangeFieldRow(label: string, value: string, emphasize = false): string {
-  return `
-    <div class="flex items-start justify-between gap-3 py-1.5 text-sm">
-      <span class="shrink-0 text-muted-foreground">${escapeHtml(label)}</span>
-      <span class="min-w-0 text-right ${emphasize ? "font-medium text-primary" : "text-card-foreground"}">${renderMultilineValue(value)}</span>
-    </div>`;
+function resolveGroupPathForChange(change: DeploymentConfigChange): string[] {
+  if (change.groupPath?.length) return change.groupPath.filter(Boolean);
+  const fromPath = resolveChangeGroupPath(change.settingsPath);
+  if (fromPath?.length) return fromPath;
+  if (change.settingsPath) {
+    const nav = resolveOriginNavFromPath(change.settingsPath);
+    const parts = [nav.l1Title, nav.l2Title].filter(
+      (part, index, arr) => Boolean(part) && arr.indexOf(part) === index,
+    );
+    if (parts.length) return parts;
+  }
+  return ["其他变更"];
 }
 
-function renderChangeCompareBlock(changes: DeploymentConfigChange[]): string {
-  const beforeRows = changes.map((c) => renderChangeFieldRow(c.label, c.before)).join("");
-  const afterRows = changes.map((c) => renderChangeFieldRow(c.label, c.after, true)).join("");
-  return `
-    <div class="grid gap-3 sm:grid-cols-[1fr_auto_1fr] sm:items-stretch">
-      <div class="rounded-lg border border-border bg-muted/40 p-3">
-        <div class="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">更改前</div>
-        <div class="divide-y divide-border/60">${beforeRows}</div>
-      </div>
-      <div class="flex items-center justify-center">
-        <span class="inline-flex size-8 items-center justify-center rounded-full border border-border bg-card text-primary shadow-sm">
-          ${CHANGE_ARROW_ICON}
-        </span>
-      </div>
-      <div class="rounded-lg border border-border bg-muted/40 p-3">
-        <div class="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">更改后</div>
-        <div class="divide-y divide-border/60">${afterRows}</div>
-      </div>
-    </div>`;
-}
-
-function renderChangeDeleteBlock(changes: DeploymentConfigChange[]): string {
-  const items = changes
-    .map(
-      (c) => `
-      <div class="rounded-lg border border-border bg-muted/40 px-3 py-2.5 text-sm text-card-foreground">
-        <span class="font-medium">${escapeHtml(c.label)}</span>
-        <span class="ml-2 text-muted-foreground">${renderMultilineValue(c.before)}</span>
-      </div>`,
-    )
+function renderDetailRows(details: ChangeDetailRow[]): string {
+  return details
+    .map((row) => {
+      const rowKind = resolveChangePreviewKind(
+        { label: "", before: row.before, after: row.after },
+        [row],
+      );
+      const afterClass =
+        rowKind === "add"
+          ? "font-medium text-emerald-700 dark:text-emerald-400"
+          : rowKind === "delete"
+            ? "font-medium text-red-700 dark:text-red-400"
+            : "font-medium text-primary";
+      return `
+      <div class="grid grid-cols-1 gap-2 border-t border-border/60 py-2 first:border-t-0 first:pt-0 sm:grid-cols-[7.5rem_minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-start sm:gap-3">
+        <div class="text-xs font-medium text-muted-foreground sm:pt-1.5">${escapeHtml(row.label)}</div>
+        <div class="rounded-md bg-muted/50 px-2.5 py-1.5 text-sm text-muted-foreground">${escapeHtml(row.before || "—")}</div>
+        <div class="hidden items-center justify-center text-muted-foreground sm:flex" aria-hidden="true">${CHANGE_ARROW_ICON}</div>
+        <div class="rounded-md bg-primary/5 px-2.5 py-1.5 text-sm ${afterClass}">${escapeHtml(row.after || "—")}</div>
+      </div>`;
+    })
     .join("");
-  return `<div class="space-y-2">${items}</div>`;
 }
 
-function renderChangeAddBlock(changes: DeploymentConfigChange[]): string {
-  const items = changes
-    .map(
-      (c) => `
-      <div class="rounded-lg border border-border bg-muted/40 px-3 py-2.5 text-sm">
-        <span class="font-medium text-card-foreground">${escapeHtml(c.label)}</span>
-        <span class="ml-2 font-medium text-primary">${renderMultilineValue(c.after)}</span>
-      </div>`,
-    )
-    .join("");
-  return `<div class="space-y-2">${items}</div>`;
+function renderSettingChangeCard(change: DeploymentConfigChange): string {
+  const normalized = normalizeChangeForDisplay(change);
+  const details = resolveChangeDetails(normalized);
+  if (details.length === 0) return "";
+
+  const kind = resolveChangePreviewKind(normalized, details);
+  const badge = change.operation?.trim() || changePreviewKindLabel(kind);
+
+  return `
+    <article class="rounded-lg border border-border bg-card p-3 sm:p-3.5">
+      <div class="mb-2 flex flex-wrap items-center gap-2">
+        <h4 class="m-0 text-sm font-semibold text-card-foreground">${escapeHtml(normalized.label)}</h4>
+        <span class="inline-flex rounded-md px-2 py-0.5 text-[11px] font-semibold ${changePreviewKindBadgeClass(kind)}">${escapeHtml(badge)}</span>
+      </div>
+      <div class="space-y-0">${renderDetailRows(details)}</div>
+    </article>`;
 }
 
-/** 变更预览主体：按新增 / 修改 / 删除分组的前后对比 */
+/** 变更预览主体：按导航分组 + 设置项逐行对比 */
 export function renderChangePreviewSections(changes: DeploymentConfigChange[]): string {
   if (changes.length === 0) {
     return `<p class="m-0 py-8 text-center text-sm text-muted-foreground">暂无变更明细</p>`;
   }
 
-  const normalized = changes.map(normalizeChangeForDisplay);
-  const groups = new Map<
-    string,
-    { kind: ChangePreviewKind; operation: string; items: DeploymentConfigChange[] }
-  >();
-
-  for (const change of normalized) {
-    const kind = resolveChangePreviewKind(change);
-    const operation = change.operation?.trim() || changePreviewKindLabel(kind);
-    const key = `${kind}::${operation}`;
-    const existing = groups.get(key);
-    if (existing) {
-      existing.items.push(change);
-    } else {
-      groups.set(key, { kind, operation, items: [change] });
-    }
+  const groups = new Map<string, { title: string; items: DeploymentConfigChange[] }>();
+  for (const change of changes) {
+    const path = resolveGroupPathForChange(change);
+    const title = path.join(" / ");
+    const existing = groups.get(title);
+    if (existing) existing.items.push(change);
+    else groups.set(title, { title, items: [change] });
   }
 
-  return [...groups.values()]
-    .map(({ kind, operation, items }) => {
-      const body =
-        kind === "delete"
-          ? renderChangeDeleteBlock(items)
-          : kind === "add"
-            ? renderChangeAddBlock(items)
-            : renderChangeCompareBlock(items);
+  const sections = [...groups.values()]
+    .map(({ title, items }) => {
+      const cards = items.map(renderSettingChangeCard).filter(Boolean).join("");
+      if (!cards) return "";
       return `
         <section class="space-y-3">
-          <div class="flex flex-wrap items-center gap-2">
-            <span class="inline-flex rounded-md px-2 py-0.5 text-xs font-semibold ${changePreviewKindBadgeClass(kind)}">${escapeHtml(operation)}</span>
-          </div>
-          ${body}
+          <h3 class="m-0 text-xs font-semibold uppercase tracking-wide text-muted-foreground">${escapeHtml(title)}</h3>
+          <div class="space-y-3">${cards}</div>
         </section>`;
     })
-    .join('<div class="border-t border-border"></div>');
+    .filter(Boolean);
+
+  if (sections.length === 0) {
+    return `<p class="m-0 py-8 text-center text-sm text-muted-foreground">暂无变更明细</p>`;
+  }
+
+  return sections.join('<div class="border-t border-border my-1"></div>');
 }
 
 export type ChangePreviewDialogMode = "view" | "confirm";

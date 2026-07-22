@@ -58,6 +58,18 @@ type ShiftType = {
   autoClockOutDelayEnabled: boolean;
   /** 下班自动打卡延迟（分钟） */
   autoClockOutDelayMinutes: number;
+  /** 班次默认是否安排休息 */
+  breakEnabled?: boolean;
+  /** 默认休息 ID */
+  breakId?: string;
+  /** 默认休息名称快照 */
+  breakName?: string;
+  /** 默认休息补偿 */
+  breakCompensation?: "paid" | "unpaid";
+  /** 默认休息时长（分钟） */
+  breakDurationMinutes?: number;
+  /** 默认是否强制休息 */
+  breakMandatory?: boolean;
 };
 
 type ShiftAssignment = {
@@ -84,6 +96,10 @@ type ShiftAssignment = {
   breakDurationMinutes?: number;
   /** 是否强制休息 */
   breakMandatory?: boolean;
+  /** 是否安排休息；缺省时兼容：有休息明细视为 true */
+  breakEnabled?: boolean;
+  /** 长工时手动关闭休息时的可选原因 */
+  breakSkipReason?: string;
 };
 
 type CustomBreakOption = {
@@ -105,7 +121,8 @@ type PageState = {
   dateFrom: string;
   dateTo: string;
   quickPreset: QuickPreset;
-  employeeFilter: string;
+  /** 员工筛选：空数组表示全部员工 */
+  employeeFilterIds: string[];
 };
 
 const DEFAULT_SHIFT_TYPES: ShiftType[] = [
@@ -152,8 +169,8 @@ const DEFAULT_EMPLOYEES: RosterEmployee[] = [
 const pageState: PageState = {
   dateFrom: "",
   dateTo: "",
-  quickPreset: "last-this-week",
-  employeeFilter: "",
+  quickPreset: "this-week",
+  employeeFilterIds: [],
 };
 
 type RepeatMode = "day" | "week";
@@ -177,14 +194,49 @@ let shiftPageTab: ShiftPageTab = "schedule";
 let shiftConfigStoreFilter = "";
 /** 新增/编辑班次弹窗；null 表示关闭 */
 let shiftFormEditor: { mode: "create" | "edit"; shift: ShiftType } | null = null;
+/** 排班表 · 员工多选筛选下拉是否展开 */
+let employeeFilterDropdownOpen = false;
+/** 排班表 · 员工多选筛选搜索词 */
+let employeeFilterSearchQuery = "";
+/** 员工筛选下拉：点击外部关闭的监听（避免 remount 重复绑定） */
+let employeeFilterOutsideCloser: ((e: MouseEvent) => void) | null = null;
+/** 安排排班弹窗 · 员工多选下拉是否展开 */
+let editEmployeeDropdownOpen = false;
+/** 安排排班弹窗 · 员工多选搜索词 */
+let editEmployeeSearchQuery = "";
+/** 安排排班弹窗员工多选：点击外部关闭 */
+let editEmployeeOutsideCloser: ((e: MouseEvent) => void) | null = null;
 /** 删除班次确认弹窗中的班次 id；null 表示关闭 */
 let shiftDeleteConfirmId: string | null = null;
 let cellEditor: {
   date: string;
   employeeIds: string[];
+  /** 来自「员工排班」入口时日期可改，并允许员工为空再自选 */
+  dateEditable: boolean;
   repeatMode: RepeatMode;
   repeatWeekdays: number[];
+  /** 是否安排休息 */
+  breakEnabled: boolean;
+  /** 长工时关闭休息的可选原因 */
+  breakSkipReason: string;
+  /** 用户是否已手动改过「安排休息」开关 */
+  breakSwitchTouched: boolean;
 } | null = null;
+
+/** 超过该工时（小时）默认要求安排休息 */
+const BREAK_REQUIRED_HOURS_THRESHOLD = 4;
+
+function defaultBreakEnabledForWorkHours(hours: number): boolean {
+  if (!Number.isFinite(hours) || hours <= 0) return false;
+  return hours > BREAK_REQUIRED_HOURS_THRESHOLD;
+}
+
+function assignmentHasBreak(a: ShiftAssignment | undefined): boolean {
+  if (!a) return false;
+  if (a.breakEnabled === false) return false;
+  if (a.breakEnabled === true) return true;
+  return !!(a.breakId || a.breakName);
+}
 
 function escapeHtml(s: string): string {
   return s
@@ -206,6 +258,21 @@ function parseIsoDate(s: string): Date {
   return new Date(y!, m! - 1, d!);
 }
 
+/** 本地日历「今天」YYYY-MM-DD */
+function todayIso(): string {
+  return isoDate(new Date());
+}
+
+/** 今天及以后可排班；历史日期只读 */
+function isScheduleDateEditable(date: string): boolean {
+  return date >= todayIso();
+}
+
+/** 「员工排班」默认日期：今天（始终可排） */
+function defaultEmployeeScheduleDate(): string {
+  return todayIso();
+}
+
 function startOfWeekMonday(d: Date): Date {
   const copy = new Date(d.getFullYear(), d.getMonth(), d.getDate());
   const day = copy.getDay();
@@ -221,19 +288,16 @@ function addDays(d: Date, n: number): Date {
 }
 
 function initDefaultDateRange(): void {
-  const today = new Date();
-  const thisWeekStart = startOfWeekMonday(today);
-  const lastWeekStart = addDays(thisWeekStart, -7);
-  const nextWeekEnd = addDays(thisWeekStart, 13);
-  pageState.dateFrom = isoDate(lastWeekStart);
-  pageState.dateTo = isoDate(nextWeekEnd);
+  const thisWeekStart = startOfWeekMonday(new Date());
+  pageState.dateFrom = isoDate(thisWeekStart);
+  pageState.dateTo = isoDate(addDays(thisWeekStart, 6));
 }
 
 if (!pageState.dateFrom) initDefaultDateRange();
 
 function normalizeShiftType(raw: Partial<ShiftType> & Pick<ShiftType, "id" | "name" | "startTime" | "endTime">): ShiftType {
   const storeId = typeof raw.storeId === "string" ? raw.storeId.trim() : "";
-  return {
+  const base: ShiftType = {
     id: raw.id,
     name: raw.name,
     startTime: raw.startTime,
@@ -248,6 +312,40 @@ function normalizeShiftType(raw: Partial<ShiftType> & Pick<ShiftType, "id" | "na
         ? raw.autoClockOutDelayMinutes
         : 30,
   };
+  if (raw.breakEnabled === true) {
+    base.breakEnabled = true;
+    if (typeof raw.breakId === "string" && raw.breakId) base.breakId = raw.breakId;
+    if (typeof raw.breakName === "string" && raw.breakName.trim()) base.breakName = raw.breakName.trim();
+    if (raw.breakCompensation === "paid" || raw.breakCompensation === "unpaid") {
+      base.breakCompensation = raw.breakCompensation;
+    }
+    if (typeof raw.breakDurationMinutes === "number" && raw.breakDurationMinutes > 0) {
+      base.breakDurationMinutes = raw.breakDurationMinutes;
+    }
+    if (typeof raw.breakMandatory === "boolean") base.breakMandatory = raw.breakMandatory;
+  } else if (raw.breakEnabled === false) {
+    base.breakEnabled = false;
+  } else if (typeof raw.breakId === "string" && raw.breakId) {
+    // 兼容旧数据：仅有 breakId 视为开启
+    base.breakEnabled = true;
+    base.breakId = raw.breakId;
+    if (typeof raw.breakName === "string" && raw.breakName.trim()) base.breakName = raw.breakName.trim();
+    if (raw.breakCompensation === "paid" || raw.breakCompensation === "unpaid") {
+      base.breakCompensation = raw.breakCompensation;
+    }
+    if (typeof raw.breakDurationMinutes === "number" && raw.breakDurationMinutes > 0) {
+      base.breakDurationMinutes = raw.breakDurationMinutes;
+    }
+    if (typeof raw.breakMandatory === "boolean") base.breakMandatory = raw.breakMandatory;
+  }
+  return base;
+}
+
+function shiftTypeHasBreak(t: ShiftType | undefined): boolean {
+  if (!t) return false;
+  if (t.breakEnabled === false) return false;
+  if (t.breakEnabled === true) return true;
+  return !!t.breakId;
 }
 
 function shiftMatchesStoreFilter(shift: ShiftType, storeId: string): boolean {
@@ -360,6 +458,14 @@ function normalizeAssignment(raw: Partial<ShiftAssignment>): ShiftAssignment | n
   if (typeof raw.breakMandatory === "boolean") {
     assignment.breakMandatory = raw.breakMandatory;
   }
+  if (typeof raw.breakEnabled === "boolean") {
+    assignment.breakEnabled = raw.breakEnabled;
+  } else if (assignment.breakId || assignment.breakName) {
+    assignment.breakEnabled = true;
+  }
+  if (typeof raw.breakSkipReason === "string" && raw.breakSkipReason.trim()) {
+    assignment.breakSkipReason = raw.breakSkipReason.trim();
+  }
   return assignment;
 }
 
@@ -467,6 +573,29 @@ function getAssignment(employeeId: string, date: string): ShiftAssignment | unde
   return readAssignments().find((a) => a.employeeId === employeeId && a.date === date);
 }
 
+/** 指定日期已排某班次的员工 id */
+function employeeIdsAssignedToShiftOnDate(date: string, shiftId: string): Set<string> {
+  if (!date || !shiftId) return new Set();
+  return new Set(
+    readAssignments()
+      .filter((a) => a.date === date && a.shiftId === shiftId)
+      .map((a) => a.employeeId),
+  );
+}
+
+/**
+ * 「员工排班」入口：已选班次时，当日已排该班次的员工不出现在可选列表。
+ * 点格子进入时不过滤。
+ */
+function getEditDialogSelectableEmployees(dialog: HTMLElement): RosterEmployee[] {
+  const all = readScopedEmployees();
+  if (!cellEditor?.dateEditable) return all;
+  const shiftId = dialog.querySelector<HTMLSelectElement>("[data-shift-edit-shift]")?.value ?? "";
+  if (!shiftId) return all;
+  const taken = employeeIdsAssignedToShiftOnDate(cellEditor.date, shiftId);
+  return all.filter((e) => !taken.has(e.id));
+}
+
 /** 读取「休息与加班 · 自定义休息」列表，供排班选用 */
 function readCustomBreakOptions(): CustomBreakOption[] {
   try {
@@ -557,15 +686,39 @@ function renderCustomBreakNameSelectOptions(
     .join("");
 }
 
-function renderSelectedBreakMetaHtml(breakOpt: CustomBreakOption | undefined): string {
+function renderSelectedBreakMetaHtml(
+  breakOpt: CustomBreakOption | undefined,
+  metaAttr = "data-shift-edit-break-meta",
+): string {
   if (!breakOpt) {
-    return `<p class="text-xs text-muted-foreground" data-shift-edit-break-meta>请先在「休息与加班」配置对应类型的自定义休息</p>`;
+    return `<p class="text-xs text-muted-foreground" ${metaAttr}>请先在「休息与加班」配置对应类型的自定义休息</p>`;
   }
   const mandatory = breakOpt.mandatory ? "是" : "否";
-  return `<p class="text-xs text-muted-foreground" data-shift-edit-break-meta>
+  return `<p class="text-xs text-muted-foreground" ${metaAttr}>
     时长 <span class="font-medium text-foreground tabular-nums">${breakOpt.durationMinutes}</span> 分钟
     · 强制 <span class="font-medium text-foreground">${mandatory}</span>
   </p>`;
+}
+
+function syncBreakNameSelectInRoot(
+  root: HTMLElement,
+  compensation: "paid" | "unpaid",
+  opts: { idAttr: string; metaAttr: string; preferredId?: string },
+): CustomBreakOption | undefined {
+  const nameSelect = root.querySelector<HTMLSelectElement>(`[${opts.idAttr}]`);
+  if (!nameSelect) return undefined;
+  const selected = resolveCustomBreakSelection(
+    opts.preferredId ?? nameSelect.value,
+    { breakCompensation: compensation },
+    compensation,
+  );
+  nameSelect.innerHTML = renderCustomBreakNameSelectOptions(compensation, selected?.id);
+  const oldMeta = root.querySelector(`[${opts.metaAttr}]`);
+  if (oldMeta) {
+    oldMeta.insertAdjacentHTML("afterend", renderSelectedBreakMetaHtml(selected, opts.metaAttr));
+    oldMeta.remove();
+  }
+  return selected;
 }
 
 function syncShiftEditBreakNameSelect(
@@ -573,20 +726,11 @@ function syncShiftEditBreakNameSelect(
   compensation: "paid" | "unpaid",
   preferredId?: string,
 ): CustomBreakOption | undefined {
-  const nameSelect = dialog.querySelector<HTMLSelectElement>("[data-shift-edit-break-id]");
-  if (!nameSelect) return undefined;
-  const selected = resolveCustomBreakSelection(
-    preferredId ?? nameSelect.value,
-    { breakCompensation: compensation },
-    compensation,
-  );
-  nameSelect.innerHTML = renderCustomBreakNameSelectOptions(compensation, selected?.id);
-  const oldMeta = dialog.querySelector("[data-shift-edit-break-meta]");
-  if (oldMeta) {
-    oldMeta.insertAdjacentHTML("afterend", renderSelectedBreakMetaHtml(selected));
-    oldMeta.remove();
-  }
-  return selected;
+  return syncBreakNameSelectInRoot(dialog, compensation, {
+    idAttr: "data-shift-edit-break-id",
+    metaAttr: "data-shift-edit-break-meta",
+    preferredId,
+  });
 }
 
 function getEffectiveTimes(assignment: ShiftAssignment, shift: ShiftType): { startTime: string; endTime: string } {
@@ -657,23 +801,30 @@ function buildAssignmentWithOverrides(
     earlyClockInMinutes: number;
     autoClockOutDelayEnabled: boolean;
     autoClockOutDelayMinutes: number;
-    breakId: string;
-    breakName: string;
-    breakCompensation: "paid" | "unpaid";
-    breakDurationMinutes: number;
-    breakMandatory: boolean;
+    breakEnabled: boolean;
+    breakSkipReason?: string;
+    breakId?: string;
+    breakName?: string;
+    breakCompensation?: "paid" | "unpaid";
+    breakDurationMinutes?: number;
+    breakMandatory?: boolean;
   },
 ): ShiftAssignment {
   const base: ShiftAssignment = {
     employeeId,
     date,
     shiftId,
-    breakId: form.breakId,
-    breakName: form.breakName,
-    breakCompensation: form.breakCompensation,
-    breakDurationMinutes: form.breakDurationMinutes,
-    breakMandatory: form.breakMandatory,
+    breakEnabled: form.breakEnabled,
   };
+  if (form.breakEnabled) {
+    if (form.breakId) base.breakId = form.breakId;
+    if (form.breakName) base.breakName = form.breakName;
+    if (form.breakCompensation) base.breakCompensation = form.breakCompensation;
+    if (form.breakDurationMinutes) base.breakDurationMinutes = form.breakDurationMinutes;
+    if (form.breakMandatory !== undefined) base.breakMandatory = form.breakMandatory;
+  } else if (form.breakSkipReason?.trim()) {
+    base.breakSkipReason = form.breakSkipReason.trim();
+  }
   if (form.startTime !== shift.startTime || form.endTime !== shift.endTime) {
     base.overrideStartTime = form.startTime;
     base.overrideEndTime = form.endTime;
@@ -699,22 +850,31 @@ function saveAssignmentDayAdjustForEmployees(
   earlyClockInMinutes: number,
   autoClockOutDelayEnabled: boolean,
   autoClockOutDelayMinutes: number,
-  breakOpt: CustomBreakOption,
+  breakEnabled: boolean,
+  breakOpt: CustomBreakOption | null,
+  breakSkipReason = "",
 ): boolean {
   if (employeeIds.length === 0 || dates.length === 0) return false;
   const shift = readShiftTypes().find((t) => t.id === shiftId);
   if (!shift || !startTime || !endTime) return false;
+  if (breakEnabled && !breakOpt) return false;
   const form = {
     startTime,
     endTime,
     earlyClockInMinutes,
     autoClockOutDelayEnabled,
     autoClockOutDelayMinutes,
-    breakId: breakOpt.id,
-    breakName: breakOpt.name,
-    breakCompensation: breakOpt.compensation,
-    breakDurationMinutes: breakOpt.durationMinutes,
-    breakMandatory: breakOpt.mandatory,
+    breakEnabled,
+    breakSkipReason: breakEnabled ? undefined : breakSkipReason,
+    ...(breakEnabled && breakOpt
+      ? {
+          breakId: breakOpt.id,
+          breakName: breakOpt.name,
+          breakCompensation: breakOpt.compensation,
+          breakDurationMinutes: breakOpt.durationMinutes,
+          breakMandatory: breakOpt.mandatory,
+        }
+      : {}),
   };
   let all = readAssignments();
   for (const date of dates) {
@@ -734,11 +894,13 @@ function resolveRepeatTargetDates(
   repeatMode: RepeatMode,
   repeatWeekdays: number[],
 ): string[] {
-  if (repeatMode === "day") return [anchorDate];
+  if (repeatMode === "day") {
+    return isScheduleDateEditable(anchorDate) ? [anchorDate] : [];
+  }
   const weekdays =
     repeatWeekdays.length > 0 ? repeatWeekdays : [parseIsoDate(anchorDate).getDay()];
-  return enumerateDates(pageState.dateFrom, pageState.dateTo).filter((d) =>
-    weekdays.includes(parseIsoDate(d).getDay()),
+  return enumerateDates(pageState.dateFrom, pageState.dateTo).filter(
+    (d) => weekdays.includes(parseIsoDate(d).getDay()) && isScheduleDateEditable(d),
   );
 }
 
@@ -761,11 +923,17 @@ function clearAssignmentOverrides(employeeId: string, date: string): void {
   const assignment = getAssignment(employeeId, date);
   if (!assignment) return;
   const next: ShiftAssignment = { employeeId, date, shiftId: assignment.shiftId };
-  if (assignment.breakId) next.breakId = assignment.breakId;
-  if (assignment.breakName) next.breakName = assignment.breakName;
-  if (assignment.breakCompensation) next.breakCompensation = assignment.breakCompensation;
-  if (assignment.breakDurationMinutes) next.breakDurationMinutes = assignment.breakDurationMinutes;
-  if (assignment.breakMandatory !== undefined) next.breakMandatory = assignment.breakMandatory;
+  if (assignment.breakEnabled === false) {
+    next.breakEnabled = false;
+    if (assignment.breakSkipReason) next.breakSkipReason = assignment.breakSkipReason;
+  } else if (assignmentHasBreak(assignment)) {
+    next.breakEnabled = true;
+    if (assignment.breakId) next.breakId = assignment.breakId;
+    if (assignment.breakName) next.breakName = assignment.breakName;
+    if (assignment.breakCompensation) next.breakCompensation = assignment.breakCompensation;
+    if (assignment.breakDurationMinutes) next.breakDurationMinutes = assignment.breakDurationMinutes;
+    if (assignment.breakMandatory !== undefined) next.breakMandatory = assignment.breakMandatory;
+  }
   upsertAssignment(next);
 }
 
@@ -869,17 +1037,22 @@ function isWeekend(dateStr: string): boolean {
   return day === 0 || day === 6;
 }
 
-function canSyncToNextWeek(): boolean {
-  const dates = enumerateDates(pageState.dateFrom, pageState.dateTo);
-  if (dates.length < 7) return false;
-  const thisWeekStart = isoDate(startOfWeekMonday(new Date()));
-  return dates.includes(thisWeekStart);
+const SYNC_TO_NEXT_WEEK_PRESETS: ReadonlySet<QuickPreset> = new Set([
+  "last-week",
+  "this-week",
+  "next-week",
+]);
+
+/** 仅快捷条件为「上周 / 本周 / 下周」时展示「同步到下周」 */
+function shouldShowSyncToNextWeek(): boolean {
+  return SYNC_TO_NEXT_WEEK_PRESETS.has(pageState.quickPreset);
 }
 
-function syncCurrentWeekToNextWeek(): void {
-  const thisWeekStart = startOfWeekMonday(new Date());
-  const weekDates = Array.from({ length: 7 }, (_, i) => isoDate(addDays(thisWeekStart, i)));
-  const nextWeekDates = Array.from({ length: 7 }, (_, i) => isoDate(addDays(thisWeekStart, 7 + i)));
+/** 将当前选中周（dateFrom 所在周）的排班复制到下一周 */
+function syncSelectedWeekToNextWeek(): void {
+  const weekStart = startOfWeekMonday(parseIsoDate(pageState.dateFrom || isoDate(new Date())));
+  const weekDates = Array.from({ length: 7 }, (_, i) => isoDate(addDays(weekStart, i)));
+  const nextWeekDates = Array.from({ length: 7 }, (_, i) => isoDate(addDays(weekStart, 7 + i)));
   const current = readAssignments();
   const all = current.filter((a) => !nextWeekDates.includes(a.date));
   for (const srcDate of weekDates) {
@@ -901,11 +1074,19 @@ function syncCurrentWeekToNextWeek(): void {
         ...(src.overrideAutoClockOutDelayMinutes !== undefined
           ? { overrideAutoClockOutDelayMinutes: src.overrideAutoClockOutDelayMinutes }
           : {}),
-        ...(src.breakId ? { breakId: src.breakId } : {}),
-        ...(src.breakName ? { breakName: src.breakName } : {}),
-        ...(src.breakCompensation ? { breakCompensation: src.breakCompensation } : {}),
-        ...(src.breakDurationMinutes ? { breakDurationMinutes: src.breakDurationMinutes } : {}),
-        ...(src.breakMandatory !== undefined ? { breakMandatory: src.breakMandatory } : {}),
+        ...(src.breakEnabled === false
+          ? {
+              breakEnabled: false as const,
+              ...(src.breakSkipReason ? { breakSkipReason: src.breakSkipReason } : {}),
+            }
+          : {
+              ...(src.breakEnabled === true ? { breakEnabled: true as const } : {}),
+              ...(src.breakId ? { breakId: src.breakId } : {}),
+              ...(src.breakName ? { breakName: src.breakName } : {}),
+              ...(src.breakCompensation ? { breakCompensation: src.breakCompensation } : {}),
+              ...(src.breakDurationMinutes ? { breakDurationMinutes: src.breakDurationMinutes } : {}),
+              ...(src.breakMandatory !== undefined ? { breakMandatory: src.breakMandatory } : {}),
+            }),
       });
     }
   }
@@ -938,13 +1119,216 @@ function renderQuickPresetButtons(): string {
   }).join("");
 }
 
-function renderEmployeeFilterOptions(employees: RosterEmployee[]): string {
-  const opts = [`<option value="">员工</option>`];
-  for (const e of employees) {
-    const sel = pageState.employeeFilter === e.id ? " selected" : "";
-    opts.push(`<option value="${escapeHtml(e.id)}"${sel}>${escapeHtml(e.name)}</option>`);
+function renderEmployeeFilterTagsHtml(employees: RosterEmployee[], selectedIds: string[]): string {
+  const selectedSet = new Set(selectedIds);
+  const selectedEmployees = employees.filter((e) => selectedSet.has(e.id));
+  if (selectedEmployees.length === 0) {
+    return `<span class="px-1 text-[13px] text-muted-foreground">全部员工</span>`;
   }
-  return opts.join("");
+  return selectedEmployees
+    .map(
+      (e) =>
+        `<span class="inline-flex max-w-[10rem] items-center gap-1 overflow-hidden rounded-full border border-primary/25 bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+          <span class="truncate">${escapeHtml(e.name)}</span>
+          <button type="button" data-shift-employee-filter-remove="${escapeHtml(e.id)}" class="shrink-0 text-sm leading-none text-primary/60 hover:text-primary" aria-label="移除 ${escapeHtml(e.name)}">×</button>
+        </span>`,
+    )
+    .join("");
+}
+
+function renderEmployeeFilterOptionsHtml(
+  employees: RosterEmployee[],
+  selectedIds: string[],
+  q: string,
+): string {
+  const selectedSet = new Set(selectedIds);
+  const query = q.trim().toLowerCase();
+  if (employees.length === 0) {
+    return `<div class="px-3 py-2 text-sm text-muted-foreground">暂无员工</div>`;
+  }
+  const optionsHtml = employees
+    .map((e) => {
+      const checked = selectedSet.has(e.id);
+      const hidden = query && !e.name.toLowerCase().includes(query);
+      return `<label class="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm hover:bg-muted/60${checked ? " bg-primary/5 text-primary" : " text-foreground"}${hidden ? " hidden" : ""}" data-shift-employee-filter-option>
+        <input type="checkbox" value="${escapeHtml(e.id)}" data-shift-employee-filter-option-cb class="size-4 shrink-0 accent-primary"${checked ? " checked" : ""} />
+        <span class="min-w-0 truncate">${escapeHtml(e.name)}</span>
+      </label>`;
+    })
+    .join("");
+  const visibleCount = employees.filter((e) => !query || e.name.toLowerCase().includes(query)).length;
+  const emptySearchHtml =
+    visibleCount === 0
+      ? `<div class="px-3 py-2 text-sm text-muted-foreground" data-shift-employee-filter-empty>没有匹配的员工</div>`
+      : "";
+  return `${optionsHtml}${emptySearchHtml}`;
+}
+
+function renderEmployeeFilterMultiSelect(employees: RosterEmployee[]): string {
+  const tagsHtml = renderEmployeeFilterTagsHtml(employees, pageState.employeeFilterIds);
+  return `
+    <div class="relative min-w-[12rem] max-w-md flex-1 sm:flex-none sm:min-w-[14rem]" data-shift-employee-filter>
+      <div
+        class="flex min-h-9 cursor-pointer items-center rounded-md border border-input bg-background py-1 pl-1.5 pr-8 shadow-sm transition-colors hover:border-primary"
+        data-shift-employee-filter-trigger
+        role="combobox"
+        aria-expanded="false"
+        aria-haspopup="listbox"
+        tabindex="0"
+      >
+        <div class="flex min-h-[26px] flex-1 flex-wrap items-center gap-1.5" data-shift-employee-filter-tags>${tagsHtml}</div>
+        <svg data-shift-employee-filter-chevron class="pointer-events-none absolute right-2.5 top-1/2 size-3 -translate-y-1/2 text-muted-foreground transition-transform" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><path d="M6 8.825a.5.5 0 0 1-.354-.146l-4-4a.5.5 0 0 1 .708-.708L6 7.617l3.646-3.646a.5.5 0 0 1 .708.708l-4 4A.5.5 0 0 1 6 8.825z"/></svg>
+      </div>
+    </div>`;
+}
+
+function setEmployeeFilterOpenState(wrap: HTMLElement, open: boolean): void {
+  if (open) wrap.setAttribute("data-open", "1");
+  else wrap.removeAttribute("data-open");
+  const trigger = wrap.querySelector<HTMLElement>("[data-shift-employee-filter-trigger]");
+  if (trigger) {
+    trigger.setAttribute("aria-expanded", open ? "true" : "false");
+    trigger.classList.toggle("border-primary", open);
+    trigger.classList.toggle("ring-2", open);
+    trigger.classList.toggle("ring-ring/20", open);
+  }
+  wrap.querySelector("[data-shift-employee-filter-chevron]")?.classList.toggle("rotate-180", open);
+}
+
+function mountEmployeeFilterDropdown(wrap: HTMLElement): HTMLElement {
+  let dropdown = wrap.querySelector<HTMLElement>("[data-shift-employee-filter-dropdown]");
+  if (dropdown) return dropdown;
+  const employees = readScopedEmployees();
+  wrap.insertAdjacentHTML(
+    "beforeend",
+    `<div class="absolute left-0 right-0 top-[calc(100%+4px)] z-50 overflow-hidden rounded-md border border-border bg-card shadow-lg" data-shift-employee-filter-dropdown role="listbox">
+      <div class="border-b border-border p-2">
+        <input type="search" value="${escapeHtml(employeeFilterSearchQuery)}" data-shift-employee-filter-search placeholder="搜索员工…" autocomplete="off" aria-label="搜索员工" class="h-8 w-full rounded-md border border-input bg-background px-2.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+      </div>
+      <div class="max-h-56 overflow-y-auto py-1" data-shift-employee-filter-options>
+        ${renderEmployeeFilterOptionsHtml(employees, pageState.employeeFilterIds, employeeFilterSearchQuery)}
+      </div>
+    </div>`,
+  );
+  dropdown = wrap.querySelector<HTMLElement>("[data-shift-employee-filter-dropdown]")!;
+  return dropdown;
+}
+
+function unmountEmployeeFilterDropdown(wrap: HTMLElement): void {
+  wrap.querySelector("[data-shift-employee-filter-dropdown]")?.remove();
+}
+
+function syncEmployeeFilterSelectionUi(root: HTMLElement): void {
+  const employees = readScopedEmployees();
+  const selectedIds = pageState.employeeFilterIds.filter((id) => employees.some((e) => e.id === id));
+  pageState.employeeFilterIds = selectedIds;
+  const selectedSet = new Set(selectedIds);
+  const tags = root.querySelector("[data-shift-employee-filter-tags]");
+  if (tags) tags.innerHTML = renderEmployeeFilterTagsHtml(employees, selectedIds);
+  root.querySelectorAll<HTMLElement>("[data-shift-employee-filter-option]").forEach((opt) => {
+    const cb = opt.querySelector<HTMLInputElement>("[data-shift-employee-filter-option-cb]");
+    if (!cb) return;
+    const checked = selectedSet.has(cb.value);
+    cb.checked = checked;
+    opt.classList.toggle("bg-primary/5", checked);
+    opt.classList.toggle("text-primary", checked);
+    opt.classList.toggle("text-foreground", !checked);
+  });
+}
+
+function renderScheduleTableInnerHtml(): string {
+  const shiftTypes = readShiftTypes();
+  const typeMap = new Map(shiftTypes.map((t) => [t.id, t]));
+  const employees = readScopedEmployees();
+  const needsStore = usesInPageStorePicker() && !readScopeFilters().store;
+  const validIds = new Set(employees.map((e) => e.id));
+  pageState.employeeFilterIds = pageState.employeeFilterIds.filter((id) => validIds.has(id));
+  const filtered =
+    pageState.employeeFilterIds.length > 0
+      ? employees.filter((e) => pageState.employeeFilterIds.includes(e.id))
+      : employees;
+  const dates = enumerateDates(pageState.dateFrom, pageState.dateTo);
+  const headerCells = dates
+    .map(
+      (d) =>
+        `<th class="min-w-[5.5rem] whitespace-nowrap border border-primary/20 px-2 py-2.5 text-center text-xs font-medium">${escapeHtml(formatColumnHeader(d))}</th>`,
+    )
+    .join("");
+  const bodyRows = needsStore
+    ? ""
+    : filtered
+        .map((emp) => {
+          const hours = employeeTotalHours(emp.id, dates);
+          const cells = dates
+            .map((d) => {
+              const a = getAssignment(emp.id, d);
+              const shift = a ? typeMap.get(a.shiftId) : undefined;
+              return renderShiftCell(emp.id, d, a, shift, isWeekend(d));
+            })
+            .join("");
+          return `<tr class="border-b border-border/60">
+        <td class="sticky left-0 z-[1] min-w-[8rem] border border-border/60 bg-card px-3 py-2 text-sm">
+          <span class="font-medium text-foreground">${escapeHtml(emp.name)}</span>
+          <span class="mt-0.5 block text-xs tabular-nums text-muted-foreground">${hours} 小时</span>
+        </td>
+        ${cells}
+      </tr>`;
+        })
+        .join("");
+  const emptyMessage = needsStore
+    ? "请先选择门店"
+    : "暂无员工数据，请先在「角色与员工」中添加员工。";
+  return `<table class="w-full min-w-max border-collapse">
+          <thead class="sticky top-0 z-[2]">
+            <tr class="bg-primary text-primary-foreground">
+              <th class="sticky left-0 z-[3] min-w-[8rem] border border-primary/20 bg-primary px-3 py-2.5 text-left text-sm font-medium">员工</th>
+              ${headerCells}
+            </tr>
+          </thead>
+          <tbody>${bodyRows || `<tr><td colspan="${dates.length + 1}" class="px-4 py-8 text-center text-sm text-muted-foreground">${escapeHtml(emptyMessage)}</td></tr>`}</tbody>
+        </table>`;
+}
+
+function bindScheduleCellClicks(root: HTMLElement, remount: () => void): void {
+  root.querySelectorAll("[data-shift-cell]").forEach((btn) => {
+    if ((btn as HTMLElement).dataset.shiftCellBound === "1") return;
+    (btn as HTMLElement).dataset.shiftCellBound = "1";
+    btn.addEventListener("click", () => {
+      const employeeId = btn.getAttribute("data-shift-employee");
+      const date = btn.getAttribute("data-shift-date");
+      if (!employeeId || !date || !isScheduleDateEditable(date)) return;
+      clearEditEmployeePickerState();
+      const existing = getAssignment(employeeId, date);
+      const shiftTypes = readShiftTypes();
+      const shift = existing ? shiftTypes.find((t) => t.id === existing.shiftId) : undefined;
+      const { startTime, endTime } = existing && shift
+        ? getEffectiveTimes(existing, shift)
+        : { startTime: shift?.startTime ?? "", endTime: shift?.endTime ?? "" };
+      const hours = shiftDurationHoursFromTimes(startTime, endTime);
+      const hasBreak = assignmentHasBreak(existing);
+      cellEditor = {
+        date,
+        employeeIds: [employeeId],
+        dateEditable: false,
+        repeatMode: "day",
+        repeatWeekdays: [parseIsoDate(date).getDay()],
+        breakEnabled: existing ? hasBreak : defaultBreakEnabledForWorkHours(hours),
+        breakSkipReason: existing?.breakSkipReason ?? "",
+        breakSwitchTouched: !!existing,
+      };
+      remount();
+    });
+  });
+}
+
+function refreshScheduleTable(root: HTMLElement, remount: () => void): void {
+  const host = root.querySelector("[data-shift-schedule-table]");
+  if (!host) {
+    remount();
+    return;
+  }
+  host.innerHTML = renderScheduleTableInnerHtml();
+  bindScheduleCellClicks(root, remount);
 }
 
 function renderShiftCell(
@@ -954,24 +1338,36 @@ function renderShiftCell(
   shift: ShiftType | undefined,
   weekend: boolean,
 ): string {
+  const editable = isScheduleDateEditable(date);
   const bg = weekend ? "bg-background" : "bg-muted/40";
   let content = "";
   if (shift && assignment) {
     const { startTime, endTime } = getEffectiveTimes(assignment, shift);
     const customized = hasAnyDayOverride(assignment, shift);
-    const breakOpt = resolveCustomBreakSelection(assignment.breakId, {
-      breakName: assignment.breakName,
-      breakCompensation: assignment.breakCompensation,
-      breakDurationMinutes: assignment.breakDurationMinutes,
-      breakMandatory: assignment.breakMandatory,
-    });
+    const breakOpt = assignmentHasBreak(assignment)
+      ? resolveCustomBreakSelection(assignment.breakId, {
+          breakName: assignment.breakName,
+          breakCompensation: assignment.breakCompensation,
+          breakDurationMinutes: assignment.breakDurationMinutes,
+          breakMandatory: assignment.breakMandatory,
+        })
+      : undefined;
     const breakLabel = breakOpt
       ? `${breakOpt.name} ${breakOpt.durationMinutes}分${breakOpt.mandatory ? "·强" : ""}`
-      : assignment.breakName
+      : assignmentHasBreak(assignment) && assignment.breakName
         ? `${assignment.breakName}${assignment.breakDurationMinutes ? ` ${assignment.breakDurationMinutes}分` : ""}`
         : "";
     content = `<span class="block truncate rounded px-1 py-0.5 text-xs font-medium" style="background:${escapeHtml(shift.color)}">${escapeHtml(shift.name)}</span>
       <span class="mt-0.5 block truncate px-0.5 text-[10px] tabular-nums ${customized ? "font-medium text-primary" : "text-muted-foreground"}">${escapeHtml(startTime)}–${escapeHtml(endTime)}${customized ? "*" : ""}${breakLabel ? ` · ${escapeHtml(breakLabel)}` : ""}</span>`;
+  }
+  if (!editable) {
+    return `<td class="min-w-[5.5rem] border border-border/60 px-1 py-1.5 align-middle ${bg}">
+      <div
+        class="flex h-12 w-full cursor-not-allowed flex-col items-center justify-center rounded-sm text-left opacity-60"
+        aria-label="历史日期不可排班 ${escapeHtml(date)}"
+        title="历史日期不可排班"
+      >${content}</div>
+    </td>`;
   }
   return `<td class="min-w-[5.5rem] border border-border/60 px-1 py-1.5 align-middle ${bg}">
     <button type="button"
@@ -1002,6 +1398,15 @@ function renderShiftTypeDetailForm(t: ShiftType, opts?: { showDelete?: boolean }
     dataAttr: 'data-shift-type-store',
     className: `${SHIFT_FORM_INPUT} sm:max-w-md`,
   });
+  const breakEnabled =
+    typeof t.breakEnabled === "boolean"
+      ? t.breakEnabled
+      : !!t.breakId || defaultBreakEnabledForWorkHours(shiftDurationHoursFromTimes(t.startTime, t.endTime));
+  const breakCompensation =
+    t.breakCompensation ??
+    resolveCustomBreakSelection(t.breakId, t)?.compensation ??
+    "unpaid";
+  const breakOpt = resolveCustomBreakSelection(t.breakId, t, breakCompensation);
   return `
     <div class="space-y-4" data-shift-config-detail data-shift-type-row="${escapeHtml(t.id)}">
       <div class="space-y-3">
@@ -1043,6 +1448,33 @@ function renderShiftTypeDetailForm(t: ShiftType, opts?: { showDelete?: boolean }
             <span class="${SHIFT_FORM_NUMBER_UNIT}">分钟</span>
           </div>
         </div>
+
+        <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
+          <span class="${SHIFT_FORM_LABEL}">安排休息:</span>
+          <label class="inline-flex cursor-pointer items-center gap-2 text-sm">
+            <input type="checkbox" data-shift-type-break-enabled class="size-4 shrink-0 accent-primary"${breakEnabled ? " checked" : ""} />
+            <span class="text-muted-foreground">合规要求工时超过 ${BREAK_REQUIRED_HOURS_THRESHOLD} 小时需要安排休息</span>
+          </label>
+        </div>
+        <div class="space-y-3${breakEnabled ? "" : " hidden"}" data-shift-type-break-fields>
+          <div class="flex flex-col gap-1 sm:flex-row sm:items-start sm:gap-3">
+            <span class="${SHIFT_FORM_LABEL}"><span class="text-destructive">*</span> 休息类型:</span>
+            <select data-shift-type-break-compensation class="${SHIFT_FORM_INPUT} sm:max-w-md"${breakEnabled ? " required" : ""}>
+              <option value="unpaid"${breakCompensation === "unpaid" ? " selected" : ""}>无薪</option>
+              <option value="paid"${breakCompensation === "paid" ? " selected" : ""}>带薪</option>
+            </select>
+          </div>
+          <div class="flex flex-col gap-1 sm:flex-row sm:items-start sm:gap-3">
+            <span class="${SHIFT_FORM_LABEL}"><span class="text-destructive">*</span> 休息名称:</span>
+            <div class="min-w-0 flex-1 space-y-1 sm:max-w-md">
+              <select data-shift-type-break-id class="${SHIFT_FORM_INPUT}"${breakEnabled ? " required" : ""}>
+                ${renderCustomBreakNameSelectOptions(breakCompensation, t.breakId)}
+              </select>
+              ${renderSelectedBreakMetaHtml(breakOpt, "data-shift-type-break-meta")}
+            </div>
+          </div>
+        </div>
+
         <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
           <span class="${SHIFT_FORM_LABEL}">显示颜色:</span>
           <input type="color" value="${escapeHtml(t.color.startsWith("#") ? t.color : "#dbeafe")}" data-shift-type-color class="size-9 cursor-pointer rounded border border-input bg-background" />
@@ -1064,33 +1496,40 @@ function resolveShiftStoreLabel(storeId: string | undefined): string {
   return hit?.label || storeId;
 }
 
-function renderShiftListCard(t: ShiftType): string {
+function renderShiftListRow(t: ShiftType): string {
   const hours = formatWorkHoursDisplay(t.startTime, t.endTime);
   const storeLabel = resolveShiftStoreLabel(t.storeId);
   const earlyLabel =
-    t.earlyClockInMinutes > 0
-      ? `上班提前打卡 ${t.earlyClockInMinutes} 分钟`
-      : "上班不提前打卡";
+    t.earlyClockInMinutes > 0 ? `${t.earlyClockInMinutes} 分钟` : "不提前";
   const autoOutLabel = t.autoClockOutDelayEnabled
-    ? `下班自动延迟打卡 ${t.autoClockOutDelayMinutes} 分钟`
-    : "下班不自动延迟打卡";
+    ? `${t.autoClockOutDelayMinutes} 分钟`
+    : "不启用";
+  const breakLabel = shiftTypeHasBreak(t)
+    ? t.breakName
+      ? `${t.breakCompensation === "paid" ? "带薪" : "无薪"} · ${t.breakName}`
+      : "已安排"
+    : "不安排";
   return `
-    <div class="flex items-center gap-3 rounded-lg border border-border bg-card px-3.5 py-3" data-shift-list-item="${escapeHtml(t.id)}">
-      <span class="size-2.5 shrink-0 rounded-full" style="background:${escapeHtml(t.color)}" aria-hidden="true"></span>
-      <span class="min-w-0 flex-1">
-        <span class="block truncate text-sm font-medium text-foreground">${escapeHtml(t.name || "未命名班次")}</span>
-        <span class="mt-0.5 block truncate text-xs tabular-nums text-muted-foreground">${escapeHtml(t.startTime)}–${escapeHtml(t.endTime)} · ${escapeHtml(hours)}</span>
-        <span class="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
-          <span>门店：${escapeHtml(storeLabel)}</span>
-          <span>${escapeHtml(earlyLabel)}</span>
-          <span>${escapeHtml(autoOutLabel)}</span>
+    <tr class="border-b border-border/60 hover:bg-muted/20" data-shift-list-item="${escapeHtml(t.id)}">
+      <td class="px-3 py-2.5">
+        <span class="inline-flex min-w-0 items-center gap-2">
+          <span class="size-2.5 shrink-0 rounded-full" style="background:${escapeHtml(t.color)}" aria-hidden="true"></span>
+          <span class="truncate font-medium text-foreground">${escapeHtml(t.name || "未命名班次")}</span>
         </span>
-      </span>
-      <div class="flex shrink-0 items-center gap-2">
-        <button type="button" data-shift-list-edit="${escapeHtml(t.id)}" class="h-8 rounded-md border border-border px-3 text-sm text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">编辑</button>
-        <button type="button" data-shift-list-delete="${escapeHtml(t.id)}" class="h-8 rounded-md border border-destructive/30 px-3 text-sm text-destructive hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">删除</button>
-      </div>
-    </div>`;
+      </td>
+      <td class="px-3 py-2.5 text-sm text-muted-foreground">${escapeHtml(storeLabel)}</td>
+      <td class="px-3 py-2.5 text-sm tabular-nums text-muted-foreground">${escapeHtml(t.startTime)}–${escapeHtml(t.endTime)}</td>
+      <td class="px-3 py-2.5 text-sm tabular-nums text-muted-foreground">${escapeHtml(hours)}</td>
+      <td class="px-3 py-2.5 text-sm text-muted-foreground">${escapeHtml(earlyLabel)}</td>
+      <td class="px-3 py-2.5 text-sm text-muted-foreground">${escapeHtml(autoOutLabel)}</td>
+      <td class="px-3 py-2.5 text-sm text-muted-foreground">${escapeHtml(breakLabel)}</td>
+      <td class="px-3 py-2.5">
+        <div class="flex flex-wrap items-center gap-2">
+          <button type="button" data-shift-list-edit="${escapeHtml(t.id)}" class="h-8 rounded-md border border-border px-3 text-sm text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">编辑</button>
+          <button type="button" data-shift-list-delete="${escapeHtml(t.id)}" class="h-8 rounded-md border border-destructive/30 px-3 text-sm text-destructive hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">删除</button>
+        </div>
+      </td>
+    </tr>`;
 }
 
 function openShiftDeleteConfirm(id: string): void {
@@ -1203,7 +1642,7 @@ function renderShiftFormDialog(): string {
       <div class="relative z-10 flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-xl border border-border bg-card shadow-lg">
         <div class="border-b border-border px-5 py-4">
           <h2 id="shift-form-title" class="text-base font-semibold text-foreground">${title}</h2>
-          <p class="mt-1 text-xs text-muted-foreground">${isCreate ? "填写班次信息后保存，将出现在班次列表中。" : "修改班次信息后保存。"}</p>
+          ${isCreate ? "" : `<p class="mt-1 text-xs text-muted-foreground">修改班次信息后保存。</p>`}
         </div>
         <div class="min-h-0 flex-1 overflow-auto p-4 sm:p-5">${form}</div>
         <div class="flex shrink-0 items-center justify-end gap-2 border-t border-border px-5 py-3">
@@ -1218,7 +1657,13 @@ function renderShiftsPanel(): string {
   ensureShiftListStoreFilter();
   const types = readShiftTypes();
   const filtered = filterShiftTypesByStore(types, shiftConfigStoreFilter);
-  const listItems = filtered.map((t) => renderShiftListCard(t)).join("");
+  const emptyMessage = shiftConfigStoreFilter
+    ? "当前门店暂无班次，请点击「新增班次」"
+    : "暂无班次，请点击「新增班次」";
+  const tableRows =
+    filtered.length > 0
+      ? filtered.map((t) => renderShiftListRow(t)).join("")
+      : `<tr><td colspan="8" class="px-4 py-10 text-center text-sm text-muted-foreground">${escapeHtml(emptyMessage)}</td></tr>`;
   const storeFilter = `
     <div class="flex flex-wrap items-center gap-2">
       <label for="shift-config-store-filter" class="shrink-0 text-sm text-muted-foreground">${escapeHtml(t("header.scopeStore"))}</label>
@@ -1234,13 +1679,24 @@ function renderShiftsPanel(): string {
         ${storeFilter}
         <button type="button" data-shift-type-add class="h-9 shrink-0 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">+ 新增班次</button>
       </div>
-      <div class="min-h-0 flex-1 space-y-2 overflow-auto rounded-xl border border-border bg-card p-3" data-shift-config-list role="list">
-        ${
-          listItems ||
-          `<p class="px-2 py-10 text-center text-sm text-muted-foreground">${
-            shiftConfigStoreFilter ? "当前门店暂无班次，请点击「新增班次」" : "暂无班次，请点击「新增班次」"
-          }</p>`
-        }
+      <div class="min-h-0 flex-1 overflow-hidden rounded-xl border border-border bg-card shadow-sm" data-shift-config-list>
+        <div class="h-full overflow-auto">
+          <table class="w-full min-w-[56rem] text-left text-sm">
+            <thead class="sticky top-0 z-[1] border-b border-border bg-muted/30 text-xs text-muted-foreground">
+              <tr>
+                <th class="px-3 py-2.5 font-medium">班次</th>
+                <th class="px-3 py-2.5 font-medium">门店</th>
+                <th class="px-3 py-2.5 font-medium">时间</th>
+                <th class="px-3 py-2.5 font-medium">工时</th>
+                <th class="px-3 py-2.5 font-medium">提前打卡</th>
+                <th class="px-3 py-2.5 font-medium">自动下班</th>
+                <th class="px-3 py-2.5 font-medium">休息</th>
+                <th class="px-3 py-2.5 font-medium">操作</th>
+              </tr>
+            </thead>
+            <tbody>${tableRows}</tbody>
+          </table>
+        </div>
       </div>
       ${renderShiftFormDialog()}
       ${renderShiftDeleteConfirmDialog()}
@@ -1265,6 +1721,41 @@ function bindShiftFormDialog(remount: () => void): void {
     });
     syncAutoClockOutDelayField(detail);
     syncShiftWorkHoursInRow(detail);
+
+    const syncTypeBreakFields = () => {
+      const enabled =
+        detail.querySelector<HTMLInputElement>("[data-shift-type-break-enabled]")?.checked ?? false;
+      detail.querySelector<HTMLElement>("[data-shift-type-break-fields]")?.classList.toggle("hidden", !enabled);
+      const compensation = detail.querySelector<HTMLSelectElement>("[data-shift-type-break-compensation]");
+      const breakId = detail.querySelector<HTMLSelectElement>("[data-shift-type-break-id]");
+      if (compensation) compensation.required = enabled;
+      if (breakId) breakId.required = enabled;
+    };
+    syncTypeBreakFields();
+    detail.querySelector("[data-shift-type-break-enabled]")?.addEventListener("change", syncTypeBreakFields);
+    detail.querySelector("[data-shift-type-break-compensation]")?.addEventListener("change", (e) => {
+      const compensation =
+        (e.target as HTMLSelectElement).value === "paid" ? "paid" : "unpaid";
+      syncBreakNameSelectInRoot(detail, compensation, {
+        idAttr: "data-shift-type-break-id",
+        metaAttr: "data-shift-type-break-meta",
+      });
+    });
+    detail.querySelector("[data-shift-type-break-id]")?.addEventListener("change", (e) => {
+      const compensation =
+        detail.querySelector<HTMLSelectElement>("[data-shift-type-break-compensation]")?.value === "paid"
+          ? "paid"
+          : "unpaid";
+      const breakId = (e.target as HTMLSelectElement).value;
+      const breakOpt = resolveCustomBreakSelection(breakId, { breakCompensation: compensation }, compensation);
+      const oldMeta = detail.querySelector("[data-shift-type-break-meta]");
+      if (!oldMeta) return;
+      oldMeta.insertAdjacentHTML(
+        "afterend",
+        renderSelectedBreakMetaHtml(breakOpt, "data-shift-type-break-meta"),
+      );
+      oldMeta.remove();
+    });
   }
 
   const close = () => {
@@ -1277,6 +1768,21 @@ function bindShiftFormDialog(remount: () => void): void {
 
   dialog.querySelector("[data-shift-form-save]")?.addEventListener("click", () => {
     if (!shiftFormEditor || !detail) return;
+    const breakEnabled =
+      detail.querySelector<HTMLInputElement>("[data-shift-type-break-enabled]")?.checked ?? false;
+    if (breakEnabled) {
+      const compensation =
+        detail.querySelector<HTMLSelectElement>("[data-shift-type-break-compensation]")?.value === "paid"
+          ? "paid"
+          : "unpaid";
+      const breakId = detail.querySelector<HTMLSelectElement>("[data-shift-type-break-id]")?.value ?? "";
+      const breakOpt = resolveCustomBreakSelection(breakId, { breakCompensation: compensation }, compensation);
+      if (!breakOpt) {
+        detail.querySelector<HTMLSelectElement>("[data-shift-type-break-id]")?.focus();
+        window.alert("请选择休息名称。");
+        return;
+      }
+    }
     const updated = collectShiftTypeFromDetail(detail, shiftFormEditor.shift.id);
     if (!updated) {
       window.alert("请填写班次名称。");
@@ -1369,86 +1875,354 @@ function renderShiftSelectOptions(types: ShiftType[], selectedId: string): strin
   return opts.join("");
 }
 
-function renderEmployeeMultiSelect(employees: RosterEmployee[], selectedIds: string[]): string {
+function renderEditEmployeeTagsHtml(employees: RosterEmployee[], selectedIds: string[]): string {
   const selectedSet = new Set(selectedIds);
-  const tags = selectedIds
-    .map((id) => {
-      const emp = employees.find((e) => e.id === id);
-      if (!emp) return "";
-      const removable = selectedIds.length > 1;
-      return `<span class="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 text-sm text-foreground" data-shift-edit-employee-tag="${escapeHtml(id)}">
-        <span>${escapeHtml(emp.name)}</span>
-        ${
-          removable
-            ? `<button type="button" data-shift-edit-employee-remove="${escapeHtml(id)}" class="inline-flex size-4 items-center justify-center rounded-sm text-muted-foreground hover:bg-background hover:text-foreground" aria-label="移除 ${escapeHtml(emp.name)}">×</button>`
-            : ""
-        }
-      </span>`;
+  const selectedEmployees = employees.filter((e) => selectedSet.has(e.id));
+  const allowEmptyEmployees = !!cellEditor?.dateEditable;
+  if (selectedEmployees.length === 0) {
+    return `<span class="px-1 text-[13px] text-muted-foreground">请选择员工（可多选）</span>`;
+  }
+  return selectedEmployees
+    .map((e) => {
+      const canRemove = allowEmptyEmployees || selectedEmployees.length > 1;
+      return `<span class="inline-flex max-w-[10rem] items-center gap-1 overflow-hidden rounded-full border border-primary/25 bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+          <span class="truncate">${escapeHtml(e.name)}</span>
+          ${
+            canRemove
+              ? `<button type="button" data-shift-edit-employee-remove="${escapeHtml(e.id)}" class="shrink-0 text-sm leading-none text-primary/60 hover:text-primary" aria-label="移除 ${escapeHtml(e.name)}">×</button>`
+              : ""
+          }
+        </span>`;
     })
     .join("");
-  const addOptions = employees
-    .filter((e) => !selectedSet.has(e.id))
-    .map((e) => `<option value="${escapeHtml(e.id)}">${escapeHtml(e.name)}</option>`)
+}
+
+function renderEditEmployeeOptionsHtml(
+  employees: RosterEmployee[],
+  selectedIds: string[],
+  q: string,
+  emptyMessage = "暂无员工",
+): string {
+  const selectedSet = new Set(selectedIds);
+  const query = q.trim().toLowerCase();
+  if (employees.length === 0) {
+    return `<div class="px-3 py-2 text-sm text-muted-foreground" data-shift-edit-employee-empty>${escapeHtml(emptyMessage)}</div>`;
+  }
+  const optionsHtml = employees
+    .map((e) => {
+      const checked = selectedSet.has(e.id);
+      const hidden = query && !e.name.toLowerCase().includes(query);
+      return `<label class="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm hover:bg-muted/60${checked ? " bg-primary/5 text-primary" : " text-foreground"}${hidden ? " hidden" : ""}" data-shift-edit-employee-option>
+        <input type="checkbox" value="${escapeHtml(e.id)}" data-shift-edit-employee-option-cb class="size-4 shrink-0 accent-primary"${checked ? " checked" : ""} />
+        <span class="min-w-0 truncate">${escapeHtml(e.name)}</span>
+      </label>`;
+    })
     .join("");
-  const addSelect =
-    addOptions.length > 0
-      ? `<select data-shift-edit-employee-add class="h-7 min-w-[5.5rem] shrink-0 border-0 bg-transparent text-sm text-muted-foreground focus-visible:outline-none">
-          <option value="">+ 添加员工</option>
-          ${addOptions}
-        </select>`
+  const visibleCount = employees.filter((e) => !query || e.name.toLowerCase().includes(query)).length;
+  const emptySearchHtml =
+    visibleCount === 0
+      ? `<div class="px-3 py-2 text-sm text-muted-foreground" data-shift-edit-employee-empty>没有匹配的员工</div>`
       : "";
-
-  return `<div data-shift-edit-employee-picker class="flex min-h-9 w-full max-w-md flex-wrap items-center gap-1.5 rounded-md border border-input bg-background px-2 py-1.5 shadow-sm">
-    ${tags}
-    ${addSelect}
-  </div>`;
+  return `${optionsHtml}${emptySearchHtml}`;
 }
 
-function collectSelectedEmployeeIdsFromDialog(dialog: HTMLElement): string[] {
-  return [...dialog.querySelectorAll<HTMLElement>("[data-shift-edit-employee-tag]")]
-    .map((tag) => tag.getAttribute("data-shift-edit-employee-tag") ?? "")
-    .filter(Boolean);
+function pruneEditEmployeeSelectionToSelectable(dialog: HTMLElement): void {
+  if (!cellEditor) return;
+  const allowed = new Set(getEditDialogSelectableEmployees(dialog).map((e) => e.id));
+  const nextIds = cellEditor.employeeIds.filter((id) => allowed.has(id));
+  if (nextIds.length !== cellEditor.employeeIds.length) {
+    cellEditor = { ...cellEditor, employeeIds: nextIds };
+  }
 }
 
-function appendEmployeeTag(dialog: HTMLElement, employee: RosterEmployee): void {
-  const picker = dialog.querySelector<HTMLElement>("[data-shift-edit-employee-picker]");
-  const addSelect = dialog.querySelector<HTMLSelectElement>("[data-shift-edit-employee-add]");
-  if (!picker || picker.querySelector(`[data-shift-edit-employee-tag="${employee.id}"]`)) return;
-
-  const tag = document.createElement("span");
-  tag.className =
-    "inline-flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 text-sm text-foreground";
-  tag.setAttribute("data-shift-edit-employee-tag", employee.id);
-  tag.innerHTML = `<span>${escapeHtml(employee.name)}</span>
-    <button type="button" data-shift-edit-employee-remove="${escapeHtml(employee.id)}" class="inline-flex size-4 items-center justify-center rounded-sm text-muted-foreground hover:bg-background hover:text-foreground" aria-label="移除 ${escapeHtml(employee.name)}">×</button>`;
-  if (addSelect) picker.insertBefore(tag, addSelect);
-  else picker.appendChild(tag);
-
-  refreshEmployeePickerRemoveButtons(dialog);
-  refreshEmployeeAddSelectOptions(dialog);
+/** 班次/日期变化后刷新可选员工列表（不 remount） */
+function refreshEditEmployeeOptions(dialog: HTMLElement): void {
+  if (!cellEditor) return;
+  pruneEditEmployeeSelectionToSelectable(dialog);
+  const employees = getEditDialogSelectableEmployees(dialog);
+  const shiftId = dialog.querySelector<HTMLSelectElement>("[data-shift-edit-shift]")?.value ?? "";
+  const emptyMessage =
+    cellEditor.dateEditable && shiftId
+      ? "该班次当日已排员工不可再选"
+      : "暂无员工";
+  const optionsWrap = dialog.querySelector("[data-shift-edit-employee-options]");
+  if (optionsWrap) {
+    optionsWrap.innerHTML = renderEditEmployeeOptionsHtml(
+      employees,
+      cellEditor.employeeIds,
+      editEmployeeSearchQuery,
+      emptyMessage,
+    );
+  }
+  syncEditEmployeeSelectionUi(dialog);
 }
 
-function refreshEmployeePickerRemoveButtons(dialog: HTMLElement): void {
-  const tags = dialog.querySelectorAll<HTMLElement>("[data-shift-edit-employee-tag]");
-  const removable = tags.length > 1;
-  tags.forEach((tag) => {
-    const id = tag.getAttribute("data-shift-edit-employee-tag") ?? "";
-    const existing = tag.querySelector("[data-shift-edit-employee-remove]");
-    if (!removable) {
-      existing?.remove();
-      return;
+/** 员工选择器壳层：下拉不入 SSR，开合与改选均不 remount */
+function renderEmployeeMultiSelect(employees: RosterEmployee[], selectedIds: string[]): string {
+  const tagsHtml = renderEditEmployeeTagsHtml(employees, selectedIds);
+  return `
+    <div class="relative w-full max-w-md" data-shift-edit-employee-picker>
+      <div
+        class="flex min-h-9 cursor-pointer items-center rounded-md border border-input bg-background py-1 pl-1.5 pr-8 shadow-sm transition-colors hover:border-primary"
+        data-shift-edit-employee-trigger
+        role="combobox"
+        aria-expanded="false"
+        aria-haspopup="listbox"
+        tabindex="0"
+      >
+        <div class="flex min-h-[26px] flex-1 flex-wrap items-center gap-1.5" data-shift-edit-employee-tags>${tagsHtml}</div>
+        <svg data-shift-edit-employee-chevron class="pointer-events-none absolute right-2.5 top-1/2 size-3 -translate-y-1/2 text-muted-foreground transition-transform" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><path d="M6 8.825a.5.5 0 0 1-.354-.146l-4-4a.5.5 0 0 1 .708-.708L6 7.617l3.646-3.646a.5.5 0 0 1 .708.708l-4 4A.5.5 0 0 1 6 8.825z"/></svg>
+      </div>
+    </div>`;
+}
+
+function syncEditEmployeeSelectionUi(dialog: HTMLElement): void {
+  if (!cellEditor) return;
+  const employees = readScopedEmployees();
+  const selectable = new Set(getEditDialogSelectableEmployees(dialog).map((e) => e.id));
+  const selectedIds = cellEditor.employeeIds.filter(
+    (id) => employees.some((e) => e.id === id) && selectable.has(id),
+  );
+  if (selectedIds.length !== cellEditor.employeeIds.length) {
+    cellEditor = { ...cellEditor, employeeIds: selectedIds };
+  }
+  const selectedSet = new Set(selectedIds);
+  const tags = dialog.querySelector("[data-shift-edit-employee-tags]");
+  if (tags) tags.innerHTML = renderEditEmployeeTagsHtml(employees, selectedIds);
+
+  dialog.querySelectorAll<HTMLElement>("[data-shift-edit-employee-option]").forEach((opt) => {
+    const cb = opt.querySelector<HTMLInputElement>("[data-shift-edit-employee-option-cb]");
+    if (!cb) return;
+    const checked = selectedSet.has(cb.value);
+    cb.checked = checked;
+    opt.classList.toggle("bg-primary/5", checked);
+    opt.classList.toggle("text-primary", checked);
+    opt.classList.toggle("text-foreground", !checked);
+  });
+
+  const saveBtn = dialog.querySelector("[data-shift-edit-save]");
+  if (saveBtn) saveBtn.textContent = selectedIds.length > 1 ? "批量保存" : "保存";
+
+  const hint = dialog.querySelector<HTMLElement>("[data-shift-edit-batch-hint]");
+  if (hint) {
+    if (selectedIds.length > 1) {
+      hint.textContent = `已选 ${selectedIds.length} 名员工，保存后统一应用以上设置`;
+      hint.classList.remove("hidden");
+      hint.classList.add("text-primary");
+      hint.classList.remove("text-muted-foreground");
+    } else {
+      hint.classList.add("hidden");
     }
-    if (!existing && id) {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.setAttribute("data-shift-edit-employee-remove", id);
-      btn.className =
-        "inline-flex size-4 items-center justify-center rounded-sm text-muted-foreground hover:bg-background hover:text-foreground";
-      btn.setAttribute("aria-label", "移除员工");
-      btn.textContent = "×";
-      tag.appendChild(btn);
+  }
+}
+
+function setEditEmployeePickerOpenState(wrap: HTMLElement, open: boolean): void {
+  if (open) wrap.setAttribute("data-open", "1");
+  else wrap.removeAttribute("data-open");
+  const trigger = wrap.querySelector<HTMLElement>("[data-shift-edit-employee-trigger]");
+  if (trigger) {
+    trigger.setAttribute("aria-expanded", open ? "true" : "false");
+    trigger.classList.toggle("border-primary", open);
+    trigger.classList.toggle("ring-2", open);
+    trigger.classList.toggle("ring-ring/20", open);
+  }
+  wrap.querySelector("[data-shift-edit-employee-chevron]")?.classList.toggle("rotate-180", open);
+}
+
+function mountEditEmployeeDropdown(wrap: HTMLElement): HTMLElement {
+  let dropdown = wrap.querySelector<HTMLElement>("[data-shift-edit-employee-dropdown]");
+  if (dropdown) return dropdown;
+  const dialog = wrap.closest<HTMLElement>("[data-shift-edit-dialog]") ?? wrap;
+  pruneEditEmployeeSelectionToSelectable(dialog);
+  const employees = getEditDialogSelectableEmployees(dialog);
+  const selectedIds = cellEditor?.employeeIds ?? [];
+  const shiftId = dialog.querySelector<HTMLSelectElement>("[data-shift-edit-shift]")?.value ?? "";
+  const emptyMessage =
+    cellEditor?.dateEditable && shiftId
+      ? "该班次当日已排员工不可再选"
+      : "暂无员工";
+  wrap.insertAdjacentHTML(
+    "beforeend",
+    `<div class="fixed z-[70] overflow-hidden rounded-md border border-border bg-card shadow-lg" data-shift-edit-employee-dropdown role="listbox">
+      <div class="border-b border-border p-2">
+        <input type="search" value="${escapeHtml(editEmployeeSearchQuery)}" data-shift-edit-employee-search placeholder="搜索员工…" autocomplete="off" aria-label="搜索员工" class="h-8 w-full rounded-md border border-input bg-background px-2.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+      </div>
+      <div class="max-h-56 overflow-y-auto py-1" data-shift-edit-employee-options>
+        ${renderEditEmployeeOptionsHtml(employees, selectedIds, editEmployeeSearchQuery, emptyMessage)}
+      </div>
+    </div>`,
+  );
+  dropdown = wrap.querySelector<HTMLElement>("[data-shift-edit-employee-dropdown]")!;
+  return dropdown;
+}
+
+function unmountEditEmployeeDropdown(wrap: HTMLElement): void {
+  wrap.querySelector("[data-shift-edit-employee-dropdown]")?.remove();
+}
+
+function collectSelectedEmployeeIdsFromDialog(_dialog: HTMLElement): string[] {
+  return cellEditor?.employeeIds.filter(Boolean) ?? [];
+}
+
+function clearEditEmployeePickerState(): void {
+  clearEditEmployeeOutsideCloser();
+  editEmployeeDropdownOpen = false;
+  editEmployeeSearchQuery = "";
+}
+
+function clearEditEmployeeOutsideCloser(): void {
+  if (!editEmployeeOutsideCloser) return;
+  document.removeEventListener("click", editEmployeeOutsideCloser, true);
+  editEmployeeOutsideCloser = null;
+}
+
+function positionEditEmployeeDropdown(wrap: HTMLElement): void {
+  const trigger = wrap.querySelector<HTMLElement>("[data-shift-edit-employee-trigger]");
+  const dropdown = wrap.querySelector<HTMLElement>("[data-shift-edit-employee-dropdown]");
+  if (!trigger || !dropdown) return;
+  const rect = trigger.getBoundingClientRect();
+  dropdown.style.left = `${rect.left}px`;
+  dropdown.style.top = `${rect.bottom + 4}px`;
+  dropdown.style.width = `${Math.max(rect.width, 240)}px`;
+}
+
+function syncEditEmployeeOptionVisibility(dialog: HTMLElement): void {
+  const q = editEmployeeSearchQuery.trim().toLowerCase();
+  const options = dialog.querySelectorAll<HTMLElement>("[data-shift-edit-employee-option]");
+  let visible = 0;
+  options.forEach((opt) => {
+    const label = (opt.textContent || "").trim().toLowerCase();
+    const show = !q || label.includes(q);
+    opt.classList.toggle("hidden", !show);
+    if (show) visible += 1;
+  });
+  let emptyEl = dialog.querySelector<HTMLElement>("[data-shift-edit-employee-empty]");
+  const optionsWrap = dialog.querySelector("[data-shift-edit-employee-options]");
+  if (!optionsWrap) return;
+  if (visible === 0 && options.length > 0) {
+    if (!emptyEl) {
+      emptyEl = document.createElement("div");
+      emptyEl.className = "px-3 py-2 text-sm text-muted-foreground";
+      emptyEl.setAttribute("data-shift-edit-employee-empty", "");
+      optionsWrap.appendChild(emptyEl);
+    }
+    emptyEl.textContent = q ? "没有匹配的员工" : "暂无员工";
+    emptyEl.classList.remove("hidden");
+  } else if (emptyEl) {
+    emptyEl.classList.add("hidden");
+  }
+}
+
+function bindEditEmployeeMultiSelect(dialog: HTMLElement): void {
+  const wrap = dialog.querySelector<HTMLElement>("[data-shift-edit-employee-picker]");
+  if (!wrap || wrap.dataset.editEmployeeBound === "1" || !cellEditor) return;
+  wrap.dataset.editEmployeeBound = "1";
+
+  const close = () => {
+    if (!editEmployeeDropdownOpen) return;
+    clearEditEmployeeOutsideCloser();
+    editEmployeeDropdownOpen = false;
+    editEmployeeSearchQuery = "";
+    unmountEditEmployeeDropdown(wrap);
+    setEditEmployeePickerOpenState(wrap, false);
+  };
+
+  const bindDropdownChrome = (dropdown: HTMLElement) => {
+    dropdown.addEventListener("click", (e) => e.stopPropagation());
+    const search = dropdown.querySelector<HTMLInputElement>("[data-shift-edit-employee-search]");
+    search?.addEventListener("input", () => {
+      editEmployeeSearchQuery = search.value;
+      syncEditEmployeeOptionVisibility(dialog);
+    });
+    search?.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        close();
+      }
+    });
+  };
+
+  const open = () => {
+    const existed = !!wrap.querySelector("[data-shift-edit-employee-dropdown]");
+    editEmployeeDropdownOpen = true;
+    const dropdown = mountEditEmployeeDropdown(wrap);
+    if (!existed) bindDropdownChrome(dropdown);
+    setEditEmployeePickerOpenState(wrap, true);
+    positionEditEmployeeDropdown(wrap);
+    clearEditEmployeeOutsideCloser();
+    editEmployeeOutsideCloser = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target?.closest("[data-shift-edit-employee-picker]")) return;
+      if (target?.closest("[data-shift-edit-employee-dropdown]")) return;
+      close();
+    };
+    requestAnimationFrame(() => {
+      positionEditEmployeeDropdown(wrap);
+      if (editEmployeeOutsideCloser) {
+        document.addEventListener("click", editEmployeeOutsideCloser, true);
+      }
+      dropdown.querySelector<HTMLInputElement>("[data-shift-edit-employee-search]")?.focus();
+    });
+  };
+
+  const openOrToggle = () => {
+    if (editEmployeeDropdownOpen && wrap.querySelector("[data-shift-edit-employee-dropdown]")) close();
+    else open();
+  };
+
+  const applyEmployeeIds = (ids: string[]) => {
+    if (!cellEditor) return;
+    cellEditor = { ...cellEditor, employeeIds: ids };
+    syncEditEmployeeSelectionUi(dialog);
+  };
+
+  wrap.querySelector("[data-shift-edit-employee-trigger]")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if ((e.target as HTMLElement | null)?.closest("[data-shift-edit-employee-remove]")) return;
+    openOrToggle();
+  });
+  wrap.querySelector("[data-shift-edit-employee-trigger]")?.addEventListener("keydown", (e) => {
+    const ke = e as KeyboardEvent;
+    if (ke.key === "Enter" || ke.key === " ") {
+      ke.preventDefault();
+      openOrToggle();
+    } else if (ke.key === "Escape") {
+      close();
     }
   });
+
+  wrap.addEventListener("click", (e) => {
+    const btn = (e.target as HTMLElement | null)?.closest<HTMLElement>("[data-shift-edit-employee-remove]");
+    if (!btn || !wrap.contains(btn)) return;
+    e.stopPropagation();
+    if (!cellEditor) return;
+    const id = btn.getAttribute("data-shift-edit-employee-remove");
+    const allowEmpty = cellEditor.dateEditable;
+    if (!id || (!allowEmpty && cellEditor.employeeIds.length <= 1)) return;
+    applyEmployeeIds(cellEditor.employeeIds.filter((x) => x !== id));
+  });
+
+  wrap.addEventListener("change", (e) => {
+    const cb = e.target as HTMLInputElement | null;
+    if (!cb || !cb.matches("[data-shift-edit-employee-option-cb]")) return;
+    if (!cellEditor) return;
+    const id = cb.value;
+    if (!id) return;
+    const set = new Set(cellEditor.employeeIds);
+    if (cb.checked) set.add(id);
+    else {
+      if (!cellEditor.dateEditable && set.size <= 1) {
+        cb.checked = true;
+        return;
+      }
+      set.delete(id);
+    }
+    applyEmployeeIds([...set]);
+  });
+
+  if (editEmployeeDropdownOpen) {
+    open();
+  }
 }
 
 function renderRepeatWeekdayCheckboxes(selectedDays: number[]): string {
@@ -1510,18 +2284,6 @@ function syncRepeatWeekdaysPanel(dialog: HTMLElement, anchorDate: string): void 
   }
 }
 
-function refreshEmployeeAddSelectOptions(dialog: HTMLElement): void {
-  const addSelect = dialog.querySelector<HTMLSelectElement>("[data-shift-edit-employee-add]");
-  if (!addSelect) return;
-  const selected = new Set(collectSelectedEmployeeIdsFromDialog(dialog));
-  const employees = readEmployees().filter((e) => !selected.has(e.id));
-  addSelect.innerHTML =
-    employees.length > 0
-      ? `<option value="">+ 添加员工</option>${employees.map((e) => `<option value="${escapeHtml(e.id)}">${escapeHtml(e.name)}</option>`).join("")}`
-      : "";
-  addSelect.classList.toggle("hidden", employees.length === 0);
-}
-
 function renderCellEditDialog(types: ShiftType[]): string {
   if (!cellEditor) return "";
   const pageStoreId = readScopeFilters().store;
@@ -1567,6 +2329,9 @@ function renderCellEditDialog(types: ShiftType[]): string {
     "unpaid";
   const breakId = assignment?.breakId;
   const breakOpt = resolveCustomBreakSelection(breakId, assignment, breakCompensation);
+  const breakEnabled = cellEditor.breakEnabled;
+  const workHours = shiftDurationHoursFromTimes(startTime, endTime);
+  const showSkipReason = !breakEnabled && workHours > BREAK_REQUIRED_HOURS_THRESHOLD;
 
 return `
     <div class="fixed inset-0 z-50 flex items-center justify-center p-4" data-shift-edit-dialog role="dialog" aria-modal="true" aria-labelledby="shift-edit-title">
@@ -1574,7 +2339,6 @@ return `
       <div class="relative z-10 flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-xl border border-border bg-card shadow-lg">
         <div class="border-b border-border px-5 py-4">
           <h2 id="shift-edit-title" class="text-base font-semibold text-foreground">${hasAnyAssignment ? "当日班次调整" : "安排排班"}</h2>
-          <p class="mt-1 text-xs text-muted-foreground">可调整项与班次配置一致；选中多名员工时，保存后将批量应用相同排班，不修改班次模板。</p>
         </div>
         <div class="min-h-0 flex-1 space-y-3 overflow-auto px-5 py-4">
           <div class="flex flex-col gap-1 sm:flex-row sm:items-start sm:gap-3">
@@ -1586,7 +2350,11 @@ return `
           <div class="flex flex-col gap-1 sm:flex-row sm:items-start sm:gap-3">
             <span class="${SHIFT_FORM_LABEL}"><span class="text-destructive">*</span> 日期:</span>
             <div class="relative flex w-full max-w-md items-center">
-              <input type="date" value="${escapeHtml(cellEditor.date)}" readonly class="${SHIFT_FORM_INPUT} pr-10" />
+              <input type="date" value="${escapeHtml(cellEditor.date)}" data-shift-edit-date${
+                cellEditor.dateEditable
+                  ? ` min="${escapeHtml(todayIso())}" required`
+                  : " readonly"
+              } class="${SHIFT_FORM_INPUT} pr-10" />
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="pointer-events-none absolute right-3 text-muted-foreground" aria-hidden="true"><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
             </div>
           </div>
@@ -1615,9 +2383,17 @@ return `
             </div>
           </div>
 
+          <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
+            <span class="${SHIFT_FORM_LABEL}">安排休息:</span>
+            <label class="inline-flex cursor-pointer items-center gap-2 text-sm">
+              <input type="checkbox" data-shift-edit-break-enabled class="size-4 shrink-0 accent-primary"${breakEnabled ? " checked" : ""} />
+              <span class="text-muted-foreground">合规要求工时超过 ${BREAK_REQUIRED_HOURS_THRESHOLD} 小时需要安排休息</span>
+            </label>
+          </div>
+          <div class="space-y-3${breakEnabled ? "" : " hidden"}" data-shift-edit-break-fields>
             <div class="flex flex-col gap-1 sm:flex-row sm:items-start sm:gap-3">
               <span class="${SHIFT_FORM_LABEL}"><span class="text-destructive">*</span> 休息类型:</span>
-              <select data-shift-edit-break-compensation class="${SHIFT_FORM_INPUT} sm:max-w-md" required>
+              <select data-shift-edit-break-compensation class="${SHIFT_FORM_INPUT} sm:max-w-md"${breakEnabled ? " required" : ""}>
                 <option value="unpaid"${breakCompensation === "unpaid" ? " selected" : ""}>无薪</option>
                 <option value="paid"${breakCompensation === "paid" ? " selected" : ""}>带薪</option>
               </select>
@@ -1625,12 +2401,17 @@ return `
             <div class="flex flex-col gap-1 sm:flex-row sm:items-start sm:gap-3">
               <span class="${SHIFT_FORM_LABEL}"><span class="text-destructive">*</span> 休息名称:</span>
               <div class="min-w-0 flex-1 space-y-1 sm:max-w-md">
-                <select data-shift-edit-break-id class="${SHIFT_FORM_INPUT}" required>
+                <select data-shift-edit-break-id class="${SHIFT_FORM_INPUT}"${breakEnabled ? " required" : ""}>
                   ${renderCustomBreakNameSelectOptions(breakCompensation, breakId)}
                 </select>
                 ${renderSelectedBreakMetaHtml(breakOpt)}
               </div>
             </div>
+          </div>
+          <div class="flex flex-col gap-1 sm:flex-row sm:items-start sm:gap-3${showSkipReason ? "" : " hidden"}" data-shift-edit-break-skip-wrap>
+            <span class="${SHIFT_FORM_LABEL}">关闭原因:</span>
+            <input type="text" value="${escapeHtml(cellEditor.breakSkipReason)}" data-shift-edit-break-skip-reason maxlength="80" placeholder="选填，如：短班次无需休息" class="${SHIFT_FORM_INPUT} sm:max-w-md" />
+          </div>
 
           <div class="flex flex-col gap-1 sm:flex-row sm:items-start sm:gap-3">
             <span class="${SHIFT_FORM_LABEL} flex items-center justify-end gap-2 sm:pt-2">
@@ -1643,14 +2424,15 @@ return `
             </div>
           </div>
           ${!hasAnyAssignment ? renderRepeatSection(repeatMode, repeatWeekdays, cellEditor.date) : ""}
+          <p data-shift-edit-batch-hint class="text-xs text-primary sm:pl-[calc(9rem+0.75rem)]${multiEmployee ? "" : " hidden"}">${
+            multiEmployee ? `已选 ${selectedEmployeeIds.length} 名员工，保存后统一应用以上设置` : ""
+          }</p>
           ${
-            multiEmployee
-              ? `<p class="text-xs text-primary sm:pl-[calc(9rem+0.75rem)]">已选 ${selectedEmployeeIds.length} 名员工，保存后统一应用以上设置</p>`
-              : !hasAnyAssignment && repeatMode === "week"
-                ? `<p class="text-xs text-muted-foreground sm:pl-[calc(9rem+0.75rem)]">按周重复时，将在当前排班表可见日期范围内批量写入</p>`
-              : customized
+            !multiEmployee && !hasAnyAssignment && repeatMode === "week"
+              ? `<p class="text-xs text-muted-foreground sm:pl-[calc(9rem+0.75rem)]">按周重复时，将在当前排班表可见日期范围内批量写入</p>`
+              : !multiEmployee && customized
                 ? `<p class="text-xs text-primary sm:pl-[calc(9rem+0.75rem)]">* 已针对当日调整，与班次默认不同</p>`
-                : `<p class="text-xs text-muted-foreground sm:pl-[calc(9rem+0.75rem)]">修改后将仅应用于 ${escapeHtml(cellEditor.date)}</p>`
+                : ""
           }
         </div>
         <div class="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-border px-5 py-3">
@@ -1699,47 +2481,8 @@ export function renderTeamShiftSchedulingPage(rulesPanelHtml = ""): string {
 
 function renderSchedulePanel(): string {
   const shiftTypes = readShiftTypes();
-  const typeMap = new Map(shiftTypes.map((t) => [t.id, t]));
   const employees = readScopedEmployees();
-  const needsStore = usesInPageStorePicker() && !readScopeFilters().store;
-  const filtered = pageState.employeeFilter
-    ? employees.filter((e) => e.id === pageState.employeeFilter)
-    : employees;
-  const dates = enumerateDates(pageState.dateFrom, pageState.dateTo);
-  const syncEnabled = canSyncToNextWeek();
-
-  const headerCells = dates
-    .map(
-      (d) =>
-        `<th class="min-w-[5.5rem] whitespace-nowrap border border-primary/20 px-2 py-2.5 text-center text-xs font-medium">${escapeHtml(formatColumnHeader(d))}</th>`,
-    )
-    .join("");
-
-  const bodyRows = needsStore
-    ? ""
-    : filtered
-        .map((emp) => {
-          const hours = employeeTotalHours(emp.id, dates);
-          const cells = dates
-            .map((d) => {
-              const a = getAssignment(emp.id, d);
-              const shift = a ? typeMap.get(a.shiftId) : undefined;
-              return renderShiftCell(emp.id, d, a, shift, isWeekend(d));
-            })
-            .join("");
-          return `<tr class="border-b border-border/60">
-        <td class="sticky left-0 z-[1] min-w-[8rem] border border-border/60 bg-card px-3 py-2 text-sm">
-          <span class="font-medium text-foreground">${escapeHtml(emp.name)}</span>
-          <span class="mt-0.5 block text-xs tabular-nums text-muted-foreground">${hours} 小时</span>
-        </td>
-        ${cells}
-      </tr>`;
-        })
-        .join("");
-
-  const emptyMessage = needsStore
-    ? "请先选择门店"
-    : "暂无员工数据，请先在「角色与员工」中添加员工。";
+  const syncVisible = shouldShowSyncToNextWeek();
 
   return `
     <div class="flex min-h-0 flex-1 flex-col gap-3" data-shift-schedule-panel>
@@ -1757,27 +2500,21 @@ function renderSchedulePanel(): string {
       </div>
 
       <div class="flex shrink-0 flex-wrap items-center gap-3">
-        <select data-shift-employee-filter class="h-9 min-w-[8rem] rounded-md border border-input bg-background px-3 text-sm">${renderEmployeeFilterOptions(employees)}</select>
-        <button type="button" data-shift-sync-next-week
-          class="h-9 rounded-md border border-border px-4 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
-            syncEnabled
-              ? "bg-background text-foreground hover:bg-muted"
-              : "cursor-not-allowed bg-muted/50 text-muted-foreground"
-          }"
-          ${syncEnabled ? "" : "disabled"}
-        >同步到下周</button>
+        ${renderEmployeeFilterMultiSelect(employees)}
+        <button type="button" data-shift-open-employee-schedule
+          class="h-9 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        >员工排班</button>
+        ${
+          syncVisible
+            ? `<button type="button" data-shift-sync-next-week
+          class="h-9 rounded-md border border-border bg-background px-4 text-sm text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        >同步到下周</button>`
+            : ""
+        }
       </div>
 
-      <div class="min-h-0 flex-1 overflow-auto rounded-lg border border-border">
-        <table class="w-full min-w-max border-collapse">
-          <thead class="sticky top-0 z-[2]">
-            <tr class="bg-primary text-primary-foreground">
-              <th class="sticky left-0 z-[3] min-w-[8rem] border border-primary/20 bg-primary px-3 py-2.5 text-left text-sm font-medium">员工</th>
-              ${headerCells}
-            </tr>
-          </thead>
-          <tbody>${bodyRows || `<tr><td colspan="${dates.length + 1}" class="px-4 py-8 text-center text-sm text-muted-foreground">${escapeHtml(emptyMessage)}</td></tr>`}</tbody>
-        </table>
+      <div class="min-h-0 flex-1 overflow-auto rounded-lg border border-border" data-shift-schedule-table>
+        ${renderScheduleTableInnerHtml()}
       </div>
 
       ${renderCellEditDialog(shiftTypes)}
@@ -1787,10 +2524,139 @@ function renderSchedulePanel(): string {
 function readPageStateFromDom(root: HTMLElement): void {
   const from = root.querySelector<HTMLInputElement>("[data-shift-date-from]");
   const to = root.querySelector<HTMLInputElement>("[data-shift-date-to]");
-  const emp = root.querySelector<HTMLSelectElement>("[data-shift-employee-filter]");
   if (from?.value) pageState.dateFrom = from.value;
   if (to?.value) pageState.dateTo = to.value;
-  if (emp) pageState.employeeFilter = emp.value;
+}
+
+function clearEmployeeFilterOutsideCloser(): void {
+  if (!employeeFilterOutsideCloser) return;
+  document.removeEventListener("click", employeeFilterOutsideCloser, true);
+  employeeFilterOutsideCloser = null;
+}
+
+function syncEmployeeFilterOptionVisibility(root: HTMLElement): void {
+  const q = employeeFilterSearchQuery.trim().toLowerCase();
+  const options = root.querySelectorAll<HTMLElement>("[data-shift-employee-filter-option]");
+  let visible = 0;
+  options.forEach((opt) => {
+    const label = (opt.textContent || "").trim().toLowerCase();
+    const show = !q || label.includes(q);
+    opt.classList.toggle("hidden", !show);
+    if (show) visible += 1;
+  });
+  let emptyEl = root.querySelector<HTMLElement>("[data-shift-employee-filter-empty]");
+  const optionsWrap = root.querySelector("[data-shift-employee-filter-options]");
+  if (!optionsWrap) return;
+  if (visible === 0 && options.length > 0) {
+    if (!emptyEl) {
+      emptyEl = document.createElement("div");
+      emptyEl.className = "px-3 py-2 text-sm text-muted-foreground";
+      emptyEl.setAttribute("data-shift-employee-filter-empty", "");
+      optionsWrap.appendChild(emptyEl);
+    }
+    emptyEl.textContent = q ? "没有匹配的员工" : "暂无员工";
+    emptyEl.classList.remove("hidden");
+  } else if (emptyEl) {
+    emptyEl.classList.add("hidden");
+  }
+}
+
+function bindEmployeeFilterMultiSelect(root: HTMLElement, remount: () => void): void {
+  const wrap = root.querySelector<HTMLElement>("[data-shift-employee-filter]");
+  if (!wrap || wrap.dataset.employeeFilterBound === "1") return;
+  wrap.dataset.employeeFilterBound = "1";
+
+  const close = () => {
+    if (!employeeFilterDropdownOpen) return;
+    clearEmployeeFilterOutsideCloser();
+    employeeFilterDropdownOpen = false;
+    employeeFilterSearchQuery = "";
+    unmountEmployeeFilterDropdown(wrap);
+    setEmployeeFilterOpenState(wrap, false);
+  };
+
+  const bindDropdownChrome = (dropdown: HTMLElement) => {
+    dropdown.addEventListener("click", (e) => e.stopPropagation());
+    const search = dropdown.querySelector<HTMLInputElement>("[data-shift-employee-filter-search]");
+    search?.addEventListener("input", () => {
+      employeeFilterSearchQuery = search.value;
+      syncEmployeeFilterOptionVisibility(root);
+    });
+    search?.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        close();
+      }
+    });
+  };
+
+  const open = () => {
+    const existed = !!wrap.querySelector("[data-shift-employee-filter-dropdown]");
+    employeeFilterDropdownOpen = true;
+    const dropdown = mountEmployeeFilterDropdown(wrap);
+    if (!existed) bindDropdownChrome(dropdown);
+    setEmployeeFilterOpenState(wrap, true);
+    clearEmployeeFilterOutsideCloser();
+    employeeFilterOutsideCloser = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target?.closest("[data-shift-employee-filter]")) return;
+      close();
+    };
+    requestAnimationFrame(() => {
+      if (employeeFilterOutsideCloser) {
+        document.addEventListener("click", employeeFilterOutsideCloser, true);
+      }
+      dropdown.querySelector<HTMLInputElement>("[data-shift-employee-filter-search]")?.focus();
+    });
+  };
+
+  const openOrToggle = () => {
+    if (employeeFilterDropdownOpen && wrap.querySelector("[data-shift-employee-filter-dropdown]")) close();
+    else open();
+  };
+
+  const applyFilterIds = (ids: string[]) => {
+    pageState.employeeFilterIds = ids;
+    syncEmployeeFilterSelectionUi(root);
+    refreshScheduleTable(root, remount);
+  };
+
+  wrap.querySelector("[data-shift-employee-filter-trigger]")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if ((e.target as HTMLElement | null)?.closest("[data-shift-employee-filter-remove]")) return;
+    openOrToggle();
+  });
+  wrap.querySelector("[data-shift-employee-filter-trigger]")?.addEventListener("keydown", (e) => {
+    const ke = e as KeyboardEvent;
+    if (ke.key === "Enter" || ke.key === " ") {
+      ke.preventDefault();
+      openOrToggle();
+    } else if (ke.key === "Escape") {
+      close();
+    }
+  });
+
+  wrap.addEventListener("click", (e) => {
+    const btn = (e.target as HTMLElement | null)?.closest<HTMLElement>("[data-shift-employee-filter-remove]");
+    if (!btn || !wrap.contains(btn)) return;
+    e.stopPropagation();
+    const id = btn.getAttribute("data-shift-employee-filter-remove");
+    if (!id) return;
+    applyFilterIds(pageState.employeeFilterIds.filter((x) => x !== id));
+  });
+
+  wrap.addEventListener("change", (e) => {
+    const cb = e.target as HTMLInputElement | null;
+    if (!cb || !cb.matches("[data-shift-employee-filter-option-cb]")) return;
+    const id = cb.value;
+    if (!id) return;
+    const set = new Set(pageState.employeeFilterIds);
+    if (cb.checked) set.add(id);
+    else set.delete(id);
+    applyFilterIds([...set]);
+  });
+
+  if (employeeFilterDropdownOpen) open();
 }
 
 function syncShiftWorkHoursInRow(row: HTMLElement): void {
@@ -1827,8 +2693,10 @@ function collectShiftTypeFromDetail(root: HTMLElement, id: string): ShiftType | 
     0,
     Number(root.querySelector<HTMLInputElement>("[data-shift-auto-clock-out-delay]")?.value) || 0,
   );
+  const breakEnabled =
+    root.querySelector<HTMLInputElement>("[data-shift-type-break-enabled]")?.checked ?? false;
   if (!name) return null;
-  return normalizeShiftType({
+  const partial: Partial<ShiftType> & Pick<ShiftType, "id" | "name" | "startTime" | "endTime"> = {
     id,
     name,
     storeId,
@@ -1838,7 +2706,24 @@ function collectShiftTypeFromDetail(root: HTMLElement, id: string): ShiftType | 
     earlyClockInMinutes,
     autoClockOutDelayEnabled,
     autoClockOutDelayMinutes,
-  });
+    breakEnabled,
+  };
+  if (breakEnabled) {
+    const compensation =
+      root.querySelector<HTMLSelectElement>("[data-shift-type-break-compensation]")?.value === "paid"
+        ? "paid"
+        : "unpaid";
+    const breakId = root.querySelector<HTMLSelectElement>("[data-shift-type-break-id]")?.value ?? "";
+    const breakOpt = resolveCustomBreakSelection(breakId, { breakCompensation: compensation }, compensation);
+    if (breakOpt) {
+      partial.breakId = breakOpt.id;
+      partial.breakName = breakOpt.name;
+      partial.breakCompensation = breakOpt.compensation;
+      partial.breakDurationMinutes = breakOpt.durationMinutes;
+      partial.breakMandatory = breakOpt.mandatory;
+    }
+  }
+  return normalizeShiftType(partial);
 }
 
 function syncEditWorkHoursInDialog(dialog: HTMLElement): void {
@@ -1846,6 +2731,26 @@ function syncEditWorkHoursInDialog(dialog: HTMLElement): void {
   const end = dialog.querySelector<HTMLInputElement>("[data-shift-edit-end]")?.value ?? "";
   const label = dialog.querySelector<HTMLElement>("[data-shift-edit-work-hours]");
   if (label) label.textContent = formatWorkHoursDisplay(start, end);
+  syncEditBreakSkipReasonVisibility(dialog);
+}
+
+function syncEditBreakFieldsVisibility(dialog: HTMLElement): void {
+  const enabled = dialog.querySelector<HTMLInputElement>("[data-shift-edit-break-enabled]")?.checked ?? false;
+  dialog.querySelector<HTMLElement>("[data-shift-edit-break-fields]")?.classList.toggle("hidden", !enabled);
+  const compensation = dialog.querySelector<HTMLSelectElement>("[data-shift-edit-break-compensation]");
+  const breakId = dialog.querySelector<HTMLSelectElement>("[data-shift-edit-break-id]");
+  if (compensation) compensation.required = enabled;
+  if (breakId) breakId.required = enabled;
+  syncEditBreakSkipReasonVisibility(dialog);
+}
+
+function syncEditBreakSkipReasonVisibility(dialog: HTMLElement): void {
+  const enabled = dialog.querySelector<HTMLInputElement>("[data-shift-edit-break-enabled]")?.checked ?? false;
+  const start = dialog.querySelector<HTMLInputElement>("[data-shift-edit-start]")?.value ?? "";
+  const end = dialog.querySelector<HTMLInputElement>("[data-shift-edit-end]")?.value ?? "";
+  const hours = shiftDurationHoursFromTimes(start, end);
+  const show = !enabled && hours > BREAK_REQUIRED_HOURS_THRESHOLD;
+  dialog.querySelector<HTMLElement>("[data-shift-edit-break-skip-wrap]")?.classList.toggle("hidden", !show);
 }
 
 function syncEditAutoClockOutDelayField(dialog: HTMLElement): void {
@@ -1869,11 +2774,40 @@ function applyShiftTemplateToEditDialog(dialog: HTMLElement, shift: ShiftType): 
   if (delay) delay.value = String(shift.autoClockOutDelayMinutes);
   syncEditWorkHoursInDialog(dialog);
   syncEditAutoClockOutDelayField(dialog);
+  if (cellEditor) {
+    cellEditor.breakSwitchTouched = false;
+    cellEditor.breakEnabled = shiftTypeHasBreak(shift)
+      ? true
+      : shift.breakEnabled === false
+        ? false
+        : defaultBreakEnabledForWorkHours(shiftDurationHoursFromTimes(shift.startTime, shift.endTime));
+    cellEditor.breakSkipReason = "";
+    const breakToggle = dialog.querySelector<HTMLInputElement>("[data-shift-edit-break-enabled]");
+    if (breakToggle) breakToggle.checked = cellEditor.breakEnabled;
+    const skipReason = dialog.querySelector<HTMLInputElement>("[data-shift-edit-break-skip-reason]");
+    if (skipReason) skipReason.value = "";
+    if (cellEditor.breakEnabled && shiftTypeHasBreak(shift)) {
+      const compensation =
+        shift.breakCompensation ??
+        resolveCustomBreakSelection(shift.breakId, shift)?.compensation ??
+        "unpaid";
+      const compensationSelect = dialog.querySelector<HTMLSelectElement>("[data-shift-edit-break-compensation]");
+      if (compensationSelect) compensationSelect.value = compensation;
+      syncShiftEditBreakNameSelect(dialog, compensation, shift.breakId);
+    }
+    syncEditBreakFieldsVisibility(dialog);
+  }
 }
 
 function bindCellEditDialog(remount: () => void): void {
   const dialog = document.querySelector<HTMLElement>("[data-shift-edit-dialog]");
   if (!dialog || !cellEditor) return;
+  if (!isScheduleDateEditable(cellEditor.date)) {
+    clearEditEmployeePickerState();
+    cellEditor = null;
+    remount();
+    return;
+  }
 
   const onTimeChange = () => syncEditWorkHoursInDialog(dialog);
   dialog.querySelector("[data-shift-edit-start]")?.addEventListener("input", onTimeChange);
@@ -1885,11 +2819,26 @@ function bindCellEditDialog(remount: () => void): void {
     syncEditAutoClockOutDelayField(dialog);
   });
   syncEditAutoClockOutDelayField(dialog);
+  syncEditBreakFieldsVisibility(dialog);
+
+  dialog.querySelector("[data-shift-edit-break-enabled]")?.addEventListener("change", (e) => {
+    if (!cellEditor) return;
+    const checked = (e.target as HTMLInputElement).checked;
+    cellEditor.breakEnabled = checked;
+    cellEditor.breakSwitchTouched = true;
+    if (checked) cellEditor.breakSkipReason = "";
+    syncEditBreakFieldsVisibility(dialog);
+  });
+  dialog.querySelector("[data-shift-edit-break-skip-reason]")?.addEventListener("input", (e) => {
+    if (!cellEditor) return;
+    cellEditor.breakSkipReason = (e.target as HTMLInputElement).value;
+  });
 
   dialog.querySelector("[data-shift-edit-shift]")?.addEventListener("change", (e) => {
     const shiftId = (e.target as HTMLSelectElement).value;
     const shift = readShiftTypes().find((t) => t.id === shiftId);
     if (shift) applyShiftTemplateToEditDialog(dialog, shift);
+    refreshEditEmployeeOptions(dialog);
   });
 
   dialog.querySelector("[data-shift-edit-break-compensation]")?.addEventListener("change", (e) => {
@@ -1911,25 +2860,22 @@ function bindCellEditDialog(remount: () => void): void {
     oldMeta.remove();
   });
 
-  dialog.querySelector("[data-shift-edit-employee-add]")?.addEventListener("change", (e) => {
-    const employeeId = (e.target as HTMLSelectElement).value;
-    if (!employeeId) return;
-    const employee = readEmployees().find((emp) => emp.id === employeeId);
-    if (employee) appendEmployeeTag(dialog, employee);
-    (e.target as HTMLSelectElement).value = "";
-  });
+  bindEditEmployeeMultiSelect(dialog);
 
-  dialog.addEventListener("click", (e) => {
-    const target = e.target as HTMLElement;
-    const removeBtn = target.closest<HTMLElement>("[data-shift-edit-employee-remove]");
-    if (!removeBtn) return;
-    const employeeId = removeBtn.getAttribute("data-shift-edit-employee-remove");
-    if (!employeeId) return;
-    const tags = dialog.querySelectorAll("[data-shift-edit-employee-tag]");
-    if (tags.length <= 1) return;
-    removeBtn.closest("[data-shift-edit-employee-tag]")?.remove();
-    refreshEmployeePickerRemoveButtons(dialog);
-    refreshEmployeeAddSelectOptions(dialog);
+  dialog.querySelector<HTMLInputElement>("[data-shift-edit-date]")?.addEventListener("change", (e) => {
+    if (!cellEditor?.dateEditable) return;
+    const next = (e.target as HTMLInputElement).value;
+    if (!next || !isScheduleDateEditable(next)) {
+      (e.target as HTMLInputElement).value = cellEditor.date;
+      return;
+    }
+    cellEditor = {
+      ...cellEditor,
+      date: next,
+      repeatWeekdays: [parseIsoDate(next).getDay()],
+    };
+    refreshEditEmployeeOptions(dialog);
+    syncRepeatWeekdaysPanel(dialog, cellEditor.date);
   });
 
   dialog.querySelectorAll("[data-shift-edit-repeat-mode]").forEach((radio) => {
@@ -1946,30 +2892,33 @@ function bindCellEditDialog(remount: () => void): void {
   });
 
   dialog.querySelector("[data-shift-edit-backdrop]")?.addEventListener("click", () => {
+    clearEditEmployeePickerState();
     cellEditor = null;
     remount();
   });
   dialog.querySelector("[data-shift-edit-cancel]")?.addEventListener("click", () => {
+    clearEditEmployeePickerState();
     cellEditor = null;
     remount();
   });
   dialog.querySelector("[data-shift-edit-reset]")?.addEventListener("click", () => {
-    if (!cellEditor) return;
+    if (!cellEditor || !isScheduleDateEditable(cellEditor.date)) return;
     const employeeIds = collectSelectedEmployeeIdsFromDialog(dialog);
     if (employeeIds.length === 0) return;
     clearAssignmentOverridesForEmployees(employeeIds, cellEditor.date);
     remount();
   });
   dialog.querySelector("[data-shift-edit-clear]")?.addEventListener("click", () => {
-    if (!cellEditor) return;
+    if (!cellEditor || !isScheduleDateEditable(cellEditor.date)) return;
     const employeeIds = collectSelectedEmployeeIdsFromDialog(dialog);
     if (employeeIds.length === 0) return;
     clearAssignmentsForEmployees(employeeIds, cellEditor.date);
+    clearEditEmployeePickerState();
     cellEditor = null;
     remount();
   });
   dialog.querySelector("[data-shift-edit-save]")?.addEventListener("click", () => {
-    if (!cellEditor) return;
+    if (!cellEditor || !isScheduleDateEditable(cellEditor.date)) return;
     const employeeIds = collectSelectedEmployeeIdsFromDialog(dialog);
     const shiftId = dialog.querySelector<HTMLSelectElement>("[data-shift-edit-shift]")?.value ?? "";
     const start = dialog.querySelector<HTMLInputElement>("[data-shift-edit-start]")?.value ?? "";
@@ -1988,14 +2937,23 @@ function bindCellEditDialog(remount: () => void): void {
       dialog.querySelector<HTMLSelectElement>("[data-shift-edit-break-compensation]")?.value === "paid"
         ? "paid"
         : "unpaid";
+    const breakEnabled =
+      dialog.querySelector<HTMLInputElement>("[data-shift-edit-break-enabled]")?.checked ?? false;
+    const breakSkipReason =
+      dialog.querySelector<HTMLInputElement>("[data-shift-edit-break-skip-reason]")?.value.trim() ?? "";
     const breakId = dialog.querySelector<HTMLSelectElement>("[data-shift-edit-break-id]")?.value ?? "";
-    const breakOpt = resolveCustomBreakSelection(breakId, { breakCompensation: compensation }, compensation);
-    if (employeeIds.length === 0) return;
+    const breakOpt = breakEnabled
+      ? resolveCustomBreakSelection(breakId, { breakCompensation: compensation }, compensation) ?? null
+      : null;
+    if (employeeIds.length === 0) {
+      dialog.querySelector<HTMLElement>("[data-shift-edit-employee-trigger]")?.focus();
+      return;
+    }
     if (!shiftId) {
       dialog.querySelector<HTMLSelectElement>("[data-shift-edit-shift]")?.focus();
       return;
     }
-    if (!breakOpt) {
+    if (breakEnabled && !breakOpt) {
       dialog.querySelector<HTMLSelectElement>("[data-shift-edit-break-id]")?.focus();
       return;
     }
@@ -2016,11 +2974,14 @@ function bindCellEditDialog(remount: () => void): void {
         earlyClockInMinutes,
         autoClockOutDelayEnabled,
         autoClockOutDelayMinutes,
+        breakEnabled,
         breakOpt,
+        breakSkipReason,
       )
     ) {
       return;
     }
+    clearEditEmployeePickerState();
     cellEditor = null;
     remount();
   });
@@ -2043,6 +3004,9 @@ export function bindTeamShiftSchedulingUi(remount: () => void): void {
         closeShiftFormEditor();
         closeShiftDeleteConfirm();
       }
+      clearEmployeeFilterOutsideCloser();
+      employeeFilterDropdownOpen = false;
+      employeeFilterSearchQuery = "";
       shiftPageTab = tab;
       remount();
     });
@@ -2072,11 +3036,17 @@ export function bindTeamShiftSchedulingUi(remount: () => void): void {
   root.querySelector("[data-shift-date-from]")?.addEventListener("change", () => {
     readPageStateFromDom(root);
     pageState.quickPreset = "this-week";
+    clearEmployeeFilterOutsideCloser();
+    employeeFilterDropdownOpen = false;
+    employeeFilterSearchQuery = "";
     remount();
   });
   root.querySelector("[data-shift-date-to]")?.addEventListener("change", () => {
     readPageStateFromDom(root);
     pageState.quickPreset = "this-week";
+    clearEmployeeFilterOutsideCloser();
+    employeeFilterDropdownOpen = false;
+    employeeFilterSearchQuery = "";
     remount();
   });
 
@@ -2085,36 +3055,38 @@ export function bindTeamShiftSchedulingUi(remount: () => void): void {
       const preset = btn.getAttribute("data-shift-quick-preset") as QuickPreset;
       if (preset) {
         applyQuickPreset(preset);
+        clearEmployeeFilterOutsideCloser();
+        employeeFilterDropdownOpen = false;
+        employeeFilterSearchQuery = "";
         remount();
       }
     });
   });
 
-  root.querySelector("[data-shift-employee-filter]")?.addEventListener("change", () => {
-    readPageStateFromDom(root);
+  bindEmployeeFilterMultiSelect(root, remount);
+
+  root.querySelector("[data-shift-open-employee-schedule]")?.addEventListener("click", () => {
+    clearEditEmployeePickerState();
+    const date = defaultEmployeeScheduleDate();
+    cellEditor = {
+      date,
+      employeeIds: [],
+      dateEditable: true,
+      repeatMode: "day",
+      repeatWeekdays: [parseIsoDate(date).getDay()],
+      breakEnabled: false,
+      breakSkipReason: "",
+      breakSwitchTouched: false,
+    };
     remount();
   });
 
   root.querySelector("[data-shift-sync-next-week]")?.addEventListener("click", () => {
-    if (!canSyncToNextWeek()) return;
-    syncCurrentWeekToNextWeek();
+    if (!shouldShowSyncToNextWeek()) return;
+    syncSelectedWeekToNextWeek();
     remount();
   });
 
-  root.querySelectorAll("[data-shift-cell]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const employeeId = btn.getAttribute("data-shift-employee");
-      const date = btn.getAttribute("data-shift-date");
-      if (!employeeId || !date) return;
-      cellEditor = {
-        date,
-        employeeIds: [employeeId],
-        repeatMode: "day",
-        repeatWeekdays: [parseIsoDate(date).getDay()],
-      };
-      remount();
-    });
-  });
-
+  bindScheduleCellClicks(root, remount);
   bindCellEditDialog(remount);
 }

@@ -170,7 +170,6 @@ import {
   getTeamSettingItemsBySeqs,
   renderTeamSettingsEmbedSection,
   renderTeamSettingsTabPanel,
-  TEAM_BREAKS_OVERTIME_GLOBAL_SETTING_SEQS,
   TEAM_BREAKS_OVERTIME_BREAK_RULES_SETTING_SEQS,
   TEAM_CLOCK_IN_GROUP_ORDER,
   TEAM_CLOCK_IN_SETTING_SEQS,
@@ -5775,11 +5774,9 @@ function renderTeamShiftSchedulingPageWithSettings(): string {
 }
 
 function renderTeamBreaksOvertimePageWithSettings(path: string): string {
-  const globalItems = getTeamSettingItemsBySeqs(TEAM_BREAKS_OVERTIME_GLOBAL_SETTING_SEQS);
   const breakRulesItems = getTeamSettingItemsBySeqs(TEAM_BREAKS_OVERTIME_BREAK_RULES_SETTING_SEQS);
-  const globalRowsHtml = renderModuleSettingRowsHtml(globalItems);
   const paidBreakRowsHtml = renderModuleSettingRowsHtml(breakRulesItems);
-  const page = renderTeamBreaksOvertimePage(globalRowsHtml, path, paidBreakRowsHtml);
+  const page = renderTeamBreaksOvertimePage(path, paidBreakRowsHtml);
   const bar = renderPageSaveBar(path);
   // 勿用 wrapPageWithSaveBar：其外层 overflow-y-auto 会让三级导航与四级内容同步滚动
   if (!bar) return page;
