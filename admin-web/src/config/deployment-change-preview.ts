@@ -6,7 +6,12 @@ import {
   getSettingTitleBySeq,
 } from "./deployment-change-buffer";
 import { resolveOriginNavFromPath } from "./deployment-config-domains";
-import type { ChangeDetailRow, DeploymentConfigChange } from "./deployment-types";
+import type {
+  ChangeDetailRow,
+  DeploymentConfigChange,
+  EntityChangeBlock,
+  EntityChangeOp,
+} from "./deployment-types";
 import {
   formatAutoLogoutByLineForDeployment,
   formatMaxGuestsByLineForDeployment,
@@ -265,7 +270,80 @@ function renderDetailRows(details: ChangeDetailRow[]): string {
     .join("");
 }
 
+function entityOpToPreviewKind(op: EntityChangeOp): ChangePreviewKind {
+  if (op === "create") return "add";
+  if (op === "delete") return "delete";
+  return "edit";
+}
+
+function renderEntityBlocks(entities: EntityChangeBlock[]): string {
+  return entities
+    .map((block) => {
+      const kind = entityOpToPreviewKind(block.operation);
+      const fieldsAsDetails: ChangeDetailRow[] = block.fields.map((f) => ({
+        key: f.key,
+        label: f.label,
+        before: f.before,
+        after: f.after,
+      }));
+      const body =
+        fieldsAsDetails.length > 0
+          ? `<div class="mt-2 space-y-0">${renderDetailRows(fieldsAsDetails)}</div>`
+          : `<p class="mt-2 m-0 text-xs text-muted-foreground">${escapeHtml(changePreviewKindLabel(kind))}该实体</p>`;
+      return `
+        <div class="rounded-md border border-border/70 bg-muted/20 p-2.5 sm:p-3">
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="text-sm font-medium text-card-foreground">${escapeHtml(block.entityLabel)}</span>
+            <span class="inline-flex rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${changePreviewKindBadgeClass(kind)}">${escapeHtml(changePreviewKindLabel(kind))}</span>
+          </div>
+          ${body}
+        </div>`;
+    })
+    .join("");
+}
+
+function renderCollectionChangeCard(change: DeploymentConfigChange): string {
+  const entities = (change.entities ?? []).filter(
+    (block) =>
+      block.operation === "create" ||
+      block.operation === "delete" ||
+      block.fields.some((f) => f.before !== f.after),
+  );
+  if (entities.length === 0) return "";
+
+  const badge = change.operation?.trim() || summarizeEntityOpsBadge(entities);
+
+  return `
+    <article class="rounded-lg border border-border bg-card p-3 sm:p-3.5">
+      <div class="mb-3 flex flex-wrap items-center gap-2">
+        <h4 class="m-0 text-sm font-semibold text-card-foreground">${escapeHtml(change.label)}</h4>
+        <span class="inline-flex rounded-md px-2 py-0.5 text-[11px] font-semibold bg-blue-500/15 text-blue-700 dark:text-blue-400">${escapeHtml(badge)}</span>
+      </div>
+      <div class="max-h-[min(28rem,50vh)] space-y-2 overflow-auto pr-0.5">${renderEntityBlocks(entities)}</div>
+    </article>`;
+}
+
+function summarizeEntityOpsBadge(entities: EntityChangeBlock[]): string {
+  let create = 0;
+  let update = 0;
+  let remove = 0;
+  for (const block of entities) {
+    if (block.operation === "create") create += 1;
+    else if (block.operation === "delete") remove += 1;
+    else update += 1;
+  }
+  const parts: string[] = [];
+  if (create) parts.push(`新增 ${create}`);
+  if (update) parts.push(`修改 ${update}`);
+  if (remove) parts.push(`删除 ${remove}`);
+  return parts.join(" · ") || "修改";
+}
+
 function renderSettingChangeCard(change: DeploymentConfigChange): string {
+  if (change.entities?.length) {
+    return renderCollectionChangeCard(change);
+  }
+
   const normalized = normalizeChangeForDisplay(change);
   const details = resolveChangeDetails(normalized);
   if (details.length === 0) return "";

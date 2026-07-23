@@ -209,6 +209,14 @@ export const DEMO_CONFIG_DOMAINS: DeploymentConfigDomain[] = [
     pagePaths: ["/operations/queue-call/emenu-pro"],
   },
   {
+    domainKey: "marketing.ads",
+    displayName: "广告",
+    navRefs: [{ l1Key: "marketing", l2Key: "mkt-ads" }],
+    productLines: ["eMenu", "Kiosk", "CDS", "叫号屏"],
+    granularity: "store",
+    pagePaths: ["/marketing/ads"],
+  },
+  {
     domainKey: "kds.display",
     displayName: "KDS显示与交互",
     navRefs: [{ l1Key: "kitchen-kds", l2Key: "kds-display" }],

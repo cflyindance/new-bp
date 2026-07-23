@@ -1,7 +1,10 @@
 /**
  * 设置页 · 页脚保存栏
  */
-import { confirmAndTriggerPageSaveAndDeploy } from "./deployment-page-trigger";
+import {
+  confirmAndTriggerPageSaveAndDeploy,
+  previewPageSaveChanges,
+} from "./deployment-page-trigger";
 import { getStoreConfigCursor } from "./deployment-store";
 import { resolveDomainsForPath } from "./deployment-config-domains";
 import { resolveAutoDeploymentScope } from "./deployment-mock-devices";
@@ -11,7 +14,6 @@ import {
 } from "./page-save-registry";
 import {
   discardPageDraft,
-  getPageDraftChangeCount,
   initPageSaveSession,
   isPageBatchSavePath,
   listPageDraftFohToggles,
@@ -68,10 +70,18 @@ export function renderPageSaveBar(path: string): string {
     >
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div class="min-w-0 text-sm text-muted-foreground">
-          <span data-page-save-count ${dirty ? "" : 'class="hidden"'}>
-            <span class="font-medium text-foreground" data-page-save-count-num>${count}</span>
-            项待保存
-          </span>
+          <button
+            type="button"
+            data-page-save-preview
+            class="rounded-sm text-left hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none"
+            ${dirty ? "" : "disabled hidden"}
+            ${dirty ? "" : 'aria-hidden="true"'}
+          >
+            <span data-page-save-count>
+              <span class="font-medium text-foreground underline decoration-foreground/30 underline-offset-2" data-page-save-count-num>${count}</span>
+              <span class="underline decoration-foreground/30 underline-offset-2">项待保存</span>
+            </span>
+          </button>
           <span data-page-save-count-sep ${dirty ? "" : 'class="hidden"'}> · </span>
           <span data-page-save-deployed-hint>${escapeHtml(deployedHint)}</span>
         </div>
@@ -113,14 +123,19 @@ function syncPageSaveBarDom(pageKey: string): void {
   const count = getPageSavePendingCount(pageKey);
   const dirty = count > 0;
 
-  const countWrap = bar.querySelector("[data-page-save-count]");
+  const countWrap = bar.querySelector<HTMLButtonElement>("[data-page-save-preview]");
   const countNum = bar.querySelector("[data-page-save-count-num]");
   const sep = bar.querySelector("[data-page-save-count-sep]");
   const discardBtn = bar.querySelector<HTMLButtonElement>("[data-page-save-discard]");
   const commitBtn = bar.querySelector<HTMLButtonElement>("[data-page-save-commit]");
 
   if (countNum) countNum.textContent = String(count);
-  countWrap?.classList.toggle("hidden", !dirty);
+  if (countWrap) {
+    countWrap.classList.toggle("hidden", !dirty);
+    countWrap.disabled = !dirty;
+    if (dirty) countWrap.removeAttribute("aria-hidden");
+    else countWrap.setAttribute("aria-hidden", "true");
+  }
   sep?.classList.toggle("hidden", !dirty);
   if (discardBtn) discardBtn.disabled = !dirty;
   if (commitBtn) commitBtn.disabled = !dirty;
@@ -170,6 +185,16 @@ export function bindPageSaveBar(remount: () => void): void {
 
     document.body.addEventListener("click", (e) => {
       const target = e.target as HTMLElement;
+
+      const previewBtn = target.closest<HTMLElement>("[data-page-save-preview]");
+      if (previewBtn) {
+        const bar = previewBtn.closest<HTMLElement>("[data-page-save-bar]");
+        const pageKey = bar?.dataset.pageSaveKey;
+        if (!pageKey || !isPageSavePending(pageKey)) return;
+        void previewPageSaveChanges(pageKey);
+        return;
+      }
+
       const commitBtn = target.closest<HTMLElement>("[data-page-save-commit]");
       if (commitBtn) {
         const bar = commitBtn.closest<HTMLElement>("[data-page-save-bar]");

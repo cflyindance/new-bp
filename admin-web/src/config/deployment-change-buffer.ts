@@ -1,6 +1,11 @@
 /**
  * 配置变更缓冲：按页面分桶（批量保存）+ 全局 FIFO（即时下发页）
  */
+import {
+  collectionChangeHasDiff,
+  mergeEntityChangeBlocks,
+  withCollectionSummary,
+} from "./collection-change-diff";
 import type { ChangeDetailRow, DeploymentConfigChange } from "./deployment-types";
 import { listAllModuleSettingCatalogEntries } from "./module-settings-catalog";
 
@@ -241,8 +246,11 @@ export function mergeChangeDetails(
   return [...map.values()].filter((row) => row.before !== row.after);
 }
 
-/** 是否存在实质差异（有 details 时按 key 对齐判断） */
+/** 是否存在实质差异（有 entities / details 时按结构化判断） */
 export function changeHasDiff(change: DeploymentConfigChange): boolean {
+  if (change.entities && change.entities.length > 0) {
+    return collectionChangeHasDiff(change);
+  }
   if (change.details && change.details.length > 0) {
     return change.details.some((row) => row.before !== row.after);
   }
@@ -250,6 +258,9 @@ export function changeHasDiff(change: DeploymentConfigChange): boolean {
 }
 
 function withRecalculatedSummary(change: DeploymentConfigChange): DeploymentConfigChange {
+  if (change.entities?.length) {
+    return withCollectionSummary(change);
+  }
   if (!change.details?.length) return change;
   const summary = summarizeChangeDetails(change.details);
   return { ...change, before: summary.before, after: summary.after, details: change.details };
@@ -267,6 +278,26 @@ function upsertChange(
   const key = changeDedupeKey(change);
   const existing = store.get(key);
   if (existing) {
+    if (change.entities?.length || existing.entities?.length) {
+      const mergedEntities = mergeEntityChangeBlocks(existing.entities, change.entities);
+      let merged: DeploymentConfigChange = {
+        ...change,
+        before: existing.before,
+        entities: mergedEntities,
+        details: undefined,
+        changeKind: "collection",
+        groupPath: change.groupPath ?? existing.groupPath,
+      };
+      if (mergedEntities?.length) {
+        merged = withRecalculatedSummary(merged);
+      }
+      if (!changeHasDiff(merged)) {
+        store.delete(key);
+        return;
+      }
+      store.set(key, merged);
+      return;
+    }
     const mergedDetails = mergeChangeDetails(existing.details, change.details);
     let merged: DeploymentConfigChange = {
       ...change,
@@ -285,6 +316,24 @@ function upsertChange(
     return;
   }
   store.set(key, withRecalculatedSummary({ ...change }));
+}
+
+/**
+ * 用完整集合 diff 覆盖页面桶中的同 fieldKey（适合每次相对 baseline 重算）
+ */
+export function replacePageConfigChange(pageKey: string, change: DeploymentConfigChange): void {
+  let bucket = pageBuckets.get(pageKey);
+  if (!bucket) {
+    bucket = new Map();
+    pageBuckets.set(pageKey, bucket);
+  }
+  const key = changeDedupeKey(change);
+  if (!changeHasDiff(change)) {
+    bucket.delete(key);
+    if (bucket.size === 0) pageBuckets.delete(pageKey);
+    return;
+  }
+  bucket.set(key, withRecalculatedSummary({ ...change }));
 }
 
 /** 记录一次配置变更（无实际差异或重复则忽略）— 即时下发页 */

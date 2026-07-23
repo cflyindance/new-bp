@@ -139,7 +139,7 @@ const KNOWN_NUMBER_FIELDS: NumberFieldMeta[] = [
   { seq: 3, fieldId: "3-caller-ticket-display-minutes", label: "叫号展示分钟" },
   { seq: 4, fieldId: "4-caller-ticket-slot-limit", label: "叫号槽位上限" },
   { seq: 5, fieldId: "5-caller-data-retention-days", label: "叫号数据保留天数" },
-  { seq: 588, fieldId: "588-order-place-interval-seconds", label: "下单间隔秒数" },
+  { seq: 588, fieldId: "588-order-place-interval-by-line", label: "下单间隔秒数（按产线）" },
 ];
 
 const KNOWN_TEXT_FIELDS: TextFieldMeta[] = [

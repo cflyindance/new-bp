@@ -171,7 +171,7 @@ import {
   renderTeamSettingsEmbedSection,
   renderTeamSettingsTabPanel,
   TEAM_BREAKS_OVERTIME_BREAK_RULES_SETTING_SEQS,
-  TEAM_CLOCK_IN_GROUP_ORDER,
+  TEAM_CLOCK_IN_SETTING_GROUPS,
   TEAM_CLOCK_IN_SETTING_SEQS,
   TEAM_SHIFT_SCHEDULING_SETTING_SEQS,
 } from "./config/team-settings-embed-ui";
@@ -255,6 +255,7 @@ import {
   wrapPageWithSaveBar,
 } from "./config/page-save-bar-ui";
 import { bindPageSaveGuard, syncPageSaveGuardPath } from "./config/page-save-guard";
+import { bindIframeSaveDeployBridge } from "./config/iframe-save-deploy-bridge";
 import {
   isPageBatchSavePath,
   resolvePageSaveKey,
@@ -3593,18 +3594,39 @@ function normalizeTabModuleHashes(): void {
     return;
   }
   if (raw === "/operations/queue-call/settings/guest-order-auth" || raw.startsWith("/operations/queue-call/settings/guest-order-auth/")) {
-    replaceHashPath(`${MENU_ORDER_LIMITS_BASE}/auth`);
+    replaceHashPath(`${MENU_ORDER_LIMITS_BASE}/other`);
     return;
   }
   if (
     raw === "/operations/queue-call/settings/guest-order-throttle" ||
     raw.startsWith("/operations/queue-call/settings/guest-order-throttle/")
   ) {
-    replaceHashPath(`${MENU_ORDER_LIMITS_BASE}/interval`);
+    replaceHashPath(`${MENU_ORDER_LIMITS_BASE}/other`);
     return;
   }
   if (raw === `${MENU_ORDER_LIMITS_BASE}/quantity` || raw.startsWith(`${MENU_ORDER_LIMITS_BASE}/quantity/`)) {
     replaceHashPath(MENU_ORDER_LIMITS_BASE);
+    return;
+  }
+  /* 菜单下单限制 · 旧 Tab 路径 → 合并后的 dish-round / other */
+  if (
+    raw === `${MENU_ORDER_LIMITS_BASE}/mutex` ||
+    raw.startsWith(`${MENU_ORDER_LIMITS_BASE}/mutex/`) ||
+    raw === `${MENU_ORDER_LIMITS_BASE}/combo` ||
+    raw.startsWith(`${MENU_ORDER_LIMITS_BASE}/combo/`)
+  ) {
+    replaceHashPath(`${MENU_ORDER_LIMITS_BASE}/dish-round`);
+    return;
+  }
+  if (
+    raw === `${MENU_ORDER_LIMITS_BASE}/interval` ||
+    raw.startsWith(`${MENU_ORDER_LIMITS_BASE}/interval/`) ||
+    raw === `${MENU_ORDER_LIMITS_BASE}/auth` ||
+    raw.startsWith(`${MENU_ORDER_LIMITS_BASE}/auth/`) ||
+    raw === `${MENU_ORDER_LIMITS_BASE}/points` ||
+    raw.startsWith(`${MENU_ORDER_LIMITS_BASE}/points/`)
+  ) {
+    replaceHashPath(`${MENU_ORDER_LIMITS_BASE}/other`);
     return;
   }
   /* 前厅设置 · 旧「点餐首页与语言」组 → 方案 B 三组 */
@@ -5787,20 +5809,22 @@ function renderTeamBreaksOvertimePageWithSettings(path: string): string {
 }
 
 function renderTeamClockInRulesSectionsHtml(items: ModuleSettingCatalogItem[]): string {
-  return TEAM_CLOCK_IN_GROUP_ORDER.map((groupKey) => {
-    const groupItems = items.filter((item) => item.groupKey === groupKey);
+  const bySeq = new Map(items.map((item) => [item.seq, item]));
+  return TEAM_CLOCK_IN_SETTING_GROUPS.map((group) => {
+    const groupItems = group.seqs
+      .map((seq) => bySeq.get(seq))
+      .filter((item): item is ModuleSettingCatalogItem => item !== undefined);
     if (groupItems.length === 0) return "";
-    const groupTitle = groupItems[0]?.groupTitle ?? groupKey;
-    const sectionId = moduleSettingsCategoryDomId(groupKey);
+    const sectionId = moduleSettingsCategoryDomId(group.key);
     const rows = renderModuleSettingRowsHtml(groupItems);
     return `
       <section
         id="${sectionId}"
         class="module-settings-category-card scroll-mt-4 rounded-xl border border-border bg-background shadow-sm"
-        aria-label="${escapeHtml(tf("moduleSettings.categoryAria", { category: groupTitle }))}"
+        aria-label="${escapeHtml(tf("moduleSettings.categoryAria", { category: group.title }))}"
       >
         <div class="flex items-baseline justify-between gap-3 border-b border-border px-4 py-3">
-          <h3 class="text-sm font-semibold text-card-foreground">${escapeHtml(groupTitle)}</h3>
+          <h3 class="text-sm font-semibold text-card-foreground">${escapeHtml(group.title)}</h3>
           <span class="shrink-0 text-xs tabular-nums text-muted-foreground">${groupItems.length}</span>
         </div>
         <ul class="m-0 list-none divide-y divide-border p-0" role="list">${rows}</ul>
@@ -12185,6 +12209,7 @@ function mount(): void {
   bindFohClassificationSettingsUi(mount);
   bindFohEmenuProIframeBridge();
   bindTipOutScopeStoreBridge();
+  bindIframeSaveDeployBridge();
   bindFohMenuOrderLimitsUi((tab) => {
     replaceHashPath(getMenuOrderLimitTabHref(tab));
     mount();

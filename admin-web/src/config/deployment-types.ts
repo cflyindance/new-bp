@@ -54,12 +54,33 @@ export interface ChangeDetailRow {
   after: string;
 }
 
+/** 集合内实体操作类型 */
+export type EntityChangeOp = "create" | "update" | "delete";
+
+/** 实体字段差异行 */
+export interface EntityFieldChange {
+  key: string;
+  label: string;
+  before: string;
+  after: string;
+}
+
+/** 集合变更中的单个实体块 */
+export interface EntityChangeBlock {
+  /** 稳定 id，如 employee:e_12、table:t_3 */
+  entityKey: string;
+  /** 展示名，如「张三」「A1」 */
+  entityLabel: string;
+  operation: EntityChangeOp;
+  fields: EntityFieldChange[];
+}
+
 /** 单次配置变更快照（修改前 → 修改后） */
 export interface DeploymentConfigChange {
   fieldKey?: string;
   /** 功能设置名称（含子项，如「展示清桌按钮 · 适用产线」） */
   label: string;
-  /** 操作类型（如「勾选产线 eMenu」「修改数值」） */
+  /** 操作类型（如「勾选产线 eMenu」「修改数值」）；集合可为「新增 2 · 修改 1」 */
   operation?: string;
   before: string;
   after: string;
@@ -67,8 +88,12 @@ export interface DeploymentConfigChange {
   settingsPath?: string;
   /** 导航分组路径，如 ["前厅管理中心", "设置", "账户安全与授权"] */
   groupPath?: string[];
-  /** 结构化子行；预览优先使用 */
+  /** 结构化子行；设置项预览优先使用 */
   details?: ChangeDetailRow[];
+  /** CRUD 集合结构化明细；预览优先于 details */
+  entities?: EntityChangeBlock[];
+  /** 缺省：有 entities → collection，否则 setting */
+  changeKind?: "setting" | "collection";
 }
 
 export interface DeploymentSimulatorMeta {

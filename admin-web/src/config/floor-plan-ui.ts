@@ -3,7 +3,14 @@
  * 原型：localStorage 按门店隔离持久化区域与桌位布局
  */
 import { getScopedFilterOptions, readScopeFilters } from "../auth/session-scope";
-import { recordPageOrImmediateConfigChange } from "./page-config-change";
+import { clearPageConfigChanges } from "./deployment-change-buffer";
+import { diffCollection, type CollectionAdapter } from "./collection-change-diff";
+import { resolveChangeGroupPath } from "./module-settings-deployment-change";
+import { replacePageOrImmediateConfigChange } from "./page-config-change";
+import {
+  registerPageSaveDirtyProbe,
+  registerPageSavePreCommit,
+} from "./page-save-registry";
 
 export const FLOOR_PLAN_PATH = "/operations/queue-call/floor-plan";
 
@@ -163,11 +170,138 @@ function readState(): FloorPlanState {
   }
 }
 
-function summarizeFloorPlan(state: FloorPlanState): string {
-  const areaCount = state.areas.length;
-  const tableCount = state.areas.reduce((sum, area) => sum + area.tables.length, 0);
-  if (areaCount === 0) return "暂无区域与桌位";
-  return `${areaCount} 个区域，${tableCount} 张桌位`;
+function cloneAreas(areas: FloorPlanArea[]): FloorPlanArea[] {
+  return JSON.parse(JSON.stringify(areas)) as FloorPlanArea[];
+}
+
+type FlatFloorPlanTable = FloorPlanTable & { areaId: string; areaName: string };
+
+const SHAPE_LABEL: Record<FloorPlanTableShape, string> = {
+  rectangle: "矩形",
+  circle: "圆形",
+  oval: "椭圆",
+};
+
+const CATEGORY_LABEL: Record<FloorPlanTableCategory, string> = {
+  standard: "标准",
+  booth: "卡座",
+  bar: "吧台",
+  private: "包间",
+};
+
+const FLOOR_PLAN_AREA_ADAPTER: CollectionAdapter<FloorPlanArea> = {
+  collectionKey: "foh.floor-plan-areas",
+  collectionLabel: "平面图区域",
+  idOf: (item) => item.id,
+  labelOf: (item) => item.name || item.id,
+  fields: [
+    { key: "name", label: "区域名称", get: (i) => i.name },
+    {
+      key: "tableCount",
+      label: "桌位数",
+      get: (i) => i.tables.length,
+    },
+  ],
+};
+
+const FLOOR_PLAN_TABLE_ADAPTER: CollectionAdapter<FlatFloorPlanTable> = {
+  collectionKey: "foh.floor-plan-tables",
+  collectionLabel: "平面图桌位",
+  idOf: (item) => item.id,
+  labelOf: (item) => `${item.areaName} · ${item.name || item.id}`,
+  fields: [
+    { key: "areaName", label: "所属区域", get: (i) => i.areaName },
+    { key: "name", label: "桌位名称", get: (i) => i.name },
+    { key: "seats", label: "座位数", get: (i) => i.seats },
+    {
+      key: "shape",
+      label: "形状",
+      get: (i) => i.shape,
+      format: (v) => SHAPE_LABEL[v as FloorPlanTableShape] ?? String(v),
+    },
+    {
+      key: "category",
+      label: "类型",
+      get: (i) => i.category,
+      format: (v) => CATEGORY_LABEL[v as FloorPlanTableCategory] ?? String(v),
+    },
+    { key: "width", label: "宽度", get: (i) => i.width },
+    { key: "height", label: "高度", get: (i) => i.height },
+    { key: "rotation", label: "旋转角", get: (i) => i.rotation },
+    { key: "x", label: "X 坐标", get: (i) => i.x },
+    { key: "y", label: "Y 坐标", get: (i) => i.y },
+  ],
+};
+
+function flattenFloorPlanTables(areas: FloorPlanArea[]): FlatFloorPlanTable[] {
+  return areas.flatMap((area) =>
+    area.tables.map((table) => ({
+      ...table,
+      areaId: area.id,
+      areaName: area.name,
+    })),
+  );
+}
+
+/** 进入页后的区域快照（按门店）；放弃修改时回滚 */
+const floorPlanBaselineByStore = new Map<string, FloorPlanArea[]>();
+
+function ensureFloorPlanBaseline(storeId: string, areas: FloorPlanArea[]): FloorPlanArea[] {
+  const existing = floorPlanBaselineByStore.get(storeId);
+  if (existing) return existing;
+  const cloned = cloneAreas(areas);
+  floorPlanBaselineByStore.set(storeId, cloned);
+  return cloned;
+}
+
+function rerecordFloorPlanCollectionChanges(storeId: string, areas: FloorPlanArea[]): void {
+  const baseline = ensureFloorPlanBaseline(storeId, areas);
+  const groupPath = resolveChangeGroupPath(FLOOR_PLAN_PATH);
+  const opts = { settingsPath: FLOOR_PLAN_PATH, groupPath };
+  const storeLabel = resolveFloorPlanStoreLabel(storeId);
+
+  const areasChange = diffCollection(baseline, areas, FLOOR_PLAN_AREA_ADAPTER, opts);
+  if (areasChange) {
+    replacePageOrImmediateConfigChange(FLOOR_PLAN_PATH, {
+      ...areasChange,
+      label: `${areasChange.label} · ${storeLabel}`,
+    });
+  } else {
+    replacePageOrImmediateConfigChange(FLOOR_PLAN_PATH, {
+      fieldKey: FLOOR_PLAN_AREA_ADAPTER.collectionKey,
+      label: `${FLOOR_PLAN_AREA_ADAPTER.collectionLabel} · ${storeLabel}`,
+      before: "原 0 项",
+      after: "现 0 项",
+      entities: [],
+      changeKind: "collection",
+      settingsPath: FLOOR_PLAN_PATH,
+      groupPath,
+    });
+  }
+
+  const tablesChange = diffCollection(
+    flattenFloorPlanTables(baseline),
+    flattenFloorPlanTables(areas),
+    FLOOR_PLAN_TABLE_ADAPTER,
+    opts,
+  );
+  if (tablesChange) {
+    replacePageOrImmediateConfigChange(FLOOR_PLAN_PATH, {
+      ...tablesChange,
+      label: `${tablesChange.label} · ${storeLabel}`,
+    });
+  } else {
+    replacePageOrImmediateConfigChange(FLOOR_PLAN_PATH, {
+      fieldKey: FLOOR_PLAN_TABLE_ADAPTER.collectionKey,
+      label: `${FLOOR_PLAN_TABLE_ADAPTER.collectionLabel} · ${storeLabel}`,
+      before: "原 0 项",
+      after: "现 0 项",
+      entities: [],
+      changeKind: "collection",
+      settingsPath: FLOOR_PLAN_PATH,
+      groupPath,
+    });
+  }
 }
 
 function writeState(state: FloorPlanState): void {
@@ -179,11 +313,61 @@ function writeState(state: FloorPlanState): void {
   // 始终持久化完整状态（含弹窗/选中），否则「新增区域」等仅改 UI 态的操作会在 remount 后丢失
   localStorage.setItem(key, JSON.stringify(state));
   if (beforePayload === afterPayload) return;
-  const storeLabel = resolveFloorPlanStoreLabel(storeId);
-  recordPageOrImmediateConfigChange(FLOOR_PLAN_PATH, {
-    label: `餐位平面图 · ${storeLabel}`,
-    before: summarizeFloorPlan(before),
-    after: summarizeFloorPlan(state),
+  ensureFloorPlanBaseline(storeId, before.areas);
+  rerecordFloorPlanCollectionChanges(storeId, state.areas);
+}
+
+let floorPlanRegistryBound = false;
+
+function ensureFloorPlanPageSaveRegistry(): void {
+  if (floorPlanRegistryBound) return;
+  floorPlanRegistryBound = true;
+
+  registerPageSavePreCommit(FLOOR_PLAN_PATH, () => {
+    const storeId = resolveFloorPlanStoreId();
+    const state = readState();
+    ensureFloorPlanBaseline(storeId, state.areas);
+    rerecordFloorPlanCollectionChanges(storeId, state.areas);
+    return true;
+  });
+
+  registerPageSaveDirtyProbe(FLOOR_PLAN_PATH, () => {
+    const storeId = resolveFloorPlanStoreId();
+    const baseline = floorPlanBaselineByStore.get(storeId);
+    if (!baseline) return false;
+    try {
+      return JSON.stringify(baseline) !== JSON.stringify(readState().areas);
+    } catch {
+      return false;
+    }
+  });
+
+  window.addEventListener("menusifu:page-settings-discard", (event) => {
+    const pageKey = (event as CustomEvent<{ pageKey?: string }>).detail?.pageKey;
+    if (pageKey !== FLOOR_PLAN_PATH) return;
+    const storeId = resolveFloorPlanStoreId();
+    const baseline = floorPlanBaselineByStore.get(storeId);
+    if (!baseline) return;
+    const current = readState();
+    const restored: FloorPlanState = {
+      ...current,
+      areas: cloneAreas(baseline),
+      activeAreaId: baseline[0]?.id ?? "",
+      selectedTableId: null,
+      tableDialog: null,
+      areaDialog: null,
+      dialogDraft: undefined,
+    };
+    localStorage.setItem(storageKeyForStore(storeId), JSON.stringify(restored));
+    clearPageConfigChanges(FLOOR_PLAN_PATH);
+    remountFloorPlan();
+  });
+
+  window.addEventListener("menusifu:page-settings-saved", (event) => {
+    const pageKey = (event as CustomEvent<{ pageKey?: string }>).detail?.pageKey;
+    if (pageKey !== FLOOR_PLAN_PATH) return;
+    const storeId = resolveFloorPlanStoreId();
+    floorPlanBaselineByStore.set(storeId, cloneAreas(readState().areas));
   });
 }
 
@@ -764,7 +948,10 @@ function openEditTableDialog(state: FloorPlanState, tableId: string): FloorPlanS
 }
 
 export function renderFloorPlanPage(): string {
+  ensureFloorPlanPageSaveRegistry();
+  const storeId = resolveFloorPlanStoreId();
   const state = readState();
+  ensureFloorPlanBaseline(storeId, state.areas);
   const active = getActiveArea(state);
   const hasAreas = state.areas.length > 0;
 
@@ -1007,6 +1194,7 @@ function bindFloorPlanFormPresets(scope: Element): void {
 }
 
 export function bindFloorPlanEditor(onRemount: () => void): void {
+  ensureFloorPlanPageSaveRegistry();
   const root = document.querySelector("[data-floor-plan-root]");
   if (!root) return;
 

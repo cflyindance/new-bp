@@ -116,7 +116,7 @@
       </div>
     </header>
 
-    <main class="mx-auto w-full max-w-4xl flex-1 space-y-4 p-4 sm:p-6">
+    <main class="mx-auto w-full max-w-4xl flex-1 space-y-4 p-4 pb-28 sm:p-6 sm:pb-28">
       <section class="rounded-lg border border-gray-200 bg-white px-4 py-4 sm:px-5" aria-label="场景描述">
         <h2 class="text-base font-semibold text-gray-900">场景描述</h2>
         <div class="mt-3 space-y-3">
@@ -396,6 +396,39 @@
         <p id="posterRatioHint" class="mt-1 hidden text-xs text-amber-600"></p>
       </div>
     </main>
+
+    <footer
+      class="sticky bottom-0 z-20 border-t border-gray-200 bg-white/95 px-4 py-3 shadow-[0_-4px_12px_rgba(0,0,0,0.06)] backdrop-blur supports-[backdrop-filter]:bg-white/80 sm:px-6"
+      data-ads-edit-save-bar
+    >
+      <div class="mx-auto flex w-full max-w-4xl flex-wrap items-center justify-between gap-3">
+        <p class="text-sm text-gray-500">
+          <span data-ads-edit-dirty-hint class="hidden">
+            <span class="font-medium text-gray-900">有未下发的修改</span>
+            <span> · </span>
+          </span>
+          <span>编辑系统预设广告后请保存并下发到终端</span>
+        </p>
+        <div class="flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            data-ads-edit-discard
+            class="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+            disabled
+          >
+            放弃修改
+          </button>
+          <button
+            type="button"
+            data-ads-edit-save-deploy
+            class="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-40"
+            disabled
+          >
+            保存并下发
+          </button>
+        </div>
+      </div>
+    </footer>
   </div>
 
   <script src="../TipOut/global-scope-filter.js"></script>
@@ -1182,6 +1215,227 @@
         bindTriggerSettings();
         renderPoster(ad.poster || null);
       }
+
+      /* —— 保存并下发（相对进入页 baseline） —— */
+      var ADS_EDIT_PAGE_KEY = "/marketing/ads";
+      var baselineAd = null;
+      var baselineEnabled = true;
+      var saveDeployPending = false;
+
+      function cloneAd(value) {
+        return JSON.parse(JSON.stringify(value));
+      }
+
+      function captureBaseline() {
+        var current = getAd();
+        baselineAd = current ? cloneAd(current) : null;
+        baselineEnabled = MarketingAdsStore.readSystemAdEnabled(adId);
+        refreshSaveBar();
+      }
+
+      function summarizePoster(poster) {
+        if (!poster || !poster.imageUrl) return "未设置";
+        return poster.fileName ? "已上传：" + poster.fileName : "已上传图片";
+      }
+
+      function summarizeMediaItems(items) {
+        var list = MarketingAdsStore.normalizeMediaItems(items);
+        if (!list.length) return "无素材";
+        var names = list
+          .slice(0, 3)
+          .map(function (it) {
+            return (it.fileName || (it.kind === "video" ? "视频" : "图片")) + "";
+          })
+          .join("、");
+        return list.length > 3 ? names + " 等 " + list.length + " 项" : names + "（共 " + list.length + " 项）";
+      }
+
+      function summarizeCoverImage(img) {
+        if (!img || !img.imageUrl) return "未设置";
+        return img.fileName ? "已上传：" + img.fileName : "已上传图片";
+      }
+
+      function adFieldMap(ad, enabled) {
+        var labels = MarketingAdsStore.normalizePosterButtonLabels(ad && ad.posterButtonLabels);
+        var announcement = MarketingAdsStore.normalizeAnnouncementContent(ad && ad.announcementContent);
+        var cover = MarketingAdsStore.normalizeHomeCover(ad && ad.homeCover);
+        return {
+          enabled: { label: "启用状态", value: enabled ? "开启" : "关闭" },
+          sceneDescExtra: {
+            label: "追加描述",
+            value: MarketingAdsStore.normalizeSceneDescExtra(ad && ad.sceneDescExtra) || "（空）",
+          },
+          poster: { label: "海报图片", value: summarizePoster(ad && ad.poster) },
+          mediaItems: { label: "媒体素材", value: summarizeMediaItems(ad && ad.mediaItems) },
+          homeCoverPortrait: { label: "竖屏封面", value: summarizeCoverImage(cover.portrait) },
+          homeCoverLandscape: { label: "横屏封面", value: summarizeCoverImage(cover.landscape) },
+          announcementZh: { label: "公告（中文）", value: announcement.zh.trim() || "（空）" },
+          announcementEn: { label: "公告（英文）", value: announcement.en.trim() || "（空）" },
+          posterButtonZh: { label: "海报按钮文案（中文）", value: labels.zh.trim() || "（空）" },
+          posterButtonEn: { label: "海报按钮文案（英文）", value: labels.en.trim() || "（空）" },
+        };
+      }
+
+      function buildAdsDeployChange() {
+        var current = getAd();
+        if (!baselineAd || !current) return null;
+        var currentEnabled = MarketingAdsStore.readSystemAdEnabled(adId);
+        var beforeMap = adFieldMap(baselineAd, baselineEnabled);
+        var afterMap = adFieldMap(current, currentEnabled);
+        var fields = [];
+        Object.keys(beforeMap).forEach(function (key) {
+          var before = beforeMap[key].value;
+          var after = afterMap[key].value;
+          if (before === after) return;
+          fields.push({
+            key: key,
+            label: afterMap[key].label || beforeMap[key].label || key,
+            before: before,
+            after: after,
+          });
+        });
+        if (!fields.length) return null;
+        var entityLabel = (adSpec && adSpec.name) || current.name || adId;
+        return {
+          fieldKey: "marketing.ads",
+          label: "广告",
+          operation: "修改 1",
+          before: "原配置",
+          after: "已修改「" + entityLabel + "」",
+          settingsPath: ADS_EDIT_PAGE_KEY,
+          groupPath: ["营销中心", "广告"],
+          changeKind: "collection",
+          entities: [
+            {
+              entityKey: "marketing.ads:" + adId,
+              entityLabel: entityLabel,
+              operation: "update",
+              fields: fields,
+            },
+          ],
+        };
+      }
+
+      function isAdsEditDirty() {
+        var current = getAd();
+        if (!baselineAd || !current) return false;
+        var left = cloneAd(baselineAd);
+        var right = cloneAd(current);
+        delete left.updatedAt;
+        delete right.updatedAt;
+        var enabledNow = MarketingAdsStore.readSystemAdEnabled(adId);
+        return (
+          JSON.stringify(left) !== JSON.stringify(right) || Boolean(baselineEnabled) !== Boolean(enabledNow)
+        );
+      }
+
+      function refreshSaveBar() {
+        var dirty = isAdsEditDirty();
+        var discardBtn = document.querySelector("[data-ads-edit-discard]");
+        var saveBtn = document.querySelector("[data-ads-edit-save-deploy]");
+        var hint = document.querySelector("[data-ads-edit-dirty-hint]");
+        if (discardBtn) discardBtn.disabled = !dirty || saveDeployPending;
+        if (saveBtn) saveBtn.disabled = !dirty || saveDeployPending;
+        if (hint) hint.classList.toggle("hidden", !dirty);
+      }
+
+      function markAdsEditDirty() {
+        refreshSaveBar();
+      }
+
+      function restoreBaselineAndReload() {
+        if (!baselineAd) return;
+        var items = MarketingAdsStore.readAds().slice();
+        var found = false;
+        for (var i = 0; i < items.length; i++) {
+          if (items[i].id === adId) {
+            items[i] = cloneAd(baselineAd);
+            found = true;
+            break;
+          }
+        }
+        if (!found) items.push(cloneAd(baselineAd));
+        MarketingAdsStore.writeAds(items);
+        MarketingAdsStore.setSystemAdEnabled(adId, baselineEnabled);
+        window.location.reload();
+      }
+
+      function requestSaveAndDeploy() {
+        var change = buildAdsDeployChange();
+        if (!change) {
+          window.alert("当前没有可下发的变更");
+          refreshSaveBar();
+          return;
+        }
+        if (!window.parent || window.parent === window) {
+          window.alert("请在商家后台嵌入页中使用「保存并下发」");
+          return;
+        }
+        saveDeployPending = true;
+        refreshSaveBar();
+        var requestId =
+          "ads-edit-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8);
+        var onResult = function (event) {
+          var data = event.data;
+          if (!data || data.type !== "menusifu:iframe-save-deploy-result") return;
+          if (data.requestId && data.requestId !== requestId) return;
+          window.removeEventListener("message", onResult);
+          saveDeployPending = false;
+          if (data.ok) {
+            captureBaseline();
+            return;
+          }
+          refreshSaveBar();
+          if (data.reason === "cancelled") return;
+          if (data.reason === "no-changes") {
+            window.alert("当前没有可下发的变更");
+            return;
+          }
+          window.alert("下发未完成，请重试");
+        };
+        window.addEventListener("message", onResult);
+        window.parent.postMessage(
+          {
+            type: "menusifu:iframe-save-deploy",
+            pageKey: ADS_EDIT_PAGE_KEY,
+            changes: [change],
+            requestId: requestId,
+          },
+          "*",
+        );
+      }
+
+      (function wrapStoreMutations() {
+        var origUpdate = MarketingAdsStore.updateSystemAd;
+        MarketingAdsStore.updateSystemAd = function (id, patch) {
+          var result = origUpdate.call(MarketingAdsStore, id, patch);
+          markAdsEditDirty();
+          return result;
+        };
+        var origSetEnabled = MarketingAdsStore.setSystemAdEnabled;
+        MarketingAdsStore.setSystemAdEnabled = function (id, on) {
+          origSetEnabled.call(MarketingAdsStore, id, on);
+          markAdsEditDirty();
+        };
+      })();
+
+      var discardEl = document.querySelector("[data-ads-edit-discard]");
+      if (discardEl) {
+        discardEl.addEventListener("click", function () {
+          if (!isAdsEditDirty()) return;
+          if (!window.confirm("放弃当前未下发的修改并恢复进入页时的内容？")) return;
+          restoreBaselineAndReload();
+        });
+      }
+      var saveDeployEl = document.querySelector("[data-ads-edit-save-deploy]");
+      if (saveDeployEl) {
+        saveDeployEl.addEventListener("click", function () {
+          if (!isAdsEditDirty() || saveDeployPending) return;
+          requestSaveAndDeploy();
+        });
+      }
+
+      captureBaseline();
     })();
   </script>
 </body>

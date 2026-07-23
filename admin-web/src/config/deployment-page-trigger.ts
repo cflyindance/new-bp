@@ -3,7 +3,10 @@
  */
 import { resolveOriginNavFromPath } from "./deployment-config-domains";
 import { createDeploymentFromPath } from "./deployment-store";
-import { openPageSaveConfirmDialog } from "./page-save-confirm-dialog";
+import {
+  openPageSaveChangePreviewDialog,
+  openPageSaveConfirmDialog,
+} from "./page-save-confirm-dialog";
 import { runPageSavePreCommit } from "./page-save-registry";
 import { showPageSaveSuccessToast } from "./page-save-toast";
 import {
@@ -13,15 +16,14 @@ import {
 import { getPageChangeCount } from "./deployment-change-buffer";
 import type { DeploymentBatch } from "./deployment-types";
 
+/** 保存并下发：先弹出「确认变更」，确认后再下发 */
 export async function confirmAndTriggerPageSaveAndDeploy(
   pageKey: string,
 ): Promise<DeploymentBatch | null> {
   const key = resolvePageSaveKey(pageKey);
 
   if (!runPageSavePreCommit(key)) return null;
-
-  const changeCount = getPageChangeCount(key);
-  if (changeCount === 0) return null;
+  if (getPageChangeCount(key) === 0) return null;
 
   const scope = await openPageSaveConfirmDialog(key);
   if (!scope) return null;
@@ -54,8 +56,23 @@ export async function confirmAndTriggerPageSaveAndDeploy(
   return batch;
 }
 
+/** 仅预览待保存变更（「N 项待保存」入口） */
+export async function previewPageSaveChanges(pageKey: string): Promise<void> {
+  const key = resolvePageSaveKey(pageKey);
+  if (!runPageSavePreCommit(key)) return;
+  if (getPageChangeCount(key) === 0) return;
+  await openPageSaveChangePreviewDialog(key);
+}
+
 /** @deprecated 使用 confirmAndTriggerPageSaveAndDeploy */
 export function triggerPageSaveAndDeploy(pageKey: string): DeploymentBatch | null {
   void confirmAndTriggerPageSaveAndDeploy(pageKey);
   return null;
+}
+
+/** @deprecated 使用 confirmAndTriggerPageSaveAndDeploy */
+export async function triggerPageSaveAndDeployDirect(
+  pageKey: string,
+): Promise<DeploymentBatch | null> {
+  return confirmAndTriggerPageSaveAndDeploy(pageKey);
 }

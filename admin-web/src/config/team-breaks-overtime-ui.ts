@@ -3,7 +3,13 @@
  * 路径：/team/breaks-overtime
  * 布局：左侧快捷导航 + 右侧滚动内容（对齐设置页 module-settings 交互）
  */
-import { formatConfigDisplayValue } from "./deployment-change-buffer";
+import {
+  buildChangeDetailRows,
+  changeHasDiff,
+  summarizeChangeDetails,
+} from "./deployment-change-buffer";
+import { diffCollection, type CollectionAdapter } from "./collection-change-diff";
+import { resolveChangeGroupPath } from "./module-settings-deployment-change";
 import { recordPageOrImmediateConfigChange } from "./page-config-change";
 import {
   registerPageSaveDirtyProbe,
@@ -426,12 +432,130 @@ function writeConfig(config: BreaksOvertimeConfig): void {
   const afterStr = JSON.stringify(config);
   if (beforeStr === afterStr) return;
   localStorage.setItem(STORAGE_KEY, afterStr);
-  recordPageOrImmediateConfigChange(TEAM_BREAKS_OVERTIME_PATH, {
-    label: "休息与加班规则",
-    before: formatConfigDisplayValue(before),
-    after: formatConfigDisplayValue(config),
-  });
+
+  const groupPath = resolveChangeGroupPath(TEAM_BREAKS_OVERTIME_PATH);
+  const opts = { settingsPath: TEAM_BREAKS_OVERTIME_PATH, groupPath };
+
+  const breaksChange = diffCollection(before.customBreaks, config.customBreaks, CUSTOM_BREAK_ADAPTER, opts);
+  if (breaksChange) recordPageOrImmediateConfigChange(TEAM_BREAKS_OVERTIME_PATH, breaksChange);
+
+  const overtimeChange = diffCollection(
+    before.overtimeRules,
+    config.overtimeRules,
+    OVERTIME_RULE_ADAPTER,
+    opts,
+  );
+  if (overtimeChange) recordPageOrImmediateConfigChange(TEAM_BREAKS_OVERTIME_PATH, overtimeChange);
+
+  const scalarBefore = {
+    unpaidPresets: before.unpaidPresets,
+    paidPresets: before.paidPresets,
+    blockEarlyEnd: before.blockEarlyEnd,
+    convertExcessPaidToUnpaid: before.convertExcessPaidToUnpaid,
+    workWeekStartDay: before.workWeekStartDay,
+  };
+  const scalarAfter = {
+    unpaidPresets: config.unpaidPresets,
+    paidPresets: config.paidPresets,
+    blockEarlyEnd: config.blockEarlyEnd,
+    convertExcessPaidToUnpaid: config.convertExcessPaidToUnpaid,
+    workWeekStartDay: config.workWeekStartDay,
+  };
+  if (JSON.stringify(scalarBefore) !== JSON.stringify(scalarAfter)) {
+    const details = buildChangeDetailRows(scalarBefore, scalarAfter, {
+      rootKey: "team.breaks-overtime-rules",
+      rootLabel: "休息与加班规则",
+    }).map((row) => {
+      if (row.key.endsWith("workWeekStartDay") || row.label.includes("workWeekStartDay")) {
+        const dayLabel = (v: string) => {
+          const n = Number(v);
+          return WEEKDAY_OPTIONS.find((d) => d.value === n)?.label ?? v;
+        };
+        return {
+          ...row,
+          label: "工周起始日",
+          before: dayLabel(row.before),
+          after: dayLabel(row.after),
+        };
+      }
+      if (row.key.includes("blockEarlyEnd")) return { ...row, label: "阻止提前结束休息" };
+      if (row.key.includes("convertExcessPaidToUnpaid")) {
+        return { ...row, label: "超时带薪转无薪" };
+      }
+      if (row.key.includes("unpaidPresets")) return { ...row, label: "无薪休息预设" };
+      if (row.key.includes("paidPresets")) return { ...row, label: "带薪休息预设" };
+      return row;
+    });
+    if (details.length > 0) {
+      const summary = summarizeChangeDetails(details);
+      const change = {
+        fieldKey: "team.breaks-overtime-rules",
+        label: "休息与加班规则",
+        before: summary.before,
+        after: summary.after,
+        settingsPath: TEAM_BREAKS_OVERTIME_PATH,
+        groupPath,
+        details,
+        changeKind: "setting" as const,
+      };
+      if (changeHasDiff(change)) {
+        recordPageOrImmediateConfigChange(TEAM_BREAKS_OVERTIME_PATH, change);
+      }
+    }
+  }
 }
+
+const CUSTOM_BREAK_ADAPTER: CollectionAdapter<CustomBreak> = {
+  collectionKey: "team.custom-breaks",
+  collectionLabel: "自定义休息",
+  idOf: (item) => item.id,
+  labelOf: (item) => item.name || item.id,
+  fields: [
+    { key: "name", label: "名称", get: (i) => i.name },
+    { key: "durationMinutes", label: "时长（分钟）", get: (i) => i.durationMinutes },
+    {
+      key: "compensation",
+      label: "补偿",
+      get: (i) => i.compensation,
+      format: (v) => (v === "paid" ? "带薪" : "无薪"),
+    },
+    {
+      key: "mandatory",
+      label: "强制休息",
+      get: (i) => i.mandatory,
+      format: (v) => (v ? "是" : "否"),
+    },
+  ],
+};
+
+const OVERTIME_RULE_ADAPTER: CollectionAdapter<OvertimeRule> = {
+  collectionKey: "team.overtime-rules",
+  collectionLabel: "加班规则",
+  idOf: (item) => item.id,
+  labelOf: (item) => item.name || item.id,
+  fields: [
+    { key: "name", label: "名称", get: (i) => i.name },
+    {
+      key: "scope",
+      label: "计算口径",
+      get: (i) => i.scope,
+      format: (v) => OVERTIME_SCOPE_META[v as OvertimeScope]?.title ?? String(v),
+    },
+    { key: "hoursBeforeOvertime", label: "加班前工时阈值", get: (i) => i.hoursBeforeOvertime },
+    { key: "wageMultiplier", label: "工资倍率", get: (i) => i.wageMultiplier },
+    { key: "dayNumber", label: "第 N 天", get: (i) => i.dayNumber ?? "—" },
+    {
+      key: "secondaryHoursBeforeOvertime",
+      label: "第二档工时阈值",
+      get: (i) => i.secondaryHoursBeforeOvertime ?? "—",
+    },
+    {
+      key: "secondaryWageMultiplier",
+      label: "第二档工资倍率",
+      get: (i) => i.secondaryWageMultiplier ?? "—",
+    },
+  ],
+};
 
 function getDraft(): BreaksOvertimeConfig {
   if (!draftConfig) draftConfig = readConfig();

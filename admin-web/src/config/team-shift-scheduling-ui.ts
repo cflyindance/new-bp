@@ -12,8 +12,14 @@ import {
   writeScopeFilters,
 } from "../auth/session-scope";
 import { getUiLocale, t } from "../i18n";
-import { formatConfigDisplayValue } from "./deployment-change-buffer";
-import { recordPageOrImmediateConfigChange } from "./page-config-change";
+import { clearPageConfigChanges } from "./deployment-change-buffer";
+import { diffCollection, type CollectionAdapter } from "./collection-change-diff";
+import { resolveChangeGroupPath } from "./module-settings-deployment-change";
+import { replacePageOrImmediateConfigChange } from "./page-config-change";
+import {
+  registerPageSaveDirtyProbe,
+  registerPageSavePreCommit,
+} from "./page-save-registry";
 import { parseRosterStoreScopeId } from "./team-employee-roster-scope";
 
 export const TEAM_SHIFT_SCHEDULING_PATH = "/team/shift-scheduling";
@@ -415,11 +421,239 @@ function readShiftTypes(): ShiftType[] {
 function writeShiftTypes(types: ShiftType[]): void {
   const before = readShiftTypes();
   if (JSON.stringify(before) === JSON.stringify(types)) return;
+  ensureShiftTypesBaseline(before);
   localStorage.setItem(SHIFT_TYPES_STORAGE_KEY, JSON.stringify(types));
-  recordPageOrImmediateConfigChange(TEAM_SHIFT_SCHEDULING_PATH, {
-    label: "班次类型",
-    before: formatConfigDisplayValue(before),
-    after: formatConfigDisplayValue(types),
+  rerecordShiftTypesChange(types);
+}
+
+function writeAssignments(assignments: ShiftAssignment[]): void {
+  const before = readAssignments();
+  if (JSON.stringify(before) === JSON.stringify(assignments)) return;
+  ensureAssignmentsBaseline(before);
+  localStorage.setItem(ASSIGNMENTS_STORAGE_KEY, JSON.stringify(assignments));
+  rerecordAssignmentsChange(assignments);
+}
+
+let shiftTypesBaseline: ShiftType[] | null = null;
+let assignmentsBaseline: ShiftAssignment[] | null = null;
+
+function cloneJson<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
+}
+
+function ensureShiftTypesBaseline(types: ShiftType[]): ShiftType[] {
+  if (!shiftTypesBaseline) shiftTypesBaseline = cloneJson(types);
+  return shiftTypesBaseline;
+}
+
+function ensureAssignmentsBaseline(assignments: ShiftAssignment[]): ShiftAssignment[] {
+  if (!assignmentsBaseline) assignmentsBaseline = cloneJson(assignments);
+  return assignmentsBaseline;
+}
+
+const SHIFT_TYPE_ADAPTER: CollectionAdapter<ShiftType> = {
+  collectionKey: "team.shift-types",
+  collectionLabel: "班次类型",
+  idOf: (item) => item.id,
+  labelOf: (item) => item.name || item.id,
+  fields: [
+    { key: "name", label: "名称", get: (i) => i.name },
+    { key: "startTime", label: "开始时间", get: (i) => i.startTime },
+    { key: "endTime", label: "结束时间", get: (i) => i.endTime },
+    { key: "color", label: "颜色", get: (i) => i.color },
+    { key: "storeId", label: "所属门店", get: (i) => i.storeId || "全部门店" },
+    { key: "earlyClockInMinutes", label: "提前打卡（分钟）", get: (i) => i.earlyClockInMinutes },
+    {
+      key: "autoClockOutDelayEnabled",
+      label: "下班自动打卡延迟",
+      get: (i) => i.autoClockOutDelayEnabled,
+      format: (v) => (v ? "开启" : "关闭"),
+    },
+    { key: "autoClockOutDelayMinutes", label: "延迟分钟", get: (i) => i.autoClockOutDelayMinutes },
+    {
+      key: "breakEnabled",
+      label: "默认安排休息",
+      get: (i) => i.breakEnabled ?? false,
+      format: (v) => (v ? "是" : "否"),
+    },
+    { key: "breakName", label: "默认休息", get: (i) => i.breakName || "—" },
+    {
+      key: "breakCompensation",
+      label: "默认休息补偿",
+      get: (i) => i.breakCompensation,
+      format: (v) => (v === "paid" ? "带薪" : v === "unpaid" ? "无薪" : "—"),
+    },
+    { key: "breakDurationMinutes", label: "默认休息时长", get: (i) => i.breakDurationMinutes ?? "—" },
+    {
+      key: "breakMandatory",
+      label: "默认强制休息",
+      get: (i) => i.breakMandatory ?? false,
+      format: (v) => (v ? "是" : "否"),
+    },
+  ],
+};
+
+function assignmentEntityId(a: ShiftAssignment): string {
+  return `${a.date}|${a.employeeId}|${a.shiftId}`;
+}
+
+function assignmentEntityLabel(a: ShiftAssignment): string {
+  const emp = readEmployees().find((e) => e.id === a.employeeId);
+  const shift = readShiftTypes().find((s) => s.id === a.shiftId);
+  const name = emp?.name || a.employeeId;
+  const shiftName = shift?.name || a.shiftId;
+  return `${a.date} · ${name} · ${shiftName}`;
+}
+
+const SHIFT_ASSIGNMENT_ADAPTER: CollectionAdapter<ShiftAssignment> = {
+  collectionKey: "team.shift-assignments",
+  collectionLabel: "排班安排",
+  idOf: assignmentEntityId,
+  labelOf: assignmentEntityLabel,
+  fields: [
+    { key: "date", label: "日期", get: (i) => i.date },
+    {
+      key: "employeeId",
+      label: "员工",
+      get: (i) => i.employeeId,
+      format: (v) => readEmployees().find((e) => e.id === v)?.name ?? String(v),
+    },
+    {
+      key: "shiftId",
+      label: "班次",
+      get: (i) => i.shiftId,
+      format: (v) => readShiftTypes().find((s) => s.id === v)?.name ?? String(v),
+    },
+    { key: "overrideStartTime", label: "特殊开始时间", get: (i) => i.overrideStartTime || "—" },
+    { key: "overrideEndTime", label: "特殊结束时间", get: (i) => i.overrideEndTime || "—" },
+    {
+      key: "overrideEarlyClockInMinutes",
+      label: "当日提前打卡",
+      get: (i) => i.overrideEarlyClockInMinutes ?? "—",
+    },
+    {
+      key: "overrideAutoClockOutDelayEnabled",
+      label: "当日自动打卡延迟",
+      get: (i) => i.overrideAutoClockOutDelayEnabled,
+      format: (v) => (v === true ? "开启" : v === false ? "关闭" : "—"),
+    },
+    {
+      key: "overrideAutoClockOutDelayMinutes",
+      label: "当日延迟分钟",
+      get: (i) => i.overrideAutoClockOutDelayMinutes ?? "—",
+    },
+    {
+      key: "breakEnabled",
+      label: "安排休息",
+      get: (i) => i.breakEnabled,
+      format: (v) => (v === true ? "是" : v === false ? "否" : "—"),
+    },
+    { key: "breakName", label: "休息", get: (i) => i.breakName || "—" },
+    {
+      key: "breakCompensation",
+      label: "休息补偿",
+      get: (i) => i.breakCompensation,
+      format: (v) => (v === "paid" ? "带薪" : v === "unpaid" ? "无薪" : "—"),
+    },
+    { key: "breakDurationMinutes", label: "休息时长", get: (i) => i.breakDurationMinutes ?? "—" },
+    {
+      key: "breakMandatory",
+      label: "强制休息",
+      get: (i) => i.breakMandatory,
+      format: (v) => (v === true ? "是" : v === false ? "否" : "—"),
+    },
+    { key: "breakSkipReason", label: "跳过休息原因", get: (i) => i.breakSkipReason || "—" },
+  ],
+};
+
+function rerecordShiftTypesChange(types: ShiftType[]): void {
+  const baseline = ensureShiftTypesBaseline(types);
+  const groupPath = resolveChangeGroupPath(TEAM_SHIFT_SCHEDULING_PATH);
+  const change = diffCollection(baseline, types, SHIFT_TYPE_ADAPTER, {
+    settingsPath: TEAM_SHIFT_SCHEDULING_PATH,
+    groupPath,
+  });
+  replacePageOrImmediateConfigChange(
+    TEAM_SHIFT_SCHEDULING_PATH,
+    change ?? {
+      fieldKey: SHIFT_TYPE_ADAPTER.collectionKey,
+      label: SHIFT_TYPE_ADAPTER.collectionLabel,
+      before: "原 0 项",
+      after: "现 0 项",
+      entities: [],
+      changeKind: "collection",
+      settingsPath: TEAM_SHIFT_SCHEDULING_PATH,
+      groupPath,
+    },
+  );
+}
+
+function rerecordAssignmentsChange(assignments: ShiftAssignment[]): void {
+  const baseline = ensureAssignmentsBaseline(assignments);
+  const groupPath = resolveChangeGroupPath(TEAM_SHIFT_SCHEDULING_PATH);
+  const change = diffCollection(baseline, assignments, SHIFT_ASSIGNMENT_ADAPTER, {
+    settingsPath: TEAM_SHIFT_SCHEDULING_PATH,
+    groupPath,
+  });
+  replacePageOrImmediateConfigChange(
+    TEAM_SHIFT_SCHEDULING_PATH,
+    change ?? {
+      fieldKey: SHIFT_ASSIGNMENT_ADAPTER.collectionKey,
+      label: SHIFT_ASSIGNMENT_ADAPTER.collectionLabel,
+      before: "原 0 项",
+      after: "现 0 项",
+      entities: [],
+      changeKind: "collection",
+      settingsPath: TEAM_SHIFT_SCHEDULING_PATH,
+      groupPath,
+    },
+  );
+}
+
+let shiftSchedulingRegistryBound = false;
+
+function ensureShiftSchedulingPageSaveRegistry(): void {
+  if (shiftSchedulingRegistryBound) return;
+  shiftSchedulingRegistryBound = true;
+
+  registerPageSavePreCommit(TEAM_SHIFT_SCHEDULING_PATH, () => {
+    ensureShiftTypesBaseline(readShiftTypes());
+    ensureAssignmentsBaseline(readAssignments());
+    rerecordShiftTypesChange(readShiftTypes());
+    rerecordAssignmentsChange(readAssignments());
+    return true;
+  });
+
+  registerPageSaveDirtyProbe(TEAM_SHIFT_SCHEDULING_PATH, () => {
+    try {
+      const typesDirty =
+        !!shiftTypesBaseline && JSON.stringify(shiftTypesBaseline) !== JSON.stringify(readShiftTypes());
+      const assignmentsDirty =
+        !!assignmentsBaseline &&
+        JSON.stringify(assignmentsBaseline) !== JSON.stringify(readAssignments());
+      return typesDirty || assignmentsDirty;
+    } catch {
+      return false;
+    }
+  });
+
+  window.addEventListener("menusifu:page-settings-discard", (event) => {
+    const pageKey = (event as CustomEvent<{ pageKey?: string }>).detail?.pageKey;
+    if (pageKey !== TEAM_SHIFT_SCHEDULING_PATH) return;
+    if (shiftTypesBaseline) {
+      localStorage.setItem(SHIFT_TYPES_STORAGE_KEY, JSON.stringify(shiftTypesBaseline));
+    }
+    if (assignmentsBaseline) {
+      localStorage.setItem(ASSIGNMENTS_STORAGE_KEY, JSON.stringify(assignmentsBaseline));
+    }
+    clearPageConfigChanges(TEAM_SHIFT_SCHEDULING_PATH);
+  });
+
+  window.addEventListener("menusifu:page-settings-saved", (event) => {
+    const pageKey = (event as CustomEvent<{ pageKey?: string }>).detail?.pageKey;
+    if (pageKey !== TEAM_SHIFT_SCHEDULING_PATH) return;
+    shiftTypesBaseline = cloneJson(readShiftTypes());
+    assignmentsBaseline = cloneJson(readAssignments());
   });
 }
 
@@ -479,17 +713,6 @@ function readAssignments(): ShiftAssignment[] {
   } catch {
     return [];
   }
-}
-
-function writeAssignments(assignments: ShiftAssignment[]): void {
-  const before = readAssignments();
-  if (JSON.stringify(before) === JSON.stringify(assignments)) return;
-  localStorage.setItem(ASSIGNMENTS_STORAGE_KEY, JSON.stringify(assignments));
-  recordPageOrImmediateConfigChange(TEAM_SHIFT_SCHEDULING_PATH, {
-    label: "排班安排",
-    before: formatConfigDisplayValue(before),
-    after: formatConfigDisplayValue(assignments),
-  });
 }
 
 function readEmployees(): RosterEmployee[] {
@@ -2458,6 +2681,9 @@ export function isTeamShiftSchedulingPath(path: string): boolean {
 }
 
 export function renderTeamShiftSchedulingPage(rulesPanelHtml = ""): string {
+  ensureShiftSchedulingPageSaveRegistry();
+  ensureShiftTypesBaseline(readShiftTypes());
+  ensureAssignmentsBaseline(readAssignments());
   const panel =
     shiftPageTab === "schedule"
       ? renderSchedulePanel()
@@ -2988,6 +3214,7 @@ function bindCellEditDialog(remount: () => void): void {
 }
 
 export function bindTeamShiftSchedulingUi(remount: () => void): void {
+  ensureShiftSchedulingPageSaveRegistry();
   const root = document.querySelector<HTMLElement>("[data-shift-scheduling-page]");
   if (!root) return;
 

@@ -1,5 +1,5 @@
 /**
- * 页面保存并下发 · 变更前后对比确认弹窗
+ * 页面保存并下发 · 变更前后对比弹窗
  */
 import { peekPageConfigChanges } from "./deployment-change-buffer";
 import { renderChangePreviewDialog } from "./deployment-change-preview";
@@ -14,6 +14,59 @@ export function shouldShowPageSaveConfirmDialog(): boolean {
   return true;
 }
 
+/** 「N 项待保存」：只读预览变更，不触发下发 */
+export function openPageSaveChangePreviewDialog(pageKey: string): Promise<void> {
+  const key = resolvePageSaveKey(pageKey);
+  const changes = peekPageConfigChanges(key);
+
+  return new Promise((resolve) => {
+    document.getElementById(DIALOG_ID)?.remove();
+
+    const host = document.createElement("div");
+    host.innerHTML = renderChangePreviewDialog({
+      mode: "view",
+      changes,
+      dialogId: DIALOG_ID,
+      title: "确认变更",
+      subtitle: "以下为当前页待保存并下发的配置变更明细。",
+      closeAttr: "data-page-save-confirm-close",
+      backdropAttr: "data-page-save-confirm-backdrop",
+      zClass: "z-[10040]",
+    });
+
+    const overlay = host.firstElementChild as HTMLElement | null;
+    if (!overlay) {
+      resolve();
+      return;
+    }
+
+    const close = () => {
+      overlay.remove();
+      document.removeEventListener("keydown", onKeyDown);
+      resolve();
+    };
+
+    const onKeyDown = (ev: KeyboardEvent) => {
+      if (ev.key === "Escape") close();
+    };
+
+    overlay.addEventListener("click", (ev) => {
+      const target = ev.target as HTMLElement;
+      if (
+        target.closest("[data-page-save-confirm-close]") ||
+        target.closest("[data-page-save-confirm-backdrop]")
+      ) {
+        close();
+      }
+    });
+
+    document.addEventListener("keydown", onKeyDown);
+    document.body.appendChild(overlay);
+    overlay.focus({ preventScroll: true });
+  });
+}
+
+/** 带「确认下发」的对比弹窗（iframe 等需二次确认的场景仍可用） */
 export function openPageSaveConfirmDialog(
   pageKey: string,
   _changeCount?: number,

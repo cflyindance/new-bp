@@ -18,11 +18,26 @@ export const TEAM_BREAKS_OVERTIME_SETTING_SEQS = [
 
 export const TEAM_CLOCK_IN_SETTING_SEQS = [72, 73, 71, 67, 68, 69, 241, 70] as const;
 
-/** 员工打卡 · 规则设置分组顺序 */
-export const TEAM_CLOCK_IN_GROUP_ORDER = [
-  "clock-hours",
-  "logout-gates",
-  "punch-receipt",
+/**
+ * 员工打卡 · 规则设置分组（按 seq，不依赖 catalog 的 groupKey）。
+ * catalog 中这些项仍挂在「考勤与工时 / 角色与员工权限」下，业务页需自定义分组。
+ */
+export const TEAM_CLOCK_IN_SETTING_GROUPS = [
+  {
+    key: "clock-hours",
+    title: "开收工与工时",
+    seqs: [72, 73, 71, 67, 241],
+  },
+  {
+    key: "logout-gates",
+    title: "登出门禁",
+    seqs: [68, 69],
+  },
+  {
+    key: "punch-receipt",
+    title: "打卡凭证",
+    seqs: [70],
+  },
 ] as const;
 
 export function getTeamSettingItemsBySeqs(
@@ -57,16 +72,17 @@ export type TeamSettingsTabPanelOpts = {
 
 /** Tab 面板内：规则设置列表（员工打卡等页与业务 Tab 同级） */
 export function renderTeamSettingsTabPanel(opts: TeamSettingsTabPanelOpts): string {
-  const bodyHtml = (opts.sectionsHtml ?? opts.rowsHtml ?? "").trim();
-  if (!bodyHtml) return "";
+  const sections = opts.sectionsHtml?.trim() ?? "";
+  const rows = opts.rowsHtml?.trim() ?? "";
+  if (!sections && !rows) return "";
 
   const description =
     opts.description ??
     "以下规则与本页业务直接相关，修改后立即生效；完整薪酬规则仍在「设置 → 薪酬与小费」。";
 
-  const listOrSections = opts.sectionsHtml
-    ? `<div class="flex flex-col gap-4 p-4">${opts.sectionsHtml}</div>`
-    : `<ul class="m-0 list-none divide-y divide-border p-0" role="list">${opts.rowsHtml}</ul>`;
+  const listOrSections = sections
+    ? `<div class="flex flex-col gap-4 p-4">${sections}</div>`
+    : `<ul class="m-0 list-none divide-y divide-border p-0" role="list">${rows}</ul>`;
 
   return `
     <div class="flex min-h-0 flex-1 flex-col" data-clock-rules-panel role="tabpanel">

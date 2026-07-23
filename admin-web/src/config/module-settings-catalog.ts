@@ -626,21 +626,7 @@ export const MODULE_SETTINGS_BY_PATH: Record<string, ModuleSettingCatalogHub> = 
     hubTitle: "团队管理",
     settingsPath: "/team/settings",
     items: [
-      { id: "s66-time-attendance-员工强制休息时长-分钟", groupTitle: "考勤与工时", groupKey: "time-attendance", sceneDesc: "设置员工强制休息的时长", moduleName: "员工工时", feature: "（未填写）", title: "员工强制休息时长(分钟)", seq: 66 },
-      { id: "s67-time-attendance-员工持续工作时长上限", groupTitle: "考勤与工时", groupKey: "time-attendance", sceneDesc: "设置员工持续工作时长上限", moduleName: "员工工时", feature: "（未填写）", title: "员工持续工作时长上限", seq: 67 },
-      { id: "s68-role-employee-permissions-在单子还没全部关闭的情况下-允许经理强制登出", groupTitle: "角色与员工权限", groupKey: "role-employee-permissions", sceneDesc: "", moduleName: "员工工时", feature: "（未填写）", title: "在单子还没全部关闭的情况下,允许经理强制登出", seq: 68 },
-      { id: "s69-role-employee-permissions-在单子全部付完款的情况下-才允许企台登出", groupTitle: "角色与员工权限", groupKey: "role-employee-permissions", sceneDesc: "", moduleName: "员工工时", feature: "（未填写）", title: "在单子全部付完款的情况下,才允许企台登出", seq: 69 },
-      { id: "s70-time-attendance-下班打卡打印确认小票", groupTitle: "考勤与工时", groupKey: "time-attendance", sceneDesc: "控制打卡打印小票是仅打印工作时间还是打印工作时间和小费", moduleName: "员工工时", feature: "下班打卡打印确认小票内容（工时/小费）", title: "下班打卡打印确认小票", seq: 70 },
-      { id: "s71-time-attendance-员工最长工作时间-小时", groupTitle: "考勤与工时", groupKey: "time-attendance", sceneDesc: "控制员工最长工作时间(小时)", moduleName: "员工工时", feature: "（未填写）", title: "员工最长工作时间(小时)", seq: 71 },
-      { id: "s72-time-attendance-重置开工-每日-HH-mm", groupTitle: "考勤与工时", groupKey: "time-attendance", sceneDesc: "", moduleName: "员工工时", feature: "（未填写）", title: "重置开工(每日,HH:mm)", seq: 72 },
-      { id: "s73-time-attendance-自动收工打卡", groupTitle: "考勤与工时", groupKey: "time-attendance", sceneDesc: "", moduleName: "员工工时", feature: "（未填写）", title: "自动收工打卡", seq: 73 },
-      { id: "s74-scheduling-是否启用打卡依赖排班", groupTitle: "排班", groupKey: "scheduling", sceneDesc: "", moduleName: "员工工时", feature: "（未填写）", title: "是否启用打卡依赖排班", seq: 74 },
-      { id: "s186-payroll-tips-分享小费金额计算-按照", groupTitle: "薪酬与小费", groupKey: "payroll-tips", sceneDesc: "设置分享小费金额计算基数（Net Sales / Grand Total / Account Receivable / Only Gratuity）", moduleName: "分享小费", feature: "（未填写）", title: "分享小费金额计算:按照", seq: 186 },
-      { id: "s241-time-attendance-Batch-前检查未打下班卡", groupTitle: "考勤与工时", groupKey: "time-attendance", sceneDesc: "Batch/关账前是否检查仍有员工未打下班卡（考勤门禁）。考勤规则 SSOT 在团队管理；支付中心 Batch 流程会引用本开关。", moduleName: "基本设置", feature: "（未填写）", title: "Batch 前检查未打下班卡", seq: 241 },
-      { id: "s306-payroll-tips-分摊小费比例", groupTitle: "薪酬与小费", groupKey: "payroll-tips", sceneDesc: "设置每个员工小费的分配获得比例", moduleName: "基本设置", feature: "（未填写）", title: "分摊小费比例(%)", seq: 306 },
-      { id: "s309-payroll-tips-小费计算标准", groupTitle: "薪酬与小费", groupKey: "payroll-tips", sceneDesc: "设置员工的小费计算标准按照上班工时进行计算还是其他的计算方式", moduleName: "基本设置", feature: "（未填写）", title: "小费计算标准", seq: 309 },
       { id: "s310-payroll-tips-工资计算标准", groupTitle: "薪酬与小费", groupKey: "payroll-tips", sceneDesc: "设置员工的工资计算标准是按照什么规则", moduleName: "基本设置", feature: "（未填写）", title: "工资计算标准", seq: 310 },
-      { id: "s329-time-attendance-员工报表-带薪休息时长-分钟", groupTitle: "考勤与工时", groupKey: "time-attendance", sceneDesc: "设置员工带薪休息的时长", moduleName: "员工报表", feature: "（未填写）", title: "员工报表:带薪休息时长(分钟)", seq: 329 },
     ],
   },
   "/transactions/settings": {
@@ -728,10 +714,17 @@ export function listAllModuleSettingCatalogEntries(): Array<{
   item: ModuleSettingCatalogItem;
 }> {
   const rows: Array<{ hubTitle: string; settingsPath: string; item: ModuleSettingCatalogItem }> = [];
+  const seenSeq = new Set<number>();
   for (const hub of Object.values(MODULE_SETTINGS_BY_PATH)) {
     for (const item of hub.items) {
       rows.push({ hubTitle: hub.hubTitle, settingsPath: hub.settingsPath, item });
+      seenSeq.add(item.seq);
     }
+  }
+  for (const item of TEAM_EMBEDDED_SETTING_CATALOG_ITEMS) {
+    if (seenSeq.has(item.seq)) continue;
+    rows.push({ hubTitle: "团队管理", settingsPath: "/team/settings", item });
+    seenSeq.add(item.seq);
   }
   return rows;
 }
@@ -1168,7 +1161,27 @@ export function groupCatalogItemsByCategory(
   });
 }
 
-/** 按 seq 从全部 hub 中解析设置项（团队等业务页嵌入用） */
+/**
+ * 已迁至业务页嵌入的团队设置项（不在「设置」Hub 展示，但仍参与 seq 解析与嵌入渲染）
+ */
+export const TEAM_EMBEDDED_SETTING_CATALOG_ITEMS: ModuleSettingCatalogItem[] = [
+  { id: "s66-time-attendance-员工强制休息时长-分钟", groupTitle: "考勤与工时", groupKey: "time-attendance", sceneDesc: "设置员工强制休息的时长", moduleName: "员工工时", feature: "（未填写）", title: "员工强制休息时长(分钟)", seq: 66 },
+  { id: "s67-time-attendance-员工持续工作时长上限", groupTitle: "考勤与工时", groupKey: "time-attendance", sceneDesc: "设置员工持续工作时长上限", moduleName: "员工工时", feature: "（未填写）", title: "员工持续工作时长上限", seq: 67 },
+  { id: "s68-role-employee-permissions-在单子还没全部关闭的情况下-允许经理强制登出", groupTitle: "角色与员工权限", groupKey: "role-employee-permissions", sceneDesc: "", moduleName: "员工工时", feature: "（未填写）", title: "在单子还没全部关闭的情况下,允许经理强制登出", seq: 68 },
+  { id: "s69-role-employee-permissions-在单子全部付完款的情况下-才允许企台登出", groupTitle: "角色与员工权限", groupKey: "role-employee-permissions", sceneDesc: "", moduleName: "员工工时", feature: "（未填写）", title: "在单子全部付完款的情况下,才允许企台登出", seq: 69 },
+  { id: "s70-time-attendance-下班打卡打印确认小票", groupTitle: "考勤与工时", groupKey: "time-attendance", sceneDesc: "控制打卡打印小票是仅打印工作时间还是打印工作时间和小费", moduleName: "员工工时", feature: "下班打卡打印确认小票内容（工时/小费）", title: "下班打卡打印确认小票", seq: 70 },
+  { id: "s71-time-attendance-员工最长工作时间-小时", groupTitle: "考勤与工时", groupKey: "time-attendance", sceneDesc: "控制员工最长工作时间(小时)", moduleName: "员工工时", feature: "（未填写）", title: "员工最长工作时间(小时)", seq: 71 },
+  { id: "s72-time-attendance-重置开工-每日-HH-mm", groupTitle: "考勤与工时", groupKey: "time-attendance", sceneDesc: "", moduleName: "员工工时", feature: "（未填写）", title: "重置开工(每日,HH:mm)", seq: 72 },
+  { id: "s73-time-attendance-自动收工打卡", groupTitle: "考勤与工时", groupKey: "time-attendance", sceneDesc: "", moduleName: "员工工时", feature: "（未填写）", title: "自动收工打卡", seq: 73 },
+  { id: "s74-scheduling-是否启用打卡依赖排班", groupTitle: "排班", groupKey: "scheduling", sceneDesc: "", moduleName: "员工工时", feature: "（未填写）", title: "是否启用打卡依赖排班", seq: 74 },
+  { id: "s186-payroll-tips-分享小费金额计算-按照", groupTitle: "薪酬与小费", groupKey: "payroll-tips", sceneDesc: "设置分享小费金额计算基数（Net Sales / Grand Total / Account Receivable / Only Gratuity）", moduleName: "分享小费", feature: "（未填写）", title: "分享小费金额计算:按照", seq: 186 },
+  { id: "s241-time-attendance-Batch-前检查未打下班卡", groupTitle: "考勤与工时", groupKey: "time-attendance", sceneDesc: "Batch/关账前是否检查仍有员工未打下班卡（考勤门禁）。考勤规则 SSOT 在团队管理；支付中心 Batch 流程会引用本开关。", moduleName: "基本设置", feature: "（未填写）", title: "Batch 前检查未打下班卡", seq: 241 },
+  { id: "s306-payroll-tips-分摊小费比例", groupTitle: "薪酬与小费", groupKey: "payroll-tips", sceneDesc: "设置每个员工小费的分配获得比例", moduleName: "基本设置", feature: "（未填写）", title: "分摊小费比例(%)", seq: 306 },
+  { id: "s309-payroll-tips-小费计算标准", groupTitle: "薪酬与小费", groupKey: "payroll-tips", sceneDesc: "设置员工的小费计算标准按照上班工时进行计算还是其他的计算方式", moduleName: "基本设置", feature: "（未填写）", title: "小费计算标准", seq: 309 },
+  { id: "s329-time-attendance-员工报表-带薪休息时长-分钟", groupTitle: "考勤与工时", groupKey: "time-attendance", sceneDesc: "设置员工带薪休息的时长", moduleName: "员工报表", feature: "（未填写）", title: "员工报表:带薪休息时长(分钟)", seq: 329 },
+];
+
+/** 按 seq 从全部 hub + 团队嵌入目录中解析设置项（团队等业务页嵌入用） */
 export function getTeamEmbeddedSettingItems(seqs: readonly number[]): ModuleSettingCatalogItem[] {
   const want = new Set(seqs);
   const bySeq = new Map<number, ModuleSettingCatalogItem>();
@@ -1176,6 +1189,9 @@ export function getTeamEmbeddedSettingItems(seqs: readonly number[]): ModuleSett
     for (const item of hub.items) {
       if (want.has(item.seq) && !bySeq.has(item.seq)) bySeq.set(item.seq, item);
     }
+  }
+  for (const item of TEAM_EMBEDDED_SETTING_CATALOG_ITEMS) {
+    if (want.has(item.seq) && !bySeq.has(item.seq)) bySeq.set(item.seq, item);
   }
   return seqs
     .map((seq) => bySeq.get(seq))

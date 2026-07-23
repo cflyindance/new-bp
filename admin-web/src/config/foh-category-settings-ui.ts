@@ -184,10 +184,6 @@ function normalizeSpecialMenuLines(raw: unknown, legacyEnabled?: boolean): Speci
   return [];
 }
 
-function isSpecialMenuEnabled(state: FohCategorySettingsState): boolean {
-  return state.specialMenuLines.length > 0;
-}
-
 const MODULE_SETTING_CONTROL_CLASS =
   "size-4 shrink-0 accent-primary text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50";
 
@@ -1204,15 +1200,6 @@ function renderSpecialMenuDialogBody(
 }
 
 function renderSpecialMenuPanel(state: FohCategorySettingsState): string {
-  if (!isSpecialMenuEnabled(state)) {
-    return `
-      <div class="space-y-6" data-foh-category-settings-panel="special-menu">
-        <div class="rounded-xl border border-dashed border-border bg-muted/20 p-8 text-center text-sm text-muted-foreground">
-          特殊品类未展示。请前往「品类设置」勾选适用产线后，再在此配置特殊品类。
-        </div>
-      </div>`;
-  }
-
   return `
     <div class="mt-1 space-y-3" data-foh-category-settings-panel="special-menu">
       <div class="flex flex-wrap items-center justify-end gap-2">

@@ -1,7 +1,7 @@
 /**
  * 会员中心 / 前厅 · 积分规则与兑换商品
  * — 525 菜单页面展示积分菜：产线多选（样式对齐 509 展示账户积分），无总开关、默认展开
- * — 527 纯积分订单：主开关 + 产线多选
+ * — 527 纯积分订单：默认开启（无总开关）+ 产线多选（POS / PayPad / POS GO / eMenu / SDI）
  * — 526 积分菜展示位置：按产线单选顶部/尾部（Kiosk / eMenu / SDI / Online Order）
  * seq 509 展示账户积分已迁至 guest-menu-line-toggle-ui（前厅·食客端·首页与版式）。
  */
@@ -10,6 +10,12 @@ import {
   FOH_LINE_CONFIG_ROW_ATTR,
   getFohActiveLineFilterId,
 } from "./foh-settings-by-line-filter";
+import {
+  MENU_ORDER_LIMIT_OTHER_PRODUCT_LINE_IDS,
+  MENU_ORDER_LIMIT_OTHER_PRODUCT_LINES,
+  normalizeMenuOrderLimitOtherProductLineIds,
+  type MenuOrderLimitOtherProductLineId,
+} from "./menu-order-limit-product-lines";
 import { MODULE_SETTING_CHOICE_CONTROL_CLASS } from "./module-settings-choice-ui";
 import {
   readModuleSettingJson,
@@ -37,7 +43,12 @@ export const MEMBER_POINTS_DISH_POSITION_PRODUCT_LINES = [
 export type MemberPointsDishPositionProductLineId =
   (typeof MEMBER_POINTS_DISH_POSITION_PRODUCT_LINES)[number]["id"];
 
-/** 仍带总开关的积分设置（525 已改为无开关常显） */
+/** 527 纯积分订单适用产线（与菜单下单限制·其他设置一致） */
+export const MEMBER_POINTS_ONLY_ORDER_PRODUCT_LINES = MENU_ORDER_LIMIT_OTHER_PRODUCT_LINES;
+
+export type MemberPointsOnlyOrderProductLineId = MenuOrderLimitOtherProductLineId;
+
+/** 527 等积分字段（菜单下单限制页默认开启、不展示总开关） */
 export const MEMBER_POINTS_TOGGLE_FIELD_SEQS = [MEMBER_POINTS_ONLY_ORDER_SEQ] as const;
 
 export type MemberPointsToggleFieldSeq = (typeof MEMBER_POINTS_TOGGLE_FIELD_SEQS)[number];
@@ -46,11 +57,10 @@ const SHOW_POINTS_DISHES_LINES_STORAGE_ID = "525-show-points-dishes-lines";
 
 const TOGGLE_FIELD_CONFIG: Record<
   MemberPointsToggleFieldSeq,
-  { linesStorageId: string; panelHint: string; linesAriaLabel: string }
+  { linesStorageId: string; linesAriaLabel: string }
 > = {
   [MEMBER_POINTS_ONLY_ORDER_SEQ]: {
     linesStorageId: "527-points-only-order-lines",
-    panelHint: "勾选产线允许订单仅含积分商品时直接下单兑换。",
     linesAriaLabel: "纯积分订单适用产线",
   },
 };
@@ -73,6 +83,10 @@ export type MemberPointsDishPositionByLine = Record<
 const DEFAULT_POSITION: MemberPointsDishPosition = "top";
 
 const ALL_LINE_IDS: MemberLoginProductLineId[] = MEMBER_LOGIN_PRODUCT_LINES.map((l) => l.id);
+
+const POINTS_ONLY_ORDER_LINE_IDS: MemberPointsOnlyOrderProductLineId[] = [
+  ...MENU_ORDER_LIMIT_OTHER_PRODUCT_LINE_IDS,
+];
 
 const POSITION_LINE_IDS: MemberPointsDishPositionProductLineId[] =
   MEMBER_POINTS_DISH_POSITION_PRODUCT_LINES.map((l) => l.id);
@@ -146,29 +160,33 @@ export function ensureMemberShowPointsDishesLinesDefault(): void {
   }
 }
 
-export function readMemberPointsToggleFieldLines(seq: MemberPointsToggleFieldSeq): MemberLoginProductLineId[] {
+export function readMemberPointsToggleFieldLines(
+  seq: MemberPointsToggleFieldSeq,
+): MemberPointsOnlyOrderProductLineId[] {
   const { linesStorageId } = TOGGLE_FIELD_CONFIG[seq];
-  const normalized = normalizeLineIds(readModuleSettingJson<unknown>(linesStorageId, null));
+  const normalized = normalizeMenuOrderLimitOtherProductLineIds(
+    readModuleSettingJson<unknown>(linesStorageId, null),
+  );
   if (normalized.length > 0) return normalized;
 
   if (readLegacyToggleOn(seq)) {
-    writeMemberPointsToggleFieldLines(seq, ALL_LINE_IDS);
-    return [...ALL_LINE_IDS];
+    writeMemberPointsToggleFieldLines(seq, POINTS_ONLY_ORDER_LINE_IDS);
+    return [...POINTS_ONLY_ORDER_LINE_IDS];
   }
   return [];
 }
 
 export function writeMemberPointsToggleFieldLines(
   seq: MemberPointsToggleFieldSeq,
-  lines: MemberLoginProductLineId[],
+  lines: MemberPointsOnlyOrderProductLineId[],
 ): void {
-  const unique = ALL_LINE_IDS.filter((id) => lines.includes(id));
+  const unique = POINTS_ONLY_ORDER_LINE_IDS.filter((id) => lines.includes(id));
   writeModuleSettingJson(TOGGLE_FIELD_CONFIG[seq].linesStorageId, unique);
 }
 
 export function ensureMemberPointsToggleFieldLinesDefault(seq: MemberPointsToggleFieldSeq): void {
   if (readMemberPointsToggleFieldLines(seq).length === 0) {
-    writeMemberPointsToggleFieldLines(seq, ALL_LINE_IDS);
+    writeMemberPointsToggleFieldLines(seq, POINTS_ONLY_ORDER_LINE_IDS);
   }
 }
 
@@ -256,8 +274,8 @@ export function renderMemberPointsToggleFieldLinesPanelHtml(
   on: boolean,
 ): string {
   const selected = new Set(readMemberPointsToggleFieldLines(seq));
-  const { panelHint, linesAriaLabel } = TOGGLE_FIELD_CONFIG[seq];
-  const cells = MEMBER_LOGIN_PRODUCT_LINES.map((line, index) => {
+  const { linesAriaLabel } = TOGGLE_FIELD_CONFIG[seq];
+  const cells = MEMBER_POINTS_ONLY_ORDER_PRODUCT_LINES.map((line, index) => {
     const checked = selected.has(line.id);
     const divider = index > 0 ? "border-l border-border" : "";
     return `
@@ -285,13 +303,12 @@ export function renderMemberPointsToggleFieldLinesPanelHtml(
       ${on ? "" : 'aria-hidden="true"'}
     >
       <div
-        class="flex w-full max-w-2xl overflow-hidden rounded-md border border-border bg-muted/40"
+        class="flex w-full max-w-3xl overflow-hidden rounded-md border border-border bg-muted/40"
         role="group"
         aria-label="${escapeHtml(linesAriaLabel)}"
       >
         ${cells}
       </div>
-      <p class="m-0 mt-2 text-xs leading-relaxed text-muted-foreground">${escapeHtml(panelHint)}</p>
     </div>`;
 }
 
@@ -375,12 +392,15 @@ function collectShowPointsDishesLinesFromGroup(group: HTMLElement): MemberLoginP
   return lines;
 }
 
-function collectToggleLinesFromPanel(panel: HTMLElement, seq: MemberPointsToggleFieldSeq): MemberLoginProductLineId[] {
-  const lines: MemberLoginProductLineId[] = [];
+function collectToggleLinesFromPanel(
+  panel: HTMLElement,
+  seq: MemberPointsToggleFieldSeq,
+): MemberPointsOnlyOrderProductLineId[] {
+  const lines: MemberPointsOnlyOrderProductLineId[] = [];
   panel.querySelectorAll<HTMLInputElement>(`[data-member-points-toggle-field-line="${seq}"]:checked`).forEach((input) => {
     const id = input.getAttribute("data-member-points-line-id");
-    if (id && ALL_LINE_IDS.includes(id as MemberLoginProductLineId)) {
-      lines.push(id as MemberLoginProductLineId);
+    if (id && POINTS_ONLY_ORDER_LINE_IDS.includes(id as MemberPointsOnlyOrderProductLineId)) {
+      lines.push(id as MemberPointsOnlyOrderProductLineId);
     }
   });
   return lines;

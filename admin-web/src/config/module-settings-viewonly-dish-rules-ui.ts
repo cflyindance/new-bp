@@ -1,9 +1,15 @@
 /**
  * 前厅 · 食客端·下单与规则：
  * seq 595 允许可看不可点的菜添加至购物车、
- * seq 596 可看不可点的菜弹出服务员授权（主开关 + eMenu / SDI 产线多选）。
+ * seq 596 可看不可点的菜弹出服务员授权（主开关 + 多产线多选）。
  */
 
+import {
+  MENU_ORDER_LIMIT_OTHER_PRODUCT_LINE_IDS,
+  MENU_ORDER_LIMIT_OTHER_PRODUCT_LINES,
+  normalizeMenuOrderLimitOtherProductLineIds,
+  type MenuOrderLimitOtherProductLineId,
+} from "./menu-order-limit-product-lines";
 import { readModuleSettingJson, writeModuleSettingJson } from "./module-settings-form-ui";
 import { moduleSettingToggleStorageKey } from "./module-settings-toggle-ui";
 
@@ -15,16 +21,13 @@ export const VIEWONLY_DISH_RULES_SEQS: readonly number[] = [
   VIEWONLY_DISH_AUTH_SEQ,
 ];
 
-export const VIEWONLY_DISH_RULES_PRODUCT_LINES = [
-  { id: "emenu", label: "eMenu" },
-  { id: "sdi", label: "SDI" },
-] as const;
+export const VIEWONLY_DISH_RULES_PRODUCT_LINES = MENU_ORDER_LIMIT_OTHER_PRODUCT_LINES;
 
-export type ViewonlyDishRulesProductLineId =
-  (typeof VIEWONLY_DISH_RULES_PRODUCT_LINES)[number]["id"];
+export type ViewonlyDishRulesProductLineId = MenuOrderLimitOtherProductLineId;
 
-const ALL_LINE_IDS: ViewonlyDishRulesProductLineId[] =
-  VIEWONLY_DISH_RULES_PRODUCT_LINES.map((l) => l.id);
+const ALL_LINE_IDS: ViewonlyDishRulesProductLineId[] = [
+  ...MENU_ORDER_LIMIT_OTHER_PRODUCT_LINE_IDS,
+];
 
 const LINES_ARIA_LABEL_BY_SEQ: Record<number, string> = {
   [VIEWONLY_DISH_CART_SEQ]: "允许可看不可点菜加购适用产线",
@@ -83,12 +86,7 @@ function ensureAllViewonlyDishRuleTogglesMigrated(): void {
 }
 
 function normalizeLineIds(raw: unknown): ViewonlyDishRulesProductLineId[] {
-  if (!Array.isArray(raw)) return [];
-  const valid = new Set<string>(ALL_LINE_IDS);
-  return raw.filter(
-    (id): id is ViewonlyDishRulesProductLineId =>
-      typeof id === "string" && valid.has(id),
-  );
+  return normalizeMenuOrderLimitOtherProductLineIds(raw);
 }
 
 export function readViewonlyDishRuleLines(seq: number): ViewonlyDishRulesProductLineId[] {
@@ -145,7 +143,7 @@ function renderLinesMultiselectHtml(seq: number, enabled: boolean): string {
 
   return `
     <div
-      class="flex w-full max-w-md overflow-hidden rounded-md border border-border bg-muted/40"
+      class="flex w-full max-w-3xl overflow-hidden rounded-md border border-border bg-muted/40"
       data-viewonly-dish-rule-lines="${seq}"
       role="group"
       aria-label="${escapeHtml(ariaLabel)}"

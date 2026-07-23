@@ -1,7 +1,13 @@
 /**
- * 前厅 · 食客端·下单与规则：seq 646 命中任意规则后,弹出密码授权（主开关 + eMenu 产线多选）。
+ * 前厅 · 食客端·下单与规则：seq 646 命中任意规则后,弹出密码授权（主开关 + 多产线多选）。
  */
 
+import {
+  MENU_ORDER_LIMIT_OTHER_PRODUCT_LINE_IDS,
+  MENU_ORDER_LIMIT_OTHER_PRODUCT_LINES,
+  normalizeMenuOrderLimitOtherProductLineIds,
+  type MenuOrderLimitOtherProductLineId,
+} from "./menu-order-limit-product-lines";
 import { readModuleSettingJson, writeModuleSettingJson } from "./module-settings-form-ui";
 import { moduleSettingToggleStorageKey } from "./module-settings-toggle-ui";
 
@@ -9,12 +15,13 @@ export const RULE_HIT_PASSWORD_AUTH_SEQ = 646;
 
 const LINES_STORAGE_ID = "646-rule-hit-password-auth-lines";
 
-export const RULE_HIT_PASSWORD_AUTH_PRODUCT_LINES = [{ id: "emenu", label: "eMenu" }] as const;
+export const RULE_HIT_PASSWORD_AUTH_PRODUCT_LINES = MENU_ORDER_LIMIT_OTHER_PRODUCT_LINES;
 
-export type RuleHitPasswordAuthProductLineId =
-  (typeof RULE_HIT_PASSWORD_AUTH_PRODUCT_LINES)[number]["id"];
+export type RuleHitPasswordAuthProductLineId = MenuOrderLimitOtherProductLineId;
 
-const EMENU_LINE_ID: RuleHitPasswordAuthProductLineId = "emenu";
+const ALL_LINE_IDS: RuleHitPasswordAuthProductLineId[] = [
+  ...MENU_ORDER_LIMIT_OTHER_PRODUCT_LINE_IDS,
+];
 
 const MODULE_SETTING_CONTROL_CLASS =
   "size-4 shrink-0 accent-primary text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50";
@@ -57,8 +64,7 @@ export function ensureRuleHitPasswordAuthToggleMigrated(): void {
 }
 
 function normalizeLineIds(raw: unknown): RuleHitPasswordAuthProductLineId[] {
-  if (!Array.isArray(raw)) return [];
-  return raw.includes(EMENU_LINE_ID) ? [EMENU_LINE_ID] : [];
+  return normalizeMenuOrderLimitOtherProductLineIds(raw);
 }
 
 export function readRuleHitPasswordAuthLines(): RuleHitPasswordAuthProductLineId[] {
@@ -68,15 +74,16 @@ export function readRuleHitPasswordAuthLines(): RuleHitPasswordAuthProductLineId
   if (normalized.length > 0) return normalized;
 
   if (readLegacyToggleOn()) {
-    writeRuleHitPasswordAuthLines([EMENU_LINE_ID]);
-    return [EMENU_LINE_ID];
+    const all = [...ALL_LINE_IDS];
+    writeRuleHitPasswordAuthLines(all);
+    return all;
   }
   return [];
 }
 
 export function writeRuleHitPasswordAuthLines(lines: RuleHitPasswordAuthProductLineId[]): void {
-  const enabled = lines.includes(EMENU_LINE_ID);
-  writeModuleSettingJson(LINES_STORAGE_ID, enabled ? [EMENU_LINE_ID] : []);
+  const unique = ALL_LINE_IDS.filter((id) => lines.includes(id));
+  writeModuleSettingJson(LINES_STORAGE_ID, unique);
 }
 
 export function isRuleHitPasswordAuthSeq(seq: number): boolean {
@@ -106,7 +113,7 @@ function renderLinesMultiselectHtml(enabled: boolean): string {
 
   return `
     <div
-      class="flex w-full max-w-xs overflow-hidden rounded-md border border-border bg-muted/40"
+      class="flex w-full max-w-3xl overflow-hidden rounded-md border border-border bg-muted/40"
       data-rule-hit-password-auth-lines="${RULE_HIT_PASSWORD_AUTH_SEQ}"
       role="group"
       aria-label="命中任意规则后弹出密码授权适用产线"
@@ -124,9 +131,6 @@ export function renderRuleHitPasswordAuthPanelHtml(on: boolean): string {
       ${on ? "" : 'aria-hidden="true"'}
     >
       ${renderLinesMultiselectHtml(on)}
-      <p class="m-0 mt-2 text-xs leading-relaxed text-muted-foreground">
-        勾选产线后，食客下单命中任意限制规则时须服务员输入密码授权。
-      </p>
     </div>`;
 }
 
@@ -153,8 +157,8 @@ function collectLinesFromGroup(group: HTMLElement): RuleHitPasswordAuthProductLi
   const lines: RuleHitPasswordAuthProductLineId[] = [];
   group.querySelectorAll<HTMLInputElement>("[data-rule-hit-password-auth-line]:checked").forEach((input) => {
     const id = input.getAttribute("data-rule-hit-password-auth-line");
-    if (id === EMENU_LINE_ID) {
-      lines.push(EMENU_LINE_ID);
+    if (id && ALL_LINE_IDS.includes(id as RuleHitPasswordAuthProductLineId)) {
+      lines.push(id as RuleHitPasswordAuthProductLineId);
     }
   });
   writeRuleHitPasswordAuthLines(lines);
