@@ -409,7 +409,23 @@
     );
   }
 
-  function renderHtml(byLine, activeLineId, activeGroupId, activeCategoryId) {
+  function normalizePickerOptions(opts) {
+    opts = opts || {};
+    return {
+      leafLevel: opts.leafLevel === "category" ? "category" : "dish",
+    };
+  }
+
+  function readPickerOptions(pickerEl) {
+    if (!pickerEl || !pickerEl.getAttribute) return normalizePickerOptions({});
+    return normalizePickerOptions({
+      leafLevel: pickerEl.getAttribute("data-leaf-level") || "dish",
+    });
+  }
+
+  function renderHtml(byLine, activeLineId, activeGroupId, activeCategoryId, opts) {
+    opts = normalizePickerOptions(opts);
+    var leafCategory = opts.leafLevel === "category";
     byLine = normalizeByLine(byLine);
     var activeLine = isLineId(activeLineId) ? activeLineId : DEFAULT_LINE;
     var tree = resolveTree(activeLine);
@@ -443,20 +459,23 @@
     var col2 = group
       ? group.categories
           .map(function (c) {
-            return renderItem(cKey(activeG, c.id), c.name, c.id === activeC, sel, tree, {
+            return renderItem(cKey(activeG, c.id), c.name, !leafCategory && c.id === activeC, sel, tree, {
               childCount: c.dishes.length,
             });
           })
           .join("")
       : "";
 
-    var col3 = category
-      ? category.dishes
-          .map(function (d) {
-            return renderItem(dKey(activeG, activeC, d.id), d.name, false, sel, tree);
-          })
-          .join("")
-      : "";
+    var col3 = "";
+    if (!leafCategory) {
+      col3 = category
+        ? category.dishes
+            .map(function (d) {
+              return renderItem(dKey(activeG, activeC, d.id), d.name, false, sel, tree);
+            })
+            .join("")
+        : "";
+    }
 
     var empty = function (t) {
       return '<p class="bmsp-empty">' + esc(t) + "</p>";
@@ -464,7 +483,9 @@
 
     return (
       '<div class="bmsp-root" data-brand-menu-structure-picker data-enable-lines="1"' +
-      ' data-active-line="' +
+      ' data-leaf-level="' +
+      esc(opts.leafLevel) +
+      '" data-active-line="' +
       esc(activeLine) +
       '" data-active-group="' +
       esc(activeG) +
@@ -474,7 +495,9 @@
       '<input type="hidden" data-brand-menu-structure-by-line value="' +
       esc(JSON.stringify(byLine)) +
       '" />' +
-      '<div class="bmsp-grid">' +
+      '<div class="bmsp-grid' +
+      (leafCategory ? " bmsp-grid--no-dish" : "") +
+      '">' +
       '<div class="bmsp-col"><p class="bmsp-col-title">产线</p><div data-brand-menu-col="line">' +
       colLine +
       "</div></div>" +
@@ -484,9 +507,11 @@
       '<div class="bmsp-col"><p class="bmsp-col-title">类</p><div data-brand-menu-col="category">' +
       (col2 || empty("请选择组")) +
       "</div></div>" +
-      '<div class="bmsp-col"><p class="bmsp-col-title">菜</p><div data-brand-menu-col="dish">' +
-      (col3 || empty("请选择分类")) +
-      "</div></div>" +
+      (leafCategory
+        ? ""
+        : '<div class="bmsp-col"><p class="bmsp-col-title">菜</p><div data-brand-menu-col="dish">' +
+          (col3 || empty("请选择分类")) +
+          "</div></div>") +
       "</div></div>"
     );
   }
@@ -508,18 +533,19 @@
     }
   }
 
-  function bind(pickerEl) {
+  function bind(pickerEl, opts) {
     if (!pickerEl || pickerEl.dataset.brandMenuStructureBound === "1") return;
     pickerEl.dataset.brandMenuStructureBound = "1";
+    var pickerOpts = normalizePickerOptions(opts || readPickerOptions(pickerEl));
 
     function rerender(byLine, activeG, activeC, activeLine, notify) {
       var wrap = document.createElement("div");
-      wrap.innerHTML = renderHtml(byLine, activeLine, activeG, activeC).trim();
+      wrap.innerHTML = renderHtml(byLine, activeLine, activeG, activeC, pickerOpts).trim();
       var next = wrap.firstElementChild;
       if (!next) return;
       pickerEl.replaceWith(next);
       syncIndeterminate(next);
-      bind(next);
+      bind(next, pickerOpts);
       if (notify) {
         next.dispatchEvent(
           new CustomEvent("brand-menu-structure-change", {
@@ -543,13 +569,14 @@
       if (!btn || e.target.closest("[data-brand-menu-enable]")) return;
       var key = btn.getAttribute("data-brand-menu-col-select") || "";
       var activeLine = isLineId(pickerEl.dataset.activeLine) ? pickerEl.dataset.activeLine : DEFAULT_LINE;
-      var tree = resolveTree(activeLine);
+      var treeNav = resolveTree(activeLine);
       var byLine = readByLine(pickerEl);
       if (key.indexOf("g:") === 0) {
         var gid = key.slice(2);
-        var g = findGroup(gid, tree);
+        var g = findGroup(gid, treeNav);
         rerender(byLine, gid, g && g.categories[0] ? g.categories[0].id : "", activeLine, false);
       } else if (key.indexOf("c:") === 0) {
+        if (pickerOpts.leafLevel === "category") return;
         var pp = key.split(":");
         rerender(byLine, pp[1] || "", pp[2] || "", activeLine, false);
       }

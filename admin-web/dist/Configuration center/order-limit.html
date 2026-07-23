@@ -231,6 +231,7 @@
       display: none; align-items: center; justify-content: center;
       background: rgba(2, 6, 23, .35); padding: 14px;
     }
+    .modal-mask.nested { z-index: 1100; background: rgba(2, 6, 23, .45); }
     .modal {
       width: min(1020px, 100%);
       max-height: calc(100vh - 30px);
@@ -242,6 +243,7 @@
       border: 1px solid var(--ol-border);
       box-shadow: 0 18px 40px rgba(15, 23, 42, .18);
     }
+    .modal.modal-sm { width: min(560px, 100%); }
     .modal-head {
       flex-shrink: 0;
       padding: 12px 14px;
@@ -267,7 +269,7 @@
       gap: 12px;
       align-content: start;
     }
-    .steps { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+    .steps { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
     .step {
       display: grid; justify-items: center; gap: 4px;
     }
@@ -279,7 +281,7 @@
     }
     .step.done .step-dot { background: #16a34a; border-color: #16a34a; color: #fff; }
     .step.active .step-dot { background: var(--ol-primary); border-color: var(--ol-primary); color: #fff; }
-    .step-text { font-size: 12px; color: var(--ol-muted); text-align: center; }
+    .step-text { font-size: 11px; color: var(--ol-muted); text-align: center; line-height: 1.25; }
     .wizard-sec { border: 1px solid var(--ol-border); border-radius: 12px; padding: 12px; }
     .wizard-sec h4 { margin: 0 0 8px; font-size: 15px; font-weight: 600; }
     .wizard-sec--plain {
@@ -346,6 +348,9 @@
       grid-template-columns: repeat(4, minmax(0, 1fr));
       min-height: 14rem;
     }
+    .bmsp-grid.bmsp-grid--no-dish {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
     .bmsp-col {
       display: flex;
       flex-direction: column;
@@ -408,12 +413,131 @@
       font-size: 12px;
       color: var(--ol-muted);
     }
+    .qty-scene-block {
+      margin-bottom: 12px;
+      padding: 10px;
+      border: 1px solid #e8edf3;
+      border-radius: 10px;
+      background: #fff;
+    }
     .qty-sub-label {
       margin: 0 0 6px;
       font-size: 12px;
       font-weight: 600;
       color: #334155;
     }
+    .qty-scene-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .qty-scene-head strong { font-size: 13px; }
+    .qty-scene-head .qty-hint { margin: 2px 0 0; }
+    .qty-scene-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .qty-scene-chip {
+      min-width: 112px;
+      text-align: left;
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-size: 12px;
+      line-height: 1.35;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      cursor: pointer;
+    }
+    .qty-scene-chip.active {
+      background: #e8f3ff;
+      border-color: #93c5fd;
+      color: #0d61cb;
+      font-weight: 600;
+    }
+    .qty-scene-chip .qty-scene-status {
+      display: block;
+      margin-top: 2px;
+      font-size: 11px;
+      font-weight: 500;
+    }
+    .qty-scene-chip .qty-scene-status.done { color: #16a34a; }
+    .qty-scene-chip .qty-scene-status.partial { color: #d97706; }
+    .qty-scene-chip .qty-scene-status.empty { color: #94a3b8; }
+    .qty-context-hint {
+      margin: 0 0 8px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px dashed #cbd5e1;
+      background: #f8fafc;
+      font-size: 12px;
+      color: #334155;
+    }
+    .qty-panel {
+      margin-top: 10px;
+      padding: 12px;
+      border: 1px solid #bfdbfe;
+      border-radius: 10px;
+      background: #f8fbff;
+    }
+    .qty-panel-title {
+      margin: 0 0 8px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .qty-panel-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .qty-copy-list { display: grid; gap: 6px; margin: 8px 0; }
+    .qty-copy-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      background: #fff;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .qty-copy-item.is-checked {
+      border-color: #93c5fd;
+      background: #f8fbff;
+    }
+    .qty-dim-round-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    .qty-step-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .person-range-list { display: grid; gap: 8px; }
+    .person-range-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: center;
+      border: 1px solid #edf2f7;
+      border-radius: 8px;
+      padding: 8px;
+      background: #fff;
+    }
+    .person-range-row .input { width: 100%; }
+    .person-range-sep { font-size: 12px; color: var(--ol-muted); }
+    .person-range-hint {
+      margin: 6px 0 0;
+      font-size: 12px;
+      color: var(--ol-muted);
+      line-height: 1.4;
+    }
+    .qty-person-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
     .qty-round-block { margin-bottom: 12px; }
     .qty-hint {
       margin: 6px 0 0;
@@ -822,6 +946,22 @@
     </div>
   </div>
 
+  <div class="modal-mask nested" id="dimEditorMask" style="display:none;">
+    <div class="modal modal-sm" role="dialog" aria-modal="true" aria-labelledby="dimEditorTitle">
+      <div class="modal-head">
+        <h3 id="dimEditorTitle">编辑人数 / 轮次区间</h3>
+        <button class="icon-btn" id="dimEditorClose" type="button" data-dim-edit-cancel="1">✕</button>
+      </div>
+      <div class="modal-body" id="dimEditorBody"></div>
+      <div class="modal-foot">
+        <div class="foot-right">
+          <button type="button" class="btn" data-dim-edit-cancel="1">取消</button>
+          <button type="button" class="btn btn-primary" data-dim-edit-save="1">完成</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="assets/brand-menu-structure-picker.js"></script>
   <script>
     (function () {
@@ -855,7 +995,7 @@
           }, 180);
         }, 2600);
       }
-      var STEPS = ["规则类型", "详细配置", "时间设置", "会员等级", "确认保存"];
+      var STEPS = ["规则类型", "详细配置", "限购数量", "时间设置", "会员等级", "确认保存"];
 
       var weekdays = [
         { id: "mon", name: "周一", short: "一" },
@@ -1012,15 +1152,14 @@
             created: "2024-01-10",
             description: "每人第一轮招牌菜品限购1份",
             rounds: [
-              {
-                roundName: "第一轮",
-                selectedCategories: [1, 4, 2, 5],
-                selectedDishes: [1, 5, 48, 13, 61],
-                quantitySettings: { dish_1: 1, dish_5: 1, dish_48: 1, dish_13: 1, dish_61: 1 },
-                maxTotalQuantity: 3
-              },
-              { roundName: "第二轮", selectedCategories: [], selectedDishes: [], quantitySettings: {}, maxTotalQuantity: 5 },
-              { roundName: "第三轮", selectedCategories: [], selectedDishes: [], quantitySettings: {}, maxTotalQuantity: 4 }
+              { min: 1, max: 1, roundName: "第一轮", selectedCategories: [1, 4, 2, 5], selectedDishes: [1, 5, 48, 13, 61], quantitySettings: { dish_1: 1, dish_5: 1, dish_48: 1, dish_13: 1, dish_61: 1 }, maxTotalQuantity: 3 },
+              { min: 2, max: 2, roundName: "第二轮", selectedCategories: [], selectedDishes: [], quantitySettings: {}, maxTotalQuantity: 5 },
+              { min: 3, max: 99, roundName: "第三轮及以上", selectedCategories: [], selectedDishes: [], quantitySettings: {}, maxTotalQuantity: 4 }
+            ],
+            roundRanges: [
+              { min: 1, max: 1 },
+              { min: 2, max: 2 },
+              { min: 3, max: 99 }
             ]
           },
           {
@@ -1069,17 +1208,24 @@
           method: null,
           name: "",
           description: "",
-          personRanges: [{ min: 1, max: 4 }],
+          personRanges: [createEmptyPersonRange(1, 99, 0)],
+          activePersonRange: 0,
           structureByLine: emptyStructureByLine(),
           selectedCategories: [],
           selectedDishes: [],
           quantitySettings: {},
           maxSameDishSettings: {},
           rounds: [],
+          roundRanges: [],
           activeRound: 0,
           activeQtyLine: null,
           selectedQtyKeys: [],
           batchQtyValue: "",
+          dimEditorOpen: false,
+          dimEditorDraft: null,
+          copySceneOpen: false,
+          copyTargetSceneIds: [],
+          copyCurrentLineOnly: true,
           enableMemberLevels: false,
           selectedMemberLevels: [],
           enableTimeSettings: false,
@@ -1233,11 +1379,331 @@
         return names.join("、");
       }
 
-      function createEmptyRound(name) {
+      function createEmptyRoundRange(min, max) {
         return {
-          roundName: name || "第一轮",
-          quantitySettings: {}
+          min: min != null ? min : 1,
+          max: max != null ? max : 99
         };
+      }
+
+      function createEmptyPersonRange(min, max, roundCount) {
+        var roundQuantities = [];
+        for (var i = 0; i < (roundCount || 0); i++) {
+          roundQuantities.push({ quantitySettings: {} });
+        }
+        return {
+          min: min != null ? min : 1,
+          max: max != null ? max : 99,
+          quantitySettings: {},
+          roundQuantities: roundQuantities
+        };
+      }
+
+      function formatPersonRangeLabel(range) {
+        var min = Number(range.min) || 1;
+        var max = Number(range.max) || 99;
+        if (max >= 99) return min <= 1 ? "不限人数" : (min + "人及以上");
+        if (min === max) return min + "人";
+        if (min <= 1) return max + "人及以下";
+        return min + "-" + max + "人";
+      }
+
+      function formatRoundRangeLabel(range) {
+        var min = Number(range.min) || 1;
+        var max = Number(range.max) || 99;
+        if (max >= 99) return min <= 1 ? "不限轮次" : (min + "轮及以上");
+        if (min === max) return "第" + min + "轮";
+        if (min <= 1) return max + "轮及以下";
+        return min + "-" + max + "轮";
+      }
+
+      function formatPersonRangesSummary(ranges) {
+        if (!ranges || !ranges.length) return "未设置";
+        return ranges.map(formatPersonRangeLabel).join(" / ");
+      }
+
+      function formatRoundRangesSummary(ranges) {
+        if (!ranges || !ranges.length) return "未设置";
+        return ranges.map(formatRoundRangeLabel).join(" / ");
+      }
+
+      function normalizeRoundRangesList(list) {
+        if (!Array.isArray(list) || !list.length) return [createEmptyRoundRange(1, 99)];
+        return list.map(function (r, i) {
+          if (r && (r.min != null || r.max != null)) {
+            return createEmptyRoundRange(Number(r.min) || 1, Number(r.max) || 99);
+          }
+          // 兼容旧版具名轮次：第 i 轮 → i+1 ~ i+1
+          return createEmptyRoundRange(i + 1, i + 1);
+        });
+      }
+
+      function ensurePersonRangesShape(draft) {
+        if (!Array.isArray(draft.personRanges) || !draft.personRanges.length) {
+          draft.personRanges = [createEmptyPersonRange(1, 99, draft.round === "multiRound" ? (draft.roundRanges || []).length : 0)];
+        }
+        if (draft.round === "multiRound") {
+          draft.roundRanges = normalizeRoundRangesList(draft.roundRanges && draft.roundRanges.length ? draft.roundRanges : draft.rounds);
+        } else if (!Array.isArray(draft.roundRanges)) {
+          draft.roundRanges = [];
+        }
+        var roundCount = draft.round === "multiRound" ? (draft.roundRanges || []).length : 0;
+        // 原地补齐，避免重建对象导致 setQtyValue 写到失效引用
+        draft.personRanges.forEach(function (pr) {
+          pr.min = Number(pr.min) || 1;
+          pr.max = Number(pr.max) || 99;
+          if (!pr.quantitySettings || typeof pr.quantitySettings !== "object") {
+            pr.quantitySettings = {};
+          }
+          if (!Array.isArray(pr.roundQuantities)) pr.roundQuantities = [];
+          while (pr.roundQuantities.length < roundCount) {
+            pr.roundQuantities.push({ quantitySettings: {} });
+          }
+          if (pr.roundQuantities.length > roundCount) {
+            pr.roundQuantities.length = roundCount;
+          }
+          pr.roundQuantities.forEach(function (rq) {
+            if (!rq) return;
+            if (!rq.quantitySettings || typeof rq.quantitySettings !== "object") {
+              rq.quantitySettings = {};
+            }
+          });
+        });
+        if (draft.activePersonRange == null || draft.activePersonRange < 0 || draft.activePersonRange >= draft.personRanges.length) {
+          draft.activePersonRange = 0;
+        }
+        if (draft.round === "multiRound") {
+          if (draft.activeRound == null || draft.activeRound < 0 || draft.activeRound >= (draft.roundRanges || []).length) {
+            draft.activeRound = Math.max(0, (draft.roundRanges || []).length - 1);
+          }
+        }
+        return draft.personRanges;
+      }
+
+      function getActivePersonRange(draft) {
+        ensurePersonRangesShape(draft);
+        return draft.personRanges[draft.activePersonRange] || draft.personRanges[0];
+      }
+
+      function setQtyValue(draft, qtyKey, num) {
+        ensurePersonRangesShape(draft);
+        var pr = draft.personRanges[draft.activePersonRange] || draft.personRanges[0];
+        if (!pr) return;
+        if (draft.round === "multiRound") {
+          var rq = pr.roundQuantities[draft.activeRound];
+          if (!rq) {
+            rq = { quantitySettings: {} };
+            pr.roundQuantities[draft.activeRound] = rq;
+          }
+          if (!rq.quantitySettings) rq.quantitySettings = {};
+          rq.quantitySettings[qtyKey] = num;
+        } else {
+          if (!pr.quantitySettings) pr.quantitySettings = {};
+          pr.quantitySettings[qtyKey] = num;
+        }
+      }
+
+      function getQtyMap(draft) {
+        ensurePersonRangesShape(draft);
+        var pr = draft.personRanges[draft.activePersonRange] || draft.personRanges[0];
+        if (!pr) return {};
+        if (draft.round === "multiRound") {
+          var rq = (pr.roundQuantities || [])[draft.activeRound];
+          return (rq && rq.quantitySettings) || {};
+        }
+        return pr.quantitySettings || {};
+      }
+
+      function getQtyMapAt(draft, personIndex, roundIndex) {
+        ensurePersonRangesShape(draft);
+        var pr = draft.personRanges[personIndex];
+        if (!pr) return {};
+        if (draft.round === "multiRound") {
+          var rq = (pr.roundQuantities || [])[roundIndex];
+          return (rq && rq.quantitySettings) || {};
+        }
+        return pr.quantitySettings || {};
+      }
+
+      function setQtyValueAt(draft, personIndex, roundIndex, qtyKey, num) {
+        ensurePersonRangesShape(draft);
+        var pr = draft.personRanges[personIndex];
+        if (!pr) return;
+        if (draft.round === "multiRound") {
+          var rq = pr.roundQuantities[roundIndex];
+          if (!rq) {
+            rq = { quantitySettings: {} };
+            pr.roundQuantities[roundIndex] = rq;
+          }
+          if (!rq.quantitySettings) rq.quantitySettings = {};
+          rq.quantitySettings[qtyKey] = num;
+        } else {
+          if (!pr.quantitySettings) pr.quantitySettings = {};
+          pr.quantitySettings[qtyKey] = num;
+        }
+      }
+
+      function listQtyScenes(draft) {
+        ensurePersonRangesShape(draft);
+        var scenes = [];
+        var isMulti = draft.round === "multiRound";
+        draft.personRanges.forEach(function (pr, pi) {
+          if (isMulti) {
+            (draft.roundRanges || []).forEach(function (r, ri) {
+              scenes.push({
+                id: pi + ":" + ri,
+                personIndex: pi,
+                roundIndex: ri,
+                label: formatPersonRangeLabel(pr) + " · " + formatRoundRangeLabel(r)
+              });
+            });
+          } else {
+            scenes.push({
+              id: String(pi),
+              personIndex: pi,
+              roundIndex: null,
+              label: formatPersonRangeLabel(pr)
+            });
+          }
+        });
+        return scenes;
+      }
+
+      function getActiveScene(draft) {
+        var scenes = listQtyScenes(draft);
+        if (!scenes.length) return null;
+        var found = scenes.find(function (s) {
+          if (s.personIndex !== draft.activePersonRange) return false;
+          if (draft.round === "multiRound") return s.roundIndex === draft.activeRound;
+          return true;
+        });
+        return found || scenes[0];
+      }
+
+      function resolveSceneSelection(draft) {
+        var scenes = listQtyScenes(draft);
+        if (!scenes.length) return null;
+        var active = getActiveScene(draft);
+        if (!active || !scenes.some(function (s) { return s.id === active.id; })) {
+          active = scenes[0];
+        }
+        draft.activePersonRange = active.personIndex;
+        if (draft.round === "multiRound") draft.activeRound = active.roundIndex;
+        return active;
+      }
+
+      function sceneHasQtyOnLine(draft, scene, lineId, method) {
+        var byLine = getDraftStructureByLine(draft);
+        var keys = listQtyItems(byLine, method)
+          .filter(function (it) { return it.lineId === lineId; })
+          .map(function (item) { return qtyKeyForItem(method, item); });
+        if (!keys.length) return false;
+        var map = getQtyMapAt(draft, scene.personIndex, scene.roundIndex);
+        return keys.some(function (k) { return Number(map[k]) > 0; });
+      }
+
+      function getSceneCompletion(draft, scene, lineOpts, method) {
+        if (!lineOpts || !lineOpts.length) return "empty";
+        var hit = 0;
+        lineOpts.forEach(function (line) {
+          if (sceneHasQtyOnLine(draft, scene, line.id, method)) hit += 1;
+        });
+        if (hit <= 0) return "empty";
+        if (hit >= lineOpts.length) return "done";
+        return "partial";
+      }
+
+      function completionLabel(status) {
+        if (status === "done") return { cls: "done", text: "● 已配置" };
+        if (status === "partial") return { cls: "partial", text: "◐ 部分产线" };
+        return { cls: "empty", text: "○ 未配置" };
+      }
+
+      function cloneDimEditorDraft(draft) {
+        ensurePersonRangesShape(draft);
+        return {
+          personRanges: (draft.personRanges || []).map(function (pr) {
+            return {
+              min: pr.min,
+              max: pr.max,
+              quantitySettings: Object.assign({}, pr.quantitySettings || {}),
+              roundQuantities: (pr.roundQuantities || []).map(function (rq) {
+                return { quantitySettings: Object.assign({}, (rq && rq.quantitySettings) || {}) };
+              })
+            };
+          }),
+          roundRanges: (draft.roundRanges || []).map(function (r) {
+            return createEmptyRoundRange(r.min, r.max);
+          })
+        };
+      }
+
+      function ensureDimEditorShape(dim, isMulti) {
+        if (!dim.personRanges || !dim.personRanges.length) {
+          dim.personRanges = [createEmptyPersonRange(1, 99, isMulti ? (dim.roundRanges || []).length : 0)];
+        }
+        if (!Array.isArray(dim.roundRanges)) dim.roundRanges = [];
+        if (isMulti && !dim.roundRanges.length) dim.roundRanges = [createEmptyRoundRange(1, 99)];
+        var roundCount = isMulti ? dim.roundRanges.length : 0;
+        dim.personRanges.forEach(function (pr) {
+          pr.min = Number(pr.min) || 1;
+          pr.max = Number(pr.max) || 99;
+          if (!pr.quantitySettings || typeof pr.quantitySettings !== "object") pr.quantitySettings = {};
+          if (!Array.isArray(pr.roundQuantities)) pr.roundQuantities = [];
+          while (pr.roundQuantities.length < roundCount) pr.roundQuantities.push({ quantitySettings: {} });
+          if (pr.roundQuantities.length > roundCount) pr.roundQuantities.length = roundCount;
+          pr.roundQuantities.forEach(function (rq) {
+            if (!rq.quantitySettings || typeof rq.quantitySettings !== "object") rq.quantitySettings = {};
+          });
+        });
+        return dim;
+      }
+
+      function validateRanges(ranges, kind) {
+        var label = kind === "round" ? "轮次区间" : "人数区间";
+        if (!ranges || !ranges.length) return "请至少设置一个" + label;
+        var normalized = ranges.map(function (r, i) {
+          return { min: Number(r.min), max: Number(r.max), index: i };
+        });
+        for (var i = 0; i < normalized.length; i++) {
+          var r = normalized[i];
+          if (!Number.isFinite(r.min) || !Number.isFinite(r.max) || r.min < 1 || r.max < 1) {
+            return "第 " + (i + 1) + " 个" + label + "需为正整数";
+          }
+          if (r.min > r.max) return "第 " + (i + 1) + " 个" + label + "的最小值不能大于最大值";
+        }
+        var sorted = normalized.slice().sort(function (a, b) { return a.min - b.min || a.max - b.max; });
+        for (var j = 0; j < sorted.length; j++) {
+          for (var k = j + 1; k < sorted.length; k++) {
+            var a = sorted[j];
+            var b = sorted[k];
+            if (a.max >= b.min) {
+              return label + "不能重叠（请检查 " + a.min + "-" + a.max + " 与 " + b.min + "-" + b.max + "）";
+            }
+          }
+        }
+        return null;
+      }
+
+      function validatePersonRanges(ranges) {
+        return validateRanges(ranges, "person");
+      }
+
+      function validateRoundRanges(ranges) {
+        return validateRanges(ranges, "round");
+      }
+
+      function findPersonRangeIndexByCount(ranges, personCount) {
+        var count = Number(personCount) || 0;
+        for (var i = 0; i < (ranges || []).length; i++) {
+          var r = ranges[i];
+          if (count >= Number(r.min) && count <= Number(r.max)) return i;
+        }
+        return -1;
+      }
+
+      function findRoundRangeIndexByRound(ranges, roundNo) {
+        return findPersonRangeIndexByCount(ranges, roundNo);
       }
 
       function getDraftStructureByLine(draft) {
@@ -1305,23 +1771,6 @@
         return item.name;
       }
 
-      function renderRoundTabsHtml(draft) {
-        return (
-          "<div class='round-tabs'>" +
-          draft.rounds.map(function (r, i) {
-            var active = i === draft.activeRound ? " active" : "";
-            return (
-              "<span class='round-chip'>" +
-                "<button type='button' class='btn round-tab" + active + "' data-round-index='" + i + "'>" + esc(r.roundName) + "</button>" +
-                "<button type='button' class='round-del' data-round-del='" + i + "' title='删除轮次' aria-label='删除轮次'>×</button>" +
-              "</span>"
-            );
-          }).join("") +
-          "<button type='button' class='btn round-tab' data-round-add='1'>+ 添加轮次</button>" +
-          "</div>"
-        );
-      }
-
       function getVisibleQtyKeys(draft, method, activeLine) {
         var byLine = getDraftStructureByLine(draft);
         return listQtyItems(byLine, method)
@@ -1337,47 +1786,217 @@
         return draft.selectedQtyKeys;
       }
 
-      function setQtyValue(draft, qtyKey, num) {
-        if (draft.round === "multiRound") {
-          var r = draft.rounds[draft.activeRound];
-          if (r) r.quantitySettings[qtyKey] = num;
-        } else {
-          draft.quantitySettings[qtyKey] = num;
-        }
+      function renderDimPersonRangesHtml(dim) {
+        var rows = dim.personRanges.map(function (r, i) {
+          return (
+            "<div class='person-range-row'>" +
+              "<input class='input' type='number' min='1' data-dim-person-min='" + i + "' value='" + esc(r.min) + "' />" +
+              "<span class='person-range-sep'>至</span>" +
+              "<input class='input' type='number' min='1' data-dim-person-max='" + i + "' value='" + esc(r.max) + "' title='填 99 表示及以上' />" +
+              "<button type='button' class='btn btn-danger' data-dim-person-del='" + i + "'" +
+                (dim.personRanges.length <= 1 ? " disabled" : "") + ">删除</button>" +
+            "</div>"
+          );
+        }).join("");
+        return (
+          "<div class='person-range-list'>" + rows + "</div>" +
+          "<div style='margin-top:8px;'>" +
+            "<button type='button' class='btn' data-dim-person-add='1'>+ 添加人数区间</button>" +
+          "</div>" +
+          "<p class='person-range-hint'>例：1–3、4–6、7–99（99 表示及以上）。区间不可重叠。</p>"
+        );
       }
 
-      function renderQtySectionHtml(draft, isMulti, currentRound, method) {
-        if (!MenuPicker) return "<div style='font-size:12px;color:#6b7280;'>请先选择至少一项</div>";
+      function renderDimRoundsHtml(dim) {
+        var rows = (dim.roundRanges || []).map(function (r, i) {
+          return (
+            "<div class='person-range-row'>" +
+              "<input class='input' type='number' min='1' data-dim-round-min='" + i + "' value='" + esc(r.min) + "' />" +
+              "<span class='person-range-sep'>至</span>" +
+              "<input class='input' type='number' min='1' data-dim-round-max='" + i + "' value='" + esc(r.max) + "' title='填 99 表示及以上' />" +
+              "<button type='button' class='btn btn-danger' data-dim-round-del='" + i + "'" +
+                ((dim.roundRanges || []).length <= 1 ? " disabled" : "") + ">删除</button>" +
+            "</div>"
+          );
+        }).join("");
+        return (
+          "<div class='person-range-list'>" + rows + "</div>" +
+          "<div style='margin-top:8px;'>" +
+            "<button type='button' class='btn' data-dim-round-add='1'>+ 添加轮次区间</button>" +
+          "</div>" +
+          "<p class='person-range-hint'>例：1–3（3轮及以下）、4–6、7–99（7轮及以上）。区间不可重叠；同一商品可按轮次区间设置不同限购数量。</p>"
+        );
+      }
+
+      function renderDimEditorBodyHtml(draft) {
+        if (!draft.dimEditorDraft) return "";
+        var isMulti = draft.round === "multiRound";
+        var dim = ensureDimEditorShape(draft.dimEditorDraft, isMulti);
+        return (
+          "<div class='qty-sub-label'>人数区间</div>" +
+          renderDimPersonRangesHtml(dim) +
+          (isMulti
+            ? "<div class='qty-sub-label' style='margin-top:12px;'>轮次区间</div>" + renderDimRoundsHtml(dim)
+            : "") +
+          "<p class='person-range-hint'>保存后将重建场景胶囊；删除的区间对应数量会一并移除。</p>"
+        );
+      }
+
+      function syncDimEditorModal() {
+        var mask = document.getElementById("dimEditorMask");
+        var body = document.getElementById("dimEditorBody");
+        var title = document.getElementById("dimEditorTitle");
+        if (!mask || !body || !state.draft) return;
+        var draft = state.draft;
+        if (!draft.dimEditorOpen || !draft.dimEditorDraft) {
+          mask.style.display = "none";
+          body.innerHTML = "";
+          return;
+        }
+        var isMulti = draft.round === "multiRound";
+        if (title) title.textContent = isMulti ? "编辑人数 / 轮次区间" : "编辑人数区间";
+        body.innerHTML = renderDimEditorBodyHtml(draft);
+        mask.style.display = "flex";
+      }
+
+      function openDimEditor() {
+        var draft = state.draft;
+        if (!draft) return;
+        draft.dimEditorOpen = true;
+        draft.dimEditorDraft = cloneDimEditorDraft(draft);
+        draft.copySceneOpen = false;
+        syncDimEditorModal();
+      }
+
+      function closeDimEditor() {
+        var draft = state.draft;
+        if (draft) {
+          draft.dimEditorOpen = false;
+          draft.dimEditorDraft = null;
+        }
+        syncDimEditorModal();
+      }
+
+      function renderCopyScenePanelHtml(draft, scenes, activeScene) {
+        if (!draft.copySceneOpen || !activeScene) return "";
+        var targets = scenes.filter(function (s) { return s.id !== activeScene.id; });
+        var selected = Array.isArray(draft.copyTargetSceneIds) ? draft.copyTargetSceneIds : [];
+        var selectedSet = {};
+        selected.forEach(function (id) { selectedSet[id] = true; });
+        if (!targets.length) {
+          return (
+            "<div class='qty-panel' id='wCopyScenePanel'>" +
+              "<div class='qty-panel-title'>复制到其他场景</div>" +
+              "<p class='qty-hint'>当前只有一个场景，无需复制。</p>" +
+              "<div class='qty-panel-actions'>" +
+                "<button type='button' class='btn' data-qty-copy-cancel='1'>关闭</button>" +
+              "</div>" +
+            "</div>"
+          );
+        }
+        var list = targets.map(function (s) {
+          var checked = selectedSet[s.id] ? " checked" : "";
+          var cls = selectedSet[s.id] ? " is-checked" : "";
+          return (
+            "<label class='qty-copy-item" + cls + "'>" +
+              "<input type='checkbox' data-qty-copy-target='" + esc(s.id) + "'" + checked + " />" +
+              "<span>" + esc(s.label) + "</span>" +
+            "</label>"
+          );
+        }).join("");
+        var onlyLine = draft.copyCurrentLineOnly !== false;
+        var lineLabel = draft.activeQtyLine || "";
+        if (MenuPicker && draft.activeQtyLine) {
+          var lo = (MenuPicker.LINE_OPTIONS || []).find(function (l) { return l.id === draft.activeQtyLine; });
+          if (lo) lineLabel = lo.label;
+        }
+        return (
+          "<div class='qty-panel' id='wCopyScenePanel'>" +
+            "<div class='qty-panel-title'>复制到其他场景</div>" +
+            "<p class='qty-hint' style='margin-top:0;'>将「" + esc(activeScene.label) + "」的数量复制并覆盖到所选场景</p>" +
+            "<div class='qty-copy-list'>" + list + "</div>" +
+            "<label style='display:flex;align-items:center;gap:8px;font-size:12px;'>" +
+              "<input type='checkbox' data-qty-copy-line-only='1'" + (onlyLine ? " checked" : "") + " />" +
+              "<span>仅复制当前产线" + (lineLabel ? "（" + esc(lineLabel) + "）" : "") + "</span>" +
+            "</label>" +
+            "<div class='qty-panel-actions'>" +
+              "<button type='button' class='btn' data-qty-copy-cancel='1'>取消</button>" +
+              "<button type='button' class='btn btn-primary' data-qty-copy-apply='1'>复制并覆盖</button>" +
+            "</div>" +
+          "</div>"
+        );
+      }
+
+      function renderQtySectionHtml(draft, method) {
+        if (!MenuPicker) return "<div style='font-size:12px;color:#6b7280;'>商品结构选择器未加载</div>";
+        ensurePersonRangesShape(draft);
+        if (draft.round === "multiRound" && !(draft.roundRanges && draft.roundRanges.length)) {
+          draft.roundRanges = [createEmptyRoundRange(1, 99)];
+          draft.activeRound = 0;
+          ensurePersonRangesShape(draft);
+        }
         var byLine = getDraftStructureByLine(draft);
-        var qtyMap = getQtyMap(draft, isMulti, currentRound);
         var lineOpts = getQtyLineOptions(byLine, method);
-        var roundBlock = "";
-        if (isMulti) {
-          roundBlock =
-            "<div class='qty-round-block'>" +
-              "<div class='qty-sub-label'>轮次</div>" +
-              renderRoundTabsHtml(draft) +
-              "<p class='qty-hint'>同一商品可在不同轮次设置不同限购数量；填 0 表示该轮不可点</p>" +
-            "</div>";
-        }
+        var scenes = listQtyScenes(draft);
+        var activeScene = resolveSceneSelection(draft);
+
+        var sceneChips = scenes.map(function (scene) {
+          var status = getSceneCompletion(draft, scene, lineOpts, method);
+          var meta = completionLabel(status);
+          var active = activeScene && scene.id === activeScene.id ? " active" : "";
+          return (
+            "<button type='button' class='qty-scene-chip" + active + "' data-qty-scene='" + esc(scene.id) + "'" +
+              " data-person-index='" + scene.personIndex + "'" +
+              (scene.roundIndex != null ? " data-scene-round='" + scene.roundIndex + "'" : "") + ">" +
+              "<span>" + esc(scene.label) + "</span>" +
+              "<span class='qty-scene-status " + meta.cls + "'>" + meta.text + "</span>" +
+            "</button>"
+          );
+        }).join("");
+
+        var sceneBlock =
+          "<div class='qty-scene-block'>" +
+            "<div class='qty-scene-head'>" +
+              "<div>" +
+                "<strong>配置场景</strong>" +
+                "<p class='qty-hint'>每个场景 = 人数区间" + (draft.round === "multiRound" ? " × 轮次区间" : "") + "。先选场景，再填数量。</p>" +
+              "</div>" +
+              "<button type='button' class='btn' data-dim-edit-open='1'>编辑人数" +
+                (draft.round === "multiRound" ? " / 轮次区间" : "") + "</button>" +
+            "</div>" +
+            "<div class='qty-scene-chips'>" + (sceneChips || "<span class='qty-hint'>暂无场景</span>") + "</div>" +
+          "</div>";
+
         if (!lineOpts.length) {
-          return roundBlock + "<div style='font-size:12px;color:#6b7280;'>请先选择至少一项</div>";
+          return (
+            sceneBlock +
+            "<div style='font-size:12px;color:#6b7280;'>请先在「详细配置」步骤选择商品</div>"
+          );
         }
+
         var activeLine = resolveActiveQtyLine(draft, byLine, method);
         draft.activeQtyLine = activeLine;
-        var tabs =
+        var lineTabs =
           "<div class='qty-sub-label'>产线</div>" +
           "<div class='qty-line-tabs'>" +
-          lineOpts.map(function (line) {
-            var active = line.id === activeLine ? " active" : "";
-            return (
-              "<button type='button' class='btn qty-line-tab" + active + "' data-qty-line='" + esc(line.id) + "'>" +
-                "<span>" + esc(line.label) + "</span>" +
-                "<span class='qty-line-count'>" + line.count + "</span>" +
-              "</button>"
-            );
-          }).join("") +
+            lineOpts.map(function (line) {
+              var active = line.id === activeLine ? " active" : "";
+              return (
+                "<button type='button' class='btn qty-line-tab" + active + "' data-qty-line='" + esc(line.id) + "'>" +
+                  esc(line.label) +
+                  "<span class='qty-line-count'>" + line.count + "</span>" +
+                "</button>"
+              );
+            }).join("") +
           "</div>";
+
+        var contextParts = [activeScene ? activeScene.label : ""];
+        var lineMeta = lineOpts.find(function (l) { return l.id === activeLine; });
+        if (lineMeta) contextParts.push(lineMeta.label);
+        var contextHint =
+          "<div class='qty-context-hint'>正在编辑：<strong>" + esc(contextParts.filter(Boolean).join(" · ")) + "</strong></div>";
+
+        var qtyMap = getQtyMap(draft);
         var items = listQtyItems(byLine, method).filter(function (it) { return it.lineId === activeLine; });
         var visibleKeys = items.map(function (item) { return qtyKeyForItem(method, item); });
         var selectedKeys = normalizeSelectedQtyKeys(draft, visibleKeys);
@@ -1390,12 +2009,14 @@
             "<button type='button' class='btn' data-qty-select-all='1'>" + (allSelected ? "取消全选" : "全选") + "</button>" +
             "<button type='button' class='btn' data-qty-clear-select='1'" + (selectedKeys.length ? "" : " disabled") + ">清空选择</button>" +
             "<span class='qty-batch-count'>已选 " + selectedKeys.length + " 项</span>" +
+            "<button type='button' class='btn' data-qty-copy-open='1'>复制到其他场景…</button>" +
             "<div class='qty-batch-apply'>" +
               "<span style='font-size:12px;color:#64748b;'>批量数量</span>" +
               "<input class='input' type='number' min='0' id='wBatchQty' data-batch-qty-input='1' value='" + esc(batchValue) + "' placeholder='如 3' />" +
               "<button type='button' class='btn btn-primary' data-qty-batch-apply='1'" + (selectedKeys.length ? "" : " disabled") + ">应用到所选</button>" +
             "</div>" +
           "</div>";
+
         var rows = items.map(function (item) {
           var key = qtyKeyForItem(method, item);
           var value = qtyMap[key] != null ? qtyMap[key] : 0;
@@ -1409,21 +2030,30 @@
             "</div>"
           );
         }).join("");
-        return roundBlock + tabs + batchBar + "<div class='qty-list' id='wQtyList'>" + rows + "</div>";
+
+        return (
+          sceneBlock +
+          lineTabs +
+          contextHint +
+          batchBar +
+          renderCopyScenePanelHtml(draft, scenes, activeScene) +
+          "<div class='qty-list' id='wQtyList'>" + rows + "</div>"
+        );
+      }
+
+      function refreshStructureSummaryUi() {
+        var draft = state.draft;
+        if (!draft || !MenuPicker) return;
+        var summaryEl = document.getElementById("wStructureSummary");
+        if (!summaryEl) return;
+        summaryEl.textContent = MenuPicker.formatSummary(getDraftStructureByLine(draft));
       }
 
       function refreshStructureQtyUi() {
         var draft = state.draft;
-        if (!draft || draft.step !== 2 || !MenuPicker) return;
-        var isMulti = draft.round === "multiRound";
-        var currentRound = isMulti ? draft.rounds[draft.activeRound] : null;
-        var byLine = getDraftStructureByLine(draft);
-        var summaryEl = document.getElementById("wStructureSummary");
-        if (summaryEl) summaryEl.textContent = MenuPicker.formatSummary(byLine);
+        if (!draft || draft.step !== 3 || !MenuPicker) return;
         var qtySec = document.getElementById("wQtySection");
-        if (qtySec) {
-          qtySec.innerHTML = renderQtySectionHtml(draft, isMulti, currentRound, draft.method);
-        }
+        if (qtySec) qtySec.innerHTML = renderQtySectionHtml(draft, draft.method);
       }
 
       function typeKeyToLabel(type) {
@@ -1451,14 +2081,30 @@
       function labelToMethodKey(method) { return method === "按每种菜品限购" ? "perDish" : "perCategory"; }
 
       function parsePersonRanges(persons) {
-        if (persons.indexOf("所有") >= 0) return [{ min: 1, max: 99 }];
-        var parts = persons.split("，");
+        if (!persons) return [{ min: 1, max: 99 }];
+        if (persons.indexOf("所有") >= 0 || persons.indexOf("不限") >= 0) return [{ min: 1, max: 99 }];
+        var parts = String(persons).split(/\s*[/，,]\s*/);
         var out = [];
         for (var i = 0; i < parts.length; i++) {
-          var m = parts[i].match(/(\d+)-(\d+)/);
-          if (m) out.push({ min: Number(m[1]), max: Number(m[2]) });
+          var part = parts[i];
+          if (!part) continue;
+          var mRange = part.match(/(\d+)\s*[-~～至]+\s*(\d+)/);
+          if (mRange) {
+            out.push({ min: Number(mRange[1]), max: Number(mRange[2]) });
+            continue;
+          }
+          var mPlus = part.match(/(\d+)\s*人及以上/);
+          if (mPlus) {
+            out.push({ min: Number(mPlus[1]), max: 99 });
+            continue;
+          }
+          var mSingle = part.match(/(\d+)\s*人/);
+          if (mSingle) {
+            var n = Number(mSingle[1]);
+            out.push({ min: n, max: n });
+          }
         }
-        return out.length ? out : [{ min: 1, max: 4 }];
+        return out.length ? out : [{ min: 1, max: 99 }];
       }
 
       function ruleToDraft(rule) {
@@ -1499,7 +2145,7 @@
             }
           }
         }
-        return {
+        var draft = {
           step: 1,
           type: labelToTypeKey(rule.type),
           round: labelToRoundKey(rule.round),
@@ -1507,6 +2153,7 @@
           name: rule.name,
           description: rule.description,
           personRanges: parsePersonRanges(rule.persons),
+          activePersonRange: 0,
           structureByLine: structureByLine,
           selectedCategories: selectedCategories,
           selectedDishes: selectedDishes,
@@ -1518,16 +2165,17 @@
           maxPerPersonQuantity: rule.maxPerPersonQuantity,
           minSingleOrder: rule.minSingleOrder,
           maxSingleOrder: rule.maxSingleOrder,
-          rounds: (rule.rounds || []).map(function (r) {
-            return {
-              roundName: r.roundName || "轮次",
-              quantitySettings: Object.assign({}, r.quantitySettings || {})
-            };
-          }),
+          rounds: (rule.rounds || []).slice(),
+          roundRanges: normalizeRoundRangesList(rule.roundRanges && rule.roundRanges.length ? rule.roundRanges : rule.rounds),
           activeRound: 0,
           activeQtyLine: null,
           selectedQtyKeys: [],
           batchQtyValue: "",
+          dimEditorOpen: false,
+          dimEditorDraft: null,
+          copySceneOpen: false,
+          copyTargetSceneIds: [],
+          copyCurrentLineOnly: true,
           enableMemberLevels: !!rule.enableMemberLevels,
           selectedMemberLevels: (rule.memberLevels || []).slice(),
           enableTimeSettings: !!rule.enableTimeSettings,
@@ -1537,18 +2185,51 @@
           weekdayTimeRanges: weekdayMap,
           maxRounds: rule.maxRounds
         };
+        // 迁移：优先使用新结构 personRanges；否则从旧 quantitySettings / rounds 灌入第一档区间
+        if (Array.isArray(rule.personRanges) && rule.personRanges.length) {
+          draft.personRanges = rule.personRanges.map(function (pr) {
+            return {
+              min: Number(pr.min) || 1,
+              max: Number(pr.max) || 99,
+              quantitySettings: Object.assign({}, pr.quantitySettings || {}),
+              roundQuantities: Array.isArray(pr.roundQuantities)
+                ? pr.roundQuantities.map(function (rq) {
+                    return { quantitySettings: Object.assign({}, (rq && rq.quantitySettings) || {}) };
+                  })
+                : []
+            };
+          });
+        } else {
+          var legacyRanges = parsePersonRanges(rule.persons || "1-99人");
+          var roundCount = (rule.rounds || []).length;
+          draft.personRanges = legacyRanges.map(function (r, idx) {
+            var pr = createEmptyPersonRange(r.min, r.max, roundCount);
+            if (idx === 0) {
+              pr.quantitySettings = Object.assign({}, rule.quantitySettings || {});
+              if (rule.rounds && rule.rounds.length) {
+                pr.roundQuantities = rule.rounds.map(function (rr) {
+                  return { quantitySettings: Object.assign({}, rr.quantitySettings || {}) };
+                });
+              }
+            }
+            return pr;
+          });
+        }
+        ensurePersonRangesShape(draft);
+        return draft;
       }
 
       function buildDishesSummary(draft) {
         if (!MenuPicker) return "未选商品";
         var summary = MenuPicker.formatSummary(MenuPicker.normalizeByLine(draft.structureByLine));
         if (draft.round === "multiRound") {
-          return summary + "（" + draft.rounds.length + " 轮数量配置）";
+          return summary + "（" + (draft.roundRanges || []).length + " 个轮次区间）";
         }
         return summary;
       }
 
       function draftToRule(draft, existing) {
+        ensurePersonRangesShape(draft);
         var isMulti = draft.round === "multiRound";
         var weekdayTimeRanges = undefined;
         if (draft.enableTimeSettings && draft.selectedWeekdays && draft.selectedWeekdays.length) {
@@ -1566,13 +2247,27 @@
         var selectedBusinessHourIds = draft.enableTimeSettings
           ? (draft.selectedBusinessHourIds || []).slice()
           : [];
+        var personRanges = draft.personRanges.map(function (pr) {
+          return {
+            min: Number(pr.min) || 1,
+            max: Number(pr.max) || 99,
+            quantitySettings: isMulti ? undefined : Object.assign({}, pr.quantitySettings || {}),
+            roundQuantities: isMulti
+              ? (pr.roundQuantities || []).map(function (rq) {
+                  return { quantitySettings: Object.assign({}, (rq && rq.quantitySettings) || {}) };
+                })
+              : undefined
+          };
+        });
+        var firstPr = personRanges[0] || createEmptyPersonRange(1, 99, 0);
         return {
           id: existing ? existing.id : 0,
           name: draft.name.trim(),
           type: typeKeyToLabel(draft.type),
           round: roundKeyToLabel(draft.round),
           method: methodKeyToLabel(draft.method),
-          persons: (draft.personRanges || []).map(function (r) { return r.min + "-" + r.max + "人"; }).join("，") || "1-4人",
+          persons: formatPersonRangesSummary(personRanges),
+          personRanges: personRanges,
           dishes: buildDishesSummary(draft),
           status: existing ? existing.status : "active",
           created: existing ? existing.created : new Date().toISOString().split("T")[0],
@@ -1581,14 +2276,17 @@
           selectedCategories: draft.selectedCategories,
           selectedDishes: draft.selectedDishes,
           rounds: isMulti
-            ? draft.rounds.map(function (r) {
-                return {
-                  roundName: r.roundName,
-                  quantitySettings: Object.assign({}, r.quantitySettings || {})
-                };
+            ? (draft.roundRanges || []).map(function (r) {
+                return { min: Number(r.min) || 1, max: Number(r.max) || 99 };
               })
             : undefined,
-          quantitySettings: !isMulti ? draft.quantitySettings : undefined,
+          roundRanges: isMulti
+            ? (draft.roundRanges || []).map(function (r) {
+                return { min: Number(r.min) || 1, max: Number(r.max) || 99 };
+              })
+            : undefined,
+          // 兼容旧模拟器：保留第一档数量快照
+          quantitySettings: !isMulti ? Object.assign({}, firstPr.quantitySettings || {}) : undefined,
           maxSameDishSettings: !isMulti ? draft.maxSameDishSettings : undefined,
           minTotalQuantity: !isMulti ? draft.minTotalQuantity : undefined,
           maxTotalQuantity: !isMulti ? draft.maxTotalQuantity : undefined,
@@ -1609,7 +2307,36 @@
         };
       }
 
+      function validateDraftStep2(draft) {
+        if (!draft.name.trim()) return "请输入规则名称";
+        var byLine = MenuPicker
+          ? MenuPicker.normalizeByLine(draft.structureByLine)
+          : emptyStructureByLine();
+        if (!MenuPicker || MenuPicker.countDishes(byLine) <= 0) return "请至少选择一个商品";
+        return null;
+      }
+
       function validateDraftStep3(draft) {
+        ensurePersonRangesShape(draft);
+        var personErr = validatePersonRanges(draft.personRanges);
+        if (personErr) return personErr;
+        if (draft.round === "multiRound") {
+          var roundErr = validateRoundRanges(draft.roundRanges);
+          if (roundErr) return roundErr;
+        }
+        var anyQty = draft.personRanges.some(function (pr) {
+          if (draft.round === "multiRound") {
+            return (pr.roundQuantities || []).some(function (rq) {
+              return Object.values((rq && rq.quantitySettings) || {}).some(function (v) { return Number(v) > 0; });
+            });
+          }
+          return Object.values(pr.quantitySettings || {}).some(function (v) { return Number(v) > 0; });
+        });
+        if (!anyQty) return "请至少在某一人数区间设置大于 0 的限购数量（填 0 表示不可点）";
+        return null;
+      }
+
+      function validateDraftStep4(draft) {
         if (!draft.enableTimeSettings) return null;
         if (!(draft.selectedBusinessHourIds || []).length) {
           return "请至少选择一个营业时间段";
@@ -1617,62 +2344,58 @@
         return null;
       }
 
-      function validateDraftStep2(draft) {
-        if (!draft.name.trim()) return "请输入规则名称";
-        if (!draft.personRanges.length) return "请至少设置一个人数区间";
-        var byLine = MenuPicker
-          ? MenuPicker.normalizeByLine(draft.structureByLine)
-          : emptyStructureByLine();
-        if (!MenuPicker || MenuPicker.countDishes(byLine) <= 0) return "请至少选择一个商品";
-        if (draft.round === "multiRound") {
-          if (!draft.rounds.length) return "请至少添加一个轮次";
-          var anyQty = draft.rounds.some(function (round) {
-            return Object.values(round.quantitySettings || {}).some(function (v) { return Number(v) > 0; });
-          });
-          if (!anyQty) return "请至少在某一轮设置大于 0 的限购数量（填 0 表示该轮不可点）";
-          return null;
-        }
-        var hasQty2 = Object.values(draft.quantitySettings || {}).some(function (v) { return v > 0; });
-        if (!hasQty2) return "请至少设置一个限购数量";
-        return null;
-      }
-
       function getCategoryIdByName(name) {
         var c = dishCategories.find(function (x) { return x.name === name; });
         return c ? c.id : undefined;
       }
-      function getRoundSettings(rule, round) {
+      function getRoundSettings(rule, round, personCount) {
+        var ranges = rule.personRanges || [];
+        var prIdx = findPersonRangeIndexByCount(ranges, personCount);
+        if (prIdx < 0) {
+          return {
+            roundName: "人数未覆盖",
+            selectedCategories: rule.selectedCategories || [],
+            selectedDishes: rule.selectedDishes || [],
+            quantitySettings: {},
+            unavailable: true,
+            unavailableReason: "当前就餐人数未命中规则的人数区间"
+          };
+        }
+        var pr = ranges[prIdx];
         var isMultiRound = rule.round === "多轮";
-        var roundConfig = rule.rounds && rule.rounds[round - 1];
         if (isMultiRound) {
-          if (!roundConfig) {
+          var roundRanges = normalizeRoundRangesList(rule.roundRanges && rule.roundRanges.length ? rule.roundRanges : rule.rounds);
+          var rrIdx = findRoundRangeIndexByRound(roundRanges, round);
+          var rq = rrIdx >= 0 ? (pr.roundQuantities || [])[rrIdx] : null;
+          if (rrIdx < 0 || !rq) {
             return {
-              roundName: "未配置轮次",
+              roundName: "轮次未覆盖",
               selectedCategories: rule.selectedCategories || [],
               selectedDishes: rule.selectedDishes || [],
               quantitySettings: {},
-              unavailable: true
+              unavailable: true,
+              unavailableReason: "第 " + round + " 轮未命中规则的轮次区间"
             };
           }
           return {
-            roundName: roundConfig.roundName,
+            roundName: formatRoundRangeLabel(roundRanges[rrIdx]),
             selectedCategories: rule.selectedCategories || [],
             selectedDishes: rule.selectedDishes || [],
-            quantitySettings: roundConfig.quantitySettings || {},
-            maxSameDishSettings: roundConfig.maxSameDishSettings || rule.maxSameDishSettings,
-            minTotalQuantity: roundConfig.minTotalQuantity != null ? roundConfig.minTotalQuantity : rule.minTotalQuantity,
-            maxTotalQuantity: roundConfig.maxTotalQuantity != null ? roundConfig.maxTotalQuantity : rule.maxTotalQuantity,
-            minPerPersonQuantity: roundConfig.minPerPersonQuantity != null ? roundConfig.minPerPersonQuantity : rule.minPerPersonQuantity,
-            maxPerPersonQuantity: roundConfig.maxPerPersonQuantity != null ? roundConfig.maxPerPersonQuantity : rule.maxPerPersonQuantity,
-            minSingleOrder: roundConfig.minSingleOrder != null ? roundConfig.minSingleOrder : rule.minSingleOrder,
-            maxSingleOrder: roundConfig.maxSingleOrder != null ? roundConfig.maxSingleOrder : rule.maxSingleOrder
+            quantitySettings: rq.quantitySettings || {},
+            maxSameDishSettings: rule.maxSameDishSettings,
+            minTotalQuantity: rule.minTotalQuantity,
+            maxTotalQuantity: rule.maxTotalQuantity,
+            minPerPersonQuantity: rule.minPerPersonQuantity,
+            maxPerPersonQuantity: rule.maxPerPersonQuantity,
+            minSingleOrder: rule.minSingleOrder,
+            maxSingleOrder: rule.maxSingleOrder
           };
         }
         return {
           roundName: "单轮",
           selectedCategories: rule.selectedCategories || [],
           selectedDishes: rule.selectedDishes || [],
-          quantitySettings: rule.quantitySettings || {},
+          quantitySettings: pr.quantitySettings || rule.quantitySettings || {},
           maxSameDishSettings: rule.maxSameDishSettings,
           minTotalQuantity: rule.minTotalQuantity,
           maxTotalQuantity: rule.maxTotalQuantity,
@@ -1687,10 +2410,10 @@
         var personCount = ctx.personCount;
         var currentRoundItems = ctx.currentRoundItems;
         var isPerTable = rule.type === "按桌/订单限购";
-        var settings = getRoundSettings(rule, newItem.round);
+        var settings = getRoundSettings(rule, newItem.round, personCount);
 
         if (settings.unavailable) {
-          violations.push({ type: "error", message: "第 " + newItem.round + " 轮未配置限购数量，无法下单" });
+          violations.push({ type: "error", message: settings.unavailableReason || ("第 " + newItem.round + " 轮未配置限购数量，无法下单") });
           return violations;
         }
         if (rule.maxRounds !== undefined && newItem.round > rule.maxRounds) {
@@ -1978,7 +2701,12 @@
       function closeWizard() {
         state.wizardOpen = false;
         state.editingRuleId = null;
+        if (state.draft) {
+          state.draft.dimEditorOpen = false;
+          state.draft.dimEditorDraft = null;
+        }
         document.getElementById("wizardMask").style.display = "none";
+        syncDimEditorModal();
         document.body.style.overflow = "";
       }
 
@@ -2001,7 +2729,7 @@
           "</div></div>" +
           "<div class='wizard-sec wizard-sec--plain'><h4>限购轮次</h4><div class='choice-grid three'>" +
             choice("round", "perRound", draft.round, "每轮", "每轮独立计算") +
-            choice("round", "multiRound", draft.round, "多轮", "同商品各轮数量可不同") +
+            choice("round", "multiRound", draft.round, "多轮", "按轮次区间设不同数量") +
             choice("round", "ignoreRound", draft.round, "与轮次无关", "全程总量限制") +
           "</div></div>" +
           "<div class='wizard-sec wizard-sec--plain'><h4>限购方式</h4><div class='choice-grid'>" +
@@ -2012,29 +2740,14 @@
         );
       }
 
-      function selectedEntityIds(draft, isMulti, currentRound, method) {
-        if (isMulti && currentRound) {
-          return method === "perCategory" ? currentRound.selectedCategories : currentRound.selectedDishes;
-        }
-        return method === "perCategory" ? draft.selectedCategories : draft.selectedDishes;
-      }
-
-      function getQtyMap(draft, isMulti, currentRound) {
-        return isMulti && currentRound ? currentRound.quantitySettings : draft.quantitySettings;
-      }
-
       function renderStepConfig() {
         var draft = state.draft;
-        var isMulti = draft.round === "multiRound";
-        var currentRound = isMulti ? draft.rounds[draft.activeRound] : null;
-        var method = draft.method;
         var byLine = getDraftStructureByLine(draft);
-
+        var pickerOpts = { leafLevel: draft.method === "perCategory" ? "category" : "dish" };
         var structureHtml = MenuPicker
-          ? MenuPicker.renderHtml(byLine)
+          ? MenuPicker.renderHtml(byLine, null, null, null, pickerOpts)
           : "<div style='font-size:12px;color:#b91c1c;'>商品结构选择器未加载</div>";
         var summaryText = MenuPicker ? MenuPicker.formatSummary(byLine) : "未选商品";
-        var qtySection = renderQtySectionHtml(draft, isMulti, currentRound, method);
 
         return (
           "<div class='wizard-sec'><h4>基础信息</h4>" +
@@ -2042,9 +2755,21 @@
             "<div class='field'><label>规则描述</label><textarea class='textarea' id='wDesc'>" + esc(draft.description) + "</textarea></div>" +
           "</div>" +
           "<div class='wizard-sec'><h4>选择商品</h4>" +
+            (draft.method === "perCategory"
+              ? "<p class='structure-summary'>按分类限购：请勾选组 / 类（不展示菜品）</p>"
+              : "") +
             "<p class='structure-summary' id='wStructureSummary'>" + esc(summaryText) + "</p>" +
             structureHtml +
-          "</div>" +
+          "</div>"
+        );
+      }
+
+      function renderStepQuantity() {
+        var draft = state.draft;
+        ensurePersonRangesShape(draft);
+        var isMulti = draft.round === "multiRound";
+        var qtySection = renderQtySectionHtml(draft, draft.method);
+        return (
           "<div class='wizard-sec'><h4>限购数量</h4><div id='wQtySection'>" + qtySection + "</div></div>" +
           (!isMulti
             ? "<div class='wizard-sec'><h4>附加限制</h4><div style='display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;'>" +
@@ -2117,7 +2842,10 @@
           "<div class='wizard-sec'><div class='confirm-list'>" +
             cRow("名称", rule.name) +
             cRow("类型", rule.type + " / " + rule.round + " / " + rule.method) +
-            cRow("人数", rule.persons) +
+            cRow("人数", formatPersonRangesSummary(draft.personRanges)) +
+            (draft.round === "multiRound"
+              ? cRow("轮次区间", formatRoundRangesSummary(draft.roundRanges))
+              : "") +
             cRow("关联", rule.dishes) +
             cRow("时间", timeLabel) +
             cRow("描述", rule.description) +
@@ -2141,16 +2869,21 @@
         if (state.draft.step === 2) {
           content.innerHTML = renderStepConfig();
           var picker = content.querySelector("[data-brand-menu-structure-picker]");
-          if (picker && MenuPicker) MenuPicker.bind(picker);
+          if (picker && MenuPicker) {
+            MenuPicker.bind(picker, {
+              leafLevel: state.draft.method === "perCategory" ? "category" : "dish"
+            });
+          }
         }
-        if (state.draft.step === 3) content.innerHTML = renderStepTime();
-        if (state.draft.step === 4) content.innerHTML = renderStepMember();
-        if (state.draft.step === 5) content.innerHTML = renderStepConfirm();
+        if (state.draft.step === 3) content.innerHTML = renderStepQuantity();
+        if (state.draft.step === 4) content.innerHTML = renderStepTime();
+        if (state.draft.step === 5) content.innerHTML = renderStepMember();
+        if (state.draft.step === 6) content.innerHTML = renderStepConfirm();
 
         var prevBtn = document.getElementById("wizardPrev");
         prevBtn.style.visibility = state.draft.step === 1 ? "hidden" : "visible";
         prevBtn.disabled = state.draft.step === 1;
-        document.getElementById("wizardNext").textContent = state.draft.step === 5
+        document.getElementById("wizardNext").textContent = state.draft.step === 6
           ? (state.editingRuleId != null ? "更新规则" : "保存规则")
           : "下一步";
       }
@@ -2159,9 +2892,10 @@
         var d = state.draft;
         if (d.step === 1) {
           if (!d.type || !d.round || !d.method) { showToast("请完成规则类型选择"); return; }
-          if (d.round === "multiRound" && d.rounds.length === 0) {
-            d.rounds = [createEmptyRound("第一轮")];
+          if (d.round === "multiRound" && !(d.roundRanges && d.roundRanges.length)) {
+            d.roundRanges = [createEmptyRoundRange(1, 99)];
             d.activeRound = 0;
+            ensurePersonRangesShape(d);
           }
           d.step = 2;
           renderWizard();
@@ -2170,19 +2904,29 @@
         if (d.step === 2) {
           var err = validateDraftStep2(d);
           if (err) { showToast(err); return; }
+          d.dimEditorOpen = false;
+          d.dimEditorDraft = null;
+          d.copySceneOpen = false;
           d.step = 3;
           renderWizard();
           return;
         }
         if (d.step === 3) {
-          var timeErr = validateDraftStep3(d);
-          if (timeErr) { showToast(timeErr); return; }
+          var qtyErr = validateDraftStep3(d);
+          if (qtyErr) { showToast(qtyErr); return; }
           d.step = 4;
           renderWizard();
           return;
         }
-        if (d.step === 4) { d.step = 5; renderWizard(); return; }
-        if (d.step === 5) {
+        if (d.step === 4) {
+          var timeErr = validateDraftStep4(d);
+          if (timeErr) { showToast(timeErr); return; }
+          d.step = 5;
+          renderWizard();
+          return;
+        }
+        if (d.step === 5) { d.step = 6; renderWizard(); return; }
+        if (d.step === 6) {
           if (state.editingRuleId != null) {
             state.rules = state.rules.map(function (r) {
               if (r.id !== state.editingRuleId) return r;
@@ -2337,7 +3081,13 @@
 
         var mask = e.target.closest("#wizardMask");
         if (mask && e.target.id === "wizardMask") {
+          if (state.draft && state.draft.dimEditorOpen) return;
           closeWizard();
+          return;
+        }
+        var dimMask = e.target.closest("#dimEditorMask");
+        if (dimMask && e.target.id === "dimEditorMask") {
+          closeDimEditor();
           return;
         }
 
@@ -2349,13 +3099,148 @@
           renderWizard();
           return;
         }
-        var roundTab = e.target.closest("[data-round-index]");
-        if (roundTab) {
-          d.activeRound = Number(roundTab.getAttribute("data-round-index"));
+
+        var qtySceneBtn = e.target.closest("[data-qty-scene]");
+        if (qtySceneBtn) {
+          d.activePersonRange = Number(qtySceneBtn.getAttribute("data-person-index")) || 0;
+          var sceneRound = qtySceneBtn.getAttribute("data-scene-round");
+          if (sceneRound != null) d.activeRound = Number(sceneRound) || 0;
           d.selectedQtyKeys = [];
+          d.batchQtyValue = "";
+          d.copySceneOpen = false;
           refreshStructureQtyUi();
           return;
         }
+
+        var dimEditOpen = e.target.closest("[data-dim-edit-open]");
+        if (dimEditOpen) {
+          openDimEditor();
+          return;
+        }
+        var dimEditCancel = e.target.closest("[data-dim-edit-cancel]");
+        if (dimEditCancel) {
+          closeDimEditor();
+          return;
+        }
+        var dimEditSave = e.target.closest("[data-dim-edit-save]");
+        if (dimEditSave) {
+          if (!d.dimEditorDraft) return;
+          var isMultiSave = d.round === "multiRound";
+          ensureDimEditorShape(d.dimEditorDraft, isMultiSave);
+          var dimErr = validatePersonRanges(d.dimEditorDraft.personRanges);
+          if (dimErr) { showToast(dimErr); return; }
+          if (isMultiSave) {
+            var roundDimErr = validateRoundRanges(d.dimEditorDraft.roundRanges);
+            if (roundDimErr) { showToast(roundDimErr); return; }
+          }
+          d.personRanges = d.dimEditorDraft.personRanges;
+          if (isMultiSave) d.roundRanges = d.dimEditorDraft.roundRanges;
+          else d.roundRanges = d.roundRanges || [];
+          ensurePersonRangesShape(d);
+          resolveSceneSelection(d);
+          closeDimEditor();
+          d.selectedQtyKeys = [];
+          showToast("维度已更新");
+          refreshStructureQtyUi();
+          return;
+        }
+        var dimPersonAdd = e.target.closest("[data-dim-person-add]");
+        if (dimPersonAdd && d.dimEditorDraft) {
+          ensureDimEditorShape(d.dimEditorDraft, d.round === "multiRound");
+          var lastPr = d.dimEditorDraft.personRanges[d.dimEditorDraft.personRanges.length - 1];
+          var nextMin = lastPr ? Number(lastPr.max) + 1 : 1;
+          if (nextMin > 99) nextMin = 99;
+          d.dimEditorDraft.personRanges.push(
+            createEmptyPersonRange(nextMin, 99, d.round === "multiRound" ? d.dimEditorDraft.roundRanges.length : 0)
+          );
+          syncDimEditorModal();
+          return;
+        }
+        var dimPersonDel = e.target.closest("[data-dim-person-del]");
+        if (dimPersonDel && d.dimEditorDraft) {
+          var pDel = Number(dimPersonDel.getAttribute("data-dim-person-del"));
+          if (d.dimEditorDraft.personRanges.length > 1 && Number.isFinite(pDel)) {
+            d.dimEditorDraft.personRanges.splice(pDel, 1);
+            syncDimEditorModal();
+          }
+          return;
+        }
+        var dimRoundAdd = e.target.closest("[data-dim-round-add]");
+        if (dimRoundAdd && d.dimEditorDraft) {
+          ensureDimEditorShape(d.dimEditorDraft, true);
+          var lastRr = d.dimEditorDraft.roundRanges[d.dimEditorDraft.roundRanges.length - 1];
+          var nextRoundMin = lastRr ? Number(lastRr.max) + 1 : 1;
+          if (nextRoundMin > 99) nextRoundMin = 99;
+          d.dimEditorDraft.roundRanges.push(createEmptyRoundRange(nextRoundMin, 99));
+          ensureDimEditorShape(d.dimEditorDraft, true);
+          syncDimEditorModal();
+          return;
+        }
+        var dimRoundDel = e.target.closest("[data-dim-round-del]");
+        if (dimRoundDel && d.dimEditorDraft) {
+          var rDel = Number(dimRoundDel.getAttribute("data-dim-round-del"));
+          if (Number.isFinite(rDel) && d.dimEditorDraft.roundRanges.length > 1) {
+            d.dimEditorDraft.roundRanges.splice(rDel, 1);
+            d.dimEditorDraft.personRanges.forEach(function (pr) {
+              if (pr.roundQuantities && pr.roundQuantities.length > rDel) pr.roundQuantities.splice(rDel, 1);
+            });
+            ensureDimEditorShape(d.dimEditorDraft, true);
+            syncDimEditorModal();
+          }
+          return;
+        }
+
+        var qtyCopyOpen = e.target.closest("[data-qty-copy-open]");
+        if (qtyCopyOpen) {
+          d.copySceneOpen = true;
+          d.copyTargetSceneIds = [];
+          d.copyCurrentLineOnly = true;
+          closeDimEditor();
+          refreshStructureQtyUi();
+          return;
+        }
+        var qtyCopyCancel = e.target.closest("[data-qty-copy-cancel]");
+        if (qtyCopyCancel) {
+          d.copySceneOpen = false;
+          d.copyTargetSceneIds = [];
+          refreshStructureQtyUi();
+          return;
+        }
+        var qtyCopyApply = e.target.closest("[data-qty-copy-apply]");
+        if (qtyCopyApply) {
+          var scenesAll = listQtyScenes(d);
+          var fromScene = getActiveScene(d);
+          var targetIds = Array.isArray(d.copyTargetSceneIds) ? d.copyTargetSceneIds : [];
+          if (!fromScene) return;
+          if (!targetIds.length) { showToast("请选择目标场景"); return; }
+          var byLineCopy = getDraftStructureByLine(d);
+          var lineOptsCopy = getQtyLineOptions(byLineCopy, d.method);
+          var lineIds = d.copyCurrentLineOnly !== false
+            ? [d.activeQtyLine].filter(Boolean)
+            : lineOptsCopy.map(function (l) { return l.id; });
+          if (!lineIds.length) { showToast("当前没有可复制的产线"); return; }
+          var itemsCopy = listQtyItems(byLineCopy, d.method);
+          var copied = 0;
+          targetIds.forEach(function (tid) {
+            var toScene = scenesAll.find(function (s) { return s.id === tid; });
+            if (!toScene) return;
+            lineIds.forEach(function (lineId) {
+              itemsCopy.filter(function (it) { return it.lineId === lineId; }).forEach(function (item) {
+                var key = qtyKeyForItem(d.method, item);
+                var srcMap = getQtyMapAt(d, fromScene.personIndex, fromScene.roundIndex);
+                var val = srcMap[key] != null ? Number(srcMap[key]) || 0 : 0;
+                setQtyValueAt(d, toScene.personIndex, toScene.roundIndex, key, val);
+              });
+            });
+            copied += 1;
+          });
+          d.copySceneOpen = false;
+          d.copyTargetSceneIds = [];
+          showToast("已复制到 " + copied + " 个场景");
+          refreshStructureQtyUi();
+          return;
+        }
+
         var qtyLineBtn = e.target.closest("[data-qty-line]");
         if (qtyLineBtn) {
           d.activeQtyLine = qtyLineBtn.getAttribute("data-qty-line");
@@ -2400,31 +3285,6 @@
           selected.forEach(function (key) { setQtyValue(d, key, batchNum); });
           d.batchQtyValue = String(batchNum);
           showToast("已将 " + selected.length + " 项数量设为 " + batchNum);
-          refreshStructureQtyUi();
-          return;
-        }
-        var roundAdd = e.target.closest("[data-round-add]");
-        if (roundAdd) {
-          d.rounds.push(createEmptyRound("第" + (d.rounds.length + 1) + "轮"));
-          d.activeRound = d.rounds.length - 1;
-          d.selectedQtyKeys = [];
-          refreshStructureQtyUi();
-          return;
-        }
-        var roundDel = e.target.closest("[data-round-del]");
-        if (roundDel) {
-          var delIndex = Number(roundDel.getAttribute("data-round-del"));
-          if (Number.isFinite(delIndex) && delIndex >= 0 && delIndex < d.rounds.length) {
-            d.rounds.splice(delIndex, 1);
-            if (d.rounds.length === 0) {
-              d.activeRound = 0;
-            } else if (d.activeRound >= d.rounds.length) {
-              d.activeRound = d.rounds.length - 1;
-            } else if (delIndex <= d.activeRound && d.activeRound > 0) {
-              d.activeRound -= 1;
-            }
-          }
-          d.selectedQtyKeys = [];
           refreshStructureQtyUi();
           return;
         }
@@ -2532,21 +3392,61 @@
         var toggle = e.target.getAttribute && e.target.getAttribute("data-entity-toggle");
         if (toggle) {
           var id = Number(toggle);
-          var isMulti = d.round === "multiRound";
           var method = d.method;
-          if (isMulti) {
-            var round = d.rounds[d.activeRound];
-            if (!round) return;
-            var arr = method === "perCategory" ? round.selectedCategories : round.selectedDishes;
-            var i = arr.indexOf(id);
-            if (i >= 0) arr.splice(i, 1);
-            else arr.push(id);
-          } else {
-            var arr2 = method === "perCategory" ? d.selectedCategories : d.selectedDishes;
-            var j = arr2.indexOf(id);
-            if (j >= 0) arr2.splice(j, 1);
-            else arr2.push(id);
+          var arr2 = method === "perCategory" ? d.selectedCategories : d.selectedDishes;
+          var j = arr2.indexOf(id);
+          if (j >= 0) arr2.splice(j, 1);
+          else arr2.push(id);
+        }
+
+        if (e.target.getAttribute && e.target.getAttribute("data-dim-person-min") != null) {
+          if (!d.dimEditorDraft) return;
+          var iMin = Number(e.target.getAttribute("data-dim-person-min"));
+          if (d.dimEditorDraft.personRanges[iMin]) {
+            d.dimEditorDraft.personRanges[iMin].min = Math.max(1, Number(e.target.value) || 1);
           }
+          return;
+        }
+        if (e.target.getAttribute && e.target.getAttribute("data-dim-person-max") != null) {
+          if (!d.dimEditorDraft) return;
+          var iMax = Number(e.target.getAttribute("data-dim-person-max"));
+          if (d.dimEditorDraft.personRanges[iMax]) {
+            d.dimEditorDraft.personRanges[iMax].max = Math.max(1, Number(e.target.value) || 1);
+          }
+          return;
+        }
+        if (e.target.getAttribute && e.target.getAttribute("data-dim-round-min") != null) {
+          if (!d.dimEditorDraft) return;
+          var iRMin = Number(e.target.getAttribute("data-dim-round-min"));
+          if (d.dimEditorDraft.roundRanges[iRMin]) {
+            d.dimEditorDraft.roundRanges[iRMin].min = Math.max(1, Number(e.target.value) || 1);
+          }
+          return;
+        }
+        if (e.target.getAttribute && e.target.getAttribute("data-dim-round-max") != null) {
+          if (!d.dimEditorDraft) return;
+          var iRMax = Number(e.target.getAttribute("data-dim-round-max"));
+          if (d.dimEditorDraft.roundRanges[iRMax]) {
+            d.dimEditorDraft.roundRanges[iRMax].max = Math.max(1, Number(e.target.value) || 1);
+          }
+          return;
+        }
+
+        if (e.target.getAttribute && e.target.getAttribute("data-qty-copy-target") != null) {
+          var tid = e.target.getAttribute("data-qty-copy-target");
+          if (!Array.isArray(d.copyTargetSceneIds)) d.copyTargetSceneIds = [];
+          var tIdx = d.copyTargetSceneIds.indexOf(tid);
+          if (e.target.checked) {
+            if (tIdx < 0) d.copyTargetSceneIds.push(tid);
+          } else if (tIdx >= 0) {
+            d.copyTargetSceneIds.splice(tIdx, 1);
+          }
+          refreshStructureQtyUi();
+          return;
+        }
+        if (e.target.getAttribute && e.target.getAttribute("data-qty-copy-line-only") != null) {
+          d.copyCurrentLineOnly = !!e.target.checked;
+          return;
         }
 
         var qtySelect = e.target.getAttribute && e.target.getAttribute("data-qty-select");
@@ -2593,7 +3493,7 @@
         var byLine = e.detail && e.detail.byLine;
         if (!byLine) return;
         applyStructureToDraft(state.draft, byLine);
-        refreshStructureQtyUi();
+        refreshStructureSummaryUi();
       });
 
       document.getElementById("simPrevRound").addEventListener("click", function () {
