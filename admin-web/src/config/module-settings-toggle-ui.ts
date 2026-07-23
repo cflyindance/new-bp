@@ -254,7 +254,7 @@ export const HOTPOT_HALF_SURCHARGE_TOGGLE_SEQ: readonly number[] = [575];
 /** 前厅 · 需要权限下单的积分菜（594 主开关 + eMenu 产线，见 points-dish-auth-order-ui） */
 export const POINTS_DISH_AUTH_ORDER_TOGGLE_SEQ: readonly number[] = [594];
 
-/** 前厅 · 命中任意规则后弹出密码授权（646 主开关 + eMenu 产线，见 rule-hit-password-auth-ui） */
+/** 前厅 · 命中任意规则后弹出密码授权（646 主开关 + 按产线启用/授权模式，见 rule-hit-password-auth-ui） */
 export const RULE_HIT_PASSWORD_AUTH_TOGGLE_SEQ: readonly number[] = [646];
 
 /** 前厅 · 展示输入手机号页面（504 主开关 + Kiosk 产线，见 guest-phone-display-page-ui） */

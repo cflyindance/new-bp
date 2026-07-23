@@ -120,7 +120,8 @@ const AUTH_SETTINGS: SettingMeta[] = [
   {
     seq: RULE_HIT_PASSWORD_AUTH_SEQ,
     title: "命中任意规则后,弹出密码授权",
-    sceneDesc: "勾选产线后，食客下单命中任意限制规则时须服务员输入密码授权。",
+    sceneDesc:
+      "各产线可分别启用，并选择「每次命中均需授权」或「授权一次后本单放行」。",
   },
   {
     seq: VIEWONLY_DISH_CART_SEQ,

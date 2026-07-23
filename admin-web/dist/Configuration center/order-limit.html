@@ -462,15 +462,6 @@
     .qty-scene-chip .qty-scene-status.done { color: #16a34a; }
     .qty-scene-chip .qty-scene-status.partial { color: #d97706; }
     .qty-scene-chip .qty-scene-status.empty { color: #94a3b8; }
-    .qty-context-hint {
-      margin: 0 0 8px;
-      padding: 8px 10px;
-      border-radius: 8px;
-      border: 1px dashed #cbd5e1;
-      background: #f8fafc;
-      font-size: 12px;
-      color: #334155;
-    }
     .qty-panel {
       margin-top: 10px;
       padding: 12px;
@@ -531,12 +522,6 @@
     }
     .person-range-row .input { width: 100%; }
     .person-range-sep { font-size: 12px; color: var(--ol-muted); }
-    .person-range-hint {
-      margin: 6px 0 0;
-      font-size: 12px;
-      color: var(--ol-muted);
-      line-height: 1.4;
-    }
     .qty-person-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
     .qty-round-block { margin-bottom: 12px; }
     .qty-hint {
@@ -962,6 +947,17 @@
     </div>
   </div>
 
+  <div class="modal-mask nested" id="copySceneMask" style="display:none;">
+    <div class="modal modal-sm" role="dialog" aria-modal="true" aria-labelledby="copySceneTitle">
+      <div class="modal-head">
+        <h3 id="copySceneTitle">复制到其他场景</h3>
+        <button class="icon-btn" type="button" data-qty-copy-cancel="1">✕</button>
+      </div>
+      <div class="modal-body" id="copySceneBody"></div>
+      <div class="modal-foot" id="copySceneFoot"></div>
+    </div>
+  </div>
+
   <script src="assets/brand-menu-structure-picker.js"></script>
   <script>
     (function () {
@@ -995,7 +991,7 @@
           }, 180);
         }, 2600);
       }
-      var STEPS = ["规则类型", "详细配置", "限购数量", "时间设置", "会员等级", "确认保存"];
+      var STEPS = ["规则类型", "商品配置", "限购数量", "时间设置", "会员等级", "确认保存"];
 
       var weekdays = [
         { id: "mon", name: "周一", short: "一" },
@@ -1802,8 +1798,7 @@
           "<div class='person-range-list'>" + rows + "</div>" +
           "<div style='margin-top:8px;'>" +
             "<button type='button' class='btn' data-dim-person-add='1'>+ 添加人数区间</button>" +
-          "</div>" +
-          "<p class='person-range-hint'>例：1–3、4–6、7–99（99 表示及以上）。区间不可重叠。</p>"
+          "</div>"
         );
       }
 
@@ -1823,8 +1818,7 @@
           "<div class='person-range-list'>" + rows + "</div>" +
           "<div style='margin-top:8px;'>" +
             "<button type='button' class='btn' data-dim-round-add='1'>+ 添加轮次区间</button>" +
-          "</div>" +
-          "<p class='person-range-hint'>例：1–3（3轮及以下）、4–6、7–99（7轮及以上）。区间不可重叠；同一商品可按轮次区间设置不同限购数量。</p>"
+          "</div>"
         );
       }
 
@@ -1837,8 +1831,7 @@
           renderDimPersonRangesHtml(dim) +
           (isMulti
             ? "<div class='qty-sub-label' style='margin-top:12px;'>轮次区间</div>" + renderDimRoundsHtml(dim)
-            : "") +
-          "<p class='person-range-hint'>保存后将重建场景胶囊；删除的区间对应数量会一并移除。</p>"
+            : "")
         );
       }
 
@@ -1866,6 +1859,7 @@
         draft.dimEditorDraft = cloneDimEditorDraft(draft);
         draft.copySceneOpen = false;
         syncDimEditorModal();
+        syncCopySceneModal();
       }
 
       function closeDimEditor() {
@@ -1877,23 +1871,15 @@
         syncDimEditorModal();
       }
 
-      function renderCopyScenePanelHtml(draft, scenes, activeScene) {
-        if (!draft.copySceneOpen || !activeScene) return "";
+      function renderCopySceneBodyHtml(draft, scenes, activeScene) {
+        if (!activeScene) return "<p class='qty-hint'>请先选择场景。</p>";
         var targets = scenes.filter(function (s) { return s.id !== activeScene.id; });
+        if (!targets.length) {
+          return "<p class='qty-hint' style='margin:0;'>当前只有一个场景，无需复制。</p>";
+        }
         var selected = Array.isArray(draft.copyTargetSceneIds) ? draft.copyTargetSceneIds : [];
         var selectedSet = {};
         selected.forEach(function (id) { selectedSet[id] = true; });
-        if (!targets.length) {
-          return (
-            "<div class='qty-panel' id='wCopyScenePanel'>" +
-              "<div class='qty-panel-title'>复制到其他场景</div>" +
-              "<p class='qty-hint'>当前只有一个场景，无需复制。</p>" +
-              "<div class='qty-panel-actions'>" +
-                "<button type='button' class='btn' data-qty-copy-cancel='1'>关闭</button>" +
-              "</div>" +
-            "</div>"
-          );
-        }
         var list = targets.map(function (s) {
           var checked = selectedSet[s.id] ? " checked" : "";
           var cls = selectedSet[s.id] ? " is-checked" : "";
@@ -1911,20 +1897,70 @@
           if (lo) lineLabel = lo.label;
         }
         return (
-          "<div class='qty-panel' id='wCopyScenePanel'>" +
-            "<div class='qty-panel-title'>复制到其他场景</div>" +
-            "<p class='qty-hint' style='margin-top:0;'>将「" + esc(activeScene.label) + "」的数量复制并覆盖到所选场景</p>" +
-            "<div class='qty-copy-list'>" + list + "</div>" +
-            "<label style='display:flex;align-items:center;gap:8px;font-size:12px;'>" +
-              "<input type='checkbox' data-qty-copy-line-only='1'" + (onlyLine ? " checked" : "") + " />" +
-              "<span>仅复制当前产线" + (lineLabel ? "（" + esc(lineLabel) + "）" : "") + "</span>" +
-            "</label>" +
-            "<div class='qty-panel-actions'>" +
-              "<button type='button' class='btn' data-qty-copy-cancel='1'>取消</button>" +
-              "<button type='button' class='btn btn-primary' data-qty-copy-apply='1'>复制并覆盖</button>" +
-            "</div>" +
+          "<p class='qty-hint' style='margin-top:0;'>将「" + esc(activeScene.label) + "」的数量复制并覆盖到所选场景</p>" +
+          "<div class='qty-copy-list'>" + list + "</div>" +
+          "<label style='display:flex;align-items:center;gap:8px;font-size:12px;'>" +
+            "<input type='checkbox' data-qty-copy-line-only='1'" + (onlyLine ? " checked" : "") + " />" +
+            "<span>仅复制当前产线" + (lineLabel ? "（" + esc(lineLabel) + "）" : "") + "</span>" +
+          "</label>"
+        );
+      }
+
+      function renderCopySceneFootHtml(draft, scenes, activeScene) {
+        var targets = activeScene
+          ? scenes.filter(function (s) { return s.id !== activeScene.id; })
+          : [];
+        if (!targets.length) {
+          return (
+            "<div class='foot-right'>" +
+              "<button type='button' class='btn' data-qty-copy-cancel='1'>关闭</button>" +
+            "</div>"
+          );
+        }
+        return (
+          "<div class='foot-right'>" +
+            "<button type='button' class='btn' data-qty-copy-cancel='1'>取消</button>" +
+            "<button type='button' class='btn btn-primary' data-qty-copy-apply='1'>复制并覆盖</button>" +
           "</div>"
         );
+      }
+
+      function syncCopySceneModal() {
+        var mask = document.getElementById("copySceneMask");
+        var body = document.getElementById("copySceneBody");
+        var foot = document.getElementById("copySceneFoot");
+        if (!mask || !body || !foot) return;
+        var draft = state.draft;
+        if (!draft || !draft.copySceneOpen) {
+          mask.style.display = "none";
+          body.innerHTML = "";
+          foot.innerHTML = "";
+          return;
+        }
+        var scenes = listQtyScenes(draft);
+        var activeScene = resolveSceneSelection(draft);
+        body.innerHTML = renderCopySceneBodyHtml(draft, scenes, activeScene);
+        foot.innerHTML = renderCopySceneFootHtml(draft, scenes, activeScene);
+        mask.style.display = "flex";
+      }
+
+      function openCopySceneModal() {
+        var draft = state.draft;
+        if (!draft) return;
+        closeDimEditor();
+        draft.copySceneOpen = true;
+        draft.copyTargetSceneIds = [];
+        draft.copyCurrentLineOnly = true;
+        syncCopySceneModal();
+      }
+
+      function closeCopySceneModal() {
+        var draft = state.draft;
+        if (draft) {
+          draft.copySceneOpen = false;
+          draft.copyTargetSceneIds = [];
+        }
+        syncCopySceneModal();
       }
 
       function renderQtySectionHtml(draft, method) {
@@ -1970,7 +2006,7 @@
         if (!lineOpts.length) {
           return (
             sceneBlock +
-            "<div style='font-size:12px;color:#6b7280;'>请先在「详细配置」步骤选择商品</div>"
+            "<div style='font-size:12px;color:#6b7280;'>请先在「商品配置」步骤选择商品</div>"
           );
         }
 
@@ -1989,12 +2025,6 @@
               );
             }).join("") +
           "</div>";
-
-        var contextParts = [activeScene ? activeScene.label : ""];
-        var lineMeta = lineOpts.find(function (l) { return l.id === activeLine; });
-        if (lineMeta) contextParts.push(lineMeta.label);
-        var contextHint =
-          "<div class='qty-context-hint'>正在编辑：<strong>" + esc(contextParts.filter(Boolean).join(" · ")) + "</strong></div>";
 
         var qtyMap = getQtyMap(draft);
         var items = listQtyItems(byLine, method).filter(function (it) { return it.lineId === activeLine; });
@@ -2034,9 +2064,7 @@
         return (
           sceneBlock +
           lineTabs +
-          contextHint +
           batchBar +
-          renderCopyScenePanelHtml(draft, scenes, activeScene) +
           "<div class='qty-list' id='wQtyList'>" + rows + "</div>"
         );
       }
@@ -2704,9 +2732,12 @@
         if (state.draft) {
           state.draft.dimEditorOpen = false;
           state.draft.dimEditorDraft = null;
+          state.draft.copySceneOpen = false;
+          state.draft.copyTargetSceneIds = [];
         }
         document.getElementById("wizardMask").style.display = "none";
         syncDimEditorModal();
+        syncCopySceneModal();
         document.body.style.overflow = "";
       }
 
@@ -2886,6 +2917,14 @@
         document.getElementById("wizardNext").textContent = state.draft.step === 6
           ? (state.editingRuleId != null ? "更新规则" : "保存规则")
           : "下一步";
+        if (state.draft.step !== 3) {
+          state.draft.copySceneOpen = false;
+          state.draft.copyTargetSceneIds = [];
+          state.draft.dimEditorOpen = false;
+          state.draft.dimEditorDraft = null;
+        }
+        syncDimEditorModal();
+        syncCopySceneModal();
       }
 
       function wizardNext() {
@@ -3081,13 +3120,18 @@
 
         var mask = e.target.closest("#wizardMask");
         if (mask && e.target.id === "wizardMask") {
-          if (state.draft && state.draft.dimEditorOpen) return;
+          if (state.draft && (state.draft.dimEditorOpen || state.draft.copySceneOpen)) return;
           closeWizard();
           return;
         }
         var dimMask = e.target.closest("#dimEditorMask");
         if (dimMask && e.target.id === "dimEditorMask") {
           closeDimEditor();
+          return;
+        }
+        var copyMask = e.target.closest("#copySceneMask");
+        if (copyMask && e.target.id === "copySceneMask") {
+          closeCopySceneModal();
           return;
         }
 
@@ -3109,6 +3153,7 @@
           d.batchQtyValue = "";
           d.copySceneOpen = false;
           refreshStructureQtyUi();
+          syncCopySceneModal();
           return;
         }
 
@@ -3192,18 +3237,12 @@
 
         var qtyCopyOpen = e.target.closest("[data-qty-copy-open]");
         if (qtyCopyOpen) {
-          d.copySceneOpen = true;
-          d.copyTargetSceneIds = [];
-          d.copyCurrentLineOnly = true;
-          closeDimEditor();
-          refreshStructureQtyUi();
+          openCopySceneModal();
           return;
         }
         var qtyCopyCancel = e.target.closest("[data-qty-copy-cancel]");
         if (qtyCopyCancel) {
-          d.copySceneOpen = false;
-          d.copyTargetSceneIds = [];
-          refreshStructureQtyUi();
+          closeCopySceneModal();
           return;
         }
         var qtyCopyApply = e.target.closest("[data-qty-copy-apply]");
@@ -3234,8 +3273,7 @@
             });
             copied += 1;
           });
-          d.copySceneOpen = false;
-          d.copyTargetSceneIds = [];
+          closeCopySceneModal();
           showToast("已复制到 " + copied + " 个场景");
           refreshStructureQtyUi();
           return;
@@ -3441,7 +3479,7 @@
           } else if (tIdx >= 0) {
             d.copyTargetSceneIds.splice(tIdx, 1);
           }
-          refreshStructureQtyUi();
+          syncCopySceneModal();
           return;
         }
         if (e.target.getAttribute && e.target.getAttribute("data-qty-copy-line-only") != null) {
