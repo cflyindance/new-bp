@@ -870,6 +870,10 @@
           <span style="font-size:16px">+</span> 新增条件
         </button>
         <div class="add-option-menu" id="manualConditionMenu">
+          <div class="add-option-menu-item" data-type="role" onclick="addManualCondition('role')">角色</div>
+          <div class="add-option-menu-item" data-type="employee" onclick="addManualCondition('employee')">员工</div>
+          <div class="add-option-menu-item" data-type="hours" onclick="addManualCondition('hours')">营业时间段</div>
+          <div class="add-option-menu-item" data-type="shift" onclick="addManualCondition('shift')">班次</div>
           <div class="add-option-menu-item" data-type="weekday" onclick="addManualCondition('weekday')">周期（星期）</div>
         </div>
       </div>
@@ -1703,9 +1707,20 @@
       container.innerHTML = '';
       existingManualConditions = {};
       var cond = poolRuleConditions[ruleId];
-      if (cond && typeof cond === 'object' && Array.isArray(cond.weekdays) && cond.weekdays.length) {
-        addManualCondition('weekday', true);
-        setManualConditionValue('weekday', cond.weekdays);
+      if (cond && typeof cond === 'object') {
+        normalizeConditionsRoleEmployeeExclusive(cond);
+        sortPoolConditionLoadKeys(Object.keys(cond)).forEach(function(type) {
+          if (type === 'weekdays') {
+            addManualCondition('weekday', true);
+            setManualConditionValue('weekday', cond.weekdays);
+            return;
+          }
+          if (type !== 'role' && type !== 'employee' && type !== 'hours' && type !== 'shift') return;
+          addManualCondition(type, true);
+          if (type === 'role') setManualConditionValue(type, { role: cond.role || [] });
+          else if (type === 'employee') setManualConditionValue(type, { employeeRoles: cond.employeeRoles, employees: cond.employee });
+          else setManualConditionValue(type, cond[type]);
+        });
       }
       updateManualConditionMenu();
     }
@@ -2682,7 +2697,7 @@
     function updateManualConditionMenu() {
       document.querySelectorAll('#manualConditionMenu .add-option-menu-item').forEach(function(item) {
         var t = item.dataset.type;
-        item.style.display = existingManualConditions[t] ? 'none' : '';
+        item.style.display = roleEmployeeMenuItemHidden(existingManualConditions, t) ? 'none' : '';
       });
     }
     function updateTipClaimSalesConditionMenu() {
@@ -2979,15 +2994,42 @@
 
     function addManualCondition(type, silent) {
       if (existingManualConditions[type]) return;
-      var names = { weekday: '周期（星期）' };
+      if (type === 'role' && existingManualConditions['employee']) {
+        if (!silent) showNotification('已添加「员工」取值条件时不能同时添加「角色」', 'warning');
+        return;
+      }
+      if (type === 'employee' && existingManualConditions['role']) {
+        if (!silent) showNotification('已添加「角色」取值条件时不能同时添加「员工」', 'warning');
+        return;
+      }
+      var names = getCondTypeNames();
       var cardId = 'manual-cond-' + type;
       var body = '';
-      if (type === 'weekday') {
+      if (type === 'role') {
+        body = '<div class="drawer-form-row"><label>角色：</label><div class="multi-select role-role-select" id="manualRoleSelect" style="flex:1">' +
+          '<div class="multi-select-input" onclick="toggleMultiSelect(\'manualRoleSelect\')">' +
+          '<div class="multi-select-tags"><span class="multi-select-placeholder">请选择角色</span></div>' +
+          '<svg class="multi-select-arrow" width="12" height="12" viewBox="0 0 12 12" fill="#999"><path d="M6 8.825a.5.5 0 0 1-.354-.146l-4-4a.5.5 0 0 1 .708-.708L6 7.617l3.646-3.646a.5.5 0 0 1 .708.708l-4 4A.5.5 0 0 1 6 8.825z"/></svg></div>' +
+          '<div class="multi-select-dropdown">' + roleOptionsHtml + '</div></div></div>';
+      } else if (type === 'employee') {
+        body = getStandaloneEmployeeConditionBodyHtml('manualEmployeeCondRoleSelect', 'manualEmployeeCondStaffSelect');
+      } else if (type === 'hours') {
+        body = '<div class="drawer-form-row"><label>营业时间段：</label><input type="time" class="form-control" style="width:120px"><span style="color:var(--text-tertiary)">~</span><input type="time" class="form-control" style="width:120px"></div>';
+      } else if (type === 'shift') {
+        body = '<div class="drawer-form-row"><label>班次：</label><div class="multi-select shift-condition-select" id="manualShiftConditionSelect" style="flex:1" data-placeholder="请选择班次">' +
+          '<div class="multi-select-input" onclick="toggleMultiSelect(\'manualShiftConditionSelect\')">' +
+          '<div class="multi-select-tags"><span class="multi-select-placeholder">请选择班次</span></div>' +
+          '<svg class="multi-select-arrow" width="12" height="12" viewBox="0 0 12 12" fill="#999"><path d="M6 8.825a.5.5 0 0 1-.354-.146l-4-4a.5.5 0 0 1 .708-.708L6 7.617l3.646-3.646a.5.5 0 0 1 .708.708l-4 4A.5.5 0 0 1 6 8.825z"/></svg></div>' +
+          '<div class="multi-select-dropdown">' + getShiftMultiSelectOptionsHtml() + '</div></div></div>' +
+          '<div class="drawer-form-row"><button type="button" class="btn btn-sm" onclick="openShiftManageModal(\'manualShiftConditionSelect\')">班次设置</button></div>';
+      } else if (type === 'weekday') {
         body = '<div class="drawer-form-row"><label>周期：</label><div class="multi-select weekday-condition-select" id="manualWeekdayConditionSelect" style="flex:1" data-placeholder="请选择星期">' +
           '<div class="multi-select-input" onclick="toggleMultiSelect(\'manualWeekdayConditionSelect\')">' +
           '<div class="multi-select-tags"><span class="multi-select-placeholder">请选择星期</span></div>' +
           '<svg class="multi-select-arrow" width="12" height="12" viewBox="0 0 12 12" fill="#999"><path d="M6 8.825a.5.5 0 0 1-.354-.146l-4-4a.5.5 0 0 1 .708-.708L6 7.617l3.646-3.646a.5.5 0 0 1 .708.708l-4 4A.5.5 0 0 1 6 8.825z"/></svg></div>' +
           '<div class="multi-select-dropdown">' + getWeekdayMultiSelectOptionsHtml() + '</div></div></div>';
+      } else {
+        return;
       }
       var card = document.createElement('div');
       card.className = 'condition-card';
@@ -3006,7 +3048,36 @@
     function setManualConditionValue(type, value) {
       var card = document.getElementById('manual-cond-' + type);
       if (!card) return;
-      if (type === 'weekday') applyWeekdayConditionValue(card, value);
+      if (type === 'role' && value) {
+        var roleMs = card.querySelector('.role-role-select');
+        var roleArr = Array.isArray(value) ? value : (value.role || []);
+        if (roleMs) {
+          roleMs.querySelectorAll('input[type="checkbox"]').forEach(function(cb) {
+            cb.checked = roleArr.indexOf(cb.value) >= 0;
+          });
+          if (roleMs.id) refreshMultiTags(roleMs.id);
+        }
+      } else if (type === 'employee') {
+        applyStandaloneEmployeeConditionToCard(card, value);
+      } else if (type === 'hours' && value && (value.start || value.end)) {
+        var inputs = card.querySelectorAll('input[type="time"]');
+        if (inputs[0] && value.start) inputs[0].value = value.start;
+        if (inputs[1] && value.end) inputs[1].value = value.end;
+      } else if (type === 'shift') {
+        var arr = Array.isArray(value) ? value : (value != null && value !== '' ? [String(value)] : []);
+        mergeShiftsFromSaved(arr);
+        var shiftMs = card.querySelector('.shift-condition-select');
+        if (shiftMs) {
+          var dropdown = shiftMs.querySelector('.multi-select-dropdown');
+          if (dropdown) dropdown.innerHTML = getShiftMultiSelectOptionsHtml();
+          shiftMs.querySelectorAll('input[type="checkbox"]').forEach(function(cb) {
+            cb.checked = arr.indexOf(cb.value) >= 0;
+          });
+          if (shiftMs.id) refreshMultiTags(shiftMs.id);
+        }
+      } else if (type === 'weekday') {
+        applyWeekdayConditionValue(card, value);
+      }
     }
 
     function setSalesConditionValue(type, value) {
@@ -4812,8 +4883,15 @@
     }
     function formatManualCondForDisplay(cond) {
       if (!cond || typeof cond !== 'object') return '';
-      if (Array.isArray(cond.weekdays) && cond.weekdays.length) return '周期: ' + formatWeekdaysCondDisplay(cond.weekdays);
-      return '';
+      var parts = [];
+      if (Array.isArray(cond.role) && cond.role.length) parts.push('角色: ' + cond.role.join(', '));
+      else if (cond.role) parts.push('角色: ' + cond.role);
+      if (Array.isArray(cond.employeeRoles) && cond.employeeRoles.length) parts.push('员工筛选角色: ' + cond.employeeRoles.join(', '));
+      if (Array.isArray(cond.employee) && cond.employee.length) parts.push('员工: ' + cond.employee.join(', '));
+      if (cond.hours && (cond.hours.start || cond.hours.end)) parts.push('营业时间段: ' + (cond.hours.start || '') + '-' + (cond.hours.end || ''));
+      if (Array.isArray(cond.shift) && cond.shift.length) parts.push('班次: ' + formatShiftSelectionForDisplay(cond.shift));
+      if (Array.isArray(cond.weekdays) && cond.weekdays.length) parts.push('周期: ' + formatWeekdaysCondDisplay(cond.weekdays));
+      return parts.join(' | ');
     }
     function hasValidConditions(ruleId) {
       var card = document.getElementById('rule-' + ruleId);
@@ -4865,9 +4943,7 @@
         return false;
       }
       if (type === 'manual') {
-        var mc = poolRuleConditions[ruleId];
-        if (!mc || typeof mc !== 'object') return true;
-        if (mc.weekdays !== undefined && (!Array.isArray(mc.weekdays) || mc.weekdays.length === 0)) return false;
+        // 手动上报取值条件均为可选；有卡片未选值亦可保存
         return true;
       }
       return true;
@@ -4991,7 +5067,9 @@
 
     function saveManualCondition() {
       if (currentEditingRuleId) {
-        poolRuleConditions[currentEditingRuleId] = collectManualConditions();
+        var mc = collectManualConditions();
+        normalizeConditionsRoleEmployeeExclusive(mc);
+        poolRuleConditions[currentEditingRuleId] = mc;
         updatePoolRuleConditionDisplay(currentEditingRuleId);
       }
       closeDrawer('manualDrawer');
@@ -5006,11 +5084,35 @@
         var id = card.id || '';
         var type = id.replace('manual-cond-', '');
         if (!type) return;
-        if (type === 'weekday') {
+        if (type === 'role') {
+          var roleMs = card.querySelector('.role-role-select');
+          if (roleMs) {
+            var checked = roleMs.querySelectorAll('input[type="checkbox"]:checked');
+            cond.role = Array.from(checked).map(function(c) { return c.value; });
+          }
+        } else if (type === 'employee') {
+          var manualEcRoleMs = card.querySelector('.employee-condition-role-select');
+          var manualEcStaffMs = card.querySelector('.employee-condition-staff-select');
+          if (manualEcRoleMs) {
+            cond.employeeRoles = Array.from(manualEcRoleMs.querySelectorAll('input[type="checkbox"]:checked')).map(function(c) { return c.value; });
+          }
+          if (manualEcStaffMs) {
+            cond.employee = Array.from(manualEcStaffMs.querySelectorAll('input[type="checkbox"]:not(.role-employee-select-all-cb):checked')).map(function(c) { return c.value; });
+          }
+        } else if (type === 'hours') {
+          var inputs = card.querySelectorAll('input[type="time"]');
+          cond.hours = { start: inputs[0] ? inputs[0].value : '', end: inputs[1] ? inputs[1].value : '' };
+        } else if (type === 'shift') {
+          var shiftMs = card.querySelector('.shift-condition-select');
+          if (shiftMs) {
+            var shiftChecked = shiftMs.querySelectorAll('input[type="checkbox"]:checked');
+            cond.shift = Array.from(shiftChecked).map(function(c) { return c.value; });
+          }
+        } else if (type === 'weekday') {
           var wMs = card.querySelector('.weekday-condition-select');
           if (wMs) {
-            var checked = wMs.querySelectorAll('input[type="checkbox"]:checked');
-            cond.weekdays = Array.from(checked).map(function(c) { return c.value; });
+            var wChecked = wMs.querySelectorAll('input[type="checkbox"]:checked');
+            cond.weekdays = Array.from(wChecked).map(function(c) { return c.value; });
           }
         }
       });

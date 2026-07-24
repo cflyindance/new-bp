@@ -24,7 +24,7 @@
     },
     {
       id: 2,
-      ruleName: 'Tip Pool — 多角色分配',
+      ruleName: 'Tip Pool — 多角色分配（不打卡按工时）',
       store: 'Sakura Sushi & Ramen House - Dallas, TX 75247',
       poolRules: [{ type: 'tips', pct: 10 }],
       deductRoles: ['Server', 'Bartender', 'Cashier'],
@@ -34,7 +34,7 @@
         { roles: ['Host'], pct: 20 }
       ],
       distribution: 'hours',
-      clockin: 'clock'
+      clockin: 'noclock'
     },
     {
       id: 3,

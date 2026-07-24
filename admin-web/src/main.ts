@@ -325,6 +325,29 @@ import {
   isPathAllowedByPlatformPreset,
   isPresetL2Enabled,
 } from "./config/platform-preset-nav-filter";
+import {
+  buildHubSearchIndex,
+  clearAllHubSheetSearch,
+  clearHubSheetSearch,
+  consumeHubSearchFocusTarget,
+  consumeHubSheetSearchInputRefocus,
+  filterSheetSubnavForHubSearch,
+  filterSubnavBySearchPaths,
+  getHubSheetDomId,
+  getHubSheetSearchKeepPaths,
+  getHubSheetSearchQuery,
+  isHubSheetSearchEnabled,
+  listHubSheetSearchHubIds,
+  markHubSheetSearchInputRefocus,
+  navPathsToKeepFromHits,
+  queryHubSearchIndex,
+  renderHubSearchResultsPane,
+  renderHubSheetNavEmpty,
+  renderHubSheetSearchBox,
+  setHubSearchFocusTarget,
+  setHubSheetSearchQuery,
+  shouldEnterHubSearch,
+} from "./config/hub-sheet-search";
 import { APP_NAV_HOME_PATH, isNavHomePath, readAppHashPath } from "./config/app-routes";
 import {
   bindStaffAccountsPage,
@@ -2086,7 +2109,10 @@ function readNavModuleSheetOpen(moduleId: string): boolean {
 function setNavModuleSheetOpen(moduleId: string, open: boolean): void {
   const next = { ...readNavModuleSheetsOpenState() };
   if (open) next[moduleId] = true;
-  else delete next[moduleId];
+  else {
+    delete next[moduleId];
+    clearHubSheetSearch(moduleId);
+  }
   try {
     sessionStorage.setItem(NAV_MODULE_SHEETS_OPEN_KEY, JSON.stringify(next));
   } catch {
@@ -2095,6 +2121,7 @@ function setNavModuleSheetOpen(moduleId: string, open: boolean): void {
 }
 
 function closeAllNavModuleSheets(): void {
+  clearAllHubSheetSearch();
   try {
     sessionStorage.removeItem(NAV_MODULE_SHEETS_OPEN_KEY);
   } catch {
@@ -2182,7 +2209,10 @@ function readInventorySecondarySheetOpen(): boolean {
 function setInventorySecondarySheetOpen(open: boolean): void {
   try {
     if (open) sessionStorage.setItem(INVENTORY_SHEET_OPEN_KEY, "true");
-    else sessionStorage.removeItem(INVENTORY_SHEET_OPEN_KEY);
+    else {
+      sessionStorage.removeItem(INVENTORY_SHEET_OPEN_KEY);
+      clearHubSheetSearch("inventory-ordering");
+    }
   } catch {
     /* ignore */
   }
@@ -2212,7 +2242,10 @@ function readProductCenterMainSecondarySheetOpen(): boolean {
 function setProductCenterMainSecondarySheetOpen(open: boolean): void {
   try {
     if (open) sessionStorage.setItem(PRODUCT_CENTER_MAIN_SHEET_OPEN_KEY, "true");
-    else sessionStorage.removeItem(PRODUCT_CENTER_MAIN_SHEET_OPEN_KEY);
+    else {
+      sessionStorage.removeItem(PRODUCT_CENTER_MAIN_SHEET_OPEN_KEY);
+      clearHubSheetSearch("product-center-main");
+    }
   } catch {
     /* ignore */
   }
@@ -2233,7 +2266,10 @@ function readMarketingSecondarySheetOpen(): boolean {
 function setMarketingSecondarySheetOpen(open: boolean): void {
   try {
     if (open) sessionStorage.setItem(MARKETING_SHEET_OPEN_KEY, "true");
-    else sessionStorage.removeItem(MARKETING_SHEET_OPEN_KEY);
+    else {
+      sessionStorage.removeItem(MARKETING_SHEET_OPEN_KEY);
+      clearHubSheetSearch("marketing");
+    }
   } catch {
     /* ignore */
   }
@@ -2254,7 +2290,10 @@ function readPromotionsSecondarySheetOpen(): boolean {
 function setPromotionsSecondarySheetOpen(open: boolean): void {
   try {
     if (open) sessionStorage.setItem(PROMOTIONS_SHEET_OPEN_KEY, "true");
-    else sessionStorage.removeItem(PROMOTIONS_SHEET_OPEN_KEY);
+    else {
+      sessionStorage.removeItem(PROMOTIONS_SHEET_OPEN_KEY);
+      clearHubSheetSearch("promotions");
+    }
   } catch {
     /* ignore */
   }
@@ -2275,7 +2314,10 @@ function readMembersSecondarySheetOpen(): boolean {
 function setMembersSecondarySheetOpen(open: boolean): void {
   try {
     if (open) sessionStorage.setItem(MEMBERS_SHEET_OPEN_KEY, "true");
-    else sessionStorage.removeItem(MEMBERS_SHEET_OPEN_KEY);
+    else {
+      sessionStorage.removeItem(MEMBERS_SHEET_OPEN_KEY);
+      clearHubSheetSearch("members");
+    }
   } catch {
     /* ignore */
   }
@@ -2296,7 +2338,10 @@ function readGiftCardsSecondarySheetOpen(): boolean {
 function setGiftCardsSecondarySheetOpen(open: boolean): void {
   try {
     if (open) sessionStorage.setItem(GIFT_CARDS_SHEET_OPEN_KEY, "true");
-    else sessionStorage.removeItem(GIFT_CARDS_SHEET_OPEN_KEY);
+    else {
+      sessionStorage.removeItem(GIFT_CARDS_SHEET_OPEN_KEY);
+      clearHubSheetSearch("gift-cards");
+    }
   } catch {
     /* ignore */
   }
@@ -2313,7 +2358,10 @@ function readReportsSecondarySheetOpen(): boolean {
 function setReportsSecondarySheetOpen(open: boolean): void {
   try {
     if (open) sessionStorage.setItem(REPORTS_SHEET_OPEN_KEY, "true");
-    else sessionStorage.removeItem(REPORTS_SHEET_OPEN_KEY);
+    else {
+      sessionStorage.removeItem(REPORTS_SHEET_OPEN_KEY);
+      clearHubSheetSearch("reports-finance");
+    }
   } catch {
     /* ignore */
   }
@@ -2334,7 +2382,10 @@ function readPrintSecondarySheetOpen(): boolean {
 function setPrintSecondarySheetOpen(open: boolean): void {
   try {
     if (open) sessionStorage.setItem(PRINT_SHEET_OPEN_KEY, "true");
-    else sessionStorage.removeItem(PRINT_SHEET_OPEN_KEY);
+    else {
+      sessionStorage.removeItem(PRINT_SHEET_OPEN_KEY);
+      clearHubSheetSearch("print-templates");
+    }
   } catch {
     /* ignore */
   }
@@ -2351,7 +2402,10 @@ function readReservationsSecondarySheetOpen(): boolean {
 function setReservationsSecondarySheetOpen(open: boolean): void {
   try {
     if (open) sessionStorage.setItem(RESERVATIONS_SHEET_OPEN_KEY, "true");
-    else sessionStorage.removeItem(RESERVATIONS_SHEET_OPEN_KEY);
+    else {
+      sessionStorage.removeItem(RESERVATIONS_SHEET_OPEN_KEY);
+      clearHubSheetSearch("reservations");
+    }
   } catch {
     /* ignore */
   }
@@ -2474,11 +2528,29 @@ function renderProductCenterMainSecondarySheet(hash: string, open: boolean): str
   const pcmShowBrandProducts = isPresetL2Enabled("product-center-main", "pcm-brand-products");
   const pcmShowBrandMenu = isPresetL2Enabled("product-center-main", "pcm-brand-menu");
   const pcmShowStoreMenu = isPresetL2Enabled("product-center-main", "pcm-store-mgmt");
-  const hubBody = `
+  const bpSubnav = filterSheetSubnavForHubSearch("product-center-main", BRAND_PRODUCTS_SUBNAV);
+  const brandMenuSubnav = filterSheetSubnavForHubSearch("product-center-main", BRAND_MENU_SUBNAV);
+  const storeMenuSubnav = filterSheetSubnavForHubSearch("product-center-main", STORE_MENU_SUBNAV);
+  const pcmSettings = filterSheetSubnavForHubSearch(
+    "product-center-main",
+    PRODUCT_CENTER_MAIN_SHEET_SETTINGS_SUBNAV,
+  );
+  const pcmSearchActive = getHubSheetSearchKeepPaths("product-center-main") != null;
+  const showBp = pcmShowBrandProducts && bpSubnav.length > 0;
+  const showBrandMenu = pcmShowBrandMenu && brandMenuSubnav.length > 0;
+  const showStoreMenu = pcmShowStoreMenu && storeMenuSubnav.length > 0;
+  const showPcmSettings = pcmSettings.length > 0;
+  let pcmSectionIdx = 0;
+  const pcmSectionClass = (): string =>
+    pcmSectionIdx++ === 0 ? pcmHubSectionFirst : pcmHubSectionRest;
+  const hubBody =
+    pcmSearchActive && !showBp && !showBrandMenu && !showStoreMenu && !showPcmSettings
+      ? renderHubSheetNavEmpty()
+      : `
         <div class="space-y-4">
           ${
-            pcmShowBrandProducts
-              ? `<section class="${pcmHubSectionFirst}">
+            showBp
+              ? `<section class="${pcmSectionClass()}">
             <button
               type="button"
               data-pcm-sheet-bp-mgmt-toggle
@@ -2490,7 +2562,7 @@ function renderProductCenterMainSecondarySheet(hash: string, open: boolean): str
               <span class="shrink-0 text-sidebar-muted transition-transform duration-200 ${bpMgmtExpanded ? "" : "-rotate-90"}">${PCM_SHEET_GROUP_CHEVRON}</span>
             </button>
             <div id="pcm-sheet-bp-mgmt-children" class="${bpMgmtExpanded ? "" : "hidden"}" ${bpMgmtExpanded ? "" : 'aria-hidden="true"'}>
-              ${renderPcSheetDarkSubnav(hash, BRAND_PRODUCTS_SUBNAV, getActiveBrandProductsSubPath, getBrandProductsSidebarChildActivePath, {
+              ${renderPcSheetDarkSubnav(hash, bpSubnav, getActiveBrandProductsSubPath, getBrandProductsSidebarChildActivePath, {
                 brandProductSecondLevel: true,
               })}
             </div>
@@ -2498,8 +2570,8 @@ function renderProductCenterMainSecondarySheet(hash: string, open: boolean): str
               : ""
           }
           ${
-            pcmShowBrandMenu
-              ? `<section class="${pcmHubSectionRest}">
+            showBrandMenu
+              ? `<section class="${pcmSectionClass()}">
             <button
               type="button"
               data-pcm-sheet-brand-menu-toggle
@@ -2511,7 +2583,7 @@ function renderProductCenterMainSecondarySheet(hash: string, open: boolean): str
               <span class="shrink-0 text-sidebar-muted transition-transform duration-200 ${brMenuExpanded ? "" : "-rotate-90"}">${PCM_SHEET_GROUP_CHEVRON}</span>
             </button>
             <div id="pcm-sheet-brand-menu-children" class="${brMenuExpanded ? "" : "hidden"}" ${brMenuExpanded ? "" : 'aria-hidden="true"'}>
-              ${renderPcSheetDarkSubnav(hash, BRAND_MENU_SUBNAV, getActiveBrandMenuSubPath, pcmSheetNavNoChildPath, {
+              ${renderPcSheetDarkSubnav(hash, brandMenuSubnav, getActiveBrandMenuSubPath, pcmSheetNavNoChildPath, {
                 brandProductSecondLevel: true,
                 sheetGroupedSubnavAriaLabel: brandMenuSheetAria,
               })}
@@ -2520,8 +2592,8 @@ function renderProductCenterMainSecondarySheet(hash: string, open: boolean): str
               : ""
           }
           ${
-            pcmShowStoreMenu
-              ? `<section class="${pcmHubSectionRest}">
+            showStoreMenu
+              ? `<section class="${pcmSectionClass()}">
             <button
               type="button"
               data-pcm-sheet-store-menu-toggle
@@ -2533,7 +2605,7 @@ function renderProductCenterMainSecondarySheet(hash: string, open: boolean): str
               <span class="shrink-0 text-sidebar-muted transition-transform duration-200 ${storeMgmtExpanded ? "" : "-rotate-90"}">${PCM_SHEET_GROUP_CHEVRON}</span>
             </button>
             <div id="pcm-sheet-store-menu-children" class="${storeMgmtExpanded ? "" : "hidden"}" ${storeMgmtExpanded ? "" : 'aria-hidden="true"'}>
-              ${renderPcSheetDarkSubnav(hash, STORE_MENU_SUBNAV, getActiveStoreMenuSubPath, getStoreMenuSidebarChildActivePath, {
+              ${renderPcSheetDarkSubnav(hash, storeMenuSubnav, getActiveStoreMenuSubPath, getStoreMenuSidebarChildActivePath, {
                 brandProductSecondLevel: true,
                 sheetGroupedSubnavAriaLabel: storeMenuSheetAria,
               })}
@@ -2542,9 +2614,9 @@ function renderProductCenterMainSecondarySheet(hash: string, open: boolean): str
               : ""
           }
           ${
-            PRODUCT_CENTER_MAIN_SHEET_SETTINGS_SUBNAV.length > 0
-              ? `<section class="${pcmHubSectionRest}">
-            ${renderPcSheetDarkSubnav(hash, PRODUCT_CENTER_MAIN_SHEET_SETTINGS_SUBNAV, getActiveProductCenterMainSettingsSubPath, pcmSheetNavNoChildPath, {
+            showPcmSettings
+              ? `<section class="${pcmSectionClass()}">
+            ${renderPcSheetDarkSubnav(hash, pcmSettings, getActiveProductCenterMainSettingsSubPath, pcmSheetNavNoChildPath, {
               brandProductSecondLevel: true,
               sheetGroupedSubnavAriaLabel: `${pick(pcmHubMod.title, pcmHubMod.titleEn)} · ${t("nav.subNavQualifier")}`,
             })}
@@ -2561,6 +2633,7 @@ function renderProductCenterMainSecondarySheet(hash: string, open: boolean): str
       role="dialog"
       aria-modal="${open ? "true" : "false"}"
       aria-label="${pcmDlgAria}"
+      data-hub-sheet-root="product-center-main"
     >
       <div class="flex h-14 shrink-0 items-center gap-1 ${SBR_DIVIDER_B} px-2">
         <button
@@ -2573,6 +2646,7 @@ function renderProductCenterMainSecondarySheet(hash: string, open: boolean): str
         </button>
         <span class="min-w-0 truncate text-sm font-semibold ${SBR_TITLE}">${pick(pcmHubMod.title, pcmHubMod.titleEn)}</span>
       </div>
+      ${renderHubSheetSearchBox("product-center-main")}
       <nav class="sidebar-primary-nav-scroll min-h-0 flex-1 overflow-y-auto px-2 py-3" aria-label="${pcmNavFunc}">
         ${hubBody}
       </nav>
@@ -2588,10 +2662,18 @@ function renderMarketingSecondarySheet(hash: string, open: boolean): string {
     ? "translate-x-0 pointer-events-auto opacity-100"
     : "translate-x-full pointer-events-none opacity-0";
   const chevronBack = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>`;
-  const hubBody = `
+  const mktSubnav = filterSheetSubnavForHubSearch(
+    "marketing",
+    filterSheetSubnavByPlatformPreset("marketing", MARKETING_SHEET_SUBNAV),
+  );
+  const mktSearchActive = getHubSheetSearchKeepPaths("marketing") != null;
+  const hubBody =
+    mktSearchActive && mktSubnav.length === 0
+      ? renderHubSheetNavEmpty()
+      : `
         <div class="space-y-4">
           <section class="pt-0">
-            ${renderPcSheetDarkSubnav(hash, filterSheetSubnavByPlatformPreset("marketing", MARKETING_SHEET_SUBNAV), getActiveMarketingSheetSubPath, pcmSheetNavNoChildPath, {
+            ${renderPcSheetDarkSubnav(hash, mktSubnav, getActiveMarketingSheetSubPath, pcmSheetNavNoChildPath, {
               brandProductSecondLevel: true,
               sheetGroupedSubnavAriaLabel: mktSheetAria,
             })}
@@ -2606,6 +2688,7 @@ function renderMarketingSecondarySheet(hash: string, open: boolean): string {
       role="dialog"
       aria-modal="${open ? "true" : "false"}"
       aria-label="${mktDlg}"
+      data-hub-sheet-root="marketing"
     >
       <div class="flex h-14 shrink-0 items-center gap-1 ${SBR_DIVIDER_B} px-2">
         <button
@@ -2618,6 +2701,7 @@ function renderMarketingSecondarySheet(hash: string, open: boolean): string {
         </button>
         <span class="min-w-0 truncate text-sm font-semibold ${SBR_TITLE}">${pick(mktMod.title, mktMod.titleEn)}</span>
       </div>
+      ${renderHubSheetSearchBox("marketing")}
       <nav class="sidebar-primary-nav-scroll min-h-0 flex-1 overflow-y-auto px-2 py-3" aria-label="${mktNavFunc}">
         ${hubBody}
       </nav>
@@ -2633,18 +2717,27 @@ function renderPromotionsSecondarySheet(hash: string, open: boolean): string {
     ? "translate-x-0 pointer-events-auto opacity-100"
     : "translate-x-full pointer-events-none opacity-0";
   const chevronBack = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>`;
-  const hubBody = `
+  const promoMain = filterSheetSubnavForHubSearch(
+    "promotions",
+    filterSheetSubnavByPlatformPreset("promotions", PROMOTIONS_MGMT_SUBNAV),
+  );
+  const promoSettings = filterSheetSubnavForHubSearch("promotions", PROMOTIONS_SHEET_SETTINGS_SUBNAV);
+  const promoSearchActive = getHubSheetSearchKeepPaths("promotions") != null;
+  const hubBody =
+    promoSearchActive && promoMain.length === 0 && promoSettings.length === 0
+      ? renderHubSheetNavEmpty()
+      : `
         <div class="space-y-4">
           <section class="pt-0">
-            ${renderPcSheetDarkSubnav(hash, filterSheetSubnavByPlatformPreset("promotions", PROMOTIONS_MGMT_SUBNAV), getActivePromotionsMgmtSubPath, pcmSheetNavNoChildPath, {
+            ${renderPcSheetDarkSubnav(hash, promoMain, getActivePromotionsMgmtSubPath, pcmSheetNavNoChildPath, {
               brandProductSecondLevel: true,
               sheetGroupedSubnavAriaLabel: promoSheetAria,
             })}
           </section>
           ${
-            PROMOTIONS_SHEET_SETTINGS_SUBNAV.length > 0
+            promoSettings.length > 0
               ? `<section class="${SBR_DIVIDER_T} pt-3">
-            ${renderPcSheetDarkSubnav(hash, PROMOTIONS_SHEET_SETTINGS_SUBNAV, getActivePromotionsSettingsSubPath, pcmSheetNavNoChildPath, {
+            ${renderPcSheetDarkSubnav(hash, promoSettings, getActivePromotionsSettingsSubPath, pcmSheetNavNoChildPath, {
               brandProductSecondLevel: true,
               sheetGroupedSubnavAriaLabel: `${pick(prMod.title, prMod.titleEn)} · ${t("nav.subNavQualifier")}`,
             })}
@@ -2661,6 +2754,7 @@ function renderPromotionsSecondarySheet(hash: string, open: boolean): string {
       role="dialog"
       aria-modal="${open ? "true" : "false"}"
       aria-label="${prDlg}"
+      data-hub-sheet-root="promotions"
     >
       <div class="flex h-14 shrink-0 items-center gap-1 ${SBR_DIVIDER_B} px-2">
         <button
@@ -2673,6 +2767,7 @@ function renderPromotionsSecondarySheet(hash: string, open: boolean): string {
         </button>
         <span class="min-w-0 truncate text-sm font-semibold ${SBR_TITLE}">${pick(prMod.title, prMod.titleEn)}</span>
       </div>
+      ${renderHubSheetSearchBox("promotions")}
       <nav class="sidebar-primary-nav-scroll min-h-0 flex-1 overflow-y-auto px-2 py-3" aria-label="${prNavFunc}">
         ${hubBody}
       </nav>
@@ -2688,20 +2783,40 @@ function renderMembersSecondarySheet(hash: string, open: boolean): string {
     ? "translate-x-0 pointer-events-auto opacity-100"
     : "translate-x-full pointer-events-none opacity-0";
   const chevronBack = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>`;
-  const hubBody = `
+  const memMain = filterSheetSubnavForHubSearch(
+    "members",
+    filterSheetSubnavByPlatformPreset("members", MEMBERS_SHEET_SUBNAV),
+  );
+  const memSettings = filterSheetSubnavForHubSearch(
+    "members",
+    filterSheetSubnavByPlatformPreset("members", MEMBERS_SHEET_SETTINGS_SUBNAV),
+  );
+  const memSearchActive = getHubSheetSearchKeepPaths("members") != null;
+  const hubBody =
+    memSearchActive && memMain.length === 0 && memSettings.length === 0
+      ? renderHubSheetNavEmpty()
+      : `
         <div class="space-y-4">
-          <section class="pt-0">
-            ${renderPcSheetDarkSubnav(hash, filterSheetSubnavByPlatformPreset("members", MEMBERS_SHEET_SUBNAV), getActiveMembersSheetSubPath, getMembersSheetSidebarChildActivePath, {
+          ${
+            memMain.length > 0
+              ? `<section class="pt-0">
+            ${renderPcSheetDarkSubnav(hash, memMain, getActiveMembersSheetSubPath, getMembersSheetSidebarChildActivePath, {
               brandProductSecondLevel: true,
               sheetGroupedSubnavAriaLabel: memGroupedAria,
             })}
-          </section>
-          <section class="${SBR_DIVIDER_T} pt-3">
-            ${renderPcSheetDarkSubnav(hash, filterSheetSubnavByPlatformPreset("members", MEMBERS_SHEET_SETTINGS_SUBNAV), getActiveMembersSettingsSubPath, pcmSheetNavNoChildPath, {
+          </section>`
+              : ""
+          }
+          ${
+            memSettings.length > 0
+              ? `<section class="${memMain.length > 0 ? SBR_DIVIDER_T + " pt-3" : "pt-0"}">
+            ${renderPcSheetDarkSubnav(hash, memSettings, getActiveMembersSettingsSubPath, pcmSheetNavNoChildPath, {
               brandProductSecondLevel: true,
               sheetGroupedSubnavAriaLabel: `${pick(memMod.title, memMod.titleEn)} · ${t("nav.subNavQualifier")}`,
             })}
-          </section>
+          </section>`
+              : ""
+          }
         </div>`;
   return `
     <div
@@ -2712,6 +2827,7 @@ function renderMembersSecondarySheet(hash: string, open: boolean): string {
       role="dialog"
       aria-modal="${open ? "true" : "false"}"
       aria-label="${memDlg}"
+      data-hub-sheet-root="members"
     >
       <div class="flex h-14 shrink-0 items-center gap-1 ${SBR_DIVIDER_B} px-2">
         <button
@@ -2724,6 +2840,7 @@ function renderMembersSecondarySheet(hash: string, open: boolean): string {
         </button>
         <span class="min-w-0 truncate text-sm font-semibold ${SBR_TITLE}">${pick(memMod.title, memMod.titleEn)}</span>
       </div>
+      ${renderHubSheetSearchBox("members")}
       <nav class="sidebar-primary-nav-scroll min-h-0 flex-1 overflow-y-auto px-2 py-3" aria-label="${memNavFunc}">
         ${hubBody}
       </nav>
@@ -2739,20 +2856,40 @@ function renderGiftCardsSecondarySheet(hash: string, open: boolean): string {
     ? "translate-x-0 pointer-events-auto opacity-100"
     : "translate-x-full pointer-events-none opacity-0";
   const chevronBack = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>`;
-  const hubBody = `
+  const gcMain = filterSheetSubnavForHubSearch(
+    "gift-cards",
+    filterSheetSubnavByPlatformPreset("gift-cards", GIFT_CARDS_SHEET_MAIN_SUBNAV),
+  );
+  const gcSettings = filterSheetSubnavForHubSearch(
+    "gift-cards",
+    filterSheetSubnavByPlatformPreset("gift-cards", GIFT_CARDS_SHEET_SETTINGS_SUBNAV),
+  );
+  const gcSearchActive = getHubSheetSearchKeepPaths("gift-cards") != null;
+  const hubBody =
+    gcSearchActive && gcMain.length === 0 && gcSettings.length === 0
+      ? renderHubSheetNavEmpty()
+      : `
         <div class="space-y-4">
-          <section class="pt-0">
-            ${renderPcSheetDarkSubnav(hash, filterSheetSubnavByPlatformPreset("gift-cards", GIFT_CARDS_SHEET_MAIN_SUBNAV), getActiveGiftCardsSheetSubPath, pcmSheetNavNoChildPath, {
+          ${
+            gcMain.length > 0
+              ? `<section class="pt-0">
+            ${renderPcSheetDarkSubnav(hash, gcMain, getActiveGiftCardsSheetSubPath, pcmSheetNavNoChildPath, {
               brandProductSecondLevel: true,
               sheetGroupedSubnavAriaLabel: gcGroupedAria,
             })}
-          </section>
-          <section class="${SBR_DIVIDER_T} pt-3">
-            ${renderPcSheetDarkSubnav(hash, filterSheetSubnavByPlatformPreset("gift-cards", GIFT_CARDS_SHEET_SETTINGS_SUBNAV), getActiveGiftCardsSheetSubPath, pcmSheetNavNoChildPath, {
+          </section>`
+              : ""
+          }
+          ${
+            gcSettings.length > 0
+              ? `<section class="${gcMain.length > 0 ? SBR_DIVIDER_T + " pt-3" : "pt-0"}">
+            ${renderPcSheetDarkSubnav(hash, gcSettings, getActiveGiftCardsSheetSubPath, pcmSheetNavNoChildPath, {
               brandProductSecondLevel: true,
               sheetGroupedSubnavAriaLabel: `${pick(giftMod.title, giftMod.titleEn)} · ${t("nav.subNavQualifier")}`,
             })}
-          </section>
+          </section>`
+              : ""
+          }
         </div>`;
   return `
     <div
@@ -2763,6 +2900,7 @@ function renderGiftCardsSecondarySheet(hash: string, open: boolean): string {
       role="dialog"
       aria-modal="${open ? "true" : "false"}"
       aria-label="${gcDlg}"
+      data-hub-sheet-root="gift-cards"
     >
       <div class="flex h-14 shrink-0 items-center gap-1 ${SBR_DIVIDER_B} px-2">
         <button
@@ -2775,6 +2913,7 @@ function renderGiftCardsSecondarySheet(hash: string, open: boolean): string {
         </button>
         <span class="min-w-0 truncate text-sm font-semibold ${SBR_TITLE}">${pick(giftMod.title, giftMod.titleEn)}</span>
       </div>
+      ${renderHubSheetSearchBox("gift-cards")}
       <nav class="sidebar-primary-nav-scroll min-h-0 flex-1 overflow-y-auto px-2 py-3" aria-label="${gcNavFunc}">
         ${hubBody}
       </nav>
@@ -2790,10 +2929,18 @@ function renderReportsSecondarySheet(hash: string, open: boolean): string {
     ? "translate-x-0 pointer-events-auto opacity-100"
     : "translate-x-full pointer-events-none opacity-0";
   const chevronBack = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>`;
-  const hubBody = `
+  const rptSubnav = filterSheetSubnavForHubSearch(
+    "reports-finance",
+    filterSheetSubnavByPlatformPreset("reports-finance", REPORTS_SHEET_SUBNAV),
+  );
+  const rptSearchActive = getHubSheetSearchKeepPaths("reports-finance") != null;
+  const hubBody =
+    rptSearchActive && rptSubnav.length === 0
+      ? renderHubSheetNavEmpty()
+      : `
         <div class="space-y-4">
           <section class="pt-0">
-            ${renderPcSheetDarkSubnav(hash, filterSheetSubnavByPlatformPreset("reports-finance", REPORTS_SHEET_SUBNAV), getActiveReportsSheetSubPath, getReportsSheetSidebarChildActivePath, {
+            ${renderPcSheetDarkSubnav(hash, rptSubnav, getActiveReportsSheetSubPath, getReportsSheetSidebarChildActivePath, {
               brandProductSecondLevel: true,
               sheetGroupedSubnavAriaLabel: rptGroupedAria,
             })}
@@ -2808,6 +2955,7 @@ function renderReportsSecondarySheet(hash: string, open: boolean): string {
       role="dialog"
       aria-modal="${open ? "true" : "false"}"
       aria-label="${rptDlg}"
+      data-hub-sheet-root="reports-finance"
     >
       <div class="flex h-14 shrink-0 items-center gap-1 ${SBR_DIVIDER_B} px-2">
         <button
@@ -2820,6 +2968,7 @@ function renderReportsSecondarySheet(hash: string, open: boolean): string {
         </button>
         <span class="min-w-0 truncate text-sm font-semibold ${SBR_TITLE}">${pick(rptMod.title, rptMod.titleEn)}</span>
       </div>
+      ${renderHubSheetSearchBox("reports-finance")}
       <nav class="sidebar-primary-nav-scroll min-h-0 flex-1 overflow-y-auto px-2 py-3" aria-label="${rptNavFunc}">
         ${hubBody}
       </nav>
@@ -2836,10 +2985,18 @@ function renderPrintSecondarySheet(hash: string, open: boolean): string {
     ? "translate-x-0 pointer-events-auto opacity-100"
     : "translate-x-full pointer-events-none opacity-0";
   const chevronBack = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>`;
-  const hubBody = `
+  const ptSubnav = filterSheetSubnavForHubSearch(
+    "print-templates",
+    filterSheetSubnavByPlatformPreset("print-templates", PRINT_SHEET_SUBNAV),
+  );
+  const ptSearchActive = getHubSheetSearchKeepPaths("print-templates") != null;
+  const hubBody =
+    ptSearchActive && ptSubnav.length === 0
+      ? renderHubSheetNavEmpty()
+      : `
         <div class="space-y-4">
           <section class="pt-0">
-            ${renderPcSheetDarkSubnav(hash, filterSheetSubnavByPlatformPreset("print-templates", PRINT_SHEET_SUBNAV), getActivePrintSheetSubPath, pcmSheetNavNoChildPath, {
+            ${renderPcSheetDarkSubnav(hash, ptSubnav, getActivePrintSheetSubPath, pcmSheetNavNoChildPath, {
               brandProductSecondLevel: true,
               sheetGroupedSubnavAriaLabel: ptSheetAria,
             })}
@@ -2854,6 +3011,7 @@ function renderPrintSecondarySheet(hash: string, open: boolean): string {
       role="dialog"
       aria-modal="${open ? "true" : "false"}"
       aria-label="${ptDlg}"
+      data-hub-sheet-root="print-templates"
     >
       <div class="flex h-14 shrink-0 items-center gap-1 ${SBR_DIVIDER_B} px-2">
         <button
@@ -2866,6 +3024,7 @@ function renderPrintSecondarySheet(hash: string, open: boolean): string {
         </button>
         <span class="min-w-0 truncate text-sm font-semibold ${SBR_TITLE}">${pick(printMod.title, printMod.titleEn)}</span>
       </div>
+      ${renderHubSheetSearchBox("print-templates")}
       <nav class="sidebar-primary-nav-scroll min-h-0 flex-1 overflow-y-auto px-2 py-3" aria-label="${ptNavFunc}">
         ${hubBody}
       </nav>
@@ -2881,10 +3040,18 @@ function renderReservationsSecondarySheet(hash: string, open: boolean): string {
     ? "translate-x-0 pointer-events-auto opacity-100"
     : "translate-x-full pointer-events-none opacity-0";
   const chevronBack = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>`;
-  const hubBody = `
+  const resSubnav = filterSheetSubnavForHubSearch(
+    "reservations",
+    filterSheetSubnavByPlatformPreset("reservations", RESERVATIONS_SHEET_SUBNAV),
+  );
+  const resSearchActive = getHubSheetSearchKeepPaths("reservations") != null;
+  const hubBody =
+    resSearchActive && resSubnav.length === 0
+      ? renderHubSheetNavEmpty()
+      : `
         <div class="space-y-4">
           <section class="pt-0">
-            ${renderPcSheetDarkSubnav(hash, filterSheetSubnavByPlatformPreset("reservations", RESERVATIONS_SHEET_SUBNAV), getActiveReservationsSheetSubPath, pcmSheetNavNoChildPath, {
+            ${renderPcSheetDarkSubnav(hash, resSubnav, getActiveReservationsSheetSubPath, pcmSheetNavNoChildPath, {
               brandProductSecondLevel: true,
               sheetGroupedSubnavAriaLabel: resGroupedAria,
             })}
@@ -2899,6 +3066,7 @@ function renderReservationsSecondarySheet(hash: string, open: boolean): string {
       role="dialog"
       aria-modal="${open ? "true" : "false"}"
       aria-label="${resDlg}"
+      data-hub-sheet-root="reservations"
     >
       <div class="flex h-14 shrink-0 items-center gap-1 ${SBR_DIVIDER_B} px-2">
         <button
@@ -2911,6 +3079,7 @@ function renderReservationsSecondarySheet(hash: string, open: boolean): string {
         </button>
         <span class="min-w-0 truncate text-sm font-semibold ${SBR_TITLE}">${pick(resMod.title, resMod.titleEn)}</span>
       </div>
+      ${renderHubSheetSearchBox("reservations")}
       <nav class="sidebar-primary-nav-scroll min-h-0 flex-1 overflow-y-auto px-2 py-3" aria-label="${resNavFunc}">
         ${hubBody}
       </nav>
@@ -2926,20 +3095,37 @@ function renderFinanceSecondarySheet(hash: string, open: boolean): string {
     ? "translate-x-0 pointer-events-auto opacity-100"
     : "translate-x-full pointer-events-none opacity-0";
   const chevronBack = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>`;
-  const hubBody = `
+  const finMain = filterSheetSubnavForHubSearch(
+    "finance-center",
+    filterSheetSubnavByPlatformPreset("finance-center", FINANCE_SHEET_SUBNAV),
+  );
+  const finSettings = filterSheetSubnavForHubSearch("finance-center", FINANCE_SHEET_SETTINGS_SUBNAV);
+  const finSearchActive = getHubSheetSearchKeepPaths("finance-center") != null;
+  const hubBody =
+    finSearchActive && finMain.length === 0 && finSettings.length === 0
+      ? renderHubSheetNavEmpty()
+      : `
         <div class="space-y-4">
-          <section class="pt-0">
-            ${renderPcSheetDarkSubnav(hash, filterSheetSubnavByPlatformPreset("finance-center", FINANCE_SHEET_SUBNAV), getActiveFinanceSheetSubPath, pcmSheetNavNoChildPath, {
+          ${
+            finMain.length > 0
+              ? `<section class="pt-0">
+            ${renderPcSheetDarkSubnav(hash, finMain, getActiveFinanceSheetSubPath, pcmSheetNavNoChildPath, {
               brandProductSecondLevel: true,
               sheetGroupedSubnavAriaLabel: finGroupedAria,
             })}
-          </section>
-          <section class="${SBR_DIVIDER_T} pt-3">
-            ${renderPcSheetDarkSubnav(hash, FINANCE_SHEET_SETTINGS_SUBNAV, getActiveFinanceSettingsSubPath, pcmSheetNavNoChildPath, {
+          </section>`
+              : ""
+          }
+          ${
+            finSettings.length > 0
+              ? `<section class="${finMain.length > 0 ? SBR_DIVIDER_T + " pt-3" : "pt-0"}">
+            ${renderPcSheetDarkSubnav(hash, finSettings, getActiveFinanceSettingsSubPath, pcmSheetNavNoChildPath, {
               brandProductSecondLevel: true,
               sheetGroupedSubnavAriaLabel: `${pick(finMod.title, finMod.titleEn)} · ${t("nav.subNavQualifier")}`,
             })}
-          </section>
+          </section>`
+              : ""
+          }
         </div>`;
   return `
     <div
@@ -2950,6 +3136,7 @@ function renderFinanceSecondarySheet(hash: string, open: boolean): string {
       role="dialog"
       aria-modal="${open ? "true" : "false"}"
       aria-label="${finDlg}"
+      data-hub-sheet-root="finance-center"
     >
       <div class="flex h-14 shrink-0 items-center gap-1 ${SBR_DIVIDER_B} px-2">
         <button
@@ -2962,6 +3149,7 @@ function renderFinanceSecondarySheet(hash: string, open: boolean): string {
         </button>
         <span class="min-w-0 truncate text-sm font-semibold ${SBR_TITLE}">${escapeHtml(pick(finMod.title, finMod.titleEn))}</span>
       </div>
+      ${renderHubSheetSearchBox("finance-center")}
       <nav class="sidebar-primary-nav-scroll min-h-0 flex-1 overflow-y-auto px-2 py-3" aria-label="${finNavFunc}">
         ${hubBody}
       </nav>
@@ -2983,8 +3171,16 @@ function renderNavModuleSecondarySheet(
   const sheetTransition =
     open && skipEnterAnimation ? "" : SIDEBAR_SECONDARY_SHEET_TRANSITION;
   const chevronBack = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>`;
-  const subnav = getFilteredNavModuleSheetSubnav(m);
-  const hubBody = `
+  let subnav = getFilteredNavModuleSheetSubnav(m);
+  const searchQ = isHubSheetSearchEnabled(m.id) ? getHubSheetSearchQuery(m.id) : "";
+  const searchActive = shouldEnterHubSearch(searchQ);
+  if (searchActive) {
+    subnav = filterSheetSubnavForHubSearch(m.id, subnav);
+  }
+  const hubBody =
+    searchActive && subnav.length === 0
+      ? renderHubSheetNavEmpty()
+      : `
         <div class="space-y-4">
           <section class="pt-0">
             ${renderPcSheetDarkSubnav(hash, subnav, (p) => getActiveNavModuleSheetSubPath(p, m), pcmSheetNavNoChildPath, {
@@ -3003,6 +3199,7 @@ function renderNavModuleSecondarySheet(
       role="dialog"
       aria-modal="${open ? "true" : "false"}"
       aria-label="${nmDlg}"
+      data-hub-sheet-root="${m.id}"
     >
       <div class="flex h-14 shrink-0 items-center gap-1 ${SBR_DIVIDER_B} px-2">
         <button
@@ -3015,10 +3212,73 @@ function renderNavModuleSecondarySheet(
         </button>
         <span class="min-w-0 truncate text-sm font-semibold ${SBR_TITLE}">${escapeHtml(pick(m.title, m.titleEn))}</span>
       </div>
+      ${renderHubSheetSearchBox(m.id)}
       <nav class="sidebar-primary-nav-scroll min-h-0 flex-1 overflow-y-auto px-2 py-3" aria-label="${nmNavFunc}">
         ${hubBody}
       </nav>
     </div>`;
+}
+
+/** 当前打开且处于搜索态的 Hub（主区结果面板） */
+function getActiveHubSheetSearchContext(): { hubId: string; q: string } | null {
+  const openDedicated: Array<[string, boolean]> = [
+    ["marketing", readMarketingSecondarySheetOpen()],
+    ["promotions", readPromotionsSecondarySheetOpen()],
+    ["members", readMembersSecondarySheetOpen()],
+    ["gift-cards", readGiftCardsSecondarySheetOpen()],
+    ["reports-finance", readReportsSecondarySheetOpen()],
+    ["print-templates", readPrintSecondarySheetOpen()],
+    ["reservations", readReservationsSecondarySheetOpen()],
+    ["product-center-main", readProductCenterMainSecondarySheetOpen()],
+    ["inventory-ordering", readInventorySecondarySheetOpen()],
+    ["finance-center", readNavModuleSheetOpen("finance-center")],
+  ];
+  for (const [hubId, open] of openDedicated) {
+    if (!open || !isHubSheetSearchEnabled(hubId)) continue;
+    const q = getHubSheetSearchQuery(hubId);
+    if (!shouldEnterHubSearch(q)) continue;
+    return { hubId, q };
+  }
+  for (const m of NAV_MODULES) {
+    if (m.subNavPlacement !== "sheet") continue;
+    if (m.id === "finance-center") continue; // 已在专用壳处理
+    if (!isHubSheetSearchEnabled(m.id)) continue;
+    if (!readNavModuleSheetOpen(m.id)) continue;
+    const q = getHubSheetSearchQuery(m.id);
+    if (!shouldEnterHubSearch(q)) continue;
+    return { hubId: m.id, q };
+  }
+  return null;
+}
+
+function applyHubSearchFocusHighlight(): void {
+  const target = consumeHubSearchFocusTarget();
+  if (!target?.seq) return;
+  const seq = target.seq;
+  const tryFocus = (): void => {
+    const el = document.querySelector<HTMLElement>(`[data-module-setting-row-seq="${seq}"]`);
+    if (!el) return;
+    el.scrollIntoView({ block: "center", behavior: "smooth" });
+    el.classList.add("ring-2", "ring-primary", "ring-offset-2", "ring-offset-background");
+    window.setTimeout(() => {
+      el.classList.remove("ring-2", "ring-primary", "ring-offset-2", "ring-offset-background");
+    }, 1600);
+  };
+  requestAnimationFrame(() => {
+    tryFocus();
+    requestAnimationFrame(tryFocus);
+    window.setTimeout(tryFocus, 120);
+  });
+}
+
+function navigateFromHubSearchHit(hubId: string, path: string, seqRaw: string): void {
+  clearHubSheetSearch(hubId);
+  const seq = seqRaw ? Number(seqRaw) : NaN;
+  if (Number.isFinite(seq) && seq > 0) {
+    setHubSearchFocusTarget({ path, seq });
+  }
+  replaceHashPath(path);
+  mount();
 }
 
 /** 侧栏内自右向左滑入、叠在一级导航之上的库存二级导航层 */
@@ -3026,7 +3286,12 @@ function renderInventorySecondarySheet(hash: string, open: boolean): string {
   const invMod = NAV_MODULES.find((x) => x.id === "inventory-ordering")!;
   const invDlg = escapeHtml(t("inventory.sheetTitle"));
   const invNavFunc = escapeHtml(t("inventory.sheetNav"));
-  const items = getInventorySecondaryNavItems();
+  let items = getInventorySecondaryNavItems();
+  const invKeep = getHubSheetSearchKeepPaths("inventory-ordering");
+  const invSearchActive = invKeep != null;
+  if (invKeep) {
+    items = items.filter((item) => invKeep.has(item.path));
+  }
   const sheetClass = open
     ? "translate-x-0 pointer-events-auto opacity-100"
     : "translate-x-full pointer-events-none opacity-0";
@@ -3048,6 +3313,10 @@ function renderInventorySecondarySheet(hash: string, open: boolean): string {
         </li>`;
     })
     .join("");
+  const hubBody =
+    invSearchActive && items.length === 0
+      ? renderHubSheetNavEmpty()
+      : `<ul class="space-y-1" role="list">${links}</ul>`;
   return `
     <div
       id="inventory-secondary-sheet"
@@ -3057,6 +3326,7 @@ function renderInventorySecondarySheet(hash: string, open: boolean): string {
       role="dialog"
       aria-modal="${open ? "true" : "false"}"
       aria-label="${invDlg}"
+      data-hub-sheet-root="inventory-ordering"
     >
       <div class="flex h-14 shrink-0 items-center gap-1 ${SBR_DIVIDER_B} px-2">
         <button
@@ -3069,8 +3339,9 @@ function renderInventorySecondarySheet(hash: string, open: boolean): string {
         </button>
         <span class="min-w-0 truncate text-sm font-semibold ${SBR_TITLE}">${pick(invMod.title, invMod.titleEn)}</span>
       </div>
+      ${renderHubSheetSearchBox("inventory-ordering")}
       <nav class="sidebar-primary-nav-scroll min-h-0 flex-1 overflow-y-auto px-2 py-3" aria-label="${invNavFunc}">
-        <ul class="space-y-1" role="list">${links}</ul>
+        ${hubBody}
       </nav>
     </div>`;
 }
@@ -10979,7 +11250,9 @@ function renderNavHomePanel(): string {
 function renderMain(): string {
   const path = readAppHashPath();
   const tabModule = getTabModule(path);
-  const { title, module } = findTitle(path);
+  const { title: pageTitle, module } = findTitle(path);
+  const hubSearchCtx = getActiveHubSheetSearchContext();
+  const title = hubSearchCtx ? t("hubSearch.resultsTitle") : pageTitle;
   const headerKickerBase = tabModule ? formatNavModuleKicker(tabModule) : module ?? "";
   const scopeLabel = formatScopeFilterLabel(readScopeFilters(), getUiLocale());
   const headerKicker = scopeLabel
@@ -11138,7 +11411,14 @@ function renderMain(): string {
         </div>
       </header>`;
 
-  const merchantTabPanelBody =
+  const merchantTabPanelBody = (() => {
+    if (hubSearchCtx) {
+      const index = buildHubSearchIndex(hubSearchCtx.hubId);
+      const hits = index ? queryHubSearchIndex(index, hubSearchCtx.q) : [];
+      return renderHubSearchResultsPane(hubSearchCtx.hubId, hubSearchCtx.q, hits);
+    }
+    return null;
+  })() ?? (
     isGiftCardsFactory
       ? renderGiftCardsFactoryIframePanel()
       : isInventoryExpiryIframe
@@ -11272,7 +11552,8 @@ function renderMain(): string {
                                                                               ? renderBrandStoreListPage(path)
                                                                               : isGroupStoreList
                                                                                 ? renderGroupStoreListPage(path)
-                                                                                : renderPlaceholder(path, title, tabModule);
+                                                                                : renderPlaceholder(path, title, tabModule)
+  );
 
   return `
     <div class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
@@ -11716,6 +11997,20 @@ function mount(): void {
     });
   }
 
+  applyHubSearchFocusHighlight();
+  if (consumeHubSheetSearchInputRefocus()) {
+    const input = document.querySelector<HTMLInputElement>("[data-hub-sheet-search-input]");
+    if (input) {
+      const len = input.value.length;
+      input.focus();
+      try {
+        input.setSelectionRange(len, len);
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+
   document.getElementById("nav-tree")?.addEventListener(
     "scroll",
     () => {
@@ -12105,21 +12400,93 @@ function mount(): void {
     true,
   );
 
-  for (const m of NAV_MODULES) {
-    if (m.subNavPlacement !== "sheet") continue;
-    document.getElementById(`${m.id}-secondary-sheet`)?.addEventListener(
+  for (const hubId of listHubSheetSearchHubIds()) {
+    const sheetDomId = getHubSheetDomId(hubId);
+    document.getElementById(sheetDomId)?.addEventListener(
       "click",
       (e) => {
         const hit = e.target as HTMLElement;
-        if (hit.closest(`[data-nav-module-sheet-secondary-close="${m.id}"]`)) {
+        if (hit.closest(`[data-nav-module-sheet-secondary-close="${hubId}"]`)) {
           e.preventDefault();
-          setNavModuleSheetOpen(m.id, false);
+          setNavModuleSheetOpen(hubId, false);
           mount();
+          return;
+        }
+        const clearBtn = hit.closest(`[data-hub-sheet-search-clear="${hubId}"]`);
+        if (clearBtn) {
+          e.preventDefault();
+          clearHubSheetSearch(hubId);
+          mount();
+          return;
+        }
+        if (shouldEnterHubSearch(getHubSheetSearchQuery(hubId))) {
+          const navLink = hit.closest(`#${CSS.escape(sheetDomId)} a[href^="#"]`);
+          if (navLink instanceof HTMLAnchorElement) {
+            clearHubSheetSearch(hubId);
+            const nextPath = navLink.getAttribute("href")?.replace(/^#/, "") ?? "";
+            if (!nextPath || nextPath === readAppHashPath()) {
+              e.preventDefault();
+              mount();
+            }
+          }
         }
       },
       true,
     );
+
+    const searchInput = document.querySelector<HTMLInputElement>(
+      `[data-hub-sheet-search-input="${hubId}"]`,
+    );
+    if (!searchInput) continue;
+    type HubSearchInputEl = HTMLInputElement & {
+      _hubSearchTimer?: number;
+      _hubSearchComposing?: boolean;
+    };
+    const inputEl = searchInput as HubSearchInputEl;
+    const flushHubSearch = (): void => {
+      if (inputEl._hubSearchComposing) return;
+      window.clearTimeout(inputEl._hubSearchTimer);
+      inputEl._hubSearchTimer = window.setTimeout(() => {
+        if (inputEl._hubSearchComposing) return;
+        setHubSheetSearchQuery(hubId, inputEl.value);
+        markHubSheetSearchInputRefocus();
+        mount();
+      }, 200);
+    };
+    inputEl.addEventListener("compositionstart", () => {
+      inputEl._hubSearchComposing = true;
+      window.clearTimeout(inputEl._hubSearchTimer);
+    });
+    inputEl.addEventListener("compositionend", () => {
+      inputEl._hubSearchComposing = false;
+      flushHubSearch();
+    });
+    inputEl.addEventListener("input", (ev) => {
+      if (inputEl._hubSearchComposing || (ev as InputEvent).isComposing) return;
+      flushHubSearch();
+    });
+    inputEl.addEventListener("keydown", (ev) => {
+      if (ev.key !== "Escape") return;
+      if (ev.isComposing || inputEl._hubSearchComposing) return;
+      if (!getHubSheetSearchQuery(hubId) && !inputEl.value.trim()) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      window.clearTimeout(inputEl._hubSearchTimer);
+      clearHubSheetSearch(hubId);
+      mount();
+    });
   }
+
+  document.querySelector("[data-hub-search-results]")?.addEventListener("click", (e) => {
+    const btn = (e.target as HTMLElement).closest<HTMLElement>("[data-hub-search-hit]");
+    if (!btn) return;
+    e.preventDefault();
+    const hubId = btn.getAttribute("data-hub-id") ?? "";
+    const path = btn.getAttribute("data-hit-path") ?? "";
+    const seq = btn.getAttribute("data-hit-seq") ?? "";
+    if (!hubId || !path) return;
+    navigateFromHubSearchHit(hubId, path, seq);
+  });
 
   app.firstElementChild?.addEventListener("click", (e) => {
     const el = (e.target as HTMLElement).closest("[data-tertiary-sidebar-toggle]");

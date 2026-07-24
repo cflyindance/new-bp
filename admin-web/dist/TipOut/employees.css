@@ -1,12 +1,61 @@
 /* 员工管理 — 与 common.css 一致 */
 
-.employees-page .employees-toolbar {
+.employees-page .employees-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 20px;
+  margin: 0 0 16px;
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+}
+
+.employees-page .employees-tab {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 10px 2px 12px;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.employees-page .employees-tab:hover {
+  color: var(--text-primary);
+}
+
+.employees-page .employees-tab.is-active {
+  color: var(--primary, #1677ff);
+  border-bottom-color: var(--primary, #1677ff);
+  font-weight: 600;
+}
+
+.employees-page .employees-panel[hidden] {
+  display: none !important;
+}
+
+.employees-page .employees-action-bar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 16px;
+  margin: 0 0 16px;
+}
+
+.employees-page .employees-action-bar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.employees-page .employees-action-bar-actions .btn[hidden],
+.employees-page .employees-action-bar-actions .btn.is-tab-hidden {
+  display: none !important;
 }
 
 .employees-page .employees-page-title {
@@ -28,7 +77,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 8px 10px;
-  margin: 0 0 16px;
+  margin: 0;
 }
 
 .employees-page .employees-store-filter[hidden] {
@@ -69,6 +118,100 @@
 
 .employees-page .employees-table {
   min-width: 1080px;
+}
+
+.employees-page .employees-roles-table {
+  min-width: 640px;
+}
+
+.employees-page .employees-roles-table .employees-role-desc {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+  max-width: 28rem;
+}
+
+.employees-page .employees-roles-table .employees-role-desc--empty {
+  color: var(--text-tertiary, #9ca3af);
+}
+
+.employees-page .employees-roles-table .employees-role-delete[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: auto;
+  text-decoration: none;
+  color: var(--text-tertiary, #9ca3af);
+}
+
+.employees-page .employees-roles-table .employees-role-kind {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.employees-page .employees-roles-table .employees-role-occupancy {
+  font-variant-numeric: tabular-nums;
+}
+
+.employees-page .employees-roles-table .employees-role-occupancy-link {
+  color: var(--primary, #1677ff);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.employees-page .employees-roles-table .employees-role-occupancy-link:hover {
+  text-decoration: underline;
+}
+
+.employees-page .employees-roles-table .employees-role-occupancy-muted {
+  color: var(--text-tertiary, #9ca3af);
+}
+
+.employees-role-occupants-hint {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.employees-role-occupants-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: min(52vh, 360px);
+  overflow-y: auto;
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 8px;
+}
+
+.employees-role-occupants-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px 12px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+  font-size: 14px;
+}
+
+.employees-role-occupants-list li:last-child {
+  border-bottom: 0;
+}
+
+.employees-role-occupants-list .employees-role-occupant-meta {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.employees-role-occupants-empty {
+  margin: 0;
+  padding: 24px 8px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--text-tertiary, #9ca3af);
 }
 
 .employees-page .employees-table-group-row th {

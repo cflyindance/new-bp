@@ -878,7 +878,7 @@
           } else {
             valStr = '占比 ' + (pr.pct || 0) + '%';
             var cond = pr.conditions || (pr.type === 'sales' && rule.salesConditions) || (pr.type === 'personal_sales' && rule.salesConditions) || (pr.type === 'tips' && rule.tipsConditions) || (pr.type === 'surcharge' && rule.surchargeConditions);
-            if (cond && (pr.type === 'surcharge' || pr.type === 'tips')) valStr += ' | ' + formatSurchargeConditions(cond);
+            if (cond && (pr.type === 'surcharge' || pr.type === 'tips' || pr.type === 'manual')) valStr += ' | ' + formatSurchargeConditions(cond);
             else if (cond && typeof cond === 'object' && Object.keys(cond).length) valStr += ' | ' + formatConditions(cond, true);
           }
           htmlOt += '<div class="rule-detail-item"><div class="label">' + name + '</div><div class="value">' + valStr + '</div></div>';
@@ -951,7 +951,7 @@
         } else {
           valStr = '占比 ' + (pr.pct || 0) + '%';
           var cond = pr.conditions || (pr.type === 'sales' && rule.salesConditions) || (pr.type === 'personal_sales' && rule.salesConditions) || (pr.type === 'tips' && rule.tipsConditions) || (pr.type === 'surcharge' && rule.surchargeConditions);
-          if (cond && (pr.type === 'surcharge' || pr.type === 'tips')) valStr += ' | ' + formatSurchargeConditions(cond);
+          if (cond && (pr.type === 'surcharge' || pr.type === 'tips' || pr.type === 'manual')) valStr += ' | ' + formatSurchargeConditions(cond);
           else if (cond && typeof cond === 'object' && Object.keys(cond).length) valStr += ' | ' + formatConditions(cond, true);
         }
         html += '<div class="rule-detail-item"><div class="label">' + name + '</div><div class="value">' + valStr + '</div></div>';
@@ -1116,6 +1116,21 @@
       }
     }
 
+    function isManualHoursDistMode(rule) {
+      return !!(rule && rule.clockin === 'noclock' && rule.distribution === 'hours');
+    }
+
+    function parseHoursInput(val) {
+      if (val == null || val === '') return 0;
+      var n = parseFloat(val);
+      if (isNaN(n) || n < 0) return 0;
+      return n;
+    }
+
+    function roundPct(x) {
+      return Math.round(x * 10) / 10;
+    }
+
     function recalcDetailLegacyCard(card) {
       if (!card || card.getAttribute('data-order-tip-mode') === '1') return;
       var pool = parseFloat(card.getAttribute('data-pool')) || 0;
@@ -1129,13 +1144,13 @@
         if (!table) return;
         var empPctSum = 0;
         table.querySelectorAll('tbody tr').forEach(function(tr) {
-          var ic = tr.querySelector('td.input-cell input');
+          var ic = tr.querySelector('.detail-emp-pct-input');
           if (ic) empPctSum += parseFloat(ic.value) || 0;
         });
         table.querySelectorAll('tbody tr').forEach(function(tr) {
-          var inputCell = tr.querySelector('td.input-cell');
-          var empInp = inputCell ? inputCell.querySelector('input') : null;
-          var amtCell = inputCell && inputCell.nextElementSibling;
+          var empInp = tr.querySelector('.detail-emp-pct-input');
+          var pctCell = empInp ? empInp.closest('td') : null;
+          var amtCell = pctCell && pctCell.nextElementSibling;
           var empPct = empInp ? (parseFloat(empInp.value) || 0) : 0;
           var empAmt = empPctSum > 0 ? +(roleAmt * empPct / empPctSum).toFixed(2) : 0;
           if (amtCell) amtCell.textContent = money(empAmt);
@@ -1145,8 +1160,9 @@
 
     function buildLegacyDetailCardHtml(data, dateKey, rule, rid, tableId) {
       var roleConfig = buildRoleConfigFromRule(rule);
+      var manualHours = isManualHoursDistMode(rule);
       if (roleConfig.length === 0) {
-        return '<div class="card detail-card" data-rule-id="' + escHtml(rid) + '" data-pool="0">' +
+        return '<div class="card detail-card" data-rule-id="' + escHtml(rid) + '" data-pool="0" data-manual-hours="' + (manualHours ? '1' : '0') + '">' +
           '<div class="card-body" style="padding:24px;color:var(--text-secondary)">该规则暂无接收方配置</div></div>';
       }
       var seed = dateKey.split('-').reduce(function(a, b) { return a * 31 + parseInt(b, 10); }, 7);
@@ -1154,7 +1170,8 @@
       for (var sj = 0; sj < rs.length; sj++) seed = (seed * 31 + rs.charCodeAt(sj)) % 2000000000;
       var rng = seedRandom(seed);
       var ridSafe = String(rid).replace(/[^a-zA-Z0-9_-]/g, '_');
-      var html = '<div class="card detail-card" data-rule-id="' + escHtml(rid) + '" data-pool="' + (+data.pool || 0) + '">' +
+      var headHours = manualHours ? '<th>工时</th>' : '';
+      var html = '<div class="card detail-card" data-rule-id="' + escHtml(rid) + '" data-pool="' + (+data.pool || 0) + '" data-manual-hours="' + (manualHours ? '1' : '0') + '">' +
         '<div class="card-body detail-card-body-alloc" style="padding:16px">';
 
       roleConfig.forEach(function(rc, ri) {
@@ -1193,16 +1210,22 @@
           '</div>' +
           '<div class="employee-detail detail-employee-wrap">' +
           '<table class="data-table detail-table detail-employee-table" id="' + escHtml(subTableId) + '">' +
-          '<thead><tr><th>分配员工</th><th>员工分配比例</th><th>员工分配金额</th><th>操作</th></tr></thead><tbody>';
+          '<thead><tr><th>分配员工</th>' + headHours + '<th>员工分配比例</th><th>员工分配金额</th><th>操作</th></tr></thead><tbody>';
 
         rc.employees.forEach(function(emp, ei) {
           var empAmount = +(roleAmount * empPcts[ei] / 100).toFixed(2);
           var opts = rc.employees.map(function(e) {
             return '<option' + (e === emp ? ' selected' : '') + '>' + e + '</option>';
           }).join('');
+          var hoursCell = manualHours
+            ? '<td class="input-cell"><input type="number" class="detail-emp-hours-input" value="0" min="0" step="0.1" ' +
+              'onchange="onEmpHoursChange(\'' + tidJs + '\')"> h</td>'
+            : '';
           html += '<tr>' +
             '<td><select class="form-control" style="width:140px;height:28px;font-size:13px">' + opts + '</select></td>' +
-            '<td class="input-cell"><input type="number" value="' + empPcts[ei] + '" onchange="recalcRoleAmount(\'' + tidJs + '\')"> %</td>' +
+            hoursCell +
+            '<td class="input-cell"><input type="number" class="detail-emp-pct-input" value="' + empPcts[ei] +
+            '" onchange="recalcRoleAmount(\'' + tidJs + '\')"> %</td>' +
             '<td>' + money(empAmount) + '</td>' +
             '<td class="action-cell">' +
             '<a href="javascript:void(0)" onclick="addDetailRow(\'' + tidJs + '\',this)">新增行</a>' +
@@ -1262,14 +1285,22 @@
       if (available.length === 0) { showNotification('该角色下所有员工已被分配，无可选员工', 'warning'); return; }
       var options = available.map(function(e) { return '<option>' + e + '</option>'; }).join('');
       var lastRow = getLastRowOfRole(tableId, role);
+      var table = document.getElementById(tableId);
+      var card = table ? table.closest('.detail-card') : null;
+      var manualHours = card && card.getAttribute('data-manual-hours') === '1';
+      var hoursCell = manualHours
+        ? '<td class="input-cell"><input type="number" class="detail-emp-hours-input" value="0" min="0" step="0.1" onchange="onEmpHoursChange(\'' + tableId + '\')"> h</td>'
+        : '';
       var newRow = document.createElement('tr');
       newRow.innerHTML =
         '<td><select class="form-control" style="width:140px;height:28px;font-size:13px">' + options + '</select></td>' +
-        '<td class="input-cell"><input type="number" value="0"> %</td><td>$0.00</td>' +
+        hoursCell +
+        '<td class="input-cell"><input type="number" class="detail-emp-pct-input" value="0" onchange="recalcRoleAmount(\'' + tableId + '\')"> %</td>' +
+        '<td>$0.00</td>' +
         '<td class="action-cell"><a href="javascript:void(0)" onclick="addDetailRow(\'' + tableId + '\',this)">新增行</a>' +
         '<a href="javascript:void(0)" class="danger" onclick="removeDetailRow(\'' + tableId + '\',this)">删除行</a></td>';
       lastRow.after(newRow);
-      recalcRoleAmount(tableId);
+      recalcAfterRowChange(tableId);
       showNotification('已在 ' + role + ' 角色组新增员工行');
     }
 
@@ -1283,9 +1314,65 @@
       row.style.transition = 'opacity 0.2s';
       setTimeout(function() {
         row.remove();
-        recalcRoleAmount(tableId);
+        recalcAfterRowChange(tableId);
       }, 200);
       showNotification('已删除员工行');
+    }
+
+    function tableHoursSum(table) {
+      if (!table) return 0;
+      var sum = 0;
+      table.querySelectorAll('.detail-emp-hours-input').forEach(function(inp) {
+        sum += parseHoursInput(inp.value);
+      });
+      return sum;
+    }
+
+    function recalcAfterRowChange(tableId) {
+      var table = document.getElementById(tableId);
+      var card = table ? table.closest('.detail-card') : null;
+      if (card && card.getAttribute('data-manual-hours') === '1' && tableHoursSum(table) > 0) {
+        onEmpHoursChange(tableId);
+      } else {
+        recalcRoleAmount(tableId);
+      }
+    }
+
+    function onEmpHoursChange(tableId) {
+      var table = document.getElementById(tableId);
+      if (!table) return;
+      var card = table.closest('.detail-card');
+      if (!card || card.getAttribute('data-manual-hours') !== '1') return;
+
+      var rows = table.querySelectorAll('tbody tr');
+      var hoursList = [];
+      var sumH = 0;
+      rows.forEach(function(tr) {
+        var hInp = tr.querySelector('.detail-emp-hours-input');
+        var h = parseHoursInput(hInp ? hInp.value : 0);
+        hoursList.push(h);
+        sumH += h;
+      });
+
+      rows.forEach(function(tr, i) {
+        var pctInp = tr.querySelector('.detail-emp-pct-input');
+        if (!pctInp) return;
+        var pct = sumH > 0 ? roundPct(hoursList[i] / sumH * 100) : 0;
+        pctInp.value = pct;
+      });
+
+      if (sumH > 0 && rows.length > 1) {
+        var sumPct = 0;
+        rows.forEach(function(tr, i) {
+          if (i < rows.length - 1) {
+            sumPct += parseFloat(tr.querySelector('.detail-emp-pct-input').value) || 0;
+          }
+        });
+        var lastPctInp = rows[rows.length - 1].querySelector('.detail-emp-pct-input');
+        if (lastPctInp) lastPctInp.value = roundPct(100 - sumPct);
+      }
+
+      recalcRoleAmount(tableId);
     }
 
     function recalcRoleAmount(tableId) {

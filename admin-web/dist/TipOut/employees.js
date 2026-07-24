@@ -6,6 +6,10 @@
 
   const STORAGE_KEY = "tipout-employees-roster-v1";
   const ROLES_STORAGE_KEY = "tipout-employee-role-options-v1";
+  const HIDDEN_SYSTEM_ROLES_KEY = "tipout-employee-role-hidden-system-v1";
+  const ROLE_META_STORAGE_KEY = "tipout-employee-role-meta-v1";
+  const TAB_STORAGE_KEY = "tipout-employees-page-tab";
+  const ROLE_DESC_MAX_LEN = 200;
   const ROLE_MULTI_SELECT_ID = "field-role";
   const ROLE_DROPDOWN_PORTAL_CLASS = "employees-role-dropdown-portal";
   const DEFAULT_STORE_NAME = "上海陆家嘴店";
@@ -28,7 +32,12 @@
     "Downtown Branch",
     "Airport Kiosk",
   ];
-  
+
+  let editingEmployeeId = null;
+  let pendingDeleteRow = null;
+  let activeTab = "employees";
+  let editingRoleName = null;
+
   function canonicalStoreDisplayName(storeName) {
     if (window.TipOutGlobalScopeFilter && typeof TipOutGlobalScopeFilter.canonicalRosterStoreDisplayName === "function") {
       return TipOutGlobalScopeFilter.canonicalRosterStoreDisplayName(storeName);
@@ -50,9 +59,6 @@
     return !!trimmed && canonicalStoreDisplayName(trimmed) !== trimmed;
   }
 
-  let editingEmployeeId = null;
-  let pendingDeleteRow = null;
-
   function normalizeRoleName(value) {
     return String(value || "").trim();
   }
@@ -70,6 +76,135 @@
 
   function saveCustomRoles(roles) {
     localStorage.setItem(ROLES_STORAGE_KEY, JSON.stringify(roles));
+  }
+
+  function loadHiddenSystemRoles() {
+    try {
+      const raw = localStorage.getItem(HIDDEN_SYSTEM_ROLES_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed.map(normalizeRoleName).filter(Boolean) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function saveHiddenSystemRoles(roles) {
+    localStorage.setItem(HIDDEN_SYSTEM_ROLES_KEY, JSON.stringify(roles));
+  }
+
+  function normalizeRoleDescription(value) {
+    return String(value || "").trim().slice(0, ROLE_DESC_MAX_LEN);
+  }
+
+  function roleMetaKey(name) {
+    return normalizeRoleName(name).toLowerCase();
+  }
+
+  function loadRoleMetaMap() {
+    try {
+      const raw = localStorage.getItem(ROLE_META_STORAGE_KEY);
+      if (!raw) return {};
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+      const out = {};
+      Object.keys(parsed).forEach((key) => {
+        const item = parsed[key];
+        if (!item || typeof item !== "object") return;
+        const k = String(key || "").trim().toLowerCase();
+        if (!k) return;
+        out[k] = {
+          description: normalizeRoleDescription(item.description),
+        };
+      });
+      return out;
+    } catch {
+      return {};
+    }
+  }
+
+  function saveRoleMetaMap(map) {
+    localStorage.setItem(ROLE_META_STORAGE_KEY, JSON.stringify(map || {}));
+  }
+
+  function getRoleDescription(name) {
+    const key = roleMetaKey(name);
+    if (!key) return "";
+    const map = loadRoleMetaMap();
+    return map[key] && map[key].description ? String(map[key].description) : "";
+  }
+
+  function setRoleDescription(name, description) {
+    const role = normalizeRoleName(name);
+    const key = roleMetaKey(role);
+    if (!key) return false;
+    const map = loadRoleMetaMap();
+    const desc = normalizeRoleDescription(description);
+    if (!desc) {
+      if (map[key]) {
+        delete map[key];
+        saveRoleMetaMap(map);
+      }
+      return true;
+    }
+    map[key] = { description: desc };
+    saveRoleMetaMap(map);
+    return true;
+  }
+
+  function renameRoleMeta(oldName, newName) {
+    const fromKey = roleMetaKey(oldName);
+    const toKey = roleMetaKey(newName);
+    if (!fromKey || !toKey) return false;
+    const map = loadRoleMetaMap();
+    const fromMeta = map[fromKey];
+    if (!fromMeta) {
+      if (fromKey !== toKey && map[toKey] == null) return false;
+      return true;
+    }
+    if (fromKey !== toKey) {
+      delete map[fromKey];
+      map[toKey] = {
+        description: normalizeRoleDescription(fromMeta.description),
+      };
+      saveRoleMetaMap(map);
+    }
+    return true;
+  }
+
+  function removeRoleMeta(name) {
+    const key = roleMetaKey(name);
+    if (!key) return false;
+    const map = loadRoleMetaMap();
+    if (!map[key]) return false;
+    delete map[key];
+    saveRoleMetaMap(map);
+    return true;
+  }
+
+  function isHiddenSystemRole(name) {
+    const role = normalizeRoleName(name);
+    if (!role) return false;
+    return loadHiddenSystemRoles().some((r) => roleValuesEqual(r, role));
+  }
+
+  function hideSystemRole(name) {
+    const role = normalizeRoleName(name);
+    if (!role || !isSystemRole(role)) return false;
+    const hidden = loadHiddenSystemRoles();
+    if (!hidden.some((r) => roleValuesEqual(r, role))) {
+      hidden.push(role);
+      saveHiddenSystemRoles(hidden);
+    }
+    return true;
+  }
+
+  function unhideSystemRole(name) {
+    const role = normalizeRoleName(name);
+    if (!role) return false;
+    const next = loadHiddenSystemRoles().filter((r) => !roleValuesEqual(r, role));
+    saveHiddenSystemRoles(next);
+    return true;
   }
 
   function parseRoleValues(raw) {
@@ -289,14 +424,350 @@
     const out = [];
     const push = (r) => {
       const name = normalizeRoleName(r);
-      if (!name || seen[name]) return;
-      seen[name] = 1;
+      if (!name || seen[name.toLowerCase()]) return;
+      seen[name.toLowerCase()] = 1;
       out.push(name);
     };
-    DEFAULT_ROLE_OPTIONS.forEach(push);
+    DEFAULT_ROLE_OPTIONS.forEach((r) => {
+      if (!isHiddenSystemRole(r)) push(r);
+    });
     loadCustomRoles().forEach(push);
     collectRolesFromRoster(loadRoster()).forEach(push);
     return out.sort((a, b) => a.localeCompare(b, "en"));
+  }
+
+  function isSystemRole(name) {
+    const role = normalizeRoleName(name);
+    if (!role) return false;
+    return DEFAULT_ROLE_OPTIONS.some((r) => roleValuesEqual(r, role));
+  }
+
+  function listRolesForManage() {
+    const seen = {};
+    const out = [];
+    const push = (r, kind) => {
+      const name = normalizeRoleName(r);
+      if (!name) return;
+      const key = name.toLowerCase();
+      if (seen[key]) return;
+      seen[key] = 1;
+      out.push({ name, kind });
+    };
+    DEFAULT_ROLE_OPTIONS.forEach((r) => {
+      if (!isHiddenSystemRole(r)) push(r, "system");
+    });
+    loadCustomRoles().forEach((r) => push(r, "custom"));
+    return out.sort((a, b) => a.name.localeCompare(b.name, "en"));
+  }
+
+  function listEmployeesUsingRole(roleName, employees) {
+    const list = Array.isArray(employees) ? employees : [];
+    return list.filter((e) =>
+      parseRoleValues(e && e.role).some((r) => roleValuesEqual(r, roleName))
+    );
+  }
+
+  function isRoleUsedByStoreEmployees(roleName, employees) {
+    return listEmployeesUsingRole(roleName, employees).length > 0;
+  }
+
+  /** 删除校验用：需有明确当前门店 scope；全部门店视为未选店 */
+  function resolveRoleDeleteStoreContext() {
+    const scoped = resolveEmployeesListFilterScope();
+    if (!scoped || scoped.isAllStores || !String(scoped.storeId || "").trim()) {
+      return { storeId: "", employees: [] };
+    }
+    return {
+      storeId: String(scoped.storeId).trim(),
+      employees: filterListByGlobalScope(loadRoster(), scoped),
+    };
+  }
+
+  function canDeleteRole(name, ctx) {
+    const role = normalizeRoleName(name);
+    if (!role) return { ok: false, reason: "invalid" };
+    const storeId = ctx && ctx.storeId ? String(ctx.storeId).trim() : "";
+    if (!storeId) return { ok: false, reason: "no-store" };
+    if (isRoleUsedByStoreEmployees(role, ctx && ctx.employees)) {
+      return { ok: false, reason: "in-use" };
+    }
+    return { ok: true };
+  }
+
+  function applyRoleDeletion(name) {
+    const role = normalizeRoleName(name);
+    if (!role) return false;
+    if (isSystemRole(role)) {
+      hideSystemRole(role);
+      // 若曾以自定义同名存在，一并清掉
+      const nextCustom = loadCustomRoles().filter((r) => !roleValuesEqual(r, role));
+      saveCustomRoles(nextCustom);
+      removeRoleMeta(role);
+      return true;
+    }
+    const next = loadCustomRoles().filter((r) => !roleValuesEqual(r, role));
+    saveCustomRoles(next);
+    removeRoleMeta(role);
+    return true;
+  }
+
+  function isEmployeeModalOpen() {
+    return !!$("#addEmployeeModal")?.classList.contains("show");
+  }
+
+  function unselectRoleFromFormIfOpen(roleName) {
+    if (!isEmployeeModalOpen()) return;
+    const current = getSelectedRoles().filter((r) => !roleValuesEqual(r, roleName));
+    populateRoleSelect(formatRoleValues(current.length ? current : []));
+  }
+
+  function readStoredTab() {
+    try {
+      const raw = sessionStorage.getItem(TAB_STORAGE_KEY);
+      return raw === "roles" ? "roles" : "employees";
+    } catch {
+      return "employees";
+    }
+  }
+
+  function writeStoredTab(tab) {
+    try {
+      sessionStorage.setItem(TAB_STORAGE_KEY, tab === "roles" ? "roles" : "employees");
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function syncTabActionButtons() {
+    const addEmployeeBtn = $("#btn-add-employee");
+    const addRoleBtn = $("#btn-add-role-manage");
+    const onEmployees = activeTab !== "roles";
+    if (addEmployeeBtn) {
+      addEmployeeBtn.hidden = !onEmployees;
+      addEmployeeBtn.classList.toggle("is-tab-hidden", !onEmployees);
+      addEmployeeBtn.setAttribute("aria-hidden", onEmployees ? "false" : "true");
+    }
+    if (addRoleBtn) {
+      addRoleBtn.hidden = onEmployees;
+      addRoleBtn.classList.toggle("is-tab-hidden", onEmployees);
+      addRoleBtn.setAttribute("aria-hidden", onEmployees ? "true" : "false");
+    }
+  }
+
+  function setActiveTab(tab, options) {
+    const next = tab === "roles" ? "roles" : "employees";
+    activeTab = next;
+    if (!options || options.persist !== false) writeStoredTab(next);
+
+    document.querySelectorAll("[data-employees-tab]").forEach((btn) => {
+      const on = btn.getAttribute("data-employees-tab") === next;
+      btn.classList.toggle("is-active", on);
+      btn.setAttribute("aria-selected", on ? "true" : "false");
+    });
+    document.querySelectorAll("[data-employees-panel]").forEach((panel) => {
+      const on = panel.getAttribute("data-employees-panel") === next;
+      if (on) panel.removeAttribute("hidden");
+      else panel.setAttribute("hidden", "");
+    });
+    syncTabActionButtons();
+
+    if (next === "roles") renderRoleTable();
+    else renderTable();
+  }
+
+  function bindEmployeesTabs() {
+    document.querySelectorAll("[data-employees-tab]").forEach((btn) => {
+      if (btn.dataset.bound === "1") return;
+      btn.dataset.bound = "1";
+      btn.addEventListener("click", () => {
+        const tab = btn.getAttribute("data-employees-tab");
+        if (tab) setActiveTab(tab);
+      });
+    });
+  }
+
+  function renderRoleTable() {
+    const tbody = $("#rolesTableBody");
+    if (!tbody) return;
+    syncEmployeesStoreFilterUi();
+    const ctx = resolveRoleDeleteStoreContext();
+    const canDelete = !!ctx.storeId;
+    const hasStore = !!ctx.storeId;
+    const roles = listRolesForManage();
+    if (!roles.length) {
+      tbody.innerHTML =
+        '<tr><td colspan="5" style="padding:48px;text-align:center;color:var(--text-tertiary)">暂无岗位</td></tr>';
+      return;
+    }
+    tbody.innerHTML = roles
+      .map((item) => {
+        const kindLabel = item.kind === "system" ? "系统预设" : "自定义";
+        const description = getRoleDescription(item.name);
+        const descHtml = description
+          ? '<span class="employees-role-desc" title="' +
+            escapeHtml(description) +
+            '">' +
+            escapeHtml(description) +
+            "</span>"
+          : '<span class="employees-role-desc employees-role-desc--empty">—</span>';
+        const occupants = hasStore ? listEmployeesUsingRole(item.name, ctx.employees) : [];
+        const count = occupants.length;
+        let occupancyHtml;
+        if (!hasStore) {
+          occupancyHtml =
+            '<span class="employees-role-occupancy employees-role-occupancy-muted" title="请先选择门店">—</span>';
+        } else if (count > 0) {
+          occupancyHtml =
+            '<a href="javascript:void(0)" class="employees-role-occupancy employees-role-occupancy-link" data-act="view-role-occupants" data-role-name="' +
+            escapeHtml(item.name) +
+            '">' +
+            count +
+            "</a>";
+        } else {
+          occupancyHtml = '<span class="employees-role-occupancy">0</span>';
+        }
+
+        let actionHtml =
+          '<a href="javascript:void(0)" class="employees-role-edit" data-act="edit-role" data-role-name="' +
+          escapeHtml(item.name) +
+          '">编辑</a>' +
+          '<span style="color:var(--text-tertiary);margin:0 4px">|</span>';
+        {
+          const disabledAttr = canDelete ? "" : " disabled";
+          const titleAttr = canDelete ? "" : ' title="请先选择门店"';
+          actionHtml +=
+            '<a href="javascript:void(0)" class="employees-role-delete" data-act="del-role" data-role-name="' +
+            escapeHtml(item.name) +
+            '"' +
+            disabledAttr +
+            titleAttr +
+            ">删除</a>";
+        }
+        return (
+          "<tr>" +
+          "<td><strong>" +
+          escapeHtml(item.name) +
+          "</strong></td>" +
+          "<td>" +
+          descHtml +
+          "</td>" +
+          '<td class="employees-role-kind">' +
+          escapeHtml(kindLabel) +
+          "</td>" +
+          "<td>" +
+          occupancyHtml +
+          "</td>" +
+          '<td class="action-links" style="text-align:right;white-space:nowrap">' +
+          actionHtml +
+          "</td>" +
+          "</tr>"
+        );
+      })
+      .join("");
+  }
+
+  function closeRoleOccupantsModal() {
+    if (typeof closeModal === "function") closeModal("roleOccupantsModal");
+    else $("#roleOccupantsModal")?.classList.remove("show");
+  }
+
+  function openRoleOccupantsModal(roleName) {
+    const name = normalizeRoleName(roleName);
+    if (!name) return;
+    const ctx = resolveRoleDeleteStoreContext();
+    if (!ctx.storeId) {
+      notify("请先选择门店", "error");
+      return;
+    }
+    const occupants = listEmployeesUsingRole(name, ctx.employees).slice().sort((a, b) =>
+      String(a.name || "").localeCompare(String(b.name || ""), "zh")
+    );
+    const titleEl = $("#role-occupants-modal-title");
+    const hintEl = $("#role-occupants-modal-hint");
+    const listEl = $("#role-occupants-list");
+    const emptyEl = $("#role-occupants-empty");
+    if (titleEl) titleEl.textContent = "占用员工 · " + name;
+    if (hintEl) {
+      const storeLabel =
+        (typeof resolveEmployeesListFilterScope === "function" &&
+          resolveEmployeesListFilterScope().storeLabel) ||
+        "";
+      hintEl.textContent = storeLabel
+        ? "当前门店「" + storeLabel + "」共 " + occupants.length + " 人使用该岗位"
+        : "当前门店共 " + occupants.length + " 人使用该岗位";
+    }
+    if (listEl) {
+      listEl.innerHTML = occupants
+        .map((e) => {
+          const empName = escapeHtml(String(e.name || "未命名").trim() || "未命名");
+          const rolesText = escapeHtml(formatRoleValues(e.role) || "—");
+          return (
+            "<li>" +
+            "<strong>" +
+            empName +
+            "</strong>" +
+            '<span class="employees-role-occupant-meta">岗位：' +
+            rolesText +
+            "</span>" +
+            "</li>"
+          );
+        })
+        .join("");
+      listEl.hidden = occupants.length === 0;
+    }
+    if (emptyEl) emptyEl.hidden = occupants.length > 0;
+    if (typeof openModal === "function") openModal("roleOccupantsModal");
+    else $("#roleOccupantsModal")?.classList.add("show");
+  }
+
+  function bindRoleOccupantsModal() {
+    $("#btn-role-occupants-ok")?.addEventListener("click", closeRoleOccupantsModal);
+    $("#btn-role-occupants-close")?.addEventListener("click", closeRoleOccupantsModal);
+    const overlay = $("#roleOccupantsModal");
+    overlay?.addEventListener("click", (e) => {
+      if (e.target === overlay) closeRoleOccupantsModal();
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key !== "Escape") return;
+      if (overlay && overlay.classList.contains("show")) closeRoleOccupantsModal();
+    });
+  }
+
+  function notify(message, type) {
+    if (typeof showNotification === "function") showNotification(message, type || "success");
+    else alert(message);
+  }
+
+  function requestDeleteCustomRole(roleName) {
+    const name = normalizeRoleName(roleName);
+    if (!name) return;
+    const ctx = resolveRoleDeleteStoreContext();
+    const result = canDeleteRole(name, ctx);
+    if (!result.ok) {
+      if (result.reason === "in-use") {
+        notify("当前门店仍有员工使用岗位「" + name + "」，请先调整员工岗位后再删。", "error");
+      } else if (result.reason === "no-store") {
+        notify("请先选择门店", "error");
+      } else {
+        notify("无法删除该岗位", "error");
+      }
+      return;
+    }
+    const doDelete = () => {
+      applyRoleDeletion(name);
+      renderRoleTable();
+      unselectRoleFromFormIfOpen(name);
+      notify("已删除岗位「" + name + "」", "success");
+    };
+    if (typeof confirmAction === "function") {
+      confirmAction("删除后员工表单将不再可选该岗位。确定删除岗位「" + name + "」？", doDelete, {
+        title: "确认删除",
+        okText: "删除",
+        okClass: "btn btn-danger",
+      });
+    } else if (window.confirm("确定删除岗位「" + name + "」？")) {
+      doDelete();
+    }
   }
 
   function populateRoleSelect(selected) {
@@ -323,6 +794,11 @@
   function addCustomRole(name) {
     const role = normalizeRoleName(name);
     if (!role) return "";
+    // 重新新增已删除的系统预设 → 恢复显示，而非写成自定义
+    if (isSystemRole(role) && isHiddenSystemRole(role)) {
+      unhideSystemRole(role);
+      return role;
+    }
     const custom = loadCustomRoles();
     if (!custom.some((r) => r.toLowerCase() === role.toLowerCase())) {
       custom.push(role);
@@ -331,9 +807,126 @@
     return role;
   }
 
+  function isRoleNameTaken(name, exceptName) {
+    const role = normalizeRoleName(name);
+    if (!role) return false;
+    return listRolesForManage().some(
+      (item) =>
+        roleValuesEqual(item.name, role) &&
+        (!exceptName || !roleValuesEqual(item.name, exceptName))
+    );
+  }
+
+  function migrateRoleNameInRoster(oldName, newName) {
+    const from = normalizeRoleName(oldName);
+    const to = normalizeRoleName(newName);
+    if (!from || !to) return false;
+    const list = loadRoster();
+    let changed = false;
+    list.forEach((e) => {
+      const roles = parseRoleValues(e && e.role);
+      let touched = false;
+      const mapped = roles.map((r) => {
+        if (roleValuesEqual(r, from)) {
+          touched = true;
+          return to;
+        }
+        return r;
+      });
+      if (!touched) return;
+      const seen = {};
+      const deduped = [];
+      mapped.forEach((r) => {
+        const key = r.toLowerCase();
+        if (seen[key]) return;
+        seen[key] = 1;
+        deduped.push(r);
+      });
+      e.role = formatRoleValues(deduped);
+      changed = true;
+    });
+    if (changed) saveRoster(list);
+    return changed;
+  }
+
+  function renameRoleInCatalog(oldName, newName) {
+    const from = normalizeRoleName(oldName);
+    const to = normalizeRoleName(newName);
+    if (!from || !to) return false;
+
+    let custom = loadCustomRoles().filter((r) => !roleValuesEqual(r, from));
+
+    if (isSystemRole(from)) {
+      hideSystemRole(from);
+    }
+
+    if (isSystemRole(to)) {
+      unhideSystemRole(to);
+      custom = custom.filter((r) => !roleValuesEqual(r, to));
+    } else if (!custom.some((r) => roleValuesEqual(r, to))) {
+      custom.push(to);
+    }
+
+    saveCustomRoles(custom);
+    return true;
+  }
+
+  function replaceRoleInFormIfOpen(oldName, newName) {
+    if (!isEmployeeModalOpen()) return;
+    const seen = {};
+    const next = [];
+    getSelectedRoles().forEach((r) => {
+      const value = roleValuesEqual(r, oldName) ? newName : r;
+      const key = normalizeRoleName(value).toLowerCase();
+      if (!key || seen[key]) return;
+      seen[key] = 1;
+      next.push(value);
+    });
+    populateRoleSelect(formatRoleValues(next));
+  }
+
+  function applyRoleRename(oldName, newName, description) {
+    const from = normalizeRoleName(oldName);
+    const to = normalizeRoleName(newName);
+    const desc = normalizeRoleDescription(description);
+    if (!from || !to) return { ok: false, reason: "invalid" };
+
+    const sameName = roleValuesEqual(from, to);
+    if (!sameName && isRoleNameTaken(to, from)) {
+      return { ok: false, reason: "taken" };
+    }
+
+    if (sameName && from === to) {
+      const prevDesc = getRoleDescription(from);
+      if (prevDesc === desc) return { ok: false, reason: "unchanged" };
+      setRoleDescription(to, desc);
+      return { ok: true };
+    }
+
+    if (!sameName || from !== to) {
+      renameRoleInCatalog(from, to);
+      migrateRoleNameInRoster(from, to);
+      replaceRoleInFormIfOpen(from, to);
+      renameRoleMeta(from, to);
+    }
+    setRoleDescription(to, desc);
+    return { ok: true };
+  }
+
+  function resetRoleFormModalChrome() {
+    const title = $("#role-form-modal-title");
+    const confirmBtn = $("#btn-confirm-new-role");
+    if (title) title.textContent = "新增岗位";
+    if (confirmBtn) confirmBtn.textContent = "添加";
+  }
+
   function hideRoleAddModal() {
+    editingRoleName = null;
+    resetRoleFormModalChrome();
     const input = $("#field-new-role");
     if (input) input.value = "";
+    const descInput = $("#field-new-role-desc");
+    if (descInput) descInput.value = "";
     const modal = $("#employeeRoleAddModal");
     if (modal) modal.classList.remove("show");
     if ($("#addEmployeeModal")?.classList.contains("show")) {
@@ -343,44 +936,97 @@
     }
   }
 
-  function showRoleAddModal() {
+  function openRoleFormModal(roleName) {
+    const editing = normalizeRoleName(roleName);
+    editingRoleName = editing || null;
+    const title = $("#role-form-modal-title");
+    const confirmBtn = $("#btn-confirm-new-role");
     const input = $("#field-new-role");
-    if (input) {
-      input.value = "";
-    }
+    const descInput = $("#field-new-role-desc");
+    if (title) title.textContent = editingRoleName ? "编辑岗位" : "新增岗位";
+    if (confirmBtn) confirmBtn.textContent = editingRoleName ? "保存" : "添加";
+    if (input) input.value = editingRoleName || "";
+    if (descInput) descInput.value = editingRoleName ? getRoleDescription(editingRoleName) : "";
     if (typeof openModal === "function") openModal("employeeRoleAddModal");
     else $("#employeeRoleAddModal")?.classList.add("show");
-    setTimeout(() => input?.focus(), 0);
+    setTimeout(() => {
+      input?.focus();
+      input?.select?.();
+    }, 0);
   }
 
-  function confirmNewRole() {
+  function showRoleAddModal() {
+    openRoleFormModal("");
+  }
+
+  function showRoleEditModal(roleName) {
+    const name = normalizeRoleName(roleName);
+    if (!name) return;
+    openRoleFormModal(name);
+  }
+
+  function confirmRoleForm() {
     const input = $("#field-new-role");
+    const descInput = $("#field-new-role-desc");
     const name = normalizeRoleName(input && input.value);
+    const description = normalizeRoleDescription(descInput && descInput.value);
     if (!name) {
-      if (typeof showNotification === "function") showNotification("请输入岗位名称", "error");
-      else alert("请输入岗位名称");
+      notify("请输入岗位名称", "error");
       return;
     }
+
+    if (editingRoleName) {
+      const result = applyRoleRename(editingRoleName, name, description);
+      if (!result.ok) {
+        if (result.reason === "unchanged") {
+          hideRoleAddModal();
+          return;
+        }
+        if (result.reason === "taken") {
+          notify("该岗位名称已存在", "error");
+          return;
+        }
+        notify("无法保存岗位", "error");
+        return;
+      }
+      hideRoleAddModal();
+      if (activeTab === "roles") renderRoleTable();
+      else renderTable();
+      notify("已更新岗位「" + name + "」", "success");
+      return;
+    }
+
+    const formOpen = isEmployeeModalOpen();
     const exists = getRoleOptions().some((r) => roleValuesEqual(r, name));
     if (exists) {
-      const current = getSelectedRoles();
-      if (!current.some((r) => roleValuesEqual(r, name))) current.push(name);
-      populateRoleSelect(formatRoleValues(current));
+      if (formOpen) {
+        const current = getSelectedRoles();
+        if (!current.some((r) => roleValuesEqual(r, name))) current.push(name);
+        populateRoleSelect(formatRoleValues(current));
+        notify("该岗位已存在，已为您选中", "info");
+      } else {
+        notify("该岗位已存在", "info");
+      }
       hideRoleAddModal();
-      if (typeof showNotification === "function") showNotification("该岗位已存在，已为您选中", "info");
+      if (activeTab === "roles") renderRoleTable();
       return;
     }
     addCustomRole(name);
-    const current = getSelectedRoles();
-    current.push(name);
-    populateRoleSelect(formatRoleValues(current));
+    setRoleDescription(name, description);
+    if (formOpen) {
+      const current = getSelectedRoles();
+      current.push(name);
+      populateRoleSelect(formatRoleValues(current));
+    }
     hideRoleAddModal();
-    if (typeof showNotification === "function") showNotification(`已添加岗位「${name}」`, "success");
+    if (activeTab === "roles") renderRoleTable();
+    notify("已添加岗位「" + name + "」", "success");
   }
 
   function bindRoleQuickAdd() {
     $("#btn-add-role-option")?.addEventListener("click", showRoleAddModal);
-    $("#btn-confirm-new-role")?.addEventListener("click", confirmNewRole);
+    $("#btn-add-role-manage")?.addEventListener("click", showRoleAddModal);
+    $("#btn-confirm-new-role")?.addEventListener("click", confirmRoleForm);
     $("#btn-cancel-new-role")?.addEventListener("click", hideRoleAddModal);
     $("#btn-employee-role-add-close")?.addEventListener("click", hideRoleAddModal);
     const overlay = $("#employeeRoleAddModal");
@@ -390,7 +1036,7 @@
     $("#field-new-role")?.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         e.preventDefault();
-        confirmNewRole();
+        confirmRoleForm();
       } else if (e.key === "Escape") {
         hideRoleAddModal();
       }
@@ -544,6 +1190,7 @@
         TipOutGlobalScopeFilter.writeGlobalStoreFilter(storeId, label);
       }
       renderTable();
+      if (activeTab === "roles") renderRoleTable();
     });
   }
 
@@ -1344,6 +1991,26 @@
   }
 
   document.body.addEventListener("click", (e) => {
+    const viewOccupants = e.target.closest("[data-act=view-role-occupants]");
+    if (viewOccupants) {
+      e.preventDefault();
+      openRoleOccupantsModal(viewOccupants.getAttribute("data-role-name") || "");
+      return;
+    }
+    const editRole = e.target.closest("[data-act=edit-role]");
+    if (editRole) {
+      e.preventDefault();
+      showRoleEditModal(editRole.getAttribute("data-role-name") || "");
+      return;
+    }
+    const delRole = e.target.closest("[data-act=del-role]");
+    if (delRole) {
+      e.preventDefault();
+      if (delRole.hasAttribute("disabled")) return;
+      const roleName = delRole.getAttribute("data-role-name") || "";
+      requestDeleteCustomRole(roleName);
+      return;
+    }
     const edit = e.target.closest("[data-act=edit]");
     if (edit) {
       e.preventDefault();
@@ -1374,23 +2041,38 @@
   $("#btn-add-employee")?.addEventListener("click", openAddModal);
   $("#btn-submit-employee")?.addEventListener("click", submitAdd);
 
+  bindEmployeesTabs();
   bindEmployeesStoreFilter();
   syncEmployeesStoreFilterUi();
 
   if (window.TipOutGlobalScopeFilter && typeof TipOutGlobalScopeFilter.bindGlobalScopeFilterListener === "function") {
     TipOutGlobalScopeFilter.bindGlobalScopeFilterListener(() => {
       renderTable();
+      if (activeTab === "roles") renderRoleTable();
     });
   }
 
   window.addEventListener("tipout-roster-updated", () => {
     renderTable();
+    if (activeTab === "roles") renderRoleTable();
   });
   window.addEventListener("storage", (e) => {
-    if (e.key === STORAGE_KEY) renderTable();
+    if (e.key === STORAGE_KEY) {
+      renderTable();
+      if (activeTab === "roles") renderRoleTable();
+    }
+    if (
+      (e.key === ROLES_STORAGE_KEY ||
+        e.key === HIDDEN_SYSTEM_ROLES_KEY ||
+        e.key === ROLE_META_STORAGE_KEY) &&
+      activeTab === "roles"
+    ) {
+      renderRoleTable();
+    }
   });
 
   bindEmployeeDeleteConfirm();
+  bindRoleOccupantsModal();
   const addEmployeeModal = $("#addEmployeeModal");
   if (addEmployeeModal && addEmployeeModal.dataset.roleDropdownLifecycleBound !== "1") {
     addEmployeeModal.dataset.roleDropdownLifecycleBound = "1";
@@ -1402,5 +2084,5 @@
     });
     modalObserver.observe(addEmployeeModal, { attributes: true, attributeFilter: ["class"] });
   }
-  renderTable();
+  setActiveTab(readStoredTab(), { persist: false });
 })();
