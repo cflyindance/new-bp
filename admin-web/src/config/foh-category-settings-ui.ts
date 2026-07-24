@@ -6,11 +6,13 @@
 import {
   bindBrandMenuStructurePicker,
   BRAND_MENU_LINE_OPTIONS,
+  cloneBrandMenuStructureByLine,
   coerceBrandMenuStructureByLine,
   countBrandMenuStructureDishesByLine,
   emptyBrandMenuStructureByLine,
   flattenBrandMenuStructureByLine,
   isBrandMenuLineId,
+  mergeBrandMenuStructureByLine,
   readBrandMenuStructureByLineFromPicker,
   renderBrandMenuStructurePickerHtml,
   type BrandMenuLineId,
@@ -369,6 +371,85 @@ function uniqueStrings(values: string[]): string[] {
     out.push(value);
   }
   return out;
+}
+
+type MenuComboCopyMode = "merge" | "overwrite";
+
+function filterViewOnlyCategoryKeys(
+  keys: string[],
+  targetKey: MenuComboKey,
+  validKeys: Set<string>,
+): string[] {
+  return uniqueStrings(keys.filter((k) => k !== targetKey && validKeys.has(k)));
+}
+
+/** 将源菜单组合的可下单 + 不可下单配置应用到目标（不改 displayName） */
+function applyMenuComboCopy(
+  source: MenuComboConfig,
+  target: MenuComboConfig,
+  targetKey: MenuComboKey,
+  mode: MenuComboCopyMode,
+  validKeys: Set<string>,
+): MenuComboConfig {
+  if (mode === "overwrite") {
+    return {
+      ...target,
+      viewOnlyMode: source.viewOnlyMode,
+      orderableStructureByLine: cloneBrandMenuStructureByLine(source.orderableStructureByLine),
+      viewOnlyStructureByLine: cloneBrandMenuStructureByLine(source.viewOnlyStructureByLine),
+      viewOnlyCategoryKeys: filterViewOnlyCategoryKeys(
+        source.viewOnlyCategoryKeys,
+        targetKey,
+        validKeys,
+      ),
+    };
+  }
+
+  const viewOnlyMode = source.viewOnlyMode;
+  if (viewOnlyMode === "dish") {
+    return {
+      ...target,
+      viewOnlyMode,
+      orderableStructureByLine: mergeBrandMenuStructureByLine(
+        target.orderableStructureByLine,
+        source.orderableStructureByLine,
+      ),
+      viewOnlyStructureByLine: mergeBrandMenuStructureByLine(
+        target.viewOnlyStructureByLine,
+        source.viewOnlyStructureByLine,
+      ),
+      viewOnlyCategoryKeys: filterViewOnlyCategoryKeys(
+        target.viewOnlyCategoryKeys,
+        targetKey,
+        validKeys,
+      ),
+    };
+  }
+
+  return {
+    ...target,
+    viewOnlyMode,
+    orderableStructureByLine: mergeBrandMenuStructureByLine(
+      target.orderableStructureByLine,
+      source.orderableStructureByLine,
+    ),
+    viewOnlyStructureByLine: cloneBrandMenuStructureByLine(target.viewOnlyStructureByLine),
+    viewOnlyCategoryKeys: filterViewOnlyCategoryKeys(
+      [...target.viewOnlyCategoryKeys, ...source.viewOnlyCategoryKeys],
+      targetKey,
+      validKeys,
+    ),
+  };
+}
+
+function formatMenuComboConfigSummary(cfg: MenuComboConfig): string {
+  const orderableCount = countBrandMenuStructureDishesByLine(cfg.orderableStructureByLine);
+  const viewOnlyCount = countViewOnlyConfigured(cfg);
+  if (orderableCount === 0 && viewOnlyCount === 0) return "未配置";
+  const parts: string[] = [];
+  if (orderableCount > 0) parts.push(`可下单 ${orderableCount}`);
+  if (viewOnlyCount > 0) parts.push(`不可下单 ${viewOnlyCount}`);
+  return parts.join(" · ");
 }
 
 function defaultMenuConfig(age: AgeBand, category: MealCategory): MenuComboConfig {
@@ -955,6 +1036,31 @@ function renderMenuEditDialogShell(): string {
     </div>`;
 }
 
+function renderMenuCopyDialogShell(): string {
+  return `
+    <div
+      class="fixed inset-0 z-[100] hidden items-center justify-center p-4"
+      data-foh-menu-copy-dialog
+      data-source-key=""
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="foh-menu-copy-dialog-title"
+    >
+      <button type="button" class="absolute inset-0 bg-black/40" data-foh-menu-copy-backdrop aria-label="关闭"></button>
+      <div class="relative z-10 flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-lg border border-border bg-card shadow-lg">
+        <div class="flex shrink-0 items-start justify-between gap-3 border-b border-border px-5 py-4">
+          <h3 id="foh-menu-copy-dialog-title" class="text-base font-semibold text-card-foreground" data-foh-menu-copy-title>复制菜单配置</h3>
+          <button type="button" class="text-muted-foreground hover:text-foreground" data-foh-menu-copy-close aria-label="关闭">×</button>
+        </div>
+        <div class="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4" data-foh-menu-copy-body></div>
+        <div class="flex shrink-0 justify-end gap-2 border-t border-border bg-card px-5 py-4">
+          <button type="button" class="${BTN_GHOST}" data-foh-menu-copy-cancel>取消</button>
+          <button type="button" class="${BTN_PRIMARY}" data-foh-menu-copy-confirm disabled>确认复制</button>
+        </div>
+      </div>
+    </div>`;
+}
+
 function formatMenuDetailButtonLabel(count: number): string {
   return `详情（${count}）`;
 }
@@ -982,6 +1088,9 @@ function renderMenuComboRow(
       <td class="py-3 pr-3 text-sm">
         <button type="button" class="${BTN_LINK}" data-foh-menu-detail="viewOnly" data-foh-menu-combo-key="${escapeHtml(combo.key)}">${formatMenuDetailButtonLabel(viewOnlyCount)}</button>
       </td>
+      <td class="py-3 pr-3 text-sm">
+        <button type="button" class="${BTN_LINK}" data-foh-menu-combo-copy="${escapeHtml(combo.key)}">复制</button>
+      </td>
     </tr>`;
 }
 
@@ -1008,13 +1117,14 @@ function renderMenuPanel(state: FohCategorySettingsState): string {
   return `
     <div class="space-y-3" data-foh-category-settings-panel="menu">
       <div class="overflow-x-auto rounded-md border border-border">
-        <table class="w-full min-w-[28rem] border-collapse text-left text-sm">
+        <table class="w-full min-w-[32rem] border-collapse text-left text-sm">
           <thead class="bg-muted/40 text-xs text-muted-foreground">
             <tr>
               <th class="px-3 py-2 font-medium">菜单组合</th>
               <th class="px-3 py-2 font-medium">营业时间</th>
               <th class="px-3 py-2 font-medium">可下单</th>
               <th class="px-3 py-2 font-medium">不可下单</th>
+              <th class="px-3 py-2 font-medium">操作</th>
             </tr>
           </thead>
           <tbody>${rows}</tbody>
@@ -1264,6 +1374,7 @@ export function renderFohCategorySettingsPage(path: string): string {
         ${renderTabContent(tabId, state)}
       </div>
       ${renderMenuEditDialogShell()}
+      ${renderMenuCopyDialogShell()}
       ${renderCategoryFormDialogShell()}
       ${renderSpecialMenuDialogShell()}
       ${renderSpecialMenuViewDialogShell()}
@@ -1582,6 +1693,154 @@ function hideMenuEditDialog(root: HTMLElement): void {
   if (body) body.innerHTML = "";
 }
 
+function showMenuCopyDialog(root: HTMLElement): void {
+  const dialog = root.querySelector<HTMLElement>("[data-foh-menu-copy-dialog]");
+  if (!dialog) return;
+  dialog.classList.remove("hidden");
+  dialog.classList.add("flex");
+}
+
+function hideMenuCopyDialog(root: HTMLElement): void {
+  const dialog = root.querySelector<HTMLElement>("[data-foh-menu-copy-dialog]");
+  if (!dialog) return;
+  dialog.classList.add("hidden");
+  dialog.classList.remove("flex");
+  dialog.setAttribute("data-source-key", "");
+  const body = dialog.querySelector<HTMLElement>("[data-foh-menu-copy-body]");
+  if (body) body.innerHTML = "";
+  syncMenuCopyConfirmEnabled(dialog);
+}
+
+function syncMenuCopyConfirmEnabled(dialog: HTMLElement): void {
+  const confirmBtn = dialog.querySelector<HTMLButtonElement>("[data-foh-menu-copy-confirm]");
+  if (!confirmBtn) return;
+  const hasTarget = dialog.querySelectorAll<HTMLInputElement>(
+    "[data-foh-menu-copy-target]:checked",
+  ).length > 0;
+  const hasTargetsList = dialog.querySelector("[data-foh-menu-copy-targets]") != null;
+  confirmBtn.disabled = !hasTargetsList || !hasTarget;
+  confirmBtn.classList.toggle("opacity-50", confirmBtn.disabled);
+  confirmBtn.classList.toggle("pointer-events-none", confirmBtn.disabled);
+}
+
+function renderMenuCopyDialogBody(
+  targets: ComboDefinition[],
+  state: FohCategorySettingsState,
+): string {
+  if (targets.length === 0) {
+    return `<p class="m-0 text-sm text-muted-foreground">没有可复制的目标。请先配置更多年龄或类别以生成其他菜单组合。</p>`;
+  }
+
+  const list = targets
+    .map((combo) => {
+      const cfg = state.menuByCombo[combo.key] ?? defaultMenuConfig(combo.age, combo.category);
+      const summary = formatMenuComboConfigSummary(cfg);
+      return `
+        <label class="flex cursor-pointer items-center gap-3 rounded-md border border-border px-3 py-2.5 hover:bg-muted/40 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+          <input
+            type="checkbox"
+            class="${MODULE_SETTING_CONTROL_CLASS} rounded-sm"
+            value="${escapeHtml(combo.key)}"
+            data-foh-menu-copy-target
+          />
+          <span class="min-w-0 flex-1 text-sm text-foreground">${escapeHtml(combo.title)}</span>
+          <span class="shrink-0 text-xs text-muted-foreground">${escapeHtml(summary)}</span>
+        </label>`;
+    })
+    .join("");
+
+  return `
+    <p class="m-0 text-sm text-muted-foreground">将「可下单 + 不可下单」一并复制到所选菜单组合</p>
+    <div>
+      <p class="m-0 mb-2 text-xs font-medium text-muted-foreground">目标菜单组合</p>
+      <div class="grid max-h-56 gap-2 overflow-y-auto" data-foh-menu-copy-targets>${list}</div>
+    </div>
+    <div>
+      <p class="m-0 mb-2 text-xs font-medium text-muted-foreground">写入方式</p>
+      <div class="space-y-2 text-sm text-foreground">
+        <label class="flex cursor-pointer items-start gap-2">
+          <input
+            type="radio"
+            name="foh-menu-copy-mode"
+            value="merge"
+            class="${MODULE_SETTING_CONTROL_CLASS} mt-0.5"
+            data-foh-menu-copy-mode
+            checked
+          />
+          <span><span class="font-medium">合并</span>（推荐）— 源中有的菜勾上；目标原有保留</span>
+        </label>
+        <label class="flex cursor-pointer items-start gap-2">
+          <input
+            type="radio"
+            name="foh-menu-copy-mode"
+            value="overwrite"
+            class="${MODULE_SETTING_CONTROL_CLASS} mt-0.5"
+            data-foh-menu-copy-mode
+          />
+          <span><span class="font-medium">覆盖</span> — 目标变成与源完全一致</span>
+        </label>
+      </div>
+    </div>`;
+}
+
+function openMenuCopyDialog(root: HTMLElement, sourceKey: MenuComboKey): void {
+  const state = readFohCategorySettingsState();
+  const combos = listMenuCombinations(state);
+  const source = combos.find((c) => c.key === sourceKey);
+  if (!source) return;
+  const dialog = root.querySelector<HTMLElement>("[data-foh-menu-copy-dialog]");
+  const body = dialog?.querySelector<HTMLElement>("[data-foh-menu-copy-body]");
+  const titleEl = dialog?.querySelector<HTMLElement>("[data-foh-menu-copy-title]");
+  if (!dialog || !body) return;
+  dialog.setAttribute("data-source-key", sourceKey);
+  if (titleEl) titleEl.textContent = `复制菜单配置 · 源：${source.title}`;
+  const targets = combos.filter((c) => c.key !== sourceKey);
+  body.innerHTML = renderMenuCopyDialogBody(targets, state);
+  syncMenuCopyConfirmEnabled(dialog);
+  showMenuCopyDialog(root);
+}
+
+function confirmMenuCopyDialog(root: HTMLElement): void {
+  const dialog = root.querySelector<HTMLElement>("[data-foh-menu-copy-dialog]");
+  if (!dialog) return;
+  const sourceKey = dialog.getAttribute("data-source-key") || "";
+  if (!sourceKey) return;
+  const targetKeys = [
+    ...dialog.querySelectorAll<HTMLInputElement>("[data-foh-menu-copy-target]:checked"),
+  ]
+    .map((input) => input.value)
+    .filter(Boolean);
+  if (targetKeys.length === 0) return;
+  const modeRadio = dialog.querySelector<HTMLInputElement>("[data-foh-menu-copy-mode]:checked");
+  const mode: MenuComboCopyMode = modeRadio?.value === "overwrite" ? "overwrite" : "merge";
+
+  const state = readFohCategorySettingsState();
+  const combos = listMenuCombinations(state);
+  const validKeys = new Set(combos.map((c) => c.key));
+  const sourceCombo = combos.find((c) => c.key === sourceKey);
+  if (!sourceCombo) return;
+  const sourceCfg =
+    state.menuByCombo[sourceKey] ?? defaultMenuConfig(sourceCombo.age, sourceCombo.category);
+
+  for (const targetKey of targetKeys) {
+    if (targetKey === sourceKey || !validKeys.has(targetKey)) continue;
+    const targetCombo = combos.find((c) => c.key === targetKey);
+    if (!targetCombo) continue;
+    const targetCfg =
+      state.menuByCombo[targetKey] ?? defaultMenuConfig(targetCombo.age, targetCombo.category);
+    state.menuByCombo[targetKey] = applyMenuComboCopy(
+      sourceCfg,
+      targetCfg,
+      targetKey,
+      mode,
+      validKeys,
+    );
+  }
+
+  writeFohCategorySettingsState(state);
+  hideMenuCopyDialog(root);
+}
+
 function openMenuEditDialog(root: HTMLElement, comboKeyValue: MenuComboKey, scope: MenuEditScope): void {
   const state = readFohCategorySettingsState();
   const combos = listMenuCombinations(state);
@@ -1674,6 +1933,12 @@ function bindFohCategoryMenuEditDialog(root: HTMLElement, remount: () => void): 
       if (key) openMenuEditDialog(root, key, scope);
       return;
     }
+    const copyBtn = target.closest<HTMLButtonElement>("[data-foh-menu-combo-copy]");
+    if (copyBtn) {
+      const key = copyBtn.getAttribute("data-foh-menu-combo-copy");
+      if (key) openMenuCopyDialog(root, key);
+      return;
+    }
     if (
       target.closest("[data-foh-menu-edit-cancel]") ||
       target.closest("[data-foh-menu-edit-close]") ||
@@ -1685,21 +1950,48 @@ function bindFohCategoryMenuEditDialog(root: HTMLElement, remount: () => void): 
     if (target.closest("[data-foh-menu-edit-save]")) {
       saveMenuEditDialog(root);
       remountFohCategorySettings(remount);
+      return;
+    }
+    if (
+      target.closest("[data-foh-menu-copy-cancel]") ||
+      target.closest("[data-foh-menu-copy-close]") ||
+      target.closest("[data-foh-menu-copy-backdrop]")
+    ) {
+      hideMenuCopyDialog(root);
+      return;
+    }
+    if (target.closest("[data-foh-menu-copy-confirm]")) {
+      confirmMenuCopyDialog(root);
+      remountFohCategorySettings(remount);
     }
   });
 
   root.addEventListener("change", (e) => {
     const target = e.target as HTMLElement;
-    const dialog = target.closest<HTMLElement>("[data-foh-menu-edit-dialog]");
-    if (!dialog || dialog.classList.contains("hidden")) return;
-    const modeRadio = target.closest<HTMLInputElement>("[data-foh-menu-view-mode]");
-    if (modeRadio?.checked) {
-      syncMenuEditViewOnlyPanels(dialog, modeRadio.value === "dish" ? "dish" : "category");
+    const editDialog = target.closest<HTMLElement>("[data-foh-menu-edit-dialog]");
+    if (editDialog && !editDialog.classList.contains("hidden")) {
+      const modeRadio = target.closest<HTMLInputElement>("[data-foh-menu-view-mode]");
+      if (modeRadio?.checked) {
+        syncMenuEditViewOnlyPanels(editDialog, modeRadio.value === "dish" ? "dish" : "category");
+      }
+      return;
+    }
+    const copyDialog = target.closest<HTMLElement>("[data-foh-menu-copy-dialog]");
+    if (copyDialog && !copyDialog.classList.contains("hidden")) {
+      if (target.closest("[data-foh-menu-copy-target]")) {
+        syncMenuCopyConfirmEnabled(copyDialog);
+      }
     }
   });
 
   root.addEventListener("keydown", (e) => {
     if (e.key !== "Escape") return;
+    const copyDialog = root.querySelector<HTMLElement>("[data-foh-menu-copy-dialog]");
+    if (copyDialog && !copyDialog.classList.contains("hidden")) {
+      e.preventDefault();
+      hideMenuCopyDialog(root);
+      return;
+    }
     const dialog = root.querySelector<HTMLElement>("[data-foh-menu-edit-dialog]");
     if (dialog && !dialog.classList.contains("hidden")) {
       e.preventDefault();

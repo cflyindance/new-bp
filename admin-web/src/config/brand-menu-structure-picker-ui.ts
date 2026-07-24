@@ -209,6 +209,30 @@ export function emptyBrandMenuStructureByLine(): BrandMenuStructureByLine {
   return { kiosk: [], emenu: [], sdi: [] };
 }
 
+export function cloneBrandMenuStructureByLine(
+  byLine: BrandMenuStructureByLine,
+): BrandMenuStructureByLine {
+  return {
+    kiosk: [...(byLine.kiosk ?? [])],
+    emenu: [...(byLine.emenu ?? [])],
+    sdi: [...(byLine.sdi ?? [])],
+  };
+}
+
+/** 按产线对 keys 做并集去重 */
+export function mergeBrandMenuStructureByLine(
+  target: BrandMenuStructureByLine,
+  source: BrandMenuStructureByLine,
+): BrandMenuStructureByLine {
+  const out = emptyBrandMenuStructureByLine();
+  for (const line of BRAND_MENU_LINE_OPTIONS) {
+    out[line.id] = [
+      ...new Set([...(target[line.id] ?? []), ...(source[line.id] ?? [])].filter((k) => k.length > 0)),
+    ];
+  }
+  return out;
+}
+
 export function isBrandMenuLineId(value: string): value is BrandMenuLineId {
   return BRAND_MENU_LINE_OPTIONS.some((l) => l.id === value);
 }
