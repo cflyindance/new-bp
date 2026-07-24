@@ -12,7 +12,6 @@ import {
   emptyBrandMenuStructureByLine,
   flattenBrandMenuStructureByLine,
   isBrandMenuLineId,
-  mergeBrandMenuStructureByLine,
   readBrandMenuStructureByLineFromPicker,
   renderBrandMenuStructurePickerHtml,
   type BrandMenuLineId,
@@ -373,8 +372,6 @@ function uniqueStrings(values: string[]): string[] {
   return out;
 }
 
-type MenuComboCopyMode = "merge" | "overwrite";
-
 function filterViewOnlyCategoryKeys(
   keys: string[],
   targetKey: MenuComboKey,
@@ -383,59 +380,20 @@ function filterViewOnlyCategoryKeys(
   return uniqueStrings(keys.filter((k) => k !== targetKey && validKeys.has(k)));
 }
 
-/** 将源菜单组合的可下单 + 不可下单配置应用到目标（不改 displayName） */
+/** 将源菜单组合的可下单 + 不可下单配置覆盖到目标（不改 displayName） */
 function applyMenuComboCopy(
   source: MenuComboConfig,
   target: MenuComboConfig,
   targetKey: MenuComboKey,
-  mode: MenuComboCopyMode,
   validKeys: Set<string>,
 ): MenuComboConfig {
-  if (mode === "overwrite") {
-    return {
-      ...target,
-      viewOnlyMode: source.viewOnlyMode,
-      orderableStructureByLine: cloneBrandMenuStructureByLine(source.orderableStructureByLine),
-      viewOnlyStructureByLine: cloneBrandMenuStructureByLine(source.viewOnlyStructureByLine),
-      viewOnlyCategoryKeys: filterViewOnlyCategoryKeys(
-        source.viewOnlyCategoryKeys,
-        targetKey,
-        validKeys,
-      ),
-    };
-  }
-
-  const viewOnlyMode = source.viewOnlyMode;
-  if (viewOnlyMode === "dish") {
-    return {
-      ...target,
-      viewOnlyMode,
-      orderableStructureByLine: mergeBrandMenuStructureByLine(
-        target.orderableStructureByLine,
-        source.orderableStructureByLine,
-      ),
-      viewOnlyStructureByLine: mergeBrandMenuStructureByLine(
-        target.viewOnlyStructureByLine,
-        source.viewOnlyStructureByLine,
-      ),
-      viewOnlyCategoryKeys: filterViewOnlyCategoryKeys(
-        target.viewOnlyCategoryKeys,
-        targetKey,
-        validKeys,
-      ),
-    };
-  }
-
   return {
     ...target,
-    viewOnlyMode,
-    orderableStructureByLine: mergeBrandMenuStructureByLine(
-      target.orderableStructureByLine,
-      source.orderableStructureByLine,
-    ),
-    viewOnlyStructureByLine: cloneBrandMenuStructureByLine(target.viewOnlyStructureByLine),
+    viewOnlyMode: source.viewOnlyMode,
+    orderableStructureByLine: cloneBrandMenuStructureByLine(source.orderableStructureByLine),
+    viewOnlyStructureByLine: cloneBrandMenuStructureByLine(source.viewOnlyStructureByLine),
     viewOnlyCategoryKeys: filterViewOnlyCategoryKeys(
-      [...target.viewOnlyCategoryKeys, ...source.viewOnlyCategoryKeys],
+      source.viewOnlyCategoryKeys,
       targetKey,
       validKeys,
     ),
@@ -1055,7 +1013,7 @@ function renderMenuCopyDialogShell(): string {
         <div class="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4" data-foh-menu-copy-body></div>
         <div class="flex shrink-0 justify-end gap-2 border-t border-border bg-card px-5 py-4">
           <button type="button" class="${BTN_GHOST}" data-foh-menu-copy-cancel>取消</button>
-          <button type="button" class="${BTN_PRIMARY}" data-foh-menu-copy-confirm disabled>确认复制</button>
+          <button type="button" class="${BTN_PRIMARY}" data-foh-menu-copy-confirm disabled>复制并覆盖</button>
         </div>
       </div>
     </div>`;
@@ -1750,36 +1708,10 @@ function renderMenuCopyDialogBody(
     .join("");
 
   return `
-    <p class="m-0 text-sm text-muted-foreground">将「可下单 + 不可下单」一并复制到所选菜单组合</p>
+    <p class="m-0 text-sm text-muted-foreground">将「可下单 + 不可下单」复制并覆盖到所选菜单组合</p>
     <div>
       <p class="m-0 mb-2 text-xs font-medium text-muted-foreground">目标菜单组合</p>
       <div class="grid max-h-56 gap-2 overflow-y-auto" data-foh-menu-copy-targets>${list}</div>
-    </div>
-    <div>
-      <p class="m-0 mb-2 text-xs font-medium text-muted-foreground">写入方式</p>
-      <div class="space-y-2 text-sm text-foreground">
-        <label class="flex cursor-pointer items-start gap-2">
-          <input
-            type="radio"
-            name="foh-menu-copy-mode"
-            value="merge"
-            class="${MODULE_SETTING_CONTROL_CLASS} mt-0.5"
-            data-foh-menu-copy-mode
-            checked
-          />
-          <span><span class="font-medium">合并</span>（推荐）— 源中有的菜勾上；目标原有保留</span>
-        </label>
-        <label class="flex cursor-pointer items-start gap-2">
-          <input
-            type="radio"
-            name="foh-menu-copy-mode"
-            value="overwrite"
-            class="${MODULE_SETTING_CONTROL_CLASS} mt-0.5"
-            data-foh-menu-copy-mode
-          />
-          <span><span class="font-medium">覆盖</span> — 目标变成与源完全一致</span>
-        </label>
-      </div>
     </div>`;
 }
 
@@ -1811,8 +1743,6 @@ function confirmMenuCopyDialog(root: HTMLElement): void {
     .map((input) => input.value)
     .filter(Boolean);
   if (targetKeys.length === 0) return;
-  const modeRadio = dialog.querySelector<HTMLInputElement>("[data-foh-menu-copy-mode]:checked");
-  const mode: MenuComboCopyMode = modeRadio?.value === "overwrite" ? "overwrite" : "merge";
 
   const state = readFohCategorySettingsState();
   const combos = listMenuCombinations(state);
@@ -1832,7 +1762,6 @@ function confirmMenuCopyDialog(root: HTMLElement): void {
       sourceCfg,
       targetCfg,
       targetKey,
-      mode,
       validKeys,
     );
   }
