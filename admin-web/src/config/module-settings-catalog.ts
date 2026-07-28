@@ -618,6 +618,7 @@ export const MODULE_SETTINGS_BY_PATH: Record<string, ModuleSettingCatalogHub> = 
     items: [
       { id: "s417-store-profile-基本信息", groupTitle: "门店档案", groupKey: "store-profile", sceneDesc: "餐厅的基本信息", moduleName: "餐馆信息", feature: "餐馆信息（基本信息）", title: "基本信息", seq: 417 },
       { id: "s418-store-hours-operation-营业时段", groupTitle: "营业与运营", groupKey: "store-hours-operation", sceneDesc: "餐厅的营业时间段设置", moduleName: "营业时段", feature: "（未填写）", title: "营业时段", seq: 418 },
+      { id: "s583-store-hours-operation-额外时间", groupTitle: "营业与运营", groupKey: "store-hours-operation", sceneDesc: "针对节假日或调休日覆盖/暂停所选营业时间", moduleName: "额外时间", feature: "（未填写）", title: "额外时间", seq: 583 },
       { id: "s433-brand-identity-assets-餐厅LOGO", groupTitle: "品牌标识素材", groupKey: "brand-identity-assets", sceneDesc: "设置餐厅的LOGO", moduleName: "餐厅LOGO", feature: "（未填写）", title: "餐厅LOGO", seq: 433 },
       { id: "s582-store-hours-operation-营业时间即将结束提示", groupTitle: "营业与运营", groupKey: "store-hours-operation", sceneDesc: "设置营业时间结束前多少分钟进行提示", moduleName: "下单设置", feature: "（未填写）", title: "营业时间即将结束提示", seq: 582 },
     ],
@@ -994,6 +995,7 @@ const MODULE_SETTINGS_INTRA_SORT: Record<number, number> = {
   395: 3230,
   417: 2480,
   418: 2500,
+  583: 2505,
   422: 2880,
   423: 2870,
   429: 1780,

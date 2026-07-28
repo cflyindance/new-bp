@@ -1,0 +1,13 @@
+---
+description: 导出 PRD/规格时走 export-prd-spec Skill，产出完整三件套到约定目录
+alwaysApply: true
+---
+
+# 导出产品文档
+
+当用户要求「导出 PRD」「导出规格」「从代码生成需求/SPEC」或同等含义时：
+
+1. 使用项目 Skill `.cursor/skills/export-prd-spec/`
+2. 必须输出 `PRD.md` + `SPEC.md` + `DIFF.md` 到 `docs/产品PRD/exports/YYYY-MM-DD-<scope>/`
+3. 未指定范围时先询问，禁止整仓盲扫
+4. 不得只写摘要交差

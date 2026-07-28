@@ -57,12 +57,29 @@ export const DEMO_CONFIG_DOMAINS: DeploymentConfigDomain[] = [
     pagePaths: ["/brand-menu/channel-visibility"],
   },
   {
+    // syncMode 设计为 manual-only（见云端下发设计附录 A）；原型域表暂无 syncMode 字段
+    domainKey: "store.profile",
+    displayName: "门店档案",
+    navRefs: [{ l1Key: "store-mgmt", l2Key: "st-settings" }],
+    productLines: ["POS", "Kiosk", "eMenu"],
+    granularity: "store",
+    pagePaths: [
+      "/stores/settings",
+      "/stores/settings/store-profile",
+      "/stores/settings/brand-identity-assets",
+    ],
+  },
+  {
     domainKey: "store.hours",
     displayName: "营业时间",
     navRefs: [{ l1Key: "store-mgmt", l2Key: "store-hours" }],
     productLines: ["POS", "Kiosk", "eMenu"],
     granularity: "store",
-    pagePaths: ["/stores/hours", "/stores/settings"],
+    pagePaths: [
+      "/stores/hours",
+      "/stores/settings",
+      "/stores/settings/store-hours-operation",
+    ],
   },
   {
     domainKey: "module.settings",

@@ -1,6 +1,6 @@
 /**
- * 门店管理 · 营业与运营：营业时间库 + 额外时间（指定日期生效/不生效）。
- * seq 418；数据原型 localStorage JSON。
+ * 门店管理 · 营业与运营：营业时间库（seq 418）+ 额外时间（seq 583，与 418 同级）。
+ * 数据原型 localStorage JSON；额外时间存储键仍为 418-business-hour-exceptions。
  */
 
 import {
@@ -10,6 +10,8 @@ import {
 } from "./module-settings-form-ui";
 
 export const STORE_BUSINESS_HOURS_SEQ = 418;
+/** 营业与运营 · 额外时间（与 418 同组同级；数据仍为 418-business-hour-exceptions） */
+export const STORE_BUSINESS_HOUR_EXCEPTIONS_SEQ = 583;
 
 export const STORE_BUSINESS_HOUR_SCHEDULES_FIELD_ID = "418-business-hour-schedules";
 export const STORE_BUSINESS_HOUR_EXCEPTIONS_FIELD_ID = "418-business-hour-exceptions";
@@ -50,6 +52,8 @@ export type StoreBusinessHourException = {
   activeDays?: StoreBusinessHourDay[];
   /** include=该时间生效；exclude=该时间不生效 */
   mode: StoreBusinessHourExceptionMode;
+  /** 关联的营业时间规则 id；≥1 才可保存；空数组为待补全孤儿 */
+  scheduleIds: string[];
 };
 
 export const STORE_BUSINESS_HOUR_DAYS: { day: StoreBusinessHourDay; label: string; short: string }[] = [
@@ -204,6 +208,25 @@ function normalizeSchedule(
   };
 }
 
+function normalizeScheduleIds(
+  raw: Partial<StoreBusinessHourException> & { scheduleId?: string },
+): string[] {
+  const fromArray = Array.isArray(raw.scheduleIds)
+    ? raw.scheduleIds.filter((id): id is string => typeof id === "string" && id.trim().length > 0).map((id) => id.trim())
+    : [];
+  if (fromArray.length > 0) return [...new Set(fromArray)];
+  const legacy = typeof raw.scheduleId === "string" ? raw.scheduleId.trim() : "";
+  return legacy ? [legacy] : [];
+}
+
+function sanitizeExceptionScheduleIds(scheduleIds: string[], validIds: Set<string>): string[] {
+  return [...new Set(scheduleIds.filter((id) => validIds.has(id)))];
+}
+
+function isOrphanException(exception: StoreBusinessHourException): boolean {
+  return exception.scheduleIds.length === 0;
+}
+
 function normalizeException(
   raw: Partial<StoreBusinessHourException> & { date?: string; note?: string; scheduleId?: string },
 ): StoreBusinessHourException | null {
@@ -228,6 +251,7 @@ function normalizeException(
     toDay,
     activeDays: normalizeActiveDays(raw.activeDays, fromDay, toDay),
     mode,
+    scheduleIds: normalizeScheduleIds(raw),
   };
 }
 
@@ -335,6 +359,17 @@ export function readBusinessHourExceptions(): StoreBusinessHourException[] {
     .sort((a, b) => a.fromDate.localeCompare(b.fromDate) || a.name.localeCompare(b.name));
 }
 
+/** 展示用：与当前营业时间库求交清洗 scheduleIds（不单独写盘） */
+function readBusinessHourExceptionsForDisplay(
+  schedules: StoreBusinessHourSchedule[] = readBusinessHourSchedules(),
+): StoreBusinessHourException[] {
+  const validIds = new Set(schedules.map((s) => s.id));
+  return readBusinessHourExceptions().map((e) => ({
+    ...e,
+    scheduleIds: sanitizeExceptionScheduleIds(e.scheduleIds, validIds),
+  }));
+}
+
 export function writeBusinessHourExceptions(exceptions: StoreBusinessHourException[]): void {
   writeModuleSettingJson(STORE_BUSINESS_HOUR_EXCEPTIONS_FIELD_ID, exceptions);
 }
@@ -388,18 +423,6 @@ export function getScheduleActiveDays(
   return expandScheduleActiveDays(schedule.fromDay, schedule.toDay);
 }
 
-function renderExceptionDayBadges(exception: StoreBusinessHourException): string {
-  const active = getScheduleActiveDays(exception);
-  return STORE_BUSINESS_HOUR_DAY_BADGES.filter(({ day }) => active.has(day))
-    .map(
-      ({ badge }) => `<span
-      class="inline-flex h-6 min-w-[2rem] items-center justify-center rounded-md px-1.5 text-[10px] font-semibold tracking-wide bg-primary/15 text-primary ring-1 ring-primary/30"
-      aria-hidden="true"
-    >${badge}</span>`,
-    )
-    .join("");
-}
-
 function deriveFromToDays(activeDays: StoreBusinessHourDay[]): {
   fromDay: StoreBusinessHourDay;
   toDay: StoreBusinessHourDay;
@@ -411,7 +434,9 @@ function deriveFromToDays(activeDays: StoreBusinessHourDay[]): {
   };
 }
 
-function renderScheduleDayBadges(schedule: StoreBusinessHourSchedule): string {
+function renderScheduleDayBadges(
+  schedule: Pick<StoreBusinessHourSchedule, "fromDay" | "toDay" | "activeDays">,
+): string {
   const active = getScheduleActiveDays(schedule);
   return STORE_BUSINESS_HOUR_DAY_BADGES.filter(({ day }) => active.has(day))
     .map(
@@ -433,7 +458,59 @@ function exceptionModeBadgeClass(mode: StoreBusinessHourExceptionMode): string {
     : "bg-rose-500/10 text-rose-700 ring-1 ring-rose-500/20 dark:text-rose-400";
 }
 
-function renderScheduleCard(schedule: StoreBusinessHourSchedule): string {
+function exceptionsLinkedToSchedule(
+  exceptions: StoreBusinessHourException[],
+  scheduleId: string,
+): StoreBusinessHourException[] {
+  return exceptions.filter(
+    (e) => Array.isArray(e.scheduleIds) && e.scheduleIds.length > 0 && e.scheduleIds.includes(scheduleId),
+  );
+}
+
+/** 营业时间卡片下的额外时间行：只展示本规则相关信息，不提示其他关联规则 */
+function renderNestedExceptionRow(exception: StoreBusinessHourException): string {
+  return `
+    <li
+      class="group flex items-start justify-between gap-2 rounded-md border border-border/80 bg-muted/20 px-3 py-2"
+      data-business-hour-exception
+      data-exception-id="${escapeHtml(exception.id)}"
+    >
+      <div class="min-w-0 flex-1 space-y-0.5">
+        <div class="flex flex-wrap items-center gap-1.5">
+          <span class="inline-flex rounded-full px-1.5 py-0.5 text-[10px] font-medium ${exceptionModeBadgeClass(exception.mode)}">
+            ${escapeHtml(formatExceptionModeLabel(exception.mode))}
+          </span>
+          <span class="text-sm font-medium text-foreground">${escapeHtml(exception.name)}</span>
+          <span class="text-[11px] tabular-nums text-muted-foreground">${escapeHtml(formatDateRange(exception.fromDate, exception.toDate))}</span>
+        </div>
+        <p class="text-xs tabular-nums text-muted-foreground">
+          ${escapeHtml(exception.openTime)} — ${escapeHtml(exception.closeTime)}
+        </p>
+      </div>
+      <div class="flex shrink-0 items-center gap-0.5">
+        <button type="button" class="${BTN_ICON}" data-business-hour-exception-edit aria-label="编辑额外时间 ${escapeHtml(exception.name)}" title="编辑">
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>
+          </svg>
+        </button>
+        <button type="button" class="${BTN_ICON} hover:text-destructive" data-business-hour-exception-remove aria-label="删除额外时间 ${escapeHtml(exception.name)}" title="删除">
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
+          </svg>
+        </button>
+      </div>
+    </li>`;
+}
+
+function renderScheduleCard(
+  schedule: StoreBusinessHourSchedule,
+  relatedExceptions: StoreBusinessHourException[],
+): string {
+  const nested =
+    relatedExceptions.length > 0
+      ? `<ul class="space-y-2">${relatedExceptions.map((e) => renderNestedExceptionRow(e)).join("")}</ul>`
+      : `<p class="text-xs text-muted-foreground">暂无额外时间</p>`;
+
   return `
     <li
       class="group rounded-lg border border-border bg-card p-4 shadow-sm transition-shadow hover:shadow-md"
@@ -482,62 +559,67 @@ function renderScheduleCard(schedule: StoreBusinessHourSchedule): string {
           </button>
         </div>
       </div>
+      <div class="mt-4 space-y-2 border-t border-dashed border-border pt-3" data-business-hour-schedule-exceptions>
+        <div class="flex items-center justify-between gap-2">
+          <p class="text-xs font-medium text-muted-foreground">额外时间</p>
+          <button
+            type="button"
+            class="text-xs text-primary hover:underline"
+            data-business-hour-exception-create
+            data-source-schedule-id="${escapeHtml(schedule.id)}"
+          >+ 添加额外时间</button>
+        </div>
+        ${nested}
+      </div>
     </li>`;
 }
 
-function renderExceptionCard(exception: StoreBusinessHourException): string {
+function renderOrphanExceptionRow(exception: StoreBusinessHourException): string {
   return `
     <li
-      class="group rounded-lg border border-border bg-card p-4 shadow-sm transition-shadow hover:shadow-md"
+      class="group flex items-start justify-between gap-2 rounded-md border border-amber-500/30 bg-amber-500/5 px-3 py-2"
       data-business-hour-exception
       data-exception-id="${escapeHtml(exception.id)}"
     >
-      <div class="flex items-start justify-between gap-3">
-        <div class="min-w-0 flex-1 space-y-2">
-          <div class="flex flex-wrap items-center gap-2">
-            <h5 class="text-sm font-semibold text-foreground">${escapeHtml(exception.name)}</h5>
-            <span class="inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${exceptionModeBadgeClass(exception.mode)}">
-              ${escapeHtml(formatExceptionModeLabel(exception.mode))}
-            </span>
-            <span class="inline-flex rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground tabular-nums">
-              ${escapeHtml(formatDateRange(exception.fromDate, exception.toDate))}
-            </span>
-          </div>
-          <p class="text-lg font-medium tabular-nums tracking-tight text-foreground">
-            ${escapeHtml(exception.openTime)}
-            <span class="mx-1.5 text-muted-foreground font-normal">—</span>
-            ${escapeHtml(exception.closeTime)}
-          </p>
-          <div class="flex flex-wrap items-center gap-2">
-            <span class="flex flex-wrap gap-2">${renderExceptionDayBadges(exception)}</span>
-          </div>
+      <div class="min-w-0 flex-1 space-y-0.5">
+        <div class="flex flex-wrap items-center gap-1.5">
+          <span class="inline-flex rounded-full px-1.5 py-0.5 text-[10px] font-medium ${exceptionModeBadgeClass(exception.mode)}">
+            ${escapeHtml(formatExceptionModeLabel(exception.mode))}
+          </span>
+          <span class="text-sm font-medium text-foreground">${escapeHtml(exception.name)}</span>
+          <span class="text-[11px] tabular-nums text-muted-foreground">${escapeHtml(formatDateRange(exception.fromDate, exception.toDate))}</span>
         </div>
-        <div class="flex shrink-0 items-center gap-0.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100">
-          <button
-            type="button"
-            class="${BTN_ICON}"
-            data-business-hour-exception-edit
-            aria-label="编辑额外时间 ${escapeHtml(exception.name)}"
-            title="编辑"
-          >
-            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-              <path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>
-            </svg>
-          </button>
-          <button
-            type="button"
-            class="${BTN_ICON} hover:text-destructive"
-            data-business-hour-exception-remove
-            aria-label="删除额外时间 ${escapeHtml(exception.name)}"
-            title="删除"
-          >
-            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-              <path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
-            </svg>
-          </button>
-        </div>
+        <p class="text-xs tabular-nums text-muted-foreground">
+          ${escapeHtml(exception.openTime)} — ${escapeHtml(exception.closeTime)}
+        </p>
+      </div>
+      <div class="flex shrink-0 items-center gap-0.5">
+        <button type="button" class="${BTN_ICON}" data-business-hour-exception-edit aria-label="编辑额外时间 ${escapeHtml(exception.name)}" title="编辑">
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>
+          </svg>
+        </button>
+        <button type="button" class="${BTN_ICON} hover:text-destructive" data-business-hour-exception-remove aria-label="删除额外时间 ${escapeHtml(exception.name)}" title="删除">
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
+          </svg>
+        </button>
       </div>
     </li>`;
+}
+
+function renderOrphanExceptionsBanner(orphans: StoreBusinessHourException[]): string {
+  if (orphans.length === 0) return "";
+  return `
+    <details class="rounded-lg border border-amber-500/40 bg-amber-500/5 open:shadow-sm" data-business-hour-orphan-banner>
+      <summary class="cursor-pointer list-none px-4 py-3 text-sm font-medium text-foreground marker:content-none [&::-webkit-details-marker]:hidden">
+        <span class="inline-flex items-center gap-2">
+          <span class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500/20 px-1.5 text-[11px] tabular-nums text-amber-800 dark:text-amber-300">${orphans.length}</span>
+          有 ${orphans.length} 条额外时间未关联营业时间，请编辑补全
+        </span>
+      </summary>
+      <ul class="space-y-2 border-t border-amber-500/20 px-4 py-3">${orphans.map(renderOrphanExceptionRow).join("")}</ul>
+    </details>`;
 }
 
 function renderDayChipSelector(selected: Set<StoreBusinessHourDay>, dataAttr: string): string {
@@ -594,7 +676,6 @@ function renderScheduleDialog(): string {
           <div class="rounded-lg border border-border bg-muted/20 p-4 space-y-4">
             <div>
               <p class="${LABEL_CLASS}">生效日期</p>
-              <p class="${HINT_CLASS} mt-0.5">规则在以下日期区间内重复生效</p>
             </div>
             <div class="grid grid-cols-2 gap-4">
               <div class="space-y-1.5">
@@ -628,6 +709,74 @@ function renderScheduleDialog(): string {
     </div>`;
 }
 
+function renderExceptionScheduleCheckboxes(
+  schedules: StoreBusinessHourSchedule[],
+  selectedIds: Set<string>,
+  options?: { lockedScheduleId?: string },
+): string {
+  const lockedId = options?.lockedScheduleId?.trim() || "";
+  const visible = lockedId ? schedules.filter((s) => s.id === lockedId) : schedules;
+
+  if (visible.length === 0) {
+    return `<p class="text-xs text-muted-foreground" data-business-hour-exception-schedule-empty>${
+      lockedId ? "来源营业时间不存在，请关闭后重试" : "暂无营业时间可选，请先新建营业时间"
+    }</p>`;
+  }
+
+  const items = visible
+    .map((s) => {
+      const checked = lockedId ? true : selectedIds.has(s.id);
+      const locked = !!lockedId;
+      return `<label class="flex items-start gap-2.5 rounded-md border border-border px-3 py-2 ${
+        locked ? "cursor-default bg-muted/30" : "cursor-pointer has-[:checked]:border-primary has-[:checked]:bg-primary/5"
+      }">
+        <input
+          type="checkbox"
+          class="mt-0.5 accent-primary"
+          value="${escapeHtml(s.id)}"
+          data-business-hour-exception-schedule
+          ${checked ? "checked" : ""}
+          ${locked ? "disabled" : ""}
+        />
+        <span class="min-w-0">
+          <span class="block text-sm font-medium text-foreground">${escapeHtml(s.name)}</span>
+          <span class="block text-xs tabular-nums text-muted-foreground">${escapeHtml(s.openTime)} — ${escapeHtml(s.closeTime)}</span>
+        </span>
+      </label>`;
+    })
+    .join("");
+
+  const hiddenLock = lockedId
+    ? `<input type="hidden" data-business-hour-exception-locked-schedule-id value="${escapeHtml(lockedId)}" />`
+    : `<input type="hidden" data-business-hour-exception-locked-schedule-id value="" />`;
+
+  return `${hiddenLock}${items}`;
+}
+
+function fillExceptionScheduleCheckboxes(
+  panel: HTMLElement,
+  selectedIds: Set<string>,
+  options?: { lockedScheduleId?: string },
+): void {
+  const list = panel.querySelector<HTMLElement>("[data-business-hour-exception-schedule-list]");
+  if (!list) return;
+  list.innerHTML = renderExceptionScheduleCheckboxes(readBusinessHourSchedules(), selectedIds, options);
+}
+
+function getSelectedExceptionScheduleIds(panel: HTMLElement): string[] {
+  const locked = panel
+    .querySelector<HTMLInputElement>("[data-business-hour-exception-locked-schedule-id]")
+    ?.value.trim();
+  if (locked) return [locked];
+
+  const ids: string[] = [];
+  panel.querySelectorAll<HTMLInputElement>("[data-business-hour-exception-schedule]:checked").forEach((input) => {
+    const id = input.value.trim();
+    if (id) ids.push(id);
+  });
+  return [...new Set(ids)];
+}
+
 function renderExceptionDialog(): string {
   const today = currentDate();
   const defaultDays = new Set<StoreBusinessHourDay>(["mon", "tue", "wed", "thu", "fri"]);
@@ -643,7 +792,6 @@ function renderExceptionDialog(): string {
       <div class="relative z-10 max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-card shadow-xl">
         <div class="border-b border-border px-5 py-4">
           <h3 id="business-hour-exception-dialog-title" class="text-base font-semibold text-card-foreground" data-business-hour-exception-dialog-title>新增额外时间</h3>
-          <p class="mt-1 text-xs text-muted-foreground">设置覆盖规则：名称、时段、日期区间与每周重复</p>
         </div>
         <div class="space-y-5 px-5 py-4">
           <input type="hidden" data-business-hour-exception-edit-id value="" />
@@ -654,14 +802,14 @@ function renderExceptionDialog(): string {
                 <input type="radio" name="business-hour-exception-mode" value="include" class="mt-0.5 accent-primary" data-business-hour-exception-mode checked />
                 <span>
                   <span class="block text-sm font-medium text-foreground">该时间生效</span>
-                  <span class="block text-xs text-muted-foreground">在设定范围内启用此营业时间</span>
+                  <span class="block text-xs text-muted-foreground">在设定范围内，用此时段覆盖所选营业时间的开闭市</span>
                 </span>
               </label>
               <label class="flex cursor-pointer items-start gap-3 rounded-lg border border-border p-3 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
                 <input type="radio" name="business-hour-exception-mode" value="exclude" class="mt-0.5 accent-primary" data-business-hour-exception-mode />
                 <span>
                   <span class="block text-sm font-medium text-foreground">该时间不生效</span>
-                  <span class="block text-xs text-muted-foreground">在设定范围内暂停此营业时间</span>
+                  <span class="block text-xs text-muted-foreground">在设定范围内，暂停所选营业时间</span>
                 </span>
               </label>
             </div>
@@ -683,7 +831,6 @@ function renderExceptionDialog(): string {
           <div class="rounded-lg border border-border bg-muted/20 p-4 space-y-4">
             <div>
               <p class="${LABEL_CLASS}">生效日期</p>
-              <p class="${HINT_CLASS} mt-0.5">规则在以下日期区间内重复生效</p>
             </div>
             <div class="grid grid-cols-2 gap-4">
               <div class="space-y-1.5">
@@ -706,6 +853,12 @@ function renderExceptionDialog(): string {
               </div>
               ${renderDayChipSelector(defaultDays, "data-business-hour-exception-day-chip")}
             </div>
+          </div>
+          <div class="space-y-2 rounded-lg border border-border bg-muted/10 p-4">
+            <div>
+              <p class="${LABEL_CLASS}">作用于营业时间 <span class="text-destructive">*</span></p>
+            </div>
+            <div class="space-y-2" data-business-hour-exception-schedule-list></div>
           </div>
           <p class="hidden text-xs text-destructive" data-business-hour-exception-error role="alert"></p>
         </div>
@@ -744,10 +897,19 @@ function renderDeleteConfirmDialog(): string {
     </div>`;
 }
 
-function renderSchedulesSection(schedules: StoreBusinessHourSchedule[]): string {
+function renderSchedulesSection(
+  schedules: StoreBusinessHourSchedule[],
+  exceptions: StoreBusinessHourException[],
+): string {
   const list =
     schedules.length > 0
-      ? `<ul class="grid gap-3 sm:grid-cols-1" data-business-hour-schedule-list>${schedules.map(renderScheduleCard).join("")}</ul>`
+      ? `<ul class="grid gap-3 sm:grid-cols-1" data-business-hour-schedule-list>${schedules
+          .map((schedule) => {
+            // 仅挂载关联到本条营业时间的额外时间（由【额外时间】多选同步而来时亦按 id 过滤）
+            const related = exceptionsLinkedToSchedule(exceptions, schedule.id);
+            return renderScheduleCard(schedule, related);
+          })
+          .join("")}</ul>`
       : `<div class="rounded-xl border border-dashed border-border bg-muted/20 px-6 py-10 text-center" data-business-hour-empty>
           <p class="text-sm font-medium text-foreground">暂无营业时间</p>
           <p class="mt-1 text-xs text-muted-foreground">添加午市、晚市等时段，供品类与品牌绑定使用</p>
@@ -772,59 +934,161 @@ function renderSchedulesSection(schedules: StoreBusinessHourSchedule[]): string 
     </section>`;
 }
 
-function renderExceptionsSection(exceptions: StoreBusinessHourException[]): string {
-  const list =
-    exceptions.length > 0
-      ? `<ul class="grid gap-3 sm:grid-cols-1" data-business-hour-exception-list>${exceptions.map(renderExceptionCard).join("")}</ul>`
-      : `<div class="rounded-xl border border-dashed border-border bg-muted/10 px-4 py-6 text-center text-sm text-muted-foreground" data-business-hour-exception-empty>
-          暂无额外时间，可针对节假日或调休日单独设置生效/不生效
-        </div>`;
+function renderStandaloneExceptionCard(
+  exception: StoreBusinessHourException,
+  schedulesById: Map<string, StoreBusinessHourSchedule>,
+): string {
+  const linkedNames = exception.scheduleIds
+    .map((id) => schedulesById.get(id)?.name || id)
+    .filter(Boolean);
+  const linkedLabel =
+    linkedNames.length > 0 ? linkedNames.map((n) => escapeHtml(n)).join("、") : "未关联";
 
   return `
-    <section class="space-y-4 border-t border-border pt-6" data-business-hour-exceptions-section>
+    <li
+      class="group rounded-lg border border-border bg-card p-4 shadow-sm transition-shadow hover:shadow-md"
+      data-business-hour-exception
+      data-exception-id="${escapeHtml(exception.id)}"
+    >
+      <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0 flex-1 space-y-2">
+          <div class="flex flex-wrap items-center gap-2">
+            <h5 class="text-sm font-semibold text-foreground">${escapeHtml(exception.name)}</h5>
+            <span class="inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${exceptionModeBadgeClass(exception.mode)}">
+              ${escapeHtml(formatExceptionModeLabel(exception.mode))}
+            </span>
+            <span class="inline-flex rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground tabular-nums">
+              ${escapeHtml(formatDateRange(exception.fromDate, exception.toDate))}
+            </span>
+          </div>
+          <p class="text-lg font-medium tabular-nums tracking-tight text-foreground">
+            ${escapeHtml(exception.openTime)}
+            <span class="mx-1.5 text-muted-foreground font-normal">—</span>
+            ${escapeHtml(exception.closeTime)}
+          </p>
+          <p class="text-xs text-muted-foreground">作用于：${linkedLabel}</p>
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="flex flex-wrap gap-2">${renderScheduleDayBadges(exception)}</span>
+          </div>
+        </div>
+        <div class="flex shrink-0 items-center gap-0.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100">
+          <button type="button" class="${BTN_ICON}" data-business-hour-exception-edit aria-label="编辑额外时间 ${escapeHtml(exception.name)}" title="编辑">
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>
+            </svg>
+          </button>
+          <button type="button" class="${BTN_ICON} hover:text-destructive" data-business-hour-exception-remove aria-label="删除额外时间 ${escapeHtml(exception.name)}" title="删除">
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </li>`;
+}
+
+function renderExceptionsSection(
+  schedules: StoreBusinessHourSchedule[],
+  exceptions: StoreBusinessHourException[],
+): string {
+  const schedulesById = new Map(schedules.map((s) => [s.id, s]));
+  const linked = exceptions.filter((e) => !isOrphanException(e));
+  const list =
+    linked.length > 0
+      ? `<ul class="grid gap-3 sm:grid-cols-1" data-business-hour-exception-list>${linked
+          .map((e) => renderStandaloneExceptionCard(e, schedulesById))
+          .join("")}</ul>`
+      : `<div class="rounded-xl border border-dashed border-border bg-muted/10 px-4 py-6 text-center text-sm text-muted-foreground" data-business-hour-exception-empty>
+          暂无额外时间，可针对节假日或调休日设置生效/不生效，并选择作用的营业时间
+        </div>`;
+
+  const canCreate = schedules.length > 0;
+  const createBtn = canCreate
+    ? `<button type="button" class="${BTN_PRIMARY}" data-business-hour-exception-create>
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          新增
+        </button>`
+    : `<button type="button" class="${BTN_GHOST} opacity-60" disabled title="请先在营业时段中新建营业时间">新增</button>`;
+
+  return `
+    <section class="space-y-4" data-business-hour-exceptions-section>
       <div class="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h4 class="${SECTION_HEAD_CLASS}">额外时间</h4>
-          <p class="${HINT_CLASS} mt-0.5">针对特定日期区间覆盖常规营业时间</p>
+          <p class="${HINT_CLASS} mt-0.5">针对特定日期覆盖或暂停所选营业时间</p>
         </div>
-        <button type="button" class="${BTN_GHOST}" data-business-hour-exception-create>
-          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-          新增
-        </button>
+        ${createBtn}
       </div>
       ${list}
     </section>`;
 }
 
-function renderPanelBody(
+function renderSchedulesPanelBody(
   schedules: StoreBusinessHourSchedule[],
   exceptions: StoreBusinessHourException[],
 ): string {
-  return `${renderSchedulesSection(schedules)}${renderExceptionsSection(exceptions)}`;
+  return renderSchedulesSection(schedules, exceptions);
+}
+
+function renderExceptionsPanelBody(
+  schedules: StoreBusinessHourSchedule[],
+  exceptions: StoreBusinessHourException[],
+): string {
+  const orphans = exceptions.filter(isOrphanException);
+  return `${renderOrphanExceptionsBanner(orphans)}${renderExceptionsSection(schedules, exceptions)}`;
+}
+
+function renderPanelBody(
+  schedules: StoreBusinessHourSchedule[],
+  exceptions: StoreBusinessHourException[],
+  mode: "schedules" | "exceptions",
+): string {
+  return mode === "exceptions"
+    ? renderExceptionsPanelBody(schedules, exceptions)
+    : renderSchedulesPanelBody(schedules, exceptions);
 }
 
 export function isStoreBusinessHoursSeq(seq: number): boolean {
   return seq === STORE_BUSINESS_HOURS_SEQ;
 }
 
-export function renderStoreBusinessHoursHtml(): string {
+export function isStoreBusinessHourExceptionsSeq(seq: number): boolean {
+  return seq === STORE_BUSINESS_HOUR_EXCEPTIONS_SEQ;
+}
+
+function renderBusinessHoursPanelShell(mode: "schedules" | "exceptions"): string {
   const schedules = readBusinessHourSchedules();
-  const exceptions = readBusinessHourExceptions();
+  const exceptions = readBusinessHourExceptionsForDisplay(schedules);
   return `
-    <div class="space-y-5" data-store-business-hours-panel>
-      <div data-store-business-hours-body>${renderPanelBody(schedules, exceptions)}</div>
+    <div class="space-y-5" data-store-business-hours-panel data-business-hours-panel-mode="${mode}">
+      <div class="space-y-4" data-store-business-hours-body>${renderPanelBody(schedules, exceptions, mode)}</div>
       ${renderScheduleDialog()}
       ${renderExceptionDialog()}
       ${renderDeleteConfirmDialog()}
     </div>`;
 }
 
+export function renderStoreBusinessHoursHtml(): string {
+  return renderBusinessHoursPanelShell("schedules");
+}
+
+export function renderStoreBusinessHourExceptionsHtml(): string {
+  return renderBusinessHoursPanelShell("exceptions");
+}
+
 function refreshPanelBody(panel: HTMLElement): void {
   const body = panel.querySelector<HTMLElement>("[data-store-business-hours-body]");
   if (!body) return;
   const schedules = readBusinessHourSchedules();
-  const exceptions = readBusinessHourExceptions();
-  body.innerHTML = renderPanelBody(schedules, exceptions);
+  const exceptions = readBusinessHourExceptionsForDisplay(schedules);
+  const mode = panel.getAttribute("data-business-hours-panel-mode") === "exceptions" ? "exceptions" : "schedules";
+  body.innerHTML = renderPanelBody(schedules, exceptions, mode);
+}
+
+function refreshAllBusinessHoursPanels(): void {
+  document.querySelectorAll<HTMLElement>("[data-store-business-hours-panel]").forEach((panel) => {
+    refreshPanelBody(panel);
+  });
 }
 
 function showDialog(dialog: HTMLElement | null): void {
@@ -978,12 +1242,17 @@ function saveScheduleDialog(panel: HTMLElement): void {
   else schedules.push(schedule);
   writeBusinessHourSchedules(schedules);
   hideScheduleDialog(panel);
-  refreshPanelBody(panel);
+  refreshAllBusinessHoursPanels();
 }
 
 function removeSchedule(panel: HTMLElement, scheduleId: string): void {
   writeBusinessHourSchedules(readBusinessHourSchedules().filter((s) => s.id !== scheduleId));
-  refreshPanelBody(panel);
+  const next = readBusinessHourExceptions().map((e) => ({
+    ...e,
+    scheduleIds: e.scheduleIds.filter((id) => id !== scheduleId),
+  }));
+  writeBusinessHourExceptions(next);
+  refreshAllBusinessHoursPanels();
 }
 
 type BusinessHourDeleteKind = "schedule" | "exception";
@@ -1051,7 +1320,7 @@ function openDeleteExceptionDialog(panel: HTMLElement, exception: StoreBusinessH
   );
 }
 
-function resetExceptionDialog(panel: HTMLElement): void {
+function resetExceptionDialog(panel: HTMLElement, sourceSchedule?: StoreBusinessHourSchedule): void {
   const today = currentDate();
   const editId = panel.querySelector<HTMLInputElement>("[data-business-hour-exception-edit-id]");
   const title = panel.querySelector<HTMLElement>("[data-business-hour-exception-dialog-title]");
@@ -1063,20 +1332,32 @@ function resetExceptionDialog(panel: HTMLElement): void {
   const fromDate = panel.querySelector<HTMLInputElement>("[data-business-hour-exception-from-date]");
   const toDate = panel.querySelector<HTMLInputElement>("[data-business-hour-exception-to-date]");
   if (name) name.value = "";
-  if (open) open.value = "11:00";
-  if (close) close.value = "22:00";
+  if (open) open.value = sourceSchedule?.openTime || "09:00";
+  if (close) close.value = sourceSchedule?.closeTime || "22:00";
   if (fromDate) fromDate.value = today;
   if (toDate) toDate.value = today;
   panel.querySelectorAll<HTMLInputElement>("[data-business-hour-exception-mode]").forEach((input, idx) => {
     input.checked = idx === 0;
   });
   setSelectedDays(panel, new Set(["mon", "tue", "wed", "thu", "fri"]), EXCEPTION_DAY_CHIP_ATTR);
+  // 从营业时间卡片进入：锁定为当前规则；额外时间设置入口：可多选
+  fillExceptionScheduleCheckboxes(
+    panel,
+    sourceSchedule ? new Set([sourceSchedule.id]) : new Set(),
+    sourceSchedule ? { lockedScheduleId: sourceSchedule.id } : undefined,
+  );
   setExceptionDialogError(panel, "");
 }
 
-function openExceptionDialog(panel: HTMLElement, exception?: StoreBusinessHourException): void {
+function openExceptionDialog(
+  panel: HTMLElement,
+  exception?: StoreBusinessHourException,
+  sourceScheduleId?: string,
+): void {
   const dialog = panel.querySelector<HTMLElement>("[data-business-hour-exception-dialog]");
-  resetExceptionDialog(panel);
+  const schedules = readBusinessHourSchedules();
+  const sourceSchedule = sourceScheduleId ? schedules.find((s) => s.id === sourceScheduleId) : undefined;
+  resetExceptionDialog(panel, sourceSchedule);
   if (exception) {
     const editId = panel.querySelector<HTMLInputElement>("[data-business-hour-exception-edit-id]");
     const title = panel.querySelector<HTMLElement>("[data-business-hour-exception-dialog-title]");
@@ -1096,6 +1377,19 @@ function openExceptionDialog(panel: HTMLElement, exception?: StoreBusinessHourEx
       input.checked = input.value === exception.mode;
     });
     setSelectedDays(panel, getScheduleActiveDays(exception), EXCEPTION_DAY_CHIP_ATTR);
+    const validIds = new Set(schedules.map((s) => s.id));
+    if (sourceScheduleId && validIds.has(sourceScheduleId)) {
+      // 从营业时间卡片进入编辑：锁定为当前规则，不可改选
+      fillExceptionScheduleCheckboxes(panel, new Set([sourceScheduleId]), {
+        lockedScheduleId: sourceScheduleId,
+      });
+    } else {
+      // 额外时间设置入口：可多选
+      fillExceptionScheduleCheckboxes(
+        panel,
+        new Set(sanitizeExceptionScheduleIds(exception.scheduleIds, validIds)),
+      );
+    }
   }
   showDialog(dialog);
   panel.querySelector<HTMLInputElement>("[data-business-hour-exception-name]")?.focus();
@@ -1114,6 +1408,9 @@ function saveExceptionDialog(panel: HTMLElement): void {
   const toDate = panel.querySelector<HTMLInputElement>("[data-business-hour-exception-to-date]")?.value ?? "";
   const modeInput = panel.querySelector<HTMLInputElement>("[data-business-hour-exception-mode]:checked");
   const selectedDays = [...getSelectedDays(panel, EXCEPTION_DAY_CHIP_ATTR)];
+  const schedules = readBusinessHourSchedules();
+  const validIds = new Set(schedules.map((s) => s.id));
+  const scheduleIds = sanitizeExceptionScheduleIds(getSelectedExceptionScheduleIds(panel), validIds);
 
   if (!name) {
     setExceptionDialogError(panel, "请填写名称");
@@ -1136,6 +1433,10 @@ function saveExceptionDialog(panel: HTMLElement): void {
     setExceptionDialogError(panel, "结束时间应晚于开始时间");
     return;
   }
+  if (scheduleIds.length === 0) {
+    setExceptionDialogError(panel, "请至少选择一条营业时间");
+    return;
+  }
 
   const mode: StoreBusinessHourExceptionMode = modeInput?.value === "exclude" ? "exclude" : "include";
   const { fromDay, toDay } = deriveFromToDays(selectedDays);
@@ -1150,11 +1451,12 @@ function saveExceptionDialog(panel: HTMLElement): void {
     toDay,
     activeDays: selectedDays,
     mode,
+    scheduleIds,
   });
   if (!exception) return;
 
-  const exceptions = readBusinessHourExceptions().filter((e) => e.id !== exception.id);
-  const duplicate = exceptions.find(
+  const withoutCurrent = readBusinessHourExceptionsForDisplay(schedules).filter((e) => e.id !== exception.id);
+  const duplicate = withoutCurrent.find(
     (e) =>
       e.name === exception.name &&
       e.fromDate === exception.fromDate &&
@@ -1162,23 +1464,24 @@ function saveExceptionDialog(panel: HTMLElement): void {
       e.openTime === exception.openTime &&
       e.closeTime === exception.closeTime &&
       e.mode === exception.mode &&
-      formatActiveDaysLabel(getScheduleActiveDays(e)) === formatActiveDaysLabel(getScheduleActiveDays(exception)),
+      formatActiveDaysLabel(getScheduleActiveDays(e)) === formatActiveDaysLabel(getScheduleActiveDays(exception)) &&
+      [...e.scheduleIds].sort().join(",") === [...exception.scheduleIds].sort().join(","),
   );
   if (duplicate) {
     setExceptionDialogError(panel, "相同规则已存在");
     return;
   }
 
-  exceptions.push(exception);
-  exceptions.sort((a, b) => a.fromDate.localeCompare(b.fromDate) || a.name.localeCompare(b.name));
-  writeBusinessHourExceptions(exceptions);
+  withoutCurrent.push(exception);
+  withoutCurrent.sort((a, b) => a.fromDate.localeCompare(b.fromDate) || a.name.localeCompare(b.name));
+  writeBusinessHourExceptions(withoutCurrent);
   hideExceptionDialog(panel);
-  refreshPanelBody(panel);
+  refreshAllBusinessHoursPanels();
 }
 
 function removeException(panel: HTMLElement, exceptionId: string): void {
   writeBusinessHourExceptions(readBusinessHourExceptions().filter((e) => e.id !== exceptionId));
-  refreshPanelBody(panel);
+  refreshAllBusinessHoursPanels();
 }
 
 function toggleDayChip(chip: HTMLButtonElement): void {
@@ -1273,8 +1576,10 @@ export function bindStoreBusinessHoursControls(): void {
         return;
       }
 
-      if (target.closest("[data-business-hour-exception-create]")) {
-        openExceptionDialog(panel);
+      const createExceptionBtn = target.closest<HTMLElement>("[data-business-hour-exception-create]");
+      if (createExceptionBtn) {
+        const sourceScheduleId = createExceptionBtn.getAttribute("data-source-schedule-id") || undefined;
+        openExceptionDialog(panel, undefined, sourceScheduleId);
         return;
       }
       if (
@@ -1293,8 +1598,10 @@ export function bindStoreBusinessHoursControls(): void {
       if (editExceptionBtn) {
         const row = editExceptionBtn.closest<HTMLElement>("[data-business-hour-exception]");
         const exceptionId = row?.getAttribute("data-exception-id");
-        const exception = readBusinessHourExceptions().find((e) => e.id === exceptionId);
-        if (exception) openExceptionDialog(panel, exception);
+        const exception = readBusinessHourExceptionsForDisplay().find((e) => e.id === exceptionId);
+        const scheduleCard = editExceptionBtn.closest<HTMLElement>("[data-business-hour-schedule]");
+        const sourceScheduleId = scheduleCard?.getAttribute("data-schedule-id") || undefined;
+        if (exception) openExceptionDialog(panel, exception, sourceScheduleId);
         return;
       }
 
@@ -1303,7 +1610,7 @@ export function bindStoreBusinessHoursControls(): void {
         const row = removeExceptionBtn.closest<HTMLElement>("[data-business-hour-exception]");
         const exceptionId = row?.getAttribute("data-exception-id");
         if (!exceptionId) return;
-        const exception = readBusinessHourExceptions().find((e) => e.id === exceptionId);
+        const exception = readBusinessHourExceptionsForDisplay().find((e) => e.id === exceptionId);
         if (exception) openDeleteExceptionDialog(panel, exception);
       }
     });

@@ -895,7 +895,10 @@ export function isEmenuOrderingTertiaryPath(path: string): boolean {
   return getActiveEmenuOrderingSubPath(path) !== "";
 }
 
-/** 门店信息 →「门店基础信息」内左侧三级导航（路由 `/store/basic`、`/store/logo`、`/store/business-hours` 等） */
+/**
+ * @deprecated 旧「门店基础信息」三级导航；书签已重定向至 `/stores/settings/*`。
+ * 保留类型与常量仅供路由注册表兼容，勿再作为产品入口。
+ */
 export interface StoreBasicSubItem {
   id: string;
   title: string;
@@ -903,6 +906,7 @@ export interface StoreBasicSubItem {
   path: string;
 }
 
+/** @deprecated 见上；路径仅用于旧书签识别 */
 export const STORE_BASIC_SUBNAV: StoreBasicSubItem[] = [
   { id: "sb-basic", title: "基础信息", titleEn: "Store profile", path: "/store/basic" },
   { id: "sb-logo", title: "LOGO", titleEn: "Logo", path: "/store/logo" },

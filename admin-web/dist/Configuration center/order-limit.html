@@ -844,6 +844,7 @@
           <thead>
             <tr>
               <th>规则名称</th>
+              <th>规则描述</th>
               <th>策略</th>
               <th>人数</th>
               <th>时间</th>
@@ -2569,7 +2570,7 @@
         document.getElementById("ruleCountBadge").textContent = "共 " + state.rules.length + " 条";
         var tbody = document.getElementById("rulesTbody");
         if (!state.rules.length) {
-          tbody.innerHTML = "<tr><td colspan='8' style='text-align:center;color:#6b7280;padding:22px;'>暂无规则</td></tr>";
+          tbody.innerHTML = "<tr><td colspan='9' style='text-align:center;color:#6b7280;padding:22px;'>暂无规则</td></tr>";
           return;
         }
         tbody.innerHTML = state.rules.map(function (rule) {
@@ -2582,9 +2583,11 @@
                 return lv ? (lv.icon + " " + lv.name) : id;
               }).join("、")
             : "全部";
+          var descTxt = String(rule.description || "").trim();
           return (
             "<tr>" +
-              "<td><div style='font-weight:600;'>" + esc(rule.name) + "</div><div class='sub'>" + esc(rule.description || "") + "</div></td>" +
+              "<td><div style='font-weight:600;'>" + esc(rule.name) + "</div></td>" +
+              "<td style='max-width:220px;'><span class='sub'>" + (descTxt ? esc(descTxt) : "—") + "</span></td>" +
               "<td><span class='sub' style='font-size:12px;color:#374151;'>" + esc(rule.type + " · " + rule.round + " · " + rule.method) + "</span></td>" +
               "<td>" + esc(rule.persons) + "</td>" +
               "<td>" + esc(timeTxt) + "</td>" +

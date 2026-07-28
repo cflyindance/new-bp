@@ -1314,7 +1314,9 @@ import {
 } from "./config/module-settings-store-brand-logo-ui";
 import {
   bindStoreBusinessHoursControls,
+  isStoreBusinessHourExceptionsSeq,
   isStoreBusinessHoursSeq,
+  renderStoreBusinessHourExceptionsHtml,
   renderStoreBusinessHoursHtml,
 } from "./config/module-settings-store-business-hours-ui";
 import {
@@ -4081,9 +4083,26 @@ function normalizeTabModuleHashes(): void {
     replaceHashPath("/stores/settings");
     return;
   }
-  /* 侧栏已移除：门店信息、智能点餐、支付服务、费用加收 — 旧书签重定向 */
+  /* 旧三级路由 /store/basic|logo|business-hours 废弃 → 门店信息设置分组 */
+  if (raw === "/store/basic" || raw === "/store/basic/" || raw.startsWith("/store/basic/")) {
+    replaceHashPath("/stores/settings/store-profile");
+    return;
+  }
+  if (raw === "/store/logo" || raw === "/store/logo/" || raw.startsWith("/store/logo/")) {
+    replaceHashPath("/stores/settings/brand-identity-assets");
+    return;
+  }
+  if (
+    raw === "/store/business-hours" ||
+    raw === "/store/business-hours/" ||
+    raw.startsWith("/store/business-hours/")
+  ) {
+    replaceHashPath("/stores/settings/store-hours-operation");
+    return;
+  }
+  /* 侧栏已移除：门店信息旧前缀 /store、智能点餐、支付服务、费用加收 — 旧书签重定向 */
   if (raw === "/store" || raw === "/store/" || raw.startsWith("/store/")) {
-    location.replace("#/stores/settings");
+    replaceHashPath("/stores/settings");
     return;
   }
   if (raw === "/ordering" || raw === "/ordering/" || raw.startsWith("/ordering/")) {
@@ -9249,6 +9268,15 @@ function renderModuleSettingStoreBusinessHoursRow(_item: ModuleSettingCatalogIte
         </li>`;
 }
 
+function renderModuleSettingStoreBusinessHourExceptionsRow(_item: ModuleSettingCatalogItem): string {
+  return `
+        <li class="list-none">
+          <div class="border-b border-border px-4 py-3">
+            ${renderStoreBusinessHourExceptionsHtml()}
+          </div>
+        </li>`;
+}
+
 function renderModuleSettingLineMergeMatrixRow(_item: ModuleSettingCatalogItem): string {
   return `
         <li class="list-none">
@@ -9750,6 +9778,9 @@ function renderModuleSettingRow(item: ModuleSettingCatalogItem): string {
   }
   if (isStoreBusinessHoursSeq(item.seq)) {
     return renderModuleSettingStoreBusinessHoursRow(item);
+  }
+  if (isStoreBusinessHourExceptionsSeq(item.seq)) {
+    return renderModuleSettingStoreBusinessHourExceptionsRow(item);
   }
   if (isStoreBrandManagementSeq(item.seq)) {
     return renderModuleSettingStoreBrandManagementRow(item);
