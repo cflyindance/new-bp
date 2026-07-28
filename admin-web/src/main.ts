@@ -278,7 +278,7 @@ import {
   bindVersionSwitchControl,
   renderVersionSwitchControl,
 } from "./shell/version-switch-control";
-import { shouldShowAiAssistantControl, shouldShowMPlatformViewSwitchOption, shouldShowRestartOnboardingControl } from "./config/product-version";
+import { filterModuleSettingItemsForProductVersion, isMvpHiddenModuleSettingSeq, shouldShowAiAssistantControl, shouldShowMPlatformViewSwitchOption, shouldShowRestartOnboardingControl } from "./config/product-version";
 import { bindImpersonationBanner, renderImpersonationBanner } from "./config/enterprise-merchant-impersonate";
 import { bindChainBrandOrgSyncListener, listMPlatformGroupsForMerchantBackend, resolveChainBrandContext, writeActiveMerchantGroupId } from "./config/merchant-chain-brand-sync";
 import {
@@ -5430,7 +5430,7 @@ function buildModuleSettingsGroupsForPreset(
   lineId?: FohLineNavId | null,
 ): ModuleSettingsGroup[] {
   const isFohHub = catalog.settingsPath === FOH_SETTINGS_PATH;
-  const items = isFohHub
+  const rawItems = isFohHub
     ? normalizeFohCatalogItemsForGrouping(catalog.items)
     : isPrintSettingsPath(catalog.settingsPath)
       ? normalizePrintCatalogItemsForGrouping(catalog.items)
@@ -5441,6 +5441,7 @@ function buildModuleSettingsGroupsForPreset(
           : catalog.settingsPath === "/transactions/settings"
             ? filterCardFeesCatalogItemsForDualPricing(catalog.items)
             : catalog.items;
+  const items = filterModuleSettingItemsForProductVersion(rawItems);
   const base = lineId
     ? getFohLineViewGroups(catalog, lineId)
     : groupCatalogItemsByCategory(items, catalog.groupOrder);
@@ -9287,6 +9288,9 @@ function renderModuleSettingLineMergeMatrixRow(_item: ModuleSettingCatalogItem):
 }
 
 function renderModuleSettingRow(item: ModuleSettingCatalogItem): string {
+  if (isMvpHiddenModuleSettingSeq(item.seq)) {
+    return "";
+  }
   if (shouldSkipTableSelectionPageMergedSeq(item.seq)) {
     return "";
   }

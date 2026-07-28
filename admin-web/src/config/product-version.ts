@@ -17,6 +17,9 @@ export const MVP_BRAND_PERSPECTIVE_HIDDEN_NAV_MODULE_IDS = ["brand-store-list"] 
 /** MVP 下系统设置内隐藏的二级导航（仅隐藏，不删除配置） */
 export const MVP_HIDDEN_SETTINGS_NAV_CHILD_IDS = ["set-platform-preset"] as const;
 
+/** MVP 下模块设置中隐藏的 seq（仅隐藏，不删除 catalog 配置） */
+export const MVP_HIDDEN_MODULE_SETTING_SEQS = [583] as const;
+
 let memoryVersion: ProductVersion | undefined;
 
 export function readProductVersion(): ProductVersion {
@@ -43,6 +46,19 @@ export function writeProductVersion(version: ProductVersion): void {
 
 export function isMvpProductVersion(): boolean {
   return readProductVersion() === "mvp";
+}
+
+/** MVP 下是否隐藏某模块设置项（如「额外时间」） */
+export function isMvpHiddenModuleSettingSeq(seq: number): boolean {
+  return (
+    isMvpProductVersion() && (MVP_HIDDEN_MODULE_SETTING_SEQS as readonly number[]).includes(seq)
+  );
+}
+
+export function filterModuleSettingItemsForProductVersion<T extends { seq: number }>(items: T[]): T[] {
+  if (!isMvpProductVersion()) return items;
+  const hidden = MVP_HIDDEN_MODULE_SETTING_SEQS as readonly number[];
+  return items.filter((item) => !hidden.includes(item.seq));
 }
 
 /** MVP 版本下隐藏「重新引导」等首次登录引导入口 */

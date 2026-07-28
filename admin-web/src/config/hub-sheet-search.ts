@@ -29,6 +29,7 @@ import {
 import { normalizeFohCatalogItemsForGrouping } from "./foh-settings-group-keys";
 import { FOH_SETTINGS_PATH } from "./foh-settings-by-line-ui";
 import { filterCatalogItemsForPreset } from "./platform-preset-settings-filter";
+import { filterModuleSettingItemsForProductVersion } from "./product-version";
 import { filterSheetSubnavByPlatformPreset, getFilteredNavModuleSheetSubnav } from "./platform-preset-nav-filter";
 
 /** 无 `subNavPlacement: sheet`、走专用滑层壳的 Hub（与通用壳一并启用搜索） */
@@ -288,6 +289,7 @@ function buildSettingEntries(
     items = normalizeFohCatalogItemsForGrouping(items);
   }
   items = filterCatalogItemsForPreset(settingsPath, items);
+  items = filterModuleSettingItemsForProductVersion(items);
   return items.map((item: ModuleSettingCatalogItem) => ({
     id: `setting:${settingsPath}:${item.seq}`,
     kind: "setting" as const,
