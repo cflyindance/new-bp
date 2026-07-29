@@ -26,7 +26,7 @@ export const TEAM_CLOCK_IN_PATH = "/team/clock-in";
 const CLOCK_TAB_STORAGE_KEY = "team-clock-in-tab";
 const REQUIRE_SHIFT_SEQ = TEAM_SHIFT_SCHEDULING_SETTING_SEQS[0];
 
-const PUNCHES_STORAGE_KEY = "bplant-team-clock-punches-v4";
+const PUNCHES_STORAGE_KEY = "bplant-team-clock-punches-v5";
 const SETTINGS_STORAGE_KEY = "bplant-team-clock-settings-v1";
 const SHIFT_TYPES_STORAGE_KEY = "bplant-team-shift-types-v1";
 const ASSIGNMENTS_STORAGE_KEY = "bplant-team-shift-assignments-v1";
@@ -336,14 +336,17 @@ function pickSeedEmployees(): RosterEmployee[] {
 }
 
 /**
- * 近 7 天考勤演示数据：按花名册员工生成完整班次 / 休息 / 进行中 / 补卡等，
- * 覆盖「考勤记录」默认日期范围，并与门店筛选下的员工 id 对齐。
+ * 近 7 天考勤演示数据：历史日保留班次/休息/补卡样本；
+ * 「打卡管理」当日显式覆盖 未打卡 / 在岗 / 休息中 / 已下班 四态（相对当前时刻写入）。
  */
 function seedDemoPunches(): PunchRecord[] {
   const employees = pickSeedEmployees();
   const demo: PunchRecord[] = [];
   let seq = 0;
   const now = new Date();
+  const today = todayIso();
+  const minsNow = now.getHours() * 60 + now.getMinutes();
+
   const push = (
     employeeId: string,
     date: string,
@@ -355,7 +358,7 @@ function seedDemoPunches(): PunchRecord[] {
   ) => {
     const ts = punchAt(date, hour, minute);
     // 今日不写入未来时刻，避免演示数据“穿越”
-    if (date === todayIso() && new Date(ts).getTime() > now.getTime()) return;
+    if (date === today && new Date(ts).getTime() > now.getTime()) return;
     demo.push({
       id: `demo-punch-${++seq}`,
       employeeId,
@@ -366,9 +369,49 @@ function seedDemoPunches(): PunchRecord[] {
     });
   };
 
-  for (let daysAgo = 6; daysAgo >= 0; daysAgo--) {
+  /** 打卡管理：按员工槽位强制四种状态（花名册不足 4 人时按序覆盖能覆盖的） */
+  const seedTodayByStatus = (emp: RosterEmployee, slot: number) => {
+    const statusSlot = slot % 4;
+    if (statusSlot === 0) {
+      // 未打卡：今日无记录
+      return;
+    }
+
+    const hm = (absoluteMins: number): [number, number] => {
+      const t = Math.max(0, Math.min(Math.max(0, minsNow - 1), absoluteMins));
+      return [Math.floor(t / 60), t % 60];
+    };
+
+    if (statusSlot === 1) {
+      // 在岗：仅上班卡
+      const [ih, im] = hm(Math.max(0, minsNow - 180));
+      push(emp.id, today, ih, im, "in");
+      return;
+    }
+
+    if (statusSlot === 2) {
+      // 休息中：上班后进入休息，未结束休息
+      const inMins = Math.max(0, minsNow - 240);
+      const breakMins = Math.max(inMins + 1, minsNow - 20);
+      const [ih, im] = hm(inMins);
+      const [bh, bm] = hm(breakMins);
+      push(emp.id, today, ih, im, "in");
+      push(emp.id, today, bh, bm, "break-start", "terminal", { breakLabel: "短休" });
+      return;
+    }
+
+    // 已下班：完整上/下班
+    const inMins = Math.max(0, minsNow - 420);
+    const outMins = Math.max(inMins + 1, minsNow - 60);
+    const [ih, im] = hm(inMins);
+    const [oh, om] = hm(outMins);
+    push(emp.id, today, ih, im, "in");
+    push(emp.id, today, oh, om, "out");
+  };
+
+  // 历史 6 天：完整班次 / 休息 / 补卡等（不含今日，今日单独灌状态样本）
+  for (let daysAgo = 6; daysAgo >= 1; daysAgo--) {
     const date = dateOffsetIso(daysAgo);
-    const isToday = daysAgo === 0;
     const weekday = new Date(`${date}T12:00:00`).getDay(); // 0 Sun … 6 Sat
     const isWeekend = weekday === 0 || weekday === 6;
 
@@ -376,37 +419,28 @@ function seedDemoPunches(): PunchRecord[] {
       const pattern = index % 4;
 
       if (pattern === 0) {
-        // 早班 + 午餐；今日仍在岗
         if (isWeekend) return;
         push(emp.id, date, 8, 52, "in");
         push(emp.id, date, 12, 5, "break-start", "terminal", { breakLabel: "用餐休息" });
         push(emp.id, date, 12, 35, "break-end");
-        if (!isToday) push(emp.id, date, 17, 8, "out");
+        push(emp.id, date, 17, 8, "out");
         return;
       }
 
       if (pattern === 1) {
-        // 晚班（周一三五；今日过开班时刻后记为在岗）
         if (!(weekday === 1 || weekday === 3 || weekday === 5)) return;
-        if (isToday) {
-          push(emp.id, date, 16, 50, "in");
-        } else {
-          push(emp.id, date, 16, 55, "in");
-          push(emp.id, date, 19, 30, "break-start", "terminal", { breakLabel: "用餐休息" });
-          push(emp.id, date, 20, 0, "break-end");
-          push(emp.id, date, 23, 5, "out");
-        }
+        push(emp.id, date, 16, 55, "in");
+        push(emp.id, date, 19, 30, "break-start", "terminal", { breakLabel: "用餐休息" });
+        push(emp.id, date, 20, 0, "break-end");
+        push(emp.id, date, 23, 5, "out");
         return;
       }
 
       if (pattern === 2) {
-        // 早班；含迟到补卡日 / 今日未下班
         if (isWeekend) return;
         if (daysAgo === 2) {
           push(emp.id, date, 9, 25, "in", "manager", { note: "迟到补卡" });
           push(emp.id, date, 17, 0, "out", "manager", { note: "手动下班" });
-        } else if (isToday) {
-          push(emp.id, date, 9, 2, "in");
         } else {
           push(emp.id, date, 8, 58, "in");
           push(emp.id, date, 14, 0, "break-start", "terminal", { breakLabel: "短休" });
@@ -416,21 +450,20 @@ function seedDemoPunches(): PunchRecord[] {
         return;
       }
 
-      // pattern === 3：后厨；周末短班 / 今日休息中
+      // pattern === 3
       if (isWeekend) {
         push(emp.id, date, 10, 0, "in");
         push(emp.id, date, 15, 0, "out");
-      } else if (!isToday) {
+      } else {
         push(emp.id, date, 8, 45, "in");
         push(emp.id, date, 11, 30, "break-start", "terminal", { breakLabel: "短休" });
         push(emp.id, date, 11, 45, "break-end");
         push(emp.id, date, 16, 50, "out");
-      } else {
-        push(emp.id, date, 8, 48, "in");
-        push(emp.id, date, 11, 30, "break-start", "terminal", { breakLabel: "短休" });
       }
     });
   }
+
+  employees.forEach((emp, index) => seedTodayByStatus(emp, index));
 
   writePunches(demo);
   return demo;

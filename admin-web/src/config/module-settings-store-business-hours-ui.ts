@@ -453,6 +453,38 @@ function formatExceptionModeLabel(mode: StoreBusinessHourExceptionMode): string 
   return mode === "include" ? "该时间生效" : "该时间不生效";
 }
 
+function formatExceptionModeShort(mode: StoreBusinessHourExceptionMode): string {
+  return mode === "include" ? "生效" : "不生效";
+}
+
+/**
+ * 同一营业时间 + 同一生效日期区间：生效/不生效对称互斥。
+ * 多选 scheduleIds 时按条独立检查，返回首条冲突。
+ */
+function findExceptionDateModeConflict(
+  candidate: StoreBusinessHourException,
+  others: StoreBusinessHourException[],
+  schedules: StoreBusinessHourSchedule[],
+): { scheduleName: string; dateLabel: string; existingMode: StoreBusinessHourExceptionMode } | null {
+  for (const scheduleId of candidate.scheduleIds) {
+    const conflict = others.find(
+      (e) =>
+        e.scheduleIds.includes(scheduleId) &&
+        e.fromDate === candidate.fromDate &&
+        e.toDate === candidate.toDate &&
+        e.mode !== candidate.mode,
+    );
+    if (!conflict) continue;
+    const scheduleName = schedules.find((s) => s.id === scheduleId)?.name?.trim() || scheduleId;
+    return {
+      scheduleName,
+      dateLabel: formatDateRange(candidate.fromDate, candidate.toDate),
+      existingMode: conflict.mode,
+    };
+  }
+  return null;
+}
+
 function exceptionModeBadgeClass(mode: StoreBusinessHourExceptionMode): string {
   return mode === "include"
     ? "bg-emerald-500/10 text-emerald-700 ring-1 ring-emerald-500/20 dark:text-emerald-400"
@@ -1577,6 +1609,14 @@ function saveExceptionDialog(panel: HTMLElement): void {
   if (!exception) return;
 
   const withoutCurrent = readBusinessHourExceptionsForDisplay(schedules).filter((e) => e.id !== exception.id);
+  const modeConflict = findExceptionDateModeConflict(exception, withoutCurrent, schedules);
+  if (modeConflict) {
+    setExceptionDialogError(
+      panel,
+      `「${modeConflict.scheduleName}」在 ${modeConflict.dateLabel} 已设为${formatExceptionModeShort(modeConflict.existingMode)}，不可再设为${formatExceptionModeShort(exception.mode)}`,
+    );
+    return;
+  }
   const duplicate = withoutCurrent.find(
     (e) =>
       e.name === exception.name &&
