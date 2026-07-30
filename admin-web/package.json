@@ -12,6 +12,7 @@
     "generate:settings-groups": "node scripts/generate-settings-group-mapping.mjs",
     "generate:foh-line-scope": "node scripts/generate-foh-line-scope-matrix.mjs && node scripts/generate-foh-line-storage-registry.mjs",
     "verify:foh-line-scope": "node scripts/verify-foh-line-scope.mjs",
+    "verify:foh-lines-store": "npx tsx scripts/verify-foh-lines-store.ts",
     "build:settings-catalog": "node scripts/verify-foh-line-scope.mjs && node scripts/build-module-settings-catalog.mjs",
     "verify:platform-preset-tree": "node scripts/verify-platform-preset-tree.mjs",
   "verify:foh-platform-preset-l3": "npx tsx scripts/verify-foh-platform-preset-l3.ts",

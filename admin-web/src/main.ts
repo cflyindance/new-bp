@@ -220,6 +220,7 @@ import { normalizeOrderCatalogItemsForGrouping } from "./config/order-settings-g
 import {
   applyFohByLineUiSuppressions,
   getActiveFohByLineIdFromDom,
+  getFohByLineRenderContext,
   readFohByLineToggleState,
   setFohByLineRenderContext,
   writeFohByLineToggleState,
@@ -279,7 +280,7 @@ import {
   bindVersionSwitchControl,
   renderVersionSwitchControl,
 } from "./shell/version-switch-control";
-import { filterModuleSettingItemsForProductVersion, isMvpHiddenModuleSettingSeq, shouldShowAiAssistantControl, shouldShowMPlatformViewSwitchOption, shouldShowRestartOnboardingControl } from "./config/product-version";
+import { filterModuleSettingItemsForProductVersion, isMvpHiddenModuleSettingSeq, shouldShowAiAssistantControl, shouldShowFohSettingsViewModeControl, shouldShowMPlatformViewSwitchOption, shouldShowRestartOnboardingControl } from "./config/product-version";
 import { bindImpersonationBanner, renderImpersonationBanner } from "./config/enterprise-merchant-impersonate";
 import { bindChainBrandOrgSyncListener, listMPlatformGroupsForMerchantBackend, resolveChainBrandContext, writeActiveMerchantGroupId } from "./config/merchant-chain-brand-sync";
 import {
@@ -3924,8 +3925,11 @@ function normalizeTabModuleHashes(): void {
     replaceHashPath("/operations/queue-call/settings/foh-guest-menu-home");
     return;
   }
-  /* 前厅设置 · 记忆上次查看方式（按产线） */
-  if (raw === FOH_SETTINGS_PATH || raw === `${FOH_SETTINGS_PATH}/`) {
+  /* 前厅设置 · 记忆上次查看方式（按产线）；MVP 默认按场景，忽略本地记忆 */
+  if (
+    shouldShowFohSettingsViewModeControl() &&
+    (raw === FOH_SETTINGS_PATH || raw === `${FOH_SETTINGS_PATH}/`)
+  ) {
     try {
       if (localStorage.getItem(FOH_VIEW_MODE_STORAGE_KEY) === "by-line") {
         replaceHashPath(getFohSettingsByLinePath(readFohSettingsLastLineId()));
@@ -6228,8 +6232,12 @@ function moduleSettingToggleOnLabelClass(on: boolean): string {
 
 function renderModuleSettingToggleSwitch(item: ModuleSettingCatalogItem): string {
   const on = readModuleSettingToggleOn(item.seq);
-  /** 前厅设置：开启态不展示开关（主视图固定开启；按产线视图仅关闭时展示以便开启） */
-  if (isFohHubSettingToggleSeq(item.seq) && on) return "";
+  /**
+   * 前厅按场景视图：开启态不展示主开关，由适用产线勾选表达状态。
+   * 前厅按产线视图：始终展示开关，状态取当前产线是否在功能的 lines 中。
+   */
+  const isFohByLineView = getFohByLineRenderContext() !== null;
+  if (isFohHubSettingToggleSeq(item.seq) && on && !isFohByLineView) return "";
   const ariaLabel = tf("moduleSettings.toggleAria", { name: item.title });
   const stateHint = on ? t("moduleSettings.toggleOn") : t("moduleSettings.toggleOff");
   const trackClass = on ? MODULE_SETTING_TOGGLE_TRACK_ON : MODULE_SETTING_TOGGLE_TRACK_OFF;

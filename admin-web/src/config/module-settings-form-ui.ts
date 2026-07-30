@@ -8,6 +8,13 @@ import {
   type ModuleSettingChangeKind,
 } from "./module-settings-deployment-change";
 import { readAppHashPath } from "./app-routes";
+import { FOH_LINE_NAV_ORDER } from "./foh-settings-line-scope";
+import {
+  decodeFohLinesValue,
+  encodeFohLinesValue,
+  fohLinesSeqForFieldId,
+  isFohLinesFieldId,
+} from "./foh-settings-lines-codec";
 import {
   isPageBatchSavePath,
   readPageDraftFieldForCurrentPath,
@@ -362,12 +369,46 @@ export function writeModuleSettingText(fieldId: string, value: string): void {
   }
 }
 
+/**
+ * 前厅适用产线字段在存储层是 `{ v: 1, lines: [...] }`，对调用方仍呈现为产线数组。
+ * 未配置（缺失键或存量空数组）时保持调用方自带的兜底，不在此处改变默认语义。
+ */
+function decodeStoredJson<T>(fieldId: string, raw: unknown, defaultValue: T): T {
+  if (!isFohLinesFieldId(fieldId)) return raw as T;
+  const decoded = decodeFohLinesValue(raw);
+  if (decoded.state === "configured") return decoded.lines as unknown as T;
+  if (decoded.state === "unconfigured") return Array.isArray(raw) ? (raw as T) : defaultValue;
+  return raw as T;
+}
+
+function encodeStoredJson(fieldId: string, value: unknown): unknown {
+  if (!isFohLinesFieldId(fieldId)) return value;
+  if (!Array.isArray(value)) return value;
+  return encodeFohLinesValue(value as string[]);
+}
+
+/**
+ * 未经产线解码的原始值，`undefined` 表示无值。
+ * 需要区分「已配置为空」与「未配置」的调用方用这个。
+ */
+export function readModuleSettingJsonRaw(fieldId: string): unknown {
+  try {
+    const draft = readPageDraftFieldForCurrentPath(fieldId);
+    const serialized =
+      draft !== undefined ? draft : localStorage.getItem(moduleSettingStorageKey(fieldId));
+    if (serialized === null || serialized === undefined || serialized === "") return undefined;
+    return JSON.parse(serialized);
+  } catch {
+    return undefined;
+  }
+}
+
 export function readModuleSettingJson<T>(fieldId: string, defaultValue: T): T {
   const draft = readPageDraftFieldForCurrentPath(fieldId);
   if (draft !== undefined) {
     try {
       if (draft === "") return defaultValue;
-      return JSON.parse(draft) as T;
+      return decodeStoredJson(fieldId, JSON.parse(draft), defaultValue);
     } catch {
       return defaultValue;
     }
@@ -375,22 +416,36 @@ export function readModuleSettingJson<T>(fieldId: string, defaultValue: T): T {
   try {
     const raw = localStorage.getItem(moduleSettingStorageKey(fieldId));
     if (raw === null || raw === "") return defaultValue;
-    return JSON.parse(raw) as T;
+    return decodeStoredJson(fieldId, JSON.parse(raw), defaultValue);
   } catch {
     return defaultValue;
   }
 }
 
 export function writeModuleSettingJson(fieldId: string, value: unknown, kind: ModuleSettingChangeKind = "json"): void {
-  const before = readModuleSettingJson<unknown>(fieldId, null);
-  const afterStr = JSON.stringify(value);
-  const beforeStr = before === null ? null : JSON.stringify(before);
-  if (beforeStr === afterStr) return;
+  const storedRaw = readModuleSettingJsonRaw(fieldId);
+  const before = decodeStoredJson(fieldId, storedRaw === undefined ? null : storedRaw, null);
+  const afterStr = JSON.stringify(encodeStoredJson(fieldId, value));
+  /**
+   * 比较存储形态而非逻辑值：存量裸数组即使逻辑值未变也需要升级为结构体，
+   * 否则「全部关闭」在存量空数组上无法落盘。
+   */
+  const storedStr = storedRaw === undefined ? null : JSON.stringify(storedRaw);
+  if (storedStr === afterStr) return;
   const resolvedKind =
     kind === "json" && isProductLineJsonField(fieldId, value) ? "product_line" : kind;
-  if (deferFieldWrite(fieldId, afterStr, resolvedKind, before, value)) return;
+  if (deferFieldWrite(fieldId, afterStr, resolvedKind, before, value)) {
+    /**
+     * 草稿阶段也同步镜像：同页内再次读取空产线时，
+     * 各模块「主开关开 → 回写全选」才不会把草稿复活。
+     * discardPageDraft 会按持久层值把镜像拨回。
+     */
+    syncFohLinesMirrorToggle(fieldId, value);
+    return;
+  }
   try {
     localStorage.setItem(moduleSettingStorageKey(fieldId), afterStr);
+    syncFohLinesMirrorToggle(fieldId, value);
     const settingsPath = recordModuleSettingDeploymentChange({
       fieldId,
       kind: resolvedKind,
@@ -403,10 +458,35 @@ export function writeModuleSettingJson(fieldId: string, value: unknown, kind: Mo
   }
 }
 
+/**
+ * 与按产线开关共用镜像键：空产线 → "0"。
+ * 各模块的「空数组 + 主开关开 → 回写全选」迁移依赖这个键；
+ * 不写入时，场景视图取消全部勾选后刷新会再次复活为全选。
+ */
+function syncFohLinesMirrorToggle(fieldId: string, value: unknown): void {
+  const seq = fohLinesSeqForFieldId(fieldId);
+  if (seq === undefined) return;
+  const lines = Array.isArray(value) ? value : [];
+  try {
+    localStorage.setItem(`bplant-module-setting-toggle:${seq}`, lines.length > 0 ? "1" : "0");
+  } catch {
+    /* ignore */
+  }
+}
+
+const KNOWN_PRODUCT_LINE_IDS = new Set<string>(
+  FOH_LINE_NAV_ORDER.filter((line) => line.id !== "store-wide").map((line) => line.id),
+);
+
 function isProductLineJsonField(fieldId: string, value: unknown): boolean {
   if (!fieldId.includes("-lines") && !fieldId.endsWith("lines")) return false;
-  if (!Array.isArray(value)) return false;
-  if (value.length === 0) return true;
-  const known = new Set(["pos", "emenu", "kiosk", "cds", "paypad", "sdi", "online-order"]);
-  return value.every((v) => typeof v === "string" && known.has(v.toLowerCase()));
+  const lines = Array.isArray(value) ? value : decodeProductLineWrapper(value);
+  if (!lines) return false;
+  if (lines.length === 0) return true;
+  return lines.every((v) => typeof v === "string" && KNOWN_PRODUCT_LINE_IDS.has(v.toLowerCase()));
+}
+
+function decodeProductLineWrapper(value: unknown): unknown[] | null {
+  const decoded = decodeFohLinesValue(value);
+  return decoded.state === "configured" ? decoded.lines : null;
 }

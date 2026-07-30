@@ -13,6 +13,7 @@ import {
   fohSeqAppliesToLine,
   type FohLineNavId,
 } from "./foh-settings-line-scope";
+import { shouldShowFohSettingsViewModeControl } from "./product-version";
 
 export const FOH_SETTINGS_PATH = "/operations/queue-call/settings";
 export const FOH_BY_LINE_PREFIX = `${FOH_SETTINGS_PATH}/by-line`;
@@ -160,6 +161,7 @@ export function countFohCatalogItemsForLine(
 }
 
 export function renderFohSettingsViewModeBar(path: string): string {
+  if (!shouldShowFohSettingsViewModeControl()) return "";
   const byLine = isFohSettingsByLinePath(path);
   const scenarioSelected = !byLine;
   const byLineSelected = byLine;

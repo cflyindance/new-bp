@@ -7,6 +7,11 @@ import {
 } from "./module-settings-catalog";
 import { moduleSettingStorageKey } from "./module-settings-form-ui";
 import {
+  decodeFohLinesValue,
+  fohLinesSeqForFieldId,
+  isFohLinesFieldId,
+} from "./foh-settings-lines-codec";
+import {
   moduleSettingToggleStorageKey,
   writeModuleSettingToggleOn,
 } from "./module-settings-toggle-ui";
@@ -202,8 +207,48 @@ function persistDraftEntry(entry: PageDraftEntry): void {
   }
   try {
     localStorage.setItem(moduleSettingStorageKey(entry.fieldId), entry.value);
+    syncFohLinesMirrorFromSerialized(entry.fieldId, entry.value);
   } catch {
     /* ignore */
+  }
+}
+
+function syncFohLinesMirrorFromSerialized(fieldId: string, serialized: string): void {
+  const seq = fohLinesSeqForFieldId(fieldId);
+  if (seq === undefined) return;
+  try {
+    const decoded = decodeFohLinesValue(JSON.parse(serialized));
+    const on = decoded.state === "configured" ? decoded.lines.length > 0 : true;
+    localStorage.setItem(moduleSettingToggleStorageKey(seq), on ? "1" : "0");
+  } catch {
+    /* ignore */
+  }
+}
+
+/** 放弃草稿时，把产线镜像键拨回持久层真实值 */
+function restoreFohLinesMirrorsFromStorage(bucket: PageDraftBucket): void {
+  for (const entry of bucket.drafts.values()) {
+    if (entry.kind !== "field" || !isFohLinesFieldId(entry.fieldId)) continue;
+    const seq = fohLinesSeqForFieldId(entry.fieldId);
+    if (seq === undefined) continue;
+    try {
+      const raw = localStorage.getItem(moduleSettingStorageKey(entry.fieldId));
+      if (raw === null || raw === "") {
+        localStorage.removeItem(moduleSettingToggleStorageKey(seq));
+        continue;
+      }
+      const decoded = decodeFohLinesValue(JSON.parse(raw));
+      if (decoded.state === "configured") {
+        localStorage.setItem(
+          moduleSettingToggleStorageKey(seq),
+          decoded.lines.length > 0 ? "1" : "0",
+        );
+      } else if (decoded.state === "unconfigured") {
+        localStorage.removeItem(moduleSettingToggleStorageKey(seq));
+      }
+    } catch {
+      /* ignore */
+    }
   }
 }
 
@@ -223,7 +268,9 @@ export function commitPageDraft(pageKey: string): DeploymentConfigChange[] {
 }
 
 export function discardPageDraft(pageKey: string): void {
-  buckets.get(pageKey)?.drafts.clear();
+  const bucket = buckets.get(pageKey);
+  if (bucket) restoreFohLinesMirrorsFromStorage(bucket);
+  bucket?.drafts.clear();
   clearPageConfigChanges(pageKey);
 }
 

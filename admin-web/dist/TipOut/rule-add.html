@@ -1628,6 +1628,7 @@
         else if (ruleType === 'personal_sales') setSalesConditionValue('revenueType', 'Net Sales (税前营业额)');
       }
       if (ruleType === 'personal_sales') ensureRequiredRoleConditionVisible(cond);
+      syncSalesMenuConditionWithRevenueType(true);
       updateSalesConditionMenu();
     }
     function loadTipClaimSalesConditionsForClaim(claimId) {
@@ -2658,11 +2659,47 @@
       if (t === 'employee' && existingMap['role']) return true;
       return false;
     }
+
+    var SALES_REVENUE_TYPE_PAYMENT_METHOD = 'Payment Method (支付方式)';
+
+    /** 「支付方式」营业额类型仅用于小费池贡献规则的销售额基数 */
+    function isPoolSalesRevenueTypeContext() {
+      if (editingDeductValueBasis) return false;
+      if (editingPersonalSalesPctConditions) return false;
+      if (!currentEditingRuleId) return false;
+      return getPoolRuleTypeById(currentEditingRuleId) === 'sales';
+    }
+
+    function isSalesRevenueTypePaymentMethod() {
+      var card = document.getElementById('sales-cond-revenueType');
+      var sel = card ? card.querySelector('select') : null;
+      return !!sel && sel.value === SALES_REVENUE_TYPE_PAYMENT_METHOD;
+    }
+
+    /** 支付方式口径按实付金额取值，无法归集到菜单维度 */
+    function syncSalesMenuConditionWithRevenueType(silent) {
+      if (!isSalesRevenueTypePaymentMethod()) return;
+      var card = document.getElementById('sales-cond-menu');
+      if (!card) return;
+      card.remove();
+      existingSalesConditions['menu'] = false;
+      if (!silent) showNotification('营业额类型为「支付方式」时不支持「菜单」条件，已移除', 'warning');
+    }
+
+    function onSalesRevenueTypeChange() {
+      syncSalesMenuConditionWithRevenueType(false);
+      updateSalesConditionMenu();
+    }
+
     function updateSalesConditionMenu() {
       document.querySelectorAll('#salesConditionMenu .add-option-menu-item').forEach(function(item) {
         var t = item.dataset.type;
         // 扣除方「按照小费收入占比」：去掉营业额类型
         if (editingDeductValueBasis && parseDeductCardBasis(editingDeductValueBasis) === 'tip_income' && t === 'revenueType') {
+          item.style.display = 'none';
+          return;
+        }
+        if (t === 'menu' && isSalesRevenueTypePaymentMethod()) {
           item.style.display = 'none';
           return;
         }
@@ -2717,6 +2754,10 @@
         if (!silent) showNotification('已添加「角色」取值条件时不能同时添加「员工」', 'warning');
         return;
       }
+      if (type === 'menu' && isSalesRevenueTypePaymentMethod()) {
+        if (!silent) showNotification('营业额类型为「支付方式」时不支持「菜单」条件', 'warning');
+        return;
+      }
       var names = { role: '角色', employee: '员工', area: '订单区域', orderType: '订单类型', menu: '菜单', revenueType: '营业额类型', orderTipStatus: '订单小费状态', paymentMethods: '支付方式', hours: '营业时间', shift: '班次', weekday: '周期（星期）' };
       var cardId = 'sales-cond-' + type;
       var body = '';
@@ -2735,7 +2776,10 @@
       } else if (type === 'menu') {
         body = getMenuCascadeFourRowsHtml({ pl: 'salesMenuProductLineSelect', group: 'salesMenuGroupSelect', category: 'salesMenuCategorySelect', item: 'salesMenuItemSelect' });
       } else if (type === 'revenueType') {
-        body = '<div class="drawer-form-row"><label>营业额类型：</label><select class="form-control" style="flex:1"><option value="">请选择</option><option>Net Sales (税前营业额)</option><option>Gross Sales (总销售额)</option></select></div>';
+        var paymentMethodRevenueOption = isPoolSalesRevenueTypeContext()
+          ? '<option>' + SALES_REVENUE_TYPE_PAYMENT_METHOD + '</option>'
+          : '';
+        body = '<div class="drawer-form-row"><label>营业额类型：</label><select class="form-control" style="flex:1" onchange="onSalesRevenueTypeChange()"><option value="">请选择</option><option>Net Sales (税前营业额)</option><option>Gross Sales (总销售额)</option>' + paymentMethodRevenueOption + '</select></div>';
       } else if (type === 'orderTipStatus') {
         body = '<div class="drawer-form-row"><label>订单小费状态：</label><select class="form-control" style="flex:1">' +
           '<option value="">请选择</option>' +
@@ -3515,6 +3559,7 @@
         setSalesConditionValue('revenueType', (cond && cond.revenueType) || 'Net Sales (税前营业额)');
       }
       ensureRequiredRoleConditionVisible(cond);
+      syncSalesMenuConditionWithRevenueType(true);
       updateSalesConditionMenu();
     }
 

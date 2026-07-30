@@ -86,6 +86,11 @@ export function shouldShowBrandPerspectiveRegionScopeFilter(): boolean {
   return !isMvpProductVersion();
 }
 
+/** MVP 下前厅设置不展示「查看方式」切换；默认按场景 */
+export function shouldShowFohSettingsViewModeControl(): boolean {
+  return !isMvpProductVersion();
+}
+
 /**
  * MVP + 品牌多门店视角：顶栏品牌是否可切换（非 MVP 行为相同）。
  * 授权 ≥2 个品牌时展示下拉；仅 1 个品牌时只读锁定。见 session-scope.shouldShowBrandScopeFilter。

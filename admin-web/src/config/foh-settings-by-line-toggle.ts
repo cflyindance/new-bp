@@ -1,7 +1,7 @@
 /**
  * 前厅 · 按产线视图：主开关 ↔ 当前产线在 lines 存储中的启用状态（P2）
  */
-import { readModuleSettingJson, writeModuleSettingJson } from "./module-settings-form-ui";
+import { readFohLines, writeFohLines } from "./foh-settings-lines-store";
 import {
   getDefaultModuleSettingToggleOn,
   isFohHubSettingToggleSeq,
@@ -12,7 +12,7 @@ import {
   fohSeqAppliesToLine,
   type FohLineNavId,
 } from "./foh-settings-line-scope";
-import { FOH_LINE_STORAGE_BY_SEQ, hasFohLineStorage } from "./foh-settings-line-storage-registry";
+import { hasFohLineStorage } from "./foh-settings-line-storage-registry";
 import {
   FOH_LINE_CONFIG_ROW_ATTR,
   getActiveFohByLineIdFromDom,
@@ -137,31 +137,21 @@ function scopeLineIds(seq: number): string[] {
   return entry.lines.filter((l) => l !== "store-wide");
 }
 
-function readStoredLines(seq: number): string[] {
-  const storageId = FOH_LINE_STORAGE_BY_SEQ[seq];
-  if (!storageId) return [];
-  const raw = readModuleSettingJson<unknown>(storageId, null);
-  if (!Array.isArray(raw)) return [];
+/** `undefined` = 未配置过；`[]` = 全部产线关闭 */
+function readStoredLines(seq: number): string[] | undefined {
+  const stored = readFohLines(seq);
+  if (stored === undefined) return undefined;
   const valid = new Set(scopeLineIds(seq));
-  return raw.filter((id): id is string => typeof id === "string" && valid.has(id));
+  return stored.filter((id) => valid.has(id));
 }
 
 function writeStoredLines(seq: number, lines: string[]): void {
-  const storageId = FOH_LINE_STORAGE_BY_SEQ[seq];
-  if (!storageId) return;
-  const order = scopeLineIds(seq);
-  const unique = order.filter((id) => lines.includes(id));
-  writeModuleSettingJson(storageId, unique);
+  writeFohLines(seq, lines);
 }
 
-function migrateLinesFromGlobalToggle(seq: number): string[] {
-  if (!readGlobalToggleOn(seq)) return [];
-  const scope = scopeLineIds(seq);
-  if (scope.length > 0) {
-    writeStoredLines(seq, scope);
-    return scope;
-  }
-  return [];
+/** 未配置时的生效值：矩阵内全部产线开启，只读不落盘 */
+function resolveLines(seq: number): string[] {
+  return readStoredLines(seq) ?? scopeLineIds(seq);
 }
 
 /** 按产线视图下：主开关 = 当前产线是否在 lines 存储中启用 */
@@ -203,9 +193,7 @@ export function readFohByLineToggleState(seq: number, lineId: FohLineNavId): boo
     } else if (seq === EMENU_CUSTOM_MESSAGE_SEQ) {
       readEmenuCustomMessageByLine();
     }
-    const lines = readStoredLines(seq);
-    if (lines.length > 0) return lines.includes(lineId);
-    return migrateLinesFromGlobalToggle(seq).includes(lineId);
+    return resolveLines(seq).includes(lineId);
   }
 
   return readGlobalToggleOn(seq);
@@ -223,10 +211,7 @@ export function writeFohByLineToggleState(seq: number, lineId: FohLineNavId, on:
     return;
   }
 
-  let lines = readStoredLines(seq);
-  if (lines.length === 0 && readGlobalToggleOn(seq)) {
-    lines = migrateLinesFromGlobalToggle(seq);
-  }
+  let lines = resolveLines(seq);
 
   if (on) {
     if (!lines.includes(lineId)) lines = [...lines, lineId];
