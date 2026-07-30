@@ -162,15 +162,25 @@
     </div>
   </div>
 
-  <div class="modal-overlay" id="addEmployeeModal">
-    <div class="modal employees-modal" style="width:min(760px,96vw);max-height:92vh;display:flex;flex-direction:column">
+  <!-- 弹窗在 .layout.employees-page 之外，需自带 employees-page 才能命中本页表单样式 -->
+  <div class="modal-overlay employees-page" id="addEmployeeModal">
+    <div class="modal employees-modal" style="width:min(940px,96vw);max-height:92vh;display:flex;flex-direction:column">
       <div class="modal-header">
         <h3 id="employee-modal-title">新增员工</h3>
         <button type="button" class="modal-close" onclick="closeModal('addEmployeeModal')">×</button>
       </div>
-      <div class="modal-body employees-modal-body">
+      <div class="modal-body employees-modal-body employee-form-layout">
+        <nav class="employee-form-nav" aria-label="员工表单分类导航" data-employee-form-nav>
+          <button type="button" class="employee-form-nav-item" data-employee-form-nav-item="employee-sec-basic">基本信息</button>
+          <button type="button" class="employee-form-nav-item" data-employee-form-nav-item="employee-sec-contact">联系与地址</button>
+          <button type="button" class="employee-form-nav-item" data-employee-form-nav-item="employee-sec-pos">POS 登录与刷卡</button>
+          <button type="button" class="employee-form-nav-item" data-employee-form-nav-item="employee-sec-attendance">考勤与收银</button>
+          <button type="button" class="employee-form-nav-item" data-employee-form-nav-item="employee-sec-pay">薪酬</button>
+          <button type="button" class="employee-form-nav-item" data-employee-form-nav-item="employee-sec-payroll">薪资报税（Payroll）</button>
+        </nav>
+        <div class="employee-form-scroll" data-employee-form-scroll>
         <form id="form-add-employee" onsubmit="return false">
-          <section class="employee-form-section">
+          <section class="employee-form-section" id="employee-sec-basic" data-employee-form-section>
             <h4 class="employee-form-section-title">基本信息</h4>
             <div class="form-grid-add">
               <div class="form-group form-group-full">
@@ -216,7 +226,7 @@
             </div>
           </section>
 
-          <section class="employee-form-section">
+          <section class="employee-form-section" id="employee-sec-contact" data-employee-form-section>
             <h4 class="employee-form-section-title">联系与地址</h4>
             <div class="form-grid-add">
               <div class="form-group form-group-full">
@@ -250,7 +260,7 @@
             </div>
           </section>
 
-          <section class="employee-form-section">
+          <section class="employee-form-section" id="employee-sec-pos" data-employee-form-section>
             <h4 class="employee-form-section-title">POS 登录与刷卡</h4>
             <div class="form-grid-add">
               <div class="form-group">
@@ -264,7 +274,7 @@
             </div>
           </section>
 
-          <section class="employee-form-section">
+          <section class="employee-form-section" id="employee-sec-attendance" data-employee-form-section>
             <h4 class="employee-form-section-title">考勤与收银</h4>
             <div class="form-grid-add">
               <div class="form-group">
@@ -288,7 +298,7 @@
             </div>
           </section>
 
-          <section class="employee-form-section">
+          <section class="employee-form-section" id="employee-sec-pay" data-employee-form-section>
             <h4 class="employee-form-section-title">薪酬</h4>
             <div class="form-grid-add">
               <div class="form-group">
@@ -315,7 +325,7 @@
             </div>
           </section>
 
-          <section class="employee-form-section">
+          <section class="employee-form-section" id="employee-sec-payroll" data-employee-form-section>
             <h4 class="employee-form-section-title">薪资报税（Payroll）</h4>
             <div class="form-grid-add">
               <div class="form-group">
@@ -329,6 +339,7 @@
             </div>
           </section>
         </form>
+        </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn" onclick="closeModal('addEmployeeModal')">取消</button>

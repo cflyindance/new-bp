@@ -2373,6 +2373,361 @@
         return null;
       }
 
+      function validateDraftStep5(draft) {
+        if (!draft.enableMemberLevels) return null;
+        if (!(draft.selectedMemberLevels || []).length) {
+          return "请至少选择一个会员等级";
+        }
+        return null;
+      }
+
+      /* ─── 同商品规则冲突：选品展开 / 时间会员域 / 冲突引擎 ─── */
+
+      function parseStoredEntityKey(value) {
+        if (typeof value !== "string" || value.indexOf("|") < 0) return null;
+        var idx = value.indexOf("|");
+        var lineId = value.slice(0, idx);
+        var key = value.slice(idx + 1);
+        if (!lineId || !key) return null;
+        return { lineId: lineId, key: key };
+      }
+
+      function restoreStructureByLine(values) {
+        var byLine = emptyStructureByLine();
+        (values || []).forEach(function (value) {
+          var parsed = parseStoredEntityKey(value);
+          if (!parsed) return;
+          if (!byLine[parsed.lineId]) byLine[parsed.lineId] = [];
+          if (byLine[parsed.lineId].indexOf(parsed.key) < 0) {
+            byLine[parsed.lineId].push(parsed.key);
+          }
+        });
+        return MenuPicker ? MenuPicker.normalizeByLine(byLine) : byLine;
+      }
+
+      function mergeStructureByLine(into, from) {
+        var src = MenuPicker ? MenuPicker.normalizeByLine(from) : (from || emptyStructureByLine());
+        Object.keys(src).forEach(function (lineId) {
+          if (!into[lineId]) into[lineId] = [];
+          (src[lineId] || []).forEach(function (key) {
+            if (into[lineId].indexOf(key) < 0) into[lineId].push(key);
+          });
+        });
+        return into;
+      }
+
+      function targetsFromStructure(byLine) {
+        if (!MenuPicker) return [];
+        return MenuPicker.listSelectedDishes(byLine).map(function (d) {
+          return {
+            targetKey: d.lineId + "|" + d.key,
+            lineId: d.lineId,
+            dishName: d.name
+          };
+        });
+      }
+
+      function isStringEntityKey(value) {
+        return typeof value === "string" && value.indexOf("|") >= 0;
+      }
+
+      function isNumericEntityId(value) {
+        return typeof value === "number" || (typeof value === "string" && /^\d+$/.test(value));
+      }
+
+      function collectEntityValues(rule, field) {
+        var out = [];
+        function add(arr) {
+          (arr || []).forEach(function (v) { out.push(v); });
+        }
+        add(rule[field]);
+        (rule.rounds || []).forEach(function (round) {
+          add(round[field]);
+        });
+        return out;
+      }
+
+      function legacyRuleDishTargets(rule) {
+        var out = [];
+        var seen = {};
+        function pushLegacy(dishId, dishName) {
+          var targetKey = "legacy|dish:" + dishId;
+          if (seen[targetKey]) return;
+          seen[targetKey] = true;
+          out.push({ targetKey: targetKey, lineId: "legacy", dishName: dishName || ("菜品#" + dishId) });
+        }
+        collectEntityValues(rule, "selectedDishes").forEach(function (v) {
+          if (!isNumericEntityId(v)) return;
+          var id = Number(v);
+          var dish = dishes.find(function (d) { return d.id === id; });
+          pushLegacy(id, dish ? dish.name : null);
+        });
+        collectEntityValues(rule, "selectedCategories").forEach(function (v) {
+          if (!isNumericEntityId(v)) return;
+          var catId = Number(v);
+          var cat = dishCategories.find(function (c) { return c.id === catId; });
+          if (!cat) return;
+          dishes.forEach(function (d) {
+            if (d.category === cat.name) pushLegacy(d.id, d.name);
+          });
+        });
+        return out;
+      }
+
+      function expandRuleDishTargets(rule) {
+        var seen = {};
+        var out = [];
+        function pushAll(list) {
+          (list || []).forEach(function (item) {
+            if (!item || !item.targetKey || seen[item.targetKey]) return;
+            seen[item.targetKey] = true;
+            out.push(item);
+          });
+        }
+
+        if (MenuPicker && rule.structureByLine) {
+          var topByLine = MenuPicker.normalizeByLine(rule.structureByLine);
+          if (MenuPicker.countDishes(topByLine) > 0) {
+            pushAll(targetsFromStructure(topByLine));
+            return out;
+          }
+        }
+
+        var topStringKeys = []
+          .concat(rule.selectedDishes || [])
+          .concat(rule.selectedCategories || [])
+          .filter(isStringEntityKey);
+        if (topStringKeys.length && MenuPicker) {
+          var restoredTop = restoreStructureByLine(topStringKeys);
+          if (MenuPicker.countDishes(restoredTop) > 0) {
+            pushAll(targetsFromStructure(restoredTop));
+            return out;
+          }
+        }
+
+        var mergedByLine = emptyStructureByLine();
+        var hasRoundStructure = false;
+        var roundStringKeys = [];
+        (rule.rounds || []).forEach(function (round) {
+          if (MenuPicker && round.structureByLine) {
+            var roundByLine = MenuPicker.normalizeByLine(round.structureByLine);
+            if (MenuPicker.countDishes(roundByLine) > 0) {
+              hasRoundStructure = true;
+              mergeStructureByLine(mergedByLine, roundByLine);
+            }
+          }
+          [].concat(round.selectedDishes || []).concat(round.selectedCategories || [])
+            .filter(isStringEntityKey)
+            .forEach(function (k) { roundStringKeys.push(k); });
+        });
+        if (hasRoundStructure && MenuPicker) {
+          pushAll(targetsFromStructure(MenuPicker.normalizeByLine(mergedByLine)));
+          return out;
+        }
+        if (roundStringKeys.length && MenuPicker) {
+          var restoredRounds = restoreStructureByLine(roundStringKeys);
+          if (MenuPicker.countDishes(restoredRounds) > 0) {
+            pushAll(targetsFromStructure(restoredRounds));
+            return out;
+          }
+        }
+
+        pushAll(legacyRuleDishTargets(rule));
+        return out;
+      }
+
+      function parseClockMinutes(value) {
+        if (value == null) return null;
+        var text = String(value).trim();
+        var m = text.match(/^(\d{1,2}):(\d{2})$/);
+        if (!m) return null;
+        var hh = Number(m[1]);
+        var mm = Number(m[2]);
+        if (hh === 24 && mm === 0) return 1440;
+        if (hh < 0 || hh > 23 || mm < 0 || mm > 59) return null;
+        return hh * 60 + mm;
+      }
+
+      function parseIsoDateParts(iso) {
+        if (!iso || typeof iso !== "string") return null;
+        var m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (!m) return null;
+        return { y: Number(m[1]), m: Number(m[2]), d: Number(m[3]) };
+      }
+
+      function formatIsoDateParts(parts) {
+        return parts.y + "-" +
+          String(parts.m).padStart(2, "0") + "-" +
+          String(parts.d).padStart(2, "0");
+      }
+
+      function addDaysToIso(iso, delta) {
+        var parts = parseIsoDateParts(iso);
+        if (!parts) return null;
+        var dt = new Date(parts.y, parts.m - 1, parts.d + delta);
+        return formatIsoDateParts({
+          y: dt.getFullYear(),
+          m: dt.getMonth() + 1,
+          d: dt.getDate()
+        });
+      }
+
+      function weekdayKeyFromIso(iso) {
+        var parts = parseIsoDateParts(iso);
+        if (!parts) return null;
+        var dt = new Date(parts.y, parts.m - 1, parts.d);
+        return ["sun", "mon", "tue", "wed", "thu", "fri", "sat"][dt.getDay()];
+      }
+
+      function compareIsoDate(a, b) {
+        if (a === b) return 0;
+        return a < b ? -1 : 1;
+      }
+
+      function minutesRangesOverlap(aStart, aEnd, bStart, bEnd) {
+        return aStart < bEnd && bStart < aEnd;
+      }
+
+      function splitScheduleWindows(schedule) {
+        var open = parseClockMinutes(schedule.openTime);
+        var close = parseClockMinutes(schedule.closeTime);
+        if (open == null || close == null) return null;
+        var overnight = close <= open && close !== 1440;
+        var active = getBusinessHourActiveDays(schedule);
+        var fromDate = schedule.fromDate;
+        var toDate = schedule.toDate;
+        if (!fromDate || !toDate || compareIsoDate(fromDate, toDate) > 0) return null;
+        var windows = [];
+        var cursor = fromDate;
+        var guard = 0;
+        while (compareIsoDate(cursor, toDate) <= 0 && guard < 4000) {
+          guard += 1;
+          var dayKey = weekdayKeyFromIso(cursor);
+          if (dayKey && active[dayKey]) {
+            if (!overnight) {
+              windows.push({ date: cursor, dayKey: dayKey, startMin: open, endMin: close });
+            } else {
+              windows.push({ date: cursor, dayKey: dayKey, startMin: open, endMin: 1440 });
+              var nextDate = addDaysToIso(cursor, 1);
+              var nextDay = weekdayKeyFromIso(nextDate);
+              if (nextDate && nextDay) {
+                windows.push({ date: nextDate, dayKey: nextDay, startMin: 0, endMin: close });
+              }
+            }
+          }
+          cursor = addDaysToIso(cursor, 1);
+          if (!cursor) break;
+        }
+        return windows;
+      }
+
+      function scheduleWindowsOverlap(scheduleA, scheduleB) {
+        var windowsA = splitScheduleWindows(scheduleA);
+        var windowsB = splitScheduleWindows(scheduleB);
+        if (!windowsA || !windowsB) return true;
+        for (var i = 0; i < windowsA.length; i++) {
+          for (var j = 0; j < windowsB.length; j++) {
+            var a = windowsA[i];
+            var b = windowsB[j];
+            if (a.date === b.date && minutesRangesOverlap(a.startMin, a.endMin, b.startMin, b.endMin)) {
+              return true;
+            }
+          }
+        }
+        return false;
+      }
+
+      function businessHourWindowsOverlap(ruleA, ruleB, schedules) {
+        if (!ruleA.enableTimeSettings || !ruleB.enableTimeSettings) return true;
+        var idsA = ruleA.selectedBusinessHourIds || [];
+        var idsB = ruleB.selectedBusinessHourIds || [];
+        if (!idsA.length || !idsB.length) return true;
+        var map = {};
+        (schedules || []).forEach(function (s) { map[s.id] = s; });
+        for (var i = 0; i < idsA.length; i++) {
+          var sa = map[idsA[i]];
+          if (!sa) return true;
+          for (var j = 0; j < idsB.length; j++) {
+            var sb = map[idsB[j]];
+            if (!sb) return true;
+            if (scheduleWindowsOverlap(sa, sb)) return true;
+          }
+        }
+        return false;
+      }
+
+      function memberScopesOverlap(ruleA, ruleB) {
+        if (!ruleA.enableMemberLevels || !ruleB.enableMemberLevels) return true;
+        var setA = {};
+        (ruleA.memberLevels || []).forEach(function (id) { setA[id] = true; });
+        return (ruleB.memberLevels || []).some(function (id) { return !!setA[id]; });
+      }
+
+      function ruleTypeKey(rule) {
+        return String(rule.type || "") + "|" + String(rule.round || "") + "|" + String(rule.method || "");
+      }
+
+      function findSharedDishTarget(targetsA, targetsB) {
+        var map = {};
+        (targetsA || []).forEach(function (t) { map[t.targetKey] = t; });
+        for (var i = 0; i < (targetsB || []).length; i++) {
+          var hit = map[targetsB[i].targetKey];
+          if (hit) return hit;
+        }
+        return null;
+      }
+
+      function findRuleConflict(candidate, rules, editingRuleId) {
+        if (!candidate || candidate.status !== "active") return null;
+        var candidateTargets = expandRuleDishTargets(candidate);
+        if (!candidateTargets.length) return null;
+        var schedules = readBusinessHourSchedulesFromStore();
+        for (var i = 0; i < (rules || []).length; i++) {
+          var existing = rules[i];
+          if (!existing) continue;
+          if (editingRuleId != null && existing.id === editingRuleId) continue;
+          if (existing.status !== "active") continue;
+          var shared = findSharedDishTarget(candidateTargets, expandRuleDishTargets(existing));
+          if (!shared) continue;
+          if (String(candidate.round) !== String(existing.round)) {
+            return {
+              kind: "round",
+              existingRuleId: existing.id,
+              existingRuleName: existing.name,
+              dishName: shared.dishName,
+              candidateRound: candidate.round,
+              existingRound: existing.round
+            };
+          }
+          if (ruleTypeKey(candidate) === ruleTypeKey(existing)) {
+            if (
+              memberScopesOverlap(candidate, existing) &&
+              businessHourWindowsOverlap(candidate, existing, schedules)
+            ) {
+              return {
+                kind: "sameTypeScope",
+                existingRuleId: existing.id,
+                existingRuleName: existing.name,
+                dishName: shared.dishName,
+                candidateRound: candidate.round,
+                existingRound: existing.round
+              };
+            }
+          }
+        }
+        return null;
+      }
+
+      function formatRuleConflict(conflict) {
+        if (!conflict) return "规则冲突";
+        if (conflict.kind === "round") {
+          return "「" + conflict.dishName + "」已在规则「" + conflict.existingRuleName +
+            "」中使用「" + conflict.existingRound + "」，不可再设置为「" + conflict.candidateRound + "」";
+        }
+        return "「" + conflict.dishName + "」与规则「" + conflict.existingRuleName +
+          "」的规则类型相同，且时间和会员范围均有重叠";
+      }
+
       function getCategoryIdByName(name) {
         var c = dishCategories.find(function (x) { return x.name === name; });
         return c ? c.id : undefined;
@@ -2967,19 +3322,38 @@
           renderWizard();
           return;
         }
-        if (d.step === 5) { d.step = 6; renderWizard(); return; }
+        if (d.step === 5) {
+          var memberErr = validateDraftStep5(d);
+          if (memberErr) { showToast(memberErr); return; }
+          d.step = 6;
+          renderWizard();
+          return;
+        }
         if (d.step === 6) {
-          if (state.editingRuleId != null) {
+          var memberSaveErr = validateDraftStep5(d);
+          if (memberSaveErr) { showToast(memberSaveErr); return; }
+          var existing = state.editingRuleId != null
+            ? state.rules.find(function (r) { return r.id === state.editingRuleId; })
+            : null;
+          var candidate = draftToRule(d, existing || undefined);
+          if (existing) {
+            candidate.id = existing.id;
+            candidate.status = existing.status;
+            candidate.created = existing.created;
+          } else {
+            candidate.id = nextRuleId(state.rules);
+          }
+          var conflict = findRuleConflict(candidate, state.rules, state.editingRuleId);
+          if (conflict) {
+            showToast(formatRuleConflict(conflict));
+            return;
+          }
+          if (existing) {
             state.rules = state.rules.map(function (r) {
-              if (r.id !== state.editingRuleId) return r;
-              var updated = draftToRule(d, r);
-              updated.id = r.id;
-              return updated;
+              return r.id === existing.id ? candidate : r;
             });
           } else {
-            var newRule = draftToRule(d);
-            newRule.id = nextRuleId(state.rules);
-            state.rules.push(newRule);
+            state.rules.push(candidate);
           }
           saveRules(state.rules);
           closeWizard();
@@ -3062,7 +3436,19 @@
           return;
         }
         if (action === "toggle") {
-          rule.status = rule.status === "active" ? "inactive" : "active";
+          if (rule.status === "active") {
+            rule.status = "inactive";
+            saveRules(state.rules);
+            renderAll();
+            return;
+          }
+          var enableCandidate = Object.assign({}, rule, { status: "active" });
+          var enableConflict = findRuleConflict(enableCandidate, state.rules, id);
+          if (enableConflict) {
+            showToast(formatRuleConflict(enableConflict));
+            return;
+          }
+          rule.status = "active";
           saveRules(state.rules);
           renderAll();
           return;

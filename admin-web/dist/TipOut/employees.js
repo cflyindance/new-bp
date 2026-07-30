@@ -1873,6 +1873,120 @@
     openEmployeeModal(null);
   }
 
+  /**
+   * 点击导航后锁定高亮：平滑滚动过程中不按滚动位置改写高亮；
+   * 末尾分类受滚动上限限制无法置顶，故锁定至用户主动滚动才解除。
+   */
+  let employeeFormNavLocked = false;
+  let employeeFormNavUnlockTimer = null;
+
+  function unlockEmployeeFormNav() {
+    employeeFormNavLocked = false;
+    if (employeeFormNavUnlockTimer) {
+      clearTimeout(employeeFormNavUnlockTimer);
+      employeeFormNavUnlockTimer = null;
+    }
+  }
+
+  function employeeFormNavRefs() {
+    const nav = $("[data-employee-form-nav]");
+    const scroller = $("[data-employee-form-scroll]");
+    if (!nav || !scroller) return null;
+    const pairs = Array.from(nav.querySelectorAll("[data-employee-form-nav-item]"))
+      .map((item) => ({
+        item,
+        section: document.getElementById(item.getAttribute("data-employee-form-nav-item") || ""),
+      }))
+      .filter((pair) => pair.section);
+    if (!pairs.length) return null;
+    return { nav, scroller, pairs };
+  }
+
+  function setActiveEmployeeFormNav(sectionId) {
+    const refs = employeeFormNavRefs();
+    if (!refs) return;
+    refs.pairs.forEach(({ item, section }) => {
+      const active = section.id === sectionId;
+      item.classList.toggle("is-active", active);
+      if (active) item.setAttribute("aria-current", "true");
+      else item.removeAttribute("aria-current");
+    });
+  }
+
+  function syncEmployeeFormNavByScroll() {
+    if (employeeFormNavLocked) {
+      if (employeeFormNavUnlockTimer) clearTimeout(employeeFormNavUnlockTimer);
+      employeeFormNavUnlockTimer = setTimeout(unlockEmployeeFormNav, 150);
+      return;
+    }
+    const refs = employeeFormNavRefs();
+    if (!refs) return;
+    const { scroller, pairs } = refs;
+    if (scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 4) {
+      setActiveEmployeeFormNav(pairs[pairs.length - 1].section.id);
+      return;
+    }
+    const line = scroller.scrollTop + 24;
+    let current = pairs[0].section.id;
+    pairs.forEach(({ section }) => {
+      if (section.offsetTop <= line) current = section.id;
+    });
+    setActiveEmployeeFormNav(current);
+  }
+
+  /** 末尾分类受滚动上限限制无法置顶，补足底部留白使每个锚点都能定位到顶部 */
+  function updateEmployeeFormTailSpace() {
+    const refs = employeeFormNavRefs();
+    if (!refs) return;
+    const last = refs.pairs[refs.pairs.length - 1].section;
+    const form = last.parentElement;
+    if (!form) return;
+    form.style.paddingBottom = "0px";
+    const space = Math.max(0, refs.scroller.clientHeight - last.offsetHeight - 16);
+    form.style.paddingBottom = `${space}px`;
+  }
+
+  function scrollEmployeeFormToSection(sectionId) {
+    const refs = employeeFormNavRefs();
+    if (!refs) return;
+    updateEmployeeFormTailSpace();
+    const target = refs.pairs.find((pair) => pair.section.id === sectionId);
+    if (!target) return;
+    unlockEmployeeFormNav();
+    employeeFormNavLocked = true;
+    setActiveEmployeeFormNav(sectionId);
+    refs.scroller.scrollTo({ top: Math.max(0, target.section.offsetTop - 8), behavior: "smooth" });
+  }
+
+  function resetEmployeeFormNav() {
+    const refs = employeeFormNavRefs();
+    if (!refs) return;
+    unlockEmployeeFormNav();
+    updateEmployeeFormTailSpace();
+    refs.scroller.scrollTop = 0;
+    refs.nav.scrollLeft = 0;
+    setActiveEmployeeFormNav(refs.pairs[0].section.id);
+  }
+
+  function bindEmployeeFormNav() {
+    const refs = employeeFormNavRefs();
+    if (!refs || refs.nav.dataset.bound === "1") return;
+    refs.nav.dataset.bound = "1";
+    refs.nav.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-employee-form-nav-item]");
+      if (!btn) return;
+      scrollEmployeeFormToSection(btn.getAttribute("data-employee-form-nav-item") || "");
+    });
+    refs.scroller.addEventListener("scroll", syncEmployeeFormNavByScroll, { passive: true });
+    ["wheel", "touchstart", "keydown"].forEach((type) => {
+      refs.scroller.addEventListener(type, unlockEmployeeFormNav, { passive: true });
+    });
+    window.addEventListener("resize", () => {
+      if ($("#addEmployeeModal")?.classList.contains("show")) updateEmployeeFormTailSpace();
+    });
+    setActiveEmployeeFormNav(refs.pairs[0].section.id);
+  }
+
   function openEmployeeModal(id) {
     editingEmployeeId = id || null;
     const titleEl = $("#employee-modal-title");
@@ -1902,6 +2016,7 @@
     }
 
     if (typeof openModal === "function") openModal("addEmployeeModal");
+    resetEmployeeFormNav();
   }
 
   function submitAdd() {
@@ -2034,6 +2149,7 @@
   });
 
   bindPayTypeRateLinkage();
+  bindEmployeeFormNav();
   bindRoleQuickAdd();
   bindRoleMultiSelect();
   updateBasePayLabel();

@@ -141,12 +141,15 @@ let clockTab: ClockTab = "live";
 let adjustDialog: { employeeId: string; date: string } | null = null;
 let historyDialog: { employeeId: string; date: string } | null = null;
 let breakDialog: { employeeId: string; date: string } | null = null;
+/** 点击「考勤记录」时的云报表重复说明弹窗 */
+let recordsNoticeDialog = false;
 
 function consumeClockTabFromStorage(): void {
   try {
     const stored = sessionStorage.getItem(CLOCK_TAB_STORAGE_KEY);
     if (stored === "records") {
       clockTab = "records";
+      recordsNoticeDialog = true;
       sessionStorage.removeItem(CLOCK_TAB_STORAGE_KEY);
     }
   } catch {
@@ -696,6 +699,119 @@ function resolveBreakCompensation(label?: string): "paid" | "unpaid" {
   return hit?.compensation ?? "unpaid";
 }
 
+function resolveBreakAllowedMinutes(label?: string): number {
+  if (!label) return 15;
+  const hit = readBreakOptions().find((o) => o.label === label);
+  return Math.max(1, hit?.minutes ?? 15);
+}
+
+/** 各休息段相对系统时长的超时分钟合计（进行中用 refNow） */
+function computeBreakOvertimeMinutes(punches: PunchRecord[], refNowIso: string): number {
+  let overtime = 0;
+  let openStart: string | null = null;
+  let openLabel: string | undefined;
+
+  const close = (endIso: string) => {
+    if (!openStart) return;
+    const actual = minutesBetween(openStart, endIso);
+    overtime += Math.max(0, actual - resolveBreakAllowedMinutes(openLabel));
+    openStart = null;
+    openLabel = undefined;
+  };
+
+  for (const p of punches) {
+    switch (p.type) {
+      case "break-start":
+        openStart = p.timestamp;
+        openLabel = p.breakLabel;
+        break;
+      case "break-end":
+        close(p.timestamp);
+        break;
+      case "out":
+        close(p.timestamp);
+        break;
+      case "in":
+        openStart = null;
+        openLabel = undefined;
+        break;
+      default:
+        break;
+    }
+  }
+  if (openStart) close(refNowIso);
+  return overtime;
+}
+
+function alertMinutesAtLeastOne(fromIso: string, toIso: string): number {
+  return Math.max(1, minutesBetween(fromIso, toIso));
+}
+
+function computeAlerts(
+  employeeId: string,
+  date: string,
+  timecard: TimecardState,
+  settings: ClockSettings,
+): string[] {
+  const alerts: string[] = [];
+  const assignment = getAssignment(employeeId, date);
+  const shiftTypes = readShiftTypes();
+  const shift = assignment ? shiftTypes.find((t) => t.id === assignment.shiftId) : undefined;
+
+  if (isRequireScheduledShiftEnabled() && !assignment) {
+    alerts.push("无排班");
+  }
+  if (!shift || !assignment) return alerts;
+
+  const { start, end } = getEffectiveShiftTimes(assignment, shift);
+  const earlyMin = assignment.overrideEarlyClockInMinutes ?? shift.earlyClockInMinutes;
+  const schedStart = parseTimeOnDate(date, start);
+  const schedEnd = parseTimeOnDate(date, end);
+  const earliestIn = new Date(schedStart.getTime() - earlyMin * 60000);
+  const latestIn = new Date(schedStart.getTime() + settings.lateGraceMinutes * 60000);
+  const endPlusOneHour = new Date(schedEnd.getTime() + 60 * 60000);
+  const isToday = date === todayIso();
+  const now = isToday ? new Date() : new Date(`${date}T23:59:59`);
+  // 历史日：时间门闩一律视为已过
+  const pastGrace = !isToday || now.getTime() > latestIn.getTime();
+  const pastEndPlusOneHour = !isToday || now.getTime() > endPlusOneHour.getTime();
+  const refNowIso = now.toISOString();
+
+  const hasIn = Boolean(timecard.clockIn);
+  const hasOut = Boolean(timecard.clockOut);
+  const hasAnyPunch = timecard.punches.length > 0;
+
+  if (!hasAnyPunch && pastGrace) {
+    alerts.push("未打上下班卡");
+  } else if (!hasIn && hasOut) {
+    alerts.push("未打上班卡");
+  } else if (hasIn && !hasOut && pastEndPlusOneHour) {
+    alerts.push("未打下班卡");
+  }
+
+  if (timecard.clockIn) {
+    const inTime = new Date(timecard.clockIn);
+    if (inTime < earliestIn) alerts.push("提前打卡");
+    if (inTime > latestIn) {
+      alerts.push(`迟到 ${alertMinutesAtLeastOne(latestIn.toISOString(), timecard.clockIn)} 分钟`);
+    }
+  }
+
+  if (timecard.clockOut) {
+    const outTime = new Date(timecard.clockOut);
+    if (outTime < schedEnd) {
+      alerts.push(`早退 ${alertMinutesAtLeastOne(timecard.clockOut, schedEnd.toISOString())} 分钟`);
+    }
+  }
+
+  const breakOvertime = computeBreakOvertimeMinutes(timecard.punches, refNowIso);
+  if (breakOvertime > 0) {
+    alerts.push(`休息超时 ${breakOvertime} 分钟`);
+  }
+
+  return alerts;
+}
+
 function getAssignment(employeeId: string, date: string): ShiftAssignment | undefined {
   return readAssignments().find((a) => a.employeeId === employeeId && a.date === date);
 }
@@ -834,45 +950,6 @@ function statusBadgeClass(status: TimecardStatus): string {
     case "done":
       return "bg-slate-500/15 text-slate-600 dark:text-slate-400";
   }
-}
-
-function computeAlerts(
-  employeeId: string,
-  date: string,
-  timecard: TimecardState,
-  settings: ClockSettings,
-): string[] {
-  const alerts: string[] = [];
-  const assignment = getAssignment(employeeId, date);
-  const shiftTypes = readShiftTypes();
-  const shift = assignment ? shiftTypes.find((t) => t.id === assignment.shiftId) : undefined;
-
-  if (isRequireScheduledShiftEnabled() && !assignment) {
-    alerts.push("无排班");
-  }
-  if (!shift || !assignment) return alerts;
-
-  const { start, end } = getEffectiveShiftTimes(assignment, shift);
-  const earlyMin = assignment.overrideEarlyClockInMinutes ?? shift.earlyClockInMinutes;
-  const schedStart = parseTimeOnDate(date, start);
-  const schedEnd = parseTimeOnDate(date, end);
-  const earliestIn = new Date(schedStart.getTime() - earlyMin * 60000);
-  const latestIn = new Date(schedStart.getTime() + settings.lateGraceMinutes * 60000);
-  const now = new Date();
-
-  if (timecard.clockIn) {
-    const inTime = new Date(timecard.clockIn);
-    if (inTime < earliestIn) alerts.push("提前打卡");
-    if (inTime > latestIn) alerts.push("迟到");
-  } else if (now > latestIn && date === todayIso()) {
-    alerts.push("未打上班卡");
-  }
-
-  if (timecard.status === "working" && now > schedEnd && date === todayIso()) {
-    alerts.push("超时未下班");
-  }
-
-  return alerts;
 }
 
 function addPunch(
@@ -1115,6 +1192,21 @@ function renderHistoryDialog(): string {
     </div>`;
 }
 
+function renderRecordsNoticeDialog(): string {
+  if (!recordsNoticeDialog) return "";
+  return `
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4" data-clock-records-notice-dialog role="dialog" aria-modal="true" aria-labelledby="clock-records-notice-title">
+      <button type="button" class="absolute inset-0 bg-black/40" data-clock-records-notice-backdrop aria-label="关闭"></button>
+      <div class="relative z-10 w-full max-w-md rounded-xl border border-border bg-card p-5 shadow-lg">
+        <h2 id="clock-records-notice-title" class="text-base font-semibold">考勤记录</h2>
+        <p class="mt-3 text-sm leading-relaxed text-muted-foreground">考勤记录，云报表已经存在，数据同云报表-员工概览-考勤记录</p>
+        <div class="mt-5 flex justify-end">
+          <button type="button" data-clock-records-notice-close class="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">知道了</button>
+        </div>
+      </div>
+    </div>`;
+}
+
 function renderBreakDialog(): string {
   if (!breakDialog) return "";
   const emp = readEmployees().find((e) => e.id === breakDialog!.employeeId);
@@ -1144,6 +1236,34 @@ function renderBreakDialog(): string {
 
 export function isTeamClockInPath(path: string): boolean {
   return path === TEAM_CLOCK_IN_PATH || path.startsWith(`${TEAM_CLOCK_IN_PATH}/`);
+}
+
+/** 规则设置 · 开收工与工时：迟到宽限（从打卡管理表头迁入） */
+export function renderClockLateGraceSettingRowHtml(): string {
+  const settings = readSettings();
+  return `
+    <li class="list-none" data-clock-late-grace-row>
+      <div class="border-b border-border px-4 py-3">
+        <div class="flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <p class="text-sm font-medium text-foreground">迟到宽限</p>
+            <p class="mt-0.5 text-xs leading-relaxed text-muted-foreground">超过排班开始时间后，在此分钟数内打卡仍不记为迟到。</p>
+          </div>
+          <label class="flex shrink-0 items-center gap-1.5 pt-0.5 text-sm text-muted-foreground">
+            <input
+              type="number"
+              min="0"
+              step="1"
+              value="${settings.lateGraceMinutes}"
+              data-clock-late-grace
+              class="h-8 w-16 rounded-md border border-input bg-background px-2 text-center text-sm tabular-nums shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              aria-label="迟到宽限分钟数"
+            />
+            <span>分钟</span>
+          </label>
+        </div>
+      </div>
+    </li>`;
 }
 
 function renderClockTabBar(): string {
@@ -1219,13 +1339,6 @@ function renderLiveClockPanel(): string {
       <div class="rounded-xl border border-border bg-card shadow-sm">
         <div class="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">
           <p class="text-sm font-medium text-foreground">员工打卡</p>
-          <div class="flex items-center gap-3 text-xs text-muted-foreground">
-            <label class="flex items-center gap-1">
-              <span>迟到宽限</span>
-              <input type="number" min="0" step="1" value="${settings.lateGraceMinutes}" data-clock-late-grace class="h-7 w-14 rounded border border-input px-2 text-center text-xs tabular-nums" />
-              <span>分钟</span>
-            </label>
-          </div>
         </div>
         <div class="overflow-x-auto">
           <table class="w-full min-w-[56rem] text-left text-sm">
@@ -1373,6 +1486,7 @@ export function renderTeamClockInPage(rulesPanelHtml = ""): string {
       ${renderAdjustDialog()}
       ${renderHistoryDialog()}
       ${renderBreakDialog()}
+      ${renderRecordsNoticeDialog()}
     </div>`;
 }
 
@@ -1455,7 +1569,12 @@ export function bindTeamClockInUi(remount: () => void): void {
   root.querySelectorAll("[data-clock-tab]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const tab = btn.getAttribute("data-clock-tab") as ClockTab;
-      if (!tab || tab === clockTab) return;
+      if (!tab) return;
+      if (tab === "records") recordsNoticeDialog = true;
+      if (tab === clockTab) {
+        if (tab === "records") remount();
+        return;
+      }
       clockTab = tab;
       remount();
     });
@@ -1555,5 +1674,13 @@ export function bindTeamClockInUi(remount: () => void): void {
     breakDialog = null;
     remount();
   });
+
+  const recordsNoticeEl = root.querySelector("[data-clock-records-notice-dialog]");
+  const closeRecordsNotice = () => {
+    recordsNoticeDialog = false;
+    remount();
+  };
+  recordsNoticeEl?.querySelector("[data-clock-records-notice-backdrop]")?.addEventListener("click", closeRecordsNotice);
+  recordsNoticeEl?.querySelector("[data-clock-records-notice-close]")?.addEventListener("click", closeRecordsNotice);
 }
 

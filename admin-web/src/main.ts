@@ -157,6 +157,7 @@ import {
 import {
   bindTeamClockInUi,
   isTeamClockInPath,
+  renderClockLateGraceSettingRowHtml,
   renderTeamClockInPage,
   requestTeamClockInRecordsTab,
   shouldShowTeamClockInSaveBar,
@@ -6105,9 +6106,11 @@ function renderTeamClockInRulesSectionsHtml(items: ModuleSettingCatalogItem[]): 
     const groupItems = group.seqs
       .map((seq) => bySeq.get(seq))
       .filter((item): item is ModuleSettingCatalogItem => item !== undefined);
-    if (groupItems.length === 0) return "";
+    const lateGraceRow = group.key === "clock-hours" ? renderClockLateGraceSettingRowHtml() : "";
+    if (groupItems.length === 0 && !lateGraceRow) return "";
     const sectionId = moduleSettingsCategoryDomId(group.key);
     const rows = renderModuleSettingRowsHtml(groupItems);
+    const itemCount = groupItems.length + (lateGraceRow ? 1 : 0);
     return `
       <section
         id="${sectionId}"
@@ -6116,9 +6119,9 @@ function renderTeamClockInRulesSectionsHtml(items: ModuleSettingCatalogItem[]): 
       >
         <div class="flex items-baseline justify-between gap-3 border-b border-border px-4 py-3">
           <h3 class="text-sm font-semibold text-card-foreground">${escapeHtml(group.title)}</h3>
-          <span class="shrink-0 text-xs tabular-nums text-muted-foreground">${groupItems.length}</span>
+          <span class="shrink-0 text-xs tabular-nums text-muted-foreground">${itemCount}</span>
         </div>
-        <ul class="m-0 list-none divide-y divide-border p-0" role="list">${rows}</ul>
+        <ul class="m-0 list-none divide-y divide-border p-0" role="list">${lateGraceRow}${rows}</ul>
       </section>`;
   }).join("");
 }
