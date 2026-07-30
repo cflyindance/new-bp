@@ -163,6 +163,15 @@ import {
   shouldShowTeamClockInSaveBar,
 } from "./config/team-clock-in-ui";
 import {
+  bindCloudProductRouteNoticeUi,
+  renderCloudProductRouteNoticeDialog,
+} from "./config/cloud-product-route-notice-ui";
+import {
+  bindTeamReportsCloudNoticeUi,
+  renderTeamReportsCloudNoticeDialog,
+  requestTeamReportsCloudNotice,
+} from "./config/team-reports-notice-ui";
+import {
   bindTeamTrainingPerformanceUi,
   isTeamTrainingPerformancePath,
   renderTeamTrainingPerformancePage,
@@ -280,7 +289,20 @@ import {
   bindVersionSwitchControl,
   renderVersionSwitchControl,
 } from "./shell/version-switch-control";
-import { filterModuleSettingItemsForProductVersion, isMvpHiddenModuleSettingSeq, shouldShowAiAssistantControl, shouldShowFohSettingsViewModeControl, shouldShowMPlatformViewSwitchOption, shouldShowRestartOnboardingControl } from "./config/product-version";
+import {
+  filterModuleSettingItemsForProductVersion,
+  isFutureVersionDiffModuleSettingSeq,
+  isFutureVersionDiffNavModule,
+  isFutureVersionDiffSettingsNavChild,
+  isFutureVersionDiffTeamNavChild,
+  isMvpHiddenModuleSettingSeq,
+  isMvpProductVersion,
+  shouldShowAiAssistantControl,
+  shouldShowFohSettingsViewModeControl,
+  shouldShowMPlatformViewSwitchOption,
+  shouldShowRestartOnboardingControl,
+  syncProductVersionDocumentAttribute,
+} from "./config/product-version";
 import { bindImpersonationBanner, renderImpersonationBanner } from "./config/enterprise-merchant-impersonate";
 import { bindChainBrandOrgSyncListener, listMPlatformGroupsForMerchantBackend, resolveChainBrandContext, writeActiveMerchantGroupId } from "./config/merchant-chain-brand-sync";
 import {
@@ -2006,7 +2028,7 @@ function renderTeamPayrollReportIframePanel(): string {
 
 /** 员工报表主内容：小费汇总/明细与薪资均为独立统计维度，不嵌入小费管理 / 薪资管理 */
 function renderTeamReportsMainPanel(path: string, title: string, tabModule?: NavModule): string {
-  return renderPlaceholder(path, title, tabModule, { teamReportsSubnav: true });
+  return `${renderPlaceholder(path, title, tabModule, { teamReportsSubnav: true })}${renderTeamReportsCloudNoticeDialog()}`;
 }
 
 /** 非侧栏二级且仅一条子路由时不渲染顶部 Tab（避免单子模块出现一条 Tab） */
@@ -2487,8 +2509,10 @@ function renderPcSheetDarkSubnav(
     }
 
     const selected = item.path === activeSub;
+    const futureDiff =
+      isFutureVersionDiffSettingsNavChild(item.id) || isFutureVersionDiffTeamNavChild(item.id);
     return `
-        <li class="mb-0.5">
+        <li class="mb-0.5"${futureDiff ? " data-future-version-diff" : ""}>
           <a href="#${item.path}"
             class="flex min-h-9 items-center rounded-md ${l2RowHorizontal} py-1.5 text-sm transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-active focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar ${
               selected ? SBR_ACTIVE_FM : SBR_MUTED_ROW
@@ -4367,6 +4391,7 @@ function normalizeTabModuleHashes(): void {
     return;
   }
   if (raw === "/team/reports" || raw === "/team/reports/") {
+    requestTeamReportsCloudNotice();
     replaceHashPath(getTeamReportsDefaultPath());
     return;
   }
@@ -4905,7 +4930,18 @@ function getSidebarMoreExpanded(currentPath: string, moreModules: NavModule[]): 
 }
 
 function renderSidebarNavModuleItems(modules: NavModule[], hash: string, customSortMode: boolean): string {
-  return modules.map((m) => wrapSidebarNavModuleRow(renderModule(m, hash), m.id, customSortMode)).join("");
+  return modules
+    .map((m) => {
+      const html = renderModule(m, hash);
+      const marked = isFutureVersionDiffNavModule(m.id)
+        ? html.replace(
+            `data-nav-module="${m.id}"`,
+            `data-nav-module="${m.id}" data-future-version-diff`,
+          )
+        : html;
+      return wrapSidebarNavModuleRow(marked, m.id, customSortMode);
+    })
+    .join("");
 }
 
 function renderSidebarMoreGroup(
@@ -5156,7 +5192,7 @@ function renderExpandableSidebarModule(m: NavModule, hash: string, expanded: boo
               ? `<span class="ml-1 rounded bg-sidebar-active/25 px-1 py-px text-[10px] text-sidebar-active-fg">${escapeHtml(t("badge.chain"))}</span>`
               : "";
             return `
-        <li>
+        <li${isFutureVersionDiffSettingsNavChild(c.id) ? " data-future-version-diff" : ""}>
           <a href="#${c.path}"
             class="flex min-h-9 items-center rounded-md px-2 py-1.5 text-sm transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-active focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar ${
               selected ? SBR_ACTIVE_FM : SBR_MUTED_ROW
@@ -6012,7 +6048,15 @@ function renderFohHubSettingsLayout(
 
 function renderModuleSettingRowsHtml(items: ModuleSettingCatalogItem[]): string {
   return items
-    .map((item) => renderModuleSettingRow(item))
+    .map((item) => {
+      const html = renderModuleSettingRow(item);
+      if (!isFutureVersionDiffModuleSettingSeq(item.seq)) return html;
+      if (html.includes("data-future-version-diff")) return html;
+      return html.replace(
+        `data-module-setting-row-seq="${item.seq}"`,
+        `data-module-setting-row-seq="${item.seq}" data-future-version-diff`,
+      );
+    })
     .filter((html) => html.trim() !== "")
     .join("");
 }
@@ -9280,9 +9324,9 @@ function renderModuleSettingStoreBusinessHoursRow(_item: ModuleSettingCatalogIte
         </li>`;
 }
 
-function renderModuleSettingStoreBusinessHourExceptionsRow(_item: ModuleSettingCatalogItem): string {
+function renderModuleSettingStoreBusinessHourExceptionsRow(item: ModuleSettingCatalogItem): string {
   return `
-        <li class="list-none">
+        <li class="list-none" data-module-setting-row-seq="${item.seq}" data-future-version-diff>
           <div class="border-b border-border px-4 py-3">
             ${renderStoreBusinessHourExceptionsHtml()}
           </div>
@@ -11152,7 +11196,7 @@ function renderHeaderScopeFilters(): string {
     value: string,
   ): string =>
     `<label class="sr-only" for="${id}">${escapeHtml(t(labelKey))}</label>
-      <select id="${id}" class="${sel}" aria-label="${escapeHtml(t(ariaKey))}">
+      <select id="${id}" class="${sel}" aria-label="${escapeHtml(t(ariaKey))}"${id === "scope-region-select" && isBrandDataPerspective() ? " data-future-version-diff" : ""}>
         ${options
           .map((o) => {
             const lab = locale === "en" ? o.labelEn : o.labelZh;
@@ -11293,6 +11337,18 @@ function renderNavHomePanel(): string {
     </div>`;
 }
 
+function renderFutureVersionDiffBanner(): string {
+  if (isMvpProductVersion()) return "";
+  return `
+    <div
+      class="z-50 flex shrink-0 items-center justify-center bg-[#ef4444] px-4 py-2.5 text-center text-sm font-medium leading-snug text-white"
+      data-future-version-diff-banner
+      role="status"
+    >
+      ${escapeHtml(t("shell.futureVersionDiffBanner"))}
+    </div>`;
+}
+
 function renderMain(): string {
   const path = readAppHashPath();
   const tabModule = getTabModule(path);
@@ -11413,6 +11469,7 @@ function renderMain(): string {
     ? `<button
             type="button"
             data-restart-onboarding
+            data-future-version-diff
             class="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-background px-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset sm:h-10 sm:px-3"
             title="${escapeHtml(t("header.restartOnboardingTitle"))}"
           >
@@ -11425,6 +11482,7 @@ function renderMain(): string {
     ? `<button
             type="button"
             data-ai-assistant-open
+            data-future-version-diff
             aria-expanded="${aiAssistantPanelOpen ? "true" : "false"}"
             aria-haspopup="dialog"
             class="inline-flex h-9 items-center gap-1.5 rounded-md border border-primary/35 bg-primary/[0.08] px-2.5 text-sm font-medium text-primary transition-colors hover:bg-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset sm:h-10 sm:px-3 ${aiAssistantPanelOpen ? "ring-2 ring-primary/30" : ""}"
@@ -11819,6 +11877,7 @@ function mount(): void {
   bindChainBrandOrgSyncListener();
   normalizeTabModuleHashes();
   applyUiLocaleToDocument(getUiLocale());
+  syncProductVersionDocumentAttribute();
 
   const authPath = location.hash.slice(1) || "";
   if (!isAuthenticated()) {
@@ -12009,12 +12068,14 @@ function mount(): void {
   const prevMainScrollTop = document.querySelector<HTMLElement>("#app main")?.scrollTop ?? 0;
 
   app.innerHTML = `
-    <div class="relative h-dvh min-h-0 w-full overflow-hidden">
-      <div class="flex h-full min-h-0 w-full">
+    <div class="relative flex h-dvh min-h-0 w-full flex-col overflow-hidden">
+      ${renderFutureVersionDiffBanner()}
+      <div class="flex min-h-0 min-w-0 flex-1 overflow-hidden">
         ${renderSidebar()}
         ${renderMain()}
       </div>
       ${renderAiAssistantFloatingPanel()}
+      ${renderCloudProductRouteNoticeDialog()}
     </div>
   `;
 
@@ -12756,6 +12817,8 @@ function mount(): void {
   bindTeamShiftSchedulingUi(mount);
   bindTeamBreaksOvertimeUi(mount);
   bindTeamClockInUi(mount);
+  bindTeamReportsCloudNoticeUi(mount);
+  bindCloudProductRouteNoticeUi(mount);
   bindTeamTrainingPerformanceUi(mount);
   refreshCashDrawerVarianceAlertThresholdLabels();
   bindGuestNamePageUi();

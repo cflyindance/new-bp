@@ -29,7 +29,7 @@ import {
 import { normalizeFohCatalogItemsForGrouping } from "./foh-settings-group-keys";
 import { FOH_SETTINGS_PATH } from "./foh-settings-by-line-ui";
 import { filterCatalogItemsForPreset } from "./platform-preset-settings-filter";
-import { filterModuleSettingItemsForProductVersion } from "./product-version";
+import { filterModuleSettingItemsForProductVersion, isFutureVersionDiffModuleSettingSeq } from "./product-version";
 import { filterSheetSubnavByPlatformPreset, getFilteredNavModuleSheetSubnav } from "./platform-preset-nav-filter";
 
 /** 无 `subNavPlacement: sheet`、走专用滑层壳的 Hub（与通用壳一并启用搜索） */
@@ -570,6 +570,7 @@ export function renderHubSearchResultsPane(hubId: string, q: string, hits: HubSe
             data-hit-path="${escapeHtml(h.navPath)}"
             data-hit-seq="${h.seq != null ? String(h.seq) : ""}"
             data-hit-kind="${h.kind}"
+            ${h.seq != null && isFutureVersionDiffModuleSettingSeq(h.seq) ? "data-future-version-diff" : ""}
             class="w-full rounded-lg border border-border bg-card px-4 py-3 text-left shadow-sm transition-colors hover:border-primary/40 hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <div class="flex items-start justify-between gap-3">

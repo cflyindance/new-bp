@@ -68,6 +68,15 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+html[data-product-version="future"] [data-future-version-diff] {
+  outline: 2px solid #ef4444;
+  outline-offset: -2px;
+}
+
+html[data-product-version="future"] [data-future-version-diff] [data-future-version-diff] {
+  outline: none;
+}
+
 .dark {
   --color-background: oklch(16% 0.03 250);
   --color-foreground: oklch(96% 0.01 250);

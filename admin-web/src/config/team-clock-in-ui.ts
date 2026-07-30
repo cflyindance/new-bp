@@ -1242,7 +1242,7 @@ export function isTeamClockInPath(path: string): boolean {
 export function renderClockLateGraceSettingRowHtml(): string {
   const settings = readSettings();
   return `
-    <li class="list-none" data-clock-late-grace-row>
+    <li class="list-none" data-clock-late-grace-row data-future-version-diff>
       <div class="border-b border-border px-4 py-3">
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0">
@@ -1280,6 +1280,7 @@ function renderClockTabBar(): string {
           return `
         <button type="button" role="tab"
           data-clock-tab="${tab.key}"
+          ${tab.key === "live" ? "data-future-version-diff" : ""}
           class="min-h-10 border-b-2 px-4 text-sm font-medium transition-colors ${
             selected
               ? "border-primary text-primary"

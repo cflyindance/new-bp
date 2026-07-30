@@ -171,6 +171,16 @@ function findPresetKeyByLandingPath(path: string): string | undefined {
   return buildNavPresetItemRegistry().find((e) => e.landingPath === path)?.key;
 }
 
+/** 三级「功能/设置」模式：所选功能对应的四级 seq */
+function collectPresetItemSeqs(state: AddL1DialogState): number[] {
+  const seqs: number[] = [];
+  for (const key of state.presetItemKeys) {
+    const seq = getNavPresetItemRegistryEntry(key)?.seq;
+    if (seq != null && !seqs.includes(seq)) seqs.push(seq);
+  }
+  return seqs;
+}
+
 function collectSelectedSeqsForSettingsHub(
   blueprintId: string,
   settingsHubL2Id: string,
@@ -459,7 +469,6 @@ function validateAddL3State(state: AddL1DialogState): string[] {
 
   const normalized = normalizeDialogState(state);
   const hasRoute = Boolean(state.selectedRouteId || state.manualL1Route.trim());
-  const syncedL2 = syncFeatureRows(state);
   const parentL2Key = state.addL3UnderL2Id!;
 
   if (normalized.childMode === "page") {
@@ -470,14 +479,11 @@ function validateAddL3State(state: AddL1DialogState): string[] {
 
   const occupiedRoutes = getOccupiedRoutesFromBlueprint(state.blueprintId);
   const occupiedGroupKeys = getOccupiedL3GroupKeysUnderL2(getNavBlueprintDraft(state.blueprintId), parentL2Key);
-  const usedPaths = new Set<string>();
-  const usedGroupKeys = new Set<string>();
 
   if (normalized.childMode === "page") {
     try {
       const path = resolveL2PagePath(state);
       if (occupiedRoutes.has(path)) errors.push(`路由 ${path} 已被占用`);
-      usedPaths.add(path);
       const groupKey = deriveL3GroupKey(state.label.trim());
       if (occupiedGroupKeys.has(groupKey)) errors.push(`分组键 ${groupKey} 在该二级下已存在`);
     } catch {
@@ -486,27 +492,21 @@ function validateAddL3State(state: AddL1DialogState): string[] {
   }
 
   if (normalized.childMode === "features") {
-    for (const row of syncedL2) {
-      if (!row.label.trim() && !row.routePath.trim() && !row.routeId) continue;
-      if (!row.label.trim()) {
-        errors.push("三级分组名称不能为空");
-        continue;
-      }
-      const groupKey = deriveL3GroupKey(row.label.trim());
-      if (usedGroupKeys.has(groupKey)) errors.push(`三级分组「${row.label.trim()}」分组键重复`);
-      if (occupiedGroupKeys.has(groupKey)) errors.push(`分组键 ${groupKey} 在该二级下已存在`);
-      usedGroupKeys.add(groupKey);
+    const groupKey = deriveL3GroupKey(state.label.trim());
+    if (!groupKey) errors.push("请填写有效的三级分组名称");
+    if (occupiedGroupKeys.has(groupKey)) errors.push(`分组键 ${groupKey} 在该二级下已存在`);
 
-      const path = row.routeId
-        ? getNavRouteRegistryEntry(row.routeId)?.path
-        : row.routePath.trim();
-      if (!path) {
-        errors.push(`三级「${row.label}」须选择或填写路由`);
+    const draft = getNavBlueprintDraft(state.blueprintId);
+    for (const key of state.presetItemKeys) {
+      const item = getNavPresetItemRegistryEntry(key);
+      if (!item) continue;
+      if (item.seq == null) {
+        errors.push(`功能「${item.title}」不支持归入三级分组`);
         continue;
       }
-      if (occupiedRoutes.has(path)) errors.push(`路由 ${path} 已被占用`);
-      if (usedPaths.has(path)) errors.push(`路由 ${path} 在表单内重复`);
-      usedPaths.add(path);
+      if (draft.customSeqAssignments[item.seq]) {
+        errors.push(`功能「${item.title}」已归属到其他三级分组`);
+      }
     }
   }
 
@@ -981,7 +981,9 @@ function renderConfigModeSection(state: AddL1DialogState): string {
     : addingL2
       ? "二级直达，无三级子导航"
       : "一级直达，无二级子导航";
-  const featuresModeDesc = addingL2 ? "勾选后将生成二级导航" : "勾选后将生成二级导航";
+  const featuresModeDesc = addingL3
+    ? "勾选后归入该分组的四级功能/设置"
+    : "勾选后将生成二级导航";
   const manualModeDesc = addingL3 ? "手动勾选四级设置项" : addingL2 ? "手动添加三级子项" : "手动添加二级子项";
   const pickerPanel = isPage ? pageBlock : isFeatures ? featuresBlock : "";
 
@@ -1410,22 +1412,15 @@ function submitAddL3Dialog(state: AddL1DialogState): void {
   }
 
   if (mode === "features") {
-    for (const row of syncFeatureRows(state)) {
-      if (!row.label.trim()) continue;
-      const path = row.routeId
-        ? getNavRouteRegistryEntry(row.routeId)?.path ?? row.routePath.trim()
-        : row.routePath.trim();
-      if (!path) continue;
-      const item = row.fromPresetItemKey ? getNavPresetItemRegistryEntry(row.fromPresetItemKey) : undefined;
-      createNavBlueprintL3UnderL2(state.blueprintId, parentL2Key, {
-        label: row.label.trim(),
-        groupKey: item?.groupKey ?? deriveL3GroupKey(row.label.trim()),
-        settingsPath,
-        route: path,
-        l3MountKind: "features",
-        settingsSeqs: item?.seq != null ? [item.seq] : undefined,
-      });
-    }
+    const seqs = collectPresetItemSeqs(state);
+    createNavBlueprintL3UnderL2(state.blueprintId, parentL2Key, {
+      label: state.label.trim(),
+      labelEn,
+      groupKey: deriveL3GroupKey(state.label.trim()),
+      settingsPath,
+      l3MountKind: "features",
+      settingsSeqs: seqs.length ? seqs : undefined,
+    });
     return;
   }
 

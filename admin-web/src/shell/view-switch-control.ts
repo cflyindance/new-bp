@@ -109,6 +109,7 @@ function renderChainPerspectiveItem(perspective: ChainViewSwitchPerspective): st
       type="button"
       role="menuitem"
       data-view-switch-chain-perspective="${perspective}"
+      ${perspective === "group-hq" ? "data-future-version-diff" : ""}
       class="flex w-full min-h-9 items-center gap-2 rounded-md px-2.5 py-2 pl-6 text-left text-sm transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${active ? "bg-accent/60 font-medium text-accent-foreground" : "text-foreground"}${disabledClass}"
       title="${hint}"
       aria-current="${active ? "true" : "false"}"${disabledAttrs}
@@ -125,6 +126,7 @@ function renderMPlatformMenuItem(current: ViewSwitchMode): string {
       type="button"
       role="menuitem"
       data-view-switch-option="m-platform"
+      data-future-version-diff
       class="flex w-full min-h-9 items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${active ? "bg-accent/60 font-medium text-accent-foreground" : "text-foreground"}"
       title="${escapeHtml(t("shell.mPlatformHint"))}"
       aria-current="${active ? "true" : "false"}"

@@ -174,6 +174,7 @@ export function renderFohSettingsViewModeBar(path: string): string {
     <div
       class="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 shadow-sm"
       data-foh-settings-view-mode-bar
+      data-future-version-diff
       role="group"
       aria-label="${escapeHtml(t("moduleSettings.fohView.modeAria"))}"
     >

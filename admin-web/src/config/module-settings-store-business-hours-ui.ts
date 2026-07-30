@@ -728,7 +728,7 @@ function renderScheduleCard(
             ${
               isMvpProductVersion()
                 ? ""
-                : `<span class="inline-flex rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground tabular-nums">
+                : `<span class="inline-flex rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground tabular-nums" data-future-version-diff>
               ${escapeHtml(formatDateRange(schedule.fromDate, schedule.toDate))}
             </span>`
             }
@@ -880,7 +880,7 @@ function renderScheduleDialog(): string {
             </div>
           </div>
           <div class="rounded-lg border border-border bg-muted/20 p-4 space-y-4">
-            <div class="space-y-4 ${mvp ? "hidden" : ""}" data-business-hour-schedule-effective-dates>
+            <div class="space-y-4 ${mvp ? "hidden" : ""}" data-business-hour-schedule-effective-dates data-future-version-diff>
               <div>
                 <p class="${LABEL_CLASS}">生效日期</p>
               </div>
@@ -1061,16 +1061,16 @@ function renderExceptionDialog(): string {
               </label>
             </div>
           </fieldset>
-          <div class="space-y-1.5" data-business-hour-exception-name-field>
+          <div class="space-y-1.5" data-business-hour-exception-name-field data-future-version-diff>
             <label class="${LABEL_CLASS}" for="business-hour-exception-name">名称</label>
             <input id="business-hour-exception-name" type="text" class="${INPUT_CLASS}" data-business-hour-exception-name placeholder="如：国庆节、调休" />
           </div>
           <div class="grid grid-cols-2 gap-4" data-business-hour-exception-time-fields>
-            <div class="space-y-1.5">
+            <div class="space-y-1.5" data-future-version-diff>
               <label class="${LABEL_CLASS}" for="business-hour-exception-open">开始时间</label>
               <input id="business-hour-exception-open" type="time" class="${INPUT_CLASS} tabular-nums" data-business-hour-exception-open value="11:00" />
             </div>
-            <div class="space-y-1.5">
+            <div class="space-y-1.5" data-future-version-diff>
               <label class="${LABEL_CLASS}" for="business-hour-exception-close">结束时间</label>
               <input id="business-hour-exception-close" type="time" class="${INPUT_CLASS} tabular-nums" data-business-hour-exception-close value="22:00" />
             </div>
@@ -1078,12 +1078,12 @@ function renderExceptionDialog(): string {
           <div class="rounded-lg border border-border bg-muted/20 p-4 space-y-4">
             <div class="flex items-center justify-between gap-2">
               <p class="${LABEL_CLASS}" data-business-hour-exception-date-section-label>生效日期</p>
-              <button type="button" class="text-xs text-primary hover:underline disabled:opacity-40 disabled:no-underline" data-business-hour-exception-date-add>+ 添加生效时间</button>
+              <button type="button" class="text-xs text-primary hover:underline disabled:opacity-40 disabled:no-underline" data-business-hour-exception-date-add data-future-version-diff>+ 添加生效时间</button>
             </div>
             <div class="space-y-3" data-business-hour-exception-date-list>
               ${renderExceptionDateRows([today])}
             </div>
-            <div class="space-y-2 border-t border-border pt-4" data-business-hour-exception-weekly-repeat>
+            <div class="space-y-2 border-t border-border pt-4" data-business-hour-exception-weekly-repeat data-future-version-diff>
               <div class="flex items-center justify-between gap-2">
                 <p class="${LABEL_CLASS}">每周重复</p>
                 <div class="flex gap-1">

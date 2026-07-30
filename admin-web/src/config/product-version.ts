@@ -1,5 +1,6 @@
 /**
  * 商家后台产品版本：MVP / 未来版本（影响侧栏导航展示）
+ * 默认：未来版本（sessionStorage 未写入或非显式 mvp 时）
  */
 export type ProductVersion = "mvp" | "future";
 
@@ -17,19 +18,47 @@ export const MVP_BRAND_PERSPECTIVE_HIDDEN_NAV_MODULE_IDS = ["brand-store-list"] 
 /** MVP 下系统设置内隐藏的二级导航（仅隐藏，不删除配置） */
 export const MVP_HIDDEN_SETTINGS_NAV_CHILD_IDS = ["set-platform-preset"] as const;
 
+/** 团队管理侧滑二级中相较 MVP 的差异项（复杂版本红框标注） */
+export const FUTURE_VERSION_DIFF_TEAM_NAV_CHILD_IDS = ["team-training", "team-settings"] as const;
+
 /** MVP 下模块设置中隐藏的 seq（仅隐藏，不删除 catalog 配置） */
 export const MVP_HIDDEN_MODULE_SETTING_SEQS = [583] as const;
 
 let memoryVersion: ProductVersion | undefined;
 
+/** 是否为相较 MVP 仅在未来版本展示的一级导航。 */
+export function isFutureVersionDiffNavModule(moduleId: string): boolean {
+  return (
+    (MVP_GLOBAL_HIDDEN_NAV_MODULE_IDS as readonly string[]).includes(moduleId) ||
+    (MVP_GROUP_HQ_HIDDEN_NAV_MODULE_IDS as readonly string[]).includes(moduleId) ||
+    (MVP_BRAND_PERSPECTIVE_HIDDEN_NAV_MODULE_IDS as readonly string[]).includes(moduleId)
+  );
+}
+
+/** 是否为相较 MVP 仅在未来版本展示的系统设置二级导航。 */
+export function isFutureVersionDiffSettingsNavChild(childId: string): boolean {
+  return (MVP_HIDDEN_SETTINGS_NAV_CHILD_IDS as readonly string[]).includes(childId);
+}
+
+/** 是否为团队管理侧滑二级中的未来版本差异项。 */
+export function isFutureVersionDiffTeamNavChild(childId: string): boolean {
+  return (FUTURE_VERSION_DIFF_TEAM_NAV_CHILD_IDS as readonly string[]).includes(childId);
+}
+
+/** 是否为相较 MVP 仅在未来版本展示的模块设置项。 */
+export function isFutureVersionDiffModuleSettingSeq(seq: number): boolean {
+  return (MVP_HIDDEN_MODULE_SETTING_SEQS as readonly number[]).includes(seq);
+}
+
 export function readProductVersion(): ProductVersion {
   if (memoryVersion) return memoryVersion;
   try {
     const raw = sessionStorage.getItem(STORAGE_KEY);
-    memoryVersion = raw === "future" ? "future" : "mvp";
+    // 未选择过时默认「未来版本」；仅显式存为 mvp 时走 MVP
+    memoryVersion = raw === "mvp" ? "mvp" : "future";
     return memoryVersion;
   } catch {
-    memoryVersion = "mvp";
+    memoryVersion = "future";
     return memoryVersion;
   }
 }
@@ -41,11 +70,18 @@ export function writeProductVersion(version: ProductVersion): void {
   } catch {
     /* ignore */
   }
+  syncProductVersionDocumentAttribute();
   window.dispatchEvent(new CustomEvent("menusifu:product-version-change", { detail: { version } }));
 }
 
 export function isMvpProductVersion(): boolean {
   return readProductVersion() === "mvp";
+}
+
+/** 供统一差异样式按当前产品版本启停。 */
+export function syncProductVersionDocumentAttribute(): void {
+  if (typeof document === "undefined") return;
+  document.documentElement.dataset.productVersion = readProductVersion();
 }
 
 /** MVP 下是否隐藏某模块设置项（如「额外时间」） */

@@ -166,6 +166,7 @@ function renderMerchantPresetContextBanner(viewScope: MerchantPresetViewScope): 
           ? `<button
         type="button"
         data-restart-onboarding
+        data-future-version-diff
         class="mt-2 text-xs font-medium text-primary hover:underline"
       >重新引导</button>`
           : ""
