@@ -996,7 +996,7 @@
     function getAllowedPoolRuleTypes() {
       return isSurchargePoolKind()
         ? ['surcharge', 'custom']
-        : ['sales', 'personal_sales', 'tips', 'surcharge', 'manual', 'custom'];
+        : ['sales', 'personal_sales', 'tips', 'manual', 'custom'];
     }
 
     /** 解析池规则类型：兼容 personal_sales_1 这类含下划线的 type */
@@ -2623,15 +2623,22 @@
 
     var SURCHARGE_TYPE_OPTIONS = [
       { value: '商品', label: '商品' },
-      { value: '订单', label: '订单' },
-      { value: '全部', label: '全部' }
+      { value: '订单', label: '订单' }
     ];
-    function buildSurchargeTypeRadioHtml(selected) {
-      var sel = selected || '全部';
+    function getSurchargeTypeOptionsHtml() {
       return SURCHARGE_TYPE_OPTIONS.map(function(o) {
-        var checked = sel === o.value ? ' checked' : '';
-        return '<label class="radio-item" style="margin:0"><input type="radio" name="surchargeTypeValue" value="' + o.value + '"' + checked + '> ' + o.label + '</label>';
+        return '<label class="multi-select-option"><input type="checkbox" value="' + o.value + '"> ' + o.label + '</label>';
       }).join('');
+    }
+    function normalizeSurchargeTypeValues(value) {
+      var allowed = SURCHARGE_TYPE_OPTIONS.map(function(o) { return o.value; });
+      var arr = [];
+      if (Array.isArray(value)) arr = value.slice();
+      else if (value === '全部') arr = allowed.slice();
+      else if (value != null && value !== '') arr = [String(value)];
+      return arr.filter(function(v, i, a) {
+        return allowed.indexOf(v) >= 0 && a.indexOf(v) === i;
+      });
     }
 
     function toggleAddConditionMenu(drawerId) {
@@ -2996,7 +3003,11 @@
       } else if (type === 'tipType') {
         body = '<div class="drawer-form-row"><label>' + tipTerm('小费类型：') + '</label><select class="form-control" style="flex:1">' + getTipTypeSelectHtml() + '</select></div>';
       } else if (type === 'surchargeType') {
-        body = '<div class="drawer-form-row" style="align-items:flex-start"><label style="padding-top:2px">加收类型：</label><div class="radio-group" style="flex-direction:row;flex-wrap:wrap;gap:16px;flex:1">' + buildSurchargeTypeRadioHtml('全部') + '</div></div>';
+        body = '<div class="drawer-form-row"><label>加收类型：</label><div class="multi-select surcharge-type-select" id="surchargeTypeSelect" style="flex:1" data-placeholder="请选择加收类型">' +
+          '<div class="multi-select-input" onclick="toggleMultiSelect(\'surchargeTypeSelect\')">' +
+          '<div class="multi-select-tags"><span class="multi-select-placeholder">请选择加收类型</span></div>' +
+          '<svg class="multi-select-arrow" width="12" height="12" viewBox="0 0 12 12" fill="#999"><path d="M6 8.825a.5.5 0 0 1-.354-.146l-4-4a.5.5 0 0 1 .708-.708L6 7.617l3.646-3.646a.5.5 0 0 1 .708.708l-4 4A.5.5 0 0 1 6 8.825z"/></svg></div>' +
+          '<div class="multi-select-dropdown">' + getSurchargeTypeOptionsHtml() + '</div></div></div>';
       } else if (type === 'shift') {
         body = '<div class="drawer-form-row"><label>班次：</label><div class="multi-select shift-condition-select" id="surchargeShiftConditionSelect" style="flex:1" data-placeholder="请选择班次">' +
           '<div class="multi-select-input" onclick="toggleMultiSelect(\'surchargeShiftConditionSelect\')">' +
@@ -3275,10 +3286,14 @@
         var sel = card.querySelector('select');
         if (sel && value) sel.value = value;
       } else if (type === 'surchargeType') {
-        var stVal = value || '全部';
-        card.querySelectorAll('input[name="surchargeTypeValue"]').forEach(function(r) {
-          r.checked = r.value === stVal;
-        });
+        var stArr = normalizeSurchargeTypeValues(value);
+        var stMs = card.querySelector('.surcharge-type-select');
+        if (stMs) {
+          stMs.querySelectorAll('input[type="checkbox"]').forEach(function(cb) {
+            cb.checked = stArr.indexOf(cb.value) >= 0;
+          });
+          if (stMs.id) refreshMultiTags(stMs.id);
+        }
       } else if (type === 'hours' && value && (value.start || value.end)) {
         var inputs = card.querySelectorAll('input[type="time"]');
         if (inputs[0] && value.start) inputs[0].value = value.start;
@@ -4919,8 +4934,9 @@
       if (Array.isArray(cond.employee) && cond.employee.length) parts.push('员工: ' + cond.employee.join(', '));
       if (cond.area) parts.push('订单区域: ' + cond.area);
       if (cond.orderType) parts.push('订单类型: ' + cond.orderType);
-      if (cond.surchargeType) parts.push('加收类型: ' + cond.surchargeType);
-      else if (cond.tipType) parts.push(tipTerm('小费类型: ') + cond.tipType);
+      if (cond.surchargeType) {
+        parts.push('加收类型: ' + (Array.isArray(cond.surchargeType) ? cond.surchargeType.join(', ') : cond.surchargeType));
+      } else if (cond.tipType) parts.push(tipTerm('小费类型: ') + cond.tipType);
       if (cond.hours && (cond.hours.start || cond.hours.end)) parts.push('营业时间段: ' + (cond.hours.start || '') + '-' + (cond.hours.end || ''));
       if (Array.isArray(cond.shift) && cond.shift.length) parts.push('班次: ' + formatShiftSelectionForDisplay(cond.shift));
       if (Array.isArray(cond.weekdays) && cond.weekdays.length) parts.push('周期: ' + formatWeekdaysCondDisplay(cond.weekdays));
@@ -4980,7 +4996,7 @@
         if (Array.isArray(cond.employee) && cond.employee.length) return true;
         if (cond.area) return true;
         if (cond.orderType) return true;
-        if (cond.surchargeType) return true;
+        if (cond.surchargeType && (!Array.isArray(cond.surchargeType) || cond.surchargeType.length)) return true;
         if (cond.tipType) return true;
         if (cond.hours && (cond.hours.start || cond.hours.end)) return true;
         if (Array.isArray(cond.shift) && cond.shift.length) return true;
@@ -5191,8 +5207,10 @@
           var sel = card.querySelector('select');
           if (sel) cond[type] = sel.value || '';
         } else if (type === 'surchargeType') {
-          var stRadio = card.querySelector('input[name="surchargeTypeValue"]:checked');
-          if (stRadio) cond.surchargeType = stRadio.value;
+          var stMs = card.querySelector('.surcharge-type-select');
+          if (stMs) {
+            cond.surchargeType = Array.from(stMs.querySelectorAll('input[type="checkbox"]:checked')).map(function(c) { return c.value; });
+          }
         } else if (type === 'hours') {
           var inputs = card.querySelectorAll('input[type="time"]');
           cond.hours = { start: inputs[0] ? inputs[0].value : '', end: inputs[1] ? inputs[1].value : '' };

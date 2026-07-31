@@ -738,8 +738,9 @@
       if (Array.isArray(cond.employee) && cond.employee.length) parts.push('员工: ' + cond.employee.join(', '));
       if (cond.area) parts.push('订单区域: ' + (Array.isArray(cond.area) ? cond.area.join(', ') : cond.area));
       if (cond.orderType) parts.push('订单类型: ' + (Array.isArray(cond.orderType) ? cond.orderType.join(', ') : cond.orderType));
-      if (cond.surchargeType) parts.push('加收类型: ' + cond.surchargeType);
-      else if (cond.tipType) parts.push('小费类型: ' + cond.tipType);
+      if (cond.surchargeType) {
+        parts.push('加收类型: ' + (Array.isArray(cond.surchargeType) ? cond.surchargeType.join(', ') : cond.surchargeType));
+      } else if (cond.tipType) parts.push('小费类型: ' + cond.tipType);
       if (cond.containsProduct && detailMenuCascadeHasAny(cond.containsProduct)) {
         var cpTxt = detailFormatMenuCascade(cond.containsProduct);
         if (cpTxt) parts.push('订单需包含商品: ' + cpTxt);
