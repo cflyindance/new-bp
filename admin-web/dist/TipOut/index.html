@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>小费分配 - TipOut</title>
+  <title>小费分配汇总 - TipOut</title>
   <link rel="stylesheet" href="common.css">
   <style>
     .date-range-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; width: 100%; }
@@ -208,7 +208,7 @@
           <svg class="arrow" width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M6 8.825a.5.5 0 0 1-.354-.146l-4-4a.5.5 0 0 1 .708-.708L6 7.617l3.646-3.646a.5.5 0 0 1 .708.708l-4 4A.5.5 0 0 1 6 8.825z"/></svg>
         </div>
         <div class="sidebar-submenu-items" style="max-height:200px">
-          <a href="index.html" class="sidebar-menu-item active">小费分配</a>
+          <a href="index.html" class="sidebar-menu-item active">小费分配汇总</a>
         </div>
         <div class="sidebar-submenu-title open" onclick="this.classList.toggle('open');this.nextElementSibling.style.maxHeight=this.classList.contains('open')?'200px':'0'">
           <span>员工管理</span>
@@ -242,7 +242,7 @@
       </header>
 
       <div class="page-tabs">
-        <a href="index.html" class="page-tab active">小费分配</a>
+        <a href="index.html" class="page-tab active">小费分配汇总</a>
         <a href="detail.html" class="page-tab">小费分配明细</a>
         <a href="rules.html" class="page-tab">小费分配规则</a>
       </div>
@@ -405,6 +405,7 @@
   <script src="ruleData.js"></script>
   <script src="personalSalesDeduct.js"></script>
   <script src="tipAllocation.js"></script>
+  <script src="attendanceMock.js"></script>
   <script src="tipout-payroll-bridge.js"></script>
   <script>
     var ALLOC_KEY = 'tipout_allocated';
@@ -674,11 +675,32 @@
       return pipeline;
     }
 
+    function formatHoursDisplay(hours) {
+      var n = Number(hours);
+      if (!isFinite(n) || n === 0) return '0';
+      return (Math.round(n * 100) / 100).toString();
+    }
+
+    function clockStatusTagHtml(clockStatus) {
+      var status = clockStatus || '未打卡';
+      var tagClass = status === '已打卡' ? 'tag-green' : 'tag-orange';
+      return '<span class="tag ' + tagClass + '">' + status + '</span>';
+    }
+
+    function attachAttendance(row, emp, dateKey) {
+      var att = (window.TipOutAttendance && TipOutAttendance.getDayStatus)
+        ? TipOutAttendance.getDayStatus(emp.name, dateKey)
+        : { hours: 0, clockStatus: '未打卡' };
+      row.hours = att.hours;
+      row.clockStatus = att.clockStatus;
+      return row;
+    }
+
     function genDailyTip(emp, dateKey) {
       var pipeline = ensureDayPipeline(dateKey);
       if (pipeline && pipeline.byName && pipeline.byName[emp.name]) {
         var row = pipeline.byName[emp.name];
-        return {
+        return attachAttendance({
           date: dateKey,
           before: row.before,
           deducted: row.deducted,
@@ -687,7 +709,7 @@
           due: row.due,
           shortfall: row.shortfall,
           salesAmount: row.salesAmount
-        };
+        }, emp, dateKey);
       }
 
       const seed = dateKey.split('-').reduce((a, b) => a * 31 + parseInt(b), 0) + emp.name.length * 7 + emp.name.charCodeAt(0);
@@ -720,7 +742,7 @@
       }
 
       var after = calcTipAfter(before, deducted, received);
-      return { date: dateKey, before: before, deducted: deducted, received: received, after: after };
+      return attachAttendance({ date: dateKey, before: before, deducted: deducted, received: received, after: after }, emp, dateKey);
     }
 
     function getDateRange() {
@@ -915,7 +937,7 @@
 
         const empId = 'emp_' + idx;
         const rows = dailyData.map(function(d) {
-          return '<tr><td>' + d.date + '</td><td>' + money(d.before) + '</td><td class="tip-amount--deduct">' +
+          return '<tr><td>' + d.date + '</td><td>' + formatHoursDisplay(d.hours) + '</td><td>' + clockStatusTagHtml(d.clockStatus) + '</td><td>' + money(d.before) + '</td><td class="tip-amount--deduct">' +
             (d.deducted > 0 ? '−' + money(d.deducted).replace(/^-/, '') : money(0)) + '</td><td class="tip-amount--receive">' +
             (d.received > 0 ? moneySign(d.received) : money(0)) + '</td><td>' + money(d.after) + '</td></tr>';
         }).join('');
@@ -955,7 +977,7 @@
             (totalReceived > 0 ? ' + ' + money(totalReceived) : '') + '）</p>' +
           '<div class="employee-detail">' +
             '<table class="data-table">' +
-              '<thead><tr><th>日期</th><th>分配前</th><th>扣除</th><th>分得</th><th>分配后</th></tr></thead>' +
+              '<thead><tr><th>日期</th><th>员工工时</th><th>打卡状态</th><th>分配前</th><th>扣除</th><th>分得</th><th>分配后</th></tr></thead>' +
               '<tbody>' + rows + '</tbody>' +
             '</table>' +
           '</div>';

@@ -52,13 +52,28 @@
     .detail-table .action-cell a.danger { color: var(--danger); }
     .bottom-actions {
       position: fixed; bottom: 0; right: 0; left: 264px; z-index: 40;
-      display: flex; justify-content: flex-end; gap: 12px; padding: 12px 24px;
+      display: grid; grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center; column-gap: 12px; padding: 12px 24px;
       background: #fff; border-top: 1px solid var(--border-light);
       box-shadow: 0 -2px 8px rgba(0,0,0,0.06);
+      box-sizing: border-box;
+    }
+    body.tipout-embedded .bottom-actions { left: 0; }
+    .bottom-actions-start {
+      display: flex; align-items: center; justify-self: start; min-width: 0; gap: 12px;
+    }
+    .bottom-actions-end {
+      display: flex; align-items: center; justify-content: flex-end; gap: 12px; justify-self: end;
     }
     .content-area { padding-bottom: 72px; }
     @media (max-width: 768px) {
-      .bottom-actions { left: 0; flex-wrap: wrap; justify-content: center; gap: 8px; padding: 10px 12px; }
+      .bottom-actions {
+        left: 0; grid-template-columns: 1fr; gap: 8px; padding: 10px 12px;
+      }
+      .bottom-actions-start,
+      .bottom-actions-end {
+        display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; width: 100%;
+      }
       .bottom-actions .btn { flex: 1 1 auto; min-width: calc(50% - 8px); min-height: 44px; font-size: 14px; }
       .bottom-actions .btn-lg { padding-left: 12px; padding-right: 12px; }
     }
@@ -178,7 +193,7 @@
           <svg class="arrow" width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M6 8.825a.5.5 0 0 1-.354-.146l-4-4a.5.5 0 0 1 .708-.708L6 7.617l3.646-3.646a.5.5 0 0 1 .708.708l-4 4A.5.5 0 0 1 6 8.825z"/></svg>
         </div>
         <div class="sidebar-submenu-items" style="max-height:200px">
-          <a href="index.html" class="sidebar-menu-item active">小费分配</a>
+          <a href="index.html" class="sidebar-menu-item active">小费分配汇总</a>
         </div>
         <div class="sidebar-submenu-title open" onclick="this.classList.toggle('open');this.nextElementSibling.style.maxHeight=this.classList.contains('open')?'200px':'0'">
           <span>员工管理</span>
@@ -214,7 +229,7 @@
       </header>
 
       <div class="page-tabs">
-        <a href="index.html" class="page-tab">小费分配</a>
+        <a href="index.html" class="page-tab">小费分配汇总</a>
         <a href="detail.html" class="page-tab active">小费分配明细</a>
         <a href="rules.html" class="page-tab">小费分配规则</a>
       </div>
@@ -251,8 +266,13 @@
       </div>
 
       <div class="bottom-actions">
-        <button class="btn btn-primary btn-lg" onclick="saveDetail()">保存</button>
-        <button class="btn btn-primary btn-lg" onclick="saveAndNext()">保存并跳转到下一天</button>
+        <div class="bottom-actions-start">
+          <button type="button" class="btn btn-lg" onclick="updateTipData()">更新小费数据</button>
+        </div>
+        <div class="bottom-actions-end">
+          <button class="btn btn-primary btn-lg" onclick="saveDetail()">保存</button>
+          <button class="btn btn-primary btn-lg" onclick="saveAndNext()">保存并跳转到下一天</button>
+        </div>
       </div>
     </div>
   </div>
@@ -754,7 +774,7 @@
           parts.push('菜单: ' + m);
         }
       }
-      if (cond.revenueType) parts.push('营业额类型: ' + cond.revenueType);
+      if (cond.revenueType) parts.push('营业额: ' + cond.revenueType);
       if (cond.orderTipStatus === 'has_tip') parts.push('订单小费状态: 含小费');
       else if (cond.orderTipStatus === 'no_tip') parts.push('订单小费状态: 不含小费');
       if (Array.isArray(cond.paymentMethods) && cond.paymentMethods.length) {
@@ -1385,6 +1405,11 @@
 
     function saveDetail() {
       showNotification('保存成功', 'success');
+    }
+
+    function updateTipData() {
+      renderDetailPage();
+      showNotification('小费数据已更新', 'success');
     }
 
     function saveAndNext() {

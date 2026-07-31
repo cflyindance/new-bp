@@ -28,6 +28,7 @@ import {
 } from "./app-shell-mode";
 
 import { shouldShowGroupHqViewSwitchOption, shouldShowMPlatformViewSwitchOption } from "../config/product-version";
+import { renderNonMvpBadgeHtml } from "../config/cloud-product-route-notice-ui";
 import { APP_NAV_HOME_PATH } from "../config/app-routes";
 import { NAV_BLUEPRINT_ROUTE_PREFIX } from "../config/nav-blueprint-ui";
 
@@ -109,13 +110,12 @@ function renderChainPerspectiveItem(perspective: ChainViewSwitchPerspective): st
       type="button"
       role="menuitem"
       data-view-switch-chain-perspective="${perspective}"
-      ${perspective === "group-hq" ? "data-future-version-diff" : ""}
       class="flex w-full min-h-9 items-center gap-2 rounded-md px-2.5 py-2 pl-6 text-left text-sm transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${active ? "bg-accent/60 font-medium text-accent-foreground" : "text-foreground"}${disabledClass}"
       title="${hint}"
       aria-current="${active ? "true" : "false"}"${disabledAttrs}
     >
       <span class="flex size-4 shrink-0 items-center justify-center">${active ? CHECK_ICON : ""}</span>
-      <span class="min-w-0 flex-1 truncate">${label}</span>
+      <span class="min-w-0 flex-1 truncate">${label}</span>${perspective === "group-hq" ? renderNonMvpBadgeHtml() : ""}
     </button>`;
 }
 
@@ -126,13 +126,12 @@ function renderMPlatformMenuItem(current: ViewSwitchMode): string {
       type="button"
       role="menuitem"
       data-view-switch-option="m-platform"
-      data-future-version-diff
       class="flex w-full min-h-9 items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${active ? "bg-accent/60 font-medium text-accent-foreground" : "text-foreground"}"
       title="${escapeHtml(t("shell.mPlatformHint"))}"
       aria-current="${active ? "true" : "false"}"
     >
       <span class="flex size-4 shrink-0 items-center justify-center">${active ? CHECK_ICON : ""}</span>
-      <span class="min-w-0 flex-1 truncate">${escapeHtml(t("shell.mPlatform"))}</span>
+      <span class="min-w-0 flex-1 truncate">${escapeHtml(t("shell.mPlatform"))}</span>${renderNonMvpBadgeHtml()}
     </button>`;
 }
 

@@ -20,7 +20,7 @@
           <svg class="arrow" width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M6 8.825a.5.5 0 0 1-.354-.146l-4-4a.5.5 0 0 1 .708-.708L6 7.617l3.646-3.646a.5.5 0 0 1 .708.708l-4 4A.5.5 0 0 1 6 8.825z"/></svg>
         </div>
         <div class="sidebar-submenu-items" style="max-height:200px">
-          <a href="index.html" class="sidebar-menu-item">小费分配</a>
+          <a href="index.html" class="sidebar-menu-item">小费分配汇总</a>
         </div>
         <div class="sidebar-submenu-title open" onclick="this.classList.toggle('open');this.nextElementSibling.style.maxHeight=this.classList.contains('open')?'200px':'0'">
           <span>员工管理</span>
@@ -494,6 +494,7 @@
             </article>
             <div class="payroll-detail-export-fixed no-print">
               <div class="payroll-detail-export-actions">
+                <button type="button" id="btn-print-detail" class="btn btn-lg">打印</button>
                 <div class="payroll-detail-export-dropdown export-dropdown">
                   <button type="button" class="btn btn-primary btn-lg" onclick="togglePayrollDetailExportMenu()">
                     导出结果
@@ -514,7 +515,6 @@
                     </div>
                   </div>
                 </div>
-                <button type="button" id="btn-print-detail" class="btn btn-lg">打印 / PDF</button>
               </div>
             </div>
           </div>
@@ -717,6 +717,7 @@
         <div id="employeesDetailModalBody" class="payroll-page payroll-entered"></div>
       </div>
       <div class="modal-footer">
+        <button type="button" class="btn" id="btn-employees-detail-print">打印</button>
         <div class="export-dropdown employees-detail-export-dropdown">
           <button type="button" class="btn btn-primary" id="btn-employees-detail-export-toggle">
             导出结果

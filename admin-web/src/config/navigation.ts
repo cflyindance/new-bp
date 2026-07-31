@@ -696,7 +696,7 @@ export interface TipsManagementSubItem {
 }
 
 export const TIPS_MANAGEMENT_SUBNAV: TipsManagementSubItem[] = [
-  { id: "tips-distribution", title: "小费分配", titleEn: "Tip distribution", path: "/team/tips/distribution" },
+  { id: "tips-distribution", title: "小费分配汇总", titleEn: "Tip distribution summary", path: "/team/tips/distribution" },
   { id: "tips-details", title: "分配明细", titleEn: "Distribution details", path: "/team/tips/details" },
   { id: "tips-rules", title: "分配规则", titleEn: "Distribution rules", path: "/team/tips/rules" },
 ];

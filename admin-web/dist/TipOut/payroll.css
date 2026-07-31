@@ -1825,4 +1825,55 @@ body.tipout-embedded .payroll-page .payroll-detail-export-fixed {
   body {
     background: #fff;
   }
+
+  /* 当前页打印：只输出员工明细，不新开窗口 */
+  body.payroll-printing-detail * {
+    visibility: hidden !important;
+  }
+  body.payroll-printing-detail .payroll-detail-print,
+  body.payroll-printing-detail .payroll-detail-print * {
+    visibility: visible !important;
+  }
+  body.payroll-printing-detail .payroll-detail-print .no-print,
+  body.payroll-printing-detail .payroll-detail-print .no-print * {
+    display: none !important;
+    visibility: hidden !important;
+  }
+  body.payroll-printing-detail .payroll-detail-print {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    background: #fff;
+  }
+  body.payroll-printing-from-modal #tab-panel-detail {
+    display: none !important;
+  }
+  body.payroll-printing-detail:not(.payroll-printing-from-modal) #employeesDetailPreviewModal {
+    display: none !important;
+  }
+  body.payroll-printing-from-modal #employeesDetailPreviewModal,
+  body.payroll-printing-from-modal #employeesDetailPreviewModal .modal,
+  body.payroll-printing-from-modal #employeesDetailPreviewModal .modal-body,
+  body.payroll-printing-from-modal #employeesDetailModalBody {
+    position: static !important;
+    inset: auto !important;
+    transform: none !important;
+    width: 100% !important;
+    max-width: none !important;
+    max-height: none !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+  body.payroll-printing-from-modal #employeesDetailPreviewModal .modal-header,
+  body.payroll-printing-from-modal #employeesDetailPreviewModal .modal-footer {
+    display: none !important;
+  }
 }

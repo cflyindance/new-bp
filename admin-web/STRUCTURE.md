@@ -121,7 +121,7 @@ admin-web/
 
 ### 团队管理 · 小费管理（三级：侧栏「小费管理」+ 主区左侧细项）
 
-路径 **`/team/tips/distribution`**、**`/team/tips/details`**、**`/team/tips/rules`**（及以其为前缀的子路径）：主导航展开 **团队管理** 后选 **小费管理**，`tabpanel` 内左侧细项见 **`TIPS_MANAGEMENT_SUBNAV`**（小费分配、分配明细、分配规则）。访问 **`#/team/tips`**（仅该段）会重定向到 **`getTipsManagementDefaultPath()`**。
+路径 **`/team/tips/distribution`**、**`/team/tips/details`**、**`/team/tips/rules`**（及以其为前缀的子路径）：主导航展开 **团队管理** 后选 **小费管理**，`tabpanel` 内左侧细项见 **`TIPS_MANAGEMENT_SUBNAV`**（小费分配汇总、分配明细、分配规则）。访问 **`#/team/tips`**（仅该段）会重定向到 **`getTipsManagementDefaultPath()`**。
 
 ### 团队管理 · 员工报表（三级：侧栏「员工报表」+ 主区左侧细项）
 

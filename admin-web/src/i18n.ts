@@ -32,6 +32,9 @@ const messages = {
     "hubSearch.typeDesc": "说明匹配",
     "hubSearch.crumbSettings": "设置",
     "badge.chain": "连锁",
+    "badge.cloudProduct": "云产品",
+    "badge.cloudProductPartial": "部分-云产品",
+    "badge.nonMvp": "非MVP版本",
     "shell.appName": "米聚集团",
     "shell.appTagline": "MenuSifu智慧餐饮管理中心",
     "shell.groupSwitchAria": "切换集团",
@@ -266,7 +269,7 @@ const messages = {
     "placeholder.bullet.deviceHw":
       "<strong class=\"text-card-foreground\">硬件管理中心 · 硬件</strong>：在左侧主导航点击「硬件管理中心」打开<strong class=\"text-card-foreground\">右滑二级导航</strong>后选择 <strong class=\"text-card-foreground\">硬件</strong>；本区域左侧为硬件细项（支付设备、钱箱、路由器、POS、POS GO、KDS、叫号屏、打印机、电子秤、Kiosk、eMenu），交互同本后台其它三级侧栏。",
     "placeholder.bullet.tips":
-      "<strong class=\"text-card-foreground\">团队管理 · 小费管理</strong>：在左侧主导航点击「团队管理」打开<strong class=\"text-card-foreground\">右滑二级导航</strong>后选择 <strong class=\"text-card-foreground\">小费管理</strong>；本区域左侧为细项（小费分配、分配明细、分配规则），交互同本后台其它三级侧栏。",
+      "<strong class=\"text-card-foreground\">团队管理 · 小费管理</strong>：在左侧主导航点击「团队管理」打开<strong class=\"text-card-foreground\">右滑二级导航</strong>后选择 <strong class=\"text-card-foreground\">小费管理</strong>；本区域左侧为细项（小费分配汇总、分配明细、分配规则），交互同本后台其它三级侧栏。",
     "placeholder.bullet.teamReports":
       "<strong class=\"text-card-foreground\">团队管理 · 员工报表</strong>：在左侧主导航点击「团队管理」打开<strong class=\"text-card-foreground\">右滑二级导航</strong>后选择 <strong class=\"text-card-foreground\">员工报表</strong>；本区域左侧为细项（汇总、小费汇总表、小费明细表、绩效、薪资），交互同小费管理。",
     "placeholder.bullet.teamScheduling":
@@ -315,6 +318,9 @@ const messages = {
     "hubSearch.typeDesc": "Description",
     "hubSearch.crumbSettings": "Settings",
     "badge.chain": "Chain",
+    "badge.cloudProduct": "Cloud",
+    "badge.cloudProductPartial": "Partial Cloud",
+    "badge.nonMvp": "Non-MVP",
     "shell.appName": "Miju Group",
     "shell.appTagline": "MenuSifu merchant admin",
     "shell.groupSwitchAria": "Switch group",

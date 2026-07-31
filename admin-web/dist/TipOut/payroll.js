@@ -3237,7 +3237,7 @@
     };
   }
 
-  /** 与「打印 / PDF」相同：克隆 Employees Detail 打印模板 HTML */
+  /** 与「打印」相同：克隆 Employees Detail 打印模板 HTML */
   function buildPayrollDetailPrintDocumentHtml() {
     syncDerived();
     const article = document.querySelector(".payroll-detail-print");
@@ -4021,10 +4021,23 @@ body{margin:0;padding:24px;background:#fff;}
       renderPeriods();
     });
 
-    $("#btn-print-detail")?.addEventListener("click", () => {
+    function printCurrentEmployeeDetail() {
       syncDerived();
+      const modal = $("#employeesDetailPreviewModal");
+      const fromModal = !!(modal && modal.classList.contains("show"));
+      document.body.classList.toggle("payroll-printing-from-modal", fromModal);
+      document.body.classList.add("payroll-printing-detail");
+      const cleanup = () => {
+        document.body.classList.remove("payroll-printing-detail", "payroll-printing-from-modal");
+        window.removeEventListener("afterprint", cleanup);
+      };
+      window.addEventListener("afterprint", cleanup);
       window.print();
-    });
+      setTimeout(cleanup, 1500);
+    }
+
+    $("#btn-print-detail")?.addEventListener("click", () => printCurrentEmployeeDetail());
+    $("#btn-employees-detail-print")?.addEventListener("click", () => printCurrentEmployeeDetail());
 
     $("#btn-show-audit-log")?.addEventListener("click", () => showAuditLogModal());
     $("#btn-audit-log-close")?.addEventListener("click", () => hideAuditLogModal());

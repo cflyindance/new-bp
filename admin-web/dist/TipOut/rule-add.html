@@ -374,7 +374,7 @@
           <svg class="arrow" width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M6 8.825a.5.5 0 0 1-.354-.146l-4-4a.5.5 0 0 1 .708-.708L6 7.617l3.646-3.646a.5.5 0 0 1 .708.708l-4 4A.5.5 0 0 1 6 8.825z"/></svg>
         </div>
         <div class="sidebar-submenu-items" style="max-height:200px">
-          <a href="index.html" class="sidebar-menu-item active">小费分配</a>
+          <a href="index.html" class="sidebar-menu-item active">小费分配汇总</a>
         </div>
         <div class="sidebar-submenu-title open" onclick="this.classList.toggle('open');this.nextElementSibling.style.maxHeight=this.classList.contains('open')?'200px':'0'">
           <span>员工管理</span>
@@ -728,7 +728,7 @@
           <div class="add-option-menu-item" data-type="area" onclick="addSalesCondition('area')">订单区域</div>
           <div class="add-option-menu-item" data-type="orderType" onclick="addSalesCondition('orderType')">订单类型</div>
           <div class="add-option-menu-item" data-type="menu" onclick="addSalesCondition('menu')">菜单</div>
-          <div class="add-option-menu-item" data-type="revenueType" onclick="addSalesCondition('revenueType')">营业额类型</div>
+          <div class="add-option-menu-item" data-type="revenueType" onclick="addSalesCondition('revenueType')">营业额</div>
           <div class="add-option-menu-item" data-type="orderTipStatus" onclick="addSalesCondition('orderTipStatus')">订单小费状态</div>
           <div class="add-option-menu-item" data-type="paymentMethods" onclick="addSalesCondition('paymentMethods')">支付方式</div>
           <div class="add-option-menu-item" data-type="hours" onclick="addSalesCondition('hours')">营业时间</div>
@@ -2758,7 +2758,7 @@
         if (!silent) showNotification('营业额类型为「支付方式」时不支持「菜单」条件', 'warning');
         return;
       }
-      var names = { role: '角色', employee: '员工', area: '订单区域', orderType: '订单类型', menu: '菜单', revenueType: '营业额类型', orderTipStatus: '订单小费状态', paymentMethods: '支付方式', hours: '营业时间', shift: '班次', weekday: '周期（星期）' };
+      var names = { role: '角色', employee: '员工', area: '订单区域', orderType: '订单类型', menu: '菜单', revenueType: '营业额', orderTipStatus: '订单小费状态', paymentMethods: '支付方式', hours: '营业时间', shift: '班次', weekday: '周期（星期）' };
       var cardId = 'sales-cond-' + type;
       var body = '';
       if (type === 'role') {
@@ -2779,7 +2779,7 @@
         var paymentMethodRevenueOption = isPoolSalesRevenueTypeContext()
           ? '<option>' + SALES_REVENUE_TYPE_PAYMENT_METHOD + '</option>'
           : '';
-        body = '<div class="drawer-form-row"><label>营业额类型：</label><select class="form-control" style="flex:1" onchange="onSalesRevenueTypeChange()"><option value="">请选择</option><option>Net Sales (税前营业额)</option><option>Gross Sales (总销售额)</option>' + paymentMethodRevenueOption + '</select></div>';
+        body = '<div class="drawer-form-row"><label>汇总方式：</label><select class="form-control" style="flex:1" onchange="onSalesRevenueTypeChange()"><option value="">请选择</option><option>Net Sales (税前营业额)</option><option>Gross Sales (总销售额)</option>' + paymentMethodRevenueOption + '</select></div>';
       } else if (type === 'orderTipStatus') {
         body = '<div class="drawer-form-row"><label>订单小费状态：</label><select class="form-control" style="flex:1">' +
           '<option value="">请选择</option>' +
@@ -4876,7 +4876,7 @@
         var menuTxt = formatMenuCascadeCond(cond.menu);
         if (menuTxt) parts.push('菜单: ' + menuTxt);
       }
-      if (cond.revenueType) parts.push('营业额类型: ' + cond.revenueType);
+      if (cond.revenueType) parts.push('营业额: ' + cond.revenueType);
       if (cond.orderTipStatus === 'has_tip') parts.push('订单小费状态: 含小费');
       else if (cond.orderTipStatus === 'no_tip') parts.push('订单小费状态: 不含小费');
       if (Array.isArray(cond.paymentMethods) && cond.paymentMethods.length) {
