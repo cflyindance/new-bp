@@ -1,0 +1,39 @@
+---
+description: 修改代码或新增内容前必须先进入 git worktree，隔离主工作区
+alwaysApply: true
+---
+
+# 修改内容必须使用 Worktree
+
+对仓库做**任何会改动文件**的工作（新功能、改 bug、重构、加文档、改配置等）之前，必须先进入独立 git worktree，禁止直接在主工作区改文件。
+
+## 必须
+
+1. 动手改文件前，先确认当前是否已在 worktree 中；若不在，先创建并进入 worktree
+2. 优先用 `git worktree add`（或平台提供的 EnterWorktree / 隔离 worktree 能力）创建隔离目录与分支
+3. **权威编辑、安装依赖、跑测试、提交**都在该 worktree 路径内完成
+4. 分支名用简短可读名称，例如 `wt/<topic>` 或 `feat/<topic>`
+5. 业务源码改动须**同时同步**到主工作区，供本地 `npm run dev` HMR 预览——详见 `sync-worktree-and-dev` 规则
+
+## 推荐流程
+
+```bash
+# 在仓库根目录
+git fetch origin
+git worktree add ../admin-web-<topic> -b wt/<topic> origin/main
+# 之后在该 worktree 改代码，并镜像同步到主工作区 admin-web/
+```
+
+若会话已在 worktree 中（`git rev-parse --git-dir` 指向 `.git/worktrees/...`），可继续在该 worktree 工作，不必重复创建。
+
+## 例外（可不建 worktree）
+
+- 纯只读：查代码、回答问题、搜文件、读 diff
+- 用户**明确说**「直接在当前目录改 / 不要 worktree」
+- 仅修改 `.cursor/rules/`、本规则文件本身，且用户正在要求改规则
+
+## 禁止
+
+- ❌ 在主 checkout 上**单独**改业务代码、worktree 无对应变更（提交会丢）
+- ❌ 只改 worktree、不同步主工作区，导致 `npm run dev` 看不到效果
+- ❌ 跳过 worktree「先改一点再说」

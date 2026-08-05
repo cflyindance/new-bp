@@ -2,9 +2,7 @@
  * 前厅 · 菜单查找与时段：主开关 + 产线多选
  * — 118 搜索菜单（POS / POS GO / PayPad / Kiosk / eMenu / SDI）
  * — 148 比价功能模式（POS / POS GO / PayPad）
- * — 176 按时段显示菜单:堂吃菜单（POS / POS GO / PayPad）
- * — 177 按时段显示菜单:外食菜单（POS / POS GO / PayPad）
- * — 348 按照时段显示菜单（POS / POS GO / PayPad）
+ * （348 按照时段显示菜单见 module-settings-timed-menu-display-ui；原 176/177 已合并退役）
  */
 
 import { readModuleSettingJson, writeModuleSettingJson } from "./module-settings-form-ui";
@@ -12,16 +10,10 @@ import { moduleSettingToggleStorageKey } from "./module-settings-toggle-ui";
 
 export const MENU_SEARCH_SEQ = 118;
 export const PRICE_COMPARE_MODE_SEQ = 148;
-export const TIMED_MENU_DINEIN_SEQ = 176;
-export const TIMED_MENU_TAKEOUT_SEQ = 177;
-export const TIMED_MENU_DISPLAY_SEQ = 348;
 
 export const POS_MENU_SCOPE_LINES_SEQS = [
   MENU_SEARCH_SEQ,
   PRICE_COMPARE_MODE_SEQ,
-  TIMED_MENU_DINEIN_SEQ,
-  TIMED_MENU_TAKEOUT_SEQ,
-  TIMED_MENU_DISPLAY_SEQ,
 ] as const;
 
 export type PosMenuScopeLinesSeq = (typeof POS_MENU_SCOPE_LINES_SEQS)[number];
@@ -62,17 +54,11 @@ function allLineIdsForSeq(seq: PosMenuScopeLinesSeq): PosMenuScopeProductLineId[
 const LINES_STORAGE_ID_BY_SEQ: Record<PosMenuScopeLinesSeq, string> = {
   [MENU_SEARCH_SEQ]: "118-menu-search-lines",
   [PRICE_COMPARE_MODE_SEQ]: "148-price-compare-mode-lines",
-  [TIMED_MENU_DINEIN_SEQ]: "176-timed-menu-dinein-lines",
-  [TIMED_MENU_TAKEOUT_SEQ]: "177-timed-menu-takeout-lines",
-  [TIMED_MENU_DISPLAY_SEQ]: "348-timed-menu-display-lines",
 };
 
 const LINES_GROUP_ARIA_BY_SEQ: Record<PosMenuScopeLinesSeq, string> = {
   [MENU_SEARCH_SEQ]: "搜索菜单适用产线",
   [PRICE_COMPARE_MODE_SEQ]: "比价功能模式适用产线",
-  [TIMED_MENU_DINEIN_SEQ]: "按时段显示堂吃菜单适用产线",
-  [TIMED_MENU_TAKEOUT_SEQ]: "按时段显示外食菜单适用产线",
-  [TIMED_MENU_DISPLAY_SEQ]: "按照时段显示菜单适用产线",
 };
 
 const MODULE_SETTING_CONTROL_CLASS =

@@ -727,7 +727,7 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
       "paypad"
     ],
     "source": "ui-module",
-    "module": "module-settings-pos-menu-scope-lines-ui.ts"
+    "module": "module-settings-timed-menu-display-ui.ts"
   },
   "349": {
     "groupKey": "foh-pos-shell",

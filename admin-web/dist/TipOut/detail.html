@@ -297,6 +297,7 @@
   <script src="ruleData.js"></script>
   <script src="personalSalesDeduct.js"></script>
   <script src="tipAllocation.js"></script>
+  <script src="attendanceMock.js"></script>
   <script>
     var ALLOC_KEY = 'tipout_allocated';
     function getAllocatedDatesForStore(store) {
@@ -328,6 +329,54 @@
       'Runner':    ['Daniel Ortiz', 'Chris Lee'],
       'Shift Lead':['Jessica Martinez']
     };
+    var detailManualHoursState = {};
+
+    function formatRuleDistribution(rule) {
+      if (window.ruleData && ruleData.formatDistributionName) return ruleData.formatDistributionName(rule || {});
+      var names = { average: '按员工数量平均分配', hours: '按工作时长占比分配', orders: '按订单占比分配' };
+      rule = rule || {};
+      var base = names[rule.distribution] || rule.distribution || '—';
+      if (rule.distribution !== 'hours') return base;
+      var cfg = rule.workHoursConfig || {};
+      var max = Number(cfg.maxHoursPerDay);
+      if (cfg.mode === 'capped' && isFinite(max) && max >= 0.1 && max <= 24 && Math.round(max * 10) === max * 10) {
+        return base + '（每日最多 ' + max + ' 小时）';
+      }
+      return base + (rule.clockin === 'noclock' ? '（按照实际录入工时）' : '（按照实际打卡工时）');
+    }
+
+    function detailManualHoursKey(ruleId, dateKey, employeeName) {
+      return String(ruleId) + '|' + String(dateKey) + '|' + String(employeeName);
+    }
+
+    function getDetailEmployeeHours(rule, ruleId, dateKey, employeeName) {
+      if (rule && rule.clockin === 'noclock') {
+        return parseHoursInput(detailManualHoursState[detailManualHoursKey(ruleId, dateKey, employeeName)]);
+      }
+      var attendance = (window.TipOutAttendance && TipOutAttendance.getDayStatus)
+        ? TipOutAttendance.getDayStatus(employeeName, dateKey)
+        : { hours: 0 };
+      return parseHoursInput(attendance && attendance.hours);
+    }
+
+    function buildDetailEmployees(rule, ruleId, dateKey) {
+      var out = [];
+      Object.keys(roleEmployees).forEach(function(role) {
+        (roleEmployees[role] || []).forEach(function(name) {
+          out.push({ name: name, role: role, hours: getDetailEmployeeHours(rule, ruleId, dateKey, name) });
+        });
+      });
+      return out;
+    }
+
+    function onDetailManualHoursInput(input) {
+      if (!input) return;
+      var ruleId = input.getAttribute('data-rule-id') || '';
+      var dateKey = input.getAttribute('data-date-key') || '';
+      var employeeName = input.getAttribute('data-employee-name') || '';
+      detailManualHoursState[detailManualHoursKey(ruleId, dateKey, employeeName)] = parseHoursInput(input.value);
+      renderDetailPage();
+    }
 
     var currentRule = null;
 
@@ -453,6 +502,7 @@
         var cardHtml = '';
         if ((rule.allocationMode || 'legacy_pool') === 'order_tip_then_residual' && window.TipAllocation) {
           var otCtx = genSyntheticOrderTipContext(dateKey, rid);
+          otCtx.employees = buildDetailEmployees(rule, rid, dateKey);
           var otResult = TipAllocation.allocateOrderTipResidual(rule, otCtx);
           topHtml = buildOrderTipFormulaSectionHtml(otResult, rule, otCtx.lines, otCtx.tipByType, rid);
           cardHtml = buildOrderTipDetailCardHtml(otResult, dateKey, rule, rid, tableId);
@@ -537,13 +587,11 @@
         return '<div class="card detail-card" data-rule-id="' + escHtml(rid) + '" data-order-tip-mode="1" data-pool="0">' +
           '<div class="card-body" style="padding:24px;color:var(--text-secondary)">无角色分配结果</div></div>';
       }
-      var seed = dateKey.split('-').reduce(function(a, b) { return a * 31 + parseInt(b, 10); }, 7);
-      var rs = String(rid);
-      for (var si = 0; si < rs.length; si++) seed = (seed * 31 + rs.charCodeAt(si)) % 2000000000;
-      var rng = seedRandom(seed);
       var ridSafe = String(rid).replace(/[^a-zA-Z0-9_-]/g, '_');
-      var distHint = escHtml((ruleData && ruleData.distNames && ruleData.distNames[rule.distribution]) || rule.distribution || '平均');
-      var html = '<div class="card detail-card" data-rule-id="' + escHtml(rid) + '" data-order-tip-mode="1" data-pool="' + (+otResult.tipWallet || 0) + '">' +
+      var distHint = escHtml(formatRuleDistribution(rule));
+      var manualHours = rule.clockin === 'noclock' && rule.distribution === 'hours';
+      var hoursHead = manualHours ? '<th>工时</th>' : '';
+      var html = '<div class="card detail-card" data-rule-id="' + escHtml(rid) + '" data-order-tip-mode="1" data-pool="' + (+otResult.tipWallet || 0) + '" data-manual-hours="' + (manualHours ? '1' : '0') + '">' +
         '<p style="padding:12px 16px 0;font-size:12px;color:var(--text-tertiary);margin:0">以下为按当前规则与模拟订单推算的金额；员工行按「' +
         distHint + '」示意拆分。</p>' +
         '<div class="card-body detail-card-body-alloc" style="padding:16px">';
@@ -553,19 +601,8 @@
         var roleAmount = +(roleAmounts[roleName] || 0).toFixed(2);
         var emps = roleEmployees[roleName] || [];
         if (!emps.length) emps = ['（未配置员工）'];
-        var empCount = emps.length;
-        var empPcts = [];
-        var remaining = 100;
-        for (var i = 0; i < empCount; i++) {
-          if (i < empCount - 1) {
-            var p = Math.round((100 / empCount) + (rng() - 0.5) * 8);
-            p = Math.max(8, Math.min(remaining - (empCount - i - 1) * 8, p));
-            empPcts.push(p);
-            remaining -= p;
-          } else {
-            empPcts.push(remaining);
-          }
-        }
+        var empAmounts = emps.map(function(emp) { return +(otResult.receivedByName && otResult.receivedByName[emp] || 0); });
+        var empPcts = empAmounts.map(function(amount) { return roleAmount > 0 ? roundPct(amount / roleAmount * 100) : 0; });
         var sectionId = 'detailOtSec_' + ridSafe + '_r' + ri;
         var sectionIdJs = String(sectionId).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
         html += '<div class="employee-section detail-result-section" id="' + escHtml(sectionId) + '" data-role="' + detailAttrSafe(roleName) + '">' +
@@ -582,15 +619,19 @@
           '</div>' +
           '<div class="employee-detail detail-employee-wrap">' +
           '<table class="data-table detail-table detail-employee-table" id="' + escHtml(subTableId) + '">' +
-          '<thead><tr><th>分配员工</th><th>员工分配比例</th><th>员工分配金额</th><th>操作</th></tr></thead><tbody>';
+          '<thead><tr><th>分配员工</th>' + hoursHead + '<th>员工分配比例</th><th>员工分配金额</th><th>操作</th></tr></thead><tbody>';
 
         emps.forEach(function(emp, ei) {
-          var empAmount = +(roleAmount * empPcts[ei] / 100).toFixed(2);
+          var empAmount = empAmounts[ei];
           var opts = emps.map(function(e) {
             return '<option' + (e === emp ? ' selected' : '') + '>' + e + '</option>';
           }).join('');
+          var hoursCell = manualHours && emp !== '（未配置员工）'
+            ? '<td class="input-cell"><input type="number" class="detail-emp-hours-input" value="' + getDetailEmployeeHours(rule, rid, dateKey, emp) + '" min="0" step="0.1" data-rule-id="' + escHtml(rid) + '" data-date-key="' + escHtml(dateKey) + '" data-employee-name="' + escHtml(emp) + '" onchange="onDetailManualHoursInput(this)"> h</td>'
+            : (manualHours ? '<td>—</td>' : '');
           html += '<tr>' +
             '<td><select class="form-control" style="width:140px;height:28px;font-size:13px">' + opts + '</select></td>' +
+            hoursCell +
             '<td class="input-cell"><input type="number" value="' + empPcts[ei] + '" readonly style="background:rgba(0,0,0,0.04)"> %</td>' +
             '<td>' + money(empAmount) + '</td>' +
             '<td class="action-cell">—</td>' +
@@ -728,9 +769,14 @@
         (Array.isArray(obj.item) && obj.item.length);
     }
 
+    function formatSurchargeTypeDisplay(value) {
+      var map = { '商品': '商品加收', '订单': '订单加收' };
+      var arr = Array.isArray(value) ? value.slice() : (value != null && value !== '' ? [String(value)] : []);
+      return arr.map(function(v) { return map[v] || v; }).join(', ');
+    }
     function formatSurchargeConditions(cond) {
       if (!cond || typeof cond !== 'object') return '';
-      if (cond.types && Array.isArray(cond.types) && cond.types.length) return '加收类型: ' + cond.types.join(', ');
+      if (cond.types && Array.isArray(cond.types) && cond.types.length) return '加收类型: ' + formatSurchargeTypeDisplay(cond.types);
       var parts = [];
       if (Array.isArray(cond.role) && cond.role.length) parts.push('角色: ' + cond.role.join(', '));
       else if (cond.role) parts.push('角色: ' + cond.role);
@@ -739,7 +785,7 @@
       if (cond.area) parts.push('订单区域: ' + (Array.isArray(cond.area) ? cond.area.join(', ') : cond.area));
       if (cond.orderType) parts.push('订单类型: ' + (Array.isArray(cond.orderType) ? cond.orderType.join(', ') : cond.orderType));
       if (cond.surchargeType) {
-        parts.push('加收类型: ' + (Array.isArray(cond.surchargeType) ? cond.surchargeType.join(', ') : cond.surchargeType));
+        parts.push('加收类型: ' + formatSurchargeTypeDisplay(cond.surchargeType));
       } else if (cond.tipType) parts.push('小费类型: ' + cond.tipType);
       if (cond.containsProduct && detailMenuCascadeHasAny(cond.containsProduct)) {
         var cpTxt = detailFormatMenuCascade(cond.containsProduct);
@@ -949,7 +995,7 @@
           }
         }
         htmlOt += '<div class="divider"></div><div class="rule-detail-item"><div class="label">剩余小费接收方规则</div><div class="value">' + resDisplay + '</div></div>' +
-          '<div class="rule-detail-item"><div class="label">小费分配方式</div><div class="value">' + (distNames2[rule.distribution] || rule.distribution || '—') + '</div></div>';
+          '<div class="rule-detail-item"><div class="label">小费分配方式</div><div class="value">' + formatRuleDistribution(rule) + '</div></div>';
         body.innerHTML = htmlOt;
         return;
       }
@@ -986,7 +1032,7 @@
           html += '<div class="rule-detail-item" style="padding-left:16px"><div class="value" style="font-size:13px;color:var(--text-tertiary)">└ 再分配：' + ((sr.roles || []).join(' / ') || '') + ' ' + (sr.pct || 0) + '%</div></div>';
         });
       });
-      html += '<div class="rule-detail-item"><div class="label">小费分配方式</div><div class="value">' + (distNames[rule.distribution] || rule.distribution || '—') + '</div></div>';
+      html += '<div class="rule-detail-item"><div class="label">小费分配方式</div><div class="value">' + formatRuleDistribution(rule) + '</div></div>';
       body.innerHTML = html;
     }
 
@@ -1204,16 +1250,29 @@
         var roleAmount = +(poolAmt * rc.pct / 100).toFixed(2);
         var empCount = rc.employees.length;
         var empPcts = [];
-        var remaining = 100;
-        for (var i = 0; i < empCount; i++) {
-          if (i < empCount - 1) {
-            var p = Math.round((100 / empCount) + (rng() - 0.5) * 10);
-            p = Math.max(5, Math.min(remaining - (empCount - i - 1) * 5, p));
-            empPcts.push(p);
-            remaining -= p;
-          } else {
-            empPcts.push(remaining);
+        var empAmounts = [];
+        if (rule.distribution === 'hours' && window.TipAllocation && TipAllocation.distributeRoleAmountsToEmployees) {
+          var roleAmountMap = {};
+          roleAmountMap[rc.role] = roleAmount;
+          var weightedEmployees = rc.employees.map(function(emp) {
+            return { name: emp, role: rc.role, hours: getDetailEmployeeHours(rule, rid, dateKey, emp) };
+          });
+          var weighted = TipAllocation.distributeRoleAmountsToEmployees(roleAmountMap, rule, weightedEmployees);
+          empAmounts = rc.employees.map(function(emp) { return +(weighted.receivedByName[emp] || 0); });
+          empPcts = empAmounts.map(function(amount) { return roleAmount > 0 ? roundPct(amount / roleAmount * 100) : 0; });
+        } else {
+          var remaining = 100;
+          for (var i = 0; i < empCount; i++) {
+            if (i < empCount - 1) {
+              var p = Math.round((100 / empCount) + (rng() - 0.5) * 10);
+              p = Math.max(5, Math.min(remaining - (empCount - i - 1) * 5, p));
+              empPcts.push(p);
+              remaining -= p;
+            } else {
+              empPcts.push(remaining);
+            }
           }
+          empAmounts = empPcts.map(function(pct) { return +(roleAmount * pct / 100).toFixed(2); });
         }
 
         html += '<div class="employee-section detail-result-section" id="' + escHtml(sectionId) + '" data-role="' + detailAttrSafe(rc.role) + '">' +
@@ -1234,13 +1293,13 @@
           '<thead><tr><th>分配员工</th>' + headHours + '<th>员工分配比例</th><th>员工分配金额</th><th>操作</th></tr></thead><tbody>';
 
         rc.employees.forEach(function(emp, ei) {
-          var empAmount = +(roleAmount * empPcts[ei] / 100).toFixed(2);
+          var empAmount = empAmounts[ei];
           var opts = rc.employees.map(function(e) {
             return '<option' + (e === emp ? ' selected' : '') + '>' + e + '</option>';
           }).join('');
           var hoursCell = manualHours
-            ? '<td class="input-cell"><input type="number" class="detail-emp-hours-input" value="0" min="0" step="0.1" ' +
-              'onchange="onEmpHoursChange(\'' + tidJs + '\')"> h</td>'
+            ? '<td class="input-cell"><input type="number" class="detail-emp-hours-input" value="' + getDetailEmployeeHours(rule, rid, dateKey, emp) + '" min="0" step="0.1" ' +
+              'data-rule-id="' + escHtml(rid) + '" data-date-key="' + escHtml(dateKey) + '" data-employee-name="' + escHtml(emp) + '" onchange="onDetailManualHoursInput(this)"> h</td>'
             : '';
           html += '<tr>' +
             '<td><select class="form-control" style="width:140px;height:28px;font-size:13px">' + opts + '</select></td>' +

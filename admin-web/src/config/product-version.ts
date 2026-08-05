@@ -18,8 +18,14 @@ export const MVP_BRAND_PERSPECTIVE_HIDDEN_NAV_MODULE_IDS = ["brand-store-list"] 
 /** MVP 下系统设置内隐藏的二级导航（仅隐藏，不删除配置） */
 export const MVP_HIDDEN_SETTINGS_NAV_CHILD_IDS = ["set-platform-preset"] as const;
 
-/** MVP 下模块设置中隐藏的 seq（仅隐藏，不删除 catalog 配置） */
-export const MVP_HIDDEN_MODULE_SETTING_SEQS = [583] as const;
+/** MVP 下模块设置中隐藏的 seq（仅隐藏，不删除 catalog 配置）；复杂版本下以红框标注 */
+export const MVP_HIDDEN_MODULE_SETTING_SEQS = [118, 148, 165, 196, 216, 217, 218, 219, 350, 583] as const;
+
+/** MVP 下模块设置侧栏分组隐藏（groupKey）；复杂版本下以红框标注 */
+export const MVP_HIDDEN_MODULE_SETTING_GROUP_KEYS = ["foh-pos-buttons", "foh-pos-order-toolbar"] as const;
+
+/** 已合并退役、任何产品版本下均不展示的设置 seq（catalog 可保留作历史） */
+export const RETIRED_MODULE_SETTING_SEQS = [176, 177] as const;
 
 let memoryVersion: ProductVersion | undefined;
 
@@ -47,6 +53,11 @@ export function isFutureVersionDiffSettingsNavChild(_childId: string): boolean {
 /** 是否为相较 MVP 仅在未来版本展示的模块设置项。 */
 export function isFutureVersionDiffModuleSettingSeq(seq: number): boolean {
   return (MVP_HIDDEN_MODULE_SETTING_SEQS as readonly number[]).includes(seq);
+}
+
+/** 是否为相较 MVP 仅在未来版本展示、且仍用红框标注的模块设置侧栏分组。 */
+export function isFutureVersionDiffModuleSettingGroupKey(groupKey: string): boolean {
+  return (MVP_HIDDEN_MODULE_SETTING_GROUP_KEYS as readonly string[]).includes(groupKey);
 }
 
 export function readProductVersion(): ProductVersion {
@@ -86,9 +97,19 @@ export function isMvpHiddenModuleSettingSeq(seq: number): boolean {
 }
 
 export function filterModuleSettingItemsForProductVersion<T extends { seq: number }>(items: T[]): T[] {
-  if (!isMvpProductVersion()) return items;
+  const retired = RETIRED_MODULE_SETTING_SEQS as readonly number[];
+  const withoutRetired = items.filter((item) => !retired.includes(item.seq));
+  if (!isMvpProductVersion()) return withoutRetired;
   const hidden = MVP_HIDDEN_MODULE_SETTING_SEQS as readonly number[];
-  return items.filter((item) => !hidden.includes(item.seq));
+  return withoutRetired.filter((item) => !hidden.includes(item.seq));
+}
+
+export function filterModuleSettingGroupsForProductVersion<T extends { groupKey: string }>(
+  groups: T[],
+): T[] {
+  if (!isMvpProductVersion()) return groups;
+  const hidden = MVP_HIDDEN_MODULE_SETTING_GROUP_KEYS as readonly string[];
+  return groups.filter((g) => !hidden.includes(g.groupKey));
 }
 
 /** MVP 版本下隐藏「重新引导」等首次登录引导入口 */

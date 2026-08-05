@@ -10,6 +10,25 @@
     return Math.round(n * 100) / 100;
   }
 
+  function normalizeHours(value) {
+    var n = Number(value);
+    return isFinite(n) && n >= 0 ? n : 0;
+  }
+
+  function normalizeWorkHoursConfig(config) {
+    var mode = config && config.mode === 'capped' ? 'capped' : 'actual';
+    var max = config && config.maxHoursPerDay != null ? Number(config.maxHoursPerDay) : null;
+    if (!isFinite(max) || max < 0.1 || max > 24 || Math.round(max * 10) !== max * 10) max = null;
+    if (mode === 'capped' && max == null) mode = 'actual';
+    return { mode: mode, maxHoursPerDay: mode === 'capped' ? max : null };
+  }
+
+  function getEffectiveHours(employee, rule) {
+    var hours = normalizeHours(employee && employee.hours);
+    var config = normalizeWorkHoursConfig(rule && rule.workHoursConfig);
+    return config.mode === 'capped' ? Math.min(hours, config.maxHoursPerDay) : hours;
+  }
+
   function lineMatchesFilter(line, filter) {
     filter = filter || {};
     var pl = filter.productLines || [];
@@ -159,13 +178,16 @@
 
     var residual = remaining;
     var residualMeta = allocateResidualByReceivers(residual, rule.residual, roleAmounts);
+    var employeeDistribution = distributeRoleAmountsToEmployees(roleAmounts, rule, ctx.employees || []);
 
     return {
       tipWallet: tipWallet,
       claimResults: claimResults,
       residual: residual,
       residualRoles: residualMeta.residualRoles.slice(),
-      roleAmounts: roleAmounts
+      roleAmounts: roleAmounts,
+      receivedByName: employeeDistribution.receivedByName,
+      effectiveHoursByName: employeeDistribution.effectiveHoursByName
     };
   }
 
@@ -184,6 +206,61 @@
       roleAmounts[r] = roundMoney((roleAmounts[r] || 0) + piece);
       allocated = roundMoney(allocated + piece);
     }
+  }
+
+  /**
+   * 将已形成的角色金额按规则拆分给员工。
+   * employees: [{ id?, name, role, hours }]
+   */
+  function distributeRoleAmountsToEmployees(roleAmounts, rule, employees) {
+    roleAmounts = roleAmounts || {};
+    employees = employees || [];
+    var receivedByName = {};
+    var effectiveHoursByName = {};
+    employees.forEach(function (employee) {
+      if (!employee || !employee.name) return;
+      receivedByName[employee.name] = 0;
+      effectiveHoursByName[employee.name] = getEffectiveHours(employee, rule);
+    });
+
+    var mode = (rule && rule.distribution) || 'average';
+    Object.keys(roleAmounts).forEach(function (role) {
+      var roleAmount = roundMoney(roleAmounts[role]);
+      var members = employees.filter(function (employee) {
+        return employee && employee.name && String(employee.role || '').trim() === role;
+      });
+      if (!members.length || roleAmount <= 0) return;
+
+      if (mode === 'hours') {
+        var positiveMembers = members.filter(function (member) {
+          return effectiveHoursByName[member.name] > 0;
+        });
+        var totalHours = positiveMembers.reduce(function (sum, member) {
+          return sum + effectiveHoursByName[member.name];
+        }, 0);
+        if (totalHours > 0) {
+          var weightedUsed = 0;
+          positiveMembers.forEach(function (member, index) {
+            var piece = index === positiveMembers.length - 1
+              ? roundMoney(roleAmount - weightedUsed)
+              : roundMoney(roleAmount * effectiveHoursByName[member.name] / totalHours);
+            weightedUsed = roundMoney(weightedUsed + piece);
+            receivedByName[member.name] = roundMoney((receivedByName[member.name] || 0) + piece);
+          });
+          return;
+        }
+      }
+
+      var base = roundMoney(roleAmount / members.length);
+      var equalUsed = 0;
+      members.forEach(function (member, index) {
+        var piece = index === members.length - 1 ? roundMoney(roleAmount - equalUsed) : base;
+        equalUsed = roundMoney(equalUsed + piece);
+        receivedByName[member.name] = roundMoney((receivedByName[member.name] || 0) + piece);
+      });
+    });
+
+    return { receivedByName: receivedByName, effectiveHoursByName: effectiveHoursByName };
   }
 
   /**
@@ -382,23 +459,20 @@
    */
   function distributePoolToReceivers(poolAmount, rule, employees) {
     var amount = roundMoney(Number(poolAmount) || 0);
-    var receivedByName = {};
-    (employees || []).forEach(function (e) {
-      if (e && e.name) receivedByName[e.name] = 0;
-    });
-    if (amount <= 0) return { receivedByName: receivedByName, roleAmounts: {} };
+    var emptyDistribution = distributeRoleAmountsToEmployees({}, rule, employees || []);
+    if (amount <= 0) return { receivedByName: emptyDistribution.receivedByName, effectiveHoursByName: emptyDistribution.effectiveHoursByName, roleAmounts: {} };
 
     var receivers = (rule && rule.receivers) || [];
     var valid = receivers.filter(function (r) {
       return (r.roles || []).length > 0 && Number(r.pct) > 0;
     });
-    if (!valid.length) return { receivedByName: receivedByName, roleAmounts: {} };
+    if (!valid.length) return { receivedByName: emptyDistribution.receivedByName, effectiveHoursByName: emptyDistribution.effectiveHoursByName, roleAmounts: {} };
 
     var sumPct = 0;
     valid.forEach(function (r) {
       sumPct += Number(r.pct) || 0;
     });
-    if (sumPct <= 0) return { receivedByName: receivedByName, roleAmounts: {} };
+    if (sumPct <= 0) return { receivedByName: emptyDistribution.receivedByName, effectiveHoursByName: emptyDistribution.effectiveHoursByName, roleAmounts: {} };
 
     var roleAmounts = {};
     var allocated = 0;
@@ -411,27 +485,12 @@
       distributeEqualAmongRoles(rowAmt, rec.roles || [], roleAmounts);
     });
 
-    var mode = (rule && rule.distribution) || 'average';
-    Object.keys(roleAmounts).forEach(function (role) {
-      var roleAmt = roleAmounts[role] || 0;
-      var members = (employees || []).filter(function (e) {
-        return e && String(e.role || '').trim() === role;
-      });
-      if (!members.length || roleAmt <= 0) return;
-      if (mode === 'hours' || mode === 'orders') {
-        // 演示期无工时/订单权重时与 average 相同
-      }
-      var n = members.length;
-      var base = roundMoney(roleAmt / n);
-      var used = 0;
-      members.forEach(function (m, i) {
-        var piece = i === n - 1 ? roundMoney(roleAmt - used) : base;
-        used = roundMoney(used + piece);
-        if (m.name) receivedByName[m.name] = roundMoney((receivedByName[m.name] || 0) + piece);
-      });
-    });
-
-    return { receivedByName: receivedByName, roleAmounts: roleAmounts };
+    var employeeDistribution = distributeRoleAmountsToEmployees(roleAmounts, rule, employees || []);
+    return {
+      receivedByName: employeeDistribution.receivedByName,
+      effectiveHoursByName: employeeDistribution.effectiveHoursByName,
+      roleAmounts: roleAmounts
+    };
   }
 
   /**
@@ -475,11 +534,15 @@
 
   var api = {
     roundMoney: roundMoney,
+    normalizeHours: normalizeHours,
+    normalizeWorkHoursConfig: normalizeWorkHoursConfig,
+    getEffectiveHours: getEffectiveHours,
     lineMatchesFilter: lineMatchesFilter,
     categorySalesFromLines: categorySalesFromLines,
     orderTipWallet: orderTipWallet,
     orderTipPoolFromPoolRules: orderTipPoolFromPoolRules,
     allocateOrderTipResidual: allocateOrderTipResidual,
+    distributeRoleAmountsToEmployees: distributeRoleAmountsToEmployees,
     runDeductPipeline: runDeductPipeline,
     distributePoolToReceivers: distributePoolToReceivers,
     runLegacyDayPipeline: runLegacyDayPipeline

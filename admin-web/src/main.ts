@@ -285,14 +285,13 @@ import {
   bindViewSwitchControl,
   ensureMvpGroupHqViewSwitchHidden,
   ensureMvpMPlatformViewSwitchHidden,
-  renderViewSwitchControl,
 } from "./shell/view-switch-control";
+import { bindVersionSwitchControl } from "./shell/version-switch-control";
+import { mountDemoSwitchFab, unmountDemoSwitchFab } from "./shell/demo-switch-control";
 import {
-  bindVersionSwitchControl,
-  renderVersionSwitchControl,
-} from "./shell/version-switch-control";
-import {
+  filterModuleSettingGroupsForProductVersion,
   filterModuleSettingItemsForProductVersion,
+  isFutureVersionDiffModuleSettingGroupKey,
   isFutureVersionDiffModuleSettingSeq,
   isFutureVersionDiffNavModule,
   isFutureVersionDiffSettingsNavChild,
@@ -5488,7 +5487,9 @@ function buildModuleSettingsGroupsForPreset(
   const base = lineId
     ? getFohLineViewGroups(catalog, lineId)
     : groupCatalogItemsByCategory(items, catalog.groupOrder);
-  return filterModuleSettingsGroupsForPreset(catalog.settingsPath, base, lineId ?? null);
+  return filterModuleSettingGroupsForProductVersion(
+    filterModuleSettingsGroupsForPreset(catalog.settingsPath, base, lineId ?? null),
+  );
 }
 const moduleSettingsScrollTopByBasePath = new Map<string, number>();
 /** 设置页左侧二级导航列滚动位置（按 hub settingsPath 记忆，避免点击后重渲染回顶） */
@@ -5807,8 +5808,9 @@ function renderModuleSettingsSubnavGroupLink(
 ): string {
   const href = getModuleSettingsCategoryPath(settingsPath, group.groupKey);
   const navLabel = formatModuleSettingsSubnavLabel(group.groupTitle);
+  const futureDiff = isFutureVersionDiffModuleSettingGroupKey(group.groupKey);
   return `
-              <li>
+              <li${futureDiff ? " data-future-version-diff" : ""}>
                 <a href="#${href}"
                   data-module-settings-group-key="${escapeHtml(group.groupKey)}"
                   ${nested ? 'data-module-settings-subnav-nested="1"' : ""}
@@ -5895,8 +5897,9 @@ function renderFohByLineSettingsSubnavGroupLink(
 ): string {
   const href = getFohSettingsByLineCategoryPath(lineId, group.groupKey);
   const navLabel = formatModuleSettingsSubnavLabel(group.groupTitle);
+  const futureDiff = isFutureVersionDiffModuleSettingGroupKey(group.groupKey);
   return `
-              <li>
+              <li${futureDiff ? " data-future-version-diff" : ""}>
                 <a href="#${href}"
                   data-module-settings-group-key="${escapeHtml(group.groupKey)}"
                   ${nested ? 'data-module-settings-subnav-nested="1"' : ""}
@@ -10749,10 +10752,7 @@ function renderModuleHubSettingsPage(path: string, pageTitle: string): string {
             : printSettings
               ? renderPrintSettingsGroupHintHtml(group.groupKey)
               : "";
-      const rows = group.items
-        .map((item) => renderModuleSettingRow(item))
-        .filter((html) => html.trim() !== "")
-        .join("");
+      const rows = renderModuleSettingRowsHtml(group.items);
       return `
       <section
         id="${sectionId}"
@@ -11500,10 +11500,6 @@ function renderMain(): string {
             <svg class="size-5 dark:hidden" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
             <svg class="size-5 hidden dark:block" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
           </button>
-          <div class="flex shrink-0 items-center gap-2" data-shell-perspective-controls>
-            ${renderViewSwitchControl()}
-            ${renderVersionSwitchControl()}
-          </div>
         </div>
       </header>`;
 
@@ -11855,6 +11851,7 @@ function bindFullscreenIframeModal(dialogId: string, closeButtonId: string): voi
 }
 
 function mountLoginShell(): void {
+  unmountDemoSwitchFab();
   const app = document.getElementById("app");
   if (!app) return;
   app.innerHTML = renderLoginPage();
@@ -11895,6 +11892,7 @@ function mount(): void {
     if (!isPlatformPresetOnboardingPath(authPath)) {
       replaceHashPath(ONBOARDING_PATH);
     }
+    unmountDemoSwitchFab();
     mountPlatformPresetOnboardingShell(mount);
     return;
   }
@@ -12644,6 +12642,7 @@ function mount(): void {
   });
   bindPermissionsRbac();
   bindPlatformPreset(mount, MERCHANT_PLATFORM_PRESET_SCOPE);
+  mountDemoSwitchFab({ showVersionSwitch: true });
   bindViewSwitchControl(mount);
   bindVersionSwitchControl(mount);
   bindImpersonationBanner(mount);

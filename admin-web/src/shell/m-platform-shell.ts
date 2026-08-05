@@ -47,7 +47,8 @@ import {
 import { bindEnterpriseMerchant, renderEnterpriseMerchantPage } from "../config/enterprise-merchant-ui";
 import { consumeMPlatformEntryNoticePending, exitMPlatformShell } from "./app-shell-mode";
 import { showMPlatformEntryNoticeDialog } from "./m-platform-entry-notice-dialog";
-import { bindViewSwitchControl, renderViewSwitchControl } from "./view-switch-control";
+import { bindViewSwitchControl } from "./view-switch-control";
+import { mountDemoSwitchFab } from "./demo-switch-control";
 
 export const M_PLATFORM_PRESET_PATH = "/m-platform/platform-preset";
 export const M_PLATFORM_PERMISSIONS_PATH = "/m-platform/permissions/overview";
@@ -368,7 +369,6 @@ function renderMPlatformHeader(path: string): string {
           <svg class="size-5 dark:hidden" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
           <svg class="size-5 hidden dark:block" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
         </button>
-        ${renderViewSwitchControl()}
       </div>
     </header>`;
 }
@@ -433,6 +433,7 @@ export function bindMPlatformShell(onMount: () => void): void {
     document.querySelector('meta[name="theme-color"]')?.setAttribute("content", dark ? "#0f172a" : "#f8fafc");
   });
 
+  mountDemoSwitchFab({ showVersionSwitch: false });
   bindViewSwitchControl(onMount);
 
   document.querySelectorAll<HTMLButtonElement>("[data-m-platform-merchants-toggle]").forEach((btn) => {

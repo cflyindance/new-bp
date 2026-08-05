@@ -1,0 +1,42 @@
+---
+description: 功能改动须同时写入 worktree 与本地 npm run dev 主工作区，保证 HMR 立刻可见
+alwaysApply: true
+---
+
+# Worktree + 主工作区双写
+
+本仓库日常预览依赖**主工作区**的 `npm run dev`（Vite HMR），而提交/隔离开发在 **git worktree**。对业务功能做任何会改动源码的改动时，**同一批文件变更必须同时落到两处**，否则用户在浏览器里看不到效果。
+
+## 必须
+
+1. **先**按 `use-worktree` 进入/使用 worktree，在 worktree 内完成权威编辑（分支、diff、测试、提交以 worktree 为准）
+2. **再**把**相同内容**同步到 Cursor 打开的主工作区对应路径（通常为 `admin-web/` 下与 worktree 内 `admin-web/` 镜像的文件）
+3. 每完成一小步可验证的改动后就双写，不要等整单结束才同步
+4. 同步后确认主工作区 Vite 已 reload（或提示用户刷新）；若主工作区未跑 `npm run dev`，在回复里说明需在主工作区启动
+
+## 路径对应（示例）
+
+| 角色 | 典型路径 |
+|------|----------|
+| Worktree（SSOT / 提交） | `…/new-bp/admin-web-<topic>/admin-web/src/...` |
+| 主工作区（`npm run dev`） | `…/new-bp/admin-web/src/...` |
+
+双写时保持相对 `admin-web/` 的路径一致；改哪个文件，两处同改。
+
+## 推荐做法
+
+1. 在 worktree 改文件并自检
+2. 对同一相对路径在主工作区应用相同 patch（Write / StrReplace，内容一致）
+3. 用 `git -C <worktree> diff` 核对 worktree；主工作区仅作预览镜像，**不要**在主工作区单独开分支提交（除非用户明确要求）
+
+## 例外
+
+- 纯只读、不改文件
+- 仅改 `.cursor/rules/` 等且用户只要规则、不涉及页面预览
+- 用户明确说「只改 worktree / 不要同步主工作区」或「只改主工作区 / 不要 worktree」
+
+## 禁止
+
+- ❌ 只改 worktree、不告知也不同步，导致本地 `npm run dev` 仍是旧代码
+- ❌ 只改主工作区预览、worktree 无对应变更（提交时丢失）
+- ❌ 两处改成不一致内容

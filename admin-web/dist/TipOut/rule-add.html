@@ -168,6 +168,20 @@
     .radio-item input[type="radio"] {
       width: 16px; height: 16px; accent-color: var(--primary);
     }
+    .work-hours-config {
+      margin: 10px 0 0 24px; padding: 12px 14px; max-width: 620px;
+      border: 1px solid var(--border-light); border-radius: var(--radius-md);
+      background: rgba(0,0,0,0.015);
+    }
+    .work-hours-config .radio-item + .work-hours-cap-row { margin-top: 10px; }
+    .work-hours-cap-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .work-hours-cap-input {
+      width: 88px; height: 32px; padding: 4px 8px; text-align: center;
+      border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 14px;
+    }
+    .work-hours-cap-input:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 2px rgba(22,119,255,0.1); }
+    .work-hours-cap-input:disabled { background: rgba(0,0,0,0.04); color: var(--text-tertiary); cursor: not-allowed; }
+    .work-hours-config-error { display: none; margin-top: 8px; font-size: 12px; color: var(--danger); }
 
     .add-option-dropdown {
       position: relative; display: inline-block;
@@ -569,14 +583,29 @@
             <div class="form-section-title"><span class="field-desc-wrap" data-field-id="distribution" data-pool-label="小费分配方式（单选）">小费分配方式（单选） <span class="field-desc-icon" data-field-id="distribution" data-label="小费分配方式" onclick="event.preventDefault();openFieldDescEditor('distribution','小费分配方式')" title="点击编辑字段说明">ⓘ</span></span></div>
             <div class="radio-group">
               <label class="radio-item">
-                <input type="radio" name="distribution" value="average" checked> 按员工数量平均分配
+                <input type="radio" name="distribution" value="average" checked onchange="updateWorkHoursConfigUi()"> 按员工数量平均分配
               </label>
               <label class="radio-item">
-                <input type="radio" name="distribution" value="hours"> 按工作时长占比分配
+                <input type="radio" name="distribution" value="hours" onchange="updateWorkHoursConfigUi()"> 按工作时长占比分配
               </label>
               <label class="radio-item" id="distributionOrdersRow">
-                <input type="radio" name="distribution" value="orders"> 按订单占比分配
+                <input type="radio" name="distribution" value="orders" onchange="updateWorkHoursConfigUi()"> 按订单占比分配
               </label>
+            </div>
+            <div class="work-hours-config" id="workHoursConfigPanel" style="display:none">
+              <label class="radio-item">
+                <input type="radio" name="workHoursMode" value="actual" checked onchange="updateWorkHoursConfigUi()">
+                <span id="workHoursActualLabel">按照实际打卡工时</span>
+              </label>
+              <div class="work-hours-cap-row">
+                <label class="radio-item">
+                  <input type="radio" name="workHoursMode" value="capped" onchange="updateWorkHoursConfigUi()">
+                  <span id="workHoursCappedLabel">打卡工时超出最大工时，按最大工时</span>
+                </label>
+                <input class="work-hours-cap-input" id="maxHoursPerDay" type="number" min="0.1" max="24" step="0.1" inputmode="decimal" disabled oninput="clearWorkHoursConfigError()" aria-label="每日最大工时">
+                <span style="font-size:13px;color:var(--text-secondary)">小时/天</span>
+              </div>
+              <div class="work-hours-config-error" id="workHoursConfigError"></div>
             </div>
           </div>
 
@@ -810,7 +839,7 @@
           <div class="add-option-menu-item" data-type="employee" onclick="addSurchargeCondition('employee')">员工</div>
           <div class="add-option-menu-item" data-type="area" onclick="addSurchargeCondition('area')">订单区域</div>
           <div class="add-option-menu-item" data-type="orderType" onclick="addSurchargeCondition('orderType')">订单类型</div>
-          <div class="add-option-menu-item" data-type="hours" onclick="addSurchargeCondition('hours')">营业时间段</div>
+          <div class="add-option-menu-item" data-type="hours" onclick="addSurchargeCondition('hours')">订单时间段</div>
           <div class="add-option-menu-item" data-type="tipType" data-pool-label="小费类型" onclick="addSurchargeCondition('tipType')">小费类型</div>
           <div class="add-option-menu-item" data-type="surchargeType" onclick="addSurchargeCondition('surchargeType')" style="display:none">加收类型</div>
           <div class="add-option-menu-item" data-type="shift" onclick="addSurchargeCondition('shift')">班次</div>
@@ -842,7 +871,7 @@
           <div class="add-option-menu-item" data-type="employee" onclick="addTipsCondition('employee')">员工</div>
           <div class="add-option-menu-item" data-type="area" onclick="addTipsCondition('area')">订单区域</div>
           <div class="add-option-menu-item" data-type="orderType" onclick="addTipsCondition('orderType')">订单类型</div>
-          <div class="add-option-menu-item" data-type="hours" onclick="addTipsCondition('hours')">营业时间段</div>
+          <div class="add-option-menu-item" data-type="hours" onclick="addTipsCondition('hours')">订单时间段</div>
           <div class="add-option-menu-item" data-type="tipType" data-pool-label="小费类型" onclick="addTipsCondition('tipType')">小费类型</div>
           <div class="add-option-menu-item" data-type="containsProduct" onclick="addTipsCondition('containsProduct')">订单需包含商品</div>
           <div class="add-option-menu-item" data-type="shift" onclick="addTipsCondition('shift')">班次</div>
@@ -872,7 +901,7 @@
         <div class="add-option-menu" id="manualConditionMenu">
           <div class="add-option-menu-item" data-type="role" onclick="addManualCondition('role')">角色</div>
           <div class="add-option-menu-item" data-type="employee" onclick="addManualCondition('employee')">员工</div>
-          <div class="add-option-menu-item" data-type="hours" onclick="addManualCondition('hours')">营业时间段</div>
+          <div class="add-option-menu-item" data-type="hours" onclick="addManualCondition('hours')">订单时间段</div>
           <div class="add-option-menu-item" data-type="shift" onclick="addManualCondition('shift')">班次</div>
           <div class="add-option-menu-item" data-type="weekday" onclick="addManualCondition('weekday')">周期（星期）</div>
         </div>
@@ -912,7 +941,7 @@
     function getCondTypeNames(extra) {
       var names = Object.assign({
         role: '角色', employee: '员工', area: '订单区域', orderType: '订单类型',
-        hours: '营业时间段', tipType: '小费类型', containsProduct: '订单需包含商品',
+        hours: '订单时间段', tipType: '小费类型', containsProduct: '订单需包含商品',
         shift: '班次', weekday: '周期（星期）'
       }, extra || {});
       if (!isSurchargePoolKind()) return names;
@@ -1420,7 +1449,17 @@
       if (dist) dist.checked = true;
       var clock = document.querySelector('input[name="clockin"][value="' + (rule.clockin || 'clock') + '"]');
       if (clock) clock.checked = true;
+      var workHoursConfig = normalizeWorkHoursConfig(rule.workHoursConfig);
+      var workHoursMode = document.querySelector('input[name="workHoursMode"][value="' + workHoursConfig.mode + '"]');
+      if (workHoursMode) workHoursMode.checked = true;
+      var maxHoursPerDayInput = document.getElementById('maxHoursPerDay');
+      if (maxHoursPerDayInput) {
+        maxHoursPerDayInput.value = workHoursConfig.mode === 'capped' && workHoursConfig.maxHoursPerDay != null
+          ? workHoursConfig.maxHoursPerDay
+          : '';
+      }
       syncClockinForOnlyCustomPool();
+      updateWorkHoursConfigUi();
       clearDeductRulesContainer();
       if (allocMode !== 'order_tip_then_residual') {
         loadDeductRulesFromRule(rule);
@@ -2622,9 +2661,10 @@
     }
 
     var SURCHARGE_TYPE_OPTIONS = [
-      { value: '商品', label: '商品' },
-      { value: '订单', label: '订单' }
+      { value: '商品加收', label: '商品加收' },
+      { value: '订单加收', label: '订单加收' }
     ];
+    var SURCHARGE_TYPE_LEGACY_MAP = { '商品': '商品加收', '订单': '订单加收' };
     function getSurchargeTypeOptionsHtml() {
       return SURCHARGE_TYPE_OPTIONS.map(function(o) {
         return '<label class="multi-select-option"><input type="checkbox" value="' + o.value + '"> ' + o.label + '</label>';
@@ -2636,9 +2676,13 @@
       if (Array.isArray(value)) arr = value.slice();
       else if (value === '全部') arr = allowed.slice();
       else if (value != null && value !== '') arr = [String(value)];
+      arr = arr.map(function(v) { return SURCHARGE_TYPE_LEGACY_MAP[v] || v; });
       return arr.filter(function(v, i, a) {
         return allowed.indexOf(v) >= 0 && a.indexOf(v) === i;
       });
+    }
+    function formatSurchargeTypeDisplay(value) {
+      return normalizeSurchargeTypeValues(value).join(', ');
     }
 
     function toggleAddConditionMenu(drawerId) {
@@ -2939,7 +2983,7 @@
       } else if (type === 'orderType') {
         body = '<div class="drawer-form-row"><label>订单类型：</label><select class="form-control" style="flex:1">' + orderTypeSelectHtml + '</select></div>';
       } else if (type === 'hours') {
-        body = '<div class="drawer-form-row"><label>营业时间段：</label><input type="time" class="form-control" style="width:120px"><span style="color:var(--text-tertiary)">~</span><input type="time" class="form-control" style="width:120px"></div>';
+        body = '<div class="drawer-form-row"><label>订单时间段：</label><input type="time" class="form-control" style="width:120px"><span style="color:var(--text-tertiary)">~</span><input type="time" class="form-control" style="width:120px"></div>';
       } else if (type === 'tipType') {
         body = '<div class="drawer-form-row"><label>' + tipTerm('小费类型：') + '</label><select class="form-control" style="flex:1">' + getTipTypeSelectHtml() + '</select></div>';
       } else if (type === 'containsProduct') {
@@ -2999,7 +3043,7 @@
       } else if (type === 'orderType') {
         body = '<div class="drawer-form-row"><label>订单类型：</label><select class="form-control" style="flex:1">' + orderTypeSelectHtml + '</select></div>';
       } else if (type === 'hours') {
-        body = '<div class="drawer-form-row"><label>营业时间段：</label><input type="time" class="form-control" style="width:120px"><span style="color:var(--text-tertiary)">~</span><input type="time" class="form-control" style="width:120px"></div>';
+        body = '<div class="drawer-form-row"><label>订单时间段：</label><input type="time" class="form-control" style="width:120px"><span style="color:var(--text-tertiary)">~</span><input type="time" class="form-control" style="width:120px"></div>';
       } else if (type === 'tipType') {
         body = '<div class="drawer-form-row"><label>' + tipTerm('小费类型：') + '</label><select class="form-control" style="flex:1">' + getTipTypeSelectHtml() + '</select></div>';
       } else if (type === 'surchargeType') {
@@ -3069,7 +3113,7 @@
       } else if (type === 'employee') {
         body = getStandaloneEmployeeConditionBodyHtml('manualEmployeeCondRoleSelect', 'manualEmployeeCondStaffSelect');
       } else if (type === 'hours') {
-        body = '<div class="drawer-form-row"><label>营业时间段：</label><input type="time" class="form-control" style="width:120px"><span style="color:var(--text-tertiary)">~</span><input type="time" class="form-control" style="width:120px"></div>';
+        body = '<div class="drawer-form-row"><label>订单时间段：</label><input type="time" class="form-control" style="width:120px"><span style="color:var(--text-tertiary)">~</span><input type="time" class="form-control" style="width:120px"></div>';
       } else if (type === 'shift') {
         body = '<div class="drawer-form-row"><label>班次：</label><div class="multi-select shift-condition-select" id="manualShiftConditionSelect" style="flex:1" data-placeholder="请选择班次">' +
           '<div class="multi-select-input" onclick="toggleMultiSelect(\'manualShiftConditionSelect\')">' +
@@ -4228,9 +4272,8 @@
     function updateDistributionOptions() {
       var clockRadio = document.querySelector('input[name="clockin"]:checked');
       var ordersRow = document.getElementById('distributionOrdersRow');
-      if (!ordersRow) return;
       var isNoClock = clockRadio && clockRadio.value === 'noclock';
-      ordersRow.style.display = isNoClock ? 'none' : '';
+      if (ordersRow) ordersRow.style.display = isNoClock ? 'none' : '';
       if (isNoClock) {
         var ordersRadio = document.querySelector('input[name="distribution"][value="orders"]');
         if (ordersRadio && ordersRadio.checked) {
@@ -4238,6 +4281,73 @@
           if (avgRadio) avgRadio.checked = true;
         }
       }
+      updateWorkHoursConfigUi();
+    }
+
+    function normalizeWorkHoursConfig(config) {
+      var mode = config && config.mode === 'capped' ? 'capped' : 'actual';
+      var max = config && config.maxHoursPerDay != null ? Number(config.maxHoursPerDay) : null;
+      if (!isFinite(max) || max < 0.1 || max > 24 || Math.round(max * 10) !== max * 10) max = null;
+      if (mode === 'capped' && max == null) mode = 'actual';
+      return { mode: mode, maxHoursPerDay: mode === 'capped' ? max : null };
+    }
+
+    function clearWorkHoursConfigError() {
+      var errorEl = document.getElementById('workHoursConfigError');
+      if (errorEl) {
+        errorEl.textContent = '';
+        errorEl.style.display = 'none';
+      }
+    }
+
+    function updateWorkHoursConfigUi() {
+      var panel = document.getElementById('workHoursConfigPanel');
+      if (!panel) return;
+      var distRadio = document.querySelector('input[name="distribution"]:checked');
+      var clockRadio = document.querySelector('input[name="clockin"]:checked');
+      var isHours = !!(distRadio && distRadio.value === 'hours');
+      var isNoClock = !!(clockRadio && clockRadio.value === 'noclock');
+      panel.style.display = isHours ? '' : 'none';
+      var actualLabel = document.getElementById('workHoursActualLabel');
+      var cappedLabel = document.getElementById('workHoursCappedLabel');
+      if (actualLabel) actualLabel.textContent = isNoClock ? '按照实际录入工时' : '按照实际打卡工时';
+      if (cappedLabel) cappedLabel.textContent = isNoClock ? '录入工时超出最大工时，按最大工时' : '打卡工时超出最大工时，按最大工时';
+      var modeRadio = document.querySelector('input[name="workHoursMode"]:checked');
+      var maxInput = document.getElementById('maxHoursPerDay');
+      if (maxInput) maxInput.disabled = !isHours || !modeRadio || modeRadio.value !== 'capped';
+      if (!isHours || !modeRadio || modeRadio.value !== 'capped') clearWorkHoursConfigError();
+    }
+
+    function validateWorkHoursConfig() {
+      clearWorkHoursConfigError();
+      var distRadio = document.querySelector('input[name="distribution"]:checked');
+      var modeRadio = document.querySelector('input[name="workHoursMode"]:checked');
+      if (!distRadio || distRadio.value !== 'hours' || !modeRadio || modeRadio.value !== 'capped') return true;
+      var input = document.getElementById('maxHoursPerDay');
+      var raw = input ? String(input.value || '').trim() : '';
+      var value = raw === '' ? NaN : Number(raw);
+      var validPrecision = /^\d+(?:\.\d)?$/.test(raw);
+      if (!validPrecision || !isFinite(value) || value < 0.1 || value > 24) {
+        var errorEl = document.getElementById('workHoursConfigError');
+        if (errorEl) {
+          errorEl.textContent = '请输入 0.1–24 之间、最多一位小数的每日最大工时';
+          errorEl.style.display = 'block';
+        }
+        if (input) input.focus();
+        showNotification('请正确填写每日最大工时（0.1–24 小时）', 'error');
+        return false;
+      }
+      return true;
+    }
+
+    function collectWorkHoursConfig() {
+      var distRadio = document.querySelector('input[name="distribution"]:checked');
+      if (!distRadio || distRadio.value !== 'hours') return null;
+      var modeRadio = document.querySelector('input[name="workHoursMode"]:checked');
+      var mode = modeRadio && modeRadio.value === 'capped' ? 'capped' : 'actual';
+      if (mode === 'actual') return { mode: 'actual', maxHoursPerDay: null };
+      var input = document.getElementById('maxHoursPerDay');
+      return { mode: 'capped', maxHoursPerDay: input ? Number(input.value) : null };
     }
 
     var poolNumChars = ['①','②','③','④','⑤','⑥','⑦','⑧','⑨'];
@@ -4919,14 +5029,14 @@
         var cpTxt = formatMenuCascadeCond(cond.containsProduct);
         if (cpTxt) parts.push('订单需包含商品: ' + cpTxt);
       }
-      if (cond.hours && (cond.hours.start || cond.hours.end)) parts.push('营业时间段: ' + (cond.hours.start || '') + '-' + (cond.hours.end || ''));
+      if (cond.hours && (cond.hours.start || cond.hours.end)) parts.push('订单时间段: ' + (cond.hours.start || '') + '-' + (cond.hours.end || ''));
       if (Array.isArray(cond.shift) && cond.shift.length) parts.push('班次: ' + formatShiftSelectionForDisplay(cond.shift));
       if (Array.isArray(cond.weekdays) && cond.weekdays.length) parts.push('周期: ' + formatWeekdaysCondDisplay(cond.weekdays));
       return parts.join(' | ');
     }
     function formatSurchargeCondForDisplay(cond) {
       if (!cond || typeof cond !== 'object') return '';
-      if (cond.types && Array.isArray(cond.types) && cond.types.length) return '加收类型: ' + cond.types.join(', ');
+      if (cond.types && Array.isArray(cond.types) && cond.types.length) return '加收类型: ' + formatSurchargeTypeDisplay(cond.types);
       var parts = [];
       if (Array.isArray(cond.role) && cond.role.length) parts.push('角色: ' + cond.role.join(', '));
       else if (cond.role) parts.push('角色: ' + cond.role);
@@ -4935,9 +5045,9 @@
       if (cond.area) parts.push('订单区域: ' + cond.area);
       if (cond.orderType) parts.push('订单类型: ' + cond.orderType);
       if (cond.surchargeType) {
-        parts.push('加收类型: ' + (Array.isArray(cond.surchargeType) ? cond.surchargeType.join(', ') : cond.surchargeType));
+        parts.push('加收类型: ' + formatSurchargeTypeDisplay(cond.surchargeType));
       } else if (cond.tipType) parts.push(tipTerm('小费类型: ') + cond.tipType);
-      if (cond.hours && (cond.hours.start || cond.hours.end)) parts.push('营业时间段: ' + (cond.hours.start || '') + '-' + (cond.hours.end || ''));
+      if (cond.hours && (cond.hours.start || cond.hours.end)) parts.push('订单时间段: ' + (cond.hours.start || '') + '-' + (cond.hours.end || ''));
       if (Array.isArray(cond.shift) && cond.shift.length) parts.push('班次: ' + formatShiftSelectionForDisplay(cond.shift));
       if (Array.isArray(cond.weekdays) && cond.weekdays.length) parts.push('周期: ' + formatWeekdaysCondDisplay(cond.weekdays));
       return parts.join(' | ');
@@ -4949,7 +5059,7 @@
       else if (cond.role) parts.push('角色: ' + cond.role);
       if (Array.isArray(cond.employeeRoles) && cond.employeeRoles.length) parts.push('员工筛选角色: ' + cond.employeeRoles.join(', '));
       if (Array.isArray(cond.employee) && cond.employee.length) parts.push('员工: ' + cond.employee.join(', '));
-      if (cond.hours && (cond.hours.start || cond.hours.end)) parts.push('营业时间段: ' + (cond.hours.start || '') + '-' + (cond.hours.end || ''));
+      if (cond.hours && (cond.hours.start || cond.hours.end)) parts.push('订单时间段: ' + (cond.hours.start || '') + '-' + (cond.hours.end || ''));
       if (Array.isArray(cond.shift) && cond.shift.length) parts.push('班次: ' + formatShiftSelectionForDisplay(cond.shift));
       if (Array.isArray(cond.weekdays) && cond.weekdays.length) parts.push('周期: ' + formatWeekdaysCondDisplay(cond.weekdays));
       return parts.join(' | ');
@@ -5489,6 +5599,8 @@
         allocationMode: allocationMode,
         poolKind: currentPoolKind
       };
+      var workHoursConfig = collectWorkHoursConfig();
+      if (workHoursConfig) data.workHoursConfig = workHoursConfig;
       if (allocationMode === 'order_tip_then_residual') {
         data.tipClaims = collectTipClaims();
         data.residual = { receivers: collectOrderResidualReceivers() };
@@ -5515,6 +5627,7 @@
         showNotification('请选择门店', 'error');
         return;
       }
+      if (!validateWorkHoursConfig()) return;
       var allocMode = (document.querySelector('input[name="allocationMode"]:checked') || {}).value || 'legacy_pool';
       if (allocMode === 'legacy_pool') {
         if (document.querySelectorAll('.pool-rule-card').length === 0) {
@@ -5632,6 +5745,8 @@
           rule.store = data.store;
           rule.distribution = data.distribution;
           rule.clockin = data.clockin;
+          if (data.workHoursConfig) rule.workHoursConfig = data.workHoursConfig;
+          else delete rule.workHoursConfig;
           rule.allocationMode = data.allocationMode || 'legacy_pool';
           rule.poolKind = data.poolKind || 'tip';
           if (rule.allocationMode === 'order_tip_then_residual') {
@@ -5671,6 +5786,7 @@
           allocationMode: data.allocationMode || 'legacy_pool',
           poolKind: data.poolKind || 'tip'
         };
+        if (data.workHoursConfig) rule.workHoursConfig = data.workHoursConfig;
         if (rule.allocationMode === 'order_tip_then_residual') {
           rule.poolRules = data.poolRules;
           rule.tipClaims = data.tipClaims;

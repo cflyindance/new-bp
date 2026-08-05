@@ -187,7 +187,7 @@ export function renderViewSwitchControl(): string {
         id="view-switch-menu"
         role="menu"
         data-view-switch-menu
-        class="absolute right-0 top-full z-50 mt-1.5 hidden w-52 origin-top-right rounded-lg border border-border bg-card py-1.5 shadow-lg animate-fade-in"
+        class="absolute right-full top-0 z-[100] mr-1.5 hidden w-52 origin-top-right rounded-lg border border-border bg-card py-1.5 shadow-lg animate-fade-in"
         aria-label="${escapeHtml(t("shell.viewSwitchMenuAria"))}"
       >
         <div class="px-1.5">

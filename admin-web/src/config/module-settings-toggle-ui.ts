@@ -314,10 +314,11 @@ export const STORE_OPERATION_MODE_ALERTS_TOGGLE_SEQ = STORE_HOURS_OPERATION_TOGG
 /** 前厅 · POS 找单列表（151/152/153/251 主开关 + 产线，见 pos-find-order-list-ui） */
 export const POS_FIND_ORDER_LIST_TOGGLE_SEQ: readonly number[] = [151, 152, 153, 251];
 
-/** 前厅 · 菜单查找与时段（118/148/176/177/348 主开关 + 产线，见 pos-menu-scope-lines-ui） */
-export const POS_MENU_SCOPE_LINES_TOGGLE_SEQ: readonly number[] = [
-  118, 148, 176, 177, 348,
-];
+/** 前厅 · 菜单查找与时段（118/148 主开关 + 产线，见 pos-menu-scope-lines-ui；348 见 timed-menu-display-ui） */
+export const POS_MENU_SCOPE_LINES_TOGGLE_SEQ: readonly number[] = [118, 148];
+
+/** 前厅 · 按照时段显示菜单（348 按产线订单类型见 timed-menu-display-ui） */
+export const TIMED_MENU_DISPLAY_TOGGLE_SEQ: readonly number[] = [348];
 
 /** 前厅 · 菜单区界面布局（216–220 主开关 + 产线，见 pos-menu-ui-layout-lines-ui；350 见 emenu-custom-message-ui） */
 export const POS_MENU_UI_LAYOUT_LINES_TOGGLE_SEQ: readonly number[] = [
@@ -333,6 +334,7 @@ export const STAFF_ORDER_ALERT_TOGGLE_SEQ: readonly number[] = [637, 638, 639];
 export const MODULE_SETTING_TOGGLE_SEQ = new Set([
   ...POS_FIND_ORDER_LIST_TOGGLE_SEQ,
   ...POS_MENU_SCOPE_LINES_TOGGLE_SEQ,
+  ...TIMED_MENU_DISPLAY_TOGGLE_SEQ,
   ...POS_MENU_UI_LAYOUT_LINES_TOGGLE_SEQ,
   ...POS_COMBO_ORDERING_TOGGLE_SEQ,
   ...STAFF_ORDER_ALERT_TOGGLE_SEQ,

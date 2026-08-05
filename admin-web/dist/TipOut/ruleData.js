@@ -79,6 +79,26 @@
     orders: '按订单占比分配'
   };
 
+  function normalizeWorkHoursConfig(config) {
+    var mode = config && config.mode === 'capped' ? 'capped' : 'actual';
+    var max = config && config.maxHoursPerDay != null ? Number(config.maxHoursPerDay) : null;
+    if (!isFinite(max) || max < 0.1 || max > 24 || Math.round(max * 10) !== max * 10) max = null;
+    if (mode === 'capped' && max == null) mode = 'actual';
+    return { mode: mode, maxHoursPerDay: mode === 'capped' ? max : null };
+  }
+
+  function formatDistributionName(rule) {
+    rule = rule || {};
+    var distribution = rule.distribution || 'average';
+    var base = distNames[distribution] || distribution;
+    if (distribution !== 'hours') return base;
+    var config = normalizeWorkHoursConfig(rule.workHoursConfig);
+    if (config.mode === 'capped') {
+      return base + '（每日最多 ' + config.maxHoursPerDay + ' 小时）';
+    }
+    return base + (rule.clockin === 'noclock' ? '（按照实际录入工时）' : '（按照实际打卡工时）');
+  }
+
   function getRules() {
     try {
       var raw = localStorage.getItem(STORAGE_KEY);
@@ -287,7 +307,7 @@
         }
       }
       parts.push('计提小费接受方×' + n + '；剩余接收方→' + res);
-      if (rule.distribution) parts.push(distNames[rule.distribution] || rule.distribution);
+      if (rule.distribution) parts.push(formatDistributionName(rule));
       return parts.join('，');
     }
     if (rule.poolRules && rule.poolRules.length > 0) {
@@ -340,7 +360,7 @@
       parts.push('接收方 ' + recStr);
     }
     if (rule.distribution) {
-      parts.push(distNames[rule.distribution] || rule.distribution);
+      parts.push(formatDistributionName(rule));
     }
     return parts.join('，');
   }
@@ -361,6 +381,8 @@
     buildRuleDescription: buildRuleDescription,
     getRulePoolKindLabel: getRulePoolKindLabel,
     getRulePoolKindTagClass: getRulePoolKindTagClass,
+    normalizeWorkHoursConfig: normalizeWorkHoursConfig,
+    formatDistributionName: formatDistributionName,
     poolTypeNames: poolTypeNames,
     distNames: distNames
   };

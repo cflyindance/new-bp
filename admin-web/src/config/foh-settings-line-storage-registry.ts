@@ -45,7 +45,7 @@ export const FOH_LINE_STORAGE_BY_SEQ: Record<number, string> = {
   345: "345-kitchen-send-password-auth-lines",
   346: "346-home-password-auth-lines",
   347: "347-allow-change-server-lines",
-  348: "348-timed-menu-display-lines",
+  348: "348-timed-menu-order-types-by-line",
   349: "349-emenu-server-readonly-dish-lines",
   350: "350-emenu-custom-message-lines",
   351: "351-clear-table-client-notification-lines",

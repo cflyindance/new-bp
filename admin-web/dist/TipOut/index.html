@@ -661,13 +661,17 @@
             : (5 + rng() * 12);
           tipBefore = roundTip(baseBefore * weekendBoost);
         }
+        var attendance = (window.TipOutAttendance && TipOutAttendance.getDayStatus)
+          ? TipOutAttendance.getDayStatus(emp.name, dateKey)
+          : { hours: 0, clockStatus: '未打卡' };
         return {
           id: emp.name,
           name: emp.name,
           role: emp.role,
           tipBefore: tipBefore,
           tipRate: emp.tipRate || 0,
-          salesAmount: genPersonalNetSales(emp, dateKey)
+          salesAmount: genPersonalNetSales(emp, dateKey),
+          hours: rule.clockin === 'noclock' ? 0 : attendance.hours
         };
       });
       var pipeline = TipAllocation.runLegacyDayPipeline(rule, dayEmps);
