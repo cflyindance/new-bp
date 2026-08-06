@@ -62,10 +62,13 @@ Period and employee list views outside the payroll workspace are not redesigned.
 
 - Present a centered modal with a store summary, employee column, role column, Close, and Confirm.
 - Employee selection updates the available roles in the right column but does not switch the workspace immediately.
+- The authoritative role list for an employee is the unique ordered union of existing payroll data only: `employee.roleRecords[].role`, non-empty attendance-day `role` values, the matched unified-roster `role`, and finally `employee.role` / `employee.department` as fallbacks. The dialog must not invent or persist new roles.
 - Confirm remains disabled until a valid employee and role are selected.
-- Confirm applies the employee switch through the existing navigation path and applies the selected role to the workspace display state.
+- Confirm passes both the employee ID and the validated role string into the existing employee navigation path. The employee ID remains the authoritative payroll-record key; the role is stored only as transient workspace navigation context and is cleared/re-resolved whenever the period, store, or employee changes.
+- The selected role may control the employee-card role tag and which role is preselected when the dialog is reopened. It must not mutate `employee.role`, `employee.roleRecords`, attendance records, rates, calculations, saved drafts, or ADP row allocation. Payroll totals remain employee-wide, matching current behavior.
 - Close, overlay click, and Escape cancel the pending selection.
 - If the current workspace is dirty, the existing unsaved-change confirmation is required before the switch is committed.
+- If that dirty-state confirmation is cancelled, keep the switch dialog open with its staged employee and role intact; do not change the current workspace.
 - The dialog supports scrolling and an explicit empty state when no employees or roles are available.
 
 ## Attendance summary cards
@@ -130,4 +133,3 @@ Period and employee list views outside the payroll workspace are not redesigned.
   - Borderless attendance editing, focus state, and In/Out controls.
   - Header save action and existing save confirmation.
   - No new browser console errors.
-
