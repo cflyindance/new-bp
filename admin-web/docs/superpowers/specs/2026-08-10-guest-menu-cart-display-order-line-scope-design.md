@@ -141,6 +141,11 @@ seq 517 的存储字段固定为：
 
 - seq 606、608：只调整产线显示顺序，不改变存储结构。
 - seq 607：增加 Online Order，调整枚举文案和顺序，并移除主设置页与按产线页面的通用总开关。继续使用 `607-menu-image-mode-lines` 作为启用产线字段；只有该字段状态为 `missing` 时才允许执行旧开关迁移，显式空数组必须保持全部禁用。旧开关只用于一次性迁移：旧值 `1` 迁移历史三条产线，旧值 `0` 迁移为空；迁移后不再渲染或改写该开关键。已有配置新增 Online Order 时，该行预置 `original` 子值但默认不启用；全新商户首次进入时初始化为四条目标产线。
+- seq 607 必须加入 lines→toggle 镜像排除策略。以下所有写入路径在 seq 为 607 时都只能更新 `607-menu-image-mode-lines`，不得写入 `bplant-module-setting-toggle:607`：
+  - `module-settings-form-ui.ts` 的草稿/即时 JSON 写入镜像 `syncFohLinesMirrorToggle`。
+  - `page-settings-draft.ts` 的持久化序列化镜像 `syncFohLinesMirrorFromSerialized`，包括保存与放弃修改恢复。
+  - `foh-settings-by-line-toggle.ts` 的 `writeFohByLineToggleState` 尾部镜像，包括按产线操作和 AI `foh-line` 写入。
+- 镜像排除应由一个共享的 seq 判定函数提供，三条写入链路共同消费，避免只修复可见 UI 而遗漏草稿、按产线或 AI 路径。
 - seq 645：增加 Online Order；新增行使用默认 16px。已有按产线配置时新增行默认不启用；全新商户初始化时四条目标产线默认启用。显式全部禁用不得被迁移逻辑复活。
 - seq 509：现有 UI 已具备五条目标产线，补正产线范围抽取元数据并统一显示顺序。
 - seq 525：停止复用旧 `MEMBER_LOGIN_PRODUCT_LINES`，使用独立的 eMenu、SDI、Kiosk、Online Order 定义。
@@ -182,6 +187,7 @@ seq 526 的读取优先级固定为：
 - 目录场景描述同步为新的产线范围与选项文案。
 - 产线 scope seed、生成文件和 storage registry 与显式映射保持一致。
 - storage registry 对 seq 517 使用 `517-guest-menu-nav-position-enabled-lines`，对 seq 526 使用 `526-points-dish-position-enabled-lines`，对 seq 607 继续使用 `607-menu-image-mode-lines`。对象型位置字段不得进入通用 lines codec。
+- seq 607 保留在 storage registry 以支持按产线读取和 lines codec，但必须同时进入共享的 toggle-mirror exclusion 集合；“可按产线读写”与“同步旧总开关”是两项独立能力。
 - 生成器不能再用 `GUEST_DEFAULT` 掩盖 seq 509、525 或各设置项的真实范围。
 - 实施前保存目标文件差异基线；生成后只允许 18 个目标 seq、对应描述和预期 registry 项发生变化。出现其他生成漂移立即停止，不覆盖前序工作区修改。
 
@@ -231,6 +237,7 @@ seq 526 的读取优先级固定为：
 - 607 Online Order、645 Online Order 和扩展为七产线的普通项，在存量配置中默认禁用，在全新配置中按新完整范围初始化。
 - 517、526、607、645 和普通扩展项必须区分 `missing`、`configured`、`invalid`；解析失败或存储不可用时不得触发全选或自动写回。
 - seq 607 在主页面和按产线页面均不得出现通用总开关；关闭当前产线后当前行仍显示，枚举值与例外菜品数据保持。
+- seq 607 迁移完成后，无论通过组件修改、全部禁用、页面保存/放弃恢复、按产线写入或 AI `foh-line` 写入，旧 `bplant-module-setting-toggle:607` 都必须保持原值不变。
 - 18 个 seq 必须各有且仅有一个 scope owner；重复、冲突或缺失必须使验证失败。
 - storage registry 必须区分 lines 数组字段与对象型位置字段。
 
@@ -260,7 +267,8 @@ seq 526 的读取优先级固定为：
 7. 修改普通复选、枚举、字体值或菜详情选择中的代表性配置，点击页面保存后刷新，确认数据保持。
 8. 进行一次未保存修改并放弃，确认恢复上次已保存值。
 9. 打开至少一个按产线页面，确认只展示当前适用产线；seq 607 仅有行内启用控件且禁用后行仍显示；不适用项按 scope 隐藏。
-10. 检查浏览器控制台没有新增错误或警告。
+10. 在保存、全部禁用和按产线修改后检查旧 seq 607 开关键未被改写。
+11. 检查浏览器控制台没有新增错误或警告。
 
 ## 12. Build 决策
 
@@ -281,6 +289,7 @@ seq 526 的读取优先级固定为：
 - [ ] 存量商户的新增产线默认禁用，全新商户按新的完整合法范围初始化。
 - [ ] 存储缺失、合法配置、损坏/不可用三态行为明确；异常状态不会触发全选或自动写回。
 - [ ] seq 607 在主页面和按产线页面都没有重复总开关，禁用行仍显示且子值保留。
+- [ ] seq 607 保留 lines registry 能力但排除全部 lines→toggle 镜像；组件、草稿、保存/放弃、按产线和 AI 写入均不改写旧开关键。
 - [ ] 菜详情、图片例外菜品和字体大小能力无回归。
 - [ ] 主设置页与按产线页面均按正确 scope 展示。
 - [ ] 18 个 seq 各有唯一 scope owner；目录描述、scope seed、生成文件、storage registry 和基线一致。
