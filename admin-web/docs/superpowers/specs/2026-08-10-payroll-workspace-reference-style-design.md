@@ -2,24 +2,28 @@
 
 ## Goal
 
-Restore the payroll workspace to the user-provided full-page reference while keeping the existing TipOut sidebar and account header visible. Treat the screenshot as the visual specification for the workspace content area, not for the global application shell.
+Restore the payroll workspace to the user-provided full-page reference while keeping the existing application navigation and account header visible. Treat the screenshot as the visual specification for the workspace content area, not for the global application shell.
 
 This specification refines the presentation requirements in `2026-08-06-payroll-screenshot-ui-interactions-design.md`. It does not replace the employee edit modal specification or any existing payroll business behavior.
 
 ## Scope and shell boundary
 
-- Keep the fixed left navigation, top account header, mobile menu behavior, and their dimensions unchanged.
+- In the production `/team/payroll-report` route, keep the outer admin-web navigation, account header, and mobile navigation behavior unchanged.
+- Continue hiding the iframe's duplicate TipOut `.sidebar` and `.header` through the existing `body.tipout-embedded` rules.
+- Do not modify `isEmbeddedMode()`, the embedded-mode body class, iframe routing, or the shared embedded-shell rules in `common.css`.
+- When `payroll.html` is opened standalone, retain its current internal TipOut sidebar and header behavior.
+- On desktop, the applicable outer or standalone shell remains visible. At narrow widths, preserve the existing drawer-style mobile navigation rather than forcing a fixed desktop sidebar.
 - Apply the restoration only while `payroll-workspace-active` is present.
 - Period and employee list views retain their current appearance.
 - The workspace fills the available main-content width instead of emulating a fixed 1686 px canvas or scaling the page.
-- The workspace remains usable inside the narrower area created by the persistent sidebar.
+- The workspace remains usable inside the narrower area created by the applicable desktop shell.
 
 ## Workspace canvas
 
 - Present the workspace as one continuous white rounded canvas over the application's light-gray content background.
 - Visually join the existing workspace top bar, filter bar, and scrollable main panel so they read as one surface without gray seams or nested-card framing.
 - Use compact edge padding comparable to the reference: approximately 20–24 px on desktop, decreasing to 12–16 px at narrower widths.
-- Preserve the current internal scrolling behavior so the global account header and sidebar remain stable.
+- Preserve the current internal scrolling behavior so the applicable outer or standalone shell remains stable.
 - Keep the native workspace scrollbar subtle and aligned at the canvas's right edge.
 
 ## Header, actions, and filters
@@ -74,18 +78,19 @@ This specification refines the presentation requirements in `2026-08-06-payroll-
 ## Responsive behavior
 
 - At desktop widths, maintain the reference hierarchy and three-card/two-or-four-column layouts within the available content area.
-- At intermediate widths, allow action wrapping, reduce gaps, use two-column form groups, and retain the employee card's hierarchy.
-- At narrow widths, stack title/actions, summary cards, and form fields; preserve attendance with horizontal scrolling.
-- Do not hide or resize the global sidebar or account header as part of this work.
+- At intermediate widths, including the existing 1100 px breakpoint, allow action wrapping, reduce gaps, use two-column form groups, and retain the employee card's hierarchy.
+- At narrow widths, including the existing 760 px breakpoint, stack title/actions, summary cards, and form fields; preserve attendance with horizontal scrolling and the existing mobile shell behavior.
+- Do not hide or resize the outer admin-web shell or the standalone TipOut shell as part of this work; do not reveal the duplicate TipOut shell inside embedded mode.
 
 ## Acceptance criteria
 
-1. Entering the payroll workspace leaves the sidebar and account header visible.
-2. The right-side workspace reads as a single white rounded canvas matching the reference's hierarchy and density.
-3. Header actions, filter pills, employee card, three summary panels, attendance weeks, and Manage Payroll groups appear in the reference order.
-4. No gray seam separates the header, filters, and scrollable workspace body.
-5. The Manage Payroll groups appear in the specified reference order and grid sizes.
-6. Existing employee editing, employee switching, menu, attendance editing, export, dirty-state, and save flows remain functional.
-7. Existing payroll IDs, calculations, localization, and persisted data shapes remain unchanged.
-8. Desktop visual comparison confirms spacing, radii, colors, and typography; intermediate and narrow checks confirm wrapping and horizontal table scrolling.
-9. JavaScript syntax, TypeScript, the payroll structural verifier, and browser console checks pass.
+1. On a desktop embedded `/team/payroll-report` viewport, the outer admin-web navigation and account header remain visible while the iframe's duplicate TipOut shell remains hidden.
+2. When `payroll.html` is opened standalone on desktop, its current TipOut sidebar and account header remain visible.
+3. The right-side workspace reads as a single white rounded canvas matching the reference's hierarchy and density.
+4. Header actions, filter pills, employee card, three summary panels, attendance weeks, and Manage Payroll groups appear in the reference order.
+5. No gray seam separates the header, filters, and scrollable workspace body.
+6. The Manage Payroll groups appear in the specified reference order and grid sizes.
+7. Existing employee editing, employee switching, menu, attendance editing, export, dirty-state, and save flows remain functional.
+8. Existing payroll IDs, calculations, localization, and persisted data shapes remain unchanged.
+9. Desktop visual comparison covers both embedded and standalone rendering; 1100 px and 760 px checks confirm wrapping, mobile-shell behavior, and horizontal table scrolling.
+10. JavaScript syntax, TypeScript, the payroll structural verifier, and browser console checks pass.
