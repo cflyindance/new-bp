@@ -12,8 +12,8 @@
 
 ## 目标
 
-- 前厅设置固定为 22 个规范组：员工端 11 组、食客端 11 组。
-- 从生成目录排除 seq 164、176、177，最终有效目录为 154 项。
+- 前厅设置的规范 catalog 与复杂版本固定为 22 个规范组：员工端 11 组、食客端 11 组。
+- 从生成目录排除 seq 164、176、177，复杂版本最终有效目录为 154 项。
 - 每个有效 seq 只归属一个规范组。
 - 被合并的旧 groupKey 和书签继续重定向到新组。
 - 统一当前运行目录、产线范围、平台预设和设计文档。
@@ -71,7 +71,15 @@
 
 - seq 164 已在订单折扣实现中标记下线，本次加入全版本退役和目录排除，不迁移存储。
 - seq 176、177 已全版本退役，本次补充目录排除，避免继续参与生成和产线校验。
+- `scripts/generate-order-settings-design-doc.mjs` 与当前订单中心设计文档同步删除 seq 164 的有效项表述，或明确标记为退役；当前文档不得继续把它计入有效折扣项。
 - 不修改历史原始归类和竞品分析中的旧记录。
+
+## 产品版本基线
+
+- 复杂版本展示规范 catalog 的全部 22 组、154 项。
+- MVP 继续沿用现有隐藏策略：隐藏 `foh-pos-buttons`、`foh-pos-order-toolbar` 两组，以及 `MVP_HIDDEN_MODULE_SETTING_SEQS` 中属于前厅的设置；按本规格迁移后应展示 20 组、119 项。
+- 本次只向 `RETIRED_MODULE_SETTING_SEQS` 增加 seq 164，不改变 MVP 隐藏组或隐藏 seq 的定义。
+- 专项校验分别断言复杂版本与 MVP 的可见 groupKey/seq 集合，防止把复杂版本的 22/154 错误套用到 MVP。
 
 ## 旧路径兼容
 
@@ -80,18 +88,30 @@
 | `foh-pos-menu-ui-layout` / `pos-menu-ui-layout` | `foh-pos-menu-scope` |
 | `foh-pos-order-extras` / `foh-order-toolbar-extra` | `foh-pos-order-toolbar` |
 | `foh-pos-checkout-entry` / `pos-checkout-entry` | `foh-pos-find-order-list` |
-| `foh-guest-kitchen-send` / `guest-channel-kitchen-send` / `guest-scenario-dining` | `foh-guest-order-type` |
+| `foh-guest-kitchen-send` / `foh-guest-scenario-dining` / `guest-channel-kitchen-send` / `guest-scenario-dining` / `foh-guest-kitchen-dining` | `foh-guest-order-type` |
 | `guest-notes-fees` | `foh-guest-order-notes` |
 
 旧组中设置被拆到多个目标时，组级书签跳转到承担主要结构的目标组；具体设置仍通过 seq 唯一定位。
 
+所有指向被删除组的别名必须直接指向存活组，不依赖单跳规范化器进行链式跳转。`src/main.ts` 不再维护独立的 `fohSettingsLegacyGroup` 副本，改为复用 `src/config/foh-settings-group-keys.ts` 暴露的共享规范化函数；生成侧和运行时镜像对每一个别名执行同一组专项测试。
+
 ## SSOT 与派生产物
 
-1. `scripts/lib/foh-settings-groups.mjs` 是生成侧分组顺序、标题、归属和旧路径的 SSOT。
-2. `src/config/foh-settings-group-keys.ts` 是运行时镜像，必须与生成侧一致。
-3. 产线 scope 的 groupKey 随设置迁移同步，设置的产线集合和存储字段不变。
-4. `module-settings-catalog.ts`、平台预设和两份当前前厅设计文档均为派生或同步产物。
-5. 生成命令产生无关漂移时，只接受与本规格分组、名称、归属和排除项直接相关的差异。
+1. `scripts/lib/foh-settings-groups.mjs` 是生成侧分组顺序、标题、旧路径以及“组内完整 seq 顺序”的 SSOT；同一份有序 seq 列表同时用于归属和排序。
+2. `scripts/lib/settings-intra-group-sort.mjs` 必须消费上述有序列表，不再为前厅重复维护 `FOH_*_SEQ_ORDER`；专项校验逐组断言本规格表中的完整 seq 顺序。
+3. `src/config/foh-settings-group-keys.ts` 是运行时镜像，必须与生成侧一致，并向 `src/main.ts` 提供共享旧路径规范化函数。
+4. 产线生成链同步更新 `scripts/lib/foh-line-scope-extract.mjs`、`scripts/lib/foh-settings-line-scope.seed.json`、`src/config/foh-settings-line-scope.ts`、`src/config/foh-settings-line-storage-registry.ts`、产线矩阵生成器和平台预设 L3 校验；只允许 groupKey 改变，逐 seq 的 `lines` 集合和存储字段不变。
+5. `module-settings-catalog.ts`、前厅设计文档及其生成器、订单中心设计文档及其生成器均为派生或同步产物。
+6. 实施顺序固定为：先保存迁移前不变量基线，再修改分组 SSOT，再运行 `npm run generate:foh-line-scope`、`npm run build:settings-catalog` 和两份设计文档生成器，最后执行专项校验。
+7. 生成命令产生无关漂移时，只接受与本规格分组、名称、归属、排序、重定向和排除项直接相关的差异。
+
+## 回归基线与专项校验
+
+- 新增前厅 22 组专项校验，并提交迁移前基线夹具；基线覆盖 154 个保留 seq 的 catalog 元数据、`seq → lines` 集合和 `seq → storage registry` 映射。
+- catalog 元数据对比忽略本次允许变化的 `groupKey`、`groupTitle`、`sortInGroup`，其余字段必须逐项相等；新 catalog 与旧 catalog 的 seq 差集只能是 164、176、177。
+- 对迁移项 349、141、216–220、350、196、110、248、221、581、502、521–523 增加自定义控件注册、渲染入口和读写映射冒烟检查，证明迁组没有改变原控件或存储路径。
+- 旧路径测试逐项覆盖本规格重定向表，断言目标直接存活且规范化幂等；同时静态断言 `src/main.ts` 不再出现独立别名表。
+- 产线对比以迁移前基线为准，逐 seq 比较排序后的 `lines` 集合；不能仅用同步更新后的两个派生产物互相验证。
 
 ## 错误与兼容处理
 
@@ -99,14 +119,17 @@
 - 一个有效 seq 同时进入多个规范组时，专项校验失败。
 - 任何规范组缺失、顺序变化、员工端/食客端不等于 11 组时，专项校验失败。
 - 旧路径重定向必须幂等：规范路径再次归一化后保持不变。
+- 复杂版本或 MVP 的可见集合偏离产品版本基线时，专项校验失败。
+- 任一保留 seq 的非分组 catalog 元数据、产线集合、存储注册或自定义控件入口发生变化时，专项校验失败。
 
 ## 验收标准
 
-1. 前厅目录恰好包含 22 组、154 项；员工端和食客端各 11 组。
+1. 规范 catalog 与复杂版本目录恰好包含 22 组、154 项；员工端和食客端各 11 组；MVP 恰好包含 20 组、119 项。
 2. 154 个 seq 唯一，无遗漏、无重复。
-3. 侧栏不再出现“折扣”“分割线与超时提醒”“菜单区界面布局”“POS 结账入口”“食客端送厨”。
+3. 每组 seq 的展示顺序与本规格表完全一致；侧栏不再出现“折扣”“分割线与超时提醒”“菜单区界面布局”“POS 结账入口”“食客端送厨”。
 4. 新增“点单备注”，并使用本规格中的全部新名称。
-5. seq 164、176、177 不进入运行目录；历史资料保持不变。
-6. 旧 groupKey 均重定向至表中目标，规范路径幂等。
-7. 所有设置的交互、存储键和产线集合保持不变。
-8. 专项校验、前厅产线校验、TypeScript 检查、差异检查和生产构建通过。
+5. seq 164、176、177 不进入运行目录；当前订单中心文档不再把 164 计为有效项，历史资料保持不变。
+6. 旧 groupKey 均直接重定向至表中存活目标，规范路径幂等，运行时不再有第二份硬编码别名表。
+7. 基线对比证明所有保留设置的非分组 catalog 元数据、交互入口、存储键和产线集合保持不变。
+8. 迁移项自定义控件渲染和读写映射冒烟测试通过。
+9. 专项校验、`npm run verify:foh-line-scope`、`npm run verify:foh-lines-store`、`npm run verify:foh-platform-preset-l3`、TypeScript 检查、差异检查和生产构建通过。
