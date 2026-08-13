@@ -515,6 +515,93 @@ function relationSummary(db, url) {
   return paginate(items, url, (item) => `${String(actionOrder.get(item.action) ?? 99).padStart(2, "0")}::${optionKey(optionById.get(item.optionId))}`);
 }
 
+function parseRelationProductPage(url) {
+  const pageValues = url.searchParams.getAll("page");
+  const limitValues = url.searchParams.getAll("limit");
+  if (pageValues.length > 1) throw new Error("invalid_page");
+  if (limitValues.length > 1) throw new Error("invalid_page_size");
+  const pageText = pageValues[0] ?? "1";
+  if (!/^[1-9]\d*$/.test(pageText)) throw new Error("invalid_page");
+  const page = Number(pageText);
+  if (!Number.isSafeInteger(page)) throw new Error("invalid_page");
+  const pageSize = limitValues.length ? Number(limitValues[0]) : 10;
+  if (!Number.isInteger(pageSize) || ![5, 10, 20, 50].includes(pageSize)) throw new Error("invalid_page_size");
+  const offset = (page - 1) * pageSize;
+  if (!Number.isSafeInteger(offset)) throw new Error("invalid_page");
+  return { page, pageSize, offset };
+}
+
+function relationProductGroups(db, url) {
+  const { page, pageSize, offset } = parseRelationProductPage(url);
+  const query = normalizeText(url.searchParams.get("query"));
+  const actionFilter = url.searchParams.get("action") || "";
+  const categoryId = url.searchParams.get("categoryId") || "";
+  const statusFilter = url.searchParams.get("status") || "";
+  if (actionFilter && !ACTIONS.includes(actionFilter)) throw new Error("invalid_action");
+  if (statusFilter && !["active", "mixed", "inactive"].includes(statusFilter)) throw new Error("invalid_status");
+
+  const categoryOrder = new Map(db.categories.map((category) => [category.id, category.sortOrder]));
+  const productById = new Map(db.products.map((product) => [product.id, product]));
+  const optionById = new Map(db.options.map((option) => [option.id, option]));
+  const grouped = new Map();
+
+  for (const relation of db.relations) {
+    if (actionFilter && relation.action !== actionFilter) continue;
+    const product = productById.get(relation.productId);
+    const option = optionById.get(relation.optionId);
+    if (!product || !option || (categoryId && product.categoryId !== categoryId)) continue;
+    const productMatches = !query || normalizeText(`${product.name} ${product.code}`).includes(query);
+    const optionMatches = !query || normalizeText(`${option.name} ${option.nameEn ?? ""} ${option.code}`).includes(query);
+    if (!productMatches && !optionMatches) continue;
+    const group = grouped.get(product.id) ?? { product, relations: [] };
+    group.relations.push({ relation, option });
+    grouped.set(product.id, group);
+  }
+
+  const actionOrder = new Map(ACTIONS.map((action, index) => [action, index]));
+  const items = [...grouped.values()].map((group) => {
+    const activeCount = group.relations.filter(({ relation }) => relation.status === "active").length;
+    const status = activeCount === group.relations.length ? "active" : activeCount ? "mixed" : "inactive";
+    const actionGroups = new Map();
+    for (const entry of group.relations) {
+      if (!actionGroups.has(entry.relation.action)) actionGroups.set(entry.relation.action, []);
+      actionGroups.get(entry.relation.action).push(entry);
+    }
+    const actions = [...actionGroups.entries()]
+      .sort(([left], [right]) => (actionOrder.get(left) ?? 99) - (actionOrder.get(right) ?? 99) || stableTextCompare(left, right))
+      .map(([action, entries]) => ({
+        action,
+        items: entries.sort((left, right) => {
+          const leftRelationOrder = Number.isFinite(Number(left.relation.sortOrder)) ? Number(left.relation.sortOrder) : Number.POSITIVE_INFINITY;
+          const rightRelationOrder = Number.isFinite(Number(right.relation.sortOrder)) ? Number(right.relation.sortOrder) : Number.POSITIVE_INFINITY;
+          const leftOptionOrder = Number.isFinite(Number(left.option.sortOrder)) ? Number(left.option.sortOrder) : Number.POSITIVE_INFINITY;
+          const rightOptionOrder = Number.isFinite(Number(right.option.sortOrder)) ? Number(right.option.sortOrder) : Number.POSITIVE_INFINITY;
+          return leftRelationOrder - rightRelationOrder || leftOptionOrder - rightOptionOrder || stableTextCompare(normalizeText(left.option.name), normalizeText(right.option.name)) || stableTextCompare(left.relation.id, right.relation.id);
+        }).map(({ relation, option }) => ({
+          relationId: relation.id,
+          optionId: option.id,
+          optionName: option.name,
+          priceDelta: normalizePrice(relation.priceDelta),
+          sortOrder: relation.sortOrder,
+          status: relation.status,
+        })),
+      }));
+    return { product: group.product, visibleRelationCount: group.relations.length, status, actions };
+  }).filter((item) => !statusFilter || item.status === statusFilter)
+    .sort((left, right) => productKey(left.product, categoryOrder).localeCompare(productKey(right.product, categoryOrder)));
+
+  const totalProducts = items.length;
+  const totalPages = Math.ceil(totalProducts / pageSize);
+  const responsePage = totalProducts === 0 ? 1 : page;
+  return {
+    items: totalProducts === 0 ? [] : items.slice(offset, offset + pageSize),
+    page: responsePage,
+    pageSize,
+    totalPages,
+    totalProducts,
+  };
+}
+
 function relationProducts(db, url) {
   const action = url.searchParams.get("action");
   const optionId = url.searchParams.get("optionId");
@@ -770,6 +857,10 @@ export async function handleEmenuSeasoningApi(req, res, dbPath) {
     }
     if (method === "GET" && sub === "/relations/summary") {
       sendJson(res, 200, relationSummary(db, url));
+      return true;
+    }
+    if (method === "GET" && sub === "/relations/product-groups") {
+      sendJson(res, 200, relationProductGroups(db, url));
       return true;
     }
     if (method === "GET" && sub === "/relations/products") {

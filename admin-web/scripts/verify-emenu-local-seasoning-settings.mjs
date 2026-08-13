@@ -15,6 +15,8 @@ function expect(source, pattern, message) {
 
 const shell = read("src/shell/emenu-local-shell.ts");
 const page = read("src/emenu-local/seasoning/seasoning-page.ts");
+const overview = read("src/emenu-local/seasoning/seasoning-overview-ui.ts");
+const store = read("src/emenu-local/seasoning/seasoning-store.ts");
 const batch = read("src/emenu-local/seasoning/seasoning-batch-wizard-ui.ts");
 const batchPricing = read("src/emenu-local/seasoning/seasoning-batch-pricing.ts");
 const menuPicker = read("src/emenu-local/seasoning/seasoning-menu-structure-picker-ui.ts");
@@ -28,6 +30,16 @@ expect(page, /data-seasoning-settings-page/, "Seasoning page needs a stable root
 expect(page, /data-seasoning-tab="relations"/, "Relations tab is missing");
 expect(page, /data-seasoning-tab="options"/, "Option library tab is missing");
 expect(page, /data-seasoning-open-batch/, "Batch association entry is missing");
+expect(store, /relationProductGroups/, "Relations tab must load product-group pages");
+expect(overview, /data-seasoning-edit-product/, "Product rows must support editing complete associations");
+expect(overview, /data-seasoning-delete-product/, "Product rows must support deleting complete associations");
+expect(page, /relations:\s*\[\]/, "Deleting a product row must remove every product association");
+expect(overview, /data-seasoning-product-row/, "Relations overview must render one top-level row per product");
+expect(overview, /data-seasoning-product-action/, "Relations overview must group options by action");
+expect(overview, /data-seasoning-product-option/, "Relations overview must render options inside action rows");
+expect(overview, /flex-wrap/, "Options in an action must remain inline and wrap when needed");
+expect(overview, /data-seasoning-relation-pagination/, "Relations overview must expose number pagination");
+expect(overview, /relation-page-size/, "Relations overview must expose the 5, 10, 20, 50 page-size selector");
 expect(batch, /data-seasoning-batch-wizard/, "Batch wizard marker is missing");
 expect(batch, /data-seasoning-batch-step/, "Batch wizard steps are missing");
 expect(batch, /const labels = \[t\("seasoning\.batch\.stepProduct"\), t\("seasoning\.batch\.stepConfigure"\), t\("seasoning\.batch\.stepPreview"\)\]/, "Batch wizard must use Product → Actions & Options → Preview order");
@@ -96,6 +108,8 @@ const keys = [
   "seasoning.save",
   "seasoning.discardConfirm",
   "seasoning.productSelectionExpired",
+  "seasoning.deleteProductConfirm",
+  "seasoning.perPage",
   "seasoning.batch.inputPrice",
   "seasoning.batch.markupCoefficient",
   "seasoning.batch.actualMarkupPrice",

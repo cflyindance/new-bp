@@ -24,7 +24,7 @@ export function actionTone(action: SeasoningActionCode): string {
 }
 
 export function formatSeasoningMoney(value: number): string {
-  return new Intl.NumberFormat(undefined, { style: "currency", currency: "CNY", minimumFractionDigits: value % 1 ? 2 : 0 }).format(value);
+  return new Intl.NumberFormat(undefined, { style: "currency", currency: "CNY", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
 }
 
 export const primaryButtonClass = "inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-45";

@@ -59,6 +59,37 @@ export type SeasoningRelationSummary = {
   distinctPriceCount: number;
 };
 
+export type SeasoningRelationProductOption = {
+  relationId: string;
+  optionId: string;
+  optionName: string;
+  priceDelta: number;
+  sortOrder: number;
+  status: SeasoningStatus;
+};
+
+export type SeasoningRelationProductAction = {
+  action: SeasoningActionCode;
+  items: SeasoningRelationProductOption[];
+};
+
+export type SeasoningRelationProductGroup = {
+  product: SeasoningProduct;
+  visibleRelationCount: number;
+  status: "active" | "mixed" | "inactive";
+  actions: SeasoningRelationProductAction[];
+};
+
+export type SeasoningRelationPageSize = 5 | 10 | 20 | 50;
+
+export type SeasoningRelationProductPage = {
+  items: SeasoningRelationProductGroup[];
+  page: number;
+  pageSize: SeasoningRelationPageSize;
+  totalPages: number;
+  totalProducts: number;
+};
+
 export type CursorPage<T> = {
   items: T[];
   nextCursor: string | null;

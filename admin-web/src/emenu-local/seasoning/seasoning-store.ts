@@ -3,7 +3,8 @@ import type {
   CursorPage,
   SeasoningBootstrap,
   SeasoningOption,
-  SeasoningRelationSummary,
+  SeasoningRelationPageSize,
+  SeasoningRelationProductPage,
 } from "./seasoning-types";
 
 export type SeasoningTab = "relations" | "options";
@@ -11,11 +12,13 @@ export type SeasoningTab = "relations" | "options";
 export type SeasoningStoreState = {
   tab: SeasoningTab;
   bootstrap: SeasoningBootstrap | null;
-  summaries: CursorPage<SeasoningRelationSummary> | null;
+  productGroups: SeasoningRelationProductPage | null;
   options: CursorPage<SeasoningOption> | null;
   loading: boolean;
   error: string;
   relationFilters: { query: string; action: string; categoryId: string; status: string };
+  relationPage: number;
+  relationPageSize: SeasoningRelationPageSize;
   optionFilters: { query: string; status: string };
 };
 
@@ -24,11 +27,13 @@ export class SeasoningStore {
   readonly state: SeasoningStoreState = {
     tab: "relations",
     bootstrap: null,
-    summaries: null,
+    productGroups: null,
     options: null,
     loading: false,
     error: "",
     relationFilters: { query: "", action: "", categoryId: "", status: "" },
+    relationPage: 1,
+    relationPageSize: 10,
     optionFilters: { query: "", status: "" },
   };
 
@@ -66,13 +71,63 @@ export class SeasoningStore {
     this.state.bootstrap = await seasoningApi.bootstrap();
   }
 
+  async loadRelationPage(page = this.state.relationPage): Promise<void> {
+    this.state.loading = true;
+    this.state.error = "";
+    this.state.relationPage = page;
+    this.emit();
+    try {
+      let response = await seasoningApi.relationProductGroups({
+        ...this.state.relationFilters,
+        page,
+        limit: this.state.relationPageSize,
+      });
+      if (response.totalPages > 0 && page > response.totalPages) {
+        this.state.relationPage = response.totalPages;
+        response = await seasoningApi.relationProductGroups({
+          ...this.state.relationFilters,
+          page: response.totalPages,
+          limit: this.state.relationPageSize,
+        });
+      } else {
+        this.state.relationPage = response.totalProducts === 0 ? 1 : response.page;
+      }
+      this.state.productGroups = response;
+    } catch (error) {
+      this.state.error = error instanceof Error ? error.message : "request_failed";
+    } finally {
+      this.state.loading = false;
+      this.emit();
+    }
+  }
+
+  async setRelationPageSize(pageSize: SeasoningRelationPageSize): Promise<void> {
+    this.state.relationPageSize = pageSize;
+    await this.loadRelationPage(1);
+  }
+
   async loadCurrentTab(cursor = ""): Promise<void> {
     this.state.loading = true;
     this.state.error = "";
     this.emit();
     try {
       if (this.state.tab === "relations") {
-        this.state.summaries = await seasoningApi.summaries({ ...this.state.relationFilters, cursor, limit: 20 });
+        let response = await seasoningApi.relationProductGroups({
+          ...this.state.relationFilters,
+          page: this.state.relationPage,
+          limit: this.state.relationPageSize,
+        });
+        if (response.totalPages > 0 && this.state.relationPage > response.totalPages) {
+          this.state.relationPage = response.totalPages;
+          response = await seasoningApi.relationProductGroups({
+            ...this.state.relationFilters,
+            page: response.totalPages,
+            limit: this.state.relationPageSize,
+          });
+        } else if (response.totalProducts === 0) {
+          this.state.relationPage = 1;
+        }
+        this.state.productGroups = response;
       } else {
         this.state.options = await seasoningApi.options({ ...this.state.optionFilters, cursor, limit: 20 });
       }

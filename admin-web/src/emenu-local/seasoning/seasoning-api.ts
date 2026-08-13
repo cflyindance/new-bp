@@ -12,6 +12,8 @@ import type {
   SeasoningBootstrap,
   SeasoningOption,
   SeasoningProduct,
+  SeasoningRelationPageSize,
+  SeasoningRelationProductPage,
   SeasoningRelationSummary,
   SeasoningMenuStructure,
 } from "./seasoning-types";
@@ -55,6 +57,8 @@ export const seasoningApi = {
   bootstrap: () => request<SeasoningBootstrap>("/bootstrap"),
   summaries: (params: { query?: string; action?: string; categoryId?: string; status?: string; cursor?: string; limit?: number }) =>
     request<CursorPage<SeasoningRelationSummary>>(`/relations/summary${query(params)}`),
+  relationProductGroups: (params: { query?: string; action?: string; categoryId?: string; status?: string; page?: number; limit?: SeasoningRelationPageSize }) =>
+    request<SeasoningRelationProductPage>(`/relations/product-groups${query(params)}`),
   options: (params: { query?: string; status?: string; cursor?: string; limit?: number }) =>
     request<CursorPage<SeasoningOption>>(`/options${query(params)}`),
   createOption: (body: { expectedVersion: number; name: string; nameEn?: string; code: string; sortOrder?: number }) =>

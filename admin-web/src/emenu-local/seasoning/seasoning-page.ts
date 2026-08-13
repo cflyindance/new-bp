@@ -1,11 +1,11 @@
-import { t } from "../../i18n";
+import { t, tf } from "../../i18n";
 import { openSeasoningBatchWizard } from "./seasoning-batch-wizard-ui";
 import { seasoningApi, SeasoningApiError } from "./seasoning-api";
 import { renderSeasoningOptionLibrary, openSeasoningOptionEditor } from "./seasoning-option-library-ui";
-import { renderSeasoningOverviewRows } from "./seasoning-overview-ui";
+import { renderSeasoningOverview } from "./seasoning-overview-ui";
 import { openSeasoningProductDrawer } from "./seasoning-product-drawer-ui";
 import { SeasoningStore, type SeasoningStoreState } from "./seasoning-store";
-import type { BatchCommitResult, SeasoningActionCode } from "./seasoning-types";
+import type { SeasoningRelationPageSize } from "./seasoning-types";
 import { escapeSeasoningHtml, inputClass, primaryButtonClass, secondaryButtonClass } from "./seasoning-ui-helpers";
 
 let activeCleanup: (() => void) | null = null;
@@ -60,12 +60,16 @@ class SeasoningPageController {
     if (!workspace) return;
     const content = state.error
       ? `<div class="flex min-h-80 flex-col items-center justify-center gap-4 p-6 text-center"><p class="font-semibold text-destructive">${t("seasoning.loadError")}</p><button type="button" data-seasoning-retry class="${secondaryButtonClass}">${t("seasoning.retry")}</button></div>`
-      : state.loading && !(state.summaries || state.options)
+        : state.loading && !(state.productGroups || state.options)
         ? `<div class="flex min-h-80 items-center justify-center p-6 text-sm font-medium text-muted-foreground">${t("seasoning.loading")}</div>`
         : state.tab === "relations"
-          ? renderSeasoningOverviewRows(state.summaries?.items ?? [])
+          ? renderSeasoningOverview(
+            state.productGroups,
+            Boolean(state.bootstrap?.permissions.canEdit),
+            Boolean(state.relationFilters.query || state.relationFilters.action || state.relationFilters.categoryId || state.relationFilters.status),
+          )
           : renderSeasoningOptionLibrary(state.options?.items ?? [], Boolean(state.bootstrap?.permissions.canEdit));
-    const nextCursor = state.tab === "relations" ? state.summaries?.nextCursor : state.options?.nextCursor;
+    const nextCursor = state.tab === "options" ? state.options?.nextCursor : null;
     workspace.innerHTML = `
       <nav class="flex gap-5 border-b border-border px-5" aria-label="Seasoning settings"><button type="button" data-seasoning-tab="relations" class="border-b-2 py-3 text-sm font-semibold ${state.tab === "relations" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}">${t("seasoning.relationsTab")}</button><button type="button" data-seasoning-tab="options" class="border-b-2 py-3 text-sm font-semibold ${state.tab === "options" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}">${t("seasoning.optionsTab")}</button></nav>
       ${this.renderFilters(state)}
@@ -119,34 +123,34 @@ class SeasoningPageController {
       }
       return;
     }
-    if (button.hasAttribute("data-seasoning-view-products")) {
-      await this.openRelationProducts(button.dataset.action as SeasoningActionCode, String(button.dataset.optionId));
+    const relationPage = Number(button.dataset.seasoningRelationPage);
+    if (Number.isInteger(relationPage) && relationPage > 0) {
+      await this.store.loadRelationPage(relationPage);
+      return;
     }
-  }
-
-  private async openRelationProducts(action: SeasoningActionCode, optionId: string): Promise<void> {
-    const overlay = document.createElement("div");
-    overlay.className = "fixed inset-0 z-[85] flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-[2px]";
-    overlay.innerHTML = `<section role="dialog" aria-modal="true" class="w-full max-w-2xl rounded-2xl border border-border bg-card p-5 shadow-2xl"><div class="flex items-center justify-between gap-4"><div><p class="text-xs font-semibold uppercase tracking-[0.14em] text-primary">${t("seasoning.associationCount")}</p><h2 class="mt-1 text-xl font-semibold">${t("seasoning.loading")}</h2></div><button data-close class="${secondaryButtonClass}">×</button></div><div data-product-list class="mt-4 min-h-48"></div></section>`;
-    this.root.appendChild(overlay);
-    const close = () => overlay.remove();
-    overlay.querySelector("[data-close]")?.addEventListener("click", close);
-    try {
-      const page = await seasoningApi.relationProducts({ action, optionId, limit: 100 });
-      const title = overlay.querySelector("h2");
-      if (title) title.textContent = `${page.total} ${t("seasoning.associationCount")}`;
-      const list = overlay.querySelector<HTMLElement>("[data-product-list]");
-      if (list) list.innerHTML = `<div class="divide-y divide-border rounded-xl border border-border">${page.items.map((item) => `<button type="button" data-open-product="${item.product.id}" class="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-muted/40"><span><strong class="block text-sm">${escapeSeasoningHtml(item.product.name)}</strong><span class="text-xs text-muted-foreground">${escapeSeasoningHtml(item.product.categoryName)}</span></span><span class="text-sm font-semibold text-primary">${item.priceDelta ? `+¥${item.priceDelta}` : "¥0"} →</span></button>`).join("")}</div>`;
-      overlay.addEventListener("click", (event) => {
-        const productButton = (event.target as HTMLElement).closest<HTMLElement>("[data-open-product]");
-        const productId = productButton?.dataset.openProduct;
-        if (!productId) return;
-        close();
-        openSeasoningProductDrawer(this.root, { productId, onSaved: (version) => this.afterMutation(version) });
-      });
-    } catch (error) {
-      const list = overlay.querySelector<HTMLElement>("[data-product-list]");
-      if (list) list.textContent = String(error instanceof Error ? error.message : error);
+    if (button.hasAttribute("data-seasoning-clear-relation-filters")) {
+      this.store.state.relationFilters = { query: "", action: "", categoryId: "", status: "" };
+      await this.store.loadRelationPage(1);
+      return;
+    }
+    const editProductId = button.dataset.seasoningEditProduct;
+    if (editProductId) {
+      openSeasoningProductDrawer(this.root, { productId: editProductId, onSaved: (version) => this.afterMutation(version) });
+      return;
+    }
+    const deleteProductId = button.dataset.seasoningDeleteProduct;
+    if (deleteProductId && this.store.state.bootstrap) {
+      const productName = button.dataset.productName || deleteProductId;
+      if (!window.confirm(tf("seasoning.deleteProductConfirm", { product: productName }))) return;
+      button.disabled = true;
+      try {
+        const response = await seasoningApi.saveProductRelations(deleteProductId, { expectedVersion: this.store.state.bootstrap.version, relations: [] });
+        await this.afterMutation(response.version);
+        this.showToast(tf("seasoning.deleteProductSuccess", { product: productName }));
+      } catch (error) {
+        button.disabled = false;
+        this.showToast(error instanceof SeasoningApiError && error.code === "version_conflict" ? t("seasoning.versionConflict") : String(error instanceof Error ? error.message : error));
+      }
     }
   }
 
@@ -157,8 +161,14 @@ class SeasoningPageController {
     if (filter === "relation-action") this.store.state.relationFilters.action = target.value;
     if (filter === "relation-category") this.store.state.relationFilters.categoryId = target.value;
     if (filter === "relation-status") this.store.state.relationFilters.status = target.value;
+    if (filter === "relation-page-size") {
+      const pageSize = Number(target.value) as SeasoningRelationPageSize;
+      if ([5, 10, 20, 50].includes(pageSize)) void this.store.setRelationPageSize(pageSize);
+      return;
+    }
     if (filter === "option-status") this.store.state.optionFilters.status = target.value;
-    void this.store.loadCurrentTab();
+    if (filter.startsWith("relation-")) void this.store.loadRelationPage(1);
+    else void this.store.loadCurrentTab();
   }
 
   private handleInput(event: Event): void {
@@ -168,7 +178,10 @@ class SeasoningPageController {
     if (filter === "relation-query") this.store.state.relationFilters.query = target.value;
     else this.store.state.optionFilters.query = target.value;
     if (this.queryTimer) clearTimeout(this.queryTimer);
-    this.queryTimer = setTimeout(() => void this.store.loadCurrentTab(), 280);
+    this.queryTimer = setTimeout(() => {
+      if (filter === "relation-query") void this.store.loadRelationPage(1);
+      else void this.store.loadCurrentTab();
+    }, 280);
   }
 }
 

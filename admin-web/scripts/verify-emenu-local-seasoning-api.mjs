@@ -33,6 +33,32 @@ try {
   assert(firstPage.items.length === 5, "Option cursor page size failed");
   assert(firstPage.nextCursor, "Option page must provide next cursor");
 
+  const relationGroups = await fetch(`${base}/relations/product-groups`).then((response) => response.json());
+  assert(relationGroups.page === 1 && relationGroups.pageSize === 10, "Relation product groups must default to page one with ten products");
+  assert(relationGroups.totalProducts > 0 && relationGroups.items.length <= 10, "Relation product group pagination metadata is incomplete");
+  assert(relationGroups.items.every((product) => product.actions.length > 0 && product.visibleRelationCount === product.actions.reduce((count, action) => count + action.items.length, 0)), "Relation product groups must contain complete visible action details");
+  assert(relationGroups.items.every((product) => product.actions.map((action) => action.action).join(",") === product.actions.map((action) => action.action).slice().sort((left, right) => ["ADD", "LESS", "MORE", "NONE"].indexOf(left) - ["ADD", "LESS", "MORE", "NONE"].indexOf(right)).join(",")), "Relation product actions must use the fixed order");
+  assert(relationGroups.items.every((product) => product.actions.every((action) => action.items.every((item) => typeof item.optionName === "string" && Number.isFinite(item.priceDelta)))), "Relation product options must expose names and actual prices");
+
+  const productSearchGroups = await fetch(`${base}/relations/product-groups?query=${encodeURIComponent("宫保")}&page=1&limit=5`).then((response) => response.json());
+  assert(productSearchGroups.totalProducts === 1 && productSearchGroups.items[0].actions.length > 1, "Product search must preserve every matching product action");
+  const optionSearchGroups = await fetch(`${base}/relations/product-groups?query=CHILI&page=1&limit=5`).then((response) => response.json());
+  assert(optionSearchGroups.totalProducts > 0 && optionSearchGroups.items.every((product) => product.actions.every((action) => action.items.every((item) => item.optionId === "o-chili"))), "Option search must trim each product to matching options");
+  const addGroups = await fetch(`${base}/relations/product-groups?action=ADD&page=1&limit=50`).then((response) => response.json());
+  assert(addGroups.items.length > 0 && addGroups.items.every((product) => product.actions.length === 1 && product.actions[0].action === "ADD"), "Action filtering must hide unmatched actions and products");
+  const mixedGroups = await fetch(`${base}/relations/product-groups?status=mixed&page=1&limit=50`).then((response) => response.json());
+  assert(mixedGroups.items.length > 0 && mixedGroups.items.every((product) => product.status === "mixed"), "Relation product status filtering is incorrect");
+  for (const pageSize of [5, 10, 20, 50]) {
+    const sizedGroups = await fetch(`${base}/relations/product-groups?page=1&limit=${pageSize}`).then((response) => response.json());
+    assert(sizedGroups.pageSize === pageSize && sizedGroups.totalPages === Math.ceil(sizedGroups.totalProducts / pageSize), `Relation product page size ${pageSize} failed`);
+  }
+  const invalidRelationPageSize = await fetch(`${base}/relations/product-groups?page=1&limit=6`);
+  assert(invalidRelationPageSize.status === 400 && (await invalidRelationPageSize.json()).error === "invalid_page_size", "Relation product groups must reject unsupported page sizes");
+  const invalidRelationPage = await fetch(`${base}/relations/product-groups?page=0&limit=10`);
+  assert(invalidRelationPage.status === 400 && (await invalidRelationPage.json()).error === "invalid_page", "Relation product groups must reject invalid pages");
+  const beyondRelationPage = await fetch(`${base}/relations/product-groups?page=999&limit=5`).then((response) => response.json());
+  assert(beyondRelationPage.page === 999 && beyondRelationPage.totalPages > 0 && beyondRelationPage.items.length === 0, "Relation product groups must echo beyond-last-page requests as empty pages");
+
   const selectionResponse = await fetch(`${base}/product-selections`, {
     method: "POST",
     headers: sessionHeaders,
@@ -261,8 +287,19 @@ try {
   const createdOption = await createdOptionResponse.json();
   assert(createdOption.version === 3, "Second transaction must increment the version once");
 
+  const deleteProductRelationsResponse = await fetch(`${base}/products/p-kungpao/relations`, {
+    method: "PUT",
+    headers: sessionHeaders,
+    body: JSON.stringify({ expectedVersion: 3, relations: [] }),
+  });
+  assert(deleteProductRelationsResponse.ok, "Deleting a complete product association row failed");
+  const deleteProductRelations = await deleteProductRelationsResponse.json();
+  assert(deleteProductRelations.version === 4 && deleteProductRelations.relations.length === 0, "Complete product deletion must increment the version and return no relations");
+  const deletedProductGroups = await fetch(`${base}/relations/product-groups?query=${encodeURIComponent("宫保")}&page=1&limit=10`).then((response) => response.json());
+  assert(deletedProductGroups.totalProducts === 0 && deletedProductGroups.page === 1 && deletedProductGroups.totalPages === 0, "Deleted products must disappear from product-group pagination");
+
   const audit = await fetch(`${base}/audit-log?limit=10`).then((response) => response.json());
-  assert(audit.items.length >= 2, "Each successful mutation must create an audit record");
+  assert(audit.items.length >= 3, "Each successful mutation must create an audit record");
 
   console.log("eMenu local seasoning API verification passed");
 } finally {
