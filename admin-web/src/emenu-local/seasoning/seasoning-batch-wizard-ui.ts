@@ -11,7 +11,6 @@ import { renderSeasoningMenuStructurePicker, syncSeasoningMenuIndeterminate } fr
 import type {
   BatchCandidate,
   BatchCommitResult,
-  BatchDecision,
   BatchPreviewProductPage,
   BatchPreviewResponse,
   CursorPage,
@@ -267,11 +266,10 @@ class BatchWizardController {
 
   private renderPreviewStep(): string {
     if (!this.preview || !this.previewPage) return "";
-    const unresolved = this.previewPage.unresolvedCount;
     return `<div class="space-y-3">
       <div class="flex flex-wrap items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm">
         <span><strong>${this.preview.actualProductCount}</strong> 个商品</span><span class="text-muted-foreground">·</span><span><strong>${this.preview.total}</strong> 条候选关系</span>
-        <span class="ml-auto font-semibold ${unresolved ? "text-amber-700 dark:text-amber-300" : "text-emerald-700 dark:text-emerald-300"}">${unresolved ? `${unresolved} 条待处理` : "全部已处理"}</span>
+        <span class="ml-auto font-semibold text-emerald-700 dark:text-emerald-300">可直接确认</span>
       </div>
       <div class="flex flex-wrap items-center gap-2">
         <select data-preview-kind class="${inputClass} w-auto"><option value="">全部状态</option>${(["new", "same", "different", "inactive", "unavailable"] as const).map((kind) => `<option value="${kind}" ${this.previewKind === kind ? "selected" : ""}>${escapeSeasoningHtml(this.candidateLabel({ kind } as BatchCandidate))} (${this.previewPage?.summary[kind] ?? 0})</option>`).join("")}</select>
@@ -287,16 +285,11 @@ class BatchWizardController {
           </button>
           ${collapsed ? "" : `<div class="space-y-3 border-t border-border bg-background/60 p-3">${product.actions.map((group) => `<section data-preview-action="${escapeSeasoningHtml(group.action)}" class="overflow-hidden rounded-lg border border-border bg-card">
             <header class="flex items-center justify-between bg-muted/35 px-3 py-2"><span class="inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${actionTone(group.action)}">${escapeSeasoningHtml(actionLabel(group.action))}</span><span class="text-xs font-semibold text-muted-foreground">${group.items.length} 个 Option</span></header>
-            <div class="divide-y divide-border">${group.items.map((item) => {
-              const decision = item.decision;
-              const needsDecision = item.kind === "different" || item.kind === "inactive" || item.kind === "unavailable";
-              return `<div data-preview-option="${escapeSeasoningHtml(item.candidateId)}" class="grid gap-3 px-3 py-3 md:grid-cols-[minmax(140px,1fr)_110px_150px_minmax(180px,auto)] md:items-center">
-                <strong class="truncate text-sm">${escapeSeasoningHtml(item.optionName ?? item.optionId)}</strong>
-                <label class="flex items-center gap-1.5"><span class="text-xs text-muted-foreground">$</span><input type="number" min="0" step="0.01" data-candidate-price="${escapeSeasoningHtml(item.candidateId)}" value="${item.priceDelta}" aria-label="${escapeSeasoningHtml(`${item.optionName ?? item.optionId} 实际加价`)}" class="h-8 w-20 rounded-md border border-border bg-background px-2 text-right text-xs"></label>
-                <span class="w-fit rounded-full border border-border bg-muted px-2 py-1 text-[11px] font-semibold">${escapeSeasoningHtml(this.candidateLabel(item))}</span>
-                <div class="flex flex-wrap justify-start gap-2 md:justify-end">${needsDecision ? item.kind === "different" ? `<button type="button" data-decision="keep" data-candidate-id="${escapeSeasoningHtml(item.candidateId)}" class="${decision?.resolution === "keep" ? primaryButtonClass : secondaryButtonClass} !min-h-8 !px-3 text-xs">${t("seasoning.batch.keep")}</button><button type="button" data-decision="use" data-candidate-id="${escapeSeasoningHtml(item.candidateId)}" class="${decision?.resolution === "use" ? primaryButtonClass : secondaryButtonClass} !min-h-8 !px-3 text-xs">${t("seasoning.batch.use")}</button>` : item.kind === "inactive" ? `<button type="button" data-decision="keep" data-candidate-id="${escapeSeasoningHtml(item.candidateId)}" class="${decision?.resolution === "keep" ? primaryButtonClass : secondaryButtonClass} !min-h-8 !px-3 text-xs">${t("seasoning.batch.keep")}</button><button type="button" data-decision="reactivate" data-candidate-id="${escapeSeasoningHtml(item.candidateId)}" class="${decision?.resolution === "reactivate" ? primaryButtonClass : secondaryButtonClass} !min-h-8 !px-3 text-xs">${t("seasoning.batch.reactivate")}</button>` : `<button type="button" data-decision="remove" data-candidate-id="${escapeSeasoningHtml(item.candidateId)}" class="${decision?.resolution === "remove" ? primaryButtonClass : secondaryButtonClass} !min-h-8 !px-3 text-xs">${t("seasoning.batch.remove")}</button>` : `<span class="text-xs text-muted-foreground">无需处理</span>`}</div>
-              </div>`;
-            }).join("")}</div>
+            <div class="grid grid-cols-[minmax(0,1fr)_120px] gap-3 border-t border-border bg-muted/15 px-3 py-2 text-xs font-semibold text-muted-foreground"><span>Option</span><span class="text-right">价格</span></div>
+            <div class="divide-y divide-border">${group.items.map((item) => `<div data-preview-option="${escapeSeasoningHtml(item.candidateId)}" class="grid grid-cols-[minmax(0,1fr)_120px] items-center gap-3 px-3 py-3">
+              <strong data-preview-option-name class="truncate text-sm">${escapeSeasoningHtml(item.optionName ?? item.optionId)}</strong>
+              <span data-preview-option-price class="text-right text-sm font-semibold tabular-nums">$${Number(item.priceDelta).toFixed(2)}</span>
+            </div>`).join("")}</div>
           </section>`).join("")}</div>`}
         </article>`;
       }).join("") || `<div class="flex min-h-32 items-center justify-center rounded-xl border border-dashed border-border text-sm text-muted-foreground">当前筛选无匹配商品</div>`}</div>
@@ -304,13 +297,9 @@ class BatchWizardController {
     </div>`;
   }
 
-  private unresolvedCount(): number {
-    return this.previewPage?.unresolvedCount ?? this.preview?.unresolvedCount ?? 0;
-  }
-
   private render(): void {
     const content = this.loading ? `<div class="flex min-h-72 items-center justify-center"><p class="text-sm font-medium text-muted-foreground">${t("seasoning.loading")}</p></div>` : this.step === 1 ? this.renderProductStep() : this.step === 2 ? this.renderConfigurationStep() : this.renderPreviewStep();
-    const canNext = this.step === 1 ? this.selectedProductCount() > 0 : this.step === 2 ? this.allActionsConfigured() : this.unresolvedCount() === 0;
+    const canNext = this.step === 1 ? this.selectedProductCount() > 0 : this.step === 2 ? this.allActionsConfigured() : true;
     this.overlay.innerHTML = `
       <section data-seasoning-batch-wizard role="dialog" aria-modal="true" aria-labelledby="seasoning-batch-title" class="flex max-h-[94vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
         <header class="border-b border-border px-5 py-4"><div class="flex items-start justify-between gap-4"><div><p class="text-xs font-semibold uppercase tracking-[0.14em] text-primary">${t("seasoning.title")}</p><h2 id="seasoning-batch-title" class="mt-1 text-xl font-semibold">${t("seasoning.batch.open")}</h2></div><button type="button" data-close class="${secondaryButtonClass}" aria-label="${t("seasoning.close")}">×</button></div><div class="mt-4">${this.renderSteps()}</div></header>
@@ -466,22 +455,8 @@ class BatchWizardController {
     }
   }
 
-  private async updatePreviewDecision(decision: BatchDecision): Promise<void> {
-    if (!this.preview) return;
-    this.loading = true;
-    this.render();
-    try {
-      await seasoningApi.updatePreviewDecision(this.preview.previewToken, decision);
-      await this.loadPreviewProducts();
-    } catch (error) {
-      await this.recoverFromError(error);
-      this.loading = false;
-      this.render();
-    }
-  }
-
   private async commit(): Promise<void> {
-    if (!this.preview || this.unresolvedCount()) return;
+    if (!this.preview) return;
     this.loading = true;
     this.render();
     try {
@@ -667,9 +642,6 @@ class BatchWizardController {
       await this.loadPreviewProducts(this.previewPage.nextCursor);
       return;
     }
-    const resolution = target.dataset.decision as BatchDecision["resolution"] | undefined;
-    const candidateId = target.dataset.candidateId;
-    if (resolution && candidateId) await this.updatePreviewDecision({ candidateId, resolution });
   }
 
   private handleInput(event: Event): void {
@@ -768,8 +740,6 @@ class BatchWizardController {
       this.dirty = true;
       return;
     }
-    const candidateId = target.dataset.candidatePrice;
-    if (candidateId) await this.updatePreviewDecision({ candidateId, priceDelta: Math.max(0, Number(target.value) || 0) });
   }
 }
 

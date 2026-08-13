@@ -87,6 +87,8 @@ try {
       actionOptions: [
         { action: "ADD", optionPrices: [{ optionId: "o-chili", priceDelta: 1 }] },
         { action: "LESS", optionPrices: [{ optionId: "o-salt", priceDelta: 0 }] },
+        { action: "NONE", optionPrices: [{ optionId: "o-garlic", priceDelta: 2 }] },
+        { action: "MORE", optionPrices: [{ optionId: "o-mustard", priceDelta: 3 }] },
       ],
       productSelectionToken: selection.token,
       expectedVersion: bootstrap.version,
@@ -95,8 +97,8 @@ try {
   assert(previewResponse.ok, "Batch preview request failed");
   const preview = await previewResponse.json();
   assert(preview.actualProductCount === selectedGroup.total && preview.page.items.length > 0, "Selection draft did not expand on the server");
-  assert(preview.total === selectedGroup.total * 2 && preview.summary.different >= 1, "Multi-action preview summary is incomplete");
-  assert(new Set(preview.page.items.map((item) => item.action)).size >= 2, "Preview must contain candidates for every configured action");
+  assert(preview.total === selectedGroup.total * 4 && preview.summary.different >= 1 && preview.summary.inactive >= 1 && preview.summary.unavailable >= 1, "Multi-action preview summary is incomplete");
+  assert(new Set(preview.page.items.map((item) => item.action)).size >= 4, "Preview must contain candidates for every configured action");
 
   const previewPage = await fetch(`${base}/relation-previews/${preview.previewToken}/items?limit=2`, { headers: sessionHeaders }).then((response) => response.json());
   assert(previewPage.items.length === 2 && previewPage.nextCursor, "Preview candidates must use cursor pagination");
@@ -105,8 +107,8 @@ try {
   assert(productPreviewResponse.ok, "Grouped product preview request failed");
   const productPreview = await productPreviewResponse.json();
   assert(productPreview.items.length === 2 && productPreview.nextCursor, "Grouped preview must paginate by product");
-  assert(productPreview.items.every((product) => product.actions.map((group) => group.action).join(",") === "ADD,LESS"), "Each product must contain complete ordered action groups");
-  assert(productPreview.items.every((product) => product.optionCount === 2 && product.actions.every((group) => group.items.length === 1)), "Grouped preview counts are incomplete");
+  assert(productPreview.items.every((product) => product.actions.map((group) => group.action).join(",") === "ADD,LESS,MORE,NONE"), "Each product must contain complete ordered action groups");
+  assert(productPreview.items.every((product) => product.optionCount === 4 && product.actions.every((group) => group.items.length === 1)), "Grouped preview counts are incomplete");
   const firstProductIds = new Set(productPreview.items.map((product) => product.productId));
   const nextProductPreview = await fetch(`${base}/relation-previews/${preview.previewToken}/products?limit=2&cursor=${encodeURIComponent(productPreview.nextCursor)}`, { headers: sessionHeaders }).then((response) => response.json());
   assert(nextProductPreview.items.every((product) => !firstProductIds.has(product.productId)), "Product cursor pages must not overlap");
@@ -115,21 +117,10 @@ try {
 
   const differences = await fetch(`${base}/relation-previews/${preview.previewToken}/items?kind=different&limit=10`, { headers: sessionHeaders }).then((response) => response.json());
   assert(differences.items.length >= 1, "Difference filter must return unresolved candidates");
-  const priceEditResponse = await fetch(`${base}/relation-previews/${preview.previewToken}/items`, {
-    method: "PATCH",
-    headers: sessionHeaders,
-    body: JSON.stringify({ candidateId: differences.items[0].candidateId, priceDelta: differences.items[0].priceDelta + 0.25 }),
-  }).then((response) => response.json());
-  assert(priceEditResponse.unresolvedCount === preview.unresolvedCount, "Editing price must not resolve a conflict");
   const groupedDifferences = await fetch(`${base}/relation-previews/${preview.previewToken}/products?kind=different&limit=10`, { headers: sessionHeaders }).then((response) => response.json());
   assert(groupedDifferences.items.length >= 1 && groupedDifferences.items.every((product) => product.actions.every((group) => group.items.every((item) => item.kind === "different"))), "Grouped kind filter must only include matching candidates");
-  assert(groupedDifferences.items.some((product) => product.actions.some((group) => group.items.some((item) => item.candidateId === differences.items[0].candidateId))), "Price edits must not change kind-filter membership");
-  const decisionResponse = await fetch(`${base}/relation-previews/${preview.previewToken}/items`, {
-    method: "PATCH",
-    headers: sessionHeaders,
-    body: JSON.stringify({ candidateId: differences.items[0].candidateId, resolution: "use" }),
-  }).then((response) => response.json());
-  assert(decisionResponse.unresolvedCount === preview.unresolvedCount - 1, "Preview decisions must persist across pages");
+  assert(groupedDifferences.items.some((product) => product.actions.some((group) => group.items.some((item) => item.candidateId === differences.items[0].candidateId))), "Grouped kind filter must preserve candidate membership");
+  assert(preview.unresolvedCount === 0 && productPreview.unresolvedCount === 0, "Automatic preview policy must not require manual conflict decisions");
 
   const commitResponse = await fetch(`${base}/relations/batch`, {
     method: "POST",
@@ -139,6 +130,13 @@ try {
   assert(commitResponse.ok, "Atomic batch commit failed");
   const commit = await commitResponse.json();
   assert(commit.version === 2, "Successful transaction must increment version once");
+  assert(commit.updated >= 1, "Different prices must automatically use the current batch value");
+  assert(commit.reactivated >= 1, "Inactive relations must automatically reactivate");
+
+  const committedDb = JSON.parse(fs.readFileSync(dbPath, "utf8"));
+  const reactivatedGarlic = committedDb.relations.find((relation) => relation.productId === "p-yuxiang" && relation.action === "NONE" && relation.optionId === "o-garlic");
+  assert(reactivatedGarlic?.status === "active" && reactivatedGarlic.priceDelta === 2, "Reactivated relation must use the current batch price");
+  assert(!committedDb.relations.some((relation) => relation.optionId === "o-mustard"), "Unavailable options must be skipped during commit");
 
   const conflictResponse = await fetch(`${base}/relations/batch`, {
     method: "POST",

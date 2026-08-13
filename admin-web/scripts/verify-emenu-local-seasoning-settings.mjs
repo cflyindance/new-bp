@@ -53,10 +53,13 @@ expect(batch, /loadMenuStructure/, "Batch wizard must load the real menu hierarc
 expect(batch, /loadPreviewProducts/, "Batch preview must use product-group pagination");
 expect(batch, /data-preview-product/, "Preview must render one top-level row per product");
 expect(batch, /data-preview-action/, "Preview products must group options by action");
+expect(batch, /data-preview-option-name/, "Preview action rows must expose the Option field");
+expect(batch, /data-preview-option-price/, "Preview action rows must expose the read-only price field");
+if (/data-candidate-price/.test(batch)) throw new Error("Preview prices must be read-only");
+if (/data-decision=/.test(batch)) throw new Error("Preview action rows must not expose conflict decision controls");
 expect(batch, /data-toggle-preview-product/, "Preview products must support expand and collapse");
 expect(batch, /collapsedPreviewProducts/, "Product collapse state must survive preview refreshes");
 expect(batch, /previewProducts/, "Batch preview must use the grouped product endpoint");
-expect(batch, /updatePreviewDecision/, "Cross-page preview decisions must be persisted by the API");
 expect(batch, /preview_expired[\s\S]*seasoningApi\.productSelection/, "Expired previews must revalidate the product selection before choosing the recovery step");
 if (/data-select-page/.test(batch)) throw new Error("Legacy select-page action must be removed");
 expect(menuPicker, /data-seasoning-menu-structure-picker/, "Menu hierarchy picker marker is missing");

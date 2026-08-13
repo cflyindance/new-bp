@@ -506,14 +506,8 @@ function previewSummary(preview) {
   return summary;
 }
 
-function candidateResolved(item, decision) {
-  if (item.kind === "unavailable") return decision?.resolution === "remove";
-  if (item.kind === "different" || item.kind === "inactive") return Boolean(decision?.resolution);
-  return true;
-}
-
-function previewUnresolvedCount(preview) {
-  return preview.items.filter((item) => !candidateResolved(item, preview.decisions[item.candidateId])).length;
+function previewUnresolvedCount() {
+  return 0;
 }
 
 function stableTextCompare(left, right) {
@@ -603,7 +597,7 @@ function previewProductsPage(preview, url, previewToken) {
       productId,
       productName: candidates[0]?.productName ?? productId,
       optionCount: candidates.length,
-      unresolvedCount: candidates.filter((item) => !candidateResolved(item, item.decision)).length,
+      unresolvedCount: 0,
       actions,
     };
   });
@@ -881,22 +875,16 @@ export async function handleEmenuSeasoningApi(req, res, dbPath) {
       assertExpectedVersion(db, body.expectedVersion);
       const preview = resolvePreview(db, body.previewToken, dbPath, session);
       const decisions = new Map(Object.entries(preview.decisions));
-      const unresolved = preview.items.filter((item) => {
-        if (item.kind === "unavailable") return decisions.get(item.candidateId)?.resolution !== "remove";
-        if (item.kind === "different" || item.kind === "inactive") return !decisions.has(item.candidateId);
-        return false;
-      });
-      if (unresolved.length) {
-        sendJson(res, 400, { error: "unresolved_candidates", candidateIds: unresolved.map((item) => item.candidateId) });
-        return true;
-      }
       const summary = { created: 0, updated: 0, reactivated: 0, skipped: 0 };
       const mutated = mutateDb(dbPath, db, "relations_batch_saved", { candidateCount: preview.items.length }, (next) => {
         const relationByKey = new Map(next.relations.map((relation) => [relationKey(relation.productId, relation.action, relation.optionId), relation]));
         const timestamp = new Date().toISOString();
         for (const item of preview.items) {
           const decision = decisions.get(item.candidateId);
-          if (decision?.resolution === "remove" || item.kind === "unavailable") continue;
+          if (decision?.resolution === "remove" || item.kind === "unavailable") {
+            summary.skipped += 1;
+            continue;
+          }
           const key = relationKey(item.productId, item.action, item.optionId);
           const existing = relationByKey.get(key);
           if (!existing) {
@@ -906,13 +894,13 @@ export async function handleEmenuSeasoningApi(req, res, dbPath) {
             summary.created += 1;
           } else if (item.kind === "same" || decision?.resolution === "keep") {
             summary.skipped += 1;
-          } else if (item.kind === "different" && decision?.resolution === "use") {
-            existing.priceDelta = normalizePrice(decision.priceDelta ?? item.priceDelta);
+          } else if (item.kind === "different") {
+            existing.priceDelta = normalizePrice(decision?.priceDelta ?? item.priceDelta);
             existing.updatedAt = timestamp;
             summary.updated += 1;
-          } else if (item.kind === "inactive" && decision?.resolution === "reactivate") {
+          } else if (item.kind === "inactive") {
             existing.status = "active";
-            if (decision.priceDelta !== undefined) existing.priceDelta = normalizePrice(decision.priceDelta);
+            existing.priceDelta = normalizePrice(decision?.priceDelta ?? item.priceDelta);
             existing.updatedAt = timestamp;
             summary.reactivated += 1;
           } else {
