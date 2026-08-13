@@ -20,9 +20,7 @@ assert.match(source, /data-batch-select-all-action/, "批量操作条应提供�
 assert.match(source, /data-batch-clear/, "批量操作条应提供清空选择操作");
 assert.match(source, /data-batch-cancel/, "批量模式应提供明确的取消操作");
 
-const applyBranch = source.match(
-  /if \(button\.hasAttribute\("data-apply-batch"\)\)[\s\S]*?(?=\n\s*if \(button\.hasAttribute\("data-set-unlimited"\))/,
-)?.[0];
+const applyBranch = source.match(/if \(button\.hasAttribute\("data-apply-batch"\)\)[\s\S]*?(?=\n\s*if \(button\.hasAttribute\("data-fix-step"\))/)?.[0];
 assert.ok(applyBranch, "应能定位批量应用分支");
 assert.match(applyBranch, /selectedBatchTargets\(draft\)/, "批量应用应取得当前上下文的有效已选目标");
 assert.doesNotMatch(
@@ -59,7 +57,8 @@ assert.match(
 );
 
 assert.match(source, /data-limit-target=/, "既有单行数量输入应保留");
-assert.match(source, /data-set-unlimited=/, "既有单行不限制操作应保留");
+assert.match(source, /data-apply-batch="value"/, "批量应用数量操作应保留");
+assert.match(source, /data-apply-batch="zero"/, "批量设为禁止操作应保留");
 assert.match(css, /\.olf-batch-select-cell/, "应提供紧凑的批量选择列样式");
 assert.match(css, /\.olf-batch-toolbar/, "应提供可换行的批量操作条样式");
 

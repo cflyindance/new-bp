@@ -92,13 +92,48 @@
     window.location.href = appendEmbedded(url);
   }
 
+  function normalizeUnlimitedLimitCells(draft) {
+    if (!draft || !draft.limits) return false;
+    var changed = false;
+    Object.keys(draft.limits).forEach(function (key) {
+      var cell = draft.limits[key];
+      if (cell && cell.configured && cell.value == null) {
+        draft.limits[key] = { configured: false, value: null };
+        changed = true;
+      }
+    });
+    return changed;
+  }
+
+  function normalizeUnlimitedRule(rule) {
+    if (!rule) return false;
+    var changed = normalizeUnlimitedLimitCells(rule.editorDraft);
+    if (Array.isArray(rule.limits)) {
+      rule.limits.forEach(function (cell) {
+        if (cell && cell.configured && cell.value == null) {
+          cell.configured = false;
+          cell.value = null;
+          changed = true;
+        }
+      });
+    }
+    return changed;
+  }
+
   function loadRules() {
+    var rules;
     try {
       var parsed = JSON.parse(localStorage.getItem(RULES_KEY) || "[]");
-      return Array.isArray(parsed) ? parsed : [];
+      rules = Array.isArray(parsed) ? parsed : [];
     } catch (error) {
       return [];
     }
+    var changed = false;
+    rules.forEach(function (rule) { if (normalizeUnlimitedRule(rule)) changed = true; });
+    if (changed) {
+      try { localStorage.setItem(RULES_KEY, JSON.stringify(rules)); } catch (error) {}
+    }
+    return rules;
   }
 
   function saveRules(rules) {
@@ -184,7 +219,9 @@
   }
 
   function normalizeLoadedEditorDraft(draft) {
-    if (!MenuPicker || !draft) return draft;
+    if (!draft) return draft;
+    normalizeUnlimitedLimitCells(draft);
+    if (!MenuPicker) return draft;
     if (!draft.structureByLine) {
       draft.structureByLine = MenuPicker.emptyByLine();
       draft.targetIds = [];
@@ -349,6 +386,7 @@
 
   function buildCompatibilityRule(draftRule, status) {
     var draft = draftRule.editorDraft;
+    normalizeUnlimitedLimitCells(draft);
     var targets = selectedTargets(draft);
     var firstLine = draft.productLines[0];
     var firstLineTargets = targetsForLine(draft, firstLine);
@@ -612,7 +650,7 @@
         var cell = draft.limits[key];
         if (!cell || !cell.configured) missing += 1;
       });
-      if (missing) return "还有 " + missing + " 个数量单元格未配置；请输入数量、0，或显式设为不限制";
+      if (missing) return "还有 " + missing + " 个数量单元格未配置；请输入数量或 0";
     }
     if (stepNumber === 5) {
       if (!draft.conditions.daysOfWeek.length) return "请至少选择一个生效星期";
@@ -687,7 +725,7 @@
   }
 
   function renderStepThree(draft) {
-    return '<div class="olf-content-head"><h2 tabindex="-1">配置人数与轮次场景</h2><p>区间必须从 1 连续覆盖到“及以上”；不限制场景仍需保留区间。</p></div>' +
+    return '<div class="olf-content-head"><h2 tabindex="-1">配置人数与轮次场景</h2><p>区间必须从 1 连续覆盖到“及以上”。</p></div>' +
       '<section class="olf-section"><div class="olf-section-head"><h3>人数区间</h3><button type="button" class="olf-button olf-button--small" data-add-range="party">' + icon("plus", 15) + ' 添加区间</button></div><div class="olf-table-wrap"><table class="olf-table"><thead><tr><th>场景</th><th>区间</th><th>页面显示</th><th>操作</th></tr></thead><tbody>' + renderRangeRows(draft.partyRanges, "party") + '</tbody></table></div><div class="olf-help" style="margin-top:10px">' + (draft.subject === "party_size" ? "每个区间配置的是人均上限，实际限额还会乘当前订单有效人数。" : "每个区间配置的是整桌共享的绝对上限。") + '</div></section>' +
       (draft.period === "multi_round" ? '<section class="olf-section"><div class="olf-section-head"><h3>轮次区间</h3><button type="button" class="olf-button olf-button--small" data-add-range="round">' + icon("plus", 15) + ' 添加区间</button></div><div class="olf-table-wrap"><table class="olf-table"><thead><tr><th>场景</th><th>区间</th><th>页面显示</th><th>操作</th></tr></thead><tbody>' + renderRangeRows(draft.roundRanges, "round") + '</tbody></table></div></section>' : '<div class="olf-summary"><strong>当前统计周期：</strong>' + esc(periodLabel(draft.period)) + '，无需另外配置轮次区间。</div>');
   }
@@ -711,15 +749,15 @@
     var batchSelectedIds = editorState ? editorState.batchSelectedTargetIds : [];
     return targetsForLine(draft, draft.activeLineId).map(function (target) {
       var cell = cellFor(draft, target.id);
-      var stateClass = !cell.configured ? "" : cell.value === 0 ? " is-blocked" : cell.value == null ? " is-unlimited" : "";
-      var stateText = !cell.configured ? "未配置" : cell.value === 0 ? "禁止下单" : cell.value == null ? "不限制" : "已配置";
+      var stateClass = !cell.configured ? "" : cell.value === 0 ? " is-blocked" : "";
+      var stateText = !cell.configured ? "未配置" : cell.value === 0 ? "禁止下单" : "已配置";
       var actual = "—";
       if (cell.configured && cell.value != null) {
         actual = draft.subject === "party_size" ? "4 人示例：" + (cell.value * 4) + " 份" : cell.value + " 份";
       }
       var targetName = target.shortName || target.name;
       var selectCell = batchMode ? '<td class="olf-batch-select-cell"><label class="olf-batch-check"><input type="checkbox" data-batch-target-id="' + esc(target.id) + '"' + (batchSelectedIds.indexOf(target.id) >= 0 ? " checked" : "") + ' /><span class="olf-sr-only">选择' + esc(targetName) + '</span></label></td>' : "";
-      return '<tr>' + selectCell + '<td><strong>' + esc(targetName) + '</strong>' + (target.count ? '<div class="olf-hint">包含 ' + target.count + ' 个菜品</div>' : '<div class="olf-hint">' + esc(target.category || "") + '</div>') + '</td><td><input class="olf-input olf-limit-input" type="number" min="0" value="' + (cell.configured && cell.value != null ? esc(cell.value) : "") + '" placeholder="未配置" data-limit-target="' + esc(target.id) + '" /></td><td><span class="olf-limit-state' + stateClass + '">' + stateText + '</span></td><td>' + esc(actual) + '</td><td><button type="button" class="olf-button olf-button--small" data-set-unlimited="' + esc(target.id) + '">设为不限制</button></td></tr>';
+      return '<tr>' + selectCell + '<td><strong>' + esc(targetName) + '</strong>' + (target.count ? '<div class="olf-hint">包含 ' + target.count + ' 个菜品</div>' : '<div class="olf-hint">' + esc(target.category || "") + '</div>') + '</td><td><input class="olf-input olf-limit-input" type="number" min="0" value="' + (cell.configured && cell.value != null ? esc(cell.value) : "") + '" placeholder="未配置" data-limit-target="' + esc(target.id) + '" /></td><td><span class="olf-limit-state' + stateClass + '">' + stateText + '</span></td><td>' + esc(actual) + '</td></tr>';
     }).join("");
   }
 
@@ -734,11 +772,11 @@
       return '<button type="button" class="olf-tab' + (draft.activeLineId === lineId ? " is-active" : "") + '" data-line-tab="' + esc(lineId) + '">' + esc(line ? line.name : lineId) + ' · ' + completionFor(draft, lineId) + '</button>';
     }).join("");
     var selectHeader = batchMode ? '<th class="olf-batch-select-cell"><label class="olf-batch-check"><input type="checkbox" data-batch-select-all' + (batchTargets.length > 0 && batchSelected.length === batchTargets.length ? " checked" : "") + ' /><span class="olf-sr-only">全选当前产线</span></label></th>' : "";
-    var batchPanel = batchMode ? '<div id="batchPanel" class="olf-summary olf-batch-panel"><div class="olf-batch-toolbar"><strong class="olf-batch-count" data-batch-selected-count>已选 ' + batchSelected.length + ' 项</strong><button type="button" class="olf-button olf-button--small olf-button--quiet" data-batch-select-all-action>全选当前产线</button><button type="button" class="olf-button olf-button--small olf-button--quiet" data-batch-clear' + (batchSelected.length ? "" : " disabled") + '>清空选择</button><span class="olf-batch-spacer"></span><input class="olf-input olf-limit-input" type="number" min="0" id="batchLimitValue" placeholder="数量" /><button type="button" class="olf-button olf-button--small" data-apply-batch="value"' + (batchSelected.length ? "" : " disabled") + '>应用数量</button><button type="button" class="olf-button olf-button--small" data-apply-batch="zero"' + (batchSelected.length ? "" : " disabled") + '>设为禁止</button><button type="button" class="olf-button olf-button--small" data-apply-batch="unlimited"' + (batchSelected.length ? "" : " disabled") + '>设为不限制</button><button type="button" class="olf-button olf-button--small" data-batch-cancel>取消</button></div></div>' : "";
-    return '<div class="olf-content-head"><h2 tabindex="-1">设置限购数量</h2><p>普通空输入表示未配置；0 表示禁止；也可以显式设为不限制。</p></div>' +
+    var batchPanel = batchMode ? '<div id="batchPanel" class="olf-summary olf-batch-panel"><div class="olf-batch-toolbar"><strong class="olf-batch-count" data-batch-selected-count>已选 ' + batchSelected.length + ' 项</strong><button type="button" class="olf-button olf-button--small olf-button--quiet" data-batch-select-all-action>全选当前产线</button><button type="button" class="olf-button olf-button--small olf-button--quiet" data-batch-clear' + (batchSelected.length ? "" : " disabled") + '>清空选择</button><span class="olf-batch-spacer"></span><input class="olf-input olf-limit-input" type="number" min="0" id="batchLimitValue" placeholder="数量" /><button type="button" class="olf-button olf-button--small" data-apply-batch="value"' + (batchSelected.length ? "" : " disabled") + '>应用数量</button><button type="button" class="olf-button olf-button--small" data-apply-batch="zero"' + (batchSelected.length ? "" : " disabled") + '>设为禁止</button><button type="button" class="olf-button olf-button--small" data-batch-cancel>取消</button></div></div>' : "";
+    return '<div class="olf-content-head"><h2 tabindex="-1">设置限购数量</h2><p>空输入表示未配置；0 表示禁止。</p></div>' +
       '<section class="olf-section"><h3>人数场景</h3><div class="olf-tabs">' + partyTabs + '</div>' + (roundTabs ? '<h3 style="margin-top:20px">轮次场景</h3><div class="olf-tabs">' + roundTabs + '</div>' : '') + '</section>' +
       '<section class="olf-section"><div class="olf-section-head"><h3>产线配置</h3><button type="button" class="olf-button olf-button--small" data-toggle-batch>' + (batchMode ? "取消批量设置" : "批量设置") + '</button></div><div class="olf-tabs">' + lineTabs + '</div>' + batchPanel + '</section>' +
-      '<section class="olf-section"><div class="olf-table-wrap"><table class="olf-table"><thead><tr>' + selectHeader + '<th>' + (draft.targetType === "dish" ? "菜品" : "分类") + '</th><th>' + (draft.subject === "party_size" ? "人均上限" : "订单上限") + '</th><th>状态</th><th>实际限额</th><th>操作</th></tr></thead><tbody>' + renderLimitRows(draft) + '</tbody></table></div></section>' +
+      '<section class="olf-section"><div class="olf-table-wrap"><table class="olf-table"><thead><tr>' + selectHeader + '<th>' + (draft.targetType === "dish" ? "菜品" : "分类") + '</th><th>' + (draft.subject === "party_size" ? "人均上限" : "订单上限") + '</th><th>状态</th><th>实际限额</th></tr></thead><tbody>' + renderLimitRows(draft) + '</tbody></table></div></section>' +
       '<div class="olf-summary olf-summary--primary"><strong>当前示例：</strong>' + (draft.subject === "party_size" ? "按人数规则会将人均上限乘订单有效人数；不会追踪具体食客。" : "同一订单中的目标商品共同占用配置数量池。") + '</div>';
   }
 
@@ -961,17 +999,13 @@
       var draft = editorState.rule.editorDraft;
       var mode = button.getAttribute("data-apply-batch");
       var input = document.getElementById("batchLimitValue");
-      var value = mode === "value" ? Number(input.value) : mode === "zero" ? 0 : null;
+      if (mode !== "value" && mode !== "zero") return;
+      var value = mode === "value" ? Number(input.value) : 0;
       var batchTargets = selectedBatchTargets(draft);
       if (!batchTargets.length) { toast("请至少选择一个" + (draft.targetType === "dish" ? "菜品" : "分类"), true); syncBatchControls(); return; }
       if (mode === "value" && (!Number.isInteger(value) || value < 0)) { toast("请输入大于或等于 0 的整数", true); return; }
       batchTargets.forEach(function (target) { draft.limits[limitKey(draft.activePartyIndex, draft.period === "multi_round" ? draft.activeRoundIndex : 0, draft.activeLineId, target.id)] = { configured: true, value: value }; });
       markEditorDirty(); clearBatchSelection(); renderEditor(); return;
-    }
-    if (button.hasAttribute("data-set-unlimited")) {
-      var unlimitedDraft = editorState.rule.editorDraft;
-      unlimitedDraft.limits[limitKey(unlimitedDraft.activePartyIndex, unlimitedDraft.period === "multi_round" ? unlimitedDraft.activeRoundIndex : 0, unlimitedDraft.activeLineId, button.getAttribute("data-set-unlimited"))] = { configured: true, value: null };
-      markEditorDirty(); renderEditor(); return;
     }
     if (button.hasAttribute("data-fix-step")) { goToEditorStep(Number(button.getAttribute("data-fix-step")), true); return; }
     if (button.hasAttribute("data-step")) { var step = Number(button.getAttribute("data-step")); if (step <= editorState.highestStep) goToEditorStep(step, true); return; }
