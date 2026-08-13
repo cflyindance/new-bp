@@ -676,6 +676,7 @@ import {
   isMenuOrderLimitPageSettingSeq,
   MENU_ORDER_LIMITS_BASE,
   refreshMenuOrderLimitTabBadges,
+  releaseFohMenuOrderLimitsFullscreen,
   renderFohMenuOrderLimitsPanel,
 } from "./config/foh-menu-order-limits-ui";
 import {
@@ -11863,6 +11864,7 @@ function mountLoginShell(): void {
 }
 
 function mount(): void {
+  releaseFohMenuOrderLimitsFullscreen();
   bindChainBrandOrgSyncListener();
   normalizeTabModuleHashes();
   applyUiLocaleToDocument(getUiLocale());
