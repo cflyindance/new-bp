@@ -80,6 +80,7 @@ type BatchPreviewProductPage = CursorPage<BatchPreviewProductGroup> & {
   page?: number;
   pageSize?: 5 | 10 | 20 | 50;
   totalPages?: number;
+  totalProducts?: number;
 };
 ```
 
@@ -131,9 +132,12 @@ type BatchCandidate = {
 
 - `limit` 表示每页商品数。
 - `cursor` 指向下一商品边界。
-- 新增 `page` 表示从 `1` 开始的目标页码；页码模式下 `limit` 只接受 `5、10、20、50`，响应返回 `page`、`pageSize` 和 `totalPages`。
+- 新增 `page` 表示从 `1` 开始的目标页码；页码模式下 `limit` 缺失时默认 `5`，否则只接受整数 `5、10、20、50`。响应返回 `page`、`pageSize`、`totalPages` 和 `totalProducts`。
 - `page` 与 `cursor` 互斥，同时提供时返回 `invalid_pagination`；不提供 `page` 时沿用现有游标模式及原 `limit` 兼容规则。
-- 页码必须为正整数；非法页码返回 `invalid_page`。超过 `totalPages` 的页码返回空 `items` 和真实分页元数据，不自动改写请求页码。
+- 页码必须为正安全整数，且 `(page - 1) × limit` 必须为安全整数；非法或溢出的页码、重复 `page` 参数返回 `invalid_page`。
+- 页码模式下非法、非整数、非允许档位或重复的 `limit` 参数返回 `invalid_page_size`。
+- `totalProducts` 是当前 `kind` 索引下的商品数，未传 `kind` 时为全部候选商品数；`totalPages = ceil(totalProducts / pageSize)`。零商品时 `totalPages = 0`、响应 `page = 1`、`items = []`。
+- 超过 `totalPages` 的页码返回空 `items`、请求中的 `page` 和真实分页元数据，服务端不自动改写请求页码。
 - `kind` 仍用于候选关系状态筛选。
 - 顶部 `summary` 仍按全部候选关系统计；自动处理策略下全局和商品级 `unresolvedCount` 固定为 `0`。
 - 分组内 `optionCount` 按当前筛选后的可见候选关系计算。
@@ -148,7 +152,7 @@ type BatchCandidate = {
 
 1. 创建预览时，在已有候选关系数组之外建立 `candidatesByProduct`、全量有序 `productIds` 和各 `kind` 对应的有序 `productIdsByKind` 索引，并缓存全局 `summary`；同时生成只读的 `indexVersion`。
 2. 读取商品分组页时，根据 `kind` 选择对应商品 ID 索引；未筛选时使用全量索引。
-3. 先对商品 ID 索引执行游标分页，只读取本页商品 ID。
+3. 页码模式按安全的 offset 对商品 ID 索引切片；游标模式按 `afterProductId` 边界切片。两种模式都只读取本页商品 ID。
 4. 从 `candidatesByProduct` 读取本页商品明细，再应用 `kind` 筛选。
 5. 商品内按固定动作顺序分组。
 6. 动作内 Option 按候选关系已有的数值型 `sortOrder` 升序、Option 名称升序和 `candidateId` 升序稳定排序；缺失或非有限的 `sortOrder` 排在有效值之后。
@@ -189,14 +193,16 @@ type BatchCandidate = {
 - 点击数字页码可直接跳转，不依赖访问过的游标栈。
 - 页码不超过 `7` 页时全部展示；超过 `7` 页时始终展示首页、末页和当前页前后各 `2` 页，断层位置使用省略号且省略号不可点击。
 - 上一页和下一页分别切换到相邻数字页；首页禁用上一页，末页禁用下一页。
+- 零商品时保留每页数量选择器，隐藏数字页码，上一页和下一页均禁用，当前页状态保持为 `1`。
 - 单个商品的全部可见动作与 Option 始终位于同一页。
 - 页码模式按 `start = (page - 1) × limit` 计算商品切片，商品顺序与现有稳定排序保持一致。
 - 游标是服务端生成的不可透明解析字符串，内容绑定 `previewToken`、不可变的 `indexVersion`、`kind`、`limit` 和排他性的 `afterProductId`；任一作用域不匹配、商品 ID 不存在或游标格式无效时返回 `invalid_cursor`。
 - 商品页按 `afterProductId` 之后的第一项开始，避免边界商品重复。
 - 页码模式前端只保存 `previewPageNumber` 和 `previewPageSize`，不维护游标栈。
+- 同一预览令牌内返回预览步骤时保留页码和每页数量；生成新预览令牌或关闭向导时重置为第 `1` 页、每页 `5` 个商品。
 - 兼容游标调用方仍保存每页的“页起始游标”，第一页为 `undefined`。
 - `indexVersion` 在预览创建时生成，只在重建或替换整个商品索引时变化；它不同于数据库 `expectedVersion`，决定和价格 PATCH 均不修改它。因此当前页起始游标不会因这些 PATCH 失效。若服务端检测到 `indexVersion` 不匹配，则返回 `invalid_cursor`，前端清空游标并回到当前筛选第一页，同时展示非阻断提示。
-- 页码模式请求超过末页时展示明确空状态，并允许返回上一页；正常 UI 不生成超过 `totalPages` 的页码按钮。
+- 页码模式响应超过末页时：若 `totalPages > 0`，前端自动改为末页并重新请求；若 `totalPages = 0`，前端回到第 `1` 页并展示空状态。正常 UI 不生成超过 `totalPages` 的页码按钮。
 
 ### 折叠状态
 
@@ -223,8 +229,10 @@ type BatchCandidate = {
 - 动作内 Option 使用稳定排序。
 - 商品分页不会拆分商品明细。
 - 页码模式可直接跳转任意有效页面，并返回正确的 `page`、`pageSize`、`totalPages`。
-- 每页 `5、10、20、50` 的商品切片和总页数正确；切换每页数量回到第一页。
-- 数字页码在少量页面时完整展示，在大量页面时按首页、末页、当前页邻域和省略号收敛。
+- 每页 `5、10、20、50` 的商品切片、`totalProducts` 和总页数正确；覆盖零商品、恰好整页、末页不足、`page > totalPages` 以及带 `kind` 的统计；切换每页数量回到第一页。
+- 覆盖缺失 `limit` 默认值、非法/重复 `limit`、重复/超大页码和 `page + cursor` 冲突。
+- 数字页码不超过 `7` 页时完整展示；以 `20` 页为例，首页为 `1 2 3 … 20`，第 `2` 页为 `1 2 3 4 … 20`，第 `10` 页为 `1 … 8 9 10 11 12 … 20`，第 `19` 页为 `1 … 17 18 19 20`，末页为 `1 … 18 19 20`。
+- 新预览令牌重置为 `1/5`；同一令牌返回预览步骤恢复原页码和页容量；越界状态自动恢复到末页或空数据第 `1` 页。
 - 兼容接口的状态筛选仍只保留匹配的商品、动作和 Option；当前页面不展示状态筛选。
 - 同一个 `optionId` 出现在多个动作下时按多条候选关系统计并分别展示。
 - `summary` 使用原始 `kind`，全局状态汇总不因当前分页改变。
