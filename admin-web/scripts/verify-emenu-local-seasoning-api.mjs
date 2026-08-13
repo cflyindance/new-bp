@@ -192,8 +192,10 @@ try {
   const productPreview = await productPreviewResponse.json();
   assert(productPreview.items.length === 2 && productPreview.nextCursor, "Grouped preview must paginate by product");
   assert(!Object.prototype.hasOwnProperty.call(productPreview, "page") && !Object.prototype.hasOwnProperty.call(productPreview, "totalPages"), "Cursor pages must not expose number-pagination metadata");
-  assert(productPreview.items.every((product) => product.actions.map((group) => group.action).join(",") === "ADD,LESS,MORE,NONE"), "Each product must contain complete ordered action groups");
-  assert(productPreview.items.every((product) => product.optionCount === 4 && product.actions.every((group) => group.items.length === 1)), "Grouped preview counts are incomplete");
+  assert(productPreview.items.every((product) => product.finalRelationCount === product.actions.reduce((total, group) => total + group.items.length, 0)), "Final relation counts must match complete action groups");
+  assert(productPreview.items.every((product) => product.actions.slice(0, 3).map((group) => group.action).join(",") === "ADD,LESS,NONE"), "Configured available actions must preserve request order");
+  assert(productPreview.items.every((product) => product.excludedCandidates.some((item) => item.optionId === "o-mustard" && item.includedInFinal === false)), "Unavailable candidates must be excluded from final relations");
+  assert(productPreview.items.every((product) => product.actions.every((group) => group.items.every((item) => item.includedInFinal === true && Number.isFinite(item.inputPrice) && Number.isFinite(item.markupCoefficient)))), "Final preview relations must expose complete discriminated pricing fields");
   const firstProductIds = new Set(productPreview.items.map((product) => product.productId));
   const nextProductPreview = await fetch(`${base}/relation-previews/${preview.previewToken}/products?limit=2&cursor=${encodeURIComponent(productPreview.nextCursor)}`, { headers: sessionHeaders }).then((response) => response.json());
   assert(nextProductPreview.items.every((product) => !firstProductIds.has(product.productId)), "Product cursor pages must not overlap");
@@ -235,8 +237,8 @@ try {
   const differences = await fetch(`${base}/relation-previews/${preview.previewToken}/items?kind=different&limit=10`, { headers: sessionHeaders }).then((response) => response.json());
   assert(differences.items.length >= 1, "Difference filter must return unresolved candidates");
   const groupedDifferences = await fetch(`${base}/relation-previews/${preview.previewToken}/products?kind=different&limit=10`, { headers: sessionHeaders }).then((response) => response.json());
-  assert(groupedDifferences.items.length >= 1 && groupedDifferences.items.every((product) => product.actions.every((group) => group.items.every((item) => item.kind === "different"))), "Grouped kind filter must only include matching candidates");
-  assert(groupedDifferences.items.some((product) => product.actions.some((group) => group.items.some((item) => item.candidateId === differences.items[0].candidateId))), "Grouped kind filter must preserve candidate membership");
+  assert(groupedDifferences.items.length >= 1, "Grouped kind filter must return products containing matching candidates");
+  assert(groupedDifferences.items.some((product) => product.actions.some((group) => group.items.some((item) => item.source === "configured" && item.kind === "different" && item.candidateId === differences.items[0].candidateId))), "Grouped kind filter must preserve matching candidate membership inside the complete final relation set");
   assert(preview.unresolvedCount === 0 && productPreview.unresolvedCount === 0, "Automatic preview policy must not require manual conflict decisions");
 
   const commitResponse = await fetch(`${base}/relations/batch`, {
@@ -254,6 +256,8 @@ try {
   const reactivatedGarlic = committedDb.relations.find((relation) => relation.productId === "p-yuxiang" && relation.action === "NONE" && relation.optionId === "o-garlic");
   assert(reactivatedGarlic?.status === "active" && reactivatedGarlic.priceDelta === 2, "Reactivated relation must use the current batch price");
   assert(!committedDb.relations.some((relation) => relation.optionId === "o-mustard"), "Unavailable options must be skipped during commit");
+  const committedKungpao = committedDb.relations.filter((relation) => relation.productId === "p-kungpao");
+  assert(new Set(committedKungpao.map((relation) => relation.sortOrder)).size === committedKungpao.length && committedKungpao.every((relation) => Number.isSafeInteger(relation.sortOrder) && relation.sortOrder >= 10_000_010), "Batch commit must atomically assign unique encoded sort orders");
 
   const conflictResponse = await fetch(`${base}/relations/batch`, {
     method: "POST",
@@ -287,19 +291,37 @@ try {
   const createdOption = await createdOptionResponse.json();
   assert(createdOption.version === 3, "Second transaction must increment the version once");
 
+  const reorderProductResponse = await fetch(`${base}/products/p-kungpao/relations`, {
+    method: "PUT",
+    headers: sessionHeaders,
+    body: JSON.stringify({ expectedVersion: 3, relations: [
+      { action: "NONE", optionId: "o-soy", priceDelta: 0.2, sortOrder: -9, status: "active" },
+      { action: "NONE", optionId: "o-chili", priceDelta: 0, sortOrder: 1.5, status: "inactive" },
+      { action: "ADD", optionId: "o-peanut", priceDelta: 1, sortOrder: 10, status: "active" },
+    ] }),
+  });
+  assert(reorderProductResponse.ok, "Single-product ordered replacement failed");
+  const reorderedProduct = await reorderProductResponse.json();
+  assert(reorderedProduct.version === 4 && reorderedProduct.relations.map((relation) => relation.action).join(",") === "NONE,NONE,ADD", "Single-product PUT must preserve ordered payload actions");
+  assert(reorderedProduct.relations.map((relation) => relation.sortOrder).join(",") === "10000010,10000020,11000010", "Server must generate encoded sort orders instead of trusting client values");
+  assert(reorderedProduct.relations[1].status === "inactive", "Single-product status must round-trip");
+  const reorderedGroups = await fetch(`${base}/relations/product-groups?query=D1001&page=1&limit=10`).then((response) => response.json());
+  assert(reorderedGroups.items[0].actions.map((group) => group.action).join(",") === "NONE,ADD", "Product-group API must return saved action order");
+  assert(reorderedGroups.items[0].actions[0].items.map((item) => item.optionId).join(",") === "o-soy,o-chili", "Product-group API must return saved option order");
+
   const deleteProductRelationsResponse = await fetch(`${base}/products/p-kungpao/relations`, {
     method: "PUT",
     headers: sessionHeaders,
-    body: JSON.stringify({ expectedVersion: 3, relations: [] }),
+    body: JSON.stringify({ expectedVersion: 4, relations: [] }),
   });
   assert(deleteProductRelationsResponse.ok, "Deleting a complete product association row failed");
   const deleteProductRelations = await deleteProductRelationsResponse.json();
-  assert(deleteProductRelations.version === 4 && deleteProductRelations.relations.length === 0, "Complete product deletion must increment the version and return no relations");
+  assert(deleteProductRelations.version === 5 && deleteProductRelations.relations.length === 0, "Complete product deletion must increment the version and return no relations");
   const deletedProductGroups = await fetch(`${base}/relations/product-groups?query=${encodeURIComponent("宫保")}&page=1&limit=10`).then((response) => response.json());
   assert(deletedProductGroups.totalProducts === 0 && deletedProductGroups.page === 1 && deletedProductGroups.totalPages === 0, "Deleted products must disappear from product-group pagination");
 
   const audit = await fetch(`${base}/audit-log?limit=10`).then((response) => response.json());
-  assert(audit.items.length >= 3, "Each successful mutation must create an audit record");
+  assert(audit.items.length >= 4, "Each successful mutation must create an audit record");
 
   console.log("eMenu local seasoning API verification passed");
 } finally {

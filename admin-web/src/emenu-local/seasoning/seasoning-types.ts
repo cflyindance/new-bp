@@ -191,17 +191,64 @@ export type BatchPreviewPage = CursorPage<BatchCandidate & { decision?: BatchDec
   summary: Record<BatchCandidateKind, number>;
 };
 
+export type BatchFinalConfiguredRelation = {
+  source: "configured";
+  includedInFinal: true;
+  candidateId: string;
+  relationId?: string;
+  action: SeasoningActionCode;
+  optionId: string;
+  optionName: string;
+  inputPrice: number;
+  markupCoefficient: number;
+  priceDelta: number;
+  status: "active";
+  kind: Exclude<BatchCandidateKind, "unavailable">;
+  sortOrder: number;
+};
+
+export type BatchFinalPreservedRelation = {
+  source: "preserved";
+  includedInFinal: true;
+  relationId: string;
+  action: SeasoningActionCode;
+  optionId: string;
+  optionName: string;
+  inputPrice: number;
+  markupCoefficient: 1;
+  priceDelta: number;
+  status: SeasoningStatus;
+  preservedReason: "not_configured" | "configured_but_unavailable" | "product_unavailable";
+  sortOrder: number;
+};
+
+export type BatchExcludedCandidate = {
+  source: "configured";
+  includedInFinal: false;
+  candidateId: string;
+  action: SeasoningActionCode;
+  optionId: string;
+  optionName: string;
+  inputPrice: number;
+  markupCoefficient: number;
+  priceDelta: number;
+  kind: "unavailable";
+  reason: "product_inactive" | "product_not_sellable" | "option_inactive";
+  existingRelationId?: string;
+};
+
 export type BatchPreviewActionGroup = {
   action: SeasoningActionCode;
-  items: Array<BatchCandidate & { decision?: BatchDecision }>;
+  items: Array<BatchFinalConfiguredRelation | BatchFinalPreservedRelation>;
 };
 
 export type BatchPreviewProductGroup = {
   productId: string;
-  productName?: string;
-  optionCount: number;
-  unresolvedCount: number;
+  productName: string;
+  disposition: "merge" | "unchanged_unavailable";
   actions: BatchPreviewActionGroup[];
+  excludedCandidates: BatchExcludedCandidate[];
+  finalRelationCount: number;
 };
 
 export type BatchPreviewProductCursorPage = CursorPage<BatchPreviewProductGroup> & {

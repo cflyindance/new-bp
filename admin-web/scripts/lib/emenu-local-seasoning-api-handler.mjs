@@ -5,6 +5,10 @@ import { createEmenuSeasoningSeedDb } from "./emenu-local-seasoning-seed.mjs";
 
 const API_PREFIX = "/api/v1/emenu-local/seasoning";
 const ACTIONS = ["ADD", "LESS", "MORE", "NONE"];
+const SEASONING_SORT_MARKER = 10_000_000;
+const SEASONING_ACTION_SORT_SPAN = 1_000_000;
+const SEASONING_OPTION_SORT_STEP = 10;
+const SEASONING_MAX_OPTIONS_PER_ACTION = 10_000;
 const previewTokens = new Map();
 const productSelectionTokens = new Map();
 const PRODUCT_SELECTION_TTL_MS = 15 * 60_000;
@@ -164,6 +168,47 @@ function relationKey(productId, action, optionId) {
   return `${productId}::${action}::${optionId}`;
 }
 
+function encodeRelationSortOrder(actionIndex, optionIndex) {
+  if (!Number.isInteger(actionIndex) || actionIndex < 0 || actionIndex >= ACTIONS.length) throw new Error("invalid_action_order");
+  if (!Number.isInteger(optionIndex) || optionIndex < 0 || optionIndex >= SEASONING_MAX_OPTIONS_PER_ACTION) throw new Error("too_many_options");
+  return SEASONING_SORT_MARKER + actionIndex * SEASONING_ACTION_SORT_SPAN + (optionIndex + 1) * SEASONING_OPTION_SORT_STEP;
+}
+
+function hasEncodedRelationOrder(relations) {
+  if (!relations.length) return false;
+  const bucketsByAction = new Map();
+  const usedBuckets = new Set();
+  const usedOrders = new Set();
+  for (const relation of relations) {
+    const order = relation.sortOrder;
+    if (!Number.isSafeInteger(order) || order < SEASONING_SORT_MARKER + SEASONING_OPTION_SORT_STEP || usedOrders.has(order)) return false;
+    const encoded = order - SEASONING_SORT_MARKER;
+    const bucket = Math.floor(encoded / SEASONING_ACTION_SORT_SPAN);
+    const within = encoded - bucket * SEASONING_ACTION_SORT_SPAN;
+    if (bucket < 0 || bucket >= ACTIONS.length || within < SEASONING_OPTION_SORT_STEP || within % SEASONING_OPTION_SORT_STEP !== 0 || within / SEASONING_OPTION_SORT_STEP > SEASONING_MAX_OPTIONS_PER_ACTION) return false;
+    const existingBucket = bucketsByAction.get(relation.action);
+    if (existingBucket !== undefined && existingBucket !== bucket) return false;
+    if (existingBucket === undefined && usedBuckets.has(bucket)) return false;
+    bucketsByAction.set(relation.action, bucket);
+    usedBuckets.add(bucket);
+    usedOrders.add(order);
+  }
+  return true;
+}
+
+function orderedRelationActions(relations) {
+  const actions = [...new Set(relations.map((relation) => relation.action))];
+  if (!hasEncodedRelationOrder(relations)) return actions.sort((left, right) => ACTIONS.indexOf(left) - ACTIONS.indexOf(right));
+  const minimums = new Map();
+  for (const relation of relations) minimums.set(relation.action, Math.min(minimums.get(relation.action) ?? Number.POSITIVE_INFINITY, relation.sortOrder));
+  return actions.sort((left, right) => minimums.get(left) - minimums.get(right));
+}
+
+function sortProductRelations(relations) {
+  const actions = new Map(orderedRelationActions(relations).map((action, index) => [action, index]));
+  return [...relations].sort((left, right) => (actions.get(left.action) ?? 99) - (actions.get(right.action) ?? 99) || left.sortOrder - right.sortOrder || stableTextCompare(left.optionId, right.optionId));
+}
+
 function assertExpectedVersion(db, expectedVersion) {
   if (Number(expectedVersion) !== db.version) {
     const error = new Error("version_conflict");
@@ -300,10 +345,16 @@ function createCandidates(db, body, scope, session) {
     seenActions.add(entry.action);
     const optionPrices = Array.isArray(entry.optionPrices) ? entry.optionPrices : [];
     if (!optionPrices.length) throw new Error("options_required");
-    const uniqueOptions = new Map();
-    for (const option of optionPrices) uniqueOptions.set(String(option.optionId), { optionId: String(option.optionId), ...normalizePreviewPricing(option) });
-    return { action: entry.action, optionPrices: [...uniqueOptions.values()] };
-  }).sort((left, right) => ACTIONS.indexOf(left.action) - ACTIONS.indexOf(right.action));
+    if (optionPrices.length > SEASONING_MAX_OPTIONS_PER_ACTION) throw new Error("too_many_options");
+    const uniqueOptions = new Set();
+    const normalizedOptions = optionPrices.map((option) => {
+      const optionId = String(option.optionId);
+      if (uniqueOptions.has(optionId)) throw new Error("invalid_or_duplicate_relation");
+      uniqueOptions.add(optionId);
+      return { optionId, ...normalizePreviewPricing(option) };
+    });
+    return { action: entry.action, optionPrices: normalizedOptions };
+  });
   const draft = resolveProductSelectionDraft(db, body.productSelectionToken, scope, session);
   const products = db.products.filter((product) => draft.selectedIds.has(product.id));
   if (!products.length) throw new Error("products_required");
@@ -311,14 +362,9 @@ function createCandidates(db, body, scope, session) {
   const relationByKey = new Map(db.relations.map((relation) => [relationKey(relation.productId, relation.action, relation.optionId), relation]));
   const items = [];
   for (const product of products) {
-    for (const actionEntry of actionOptions) {
-      let nextOrder = db.relations
-        .filter((relation) => relation.productId === product.id && relation.action === actionEntry.action)
-        .reduce((max, relation) => Math.max(max, relation.sortOrder), 0) + 10;
-      const orderedOptions = actionEntry.optionPrices
-        .map((entry) => ({ ...entry, option: optionById.get(entry.optionId) }))
-        .sort((left, right) => (left.option?.sortOrder ?? 0) - (right.option?.sortOrder ?? 0) || left.optionId.localeCompare(right.optionId));
-      for (const entry of orderedOptions) {
+    for (const [actionIndex, actionEntry] of actionOptions.entries()) {
+      const orderedOptions = actionEntry.optionPrices.map((entry) => ({ ...entry, option: optionById.get(entry.optionId) }));
+      for (const [optionIndex, entry] of orderedOptions.entries()) {
         const existing = relationByKey.get(relationKey(product.id, actionEntry.action, entry.optionId));
         let kind = "new";
         let reason;
@@ -347,12 +393,13 @@ function createCandidates(db, body, scope, session) {
           markupCoefficient: entry.markupCoefficient,
           priceDelta: entry.priceDelta,
           existingPriceDelta: existing?.priceDelta,
-          sortOrder: existing?.sortOrder ?? nextOrder,
+          sortOrder: encodeRelationSortOrder(actionIndex, optionIndex),
+          requestActionIndex: actionIndex,
+          requestOptionIndex: optionIndex,
           status: existing?.status ?? "active",
           kind,
           reason,
         });
-        if (!existing) nextOrder += 10;
       }
     }
   }
@@ -558,7 +605,6 @@ function relationProductGroups(db, url) {
     grouped.set(product.id, group);
   }
 
-  const actionOrder = new Map(ACTIONS.map((action, index) => [action, index]));
   const items = [...grouped.values()].map((group) => {
     const activeCount = group.relations.filter(({ relation }) => relation.status === "active").length;
     const status = activeCount === group.relations.length ? "active" : activeCount ? "mixed" : "inactive";
@@ -567,8 +613,9 @@ function relationProductGroups(db, url) {
       if (!actionGroups.has(entry.relation.action)) actionGroups.set(entry.relation.action, []);
       actionGroups.get(entry.relation.action).push(entry);
     }
+    const relationActionOrder = new Map(orderedRelationActions(group.relations.map(({ relation }) => relation)).map((action, index) => [action, index]));
     const actions = [...actionGroups.entries()]
-      .sort(([left], [right]) => (actionOrder.get(left) ?? 99) - (actionOrder.get(right) ?? 99) || stableTextCompare(left, right))
+      .sort(([left], [right]) => (relationActionOrder.get(left) ?? 99) - (relationActionOrder.get(right) ?? 99) || stableTextCompare(left, right))
       .map(([action, entries]) => ({
         action,
         items: entries.sort((left, right) => {
@@ -633,6 +680,102 @@ function resolvePreview(db, token, scope, session) {
   if (preview.scope !== scope || preview.session !== session) throw previewError();
   resolveProductSelectionDraft(db, preview.productSelectionToken, scope, session);
   return preview;
+}
+
+function preservedPreviewRelation(relation, option, preservedReason) {
+  const priceDelta = normalizePrice(relation.priceDelta);
+  return {
+    source: "preserved",
+    includedInFinal: true,
+    relationId: relation.id,
+    action: relation.action,
+    optionId: relation.optionId,
+    optionName: option?.name ?? relation.optionId,
+    inputPrice: priceDelta,
+    markupCoefficient: 1,
+    priceDelta,
+    status: relation.status === "inactive" ? "inactive" : "active",
+    preservedReason,
+    createdAt: relation.createdAt,
+  };
+}
+
+function configuredPreviewRelation(candidate, existing) {
+  const complete = completeCandidatePricing(candidate);
+  return {
+    source: "configured",
+    includedInFinal: true,
+    candidateId: complete.candidateId,
+    ...(existing ? { relationId: existing.id, createdAt: existing.createdAt } : {}),
+    action: complete.action,
+    optionId: complete.optionId,
+    optionName: complete.optionName,
+    inputPrice: complete.inputPrice,
+    markupCoefficient: complete.markupCoefficient,
+    priceDelta: complete.priceDelta,
+    status: "active",
+    kind: complete.kind,
+  };
+}
+
+function excludedPreviewCandidate(candidate, existing) {
+  const complete = completeCandidatePricing(candidate);
+  return {
+    source: "configured",
+    includedInFinal: false,
+    candidateId: complete.candidateId,
+    action: complete.action,
+    optionId: complete.optionId,
+    optionName: complete.optionName,
+    inputPrice: complete.inputPrice,
+    markupCoefficient: complete.markupCoefficient,
+    priceDelta: complete.priceDelta,
+    kind: "unavailable",
+    reason: complete.reason,
+    ...(existing ? { existingRelationId: existing.id } : {}),
+  };
+}
+
+function buildBatchFinalProducts(db, preview) {
+  const optionById = new Map(db.options.map((option) => [option.id, option]));
+  const relationByKey = new Map(db.relations.map((relation) => [relationKey(relation.productId, relation.action, relation.optionId), relation]));
+  const products = new Map();
+  for (const product of preview.products) {
+    const currentRelations = sortProductRelations(db.relations.filter((relation) => relation.productId === product.id));
+    const candidates = preview.items.filter((candidate) => candidate.productId === product.id);
+    const excludedCandidates = candidates.filter((candidate) => candidate.kind === "unavailable").map((candidate) => excludedPreviewCandidate(candidate, relationByKey.get(relationKey(product.id, candidate.action, candidate.optionId))));
+    const productUnavailable = product.status !== "active" || !product.emenuSellable;
+    if (productUnavailable) {
+      const actions = orderedRelationActions(currentRelations).map((action, actionIndex) => ({
+        action,
+        items: currentRelations.filter((relation) => relation.action === action).map((relation, optionIndex) => ({
+          ...preservedPreviewRelation(relation, optionById.get(relation.optionId), "product_unavailable"),
+          sortOrder: encodeRelationSortOrder(actionIndex, optionIndex),
+        })),
+      }));
+      products.set(product.id, { productId: product.id, productName: product.name, disposition: "unchanged_unavailable", actions, excludedCandidates, finalRelationCount: currentRelations.length });
+      continue;
+    }
+
+    const validCandidates = candidates.filter((candidate) => candidate.kind !== "unavailable");
+    const configuredActions = preview.actionOptions.map((entry) => entry.action).filter((action) => validCandidates.some((candidate) => candidate.action === action));
+    const actionSequence = [...configuredActions, ...orderedRelationActions(currentRelations).filter((action) => !configuredActions.includes(action))];
+    const actions = actionSequence.map((action, actionIndex) => {
+      const configured = validCandidates.filter((candidate) => candidate.action === action).sort((left, right) => left.requestOptionIndex - right.requestOptionIndex);
+      const configuredKeys = new Set(configured.map((candidate) => relationKey(product.id, candidate.action, candidate.optionId)));
+      const preserved = currentRelations.filter((relation) => relation.action === action && !configuredKeys.has(relationKey(product.id, relation.action, relation.optionId)));
+      const items = [
+        ...configured.map((candidate) => configuredPreviewRelation(candidate, relationByKey.get(relationKey(product.id, candidate.action, candidate.optionId)))),
+        ...preserved.map((relation) => {
+          const unavailable = candidates.some((candidate) => candidate.kind === "unavailable" && candidate.action === relation.action && candidate.optionId === relation.optionId);
+          return preservedPreviewRelation(relation, optionById.get(relation.optionId), unavailable ? "configured_but_unavailable" : "not_configured");
+        }),
+      ].map((item, optionIndex) => ({ ...item, sortOrder: encodeRelationSortOrder(actionIndex, optionIndex) }));
+      return { action, items };
+    }).filter((group) => group.items.length);
+    products.set(product.id, { productId: product.id, productName: product.name, disposition: "merge", actions, excludedCandidates, finalRelationCount: actions.reduce((total, group) => total + group.items.length, 0) });
+  }
+  return products;
 }
 
 function previewSummary(preview) {
@@ -701,21 +844,8 @@ function previewCandidateCompare(left, right) {
   return leftOrder - rightOrder || stableTextCompare(left.optionName, right.optionName) || stableTextCompare(left.candidateId, right.candidateId);
 }
 
-function previewProductGroups(preview, productIds, kind) {
-  return productIds.map((productId) => {
-    const candidates = (preview.candidatesByProduct.get(productId) ?? [])
-      .filter((item) => !kind || item.kind === kind)
-      .map((item) => ({ ...completeCandidatePricing(item), decision: preview.decisions[item.candidateId] }));
-    const grouped = new Map();
-    for (const item of candidates) {
-      if (!grouped.has(item.action)) grouped.set(item.action, []);
-      grouped.get(item.action).push(item);
-    }
-    const actions = [...grouped.entries()]
-      .sort(([left], [right]) => actionOrder(left) - actionOrder(right) || stableTextCompare(left, right))
-      .map(([action, actionItems]) => ({ action, items: actionItems.sort(previewCandidateCompare) }));
-    return { productId, productName: candidates[0]?.productName ?? productId, optionCount: candidates.length, unresolvedCount: 0, actions };
-  });
+function previewProductGroups(preview, productIds) {
+  return productIds.map((productId) => preview.finalProducts.get(productId)).filter(Boolean);
 }
 
 function previewProductsPage(preview, url, previewToken) {
@@ -741,7 +871,7 @@ function previewProductsPage(preview, url, previewToken) {
     const responsePage = totalProducts === 0 ? 1 : page;
     const pageProductIds = totalProducts === 0 ? [] : productIds.slice(offset, offset + pageSize);
     return {
-      items: previewProductGroups(preview, pageProductIds, kind),
+      items: previewProductGroups(preview, pageProductIds),
       page: responsePage,
       pageSize,
       totalPages,
@@ -763,7 +893,7 @@ function previewProductsPage(preview, url, previewToken) {
     start = afterIndex + 1;
   }
   const pageProductIds = productIds.slice(start, start + limit);
-  const items = previewProductGroups(preview, pageProductIds, kind);
+  const items = previewProductGroups(preview, pageProductIds);
   const hasMore = start + limit < productIds.length;
   const nextCursor = hasMore && pageProductIds.length
     ? encodeProductCursor({ previewToken, indexVersion: preview.indexVersion, kind, limit, afterProductId: pageProductIds[pageProductIds.length - 1] })
@@ -942,25 +1072,34 @@ export async function handleEmenuSeasoningApi(req, res, dbPath) {
       if (!product) throw new Error("product_not_found");
       const requested = Array.isArray(body.relations) ? body.relations : [];
       const seen = new Set();
+      const actionIndexes = new Map();
+      const optionIndexes = new Map();
       for (const relation of requested) {
         const key = relationKey(productId, relation.action, relation.optionId);
         if (!ACTIONS.includes(relation.action) || seen.has(key)) throw new Error("invalid_or_duplicate_relation");
         seen.add(key);
         normalizePrice(relation.priceDelta);
+        if (!db.options.some((option) => option.id === relation.optionId && option.status === "active")) throw new Error("option_unavailable");
+        if (!actionIndexes.has(relation.action)) actionIndexes.set(relation.action, actionIndexes.size);
+        optionIndexes.set(relation.action, (optionIndexes.get(relation.action) ?? 0) + 1);
+        if (optionIndexes.get(relation.action) > SEASONING_MAX_OPTIONS_PER_ACTION) throw new Error("too_many_options");
       }
       const mutated = mutateDb(dbPath, db, "product_relations_updated", { productId, count: requested.length }, (next) => {
         const existing = new Map(next.relations.filter((relation) => relation.productId === productId).map((relation) => [relationKey(productId, relation.action, relation.optionId), relation]));
         next.relations = next.relations.filter((relation) => relation.productId !== productId);
         const timestamp = new Date().toISOString();
-        requested.forEach((relation, index) => {
+        const nextOptionIndexes = new Map();
+        requested.forEach((relation) => {
           const previous = existing.get(relationKey(productId, relation.action, relation.optionId));
+          const optionIndex = nextOptionIndexes.get(relation.action) ?? 0;
+          nextOptionIndexes.set(relation.action, optionIndex + 1);
           next.relations.push({
             id: previous?.id ?? `r-${crypto.randomUUID()}`,
             productId,
             action: relation.action,
             optionId: relation.optionId,
             priceDelta: normalizePrice(relation.priceDelta),
-            sortOrder: Number(relation.sortOrder) || (index + 1) * 10,
+            sortOrder: encodeRelationSortOrder(actionIndexes.get(relation.action), optionIndex),
             status: relation.status === "inactive" ? "inactive" : "active",
             createdAt: previous?.createdAt ?? timestamp,
             updatedAt: timestamp,
@@ -974,6 +1113,7 @@ export async function handleEmenuSeasoningApi(req, res, dbPath) {
       const body = await readBody(req);
       assertExpectedVersion(db, body.expectedVersion);
       const preview = createCandidates(db, body, dbPath, session);
+      const finalProducts = buildBatchFinalProducts(db, preview);
       const previewToken = crypto.randomUUID();
       const stored = {
         ...preview,
@@ -981,6 +1121,7 @@ export async function handleEmenuSeasoningApi(req, res, dbPath) {
         scope: dbPath,
         session,
         actionOptions: preview.actionOptions,
+        finalProducts,
         productSelectionToken: String(body.productSelectionToken),
         decisions: {},
         version: db.version,
@@ -1026,6 +1167,16 @@ export async function handleEmenuSeasoningApi(req, res, dbPath) {
         item.inputPrice = priceDelta;
         item.markupCoefficient = 1;
         item.priceDelta = priceDelta;
+        for (const product of preview.finalProducts.values()) {
+          for (const group of product.actions) {
+            const finalItem = group.items.find((entry) => entry.source === "configured" && entry.candidateId === item.candidateId);
+            if (finalItem) {
+              finalItem.inputPrice = priceDelta;
+              finalItem.markupCoefficient = 1;
+              finalItem.priceDelta = priceDelta;
+            }
+          }
+        }
       }
       sendJson(res, 200, { candidate: { ...completeCandidatePricing(item), decision: preview.decisions[item.candidateId] }, unresolvedCount: previewUnresolvedCount(preview), summary: previewSummary(preview) });
       return true;
@@ -1045,37 +1196,50 @@ export async function handleEmenuSeasoningApi(req, res, dbPath) {
       const preview = resolvePreview(db, body.previewToken, dbPath, session);
       const decisions = new Map(Object.entries(preview.decisions));
       const summary = { created: 0, updated: 0, reactivated: 0, skipped: 0 };
+      for (const item of preview.items) {
+        const decision = decisions.get(item.candidateId);
+        if (item.kind === "unavailable" || decision?.resolution === "remove" || decision?.resolution === "keep") summary.skipped += 1;
+        else if (item.kind === "new") summary.created += 1;
+        else if (item.kind === "different") summary.updated += 1;
+        else if (item.kind === "inactive") summary.reactivated += 1;
+        else summary.skipped += 1;
+      }
       const mutated = mutateDb(dbPath, db, "relations_batch_saved", { candidateCount: preview.items.length }, (next) => {
         const relationByKey = new Map(next.relations.map((relation) => [relationKey(relation.productId, relation.action, relation.optionId), relation]));
         const timestamp = new Date().toISOString();
-        for (const item of preview.items) {
-          const candidate = completeCandidatePricing(item);
-          const decision = decisions.get(item.candidateId);
-          if (decision?.resolution === "remove" || candidate.kind === "unavailable") {
-            summary.skipped += 1;
-            continue;
-          }
-          const key = relationKey(candidate.productId, candidate.action, candidate.optionId);
-          const existing = relationByKey.get(key);
-          if (!existing) {
-            const relation = { id: `r-${crypto.randomUUID()}`, productId: candidate.productId, action: candidate.action, optionId: candidate.optionId, priceDelta: candidate.priceDelta, sortOrder: candidate.sortOrder, status: "active", createdAt: timestamp, updatedAt: timestamp };
-            next.relations.push(relation);
-            relationByKey.set(key, relation);
-            summary.created += 1;
-          } else if (candidate.kind === "same" || decision?.resolution === "keep") {
-            summary.skipped += 1;
-          } else if (candidate.kind === "different") {
-            existing.priceDelta = candidate.priceDelta;
-            existing.updatedAt = timestamp;
-            summary.updated += 1;
-          } else if (candidate.kind === "inactive") {
-            existing.status = "active";
-            existing.priceDelta = candidate.priceDelta;
-            existing.updatedAt = timestamp;
-            summary.reactivated += 1;
-          } else {
-            summary.skipped += 1;
-          }
+        for (const product of preview.finalProducts.values()) {
+          if (product.disposition === "unchanged_unavailable") continue;
+          const preparedGroups = product.actions.map((group) => ({
+            action: group.action,
+            items: group.items.map((item) => {
+              const existing = relationByKey.get(relationKey(product.productId, item.action, item.optionId));
+              if (item.source === "configured") {
+                const decision = decisions.get(item.candidateId);
+                if (decision?.resolution === "remove" || decision?.resolution === "keep") return existing ? { item, existing, preserve: true } : null;
+              }
+              return { item, existing, preserve: item.source === "preserved" };
+            }).filter(Boolean),
+          })).filter((group) => group.items.length);
+          next.relations = next.relations.filter((relation) => relation.productId !== product.productId);
+          preparedGroups.forEach((group, actionIndex) => {
+            group.items.forEach(({ item, existing, preserve }, optionIndex) => {
+              const sortOrder = encodeRelationSortOrder(actionIndex, optionIndex);
+              const priceDelta = preserve && existing ? normalizePrice(existing.priceDelta) : normalizePrice(item.priceDelta);
+              const status = preserve && existing ? existing.status : "active";
+              const changed = !existing || existing.sortOrder !== sortOrder || normalizePrice(existing.priceDelta) !== priceDelta || existing.status !== status;
+              next.relations.push({
+                id: existing?.id ?? `r-${crypto.randomUUID()}`,
+                productId: product.productId,
+                action: group.action,
+                optionId: item.optionId,
+                priceDelta,
+                sortOrder,
+                status,
+                createdAt: existing?.createdAt ?? timestamp,
+                updatedAt: changed ? timestamp : existing.updatedAt,
+              });
+            });
+          });
         }
       });
       previewTokens.delete(String(body.previewToken));

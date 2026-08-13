@@ -17,6 +17,19 @@ import {
   updateBatchInputPrice,
 } from "../src/emenu-local/seasoning/seasoning-batch-pricing";
 import { previewPageItems } from "../src/emenu-local/seasoning/seasoning-preview-pagination";
+import {
+  assignSeasoningSortOrders,
+  encodeSeasoningSortOrder,
+  isEncodedSeasoningOrder,
+  moveOrderedItem,
+  seasoningActionOrder,
+  sortSeasoningProductRelations,
+} from "../src/emenu-local/seasoning/seasoning-relation-order";
+import {
+  createProductConfigurationDraft,
+  moveDraftAction,
+  moveDraftOption,
+} from "../src/emenu-local/seasoning/seasoning-configuration-workspace-ui";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -61,6 +74,33 @@ const existing: ProductSeasoningRelation[] = [
   { id: "r1", productId: "p1", action: "ADD", optionId: "o1", priceDelta: 1, sortOrder: 10, status: "active", createdAt: "", updatedAt: "" },
   { id: "r2", productId: "p1", action: "ADD", optionId: "o2", priceDelta: 0, sortOrder: 20, status: "inactive", createdAt: "", updatedAt: "" },
 ];
+
+const encodedRelations: ProductSeasoningRelation[] = [
+  { ...existing[0], id: "r-more-1", action: "MORE", optionId: "o3", sortOrder: encodeSeasoningSortOrder(0, 0) },
+  { ...existing[0], id: "r-more-2", action: "MORE", optionId: "o1", sortOrder: encodeSeasoningSortOrder(0, 1) },
+  { ...existing[0], id: "r-add-1", action: "ADD", optionId: "o2", sortOrder: encodeSeasoningSortOrder(1, 0), priceDelta: 2, status: "inactive" },
+];
+assert(isEncodedSeasoningOrder(encodedRelations), "Encoded relation orders must be recognized");
+assert(seasoningActionOrder(encodedRelations).join(",") === "MORE,ADD", "Encoded action order must override the legacy fixed order");
+assert(sortSeasoningProductRelations(encodedRelations).map((item) => item.optionId).join(",") === "o3,o1,o2", "Encoded option order must be preserved inside each action");
+assert(!isEncodedSeasoningOrder([{ ...encodedRelations[0], sortOrder: 10 }, encodedRelations[1]]), "Partially encoded product data must fall back as one legacy set");
+assert(seasoningActionOrder([{ ...encodedRelations[0], sortOrder: 10 }, encodedRelations[2]]).join(",") === "ADD,MORE", "Invalid encoded data must use the fixed legacy action order");
+assert(moveOrderedItem(["a", "b", "c"], 0, 2).join(",") === "b,c,a", "Generic reorder must move an item to its target index");
+
+const assigned = assignSeasoningSortOrders([
+  { action: "NONE" as const, optionId: "o1" },
+  { action: "NONE" as const, optionId: "o2" },
+  { action: "LESS" as const, optionId: "o3" },
+]);
+assert(assigned.map((item) => item.sortOrder).join(",") === "10000010,10000020,11000010", "Saved ordering must encode action and Option positions deterministically");
+
+const productDraft = createProductConfigurationDraft(encodedRelations);
+assert(productDraft.map((group) => group.action).join(",") === "MORE,ADD", "Product editor must initialize actions using saved order");
+assert(productDraft[0].options.map((option) => option.optionId).join(",") === "o3,o1", "Product editor must initialize Option order from saved relations");
+assert(productDraft[1].options[0].inputPrice === 2 && productDraft[1].options[0].markupCoefficient === 1, "Historical relations must initialize base price from priceDelta and coefficient to 1.00");
+assert(productDraft[1].options[0].status === "inactive", "Product editor must retain relation status");
+assert(moveDraftAction(productDraft, "MORE", "ADD").map((group) => group.action).join(",") === "ADD,MORE", "Action drag must update draft order");
+assert(moveDraftOption(productDraft, "MORE", "o3", "o1")[0].options.map((option) => option.optionId).join(",") === "o1,o3", "Option drag must update order only inside its action");
 
 const candidates = expandBatchCandidates({
   action: "ADD",

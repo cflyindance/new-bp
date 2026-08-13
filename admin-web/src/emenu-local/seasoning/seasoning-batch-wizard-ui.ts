@@ -7,6 +7,13 @@ import {
   updateBatchInputPrice,
   type BatchOptionPricingDraft,
 } from "./seasoning-batch-pricing";
+import {
+  installSeasoningWorkspaceReorder,
+  moveDraftAction,
+  moveDraftOption,
+  renderSeasoningConfigurationWorkspace,
+  type SeasoningConfigurationDraft,
+} from "./seasoning-configuration-workspace-ui";
 import { renderSeasoningMenuStructurePicker, syncSeasoningMenuIndeterminate } from "./seasoning-menu-structure-picker-ui";
 import { previewPageItems } from "./seasoning-preview-pagination";
 import type {
@@ -44,6 +51,7 @@ class BatchWizardController {
   private pendingActions = new Set<SeasoningActionCode>();
   private pendingOptions = new Set<string>();
   private bulkPriceInput = "";
+  private linkedOptionQuery = "";
   private selectedPriceOptions = new Set<string>();
   private options: CursorPage<SeasoningOption> | null = null;
   private productSelection: ProductSelectionDraft | null = null;
@@ -74,6 +82,10 @@ class BatchWizardController {
       } else {
         this.close();
       }
+    });
+    installSeasoningWorkspaceReorder(this.overlay, {
+      moveAction: (source, target) => this.reorderAction(source, target),
+      moveOption: (action, source, target) => this.reorderOption(action, source, target),
     });
     this.render();
     void this.initialize();
@@ -136,6 +148,48 @@ class BatchWizardController {
     this.discardPreview();
   }
 
+  private configurationDraft(): SeasoningConfigurationDraft {
+    return [...this.actionOptions].map(([action, options]) => ({
+      action,
+      options: [...options].map(([optionId, pricing]) => ({ optionId, ...pricing })),
+    }));
+  }
+
+  private applyConfigurationDraft(draft: SeasoningConfigurationDraft): void {
+    this.actionOptions = new Map(draft.map((group) => [group.action, new Map(group.options.map(({ optionId, inputPrice, markupCoefficient }) => [optionId, { inputPrice, markupCoefficient }]))]));
+  }
+
+  private reorderAction(source: SeasoningActionCode, target: SeasoningActionCode): void {
+    this.applyConfigurationDraft(moveDraftAction(this.configurationDraft(), source, target));
+    this.clearAfterConfigurationChange();
+    this.dirty = true;
+    this.render();
+  }
+
+  private reorderOption(action: SeasoningActionCode, source: string, target: string): void {
+    if (this.linkedOptionQuery.trim()) return;
+    this.applyConfigurationDraft(moveDraftOption(this.configurationDraft(), action, source, target));
+    this.clearAfterConfigurationChange();
+    this.dirty = true;
+    this.render();
+  }
+
+  private renderSharedConfigurationStep(): string {
+    return renderSeasoningConfigurationWorkspace({
+      draft: this.configurationDraft(),
+      activeAction: this.activeAction,
+      actionPickerOpen: this.actionPickerOpen,
+      optionPickerOpen: this.optionPickerOpen,
+      pendingActions: this.pendingActions,
+      pendingOptions: this.pendingOptions,
+      selectedPriceOptions: this.selectedPriceOptions,
+      bulkPriceInput: this.bulkPriceInput,
+      optionQuery: this.linkedOptionQuery,
+      options: this.options?.items ?? [],
+      mode: "batch",
+    });
+  }
+
   private errorMessage(error: unknown): string {
     if (error instanceof SeasoningApiError && error.code === "version_conflict") return t("seasoning.versionConflict");
     if (error instanceof SeasoningApiError && PRODUCT_SELECTION_ERRORS.has(error.code)) return t("seasoning.productSelectionExpired");
@@ -182,6 +236,9 @@ class BatchWizardController {
     if (selectedCount) selectedCount.textContent = tf("seasoning.batch.updateSelectedPrices", { count: String(this.selectedPriceOptions.size) });
     const updateSelected = this.overlay.querySelector<HTMLButtonElement>("[data-fill-selected-prices]");
     if (updateSelected) updateSelected.disabled = this.selectedPriceOptions.size === 0 || this.normalizedBulkPrice() === null;
+    const fillAll = this.overlay.querySelector<HTMLButtonElement>("[data-fill-bulk-price]");
+    const activeOptions = this.activeAction ? this.actionOptions.get(this.activeAction) : undefined;
+    if (fillAll) fillAll.disabled = !activeOptions?.size || this.normalizedBulkPrice() === null;
   }
 
   private actionDescription(action: SeasoningActionCode): string {
@@ -263,16 +320,16 @@ class BatchWizardController {
       </div>
       <div class="max-h-[48vh] space-y-3 overflow-y-auto pr-1">${this.previewPage.items.map((product) => {
         const collapsed = this.collapsedPreviewProducts.has(product.productId);
-        return `<article data-preview-product="${escapeSeasoningHtml(product.productId)}" class="overflow-hidden rounded-xl border ${product.unresolvedCount ? "border-amber-300 bg-amber-50/30 dark:bg-amber-950/10" : "border-border bg-card"}">
+        return `<article data-preview-product="${escapeSeasoningHtml(product.productId)}" class="overflow-hidden rounded-xl border ${product.excludedCandidates.length ? "border-amber-300 bg-amber-50/30 dark:bg-amber-950/10" : "border-border bg-card"}">
           <button type="button" data-toggle-preview-product="${escapeSeasoningHtml(product.productId)}" aria-expanded="${!collapsed}" class="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-muted/35">
             <span class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-sm font-bold text-primary">${escapeSeasoningHtml((product.productName ?? product.productId).slice(0, 1))}</span>
-            <span class="min-w-0 flex-1"><strong class="block truncate text-sm">${escapeSeasoningHtml(product.productName ?? product.productId)}</strong><span class="mt-0.5 block text-xs text-muted-foreground">${product.optionCount} 个 Option${product.unresolvedCount ? ` · ${product.unresolvedCount} 条待处理` : ""}</span></span>
+            <span class="min-w-0 flex-1"><strong class="block truncate text-sm">${escapeSeasoningHtml(product.productName ?? product.productId)}</strong><span class="mt-0.5 block text-xs text-muted-foreground">${product.finalRelationCount} 个 Option${product.excludedCandidates.length ? ` · ${product.excludedCandidates.length} 条不可用` : ""}</span></span>
             <span class="text-sm text-muted-foreground transition-transform ${collapsed ? "" : "rotate-180"}" aria-hidden="true">⌄</span>
           </button>
           ${collapsed ? "" : `<div class="space-y-3 border-t border-border bg-background/60 p-3">${product.actions.map((group) => `<section data-preview-action="${escapeSeasoningHtml(group.action)}" class="overflow-x-auto rounded-lg border border-border bg-card">
             <header class="flex min-w-[620px] items-center justify-between bg-muted/35 px-3 py-2"><span class="inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${actionTone(group.action)}">${escapeSeasoningHtml(actionLabel(group.action))}</span><span class="text-xs font-semibold text-muted-foreground">${group.items.length} 个 Option</span></header>
             <div class="grid min-w-[620px] grid-cols-[minmax(160px,1fr)_120px_100px_120px] gap-3 border-t border-border bg-muted/15 px-3 py-2 text-xs font-semibold text-muted-foreground"><span>Option</span><span class="text-right">Option 原价</span><span class="text-right">加价系数</span><span class="text-right">实际价格</span></div>
-            <div class="min-w-[620px] divide-y divide-border">${group.items.map((item) => `<div data-preview-option="${escapeSeasoningHtml(item.candidateId)}" class="grid grid-cols-[minmax(160px,1fr)_120px_100px_120px] items-center gap-3 px-3 py-3">
+            <div class="min-w-[620px] divide-y divide-border">${group.items.map((item) => `<div data-preview-option="${escapeSeasoningHtml(item.source === "configured" ? item.candidateId : item.relationId)}" class="grid grid-cols-[minmax(160px,1fr)_120px_100px_120px] items-center gap-3 px-3 py-3">
               <strong data-preview-option-name class="truncate text-sm">${escapeSeasoningHtml(item.optionName ?? item.optionId)}</strong>
               <span data-preview-option-input-price class="text-right text-sm tabular-nums">$${Number(item.inputPrice).toFixed(2)}</span>
               <span data-preview-option-coefficient class="text-right text-sm tabular-nums">${Number(item.markupCoefficient).toFixed(2)}</span>
@@ -293,7 +350,7 @@ class BatchWizardController {
   }
 
   private render(): void {
-    const content = this.loading ? `<div class="flex min-h-72 items-center justify-center"><p class="text-sm font-medium text-muted-foreground">${t("seasoning.loading")}</p></div>` : this.step === 1 ? this.renderProductStep() : this.step === 2 ? this.renderConfigurationStep() : this.renderPreviewStep();
+    const content = this.loading ? `<div class="flex min-h-72 items-center justify-center"><p class="text-sm font-medium text-muted-foreground">${t("seasoning.loading")}</p></div>` : this.step === 1 ? this.renderProductStep() : this.step === 2 ? this.renderSharedConfigurationStep() : this.renderPreviewStep();
     const canNext = this.step === 1 ? this.selectedProductCount() > 0 : this.step === 2 ? this.allActionsConfigured() : true;
     this.overlay.innerHTML = `
       <section data-seasoning-batch-wizard role="dialog" aria-modal="true" aria-labelledby="seasoning-batch-title" class="flex max-h-[94vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
@@ -678,7 +735,10 @@ class BatchWizardController {
     }
     if (target.hasAttribute("data-linked-option-query")) {
       const query = target.value.trim().toLocaleLowerCase();
+      this.linkedOptionQuery = target.value;
       this.overlay.querySelectorAll<HTMLElement>("[data-linked-option-row]").forEach((row) => row.classList.toggle("hidden", !String(row.dataset.searchText).includes(query)));
+      this.overlay.querySelectorAll<HTMLButtonElement>("[data-drag-option]").forEach((button) => { button.disabled = Boolean(query); });
+      this.overlay.querySelector<HTMLElement>("[data-option-reorder-search-hint]")?.classList.toggle("hidden", !query);
       this.syncBulkPriceSelectionState();
     }
     if (target.hasAttribute("data-option-picker-query")) {

@@ -21,6 +21,9 @@ const batch = read("src/emenu-local/seasoning/seasoning-batch-wizard-ui.ts");
 const batchPricing = read("src/emenu-local/seasoning/seasoning-batch-pricing.ts");
 const menuPicker = read("src/emenu-local/seasoning/seasoning-menu-structure-picker-ui.ts");
 const drawer = read("src/emenu-local/seasoning/seasoning-product-drawer-ui.ts");
+const workspace = read("src/emenu-local/seasoning/seasoning-configuration-workspace-ui.ts");
+const relationOrder = read("src/emenu-local/seasoning/seasoning-relation-order.ts");
+const apiHandler = read("scripts/lib/emenu-local-seasoning-api-handler.mjs");
 const options = read("src/emenu-local/seasoning/seasoning-option-library-ui.ts");
 const i18n = read("src/i18n.ts");
 
@@ -43,7 +46,7 @@ expect(overview, /relation-page-size/, "Relations overview must expose the 5, 10
 expect(batch, /data-seasoning-batch-wizard/, "Batch wizard marker is missing");
 expect(batch, /data-seasoning-batch-step/, "Batch wizard steps are missing");
 expect(batch, /const labels = \[t\("seasoning\.batch\.stepProduct"\), t\("seasoning\.batch\.stepConfigure"\), t\("seasoning\.batch\.stepPreview"\)\]/, "Batch wizard must use Product → Actions & Options → Preview order");
-expect(batch, /this\.step === 1 \? this\.renderProductStep\(\) : this\.step === 2 \? this\.renderConfigurationStep\(\) : this\.renderPreviewStep\(\)/, "Batch wizard content order is incorrect");
+expect(batch, /this\.step === 1 \? this\.renderProductStep\(\) : this\.step === 2 \? this\.renderSharedConfigurationStep\(\) : this\.renderPreviewStep\(\)/, "Batch wizard content order is incorrect");
 expect(batch, /data-open-action-picker/, "Combined configuration step must add actions in place");
 expect(batch, /data-open-option-picker/, "Combined configuration step must add options in place");
 expect(batch, /data-action-option-price/, "Linked options must support per-action pricing");
@@ -93,7 +96,22 @@ expect(menuPicker, /data-menu-column="category"/, "Category column is missing");
 expect(menuPicker, /data-menu-column="dish"/, "Dish column is missing");
 expect(menuPicker, /indeterminate/, "Menu picker must synchronize native indeterminate state");
 if (/data-menu-column="line"|data-seasoning-line/.test(menuPicker)) throw new Error("Seasoning menu picker must not expose a production-line dimension");
-expect(drawer, /data-seasoning-product-drawer/, "Product drawer marker is missing");
+expect(drawer, /data-seasoning-product-editor/, "Single-product editor marker is missing");
+expect(drawer, /renderSeasoningConfigurationWorkspace/, "Single-product editor must reuse the batch configuration workspace");
+expect(drawer, /const labels = \[t\("seasoning\.batch\.stepConfigure"\), t\("seasoning\.batch\.stepPreview"\)\]/, "Single-product editor must expose exactly Actions & Options and Preview steps");
+expect(drawer, /this\.step === 1 \? this\.renderConfiguration\(\) : this\.renderPreview\(\)/, "Single-product editor step content is incorrect");
+if (/renderProductStep|data-seasoning-menu-structure-picker/.test(drawer)) throw new Error("Single-product editor must not expose a product-selection step");
+expect(workspace, /data-drag-action/, "Actions must expose drag handles");
+expect(workspace, /data-drag-option/, "Options must expose drag handles");
+expect(workspace, /pointerdown/, "Shared workspace must support pointer drag sorting");
+expect(workspace, /event\.altKey/, "Shared workspace must support Alt + Arrow keyboard sorting");
+expect(workspace, /clearSearchToReorder/, "Option search must explain why sorting is temporarily disabled");
+expect(workspace, /data-action-option-status/, "Single-product editing must retain relation status controls");
+expect(relationOrder, /SEASONING_SORT_MARKER\s*=\s*10_000_000/, "Relation ordering needs an explicit encoded-format marker");
+expect(relationOrder, /assignSeasoningSortOrders/, "Client save payloads must encode action and Option order");
+expect(apiHandler, /buildBatchFinalProducts/, "Batch preview must build the final per-product configuration");
+expect(apiHandler, /preservedPreviewRelation/, "Batch merge must preserve unselected historical relations");
+expect(apiHandler, /encodeRelationSortOrder/, "Server writes must own and validate persisted ordering");
 expect(options, /data-seasoning-option-library/, "Option library marker is missing");
 
 const keys = [
