@@ -393,7 +393,7 @@ function renderQuantityPanel(iframeSrc: string, activeTab: MenuOrderLimitTabId):
       id="menu-order-limit-panel-quantity"
       role="tabpanel"
       aria-labelledby="menu-order-limit-tab-quantity"
-      class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm"
+      class="flex min-h-0 flex-1 flex-col overflow-hidden"
       data-menu-order-limit-panel="quantity"
     >
       <iframe

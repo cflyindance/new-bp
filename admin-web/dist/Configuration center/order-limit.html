@@ -84,6 +84,42 @@
     }
     .section-head h2 { margin: 0; font-size: 15px; font-weight: 600; }
     .section-body { padding: 12px 16px 16px; }
+    html.embedded-mode,
+    html.embedded-mode body {
+      height: 100%;
+      overflow: hidden;
+      background: transparent;
+    }
+    html.embedded-mode .page {
+      height: 100%;
+      min-height: 0;
+      padding: 0;
+      gap: 0;
+      overflow: hidden;
+      background: transparent;
+    }
+    html.embedded-mode #rulesPanel {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      flex: 1;
+      overflow: hidden;
+      border: 0;
+      border-radius: 0;
+      box-shadow: none;
+    }
+    html.embedded-mode #rulesPanel .section-head { flex: 0 0 auto; }
+    html.embedded-mode #rulesPanel .section-body {
+      min-height: 0;
+      flex: 1;
+      overflow: auto;
+    }
+    html.embedded-mode #rulesPanel thead th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: #fafcff;
+    }
     .badge {
       display: inline-flex;
       align-items: center;
