@@ -141,6 +141,7 @@ button { color: inherit; }
 }
 .olf-content-head { margin-bottom: 28px; }
 .olf-content-head h2 { margin: 0 0 7px; font-size: 20px; line-height: 28px; font-weight: 600; }
+.olf-content-head h2:focus { outline: none; }
 .olf-content-head p { margin: 0; font-size: 14px; line-height: 22px; color: var(--olf-secondary); }
 .olf-section { padding: 26px 0; border-top: 1px solid var(--olf-border); }
 .olf-section:first-of-type { padding-top: 0; border-top: 0; }
