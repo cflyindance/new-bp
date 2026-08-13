@@ -516,6 +516,104 @@ function previewUnresolvedCount(preview) {
   return preview.items.filter((item) => !candidateResolved(item, preview.decisions[item.candidateId])).length;
 }
 
+function stableTextCompare(left, right) {
+  const first = String(left ?? "");
+  const second = String(right ?? "");
+  return first < second ? -1 : first > second ? 1 : 0;
+}
+
+function buildPreviewProductIndex(items) {
+  const candidatesByProduct = new Map();
+  const productIdsByKind = { new: new Set(), same: new Set(), different: new Set(), inactive: new Set(), unavailable: new Set() };
+  for (const item of items) {
+    if (!candidatesByProduct.has(item.productId)) candidatesByProduct.set(item.productId, []);
+    candidatesByProduct.get(item.productId).push(item);
+    if (!productIdsByKind[item.kind]) productIdsByKind[item.kind] = new Set();
+    productIdsByKind[item.kind].add(item.productId);
+  }
+  return {
+    indexVersion: crypto.randomUUID(),
+    candidatesByProduct,
+    productIds: [...candidatesByProduct.keys()].sort(stableTextCompare),
+    productIdsByKind: Object.fromEntries(Object.entries(productIdsByKind).map(([kind, productIds]) => [kind, [...productIds].sort(stableTextCompare)])),
+  };
+}
+
+function invalidProductCursor() {
+  const error = new Error("invalid_cursor");
+  error.statusCode = 400;
+  error.payload = { error: "invalid_cursor" };
+  throw error;
+}
+
+function encodeProductCursor(payload) {
+  return Buffer.from(JSON.stringify(payload), "utf8").toString("base64url");
+}
+
+function decodeProductCursor(cursor) {
+  try {
+    const parsed = JSON.parse(Buffer.from(cursor, "base64url").toString("utf8"));
+    if (!parsed || typeof parsed !== "object") invalidProductCursor();
+    return parsed;
+  } catch (error) {
+    if (error?.message === "invalid_cursor") throw error;
+    invalidProductCursor();
+  }
+}
+
+function actionOrder(action) {
+  const index = ACTIONS.indexOf(action);
+  return index >= 0 ? index : ACTIONS.length;
+}
+
+function previewCandidateCompare(left, right) {
+  const leftOrder = Number.isFinite(Number(left.sortOrder)) ? Number(left.sortOrder) : Number.POSITIVE_INFINITY;
+  const rightOrder = Number.isFinite(Number(right.sortOrder)) ? Number(right.sortOrder) : Number.POSITIVE_INFINITY;
+  return leftOrder - rightOrder || stableTextCompare(left.optionName, right.optionName) || stableTextCompare(left.candidateId, right.candidateId);
+}
+
+function previewProductsPage(preview, url, previewToken) {
+  const kind = url.searchParams.get("kind") || "";
+  const requestedLimit = Number(url.searchParams.get("limit") || 5);
+  const limit = Math.max(1, Math.min(50, Number.isFinite(requestedLimit) ? Math.floor(requestedLimit) : 5));
+  const productIds = kind ? (preview.productIdsByKind[kind] ?? []) : preview.productIds;
+  const cursorValue = url.searchParams.get("cursor");
+  let start = 0;
+  if (cursorValue) {
+    const cursor = decodeProductCursor(cursorValue);
+    if (cursor.previewToken !== previewToken || cursor.indexVersion !== preview.indexVersion || cursor.kind !== kind || cursor.limit !== limit || typeof cursor.afterProductId !== "string") invalidProductCursor();
+    const afterIndex = productIds.indexOf(cursor.afterProductId);
+    if (afterIndex < 0) invalidProductCursor();
+    start = afterIndex + 1;
+  }
+  const pageProductIds = productIds.slice(start, start + limit);
+  const items = pageProductIds.map((productId) => {
+    const candidates = (preview.candidatesByProduct.get(productId) ?? [])
+      .filter((item) => !kind || item.kind === kind)
+      .map((item) => ({ ...item, decision: preview.decisions[item.candidateId] }));
+    const grouped = new Map();
+    for (const item of candidates) {
+      if (!grouped.has(item.action)) grouped.set(item.action, []);
+      grouped.get(item.action).push(item);
+    }
+    const actions = [...grouped.entries()]
+      .sort(([left], [right]) => actionOrder(left) - actionOrder(right) || stableTextCompare(left, right))
+      .map(([action, actionItems]) => ({ action, items: actionItems.sort(previewCandidateCompare) }));
+    return {
+      productId,
+      productName: candidates[0]?.productName ?? productId,
+      optionCount: candidates.length,
+      unresolvedCount: candidates.filter((item) => !candidateResolved(item, item.decision)).length,
+      actions,
+    };
+  });
+  const hasMore = start + limit < productIds.length;
+  const nextCursor = hasMore && pageProductIds.length
+    ? encodeProductCursor({ previewToken, indexVersion: preview.indexVersion, kind, limit, afterProductId: pageProductIds[pageProductIds.length - 1] })
+    : null;
+  return { items, nextCursor, total: productIds.length, unresolvedCount: previewUnresolvedCount(preview), summary: previewSummary(preview) };
+}
+
 function previewItemsPage(preview, url) {
   const kind = url.searchParams.get("kind");
   const items = preview.items
@@ -718,6 +816,7 @@ export async function handleEmenuSeasoningApi(req, res, dbPath) {
       const previewToken = crypto.randomUUID();
       const stored = {
         ...preview,
+        ...buildPreviewProductIndex(preview.items),
         scope: dbPath,
         session,
         actionOptions: preview.actionOptions,
@@ -745,6 +844,12 @@ export async function handleEmenuSeasoningApi(req, res, dbPath) {
       sendJson(res, 200, previewItemsPage(preview, url));
       return true;
     }
+    const previewProductsMatch = sub.match(/^\/relation-previews\/([^/]+)\/products$/);
+    if (method === "GET" && previewProductsMatch) {
+      const preview = resolvePreview(db, previewProductsMatch[1], dbPath, session);
+      sendJson(res, 200, previewProductsPage(preview, url, previewProductsMatch[1]));
+      return true;
+    }
     if (method === "PATCH" && previewItemsMatch) {
       const preview = resolvePreview(db, previewItemsMatch[1], dbPath, session);
       const body = await readBody(req);
@@ -758,11 +863,6 @@ export async function handleEmenuSeasoningApi(req, res, dbPath) {
         const priceDelta = normalizePrice(body.priceDelta);
         preview.decisions[item.candidateId] = { ...(preview.decisions[item.candidateId] ?? { candidateId: item.candidateId }), priceDelta };
         item.priceDelta = priceDelta;
-        if (item.kind !== "unavailable") {
-          if (item.status === "inactive") item.kind = "inactive";
-          else if (item.existingPriceDelta !== undefined) item.kind = normalizePrice(item.existingPriceDelta) === priceDelta ? "same" : "different";
-          else item.kind = "new";
-        }
       }
       sendJson(res, 200, { candidate: { ...item, decision: preview.decisions[item.candidateId] }, unresolvedCount: previewUnresolvedCount(preview), summary: previewSummary(preview) });
       return true;

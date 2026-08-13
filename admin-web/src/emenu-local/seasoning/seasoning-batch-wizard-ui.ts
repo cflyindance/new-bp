@@ -12,7 +12,7 @@ import type {
   BatchCandidate,
   BatchCommitResult,
   BatchDecision,
-  BatchPreviewPage,
+  BatchPreviewProductPage,
   BatchPreviewResponse,
   CursorPage,
   ProductSelectionDraft,
@@ -50,10 +50,11 @@ class BatchWizardController {
   private menu: SeasoningMenuStructure | null = null;
   private productQuery = "";
   private preview: BatchPreviewResponse | null = null;
-  private previewPage: BatchPreviewPage | null = null;
+  private previewPage: BatchPreviewProductPage | null = null;
   private previewKind = "";
   private previewCursors: Array<string | undefined> = [undefined];
   private previewPageIndex = 0;
+  private collapsedPreviewProducts = new Set<string>();
   private loading = false;
   private error = "";
   private dirty = false;
@@ -118,6 +119,7 @@ class BatchWizardController {
     this.previewKind = "";
     this.previewCursors = [undefined];
     this.previewPageIndex = 0;
+    this.collapsedPreviewProducts.clear();
   }
 
   private clearAfterProductChange(): void {
@@ -275,11 +277,29 @@ class BatchWizardController {
         <select data-preview-kind class="${inputClass} w-auto"><option value="">全部状态</option>${(["new", "same", "different", "inactive", "unavailable"] as const).map((kind) => `<option value="${kind}" ${this.previewKind === kind ? "selected" : ""}>${escapeSeasoningHtml(this.candidateLabel({ kind } as BatchCandidate))} (${this.previewPage?.summary[kind] ?? 0})</option>`).join("")}</select>
         <span class="ml-auto text-xs text-muted-foreground">第 ${this.previewPageIndex + 1} 页</span>
       </div>
-      <div class="max-h-[42vh] space-y-2 overflow-y-auto pr-1">${this.previewPage.items.map((item) => {
-        const decision = item.decision;
-        const needsDecision = item.kind === "different" || item.kind === "inactive" || item.kind === "unavailable";
-        return `<article class="rounded-xl border ${needsDecision && !decision?.resolution ? "border-amber-300 bg-amber-50/50 dark:bg-amber-950/20" : "border-border bg-card"} p-3"><div class="flex flex-wrap items-start justify-between gap-2"><div><p class="text-sm font-semibold">${escapeSeasoningHtml(item.productName ?? item.productId)} · ${escapeSeasoningHtml(item.optionName ?? item.optionId)}</p><p class="mt-1 text-xs text-muted-foreground">${escapeSeasoningHtml(actionLabel(item.action))}</p></div><div class="flex items-center gap-2"><input type="number" min="0" step="0.01" data-candidate-price="${escapeSeasoningHtml(item.candidateId)}" value="${item.priceDelta}" class="h-8 w-20 rounded-md border border-border bg-background px-2 text-xs"><span class="rounded-full border border-border bg-muted px-2 py-1 text-[11px] font-semibold">${escapeSeasoningHtml(this.candidateLabel(item))}</span></div></div>${needsDecision ? `<div class="mt-3 flex flex-wrap gap-2">${item.kind === "different" ? `<button type="button" data-decision="keep" data-candidate-id="${item.candidateId}" class="${decision?.resolution === "keep" ? primaryButtonClass : secondaryButtonClass}">${t("seasoning.batch.keep")}</button><button type="button" data-decision="use" data-candidate-id="${item.candidateId}" class="${decision?.resolution === "use" ? primaryButtonClass : secondaryButtonClass}">${t("seasoning.batch.use")}</button>` : item.kind === "inactive" ? `<button type="button" data-decision="keep" data-candidate-id="${item.candidateId}" class="${decision?.resolution === "keep" ? primaryButtonClass : secondaryButtonClass}">${t("seasoning.batch.keep")}</button><button type="button" data-decision="reactivate" data-candidate-id="${item.candidateId}" class="${decision?.resolution === "reactivate" ? primaryButtonClass : secondaryButtonClass}">${t("seasoning.batch.reactivate")}</button>` : `<button type="button" data-decision="remove" data-candidate-id="${item.candidateId}" class="${decision?.resolution === "remove" ? primaryButtonClass : secondaryButtonClass}">${t("seasoning.batch.remove")}</button>`}</div>` : ""}</article>`;
-      }).join("") || `<div class="flex min-h-32 items-center justify-center text-sm text-muted-foreground">当前筛选无候选关系</div>`}</div>
+      <div class="max-h-[48vh] space-y-3 overflow-y-auto pr-1">${this.previewPage.items.map((product) => {
+        const collapsed = this.collapsedPreviewProducts.has(product.productId);
+        return `<article data-preview-product="${escapeSeasoningHtml(product.productId)}" class="overflow-hidden rounded-xl border ${product.unresolvedCount ? "border-amber-300 bg-amber-50/30 dark:bg-amber-950/10" : "border-border bg-card"}">
+          <button type="button" data-toggle-preview-product="${escapeSeasoningHtml(product.productId)}" aria-expanded="${!collapsed}" class="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-muted/35">
+            <span class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-sm font-bold text-primary">${escapeSeasoningHtml((product.productName ?? product.productId).slice(0, 1))}</span>
+            <span class="min-w-0 flex-1"><strong class="block truncate text-sm">${escapeSeasoningHtml(product.productName ?? product.productId)}</strong><span class="mt-0.5 block text-xs text-muted-foreground">${product.optionCount} 个 Option${product.unresolvedCount ? ` · ${product.unresolvedCount} 条待处理` : ""}</span></span>
+            <span class="text-sm text-muted-foreground transition-transform ${collapsed ? "" : "rotate-180"}" aria-hidden="true">⌄</span>
+          </button>
+          ${collapsed ? "" : `<div class="space-y-3 border-t border-border bg-background/60 p-3">${product.actions.map((group) => `<section data-preview-action="${escapeSeasoningHtml(group.action)}" class="overflow-hidden rounded-lg border border-border bg-card">
+            <header class="flex items-center justify-between bg-muted/35 px-3 py-2"><span class="inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${actionTone(group.action)}">${escapeSeasoningHtml(actionLabel(group.action))}</span><span class="text-xs font-semibold text-muted-foreground">${group.items.length} 个 Option</span></header>
+            <div class="divide-y divide-border">${group.items.map((item) => {
+              const decision = item.decision;
+              const needsDecision = item.kind === "different" || item.kind === "inactive" || item.kind === "unavailable";
+              return `<div data-preview-option="${escapeSeasoningHtml(item.candidateId)}" class="grid gap-3 px-3 py-3 md:grid-cols-[minmax(140px,1fr)_110px_150px_minmax(180px,auto)] md:items-center">
+                <strong class="truncate text-sm">${escapeSeasoningHtml(item.optionName ?? item.optionId)}</strong>
+                <label class="flex items-center gap-1.5"><span class="text-xs text-muted-foreground">$</span><input type="number" min="0" step="0.01" data-candidate-price="${escapeSeasoningHtml(item.candidateId)}" value="${item.priceDelta}" aria-label="${escapeSeasoningHtml(`${item.optionName ?? item.optionId} 实际加价`)}" class="h-8 w-20 rounded-md border border-border bg-background px-2 text-right text-xs"></label>
+                <span class="w-fit rounded-full border border-border bg-muted px-2 py-1 text-[11px] font-semibold">${escapeSeasoningHtml(this.candidateLabel(item))}</span>
+                <div class="flex flex-wrap justify-start gap-2 md:justify-end">${needsDecision ? item.kind === "different" ? `<button type="button" data-decision="keep" data-candidate-id="${escapeSeasoningHtml(item.candidateId)}" class="${decision?.resolution === "keep" ? primaryButtonClass : secondaryButtonClass} !min-h-8 !px-3 text-xs">${t("seasoning.batch.keep")}</button><button type="button" data-decision="use" data-candidate-id="${escapeSeasoningHtml(item.candidateId)}" class="${decision?.resolution === "use" ? primaryButtonClass : secondaryButtonClass} !min-h-8 !px-3 text-xs">${t("seasoning.batch.use")}</button>` : item.kind === "inactive" ? `<button type="button" data-decision="keep" data-candidate-id="${escapeSeasoningHtml(item.candidateId)}" class="${decision?.resolution === "keep" ? primaryButtonClass : secondaryButtonClass} !min-h-8 !px-3 text-xs">${t("seasoning.batch.keep")}</button><button type="button" data-decision="reactivate" data-candidate-id="${escapeSeasoningHtml(item.candidateId)}" class="${decision?.resolution === "reactivate" ? primaryButtonClass : secondaryButtonClass} !min-h-8 !px-3 text-xs">${t("seasoning.batch.reactivate")}</button>` : `<button type="button" data-decision="remove" data-candidate-id="${escapeSeasoningHtml(item.candidateId)}" class="${decision?.resolution === "remove" ? primaryButtonClass : secondaryButtonClass} !min-h-8 !px-3 text-xs">${t("seasoning.batch.remove")}</button>` : `<span class="text-xs text-muted-foreground">无需处理</span>`}</div>
+              </div>`;
+            }).join("")}</div>
+          </section>`).join("")}</div>`}
+        </article>`;
+      }).join("") || `<div class="flex min-h-32 items-center justify-center rounded-xl border border-dashed border-border text-sm text-muted-foreground">当前筛选无匹配商品</div>`}</div>
       <div class="flex items-center justify-between"><button type="button" data-preview-previous class="${secondaryButtonClass}" ${this.previewPageIndex === 0 ? "disabled" : ""}>上一页</button><button type="button" data-preview-next class="${secondaryButtonClass}" ${this.previewPage.nextCursor ? "" : "disabled"}>下一页</button></div>
     </div>`;
   }
@@ -406,7 +426,11 @@ class BatchWizardController {
         productSelectionToken: this.productSelection.token,
         expectedVersion: this.input.bootstrap.version,
       });
-      this.previewPage = { ...this.preview.page, unresolvedCount: this.preview.unresolvedCount, summary: this.preview.summary };
+      this.previewKind = "";
+      this.previewCursors = [undefined];
+      this.previewPageIndex = 0;
+      this.collapsedPreviewProducts.clear();
+      this.previewPage = await seasoningApi.previewProducts(this.preview.previewToken, { limit: 5 });
       this.step = 3;
     } catch (error) {
       await this.recoverFromError(error);
@@ -416,15 +440,26 @@ class BatchWizardController {
     }
   }
 
-  private async loadPreviewItems(cursor = this.previewCursors[this.previewPageIndex]): Promise<void> {
+  private async loadPreviewProducts(cursor = this.previewCursors[this.previewPageIndex]): Promise<void> {
     if (!this.preview) return;
     this.loading = true;
     this.render();
     try {
-      this.previewPage = await seasoningApi.previewItems(this.preview.previewToken, { kind: this.previewKind || undefined, cursor, limit: 20 });
+      this.previewPage = await seasoningApi.previewProducts(this.preview.previewToken, { kind: this.previewKind || undefined, cursor, limit: 5 });
       this.error = "";
     } catch (error) {
-      await this.recoverFromError(error);
+      if (error instanceof SeasoningApiError && error.code === "invalid_cursor") {
+        this.previewCursors = [undefined];
+        this.previewPageIndex = 0;
+        try {
+          this.previewPage = await seasoningApi.previewProducts(this.preview.previewToken, { kind: this.previewKind || undefined, limit: 5 });
+          this.error = "预览分页已刷新，已返回第一页";
+        } catch (recoveryError) {
+          await this.recoverFromError(recoveryError);
+        }
+      } else {
+        await this.recoverFromError(error);
+      }
     } finally {
       this.loading = false;
       this.render();
@@ -437,7 +472,7 @@ class BatchWizardController {
     this.render();
     try {
       await seasoningApi.updatePreviewDecision(this.preview.previewToken, decision);
-      await this.loadPreviewItems();
+      await this.loadPreviewProducts();
     } catch (error) {
       await this.recoverFromError(error);
       this.loading = false;
@@ -614,15 +649,22 @@ class BatchWizardController {
       await this.loadMenuStructure(true, this.menu.dishes.nextCursor, true);
       return;
     }
+    const togglePreviewProductId = target.dataset.togglePreviewProduct;
+    if (togglePreviewProductId) {
+      if (this.collapsedPreviewProducts.has(togglePreviewProductId)) this.collapsedPreviewProducts.delete(togglePreviewProductId);
+      else this.collapsedPreviewProducts.add(togglePreviewProductId);
+      this.render();
+      return;
+    }
     if (target.hasAttribute("data-preview-previous") && this.previewPageIndex > 0) {
       this.previewPageIndex -= 1;
-      await this.loadPreviewItems();
+      await this.loadPreviewProducts();
       return;
     }
     if (target.hasAttribute("data-preview-next") && this.previewPage?.nextCursor) {
       this.previewPageIndex += 1;
       this.previewCursors[this.previewPageIndex] = this.previewPage.nextCursor;
-      await this.loadPreviewItems(this.previewPage.nextCursor);
+      await this.loadPreviewProducts(this.previewPage.nextCursor);
       return;
     }
     const resolution = target.dataset.decision as BatchDecision["resolution"] | undefined;
@@ -668,7 +710,7 @@ class BatchWizardController {
       this.previewKind = target.value;
       this.previewCursors = [undefined];
       this.previewPageIndex = 0;
-      await this.loadPreviewItems(undefined);
+      await this.loadPreviewProducts(undefined);
       return;
     }
     if (!(target instanceof HTMLInputElement)) return;

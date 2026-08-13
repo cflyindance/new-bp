@@ -153,6 +153,24 @@ export type BatchPreviewPage = CursorPage<BatchCandidate & { decision?: BatchDec
   summary: Record<BatchCandidateKind, number>;
 };
 
+export type BatchPreviewActionGroup = {
+  action: SeasoningActionCode;
+  items: Array<BatchCandidate & { decision?: BatchDecision }>;
+};
+
+export type BatchPreviewProductGroup = {
+  productId: string;
+  productName?: string;
+  optionCount: number;
+  unresolvedCount: number;
+  actions: BatchPreviewActionGroup[];
+};
+
+export type BatchPreviewProductPage = CursorPage<BatchPreviewProductGroup> & {
+  unresolvedCount: number;
+  summary: Record<BatchCandidateKind, number>;
+};
+
 export type BatchCommitResult = {
   version: number;
   created: number;

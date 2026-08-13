@@ -3,6 +3,7 @@ import type {
   BatchActionOptions,
   BatchDecision,
   BatchPreviewPage,
+  BatchPreviewProductPage,
   BatchPreviewResponse,
   CursorPage,
   ProductSeasoningRelation,
@@ -81,6 +82,8 @@ export const seasoningApi = {
     request<BatchPreviewResponse>("/relations/preview", { method: "POST", body: JSON.stringify(body) }),
   previewItems: (previewToken: string, params: { kind?: string; cursor?: string; limit?: number }) =>
     request<BatchPreviewPage>(`/relation-previews/${encodeURIComponent(previewToken)}/items${query(params)}`),
+  previewProducts: (previewToken: string, params: { kind?: string; cursor?: string; limit?: number }) =>
+    request<BatchPreviewProductPage>(`/relation-previews/${encodeURIComponent(previewToken)}/products${query(params)}`),
   updatePreviewDecision: (previewToken: string, body: BatchDecision) =>
     request<{ candidate: BatchPreviewPage["items"][number]; unresolvedCount: number; summary: BatchPreviewPage["summary"] }>(`/relation-previews/${encodeURIComponent(previewToken)}/items`, { method: "PATCH", body: JSON.stringify(body) }),
   discardPreview: (previewToken: string) => request<void>(`/relation-previews/${encodeURIComponent(previewToken)}`, { method: "DELETE" }),

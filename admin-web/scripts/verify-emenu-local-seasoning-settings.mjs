@@ -50,7 +50,12 @@ expect(batchPricing, /MAX_MARKUP_COEFFICIENT\s*=\s*2/, "Paid coefficient maximum
 expect(batch, /calculateActualMarkupPrice/, "Preview must use the calculated actual markup price");
 expect(batch, /createProductSelection/, "Batch wizard must create one server-side product selection draft");
 expect(batch, /loadMenuStructure/, "Batch wizard must load the real menu hierarchy");
-expect(batch, /loadPreviewItems/, "Batch preview must use paginated server results");
+expect(batch, /loadPreviewProducts/, "Batch preview must use product-group pagination");
+expect(batch, /data-preview-product/, "Preview must render one top-level row per product");
+expect(batch, /data-preview-action/, "Preview products must group options by action");
+expect(batch, /data-toggle-preview-product/, "Preview products must support expand and collapse");
+expect(batch, /collapsedPreviewProducts/, "Product collapse state must survive preview refreshes");
+expect(batch, /previewProducts/, "Batch preview must use the grouped product endpoint");
 expect(batch, /updatePreviewDecision/, "Cross-page preview decisions must be persisted by the API");
 expect(batch, /preview_expired[\s\S]*seasoningApi\.productSelection/, "Expired previews must revalidate the product selection before choosing the recovery step");
 if (/data-select-page/.test(batch)) throw new Error("Legacy select-page action must be removed");
