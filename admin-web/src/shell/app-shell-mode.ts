@@ -1,7 +1,7 @@
 /**
- * 应用 Shell 模式：商家后台 / M 平台 / eMenu 本地配置后台
+ * 应用 Shell 模式：商家后台 / M 平台 / eMenu 本地配置后台 / Kiosk 本地配置后台
  */
-export type AppShellMode = "merchant" | "m-platform" | "emenu-local";
+export type AppShellMode = "merchant" | "m-platform" | "emenu-local" | "kiosk-local";
 
 const STORAGE_KEY = "menusifu:app-shell-mode-v1";
 const ENTRY_NOTICE_PENDING_KEY = "menusifu:m-platform-entry-notice-pending";
@@ -32,7 +32,7 @@ export function readAppShellMode(): AppShellMode {
   if (memoryMode) return memoryMode;
   try {
     const raw = sessionStorage.getItem(STORAGE_KEY);
-    memoryMode = raw === "m-platform" || raw === "emenu-local" ? raw : "merchant";
+    memoryMode = raw === "m-platform" || raw === "emenu-local" || raw === "kiosk-local" ? raw : "merchant";
     return memoryMode;
   } catch {
     memoryMode = "merchant";
@@ -58,6 +58,10 @@ export function isEmenuLocalShellMode(): boolean {
   return readAppShellMode() === "emenu-local";
 }
 
+export function isKioskLocalShellMode(): boolean {
+  return readAppShellMode() === "kiosk-local";
+}
+
 export function enterMPlatformShell(): void {
   markMPlatformEntryNoticePending();
   writeAppShellMode("m-platform");
@@ -72,5 +76,13 @@ export function enterEmenuLocalShell(): void {
 }
 
 export function exitEmenuLocalShell(): void {
+  writeAppShellMode("merchant");
+}
+
+export function enterKioskLocalShell(): void {
+  writeAppShellMode("kiosk-local");
+}
+
+export function exitKioskLocalShell(): void {
   writeAppShellMode("merchant");
 }

@@ -2,6 +2,7 @@
  * Demo 切换悬浮球：右侧垂直居中可拖动，点击后左侧展开视角/版本面板
  */
 import { t } from "../i18n";
+import { bindPeripheralProductsControl, renderPeripheralProductsControl } from "./peripheral-products-control";
 import { renderViewSwitchControl } from "./view-switch-control";
 import { renderVersionSwitchControl } from "./version-switch-control";
 
@@ -80,11 +81,13 @@ function setDemoSwitchOpen(root: HTMLElement, open: boolean): void {
   setBackdropVisible(open);
 
   if (!open) {
-    root.querySelectorAll<HTMLElement>("[data-view-switch-root], [data-version-switch-root]").forEach((ctrl) => {
+    root.querySelectorAll<HTMLElement>("[data-view-switch-root], [data-version-switch-root], [data-peripheral-products-root]").forEach((ctrl) => {
       const menuToggle = ctrl.querySelector<HTMLButtonElement>(
-        "[data-view-switch-toggle], [data-version-switch-toggle]",
+        "[data-view-switch-toggle], [data-version-switch-toggle], [data-peripheral-products-toggle]",
       );
-      const menu = ctrl.querySelector<HTMLElement>("[data-view-switch-menu], [data-version-switch-menu]");
+      const menu = ctrl.querySelector<HTMLElement>(
+        "[data-view-switch-menu], [data-version-switch-menu], [data-peripheral-products-menu]",
+      );
       menuToggle?.setAttribute("aria-expanded", "false");
       menu?.classList.add("hidden");
     });
@@ -102,6 +105,7 @@ function renderDemoSwitchFabHtml(options: DemoSwitchControlOptions): string {
     <div class="flex min-w-0 flex-col items-stretch gap-1.5 overflow-visible rounded-xl border border-border bg-card p-2 shadow-lg">
       ${renderViewSwitchControl()}
       ${showVersionSwitch ? renderVersionSwitchControl() : ""}
+      ${renderPeripheralProductsControl()}
     </div>`;
 
   return `
@@ -283,6 +287,7 @@ export function mountDemoSwitchFab(options: DemoSwitchControlOptions = {}): void
   applyFabPosition(root);
   bindFabDragAndToggle(root);
   bindBackdropDismiss();
+  bindPeripheralProductsControl();
   ensureDemoSwitchDismissBound();
 }
 

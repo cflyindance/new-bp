@@ -279,10 +279,13 @@ import {
 import { MERCHANT_PLATFORM_PRESET_SCOPE, isMerchantPlatformPresetPath, isMPlatformPresetPath } from "./config/platform-preset-scope";
 import {
   enterEmenuLocalShell,
+  enterKioskLocalShell,
   enterMPlatformShell,
   exitEmenuLocalShell,
+  exitKioskLocalShell,
   exitMPlatformShell,
   isEmenuLocalShellMode,
+  isKioskLocalShellMode,
   isMPlatformShellMode,
 } from "./shell/app-shell-mode";
 import {
@@ -338,6 +341,12 @@ import {
   isEmenuLocalContentPath,
   normalizeEmenuLocalPath,
 } from "./shell/emenu-local-routes";
+import { bindKioskLocalShell, mountKioskLocalShell } from "./shell/kiosk-local-shell";
+import {
+  KIOSK_LOCAL_DEFAULT_PATH,
+  isKioskLocalContentPath,
+  normalizeKioskLocalPath,
+} from "./shell/kiosk-local-routes";
 import { NAV_BLUEPRINT_ROUTE_PREFIX } from "./config/nav-blueprint-ui";
 import {
   filterModuleSettingsGroupsForPreset,
@@ -11917,7 +11926,10 @@ function mount(): void {
     return;
   }
 
-  if (isEmenuLocalShellMode() || isEmenuLocalContentPath(authPath)) {
+  if (
+    isEmenuLocalContentPath(authPath) ||
+    (isEmenuLocalShellMode() && !isKioskLocalContentPath(authPath) && !isMPlatformContentPath(authPath))
+  ) {
     if (isViewSwitchRestricted()) {
       exitEmenuLocalShell();
       replaceHashPath(APP_NAV_HOME_PATH);
@@ -11935,6 +11947,30 @@ function mount(): void {
     if (!app) return;
     app.innerHTML = mountEmenuLocalShell(mount, normalizedPath);
     bindEmenuLocalShell(mount);
+    return;
+  }
+
+  if (
+    isKioskLocalContentPath(authPath) ||
+    (isKioskLocalShellMode() && !isEmenuLocalContentPath(authPath) && !isMPlatformContentPath(authPath))
+  ) {
+    if (isViewSwitchRestricted()) {
+      exitKioskLocalShell();
+      replaceHashPath(APP_NAV_HOME_PATH);
+      mount();
+      return;
+    }
+    const normalizedPath = normalizeKioskLocalPath(authPath);
+    if (authPath !== normalizedPath) {
+      replaceHashPath(KIOSK_LOCAL_DEFAULT_PATH);
+      mount();
+      return;
+    }
+    if (!isKioskLocalShellMode()) enterKioskLocalShell();
+    const app = document.getElementById("app");
+    if (!app) return;
+    app.innerHTML = mountKioskLocalShell(mount, normalizedPath);
+    bindKioskLocalShell(mount);
     return;
   }
 

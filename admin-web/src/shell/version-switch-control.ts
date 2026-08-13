@@ -97,13 +97,17 @@ function closeAllVersionSwitchMenus(): void {
   document.querySelectorAll<HTMLElement>("[data-version-switch-root]").forEach((root) => setVersionSwitchOpen(root, false));
 }
 
-function closeViewSwitchMenus(): void {
+function closeOtherSwitchMenus(): void {
   document.querySelectorAll<HTMLElement>("[data-view-switch-root]").forEach((root) => {
     const toggle = root.querySelector<HTMLButtonElement>("[data-view-switch-toggle]");
     const menu = root.querySelector<HTMLElement>("[data-view-switch-menu]");
     if (!toggle || !menu) return;
     toggle.setAttribute("aria-expanded", "false");
     menu.classList.add("hidden");
+  });
+  document.querySelectorAll<HTMLElement>("[data-peripheral-products-root]").forEach((root) => {
+    root.querySelector<HTMLButtonElement>("[data-peripheral-products-toggle]")?.setAttribute("aria-expanded", "false");
+    root.querySelector<HTMLElement>("[data-peripheral-products-menu]")?.classList.add("hidden");
   });
 }
 
@@ -122,7 +126,7 @@ export function bindVersionSwitchControl(onMount: () => void): void {
     toggle?.addEventListener("click", (e) => {
       e.stopPropagation();
       const open = toggle.getAttribute("aria-expanded") !== "true";
-      closeViewSwitchMenus();
+      closeOtherSwitchMenus();
       setVersionSwitchOpen(root, open);
     });
 
