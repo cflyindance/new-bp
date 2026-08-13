@@ -21,16 +21,16 @@
 Add this assertion beside the existing Demo switch checks:
 
 ```js
-expect(viewSwitch, /data-demo-switch-non-mvp-stack/g, "Flat Group HQ and M Platform cards must stack their non-MVP badges");
-const stackedBadgeCount = (viewSwitch.match(/data-demo-switch-non-mvp-stack/g) ?? []).length;
-if (stackedBadgeCount !== 2) throw new Error(`Expected 2 flat non-MVP badge stacks, found ${stackedBadgeCount}`);
+expect(viewSwitch, /data-demo-switch-non-mvp-stack/, "Flat non-MVP cards must expose a stacked badge wrapper");
+expect(viewSwitch, /perspective === "group-hq"[\s\S]*renderFlatNonMvpContent/, "Flat Group HQ card must use the stacked badge wrapper");
+expect(viewSwitch, /renderFlatNonMvpContent\(t\("shell\.mPlatform"\)\)/, "Flat M Platform card must use the stacked badge wrapper");
 ```
 
 - [ ] **Step 2: Run the verifier and preserve RED evidence**
 
 Run: `node scripts/verify-emenu-local-config-shell.mjs`
 
-Expected: FAIL with `Flat Group HQ and M Platform cards must stack their non-MVP badges`.
+Expected: FAIL with `Flat non-MVP cards must expose a stacked badge wrapper`.
 
 ### Task 2: Stack the two flat-card badges
 
