@@ -139,6 +139,92 @@ function renderMPlatformMenuItem(current: ViewSwitchMode): string {
     </button>`;
 }
 
+const FLAT_CARD_CLASS =
+  "relative flex min-h-12 w-full items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+
+function renderFlatStoreCard(current: ViewSwitchMode): string {
+  const active = current === "store";
+  return `
+    <button
+      type="button"
+      data-view-switch-option="store"
+      class="${FLAT_CARD_CLASS} ${active ? "border-primary/25 bg-primary/10 font-semibold text-primary" : "border-transparent bg-muted/60 text-foreground hover:border-border hover:bg-muted"}"
+      title="${escapeHtml(t("shell.navLayoutStoreHint"))}"
+      aria-current="${active ? "true" : "false"}"
+    >
+      <span class="flex size-4 shrink-0 items-center justify-center">${active ? CHECK_ICON : ""}</span>
+      <span class="min-w-0 flex-1 leading-5">${escapeHtml(t("shell.navLayoutStore"))}</span>
+    </button>`;
+}
+
+function renderFlatChainCard(perspective: ChainViewSwitchPerspective): string {
+  const allowed = canUseChainDataPerspective(perspective);
+  const active = allowed && isChainPerspectiveActive(perspective);
+  const reasonId = `demo-view-${perspective}-restricted`;
+  return `
+    <button
+      type="button"
+      data-view-switch-chain-perspective="${perspective}"
+      class="${FLAT_CARD_CLASS} ${active ? "border-primary/25 bg-primary/10 font-semibold text-primary" : "border-transparent bg-muted/60 text-foreground hover:border-border hover:bg-muted"} ${allowed ? "" : "cursor-not-allowed opacity-50"}"
+      title="${escapeHtml(allowed ? hintForChainPerspective(perspective) : t("shell.perspectiveRestrictedHint"))}"
+      aria-current="${active ? "true" : "false"}"
+      ${allowed ? "" : `disabled aria-disabled="true" aria-describedby="${reasonId}"`}
+    >
+      <span class="flex size-4 shrink-0 items-center justify-center">${active ? CHECK_ICON : ""}</span>
+      <span class="min-w-0 flex-1 leading-5">${escapeHtml(labelForChainPerspective(perspective))}</span>
+      ${perspective === "group-hq" ? renderNonMvpBadgeHtml() : ""}
+    </button>`;
+}
+
+function renderFlatMPlatformCard(current: ViewSwitchMode): string {
+  const active = current === "m-platform";
+  return `
+    <button
+      type="button"
+      data-view-switch-option="m-platform"
+      class="${FLAT_CARD_CLASS} ${active ? "border-primary/25 bg-primary/10 font-semibold text-primary" : "border-transparent bg-muted/60 text-foreground hover:border-border hover:bg-muted"}"
+      title="${escapeHtml(t("shell.mPlatformHint"))}"
+      aria-current="${active ? "true" : "false"}"
+    >
+      <span class="flex size-4 shrink-0 items-center justify-center">${active ? CHECK_ICON : ""}</span>
+      <span class="min-w-0 flex-1 leading-5">${escapeHtml(t("shell.mPlatform"))}</span>
+      ${renderNonMvpBadgeHtml()}
+    </button>`;
+}
+
+export function renderFlatViewSwitchGroup(): string {
+  const labelId = "demo-switch-view-group-title";
+  if (isViewSwitchRestricted()) {
+    const reasonId = "demo-switch-view-locked-reason";
+    return `
+      <div data-view-switch-root data-view-switch-locked="1" role="group" aria-labelledby="${labelId}" aria-describedby="${reasonId}">
+        <h2 id="${labelId}" class="px-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">${escapeHtml(t("shell.viewSwitch"))}</h2>
+        <p id="${reasonId}" class="mt-1.5 rounded-lg border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-xs leading-5 text-amber-950 dark:text-amber-100">${escapeHtml(t("shell.impersonationViewLocked"))}</p>
+        <div class="mt-2 grid grid-cols-2 gap-2">
+          <button type="button" disabled aria-disabled="true" aria-describedby="${reasonId}" class="${FLAT_CARD_CLASS} cursor-not-allowed border-amber-500/20 bg-amber-500/10 font-semibold text-amber-950 opacity-70 dark:text-amber-100">
+            <span class="flex size-4 shrink-0 items-center justify-center">${CHECK_ICON}</span>
+            <span class="min-w-0 flex-1 leading-5">${escapeHtml(t("shell.perspectiveBrand"))}</span>
+          </button>
+        </div>
+      </div>`;
+  }
+
+  const current = getCurrentViewSwitchMode();
+  const restrictedHintVisible = !canUseChainDataPerspective("brand") ||
+    (shouldShowGroupHqViewSwitchOption() && !canUseChainDataPerspective("group-hq"));
+  return `
+    <div data-view-switch-root role="group" aria-labelledby="${labelId}">
+      <h2 id="${labelId}" class="px-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">${escapeHtml(t("shell.viewSwitch"))}</h2>
+      <div class="mt-2 grid grid-cols-2 gap-2" data-demo-switch-view-options>
+        ${renderFlatStoreCard(current)}
+        ${shouldShowGroupHqViewSwitchOption() ? renderFlatChainCard("group-hq") : ""}
+        ${renderFlatChainCard("brand")}
+        ${shouldShowMPlatformViewSwitchOption() ? renderFlatMPlatformCard(current) : ""}
+      </div>
+      ${restrictedHintVisible ? `<p id="demo-view-brand-restricted" class="mt-2 px-1 text-xs leading-5 text-muted-foreground">${escapeHtml(t("shell.perspectiveRestrictedHint"))}</p><span id="demo-view-group-hq-restricted" class="sr-only">${escapeHtml(t("shell.perspectiveRestrictedHint"))}</span>` : ""}
+    </div>`;
+}
+
 export function renderViewSwitchControl(): string {
   if (isViewSwitchRestricted()) {
     const label = escapeHtml(labelForChainPerspective("brand"));

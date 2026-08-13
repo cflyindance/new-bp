@@ -88,8 +88,16 @@ expect(peripheralProducts, /data-peripheral-product-option="emenu-local"/, "Peri
 expect(peripheralProducts, /data-peripheral-product-option="kiosk-local"/, "Peripheral products must render the Kiosk option");
 expect(peripheralProducts, /enterEmenuLocalShell/, "Peripheral products must enter the eMenu shell");
 expect(peripheralProducts, /EMENU_LOCAL_DEFAULT_PATH/, "Peripheral products must use the eMenu default route");
-expect(demoSwitch, /renderPeripheralProductsControl/, "Demo switch panel must include peripheral products");
+expect(demoSwitch, /renderFlatPeripheralProductsGroup/, "Demo switch panel must include flat peripheral products");
 expect(demoSwitch, /bindPeripheralProductsControl/, "Demo switch panel must bind peripheral products");
+expect(demoSwitch, /data-demo-switch-view-group/, "Demo panel must expose the flat view group");
+expect(demoSwitch, /data-demo-switch-version-group/, "Demo panel must expose the flat version group");
+expect(demoSwitch, /data-demo-switch-products-group/, "Demo panel must expose the flat peripheral products group");
+if (/renderViewSwitchControl\(\)/.test(demoSwitch)) throw new Error("Demo panel must not render the nested view control");
+if (/renderVersionSwitchControl\(\)/.test(demoSwitch)) throw new Error("Demo panel must not render the nested version control");
+if (/renderPeripheralProductsControl\(\)/.test(demoSwitch)) throw new Error("Demo panel must not render the nested products control");
+expect(demoSwitch, /data-demo-switch-panel-scroll/, "Demo panel must constrain small-screen overflow");
+expect(demoSwitch, /\.focus\(/, "Demo panel must manage keyboard focus");
 
 expect(kioskRoutes, /KIOSK_LOCAL_DEFAULT_PATH\s*=\s*"\/kiosk-local\/service-settings"/, "Default Kiosk route must be service settings");
 expect(kioskShell, /data-kiosk-local-shell/, "Kiosk shell must expose a stable shell marker");

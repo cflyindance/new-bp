@@ -23,6 +23,43 @@ function escapeHtml(value: string): string {
 const CHEVRON_ICON = `<svg class="size-3.5 shrink-0 opacity-70" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>`;
 const CHECK_ICON = `<svg class="size-4 shrink-0 text-primary" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>`;
 
+function renderFlatProductCard(
+  product: "emenu-local" | "kiosk-local",
+  active: boolean,
+  restricted: boolean,
+  reasonId: string,
+): string {
+  const label = product === "emenu-local" ? t("shell.emenuLocal") : t("shell.kioskLocal");
+  const hint = product === "emenu-local" ? t("shell.emenuLocalHint") : t("shell.kioskLocalHint");
+  return `
+    <button
+      type="button"
+      data-peripheral-product-option="${product}"
+      class="flex min-h-12 w-full items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${active ? "border-primary/25 bg-primary/10 font-semibold text-primary" : "border-transparent bg-muted/60 text-foreground hover:border-border hover:bg-muted"} ${restricted ? "cursor-not-allowed opacity-50" : ""}"
+      title="${escapeHtml(restricted ? t("shell.impersonationViewLocked") : hint)}"
+      aria-current="${active ? "true" : "false"}"
+      ${restricted ? `disabled aria-disabled="true" aria-describedby="${reasonId}"` : ""}
+    >
+      <span class="flex size-4 shrink-0 items-center justify-center">${active ? CHECK_ICON : ""}</span>
+      <span class="min-w-0 flex-1 leading-5">${escapeHtml(label)}</span>
+    </button>`;
+}
+
+export function renderFlatPeripheralProductsGroup(): string {
+  const restricted = isViewSwitchRestricted();
+  const reasonId = "demo-switch-products-locked-reason";
+  const labelId = "demo-switch-products-group-title";
+  return `
+    <div data-peripheral-products-root role="group" aria-labelledby="${labelId}" ${restricted ? `aria-describedby="${reasonId}"` : ""}>
+      <h2 id="${labelId}" class="px-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">${escapeHtml(t("shell.peripheralProducts"))}</h2>
+      ${restricted ? `<p id="${reasonId}" class="mt-1.5 rounded-lg border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-xs leading-5 text-amber-950 dark:text-amber-100">${escapeHtml(t("shell.impersonationViewLocked"))}</p>` : ""}
+      <div class="mt-2 grid grid-cols-2 gap-2">
+        ${renderFlatProductCard("emenu-local", isEmenuLocalShellMode(), restricted, reasonId)}
+        ${renderFlatProductCard("kiosk-local", isKioskLocalShellMode(), restricted, reasonId)}
+      </div>
+    </div>`;
+}
+
 export function renderPeripheralProductsControl(): string {
   const restricted = isViewSwitchRestricted();
   const emenuActive = isEmenuLocalShellMode();

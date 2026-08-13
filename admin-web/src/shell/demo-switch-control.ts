@@ -2,9 +2,9 @@
  * Demo 切换悬浮球：右侧垂直居中可拖动，点击后左侧展开视角/版本面板
  */
 import { t } from "../i18n";
-import { bindPeripheralProductsControl, renderPeripheralProductsControl } from "./peripheral-products-control";
-import { renderViewSwitchControl } from "./view-switch-control";
-import { renderVersionSwitchControl } from "./version-switch-control";
+import { bindPeripheralProductsControl, renderFlatPeripheralProductsGroup } from "./peripheral-products-control";
+import { renderFlatViewSwitchGroup } from "./view-switch-control";
+import { renderFlatVersionSwitchGroup } from "./version-switch-control";
 
 export type DemoSwitchControlOptions = {
   /** 商家后台为 true；M 平台为 false（无版本切换） */
@@ -64,33 +64,52 @@ function setBackdropVisible(visible: boolean): void {
   backdrop.setAttribute("aria-hidden", visible ? "false" : "true");
 }
 
-function setDemoSwitchOpen(root: HTMLElement, open: boolean): void {
+function positionDemoSwitchPanel(root: HTMLElement): void {
+  const panel = root.querySelector<HTMLElement>("[data-demo-switch-panel]");
+  if (!panel || root.dataset.demoSwitchOpen !== "1") return;
+  const rootRect = root.getBoundingClientRect();
+  const panelRect = panel.getBoundingClientRect();
+  const gap = 8;
+  const availableLeft = rootRect.left - VIEWPORT_MARGIN_PX;
+  const availableRight = window.innerWidth - VIEWPORT_MARGIN_PX - rootRect.right;
+  const openLeft = availableLeft >= panelRect.width + gap || availableLeft >= availableRight;
+  const desiredLeft = openLeft ? rootRect.left - panelRect.width - gap : rootRect.right + gap;
+  const maxLeft = Math.max(VIEWPORT_MARGIN_PX, window.innerWidth - VIEWPORT_MARGIN_PX - panelRect.width);
+  const clampedLeft = Math.max(VIEWPORT_MARGIN_PX, Math.min(desiredLeft, maxLeft));
+
+  panel.dataset.demoSwitchSide = openLeft ? "left" : "right";
+  panel.style.left = `${clampedLeft - rootRect.left}px`;
+  panel.style.right = "auto";
+  panel.style.transform = "none";
+
+  const desiredTop = rootRect.height / 2 - panelRect.height / 2;
+  const minTop = VIEWPORT_MARGIN_PX - rootRect.top;
+  const maxTop = window.innerHeight - VIEWPORT_MARGIN_PX - rootRect.top - panelRect.height;
+  panel.style.top = `${Math.max(minTop, Math.min(desiredTop, maxTop))}px`;
+}
+
+function setDemoSwitchOpen(root: HTMLElement, open: boolean, focusFirst = false): void {
   const toggle = root.querySelector<HTMLButtonElement>("[data-demo-switch-toggle]");
   const panel = root.querySelector<HTMLElement>("[data-demo-switch-panel]");
   if (!toggle || !panel) return;
+  const focusWasInside = panel.contains(document.activeElement);
   toggle.setAttribute("aria-expanded", open ? "true" : "false");
   panel.setAttribute("aria-hidden", open ? "false" : "true");
-  panel.classList.toggle("max-w-0", !open);
+  panel.classList.toggle("invisible", !open);
   panel.classList.toggle("opacity-0", !open);
   panel.classList.toggle("pointer-events-none", !open);
-  panel.classList.toggle("overflow-hidden", !open);
-  panel.classList.toggle("overflow-visible", open);
-  panel.classList.toggle("max-w-[min(90vw,22rem)]", open);
   panel.classList.toggle("opacity-100", open);
   root.dataset.demoSwitchOpen = open ? "1" : "0";
   setBackdropVisible(open);
 
-  if (!open) {
-    root.querySelectorAll<HTMLElement>("[data-view-switch-root], [data-version-switch-root], [data-peripheral-products-root]").forEach((ctrl) => {
-      const menuToggle = ctrl.querySelector<HTMLButtonElement>(
-        "[data-view-switch-toggle], [data-version-switch-toggle], [data-peripheral-products-toggle]",
-      );
-      const menu = ctrl.querySelector<HTMLElement>(
-        "[data-view-switch-menu], [data-version-switch-menu], [data-peripheral-products-menu]",
-      );
-      menuToggle?.setAttribute("aria-expanded", "false");
-      menu?.classList.add("hidden");
+  if (open) {
+    requestAnimationFrame(() => {
+      positionDemoSwitchPanel(root);
+      if (!focusFirst) return;
+      panel.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus();
     });
+  } else if (focusWasInside) {
+    requestAnimationFrame(() => toggle.focus({ preventScroll: true }));
   }
 }
 
@@ -102,10 +121,11 @@ function renderDemoSwitchFabHtml(options: DemoSwitchControlOptions): string {
   const showVersionSwitch = options.showVersionSwitch !== false;
   const hintKey = showVersionSwitch ? "shell.demoSwitchHint" : "shell.demoSwitchHintViewOnly";
   const panelInner = `
-    <div class="flex min-w-0 flex-col items-stretch gap-1.5 overflow-visible rounded-xl border border-border bg-card p-2 shadow-lg">
-      ${renderViewSwitchControl()}
-      ${showVersionSwitch ? renderVersionSwitchControl() : ""}
-      ${renderPeripheralProductsControl()}
+    <div data-demo-switch-panel-scroll class="w-[min(22rem,calc(100vw-1.5rem))] max-h-[calc(100vh-1.5rem)] overflow-y-auto rounded-2xl border border-border bg-card p-3 shadow-xl">
+      <section data-demo-switch-view-group>${renderFlatViewSwitchGroup()}</section>
+      ${showVersionSwitch ? `<div class="my-3 h-px bg-border" aria-hidden="true"></div><section data-demo-switch-version-group>${renderFlatVersionSwitchGroup()}</section>` : ""}
+      <div class="my-3 h-px bg-border" aria-hidden="true"></div>
+      <section data-demo-switch-products-group>${renderFlatPeripheralProductsGroup()}</section>
     </div>`;
 
   return `
@@ -127,12 +147,10 @@ function renderDemoSwitchFabHtml(options: DemoSwitchControlOptions): string {
         <div
           id="demo-switch-panel"
           data-demo-switch-panel
-          class="absolute right-full top-1/2 z-[81] mr-2 max-w-0 -translate-y-1/2 overflow-hidden opacity-0 pointer-events-none transition-[max-width,opacity] duration-200 ease-out"
+          class="invisible absolute right-[calc(100%+0.5rem)] top-1/2 z-[81] opacity-0 pointer-events-none transition-opacity duration-150 ease-out"
           aria-hidden="true"
         >
-          <div class="w-max max-w-[min(90vw,22rem)] overflow-visible">
-            ${panelInner}
-          </div>
+          ${panelInner}
         </div>
         <button
           type="button"
@@ -216,10 +234,21 @@ function bindFabDragAndToggle(root: HTMLElement): void {
     window.addEventListener("pointercancel", onPointerUp);
   });
 
+  toggle.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    e.preventDefault();
+    e.stopPropagation();
+    const open = toggle.getAttribute("aria-expanded") !== "true";
+    setDemoSwitchOpen(root, open, open);
+  });
+
   // 点击由 pointerup 处理，避免 preventDefault(pointerdown) 吞掉 click
   toggle.addEventListener("click", (e) => {
     e.preventDefault();
     e.stopPropagation();
+    if (e.detail !== 0) return;
+    const open = toggle.getAttribute("aria-expanded") !== "true";
+    setDemoSwitchOpen(root, open, open);
   });
 }
 
@@ -266,8 +295,9 @@ function ensureDemoSwitchDismissBound(): void {
     "resize",
     () => {
       const root = document.getElementById(FAB_ROOT_ID);
-      if (!root || !sessionFabPos) return;
-      applyFabPosition(root);
+      if (!root) return;
+      if (sessionFabPos) applyFabPosition(root);
+      positionDemoSwitchPanel(root);
     },
     { passive: true },
   );
