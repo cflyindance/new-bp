@@ -232,6 +232,14 @@ button { color: inherit; }
 .olf-table th, .olf-table td { padding: 12px 14px; border-bottom: 1px solid var(--olf-border); text-align: left; vertical-align: middle; }
 .olf-table th { background: var(--olf-subtle); color: var(--olf-secondary); font-weight: 500; white-space: nowrap; }
 .olf-table tr:last-child td { border-bottom: 0; }
+.olf-batch-select-cell { width: 48px; padding-left: 10px !important; padding-right: 10px !important; text-align: center !important; }
+.olf-batch-check { display: inline-grid; place-items: center; cursor: pointer; }
+.olf-batch-check input { width: 17px; height: 17px; margin: 0; accent-color: var(--olf-primary); }
+.olf-batch-panel { margin-top: 14px; }
+.olf-batch-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.olf-batch-count { min-width: 66px; color: var(--olf-text); font-size: 13px; }
+.olf-batch-spacer { flex: 1 1 24px; }
+.olf-batch-toolbar .olf-limit-input { width: 116px; min-height: 36px; padding: 7px 10px; }
 .olf-range-inputs { display: flex; align-items: center; gap: 8px; }
 .olf-range-inputs .olf-input { width: 92px; min-height: 40px; padding: 7px 10px; }
 
