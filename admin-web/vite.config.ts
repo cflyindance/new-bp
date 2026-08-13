@@ -3,6 +3,7 @@ import path from "node:path";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig, type Plugin } from "vite";
 import { attachPayrollMockApi } from "./scripts/lib/payroll-mock-api-handler.mjs";
+import { attachEmenuSeasoningApi } from "./scripts/lib/emenu-local-seasoning-api-handler.mjs";
 
 /** 开发态提供 dist 内嵌静态资源（TipOut / Configuration center / emenu-pro） */
 const EMBEDDED_STATIC_ROUTES = [
@@ -95,6 +96,7 @@ function attachEmbeddedStaticMiddleware(
 }
 
 const usePayrollApiProxy = process.env.PAYROLL_USE_API_PROXY === "1";
+const useEmenuLocalApiProxy = process.env.EMENU_LOCAL_USE_API_PROXY === "1";
 
 function serveEmbeddedStaticDirs(): Plugin {
   return {
@@ -104,11 +106,17 @@ function serveEmbeddedStaticDirs(): Plugin {
       if (!usePayrollApiProxy) {
         attachPayrollMockApi(server.middlewares, process.cwd());
       }
+      if (!useEmenuLocalApiProxy) {
+        attachEmenuSeasoningApi(server.middlewares, process.cwd());
+      }
     },
     configurePreviewServer(server) {
       attachEmbeddedStaticMiddleware(server.middlewares);
       if (!usePayrollApiProxy) {
         attachPayrollMockApi(server.middlewares, process.cwd());
+      }
+      if (!useEmenuLocalApiProxy) {
+        attachEmenuSeasoningApi(server.middlewares, process.cwd());
       }
     },
   };
@@ -125,16 +133,24 @@ export default defineConfig({
     /** 启动后自动打开系统浏览器（无需再猜端口） */
     open: true,
     strictPort: false,
-    ...(usePayrollApiProxy
-      ? {
-          proxy: {
+    proxy: {
+      ...(usePayrollApiProxy
+        ? {
             "/api/v1/payroll": {
               target: "http://127.0.0.1:3010",
               changeOrigin: true,
             },
-          },
-        }
-      : {}),
+          }
+        : {}),
+      ...(useEmenuLocalApiProxy
+        ? {
+            "/api/v1/emenu-local/seasoning": {
+              target: "http://127.0.0.1:3011",
+              changeOrigin: true,
+            },
+          }
+        : {}),
+    },
   },
   preview: {
     port: 4173,

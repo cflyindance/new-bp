@@ -1,0 +1,161 @@
+import fs from "node:fs";
+import http from "node:http";
+import os from "node:os";
+import path from "node:path";
+import { handleEmenuSeasoningApi } from "./lib/emenu-local-seasoning-api-handler.mjs";
+
+function assert(condition, message) {
+  if (!condition) throw new Error(message);
+}
+
+const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "emenu-seasoning-api-"));
+const dbPath = path.join(tempDir, "db.json");
+const server = http.createServer((req, res) => {
+  handleEmenuSeasoningApi(req, res, dbPath).then((handled) => {
+    if (!handled) {
+      res.statusCode = 404;
+      res.end("Not found");
+    }
+  });
+});
+
+await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+const address = server.address();
+const base = `http://127.0.0.1:${address.port}/api/v1/emenu-local/seasoning`;
+const sessionHeaders = { "Content-Type": "application/json", "X-Seasoning-Session": "verify-session" };
+
+try {
+  const bootstrap = await fetch(`${base}/bootstrap`).then((response) => response.json());
+  assert(bootstrap.version === 1, "Initial config version must be 1");
+  assert(bootstrap.permissions?.canEdit === true, "Demo API must expose edit permission");
+
+  const firstPage = await fetch(`${base}/options?limit=5`).then((response) => response.json());
+  assert(firstPage.items.length === 5, "Option cursor page size failed");
+  assert(firstPage.nextCursor, "Option page must provide next cursor");
+
+  const selectionResponse = await fetch(`${base}/product-selections`, {
+    method: "POST",
+    headers: sessionHeaders,
+    body: "{}",
+  });
+  assert(selectionResponse.status === 201, "Product selection draft request failed");
+  const selection = await selectionResponse.json();
+  assert(selection.token && selection.total === 0 && selection.expiresAt && selection.menuVersion, "Product selection draft is incomplete");
+
+  const wrongSessionResponse = await fetch(`${base}/product-selections/${selection.token}`, {
+    headers: { "X-Seasoning-Session": "another-session" },
+  });
+  assert(wrongSessionResponse.status === 409, "Product selection must be isolated by operator session");
+
+  const menuBefore = await fetch(`${base}/menu-structure?selectionToken=${selection.token}&limit=3`, {
+    headers: sessionHeaders,
+  }).then((response) => response.json());
+  assert(menuBefore.groups.length >= 2, "Menu structure must expose real groups");
+  assert(menuBefore.categories.length > 0, "Active group categories are missing");
+  assert(menuBefore.dishes.items.length > 0, "Active category dishes are missing");
+  assert(menuBefore.dishes.nextCursor, "Dish column must support cursor pagination");
+  const activeGroup = menuBefore.activeGroupId;
+
+  const selectedGroupResponse = await fetch(`${base}/product-selections/${selection.token}`, {
+    method: "PATCH",
+    headers: sessionHeaders,
+    body: JSON.stringify({ operation: "scope", level: "group", groupId: activeGroup, query: "", selected: true }),
+  });
+  assert(selectedGroupResponse.ok, "Selecting a group draft scope failed");
+  const selectedGroup = await selectedGroupResponse.json();
+  assert(selectedGroup.total > 3, "Group cascade must include unloaded descendants");
+
+  const menuAfter = await fetch(`${base}/menu-structure?selectionToken=${selection.token}&groupId=${activeGroup}&limit=3`, {
+    headers: sessionHeaders,
+  }).then((response) => response.json());
+  const selectedGroupNode = menuAfter.groups.find((group) => group.id === activeGroup);
+  assert(selectedGroupNode.selectedCount === selectedGroupNode.selectableCount, "Group selected counts must drive checked state");
+  assert(menuAfter.dishes.items.every((dish) => !dish.selectable || dish.selected), "Visible dish states must follow the server draft");
+
+  const searchSelection = await fetch(`${base}/product-selections`, { method: "POST", headers: sessionHeaders, body: "{}" }).then((response) => response.json());
+  const searchScopeResponse = await fetch(`${base}/product-selections/${searchSelection.token}`, {
+    method: "PATCH",
+    headers: sessionHeaders,
+    body: JSON.stringify({ operation: "scope", level: "search", query: "宫保", selected: true }),
+  }).then((response) => response.json());
+  assert(searchScopeResponse.total === 1, "Search-scoped selection must only freeze matching products and deduplicate repeated paths");
+
+  const previewResponse = await fetch(`${base}/relations/preview`, {
+    method: "POST",
+    headers: sessionHeaders,
+    body: JSON.stringify({
+      actionOptions: [
+        { action: "ADD", optionPrices: [{ optionId: "o-chili", priceDelta: 1 }] },
+        { action: "LESS", optionPrices: [{ optionId: "o-salt", priceDelta: 0 }] },
+      ],
+      productSelectionToken: selection.token,
+      expectedVersion: bootstrap.version,
+    }),
+  });
+  assert(previewResponse.ok, "Batch preview request failed");
+  const preview = await previewResponse.json();
+  assert(preview.actualProductCount === selectedGroup.total && preview.page.items.length > 0, "Selection draft did not expand on the server");
+  assert(preview.total === selectedGroup.total * 2 && preview.summary.different >= 1, "Multi-action preview summary is incomplete");
+  assert(new Set(preview.page.items.map((item) => item.action)).size >= 2, "Preview must contain candidates for every configured action");
+
+  const previewPage = await fetch(`${base}/relation-previews/${preview.previewToken}/items?limit=2`, { headers: sessionHeaders }).then((response) => response.json());
+  assert(previewPage.items.length === 2 && previewPage.nextCursor, "Preview candidates must use cursor pagination");
+
+  const differences = await fetch(`${base}/relation-previews/${preview.previewToken}/items?kind=different&limit=10`, { headers: sessionHeaders }).then((response) => response.json());
+  assert(differences.items.length >= 1, "Difference filter must return unresolved candidates");
+  const decisionResponse = await fetch(`${base}/relation-previews/${preview.previewToken}/items`, {
+    method: "PATCH",
+    headers: sessionHeaders,
+    body: JSON.stringify({ candidateId: differences.items[0].candidateId, resolution: "use" }),
+  }).then((response) => response.json());
+  assert(decisionResponse.unresolvedCount === preview.unresolvedCount - 1, "Preview decisions must persist across pages");
+
+  const commitResponse = await fetch(`${base}/relations/batch`, {
+    method: "POST",
+    headers: sessionHeaders,
+    body: JSON.stringify({ expectedVersion: bootstrap.version, previewToken: preview.previewToken }),
+  });
+  assert(commitResponse.ok, "Atomic batch commit failed");
+  const commit = await commitResponse.json();
+  assert(commit.version === 2, "Successful transaction must increment version once");
+
+  const conflictResponse = await fetch(`${base}/relations/batch`, {
+    method: "POST",
+    headers: sessionHeaders,
+    body: JSON.stringify({ expectedVersion: bootstrap.version, previewToken: preview.previewToken }),
+  });
+  assert(conflictResponse.status === 409, "Stale version must return 409");
+
+  const staleSelection = await fetch(`${base}/product-selections`, { method: "POST", headers: sessionHeaders, body: "{}" }).then((response) => response.json());
+  const persisted = JSON.parse(fs.readFileSync(dbPath, "utf8"));
+  const changedProduct = persisted.products.find((product) => product.status === "active" && product.emenuSellable);
+  assert(changedProduct, "Stale product-selection test needs an active product");
+  changedProduct.name = `${changedProduct.name}（已调整）`;
+  fs.writeFileSync(dbPath, JSON.stringify(persisted, null, 2), "utf8");
+  const staleSelectionResponse = await fetch(`${base}/product-selections/${staleSelection.token}`, { headers: sessionHeaders });
+  assert(staleSelectionResponse.status === 409, "Menu selection changes must invalidate a product draft");
+  const staleSelectionError = await staleSelectionResponse.json();
+  assert(staleSelectionError.error === "product_selection_stale", "Stale product selection must return a stable error code");
+  changedProduct.name = changedProduct.name.replace("（已调整）", "");
+  fs.writeFileSync(dbPath, JSON.stringify(persisted, null, 2), "utf8");
+
+  const snapshot = await fetch(`${base}/snapshot`).then((response) => response.json());
+  assert(snapshot.version === 2 && Array.isArray(snapshot.relations), "Terminal snapshot is incomplete");
+
+  const createdOptionResponse = await fetch(`${base}/options`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ expectedVersion: 2, name: "测试调味", code: "TEST_OPTION", sortOrder: 999 }),
+  });
+  assert(createdOptionResponse.status === 201, "Atomic replacement of an existing database file failed");
+  const createdOption = await createdOptionResponse.json();
+  assert(createdOption.version === 3, "Second transaction must increment the version once");
+
+  const audit = await fetch(`${base}/audit-log?limit=10`).then((response) => response.json());
+  assert(audit.items.length >= 2, "Each successful mutation must create an audit record");
+
+  console.log("eMenu local seasoning API verification passed");
+} finally {
+  await new Promise((resolve) => server.close(resolve));
+  fs.rmSync(tempDir, { recursive: true, force: true });
+}

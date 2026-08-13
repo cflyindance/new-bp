@@ -1,7 +1,7 @@
 /**
- * 应用 Shell 模式：商家后台 vs M 平台（企业级配置）
+ * 应用 Shell 模式：商家后台 / M 平台 / eMenu 本地配置后台
  */
-export type AppShellMode = "merchant" | "m-platform";
+export type AppShellMode = "merchant" | "m-platform" | "emenu-local";
 
 const STORAGE_KEY = "menusifu:app-shell-mode-v1";
 const ENTRY_NOTICE_PENDING_KEY = "menusifu:m-platform-entry-notice-pending";
@@ -32,7 +32,7 @@ export function readAppShellMode(): AppShellMode {
   if (memoryMode) return memoryMode;
   try {
     const raw = sessionStorage.getItem(STORAGE_KEY);
-    memoryMode = raw === "m-platform" ? "m-platform" : "merchant";
+    memoryMode = raw === "m-platform" || raw === "emenu-local" ? raw : "merchant";
     return memoryMode;
   } catch {
     memoryMode = "merchant";
@@ -54,11 +54,23 @@ export function isMPlatformShellMode(): boolean {
   return readAppShellMode() === "m-platform";
 }
 
+export function isEmenuLocalShellMode(): boolean {
+  return readAppShellMode() === "emenu-local";
+}
+
 export function enterMPlatformShell(): void {
   markMPlatformEntryNoticePending();
   writeAppShellMode("m-platform");
 }
 
 export function exitMPlatformShell(): void {
+  writeAppShellMode("merchant");
+}
+
+export function enterEmenuLocalShell(): void {
+  writeAppShellMode("emenu-local");
+}
+
+export function exitEmenuLocalShell(): void {
   writeAppShellMode("merchant");
 }

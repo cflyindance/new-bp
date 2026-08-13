@@ -22,17 +22,21 @@ import {
   type SidebarNavLayoutPreset,
 } from "../config/sidebar-nav-order";
 import {
+  enterEmenuLocalShell,
   enterMPlatformShell,
+  exitEmenuLocalShell,
   exitMPlatformShell,
+  isEmenuLocalShellMode,
   isMPlatformShellMode,
 } from "./app-shell-mode";
+import { EMENU_LOCAL_DEFAULT_PATH } from "./emenu-local-routes";
 
 import { shouldShowGroupHqViewSwitchOption, shouldShowMPlatformViewSwitchOption } from "../config/product-version";
 import { renderNonMvpBadgeHtml } from "../config/cloud-product-route-notice-ui";
 import { APP_NAV_HOME_PATH } from "../config/app-routes";
 import { NAV_BLUEPRINT_ROUTE_PREFIX } from "../config/nav-blueprint-ui";
 
-export type ViewSwitchMode = SidebarNavLayoutPreset | "m-platform";
+export type ViewSwitchMode = SidebarNavLayoutPreset | "m-platform" | "emenu-local";
 export type ChainViewSwitchPerspective = "group-hq" | "brand";
 
 function escapeHtml(s: string): string {
@@ -44,6 +48,7 @@ function escapeHtml(s: string): string {
 }
 
 function getCurrentViewSwitchMode(): ViewSwitchMode {
+  if (isEmenuLocalShellMode()) return "emenu-local";
   if (isMPlatformShellMode()) return "m-platform";
   return readSidebarNavLayoutPreset();
 }
@@ -61,12 +66,14 @@ function hintForChainPerspective(perspective: ChainDataPerspective): string {
 }
 
 function labelForMode(mode: ViewSwitchMode): string {
+  if (mode === "emenu-local") return t("shell.emenuLocal");
   if (mode === "m-platform") return t("shell.mPlatform");
   if (mode === "chain") return labelForChainPerspective(resolveChainDataPerspective());
   return t("shell.navLayoutStore");
 }
 
 function hintForMode(mode: ViewSwitchMode): string {
+  if (mode === "emenu-local") return t("shell.emenuLocalHint");
   if (mode === "m-platform") return t("shell.mPlatformHint");
   if (mode === "chain") return hintForChainPerspective(resolveChainDataPerspective());
   return t("shell.navLayoutStoreHint");
@@ -135,6 +142,22 @@ function renderMPlatformMenuItem(current: ViewSwitchMode): string {
     </button>`;
 }
 
+function renderEmenuLocalMenuItem(current: ViewSwitchMode): string {
+  const active = current === "emenu-local";
+  return `
+    <button
+      type="button"
+      role="menuitem"
+      data-view-switch-option="emenu-local"
+      class="flex w-full min-h-9 items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${active ? "bg-accent/60 font-medium text-accent-foreground" : "text-foreground"}"
+      title="${escapeHtml(t("shell.emenuLocalHint"))}"
+      aria-current="${active ? "true" : "false"}"
+    >
+      <span class="flex size-4 shrink-0 items-center justify-center">${active ? CHECK_ICON : ""}</span>
+      <span class="min-w-0 flex-1 truncate">${escapeHtml(t("shell.emenuLocal"))}</span>
+    </button>`;
+}
+
 export function renderViewSwitchControl(): string {
   if (isViewSwitchRestricted()) {
     const label = escapeHtml(labelForChainPerspective("brand"));
@@ -197,6 +220,8 @@ export function renderViewSwitchControl(): string {
           ${renderChainPerspectiveItem("brand")}
           ${shouldShowMPlatformViewSwitchOption() ? `<div class="my-1 h-px bg-border" aria-hidden="true"></div>
           ${renderMPlatformMenuItem(current)}` : ""}
+          <div class="my-1 h-px bg-border" aria-hidden="true"></div>
+          ${renderEmenuLocalMenuItem(current)}
         </div>
       </div>
     </div>`;
@@ -218,6 +243,10 @@ function applyChainPerspective(perspective: ChainViewSwitchPerspective, onMount:
     exitMPlatformShell();
     location.hash = "#/nav-home";
   }
+  if (isEmenuLocalShellMode()) {
+    exitEmenuLocalShell();
+    location.hash = `#${APP_NAV_HOME_PATH}`;
+  }
 
   markSidebarNavLayoutPresetManual();
   writeSidebarNavLayoutPreset("chain");
@@ -231,6 +260,14 @@ function applyChainPerspective(perspective: ChainViewSwitchPerspective, onMount:
 
 function applyViewSwitchMode(mode: ViewSwitchMode, onMount: () => void): void {
   if (isViewSwitchRestricted()) return;
+
+  if (mode === "emenu-local") {
+    if (isEmenuLocalShellMode() && location.hash === `#${EMENU_LOCAL_DEFAULT_PATH}`) return;
+    enterEmenuLocalShell();
+    location.hash = `#${EMENU_LOCAL_DEFAULT_PATH}`;
+    onMount();
+    return;
+  }
 
   if (mode === "m-platform") {
     if (!shouldShowMPlatformViewSwitchOption()) return;
@@ -249,6 +286,10 @@ function applyViewSwitchMode(mode: ViewSwitchMode, onMount: () => void): void {
   if (isMPlatformShellMode()) {
     exitMPlatformShell();
     location.hash = "#/nav-home";
+  }
+  if (isEmenuLocalShellMode()) {
+    exitEmenuLocalShell();
+    location.hash = `#${APP_NAV_HOME_PATH}`;
   }
 
   if (readSidebarNavLayoutPreset() === "store") return;
@@ -307,7 +348,7 @@ export function bindViewSwitchControl(onMount: () => void): void {
     root.querySelectorAll<HTMLButtonElement>("[data-view-switch-option]").forEach((btn) => {
       btn.addEventListener("click", () => {
         const raw = btn.getAttribute("data-view-switch-option");
-        if (raw !== "store" && raw !== "m-platform") return;
+        if (raw !== "store" && raw !== "m-platform" && raw !== "emenu-local") return;
         if (raw === "m-platform" && !shouldShowMPlatformViewSwitchOption()) return;
         setViewSwitchOpen(root, false);
         applyViewSwitchMode(raw, onMount);

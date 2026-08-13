@@ -1,0 +1,63 @@
+import type { MessageKey } from "../i18n";
+
+export const EMENU_LOCAL_ROUTE_PREFIX = "/emenu-local";
+export const EMENU_LOCAL_DEFAULT_PATH = "/emenu-local/device-settings";
+
+export type EmenuLocalNavItem = {
+  id: string;
+  path: string;
+  titleKey: MessageKey;
+  descriptionKey: MessageKey;
+  icon: "device" | "global" | "category" | "menu" | "seasoning";
+};
+
+export const EMENU_LOCAL_NAV_ITEMS: readonly EmenuLocalNavItem[] = [
+  {
+    id: "device-settings",
+    path: "/emenu-local/device-settings",
+    titleKey: "shell.emenuLocalDeviceSettings",
+    descriptionKey: "shell.emenuLocalDeviceSettingsDesc",
+    icon: "device",
+  },
+  {
+    id: "global-settings",
+    path: "/emenu-local/global-settings",
+    titleKey: "shell.emenuLocalGlobalSettings",
+    descriptionKey: "shell.emenuLocalGlobalSettingsDesc",
+    icon: "global",
+  },
+  {
+    id: "category-settings",
+    path: "/emenu-local/category-settings",
+    titleKey: "shell.emenuLocalCategorySettings",
+    descriptionKey: "shell.emenuLocalCategorySettingsDesc",
+    icon: "category",
+  },
+  {
+    id: "menu-category-settings",
+    path: "/emenu-local/menu-category-settings",
+    titleKey: "shell.emenuLocalMenuCategorySettings",
+    descriptionKey: "shell.emenuLocalMenuCategorySettingsDesc",
+    icon: "menu",
+  },
+  {
+    id: "seasoning-settings",
+    path: "/emenu-local/seasoning-settings",
+    titleKey: "shell.emenuLocalSeasoningSettings",
+    descriptionKey: "shell.emenuLocalSeasoningSettingsDesc",
+    icon: "seasoning",
+  },
+] as const;
+
+export function isEmenuLocalContentPath(path: string): boolean {
+  return path === EMENU_LOCAL_ROUTE_PREFIX || path.startsWith(`${EMENU_LOCAL_ROUTE_PREFIX}/`);
+}
+
+export function normalizeEmenuLocalPath(path: string): string {
+  return EMENU_LOCAL_NAV_ITEMS.some((item) => item.path === path) ? path : EMENU_LOCAL_DEFAULT_PATH;
+}
+
+export function getActiveEmenuLocalNavItem(path: string): EmenuLocalNavItem {
+  const normalized = normalizeEmenuLocalPath(path);
+  return EMENU_LOCAL_NAV_ITEMS.find((item) => item.path === normalized) ?? EMENU_LOCAL_NAV_ITEMS[0];
+}

@@ -20,6 +20,7 @@ import {
   shouldShowBrandScopeLockedLabel,
   shouldShowHeaderStoreScopeFilter,
   shouldShowRegionScopeFilter,
+  isViewSwitchRestricted,
   ensureMvpBrandPerspectiveRegionScopeCleared,
   shouldShowMerchantGroupSwitcher,
   resetScopeFiltersForGroupChange,
@@ -277,8 +278,11 @@ import {
 } from "./config/page-settings-draft";
 import { MERCHANT_PLATFORM_PRESET_SCOPE, isMerchantPlatformPresetPath, isMPlatformPresetPath } from "./config/platform-preset-scope";
 import {
+  enterEmenuLocalShell,
   enterMPlatformShell,
+  exitEmenuLocalShell,
   exitMPlatformShell,
+  isEmenuLocalShellMode,
   isMPlatformShellMode,
 } from "./shell/app-shell-mode";
 import {
@@ -325,6 +329,15 @@ import {
   isMPlatformContentPath,
   mountMPlatformShell,
 } from "./shell/m-platform-shell";
+import {
+  bindEmenuLocalShell,
+  mountEmenuLocalShell,
+} from "./shell/emenu-local-shell";
+import {
+  EMENU_LOCAL_DEFAULT_PATH,
+  isEmenuLocalContentPath,
+  normalizeEmenuLocalPath,
+} from "./shell/emenu-local-routes";
 import { NAV_BLUEPRINT_ROUTE_PREFIX } from "./config/nav-blueprint-ui";
 import {
   filterModuleSettingsGroupsForPreset,
@@ -11901,6 +11914,27 @@ function mount(): void {
   if (isPlatformPresetOnboardingPath(authPath)) {
     replaceHashPath(APP_NAV_HOME_PATH);
     mount();
+    return;
+  }
+
+  if (isEmenuLocalShellMode() || isEmenuLocalContentPath(authPath)) {
+    if (isViewSwitchRestricted()) {
+      exitEmenuLocalShell();
+      replaceHashPath(APP_NAV_HOME_PATH);
+      mount();
+      return;
+    }
+    const normalizedPath = normalizeEmenuLocalPath(authPath);
+    if (authPath !== normalizedPath) {
+      replaceHashPath(EMENU_LOCAL_DEFAULT_PATH);
+      mount();
+      return;
+    }
+    if (!isEmenuLocalShellMode()) enterEmenuLocalShell();
+    const app = document.getElementById("app");
+    if (!app) return;
+    app.innerHTML = mountEmenuLocalShell(mount, normalizedPath);
+    bindEmenuLocalShell(mount);
     return;
   }
 
