@@ -24,14 +24,14 @@
 ```text
 商品 A                                      5 个 Option  ▼
 ├─ 添加                                      2 个
-│  Option                              价格
-│  香菜                                $1.20
-│  辣椒                                $2.40
+│  Option              Option 原价   加价系数   实际价格
+│  香菜                $1.00          1.20       $1.20
+│  辣椒                $2.00          1.20       $2.40
 └─ 少放                                      3 个
-   Option                              价格
-   盐                                  $0.80
-   糖                                  $1.10
-   蒜                                  $0.60
+   Option              Option 原价   加价系数   实际价格
+   盐                  $0.50          1.60       $0.80
+   糖                  $1.00          1.10       $1.10
+   蒜                  $0.50          1.20       $0.60
 ```
 
 ### 商品层
@@ -50,9 +50,10 @@
 
 ### Option 层
 
-- 每个动作内固定为 `Option | 价格` 两列。
-- 价格仅展示本批次计算后的实际加价，格式为两位小数，不允许编辑。
-- 不展示候选关系状态、内部编码、加价系数或处理按钮。
+- 每个动作内固定为 `Option | Option 原价 | 加价系数 | 实际价格` 四列。
+- `Option 原价` 对应设置动作页面原“输入价格”字段；设置动作页面同步将字段名称改为“输入原价”。
+- `实际价格 = Option 原价 × 加价系数`，金额和系数均展示两位小数。
+- 四列全部只读，不展示候选关系状态、内部编码或处理按钮。
 
 ## API 与类型
 
@@ -77,6 +78,26 @@ type BatchPreviewProductPage = CursorPage<BatchPreviewProductGroup> & {
   summary: Record<BatchCandidateKind, number>;
 };
 ```
+
+价格字段扩展为：
+
+```ts
+type BatchOptionPrice = {
+  optionId: string;
+  inputPrice: number;
+  markupCoefficient: number;
+  priceDelta: number;
+};
+
+type BatchCandidate = {
+  // 其余候选关系字段保持不变
+  inputPrice: number;
+  markupCoefficient: number;
+  priceDelta: number;
+};
+```
+
+客户端创建预览时同时提交原价、加价系数和实际价格。服务端分别规范化金额与系数，并重新计算 `inputPrice × markupCoefficient`；提交的 `priceDelta` 与重新计算结果不一致时返回 `invalid_price_calculation`，不创建预览。兼容旧调用方：缺少原价或系数时使用 `inputPrice = priceDelta`、`markupCoefficient = 1`，使旧请求仍可读取和提交。
 
 现有 `BatchCandidate` 合同已经包含数值型 `sortOrder`，商品分组接口直接沿用该字段，不新增另一套 Option 顺序来源。对于历史或异常数据中缺失、非有限的 `sortOrder`，使用下述稳定回退顺序。
 
@@ -132,6 +153,7 @@ type BatchPreviewProductPage = CursorPage<BatchPreviewProductGroup> & {
 - `inactive`：自动重新启用并使用本批次价格。
 - `unavailable`：自动跳过，不创建或修改关系。
 - 预览页面不提供人工处理入口，确认按钮不受候选关系状态阻塞。
+- 最终商品关系仍只保存 `priceDelta`（实际价格）；原价和加价系数仅属于本批次配置与预览数据，不改变终端快照结构。
 
 ### 分页
 
@@ -170,7 +192,10 @@ type BatchPreviewProductPage = CursorPage<BatchPreviewProductGroup> & {
 - 状态筛选只保留匹配的商品、动作和 Option。
 - 同一个 `optionId` 出现在多个动作下时按多条候选关系统计并分别展示。
 - `summary` 使用原始 `kind`，全局状态汇总不因当前分页改变。
-- 动作明细仅包含 Option 名称和只读价格，不存在价格输入框、状态标签和处理按钮。
+- 设置动作页面使用“输入原价”字段名，并继续实时计算实际价格。
+- 动作明细仅包含 Option、Option 原价、加价系数和实际价格，不存在价格输入框、状态标签和处理按钮。
+- 预览接口返回的实际价格与服务端按原价和系数重新计算的结果一致；不一致请求被拒绝。
+- 缺少新增价格字段的旧预览请求按系数 `1` 兼容。
 - 无人工决定时，差异价格自动覆盖、停用关系自动启用且不可用关系自动跳过。
 - 切换状态筛选会清空游标并从第一页开始。
 - 更新候选关系后可使用当前页起始游标刷新，上一页导航仍正确。
@@ -184,7 +209,7 @@ type BatchPreviewProductPage = CursorPage<BatchPreviewProductGroup> & {
 - 商品、动作和 Option 数量正确。
 - 一个商品包含多个动作时，明细完整且层级清晰。
 - 多商品分页不会把单个商品拆开。
-- 状态筛选正常；动作内只展示 Option 和只读价格。
+- 状态筛选正常；动作内只展示 Option、Option 原价、加价系数和实际价格，均不可编辑。
 - 无须处理冲突即可确认建立关联。
 - 浏览器控制台无错误。
 
