@@ -306,23 +306,22 @@ button { color: inherit; }
 .olf-dialog p { margin: 0 0 22px; font-size: 14px; line-height: 22px; color: var(--olf-secondary); }
 .olf-dialog-actions { display: flex; justify-content: flex-end; gap: 10px; }
 
-.olf-drawer-mask { position: fixed; z-index: 70; inset: 0; display: none; background: rgba(0,0,0,.42); }
-.olf-drawer-mask.is-open { display: block; }
-.olf-drawer {
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: min(680px, 100%);
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  background: var(--olf-surface);
-  box-shadow: -14px 0 40px rgba(0,0,0,.14);
-}
-.olf-drawer-head, .olf-drawer-foot { flex: 0 0 auto; padding: 18px 22px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--olf-border); }
-.olf-drawer-head h3 { margin: 0; font-size: 18px; font-weight: 600; }
-.olf-drawer-body { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 22px; }
-.olf-drawer-foot { justify-content: flex-end; border-top: 1px solid var(--olf-border); border-bottom: 0; }
+.olf-structure-summary { margin: 0 0 10px; font-size: 12px; line-height: 19px; color: var(--olf-muted); }
+.bmsp-root { overflow: hidden; border: 1px solid var(--olf-border); border-radius: 12px; background: var(--olf-surface); }
+.bmsp-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); min-height: 240px; }
+.bmsp-grid.bmsp-grid--no-dish { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.bmsp-col { display: flex; min-width: 0; min-height: 0; flex-direction: column; border-right: 1px solid var(--olf-border); }
+.bmsp-col:last-child { border-right: 0; }
+.bmsp-col-title { margin: 0; padding: 10px 12px; border-bottom: 1px solid var(--olf-border); background: var(--olf-subtle); color: var(--olf-secondary); font-size: 12px; font-weight: 600; }
+.bmsp-col > div { min-height: 0; flex: 1; overflow: auto; padding: 5px; }
+.bmsp-item { width: 100%; min-height: 36px; padding: 7px 9px; display: flex; align-items: center; gap: 7px; border: 0; border-radius: 8px; background: transparent; color: var(--olf-text); font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
+.bmsp-item:hover { background: var(--olf-subtle); }
+.bmsp-item.active { background: var(--olf-primary-soft); color: var(--olf-primary-text); }
+.bmsp-item:focus-visible { outline: 2px solid var(--olf-primary); outline-offset: -2px; }
+.bmsp-label { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bmsp-badge { min-width: 20px; padding: 1px 6px; flex-shrink: 0; border-radius: 999px; background: #eef2f6; color: var(--olf-muted); font-size: 11px; line-height: 18px; text-align: center; }
+.bmsp-cb { width: 15px; height: 15px; flex-shrink: 0; accent-color: var(--olf-primary); }
+.bmsp-empty { margin: 0; padding: 12px; color: var(--olf-muted); font-size: 12px; }
 
 .olf-flow-main { width: min(1040px, calc(100% - 48px)); margin: 0 auto; padding: 28px 0 110px; }
 .olf-flow-card { padding: 28px 30px; border: 1px solid var(--olf-border); border-radius: 16px; background: var(--olf-surface); }
@@ -366,7 +365,8 @@ button { color: inherit; }
   .olf-footer .olf-button { min-height: 44px; padding: 0 14px; font-size: 14px; }
   .olf-review-row { grid-template-columns: 1fr; gap: 5px; }
   .olf-review-row button { justify-self: start; }
-  .olf-drawer-body { padding: 16px; }
+  .bmsp-grid, .bmsp-grid.bmsp-grid--no-dish { grid-template-columns: 1fr 1fr; }
+  .bmsp-col { min-height: 180px; border-right: 0; border-bottom: 1px solid var(--olf-border); }
 }
 
 @media (prefers-reduced-motion: reduce) {

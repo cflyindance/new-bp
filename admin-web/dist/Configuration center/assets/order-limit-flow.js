@@ -7,10 +7,11 @@
   var root = document.getElementById("orderLimitFlowRoot");
   var page = document.body.getAttribute("data-order-limit-page");
   if (!root || !page) return;
+  var MenuPicker = window.BrandMenuStructurePicker;
 
   var steps = [
     { title: "规则类型", note: "确定计算口径" },
-    { title: "商品范围", note: "名称与业务范围" },
+    { title: "商品配置", note: "基础信息与商品选择" },
     { title: "场景配置", note: "人数与轮次区间" },
     { title: "限购数量", note: "按场景和产线配置" },
     { title: "生效范围", note: "时间、会员与人数" },
@@ -18,7 +19,7 @@
     { title: "确认发布", note: "复核并下发" }
   ];
   var lines = [
-    { id: "pos", name: "POS" },
+    { id: "kiosk", name: "Kiosk" },
     { id: "emenu", name: "eMenu" },
     { id: "sdi", name: "SDI" }
   ];
@@ -128,17 +129,15 @@
       targetType: null,
       name: "",
       description: "",
-      storeIds: ["ny-midtown", "flushing"],
-      productLines: ["pos", "emenu", "sdi"],
-      menuIds: ["dinner"],
-      orderTypes: ["dine-in"],
+      structureByLine: MenuPicker ? MenuPicker.emptyByLine() : { kiosk: [], emenu: [], sdi: [] },
+      productLines: [],
       targetIds: [],
       partyRanges: [{ min: 1, max: null }],
       roundRanges: [{ min: 1, max: null }],
       limits: {},
       activePartyIndex: 0,
       activeRoundIndex: 0,
-      activeLineId: "pos",
+      activeLineId: "kiosk",
       conditions: {
         effectiveFrom: today(),
         effectiveTo: "",
@@ -184,8 +183,22 @@
     return (rule.selectedCategories || []).map(function (id) { return "category:" + id; });
   }
 
+  function normalizeLoadedEditorDraft(draft) {
+    if (!MenuPicker || !draft) return draft;
+    if (!draft.structureByLine) {
+      draft.structureByLine = MenuPicker.emptyByLine();
+      draft.targetIds = [];
+      draft.productLines = [];
+      draft.activeLineId = "kiosk";
+      draft.limits = {};
+      return draft;
+    }
+    syncDraftTargetsFromStructure(draft, true);
+    return draft;
+  }
+
   function draftFromRule(rule) {
-    if (rule && rule.editorDraft) return JSON.parse(JSON.stringify(rule.editorDraft));
+    if (rule && rule.editorDraft) return normalizeLoadedEditorDraft(JSON.parse(JSON.stringify(rule.editorDraft)));
     var draft = defaultDraft();
     if (!rule) return draft;
     draft.subject = mapLegacyType(rule.type);
@@ -194,10 +207,14 @@
     draft.name = rule.name || "";
     draft.description = rule.description || "";
     draft.targetIds = legacyTargetIds(rule, draft.targetType);
-    if (Array.isArray(rule.storeIds) && rule.storeIds.length) draft.storeIds = rule.storeIds.slice();
-    if (Array.isArray(rule.productLines) && rule.productLines.length) draft.productLines = rule.productLines.slice();
-    if (Array.isArray(rule.menuIds) && rule.menuIds.length) draft.menuIds = rule.menuIds.slice();
-    if (Array.isArray(rule.orderTypes) && rule.orderTypes.length) draft.orderTypes = rule.orderTypes.slice();
+    if (MenuPicker && rule.structureByLine) {
+      draft.structureByLine = MenuPicker.normalizeByLine(rule.structureByLine);
+      syncDraftTargetsFromStructure(draft, false);
+    } else {
+      draft.productLines = Array.isArray(rule.productLines) && rule.productLines.length
+        ? rule.productLines.slice()
+        : ["kiosk", "emenu", "sdi"];
+    }
     draft.conditions.businessHour = rule.enableTimeSettings
       ? ((rule.selectedBusinessHourIds || [])[0] || "all")
       : "all";
@@ -240,9 +257,70 @@
   function targetShortLabel(value) { return value === "dish" ? "按菜品" : "按分类"; }
 
   function targetSource(draft) { return draft.targetType === "dish" ? dishes : categories; }
+
+  function structureItems(draft) {
+    if (!MenuPicker || !draft.structureByLine) return [];
+    var byLine = MenuPicker.normalizeByLine(draft.structureByLine);
+    return draft.targetType === "dish"
+      ? MenuPicker.listSelectedDishes(byLine)
+      : MenuPicker.listSelectedCategories(byLine);
+  }
+
+  function structureTargetId(draft, item) {
+    return draft.targetType + ":" + item.lineId + "|" + item.key;
+  }
+
   function selectedTargets(draft) {
+    var structured = structureItems(draft);
+    if (structured.length) {
+      return structured.map(function (item) {
+        var suffix = "（" + item.lineLabel + "）";
+        var shortName = item.name.slice(-suffix.length) === suffix
+          ? item.name.slice(0, -suffix.length)
+          : item.name;
+        return {
+          id: structureTargetId(draft, item),
+          name: item.name,
+          shortName: shortName,
+          lineId: item.lineId,
+          lineLabel: item.lineLabel,
+          key: item.key
+        };
+      });
+    }
     var ids = draft.targetIds || [];
     return targetSource(draft).filter(function (item) { return ids.indexOf(item.id) >= 0; });
+  }
+
+  function targetsForLine(draft, lineId) {
+    return selectedTargets(draft).filter(function (item) {
+      return !item.lineId || item.lineId === lineId;
+    });
+  }
+
+  function syncDraftTargetsFromStructure(draft, pruneLimits) {
+    if (!MenuPicker) return;
+    draft.structureByLine = MenuPicker.normalizeByLine(draft.structureByLine);
+    var items = structureItems(draft);
+    draft.targetIds = items.map(function (item) { return structureTargetId(draft, item); });
+    draft.productLines = lines.map(function (line) { return line.id; }).filter(function (lineId) {
+      return items.some(function (item) { return item.lineId === lineId; });
+    });
+    if (draft.productLines.indexOf(draft.activeLineId) < 0) {
+      draft.activeLineId = draft.productLines[0] || "kiosk";
+    }
+    if (pruneLimits !== false) {
+      var allowedTargets = {};
+      draft.targetIds.forEach(function (targetId) { allowedTargets[targetId] = true; });
+      var allowedLines = {};
+      draft.productLines.forEach(function (lineId) { allowedLines[lineId] = true; });
+      Object.keys(draft.limits || {}).forEach(function (key) {
+        var parts = key.split("|");
+        var lineId = parts[2];
+        var targetId = parts.slice(3).join("|");
+        if (!allowedLines[lineId] || !allowedTargets[targetId]) delete draft.limits[key];
+      });
+    }
   }
 
   function formatRange(range, unit) {
@@ -261,8 +339,8 @@
     draft.partyRanges.forEach(function (_, partyIndex) {
       for (var roundIndex = 0; roundIndex < roundCount; roundIndex += 1) {
         draft.productLines.forEach(function (lineId) {
-          draft.targetIds.forEach(function (targetId) {
-            callback(limitKey(partyIndex, roundIndex, lineId, targetId), partyIndex, roundIndex, lineId, targetId);
+          targetsForLine(draft, lineId).forEach(function (target) {
+            callback(limitKey(partyIndex, roundIndex, lineId, target.id), partyIndex, roundIndex, lineId, target.id);
           });
         });
       }
@@ -273,16 +351,17 @@
     var draft = draftRule.editorDraft;
     var targets = selectedTargets(draft);
     var firstLine = draft.productLines[0];
+    var firstLineTargets = targetsForLine(draft, firstLine);
     var quantitySettings = {};
-    draft.targetIds.forEach(function (targetId) {
-      var cell = draft.limits[limitKey(0, 0, firstLine, targetId)];
-      if (cell && cell.configured && cell.value != null) quantitySettings[targetId.replace(":", "_")] = cell.value;
+    firstLineTargets.forEach(function (target) {
+      var cell = draft.limits[limitKey(0, 0, firstLine, target.id)];
+      if (cell && cell.configured && cell.value != null) quantitySettings[target.id.replace(":", "_")] = cell.value;
     });
     var personRanges = draft.partyRanges.map(function (range, partyIndex) {
       var quantity = {};
-      draft.targetIds.forEach(function (targetId) {
-        var cell = draft.limits[limitKey(partyIndex, 0, firstLine, targetId)];
-        if (cell && cell.configured && cell.value != null) quantity[targetId.replace(":", "_")] = cell.value;
+      firstLineTargets.forEach(function (target) {
+        var cell = draft.limits[limitKey(partyIndex, 0, firstLine, target.id)];
+        if (cell && cell.configured && cell.value != null) quantity[target.id.replace(":", "_")] = cell.value;
       });
       return {
         min: range.min,
@@ -290,9 +369,9 @@
         quantitySettings: draft.period === "multi_round" ? undefined : quantity,
         roundQuantities: draft.period === "multi_round" ? draft.roundRanges.map(function (_, roundIndex) {
           var roundQuantity = {};
-          draft.targetIds.forEach(function (targetId) {
-            var cell = draft.limits[limitKey(partyIndex, roundIndex, firstLine, targetId)];
-            if (cell && cell.configured && cell.value != null) roundQuantity[targetId.replace(":", "_")] = cell.value;
+          firstLineTargets.forEach(function (target) {
+            var cell = draft.limits[limitKey(partyIndex, roundIndex, firstLine, target.id)];
+            if (cell && cell.configured && cell.value != null) roundQuantity[target.id.replace(":", "_")] = cell.value;
           });
           return { quantitySettings: roundQuantity };
         }) : undefined
@@ -310,8 +389,9 @@
       dishes: targets.length ? targets.map(function (item) { return item.name; }).join("、") : "未选择商品",
       status: status || "draft",
       created: draftRule.created || today(),
-      selectedCategories: draft.targetType === "category" ? draft.targetIds.map(function (id) { return Number(id.split(":")[1]); }) : [],
-      selectedDishes: draft.targetType === "dish" ? draft.targetIds.map(function (id) { return Number(id.split(":")[1]); }) : [],
+      selectedCategories: draft.targetType === "category" ? targets.map(function (item) { return item.lineId ? item.lineId + "|" + item.key : Number(item.id.split(":")[1]); }) : [],
+      selectedDishes: draft.targetType === "dish" ? targets.map(function (item) { return item.lineId ? item.lineId + "|" + item.key : Number(item.id.split(":")[1]); }) : [],
+      structureByLine: MenuPicker ? MenuPicker.normalizeByLine(draft.structureByLine) : draft.structureByLine,
       quantitySettings: quantitySettings,
       personRanges: personRanges,
       roundRanges: draft.period === "multi_round" ? draft.roundRanges.map(function (range) { return { min: range.min, max: range.max == null ? 99 : range.max }; }) : undefined,
@@ -327,9 +407,6 @@
       enableMemberLevels: draft.conditions.memberMode === "specified",
       memberLevels: draft.conditions.memberLevelIds,
       productLines: draft.productLines,
-      storeIds: draft.storeIds,
-      menuIds: draft.menuIds,
-      orderTypes: draft.orderTypes,
       limits: Object.keys(draft.limits).map(function (key) {
         var parts = key.split("|");
         var cell = draft.limits[key];
@@ -375,7 +452,10 @@
     var rules = loadRules();
     if (draftId) {
       var existingDraft = rules.find(function (rule) { return String(rule.id) === String(draftId) && rule.status === "draft"; });
-      if (existingDraft) return existingDraft;
+      if (existingDraft) {
+        existingDraft.editorDraft = normalizeLoadedEditorDraft(existingDraft.editorDraft);
+        return existingDraft;
+      }
     }
 
     var sourceRule = sourceRuleId ? rules.find(function (rule) { return String(rule.id) === String(sourceRuleId); }) : null;
@@ -468,10 +548,6 @@
     }
     if (stepNumber === 2) {
       if (!draft.name.trim()) return "请输入规则名称";
-      if (!draft.storeIds.length) return "请至少选择一家适用门店";
-      if (!draft.productLines.length) return "请至少选择一条产线或点单渠道";
-      if (!draft.menuIds.length) return "请至少选择一个菜单";
-      if (!draft.orderTypes.length) return "请至少选择一种订单类型";
       if (!draft.targetIds.length) return "请至少选择一个分类或菜品";
     }
     if (stepNumber === 3) {
@@ -545,12 +621,14 @@
   }
 
   function renderStepTwo(draft) {
-    return '<div class="olf-content-head"><h2 tabindex="-1">填写基础信息并选择商品范围</h2><p>同时确定规则适用的门店、产线、菜单和订单类型。</p></div>' +
-      '<section class="olf-section"><div class="olf-field-grid"><label class="olf-field olf-field--full"><span class="olf-label olf-required">规则名称</span><input class="olf-input" data-field="name" value="' + esc(draft.name) + '" placeholder="例如：晚市海鲜分类限购" maxlength="60" /><span class="olf-hint">用于规则列表、发布记录和授权审计。</span></label><label class="olf-field olf-field--full"><span class="olf-label">规则说明</span><textarea class="olf-textarea" data-field="description" maxlength="200" placeholder="填写内部说明，顾客端不会展示">' + esc(draft.description) + '</textarea></label></div></section>' +
-      '<section class="olf-section"><h3>适用门店</h3><div class="olf-check-grid">' + renderChecks("storeIds", stores, draft.storeIds) + '</div></section>' +
-      '<section class="olf-section"><h3>产线 / 点单渠道</h3><div class="olf-check-grid">' + renderChecks("productLines", lines, draft.productLines) + '</div></section>' +
-      '<section class="olf-section"><div class="olf-field-grid"><label class="olf-field"><span class="olf-label olf-required">适用菜单</span><select class="olf-select" data-field="menu"><option value="dinner"' + (draft.menuIds[0] === "dinner" ? " selected" : "") + '>晚市菜单</option><option value="all-day"' + (draft.menuIds[0] === "all-day" ? " selected" : "") + '>全日菜单</option><option value="ayce"' + (draft.menuIds[0] === "ayce" ? " selected" : "") + '>自助餐菜单</option></select></label><div class="olf-field"><span class="olf-label olf-required">订单类型</span><div class="olf-check-grid">' + renderChecks("orderTypes", [{ id: "dine-in", name: "堂食" }, { id: "takeout", name: "外带" }, { id: "delivery", name: "外送" }], draft.orderTypes) + '</div></div></div></section>' +
-      '<section class="olf-section"><div class="olf-section-head"><div><h3>适用' + (draft.targetType === "dish" ? "菜品" : "分类") + '</h3><div class="olf-help">已选 ' + draft.targetIds.length + ' 项；正式保存使用稳定业务 ID。</div></div><button type="button" class="olf-button olf-button--small" data-open-target-drawer>选择' + (draft.targetType === "dish" ? "菜品" : "分类") + '</button></div>' + renderTargetSummary(draft) + '</section>';
+    var byLine = MenuPicker ? MenuPicker.normalizeByLine(draft.structureByLine) : null;
+    var pickerHtml = MenuPicker
+      ? MenuPicker.renderHtml(byLine, null, null, null, { leafLevel: draft.targetType === "category" ? "category" : "dish" })
+      : '<div class="olf-summary olf-summary--danger">商品结构选择器未加载，请刷新后重试。</div>';
+    var summary = MenuPicker ? MenuPicker.formatSummary(byLine) : "未选商品";
+    return '<div class="olf-content-head"><h2 tabindex="-1">商品配置</h2><p>填写基础信息，并按原有商品结构选择限购目标。</p></div>' +
+      '<section class="olf-section"><h3>基础信息</h3><div class="olf-field-grid"><label class="olf-field olf-field--full"><span class="olf-label olf-required">规则名称</span><input class="olf-input" data-field="name" value="' + esc(draft.name) + '" maxlength="60" /></label><label class="olf-field olf-field--full"><span class="olf-label">规则描述</span><textarea class="olf-textarea" data-field="description" maxlength="200">' + esc(draft.description) + '</textarea></label></div></section>' +
+      '<section class="olf-section"><h3>选择商品</h3><p class="olf-structure-summary" id="structureSummary">' + esc(summary) + '</p>' + pickerHtml + '</section>';
   }
 
   function renderRangeRows(ranges, kind) {
@@ -571,16 +649,17 @@
   }
 
   function completionFor(draft, lineId) {
-    var total = draft.targetIds.length;
-    var complete = draft.targetIds.reduce(function (count, targetId) {
-      var cell = draft.limits[limitKey(draft.activePartyIndex, draft.period === "multi_round" ? draft.activeRoundIndex : 0, lineId, targetId)];
+    var targets = targetsForLine(draft, lineId);
+    var total = targets.length;
+    var complete = targets.reduce(function (count, target) {
+      var cell = draft.limits[limitKey(draft.activePartyIndex, draft.period === "multi_round" ? draft.activeRoundIndex : 0, lineId, target.id)];
       return count + (cell && cell.configured ? 1 : 0);
     }, 0);
     return complete + "/" + total;
   }
 
   function renderLimitRows(draft) {
-    return selectedTargets(draft).map(function (target) {
+    return targetsForLine(draft, draft.activeLineId).map(function (target) {
       var cell = cellFor(draft, target.id);
       var stateClass = !cell.configured ? "" : cell.value === 0 ? " is-blocked" : cell.value == null ? " is-unlimited" : "";
       var stateText = !cell.configured ? "未配置" : cell.value === 0 ? "禁止下单" : cell.value == null ? "不限制" : "已配置";
@@ -588,7 +667,7 @@
       if (cell.configured && cell.value != null) {
         actual = draft.subject === "party_size" ? "4 人示例：" + (cell.value * 4) + " 份" : cell.value + " 份";
       }
-      return '<tr><td><strong>' + esc(target.name) + '</strong>' + (target.count ? '<div class="olf-hint">包含 ' + target.count + ' 个菜品</div>' : '<div class="olf-hint">' + esc(target.category || "") + '</div>') + '</td><td><input class="olf-input olf-limit-input" type="number" min="0" value="' + (cell.configured && cell.value != null ? esc(cell.value) : "") + '" placeholder="未配置" data-limit-target="' + esc(target.id) + '" /></td><td><span class="olf-limit-state' + stateClass + '">' + stateText + '</span></td><td>' + esc(actual) + '</td><td><button type="button" class="olf-button olf-button--small" data-set-unlimited="' + esc(target.id) + '">设为不限制</button></td></tr>';
+      return '<tr><td><strong>' + esc(target.shortName || target.name) + '</strong>' + (target.count ? '<div class="olf-hint">包含 ' + target.count + ' 个菜品</div>' : '<div class="olf-hint">' + esc(target.category || "") + '</div>') + '</td><td><input class="olf-input olf-limit-input" type="number" min="0" value="' + (cell.configured && cell.value != null ? esc(cell.value) : "") + '" placeholder="未配置" data-limit-target="' + esc(target.id) + '" /></td><td><span class="olf-limit-state' + stateClass + '">' + stateText + '</span></td><td>' + esc(actual) + '</td><td><button type="button" class="olf-button olf-button--small" data-set-unlimited="' + esc(target.id) + '">设为不限制</button></td></tr>';
     }).join("");
   }
 
@@ -608,7 +687,7 @@
 
   function renderStepFive(draft) {
     var condition = draft.conditions;
-    return '<div class="olf-content-head"><h2 tabindex="-1">设置生效范围</h2><p>门店、产线、菜单和订单类型已在第二步定义；这里配置时间、会员和有效人数口径。</p></div>' +
+    return '<div class="olf-content-head"><h2 tabindex="-1">设置生效范围</h2><p>商品适用产线由商品结构自动确定；这里配置时间、会员和有效人数口径。</p></div>' +
       '<section class="olf-section"><div class="olf-field-grid"><label class="olf-field"><span class="olf-label olf-required">开始日期</span><input class="olf-input" type="date" data-condition="effectiveFrom" value="' + esc(condition.effectiveFrom) + '" /></label><label class="olf-field"><span class="olf-label">结束日期</span><input class="olf-input" type="date" data-condition="effectiveTo" value="' + esc(condition.effectiveTo) + '" /><span class="olf-hint">留空表示长期生效。</span></label><label class="olf-field"><span class="olf-label olf-required">营业时段</span><select class="olf-select" data-condition="businessHour"><option value="all"' + (condition.businessHour === "all" ? " selected" : "") + '>全天</option><option value="lunch"' + (condition.businessHour === "lunch" ? " selected" : "") + '>午市 11:00–16:59</option><option value="dinner"' + (condition.businessHour === "dinner" ? " selected" : "") + '>晚市 17:00–23:00</option></select></label><label class="olf-field"><span class="olf-label">儿童计入有效人数</span><select class="olf-select" data-condition="childCountPolicy"><option value="inherit"' + (condition.childCountPolicy === "inherit" ? " selected" : "") + '>继承门店全局设置</option><option value="include"' + (condition.childCountPolicy === "include" ? " selected" : "") + '>计入</option><option value="exclude"' + (condition.childCountPolicy === "exclude" ? " selected" : "") + '>不计入</option></select></label></div></section>' +
       '<section class="olf-section"><h3>生效星期</h3><div class="olf-check-grid">' + renderChecks("daysOfWeek", weekdays, condition.daysOfWeek) + '</div></section>' +
       '<section class="olf-section"><h3>会员范围</h3><div class="olf-choice-grid olf-choice-grid--two">' + renderChoice("memberMode", "all", "全部顾客", "会员与非会员均适用", condition.memberMode === "all") + renderChoice("memberMode", "specified", "指定会员等级", "仅选中的会员等级适用", condition.memberMode === "specified") + '</div>' + (condition.memberMode === "specified" ? '<div class="olf-check-grid" style="margin-top:14px">' + renderChecks("memberLevelIds", memberLevels, condition.memberLevelIds) + '</div>' : '') + '</section>';
@@ -648,7 +727,7 @@
       '<div class="olf-review-row"><span>规则</span><strong>' + esc(draft.name || "未命名规则") + '</strong><button class="olf-button olf-button--small" data-fix-step="2">编辑</button></div>' +
       '<div class="olf-review-row"><span>计算方式</span><strong>' + esc(subjectLabel(draft.subject) + " × " + periodLabel(draft.period) + " × " + targetShortLabel(draft.targetType)) + '</strong><button class="olf-button olf-button--small" data-fix-step="1">编辑</button></div>' +
       '<div class="olf-review-row"><span>商品范围</span><strong>' + esc(selectedTargets(draft).map(function (item) { return item.name; }).join("、") || "未选择") + '</strong><button class="olf-button olf-button--small" data-fix-step="2">编辑</button></div>' +
-      '<div class="olf-review-row"><span>业务范围</span><strong>' + esc(namesFor(stores, draft.storeIds) + " · " + namesFor(lines, draft.productLines) + " · " + (draft.menuIds[0] === "dinner" ? "晚市菜单" : draft.menuIds[0] === "ayce" ? "自助餐菜单" : "全日菜单")) + '</strong><button class="olf-button olf-button--small" data-fix-step="2">编辑</button></div>' +
+      '<div class="olf-review-row"><span>适用产线</span><strong>' + esc(namesFor(lines, draft.productLines)) + '</strong><button class="olf-button olf-button--small" data-fix-step="2">编辑</button></div>' +
       '<div class="olf-review-row"><span>人数 / 轮次</span><strong>' + esc(draft.partyRanges.map(function (range) { return formatRange(range, "人"); }).join("、") + (draft.period === "multi_round" ? "；" + draft.roundRanges.map(function (range) { return formatRange(range, "轮"); }).join("、") : "")) + '</strong><button class="olf-button olf-button--small" data-fix-step="3">编辑</button></div>' +
       '<div class="olf-review-row"><span>数量完成度</span><strong>' + completion.complete + "/" + completion.total + ' 个单元格</strong><button class="olf-button olf-button--small" data-fix-step="4">编辑</button></div>' +
       '<div class="olf-review-row"><span>生效条件</span><strong>' + esc((draft.conditions.effectiveTo ? draft.conditions.effectiveFrom + " 至 " + draft.conditions.effectiveTo : draft.conditions.effectiveFrom + " 起长期") + " · " + memberText + " · 儿童人数" + (draft.conditions.childCountPolicy === "inherit" ? "继承门店" : draft.conditions.childCountPolicy === "include" ? "计入" : "不计入")) + '</strong><button class="olf-button olf-button--small" data-fix-step="5">编辑</button></div>' +
@@ -683,6 +762,10 @@
     draft.highestStep = editorState.highestStep;
     document.getElementById("stepNav").innerHTML = renderEditorNav();
     document.getElementById("editorContent").innerHTML = renderEditorContent();
+    if (MenuPicker) {
+      var pickerElement = document.querySelector("[data-brand-menu-structure-picker]");
+      if (pickerElement) MenuPicker.bind(pickerElement, { leafLevel: draft.targetType === "category" ? "category" : "dish" });
+    }
     document.getElementById("progressFill").style.width = ((editorState.currentStep / steps.length) * 100) + "%";
     document.getElementById("footerNote").textContent = "第 " + editorState.currentStep + " 步，共 " + steps.length + " 步";
     var previous = document.getElementById("previousButton");
@@ -710,21 +793,10 @@
     editorState.dialogConfirm = null;
   }
 
-  function openTargetDrawer() {
-    var draft = editorState.rule.editorDraft;
-    editorState.targetSelection = draft.targetIds.slice();
-    var source = targetSource(draft);
-    document.getElementById("targetDrawerTitle").textContent = "选择" + (draft.targetType === "dish" ? "菜品" : "分类");
-    document.getElementById("targetDrawerBody").innerHTML = '<div class="olf-check-grid">' + source.map(function (item) { return '<label class="olf-check"><input type="checkbox" data-drawer-target="' + esc(item.id) + '"' + (editorState.targetSelection.indexOf(item.id) >= 0 ? " checked" : "") + ' /><span><strong>' + esc(item.name) + '</strong>' + (item.category ? '<span class="olf-hint" style="display:block">' + esc(item.category) + '</span>' : '<span class="olf-hint" style="display:block">' + item.count + ' 个菜品</span>') + '</span></label>'; }).join("") + '</div>';
-    document.getElementById("targetDrawerMask").classList.add("is-open");
-  }
-
-  function closeTargetDrawer() { document.getElementById("targetDrawerMask").classList.remove("is-open"); }
-
   function normalizeActiveDimensions(draft) {
     draft.activePartyIndex = Math.min(draft.activePartyIndex || 0, Math.max(0, draft.partyRanges.length - 1));
     draft.activeRoundIndex = Math.min(draft.activeRoundIndex || 0, Math.max(0, draft.roundRanges.length - 1));
-    if (draft.productLines.indexOf(draft.activeLineId) < 0) draft.activeLineId = draft.productLines[0] || "pos";
+    if (draft.productLines.indexOf(draft.activeLineId) < 0) draft.activeLineId = draft.productLines[0] || "kiosk";
   }
 
   function changeChoice(field, value) {
@@ -739,7 +811,13 @@
     var destructive = (field === "targetType" && draft.targetIds.length) || (field === "period" && Object.keys(draft.limits).length);
     var apply = function () {
       draft[field] = value;
-      if (field === "targetType") { draft.targetIds = []; draft.limits = {}; }
+      if (field === "targetType") {
+        draft.structureByLine = MenuPicker ? MenuPicker.emptyByLine() : { kiosk: [], emenu: [], sdi: [] };
+        draft.targetIds = [];
+        draft.productLines = [];
+        draft.activeLineId = "kiosk";
+        draft.limits = {};
+      }
       if (field === "period") { draft.limits = {}; draft.activeRoundIndex = 0; if (value !== "multi_round") draft.roundRanges = [{ min: 1, max: null }]; }
       markEditorDirty(); renderEditor();
     };
@@ -811,7 +889,6 @@
     var button = event.target.closest("button");
     if (!button) return;
     if (button.hasAttribute("data-choice-field")) { changeChoice(button.getAttribute("data-choice-field"), button.getAttribute("data-choice-value")); return; }
-    if (button.hasAttribute("data-open-target-drawer")) { openTargetDrawer(); return; }
     if (button.hasAttribute("data-add-range")) { addRange(button.getAttribute("data-add-range")); return; }
     if (button.hasAttribute("data-delete-range")) { deleteRange(button.getAttribute("data-delete-range"), Number(button.getAttribute("data-range-index"))); return; }
     if (button.hasAttribute("data-party-tab")) { editorState.rule.editorDraft.activePartyIndex = Number(button.getAttribute("data-party-tab")); renderEditor(); return; }
@@ -824,7 +901,7 @@
       var input = document.getElementById("batchLimitValue");
       var value = mode === "value" ? Number(input.value) : mode === "zero" ? 0 : null;
       if (mode === "value" && (!Number.isInteger(value) || value < 0)) { toast("请输入大于或等于 0 的整数", true); return; }
-      draft.targetIds.forEach(function (targetId) { draft.limits[limitKey(draft.activePartyIndex, draft.period === "multi_round" ? draft.activeRoundIndex : 0, draft.activeLineId, targetId)] = { configured: true, value: value }; });
+      targetsForLine(draft, draft.activeLineId).forEach(function (target) { draft.limits[limitKey(draft.activePartyIndex, draft.period === "multi_round" ? draft.activeRoundIndex : 0, draft.activeLineId, target.id)] = { configured: true, value: value }; });
       markEditorDirty(); renderEditor(); return;
     }
     if (button.hasAttribute("data-set-unlimited")) {
@@ -841,10 +918,10 @@
     var draft = editorState.rule.editorDraft;
     if (target.hasAttribute("data-field")) {
       var field = target.getAttribute("data-field");
-      if (field === "menu") draft.menuIds = [target.value]; else draft[field] = target.value;
+      draft[field] = target.value;
       markEditorDirty(); return;
     }
-    if (target.name === "storeIds" || target.name === "productLines" || target.name === "orderTypes" || target.name === "daysOfWeek" || target.name === "memberLevelIds") {
+    if (target.name === "daysOfWeek" || target.name === "memberLevelIds") {
       updateCheckedList(target.name, target.value, target.checked); return;
     }
     if (target.hasAttribute("data-range-kind")) {
@@ -873,12 +950,6 @@
     if (target.hasAttribute("data-auth-role")) { draft.authorization.scopePermissions[target.getAttribute("data-auth-role")] = target.value; markEditorDirty(); return; }
     if (target.hasAttribute("data-auth-default")) { draft.authorization.defaultScope = target.value; markEditorDirty(); return; }
     if (target.hasAttribute("data-auth-reason")) { draft.authorization.reasonRequired = target.checked; markEditorDirty(); return; }
-    if (target.hasAttribute("data-drawer-target")) {
-      var value = target.getAttribute("data-drawer-target");
-      var index = editorState.targetSelection.indexOf(value);
-      if (target.checked && index < 0) editorState.targetSelection.push(value);
-      if (!target.checked && index >= 0) editorState.targetSelection.splice(index, 1);
-    }
   }
 
   function mountEditor() {
@@ -895,16 +966,26 @@
       rule: rule,
       currentStep: Number(rule.editorDraft.currentStep) || 1,
       highestStep: Math.max(Number(rule.editorDraft.highestStep) || 1, Number(rule.editorDraft.currentStep) || 1),
-      stepErrors: {}, saveTimer: null, dirty: false, dialogConfirm: null, targetSelection: []
+      stepErrors: {}, saveTimer: null, dirty: false, dialogConfirm: null
     };
     normalizeActiveDimensions(rule.editorDraft);
     root.innerHTML = '<div class="olf-page"><header class="olf-header"><div class="olf-header-main"><div class="olf-title-group"><button type="button" class="olf-icon-button" id="backButton" aria-label="返回规则列表">' + icon("back", 20) + '</button><div class="olf-title-copy"><h1>' + (rule.sourceRuleId ? "编辑" : "新增") + '数量与频次规则</h1><span class="olf-save-state" id="saveState">草稿已保存</span></div></div><div class="olf-actions"><button type="button" class="olf-button" id="headerSaveButton">保存草稿</button></div></div><div class="olf-progress"><span id="progressFill"></span></div></header><div class="olf-editor-shell"><nav class="olf-step-nav" id="stepNav" aria-label="规则配置步骤"></nav><main class="olf-content" id="editorContent"></main></div><footer class="olf-footer"><span class="olf-footer-note" id="footerNote"></span><div class="olf-actions"><button type="button" class="olf-button" id="previousButton">上一步</button><button type="button" class="olf-button" id="saveReturnButton" style="display:none">保存草稿并返回</button><button type="button" class="olf-button olf-button--primary" id="nextButton">下一步</button></div></footer></div>' +
-      '<div class="olf-overlay" id="confirmOverlay" role="dialog" aria-modal="true" aria-labelledby="dialogTitle"><div class="olf-dialog"><h3 id="dialogTitle">确认操作</h3><p id="dialogCopy"></p><div class="olf-dialog-actions"><button type="button" class="olf-button" id="dialogCancel">继续编辑</button><button type="button" class="olf-button olf-button--primary" id="dialogConfirm">确定</button></div></div></div>' +
-      '<div class="olf-drawer-mask" id="targetDrawerMask"><section class="olf-drawer" role="dialog" aria-modal="true" aria-labelledby="targetDrawerTitle"><header class="olf-drawer-head"><h3 id="targetDrawerTitle">选择目标</h3><button type="button" class="olf-icon-button" id="targetDrawerClose" aria-label="关闭">' + icon("close", 18) + '</button></header><div class="olf-drawer-body" id="targetDrawerBody"></div><footer class="olf-drawer-foot"><button type="button" class="olf-button" id="targetDrawerCancel">取消</button><button type="button" class="olf-button olf-button--primary" id="targetDrawerConfirm">确定</button></footer></section></div>';
+      '<div class="olf-overlay" id="confirmOverlay" role="dialog" aria-modal="true" aria-labelledby="dialogTitle"><div class="olf-dialog"><h3 id="dialogTitle">确认操作</h3><p id="dialogCopy"></p><div class="olf-dialog-actions"><button type="button" class="olf-button" id="dialogCancel">继续编辑</button><button type="button" class="olf-button olf-button--primary" id="dialogConfirm">确定</button></div></div></div>';
     renderEditor();
     root.addEventListener("click", handleEditorClick);
     root.addEventListener("input", handleEditorInput);
     root.addEventListener("change", handleEditorInput);
+    root.addEventListener("brand-menu-structure-change", function (event) {
+      var draft = editorState.rule.editorDraft;
+      var byLine = event.detail && event.detail.byLine;
+      if (!byLine || !MenuPicker) return;
+      draft.structureByLine = MenuPicker.normalizeByLine(byLine);
+      syncDraftTargetsFromStructure(draft, true);
+      var summary = document.getElementById("structureSummary");
+      if (summary) summary.textContent = MenuPicker.formatSummary(draft.structureByLine);
+      delete editorState.stepErrors[2];
+      markEditorDirty();
+    });
     document.getElementById("headerSaveButton").addEventListener("click", function () { if (saveEditorDraft(true)) toast("草稿已保存"); });
     document.getElementById("backButton").addEventListener("click", function () {
       if (!saveEditorDraft(true)) return;
@@ -925,19 +1006,9 @@
     });
     document.getElementById("dialogCancel").addEventListener("click", closeDialog);
     document.getElementById("dialogConfirm").addEventListener("click", function () { var confirm = editorState.dialogConfirm; if (confirm) confirm(); });
-    document.getElementById("targetDrawerClose").addEventListener("click", closeTargetDrawer);
-    document.getElementById("targetDrawerCancel").addEventListener("click", closeTargetDrawer);
-    document.getElementById("targetDrawerConfirm").addEventListener("click", function () {
-      var draft = editorState.rule.editorDraft;
-      var before = draft.targetIds.join(",");
-      draft.targetIds = editorState.targetSelection.slice();
-      if (before !== draft.targetIds.join(",")) draft.limits = {};
-      closeTargetDrawer(); markEditorDirty(); renderEditor();
-    });
     document.addEventListener("keydown", function (event) {
       if (event.key !== "Escape") return;
-      if (document.getElementById("targetDrawerMask").classList.contains("is-open")) closeTargetDrawer();
-      else if (document.getElementById("confirmOverlay").classList.contains("is-open")) closeDialog();
+      if (document.getElementById("confirmOverlay").classList.contains("is-open")) closeDialog();
     });
   }
 
@@ -965,9 +1036,9 @@
     var draftRule = getDraftFromParams();
     if (!draftRule) { renderErrorState("草稿不存在", "请返回规则列表重新进入。", "返回规则列表", function () { go("order-limit.html"); }); return; }
     var draft = draftRule.editorDraft;
-    var allowed = stores.filter(function (store) { return draft.storeIds.indexOf(store.id) >= 0; });
+    var allowed = stores.slice();
     var selected = (draft.deployStoreIds || []).slice();
-    root.innerHTML = '<div class="olf-page">' + renderFlowHeader("选择发布门店", 82, "", "下一步") + '<main class="olf-flow-main"><section class="olf-flow-card"><h2>选择实际下发门店</h2><p class="olf-help">只能选择规则业务范围内的门店。至少选择一家门店后继续。</p><div class="olf-store-layout"><div class="olf-store-list" id="storeList">' + (allowed.length ? allowed.map(function (store) { return '<label class="olf-store-row"><input type="checkbox" value="' + esc(store.id) + '"' + (selected.indexOf(store.id) >= 0 ? " checked" : "") + ' /><span class="olf-store-copy"><strong>' + esc(store.name) + '</strong><span>MID ' + esc(store.mid) + ' · ' + esc(store.zone) + '</span></span></label>'; }).join("") : '<div class="olf-empty"><strong>暂无可下发门店</strong><span>请返回第二步维护适用门店。</span></div>') + '</div><aside class="olf-selected-panel"><h3>已选门店（<span id="selectedStoreCount">0</span>）</h3><div id="selectedStoreNames" class="olf-token-list"></div></aside></div></section></main></div>';
+    root.innerHTML = '<div class="olf-page">' + renderFlowHeader("选择发布门店", 82, "", "下一步") + '<main class="olf-flow-main"><section class="olf-flow-card"><h2>选择实际下发门店</h2><p class="olf-help">门店范围在发布阶段统一选择。至少选择一家门店后继续。</p><div class="olf-store-layout"><div class="olf-store-list" id="storeList">' + (allowed.length ? allowed.map(function (store) { return '<label class="olf-store-row"><input type="checkbox" value="' + esc(store.id) + '"' + (selected.indexOf(store.id) >= 0 ? " checked" : "") + ' /><span class="olf-store-copy"><strong>' + esc(store.name) + '</strong><span>MID ' + esc(store.mid) + ' · ' + esc(store.zone) + '</span></span></label>'; }).join("") : '<div class="olf-empty"><strong>暂无可下发门店</strong><span>当前没有可发布的门店。</span></div>') + '</div><aside class="olf-selected-panel"><h3>已选门店（<span id="selectedStoreCount">0</span>）</h3><div id="selectedStoreNames" class="olf-token-list"></div></aside></div></section></main></div>';
     function sync() {
       selected = Array.prototype.map.call(document.querySelectorAll("#storeList input:checked"), function (input) { return input.value; });
       document.getElementById("selectedStoreCount").textContent = String(selected.length);
