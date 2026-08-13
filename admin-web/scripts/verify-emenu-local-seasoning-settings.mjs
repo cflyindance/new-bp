@@ -67,6 +67,12 @@ if (/data-decision=/.test(batch)) throw new Error("Preview action rows must not 
 expect(batch, /data-toggle-preview-product/, "Preview products must support expand and collapse");
 expect(batch, /collapsedPreviewProducts/, "Product collapse state must survive preview refreshes");
 expect(batch, /previewProducts/, "Batch preview must use the grouped product endpoint");
+expect(batch, /data-preview-page-size/, "Preview must expose a page-size selector");
+expect(batch, /data-preview-page=/, "Preview must expose direct numeric page buttons");
+expect(batch, /previewPageItems/, "Preview must collapse large page ranges with ellipses");
+if (/data-preview-kind/.test(batch)) throw new Error("Preview must not expose the status filter");
+if (/可直接确认/.test(batch)) throw new Error("Preview must not display the direct-confirm status block");
+if (/previewCursors|previewPageIndex/.test(batch)) throw new Error("Preview UI must use direct number pagination instead of a cursor stack");
 expect(batch, /preview_expired[\s\S]*seasoningApi\.productSelection/, "Expired previews must revalidate the product selection before choosing the recovery step");
 if (/data-select-page/.test(batch)) throw new Error("Legacy select-page action must be removed");
 expect(menuPicker, /data-seasoning-menu-structure-picker/, "Menu hierarchy picker marker is missing");

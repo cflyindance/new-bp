@@ -614,8 +614,55 @@ function previewCandidateCompare(left, right) {
   return leftOrder - rightOrder || stableTextCompare(left.optionName, right.optionName) || stableTextCompare(left.candidateId, right.candidateId);
 }
 
+function previewProductGroups(preview, productIds, kind) {
+  return productIds.map((productId) => {
+    const candidates = (preview.candidatesByProduct.get(productId) ?? [])
+      .filter((item) => !kind || item.kind === kind)
+      .map((item) => ({ ...completeCandidatePricing(item), decision: preview.decisions[item.candidateId] }));
+    const grouped = new Map();
+    for (const item of candidates) {
+      if (!grouped.has(item.action)) grouped.set(item.action, []);
+      grouped.get(item.action).push(item);
+    }
+    const actions = [...grouped.entries()]
+      .sort(([left], [right]) => actionOrder(left) - actionOrder(right) || stableTextCompare(left, right))
+      .map(([action, actionItems]) => ({ action, items: actionItems.sort(previewCandidateCompare) }));
+    return { productId, productName: candidates[0]?.productName ?? productId, optionCount: candidates.length, unresolvedCount: 0, actions };
+  });
+}
+
 function previewProductsPage(preview, url, previewToken) {
   const kind = url.searchParams.get("kind") || "";
+  const pageValues = url.searchParams.getAll("page");
+  const cursorValues = url.searchParams.getAll("cursor");
+  const limitValues = url.searchParams.getAll("limit");
+  if (pageValues.length) {
+    if (pageValues.length !== 1) throw new Error("invalid_page");
+    if (cursorValues.length) throw new Error("invalid_pagination");
+    if (limitValues.length > 1) throw new Error("invalid_page_size");
+    const pageText = pageValues[0];
+    if (!/^[1-9]\d*$/.test(pageText)) throw new Error("invalid_page");
+    const page = Number(pageText);
+    if (!Number.isSafeInteger(page)) throw new Error("invalid_page");
+    const pageSize = limitValues.length ? Number(limitValues[0]) : 5;
+    if (!Number.isInteger(pageSize) || ![5, 10, 20, 50].includes(pageSize)) throw new Error("invalid_page_size");
+    const offset = (page - 1) * pageSize;
+    if (!Number.isSafeInteger(offset)) throw new Error("invalid_page");
+    const productIds = kind ? (preview.productIdsByKind[kind] ?? []) : preview.productIds;
+    const totalProducts = productIds.length;
+    const totalPages = Math.ceil(totalProducts / pageSize);
+    const responsePage = totalProducts === 0 ? 1 : page;
+    const pageProductIds = totalProducts === 0 ? [] : productIds.slice(offset, offset + pageSize);
+    return {
+      items: previewProductGroups(preview, pageProductIds, kind),
+      page: responsePage,
+      pageSize,
+      totalPages,
+      totalProducts,
+      unresolvedCount: previewUnresolvedCount(preview),
+      summary: previewSummary(preview),
+    };
+  }
   const requestedLimit = Number(url.searchParams.get("limit") || 5);
   const limit = Math.max(1, Math.min(50, Number.isFinite(requestedLimit) ? Math.floor(requestedLimit) : 5));
   const productIds = kind ? (preview.productIdsByKind[kind] ?? []) : preview.productIds;
@@ -629,26 +676,7 @@ function previewProductsPage(preview, url, previewToken) {
     start = afterIndex + 1;
   }
   const pageProductIds = productIds.slice(start, start + limit);
-  const items = pageProductIds.map((productId) => {
-    const candidates = (preview.candidatesByProduct.get(productId) ?? [])
-      .filter((item) => !kind || item.kind === kind)
-      .map((item) => ({ ...completeCandidatePricing(item), decision: preview.decisions[item.candidateId] }));
-    const grouped = new Map();
-    for (const item of candidates) {
-      if (!grouped.has(item.action)) grouped.set(item.action, []);
-      grouped.get(item.action).push(item);
-    }
-    const actions = [...grouped.entries()]
-      .sort(([left], [right]) => actionOrder(left) - actionOrder(right) || stableTextCompare(left, right))
-      .map(([action, actionItems]) => ({ action, items: actionItems.sort(previewCandidateCompare) }));
-    return {
-      productId,
-      productName: candidates[0]?.productName ?? productId,
-      optionCount: candidates.length,
-      unresolvedCount: 0,
-      actions,
-    };
-  });
+  const items = previewProductGroups(preview, pageProductIds, kind);
   const hasMore = start + limit < productIds.length;
   const nextCursor = hasMore && pageProductIds.length
     ? encodeProductCursor({ previewToken, indexVersion: preview.indexVersion, kind, limit, afterProductId: pageProductIds[pageProductIds.length - 1] })

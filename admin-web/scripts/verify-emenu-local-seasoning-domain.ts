@@ -16,6 +16,7 @@ import {
   generateMarkupCoefficient,
   updateBatchInputPrice,
 } from "../src/emenu-local/seasoning/seasoning-batch-pricing";
+import { previewPageItems } from "../src/emenu-local/seasoning/seasoning-preview-pagination";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -46,6 +47,11 @@ try {
   rejectedUnsafePricing = true;
 }
 assert(rejectedUnsafePricing, "Unsafe pricing products must be rejected by the client contract");
+assert(previewPageItems(1, 20).map((item) => item ?? "…").join(" ") === "1 2 3 … 20", "First-page pagination range is incorrect");
+assert(previewPageItems(2, 20).map((item) => item ?? "…").join(" ") === "1 2 3 4 … 20", "Near-start pagination range is incorrect");
+assert(previewPageItems(10, 20).map((item) => item ?? "…").join(" ") === "1 … 8 9 10 11 12 … 20", "Middle pagination range is incorrect");
+assert(previewPageItems(19, 20).map((item) => item ?? "…").join(" ") === "1 … 17 18 19 20", "Near-end pagination range is incorrect");
+assert(previewPageItems(20, 20).map((item) => item ?? "…").join(" ") === "1 … 18 19 20", "Last-page pagination range is incorrect");
 
 const pricing = createBatchOptionPricing(() => 0.5);
 assert(pricing.markupCoefficient === 1.25, "Pricing draft must retain its generated coefficient");

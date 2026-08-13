@@ -173,10 +173,24 @@ export type BatchPreviewProductGroup = {
   actions: BatchPreviewActionGroup[];
 };
 
-export type BatchPreviewProductPage = CursorPage<BatchPreviewProductGroup> & {
+export type BatchPreviewProductCursorPage = CursorPage<BatchPreviewProductGroup> & {
   unresolvedCount: number;
   summary: Record<BatchCandidateKind, number>;
 };
+
+export type BatchPreviewPageSize = 5 | 10 | 20 | 50;
+
+export type BatchPreviewProductNumberPage = {
+  items: BatchPreviewProductGroup[];
+  page: number;
+  pageSize: BatchPreviewPageSize;
+  totalPages: number;
+  totalProducts: number;
+  unresolvedCount: number;
+  summary: Record<BatchCandidateKind, number>;
+};
+
+export type BatchPreviewProductPage = BatchPreviewProductCursorPage | BatchPreviewProductNumberPage;
 
 export type BatchCommitResult = {
   version: number;

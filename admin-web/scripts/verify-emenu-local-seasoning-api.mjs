@@ -165,6 +165,7 @@ try {
   assert(productPreviewResponse.ok, "Grouped product preview request failed");
   const productPreview = await productPreviewResponse.json();
   assert(productPreview.items.length === 2 && productPreview.nextCursor, "Grouped preview must paginate by product");
+  assert(!Object.prototype.hasOwnProperty.call(productPreview, "page") && !Object.prototype.hasOwnProperty.call(productPreview, "totalPages"), "Cursor pages must not expose number-pagination metadata");
   assert(productPreview.items.every((product) => product.actions.map((group) => group.action).join(",") === "ADD,LESS,MORE,NONE"), "Each product must contain complete ordered action groups");
   assert(productPreview.items.every((product) => product.optionCount === 4 && product.actions.every((group) => group.items.length === 1)), "Grouped preview counts are incomplete");
   const firstProductIds = new Set(productPreview.items.map((product) => product.productId));
@@ -172,6 +173,38 @@ try {
   assert(nextProductPreview.items.every((product) => !firstProductIds.has(product.productId)), "Product cursor pages must not overlap");
   const wrongScopeCursor = await fetch(`${base}/relation-previews/${preview.previewToken}/products?kind=different&limit=2&cursor=${encodeURIComponent(productPreview.nextCursor)}`, { headers: sessionHeaders });
   assert(wrongScopeCursor.status === 400, "Product cursors must be scoped to the active filter");
+
+  const numberPageResponse = await fetch(`${base}/relation-previews/${preview.previewToken}/products?page=2&limit=5`, { headers: sessionHeaders });
+  assert(numberPageResponse.ok, "Direct product number pagination failed");
+  const numberPage = await numberPageResponse.json();
+  assert(numberPage.page === 2 && numberPage.pageSize === 5 && numberPage.totalProducts === selectedGroup.total && numberPage.totalPages === Math.ceil(selectedGroup.total / 5), "Number pagination metadata is incomplete");
+  assert(numberPage.items.length === Math.min(5, Math.max(0, selectedGroup.total - 5)), "Number pagination product slice is incorrect");
+  assert(!Object.prototype.hasOwnProperty.call(numberPage, "nextCursor"), "Number pages must not expose cursor metadata");
+
+  const defaultNumberPage = await fetch(`${base}/relation-previews/${preview.previewToken}/products?page=1`, { headers: sessionHeaders }).then((response) => response.json());
+  assert(defaultNumberPage.pageSize === 5 && defaultNumberPage.items.length === Math.min(5, selectedGroup.total), "Number pagination must default to five products");
+  for (const pageSize of [5, 10, 20, 50]) {
+    const sizedPage = await fetch(`${base}/relation-previews/${preview.previewToken}/products?page=1&limit=${pageSize}`, { headers: sessionHeaders }).then((response) => response.json());
+    assert(sizedPage.pageSize === pageSize && sizedPage.totalPages === Math.ceil(selectedGroup.total / pageSize), `Page size ${pageSize} metadata failed`);
+  }
+
+  const paginationConflict = await fetch(`${base}/relation-previews/${preview.previewToken}/products?page=1&cursor=anything`, { headers: sessionHeaders });
+  assert(paginationConflict.status === 400 && (await paginationConflict.json()).error === "invalid_pagination", "Page and cursor parameters must be mutually exclusive");
+  const invalidPageSize = await fetch(`${base}/relation-previews/${preview.previewToken}/products?page=1&limit=6`, { headers: sessionHeaders });
+  assert(invalidPageSize.status === 400 && (await invalidPageSize.json()).error === "invalid_page_size", "Unsupported page sizes must be rejected");
+  const duplicatePageSize = await fetch(`${base}/relation-previews/${preview.previewToken}/products?page=1&limit=5&limit=10`, { headers: sessionHeaders });
+  assert(duplicatePageSize.status === 400 && (await duplicatePageSize.json()).error === "invalid_page_size", "Repeated page sizes must be rejected");
+  const invalidPage = await fetch(`${base}/relation-previews/${preview.previewToken}/products?page=0&limit=5`, { headers: sessionHeaders });
+  assert(invalidPage.status === 400 && (await invalidPage.json()).error === "invalid_page", "Non-positive page numbers must be rejected");
+  const duplicatePage = await fetch(`${base}/relation-previews/${preview.previewToken}/products?page=1&page=2&limit=5`, { headers: sessionHeaders });
+  assert(duplicatePage.status === 400 && (await duplicatePage.json()).error === "invalid_page", "Repeated page numbers must be rejected");
+  const unsafePage = await fetch(`${base}/relation-previews/${preview.previewToken}/products?page=999999999999999999999&limit=50`, { headers: sessionHeaders });
+  assert(unsafePage.status === 400 && (await unsafePage.json()).error === "invalid_page", "Unsafe page offsets must be rejected");
+  const beyondLastPage = await fetch(`${base}/relation-previews/${preview.previewToken}/products?page=999&limit=5`, { headers: sessionHeaders }).then((response) => response.json());
+  assert(beyondLastPage.page === 999 && beyondLastPage.items.length === 0 && beyondLastPage.totalPages > 0, "Non-empty previews must echo beyond-last-page requests as empty pages");
+
+  const emptyNumberPage = await fetch(`${base}/relation-previews/${preview.previewToken}/products?kind=missing&page=9&limit=5`, { headers: sessionHeaders }).then((response) => response.json());
+  assert(emptyNumberPage.page === 1 && emptyNumberPage.totalProducts === 0 && emptyNumberPage.totalPages === 0 && emptyNumberPage.items.length === 0, "Zero-product number pages must normalize to page one");
 
   const differences = await fetch(`${base}/relation-previews/${preview.previewToken}/items?kind=different&limit=10`, { headers: sessionHeaders }).then((response) => response.json());
   assert(differences.items.length >= 1, "Difference filter must return unresolved candidates");

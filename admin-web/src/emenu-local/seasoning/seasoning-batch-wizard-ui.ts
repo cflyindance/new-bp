@@ -8,10 +8,11 @@ import {
   type BatchOptionPricingDraft,
 } from "./seasoning-batch-pricing";
 import { renderSeasoningMenuStructurePicker, syncSeasoningMenuIndeterminate } from "./seasoning-menu-structure-picker-ui";
+import { previewPageItems } from "./seasoning-preview-pagination";
 import type {
-  BatchCandidate,
   BatchCommitResult,
-  BatchPreviewProductPage,
+  BatchPreviewPageSize,
+  BatchPreviewProductNumberPage,
   BatchPreviewResponse,
   CursorPage,
   ProductSelectionDraft,
@@ -49,10 +50,9 @@ class BatchWizardController {
   private menu: SeasoningMenuStructure | null = null;
   private productQuery = "";
   private preview: BatchPreviewResponse | null = null;
-  private previewPage: BatchPreviewProductPage | null = null;
-  private previewKind = "";
-  private previewCursors: Array<string | undefined> = [undefined];
-  private previewPageIndex = 0;
+  private previewPage: BatchPreviewProductNumberPage | null = null;
+  private previewPageNumber = 1;
+  private previewPageSize: BatchPreviewPageSize = 5;
   private collapsedPreviewProducts = new Set<string>();
   private loading = false;
   private error = "";
@@ -115,9 +115,8 @@ class BatchWizardController {
     if (token) void seasoningApi.discardPreview(token).catch(() => undefined);
     this.preview = null;
     this.previewPage = null;
-    this.previewKind = "";
-    this.previewCursors = [undefined];
-    this.previewPageIndex = 0;
+    this.previewPageNumber = 1;
+    this.previewPageSize = 5;
     this.collapsedPreviewProducts.clear();
   }
 
@@ -256,24 +255,11 @@ class BatchWizardController {
     </div>`;
   }
 
-  private candidateLabel(item: BatchCandidate): string {
-    if (item.kind === "new") return t("seasoning.batch.new");
-    if (item.kind === "same") return t("seasoning.batch.same");
-    if (item.kind === "different") return t("seasoning.batch.different");
-    if (item.kind === "inactive") return t("seasoning.batch.inactive");
-    return t("seasoning.batch.unavailable");
-  }
-
   private renderPreviewStep(): string {
     if (!this.preview || !this.previewPage) return "";
     return `<div class="space-y-3">
       <div class="flex flex-wrap items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm">
         <span><strong>${this.preview.actualProductCount}</strong> 个商品</span><span class="text-muted-foreground">·</span><span><strong>${this.preview.total}</strong> 条候选关系</span>
-        <span class="ml-auto font-semibold text-emerald-700 dark:text-emerald-300">可直接确认</span>
-      </div>
-      <div class="flex flex-wrap items-center gap-2">
-        <select data-preview-kind class="${inputClass} w-auto"><option value="">全部状态</option>${(["new", "same", "different", "inactive", "unavailable"] as const).map((kind) => `<option value="${kind}" ${this.previewKind === kind ? "selected" : ""}>${escapeSeasoningHtml(this.candidateLabel({ kind } as BatchCandidate))} (${this.previewPage?.summary[kind] ?? 0})</option>`).join("")}</select>
-        <span class="ml-auto text-xs text-muted-foreground">第 ${this.previewPageIndex + 1} 页</span>
       </div>
       <div class="max-h-[48vh] space-y-3 overflow-y-auto pr-1">${this.previewPage.items.map((product) => {
         const collapsed = this.collapsedPreviewProducts.has(product.productId);
@@ -294,8 +280,15 @@ class BatchWizardController {
             </div>`).join("")}</div>
           </section>`).join("")}</div>`}
         </article>`;
-      }).join("") || `<div class="flex min-h-32 items-center justify-center rounded-xl border border-dashed border-border text-sm text-muted-foreground">当前筛选无匹配商品</div>`}</div>
-      <div class="flex items-center justify-between"><button type="button" data-preview-previous class="${secondaryButtonClass}" ${this.previewPageIndex === 0 ? "disabled" : ""}>上一页</button><button type="button" data-preview-next class="${secondaryButtonClass}" ${this.previewPage.nextCursor ? "" : "disabled"}>下一页</button></div>
+      }).join("") || `<div class="flex min-h-32 items-center justify-center rounded-xl border border-dashed border-border text-sm text-muted-foreground">暂无可预览商品</div>`}</div>
+      <div class="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3">
+        <label class="flex items-center gap-2 text-sm text-muted-foreground">每页<select data-preview-page-size class="${inputClass} !h-9 w-auto">${([5, 10, 20, 50] as const).map((size) => `<option value="${size}" ${this.previewPageSize === size ? "selected" : ""}>${size}</option>`).join("")}</select>个商品</label>
+        <nav data-preview-pagination aria-label="预览分页" class="flex flex-wrap items-center justify-end gap-1.5">
+          <button type="button" data-preview-previous class="${secondaryButtonClass} !min-h-9 !px-3" ${this.previewPageNumber <= 1 || !this.previewPage.totalPages ? "disabled" : ""}>上一页</button>
+          ${previewPageItems(this.previewPageNumber, this.previewPage.totalPages).map((page) => page === null ? `<span data-preview-ellipsis class="px-1 text-sm text-muted-foreground">…</span>` : `<button type="button" data-preview-page="${page}" aria-label="第 ${page} 页" ${page === this.previewPageNumber ? 'aria-current="page"' : ""} class="${page === this.previewPageNumber ? primaryButtonClass : secondaryButtonClass} !min-h-9 min-w-9 !px-2">${page}</button>`).join("")}
+          <button type="button" data-preview-next class="${secondaryButtonClass} !min-h-9 !px-3" ${!this.previewPage.totalPages || this.previewPageNumber >= this.previewPage.totalPages ? "disabled" : ""}>下一页</button>
+        </nav>
+      </div>
     </div>`;
   }
 
@@ -419,11 +412,8 @@ class BatchWizardController {
         productSelectionToken: this.productSelection.token,
         expectedVersion: this.input.bootstrap.version,
       });
-      this.previewKind = "";
-      this.previewCursors = [undefined];
-      this.previewPageIndex = 0;
       this.collapsedPreviewProducts.clear();
-      this.previewPage = await seasoningApi.previewProducts(this.preview.previewToken, { limit: 5 });
+      await this.loadPreviewProducts();
       this.step = 3;
     } catch (error) {
       await this.recoverFromError(error);
@@ -433,19 +423,31 @@ class BatchWizardController {
     }
   }
 
-  private async loadPreviewProducts(cursor = this.previewCursors[this.previewPageIndex]): Promise<void> {
+  private async loadPreviewProducts(): Promise<void> {
     if (!this.preview) return;
     this.loading = true;
     this.render();
     try {
-      this.previewPage = await seasoningApi.previewProducts(this.preview.previewToken, { kind: this.previewKind || undefined, cursor, limit: 5 });
+      const response = await seasoningApi.previewProducts(this.preview.previewToken, { page: this.previewPageNumber, limit: this.previewPageSize });
+      if (!("page" in response)) throw new Error("invalid_pagination_response");
+      if (response.totalPages > 0 && response.page > response.totalPages) {
+        this.previewPageNumber = response.totalPages;
+        const recovered = await seasoningApi.previewProducts(this.preview.previewToken, { page: this.previewPageNumber, limit: this.previewPageSize });
+        if (!("page" in recovered)) throw new Error("invalid_pagination_response");
+        this.previewPage = recovered;
+      } else {
+        this.previewPageNumber = response.page;
+        this.previewPage = response;
+      }
       this.error = "";
     } catch (error) {
-      if (error instanceof SeasoningApiError && error.code === "invalid_cursor") {
-        this.previewCursors = [undefined];
-        this.previewPageIndex = 0;
+      if (error instanceof SeasoningApiError && (error.code === "invalid_page" || error.code === "invalid_page_size" || error.code === "invalid_pagination")) {
+        this.previewPageNumber = 1;
+        this.previewPageSize = 5;
         try {
-          this.previewPage = await seasoningApi.previewProducts(this.preview.previewToken, { kind: this.previewKind || undefined, limit: 5 });
+          const recovered = await seasoningApi.previewProducts(this.preview.previewToken, { page: 1, limit: 5 });
+          if (!("page" in recovered)) throw new Error("invalid_pagination_response");
+          this.previewPage = recovered;
           this.error = "预览分页已刷新，已返回第一页";
         } catch (recoveryError) {
           await this.recoverFromError(recoveryError);
@@ -635,15 +637,20 @@ class BatchWizardController {
       this.render();
       return;
     }
-    if (target.hasAttribute("data-preview-previous") && this.previewPageIndex > 0) {
-      this.previewPageIndex -= 1;
+    if (target.hasAttribute("data-preview-previous") && this.previewPageNumber > 1) {
+      this.previewPageNumber -= 1;
       await this.loadPreviewProducts();
       return;
     }
-    if (target.hasAttribute("data-preview-next") && this.previewPage?.nextCursor) {
-      this.previewPageIndex += 1;
-      this.previewCursors[this.previewPageIndex] = this.previewPage.nextCursor;
-      await this.loadPreviewProducts(this.previewPage.nextCursor);
+    if (target.hasAttribute("data-preview-next") && this.previewPage && this.previewPageNumber < this.previewPage.totalPages) {
+      this.previewPageNumber += 1;
+      await this.loadPreviewProducts();
+      return;
+    }
+    const directPage = Number(target.dataset.previewPage);
+    if (Number.isInteger(directPage) && directPage >= 1 && directPage <= (this.previewPage?.totalPages ?? 0) && directPage !== this.previewPageNumber) {
+      this.previewPageNumber = directPage;
+      await this.loadPreviewProducts();
       return;
     }
   }
@@ -682,11 +689,12 @@ class BatchWizardController {
 
   private async handleChange(event: Event): Promise<void> {
     const target = event.target as HTMLInputElement | HTMLSelectElement;
-    if (target instanceof HTMLSelectElement && target.hasAttribute("data-preview-kind")) {
-      this.previewKind = target.value;
-      this.previewCursors = [undefined];
-      this.previewPageIndex = 0;
-      await this.loadPreviewProducts(undefined);
+    if (target instanceof HTMLSelectElement && target.hasAttribute("data-preview-page-size")) {
+      const pageSize = Number(target.value);
+      if (![5, 10, 20, 50].includes(pageSize)) return;
+      this.previewPageSize = pageSize as BatchPreviewPageSize;
+      this.previewPageNumber = 1;
+      await this.loadPreviewProducts();
       return;
     }
     if (!(target instanceof HTMLInputElement)) return;
