@@ -14,7 +14,7 @@
 
 ## 采用方案
 
-采用后端按商品分页的方案。预览接口返回若干商品分组，每个分组携带该商品在当前筛选条件下的全部动作和 Option 明细。分页游标以商品为边界，避免前端聚合候选关系页导致商品明细不完整，也避免一次加载全部候选关系造成性能问题。
+采用后端按商品分页的方案。预览接口返回若干商品分组，每个分组携带该商品在当前筛选条件下的全部动作和 Option 明细。分页游标以商品为边界，避免前端聚合候选关系页导致商品明细不完整，也避免把全部候选关系一次传输到客户端。
 
 ## 信息架构
 
@@ -78,13 +78,21 @@ type BatchPreviewProductPage = CursorPage<BatchPreviewProductGroup> & {
 };
 ```
 
-`GET /relation-previews/:token/items` 调整为按商品返回分组页：
+现有 `BatchCandidate` 合同已经包含数值型 `sortOrder`，商品分组接口直接沿用该字段，不新增另一套 Option 顺序来源。对于历史或异常数据中缺失、非有限的 `sortOrder`，使用下述稳定回退顺序。
+
+为避免破坏现有候选关系读取契约，保留 `GET /relation-previews/:token/items` 的响应结构和候选关系分页语义，新增：
+
+`GET /relation-previews/:token/products`
+
+新接口按商品返回分组页：
 
 - `limit` 表示每页商品数。
 - `cursor` 指向下一商品边界。
 - `kind` 仍用于候选关系状态筛选。
 - 顶部 `summary` 和全局 `unresolvedCount` 仍按全部候选关系统计。
 - 分组内 `optionCount` 和 `unresolvedCount` 按当前筛选后的可见候选关系计算。
+
+当前批量向导切换到新接口；旧候选关系接口继续由兼容测试覆盖。两个读取接口共享同一预览令牌、候选关系和决定状态。
 
 候选关系更新接口保持不变：
 
@@ -96,21 +104,29 @@ type BatchPreviewProductPage = CursorPage<BatchPreviewProductGroup> & {
 
 后端处理顺序：
 
-1. 读取预览中的全部候选关系和决定。
-2. 应用 `kind` 筛选；未筛选时保留全部候选关系。
-3. 按商品分组。
-4. 商品按稳定的商品标识顺序排列。
+1. 创建预览时，在已有候选关系数组之外建立 `candidatesByProduct`、全量有序 `productIds` 和各 `kind` 对应的有序 `productIdsByKind` 索引，并缓存全局 `summary`；同时生成只读的 `indexVersion`。
+2. 读取商品分组页时，根据 `kind` 选择对应商品 ID 索引；未筛选时使用全量索引。
+3. 先对商品 ID 索引执行游标分页，只读取本页商品 ID。
+4. 从 `candidatesByProduct` 读取本页商品明细，再应用 `kind` 筛选。
 5. 商品内按固定动作顺序分组。
-6. 动作内 Option 按 `sortOrder`、Option 名称和 `candidateId` 稳定排序。
-7. 对商品分组执行游标分页。
+6. 动作内 Option 按候选关系已有的数值型 `sortOrder` 升序、Option 名称升序和 `candidateId` 升序稳定排序；缺失或非有限的 `sortOrder` 排在有效值之后。
+
+商品顺序使用 `productId` 的 Unicode 码点升序，避免依赖运行环境区域设置。已知动作固定按 `ADD、LESS、MORE、NONE` 排序；未来未知动作排在已知动作之后，并按动作代码 Unicode 码点升序排列。
+
+预览索引仅在创建预览时构建一次。决定和价格更新不会改变候选关系的 `productId`、`action`、`kind` 或排序字段，因此无须重建商品索引；全局待处理数量按决定状态更新。
 
 状态筛选后的语义：
 
 - 只返回至少包含一条匹配候选关系的商品。
 - 商品内仅展示匹配状态的 Option。
 - 没有匹配 Option 的动作不展示。
-- 筛选后的商品和动作数量均以当前可见明细为准。
-- 顶部状态汇总仍显示全局各状态数量，便于切换筛选。
+- `optionCount` 和动作数量统计候选关系行数，而不是去重后的 `optionId` 数；同一个 Option 出现在不同动作下时分别计数。
+- 筛选后的商品、动作和 Option 数量均以当前可见候选关系为准。
+- `summary` 始终统计候选关系的原始 `kind`，不因分页、筛选、价格编辑或决定而改变。
+- 全局 `unresolvedCount` 统计尚未满足决定要求的全部候选关系：`different` 和 `inactive` 需要任一合法 `resolution`，`unavailable` 必须选择 `remove`；`new` 和 `same` 默认已处理。
+- 商品分组的 `unresolvedCount` 使用同一规则，但只统计该商品当前可见的候选关系。
+- 修改 `priceDelta` 不视为解决冲突，也不改变候选关系的 `kind`。
+- 顶部状态汇总仍显示全局各原始状态数量，便于切换筛选。
 
 ## 更新后的页面行为
 
@@ -119,17 +135,21 @@ type BatchPreviewProductPage = CursorPage<BatchPreviewProductGroup> & {
 用户对某个 Option 操作后：
 
 1. 使用现有 `candidateId` 更新预览决定。
-2. 重新请求当前商品页。
+2. 使用当前页起始游标重新请求商品页。
 3. 更新顶部全局待处理数量和状态汇总。
-4. 保留当前页码、状态筛选和商品展开状态。
+4. 保留当前页起始游标、由游标栈推导的页序号、状态筛选和商品展开状态。
 
-如果当前筛选下的某个 Option 因决定更新而不再符合筛选条件，它从当前分组中移除；若商品没有其他匹配 Option，则该商品从当前页移除。分页数据由服务端最新结果决定。
+候选关系的 `kind` 是预览生成时的原始状态，决定和价格更新不改变筛选归属。因此处理某个 Option 后，它仍保留在当前筛选和商品分组中，仅更新决定按钮状态与待处理数量。
 
 ### 分页
 
 - 上一页和下一页按商品页切换。
 - 单个商品的全部可见动作与 Option 始终位于同一页。
-- 前端继续保存每页游标，支持返回上一页。
+- 游标是服务端生成的不可透明解析字符串，内容绑定 `previewToken`、不可变的 `indexVersion`、`kind`、`limit` 和排他性的 `afterProductId`；任一作用域不匹配、商品 ID 不存在或游标格式无效时返回 `invalid_cursor`。
+- 商品页按 `afterProductId` 之后的第一项开始，避免边界商品重复。
+- 前端保存每页的“页起始游标”，第一页为 `undefined`，支持返回上一页以及更新候选关系后刷新原页。
+- 切换 `kind` 时必须清空游标栈并回到第一页。
+- `indexVersion` 在预览创建时生成，只在重建或替换整个商品索引时变化；它不同于数据库 `expectedVersion`，决定和价格 PATCH 均不修改它。因此当前页起始游标不会因这些 PATCH 失效。若服务端检测到 `indexVersion` 不匹配，则返回 `invalid_cursor`，前端清空游标并回到当前筛选第一页，同时展示非阻断提示。
 - 空页或筛选结果耗尽时展示明确空状态。
 
 ### 折叠状态
@@ -146,6 +166,7 @@ type BatchPreviewProductPage = CursorPage<BatchPreviewProductGroup> & {
 - 商品选择草稿失效：沿用现有恢复流程返回商品选择步骤。
 - 分组页为空：展示空状态，并允许切换状态筛选或返回上一页。
 - 更新候选关系失败：保留当前商品页与展开状态，展示错误提示。
+- 商品游标无效：保留状态筛选和展开状态，清空分页游标并回到第一页。
 
 ## 测试与验收
 
@@ -156,9 +177,15 @@ type BatchPreviewProductPage = CursorPage<BatchPreviewProductGroup> & {
 - 动作内 Option 使用稳定排序。
 - 商品分页不会拆分商品明细。
 - 状态筛选只保留匹配的商品、动作和 Option。
-- 全局状态汇总和待处理数量不因当前分页改变。
+- 同一个 `optionId` 出现在多个动作下时按多条候选关系统计并分别展示。
+- `summary` 使用原始 `kind`，全局状态汇总和待处理数量不因当前分页改变。
+- 价格编辑不会解决冲突或改变状态筛选归属。
 - 修改价格、保留原值、使用本次值、重新启用和移除继续以 `candidateId` 生效。
 - 候选关系更新后商品展开状态保持不变。
+- 切换状态筛选会清空游标并从第一页开始。
+- 更新候选关系后可使用当前页起始游标刷新，上一页导航仍正确。
+- 无效、跨预览、跨筛选和错误 `limit` 的游标均被拒绝并触发前端恢复。
+- 商品分组接口与旧候选关系接口共享决定状态，旧接口响应契约保持兼容。
 - 现有批次提交与过期恢复验证继续通过。
 
 ### 浏览器验收
