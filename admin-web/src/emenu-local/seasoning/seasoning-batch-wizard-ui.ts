@@ -283,12 +283,14 @@ class BatchWizardController {
             <span class="min-w-0 flex-1"><strong class="block truncate text-sm">${escapeSeasoningHtml(product.productName ?? product.productId)}</strong><span class="mt-0.5 block text-xs text-muted-foreground">${product.optionCount} 个 Option${product.unresolvedCount ? ` · ${product.unresolvedCount} 条待处理` : ""}</span></span>
             <span class="text-sm text-muted-foreground transition-transform ${collapsed ? "" : "rotate-180"}" aria-hidden="true">⌄</span>
           </button>
-          ${collapsed ? "" : `<div class="space-y-3 border-t border-border bg-background/60 p-3">${product.actions.map((group) => `<section data-preview-action="${escapeSeasoningHtml(group.action)}" class="overflow-hidden rounded-lg border border-border bg-card">
-            <header class="flex items-center justify-between bg-muted/35 px-3 py-2"><span class="inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${actionTone(group.action)}">${escapeSeasoningHtml(actionLabel(group.action))}</span><span class="text-xs font-semibold text-muted-foreground">${group.items.length} 个 Option</span></header>
-            <div class="grid grid-cols-[minmax(0,1fr)_120px] gap-3 border-t border-border bg-muted/15 px-3 py-2 text-xs font-semibold text-muted-foreground"><span>Option</span><span class="text-right">价格</span></div>
-            <div class="divide-y divide-border">${group.items.map((item) => `<div data-preview-option="${escapeSeasoningHtml(item.candidateId)}" class="grid grid-cols-[minmax(0,1fr)_120px] items-center gap-3 px-3 py-3">
+          ${collapsed ? "" : `<div class="space-y-3 border-t border-border bg-background/60 p-3">${product.actions.map((group) => `<section data-preview-action="${escapeSeasoningHtml(group.action)}" class="overflow-x-auto rounded-lg border border-border bg-card">
+            <header class="flex min-w-[620px] items-center justify-between bg-muted/35 px-3 py-2"><span class="inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${actionTone(group.action)}">${escapeSeasoningHtml(actionLabel(group.action))}</span><span class="text-xs font-semibold text-muted-foreground">${group.items.length} 个 Option</span></header>
+            <div class="grid min-w-[620px] grid-cols-[minmax(160px,1fr)_120px_100px_120px] gap-3 border-t border-border bg-muted/15 px-3 py-2 text-xs font-semibold text-muted-foreground"><span>Option</span><span class="text-right">Option 原价</span><span class="text-right">加价系数</span><span class="text-right">实际价格</span></div>
+            <div class="min-w-[620px] divide-y divide-border">${group.items.map((item) => `<div data-preview-option="${escapeSeasoningHtml(item.candidateId)}" class="grid grid-cols-[minmax(160px,1fr)_120px_100px_120px] items-center gap-3 px-3 py-3">
               <strong data-preview-option-name class="truncate text-sm">${escapeSeasoningHtml(item.optionName ?? item.optionId)}</strong>
-              <span data-preview-option-price class="text-right text-sm font-semibold tabular-nums">$${Number(item.priceDelta).toFixed(2)}</span>
+              <span data-preview-option-input-price class="text-right text-sm tabular-nums">$${Number(item.inputPrice).toFixed(2)}</span>
+              <span data-preview-option-coefficient class="text-right text-sm tabular-nums">${Number(item.markupCoefficient).toFixed(2)}</span>
+              <span data-preview-option-actual-price class="text-right text-sm font-semibold tabular-nums">$${Number(item.priceDelta).toFixed(2)}</span>
             </div>`).join("")}</div>
           </section>`).join("")}</div>`}
         </article>`;
@@ -409,6 +411,8 @@ class BatchWizardController {
           action,
           optionPrices: [...options].map(([optionId, pricing]) => ({
             optionId,
+            inputPrice: pricing.inputPrice,
+            markupCoefficient: pricing.markupCoefficient,
             priceDelta: calculateActualMarkupPrice(pricing.inputPrice, pricing.markupCoefficient),
           })),
         })),

@@ -38,6 +38,14 @@ assert(generateMarkupCoefficient(() => 0.5) === 1.25, "Coefficient must be distr
 assert(generateMarkupCoefficient(() => 1) === 2, "Coefficient must not exceed 2.00");
 assert(calculateActualMarkupPrice(10, 1.25) === 12.5, "Actual markup price must multiply input price by coefficient");
 assert(calculateActualMarkupPrice(1.01, 1.5) === 1.52, "Actual markup price must round to cents");
+assert(calculateActualMarkupPrice(0.05, 0.5) === 0.03, "Half-cent products must round once using integer pricing");
+let rejectedUnsafePricing = false;
+try {
+  calculateActualMarkupPrice(90071992547409.91, 2);
+} catch {
+  rejectedUnsafePricing = true;
+}
+assert(rejectedUnsafePricing, "Unsafe pricing products must be rejected by the client contract");
 
 const pricing = createBatchOptionPricing(() => 0.5);
 assert(pricing.markupCoefficient === 1.25, "Pricing draft must retain its generated coefficient");
@@ -50,7 +58,11 @@ const existing: ProductSeasoningRelation[] = [
 
 const candidates = expandBatchCandidates({
   action: "ADD",
-  optionPrices: [{ optionId: "o1", priceDelta: 1 }, { optionId: "o2", priceDelta: 0 }, { optionId: "o3", priceDelta: 2 }],
+  optionPrices: [
+    { optionId: "o1", inputPrice: 1, markupCoefficient: 1, priceDelta: 1 },
+    { optionId: "o2", inputPrice: 0, markupCoefficient: 1, priceDelta: 0 },
+    { optionId: "o3", inputPrice: 2, markupCoefficient: 1, priceDelta: 2 },
+  ],
   productIds: ["p1", "p2"],
   existingRelations: existing,
   activeProductIds: new Set(["p1", "p2"]),

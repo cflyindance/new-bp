@@ -54,7 +54,14 @@ expect(batch, /loadPreviewProducts/, "Batch preview must use product-group pagin
 expect(batch, /data-preview-product/, "Preview must render one top-level row per product");
 expect(batch, /data-preview-action/, "Preview products must group options by action");
 expect(batch, /data-preview-option-name/, "Preview action rows must expose the Option field");
-expect(batch, /data-preview-option-price/, "Preview action rows must expose the read-only price field");
+expect(batch, /data-preview-option-input-price/, "Preview action rows must expose the read-only Option base price");
+expect(batch, /data-preview-option-coefficient/, "Preview action rows must expose the read-only markup coefficient");
+expect(batch, /data-preview-option-actual-price/, "Preview action rows must expose the read-only actual price");
+expect(batch, /Option 原价/, "Preview action headers must label the Option base price");
+expect(batch, /加价系数/, "Preview action headers must label the markup coefficient");
+expect(batch, /实际价格/, "Preview action headers must label the actual price");
+expect(batch, /inputPrice:\s*pricing\.inputPrice/, "Preview requests must preserve the configured Option base price");
+expect(batch, /markupCoefficient:\s*pricing\.markupCoefficient/, "Preview requests must preserve the generated markup coefficient");
 if (/data-candidate-price/.test(batch)) throw new Error("Preview prices must be read-only");
 if (/data-decision=/.test(batch)) throw new Error("Preview action rows must not expose conflict decision controls");
 expect(batch, /data-toggle-preview-product/, "Preview products must support expand and collapse");
@@ -92,5 +99,8 @@ for (const key of keys) {
   const count = i18n.split(`"${key}"`).length - 1;
   if (count < 2) throw new Error(`Missing bilingual i18n key: ${key}`);
 }
+
+expect(i18n, /"seasoning\.batch\.inputPrice":\s*"输入原价"/, "Chinese configuration label must use 输入原价");
+expect(i18n, /"seasoning\.batch\.inputPrice":\s*"Input base price"/, "English configuration label must use Input base price");
 
 console.log("eMenu local seasoning settings structure verification passed");

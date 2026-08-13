@@ -85,10 +85,10 @@ try {
     headers: sessionHeaders,
     body: JSON.stringify({
       actionOptions: [
-        { action: "ADD", optionPrices: [{ optionId: "o-chili", priceDelta: 1 }] },
-        { action: "LESS", optionPrices: [{ optionId: "o-salt", priceDelta: 0 }] },
-        { action: "NONE", optionPrices: [{ optionId: "o-garlic", priceDelta: 2 }] },
-        { action: "MORE", optionPrices: [{ optionId: "o-mustard", priceDelta: 3 }] },
+        { action: "ADD", optionPrices: [{ optionId: "o-chili", inputPrice: 1.01, markupCoefficient: 1.5, priceDelta: 1.52 }] },
+        { action: "LESS", optionPrices: [{ optionId: "o-salt", inputPrice: 0, markupCoefficient: 1.38, priceDelta: 0 }] },
+        { action: "NONE", optionPrices: [{ optionId: "o-garlic", inputPrice: 1, markupCoefficient: 2, priceDelta: 2 }] },
+        { action: "MORE", optionPrices: [{ optionId: "o-mustard", inputPrice: 2, markupCoefficient: 1.5, priceDelta: 3 }] },
       ],
       productSelectionToken: selection.token,
       expectedVersion: bootstrap.version,
@@ -99,9 +99,67 @@ try {
   assert(preview.actualProductCount === selectedGroup.total && preview.page.items.length > 0, "Selection draft did not expand on the server");
   assert(preview.total === selectedGroup.total * 4 && preview.summary.different >= 1 && preview.summary.inactive >= 1 && preview.summary.unavailable >= 1, "Multi-action preview summary is incomplete");
   assert(new Set(preview.page.items.map((item) => item.action)).size >= 4, "Preview must contain candidates for every configured action");
+  assert(preview.page.items.every((item) => Number.isFinite(item.inputPrice) && Number.isFinite(item.markupCoefficient)), "Preview candidates must return complete pricing fields");
+  const preciseCandidate = preview.page.items.find((item) => item.action === "ADD" && item.optionId === "o-chili");
+  assert(preciseCandidate?.inputPrice === 1.01 && preciseCandidate.markupCoefficient === 1.5 && preciseCandidate.priceDelta === 1.52, "Preview pricing fields must preserve the fixed-point calculation");
 
   const previewPage = await fetch(`${base}/relation-previews/${preview.previewToken}/items?limit=2`, { headers: sessionHeaders }).then((response) => response.json());
   assert(previewPage.items.length === 2 && previewPage.nextCursor, "Preview candidates must use cursor pagination");
+
+  const partialPricingResponse = await fetch(`${base}/relations/preview`, {
+    method: "POST",
+    headers: sessionHeaders,
+    body: JSON.stringify({ actionOptions: [{ action: "ADD", optionPrices: [{ optionId: "o-chili", inputPrice: 1, priceDelta: 1 }] }], productSelectionToken: selection.token, expectedVersion: bootstrap.version }),
+  });
+  assert(partialPricingResponse.status === 400 && (await partialPricingResponse.json()).error === "invalid_price_fields", "Partial pricing fields must be rejected");
+
+  const inconsistentPricingResponse = await fetch(`${base}/relations/preview`, {
+    method: "POST",
+    headers: sessionHeaders,
+    body: JSON.stringify({ actionOptions: [{ action: "ADD", optionPrices: [{ optionId: "o-chili", inputPrice: 1.01, markupCoefficient: 1.5, priceDelta: 1.51 }] }], productSelectionToken: selection.token, expectedVersion: bootstrap.version }),
+  });
+  assert(inconsistentPricingResponse.status === 400 && (await inconsistentPricingResponse.json()).error === "invalid_price_calculation", "Inconsistent actual prices must be rejected");
+
+  const overPreciseInputResponse = await fetch(`${base}/relations/preview`, {
+    method: "POST",
+    headers: sessionHeaders,
+    body: JSON.stringify({ actionOptions: [{ action: "ADD", optionPrices: [{ optionId: "o-chili", inputPrice: 1.005, markupCoefficient: 1, priceDelta: 1.01 }] }], productSelectionToken: selection.token, expectedVersion: bootstrap.version }),
+  });
+  assert(overPreciseInputResponse.status === 400 && (await overPreciseInputResponse.json()).error === "invalid_input_price", "Option base prices with more than two decimals must be rejected");
+
+  const invalidCoefficientResponse = await fetch(`${base}/relations/preview`, {
+    method: "POST",
+    headers: sessionHeaders,
+    body: JSON.stringify({ actionOptions: [{ action: "ADD", optionPrices: [{ optionId: "o-chili", inputPrice: 1, markupCoefficient: 0.495, priceDelta: 0.5 }] }], productSelectionToken: selection.token, expectedVersion: bootstrap.version }),
+  });
+  assert(invalidCoefficientResponse.status === 400 && (await invalidCoefficientResponse.json()).error === "invalid_markup_coefficient", "Markup coefficients must enforce precision before range normalization");
+
+  const halfCentPreviewResponse = await fetch(`${base}/relations/preview`, {
+    method: "POST",
+    headers: sessionHeaders,
+    body: JSON.stringify({ actionOptions: [{ action: "ADD", optionPrices: [{ optionId: "o-cilantro", inputPrice: 0.05, markupCoefficient: 0.5, priceDelta: 0.03 }] }], productSelectionToken: selection.token, expectedVersion: bootstrap.version }),
+  });
+  assert(halfCentPreviewResponse.ok, "Fixed-point half-cent pricing must be accepted");
+  const halfCentPreview = await halfCentPreviewResponse.json();
+  assert(halfCentPreview.page.items.every((item) => item.inputPrice === 0.05 && item.markupCoefficient === 0.5 && item.priceDelta === 0.03), "Half-cent pricing must round once in the response");
+
+  const legacyPreviewResponse = await fetch(`${base}/relations/preview`, {
+    method: "POST",
+    headers: sessionHeaders,
+    body: JSON.stringify({ actionOptions: [{ action: "ADD", optionPrices: [{ optionId: "o-cilantro", priceDelta: 2.25 }] }], productSelectionToken: selection.token, expectedVersion: bootstrap.version }),
+  });
+  assert(legacyPreviewResponse.ok, "Legacy price-only previews must remain supported");
+  const legacyPreview = await legacyPreviewResponse.json();
+  assert(legacyPreview.page.items.every((item) => item.inputPrice === 2.25 && item.markupCoefficient === 1 && item.priceDelta === 2.25), "Legacy previews must return complete pricing fields");
+  const legacyCandidateId = legacyPreview.page.items[0].candidateId;
+  const invalidLegacyPatch = await fetch(`${base}/relation-previews/${legacyPreview.previewToken}/items`, { method: "PATCH", headers: sessionHeaders, body: JSON.stringify({ candidateId: legacyCandidateId, priceDelta: -1 }) });
+  assert(invalidLegacyPatch.status === 400 && (await invalidLegacyPatch.json()).error === "invalid_price_delta", "Legacy price patches must use strict price validation");
+  const overPreciseLegacyPatch = await fetch(`${base}/relation-previews/${legacyPreview.previewToken}/items`, { method: "PATCH", headers: sessionHeaders, body: JSON.stringify({ candidateId: legacyCandidateId, priceDelta: 2.345 }) });
+  assert(overPreciseLegacyPatch.status === 400 && (await overPreciseLegacyPatch.json()).error === "invalid_price_delta", "Legacy price patches must reject more than two decimals");
+  const legacyPatch = await fetch(`${base}/relation-previews/${legacyPreview.previewToken}/items`, { method: "PATCH", headers: sessionHeaders, body: JSON.stringify({ candidateId: legacyCandidateId, priceDelta: 2.34 }) });
+  assert(legacyPatch.ok, "Valid legacy price patches must remain supported");
+  const patchedLegacyCandidate = (await legacyPatch.json()).candidate;
+  assert(patchedLegacyCandidate.inputPrice === 2.34 && patchedLegacyCandidate.markupCoefficient === 1 && patchedLegacyCandidate.priceDelta === 2.34, "Legacy price patches must restore the pricing invariant");
 
   const productPreviewResponse = await fetch(`${base}/relation-previews/${preview.previewToken}/products?limit=2`, { headers: sessionHeaders });
   assert(productPreviewResponse.ok, "Grouped product preview request failed");

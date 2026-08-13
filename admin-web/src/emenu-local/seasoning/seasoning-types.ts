@@ -108,7 +108,12 @@ export type ProductSelectionDraft = {
   menuVersion: string;
 };
 
-export type BatchOptionPrice = { optionId: string; priceDelta: number };
+export type BatchOptionPrice = {
+  optionId: string;
+  inputPrice: number;
+  markupCoefficient: number;
+  priceDelta: number;
+};
 
 export type BatchActionOptions = {
   action: SeasoningActionCode;
@@ -124,6 +129,8 @@ export type BatchCandidate = {
   optionId: string;
   optionName?: string;
   action: SeasoningActionCode;
+  inputPrice: number;
+  markupCoefficient: number;
   priceDelta: number;
   existingPriceDelta?: number;
   sortOrder: number;

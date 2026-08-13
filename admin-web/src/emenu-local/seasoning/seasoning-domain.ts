@@ -84,6 +84,8 @@ export function expandBatchCandidates(input: {
         productId,
         optionId: option.optionId,
         action: input.action,
+        inputPrice: normalizePriceDelta(option.inputPrice),
+        markupCoefficient: option.markupCoefficient,
         priceDelta,
         existingPriceDelta: existing?.priceDelta,
         sortOrder: existing?.sortOrder ?? nextOrder,

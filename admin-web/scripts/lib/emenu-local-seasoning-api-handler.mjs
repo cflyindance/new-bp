@@ -78,6 +78,52 @@ function normalizePrice(value) {
   return Math.round((number + Number.EPSILON) * 100) / 100;
 }
 
+const MAX_SAFE_BIGINT = BigInt(Number.MAX_SAFE_INTEGER);
+
+function strictDecimalHundredths(value, errorCode) {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) throw new Error(errorCode);
+  const match = /^(\d+)(?:\.(\d{1,2}))?$/.exec(String(value));
+  if (!match) throw new Error(errorCode);
+  const scaled = BigInt(match[1]) * 100n + BigInt((match[2] ?? "").padEnd(2, "0") || "0");
+  if (scaled > MAX_SAFE_BIGINT) throw new Error(errorCode);
+  return Number(scaled);
+}
+
+function normalizePreviewPricing(option) {
+  const hasInputPrice = Object.prototype.hasOwnProperty.call(option, "inputPrice");
+  const hasCoefficient = Object.prototype.hasOwnProperty.call(option, "markupCoefficient");
+  const hasPriceDelta = Object.prototype.hasOwnProperty.call(option, "priceDelta");
+  const usesNewFormat = hasInputPrice || hasCoefficient;
+  if (usesNewFormat && (!hasInputPrice || !hasCoefficient || !hasPriceDelta || option.inputPrice === null || option.markupCoefficient === null || option.priceDelta === null)) throw new Error("invalid_price_fields");
+  if (!usesNewFormat && (!hasPriceDelta || option.priceDelta === null)) throw new Error("invalid_price_fields");
+
+  if (!usesNewFormat) {
+    const legacyCents = strictDecimalHundredths(option.priceDelta, "invalid_price_delta");
+    const legacyPrice = legacyCents / 100;
+    return { inputPrice: legacyPrice, markupCoefficient: 1, priceDelta: legacyPrice };
+  }
+
+  const inputCents = strictDecimalHundredths(option.inputPrice, "invalid_input_price");
+  const coefficientHundredths = strictDecimalHundredths(option.markupCoefficient, "invalid_markup_coefficient");
+  if (coefficientHundredths < 50 || coefficientHundredths > 200) throw new Error("invalid_markup_coefficient");
+  const suppliedActualCents = strictDecimalHundredths(option.priceDelta, "invalid_price_delta");
+  const product = BigInt(inputCents) * BigInt(coefficientHundredths);
+  if (product > MAX_SAFE_BIGINT) throw new Error("invalid_price_delta");
+  const calculatedActualCents = (product + 50n) / 100n;
+  if (calculatedActualCents > MAX_SAFE_BIGINT) throw new Error("invalid_price_delta");
+  if (BigInt(suppliedActualCents) !== calculatedActualCents) throw new Error("invalid_price_calculation");
+  return { inputPrice: inputCents / 100, markupCoefficient: coefficientHundredths / 100, priceDelta: Number(calculatedActualCents) / 100 };
+}
+
+function completeCandidatePricing(item) {
+  const pricing = normalizePreviewPricing({
+    ...(item.inputPrice !== undefined ? { inputPrice: item.inputPrice } : {}),
+    ...(item.markupCoefficient !== undefined ? { markupCoefficient: item.markupCoefficient } : {}),
+    priceDelta: item.priceDelta,
+  });
+  return { ...item, ...pricing };
+}
+
 function encodeCursor(key) {
   return Buffer.from(JSON.stringify({ after: key }), "utf8").toString("base64url");
 }
@@ -255,7 +301,7 @@ function createCandidates(db, body, scope, session) {
     const optionPrices = Array.isArray(entry.optionPrices) ? entry.optionPrices : [];
     if (!optionPrices.length) throw new Error("options_required");
     const uniqueOptions = new Map();
-    for (const option of optionPrices) uniqueOptions.set(String(option.optionId), { optionId: String(option.optionId), priceDelta: normalizePrice(option.priceDelta) });
+    for (const option of optionPrices) uniqueOptions.set(String(option.optionId), { optionId: String(option.optionId), ...normalizePreviewPricing(option) });
     return { action: entry.action, optionPrices: [...uniqueOptions.values()] };
   }).sort((left, right) => ACTIONS.indexOf(left.action) - ACTIONS.indexOf(right.action));
   const draft = resolveProductSelectionDraft(db, body.productSelectionToken, scope, session);
@@ -297,6 +343,8 @@ function createCandidates(db, body, scope, session) {
           optionId: entry.optionId,
           optionName: entry.option?.name ?? entry.optionId,
           action: actionEntry.action,
+          inputPrice: entry.inputPrice,
+          markupCoefficient: entry.markupCoefficient,
           priceDelta: entry.priceDelta,
           existingPriceDelta: existing?.priceDelta,
           sortOrder: existing?.sortOrder ?? nextOrder,
@@ -584,7 +632,7 @@ function previewProductsPage(preview, url, previewToken) {
   const items = pageProductIds.map((productId) => {
     const candidates = (preview.candidatesByProduct.get(productId) ?? [])
       .filter((item) => !kind || item.kind === kind)
-      .map((item) => ({ ...item, decision: preview.decisions[item.candidateId] }));
+      .map((item) => ({ ...completeCandidatePricing(item), decision: preview.decisions[item.candidateId] }));
     const grouped = new Map();
     for (const item of candidates) {
       if (!grouped.has(item.action)) grouped.set(item.action, []);
@@ -612,7 +660,7 @@ function previewItemsPage(preview, url) {
   const kind = url.searchParams.get("kind");
   const items = preview.items
     .filter((item) => !kind || item.kind === kind)
-    .map((item) => ({ ...item, decision: preview.decisions[item.candidateId] }))
+    .map((item) => ({ ...completeCandidatePricing(item), decision: preview.decisions[item.candidateId] }))
     .sort((left, right) => left.candidateId.localeCompare(right.candidateId));
   return {
     ...paginate(items, url, (item) => item.candidateId),
@@ -854,11 +902,13 @@ export async function handleEmenuSeasoningApi(req, res, dbPath) {
       if (resolution && !allowed.has(resolution)) throw new Error("invalid_decision");
       if (resolution) preview.decisions[item.candidateId] = { candidateId: item.candidateId, resolution };
       if (body.priceDelta !== undefined) {
-        const priceDelta = normalizePrice(body.priceDelta);
+        const priceDelta = strictDecimalHundredths(body.priceDelta, "invalid_price_delta") / 100;
         preview.decisions[item.candidateId] = { ...(preview.decisions[item.candidateId] ?? { candidateId: item.candidateId }), priceDelta };
+        item.inputPrice = priceDelta;
+        item.markupCoefficient = 1;
         item.priceDelta = priceDelta;
       }
-      sendJson(res, 200, { candidate: { ...item, decision: preview.decisions[item.candidateId] }, unresolvedCount: previewUnresolvedCount(preview), summary: previewSummary(preview) });
+      sendJson(res, 200, { candidate: { ...completeCandidatePricing(item), decision: preview.decisions[item.candidateId] }, unresolvedCount: previewUnresolvedCount(preview), summary: previewSummary(preview) });
       return true;
     }
     const previewMatch = sub.match(/^\/relation-previews\/([^/]+)$/);
@@ -880,27 +930,28 @@ export async function handleEmenuSeasoningApi(req, res, dbPath) {
         const relationByKey = new Map(next.relations.map((relation) => [relationKey(relation.productId, relation.action, relation.optionId), relation]));
         const timestamp = new Date().toISOString();
         for (const item of preview.items) {
+          const candidate = completeCandidatePricing(item);
           const decision = decisions.get(item.candidateId);
-          if (decision?.resolution === "remove" || item.kind === "unavailable") {
+          if (decision?.resolution === "remove" || candidate.kind === "unavailable") {
             summary.skipped += 1;
             continue;
           }
-          const key = relationKey(item.productId, item.action, item.optionId);
+          const key = relationKey(candidate.productId, candidate.action, candidate.optionId);
           const existing = relationByKey.get(key);
           if (!existing) {
-            const relation = { id: `r-${crypto.randomUUID()}`, productId: item.productId, action: item.action, optionId: item.optionId, priceDelta: normalizePrice(decision?.priceDelta ?? item.priceDelta), sortOrder: item.sortOrder, status: "active", createdAt: timestamp, updatedAt: timestamp };
+            const relation = { id: `r-${crypto.randomUUID()}`, productId: candidate.productId, action: candidate.action, optionId: candidate.optionId, priceDelta: candidate.priceDelta, sortOrder: candidate.sortOrder, status: "active", createdAt: timestamp, updatedAt: timestamp };
             next.relations.push(relation);
             relationByKey.set(key, relation);
             summary.created += 1;
-          } else if (item.kind === "same" || decision?.resolution === "keep") {
+          } else if (candidate.kind === "same" || decision?.resolution === "keep") {
             summary.skipped += 1;
-          } else if (item.kind === "different") {
-            existing.priceDelta = normalizePrice(decision?.priceDelta ?? item.priceDelta);
+          } else if (candidate.kind === "different") {
+            existing.priceDelta = candidate.priceDelta;
             existing.updatedAt = timestamp;
             summary.updated += 1;
-          } else if (item.kind === "inactive") {
+          } else if (candidate.kind === "inactive") {
             existing.status = "active";
-            existing.priceDelta = normalizePrice(decision?.priceDelta ?? item.priceDelta);
+            existing.priceDelta = candidate.priceDelta;
             existing.updatedAt = timestamp;
             summary.reactivated += 1;
           } else {
