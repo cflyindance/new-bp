@@ -79,6 +79,9 @@ expect(appShellMode, /exitEmenuLocalShell/, "App shell mode must expose eMenu ex
 expect(viewSwitch, /data-view-switch-option="store"/, "Demo view switch must keep the store option");
 expect(viewSwitch, /data-view-switch-chain-perspective="\$\{perspective\}"/, "Demo view switch must keep chain perspective options");
 expect(viewSwitch, /data-view-switch-option="m-platform"/, "Demo view switch must keep the M Platform option");
+expect(viewSwitch, /data-demo-switch-non-mvp-stack/, "Flat non-MVP cards must expose a stacked badge wrapper");
+expect(viewSwitch, /perspective === "group-hq"[\s\S]*renderFlatNonMvpContent/, "Flat Group HQ card must use the stacked badge wrapper");
+expect(viewSwitch, /renderFlatNonMvpContent\(t\("shell\.mPlatform"\)\)/, "Flat M Platform card must use the stacked badge wrapper");
 if (/data-view-switch-option="emenu-local"/.test(viewSwitch)) {
   throw new Error("eMenu must not remain inside the view switch menu");
 }

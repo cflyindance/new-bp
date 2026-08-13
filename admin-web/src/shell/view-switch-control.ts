@@ -142,6 +142,14 @@ function renderMPlatformMenuItem(current: ViewSwitchMode): string {
 const FLAT_CARD_CLASS =
   "relative flex min-h-12 w-full items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
+function renderFlatNonMvpContent(label: string): string {
+  return `
+    <span data-demo-switch-non-mvp-stack class="flex min-w-0 flex-1 flex-col items-start gap-1 leading-5">
+      <span>${escapeHtml(label)}</span>
+      <span class="-ml-1 flex">${renderNonMvpBadgeHtml()}</span>
+    </span>`;
+}
+
 function renderFlatStoreCard(current: ViewSwitchMode): string {
   const active = current === "store";
   return `
@@ -171,8 +179,9 @@ function renderFlatChainCard(perspective: ChainViewSwitchPerspective): string {
       ${allowed ? "" : `disabled aria-disabled="true" aria-describedby="${reasonId}"`}
     >
       <span class="flex size-4 shrink-0 items-center justify-center">${active ? CHECK_ICON : ""}</span>
-      <span class="min-w-0 flex-1 leading-5">${escapeHtml(labelForChainPerspective(perspective))}</span>
-      ${perspective === "group-hq" ? renderNonMvpBadgeHtml() : ""}
+      ${perspective === "group-hq"
+        ? renderFlatNonMvpContent(labelForChainPerspective(perspective))
+        : `<span class="min-w-0 flex-1 leading-5">${escapeHtml(labelForChainPerspective(perspective))}</span>`}
     </button>`;
 }
 
@@ -187,8 +196,7 @@ function renderFlatMPlatformCard(current: ViewSwitchMode): string {
       aria-current="${active ? "true" : "false"}"
     >
       <span class="flex size-4 shrink-0 items-center justify-center">${active ? CHECK_ICON : ""}</span>
-      <span class="min-w-0 flex-1 leading-5">${escapeHtml(t("shell.mPlatform"))}</span>
-      ${renderNonMvpBadgeHtml()}
+      ${renderFlatNonMvpContent(t("shell.mPlatform"))}
     </button>`;
 }
 
