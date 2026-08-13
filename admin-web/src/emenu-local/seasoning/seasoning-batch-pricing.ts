@@ -1,4 +1,3 @@
-export const FREE_OPTION_PROBABILITY = 0.2;
 export const MIN_MARKUP_COEFFICIENT = 0.5;
 export const MAX_MARKUP_COEFFICIENT = 2;
 
@@ -13,9 +12,7 @@ function roundCurrency(value: number): number {
 
 export function generateMarkupCoefficient(random: () => number = Math.random): number {
   const sample = Math.min(1, Math.max(0, random()));
-  if (sample < FREE_OPTION_PROBABILITY) return 0;
-  const paidSample = (sample - FREE_OPTION_PROBABILITY) / (1 - FREE_OPTION_PROBABILITY);
-  return roundCurrency(MIN_MARKUP_COEFFICIENT + paidSample * (MAX_MARKUP_COEFFICIENT - MIN_MARKUP_COEFFICIENT));
+  return roundCurrency(MIN_MARKUP_COEFFICIENT + sample * (MAX_MARKUP_COEFFICIENT - MIN_MARKUP_COEFFICIENT));
 }
 
 export function createBatchOptionPricing(random: () => number = Math.random): BatchOptionPricingDraft {
@@ -23,7 +20,6 @@ export function createBatchOptionPricing(random: () => number = Math.random): Ba
 }
 
 export function updateBatchInputPrice(draft: BatchOptionPricingDraft, inputPrice: number): BatchOptionPricingDraft {
-  if (draft.markupCoefficient === 0) return { ...draft, inputPrice: 0 };
   const normalized = Number.isFinite(inputPrice) ? Math.max(0, roundCurrency(inputPrice)) : 0;
   return { ...draft, inputPrice: normalized };
 }
