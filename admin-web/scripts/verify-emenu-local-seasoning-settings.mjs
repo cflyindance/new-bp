@@ -16,6 +16,7 @@ function expect(source, pattern, message) {
 const shell = read("src/shell/emenu-local-shell.ts");
 const page = read("src/emenu-local/seasoning/seasoning-page.ts");
 const batch = read("src/emenu-local/seasoning/seasoning-batch-wizard-ui.ts");
+const batchPricing = read("src/emenu-local/seasoning/seasoning-batch-pricing.ts");
 const menuPicker = read("src/emenu-local/seasoning/seasoning-menu-structure-picker-ui.ts");
 const drawer = read("src/emenu-local/seasoning/seasoning-product-drawer-ui.ts");
 const options = read("src/emenu-local/seasoning/seasoning-option-library-ui.ts");
@@ -34,12 +35,20 @@ expect(batch, /this\.step === 1 \? this\.renderProductStep\(\) : this\.step === 
 expect(batch, /data-open-action-picker/, "Combined configuration step must add actions in place");
 expect(batch, /data-open-option-picker/, "Combined configuration step must add options in place");
 expect(batch, /data-action-option-price/, "Linked options must support per-action pricing");
+expect(batch, /data-action-option-coefficient/, "Linked options must expose the generated markup coefficient");
+expect(batch, /data-action-option-actual-price/, "Linked options must expose the calculated actual markup price");
+expect(batch, /data-option-free/, "Free options must have a stable UI marker");
+if (/\$\{t\("seasoning\.optionCode"\)\}/.test(batch)) throw new Error("Pricing table must not display the internal option code column");
 expect(batch, /data-bulk-action-price/, "Current action must expose a bulk price input");
 expect(batch, /data-fill-bulk-price/, "Current action must expose a fill-all price action");
 expect(batch, /data-select-price-option/, "Option rows must support selecting a subset for bulk pricing");
 expect(batch, /data-select-visible-price-options/, "Option table must support selecting visible rows");
 expect(batch, /data-fill-selected-prices/, "Selected options must expose a bulk pricing action");
 expect(batch, /normalizedBulkPrice/, "Bulk price input must enforce the shared amount precision");
+expect(batchPricing, /FREE_OPTION_PROBABILITY\s*=\s*0\.2/, "Free option probability must be 20%");
+expect(batchPricing, /MIN_MARKUP_COEFFICIENT\s*=\s*0\.5/, "Paid coefficient minimum must be 0.50");
+expect(batchPricing, /MAX_MARKUP_COEFFICIENT\s*=\s*2/, "Paid coefficient maximum must be 2.00");
+expect(batch, /calculateActualMarkupPrice/, "Preview must use the calculated actual markup price");
 expect(batch, /createProductSelection/, "Batch wizard must create one server-side product selection draft");
 expect(batch, /loadMenuStructure/, "Batch wizard must load the real menu hierarchy");
 expect(batch, /loadPreviewItems/, "Batch preview must use paginated server results");
@@ -67,6 +76,10 @@ const keys = [
   "seasoning.save",
   "seasoning.discardConfirm",
   "seasoning.productSelectionExpired",
+  "seasoning.batch.inputPrice",
+  "seasoning.batch.markupCoefficient",
+  "seasoning.batch.actualMarkupPrice",
+  "seasoning.batch.free",
 ];
 
 for (const key of keys) {

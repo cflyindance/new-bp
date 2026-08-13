@@ -1,6 +1,12 @@
 import { t, tf } from "../../i18n";
 import { SEASONING_ACTIONS } from "./seasoning-domain";
 import { seasoningApi, SeasoningApiError } from "./seasoning-api";
+import {
+  calculateActualMarkupPrice,
+  createBatchOptionPricing,
+  updateBatchInputPrice,
+  type BatchOptionPricingDraft,
+} from "./seasoning-batch-pricing";
 import { renderSeasoningMenuStructurePicker, syncSeasoningMenuIndeterminate } from "./seasoning-menu-structure-picker-ui";
 import type {
   BatchCandidate,
@@ -15,7 +21,7 @@ import type {
   SeasoningMenuStructure,
   SeasoningOption,
 } from "./seasoning-types";
-import { actionLabel, actionTone, escapeSeasoningHtml, formatSeasoningMoney, inputClass, primaryButtonClass, secondaryButtonClass } from "./seasoning-ui-helpers";
+import { actionLabel, actionTone, escapeSeasoningHtml, inputClass, primaryButtonClass, secondaryButtonClass } from "./seasoning-ui-helpers";
 
 type WizardInput = {
   bootstrap: SeasoningBootstrap;
@@ -31,7 +37,7 @@ const PRODUCT_SELECTION_ERRORS = new Set([
 
 class BatchWizardController {
   private step = 1;
-  private actionOptions = new Map<SeasoningActionCode, Map<string, number>>();
+  private actionOptions = new Map<SeasoningActionCode, Map<string, BatchOptionPricingDraft>>();
   private activeAction: SeasoningActionCode | null = null;
   private actionPickerOpen = false;
   private optionPickerOpen = false;
@@ -164,7 +170,7 @@ class BatchWizardController {
   }
 
   private syncBulkPriceSelectionState(): void {
-    const visibleRows = [...this.overlay.querySelectorAll<HTMLElement>("[data-linked-option-row]:not(.hidden)")];
+    const visibleRows = [...this.overlay.querySelectorAll<HTMLElement>('[data-linked-option-row]:not(.hidden):not([data-option-free="true"])')];
     const visibleIds = visibleRows.map((row) => String(row.dataset.optionId)).filter(Boolean);
     const selectedVisibleCount = visibleIds.filter((optionId) => this.selectedPriceOptions.has(optionId)).length;
     const selectAll = this.overlay.querySelector<HTMLInputElement>("[data-select-visible-price-options]");
@@ -218,7 +224,8 @@ class BatchWizardController {
     const actionCards = [...this.actionOptions.entries()].map(([action, options]) => `<button type="button" data-activate-action="${action}" class="w-full rounded-xl border px-3 py-3 text-left transition ${this.activeAction === action ? "border-primary/50 bg-primary/5 ring-2 ring-primary/10" : "border-transparent hover:border-border hover:bg-muted/35"}"><span class="flex items-center justify-between gap-2"><span class="inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${actionTone(action)}">${escapeSeasoningHtml(actionLabel(action))}</span><span class="text-xs font-semibold text-muted-foreground">${tf("seasoning.batch.optionCount", { count: String(options.size) })}</span></span><span class="mt-2 block text-xs text-muted-foreground">${escapeSeasoningHtml(this.actionDescription(action))}</span></button>`).join("");
     const linkedOptions = activeOptions ? (this.options?.items ?? []).filter((option) => activeOptions.has(option.id)) : [];
     const bulkPrice = this.normalizedBulkPrice();
-    const bulkPriceEditor = activeOptions ? `<div class="flex shrink-0 flex-wrap items-center gap-2 rounded-lg border border-border bg-muted/25 p-1 pl-3"><label for="seasoning-bulk-price" class="text-xs font-semibold text-muted-foreground">${t("seasoning.batch.bulkPrice")}</label><span class="text-sm text-muted-foreground">$</span><input id="seasoning-bulk-price" type="number" min="0" step="0.01" inputmode="decimal" data-bulk-action-price value="${escapeSeasoningHtml(this.bulkPriceInput)}" placeholder="0.00" class="h-8 w-20 rounded-md border border-border bg-background px-2 text-right text-sm"><button type="button" data-fill-selected-prices class="${secondaryButtonClass} !min-h-8 !px-3 text-xs" ${this.selectedPriceOptions.size && bulkPrice !== null ? "" : "disabled"}><span data-selected-price-count>${tf("seasoning.batch.updateSelectedPrices", { count: String(this.selectedPriceOptions.size) })}</span></button><button type="button" data-fill-bulk-price class="${secondaryButtonClass} !min-h-8 !px-3 text-xs" ${activeOptions.size && bulkPrice !== null ? "" : "disabled"}>${t("seasoning.batch.fillAllPrices")}</button></div>` : "";
+    const paidOptionCount = activeOptions ? [...activeOptions.values()].filter((pricing) => pricing.markupCoefficient > 0).length : 0;
+    const bulkPriceEditor = activeOptions ? `<div class="flex shrink-0 flex-wrap items-center gap-2 rounded-lg border border-border bg-muted/25 p-1 pl-3"><label for="seasoning-bulk-price" class="text-xs font-semibold text-muted-foreground">${t("seasoning.batch.bulkPrice")}</label><span class="text-sm text-muted-foreground">$</span><input id="seasoning-bulk-price" type="number" min="0" step="0.01" inputmode="decimal" data-bulk-action-price value="${escapeSeasoningHtml(this.bulkPriceInput)}" placeholder="0.00" class="h-8 w-20 rounded-md border border-border bg-background px-2 text-right text-sm"><button type="button" data-fill-selected-prices class="${secondaryButtonClass} !min-h-8 !px-3 text-xs" ${this.selectedPriceOptions.size && bulkPrice !== null ? "" : "disabled"}><span data-selected-price-count>${tf("seasoning.batch.updateSelectedPrices", { count: String(this.selectedPriceOptions.size) })}</span></button><button type="button" data-fill-bulk-price class="${secondaryButtonClass} !min-h-8 !px-3 text-xs" ${paidOptionCount && bulkPrice !== null ? "" : "disabled"}>${t("seasoning.batch.fillAllPrices")}</button></div>` : "";
     return `<div class="grid min-h-[430px] overflow-hidden rounded-2xl border border-border bg-card lg:grid-cols-[270px_minmax(0,1fr)]">
       <aside class="flex flex-col border-b border-border bg-muted/20 p-4 lg:border-b-0 lg:border-r">
         <div class="flex items-center justify-between gap-3"><div><h3 class="text-sm font-semibold">${t("seasoning.batch.actions")}</h3><p class="mt-1 text-xs text-muted-foreground">${this.actionOptions.size ? tf("seasoning.batch.actionCount", { count: String(this.actionOptions.size) }) : t("seasoning.batch.noActions")}</p></div><button type="button" data-open-action-picker class="${primaryButtonClass} !min-h-9 !px-3 text-xs">＋ ${t("seasoning.batch.addAction")}</button></div>
@@ -226,7 +233,13 @@ class BatchWizardController {
       </aside>
       <section class="min-w-0 p-5">${this.activeAction && activeOptions ? `<div class="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-4"><div class="flex items-center gap-2"><span class="inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${actionTone(this.activeAction)}">${escapeSeasoningHtml(actionLabel(this.activeAction))}</span><span class="text-xs text-muted-foreground">${t("seasoning.batch.currentAction")}</span></div><div class="flex gap-2"><button type="button" data-remove-action class="${secondaryButtonClass} text-destructive">${t("seasoning.batch.removeAction")}</button><button type="button" data-open-option-picker class="${primaryButtonClass}">＋ ${t("seasoning.batch.addOptionToAction")}</button></div></div>
         <div class="mt-4 flex flex-wrap items-center gap-3"><input data-linked-option-query class="${inputClass} min-w-52 flex-1" placeholder="${t("seasoning.searchOptions")}"><span class="shrink-0 text-sm text-muted-foreground">${tf("seasoning.batch.optionCount", { count: String(activeOptions.size) })}</span>${bulkPriceEditor}</div>
-        <div class="mt-3 overflow-hidden rounded-xl border border-border"><div class="grid grid-cols-[36px_minmax(160px,1fr)_120px_170px_44px] items-center gap-3 bg-muted/45 px-4 py-3 text-xs font-semibold text-muted-foreground"><input type="checkbox" data-select-visible-price-options class="size-4 rounded border-border text-primary" aria-label="${t("seasoning.batch.selectVisibleOptions")}"><span>${t("seasoning.option")}</span><span class="hidden sm:block">${t("seasoning.optionCode")}</span><span>${t("seasoning.batch.defaultPrice")}</span><span></span></div><div data-linked-option-list>${linkedOptions.map((option) => `<div data-linked-option-row data-option-id="${escapeSeasoningHtml(option.id)}" data-search-text="${escapeSeasoningHtml(`${option.name} ${option.code}`.toLocaleLowerCase())}" class="grid grid-cols-[36px_minmax(140px,1fr)_120px_170px_44px] items-center gap-3 border-t border-border px-4 py-3"><input type="checkbox" data-select-price-option="${escapeSeasoningHtml(option.id)}" ${this.selectedPriceOptions.has(option.id) ? "checked" : ""} class="size-4 rounded border-border text-primary" aria-label="${tf("seasoning.batch.selectOptionForPrice", { option: option.name })}"><span class="min-w-0"><strong class="block truncate text-sm">${escapeSeasoningHtml(option.name)}</strong></span><span class="hidden truncate font-mono text-[11px] text-muted-foreground sm:block">${escapeSeasoningHtml(option.code)}</span><label class="flex items-center gap-2"><span class="text-sm text-muted-foreground">$</span><input type="number" min="0" step="0.01" data-action-option-price="${escapeSeasoningHtml(option.id)}" value="${activeOptions.get(option.id) ?? 0}" class="h-9 w-24 rounded-lg border border-border bg-background px-2 text-right text-sm"></label><button type="button" data-remove-action-option="${escapeSeasoningHtml(option.id)}" class="rounded-lg border-0 bg-transparent text-lg text-muted-foreground hover:bg-muted hover:text-destructive" aria-label="${t("seasoning.remove")}">×</button></div>`).join("")}</div>${activeOptions.size ? "" : `<div class="flex min-h-48 flex-col items-center justify-center border-t border-border px-4 text-center"><p class="text-sm font-semibold">${t("seasoning.batch.optionEmptyTitle")}</p><button type="button" data-open-option-picker class="${secondaryButtonClass} mt-3">${t("seasoning.batch.addOptionToAction")}</button></div>`}</div>` : `<div class="flex min-h-[380px] flex-col items-center justify-center rounded-xl border border-dashed border-border bg-muted/15 px-6 text-center"><span class="flex size-12 items-center justify-center rounded-xl bg-primary/10 text-2xl text-primary">＋</span><h3 class="mt-4 text-base font-semibold">${t("seasoning.batch.actionEmptyTitle")}</h3><p class="mt-2 max-w-md text-sm leading-6 text-muted-foreground">${t("seasoning.batch.actionEmptyDescription")}</p><button type="button" data-open-action-picker class="${primaryButtonClass} mt-5">${t("seasoning.batch.addAction")}</button></div>`}</section>
+        <div class="mt-3 overflow-x-auto rounded-xl border border-border"><div class="min-w-[720px]"><div class="grid grid-cols-[36px_minmax(140px,1fr)_130px_110px_140px_44px] items-center gap-3 bg-muted/45 px-4 py-3 text-xs font-semibold text-muted-foreground"><input type="checkbox" data-select-visible-price-options class="size-4 rounded border-border text-primary" aria-label="${t("seasoning.batch.selectVisibleOptions")}"><span>${t("seasoning.option")}</span><span>${t("seasoning.batch.inputPrice")}</span><span>${t("seasoning.batch.markupCoefficient")}</span><span>${t("seasoning.batch.actualMarkupPrice")}</span><span></span></div><div data-linked-option-list>${linkedOptions.map((option) => {
+          const pricing = activeOptions.get(option.id);
+          if (!pricing) return "";
+          const free = pricing.markupCoefficient === 0;
+          const actualPrice = calculateActualMarkupPrice(pricing.inputPrice, pricing.markupCoefficient);
+          return `<div data-linked-option-row data-option-id="${escapeSeasoningHtml(option.id)}" data-option-free="${free}" data-search-text="${escapeSeasoningHtml(`${option.name} ${option.code}`.toLocaleLowerCase())}" class="grid grid-cols-[36px_minmax(140px,1fr)_130px_110px_140px_44px] items-center gap-3 border-t border-border px-4 py-3"><input type="checkbox" data-select-price-option="${escapeSeasoningHtml(option.id)}" ${this.selectedPriceOptions.has(option.id) ? "checked" : ""} ${free ? "disabled" : ""} class="size-4 rounded border-border text-primary" aria-label="${tf("seasoning.batch.selectOptionForPrice", { option: option.name })}"><span class="min-w-0"><strong class="block truncate text-sm">${escapeSeasoningHtml(option.name)}</strong></span><label class="flex items-center gap-2"><span class="text-sm text-muted-foreground">$</span><input type="number" min="0" step="0.01" inputmode="decimal" data-action-option-price="${escapeSeasoningHtml(option.id)}" value="${free ? "" : pricing.inputPrice}" placeholder="${free ? "—" : "0.00"}" ${free ? "disabled" : ""} class="h-9 w-24 rounded-lg border border-border bg-background px-2 text-right text-sm disabled:cursor-not-allowed disabled:bg-muted/60"></label><span data-action-option-coefficient="${escapeSeasoningHtml(option.id)}" class="inline-flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${free ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-border bg-muted/35 text-foreground"}">${pricing.markupCoefficient.toFixed(2)}${free ? `<span>${t("seasoning.batch.free")}</span>` : ""}</span><span data-action-option-actual-price="${escapeSeasoningHtml(option.id)}" class="font-semibold tabular-nums ${free ? "text-emerald-700" : "text-foreground"}">$${actualPrice.toFixed(2)}${free ? `<span class="ml-1 text-xs">${t("seasoning.batch.free")}</span>` : ""}</span><button type="button" data-remove-action-option="${escapeSeasoningHtml(option.id)}" class="rounded-lg border-0 bg-transparent text-lg text-muted-foreground hover:bg-muted hover:text-destructive" aria-label="${t("seasoning.remove")}">×</button></div>`;
+        }).join("")}</div></div>${activeOptions.size ? "" : `<div class="flex min-h-48 flex-col items-center justify-center border-t border-border px-4 text-center"><p class="text-sm font-semibold">${t("seasoning.batch.optionEmptyTitle")}</p><button type="button" data-open-option-picker class="${secondaryButtonClass} mt-3">${t("seasoning.batch.addOptionToAction")}</button></div>`}</div>` : `<div class="flex min-h-[380px] flex-col items-center justify-center rounded-xl border border-dashed border-border bg-muted/15 px-6 text-center"><span class="flex size-12 items-center justify-center rounded-xl bg-primary/10 text-2xl text-primary">＋</span><h3 class="mt-4 text-base font-semibold">${t("seasoning.batch.actionEmptyTitle")}</h3><p class="mt-2 max-w-md text-sm leading-6 text-muted-foreground">${t("seasoning.batch.actionEmptyDescription")}</p><button type="button" data-open-action-picker class="${primaryButtonClass} mt-5">${t("seasoning.batch.addAction")}</button></div>`}</section>
     </div>${this.renderActionPicker()}${this.renderOptionPicker()}`;
   }
 
@@ -387,7 +400,10 @@ class BatchWizardController {
       this.preview = await seasoningApi.previewBatch({
         actionOptions: [...this.actionOptions].map(([action, options]) => ({
           action,
-          optionPrices: [...options].map(([optionId, priceDelta]) => ({ optionId, priceDelta })),
+          optionPrices: [...options].map(([optionId, pricing]) => ({
+            optionId,
+            priceDelta: calculateActualMarkupPrice(pricing.inputPrice, pricing.markupCoefficient),
+          })),
         })),
         productSelectionToken: this.productSelection.token,
         expectedVersion: this.input.bootstrap.version,
@@ -517,9 +533,11 @@ class BatchWizardController {
       return;
     }
     if (target.hasAttribute("data-confirm-options") && this.activeAction) {
-      const previous = this.actionOptions.get(this.activeAction) ?? new Map<string, number>();
-      const next = new Map<string, number>();
-      for (const option of this.options?.items ?? []) if (this.pendingOptions.has(option.id)) next.set(option.id, previous.get(option.id) ?? 0);
+      const previous = this.actionOptions.get(this.activeAction) ?? new Map<string, BatchOptionPricingDraft>();
+      const next = new Map<string, BatchOptionPricingDraft>();
+      for (const option of this.options?.items ?? []) {
+        if (this.pendingOptions.has(option.id)) next.set(option.id, previous.get(option.id) ?? createBatchOptionPricing());
+      }
       this.actionOptions.set(this.activeAction, next);
       this.selectedPriceOptions = new Set([...this.selectedPriceOptions].filter((optionId) => next.has(optionId)));
       this.optionPickerOpen = false;
@@ -541,7 +559,7 @@ class BatchWizardController {
       const price = this.normalizedBulkPrice();
       const options = this.actionOptions.get(this.activeAction);
       if (price === null || !options?.size) return;
-      for (const optionId of options.keys()) options.set(optionId, price);
+      for (const [optionId, pricing] of options) options.set(optionId, updateBatchInputPrice(pricing, price));
       this.clearAfterConfigurationChange();
       this.dirty = true;
       this.render();
@@ -551,7 +569,10 @@ class BatchWizardController {
       const price = this.normalizedBulkPrice();
       const options = this.actionOptions.get(this.activeAction);
       if (price === null || !options || !this.selectedPriceOptions.size) return;
-      for (const optionId of this.selectedPriceOptions) if (options.has(optionId)) options.set(optionId, price);
+      for (const optionId of this.selectedPriceOptions) {
+        const pricing = options.get(optionId);
+        if (pricing) options.set(optionId, updateBatchInputPrice(pricing, price));
+      }
       this.clearAfterConfigurationChange();
       this.dirty = true;
       this.render();
@@ -618,12 +639,18 @@ class BatchWizardController {
       this.bulkPriceInput = target.value;
       const fillButton = this.overlay.querySelector<HTMLButtonElement>("[data-fill-bulk-price]");
       const activeOptions = this.activeAction ? this.actionOptions.get(this.activeAction) : undefined;
-      if (fillButton) fillButton.disabled = !activeOptions?.size || this.normalizedBulkPrice() === null;
+      const hasPaidOptions = activeOptions ? [...activeOptions.values()].some((pricing) => pricing.markupCoefficient > 0) : false;
+      if (fillButton) fillButton.disabled = !hasPaidOptions || this.normalizedBulkPrice() === null;
       this.syncBulkPriceSelectionState();
     }
     const changedPriceOptionId = target.dataset.actionOptionPrice;
     if (changedPriceOptionId && this.activeAction && this.actionOptions.get(this.activeAction)?.has(changedPriceOptionId)) {
-      this.actionOptions.get(this.activeAction)?.set(changedPriceOptionId, Math.max(0, Number(target.value) || 0));
+      const pricing = this.actionOptions.get(this.activeAction)?.get(changedPriceOptionId);
+      if (!pricing) return;
+      const updated = updateBatchInputPrice(pricing, Math.max(0, Number(target.value) || 0));
+      this.actionOptions.get(this.activeAction)?.set(changedPriceOptionId, updated);
+      const actualPrice = this.overlay.querySelector<HTMLElement>(`[data-action-option-actual-price="${CSS.escape(changedPriceOptionId)}"]`);
+      if (actualPrice) actualPrice.textContent = `$${calculateActualMarkupPrice(updated.inputPrice, updated.markupCoefficient).toFixed(2)}`;
       this.clearAfterConfigurationChange();
       this.dirty = true;
     }
@@ -675,7 +702,7 @@ class BatchWizardController {
       return;
     }
     if (target.hasAttribute("data-select-visible-price-options")) {
-      const visibleIds = [...this.overlay.querySelectorAll<HTMLElement>("[data-linked-option-row]:not(.hidden)")].map((row) => String(row.dataset.optionId)).filter(Boolean);
+      const visibleIds = [...this.overlay.querySelectorAll<HTMLElement>('[data-linked-option-row]:not(.hidden):not([data-option-free="true"])')].map((row) => String(row.dataset.optionId)).filter(Boolean);
       for (const optionId of visibleIds) {
         if (target.checked) this.selectedPriceOptions.add(optionId); else this.selectedPriceOptions.delete(optionId);
         this.overlay.querySelectorAll<HTMLInputElement>("[data-select-price-option]").forEach((optionCheckbox) => {
@@ -695,7 +722,9 @@ class BatchWizardController {
     }
     const changedPriceOptionId = target.dataset.actionOptionPrice;
     if (changedPriceOptionId && this.activeAction && this.actionOptions.get(this.activeAction)?.has(changedPriceOptionId)) {
-      this.actionOptions.get(this.activeAction)?.set(changedPriceOptionId, Math.max(0, Number(target.value) || 0));
+      const pricing = this.actionOptions.get(this.activeAction)?.get(changedPriceOptionId);
+      if (!pricing) return;
+      this.actionOptions.get(this.activeAction)?.set(changedPriceOptionId, updateBatchInputPrice(pricing, Math.max(0, Number(target.value) || 0)));
       this.clearAfterConfigurationChange();
       this.dirty = true;
       return;

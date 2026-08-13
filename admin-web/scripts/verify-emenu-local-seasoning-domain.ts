@@ -10,6 +10,12 @@ import {
   buildTerminalSeasoningGroups,
   createOrderSeasoningSnapshot,
 } from "../src/emenu-local/seasoning/seasoning-terminal-rules";
+import {
+  calculateActualMarkupPrice,
+  createBatchOptionPricing,
+  generateMarkupCoefficient,
+  updateBatchInputPrice,
+} from "../src/emenu-local/seasoning/seasoning-batch-pricing";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -26,6 +32,21 @@ try {
   rejectedNegative = true;
 }
 assert(rejectedNegative, "Negative price delta must be rejected");
+
+assert(generateMarkupCoefficient(() => 0) === 0, "The lowest 20% of random samples must create a free option");
+assert(generateMarkupCoefficient(() => 0.1999) === 0, "Free option probability boundary is incorrect");
+assert(generateMarkupCoefficient(() => 0.2) === 0.5, "Paid coefficient must start at 0.50");
+assert(generateMarkupCoefficient(() => 0.6) === 1.25, "Paid coefficient must be distributed across the configured range");
+assert(generateMarkupCoefficient(() => 1) === 2, "Paid coefficient must not exceed 2.00");
+assert(calculateActualMarkupPrice(10, 1.25) === 12.5, "Actual markup price must multiply input price by coefficient");
+assert(calculateActualMarkupPrice(1.01, 1.5) === 1.52, "Actual markup price must round to cents");
+
+const freePricing = createBatchOptionPricing(() => 0.1);
+assert(freePricing.markupCoefficient === 0 && freePricing.inputPrice === 0, "Free pricing draft must start at zero");
+assert(updateBatchInputPrice(freePricing, 33).inputPrice === 0, "Free pricing draft must reject price input");
+const paidPricing = createBatchOptionPricing(() => 0.6);
+assert(paidPricing.markupCoefficient === 1.25, "Paid pricing draft must retain its generated coefficient");
+assert(updateBatchInputPrice(paidPricing, 33).inputPrice === 33, "Paid pricing draft must accept price input");
 
 const existing: ProductSeasoningRelation[] = [
   { id: "r1", productId: "p1", action: "ADD", optionId: "o1", priceDelta: 1, sortOrder: 10, status: "active", createdAt: "", updatedAt: "" },
