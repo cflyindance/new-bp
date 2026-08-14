@@ -43,6 +43,7 @@
 - 删除目标时，只清理当前门店已失效的数量单元格。
 - 当前门店全部目标被删除后，状态立即变为「未添加」，并从最终发布门店集合移除。
 - 切换全局限购对象（分类/菜品）时，维持现有重置确认，但确认后清空所有门店的商品与数量配置。
+- 人数区间、轮次区间或统计周期是规则级维度。新增、删除或修改这些维度时，必须清空全部 `storeConfigs[*].limits`，不能只清当前门店；页面沿用现有重置提示。
 
 ## 限购数量页面
 
@@ -68,7 +69,10 @@
 - 未添加：红色文案，复选框禁用。
 - 用户可以取消部分已添加门店。
 - 至少保留一家已添加门店，才允许进入确认发布。
-- 从编辑器首次进入该页面时，新增的已添加门店自动加入默认选择；用户在本页主动取消的选择在返回再进入时保留，除非商品状态变为未添加。
+- 门店第一次从「未添加」变为「已添加」时自动加入 `deployStoreIds`。
+- 用户在本页主动取消门店时，同时写入持久化的 `deployExcludedStoreIds`；重新勾选时从排除集合移除。
+- 新变为已添加且不在排除集合中的门店自动加入发布选择；用户此前主动取消的门店在刷新、返回再进入后保持未选。
+- 门店变回「未添加」时从 `deployStoreIds` 移除，但保留排除记录；再次添加商品时只有用户重新勾选才恢复发布，避免自动推翻既有取消决定。
 
 发布确认页展示最终 `deployStoreIds`，并再次校验这些门店都具有完整商品结构和数量矩阵。
 
@@ -81,6 +85,7 @@
   participatingStoreIds: ["ny-midtown"],
   activeStoreId: "ny-midtown",
   deployStoreIds: ["ny-midtown"],
+  deployExcludedStoreIds: [],
   storeConfigs: {
     "ny-midtown": {
       structureByLine: { kiosk: [], emenu: [], sdi: [] },
@@ -105,9 +110,18 @@ partyIndex|roundIndex|productLineId|targetId
 ## 兼容输出与发布数据
 
 - 规则兼容输出新增按门店的 `storeConfigs` 快照，发布时只保留 `deployStoreIds` 对应配置。
-- 顶层旧字段保留只读兼容值：取第一个最终发布门店的配置生成，供仍未支持门店维度的列表摘要使用；业务校验与发布不得依赖这些顶层字段。
+- 草稿迁移时把原顶层结构保存为只读 `legacyCompatibilityFallback`。草稿顶层旧字段按确定顺序生成：第一个 `deployStoreIds` 门店；若没有，则取第一个状态为已添加的 `participatingStoreIds` 门店；若仍没有，则使用 `legacyCompatibilityFallback`。因此草稿保存不会因尚未选择最终发布门店而覆盖历史摘要。
+- 正式发布后，顶层旧字段只取第一个最终发布门店生成；业务校验与发布不得依赖这些顶层字段。
 - 规则列表的关联摘要优先显示「N 家门店 / M 个目标」，避免只展示第一家门店商品造成误解。
 - 冲突判断若当前原型已读取 `storeConfigs`，应增加门店交集维度；尚未接入的旧消费者继续读取兼容字段，但不影响本流程按门店保存。
+
+### 草稿态与正式发布快照
+
+- 草稿的权威字段是 `editorDraft.participatingStoreIds`、`editorDraft.storeConfigs`、`editorDraft.deployStoreIds` 和 `editorDraft.deployExcludedStoreIds`，允许保留参与但本次不发布的已添加门店。
+- 点击最终发布时构建新的正式快照，不直接修改仍在内存中的草稿对象。
+- 正式快照只保留 `deployStoreIds` 对应的 `storeConfigs`；`participatingStoreIds` 设为 `deployStoreIds` 的副本；`activeStoreId` 设为第一个发布门店；`deployExcludedStoreIds` 清空。
+- 正式规则的顶层 `storeConfigs` 与 `editorDraft.storeConfigs` 必须使用同一组已裁剪门店，不能出现未发布配置或悬空 ID。
+- 后续编辑正式规则时以这个已裁剪快照为基础，因此不会恢复上一次未发布的门店配置。
 
 ## 历史规则迁移
 
@@ -115,7 +129,7 @@ partyIndex|roundIndex|productLineId|targetId
 
 1. 已有 `storeConfigs` 时只做结构归一化，不重复复制。
 2. 没有 `storeConfigs` 且存在 `deployStoreIds` 时，把原顶层商品结构、目标、产线和数量矩阵深复制到每个历史发布门店。
-3. 没有 `storeConfigs` 且没有 `deployStoreIds` 时，保留原顶层兼容字段用于摘要，但 `participatingStoreIds` 为空；进入编辑后要求用户选择门店并重新确认商品配置。
+3. 没有 `storeConfigs` 且没有 `deployStoreIds` 时，把原顶层兼容字段深复制到 `legacyCompatibilityFallback`，但 `participatingStoreIds` 为空；进入编辑后要求用户选择门店并重新确认商品配置。
 4. 迁移结果在草稿读取后立即持久化，刷新后保持一致。
 
 不同门店的配置必须深复制，禁止共享对象引用。
@@ -144,7 +158,16 @@ partyIndex|roundIndex|productLineId|targetId
 - 商品状态变为未添加：从 `deployStoreIds` 移除。
 - 门店商品目标变化：剪枝当前门店失效数量单元格。
 - 切换门店：保留其他门店配置，只清理临时批量选择。
-- 删除历史发布门店或门店不再可用：保留数据但不允许进入本次 `deployStoreIds`，页面显示不可用状态时不参与发布。
+- 删除历史发布门店或门店不再可用：保留其存储数据用于审计，但不出现在「全部可用门店」表格，也不计入已添加门店或发布校验；保存草稿时不得误删，正式发布快照会随未发布配置一起裁剪。当前静态门店原型不提供不可用门店管理 UI。
+
+## 门店基础数据
+
+当前静态 `stores` 数据为每家门店补充明确的 `address` 字段，参与门店表格和后置门店页直接读取该字段，不使用时区代替地址：
+
+- 纽约中城店：349 5th Ave, New York, NY 10016, USA
+- 法拉盛店：39-16 Prince St, Flushing, NY 11354, USA
+- 布鲁克林店：445 Albee Square W, Brooklyn, NY 11201, USA
+- 波士顿店：1 Washington Mall, Boston, MA 02108, USA
 
 ## 验收标准
 
@@ -161,4 +184,7 @@ partyIndex|roundIndex|productLineId|targetId
 11. 菜品规则和分类规则均支持按门店独立配置。
 12. 单项数量、批量数量、设为禁止、批量清空和场景切换行为不回归。
 13. 刷新、返回和重新进入后，各门店商品、数量和最终发布选择保持一致。
-
+14. 修改人数、轮次或统计周期后，所有门店的旧数量矩阵都被清空并要求重新配置。
+15. 用户主动取消发布的门店在刷新后保持未选；新变为已添加的门店自动选中。
+16. 正式发布快照不包含未发布门店配置或悬空参与门店 ID。
+17. 门店地址来自明确的 `address` 数据字段。
