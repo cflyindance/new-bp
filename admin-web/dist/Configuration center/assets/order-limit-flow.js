@@ -761,6 +761,16 @@
     editorState.batchSelectedTargetIds = [];
   }
 
+  function clearProductSearch() {
+    if (!editorState) return;
+    editorState.productSearchQuery = "";
+    editorState.productSearchComposing = false;
+  }
+
+  function normalizeProductSearchQuery(value) {
+    return String(value == null ? "" : value).trim().toLocaleLowerCase();
+  }
+
   function currentBatchTargets(draft) {
     return targetsForLine(draft, draft.activeLineId, activeStoreConfig(draft));
   }
@@ -942,6 +952,69 @@
     return '<div class="olf-token-list">' + selected.map(function (item) { return '<span class="olf-token">' + esc(item.name) + '</span>'; }).join("") + '</div>';
   }
 
+  function matchingProductSearchResults(query) {
+    var normalized = normalizeProductSearchQuery(query);
+    if (!normalized || !MenuPicker || !MenuPicker.listAllDishes) return [];
+    return MenuPicker.listAllDishes().filter(function (product) {
+      return normalizeProductSearchQuery(product.dishName).indexOf(normalized) >= 0;
+    });
+  }
+
+  function renderProductSearchResults(draft, config) {
+    var results = matchingProductSearchResults(editorState ? editorState.productSearchQuery : "");
+    if (!results.length) {
+      return '<div class="olf-empty olf-product-search-empty" data-product-search-results><strong>未找到相关商品</strong><span>当前门店全部产线中未找到相关商品</span></div>';
+    }
+    var rows = results.map(function (product) {
+      var dishKey = draft.targetType === "dish" ? product.dishKey : "";
+      var categoryKey = draft.targetType === "category" ? product.categoryKey : "";
+      var targetKey = dishKey || categoryKey;
+      var checked = MenuPicker.isNodeSelected(config.structureByLine, product.lineId, targetKey);
+      var categoryState = draft.targetType === "category"
+        ? '<span class="olf-product-search-category-state">' + (checked ? "已按分类加入" : "选择后加入分类") + '</span>'
+        : "";
+      return '<label class="olf-product-search-row' + (checked ? ' is-selected' : '') + '"><input type="checkbox" data-product-search-target data-line-id="' + esc(product.lineId) + '" data-dish-key="' + esc(product.dishKey) + '" data-category-key="' + esc(product.categoryKey) + '" aria-label="' + esc((checked ? "取消选择" : "选择") + product.dishName + "，" + product.lineLabel) + '"' + (checked ? " checked" : "") + ' /><span class="olf-product-search-copy"><strong>' + esc(product.dishName) + '</strong><span class="olf-product-search-path">' + esc(product.lineLabel + " / " + product.groupName + " / " + product.categoryName) + '</span></span>' + categoryState + '</label>';
+    }).join("");
+    return '<div class="olf-product-search-results" data-product-search-results>' + rows + '</div>';
+  }
+
+  function renderProductSearchSurfaceHtml(draft, config) {
+    var query = editorState ? editorState.productSearchQuery : "";
+    if (normalizeProductSearchQuery(query)) return renderProductSearchResults(draft, config);
+    return MenuPicker
+      ? MenuPicker.renderHtml(config.structureByLine, null, null, null, { leafLevel: draft.targetType === "category" ? "category" : "dish" })
+      : '<div class="olf-summary olf-summary--danger">商品结构选择器未加载，请刷新后重试。</div>';
+  }
+
+  function renderProductSearchSurface(draft) {
+    var surface = root.querySelector("[data-product-search-surface]");
+    if (!surface || !draft.activeStoreId) return;
+    var config = storeConfigFor(draft, draft.activeStoreId, false);
+    if (!config) return;
+    surface.innerHTML = renderProductSearchSurfaceHtml(draft, config);
+    var pickerElement = surface.querySelector("[data-brand-menu-structure-picker]");
+    if (pickerElement && MenuPicker) MenuPicker.bind(pickerElement, { leafLevel: draft.targetType === "category" ? "category" : "dish" });
+  }
+
+  function updateProductStructureSummary(draft) {
+    var summary = document.getElementById("structureSummary");
+    if (!summary || !MenuPicker) return;
+    var config = storeConfigFor(draft, draft.activeStoreId, false);
+    summary.textContent = config ? MenuPicker.formatSummary(config.structureByLine) : "未选择门店";
+  }
+
+  function applyActiveStoreStructure(draft, byLine, renderAfter) {
+    if (!byLine || !MenuPicker || !draft.activeStoreId || !isAvailableStoreId(draft.activeStoreId)) return false;
+    var config = storeConfigFor(draft, draft.activeStoreId, true);
+    config.structureByLine = MenuPicker.normalizeByLine(byLine);
+    syncStoreTargetsFromStructure(draft, config, true);
+    normalizeStoreDraft(draft);
+    delete editorState.stepErrors[2];
+    markEditorDirty();
+    if (renderAfter !== false) renderEditor();
+    return true;
+  }
+
   function renderStepTwo(draft) {
     normalizeStoreDraft(draft);
     var hasActiveStore = isAvailableStoreId(draft.activeStoreId);
@@ -950,13 +1023,14 @@
     var storeOptions = '<option value="">请选择配置门店</option>' + stores.map(function (store) {
       return '<option value="' + esc(store.id) + '"' + (draft.activeStoreId === store.id ? ' selected' : '') + '>' + esc(store.name) + '</option>';
     }).join('');
-    var pickerHtml = hasActiveStore
-      ? (MenuPicker ? MenuPicker.renderHtml(byLine, null, null, null, { leafLevel: draft.targetType === "category" ? "category" : "dish" }) : '<div class="olf-summary olf-summary--danger">商品结构选择器未加载，请刷新后重试。</div>')
+    var query = editorState ? editorState.productSearchQuery : "";
+    var searchHtml = hasActiveStore
+      ? '<label class="olf-field olf-product-search"><span class="olf-label">搜索商品</span><input class="olf-input olf-product-search-input" type="search" data-product-search value="' + esc(query) + '" placeholder="搜索当前门店全部产线商品" autocomplete="off" /></label><div data-product-search-surface>' + renderProductSearchSurfaceHtml(draft, config) + '</div>'
       : '<div class="olf-empty"><strong>请选择门店后配置商品</strong><span>不同门店的商品范围和数量矩阵将独立保存。</span></div>';
     var summary = hasActiveStore && MenuPicker ? MenuPicker.formatSummary(byLine) : "未选择门店";
     return '<div class="olf-content-head"><h2 tabindex="-1">商品配置</h2><p>通过门店下拉切换并配置各门店商品，实际生效门店将在“生效范围”中选择。</p></div>' +
       '<section class="olf-section"><h3>基础信息</h3><div class="olf-field-grid"><label class="olf-field olf-field--full"><span class="olf-label olf-required">规则名称</span><input class="olf-input" data-field="name" value="' + esc(draft.name) + '" maxlength="60" /></label><label class="olf-field olf-field--full"><span class="olf-label">规则描述</span><textarea class="olf-textarea" data-field="description" maxlength="200">' + esc(draft.description) + '</textarea></label></div></section>' +
-      '<section class="olf-section olf-store-product-config"><div class="olf-section-head"><div><h3>选择商品</h3><p class="olf-structure-summary" id="structureSummary">' + esc(summary) + '</p></div></div><label class="olf-field olf-config-store-select"><span class="olf-label olf-required">配置门店</span><select class="olf-select" data-config-store-select>' + storeOptions + '</select><span class="olf-hint">切换门店会自动保存上一家门店的商品配置。</span></label>' + pickerHtml + '</section>';
+      '<section class="olf-section olf-store-product-config"><div class="olf-section-head"><div><h3>选择商品</h3><p class="olf-structure-summary" id="structureSummary">' + esc(summary) + '</p></div></div><label class="olf-field olf-config-store-select"><span class="olf-label olf-required">配置门店</span><select class="olf-select" data-config-store-select>' + storeOptions + '</select><span class="olf-hint">切换门店会自动保存上一家门店的商品配置。</span></label>' + searchHtml + '</section>';
   }
 
   function renderRangeRows(ranges, kind) {
@@ -1219,6 +1293,7 @@
     var apply = function () {
       draft[field] = value;
       if (field === "targetType") {
+        clearProductSearch();
         draft.structureByLine = MenuPicker ? MenuPicker.emptyByLine() : { kiosk: [], emenu: [], sdi: [] };
         draft.targetIds = [];
         draft.productLines = [];
@@ -1289,6 +1364,7 @@
       editorState.highestStep = Math.max(editorState.highestStep, step);
     }
     if (editorState.currentStep === 4 && step !== 4) clearBatchSelection();
+    if (editorState.currentStep === 2 && step !== 2) clearProductSearch();
     editorState.currentStep = step;
     editorState.rule.editorDraft.currentStep = step;
     editorState.rule.editorDraft.highestStep = editorState.highestStep;
@@ -1330,9 +1406,30 @@
   function handleEditorInput(event) {
     var target = event.target;
     var draft = editorState.rule.editorDraft;
+    if (target.hasAttribute("data-product-search")) {
+      if (event.type !== "input") return;
+      editorState.productSearchQuery = target.value;
+      if (!editorState.productSearchComposing) renderProductSearchSurface(draft);
+      return;
+    }
+    if (target.hasAttribute("data-product-search-target")) {
+      if (event.type !== "change" || !MenuPicker || !draft.activeStoreId) return;
+      var searchLineId = target.getAttribute("data-line-id") || "";
+      var searchDishKey = target.getAttribute("data-dish-key") || "";
+      var searchCategoryKey = target.getAttribute("data-category-key") || "";
+      var searchTargetKey = draft.targetType === "dish" ? searchDishKey : searchCategoryKey;
+      var searchConfig = storeConfigFor(draft, draft.activeStoreId, false);
+      if (!searchConfig || !searchTargetKey) { renderProductSearchSurface(draft); return; }
+      var nextByLine = MenuPicker.setNodeSelected(searchConfig.structureByLine, searchLineId, searchTargetKey, target.checked);
+      if (!applyActiveStoreStructure(draft, nextByLine, false)) { renderProductSearchSurface(draft); return; }
+      updateProductStructureSummary(draft);
+      renderProductSearchSurface(draft);
+      return;
+    }
     if (target.hasAttribute("data-config-store-select")) {
       if (event.type !== "change") return;
       clearBatchSelection();
+      clearProductSearch();
       draft.activeStoreId = isAvailableStoreId(target.value) ? target.value : "";
       if (draft.activeStoreId) {
         var selectedStoreConfig = storeConfigFor(draft, draft.activeStoreId, true);
@@ -1418,7 +1515,8 @@
       currentStep: Number(rule.editorDraft.currentStep) || 1,
       highestStep: Math.max(Number(rule.editorDraft.highestStep) || 1, Number(rule.editorDraft.currentStep) || 1),
       stepErrors: {}, saveTimer: null, dirty: false, dialogConfirm: null,
-      batchMode: false, batchSelectedTargetIds: []
+      batchMode: false, batchSelectedTargetIds: [],
+      productSearchQuery: "", productSearchComposing: false
     };
     normalizeActiveDimensions(rule.editorDraft, editorState.currentStep === 4);
     root.innerHTML = '<div class="olf-page"><header class="olf-header"><div class="olf-header-main"><div class="olf-title-group"><button type="button" class="olf-icon-button" id="backButton" aria-label="返回规则列表">' + icon("back", 20) + '</button><div class="olf-title-copy"><h1>' + (rule.sourceRuleId ? "编辑" : "新增") + '数量与频次规则</h1><span class="olf-save-state" id="saveState">草稿已保存</span></div></div><div class="olf-actions"><button type="button" class="olf-button" id="headerSaveButton">保存草稿</button></div></div><div class="olf-progress"><span id="progressFill"></span></div></header><div class="olf-editor-shell"><nav class="olf-step-nav" id="stepNav" aria-label="规则配置步骤"></nav><main class="olf-content" id="editorContent"></main></div><footer class="olf-footer"><span class="olf-footer-note" id="footerNote"></span><div class="olf-actions"><button type="button" class="olf-button" id="previousButton">上一步</button><button type="button" class="olf-button" id="saveReturnButton" style="display:none">保存草稿并返回</button><button type="button" class="olf-button olf-button--primary" id="nextButton">下一步</button></div></footer></div>' +
@@ -1427,17 +1525,19 @@
     root.addEventListener("click", handleEditorClick);
     root.addEventListener("input", handleEditorInput);
     root.addEventListener("change", handleEditorInput);
+    root.addEventListener("compositionstart", function (event) {
+      if (event.target && event.target.hasAttribute("data-product-search")) editorState.productSearchComposing = true;
+    });
+    root.addEventListener("compositionend", function (event) {
+      if (!event.target || !event.target.hasAttribute("data-product-search")) return;
+      editorState.productSearchComposing = false;
+      editorState.productSearchQuery = event.target.value;
+      renderProductSearchSurface(editorState.rule.editorDraft);
+    });
     root.addEventListener("brand-menu-structure-change", function (event) {
       var draft = editorState.rule.editorDraft;
       var byLine = event.detail && event.detail.byLine;
-      if (!byLine || !MenuPicker || !draft.activeStoreId) return;
-      var config = storeConfigFor(draft, draft.activeStoreId, true);
-      config.structureByLine = MenuPicker.normalizeByLine(byLine);
-      syncStoreTargetsFromStructure(draft, config, true);
-      normalizeStoreDraft(draft);
-      delete editorState.stepErrors[2];
-      markEditorDirty();
-      renderEditor();
+      applyActiveStoreStructure(draft, byLine, true);
     });
     document.getElementById("headerSaveButton").addEventListener("click", function () { if (saveEditorDraft(true)) toast("草稿已保存"); });
     document.getElementById("backButton").addEventListener("click", function () {
