@@ -771,6 +771,86 @@
     return String(value == null ? "" : value).trim().toLocaleLowerCase();
   }
 
+  function createSelectedPreviewState() {
+    return {
+      open: false,
+      storeId: "",
+      lineId: "",
+      page: 1,
+      pageSize: 10,
+      selectedRowIds: [],
+      pendingDelete: null
+    };
+  }
+
+  function selectedPreviewRows(draft) {
+    if (!MenuPicker || !MenuPicker.listSelectedTargets) return [];
+    var rows = [];
+    addedStoreIds(draft).forEach(function (storeId) {
+      var store = stores.find(function (item) { return item.id === storeId; });
+      var config = storeConfigFor(draft, storeId, false);
+      if (!store || !config) return;
+      MenuPicker.listSelectedTargets(config.structureByLine, draft.targetType).forEach(function (target) {
+        rows.push({
+          rowId: [storeId, target.lineId, target.targetKey].join("|"),
+          storeId: storeId,
+          storeName: store.name,
+          lineId: target.lineId,
+          lineLabel: target.lineLabel,
+          groupName: target.groupName,
+          categoryName: target.categoryName,
+          targetKey: target.targetKey,
+          targetType: target.targetType,
+          dishName: target.dishName,
+          dishCount: target.dishCount
+        });
+      });
+    });
+    return rows;
+  }
+
+  function selectedPreviewStoreOptions(rows) {
+    var ids = rows.map(function (row) { return row.storeId; });
+    return stores.filter(function (store) { return ids.indexOf(store.id) >= 0; });
+  }
+
+  function selectedPreviewLineOptions(rows, storeId) {
+    var ids = rows.filter(function (row) { return !storeId || row.storeId === storeId; }).map(function (row) { return row.lineId; });
+    return lines.filter(function (line) { return ids.indexOf(line.id) >= 0; });
+  }
+
+  function filteredSelectedPreviewRows(rows, state) {
+    return rows.filter(function (row) {
+      return (!state.storeId || row.storeId === state.storeId) && (!state.lineId || row.lineId === state.lineId);
+    });
+  }
+
+  function pagedSelectedPreviewRows(rows, state) {
+    var start = (state.page - 1) * state.pageSize;
+    return rows.slice(start, start + state.pageSize);
+  }
+
+  function normalizeSelectedPreviewState(draft) {
+    var state = editorState.selectedPreview;
+    var rows = selectedPreviewRows(draft);
+    var storeIds = selectedPreviewStoreOptions(rows).map(function (store) { return store.id; });
+    if (state.storeId && storeIds.indexOf(state.storeId) < 0) state.storeId = "";
+    var lineIds = selectedPreviewLineOptions(rows, state.storeId).map(function (line) { return line.id; });
+    if (state.lineId && lineIds.indexOf(state.lineId) < 0) state.lineId = "";
+    var filtered = filteredSelectedPreviewRows(rows, state);
+    var totalPages = Math.max(1, Math.ceil(filtered.length / state.pageSize));
+    state.page = Math.max(1, Math.min(Number(state.page) || 1, totalPages));
+    var pageRows = pagedSelectedPreviewRows(filtered, state);
+    var pageIds = pageRows.map(function (row) { return row.rowId; });
+    state.selectedRowIds = state.selectedRowIds.filter(function (rowId) { return pageIds.indexOf(rowId) >= 0; });
+    return { rows: rows, filtered: filtered, pageRows: pageRows, totalPages: totalPages };
+  }
+
+  function resetSelectedPreview() {
+    if (!editorState) return;
+    editorState.selectedPreview = createSelectedPreviewState();
+  }
+
   function currentBatchTargets(draft) {
     return targetsForLine(draft, draft.activeLineId, activeStoreConfig(draft));
   }
@@ -1003,16 +1083,29 @@
     summary.textContent = config ? MenuPicker.formatSummary(config.structureByLine) : "未选择门店";
   }
 
-  function applyActiveStoreStructure(draft, byLine, renderAfter) {
-    if (!byLine || !MenuPicker || !draft.activeStoreId || !isAvailableStoreId(draft.activeStoreId)) return false;
-    var config = storeConfigFor(draft, draft.activeStoreId, true);
+  function updateSelectedPreviewEntry(draft) {
+    var button = root.querySelector("[data-selected-preview-open]");
+    if (!button) return;
+    var count = selectedPreviewRows(draft).length;
+    button.textContent = "查看已选商品（" + count + "）";
+    button.disabled = count === 0;
+  }
+
+  function applyStoreStructure(draft, storeId, byLine, options) {
+    options = options || {};
+    if (!byLine || !MenuPicker || !storeId || !isAvailableStoreId(storeId)) return false;
+    var config = storeConfigFor(draft, storeId, true);
     config.structureByLine = MenuPicker.normalizeByLine(byLine);
     syncStoreTargetsFromStructure(draft, config, true);
     normalizeStoreDraft(draft);
-    delete editorState.stepErrors[2];
-    markEditorDirty();
-    if (renderAfter !== false) renderEditor();
+    if (options.updateEditor !== false && editorState) delete editorState.stepErrors[2];
+    if (options.markDirty !== false) markEditorDirty();
+    if (options.render !== false) renderEditor();
     return true;
+  }
+
+  function applyActiveStoreStructure(draft, byLine, renderAfter) {
+    return applyStoreStructure(draft, draft.activeStoreId, byLine, { render: renderAfter !== false });
   }
 
   function renderStepTwo(draft) {
@@ -1028,9 +1121,161 @@
       ? '<label class="olf-field olf-product-search"><span class="olf-label">搜索商品</span><input class="olf-input olf-product-search-input" type="search" data-product-search value="' + esc(query) + '" placeholder="搜索当前门店全部产线商品" autocomplete="off" /></label><div data-product-search-surface>' + renderProductSearchSurfaceHtml(draft, config) + '</div>'
       : '<div class="olf-empty"><strong>请选择门店后配置商品</strong><span>不同门店的商品范围和数量矩阵将独立保存。</span></div>';
     var summary = hasActiveStore && MenuPicker ? MenuPicker.formatSummary(byLine) : "未选择门店";
+    var previewCount = selectedPreviewRows(draft).length;
     return '<div class="olf-content-head"><h2 tabindex="-1">商品配置</h2><p>通过门店下拉切换并配置各门店商品，实际生效门店将在“生效范围”中选择。</p></div>' +
       '<section class="olf-section"><h3>基础信息</h3><div class="olf-field-grid"><label class="olf-field olf-field--full"><span class="olf-label olf-required">规则名称</span><input class="olf-input" data-field="name" value="' + esc(draft.name) + '" maxlength="60" /></label><label class="olf-field olf-field--full"><span class="olf-label">规则描述</span><textarea class="olf-textarea" data-field="description" maxlength="200">' + esc(draft.description) + '</textarea></label></div></section>' +
-      '<section class="olf-section olf-store-product-config"><div class="olf-section-head"><div><h3>选择商品</h3><p class="olf-structure-summary" id="structureSummary">' + esc(summary) + '</p></div></div><label class="olf-field olf-config-store-select"><span class="olf-label olf-required">配置门店</span><select class="olf-select" data-config-store-select>' + storeOptions + '</select><span class="olf-hint">切换门店会自动保存上一家门店的商品配置。</span></label>' + searchHtml + '</section>';
+      '<section class="olf-section olf-store-product-config"><div class="olf-section-head"><div><h3 id="selectedProductHeading" tabindex="-1">选择商品</h3><p class="olf-structure-summary" id="structureSummary">' + esc(summary) + '</p></div><button type="button" class="olf-button olf-button--small olf-selected-preview-entry" data-selected-preview-open' + (previewCount ? '' : ' disabled') + '>查看已选商品（' + previewCount + '）</button></div><label class="olf-field olf-config-store-select"><span class="olf-label olf-required">配置门店</span><select class="olf-select" data-config-store-select>' + storeOptions + '</select><span class="olf-hint">切换门店会自动保存上一家门店的商品配置。</span></label>' + searchHtml + '</section>';
+  }
+
+  function renderSelectedPreviewDialog(draft) {
+    var overlay = document.querySelector("[data-selected-preview-overlay]");
+    if (!overlay || !editorState || !editorState.selectedPreview.open) return;
+    var state = editorState.selectedPreview;
+    var data = normalizeSelectedPreviewState(draft);
+    var storeOptions = '<option value="">全部门店</option>' + selectedPreviewStoreOptions(data.rows).map(function (store) {
+      return '<option value="' + esc(store.id) + '"' + (state.storeId === store.id ? ' selected' : '') + '>' + esc(store.name) + '</option>';
+    }).join("");
+    var lineOptions = '<option value="">全部产线</option>' + selectedPreviewLineOptions(data.rows, state.storeId).map(function (line) {
+      return '<option value="' + esc(line.id) + '"' + (state.lineId === line.id ? ' selected' : '') + '>' + esc(line.name) + '</option>';
+    }).join("");
+    var selectedIds = state.selectedRowIds;
+    var allPageSelected = data.pageRows.length > 0 && data.pageRows.every(function (row) { return selectedIds.indexOf(row.rowId) >= 0; });
+    var rowsHtml = data.pageRows.map(function (row) {
+      var checked = selectedIds.indexOf(row.rowId) >= 0;
+      var targetName = draft.targetType === "category" ? row.groupName + " / " + row.categoryName : row.dishName;
+      var detail = draft.targetType === "category" ? row.dishCount + " 个菜品" : row.groupName + " / " + row.categoryName;
+      return '<tr class="' + (checked ? 'is-selected' : '') + '" data-selected-preview-row="' + esc(row.rowId) + '"><td><input type="checkbox" data-selected-preview-row-check value="' + esc(row.rowId) + '" aria-label="选择' + esc(row.storeName + '，' + row.lineLabel + '，' + targetName) + '"' + (checked ? ' checked' : '') + ' /></td><td>' + esc(row.storeName) + '</td><td>' + esc(row.lineLabel) + '</td><td><strong>' + esc(targetName) + '</strong></td><td>' + esc(detail) + '</td><td><button type="button" class="olf-button olf-button--small olf-button--link" data-selected-preview-delete="single" data-selected-preview-row-id="' + esc(row.rowId) + '">删除</button></td></tr>';
+    }).join("");
+    var emptyHtml = data.filtered.length ? "" : '<div class="olf-empty olf-selected-preview-empty"><strong>暂无已选商品</strong><span>当前筛选条件下暂无已选商品，请调整门店或产线。</span></div>';
+    var targetHeading = draft.targetType === "category" ? "分类名称" : "商品名称";
+    var detailHeading = draft.targetType === "category" ? "包含菜品" : "商品分类";
+    overlay.innerHTML = '<section class="olf-selected-preview-dialog" role="dialog" aria-modal="true" aria-labelledby="selectedPreviewTitle"><div class="olf-selected-preview-head"><h3 id="selectedPreviewTitle" tabindex="-1">查看已选商品（' + data.rows.length + '）</h3><button type="button" class="olf-icon-button" data-selected-preview-close aria-label="关闭已选商品预览">' + icon("close", 19) + '</button></div><div class="olf-selected-preview-toolbar"><div class="olf-actions"><button type="button" class="olf-button olf-button--small" data-selected-preview-delete="batch"' + (selectedIds.length ? '' : ' disabled') + '>批量删除</button><button type="button" class="olf-button olf-button--small olf-button--danger" data-selected-preview-delete="all"' + (data.rows.length ? '' : ' disabled') + '>全部删除</button></div><div class="olf-selected-preview-filters"><label class="olf-field"><span class="olf-label">门店</span><select class="olf-select" data-selected-preview-store>' + storeOptions + '</select></label><label class="olf-field"><span class="olf-label">产线</span><select class="olf-select" data-selected-preview-line>' + lineOptions + '</select></label></div></div><div class="olf-selected-preview-table-wrap"><table class="olf-table"><thead><tr><th><input type="checkbox" data-selected-preview-select-all aria-label="全选当前页"' + (allPageSelected ? ' checked' : '') + (data.pageRows.length ? '' : ' disabled') + ' /></th><th>配置门店</th><th>产线</th><th>' + targetHeading + '</th><th>' + detailHeading + '</th><th>操作</th></tr></thead><tbody>' + rowsHtml + '</tbody></table>' + emptyHtml + '</div><div class="olf-selected-preview-pagination"><span>共 ' + data.filtered.length + ' 条</span><div class="olf-actions"><button type="button" class="olf-button olf-button--small" data-selected-preview-page="previous"' + (state.page <= 1 ? ' disabled' : '') + '>上一页</button><span>第 ' + state.page + ' / ' + data.totalPages + ' 页</span><button type="button" class="olf-button olf-button--small" data-selected-preview-page="next"' + (state.page >= data.totalPages ? ' disabled' : '') + '>下一页</button><label class="olf-selected-preview-page-size"><span class="olf-sr-only">每页条数</span><select class="olf-select" data-selected-preview-page-size><option value="10"' + (state.pageSize === 10 ? ' selected' : '') + '>10 条/页</option><option value="20"' + (state.pageSize === 20 ? ' selected' : '') + '>20 条/页</option><option value="50"' + (state.pageSize === 50 ? ' selected' : '') + '>50 条/页</option></select></label></div></div></section>';
+    overlay.classList.add("is-open");
+  }
+
+  function openSelectedPreview() {
+    resetSelectedPreview();
+    editorState.selectedPreview.open = true;
+    renderSelectedPreviewDialog(editorState.rule.editorDraft);
+    window.setTimeout(function () {
+      var title = document.getElementById("selectedPreviewTitle");
+      if (title) title.focus();
+    }, 0);
+  }
+
+  function closeSelectedPreview() {
+    var overlay = document.querySelector("[data-selected-preview-overlay]");
+    if (overlay) { overlay.classList.remove("is-open"); overlay.innerHTML = ""; }
+    resetSelectedPreview();
+    var entry = root.querySelector("[data-selected-preview-open]");
+    var fallback = document.getElementById("selectedProductHeading");
+    window.setTimeout(function () {
+      if (entry && !entry.disabled) entry.focus();
+      else if (fallback) fallback.focus();
+    }, 0);
+  }
+
+  function selectedPreviewDeleteRequest(draft, kind, rowIds) {
+    var allRows = selectedPreviewRows(draft);
+    var requested = kind === "all" ? allRows : allRows.filter(function (row) { return rowIds.indexOf(row.rowId) >= 0; });
+    var seen = {};
+    requested = requested.filter(function (row) {
+      if (seen[row.rowId]) return false;
+      seen[row.rowId] = true;
+      return true;
+    });
+    if (!requested.length) return null;
+    var title = kind === "single" ? "删除已选商品？" : kind === "batch" ? "批量删除已选商品？" : "删除全部已选商品？";
+    var copy;
+    if (kind === "single") {
+      var row = requested[0];
+      var name = row.targetType === "category" ? row.groupName + " / " + row.categoryName : row.dishName;
+      copy = "将删除“" + row.storeName + " / " + row.lineLabel + " / " + name + "”，并清理对应数量配置。";
+    } else if (kind === "batch") {
+      copy = "将删除已勾选的 " + requested.length + " 个限购对象，并清理对应数量配置。";
+    } else {
+      copy = "将删除全部 " + requested.length + " 个限购对象，不受当前筛选条件限制，并清理全部对应数量配置。";
+    }
+    return { kind: kind, rows: requested, rowIds: requested.map(function (row) { return row.rowId; }), title: title, copy: copy };
+  }
+
+  function applySelectedPreviewDeletion(draft, rowIds) {
+    var authoritative = selectedPreviewRows(draft);
+    var byId = {};
+    authoritative.forEach(function (row) { byId[row.rowId] = row; });
+    var validRows = rowIds.map(function (rowId) { return byId[rowId]; }).filter(Boolean);
+    var skipped = rowIds.length - validRows.length;
+    if (!validRows.length) return { deleted: 0, skipped: skipped };
+    var shadowDraft = cloneValue(draft);
+    normalizeStoreDraft(shadowDraft);
+    var grouped = {};
+    validRows.forEach(function (row) {
+      if (!grouped[row.storeId]) grouped[row.storeId] = [];
+      grouped[row.storeId].push(row);
+    });
+    Object.keys(grouped).forEach(function (storeId) {
+      var config = storeConfigFor(shadowDraft, storeId, false);
+      if (!config) throw new Error("门店商品配置不存在");
+      var nextByLine = config.structureByLine;
+      grouped[storeId].forEach(function (row) {
+        nextByLine = MenuPicker.setNodeSelected(nextByLine, row.lineId, row.targetKey, false);
+      });
+      if (!applyStoreStructure(shadowDraft, storeId, nextByLine, { render: false, markDirty: false, updateEditor: false })) throw new Error("商品配置更新失败");
+    });
+    var remainingIds = {};
+    selectedPreviewRows(shadowDraft).forEach(function (row) { remainingIds[row.rowId] = true; });
+    if (validRows.some(function (row) { return remainingIds[row.rowId]; })) throw new Error("商品删除校验失败");
+    shadowDraft.activeStoreId = draft.activeStoreId;
+    shadowDraft.activeLineId = draft.activeLineId;
+    normalizeStoreDraft(shadowDraft);
+    Object.keys(draft).forEach(function (key) { delete draft[key]; });
+    Object.keys(shadowDraft).forEach(function (key) { draft[key] = shadowDraft[key]; });
+    markEditorDirty();
+    return { deleted: validRows.length, skipped: skipped };
+  }
+
+  function focusSelectedPreviewAfterDelete(kind, focusIndex) {
+    window.setTimeout(function () {
+      if (kind === "single") {
+        var buttons = root.querySelectorAll('[data-selected-preview-delete="single"]');
+        if (buttons.length) { buttons[Math.min(focusIndex, buttons.length - 1)].focus(); return; }
+        var storeFilter = root.querySelector("[data-selected-preview-store]");
+        if (storeFilter) { storeFilter.focus(); return; }
+      }
+      var title = document.getElementById("selectedPreviewTitle");
+      if (title) title.focus();
+    }, 0);
+  }
+
+  function confirmSelectedPreviewDeletion(request) {
+    var draft = editorState.rule.editorDraft;
+    var currentPageRows = normalizeSelectedPreviewState(draft).pageRows;
+    var focusIndex = Math.max(0, currentPageRows.findIndex(function (row) { return request.rowIds.indexOf(row.rowId) >= 0; }));
+    closeDialog(false);
+    try {
+      var result = applySelectedPreviewDeletion(draft, request.rowIds);
+      editorState.selectedPreview.selectedRowIds = [];
+      editorState.selectedPreview.pendingDelete = null;
+      renderEditor();
+      renderSelectedPreviewDialog(draft);
+      toast("已删除 " + result.deleted + " 项" + (result.skipped ? "，跳过 " + result.skipped + " 项失效内容" : ""));
+      focusSelectedPreviewAfterDelete(request.kind, focusIndex);
+    } catch (error) {
+      editorState.selectedPreview.pendingDelete = null;
+      toast(error && error.message ? error.message : "删除失败，请重试", true);
+      renderSelectedPreviewDialog(draft);
+    }
+  }
+
+  function requestSelectedPreviewDeletion(kind, rowIds, trigger) {
+    var request = selectedPreviewDeleteRequest(editorState.rule.editorDraft, kind, rowIds || []);
+    if (!request) { toast("没有可删除的已选商品", true); return; }
+    editorState.selectedPreview.pendingDelete = request;
+    openDialog(request.title, request.copy, "确认删除", function () { confirmSelectedPreviewDeletion(request); }, {
+      danger: true,
+      returnFocus: trigger,
+      onCancel: function () { editorState.selectedPreview.pendingDelete = null; }
+    });
   }
 
   function renderRangeRows(ranges, kind) {
@@ -1255,19 +1500,38 @@
     if (heading) window.setTimeout(function () { heading.focus(); }, 0);
   }
 
-  function openDialog(title, copy, confirmLabel, onConfirm) {
+  function openDialog(title, copy, confirmLabel, onConfirm, options) {
+    options = options || {};
     var overlay = document.getElementById("confirmOverlay");
     document.getElementById("dialogTitle").textContent = title;
     document.getElementById("dialogCopy").textContent = copy;
-    document.getElementById("dialogConfirm").textContent = confirmLabel;
+    var confirmButton = document.getElementById("dialogConfirm");
+    confirmButton.textContent = confirmLabel;
+    confirmButton.className = "olf-button " + (options.danger ? "olf-button--danger" : "olf-button--primary");
     overlay.classList.add("is-open");
     editorState.dialogConfirm = onConfirm;
+    editorState.dialogOptions = options;
+    editorState.dialogReturnFocus = options.returnFocus || document.activeElement;
     document.getElementById("dialogCancel").focus();
   }
 
-  function closeDialog() {
+  function closeDialog(returnFocus) {
+    var focusTarget = editorState.dialogReturnFocus;
     document.getElementById("confirmOverlay").classList.remove("is-open");
     editorState.dialogConfirm = null;
+    editorState.dialogOptions = null;
+    editorState.dialogReturnFocus = null;
+    if (returnFocus !== false && focusTarget && document.contains(focusTarget) && !focusTarget.disabled) {
+      window.setTimeout(function () { focusTarget.focus(); }, 0);
+    }
+  }
+
+  function cancelDialog() {
+    var options = editorState.dialogOptions || {};
+    var focusTarget = editorState.dialogReturnFocus;
+    closeDialog(false);
+    if (typeof options.onCancel === "function") options.onCancel();
+    if (focusTarget && document.contains(focusTarget) && !focusTarget.disabled) window.setTimeout(function () { focusTarget.focus(); }, 0);
   }
 
   function normalizeActiveDimensions(draft, requireAddedStore) {
@@ -1375,6 +1639,23 @@
   function handleEditorClick(event) {
     var button = event.target.closest("button");
     if (!button) return;
+    if (button.hasAttribute("data-selected-preview-open")) { openSelectedPreview(); return; }
+    if (button.hasAttribute("data-selected-preview-close")) { closeSelectedPreview(); return; }
+    if (button.hasAttribute("data-selected-preview-page")) {
+      var previewState = editorState.selectedPreview;
+      previewState.page += button.getAttribute("data-selected-preview-page") === "next" ? 1 : -1;
+      previewState.selectedRowIds = [];
+      renderSelectedPreviewDialog(editorState.rule.editorDraft);
+      return;
+    }
+    if (button.hasAttribute("data-selected-preview-delete")) {
+      var deleteKind = button.getAttribute("data-selected-preview-delete");
+      var rowIds = deleteKind === "single"
+        ? [button.getAttribute("data-selected-preview-row-id")]
+        : editorState.selectedPreview.selectedRowIds.slice();
+      requestSelectedPreviewDeletion(deleteKind, rowIds, button);
+      return;
+    }
     if (button.hasAttribute("data-choice-field")) { changeChoice(button.getAttribute("data-choice-field"), button.getAttribute("data-choice-value")); return; }
     if (button.hasAttribute("data-add-range")) { addRange(button.getAttribute("data-add-range")); return; }
     if (button.hasAttribute("data-delete-range")) { deleteRange(button.getAttribute("data-delete-range"), Number(button.getAttribute("data-range-index"))); return; }
@@ -1406,6 +1687,50 @@
   function handleEditorInput(event) {
     var target = event.target;
     var draft = editorState.rule.editorDraft;
+    if (target.hasAttribute("data-selected-preview-store")) {
+      if (event.type !== "change") return;
+      editorState.selectedPreview.storeId = target.value;
+      editorState.selectedPreview.lineId = "";
+      editorState.selectedPreview.page = 1;
+      editorState.selectedPreview.selectedRowIds = [];
+      renderSelectedPreviewDialog(draft);
+      return;
+    }
+    if (target.hasAttribute("data-selected-preview-line")) {
+      if (event.type !== "change") return;
+      editorState.selectedPreview.lineId = target.value;
+      editorState.selectedPreview.page = 1;
+      editorState.selectedPreview.selectedRowIds = [];
+      renderSelectedPreviewDialog(draft);
+      return;
+    }
+    if (target.hasAttribute("data-selected-preview-page-size")) {
+      if (event.type !== "change") return;
+      var pageSize = Number(target.value);
+      editorState.selectedPreview.pageSize = [10, 20, 50].indexOf(pageSize) >= 0 ? pageSize : 10;
+      editorState.selectedPreview.page = 1;
+      editorState.selectedPreview.selectedRowIds = [];
+      renderSelectedPreviewDialog(draft);
+      return;
+    }
+    if (target.hasAttribute("data-selected-preview-row-check")) {
+      if (event.type !== "change") return;
+      var previewRowId = target.value;
+      var selectedRowIds = editorState.selectedPreview.selectedRowIds.slice();
+      var previewRowIndex = selectedRowIds.indexOf(previewRowId);
+      if (target.checked && previewRowIndex < 0) selectedRowIds.push(previewRowId);
+      if (!target.checked && previewRowIndex >= 0) selectedRowIds.splice(previewRowIndex, 1);
+      editorState.selectedPreview.selectedRowIds = selectedRowIds;
+      renderSelectedPreviewDialog(draft);
+      return;
+    }
+    if (target.hasAttribute("data-selected-preview-select-all")) {
+      if (event.type !== "change") return;
+      var previewData = normalizeSelectedPreviewState(draft);
+      editorState.selectedPreview.selectedRowIds = target.checked ? previewData.pageRows.map(function (row) { return row.rowId; }) : [];
+      renderSelectedPreviewDialog(draft);
+      return;
+    }
     if (target.hasAttribute("data-product-search")) {
       if (event.type !== "input") return;
       editorState.productSearchQuery = target.value;
@@ -1423,6 +1748,7 @@
       var nextByLine = MenuPicker.setNodeSelected(searchConfig.structureByLine, searchLineId, searchTargetKey, target.checked);
       if (!applyActiveStoreStructure(draft, nextByLine, false)) { renderProductSearchSurface(draft); return; }
       updateProductStructureSummary(draft);
+      updateSelectedPreviewEntry(draft);
       renderProductSearchSurface(draft);
       return;
     }
@@ -1514,12 +1840,14 @@
       rule: rule,
       currentStep: Number(rule.editorDraft.currentStep) || 1,
       highestStep: Math.max(Number(rule.editorDraft.highestStep) || 1, Number(rule.editorDraft.currentStep) || 1),
-      stepErrors: {}, saveTimer: null, dirty: false, dialogConfirm: null,
+      stepErrors: {}, saveTimer: null, dirty: false, dialogConfirm: null, dialogOptions: null, dialogReturnFocus: null,
       batchMode: false, batchSelectedTargetIds: [],
-      productSearchQuery: "", productSearchComposing: false
+      productSearchQuery: "", productSearchComposing: false,
+      selectedPreview: createSelectedPreviewState()
     };
     normalizeActiveDimensions(rule.editorDraft, editorState.currentStep === 4);
     root.innerHTML = '<div class="olf-page"><header class="olf-header"><div class="olf-header-main"><div class="olf-title-group"><button type="button" class="olf-icon-button" id="backButton" aria-label="返回规则列表">' + icon("back", 20) + '</button><div class="olf-title-copy"><h1>' + (rule.sourceRuleId ? "编辑" : "新增") + '数量与频次规则</h1><span class="olf-save-state" id="saveState">草稿已保存</span></div></div><div class="olf-actions"><button type="button" class="olf-button" id="headerSaveButton">保存草稿</button></div></div><div class="olf-progress"><span id="progressFill"></span></div></header><div class="olf-editor-shell"><nav class="olf-step-nav" id="stepNav" aria-label="规则配置步骤"></nav><main class="olf-content" id="editorContent"></main></div><footer class="olf-footer"><span class="olf-footer-note" id="footerNote"></span><div class="olf-actions"><button type="button" class="olf-button" id="previousButton">上一步</button><button type="button" class="olf-button" id="saveReturnButton" style="display:none">保存草稿并返回</button><button type="button" class="olf-button olf-button--primary" id="nextButton">下一步</button></div></footer></div>' +
+      '<div class="olf-overlay olf-selected-preview-overlay" data-selected-preview-overlay></div>' +
       '<div class="olf-overlay" id="confirmOverlay" role="dialog" aria-modal="true" aria-labelledby="dialogTitle"><div class="olf-dialog"><h3 id="dialogTitle">确认操作</h3><p id="dialogCopy"></p><div class="olf-dialog-actions"><button type="button" class="olf-button" id="dialogCancel">继续编辑</button><button type="button" class="olf-button olf-button--primary" id="dialogConfirm">确定</button></div></div></div>';
     renderEditor();
     root.addEventListener("click", handleEditorClick);
@@ -1557,11 +1885,12 @@
       if (!saveEditorDraft(true)) return;
       go("order-limit-publish-confirm.html?draftId=" + encodeURIComponent(editorState.rule.id));
     });
-    document.getElementById("dialogCancel").addEventListener("click", closeDialog);
+    document.getElementById("dialogCancel").addEventListener("click", cancelDialog);
     document.getElementById("dialogConfirm").addEventListener("click", function () { var confirm = editorState.dialogConfirm; if (confirm) confirm(); });
     document.addEventListener("keydown", function (event) {
       if (event.key !== "Escape") return;
-      if (document.getElementById("confirmOverlay").classList.contains("is-open")) closeDialog();
+      if (document.getElementById("confirmOverlay").classList.contains("is-open")) { cancelDialog(); return; }
+      if (editorState.selectedPreview.open) closeSelectedPreview();
     });
   }
 
