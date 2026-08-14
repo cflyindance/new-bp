@@ -1,19 +1,18 @@
 const now = "2026-08-12T00:00:00.000Z";
 
 export const UNCATEGORIZED_OPTION_CATEGORY_ID = "option-category-uncategorized";
+export const DEFAULT_OPTION_CATEGORY_BACKFILL_MIGRATION = "defaultOptionCategoryBackfillV1";
 
-const optionCategories = [
+export const DEFAULT_OPTION_CATEGORIES = [
   { id: "option-category-aromatics", code: "AROMATICS", name: "香辛料", status: "active", sortOrder: 10, system: false, createdAt: now, updatedAt: now },
   { id: "option-category-seasoning", code: "SEASONING", name: "基础调味", status: "active", sortOrder: 20, system: false, createdAt: now, updatedAt: now },
   { id: "option-category-sauces", code: "SAUCES", name: "酱料", status: "active", sortOrder: 30, system: false, createdAt: now, updatedAt: now },
-  { id: UNCATEGORIZED_OPTION_CATEGORY_ID, code: "UNCATEGORIZED", name: "未分类", status: "active", sortOrder: 999999, system: true, createdAt: now, updatedAt: now },
 ];
 
-const optionCategoryBySlug = new Map([
-  ...["cilantro", "scallion", "garlic", "chili", "pepper", "ginger", "onion", "cumin"].map((slug) => [slug, "option-category-aromatics"]),
-  ...["peanut", "salt", "sugar", "vinegar", "sesame"].map((slug) => [slug, "option-category-seasoning"]),
-  ...["soy", "sesame-oil", "mustard", "mayo", "ketchup", "hot-sauce", "cheese"].map((slug) => [slug, "option-category-sauces"]),
-]);
+const optionCategories = [
+  ...DEFAULT_OPTION_CATEGORIES,
+  { id: UNCATEGORIZED_OPTION_CATEGORY_ID, code: "UNCATEGORIZED", name: "未分类", status: "active", sortOrder: 999999, system: true, createdAt: now, updatedAt: now },
+];
 
 const optionRows = [
   ["cilantro", "CILANTRO", "香菜", "Cilantro"],
@@ -37,6 +36,20 @@ const optionRows = [
   ["hot-sauce", "HOT_SAUCE", "辣酱", "Hot sauce"],
   ["cheese", "CHEESE", "芝士", "Cheese"],
 ];
+
+const categoryBySlug = new Map([
+  ...["cilantro", "scallion", "garlic", "chili", "pepper", "ginger", "onion", "cumin"].map((slug) => [slug, "option-category-aromatics"]),
+  ...["peanut", "salt", "sugar", "vinegar", "sesame"].map((slug) => [slug, "option-category-seasoning"]),
+  ...["soy", "sesame-oil", "mustard", "mayo", "ketchup", "hot-sauce", "cheese"].map((slug) => [slug, "option-category-sauces"]),
+]);
+
+export const DEFAULT_OPTION_CATEGORY_BACKFILL_ITEMS = optionRows.map(([slug, code]) => ({
+  optionId: `o-${slug}`,
+  code,
+  categoryId: categoryBySlug.get(slug) ?? UNCATEGORIZED_OPTION_CATEGORY_ID,
+})).filter((item) => item.categoryId !== UNCATEGORIZED_OPTION_CATEGORY_ID);
+
+const optionCategoryById = new Map(DEFAULT_OPTION_CATEGORY_BACKFILL_ITEMS.map((item) => [item.optionId, item.categoryId]));
 
 const products = [
   ["p-kungpao", "D1001", "宫保鸡丁", "cat-hot", "热菜", 10, true, "active"],
@@ -85,7 +98,7 @@ export function createEmenuSeasoningSeedDb() {
     code,
     name,
     nameEn,
-    categoryId: optionCategoryBySlug.get(id) ?? UNCATEGORIZED_OPTION_CATEGORY_ID,
+    categoryId: optionCategoryById.get(`o-${id}`) ?? UNCATEGORIZED_OPTION_CATEGORY_ID,
     status: id === "mustard" ? "inactive" : "active",
     sortOrder: (index + 1) * 10,
     createdAt: now,
@@ -117,6 +130,7 @@ export function createEmenuSeasoningSeedDb() {
   return {
     version: 1,
     updatedAt: now,
+    migrations: { [DEFAULT_OPTION_CATEGORY_BACKFILL_MIGRATION]: true },
     permissions: { canView: true, canEdit: true },
     categories: [
       { id: "cat-hot", name: "热菜", sortOrder: 10 },
@@ -126,7 +140,7 @@ export function createEmenuSeasoningSeedDb() {
     ],
     menuGroups,
     products,
-    optionCategories,
+    optionCategories: structuredClone(optionCategories),
     options,
     relations,
     auditLog: [],

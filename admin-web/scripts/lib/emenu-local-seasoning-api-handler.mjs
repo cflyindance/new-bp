@@ -1,7 +1,13 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { createEmenuSeasoningSeedDb, UNCATEGORIZED_OPTION_CATEGORY_ID } from "./emenu-local-seasoning-seed.mjs";
+import {
+  createEmenuSeasoningSeedDb,
+  DEFAULT_OPTION_CATEGORIES,
+  DEFAULT_OPTION_CATEGORY_BACKFILL_ITEMS,
+  DEFAULT_OPTION_CATEGORY_BACKFILL_MIGRATION,
+  UNCATEGORIZED_OPTION_CATEGORY_ID,
+} from "./emenu-local-seasoning-seed.mjs";
 
 const API_PREFIX = "/api/v1/emenu-local/seasoning";
 const ACTIONS = ["ADD", "LESS", "MORE", "NONE"];
@@ -48,20 +54,29 @@ function sendJson(res, status, payload) {
   res.end(JSON.stringify(payload));
 }
 
-function loadDb(dbPath) {
+export function loadEmenuSeasoningDb(dbPath, persistDb = saveDbAtomic) {
   if (!fs.existsSync(dbPath)) return createEmenuSeasoningSeedDb();
+  let parsed;
   try {
-    const parsed = JSON.parse(fs.readFileSync(dbPath, "utf8"));
+    parsed = JSON.parse(fs.readFileSync(dbPath, "utf8"));
     if (!parsed || !Array.isArray(parsed.options) || !Array.isArray(parsed.relations)) throw new Error("invalid_db");
     if (!Array.isArray(parsed.menuGroups) || !parsed.menuGroups.length) parsed.menuGroups = createEmenuSeasoningSeedDb().menuGroups;
-    if (normalizeOptionCategoryDb(parsed)) {
-      parsed.version = Number(parsed.version || 0) + 1;
-      appendAudit(parsed, "migrate_option_categories", { uncategorizedCategoryId: UNCATEGORIZED_OPTION_CATEGORY_ID });
-      return saveDbAtomic(dbPath, parsed);
-    }
-    return parsed;
   } catch {
     return createEmenuSeasoningSeedDb();
+  }
+  const normalization = normalizeOptionCategoryDb(parsed);
+  if (!normalization.changed) return parsed;
+  parsed.version = Number(parsed.version || 0) + 1;
+  appendAudit(parsed, "migrate_option_categories", {
+    uncategorizedCategoryId: UNCATEGORIZED_OPTION_CATEGORY_ID,
+    [DEFAULT_OPTION_CATEGORY_BACKFILL_MIGRATION]: normalization.backfillEvaluated,
+    movedOptionCount: normalization.movedOptionCount,
+    categoryConflicts: normalization.categoryConflicts,
+  });
+  try {
+    return persistDb(dbPath, parsed);
+  } catch {
+    throw apiError("seasoning_db_migration_failed", 500);
   }
 }
 
@@ -238,28 +253,71 @@ function optionPickerSnapshot(db, url) {
   };
 }
 
+function normalizedCategoryCode(category) {
+  return String(category?.code ?? "").trim().toUpperCase();
+}
+
+function categoryMigrationConflict(reason, detail = {}) {
+  throw apiError("option_category_migration_conflict", 500, { reason, ...detail });
+}
+
 function normalizeOptionCategoryDb(db) {
   let changed = false;
+  let movedOptionCount = 0;
+  const categoryConflicts = [];
+  const hasMigrationState = db.migrations && typeof db.migrations === "object" && !Array.isArray(db.migrations);
+  const backfillRequired = !hasMigrationState || db.migrations[DEFAULT_OPTION_CATEGORY_BACKFILL_MIGRATION] !== true;
+
   if (!Array.isArray(db.optionCategories)) {
     db.optionCategories = [];
     changed = true;
   }
-  if (!db.optionCategories.some((category) => !category.system)) {
-    const defaults = createEmenuSeasoningSeedDb().optionCategories.filter((category) => !category.system);
-    db.optionCategories.push(...structuredClone(defaults));
-    changed = true;
-  }
+
   let uncategorized = db.optionCategories.find((category) => category.id === UNCATEGORIZED_OPTION_CATEGORY_ID);
+  const uncategorizedCodeOwners = db.optionCategories.filter((category) => normalizedCategoryCode(category) === UNCATEGORIZED_OPTION_CATEGORY_CODE);
+  const conflictingUncategorizedOwner = uncategorizedCodeOwners.find((category) => category.id !== UNCATEGORIZED_OPTION_CATEGORY_ID);
+  if ((!uncategorized && uncategorizedCodeOwners.length) || conflictingUncategorizedOwner) {
+    categoryMigrationConflict("uncategorized_code_conflict", { occupiedByCategoryId: conflictingUncategorizedOwner?.id ?? uncategorizedCodeOwners[0]?.id });
+  }
   if (!uncategorized) {
     const timestamp = new Date().toISOString();
     uncategorized = { id: UNCATEGORIZED_OPTION_CATEGORY_ID, code: UNCATEGORIZED_OPTION_CATEGORY_CODE, name: "未分类", status: "active", sortOrder: 999999, system: true, createdAt: timestamp, updatedAt: timestamp };
     db.optionCategories.push(uncategorized);
     changed = true;
   }
-  if (uncategorized.code !== UNCATEGORIZED_OPTION_CATEGORY_CODE || uncategorized.name !== "未分类" || uncategorized.status !== "active" || uncategorized.system !== true) {
+  if (uncategorized.code !== UNCATEGORIZED_OPTION_CATEGORY_CODE || uncategorized.name !== "未分类" || uncategorized.status !== "active" || uncategorized.system !== true || uncategorized.sortOrder !== 999999) {
     Object.assign(uncategorized, { code: UNCATEGORIZED_OPTION_CATEGORY_CODE, name: "未分类", status: "active", system: true, sortOrder: 999999 });
     changed = true;
   }
+
+  const backfillTargets = new Map();
+  if (backfillRequired) {
+    const timestamp = new Date().toISOString();
+    for (const definition of DEFAULT_OPTION_CATEGORIES) {
+      let category = db.optionCategories.find((item) => item.id === definition.id);
+      const codeOwners = db.optionCategories.filter((item) => normalizedCategoryCode(item) === definition.code);
+      const conflictingCodeOwner = codeOwners.find((item) => item.id !== definition.id);
+      if (!category && codeOwners.length) {
+        categoryConflicts.push({ categoryId: definition.id, code: definition.code, reason: "code_owned_by_other_id", occupiedByCategoryId: codeOwners[0].id });
+        continue;
+      }
+      if (category && (normalizedCategoryCode(category) !== definition.code || conflictingCodeOwner)) {
+        categoryConflicts.push({ categoryId: definition.id, code: definition.code, reason: conflictingCodeOwner ? "duplicate_code_owner" : "fixed_id_code_mismatch", occupiedByCategoryId: conflictingCodeOwner?.id ?? null });
+        continue;
+      }
+      if (!category) {
+        category = { ...structuredClone(definition), createdAt: timestamp, updatedAt: timestamp };
+        db.optionCategories.push(category);
+        changed = true;
+      } else if (category.code !== definition.code) {
+        category.code = definition.code;
+        category.updatedAt = timestamp;
+        changed = true;
+      }
+      backfillTargets.set(category.id, category);
+    }
+  }
+
   const validIds = new Set(db.optionCategories.map((category) => category.id));
   for (const option of db.options) {
     if (!option.categoryId || !validIds.has(option.categoryId)) {
@@ -267,7 +325,23 @@ function normalizeOptionCategoryDb(db) {
       changed = true;
     }
   }
-  return changed;
+
+  if (backfillRequired) {
+    const assignmentByOptionId = new Map(DEFAULT_OPTION_CATEGORY_BACKFILL_ITEMS.map((item) => [item.optionId, item]));
+    for (const option of db.options) {
+      const assignment = assignmentByOptionId.get(option.id);
+      const target = assignment ? backfillTargets.get(assignment.categoryId) : null;
+      if (option.categoryId !== UNCATEGORIZED_OPTION_CATEGORY_ID || !assignment || String(option.code ?? "").trim().toUpperCase() !== assignment.code || target?.status !== "active") continue;
+      option.categoryId = target.id;
+      movedOptionCount += 1;
+      changed = true;
+    }
+    if (!hasMigrationState) db.migrations = {};
+    db.migrations[DEFAULT_OPTION_CATEGORY_BACKFILL_MIGRATION] = true;
+    changed = true;
+  }
+
+  return { changed, backfillEvaluated: backfillRequired, movedOptionCount, categoryConflicts };
 }
 
 function encodeRelationSortOrder(actionIndex, optionIndex) {
@@ -1044,7 +1118,7 @@ export async function handleEmenuSeasoningApi(req, res, dbPath) {
   cleanPreviewTokens();
 
   try {
-    let db = loadDb(dbPath);
+    let db = loadEmenuSeasoningDb(dbPath);
     if (method === "GET" && sub === "/health") {
       sendJson(res, 200, { ok: true, service: "emenu-local-seasoning", version: db.version });
       return true;

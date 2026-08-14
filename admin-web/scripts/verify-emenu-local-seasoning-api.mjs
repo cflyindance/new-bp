@@ -2,10 +2,28 @@ import fs from "node:fs";
 import http from "node:http";
 import os from "node:os";
 import path from "node:path";
-import { handleEmenuSeasoningApi } from "./lib/emenu-local-seasoning-api-handler.mjs";
+import { handleEmenuSeasoningApi, loadEmenuSeasoningDb } from "./lib/emenu-local-seasoning-api-handler.mjs";
+import {
+  createEmenuSeasoningSeedDb,
+  DEFAULT_OPTION_CATEGORY_BACKFILL_ITEMS,
+  DEFAULT_OPTION_CATEGORY_BACKFILL_MIGRATION,
+  UNCATEGORIZED_OPTION_CATEGORY_ID,
+} from "./lib/emenu-local-seasoning-seed.mjs";
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
+}
+
+function writeDb(filePath, db) {
+  fs.writeFileSync(filePath, JSON.stringify(db, null, 2), "utf8");
+}
+
+function readDb(filePath) {
+  return JSON.parse(fs.readFileSync(filePath, "utf8"));
+}
+
+function migrationAuditCount(db) {
+  return db.auditLog.filter((entry) => entry.operation === "migrate_option_categories").length;
 }
 
 const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "emenu-seasoning-api-"));
@@ -343,15 +361,119 @@ try {
   assert(inUseDeleteResponse.status === 409 && (await inUseDeleteResponse.json()).error === "option_category_in_use", "Referenced Option category deletion must be blocked with a stable error");
 
   const legacyDb = JSON.parse(fs.readFileSync(dbPath, "utf8"));
+  const migrationAuditsBefore = migrationAuditCount(legacyDb);
+  delete legacyDb.migrations;
   delete legacyDb.optionCategories;
   legacyDb.options.forEach((option) => { delete option.categoryId; });
   fs.writeFileSync(dbPath, JSON.stringify(legacyDb, null, 2), "utf8");
   const migratedHealth = await fetch(`${base}/health`).then((response) => response.json());
   const migratedOnce = JSON.parse(fs.readFileSync(dbPath, "utf8"));
-  assert(migratedHealth.version === 9 && migratedOnce.options.every((option) => option.categoryId === "option-category-uncategorized"), "Legacy Options must persistently migrate to the system category once");
+  const expectedCategoryByOptionId = new Map(DEFAULT_OPTION_CATEGORY_BACKFILL_ITEMS.map((item) => [item.optionId, item.categoryId]));
+  assert(migratedHealth.version === 9, "Legacy Option category migration must increment the version once");
+  assert(migratedOnce.options.every((option) => option.categoryId === (expectedCategoryByOptionId.get(option.id) ?? UNCATEGORIZED_OPTION_CATEGORY_ID)), "Legacy system Options must backfill into their fixed default categories");
+  assert(migratedOnce.migrations?.[DEFAULT_OPTION_CATEGORY_BACKFILL_MIGRATION] === true, "Legacy Option category migration must persist its completion marker");
+  assert(migrationAuditCount(migratedOnce) === migrationAuditsBefore + 1, "Legacy Option category migration must append one audit record");
   const secondHealth = await fetch(`${base}/health`).then((response) => response.json());
   const migratedTwice = JSON.parse(fs.readFileSync(dbPath, "utf8"));
-  assert(secondHealth.version === 9 && migratedTwice.auditLog.filter((entry) => entry.operation === "migrate_option_categories").length === 1, "Option category migration must be idempotent");
+  assert(secondHealth.version === 9 && migrationAuditCount(migratedTwice) === migrationAuditsBefore + 1, "Option category migration must be idempotent");
+
+  const manualPath = path.join(tempDir, "manual-category-db.json");
+  const manualDb = createEmenuSeasoningSeedDb();
+  delete manualDb.migrations;
+  manualDb.options.forEach((option) => { option.categoryId = UNCATEGORIZED_OPTION_CATEGORY_ID; });
+  manualDb.options.find((option) => option.id === "o-cilantro").categoryId = "option-category-sauces";
+  manualDb.options.find((option) => option.id === "o-garlic").code = "STORE_GARLIC";
+  manualDb.options.push({ id: "store-cilantro", code: "CILANTRO", name: "门店香菜", nameEn: "Store cilantro", categoryId: UNCATEGORIZED_OPTION_CATEGORY_ID, status: "active", sortOrder: 999, createdAt: manualDb.updatedAt, updatedAt: manualDb.updatedAt });
+  writeDb(manualPath, manualDb);
+  const manualMigrated = loadEmenuSeasoningDb(manualPath);
+  assert(manualMigrated.options.find((option) => option.id === "o-cilantro").categoryId === "option-category-sauces", "A manually categorized system Option must not be moved");
+  assert(manualMigrated.options.find((option) => option.id === "o-garlic").categoryId === UNCATEGORIZED_OPTION_CATEGORY_ID, "A fixed system Option ID with a changed code must not be moved");
+  assert(manualMigrated.options.find((option) => option.id === "store-cilantro").categoryId === UNCATEGORIZED_OPTION_CATEGORY_ID, "A store Option with a reserved code but different ID must not be moved");
+  const manualVersion = manualMigrated.version;
+  const manualAudits = migrationAuditCount(manualMigrated);
+  manualMigrated.options.find((option) => option.id === "o-salt").categoryId = UNCATEGORIZED_OPTION_CATEGORY_ID;
+  writeDb(manualPath, manualMigrated);
+  const manualReloaded = loadEmenuSeasoningDb(manualPath);
+  assert(manualReloaded.options.find((option) => option.id === "o-salt").categoryId === UNCATEGORIZED_OPTION_CATEGORY_ID, "A completed migration must respect a later manual move to uncategorized");
+  assert(manualReloaded.version === manualVersion && migrationAuditCount(manualReloaded) === manualAudits, "A completed migration must not increment version or audit again");
+
+  const removedDefaultPath = path.join(tempDir, "removed-default-category-db.json");
+  const removedDefaultDb = createEmenuSeasoningSeedDb();
+  removedDefaultDb.options.filter((option) => option.categoryId === "option-category-sauces").forEach((option) => { option.categoryId = UNCATEGORIZED_OPTION_CATEGORY_ID; });
+  removedDefaultDb.optionCategories = removedDefaultDb.optionCategories.filter((category) => category.id !== "option-category-sauces");
+  writeDb(removedDefaultPath, removedDefaultDb);
+  const removedDefaultReloaded = loadEmenuSeasoningDb(removedDefaultPath);
+  assert(!removedDefaultReloaded.optionCategories.some((category) => category.id === "option-category-sauces") && removedDefaultReloaded.version === removedDefaultDb.version, "A completed migration must not recreate a deleted default category");
+
+  const inactivePath = path.join(tempDir, "inactive-default-category-db.json");
+  const inactiveDb = createEmenuSeasoningSeedDb();
+  delete inactiveDb.migrations;
+  inactiveDb.options.forEach((option) => { option.categoryId = UNCATEGORIZED_OPTION_CATEGORY_ID; });
+  inactiveDb.optionCategories.find((category) => category.id === "option-category-aromatics").status = "inactive";
+  writeDb(inactivePath, inactiveDb);
+  const inactiveMigrated = loadEmenuSeasoningDb(inactivePath);
+  assert(inactiveMigrated.optionCategories.find((category) => category.id === "option-category-aromatics").status === "inactive", "Backfill must not re-enable an inactive default category");
+  assert(inactiveMigrated.options.filter((option) => expectedCategoryByOptionId.get(option.id) === "option-category-aromatics").every((option) => option.categoryId === UNCATEGORIZED_OPTION_CATEGORY_ID), "Backfill must not move Options into an inactive category");
+
+  const occupiedCodePath = path.join(tempDir, "occupied-default-code-db.json");
+  const occupiedCodeDb = createEmenuSeasoningSeedDb();
+  delete occupiedCodeDb.migrations;
+  occupiedCodeDb.options.forEach((option) => { option.categoryId = UNCATEGORIZED_OPTION_CATEGORY_ID; });
+  occupiedCodeDb.optionCategories = occupiedCodeDb.optionCategories.filter((category) => category.id !== "option-category-aromatics");
+  occupiedCodeDb.optionCategories.push({ id: "store-aromatics", code: "AROMATICS", name: "门店香料", status: "active", sortOrder: 40, system: false, createdAt: occupiedCodeDb.updatedAt, updatedAt: occupiedCodeDb.updatedAt });
+  writeDb(occupiedCodePath, occupiedCodeDb);
+  const occupiedCodeMigrated = loadEmenuSeasoningDb(occupiedCodePath);
+  assert(occupiedCodeMigrated.optionCategories.filter((category) => category.code === "AROMATICS").length === 1 && !occupiedCodeMigrated.optionCategories.some((category) => category.id === "option-category-aromatics"), "Backfill must not create a duplicate default category code");
+  assert(occupiedCodeMigrated.options.filter((option) => expectedCategoryByOptionId.get(option.id) === "option-category-aromatics").every((option) => option.categoryId === UNCATEGORIZED_OPTION_CATEGORY_ID), "Backfill must not move system Options into a store category that owns the default code");
+  assert(occupiedCodeMigrated.auditLog[0].detail.categoryConflicts.some((conflict) => conflict.code === "AROMATICS" && conflict.occupiedByCategoryId === "store-aromatics"), "Backfill audit must record a default category code conflict");
+
+  const mismatchedCodePath = path.join(tempDir, "mismatched-default-code-db.json");
+  const mismatchedCodeDb = createEmenuSeasoningSeedDb();
+  delete mismatchedCodeDb.migrations;
+  mismatchedCodeDb.options.forEach((option) => { option.categoryId = UNCATEGORIZED_OPTION_CATEGORY_ID; });
+  mismatchedCodeDb.optionCategories.find((category) => category.id === "option-category-aromatics").code = "CUSTOM_AROMATICS";
+  writeDb(mismatchedCodePath, mismatchedCodeDb);
+  const mismatchedCodeMigrated = loadEmenuSeasoningDb(mismatchedCodePath);
+  assert(mismatchedCodeMigrated.optionCategories.find((category) => category.id === "option-category-aromatics").code === "CUSTOM_AROMATICS", "Backfill must not rewrite a mismatched ordinary default category code");
+  assert(mismatchedCodeMigrated.options.filter((option) => expectedCategoryByOptionId.get(option.id) === "option-category-aromatics").every((option) => option.categoryId === UNCATEGORIZED_OPTION_CATEGORY_ID), "Backfill must skip Options when the fixed default category ID has a mismatched code");
+
+  const uncategorizedConflictPath = path.join(tempDir, "uncategorized-code-conflict-db.json");
+  const uncategorizedConflictDb = createEmenuSeasoningSeedDb();
+  delete uncategorizedConflictDb.migrations;
+  uncategorizedConflictDb.optionCategories = uncategorizedConflictDb.optionCategories.filter((category) => category.id !== UNCATEGORIZED_OPTION_CATEGORY_ID);
+  uncategorizedConflictDb.optionCategories.push({ id: "store-uncategorized", code: "UNCATEGORIZED", name: "门店未分类", status: "active", sortOrder: 999, system: false, createdAt: uncategorizedConflictDb.updatedAt, updatedAt: uncategorizedConflictDb.updatedAt });
+  uncategorizedConflictDb.options.forEach((option) => { delete option.categoryId; });
+  writeDb(uncategorizedConflictPath, uncategorizedConflictDb);
+  const uncategorizedConflictOriginal = fs.readFileSync(uncategorizedConflictPath, "utf8");
+  let uncategorizedConflictError;
+  try {
+    loadEmenuSeasoningDb(uncategorizedConflictPath);
+  } catch (error) {
+    uncategorizedConflictError = error;
+  }
+  assert(uncategorizedConflictError?.message === "option_category_migration_conflict" && uncategorizedConflictError?.statusCode === 500, "An uncategorized ID/code conflict must fail migration with a stable server error");
+  assert(fs.readFileSync(uncategorizedConflictPath, "utf8") === uncategorizedConflictOriginal, "An uncategorized ID/code conflict must not modify the database");
+
+  const persistenceFailurePath = path.join(tempDir, "migration-persistence-failure-db.json");
+  const persistenceFailureDb = createEmenuSeasoningSeedDb();
+  delete persistenceFailureDb.migrations;
+  persistenceFailureDb.options.forEach((option) => { option.categoryId = UNCATEGORIZED_OPTION_CATEGORY_ID; });
+  writeDb(persistenceFailurePath, persistenceFailureDb);
+  const persistenceFailureOriginal = fs.readFileSync(persistenceFailurePath, "utf8");
+  let persistenceFailureError;
+  try {
+    loadEmenuSeasoningDb(persistenceFailurePath, () => { throw new Error("simulated_write_failure"); });
+  } catch (error) {
+    persistenceFailureError = error;
+  }
+  assert(persistenceFailureError?.message === "seasoning_db_migration_failed" && persistenceFailureError?.statusCode === 500, "Migration persistence failure must surface as a stable server error");
+  assert(fs.readFileSync(persistenceFailurePath, "utf8") === persistenceFailureOriginal, "Migration persistence failure must preserve the original database file");
+
+  fs.writeFileSync(dbPath, uncategorizedConflictOriginal, "utf8");
+  const conflictHealthResponse = await fetch(`${base}/health`);
+  const conflictHealth = await conflictHealthResponse.json();
+  assert(conflictHealthResponse.status === 500 && conflictHealth.error === "option_category_migration_conflict", "A migration conflict must be returned to the caller as a server error");
+  assert(fs.readFileSync(dbPath, "utf8") === uncategorizedConflictOriginal, "A request-time migration conflict must not replace the database with seed data");
 
   console.log("eMenu local seasoning API verification passed");
 } finally {
