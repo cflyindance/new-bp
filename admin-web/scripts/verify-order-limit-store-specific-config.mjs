@@ -17,28 +17,34 @@ assert.match(source, /legacyCompatibilityFallback/, "无历史发布门店时应
 
 const stepTwo = source.match(/function renderStepTwo\(draft\)[\s\S]*?(?=\n\s*function renderRangeRows)/)?.[0];
 assert.ok(stepTwo, "应能定位商品配置渲染函数");
-assert.match(stepTwo, /data-participating-store/, "商品配置应渲染参与门店选择");
-assert.match(stepTwo, /data-store-tab/, "商品配置应渲染门店 Tab");
-assert.match(stepTwo, /商品状态|已添加|未添加/, "参与门店表格应展示商品状态");
-assert.match(stepTwo, /store\.address/, "参与门店表格应展示明确地址");
+assert.match(stepTwo, /data-config-store-select/, "商品配置应使用单选门店下拉");
+assert.match(stepTwo, /stores\.map/, "商品配置门店下拉应展示全部门店");
+assert.doesNotMatch(stepTwo, /data-participating-store|data-store-tab|商品状态/, "商品配置不应保留参与门店表格或门店 Tab");
 
 const stepFour = source.match(/function renderStepFour\(draft\)[\s\S]*?(?=\n\s*function renderStepFive)/)?.[0];
 assert.ok(stepFour, "应能定位数量配置渲染函数");
 assert.match(stepFour, /data-limit-store-tab/, "数量配置应提供门店 Tab");
 assert.match(stepFour, /activeStoreConfig\(draft\)/, "数量配置应读取当前门店矩阵");
 
-const storesFlow = source.match(/function mountStores\(\)[\s\S]*?(?=\n\s*function publishDraft)/)?.[0];
-assert.ok(storesFlow, "应能定位后置门店页");
-assert.match(storesFlow, /store\.address/, "后置门店页应展示地址");
-assert.match(storesFlow, /已添加|未添加/, "后置门店页应展示商品状态");
-assert.match(storesFlow, /disabled/, "未添加门店应禁止勾选");
-assert.match(storesFlow, /deployExcludedStoreIds/, "后置门店页应持久记录主动取消");
+const stepFive = source.match(/function renderStepFive\(draft\)[\s\S]*?(?=\n\s*function renderStepSix)/)?.[0];
+assert.ok(stepFive, "应能定位生效范围渲染函数");
+assert.match(stepFive, /data-effective-store/, "生效范围应提供门店勾选");
+assert.match(stepFive, /store\.address/, "生效范围应展示地址");
+assert.match(stepFive, /已添加|未添加/, "生效范围应展示商品状态");
+assert.match(stepFive, /disabled/, "未添加门店应禁止勾选");
+
+const storesFlow = source.match(/function mountStores\(\)[\s\S]*?(?=\n\s*function validateDeployStores)/)?.[0];
+assert.ok(storesFlow, "应能定位历史后置门店路由");
+assert.match(storesFlow, /currentStep = 5/, "历史后置门店路由应安全回到生效范围");
+assert.match(storesFlow, /order-limit-rule-editor\.html/, "历史后置门店路由应重定向到编辑器");
+assert.doesNotMatch(storesFlow, /data-deploy-store|olf-publish-store-table/, "历史后置门店路由不应再渲染重复选择页");
 
 assert.match(source, /function clearAllStoreLimits\(draft\)/, "规则级场景变化应统一清空全部门店数量");
 assert.match(source, /function buildPublishedDraft\(draft\)/, "正式发布应构建裁剪后的门店快照");
 assert.match(source, /deployStoreIds[\s\S]{0,500}storeConfigs/, "正式快照应按最终发布门店裁剪配置");
 
-assert.match(css, /\.olf-participating-stores/, "应提供参与门店表格样式");
+assert.match(css, /\.olf-config-store-select/, "应提供商品配置门店下拉样式");
+assert.match(css, /\.olf-effective-stores/, "应提供生效范围门店表格样式");
 assert.match(css, /\.olf-store-status\.is-added/, "应提供已添加状态样式");
 assert.match(css, /\.olf-store-status\.is-missing/, "应提供未添加状态样式");
 
