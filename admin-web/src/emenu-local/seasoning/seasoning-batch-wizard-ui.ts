@@ -61,6 +61,7 @@ class BatchWizardController {
   private productSelection: ProductSelectionDraft | null = null;
   private menu: SeasoningMenuStructure | null = null;
   private productQuery = "";
+  private appliedProductQuery = "";
   private preview: BatchPreviewResponse | null = null;
   private previewPage: BatchPreviewProductNumberPage | null = null;
   private previewPageNumber = 1;
@@ -258,7 +259,7 @@ class BatchWizardController {
     if (!this.actionPickerOpen) return "";
     return `<div class="fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-[2px]" data-picker-backdrop="action">
       <section role="dialog" aria-modal="true" aria-labelledby="seasoning-action-picker-title" class="w-full max-w-2xl rounded-2xl border border-border bg-card p-5 shadow-2xl">
-        <div class="flex items-start justify-between gap-4"><div><h3 id="seasoning-action-picker-title" class="text-lg font-semibold">${t("seasoning.batch.addAction")}</h3><p class="mt-1 text-sm text-muted-foreground">${t("seasoning.batch.addActionHint")}</p></div><button type="button" data-close-picker="action" class="${secondaryButtonClass}" aria-label="${t("seasoning.close")}">×</button></div>
+        <div class="flex items-start justify-between gap-4"><h3 id="seasoning-action-picker-title" class="text-lg font-semibold">${t("seasoning.batch.addAction")}</h3><button type="button" data-close-picker="action" class="${secondaryButtonClass}" aria-label="${t("seasoning.close")}">×</button></div>
         <div class="mt-5 grid gap-3 sm:grid-cols-2">${SEASONING_ACTIONS.map((definition) => {
           const existing = this.actionOptions.has(definition.code);
           const checked = existing || this.pendingActions.has(definition.code);
@@ -310,11 +311,9 @@ class BatchWizardController {
       <div class="flex flex-col gap-2 sm:flex-row">
         <div class="relative min-w-0 flex-1"><input data-product-query class="${inputClass} pr-10" placeholder="${t("seasoning.searchProducts")}" value="${escapeSeasoningHtml(this.productQuery)}"><span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" aria-hidden="true">⌕</span></div>
         <button type="button" data-search-products class="${secondaryButtonClass}">搜索</button>
-        <button type="button" data-select-filter class="${secondaryButtonClass}">${t("seasoning.batch.selectAllFilter")}</button>
         <span class="inline-flex min-h-10 items-center justify-center rounded-lg bg-primary/10 px-3 text-sm font-semibold text-primary">${tf("seasoning.batch.selectedCount", { count: String(this.selectedProductCount()) })}</span>
       </div>
       ${renderSeasoningMenuStructurePicker(this.menu)}
-      <p class="text-xs leading-5 text-muted-foreground">勾选“组”或“类”会选择当前搜索范围内的全部可用菜品；点击名称只切换右侧浏览内容。</p>
     </div>`;
   }
 
@@ -384,7 +383,14 @@ class BatchWizardController {
     }
   }
 
-  private async loadMenuStructure(showLoading = true, cursor?: string, append = false): Promise<void> {
+  private async loadMenuStructure(
+    showLoading = true,
+    cursor?: string,
+    append = false,
+    query = this.appliedProductQuery,
+    groupId = this.menu?.activeGroupId,
+    categoryId = this.menu?.activeCategoryId,
+  ): Promise<void> {
     if (!this.productSelection) return;
     if (showLoading) {
       this.loading = true;
@@ -393,13 +399,14 @@ class BatchWizardController {
     try {
       const next = await seasoningApi.menuStructure({
         selectionToken: this.productSelection.token,
-        query: this.productQuery,
-        groupId: this.menu?.activeGroupId,
-        categoryId: this.menu?.activeCategoryId,
+        query,
+        groupId,
+        categoryId,
         cursor,
         limit: 6,
       });
       this.menu = append && this.menu ? { ...next, dishes: { ...next.dishes, items: [...this.menu.dishes.items, ...next.dishes.items] } } : next;
+      this.appliedProductQuery = next.query;
       this.productSelection = { ...this.productSelection, total: next.selectedTotal };
       this.error = "";
     } catch (error) {
@@ -680,12 +687,7 @@ class BatchWizardController {
       return;
     }
     if (target.hasAttribute("data-search-products")) {
-      if (this.menu) this.menu = { ...this.menu, activeGroupId: "", activeCategoryId: "" };
-      await this.loadMenuStructure();
-      return;
-    }
-    if (target.hasAttribute("data-select-filter")) {
-      await this.updateProductSelection({ operation: "scope", level: "search", query: this.productQuery, selected: true });
+      await this.loadMenuStructure(true, undefined, false, this.productQuery, "", "");
       return;
     }
     const groupId = target.dataset.menuActivateGroup;
@@ -824,8 +826,8 @@ class BatchWizardController {
     const menuId = target.dataset.menuToggleId;
     if (menuLevel && menuId && this.menu) {
       if (menuLevel === "dish") await this.updateProductSelection({ operation: "dish", productId: menuId, selected: target.checked });
-      else if (menuLevel === "group") await this.updateProductSelection({ operation: "scope", level: "group", groupId: menuId, query: this.productQuery, selected: target.checked });
-      else if (menuLevel === "category") await this.updateProductSelection({ operation: "scope", level: "category", groupId: this.menu.activeGroupId, categoryId: menuId, query: this.productQuery, selected: target.checked });
+      else if (menuLevel === "group") await this.updateProductSelection({ operation: "scope", level: "group", groupId: menuId, query: this.appliedProductQuery, selected: target.checked });
+      else if (menuLevel === "category") await this.updateProductSelection({ operation: "scope", level: "category", groupId: this.menu.activeGroupId, categoryId: menuId, query: this.appliedProductQuery, selected: target.checked });
       return;
     }
     const changedPriceOptionId = target.dataset.actionOptionPrice;

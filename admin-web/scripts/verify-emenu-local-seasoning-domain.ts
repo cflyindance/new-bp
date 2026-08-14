@@ -98,7 +98,7 @@ const productDraft = createProductConfigurationDraft(encodedRelations);
 assert(productDraft.map((group) => group.action).join(",") === "MORE,ADD", "Product editor must initialize actions using saved order");
 assert(productDraft[0].options.map((option) => option.optionId).join(",") === "o3,o1", "Product editor must initialize Option order from saved relations");
 assert(productDraft[1].options[0].inputPrice === 2 && productDraft[1].options[0].markupCoefficient === 1, "Historical relations must initialize base price from priceDelta and coefficient to 1.00");
-assert(productDraft[1].options[0].status === "inactive", "Product editor must retain relation status");
+assert(!("status" in productDraft[1].options[0]), "Product editor draft must not retain hidden relation status");
 assert(moveDraftAction(productDraft, "MORE", "ADD").map((group) => group.action).join(",") === "ADD,MORE", "Action drag must update draft order");
 assert(moveDraftOption(productDraft, "MORE", "o3", "o1")[0].options.map((option) => option.optionId).join(",") === "o1,o3", "Option drag must update order only inside its action");
 

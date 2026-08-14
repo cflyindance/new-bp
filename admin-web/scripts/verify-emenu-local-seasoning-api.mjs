@@ -102,6 +102,32 @@ try {
   assert(menuBefore.categories.length > 0, "Active group categories are missing");
   assert(menuBefore.dishes.items.length > 0, "Active category dishes are missing");
   assert(menuBefore.dishes.nextCursor, "Dish column must support cursor pagination");
+  const mainGroupBefore = menuBefore.groups.find((group) => group.id === "group-main");
+  const hotCategoryBefore = menuBefore.categories.find((category) => category.id === "cat-hot");
+  assert(mainGroupBefore?.selectableCount === 11, "Menu group counts must exclude inactive and non-eMenu products");
+  assert(hotCategoryBefore?.dishCount === 4 && hotCategoryBefore.selectableCount === 4, "Menu category counts must only include selectable products");
+  assert(menuBefore.dishes.items.every((dish) => dish.selectable && !["p-retired", "p-not-sellable"].includes(dish.id) && !Object.prototype.hasOwnProperty.call(dish, "unavailableReason")), "Menu dishes must not expose unavailable products or reasons");
+
+  const fullHotMenu = await fetch(`${base}/menu-structure?selectionToken=${selection.token}&groupId=group-main&categoryId=cat-hot&limit=50`, { headers: sessionHeaders }).then((response) => response.json());
+  assert(fullHotMenu.dishes.items.length === 4 && fullHotMenu.dishes.items.every((dish) => dish.status === "active" && dish.emenuSellable === true), "Complete dish pages must contain selectable products only");
+  const codeMenu = await fetch(`${base}/menu-structure?selectionToken=${selection.token}&query=D1001&limit=50`, { headers: sessionHeaders }).then((response) => response.json());
+  assert(codeMenu.query === "D1001" && codeMenu.dishes.items.length === 1 && codeMenu.dishes.items[0].id === "p-kungpao", "Internal product code search must remain supported without exposing unavailable products");
+  for (const unavailableQuery of ["已停用菜品", "D9998", "非 eMenu 菜品", "D9999"]) {
+    const unavailableMenu = await fetch(`${base}/menu-structure?selectionToken=${selection.token}&query=${encodeURIComponent(unavailableQuery)}&limit=50`, { headers: sessionHeaders }).then((response) => response.json());
+    assert(unavailableMenu.groups.length === 0 && unavailableMenu.categories.length === 0 && unavailableMenu.dishes.items.length === 0, `Unavailable product query ${unavailableQuery} must return no menu results`);
+  }
+
+  const partialSelection = await fetch(`${base}/product-selections`, { method: "POST", headers: sessionHeaders, body: "{}" }).then((response) => response.json());
+  await fetch(`${base}/product-selections/${partialSelection.token}`, {
+    method: "PATCH",
+    headers: sessionHeaders,
+    body: JSON.stringify({ operation: "dish", productId: "p-kungpao", selected: true }),
+  });
+  const partialMenu = await fetch(`${base}/menu-structure?selectionToken=${partialSelection.token}&groupId=group-main&categoryId=cat-hot&limit=3`, { headers: sessionHeaders }).then((response) => response.json());
+  const partialGroup = partialMenu.groups.find((group) => group.id === "group-main");
+  const partialCategory = partialMenu.categories.find((category) => category.id === "cat-hot");
+  assert(partialGroup?.selectedCount === 1 && partialGroup.selectableCount === 11, "Group counts must expose a partial selection across unloaded dishes");
+  assert(partialCategory?.selectedCount === 1 && partialCategory.selectableCount === 4, "Category counts must expose a partial selection across unloaded dishes");
   const activeGroup = menuBefore.activeGroupId;
 
   const selectedGroupResponse = await fetch(`${base}/product-selections/${selection.token}`, {
@@ -111,7 +137,7 @@ try {
   });
   assert(selectedGroupResponse.ok, "Selecting a group draft scope failed");
   const selectedGroup = await selectedGroupResponse.json();
-  assert(selectedGroup.total > 3, "Group cascade must include unloaded descendants");
+  assert(selectedGroup.total === 11, "Group cascade must include every unloaded selectable descendant and exclude unavailable products");
 
   const menuAfter = await fetch(`${base}/menu-structure?selectionToken=${selection.token}&groupId=${activeGroup}&limit=3`, {
     headers: sessionHeaders,
@@ -127,6 +153,12 @@ try {
     body: JSON.stringify({ operation: "scope", level: "search", query: "宫保", selected: true }),
   }).then((response) => response.json());
   assert(searchScopeResponse.total === 1, "Search-scoped selection must only freeze matching products and deduplicate repeated paths");
+  const legacyCodeScopeResponse = await fetch(`${base}/product-selections/${searchSelection.token}`, {
+    method: "PATCH",
+    headers: sessionHeaders,
+    body: JSON.stringify({ operation: "scope", level: "search", query: "D1001", selected: true }),
+  }).then((response) => response.json());
+  assert(legacyCodeScopeResponse.total === 1, "Legacy search-scope selection must keep code matching and deduplicate repeated menu paths");
 
   const previewResponse = await fetch(`${base}/relations/preview`, {
     method: "POST",

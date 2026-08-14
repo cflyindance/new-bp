@@ -501,7 +501,7 @@ function matchingMenuProductIds(db, { groupId = "", categoryId = "", query = "" 
       if (categoryId && category.id !== categoryId) continue;
       for (const productId of category.productIds) {
         const product = productById.get(productId);
-        if (!product) continue;
+        if (!isSelectableProduct(product)) continue;
         if (normalizedQuery && !normalizeText(`${product.name} ${product.code}`).includes(normalizedQuery)) continue;
         ids.add(product.id);
       }
@@ -682,9 +682,8 @@ function menuStructure(db, url, scope, session) {
       categoryId: activeCategory.id,
       categoryName: activeCategory.name,
       relationCount: relationCounts.get(product.id) ?? 0,
-      selectable: isSelectableProduct(product),
-      selected: isSelectableProduct(product) && Boolean(draft?.selectedIds.has(product.id)),
-      unavailableReason: product.status !== "active" ? "product_inactive" : !product.emenuSellable ? "product_not_sellable" : undefined,
+      selectable: true,
+      selected: Boolean(draft?.selectedIds.has(product.id)),
     }));
   return {
     groups,

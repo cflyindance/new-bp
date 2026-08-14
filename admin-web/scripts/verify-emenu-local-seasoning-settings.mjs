@@ -66,6 +66,14 @@ expect(batchPricing, /MAX_MARKUP_COEFFICIENT\s*=\s*2/, "Paid coefficient maximum
 expect(batch, /calculateActualMarkupPrice/, "Preview must use the calculated actual markup price");
 expect(batch, /createProductSelection/, "Batch wizard must create one server-side product selection draft");
 expect(batch, /loadMenuStructure/, "Batch wizard must load the real menu hierarchy");
+expect(batch, /private appliedProductQuery = ""/, "Batch product search must track the last successfully applied query");
+expect(batch, /query = this\.appliedProductQuery/, "Non-search menu reloads must default to the applied query");
+expect(batch, /this\.appliedProductQuery = next\.query/, "Successful menu responses must become the applied query");
+expect(batch, /loadMenuStructure\(true, undefined, false, this\.productQuery, "", ""\)/, "Only explicit product search may apply the input query");
+expect(batch, /level: "group"[\s\S]*query: this\.appliedProductQuery/, "Group selection must use the applied query");
+expect(batch, /level: "category"[\s\S]*query: this\.appliedProductQuery/, "Category selection must use the applied query");
+if (/data-select-filter|seasoning\.batch\.selectAllFilter/.test(batch)) throw new Error("Batch product selection must not expose select-all-filter behavior");
+if (/勾选“组”或“类”会选择当前搜索范围内的全部可用菜品/.test(batch)) throw new Error("Batch product selection helper copy must be removed");
 expect(batch, /loadPreviewProducts/, "Batch preview must use product-group pagination");
 expect(batch, /data-preview-product/, "Preview must render one top-level row per product");
 expect(batch, /data-preview-action/, "Preview products must group options by action");
@@ -96,6 +104,8 @@ expect(menuPicker, /data-menu-column="group"/, "Group column is missing");
 expect(menuPicker, /data-menu-column="category"/, "Category column is missing");
 expect(menuPicker, /data-menu-column="dish"/, "Dish column is missing");
 expect(menuPicker, /indeterminate/, "Menu picker must synchronize native indeterminate state");
+expect(menuPicker, /dish\.relationCount/, "Dish rows must keep the linked Option count");
+if (/dish\.code|unavailableReason|商品已停用|不可在 eMenu 销售/.test(menuPicker)) throw new Error("Dish rows must hide internal codes and unavailable-product details");
 if (/data-menu-column="line"|data-seasoning-line/.test(menuPicker)) throw new Error("Seasoning menu picker must not expose a production-line dimension");
 expect(drawer, /data-seasoning-product-editor/, "Single-product editor marker is missing");
 expect(drawer, /renderSeasoningConfigurationWorkspace/, "Single-product editor must reuse the batch configuration workspace");
@@ -115,6 +125,7 @@ expect(workspace, /data-option-category-toggle/, "Option picker categories must 
 expect(workspace, /data-activate-option-category/, "Option picker must use linked category and Option columns");
 expect(workspace, /data-option-category-indeterminate/, "Option category selection must expose a native partial state");
 expect(workspace, /grid[\s\S]*md:grid-cols-\[280px_minmax\(0,1fr\)\]/, "Option picker must switch from stacked mobile layout to two desktop columns");
+if (/seasoning\.batch\.addActionHint/.test(workspace) || /seasoning\.batch\.addActionHint/.test(batch)) throw new Error("Shared and legacy action pickers must not display the multi-action helper copy");
 expect(categoryManager, /data-option-category-manager/, "Public Option library must expose category management");
 expect(categoryManager, /reorderOptionCategories/, "Option category manager must persist drag order through the server");
 expect(categoryManager, /option_category_in_use/, "Referenced Option categories must show a specific deletion error");
@@ -126,6 +137,7 @@ expect(apiHandler, /encodeRelationSortOrder/, "Server writes must own and valida
 expect(apiHandler, /optionPickerSnapshot/, "Option picker must use a complete categorized server snapshot");
 expect(apiHandler, /normalizeOptionCategoryDb/, "Legacy Option data must migrate to a persistent category");
 expect(apiHandler, /option_active_limit_exceeded/, "Server must enforce the active Option limit on writes");
+expect(apiHandler, /if \(!isSelectableProduct\(product\)\) continue;[\s\S]*product\.name[\s\S]*product\.code/, "Menu matching must filter unavailable products before name/code search");
 expect(options, /data-seasoning-option-library/, "Option library marker is missing");
 expect(options, /data-seasoning-toggle-option/, "Public Option library must retain Option enable and disable controls");
 

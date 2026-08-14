@@ -50,7 +50,6 @@ function checkedAttr(checked: boolean): string {
 }
 
 function renderDishRow(dish: SeasoningMenuDish): string {
-  const reason = dish.unavailableReason === "product_inactive" ? "商品已停用" : dish.unavailableReason === "product_not_sellable" ? "不可在 eMenu 销售" : "";
   return `
     <label class="flex items-start gap-2 rounded-lg px-2 py-2 transition-colors ${dish.selected ? "bg-primary/10 ring-1 ring-primary/20" : "hover:bg-muted/55"} ${dish.selectable ? "cursor-pointer" : "cursor-not-allowed opacity-55"}">
       <input
@@ -66,8 +65,6 @@ function renderDishRow(dish: SeasoningMenuDish): string {
           <strong class="truncate text-sm font-medium text-foreground">${escapeSeasoningHtml(dish.name)}</strong>
           <span class="shrink-0 text-[11px] tabular-nums text-muted-foreground">${dish.relationCount ?? 0} Option</span>
         </span>
-        <span class="mt-0.5 block font-mono text-[10px] tracking-wide text-muted-foreground">${escapeSeasoningHtml(dish.code)}</span>
-        ${reason ? `<span class="mt-1 block text-[11px] font-medium text-destructive">${reason}</span>` : ""}
       </span>
     </label>`;
 }
