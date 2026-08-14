@@ -344,6 +344,24 @@ button { color: inherit; }
 .olf-selected-panel { align-self: start; padding: 18px; border: 1px solid var(--olf-border); border-radius: 12px; background: var(--olf-subtle); }
 .olf-selected-panel h3 { margin: 0 0 12px; font-size: 15px; }
 
+.olf-participating-stores { margin-top: 14px; }
+.olf-store-check-col { width: 44px; }
+.olf-participating-row { transition: background-color .16s ease; }
+.olf-participating-row.is-selected { background: var(--olf-primary-soft); }
+.olf-participating-row input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--olf-primary); }
+.olf-store-status { display: inline-flex; align-items: center; min-width: 52px; font-weight: 600; }
+.olf-store-status.is-added { color: #16a34a; }
+.olf-store-status.is-missing { color: #ef4444; }
+.olf-store-tabs { margin-top: 14px; }
+.olf-store-tabs .olf-tab { gap: 8px; }
+.olf-store-tab-state { font-size: 11px; font-weight: 600; }
+.olf-store-tab-state.is-added { color: #16a34a; }
+.olf-store-tab-state.is-missing { color: #ef4444; }
+.olf-store-product-config .olf-structure-summary { margin: 4px 0 0; }
+.olf-publish-store-table { margin-top: 18px; }
+.olf-publish-store-table input:disabled { cursor: not-allowed; opacity: .45; }
+.olf-selected-panel--inline { margin-top: 18px; }
+
 .olf-toast-host { position: fixed; z-index: 120; top: 20px; left: 50%; transform: translateX(-50%); display: grid; gap: 8px; pointer-events: none; }
 .olf-toast { padding: 10px 16px; border: 1px solid var(--olf-border); border-radius: 10px; background: var(--olf-surface); box-shadow: 0 8px 24px rgba(0,0,0,.12); font-size: 13px; }
 .olf-toast.is-error { color: var(--olf-danger); border-color: #ffccc7; }
