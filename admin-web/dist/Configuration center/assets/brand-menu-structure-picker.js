@@ -365,6 +365,59 @@
     return out;
   }
 
+  function listAllDishes() {
+    var out = [];
+    LINE_OPTIONS.forEach(function (line) {
+      resolveTree(line.id).forEach(function (g) {
+        g.categories.forEach(function (c) {
+          c.dishes.forEach(function (d) {
+            out.push({
+              lineId: line.id,
+              lineLabel: line.label,
+              groupId: g.id,
+              groupName: g.name,
+              categoryId: c.id,
+              categoryName: c.name,
+              dishId: d.id,
+              dishName: d.name,
+              dishKey: dKey(g.id, c.id, d.id),
+              categoryKey: cKey(g.id, c.id),
+            });
+          });
+        });
+      });
+    });
+    return out;
+  }
+
+  function nodeExists(key, tree) {
+    if (typeof key !== "string" || !key) return false;
+    if (key.indexOf("g:") === 0) return !!findGroup(key.slice(2), tree);
+    var parts = key.split(":");
+    if (key.indexOf("c:") === 0) return !!findCategory(parts[1] || "", parts[2] || "", tree);
+    if (key.indexOf("d:") !== 0) return false;
+    var category = findCategory(parts[1] || "", parts[2] || "", tree);
+    return !!category && category.dishes.some(function (dish) { return dish.id === (parts[3] || ""); });
+  }
+
+  function setNodeSelected(byLine, lineId, nodeKey, checked) {
+    var next = normalizeByLine(byLine);
+    if (!isLineId(lineId)) return next;
+    var tree = resolveTree(lineId);
+    if (!nodeExists(nodeKey, tree)) return next;
+    var selection = keysToSelection(next[lineId] || [], tree);
+    next[lineId] = selectionToKeys(cascade(selection, nodeKey, !!checked, tree));
+    return next;
+  }
+
+  function isNodeSelected(byLine, lineId, nodeKey) {
+    if (!isLineId(lineId)) return false;
+    var tree = resolveTree(lineId);
+    if (!nodeExists(nodeKey, tree)) return false;
+    var normalized = normalizeByLine(byLine);
+    return !!keysToSelection(normalized[lineId] || [], tree)[nodeKey];
+  }
+
   function renderItem(key, title, active, sel, tree, opts) {
     opts = opts || {};
     var st = cbState(key, sel, tree);
@@ -608,6 +661,9 @@
     formatSummary: formatSummary,
     listSelectedDishes: listSelectedDishes,
     listSelectedCategories: listSelectedCategories,
+    listAllDishes: listAllDishes,
+    setNodeSelected: setNodeSelected,
+    isNodeSelected: isNodeSelected,
     renderHtml: renderHtml,
     bind: bind,
     readByLine: readByLine,

@@ -336,6 +336,19 @@ button { color: inherit; }
 .olf-flow-card h2 { margin: 0 0 7px; font-size: 20px; }
 .olf-config-store-select { width: min(100%, 320px); margin: 14px 0 18px; }
 .olf-config-store-select .olf-select { width: 100%; }
+.olf-product-search { width: min(100%, 440px); margin: 0 0 14px; }
+.olf-product-search-input { width: 100%; }
+.olf-product-search-results { max-height: 360px; overflow-y: auto; border: 1px solid var(--olf-border); border-radius: 12px; background: var(--olf-surface); }
+.olf-product-search-row { min-height: 58px; padding: 10px 14px; display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; align-items: center; gap: 10px; border-bottom: 1px solid var(--olf-border); cursor: pointer; transition: background-color .16s ease; }
+.olf-product-search-row:last-child { border-bottom: 0; }
+.olf-product-search-row:hover { background: var(--olf-subtle); }
+.olf-product-search-row.is-selected { background: var(--olf-primary-soft); }
+.olf-product-search-row > input { width: 17px; height: 17px; accent-color: var(--olf-primary); }
+.olf-product-search-copy { min-width: 0; display: grid; gap: 3px; }
+.olf-product-search-copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+.olf-product-search-path { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--olf-muted); font-size: 12px; }
+.olf-product-search-category-state { color: var(--olf-primary-text); font-size: 12px; font-weight: 600; white-space: nowrap; }
+.olf-product-search-empty { min-height: 120px; }
 .olf-effective-stores .olf-table-wrap { margin-top: 14px; }
 .olf-store-check-col { width: 44px; }
 .olf-participating-row { transition: background-color .16s ease; }
@@ -378,6 +391,9 @@ button { color: inherit; }
   .olf-review-row button { justify-self: start; }
   .bmsp-grid, .bmsp-grid.bmsp-grid--no-dish { grid-template-columns: 1fr 1fr; }
   .bmsp-col { min-height: 180px; border-right: 0; border-bottom: 1px solid var(--olf-border); }
+  .olf-product-search-row { grid-template-columns: 18px minmax(0, 1fr); }
+  .olf-product-search-category-state { grid-column: 2; white-space: normal; }
+  .olf-product-search-path { white-space: normal; }
 }
 
 @media (prefers-reduced-motion: reduce) {
