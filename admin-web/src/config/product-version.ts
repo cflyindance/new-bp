@@ -25,7 +25,7 @@ export const MVP_HIDDEN_MODULE_SETTING_SEQS = [118, 148, 165, 196, 216, 217, 218
 export const MVP_HIDDEN_MODULE_SETTING_GROUP_KEYS = ["foh-pos-buttons", "foh-pos-order-toolbar"] as const;
 
 /** 已合并退役、任何产品版本下均不展示的设置 seq（catalog 可保留作历史） */
-export const RETIRED_MODULE_SETTING_SEQS = [176, 177] as const;
+export const RETIRED_MODULE_SETTING_SEQS = [164, 169, 176, 177] as const;
 
 let memoryVersion: ProductVersion | undefined;
 

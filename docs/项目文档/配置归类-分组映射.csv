@@ -74,7 +74,7 @@ seq,groupTitle,groupKey
 72,考勤与工时,time-attendance
 73,考勤与工时,time-attendance
 74,排班,scheduling
-75,账户安全与授权,account-security-auth
+75,登录与终端主界面,foh-pos-shell
 76,钱箱备款与平账,drawer-float-reconcile
 77,营业与运营,store-hours-operation
 78,外部系统对接,integrations
@@ -106,53 +106,53 @@ seq,groupTitle,groupKey
 104,线上订餐服务对接,online-order-service
 105,线上订餐服务对接,online-order-service
 106,线上订餐服务对接,online-order-service
-107,桌台与餐位,tables-floor
+107,选桌与开台流程,foh-table-start-flow
 108,POS 开单流程,pos-order-init
 109,语言与本地化,language-localization
-110,POS 点单页工具栏,pos-order-toolbar
-111,POS 开单流程,pos-order-init
+110,消息类型提醒,foh-pos-order-alerts
+111,选桌与开台流程,foh-table-start-flow
 112,菜品与菜单基础,item-menu-base
-113,POS 送厨流程,pos-kitchen-send
-114,POS 送厨流程,pos-kitchen-send
+113,送厨规则与权限,foh-kitchen-send-timing
+114,送厨规则与权限,foh-kitchen-send-timing
 115,改单与分合单,order-edit-split-merge
 116,改单与分合单,order-edit-split-merge
 117,改单与分合单,order-edit-split-merge
-118,POS 菜单与布局,pos-menu-ui
+118,POS 菜单与界面,foh-pos-menu-scope
 119,改单与分合单,order-edit-split-merge
-120,POS 送厨流程,pos-kitchen-send
-121,POS 点单页展示,pos-order-cart
-122,POS 点单页展示,pos-order-cart
-123,POS 送厨流程,pos-kitchen-send
+120,送厨规则与权限,foh-kitchen-send-timing
+121,点单内容与客户信息,foh-pos-order-cart
+122,点单内容与客户信息,foh-pos-order-cart
+123,送厨规则与权限,foh-kitchen-send-timing
 124,改单与分合单,order-edit-split-merge
-125,POS 送厨流程,pos-kitchen-send
+125,送厨规则与权限,foh-kitchen-send-timing
 126,订单基础,order-basics
 127,订单基础,order-basics
 128,订单基础,order-basics
 129,订单基础,order-basics
 130,订单基础,order-basics
 131,订单基础,order-basics
-132,POS 点单页展示,pos-order-cart
-133,POS 点单页展示,pos-order-cart
+132,点单内容与客户信息,foh-pos-order-cart
+133,点单内容与客户信息,foh-pos-order-cart
 134,点单界面,order-ui
-135,POS 点单页展示,pos-order-cart
+135,点单内容与客户信息,foh-pos-order-cart
 136,POS 点单页展示,pos-order-cart
-137,POS 点单页展示,pos-order-cart
-138,下单操作限制与授权,order-operation-guardrails
-139,套餐点单与展示,combo-ordering
+137,点单内容与客户信息,foh-pos-order-cart
+138,套餐与自定义点单,foh-pos-combo-ordering
+139,套餐与自定义点单,foh-pos-combo-ordering
 140,改单与分合单,order-edit-split-merge
-141,分单合单与改单,split-merge-edit
+141,点单内容与客户信息,foh-pos-order-cart
 142,税务规则,tax-rules
 143,税务规则,tax-rules
 144,税务规则,tax-rules
-145,套餐点单与展示,combo-ordering
+145,套餐与自定义点单,foh-pos-combo-ordering
 146,价格与折扣工具,pricing-tools
 147,结算取整,order-settlement-rounding
-148,POS 菜单与布局,pos-menu-ui
+148,POS 菜单与界面,foh-pos-menu-scope
 149,附加费与服务费,order-surcharge-fees
 150,分单合单与改单,split-merge-edit
-151,POS 找单列表,pos-find-order-list
-152,POS 找单列表,pos-find-order-list
-153,POS 找单列表,pos-find-order-list
+151,找单与结账入口,foh-pos-find-order-list
+152,找单与结账入口,foh-pos-find-order-list
+153,找单与结账入口,foh-pos-find-order-list
 154,POS 找单列表,pos-find-order-list
 155,删单与厨房通知,kitchen-void-notify
 156,删单与退款,order-void-refund
@@ -164,8 +164,8 @@ seq,groupTitle,groupKey
 162,折扣,order-discount
 163,折扣,order-discount
 164,折扣,order-discount
-165,界面与操作偏好,ui-operation-preferences
-166,账户安全与授权,account-security-auth
+165,登录与终端主界面,foh-pos-shell
+166,登录与终端主界面,foh-pos-shell
 167,出纸与设备,print-engine-device
 168,界面与操作偏好,ui-operation-preferences
 169,桌台与餐位,tables-floor
@@ -173,11 +173,11 @@ seq,groupTitle,groupKey
 171,现金日结与班结,daily-cash-close
 172,卡支付规则与合规,card-fees
 173,门店档案,store-profile
-174,界面与操作偏好,ui-operation-preferences
-175,账户安全与授权,account-security-auth
+174,POS 菜单与界面,foh-pos-menu-scope
+175,登录与终端主界面,foh-pos-shell
 176,POS 菜单与布局,pos-menu-ui
 177,POS 菜单与布局,pos-menu-ui
-178,POS 点单页展示,pos-order-cart
+178,点单内容与客户信息,foh-pos-order-cart
 179,库存管控规则,inventory-control-rules
 180,卡支付规则与合规,card-fees
 181,钱箱备款与平账,drawer-float-reconcile
@@ -192,37 +192,37 @@ seq,groupTitle,groupKey
 190,高级服务与运行模式,advanced-service-switches
 191,高级服务与运行模式,advanced-service-switches
 192,高级服务与运行模式,advanced-service-switches
-193,POS 按钮显隐,pos-button-visibility
-194,POS 按钮显隐,pos-button-visibility
-195,POS 按钮显隐,pos-button-visibility
-196,POS 点单页工具栏,pos-order-toolbar
-197,POS 按钮显隐,pos-button-visibility
-198,POS 按钮显隐,pos-button-visibility
-199,POS 按钮显隐,pos-button-visibility
-200,POS 按钮显隐,pos-button-visibility
-201,POS 按钮显隐,pos-button-visibility
-202,POS 按钮显隐,pos-button-visibility
-203,POS 按钮显隐,pos-button-visibility
-204,POS 按钮显隐,pos-button-visibility
-205,POS 按钮显隐,pos-button-visibility
-206,POS 按钮显隐,pos-button-visibility
-207,POS 按钮显隐,pos-button-visibility
-208,POS 按钮显隐,pos-button-visibility
-209,POS 按钮显隐,pos-button-visibility
-210,POS 按钮显隐,pos-button-visibility
-211,POS 按钮显隐,pos-button-visibility
-212,POS 按钮显隐,pos-button-visibility
-213,POS 按钮显隐,pos-button-visibility
-214,POS 按钮显隐,pos-button-visibility
-215,POS 按钮显隐,pos-button-visibility
-216,POS 菜单与布局,pos-menu-ui
-217,POS 菜单与布局,pos-menu-ui
-218,POS 菜单与布局,pos-menu-ui
-219,POS 菜单与布局,pos-menu-ui
-220,POS 菜单与布局,pos-menu-ui
-221,POS 结账入口,pos-checkout-entry
-222,POS 点单页展示,pos-order-cart
-223,POS 点单页展示,pos-order-cart
+193,点单页按钮显隐,foh-pos-buttons
+194,点单页按钮显隐,foh-pos-buttons
+195,点单页按钮显隐,foh-pos-buttons
+196,点单页工具栏,foh-pos-order-toolbar
+197,点单页按钮显隐,foh-pos-buttons
+198,点单页按钮显隐,foh-pos-buttons
+199,点单页按钮显隐,foh-pos-buttons
+200,点单页按钮显隐,foh-pos-buttons
+201,点单页按钮显隐,foh-pos-buttons
+202,点单页按钮显隐,foh-pos-buttons
+203,点单页按钮显隐,foh-pos-buttons
+204,点单页按钮显隐,foh-pos-buttons
+205,点单页按钮显隐,foh-pos-buttons
+206,点单页按钮显隐,foh-pos-buttons
+207,点单页按钮显隐,foh-pos-buttons
+208,点单页按钮显隐,foh-pos-buttons
+209,点单页按钮显隐,foh-pos-buttons
+210,点单页按钮显隐,foh-pos-buttons
+211,点单页按钮显隐,foh-pos-buttons
+212,点单页按钮显隐,foh-pos-buttons
+213,点单页按钮显隐,foh-pos-buttons
+214,点单页按钮显隐,foh-pos-buttons
+215,点单页按钮显隐,foh-pos-buttons
+216,POS 菜单与界面,foh-pos-menu-scope
+217,POS 菜单与界面,foh-pos-menu-scope
+218,POS 菜单与界面,foh-pos-menu-scope
+219,POS 菜单与界面,foh-pos-menu-scope
+220,POS 菜单与界面,foh-pos-menu-scope
+221,找单与结账入口,foh-pos-find-order-list
+222,点单内容与客户信息,foh-pos-order-cart
+223,点单内容与客户信息,foh-pos-order-cart
 224,系统对接与效期管理,integration-expiry
 225,系统对接与效期管理,integration-expiry
 226,系统对接与效期管理,integration-expiry
@@ -233,7 +233,7 @@ seq,groupTitle,groupKey
 231,小费政策与计算,tip-policy
 232,小费政策与计算,tip-policy
 233,支付手段与展示,payment-methods
-234,支付方式,payment-methods
+234,支付方式,payment-methods-2
 235,BATCH与日结,batch-settlement
 236,BATCH与日结,batch-settlement
 237,小费政策与计算,tip-policy
@@ -247,10 +247,10 @@ seq,groupTitle,groupKey
 245,支付收据流程,payment-receipt-flow
 246,支付签购单,payment-signature-slip
 247,支付签购单,payment-signature-slip
-248,POS 结账入口,pos-checkout-entry
+248,找单与结账入口,foh-pos-find-order-list
 249,支付收据流程,payment-receipt-flow
 250,支付签购单,payment-signature-slip
-251,POS 找单列表,pos-find-order-list
+251,找单与结账入口,foh-pos-find-order-list
 252,小费政策与计算,tip-policy
 253,小费政策与计算,tip-policy
 254,钱箱与支付终端,cash-payment-terminals
@@ -330,9 +330,9 @@ seq,groupTitle,groupKey
 328,总报表字段与核算项,summary-report-fields
 329,考勤与工时,time-attendance
 330,现金日结与班结,daily-cash-close
-331,通知基础与渠道,notification-basics
-332,通知基础与渠道,notification-basics
-333,呼叫服务员与现场提醒,service-call-alerts
+331,消息类型提醒,foh-pos-order-alerts
+332,消息类型提醒,foh-pos-order-alerts
+333,桌边呼叫,foh-tableside-service
 334,订单与取餐通知,order-pickup-messages
 335,订单与取餐通知,order-pickup-messages
 336,订单与取餐通知,order-pickup-messages
@@ -344,13 +344,13 @@ seq,groupTitle,groupKey
 342,预约提醒与自动化,reservation-automation
 343,高级设置,高级设置
 344,高级服务与运行模式,advanced-service-switches
-345,账户安全与授权,account-security-auth
-346,账户安全与授权,account-security-auth
-347,桌台与餐位,tables-floor
-348,POS 菜单与布局,pos-menu-ui
-349,角色与员工权限,role-employee-permissions
-350,POS 菜单与布局,pos-menu-ui
-351,桌台与餐位,tables-floor
+345,送厨规则与权限,foh-kitchen-send-timing
+346,登录与终端主界面,foh-pos-shell
+347,清桌与换服务员（企台）,foh-table-clear-ops
+348,POS 菜单与界面,foh-pos-menu-scope
+349,点单内容与客户信息,foh-pos-order-cart
+350,POS 菜单与界面,foh-pos-menu-scope
+351,清桌与换服务员（企台）,foh-table-clear-ops
 352,打印机与输出设备,printer-output-devices
 353,打印机与输出设备,printer-output-devices
 354,打印机与输出设备,printer-output-devices
@@ -427,6 +427,7 @@ seq,groupTitle,groupKey
 425,员工与出勤,staff-profile
 426,角色与员工权限,role-employee-permissions
 427,员工与出勤,staff-profile
+428,平面图,平面图
 429,外送区域与打包费,delivery-packaging
 430,屏显与终端素材,screen-terminal-assets
 431,屏显与终端素材,screen-terminal-assets
@@ -441,7 +442,7 @@ seq,groupTitle,groupKey
 440,菜品与菜单基础,item-menu-base
 441,菜品与菜单基础,item-menu-base
 442,促销活动与规则,promo-strategy
-443,食客端·下单与规则,guest-order-rules
+443,计时与自助餐规则,foh-guest-duration-scenarios
 444,菜品与菜单基础,item-menu-base
 445,税务规则,tax-rules
 446,折扣,order-discount
@@ -450,7 +451,7 @@ seq,groupTitle,groupKey
 449,收银记录与审计,register-audit-records
 450,收银记录与审计,register-audit-records
 451,费用折扣与小费支出,fees-tips-expense
-452,卡交易与附加费用,card-fees
+452,卡交易与附加费用,card-fees-2
 453,专题分析报表,topic-analysis-reports
 454,卡支付规则与合规,card-fees
 455,打印基础,print-foundation-devices
@@ -465,7 +466,7 @@ seq,groupTitle,groupKey
 464,结账与交互,cds-checkout-ux
 465,结账与交互,cds-checkout-ux
 466,客显屏,cds
-# 467 已去重，不进入 catalog（见 settings-catalog-exclusions.mjs，SSOT 652/653）
+467,语言,语言
 468,库存主数据与库位,master-data-locations
 469,库存主数据与库位,master-data-locations
 470,（未填写）,未填写
@@ -481,15 +482,15 @@ seq,groupTitle,groupKey
 480,会员账户与卡体系,member-account-system
 481,会员账户与卡体系,member-account-system
 482,会员账户与卡体系,member-account-system
-483,POS 点单页工具栏,pos-order-toolbar
-484,POS 点单页工具栏,pos-order-toolbar
-485,POS 点单页工具栏,pos-order-toolbar
-486,POS 点单页工具栏,pos-order-toolbar
-487,食客端·下单与规则,guest-order-rules
-488,食客端·下单与规则,guest-order-rules
-489,食客端·下单与规则,guest-order-rules
-490,食客端·下单与规则,guest-order-rules
-491,食客端·下单与规则,guest-order-rules
+483,点单页工具栏,foh-pos-order-toolbar
+484,点单页工具栏,foh-pos-order-toolbar
+485,点单页工具栏,foh-pos-order-toolbar
+486,点单页工具栏,foh-pos-order-toolbar
+487,订单类型、取餐与送厨,foh-guest-order-type
+488,订单类型、取餐与送厨,foh-guest-order-type
+489,订单类型、取餐与送厨,foh-guest-order-type
+490,订单类型、取餐与送厨,foh-guest-order-type
+491,订单类型、取餐与送厨,foh-guest-order-type
 492,扫码端·结账交互,guest-self-checkout-ux
 493,小费政策与计算,tip-policy
 494,扫码端·结账交互,guest-self-checkout-ux
@@ -500,47 +501,48 @@ seq,groupTitle,groupKey
 499,打印机与输出设备,printer-output-devices
 500,订单收据,order-receipt
 501,扫码端·结账交互,guest-self-checkout-ux
-502,食客端·下单与规则,guest-order-rules
-503,食客端·下单与规则,guest-order-rules
-504,食客端·下单与规则,guest-order-rules
-505,食客端·下单与规则,guest-order-rules
-506,食客端·下单与规则,guest-order-rules
-507,食客端·下单与规则,guest-order-rules
+502,订单类型、取餐与送厨,foh-guest-order-type
+503,订单类型、取餐与送厨,foh-guest-order-type
+504,食客登记与会员,foh-guest-registration
+505,食客登记与会员,foh-guest-registration
+506,食客登记与会员,foh-guest-registration
+507,食客登记与会员,foh-guest-registration
 508,登录注册与信息校验,login-verification
-509,食客端·首页与版式,guest-menu-global
-510,食客端·下单与规则,guest-order-rules
+509,菜单与购物车展示,foh-guest-menu-body
+510,食客登记与会员,foh-guest-registration
 511,支付手段与展示,payment-methods
-512,卡交易与附加费用,card-fees
-# 513,514 已去重，不进入 catalog（与 652/653 重复）
-515,食客端·菜单结构,guest-menu-structure
-516,食客端·菜单结构,guest-menu-structure
-517,食客端·菜单结构,guest-menu-structure
-518,食客端·菜单结构,guest-menu-structure
-519,食客端·菜单结构,guest-menu-structure
-520,食客端·菜单结构,guest-menu-structure
-521,备注与附加服务,guest-notes-fees
-522,备注与附加服务,guest-notes-fees
-523,备注与附加服务,guest-notes-fees
-524,食客端·菜单结构,guest-menu-structure
-525,食客端·菜单结构,guest-menu-structure
-526,食客端·菜单结构,guest-menu-structure
+512,卡交易与附加费用,card-fees-3
+513,语言,语言
+514,语言,语言
+515,菜单与购物车展示,foh-guest-menu-body
+516,菜单与购物车展示,foh-guest-menu-body
+517,菜单与购物车展示,foh-guest-menu-body
+518,菜单与购物车展示,foh-guest-menu-body
+519,菜单与购物车展示,foh-guest-menu-body
+520,菜单与购物车展示,foh-guest-menu-body
+521,点单备注,foh-guest-order-notes
+522,点单备注,foh-guest-order-notes
+523,点单备注,foh-guest-order-notes
+524,菜单与购物车展示,foh-guest-menu-body
+525,菜单与购物车展示,foh-guest-menu-body
+526,菜单与购物车展示,foh-guest-menu-body
 527,食客端·下单与规则,guest-order-rules
-528,食客端·菜单结构,guest-menu-structure
+528,菜单与购物车展示,foh-guest-menu-body
 529,等位排队规则,waitlist-queue-rules
 530,品牌与菜单展示,brand-menu-presentation
 531,品牌与菜单展示,brand-menu-presentation
-532,食客端·首页与版式,guest-menu-global
+532,点餐首页与入口,foh-guest-menu-home
 533,桌台与餐位,tables-floor
-534,桌台与餐位,tables-floor
-535,等待时长提示,wait-time
-536,等待时长提示,wait-time
-537,等待时长提示,wait-time
-538,等待时长提示,wait-time
-539,等待时长提示,wait-time
-540,等待时长提示,wait-time
+534,清桌与换服务员（企台）,foh-table-clear-ops
+535,等待时长计算与展示,foh-wait-time-display
+536,等待时长计算与展示,foh-wait-time-display
+537,等待时长计算与展示,foh-wait-time-display
+538,等待时长计算与展示,foh-wait-time-display
+539,等待时长计算与展示,foh-wait-time-display
+540,等待时长计算与展示,foh-wait-time-display
 541,促销渠道与载体,promo-channel
 542,食客端·首页与版式,guest-menu-global
-543,卡交易与附加费用,card-fees
+543,卡交易与附加费用,card-fees-4
 544,备注与附加服务,guest-notes-fees
 545,备注与附加服务,guest-notes-fees
 546,加收,order-surcharge
@@ -568,17 +570,17 @@ seq,groupTitle,groupKey
 568,食客下单限制规则,guest-order-limits
 569,食客端·下单与规则,guest-order-rules
 570,食客端·下单与规则,guest-order-rules
-571,食客端·下单与规则,guest-order-rules
-572,食客端·下单与规则,guest-order-rules
-573,食客端·下单与规则,guest-order-rules
-574,食客端·下单与规则,guest-order-rules
-575,食客端·下单与规则,guest-order-rules
+571,计时与自助餐规则,foh-guest-duration-scenarios
+572,火锅点餐,foh-guest-hotpot
+573,火锅点餐,foh-guest-hotpot
+574,火锅点餐,foh-guest-hotpot
+575,火锅点餐,foh-guest-hotpot
 576,食客下单限制规则,guest-order-limits
-577,食客端·下单与规则,guest-order-rules
-578,食客端·下单与规则,guest-order-rules
-579,食客端·下单与规则,guest-order-rules
-580,食客端·下单与规则,guest-order-rules
-581,食客端·下单与规则,guest-order-rules
+577,计时与自助餐规则,foh-guest-duration-scenarios
+578,计时与自助餐规则,foh-guest-duration-scenarios
+579,计时与自助餐规则,foh-guest-duration-scenarios
+580,计时与自助餐规则,foh-guest-duration-scenarios
+581,订单类型、取餐与送厨,foh-guest-order-type
 582,营业与运营,store-hours-operation
 583,食客下单限制规则,guest-order-limits
 584,食客下单限制规则,guest-order-limits
@@ -589,38 +591,42 @@ seq,groupTitle,groupKey
 589,食客下单限制规则,guest-order-limits
 590,食客下单限制规则,guest-order-limits
 591,食客下单限制规则,guest-order-limits
-592,桌台与餐位,tables-floor
+592,选桌与开台流程,foh-table-start-flow
 593,开单·桌台与场景,order-init-scenario
 594,下单操作限制与授权,order-operation-guardrails
 595,下单操作限制与授权,order-operation-guardrails
 596,下单操作限制与授权,order-operation-guardrails
 597,食客端·下单与规则,guest-order-rules
 598,食客端·下单与规则,guest-order-rules
-599,食客端·首页与版式,guest-menu-global
-600,食客端·首页与版式,guest-menu-global
-601,食客端·首页与版式,guest-menu-global
-602,食客端·首页与版式,guest-menu-global
-# 603,605,613,614 已去重（SSOT 515/516/524/528），不进入 catalog（见 settings-catalog-exclusions.mjs）
-604,食客端·首页与版式,guest-menu-global
-606,食客端·首页与版式,guest-menu-global
-607,食客端·首页与版式,guest-menu-global
-608,食客端·首页与版式,guest-menu-global
-# 609,610 已去重，不进入 catalog（见 settings-catalog-exclusions.mjs）
-611,食客端·首页与版式,guest-menu-global
+599,点餐首页与入口,foh-guest-menu-home
+600,点餐首页与入口,foh-guest-menu-home
+601,点餐首页与入口,foh-guest-menu-home
+602,点餐首页与入口,foh-guest-menu-home
+603,展示设置,展示设置
+604,点餐首页与入口,foh-guest-menu-home
+605,展示设置,展示设置
+606,菜单与购物车展示,foh-guest-menu-body
+607,菜单与购物车展示,foh-guest-menu-body
+608,菜单与购物车展示,foh-guest-menu-body
+609,展示设置,展示设置
+610,展示设置,展示设置
+611,点餐首页与入口,foh-guest-menu-home
 612,食客端·首页与版式,guest-menu-global
+613,展示设置,展示设置
+614,展示设置,展示设置
 615,会员引导与权益展示,member-guidance-benefits
-616,食客端·购物车展示,guest-menu-cart
-617,食客端·购物车展示,guest-menu-cart
-618,食客端·购物车展示,guest-menu-cart
-619,桌台与餐位,tables-floor
-620,下单操作限制与授权,order-operation-guardrails
-621,下单操作限制与授权,order-operation-guardrails
-622,食客端·下单与规则,guest-order-rules
-623,食客端·下单与规则,guest-order-rules
+616,菜单与购物车展示,foh-guest-menu-body
+617,菜单与购物车展示,foh-guest-menu-body
+618,菜单与购物车展示,foh-guest-menu-body
+619,选桌与开台流程,foh-table-start-flow
+620,点单前限制与授权,foh-guest-pre-order
+621,选桌与开台流程,foh-table-start-flow
+622,食客登记与会员,foh-guest-registration
+623,食客登记与会员,foh-guest-registration
 624,登录注册与信息校验,login-verification
-625,POS 开单流程,pos-order-init
-626,下单操作限制与授权,order-operation-guardrails
-627,下单操作限制与授权,order-operation-guardrails
+625,选桌与开台流程,foh-table-start-flow
+626,点单前限制与授权,foh-guest-pre-order
+627,点单前限制与授权,foh-guest-pre-order
 628,标签与分类属性,tags-attributes
 629,呼叫服务员与现场提醒,service-call-alerts
 630,呼叫服务员与现场提醒,service-call-alerts
@@ -630,23 +636,23 @@ seq,groupTitle,groupKey
 634,呼叫服务员与现场提醒,service-call-alerts
 635,呼叫服务员与现场提醒,service-call-alerts
 636,呼叫服务员与现场提醒,service-call-alerts
-637,呼叫服务员与现场提醒,service-call-alerts
-638,订单与取餐通知,order-pickup-messages
-639,订单与取餐通知,order-pickup-messages
-640,呼叫服务员与现场提醒,service-call-alerts
-641,呼叫服务员与现场提醒,service-call-alerts
-642,桌台与餐位,tables-floor
-643,桌台与餐位,tables-floor
-644,桌台与餐位,tables-floor
-645,食客端·首页与版式,guest-menu-global
+637,消息类型提醒,foh-pos-order-alerts
+638,消息类型提醒,foh-pos-order-alerts
+639,消息类型提醒,foh-pos-order-alerts
+640,桌边呼叫,foh-tableside-service
+641,桌边呼叫,foh-tableside-service
+642,清桌与换服务员（企台）,foh-table-clear-ops
+643,选桌与开台流程,foh-table-start-flow
+644,选桌与开台流程,foh-table-start-flow
+645,菜单与购物车展示,foh-guest-menu-body
 646,账户安全与授权,account-security-auth
 647,抽奖活动设置,lottery-activity-settings
 648,投放位与触发规则,placement-trigger
 649,投放位与触发规则,placement-trigger
 650,会员引导与权益展示,member-guidance-benefits
 651,营销内容与素材,content-assets
-652,食客端·界面语言,guest-facing-locale
-653,食客端·界面语言,guest-facing-locale
+652,食客端语言,foh-guest-facing-locale
+653,食客端语言,foh-guest-facing-locale
 654,订单收据,order-receipt
 655,食客端·品类与场景菜单,guest-menu-scenarios
 656,食客端·品类与场景菜单,guest-menu-scenarios
@@ -664,160 +670,3 @@ seq,groupTitle,groupKey
 668,钱箱与支付终端,cash-payment-terminals
 669,结账与交互,cds-checkout-ux
 670,钱箱与支付终端,cash-payment-terminals
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

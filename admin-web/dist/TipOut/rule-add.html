@@ -588,24 +588,24 @@
               <label class="radio-item">
                 <input type="radio" name="distribution" value="hours" onchange="updateWorkHoursConfigUi()"> 按工作时长占比分配
               </label>
+              <div class="work-hours-config" id="workHoursConfigPanel" style="display:none">
+                <label class="radio-item">
+                  <input type="radio" name="workHoursMode" value="actual" checked onchange="updateWorkHoursConfigUi()">
+                  <span id="workHoursActualLabel">按照实际打卡工时</span>
+                </label>
+                <div class="work-hours-cap-row">
+                  <label class="radio-item">
+                    <input type="radio" name="workHoursMode" value="capped" onchange="updateWorkHoursConfigUi()">
+                    <span id="workHoursCappedLabel">打卡工时超出最大工时，按最大工时</span>
+                  </label>
+                  <input class="work-hours-cap-input" id="maxHoursPerDay" type="number" min="0.1" max="24" step="0.1" inputmode="decimal" disabled oninput="clearWorkHoursConfigError()" aria-label="每日最大工时">
+                  <span style="font-size:13px;color:var(--text-secondary)">小时/天</span>
+                </div>
+                <div class="work-hours-config-error" id="workHoursConfigError"></div>
+              </div>
               <label class="radio-item" id="distributionOrdersRow">
                 <input type="radio" name="distribution" value="orders" onchange="updateWorkHoursConfigUi()"> 按订单占比分配
               </label>
-            </div>
-            <div class="work-hours-config" id="workHoursConfigPanel" style="display:none">
-              <label class="radio-item">
-                <input type="radio" name="workHoursMode" value="actual" checked onchange="updateWorkHoursConfigUi()">
-                <span id="workHoursActualLabel">按照实际打卡工时</span>
-              </label>
-              <div class="work-hours-cap-row">
-                <label class="radio-item">
-                  <input type="radio" name="workHoursMode" value="capped" onchange="updateWorkHoursConfigUi()">
-                  <span id="workHoursCappedLabel">打卡工时超出最大工时，按最大工时</span>
-                </label>
-                <input class="work-hours-cap-input" id="maxHoursPerDay" type="number" min="0.1" max="24" step="0.1" inputmode="decimal" disabled oninput="clearWorkHoursConfigError()" aria-label="每日最大工时">
-                <span style="font-size:13px;color:var(--text-secondary)">小时/天</span>
-              </div>
-              <div class="work-hours-config-error" id="workHoursConfigError"></div>
             </div>
           </div>
 

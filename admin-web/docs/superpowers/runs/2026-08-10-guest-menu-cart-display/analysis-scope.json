@@ -1,0 +1,94 @@
+{
+  "version": 1,
+  "mode": "standalone",
+  "requirement": {
+    "currentBehavior": "菜单与购物车展示分组的 18 项顺序、逐项适用产线和部分枚举文案与产品要求不一致；多个组件错误共享产线数组，scope 抽取器会回退到同文件首个 PRODUCT_LINES，seq 607 还有重复总开关与隐式 toggle 镜像。",
+    "targetBehavior": "按已确认规格精确重排 18 项，逐项使用指定产线并支持多选；517/607/526 采用行内启用加逐行单选；显式空选不复活；scope owner 唯一；seq 607 不再渲染或改写旧开关。",
+    "acceptance": "设计规格第 13 节全部满足。",
+    "outOfScope": [
+      "修改下游菜单、积分、购物车或送厨业务算法",
+      "新增或删除设置项",
+      "重构其他前厅设置分组",
+      "后端接口"
+    ]
+  },
+  "rootCause": {
+    "status": "confirmed",
+    "summary": "排序 SSOT 使用历史子分组顺序；结构与购物车组件各自共享单一产线数组；525 复用旧会员产线；scope 抽取启发式无法表达逐 seq 差异；517/526 缺 enabled-lines，607 同时存在行内启用需求、通用总开关与通用 toggle 镜像。"
+  },
+  "entryPoints": [
+    {
+      "path": "src/main.ts",
+      "symbol": "renderModuleSettingRow/runModuleSettingToggleSideEffects/mount",
+      "relation": "entry_point",
+      "impact": "affected",
+      "deepRead": true
+    }
+  ],
+  "references": [
+    { "path": "scripts/lib/foh-settings-groups.mjs", "symbol": "FOH_SETTINGS_ASSIGN_MAP.foh-guest-menu-body", "relation": "producer", "impact": "affected", "deepRead": true },
+    { "path": "scripts/lib/foh-line-scope-extract.mjs", "symbol": "extractUiLineScopeMap/STORAGE_MANUAL_SUPPLEMENT", "relation": "producer", "impact": "affected", "deepRead": true },
+    { "path": "src/config/module-settings-guest-menu-structure-ui.ts", "symbol": "515-520/524/528", "relation": "definition", "impact": "affected", "deepRead": true },
+    { "path": "src/config/module-settings-guest-menu-image-mode-ui.ts", "symbol": "seq 607", "relation": "definition", "impact": "affected", "deepRead": true },
+    { "path": "src/config/module-settings-member-points-rewards-ui.ts", "symbol": "seq 525/526", "relation": "definition", "impact": "affected", "deepRead": true },
+    { "path": "src/config/module-settings-guest-menu-cart-ui.ts", "symbol": "seq 616-618", "relation": "definition", "impact": "affected", "deepRead": true },
+    { "path": "src/config/module-settings-form-ui.ts", "symbol": "writeModuleSettingJson/syncFohLinesMirrorToggle", "relation": "side_effect", "impact": "affected", "deepRead": true },
+    { "path": "src/config/page-settings-draft.ts", "symbol": "persistDraftEntry/syncFohLinesMirrorFromSerialized", "relation": "side_effect", "impact": "affected", "deepRead": true },
+    { "path": "src/config/foh-settings-by-line-toggle.ts", "symbol": "writeFohByLineToggleState/applyFohByLineUiSuppressions", "relation": "shared_caller", "impact": "affected", "deepRead": true },
+    { "path": "src/config/module-settings-ai-editable.ts", "symbol": "foh-line mutation", "relation": "indirect_caller", "impact": "affected", "deepRead": false },
+    { "path": "src/config/module-settings-catalog.ts", "symbol": "目标 18 seq 与组内排序", "relation": "data_source", "impact": "affected", "deepRead": true }
+  ],
+  "deepReadPaths": [
+    "src/main.ts",
+    "scripts/lib/foh-settings-groups.mjs",
+    "scripts/lib/foh-line-scope-extract.mjs",
+    "src/config/module-settings-guest-menu-structure-ui.ts",
+    "src/config/module-settings-guest-menu-class-name-display-ui.ts",
+    "src/config/module-settings-guest-menu-image-mode-ui.ts",
+    "src/config/module-settings-guest-dish-detail-display-ui.ts",
+    "src/config/module-settings-guest-menu-dish-name-font-ui.ts",
+    "src/config/module-settings-guest-menu-line-toggle-ui.ts",
+    "src/config/module-settings-member-points-rewards-ui.ts",
+    "src/config/module-settings-guest-menu-cart-ui.ts",
+    "src/config/module-settings-form-ui.ts",
+    "src/config/page-settings-draft.ts",
+    "src/config/foh-settings-by-line-toggle.ts",
+    "src/config/module-settings-toggle-ui.ts",
+    "src/config/module-settings-catalog.ts"
+  ],
+  "dataFlow": [
+    { "from": "scripts/lib/foh-settings-groups.mjs", "to": "src/config/module-settings-catalog.ts", "evidence": "分组 SSOT 生成运行时组内排序。" },
+    { "from": "src/main.ts", "to": "src/config/module-settings-guest-menu-*.ts", "evidence": "设置项分派渲染专用 UI 并在挂载时绑定事件。" },
+    { "from": "src/config/module-settings-guest-menu-*.ts", "to": "src/config/module-settings-form-ui.ts", "evidence": "组件通过 JSON/数值写入进入页面草稿。" },
+    { "from": "src/config/module-settings-form-ui.ts", "to": "src/config/page-settings-draft.ts", "evidence": "页面保存或放弃修改提交/恢复持久化数据。" },
+    { "from": "src/config/foh-settings-line-storage-registry.ts", "to": "src/config/foh-settings-by-line-toggle.ts", "evidence": "按产线读取和 AI 写入使用 lines registry 与 codec。" }
+  ],
+  "sharedCallers": [
+    { "path": "src/config/module-settings-form-ui.ts", "impact": "affected", "verification": "非 607 lines 设置继续镜像；607 永不镜像。" },
+    { "path": "src/config/page-settings-draft.ts", "impact": "affected", "verification": "保存/放弃恢复不改写 607 旧开关。" },
+    { "path": "src/config/foh-settings-by-line-toggle.ts", "impact": "affected", "verification": "按产线与 AI 写入 607 只改 lines。" }
+  ],
+  "sharedCallersComplete": true,
+  "expansions": [
+    {
+      "question": "seq 607 从可见总开关移除后是否仍存在隐式 toggle 写入？",
+      "trigger": "high_risk_side_effect",
+      "addedPaths": ["src/config/module-settings-form-ui.ts", "src/config/page-settings-draft.ts", "src/config/foh-settings-by-line-toggle.ts", "src/config/module-settings-ai-editable.ts"],
+      "expectedEvidence": "枚举所有 lines→toggle 镜像消费者并建立共享排除策略。"
+    }
+  ],
+  "wikiQueries": [
+    {
+      "question": "菜单与购物车展示的排序、产线 scope、草稿持久化和 toggle 镜像入口在哪里？",
+      "mode": "wiki_bypass",
+      "reason": "resolve-query-context 返回 wiki_not_configured；改为当前源码域追踪。",
+      "sourcePaths": ["src/main.ts", "src/config", "scripts/lib"]
+    }
+  ],
+  "workspace": {
+    "status": "unrelated_changes",
+    "evidence": "工作区含此前已确认的前厅分组、通知、清桌、TipOut 和 timed-menu 改动；本任务与其中 catalog/scope/main.ts 有已知增量重叠，实施前保留差异基线并只编辑目标符号。"
+  },
+  "scopeStatus": "bounded",
+  "stopReason": "requirement_impact_bounded"
+}

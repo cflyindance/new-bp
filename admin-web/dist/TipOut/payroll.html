@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>薪酬报税 - BPlant</title>
   <link rel="stylesheet" href="common.css">
-  <link rel="stylesheet" href="payroll.css?v=2026062403">
+  <link rel="stylesheet" href="payroll.css?v=2026081001">
 </head>
 <body>
   <div class="layout payroll-page">
@@ -74,7 +74,7 @@
           </div>
         </div>
 
-        <div id="payroll-store-bar" class="payroll-store-bar no-print">
+        <div id="payroll-store-bar" class="payroll-store-bar payroll-workspace-filters no-print">
           <div class="payroll-store-bar-inner">
             <div class="payroll-store-bar-field">
               <label class="payroll-store-filter-label" for="payroll-store-filter">门店</label>
@@ -85,6 +85,42 @@
               >
                 <option value="">请选择门店</option>
               </select>
+              <button type="button" class="payroll-filter-trigger" id="payroll-store-trigger" data-action="toggle-workspace-menu" data-menu="store" aria-haspopup="listbox" aria-expanded="false" aria-controls="payroll-store-picker">
+                <span class="payroll-filter-trigger-label">Store</span>
+                <strong id="payroll-store-trigger-value">—</strong>
+                <span class="payroll-filter-trigger-caret" aria-hidden="true">⌄</span>
+              </button>
+              <div class="payroll-filter-popover payroll-store-picker" id="payroll-store-picker" data-workspace-menu="store" hidden>
+                <label class="payroll-store-picker-search" for="payroll-store-search">
+                  <span aria-hidden="true">⌕</span>
+                  <input id="payroll-store-search" type="search" autocomplete="off" placeholder="搜索门店" />
+                </label>
+                <div id="payroll-store-options" class="payroll-filter-options" role="listbox" aria-label="Store"></div>
+              </div>
+            </div>
+            <div class="payroll-store-bar-field payroll-workspace-filter-field payroll-workspace-only">
+              <label class="payroll-store-filter-label" for="manage-period-nav-year">年度</label>
+              <select id="manage-period-nav-year" class="form-control payroll-workspace-filter-select" aria-label="年度"></select>
+              <button type="button" class="payroll-filter-trigger" id="payroll-year-trigger" data-action="toggle-workspace-menu" data-menu="year" aria-haspopup="listbox" aria-expanded="false" aria-controls="payroll-year-menu">
+                <span class="payroll-filter-trigger-label">Year</span>
+                <strong id="payroll-year-trigger-value">—</strong>
+                <span class="payroll-filter-trigger-caret" aria-hidden="true">⌄</span>
+              </button>
+              <div class="payroll-filter-popover payroll-compact-picker" id="payroll-year-menu" data-workspace-menu="year" hidden>
+                <div id="payroll-year-options" class="payroll-filter-options" role="listbox" aria-label="Year"></div>
+              </div>
+            </div>
+            <div class="payroll-store-bar-field payroll-workspace-filter-field payroll-workspace-only">
+              <label class="payroll-store-filter-label" for="workspace-period-filter">期数</label>
+              <select id="workspace-period-filter" class="form-control payroll-workspace-filter-select" aria-label="期数"></select>
+              <button type="button" class="payroll-filter-trigger" id="payroll-period-trigger" data-action="toggle-workspace-menu" data-menu="period" aria-haspopup="listbox" aria-expanded="false" aria-controls="payroll-period-menu">
+                <span class="payroll-filter-trigger-label">Period</span>
+                <strong id="payroll-period-trigger-value">—</strong>
+                <span class="payroll-filter-trigger-caret" aria-hidden="true">⌄</span>
+              </button>
+              <div class="payroll-filter-popover payroll-compact-picker" id="payroll-period-menu" data-workspace-menu="period" hidden>
+                <div id="payroll-period-options" class="payroll-filter-options" role="listbox" aria-label="Period"></div>
+              </div>
             </div>
             <div class="payroll-store-bar-actions">
               <button type="button" class="btn" id="btn-export-batch-adp" data-action="export-batch-adp" disabled>批量导出 ADP</button>
@@ -158,47 +194,87 @@
         </section>
 
         <!-- View: Workspace -->
-        <section id="view-workspace" hidden aria-labelledby="ws-employee-switch">
+        <section id="view-workspace" hidden aria-labelledby="payroll-workspace-title">
+          <div class="payroll-workspace-topbar no-print">
+            <div class="payroll-workspace-title-block">
+              <p class="payroll-workspace-eyebrow">Team · Payroll</p>
+              <h1 class="payroll-workspace-title" id="payroll-workspace-title">Payroll Management</h1>
+            </div>
+            <div class="payroll-workspace-actions">
+              <div class="payroll-adp-export-dropdown">
+                <button
+                  type="button"
+                  class="btn payroll-workspace-action-btn"
+                  id="btn-payroll-adp-menu-toggle"
+                  data-action="toggle-adp-export-menu"
+                  aria-haspopup="menu"
+                  aria-expanded="false"
+                >
+                  <span id="payroll-adp-menu-label">Export ADP Report</span>
+                  <span aria-hidden="true">⌄</span>
+                </button>
+                <div class="payroll-adp-export-menu" id="payroll-adp-export-menu" role="menu" hidden>
+                  <button type="button" class="payroll-adp-export-item" data-action="preview-adp-report" role="menuitem">
+                    <span id="payroll-export-current-label">Export Current ADP</span>
+                  </button>
+                  <button type="button" class="payroll-adp-export-item" data-action="export-batch-adp" role="menuitem">
+                    <span id="payroll-export-batch-label">Batch Export ADP</span>
+                  </button>
+                </div>
+              </div>
+              <button type="button" class="btn payroll-workspace-action-btn" data-action="preview-employees-detail">Employees Detail</button>
+              <button type="button" class="btn btn-primary payroll-workspace-action-btn" id="payroll-header-save" data-action="confirm-employee">确定并保存</button>
+            </div>
+          </div>
           <div class="payroll-workspace-layout">
-            <aside class="payroll-workspace-period-nav no-print" aria-label="期数">
-              <select id="manage-period-nav-year" class="payroll-workspace-period-nav-year-select form-control" aria-label="年度"></select>
+            <aside class="payroll-workspace-period-nav no-print" aria-label="期数" hidden aria-hidden="true">
               <p class="payroll-workspace-period-nav-title" id="manage-period-nav-title">期数</p>
               <div id="manage-period-nav-grid" class="payroll-workspace-period-grid"></div>
             </aside>
             <div class="payroll-workspace-main">
-          <div class="payroll-workspace-identity no-print">
-            <div class="payroll-workspace-identity-main">
-              <div class="payroll-workspace-identity-name-row">
-                <select id="ws-employee-switch" class="payroll-workspace-employee-select" aria-label="切换本期员工"></select>
-                <span id="ws-employee-role-tag" class="tag tag-blue payroll-employee-role-tag" hidden></span>
-              </div>
-              <p id="ws-breadcrumb-period" class="payroll-period-context"></p>
-            </div>
-            <div class="payroll-workspace-identity-fields">
-              <div class="payroll-workspace-identity-field payroll-workspace-identity-field--stack">
-                <div class="payroll-workspace-identity-input-row">
-                  <label class="payroll-workspace-adp-label payroll-label-with-help" for="field-adp-file">
-                    <span>ADP File#</span>
-                    <button type="button" class="payroll-field-help" data-field-help="adp-file" aria-label="ADP File# 字段说明">?</button>
-                  </label>
-                  <input id="field-adp-file" type="text" class="payroll-workspace-adp-input" autocomplete="off" placeholder="—" />
-                </div>
-                <div class="payroll-workspace-identity-input-row">
-                  <label class="payroll-workspace-adp-label payroll-label-with-help" for="field-ssn">
-                    <span>员工 SSN</span>
-                    <button type="button" class="payroll-field-help" data-field-help="ssn" aria-label="员工 SSN 字段说明">?</button>
-                  </label>
-                  <input id="field-ssn" type="text" class="payroll-workspace-adp-input payroll-workspace-ssn-input" autocomplete="off" inputmode="numeric" placeholder="XXX-XX-XXXX" maxlength="11" />
+          <section class="payroll-employee-hero no-print" aria-labelledby="ws-employee-name">
+            <div class="payroll-employee-hero-head">
+              <div class="payroll-employee-hero-person">
+                <span class="payroll-employee-avatar" id="ws-employee-avatar" aria-hidden="true">—</span>
+                <div>
+                  <div class="payroll-employee-name-line">
+                    <h2 class="payroll-employee-name" id="ws-employee-name">—</h2>
+                    <span class="payroll-employee-role" id="ws-employee-role-display" hidden></span>
+                  </div>
+                  <div class="payroll-employee-meta">
+                    <span><span id="workspace-employee-id-label">Employee ID</span> <strong id="ws-employee-id">—</strong></span>
+                    <span><span id="workspace-adp-label">ADP File#</span> <strong id="ws-employee-adp-display">—</strong></span>
+                    <span><span id="workspace-ssn-label">SSN</span> <strong id="ws-employee-ssn-display">—</strong></span>
+                    <span><span id="workspace-hire-label">Hire Date</span> <strong id="ws-employee-hire-display">—</strong></span>
+                    <span><span id="workspace-range-label">Salary Range</span> <strong id="ws-period-range">—</strong></span>
+                  </div>
                 </div>
               </div>
-              <div class="payroll-workspace-identity-field">
-                <label class="payroll-workspace-adp-label payroll-label-with-help" for="field-hire-date">
-                  <span>Hire Date</span>
-                  <button type="button" class="payroll-field-help" data-field-help="hire-date" aria-label="Hire Date 字段说明">?</button>
-                </label>
-                <input id="field-hire-date" type="date" class="payroll-workspace-date-input" />
+              <div class="payroll-employee-hero-actions">
+                <button type="button" class="btn btn-sm payroll-hero-btn" data-action="refresh-employee-data">更新员工数据</button>
+                <button type="button" class="btn btn-sm payroll-hero-btn" data-action="open-employee-identity-edit">编辑</button>
+                <button type="button" class="btn btn-sm payroll-hero-btn" data-action="open-employee-picker">切换员工</button>
               </div>
             </div>
+            <div class="payroll-employee-metrics">
+              <div class="payroll-employee-metric">
+                <span id="workspace-total-salary-label">Total Salary</span>
+                <strong id="ws-total-salary">$0.00</strong>
+              </div>
+              <div class="payroll-employee-metric">
+                <span id="workspace-total-hours-label">Total Hours</span>
+                <strong id="ws-total-hours">0.00 h</strong>
+              </div>
+              <div class="payroll-employee-metric">
+                <span id="workspace-paycheck-label">Paycheck</span>
+                <strong id="ws-paycheck">—</strong>
+              </div>
+            </div>
+          </section>
+          <div class="payroll-workspace-identity-hooks no-print" hidden aria-hidden="true">
+            <select id="ws-employee-switch" aria-label="切换本期员工"></select>
+            <span id="ws-employee-role-tag" hidden></span>
+            <p id="ws-breadcrumb-period"></p>
           </div>
           <div id="tab-panel-manage" class="payroll-workspace-manage-panel">
             <section class="payroll-manage-section payroll-attendance-section" aria-label="考勤明细">
@@ -208,8 +284,8 @@
               </div>
             </section>
 
-            <section class="payroll-manage-section payroll-period-summary" aria-label="Pay Period 汇总">
-              <h3 class="payroll-manage-section-title" id="manage-pay-period-title">Pay Period 汇总</h3>
+            <section class="payroll-manage-section payroll-period-summary" aria-label="Attendance Details">
+              <h3 class="payroll-manage-section-title" id="manage-pay-period-title">Attendance Details</h3>
               <div class="payroll-sum-cards">
                 <div class="card payroll-sum-card payroll-sum-card--hours">
                   <div class="card-header payroll-sum-card-header">
@@ -272,7 +348,7 @@
               <h3 class="payroll-manage-section-title" id="manage-wide-table-title">Manage payroll 宽表</h3>
               <div class="payroll-wide-groups">
 
-                <div class="card payroll-wide-group payroll-wide-group--tips">
+                <div class="card payroll-wide-group payroll-wide-group--tips payroll-screenshot-manage-group">
                   <div class="card-header payroll-wide-group-header">
                     <div class="payroll-wide-group-heading">
                       <span class="payroll-wide-group-badge payroll-wide-group-badge--tips" aria-hidden="true">$</span>
@@ -300,7 +376,7 @@
                   </div>
                 </div>
 
-                <div class="card payroll-wide-group">
+                <div class="card payroll-wide-group payroll-wide-group--deductions payroll-screenshot-manage-group">
                   <div class="card-header payroll-wide-group-header">
                     <div class="payroll-wide-group-heading">
                       <span class="payroll-wide-group-badge payroll-wide-group-badge--deductions" aria-hidden="true">−</span>
@@ -341,7 +417,7 @@
                   </div>
                 </div>
 
-                <div class="card payroll-wide-group">
+                <div class="card payroll-wide-group payroll-wide-group--meals payroll-screenshot-manage-group">
                   <div class="card-header payroll-wide-group-header">
                     <div class="payroll-wide-group-heading">
                       <span class="payroll-wide-group-badge payroll-wide-group-badge--meals" aria-hidden="true">M</span>
@@ -375,7 +451,7 @@
                   </div>
                 </div>
 
-                <div class="card payroll-wide-group">
+                <div class="card payroll-wide-group payroll-wide-group--extra payroll-screenshot-manage-group">
                   <div class="card-header payroll-wide-group-header">
                     <div class="payroll-wide-group-heading">
                       <span class="payroll-wide-group-badge payroll-wide-group-badge--extra" aria-hidden="true">+</span>
@@ -402,7 +478,7 @@
                   </div>
                 </div>
 
-                <div class="card payroll-wide-group payroll-wide-group--compact">
+                <div class="card payroll-wide-group payroll-wide-group--compact payroll-wide-group--exempt payroll-screenshot-manage-group">
                   <div class="card-header payroll-wide-group-header">
                     <div class="payroll-wide-group-heading">
                       <span class="payroll-wide-group-badge payroll-wide-group-badge--exempt" aria-hidden="true">E</span>
@@ -559,8 +635,67 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="payrollEmployeeEditModal">
+    <div class="modal payroll-employee-edit-modal" role="dialog" aria-modal="true" aria-labelledby="employee-edit-title">
+      <div class="modal-header payroll-employee-edit-header">
+        <button type="button" class="modal-close" id="btn-employee-edit-close" aria-label="关闭">×</button>
+        <h3 id="employee-edit-title">编辑员工信息</h3>
+        <button type="button" class="btn btn-primary" id="btn-employee-edit-confirm">Confirm</button>
+      </div>
+      <div class="modal-body payroll-employee-edit-body">
+        <div class="payroll-employee-edit-field">
+          <label class="payroll-employee-edit-label" for="field-adp-file">
+            <span>ADP ID</span>
+            <button type="button" class="payroll-field-help" data-field-help="adp-file" aria-label="ADP ID 字段说明">?</button>
+          </label>
+          <input id="field-adp-file" type="text" class="payroll-employee-edit-input" autocomplete="off" placeholder="—" />
+        </div>
+        <div class="payroll-employee-edit-field">
+          <label class="payroll-employee-edit-label" for="field-ssn">
+            <span>Employee SSN</span>
+          </label>
+          <input id="field-ssn" type="text" class="payroll-employee-edit-input payroll-workspace-ssn-input" autocomplete="off" inputmode="numeric" placeholder="XXX-XX-XXXX" maxlength="11" />
+        </div>
+        <div class="payroll-employee-edit-field">
+          <label class="payroll-employee-edit-label" for="field-hire-date">
+            <span>Hire Date</span>
+            <button type="button" class="payroll-field-help" data-field-help="hire-date" aria-label="Hire Date 字段说明">?</button>
+          </label>
+          <input id="field-hire-date" type="date" class="payroll-employee-edit-input payroll-employee-edit-date" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="payrollEmployeePickerModal">
+    <div class="modal payroll-employee-picker" role="dialog" aria-modal="true" aria-labelledby="employee-picker-title">
+      <div class="modal-header payroll-employee-picker-header">
+        <button type="button" class="modal-close" id="btn-employee-picker-close" aria-label="关闭">×</button>
+        <h3 id="employee-picker-title">切换员工</h3>
+        <button type="button" class="btn btn-primary" id="btn-employee-picker-confirm" disabled>Confirm</button>
+      </div>
+      <div class="modal-body payroll-employee-picker-body">
+        <div class="payroll-employee-picker-store" id="employee-picker-store">
+          <span class="payroll-employee-picker-store-icon" aria-hidden="true">▣</span>
+          <span><strong id="employee-picker-store-name">—</strong><small id="employee-picker-store-address">—</small></span>
+        </div>
+        <div class="payroll-employee-role-picker">
+          <section class="payroll-employee-role-column" aria-labelledby="employee-picker-employee-label">
+            <p id="employee-picker-employee-label">员工</p>
+            <div id="employee-picker-employees" class="payroll-employee-picker-list" role="listbox"></div>
+          </section>
+          <section class="payroll-employee-role-column" aria-labelledby="employee-picker-role-label">
+            <p id="employee-picker-role-label">角色</p>
+            <div id="employee-picker-roles" class="payroll-employee-picker-role-list" role="listbox"></div>
+          </section>
+        </div>
+        <span id="employee-picker-count" class="payroll-employee-picker-count"></span>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-overlay" id="fieldHelpModal">
-    <div class="modal" style="width:min(520px,92vw)">
+    <div class="modal" style="width:min(520px,92vw)" role="dialog" aria-modal="true" aria-labelledby="field-help-title">
       <div class="modal-header">
         <h3 id="field-help-title">字段说明</h3>
         <button type="button" class="modal-close" id="btn-field-help-close" aria-label="关闭">×</button>

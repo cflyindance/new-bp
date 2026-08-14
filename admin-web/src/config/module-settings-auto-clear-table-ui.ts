@@ -1,20 +1,26 @@
 /**
- * 前厅 · 桌台与餐位：seq 534 自动清桌（主开关 + 各产线占用超时分钟数）。
+ * 前厅 · 清桌与换企台：seq 534 付款后自动清桌（主开关 + 各产线付款后等待分钟数）。
+ * 原 seq 169「付款后清桌模式」已合并，并在首次读取时迁移。
  */
 
 import {
   moduleSettingStorageKey,
   readModuleSettingJson,
+  readModuleSettingJsonRaw,
   readModuleSettingNumber,
   writeModuleSettingJson,
   writeModuleSettingNumber,
 } from "./module-settings-form-ui";
 import { moduleSettingToggleStorageKey } from "./module-settings-toggle-ui";
+import { getLayoutContextStoreId } from "../auth/session-scope";
 
 export const AUTO_CLEAR_TABLE_SEQ = 534;
 
 const LINES_STORAGE_ID = "534-auto-clear-table-lines";
 const MINUTES_BY_LINE_STORAGE_ID = "534-auto-clear-table-minutes-by-line";
+const LEGACY_POST_PAYMENT_CLEAR_TABLE_SEQ = 169;
+const LEGACY_LINES_STORAGE_ID = "169-post-payment-clear-table-lines";
+const MIGRATION_MARKER_PREFIX = "534-post-payment-auto-clear-169-migrated-v1";
 
 export const AUTO_CLEAR_TABLE_PRODUCT_LINES = [
   { id: "emenu", label: "eMenu" },
@@ -28,6 +34,13 @@ export const AUTO_CLEAR_TABLE_PRODUCT_LINES = [
 export type AutoClearTableProductLineId = (typeof AUTO_CLEAR_TABLE_PRODUCT_LINES)[number]["id"];
 
 const ALL_LINE_IDS: AutoClearTableProductLineId[] = AUTO_CLEAR_TABLE_PRODUCT_LINES.map((l) => l.id);
+const LEGACY_LINE_IDS = new Set<AutoClearTableProductLineId>([
+  "emenu",
+  "pos",
+  "pos-go",
+  "paypad",
+  "sdi",
+]);
 
 const MINUTES_MIN = 0;
 const MINUTES_MAX = 999;
@@ -36,8 +49,8 @@ const MINUTES_DEFAULT = 60;
 const NUMBER_INPUT_CLASS =
   "h-8 w-24 rounded-md border border-input bg-background px-2 text-right text-sm tabular-nums text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
 
-let toggleMigrated = false;
 let minutesMigrated = false;
+const migratedScopes = new Set<string>();
 
 function escapeHtml(s: string): string {
   return s
@@ -66,22 +79,7 @@ function readLegacyToggleOn(seq: number): boolean {
 }
 
 export function ensureAutoClearTableToggleMigrated(): void {
-  if (toggleMigrated) return;
-  toggleMigrated = true;
-  try {
-    if (localStorage.getItem(moduleSettingToggleStorageKey(AUTO_CLEAR_TABLE_SEQ)) !== null) {
-      return;
-    }
-  } catch {
-    return;
-  }
-  if (readLegacyToggleOn(AUTO_CLEAR_TABLE_SEQ)) {
-    try {
-      localStorage.setItem(moduleSettingToggleStorageKey(AUTO_CLEAR_TABLE_SEQ), "1");
-    } catch {
-      /* ignore */
-    }
-  }
+  ensurePostPaymentAutoClearMigration();
 }
 
 export function readAutoClearTableMasterOn(): boolean {
@@ -115,12 +113,104 @@ function normalizeMinutesByLine(
   return base;
 }
 
+export function mergePostPaymentAutoClearMigrationState(input: {
+  targetToggleOn: boolean;
+  targetMinutes: Partial<Record<string, unknown>>;
+  legacyToggleOn: boolean;
+  legacyLines: readonly string[];
+}): {
+  toggleOn: boolean;
+  minutes: Record<AutoClearTableProductLineId, number>;
+} {
+  const hasConfiguredTargetMinutes = ALL_LINE_IDS.some((id) =>
+    Object.prototype.hasOwnProperty.call(input.targetMinutes, id),
+  );
+  const minutes = normalizeMinutesByLine(input.targetMinutes);
+
+  if (input.targetToggleOn && !hasConfiguredTargetMinutes) {
+    for (const id of ALL_LINE_IDS) minutes[id] = MINUTES_DEFAULT;
+  }
+
+  for (const rawLineId of input.legacyLines) {
+    const lineId = rawLineId as AutoClearTableProductLineId;
+    if (!LEGACY_LINE_IDS.has(lineId) || minutes[lineId] > 0) continue;
+    minutes[lineId] = MINUTES_DEFAULT;
+  }
+
+  return {
+    toggleOn: input.targetToggleOn || input.legacyToggleOn,
+    minutes,
+  };
+}
+
+function migrationMarkerStorageKey(scopeId: string): string {
+  return moduleSettingStorageKey(`${MIGRATION_MARKER_PREFIX}:${scopeId}`);
+}
+
+function ensurePostPaymentAutoClearMigration(): void {
+  let scopeId: string;
+  try {
+    scopeId = getLayoutContextStoreId();
+  } catch {
+    scopeId = "current-store";
+  }
+  if (migratedScopes.has(scopeId)) return;
+
+  const markerKey = migrationMarkerStorageKey(scopeId);
+  try {
+    if (localStorage.getItem(markerKey) === "1") {
+      migratedScopes.add(scopeId);
+      return;
+    }
+
+    const rawTargetMinutes = readModuleSettingJsonRaw(MINUTES_BY_LINE_STORAGE_ID);
+    const targetMinutes =
+      rawTargetMinutes && typeof rawTargetMinutes === "object" && !Array.isArray(rawTargetMinutes)
+        ? (rawTargetMinutes as Partial<Record<string, unknown>>)
+        : {};
+    const legacyLinesRaw = readModuleSettingJson<unknown>(LEGACY_LINES_STORAGE_ID, null);
+    const legacyLines = Array.isArray(legacyLinesRaw)
+      ? legacyLinesRaw.filter((line): line is string => typeof line === "string")
+      : [];
+    const merged = mergePostPaymentAutoClearMigrationState({
+      targetToggleOn: readLegacyToggleOn(AUTO_CLEAR_TABLE_SEQ),
+      targetMinutes,
+      legacyToggleOn: readLegacyToggleOn(LEGACY_POST_PAYMENT_CLEAR_TABLE_SEQ),
+      legacyLines,
+    });
+
+    localStorage.setItem(
+      moduleSettingStorageKey(MINUTES_BY_LINE_STORAGE_ID),
+      JSON.stringify(merged.minutes),
+    );
+    for (const lineId of ALL_LINE_IDS) {
+      localStorage.setItem(
+        moduleSettingStorageKey(minutesFieldId(lineId)),
+        String(merged.minutes[lineId]),
+      );
+    }
+    localStorage.setItem(
+      moduleSettingStorageKey(LINES_STORAGE_ID),
+      JSON.stringify(ALL_LINE_IDS.filter((id) => merged.minutes[id] > 0)),
+    );
+    localStorage.setItem(
+      moduleSettingToggleStorageKey(AUTO_CLEAR_TABLE_SEQ),
+      merged.toggleOn ? "1" : "0",
+    );
+    localStorage.setItem(markerKey, "1");
+    migratedScopes.add(scopeId);
+  } catch {
+    /* 存储失败时不写迁移标记，下次加载继续重试。 */
+  }
+}
+
 function syncLinesFromMinutes(values: Record<AutoClearTableProductLineId, number>): void {
   const enabled = ALL_LINE_IDS.filter((id) => values[id] > 0);
   writeAutoClearTableLines(enabled);
 }
 
 function ensureAutoClearTableMinutesMigrated(): void {
+  ensurePostPaymentAutoClearMigration();
   if (minutesMigrated) return;
   minutesMigrated = true;
 
@@ -226,7 +316,7 @@ function renderMinutesByLineEditorHtml(enabled: boolean): string {
             step="1"
             data-auto-clear-table-minutes-line="${escapeHtml(line.id)}"
             ${enabled ? "" : "disabled"}
-            aria-label="${escapeHtml(line.label)} 自动清桌时间"
+            aria-label="${escapeHtml(line.label)} 付款后自动清桌时间"
           />
           <span class="text-sm text-muted-foreground">分钟</span>
         </div>
@@ -241,7 +331,7 @@ function renderMinutesByLineEditorHtml(enabled: boolean): string {
           <thead class="bg-muted/40 text-xs text-muted-foreground">
             <tr>
               <th class="px-3 py-2 font-medium w-[5.5rem]">产线</th>
-              <th class="px-3 py-2 font-medium">超时时间</th>
+              <th class="px-3 py-2 font-medium">付款后等待时间</th>
             </tr>
           </thead>
           <tbody>${rows}</tbody>

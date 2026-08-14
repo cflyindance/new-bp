@@ -7,6 +7,7 @@ import {
   isPageSaveDirty,
   resolvePageSaveKey,
 } from "./page-settings-draft";
+import { getActiveSettingEditScopeKey } from "./module-setting-edit-context";
 
 let bound = false;
 let lastPath = "";
@@ -36,6 +37,18 @@ export function bindPageSaveGuard(): void {
       return;
     }
     discardPageDraft(prevKey);
+  });
+
+  window.addEventListener("beforeunload", (event) => {
+    const activeScopeKey = getActiveSettingEditScopeKey();
+    const currentPageKey = resolvePageSaveKey(readHashPath());
+    const hasUnsavedDraft =
+      Boolean(activeScopeKey && isPageSaveDirty(activeScopeKey)) ||
+      (isPageBatchSavePath(currentPageKey) && isPageSaveDirty(currentPageKey));
+    if (!hasUnsavedDraft) return;
+
+    event.preventDefault();
+    event.returnValue = "";
   });
 }
 

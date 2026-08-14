@@ -10,7 +10,11 @@ import {
   isSettingsCatalogExcluded,
   isSettingsHubCatalogDisabled,
 } from "./lib/settings-catalog-exclusions.mjs";
-import { buildCatalogSceneDesc, buildCatalogTitle } from "./lib/settings-catalog-scene-supplement.mjs";
+import {
+  buildCatalogFeature,
+  buildCatalogSceneDesc,
+  buildCatalogTitle,
+} from "./lib/settings-catalog-scene-supplement.mjs";
 import { getSettingsCatalogPathForSeq } from "./lib/settings-catalog-path-override.mjs";
 import { SETTINGS_CATALOG_VIRTUAL_ITEMS } from "./lib/settings-catalog-virtual-items.mjs";
 import { getSettingsHub } from "./lib/settings-hub-override.mjs";
@@ -203,7 +207,7 @@ function buildCatalog(rows, mapping) {
     const item = {
       seq: row.seq,
       title: buildCatalogTitle(row.seq, row.title),
-      feature: row.feature,
+      feature: buildCatalogFeature(row.seq, row.feature),
       sceneDesc: buildCatalogSceneDesc(row.seq, row.sceneDesc),
       moduleName: row.moduleName,
       groupTitle: group.groupTitle,

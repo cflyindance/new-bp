@@ -178,6 +178,9 @@ const ORDER_TYPE_ALIAS: Readonly<Record<string, string>> = {
   delivery: "delivery",
 };
 
+/** 643/644 已合并为三态规则，不能由布尔 foh-line mutation 表达。 */
+const FOH_LINE_BOOLEAN_MUTATION_EXCLUDED_SEQS = new Set([643, 644]);
+
 function escapeHtml(s: string): string {
   return s
     .replace(/&/g, "&amp;")
@@ -441,7 +444,9 @@ function persistMutation(m: AiSettingMutation): void {
       writeModuleSettingColor(m.fieldId, m.value);
       break;
     case "foh-line":
-      writeFohByLineToggleState(m.seq, m.lineId as FohLineNavId, m.on);
+      if (!FOH_LINE_BOOLEAN_MUTATION_EXCLUDED_SEQS.has(m.seq)) {
+        writeFohByLineToggleState(m.seq, m.lineId as FohLineNavId, m.on);
+      }
       break;
     case "order-type": {
       const fieldId = isKitchenOrderTypeMultiselectSeq(m.seq)
@@ -562,7 +567,11 @@ export function processAiAssistantComplexSettingChange(
     const on = /开启|打开|启用|勾选/.test(fohLineMatch[3]);
     const target = fohLineMatch[4].trim();
     const hits = searchSettingsByPhrase(target, 3);
-    const hit = hits.find((h) => FOH_LINE_STORAGE_BY_SEQ[h.item.seq]);
+    const hit = hits.find(
+      (h) =>
+        FOH_LINE_STORAGE_BY_SEQ[h.item.seq] &&
+        !FOH_LINE_BOOLEAN_MUTATION_EXCLUDED_SEQS.has(h.item.seq),
+    );
     if (lineId && hit) {
       const lineLabel = FOH_LINE_NAV_ORDER.find((l) => l.id === lineId)?.label ?? lineId;
       const mutation: AiSettingMutation = {

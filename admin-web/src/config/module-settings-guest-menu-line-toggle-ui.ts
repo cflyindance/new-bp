@@ -6,6 +6,8 @@
  */
 
 import { readModuleSettingJson, writeModuleSettingJson } from "./module-settings-form-ui";
+import { getGuestMenuBodyProductLines } from "./module-settings-guest-menu-body-line-scope";
+import { readModuleSettingJsonState } from "./module-setting-storage-state";
 import { moduleSettingToggleStorageKey } from "./module-settings-toggle-ui";
 
 export const GUEST_MENU_START_BUTTON_SEQ = 611;
@@ -29,11 +31,7 @@ const PURE_DISPLAY_LINES: ProductLineDef[] = [
 ];
 
 const ACCOUNT_POINTS_LINES: ProductLineDef[] = [
-  { id: "emenu", label: "eMenu" },
-  { id: "kiosk", label: "Kiosk" },
-  { id: "sdi", label: "SDI" },
-  { id: "online-order", label: "Online Order" },
-  { id: "cds", label: "CDS" },
+  ...getGuestMenuBodyProductLines(GUEST_MENU_ACCOUNT_POINTS_SEQ),
 ];
 
 const CONFIG_BY_SEQ: Record<
@@ -136,9 +134,9 @@ export function readGuestMenuLineToggleLines(seq: number): string[] {
   if (!isSeqInGuestMenuLineToggleGroup(seq)) return [];
   ensureGuestMenuLineToggleMigrated(seq);
   const { linesStorageId } = getConfig(seq);
-  const stored = readModuleSettingJson<unknown>(linesStorageId, null);
-  const normalized = normalizeLineIds(seq, stored);
-  if (normalized.length > 0) return normalized;
+  const state = readModuleSettingJsonState(linesStorageId);
+  if (state.state === "configured") return normalizeLineIds(seq, state.value);
+  if (state.state === "invalid") return [];
 
   if (readLegacyToggleOn(seq)) {
     const all = allLineIds(seq);
@@ -161,7 +159,7 @@ export function isGuestMenuLineToggleSeq(seq: number): boolean {
 
 export function ensureGuestMenuLineToggleLinesDefault(seq: number): void {
   if (!isSeqInGuestMenuLineToggleGroup(seq)) return;
-  if (readGuestMenuLineToggleLines(seq).length === 0) {
+  if (readModuleSettingJsonState(getConfig(seq).linesStorageId).state === "missing") {
     writeGuestMenuLineToggleLines(seq, allLineIds(seq));
   }
 }

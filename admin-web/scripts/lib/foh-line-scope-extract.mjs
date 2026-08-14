@@ -17,15 +17,13 @@ export const STAFF_GROUPS = new Set([
   "foh-pos-shell",
   "foh-table-start-flow",
   "foh-pos-menu-scope",
-  "foh-pos-menu-ui-layout",
   "foh-pos-order-cart",
   "foh-pos-combo-ordering",
   "foh-pos-buttons",
+  "foh-pos-order-toolbar",
   "foh-kitchen-send-timing",
   "foh-pos-find-order-list",
-  "foh-pos-checkout-entry",
   "foh-table-clear-ops",
-  "foh-pos-notification-control",
   "foh-pos-order-alerts",
 ]);
 
@@ -122,7 +120,7 @@ export const SCOPE_MANUAL_OVERRIDES = {
     source: "ui-module",
     module: "module-settings-guest-category-mode-ui.ts",
   },
-  /** POS 通知总控 / 订单消息提醒（迁自消息中心） */
+  /** 消息类型提醒（含迁自 POS 通知总控的员工端通知类型与新单语音播报） */
   331: { lines: STORE_WIDE, source: "store-wide" },
   332: {
     lines: ["kiosk", "emenu", "pos", "pos-go", "paypad", "sdi", "online-order"],
@@ -144,7 +142,8 @@ export const SCOPE_MANUAL_OVERRIDES = {
 
 export const STORAGE_MANUAL_SUPPLEMENT = {
   572: "572-hotpot-base-required-lines",
-  517: "517-guest-menu-nav-position-by-line",
+  517: "517-guest-menu-nav-position-enabled-lines",
+  526: "526-points-dish-position-enabled-lines",
   640: "640-service-call-cooldown-lines",
   652: "652-guest-facing-locales-by-line",
   653: "653-default-locale-by-line",
@@ -167,6 +166,32 @@ export function buildFohCatalogSeqIndex() {
 export function extractUiLineScopeMap(configDir = CONFIG_DIR) {
   /** @type {Map<number, { lines: string[], source: string, module?: string }>} */
   const uiMap = new Map();
+
+  const guestMenuScopeFile = path.join(
+    configDir,
+    "module-settings-guest-menu-body-line-scope.ts",
+  );
+  if (!fs.existsSync(guestMenuScopeFile)) {
+    throw new Error(`Missing guest menu line-scope SSOT: ${guestMenuScopeFile}`);
+  }
+  const guestMenuScopeText = fs.readFileSync(guestMenuScopeFile, "utf8");
+  const guestMenuScopeBlock = guestMenuScopeText.match(
+    /GUEST_MENU_BODY_PRODUCT_LINE_IDS_BY_SEQ\s*=\s*\{([\s\S]*?)\}\s*as const/,
+  );
+  if (!guestMenuScopeBlock) {
+    throw new Error("Cannot parse GUEST_MENU_BODY_PRODUCT_LINE_IDS_BY_SEQ");
+  }
+  for (const match of guestMenuScopeBlock[1].matchAll(/(\d+)\s*:\s*\[([^\]]*)\]/g)) {
+    const seq = Number(match[1]);
+    if (uiMap.has(seq)) throw new Error(`Duplicate guest menu line-scope owner for seq ${seq}`);
+    const lines = [...match[2].matchAll(/["']([^"']+)["']/g)].map((m) => m[1]);
+    if (!lines.length) throw new Error(`Empty guest menu line-scope for seq ${seq}`);
+    uiMap.set(seq, {
+      lines,
+      source: "ui-module",
+      module: path.basename(guestMenuScopeFile),
+    });
+  }
 
   function parseProductLinesFromFile(filePath) {
     const text = fs.readFileSync(filePath, "utf8");
@@ -223,7 +248,7 @@ export function extractUiLineScopeMap(configDir = CONFIG_DIR) {
         }
         if (!mappedLines) mappedLines = lines;
       }
-      if (mappedLines?.length) {
+      if (mappedLines?.length && !uiMap.has(seq)) {
         uiMap.set(seq, { lines: [...mappedLines], source: "ui-module", module: moduleName });
       }
     }
@@ -271,7 +296,8 @@ export function buildFohLineScopeSeed(uiMap = extractUiLineScopeMap()) {
 /** @returns {Map<number, string>} */
 export function extractLineStorageMap(configDir = CONFIG_DIR) {
   const { allSeqs } = buildFohCatalogSeqIndex();
-  const fohSeqs = new Set(allSeqs);
+  /** seq 644 已从目录合并到 643，但仍需注册旧 lines 键供兼容镜像使用。 */
+  const fohSeqs = new Set([...allSeqs, 644]);
   /** @type {Map<number, string>} */
   const bySeq = new Map();
 

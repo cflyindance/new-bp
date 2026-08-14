@@ -19,6 +19,7 @@ import {
   writeFohByLineToggleState,
 } from "./foh-settings-by-line-toggle";
 import type { FohLineNavId } from "./foh-settings-line-scope";
+import { isFohLinesToggleMirrorExcludedSeq } from "./module-settings-guest-menu-body-line-scope";
 import type { DeploymentConfigChange } from "./deployment-types";
 import {
   clearPageConfigChanges,
@@ -27,6 +28,10 @@ import {
   isPageDirty,
   recordPageConfigChange,
 } from "./deployment-change-buffer";
+import {
+  getActiveSettingEditScopeKey,
+  isHubSearchEditScopeKey,
+} from "./module-setting-edit-context";
 
 /** 不参与页面批量保存的 Hub（占位/空 catalog 等） */
 export const PAGE_BATCH_SAVE_EXCLUDE_PATHS = new Set<string>([
@@ -82,7 +87,17 @@ export function isPageBatchSavePath(pathOrKey: string): boolean {
   const key = pathOrKey.includes("/")
     ? resolvePageSaveKey(pathOrKey)
     : pathOrKey;
-  return PAGE_BATCH_SAVE_PATHS.has(key);
+  return PAGE_BATCH_SAVE_PATHS.has(key) || isHubSearchEditScopeKey(key);
+}
+
+/** 当前控件应读写的保存桶；搜索结果优先于 URL 页面桶。 */
+export function resolveCurrentPageSaveKey(path?: string): string {
+  const active = getActiveSettingEditScopeKey();
+  if (active) return active;
+  const current =
+    path ??
+    (typeof window !== "undefined" ? window.location.hash.replace(/^#/, "") || "/" : "/");
+  return resolvePageSaveKey(current);
 }
 
 function ensureBucket(pageKey: string, settingsPath?: string): PageDraftBucket {
@@ -153,17 +168,13 @@ export function readPageDraftField(pageKey: string, fieldId: string): string | u
 }
 
 export function readPageDraftFieldForCurrentPath(fieldId: string): string | undefined {
-  const pageKey = resolvePageSaveKey(
-    typeof window !== "undefined" ? window.location.hash.replace(/^#/, "") || "/" : "/",
-  );
+  const pageKey = resolveCurrentPageSaveKey();
   if (!isPageBatchSavePath(pageKey)) return undefined;
   return readPageDraftField(pageKey, fieldId);
 }
 
 export function readPageDraftToggleForCurrentPath(seq: number): boolean | undefined {
-  const pageKey = resolvePageSaveKey(
-    typeof window !== "undefined" ? window.location.hash.replace(/^#/, "") || "/" : "/",
-  );
+  const pageKey = resolveCurrentPageSaveKey();
   if (!isPageBatchSavePath(pageKey)) return undefined;
   return readPageDraftToggle(pageKey, seq);
 }
@@ -172,9 +183,7 @@ export function readPageDraftFohToggleForCurrentPath(
   seq: number,
   lineId: string,
 ): boolean | undefined {
-  const pageKey = resolvePageSaveKey(
-    typeof window !== "undefined" ? window.location.hash.replace(/^#/, "") || "/" : "/",
-  );
+  const pageKey = resolveCurrentPageSaveKey();
   if (!isPageBatchSavePath(pageKey)) return undefined;
   return readPageDraftFohToggle(pageKey, seq, lineId);
 }
@@ -215,7 +224,7 @@ function persistDraftEntry(entry: PageDraftEntry): void {
 
 function syncFohLinesMirrorFromSerialized(fieldId: string, serialized: string): void {
   const seq = fohLinesSeqForFieldId(fieldId);
-  if (seq === undefined) return;
+  if (seq === undefined || isFohLinesToggleMirrorExcludedSeq(seq)) return;
   try {
     const decoded = decodeFohLinesValue(JSON.parse(serialized));
     const on = decoded.state === "configured" ? decoded.lines.length > 0 : true;
@@ -230,7 +239,7 @@ function restoreFohLinesMirrorsFromStorage(bucket: PageDraftBucket): void {
   for (const entry of bucket.drafts.values()) {
     if (entry.kind !== "field" || !isFohLinesFieldId(entry.fieldId)) continue;
     const seq = fohLinesSeqForFieldId(entry.fieldId);
-    if (seq === undefined) continue;
+    if (seq === undefined || isFohLinesToggleMirrorExcludedSeq(seq)) continue;
     try {
       const raw = localStorage.getItem(moduleSettingStorageKey(entry.fieldId));
       if (raw === null || raw === "") {

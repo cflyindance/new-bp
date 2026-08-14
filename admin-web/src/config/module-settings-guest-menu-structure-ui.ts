@@ -16,6 +16,12 @@ import {
 } from "./foh-settings-by-line-filter";
 import { MODULE_SETTING_CHOICE_CONTROL_CLASS } from "./module-settings-choice-ui";
 import {
+  getGuestMenuBodyProductLineIds,
+  getGuestMenuBodyProductLines,
+  type GuestMenuBodyProductLineId,
+} from "./module-settings-guest-menu-body-line-scope";
+import { readModuleSettingJsonState } from "./module-setting-storage-state";
+import {
   moduleSettingStorageKey,
   readModuleSettingJson,
   readModuleSettingRadio,
@@ -32,20 +38,14 @@ export const GUEST_MENU_COMBO_NAV_SEQ = 520;
 export const GUEST_MENU_WATERFALL_SEQ = 524;
 export const GUEST_MENU_ZERO_PRICE_DISPLAY_SEQ = 528;
 
-export const GUEST_MENU_STRUCTURE_PRODUCT_LINES = [
-  { id: "kiosk", label: "Kiosk" },
-  { id: "emenu", label: "eMenu" },
-  { id: "sdi", label: "SDI" },
-  { id: "online-order", label: "Online Order" },
-] as const;
+export const GUEST_MENU_STRUCTURE_PRODUCT_LINES = getGuestMenuBodyProductLines(
+  GUEST_MENU_SHOW_SERIAL_SEQ,
+);
 
 /** 517 菜单展示位置适用产线（与结构组一致，独立导出供产线抽取） */
-export const GUEST_MENU_NAV_POSITION_PRODUCT_LINES = [
-  { id: "kiosk", label: "Kiosk" },
-  { id: "emenu", label: "eMenu" },
-  { id: "sdi", label: "SDI" },
-  { id: "online-order", label: "Online Order" },
-] as const;
+export const GUEST_MENU_NAV_POSITION_PRODUCT_LINES = getGuestMenuBodyProductLines(
+  GUEST_MENU_NAV_POSITION_SEQ,
+);
 
 /** 带总开关的菜单结构设置（517 已改为无开关常显表格） */
 export const GUEST_MENU_STRUCTURE_SEQS: readonly number[] = [
@@ -64,16 +64,16 @@ const LEGACY_NAV_POSITION_RADIO_FIELD_ID = "517-menu-nav-position";
 /** 旧版产线多选存储（勿用 *_LINES_STORAGE_ID 命名，避免产线 registry 误抽） */
 const LEGACY_NAV_POSITION_LINES_KEY = "517-guest-menu-nav-position-lines";
 const NAV_POSITION_BY_LINE_STORAGE_ID = "517-guest-menu-nav-position-by-line";
+const NAV_POSITION_ENABLED_LINES_STORAGE_ID = "517-guest-menu-nav-position-enabled-lines";
 
 export const GUEST_MENU_NAV_POSITION_OPTIONS = [
-  { value: "side", label: "侧边展示" },
   { value: "top", label: "顶部展示" },
+  { value: "side", label: "侧边展示" },
 ] as const;
 
 export type GuestMenuNavPosition = (typeof GUEST_MENU_NAV_POSITION_OPTIONS)[number]["value"];
 
-export type GuestMenuNavPositionProductLineId =
-  (typeof GUEST_MENU_NAV_POSITION_PRODUCT_LINES)[number]["id"];
+export type GuestMenuNavPositionProductLineId = GuestMenuBodyProductLineId;
 
 export type GuestMenuNavPositionByLine = Record<
   GuestMenuNavPositionProductLineId,
@@ -84,43 +84,46 @@ const DEFAULT_NAV_POSITION: GuestMenuNavPosition = "top";
 
 const CONFIG_BY_SEQ: Record<
   GuestMenuStructureSeq,
-  { linesStorageId: string; linesAriaLabel: string }
+  { linesStorageId: string; linesAriaLabel: string; lines: ReturnType<typeof getGuestMenuBodyProductLines> }
 > = {
   [GUEST_MENU_SHOW_SERIAL_SEQ]: {
+    lines: getGuestMenuBodyProductLines(GUEST_MENU_SHOW_SERIAL_SEQ),
     linesStorageId: "515-guest-menu-show-serial-lines",
     linesAriaLabel: "展示菜单序号适用产线",
   },
   [GUEST_MENU_SHOW_GROUP_NAME_SEQ]: {
+    lines: getGuestMenuBodyProductLines(GUEST_MENU_SHOW_GROUP_NAME_SEQ),
     linesStorageId: "516-guest-menu-show-group-name-lines",
     linesAriaLabel: "显示组名称适用产线",
   },
   [GUEST_MENU_EXPAND_FIRST_GROUP_SEQ]: {
+    lines: getGuestMenuBodyProductLines(GUEST_MENU_EXPAND_FIRST_GROUP_SEQ),
     linesStorageId: "518-guest-menu-expand-first-group-lines",
     linesAriaLabel: "默认展开第一组适用产线",
   },
   [GUEST_MENU_IMAGE_CROP_SEQ]: {
+    lines: getGuestMenuBodyProductLines(GUEST_MENU_IMAGE_CROP_SEQ),
     linesStorageId: "519-guest-menu-image-crop-lines",
     linesAriaLabel: "菜单图片裁切显示适用产线",
   },
   [GUEST_MENU_COMBO_NAV_SEQ]: {
+    lines: getGuestMenuBodyProductLines(GUEST_MENU_COMBO_NAV_SEQ),
     linesStorageId: "520-guest-menu-combo-nav-lines",
     linesAriaLabel: "套餐展示导航栏适用产线",
   },
   [GUEST_MENU_WATERFALL_SEQ]: {
+    lines: getGuestMenuBodyProductLines(GUEST_MENU_WATERFALL_SEQ),
     linesStorageId: "524-guest-menu-waterfall-lines",
     linesAriaLabel: "瀑布流模式适用产线",
   },
   [GUEST_MENU_ZERO_PRICE_DISPLAY_SEQ]: {
+    lines: getGuestMenuBodyProductLines(GUEST_MENU_ZERO_PRICE_DISPLAY_SEQ),
     linesStorageId: "528-guest-menu-zero-price-display-lines",
     linesAriaLabel: "菜价为0展示价格适用产线",
   },
 };
 
-type GuestMenuStructureProductLineId =
-  (typeof GUEST_MENU_STRUCTURE_PRODUCT_LINES)[number]["id"];
-
-const ALL_LINE_IDS: GuestMenuStructureProductLineId[] =
-  GUEST_MENU_STRUCTURE_PRODUCT_LINES.map((l) => l.id);
+type GuestMenuStructureProductLineId = GuestMenuBodyProductLineId;
 
 const NAV_POSITION_LINE_IDS: GuestMenuNavPositionProductLineId[] =
   GUEST_MENU_NAV_POSITION_PRODUCT_LINES.map((l) => l.id);
@@ -145,6 +148,10 @@ function isSeqInGuestMenuStructureGroup(seq: number): seq is GuestMenuStructureS
 
 function getConfig(seq: GuestMenuStructureSeq) {
   return CONFIG_BY_SEQ[seq];
+}
+
+function allLineIds(seq: GuestMenuStructureSeq): GuestMenuStructureProductLineId[] {
+  return getGuestMenuBodyProductLineIds(seq);
 }
 
 function readLegacyToggleOn(seq: number): boolean {
@@ -188,6 +195,11 @@ function readLegacyNavPositionLines(): GuestMenuNavPositionProductLineId[] {
   );
 }
 
+function normalizeNavEnabledLines(raw: unknown): GuestMenuNavPositionProductLineId[] {
+  if (!Array.isArray(raw)) return [];
+  return NAV_POSITION_LINE_IDS.filter((id) => raw.includes(id));
+}
+
 function migrateLegacyNavPositionByLine(): GuestMenuNavPositionByLine | null {
   let legacyPosition: GuestMenuNavPosition | null = null;
   try {
@@ -217,13 +229,12 @@ function migrateLegacyNavPositionByLine(): GuestMenuNavPositionByLine | null {
 export function readGuestMenuNavPositionByLine(): GuestMenuNavPositionByLine {
   if (!navPositionMigrated) {
     navPositionMigrated = true;
-    const existing = readModuleSettingJson<Partial<Record<string, GuestMenuNavPosition>> | null>(
-      NAV_POSITION_BY_LINE_STORAGE_ID,
-      null,
-    );
-    if (existing && typeof existing === "object" && Object.keys(existing).length > 0) {
-      return normalizeNavPositionByLine(existing);
+    const state = readModuleSettingJsonState(NAV_POSITION_BY_LINE_STORAGE_ID);
+    if (state.state === "configured") {
+      const existing = state.value && typeof state.value === "object" ? state.value : {};
+      return normalizeNavPositionByLine(existing as Partial<Record<string, GuestMenuNavPosition>>);
     }
+    if (state.state === "invalid") return defaultNavPositionByLine();
     const migrated = migrateLegacyNavPositionByLine();
     if (migrated) {
       writeGuestMenuNavPositionByLine(migrated);
@@ -234,11 +245,34 @@ export function readGuestMenuNavPositionByLine(): GuestMenuNavPositionByLine {
     return defaults;
   }
 
-  const raw = readModuleSettingJson<Partial<Record<string, GuestMenuNavPosition>>>(
-    NAV_POSITION_BY_LINE_STORAGE_ID,
-    {},
+  const state = readModuleSettingJsonState(NAV_POSITION_BY_LINE_STORAGE_ID);
+  if (state.state !== "configured") return defaultNavPositionByLine();
+  const raw = state.value && typeof state.value === "object" ? state.value : {};
+  return normalizeNavPositionByLine(raw as Partial<Record<string, GuestMenuNavPosition>>);
+}
+
+export function readGuestMenuNavPositionEnabledLines(): GuestMenuNavPositionProductLineId[] {
+  const state = readModuleSettingJsonState(NAV_POSITION_ENABLED_LINES_STORAGE_ID);
+  if (state.state === "configured") return normalizeNavEnabledLines(state.value);
+  if (state.state === "invalid") return [];
+
+  const legacyLines = readLegacyNavPositionLines();
+  const migrated = legacyLines.length > 0
+    ? legacyLines
+    : readLegacyToggleOn(GUEST_MENU_NAV_POSITION_SEQ)
+      ? [...NAV_POSITION_LINE_IDS]
+      : [...NAV_POSITION_LINE_IDS];
+  writeGuestMenuNavPositionEnabledLines(migrated);
+  return migrated;
+}
+
+export function writeGuestMenuNavPositionEnabledLines(
+  lines: GuestMenuNavPositionProductLineId[],
+): void {
+  writeModuleSettingJson(
+    NAV_POSITION_ENABLED_LINES_STORAGE_ID,
+    NAV_POSITION_LINE_IDS.filter((id) => lines.includes(id)),
   );
-  return normalizeNavPositionByLine(raw ?? {});
 }
 
 export function writeGuestMenuNavPositionByLine(values: GuestMenuNavPositionByLine): void {
@@ -251,11 +285,13 @@ export function isGuestMenuNavPositionSeq(seq: number): boolean {
 
 export function renderGuestMenuNavPositionByLineEditorHtml(): string {
   const values = readGuestMenuNavPositionByLine();
+  const enabledLines = new Set(readGuestMenuNavPositionEnabledLines());
   const activeLine = getFohActiveLineFilterId();
   const lines = activeLine
     ? GUEST_MENU_NAV_POSITION_PRODUCT_LINES.filter((line) => line.id === activeLine)
     : GUEST_MENU_NAV_POSITION_PRODUCT_LINES;
   const rows = lines.map((line) => {
+    const enabled = enabledLines.has(line.id);
     const groupName = `guest-menu-nav-position-${line.id}`;
     const radios = GUEST_MENU_NAV_POSITION_OPTIONS.map((opt) => {
       const checked = values[line.id] === opt.value;
@@ -267,6 +303,7 @@ export function renderGuestMenuNavPositionByLineEditorHtml(): string {
             value="${escapeHtml(opt.value)}"
             class="${MODULE_SETTING_CHOICE_CONTROL_CLASS}"
             ${checked ? "checked" : ""}
+            ${enabled ? "" : "disabled"}
             data-guest-menu-nav-position-line="${escapeHtml(line.id)}"
             aria-label="${escapeHtml(line.label)} ${escapeHtml(opt.label)}"
           />
@@ -276,7 +313,18 @@ export function renderGuestMenuNavPositionByLineEditorHtml(): string {
 
     return `
     <tr class="border-t border-border" ${FOH_LINE_CONFIG_ROW_ATTR}="${escapeHtml(line.id)}">
-      <td class="px-3 py-2.5 text-sm font-medium text-foreground align-top whitespace-nowrap">${escapeHtml(line.label)}</td>
+      <td class="px-3 py-2.5 text-sm font-medium text-foreground align-top whitespace-nowrap">
+        <label class="inline-flex cursor-pointer items-center gap-2">
+          <input
+            type="checkbox"
+            class="${MODULE_SETTING_CHOICE_CONTROL_CLASS} rounded-sm"
+            data-guest-menu-nav-position-enabled-line="${escapeHtml(line.id)}"
+            ${enabled ? "checked" : ""}
+            aria-label="启用 ${escapeHtml(line.label)} 菜单展示位置"
+          />
+          <span>${escapeHtml(line.label)}</span>
+        </label>
+      </td>
       <td class="px-3 py-2.5">
         <div class="flex flex-wrap items-center gap-x-5 gap-y-2" role="radiogroup" aria-label="${escapeHtml(line.label)} 菜单展示位置">${radios}</div>
       </td>
@@ -313,6 +361,21 @@ function collectNavPositionByLineFromEditor(editor: HTMLElement): GuestMenuNavPo
   return values;
 }
 
+function collectNavPositionEnabledLinesFromEditor(
+  editor: HTMLElement,
+): GuestMenuNavPositionProductLineId[] {
+  const lines: GuestMenuNavPositionProductLineId[] = [];
+  editor
+    .querySelectorAll<HTMLInputElement>("[data-guest-menu-nav-position-enabled-line]:checked")
+    .forEach((input) => {
+      const id = input.getAttribute(
+        "data-guest-menu-nav-position-enabled-line",
+      ) as GuestMenuNavPositionProductLineId | null;
+      if (id && NAV_POSITION_LINE_IDS.includes(id)) lines.push(id);
+    });
+  return lines;
+}
+
 export function ensureGuestMenuStructureToggleMigrated(seq: number): void {
   if (migratedToggleSeqs.has(seq)) return;
   migratedToggleSeqs.add(seq);
@@ -334,9 +397,9 @@ export function ensureGuestMenuStructureToggleMigrated(seq: number): void {
   }
 }
 
-function normalizeLineIds(raw: unknown): GuestMenuStructureProductLineId[] {
+function normalizeLineIds(seq: GuestMenuStructureSeq, raw: unknown): GuestMenuStructureProductLineId[] {
   if (!Array.isArray(raw)) return [];
-  const valid = new Set<string>(ALL_LINE_IDS);
+  const valid = new Set<string>(allLineIds(seq));
   const out: GuestMenuStructureProductLineId[] = [];
   for (const item of raw) {
     if (typeof item !== "string") continue;
@@ -351,12 +414,12 @@ export function readGuestMenuStructureLines(seq: number): string[] {
   if (!isSeqInGuestMenuStructureGroup(seq)) return [];
   ensureGuestMenuStructureToggleMigrated(seq);
   const { linesStorageId } = getConfig(seq);
-  const stored = readModuleSettingJson<unknown>(linesStorageId, null);
-  const normalized = normalizeLineIds(stored);
-  if (normalized.length > 0) return normalized;
+  const state = readModuleSettingJsonState(linesStorageId);
+  if (state.state === "configured") return normalizeLineIds(seq, state.value);
+  if (state.state === "invalid") return [];
 
   if (readLegacyToggleOn(seq)) {
-    const all = [...ALL_LINE_IDS];
+    const all = allLineIds(seq);
     writeGuestMenuStructureLines(seq, all);
     return all;
   }
@@ -365,8 +428,9 @@ export function readGuestMenuStructureLines(seq: number): string[] {
 
 export function writeGuestMenuStructureLines(seq: number, lines: string[]): void {
   if (!isSeqInGuestMenuStructureGroup(seq)) return;
-  const valid = new Set(ALL_LINE_IDS);
-  const unique = ALL_LINE_IDS.filter((id) => lines.includes(id) && valid.has(id));
+  const ids = allLineIds(seq);
+  const valid = new Set(ids);
+  const unique = ids.filter((id) => lines.includes(id) && valid.has(id));
   writeModuleSettingJson(getConfig(seq).linesStorageId, unique);
 }
 
@@ -376,14 +440,15 @@ export function isGuestMenuStructureSeq(seq: number): boolean {
 
 export function ensureGuestMenuStructureLinesDefault(seq: number): void {
   if (!isSeqInGuestMenuStructureGroup(seq)) return;
-  if (readGuestMenuStructureLines(seq).length === 0) {
-    writeGuestMenuStructureLines(seq, [...ALL_LINE_IDS]);
+  const state = readModuleSettingJsonState(getConfig(seq).linesStorageId);
+  if (state.state === "missing") {
+    writeGuestMenuStructureLines(seq, allLineIds(seq));
   }
 }
 
 function renderLinesMultiselectHtml(seq: GuestMenuStructureSeq, enabled: boolean): string {
   const selected = new Set(readGuestMenuStructureLines(seq));
-  const cells = GUEST_MENU_STRUCTURE_PRODUCT_LINES.map((line, index) => {
+  const cells = getConfig(seq).lines.map((line, index) => {
     const checked = selected.has(line.id);
     const divider = index > 0 ? "border-l border-border" : "";
     return `
@@ -457,7 +522,7 @@ function collectLinesFromGroup(group: HTMLElement): string[] {
   const lines: string[] = [];
   group.querySelectorAll<HTMLInputElement>(`[data-guest-menu-structure-line="${seq}"]:checked`).forEach((input) => {
     const id = input.getAttribute("data-line-id");
-    if (id && (ALL_LINE_IDS as readonly string[]).includes(id)) lines.push(id);
+    if (id && allLineIds(seq).includes(id as GuestMenuStructureProductLineId)) lines.push(id);
   });
   writeGuestMenuStructureLines(seq, lines);
   return lines;
@@ -481,7 +546,17 @@ export function bindGuestMenuStructureUi(root: ParentNode = document): void {
     if (editor.dataset.guestMenuNavPositionEditorBound === "1") return;
     editor.dataset.guestMenuNavPositionEditorBound = "1";
     editor.addEventListener("change", (e) => {
-      if (!(e.target as HTMLElement).matches("[data-guest-menu-nav-position-line]")) return;
+      const target = e.target as HTMLElement;
+      if (target.matches("[data-guest-menu-nav-position-enabled-line]")) {
+        const checkbox = target as HTMLInputElement;
+        const lineId = checkbox.getAttribute("data-guest-menu-nav-position-enabled-line");
+        editor
+          .querySelectorAll<HTMLInputElement>(`[data-guest-menu-nav-position-line="${lineId}"]`)
+          .forEach((radio) => { radio.disabled = !checkbox.checked; });
+        writeGuestMenuNavPositionEnabledLines(collectNavPositionEnabledLinesFromEditor(editor));
+        return;
+      }
+      if (!target.matches("[data-guest-menu-nav-position-line]")) return;
       writeGuestMenuNavPositionByLine(collectNavPositionByLineFromEditor(editor));
     });
   });

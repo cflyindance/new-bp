@@ -106,11 +106,22 @@ export const SETTINGS_CATALOG_VIRTUAL_ITEMS = [
     settingsPath: "/operations/queue-call/settings",
     seq: 673,
     groupKey: "foh-wait-time-display",
-    groupTitle: "预计等待时长展示",
+    groupTitle: "等待时长计算与展示",
     title: "预计等待时长计算设置",
     sceneDesc:
       "全店统一的排队杯数→预计等待时长换算规则；各产线展示开关、区间与样式均依据本设置计算。",
     moduleName: "等待时长",
+    feature: "（未填写）",
+  },
+  {
+    settingsPath: "/operations/queue-call/settings",
+    seq: 674,
+    groupKey: "foh-guest-duration-scenarios",
+    groupTitle: "计时与自助餐规则",
+    title: "用餐时长限制",
+    sceneDesc:
+      "按 POS、POS GO、PayPad、eMenu、SDI 分别启用并设置用餐时长限制（1–1440 分钟）；关联的展示、倒计时、提示和禁下单功能仅在已启用限制的产线生效。",
+    moduleName: "下单设置",
     feature: "（未填写）",
   },
   {

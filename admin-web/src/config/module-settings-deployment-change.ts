@@ -17,6 +17,7 @@ import {
   resolvePageSaveKey,
   trackPageConfigChange,
 } from "./page-settings-draft";
+import { getActiveSettingEditContext } from "./module-setting-edit-context";
 import {
   getModuleSettingsBasePath,
   listAllModuleSettingCatalogEntries,
@@ -659,6 +660,11 @@ export function recordModuleSettingDeploymentChange(input: ModuleSettingChangeIn
   if (!changeHasDiff(built)) return built.settingsPath;
 
   const settingsPath = built.settingsPath;
+  const activeEditContext = getActiveSettingEditContext();
+  if (activeEditContext?.mode === "search" && settingsPath) {
+    trackPageConfigChange(activeEditContext.scopeKey, settingsPath, built);
+    return settingsPath;
+  }
   if (settingsPath && isPageBatchSavePath(settingsPath)) {
     trackPageConfigChange(resolvePageSaveKey(settingsPath), settingsPath, built);
     return settingsPath;

@@ -52,7 +52,7 @@ export const SETTINGS_CATALOG_SCENE_OVERRIDE_BY_SEQ = new Map([
   ],
   [
     348,
-    "开启后，在选定产线（POS、POS GO、PayPad）按时段显示菜单。",
+    "在 eMenu、Kiosk、POS、POS GO、PayPad、SDI 各产线，可分别多选 Dinein、Delivery、Pick Up、ToGo 作为按时段显示菜单的订单类型。",
   ],
   [
     216,
@@ -226,7 +226,7 @@ export const SETTINGS_CATALOG_SCENE_OVERRIDE_BY_SEQ = new Map([
   ],
   [
     509,
-    "开启后，在选定产线（eMenu、Kiosk、SDI、Online Order、CDS）展示会员账户积分余额。",
+    "开启后，在选定产线（eMenu、SDI、Kiosk、Online Order、CDS）展示会员账户积分余额。",
   ],
   [
     600,
@@ -258,7 +258,7 @@ export const SETTINGS_CATALOG_SCENE_OVERRIDE_BY_SEQ = new Map([
   ],
   [
     526,
-    "各产线（Kiosk、eMenu、SDI、Online Order）独立配置积分菜展示位置：顶部展示或尾部展示。",
+    "各产线（eMenu、SDI、Kiosk、Online Order）可独立启用，并选择顶部展示或底部展示。",
   ],
   [
     527,
@@ -453,10 +453,15 @@ export const SETTINGS_CATALOG_SCENE_OVERRIDE_BY_SEQ = new Map([
   ],
   [
     333,
-    "按产线（eMenu、SDI）多选客人可发起的桌边服务请求类型（呼叫服务员/结账/加水等），支持弹窗新增与删除自定义类型；原 seq 629、630–636 已合并。员工提醒需同时在前厅「POS 通知总控」勾选「桌边服务请求」。",
+    "按产线（eMenu、SDI）多选客人可发起的桌边服务请求类型（呼叫服务员/结账/加水等），支持弹窗新增与删除自定义类型；原 seq 629、630–636 已合并。员工提醒需同时在前厅「消息类型提醒」勾选「桌边服务请求」。",
   ],
   [641, "开启后，在选定产线（eMenu、SDI）未开单（无有效订单）时仍允许发起桌边服务请求。"],
   [640, "按产线（eMenu、SDI）启用并配置同一桌/会话重复发起呼叫的最小间隔（秒）；0 表示启用但不限制间隔。"],
+  [
+    534,
+    "付款完成后，按各产线设置的超时分钟数自动清桌；0 表示该产线不启用。原 seq 169 已合并。",
+  ],
+  [642, "设置是否展示清桌快捷按钮（eMenu）"],
   [
     637,
     "勾选产线后，订单含指定菜品时向员工发送消息提醒；指定菜品列表配置见业务规则（原型待接）。",
@@ -472,7 +477,7 @@ export const SETTINGS_CATALOG_SCENE_OVERRIDE_BY_SEQ = new Map([
   [619, "开启后在所选产线展示人数选择页；关闭则跳过。适用产线：Kiosk、eMenu、POS、POS GO、PayPad、SDI。"],
   [
     643,
-    "开启后在所选产线开单前需换桌（防止订单误追加）。适用产线：Kiosk、eMenu、POS、POS GO、PayPad、SDI。",
+    "可按产线设置开单前不启用换桌、可选换桌或必须换桌。适用产线：POS、POS GO、PayPad、eMenu、SDI。",
   ],
   [
     644,
@@ -542,10 +547,10 @@ export const SETTINGS_CATALOG_SCENE_OVERRIDE_BY_SEQ = new Map([
     575,
     "开启后可添加多条加收规则：列表展示摘要，添加/编辑弹框配置额外加收金额，并按产线（eMenu、SDI）以组/类/菜结构选择适用商品（对齐展示菜详情）。",
   ],
-  [577, "开启后，在选定产线（eMenu）订单下单后展示用餐时长。"],
-  [578, "开启后，在选定产线（eMenu）将用餐时长以倒计时方式展示。"],
-  [579, "开启后，在选定产线（eMenu）于剩余用餐时长达到阈值时弹出提示。"],
-  [580, "开启后，在选定产线（eMenu）于用餐剩余时长提示后禁止食客自助下单。"],
+  [577, "开启后，在选定产线（POS、POS GO、PayPad、eMenu、SDI）订单下单后展示用餐时长；对应产线须先启用用餐时长限制。"],
+  [578, "开启后，在选定产线（POS、POS GO、PayPad、eMenu、SDI）将用餐时长以倒计时方式展示；对应产线须先启用用餐时长限制。"],
+  [579, "开启后，在选定产线（POS、POS GO、PayPad、eMenu、SDI）于剩余用餐时长达到阈值时弹出提示；对应产线须先启用用餐时长限制。"],
+  [580, "开启后，在选定产线（POS、POS GO、PayPad、eMenu、SDI）于用餐剩余时长提示后禁止食客自助下单；对应产线须先启用用餐时长限制。"],
   [
     588,
     "开启后，在选定产线（eMenu、SDI）配置两次订单提交的最小时间间隔（秒）；小于间隔时需服务员授权。",
@@ -567,8 +572,8 @@ export const SETTINGS_CATALOG_SCENE_OVERRIDE_BY_SEQ = new Map([
     "开启后在所选产线（eMenu）食客下单命中任意限制规则时弹出服务员密码授权。",
   ],
   [616, "开启后，在选定产线（eMenu、SDI）购物车中展示菜单送厨状态。"],
-  [617, "开启后，在选定产线（eMenu、SDI）购物车中展示订单价格。"],
-  [618, "开启后，在选定产线（eMenu、SDI）购物车中自动隐藏已售罄菜品。"],
+  [617, "开启后，在选定产线（eMenu、SDI、Kiosk、Online Order）购物车中展示订单价格。"],
+  [618, "开启后，在选定产线（POS、POS GO、PayPad、eMenu、SDI、Kiosk、Online Order）自动隐藏已售罄菜品。"],
   [
     531,
     "开启后，在选定产线（Kiosk、eMenu、SDI）菜单按多品牌分类展示（先选品牌再点餐）；关闭后使用常规菜单结构。",
@@ -588,35 +593,35 @@ export const SETTINGS_CATALOG_SCENE_OVERRIDE_BY_SEQ = new Map([
   ],
   [
     606,
-    "开启后，在选定产线（Kiosk、eMenu、SDI、Online Order）的菜单树形结构中展示类名称。",
+    "开启后，在选定产线（eMenu、SDI、Kiosk、Online Order）的菜单树形结构中展示类名称。",
   ],
   [
     607,
-    "开启后，按产线配置菜单图片大小展示模式（原始/小图/大图）及例外菜品。",
+    "按产线独立启用菜单图片展示模式（默认/大图模式/小图模式）及例外菜品。",
   ],
   [
     515,
-    "开启后，在选定产线（Kiosk、eMenu、SDI、Online Order）的菜单上展示菜品序号 ID。",
+    "开启后，在选定产线（POS、POS GO、PayPad、eMenu、SDI、Kiosk、Online Order）的菜单上展示菜品序号 ID。",
   ],
   [
     516,
-    "开启后，在选定产线（Kiosk、eMenu、SDI、Online Order）的组-类-菜树形菜单中展示组名称。",
+    "开启后，在选定产线（POS、POS GO、PayPad、eMenu、SDI、Kiosk、Online Order）的组-类-菜树形菜单中展示组名称。",
   ],
   [
     517,
-    "各产线（Kiosk、eMenu、SDI、Online Order）独立配置菜单分类导航为侧边展示或顶部展示。",
+    "各产线（eMenu、SDI、Kiosk、Online Order）可独立启用，并选择顶部展示或侧边展示。",
   ],
   [
     518,
-    "开启后，在选定产线（Kiosk、eMenu、SDI、Online Order）的组-类-菜树形菜单中默认展开第一组下的类。",
+    "开启后，在选定产线（eMenu、SDI、Kiosk、Online Order）的组-类-菜树形菜单中默认展开第一组下的类。",
   ],
   [
     519,
-    "开启后，在选定产线（Kiosk、eMenu、SDI、Online Order）将菜单图片填充菜单卡片（裁切）展示。",
+    "开启后，在选定产线（POS、POS GO、PayPad、eMenu、SDI、Kiosk、Online Order）将菜单图片填充菜单卡片（裁切）展示。",
   ],
   [
     520,
-    "开启后，在选定产线（Kiosk、eMenu、SDI、Online Order）的套餐页面展示步骤分类导航栏。",
+    "开启后，在 Kiosk 套餐页面展示步骤分类导航栏。",
   ],
   [
     524,
@@ -624,7 +629,7 @@ export const SETTINGS_CATALOG_SCENE_OVERRIDE_BY_SEQ = new Map([
   ],
   [
     528,
-    "开启后，在选定产线（Kiosk、eMenu、SDI、Online Order）对价格为 0 的菜品展示价格标签。",
+    "开启后，在选定产线（POS、POS GO、PayPad、eMenu、SDI、Kiosk、Online Order）对价格为 0 的菜品展示价格标签。",
   ],
 ]);
 
@@ -634,6 +639,9 @@ export const SETTINGS_CATALOG_SCENE_SUPPLEMENT_BY_SEQ = new Map([
 ]);
 
 export const SETTINGS_CATALOG_TITLE_OVERRIDE_BY_SEQ = new Map([
+  [643, "开单前，换桌"],
+  [534, "付款后自动清桌"],
+  [642, "展示清桌快捷按钮"],
   [531, "品牌模式"],
   [530, "品牌页作为首页"],
   [601, "品类模式"],
@@ -693,6 +701,10 @@ export const SETTINGS_CATALOG_TITLE_OVERRIDE_BY_SEQ = new Map([
   [443, "按照时长收费"],
 ]);
 
+export const SETTINGS_CATALOG_FEATURE_OVERRIDE_BY_SEQ = new Map([
+  [348, "按照时段显示菜单（按产线×订单类型）"],
+]);
+
 /** @param {number} seq @param {string} baseDesc */
 export function buildCatalogSceneDesc(seq, baseDesc) {
   const n = Number(seq);
@@ -712,4 +724,12 @@ export function buildCatalogTitle(seq, baseTitle) {
   const override = SETTINGS_CATALOG_TITLE_OVERRIDE_BY_SEQ.get(n);
   if (override) return override;
   return (baseTitle || "").trim();
+}
+
+/** @param {number} seq @param {string} baseFeature */
+export function buildCatalogFeature(seq, baseFeature) {
+  const n = Number(seq);
+  const override = SETTINGS_CATALOG_FEATURE_OVERRIDE_BY_SEQ.get(n);
+  if (override) return override;
+  return (baseFeature || "").trim();
 }

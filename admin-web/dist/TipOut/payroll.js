@@ -514,12 +514,14 @@
       });
       const totals = sumWeekSegmentTotals(group);
       blocks.push(`<section class="payroll-seg-week-block">
-        ${renderManageWeekTitleHtml(period, weekIndex)}
+        <div class="payroll-seg-week-toolbar">
+          ${renderManageWeekTitleHtml(period, weekIndex)}
+          ${renderManageWeekSummaryHtml(totals, weekIndex)}
+        </div>
         <table class="payroll-seg-table">
           ${renderManageSegmentTableHeadHtml()}
           <tbody>${rowHtml.join("")}</tbody>
         </table>
-        ${renderManageWeekSummaryHtml(totals, weekIndex)}
       </section>`);
     });
     return `<div class="payroll-seg-biweekly">${blocks.join("")}</div>`;
@@ -859,6 +861,43 @@
     return "—";
   }
 
+  function getEmployeeAvailableRoles(emp) {
+    if (!emp) return [];
+    const roles = [];
+    const seen = new Set();
+    const add = (value) => {
+      const role = String(value || "").trim();
+      if (!role || role === "—" || seen.has(role)) return;
+      seen.add(role);
+      roles.push(role);
+    };
+    (Array.isArray(emp.roleRecords) ? emp.roleRecords : []).forEach((record) => add(record && record.role));
+    (Array.isArray(emp.segments) ? emp.segments : []).forEach((day) => add(day && day.role));
+    const rosterMatch = findUnifiedRosterMatch(emp);
+    add(rosterMatch && rosterMatch.role);
+    add(emp.role);
+    add(emp.department);
+    if (roles.length === 0) add(resolveEmployeeRole(emp));
+    return roles;
+  }
+
+  function resolveWorkspaceRole(emp) {
+    if (!emp) return "—";
+    const roles = getEmployeeAvailableRoles(emp);
+    const context = state.workspaceRoleContext;
+    if (
+      context &&
+      context.employeeId === emp.id &&
+      context.periodId === state.periodId &&
+      roles.includes(String(context.role || "").trim())
+    ) {
+      return context.role;
+    }
+    const role = roles[0] || resolveEmployeeRole(emp);
+    state.workspaceRoleContext = role && role !== "—" ? { employeeId: emp.id, periodId: state.periodId, role } : null;
+    return role || "—";
+  }
+
   function resolveEmployeeHireDate(emp) {
     if (emp && emp.hireDate) return String(emp.hireDate).trim();
     const match = findUnifiedRosterMatch(emp);
@@ -1078,8 +1117,23 @@
     workspaceEntrySnapshot: "",
     workspaceConfirmedInSession: false,
     workspaceDraft: null,
+    workspaceRoleContext: null,
     activeTab: "manage",
   };
+
+  let employeePickerState = {
+    employeeId: null,
+    role: "",
+    trigger: null,
+  };
+
+  let employeeEditModalState = {
+    snapshot: null,
+    trigger: null,
+    inertNodes: [],
+  };
+
+  let fieldHelpTrigger = null;
 
   function emptySlots(count) {
     const n = Math.max(1, Number(count) || 1);
@@ -1747,7 +1801,7 @@
   function syncWorkspaceEmployeeRoleTag(emp) {
     const tag = $("#ws-employee-role-tag");
     if (!tag) return;
-    const role = resolveEmployeeRole(emp);
+    const role = resolveWorkspaceRole(emp);
     if (!role || role === "—") {
       tag.hidden = true;
       tag.textContent = "";
@@ -1776,13 +1830,293 @@
     syncWorkspaceEmployeeRoleTag(getEmployee(state.periodId, sel.value));
   }
 
-  function navigateWorkspaceEmployee(empId) {
-    if (!empId || empId === state.employeeId) return;
+  function getEmployeeAvatarLabel(emp) {
+    const name = String((emp && emp.name) || "").trim();
+    if (!name) return "?";
+    const words = name.split(/\s+/).filter(Boolean);
+    if (words.length === 1) return words[0].slice(0, 1).toUpperCase();
+    return `${words[0].slice(0, 1)}${words[words.length - 1].slice(0, 1)}`.toUpperCase();
+  }
+
+  function setTextContent(selector, value) {
+    const el = $(selector);
+    if (el) el.textContent = value == null || value === "" ? "—" : String(value);
+  }
+
+  function renderWorkspaceHero(emp, period) {
+    if (!emp || !period) return;
+    const draftEmp = getDraftAsEmployeeShape() || emp;
+    const sums = sumSegments(draftEmp);
+    const payAmounts = sumSegmentPayAmounts(draftEmp);
+    const role = resolveWorkspaceRole(draftEmp);
+    const totalHours = sums.reg + sums.paidBreak + sums.ot + sums.ot2;
+
+    setTextContent("#ws-employee-avatar", getEmployeeAvatarLabel(draftEmp));
+    setTextContent("#ws-employee-name", draftEmp.name || "—");
+    setTextContent("#ws-employee-id", draftEmp.id || emp.id || "—");
+    setTextContent("#ws-employee-adp-display", draftEmp.adpFile || "—");
+    setTextContent("#ws-employee-ssn-display", resolveEmployeeSsn(draftEmp) || "—");
+    setTextContent("#ws-employee-hire-display", resolveEmployeeHireDate(draftEmp) || "—");
+    setTextContent("#ws-period-range", period.rangeLabel || "—");
+    setTextContent("#ws-total-salary", `$${fmtMoney(payAmounts.totalAmt)}`);
+    setTextContent("#ws-total-hours", `${fmtMoney(totalHours)} h`);
+    setTextContent("#ws-paycheck", period.paycheckDate || "—");
+
+    const roleEl = $("#ws-employee-role-display");
+    if (roleEl) {
+      roleEl.hidden = !role || role === "—";
+      roleEl.textContent = role && role !== "—" ? role : "";
+    }
+  }
+
+  function renderEmployeePicker() {
+    const employeesEl = $("#employee-picker-employees");
+    const rolesEl = $("#employee-picker-roles");
+    const countEl = $("#employee-picker-count");
+    const confirmBtn = $("#btn-employee-picker-confirm");
+    if (!employeesEl || !rolesEl) return;
+    const list = filterEmployeesByStore(state.data.employees[state.periodId] || [], state.employeeStoreFilter);
+    const selectedEmp = list.find((emp) => emp.id === employeePickerState.employeeId) || null;
+    const roles = getEmployeeAvailableRoles(selectedEmp);
+    if (selectedEmp && !roles.includes(employeePickerState.role)) {
+      employeePickerState.role = roles[0] || "";
+    }
+
+    const storeParts = splitStoreLabel(state.employeeStoreFilter);
+    setTextContent("#employee-picker-store-name", storeParts.name);
+    setTextContent("#employee-picker-store-address", storeParts.address || state.employeeStoreFilter);
+    if (countEl) countEl.textContent = T("workspace.employeeCount", { n: list.length });
+
+    employeesEl.innerHTML = list.length
+      ? list.map((emp) => {
+          const selected = emp.id === employeePickerState.employeeId;
+          return `<button type="button" class="payroll-employee-picker-item${selected ? " is-selected" : ""}" data-action="stage-employee-picker" data-employee-id="${escapeHtml(emp.id)}" role="option" aria-selected="${selected ? "true" : "false"}">
+            <span class="payroll-filter-radio" aria-hidden="true"></span>
+            <span class="payroll-employee-picker-avatar" aria-hidden="true">${escapeHtml(getEmployeeAvatarLabel(emp))}</span>
+            <span class="payroll-employee-picker-copy"><strong>${escapeHtml(emp.name || "—")}</strong></span>
+            <span class="payroll-employee-picker-arrow" aria-hidden="true">›</span>
+          </button>`;
+        }).join("")
+      : `<p class="payroll-employee-picker-empty">${escapeHtml(T("workspace.noEmployees"))}</p>`;
+
+    rolesEl.innerHTML = roles.length
+      ? roles.map((role) => {
+          const selected = role === employeePickerState.role;
+          return `<button type="button" class="payroll-employee-picker-role${selected ? " is-selected" : ""}" data-action="stage-role-picker" data-role="${escapeHtml(role)}" role="option" aria-selected="${selected ? "true" : "false"}">
+            <span class="payroll-filter-radio" aria-hidden="true"></span><span>${escapeHtml(role)}</span>
+          </button>`;
+        }).join("")
+      : `<p class="payroll-employee-picker-empty">${escapeHtml(T("workspace.noRoles"))}</p>`;
+
+    if (confirmBtn) confirmBtn.disabled = !(selectedEmp && roles.includes(employeePickerState.role));
+  }
+
+  function showEmployeePicker(trigger) {
+    const modal = $("#payrollEmployeePickerModal");
+    if (!modal) return;
+    const scopedEmployees = filterEmployeesByStore(state.data.employees[state.periodId] || [], state.employeeStoreFilter);
+    const currentEmp = getEmployee(state.periodId, state.employeeId);
+    const emp = scopedEmployees.find((item) => currentEmp && item.id === currentEmp.id) || scopedEmployees[0] || currentEmp;
+    employeePickerState = {
+      employeeId: emp ? emp.id : null,
+      role: emp ? resolveWorkspaceRole(emp) : "",
+      trigger: trigger || document.activeElement,
+    };
+    renderEmployeePicker();
+    if (typeof openModal === "function") openModal("payrollEmployeePickerModal");
+    else {
+      modal.classList.add("show");
+      document.body.style.overflow = "hidden";
+    }
+    window.setTimeout(() => {
+      const selected = $("#employee-picker-employees .is-selected");
+      if (selected) selected.focus();
+      else $("#btn-employee-picker-close")?.focus();
+    }, 0);
+  }
+
+  function hideEmployeePicker(restoreFocus = true) {
+    if (typeof closeModal === "function") closeModal("payrollEmployeePickerModal");
+    else {
+      const modal = $("#payrollEmployeePickerModal");
+      if (modal) modal.classList.remove("show");
+      document.body.style.overflow = "";
+    }
+    if (restoreFocus) window.setTimeout(() => employeePickerState.trigger?.focus?.(), 0);
+  }
+
+  function confirmEmployeePickerSelection() {
+    const emp = getEmployee(state.periodId, employeePickerState.employeeId);
+    const roles = getEmployeeAvailableRoles(emp);
+    if (!emp || !roles.includes(employeePickerState.role)) return;
+    navigateWorkspaceEmployee(emp.id, employeePickerState.role, {
+      onApplied: () => hideEmployeePicker(true),
+      onCancel: () => renderEmployeePicker(),
+    });
+  }
+
+  const MODAL_FOCUSABLE_SELECTOR = [
+    "button:not([disabled])",
+    "input:not([disabled])",
+    "select:not([disabled])",
+    "textarea:not([disabled])",
+    "a[href]",
+    "[tabindex]:not([tabindex='-1'])",
+  ].join(",");
+
+  function getModalFocusableElements(overlay) {
+    if (!overlay) return [];
+    const dialog = overlay.querySelector("[role='dialog'], .modal");
+    if (!dialog) return [];
+    return $all(MODAL_FOCUSABLE_SELECTOR, dialog).filter((el) => {
+      if (el.hidden || el.getAttribute("aria-hidden") === "true") return false;
+      const style = window.getComputedStyle(el);
+      return style.display !== "none" && style.visibility !== "hidden";
+    });
+  }
+
+  function trapFocusInModal(e, overlay) {
+    if (!overlay || !overlay.classList.contains("show") || e.key !== "Tab") return false;
+    const focusable = getModalFocusableElements(overlay);
+    if (focusable.length === 0) {
+      e.preventDefault();
+      overlay.querySelector("[role='dialog'], .modal")?.focus?.();
+      return true;
+    }
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    const active = document.activeElement;
+    if (e.shiftKey && (active === first || !overlay.contains(active))) {
+      e.preventDefault();
+      last.focus();
+      return true;
+    }
+    if (!e.shiftKey && (active === last || !overlay.contains(active))) {
+      e.preventDefault();
+      first.focus();
+      return true;
+    }
+    return false;
+  }
+
+  function setEmployeeEditBackgroundInert(isInert) {
+    const editOverlay = $("#payrollEmployeeEditModal");
+    const helpOverlay = $("#fieldHelpModal");
+    if (isInert) {
+      employeeEditModalState.inertNodes = Array.from(document.body.children)
+        .filter((node) => node !== editOverlay && node !== helpOverlay)
+        .map((node) => ({ node, wasInert: node.hasAttribute("inert") }));
+      employeeEditModalState.inertNodes.forEach(({ node }) => node.setAttribute("inert", ""));
+      document.body.classList.add("payroll-employee-edit-open");
+      return;
+    }
+    employeeEditModalState.inertNodes.forEach(({ node, wasInert }) => {
+      if (!wasInert) node.removeAttribute("inert");
+    });
+    employeeEditModalState.inertNodes = [];
+    document.body.classList.remove("payroll-employee-edit-open");
+  }
+
+  function captureEmployeeIdentityValues() {
+    return {
+      adpFile: $("#field-adp-file")?.value || "",
+      ssn: $("#field-ssn")?.value || "",
+      hireDate: $("#field-hire-date")?.value || "",
+    };
+  }
+
+  function restoreEmployeeIdentityValues(snapshot) {
+    if (!snapshot) return;
+    const adpInput = $("#field-adp-file");
+    const ssnInput = $("#field-ssn");
+    const hireDateInput = $("#field-hire-date");
+    if (adpInput) adpInput.value = snapshot.adpFile;
+    if (ssnInput) ssnInput.value = snapshot.ssn;
+    if (hireDateInput) hireDateInput.value = snapshot.hireDate;
+  }
+
+  function showEmployeeEditModal(trigger) {
+    const modal = $("#payrollEmployeeEditModal");
+    if (!modal || modal.classList.contains("show")) return;
+    readFormIntoDraft();
+    employeeEditModalState.snapshot = captureEmployeeIdentityValues();
+    employeeEditModalState.trigger = trigger || document.activeElement;
+    if (typeof openModal === "function") openModal("payrollEmployeeEditModal");
+    else {
+      modal.classList.add("show");
+      document.body.style.overflow = "hidden";
+    }
+    modal.removeAttribute("aria-hidden");
+    modal.removeAttribute("inert");
+    setEmployeeEditBackgroundInert(true);
+    window.setTimeout(() => {
+      if (modal.classList.contains("show")) $("#field-adp-file")?.focus({ preventScroll: true });
+    }, 80);
+  }
+
+  function hideEmployeeEditModal({ accept = false, restoreFocus = true } = {}) {
+    const modal = $("#payrollEmployeeEditModal");
+    if (!modal || !modal.classList.contains("show")) return;
+    if ($("#fieldHelpModal")?.classList.contains("show")) hideFieldHelp(false);
+    if (!accept) restoreEmployeeIdentityValues(employeeEditModalState.snapshot);
+    readFormIntoDraft();
+    syncDerived();
+    if (typeof closeModal === "function") closeModal("payrollEmployeeEditModal");
+    else {
+      modal.classList.remove("show");
+      document.body.style.overflow = "";
+    }
+    modal.removeAttribute("aria-hidden");
+    modal.removeAttribute("inert");
+    setEmployeeEditBackgroundInert(false);
+    const trigger = employeeEditModalState.trigger;
+    employeeEditModalState.snapshot = null;
+    employeeEditModalState.trigger = null;
+    if (restoreFocus && trigger?.isConnected) window.setTimeout(() => trigger.focus?.(), 0);
+  }
+
+  function confirmEmployeeEditModal() {
+    hideEmployeeEditModal({ accept: true, restoreFocus: true });
+  }
+
+  function setAdpExportMenuOpen(open) {
+    const menu = $("#payroll-adp-export-menu");
+    const toggle = $("#btn-payroll-adp-menu-toggle");
+    if (!menu || !toggle) return;
+    menu.hidden = !open;
+    toggle.setAttribute("aria-expanded", open ? "true" : "false");
+  }
+
+  function toggleAdpExportMenu() {
+    const menu = $("#payroll-adp-export-menu");
+    if (!menu) return;
+    setAdpExportMenuOpen(menu.hidden);
+  }
+
+  function navigateWorkspaceEmployee(empId, roleContext, options) {
+    const opts = options || {};
+    const targetEmp = getEmployee(state.periodId, empId);
+    if (!empId || !targetEmp) return;
+    const availableRoles = getEmployeeAvailableRoles(targetEmp);
+    const nextRole = availableRoles.includes(String(roleContext || "").trim())
+      ? String(roleContext).trim()
+      : availableRoles[0] || resolveEmployeeRole(targetEmp);
+    const currentRole = empId === state.employeeId
+      ? state.workspaceRoleContext && state.workspaceRoleContext.employeeId === empId && state.workspaceRoleContext.periodId === state.periodId
+        ? state.workspaceRoleContext.role
+        : availableRoles[0] || resolveEmployeeRole(targetEmp)
+      : "";
+    if (empId === state.employeeId && nextRole === currentRole) {
+      if (typeof opts.onApplied === "function") opts.onApplied();
+      return;
+    }
     const apply = () => {
       state.employeeId = empId;
+      state.workspaceRoleContext = nextRole && nextRole !== "—" ? { employeeId: empId, periodId: state.periodId, role: nextRole } : null;
       markWorkspaceEntrySnapshot();
       renderManageForm();
       syncWorkspaceDirtyBaseline();
+      if (typeof opts.onApplied === "function") opts.onApplied();
     };
     readFormIntoDraft();
     if (hasUnconfirmedWorkspaceChanges()) {
@@ -1790,6 +2124,7 @@
         if (!ok) {
           const sel = $("#ws-employee-switch");
           if (sel) sel.value = state.employeeId;
+          if (typeof opts.onCancel === "function") opts.onCancel();
           return;
         }
         apply();
@@ -2314,6 +2649,7 @@
           : stores[0] || "";
     select.value = next;
     state.employeeStoreFilter = next;
+    renderCustomFilterMenus();
 
     if (next && (!active || active !== next)) {
       if (
@@ -2341,29 +2677,41 @@
       select.dataset.bound = "1";
       select.addEventListener("change", () => {
         const storeName = String(select.value || "").trim();
-        state.employeeStoreFilter = storeName;
-        if (
-          storeName &&
-          window.TipOutGlobalScopeFilter &&
-          typeof TipOutGlobalScopeFilter.writeGlobalStoreFilter === "function"
-        ) {
-          let storeId = "";
-          let storeLabel = storeName;
-          if (typeof TipOutGlobalScopeFilter.listScopedStoreOptions === "function") {
-            const hit = TipOutGlobalScopeFilter.listScopedStoreOptions().find((o) => {
-              const label = String((o && (o.labelZh || o.value)) || "").trim();
-              return label === storeName || String(o.value || "") === storeName;
-            });
-            if (hit) {
-              storeId = String(hit.value || "");
-              storeLabel = String(hit.labelZh || storeName);
+        const previousStore = state.employeeStoreFilter;
+        const apply = () => {
+          state.employeeStoreFilter = storeName;
+          if (
+            storeName &&
+            window.TipOutGlobalScopeFilter &&
+            typeof TipOutGlobalScopeFilter.writeGlobalStoreFilter === "function"
+          ) {
+            let storeId = "";
+            let storeLabel = storeName;
+            if (typeof TipOutGlobalScopeFilter.listScopedStoreOptions === "function") {
+              const hit = TipOutGlobalScopeFilter.listScopedStoreOptions().find((o) => {
+                const label = String((o && (o.labelZh || o.value)) || "").trim();
+                return label === storeName || String(o.value || "") === storeName;
+              });
+              if (hit) {
+                storeId = String(hit.value || "");
+                storeLabel = String(hit.labelZh || storeName);
+              }
             }
+            if (!storeId) storeId = "roster-store:" + encodeURIComponent(storeName);
+            TipOutGlobalScopeFilter.writeGlobalStoreFilter(storeId, storeLabel);
           }
-          if (!storeId) storeId = "roster-store:" + encodeURIComponent(storeName);
-          TipOutGlobalScopeFilter.writeGlobalStoreFilter(storeId, storeLabel);
+          handleEmployeeStoreFilterChange();
+          updateEmployeeBatchExportButton();
+          renderCustomFilterMenus();
+        };
+        if (state.view === "workspace") {
+          runAfterUnsavedWorkspaceConfirm(apply, () => {
+            select.value = previousStore;
+            renderCustomFilterMenus();
+          });
+          return;
         }
-        handleEmployeeStoreFilterChange();
-        updateEmployeeBatchExportButton();
+        apply();
       });
     }
   }
@@ -2387,10 +2735,14 @@
     }
     if (!filtered.some((e) => e.id === state.employeeId)) {
       state.employeeId = filtered[0].id;
+      state.workspaceRoleContext = null;
+      markWorkspaceEntrySnapshot();
       renderManageForm();
+      syncWorkspaceDirtyBaseline();
     } else {
       renderWorkspaceEmployeeSwitch(state.employeeId);
     }
+    renderCustomFilterMenus();
     saveState();
   }
 
@@ -2569,6 +2921,7 @@
   function renderManagePeriodNav() {
     const grid = $("#manage-period-nav-grid");
     const yearEl = $("#manage-period-nav-year");
+    const periodSelect = $("#workspace-period-filter");
     if (!grid) return;
     const current = getPeriod(state.periodId);
     const currentYear = current ? getPeriodYear(current) : "";
@@ -2595,6 +2948,7 @@
     }
     if (!current && !navYear) {
       grid.innerHTML = "";
+      if (periodSelect) periodSelect.innerHTML = "";
       return;
     }
     const periods = (Array.isArray(state.data.periods) ? state.data.periods : [])
@@ -2602,7 +2956,14 @@
       .sort((a, b) => Number(a.periodNumber || 0) - Number(b.periodNumber || 0));
     if (periods.length === 0) {
       grid.innerHTML = `<p class="payroll-workspace-period-empty">${escapeHtml(T("empty.periods"))}</p>`;
+      if (periodSelect) periodSelect.innerHTML = "";
       return;
+    }
+    if (periodSelect) {
+      periodSelect.innerHTML = periods
+        .map((p) => `<option value="${escapeHtml(p.id)}">${escapeHtml(T("filter.periodN", { n: p.periodNumber != null ? p.periodNumber : "—" }))}</option>`)
+        .join("");
+      if (periods.some((p) => p.id === state.periodId)) periodSelect.value = state.periodId;
     }
     grid.innerHTML = periods
       .map((p) => {
@@ -2612,6 +2973,117 @@
         </button>`;
       })
       .join("");
+    renderCustomFilterMenus();
+  }
+
+  function splitStoreLabel(store) {
+    const raw = String(store || "").trim();
+    const separator = raw.lastIndexOf(" - ");
+    if (separator < 0) return { name: raw || "—", address: "" };
+    return {
+      name: raw.slice(0, separator).trim() || raw,
+      address: raw.slice(separator + 3).trim(),
+    };
+  }
+
+  function isCurrentPayrollPeriod(period) {
+    const range = getPeriodDateRange(period && period.rangeLabel);
+    if (!range.start || !range.end) return false;
+    const today = startOfDay(new Date()).getTime();
+    return today >= startOfDay(range.start).getTime() && today <= startOfDay(range.end).getTime();
+  }
+
+  function renderCustomFilterMenus(storeQuery) {
+    const storeSelect = $("#payroll-store-filter");
+    const yearSelect = $("#manage-period-nav-year");
+    const periodSelect = $("#workspace-period-filter");
+    const storeValue = $("#payroll-store-trigger-value");
+    const yearValue = $("#payroll-year-trigger-value");
+    const periodValue = $("#payroll-period-trigger-value");
+    const storeOptions = $("#payroll-store-options");
+    const yearOptions = $("#payroll-year-options");
+    const periodOptions = $("#payroll-period-options");
+
+    if (storeSelect && storeValue) storeValue.textContent = storeSelect.value || "—";
+    if (yearSelect && yearValue) yearValue.textContent = yearSelect.value || "—";
+    const activePeriod = getPeriod(state.periodId);
+    if (periodValue) {
+      periodValue.textContent = activePeriod && activePeriod.periodNumber != null
+        ? String(activePeriod.periodNumber)
+        : "—";
+    }
+
+    if (storeSelect && storeOptions) {
+      const query = String(storeQuery || "").trim().toLowerCase();
+      const stores = Array.from(storeSelect.options)
+        .map((option) => option.value)
+        .filter(Boolean)
+        .filter((store) => {
+          if (!query) return true;
+          const parts = splitStoreLabel(store);
+          return `${parts.name} ${parts.address}`.toLowerCase().includes(query);
+        });
+      storeOptions.innerHTML = stores.length
+        ? stores.map((store) => {
+            const parts = splitStoreLabel(store);
+            const selected = store === storeSelect.value;
+            return `<button type="button" class="payroll-filter-option payroll-store-option${selected ? " is-selected" : ""}" data-action="select-workspace-store" data-value="${escapeHtml(store)}" role="option" aria-selected="${selected ? "true" : "false"}">
+              <span class="payroll-filter-radio" aria-hidden="true"></span>
+              <span><strong>${escapeHtml(parts.name)}</strong>${parts.address ? `<small>${escapeHtml(parts.address)}</small>` : ""}</span>
+            </button>`;
+          }).join("")
+        : `<p class="payroll-filter-empty">${escapeHtml(T("workspace.noStores"))}</p>`;
+    }
+
+    if (yearSelect && yearOptions) {
+      yearOptions.innerHTML = Array.from(yearSelect.options).map((option) => {
+        const selected = option.value === yearSelect.value;
+        return `<button type="button" class="payroll-filter-option payroll-compact-option${selected ? " is-selected" : ""}" data-action="select-workspace-year" data-value="${escapeHtml(option.value)}" role="option" aria-selected="${selected ? "true" : "false"}">
+          <span class="payroll-filter-radio" aria-hidden="true"></span><strong>${escapeHtml(option.textContent || option.value)}</strong>
+        </button>`;
+      }).join("");
+    }
+
+    if (periodSelect && periodOptions) {
+      periodOptions.innerHTML = Array.from(periodSelect.options).map((option) => {
+        const period = getPeriod(option.value);
+        const selected = option.value === periodSelect.value;
+        const number = period && period.periodNumber != null ? period.periodNumber : option.textContent;
+        return `<button type="button" class="payroll-filter-option payroll-compact-option${selected ? " is-selected" : ""}" data-action="select-workspace-period" data-value="${escapeHtml(option.value)}" role="option" aria-selected="${selected ? "true" : "false"}">
+          <span class="payroll-filter-radio" aria-hidden="true"></span><strong>${escapeHtml(String(number || "—"))}</strong>${isCurrentPayrollPeriod(period) ? `<span class="payroll-period-now">${escapeHtml(T("workspace.now"))}</span>` : ""}
+        </button>`;
+      }).join("");
+    }
+  }
+
+  function closeWorkspaceMenus(exceptName) {
+    $all("[data-workspace-menu]").forEach((menu) => {
+      const name = menu.getAttribute("data-workspace-menu");
+      if (exceptName && name === exceptName) return;
+      menu.hidden = true;
+      const trigger = $(`[data-action="toggle-workspace-menu"][data-menu="${name}"]`);
+      if (trigger) trigger.setAttribute("aria-expanded", "false");
+    });
+  }
+
+  function setWorkspaceMenuOpen(name, open) {
+    const menu = $(`[data-workspace-menu="${name}"]`);
+    const trigger = $(`[data-action="toggle-workspace-menu"][data-menu="${name}"]`);
+    if (!menu || !trigger) return;
+    closeWorkspaceMenus(open ? name : "");
+    if (open) renderCustomFilterMenus($("#payroll-store-search")?.value || "");
+    menu.hidden = !open;
+    trigger.setAttribute("aria-expanded", open ? "true" : "false");
+    if (open && name === "store") window.setTimeout(() => $("#payroll-store-search")?.focus(), 0);
+    if (open && name !== "store") {
+      window.setTimeout(() => menu.querySelector(".is-selected")?.focus(), 0);
+    }
+  }
+
+  function toggleWorkspaceMenu(name) {
+    const menu = $(`[data-workspace-menu="${name}"]`);
+    if (!menu) return;
+    setWorkspaceMenuOpen(name, menu.hidden);
   }
 
   function resolveEmployeeIdForPeriod(targetPeriodId, currentEmp) {
@@ -2823,9 +3295,12 @@
 
   function updateEmployeeBatchExportButton() {
     const btn = $("#btn-export-batch-adp");
-    if (!btn) return;
     const { exportable } = getEmployeesForListExport();
-    btn.disabled = exportable.length === 0;
+    if (btn) btn.disabled = exportable.length === 0;
+    $all('[data-action="export-batch-adp"]').forEach((item) => {
+      item.disabled = exportable.length === 0;
+      item.setAttribute("aria-disabled", exportable.length === 0 ? "true" : "false");
+    });
   }
 
   function renderEmployees() {
@@ -3294,6 +3769,7 @@ body{margin:0;padding:24px;background:#fff;}
     syncEmployeeStoreFilterControls(state.data.employees[state.periodId] || []);
     renderWorkspaceEmployeeSwitch(emp.id);
     renderManagePeriodNav();
+    renderCustomFilterMenus();
     $("#field-adp-file").value = editEmp.adpFile;
     const ssnInput = $("#field-ssn");
     if (ssnInput) ssnInput.value = resolveEmployeeSsn(editEmp);
@@ -3366,6 +3842,8 @@ body{margin:0;padding:24px;background:#fff;}
         return parseInt(a.getAttribute("data-slot-index"), 10) - parseInt(b.getAttribute("data-slot-index"), 10);
       });
       const day = normalizeDay({});
+      const previousDay = draft.segments && draft.segments[dIdx] ? normalizeDay(draft.segments[dIdx]) : null;
+      if (previousDay && previousDay.role) day.role = previousDay.role;
       day.slots = [];
       dayRows.forEach((row) => {
         const slot = parseInt(row.getAttribute("data-slot-index"), 10);
@@ -3512,6 +3990,7 @@ body{margin:0;padding:24px;background:#fff;}
     if (exportBtn) exportBtn.disabled = missingAdpFile;
     updateManageWeekSummaries(emp, period);
     updateEmployeeBatchExportButton();
+    renderWorkspaceHero(emp, period);
   }
 
   function showView(name) {
@@ -3670,7 +4149,7 @@ body{margin:0;padding:24px;background:#fff;}
     });
   }
 
-  function showFieldHelp(fieldKey) {
+  function showFieldHelp(fieldKey, trigger) {
     const meta = typeof getPayrollFieldHelp === "function" ? getPayrollFieldHelp(fieldKey) : null;
     if (!meta) return;
     const titleEl = $("#field-help-title");
@@ -3683,12 +4162,29 @@ body{margin:0;padding:24px;background:#fff;}
       html += `<div class="field-help-adp"><strong>${escapeHtml(T("fieldHelp.adpMap"))}</strong>${escapeHtml(meta.adp)}</div>`;
     }
     bodyEl.innerHTML = html;
+    fieldHelpTrigger = trigger || document.activeElement;
+    const employeeEditModal = $("#payrollEmployeeEditModal");
+    if (employeeEditModal?.classList.contains("show")) {
+      employeeEditModal.setAttribute("inert", "");
+      employeeEditModal.setAttribute("aria-hidden", "true");
+    }
     modal.classList.add("show");
+    modal.removeAttribute("inert");
+    window.setTimeout(() => $("#btn-field-help-close")?.focus(), 0);
   }
 
-  function hideFieldHelp() {
+  function hideFieldHelp(restoreFocus = true) {
     const modal = $("#fieldHelpModal");
-    if (modal) modal.classList.remove("show");
+    if (!modal || !modal.classList.contains("show")) return;
+    modal.classList.remove("show");
+    const employeeEditModal = $("#payrollEmployeeEditModal");
+    if (employeeEditModal?.classList.contains("show")) {
+      employeeEditModal.removeAttribute("inert");
+      employeeEditModal.removeAttribute("aria-hidden");
+    }
+    const trigger = fieldHelpTrigger;
+    fieldHelpTrigger = null;
+    if (restoreFocus && trigger?.isConnected) window.setTimeout(() => trigger.focus?.(), 0);
   }
 
   function bindFieldHelp() {
@@ -3698,7 +4194,7 @@ body{margin:0;padding:24px;background:#fff;}
         e.preventDefault();
         e.stopPropagation();
         const key = helpBtn.getAttribute("data-field-help");
-        if (key) showFieldHelp(key);
+        if (key) showFieldHelp(key, helpBtn);
         return;
       }
       if (e.target.id === "btn-field-help-close" || e.target.id === "btn-field-help-ok") {
@@ -3706,7 +4202,10 @@ body{margin:0;padding:24px;background:#fff;}
       }
     });
     document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") hideFieldHelp();
+      if (e.key !== "Escape" || !$("#fieldHelpModal")?.classList.contains("show")) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      hideFieldHelp();
     });
   }
 
@@ -3846,6 +4345,60 @@ body{margin:0;padding:24px;background:#fff;}
         syncWorkspaceDirtyBaseline();
         showView("workspace");
       }
+      if (act === "toggle-adp-export-menu") {
+        e.stopPropagation();
+        closeWorkspaceMenus();
+        toggleAdpExportMenu();
+      }
+      if (act === "toggle-workspace-menu") {
+        e.stopPropagation();
+        setAdpExportMenuOpen(false);
+        toggleWorkspaceMenu(btn.getAttribute("data-menu"));
+      }
+      if (act === "select-workspace-store") {
+        const select = $("#payroll-store-filter");
+        if (select) {
+          select.value = btn.getAttribute("data-value") || "";
+          closeWorkspaceMenus();
+          select.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+      }
+      if (act === "select-workspace-year") {
+        const select = $("#manage-period-nav-year");
+        if (select) {
+          select.value = btn.getAttribute("data-value") || "";
+          closeWorkspaceMenus();
+          select.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+      }
+      if (act === "select-workspace-period") {
+        const select = $("#workspace-period-filter");
+        if (select) {
+          select.value = btn.getAttribute("data-value") || "";
+          closeWorkspaceMenus();
+          select.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+      }
+      if (act === "open-employee-picker") {
+        closeWorkspaceMenus();
+        showEmployeePicker(btn);
+      }
+      if (act === "stage-employee-picker") {
+        const employeeId = btn.getAttribute("data-employee-id");
+        const emp = getEmployee(state.periodId, employeeId);
+        const roles = getEmployeeAvailableRoles(emp);
+        employeePickerState.employeeId = employeeId;
+        employeePickerState.role = roles.includes(employeePickerState.role) ? employeePickerState.role : roles[0] || "";
+        renderEmployeePicker();
+      }
+      if (act === "stage-role-picker") {
+        employeePickerState.role = btn.getAttribute("data-role") || "";
+        renderEmployeePicker();
+      }
+      if (act === "open-employee-identity-edit") {
+        closeWorkspaceMenus();
+        showEmployeeEditModal(btn);
+      }
       if (act === "confirm-employee") {
         confirmEmployee();
       }
@@ -3853,9 +4406,11 @@ body{margin:0;padding:24px;background:#fff;}
         refreshEmployeeDataFromThirdParty();
       }
       if (act === "preview-employees-detail") {
+        setAdpExportMenuOpen(false);
         runAfterUnsavedWorkspaceConfirm(() => showEmployeesDetailModal());
       }
       if (act === "preview-adp-report") {
+        setAdpExportMenuOpen(false);
         runAfterUnsavedWorkspaceConfirm(() => showAdpReportModal());
       }
       if (act === "switch-workspace-period") {
@@ -3865,6 +4420,7 @@ body{margin:0;padding:24px;background:#fff;}
         exportAdpCsv();
       }
       if (act === "export-batch-adp") {
+        setAdpExportMenuOpen(false);
         runAfterUnsavedWorkspaceConfirm(() => exportBatchAdpCsv());
       }
       if (act === "show-audit-log") {
@@ -3944,6 +4500,25 @@ body{margin:0;padding:24px;background:#fff;}
       navigateWorkspaceEmployee(e.target.value);
     });
 
+    $("#workspace-period-filter")?.addEventListener("change", (e) => {
+      navigateWorkspacePeriod(e.target.value);
+    });
+
+    $("#payroll-store-search")?.addEventListener("input", (e) => {
+      renderCustomFilterMenus(e.target.value);
+    });
+
+    $("#btn-employee-picker-close")?.addEventListener("click", () => hideEmployeePicker());
+    $("#btn-employee-picker-confirm")?.addEventListener("click", () => confirmEmployeePickerSelection());
+    $("#payrollEmployeePickerModal")?.addEventListener("click", (e) => {
+      if (e.target && e.target.id === "payrollEmployeePickerModal") hideEmployeePicker();
+    });
+    $("#btn-employee-edit-close")?.addEventListener("click", () => hideEmployeeEditModal());
+    $("#btn-employee-edit-confirm")?.addEventListener("click", () => confirmEmployeeEditModal());
+    $("#payrollEmployeeEditModal")?.addEventListener("click", (e) => {
+      if (e.target && e.target.id === "payrollEmployeeEditModal") hideEmployeeEditModal();
+    });
+
     $("#manage-period-nav-year")?.addEventListener("change", (e) => {
       const select = e.target;
       const year = select.value;
@@ -3989,6 +4564,36 @@ body{margin:0;padding:24px;background:#fff;}
       markWorkspaceEntrySnapshot();
       renderManageForm();
       syncWorkspaceDirtyBaseline();
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!e.target.closest(".payroll-adp-export-dropdown")) setAdpExportMenuOpen(false);
+      if (!e.target.closest(".payroll-store-bar-field")) closeWorkspaceMenus();
+    });
+
+    document.addEventListener("keydown", (e) => {
+      const fieldHelpModal = $("#fieldHelpModal");
+      const employeeEditModal = $("#payrollEmployeeEditModal");
+      if (e.key === "Tab") {
+        if (fieldHelpModal?.classList.contains("show")) {
+          trapFocusInModal(e, fieldHelpModal);
+          return;
+        }
+        if (employeeEditModal?.classList.contains("show")) {
+          trapFocusInModal(e, employeeEditModal);
+          return;
+        }
+      }
+      if (e.key !== "Escape") return;
+      if (employeeEditModal?.classList.contains("show")) {
+        e.preventDefault();
+        hideEmployeeEditModal();
+        return;
+      }
+      setAdpExportMenuOpen(false);
+      closeWorkspaceMenus();
+      const picker = $("#payrollEmployeePickerModal");
+      if (picker && picker.classList.contains("show")) hideEmployeePicker();
     });
 
     document.body.addEventListener("click", (e) => {

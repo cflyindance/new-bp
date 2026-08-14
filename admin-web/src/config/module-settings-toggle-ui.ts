@@ -53,16 +53,10 @@ export const TABLE_SELECTION_PAGE_TOGGLE_SEQ: readonly number[] = [107];
 /** 前厅 · 人数选择（619 合并 108；产线多选见 party-size-selection-page-ui） */
 export const PARTY_SIZE_SELECTION_PAGE_TOGGLE_SEQ: readonly number[] = [619];
 
-/** 前厅 · 开单前换桌 / 开单前必须换桌（643/644；产线多选见 pre-order-table-change-ui） */
-export const PRE_ORDER_TABLE_CHANGE_TOGGLE_SEQ: readonly number[] = [643, 644];
-
 /** 前厅 · 不允许一桌多单（592 按产线见 single-table-order-limit-ui） */
 export const SINGLE_TABLE_NO_MULTI_ORDER_TOGGLE_SEQ: readonly number[] = [592];
 
-/** 前厅 · 付款后清桌模式（169 按产线见 post-payment-clear-table-ui） */
-export const POST_PAYMENT_CLEAR_TABLE_TOGGLE_SEQ: readonly number[] = [169];
-
-/** 前厅 · 自动清桌（534 按产线见 auto-clear-table-ui） */
+/** 前厅 · 付款后自动清桌（534 按产线见 auto-clear-table-ui；原 169 已合并） */
 export const AUTO_CLEAR_TABLE_TOGGLE_SEQ: readonly number[] = [534];
 
 /** 前厅 · 展示清桌按钮（642，仅 eMenu，见 clear-table-button-ui） */
@@ -228,8 +222,6 @@ export const GUEST_MENU_CLASSIFICATION_MODE_TOGGLE_SEQ: readonly number[] = [602
 export const GUEST_MENU_CLASS_NAME_DISPLAY_TOGGLE_SEQ: readonly number[] = [606];
 
 /** 前厅 · 菜单图片大小展示模式（607 主开关 + 按产线配置，见 guest-menu-image-mode-ui） */
-export const GUEST_MENU_IMAGE_MODE_TOGGLE_SEQ: readonly number[] = [607];
-
 /** 前厅 · 火锅锅底必选（572 主开关 + eMenu/SDI 产线，见 hotpot-base-required-ui） */
 export const HOTPOT_BASE_REQUIRED_TOGGLE_SEQ: readonly number[] = [572];
 
@@ -314,11 +306,8 @@ export const STORE_OPERATION_MODE_ALERTS_TOGGLE_SEQ = STORE_HOURS_OPERATION_TOGG
 /** 前厅 · POS 找单列表（151/152/153/251 主开关 + 产线，见 pos-find-order-list-ui） */
 export const POS_FIND_ORDER_LIST_TOGGLE_SEQ: readonly number[] = [151, 152, 153, 251];
 
-/** 前厅 · 菜单查找与时段（118/148 主开关 + 产线，见 pos-menu-scope-lines-ui；348 见 timed-menu-display-ui） */
+/** 前厅 · 菜单查找与时段（118/148 主开关 + 产线，见 pos-menu-scope-lines-ui） */
 export const POS_MENU_SCOPE_LINES_TOGGLE_SEQ: readonly number[] = [118, 148];
-
-/** 前厅 · 按照时段显示菜单（348 按产线订单类型见 timed-menu-display-ui） */
-export const TIMED_MENU_DISPLAY_TOGGLE_SEQ: readonly number[] = [348];
 
 /** 前厅 · 菜单区界面布局（216–220 主开关 + 产线，见 pos-menu-ui-layout-lines-ui；350 见 emenu-custom-message-ui） */
 export const POS_MENU_UI_LAYOUT_LINES_TOGGLE_SEQ: readonly number[] = [
@@ -328,13 +317,12 @@ export const POS_MENU_UI_LAYOUT_LINES_TOGGLE_SEQ: readonly number[] = [
 /** 前厅 · 套餐点单与展示（139/145 主开关 + 产线，见 pos-combo-ordering-ui） */
 export const POS_COMBO_ORDERING_TOGGLE_SEQ: readonly number[] = [139, 145];
 
-/** 前厅 · 订单消息提醒（637/638/639 主开关 + 产线，见 staff-order-alerts-ui） */
+/** 前厅 · 消息类型提醒（637/638/639 主开关 + 产线，见 staff-order-alerts-ui） */
 export const STAFF_ORDER_ALERT_TOGGLE_SEQ: readonly number[] = [637, 638, 639];
 
 export const MODULE_SETTING_TOGGLE_SEQ = new Set([
   ...POS_FIND_ORDER_LIST_TOGGLE_SEQ,
   ...POS_MENU_SCOPE_LINES_TOGGLE_SEQ,
-  ...TIMED_MENU_DISPLAY_TOGGLE_SEQ,
   ...POS_MENU_UI_LAYOUT_LINES_TOGGLE_SEQ,
   ...POS_COMBO_ORDERING_TOGGLE_SEQ,
   ...STAFF_ORDER_ALERT_TOGGLE_SEQ,
@@ -368,7 +356,6 @@ export const MODULE_SETTING_TOGGLE_SEQ = new Set([
   ...DURATION_BILLING_TOGGLE_SEQ,
   ...GUEST_MENU_CLASSIFICATION_MODE_TOGGLE_SEQ,
   ...GUEST_MENU_CLASS_NAME_DISPLAY_TOGGLE_SEQ,
-  ...GUEST_MENU_IMAGE_MODE_TOGGLE_SEQ,
   ...HOTPOT_BASE_REQUIRED_TOGGLE_SEQ,
   ...HOTPOT_BASE_STILL_SHOW_TOGGLE_SEQ,
   ...GUEST_DINING_DURATION_TOGGLE_SEQ,
@@ -421,9 +408,7 @@ export const MODULE_SETTING_TOGGLE_SEQ = new Set([
   608, 647, 672,
   ...TABLE_SELECTION_PAGE_TOGGLE_SEQ,
   ...PARTY_SIZE_SELECTION_PAGE_TOGGLE_SEQ,
-  ...PRE_ORDER_TABLE_CHANGE_TOGGLE_SEQ,
   ...SINGLE_TABLE_NO_MULTI_ORDER_TOGGLE_SEQ,
-  ...POST_PAYMENT_CLEAR_TABLE_TOGGLE_SEQ,
   ...AUTO_CLEAR_TABLE_TOGGLE_SEQ,
   ...CLEAR_TABLE_BUTTON_TOGGLE_SEQ,
   ...CLEAR_TABLE_CLIENT_NOTIFICATION_TOGGLE_SEQ,

@@ -30,13 +30,13 @@ const STAFF_GROUPS = new Set([
   "foh-pos-shell",
   "foh-table-start-flow",
   "foh-pos-menu-scope",
-  "foh-pos-menu-ui-layout",
   "foh-pos-order-cart",
   "foh-pos-combo-ordering",
   "foh-pos-buttons",
+  "foh-pos-order-toolbar",
   "foh-kitchen-send-timing",
   "foh-pos-find-order-list",
-  "foh-pos-checkout-entry",
+  "foh-pos-order-alerts",
   "foh-table-clear-ops",
 ]);
 

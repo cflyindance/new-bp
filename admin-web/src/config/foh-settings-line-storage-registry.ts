@@ -25,10 +25,7 @@ export const FOH_LINE_STORAGE_BY_SEQ: Record<number, string> = {
   153: "153-find-order-untipped-default-lines",
   165: "165-default-main-screen-lines",
   166: "166-auto-logout-after-operation-lines",
-  169: "169-post-payment-clear-table-lines",
   175: "175-login-ignore-special-chars-lines",
-  176: "176-timed-menu-dinein-lines",
-  177: "177-timed-menu-takeout-lines",
   178: "178-dish-sequence-id-display-lines",
   196: "196-custom-divider-name-lines",
   216: "216-menu-group-flat-display-lines",
@@ -45,7 +42,6 @@ export const FOH_LINE_STORAGE_BY_SEQ: Record<number, string> = {
   345: "345-kitchen-send-password-auth-lines",
   346: "346-home-password-auth-lines",
   347: "347-allow-change-server-lines",
-  348: "348-timed-menu-order-types-by-line",
   349: "349-emenu-server-readonly-dish-lines",
   350: "350-emenu-custom-message-lines",
   351: "351-clear-table-client-notification-lines",
@@ -62,7 +58,7 @@ export const FOH_LINE_STORAGE_BY_SEQ: Record<number, string> = {
   510: "510-privacy-default-lines",
   515: "515-guest-menu-show-serial-lines",
   516: "516-guest-menu-show-group-name-lines",
-  517: "517-guest-menu-nav-position-by-line",
+  517: "517-guest-menu-nav-position-enabled-lines",
   518: "518-guest-menu-expand-first-group-lines",
   519: "519-guest-menu-image-crop-lines",
   520: "520-guest-menu-combo-nav-lines",
@@ -71,6 +67,7 @@ export const FOH_LINE_STORAGE_BY_SEQ: Record<number, string> = {
   523: "523-combo-subitem-remark-lines",
   524: "524-guest-menu-waterfall-lines",
   525: "525-show-points-dishes-lines",
+  526: "526-points-dish-position-enabled-lines",
   528: "528-guest-menu-zero-price-display-lines",
   532: "532-menusifu-brand-logo-lines",
   534: "534-auto-clear-table-lines",
@@ -116,6 +113,7 @@ export const FOH_LINE_STORAGE_BY_SEQ: Record<number, string> = {
   645: "645-dish-name-font-lines",
   652: "652-guest-facing-locales-by-line",
   653: "653-default-locale-by-line",
+  674: "674-dining-duration-limit-lines",
 };
 
 export function hasFohLineStorage(seq: number): boolean {

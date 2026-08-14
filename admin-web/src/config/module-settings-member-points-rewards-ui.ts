@@ -23,25 +23,31 @@ import {
 } from "./module-settings-form-ui";
 import { moduleSettingToggleStorageKey } from "./module-settings-toggle-ui";
 import {
+  getGuestMenuBodyProductLineIds,
+  getGuestMenuBodyProductLines,
+  type GuestMenuBodyProductLineId,
+} from "./module-settings-guest-menu-body-line-scope";
+import { readModuleSettingJsonState } from "./module-setting-storage-state";
+import {
   MEMBER_LOGIN_PRODUCT_LINES,
   type MemberLoginProductLineId,
 } from "./module-settings-member-sms-verification-ui";
 
-export const MEMBER_SHOW_ACCOUNT_POINTS_SEQ = 509;
 export const MEMBER_SHOW_POINTS_DISHES_SEQ = 525;
 export const MEMBER_POINTS_DISH_POSITION_SEQ = 526;
 export const MEMBER_POINTS_ONLY_ORDER_SEQ = 527;
 
 /** 526 积分菜展示位置适用产线（不含 POS / PayPad） */
-export const MEMBER_POINTS_DISH_POSITION_PRODUCT_LINES = [
-  { id: "kiosk", label: "Kiosk" },
-  { id: "emenu", label: "eMenu" },
-  { id: "sdi", label: "SDI" },
-  { id: "online-order", label: "Online Order" },
-] as const;
+export const MEMBER_POINTS_DISH_POSITION_PRODUCT_LINES = getGuestMenuBodyProductLines(
+  MEMBER_POINTS_DISH_POSITION_SEQ,
+);
 
-export type MemberPointsDishPositionProductLineId =
-  (typeof MEMBER_POINTS_DISH_POSITION_PRODUCT_LINES)[number]["id"];
+export const MEMBER_SHOW_POINTS_DISHES_PRODUCT_LINES = getGuestMenuBodyProductLines(
+  MEMBER_SHOW_POINTS_DISHES_SEQ,
+);
+
+export type MemberPointsDishPositionProductLineId = GuestMenuBodyProductLineId;
+type MemberShowPointsDishesProductLineId = GuestMenuBodyProductLineId;
 
 /** 527 纯积分订单适用产线（与菜单下单限制·其他设置一致） */
 export const MEMBER_POINTS_ONLY_ORDER_PRODUCT_LINES = MENU_ORDER_LIMIT_OTHER_PRODUCT_LINES;
@@ -66,10 +72,11 @@ const TOGGLE_FIELD_CONFIG: Record<
 };
 
 const POINTS_DISH_POSITION_STORAGE_ID = "526-points-dish-position-by-line";
+const POINTS_DISH_POSITION_ENABLED_LINES_STORAGE_ID = "526-points-dish-position-enabled-lines";
 
 export const MEMBER_POINTS_DISH_POSITION_OPTIONS = [
   { value: "top", label: "顶部展示" },
-  { value: "bottom", label: "尾部展示" },
+  { value: "bottom", label: "底部展示" },
 ] as const;
 
 export type MemberPointsDishPosition =
@@ -82,7 +89,8 @@ export type MemberPointsDishPositionByLine = Record<
 
 const DEFAULT_POSITION: MemberPointsDishPosition = "top";
 
-const ALL_LINE_IDS: MemberLoginProductLineId[] = MEMBER_LOGIN_PRODUCT_LINES.map((l) => l.id);
+const SHOW_POINTS_DISHES_LINE_IDS: MemberShowPointsDishesProductLineId[] =
+  getGuestMenuBodyProductLineIds(MEMBER_SHOW_POINTS_DISHES_SEQ);
 
 const POINTS_ONLY_ORDER_LINE_IDS: MemberPointsOnlyOrderProductLineId[] = [
   ...MENU_ORDER_LIMIT_OTHER_PRODUCT_LINE_IDS,
@@ -110,10 +118,12 @@ function readLegacyToggleOn(seq: number): boolean {
   }
 }
 
-function normalizeLineIds(raw: unknown): MemberLoginProductLineId[] {
+function normalizeLineIds(raw: unknown): MemberShowPointsDishesProductLineId[] {
   if (!Array.isArray(raw)) return [];
-  const valid = new Set<string>(ALL_LINE_IDS);
-  return raw.filter((id): id is MemberLoginProductLineId => typeof id === "string" && valid.has(id));
+  const valid = new Set<string>(SHOW_POINTS_DISHES_LINE_IDS);
+  return raw.filter(
+    (id): id is MemberShowPointsDishesProductLineId => typeof id === "string" && valid.has(id),
+  );
 }
 
 function isToggleFieldSeq(seq: number): seq is MemberPointsToggleFieldSeq {
@@ -136,27 +146,26 @@ export function isMemberPointsDishPositionSeq(seq: number): boolean {
   return seq === MEMBER_POINTS_DISH_POSITION_SEQ;
 }
 
-export function readMemberShowPointsDishesLines(): MemberLoginProductLineId[] {
-  const normalized = normalizeLineIds(
-    readModuleSettingJson<unknown>(SHOW_POINTS_DISHES_LINES_STORAGE_ID, null),
-  );
-  if (normalized.length > 0) return normalized;
+export function readMemberShowPointsDishesLines(): MemberShowPointsDishesProductLineId[] {
+  const state = readModuleSettingJsonState(SHOW_POINTS_DISHES_LINES_STORAGE_ID);
+  if (state.state === "configured") return normalizeLineIds(state.value);
+  if (state.state === "invalid") return [];
 
   if (readLegacyToggleOn(MEMBER_SHOW_POINTS_DISHES_SEQ)) {
-    writeMemberShowPointsDishesLines(ALL_LINE_IDS);
-    return [...ALL_LINE_IDS];
+    writeMemberShowPointsDishesLines(SHOW_POINTS_DISHES_LINE_IDS);
+    return [...SHOW_POINTS_DISHES_LINE_IDS];
   }
   return [];
 }
 
-export function writeMemberShowPointsDishesLines(lines: MemberLoginProductLineId[]): void {
-  const unique = ALL_LINE_IDS.filter((id) => lines.includes(id));
+export function writeMemberShowPointsDishesLines(lines: MemberShowPointsDishesProductLineId[]): void {
+  const unique = SHOW_POINTS_DISHES_LINE_IDS.filter((id) => lines.includes(id));
   writeModuleSettingJson(SHOW_POINTS_DISHES_LINES_STORAGE_ID, unique);
 }
 
 export function ensureMemberShowPointsDishesLinesDefault(): void {
-  if (readMemberShowPointsDishesLines().length === 0) {
-    writeMemberShowPointsDishesLines(ALL_LINE_IDS);
+  if (readModuleSettingJsonState(SHOW_POINTS_DISHES_LINES_STORAGE_ID).state === "missing") {
+    writeMemberShowPointsDishesLines(SHOW_POINTS_DISHES_LINE_IDS);
   }
 }
 
@@ -217,16 +226,36 @@ function normalizePositionByLine(
 }
 
 export function readMemberPointsDishPositionByLine(): MemberPointsDishPositionByLine {
-  const raw = readModuleSettingJson<Partial<MemberPointsDishPositionByLine>>(
-    POINTS_DISH_POSITION_STORAGE_ID,
-    {},
-  );
-  if (raw && typeof raw === "object" && Object.keys(raw).length > 0) {
-    return normalizePositionByLine(raw);
+  const state = readModuleSettingJsonState(POINTS_DISH_POSITION_STORAGE_ID);
+  if (state.state === "configured" && state.value && typeof state.value === "object") {
+    return normalizePositionByLine(state.value as Partial<MemberPointsDishPositionByLine>);
   }
+  if (state.state === "invalid") return defaultPositionByLine();
   const migrated = defaultPositionByLine();
   writeMemberPointsDishPositionByLine(migrated);
   return migrated;
+}
+
+export function readMemberPointsDishPositionEnabledLines(): MemberPointsDishPositionProductLineId[] {
+  const state = readModuleSettingJsonState(POINTS_DISH_POSITION_ENABLED_LINES_STORAGE_ID);
+  if (state.state === "configured") {
+    const value = state.value;
+    if (!Array.isArray(value)) return [];
+    return POSITION_LINE_IDS.filter((id) => value.includes(id));
+  }
+  if (state.state === "invalid") return [];
+  const defaults = [...POSITION_LINE_IDS];
+  writeMemberPointsDishPositionEnabledLines(defaults);
+  return defaults;
+}
+
+export function writeMemberPointsDishPositionEnabledLines(
+  lines: MemberPointsDishPositionProductLineId[],
+): void {
+  writeModuleSettingJson(
+    POINTS_DISH_POSITION_ENABLED_LINES_STORAGE_ID,
+    POSITION_LINE_IDS.filter((id) => lines.includes(id)),
+  );
 }
 
 export function writeMemberPointsDishPositionByLine(values: MemberPointsDishPositionByLine): void {
@@ -237,7 +266,7 @@ export function writeMemberPointsDishPositionByLine(values: MemberPointsDishPosi
 export function renderMemberShowPointsDishesPanelHtml(): string {
   ensureMemberShowPointsDishesLinesDefault();
   const selected = new Set(readMemberShowPointsDishesLines());
-  const cells = MEMBER_LOGIN_PRODUCT_LINES.map((line, index) => {
+  const cells = MEMBER_SHOW_POINTS_DISHES_PRODUCT_LINES.map((line, index) => {
     const checked = selected.has(line.id);
     const divider = index > 0 ? "border-l border-border" : "";
     return `
@@ -333,11 +362,13 @@ export function setMemberPointsToggleFieldLinesPanelVisible(
 
 export function renderMemberPointsDishPositionByLineEditorHtml(): string {
   const values = readMemberPointsDishPositionByLine();
+  const enabledLines = new Set(readMemberPointsDishPositionEnabledLines());
   const activeLine = getFohActiveLineFilterId();
   const lines = activeLine
     ? MEMBER_POINTS_DISH_POSITION_PRODUCT_LINES.filter((line) => line.id === activeLine)
     : MEMBER_POINTS_DISH_POSITION_PRODUCT_LINES;
   const rows = lines.map((line) => {
+    const enabled = enabledLines.has(line.id);
     const groupName = `member-points-dish-position-${line.id}`;
     const radios = MEMBER_POINTS_DISH_POSITION_OPTIONS.map((opt) => {
       const checked = values[line.id] === opt.value;
@@ -349,6 +380,7 @@ export function renderMemberPointsDishPositionByLineEditorHtml(): string {
             value="${escapeHtml(opt.value)}"
             class="${MODULE_SETTING_CHOICE_CONTROL_CLASS}"
             ${checked ? "checked" : ""}
+            ${enabled ? "" : "disabled"}
             data-member-points-dish-position-line="${escapeHtml(line.id)}"
             aria-label="${escapeHtml(line.label)} ${escapeHtml(opt.label)}"
           />
@@ -358,7 +390,18 @@ export function renderMemberPointsDishPositionByLineEditorHtml(): string {
 
     return `
     <tr class="border-t border-border" ${FOH_LINE_CONFIG_ROW_ATTR}="${escapeHtml(line.id)}">
-      <td class="px-3 py-2.5 text-sm font-medium text-foreground align-top whitespace-nowrap">${escapeHtml(line.label)}</td>
+      <td class="px-3 py-2.5 text-sm font-medium text-foreground align-top whitespace-nowrap">
+        <label class="inline-flex cursor-pointer items-center gap-2">
+          <input
+            type="checkbox"
+            class="${MODULE_SETTING_CHOICE_CONTROL_CLASS} rounded-sm"
+            data-member-points-dish-position-enabled-line="${escapeHtml(line.id)}"
+            ${enabled ? "checked" : ""}
+            aria-label="启用 ${escapeHtml(line.label)} 积分菜展示位置"
+          />
+          <span>${escapeHtml(line.label)}</span>
+        </label>
+      </td>
       <td class="px-3 py-2.5">
         <div class="flex flex-wrap items-center gap-x-5 gap-y-2" role="radiogroup" aria-label="${escapeHtml(line.label)} 积分菜展示位置">${radios}</div>
       </td>
@@ -381,12 +424,12 @@ export function renderMemberPointsDishPositionByLineEditorHtml(): string {
     </div>`;
 }
 
-function collectShowPointsDishesLinesFromGroup(group: HTMLElement): MemberLoginProductLineId[] {
-  const lines: MemberLoginProductLineId[] = [];
+function collectShowPointsDishesLinesFromGroup(group: HTMLElement): MemberShowPointsDishesProductLineId[] {
+  const lines: MemberShowPointsDishesProductLineId[] = [];
   group.querySelectorAll<HTMLInputElement>("[data-member-show-points-dishes-line]:checked").forEach((input) => {
     const id = input.getAttribute("data-member-show-points-dishes-line");
-    if (id && ALL_LINE_IDS.includes(id as MemberLoginProductLineId)) {
-      lines.push(id as MemberLoginProductLineId);
+    if (id && SHOW_POINTS_DISHES_LINE_IDS.includes(id as MemberShowPointsDishesProductLineId)) {
+      lines.push(id as MemberShowPointsDishesProductLineId);
     }
   });
   return lines;
@@ -420,6 +463,21 @@ function collectPositionByLineFromEditor(editor: HTMLElement): MemberPointsDishP
   return values;
 }
 
+function collectPositionEnabledLinesFromEditor(
+  editor: HTMLElement,
+): MemberPointsDishPositionProductLineId[] {
+  const lines: MemberPointsDishPositionProductLineId[] = [];
+  editor
+    .querySelectorAll<HTMLInputElement>("[data-member-points-dish-position-enabled-line]:checked")
+    .forEach((input) => {
+      const id = input.getAttribute(
+        "data-member-points-dish-position-enabled-line",
+      ) as MemberPointsDishPositionProductLineId | null;
+      if (id && POSITION_LINE_IDS.includes(id)) lines.push(id);
+    });
+  return lines;
+}
+
 export function bindMemberPointsRewardsUi(root: ParentNode = document): void {
   root.querySelectorAll<HTMLElement>("[data-member-show-points-dishes-lines]").forEach((group) => {
     if (group.dataset.memberShowPointsDishesBound === "1") return;
@@ -447,7 +505,17 @@ export function bindMemberPointsRewardsUi(root: ParentNode = document): void {
     if (editor.dataset.memberPointsDishPositionEditorBound === "1") return;
     editor.dataset.memberPointsDishPositionEditorBound = "1";
     editor.addEventListener("change", (e) => {
-      if (!(e.target as HTMLElement).matches("[data-member-points-dish-position-line]")) return;
+      const target = e.target as HTMLElement;
+      if (target.matches("[data-member-points-dish-position-enabled-line]")) {
+        const checkbox = target as HTMLInputElement;
+        const lineId = checkbox.getAttribute("data-member-points-dish-position-enabled-line");
+        editor
+          .querySelectorAll<HTMLInputElement>(`[data-member-points-dish-position-line="${lineId}"]`)
+          .forEach((radio) => { radio.disabled = !checkbox.checked; });
+        writeMemberPointsDishPositionEnabledLines(collectPositionEnabledLinesFromEditor(editor));
+        return;
+      }
+      if (!target.matches("[data-member-points-dish-position-line]")) return;
       writeMemberPointsDishPositionByLine(collectPositionByLineFromEditor(editor));
     });
   });

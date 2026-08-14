@@ -68,6 +68,24 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+iframe.marketing-screensaver-flow-fullscreen {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 2147483000 !important;
+  display: block !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  min-width: 100vw !important;
+  min-height: 100vh !important;
+  min-height: 100dvh !important;
+  max-width: none !important;
+  max-height: none !important;
+  flex: none !important;
+  border: 0 !important;
+  background: #f5f6f7;
+}
+
 html[data-product-version="future"] [data-future-version-diff] {
   outline: 2px solid #ef4444;
   outline-offset: -2px;

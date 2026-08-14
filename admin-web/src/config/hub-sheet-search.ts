@@ -76,6 +76,8 @@ export type HubSearchIndexEntry = {
   moduleName?: string;
   feature?: string;
   sceneDesc?: string;
+  /** 设置条目的真实 catalog 来源；导航条目为空。 */
+  settingsPath?: string;
 };
 
 export type HubSearchHit = HubSearchIndexEntry & {
@@ -302,6 +304,7 @@ function buildSettingEntries(
     moduleName: item.moduleName,
     feature: item.feature === "（未填写）" ? "" : item.feature,
     sceneDesc: item.sceneDesc,
+    settingsPath,
   }));
 }
 
@@ -532,7 +535,14 @@ function typeLabel(g: HubSearchDisplayGroup): string {
   return t("hubSearch.typeDesc");
 }
 
-export function renderHubSearchResultsPane(hubId: string, q: string, hits: HubSearchHit[]): string {
+export type HubSearchSettingResultRenderer = (hit: HubSearchHit) => string;
+
+export function renderHubSearchResultsPane(
+  hubId: string,
+  q: string,
+  hits: HubSearchHit[],
+  renderSettingResult?: HubSearchSettingResultRenderer,
+): string {
   const needle = q.trim().toLowerCase();
   const title = escapeHtml(t("hubSearch.resultsTitle"));
   const meta = escapeHtml(tf("hubSearch.resultsMeta", { q: q.trim(), count: String(hits.length) }));
@@ -562,6 +572,29 @@ export function renderHubSearchResultsPane(hubId: string, q: string, hits: HubSe
             h.seq != null && h.kind === "setting"
               ? `<strong class="text-foreground">${escapeHtml(String(h.seq))} · ${highlightNeedle(label, needle)}</strong>`
               : `<strong class="text-foreground">${highlightNeedle(label, needle)}</strong>`;
+          if (h.kind === "setting" && renderSettingResult) {
+            const settingHtml = renderSettingResult(h);
+            if (settingHtml) {
+              return `
+          <article
+            data-hub-search-setting-result
+            data-hub-id="${escapeHtml(hubId)}"
+            data-hit-path="${escapeHtml(h.navPath)}"
+            data-hit-seq="${h.seq != null ? String(h.seq) : ""}"
+            ${h.seq != null && isFutureVersionDiffModuleSettingSeq(h.seq) ? "data-future-version-diff" : ""}
+            class="overflow-hidden rounded-xl border border-border bg-card shadow-sm"
+          >
+            <div class="flex flex-wrap items-start justify-between gap-3 border-b border-border bg-muted/20 px-4 py-3">
+              <div class="min-w-0">
+                <p class="text-xs text-muted-foreground">${escapeHtml(h.breadcrumb)}</p>
+                <p class="mt-1 text-xs text-muted-foreground/80">${highlightNeedle(h.summary, needle)}</p>
+              </div>
+              <span class="shrink-0 rounded-full border border-border bg-background px-2 py-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">${escapeHtml(typeLabel(h.displayGroup))}</span>
+            </div>
+            ${settingHtml}
+          </article>`;
+            }
+          }
           return `
           <button
             type="button"

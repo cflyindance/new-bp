@@ -21,6 +21,8 @@ import {
   resolvePageSaveKey,
   setPageDraftField,
 } from "./page-settings-draft";
+import { getActiveSettingEditContext } from "./module-setting-edit-context";
+import { isFohLinesToggleMirrorExcludedSeq } from "./module-settings-guest-menu-body-line-scope";
 
 export type ModuleSettingCheckboxOption = {
   fieldId: string;
@@ -196,6 +198,8 @@ export function readModuleSettingCheckbox(fieldId: string, defaultChecked: boole
 }
 
 function resolveDeferPageKey(fieldId: string): string | undefined {
+  const active = getActiveSettingEditContext();
+  if (active?.mode === "search") return active.scopeKey;
   const currentPath = readAppHashPath();
   const pageKeyFromPath = resolvePageSaveKey(currentPath);
   if (isPageBatchSavePath(pageKeyFromPath)) return pageKeyFromPath;
@@ -459,13 +463,38 @@ export function writeModuleSettingJson(fieldId: string, value: unknown, kind: Mo
 }
 
 /**
+ * 写入由另一主配置确定性派生的 JSON 镜像。
+ * 镜像参与同一页面的保存/放弃，但不单独登记为用户可见变更，避免兼容字段出现在预览中。
+ */
+export function writeModuleSettingDerivedJson(fieldId: string, value: unknown): void {
+  const storedRaw = readModuleSettingJsonRaw(fieldId);
+  const afterStr = JSON.stringify(encodeStoredJson(fieldId, value));
+  const storedStr = storedRaw === undefined ? null : JSON.stringify(storedRaw);
+  if (storedStr === afterStr) return;
+
+  const pageKey = resolveDeferPageKey(fieldId);
+  if (pageKey) {
+    setPageDraftField(pageKey, fieldId, afterStr);
+    syncFohLinesMirrorToggle(fieldId, value);
+    return;
+  }
+
+  try {
+    localStorage.setItem(moduleSettingStorageKey(fieldId), afterStr);
+    syncFohLinesMirrorToggle(fieldId, value);
+  } catch {
+    /* ignore */
+  }
+}
+
+/**
  * 与按产线开关共用镜像键：空产线 → "0"。
  * 各模块的「空数组 + 主开关开 → 回写全选」迁移依赖这个键；
  * 不写入时，场景视图取消全部勾选后刷新会再次复活为全选。
  */
 function syncFohLinesMirrorToggle(fieldId: string, value: unknown): void {
   const seq = fohLinesSeqForFieldId(fieldId);
-  if (seq === undefined) return;
+  if (seq === undefined || isFohLinesToggleMirrorExcludedSeq(seq)) return;
   const lines = Array.isArray(value) ? value : [];
   try {
     localStorage.setItem(`bplant-module-setting-toggle:${seq}`, lines.length > 0 ? "1" : "0");

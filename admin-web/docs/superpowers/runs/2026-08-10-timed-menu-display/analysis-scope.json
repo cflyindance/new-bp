@@ -1,0 +1,168 @@
+{
+  "version": 1,
+  "mode": "standalone",
+  "requirement": {
+    "currentBehavior": "seq 348 的业务模块存在，但未接入 src/main.ts，设置页无法渲染或绑定矩阵；模块只声明 POS、POS GO、PayPad。",
+    "targetBehavior": "seq 348 无开关直接展示矩阵，支持 eMenu、Kiosk、POS、POS GO、PayPad、SDI，每线多选 Dinein、Delivery、Pick Up、ToGo，并与 seq 132 复用共享矩阵能力。",
+    "acceptance": "设计规格第 13 节全部满足。",
+    "outOfScope": [
+      "菜单时段创建和匹配算法",
+      "seq 176/177 恢复",
+      "seq 132 产线扩展",
+      "后端接口"
+    ]
+  },
+  "rootCause": {
+    "status": "code_supported",
+    "summary": "提交 c702039 加入了 seq 348 专用模块和元数据，但 src/main.ts 没有导入、专用行分派或挂载绑定；模块自身的产线常量也只覆盖三条产线。"
+  },
+  "entryPoints": [
+    {
+      "path": "src/main.ts",
+      "symbol": "renderModuleSettingRow/mount",
+      "relation": "entry_point",
+      "impact": "affected",
+      "deepRead": true
+    }
+  ],
+  "references": [
+    {
+      "path": "src/config/module-settings-timed-menu-display-ui.ts",
+      "symbol": "TIMED_MENU_DISPLAY_PRODUCT_LINES/renderTimedMenuDisplayPanelHtml/bindTimedMenuDisplayUi",
+      "relation": "definition",
+      "impact": "affected",
+      "deepRead": true
+    },
+    {
+      "path": "src/config/module-settings-order-display-seat-ui.ts",
+      "symbol": "ORDER_DISPLAY_SEAT_PRODUCT_LINES/renderOrderDisplaySeatPanelHtml/bindOrderDisplaySeatUi",
+      "relation": "shared_caller",
+      "impact": "affected",
+      "deepRead": true
+    },
+    {
+      "path": "src/config/module-settings-auto-kitchen-send-payment-ui.ts",
+      "symbol": "renderAutoKitchenSendPaymentPanelHtml",
+      "relation": "definition",
+      "impact": "not_affected",
+      "deepRead": true
+    },
+    {
+      "path": "src/config/module-settings-form-ui.ts",
+      "symbol": "readModuleSettingJson/writeModuleSettingJson",
+      "relation": "data_source",
+      "impact": "affected",
+      "deepRead": true
+    },
+    {
+      "path": "src/config/page-settings-draft.ts",
+      "symbol": "page draft field lifecycle",
+      "relation": "side_effect",
+      "impact": "affected",
+      "deepRead": false
+    },
+    {
+      "path": "src/config/foh-settings-by-line-toggle.ts",
+      "symbol": "applyFohByLineUiSuppressions",
+      "relation": "direct_caller",
+      "impact": "affected",
+      "deepRead": true
+    },
+    {
+      "path": "src/config/module-settings-toggle-ui.ts",
+      "symbol": "TIMED_MENU_DISPLAY_TOGGLE_SEQ/MODULE_SETTING_TOGGLE_SEQ",
+      "relation": "consumer",
+      "impact": "affected",
+      "deepRead": true
+    },
+    {
+      "path": "scripts/lib/foh-line-scope-extract.mjs",
+      "symbol": "extractUiLineScopeMap/STORAGE_MANUAL_SUPPLEMENT",
+      "relation": "producer",
+      "impact": "affected",
+      "deepRead": true
+    },
+    {
+      "path": "src/config/foh-settings-line-scope.ts",
+      "symbol": "FOH_LINE_SCOPE_BY_SEQ[348]",
+      "relation": "consumer",
+      "impact": "affected",
+      "deepRead": true
+    },
+    {
+      "path": "src/config/foh-settings-line-storage-registry.ts",
+      "symbol": "FOH_LINE_STORAGE_BY_SEQ[348]",
+      "relation": "consumer",
+      "impact": "affected",
+      "deepRead": true
+    },
+    {
+      "path": "src/config/module-settings-catalog.ts",
+      "symbol": "seq 348 catalog item",
+      "relation": "data_source",
+      "impact": "affected",
+      "deepRead": true
+    }
+  ],
+  "deepReadPaths": [
+    "src/main.ts",
+    "src/config/module-settings-timed-menu-display-ui.ts",
+    "src/config/module-settings-order-display-seat-ui.ts",
+    "src/config/module-settings-auto-kitchen-send-payment-ui.ts",
+    "src/config/module-settings-form-ui.ts",
+    "src/config/foh-settings-by-line-toggle.ts",
+    "src/config/module-settings-toggle-ui.ts",
+    "scripts/lib/foh-line-scope-extract.mjs",
+    "src/config/foh-settings-line-scope.ts",
+    "src/config/foh-settings-line-storage-registry.ts",
+    "src/config/module-settings-catalog.ts"
+  ],
+  "dataFlow": [
+    {
+      "from": "src/main.ts",
+      "to": "src/config/module-settings-timed-menu-display-ui.ts",
+      "evidence": "设置项分派渲染业务面板，mount 绑定 change 事件。"
+    },
+    {
+      "from": "src/config/module-settings-timed-menu-display-ui.ts",
+      "to": "src/config/module-settings-form-ui.ts",
+      "evidence": "业务包装层通过 read/writeModuleSettingJson 读取和写入页面草稿。"
+    },
+    {
+      "from": "src/config/module-settings-form-ui.ts",
+      "to": "src/config/page-settings-draft.ts",
+      "evidence": "批量保存页面先写字段草稿，保存栏提交后才进入持久层。"
+    }
+  ],
+  "sharedCallers": [
+    {
+      "path": "src/config/module-settings-order-display-seat-ui.ts",
+      "impact": "affected",
+      "verification": "三产线、历史迁移、开关显隐与保存回归。"
+    },
+    {
+      "path": "src/config/module-settings-timed-menu-display-ui.ts",
+      "impact": "affected",
+      "verification": "六产线、无开关、草稿保存与 E2E。"
+    }
+  ],
+  "sharedCallersComplete": true,
+  "expansions": [
+    {
+      "question": "共享矩阵抽象是否影响第二个消费者和页面草稿？",
+      "trigger": "shared_contract",
+      "addedPaths": [
+        "src/config/module-settings-order-display-seat-ui.ts",
+        "src/config/module-settings-form-ui.ts",
+        "src/config/page-settings-draft.ts"
+      ],
+      "expectedEvidence": "确认业务迁移留在包装层，通用组件不持久化，草稿协议不变。"
+    }
+  ],
+  "workspace": {
+    "status": "unrelated_changes",
+    "evidence": "工作区存在此前已确认的前厅分组、通知、清桌和 TipOut 改动；目标文件 main.ts、catalog、scope 生成物有增量修改，但本任务目标符号未被来源不明的并行改动覆盖。"
+  },
+  "scopeStatus": "bounded",
+  "stopReason": "root_cause_and_impact_bounded"
+}

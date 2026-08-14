@@ -13,6 +13,7 @@ import {
   type FohLineNavId,
 } from "./foh-settings-line-scope";
 import { hasFohLineStorage } from "./foh-settings-line-storage-registry";
+import { isFohLinesToggleMirrorExcludedSeq } from "./module-settings-guest-menu-body-line-scope";
 import {
   FOH_LINE_CONFIG_ROW_ATTR,
   getActiveFohByLineIdFromDom,
@@ -25,6 +26,7 @@ import {
 import {
   isPageBatchSavePath,
   readPageDraftFohToggleForCurrentPath,
+  resolveCurrentPageSaveKey,
   resolvePageSaveKey,
 } from "./page-settings-draft";
 import {
@@ -76,6 +78,13 @@ import {
   readEmenuCustomMessageByLine,
   syncEmenuCustomMessageEnabledFromLines,
 } from "./module-settings-emenu-custom-message-ui";
+import {
+  GUEST_DINING_DURATION_LIMIT_SEQ,
+  GUEST_DINING_DURATION_SEQS,
+  isGuestDiningDurationLineLimitEnabled,
+  readDiningDurationLimitByLine,
+  syncDiningDurationLimitEnabledFromLines,
+} from "./module-settings-guest-dining-duration-ui";
 
 export {
   FOH_LINE_CONFIG_ROW_ATTR,
@@ -157,7 +166,7 @@ function resolveLines(seq: number): string[] {
 /** 按产线视图下：主开关 = 当前产线是否在 lines 存储中启用 */
 export function readFohByLineToggleState(seq: number, lineId: FohLineNavId): boolean {
   if (typeof window !== "undefined") {
-    const pageKey = resolvePageSaveKey(window.location.hash.replace(/^#/, "") || "/");
+    const pageKey = resolveCurrentPageSaveKey();
     if (isPageBatchSavePath(pageKey)) {
       const draft = readPageDraftFohToggleForCurrentPath(seq, lineId);
       if (draft !== undefined) return draft;
@@ -168,6 +177,10 @@ export function readFohByLineToggleState(seq: number, lineId: FohLineNavId): boo
 
   if (lineId === "store-wide") {
     return readGlobalToggleOn(seq);
+  }
+
+  if (seq === GUEST_DINING_DURATION_LIMIT_SEQ) {
+    return isGuestDiningDurationLineLimitEnabled(lineId);
   }
 
   if (hasFohLineStorage(seq)) {
@@ -200,7 +213,30 @@ export function readFohByLineToggleState(seq: number, lineId: FohLineNavId): boo
 }
 
 export function writeFohByLineToggleState(seq: number, lineId: FohLineNavId, on: boolean): void {
+  /** 开单前换桌是三态值，禁止布尔入口绕过专用模式写入。 */
+  if (seq === 643 || seq === 644) return;
   if (!fohSeqAppliesToLine(seq, lineId)) return;
+
+  if (
+    (GUEST_DINING_DURATION_SEQS as readonly number[]).includes(seq) &&
+    !isGuestDiningDurationLineLimitEnabled(lineId)
+  ) {
+    return;
+  }
+
+  if (seq === GUEST_DINING_DURATION_LIMIT_SEQ) {
+    const config = readDiningDurationLimitByLine();
+    const lines = Object.entries(config)
+      .filter(([, item]) => item.enabled)
+      .map(([id]) => id);
+    const nextLines = on
+      ? lines.includes(lineId)
+        ? lines
+        : [...lines, lineId]
+      : lines.filter((id) => id !== lineId);
+    syncDiningDurationLimitEnabledFromLines(nextLines);
+    return;
+  }
 
   if (lineId === "store-wide" || !hasFohLineStorage(seq)) {
     try {
@@ -243,10 +279,12 @@ export function writeFohByLineToggleState(seq: number, lineId: FohLineNavId, on:
     writeStoredLines(seq, lines);
   }
 
-  try {
-    localStorage.setItem(moduleSettingToggleStorageKey(seq), lines.length > 0 ? "1" : "0");
-  } catch {
-    /* ignore */
+  if (!isFohLinesToggleMirrorExcludedSeq(seq)) {
+    try {
+      localStorage.setItem(moduleSettingToggleStorageKey(seq), lines.length > 0 ? "1" : "0");
+    } catch {
+      /* ignore */
+    }
   }
 }
 
@@ -305,4 +343,3 @@ export function applyFohByLineUiSuppressions(root: ParentNode = document): void 
     });
   }
 }
-

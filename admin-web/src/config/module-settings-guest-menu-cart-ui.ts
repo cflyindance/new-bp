@@ -5,6 +5,12 @@
  */
 
 import { readModuleSettingJson, writeModuleSettingJson } from "./module-settings-form-ui";
+import {
+  getGuestMenuBodyProductLineIds,
+  getGuestMenuBodyProductLines,
+  type GuestMenuBodyProductLineId,
+} from "./module-settings-guest-menu-body-line-scope";
+import { readModuleSettingJsonState } from "./module-setting-storage-state";
 import { moduleSettingToggleStorageKey } from "./module-settings-toggle-ui";
 
 export const GUEST_MENU_CART_KITCHEN_STATUS_SEQ = 616;
@@ -17,14 +23,15 @@ export const GUEST_MENU_CART_SEQS: readonly number[] = [
   GUEST_MENU_CART_SOLDOUT_HIDE_SEQ,
 ];
 
-export const GUEST_MENU_CART_PRODUCT_LINES = [
-  { id: "emenu", label: "eMenu" },
-  { id: "sdi", label: "SDI" },
-] as const;
+export const GUEST_MENU_CART_PRODUCT_LINES = getGuestMenuBodyProductLines(
+  GUEST_MENU_CART_KITCHEN_STATUS_SEQ,
+);
 
-export type GuestMenuCartProductLineId = (typeof GUEST_MENU_CART_PRODUCT_LINES)[number]["id"];
+export type GuestMenuCartProductLineId = GuestMenuBodyProductLineId;
 
-const ALL_LINE_IDS: GuestMenuCartProductLineId[] = GUEST_MENU_CART_PRODUCT_LINES.map((l) => l.id);
+function allLineIds(seq: number): GuestMenuCartProductLineId[] {
+  return getGuestMenuBodyProductLineIds(seq);
+}
 
 const LINES_ARIA_LABEL_BY_SEQ: Record<number, string> = {
   [GUEST_MENU_CART_KITCHEN_STATUS_SEQ]: "展示菜单送厨状态适用产线",
@@ -83,9 +90,9 @@ function ensureAllGuestMenuCartTogglesMigrated(): void {
   }
 }
 
-function normalizeLineIds(raw: unknown): GuestMenuCartProductLineId[] {
+function normalizeLineIds(seq: number, raw: unknown): GuestMenuCartProductLineId[] {
   if (!Array.isArray(raw)) return [];
-  const valid = new Set<string>(ALL_LINE_IDS);
+  const valid = new Set<string>(allLineIds(seq));
   return raw.filter(
     (id): id is GuestMenuCartProductLineId => typeof id === "string" && valid.has(id),
   );
@@ -94,12 +101,12 @@ function normalizeLineIds(raw: unknown): GuestMenuCartProductLineId[] {
 export function readGuestMenuCartLines(seq: number): GuestMenuCartProductLineId[] {
   if (!isGuestMenuCartSeq(seq)) return [];
   ensureGuestMenuCartToggleMigrated(seq);
-  const stored = readModuleSettingJson<unknown>(linesStorageId(seq), null);
-  const normalized = normalizeLineIds(stored);
-  if (normalized.length > 0) return normalized;
+  const state = readModuleSettingJsonState(linesStorageId(seq));
+  if (state.state === "configured") return normalizeLineIds(seq, state.value);
+  if (state.state === "invalid") return [];
 
   if (readLegacyToggleOn(seq)) {
-    const all = [...ALL_LINE_IDS];
+    const all = allLineIds(seq);
     writeGuestMenuCartLines(seq, all);
     return all;
   }
@@ -108,7 +115,7 @@ export function readGuestMenuCartLines(seq: number): GuestMenuCartProductLineId[
 
 export function writeGuestMenuCartLines(seq: number, lines: GuestMenuCartProductLineId[]): void {
   if (!isGuestMenuCartSeq(seq)) return;
-  const unique = ALL_LINE_IDS.filter((id) => lines.includes(id));
+  const unique = allLineIds(seq).filter((id) => lines.includes(id));
   writeModuleSettingJson(linesStorageId(seq), unique);
 }
 
@@ -118,7 +125,8 @@ export function isGuestMenuCartSeq(seq: number): boolean {
 
 function renderLinesMultiselectHtml(seq: number, enabled: boolean): string {
   const selected = new Set(readGuestMenuCartLines(seq));
-  const cells = GUEST_MENU_CART_PRODUCT_LINES.map((line, index) => {
+  const productLines = getGuestMenuBodyProductLines(seq);
+  const cells = productLines.map((line, index) => {
     const checked = selected.has(line.id);
     const divider = index > 0 ? "border-l border-border" : "";
     return `
@@ -187,7 +195,7 @@ function collectLinesFromGroup(group: HTMLElement): GuestMenuCartProductLineId[]
   const lines: GuestMenuCartProductLineId[] = [];
   group.querySelectorAll<HTMLInputElement>("[data-guest-menu-cart-line]:checked").forEach((input) => {
     const id = input.getAttribute("data-guest-menu-cart-line");
-    if (id && ALL_LINE_IDS.includes(id as GuestMenuCartProductLineId)) {
+    if (id && allLineIds(seq).includes(id as GuestMenuCartProductLineId)) {
       lines.push(id as GuestMenuCartProductLineId);
     }
   });

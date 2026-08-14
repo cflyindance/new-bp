@@ -11,6 +11,11 @@ import {
   writeModuleSettingJson,
   writeModuleSettingNumber,
 } from "./module-settings-form-ui";
+import {
+  getGuestMenuBodyProductLines,
+  type GuestMenuBodyProductLineId,
+} from "./module-settings-guest-menu-body-line-scope";
+import { readModuleSettingJsonState } from "./module-setting-storage-state";
 
 export const GUEST_MENU_DISH_NAME_FONT_SEQ = 645;
 
@@ -22,14 +27,11 @@ const FONT_MIN = 8;
 const FONT_MAX = 72;
 const FONT_DEFAULT = 16;
 
-export const GUEST_MENU_DISH_NAME_FONT_PRODUCT_LINES = [
-  { id: "kiosk", label: "Kiosk" },
-  { id: "emenu", label: "eMenu" },
-  { id: "sdi", label: "SDI" },
-] as const;
+export const GUEST_MENU_DISH_NAME_FONT_PRODUCT_LINES = getGuestMenuBodyProductLines(
+  GUEST_MENU_DISH_NAME_FONT_SEQ,
+);
 
-export type GuestMenuDishNameFontProductLineId =
-  (typeof GUEST_MENU_DISH_NAME_FONT_PRODUCT_LINES)[number]["id"];
+export type GuestMenuDishNameFontProductLineId = GuestMenuBodyProductLineId;
 
 export type DishNameFontLineConfig = {
   enabled: boolean;
@@ -65,16 +67,18 @@ function defaultLineConfig(enabled: boolean): DishNameFontLineConfig {
   return { enabled, fontPx: FONT_DEFAULT };
 }
 
-function defaultByLineConfig(): Record<GuestMenuDishNameFontProductLineId, DishNameFontLineConfig> {
+function defaultByLineConfig(
+  enabled = true,
+): Record<GuestMenuDishNameFontProductLineId, DishNameFontLineConfig> {
   return Object.fromEntries(
-    GUEST_MENU_DISH_NAME_FONT_PRODUCT_LINES.map((line) => [line.id, defaultLineConfig(true)]),
+    GUEST_MENU_DISH_NAME_FONT_PRODUCT_LINES.map((line) => [line.id, defaultLineConfig(enabled)]),
   ) as Record<GuestMenuDishNameFontProductLineId, DishNameFontLineConfig>;
 }
 
 function normalizeByLineConfig(
   raw: Partial<Record<string, Partial<DishNameFontLineConfig>>>,
 ): Record<GuestMenuDishNameFontProductLineId, DishNameFontLineConfig> {
-  const base = defaultByLineConfig();
+  const base = defaultByLineConfig(false);
   for (const line of GUEST_MENU_DISH_NAME_FONT_PRODUCT_LINES) {
     const item = raw[line.id];
     if (!item || typeof item !== "object") continue;
@@ -109,14 +113,8 @@ function ensureDishNameFontByLineMigrated(): void {
   if (migrated) return;
   migrated = true;
 
-  const raw = readModuleSettingJson<Partial<Record<string, Partial<DishNameFontLineConfig>>>>(
-    DISH_NAME_FONT_BY_LINE_FIELD_ID,
-    {},
-  );
-  if (raw && typeof raw === "object" && Object.keys(raw).length > 0) {
-    writeDishNameFontByLine(normalizeByLineConfig(raw));
-    return;
-  }
+  const state = readModuleSettingJsonState(DISH_NAME_FONT_BY_LINE_FIELD_ID);
+  if (state.state === "configured" || state.state === "invalid") return;
 
   const hasLegacyFont = (() => {
     try {
@@ -182,14 +180,13 @@ export function readDishNameFontByLine(): Record<
   DishNameFontLineConfig
 > {
   ensureDishNameFontByLineMigrated();
-  const raw = readModuleSettingJson<Partial<Record<string, Partial<DishNameFontLineConfig>>>>(
-    DISH_NAME_FONT_BY_LINE_FIELD_ID,
-    {},
-  );
-  if (raw && typeof raw === "object" && Object.keys(raw).length > 0) {
-    return normalizeByLineConfig(raw);
+  const state = readModuleSettingJsonState(DISH_NAME_FONT_BY_LINE_FIELD_ID);
+  if (state.state === "configured" && state.value && typeof state.value === "object") {
+    return normalizeByLineConfig(
+      state.value as Partial<Record<string, Partial<DishNameFontLineConfig>>>,
+    );
   }
-  return defaultByLineConfig();
+  return defaultByLineConfig(state.state === "missing");
 }
 
 export function writeDishNameFontByLine(

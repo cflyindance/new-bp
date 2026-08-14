@@ -1,0 +1,2264 @@
+{
+  "items": [
+    {
+      "id": "s75-foh-pos-shell-自动登出时间-分钟",
+      "sceneDesc": "设置超过多久系统没有操作，自动退出登录",
+      "moduleName": "系统安全",
+      "feature": "（未填写）",
+      "title": "自动登出时间(分钟)",
+      "seq": 75
+    },
+    {
+      "id": "s107-foh-table-start-flow-跳过选桌",
+      "sceneDesc": "设置点单是否需要展示选择桌子页面",
+      "moduleName": "基础设置",
+      "feature": "跳过选桌（是否展示选桌页面）",
+      "title": "跳过选桌",
+      "seq": 107
+    },
+    {
+      "id": "s110-foh-pos-order-alerts-点单超时提醒-分钟",
+      "sceneDesc": "设置订单创建后显示警告的时间间隔。",
+      "moduleName": "基础设置",
+      "feature": "（未填写）",
+      "title": "点单超时提醒(分钟)",
+      "seq": 110
+    },
+    {
+      "id": "s111-foh-table-start-flow-每单最多客人数量",
+      "sceneDesc": "设置每单最多可以选择的客人数量",
+      "moduleName": "基础设置",
+      "feature": "（未填写）",
+      "title": "每单最多客人数量",
+      "seq": 111
+    },
+    {
+      "id": "s113-foh-kitchen-send-timing-点击-送厨-整单送厨",
+      "sceneDesc": "设置点击\"送厨\"订单是否整单送厨",
+      "moduleName": "基础设置",
+      "feature": "（未填写）",
+      "title": "点击\"送厨\"整单送厨",
+      "seq": 113
+    },
+    {
+      "id": "s114-foh-kitchen-send-timing-点击-付款-直接送厨",
+      "sceneDesc": "设置点击\"付款\"订单是否直接送厨",
+      "moduleName": "基础设置",
+      "feature": "（未填写）",
+      "title": "点击\"付款\"直接送厨",
+      "seq": 114
+    },
+    {
+      "id": "s118-foh-pos-menu-scope-搜索菜单",
+      "sceneDesc": "开启后，在选定产线（POS、POS GO、PayPad）点单页支持搜索菜单。",
+      "moduleName": "基础设置",
+      "feature": "（未填写）",
+      "title": "搜索菜单",
+      "seq": 118
+    },
+    {
+      "id": "s120-foh-kitchen-send-timing-结账后自动送厨",
+      "sceneDesc": "设置结账后是否自动送厨",
+      "moduleName": "基础设置",
+      "feature": "（未填写）",
+      "title": "结账后自动送厨",
+      "seq": 120
+    },
+    {
+      "id": "s121-foh-pos-order-cart-订单数量支持小数",
+      "sceneDesc": "设置订单数量是否支持小数展示，比如有半份，三分之一份的",
+      "moduleName": "基础设置",
+      "feature": "（未填写）",
+      "title": "订单数量支持小数",
+      "seq": 121
+    },
+    {
+      "id": "s122-foh-pos-order-cart-减菜后自动重定向",
+      "sceneDesc": "开启后在所选产线减菜完成后自动重定向。适用产线：POS、POS GO、PayPad。",
+      "moduleName": "基础设置",
+      "feature": "（未填写）",
+      "title": "减菜后自动重定向",
+      "seq": 122
+    },
+    {
+      "id": "s123-foh-kitchen-send-timing-打单后自动送厨",
+      "sceneDesc": "设置打单后是否自动送厨",
+      "moduleName": "基础设置",
+      "feature": "（未填写）",
+      "title": "打单后自动送厨",
+      "seq": 123
+    },
+    {
+      "id": "s125-foh-kitchen-send-timing-延迟送厨时间",
+      "sceneDesc": "设置订单下单后多久再自动送厨",
+      "moduleName": "基础设置",
+      "feature": "（未填写）",
+      "title": "延迟送厨时间",
+      "seq": 125
+    },
+    {
+      "id": "s132-foh-pos-order-cart-点单显示座位",
+      "sceneDesc": "设置哪种订单类型(Dinein、Delivery、Pick Up、To Go)的点单，点单显示座位，用于一个订单，多个座位，按照座位点单加菜",
+      "moduleName": "点单界面设置",
+      "feature": "点单显示座位（按订单类型）",
+      "title": "点单显示座位",
+      "seq": 132
+    },
+    {
+      "id": "s133-foh-pos-order-cart-相同菜拆分显示",
+      "sceneDesc": "设置相同的菜是分开展示，还是合并展示",
+      "moduleName": "点单界面设置",
+      "feature": "（未填写）",
+      "title": "相同菜拆分显示",
+      "seq": 133
+    },
+    {
+      "id": "s135-foh-pos-order-cart-菜序模式",
+      "sceneDesc": "设置订单中，相同的类（即菜序）下的商品，合并到一个类下进行展示。",
+      "moduleName": "点单界面设置",
+      "feature": "（未填写）",
+      "title": "菜序模式",
+      "seq": 135
+    },
+    {
+      "id": "s137-foh-pos-order-cart-显示ASAP订单时间",
+      "sceneDesc": "设置订单时间是否显示ASAP订单时间",
+      "moduleName": "点单界面设置",
+      "feature": "（未填写）",
+      "title": "显示ASAP订单时间",
+      "seq": 137
+    },
+    {
+      "id": "s138-foh-pos-combo-ordering-自定义点单",
+      "sceneDesc": "开启后在所选产线支持自定义手动录入菜品。适用产线：POS、POS GO、PayPad。",
+      "moduleName": "自定义单/套餐",
+      "feature": "自定义点单（手写录入菜品开关）",
+      "title": "自定义点单",
+      "seq": 138
+    },
+    {
+      "id": "s139-foh-pos-combo-ordering-自动点完套餐",
+      "sceneDesc": "开启后，在选定产线（POS、POS GO、PayPad、Kiosk、eMenu、SDI、Online Order）点选套餐时自动完成套餐内必选子项。",
+      "moduleName": "自定义单/套餐",
+      "feature": "（未填写）",
+      "title": "自动点完套餐",
+      "seq": 139
+    },
+    {
+      "id": "s141-foh-pos-order-cart-支持为已送厨的菜修改调味",
+      "sceneDesc": "勾选产线后，已送厨菜品行仍允许修改调味/加料。",
+      "moduleName": "自定义单/套餐",
+      "feature": "（未填写）",
+      "title": "支持为已送厨的菜修改调味",
+      "seq": 141
+    },
+    {
+      "id": "s145-foh-pos-combo-ordering-当套餐价钱规则是可调时-显示套餐子菜价格",
+      "sceneDesc": "开启后，在选定产线（POS、POS GO、PayPad、Kiosk、eMenu、SDI、Online Order）当套餐价格为可调整规则时展示子菜价格。",
+      "moduleName": "价格",
+      "feature": "（未填写）",
+      "title": "当套餐价钱规则是可调时,显示套餐子菜价格",
+      "seq": 145
+    },
+    {
+      "id": "s148-foh-pos-menu-scope-比价功能模式",
+      "sceneDesc": "开启后，在选定产线（POS、POS GO、PayPad）点单页启用比价功能模式。",
+      "moduleName": "价格",
+      "feature": "（未填写）",
+      "title": "比价功能模式",
+      "seq": 148
+    },
+    {
+      "id": "s151-foh-pos-find-order-list-显示所有单的总计价格",
+      "sceneDesc": "勾选产线后，找单列表页展示所有订单的总价合计。",
+      "moduleName": "找单",
+      "feature": "（未填写）",
+      "title": "显示所有单的总计价格",
+      "seq": 151
+    },
+    {
+      "id": "s152-foh-pos-find-order-list-显示-关闭以下全部单子-按钮",
+      "sceneDesc": "勾选产线后，找单列表展示「关闭以下全部单子」操作按钮。",
+      "moduleName": "找单",
+      "feature": "（未填写）",
+      "title": "显示：\"关闭以下全部单子\"按钮",
+      "seq": 152
+    },
+    {
+      "id": "s153-foh-pos-find-order-list-默认显示未加小费订单",
+      "sceneDesc": "勾选产线后，找单列表默认筛选展示未加小费的订单。",
+      "moduleName": "找单",
+      "feature": "（未填写）",
+      "title": "默认显示未加小费订单",
+      "seq": 153
+    },
+    {
+      "id": "s165-foh-pos-shell-默认主界面",
+      "sceneDesc": "门店兜底：员工登录 POS / POS GO / PayPad 后的默认主界面（MAIN / TABLE / ORDER / RECALL）；各产线独立配置。",
+      "moduleName": "基本设置",
+      "feature": "默认主界面（POS启动落地页）",
+      "title": "默认主界面",
+      "seq": 165
+    },
+    {
+      "id": "s166-foh-pos-shell-完成每次操作后账号自动登出",
+      "sceneDesc": "设置POS系统完成每次操作后账号是否自动登出",
+      "moduleName": "基本设置",
+      "feature": "（未填写）",
+      "title": "完成每次操作后账号自动登出",
+      "seq": 166
+    },
+    {
+      "id": "s174-foh-pos-menu-scope-菜单模式",
+      "sceneDesc": "设置点单获取的菜单是哪一套菜单（POS菜单还是eMenu菜单）",
+      "moduleName": "基本设置",
+      "feature": "菜单模式（POS菜单/eMenu菜单）",
+      "title": "菜单模式",
+      "seq": 174
+    },
+    {
+      "id": "s175-foh-pos-shell-登录忽略特殊符号",
+      "sceneDesc": "设置进行登录输入时是否允许输入特殊符号",
+      "moduleName": "基本设置",
+      "feature": "（未填写）",
+      "title": "登录忽略特殊符号",
+      "seq": 175
+    },
+    {
+      "id": "s178-foh-pos-order-cart-显示单菜序号",
+      "sceneDesc": "开启后在所选产线点单页展示单个菜的菜品序号 ID。适用产线：POS、POS GO、PayPad、Kiosk、SDI、Online Order、eMenu。",
+      "moduleName": "单菜设置",
+      "feature": "（未填写）",
+      "title": "显示单菜序号",
+      "seq": 178
+    },
+    {
+      "id": "s193-foh-pos-buttons-将-删单-隐藏到-更多",
+      "sceneDesc": "设置POS点单页面，将\"删单\"按钮隐藏到\"更多\"中...",
+      "moduleName": "常见按键",
+      "feature": "将“删单”隐藏到“更多”（POS布局）",
+      "title": "将\"删单\"隐藏到\"更多\"",
+      "seq": 193
+    },
+    {
+      "id": "s194-foh-pos-buttons-将-移单-隐藏到-更多",
+      "sceneDesc": "设置POS点单页面，将\"移单\"隐藏到\"更多\"中...",
+      "moduleName": "常见按键",
+      "feature": "（未填写）",
+      "title": "将\"移单\"隐藏到\"更多\"",
+      "seq": 194
+    },
+    {
+      "id": "s195-foh-pos-buttons-将-清桌-隐藏到-更多",
+      "sceneDesc": "设置POS点单页面，将\"清桌\"隐藏到\"更多\"中...",
+      "moduleName": "常见按键",
+      "feature": "（未填写）",
+      "title": "将\"清桌\"隐藏到\"更多\"",
+      "seq": 195
+    },
+    {
+      "id": "s196-foh-pos-order-toolbar-自定义分割线名称",
+      "sceneDesc": "设置POS点单页面，自定义分割线名称",
+      "moduleName": "常见按键",
+      "feature": "（未填写）",
+      "title": "自定义分割线名称",
+      "seq": 196
+    },
+    {
+      "id": "s197-foh-pos-buttons-将-编辑-隐藏到-更多",
+      "sceneDesc": "设置POS点单页面，将\"编辑\"隐藏到\"更多\"中...",
+      "moduleName": "常见按键",
+      "feature": "（未填写）",
+      "title": "将\"编辑\"隐藏到\"更多\"",
+      "seq": 197
+    },
+    {
+      "id": "s198-foh-pos-buttons-将-送厨-隐藏到-更多",
+      "sceneDesc": "设置POS点单页面，将\"送厨\"隐藏到\"更多\"",
+      "moduleName": "常见按键",
+      "feature": "（未填写）",
+      "title": "将\"送厨\"隐藏到\"更多\"",
+      "seq": 198
+    },
+    {
+      "id": "s199-foh-pos-buttons-将-付款-隐藏到-更多",
+      "sceneDesc": "设置POS点单页面，将\"付款\"隐藏到\"更多\"",
+      "moduleName": "常见按键",
+      "feature": "（未填写）",
+      "title": "将\"付款\"隐藏到\"更多\"",
+      "seq": 199
+    },
+    {
+      "id": "s200-foh-pos-buttons-将-合并-隐藏到-更多",
+      "sceneDesc": "设置POS点单页面，将\"合并\"隐藏到\"更多\"",
+      "moduleName": "常见按键",
+      "feature": "（未填写）",
+      "title": "将\"合并\"隐藏到\"更多\"",
+      "seq": 200
+    },
+    {
+      "id": "s201-foh-pos-buttons-将-分单-隐藏到-更多",
+      "sceneDesc": "设置POS点单页面，将\"分单\"隐藏到\"更多\"",
+      "moduleName": "常见按键",
+      "feature": "（未填写）",
+      "title": "将\"分单\"隐藏到\"更多\"",
+      "seq": 201
+    },
+    {
+      "id": "s202-foh-pos-buttons-将-打单-隐藏到-更多",
+      "sceneDesc": "设置POS点单页面，将\"打单\"隐藏到\"更多\"",
+      "moduleName": "常见按键",
+      "feature": "（未填写）",
+      "title": "将\"打单\"隐藏到\"更多\"",
+      "seq": 202
+    },
+    {
+      "id": "s203-foh-pos-buttons-将-小费-隐藏到-更多",
+      "sceneDesc": "设置POS点单页面，将\"小费\"隐藏到\"更多\"",
+      "moduleName": "常见按键",
+      "feature": "（未填写）",
+      "title": "将\"小费\"隐藏到\"更多\"",
+      "seq": 203
+    },
+    {
+      "id": "s204-foh-pos-buttons-将-加收-隐藏到-更多",
+      "sceneDesc": "设置POS点单页面，将\"加收\"隐藏到\"更多\"",
+      "moduleName": "常见按键",
+      "feature": "（未填写）",
+      "title": "将\"加收\"隐藏到\"更多\"",
+      "seq": 204
+    },
+    {
+      "id": "s205-foh-pos-buttons-将-复制-隐藏到-更多",
+      "sceneDesc": "设置POS点单页面，将\"复制\"隐藏到\"更多\"",
+      "moduleName": "常见按键",
+      "feature": "（未填写）",
+      "title": "将\"复制\"隐藏到\"更多\"",
+      "seq": 205
+    },
+    {
+      "id": "s206-foh-pos-buttons-将-打折-隐藏到-更多",
+      "sceneDesc": "设置POS点单页面，将\"打折\"隐藏到\"更多\"",
+      "moduleName": "常见按键",
+      "feature": "（未填写）",
+      "title": "将\"打折\"隐藏到\"更多\"",
+      "seq": 206
+    },
+    {
+      "id": "s207-foh-pos-buttons-将-移菜-隐藏到-更多",
+      "sceneDesc": "设置POS点单页面，将\"移菜\"隐藏到\"更多\"",
+      "moduleName": "常见按键",
+      "feature": "（未填写）",
+      "title": "将\"移菜\"隐藏到\"更多\"",
+      "seq": 207
+    },
+    {
+      "id": "s208-foh-pos-buttons-将-顾客信息-隐藏到-更多",
+      "sceneDesc": "设置POS点单页面，将\"顾客信息\"隐藏到\"更多\"",
+      "moduleName": "常见按键",
+      "feature": "（未填写）",
+      "title": "将\"顾客信息\"隐藏到\"更多\"",
+      "seq": 208
+    },
+    {
+      "id": "s209-foh-pos-buttons-将-退款并删单-隐藏到-更多",
+      "sceneDesc": "设置POS点单页面，将\"退款并删单\"隐藏到\"更多\"",
+      "moduleName": "常见按键",
+      "feature": "（未填写）",
+      "title": "将\"退款并删单\"隐藏到\"更多\"",
+      "seq": 209
+    },
+    {
+      "id": "s210-foh-pos-buttons-将-叫号-隐藏到-更多",
+      "sceneDesc": "设置POS点单页面，将\"叫号\"隐藏到\"更多\"",
+      "moduleName": "常见按键",
+      "feature": "（未填写）",
+      "title": "将\"叫号\"隐藏到\"更多\"",
+      "seq": 210
+    },
+    {
+      "id": "s211-foh-pos-buttons-将-类型-隐藏到-更多",
+      "sceneDesc": "设置POS点单页面，将\"类型\"隐藏到\"更多\"",
+      "moduleName": "常见按键",
+      "feature": "（未填写）",
+      "title": "将\"类型\"隐藏到\"更多\"",
+      "seq": 211
+    },
+    {
+      "id": "s212-foh-pos-buttons-将-销号-隐藏到-更多",
+      "sceneDesc": "设置POS点单页面，将\"销号\"隐藏到\"更多\"",
+      "moduleName": "常见按键",
+      "feature": "（未填写）",
+      "title": "将\"销号\"隐藏到\"更多\"",
+      "seq": 212
+    },
+    {
+      "id": "s213-foh-pos-buttons-将-催菜-隐藏到-更多",
+      "sceneDesc": "设置POS点单页面，将\"催菜\"隐藏到\"更多\"",
+      "moduleName": "其他按键",
+      "feature": "（未填写）",
+      "title": "将\"催菜\"隐藏到\"更多\"",
+      "seq": 213
+    },
+    {
+      "id": "s214-foh-pos-buttons-将-企台-隐藏到-更多",
+      "sceneDesc": "设置POS点单页面，将\"企台\"隐藏到\"更多\"",
+      "moduleName": "其他按键",
+      "feature": "（未填写）",
+      "title": "将\"企台\"隐藏到\"更多\"",
+      "seq": 214
+    },
+    {
+      "id": "s215-foh-pos-buttons-来取-外送历史订单界面-将-复制-隐藏",
+      "sceneDesc": "设置POS点单页面，来取/外送历史订单界面:将\"复制\"隐藏",
+      "moduleName": "其他按键",
+      "feature": "（未填写）",
+      "title": "来取/外送历史订单界面:将\"复制\"隐藏",
+      "seq": 215
+    },
+    {
+      "id": "s216-foh-pos-menu-scope-组平铺展示",
+      "sceneDesc": "开启后，在选定产线（POS、PayPad）点单页菜单组以平铺方式展示。",
+      "moduleName": "点餐界面模式",
+      "feature": "（未填写）",
+      "title": "组平铺展示",
+      "seq": 216
+    },
+    {
+      "id": "s217-foh-pos-menu-scope-类展示",
+      "sceneDesc": "开启后，在选定产线（POS、PayPad）按产线独立配置分类展示布局（Horizontal2 / Horizontal 3 / Vertical 1）。",
+      "moduleName": "点餐界面模式",
+      "feature": "类展示（分类布局形式）",
+      "title": "类展示",
+      "seq": 217
+    },
+    {
+      "id": "s218-foh-pos-menu-scope-菜展示",
+      "sceneDesc": "开启后，在选定产线（POS、PayPad）按产线独立配置菜品按钮展示布局（Regular Buttons / Large Buttons）。",
+      "moduleName": "点餐界面模式",
+      "feature": "（未填写）",
+      "title": "菜展示",
+      "seq": 218
+    },
+    {
+      "id": "s219-foh-pos-menu-scope-按钮颜色满铺",
+      "sceneDesc": "开启后，在选定产线（POS、PayPad）点单页菜单按钮颜色铺满按钮区域。",
+      "moduleName": "点餐界面模式",
+      "feature": "（未填写）",
+      "title": "按钮颜色满铺",
+      "seq": 219
+    },
+    {
+      "id": "s220-foh-pos-menu-scope-显示菜品价格",
+      "sceneDesc": "开启后，在选定产线（POS、PayPad）点单页菜单区展示菜品价格。",
+      "moduleName": "点餐界面模式",
+      "feature": "（未填写）",
+      "title": "显示菜品价格",
+      "seq": 220
+    },
+    {
+      "id": "s221-foh-pos-find-order-list-支付前确认客户信息",
+      "sceneDesc": "勾选产线后，支付前需服务员二次确认客户信息。",
+      "moduleName": "点餐界面模式",
+      "feature": "（未填写）",
+      "title": "支付前确认客户信息",
+      "seq": 221
+    },
+    {
+      "id": "s222-foh-pos-order-cart-客户姓名必填",
+      "sceneDesc": "开启后在所选产线 POS 点单页将客户姓名设为必填。适用产线：POS、POS GO、PayPad。",
+      "moduleName": "点餐界面模式",
+      "feature": "（未填写）",
+      "title": "客户姓名必填",
+      "seq": 222
+    },
+    {
+      "id": "s223-foh-pos-order-cart-客户电话必填",
+      "sceneDesc": "开启后在所选产线 POS 点单页将客户电话设为必填。适用产线：POS、POS GO、PayPad。",
+      "moduleName": "点餐界面模式",
+      "feature": "（未填写）",
+      "title": "客户电话必填",
+      "seq": 223
+    },
+    {
+      "id": "s248-foh-pos-find-order-list-当用条形码找单时打开单子付款界面",
+      "sceneDesc": "勾选产线后，扫描条形码找单时直接进入该单付款界面。",
+      "moduleName": "付款收据",
+      "feature": "（未填写）",
+      "title": "当用条形码找单时打开单子付款界面",
+      "seq": 248
+    },
+    {
+      "id": "s251-foh-pos-find-order-list-找单界面打印所选收据类型",
+      "sceneDesc": "勾选产线后，找单页打印时可选择收据类型。",
+      "moduleName": "付款收据",
+      "feature": "（未填写）",
+      "title": "找单界面打印所选收据类型",
+      "seq": 251
+    },
+    {
+      "id": "s331-foh-pos-order-alerts-员工端通知类型",
+      "sceneDesc": "多选启用哪些员工端通知类型（按订单/服务/运营/交易/系统分类展示）；仅控制 POS/员工端是否接收该类提醒，具体业务配置见对应中心。",
+      "moduleName": "消息中心",
+      "feature": "（未填写）",
+      "title": "员工端通知类型",
+      "seq": 331
+    },
+    {
+      "id": "s332-foh-pos-order-alerts-新单语音播报",
+      "sceneDesc": "多选适用产线：Kiosk、eMenu、POS、POS GO、PayPad、SDI、Online Order；勾选后该产线新订单进行语音播报提醒。",
+      "moduleName": "消息中心",
+      "feature": "（未填写）",
+      "title": "新单语音播报",
+      "seq": 332
+    },
+    {
+      "id": "s333-foh-tableside-service-用餐者请求服务的类型",
+      "sceneDesc": "按产线（eMenu、SDI）多选客人可发起的桌边服务请求类型（呼叫服务员/结账/加水等），支持弹窗新增与删除自定义类型；原 seq 629、630–636 已合并。员工提醒需同时在前厅「消息类型提醒」勾选「桌边服务请求」。",
+      "moduleName": "消息中心",
+      "feature": "（未填写）",
+      "title": "用餐者请求服务的类型",
+      "seq": 333
+    },
+    {
+      "id": "s345-foh-kitchen-send-timing-送厨密码权限",
+      "sceneDesc": "设置Ipad上使用POS，送厨操作是否需要权限",
+      "moduleName": "基础设置",
+      "feature": "（未填写）",
+      "title": "送厨密码权限",
+      "seq": 345
+    },
+    {
+      "id": "s346-foh-pos-shell-主页密码权限",
+      "sceneDesc": "设置Ipad上使用POS，进入主页是否需要权限",
+      "moduleName": "基础设置",
+      "feature": "（未填写）",
+      "title": "主页密码权限",
+      "seq": 346
+    },
+    {
+      "id": "s347-foh-table-clear-ops-允许更换企台",
+      "sceneDesc": "设置Ipad上使用POS，是否允许更换服务员",
+      "moduleName": "基础设置",
+      "feature": "（未填写）",
+      "title": "允许更换企台",
+      "seq": 347
+    },
+    {
+      "id": "s348-foh-pos-menu-scope-按照时段显示菜单",
+      "sceneDesc": "在 eMenu、Kiosk、POS、POS GO、PayPad、SDI 各产线，可分别多选 Dinein、Delivery、Pick Up、ToGo 作为按时段显示菜单的订单类型。",
+      "moduleName": "基础设置",
+      "feature": "按照时段显示菜单（按产线×订单类型）",
+      "title": "按照时段显示菜单",
+      "seq": 348
+    },
+    {
+      "id": "s349-foh-pos-order-cart-允许企台在电子菜单上点只读菜",
+      "sceneDesc": "设置Ipad上使用POS，是否允许企台在电子菜单上点只读菜",
+      "moduleName": "基础设置",
+      "feature": "（未填写）",
+      "title": "允许企台在电子菜单上点只读菜",
+      "seq": 349
+    },
+    {
+      "id": "s350-foh-pos-menu-scope-电子菜单自定义消息",
+      "sceneDesc": "开启后，在选定产线（POS、PayPad）允许配置电子菜单自定义消息。",
+      "moduleName": "基础设置",
+      "feature": "（未填写）",
+      "title": "电子菜单自定义消息",
+      "seq": 350
+    },
+    {
+      "id": "s351-foh-table-clear-ops-启用向客户端发送清桌通知",
+      "sceneDesc": "设置Ipad上使用POS，是否启用向客户端发送清桌通知",
+      "moduleName": "基础设置",
+      "feature": "（未填写）",
+      "title": "启用向客户端发送清桌通知",
+      "seq": 351
+    },
+    {
+      "id": "s443-foh-guest-duration-scenarios-按照时长收费",
+      "sceneDesc": "开启后多选适用场景（KTV、VIP包间）；勾选后对应场景按时长收费。",
+      "moduleName": "按时计价",
+      "feature": "按时计价（如KTV按时长收费）",
+      "title": "按照时长收费",
+      "seq": 443
+    },
+    {
+      "id": "s483-foh-pos-order-toolbar-分单-删单-保存-退出-付款-送厨-直送-仅付款",
+      "sceneDesc": "整单操作相关操作的按钮及排序顺序",
+      "moduleName": "整单操作",
+      "feature": "点单页配置：整单操作（按钮集合/排序）",
+      "title": "分单、删单、保存、退出、付款、送厨、直送、仅付款",
+      "seq": 483
+    },
+    {
+      "id": "s484-foh-pos-order-toolbar-分割线-加1-数量-减1-备注-税-调味-改价",
+      "sceneDesc": "菜品详情相关操作的按钮及排序顺序",
+      "moduleName": "菜品详情",
+      "feature": "菜品详情（按钮集合/排序）",
+      "title": "分割线、加1、数量、减1、备注、税、调味、改价",
+      "seq": 484
+    },
+    {
+      "id": "s485-foh-pos-order-toolbar-排序-客人信息-类型-换桌-企台-客人-整单备注-会员-打单",
+      "sceneDesc": "订单信息相关操作的按钮及排序顺序",
+      "moduleName": "订单信息",
+      "feature": "POS点单页配置订单信息（按钮排序/显隐）",
+      "title": "排序、客人信息、类型、换桌、企台、客人、整单备注、会员、打单",
+      "seq": 485
+    },
+    {
+      "id": "s486-foh-pos-order-toolbar-加收-折扣-小费-整单税",
+      "sceneDesc": "订单金额相关操作的按钮及排序顺序",
+      "moduleName": "订单金额",
+      "feature": "点单页配置订单金额（按钮排序/显隐）",
+      "title": "加收、折扣、小费、整单税",
+      "seq": 486
+    },
+    {
+      "id": "s487-foh-guest-order-type-订单类型可用范围-堂吃-外带-来取",
+      "sceneDesc": "设置订单类型是支持堂吃，还是支持打包，还是支持外带",
+      "moduleName": "订单类型",
+      "feature": "（未填写）",
+      "title": "订单类型可用范围（堂吃/外带/来取）",
+      "seq": 487
+    },
+    {
+      "id": "s488-foh-guest-order-type-展示订单类型选择页面",
+      "sceneDesc": "设置食客端是否展示订单类型选择页面",
+      "moduleName": "订单类型",
+      "feature": "（未填写）",
+      "title": "展示订单类型选择页面",
+      "seq": 488
+    },
+    {
+      "id": "s489-foh-guest-order-type-送餐取餐服务方式",
+      "sceneDesc": "设置食客端是否展示送餐取餐服务方式（柜台自取/服务员送餐到桌）",
+      "moduleName": "订单类型",
+      "feature": "（未填写）",
+      "title": "送餐取餐服务方式",
+      "seq": 489
+    },
+    {
+      "id": "s490-foh-guest-order-type-展示取餐方式",
+      "sceneDesc": "设置食客端是否展示送餐取餐服务方式选择页面",
+      "moduleName": "订单类型",
+      "feature": "（未填写）",
+      "title": "展示取餐方式",
+      "seq": 490
+    },
+    {
+      "id": "s491-foh-guest-order-type-打包展示输入号码牌",
+      "sceneDesc": "设置打包场景下是否展示输入取餐实体号码牌页面",
+      "moduleName": "订单类型",
+      "feature": "（未填写）",
+      "title": "打包展示输入号码牌",
+      "seq": 491
+    },
+    {
+      "id": "s502-foh-guest-order-type-可自动送厨的订单支付状态",
+      "sceneDesc": "设置订单在何种支付状态下自动送厨",
+      "moduleName": "收据",
+      "feature": "（未填写）",
+      "title": "可自动送厨的订单支付状态",
+      "seq": 502
+    },
+    {
+      "id": "s503-foh-guest-order-type-送餐到桌餐牌号获取方式",
+      "sceneDesc": "设置送餐到桌餐牌号获取方式是输入实体号码牌还是使用虚拟的订单号",
+      "moduleName": "收据",
+      "feature": "（未填写）",
+      "title": "送餐到桌餐牌号获取方式",
+      "seq": 503
+    },
+    {
+      "id": "s504-foh-guest-registration-展示输入手机号页面",
+      "sceneDesc": "食客端（Kiosk/eMenu/扫码等）是否展示输入手机号页面；合并原 seq 30（终端/食客端）为 SSOT。",
+      "moduleName": "用户信息",
+      "feature": "（未填写）",
+      "title": "展示输入手机号页面",
+      "seq": 504
+    },
+    {
+      "id": "s505-foh-guest-registration-手机号必填",
+      "sceneDesc": "勾选产线在输入手机号页面要求手机号必填（取餐联络等；须与 seq 504 展示页同轨）。",
+      "moduleName": "用户信息",
+      "feature": "（未填写）",
+      "title": "手机号必填",
+      "seq": 505
+    },
+    {
+      "id": "s506-foh-guest-registration-输入姓名",
+      "sceneDesc": "勾选产线展示输入食客姓名页面。",
+      "moduleName": "用户信息",
+      "feature": "（未填写）",
+      "title": "输入姓名",
+      "seq": 506
+    },
+    {
+      "id": "s507-foh-guest-registration-姓名必填",
+      "sceneDesc": "勾选产线在输入姓名页面要求姓名必填（叫号等）；须与「展示输入姓名页面」配套。",
+      "moduleName": "用户信息",
+      "feature": "（未填写）",
+      "title": "姓名必填",
+      "seq": 507
+    },
+    {
+      "id": "s509-foh-guest-menu-body-展示账户积分",
+      "sceneDesc": "开启后，在选定产线（eMenu、SDI、Kiosk、Online Order、CDS）展示会员账户积分余额。",
+      "moduleName": "用户信息",
+      "feature": "（未填写）",
+      "title": "展示账户积分",
+      "seq": 509
+    },
+    {
+      "id": "s510-foh-guest-registration-默认选中隐私条款",
+      "sceneDesc": "勾选产线在输入手机号页面的隐私条款默认勾选（食客仍可取消）。",
+      "moduleName": "用户信息",
+      "feature": "（未填写）",
+      "title": "默认选中隐私条款",
+      "seq": 510
+    },
+    {
+      "id": "s515-foh-guest-menu-body-展示菜单序号",
+      "sceneDesc": "开启后，在选定产线（POS、POS GO、PayPad、eMenu、SDI、Kiosk、Online Order）的菜单上展示菜品序号 ID。",
+      "moduleName": "菜单",
+      "feature": "（未填写）",
+      "title": "展示菜单序号",
+      "seq": 515
+    },
+    {
+      "id": "s516-foh-guest-menu-body-显示组名称",
+      "sceneDesc": "开启后，在选定产线（POS、POS GO、PayPad、eMenu、SDI、Kiosk、Online Order）的组-类-菜树形菜单中展示组名称。",
+      "moduleName": "菜单",
+      "feature": "（未填写）",
+      "title": "显示组名称",
+      "seq": 516
+    },
+    {
+      "id": "s517-foh-guest-menu-body-菜单展示位置",
+      "sceneDesc": "各产线（eMenu、SDI、Kiosk、Online Order）可独立启用，并选择顶部展示或侧边展示。",
+      "moduleName": "菜单",
+      "feature": "（未填写）",
+      "title": "菜单展示位置",
+      "seq": 517
+    },
+    {
+      "id": "s518-foh-guest-menu-body-默认展开第一组",
+      "sceneDesc": "开启后，在选定产线（eMenu、SDI、Kiosk、Online Order）的组-类-菜树形菜单中默认展开第一组下的类。",
+      "moduleName": "菜单",
+      "feature": "（未填写）",
+      "title": "默认展开第一组",
+      "seq": 518
+    },
+    {
+      "id": "s519-foh-guest-menu-body-菜单图片裁切显示",
+      "sceneDesc": "开启后，在选定产线（POS、POS GO、PayPad、eMenu、SDI、Kiosk、Online Order）将菜单图片填充菜单卡片（裁切）展示。",
+      "moduleName": "菜单",
+      "feature": "（未填写）",
+      "title": "菜单图片裁切显示",
+      "seq": 519
+    },
+    {
+      "id": "s520-foh-guest-menu-body-套餐展示导航栏",
+      "sceneDesc": "开启后，在 Kiosk 套餐页面展示步骤分类导航栏。",
+      "moduleName": "菜单",
+      "feature": "（未填写）",
+      "title": "套餐展示导航栏",
+      "seq": 520
+    },
+    {
+      "id": "s521-foh-guest-order-notes-订单备注",
+      "sceneDesc": "开启后在所选产线允许食客填写订单级特殊备注。适用产线：Kiosk、eMenu、SDI、Online Order。",
+      "moduleName": "菜单",
+      "feature": "（未填写）",
+      "title": "订单备注",
+      "seq": 521
+    },
+    {
+      "id": "s522-foh-guest-order-notes-产品备注",
+      "sceneDesc": "开启后，按产线配置支持食客特殊备注的商品；点击选择商品，以组/类/菜结构勾选。",
+      "moduleName": "菜单",
+      "feature": "（未填写）",
+      "title": "产品备注",
+      "seq": 522
+    },
+    {
+      "id": "s523-foh-guest-order-notes-套餐子项备注",
+      "sceneDesc": "设置套餐内的子商品是否支持食客进行特殊备注",
+      "moduleName": "菜单",
+      "feature": "（未填写）",
+      "title": "套餐子项备注",
+      "seq": 523
+    },
+    {
+      "id": "s524-foh-guest-menu-body-瀑布流模式",
+      "sceneDesc": "开启后，在选定产线（Kiosk、eMenu、SDI、Online Order）菜单以瀑布流连续滚动方式浏览。",
+      "moduleName": "菜单",
+      "feature": "（未填写）",
+      "title": "瀑布流模式",
+      "seq": 524
+    },
+    {
+      "id": "s525-foh-guest-menu-body-菜单页面展示积分菜",
+      "sceneDesc": "勾选产线在菜单页展示可积分兑换的商品。",
+      "moduleName": "菜单",
+      "feature": "（未填写）",
+      "title": "菜单页面展示积分菜",
+      "seq": 525
+    },
+    {
+      "id": "s526-foh-guest-menu-body-菜单页面积分菜展示位置",
+      "sceneDesc": "各产线（eMenu、SDI、Kiosk、Online Order）可独立启用，并选择顶部展示或底部展示。",
+      "moduleName": "菜单",
+      "feature": "（未填写）",
+      "title": "菜单页面积分菜展示位置",
+      "seq": 526
+    },
+    {
+      "id": "s528-foh-guest-menu-body-菜价为0展示价格",
+      "sceneDesc": "开启后，在选定产线（POS、POS GO、PayPad、eMenu、SDI、Kiosk、Online Order）对价格为 0 的菜品展示价格标签。",
+      "moduleName": "菜单",
+      "feature": "（未填写）",
+      "title": "菜价为0展示价格",
+      "seq": 528
+    },
+    {
+      "id": "s532-foh-guest-menu-home-展示MenuSifu品牌LOGO",
+      "sceneDesc": "LOGO 图片素材请在素材中心维护；本项仅控制是否在选定产线首页展示 MenuSifu 品牌标识。",
+      "moduleName": "展示设置",
+      "feature": "（未填写）",
+      "title": "展示MenuSifu品牌LOGO",
+      "seq": 532
+    },
+    {
+      "id": "s534-foh-table-clear-ops-付款后自动清桌",
+      "sceneDesc": "付款完成后，按各产线设置的超时分钟数自动清桌；0 表示该产线不启用。原 seq 169 已合并。",
+      "moduleName": "桌子设置",
+      "feature": "（未填写）",
+      "title": "付款后自动清桌",
+      "seq": 534
+    },
+    {
+      "id": "s535-foh-wait-time-display-展示当前订单预计等待时长",
+      "sceneDesc": "按产线（Kiosk）启用并配置功能时间：自动关闭提示与菜单弹框阈值（分钟）；时长依据「预计等待时长计算设置」。",
+      "moduleName": "等待时长",
+      "feature": "（未填写）",
+      "title": "展示当前订单预计等待时长",
+      "seq": 535
+    },
+    {
+      "id": "s536-foh-wait-time-display-预计等待时长区间设置",
+      "sceneDesc": "按产线（Kiosk）启用并配置区间功能时间：杯数/等待时长阈值与区间起止偏移（分钟）；时长依据「预计等待时长计算设置」。",
+      "moduleName": "等待时长",
+      "feature": "（未填写）",
+      "title": "预计等待时长区间设置",
+      "seq": 536
+    },
+    {
+      "id": "s537-foh-wait-time-display-等待时长展示类型",
+      "sceneDesc": "按产线（Kiosk）配置展示类型：排队数量与/或等待时间；时长依据「预计等待时长计算设置」。",
+      "moduleName": "等待时长",
+      "feature": "（未填写）",
+      "title": "等待时长展示类型",
+      "seq": 537
+    },
+    {
+      "id": "s538-foh-wait-time-display-字体大小",
+      "sceneDesc": "按产线（Kiosk）配置字体大小：系统默认或倍数。",
+      "moduleName": "等待时长",
+      "feature": "（未填写）",
+      "title": "字体大小",
+      "seq": 538
+    },
+    {
+      "id": "s539-foh-wait-time-display-字体背景色",
+      "sceneDesc": "按产线（Kiosk）配置字体背景色：系统默认或自定义色。",
+      "moduleName": "等待时长",
+      "feature": "（未填写）",
+      "title": "字体背景色",
+      "seq": 539
+    },
+    {
+      "id": "s540-foh-wait-time-display-字体颜色",
+      "sceneDesc": "按产线（Kiosk）配置字体颜色：系统默认或自定义色。",
+      "moduleName": "等待时长",
+      "feature": "（未填写）",
+      "title": "字体颜色",
+      "seq": 540
+    },
+    {
+      "id": "s571-foh-guest-duration-scenarios-品类先下单",
+      "sceneDesc": "开启后在所选产线（eMenu、SDI）品类/自助餐模式下，选择套餐后默认先下单再选套餐内商品。",
+      "moduleName": "下单设置",
+      "feature": "（未填写）",
+      "title": "品类先下单",
+      "seq": 571
+    },
+    {
+      "id": "s572-foh-guest-hotpot-火锅锅底必选",
+      "sceneDesc": "开启后在所选产线（eMenu、SDI）下单时火锅锅底为必选项；关闭则锅底可选。",
+      "moduleName": "下单设置",
+      "feature": "（未填写）",
+      "title": "火锅锅底必选",
+      "seq": 572
+    },
+    {
+      "id": "s573-foh-guest-hotpot-火锅锅底下单后仍展示锅底",
+      "sceneDesc": "开启后，在选定产线（eMenu、SDI）锅底下单后菜单中仍展示火锅锅底品类。",
+      "moduleName": "下单设置",
+      "feature": "（未填写）",
+      "title": "火锅锅底下单后仍展示锅底",
+      "seq": 573
+    },
+    {
+      "id": "s574-foh-guest-hotpot-火锅锅底下单方式",
+      "sceneDesc": "开启后按产线（eMenu、SDI）独立配置火锅锅底下单方式（二选一）：锅底先下单，或锅底加入购物车后与其他菜品统一下单。",
+      "moduleName": "下单设置",
+      "feature": "（未填写）",
+      "title": "火锅锅底下单方式",
+      "seq": 574
+    },
+    {
+      "id": "s575-foh-guest-hotpot-同一锅型-相同锅底超过一半默认加收",
+      "sceneDesc": "开启后可添加多条加收规则：列表展示摘要，添加/编辑弹框配置额外加收金额，并按产线（eMenu、SDI）以组/类/菜结构选择适用商品（对齐展示菜详情）。",
+      "moduleName": "下单设置",
+      "feature": "（未填写）",
+      "title": "同一锅型,相同锅底超过一半默认加收",
+      "seq": 575
+    },
+    {
+      "id": "s577-foh-guest-duration-scenarios-展示用餐时长",
+      "sceneDesc": "开启后，在选定产线（POS、POS GO、PayPad、eMenu、SDI）订单下单后展示用餐时长；对应产线须先启用用餐时长限制。",
+      "moduleName": "下单设置",
+      "feature": "（未填写）",
+      "title": "展示用餐时长",
+      "seq": 577
+    },
+    {
+      "id": "s578-foh-guest-duration-scenarios-用餐时长倒计时展示",
+      "sceneDesc": "开启后，在选定产线（POS、POS GO、PayPad、eMenu、SDI）将用餐时长以倒计时方式展示；对应产线须先启用用餐时长限制。",
+      "moduleName": "下单设置",
+      "feature": "（未填写）",
+      "title": "用餐时长倒计时展示",
+      "seq": 578
+    },
+    {
+      "id": "s579-foh-guest-duration-scenarios-用餐剩余时长提示",
+      "sceneDesc": "开启后，在选定产线（POS、POS GO、PayPad、eMenu、SDI）于剩余用餐时长达到阈值时弹出提示；对应产线须先启用用餐时长限制。",
+      "moduleName": "下单设置",
+      "feature": "（未填写）",
+      "title": "用餐剩余时长提示",
+      "seq": 579
+    },
+    {
+      "id": "s580-foh-guest-duration-scenarios-用餐剩余时长提示后不允许下单",
+      "sceneDesc": "开启后，在选定产线（POS、POS GO、PayPad、eMenu、SDI）于用餐剩余时长提示后禁止食客自助下单；对应产线须先启用用餐时长限制。",
+      "moduleName": "下单设置",
+      "feature": "（未填写）",
+      "title": "用餐剩余时长提示后不允许下单",
+      "seq": 580
+    },
+    {
+      "id": "s581-foh-guest-order-type-菜单送厨方式",
+      "sceneDesc": "设置菜单下单后自动送厨还是需要服务员在POS上手动操作送厨",
+      "moduleName": "下单设置",
+      "feature": "（未填写）",
+      "title": "菜单送厨方式",
+      "seq": 581
+    },
+    {
+      "id": "s592-foh-table-start-flow-不允许一桌多单",
+      "sceneDesc": "设置一个桌子是否允许创建多个订单",
+      "moduleName": "下单设置",
+      "feature": "（未填写）",
+      "title": "不允许一桌多单",
+      "seq": 592
+    },
+    {
+      "id": "s599-foh-guest-menu-home-选择您想展示的菜单组",
+      "sceneDesc": "按产线（Kiosk、eMenu、SDI、Online Order）配置要展示的菜单组；点击选择菜单组，以对话框勾选；未选择菜单组的产线不生效。",
+      "moduleName": "展示设置",
+      "feature": "（未填写）",
+      "title": "选择您想展示的菜单组",
+      "seq": 599
+    },
+    {
+      "id": "s600-foh-guest-menu-home-纯展示模式",
+      "sceneDesc": "勾选产线后，菜单为纯展示（不可加购）。",
+      "moduleName": "展示设置",
+      "feature": "（未填写）",
+      "title": "纯展示模式",
+      "seq": 600
+    },
+    {
+      "id": "s601-foh-guest-menu-home-品类模式",
+      "sceneDesc": "开启后，在选定产线（eMenu、SDI）使用品类先分类再选菜的点单形式（非普通扁平菜单）。",
+      "moduleName": "展示设置",
+      "feature": "（未填写）",
+      "title": "品类模式",
+      "seq": 601
+    },
+    {
+      "id": "s602-foh-guest-menu-home-菜单分类模式",
+      "sceneDesc": "开启后，在选定产线（eMenu、SDI）按菜单分类层级先浏览再选菜（非普通扁平菜单）。",
+      "moduleName": "展示设置",
+      "feature": "（未填写）",
+      "title": "菜单分类模式",
+      "seq": 602
+    },
+    {
+      "id": "s604-foh-guest-menu-home-eMenu-Pro模式",
+      "sceneDesc": "设置所有设备/桌子的菜单页面展示形式（普通/高级设计稿）",
+      "moduleName": "展示设置",
+      "feature": "（未填写）",
+      "title": "eMenu Pro模式",
+      "seq": 604
+    },
+    {
+      "id": "s606-foh-guest-menu-body-展示菜单类名称",
+      "sceneDesc": "开启后，在选定产线（eMenu、SDI、Kiosk、Online Order）的菜单树形结构中展示类名称。",
+      "moduleName": "展示设置",
+      "feature": "（未填写）",
+      "title": "展示菜单类名称",
+      "seq": 606
+    },
+    {
+      "id": "s607-foh-guest-menu-body-菜单图片展示模式",
+      "sceneDesc": "按产线独立启用菜单图片展示模式（默认/大图模式/小图模式）及例外菜品。",
+      "moduleName": "展示设置",
+      "feature": "（未填写）",
+      "title": "菜单图片展示模式",
+      "seq": 607
+    },
+    {
+      "id": "s608-foh-guest-menu-body-展示菜详情",
+      "sceneDesc": "开启后，按产线配置菜详情展示；点击选择商品，以组/类/菜结构勾选。",
+      "moduleName": "展示设置",
+      "feature": "（未填写）",
+      "title": "展示菜详情",
+      "seq": 608
+    },
+    {
+      "id": "s611-foh-guest-menu-home-展示开始按钮",
+      "sceneDesc": "勾选产线后，在首页展示「开始点单」入口。",
+      "moduleName": "展示设置",
+      "feature": "（未填写）",
+      "title": "展示开始按钮",
+      "seq": 611
+    },
+    {
+      "id": "s616-foh-guest-menu-body-展示菜单送厨状态",
+      "sceneDesc": "开启后，在选定产线（eMenu、SDI）购物车中展示菜单送厨状态。",
+      "moduleName": "展示设置",
+      "feature": "（未填写）",
+      "title": "展示菜单送厨状态",
+      "seq": 616
+    },
+    {
+      "id": "s617-foh-guest-menu-body-购物车展示订单价格",
+      "sceneDesc": "开启后，在选定产线（eMenu、SDI、Kiosk、Online Order）购物车中展示订单价格。",
+      "moduleName": "展示设置",
+      "feature": "（未填写）",
+      "title": "购物车展示订单价格",
+      "seq": 617
+    },
+    {
+      "id": "s618-foh-guest-menu-body-菜品售罄自动隐藏",
+      "sceneDesc": "开启后，在选定产线（POS、POS GO、PayPad、eMenu、SDI、Kiosk、Online Order）自动隐藏已售罄菜品。",
+      "moduleName": "展示设置",
+      "feature": "（未填写）",
+      "title": "菜品售罄自动隐藏",
+      "seq": 618
+    },
+    {
+      "id": "s619-foh-table-start-flow-人数选择",
+      "sceneDesc": "开启后在所选产线展示人数选择页；关闭则跳过。适用产线：Kiosk、eMenu、POS、POS GO、PayPad、SDI。",
+      "moduleName": "用户设置",
+      "feature": "（未填写）",
+      "title": "人数选择",
+      "seq": 619
+    },
+    {
+      "id": "s620-foh-guest-pre-order-限制食客提前开单",
+      "sceneDesc": "开启后在所选产线（eMenu、SDI）限制食客直接开单（需服务员授权并绑定小费）。",
+      "moduleName": "用户设置",
+      "feature": "（未填写）",
+      "title": "限制食客提前开单",
+      "seq": 620
+    },
+    {
+      "id": "s621-foh-table-start-flow-允许食客更改人数",
+      "sceneDesc": "设置是否允许食客更改就餐人数。关闭后需要服务员输入密码更改当前桌人数",
+      "moduleName": "用户设置",
+      "feature": "（未填写）",
+      "title": "允许食客更改人数",
+      "seq": 621
+    },
+    {
+      "id": "s622-foh-guest-registration-登录-注册需要短信验证码",
+      "sceneDesc": "默认开启（无开关）：在选定产线（Kiosk/eMenu/CDS/SDI/Online Order）的会员登录/注册页要求短信验证码（须开通会员且该产线 623≠不展示登录页；合并原 seq 508）。",
+      "moduleName": "用户设置",
+      "feature": "（未填写）",
+      "title": "登录/注册需要短信验证码",
+      "seq": 622
+    },
+    {
+      "id": "s623-foh-guest-registration-点单前会员身份策略",
+      "sceneDesc": "各产线（Kiosk/eMenu/SDI/Online Order）点单前会员身份：可选登录、强制登录/注册，或不展示登录页；每产线三选一；合并原 seq 623/624 布尔开关。",
+      "moduleName": "用户设置",
+      "feature": "（未填写）",
+      "title": "点单前会员身份策略",
+      "seq": 623
+    },
+    {
+      "id": "s625-foh-table-start-flow-儿童将不参与下单限制规则的人数计算",
+      "sceneDesc": "设置儿童是否参与下单限制规则的人数计算",
+      "moduleName": "用户设置",
+      "feature": "（未填写）",
+      "title": "儿童将不参与下单限制规则的人数计算",
+      "seq": 625
+    },
+    {
+      "id": "s626-foh-guest-pre-order-下单前-需要服务员授权",
+      "sceneDesc": "开启后在所选产线（eMenu、SDI）食客下单前需要服务员授权。",
+      "moduleName": "用户设置",
+      "feature": "（未填写）",
+      "title": "下单前,需要服务员授权",
+      "seq": 626
+    },
+    {
+      "id": "s627-foh-guest-pre-order-下单前允许食客切换品类",
+      "sceneDesc": "开启后在所选产线（eMenu、SDI）允许食客下单前切换品类菜单；关闭时需服务员授权。",
+      "moduleName": "用户设置",
+      "feature": "（未填写）",
+      "title": "下单前允许食客切换品类",
+      "seq": 627
+    },
+    {
+      "id": "s637-foh-pos-order-alerts-指定菜品提醒",
+      "sceneDesc": "勾选产线后，订单含指定菜品时向员工发送消息提醒；指定菜品列表配置见业务规则（原型待接）。",
+      "moduleName": "消息通知",
+      "feature": "（未填写）",
+      "title": "指定菜品提醒",
+      "seq": 637
+    },
+    {
+      "id": "s638-foh-pos-order-alerts-新订单提醒",
+      "sceneDesc": "勾选产线后，该产线有新订单进入店内时向员工发送消息提醒（不发顾客短信）。",
+      "moduleName": "消息通知",
+      "feature": "（未填写）",
+      "title": "新订单提醒",
+      "seq": 638
+    },
+    {
+      "id": "s639-foh-pos-order-alerts-追单提醒",
+      "sceneDesc": "勾选产线后，该产线在追单/加菜时向员工发送消息提醒（不发顾客短信）。",
+      "moduleName": "消息通知",
+      "feature": "（未填写）",
+      "title": "追单提醒",
+      "seq": 639
+    },
+    {
+      "id": "s640-foh-tableside-service-呼叫服务员时间间隔",
+      "sceneDesc": "按产线（eMenu、SDI）启用并配置同一桌/会话重复发起呼叫的最小间隔（秒）；0 表示启用但不限制间隔。",
+      "moduleName": "消息通知",
+      "feature": "（未填写）",
+      "title": "呼叫服务员时间间隔",
+      "seq": 640
+    },
+    {
+      "id": "s641-foh-tableside-service-未开单可呼叫服务员",
+      "sceneDesc": "开启后，在选定产线（eMenu、SDI）未开单（无有效订单）时仍允许发起桌边服务请求。",
+      "moduleName": "消息通知",
+      "feature": "（未填写）",
+      "title": "未开单可呼叫服务员",
+      "seq": 641
+    },
+    {
+      "id": "s642-foh-table-clear-ops-展示清桌快捷按钮",
+      "sceneDesc": "设置是否展示清桌快捷按钮（eMenu）",
+      "moduleName": "服务员设置",
+      "feature": "（未填写）",
+      "title": "展示清桌快捷按钮",
+      "seq": 642
+    },
+    {
+      "id": "s643-foh-table-start-flow-开单前-换桌",
+      "sceneDesc": "可按产线设置开单前不启用换桌、可选换桌或必须换桌。适用产线：POS、POS GO、PayPad、eMenu、SDI。",
+      "moduleName": "服务员设置",
+      "feature": "（未填写）",
+      "title": "开单前，换桌",
+      "seq": 643
+    },
+    {
+      "id": "s645-foh-guest-menu-body-菜品名称字体大小",
+      "sceneDesc": "为各产线分别设置菜品名称字号（8–72px，默认 16）；取消勾选表示该产线不启用此设置。",
+      "moduleName": "菜单样式",
+      "feature": "（未填写）",
+      "title": "菜品名称字体大小",
+      "seq": 645
+    },
+    {
+      "id": "s652-foh-guest-facing-locale-选择语言",
+      "sceneDesc": "设置终端支持的语言列表",
+      "moduleName": "多语言",
+      "feature": "（未填写）",
+      "title": "选择语言",
+      "seq": 652
+    },
+    {
+      "id": "s653-foh-guest-facing-locale-默认语言",
+      "sceneDesc": "设置终端的默认语言",
+      "moduleName": "多语言",
+      "feature": "（未填写）",
+      "title": "默认语言",
+      "seq": 653
+    },
+    {
+      "id": "s673-foh-wait-time-display-预计等待时长计算设置",
+      "sceneDesc": "全店统一的排队杯数→预计等待时长换算规则；各产线展示开关、区间与样式均依据本设置计算。",
+      "moduleName": "等待时长",
+      "feature": "（未填写）",
+      "title": "预计等待时长计算设置",
+      "seq": 673
+    },
+    {
+      "id": "s674-foh-guest-duration-scenarios-用餐时长限制",
+      "sceneDesc": "按 POS、POS GO、PayPad、eMenu、SDI 分别启用并设置用餐时长限制（1–1440 分钟）；关联的展示、倒计时、提示和禁下单功能仅在已启用限制的产线生效。",
+      "moduleName": "下单设置",
+      "feature": "（未填写）",
+      "title": "用餐时长限制",
+      "seq": 674
+    }
+  ],
+  "linesBySeq": {
+    "75": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "107": [
+      "emenu",
+      "kiosk",
+      "paypad",
+      "pos",
+      "pos-go",
+      "sdi"
+    ],
+    "110": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "111": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "113": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "114": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "118": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "120": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "121": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "122": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "123": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "125": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "132": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "133": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "135": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "137": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "138": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "139": [
+      "emenu",
+      "kiosk",
+      "online-order",
+      "paypad",
+      "pos",
+      "pos-go",
+      "sdi"
+    ],
+    "141": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "145": [
+      "emenu",
+      "kiosk",
+      "online-order",
+      "paypad",
+      "pos",
+      "pos-go",
+      "sdi"
+    ],
+    "148": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "151": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "152": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "153": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "165": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "166": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "174": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "175": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "178": [
+      "emenu",
+      "kiosk",
+      "online-order",
+      "paypad",
+      "pos",
+      "pos-go",
+      "sdi"
+    ],
+    "193": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "194": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "195": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "196": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "197": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "198": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "199": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "200": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "201": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "202": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "203": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "204": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "205": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "206": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "207": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "208": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "209": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "210": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "211": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "212": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "213": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "214": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "215": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "216": [
+      "paypad",
+      "pos"
+    ],
+    "217": [
+      "paypad",
+      "pos"
+    ],
+    "218": [
+      "paypad",
+      "pos"
+    ],
+    "219": [
+      "paypad",
+      "pos"
+    ],
+    "220": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "221": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "222": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "223": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "248": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "251": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "331": [
+      "store-wide"
+    ],
+    "332": [
+      "emenu",
+      "kiosk",
+      "online-order",
+      "paypad",
+      "pos",
+      "pos-go",
+      "sdi"
+    ],
+    "333": [
+      "store-wide"
+    ],
+    "345": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "346": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "347": [
+      "emenu",
+      "paypad",
+      "pos-go"
+    ],
+    "348": [
+      "emenu",
+      "kiosk",
+      "paypad",
+      "pos",
+      "pos-go",
+      "sdi"
+    ],
+    "349": [
+      "paypad",
+      "pos-go"
+    ],
+    "350": [
+      "paypad",
+      "pos"
+    ],
+    "351": [
+      "emenu",
+      "paypad",
+      "pos-go"
+    ],
+    "443": [
+      "store-wide"
+    ],
+    "483": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "484": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "485": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "486": [
+      "paypad",
+      "pos",
+      "pos-go"
+    ],
+    "487": [
+      "emenu",
+      "kiosk",
+      "online-order",
+      "sdi"
+    ],
+    "488": [
+      "emenu",
+      "kiosk",
+      "online-order",
+      "sdi"
+    ],
+    "489": [
+      "emenu",
+      "kiosk",
+      "online-order",
+      "sdi"
+    ],
+    "490": [
+      "emenu",
+      "kiosk",
+      "online-order",
+      "sdi"
+    ],
+    "491": [
+      "emenu",
+      "kiosk",
+      "online-order",
+      "sdi"
+    ],
+    "502": [
+      "kiosk"
+    ],
+    "503": [
+      "kiosk"
+    ],
+    "504": [
+      "kiosk"
+    ],
+    "505": [
+      "kiosk"
+    ],
+    "506": [
+      "emenu",
+      "kiosk",
+      "online-order",
+      "sdi"
+    ],
+    "507": [
+      "emenu",
+      "kiosk",
+      "online-order",
+      "sdi"
+    ],
+    "509": [
+      "cds",
+      "emenu",
+      "kiosk",
+      "online-order",
+      "sdi"
+    ],
+    "510": [
+      "cds",
+      "emenu",
+      "kiosk",
+      "online-order",
+      "sdi"
+    ],
+    "515": [
+      "emenu",
+      "kiosk",
+      "online-order",
+      "paypad",
+      "pos",
+      "pos-go",
+      "sdi"
+    ],
+    "516": [
+      "emenu",
+      "kiosk",
+      "online-order",
+      "paypad",
+      "pos",
+      "pos-go",
+      "sdi"
+    ],
+    "517": [
+      "emenu",
+      "kiosk",
+      "online-order",
+      "sdi"
+    ],
+    "518": [
+      "emenu",
+      "kiosk",
+      "online-order",
+      "sdi"
+    ],
+    "519": [
+      "emenu",
+      "kiosk",
+      "online-order",
+      "paypad",
+      "pos",
+      "pos-go",
+      "sdi"
+    ],
+    "520": [
+      "kiosk"
+    ],
+    "521": [
+      "emenu",
+      "kiosk",
+      "online-order",
+      "sdi"
+    ],
+    "522": [
+      "emenu",
+      "kiosk",
+      "online-order",
+      "sdi"
+    ],
+    "523": [
+      "emenu",
+      "kiosk",
+      "online-order",
+      "sdi"
+    ],
+    "524": [
+      "emenu",
+      "kiosk",
+      "online-order",
+      "sdi"
+    ],
+    "525": [
+      "emenu",
+      "kiosk",
+      "online-order",
+      "sdi"
+    ],
+    "526": [
+      "emenu",
+      "kiosk",
+      "online-order",
+      "sdi"
+    ],
+    "528": [
+      "emenu",
+      "kiosk",
+      "online-order",
+      "paypad",
+      "pos",
+      "pos-go",
+      "sdi"
+    ],
+    "532": [
+      "emenu",
+      "kiosk"
+    ],
+    "534": [
+      "emenu",
+      "kiosk",
+      "paypad",
+      "pos",
+      "pos-go",
+      "sdi"
+    ],
+    "535": [
+      "kiosk"
+    ],
+    "536": [
+      "kiosk"
+    ],
+    "537": [
+      "kiosk"
+    ],
+    "538": [
+      "kiosk"
+    ],
+    "539": [
+      "kiosk"
+    ],
+    "540": [
+      "kiosk"
+    ],
+    "571": [
+      "emenu",
+      "sdi"
+    ],
+    "572": [
+      "emenu",
+      "sdi"
+    ],
+    "573": [
+      "emenu",
+      "sdi"
+    ],
+    "574": [
+      "emenu",
+      "sdi"
+    ],
+    "575": [
+      "emenu",
+      "sdi"
+    ],
+    "577": [
+      "emenu",
+      "paypad",
+      "pos",
+      "pos-go",
+      "sdi"
+    ],
+    "578": [
+      "emenu",
+      "paypad",
+      "pos",
+      "pos-go",
+      "sdi"
+    ],
+    "579": [
+      "emenu",
+      "paypad",
+      "pos",
+      "pos-go",
+      "sdi"
+    ],
+    "580": [
+      "emenu",
+      "paypad",
+      "pos",
+      "pos-go",
+      "sdi"
+    ],
+    "581": [
+      "emenu",
+      "kiosk",
+      "online-order",
+      "sdi"
+    ],
+    "592": [
+      "emenu",
+      "kiosk",
+      "online-order",
+      "sdi"
+    ],
+    "599": [
+      "emenu",
+      "kiosk",
+      "online-order",
+      "sdi"
+    ],
+    "600": [
+      "emenu",
+      "kiosk",
+      "sdi"
+    ],
+    "601": [
+      "emenu",
+      "sdi"
+    ],
+    "602": [
+      "emenu",
+      "sdi"
+    ],
+    "604": [
+      "emenu",
+      "kiosk"
+    ],
+    "606": [
+      "emenu",
+      "kiosk",
+      "online-order",
+      "sdi"
+    ],
+    "607": [
+      "emenu",
+      "kiosk",
+      "online-order",
+      "sdi"
+    ],
+    "608": [
+      "emenu",
+      "kiosk",
+      "online-order",
+      "sdi"
+    ],
+    "611": [
+      "emenu",
+      "kiosk",
+      "online-order",
+      "sdi"
+    ],
+    "616": [
+      "emenu",
+      "sdi"
+    ],
+    "617": [
+      "emenu",
+      "kiosk",
+      "online-order",
+      "sdi"
+    ],
+    "618": [
+      "emenu",
+      "kiosk",
+      "online-order",
+      "paypad",
+      "pos",
+      "pos-go",
+      "sdi"
+    ],
+    "619": [
+      "emenu",
+      "kiosk",
+      "paypad",
+      "pos",
+      "pos-go",
+      "sdi"
+    ],
+    "620": [
+      "emenu",
+      "sdi"
+    ],
+    "621": [
+      "emenu",
+      "sdi"
+    ],
+    "622": [
+      "cds",
+      "emenu",
+      "kiosk",
+      "online-order",
+      "sdi"
+    ],
+    "623": [
+      "emenu",
+      "kiosk",
+      "online-order",
+      "sdi"
+    ],
+    "625": [
+      "emenu",
+      "paypad",
+      "pos",
+      "pos-go",
+      "sdi"
+    ],
+    "626": [
+      "emenu",
+      "sdi"
+    ],
+    "627": [
+      "emenu",
+      "sdi"
+    ],
+    "637": [
+      "emenu",
+      "kiosk",
+      "online-order",
+      "sdi"
+    ],
+    "638": [
+      "emenu",
+      "kiosk",
+      "online-order",
+      "sdi"
+    ],
+    "639": [
+      "emenu",
+      "sdi"
+    ],
+    "640": [
+      "emenu",
+      "sdi"
+    ],
+    "641": [
+      "emenu",
+      "sdi"
+    ],
+    "642": [
+      "emenu"
+    ],
+    "643": [
+      "emenu",
+      "paypad",
+      "pos",
+      "pos-go",
+      "sdi"
+    ],
+    "645": [
+      "emenu",
+      "kiosk",
+      "online-order",
+      "sdi"
+    ],
+    "652": [
+      "cds",
+      "emenu",
+      "kiosk",
+      "sdi"
+    ],
+    "653": [
+      "cds",
+      "emenu",
+      "kiosk",
+      "sdi"
+    ],
+    "673": [
+      "store-wide"
+    ],
+    "674": [
+      "emenu",
+      "paypad",
+      "pos",
+      "pos-go",
+      "sdi"
+    ]
+  },
+  "storageBySeq": {
+    "75": "75-auto-logout-minutes-lines",
+    "107": "107-table-selection-page-lines",
+    "110": "110-order-timeout-reminder-lines",
+    "111": "111-max-guests-per-order-lines",
+    "113": "113-send-kitchen-whole-order-lines",
+    "114": "114-pos-kitchen-send-trigger-lines",
+    "118": "118-menu-search-lines",
+    "120": "120-send-kitchen-after-checkout-lines",
+    "121": "121-order-qty-decimal-lines",
+    "122": "122-reduce-dish-auto-redirect-lines",
+    "123": "123-pos-kitchen-send-trigger-lines",
+    "135": "135-course-sequence-mode-lines",
+    "137": "137-show-asap-order-time-lines",
+    "138": "138-custom-order-lines",
+    "139": "139-pos-combo-auto-finish-lines",
+    "141": "141-kitchen-line-edit-lines",
+    "145": "145-pos-combo-show-subitem-price-lines",
+    "148": "148-price-compare-mode-lines",
+    "151": "151-find-order-show-total-lines",
+    "152": "152-find-order-close-all-btn-lines",
+    "153": "153-find-order-untipped-default-lines",
+    "165": "165-default-main-screen-lines",
+    "166": "166-auto-logout-after-operation-lines",
+    "175": "175-login-ignore-special-chars-lines",
+    "178": "178-dish-sequence-id-display-lines",
+    "196": "196-custom-divider-name-lines",
+    "216": "216-menu-group-flat-display-lines",
+    "217": "217-category-layout-lines",
+    "218": "218-item-layout-lines",
+    "219": "219-button-color-full-fill-lines",
+    "220": "220-show-dish-price-lines",
+    "221": "221-pre-payment-confirm-customer-lines",
+    "222": "222-customer-name-required-lines",
+    "223": "223-customer-phone-required-lines",
+    "248": "248-barcode-find-open-payment-lines",
+    "251": "251-find-order-print-receipt-type-lines",
+    "332": "332-voice-alert-product-lines",
+    "345": "345-kitchen-send-password-auth-lines",
+    "346": "346-home-password-auth-lines",
+    "347": "347-allow-change-server-lines",
+    "349": "349-emenu-server-readonly-dish-lines",
+    "350": "350-emenu-custom-message-lines",
+    "351": "351-clear-table-client-notification-lines",
+    "488": "488-guest-kiosk-flow-page-lines",
+    "489": "489-guest-kiosk-flow-page-lines",
+    "490": "490-guest-kiosk-flow-page-lines",
+    "491": "491-guest-kiosk-flow-page-lines",
+    "503": "503-table-delivery-meal-card-lines",
+    "504": "504-guest-phone-display-page-lines",
+    "505": "505-phone-required-lines",
+    "506": "506-guest-name-page-lines",
+    "507": "507-guest-name-page-lines",
+    "509": "509-show-account-points-lines",
+    "510": "510-privacy-default-lines",
+    "515": "515-guest-menu-show-serial-lines",
+    "516": "516-guest-menu-show-group-name-lines",
+    "517": "517-guest-menu-nav-position-enabled-lines",
+    "518": "518-guest-menu-expand-first-group-lines",
+    "519": "519-guest-menu-image-crop-lines",
+    "520": "520-guest-menu-combo-nav-lines",
+    "521": "521-order-remark-lines",
+    "522": "522-product-remark-lines",
+    "523": "523-combo-subitem-remark-lines",
+    "524": "524-guest-menu-waterfall-lines",
+    "525": "525-show-points-dishes-lines",
+    "526": "526-points-dish-position-enabled-lines",
+    "528": "528-guest-menu-zero-price-display-lines",
+    "532": "532-menusifu-brand-logo-lines",
+    "534": "534-auto-clear-table-lines",
+    "535": "535-wait-time-display-lines",
+    "536": "536-wait-time-display-lines",
+    "537": "537-wait-time-display-lines",
+    "538": "538-wait-time-display-lines",
+    "539": "539-wait-time-display-lines",
+    "540": "540-wait-time-display-lines",
+    "571": "571-guest-category-mode-lines",
+    "572": "572-hotpot-base-required-lines",
+    "573": "573-hotpot-base-still-show-lines",
+    "574": "574-hotpot-base-order-mode-lines",
+    "577": "577-guest-dining-duration-lines",
+    "578": "578-guest-dining-duration-lines",
+    "579": "579-guest-dining-duration-lines",
+    "580": "580-guest-dining-duration-lines",
+    "592": "592-single-table-no-multi-order-lines",
+    "599": "599-guest-menu-group-lines",
+    "600": "600-guest-menu-pure-display-lines",
+    "601": "601-guest-category-mode-lines",
+    "602": "602-menu-classification-mode-lines",
+    "604": "604-emenu-pro-mode-lines",
+    "606": "606-menu-class-name-display-lines",
+    "607": "607-menu-image-mode-lines",
+    "608": "608-guest-dish-detail-lines",
+    "611": "611-guest-menu-start-button-lines",
+    "616": "616-guest-menu-cart-lines",
+    "617": "617-guest-menu-cart-lines",
+    "618": "618-guest-menu-cart-lines",
+    "619": "619-party-size-selection-lines",
+    "620": "620-guest-emenu-auth-page-lines",
+    "621": "621-guest-change-party-size-lines",
+    "622": "622-sms-verification-lines",
+    "625": "625-child-excluded-from-order-limit-lines",
+    "626": "626-guest-emenu-auth-page-lines",
+    "627": "627-guest-category-mode-lines",
+    "640": "640-service-call-cooldown-lines",
+    "641": "641-tableside-service-call-before-order-lines",
+    "642": "642-clear-table-button-lines",
+    "643": "643-pre-order-change-table-lines",
+    "645": "645-dish-name-font-lines",
+    "652": "652-guest-facing-locales-by-line",
+    "653": "653-default-locale-by-line",
+    "674": "674-dining-duration-limit-lines"
+  },
+  "uiModulesBySeq": {
+    "110": [
+      "module-settings-ai-editable.ts",
+      "module-settings-catalog.ts",
+      "module-settings-delayed-kitchen-send-ui.ts",
+      "module-settings-guest-dish-detail-display-ui.ts",
+      "module-settings-guest-menu-group-by-line-ui.ts",
+      "module-settings-guest-menu-image-mode-ui.ts",
+      "module-settings-guest-menu-order-interval-ui.ts",
+      "module-settings-hotpot-half-surcharge-ui.ts",
+      "module-settings-order-numbering-ui.ts",
+      "module-settings-order-timeout-reminder-ui.ts",
+      "module-settings-product-remark-ui.ts",
+      "module-settings-store-brand-management-ui.ts",
+      "module-settings-tableside-service-call-ui.ts"
+    ],
+    "141": [
+      "module-settings-catalog.ts",
+      "module-settings-kitchen-line-edit-ui.ts",
+      "module-settings-toggle-ui.ts"
+    ],
+    "196": [
+      "module-settings-ai-editable.ts",
+      "module-settings-catalog.ts",
+      "module-settings-custom-divider-name-ui.ts",
+      "module-settings-emenu-custom-message-ui.ts",
+      "module-settings-pos-button-visibility-ui.ts",
+      "module-settings-toggle-ui.ts"
+    ],
+    "216": [
+      "module-settings-catalog.ts",
+      "module-settings-pos-menu-ui-layout-lines-ui.ts",
+      "module-settings-toggle-ui.ts"
+    ],
+    "217": [
+      "module-settings-catalog.ts",
+      "module-settings-default-main-screen-ui.ts",
+      "module-settings-pos-menu-ui-layout-lines-ui.ts",
+      "module-settings-toggle-ui.ts"
+    ],
+    "218": [
+      "module-settings-catalog.ts",
+      "module-settings-pos-menu-ui-layout-lines-ui.ts",
+      "module-settings-toggle-ui.ts"
+    ],
+    "219": [
+      "module-settings-catalog.ts",
+      "module-settings-pos-menu-ui-layout-lines-ui.ts",
+      "module-settings-toggle-ui.ts"
+    ],
+    "220": [
+      "module-settings-catalog.ts",
+      "module-settings-pos-menu-ui-layout-lines-ui.ts",
+      "module-settings-toggle-ui.ts"
+    ],
+    "221": [
+      "module-settings-catalog.ts",
+      "module-settings-pos-checkout-entry-lines-ui.ts",
+      "module-settings-toggle-ui.ts"
+    ],
+    "248": [
+      "module-settings-catalog.ts",
+      "module-settings-pos-checkout-entry-lines-ui.ts",
+      "module-settings-toggle-ui.ts"
+    ],
+    "349": [
+      "module-settings-catalog.ts",
+      "module-settings-emenu-server-readonly-dish-ui.ts",
+      "module-settings-toggle-ui.ts"
+    ],
+    "350": [
+      "module-settings-catalog.ts",
+      "module-settings-emenu-custom-message-ui.ts",
+      "module-settings-pos-menu-ui-layout-lines-ui.ts",
+      "module-settings-toggle-ui.ts"
+    ],
+    "502": [
+      "module-settings-auto-kitchen-send-payment-ui.ts",
+      "module-settings-catalog.ts",
+      "module-settings-toggle-ui.ts"
+    ],
+    "521": [
+      "module-settings-catalog.ts",
+      "module-settings-order-remark-lines-ui.ts",
+      "module-settings-toggle-ui.ts"
+    ],
+    "522": [
+      "module-settings-catalog.ts",
+      "module-settings-product-remark-ui.ts",
+      "module-settings-toggle-ui.ts"
+    ],
+    "523": [
+      "module-settings-catalog.ts",
+      "module-settings-combo-subitem-remark-lines-ui.ts",
+      "module-settings-toggle-ui.ts"
+    ],
+    "581": [
+      "module-settings-catalog.ts",
+      "module-settings-post-order-kitchen-send-mode-ui.ts"
+    ]
+  }
+}

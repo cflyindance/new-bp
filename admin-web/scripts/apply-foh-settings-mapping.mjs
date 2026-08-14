@@ -1,5 +1,5 @@
 /**
- * 将前厅管理中心 14 组分类写入 docs/项目文档/配置归类-分组映射.csv（方案 E）
+ * 将前厅管理中心 22 组分类写入 docs/项目文档/配置归类-分组映射.csv（方案 A）
  * 运行：node scripts/apply-foh-settings-mapping.mjs
  */
 import fs from "node:fs";
@@ -16,6 +16,7 @@ const mappingPath = [projectDocs, repoDocs]
   .find((p) => fs.existsSync(p));
 
 const fohAssign = buildFohAssignMap();
+const virtualCatalogSeqs = new Set([673]);
 
 function parseCsvLine(line) {
   const parts = [];
@@ -78,8 +79,9 @@ for (const line of lines) {
   }
 }
 
-if (updated !== fohAssign.size) {
-  throw new Error(`预期更新 ${fohAssign.size} 条前厅映射，实际更新 ${updated} 条`);
+const expectedCsvUpdates = [...fohAssign.keys()].filter((seq) => !virtualCatalogSeqs.has(seq)).length;
+if (updated !== expectedCsvUpdates) {
+  throw new Error(`预期更新 ${expectedCsvUpdates} 条前厅映射，实际更新 ${updated} 条`);
 }
 
 fs.writeFileSync(mappingPath, `${out.join("\n")}\n`, "utf8");

@@ -8,8 +8,12 @@ import { fileURLToPath } from "node:url";
 import { parseConfigMd } from "./lib/parse-bplant-config-md.mjs";
 import { isSettingsCatalogExcluded } from "./lib/settings-catalog-exclusions.mjs";
 import { filterRowsForSettingsHub } from "./lib/settings-hub-override.mjs";
+import { SETTINGS_CATALOG_VIRTUAL_ITEMS } from "./lib/settings-catalog-virtual-items.mjs";
 import { INTRA_GROUP_SORT_BY_SEQ } from "./lib/settings-intra-group-sort.mjs";
-import { buildCatalogSceneDesc } from "./lib/settings-catalog-scene-supplement.mjs";
+import {
+  buildCatalogSceneDesc,
+  buildCatalogTitle,
+} from "./lib/settings-catalog-scene-supplement.mjs";
 import {
   FOH_SETTINGS_GROUP_ORDER,
   FOH_SETTINGS_GROUP_TITLES,
@@ -24,31 +28,28 @@ const sourcePath = [projectDocsDir, docsDir].map((d) => path.join(d, "配置归�
   ?? path.join(projectDocsDir, "配置归类-终版.md");
 const outPath = path.join(projectDocsDir, "前厅管理中心-设置二级导航重设计方案.md");
 
-const titles = { ...FOH_SETTINGS_GROUP_TITLES, cds: "客显屏" };
+const titles = { ...FOH_SETTINGS_GROUP_TITLES };
 
 const reasons = {
   "foh-table-start-flow":
     "选桌页、人数页、就餐人数规则与开单前换桌/一桌多单；不含清桌与企台。",
   "foh-table-clear-ops":
-    "付款后/超时/手动清桌、iPad 清桌通知与更换企台；餐位平面图 seq 428 为独立功能页。",
-  "foh-pos-shell": "员工登录 POS 后的默认主界面与主页密码门禁。",
-  "foh-pos-menu-scope": "收银端菜单搜索、比价与堂吃/外食/iPad 时段菜单；不含组/类/菜布局。",
-  "foh-pos-menu-ui-layout": "POS 菜单区组/类/菜布局、价格展示、按钮样式与 iPad 电子菜单自定义消息。",
+    "付款后按产线延时自动清桌、手动清桌、iPad 清桌通知与更换企台；餐位平面图 seq 428 为独立功能页。",
+  "foh-pos-shell": "员工登录 POS 后的默认终端主界面、会话规则与主页密码门禁。",
+  "foh-pos-menu-scope": "收银端菜单搜索、比价、时段菜单，以及组/类/菜布局和界面展示。",
   "foh-pos-order-cart":
-    "订单行展示结构（座位/合并拆分/菜序/序号/数量）、减菜交互与 POS 客户姓名/电话必填；不含套餐点单。",
+    "点单内容展示、减菜交互、只读菜与送厨后调味权限，以及 POS 客户姓名/电话必填；不含套餐点单。",
   "foh-pos-combo-ordering": "自定义手写录菜、自动点完套餐与可调套餐子菜价格展示（139/145 按产线）。",
-  "foh-pos-buttons": "点单页按钮是否收入「更多」及工具栏按钮排序（193–215、483–486）。",
+  "foh-pos-buttons": "点单页操作按钮是否收入「更多」（193–215）。",
+  "foh-pos-order-toolbar": "点单页四区工具栏按钮排序/显隐，以及自定义分割线名称（483–486、196）。",
   "foh-kitchen-send-timing":
-    "收银侧送厨时机：延迟参数 → 手动送厨 → 打单/付款/结账自动送厨 → iPad 送厨密码；不含后厨出票规则。",
+    "收银侧送厨规则与权限：延迟参数 → 手动送厨 → 打单/付款/结账自动送厨 → iPad 送厨密码；不含后厨出票规则。",
   "foh-pos-find-order-list":
-    "POS/PayPad 找单列表默认筛选、汇总展示、批量关单与找单页打印收据类型。",
-  "foh-pos-checkout-entry": "条码找单进付款界面、支付前服务员二次确认客户信息。",
-  "foh-pos-notification-control":
-    "POS/员工端通知类型总开关与新单语音播报；地基配置，须先于订单提醒与桌边 Service Request 联动。",
+    "POS/PayPad 找单列表默认筛选、汇总展示、批量关单、打印收据，以及条码找单进付款和支付前客户确认。",
   "foh-pos-order-alerts":
-    "扫码/线上下单等渠道的店内员工订单消息（不发顾客短信）；新单、追单、指定菜品按产线配置。",
+    "POS/员工端通知类型、新单语音播报，以及扫码/线上下单等渠道的店内员工订单消息；新单、追单、指定菜品按产线配置。",
   "foh-guest-order-type":
-    "堂吃/外带/来取范围、订单类型与取餐方式页、号码牌与送餐到桌餐牌号；先定怎么吃、怎么取。",
+    "堂吃/外带/来取范围、订单类型与取餐方式页、号码牌、送餐到桌餐牌号，以及食客端送厨规则。",
   "foh-guest-registration":
     "点单前会员身份、短信验证码，及手机号/姓名登记与隐私条款默认勾选。",
   "foh-guest-pre-order":
@@ -58,18 +59,16 @@ const reasons = {
   "foh-guest-menu-body":
     "菜单页视觉（类名/图片/详情/字号）、积分露出、菜单树导航/瀑布流，及购物车展示。",
   "foh-guest-facing-locale": "食客端（eMenu/Kiosk/客显）可选语言列表与默认语言（652/653）。",
-  "foh-guest-kitchen-send": "C 端菜单送厨方式与可自动送厨的支付状态；与 POS 送厨时机分轨。",
   "foh-guest-hotpot": "锅底必选/下单方式/加收与下单后仍展示；无火锅业态可跳过。",
   "foh-guest-duration-scenarios":
     "按时计价场景、自助餐品类先下单与用餐时长展示/提示/禁下单；无 KTV/自助餐/限时用餐可跳过。",
-  "foh-tableside-service": "桌边呼叫服务员、服务类型与订单/商品/套餐备注。",
+  "foh-tableside-service": "桌边呼叫服务员及服务类型。",
+  "foh-guest-order-notes": "订单、商品与套餐子项备注开关。",
   "foh-wait-time-display":
     "Kiosk / Online Order 点单页预计等待时长展示、区间规则与样式；主开关 + 产线多选。",
-  cds:
-    "客显屏封面/Logo（461/462）与 Pickup/Delivery 场景启用（466）；界面语言见 `foh-guest-facing-locale`。",
 };
 
-const assignMap = { ...FOH_SETTINGS_ASSIGN_MAP, cds: [461, 462, 466, 10] };
+const assignMap = { ...FOH_SETTINGS_ASSIGN_MAP };
 
 const assign = new Map();
 for (const [key, seqs] of Object.entries(assignMap)) {
@@ -106,10 +105,21 @@ function sortItemsInGroup(items) {
 }
 
 const md = fs.readFileSync(sourcePath, "utf8");
-const rows = filterRowsForSettingsHub(parseConfigMd(md), "前厅管理中心").filter(
-  (r) => !isSettingsCatalogExcluded(r.seq),
+const sourceRows = filterRowsForSettingsHub(parseConfigMd(md), "前厅管理中心").filter(
+  (r) => !isSettingsCatalogExcluded(r.seq) && assign.has(r.seq),
 );
-const order = [...FOH_SETTINGS_GROUP_ORDER, "cds"];
+const virtualRows = SETTINGS_CATALOG_VIRTUAL_ITEMS.filter(
+  (item) => item.settingsPath === "/operations/queue-call/settings" && assign.has(item.seq),
+).map((item) => ({
+  seq: item.seq,
+  nav: "虚拟设置",
+  moduleName: item.moduleName,
+  feature: item.feature,
+  title: item.title,
+  sceneDesc: item.sceneDesc,
+}));
+const rows = [...sourceRows, ...virtualRows];
+const order = [...FOH_SETTINGS_GROUP_ORDER];
 
 const missing = rows.filter((r) => !assign.has(r.seq)).map((r) => r.seq);
 if (missing.length) {
@@ -121,6 +131,7 @@ for (const r of rows) {
   const key = assign.get(r.seq);
   by.get(key).push({
     ...r,
+    title: buildCatalogTitle(r.seq, r.title),
     terminal: inferTerminal(r.seq, r.nav),
   });
 }
@@ -131,8 +142,8 @@ const push = (...xs) => lines.push(...xs);
 push(
   "# 前厅管理中心 · 设置二级导航重设计方案",
   "",
-  "> 文档版本：v3.0（方案 E：员工端 7 组 + 食客端 7 组，共 14 组；按配置路径排序）  ",
-  "> 数据范围：前厅设置 catalog 条数见 §3 合计（含 hub override 自会员中心 v1.20–v1.24）  ",
+  "> 文档版本：v4.0（方案 A：员工端 11 组 + 食客端 11 组，共 22 组）",
+  "> 数据范围：复杂版本前厅设置 catalog 154 项；MVP 20 组、119 项",
   "> 竞品参考：Toast / Clover / Square / Peblla / Snackpass 商家后台结构文档及《餐饮行业竞品后台信息架构深度分析》",
   "",
   "---",
@@ -150,7 +161,7 @@ push(
   "",
   "### 1.2 设计目标",
   "",
-  "- 二级导航收敛为 **12 个** 有餐饮场景语义的分类（方案 D-紧凑；单组 ≤22 条；组名不含 POS/食客端等产品线）",
+  "- 二级导航收敛为 **22 个** 餐饮场景分类，员工端与食客端各 11 组",
   "- 每条功能设置有明确归属与归类理由",
   "- 为 `docs/项目文档/配置归类-分组映射.csv` 提供可执行的 `groupTitle` / `groupKey`",
   "- **不修改** `配置归类-终版.md` 原文",
@@ -175,7 +186,7 @@ push(
   "",
   "---",
   "",
-  "## 3. 推荐二级导航结构（12 组，方案 D-紧凑，已确认）",
+  "## 3. 推荐二级导航结构（22 组，方案 A，已确认）",
   "",
   "| 序号 | groupTitle | groupKey | 条数 | 说明 |",
   "|------|------------|----------|------|------|",
@@ -191,19 +202,20 @@ for (let i = 0; i < order.length; i++) {
 push(
   `| | **合计** | | **${total}** | |`,
   "",
-  "### 3.0 v3.5 变更说明（场景点餐拆 3 组，已确认）",
+  "### 3.0 v4.0 变更说明（22 组信息架构收敛，已确认）",
   "",
-  "原 **`foh-guest-scenario-dining`（场景点餐，13 条）** 拆为：",
+  "在保留员工端/食客端各 11 组的前提下，合并过细分类并修正边界：",
   "",
-  "| 新组 | groupKey | 条数 | seq |",
-  "|------|----------|------|-----|",
-  "| 食客端送厨 | `foh-guest-kitchen-send` | 2 | 581、502 |",
-  "| 火锅点餐 | `foh-guest-hotpot` | 4 | 572、574、573、575 |",
-  "| 时长与自助餐 | `foh-guest-duration-scenarios` | 6 | 443、571、577–580 |",
+  "| 调整 | 目标组 | seq |",
+  "|------|--------|-----|",
+  "| 菜单查找与布局合并 | `foh-pos-menu-scope` | 118、174、148、348、216–220、350 |",
+  "| 分割线/结账入口合并 | `foh-pos-order-toolbar` / `foh-pos-find-order-list` | 196；248、221 |",
+  "| 食客端送厨并入履约 | `foh-guest-order-type` | 581、502 |",
+  "| 桌边服务拆出点单备注 | `foh-guest-order-notes` | 521–523 |",
   "",
-  "侧栏顺序：… → 菜单展示与购物车 → **食客端送厨 → 火锅点餐 → 时长与自助餐** → 桌边服务 → …",
+  "seq 164、176、177 从当前目录排除；保留设置的交互、存储和产线集合不变。",
   "",
-  "书签：`foh-guest-scenario-dining` / `guest-scenario-dining` / `guest-channel-kitchen-send` → `foh-guest-kitchen-send`；`guest-hotpot` → `foh-guest-hotpot`；`guest-duration-scenarios` → `foh-guest-duration-scenarios`。",
+  "以下小节为历史演进记录；当前结构以 §3 主表与本节为准。",
   "",
   "### 3.0.1 v3.4 变更说明（侧栏员工端/食客端视觉分隔，已确认）",
   "",
@@ -230,8 +242,8 @@ push(
   "",
   "| 新组 | groupKey | 条数 | seq |",
   "|------|----------|------|-----|",
-  "| 选桌与开台流程 | `foh-table-start-flow` | 8 | 107、619、111、625、621、643、644、592 |",
-  "| 清桌与企台 | `foh-table-clear-ops` | 5 | 169、534、642、351、347 |",
+  "| 选桌与开台流程 | `foh-table-start-flow` | 7 | 107、619、111、625、621、643、592 |",
+  "| 清桌与企台 | `foh-table-clear-ops` | 4 | 534、642、351、347 |",
   "",
   "侧栏顺序：**选桌与开台流程 → 清桌与企台** → 登录与主界面 → …",
   "",
@@ -348,8 +360,7 @@ push(
   "|-----|----------|------|",
   "| 107 | 跳过选桌 | 前厅 · `tables-floor` |",
   "| 619 | 人数选择 | 前厅 · `tables-floor` |",
-  "| 643 | 开单前,换桌 | 前厅 · `tables-floor` |",
-  "| 644 | 开单前,必换桌 | 前厅 · `tables-floor` |",
+  "| 643 | 开单前，换桌 | 前厅 · `tables-floor` |",
   "| 592 | 不允许一桌多单 | 前厅 · `tables-floor` |",
   "| 108 | 跳过选择人数 | 前厅 · `pos-order-init` |",
   "| 111 | 每单最多客人数量 | 前厅 · `pos-order-init` |",
@@ -370,7 +381,7 @@ push(
   "| 533 | 选择桌子页面 | 前厅 · `tables-floor` |",
   "| 110 | 点单超时提醒(分钟) | 前厅 · `pos-order-toolbar` |",
   "",
-  "订单中心 `order-init-scenario` 仅保留 POS 通用开单 **107/108/111/126/619/625/643/644/592**（9 条；v1.13 再迁 8 条，仅留 126）；**593** 归商品管理（catalog 不展示）。",
+  "订单中心 `order-init-scenario` 仅保留 POS 通用开单 **107/108/111/126/619/625/643/592**（8 条；v1.13 再迁 7 条，仅留 126）；**593** 归商品管理（catalog 不展示）。",
   "",
   "### 3.4 v1.11 变更说明（送厨策略方案 B，已确认）",
   "",
@@ -508,7 +519,7 @@ for (let i = 0; i < order.length; i++) {
   if (k === "foh-table-start-flow") {
     push(
       "",
-      "**组内展示顺序**：107 选桌页 → 619 人数页 → 111/625/621 人数规则 → 643/644 开单前换桌 → 592 一桌多单。",
+      "**组内展示顺序**：107 选桌页 → 619 人数页 → 111/625/621 人数规则 → 643 开单前换桌三态矩阵 → 592 一桌多单。",
       "",
       "**107/533** 为选桌 SSOT；**108/619** 为人数页 SSOT；**126** 默认单型留订单中心。",
       "",
@@ -517,11 +528,11 @@ for (let i = 0; i < order.length; i++) {
   if (k === "foh-table-clear-ops") {
     push(
       "",
-      "**组内展示顺序**：169 付款后清桌 → 534 自动清桌 → 642 清桌按钮 → 351 清桌通知 → 347 更换企台。",
+      "**组内展示顺序**：534 付款后自动清桌 → 642 展示清桌快捷按钮 → 351 清桌通知 → 347 更换企台；原 169 已合并至 534。",
       "",
     );
   }
-  if (k === "pos-button-visibility") {
+  if (k === "foh-pos-buttons") {
     push(
       "",
       "**组内展示顺序**：193–195 删单/移单/清桌 → 197–212 常见按键 → 213–215 其他按键。",
@@ -568,7 +579,7 @@ for (let i = 0; i < order.length; i++) {
       "",
     );
   }
-  if (k === "guest-facing-locale") {
+  if (k === "foh-guest-facing-locale") {
     push(
       "",
       "**组内展示顺序**：652 可选语言 → 653 默认语言。",
@@ -579,10 +590,10 @@ for (let i = 0; i < order.length; i++) {
       "",
     );
   }
-  if (k === "foh-guest-kitchen-send") {
+  if (k === "foh-guest-order-type") {
     push(
       "",
-      "**组内展示顺序**：581 菜单送厨方式 → 502 可自动送厨的订单支付状态。",
+      "**组内展示顺序**：487–491 订单类型与取餐流程 → 503 送餐到桌餐牌号 → 581 菜单送厨方式 → 502 可自动送厨的支付状态。",
       "",
     );
   }
@@ -598,9 +609,9 @@ for (let i = 0; i < order.length; i++) {
   if (k === "foh-guest-duration-scenarios") {
     push(
       "",
-      "**组内展示顺序**：443 按时计价 → 571 品类先下单 → 577 展示用餐时长 → 578 倒计时 → 579 剩余提示 → 580 提示后禁下单。",
+      "**组内展示顺序**：443 按时计价 → 571 品类先下单 → 674 用餐时长限制 → 577 展示用餐时长 → 578 倒计时 → 579 剩余提示 → 580 提示后禁下单。",
       "",
-      "**577–580** 右侧**开关** + 产线多选（原型 localStorage）。",
+      "**674** 无总开关，按 POS、POS GO、PayPad、eMenu、SDI 分别启用并设置 1–1440 分钟；**577–580** 保留总开关并扩展为相同五产线，未启用限制的产线自动失效但保留选择。",
       "",
     );
   }
@@ -617,16 +628,16 @@ for (let i = 0; i < order.length; i++) {
       "",
     );
   }
-  if (k === "guest-notes-fees") {
+  if (k === "foh-guest-order-notes") {
     push(
       "",
-      "**SSOT 备注**：521 订单、522 商品、523 套餐子项；**附加服务**：544 餐具、545 打包带。",
+      "**SSOT 备注**：521 订单、522 商品、523 套餐子项。",
       "",
-      "**521–523** 右侧**开关**（保留功能场景描述）；**544/545** **关闭/开启**主开关，开启后展开**单选**：免费、`$1.5`、其他金额（原型 localStorage）。",
+      "**521–523** 右侧**开关**（保留功能场景描述与原存储）。",
       "",
     );
   }
-  if (k === "wait-time") {
+  if (k === "foh-wait-time-display") {
     push(
       "",
       "**535/536** 主开关 + 子项（分钟/杯数）；**537** 多选（排队数量/等待时间）；**538** 字体大小（默认/倍数）；**539/540** 字体背景色/颜色（默认/自定义色块）。",
@@ -645,14 +656,7 @@ for (let i = 0; i < order.length; i++) {
   if (k === "foh-pos-menu-scope") {
     push(
       "",
-      "**组内展示顺序**：118 搜索菜单 → 148 比价 → 176/177 堂吃/外食时段 → 348 iPad 按时段。",
-      "",
-    );
-  }
-  if (k === "foh-pos-menu-ui-layout") {
-    push(
-      "",
-      "**组内展示顺序**：216 组平铺 → 217 类展示 → 218 菜展示 → 220 显示价格 → 219 按钮颜色满铺 → 350 电子菜单自定义消息。",
+      "**组内展示顺序**：118 搜索菜单 → 174 菜单模式 → 148 比价 → 348 iPad 时段 → 216 组平铺 → 217 类展示 → 218 菜展示 → 220 显示价格 → 219 按钮颜色满铺 → 350 电子菜单自定义消息。",
       "",
     );
   }
@@ -670,23 +674,17 @@ for (let i = 0; i < order.length; i++) {
 push(
   "---",
   "",
-  "## 5. 与旧分组对照（26 组 → 14 组）",
+  "## 5. 本次分组合并对照（25 个规范组 + 孤立折扣 → 22 组）",
   "",
   "| 新 groupTitle | 吸收的旧分组示例 |",
   "|---------------|------------------|",
-  "| 桌台与餐位 | 平面图、桌子设置、企台操作权限 |",
-  "| 操作按钮显隐 | 常见按键、其他按键（隐藏到「更多」） |",
-  "| POS 点单页工具栏 | 点单页配置、分割线命名 |",
-  "| POS 菜单与布局 | 点餐界面模式、时段菜单、搜索菜单 |",
-  "| 食客端·菜单结构 | 服务设置·菜单（515–520、524、528） |",
-  "| 食客端·品类与场景菜单 | 自助餐品类与场景菜单（655–661） |",
-  "| 食客端·首页与版式 | 全局展示设置、菜单样式、首页入口；不含全局重复项 |",
-  "| 食客端·购物车展示 | 购物车送厨/价格/售罄展示（616–618） |",
-  "| 食客端·界面语言 | 全局多语言 652/653（eMenu·Kiosk·客显 C 端 UI） |",
-  "| 食客端·下单与规则 | 提示信息、下单设置（火锅/用餐时长/轮次，不含纯展示） |",
-  "| 备注与附加服务 | 备注（521–523）、餐具/打包附加费（544、545） |",
-  "| 等待时长提示 | 等待时长 |",
-  "| 客显屏 | 封面、Logo（461/462）、场景启用（466）；语言见食客端·界面语言 |",
+  "| POS 菜单与界面 | 菜单查找与时段、菜单区界面布局 |",
+  "| 点单页工具栏 | 原工具栏配置、自定义分割线名称 |",
+  "| 找单与结账入口 | POS 找单列表、POS 结账入口 |",
+  "| 订单类型、取餐与送厨 | 订单类型与取餐、食客端送厨 |",
+  "| 桌边呼叫 | 原桌边服务中的呼叫与服务类型 |",
+  "| 点单备注 | 原桌边服务中的订单/商品/套餐子项备注 |",
+  "| 消息类型提醒 | POS 通知总控、订单消息提醒、点单超时提醒 |",
   "",
   "---",
   "",
@@ -720,7 +718,7 @@ push(
   "- **客显屏**（`cds`）：461/462/466；与素材中心、guest-menu-global 分工见 §3.15。",
   "- **C 端界面语言**（652/653）在 `guest-facing-locale`；**小费页、小票**（463、465）在支付中心。",
   "- **菜单文案多语言**（456）在商品中心；**店员默认语言**（109）在系统设置。",
-  "- 670 条中属于前厅的 100 条均已列入上文；另经 hub override 自商品/订单增补项，不删项。",
+  "- 当前复杂版本前厅 catalog 共 154 项，均已列入上文；seq 164、176、177 已退役并排除。",
   "- **107/533** 选桌、**108/619** 人数页已合并至前厅；**126** 默认单型留订单中心；**593** 归商品管理。",
   "- **v1.25 自系统设置迁入**：**165** → `pos-shell-landing`（POS 登录默认主界面；门店 × 产线兜底；UI：`module-settings-default-main-screen-ui.ts`）。",
   "- **v1.24 自会员中心迁入**：**622** → `guest-order-rules`（紧挨 **623**；开通会员后各产线登录/注册是否须短信验证码；UI：`module-settings-member-sms-verification-ui.ts`）。",

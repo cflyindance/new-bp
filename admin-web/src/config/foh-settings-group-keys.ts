@@ -38,10 +38,12 @@ export const FOH_SETTINGS_LEGACY_GROUP_REDIRECT: Record<string, string> = {
   "combo-ordering": "foh-pos-combo-ordering",
   "foh-find-order-checkout": "foh-pos-find-order-list",
   "pos-find-order-list": "foh-pos-find-order-list",
-  "pos-checkout-entry": "foh-pos-checkout-entry",
+  "foh-pos-checkout-entry": "foh-pos-find-order-list",
+  "pos-checkout-entry": "foh-pos-find-order-list",
   "foh-pos-menu-layout": "foh-pos-menu-scope",
   "pos-menu-ui": "foh-pos-menu-scope",
-  "pos-menu-ui-layout": "foh-pos-menu-ui-layout",
+  "foh-pos-menu-ui-layout": "foh-pos-menu-scope",
+  "pos-menu-ui-layout": "foh-pos-menu-scope",
   "guest-menu-structure": "foh-guest-menu-body",
   "guest-menu-cart": "foh-guest-menu-body",
   "guest-menu-global": "foh-guest-menu-home",
@@ -53,24 +55,27 @@ export const FOH_SETTINGS_LEGACY_GROUP_REDIRECT: Record<string, string> = {
   "guest-registration": "foh-guest-registration",
   "guest-order-auth": "foh-guest-menu-body",
   "guest-order-throttle": "foh-guest-menu-body",
-  "foh-guest-scenario-dining": "foh-guest-kitchen-send",
-  "guest-channel-kitchen-send": "foh-guest-kitchen-send",
-  "guest-scenario-dining": "foh-guest-kitchen-send",
+  "foh-guest-kitchen-send": "foh-guest-order-type",
+  "foh-guest-scenario-dining": "foh-guest-order-type",
+  "guest-channel-kitchen-send": "foh-guest-order-type",
+  "guest-scenario-dining": "foh-guest-order-type",
   "guest-hotpot": "foh-guest-hotpot",
   "guest-duration-scenarios": "foh-guest-duration-scenarios",
   "tableside-service-call": "foh-tableside-service",
   "service-call-alerts": "foh-tableside-service",
-  "guest-notes-fees": "foh-tableside-service",
+  "guest-notes-fees": "foh-guest-order-notes",
   "wait-time": "foh-wait-time-display",
   "guest-menu-scenarios": "foh-guest-menu-body",
   "foh-tables": "foh-table-start-flow",
   "foh-cashier-start": "foh-pos-shell",
   "foh-order-buttons-core": "foh-pos-buttons",
-  "foh-order-toolbar-extra": "foh-pos-order-extras",
+  "foh-pos-order-extras": "foh-pos-order-toolbar",
+  "foh-order-toolbar-extra": "foh-pos-order-toolbar",
   "foh-menu-find-pay": "foh-pos-menu-scope",
-  "foh-guest-kitchen-dining": "foh-guest-kitchen-send",
+  "foh-guest-kitchen-dining": "foh-guest-order-type",
   "foh-tableside-experience": "foh-tableside-service",
-  "notification-basics": "foh-pos-notification-control",
+  "foh-pos-notification-control": "foh-pos-order-alerts",
+  "notification-basics": "foh-pos-order-alerts",
   "staff-order-alerts": "foh-pos-order-alerts",
   "order-pickup-messages": "foh-pos-order-alerts",
   "account-security-auth": "foh-pos-shell",
@@ -82,31 +87,27 @@ export const FOH_SETTINGS_LEGACY_GROUP_REDIRECT: Record<string, string> = {
 
 export const FOH_SETTINGS_GROUP_TITLES: Record<string, string> = {
   "foh-table-start-flow": "选桌与开台流程",
-  "foh-table-clear-ops": "清桌与换企台",
-  "foh-pos-shell": "登录与主界面",
-  "foh-pos-menu-scope": "菜单查找与时段",
-  "foh-pos-menu-ui-layout": "菜单区界面布局",
-  "foh-pos-order-cart": "订单行与客户信息",
+  "foh-table-clear-ops": "清桌与换服务员（企台）",
+  "foh-pos-shell": "登录与终端主界面",
+  "foh-pos-menu-scope": "POS 菜单与界面",
+  "foh-pos-order-cart": "点单内容与客户信息",
   "foh-pos-combo-ordering": "套餐与自定义点单",
   "foh-pos-buttons": "点单页按钮显隐",
-  "foh-pos-order-extras": "分割线与超时提醒",
-  "foh-pos-order-toolbar": "点单页工具栏配置",
-  "foh-kitchen-send-timing": "送厨时机",
-  "foh-pos-find-order-list": "POS 找单列表",
-  "foh-pos-checkout-entry": "POS 结账入口",
-  "foh-pos-notification-control": "POS 通知总控",
-  "foh-pos-order-alerts": "订单消息提醒",
-  "foh-guest-order-type": "订单类型与取餐",
+  "foh-pos-order-toolbar": "点单页工具栏",
+  "foh-kitchen-send-timing": "送厨规则与权限",
+  "foh-pos-find-order-list": "找单与结账入口",
+  "foh-pos-order-alerts": "消息类型提醒",
+  "foh-guest-order-type": "订单类型、取餐与送厨",
   "foh-guest-registration": "食客登记与会员",
-  "foh-guest-pre-order": "点单前须知与授权",
+  "foh-guest-pre-order": "点单前限制与授权",
   "foh-guest-menu-home": "点餐首页与入口",
-  "foh-guest-menu-body": "菜单展示与购物车",
+  "foh-guest-menu-body": "菜单与购物车展示",
   "foh-guest-facing-locale": "食客端语言",
-  "foh-guest-kitchen-send": "食客端送厨",
   "foh-guest-hotpot": "火锅点餐",
-  "foh-guest-duration-scenarios": "用餐时长与自助餐",
-  "foh-tableside-service": "桌边服务",
-  "foh-wait-time-display": "预计等待时长展示",
+  "foh-guest-duration-scenarios": "计时与自助餐规则",
+  "foh-tableside-service": "桌边呼叫",
+  "foh-guest-order-notes": "点单备注",
+  "foh-wait-time-display": "等待时长计算与展示",
 };
 
 /** 同一 foh 场景组在 catalog / 预设树中可能出现的全部 groupKey 别名 */
@@ -128,6 +129,24 @@ const legacyKeysByCanonical = (() => {
 
 export function normalizeFohCatalogGroupKey(groupKey: string): string {
   return FOH_SETTINGS_LEGACY_GROUP_REDIRECT[groupKey] ?? groupKey;
+}
+
+/** 将所有旧前厅分组书签归一化到当前存活分组。 */
+export function normalizeLegacyFohSettingsPath(path: string): string {
+  const [pathname, query = ""] = path.split("?", 2);
+  const categoryPrefix = `${FOH_SETTINGS_CATALOG_PATH}/`;
+  if (pathname.startsWith(categoryPrefix)) {
+    const groupKey = pathname.slice(categoryPrefix.length).split("/", 1)[0];
+    const normalized = normalizeFohCatalogGroupKey(groupKey);
+    if (normalized !== groupKey) return `${categoryPrefix}${normalized}`;
+  }
+  if (pathname !== FOH_SETTINGS_CATALOG_PATH || !query) return path;
+
+  const params = new URLSearchParams(query);
+  const groupKey = params.get("group");
+  if (!groupKey) return path;
+  const normalized = normalizeFohCatalogGroupKey(groupKey);
+  return normalized === groupKey ? path : `${categoryPrefix}${normalized}`;
 }
 
 export function resolveFohCatalogGroupKeyForSeq(seq: number, fallbackGroupKey: string): string {

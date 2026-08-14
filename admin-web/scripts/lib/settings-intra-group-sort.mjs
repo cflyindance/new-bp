@@ -4,27 +4,10 @@
  */
 
 import { KDS_TERMINAL_INTRA_GROUP_SORT_BY_SEQ } from "./kds-terminal-settings-groups.mjs";
-
-/** POS 操作按钮显隐（收入「更多」） */
-const FOH_POS_BUTTONS_SEQ_ORDER = [
-  193, 194, 195, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210,
-  211, 212, 213, 214, 215,
-];
-
-/** 分割线名称与点单超时提醒 */
-const FOH_POS_ORDER_EXTRAS_SEQ_ORDER = [196, 110];
-
-/** 点单页工具栏配置（四区按钮排序/显隐） */
-const FOH_POS_ORDER_TOOLBAR_SEQ_ORDER = [483, 484, 485, 486];
-
-/** 菜单查找与时段：搜索/比价 → 堂吃/外食时段 → iPad 时段 */
-const FOH_POS_MENU_SCOPE_SEQ_ORDER = [118, 148, 176, 177, 348];
-
-/** 菜单区界面布局：组 → 类 → 菜 → 价格 → 样式 → iPad 扩展 */
-const FOH_POS_MENU_UI_LAYOUT_SEQ_ORDER = [216, 217, 218, 220, 219, 350];
-
-/** @deprecated 已拆为 foh-pos-menu-scope + foh-pos-menu-ui-layout，保留供文档脚本引用 */
-export const POS_MENU_UI_SEQ_ORDER = [...FOH_POS_MENU_SCOPE_SEQ_ORDER, ...FOH_POS_MENU_UI_LAYOUT_SEQ_ORDER];
+import {
+  FOH_SETTINGS_ASSIGN_MAP,
+  FOH_SETTINGS_GROUP_ORDER,
+} from "./foh-settings-groups.mjs";
 
 /** @type {Map<number, number>} */
 export const INTRA_GROUP_SORT_BY_SEQ = new Map();
@@ -36,107 +19,6 @@ function assignSort(seqList, step = 10) {
   }
 }
 
-assignSort(FOH_POS_BUTTONS_SEQ_ORDER);
-assignSort(FOH_POS_ORDER_EXTRAS_SEQ_ORDER);
-assignSort(FOH_POS_ORDER_TOOLBAR_SEQ_ORDER);
-assignSort(FOH_POS_MENU_SCOPE_SEQ_ORDER);
-assignSort(FOH_POS_MENU_UI_LAYOUT_SEQ_ORDER);
-
-/** 选桌与开台流程：选桌/人数页 → 人数规则 → 开单前桌台约束 */
-const FOH_TABLE_START_FLOW_SEQ_ORDER = [107, 619, 111, 625, 621, 643, 644, 592];
-
-/** 清桌与企台：清桌策略 → iPad 通知与企台 */
-const FOH_TABLE_CLEAR_OPS_SEQ_ORDER = [169, 534, 642, 351, 347];
-
-/** @deprecated 已拆为 foh-table-start-flow + foh-table-clear-ops，保留供文档脚本引用 */
-export const FOH_TABLES_START_SEQ_ORDER = [
-  ...FOH_TABLE_START_FLOW_SEQ_ORDER,
-  ...FOH_TABLE_CLEAR_OPS_SEQ_ORDER,
-];
-
-/** 登录与主界面 */
-const FOH_POS_SHELL_SEQ_ORDER = [165, 346];
-
-/** 送厨时机：延迟参数 → 手动送厨 → 打单/付款/结账链路 → 密码权限 → 送厨后改调味（141） */
-const FOH_KITCHEN_SEND_TIMING_SEQ_ORDER = [125, 113, 123, 114, 120, 345, 141];
-
-/** POS 找单列表 */
-const FOH_POS_FIND_ORDER_LIST_SEQ_ORDER = [153, 151, 152, 251];
-
-/** POS 结账入口 */
-const FOH_POS_CHECKOUT_ENTRY_SEQ_ORDER = [248, 221];
-
-/** 购物车行展示 */
-const FOH_POS_ORDER_CART_SEQ_ORDER = [132, 133, 135, 137, 178, 121, 122, 222, 223];
-
-/** 套餐与自定义点单 */
-const FOH_POS_COMBO_ORDERING_SEQ_ORDER = [138, 139, 145];
-
-/** 权限 · 门店安全策略（349 企台点只读菜） */
-const STORE_SECURITY_POLICY_SEQ_ORDER = [349];
-
-/** 菜单展示与购物车：视觉样式 → 积分露出 → 树形导航 → 购物车展示 */
-const FOH_GUEST_MENU_BODY_SEQ_ORDER = [
-  606, 607, 608, 645, 509, 525, 526, 515, 516, 517, 518, 519, 520, 524, 528, 616, 617, 618,
-];
-
-/** 点餐首页与入口：菜单组 → 版式 → 浏览结构 → 纯展示 → 入口 → 品牌 */
-const FOH_GUEST_MENU_HOME_SEQ_ORDER = [599, 604, 601, 602, 600, 611, 532];
-
-/** 食客端语言 */
-const FOH_GUEST_FACING_LOCALE_SEQ_ORDER = [652, 653];
-
-/** 订单类型与取餐 */
-const FOH_GUEST_ORDER_TYPE_SEQ_ORDER = [487, 488, 489, 490, 491, 503];
-
-/** 食客登记与会员 */
-const FOH_GUEST_REGISTRATION_SEQ_ORDER = [623, 622, 504, 505, 506, 507, 510];
-
-/** 点单前须知与授权 */
-const FOH_GUEST_PRE_ORDER_SEQ_ORDER = [620, 626, 627];
-
-/** 食客端送厨 */
-const FOH_GUEST_KITCHEN_SEND_SEQ_ORDER = [581, 502, 91, 567];
-
-/** 火锅点餐 */
-const FOH_GUEST_HOTPOT_SEQ_ORDER = [572, 574, 573, 575];
-
-/** 时长与自助餐 */
-const FOH_GUEST_DURATION_SCENARIOS_SEQ_ORDER = [443, 571, 577, 578, 579, 580];
-
-/** @deprecated 已拆为 foh-guest-kitchen-send + foh-guest-hotpot + foh-guest-duration-scenarios */
-export const FOH_GUEST_SCENARIO_DINING_SEQ_ORDER = [
-  ...FOH_GUEST_KITCHEN_SEND_SEQ_ORDER,
-  ...FOH_GUEST_HOTPOT_SEQ_ORDER,
-  ...FOH_GUEST_DURATION_SCENARIOS_SEQ_ORDER,
-];
-
-/** 桌边服务 */
-const FOH_TABLESIDE_SERVICE_SEQ_ORDER = [641, 640, 333, 521, 522, 523];
-
-/** 排队与等待展示（产线多选，见 wait-time-display-ui） */
-const FOH_WAIT_TIME_DISPLAY_SEQ_ORDER = [673, 535, 536, 537, 538, 539, 540];
-
-assignSort(FOH_TABLE_START_FLOW_SEQ_ORDER);
-assignSort(FOH_TABLE_CLEAR_OPS_SEQ_ORDER);
-assignSort(FOH_POS_SHELL_SEQ_ORDER);
-assignSort(FOH_KITCHEN_SEND_TIMING_SEQ_ORDER);
-assignSort(FOH_POS_FIND_ORDER_LIST_SEQ_ORDER);
-assignSort(FOH_POS_CHECKOUT_ENTRY_SEQ_ORDER);
-assignSort(FOH_POS_ORDER_CART_SEQ_ORDER);
-assignSort(FOH_POS_COMBO_ORDERING_SEQ_ORDER);
-assignSort(STORE_SECURITY_POLICY_SEQ_ORDER);
-assignSort(FOH_GUEST_MENU_BODY_SEQ_ORDER);
-assignSort(FOH_GUEST_MENU_HOME_SEQ_ORDER);
-assignSort(FOH_GUEST_FACING_LOCALE_SEQ_ORDER);
-assignSort(FOH_GUEST_ORDER_TYPE_SEQ_ORDER);
-assignSort(FOH_GUEST_REGISTRATION_SEQ_ORDER);
-assignSort(FOH_GUEST_PRE_ORDER_SEQ_ORDER);
-assignSort(FOH_GUEST_KITCHEN_SEND_SEQ_ORDER);
-assignSort(FOH_GUEST_HOTPOT_SEQ_ORDER);
-assignSort(FOH_GUEST_DURATION_SCENARIOS_SEQ_ORDER);
-assignSort(FOH_TABLESIDE_SERVICE_SEQ_ORDER);
-assignSort(FOH_WAIT_TIME_DISPLAY_SEQ_ORDER);
 
 /** 外卖/来取 v2.4：线上下单开关 → 外送区域 */
 const DELIVERY_SCAN_ONLINE_SEQ_ORDER = [90, 92];
@@ -149,10 +31,10 @@ const ONLINE_ORDER_SERVICE_SEQ_ORDER = [93, 95, 96, 97, 99, 100, 101, 102, 103, 
 /** 桌边服务：未开单 → 间隔 → 服务类型 */
 const TABLESIDE_SERVICE_CALL_SEQ_ORDER = [641, 640, 333];
 
-/** 前厅 · POS 通知总控 */
-const FOH_POS_NOTIFICATION_CONTROL_SEQ_ORDER = [331, 332];
+/** 前厅 · 消息类型提醒：基础通知 */
+const STAFF_ORDER_ALERT_BASICS_SEQ_ORDER = [331, 332];
 
-/** 前厅 · 订单消息提醒 */
+/** 前厅 · 消息类型提醒：订单提醒 */
 const STAFF_ORDER_ALERTS_SEQ_ORDER = [638, 639, 637];
 
 /** 消息中心 · 顾客短信渠道（文案/场景关联见消息模板 + 消息配置） */
@@ -178,7 +60,7 @@ const POS_SHELL_LANDING_SEQ_ORDER = [165, 346];
 
 assignSort(POS_SHELL_LANDING_SEQ_ORDER);
 assignSort(TIME_ATTENDANCE_SEQ_ORDER);
-assignSort(FOH_POS_NOTIFICATION_CONTROL_SEQ_ORDER);
+assignSort(STAFF_ORDER_ALERT_BASICS_SEQ_ORDER);
 assignSort(STAFF_ORDER_ALERTS_SEQ_ORDER);
 assignSort(CUSTOMER_ORDER_SMS_SEQ_ORDER);
 assignSort(DELIVERY_SCAN_ONLINE_SEQ_ORDER);
@@ -456,7 +338,12 @@ export {
   ADVANCED_GROUP_NAV_SECTIONS,
 } from "./system-settings-groups.mjs";
 
-export { FOH_SETTINGS_GROUP_ORDER } from "./foh-settings-groups.mjs";
+/** 前厅最终顺序只取自分组 SSOT；覆盖同一 seq 在其他 hub 中建立的排序。 */
+for (const groupKey of FOH_SETTINGS_GROUP_ORDER) {
+  assignSort(FOH_SETTINGS_ASSIGN_MAP[groupKey] ?? []);
+}
+
+export { FOH_SETTINGS_GROUP_ORDER };
 
 export {
   KDS_DISPLAY_SETTINGS_GROUP_ORDER,

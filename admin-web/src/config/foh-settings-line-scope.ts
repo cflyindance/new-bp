@@ -34,16 +34,6 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
     "source": "ui-module",
     "module": "module-settings-pos-session-security-ui.ts"
   },
-  "91": {
-    "groupKey": "foh-guest-kitchen-send",
-    "lines": [
-      "kiosk",
-      "emenu",
-      "sdi",
-      "online-order"
-    ],
-    "source": "group-default"
-  },
   "107": {
     "groupKey": "foh-table-start-flow",
     "lines": [
@@ -58,7 +48,7 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
     "module": "module-settings-table-selection-page-ui.ts"
   },
   "110": {
-    "groupKey": "foh-pos-order-extras",
+    "groupKey": "foh-pos-order-alerts",
     "lines": [
       "pos",
       "pos-go",
@@ -210,7 +200,7 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
     "module": "module-settings-pos-combo-ordering-ui.ts"
   },
   "141": {
-    "groupKey": "foh-kitchen-send-timing",
+    "groupKey": "foh-pos-order-cart",
     "lines": [
       "pos",
       "pos-go",
@@ -293,18 +283,6 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
     "source": "ui-module",
     "module": "module-settings-pos-session-security-ui.ts"
   },
-  "169": {
-    "groupKey": "foh-table-clear-ops",
-    "lines": [
-      "emenu",
-      "pos",
-      "pos-go",
-      "paypad",
-      "sdi"
-    ],
-    "source": "ui-module",
-    "module": "module-settings-post-payment-clear-table-ui.ts"
-  },
   "174": {
     "groupKey": "foh-pos-menu-scope",
     "lines": [
@@ -323,26 +301,6 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
     ],
     "source": "ui-module",
     "module": "module-settings-pos-session-security-ui.ts"
-  },
-  "176": {
-    "groupKey": "foh-pos-menu-scope",
-    "lines": [
-      "pos",
-      "pos-go",
-      "paypad"
-    ],
-    "source": "ui-module",
-    "module": "module-settings-pos-menu-scope-lines-ui.ts"
-  },
-  "177": {
-    "groupKey": "foh-pos-menu-scope",
-    "lines": [
-      "pos",
-      "pos-go",
-      "paypad"
-    ],
-    "source": "ui-module",
-    "module": "module-settings-pos-menu-scope-lines-ui.ts"
   },
   "178": {
     "groupKey": "foh-pos-order-cart",
@@ -386,7 +344,7 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
     "source": "group-default"
   },
   "196": {
-    "groupKey": "foh-pos-order-extras",
+    "groupKey": "foh-pos-order-toolbar",
     "lines": [
       "pos",
       "pos-go",
@@ -566,7 +524,7 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
     "source": "group-default"
   },
   "216": {
-    "groupKey": "foh-pos-menu-ui-layout",
+    "groupKey": "foh-pos-menu-scope",
     "lines": [
       "pos",
       "paypad"
@@ -575,7 +533,7 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
     "module": "module-settings-pos-menu-ui-layout-lines-ui.ts"
   },
   "217": {
-    "groupKey": "foh-pos-menu-ui-layout",
+    "groupKey": "foh-pos-menu-scope",
     "lines": [
       "pos",
       "paypad"
@@ -584,7 +542,7 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
     "module": "module-settings-pos-menu-ui-layout-lines-ui.ts"
   },
   "218": {
-    "groupKey": "foh-pos-menu-ui-layout",
+    "groupKey": "foh-pos-menu-scope",
     "lines": [
       "pos",
       "paypad"
@@ -593,7 +551,7 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
     "module": "module-settings-pos-menu-ui-layout-lines-ui.ts"
   },
   "219": {
-    "groupKey": "foh-pos-menu-ui-layout",
+    "groupKey": "foh-pos-menu-scope",
     "lines": [
       "pos",
       "paypad"
@@ -602,7 +560,7 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
     "module": "module-settings-pos-menu-ui-layout-lines-ui.ts"
   },
   "220": {
-    "groupKey": "foh-pos-menu-ui-layout",
+    "groupKey": "foh-pos-menu-scope",
     "lines": [
       "pos",
       "pos-go",
@@ -612,7 +570,7 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
     "module": "module-settings-pos-menu-ui-layout-lines-ui.ts"
   },
   "221": {
-    "groupKey": "foh-pos-checkout-entry",
+    "groupKey": "foh-pos-find-order-list",
     "lines": [
       "pos",
       "pos-go",
@@ -642,7 +600,7 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
     "module": "module-settings-pos-order-cart-pos-lines-ui.ts"
   },
   "248": {
-    "groupKey": "foh-pos-checkout-entry",
+    "groupKey": "foh-pos-find-order-list",
     "lines": [
       "pos",
       "pos-go",
@@ -662,14 +620,14 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
     "module": "module-settings-pos-find-order-list-ui.ts"
   },
   "331": {
-    "groupKey": "foh-pos-notification-control",
+    "groupKey": "foh-pos-order-alerts",
     "lines": [
       "store-wide"
     ],
     "source": "store-wide"
   },
   "332": {
-    "groupKey": "foh-pos-notification-control",
+    "groupKey": "foh-pos-order-alerts",
     "lines": [
       "kiosk",
       "emenu",
@@ -722,15 +680,18 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
   "348": {
     "groupKey": "foh-pos-menu-scope",
     "lines": [
+      "emenu",
+      "kiosk",
       "pos",
       "pos-go",
-      "paypad"
+      "paypad",
+      "sdi"
     ],
     "source": "ui-module",
     "module": "module-settings-timed-menu-display-ui.ts"
   },
   "349": {
-    "groupKey": "foh-pos-shell",
+    "groupKey": "foh-pos-order-cart",
     "lines": [
       "pos-go",
       "paypad"
@@ -739,7 +700,7 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
     "module": "module-settings-emenu-server-readonly-dish-ui.ts"
   },
   "350": {
-    "groupKey": "foh-pos-menu-ui-layout",
+    "groupKey": "foh-pos-menu-scope",
     "lines": [
       "pos",
       "paypad"
@@ -851,7 +812,7 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
     "source": "group-default"
   },
   "502": {
-    "groupKey": "foh-guest-kitchen-send",
+    "groupKey": "foh-guest-order-type",
     "lines": [
       "kiosk"
     ],
@@ -904,13 +865,14 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
   "509": {
     "groupKey": "foh-guest-menu-body",
     "lines": [
-      "kiosk",
       "emenu",
       "sdi",
-      "online-order"
+      "kiosk",
+      "online-order",
+      "cds"
     ],
     "source": "ui-module",
-    "module": "module-settings-member-points-rewards-ui.ts"
+    "module": "module-settings-guest-menu-body-line-scope.ts"
   },
   "510": {
     "groupKey": "foh-guest-registration",
@@ -927,71 +889,77 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
   "515": {
     "groupKey": "foh-guest-menu-body",
     "lines": [
-      "kiosk",
+      "pos",
+      "pos-go",
+      "paypad",
       "emenu",
       "sdi",
+      "kiosk",
       "online-order"
     ],
     "source": "ui-module",
-    "module": "module-settings-guest-menu-structure-ui.ts"
+    "module": "module-settings-guest-menu-body-line-scope.ts"
   },
   "516": {
     "groupKey": "foh-guest-menu-body",
     "lines": [
-      "kiosk",
+      "pos",
+      "pos-go",
+      "paypad",
       "emenu",
       "sdi",
+      "kiosk",
       "online-order"
     ],
     "source": "ui-module",
-    "module": "module-settings-guest-menu-structure-ui.ts"
+    "module": "module-settings-guest-menu-body-line-scope.ts"
   },
   "517": {
     "groupKey": "foh-guest-menu-body",
     "lines": [
-      "kiosk",
       "emenu",
       "sdi",
+      "kiosk",
       "online-order"
     ],
     "source": "ui-module",
-    "module": "module-settings-guest-menu-structure-ui.ts"
+    "module": "module-settings-guest-menu-body-line-scope.ts"
   },
   "518": {
     "groupKey": "foh-guest-menu-body",
     "lines": [
-      "kiosk",
       "emenu",
       "sdi",
+      "kiosk",
       "online-order"
     ],
     "source": "ui-module",
-    "module": "module-settings-guest-menu-structure-ui.ts"
+    "module": "module-settings-guest-menu-body-line-scope.ts"
   },
   "519": {
     "groupKey": "foh-guest-menu-body",
     "lines": [
-      "kiosk",
+      "pos",
+      "pos-go",
+      "paypad",
       "emenu",
       "sdi",
+      "kiosk",
       "online-order"
     ],
     "source": "ui-module",
-    "module": "module-settings-guest-menu-structure-ui.ts"
+    "module": "module-settings-guest-menu-body-line-scope.ts"
   },
   "520": {
     "groupKey": "foh-guest-menu-body",
     "lines": [
-      "kiosk",
-      "emenu",
-      "sdi",
-      "online-order"
+      "kiosk"
     ],
     "source": "ui-module",
-    "module": "module-settings-guest-menu-structure-ui.ts"
+    "module": "module-settings-guest-menu-body-line-scope.ts"
   },
   "521": {
-    "groupKey": "foh-tableside-service",
+    "groupKey": "foh-guest-order-notes",
     "lines": [
       "kiosk",
       "emenu",
@@ -1002,7 +970,7 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
     "module": "module-settings-order-remark-lines-ui.ts"
   },
   "522": {
-    "groupKey": "foh-tableside-service",
+    "groupKey": "foh-guest-order-notes",
     "lines": [
       "kiosk",
       "emenu",
@@ -1013,7 +981,7 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
     "module": "module-settings-product-remark-ui.ts"
   },
   "523": {
-    "groupKey": "foh-tableside-service",
+    "groupKey": "foh-guest-order-notes",
     "lines": [
       "kiosk",
       "emenu",
@@ -1025,46 +993,49 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
   "524": {
     "groupKey": "foh-guest-menu-body",
     "lines": [
-      "kiosk",
       "emenu",
       "sdi",
+      "kiosk",
       "online-order"
     ],
     "source": "ui-module",
-    "module": "module-settings-guest-menu-structure-ui.ts"
+    "module": "module-settings-guest-menu-body-line-scope.ts"
   },
   "525": {
     "groupKey": "foh-guest-menu-body",
     "lines": [
-      "kiosk",
       "emenu",
       "sdi",
+      "kiosk",
       "online-order"
     ],
     "source": "ui-module",
-    "module": "module-settings-member-points-rewards-ui.ts"
+    "module": "module-settings-guest-menu-body-line-scope.ts"
   },
   "526": {
     "groupKey": "foh-guest-menu-body",
     "lines": [
-      "kiosk",
       "emenu",
       "sdi",
+      "kiosk",
       "online-order"
     ],
     "source": "ui-module",
-    "module": "module-settings-member-points-rewards-ui.ts"
+    "module": "module-settings-guest-menu-body-line-scope.ts"
   },
   "528": {
     "groupKey": "foh-guest-menu-body",
     "lines": [
-      "kiosk",
+      "pos",
+      "pos-go",
+      "paypad",
       "emenu",
       "sdi",
+      "kiosk",
       "online-order"
     ],
     "source": "ui-module",
-    "module": "module-settings-guest-menu-structure-ui.ts"
+    "module": "module-settings-guest-menu-body-line-scope.ts"
   },
   "532": {
     "groupKey": "foh-guest-menu-home",
@@ -1136,16 +1107,6 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
     "source": "ui-module",
     "module": "module-settings-wait-time-style-ui.ts"
   },
-  "567": {
-    "groupKey": "foh-guest-kitchen-send",
-    "lines": [
-      "kiosk",
-      "emenu",
-      "sdi",
-      "online-order"
-    ],
-    "source": "group-default"
-  },
   "571": {
     "groupKey": "foh-guest-duration-scenarios",
     "lines": [
@@ -1194,7 +1155,11 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
   "577": {
     "groupKey": "foh-guest-duration-scenarios",
     "lines": [
-      "emenu"
+      "pos",
+      "pos-go",
+      "paypad",
+      "emenu",
+      "sdi"
     ],
     "source": "ui-module",
     "module": "module-settings-guest-dining-duration-ui.ts"
@@ -1202,7 +1167,11 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
   "578": {
     "groupKey": "foh-guest-duration-scenarios",
     "lines": [
-      "emenu"
+      "pos",
+      "pos-go",
+      "paypad",
+      "emenu",
+      "sdi"
     ],
     "source": "ui-module",
     "module": "module-settings-guest-dining-duration-ui.ts"
@@ -1210,7 +1179,11 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
   "579": {
     "groupKey": "foh-guest-duration-scenarios",
     "lines": [
-      "emenu"
+      "pos",
+      "pos-go",
+      "paypad",
+      "emenu",
+      "sdi"
     ],
     "source": "ui-module",
     "module": "module-settings-guest-dining-duration-ui.ts"
@@ -1218,13 +1191,17 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
   "580": {
     "groupKey": "foh-guest-duration-scenarios",
     "lines": [
-      "emenu"
+      "pos",
+      "pos-go",
+      "paypad",
+      "emenu",
+      "sdi"
     ],
     "source": "ui-module",
     "module": "module-settings-guest-dining-duration-ui.ts"
   },
   "581": {
-    "groupKey": "foh-guest-kitchen-send",
+    "groupKey": "foh-guest-order-type",
     "lines": [
       "kiosk",
       "emenu",
@@ -1294,34 +1271,35 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
   "606": {
     "groupKey": "foh-guest-menu-body",
     "lines": [
-      "kiosk",
       "emenu",
       "sdi",
+      "kiosk",
       "online-order"
     ],
     "source": "ui-module",
-    "module": "module-settings-guest-menu-class-name-display-ui.ts"
+    "module": "module-settings-guest-menu-body-line-scope.ts"
   },
   "607": {
     "groupKey": "foh-guest-menu-body",
     "lines": [
-      "kiosk",
       "emenu",
-      "sdi"
+      "sdi",
+      "kiosk",
+      "online-order"
     ],
     "source": "ui-module",
-    "module": "module-settings-guest-menu-image-mode-ui.ts"
+    "module": "module-settings-guest-menu-body-line-scope.ts"
   },
   "608": {
     "groupKey": "foh-guest-menu-body",
     "lines": [
-      "kiosk",
       "emenu",
       "sdi",
+      "kiosk",
       "online-order"
     ],
     "source": "ui-module",
-    "module": "module-settings-guest-dish-detail-display-ui.ts"
+    "module": "module-settings-guest-menu-body-line-scope.ts"
   },
   "611": {
     "groupKey": "foh-guest-menu-home",
@@ -1340,25 +1318,32 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
       "sdi"
     ],
     "source": "ui-module",
-    "module": "module-settings-guest-menu-cart-ui.ts"
+    "module": "module-settings-guest-menu-body-line-scope.ts"
   },
   "617": {
     "groupKey": "foh-guest-menu-body",
     "lines": [
       "emenu",
-      "sdi"
+      "sdi",
+      "kiosk",
+      "online-order"
     ],
     "source": "ui-module",
-    "module": "module-settings-guest-menu-cart-ui.ts"
+    "module": "module-settings-guest-menu-body-line-scope.ts"
   },
   "618": {
     "groupKey": "foh-guest-menu-body",
     "lines": [
+      "pos",
+      "pos-go",
+      "paypad",
       "emenu",
-      "sdi"
+      "sdi",
+      "kiosk",
+      "online-order"
     ],
     "source": "ui-module",
-    "module": "module-settings-guest-menu-cart-ui.ts"
+    "module": "module-settings-guest-menu-body-line-scope.ts"
   },
   "619": {
     "groupKey": "foh-table-start-flow",
@@ -1507,18 +1492,8 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
       "pos",
       "pos-go",
       "paypad",
-      "emenu"
-    ],
-    "source": "ui-module",
-    "module": "module-settings-pre-order-table-change-ui.ts"
-  },
-  "644": {
-    "groupKey": "foh-table-start-flow",
-    "lines": [
-      "pos",
-      "pos-go",
-      "paypad",
-      "emenu"
+      "emenu",
+      "sdi"
     ],
     "source": "ui-module",
     "module": "module-settings-pre-order-table-change-ui.ts"
@@ -1526,12 +1501,13 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
   "645": {
     "groupKey": "foh-guest-menu-body",
     "lines": [
-      "kiosk",
       "emenu",
-      "sdi"
+      "sdi",
+      "kiosk",
+      "online-order"
     ],
     "source": "ui-module",
-    "module": "module-settings-guest-menu-dish-name-font-ui.ts"
+    "module": "module-settings-guest-menu-body-line-scope.ts"
   },
   "652": {
     "groupKey": "foh-guest-facing-locale",
@@ -1561,6 +1537,18 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
       "store-wide"
     ],
     "source": "store-wide"
+  },
+  "674": {
+    "groupKey": "foh-guest-duration-scenarios",
+    "lines": [
+      "pos",
+      "pos-go",
+      "paypad",
+      "emenu",
+      "sdi"
+    ],
+    "source": "ui-module",
+    "module": "module-settings-guest-dining-duration-ui.ts"
   }
 };
 

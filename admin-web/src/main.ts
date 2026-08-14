@@ -225,7 +225,10 @@ import {
   getFohSettingsByLinePath,
   type FohLineViewGroup,
 } from "./config/foh-settings-by-line-ui";
-import { normalizeFohCatalogItemsForGrouping } from "./config/foh-settings-group-keys";
+import {
+  normalizeFohCatalogItemsForGrouping,
+  normalizeLegacyFohSettingsPath,
+} from "./config/foh-settings-group-keys";
 import { normalizePrintCatalogItemsForGrouping } from "./config/print-settings-group-keys";
 import { normalizeFinanceCatalogItemsForGrouping } from "./config/finance-settings-group-keys";
 import { normalizeOrderCatalogItemsForGrouping } from "./config/order-settings-group-keys";
@@ -268,14 +271,25 @@ import {
   shouldRenderPageSaveBar,
   wrapPageWithSaveBar,
 } from "./config/page-save-bar-ui";
+import { confirmAndTriggerPageSaveAndDeploy } from "./config/deployment-page-trigger";
+import { getPageSavePendingCount, isPageSavePending } from "./config/page-save-registry";
+import { openHubSearchLeaveConfirmDialog } from "./config/hub-search-leave-confirm-dialog";
 import { bindPageSaveGuard, syncPageSaveGuardPath } from "./config/page-save-guard";
 import { bindIframeSaveDeployBridge } from "./config/iframe-save-deploy-bridge";
+import { bindMarketingScreensaverFullscreenFlow } from "./config/marketing-screensaver-fullscreen";
 import {
   isPageBatchSavePath,
+  discardPageDraft,
   resolvePageSaveKey,
+  resolveCurrentPageSaveKey,
   setPageDraftFohToggle,
   setPageDraftToggle,
 } from "./config/page-settings-draft";
+import {
+  getActiveSettingEditContext,
+  hubSearchEditScopeKey,
+  setActiveSettingEditContext,
+} from "./config/module-setting-edit-context";
 import { MERCHANT_PLATFORM_PRESET_SCOPE, isMerchantPlatformPresetPath, isMPlatformPresetPath } from "./config/platform-preset-scope";
 import {
   enterEmenuLocalShell,
@@ -393,6 +407,7 @@ import {
   setHubSearchFocusTarget,
   setHubSheetSearchQuery,
   shouldEnterHubSearch,
+  type HubSearchHit,
 } from "./config/hub-sheet-search";
 import { APP_NAV_HOME_PATH, isNavHomePath, readAppHashPath } from "./config/app-routes";
 import {
@@ -552,13 +567,6 @@ import {
   renderSingleTableNoMultiOrderPanelHtml,
   setSingleTableNoMultiOrderPanelVisible,
 } from "./config/module-settings-single-table-order-limit-ui";
-import {
-  bindPostPaymentClearTableUi,
-  ensurePostPaymentClearTableToggleMigrated,
-  isPostPaymentClearTableSeq,
-  renderPostPaymentClearTablePanelHtml,
-  setPostPaymentClearTablePanelVisible,
-} from "./config/module-settings-post-payment-clear-table-ui";
 import {
   bindAutoClearTableUi,
   ensureAutoClearTableToggleMigrated,
@@ -752,7 +760,11 @@ import {
 import {
   bindGuestDiningDurationUi,
   ensureGuestDiningDurationToggleMigrated,
+  isGuestDiningDurationLimitSeq,
+  isGuestDiningDurationLineLimitEnabled,
   isGuestDiningDurationSeq,
+  refreshGuestDiningDurationLimitDependencies,
+  renderGuestDiningDurationLimitPanelHtml,
   renderGuestDiningDurationPanelHtml,
   setGuestDiningDurationPanelVisible,
   type GuestDiningDurationSeq,
@@ -858,10 +870,8 @@ import {
 } from "./config/module-settings-guest-menu-class-name-display-ui";
 import {
   bindGuestMenuImageModeUi,
-  ensureGuestMenuImageModeToggleMigrated,
   isGuestMenuImageModeSeq,
   renderGuestMenuImageModePanelHtml,
-  setGuestMenuImageModePanelVisible,
 } from "./config/module-settings-guest-menu-image-mode-ui";
 import {
   bindGuestMenuLineToggleUi,
@@ -971,6 +981,11 @@ import {
   setOrderDisplaySeatPanelVisible,
 } from "./config/module-settings-order-display-seat-ui";
 import {
+  bindTimedMenuDisplayUi,
+  isTimedMenuDisplaySeq,
+  renderTimedMenuDisplayPanelHtml,
+} from "./config/module-settings-timed-menu-display-ui";
+import {
   bindPosButtonVisibilityUi,
   ensurePosButtonVisibilityToggleMigrated,
   isPosButtonVisibilitySeq,
@@ -996,7 +1011,6 @@ import {
   bindPreOrderTableChangeUi,
   isPreOrderTableChangeSeq,
   renderPreOrderTableChangePanelHtml,
-  setPreOrderTableChangePanelVisible,
 } from "./config/module-settings-pre-order-table-change-ui";
 import {
   isLineMergeMatrixHostSeq,
@@ -1460,12 +1474,6 @@ import {
   renderOrderPickupSmsSectionHeaderHtml,
 } from "./config/module-settings-order-pickup-messages-ui";
 import {
-  isFohPosNotificationControlGroupIntroSeq,
-  isFohPosOrderAlertsGroupIntroSeq,
-  renderFohPosNotificationControlGroupIntroHtml,
-  renderFohPosOrderAlertsGroupIntroHtml,
-} from "./config/foh-pos-notification-groups-ui";
-import {
   isNotificationCustomerSmsGroupIntroSeq,
   renderNotificationCustomerSmsGroupIntroHtml,
   wrapModuleSettingGroupIntro,
@@ -1920,6 +1928,7 @@ function renderMarketingScreensaverIframePanel(): string {
     <div class="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
       <iframe
         title="营销中心屏保功能"
+        data-marketing-screensaver-frame
         class="block h-full w-full flex-1 border-0"
         src="${MARKETING_SCREENSAVER_IFRAME_SRC}"
         referrerpolicy="no-referrer-when-downgrade"
@@ -3739,6 +3748,11 @@ function normalizeTabModuleHashes(): void {
     replaceHashPath(APP_NAV_HOME_PATH);
     return;
   }
+  const normalizedFohSettingsPath = normalizeLegacyFohSettingsPath(raw);
+  if (normalizedFohSettingsPath !== raw) {
+    replaceHashPath(normalizedFohSettingsPath);
+    return;
+  }
   /* 侧栏已移除一级「配置中心」，旧书签统一到系统设置 · 区域与显示 */
   if (raw === "/config-center" || raw.startsWith("/config-center/")) {
     replaceHashPath("/settings/locale-display");
@@ -4009,60 +4023,6 @@ function normalizeTabModuleHashes(): void {
         replaceHashPath(getFohSettingsByLineCategoryPath(lineId, groups[0].groupKey));
         return;
       }
-    }
-  }
-  /* 前厅设置 · 旧 groupKey 书签 → 方案 E 十四组（含 v2.0 十二组重定向） */
-  const fohSettingsLegacyGroup: Record<string, string> = {
-    "foh-tables-start": "foh-table-start-flow",
-    "tables-floor": "foh-table-start-flow",
-    "pos-shell-landing": "foh-pos-shell",
-    "pos-order-init": "foh-table-start-flow",
-    "table-clear-ops": "foh-table-clear-ops",
-    "pos-kitchen-send": "foh-kitchen-send-timing",
-    "pos-button-visibility": "foh-pos-buttons",
-    "pos-order-toolbar": "foh-pos-order-toolbar",
-    "foh-order-cart-combo": "foh-pos-order-cart",
-    "pos-order-cart": "foh-pos-order-cart",
-    "pos-combo-ordering": "foh-pos-combo-ordering",
-    "foh-find-order-checkout": "foh-pos-find-order-list",
-    "pos-find-order-list": "foh-pos-find-order-list",
-    "pos-checkout-entry": "foh-pos-checkout-entry",
-    "foh-pos-menu-layout": "foh-pos-menu-scope",
-    "pos-menu-ui": "foh-pos-menu-scope",
-    "pos-menu-ui-layout": "foh-pos-menu-ui-layout",
-    "guest-menu-structure": "foh-guest-menu-body",
-    "guest-menu-cart": "foh-guest-menu-body",
-    "guest-menu-global": "foh-guest-menu-home",
-    "guest-facing-locale": "foh-guest-facing-locale",
-    "foh-guest-menu-shell": "foh-guest-menu-home",
-    "foh-guest-order-entry": "foh-guest-order-type",
-    "guest-order-type": "foh-guest-order-type",
-    "guest-pre-order-flow": "foh-guest-pre-order",
-    "guest-registration": "foh-guest-registration",
-    "guest-order-auth": "foh-guest-menu-body",
-    "guest-order-throttle": "foh-guest-menu-body",
-    "foh-guest-scenario-dining": "foh-guest-kitchen-send",
-    "guest-channel-kitchen-send": "foh-guest-kitchen-send",
-    "guest-scenario-dining": "foh-guest-kitchen-send",
-    "guest-hotpot": "foh-guest-hotpot",
-    "guest-duration-scenarios": "foh-guest-duration-scenarios",
-    "tableside-service-call": "foh-tableside-service",
-    "guest-notes-fees": "foh-tableside-service",
-    "wait-time": "foh-wait-time-display",
-    "guest-menu-scenarios": "foh-guest-menu-body",
-    "foh-tables": "foh-table-start-flow",
-    "foh-cashier-start": "foh-pos-shell",
-    "foh-order-buttons-core": "foh-pos-buttons",
-    "foh-order-toolbar-extra": "foh-pos-order-extras",
-    "foh-menu-find-pay": "foh-pos-menu-scope",
-    "foh-guest-kitchen-dining": "foh-guest-kitchen-send",
-    "foh-tableside-experience": "foh-tableside-service",
-  };
-  for (const [legacy, next] of Object.entries(fohSettingsLegacyGroup)) {
-    const legacyBase = `/operations/queue-call/settings/${legacy}`;
-    if (raw === legacyBase || raw.startsWith(`${legacyBase}/`)) {
-      replaceHashPath(`/operations/queue-call/settings/${next}`);
-      return;
     }
   }
   /* 方案 F：权限中心无 settings catalog；旧书签 → 前厅 POS 会话安全或 RBAC 总览 */
@@ -6103,7 +6063,10 @@ function renderFohByLineGroupRowsHtml(
 
 function runFohByLineToggleSideEffects(seq: number, next: boolean): void {
   if (isGuestDishDetailDisplaySeq(seq)) setGuestDishDetailPanelVisible(next);
-  if (isGuestDiningDurationSeq(seq)) setGuestDiningDurationPanelVisible(seq, next);
+  if (isGuestDiningDurationSeq(seq)) {
+    setGuestDiningDurationPanelVisible(seq, next);
+    refreshGuestDiningDurationLimitDependencies();
+  }
   if (isWaitTimeDisplayToggleSeq(seq)) {
     setModuleSettingNestedPanelVisible(seq, next);
   } else if (isModuleSettingNestedParentSeq(seq)) {
@@ -6117,7 +6080,6 @@ function runFohByLineToggleSideEffects(seq: number, next: boolean): void {
     if (next) ensureDefaultMainScreenLinesDefault();
     setDefaultMainScreenPanelVisible(next);
   }
-  if (isGuestMenuImageModeSeq(seq)) setGuestMenuImageModePanelVisible(next);
   if (isGuestEmenuProModeSeq(seq)) {
     if (next) ensureGuestEmenuProModeLinesDefault();
     setGuestEmenuProModePanelVisible(next);
@@ -6308,10 +6270,19 @@ function renderModuleSettingToggleSwitch(item: ModuleSettingCatalogItem): string
    * 前厅按场景视图：开启态不展示主开关，由适用产线勾选表达状态。
    * 前厅按产线视图：始终展示开关，状态取当前产线是否在功能的 lines 中。
    */
-  const isFohByLineView = getFohByLineRenderContext() !== null;
+  const fohLineId = getFohByLineRenderContext();
+  const isFohByLineView = fohLineId !== null;
   if (isFohHubSettingToggleSeq(item.seq) && on && !isFohByLineView) return "";
   const ariaLabel = tf("moduleSettings.toggleAria", { name: item.title });
-  const stateHint = on ? t("moduleSettings.toggleOn") : t("moduleSettings.toggleOff");
+  const durationRestricted =
+    fohLineId !== null &&
+    isGuestDiningDurationSeq(item.seq) &&
+    !isGuestDiningDurationLineLimitEnabled(fohLineId);
+  const stateHint = durationRestricted
+    ? "需先启用该产线的用餐时长限制"
+    : on
+      ? t("moduleSettings.toggleOn")
+      : t("moduleSettings.toggleOff");
   const trackClass = on ? MODULE_SETTING_TOGGLE_TRACK_ON : MODULE_SETTING_TOGGLE_TRACK_OFF;
   const knobClass = on ? "translate-x-5" : "translate-x-0.5";
   return `
@@ -6321,10 +6292,12 @@ function renderModuleSettingToggleSwitch(item: ModuleSettingCatalogItem): string
         type="button"
         role="switch"
         aria-checked="${on ? "true" : "false"}"
+        aria-disabled="${durationRestricted ? "true" : "false"}"
         aria-label="${escapeHtml(ariaLabel)}"
         title="${escapeHtml(stateHint)}"
         data-module-setting-toggle="${item.seq}"
-        class="module-setting-toggle relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${trackClass}"
+        class="module-setting-toggle relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border-2 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${durationRestricted ? "cursor-not-allowed opacity-50" : "cursor-pointer"} ${trackClass}"
+        ${durationRestricted ? "disabled" : ""}
       >
         <span
           class="pointer-events-none block size-5 ${knobClass} ${MODULE_SETTING_TOGGLE_KNOB} rounded-full transition-transform duration-200"
@@ -7963,21 +7936,6 @@ function renderModuleSettingSingleTableNoMultiOrderRow(item: ModuleSettingCatalo
         </li>`;
 }
 
-function renderModuleSettingPostPaymentClearTableRow(item: ModuleSettingCatalogItem): string {
-  ensurePostPaymentClearTableToggleMigrated();
-  const on = readModuleSettingToggleOn(item.seq);
-  return `
-        <li class="list-none" data-module-setting-row-seq="${item.seq}">
-          <div class="border-b border-border px-4 py-3">
-            <div class="flex items-start justify-between gap-3">
-              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
-              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
-            </div>
-            ${renderPostPaymentClearTablePanelHtml(item.seq, on)}
-          </div>
-        </li>`;
-}
-
 function renderModuleSettingAutoClearTableRow(item: ModuleSettingCatalogItem): string {
   ensureAutoClearTableToggleMigrated();
   const on = readModuleSettingToggleOn(item.seq);
@@ -8203,6 +8161,73 @@ function renderModuleSettingGuestDishDetailDisplayRow(item: ModuleSettingCatalog
         </li>`;
 }
 
+let hubSearchLeaveGuardRunning = false;
+let bypassHubSearchLeaveGuard = false;
+
+async function guardHubSearchEditAction(hubId: string, action: () => void): Promise<boolean> {
+  const scopeKey = hubSearchEditScopeKey(hubId);
+  if (!isPageSavePending(scopeKey)) {
+    action();
+    return true;
+  }
+  if (hubSearchLeaveGuardRunning) return false;
+
+  hubSearchLeaveGuardRunning = true;
+  try {
+    const choice = await openHubSearchLeaveConfirmDialog(getPageSavePendingCount(scopeKey));
+    if (choice === "cancel") {
+      mount();
+      return false;
+    }
+    if (choice === "discard") {
+      discardPageDraft(scopeKey);
+      action();
+      return true;
+    }
+    const batch = await confirmAndTriggerPageSaveAndDeploy(scopeKey);
+    if (!batch) {
+      mount();
+      return false;
+    }
+    action();
+    return true;
+  } finally {
+    hubSearchLeaveGuardRunning = false;
+  }
+}
+
+function replayHubSearchGuardedClick(target: HTMLElement): void {
+  bypassHubSearchLeaveGuard = true;
+  try {
+    target.click();
+  } finally {
+    bypassHubSearchLeaveGuard = false;
+  }
+}
+
+function renderHubSearchSettingResult(hit: HubSearchHit): string {
+  if (hit.kind !== "setting" || hit.seq == null || !hit.settingsPath) return "";
+  const catalog = getModuleSettingsCatalog(hit.settingsPath);
+  const item = catalog?.items.find((candidate) => candidate.seq === hit.seq);
+  if (!item) return "";
+  const row = renderModuleSettingRow(item);
+  if (!row) return "";
+  return `
+    <div class="bg-card" data-hub-search-setting-surface="${hit.seq}">
+      <ul class="m-0 list-none p-0">${row}</ul>
+    </div>`;
+}
+
+function renderModuleSettingGuestDiningDurationLimitRow(item: ModuleSettingCatalogItem): string {
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            <div class="min-w-0">${renderModuleSettingTitleBlock(item)}</div>
+            ${renderGuestDiningDurationLimitPanelHtml()}
+          </div>
+        </li>`;
+}
+
 function renderModuleSettingGuestDiningDurationRow(item: ModuleSettingCatalogItem): string {
   const seq = item.seq as GuestDiningDurationSeq;
   ensureGuestDiningDurationToggleMigrated(seq);
@@ -8422,16 +8447,11 @@ function renderModuleSettingGuestMenuClassNameDisplayRow(item: ModuleSettingCata
 }
 
 function renderModuleSettingGuestMenuImageModeRow(item: ModuleSettingCatalogItem): string {
-  ensureGuestMenuImageModeToggleMigrated();
-  const on = readModuleSettingToggleOn(item.seq);
   return `
         <li class="list-none" data-module-setting-row-seq="${item.seq}">
           <div class="border-b border-border px-4 py-3">
-            <div class="flex items-start justify-between gap-3">
-              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
-              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
-            </div>
-            ${renderGuestMenuImageModePanelHtml(on)}
+            <div class="min-w-0">${renderModuleSettingTitleBlock(item)}</div>
+            ${renderGuestMenuImageModePanelHtml()}
           </div>
         </li>`;
 }
@@ -8669,6 +8689,16 @@ function renderModuleSettingOrderDisplaySeatRow(item: ModuleSettingCatalogItem):
         </li>`;
 }
 
+function renderModuleSettingTimedMenuDisplayRow(item: ModuleSettingCatalogItem): string {
+  return `
+        <li class="list-none" data-module-setting-row-seq="${item.seq}">
+          <div class="border-b border-border px-4 py-3">
+            ${renderModuleSettingTitleBlock(item)}
+            ${renderTimedMenuDisplayPanelHtml()}
+          </div>
+        </li>`;
+}
+
 function renderModuleSettingPosButtonVisibilityRow(item: ModuleSettingCatalogItem): string {
   ensurePosButtonVisibilityToggleMigrated(item.seq);
   const on = readModuleSettingToggleOn(item.seq);
@@ -8689,15 +8719,11 @@ function renderModuleSettingPreOrderTableChangeRow(item: ModuleSettingCatalogIte
     return renderModuleSettingRow(item);
   }
   const seq = item.seq;
-  const on = readModuleSettingToggleOn(seq);
   return `
         <li class="list-none" data-module-setting-row-seq="${seq}">
           <div class="border-b border-border px-4 py-3">
-            <div class="flex items-start justify-between gap-3">
-              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
-              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
-            </div>
-            ${renderPreOrderTableChangePanelHtml(seq, on)}
+            <div class="min-w-0">${renderModuleSettingTitleBlock(item)}</div>
+            ${renderPreOrderTableChangePanelHtml()}
           </div>
         </li>`;
 }
@@ -8873,10 +8899,7 @@ function renderModuleSettingOrderPickupSmsContentRow(item: ModuleSettingCatalogI
 }
 
 function renderModuleSettingNotificationCenterTopicsRow(item: ModuleSettingCatalogItem): string {
-  const intro = isFohPosNotificationControlGroupIntroSeq(item.seq)
-    ? renderFohPosNotificationControlGroupIntroHtml()
-    : "";
-  const row = `
+  return `
         <li class="list-none" data-module-setting-row-seq="${item.seq}">
           <div class="border-b border-border px-4 py-3">
             ${renderModuleSettingTitleBlock(item)}
@@ -8885,7 +8908,6 @@ function renderModuleSettingNotificationCenterTopicsRow(item: ModuleSettingCatal
             </div>
           </div>
         </li>`;
-  return intro ? wrapModuleSettingGroupIntro(row, intro) : row;
 }
 
 function renderModuleSettingDurationBillingScenesRow(item: ModuleSettingCatalogItem): string {
@@ -8906,10 +8928,7 @@ function renderModuleSettingDurationBillingScenesRow(item: ModuleSettingCatalogI
 function renderModuleSettingStaffOrderAlertRow(item: ModuleSettingCatalogItem): string {
   ensureStaffOrderAlertToggleMigrated(item.seq);
   const on = readModuleSettingToggleOn(item.seq);
-  const intro = isFohPosOrderAlertsGroupIntroSeq(item.seq)
-    ? renderFohPosOrderAlertsGroupIntroHtml()
-    : "";
-  const row = `
+  return `
         <li class="list-none" data-module-setting-row-seq="${item.seq}">
           <div class="border-b border-border px-4 py-3">
             <div class="flex items-start justify-between gap-3">
@@ -8919,7 +8938,6 @@ function renderModuleSettingStaffOrderAlertRow(item: ModuleSettingCatalogItem): 
             ${renderStaffOrderAlertPanelHtml(item.seq, on)}
           </div>
         </li>`;
-  return intro ? wrapModuleSettingGroupIntro(row, intro) : row;
 }
 
 function renderModuleSettingTablesideServiceCallMasterRow(item: ModuleSettingCatalogItem): string {
@@ -9887,9 +9905,6 @@ function renderModuleSettingRow(item: ModuleSettingCatalogItem): string {
   if (isSingleTableNoMultiOrderSeq(item.seq)) {
     return renderModuleSettingSingleTableNoMultiOrderRow(item);
   }
-  if (isPostPaymentClearTableSeq(item.seq)) {
-    return renderModuleSettingPostPaymentClearTableRow(item);
-  }
   if (isAutoClearTableSeq(item.seq)) {
     return renderModuleSettingAutoClearTableRow(item);
   }
@@ -10034,6 +10049,9 @@ function renderModuleSettingRow(item: ModuleSettingCatalogItem): string {
   if (isOrderDisplaySeatSeq(item.seq)) {
     return renderModuleSettingOrderDisplaySeatRow(item);
   }
+  if (isTimedMenuDisplaySeq(item.seq)) {
+    return renderModuleSettingTimedMenuDisplayRow(item);
+  }
   if (isMenuSourceModeRadioSeq(item.seq)) {
     return renderModuleSettingMenuSourceModeRow(item);
   }
@@ -10045,6 +10063,9 @@ function renderModuleSettingRow(item: ModuleSettingCatalogItem): string {
   }
   if (isGuestDishDetailDisplaySeq(item.seq)) {
     return renderModuleSettingGuestDishDetailDisplayRow(item);
+  }
+  if (isGuestDiningDurationLimitSeq(item.seq)) {
+    return renderModuleSettingGuestDiningDurationLimitRow(item);
   }
   if (isGuestDiningDurationSeq(item.seq)) {
     return renderModuleSettingGuestDiningDurationRow(item);
@@ -10164,6 +10185,7 @@ function runModuleSettingToggleSideEffects(seq: number, next: boolean): void {
       }
       if (isGuestDiningDurationSeq(seq)) {
         setGuestDiningDurationPanelVisible(seq, next);
+        refreshGuestDiningDurationLimitDependencies();
       }
       if (isGuestOrderPlaceIntervalSeq(seq)) {
         setGuestOrderPlaceIntervalPanelVisible(next);
@@ -10198,9 +10220,6 @@ function runModuleSettingToggleSideEffects(seq: number, next: boolean): void {
       }
       if (isSingleTableNoMultiOrderSeq(seq)) {
         setSingleTableNoMultiOrderPanelVisible(seq, next);
-      }
-      if (isPostPaymentClearTableSeq(seq)) {
-        setPostPaymentClearTablePanelVisible(seq, next);
       }
       if (isStaffOrderAlertSeq(seq)) {
         setStaffOrderAlertPanelVisible(seq, next);
@@ -10287,9 +10306,6 @@ function runModuleSettingToggleSideEffects(seq: number, next: boolean): void {
       if (isGuestMenuClassNameDisplaySeq(seq)) {
         setGuestMenuClassNameDisplayPanelVisible(next);
       }
-      if (isGuestMenuImageModeSeq(seq)) {
-        setGuestMenuImageModePanelVisible(next);
-      }
       if (isGuestMenuLineToggleSeq(seq)) {
         if (next) ensureGuestMenuLineToggleLinesDefault(seq);
         setGuestMenuLineTogglePanelVisible(seq, next);
@@ -10372,9 +10388,6 @@ function runModuleSettingToggleSideEffects(seq: number, next: boolean): void {
       if (isPartySizeSelectionPageSeq(seq)) {
         setPartySizeSelectionPagePanelVisible(seq, next);
       }
-      if (isPreOrderTableChangeSeq(seq)) {
-        setPreOrderTableChangePanelVisible(seq, next);
-      }
       if (isTipAlertRatioSeq(seq)) {
         setTipAlertRatioPanelVisible(seq, next);
       }
@@ -10435,15 +10448,34 @@ function runModuleSettingToggleSideEffects(seq: number, next: boolean): void {
 function applyModuleSettingToggleChange(seq: number, next: boolean): void {
   const byLineId = getActiveFohByLineIdFromDom();
   const currentPath = readAppHashPath();
+  const isActiveFohByLine = Boolean(
+    byLineId && isFohSettingsByLinePath(currentPath),
+  );
+  if (isGuestDiningDurationLimitSeq(seq) && !isActiveFohByLine) {
+    refreshGuestDiningDurationLimitDependencies();
+    return;
+  }
+  if (
+    byLineId &&
+    isActiveFohByLine &&
+    isGuestDiningDurationSeq(seq) &&
+    !isGuestDiningDurationLineLimitEnabled(byLineId)
+  ) {
+    refreshGuestDiningDurationLimitDependencies();
+    return;
+  }
   const before =
-    byLineId && isFohSettingsByLinePath(currentPath)
+    byLineId && isActiveFohByLine
       ? readFohByLineToggleState(seq, byLineId)
       : readModuleSettingToggleOn(seq);
   if (before === next) return;
 
-  const pageKeyFromCurrent = resolvePageSaveKey(currentPath);
-  const settingsPath = isPageBatchSavePath(pageKeyFromCurrent)
-    ? pageKeyFromCurrent
+  const activeEditContext = getActiveSettingEditContext();
+  const pageKeyFromCurrent = resolveCurrentPageSaveKey(currentPath);
+  const settingsPath = activeEditContext?.mode === "search"
+    ? resolveSettingsPathForSeq(seq) ?? activeEditContext.settingsPath
+    : isPageBatchSavePath(pageKeyFromCurrent)
+      ? pageKeyFromCurrent
     : currentPath.startsWith("/operations/queue-call/settings")
       ? getModuleSettingsBasePath(currentPath) ?? "/operations/queue-call/settings"
       : resolveSettingsPathForSeq(seq) ?? resolveSettingsPathForChange(String(seq));
@@ -10455,13 +10487,20 @@ function applyModuleSettingToggleChange(seq: number, next: boolean): void {
     ? `${getSettingTitleBySeq(seq)}（${lineLabel} 产线）`
     : undefined;
 
-  const deferBatchSave = settingsPath && isPageBatchSavePath(settingsPath);
+  const deferBatchSave = Boolean(
+    activeEditContext?.mode === "search" || (settingsPath && isPageBatchSavePath(settingsPath)),
+  );
 
   if (deferBatchSave) {
-    const pageKey = resolvePageSaveKey(settingsPath);
-    if (byLineId && isFohSettingsByLinePath(currentPath)) {
-      setPageDraftFohToggle(pageKey, seq, byLineId, next);
+    const pageKey = activeEditContext?.scopeKey ?? resolvePageSaveKey(settingsPath!);
+    if (byLineId && isActiveFohByLine) {
+      if (isGuestDiningDurationLimitSeq(seq)) {
+        writeFohByLineToggleState(seq, byLineId, next);
+      } else {
+        setPageDraftFohToggle(pageKey, seq, byLineId, next);
+      }
       runFohByLineToggleSideEffects(seq, next);
+      refreshGuestDiningDurationLimitDependencies();
       requestAnimationFrame(() => applyFohByLineUiSuppressions());
     } else {
       setPageDraftToggle(pageKey, seq, next);
@@ -10480,9 +10519,10 @@ function applyModuleSettingToggleChange(seq: number, next: boolean): void {
     return;
   }
 
-  if (byLineId && isFohSettingsByLinePath(currentPath)) {
+  if (byLineId && isActiveFohByLine) {
     writeFohByLineToggleState(seq, byLineId, next);
     runFohByLineToggleSideEffects(seq, next);
+    refreshGuestDiningDurationLimitDependencies();
     requestAnimationFrame(() => applyFohByLineUiSuppressions());
   } else {
     writeModuleSettingToggleOn(seq, next);
@@ -11379,6 +11419,16 @@ function renderMain(): string {
   const tabModule = getTabModule(path);
   const { title: pageTitle } = findTitle(path);
   const hubSearchCtx = getActiveHubSheetSearchContext();
+  setActiveSettingEditContext(
+    hubSearchCtx
+      ? {
+          mode: "search",
+          scopeKey: hubSearchEditScopeKey(hubSearchCtx.hubId),
+          settingsPath: path,
+          hubId: hubSearchCtx.hubId,
+        }
+      : null,
+  );
   const title = hubSearchCtx ? t("hubSearch.resultsTitle") : pageTitle;
   const isBrandProductsTertiary = isBrandProductsTertiaryPath(path);
   const isBrandMenuTertiary = isBrandMenuTertiaryPath(path);
@@ -11427,6 +11477,7 @@ function renderMain(): string {
   const isGroupStoreList = isGroupStoreListPath(path);
   syncTeamBreaksOvertimeSession(path);
   const wideContentLayout =
+    Boolean(hubSearchCtx) ||
     isBrandMenuTertiary ||
     isStoreMenuTertiary ||
     isDeviceManagementHardware ||
@@ -11530,7 +11581,18 @@ function renderMain(): string {
     if (hubSearchCtx) {
       const index = buildHubSearchIndex(hubSearchCtx.hubId);
       const hits = index ? queryHubSearchIndex(index, hubSearchCtx.q) : [];
-      return renderHubSearchResultsPane(hubSearchCtx.hubId, hubSearchCtx.q, hits);
+      const scopeKey = hubSearchEditScopeKey(hubSearchCtx.hubId);
+      return `<div class="flex min-h-0 flex-1 flex-col overflow-hidden" data-hub-search-edit-scope="${escapeHtml(scopeKey)}">
+        <div class="min-h-0 flex-1 overflow-y-auto">
+          ${renderHubSearchResultsPane(
+            hubSearchCtx.hubId,
+            hubSearchCtx.q,
+            hits,
+            renderHubSearchSettingResult,
+          )}
+        </div>
+        ${renderPageSaveBar(scopeKey)}
+      </div>`;
     }
     return null;
   })() ?? (
@@ -12141,6 +12203,8 @@ function mount(): void {
     </div>
   `;
 
+  bindMarketingScreensaverFullscreenFlow(app);
+
   const applySidebarNavScroll = (): void => {
     const nav = document.getElementById("nav-tree");
     if (!nav) return;
@@ -12179,6 +12243,50 @@ function mount(): void {
       }
     }
   }
+
+  app.firstElementChild?.addEventListener(
+    "click",
+    (e) => {
+      if (bypassHubSearchLeaveGuard) return;
+      const active = getActiveSettingEditContext();
+      if (active?.mode !== "search" || !active.hubId || !isPageSavePending(active.scopeKey)) return;
+      const target = e.target as HTMLElement;
+      const actionTarget = target.closest<HTMLElement>(
+        [
+          "[data-hub-sheet-search-clear]",
+          "[data-hub-search-hit]",
+          "[data-nav-module-sheet-secondary-close]",
+          "[data-inventory-secondary-close]",
+          "[data-product-center-main-secondary-close]",
+          "[data-marketing-secondary-close]",
+          "[data-promotions-secondary-close]",
+          "[data-members-secondary-close]",
+          "[data-gift-cards-secondary-close]",
+          "[data-reports-secondary-close]",
+          "[data-print-secondary-close]",
+          "[data-reservations-secondary-close]",
+          "#nav-tree a[href^='#']",
+          "#nav-tree [data-inventory-sidebar-open]",
+          "#nav-tree [data-product-center-main-sidebar-open]",
+          "#nav-tree [data-marketing-sidebar-open]",
+          "#nav-tree [data-promotions-sidebar-open]",
+          "#nav-tree [data-members-sidebar-open]",
+          "#nav-tree [data-gift-cards-sidebar-open]",
+          "#nav-tree [data-reports-sidebar-open]",
+          "#nav-tree [data-print-sidebar-open]",
+          "#nav-tree [data-reservations-sidebar-open]",
+          "#nav-tree [data-nav-module-sheet-sidebar-open]",
+          "[data-hub-sheet-root] a[href^='#']",
+        ].join(","),
+      );
+      if (!actionTarget) return;
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      void guardHubSearchEditAction(active.hubId, () => replayHubSearchGuardedClick(actionTarget));
+    },
+    true,
+  );
 
   document.getElementById("nav-tree")?.addEventListener(
     "scroll",
@@ -12584,8 +12692,10 @@ function mount(): void {
         const clearBtn = hit.closest(`[data-hub-sheet-search-clear="${hubId}"]`);
         if (clearBtn) {
           e.preventDefault();
-          clearHubSheetSearch(hubId);
-          mount();
+          void guardHubSearchEditAction(hubId, () => {
+            clearHubSheetSearch(hubId);
+            mount();
+          });
           return;
         }
         if (shouldEnterHubSearch(getHubSheetSearchQuery(hubId))) {
@@ -12617,9 +12727,13 @@ function mount(): void {
       window.clearTimeout(inputEl._hubSearchTimer);
       inputEl._hubSearchTimer = window.setTimeout(() => {
         if (inputEl._hubSearchComposing) return;
-        setHubSheetSearchQuery(hubId, inputEl.value);
-        markHubSheetSearchInputRefocus();
-        mount();
+        const nextQuery = inputEl.value;
+        if (nextQuery === getHubSheetSearchQuery(hubId)) return;
+        void guardHubSearchEditAction(hubId, () => {
+          setHubSheetSearchQuery(hubId, nextQuery);
+          markHubSheetSearchInputRefocus();
+          mount();
+        });
       }, 200);
     };
     inputEl.addEventListener("compositionstart", () => {
@@ -12641,8 +12755,10 @@ function mount(): void {
       ev.preventDefault();
       ev.stopPropagation();
       window.clearTimeout(inputEl._hubSearchTimer);
-      clearHubSheetSearch(hubId);
-      mount();
+      void guardHubSearchEditAction(hubId, () => {
+        clearHubSheetSearch(hubId);
+        mount();
+      });
     });
   }
 
@@ -12654,7 +12770,7 @@ function mount(): void {
     const path = btn.getAttribute("data-hit-path") ?? "";
     const seq = btn.getAttribute("data-hit-seq") ?? "";
     if (!hubId || !path) return;
-    navigateFromHubSearchHit(hubId, path, seq);
+    void guardHubSearchEditAction(hubId, () => navigateFromHubSearchHit(hubId, path, seq));
   });
 
   app.firstElementChild?.addEventListener("click", (e) => {
@@ -12811,7 +12927,6 @@ function mount(): void {
   bindTakeoutEnhancedDisplayUi();
   bindTableSelectionPageUi();
   bindSingleTableNoMultiOrderUi();
-  bindPostPaymentClearTableUi();
   bindAutoClearTableUi();
   bindStoreClosingAlertUi();
   bindClearTableButtonUi();
@@ -12864,6 +12979,7 @@ function mount(): void {
   bindCustomDividerNameUi();
   bindEmenuCustomMessageUi();
   bindOrderDisplaySeatUi();
+  bindTimedMenuDisplayUi();
   bindLineMergeMatrixUi();
   bindPosButtonVisibilityUi();
   bindPartySizeSelectionPageUi();

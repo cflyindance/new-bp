@@ -3,21 +3,23 @@
  */
 
 import { readModuleSettingJson, writeModuleSettingJson } from "./module-settings-form-ui";
+import {
+  getGuestMenuBodyProductLineIds,
+  getGuestMenuBodyProductLines,
+  type GuestMenuBodyProductLineId,
+} from "./module-settings-guest-menu-body-line-scope";
+import { readModuleSettingJsonState } from "./module-setting-storage-state";
 import { moduleSettingToggleStorageKey } from "./module-settings-toggle-ui";
 
 export const GUEST_MENU_CLASS_NAME_DISPLAY_SEQ = 606;
 
 const LINES_STORAGE_ID = "606-menu-class-name-display-lines";
 
-export const GUEST_MENU_CLASS_NAME_DISPLAY_PRODUCT_LINES = [
-  { id: "kiosk", label: "Kiosk" },
-  { id: "emenu", label: "eMenu" },
-  { id: "sdi", label: "SDI" },
-  { id: "online-order", label: "Online Order" },
-] as const;
+export const GUEST_MENU_CLASS_NAME_DISPLAY_PRODUCT_LINES = getGuestMenuBodyProductLines(
+  GUEST_MENU_CLASS_NAME_DISPLAY_SEQ,
+);
 
-export type GuestMenuClassNameDisplayProductLineId =
-  (typeof GUEST_MENU_CLASS_NAME_DISPLAY_PRODUCT_LINES)[number]["id"];
+export type GuestMenuClassNameDisplayProductLineId = GuestMenuBodyProductLineId;
 
 const ALL_LINE_IDS: GuestMenuClassNameDisplayProductLineId[] =
   GUEST_MENU_CLASS_NAME_DISPLAY_PRODUCT_LINES.map((l) => l.id);
@@ -73,9 +75,9 @@ function normalizeLineIds(raw: unknown): GuestMenuClassNameDisplayProductLineId[
 
 export function readGuestMenuClassNameDisplayLines(): GuestMenuClassNameDisplayProductLineId[] {
   ensureGuestMenuClassNameDisplayToggleMigrated();
-  const stored = readModuleSettingJson<unknown>(LINES_STORAGE_ID, null);
-  const normalized = normalizeLineIds(stored);
-  if (normalized.length > 0) return normalized;
+  const state = readModuleSettingJsonState(LINES_STORAGE_ID);
+  if (state.state === "configured") return normalizeLineIds(state.value);
+  if (state.state === "invalid") return [];
 
   if (readLegacyToggleOn()) {
     const all = [...ALL_LINE_IDS];

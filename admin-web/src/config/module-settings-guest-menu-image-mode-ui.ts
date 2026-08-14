@@ -25,6 +25,11 @@ import {
   getFohActiveLineFilterId,
 } from "./foh-settings-by-line-filter";
 import { moduleSettingToggleStorageKey } from "./module-settings-toggle-ui";
+import {
+  getGuestMenuBodyProductLines,
+  type GuestMenuBodyProductLineId,
+} from "./module-settings-guest-menu-body-line-scope";
+import { readModuleSettingJsonState } from "./module-setting-storage-state";
 
 export const GUEST_MENU_IMAGE_MODE_SEQ = 607;
 
@@ -32,14 +37,11 @@ const LINES_STORAGE_ID = "607-menu-image-mode-lines";
 
 const LEGACY_MODE_FIELD_ID = "607-image-mode";
 
-export const GUEST_MENU_IMAGE_MODE_PRODUCT_LINES = [
-  { id: "kiosk", label: "Kiosk" },
-  { id: "emenu", label: "eMenu" },
-  { id: "sdi", label: "SDI" },
-] as const;
+export const GUEST_MENU_IMAGE_MODE_PRODUCT_LINES = getGuestMenuBodyProductLines(
+  GUEST_MENU_IMAGE_MODE_SEQ,
+);
 
-export type GuestMenuImageModeProductLineId =
-  (typeof GUEST_MENU_IMAGE_MODE_PRODUCT_LINES)[number]["id"];
+export type GuestMenuImageModeProductLineId = GuestMenuBodyProductLineId;
 
 export type GuestMenuImageMode = "original" | "small" | "large";
 
@@ -47,12 +49,12 @@ const ALL_LINE_IDS: GuestMenuImageModeProductLineId[] =
   GUEST_MENU_IMAGE_MODE_PRODUCT_LINES.map((l) => l.id);
 
 const MODE_OPTIONS: ReadonlyArray<{ value: GuestMenuImageMode; label: string }> = [
-  { value: "original", label: "原始模式" },
-  { value: "small", label: "小图模式" },
+  { value: "original", label: "默认" },
   { value: "large", label: "大图模式" },
+  { value: "small", label: "小图模式" },
 ];
 
-const DEFAULT_MODE: GuestMenuImageMode = "small";
+const DEFAULT_MODE: GuestMenuImageMode = "original";
 
 const MODULE_SETTING_CONTROL_CLASS =
   "size-4 shrink-0 accent-primary text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50";
@@ -66,7 +68,6 @@ const BTN_GHOST =
 const BTN_DIALOG_PRIMARY =
   "inline-flex h-9 shrink-0 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90";
 
-let toggleMigrated = false;
 let legacyMigrated = false;
 
 function escapeHtml(s: string): string {
@@ -118,22 +119,7 @@ function readLegacyToggleOn(): boolean {
 }
 
 export function ensureGuestMenuImageModeToggleMigrated(): void {
-  if (toggleMigrated) return;
-  toggleMigrated = true;
-  try {
-    if (localStorage.getItem(moduleSettingToggleStorageKey(GUEST_MENU_IMAGE_MODE_SEQ)) !== null) {
-      return;
-    }
-  } catch {
-    return;
-  }
-  if (readLegacyToggleOn()) {
-    try {
-      localStorage.setItem(moduleSettingToggleStorageKey(GUEST_MENU_IMAGE_MODE_SEQ), "1");
-    } catch {
-      /* ignore */
-    }
-  }
+  readGuestMenuImageModeLines();
 }
 
 function migrateLegacyGlobalToLines(): void {
@@ -173,23 +159,31 @@ export function writeGuestMenuImageModeLines(lines: GuestMenuImageModeProductLin
 
 /** 表格展示全部产线；开启后默认全部生效 */
 export function ensureGuestMenuImageModeLinesDefault(): void {
-  writeGuestMenuImageModeLines([...ALL_LINE_IDS]);
+  if (readModuleSettingJsonState(LINES_STORAGE_ID).state === "missing") {
+    readGuestMenuImageModeLines();
+  }
 }
 
 export function readGuestMenuImageModeLines(): GuestMenuImageModeProductLineId[] {
-  ensureGuestMenuImageModeToggleMigrated();
   migrateLegacyGlobalToLines();
 
-  const stored = readModuleSettingJson<unknown>(LINES_STORAGE_ID, null);
-  const normalized = normalizeLineIds(stored);
-  if (normalized.length > 0) return normalized;
+  const state = readModuleSettingJsonState(LINES_STORAGE_ID);
+  if (state.state === "configured") return normalizeLineIds(state.value);
+  if (state.state === "invalid") return [];
 
-  if (readLegacyToggleOn()) {
-    const all = [...ALL_LINE_IDS];
-    writeGuestMenuImageModeLines(all);
-    return all;
+  let legacyToggle: string | null = null;
+  try {
+    legacyToggle = localStorage.getItem(moduleSettingToggleStorageKey(GUEST_MENU_IMAGE_MODE_SEQ));
+  } catch {
+    return [];
   }
-  return [];
+  const migrated = legacyToggle === null
+    ? [...ALL_LINE_IDS]
+    : legacyToggle === "1"
+      ? ALL_LINE_IDS.filter((id) => id !== "online-order")
+      : [];
+  writeGuestMenuImageModeLines(migrated);
+  return migrated;
 }
 
 export function readGuestMenuImageModeForLine(lineId: GuestMenuImageModeProductLineId): GuestMenuImageMode {
@@ -319,7 +313,18 @@ function renderLineRow(
       ${FOH_LINE_CONFIG_ROW_ATTR}="${escapeHtml(line.id)}"
       data-menu-image-mode-line-config="${escapeHtml(line.id)}"
     >
-      <td class="px-3 py-2.5 text-sm font-medium text-foreground whitespace-nowrap align-top">${escapeHtml(line.label)}</td>
+      <td class="px-3 py-2.5 text-sm font-medium text-foreground whitespace-nowrap align-top">
+        <label class="inline-flex cursor-pointer items-center gap-2">
+          <input
+            type="checkbox"
+            class="${MODULE_SETTING_CONTROL_CLASS} rounded-sm"
+            data-menu-image-mode-line-enabled="${escapeHtml(line.id)}"
+            ${enabled ? "checked" : ""}
+            aria-label="启用 ${escapeHtml(line.label)} 菜单图片展示模式"
+          />
+          <span>${escapeHtml(line.label)}</span>
+        </label>
+      </td>
       <td class="px-3 py-2.5 align-top">${renderModeRadiosHtml(line.id, enabled)}</td>
       <td class="px-3 py-2.5 align-top">${renderMenuSettingsCell(line.id, mode)}</td>
     </tr>`;
@@ -353,10 +358,11 @@ function renderDishPickDialog(): string {
     </div>`;
 }
 
-function renderEditorInnerHtml(panelEnabled: boolean): string {
+function renderEditorInnerHtml(_panelEnabled: boolean): string {
   ensureGuestMenuImageModeLinesDefault();
+  const enabledLines = new Set(readGuestMenuImageModeLines());
   const rows = visibleProductLines()
-    .map((line) => renderLineRow(line, panelEnabled))
+    .map((line) => renderLineRow(line, enabledLines.has(line.id)))
     .join("");
 
   return `
@@ -378,15 +384,13 @@ function renderEditorInnerHtml(panelEnabled: boolean): string {
     ${renderDishPickDialog()}`;
 }
 
-export function renderGuestMenuImageModePanelHtml(on: boolean): string {
-  const hidden = on ? "" : "hidden";
+export function renderGuestMenuImageModePanelHtml(): string {
   return `
     <div
-      class="mt-3 max-w-4xl ${hidden}"
+      class="mt-3 max-w-4xl"
       data-menu-image-mode-panel="${GUEST_MENU_IMAGE_MODE_SEQ}"
-      ${on ? "" : 'aria-hidden="true"'}
     >
-      ${renderEditorInnerHtml(on)}
+      ${renderEditorInnerHtml(true)}
     </div>`;
 }
 
@@ -436,6 +440,16 @@ function setEditorInteractive(editor: HTMLElement, enabled: boolean): void {
     label.classList.toggle("opacity-50", !enabled);
     label.classList.toggle("cursor-pointer", enabled);
   });
+}
+
+function setLineInteractive(editor: HTMLElement, lineId: string, enabled: boolean): void {
+  const row = editor.querySelector<HTMLElement>(`[data-menu-image-mode-line-config="${lineId}"]`);
+  if (!row) return;
+  row
+    .querySelectorAll<HTMLInputElement | HTMLButtonElement>(
+      "input:not([data-menu-image-mode-line-enabled]), button",
+    )
+    .forEach((control) => { control.disabled = !enabled; });
 }
 
 export function setGuestMenuImageModePanelVisible(visible: boolean): void {
@@ -549,6 +563,18 @@ function bindMenuImageModePanel(panel: HTMLElement): void {
   if (editor) {
     editor.addEventListener("change", (e) => {
       const target = e.target as HTMLElement;
+      const lineToggle = target.closest<HTMLInputElement>("[data-menu-image-mode-line-enabled]");
+      if (lineToggle) {
+        const lineId = lineToggle.getAttribute("data-menu-image-mode-line-enabled");
+        if (lineId && ALL_LINE_IDS.includes(lineId as GuestMenuImageModeProductLineId)) {
+          const enabled = new Set(readGuestMenuImageModeLines());
+          if (lineToggle.checked) enabled.add(lineId as GuestMenuImageModeProductLineId);
+          else enabled.delete(lineId as GuestMenuImageModeProductLineId);
+          writeGuestMenuImageModeLines([...enabled]);
+          setLineInteractive(editor, lineId, lineToggle.checked);
+        }
+        return;
+      }
       const lineRadio = target.closest<HTMLInputElement>("[data-menu-image-mode-line-radio]");
       if (lineRadio?.checked) {
         const lineId = lineRadio.getAttribute("data-menu-image-mode-line-radio");
@@ -595,6 +621,10 @@ export function bindGuestMenuImageModeUi(root: ParentNode = document): void {
   root.querySelectorAll<HTMLElement>(`[data-menu-image-mode-panel="${GUEST_MENU_IMAGE_MODE_SEQ}"]`).forEach((panel) => {
     bindMenuImageModePanel(panel);
     const editor = panel.querySelector<HTMLElement>(`[data-menu-image-mode-editor]`);
-    if (editor) syncAllConditionalPanelsInEditor(editor);
+    if (editor) {
+      syncAllConditionalPanelsInEditor(editor);
+      const enabled = new Set(readGuestMenuImageModeLines());
+      for (const lineId of ALL_LINE_IDS) setLineInteractive(editor, lineId, enabled.has(lineId));
+    }
   });
 }

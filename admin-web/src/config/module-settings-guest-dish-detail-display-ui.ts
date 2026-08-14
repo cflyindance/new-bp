@@ -19,21 +19,23 @@ import {
   getFohActiveLineFilterId,
 } from "./foh-settings-by-line-filter";
 import { readModuleSettingJson, writeModuleSettingJson } from "./module-settings-form-ui";
+import {
+  getGuestMenuBodyProductLineIds,
+  getGuestMenuBodyProductLines,
+  type GuestMenuBodyProductLineId,
+} from "./module-settings-guest-menu-body-line-scope";
+import { readModuleSettingJsonState } from "./module-setting-storage-state";
 import { moduleSettingToggleStorageKey } from "./module-settings-toggle-ui";
 
 export const GUEST_DISH_DETAIL_DISPLAY_SEQ = 608;
 
 const LINES_STORAGE_ID = "608-guest-dish-detail-lines";
 
-export const GUEST_DISH_DETAIL_PRODUCT_LINES = [
-  { id: "kiosk", label: "Kiosk" },
-  { id: "emenu", label: "eMenu" },
-  { id: "sdi", label: "SDI" },
-  { id: "online-order", label: "Online Order" },
-] as const;
+export const GUEST_DISH_DETAIL_PRODUCT_LINES = getGuestMenuBodyProductLines(
+  GUEST_DISH_DETAIL_DISPLAY_SEQ,
+);
 
-export type GuestDishDetailProductLineId =
-  (typeof GUEST_DISH_DETAIL_PRODUCT_LINES)[number]["id"];
+export type GuestDishDetailProductLineId = GuestMenuBodyProductLineId;
 
 const ALL_LINE_IDS: GuestDishDetailProductLineId[] =
   GUEST_DISH_DETAIL_PRODUCT_LINES.map((l) => l.id);
@@ -120,14 +122,16 @@ export function writeGuestDishDetailLines(lines: GuestDishDetailProductLineId[])
 
 /** 表格展示全部产线；开启后默认全部生效 */
 export function ensureGuestDishDetailLinesDefault(): void {
-  writeGuestDishDetailLines([...ALL_LINE_IDS]);
+  if (readModuleSettingJsonState(LINES_STORAGE_ID).state === "missing") {
+    writeGuestDishDetailLines([...ALL_LINE_IDS]);
+  }
 }
 
 export function readGuestDishDetailLines(): GuestDishDetailProductLineId[] {
   ensureGuestDishDetailDisplayToggleMigrated();
-  const stored = readModuleSettingJson<unknown>(LINES_STORAGE_ID, null);
-  const normalized = normalizeLineIds(stored);
-  if (normalized.length > 0) return normalized;
+  const state = readModuleSettingJsonState(LINES_STORAGE_ID);
+  if (state.state === "configured") return normalizeLineIds(state.value);
+  if (state.state === "invalid") return [];
 
   if (readLegacyToggleOn()) {
     const all = [...ALL_LINE_IDS];
