@@ -19,21 +19,23 @@ import type {
   SeasoningRelationSummary,
   SeasoningMenuStructure,
 } from "./seasoning-types";
+import { SeasoningApiError } from "./seasoning-api-error";
+import { resolveSeasoningApiMode } from "./seasoning-api-mode";
+
+export { SeasoningApiError } from "./seasoning-api-error";
 
 const API_BASE = "/api/v1/emenu-local/seasoning";
 const SESSION_ID = globalThis.crypto?.randomUUID?.() ?? `seasoning-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-
-export class SeasoningApiError extends Error {
-  constructor(
-    public readonly status: number,
-    public readonly code: string,
-    public readonly payload: unknown,
-  ) {
-    super(code);
-  }
-}
+const API_MODE = resolveSeasoningApiMode(
+  (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env?.VITE_EMENU_SEASONING_MODE,
+  globalThis.location?.hostname ?? "localhost",
+);
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  if (API_MODE === "browser") {
+    const { browserSeasoningRequest } = await import("./seasoning-browser-transport");
+    return browserSeasoningRequest<T>(path, init);
+  }
   const response = await fetch(`${API_BASE}${path}`, {
     ...init,
     headers: { Accept: "application/json", "X-Seasoning-Session": SESSION_ID, ...(init?.body ? { "Content-Type": "application/json" } : {}), ...init?.headers },
@@ -55,50 +57,56 @@ function query(params: Record<string, string | number | undefined>): string {
   return value ? `?${value}` : "";
 }
 
-export const seasoningApi = {
-  bootstrap: () => request<SeasoningBootstrap>("/bootstrap"),
+export type SeasoningRequest = <T>(path: string, init?: RequestInit) => Promise<T>;
+
+export function createSeasoningApi(client: SeasoningRequest = request) {
+  return {
+  bootstrap: () => client<SeasoningBootstrap>("/bootstrap"),
   summaries: (params: { query?: string; action?: string; categoryId?: string; status?: string; cursor?: string; limit?: number }) =>
-    request<CursorPage<SeasoningRelationSummary>>(`/relations/summary${query(params)}`),
+    client<CursorPage<SeasoningRelationSummary>>(`/relations/summary${query(params)}`),
   relationProductGroups: (params: { query?: string; action?: string; categoryId?: string; status?: string; page?: number; limit?: SeasoningRelationPageSize }) =>
-    request<SeasoningRelationProductPage>(`/relations/product-groups${query(params)}`),
+    client<SeasoningRelationProductPage>(`/relations/product-groups${query(params)}`),
   options: (params: { query?: string; status?: string; categoryId?: string; cursor?: string; limit?: number }) =>
-    request<CursorPage<SeasoningOption>>(`/options${query(params)}`),
-  optionPicker: (params: { query?: string } = {}) => request<SeasoningOptionPickerSnapshot>(`/option-picker${query(params)}`),
-  optionCategories: (includeInactive = true) => request<{ version: number; items: SeasoningOptionCategory[] }>(`/option-categories${query({ includeInactive: includeInactive ? 1 : 0 })}`),
-  createOptionCategory: (body: { expectedVersion: number; name: string; code: string }) => request<{ version: number; category: SeasoningOptionCategory }>("/option-categories", { method: "POST", body: JSON.stringify(body) }),
-  updateOptionCategory: (categoryId: string, body: { expectedVersion: number; name?: string; status?: "active" | "inactive" }) => request<{ version: number; category: SeasoningOptionCategory }>(`/option-categories/${encodeURIComponent(categoryId)}`, { method: "PATCH", body: JSON.stringify(body) }),
-  reorderOptionCategories: (body: { expectedVersion: number; categoryIds: string[] }) => request<{ version: number; items: SeasoningOptionCategory[] }>("/option-categories/order", { method: "PUT", body: JSON.stringify(body) }),
-  deleteOptionCategory: (categoryId: string, body: { expectedVersion: number }) => request<{ version: number }>(`/option-categories/${encodeURIComponent(categoryId)}`, { method: "DELETE", body: JSON.stringify(body) }),
+    client<CursorPage<SeasoningOption>>(`/options${query(params)}`),
+  optionPicker: (params: { query?: string } = {}) => client<SeasoningOptionPickerSnapshot>(`/option-picker${query(params)}`),
+  optionCategories: (includeInactive = true) => client<{ version: number; items: SeasoningOptionCategory[] }>(`/option-categories${query({ includeInactive: includeInactive ? 1 : 0 })}`),
+  createOptionCategory: (body: { expectedVersion: number; name: string; code: string }) => client<{ version: number; category: SeasoningOptionCategory }>("/option-categories", { method: "POST", body: JSON.stringify(body) }),
+  updateOptionCategory: (categoryId: string, body: { expectedVersion: number; name?: string; status?: "active" | "inactive" }) => client<{ version: number; category: SeasoningOptionCategory }>(`/option-categories/${encodeURIComponent(categoryId)}`, { method: "PATCH", body: JSON.stringify(body) }),
+  reorderOptionCategories: (body: { expectedVersion: number; categoryIds: string[] }) => client<{ version: number; items: SeasoningOptionCategory[] }>("/option-categories/order", { method: "PUT", body: JSON.stringify(body) }),
+  deleteOptionCategory: (categoryId: string, body: { expectedVersion: number }) => client<{ version: number }>(`/option-categories/${encodeURIComponent(categoryId)}`, { method: "DELETE", body: JSON.stringify(body) }),
   createOption: (body: { expectedVersion: number; name: string; nameEn?: string; code: string; categoryId: string; sortOrder?: number }) =>
-    request<{ option: SeasoningOption; version: number }>("/options", { method: "POST", body: JSON.stringify(body) }),
+    client<{ option: SeasoningOption; version: number }>("/options", { method: "POST", body: JSON.stringify(body) }),
   updateOption: (optionId: string, body: { expectedVersion: number; name?: string; nameEn?: string; categoryId?: string; sortOrder?: number; status?: "active" | "inactive" }) =>
-    request<{ option: SeasoningOption; version: number }>(`/options/${encodeURIComponent(optionId)}`, { method: "PATCH", body: JSON.stringify(body) }),
+    client<{ option: SeasoningOption; version: number }>(`/options/${encodeURIComponent(optionId)}`, { method: "PATCH", body: JSON.stringify(body) }),
   products: (params: { query?: string; categoryId?: string; action?: string; optionIds?: string; cursor?: string; limit?: number }) =>
-    request<CursorPage<SeasoningProduct>>(`/products${query(params)}`),
+    client<CursorPage<SeasoningProduct>>(`/products${query(params)}`),
   menuStructure: (params: { selectionToken: string; query?: string; groupId?: string; categoryId?: string; cursor?: string; limit?: number }) =>
-    request<SeasoningMenuStructure>(`/menu-structure${query(params)}`),
-  createProductSelection: () => request<ProductSelectionDraft>("/product-selections", { method: "POST", body: "{}" }),
-  productSelection: (token: string) => request<ProductSelectionDraft>(`/product-selections/${encodeURIComponent(token)}`),
+    client<SeasoningMenuStructure>(`/menu-structure${query(params)}`),
+  createProductSelection: () => client<ProductSelectionDraft>("/product-selections", { method: "POST", body: "{}" }),
+  productSelection: (token: string) => client<ProductSelectionDraft>(`/product-selections/${encodeURIComponent(token)}`),
   updateProductSelection: (token: string, body:
     | { operation: "dish"; productId: string; selected: boolean }
     | { operation: "scope"; level: "group" | "category" | "search"; groupId?: string; categoryId?: string; query?: string; selected: boolean }) =>
-    request<ProductSelectionDraft>(`/product-selections/${encodeURIComponent(token)}`, { method: "PATCH", body: JSON.stringify(body) }),
-  discardProductSelection: (token: string) => request<void>(`/product-selections/${encodeURIComponent(token)}`, { method: "DELETE" }),
+    client<ProductSelectionDraft>(`/product-selections/${encodeURIComponent(token)}`, { method: "PATCH", body: JSON.stringify(body) }),
+  discardProductSelection: (token: string) => client<void>(`/product-selections/${encodeURIComponent(token)}`, { method: "DELETE" }),
   relationProducts: (params: { action: SeasoningActionCode; optionId: string; query?: string; categoryId?: string; cursor?: string; limit?: number }) =>
-    request<CursorPage<{ product: SeasoningProduct; priceDelta: number; status: "active" | "inactive"; id: string }>>(`/relations/products${query(params)}`),
+    client<CursorPage<{ product: SeasoningProduct; priceDelta: number; status: "active" | "inactive"; id: string }>>(`/relations/products${query(params)}`),
   productRelations: (productId: string) =>
-    request<{ product: SeasoningProduct; relations: ProductSeasoningRelation[]; version: number }>(`/products/${encodeURIComponent(productId)}/relations`),
+    client<{ product: SeasoningProduct; relations: ProductSeasoningRelation[]; version: number }>(`/products/${encodeURIComponent(productId)}/relations`),
   saveProductRelations: (productId: string, body: { expectedVersion: number; relations: Omit<ProductSeasoningRelation, "id" | "productId" | "createdAt" | "updatedAt">[] }) =>
-    request<{ relations: ProductSeasoningRelation[]; version: number }>(`/products/${encodeURIComponent(productId)}/relations`, { method: "PUT", body: JSON.stringify(body) }),
+    client<{ relations: ProductSeasoningRelation[]; version: number }>(`/products/${encodeURIComponent(productId)}/relations`, { method: "PUT", body: JSON.stringify(body) }),
   previewBatch: (body: { actionOptions: BatchActionOptions[]; productSelectionToken: string; expectedVersion: number }) =>
-    request<BatchPreviewResponse>("/relations/preview", { method: "POST", body: JSON.stringify(body) }),
+    client<BatchPreviewResponse>("/relations/preview", { method: "POST", body: JSON.stringify(body) }),
   previewItems: (previewToken: string, params: { kind?: string; cursor?: string; limit?: number }) =>
-    request<BatchPreviewPage>(`/relation-previews/${encodeURIComponent(previewToken)}/items${query(params)}`),
+    client<BatchPreviewPage>(`/relation-previews/${encodeURIComponent(previewToken)}/items${query(params)}`),
   previewProducts: (previewToken: string, params: { kind?: string; cursor?: string; page?: number; limit?: number }) =>
-    request<BatchPreviewProductPage>(`/relation-previews/${encodeURIComponent(previewToken)}/products${query(params)}`),
+    client<BatchPreviewProductPage>(`/relation-previews/${encodeURIComponent(previewToken)}/products${query(params)}`),
   updatePreviewDecision: (previewToken: string, body: BatchDecision) =>
-    request<{ candidate: BatchPreviewPage["items"][number]; unresolvedCount: number; summary: BatchPreviewPage["summary"] }>(`/relation-previews/${encodeURIComponent(previewToken)}/items`, { method: "PATCH", body: JSON.stringify(body) }),
-  discardPreview: (previewToken: string) => request<void>(`/relation-previews/${encodeURIComponent(previewToken)}`, { method: "DELETE" }),
+    client<{ candidate: BatchPreviewPage["items"][number]; unresolvedCount: number; summary: BatchPreviewPage["summary"] }>(`/relation-previews/${encodeURIComponent(previewToken)}/items`, { method: "PATCH", body: JSON.stringify(body) }),
+  discardPreview: (previewToken: string) => client<void>(`/relation-previews/${encodeURIComponent(previewToken)}`, { method: "DELETE" }),
   commitBatch: (body: { expectedVersion: number; previewToken: string }) =>
-    request<BatchCommitResult>("/relations/batch", { method: "POST", body: JSON.stringify(body) }),
-};
+    client<BatchCommitResult>("/relations/batch", { method: "POST", body: JSON.stringify(body) }),
+  };
+}
+
+export const seasoningApi = createSeasoningApi();

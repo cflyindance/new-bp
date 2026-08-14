@@ -34,6 +34,8 @@ jobs:
 
       - name: Build admin-web dist
         working-directory: admin-web
+        env:
+          VITE_EMENU_SEASONING_MODE: browser
         run: npm run build
 
       - name: Commit dist if changed
