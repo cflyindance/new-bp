@@ -29,6 +29,13 @@
     { id: "brooklyn", name: "布鲁克林店", mid: "100003", zone: "America/New_York" },
     { id: "boston", name: "波士顿店", mid: "100004", zone: "America/New_York" }
   ];
+  var storeAddresses = {
+    "ny-midtown": "349 5th Ave, New York, NY 10016, USA",
+    flushing: "39-16 Prince St, Flushing, NY 11354, USA",
+    brooklyn: "445 Albee Square W, Brooklyn, NY 11201, USA",
+    boston: "1 Washington Mall, Boston, MA 02108, USA"
+  };
+  stores.forEach(function (store) { store.address = storeAddresses[store.id] || ""; });
   var categories = [
     { id: "category:1", name: "海鲜类", count: 12 },
     { id: "category:2", name: "肉类", count: 15 },
@@ -108,6 +115,7 @@
   function normalizeUnlimitedRule(rule) {
     if (!rule) return false;
     var changed = normalizeUnlimitedLimitCells(rule.editorDraft);
+    if (rule.editorDraft && normalizeStoreDraft(rule.editorDraft)) changed = true;
     if (Array.isArray(rule.limits)) {
       rule.limits.forEach(function (cell) {
         if (cell && cell.configured && cell.value == null) {
@@ -155,6 +163,132 @@
     return new Date().toISOString().slice(0, 10);
   }
 
+  function cloneValue(value) {
+    return JSON.parse(JSON.stringify(value));
+  }
+
+  function createEmptyStoreConfig() {
+    return {
+      structureByLine: MenuPicker ? MenuPicker.emptyByLine() : { kiosk: [], emenu: [], sdi: [] },
+      productLines: [],
+      targetIds: [],
+      limits: {}
+    };
+  }
+
+  function cloneStoreConfig(config) {
+    var cloned = cloneValue(config || createEmptyStoreConfig());
+    cloned.structureByLine = MenuPicker
+      ? MenuPicker.normalizeByLine(cloned.structureByLine || MenuPicker.emptyByLine())
+      : (cloned.structureByLine || { kiosk: [], emenu: [], sdi: [] });
+    cloned.productLines = Array.isArray(cloned.productLines) ? cloned.productLines : [];
+    cloned.targetIds = Array.isArray(cloned.targetIds) ? cloned.targetIds : [];
+    cloned.limits = cloned.limits && typeof cloned.limits === "object" ? cloned.limits : {};
+    normalizeUnlimitedLimitCells(cloned);
+    return cloned;
+  }
+
+  function storeConfigFor(draft, storeId, create) {
+    if (!draft.storeConfigs || typeof draft.storeConfigs !== "object") draft.storeConfigs = {};
+    if (!draft.storeConfigs[storeId] && create) draft.storeConfigs[storeId] = createEmptyStoreConfig();
+    return draft.storeConfigs[storeId] || null;
+  }
+
+  function activeStoreConfig(draft) {
+    return storeConfigFor(draft, draft.activeStoreId, false) || createEmptyStoreConfig();
+  }
+
+  function storeHasTargets(draft, storeOrConfig) {
+    var config = typeof storeOrConfig === "string" ? storeConfigFor(draft, storeOrConfig, false) : storeOrConfig;
+    return !!(config && Array.isArray(config.targetIds) && config.targetIds.length);
+  }
+
+  function addedStoreIds(draft) {
+    return (draft.participatingStoreIds || []).filter(function (storeId) {
+      return stores.some(function (store) { return store.id === storeId; }) && storeHasTargets(draft, storeId);
+    });
+  }
+
+  function clearAllStoreLimits(draft) {
+    Object.keys(draft.storeConfigs || {}).forEach(function (storeId) {
+      draft.storeConfigs[storeId].limits = {};
+    });
+    draft.limits = {};
+  }
+
+  function legacyStoreConfig(draft) {
+    return cloneStoreConfig({
+      structureByLine: draft.structureByLine,
+      productLines: draft.productLines,
+      targetIds: draft.targetIds,
+      limits: draft.limits
+    });
+  }
+
+  function syncDeploySelection(draft) {
+    var added = addedStoreIds(draft);
+    var excluded = Array.isArray(draft.deployExcludedStoreIds) ? draft.deployExcludedStoreIds : [];
+    draft.deployExcludedStoreIds = excluded.filter(function (storeId, index) {
+      return (draft.participatingStoreIds || []).indexOf(storeId) >= 0 && excluded.indexOf(storeId) === index;
+    });
+    draft.deployStoreIds = added.filter(function (storeId) {
+      return draft.deployExcludedStoreIds.indexOf(storeId) < 0;
+    });
+  }
+
+  function normalizeStoreConfig(draft, config) {
+    var normalized = cloneStoreConfig(config);
+    syncStoreTargetsFromStructure(draft, normalized, true);
+    return normalized;
+  }
+
+  function normalizeStoreDraft(draft) {
+    if (!draft) return false;
+    var before = JSON.stringify(draft);
+    draft.participatingStoreIds = Array.isArray(draft.participatingStoreIds)
+      ? draft.participatingStoreIds.filter(function (storeId, index, ids) { return ids.indexOf(storeId) === index; })
+      : [];
+    draft.deployStoreIds = Array.isArray(draft.deployStoreIds) ? draft.deployStoreIds.slice() : [];
+    draft.deployExcludedStoreIds = Array.isArray(draft.deployExcludedStoreIds) ? draft.deployExcludedStoreIds.slice() : [];
+    if (!draft.storeConfigs || typeof draft.storeConfigs !== "object" ||
+        (!Object.keys(draft.storeConfigs).length && draft.deployStoreIds.length && !draft.participatingStoreIds.length)) {
+      var fallback = legacyStoreConfig(draft);
+      draft.legacyCompatibilityFallback = cloneStoreConfig(fallback);
+      draft.storeConfigs = {};
+      if (draft.deployStoreIds.length) {
+        draft.participatingStoreIds = draft.deployStoreIds.slice();
+        draft.deployStoreIds.forEach(function (storeId) {
+          draft.storeConfigs[storeId] = cloneStoreConfig(fallback);
+        });
+      }
+    }
+    if (!draft.legacyCompatibilityFallback) draft.legacyCompatibilityFallback = legacyStoreConfig(draft);
+    draft.participatingStoreIds.forEach(function (storeId) {
+      draft.storeConfigs[storeId] = normalizeStoreConfig(draft, storeConfigFor(draft, storeId, true));
+    });
+    var currentParticipants = draft.participatingStoreIds.filter(function (storeId) {
+      return stores.some(function (store) { return store.id === storeId; });
+    });
+    draft.activeStoreId = currentParticipants.indexOf(draft.activeStoreId) >= 0
+      ? draft.activeStoreId
+      : (currentParticipants[0] || "");
+    draft.targetIds = addedStoreIds(draft).reduce(function (ids, storeId) {
+      draft.storeConfigs[storeId].targetIds.forEach(function (targetId) {
+        if (ids.indexOf(targetId) < 0) ids.push(targetId);
+      });
+      return ids;
+    }, []);
+    syncDeploySelection(draft);
+    var compatibilityId = addedStoreIds(draft)[0];
+    if (compatibilityId) {
+      var compatibility = draft.storeConfigs[compatibilityId];
+      draft.structureByLine = cloneValue(compatibility.structureByLine);
+      draft.productLines = compatibility.productLines.slice();
+      draft.limits = cloneValue(compatibility.limits);
+    }
+    return before !== JSON.stringify(draft);
+  }
+
   function defaultDraft() {
     return {
       currentStep: 1,
@@ -193,7 +327,12 @@
         },
         reasonRequired: true
       },
-      deployStoreIds: []
+      participatingStoreIds: [],
+      activeStoreId: "",
+      storeConfigs: {},
+      deployStoreIds: [],
+      deployExcludedStoreIds: [],
+      legacyCompatibilityFallback: createEmptyStoreConfig()
     };
   }
 
@@ -221,8 +360,9 @@
   function normalizeLoadedEditorDraft(draft) {
     if (!draft) return draft;
     normalizeUnlimitedLimitCells(draft);
+    normalizeStoreDraft(draft);
     if (!MenuPicker) return draft;
-    if (!draft.structureByLine) {
+    if (!draft.structureByLine && !draft.participatingStoreIds.length) {
       draft.structureByLine = MenuPicker.emptyByLine();
       draft.targetIds = [];
       draft.productLines = [];
@@ -230,7 +370,8 @@
       draft.limits = {};
       return draft;
     }
-    syncDraftTargetsFromStructure(draft, true);
+    if (draft.structureByLine) syncDraftTargetsFromStructure(draft, true);
+    normalizeStoreDraft(draft);
     return draft;
   }
 
@@ -281,7 +422,8 @@
     });
     draft.currentStep = 1;
     draft.highestStep = 7;
-    return draft;
+    draft.deployStoreIds = Array.isArray(rule.deployStoreIds) ? rule.deployStoreIds.slice() : [];
+    return normalizeLoadedEditorDraft(draft);
   }
 
   function subjectLabel(value) { return value === "party_size" ? "按人数限购" : "按桌/订单限购"; }
@@ -295,9 +437,10 @@
 
   function targetSource(draft) { return draft.targetType === "dish" ? dishes : categories; }
 
-  function structureItems(draft) {
-    if (!MenuPicker || !draft.structureByLine) return [];
-    var byLine = MenuPicker.normalizeByLine(draft.structureByLine);
+  function structureItems(draft, config) {
+    var source = config || draft;
+    if (!MenuPicker || !source.structureByLine) return [];
+    var byLine = MenuPicker.normalizeByLine(source.structureByLine);
     return draft.targetType === "dish"
       ? MenuPicker.listSelectedDishes(byLine)
       : MenuPicker.listSelectedCategories(byLine);
@@ -307,8 +450,9 @@
     return draft.targetType + ":" + item.lineId + "|" + item.key;
   }
 
-  function selectedTargets(draft) {
-    var structured = structureItems(draft);
+  function selectedTargets(draft, config) {
+    var source = config || draft;
+    var structured = structureItems(draft, source);
     if (structured.length) {
       return structured.map(function (item) {
         var suffix = "（" + item.lineLabel + "）";
@@ -325,39 +469,43 @@
         };
       });
     }
-    var ids = draft.targetIds || [];
+    var ids = source.targetIds || [];
     return targetSource(draft).filter(function (item) { return ids.indexOf(item.id) >= 0; });
   }
 
-  function targetsForLine(draft, lineId) {
-    return selectedTargets(draft).filter(function (item) {
+  function targetsForLine(draft, lineId, config) {
+    return selectedTargets(draft, config).filter(function (item) {
       return !item.lineId || item.lineId === lineId;
     });
   }
 
-  function syncDraftTargetsFromStructure(draft, pruneLimits) {
+  function syncStoreTargetsFromStructure(draft, config, pruneLimits) {
     if (!MenuPicker) return;
-    draft.structureByLine = MenuPicker.normalizeByLine(draft.structureByLine);
-    var items = structureItems(draft);
-    draft.targetIds = items.map(function (item) { return structureTargetId(draft, item); });
-    draft.productLines = lines.map(function (line) { return line.id; }).filter(function (lineId) {
+    config.structureByLine = MenuPicker.normalizeByLine(config.structureByLine);
+    var items = structureItems(draft, config);
+    config.targetIds = items.map(function (item) { return structureTargetId(draft, item); });
+    config.productLines = lines.map(function (line) { return line.id; }).filter(function (lineId) {
       return items.some(function (item) { return item.lineId === lineId; });
     });
-    if (draft.productLines.indexOf(draft.activeLineId) < 0) {
-      draft.activeLineId = draft.productLines[0] || "kiosk";
+    if (config.productLines.indexOf(draft.activeLineId) < 0) {
+      draft.activeLineId = config.productLines[0] || "kiosk";
     }
     if (pruneLimits !== false) {
       var allowedTargets = {};
-      draft.targetIds.forEach(function (targetId) { allowedTargets[targetId] = true; });
+      config.targetIds.forEach(function (targetId) { allowedTargets[targetId] = true; });
       var allowedLines = {};
-      draft.productLines.forEach(function (lineId) { allowedLines[lineId] = true; });
-      Object.keys(draft.limits || {}).forEach(function (key) {
+      config.productLines.forEach(function (lineId) { allowedLines[lineId] = true; });
+      Object.keys(config.limits || {}).forEach(function (key) {
         var parts = key.split("|");
         var lineId = parts[2];
         var targetId = parts.slice(3).join("|");
-        if (!allowedLines[lineId] || !allowedTargets[targetId]) delete draft.limits[key];
+        if (!allowedLines[lineId] || !allowedTargets[targetId]) delete config.limits[key];
       });
     }
+  }
+
+  function syncDraftTargetsFromStructure(draft, pruneLimits) {
+    syncStoreTargetsFromStructure(draft, draft, pruneLimits);
   }
 
   function formatRange(range, unit) {
@@ -371,20 +519,50 @@
     return [partyIndex, roundIndex, lineId, targetId].join("|");
   }
 
-  function eachLimitCell(draft, callback) {
+  function eachLimitCell(draft, callback, storeIds) {
     var roundCount = draft.period === "multi_round" ? draft.roundRanges.length : 1;
-    draft.partyRanges.forEach(function (_, partyIndex) {
-      for (var roundIndex = 0; roundIndex < roundCount; roundIndex += 1) {
-        draft.productLines.forEach(function (lineId) {
-          targetsForLine(draft, lineId).forEach(function (target) {
-            callback(limitKey(partyIndex, roundIndex, lineId, target.id), partyIndex, roundIndex, lineId, target.id);
+    (storeIds || addedStoreIds(draft)).forEach(function (storeId) {
+      var config = storeConfigFor(draft, storeId, false);
+      if (!config) return;
+      draft.partyRanges.forEach(function (_, partyIndex) {
+        for (var roundIndex = 0; roundIndex < roundCount; roundIndex += 1) {
+          config.productLines.forEach(function (lineId) {
+            targetsForLine(draft, lineId, config).forEach(function (target) {
+              callback(limitKey(partyIndex, roundIndex, lineId, target.id), partyIndex, roundIndex, lineId, target.id, config, storeId);
+            });
           });
-        });
-      }
+        }
+      });
     });
   }
 
-  function buildCompatibilityRule(draftRule, status) {
+  function compatibilityStoreConfig(draft) {
+    var storeId = (draft.deployStoreIds || []).find(function (id) { return storeHasTargets(draft, id); })
+      || addedStoreIds(draft)[0];
+    return storeId
+      ? cloneStoreConfig(storeConfigFor(draft, storeId, false))
+      : cloneStoreConfig(draft.legacyCompatibilityFallback || createEmptyStoreConfig());
+  }
+
+  function buildPublishedDraft(draft) {
+    var published = cloneValue(draft);
+    normalizeStoreDraft(published);
+    var deployIds = (published.deployStoreIds || []).filter(function (storeId) {
+      return storeHasTargets(published, storeId);
+    });
+    var cropped = {};
+    deployIds.forEach(function (storeId) {
+      cropped[storeId] = cloneStoreConfig(published.storeConfigs[storeId]);
+    });
+    published.storeConfigs = cropped;
+    published.participatingStoreIds = deployIds.slice();
+    published.deployStoreIds = deployIds.slice();
+    published.activeStoreId = deployIds[0] || "";
+    published.deployExcludedStoreIds = [];
+    return published;
+  }
+
+  function buildCompatibilityRuleLegacy(draftRule, status) {
     var draft = draftRule.editorDraft;
     normalizeUnlimitedLimitCells(draft);
     var targets = selectedTargets(draft);
@@ -461,6 +639,39 @@
     };
   }
 
+  function buildCompatibilityRule(draftRule, status) {
+    var draft = cloneValue(draftRule.editorDraft);
+    normalizeUnlimitedLimitCells(draft);
+    normalizeLoadedEditorDraft(draft);
+    var storedDraft = status === "active" ? buildPublishedDraft(draft) : draft;
+    var compatibility = compatibilityStoreConfig(storedDraft);
+    var projection = cloneValue(storedDraft);
+    projection.structureByLine = cloneValue(compatibility.structureByLine);
+    projection.productLines = compatibility.productLines.slice();
+    projection.targetIds = compatibility.targetIds.slice();
+    projection.limits = cloneValue(compatibility.limits);
+    var built = buildCompatibilityRuleLegacy({
+      id: draftRule.id,
+      sourceRuleId: draftRule.sourceRuleId,
+      created: draftRule.created,
+      editorDraft: projection
+    }, status);
+    built.participatingStoreIds = storedDraft.participatingStoreIds.slice();
+    built.activeStoreId = storedDraft.activeStoreId;
+    built.storeConfigs = cloneValue(storedDraft.storeConfigs);
+    built.deployStoreIds = storedDraft.deployStoreIds.slice();
+    built.deployExcludedStoreIds = storedDraft.deployExcludedStoreIds.slice();
+    built.legacyCompatibilityFallback = cloneStoreConfig(storedDraft.legacyCompatibilityFallback);
+    built.editorDraft = storedDraft;
+    var totalTargets = addedStoreIds(storedDraft).reduce(function (total, storeId) {
+      return total + storedDraft.storeConfigs[storeId].targetIds.length;
+    }, 0);
+    built.dishes = addedStoreIds(storedDraft).length
+      ? addedStoreIds(storedDraft).length + " 家门店 / " + totalTargets + " 个目标"
+      : "未选择商品";
+    return built;
+  }
+
   function toast(message, isError) {
     var host = document.querySelector(".olf-toast-host");
     if (!host) {
@@ -528,7 +739,7 @@
   }
 
   function currentBatchTargets(draft) {
-    return targetsForLine(draft, draft.activeLineId);
+    return targetsForLine(draft, draft.activeLineId, activeStoreConfig(draft));
   }
 
   function selectedBatchTargets(draft) {
@@ -646,8 +857,8 @@
     }
     if (stepNumber === 4) {
       var missing = 0;
-      eachLimitCell(draft, function (key) {
-        var cell = draft.limits[key];
+      eachLimitCell(draft, function (key, partyIndex, roundIndex, lineId, targetId, config) {
+        var cell = config.limits[key];
         if (!cell || !cell.configured) missing += 1;
       });
       if (missing) return "还有 " + missing + " 个数量单元格未配置；请输入数量或 0";
@@ -706,7 +917,7 @@
     return '<div class="olf-token-list">' + selected.map(function (item) { return '<span class="olf-token">' + esc(item.name) + '</span>'; }).join("") + '</div>';
   }
 
-  function renderStepTwo(draft) {
+  function renderStepTwoLegacy(draft) {
     var byLine = MenuPicker ? MenuPicker.normalizeByLine(draft.structureByLine) : null;
     var pickerHtml = MenuPicker
       ? MenuPicker.renderHtml(byLine, null, null, null, { leafLevel: draft.targetType === "category" ? "category" : "dish" })
@@ -715,6 +926,35 @@
     return '<div class="olf-content-head"><h2 tabindex="-1">商品配置</h2><p>填写基础信息，并按原有商品结构选择限购目标。</p></div>' +
       '<section class="olf-section"><h3>基础信息</h3><div class="olf-field-grid"><label class="olf-field olf-field--full"><span class="olf-label olf-required">规则名称</span><input class="olf-input" data-field="name" value="' + esc(draft.name) + '" maxlength="60" /></label><label class="olf-field olf-field--full"><span class="olf-label">规则描述</span><textarea class="olf-textarea" data-field="description" maxlength="200">' + esc(draft.description) + '</textarea></label></div></section>' +
       '<section class="olf-section"><h3>选择商品</h3><p class="olf-structure-summary" id="structureSummary">' + esc(summary) + '</p>' + pickerHtml + '</section>';
+  }
+
+  function renderParticipatingStores(draft) {
+    var selected = draft.participatingStoreIds || [];
+    return '<div class="olf-table-wrap olf-participating-stores"><table class="olf-table"><thead><tr><th class="olf-store-check-col"></th><th>门店名</th><th>MID</th><th>地址</th><th>商品状态</th></tr></thead><tbody>' + stores.map(function (store) {
+      var checked = selected.indexOf(store.id) >= 0;
+      var added = checked && storeHasTargets(draft, store.id);
+      return '<tr class="olf-participating-row' + (checked ? ' is-selected' : '') + '"><td><input type="checkbox" data-participating-store="' + esc(store.id) + '"' + (checked ? ' checked' : '') + ' /></td><td><strong>' + esc(store.name) + '</strong></td><td>' + esc(store.mid) + '</td><td>' + esc(store.address) + '</td><td><span class="olf-store-status ' + (added ? 'is-added' : 'is-missing') + '">' + (added ? '已添加' : '未添加') + '</span></td></tr>';
+    }).join('') + '</tbody></table></div>';
+  }
+
+  function renderStepTwo(draft) {
+    // renderParticipatingStores supplies data-participating-store, store.address, 商品状态、已添加与未添加 states.
+    normalizeStoreDraft(draft);
+    var participants = (draft.participatingStoreIds || []).filter(function (storeId) { return stores.some(function (store) { return store.id === storeId; }); });
+    var config = activeStoreConfig(draft);
+    var byLine = MenuPicker ? MenuPicker.normalizeByLine(config.structureByLine) : null;
+    var storeTabs = participants.map(function (storeId) {
+      var store = stores.find(function (item) { return item.id === storeId; });
+      return '<button type="button" class="olf-tab' + (draft.activeStoreId === storeId ? ' is-active' : '') + '" data-store-tab="' + esc(storeId) + '">' + esc(store ? store.name : storeId) + '<span class="olf-store-tab-state ' + (storeHasTargets(draft, storeId) ? 'is-added' : 'is-missing') + '">' + (storeHasTargets(draft, storeId) ? '已添加' : '未添加') + '</span></button>';
+    }).join('');
+    var pickerHtml = participants.length
+      ? (MenuPicker ? MenuPicker.renderHtml(byLine, null, null, null, { leafLevel: draft.targetType === "category" ? "category" : "dish" }) : '<div class="olf-summary olf-summary--danger">商品结构选择器未加载，请刷新后重试。</div>')
+      : '<div class="olf-empty"><strong>请先选择参与门店</strong><span>勾选门店后，可分别为每家门店配置商品与产线。</span></div>';
+    var summary = participants.length && MenuPicker ? MenuPicker.formatSummary(byLine) : "未选择商品";
+    return '<div class="olf-content-head"><h2 tabindex="-1">商品配置</h2><p>各门店分别保存商品范围，后续数量矩阵也按门店独立设置。</p></div>' +
+      '<section class="olf-section"><h3>基础信息</h3><div class="olf-field-grid"><label class="olf-field olf-field--full"><span class="olf-label olf-required">规则名称</span><input class="olf-input" data-field="name" value="' + esc(draft.name) + '" maxlength="60" /></label><label class="olf-field olf-field--full"><span class="olf-label">规则描述</span><textarea class="olf-textarea" data-field="description" maxlength="200">' + esc(draft.description) + '</textarea></label></div></section>' +
+      '<section class="olf-section"><h3>选择商品</h3><div class="olf-help">先选择参与门店，再切换门店配置其商品范围；至少一家门店需要达到“已添加”状态。</div>' + renderParticipatingStores(draft) + '</section>' +
+      '<section class="olf-section olf-store-product-config"><div class="olf-section-head"><div><h3>按门店配置商品</h3><p class="olf-structure-summary" id="structureSummary">' + esc(summary) + '</p></div></div>' + (storeTabs ? '<div class="olf-tabs olf-store-tabs">' + storeTabs + '</div>' : '') + pickerHtml + '</section>';
   }
 
   function renderRangeRows(ranges, kind) {
@@ -730,25 +970,28 @@
       (draft.period === "multi_round" ? '<section class="olf-section"><div class="olf-section-head"><h3>轮次区间</h3><button type="button" class="olf-button olf-button--small" data-add-range="round">' + icon("plus", 15) + ' 添加区间</button></div><div class="olf-table-wrap"><table class="olf-table"><thead><tr><th>场景</th><th>区间</th><th>页面显示</th><th>操作</th></tr></thead><tbody>' + renderRangeRows(draft.roundRanges, "round") + '</tbody></table></div></section>' : '<div class="olf-summary"><strong>当前统计周期：</strong>' + esc(periodLabel(draft.period)) + '，无需另外配置轮次区间。</div>');
   }
 
-  function cellFor(draft, targetId) {
-    return draft.limits[limitKey(draft.activePartyIndex, draft.period === "multi_round" ? draft.activeRoundIndex : 0, draft.activeLineId, targetId)] || { configured: false, value: null };
+  function cellFor(draft, targetId, config) {
+    config = config || activeStoreConfig(draft);
+    return config.limits[limitKey(draft.activePartyIndex, draft.period === "multi_round" ? draft.activeRoundIndex : 0, draft.activeLineId, targetId)] || { configured: false, value: null };
   }
 
-  function completionFor(draft, lineId) {
-    var targets = targetsForLine(draft, lineId);
+  function completionFor(draft, lineId, config) {
+    config = config || activeStoreConfig(draft);
+    var targets = targetsForLine(draft, lineId, config);
     var total = targets.length;
     var complete = targets.reduce(function (count, target) {
-      var cell = draft.limits[limitKey(draft.activePartyIndex, draft.period === "multi_round" ? draft.activeRoundIndex : 0, lineId, target.id)];
+      var cell = config.limits[limitKey(draft.activePartyIndex, draft.period === "multi_round" ? draft.activeRoundIndex : 0, lineId, target.id)];
       return count + (cell && cell.configured ? 1 : 0);
     }, 0);
     return complete + "/" + total;
   }
 
   function renderLimitRows(draft) {
+    var config = activeStoreConfig(draft);
     var batchMode = !!(editorState && editorState.batchMode);
     var batchSelectedIds = editorState ? editorState.batchSelectedTargetIds : [];
-    return targetsForLine(draft, draft.activeLineId).map(function (target) {
-      var cell = cellFor(draft, target.id);
+    return targetsForLine(draft, draft.activeLineId, config).map(function (target) {
+      var cell = cellFor(draft, target.id, config);
       var stateClass = !cell.configured ? "" : cell.value === 0 ? " is-blocked" : "";
       var stateText = !cell.configured ? "未配置" : cell.value === 0 ? "禁止下单" : "已配置";
       var actual = "—";
@@ -761,7 +1004,7 @@
     }).join("");
   }
 
-  function renderStepFour(draft) {
+  function renderStepFourLegacy(draft) {
     var batchMode = !!(editorState && editorState.batchMode);
     var batchTargets = currentBatchTargets(draft);
     var batchSelected = selectedBatchTargets(draft);
@@ -778,6 +1021,36 @@
       '<section class="olf-section"><div class="olf-section-head"><h3>产线配置</h3><button type="button" class="olf-button olf-button--small" data-toggle-batch>' + (batchMode ? "取消批量设置" : "批量设置") + '</button></div><div class="olf-tabs">' + lineTabs + '</div>' + batchPanel + '</section>' +
       '<section class="olf-section"><div class="olf-table-wrap"><table class="olf-table"><thead><tr>' + selectHeader + '<th>' + (draft.targetType === "dish" ? "菜品" : "分类") + '</th><th>' + (draft.subject === "party_size" ? "人均上限" : "订单上限") + '</th><th>状态</th><th>实际限额</th></tr></thead><tbody>' + renderLimitRows(draft) + '</tbody></table></div></section>' +
       '<div class="olf-summary olf-summary--primary"><strong>当前示例：</strong>' + (draft.subject === "party_size" ? "按人数规则会将人均上限乘订单有效人数；不会追踪具体食客。" : "同一订单中的目标商品共同占用配置数量池。") + '</div>';
+  }
+
+  function renderStepFour(draft) {
+    normalizeActiveDimensions(draft);
+    var config = activeStoreConfig(draft);
+    var configuredStores = addedStoreIds(draft);
+    var batchMode = !!(editorState && editorState.batchMode);
+    var batchTargets = currentBatchTargets(draft);
+    var batchSelected = selectedBatchTargets(draft);
+    var storeTabs = configuredStores.map(function (storeId) {
+      var store = stores.find(function (item) { return item.id === storeId; });
+      return '<button type="button" class="olf-tab' + (draft.activeStoreId === storeId ? ' is-active' : '') + '" data-limit-store-tab="' + esc(storeId) + '">' + esc(store ? store.name : storeId) + '</button>';
+    }).join('');
+    var partyTabs = draft.partyRanges.map(function (range, index) {
+      return '<button type="button" class="olf-tab' + (draft.activePartyIndex === index ? ' is-active' : '') + '" data-party-tab="' + index + '">' + esc(formatRange(range, '人')) + '</button>';
+    }).join('');
+    var roundTabs = draft.period === 'multi_round' ? draft.roundRanges.map(function (range, index) {
+      return '<button type="button" class="olf-tab' + (draft.activeRoundIndex === index ? ' is-active' : '') + '" data-round-tab="' + index + '">' + esc(formatRange(range, '轮')) + '</button>';
+    }).join('') : '';
+    var lineTabs = config.productLines.map(function (lineId) {
+      var line = lines.find(function (item) { return item.id === lineId; });
+      return '<button type="button" class="olf-tab' + (draft.activeLineId === lineId ? ' is-active' : '') + '" data-line-tab="' + esc(lineId) + '">' + esc(line ? line.name : lineId) + ' · ' + completionFor(draft, lineId, config) + '</button>';
+    }).join('');
+    var selectHeader = batchMode ? '<th class="olf-batch-select-cell"><label class="olf-batch-check"><input type="checkbox" data-batch-select-all' + (batchTargets.length > 0 && batchSelected.length === batchTargets.length ? ' checked' : '') + ' /><span class="olf-sr-only">全选当前产线</span></label></th>' : '';
+    var batchPanel = batchMode ? '<div id="batchPanel" class="olf-summary olf-batch-panel"><div class="olf-batch-toolbar"><strong class="olf-batch-count" data-batch-selected-count>已选 ' + batchSelected.length + ' 项</strong><button type="button" class="olf-button olf-button--small olf-button--quiet" data-batch-select-all-action>全选当前产线</button><button type="button" class="olf-button olf-button--small olf-button--quiet" data-batch-clear' + (batchSelected.length ? '' : ' disabled') + '>清空选择</button><span class="olf-batch-spacer"></span><input class="olf-input olf-limit-input" type="number" min="0" id="batchLimitValue" placeholder="数量" /><button type="button" class="olf-button olf-button--small" data-apply-batch="value"' + (batchSelected.length ? '' : ' disabled') + '>应用数量</button><button type="button" class="olf-button olf-button--small" data-apply-batch="zero"' + (batchSelected.length ? '' : ' disabled') + '>设为禁止</button><button type="button" class="olf-button olf-button--small" data-batch-cancel>取消</button></div></div>' : '';
+    return '<div class="olf-content-head"><h2 tabindex="-1">设置限购数量</h2><p>先选择门店，再按该门店实际包含的产线配置数量；空输入表示未配置，0 表示禁止。</p></div>' +
+      '<section class="olf-section"><h3>配置门店</h3><div class="olf-tabs olf-store-tabs">' + storeTabs + '</div><h3 style="margin-top:20px">人数场景</h3><div class="olf-tabs">' + partyTabs + '</div>' + (roundTabs ? '<h3 style="margin-top:20px">轮次场景</h3><div class="olf-tabs">' + roundTabs + '</div>' : '') + '</section>' +
+      '<section class="olf-section"><div class="olf-section-head"><div><h3>产线配置</h3><div class="olf-help">当前门店：' + esc((stores.find(function (item) { return item.id === draft.activeStoreId; }) || {}).name || draft.activeStoreId) + '</div></div><button type="button" class="olf-button olf-button--small" data-toggle-batch>' + (batchMode ? '取消批量设置' : '批量设置') + '</button></div><div class="olf-tabs">' + lineTabs + '</div>' + batchPanel + '</section>' +
+      '<section class="olf-section"><div class="olf-table-wrap"><table class="olf-table"><thead><tr>' + selectHeader + '<th>' + (draft.targetType === 'dish' ? '菜品' : '分类') + '</th><th>' + (draft.subject === 'party_size' ? '人均上限' : '订单上限') + '</th><th>状态</th><th>实际限额</th></tr></thead><tbody>' + renderLimitRows(draft) + '</tbody></table></div></section>' +
+      '<div class="olf-summary olf-summary--primary"><strong>门店独立配置：</strong>切换门店后，商品范围和数量矩阵均独立保存，不会覆盖其他门店。</div>';
   }
 
   function renderStepFive(draft) {
@@ -804,10 +1077,10 @@
     return ids.map(function (id) { var item = items.find(function (candidate) { return candidate.id === id; }); return item ? item.name : id; }).join("、");
   }
 
-  function limitCompletion(draft) {
+  function limitCompletion(draft, storeIds) {
     var total = 0;
     var complete = 0;
-    eachLimitCell(draft, function (key) { total += 1; if (draft.limits[key] && draft.limits[key].configured) complete += 1; });
+    eachLimitCell(draft, function (key, partyIndex, roundIndex, lineId, targetId, config) { total += 1; if (config.limits[key] && config.limits[key].configured) complete += 1; }, storeIds);
     return { complete: complete, total: total };
   }
 
@@ -861,6 +1134,16 @@
       var pickerElement = document.querySelector("[data-brand-menu-structure-picker]");
       if (pickerElement) MenuPicker.bind(pickerElement, { leafLevel: draft.targetType === "category" ? "category" : "dish" });
     }
+    root.querySelectorAll("[data-store-tab]").forEach(function (storeTab) {
+      storeTab.addEventListener("click", function (event) {
+        event.stopPropagation();
+        clearBatchSelection();
+        draft.activeStoreId = storeTab.getAttribute("data-store-tab");
+        var config = activeStoreConfig(draft);
+        if (config.productLines.indexOf(draft.activeLineId) < 0) draft.activeLineId = config.productLines[0] || "kiosk";
+        renderEditor();
+      });
+    });
     document.getElementById("progressFill").style.width = ((editorState.currentStep / steps.length) * 100) + "%";
     document.getElementById("footerNote").textContent = "第 " + editorState.currentStep + " 步，共 " + steps.length + " 步";
     var previous = document.getElementById("previousButton");
@@ -892,7 +1175,10 @@
   function normalizeActiveDimensions(draft) {
     draft.activePartyIndex = Math.min(draft.activePartyIndex || 0, Math.max(0, draft.partyRanges.length - 1));
     draft.activeRoundIndex = Math.min(draft.activeRoundIndex || 0, Math.max(0, draft.roundRanges.length - 1));
-    if (draft.productLines.indexOf(draft.activeLineId) < 0) draft.activeLineId = draft.productLines[0] || "kiosk";
+    var added = addedStoreIds(draft);
+    if (added.length && added.indexOf(draft.activeStoreId) < 0) draft.activeStoreId = added[0];
+    var config = activeStoreConfig(draft);
+    if (config.productLines.indexOf(draft.activeLineId) < 0) draft.activeLineId = config.productLines[0] || "kiosk";
   }
 
   function changeChoice(field, value) {
@@ -904,7 +1190,7 @@
     }
     var current = draft[field];
     if (current === value) return;
-    var destructive = (field === "targetType" && draft.targetIds.length) || (field === "period" && Object.keys(draft.limits).length);
+    var destructive = (field === "targetType" && addedStoreIds(draft).length) || (field === "period" && Object.keys(draft.storeConfigs || {}).some(function (storeId) { return Object.keys(draft.storeConfigs[storeId].limits || {}).length; }));
     var apply = function () {
       draft[field] = value;
       if (field === "targetType") {
@@ -913,8 +1199,11 @@
         draft.productLines = [];
         draft.activeLineId = "kiosk";
         draft.limits = {};
+        Object.keys(draft.storeConfigs || {}).forEach(function (storeId) { draft.storeConfigs[storeId] = createEmptyStoreConfig(); });
+        draft.deployStoreIds = [];
+        draft.deployExcludedStoreIds = [];
       }
-      if (field === "period") { draft.limits = {}; draft.activeRoundIndex = 0; if (value !== "multi_round") draft.roundRanges = [{ min: 1, max: null }]; }
+      if (field === "period") { clearAllStoreLimits(draft); draft.activeRoundIndex = 0; if (value !== "multi_round") draft.roundRanges = [{ min: 1, max: null }]; }
       markEditorDirty(); renderEditor();
     };
     if (destructive) openDialog("重置后续配置？", "修改该选项会清空已配置的商品或数量内容。", "确认重置", function () { closeDialog(); apply(); });
@@ -946,7 +1235,7 @@
     var start = last.max == null ? Number(last.min) + 1 : Number(last.max) + 1;
     if (last.max == null) last.max = Math.max(Number(last.min), start - 1);
     ranges.push({ min: start, max: null });
-    draft.limits = {};
+    clearAllStoreLimits(draft);
     normalizeActiveDimensions(draft);
     markEditorDirty(); renderEditor();
   }
@@ -958,7 +1247,7 @@
     openDialog("删除区间？", "删除区间会重置全部数量配置，之后需要重新确认。", "删除并重置", function () {
       ranges.splice(index, 1);
       recalculateSequentialRanges(ranges);
-      draft.limits = {};
+      clearAllStoreLimits(draft);
       normalizeActiveDimensions(draft);
       closeDialog(); markEditorDirty(); renderEditor();
     });
@@ -982,6 +1271,43 @@
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  function removeParticipatingStore(draft, storeId) {
+    var participantIndex = draft.participatingStoreIds.indexOf(storeId);
+    if (participantIndex >= 0) draft.participatingStoreIds.splice(participantIndex, 1);
+    delete draft.storeConfigs[storeId];
+    draft.deployStoreIds = (draft.deployStoreIds || []).filter(function (id) { return id !== storeId; });
+    draft.deployExcludedStoreIds = (draft.deployExcludedStoreIds || []).filter(function (id) { return id !== storeId; });
+    draft.activeStoreId = draft.participatingStoreIds[0] || "";
+    normalizeStoreDraft(draft);
+  }
+
+  function handleParticipatingStoreChange(target, draft) {
+    var storeId = target.getAttribute("data-participating-store");
+    if (target.checked) {
+      if (draft.participatingStoreIds.indexOf(storeId) < 0) draft.participatingStoreIds.push(storeId);
+      storeConfigFor(draft, storeId, true);
+      draft.activeStoreId = storeId;
+      normalizeStoreDraft(draft);
+      delete editorState.stepErrors[2];
+      markEditorDirty();
+      renderEditor();
+      return;
+    }
+    if (!storeHasTargets(draft, storeId)) {
+      removeParticipatingStore(draft, storeId);
+      markEditorDirty();
+      renderEditor();
+      return;
+    }
+    target.checked = true;
+    openDialog("移除参与门店？", "移除后将清空该门店已选商品及全部数量配置，此操作保存后不可恢复。", "移除门店", function () {
+      removeParticipatingStore(draft, storeId);
+      closeDialog();
+      markEditorDirty();
+      renderEditor();
+    });
+  }
+
   function handleEditorClick(event) {
     var button = event.target.closest("button");
     if (!button) return;
@@ -990,6 +1316,8 @@
     if (button.hasAttribute("data-delete-range")) { deleteRange(button.getAttribute("data-delete-range"), Number(button.getAttribute("data-range-index"))); return; }
     if (button.hasAttribute("data-party-tab")) { clearBatchSelection(); editorState.rule.editorDraft.activePartyIndex = Number(button.getAttribute("data-party-tab")); renderEditor(); return; }
     if (button.hasAttribute("data-round-tab")) { clearBatchSelection(); editorState.rule.editorDraft.activeRoundIndex = Number(button.getAttribute("data-round-tab")); renderEditor(); return; }
+    if (button.hasAttribute("data-store-tab")) { var storeDraft = editorState.rule.editorDraft; clearBatchSelection(); storeDraft.activeStoreId = button.getAttribute("data-store-tab"); var storeConfig = activeStoreConfig(storeDraft); if (storeConfig.productLines.indexOf(storeDraft.activeLineId) < 0) storeDraft.activeLineId = storeConfig.productLines[0] || "kiosk"; renderEditor(); return; }
+    if (button.hasAttribute("data-limit-store-tab")) { clearBatchSelection(); editorState.rule.editorDraft.activeStoreId = button.getAttribute("data-limit-store-tab"); normalizeActiveDimensions(editorState.rule.editorDraft); renderEditor(); return; }
     if (button.hasAttribute("data-line-tab")) { clearBatchSelection(); editorState.rule.editorDraft.activeLineId = button.getAttribute("data-line-tab"); renderEditor(); return; }
     if (button.hasAttribute("data-toggle-batch")) { if (editorState.batchMode) clearBatchSelection(); else { editorState.batchMode = true; editorState.batchSelectedTargetIds = []; } renderEditor(); return; }
     if (button.hasAttribute("data-batch-cancel")) { clearBatchSelection(); renderEditor(); return; }
@@ -1004,7 +1332,8 @@
       var batchTargets = selectedBatchTargets(draft);
       if (!batchTargets.length) { toast("请至少选择一个" + (draft.targetType === "dish" ? "菜品" : "分类"), true); syncBatchControls(); return; }
       if (mode === "value" && (!Number.isInteger(value) || value < 0)) { toast("请输入大于或等于 0 的整数", true); return; }
-      batchTargets.forEach(function (target) { draft.limits[limitKey(draft.activePartyIndex, draft.period === "multi_round" ? draft.activeRoundIndex : 0, draft.activeLineId, target.id)] = { configured: true, value: value }; });
+      var config = activeStoreConfig(draft);
+      batchTargets.forEach(function (target) { config.limits[limitKey(draft.activePartyIndex, draft.period === "multi_round" ? draft.activeRoundIndex : 0, draft.activeLineId, target.id)] = { configured: true, value: value }; });
       markEditorDirty(); clearBatchSelection(); renderEditor(); return;
     }
     if (button.hasAttribute("data-fix-step")) { goToEditorStep(Number(button.getAttribute("data-fix-step")), true); return; }
@@ -1014,6 +1343,10 @@
   function handleEditorInput(event) {
     var target = event.target;
     var draft = editorState.rule.editorDraft;
+    if (target.hasAttribute("data-participating-store")) {
+      if (event.type === "change") handleParticipatingStoreChange(target, draft);
+      return;
+    }
     if (target.hasAttribute("data-batch-target-id")) {
       var batchTargetId = target.getAttribute("data-batch-target-id");
       var selectedIds = editorState.batchSelectedTargetIds.slice();
@@ -1038,12 +1371,12 @@
       var range = ranges[Number(target.getAttribute("data-range-index"))];
       var part = target.getAttribute("data-range-part");
       range[part] = part === "max" && target.value === "" ? null : Number(target.value);
-      draft.limits = {};
+      clearAllStoreLimits(draft);
       markEditorDirty(); return;
     }
     if (target.hasAttribute("data-limit-target")) {
       var key = limitKey(draft.activePartyIndex, draft.period === "multi_round" ? draft.activeRoundIndex : 0, draft.activeLineId, target.getAttribute("data-limit-target"));
-      draft.limits[key] = target.value === "" ? { configured: false, value: null } : { configured: true, value: Math.max(0, Number(target.value)) };
+      activeStoreConfig(draft).limits[key] = target.value === "" ? { configured: false, value: null } : { configured: true, value: Math.max(0, Number(target.value)) };
       markEditorDirty(); return;
     }
     if (target.hasAttribute("data-condition")) { draft.conditions[target.getAttribute("data-condition")] = target.value; markEditorDirty(); return; }
@@ -1088,13 +1421,14 @@
     root.addEventListener("brand-menu-structure-change", function (event) {
       var draft = editorState.rule.editorDraft;
       var byLine = event.detail && event.detail.byLine;
-      if (!byLine || !MenuPicker) return;
-      draft.structureByLine = MenuPicker.normalizeByLine(byLine);
-      syncDraftTargetsFromStructure(draft, true);
-      var summary = document.getElementById("structureSummary");
-      if (summary) summary.textContent = MenuPicker.formatSummary(draft.structureByLine);
+      if (!byLine || !MenuPicker || !draft.activeStoreId) return;
+      var config = storeConfigFor(draft, draft.activeStoreId, true);
+      config.structureByLine = MenuPicker.normalizeByLine(byLine);
+      syncStoreTargetsFromStructure(draft, config, true);
+      normalizeStoreDraft(draft);
       delete editorState.stepErrors[2];
       markEditorDirty();
+      renderEditor();
     });
     document.getElementById("headerSaveButton").addEventListener("click", function () { if (saveEditorDraft(true)) toast("草稿已保存"); });
     document.getElementById("backButton").addEventListener("click", function () {
@@ -1142,7 +1476,7 @@
     return '<header class="olf-header"><div class="olf-header-main"><div class="olf-title-group"><button type="button" class="olf-icon-button" id="flowBackButton" aria-label="返回">' + icon("back", 20) + '</button><div class="olf-title-copy"><h1>' + esc(title) + '</h1><span class="olf-save-state">规则草稿已保存</span></div></div><button type="button" class="olf-button olf-button--primary" id="flowPrimaryButton">' + esc(primaryLabel) + '</button></div><div class="olf-progress"><span style="width:' + progress + '%"></span></div></header>';
   }
 
-  function mountStores() {
+  function mountStoresLegacy() {
     var draftRule = getDraftFromParams();
     if (!draftRule) { renderErrorState("草稿不存在", "请返回规则列表重新进入。", "返回规则列表", function () { go("order-limit.html"); }); return; }
     var draft = draftRule.editorDraft;
@@ -1165,7 +1499,52 @@
     sync();
   }
 
+  function mountStores() {
+    var draftRule = getDraftFromParams();
+    if (!draftRule) { renderErrorState("草稿不存在", "请返回规则列表重新进入。", "返回规则列表", function () { go("order-limit.html"); }); return; }
+    var draft = draftRule.editorDraft;
+    normalizeStoreDraft(draft);
+    var added = addedStoreIds(draft);
+    var selected = draft.deployStoreIds.slice();
+    root.innerHTML = '<div class="olf-page">' + renderFlowHeader("选择发布门店", 82, "", "下一步") + '<main class="olf-flow-main"><section class="olf-flow-card"><h2>参与门店</h2><p class="olf-help">仅“已添加”商品的门店可以勾选发布；未添加门店保留展示但不可勾选。</p><div class="olf-table-wrap olf-publish-store-table"><table class="olf-table"><thead><tr><th class="olf-store-check-col"></th><th>门店名</th><th>MID</th><th>地址</th><th>参与活动商品</th></tr></thead><tbody>' + stores.map(function (store) {
+      var isAdded = added.indexOf(store.id) >= 0;
+      var isChecked = selected.indexOf(store.id) >= 0;
+      return '<tr class="olf-participating-row' + (isChecked ? ' is-selected' : '') + '"><td><input type="checkbox" data-deploy-store="' + esc(store.id) + '"' + (isChecked ? ' checked' : '') + (isAdded ? '' : ' disabled') + ' /></td><td><strong>' + esc(store.name) + '</strong></td><td>' + esc(store.mid) + '</td><td>' + esc(store.address) + '</td><td><span class="olf-store-status ' + (isAdded ? 'is-added' : 'is-missing') + '">' + (isAdded ? '已添加' : '未添加') + '</span></td></tr>';
+    }).join('') + '</tbody></table></div><div class="olf-selected-panel olf-selected-panel--inline"><h3>已选门店（<span id="selectedStoreCount">0</span>）</h3><div id="selectedStoreNames" class="olf-token-list"></div></div></section></main></div>';
+    function sync() {
+      selected = Array.prototype.map.call(document.querySelectorAll('[data-deploy-store]:checked'), function (input) { return input.getAttribute('data-deploy-store'); });
+      draft.deployStoreIds = selected.slice();
+      draft.deployExcludedStoreIds = added.filter(function (storeId) { return selected.indexOf(storeId) < 0; });
+      document.getElementById('selectedStoreCount').textContent = String(selected.length);
+      document.getElementById('selectedStoreNames').innerHTML = selected.length ? selected.map(function (id) { var store = stores.find(function (item) { return item.id === id; }); return '<span class="olf-token">' + esc(store ? store.name : id) + '</span>'; }).join('') : '<span class="olf-hint">尚未选择</span>';
+      document.getElementById('flowPrimaryButton').disabled = selected.length === 0;
+      root.querySelectorAll('[data-deploy-store]').forEach(function (input) { var row = input.closest('tr'); if (row) row.classList.toggle('is-selected', input.checked); });
+    }
+    root.querySelector('.olf-publish-store-table').addEventListener('change', sync);
+    document.getElementById('flowBackButton').addEventListener('click', function () { go('order-limit-rule-editor.html?draftId=' + encodeURIComponent(draftRule.id)); });
+    document.getElementById('flowPrimaryButton').addEventListener('click', function () {
+      sync();
+      if (!selected.length) { toast('请至少选择一家发布门店', true); return; }
+      if (!updateDraftRule(draftRule)) { toast('保存门店失败，请重试', true); return; }
+      go('order-limit-publish-confirm.html?draftId=' + encodeURIComponent(draftRule.id));
+    });
+    sync();
+  }
+
+  function validateDeployStores(draft) {
+    var deployIds = draft.deployStoreIds || [];
+    if (!deployIds.length) return "请至少选择一家发布门店";
+    var added = addedStoreIds(draft);
+    var invalid = deployIds.find(function (storeId) { return added.indexOf(storeId) < 0; });
+    if (invalid) return "未添加商品的门店不能发布";
+    var completion = limitCompletion(draft, deployIds);
+    if (!completion.total || completion.complete !== completion.total) return "发布门店仍有数量单元格未配置";
+    return null;
+  }
+
   function publishDraft(draftRule) {
+    var deployError = validateDeployStores(draftRule.editorDraft);
+    if (deployError) throw new Error(deployError);
     var rules = loadRules();
     var draftIndex = rules.findIndex(function (rule) { return String(rule.id) === String(draftRule.id); });
     if (draftIndex < 0) throw new Error("draft missing");
