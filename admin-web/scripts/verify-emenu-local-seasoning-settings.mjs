@@ -92,6 +92,9 @@ expect(batch, /data-toggle-preview-product/, "Preview products must support expa
 expect(batch, /collapsedPreviewProducts/, "Product collapse state must survive preview refreshes");
 expect(batch, /previewProducts/, "Batch preview must use the grouped product endpoint");
 expect(batch, /data-preview-page-size/, "Preview must expose a page-size selector");
+expect(batch, /inline-flex shrink-0 flex-nowrap items-center gap-3 whitespace-nowrap/, "Preview page-size control must remain on one line with twelve-pixel spacing");
+expect(batch, /data-preview-page-size class="\$\{inputClass\} !h-9 !w-20 shrink-0"/, "Preview page-size selector must keep an eighty-pixel width");
+expect(batch, /<span class="shrink-0">每页<\/span>[\s\S]*<span class="shrink-0">个商品<\/span>/, "Preview page-size labels must not wrap by character");
 expect(batch, /data-preview-page=/, "Preview must expose direct numeric page buttons");
 expect(batch, /previewPageItems/, "Preview must collapse large page ranges with ellipses");
 if (/data-preview-kind/.test(batch)) throw new Error("Preview must not expose the status filter");
