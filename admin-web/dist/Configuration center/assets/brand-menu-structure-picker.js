@@ -365,6 +365,56 @@
     return out;
   }
 
+  function listSelectedTargets(byLine, leafLevel) {
+    var out = [];
+    var targetType = leafLevel === "category" ? "category" : "dish";
+    byLine = normalizeByLine(byLine);
+    LINE_OPTIONS.forEach(function (line) {
+      var tree = resolveTree(line.id);
+      var selection = keysToSelection(byLine[line.id] || [], tree);
+      tree.forEach(function (g) {
+        g.categories.forEach(function (c) {
+          var categoryKey = cKey(g.id, c.id);
+          if (targetType === "category") {
+            if (!selection[categoryKey]) return;
+            out.push({
+              lineId: line.id,
+              lineLabel: line.label,
+              groupId: g.id,
+              groupName: g.name,
+              categoryId: c.id,
+              categoryName: c.name,
+              targetKey: categoryKey,
+              targetType: "category",
+              dishId: "",
+              dishName: "",
+              dishCount: c.dishes.length,
+            });
+            return;
+          }
+          c.dishes.forEach(function (d) {
+            var dishKey = dKey(g.id, c.id, d.id);
+            if (!selection[dishKey]) return;
+            out.push({
+              lineId: line.id,
+              lineLabel: line.label,
+              groupId: g.id,
+              groupName: g.name,
+              categoryId: c.id,
+              categoryName: c.name,
+              targetKey: dishKey,
+              targetType: "dish",
+              dishId: d.id,
+              dishName: d.name,
+              dishCount: 1,
+            });
+          });
+        });
+      });
+    });
+    return out;
+  }
+
   function listAllDishes() {
     var out = [];
     LINE_OPTIONS.forEach(function (line) {
@@ -661,6 +711,7 @@
     formatSummary: formatSummary,
     listSelectedDishes: listSelectedDishes,
     listSelectedCategories: listSelectedCategories,
+    listSelectedTargets: listSelectedTargets,
     listAllDishes: listAllDishes,
     setNodeSelected: setNodeSelected,
     isNodeSelected: isNodeSelected,
