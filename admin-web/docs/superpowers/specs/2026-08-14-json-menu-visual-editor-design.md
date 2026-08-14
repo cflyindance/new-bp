@@ -115,6 +115,7 @@ interface MenuNode {
 
 常用配置：
 
+- `id`
 - `name`
 - `key`
 - `path`
@@ -133,6 +134,10 @@ interface MenuNode {
 - `accessControl`
 
 `display`只有原节点已经配置或用户主动启用该字段时才写入 JSON；关闭“配置此字段”后删除该属性，而不是写入默认值。其他可选对象同样遵循“未配置即省略”。
+
+`id`使用普通文本输入框展示，新增时自动生成字符串值但允许用户修改。重复 ID 的错误可从左侧树点击定位，并在此输入框直接修复。
+
+`display`、`microAppConfig.iframe`和`accessControl.bool`使用“未配置 / true / false”三态控件，以区分属性缺失与显式 `false`。
 
 ### 4.3 右栏：菜单预览
 
@@ -175,7 +180,7 @@ interface MenuNode {
 
 - 显示 `microAppConfig.url`、`defaultPage`、`iframe`、`routeType`。
 - `defaultPage`可选。
-- `routeType`是字符串输入，保留参考数据原值，不增加枚举字段。
+- `routeType`使用参考文件实际出现的 `hash / history`选项，不接受其他值。
 - 子节点可显式填写 `type: "micro-app"`，也可省略并继承父节点逻辑。
 
 ### 5.5 未填写类型
@@ -205,6 +210,8 @@ interface MenuNode {
 
 `permission.value`使用可增删字符串标签编辑，序列化为字符串数组。`serviceName`与`permission`可以按参考数据单独存在或同时存在，编辑器不增加新的组合逻辑或包装字段。
 
+`permission.rule`仅允许参考文件实际出现的 `some`。界面以只读选项展示该值；启用 `permission`时默认选择 `some`，关闭整个 `permission`配置后删除该对象。
+
 ## 7. 树操作规则
 
 ### 7.1 新增
@@ -233,6 +240,16 @@ interface MenuNode {
 
 打开编辑器时读取当前已发布配置并创建编辑会话。保存草稿不影响当前生效菜单。新建空白配置与编辑当前配置是两个明确入口。本期不提供文件导入。
 
+新建空白配置时初始化全部必需根字段：
+
+- `_id`：由服务端创建文档时生成字符串 ID；在首次保存前由客户端生成临时字符串 ID，服务端可在创建响应中返回最终值。
+- `name`：默认为空字符串，保存、发布和导出前都必须填写非空值。
+- `menu`：空数组。
+- `updatedBy`：使用当前登录用户的 `userId、firstname、lastname`，并生成 ISO 时间字符串 `timestamp`。
+- `createdDate`：当前毫秒时间戳。
+
+新建文档在导出前也执行根结构校验；缺少 `_id`、`name`、`menu`、`updatedBy`或`createdDate`，或数据类型错误时阻止导出。
+
 ### 8.2 保存并发布
 
 发布执行完整校验。存在阻断错误时停止发布，保留全部编辑内容并定位第一个错误节点。只有警告时展示确认弹窗，用户确认后立即发布当前配置。
@@ -255,7 +272,7 @@ interface MenuNode {
 - 根字段顺序为 `_id、name、menu、updatedBy、createdDate`。
 - 节点保持当前 `menu / children`顺序和嵌套关系。
 - 保留已有字段及其数据类型。
-- 未配置的可选字段省略，不输出 `null`、空对象或编辑器内部字段。
+- 未配置的可选字段省略，不输出空对象或编辑器内部字段。参考结构明确允许的 `updatedBy.lastname: null`必须原样保留；不得把该显式 `null`当作缺失字段删除。
 - `permission.value`保持字符串数组。
 - `microAppConfig.iframe`、`accessControl.bool`、`display`保持布尔值。
 - 不修改数据直接导出时，业务字段、值、结构和数组顺序与读取内容一致；允许格式化缩进和根字段规范顺序不同于原始文本排版。
@@ -271,6 +288,9 @@ interface MenuNode {
 - `micro-app`的有效类型来源确定后缺少合法 HTTP(S) `microAppConfig.url`。
 - 配置了 `permission.rule`但`permission.value`为空。
 - 字段数据类型与参考结构不一致。
+- 根字段缺失、`name`为空或根字段数据类型与参考结构不一致。
+- `microAppConfig.routeType`不是 `hash`或`history`。
+- `accessControl.permission.rule`不是 `some`。
 
 对子节点的类型校验使用“自身显式类型优先，否则最近祖先类型”的有效类型。父微应用下的普通子路由不要求重复配置 `microAppConfig.url`；它使用父节点入口和自身 `path`。
 
@@ -293,7 +313,15 @@ interface MenuNode {
 4. `menu-tree-editor`：树操作和搜索。
 5. `menu-node-form`：常用/高级动态表单。
 6. `menu-live-preview`：只读菜单预览。
-7. `menu-document-repository`：封装读取当前发布版本、保存草稿、发布和导出。原型可使用现有浏览器存储，后续替换后端接口时不改变领域模型和界面。
+7. `menu-document-repository`：封装读取当前发布版本、保存草稿和发布。正式交付使用服务端持久化，保证产品、测试和运维看到同一份草稿/发布结果；浏览器存储只允许用于自动化测试替身，不属于验收实现。
+
+本期服务端仓储契约固定为：
+
+- `readPublished(): Promise<MenuDocument>`：读取当前生效文档。
+- `saveDraft(document: MenuDocument): Promise<void>`：保存共享草稿，不改变线上菜单。
+- `publish(document: MenuDocument): Promise<MenuDocument>`：原子替换当前生效文档并返回服务端写入最终 `updatedBy`后的文档。
+
+接口请求和响应中的业务文档均使用第 3 节的 `MenuDocument`，不得向文档增加版本号或发布状态。并发控制、草稿所有者和审计信息属于 HTTP 标头或服务端存储元数据，不进入业务 JSON。导出由浏览器直接下载当前序列化结果，不依赖服务端。
 
 数据流为：读取发布配置 → 解析为领域文档 → 编辑状态操作 → 实时校验和预览 → 序列化 → 保存草稿、发布或导出。
 
@@ -304,6 +332,7 @@ interface MenuNode {
 - 发布失败：保留草稿，展示服务端错误，不把本地状态标记为已发布。
 - 导出失败：不影响草稿或已发布配置。
 - 非法参考数据：尽可能读取并标记问题；只有用户执行发布时应用阻断规则。
+- 新建文档根字段不完整：阻止保存、发布和导出，并聚焦顶部对应字段。
 
 ## 12. 验收与测试
 
@@ -321,6 +350,8 @@ interface MenuNode {
 - 子节点类型继承正确。
 - 微应用子节点不会被错误要求重复配置父级入口。
 - 权限数组和布尔字段序列化类型正确。
+- 三态布尔字段能区分属性缺失、`true`和`false`。
+- `routeType`只接受 `hash / history`，`permission.rule`只接受 `some`。
 
 ### 12.3 树操作
 
@@ -334,9 +365,10 @@ interface MenuNode {
 - 重复路径只警告并允许确认发布。
 - 类型必填项按有效继承类型校验。
 - 发布和导出使用同一序列化结果。
+- 新建空白配置生成完整根结构，根字段不完整时无法导出。
+- `updatedBy.lastname: null`在读取、编辑和导出后仍保留为显式 `null`。
 - 发布失败或离开提醒不会丢失编辑内容。
 
 ### 12.5 可用性
 
 产品、测试和技术运维无需阅读或编辑 JSON，即可定位节点、修改路由、理解类型配置、处理校验问题并完成发布或导出。
-
