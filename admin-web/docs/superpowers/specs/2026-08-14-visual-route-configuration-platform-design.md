@@ -314,7 +314,7 @@ interface RouteReleaseAssignment {
   snapshotId: string;
   fallbackSnapshotId: string;
   priority: number;
-  status: "scheduled" | "active" | "paused" | "completed" | "rolled-back";
+  status: "scheduled" | "active" | "paused" | "completed" | "rolled-back" | "retired";
   eligibility: ReleaseEligibilityScope;
   rolloutPercent: number;
   bucketSalt: string;
@@ -334,6 +334,7 @@ interface RouteReleaseAssignment {
 | `routeMode` / `defaultPage` | 禁止 | 禁止 | 禁止 | 必填 / 可选 |
 | `supportedContainerModes` / `defaultContainerMode` | 禁止 | 禁止 | 禁止 | 必填 |
 | `allowedSandboxProfileIds` | 禁止 | 禁止 | 至少一个 | 含 iframe 模式时至少一个 |
+| `defaultSandboxProfileId` | 禁止 | 禁止 | 必填且属于允许集合 | 含 iframe 模式时必填且属于允许集合 |
 | `microFrontendContractId` | 禁止 | 禁止 | 禁止 | 含 native 模式时必填 |
 | `fallback` | `none` | `none` | `none/external` | `none/external/iframe` |
 
@@ -360,7 +361,7 @@ interface RouteReleaseAssignment {
 
 - 在商家后台工作区中使用受控 iframe 容器挂载。
 - 应用级配置维护允许来源、CSP 预期、健康检查和默认 sandbox 策略。
-- 页面级配置维护相对路径和必要能力；菜单节点只选择已审批的 sandbox profile。
+- 页面级配置维护相对路径、`allowedSandboxProfileIds` 和必填的 `defaultSandboxProfileId`；菜单节点可从允许集合中覆盖，未覆盖时运行时始终使用页面默认值。
 - 父页等待子页发送 `ready`，校验 `event.source` 与精确 `origin` 后，再通过 `menusifu-context/v1` 发送短时启动会话和上下文。
 - 允许事件限制为协议白名单，例如 `ready`、`navigate`、`resize`、`auth-expired`、`error`。
 - `allow-scripts` 与 `allow-same-origin` 的组合只对经过评审的可信来源开放；合作方默认使用更严格隔离配置。
@@ -439,6 +440,7 @@ allowed = inReleaseTarget
        AND functionalPermissionMatched
        AND applicationActive
        AND pageActive
+       AND ssoProfileActiveOrNotRequired
 ```
 
 规则：
@@ -451,12 +453,13 @@ allowed = inReleaseTarget
 - 父节点在所有子节点都不可见且自身无可访问页面时自动隐藏。
 - 用户无权限直接访问已知路径时返回统一 403 页面，不泄露远程应用地址和内部权限细节。
 - `applicationActive` 和 `pageActive` 读取应用、页面稳定身份的当前紧急状态；配置内容仍来自快照固定的修订版。应用或页面被紧急暂停后立即阻止新的远程启动会话，但不会改写历史快照。
+- 远程页面还要求其稳定 SSO profile 当前为 `active`。`suspended` 会同时阻止新发布、launch session 创建和未消费 launch code 的交换；历史快照仍可审计但不能绕过暂停。恢复为 `active` 后继续使用快照固定的 `ssoProfileRevision`。已经由目标应用建立的独立会话不保证被平台强制终止，需依赖短会话有效期或目标应用提供的撤销能力。
 
 ### 9.1 发布范围解析规则
 
 `inReleaseTarget` 由活动 `RouteReleaseAssignment` 决定，规则固定如下：
 
-1. 只考虑 `status=active` 且 `blueprintId` 匹配的 assignment。
+1. 只考虑 `blueprintId` 匹配且处于可服务状态的 assignment。`active`、`paused`、`completed`、`rolled-back` 都是可服务状态；`scheduled` 和 `retired` 不参与解析。
 2. `merchantDenylist` 优先级最高；命中后该 assignment 不匹配。
 3. `merchantAllowlist` 非空时，商家必须在列表中；空数组表示不限制具体商家。
 4. `businessTypeIds` 非空时必须匹配当前商家业态；空数组表示全部业态。
@@ -466,6 +469,19 @@ allowed = inReleaseTarget
 8. 灰度桶固定为 `hash(merchantId + assignmentId + bucketSalt) mod 10000`。结果小于 `rolloutPercent * 100` 时使用 `snapshotId`，否则使用 `fallbackSnapshotId`。
 9. 同一 assignment 扩大或缩小百分比时 `bucketSalt` 不变，保证已进入小比例批次的商家继续留在后续更大批次中。
 10. 回滚把 assignment 的活动 `snapshotId` 切换为目标旧快照，并将操作写入审计；不得修改任一快照内容。
+
+assignment 状态转换和服务语义：
+
+| 状态 | 是否参与路由解析 | 是否允许改灰度比例 | 语义 |
+|---|---|---|---|
+| `scheduled` | 否 | 否 | 等待定时激活，商家继续使用其他可服务 assignment |
+| `active` | 是 | 是 | 正在灰度，可扩大、缩小或暂停 |
+| `paused` | 是 | 否 | 冻结当前比例，已经进入灰度桶的商家继续使用 `snapshotId`，其余继续使用 `fallbackSnapshotId` |
+| `completed` | 是 | 否 | `rolloutPercent=100` 的稳定服务状态 |
+| `rolled-back` | 是 | 否 | `snapshotId` 已切换为指定旧快照并以 100% 服务当前范围 |
+| `retired` | 否 | 否 | assignment 被明确退出服务，仅保留审计记录 |
+
+允许的主状态转换为 `scheduled → active`、`active ↔ paused`、`active → completed`、`active/paused/completed → rolled-back`，以及任一非 retired 状态在确认替代 assignment 生效后进入 `retired`。自动暂停只能执行 `active → paused`，不能通过把 assignment 移出解析来撤回已经灰度的商家。
 
 ## 10. M 平台信息架构
 
@@ -619,8 +635,14 @@ POST   /route-blueprints/{blueprintId}/validate
 POST   /route-blueprints/{blueprintId}/preview
 POST   /route-blueprints/{blueprintId}/releases
 GET    /route-blueprints/{blueprintId}/releases
-POST   /route-blueprints/{blueprintId}/releases/{version}/rollout
-POST   /route-blueprints/{blueprintId}/releases/{version}/rollback
+
+POST   /route-release-assignments/{assignmentId}/activate
+POST   /route-release-assignments/{assignmentId}/rollout
+POST   /route-release-assignments/{assignmentId}/pause
+POST   /route-release-assignments/{assignmentId}/resume
+POST   /route-release-assignments/{assignmentId}/complete
+POST   /route-release-assignments/{assignmentId}/rollback
+POST   /route-release-assignments/{assignmentId}/retire
 
 GET    /merchant-route-snapshots/current
 POST   /route-launch-sessions
