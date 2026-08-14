@@ -1,5 +1,20 @@
 const now = "2026-08-12T00:00:00.000Z";
 
+export const UNCATEGORIZED_OPTION_CATEGORY_ID = "option-category-uncategorized";
+
+const optionCategories = [
+  { id: "option-category-aromatics", code: "AROMATICS", name: "香辛料", status: "active", sortOrder: 10, system: false, createdAt: now, updatedAt: now },
+  { id: "option-category-seasoning", code: "SEASONING", name: "基础调味", status: "active", sortOrder: 20, system: false, createdAt: now, updatedAt: now },
+  { id: "option-category-sauces", code: "SAUCES", name: "酱料", status: "active", sortOrder: 30, system: false, createdAt: now, updatedAt: now },
+  { id: UNCATEGORIZED_OPTION_CATEGORY_ID, code: "UNCATEGORIZED", name: "未分类", status: "active", sortOrder: 999999, system: true, createdAt: now, updatedAt: now },
+];
+
+const optionCategoryBySlug = new Map([
+  ...["cilantro", "scallion", "garlic", "chili", "pepper", "ginger", "onion", "cumin"].map((slug) => [slug, "option-category-aromatics"]),
+  ...["peanut", "salt", "sugar", "vinegar", "sesame"].map((slug) => [slug, "option-category-seasoning"]),
+  ...["soy", "sesame-oil", "mustard", "mayo", "ketchup", "hot-sauce", "cheese"].map((slug) => [slug, "option-category-sauces"]),
+]);
+
 const optionRows = [
   ["cilantro", "CILANTRO", "香菜", "Cilantro"],
   ["scallion", "SCALLION", "葱", "Scallion"],
@@ -70,6 +85,7 @@ export function createEmenuSeasoningSeedDb() {
     code,
     name,
     nameEn,
+    categoryId: optionCategoryBySlug.get(id) ?? UNCATEGORIZED_OPTION_CATEGORY_ID,
     status: id === "mustard" ? "inactive" : "active",
     sortOrder: (index + 1) * 10,
     createdAt: now,
@@ -110,6 +126,7 @@ export function createEmenuSeasoningSeedDb() {
     ],
     menuGroups,
     products,
+    optionCategories,
     options,
     relations,
     auditLog: [],

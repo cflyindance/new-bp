@@ -1,6 +1,18 @@
 export type SeasoningActionCode = "ADD" | "LESS" | "MORE" | "NONE";
 export type SeasoningStatus = "active" | "inactive";
 
+export type SeasoningOptionCategory = {
+  id: string;
+  code: string;
+  name: string;
+  status: SeasoningStatus;
+  sortOrder: number;
+  system: boolean;
+  optionCount?: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type SeasoningActionDefinition = {
   code: SeasoningActionCode;
   labelKey: "seasoning.action.add" | "seasoning.action.less" | "seasoning.action.more" | "seasoning.action.none";
@@ -11,6 +23,8 @@ export type SeasoningOption = {
   code: string;
   name: string;
   nameEn?: string;
+  categoryId: string;
+  categoryName?: string;
   status: SeasoningStatus;
   sortOrder: number;
   relationCount?: number;
@@ -205,6 +219,12 @@ export type BatchFinalConfiguredRelation = {
   status: "active";
   kind: Exclude<BatchCandidateKind, "unavailable">;
   sortOrder: number;
+};
+
+export type SeasoningOptionPickerSnapshot = {
+  version: number;
+  categories: SeasoningOptionCategory[];
+  items: SeasoningOption[];
 };
 
 export type BatchFinalPreservedRelation = {

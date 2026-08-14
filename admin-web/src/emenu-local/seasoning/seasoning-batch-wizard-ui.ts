@@ -12,6 +12,7 @@ import {
   moveDraftAction,
   moveDraftOption,
   renderSeasoningConfigurationWorkspace,
+  syncSeasoningOptionCategoryIndeterminate,
   type SeasoningConfigurationDraft,
 } from "./seasoning-configuration-workspace-ui";
 import { renderSeasoningMenuStructurePicker, syncSeasoningMenuIndeterminate } from "./seasoning-menu-structure-picker-ui";
@@ -50,10 +51,13 @@ class BatchWizardController {
   private optionPickerOpen = false;
   private pendingActions = new Set<SeasoningActionCode>();
   private pendingOptions = new Set<string>();
+  private optionPickerQuery = "";
+  private activeOptionCategoryId: string | null = null;
   private bulkPriceInput = "";
   private linkedOptionQuery = "";
   private selectedPriceOptions = new Set<string>();
   private options: CursorPage<SeasoningOption> | null = null;
+  private optionCategories: import("./seasoning-types").SeasoningOptionCategory[] = [];
   private productSelection: ProductSelectionDraft | null = null;
   private menu: SeasoningMenuStructure | null = null;
   private productQuery = "";
@@ -185,6 +189,9 @@ class BatchWizardController {
       selectedPriceOptions: this.selectedPriceOptions,
       bulkPriceInput: this.bulkPriceInput,
       optionQuery: this.linkedOptionQuery,
+      optionPickerQuery: this.optionPickerQuery,
+      activeOptionCategoryId: this.activeOptionCategoryId,
+      optionCategories: this.optionCategories,
       options: this.options?.items ?? [],
       mode: "batch",
     });
@@ -359,6 +366,7 @@ class BatchWizardController {
         <footer class="flex items-center justify-between gap-3 border-t border-border bg-muted/25 px-5 py-4"><button type="button" data-back class="${secondaryButtonClass}" ${this.step === 1 || this.loading ? "disabled" : ""}>${t("seasoning.back")}</button><div class="flex items-center gap-3">${this.step === 2 && this.configuredRelationCount() ? `<span class="hidden text-sm text-muted-foreground sm:inline">${tf("seasoning.batch.configuredRelationCount", { count: String(this.configuredRelationCount()) })}</span>` : ""}<button type="button" data-next class="${primaryButtonClass}" ${!canNext || this.loading ? "disabled" : ""}>${this.step === 3 ? t("seasoning.batch.confirm") : this.step === 2 ? t("seasoning.batch.generatePreview") : t("seasoning.next")}</button></div></footer>
       </section>`;
     syncSeasoningMenuIndeterminate(this.overlay);
+    syncSeasoningOptionCategoryIndeterminate(this.overlay);
     this.syncBulkPriceSelectionState();
   }
 
@@ -366,7 +374,9 @@ class BatchWizardController {
     this.loading = true;
     this.render();
     try {
-      this.options = await seasoningApi.options({ status: "active", limit: 100 });
+      const snapshot = await seasoningApi.optionPicker();
+      this.options = { items: snapshot.items, nextCursor: null, total: snapshot.items.length };
+      this.optionCategories = snapshot.categories;
     } catch (error) {
       this.error = this.errorMessage(error);
     } finally {
@@ -556,7 +566,9 @@ class BatchWizardController {
       return;
     }
     if (target.hasAttribute("data-open-option-picker") && this.activeAction) {
-      this.pendingOptions = new Set(this.actionOptions.get(this.activeAction)?.keys() ?? []);
+      this.pendingOptions = new Set();
+      this.optionPickerQuery = "";
+      this.activeOptionCategoryId = this.optionCategories.find((category) => (this.options?.items ?? []).some((option) => option.categoryId === category.id))?.id ?? this.optionCategories[0]?.id ?? null;
       this.optionPickerOpen = true;
       this.render();
       return;
@@ -605,15 +617,21 @@ class BatchWizardController {
     }
     if (target.hasAttribute("data-confirm-options") && this.activeAction) {
       const previous = this.actionOptions.get(this.activeAction) ?? new Map<string, BatchOptionPricingDraft>();
-      const next = new Map<string, BatchOptionPricingDraft>();
+      const next = new Map<string, BatchOptionPricingDraft>(previous);
       for (const option of this.options?.items ?? []) {
-        if (this.pendingOptions.has(option.id)) next.set(option.id, previous.get(option.id) ?? createBatchOptionPricing());
+        if (this.pendingOptions.has(option.id)) next.set(option.id, createBatchOptionPricing());
       }
       this.actionOptions.set(this.activeAction, next);
       this.selectedPriceOptions = new Set([...this.selectedPriceOptions].filter((optionId) => next.has(optionId)));
       this.optionPickerOpen = false;
       this.clearAfterConfigurationChange();
       this.dirty = true;
+      this.render();
+      return;
+    }
+    const optionCategoryId = target.dataset.activateOptionCategory;
+    if (optionCategoryId) {
+      this.activeOptionCategoryId = optionCategoryId;
       this.render();
       return;
     }
@@ -742,8 +760,11 @@ class BatchWizardController {
       this.syncBulkPriceSelectionState();
     }
     if (target.hasAttribute("data-option-picker-query")) {
-      const query = target.value.trim().toLocaleLowerCase();
-      this.overlay.querySelectorAll<HTMLElement>("[data-option-picker-card]").forEach((card) => card.classList.toggle("hidden", !String(card.dataset.searchText).includes(query)));
+      this.optionPickerQuery = target.value;
+      this.render();
+      const input = this.overlay.querySelector<HTMLInputElement>("[data-option-picker-query]");
+      input?.focus();
+      input?.setSelectionRange(input.value.length, input.value.length);
     }
   }
 
@@ -770,12 +791,17 @@ class BatchWizardController {
     const optionPickerOption = target.dataset.optionPickerOption;
     if (optionPickerOption) {
       if (target.checked) this.pendingOptions.add(optionPickerOption); else this.pendingOptions.delete(optionPickerOption);
-      const card = target.closest<HTMLElement>("[data-option-picker-card]");
-      card?.classList.toggle("border-primary/50", target.checked);
-      card?.classList.toggle("bg-primary/5", target.checked);
-      card?.classList.toggle("border-border", !target.checked);
-      const count = this.overlay.querySelector<HTMLElement>("[data-picked-option-count]");
-      if (count) count.textContent = tf("seasoning.batch.selectedOptionCount", { count: String(this.pendingOptions.size) });
+      this.render();
+      return;
+    }
+    const toggleCategoryId = target.dataset.optionCategoryToggle;
+    if (toggleCategoryId && this.activeAction) {
+      const query = this.optionPickerQuery.trim().toLocaleLowerCase();
+      const category = this.optionCategories.find((item) => item.id === toggleCategoryId);
+      const existing = new Set(this.actionOptions.get(this.activeAction)?.keys() ?? []);
+      const visible = (this.options?.items ?? []).filter((option) => option.categoryId === toggleCategoryId && !existing.has(option.id) && (!query || category?.name.toLocaleLowerCase().includes(query) || `${option.name} ${option.nameEn ?? ""} ${option.code}`.toLocaleLowerCase().includes(query)));
+      for (const option of visible) target.checked ? this.pendingOptions.add(option.id) : this.pendingOptions.delete(option.id);
+      this.render();
       return;
     }
     const priceOptionId = target.dataset.selectPriceOption;

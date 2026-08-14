@@ -2,6 +2,7 @@ import { t, tf } from "../../i18n";
 import { openSeasoningBatchWizard } from "./seasoning-batch-wizard-ui";
 import { seasoningApi, SeasoningApiError } from "./seasoning-api";
 import { renderSeasoningOptionLibrary, openSeasoningOptionEditor } from "./seasoning-option-library-ui";
+import { openSeasoningOptionCategoryManager } from "./seasoning-option-category-manager-ui";
 import { renderSeasoningOverview } from "./seasoning-overview-ui";
 import { openSeasoningProductDrawer } from "./seasoning-product-drawer-ui";
 import { SeasoningStore, type SeasoningStoreState } from "./seasoning-store";
@@ -50,7 +51,7 @@ class SeasoningPageController {
 
   private renderFilters(state: SeasoningStoreState): string {
     if (state.tab === "options") {
-      return `<div class="flex flex-col gap-2 border-b border-border bg-muted/20 p-4 sm:flex-row"><input data-filter="option-query" class="${inputClass} sm:max-w-sm" placeholder="${t("seasoning.searchOptions")}" value="${escapeSeasoningHtml(state.optionFilters.query)}"><select data-filter="option-status" class="${inputClass} sm:max-w-48"><option value="">${t("seasoning.allStatuses")}</option><option value="active" ${state.optionFilters.status === "active" ? "selected" : ""}>${t("seasoning.statusActive")}</option><option value="inactive" ${state.optionFilters.status === "inactive" ? "selected" : ""}>${t("seasoning.statusInactive")}</option></select>${state.bootstrap?.permissions.canEdit ? `<button type="button" data-seasoning-add-option class="${primaryButtonClass} sm:ml-auto">＋ ${t("seasoning.addOption")}</button>` : ""}</div>`;
+      return `<div class="flex flex-col gap-2 border-b border-border bg-muted/20 p-4 sm:flex-row"><input data-filter="option-query" class="${inputClass} sm:max-w-sm" placeholder="${t("seasoning.searchOptions")}" value="${escapeSeasoningHtml(state.optionFilters.query)}"><select data-filter="option-category" class="${inputClass} sm:max-w-48"><option value="">全部 Option 分类</option>${state.optionCategories.map((category) => `<option value="${escapeSeasoningHtml(category.id)}" ${state.optionFilters.categoryId === category.id ? "selected" : ""}>${escapeSeasoningHtml(category.name)}</option>`).join("")}</select><select data-filter="option-status" class="${inputClass} sm:max-w-48"><option value="">${t("seasoning.allStatuses")}</option><option value="active" ${state.optionFilters.status === "active" ? "selected" : ""}>${t("seasoning.statusActive")}</option><option value="inactive" ${state.optionFilters.status === "inactive" ? "selected" : ""}>${t("seasoning.statusInactive")}</option></select>${state.bootstrap?.permissions.canEdit ? `<button type="button" data-seasoning-manage-option-categories class="${secondaryButtonClass} sm:ml-auto">分类管理</button><button type="button" data-seasoning-add-option class="${primaryButtonClass}">＋ ${t("seasoning.addOption")}</button>` : ""}</div>`;
     }
     return `<div class="grid gap-2 border-b border-border bg-muted/20 p-4 sm:grid-cols-2 lg:grid-cols-[minmax(220px,1fr)_180px_180px_180px]"><input data-filter="relation-query" class="${inputClass}" placeholder="${t("seasoning.searchRelations")}" value="${escapeSeasoningHtml(state.relationFilters.query)}"><select data-filter="relation-action" class="${inputClass}"><option value="">${t("seasoning.allActions")}</option><option value="ADD" ${state.relationFilters.action === "ADD" ? "selected" : ""}>${t("seasoning.action.add")}</option><option value="LESS" ${state.relationFilters.action === "LESS" ? "selected" : ""}>${t("seasoning.action.less")}</option><option value="MORE" ${state.relationFilters.action === "MORE" ? "selected" : ""}>${t("seasoning.action.more")}</option><option value="NONE" ${state.relationFilters.action === "NONE" ? "selected" : ""}>${t("seasoning.action.none")}</option></select><select data-filter="relation-category" class="${inputClass}"><option value="">${t("seasoning.allCategories")}</option>${(state.bootstrap?.categories ?? []).map((category) => `<option value="${category.id}" ${state.relationFilters.categoryId === category.id ? "selected" : ""}>${escapeSeasoningHtml(category.name)}</option>`).join("")}</select><select data-filter="relation-status" class="${inputClass}"><option value="">${t("seasoning.allStatuses")}</option><option value="active" ${state.relationFilters.status === "active" ? "selected" : ""}>${t("seasoning.statusActive")}</option><option value="mixed" ${state.relationFilters.status === "mixed" ? "selected" : ""}>${t("seasoning.statusMixed")}</option><option value="inactive" ${state.relationFilters.status === "inactive" ? "selected" : ""}>${t("seasoning.statusInactive")}</option></select></div>`;
   }
@@ -102,13 +103,17 @@ class SeasoningPageController {
       return;
     }
     if (button.hasAttribute("data-seasoning-add-option") && this.store.state.bootstrap) {
-      openSeasoningOptionEditor(this.root, { version: this.store.state.bootstrap.version, onSaved: (version) => this.afterMutation(version) });
+      openSeasoningOptionEditor(this.root, { version: this.store.state.bootstrap.version, categories: this.store.state.optionCategories, onSaved: (version) => this.afterMutation(version) });
+      return;
+    }
+    if (button.hasAttribute("data-seasoning-manage-option-categories") && this.store.state.bootstrap) {
+      openSeasoningOptionCategoryManager(this.root, { version: this.store.state.bootstrap.version, categories: this.store.state.optionCategories, onSaved: (version) => this.afterMutation(version) });
       return;
     }
     const editOptionId = button.dataset.seasoningEditOption;
     if (editOptionId && this.store.state.bootstrap) {
       const option = this.store.state.options?.items.find((item) => item.id === editOptionId);
-      if (option) openSeasoningOptionEditor(this.root, { version: this.store.state.bootstrap.version, option, onSaved: (version) => this.afterMutation(version) });
+      if (option) openSeasoningOptionEditor(this.root, { version: this.store.state.bootstrap.version, categories: this.store.state.optionCategories, option, onSaved: (version) => this.afterMutation(version) });
       return;
     }
     const toggleOptionId = button.dataset.seasoningToggleOption;
@@ -167,6 +172,7 @@ class SeasoningPageController {
       return;
     }
     if (filter === "option-status") this.store.state.optionFilters.status = target.value;
+    if (filter === "option-category") this.store.state.optionFilters.categoryId = target.value;
     if (filter.startsWith("relation-")) void this.store.loadRelationPage(1);
     else void this.store.loadCurrentTab();
   }

@@ -11,6 +11,8 @@ import type {
   SeasoningActionCode,
   SeasoningBootstrap,
   SeasoningOption,
+  SeasoningOptionCategory,
+  SeasoningOptionPickerSnapshot,
   SeasoningProduct,
   SeasoningRelationPageSize,
   SeasoningRelationProductPage,
@@ -59,11 +61,17 @@ export const seasoningApi = {
     request<CursorPage<SeasoningRelationSummary>>(`/relations/summary${query(params)}`),
   relationProductGroups: (params: { query?: string; action?: string; categoryId?: string; status?: string; page?: number; limit?: SeasoningRelationPageSize }) =>
     request<SeasoningRelationProductPage>(`/relations/product-groups${query(params)}`),
-  options: (params: { query?: string; status?: string; cursor?: string; limit?: number }) =>
+  options: (params: { query?: string; status?: string; categoryId?: string; cursor?: string; limit?: number }) =>
     request<CursorPage<SeasoningOption>>(`/options${query(params)}`),
-  createOption: (body: { expectedVersion: number; name: string; nameEn?: string; code: string; sortOrder?: number }) =>
+  optionPicker: (params: { query?: string } = {}) => request<SeasoningOptionPickerSnapshot>(`/option-picker${query(params)}`),
+  optionCategories: (includeInactive = true) => request<{ version: number; items: SeasoningOptionCategory[] }>(`/option-categories${query({ includeInactive: includeInactive ? 1 : 0 })}`),
+  createOptionCategory: (body: { expectedVersion: number; name: string; code: string }) => request<{ version: number; category: SeasoningOptionCategory }>("/option-categories", { method: "POST", body: JSON.stringify(body) }),
+  updateOptionCategory: (categoryId: string, body: { expectedVersion: number; name?: string; status?: "active" | "inactive" }) => request<{ version: number; category: SeasoningOptionCategory }>(`/option-categories/${encodeURIComponent(categoryId)}`, { method: "PATCH", body: JSON.stringify(body) }),
+  reorderOptionCategories: (body: { expectedVersion: number; categoryIds: string[] }) => request<{ version: number; items: SeasoningOptionCategory[] }>("/option-categories/order", { method: "PUT", body: JSON.stringify(body) }),
+  deleteOptionCategory: (categoryId: string, body: { expectedVersion: number }) => request<{ version: number }>(`/option-categories/${encodeURIComponent(categoryId)}`, { method: "DELETE", body: JSON.stringify(body) }),
+  createOption: (body: { expectedVersion: number; name: string; nameEn?: string; code: string; categoryId: string; sortOrder?: number }) =>
     request<{ option: SeasoningOption; version: number }>("/options", { method: "POST", body: JSON.stringify(body) }),
-  updateOption: (optionId: string, body: { expectedVersion: number; name?: string; nameEn?: string; sortOrder?: number; status?: "active" | "inactive" }) =>
+  updateOption: (optionId: string, body: { expectedVersion: number; name?: string; nameEn?: string; categoryId?: string; sortOrder?: number; status?: "active" | "inactive" }) =>
     request<{ option: SeasoningOption; version: number }>(`/options/${encodeURIComponent(optionId)}`, { method: "PATCH", body: JSON.stringify(body) }),
   products: (params: { query?: string; categoryId?: string; action?: string; optionIds?: string; cursor?: string; limit?: number }) =>
     request<CursorPage<SeasoningProduct>>(`/products${query(params)}`),

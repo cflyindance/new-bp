@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { createEmenuSeasoningSeedDb } from "./emenu-local-seasoning-seed.mjs";
+import { createEmenuSeasoningSeedDb, UNCATEGORIZED_OPTION_CATEGORY_ID } from "./emenu-local-seasoning-seed.mjs";
 
 const API_PREFIX = "/api/v1/emenu-local/seasoning";
 const ACTIONS = ["ADD", "LESS", "MORE", "NONE"];
@@ -13,6 +13,8 @@ const previewTokens = new Map();
 const productSelectionTokens = new Map();
 const PRODUCT_SELECTION_TTL_MS = 15 * 60_000;
 const PREVIEW_TTL_MS = 15 * 60_000;
+const MAX_ACTIVE_OPTIONS = 10_000;
+const UNCATEGORIZED_OPTION_CATEGORY_CODE = "UNCATEGORIZED";
 
 function readBody(req) {
   return new Promise((resolve, reject) => {
@@ -52,6 +54,11 @@ function loadDb(dbPath) {
     const parsed = JSON.parse(fs.readFileSync(dbPath, "utf8"));
     if (!parsed || !Array.isArray(parsed.options) || !Array.isArray(parsed.relations)) throw new Error("invalid_db");
     if (!Array.isArray(parsed.menuGroups) || !parsed.menuGroups.length) parsed.menuGroups = createEmenuSeasoningSeedDb().menuGroups;
+    if (normalizeOptionCategoryDb(parsed)) {
+      parsed.version = Number(parsed.version || 0) + 1;
+      appendAudit(parsed, "migrate_option_categories", { uncategorizedCategoryId: UNCATEGORIZED_OPTION_CATEGORY_ID });
+      return saveDbAtomic(dbPath, parsed);
+    }
     return parsed;
   } catch {
     return createEmenuSeasoningSeedDb();
@@ -166,6 +173,101 @@ function productKey(product, categoryOrder) {
 
 function relationKey(productId, action, optionId) {
   return `${productId}::${action}::${optionId}`;
+}
+
+function optionCategoryKey(category) {
+  return `${category.system ? "1" : "0"}::${String(category.sortOrder).padStart(8, "0")}::${normalizeText(category.name)}::${category.id}`;
+}
+
+function apiError(code, statusCode = 400, payload = {}) {
+  const error = new Error(code);
+  error.statusCode = statusCode;
+  error.payload = { error: code, ...payload };
+  return error;
+}
+
+function optionCategoryItems(db, includeInactive = true) {
+  const counts = new Map();
+  for (const option of db.options) counts.set(option.categoryId, (counts.get(option.categoryId) ?? 0) + 1);
+  return db.optionCategories
+    .filter((category) => includeInactive || category.status === "active")
+    .map((category) => ({ ...category, optionCount: counts.get(category.id) ?? 0 }))
+    .sort((left, right) => optionCategoryKey(left).localeCompare(optionCategoryKey(right)));
+}
+
+function activeOptionCategory(db, categoryId) {
+  return db.optionCategories.find((category) => category.id === categoryId && category.status === "active");
+}
+
+function assertConfigurableOption(db, optionId) {
+  const option = db.options.find((item) => item.id === optionId);
+  let reason = "";
+  let categoryId = option?.categoryId ?? "";
+  if (!option) reason = "option_not_found";
+  else if (option.status !== "active") reason = "option_inactive";
+  else {
+    const category = db.optionCategories.find((item) => item.id === option.categoryId);
+    if (!category) reason = "category_not_found";
+    else if (category.status !== "active") reason = "category_inactive";
+  }
+  if (reason) throw apiError("option_configuration_invalid", 409, { items: [{ optionId, categoryId, reason }] });
+  return option;
+}
+
+function assertActiveOptionLimit(db, activating = 1) {
+  const activeCount = db.options.filter((option) => option.status === "active").length;
+  if (activeCount + activating > MAX_ACTIVE_OPTIONS) throw apiError("option_active_limit_exceeded", 409, { limit: MAX_ACTIVE_OPTIONS });
+}
+
+function optionPickerSnapshot(db, url) {
+  const query = normalizeText(url.searchParams.get("query"));
+  const categories = optionCategoryItems(db, false);
+  const categoryById = new Map(categories.map((category) => [category.id, category]));
+  const active = db.options.filter((option) => option.status === "active" && categoryById.has(option.categoryId));
+  if (active.length > MAX_ACTIVE_OPTIONS) throw apiError("option_picker_limit_exceeded", 409, { limit: MAX_ACTIVE_OPTIONS });
+  const matched = active.filter((option) => {
+    if (!query) return true;
+    const category = categoryById.get(option.categoryId);
+    return normalizeText(category?.name).includes(query) || normalizeText(`${option.name} ${option.nameEn ?? ""} ${option.code}`).includes(query);
+  });
+  const matchedCategoryIds = new Set(matched.map((option) => option.categoryId));
+  return {
+    version: db.version,
+    categories: categories.filter((category) => !query || matchedCategoryIds.has(category.id)).map((category) => ({ ...category, optionCount: matched.filter((option) => option.categoryId === category.id).length })),
+    items: matched.map((option) => ({ ...option, categoryName: categoryById.get(option.categoryId)?.name ?? "未分类" })).sort((left, right) => optionCategoryKey(categoryById.get(left.categoryId)).localeCompare(optionCategoryKey(categoryById.get(right.categoryId))) || optionKey(left).localeCompare(optionKey(right))),
+  };
+}
+
+function normalizeOptionCategoryDb(db) {
+  let changed = false;
+  if (!Array.isArray(db.optionCategories)) {
+    db.optionCategories = [];
+    changed = true;
+  }
+  if (!db.optionCategories.some((category) => !category.system)) {
+    const defaults = createEmenuSeasoningSeedDb().optionCategories.filter((category) => !category.system);
+    db.optionCategories.push(...structuredClone(defaults));
+    changed = true;
+  }
+  let uncategorized = db.optionCategories.find((category) => category.id === UNCATEGORIZED_OPTION_CATEGORY_ID);
+  if (!uncategorized) {
+    const timestamp = new Date().toISOString();
+    uncategorized = { id: UNCATEGORIZED_OPTION_CATEGORY_ID, code: UNCATEGORIZED_OPTION_CATEGORY_CODE, name: "未分类", status: "active", sortOrder: 999999, system: true, createdAt: timestamp, updatedAt: timestamp };
+    db.optionCategories.push(uncategorized);
+    changed = true;
+  }
+  if (uncategorized.code !== UNCATEGORIZED_OPTION_CATEGORY_CODE || uncategorized.name !== "未分类" || uncategorized.status !== "active" || uncategorized.system !== true) {
+    Object.assign(uncategorized, { code: UNCATEGORIZED_OPTION_CATEGORY_CODE, name: "未分类", status: "active", system: true, sortOrder: 999999 });
+    changed = true;
+  }
+  const validIds = new Set(db.optionCategories.map((category) => category.id));
+  for (const option of db.options) {
+    if (!option.categoryId || !validIds.has(option.categoryId)) {
+      option.categoryId = UNCATEGORIZED_OPTION_CATEGORY_ID;
+      changed = true;
+    }
+  }
+  return changed;
 }
 
 function encodeRelationSortOrder(actionIndex, optionIndex) {
@@ -351,6 +453,8 @@ function createCandidates(db, body, scope, session) {
       const optionId = String(option.optionId);
       if (uniqueOptions.has(optionId)) throw new Error("invalid_or_duplicate_relation");
       uniqueOptions.add(optionId);
+      const configuredOption = db.options.find((item) => item.id === optionId);
+      if (configuredOption?.status === "active") assertConfigurableOption(db, optionId);
       return { optionId, ...normalizePreviewPricing(option) };
     });
     return { action: entry.action, optionPrices: normalizedOptions };
@@ -409,13 +513,16 @@ function createCandidates(db, body, scope, session) {
 function optionList(db, url) {
   const query = normalizeText(url.searchParams.get("query"));
   const status = url.searchParams.get("status");
+  const categoryId = url.searchParams.get("categoryId");
+  const categoryById = new Map(db.optionCategories.map((category) => [category.id, category]));
   const relationCounts = new Map();
   for (const relation of db.relations) relationCounts.set(relation.optionId, (relationCounts.get(relation.optionId) ?? 0) + 1);
   const orderSnapshots = new Set(db.orderSnapshots.map((snapshot) => snapshot.optionId));
   const items = db.options
-    .filter((option) => (!status || option.status === status) && (!query || normalizeText(`${option.name} ${option.nameEn ?? ""} ${option.code}`).includes(query)))
+    .filter((option) => (!status || option.status === status) && (!categoryId || option.categoryId === categoryId) && (!query || normalizeText(`${option.name} ${option.nameEn ?? ""} ${option.code} ${categoryById.get(option.categoryId)?.name ?? ""}`).includes(query)))
     .map((option) => ({
       ...option,
+      categoryName: categoryById.get(option.categoryId)?.name ?? "未分类",
       relationCount: relationCounts.get(option.id) ?? 0,
       deletable: !relationCounts.has(option.id) && !orderSnapshots.has(option.id),
     }))
@@ -946,6 +1053,76 @@ export async function handleEmenuSeasoningApi(req, res, dbPath) {
       sendJson(res, 200, { version: db.version, permissions: db.permissions, categories: db.categories.map(({ id, name }) => ({ id, name })) });
       return true;
     }
+    if (method === "GET" && sub === "/option-picker") {
+      sendJson(res, 200, optionPickerSnapshot(db, url));
+      return true;
+    }
+    if (method === "GET" && sub === "/option-categories") {
+      sendJson(res, 200, { version: db.version, items: optionCategoryItems(db, url.searchParams.get("includeInactive") !== "0") });
+      return true;
+    }
+    if (method === "POST" && sub === "/option-categories") {
+      requireEditable(db);
+      const body = await readBody(req);
+      assertExpectedVersion(db, body.expectedVersion);
+      const name = String(body.name ?? "").trim();
+      const code = String(body.code ?? "").trim().toUpperCase();
+      if (!name || !/^[A-Z0-9_\-]{2,40}$/.test(code)) throw apiError("invalid_option_category");
+      if (db.optionCategories.some((category) => category.code === code)) throw apiError("option_category_code_conflict", 409);
+      const timestamp = new Date().toISOString();
+      const category = { id: `option-category-${crypto.randomUUID()}`, code, name, status: "active", sortOrder: Math.max(0, ...db.optionCategories.filter((item) => !item.system).map((item) => Number(item.sortOrder) || 0)) + 10, system: false, createdAt: timestamp, updatedAt: timestamp };
+      const mutated = mutateDb(dbPath, db, "option_category_created", { categoryId: category.id }, (next) => next.optionCategories.push(category));
+      sendJson(res, 201, { version: mutated.db.version, category });
+      return true;
+    }
+    if (method === "PUT" && sub === "/option-categories/order") {
+      requireEditable(db);
+      const body = await readBody(req);
+      assertExpectedVersion(db, body.expectedVersion);
+      const requested = Array.isArray(body.categoryIds) ? body.categoryIds.map(String) : [];
+      const editableIds = db.optionCategories.filter((category) => !category.system).map((category) => category.id);
+      if (requested.length !== editableIds.length || new Set(requested).size !== requested.length || requested.some((id) => !editableIds.includes(id))) throw apiError("invalid_option_category_order");
+      const mutated = mutateDb(dbPath, db, "option_categories_reordered", { categoryIds: requested }, (next) => {
+        const order = new Map(requested.map((id, index) => [id, (index + 1) * 10]));
+        next.optionCategories.forEach((category) => { category.sortOrder = category.system ? 999999 : order.get(category.id); category.updatedAt = new Date().toISOString(); });
+      });
+      sendJson(res, 200, { version: mutated.db.version, items: optionCategoryItems(mutated.db, true) });
+      return true;
+    }
+    const optionCategoryMatch = sub.match(/^\/option-categories\/([^/]+)$/);
+    if (method === "PATCH" && optionCategoryMatch) {
+      requireEditable(db);
+      const body = await readBody(req);
+      assertExpectedVersion(db, body.expectedVersion);
+      const category = db.optionCategories.find((item) => item.id === optionCategoryMatch[1]);
+      if (!category) throw apiError("option_category_not_found", 404);
+      if (category.system) throw apiError("option_category_system_locked", 409);
+      const mutated = mutateDb(dbPath, db, "option_category_updated", { categoryId: category.id }, (next) => {
+        const target = next.optionCategories.find((item) => item.id === category.id);
+        if (body.name !== undefined) {
+          const name = String(body.name).trim();
+          if (!name) throw apiError("invalid_option_category");
+          target.name = name;
+        }
+        if (body.status === "active" || body.status === "inactive") target.status = body.status;
+        target.updatedAt = new Date().toISOString();
+      });
+      sendJson(res, 200, { version: mutated.db.version, category: optionCategoryItems(mutated.db, true).find((item) => item.id === category.id) });
+      return true;
+    }
+    if (method === "DELETE" && optionCategoryMatch) {
+      requireEditable(db);
+      const body = await readBody(req);
+      assertExpectedVersion(db, body.expectedVersion);
+      const category = db.optionCategories.find((item) => item.id === optionCategoryMatch[1]);
+      if (!category) throw apiError("option_category_not_found", 404);
+      if (category.system) throw apiError("option_category_system_locked", 409);
+      const optionCount = db.options.filter((option) => option.categoryId === category.id).length;
+      if (optionCount) throw apiError("option_category_in_use", 409, { optionCount });
+      const mutated = mutateDb(dbPath, db, "option_category_deleted", { categoryId: category.id }, (next) => { next.optionCategories = next.optionCategories.filter((item) => item.id !== category.id); });
+      sendJson(res, 200, { version: mutated.db.version });
+      return true;
+    }
     if (method === "GET" && sub === "/options") {
       sendJson(res, 200, optionList(db, url));
       return true;
@@ -958,9 +1135,12 @@ export async function handleEmenuSeasoningApi(req, res, dbPath) {
       const code = String(body.code ?? "").trim().toUpperCase();
       if (!name || !/^[A-Z0-9_\-]{2,40}$/.test(code)) throw new Error("invalid_option");
       if (db.options.some((option) => option.code === code)) throw new Error("duplicate_option_code");
+      const categoryId = String(body.categoryId || UNCATEGORIZED_OPTION_CATEGORY_ID);
+      if (!activeOptionCategory(db, categoryId)) throw apiError("option_category_inactive", 409, { categoryId });
+      assertActiveOptionLimit(db);
       const createdAt = new Date().toISOString();
-      const option = { id: `o-${crypto.randomUUID()}`, code, name, nameEn: String(body.nameEn ?? "").trim(), status: "active", sortOrder: Number(body.sortOrder) || (db.options.length + 1) * 10, createdAt, updatedAt: createdAt };
-      const mutated = mutateDb(dbPath, db, "option_created", { optionId: option.id }, (next) => next.options.push(option));
+      const option = { id: `o-${crypto.randomUUID()}`, code, name, nameEn: String(body.nameEn ?? "").trim(), categoryId, status: "active", sortOrder: Number(body.sortOrder) || (db.options.length + 1) * 10, createdAt, updatedAt: createdAt };
+      const mutated = mutateDb(dbPath, db, "option_created", { optionId: option.id, legacyCategoryFallback: !body.categoryId }, (next) => next.options.push(option));
       sendJson(res, 201, { option, version: mutated.db.version });
       return true;
     }
@@ -979,6 +1159,11 @@ export async function handleEmenuSeasoningApi(req, res, dbPath) {
         if (body.name !== undefined) target.name = String(body.name).trim();
         if (body.nameEn !== undefined) target.nameEn = String(body.nameEn).trim();
         if (body.sortOrder !== undefined) target.sortOrder = Number(body.sortOrder) || target.sortOrder;
+        if (body.categoryId !== undefined && body.categoryId !== target.categoryId) {
+          if (!activeOptionCategory(db, String(body.categoryId))) throw apiError("option_category_inactive", 409, { categoryId: body.categoryId });
+          target.categoryId = String(body.categoryId);
+        }
+        if (body.status === "active" && target.status !== "active") assertActiveOptionLimit(db);
         if (body.status === "active" || body.status === "inactive") target.status = body.status;
         target.updatedAt = new Date().toISOString();
       });
@@ -1079,7 +1264,7 @@ export async function handleEmenuSeasoningApi(req, res, dbPath) {
         if (!ACTIONS.includes(relation.action) || seen.has(key)) throw new Error("invalid_or_duplicate_relation");
         seen.add(key);
         normalizePrice(relation.priceDelta);
-        if (!db.options.some((option) => option.id === relation.optionId && option.status === "active")) throw new Error("option_unavailable");
+        assertConfigurableOption(db, relation.optionId);
         if (!actionIndexes.has(relation.action)) actionIndexes.set(relation.action, actionIndexes.size);
         optionIndexes.set(relation.action, (optionIndexes.get(relation.action) ?? 0) + 1);
         if (optionIndexes.get(relation.action) > SEASONING_MAX_OPTIONS_PER_ACTION) throw new Error("too_many_options");
@@ -1194,6 +1379,7 @@ export async function handleEmenuSeasoningApi(req, res, dbPath) {
       const body = await readBody(req);
       assertExpectedVersion(db, body.expectedVersion);
       const preview = resolvePreview(db, body.previewToken, dbPath, session);
+      for (const item of preview.items) if (item.kind !== "unavailable") assertConfigurableOption(db, item.optionId);
       const decisions = new Map(Object.entries(preview.decisions));
       const summary = { created: 0, updated: 0, reactivated: 0, skipped: 0 };
       for (const item of preview.items) {

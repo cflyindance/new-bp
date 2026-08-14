@@ -3,6 +3,7 @@ import type {
   CursorPage,
   SeasoningBootstrap,
   SeasoningOption,
+  SeasoningOptionCategory,
   SeasoningRelationPageSize,
   SeasoningRelationProductPage,
 } from "./seasoning-types";
@@ -14,12 +15,13 @@ export type SeasoningStoreState = {
   bootstrap: SeasoningBootstrap | null;
   productGroups: SeasoningRelationProductPage | null;
   options: CursorPage<SeasoningOption> | null;
+  optionCategories: SeasoningOptionCategory[];
   loading: boolean;
   error: string;
   relationFilters: { query: string; action: string; categoryId: string; status: string };
   relationPage: number;
   relationPageSize: SeasoningRelationPageSize;
-  optionFilters: { query: string; status: string };
+  optionFilters: { query: string; status: string; categoryId: string };
 };
 
 export class SeasoningStore {
@@ -29,12 +31,13 @@ export class SeasoningStore {
     bootstrap: null,
     productGroups: null,
     options: null,
+    optionCategories: [],
     loading: false,
     error: "",
     relationFilters: { query: "", action: "", categoryId: "", status: "" },
     relationPage: 1,
     relationPageSize: 10,
-    optionFilters: { query: "", status: "" },
+    optionFilters: { query: "", status: "", categoryId: "" },
   };
 
   subscribe(listener: (state: SeasoningStoreState) => void): () => void {
@@ -129,7 +132,12 @@ export class SeasoningStore {
         }
         this.state.productGroups = response;
       } else {
-        this.state.options = await seasoningApi.options({ ...this.state.optionFilters, cursor, limit: 20 });
+        const [options, categories] = await Promise.all([
+          seasoningApi.options({ ...this.state.optionFilters, cursor, limit: 20 }),
+          seasoningApi.optionCategories(true),
+        ]);
+        this.state.options = options;
+        this.state.optionCategories = categories.items;
       }
     } catch (error) {
       this.state.error = error instanceof Error ? error.message : "request_failed";

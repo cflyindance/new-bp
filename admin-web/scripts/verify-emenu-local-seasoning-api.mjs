@@ -32,6 +32,10 @@ try {
   const firstPage = await fetch(`${base}/options?limit=5`).then((response) => response.json());
   assert(firstPage.items.length === 5, "Option cursor page size failed");
   assert(firstPage.nextCursor, "Option page must provide next cursor");
+  assert(firstPage.items.every((option) => option.categoryId && option.categoryName), "Option pages must expose category identity and name");
+  const optionPicker = await fetch(`${base}/option-picker`).then((response) => response.json());
+  assert(optionPicker.version === 1 && optionPicker.categories.length >= 4 && optionPicker.items.length === 19, "Option picker must return one complete active categorized snapshot");
+  assert(optionPicker.categories.at(-1)?.code === "UNCATEGORIZED", "Uncategorized system category must remain last");
 
   const relationGroups = await fetch(`${base}/relations/product-groups`).then((response) => response.json());
   assert(relationGroups.page === 1 && relationGroups.pageSize === 10, "Relation product groups must default to page one with ten products");
@@ -322,6 +326,32 @@ try {
 
   const audit = await fetch(`${base}/audit-log?limit=10`).then((response) => response.json());
   assert(audit.items.length >= 4, "Each successful mutation must create an audit record");
+
+  const createdCategoryResponse = await fetch(`${base}/option-categories`, { method: "POST", headers: sessionHeaders, body: JSON.stringify({ expectedVersion: 5, name: "Test category", code: "TEST_CATEGORY" }) });
+  assert(createdCategoryResponse.status === 201, "Option category creation failed");
+  const createdCategory = await createdCategoryResponse.json();
+  assert(createdCategory.version === 6 && createdCategory.category.code === "TEST_CATEGORY", "Option category creation must increment version once");
+  const categoriesBeforeOrder = await fetch(`${base}/option-categories?includeInactive=1`).then((response) => response.json());
+  const movableCategoryIds = categoriesBeforeOrder.items.filter((category) => !category.system).map((category) => category.id).reverse();
+  const reorderCategoriesResponse = await fetch(`${base}/option-categories/order`, { method: "PUT", headers: sessionHeaders, body: JSON.stringify({ expectedVersion: 6, categoryIds: movableCategoryIds }) });
+  assert(reorderCategoriesResponse.ok, "Option category reorder failed");
+  const reorderedCategories = await reorderCategoriesResponse.json();
+  assert(reorderedCategories.version === 7 && reorderedCategories.items.filter((category) => !category.system).map((category) => category.id).join(",") === movableCategoryIds.join(","), "Server must persist the complete category order atomically");
+  const deleteCategoryResponse = await fetch(`${base}/option-categories/${createdCategory.category.id}`, { method: "DELETE", headers: sessionHeaders, body: JSON.stringify({ expectedVersion: 7 }) });
+  assert(deleteCategoryResponse.ok && (await deleteCategoryResponse.json()).version === 8, "Unused Option category deletion failed");
+  const inUseDeleteResponse = await fetch(`${base}/option-categories/option-category-aromatics`, { method: "DELETE", headers: sessionHeaders, body: JSON.stringify({ expectedVersion: 8 }) });
+  assert(inUseDeleteResponse.status === 409 && (await inUseDeleteResponse.json()).error === "option_category_in_use", "Referenced Option category deletion must be blocked with a stable error");
+
+  const legacyDb = JSON.parse(fs.readFileSync(dbPath, "utf8"));
+  delete legacyDb.optionCategories;
+  legacyDb.options.forEach((option) => { delete option.categoryId; });
+  fs.writeFileSync(dbPath, JSON.stringify(legacyDb, null, 2), "utf8");
+  const migratedHealth = await fetch(`${base}/health`).then((response) => response.json());
+  const migratedOnce = JSON.parse(fs.readFileSync(dbPath, "utf8"));
+  assert(migratedHealth.version === 9 && migratedOnce.options.every((option) => option.categoryId === "option-category-uncategorized"), "Legacy Options must persistently migrate to the system category once");
+  const secondHealth = await fetch(`${base}/health`).then((response) => response.json());
+  const migratedTwice = JSON.parse(fs.readFileSync(dbPath, "utf8"));
+  assert(secondHealth.version === 9 && migratedTwice.auditLog.filter((entry) => entry.operation === "migrate_option_categories").length === 1, "Option category migration must be idempotent");
 
   console.log("eMenu local seasoning API verification passed");
 } finally {

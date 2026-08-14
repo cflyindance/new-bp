@@ -2,7 +2,7 @@ import { t, tf } from "../../i18n";
 import { SEASONING_ACTIONS } from "./seasoning-domain";
 import { calculateActualMarkupPrice, createBatchOptionPricing, type BatchOptionPricingDraft } from "./seasoning-batch-pricing";
 import { moveOrderedItem, seasoningActionOrder, sortSeasoningProductRelations } from "./seasoning-relation-order";
-import type { ProductSeasoningRelation, SeasoningActionCode, SeasoningOption, SeasoningStatus } from "./seasoning-types";
+import type { ProductSeasoningRelation, SeasoningActionCode, SeasoningOption, SeasoningOptionCategory, SeasoningStatus } from "./seasoning-types";
 import { actionLabel, actionTone, escapeSeasoningHtml, inputClass, primaryButtonClass, secondaryButtonClass } from "./seasoning-ui-helpers";
 
 export type SeasoningConfiguredOption = BatchOptionPricingDraft & {
@@ -28,6 +28,9 @@ export type SeasoningWorkspaceView = {
   selectedPriceOptions: Set<string>;
   bulkPriceInput: string;
   optionQuery: string;
+  optionPickerQuery: string;
+  activeOptionCategoryId: string | null;
+  optionCategories: SeasoningOptionCategory[];
   options: SeasoningOption[];
   mode: SeasoningWorkspaceMode;
 };
@@ -87,7 +90,36 @@ function renderActionPicker(view: SeasoningWorkspaceView): string {
 
 function renderOptionPicker(view: SeasoningWorkspaceView): string {
   if (!view.optionPickerOpen || !view.activeAction) return "";
-  return `<div class="fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-[2px]" data-picker-backdrop="option"><section role="dialog" aria-modal="true" aria-labelledby="seasoning-option-picker-title" class="flex max-h-[86vh] w-full max-w-3xl flex-col rounded-2xl border border-border bg-card p-5 shadow-2xl"><div class="flex items-start justify-between gap-4"><div><h3 id="seasoning-option-picker-title" class="text-lg font-semibold">${t("seasoning.batch.addOptionToAction")}</h3><p class="mt-1 text-sm text-muted-foreground">${tf("seasoning.batch.optionPickerHint", { action: actionLabel(view.activeAction) })}</p></div><button type="button" data-close-picker="option" class="${secondaryButtonClass}" aria-label="${t("seasoning.close")}">×</button></div><div class="mt-4"><input data-option-picker-query class="${inputClass}" placeholder="${t("seasoning.searchOptions")}"></div><div class="mt-4 grid min-h-0 flex-1 gap-2 overflow-y-auto pr-1 sm:grid-cols-2 lg:grid-cols-3">${view.options.map((option) => `<label data-option-picker-card data-search-text="${escapeSeasoningHtml(`${option.name} ${option.code}`.toLocaleLowerCase())}" class="flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition ${view.pendingOptions.has(option.id) ? "border-primary/50 bg-primary/5" : "border-border hover:border-primary/30"}"><input type="checkbox" data-option-picker-option="${escapeSeasoningHtml(option.id)}" ${view.pendingOptions.has(option.id) ? "checked" : ""} class="mt-1 size-4 rounded border-border text-primary"><span class="min-w-0"><strong class="block truncate text-sm">${escapeSeasoningHtml(option.name)}</strong><span class="mt-1 block truncate font-mono text-[11px] text-muted-foreground">${escapeSeasoningHtml(option.code)}</span></span></label>`).join("") || `<p class="col-span-full py-12 text-center text-sm text-muted-foreground">${t("seasoning.noOptions")}</p>`}</div><div class="mt-5 flex items-center justify-between gap-3"><span data-picked-option-count class="text-sm text-muted-foreground">${tf("seasoning.batch.selectedOptionCount", { count: String(view.pendingOptions.size) })}</span><div class="flex gap-2"><button type="button" data-close-picker="option" class="${secondaryButtonClass}">${t("seasoning.cancel")}</button><button type="button" data-confirm-options class="${primaryButtonClass}">${t("seasoning.batch.confirmOptions")}</button></div></div></section></div>`;
+  const existing = new Set(view.draft.find((group) => group.action === view.activeAction)?.options.map((option) => option.optionId) ?? []);
+  const query = view.optionPickerQuery.trim().toLocaleLowerCase();
+  const optionsByCategory = new Map<string, SeasoningOption[]>();
+  for (const category of view.optionCategories) {
+    const categoryMatch = query && category.name.toLocaleLowerCase().includes(query);
+    const matches = view.options.filter((option) => option.categoryId === category.id && (!query || categoryMatch || `${option.name} ${option.nameEn ?? ""} ${option.code}`.toLocaleLowerCase().includes(query)));
+    if (matches.length || !query) optionsByCategory.set(category.id, matches);
+  }
+  const visibleCategories = view.optionCategories.filter((category) => optionsByCategory.has(category.id));
+  const activeCategoryId = visibleCategories.some((category) => category.id === view.activeOptionCategoryId) ? view.activeOptionCategoryId : visibleCategories[0]?.id ?? null;
+  const activeOptions = activeCategoryId ? optionsByCategory.get(activeCategoryId) ?? [] : [];
+  const categoryRows = visibleCategories.map((category) => {
+    const available = (optionsByCategory.get(category.id) ?? []).filter((option) => !existing.has(option.id));
+    const selected = available.filter((option) => view.pendingOptions.has(option.id)).length;
+    const checked = available.length > 0 && selected === available.length;
+    const partial = selected > 0 && !checked;
+    return `<div class="flex items-center gap-2 rounded-lg px-2 py-1.5 transition ${category.id === activeCategoryId ? "bg-primary/10 ring-1 ring-primary/20" : "hover:bg-muted/55"}"><input type="checkbox" data-option-category-toggle="${escapeSeasoningHtml(category.id)}" ${checked ? "checked" : ""} ${partial ? 'data-option-category-indeterminate="1" aria-checked="mixed"' : ""} ${available.length ? "" : "disabled"} class="size-4 shrink-0 accent-primary" aria-label="选择${escapeSeasoningHtml(category.name)}下全部可用 Option"><button type="button" data-activate-option-category="${escapeSeasoningHtml(category.id)}" class="flex min-w-0 flex-1 items-center gap-2 text-left" aria-current="${category.id === activeCategoryId ? "true" : "false"}"><span class="min-w-0 flex-1 truncate text-sm font-medium">${escapeSeasoningHtml(category.name)}</span><span class="shrink-0 rounded-md bg-background/80 px-1.5 py-0.5 text-[11px] tabular-nums text-muted-foreground">${selected}/${available.length}</span><span class="text-xs text-muted-foreground">›</span></button></div>`;
+  }).join("");
+  const optionRows = activeOptions.map((option) => {
+    const already = existing.has(option.id);
+    const checked = already || view.pendingOptions.has(option.id);
+    return `<label data-option-picker-card class="flex items-start gap-3 rounded-lg px-3 py-2.5 transition ${checked ? "bg-primary/10 ring-1 ring-primary/20" : "hover:bg-muted/55"} ${already ? "cursor-not-allowed opacity-65" : "cursor-pointer"}"><input type="checkbox" data-option-picker-option="${escapeSeasoningHtml(option.id)}" ${checked ? "checked" : ""} ${already ? "disabled" : ""} class="mt-0.5 size-4 shrink-0 accent-primary"><span class="min-w-0 flex-1"><strong class="block truncate text-sm font-medium">${escapeSeasoningHtml(option.name)}</strong><span class="mt-0.5 block font-mono text-[10px] tracking-wide text-muted-foreground">${escapeSeasoningHtml(option.code)}</span>${already ? `<span class="mt-1 block text-[11px] font-medium text-primary">已在当前动作中</span>` : ""}</span></label>`;
+  }).join("");
+  return `<div class="fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-[2px]" data-picker-backdrop="option"><section role="dialog" aria-modal="true" aria-labelledby="seasoning-option-picker-title" class="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl"><header class="border-b border-border px-5 py-4"><div class="flex items-start justify-between gap-4"><div><h3 id="seasoning-option-picker-title" class="text-lg font-semibold">${t("seasoning.batch.addOptionToAction")}</h3><p class="mt-1 text-sm text-muted-foreground">${tf("seasoning.batch.optionPickerHint", { action: actionLabel(view.activeAction) })}</p></div><button type="button" data-close-picker="option" class="${secondaryButtonClass}" aria-label="${t("seasoning.close")}">×</button></div><div class="mt-4 flex items-center gap-3"><input data-option-picker-query class="${inputClass} flex-1" placeholder="搜索分类、Option 名称或编码" value="${escapeSeasoningHtml(view.optionPickerQuery)}"><span data-picked-option-count class="shrink-0 rounded-lg bg-primary/10 px-3 py-2 text-sm font-semibold text-primary">${tf("seasoning.batch.selectedOptionCount", { count: String(view.pendingOptions.size) })}</span></div></header><div class="grid min-h-0 flex-1 overflow-hidden md:grid-cols-[280px_minmax(0,1fr)] md:divide-x md:divide-border"><section class="flex max-h-44 min-h-0 flex-col border-b border-border md:max-h-none md:border-b-0"><header class="bg-muted/35 px-4 py-2.5"><strong class="text-xs tracking-wide">类</strong><p class="mt-0.5 text-[11px] text-muted-foreground">选择公共调味分类</p></header><div role="listbox" aria-label="Option 分类" class="min-h-0 flex-1 space-y-1 overflow-auto p-2">${categoryRows || `<p class="px-4 py-10 text-center text-sm text-muted-foreground">没有匹配的分类</p>`}</div></section><section class="flex min-h-0 flex-col"><header class="bg-muted/35 px-4 py-2.5"><strong class="text-xs tracking-wide">Option</strong><p class="mt-0.5 text-[11px] text-muted-foreground">勾选当前动作需要的 Option</p></header><div class="min-h-48 flex-1 space-y-1 overflow-y-auto p-2">${optionRows || `<p class="px-4 py-16 text-center text-sm text-muted-foreground">${query ? "没有匹配的 Option" : "当前分类暂无 Option"}</p>`}</div></section></div><footer class="flex items-center justify-between gap-3 border-t border-border px-5 py-4"><p data-option-picker-live class="sr-only" aria-live="polite"></p><button type="button" data-close-picker="option" class="${secondaryButtonClass}">${t("seasoning.cancel")}</button><button type="button" data-confirm-options class="${primaryButtonClass}" ${view.pendingOptions.size ? "" : "disabled"}>确认添加（${view.pendingOptions.size}）</button></footer></section></div>`;
+}
+
+export function syncSeasoningOptionCategoryIndeterminate(root: ParentNode): void {
+  const apply = () => root.querySelectorAll<HTMLInputElement>('[data-option-category-indeterminate="1"]').forEach((checkbox) => { checkbox.indeterminate = true; checkbox.setAttribute("aria-checked", "mixed"); });
+  apply();
+  requestAnimationFrame(apply);
 }
 
 export function renderSeasoningConfigurationWorkspace(view: SeasoningWorkspaceView): string {

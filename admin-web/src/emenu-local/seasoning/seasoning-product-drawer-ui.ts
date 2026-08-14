@@ -9,10 +9,11 @@ import {
   moveDraftAction,
   moveDraftOption,
   renderSeasoningConfigurationWorkspace,
+  syncSeasoningOptionCategoryIndeterminate,
   type SeasoningConfigurationDraft,
 } from "./seasoning-configuration-workspace-ui";
 import { assignSeasoningSortOrders } from "./seasoning-relation-order";
-import type { ProductSeasoningRelation, SeasoningActionCode, SeasoningOption, SeasoningProduct } from "./seasoning-types";
+import type { ProductSeasoningRelation, SeasoningActionCode, SeasoningOption, SeasoningOptionCategory, SeasoningProduct } from "./seasoning-types";
 import { actionLabel, actionTone, escapeSeasoningHtml, primaryButtonClass, secondaryButtonClass } from "./seasoning-ui-helpers";
 
 type DrawerInput = {
@@ -23,6 +24,7 @@ type DrawerInput = {
 class ProductEditWizardController {
   private product: SeasoningProduct | null = null;
   private options: SeasoningOption[] = [];
+  private optionCategories: SeasoningOptionCategory[] = [];
   private draft: SeasoningConfigurationDraft = [];
   private latestRelations: ProductSeasoningRelation[] = [];
   private version = 0;
@@ -32,6 +34,8 @@ class ProductEditWizardController {
   private optionPickerOpen = false;
   private pendingActions = new Set<SeasoningActionCode>();
   private pendingOptions = new Set<string>();
+  private optionPickerQuery = "";
+  private activeOptionCategoryId: string | null = null;
   private selectedPriceOptions = new Set<string>();
   private bulkPriceInput = "";
   private optionQuery = "";
@@ -76,16 +80,17 @@ class ProductEditWizardController {
     this.error = "";
     this.render();
     try {
-      const [productData, optionPage] = await Promise.all([
+      const [productData, optionSnapshot] = await Promise.all([
         seasoningApi.productRelations(this.input.productId),
-        seasoningApi.options({ limit: 100 }),
+        seasoningApi.optionPicker(),
       ]);
       this.product = productData.product;
       this.latestRelations = productData.relations;
       this.draft = createProductConfigurationDraft(productData.relations);
       this.activeAction = this.draft[0]?.action ?? null;
       this.version = productData.version;
-      this.options = optionPage.items;
+      this.options = optionSnapshot.items;
+      this.optionCategories = optionSnapshot.categories;
     } catch (error) {
       this.error = error instanceof Error ? error.message : "request_failed";
     } finally {
@@ -143,6 +148,9 @@ class ProductEditWizardController {
       selectedPriceOptions: this.selectedPriceOptions,
       bulkPriceInput: this.bulkPriceInput,
       optionQuery: this.optionQuery,
+      optionPickerQuery: this.optionPickerQuery,
+      activeOptionCategoryId: this.activeOptionCategoryId,
+      optionCategories: this.optionCategories,
       options: this.options,
       mode: "product",
     });
@@ -161,6 +169,7 @@ class ProductEditWizardController {
         : this.step === 1 ? this.renderConfiguration() : this.renderPreview();
     this.overlay.innerHTML = `<section data-seasoning-product-editor role="dialog" aria-modal="true" aria-labelledby="seasoning-product-editor-title" class="flex max-h-[94vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl"><header class="border-b border-border px-5 py-4"><div class="flex items-start justify-between gap-4"><div><p class="text-xs font-semibold uppercase tracking-[0.14em] text-primary">${t("seasoning.title")}</p><h2 id="seasoning-product-editor-title" class="mt-1 text-xl font-semibold">${t("seasoning.editProductTitle")}</h2></div><button type="button" data-close class="${secondaryButtonClass}" aria-label="${t("seasoning.close")}">×</button></div><div class="mt-4">${this.renderSteps()}</div></header><div class="min-h-0 flex-1 overflow-y-auto p-5">${this.renderProductBand()}${this.error && this.product ? `<p class="my-4 rounded-xl border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive">${escapeSeasoningHtml(this.error)}</p>` : ""}<div class="mt-4">${content}</div></div><footer class="flex items-center justify-between gap-3 border-t border-border bg-muted/25 px-5 py-4"><button type="button" data-back class="${secondaryButtonClass}" ${this.step === 1 || this.loading || this.saving ? "disabled" : ""}>${this.step === 1 ? t("seasoning.cancel") : t("seasoning.back")}</button><button type="button" data-next class="${primaryButtonClass}" ${this.loading || this.saving || !configuredRelationCount(this.draft) || Boolean(this.conflict) ? "disabled" : ""}>${this.step === 1 ? t("seasoning.batch.generatePreview") : t("seasoning.confirmSave")}</button></footer></section>`;
     this.syncBulkControls();
+    syncSeasoningOptionCategoryIndeterminate(this.overlay);
   }
 
   private syncBulkControls(): void {
@@ -270,7 +279,9 @@ class ProductEditWizardController {
       return;
     }
     if (button.hasAttribute("data-open-option-picker") && this.activeAction) {
-      this.pendingOptions = new Set(this.activeGroup()?.options.map((option) => option.optionId) ?? []);
+      this.pendingOptions = new Set();
+      this.optionPickerQuery = "";
+      this.activeOptionCategoryId = this.optionCategories.find((category) => this.options.some((option) => option.categoryId === category.id))?.id ?? this.optionCategories[0]?.id ?? null;
       this.optionPickerOpen = true;
       this.render();
       return;
@@ -310,11 +321,17 @@ class ProductEditWizardController {
       if (!group) return;
       const existing = new Map(group.options.map((option) => [option.optionId, option]));
       group.options = [
-        ...group.options.filter((option) => this.pendingOptions.has(option.optionId)),
+        ...group.options,
         ...this.options.filter((option) => this.pendingOptions.has(option.id) && !existing.has(option.id)).map((option) => createConfiguredOption(option.id, "product")),
       ];
       this.optionPickerOpen = false;
       this.changed();
+      return;
+    }
+    const optionCategoryId = button.dataset.activateOptionCategory;
+    if (optionCategoryId) {
+      this.activeOptionCategoryId = optionCategoryId;
+      this.render();
       return;
     }
     const removeOption = button.dataset.removeActionOption;
@@ -346,8 +363,11 @@ class ProductEditWizardController {
       return;
     }
     if (target.hasAttribute("data-option-picker-query")) {
-      const query = target.value.trim().toLocaleLowerCase();
-      this.overlay.querySelectorAll<HTMLElement>("[data-option-picker-card]").forEach((card) => card.classList.toggle("hidden", !String(card.dataset.searchText).includes(query)));
+      this.optionPickerQuery = target.value;
+      this.render();
+      const input = this.overlay.querySelector<HTMLInputElement>("[data-option-picker-query]");
+      input?.focus();
+      input?.setSelectionRange(input.value.length, input.value.length);
       return;
     }
     const optionId = target.dataset.actionOptionPrice;
@@ -370,8 +390,17 @@ class ProductEditWizardController {
     const pickedOption = target.dataset.optionPickerOption;
     if (pickedOption) {
       if (target.checked) this.pendingOptions.add(pickedOption); else this.pendingOptions.delete(pickedOption);
-      const count = this.overlay.querySelector<HTMLElement>("[data-picked-option-count]");
-      if (count) count.textContent = tf("seasoning.batch.selectedOptionCount", { count: String(this.pendingOptions.size) });
+      this.render();
+      return;
+    }
+    const toggleCategoryId = target.dataset.optionCategoryToggle;
+    if (toggleCategoryId && this.activeAction) {
+      const query = this.optionPickerQuery.trim().toLocaleLowerCase();
+      const category = this.optionCategories.find((item) => item.id === toggleCategoryId);
+      const existing = new Set(this.activeGroup()?.options.map((option) => option.optionId) ?? []);
+      const visible = this.options.filter((option) => option.categoryId === toggleCategoryId && !existing.has(option.id) && (!query || category?.name.toLocaleLowerCase().includes(query) || `${option.name} ${option.nameEn ?? ""} ${option.code}`.toLocaleLowerCase().includes(query)));
+      for (const option of visible) target.checked ? this.pendingOptions.add(option.id) : this.pendingOptions.delete(option.id);
+      this.render();
       return;
     }
     const selectedPrice = target.dataset.selectPriceOption;

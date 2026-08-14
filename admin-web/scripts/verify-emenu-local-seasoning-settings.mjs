@@ -23,6 +23,7 @@ const menuPicker = read("src/emenu-local/seasoning/seasoning-menu-structure-pick
 const drawer = read("src/emenu-local/seasoning/seasoning-product-drawer-ui.ts");
 const workspace = read("src/emenu-local/seasoning/seasoning-configuration-workspace-ui.ts");
 const relationOrder = read("src/emenu-local/seasoning/seasoning-relation-order.ts");
+const categoryManager = read("src/emenu-local/seasoning/seasoning-option-category-manager-ui.ts");
 const apiHandler = read("scripts/lib/emenu-local-seasoning-api-handler.mjs");
 const options = read("src/emenu-local/seasoning/seasoning-option-library-ui.ts");
 const i18n = read("src/i18n.ts");
@@ -107,11 +108,21 @@ expect(workspace, /pointerdown/, "Shared workspace must support pointer drag sor
 expect(workspace, /event\.altKey/, "Shared workspace must support Alt + Arrow keyboard sorting");
 expect(workspace, /clearSearchToReorder/, "Option search must explain why sorting is temporarily disabled");
 expect(workspace, /data-action-option-status/, "Single-product editing must retain relation status controls");
+expect(workspace, /data-option-category-toggle/, "Option picker categories must support bulk selection");
+expect(workspace, /data-activate-option-category/, "Option picker must use linked category and Option columns");
+expect(workspace, /data-option-category-indeterminate/, "Option category selection must expose a native partial state");
+expect(workspace, /grid[\s\S]*md:grid-cols-\[280px_minmax\(0,1fr\)\]/, "Option picker must switch from stacked mobile layout to two desktop columns");
+expect(categoryManager, /data-option-category-manager/, "Public Option library must expose category management");
+expect(categoryManager, /reorderOptionCategories/, "Option category manager must persist drag order through the server");
+expect(categoryManager, /option_category_in_use/, "Referenced Option categories must show a specific deletion error");
 expect(relationOrder, /SEASONING_SORT_MARKER\s*=\s*10_000_000/, "Relation ordering needs an explicit encoded-format marker");
 expect(relationOrder, /assignSeasoningSortOrders/, "Client save payloads must encode action and Option order");
 expect(apiHandler, /buildBatchFinalProducts/, "Batch preview must build the final per-product configuration");
 expect(apiHandler, /preservedPreviewRelation/, "Batch merge must preserve unselected historical relations");
 expect(apiHandler, /encodeRelationSortOrder/, "Server writes must own and validate persisted ordering");
+expect(apiHandler, /optionPickerSnapshot/, "Option picker must use a complete categorized server snapshot");
+expect(apiHandler, /normalizeOptionCategoryDb/, "Legacy Option data must migrate to a persistent category");
+expect(apiHandler, /option_active_limit_exceeded/, "Server must enforce the active Option limit on writes");
 expect(options, /data-seasoning-option-library/, "Option library marker is missing");
 
 const keys = [
