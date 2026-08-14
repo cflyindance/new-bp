@@ -193,7 +193,6 @@ class BatchWizardController {
       activeOptionCategoryId: this.activeOptionCategoryId,
       optionCategories: this.optionCategories,
       options: this.options?.items ?? [],
-      mode: "batch",
     });
   }
 

@@ -152,13 +152,12 @@ class ProductEditWizardController {
       activeOptionCategoryId: this.activeOptionCategoryId,
       optionCategories: this.optionCategories,
       options: this.options,
-      mode: "product",
     });
   }
 
   private renderPreview(): string {
     const optionById = new Map(this.options.map((option) => [option.id, option]));
-    return `<div class="space-y-4"><div class="flex items-center justify-between gap-3"><div><h3 class="text-base font-semibold">${t("seasoning.previewCompleteConfig")}</h3><p class="mt-1 text-xs text-muted-foreground">${tf("seasoning.batch.configuredRelationCount", { count: String(configuredRelationCount(this.draft)) })}</p></div></div>${this.conflict ? `<div class="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:bg-amber-950/25 dark:text-amber-100"><p class="font-semibold">${t("seasoning.conflictReloaded")}</p><div class="mt-3 flex flex-wrap gap-2"><button type="button" data-load-latest class="${secondaryButtonClass}">${t("seasoning.reloadLatest")}</button><button type="button" data-review-overwrite class="${primaryButtonClass}">${t("seasoning.overwriteLatest")}</button></div></div>` : ""}<div class="max-h-[52vh] space-y-3 overflow-y-auto pr-1">${this.draft.map((group) => `<section class="overflow-x-auto rounded-xl border border-border bg-card"><header class="flex min-w-[720px] items-center justify-between bg-muted/35 px-4 py-2.5"><span class="inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${actionTone(group.action)}">${escapeSeasoningHtml(actionLabel(group.action))}</span><span class="text-xs font-semibold text-muted-foreground">${tf("seasoning.batch.optionCount", { count: String(group.options.length) })}</span></header><div class="grid min-w-[720px] grid-cols-[minmax(180px,1fr)_130px_110px_130px_90px] gap-3 border-t border-border bg-muted/15 px-4 py-2 text-xs font-semibold text-muted-foreground"><span>Option</span><span class="text-right">${t("seasoning.batch.inputPrice")}</span><span class="text-right">${t("seasoning.batch.markupCoefficient")}</span><span class="text-right">${t("seasoning.batch.actualMarkupPrice")}</span><span class="text-right">${t("seasoning.status")}</span></div><div class="min-w-[720px] divide-y divide-border">${group.options.map((draft) => `<div class="grid grid-cols-[minmax(180px,1fr)_130px_110px_130px_90px] items-center gap-3 px-4 py-3"><strong class="truncate text-sm">${escapeSeasoningHtml(optionById.get(draft.optionId)?.name ?? draft.optionId)}</strong><span class="text-right text-sm tabular-nums">$${draft.inputPrice.toFixed(2)}</span><span class="text-right text-sm tabular-nums">${draft.markupCoefficient.toFixed(2)}</span><span class="text-right text-sm font-semibold tabular-nums">$${calculateActualMarkupPrice(draft.inputPrice, draft.markupCoefficient).toFixed(2)}</span><span class="text-right text-xs font-semibold ${draft.status === "inactive" ? "text-muted-foreground" : "text-primary"}">${draft.status === "inactive" ? t("seasoning.statusInactive") : t("seasoning.statusActive")}</span></div>`).join("")}</div></section>`).join("")}</div></div>`;
+    return `<div class="space-y-4"><div class="flex items-center justify-between gap-3"><div><h3 class="text-base font-semibold">${t("seasoning.previewCompleteConfig")}</h3><p class="mt-1 text-xs text-muted-foreground">${tf("seasoning.batch.configuredRelationCount", { count: String(configuredRelationCount(this.draft)) })}</p></div></div>${this.conflict ? `<div class="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:bg-amber-950/25 dark:text-amber-100"><p class="font-semibold">${t("seasoning.conflictReloaded")}</p><div class="mt-3 flex flex-wrap gap-2"><button type="button" data-load-latest class="${secondaryButtonClass}">${t("seasoning.reloadLatest")}</button><button type="button" data-review-overwrite class="${primaryButtonClass}">${t("seasoning.overwriteLatest")}</button></div></div>` : ""}<div class="max-h-[52vh] space-y-3 overflow-y-auto pr-1">${this.draft.map((group) => `<section class="overflow-x-auto rounded-xl border border-border bg-card"><header class="flex min-w-[620px] items-center justify-between bg-muted/35 px-4 py-2.5"><span class="inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${actionTone(group.action)}">${escapeSeasoningHtml(actionLabel(group.action))}</span><span class="text-xs font-semibold text-muted-foreground">${tf("seasoning.batch.optionCount", { count: String(group.options.length) })}</span></header><div class="grid min-w-[620px] grid-cols-[minmax(180px,1fr)_130px_110px_140px] gap-3 border-t border-border bg-muted/15 px-4 py-2 text-xs font-semibold text-muted-foreground"><span>Option</span><span class="text-right">${t("seasoning.batch.inputPrice")}</span><span class="text-right">${t("seasoning.batch.markupCoefficient")}</span><span class="text-right">${t("seasoning.batch.actualMarkupPrice")}</span></div><div class="min-w-[620px] divide-y divide-border">${group.options.map((draft) => `<div class="grid grid-cols-[minmax(180px,1fr)_130px_110px_140px] items-center gap-3 px-4 py-3"><strong class="truncate text-sm">${escapeSeasoningHtml(optionById.get(draft.optionId)?.name ?? draft.optionId)}</strong><span class="text-right text-sm tabular-nums">$${draft.inputPrice.toFixed(2)}</span><span class="text-right text-sm tabular-nums">${draft.markupCoefficient.toFixed(2)}</span><span class="text-right text-sm font-semibold tabular-nums">$${calculateActualMarkupPrice(draft.inputPrice, draft.markupCoefficient).toFixed(2)}</span></div>`).join("")}</div></section>`).join("")}</div></div>`;
   }
 
   private render(): void {
@@ -208,7 +207,7 @@ class ProductEditWizardController {
         action: group.action,
         optionId: option.optionId,
         priceDelta: calculateActualMarkupPrice(option.inputPrice, option.markupCoefficient),
-        status: option.status === "inactive" ? "inactive" as const : "active" as const,
+        status: "active" as const,
       }))));
       const result = await seasoningApi.saveProductRelations(this.input.productId, { expectedVersion: this.version, relations: ordered });
       this.version = result.version;
@@ -322,7 +321,7 @@ class ProductEditWizardController {
       const existing = new Map(group.options.map((option) => [option.optionId, option]));
       group.options = [
         ...group.options,
-        ...this.options.filter((option) => this.pendingOptions.has(option.id) && !existing.has(option.id)).map((option) => createConfiguredOption(option.id, "product")),
+        ...this.options.filter((option) => this.pendingOptions.has(option.id) && !existing.has(option.id)).map((option) => createConfiguredOption(option.id)),
       ];
       this.optionPickerOpen = false;
       this.changed();
@@ -417,12 +416,6 @@ class ProductEditWizardController {
       });
       this.syncBulkControls();
       return;
-    }
-    const statusOption = target.dataset.actionOptionStatus;
-    if (statusOption) {
-      const option = this.activeGroup()?.options.find((item) => item.optionId === statusOption);
-      if (option) option.status = target.checked ? "active" : "inactive";
-      this.changed();
     }
   }
 }

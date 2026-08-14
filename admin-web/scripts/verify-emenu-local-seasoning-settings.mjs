@@ -107,7 +107,10 @@ expect(workspace, /data-drag-option/, "Options must expose drag handles");
 expect(workspace, /pointerdown/, "Shared workspace must support pointer drag sorting");
 expect(workspace, /event\.altKey/, "Shared workspace must support Alt + Arrow keyboard sorting");
 expect(workspace, /clearSearchToReorder/, "Option search must explain why sorting is temporarily disabled");
-expect(workspace, /data-action-option-status/, "Single-product editing must retain relation status controls");
+if (/data-action-option-status|SeasoningWorkspaceMode|view\.mode|relation\.status/.test(workspace)) throw new Error("Single-product editing must not expose or preserve relation status controls");
+if (/seasoning\.status|seasoning\.statusActive|seasoning\.statusInactive|draft\.status/.test(drawer)) throw new Error("Single-product preview must not display relation status");
+expect(drawer, /status:\s*"active"\s+as const/, "Single-product saves must activate every retained relation");
+if (/status:\s*option\.status/.test(drawer)) throw new Error("Single-product saves must not preserve hidden inactive relation state");
 expect(workspace, /data-option-category-toggle/, "Option picker categories must support bulk selection");
 expect(workspace, /data-activate-option-category/, "Option picker must use linked category and Option columns");
 expect(workspace, /data-option-category-indeterminate/, "Option category selection must expose a native partial state");
@@ -124,6 +127,7 @@ expect(apiHandler, /optionPickerSnapshot/, "Option picker must use a complete ca
 expect(apiHandler, /normalizeOptionCategoryDb/, "Legacy Option data must migrate to a persistent category");
 expect(apiHandler, /option_active_limit_exceeded/, "Server must enforce the active Option limit on writes");
 expect(options, /data-seasoning-option-library/, "Option library marker is missing");
+expect(options, /data-seasoning-toggle-option/, "Public Option library must retain Option enable and disable controls");
 
 const keys = [
   "seasoning.title",
