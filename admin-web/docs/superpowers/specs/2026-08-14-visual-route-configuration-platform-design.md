@@ -148,6 +148,19 @@ interface ApplicationDefinition {
   revision: number;
 }
 
+interface SsoProfile {
+  id: string;
+  revision: number;
+  status: "active" | "suspended";
+  protocol: "launch-code-v1";
+  audience: string;
+  exchangeEndpoint: string;
+  clientAuthSecretRef: string;
+  signingKeyRef: string;
+  codeTtlSeconds: number;
+  contextClaims: Array<"subjectId" | "merchantId" | "brandId" | "storeId" | "locale">;
+}
+
 interface ApplicationEnvironment {
   baseUrl?: string;
   manifestUrl?: string;
@@ -174,15 +187,19 @@ interface AppPageDefinition {
   key: string;
   type: RoutePageType;
   title: LocalizedText;
+  status: "draft" | "active" | "suspended";
+  revision: number;
 
   innerRegistryKey?: string;
   relativePath?: string;
+  externalOpenMode?: "current" | "new";
   routeMode?: RouteMode;
   defaultPage?: string;
 
   defaultContainerMode?: MicroContainerMode;
   supportedContainerModes?: MicroContainerMode[];
-  sandboxProfileId?: string;
+  defaultSandboxProfileId?: string;
+  allowedSandboxProfileIds?: string[];
   microFrontendContractId?: string;
   fallback?: "none" | "external" | "iframe";
 }
@@ -194,7 +211,7 @@ interface LocalizedText {
 }
 ```
 
-页面定义表达项目内的可挂载页面。远程页面只保存相对路径，根地址来自对应环境的应用修订版。
+页面定义表达项目内的可挂载页面。远程页面只保存相对路径，根地址来自对应环境的应用修订版。编辑活动页面时生成新 `revision`；`suspended` 页面不能进入新发布，但已发布快照仍保留其历史解析信息，紧急吊销由运行时应用状态门控处理。
 
 ### 6.3 路由节点
 
@@ -209,12 +226,14 @@ interface RouteNode {
   title: LocalizedText;
   icon: RouteIcon;
   merchantPath: string;
-  display: boolean;
+  enabled: boolean;
 
   pageRef?: {
     applicationId: string;
     pageId: string;
     containerMode?: MicroContainerMode;
+    externalOpenMode?: "current" | "new";
+    sandboxProfileId?: string;
   };
   defaultChildId?: string;
   accessPolicy: RouteAccessPolicy;
@@ -243,6 +262,8 @@ interface RouteAccessPolicy {
 - 树最多三层，禁止循环父子关系。
 - 纯分组节点可以没有 `pageRef`，点击时只展开；如设置 `defaultChildId`，进入分组根路径时重定向到该子节点。
 - 所有可点击页面节点必须有明确的 `pageRef`。
+- `enabled=false` 表示节点被停用：菜单、搜索、面包屑和直接 URL 均不可访问。新模型不保留旧文件中“只隐藏菜单但仍可直达”的模糊 `display` 语义。
+- `pageRef.externalOpenMode` 和 `pageRef.sandboxProfileId` 是节点级覆盖；未填写时分别使用页面默认值。覆盖值必须属于页面允许集合。
 - 不再支持子节点隐式继承父节点的 `type` 或 `microAppConfig`。
 
 ### 6.4 发布快照
@@ -258,15 +279,18 @@ interface RouteReleaseSnapshot {
   createdBy: string;
   checksum: string;
   nodes: ResolvedRouteNode[];
-  targetPolicy: ReleaseTargetPolicy;
 }
 
 interface ResolvedRouteNode extends RouteNode {
   resolvedTarget?: {
     applicationRevision: number;
+    pageRevision: number;
+    ssoProfileId?: string;
+    ssoProfileRevision?: number;
     pageType: RoutePageType;
     url?: string;
     innerRegistryKey?: string;
+    externalOpenMode?: "current" | "new";
     routeMode?: RouteMode;
     defaultPage?: string;
     containerMode?: MicroContainerMode;
@@ -277,16 +301,43 @@ interface ResolvedRouteNode extends RouteNode {
   };
 }
 
-interface ReleaseTargetPolicy {
+interface ReleaseEligibilityScope {
   businessTypeIds: string[];
   productLineIds: string[];
   merchantAllowlist: string[];
   merchantDenylist: string[];
+}
+
+interface RouteReleaseAssignment {
+  id: string;
+  blueprintId: string;
+  snapshotId: string;
+  fallbackSnapshotId: string;
+  priority: number;
+  status: "scheduled" | "active" | "paused" | "completed" | "rolled-back";
+  eligibility: ReleaseEligibilityScope;
   rolloutPercent: number;
+  bucketSalt: string;
+  activatedAt?: string;
 }
 ```
 
-快照不可变。运行时使用 `resolvedTarget`，不在页面打开时重新拼接可变草稿数据。
+快照不可变，且固定 `applicationRevision`、`pageRevision` 和远程页面使用的 `ssoProfileRevision`。运行时使用 `resolvedTarget`，不在页面打开时重新拼接可变草稿数据。发布范围和灰度百分比不写入快照，而由可审计、可更新的 `RouteReleaseAssignment` 管理；扩大灰度只更新 assignment，不生成或修改快照。首次发布没有上一业务快照时，`fallbackSnapshotId` 指向随商家后台发布的最小内建导航快照。
+
+### 6.5 四类型字段矩阵
+
+| 字段 | inner | external | iframe | micro-app |
+|---|---|---|---|---|
+| `innerRegistryKey` | 必填 | 禁止 | 禁止 | 禁止 |
+| `relativePath` | 禁止 | 必填 | 必填 | 必填 |
+| `externalOpenMode` | 禁止 | 必填 | 禁止 | 禁止 |
+| `routeMode` / `defaultPage` | 禁止 | 禁止 | 禁止 | 必填 / 可选 |
+| `supportedContainerModes` / `defaultContainerMode` | 禁止 | 禁止 | 禁止 | 必填 |
+| `allowedSandboxProfileIds` | 禁止 | 禁止 | 至少一个 | 含 iframe 模式时至少一个 |
+| `microFrontendContractId` | 禁止 | 禁止 | 禁止 | 含 native 模式时必填 |
+| `fallback` | `none` | `none` | `none/external` | `none/external/iframe` |
+
+发布 schema 对“禁止”字段执行拒绝而不是忽略，防止 UI、存储和运行时对同一数据产生不同解释。
 
 ## 7. 四种路由类型
 
@@ -359,20 +410,23 @@ interface MerchantLaunchContext {
 2. 统一路由守卫基于当前活动快照执行范围、订阅和权限检查。
 3. 商家后台向 BFF 请求目标页面的启动会话。
 4. BFF 再次校验快照版本、节点、用户和上下文范围。
-5. BFF 创建带 `aud`、`sub`、租户上下文、`routeNodeId`、`releaseVersion`、短有效期和单次 `jti` 的启动凭证。
-6. 容器按页面类型传递凭证：
+5. BFF 按应用的 `SsoProfile` 创建服务端 launch grant。grant 保存 `aud`、`sub`、租户上下文、`routeNodeId`、`releaseVersion`、短有效期、单次 `jti` 和未消费状态。
+6. BFF 向商家前端只返回随机、不透明、短时且单次使用的 launch code；它不是 JWT，不包含可由浏览器解码的商家上下文。
+7. 容器按页面类型传递凭证：
    - external：通过平台 launch endpoint 跳转，目标服务交换单次 code；
    - iframe：完成来源握手后通过 `postMessage` 发送单次 code；
    - micro-native：通过受控生命周期参数提供 token provider，而不是写全局变量；
    - inner：复用商家后台现有会话，不另发远程凭证。
-7. 目标应用后端交换或验证凭证，并继续执行自己的业务授权。
+8. 目标应用后端使用 `SsoProfile.clientAuthSecretRef` 对应的服务端身份调用交换端点。交换操作原子消费 code，校验 audience、有效期、目标应用和未消费状态，再返回限定受众的签名断言或建立目标应用的安全会话。
+9. 目标应用继续执行自己的业务授权。浏览器端不能直接访问客户端密钥，也不能重复交换同一 code。
 
 ### 8.3 失败与刷新
 
-- 启动凭证过期时静默刷新一次；再次失败进入统一重新认证流程。
+- launch code 或目标应用会话过期时静默创建一次新的启动会话；再次失败进入统一重新认证流程。
 - 禁止自动无限刷新。
 - 目标应用返回 `auth-expired` 时，父页只对已注册来源响应。
 - 凭证不能保存在 localStorage、路由配置或长期 URL 中。
+- code 消费、过期、错误 audience、跨商家重放和重复交换均记入安全审计。
 
 ## 9. 权限与发布范围
 
@@ -380,6 +434,7 @@ interface MerchantLaunchContext {
 
 ```text
 allowed = inReleaseTarget
+       AND nodeEnabled
        AND serviceSubscriptionMatched
        AND functionalPermissionMatched
        AND applicationActive
@@ -389,11 +444,28 @@ allowed = inReleaseTarget
 规则：
 
 - 三类门控之间始终使用 AND。
+- `nodeEnabled` 来自发布快照中的 `RouteNode.enabled`；为 false 时菜单和直接 URL 都被拒绝。
 - 服务列表和功能权限列表内部使用各自配置的 `all/any`；空列表表示该类别不增加限制。
 - 菜单渲染、面包屑、搜索结果和直接路径访问共享同一决策函数。
 - 前端隐藏只改善体验，BFF 和目标应用后端必须再次授权。
 - 父节点在所有子节点都不可见且自身无可访问页面时自动隐藏。
 - 用户无权限直接访问已知路径时返回统一 403 页面，不泄露远程应用地址和内部权限细节。
+- `applicationActive` 和 `pageActive` 读取应用、页面稳定身份的当前紧急状态；配置内容仍来自快照固定的修订版。应用或页面被紧急暂停后立即阻止新的远程启动会话，但不会改写历史快照。
+
+### 9.1 发布范围解析规则
+
+`inReleaseTarget` 由活动 `RouteReleaseAssignment` 决定，规则固定如下：
+
+1. 只考虑 `status=active` 且 `blueprintId` 匹配的 assignment。
+2. `merchantDenylist` 优先级最高；命中后该 assignment 不匹配。
+3. `merchantAllowlist` 非空时，商家必须在列表中；空数组表示不限制具体商家。
+4. `businessTypeIds` 非空时必须匹配当前商家业态；空数组表示全部业态。
+5. `productLineIds` 非空时必须与商家已开通产品线至少有一个交集；空数组表示全部产品线。
+6. 商家、业态和产品线三个维度之间使用 AND。
+7. 多个 assignment 同时匹配时选择 `priority` 最大者；校验中心禁止相同 `priority` 的匹配范围重叠。若仍出现非法并列，运行时拒绝新配置并使用最近一次成功解析结果。
+8. 灰度桶固定为 `hash(merchantId + assignmentId + bucketSalt) mod 10000`。结果小于 `rolloutPercent * 100` 时使用 `snapshotId`，否则使用 `fallbackSnapshotId`。
+9. 同一 assignment 扩大或缩小百分比时 `bucketSalt` 不变，保证已进入小比例批次的商家继续留在后续更大批次中。
+10. 回滚把 assignment 的活动 `snapshotId` 切换为目标旧快照，并将操作写入审计；不得修改任一快照内容。
 
 ## 10. M 平台信息架构
 
@@ -479,16 +551,17 @@ M 平台
 3. 展示结构、页面、权限和范围变更差异。
 4. 选择发布范围和发布策略。
 5. 生成不可变快照及 checksum。
-6. 将活动版本指针先指向测试商家或首批灰度商家。
-7. 观察运行指标，人工或自动扩大范围。
-8. 达到全量条件后将目标范围扩至 100%。
+6. 创建 `RouteReleaseAssignment`，其中 `snapshotId` 指向新快照，`fallbackSnapshotId` 指向当前稳定快照。
+7. 先用商家白名单或小比例 `rolloutPercent` 激活 assignment。
+8. 观察运行指标，人工或自动更新 assignment 的百分比；快照保持不变。
+9. 达到全量条件后将目标范围扩至 100%。
 
 默认灰度阶梯为“指定测试商家 → 小比例 → 中比例 → 全量”；具体比例和观察时长由发布中心配置，不写死在路由数据模型中。
 
 ### 11.4 回滚
 
 - 回滚不修改旧快照，也不把旧 JSON 覆盖到新版本。
-- 回滚只切换目标范围对应的活动版本指针。
+- 回滚只切换目标范围对应 assignment 的活动 `snapshotId`，或将其切到预先记录的 `fallbackSnapshotId`。
 - 支持全部范围回滚和当前灰度批次回滚。
 - 必须记录操作人、原因、前后版本、影响商家数和时间。
 - 发布部分失败时保持上一完整版本，不允许商家读取混合版本。
@@ -551,6 +624,7 @@ POST   /route-blueprints/{blueprintId}/releases/{version}/rollback
 
 GET    /merchant-route-snapshots/current
 POST   /route-launch-sessions
+POST   /route-launch-sessions/exchange
 GET    /route-audits
 GET    /route-runtime-metrics
 ```
@@ -561,6 +635,8 @@ GET    /route-runtime-metrics
 - 发布接口具备幂等键，重复请求不能生成多个相同版本。
 - 商家快照接口只返回当前身份有权获得的目标版本，不接受客户端任意指定 merchantId。
 - 启动会话接口只接受已发布快照中的节点，不能用任意 URL 请求签发凭证。
+- 启动会话交换接口只允许已登记目标应用的服务端身份调用，并在同一事务中原子消费 launch code。
+- rollout 更新使用 assignment 版本号或 ETag；并发扩量、暂停和回滚不能互相覆盖。
 - 回滚和发布需要独立权限和强审计。
 
 ## 15. 存储建议
@@ -574,7 +650,7 @@ GET    /route-runtime-metrics
 - `route_blueprints`：蓝图稳定身份；
 - `route_blueprint_drafts`：可编辑草稿与并发版本；
 - `route_release_snapshots`：不可变已解析快照；
-- `route_release_targets`：业态、产品线、商家名单与灰度指针；
+- `route_release_assignments`：可变但强审计的范围、优先级、活动快照、fallback、灰度百分比和稳定分桶盐；
 - `route_audit_logs`：配置、发布、回滚和安全操作；
 - `route_runtime_events`：加载、握手、mount、403 和降级事件。
 
@@ -669,6 +745,14 @@ GET    /route-runtime-metrics
 - 三道门守卫、SSO launch session；
 - 不可变快照、指定商家发布和回滚。
 
+阶段一完成条件：
+
+- `inner`、`external`、普通 `iframe` 分别通过配置、预览、指定商家发布、无感 SSO、无权限拒绝、异常降级和回滚端到端测试；
+- 页面和应用修订版被固定到不可变快照；
+- 范围解析、稳定分桶、三道门和 `enabled` 的模型测试全部通过；
+- 配置服务断网时最近成功快照可用；
+- 发布、回滚和 launch code 交换具备完整审计。
+
 ### 阶段二：微前端与灰度
 
 - `micro-app/iframe` 路由同步；
@@ -676,13 +760,21 @@ GET    /route-runtime-metrics
 - iframe fallback；
 - 分阶段灰度、自动暂停、运行指标和发布对比。
 
-### 阶段三：规模化治理
+阶段二完成条件：
+
+- micro-iframe 的 `history/hash`、默认页面和双向路由同步通过端到端测试；
+- micro-native 的清单签名、生命周期、依赖不兼容、异常卸载和 iframe fallback 通过测试；
+- 灰度扩大只更新 assignment，不改变快照 checksum；
+- 小比例到全量的稳定分桶、自动暂停和批次回滚可验证；
+- 运行指标能够按应用、页面、快照、assignment 和容器模式定位问题。
+
+### 阶段三：规模化治理（独立后续项目）
 
 - 应用接入审批流；
 - 更完善的跨团队契约测试；
 - 开发者自助提交入口。
 
-阶段三不等同于插件市场，插件市场、计费和第三方生态仍不在本设计范围内。
+阶段三不属于阶段一、阶段二的实施计划和完成门槛，需要重新确认需求并形成独立规格。它不等同于插件市场；插件市场、计费和第三方生态仍不在本设计范围内。
 
 ## 21. 验收标准
 
