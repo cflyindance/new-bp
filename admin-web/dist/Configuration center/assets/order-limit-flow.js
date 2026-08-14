@@ -116,6 +116,7 @@
     if (!rule) return false;
     var changed = normalizeUnlimitedLimitCells(rule.editorDraft);
     if (rule.editorDraft && normalizeStoreDraft(rule.editorDraft)) changed = true;
+    if (rule.authoringDraft && normalizeStoreDraft(rule.authoringDraft)) changed = true;
     if (Array.isArray(rule.limits)) {
       rule.limits.forEach(function (cell) {
         if (cell && cell.configured && cell.value == null) {
@@ -209,6 +210,10 @@
     });
   }
 
+  function isAvailableStoreId(storeId) {
+    return stores.some(function (store) { return store.id === storeId; });
+  }
+
   function clearAllStoreLimits(draft) {
     Object.keys(draft.storeConfigs || {}).forEach(function (storeId) {
       draft.storeConfigs[storeId].limits = {};
@@ -225,15 +230,30 @@
     });
   }
 
-  function syncDeploySelection(draft) {
+  function normalizeDeploymentSelection(draft, migration) {
     var added = addedStoreIds(draft);
     var excluded = Array.isArray(draft.deployExcludedStoreIds) ? draft.deployExcludedStoreIds : [];
-    draft.deployExcludedStoreIds = excluded.filter(function (storeId, index) {
-      return (draft.participatingStoreIds || []).indexOf(storeId) >= 0 && excluded.indexOf(storeId) === index;
+    var validExcluded = excluded.filter(function (storeId, index) {
+      return isAvailableStoreId(storeId) && !!storeConfigFor(draft, storeId, false) && excluded.indexOf(storeId) === index;
     });
-    draft.deployStoreIds = added.filter(function (storeId) {
-      return draft.deployExcludedStoreIds.indexOf(storeId) < 0;
-    });
+    if (migration && migration.needed) {
+      if (migration.hadDeployField) {
+        var legacySelected = (draft.deployStoreIds || []).filter(function (storeId, index, ids) {
+          return added.indexOf(storeId) >= 0 && ids.indexOf(storeId) === index;
+        });
+        added.forEach(function (storeId) {
+          if (legacySelected.indexOf(storeId) < 0 && validExcluded.indexOf(storeId) < 0) validExcluded.push(storeId);
+        });
+        draft.deployStoreIds = legacySelected;
+      } else {
+        draft.deployStoreIds = added.slice();
+        validExcluded = [];
+      }
+      draft.deploymentSelectionVersion = 1;
+    } else {
+      draft.deployStoreIds = added.filter(function (storeId) { return validExcluded.indexOf(storeId) < 0; });
+    }
+    draft.deployExcludedStoreIds = validExcluded;
   }
 
   function normalizeStoreConfig(draft, config) {
@@ -245,9 +265,9 @@
   function normalizeStoreDraft(draft) {
     if (!draft) return false;
     var before = JSON.stringify(draft);
-    draft.participatingStoreIds = Array.isArray(draft.participatingStoreIds)
-      ? draft.participatingStoreIds.filter(function (storeId, index, ids) { return ids.indexOf(storeId) === index; })
-      : [];
+    var hadDeployField = Object.prototype.hasOwnProperty.call(draft, "deployStoreIds");
+    var needsDeploymentMigration = !draft.deploymentSelectionVersion;
+    draft.participatingStoreIds = Array.isArray(draft.participatingStoreIds) ? draft.participatingStoreIds.slice() : [];
     draft.deployStoreIds = Array.isArray(draft.deployStoreIds) ? draft.deployStoreIds.slice() : [];
     draft.deployExcludedStoreIds = Array.isArray(draft.deployExcludedStoreIds) ? draft.deployExcludedStoreIds.slice() : [];
     if (!draft.storeConfigs || typeof draft.storeConfigs !== "object" ||
@@ -263,22 +283,20 @@
       }
     }
     if (!draft.legacyCompatibilityFallback) draft.legacyCompatibilityFallback = legacyStoreConfig(draft);
-    draft.participatingStoreIds.forEach(function (storeId) {
+    Object.keys(draft.storeConfigs).forEach(function (storeId) {
       draft.storeConfigs[storeId] = normalizeStoreConfig(draft, storeConfigFor(draft, storeId, true));
     });
-    var currentParticipants = draft.participatingStoreIds.filter(function (storeId) {
-      return stores.some(function (store) { return store.id === storeId; });
+    draft.participatingStoreIds = Object.keys(draft.storeConfigs).filter(function (storeId) {
+      return isAvailableStoreId(storeId) && storeHasTargets(draft, storeId);
     });
-    draft.activeStoreId = currentParticipants.indexOf(draft.activeStoreId) >= 0
-      ? draft.activeStoreId
-      : (currentParticipants[0] || "");
+    draft.activeStoreId = isAvailableStoreId(draft.activeStoreId) ? draft.activeStoreId : "";
     draft.targetIds = addedStoreIds(draft).reduce(function (ids, storeId) {
       draft.storeConfigs[storeId].targetIds.forEach(function (targetId) {
         if (ids.indexOf(targetId) < 0) ids.push(targetId);
       });
       return ids;
     }, []);
-    syncDeploySelection(draft);
+    normalizeDeploymentSelection(draft, { needed: needsDeploymentMigration, hadDeployField: hadDeployField });
     var compatibilityId = addedStoreIds(draft)[0];
     if (compatibilityId) {
       var compatibility = draft.storeConfigs[compatibilityId];
@@ -332,6 +350,7 @@
       storeConfigs: {},
       deployStoreIds: [],
       deployExcludedStoreIds: [],
+      deploymentSelectionVersion: 1,
       legacyCompatibilityFallback: createEmptyStoreConfig()
     };
   }
@@ -376,7 +395,7 @@
   }
 
   function draftFromRule(rule) {
-    if (rule && rule.editorDraft) return normalizeLoadedEditorDraft(JSON.parse(JSON.stringify(rule.editorDraft)));
+    if (rule && (rule.authoringDraft || rule.editorDraft)) return normalizeLoadedEditorDraft(JSON.parse(JSON.stringify(rule.authoringDraft || rule.editorDraft)));
     var draft = defaultDraft();
     if (!rule) return draft;
     draft.subject = mapLegacyType(rule.type);
@@ -422,7 +441,9 @@
     });
     draft.currentStep = 1;
     draft.highestStep = 7;
-    draft.deployStoreIds = Array.isArray(rule.deployStoreIds) ? rule.deployStoreIds.slice() : [];
+    if (Object.prototype.hasOwnProperty.call(rule, "deployStoreIds")) draft.deployStoreIds = Array.isArray(rule.deployStoreIds) ? rule.deployStoreIds.slice() : [];
+    else delete draft.deployStoreIds;
+    delete draft.deploymentSelectionVersion;
     return normalizeLoadedEditorDraft(draft);
   }
 
@@ -643,6 +664,7 @@
     var draft = cloneValue(draftRule.editorDraft);
     normalizeUnlimitedLimitCells(draft);
     normalizeLoadedEditorDraft(draft);
+    var authoringDraft = cloneValue(draft);
     var storedDraft = status === "active" ? buildPublishedDraft(draft) : draft;
     var compatibility = compatibilityStoreConfig(storedDraft);
     var projection = cloneValue(storedDraft);
@@ -663,6 +685,7 @@
     built.deployExcludedStoreIds = storedDraft.deployExcludedStoreIds.slice();
     built.legacyCompatibilityFallback = cloneStoreConfig(storedDraft.legacyCompatibilityFallback);
     built.editorDraft = storedDraft;
+    if (status === "active") built.authoringDraft = authoringDraft;
     var totalTargets = addedStoreIds(storedDraft).reduce(function (total, storeId) {
       return total + storedDraft.storeConfigs[storeId].targetIds.length;
     }, 0);
@@ -864,6 +887,8 @@
       if (missing) return "还有 " + missing + " 个数量单元格未配置；请输入数量或 0";
     }
     if (stepNumber === 5) {
+      if (!draft.deployStoreIds.length) return "请至少选择一家生效门店";
+      if (draft.deployStoreIds.some(function (storeId) { return addedStoreIds(draft).indexOf(storeId) < 0; })) return "未添加商品的门店不能生效";
       if (!draft.conditions.daysOfWeek.length) return "请至少选择一个生效星期";
       if (draft.conditions.memberMode === "specified" && !draft.conditions.memberLevelIds.length) return "请至少选择一个会员等级";
       if (draft.conditions.effectiveTo && draft.conditions.effectiveFrom > draft.conditions.effectiveTo) return "结束日期不能早于开始日期";
@@ -917,44 +942,21 @@
     return '<div class="olf-token-list">' + selected.map(function (item) { return '<span class="olf-token">' + esc(item.name) + '</span>'; }).join("") + '</div>';
   }
 
-  function renderStepTwoLegacy(draft) {
-    var byLine = MenuPicker ? MenuPicker.normalizeByLine(draft.structureByLine) : null;
-    var pickerHtml = MenuPicker
-      ? MenuPicker.renderHtml(byLine, null, null, null, { leafLevel: draft.targetType === "category" ? "category" : "dish" })
-      : '<div class="olf-summary olf-summary--danger">商品结构选择器未加载，请刷新后重试。</div>';
-    var summary = MenuPicker ? MenuPicker.formatSummary(byLine) : "未选商品";
-    return '<div class="olf-content-head"><h2 tabindex="-1">商品配置</h2><p>填写基础信息，并按原有商品结构选择限购目标。</p></div>' +
-      '<section class="olf-section"><h3>基础信息</h3><div class="olf-field-grid"><label class="olf-field olf-field--full"><span class="olf-label olf-required">规则名称</span><input class="olf-input" data-field="name" value="' + esc(draft.name) + '" maxlength="60" /></label><label class="olf-field olf-field--full"><span class="olf-label">规则描述</span><textarea class="olf-textarea" data-field="description" maxlength="200">' + esc(draft.description) + '</textarea></label></div></section>' +
-      '<section class="olf-section"><h3>选择商品</h3><p class="olf-structure-summary" id="structureSummary">' + esc(summary) + '</p>' + pickerHtml + '</section>';
-  }
-
-  function renderParticipatingStores(draft) {
-    var selected = draft.participatingStoreIds || [];
-    return '<div class="olf-table-wrap olf-participating-stores"><table class="olf-table"><thead><tr><th class="olf-store-check-col"></th><th>门店名</th><th>MID</th><th>地址</th><th>商品状态</th></tr></thead><tbody>' + stores.map(function (store) {
-      var checked = selected.indexOf(store.id) >= 0;
-      var added = checked && storeHasTargets(draft, store.id);
-      return '<tr class="olf-participating-row' + (checked ? ' is-selected' : '') + '"><td><input type="checkbox" data-participating-store="' + esc(store.id) + '"' + (checked ? ' checked' : '') + ' /></td><td><strong>' + esc(store.name) + '</strong></td><td>' + esc(store.mid) + '</td><td>' + esc(store.address) + '</td><td><span class="olf-store-status ' + (added ? 'is-added' : 'is-missing') + '">' + (added ? '已添加' : '未添加') + '</span></td></tr>';
-    }).join('') + '</tbody></table></div>';
-  }
-
   function renderStepTwo(draft) {
-    // renderParticipatingStores supplies data-participating-store, store.address, 商品状态、已添加与未添加 states.
     normalizeStoreDraft(draft);
-    var participants = (draft.participatingStoreIds || []).filter(function (storeId) { return stores.some(function (store) { return store.id === storeId; }); });
-    var config = activeStoreConfig(draft);
-    var byLine = MenuPicker ? MenuPicker.normalizeByLine(config.structureByLine) : null;
-    var storeTabs = participants.map(function (storeId) {
-      var store = stores.find(function (item) { return item.id === storeId; });
-      return '<button type="button" class="olf-tab' + (draft.activeStoreId === storeId ? ' is-active' : '') + '" data-store-tab="' + esc(storeId) + '">' + esc(store ? store.name : storeId) + '<span class="olf-store-tab-state ' + (storeHasTargets(draft, storeId) ? 'is-added' : 'is-missing') + '">' + (storeHasTargets(draft, storeId) ? '已添加' : '未添加') + '</span></button>';
+    var hasActiveStore = isAvailableStoreId(draft.activeStoreId);
+    var config = hasActiveStore ? storeConfigFor(draft, draft.activeStoreId, false) : null;
+    var byLine = MenuPicker ? MenuPicker.normalizeByLine(config ? config.structureByLine : MenuPicker.emptyByLine()) : null;
+    var storeOptions = '<option value="">请选择配置门店</option>' + stores.map(function (store) {
+      return '<option value="' + esc(store.id) + '"' + (draft.activeStoreId === store.id ? ' selected' : '') + '>' + esc(store.name) + '</option>';
     }).join('');
-    var pickerHtml = participants.length
+    var pickerHtml = hasActiveStore
       ? (MenuPicker ? MenuPicker.renderHtml(byLine, null, null, null, { leafLevel: draft.targetType === "category" ? "category" : "dish" }) : '<div class="olf-summary olf-summary--danger">商品结构选择器未加载，请刷新后重试。</div>')
-      : '<div class="olf-empty"><strong>请先选择参与门店</strong><span>勾选门店后，可分别为每家门店配置商品与产线。</span></div>';
-    var summary = participants.length && MenuPicker ? MenuPicker.formatSummary(byLine) : "未选择商品";
-    return '<div class="olf-content-head"><h2 tabindex="-1">商品配置</h2><p>各门店分别保存商品范围，后续数量矩阵也按门店独立设置。</p></div>' +
+      : '<div class="olf-empty"><strong>请选择门店后配置商品</strong><span>不同门店的商品范围和数量矩阵将独立保存。</span></div>';
+    var summary = hasActiveStore && MenuPicker ? MenuPicker.formatSummary(byLine) : "未选择门店";
+    return '<div class="olf-content-head"><h2 tabindex="-1">商品配置</h2><p>通过门店下拉切换并配置各门店商品，实际生效门店将在“生效范围”中选择。</p></div>' +
       '<section class="olf-section"><h3>基础信息</h3><div class="olf-field-grid"><label class="olf-field olf-field--full"><span class="olf-label olf-required">规则名称</span><input class="olf-input" data-field="name" value="' + esc(draft.name) + '" maxlength="60" /></label><label class="olf-field olf-field--full"><span class="olf-label">规则描述</span><textarea class="olf-textarea" data-field="description" maxlength="200">' + esc(draft.description) + '</textarea></label></div></section>' +
-      '<section class="olf-section"><h3>选择商品</h3><div class="olf-help">先选择参与门店，再切换门店配置其商品范围；至少一家门店需要达到“已添加”状态。</div>' + renderParticipatingStores(draft) + '</section>' +
-      '<section class="olf-section olf-store-product-config"><div class="olf-section-head"><div><h3>按门店配置商品</h3><p class="olf-structure-summary" id="structureSummary">' + esc(summary) + '</p></div></div>' + (storeTabs ? '<div class="olf-tabs olf-store-tabs">' + storeTabs + '</div>' : '') + pickerHtml + '</section>';
+      '<section class="olf-section olf-store-product-config"><div class="olf-section-head"><div><h3>选择商品</h3><p class="olf-structure-summary" id="structureSummary">' + esc(summary) + '</p></div></div><label class="olf-field olf-config-store-select"><span class="olf-label olf-required">配置门店</span><select class="olf-select" data-config-store-select>' + storeOptions + '</select><span class="olf-hint">切换门店会自动保存上一家门店的商品配置。</span></label>' + pickerHtml + '</section>';
   }
 
   function renderRangeRows(ranges, kind) {
@@ -1024,7 +1026,7 @@
   }
 
   function renderStepFour(draft) {
-    normalizeActiveDimensions(draft);
+    normalizeActiveDimensions(draft, true);
     var config = activeStoreConfig(draft);
     var configuredStores = addedStoreIds(draft);
     var batchMode = !!(editorState && editorState.batchMode);
@@ -1054,11 +1056,19 @@
   }
 
   function renderStepFive(draft) {
+    normalizeStoreDraft(draft);
     var condition = draft.conditions;
-    return '<div class="olf-content-head"><h2 tabindex="-1">设置生效范围</h2><p>商品适用产线由商品结构自动确定；这里配置时间、会员和有效人数口径。</p></div>' +
-      '<section class="olf-section"><div class="olf-field-grid"><label class="olf-field"><span class="olf-label olf-required">开始日期</span><input class="olf-input" type="date" data-condition="effectiveFrom" value="' + esc(condition.effectiveFrom) + '" /></label><label class="olf-field"><span class="olf-label">结束日期</span><input class="olf-input" type="date" data-condition="effectiveTo" value="' + esc(condition.effectiveTo) + '" /><span class="olf-hint">留空表示长期生效。</span></label><label class="olf-field"><span class="olf-label olf-required">营业时段</span><select class="olf-select" data-condition="businessHour"><option value="all"' + (condition.businessHour === "all" ? " selected" : "") + '>全天</option><option value="lunch"' + (condition.businessHour === "lunch" ? " selected" : "") + '>午市 11:00–16:59</option><option value="dinner"' + (condition.businessHour === "dinner" ? " selected" : "") + '>晚市 17:00–23:00</option></select></label><label class="olf-field"><span class="olf-label">儿童计入有效人数</span><select class="olf-select" data-condition="childCountPolicy"><option value="inherit"' + (condition.childCountPolicy === "inherit" ? " selected" : "") + '>继承门店全局设置</option><option value="include"' + (condition.childCountPolicy === "include" ? " selected" : "") + '>计入</option><option value="exclude"' + (condition.childCountPolicy === "exclude" ? " selected" : "") + '>不计入</option></select></label></div></section>' +
-      '<section class="olf-section"><h3>生效星期</h3><div class="olf-check-grid">' + renderChecks("daysOfWeek", weekdays, condition.daysOfWeek) + '</div></section>' +
-      '<section class="olf-section"><h3>会员范围</h3><div class="olf-choice-grid olf-choice-grid--two">' + renderChoice("memberMode", "all", "全部顾客", "会员与非会员均适用", condition.memberMode === "all") + renderChoice("memberMode", "specified", "指定会员等级", "仅选中的会员等级适用", condition.memberMode === "specified") + '</div>' + (condition.memberMode === "specified" ? '<div class="olf-check-grid" style="margin-top:14px">' + renderChecks("memberLevelIds", memberLevels, condition.memberLevelIds) + '</div>' : '') + '</section>';
+    var added = addedStoreIds(draft);
+    var effectiveRows = stores.map(function (store) {
+      var isAdded = added.indexOf(store.id) >= 0;
+      var isChecked = isAdded && draft.deployStoreIds.indexOf(store.id) >= 0;
+      return '<tr class="olf-participating-row' + (isChecked ? ' is-selected' : '') + '"><td><input type="checkbox" data-effective-store="' + esc(store.id) + '"' + (isChecked ? ' checked' : '') + (isAdded ? '' : ' disabled') + ' /></td><td><strong>' + esc(store.name) + '</strong></td><td>' + esc(store.mid) + '</td><td>' + esc(store.address) + '</td><td><span class="olf-store-status ' + (isAdded ? 'is-added' : 'is-missing') + '">' + (isAdded ? '已添加' : '未添加') + '</span></td></tr>';
+    }).join('');
+    return '<div class="olf-content-head"><h2 tabindex="-1">设置生效范围</h2><p>选择本次实际生效门店，并配置时间、会员和有效人数口径。</p></div>' +
+      '<section class="olf-section olf-effective-stores"><div class="olf-section-head"><div><h3>生效门店</h3><div class="olf-help">已配置商品的门店可以生效；取消勾选不会删除该门店商品和数量配置。</div></div></div><div class="olf-table-wrap"><table class="olf-table"><thead><tr><th class="olf-store-check-col"></th><th>门店名</th><th>MID</th><th>地址</th><th>商品状态</th></tr></thead><tbody>' + effectiveRows + '</tbody></table></div></section>' +
+      '<section class="olf-section"><h3>有效日期与营业时段</h3><div class="olf-field-grid"><label class="olf-field"><span class="olf-label olf-required">开始日期</span><input class="olf-input" type="date" data-condition="effectiveFrom" value="' + esc(condition.effectiveFrom) + '" /></label><label class="olf-field"><span class="olf-label">结束日期</span><input class="olf-input" type="date" data-condition="effectiveTo" value="' + esc(condition.effectiveTo) + '" /><span class="olf-hint">留空表示长期生效。</span></label><label class="olf-field"><span class="olf-label olf-required">营业时段</span><select class="olf-select" data-condition="businessHour"><option value="all"' + (condition.businessHour === 'all' ? ' selected' : '') + '>全天</option><option value="lunch"' + (condition.businessHour === 'lunch' ? ' selected' : '') + '>午市 11:00–16:59</option><option value="dinner"' + (condition.businessHour === 'dinner' ? ' selected' : '') + '>晚市 17:00–23:00</option></select></label><label class="olf-field"><span class="olf-label">儿童计入有效人数</span><select class="olf-select" data-condition="childCountPolicy"><option value="inherit"' + (condition.childCountPolicy === 'inherit' ? ' selected' : '') + '>继承门店全局设置</option><option value="include"' + (condition.childCountPolicy === 'include' ? ' selected' : '') + '>计入</option><option value="exclude"' + (condition.childCountPolicy === 'exclude' ? ' selected' : '') + '>不计入</option></select></label></div></section>' +
+      '<section class="olf-section"><h3>生效星期</h3><div class="olf-check-grid">' + renderChecks('daysOfWeek', weekdays, condition.daysOfWeek) + '</div></section>' +
+      '<section class="olf-section"><h3>会员范围</h3><div class="olf-choice-grid olf-choice-grid--two">' + renderChoice('memberMode', 'all', '全部顾客', '会员与非会员均适用', condition.memberMode === 'all') + renderChoice('memberMode', 'specified', '指定会员等级', '仅选中的会员等级适用', condition.memberMode === 'specified') + '</div>' + (condition.memberMode === 'specified' ? '<div class="olf-check-grid" style="margin-top:14px">' + renderChecks('memberLevelIds', memberLevels, condition.memberLevelIds) + '</div>' : '') + '</section>';
   }
 
   function renderScopeRow(draft, scope, title, copy) {
@@ -1084,7 +1094,23 @@
     return { complete: complete, total: total };
   }
 
-  function renderStepSeven(draft) {
+  function storeProductSummary(draft, storeIds) {
+    return (storeIds || addedStoreIds(draft)).map(function (storeId) {
+      var store = stores.find(function (item) { return item.id === storeId; });
+      var config = storeConfigFor(draft, storeId, false);
+      return (store ? store.name : storeId) + "：" + (config ? config.targetIds.length : 0) + " 个" + (draft.targetType === "dish" ? "菜品" : "分类");
+    }).join("；");
+  }
+
+  function storeLineSummary(draft, storeIds) {
+    return (storeIds || addedStoreIds(draft)).map(function (storeId) {
+      var store = stores.find(function (item) { return item.id === storeId; });
+      var config = storeConfigFor(draft, storeId, false);
+      return (store ? store.name : storeId) + "：" + namesFor(lines, config ? config.productLines : []);
+    }).join("；");
+  }
+
+  function renderStepSevenLegacy(draft) {
     var check = validateAll(draft);
     var completion = limitCompletion(draft);
     var memberText = draft.conditions.memberMode === "all" ? "全部顾客" : namesFor(memberLevels, draft.conditions.memberLevelIds);
@@ -1094,13 +1120,21 @@
       '<section class="olf-section"><div class="olf-review">' +
       '<div class="olf-review-row"><span>规则</span><strong>' + esc(draft.name || "未命名规则") + '</strong><button class="olf-button olf-button--small" data-fix-step="2">编辑</button></div>' +
       '<div class="olf-review-row"><span>计算方式</span><strong>' + esc(subjectLabel(draft.subject) + " × " + periodLabel(draft.period) + " × " + targetShortLabel(draft.targetType)) + '</strong><button class="olf-button olf-button--small" data-fix-step="1">编辑</button></div>' +
-      '<div class="olf-review-row"><span>商品范围</span><strong>' + esc(selectedTargets(draft).map(function (item) { return item.name; }).join("、") || "未选择") + '</strong><button class="olf-button olf-button--small" data-fix-step="2">编辑</button></div>' +
-      '<div class="olf-review-row"><span>适用产线</span><strong>' + esc(namesFor(lines, draft.productLines)) + '</strong><button class="olf-button olf-button--small" data-fix-step="2">编辑</button></div>' +
+      '<div class="olf-review-row"><span>商品范围</span><strong>' + esc(storeProductSummary(draft) || "未选择") + '</strong><button class="olf-button olf-button--small" data-fix-step="2">编辑</button></div>' +
+      '<div class="olf-review-row"><span>适用产线</span><strong>' + esc(storeLineSummary(draft) || "未选择") + '</strong><button class="olf-button olf-button--small" data-fix-step="2">编辑</button></div>' +
       '<div class="olf-review-row"><span>人数 / 轮次</span><strong>' + esc(draft.partyRanges.map(function (range) { return formatRange(range, "人"); }).join("、") + (draft.period === "multi_round" ? "；" + draft.roundRanges.map(function (range) { return formatRange(range, "轮"); }).join("、") : "")) + '</strong><button class="olf-button olf-button--small" data-fix-step="3">编辑</button></div>' +
       '<div class="olf-review-row"><span>数量完成度</span><strong>' + completion.complete + "/" + completion.total + ' 个单元格</strong><button class="olf-button olf-button--small" data-fix-step="4">编辑</button></div>' +
       '<div class="olf-review-row"><span>生效条件</span><strong>' + esc((draft.conditions.effectiveTo ? draft.conditions.effectiveFrom + " 至 " + draft.conditions.effectiveTo : draft.conditions.effectiveFrom + " 起长期") + " · " + memberText + " · 儿童人数" + (draft.conditions.childCountPolicy === "inherit" ? "继承门店" : draft.conditions.childCountPolicy === "include" ? "计入" : "不计入")) + '</strong><button class="olf-button olf-button--small" data-fix-step="5">编辑</button></div>' +
       '<div class="olf-review-row"><span>超限授权</span><strong>' + esc(authText + (draft.authorization.enabled ? "，默认" + (draft.authorization.defaultScope === "operation" ? "本次操作" : draft.authorization.defaultScope === "round" ? "当前轮" : "当前订单") : "")) + '</strong><button class="olf-button olf-button--small" data-fix-step="6">编辑</button></div>' +
       '</div></section><div class="olf-summary olf-summary--primary"><strong>下一步：</strong>保存并下发后进入门店选择与发布确认；发布完成前，门店继续使用上一完整版本。</div>';
+  }
+
+  function renderStepSeven(draft) {
+    var html = renderStepSevenLegacy(draft);
+    var marker = '</div></section><div class="olf-summary olf-summary--primary">';
+    var effectiveRow = '<div class="olf-review-row"><span>生效门店</span><strong>' + esc(namesFor(stores, draft.deployStoreIds) || '未选择') + '</strong><button class="olf-button olf-button--small" data-fix-step="5">编辑</button></div>';
+    html = html.replace(marker, effectiveRow + marker);
+    return html.replace(/<div class="olf-summary olf-summary--primary">[\s\S]*<\/div>$/, '<div class="olf-summary olf-summary--primary"><strong>下一步：</strong>保存并下发后直接进入发布确认；只有已选择的生效门店会进入运行快照。</div>');
   }
 
   function renderEditorContent() {
@@ -1134,16 +1168,6 @@
       var pickerElement = document.querySelector("[data-brand-menu-structure-picker]");
       if (pickerElement) MenuPicker.bind(pickerElement, { leafLevel: draft.targetType === "category" ? "category" : "dish" });
     }
-    root.querySelectorAll("[data-store-tab]").forEach(function (storeTab) {
-      storeTab.addEventListener("click", function (event) {
-        event.stopPropagation();
-        clearBatchSelection();
-        draft.activeStoreId = storeTab.getAttribute("data-store-tab");
-        var config = activeStoreConfig(draft);
-        if (config.productLines.indexOf(draft.activeLineId) < 0) draft.activeLineId = config.productLines[0] || "kiosk";
-        renderEditor();
-      });
-    });
     document.getElementById("progressFill").style.width = ((editorState.currentStep / steps.length) * 100) + "%";
     document.getElementById("footerNote").textContent = "第 " + editorState.currentStep + " 步，共 " + steps.length + " 步";
     var previous = document.getElementById("previousButton");
@@ -1172,11 +1196,12 @@
     editorState.dialogConfirm = null;
   }
 
-  function normalizeActiveDimensions(draft) {
+  function normalizeActiveDimensions(draft, requireAddedStore) {
     draft.activePartyIndex = Math.min(draft.activePartyIndex || 0, Math.max(0, draft.partyRanges.length - 1));
     draft.activeRoundIndex = Math.min(draft.activeRoundIndex || 0, Math.max(0, draft.roundRanges.length - 1));
     var added = addedStoreIds(draft);
-    if (added.length && added.indexOf(draft.activeStoreId) < 0) draft.activeStoreId = added[0];
+    if (requireAddedStore && added.length && added.indexOf(draft.activeStoreId) < 0) draft.activeStoreId = added[0];
+    if (!requireAddedStore && !isAvailableStoreId(draft.activeStoreId)) draft.activeStoreId = "";
     var config = activeStoreConfig(draft);
     if (config.productLines.indexOf(draft.activeLineId) < 0) draft.activeLineId = config.productLines[0] || "kiosk";
   }
@@ -1271,43 +1296,6 @@
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  function removeParticipatingStore(draft, storeId) {
-    var participantIndex = draft.participatingStoreIds.indexOf(storeId);
-    if (participantIndex >= 0) draft.participatingStoreIds.splice(participantIndex, 1);
-    delete draft.storeConfigs[storeId];
-    draft.deployStoreIds = (draft.deployStoreIds || []).filter(function (id) { return id !== storeId; });
-    draft.deployExcludedStoreIds = (draft.deployExcludedStoreIds || []).filter(function (id) { return id !== storeId; });
-    draft.activeStoreId = draft.participatingStoreIds[0] || "";
-    normalizeStoreDraft(draft);
-  }
-
-  function handleParticipatingStoreChange(target, draft) {
-    var storeId = target.getAttribute("data-participating-store");
-    if (target.checked) {
-      if (draft.participatingStoreIds.indexOf(storeId) < 0) draft.participatingStoreIds.push(storeId);
-      storeConfigFor(draft, storeId, true);
-      draft.activeStoreId = storeId;
-      normalizeStoreDraft(draft);
-      delete editorState.stepErrors[2];
-      markEditorDirty();
-      renderEditor();
-      return;
-    }
-    if (!storeHasTargets(draft, storeId)) {
-      removeParticipatingStore(draft, storeId);
-      markEditorDirty();
-      renderEditor();
-      return;
-    }
-    target.checked = true;
-    openDialog("移除参与门店？", "移除后将清空该门店已选商品及全部数量配置，此操作保存后不可恢复。", "移除门店", function () {
-      removeParticipatingStore(draft, storeId);
-      closeDialog();
-      markEditorDirty();
-      renderEditor();
-    });
-  }
-
   function handleEditorClick(event) {
     var button = event.target.closest("button");
     if (!button) return;
@@ -1316,8 +1304,7 @@
     if (button.hasAttribute("data-delete-range")) { deleteRange(button.getAttribute("data-delete-range"), Number(button.getAttribute("data-range-index"))); return; }
     if (button.hasAttribute("data-party-tab")) { clearBatchSelection(); editorState.rule.editorDraft.activePartyIndex = Number(button.getAttribute("data-party-tab")); renderEditor(); return; }
     if (button.hasAttribute("data-round-tab")) { clearBatchSelection(); editorState.rule.editorDraft.activeRoundIndex = Number(button.getAttribute("data-round-tab")); renderEditor(); return; }
-    if (button.hasAttribute("data-store-tab")) { var storeDraft = editorState.rule.editorDraft; clearBatchSelection(); storeDraft.activeStoreId = button.getAttribute("data-store-tab"); var storeConfig = activeStoreConfig(storeDraft); if (storeConfig.productLines.indexOf(storeDraft.activeLineId) < 0) storeDraft.activeLineId = storeConfig.productLines[0] || "kiosk"; renderEditor(); return; }
-    if (button.hasAttribute("data-limit-store-tab")) { clearBatchSelection(); editorState.rule.editorDraft.activeStoreId = button.getAttribute("data-limit-store-tab"); normalizeActiveDimensions(editorState.rule.editorDraft); renderEditor(); return; }
+    if (button.hasAttribute("data-limit-store-tab")) { clearBatchSelection(); editorState.rule.editorDraft.activeStoreId = button.getAttribute("data-limit-store-tab"); normalizeActiveDimensions(editorState.rule.editorDraft, true); renderEditor(); return; }
     if (button.hasAttribute("data-line-tab")) { clearBatchSelection(); editorState.rule.editorDraft.activeLineId = button.getAttribute("data-line-tab"); renderEditor(); return; }
     if (button.hasAttribute("data-toggle-batch")) { if (editorState.batchMode) clearBatchSelection(); else { editorState.batchMode = true; editorState.batchSelectedTargetIds = []; } renderEditor(); return; }
     if (button.hasAttribute("data-batch-cancel")) { clearBatchSelection(); renderEditor(); return; }
@@ -1343,9 +1330,31 @@
   function handleEditorInput(event) {
     var target = event.target;
     var draft = editorState.rule.editorDraft;
-    if (target.hasAttribute("data-participating-store")) {
-      if (event.type === "change") handleParticipatingStoreChange(target, draft);
-      return;
+    if (target.hasAttribute("data-config-store-select")) {
+      if (event.type !== "change") return;
+      clearBatchSelection();
+      draft.activeStoreId = isAvailableStoreId(target.value) ? target.value : "";
+      if (draft.activeStoreId) {
+        var selectedStoreConfig = storeConfigFor(draft, draft.activeStoreId, true);
+        if (selectedStoreConfig.productLines.indexOf(draft.activeLineId) < 0) draft.activeLineId = selectedStoreConfig.productLines[0] || "kiosk";
+      }
+      markEditorDirty(); renderEditor(); return;
+    }
+    if (target.hasAttribute("data-effective-store")) {
+      if (event.type !== "change") return;
+      var effectiveStoreId = target.getAttribute("data-effective-store");
+      if (addedStoreIds(draft).indexOf(effectiveStoreId) < 0) { renderEditor(); return; }
+      var deployIndex = draft.deployStoreIds.indexOf(effectiveStoreId);
+      var excludedIndex = draft.deployExcludedStoreIds.indexOf(effectiveStoreId);
+      if (target.checked) {
+        if (deployIndex < 0) draft.deployStoreIds.push(effectiveStoreId);
+        if (excludedIndex >= 0) draft.deployExcludedStoreIds.splice(excludedIndex, 1);
+      } else {
+        if (deployIndex >= 0) draft.deployStoreIds.splice(deployIndex, 1);
+        if (excludedIndex < 0) draft.deployExcludedStoreIds.push(effectiveStoreId);
+      }
+      normalizeDeploymentSelection(draft, { needed: false, hadDeployField: true });
+      markEditorDirty(); renderEditor(); return;
     }
     if (target.hasAttribute("data-batch-target-id")) {
       var batchTargetId = target.getAttribute("data-batch-target-id");
@@ -1411,7 +1420,7 @@
       stepErrors: {}, saveTimer: null, dirty: false, dialogConfirm: null,
       batchMode: false, batchSelectedTargetIds: []
     };
-    normalizeActiveDimensions(rule.editorDraft);
+    normalizeActiveDimensions(rule.editorDraft, editorState.currentStep === 4);
     root.innerHTML = '<div class="olf-page"><header class="olf-header"><div class="olf-header-main"><div class="olf-title-group"><button type="button" class="olf-icon-button" id="backButton" aria-label="返回规则列表">' + icon("back", 20) + '</button><div class="olf-title-copy"><h1>' + (rule.sourceRuleId ? "编辑" : "新增") + '数量与频次规则</h1><span class="olf-save-state" id="saveState">草稿已保存</span></div></div><div class="olf-actions"><button type="button" class="olf-button" id="headerSaveButton">保存草稿</button></div></div><div class="olf-progress"><span id="progressFill"></span></div></header><div class="olf-editor-shell"><nav class="olf-step-nav" id="stepNav" aria-label="规则配置步骤"></nav><main class="olf-content" id="editorContent"></main></div><footer class="olf-footer"><span class="olf-footer-note" id="footerNote"></span><div class="olf-actions"><button type="button" class="olf-button" id="previousButton">上一步</button><button type="button" class="olf-button" id="saveReturnButton" style="display:none">保存草稿并返回</button><button type="button" class="olf-button olf-button--primary" id="nextButton">下一步</button></div></footer></div>' +
       '<div class="olf-overlay" id="confirmOverlay" role="dialog" aria-modal="true" aria-labelledby="dialogTitle"><div class="olf-dialog"><h3 id="dialogTitle">确认操作</h3><p id="dialogCopy"></p><div class="olf-dialog-actions"><button type="button" class="olf-button" id="dialogCancel">继续编辑</button><button type="button" class="olf-button olf-button--primary" id="dialogConfirm">确定</button></div></div></div>';
     renderEditor();
@@ -1446,7 +1455,7 @@
       var check = validateAll(draft);
       if (check) { editorState.stepErrors[check.step] = check.message; toast(check.message, true); goToEditorStep(check.step, true); return; }
       if (!saveEditorDraft(true)) return;
-      go("order-limit-store-select.html?draftId=" + encodeURIComponent(editorState.rule.id));
+      go("order-limit-publish-confirm.html?draftId=" + encodeURIComponent(editorState.rule.id));
     });
     document.getElementById("dialogCancel").addEventListener("click", closeDialog);
     document.getElementById("dialogConfirm").addEventListener("click", function () { var confirm = editorState.dialogConfirm; if (confirm) confirm(); });
@@ -1476,69 +1485,30 @@
     return '<header class="olf-header"><div class="olf-header-main"><div class="olf-title-group"><button type="button" class="olf-icon-button" id="flowBackButton" aria-label="返回">' + icon("back", 20) + '</button><div class="olf-title-copy"><h1>' + esc(title) + '</h1><span class="olf-save-state">规则草稿已保存</span></div></div><button type="button" class="olf-button olf-button--primary" id="flowPrimaryButton">' + esc(primaryLabel) + '</button></div><div class="olf-progress"><span style="width:' + progress + '%"></span></div></header>';
   }
 
-  function mountStoresLegacy() {
-    var draftRule = getDraftFromParams();
-    if (!draftRule) { renderErrorState("草稿不存在", "请返回规则列表重新进入。", "返回规则列表", function () { go("order-limit.html"); }); return; }
-    var draft = draftRule.editorDraft;
-    var allowed = stores.slice();
-    var selected = (draft.deployStoreIds || []).slice();
-    root.innerHTML = '<div class="olf-page">' + renderFlowHeader("选择发布门店", 82, "", "下一步") + '<main class="olf-flow-main"><section class="olf-flow-card"><h2>选择实际下发门店</h2><p class="olf-help">门店范围在发布阶段统一选择。至少选择一家门店后继续。</p><div class="olf-store-layout"><div class="olf-store-list" id="storeList">' + (allowed.length ? allowed.map(function (store) { return '<label class="olf-store-row"><input type="checkbox" value="' + esc(store.id) + '"' + (selected.indexOf(store.id) >= 0 ? " checked" : "") + ' /><span class="olf-store-copy"><strong>' + esc(store.name) + '</strong><span>MID ' + esc(store.mid) + ' · ' + esc(store.zone) + '</span></span></label>'; }).join("") : '<div class="olf-empty"><strong>暂无可下发门店</strong><span>当前没有可发布的门店。</span></div>') + '</div><aside class="olf-selected-panel"><h3>已选门店（<span id="selectedStoreCount">0</span>）</h3><div id="selectedStoreNames" class="olf-token-list"></div></aside></div></section></main></div>';
-    function sync() {
-      selected = Array.prototype.map.call(document.querySelectorAll("#storeList input:checked"), function (input) { return input.value; });
-      document.getElementById("selectedStoreCount").textContent = String(selected.length);
-      document.getElementById("selectedStoreNames").innerHTML = selected.length ? selected.map(function (id) { var store = stores.find(function (item) { return item.id === id; }); return '<span class="olf-token">' + esc(store ? store.name : id) + '</span>'; }).join("") : '<span class="olf-hint">尚未选择</span>';
-      document.getElementById("flowPrimaryButton").disabled = selected.length === 0;
-    }
-    document.getElementById("storeList").addEventListener("change", sync);
-    document.getElementById("flowBackButton").addEventListener("click", function () { go("order-limit-rule-editor.html?draftId=" + encodeURIComponent(draftRule.id)); });
-    document.getElementById("flowPrimaryButton").addEventListener("click", function () {
-      draft.deployStoreIds = selected.slice();
-      if (!updateDraftRule(draftRule)) { toast("保存门店失败，请重试", true); return; }
-      go("order-limit-publish-confirm.html?draftId=" + encodeURIComponent(draftRule.id));
-    });
-    sync();
-  }
-
   function mountStores() {
     var draftRule = getDraftFromParams();
-    if (!draftRule) { renderErrorState("草稿不存在", "请返回规则列表重新进入。", "返回规则列表", function () { go("order-limit.html"); }); return; }
+    if (!draftRule) { go("order-limit.html"); return; }
     var draft = draftRule.editorDraft;
-    normalizeStoreDraft(draft);
-    var added = addedStoreIds(draft);
-    var selected = draft.deployStoreIds.slice();
-    root.innerHTML = '<div class="olf-page">' + renderFlowHeader("选择发布门店", 82, "", "下一步") + '<main class="olf-flow-main"><section class="olf-flow-card"><h2>参与门店</h2><p class="olf-help">仅“已添加”商品的门店可以勾选发布；未添加门店保留展示但不可勾选。</p><div class="olf-table-wrap olf-publish-store-table"><table class="olf-table"><thead><tr><th class="olf-store-check-col"></th><th>门店名</th><th>MID</th><th>地址</th><th>参与活动商品</th></tr></thead><tbody>' + stores.map(function (store) {
-      var isAdded = added.indexOf(store.id) >= 0;
-      var isChecked = selected.indexOf(store.id) >= 0;
-      return '<tr class="olf-participating-row' + (isChecked ? ' is-selected' : '') + '"><td><input type="checkbox" data-deploy-store="' + esc(store.id) + '"' + (isChecked ? ' checked' : '') + (isAdded ? '' : ' disabled') + ' /></td><td><strong>' + esc(store.name) + '</strong></td><td>' + esc(store.mid) + '</td><td>' + esc(store.address) + '</td><td><span class="olf-store-status ' + (isAdded ? 'is-added' : 'is-missing') + '">' + (isAdded ? '已添加' : '未添加') + '</span></td></tr>';
-    }).join('') + '</tbody></table></div><div class="olf-selected-panel olf-selected-panel--inline"><h3>已选门店（<span id="selectedStoreCount">0</span>）</h3><div id="selectedStoreNames" class="olf-token-list"></div></div></section></main></div>';
-    function sync() {
-      selected = Array.prototype.map.call(document.querySelectorAll('[data-deploy-store]:checked'), function (input) { return input.getAttribute('data-deploy-store'); });
-      draft.deployStoreIds = selected.slice();
-      draft.deployExcludedStoreIds = added.filter(function (storeId) { return selected.indexOf(storeId) < 0; });
-      document.getElementById('selectedStoreCount').textContent = String(selected.length);
-      document.getElementById('selectedStoreNames').innerHTML = selected.length ? selected.map(function (id) { var store = stores.find(function (item) { return item.id === id; }); return '<span class="olf-token">' + esc(store ? store.name : id) + '</span>'; }).join('') : '<span class="olf-hint">尚未选择</span>';
-      document.getElementById('flowPrimaryButton').disabled = selected.length === 0;
-      root.querySelectorAll('[data-deploy-store]').forEach(function (input) { var row = input.closest('tr'); if (row) row.classList.toggle('is-selected', input.checked); });
+    var highestStep = Math.max(1, Math.min(7, Number(draft.highestStep) || 1));
+    var currentStep = Math.max(1, Math.min(highestStep, Number(draft.currentStep) || 1));
+    if (highestStep >= 5) currentStep = 5;
+    draft.currentStep = currentStep;
+    draft.highestStep = highestStep;
+    if (!updateDraftRule(draftRule)) {
+      renderErrorState("无法返回规则编辑", "草稿保存失败，请重试。", "重试", function () { window.location.reload(); });
+      return;
     }
-    root.querySelector('.olf-publish-store-table').addEventListener('change', sync);
-    document.getElementById('flowBackButton').addEventListener('click', function () { go('order-limit-rule-editor.html?draftId=' + encodeURIComponent(draftRule.id)); });
-    document.getElementById('flowPrimaryButton').addEventListener('click', function () {
-      sync();
-      if (!selected.length) { toast('请至少选择一家发布门店', true); return; }
-      if (!updateDraftRule(draftRule)) { toast('保存门店失败，请重试', true); return; }
-      go('order-limit-publish-confirm.html?draftId=' + encodeURIComponent(draftRule.id));
-    });
-    sync();
+    go("order-limit-rule-editor.html?draftId=" + encodeURIComponent(draftRule.id));
   }
 
   function validateDeployStores(draft) {
     var deployIds = draft.deployStoreIds || [];
-    if (!deployIds.length) return "请至少选择一家发布门店";
+    if (!deployIds.length) return "请至少选择一家生效门店";
     var added = addedStoreIds(draft);
     var invalid = deployIds.find(function (storeId) { return added.indexOf(storeId) < 0; });
     if (invalid) return "未添加商品的门店不能发布";
     var completion = limitCompletion(draft, deployIds);
-    if (!completion.total || completion.complete !== completion.total) return "发布门店仍有数量单元格未配置";
+    if (!completion.total || completion.complete !== completion.total) return "生效门店仍有数量单元格未配置";
     return null;
   }
 
@@ -1571,10 +1541,10 @@
     var draft = draftRule.editorDraft;
     var check = validateAll(draft);
     if (check) { renderErrorState("规则校验未通过", check.message, "返回规则编辑", function () { go("order-limit-rule-editor.html?draftId=" + encodeURIComponent(draftRule.id)); }); return; }
-    if (!draft.deployStoreIds.length) { renderErrorState("尚未选择发布门店", "请先完成门店选择。", "选择门店", function () { go("order-limit-store-select.html?draftId=" + encodeURIComponent(draftRule.id)); }); return; }
-    var completion = limitCompletion(draft);
-    root.innerHTML = '<div class="olf-page">' + renderFlowHeader("确认发布", 100, "", "确认发布") + '<main class="olf-flow-main"><section class="olf-flow-card"><h2>发布前最终确认</h2><p class="olf-help">发布成功后将生成正式版本；全部门店作为一个完整版本处理。</p><div class="olf-summary olf-summary--success"><strong>校验通过：</strong>规则结构、数量、授权和目标门店均完整。</div><section class="olf-section"><div class="olf-review"><div class="olf-review-row"><span>规则名称</span><strong>' + esc(draft.name) + '</strong><span></span></div><div class="olf-review-row"><span>计算方式</span><strong>' + esc(subjectLabel(draft.subject) + " × " + periodLabel(draft.period) + " × " + targetShortLabel(draft.targetType)) + '</strong><span></span></div><div class="olf-review-row"><span>商品范围</span><strong>' + esc(selectedTargets(draft).map(function (item) { return item.name; }).join("、")) + '</strong><span></span></div><div class="olf-review-row"><span>数量矩阵</span><strong>' + completion.complete + ' 个单元格已确认</strong><span></span></div><div class="olf-review-row"><span>发布门店</span><strong>' + esc(namesFor(stores, draft.deployStoreIds)) + '</strong><span></span></div><div class="olf-review-row"><span>授权范围</span><strong>' + esc(draft.authorization.enabled ? draft.authorization.allowedScopes.map(function (scope) { return scope === "operation" ? "本次操作" : scope === "round" ? "当前轮" : "当前订单"; }).join(" / ") : "硬性拒绝") + '</strong><span></span></div></div></section><div class="olf-summary olf-summary--warning"><strong>原子发布：</strong>若任一门店发布失败，本次不会形成混合版本，所有门店继续使用上一完整版本。</div></section></main></div>';
-    document.getElementById("flowBackButton").addEventListener("click", function () { go("order-limit-store-select.html?draftId=" + encodeURIComponent(draftRule.id)); });
+    if (!draft.deployStoreIds.length) { renderErrorState("尚未选择生效门店", "请先在生效范围中选择至少一家门店。", "返回规则编辑", function () { go("order-limit-rule-editor.html?draftId=" + encodeURIComponent(draftRule.id)); }); return; }
+    var completion = limitCompletion(draft, draft.deployStoreIds);
+    root.innerHTML = '<div class="olf-page">' + renderFlowHeader("确认发布", 100, "", "确认发布") + '<main class="olf-flow-main"><section class="olf-flow-card"><h2>发布前最终确认</h2><p class="olf-help">发布成功后将生成正式版本；仅本次选择的生效门店进入运行快照。</p><div class="olf-summary olf-summary--success"><strong>校验通过：</strong>规则结构、数量、授权和生效门店均完整。</div><section class="olf-section"><div class="olf-review"><div class="olf-review-row"><span>规则名称</span><strong>' + esc(draft.name) + '</strong><span></span></div><div class="olf-review-row"><span>计算方式</span><strong>' + esc(subjectLabel(draft.subject) + " × " + periodLabel(draft.period) + " × " + targetShortLabel(draft.targetType)) + '</strong><span></span></div><div class="olf-review-row"><span>商品范围</span><strong>' + esc(storeProductSummary(draft, draft.deployStoreIds)) + '</strong><span></span></div><div class="olf-review-row"><span>数量矩阵</span><strong>' + completion.complete + ' 个单元格已确认</strong><span></span></div><div class="olf-review-row"><span>生效门店</span><strong>' + esc(namesFor(stores, draft.deployStoreIds)) + '</strong><span></span></div><div class="olf-review-row"><span>授权范围</span><strong>' + esc(draft.authorization.enabled ? draft.authorization.allowedScopes.map(function (scope) { return scope === "operation" ? "本次操作" : scope === "round" ? "当前轮" : "当前订单"; }).join(" / ") : "硬性拒绝") + '</strong><span></span></div></div></section><div class="olf-summary olf-summary--warning"><strong>原子发布：</strong>若任一生效门店发布失败，本次不会形成混合版本，相关门店继续使用上一完整版本。</div></section></main></div>';
+    document.getElementById("flowBackButton").addEventListener("click", function () { go("order-limit-rule-editor.html?draftId=" + encodeURIComponent(draftRule.id)); });
     document.getElementById("flowPrimaryButton").addEventListener("click", function () {
       var button = this;
       button.disabled = true;

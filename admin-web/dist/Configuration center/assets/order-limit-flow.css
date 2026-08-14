@@ -334,17 +334,9 @@ button { color: inherit; }
 .olf-flow-main { width: min(1040px, calc(100% - 48px)); margin: 0 auto; padding: 28px 0 110px; }
 .olf-flow-card { padding: 28px 30px; border: 1px solid var(--olf-border); border-radius: 16px; background: var(--olf-surface); }
 .olf-flow-card h2 { margin: 0 0 7px; font-size: 20px; }
-.olf-store-layout { margin-top: 24px; display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 22px; }
-.olf-store-list { display: grid; gap: 10px; }
-.olf-store-row { padding: 15px; display: flex; align-items: center; gap: 12px; border: 1px solid var(--olf-border); border-radius: 12px; cursor: pointer; }
-.olf-store-row:has(input:checked) { border-color: var(--olf-primary); background: var(--olf-primary-soft); }
-.olf-store-row input { width: 18px; height: 18px; accent-color: var(--olf-primary); }
-.olf-store-copy { display: grid; gap: 3px; }
-.olf-store-copy span { color: var(--olf-muted); font-size: 12px; }
-.olf-selected-panel { align-self: start; padding: 18px; border: 1px solid var(--olf-border); border-radius: 12px; background: var(--olf-subtle); }
-.olf-selected-panel h3 { margin: 0 0 12px; font-size: 15px; }
-
-.olf-participating-stores { margin-top: 14px; }
+.olf-config-store-select { width: min(100%, 320px); margin: 14px 0 18px; }
+.olf-config-store-select .olf-select { width: 100%; }
+.olf-effective-stores .olf-table-wrap { margin-top: 14px; }
 .olf-store-check-col { width: 44px; }
 .olf-participating-row { transition: background-color .16s ease; }
 .olf-participating-row.is-selected { background: var(--olf-primary-soft); }
@@ -354,13 +346,7 @@ button { color: inherit; }
 .olf-store-status.is-missing { color: #ef4444; }
 .olf-store-tabs { margin-top: 14px; }
 .olf-store-tabs .olf-tab { gap: 8px; }
-.olf-store-tab-state { font-size: 11px; font-weight: 600; }
-.olf-store-tab-state.is-added { color: #16a34a; }
-.olf-store-tab-state.is-missing { color: #ef4444; }
 .olf-store-product-config .olf-structure-summary { margin: 4px 0 0; }
-.olf-publish-store-table { margin-top: 18px; }
-.olf-publish-store-table input:disabled { cursor: not-allowed; opacity: .45; }
-.olf-selected-panel--inline { margin-top: 18px; }
 
 .olf-toast-host { position: fixed; z-index: 120; top: 20px; left: 50%; transform: translateX(-50%); display: grid; gap: 8px; pointer-events: none; }
 .olf-toast { padding: 10px 16px; border: 1px solid var(--olf-border); border-radius: 10px; background: var(--olf-surface); box-shadow: 0 8px 24px rgba(0,0,0,.12); font-size: 13px; }
@@ -373,7 +359,6 @@ button { color: inherit; }
   .olf-step { min-height: 44px; padding: 5px; grid-template-columns: 1fr; justify-items: center; }
   .olf-step-copy, .olf-step-error { display: none; }
   .olf-content { min-height: 520px; padding: 25px 22px 30px; }
-  .olf-store-layout { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 680px) {
