@@ -347,4 +347,3 @@ feat: preview selected order limit products
 - 浏览器验收通过。
 
 提交后使用 `git merge --autostash --no-ff` 合并 `codex/order-limit-selected-products-preview` 到 `main`，不得覆盖或重置主工作区已有未提交修改。合并后在 `main` 再运行 JavaScript 语法检查和新增专项脚本。
-
