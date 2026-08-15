@@ -93,6 +93,13 @@ expect(shell, /bindEmenuHostIpControl/, "eMenu shell must bind host IP control")
 expect(i18n, /"shell\.emenuLocalEmenu":\s*"eMenu"/, "i18n must include the eMenu nav title");
 expect(i18n, /"shell\.emenuLocalEmenuSettings":\s*"设置"/, "i18n must include the eMenu settings nav title");
 expect(i18n, /"shell\.emenuLocalHostIp":\s*"主机 IP"/, "i18n must include the eMenu host IP label");
+expect(i18n, /"shell\.emenuLocalHostIpMixedContentHint"/, "i18n must warn that GitHub Pages HTTPS cannot reach HTTP POS");
+{
+  const hostControl = read("src/shell/emenu-local-host-control.ts");
+  expect(hostControl, /isKposMixedContentBlocked/, "Host control must detect HTTPS→HTTP mixed content");
+  expect(hostControl, /resolveKposApiBase/, "Host control must resolve API base for Vite proxy vs static hosts");
+  expect(hostControl, /syncEmbedKposRouting/, "Host control must sync embed kpos routing before iframe reload");
+}
 
 {
   const viteConfig = read("vite.config.ts");
@@ -125,6 +132,9 @@ expect(i18n, /"shell\.emenuLocalHostIp":\s*"主机 IP"/, "i18n must include the 
   const embedHtml = fs.readFileSync(embedIndex, "utf8");
   if (!/(?:src|href)=["']\.\/assets\//.test(embedHtml)) {
     throw new Error("dist/emenu-new/index.html must use Pages-safe relative ./assets/ URLs");
+  }
+  if (!/__MENUSIFU_KPOS_BASE__/.test(embedHtml)) {
+    throw new Error("dist/emenu-new/index.html must bootstrap __MENUSIFU_KPOS_BASE__ for static hosts");
   }
   if (/(?:src|href)=["']\/emenu-new\//.test(embedHtml)) {
     throw new Error("dist/emenu-new/index.html must not resolve assets from the GitHub Pages domain root");

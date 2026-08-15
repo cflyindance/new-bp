@@ -1,6 +1,6 @@
 /**
  * Kiosk Lite 配置页（Service Setting 等）会向 parent 索取 sessionKey。
- * 本桥接通过 /kpos 代理调用 POS clientInstanceLogin，再 postMessage 回 iframe。
+ * 本桥接通过 /kpos（Vite 代理或静态托管下的绝对 POS 地址）调用 clientInstanceLogin。
  */
 
 const LICENSE_STORAGE_KEY = "menusifu:kiosk-local:appInstanceName";
@@ -70,12 +70,13 @@ async function loginKioskSession(): Promise<string> {
   if (pendingLogin) return pendingLogin;
 
   pendingLogin = (async () => {
+    const { resolveKposApiBase } = await import("./emenu-local-host-control");
     const payload = {
       appInstanceName: resolveAppInstanceName(),
       appInstanceType: "KIOSK",
       secretKey: resolveSecretKey(),
     };
-    const res = await fetch("/kpos/webapp/license/clientInstanceLogin", {
+    const res = await fetch(`${resolveKposApiBase()}webapp/license/clientInstanceLogin`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),

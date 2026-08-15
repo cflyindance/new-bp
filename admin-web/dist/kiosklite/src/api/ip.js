@@ -22,15 +22,37 @@ function captureServerIP(url) {
   }
 }
 
+function normalizeKposBase(value) {
+  if (!value) return '';
+  const trimmed = String(value).trim();
+  if (!trimmed) return '';
+  return trimmed.endsWith('/') ? trimmed : `${trimmed}/`;
+}
+
 /**
- * admin-web 嵌入：页面在 /kpos/kiosklite，API 基址收成同源 /kpos/，
- * 由 Vite 按 menusifu-emenu-kpos-target cookie 转发到目标 POS。
+ * 优先：?kposBase= / localStorage 主机（GitHub Pages 等无 Vite 代理时直连 POS）。
+ * 其次：同源 /kpos/（本地 Vite 动态代理）。
  */
 function resolveEmbedKposBase() {
   if (typeof window === 'undefined') return '';
-  const href = window.location.href || '';
-  if (href.includes('embedded=1') || href.includes('/kpos/kiosklite')) {
-    return `${window.location.origin}/kpos/`;
+  try {
+    const params = new URLSearchParams(window.location.search || '');
+    const fromQuery = normalizeKposBase(params.get('kposBase'));
+    if (fromQuery) return fromQuery;
+
+    const stored = localStorage.getItem('menusifu:emenu-local:kpos-host');
+    const href = window.location.href || '';
+    const host = window.location.hostname.toLowerCase();
+    const onPages = host.endsWith('.github.io');
+    const embedded = params.get('embedded') === '1' || href.includes('/kpos/kiosklite');
+    if (stored && embedded && onPages) {
+      return normalizeKposBase(`${String(stored).replace(/\/$/, '')}/kpos`);
+    }
+    if (embedded) {
+      return `${window.location.origin}/kpos/`;
+    }
+  } catch {
+    /* ignore */
   }
   return '';
 }

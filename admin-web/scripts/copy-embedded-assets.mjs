@@ -51,3 +51,12 @@ if (fs.existsSync(path.join(kioskEmbedSrc, "index.html"))) {
 } else {
   console.warn("[copy-embedded-assets] Skip missing directory: dist/kiosklite/.embed-build");
 }
+
+spawnSync(process.execPath, ["scripts/patch-emenu-new-kpos-base.mjs"], {
+  cwd: projectRoot,
+  stdio: "inherit",
+});
+spawnSync(process.execPath, ["scripts/patch-kiosklite-embed-kpos-base.mjs"], {
+  cwd: projectRoot,
+  stdio: "inherit",
+});
