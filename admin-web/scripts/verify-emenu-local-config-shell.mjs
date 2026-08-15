@@ -23,6 +23,9 @@ const peripheralProducts = read("src/shell/peripheral-products-control.ts");
 const demoSwitch = read("src/shell/demo-switch-control.ts");
 const kioskShell = read("src/shell/kiosk-local-shell.ts");
 const kioskRoutes = read("src/shell/kiosk-local-routes.ts");
+const embeddedAssetCopy = read("scripts/copy-embedded-assets.mjs");
+const embeddedAssetStash = read("scripts/stash-emenu-pro-for-build.mjs");
+const pagesWorkflow = read("../.github/workflows/build-pages.yml");
 const main = read("src/main.ts");
 const i18n = read("src/i18n.ts");
 
@@ -168,7 +171,10 @@ expect(kioskShell, /aspect-video/, "Kiosk embed pages must use a fixed 16:9 aspe
 expect(kioskShell, /data-kiosk-embed-stage/, "Kiosk embed pages must expose a scale stage marker");
 expect(kioskShell, /bindKioskEmbedViewportFit/, "Kiosk shell must fit 1920x1080 iframe into the 16:9 stage");
 expect(kioskShell, /kiosklite\/index\.html/, "Kiosk shell must load kiosklite/index.html");
-expect(kioskShell, /\/kpos\/kiosklite\/index\.html/, "Kiosk iframe must load under /kpos/kiosklite so API base is same-origin /kpos/");
+expect(kioskShell, /\.\/kpos\/kiosklite\/index\.html/, "Kiosk iframe must use a Pages-safe relative ./kpos/kiosklite URL");
+if (/`\/kpos\/kiosklite\/index\.html/.test(kioskShell)) {
+  throw new Error("Kiosk iframe must not resolve /kpos from the GitHub Pages domain root");
+}
 expect(kioskShell, /data-kiosk-local-kiosk-settings-frame/, "Kiosk shell must embed Kiosk settings via a stable iframe marker");
 expect(kioskShell, /kiosklite\/index\.html[\s\S]*#\/configApp/, "Kiosk settings iframe must open dist/kiosklite#/configApp");
 expect(kioskShell, /bindKioskLocalSessionBridge/, "Kiosk shell must bind sessionKey bridge for config pages");
@@ -199,6 +205,14 @@ expect(i18n, /"shell\.kioskLocalKioskSettings":\s*"设置"/, "i18n must include 
     throw new Error("Vite must not proxy /kiosklite to POS; Kiosk pages must use local dist/kiosklite embed");
   }
 }
+
+expect(embeddedAssetStash, /EMBEDDED_DIST_DIRS\s*=\s*\[[^\]]*"kiosklite"/, "Main build must preserve dist/kiosklite while Vite empties dist");
+expect(embeddedAssetStash, /entry\s*===\s*"node_modules"/, "Kiosk stash must skip nested dependencies");
+expect(embeddedAssetCopy, /"kiosklite",\s*"\.embed-build"/, "Embedded asset copy must read the Kiosk embed build");
+expect(embeddedAssetCopy, /"kpos",\s*"kiosklite"/, "Embedded asset copy must publish Kiosk under dist/kpos/kiosklite");
+expect(pagesWorkflow, /node-version:\s*"22"/, "Pages CI must use the Node version required by Kiosk");
+expect(pagesWorkflow, /working-directory:\s*admin-web\/dist\/kiosklite[\s\S]*run:\s*npm ci/, "Pages CI must install Kiosk dependencies");
+expect(pagesWorkflow, /run:\s*npm run build:kiosklite-embed -- --skip-install/, "Pages CI must build the Kiosk embed before admin-web");
 
 {
   const embedIndex = path.join(root, "dist", "kiosklite", ".embed-build", "index.html");

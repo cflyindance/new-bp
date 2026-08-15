@@ -8,6 +8,7 @@ on:
       - "admin-web/dist/TipOut/**"
       - "admin-web/dist/Configuration center/**"
       - "admin-web/dist/emenu-pro/**"
+      - "admin-web/dist/kiosklite/**"
       - "admin-web/package.json"
       - "admin-web/package-lock.json"
       - "admin-web/vite.config.ts"
@@ -24,13 +25,23 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: npm
-          cache-dependency-path: admin-web/package-lock.json
+          cache-dependency-path: |
+            admin-web/package-lock.json
+            admin-web/dist/kiosklite/package-lock.json
 
       - name: Install dependencies
         working-directory: admin-web
         run: npm ci
+
+      - name: Install Kiosk dependencies
+        working-directory: admin-web/dist/kiosklite
+        run: npm ci --engine-strict=false
+
+      - name: Build Kiosk embed
+        working-directory: admin-web
+        run: npm run build:kiosklite-embed -- --skip-install
 
       - name: Build admin-web dist
         working-directory: admin-web

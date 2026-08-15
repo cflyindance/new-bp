@@ -1,5 +1,5 @@
 /**
- * Build dist/kiosklite for iframe embed (base=/kiosklite/) into dist/kiosklite/.embed-build.
+ * Build dist/kiosklite for iframe embed (relative asset base) into dist/kiosklite/.embed-build.
  * Keeps source tree intact for local development.
  *
  * Usage:
@@ -15,7 +15,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const appDir = path.join(root, "dist", "kiosklite");
 const embedDir = path.join(appDir, ".embed-build");
 const skipInstall = process.argv.includes("--skip-install");
-const EMBED_BASE = "/kiosklite/";
+const EMBED_BASE = "./";
 
 function fail(message) {
   console.error(`[build-kiosklite-embed] ${message}`);

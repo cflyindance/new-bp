@@ -1,6 +1,6 @@
 /**
  * 构建前暂存 dist 内嵌静态资源，避免 vite emptyOutDir 清空后丢失。
- * SSOT：dist/TipOut、dist/Configuration center、dist/emenu-pro、dist/emenu-new
+ * SSOT：dist/TipOut、dist/Configuration center、dist/emenu-pro、dist/emenu-new、dist/kiosklite
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -13,13 +13,14 @@ const stashRoot = path.resolve(projectRoot, ".cache", "embedded-assets-build-sta
 const mode = process.argv[2] === "restore" ? "restore" : "stash";
 
 /** @type {readonly string[]} */
-const EMBEDDED_DIST_DIRS = ["emenu-pro", "TipOut", "Configuration center", "emenu-new"];
+const EMBEDDED_DIST_DIRS = ["emenu-pro", "TipOut", "Configuration center", "emenu-new", "kiosklite"];
 
 function copyRecursive(src, dest) {
   const stat = fs.statSync(src);
   if (stat.isDirectory()) {
     fs.mkdirSync(dest, { recursive: true });
     for (const entry of fs.readdirSync(src)) {
+      if (entry === "node_modules" || entry === ".git") continue;
       copyRecursive(path.join(src, entry), path.join(dest, entry));
     }
     return;

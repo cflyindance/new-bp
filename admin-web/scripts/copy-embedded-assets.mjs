@@ -41,3 +41,13 @@ if (fs.existsSync(emenuIconSrc)) {
 } else {
   console.warn("[copy-embedded-assets] Skip missing directory: dist/emenu-pro/images");
 }
+
+const kioskEmbedSrc = path.resolve(projectRoot, "dist", "kiosklite", ".embed-build");
+const kioskEmbedDest = path.resolve(distDir, "kpos", "kiosklite");
+if (fs.existsSync(path.join(kioskEmbedSrc, "index.html"))) {
+  fs.rmSync(kioskEmbedDest, { recursive: true, force: true });
+  copyRecursive(kioskEmbedSrc, kioskEmbedDest);
+  console.log("[copy-embedded-assets] Copied: kpos/kiosklite");
+} else {
+  console.warn("[copy-embedded-assets] Skip missing directory: dist/kiosklite/.embed-build");
+}
