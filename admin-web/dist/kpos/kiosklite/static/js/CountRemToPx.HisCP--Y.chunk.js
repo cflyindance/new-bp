@@ -1,0 +1,1 @@
+var e=Number((document.documentElement.style.fontSize||`62.5%`).replace(`%`,``))/100,t=t=>window.navigator.userAgent.match(/\(i[^;]+;( U;)? CPU.+Mac OS X/)?t*Number(getComputedStyle(document.documentElement).fontSize.replace(`px`,``)):Math.round(t*16*e);export{t};

@@ -1,0 +1,1 @@
+function e(e){return!e||typeof e!=`object`?{version:``,updateTime:``}:{version:e.version!=null&&e.version!==``?String(e.version):``,updateTime:typeof e.updateTime==`string`&&e.updateTime?e.updateTime:``}}export{e as t};
