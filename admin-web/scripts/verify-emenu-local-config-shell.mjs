@@ -23,6 +23,7 @@ const peripheralProducts = read("src/shell/peripheral-products-control.ts");
 const demoSwitch = read("src/shell/demo-switch-control.ts");
 const kioskShell = read("src/shell/kiosk-local-shell.ts");
 const kioskRoutes = read("src/shell/kiosk-local-routes.ts");
+const emenuEmbedBuild = read("scripts/build-emenu-new-embed.mjs");
 const embeddedAssetCopy = read("scripts/copy-embedded-assets.mjs");
 const embeddedAssetStash = read("scripts/stash-emenu-pro-for-build.mjs");
 const pagesWorkflow = read("../.github/workflows/build-pages.yml");
@@ -121,8 +122,11 @@ expect(i18n, /"shell\.emenuLocalHostIp":\s*"主机 IP"/, "i18n must include the 
     throw new Error("Missing dist/emenu-new/index.html — run: node scripts/build-emenu-new-embed.mjs");
   }
   const embedHtml = fs.readFileSync(embedIndex, "utf8");
-  if (!/\/emenu-new\/assets\//.test(embedHtml)) {
-    throw new Error("dist/emenu-new/index.html must reference /emenu-new/assets/ (built embed, not source)");
+  if (!/(?:src|href)=["']\.\/assets\//.test(embedHtml)) {
+    throw new Error("dist/emenu-new/index.html must use Pages-safe relative ./assets/ URLs");
+  }
+  if (/(?:src|href)=["']\/emenu-new\//.test(embedHtml)) {
+    throw new Error("dist/emenu-new/index.html must not resolve assets from the GitHub Pages domain root");
   }
   if (!fs.existsSync(embedMeta)) {
     throw new Error("Missing dist/emenu-new/.emenu-embed-build.json — rebuild emenu-new embed");
@@ -175,6 +179,9 @@ expect(kioskShell, /\.\/kpos\/kiosklite\/index\.html/, "Kiosk iframe must use a 
 if (/`\/kpos\/kiosklite\/index\.html/.test(kioskShell)) {
   throw new Error("Kiosk iframe must not resolve /kpos from the GitHub Pages domain root");
 }
+expect(emenuEmbedBuild, /const EMBED_BASE = "\.\/"/, "eMenu embed build must use a relative asset base");
+expect(emenuEmbedBuild, /YARN_RC_FILENAME:\s*"\.yarnrc\.runtime\.yml"/, "eMenu build must tolerate omitted Yarn release files");
+expect(emenuEmbedBuild, /YARN_NODE_LINKER:\s*"node-modules"/, "eMenu fallback install must expose local build binaries");
 expect(kioskShell, /data-kiosk-local-kiosk-settings-frame/, "Kiosk shell must embed Kiosk settings via a stable iframe marker");
 expect(kioskShell, /kiosklite\/index\.html[\s\S]*#\/configApp/, "Kiosk settings iframe must open dist/kiosklite#/configApp");
 expect(kioskShell, /bindKioskLocalSessionBridge/, "Kiosk shell must bind sessionKey bridge for config pages");

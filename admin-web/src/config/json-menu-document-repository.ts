@@ -1,5 +1,6 @@
 import { serializeMenuDocument } from "./json-menu-document-serializer";
 import type { MenuDocument, MenuNode } from "./json-menu-document-domain";
+import { resolveMenuDocumentRepositoryMode } from "./json-menu-document-repository-mode";
 
 export interface MenuDocumentRepository {
   readPublished(): Promise<MenuDocument>;
@@ -118,7 +119,10 @@ export class DemoMenuDocumentRepository implements MenuDocumentRepository {
 let repository: MenuDocumentRepository | null = null;
 
 export function getMenuDocumentRepository(): MenuDocumentRepository {
-  if (!repository) repository = import.meta.env.DEV ? new DemoMenuDocumentRepository() : new HttpMenuDocumentRepository();
+  if (!repository) {
+    const mode = resolveMenuDocumentRepositoryMode(import.meta.env.DEV, window.location.hostname);
+    repository = mode === "demo" ? new DemoMenuDocumentRepository() : new HttpMenuDocumentRepository();
+  }
   return repository;
 }
 

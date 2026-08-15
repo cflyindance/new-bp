@@ -15,7 +15,7 @@ const appDir = path.join(root, "vendor", "emenu-new");
 const buildDir = path.join(appDir, "build");
 const publishDir = path.join(root, "dist", "emenu-new");
 const skipInstall = process.argv.includes("--skip-install");
-const EMBED_BASE = "/emenu-new/";
+const EMBED_BASE = "./";
 
 function fail(message) {
   console.error(`[build-emenu-new-embed] ${message}`);
@@ -64,7 +64,11 @@ if (!fs.existsSync(path.join(appDir, "package.json"))) {
 if (!skipInstall) {
   console.log("[build-emenu-new-embed] Installing dependencies in vendor/emenu-new …");
   if (fs.existsSync(path.join(appDir, "yarn.lock"))) {
-    run("yarn", ["install"], appDir);
+    const yarnRelease = path.join(appDir, ".yarn", "releases", "yarn-3.4.1.cjs");
+    const yarnEnv = fs.existsSync(yarnRelease)
+      ? {}
+      : { YARN_RC_FILENAME: ".yarnrc.runtime.yml", YARN_NODE_LINKER: "node-modules" };
+    run("yarn", ["install"], appDir, yarnEnv);
   } else {
     run("npm", ["install"], appDir);
   }
