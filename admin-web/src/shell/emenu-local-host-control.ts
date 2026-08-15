@@ -13,6 +13,18 @@ declare global {
   }
 }
 
+/** 公网临时/命名隧道域名：默认 HTTPS，且不要拼 :22080 */
+export function isPublicHttpsTunnelHost(hostname: string): boolean {
+  const host = hostname.trim().toLowerCase();
+  return (
+    host.endsWith(".trycloudflare.com") ||
+    host.endsWith(".cfargotunnel.com") ||
+    host.endsWith(".ngrok-free.app") ||
+    host.endsWith(".ngrok.io") ||
+    host.endsWith(".loca.lt")
+  );
+}
+
 export function normalizeEmenuKposHost(input: string): string | null {
   let raw = input.trim();
   if (!raw) return null;
@@ -21,9 +33,20 @@ export function normalizeEmenuKposHost(input: string): string | null {
 
   if (!/^https?:\/\//i.test(raw)) {
     if (/^[\w.-]+$/.test(raw)) {
-      raw = `http://${raw}:22080`;
+      // trycloudflare / ngrok 等：https://host（443），不是 http://host:22080
+      if (isPublicHttpsTunnelHost(raw)) {
+        raw = `https://${raw}`;
+      } else {
+        raw = `http://${raw}:22080`;
+      }
     } else if (/^[\w.-]+:\d+$/.test(raw)) {
-      raw = `http://${raw}`;
+      const hostOnly = raw.replace(/:\d+$/, "");
+      if (isPublicHttpsTunnelHost(hostOnly)) {
+        // 用户误填 tunnel:22080 → 仍走 HTTPS 默认端口
+        raw = `https://${hostOnly}`;
+      } else {
+        raw = `http://${raw}`;
+      }
     } else {
       return null;
     }
@@ -33,6 +56,10 @@ export function normalizeEmenuKposHost(input: string): string | null {
     const url = new URL(raw);
     if (!url.hostname) return null;
     if (url.protocol !== "http:" && url.protocol !== "https:") return null;
+    // 隧道域名若被存成 http://…:22080，纠正为 https://host
+    if (isPublicHttpsTunnelHost(url.hostname)) {
+      return `https://${url.hostname}`;
+    }
     return `${url.protocol}//${url.host}`;
   } catch {
     return null;
