@@ -57,6 +57,47 @@ function emptyDir(dir) {
   }
 }
 
+function normalizePagesAssetNames(dir) {
+  const renames = [];
+  const visit = (currentDir) => {
+    for (const entry of fs.readdirSync(currentDir, { withFileTypes: true })) {
+      const source = path.join(currentDir, entry.name);
+      if (entry.isDirectory()) {
+        visit(source);
+        continue;
+      }
+      if (!entry.name.startsWith("_")) continue;
+      const targetName = `pages-${entry.name.slice(1)}`;
+      const target = path.join(currentDir, targetName);
+      fs.renameSync(source, target);
+      renames.push([entry.name, targetName]);
+    }
+  };
+
+  visit(dir);
+  if (renames.length === 0) return;
+
+  const replaceReferences = (currentDir) => {
+    for (const entry of fs.readdirSync(currentDir, { withFileTypes: true })) {
+      const target = path.join(currentDir, entry.name);
+      if (entry.isDirectory()) {
+        replaceReferences(target);
+        continue;
+      }
+      if (!/\.(?:css|html|js|json|map)$/.test(entry.name)) continue;
+      const source = fs.readFileSync(target, "utf8");
+      const updated = renames.reduce(
+        (content, [oldName, newName]) => content.replaceAll(oldName, newName),
+        source,
+      );
+      if (updated !== source) fs.writeFileSync(target, updated, "utf8");
+    }
+  };
+
+  replaceReferences(dir);
+  console.log(`[build-emenu-new-embed] Renamed ${renames.length} Pages-incompatible asset(s).`);
+}
+
 if (!fs.existsSync(path.join(appDir, "package.json"))) {
   fail(`Missing emenu-new source at ${appDir}. Copy the app into vendor/emenu-new first.`);
 }
@@ -97,6 +138,7 @@ if (!fs.existsSync(path.join(buildDir, "index.html"))) {
 console.log(`[build-emenu-new-embed] Publishing to ${publishDir} …`);
 emptyDir(publishDir);
 copyRecursive(buildDir, publishDir);
+normalizePagesAssetNames(publishDir);
 fs.writeFileSync(
   path.join(publishDir, ".emenu-embed-build.json"),
   `${JSON.stringify({ base: EMBED_BASE, builtAt: new Date().toISOString(), source: "vendor/emenu-new" }, null, 2)}\n`,

@@ -146,6 +146,40 @@ expect(i18n, /"shell\.emenuLocalHostIp":\s*"主机 IP"/, "i18n must include the 
       throw new Error(`dist/emenu-new/index.html references an untracked file: ${relativePath}`);
     }
   }
+  const assetDir = path.join(root, "dist", "emenu-new", "assets");
+  const pagesExcludedAsset = fs
+    .readdirSync(assetDir, { recursive: true })
+    .find((relativePath) => path.basename(relativePath).startsWith("_"));
+  if (pagesExcludedAsset) {
+    throw new Error(
+      `dist/emenu-new contains a Jekyll-excluded asset name: assets/${pagesExcludedAsset}`,
+    );
+  }
+  const trackedEmbedFiles = new Set(
+    execFileSync("git", ["ls-files", "--", "dist/emenu-new"], {
+      cwd: root,
+      encoding: "utf8",
+    })
+      .split(/\r?\n/)
+      .filter(Boolean)
+      .map((relativePath) => relativePath.replaceAll("\\", "/")),
+  );
+  const moduleQueue = localReferences
+    .filter((relativePath) => relativePath.endsWith(".js"))
+    .map((relativePath) => path.posix.join("dist/emenu-new", relativePath.slice(2)));
+  const visitedModules = new Set();
+  while (moduleQueue.length > 0) {
+    const relativePath = moduleQueue.shift();
+    if (visitedModules.has(relativePath)) continue;
+    visitedModules.add(relativePath);
+    if (!trackedEmbedFiles.has(relativePath)) {
+      throw new Error(`dist/emenu-new module graph contains an unpublished file: ${relativePath}`);
+    }
+    const moduleSource = fs.readFileSync(path.join(root, relativePath), "utf8");
+    for (const match of moduleSource.matchAll(/(?:from\s*|import\s*\()\s*["'](\.\/[^"']+\.js)["']/g)) {
+      moduleQueue.push(path.posix.join(path.posix.dirname(relativePath), match[1]));
+    }
+  }
   if (!fs.existsSync(embedMeta)) {
     throw new Error("Missing dist/emenu-new/.emenu-embed-build.json — rebuild emenu-new embed");
   }
@@ -200,6 +234,7 @@ if (/`\/kpos\/kiosklite\/index\.html/.test(kioskShell)) {
 expect(emenuEmbedBuild, /const EMBED_BASE = "\.\/"/, "eMenu embed build must use a relative asset base");
 expect(emenuEmbedBuild, /YARN_RC_FILENAME:\s*"\.yarnrc\.runtime\.yml"/, "eMenu build must tolerate omitted Yarn release files");
 expect(emenuEmbedBuild, /YARN_NODE_LINKER:\s*"node-modules"/, "eMenu fallback install must expose local build binaries");
+expect(emenuEmbedBuild, /normalizePagesAssetNames/, "eMenu build must rename Jekyll-excluded underscore assets");
 expect(kioskShell, /data-kiosk-local-kiosk-settings-frame/, "Kiosk shell must embed Kiosk settings via a stable iframe marker");
 expect(kioskShell, /kiosklite\/index\.html[\s\S]*#\/configApp/, "Kiosk settings iframe must open dist/kiosklite#/configApp");
 expect(kioskShell, /bindKioskLocalSessionBridge/, "Kiosk shell must bind sessionKey bridge for config pages");
