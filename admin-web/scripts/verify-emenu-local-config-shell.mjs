@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { execFileSync } from "node:child_process";
 
 const root = process.cwd();
 
@@ -127,6 +128,23 @@ expect(i18n, /"shell\.emenuLocalHostIp":\s*"主机 IP"/, "i18n must include the 
   }
   if (/(?:src|href)=["']\/emenu-new\//.test(embedHtml)) {
     throw new Error("dist/emenu-new/index.html must not resolve assets from the GitHub Pages domain root");
+  }
+  const localReferences = [...embedHtml.matchAll(/(?:src|href)=["'](\.\/[^"']+)["']/g)].map((match) =>
+    match[1].split(/[?#]/, 1)[0],
+  );
+  for (const localReference of localReferences) {
+    const relativePath = path.posix.join("dist/emenu-new", localReference.slice(2));
+    if (!fs.existsSync(path.join(root, relativePath))) {
+      throw new Error(`dist/emenu-new/index.html references a missing file: ${relativePath}`);
+    }
+    try {
+      execFileSync("git", ["ls-files", "--error-unmatch", "--", relativePath], {
+        cwd: root,
+        stdio: "ignore",
+      });
+    } catch {
+      throw new Error(`dist/emenu-new/index.html references an untracked file: ${relativePath}`);
+    }
   }
   if (!fs.existsSync(embedMeta)) {
     throw new Error("Missing dist/emenu-new/.emenu-embed-build.json — rebuild emenu-new embed");
