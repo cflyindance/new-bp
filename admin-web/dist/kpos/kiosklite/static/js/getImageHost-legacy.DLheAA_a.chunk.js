@@ -1,0 +1,1 @@
+(function(){System.register([`./utils-legacy.B4eSia5A.chunk.js`],function(e,t){var n,r;return{setters:[function(e){n=e.Q,r=e.a}],execute:function(){e(`t`,r(`kioskServerIP`)||n)}}})})();
