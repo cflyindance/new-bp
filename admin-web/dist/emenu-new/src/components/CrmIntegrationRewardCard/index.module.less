@@ -1,0 +1,138 @@
+.rewardCard {
+  height: 252px;
+  min-height: 252px;
+  box-sizing: border-box;
+  border-radius: 1.25rem;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  cursor: pointer;
+  will-change: opacity, transform;
+  transition:
+    opacity 0.15s ease;
+}
+
+.disabled {
+  .header,
+  .body {
+    opacity: 0.5;
+  }
+}
+
+.header {
+  height: 104px;
+  min-height: 104px;
+  box-sizing: border-box;
+  padding: 12px 16px 10px;
+  color: #fff;
+  background: #96272f;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.headerTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 22px;
+  overflow: hidden;
+}
+
+.type {
+  min-width: 0;
+  font-size: 0.75rem;
+  font-weight: bold;
+  line-height: 1.125rem;
+  opacity: 0.9;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.name {
+  min-height: 0;
+  font-size: 0.75rem;
+  font-weight: bold;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  word-break: break-word;
+}
+
+.threshold {
+  color: #666;
+  font-size: 14px;
+  line-height: 20px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  word-break: break-word;
+}
+
+.eligibleItemText {
+  color: #666;
+  font-size: 14px;
+  line-height: 20px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.eligibleItemText {
+  margin-bottom: 0;
+}
+
+.discount {
+  flex: 0 1 auto;
+  max-width: 58%;
+  min-width: 0;
+  font-size: 0.6rem;
+  font-weight: bold;
+  line-height: 1.25rem;
+  white-space: nowrap;
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.body {
+  flex: 1;
+  padding: 12px 16px 10px;
+  display: flex;
+  flex-direction: column;
+}
+
+.bottomArea {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.footer {
+  margin-top: auto;
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.expiration {
+  color: #666;
+  font-size: 14px;
+  line-height: 20px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.voucherCount {
+  color: #9f2630;
+  font-size: 18px;
+  font-weight: 700;
+  white-space: nowrap;
+}

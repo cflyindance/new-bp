@@ -72,6 +72,9 @@ export interface NavBlueprintCustomNode {
   settingsPath?: string;
   /** L3 分组键 */
   groupKey?: string;
+  /** 是否作为商家后台可打开页面发布。 */
+  /** 稳定引用应用注册中心中的页面，不复制远端入口。 */
+  /** 服务订阅与功能权限；发布范围由 release assignment 决定。 */
   sortOrder: number;
   createdAt: string;
 }

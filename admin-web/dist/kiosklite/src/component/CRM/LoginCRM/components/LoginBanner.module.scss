@@ -1,0 +1,151 @@
+.containerBox {
+  width: 100%;
+  padding: 4.4rem 6.7rem 4.4rem 8.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 22rem;
+  box-sizing: border-box;
+  background-color: rgba(42, 40, 34, 1);
+
+  .defaultBox {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 6.7rem 0 0;
+  }
+
+  .bannerText {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .title {
+    width: auto;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .notMember {
+    color: rgba(255, 255, 255, 0.6);
+    font-weight: 800;
+    font-style: italic;
+    font-size: 2.6rem;
+  }
+
+  .joinNow {
+    color: #fff;
+    font-weight: 800;
+    font-style: italic;
+    font-size: 3.4rem;
+  }
+
+  .benefitsList {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    margin-left: 4rem;
+    padding: 0 0 0 4rem;
+    border-left: 0.2rem solid rgba(117, 117, 117, 1);
+
+    .benefits {
+      color: rgba(255, 255, 255, 0.8);
+      font-weight: 500;
+      font-size: 2.4rem;
+      display: flex;
+      align-items: center;
+
+      img {
+        width: 3.4rem;
+        margin-right: 1.35rem;
+      }
+    }
+
+    .benefitsGift {
+      margin: 2.4rem 0;
+    }
+
+    .benefitsGift::before,
+    .benefitsGift::after {
+      content: '';
+      margin: 0;
+    }
+  }
+
+  .joinBtn {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 2.4rem;
+    font-weight: 700;
+    border-radius: 5.5rem;
+    padding: 1.8rem 5rem;
+    box-sizing: border-box;
+    border: 0.2rem solid rgba(255, 255, 255, 0.3);
+    word-break: keep-all;
+    line-height: 200%;
+  }
+
+  .bannerBgImg {
+    width: 100%;
+  }
+}
+
+.picContainerBox {
+  padding: 0;
+  background: none;
+}
+
+@media screen and (max-width: 1201px) {
+  .containerBox {
+    padding: 4.4rem;
+
+    .defaultBox {
+      align-items: flex-start;
+      padding: 0;
+    }
+
+    .bannerText {
+      flex-direction: column;
+      align-items: flex-start;
+      width: 100%;
+    }
+
+    .title {
+      width: 100%;
+    }
+
+    .notMember {
+      font-size: 2.6rem;
+    }
+
+    .joinNow {
+      font-size: 3.4rem;
+    }
+
+    .benefitsList {
+      flex-direction: row;
+      align-items: center;
+      margin-left: 0;
+      padding: 0 0 0 0;
+      border-left: none;
+
+      .benefitsGift::before,
+      .benefitsGift::after {
+        content: '|';
+        margin: 0 3.5rem;
+      }
+
+      .benefits {
+        margin-bottom: 0;
+        margin-top: 2.4rem;
+      }
+    }
+  }
+
+  .picContainerBox {
+    padding: 0;
+    background: none;
+  }
+}

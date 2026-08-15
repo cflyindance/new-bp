@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* 勿扫描独立嵌入应用源码/产物，避免 Vite CSS 分析误解析其静态资源路径 */
+@source not "../../vendor";
+@source not "../../dist";
+@source not "../../.cache";
+
 /* Tailwind v4 — 设计令牌（对齐 tailwind-design-system SKILL：OKLCH + 语义色） */
 @theme {
   --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;

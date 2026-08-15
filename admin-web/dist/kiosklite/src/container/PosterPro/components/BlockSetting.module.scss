@@ -1,0 +1,13 @@
+.ComponentPropertyWrapper {
+  height: calc(100% - 150px);
+  overflow: auto;
+  .title {
+    margin-bottom:  16px;
+    font-weight: bold;
+  }
+  :global {
+    .ant-space{
+      width: 100%;
+    }
+  }
+}

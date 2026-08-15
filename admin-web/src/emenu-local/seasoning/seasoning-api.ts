@@ -85,7 +85,7 @@ export function createSeasoningApi(client: SeasoningRequest = request) {
   createProductSelection: () => client<ProductSelectionDraft>("/product-selections", { method: "POST", body: "{}" }),
   productSelection: (token: string) => client<ProductSelectionDraft>(`/product-selections/${encodeURIComponent(token)}`),
   updateProductSelection: (token: string, body:
-    | { operation: "dish"; productId: string; selected: boolean }
+    | { operation: "dish"; productId: string; groupId?: string; selected: boolean }
     | { operation: "scope"; level: "group" | "category" | "search"; groupId?: string; categoryId?: string; query?: string; selected: boolean }) =>
     client<ProductSelectionDraft>(`/product-selections/${encodeURIComponent(token)}`, { method: "PATCH", body: JSON.stringify(body) }),
   discardProductSelection: (token: string) => client<void>(`/product-selections/${encodeURIComponent(token)}`, { method: "DELETE" }),

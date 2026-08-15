@@ -1,0 +1,117 @@
+.sideNav {
+  height: calc(100vh - 34rem);
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.sectionInfo {
+  position: relative;
+  padding: 1.4rem 0 7rem 4rem;
+}
+.sectionInfo::before {
+  content: '';
+  position: absolute;
+  top: 3.4rem;
+  left: 2rem;
+  height: 100%;
+  width: 1px;
+  border-left: 3px dashed var(--primary-color);
+  transform: translateX(-50%);
+}
+.sectionInfo::after {
+  content: '';
+  position: absolute;
+  left: 2rem;
+  top: 1.4rem;
+  width: 1.8rem;
+  height: 1.8rem;
+  border-radius: 50%;
+  border: 1px solid var(--primary-color);
+  background: #fff;
+  transform: translateX(-50%);
+}
+.sectionInfo:last-child::before {
+  display: none;
+}
+.sectionName {
+  color: #333;
+  font-size: 3rem;
+  font-weight: bold;
+}
+.noAllow {
+  color: #333;
+  font-size: 2.4rem;
+  width: 90%;
+  color: #f00;
+}
+.rangTip {
+  width: 94%;
+  color: #999;
+  font-size: 2.4rem;
+  margin-top: 1rem;
+}
+.mustDish {
+  color: #f00;
+  width: 94%;
+  font-size: 2.4rem;
+  margin-top: 1rem;
+}
+.sectionInfoSelected {
+  border-radius: 1rem;
+  background-color: var(--primary-color);
+  .rangTip,
+  .sectionName {
+    color: #fff;
+  }
+}
+.sectionInfoSelected.sectionInfo::before {
+  border-color: #fff;
+}
+.incompleted {
+  color: #f00;
+}
+.sideBtnBox {
+  margin-left: -2rem;
+  display: flex;
+  .btnPrev,
+  .btnNext {
+    width: calc((100% - 4rem) / 2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 2rem auto;
+    padding: 1.4rem 0;
+    color: #fff;
+    font-size: 2.8rem;
+    border-radius: 10rem;
+  }
+  .noActivedPrev,
+  .noActivedNext {
+    background: var(--primary-color-disabled);
+    color: #0000004d;
+  }
+  .activedPrev,
+  .activedNext {
+    background-color: var(--primary-color);
+  }
+
+  .btnPrev {
+    i {
+      transform: rotate(180deg);
+      margin-right: 0.5rem;
+    }
+  }
+  .btnNext {
+    i {
+      margin-left: 0.5rem;
+    }
+  }
+}
+
+[data-lang='french'] .btnPrev {
+  font-size: 2.4rem;
+}
+[data-lang='french'] .btnNext {
+  font-size: 2.4rem;
+}

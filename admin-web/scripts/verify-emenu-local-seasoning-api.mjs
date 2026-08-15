@@ -145,6 +145,13 @@ try {
   const selectedGroupNode = menuAfter.groups.find((group) => group.id === activeGroup);
   assert(selectedGroupNode.selectedCount === selectedGroupNode.selectableCount, "Group selected counts must drive checked state");
   assert(menuAfter.dishes.items.every((dish) => !dish.selectable || dish.selected), "Visible dish states must follow the server draft");
+  const otherGroupAfterMain = menuAfter.groups.find((group) => group.id !== activeGroup);
+  assert(otherGroupAfterMain && otherGroupAfterMain.selectedCount === 0, "Selecting one group must not mark overlapping products as selected in another group path");
+  const featuredAfterMain = await fetch(`${base}/menu-structure?selectionToken=${selection.token}&groupId=group-featured&limit=50`, {
+    headers: sessionHeaders,
+  }).then((response) => response.json());
+  assert(featuredAfterMain.groups.find((group) => group.id === "group-featured")?.selectedCount === 0, "Featured group path must stay unselected after selecting main group");
+  assert(featuredAfterMain.dishes.items.every((dish) => !dish.selected), "Featured dishes must stay unchecked when selected only via another group path");
 
   const searchSelection = await fetch(`${base}/product-selections`, { method: "POST", headers: sessionHeaders, body: "{}" }).then((response) => response.json());
   const searchScopeResponse = await fetch(`${base}/product-selections/${searchSelection.token}`, {

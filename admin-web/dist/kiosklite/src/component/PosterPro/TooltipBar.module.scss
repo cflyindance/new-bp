@@ -1,0 +1,16 @@
+.tooltipBar {
+  position: absolute;
+  top: -30px;
+  right: 0;
+  font-size: 22px;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  >svg {
+    background: #fba600;
+    padding: 2px;
+    cursor: pointer;
+    font-size: 22px;
+  }
+}

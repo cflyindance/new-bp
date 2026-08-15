@@ -1,0 +1,42 @@
+.alertDialog {
+  z-index: 1301;
+}
+.alertWrapper {
+  background: #fff;
+  padding: 32px;
+  width: 368px;
+  .alertTitle {
+    font-size: 24px;
+    font-weight: bold;
+    text-align: center;
+    line-height: 28px;
+  }
+  .alertMsg {
+    margin-top: 16px;
+    margin-bottom: 12px;
+    font-size: 20px;
+    line-height: 26px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    max-height: 240px;
+    overflow: auto;
+    overflow-wrap: anywhere;
+    padding-right: 8px;
+    &::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+      border-radius: 10px;
+      background-color: #aaaaaa;
+    }
+    &::-webkit-scrollbar-thumb {
+      border-radius: 10px;
+      background-color: #96272f;
+    }
+  }
+  .confirmBtn {
+    width: 100%;
+    height: 60px;
+    font-size: 20px;
+  }
+}

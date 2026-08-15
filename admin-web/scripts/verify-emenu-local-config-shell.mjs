@@ -32,6 +32,8 @@ const orderedRoutes = [
   "/emenu-local/category-settings",
   "/emenu-local/menu-category-settings",
   "/emenu-local/seasoning-settings",
+  "/emenu-local/emenu",
+  "/emenu-local/emenu-settings",
 ];
 
 const orderedKioskRoutes = [
@@ -47,6 +49,8 @@ const orderedKioskRoutes = [
   "/kiosk-local/cover-image",
   "/kiosk-local/logo",
   "/kiosk-local/posters",
+  "/kiosk-local/kiosk",
+  "/kiosk-local/kiosk-settings",
 ];
 
 let previousIndex = -1;
@@ -68,8 +72,59 @@ for (const route of orderedKioskRoutes) {
 expect(routes, /EMENU_LOCAL_DEFAULT_PATH\s*=\s*"\/emenu-local\/device-settings"/, "Default eMenu route must be device settings");
 expect(shell, /data-emenu-local-nav/, "eMenu shell must expose stable navigation markers");
 expect(shell, /data-emenu-local-placeholder/, "eMenu shell must expose a stable placeholder marker");
+expect(shell, /data-emenu-local-emenu-frame/, "eMenu shell must embed emenu-new via a stable iframe marker");
+expect(shell, /emenu-new\/index\.html/, "eMenu shell must load dist/emenu-new/index.html");
+expect(shell, /data-emenu-local-emenu-settings-frame/, "eMenu shell must embed eMenu settings via a stable iframe marker");
+expect(shell, /emenu-new\/index\.html[\s\S]*#\/setting/, "eMenu settings iframe must open dist/emenu-new#/setting");
 expect(shell, /aria-current=/, "eMenu shell navigation must expose active state");
 expect(shell, /mountDemoSwitchFab\(\{\s*showVersionSwitch:\s*false\s*\}\)/, "eMenu shell must mount Demo switch without version control");
+expect(shell, /renderEmenuHostIpControl/, "eMenu shell must render host IP control next to theme toggle");
+expect(shell, /bindEmenuHostIpControl/, "eMenu shell must bind host IP control");
+{
+  const hostUi = read("src/shell/emenu-local-host-control-ui.ts");
+  expect(hostUi, /data-emenu-host-ip-control/, "eMenu host IP control must expose a stable marker");
+  expect(hostUi, /emenu-host-ip-apply/, "eMenu host IP control must expose an apply action");
+}
+expect(i18n, /"shell\.emenuLocalEmenu":\s*"eMenu"/, "i18n must include the eMenu nav title");
+expect(i18n, /"shell\.emenuLocalEmenuSettings":\s*"设置"/, "i18n must include the eMenu settings nav title");
+expect(i18n, /"shell\.emenuLocalHostIp":\s*"主机 IP"/, "i18n must include the eMenu host IP label");
+
+{
+  const viteConfig = read("vite.config.ts");
+  expect(viteConfig, /attachEmenuKposDynamicProxy/, "Vite must attach a dynamic /kpos proxy for embedded emenu-new");
+  expect(viteConfig, /EMENU_KPOS_PROXY_TARGET|localhost:22080/, "Vite /kpos proxy must target the POS host (default localhost:22080)");
+  expect(viteConfig, /ws:\s*true/, "Vite /kpos proxy must enable WebSocket forwarding");
+  expect(viteConfig, /menusifu-emenu-kpos-target/, "Vite /kpos proxy must honor the eMenu host IP cookie");
+  expect(viteConfig, /proxy\.web\(req,\s*res,\s*\{\s*target:/, "Vite /kpos proxy must pass per-request target (Vite ignores router)");
+  expect(viteConfig, /proxy\.ws\(req,\s*socket,\s*head,\s*\{\s*target:/, "Vite /kpos WS proxy must pass per-request target");
+  expect(viteConfig, /\/kpos\/kiosklite/, "Vite must serve local kiosklite embed under /kpos/kiosklite");
+  expect(
+    viteConfig,
+    /pathname === "\/kpos\/emenu\/version\.json"[\s\S]*"dist",\s*"emenu-new",\s*"version\.json"/,
+    "Vite must serve local dist/emenu-new/version.json for /kpos/emenu/version.json",
+  );
+  if (/["']\/emenu["']\s*:[\s\S]*\/kpos\/emenu/.test(viteConfig)) {
+    throw new Error("Vite must not proxy /emenu to POS; eMenu and settings must use dist/emenu-new");
+  }
+  if (/router:\s*\(req/.test(viteConfig)) {
+    throw new Error("Vite must not rely on http-proxy-middleware router (ignored by Vite's http-proxy)");
+  }
+}
+
+{
+  const embedIndex = path.join(root, "dist", "emenu-new", "index.html");
+  const embedMeta = path.join(root, "dist", "emenu-new", ".emenu-embed-build.json");
+  if (!fs.existsSync(embedIndex)) {
+    throw new Error("Missing dist/emenu-new/index.html — run: node scripts/build-emenu-new-embed.mjs");
+  }
+  const embedHtml = fs.readFileSync(embedIndex, "utf8");
+  if (!/\/emenu-new\/assets\//.test(embedHtml)) {
+    throw new Error("dist/emenu-new/index.html must reference /emenu-new/assets/ (built embed, not source)");
+  }
+  if (!fs.existsSync(embedMeta)) {
+    throw new Error("Missing dist/emenu-new/.emenu-embed-build.json — rebuild emenu-new embed");
+  }
+}
 
 expect(appShellMode, /"emenu-local"/, "App shell mode must include emenu-local");
 expect(appShellMode, /isEmenuLocalShellMode/, "App shell mode must expose eMenu mode detection");
@@ -103,9 +158,67 @@ expect(demoSwitch, /data-demo-switch-panel-scroll/, "Demo panel must constrain s
 expect(demoSwitch, /\.focus\(/, "Demo panel must manage keyboard focus");
 
 expect(kioskRoutes, /KIOSK_LOCAL_DEFAULT_PATH\s*=\s*"\/kiosk-local\/service-settings"/, "Default Kiosk route must be service settings");
+expect(kioskRoutes, /path:\s*"\/kiosk-local\/kiosk"/, "Kiosk routes must include the Kiosk embed entry under posters");
+expect(kioskRoutes, /path:\s*"\/kiosk-local\/kiosk-settings"/, "Kiosk routes must include the Kiosk settings embed entry");
 expect(kioskShell, /data-kiosk-local-shell/, "Kiosk shell must expose a stable shell marker");
 expect(kioskShell, /data-kiosk-local-nav/, "Kiosk shell must expose stable navigation markers");
 expect(kioskShell, /data-kiosk-local-placeholder/, "Kiosk shell must expose stable placeholder markers");
+expect(kioskShell, /data-kiosk-local-kiosk-frame/, "Kiosk shell must embed kiosklite via a stable iframe marker");
+expect(kioskShell, /aspect-video/, "Kiosk embed pages must use a fixed 16:9 aspect container");
+expect(kioskShell, /data-kiosk-embed-stage/, "Kiosk embed pages must expose a scale stage marker");
+expect(kioskShell, /bindKioskEmbedViewportFit/, "Kiosk shell must fit 1920x1080 iframe into the 16:9 stage");
+expect(kioskShell, /kiosklite\/index\.html/, "Kiosk shell must load kiosklite/index.html");
+expect(kioskShell, /\/kpos\/kiosklite\/index\.html/, "Kiosk iframe must load under /kpos/kiosklite so API base is same-origin /kpos/");
+expect(kioskShell, /data-kiosk-local-kiosk-settings-frame/, "Kiosk shell must embed Kiosk settings via a stable iframe marker");
+expect(kioskShell, /kiosklite\/index\.html[\s\S]*#\/configApp/, "Kiosk settings iframe must open dist/kiosklite#/configApp");
+expect(kioskShell, /bindKioskLocalSessionBridge/, "Kiosk shell must bind sessionKey bridge for config pages");
+expect(kioskShell, /renderEmenuHostIpControl/, "Kiosk shell must render host IP control next to theme toggle");
+expect(kioskShell, /bindEmenuHostIpControl/, "Kiosk shell must bind host IP control (same /kpos cookie as eMenu)");
+{
+  const hostControl = read("src/shell/emenu-local-host-control.ts");
+  expect(hostControl, /data-kiosk-local-kiosk-frame/, "Host apply must reload Kiosk embed iframes");
+  expect(hostControl, /data-kiosk-local-kiosk-settings-frame/, "Host apply must reload Kiosk settings iframes");
+  expect(hostControl, /reloadKposHostEmbedFrames/, "Host control must expose shared Kiosk/eMenu iframe reload");
+  expect(hostControl, /clearKioskLocalSessionCache/, "Host apply must clear Kiosk session cache for the new POS host");
+}
+{
+  const bridge = read("src/shell/kiosk-local-session-bridge.ts");
+  expect(bridge, /clientInstanceLogin/, "Kiosk session bridge must login via POS clientInstanceLogin");
+  expect(bridge, /type:\s*"sessionKey"/, "Kiosk session bridge must postMessage sessionKey to iframe");
+  expect(bridge, /getSessionKey/, "Kiosk session bridge must handle getSessionKey from iframe");
+  expect(bridge, /clearKioskLocalSessionCache/, "Kiosk session bridge must expose cache clear for host switch");
+}
+expect(i18n, /"shell\.kioskLocalKiosk":\s*"Kiosk"/, "i18n must include the Kiosk nav title");
+expect(i18n, /"shell\.kioskLocalKioskSettings":\s*"设置"/, "i18n must include the Kiosk settings nav title");
+
+{
+  const viteConfig = read("vite.config.ts");
+  expect(viteConfig, /route:\s*"kiosklite"/, "Vite must statically serve local kiosklite embed build");
+  expect(viteConfig, /"kiosklite",\s*"\.embed-build"/, "Vite kiosklite route must point at dist/kiosklite/.embed-build");
+  if (/["']\/kiosklite["']\s*:[\s\S]*\/kpos\/kiosklite/.test(viteConfig)) {
+    throw new Error("Vite must not proxy /kiosklite to POS; Kiosk pages must use local dist/kiosklite embed");
+  }
+}
+
+{
+  const embedIndex = path.join(root, "dist", "kiosklite", ".embed-build", "index.html");
+  const embedMeta = path.join(root, "dist", "kiosklite", ".embed-build", ".kiosk-embed-build.json");
+  if (!fs.existsSync(embedIndex)) {
+    throw new Error("Missing dist/kiosklite/.embed-build/index.html — run: node scripts/build-kiosklite-embed.mjs");
+  }
+  const embedHtml = fs.readFileSync(embedIndex, "utf8");
+  // CRA/host builds use ./static/; local vite embed may use /kiosklite/assets/
+  if (
+    !/\/kiosklite\/(static|assets)\//.test(embedHtml) &&
+    !/\.\/(static|assets)\//.test(embedHtml) &&
+    !/\/kiosklite\//.test(embedHtml)
+  ) {
+    throw new Error("dist/kiosklite/.embed-build/index.html must reference kiosklite static/assets (built embed, not source)");
+  }
+  if (!fs.existsSync(embedMeta)) {
+    throw new Error("Missing dist/kiosklite/.embed-build/.kiosk-embed-build.json — rebuild kiosklite embed");
+  }
+}
 expect(kioskShell, /mountDemoSwitchFab\(\{\s*showVersionSwitch:\s*false\s*\}\)/, "Kiosk shell must mount Demo switch without version control");
 
 expect(main, /isEmenuLocalContentPath/, "Main mount must recognize eMenu routes");

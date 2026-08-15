@@ -1,0 +1,31 @@
+.headerWrapper {
+  overflow: hidden;
+  .headerType {
+    display: flex;
+    justify-content: center;
+    padding-bottom: 12px;
+    .item {
+      width: 100px;
+      height: 40px;
+      line-height: 40px;
+      background: #0c122b;
+      font-size: 18px;
+      color: #bdbdbd;
+      text-align: center;
+      &.selected {
+        color: #e3c18a;
+        font-weight: bold;
+        background: #731e24;
+      }
+      &.left {
+        border-radius: 10px 0px 0px 10px;
+      }
+      &.right {
+        border-radius: 0px 10px 10px 0px;
+      }
+      &.disabled {
+        opacity: 0.5;
+      }
+    }
+  }
+}

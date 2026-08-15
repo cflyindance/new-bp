@@ -1,0 +1,46 @@
+<!doctype html><html lang="en"><head><script type="module" src="/emenu-new/assets/polyfills-modern.437cf165.js"></script><script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+        new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+      j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+      'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+  })(window,document,'script','dataLayer','GTM-MQRW585');</script><meta charset="utf-8"/><link rel="apple-touch-icon" href="/emenu-new/apple-touch-icon.png"/><link rel="icon" href="/emenu-new/favicon.ico"/><link rel="mask-icon" href="/emenu-new/masked-icon.svg" color="#ffffff"/><meta name="msapplication-TileColor" content="#ffffff"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/><meta name="theme-color" content="#ffffff"/><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=0"/><meta name="description" content="Menusifu Emenu App"/><title>Emenu App v5.11.83</title><style>#root{width:100%;height:100%}#perchDiv{width:100%;background:#fff}</style><script type="module" crossorigin src="/emenu-new/assets/index.9c9c44b3.js"></script><link rel="modulepreload" href="/emenu-new/assets/react.f65d2b19.js"><link rel="modulepreload" href="/emenu-new/assets/mui.9162859d.js"><link rel="modulepreload" href="/emenu-new/assets/antd.6f3c4ae8.js"><link rel="stylesheet" href="/emenu-new/assets/index.38c799cd.css"></head><body><noscript>You need to enable JavaScript to run this app.</noscript><noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-MQRW585" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript><div id="root"></div><div id="perchDiv"></div><script src="/emenu-new/bridge.js"></script><script>const posSDKSets = [
+      {
+        localSrc:
+          'http://localhost:22080/kpos/img/gallery/js/calculator.js?update=TstFrt',
+        src: '/kpos/img/gallery/js/calculator.js?update=TstFrt',
+      },
+      {
+        localSrc:
+          'http://localhost:22080/kpos/img/gallery/js/promotion.js?update=TstFrt',
+        src: '/kpos/img/gallery/js/promotion.js?update=TstFrt',
+      },
+      {
+        localSrc:
+          'http://localhost:22080/kpos/img/gallery/js/market.js?update=TstNew2',
+        src: '/kpos/img/gallery/js/market.js?update=TstNew2',
+      },
+    ]
+    const isLocalhost = window.location.hostname.includes('localhost')
+    posSDKSets.forEach(({ localSrc, src }) => {
+      const scriptElement = document.createElement('script')
+      scriptElement.src = isLocalhost ? localSrc : src
+      document.head.appendChild(scriptElement)
+    })</script><script src="../js/jquery-2.0.3.min.js"></script><script>const bridge = window.WebViewJavascriptBridge;
+    
+    if (bridge) {
+      // 设备信息
+      bridge.callHandler('getDeviceInfo', {}, function(res) {
+        if (res.code > 0 && res.message === 'Success') {
+          const {uuid, btName, name, modelName, webviewVersion, deviceType, version, appVersion} = res.body;
+          window.deviceUuId = uuid;
+          window.deviceName = btName || name || modelName
+          window.webviewVersion = webviewVersion
+          window.deviceType = deviceType
+          window.version = version
+          window.appVersion = appVersion
+        }
+      });
+    }
+    // else {
+    //   window.deviceUuId = '05d4ca04abfa7887AAA_test' // 本地调试用
+    //   window.deviceName = 'T40 PC_test'
+    // }</script></body></html>

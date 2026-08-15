@@ -384,7 +384,7 @@ class BatchWizardController {
   }
 
   private async loadMenuStructure(
-    showLoading = true,
+    showLoading = false,
     cursor?: string,
     append = false,
     query = this.appliedProductQuery,
@@ -412,10 +412,8 @@ class BatchWizardController {
     } catch (error) {
       await this.recoverFromError(error);
     } finally {
-      if (showLoading) {
-        this.loading = false;
-        this.render();
-      }
+      if (showLoading) this.loading = false;
+      this.render();
     }
   }
 
@@ -449,9 +447,7 @@ class BatchWizardController {
 
   private async updateProductSelection(body: Parameters<typeof seasoningApi.updateProductSelection>[1]): Promise<void> {
     if (!this.productSelection) return;
-    this.loading = true;
     this.error = "";
-    this.render();
     try {
       this.productSelection = await seasoningApi.updateProductSelection(this.productSelection.token, body);
       this.clearAfterProductChange();
@@ -459,8 +455,6 @@ class BatchWizardController {
       await this.loadMenuStructure(false);
     } catch (error) {
       await this.recoverFromError(error);
-    } finally {
-      this.loading = false;
       this.render();
     }
   }
@@ -687,23 +681,23 @@ class BatchWizardController {
       return;
     }
     if (target.hasAttribute("data-search-products")) {
-      await this.loadMenuStructure(true, undefined, false, this.productQuery, "", "");
+      await this.loadMenuStructure(false, undefined, false, this.productQuery, "", "");
       return;
     }
     const groupId = target.dataset.menuActivateGroup;
     if (groupId && this.menu) {
       this.menu = { ...this.menu, activeGroupId: groupId, activeCategoryId: "" };
-      await this.loadMenuStructure();
+      await this.loadMenuStructure(false);
       return;
     }
     const categoryId = target.dataset.menuActivateCategory;
     if (categoryId && this.menu) {
       this.menu = { ...this.menu, activeCategoryId: categoryId };
-      await this.loadMenuStructure();
+      await this.loadMenuStructure(false);
       return;
     }
     if (target.hasAttribute("data-menu-load-more") && this.menu?.dishes.nextCursor) {
-      await this.loadMenuStructure(true, this.menu.dishes.nextCursor, true);
+      await this.loadMenuStructure(false, this.menu.dishes.nextCursor, true);
       return;
     }
     const togglePreviewProductId = target.dataset.togglePreviewProduct;
@@ -825,9 +819,27 @@ class BatchWizardController {
     const menuLevel = target.dataset.menuToggleLevel;
     const menuId = target.dataset.menuToggleId;
     if (menuLevel && menuId && this.menu) {
-      if (menuLevel === "dish") await this.updateProductSelection({ operation: "dish", productId: menuId, selected: target.checked });
-      else if (menuLevel === "group") await this.updateProductSelection({ operation: "scope", level: "group", groupId: menuId, query: this.appliedProductQuery, selected: target.checked });
-      else if (menuLevel === "category") await this.updateProductSelection({ operation: "scope", level: "category", groupId: this.menu.activeGroupId, categoryId: menuId, query: this.appliedProductQuery, selected: target.checked });
+      if (menuLevel === "dish") {
+        await this.updateProductSelection({
+          operation: "dish",
+          productId: menuId,
+          groupId: this.menu.activeGroupId,
+          selected: target.checked,
+        });
+      } else if (menuLevel === "group") {
+        this.menu = { ...this.menu, activeGroupId: menuId, activeCategoryId: "" };
+        await this.updateProductSelection({ operation: "scope", level: "group", groupId: menuId, query: this.appliedProductQuery, selected: target.checked });
+      } else if (menuLevel === "category") {
+        this.menu = { ...this.menu, activeCategoryId: menuId };
+        await this.updateProductSelection({
+          operation: "scope",
+          level: "category",
+          groupId: this.menu.activeGroupId,
+          categoryId: menuId,
+          query: this.appliedProductQuery,
+          selected: target.checked,
+        });
+      }
       return;
     }
     const changedPriceOptionId = target.dataset.actionOptionPrice;

@@ -1,0 +1,84 @@
+.contentWrapper {
+  width: 380px;
+  padding: 24px;
+  .title {
+    text-align: center;
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 24px;
+  }
+  .tips {
+    text-align: center;
+    font-size: 14px;
+    margin: -16px 0 16px;
+    color: #96272f;
+    font-weight: bold;
+  }
+  .closeBtn {
+    position: absolute;
+    right: 16px;
+    top: 16px;
+  }
+  .inputLabel {
+    font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 12px;
+  }
+  .phoneInputWrapper {
+    position: relative;
+    border: 1px solid #e0e0e0;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    margin-bottom: 24px;
+    border-radius: 5px;
+    .addon {
+      position: absolute;
+      left: 18px;
+      top: 13px;
+    }
+    .inputNum {
+      height: 36px;
+      outline: none;
+      border: none;
+      font-size: 14px;
+      width: 100%;
+      padding-left: 40px;
+    }
+    .addAfter {
+      position: absolute;
+      right: 18px;
+      top: 13px;
+      font-size: 16px;
+      font-weight: bold;
+      color: #96272f;
+      &.disabled_addAfter {
+        color: #828282;
+      }
+    }
+  }
+
+  .loginBtn {
+    line-height: 53px;
+    text-align: center;
+    color: #fff;
+    font-size: 18px;
+    font-weight: bold;
+    background: #96272f;
+    border-radius: 5px;
+    &.disabled_login {
+      opacity: 0.5;
+    }
+  }
+
+  .loginLater {
+    font-size: 18px;
+    margin-top: 12px;
+    line-height: 53px;
+    text-align: center;
+    color:  #96272f;
+    border: 1px solid  #96272f;
+    border-radius: 5px;
+  }
+}

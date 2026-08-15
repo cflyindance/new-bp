@@ -1,0 +1,124 @@
+.smallContent {
+  border-radius: 20px;
+  overflow: hidden;
+
+  .imageArea {
+    height: 132px;
+    position: relative;
+    overflow: hidden;
+    
+    .dishOrderRemainingTime {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      font-size: 14px;
+      height: 20px;
+      background-color: rgba(0, 0, 0, 0.5);
+      color: #fff;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      padding: 0 6px;
+    }
+
+    .smallImage {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+  }
+
+  .contentOuterWrapper {
+    background: #fff;
+
+    .contentArea {
+      height: 151px;
+      min-height: 151px;
+      height: fit-content;
+      padding: 8px 4px 0 8px;
+
+      &.disabledContent {
+        opacity: 0.5;
+      }
+
+      .nameRow {
+        display: flex;
+        align-items: flex-start;
+        height: 48px;
+        font-weight: 700;
+        margin-bottom: 8px;
+        font-size: 1.25rem;
+        line-height: 24px;
+        letter-spacing: -1px;
+        color: #000;
+
+        .dishNameText {
+          display: -webkit-box;
+          overflow: hidden;
+          max-width: calc(100% - 50px);
+          word-break: break-word;
+          -webkit-box-orient: vertical;
+          -webkit-line-clamp: 2;
+          line-height: 1.3em;
+          max-height: 3em;
+        }
+      }
+
+      .priceOperationRow {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+
+        .pricePart {
+          display: flex;
+          //flex-direction: column;
+          align-items: center;
+          
+          .price {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #4f4f4f;
+          }
+        }
+
+        .counterPart {
+          padding: 5px 16px;
+        }
+      }
+    }
+  }
+
+  .textTagsWrapper {
+    display: flex;
+    align-items: center;
+
+    .combinationIcon {
+      margin-right: 2px;
+      margin-top: 8px;
+      color: #FF6A00;
+    }
+
+    .textTagsContainer {
+      width: 100%;
+      flex-grow: 1;
+    }
+  }
+}
+.strikethContent{
+  height: 1.5rem;
+}
+.decoration {
+  margin-left: 5px;
+  text-decoration: line-through;
+  // text-decoration-thickness: 2px;
+  color: gray;
+  font-size: 0.8rem;
+}
+
+.discount {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #96272f;
+  margin-right: 0.5rem;
+}

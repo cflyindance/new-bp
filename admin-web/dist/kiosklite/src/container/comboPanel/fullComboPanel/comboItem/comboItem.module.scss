@@ -1,0 +1,215 @@
+.comboItemsTitle {
+  // position: sticky;
+  // position: -webkit-sticky;
+  top: 0;
+  color: #333;
+  font-size: 3.6rem;
+  font-weight: 700;
+  padding: 2rem;
+  padding-right: 0;
+  background-color: #fff;
+  z-index: 1;
+  border-radius: 1rem 1rem 0 0;
+}
+.contentTopBox {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  background-color: #fff;
+  border-radius: 0 0 1rem 1rem;
+  padding-bottom: 2rem;
+  margin-bottom: 2rem;
+  display: flex;
+}
+.maxNote {
+  font-size: 2.4rem;
+  color: #ff4b00;
+  margin-bottom: 1rem;
+}
+
+@keyframes require {
+  0% {
+    -webkit-transform: translateX(0);
+    transform: translateX(0);
+  }
+  100% {
+    -webkit-transform: translateX(-2rem);
+    transform: translateX(-2rem);
+  }
+}
+.leftBox,
+.rightBox {
+  width: 50%;
+  display: inline-block;
+  font-size: 3.6rem;
+  padding: 0 3rem;
+  box-sizing: border-box;
+  flex: 1;
+  .title {
+    color: #000;
+    margin-top: 5rem;
+    margin-bottom: 2rem;
+    font-weight: 700;
+
+    .required {
+      // position: absolute;
+      // right: 2rem;
+      // top: 2rem;
+      display: inline-block;
+      color: var(--text-color-black);
+      background-image: url('../../../../assets/images/labelBg.png');
+      background-repeat: no-repeat;
+      background-size: 100% 100%;
+      padding: 0.3rem 3rem 0.5rem 5rem;
+      font-size: 2.4rem;
+      margin-left: 2.5rem;
+      -webkit-animation: require 0.8s infinite;
+      animation: require 0.8s infinite;
+    }
+    .sub {
+      color: #999;
+      margin-left: 1rem;
+      font-size: 2.4rem;
+    }
+  }
+  .noSize {
+    .title {
+      height: 5rem;
+      overflow: hidden;
+      & > span:last-child {
+        color: var(--primary-color);
+        font-size: 3rem;
+        display: flex;
+        align-items: center;
+      }
+    }
+  }
+  .word {
+    color: #333;
+    font-size: 3rem;
+    word-wrap: break-word;
+    word-break: break-word;
+  }
+  .wordSize {
+    display: flex;
+    flex-wrap: wrap;
+  }
+  .wordOption {
+    padding: 1rem;
+    margin-top: 1rem;
+    display: flex;
+    flex-wrap: wrap;
+  }
+  .singlePrice {
+    color: #333;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 8rem;
+    height: 8rem;
+    font-size: 2.8rem;
+  }
+  .textContent {
+    width: calc(100% - 14rem);
+    min-height: 12rem;
+    background-color: #f2f2f2;
+    font-size: 2.4rem;
+    line-height: 4rem;
+    color: #333;
+    border-radius: 2rem;
+    padding: 2rem;
+    padding-right: 6rem;
+    resize: none;
+    border: 0;
+    &:focus {
+      outline: none;
+      border: 0;
+    }
+  }
+  .iconEmpty {
+    position: relative;
+    left: -7rem;
+    top: -1rem;
+  }
+}
+
+.leftBox {
+  padding-left: 3rem;
+  height: 39rem;
+  .areaImg {
+    height: 100%;
+  }
+}
+
+.leftBox:empty {
+  display: none;
+}
+
+.leftBox:empty + div.rightBox {
+  //padding: 0 3rem;
+  width: calc(100% - 4rem);
+
+  .area,
+  .areaDetail {
+    margin-top: 2rem;
+  }
+}
+
+.rightBox {
+  padding-right: 3rem;
+  .area {
+    .title {
+      margin-top: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      .point {
+        img {
+          height: 3rem;
+          vertical-align: middle;
+        }
+        span {
+          color: #333;
+          margin-left: 1rem;
+        }
+      }
+    }
+    .titleWithRequired {
+      justify-content: flex-start;
+    }
+  }
+  .areaFixCombo {
+    .title {
+      margin-top: 0;
+    }
+  }
+}
+
+@media screen and (max-width: 1100px) {
+  .rightBox,
+  .leftBox {
+    width: 100%;
+  }
+  .leftBox {
+    background-color: #fff;
+    padding: 3rem;
+    border-radius: 0 0 1rem 1rem;
+    height: 50rem;
+  }
+  .contentTopBox {
+    background-color: unset;
+    display: block;
+    padding-bottom: 0;
+  }
+  .rightBox {
+    padding: 0;
+  }
+  .area,
+  .areaDetail {
+    margin-top: 2rem;
+    width: 100%;
+    padding: 2rem;
+    background-color: #fff;
+    border-radius: 1rem;
+    box-sizing: border-box;
+  }
+}

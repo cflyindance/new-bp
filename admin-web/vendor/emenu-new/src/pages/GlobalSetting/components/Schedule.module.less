@@ -1,0 +1,80 @@
+.scheduleWrapper {
+  padding: 24px 16px;
+  background: #fff;
+  height: 100%;
+  overflow-y: auto;
+  .scheduleSwitch {
+    border: 1px solid #d9d9d9;
+    border-radius: 10px;
+  }
+  .contentWrapper {
+    .operationRow {
+      display: flex;
+      justify-content: flex-start;
+      margin-top: 16px;
+      .add {
+        width: 180px;
+        height: 50px;
+        font-size: 24px;
+      }
+    }
+    .contentList {
+      margin-top: 16px;
+      .contentItem {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border: 1px solid #d9d9d9;
+        padding: 16px;
+        margin-bottom: 16px;
+        .content {
+          width: calc(100% - 200px);
+          .staff {
+            display: flex;
+            margin-bottom: 16px;
+            .staffItem {
+              font-size: 20px;
+              font-weight: bold;
+            }
+          }
+          .time {
+            font-size: 16px;
+            margin-bottom: 16px;
+            font-weight: bold;
+            .divider {
+              padding-right: 8px;
+            }
+          }
+          .area {
+            font-size: 14px;
+            font-weight: bold;
+          }
+        }
+        .operation {
+          width: 200px;
+          text-align: right;
+        }
+      }
+    }
+  }
+}
+
+.scheduleModal {
+  padding: 24px;
+  .timeRow {
+    display: flex;
+    align-items: center;
+    margin-bottom: 16px;
+    .timeLabel {
+      width: 85px;
+      margin-right: 40px;
+      font-size: 18px;
+      font-weight: bold;
+      text-align: right;
+    }
+    .weekSet {
+      display: flex;
+      align-items: center;
+    }
+  }
+}

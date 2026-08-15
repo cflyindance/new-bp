@@ -1,0 +1,13 @@
+# Ignore artifacts:
+dist
+build
+public
+coverage
+
+.vscode
+.idea
+.husky
+.yarn
+
+# Ignore all HTML files:
+*.html

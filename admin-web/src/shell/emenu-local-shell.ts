@@ -1,9 +1,11 @@
 /**
- * eMenu 本地配置后台：独立 Demo Shell 与五个一级导航占位页。
+ * eMenu 本地配置后台：独立 Demo Shell 与一级导航页。
  */
 import { t } from "../i18n";
+import { BUILD_STAMP } from "../generated/build-stamp";
 import { mountDemoSwitchFab } from "./demo-switch-control";
 import { bindViewSwitchControl } from "./view-switch-control";
+import { bindEmenuHostIpControl, renderEmenuHostIpControl } from "./emenu-local-host-control-ui";
 import {
   bindSeasoningSettingsPage,
   renderSeasoningSettingsPage,
@@ -14,6 +16,10 @@ import {
   normalizeEmenuLocalPath,
   type EmenuLocalNavItem,
 } from "./emenu-local-routes";
+
+const EMENU_NEW_IFRAME_SRC = `./emenu-new/index.html?embedded=1&v=${BUILD_STAMP}`;
+/** 与 eMenu 同一本地构建包，打开设置路由 */
+const EMENU_SETTINGS_IFRAME_SRC = `./emenu-new/index.html?embedded=1&v=${BUILD_STAMP}#/setting`;
 
 function escapeHtml(value: string): string {
   return value
@@ -35,7 +41,13 @@ function renderIcon(kind: EmenuLocalNavItem["icon"], className = "size-5"): stri
     return `<svg ${attrs}><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>`;
   }
   if (kind === "menu") {
-    return `<svg ${attrs}><path d="M6 4h12a2 2 0 0 1 2 2v14H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>`;
+    return `<svg ${attrs}><path d="M6 4h12a2 2 0 0 1 2 2v14H6a2 2 0 0 1 2-2V6a2 2 0 0 1 2-2Z"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>`;
+  }
+  if (kind === "emenu") {
+    return `<svg ${attrs}><rect x="3" y="4" width="18" height="14" rx="2.5"/><path d="M8 20h8M12 18v2"/><path d="M8 9h8M8 12h5"/></svg>`;
+  }
+  if (kind === "settings") {
+    return `<svg ${attrs}><circle cx="12" cy="12" r="3"/><path d="M12 2.5v2.2M12 19.3v2.2M4.9 4.9l1.6 1.6M17.5 17.5l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.9 19.1l1.6-1.6M17.5 6.5l1.6-1.6"/></svg>`;
   }
   return `<svg ${attrs}><path d="M7.4 15.8c-2.4-2.4-2.6-6-.5-8.1s5.7-1.9 8.1.5 3.3 6.8 1.2 8.9-6.4 1.1-8.8-1.3Z"/><path d="m15.6 8.8 3.7-3.7M12.2 11.5l.01.01M9.6 9.8l.01.01M10.3 14.1l.01.01M14.2 14.2l.01.01"/></svg>`;
 }
@@ -123,8 +135,50 @@ function renderPlaceholder(item: EmenuLocalNavItem): string {
     </section>`;
 }
 
+function renderEmenuIframePage(): string {
+  return `
+    <section
+      data-emenu-local-emenu-frame
+      class="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-border/80 bg-card shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+      aria-label="${escapeHtml(t("shell.emenuLocalEmenu"))}"
+    >
+      <iframe
+        title="${escapeHtml(t("shell.emenuLocalEmenu"))}"
+        class="block h-full min-h-[36rem] w-full flex-1 border-0"
+        src="${escapeHtml(EMENU_NEW_IFRAME_SRC)}"
+        referrerpolicy="no-referrer-when-downgrade"
+        allow="clipboard-read; clipboard-write; fullscreen"
+      ></iframe>
+    </section>`;
+}
+
+function renderEmenuSettingsIframePage(): string {
+  return `
+    <section
+      data-emenu-local-emenu-settings-frame
+      class="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-border/80 bg-card shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+      aria-label="${escapeHtml(t("shell.emenuLocalEmenuSettings"))}"
+    >
+      <iframe
+        title="${escapeHtml(t("shell.emenuLocalEmenuSettings"))}"
+        class="block h-full min-h-[36rem] w-full flex-1 border-0"
+        src="${escapeHtml(EMENU_SETTINGS_IFRAME_SRC)}"
+        referrerpolicy="no-referrer-when-downgrade"
+        allow="clipboard-read; clipboard-write; fullscreen"
+      ></iframe>
+    </section>`;
+}
+
 function renderMain(path: string): string {
   const active = getActiveEmenuLocalNavItem(path);
+  const body =
+    active.id === "seasoning-settings"
+      ? renderSeasoningSettingsPage()
+      : active.id === "emenu"
+        ? renderEmenuIframePage()
+        : active.id === "emenu-settings"
+          ? renderEmenuSettingsIframePage()
+          : renderPlaceholder(active);
   return `
     <div class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
       <header class="flex min-h-16 shrink-0 items-center justify-between gap-4 border-b border-border/80 bg-card/95 px-4 py-3 backdrop-blur sm:px-6 lg:px-8">
@@ -132,15 +186,18 @@ function renderMain(path: string): string {
           <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">eMenu · Local configuration</p>
           <h1 id="main-content" tabindex="-1" class="truncate text-xl font-semibold tracking-tight text-foreground">${escapeHtml(t(active.titleKey))}</h1>
         </div>
-        <button type="button" id="theme-toggle" class="inline-flex size-10 shrink-0 items-center justify-center rounded-xl border border-border bg-background text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="${escapeHtml(t("header.themeToggle"))}">
-          <svg class="size-5 dark:hidden" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
-          <svg class="hidden size-5 dark:block" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
-        </button>
+        <div class="flex shrink-0 items-center gap-2">
+          ${renderEmenuHostIpControl()}
+          <button type="button" id="theme-toggle" class="inline-flex size-10 shrink-0 items-center justify-center rounded-xl border border-border bg-background text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="${escapeHtml(t("header.themeToggle"))}">
+            <svg class="size-5 dark:hidden" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+            <svg class="hidden size-5 dark:block" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+          </button>
+        </div>
       </header>
       ${renderMobileNav(path)}
-      <main class="min-h-0 flex-1 overflow-y-auto bg-muted/35 p-3 sm:p-5 lg:p-7">
-        <div class="mx-auto flex min-h-full w-full max-w-[88rem] flex-col animate-fade-in">
-          ${active.id === "seasoning-settings" ? renderSeasoningSettingsPage() : renderPlaceholder(active)}
+      <main class="flex min-h-0 flex-1 flex-col overflow-hidden bg-muted/35 p-3 sm:p-5 lg:p-7">
+        <div class="mx-auto flex min-h-0 w-full max-w-[88rem] flex-1 flex-col animate-fade-in">
+          ${body}
         </div>
       </main>
     </div>`;
@@ -167,4 +224,5 @@ export function bindEmenuLocalShell(onMount: () => void): void {
   mountDemoSwitchFab({ showVersionSwitch: false });
   bindViewSwitchControl(onMount);
   bindSeasoningSettingsPage();
+  bindEmenuHostIpControl();
 }

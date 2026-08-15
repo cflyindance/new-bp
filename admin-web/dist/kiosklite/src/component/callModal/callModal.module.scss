@@ -1,0 +1,52 @@
+@import '../../assets/scss/themes.scss';
+
+.loadBox {
+  @include dialog-box-style(54rem);
+  .orderBox {
+    color: #333;
+    .msg {
+      width: 50rem;
+      font-size: 3rem;
+      margin: 2rem 0;
+      text-align: center;
+      word-wrap: break-word;
+      font-weight: bold;
+    }
+  }
+  .orderBottom {
+    margin-top: 6rem;
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    // gap: 2rem;
+    & > div {
+      width: 40rem;
+      text-align: center;
+      height: 8rem;
+      line-height: 8rem;
+      color: var(--text-color-black);
+      font-size: 3rem;
+      border-radius: 10rem;
+      font-weight: bold;
+    }
+    & > div:first-child {
+      background-color: var(--background-grey);
+      margin-bottom: 2rem;
+    }
+    & > div:last-child {
+      background-color: var(--primary-selected-color);
+    }
+  }
+}
+.itemBox {
+  text-align: center;
+  color: #333;
+  .itemName {
+    font-size: 3.6rem;
+    font-weight: bold;
+    margin: 3rem auto;
+  }
+  .subItemName {
+    font-size: 3rem;
+  }
+}

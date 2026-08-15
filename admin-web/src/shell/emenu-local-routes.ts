@@ -8,7 +8,7 @@ export type EmenuLocalNavItem = {
   path: string;
   titleKey: MessageKey;
   descriptionKey: MessageKey;
-  icon: "device" | "global" | "category" | "menu" | "seasoning";
+  icon: "device" | "global" | "category" | "menu" | "seasoning" | "emenu" | "settings";
 };
 
 export const EMENU_LOCAL_NAV_ITEMS: readonly EmenuLocalNavItem[] = [
@@ -46,6 +46,20 @@ export const EMENU_LOCAL_NAV_ITEMS: readonly EmenuLocalNavItem[] = [
     titleKey: "shell.emenuLocalSeasoningSettings",
     descriptionKey: "shell.emenuLocalSeasoningSettingsDesc",
     icon: "seasoning",
+  },
+  {
+    id: "emenu",
+    path: "/emenu-local/emenu",
+    titleKey: "shell.emenuLocalEmenu",
+    descriptionKey: "shell.emenuLocalEmenuDesc",
+    icon: "emenu",
+  },
+  {
+    id: "emenu-settings",
+    path: "/emenu-local/emenu-settings",
+    titleKey: "shell.emenuLocalEmenuSettings",
+    descriptionKey: "shell.emenuLocalEmenuSettingsDesc",
+    icon: "settings",
   },
 ] as const;
 

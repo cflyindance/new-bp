@@ -1,0 +1,19 @@
+@import '../../assets/scss/themes.scss';
+
+.loadingBox {
+  @include dialog-box-style;
+  .itemBox {
+    text-align: center;
+    color: #333;
+    .itemName {
+      font-size: 3.6rem;
+      font-weight: bold;
+      margin: 4rem;
+      word-wrap: break-word;
+      word-break: break-word;
+    }
+    .subItemName {
+      font-size: 3rem;
+    }
+  }
+}

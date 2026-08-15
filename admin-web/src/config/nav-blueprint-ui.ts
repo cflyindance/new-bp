@@ -101,6 +101,9 @@ import {
 
 } from "./platform-preset-store";
 
+import { bindJsonMenuEditor, renderJsonMenuEditorPage } from "./json-menu-editor-ui";
+
+
 
 
 function cascadeBlueprintSelection(
@@ -666,9 +669,9 @@ export function renderNavBlueprintPage(path: string): string {
 
   const edit = parseNavBlueprintEditPath(path);
 
-  if (edit) return renderNavBlueprintEditPage(edit.blueprintId);
+  if (edit) return renderJsonMenuEditorPage();
 
-  return renderNavBlueprintListPage();
+  return renderJsonMenuEditorPage();
 
 }
 
@@ -680,7 +683,7 @@ export function findNavBlueprintPageTitle(path: string): { title: string; module
 
   const edit = parseNavBlueprintEditPath(path);
 
-  if (edit) return { title: "配置菜单路由 · 默认导航蓝图", module: "M 平台" };
+  if (edit) return { title: "菜单路由可视化编辑器", module: "M 平台" };
 
   return { title: "菜单路由配置", module: "M 平台" };
 
@@ -966,6 +969,8 @@ let navBlueprintBound = false;
 
 
 export function bindNavBlueprint(onMount: () => void): void {
+
+  bindJsonMenuEditor(onMount);
 
   if (navBlueprintBound) return;
 

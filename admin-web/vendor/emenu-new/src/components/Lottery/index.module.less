@@ -1,0 +1,61 @@
+.lotteryDialog {
+  width: 420px;
+  padding: 24px 16px 16px;
+
+  .title {
+    font-size: 24px;
+    font-weight: bold;
+    text-align: center;
+  }
+  .subTitle {
+    font-size: 16px;
+    text-align: center;
+  }
+
+  .actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-gap: 8px;
+
+    &>button {
+      height: 50px;
+      font-size: 18px;
+    }
+  }
+}
+
+.lottieContainer {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 240px;
+
+  .lottie {
+    height: 100%;
+  }
+
+  .lottieLoading {
+    z-index: 1;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    transform-origin: center center;
+  }
+}
+
+.circularProgress {
+  color: #96272F;
+}
+
+.lotteryVideo {
+  width: 100%;
+  height: 100%;
+  background: #000;
+  object-fit: contain;
+}
+
+.lotteryVideoDialog {
+  z-index: 1301 !important;
+}

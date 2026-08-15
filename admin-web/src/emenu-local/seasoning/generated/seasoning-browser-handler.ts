@@ -491,6 +491,180 @@ function isSelectableProduct(product) {
   return product?.status === "active" && product.emenuSellable === true;
 }
 
+function ensureSelectionSources(draft) {
+  if (!(draft.selectionSources instanceof Map)) draft.selectionSources = new Map();
+  return draft.selectionSources;
+}
+
+function sourceBelongsToGroup(source, groupId) {
+  return source === `group:${groupId}`
+    || source.startsWith(`category:${groupId}::`)
+    || source.startsWith(`dish:${groupId}:`);
+}
+
+function isProductSelectedInGroup(draft, groupId, productId) {
+  if (!draft?.selectedIds?.has(productId)) return false;
+  const sources = draft.selectionSources?.get(productId);
+  if (!sources || sources.size === 0) return true;
+  for (const source of sources) {
+    if (sourceBelongsToGroup(source, groupId) || source.startsWith("search:")) return true;
+    // Dish toggles without group context remain visible across every menu path.
+    if (source.startsWith("dish:") && source.split(":").length === 2) return true;
+  }
+  return false;
+}
+
+function pruneProductSelection(draft, productId) {
+  const sources = draft.selectionSources?.get(productId);
+  if (!sources || sources.size === 0) {
+    draft.selectionSources?.delete(productId);
+    draft.selectedIds.delete(productId);
+  }
+}
+
+function addProductSelectionSource(draft, productId, sourceKey) {
+  const sources = ensureSelectionSources(draft);
+  let set = sources.get(productId);
+  if (!set) {
+    set = new Set();
+    sources.set(productId, set);
+  }
+  set.add(sourceKey);
+  draft.selectedIds.add(productId);
+}
+
+function expandGroupSelectionToDishes(draft, db, groupId, exceptProductId = "") {
+  const groupSource = `group:${groupId}`;
+  for (const id of matchingMenuProductIds(db, { groupId })) {
+    const sources = draft.selectionSources?.get(id);
+    if (!sources?.has(groupSource)) continue;
+    sources.delete(groupSource);
+    if (id !== exceptProductId) sources.add(`dish:${groupId}:${id}`);
+    pruneProductSelection(draft, id);
+  }
+}
+
+function expandCategorySelectionToDishes(draft, db, groupId, categoryId, exceptProductId = "") {
+  const categorySource = `category:${groupId}::${categoryId}`;
+  for (const id of matchingMenuProductIds(db, { groupId, categoryId })) {
+    const sources = draft.selectionSources?.get(id);
+    if (!sources?.has(categorySource)) continue;
+    sources.delete(categorySource);
+    if (id !== exceptProductId) sources.add(`dish:${groupId}:${id}`);
+    pruneProductSelection(draft, id);
+  }
+}
+
+function clearGroupPathSources(draft, groupId, productIds) {
+  for (const id of productIds) {
+    const sources = draft.selectionSources?.get(id);
+    if (!sources) {
+      draft.selectedIds.delete(id);
+      continue;
+    }
+    for (const source of [...sources]) {
+      if (sourceBelongsToGroup(source, groupId)) sources.delete(source);
+    }
+    pruneProductSelection(draft, id);
+  }
+}
+
+function applyProductSelectionPatch(db, draft, body) {
+  const selected = body.selected === true;
+  ensureSelectionSources(draft);
+
+  if (body.operation === "dish") {
+    const productId = String(body.productId || "");
+    const groupId = String(body.groupId || "");
+    const product = db.products.find((item) => item.id === productId);
+    if (!isSelectableProduct(product)) return;
+    const dishSource = groupId ? `dish:${groupId}:${productId}` : `dish:${productId}`;
+    if (selected) {
+      addProductSelectionSource(draft, productId, dishSource);
+      return;
+    }
+    if (groupId) {
+      expandGroupSelectionToDishes(draft, db, groupId, productId);
+      for (const group of menuGroups(db)) {
+        if (group.id !== groupId) continue;
+        for (const category of group.categories) {
+          if (!category.productIds.includes(productId)) continue;
+          expandCategorySelectionToDishes(draft, db, groupId, category.id, productId);
+        }
+      }
+      const sources = draft.selectionSources.get(productId);
+      if (sources) {
+        for (const source of [...sources]) {
+          if (sourceBelongsToGroup(source, groupId)) sources.delete(source);
+        }
+        pruneProductSelection(draft, productId);
+      } else {
+        draft.selectedIds.delete(productId);
+      }
+      return;
+    }
+    draft.selectionSources.delete(productId);
+    draft.selectedIds.delete(productId);
+    return;
+  }
+
+  if (body.operation !== "scope") throw new Error("invalid_selection_operation");
+  const level = String(body.level || "");
+  if (!new Set(["group", "category", "search"]).has(level)) throw new Error("invalid_selection_scope");
+  const groupId = level === "group" || level === "category" ? String(body.groupId || "") : "";
+  const categoryId = level === "category" ? String(body.categoryId || "") : "";
+  const query = String(body.query || "");
+  const ids = matchingMenuProductIds(db, { groupId, categoryId, query });
+  const sourceKey = level === "group"
+    ? `group:${groupId}`
+    : level === "category"
+      ? `category:${groupId}::${categoryId}`
+      : `search:${query}`;
+
+  if (selected) {
+    for (const id of ids) {
+      const product = db.products.find((item) => item.id === id);
+      if (!isSelectableProduct(product)) continue;
+      addProductSelectionSource(draft, id, sourceKey);
+    }
+    return;
+  }
+
+  if (level === "group") {
+    clearGroupPathSources(draft, groupId, ids);
+    return;
+  }
+
+  if (level === "category") {
+    expandGroupSelectionToDishes(draft, db, groupId);
+    for (const id of ids) {
+      const product = db.products.find((item) => item.id === id);
+      if (!isSelectableProduct(product)) continue;
+      const sources = draft.selectionSources.get(id);
+      if (!sources) {
+        draft.selectedIds.delete(id);
+        continue;
+      }
+      sources.delete(sourceKey);
+      sources.delete(`dish:${groupId}:${id}`);
+      pruneProductSelection(draft, id);
+    }
+    return;
+  }
+
+  for (const id of ids) {
+    const product = db.products.find((item) => item.id === id);
+    if (!isSelectableProduct(product)) continue;
+    const sources = draft.selectionSources.get(id);
+    if (!sources) {
+      draft.selectedIds.delete(id);
+      continue;
+    }
+    sources.delete(sourceKey);
+    pruneProductSelection(draft, id);
+  }
+}
+
 function matchingMenuProductIds(db, { groupId = "", categoryId = "", query = "" } = {}) {
   const normalizedQuery = normalizeText(query);
   const productById = new Map(db.products.map((product) => [product.id, product]));
@@ -625,7 +799,7 @@ function productList(db, url) {
   return paginate(items, url, (item) => productKey(item, categoryOrder));
 }
 
-function selectionCounts(db, draft, ids) {
+function selectionCounts(db, draft, ids, groupId = "") {
   const productById = new Map(db.products.map((product) => [product.id, product]));
   const uniqueIds = new Set(ids);
   let selectableCount = 0;
@@ -634,7 +808,7 @@ function selectionCounts(db, draft, ids) {
     const product = productById.get(id);
     if (!isSelectableProduct(product)) continue;
     selectableCount += 1;
-    if (draft?.selectedIds.has(id)) selectedCount += 1;
+    if (groupId ? isProductSelectedInGroup(draft, groupId, id) : draft?.selectedIds.has(id)) selectedCount += 1;
   }
   return { selectedCount, selectableCount };
 }
@@ -659,14 +833,14 @@ function menuStructure(db, url, scope, session) {
   const activeCategory = activeGroup?.categories.find((category) => category.id === requestedCategory) ?? activeGroup?.categories[0];
   const groups = groupsWithMatches.map((group) => {
     const ids = matchingMenuProductIds(db, { groupId: group.id, query });
-    return { id: group.id, name: group.name, categoryCount: group.categories.length, ...selectionCounts(db, draft, ids) };
+    return { id: group.id, name: group.name, categoryCount: group.categories.length, ...selectionCounts(db, draft, ids, group.id) };
   });
   const categories = (activeGroup?.categories ?? [])
     .slice()
     .sort((left, right) => left.sortOrder - right.sortOrder || left.name.localeCompare(right.name))
     .map((category) => {
       const ids = matchingMenuProductIds(db, { groupId: activeGroup.id, categoryId: category.id, query });
-      return { id: category.id, groupId: activeGroup.id, name: category.name, dishCount: ids.size, ...selectionCounts(db, draft, ids) };
+      return { id: category.id, groupId: activeGroup.id, name: category.name, dishCount: ids.size, ...selectionCounts(db, draft, ids, activeGroup.id) };
     });
   const dishIds = activeGroup && activeCategory
     ? [...matchingMenuProductIds(db, { groupId: activeGroup.id, categoryId: activeCategory.id, query })]
@@ -683,7 +857,7 @@ function menuStructure(db, url, scope, session) {
       categoryName: activeCategory.name,
       relationCount: relationCounts.get(product.id) ?? 0,
       selectable: true,
-      selected: Boolean(draft?.selectedIds.has(product.id)),
+      selected: Boolean(activeGroup && isProductSelectedInGroup(draft, activeGroup.id, product.id)),
     }));
   return {
     groups,
@@ -1267,7 +1441,7 @@ export async function handleEmenuSeasoningApi(req, res, dbPath) {
       const token = crypto.randomUUID();
       const expiresAt = Date.now() + PRODUCT_SELECTION_TTL_MS;
       const menuVersion = menuSelectionFingerprint(db);
-      productSelectionTokens.set(token, { scope: dbPath, session, selectedIds: new Set(), menuVersion, expiresAt });
+      productSelectionTokens.set(token, { scope: dbPath, session, selectedIds: new Set(), selectionSources: new Map(), menuVersion, expiresAt });
       sendJson(res, 201, { token, total: 0, expiresAt: new Date(expiresAt).toISOString(), menuVersion });
       return true;
     }
@@ -1280,27 +1454,7 @@ export async function handleEmenuSeasoningApi(req, res, dbPath) {
     if (method === "PATCH" && productSelectionMatch) {
       const draft = resolveProductSelectionDraft(db, productSelectionMatch[1], dbPath, session);
       const body = await readBody(req);
-      const selected = body.selected === true;
-      let ids;
-      if (body.operation === "dish") {
-        ids = new Set([String(body.productId || "")]);
-      } else if (body.operation === "scope") {
-        const level = String(body.level || "");
-        if (!new Set(["group", "category", "search"]).has(level)) throw new Error("invalid_selection_scope");
-        ids = matchingMenuProductIds(db, {
-          groupId: level === "group" || level === "category" ? String(body.groupId || "") : "",
-          categoryId: level === "category" ? String(body.categoryId || "") : "",
-          query: String(body.query || ""),
-        });
-      } else {
-        throw new Error("invalid_selection_operation");
-      }
-      for (const id of ids) {
-        const product = db.products.find((item) => item.id === id);
-        if (!isSelectableProduct(product)) continue;
-        if (selected) draft.selectedIds.add(id);
-        else draft.selectedIds.delete(id);
-      }
+      applyProductSelectionPatch(db, draft, body);
       sendJson(res, 200, { token: productSelectionMatch[1], total: draft.selectedIds.size, expiresAt: new Date(draft.expiresAt).toISOString(), menuVersion: draft.menuVersion });
       return true;
     }

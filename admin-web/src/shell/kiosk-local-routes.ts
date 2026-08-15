@@ -3,7 +3,19 @@ import type { MessageKey } from "../i18n";
 export const KIOSK_LOCAL_ROUTE_PREFIX = "/kiosk-local";
 export const KIOSK_LOCAL_DEFAULT_PATH = "/kiosk-local/service-settings";
 
-export type KioskLocalIcon = "service" | "fee" | "brand" | "promotion" | "device" | "screen" | "tag" | "poster" | "image" | "logo";
+export type KioskLocalIcon =
+  | "service"
+  | "fee"
+  | "brand"
+  | "promotion"
+  | "device"
+  | "screen"
+  | "tag"
+  | "poster"
+  | "image"
+  | "logo"
+  | "kiosk"
+  | "settings";
 
 export type KioskLocalNavItem = {
   id: string;
@@ -26,6 +38,8 @@ export const KIOSK_LOCAL_NAV_ITEMS: readonly KioskLocalNavItem[] = [
   { id: "cover-image", path: "/kiosk-local/cover-image", titleKey: "shell.kioskLocalCoverImage", descriptionKey: "shell.kioskLocalCoverImageDesc", icon: "image" },
   { id: "logo", path: "/kiosk-local/logo", titleKey: "shell.kioskLocalLogo", descriptionKey: "shell.kioskLocalLogoDesc", icon: "logo" },
   { id: "posters", path: "/kiosk-local/posters", titleKey: "shell.kioskLocalPosters", descriptionKey: "shell.kioskLocalPostersDesc", icon: "poster" },
+  { id: "kiosk", path: "/kiosk-local/kiosk", titleKey: "shell.kioskLocalKiosk", descriptionKey: "shell.kioskLocalKioskDesc", icon: "kiosk" },
+  { id: "kiosk-settings", path: "/kiosk-local/kiosk-settings", titleKey: "shell.kioskLocalKioskSettings", descriptionKey: "shell.kioskLocalKioskSettingsDesc", icon: "settings" },
 ] as const;
 
 export function isKioskLocalContentPath(path: string): boolean {
