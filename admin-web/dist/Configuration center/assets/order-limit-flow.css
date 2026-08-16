@@ -376,6 +376,13 @@ button { color: inherit; }
 .olf-dialog p { margin: 0 0 22px; font-size: 14px; line-height: 22px; color: var(--olf-secondary); }
 .olf-dialog-actions { display: flex; justify-content: flex-end; gap: 10px; }
 
+.olf-line-limit-head-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.olf-line-limit-copy-overlay.is-open { display: flex; }
+.olf-line-limit-copy-dialog { max-width: 480px; width: min(480px, 92vw); }
+.olf-line-limit-copy-list { display: grid; gap: 10px; margin: 14px 0; max-height: 240px; overflow: auto; }
+.olf-line-limit-copy-option { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.olf-line-limit-copy-option input { width: 17px; height: 17px; margin: 0; accent-color: var(--olf-primary); }
+
 .olf-structure-summary { margin: 0 0 10px; font-size: 12px; line-height: 19px; color: var(--olf-muted); }
 .bmsp-root { overflow: hidden; border: 1px solid var(--olf-border); border-radius: 12px; background: var(--olf-surface); }
 .bmsp-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); min-height: 240px; }
