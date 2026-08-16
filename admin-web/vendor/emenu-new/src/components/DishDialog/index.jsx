@@ -265,9 +265,17 @@ export default function DishDialog({
       realMainBenefitPrice: realMainBenefitPrice,
     }
     if (entrySource === 'detail') {
-      paramsItem.seasoningSnapshots = buildOrderSeasoningSnapshots(
+      const seasoningSnapshots = buildOrderSeasoningSnapshots(
         seasoningSelections,
         seasoningGroups
+      )
+      paramsItem.seasoningSnapshots = seasoningSnapshots
+      const seasoningExtra = seasoningSnapshots.reduce(
+        (sum, s) => sum + (s.transactionPrice || 0),
+        0
+      )
+      paramsItem.realPrice = roundToPrecision(
+        (paramsItem.realPrice || 0) + seasoningExtra
       )
     }
     // if(!isNeedCheckDishAuth){addToCart(paramsItem);return}
