@@ -364,11 +364,11 @@ button { color: inherit; }
 .olf-selected-preview-head h3 { margin: 0; font-size: 18px; line-height: 26px; font-weight: 600; }
 .olf-selected-preview-head h3:focus-visible { outline: 2px solid var(--olf-primary); outline-offset: 2px; }
 .olf-selected-preview-head .olf-icon-button { width: 40px; height: 40px; flex-basis: 40px; }
-.olf-selected-preview-toolbar { padding: 0 24px 16px; display: flex; align-items: end; justify-content: space-between; gap: 18px; }
-.olf-selected-preview-toolbar > .olf-actions { flex-shrink: 0; }
-.olf-selected-preview-filters { display: flex; align-items: end; gap: 10px; }
-.olf-selected-preview-filters .olf-field { min-width: 160px; margin: 0; }
-.olf-selected-preview-filters .olf-select { width: 100%; min-height: 36px; }
+.olf-selected-preview-toolbar { padding: 0 24px 16px; }
+.olf-selected-preview-filters { width: 100%; display: grid; grid-template-columns: minmax(240px, 1fr) repeat(2, minmax(160px, 200px)); align-items: end; gap: 10px; }
+.olf-selected-preview-filters .olf-field { min-width: 0; margin: 0; }
+.olf-selected-preview-filters .olf-select, .olf-selected-preview-search .olf-input { width: 100%; min-height: 36px; }
+.olf-selected-preview-search { min-width: 240px; }
 .olf-selected-preview-table-wrap { margin: 0 24px; overflow: auto; border: 1px solid var(--olf-border); border-radius: 12px; }
 .olf-selected-preview-table-wrap .olf-table { min-width: 760px; }
 .olf-selected-preview-table-wrap .olf-table tr.is-selected { background: var(--olf-primary-soft); }
@@ -377,6 +377,7 @@ button { color: inherit; }
 .olf-selected-preview-empty { min-height: 130px; border-top: 1px solid var(--olf-border); }
 .olf-selected-preview-pagination { min-height: 70px; padding: 14px 24px 18px; display: flex; align-items: center; justify-content: space-between; gap: 14px; color: var(--olf-secondary); font-size: 13px; }
 .olf-selected-preview-pagination .olf-actions { align-items: center; flex-wrap: wrap; }
+.olf-selected-preview-delete-actions { flex-shrink: 0; }
 .olf-selected-preview-page-size .olf-select { min-width: 112px; min-height: 36px; }
 .olf-effective-stores .olf-table-wrap { margin-top: 14px; }
 .olf-store-check-col { width: 44px; }
@@ -426,7 +427,7 @@ button { color: inherit; }
   .olf-selected-preview-overlay { padding: 12px; align-items: flex-start; }
   .olf-selected-preview-dialog { max-height: calc(100vh - 24px); }
   .olf-selected-preview-toolbar { align-items: stretch; flex-direction: column; }
-  .olf-selected-preview-filters { align-items: stretch; flex-direction: column; }
+  .olf-selected-preview-filters { grid-template-columns: 1fr; align-items: stretch; }
   .olf-selected-preview-filters .olf-field { width: 100%; }
   .olf-selected-preview-table-wrap { margin: 0 16px; }
   .olf-selected-preview-pagination { align-items: flex-start; flex-direction: column; }

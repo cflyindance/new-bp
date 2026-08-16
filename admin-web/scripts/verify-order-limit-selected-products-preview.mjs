@@ -102,6 +102,7 @@ for (const marker of [
   "data-selected-preview-overlay",
   "data-selected-preview-store",
   "data-selected-preview-line",
+  "data-selected-preview-search",
   "data-selected-preview-page-size",
   "data-selected-preview-select-all",
   "data-selected-preview-row",
@@ -112,6 +113,7 @@ for (const marker of [
 }
 
 assert.match(flowSource, /pageSize:\s*10/, "预览默认每页应为 10 条");
+assert.match(flowSource, /query:\s*["']["'][\s\S]{0,160}searchComposing:\s*false/, "预览应维护独立搜索和输入法组合状态");
 for (const size of [10, 20, 50]) {
   assert.match(flowSource, new RegExp(`(?:value=["']${size}["']|${size}\\s*条)`), `应支持每页 ${size} 条`);
 }
@@ -120,6 +122,21 @@ const defaultDraft = flowSource.match(/function defaultDraft\(\)[\s\S]*?(?=\n\s*
 assert.doesNotMatch(defaultDraft, /selectedPreview/, "预览状态不得进入规则默认草稿");
 const compatibilityBuilder = flowSource.match(/function buildCompatibilityRule\(draftRule, status\)[\s\S]*?(?=\n\s*function ruleSummary)/)?.[0] ?? "";
 assert.doesNotMatch(compatibilityBuilder, /selectedPreview/, "预览状态不得进入兼容输出或发布快照");
+
+const previewFilter = flowSource.match(/function filteredSelectedPreviewRows\([\s\S]*?(?=\n\s*function pagedSelectedPreviewRows)/)?.[0] ?? "";
+assert.match(previewFilter, /dishName/, "菜品规则搜索应匹配商品名称");
+assert.match(previewFilter, /categoryName/, "分类规则搜索应匹配分类名称");
+assert.match(previewFilter, /normalizeProductSearchQuery/, "预览搜索应复用规范化包含匹配");
+assert.doesNotMatch(previewFilter, /storeName|lineLabel|groupName/, "预览搜索不得匹配门店、产线或组名");
+
+const previewDialog = flowSource.match(/function renderSelectedPreviewDialog\([\s\S]*?(?=\n\s*function openSelectedPreview)/)?.[0] ?? "";
+assert.match(previewDialog, /selectedPreviewTitle[\s\S]*?data-selected-preview-search[\s\S]*?data-selected-preview-store[\s\S]*?data-selected-preview-line/, "标题下筛选区应按搜索、门店、产线顺序展示");
+assert.match(previewDialog, /olf-selected-preview-pagination[\s\S]*?data-selected-preview-delete="batch"[\s\S]*?data-selected-preview-delete="all"[\s\S]*?data-selected-preview-page="previous"/, "底部左侧应展示批量删除和全部删除，右侧保留分页");
+assert.doesNotMatch(previewDialog, /共\s*["']?\s*\+\s*data\.filtered\.length|共\s*'\s*\+\s*data\.filtered\.length/, "底部不应继续显示筛选结果总条数");
+
+assert.match(flowSource, /data-selected-preview-search[\s\S]{0,900}page\s*=\s*1[\s\S]{0,500}selectedRowIds\s*=\s*\[\]/, "搜索变化应回到第一页并清空勾选");
+assert.match(flowSource, /compositionstart[\s\S]{0,500}data-selected-preview-search[\s\S]{0,500}searchComposing\s*=\s*true/, "预览搜索应处理输入法组合开始");
+assert.match(flowSource, /compositionend[\s\S]{0,900}data-selected-preview-search[\s\S]{0,900}searchComposing\s*=\s*false/, "预览搜索应在输入法组合结束后应用搜索");
 
 const deleteRequest = flowSource.match(/function selectedPreviewDeleteRequest\([\s\S]*?(?=\n\s*function )/)?.[0] ?? "";
 assert.match(deleteRequest, /selectedPreviewRows\(draft\)/, "全部删除应从权威全量预览行生成");
@@ -131,6 +148,8 @@ for (const selector of [
   ".olf-selected-preview-dialog",
   ".olf-selected-preview-toolbar",
   ".olf-selected-preview-filters",
+  ".olf-selected-preview-search",
+  ".olf-selected-preview-delete-actions",
   ".olf-selected-preview-table-wrap",
   ".olf-selected-preview-pagination",
   ".olf-selected-preview-empty",
