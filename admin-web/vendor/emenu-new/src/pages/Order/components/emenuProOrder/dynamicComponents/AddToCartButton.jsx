@@ -906,6 +906,8 @@ const AddToCartButtonComponent = ({
           isSpecialDishServePermission,
         }}
         open={dishDialogVisible}
+        entrySource="add"
+        seasoningGroups={[]}
         showPermissionModal={showPermissionModal}
         onSubmit={(data) => {
           if (saleItem.crmIntegrationPointItem) {

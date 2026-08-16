@@ -5,6 +5,7 @@ import { CheckRounded } from '@material-ui/icons'
 import { useTranslation } from 'react-i18next'
 import PriceList from './PriceList'
 import OptionList from './OptionList'
+import SeasoningBlock from './SeasoningBlock'
 import TextAreaField from '../common/TextAreaField'
 import KeyBoardInstance from '@/utils/KeyBoardBounce'
 import VipPriceWithImg from '@/components/common/VipPriceWithImg'
@@ -98,6 +99,10 @@ const RightPanel = ({
   isShowDisplayNote,
   checkDish,
   hidePrice = false,
+  showSeasoning = false,
+  seasoningGroups = [],
+  seasoningSelections = [],
+  onToggleSeasoning,
 }) => {
   const classes = useStyles()
   const { t } = useTranslation(['translation', 'dish', 'option'])
@@ -276,6 +281,13 @@ const RightPanel = ({
             />
           </Box>
         ))}
+        {showSeasoning ? (
+          <SeasoningBlock
+            groups={seasoningGroups}
+            selections={seasoningSelections}
+            onToggleChoice={onToggleSeasoning}
+          />
+        ) : null}
         <Box hidden={!isShowDisplayNote}>
           <Typography
             variant="h6"

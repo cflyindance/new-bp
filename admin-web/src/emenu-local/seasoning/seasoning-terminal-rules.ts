@@ -59,3 +59,29 @@ export function createOrderSeasoningSnapshot(choice: TerminalSeasoningChoice): {
     sortOrder: choice.sortOrder,
   };
 }
+
+export function productHasGuestSeasoningDetail(input: {
+  product: SeasoningProduct;
+  options: SeasoningOption[];
+  relations: ProductSeasoningRelation[];
+}): boolean {
+  return buildTerminalSeasoningGroups(input).some((group) => group.choices.length > 0);
+}
+
+export function buildOrderSeasoningSnapshots(
+  selections: OrderSeasoningSelection[],
+  groups: { action: SeasoningActionCode; choices: TerminalSeasoningChoice[] }[],
+): ReturnType<typeof createOrderSeasoningSnapshot>[] {
+  const choiceByKey = new Map<string, TerminalSeasoningChoice>();
+  for (const group of groups) {
+    for (const choice of group.choices) {
+      choiceByKey.set(`${choice.action}::${choice.optionId}`, choice);
+    }
+  }
+  const snapshots: ReturnType<typeof createOrderSeasoningSnapshot>[] = [];
+  for (const selection of selections) {
+    const choice = choiceByKey.get(`${selection.action}::${selection.optionId}`);
+    if (choice) snapshots.push(createOrderSeasoningSnapshot(choice));
+  }
+  return snapshots;
+}

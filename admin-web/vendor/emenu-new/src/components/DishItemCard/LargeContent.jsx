@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import React, { useMemo, memo, useCallback } from 'react'
-import { Badge, IconButton } from '@material-ui/core'
+import { Badge, Button, IconButton } from '@material-ui/core'
 import SoldOutFlag from '@/components/DishItemCard/SoldOutFlag'
 import ImgFallback from '@/components/common/ImgFallback'
 import { serverUrl } from '@/utils/env_var'
@@ -32,6 +32,8 @@ const LargeContent = (props) => {
     large,
     setOpenModal,
     setTrue,
+    openAsDetail,
+    showSeasoningDetailBtn = false,
     setDisable,
     itemMax,
     changeCount,
@@ -279,7 +281,30 @@ const LargeContent = (props) => {
                 )}
             </div>
 
-            <div>
+            <div className={styles.addActions}>
+              {showSeasoningDetailBtn ? (
+                <Button
+                  size="small"
+                  className={styles.seasoningDetailBtn}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    if (outOfStock || displayMode) return
+                    if (!checkDishStatus()) return
+                    // Match add path: buffetViewOnly without dish-dialog entry blocks add
+                    if (buffetViewOnly && !isShowDetail) return setOpenModal(true)
+                    setDisable(
+                      !outOfStock &&
+                        (((buffetViewOnly || isSpecial) &&
+                          !isOpenSpecialDishPermission &&
+                          !isSpecialDishServePermission) ||
+                          marketPriceItem)
+                    )
+                    openAsDetail?.()
+                  }}
+                >
+                  Detail
+                </Button>
+              ) : null}
               {displayMode ? null : isDisabled || isShowDetail ? (
                 <IconButton
                   color="primary"
