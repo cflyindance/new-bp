@@ -95,7 +95,26 @@ const useTranslateOptions = () => {
       })
     )
 
-    return [sizeStr, ...optionsStrList, dish.instructions].filter(Boolean)
+    return [
+      sizeStr,
+      ...optionsStrList,
+      dish.instructions,
+      ...(Array.isArray(dish.seasoningSnapshots)
+        ? dish.seasoningSnapshots.map((snap) => {
+            if (!snap) return null
+            const actionLabels = {
+              ADD: '添加',
+              LESS: '少放',
+              MORE: '多放',
+              NONE: '不要',
+            }
+            const actionLabel = actionLabels[snap.action] || snap.action || ''
+            return [actionLabel, snap.optionName || snap.optionCode]
+              .filter(Boolean)
+              .join(' ')
+          })
+        : []),
+    ].filter(Boolean)
   }
 
   return { getItemSizeName, renderItemOption }

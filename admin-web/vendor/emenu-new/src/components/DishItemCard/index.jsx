@@ -882,13 +882,20 @@ function DishItemCard(props) {
 
   const handleChangeCount = (value) => {
     const newCart = [...cart]
-    let idx = newCart?.findIndex((e) => {
+    const sameDish = (e) => {
       const isSameId = e.id === props.id
       if (props.rewardRule) {
         return isSameId && e.rewardRule
       }
       return isSameId && !e.rewardRule && !e.crmIntegrationPointItemKey
-    })
+    }
+    // 优先改「加号」行（无 seasoningSnapshots）；没有时再改 Detail 行，避免 count 卡死或重复加行
+    let idx = newCart?.findIndex(
+      (e) => sameDish(e) && !Object.prototype.hasOwnProperty.call(e, 'seasoningSnapshots')
+    )
+    if (idx < 0) {
+      idx = newCart?.findIndex(sameDish)
+    }
     let originalCount = 0
     let dishKey = undefined
     if (idx > -1) {
