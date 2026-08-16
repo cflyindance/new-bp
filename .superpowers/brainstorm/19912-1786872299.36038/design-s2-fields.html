@@ -1,0 +1,51 @@
+<h2>设计 §2 · 实体与字段</h2>
+<p class="subtitle">四类实体：Group / Category / Product / Placement；Product 承载近真 eMenu 字段</p>
+
+<div class="section">
+  <div class="mockup">
+    <div class="mockup-header">关系</div>
+    <div class="mockup-body">
+      <pre style="margin:0;font-size:12px;line-height:1.55;white-space:pre-wrap">CatalogMenuGroup (1) ──&lt; CatalogMenuCategory
+CatalogMenuCategory (1) + Product (1) ──&lt; CatalogPlacement
+Product (1) ──&lt; optionGroups / comboSections（嵌在 Product 内，一期）</pre>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <p class="label">Group / Category / Placement（结构层）</p>
+  <div class="mockup">
+    <div class="mockup-body">
+      <pre style="margin:0;font-size:12px;line-height:1.5;white-space:pre-wrap">Group:     id, name, sortOrder, status, hidden?, restaurantHourIds?, createdAt, updatedAt
+Category:  id, groupId, name, sortOrder, status, hidden?, thumbPath?, taxIds?, createdAt, updatedAt
+Placement: id, groupId, categoryId, productId, sortOrder, status
+           · 唯一约束 (groupId, categoryId, productId)
+           · 复合展示 key: d:{groupId}:{categoryId}:{productId}</pre>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <p class="label">Product（主数据 · 近真，对齐 transformItem）</p>
+  <div class="mockup">
+    <div class="mockup-body">
+      <pre style="margin:0;font-size:12px;line-height:1.5;white-space:pre-wrap">身份:     id, code(itemNumber), name, nameI18n?, description, chineseDescription?
+展示:     thumbPath, properties[]（标签/辣度/新品/推荐）
+价格:     price, addPrice?, itemPrices[], defaultItemSizeId?, strikethroughPrice?, benefitPrice?, marketPriceItem?
+售卖:     status, hiddenItem, outOfStock?, emenuSellable, kioskSellable?, addLimit?, preSelected?
+税务:     taxIds?, qtyQualifyingForZeroRated?
+口味:     optionGroups[] → { id, name, min, max, freeQuantity, subOptions[] }
+套餐:     comboSections[] → { id, name, min/max, allowRepeatedItems, items[{saleItemId, ...}] }
+元数据:   primaryCategoryId（主分类，可与某菜单类同 id）, sortOrder, createdAt, updatedAt</pre>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <p class="label">一期刻意不做 / 外挂</p>
+  <ul>
+    <li>多语言完整资源表 → 先 nameI18n 简表</li>
+    <li>调味 ADD/LESS 关系仍在 seasoning 域，通过 productId 关联 Catalog</li>
+    <li>真实 POS 同步、库存中心</li>
+  </ul>
+</div>

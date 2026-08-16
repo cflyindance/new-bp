@@ -40,6 +40,8 @@ let dialogState: MenuNodeDialogState | null = null;
 let fullscreenPreviewOpen = false;
 let bodyOverflowBeforePreview = "";
 let fullscreenPreviewSheetRootPath: MenuNodePath | null = null;
+/** 全屏预览滑层内：有子菜单的二级目录展开态（与编辑器树 expandedPaths 独立） */
+const fullscreenPreviewSheetExpandedPaths = new Set<string>();
 const expandedPaths = new Set<string>();
 
 function expandAll(): void {
@@ -66,6 +68,15 @@ function deriveFullscreenPreviewSheetRootPath(path: MenuNodePath): MenuNodePath 
   return nodeHasVisibleChildren(rootPath) ? rootPath : null;
 }
 
+/** 选中三级（或更深）时，自动展开其二级父目录，便于预览滑层看到当前项 */
+function seedFullscreenSheetExpandedFromPath(path: MenuNodePath): void {
+  if (path.length < 2) return;
+  const l2Path = path.slice(0, 2);
+  if (nodeHasVisibleChildren(l2Path)) {
+    fullscreenPreviewSheetExpandedPaths.add(encodeMenuNodePath(l2Path));
+  }
+}
+
 function applyFullscreenEnvironment(focusClose = false): void {
   const editor = document.querySelector<HTMLElement>("[data-json-menu-editor]");
   const panel = editor?.querySelector<HTMLElement>("[data-jme-fullscreen-preview-panel]");
@@ -79,9 +90,58 @@ function applyFullscreenEnvironment(focusClose = false): void {
   if (focusClose) panel.querySelector<HTMLButtonElement>("[data-jme-fullscreen-close]")?.focus();
 }
 
+/**
+ * 预览内点击只局部替换预览面板，避免 onMount 整页重绘导致闪烁。
+ */
+function refreshFullscreenPreview(options: { focusClose?: boolean; focusSelector?: string } = {}): void {
+  const menuDocument = jsonMenuEditorStore.state.document;
+  if (!fullscreenPreviewOpen || !menuDocument) return;
+
+  const existing = document.querySelector<HTMLElement>("[data-jme-fullscreen-preview-panel]");
+  const scrollState = {
+    nav: existing?.querySelector<HTMLElement>("[data-jme-preview-nav-scroll]")?.scrollTop ?? 0,
+    sheet: existing?.querySelector<HTMLElement>("[data-jme-preview-sheet-scroll]")?.scrollTop ?? 0,
+    main: existing?.querySelector<HTMLElement>("[data-jme-preview-main-scroll]")?.scrollTop ?? 0,
+  };
+
+  const selected = jsonMenuEditorStore.selectedNode();
+  const ancestors = selectedAncestors();
+  const html = renderJsonMenuFullscreenPreview(
+    menuDocument,
+    jsonMenuEditorStore.state.locale,
+    jsonMenuEditorStore.state.selectedPath,
+    selected,
+    ancestors,
+    fullscreenPreviewSheetRootPath,
+    fullscreenPreviewSheetExpandedPaths,
+  );
+
+  if (existing) {
+    existing.outerHTML = html;
+  } else {
+    document.querySelector<HTMLElement>("[data-json-menu-editor]")?.insertAdjacentHTML("beforeend", html);
+  }
+
+  const next = document.querySelector<HTMLElement>("[data-jme-fullscreen-preview-panel]");
+  if (next) {
+    const nav = next.querySelector<HTMLElement>("[data-jme-preview-nav-scroll]");
+    const sheet = next.querySelector<HTMLElement>("[data-jme-preview-sheet-scroll]");
+    const main = next.querySelector<HTMLElement>("[data-jme-preview-main-scroll]");
+    if (nav) nav.scrollTop = scrollState.nav;
+    if (sheet) sheet.scrollTop = scrollState.sheet;
+    if (main) main.scrollTop = scrollState.main;
+  }
+
+  applyFullscreenEnvironment(options.focusClose === true);
+  if (options.focusSelector) {
+    document.querySelector<HTMLElement>(options.focusSelector)?.focus();
+  }
+}
+
 function clearFullscreenEnvironment(onMount: () => void): void {
   fullscreenPreviewOpen = false;
   fullscreenPreviewSheetRootPath = null;
+  fullscreenPreviewSheetExpandedPaths.clear();
   document.body.style.overflow = bodyOverflowBeforePreview;
   onMount();
   requestAnimationFrame(() => document.querySelector<HTMLButtonElement>("[data-jme-fullscreen-open]")?.focus());
@@ -118,7 +178,7 @@ export function renderJsonMenuEditorPage(): string {
     </div>
     <footer class="flex h-14 shrink-0 items-center gap-2 bg-transparent px-1"><div class="flex items-center text-[11px] text-slate-500"><span class="h-1.5 w-1.5 rounded-full ${state.dirty ? "bg-amber-500" : "bg-emerald-500"}"></span><span class="ml-2">${state.dirty ? "有未保存修改" : "所有更改已保存"}</span></div><div class="ml-auto flex gap-2"><button type="button" data-jme-fullscreen-open class="rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-medium text-slate-700 hover:border-teal-600 hover:text-teal-700">商家菜单预览</button><button type="button" data-jme-export class="rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50">导出 JSON</button></div></footer>
     ${renderJsonMenuNodeDialog(document, dialogState)}
-    ${fullscreenPreviewOpen ? renderJsonMenuFullscreenPreview(document, state.locale, state.selectedPath, selected, ancestors, fullscreenPreviewSheetRootPath) : ""}
+    ${fullscreenPreviewOpen ? renderJsonMenuFullscreenPreview(document, state.locale, state.selectedPath, selected, ancestors, fullscreenPreviewSheetRootPath, fullscreenPreviewSheetExpandedPaths) : ""}
   </div>`;
 }
 
@@ -220,19 +280,43 @@ export function bindJsonMenuEditor(onMount: () => void): void {
     const previewLocale = target.closest<HTMLElement>("[data-jme-locale]")?.dataset.jmeLocale;
     if (previewLocale) {
       jsonMenuEditorStore.setLocale(previewLocale as "zh-CN" | "zh-HK" | "en-US");
+      if (fullscreenPreviewOpen) {
+        refreshFullscreenPreview();
+        return;
+      }
       onMount();
-      if (fullscreenPreviewOpen) requestAnimationFrame(() => applyFullscreenEnvironment());
       return;
     }
     const selectPath = target.closest<HTMLElement>("[data-jme-select]")?.dataset.jmeSelect;
     if (selectPath != null) {
       const decoded = decodeMenuNodePath(selectPath);
+      const inPreview = Boolean(fullscreenPreviewOpen && target.closest("[data-jme-fullscreen-preview-panel]"));
+      // 预览滑层内：有子菜单的二级只能作目录，拦截误用的 select，改为展开/收起
+      if (inPreview && decoded.length === 2 && nodeHasVisibleChildren(decoded)) {
+        const encoded = encodeMenuNodePath(decoded);
+        if (fullscreenPreviewSheetExpandedPaths.has(encoded)) fullscreenPreviewSheetExpandedPaths.delete(encoded);
+        else fullscreenPreviewSheetExpandedPaths.add(encoded);
+        refreshFullscreenPreview({ focusSelector: `[data-jme-sheet-toggle="${encoded}"]` });
+        return;
+      }
       jsonMenuEditorStore.select(decoded);
       if (fullscreenPreviewOpen) {
         fullscreenPreviewSheetRootPath = deriveFullscreenPreviewSheetRootPath(decoded);
+        seedFullscreenSheetExpandedFromPath(decoded);
+        if (inPreview) {
+          refreshFullscreenPreview({ focusSelector: `[data-jme-select="${encodeMenuNodePath(decoded)}"]` });
+          return;
+        }
       }
       onMount();
       if (fullscreenPreviewOpen) requestAnimationFrame(() => applyFullscreenEnvironment());
+      return;
+    }
+    const sheetTogglePath = target.closest<HTMLElement>("[data-jme-sheet-toggle]")?.dataset.jmeSheetToggle;
+    if (sheetTogglePath != null) {
+      if (fullscreenPreviewSheetExpandedPaths.has(sheetTogglePath)) fullscreenPreviewSheetExpandedPaths.delete(sheetTogglePath);
+      else fullscreenPreviewSheetExpandedPaths.add(sheetTogglePath);
+      refreshFullscreenPreview({ focusSelector: `[data-jme-sheet-toggle="${sheetTogglePath}"]` });
       return;
     }
     const sheetBackPath = target.closest<HTMLElement>("[data-jme-sheet-back]")?.dataset.jmeSheetBack;
@@ -240,8 +324,7 @@ export function bindJsonMenuEditor(onMount: () => void): void {
       const decoded = decodeMenuNodePath(sheetBackPath);
       jsonMenuEditorStore.select(decoded);
       fullscreenPreviewSheetRootPath = null;
-      onMount();
-      if (fullscreenPreviewOpen) requestAnimationFrame(() => applyFullscreenEnvironment());
+      refreshFullscreenPreview({ focusSelector: `[data-jme-select="${encodeMenuNodePath(decoded)}"]` });
       return;
     }
     const jumpPath = target.closest<HTMLElement>("[data-jme-jump-path]")?.dataset.jmeJumpPath;
@@ -272,7 +355,15 @@ export function bindJsonMenuEditor(onMount: () => void): void {
         if (fallback.length) jsonMenuEditorStore.select(fallback);
       }
       const nextSelectedPath = jsonMenuEditorStore.state.selectedPath;
-      fullscreenPreviewSheetRootPath = deriveFullscreenPreviewSheetRootPath(nextSelectedPath);
+      // 打开预览时若落在「有子菜单的二级」，改选其一级，避免把目录当成页面详情
+      if (nextSelectedPath.length === 2 && nodeHasVisibleChildren(nextSelectedPath)) {
+        const l2Encoded = encodeMenuNodePath(nextSelectedPath);
+        fullscreenPreviewSheetExpandedPaths.add(l2Encoded);
+        jsonMenuEditorStore.select([nextSelectedPath[0]!]);
+      }
+      const sheetPath = jsonMenuEditorStore.state.selectedPath;
+      fullscreenPreviewSheetRootPath = deriveFullscreenPreviewSheetRootPath(sheetPath);
+      seedFullscreenSheetExpandedFromPath(sheetPath);
       bodyOverflowBeforePreview = document.body.style.overflow;
       fullscreenPreviewOpen = true;
       onMount();

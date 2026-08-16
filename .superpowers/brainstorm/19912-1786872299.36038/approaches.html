@@ -1,0 +1,46 @@
+<h2>三种落地方式，选哪条主路径？</h2>
+<p class="subtitle">已锁定：主数据中心 · 近真字段 · Product 多挂载 · 完整 CRUD · 商品菜单为 SSOT</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>独立 Product Catalog 域（推荐）</h3>
+      <p>新建商品菜单域（壳/路由/API/seed）；实体拆成 Product + Group + Category + Placement。调味等通过适配层读取。边界清晰，适合当全产线主数据。</p>
+    </div>
+  </div>
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>在调味模块上「长成」主数据</h3>
+      <p>继续以 emenu-local/seasoning 为载体扩 CRUD 与近真字段，Demo 的 Menu 指向它。上线快，但「调味」与「全店商品中心」耦合。</p>
+    </div>
+  </div>
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>单文件大文档</h3>
+      <p>一份 menuCatalog.json（products map + groups 树）。实现最轻，适合纯 demo；完整 CRUD、分页、多模块并发消费会吃力。</p>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="pros-cons">
+    <div class="pros">
+      <h4>为何偏 A</h4>
+      <ul>
+        <li>与「唯一真源」目标一致</li>
+        <li>Placement 天然支持多挂载</li>
+        <li>近真字段可版本化演进，不绑死调味页</li>
+      </ul>
+    </div>
+    <div class="cons">
+      <h4>A 的代价</h4>
+      <ul>
+        <li>一期要迁 seed + 写适配层</li>
+        <li>比 B 多一点脚手架</li>
+      </ul>
+    </div>
+  </div>
+</div>

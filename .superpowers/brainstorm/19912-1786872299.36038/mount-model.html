@@ -1,0 +1,45 @@
+<h2>同一道菜能否挂到多个组/类？</h2>
+<p class="subtitle">字段选了「接近 eMenu 真菜」。结构上还要定：菜对象是嵌在类里复制，还是全局 Product 再被多处引用。</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>全局 Product + 多挂载（推荐）</h3>
+      <p>菜只存一份主数据；组/类里用 productId 引用。适合「招牌推荐」与正菜单同时出现，改价改名一处生效。</p>
+    </div>
+  </div>
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>严格树嵌套、不复用</h3>
+      <p>group → category → dish 对象直接嵌套。结构简单，但同一道菜出现两次会复制字段，易漂移。</p>
+    </div>
+  </div>
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>主挂载 + 可选镜像位</h3>
+      <p>每道菜有一个主类；其它位置只存「展示挂载」引用。兼顾主分类与多入口展示。</p>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="pros-cons">
+    <div class="pros">
+      <h4>A / C 更贴主数据中心</h4>
+      <ul>
+        <li>与现有调味 seed 的 productIds 一致</li>
+        <li>后续选择器用复合 key 很自然</li>
+      </ul>
+    </div>
+    <div class="cons">
+      <h4>B 的代价</h4>
+      <ul>
+        <li>字段厚时复制成本高</li>
+        <li>不利于「一处改、处处用」</li>
+      </ul>
+    </div>
+  </div>
+</div>

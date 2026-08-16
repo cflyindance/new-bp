@@ -92,6 +92,29 @@ const compatibilityBuilder = flowSource.match(/function buildCompatibilityRule\(
 assert.doesNotMatch(compatibilityBuilder, /productSearchQuery/, "搜索词不得进入兼容规则或发布快照");
 
 assert.match(flowSource, /data-config-store-select[\s\S]{0,800}clearProductSearch/, "切换配置门店应清空搜索词");
+assert.match(flowSource, /data-config-store-select[\s\S]{0,900}clearProductPickerNav/, "切换配置门店应清空产线导航记忆");
+assert.match(
+  flowSource,
+  /olf-store-search-row[\s\S]{0,300}data-config-store-select[\s\S]{0,220}searchFieldHtml/,
+  "搜索商品应与参与门店同一行并位于右侧",
+);
+assert.match(
+  flowSource,
+  /searchFieldHtml = hasActiveStore[\s\S]{0,220}data-product-search/,
+  "已选门店时应渲染搜索商品输入框",
+);
+assert.match(
+  flowSource,
+  /olf-store-search-row[\s\S]{0,500}searchFieldHtml[\s\S]{0,80}<\/div>[\s\S]{0,80}searchSurfaceHtml/,
+  "搜索结果面板应位于门店与搜索同一行下方",
+);
+assert.match(cssSource, /\.olf-store-search-row/, "应提供门店与搜索同一行布局样式");
+assert.match(flowSource, /productPickerActiveLineId/, "应记住商品选择器当前产线");
+assert.match(flowSource, /MenuPicker\.renderHtml\([\s\S]{0,120}nav\.lineId/, "重绘菜单树应恢复记住的产线");
+assert.match(flowSource, /brand-menu-structure-nav/, "产线切换应同步导航记忆");
+assert.match(flowSource, /data-product-search-target[\s\S]{0,1200}rememberProductPickerNav/, "搜索勾选商品应记住对应产线");
+assert.match(pickerSource, /brand-menu-structure-nav/, "选择器导航变更应派发 nav 事件");
+assert.match(pickerSource, /activeLine:\s*activeLine/, "选择变更事件应携带当前产线");
 assert.match(flowSource, /compositionstart/, "搜索应处理输入法组合开始");
 assert.match(flowSource, /compositionend/, "搜索应处理输入法组合结束");
 assert.match(flowSource, /targetType === ["']category["'][\s\S]{0,300}categoryKey/, "分类限购应使用所属分类键");

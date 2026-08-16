@@ -1,0 +1,53 @@
+<h2>设计 §3 · 读写契约</h2>
+<p class="subtitle">Catalog 唯一可写；下游只读适配；Demo 周边产品组增加 Menu 入口（服务已重启，请用新 URL）</p>
+
+<div class="section">
+  <p class="label">Demo 入口</p>
+  <div class="mockup">
+    <div class="mockup-header">demo-switch · 周边产品</div>
+    <div class="mockup-body">
+      <pre style="margin:0;font-size:12px;line-height:1.55;white-space:pre-wrap">现有: eMenu 本地配置后台 | Kiosk 本地配置后台
+新增: Menu 商品菜单 → 打开 Catalog Shell（独立本地壳，对齐 emenu-local-shell）</pre>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <p class="label">Catalog API（本地 handler，可写）</p>
+  <div class="mockup">
+    <div class="mockup-body">
+      <pre style="margin:0;font-size:12px;line-height:1.5;white-space:pre-wrap">GET    /catalog/structure          组+类树 + 挂载摘要
+GET    /catalog/products           分页/搜索商品
+GET    /catalog/products/:id       商品详情（含 option/combo）
+POST   /catalog/groups|categories|products|placements
+PATCH  /catalog/.../:id
+DELETE /catalog/.../:id            软删或禁用作废（status=inactive）
+POST   /catalog/placements/reorder 同层排序
+
+写成功 → catalog.version++，下游用 version 做缓存失效</pre>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <p class="label">只读适配（下游）</p>
+  <div class="mockup">
+    <div class="mockup-body">
+      <pre style="margin:0;font-size:12px;line-height:1.5;white-space:pre-wrap">toSeasoningMenuStructure()  → 现有三列选择器形状（groups/categories/dishes）
+toBrandMenuPickerTree()     → BrandMenuGroupNode + g:/c:/d: keys
+toEmenuMenusPayload()       → { menuGroups: [{ menuCategories: [{ saleItems }] }] }
+                              供 transformMenus / 本地点餐联调
+
+规则: 下游禁止写 products；调味 relations 仍写 seasoning API，仅引用 productId</pre>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <p class="label">UI 信息架构（Catalog Shell）</p>
+  <ul>
+    <li>左：组列表 · 中：类列表 · 右：该类下挂载的菜（Placement）</li>
+    <li>点菜 → 右侧/抽屉编辑近真字段（价、图、option、combo）</li>
+    <li>另开「全部商品」页：不按挂载浏览，便于建菜后再挂载</li>
+  </ul>
+</div>

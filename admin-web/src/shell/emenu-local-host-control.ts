@@ -1,4 +1,5 @@
-import { clearKioskLocalSessionCache } from "./kiosk-local-session-bridge";
+import { clearKioskLocalSessionCache, prepareKioskEmbedAuthForHost } from "./kiosk-local-session-bridge";
+import { clearEmenuLocalSessionCache } from "./emenu-local-session-bridge";
 
 /** eMenu / Kiosk 嵌入页的 POS 主机地址（Vite 下经 /kpos 代理；静态托管下直连主机）。 */
 
@@ -85,8 +86,7 @@ export function canUseSameOriginKposProxy(
   const host = loc.hostname.toLowerCase();
   if (host === "localhost" || host === "127.0.0.1") {
     const port = loc.port || (loc.protocol === "https:" ? "443" : "80");
-    // Vite 默认 5173；被占用时会升到 5174+；preview 为 4173
-    return port === "5173" || port === "5174" || port === "4173" || /^517\d$/.test(port);
+    return port === "5173" || port === "4173";
   }
   return false;
 }
@@ -142,6 +142,7 @@ export function writeEmenuKposHost(host: string): string | null {
   syncEmenuKposHostCookie(normalized);
   syncEmbedKposRouting(normalized);
   clearKioskLocalSessionCache();
+  clearEmenuLocalSessionCache();
   return normalized;
 }
 
@@ -160,6 +161,50 @@ export function displayEmenuKposHost(host: string = readEmenuKposHost()): string
   }
 }
 
+/** 拆成「主机 / IP」与「端口」，供双输入框展示。隧道域名不展示端口。 */
+export function parseEmenuKposHostParts(host: string = readEmenuKposHost()): {
+  hostname: string;
+  port: string;
+  isTunnel: boolean;
+} {
+  const normalized = normalizeEmenuKposHost(host) || DEFAULT_EMENU_KPOS_HOST;
+  try {
+    const url = new URL(normalized);
+    const isTunnel = isPublicHttpsTunnelHost(url.hostname);
+    if (isTunnel) {
+      return { hostname: url.hostname, port: "", isTunnel: true };
+    }
+    const port = url.port || (url.protocol === "https:" ? "443" : "22080");
+    return { hostname: url.hostname, port, isTunnel: false };
+  } catch {
+    return { hostname: "localhost", port: "22080", isTunnel: false };
+  }
+}
+
+/** 由主机与端口写入统一 POS 目标（隧道忽略端口）。 */
+export function writeEmenuKposHostParts(hostname: string, port: string): string | null {
+  let hostRaw = hostname.trim().replace(/^https?:\/\//i, "").replace(/\/+$/, "");
+  if (!hostRaw) return null;
+
+  // 主机框误填了 host:port 时，优先用其中的端口
+  const embedded = hostRaw.match(/^([\w.-]+):(\d+)$/);
+  if (embedded) {
+    hostRaw = embedded[1];
+    if (!port.trim()) port = embedded[2];
+  }
+
+  if (isPublicHttpsTunnelHost(hostRaw)) {
+    return writeEmenuKposHost(hostRaw);
+  }
+
+  const portRaw = port.trim() || "22080";
+  if (!/^\d{1,5}$/.test(portRaw)) return null;
+  const portNum = Number(portRaw);
+  if (portNum < 1 || portNum > 65535) return null;
+
+  return writeEmenuKposHost(`${hostRaw}:${portRaw}`);
+}
+
 function withKposBaseQuery(frameSrc: string, apiBase: string): string {
   try {
     const url = new URL(frameSrc, window.location.href);
@@ -171,8 +216,21 @@ function withKposBaseQuery(frameSrc: string, apiBase: string): string {
   }
 }
 
+/**
+ * 嵌入 iframe 的初始 src：先同步代理 cookie / kioskServerIP，再写入 kposBase。
+ * 必须在写入 app.innerHTML（iframe 开始加载）之前调用，否则首批 /kpos 会落到默认 localhost:22080。
+ */
+export function buildKposEmbedSrc(frameSrc: string): string {
+  syncEmenuKposHostCookie();
+  const apiBase = syncEmbedKposRouting();
+  return withKposBaseQuery(frameSrc, apiBase);
+}
+
 /** 应用主机后刷新 eMenu / Kiosk 嵌入 iframe，并注入当前 /kpos 基址。 */
 export function reloadKposHostEmbedFrames(): void {
+  // 再清一次鉴权 cookie，避免应用主机后 iframe 仍被开发态旧 session 劫持
+  prepareKioskEmbedAuthForHost();
+  syncEmenuKposHostCookie();
   const apiBase = syncEmbedKposRouting();
   document
     .querySelectorAll<HTMLIFrameElement>(

@@ -1,45 +1,17 @@
 import type { MessageKey } from "../i18n";
 
 export const EMENU_LOCAL_ROUTE_PREFIX = "/emenu-local";
-export const EMENU_LOCAL_DEFAULT_PATH = "/emenu-local/device-settings";
+export const EMENU_LOCAL_DEFAULT_PATH = "/emenu-local/seasoning-settings";
 
 export type EmenuLocalNavItem = {
   id: string;
   path: string;
   titleKey: MessageKey;
   descriptionKey: MessageKey;
-  icon: "device" | "global" | "category" | "menu" | "seasoning" | "emenu" | "settings";
+  icon: "seasoning" | "emenu" | "settings";
 };
 
 export const EMENU_LOCAL_NAV_ITEMS: readonly EmenuLocalNavItem[] = [
-  {
-    id: "device-settings",
-    path: "/emenu-local/device-settings",
-    titleKey: "shell.emenuLocalDeviceSettings",
-    descriptionKey: "shell.emenuLocalDeviceSettingsDesc",
-    icon: "device",
-  },
-  {
-    id: "global-settings",
-    path: "/emenu-local/global-settings",
-    titleKey: "shell.emenuLocalGlobalSettings",
-    descriptionKey: "shell.emenuLocalGlobalSettingsDesc",
-    icon: "global",
-  },
-  {
-    id: "category-settings",
-    path: "/emenu-local/category-settings",
-    titleKey: "shell.emenuLocalCategorySettings",
-    descriptionKey: "shell.emenuLocalCategorySettingsDesc",
-    icon: "category",
-  },
-  {
-    id: "menu-category-settings",
-    path: "/emenu-local/menu-category-settings",
-    titleKey: "shell.emenuLocalMenuCategorySettings",
-    descriptionKey: "shell.emenuLocalMenuCategorySettingsDesc",
-    icon: "menu",
-  },
   {
     id: "seasoning-settings",
     path: "/emenu-local/seasoning-settings",

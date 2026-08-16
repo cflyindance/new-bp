@@ -1,0 +1,26 @@
+<h2>Menu 入口打开后，要能做什么？</h2>
+<p class="subtitle">结构已定：全局 Product + 组/类多挂载。接下来定「商品菜单」页面的能力边界。</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>完整 CRUD 主数据台</h3>
+      <p>可增删改组/类/菜、挂载关系、价格与选项等近真字段；其它本地业务只读消费这份数据。</p>
+    </div>
+  </div>
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>浏览 + 轻量编辑</h3>
+      <p>三列浏览组类菜；可改名称/启停/排序/挂载；复杂字段（option、套餐）先用 seed 预置，页面暂不深编。</p>
+    </div>
+  </div>
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>一期只读浏览</h3>
+      <p>先把结构和近真字段 seed 好、可查询可给下游引用；编辑能力二期再做。</p>
+    </div>
+  </div>
+</div>

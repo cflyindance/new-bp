@@ -1,0 +1,80 @@
+<h2>Detail 里：调味 + 大小份，怎么一次走完？</h2>
+<p class="subtitle">目标：选完调味确认后，不要关掉再点加号才弹规格。点选你更顺畅的方案。</p>
+
+<div class="cards">
+  <div class="card" data-choice="wizard" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup" style="margin:0;border:none;box-shadow:none">
+        <div class="mockup-body" style="padding:12px">
+          <div class="label">A · 同页两段</div>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+            <div class="placeholder" style="height:48px">① 调味 Option</div>
+            <div class="placeholder" style="height:48px">② 大小份 / 规格</div>
+            <button class="mock-button" style="align-self:flex-end">加入购物车</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A. 同一弹层分段</h3>
+      <p>一个 Detail：上面调味、下面规格，底部一次加购。样式像现有详情，但调味区独立。</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="steps" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup" style="margin:0;border:none;box-shadow:none">
+        <div class="mockup-body" style="padding:12px">
+          <div class="label">B · 两步向导</div>
+          <div style="display:flex;gap:6px;margin:8px 0">
+            <div class="placeholder" style="flex:1;height:28px">步骤1 调味</div>
+            <div class="placeholder" style="flex:1;height:28px;opacity:.45">步骤2 规格</div>
+          </div>
+          <div class="placeholder" style="height:72px">当前步内容</div>
+          <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px">
+            <button class="mock-button">下一步</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B. 两步向导</h3>
+      <p>先选调味 →「下一步」→ 再选大小份 → 加购。弹层不关，步骤切换。</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="seasoning-only-then-merge" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup" style="margin:0;border:none;box-shadow:none">
+        <div class="mockup-body" style="padding:12px">
+          <div class="label">C · 智能接力</div>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+            <div class="placeholder" style="height:56px">Detail：只选调味</div>
+            <div style="text-align:center;font-size:12px;opacity:.7">有规格时自动进入</div>
+            <div class="placeholder" style="height:56px">现有详情：选大小份 + 加购</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C. 确认后自动接力</h3>
+      <p>Detail 只负责调味；点确认若还有规格，不关流程，直接接上现有详情页继续选并加购。</p>
+    </div>
+  </div>
+</div>
+
+<div class="pros-cons" style="margin-top:20px">
+  <div class="pros">
+    <h4>推荐倾向</h4>
+    <ul>
+      <li><strong>A</strong>：一次看清全部必选，步骤最少</li>
+      <li>若规格区很长，可再考虑 B</li>
+    </ul>
+  </div>
+  <div class="cons">
+    <h4>需避免</h4>
+    <ul>
+      <li>关 Detail → 再点加号 → 再弹规格（你提到的断点）</li>
+    </ul>
+  </div>
+</div>

@@ -130,7 +130,7 @@ assert.match(previewFilter, /normalizeProductSearchQuery/, "预览搜索应复�
 assert.doesNotMatch(previewFilter, /storeName|lineLabel|groupName/, "预览搜索不得匹配门店、产线或组名");
 
 const previewDialog = flowSource.match(/function renderSelectedPreviewDialog\([\s\S]*?(?=\n\s*function openSelectedPreview)/)?.[0] ?? "";
-assert.match(previewDialog, /selectedPreviewTitle[\s\S]*?data-selected-preview-search[\s\S]*?data-selected-preview-store[\s\S]*?data-selected-preview-line/, "标题下筛选区应按搜索、门店、产线顺序展示");
+assert.match(previewDialog, /selectedPreviewTitle[\s\S]*?data-selected-preview-store[\s\S]*?data-selected-preview-line[\s\S]*?data-selected-preview-search/, "标题下筛选区应按门店、产线、菜单搜索顺序展示");
 assert.match(previewDialog, /olf-selected-preview-pagination[\s\S]*?data-selected-preview-delete="batch"[\s\S]*?data-selected-preview-delete="all"[\s\S]*?data-selected-preview-page="previous"/, "底部左侧应展示批量删除和全部删除，右侧保留分页");
 assert.doesNotMatch(previewDialog, /共\s*["']?\s*\+\s*data\.filtered\.length|共\s*'\s*\+\s*data\.filtered\.length/, "底部不应继续显示筛选结果总条数");
 

@@ -1,0 +1,27 @@
+<h2>设计 §1 · 入口与展示</h2>
+<p class="subtitle">方案 1：扩展共用 DishDialog。先确认这一段。</p>
+
+<div class="mockup">
+  <div class="mockup-header">菜单卡片（有调味关联时）</div>
+  <div class="mockup-body">
+    <div style="display:flex;align-items:center;gap:12px;padding:8px 0">
+      <div class="placeholder" style="width:72px;height:72px">图</div>
+      <div style="flex:1">
+        <div style="font-weight:600">宫保鸡丁</div>
+        <div class="subtitle" style="margin:0">$12.00</div>
+      </div>
+      <button class="mock-button">Detail</button>
+      <button class="mock-button">+</button>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <p class="label">规则</p>
+  <ul>
+    <li>商品在调味设置中存在关联 → 显示 <strong>Detail</strong></li>
+    <li>无关联 → 不显示 Detail（加号逻辑不变）</li>
+    <li>Detail → 打开共用详情，<code>entrySource=detail</code>，展示调味区</li>
+    <li>加号 → 有规格/Option 时开同一详情 <code>entrySource=add</code>，不展示调味区；无规格则直接加购</li>
+  </ul>
+</div>

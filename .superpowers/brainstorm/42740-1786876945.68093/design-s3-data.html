@@ -1,0 +1,31 @@
+<h2>设计 §3 · 数据与加购</h2>
+<p class="subtitle">菜单如何知道「有关联」、详情如何加载调味、加购如何落购物车。</p>
+
+<div class="section">
+  <p class="label">数据流</p>
+  <ol>
+    <li>终端已有（或拉取）门店调味快照：商品关联 + Option 库 + version</li>
+    <li>渲染菜单时：若该 <code>productId</code> 存在启用关联 → 显示 Detail</li>
+    <li>打开详情且 <code>entrySource=detail</code>：按关联生成 SeasoningBlock 候选项</li>
+    <li>食客选择遵循既有规则：同一 Option 多动作互斥；不同 Option 可多选</li>
+    <li>加入购物车：在原有菜品行上附加 <code>OrderSeasoningSelection[]</code>（动作、optionId、名称快照、priceDelta、排序快照）</li>
+    <li><code>entrySource=add</code>：不读/不写调味选择，购物车行无调味字段（或空数组）</li>
+  </ol>
+</div>
+
+<div class="pros-cons">
+  <div class="pros">
+    <h4>与现有规格对齐</h4>
+    <ul>
+      <li>复用 2026-08-12 食客端选择规则与订单快照语义</li>
+      <li>价格增量来自关联上的 priceDelta，不改 Option 本体</li>
+    </ul>
+  </div>
+  <div class="cons">
+    <h4>本阶段边界</h4>
+    <ul>
+      <li>调味可不选即可加购（§边界已定 A）</li>
+      <li>提交到 POS 的最终协议若未就绪，先保证购物车行可携带快照，对接点单列任务</li>
+    </ul>
+  </div>
+</div>

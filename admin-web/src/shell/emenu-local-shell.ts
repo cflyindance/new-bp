@@ -5,7 +5,6 @@ import { t } from "../i18n";
 import { BUILD_STAMP } from "../generated/build-stamp";
 import { mountDemoSwitchFab } from "./demo-switch-control";
 import { bindViewSwitchControl } from "./view-switch-control";
-import { bindEmenuHostIpControl, renderEmenuHostIpControl } from "./emenu-local-host-control-ui";
 import { bindEmenuLocalSessionBridge } from "./emenu-local-session-bridge";
 import { syncEmenuLangStorage, withEmbedLanguageParam } from "./embed-ui-locale";
 import { bindUiLocaleControl, renderUiLocaleControl } from "./ui-locale-control";
@@ -19,14 +18,20 @@ import {
   normalizeEmenuLocalPath,
   type EmenuLocalNavItem,
 } from "./emenu-local-routes";
+import { buildKposEmbedSrc } from "./emenu-local-host-control";
+import { syncGlobalHostIpRouting } from "./emenu-local-host-control-ui";
 
 function emenuIframeSrc(): string {
-  return withEmbedLanguageParam(`./emenu-new/index.html?embedded=1&v=${BUILD_STAMP}`);
+  return buildKposEmbedSrc(
+    withEmbedLanguageParam(`./emenu-new/index.html?embedded=1&v=${BUILD_STAMP}`),
+  );
 }
 
 /** 与 eMenu 同一本地构建包，打开设置路由 */
 function emenuSettingsIframeSrc(): string {
-  return withEmbedLanguageParam(`./emenu-new/index.html?embedded=1&v=${BUILD_STAMP}#/setting`);
+  return buildKposEmbedSrc(
+    withEmbedLanguageParam(`./emenu-new/index.html?embedded=1&v=${BUILD_STAMP}#/setting`),
+  );
 }
 
 function escapeHtml(value: string): string {
@@ -39,18 +44,6 @@ function escapeHtml(value: string): string {
 
 function renderIcon(kind: EmenuLocalNavItem["icon"], className = "size-5"): string {
   const attrs = `class="${className}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"`;
-  if (kind === "device") {
-    return `<svg ${attrs}><rect x="5" y="2.5" width="14" height="19" rx="2.5"/><path d="M9 6h6M10 18h4"/></svg>`;
-  }
-  if (kind === "global") {
-    return `<svg ${attrs}><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.2 2.5 3.3 5.5 3.3 9S14.2 18.5 12 21c-2.2-2.5-3.3-5.5-3.3-9S9.8 5.5 12 3Z"/></svg>`;
-  }
-  if (kind === "category") {
-    return `<svg ${attrs}><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>`;
-  }
-  if (kind === "menu") {
-    return `<svg ${attrs}><path d="M6 4h12a2 2 0 0 1 2 2v14H6a2 2 0 0 1 2-2V6a2 2 0 0 1 2-2Z"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>`;
-  }
   if (kind === "emenu") {
     return `<svg ${attrs}><rect x="3" y="4" width="18" height="14" rx="2.5"/><path d="M8 20h8M12 18v2"/><path d="M8 9h8M8 12h5"/></svg>`;
   }
@@ -195,7 +188,6 @@ function renderMain(path: string): string {
           <h1 id="main-content" tabindex="-1" class="truncate text-xl font-semibold tracking-tight text-foreground">${escapeHtml(t(active.titleKey))}</h1>
         </div>
         <div class="flex shrink-0 items-center gap-2">
-          ${renderEmenuHostIpControl()}
           ${renderUiLocaleControl()}
           <button type="button" id="theme-toggle" class="inline-flex size-10 shrink-0 items-center justify-center rounded-xl border border-border bg-background text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="${escapeHtml(t("header.themeToggle"))}">
             <svg class="size-5 dark:hidden" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
@@ -214,6 +206,8 @@ function renderMain(path: string): string {
 
 export function mountEmenuLocalShell(_onMount: () => void, path: string): string {
   syncEmenuLangStorage();
+  // 必须在返回含 iframe 的 HTML 之前同步，避免首批 /kpos 请求打到默认主机
+  syncGlobalHostIpRouting();
   const normalized = normalizeEmenuLocalPath(path);
   return `
     <div class="relative h-dvh min-h-0 w-full overflow-hidden bg-muted/35" data-emenu-local-shell>
@@ -234,7 +228,7 @@ export function bindEmenuLocalShell(onMount: () => void): void {
   mountDemoSwitchFab({ showVersionSwitch: false });
   bindViewSwitchControl(onMount);
   bindSeasoningSettingsPage();
-  bindEmenuHostIpControl();
+  syncGlobalHostIpRouting();
   bindEmenuLocalSessionBridge();
   bindUiLocaleControl(() => {
     syncEmenuLangStorage();

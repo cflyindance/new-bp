@@ -1,15 +1,15 @@
-/** Kiosk 本地配置后台：沿用 eMenu 本地后台的独立壳层与视觉语言。 */
-import { t } from "../i18n";
-import { BUILD_STAMP } from "../generated/build-stamp";
-import { mountDemoSwitchFab } from "./demo-switch-control";
-import { bindViewSwitchControl } from "./view-switch-control";
-import { bindKioskLocalSessionBridge } from "./kiosk-local-session-bridge";
+import { buildKposEmbedSrc, reloadKposHostEmbedFrames } from "./emenu-local-host-control";
+import { syncGlobalHostIpRouting } from "./emenu-local-host-control-ui";
+import {
+  bindKioskLocalSessionBridge,
+  ensureKioskEmbedSession,
+  prepareKioskEmbedAuthForHost,
+} from "./kiosk-local-session-bridge";
 import {
   KIOSK_EMBED_DESIGN_HEIGHT,
   KIOSK_EMBED_DESIGN_WIDTH,
   bindKioskEmbedViewportFit,
 } from "./kiosk-local-embed-fit";
-import { bindEmenuHostIpControl, renderEmenuHostIpControl } from "./emenu-local-host-control-ui";
 import { withEmbedLanguageParam } from "./embed-ui-locale";
 import { bindUiLocaleControl, renderUiLocaleControl } from "./ui-locale-control";
 import {
@@ -19,15 +19,23 @@ import {
   type KioskLocalIcon,
   type KioskLocalNavItem,
 } from "./kiosk-local-routes";
+import { mountDemoSwitchFab } from "./demo-switch-control";
+import { bindViewSwitchControl } from "./view-switch-control";
+import { t } from "../i18n";
+import { BUILD_STAMP } from "../generated/build-stamp";
 
 /** 本地 dist/kiosklite/.embed-build；挂在 /kpos/kiosklite 以便 API 基址走同源 /kpos 代理 */
 function kioskIframeSrc(): string {
-  return withEmbedLanguageParam(`./kpos/kiosklite/index.html?embedded=1&v=${BUILD_STAMP}`);
+  return buildKposEmbedSrc(
+    withEmbedLanguageParam(`./kpos/kiosklite/index.html?embedded=1&v=${BUILD_STAMP}`),
+  );
 }
 
 /** 对应主机配置页 #/configApp；业务数据经 /kpos 代理到 POS */
 function kioskSettingsIframeSrc(): string {
-  return withEmbedLanguageParam(`./kpos/kiosklite/index.html?embedded=1&v=${BUILD_STAMP}#/configApp`);
+  return buildKposEmbedSrc(
+    withEmbedLanguageParam(`./kpos/kiosklite/index.html?embedded=1&v=${BUILD_STAMP}#/configApp`),
+  );
 }
 
 function escapeHtml(value: string): string {
@@ -36,15 +44,6 @@ function escapeHtml(value: string): string {
 
 function renderIcon(kind: KioskLocalIcon, className = "size-5"): string {
   const attrs = `class="${className}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"`;
-  if (kind === "service") return `<svg ${attrs}><path d="M4 7h16M7 3v4m10-4v4M5 11h6v8H5zm10 0h4v4h-4z"/></svg>`;
-  if (kind === "fee") return `<svg ${attrs}><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5c-.8-.7-1.9-1-3.2-1-1.7 0-2.8.8-2.8 2s1 1.8 3 2.1 3 1 3 2.3-1.2 2.1-3 2.1c-1.4 0-2.7-.4-3.6-1.2M12 5.5v13"/></svg>`;
-  if (kind === "brand") return `<svg ${attrs}><path d="M4 20V7l8-4 8 4v13M8 20v-6h8v6M8 9h.01M12 9h.01M16 9h.01"/></svg>`;
-  if (kind === "promotion") return `<svg ${attrs}><path d="m4 12 8-8h6l2 2v6l-8 8Z"/><circle cx="16" cy="8" r="1"/><path d="m8 15 5-5"/></svg>`;
-  if (kind === "device") return `<svg ${attrs}><rect x="5" y="2.5" width="14" height="19" rx="2.5"/><path d="M9 6h6M10 18h4"/></svg>`;
-  if (kind === "screen") return `<svg ${attrs}><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4M7 12l3-3 3 3 2-2 2 2"/></svg>`;
-  if (kind === "tag") return `<svg ${attrs}><path d="M20 13 13 20 4 11V4h7Z"/><circle cx="8.5" cy="8.5" r="1.2"/></svg>`;
-  if (kind === "logo") return `<svg ${attrs}><circle cx="12" cy="12" r="9"/><path d="m8 15 4-8 4 8M9.5 12h5"/></svg>`;
-  if (kind === "image") return `<svg ${attrs}><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9" r="1.5"/><path d="m5 17 5-5 3 3 2-2 4 4"/></svg>`;
   if (kind === "kiosk") return `<svg ${attrs}><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h8M8 15h5M9 20h6"/></svg>`;
   if (kind === "settings") return `<svg ${attrs}><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>`;
   return `<svg ${attrs}><path d="M5 3h14v18H5zM8 7h8M8 11h8M8 15h5"/></svg>`;
@@ -105,10 +104,14 @@ function renderMain(path: string): string {
       : active.id === "kiosk-settings"
         ? renderKioskSettingsIframePage()
         : renderPlaceholder(active);
-  return `<div class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"><header class="flex min-h-16 shrink-0 items-center justify-between gap-4 border-b border-border/80 bg-card/95 px-4 py-3 backdrop-blur sm:px-6 lg:px-8"><div class="min-w-0"><p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">${escapeHtml(t("shell.kioskLocalKicker"))}</p><h1 id="main-content" tabindex="-1" class="truncate text-xl font-semibold tracking-tight text-foreground">${escapeHtml(t(active.titleKey))}</h1></div><div class="flex shrink-0 items-center gap-2">${renderEmenuHostIpControl()}${renderUiLocaleControl()}<button type="button" id="theme-toggle" class="inline-flex size-10 shrink-0 items-center justify-center rounded-xl border border-border bg-background text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="${escapeHtml(t("header.themeToggle"))}"><svg class="size-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg></button></div></header>${renderMobileNav(path)}<main class="flex min-h-0 flex-1 flex-col overflow-hidden bg-muted/35 p-3 sm:p-5 lg:p-7"><div class="mx-auto flex min-h-0 w-full max-w-[88rem] flex-1 flex-col animate-fade-in">${body}</div></main></div>`;
+  return `<div class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"><header class="flex min-h-16 shrink-0 items-center justify-between gap-4 border-b border-border/80 bg-card/95 px-4 py-3 backdrop-blur sm:px-6 lg:px-8"><div class="min-w-0"><p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">${escapeHtml(t("shell.kioskLocalKicker"))}</p><h1 id="main-content" tabindex="-1" class="truncate text-xl font-semibold tracking-tight text-foreground">${escapeHtml(t(active.titleKey))}</h1></div><div class="flex shrink-0 items-center gap-2">${renderUiLocaleControl()}<button type="button" id="theme-toggle" class="inline-flex size-10 shrink-0 items-center justify-center rounded-xl border border-border bg-background text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="${escapeHtml(t("header.themeToggle"))}"><svg class="size-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg></button></div></header>${renderMobileNav(path)}<main class="flex min-h-0 flex-1 flex-col overflow-hidden bg-muted/35 p-3 sm:p-5 lg:p-7"><div class="mx-auto flex min-h-0 w-full max-w-[88rem] flex-1 flex-col animate-fade-in">${body}</div></main></div>`;
 }
 
 export function mountKioskLocalShell(_onMount: () => void, path: string): string {
+  // 必须在返回含 iframe 的 HTML 之前同步，避免首批 /kpos 请求打到默认主机
+  syncGlobalHostIpRouting();
+  // 清掉其它 POS 留下的 session cookie，否则开发态 kiosklite 会优先用旧主机登录态
+  prepareKioskEmbedAuthForHost();
   const normalized = normalizeKioskLocalPath(path);
   return `<div class="relative h-dvh min-h-0 w-full overflow-hidden bg-muted/35" data-kiosk-local-shell><div class="flex h-full min-h-0 w-full">${renderSidebar(normalized)}${renderMain(normalized)}</div></div>`;
 }
@@ -117,10 +120,20 @@ export function bindKioskLocalShell(onMount: () => void): void {
   document.getElementById("theme-toggle")?.addEventListener("click", () => document.documentElement.classList.toggle("dark"));
   mountDemoSwitchFab({ showVersionSwitch: false });
   bindViewSwitchControl(onMount);
-  bindEmenuHostIpControl();
+  syncGlobalHostIpRouting();
   bindKioskLocalSessionBridge();
   bindKioskEmbedViewportFit();
   bindUiLocaleControl(() => {
     onMount();
   });
+
+  // 刚切主机时 cookie 已被清掉：先向当前 POS 登录写回 session，再刷新 iframe，避免仍停在选 license / 空数据
+  const needsAuthReload = !/(?:^|;\s*)sessionKey=/.test(document.cookie);
+  void ensureKioskEmbedSession()
+    .then(() => {
+      if (needsAuthReload) reloadKposHostEmbedFrames();
+    })
+    .catch((err) => {
+      console.warn("[kiosk-local] failed to warm POS session", err);
+    });
 }

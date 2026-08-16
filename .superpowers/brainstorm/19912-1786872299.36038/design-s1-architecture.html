@@ -1,0 +1,33 @@
+<h2>设计 §1 · 架构边界</h2>
+<p class="subtitle">独立 Product Catalog 域作为本地商品唯一真源</p>
+
+<div class="section">
+  <div class="mockup">
+    <div class="mockup-header">数据流</div>
+    <div class="mockup-body">
+      <pre style="margin:0;font-size:13px;line-height:1.6;white-space:pre-wrap">Demo 悬浮球
+  └─ Menu 商品菜单  →  Catalog Shell（CRUD UI）
+                         │
+                         ▼
+              Product Catalog（本地 SSOT）
+              · products[]
+              · groups[] / categories[]
+              · placements[]（组+类 → productId）
+                         │
+          ┌──────────────┼──────────────┐
+          ▼              ▼              ▼
+   eMenu 调味选择器   前厅组类菜勾选   Kiosk 等本地业务
+   （适配层只读）     （适配层只读）    （后续接入）</pre>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <p class="label">边界约定</p>
+  <ul>
+    <li><strong>写</strong>：只允许 Catalog UI / Catalog API</li>
+    <li><strong>读</strong>：下游通过适配层取「选择器视图」或「eMenu menus 形状」</li>
+    <li><strong>不依赖</strong>：POS 主机真实菜单接口</li>
+    <li><strong>持久化</strong>：本地 seed + handler（对齐现有 emenu-local 模式）</li>
+  </ul>
+</div>

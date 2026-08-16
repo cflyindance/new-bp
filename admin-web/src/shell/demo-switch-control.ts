@@ -3,6 +3,7 @@
  */
 import { t } from "../i18n";
 import { bindPeripheralProductsControl, renderFlatPeripheralProductsGroup } from "./peripheral-products-control";
+import { bindGlobalHostIpControl, renderFlatGlobalHostIpGroup } from "./emenu-local-host-control-ui";
 import { renderFlatViewSwitchGroup } from "./view-switch-control";
 import { renderFlatVersionSwitchGroup } from "./version-switch-control";
 
@@ -126,6 +127,8 @@ function renderDemoSwitchFabHtml(options: DemoSwitchControlOptions): string {
       ${showVersionSwitch ? `<div class="my-3 h-px bg-border" aria-hidden="true"></div><section data-demo-switch-version-group>${renderFlatVersionSwitchGroup()}</section>` : ""}
       <div class="my-3 h-px bg-border" aria-hidden="true"></div>
       <section data-demo-switch-products-group>${renderFlatPeripheralProductsGroup()}</section>
+      <div class="my-3 h-px bg-border" aria-hidden="true"></div>
+      <section data-demo-switch-host-ip-group>${renderFlatGlobalHostIpGroup()}</section>
     </div>`;
 
   return `
@@ -311,13 +314,19 @@ function removeDemoSwitchDom(): void {
 /** 挂载/刷新悬浮球（挂在 body，避免 #app remount 丢失；位置在会话内保留） */
 export function mountDemoSwitchFab(options: DemoSwitchControlOptions = {}): void {
   removeDemoSwitchDom();
-  document.body.insertAdjacentHTML("beforeend", renderDemoSwitchFabHtml(options));
+  try {
+    document.body.insertAdjacentHTML("beforeend", renderDemoSwitchFabHtml(options));
+  } catch (err) {
+    console.error("[demo-switch] failed to render fab", err);
+    return;
+  }
   const root = document.getElementById(FAB_ROOT_ID);
   if (!root) return;
   applyFabPosition(root);
   bindFabDragAndToggle(root);
   bindBackdropDismiss();
   bindPeripheralProductsControl();
+  bindGlobalHostIpControl();
   ensureDemoSwitchDismissBound();
 }
 

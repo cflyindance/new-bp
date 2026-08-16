@@ -1,0 +1,26 @@
+<h2>与现有 eMenu 本地调味菜单数据的关系？</h2>
+<p class="subtitle">仓库里已有 seasoning 的组/类/productIds seed。新「商品菜单」作为主数据中心后，和它怎么衔接？</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>商品菜单成为唯一真源（推荐）</h3>
+      <p>Menu Catalog 是 SSOT；调味/其它本地模块改为读这份数据。一期可迁 seed，旧结构退役或适配层兼容。</p>
+    </div>
+  </div>
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>先并行，二期统一</h3>
+      <p>Menu 独立一套近真主数据；调味暂时继续用旧 seed。接口形状对齐，后续再切源。</p>
+    </div>
+  </div>
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>在现有 seasoning 上扩成商品菜单</h3>
+      <p>不新建 Catalog 域，直接把调味菜单结构升级成完整 CRUD + 近真字段，Demo 入口指向它。</p>
+    </div>
+  </div>
+</div>

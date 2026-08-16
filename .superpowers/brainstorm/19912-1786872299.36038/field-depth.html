@@ -1,0 +1,35 @@
+<h2>商品字段要做到多「厚」？</h2>
+<p class="subtitle">已确认：本地商品主数据中心（供 eMenu / Kiosk / 前厅等消费）。下一步决定菜/商品字段深度。</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>精简主数据</h3>
+      <p>组/类/菜：id、name、code、status、sortOrder + 挂载关系。够支撑选择器与本地联调，价格/口味后补。</p>
+    </div>
+  </div>
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>对齐现有调味 seed</h3>
+      <p>在 A 基础上加 emenuSellable、主分类、产线可售标记等；与 seasoning 本地结构一致，迁移成本最低。</p>
+    </div>
+  </div>
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>接近 eMenu 真菜字段</h3>
+      <p>价格、图片、标签、沽清、option/套餐等。演示真实，但建模重、易绑死 POS 语义。</p>
+    </div>
+  </div>
+  <div class="option" data-choice="d" onclick="toggleSelect(this)">
+    <div class="letter">D</div>
+    <div class="content">
+      <h3>分层：核心 + 产线扩展</h3>
+      <p>Product 只存稳定主数据；eMenu/Kiosk 扩展 profile（价、可售、选项）外挂。主中心干净，扩展可演进。</p>
+    </div>
+  </div>
+</div>
+
+<p class="subtitle">点选后也可在对话里回复字母。</p>

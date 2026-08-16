@@ -1,0 +1,41 @@
+<h2>设计 §4 · 边界与验收</h2>
+<p class="subtitle">本需求做什么 / 不做什么，以及怎么算做完。</p>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">范围内</div>
+    <div class="mockup-body">
+      <ul>
+        <li>有关联显示 Detail</li>
+        <li>共用 DishDialog + entrySource</li>
+        <li>Detail 在 Option 下追加调味区</li>
+        <li>加号入口不展示调味</li>
+        <li>无规格也可从 Detail 加购</li>
+        <li>购物车行携带调味选择快照</li>
+      </ul>
+    </div>
+  </div>
+  <div class="mockup">
+    <div class="mockup-header">范围外（本阶段不做）</div>
+    <div class="mockup-body">
+      <ul>
+        <li>再造第二套详情页 UI</li>
+        <li>从加号入口选调味</li>
+        <li>改调味后台配置模型</li>
+        <li>强制必选调味</li>
+        <li>与配置 27/608「展示菜详情」混用为同一开关</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <p class="label">验收要点</p>
+  <ol>
+    <li>有关联菜显示 Detail；无关联不显示</li>
+    <li>Detail 打开详情可见调味在 Option 下方；加购行含调味</li>
+    <li>加号打开详情（或有规格时）不可见调味；加购行无调味</li>
+    <li>同 Option 动作互斥仍生效</li>
+    <li>仅有调味、无规格时，Detail → 确认可加购</li>
+  </ol>
+</div>

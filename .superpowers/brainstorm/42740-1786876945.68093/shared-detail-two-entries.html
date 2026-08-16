@@ -1,0 +1,48 @@
+<h2>已记录：双入口共用详情，Option 区条件追加</h2>
+<p class="subtitle">请确认下面两张流程是否符合你的意思。对的话在对话里回「确认」；要改直接说。</p>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">入口 1：点 Detail</div>
+    <div class="mockup-body">
+      <div class="label">共用「商品详情」</div>
+      <div style="display:flex;gap:12px;margin-top:10px;min-height:200px">
+        <div class="placeholder" style="flex:0.9">菜图 / 名称 / 数量</div>
+        <div style="flex:1.2;display:flex;flex-direction:column;gap:8px">
+          <div class="placeholder" style="height:44px">规格（大小份等）</div>
+          <div class="placeholder" style="height:56px">现有 Option 区域</div>
+          <div class="placeholder" style="height:64px;outline:2px dashed #2f6fed;outline-offset:2px">
+            <strong>+ 调味 Option</strong><br/>追加在 Option 下方
+          </div>
+          <button class="mock-button" style="align-self:flex-end">加入购物车</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mockup">
+    <div class="mockup-header">入口 2：点加号（加购）</div>
+    <div class="mockup-body">
+      <div class="label">同样是「商品详情」</div>
+      <div style="display:flex;gap:12px;margin-top:10px;min-height:200px">
+        <div class="placeholder" style="flex:0.9">菜图 / 名称 / 数量</div>
+        <div style="flex:1.2;display:flex;flex-direction:column;gap:8px">
+          <div class="placeholder" style="height:44px">规格（大小份等）</div>
+          <div class="placeholder" style="height:56px">现有 Option 区域</div>
+          <div class="placeholder" style="height:64px;opacity:.35">调味 Option 不展示</div>
+          <button class="mock-button" style="align-self:flex-end">加入购物车</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:16px">
+  <p class="label">规则摘要</p>
+  <ul>
+    <li>有调味关联 → 菜单显示 Detail 按钮</li>
+    <li>Detail 与加购共用同一套详情 UI，不是两套页面</li>
+    <li>仅从 Detail 进入时，在 Option 区域下方追加调味 Option</li>
+    <li>从加号进入时，详情里不出现调味 Option</li>
+  </ul>
+</div>

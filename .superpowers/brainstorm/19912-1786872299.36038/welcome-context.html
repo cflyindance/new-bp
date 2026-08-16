@@ -1,0 +1,32 @@
+<h2>商品菜单 · 设计对齐</h2>
+<p class="subtitle">我们要在 Demo 视角切换里新增 Menu 入口，并定义「组 → 类 → 菜」的本地商品主数据</p>
+
+<div class="section">
+  <p class="label">入口位置</p>
+  <div class="mockup">
+    <div class="mockup-header">Demo 悬浮球 · 周边产品组</div>
+    <div class="mockup-body">
+      <div style="display:flex;flex-direction:column;gap:8px;max-width:280px">
+        <div class="mock-button" style="opacity:.55">eMenu 本地配置后台</div>
+        <div class="mock-button" style="opacity:.55">Kiosk 本地配置后台</div>
+        <div class="mock-button" style="outline:2px solid var(--accent, #3b82f6); outline-offset:2px">Menu 商品菜单 ← 新增</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <p class="label">目标结构（对齐 eMenu）</p>
+  <div class="mockup">
+    <div class="mockup-header">组 + 类 + 菜</div>
+    <div class="mockup-body">
+      <pre style="margin:0;font-size:13px;line-height:1.55;white-space:pre-wrap">MenuCatalog（商品菜单）
+├── Group 菜单组　例：火锅主食 / 招牌推荐
+│   └── Category 菜单类　例：肉类 / 蔬菜
+│       └── Dish 菜品　→ 引用 Product（可多挂载）
+└── Product 商品主数据（全局一份，不嵌在类里复制）</pre>
+    </div>
+  </div>
+</div>
+
+<p class="subtitle">请回到对话里回答第一个问题；浏览器会随讨论更新示意。</p>

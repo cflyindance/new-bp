@@ -642,18 +642,64 @@
     var pickerOpts = normalizePickerOptions(opts || readPickerOptions(pickerEl));
 
     function rerender(byLine, activeG, activeC, activeLine, notify) {
+      var scrollTops = Array.prototype.map.call(
+        pickerEl.querySelectorAll(".bmsp-col > div"),
+        function (el) { return el.scrollTop; }
+      );
+      var pageScrollY = window.scrollY || window.pageYOffset || 0;
+      var focusKey = null;
+      var activeEl = document.activeElement;
+      if (activeEl && pickerEl.contains(activeEl) && activeEl.getAttribute) {
+        focusKey = activeEl.getAttribute("data-brand-menu-enable");
+      }
       var wrap = document.createElement("div");
       wrap.innerHTML = renderHtml(byLine, activeLine, activeG, activeC, pickerOpts).trim();
       var next = wrap.firstElementChild;
       if (!next) return;
       pickerEl.replaceWith(next);
+      var nextCols = next.querySelectorAll(".bmsp-col > div");
+      scrollTops.forEach(function (top, index) {
+        if (nextCols[index]) nextCols[index].scrollTop = top;
+      });
+      if (focusKey) {
+        var focusEl = null;
+        Array.prototype.some.call(next.querySelectorAll("[data-brand-menu-enable]"), function (el) {
+          if (el.getAttribute("data-brand-menu-enable") === focusKey) {
+            focusEl = el;
+            return true;
+          }
+          return false;
+        });
+        if (focusEl && typeof focusEl.focus === "function") {
+          try { focusEl.focus({ preventScroll: true }); }
+          catch (err) { focusEl.focus(); }
+        }
+      }
+      window.scrollTo(0, pageScrollY);
       syncIndeterminate(next);
       bind(next, pickerOpts);
       if (notify) {
         next.dispatchEvent(
           new CustomEvent("brand-menu-structure-change", {
             bubbles: true,
-            detail: { byLine: byLine },
+            detail: {
+              byLine: byLine,
+              activeLine: activeLine,
+              activeGroup: activeG,
+              activeCategory: activeC,
+            },
+          }),
+        );
+        window.scrollTo(0, pageScrollY);
+      } else {
+        next.dispatchEvent(
+          new CustomEvent("brand-menu-structure-nav", {
+            bubbles: true,
+            detail: {
+              activeLine: activeLine,
+              activeGroup: activeG,
+              activeCategory: activeC,
+            },
           }),
         );
       }

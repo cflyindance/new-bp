@@ -1,0 +1,36 @@
+<h2>设计 §2 · 详情内布局</h2>
+<p class="subtitle">共用 DishDialog 右栏；调味区仅在 Detail 入口出现，且在现有 Option 下方。</p>
+
+<div class="mockup">
+  <div class="mockup-header">DishDialog · entrySource=detail</div>
+  <div class="mockup-body">
+    <div style="display:flex;gap:14px;min-height:260px">
+      <div class="placeholder" style="flex:0.85">左：图 / 名 / 数量</div>
+      <div style="flex:1.25;display:flex;flex-direction:column;gap:8px">
+        <div class="placeholder" style="height:40px">规格 PriceList（有则显示）</div>
+        <div class="placeholder" style="height:72px">现有 OptionList</div>
+        <div style="border:2px dashed #2f6fed;border-radius:8px;padding:10px;background:rgba(47,111,237,.06)">
+          <div class="label">SeasoningBlock（新增）</div>
+          <div style="margin-top:6px;font-size:13px;line-height:1.5">
+            按调味关联渲染（加/少/多/无 + Option）<br/>
+            互斥规则沿用 seasoning-terminal-rules<br/>
+            可选展示 priceDelta
+          </div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:4px">
+          <button class="mock-button">加入购物车</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <p class="label">要点</p>
+  <ul>
+    <li>不新建第二套详情页；样式复用现有左右栏</li>
+    <li>调味与 POS Option 状态、校验、提交字段隔离</li>
+    <li>无规格/无 POS Option 时，右栏可只出现 SeasoningBlock</li>
+    <li>entrySource=add 时整块不挂载 SeasoningBlock</li>
+  </ul>
+</div>
