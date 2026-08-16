@@ -74,7 +74,7 @@ assert(view.menuGroups[0].categories[0].productIds.includes("1001"), "placement 
 assert(view.menuGroups[1].categories[0].productIds.includes("1001"), "same product multi-path");
 assert(view.categories.some((c) => c.id === "c1"), "flat categories derived");
 assert(view.sourceMenuVersion === "mv-1", "preserve menuVersion");
-assert(typeof view.fingerprint === "string" && view.fingerprint.length > 10, "fingerprint required");
+assert(typeof view.fingerprint === "string" && view.fingerprint.startsWith("kpos:"), "fingerprint required");
 
 const empty = mapKposMenusToSeasoningView({ menus: [{ menuGroups: [] }] });
 assert(empty.products.length === 0 && empty.menuGroups.length === 0, "empty menu");
