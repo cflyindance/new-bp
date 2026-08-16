@@ -6,6 +6,7 @@ import { BUILD_STAMP } from "../generated/build-stamp";
 import { mountDemoSwitchFab } from "./demo-switch-control";
 import { bindViewSwitchControl } from "./view-switch-control";
 import { bindEmenuHostIpControl, renderEmenuHostIpControl } from "./emenu-local-host-control-ui";
+import { bindEmenuLocalSessionBridge } from "./emenu-local-session-bridge";
 import { syncEmenuLangStorage, withEmbedLanguageParam } from "./embed-ui-locale";
 import { bindUiLocaleControl, renderUiLocaleControl } from "./ui-locale-control";
 import {
@@ -234,6 +235,7 @@ export function bindEmenuLocalShell(onMount: () => void): void {
   bindViewSwitchControl(onMount);
   bindSeasoningSettingsPage();
   bindEmenuHostIpControl();
+  bindEmenuLocalSessionBridge();
   bindUiLocaleControl(() => {
     syncEmenuLangStorage();
     onMount();
