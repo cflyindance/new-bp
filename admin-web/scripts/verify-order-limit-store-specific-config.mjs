@@ -29,7 +29,7 @@ assert.match(stepFour, /data-limit-store-select/, "数量配置应提供参与�
 assert.doesNotMatch(stepFour, /data-limit-store-tab/, "数量配置不应继续渲染门店 Tab");
 assert.match(stepFour, /configuredStores\.map/, "数量配置门店下拉应只从已添加商品门店生成选项");
 assert.match(stepFour, /暂无参与门店/, "数量配置应提供无参与门店安全空态");
-assert.match(stepFour, /previousActiveStoreId[\s\S]{0,500}clearBatchSelection/, "自动归一化切换门店时应清空批量状态");
+assert.match(stepFour, /previousActiveStoreId[\s\S]{0,500}resetBatchSelection/, "自动归一化切换门店时应清空批量选择");
 assert.match(stepFour, /activeStoreConfig\(draft\)/, "数量配置应读取当前门店矩阵");
 
 const activeDimensionNormalizer = source.match(/function normalizeActiveDimensions\(draft, requireAddedStore\)[\s\S]*?(?=\n\s*function changeChoice)/)?.[0];
@@ -38,7 +38,7 @@ assert.match(activeDimensionNormalizer, /requireAddedStore[\s\S]{0,500}!added\.l
 
 const inputHandler = source.match(/function handleEditorInput\(event\)[\s\S]*?(?=\n\s*function mountEditor)/)?.[0];
 assert.ok(inputHandler, "应能定位编辑器输入处理函数");
-assert.match(inputHandler, /data-limit-store-select[\s\S]{0,900}addedStoreIds\(draft\)[\s\S]{0,900}clearBatchSelection\(\)[\s\S]{0,900}activeStoreId[\s\S]{0,900}normalizeActiveDimensions[\s\S]{0,900}renderEditor/, "数量配置门店下拉应校验参与门店并安全切换矩阵");
+assert.match(inputHandler, /data-limit-store-select[\s\S]{0,900}addedStoreIds\(draft\)[\s\S]{0,900}resetBatchSelection\(\)[\s\S]{0,900}activeStoreId[\s\S]{0,900}normalizeActiveDimensions[\s\S]{0,900}renderEditor/, "数量配置门店下拉应校验参与门店并安全切换矩阵");
 
 const stepFive = source.match(/function renderStepFive\(draft\)[\s\S]*?(?=\n\s*function renderStepSix)/)?.[0];
 assert.ok(stepFive, "应能定位生效范围渲染函数");

@@ -1109,30 +1109,53 @@
     return targets.filter(function (target) { return selectedIds.indexOf(target.id) >= 0; });
   }
 
-  function setBatchSelection(targetIds) {
-    if (!editorState) return;
-    editorState.batchSelectedTargetIds = targetIds.filter(function (targetId, index, ids) { return ids.indexOf(targetId) === index; });
-    syncBatchControls();
+  function readSceneIndexes(el) {
+    if (!el || !el.hasAttribute || !el.hasAttribute("data-scene-party")) return null;
+    return {
+      partyIndex: Number(el.getAttribute("data-scene-party")),
+      roundIndex: Number(el.getAttribute("data-scene-round"))
+    };
   }
 
-  function syncBatchControls() {
+  function setBatchSelection(targetIds, scene) {
+    if (!editorState) return;
+    var ids = targetIds.filter(function (targetId, index, list) { return list.indexOf(targetId) === index; });
+    if (scene) {
+      if (!editorState.batchSelectedByScene) editorState.batchSelectedByScene = {};
+      editorState.batchSelectedByScene[sceneKey(scene.partyIndex, scene.roundIndex)] = ids;
+      syncBatchControls(scene);
+      return;
+    }
+    editorState.batchSelectedTargetIds = ids;
+    syncBatchControls(null);
+  }
+
+  function syncBatchControls(scene) {
     if (!editorState) return;
     var draft = editorState.rule.editorDraft;
+    var scopeRoot = root;
+    if (scene) {
+      var block = root.querySelector('[data-scene-block="' + sceneKey(scene.partyIndex, scene.roundIndex) + '"]');
+      if (!block) return;
+      scopeRoot = block;
+    }
     var targets = currentBatchTargets(draft);
-    var selected = selectedBatchTargets(draft);
+    var selected = scene
+      ? selectedBatchTargetsForScene(draft, scene.partyIndex, scene.roundIndex)
+      : selectedBatchTargets(draft);
     var selectedIds = selected.map(function (target) { return target.id; });
-    root.querySelectorAll("[data-batch-target-id]").forEach(function (checkbox) {
+    scopeRoot.querySelectorAll("[data-batch-target-id]").forEach(function (checkbox) {
       checkbox.checked = selectedIds.indexOf(checkbox.getAttribute("data-batch-target-id")) >= 0;
     });
-    var selectAll = root.querySelector("[data-batch-select-all]");
+    var selectAll = scopeRoot.querySelector("[data-batch-select-all]");
     if (selectAll) {
       selectAll.checked = targets.length > 0 && selected.length === targets.length;
       selectAll.indeterminate = selected.length > 0 && selected.length < targets.length;
     }
-    var count = root.querySelector("[data-batch-selected-count]");
+    var count = scopeRoot.querySelector("[data-batch-selected-count]");
     if (count) count.textContent = "已选 " + selected.length + " 项";
-    root.querySelectorAll("[data-apply-batch]").forEach(function (button) { button.disabled = selected.length === 0; });
-    var clearButton = root.querySelector("[data-batch-clear]");
+    scopeRoot.querySelectorAll("[data-apply-batch]").forEach(function (button) { button.disabled = selected.length === 0; });
+    var clearButton = scopeRoot.querySelector("[data-batch-clear]");
     if (clearButton) clearButton.disabled = selected.length === 0;
   }
 
@@ -1618,8 +1641,13 @@
   }
 
   function cellFor(draft, targetId, config) {
+    return cellForScene(draft, draft.activePartyIndex, draft.period === "multi_round" ? draft.activeRoundIndex : 0, targetId, config);
+  }
+
+  function cellForScene(draft, partyIndex, roundIndex, targetId, config) {
     config = config || activeStoreConfig(draft);
-    return config.limits[limitKey(draft.activePartyIndex, draft.period === "multi_round" ? draft.activeRoundIndex : 0, draft.activeLineId, targetId)] || { configured: false, value: null };
+    var round = draft.period === "multi_round" ? roundIndex : 0;
+    return config.limits[limitKey(partyIndex, round, draft.activeLineId, targetId)] || { configured: false, value: null };
   }
 
   function completionFor(draft, lineId, config) {
@@ -1647,15 +1675,90 @@
     return complete + "/" + total;
   }
 
-  function renderLimitRows(draft) {
+  function selectedBatchTargetsForScene(draft, partyIndex, roundIndex) {
+    var targets = currentBatchTargets(draft);
+    var validIds = targets.map(function (target) { return target.id; });
+    var selectedIds = [];
+    if (editorState) {
+      if (isSceneTileMode(draft)) {
+        var key = sceneKey(partyIndex, roundIndex);
+        if (!editorState.batchSelectedByScene) editorState.batchSelectedByScene = {};
+        selectedIds = (editorState.batchSelectedByScene[key] || []).filter(function (id) {
+          return validIds.indexOf(id) >= 0;
+        });
+        editorState.batchSelectedByScene[key] = selectedIds;
+      } else {
+        selectedIds = (editorState.batchSelectedTargetIds || []).filter(function (id) {
+          return validIds.indexOf(id) >= 0;
+        });
+        editorState.batchSelectedTargetIds = selectedIds;
+      }
+    }
+    return targets.filter(function (target) { return selectedIds.indexOf(target.id) >= 0; });
+  }
+
+  function renderLimitRowsForScene(draft, partyIndex, roundIndex) {
     var config = activeStoreConfig(draft);
-    var batchSelectedIds = editorState ? editorState.batchSelectedTargetIds : [];
+    var key = sceneKey(partyIndex, roundIndex);
+    var batchSelectedIds = [];
+    if (editorState) {
+      if (isSceneTileMode(draft)) {
+        batchSelectedIds = (editorState.batchSelectedByScene && editorState.batchSelectedByScene[key]) || [];
+      } else {
+        batchSelectedIds = editorState.batchSelectedTargetIds || [];
+      }
+    }
+    var sceneAttrs = isSceneTileMode(draft)
+      ? ' data-scene-party="' + partyIndex + '" data-scene-round="' + roundIndex + '"'
+      : "";
     return targetsForLine(draft, draft.activeLineId, config).map(function (target) {
-      var cell = cellFor(draft, target.id, config);
+      var cell = cellForScene(draft, partyIndex, roundIndex, target.id, config);
       var targetName = target.shortName || target.name;
-      var selectCell = '<td class="olf-batch-select-cell"><label class="olf-batch-check"><input type="checkbox" data-batch-target-id="' + esc(target.id) + '"' + (batchSelectedIds.indexOf(target.id) >= 0 ? " checked" : "") + ' /><span class="olf-sr-only">选择' + esc(targetName) + '</span></label></td>';
-      return '<tr>' + selectCell + '<td><strong>' + esc(targetName) + '</strong>' + (target.count ? '<div class="olf-hint">包含 ' + target.count + ' 个菜品</div>' : '<div class="olf-hint">' + esc(target.category || "") + '</div>') + '</td><td><input class="olf-input olf-limit-input" type="number" min="0" value="' + (cell.configured && cell.value != null ? esc(cell.value) : "") + '" placeholder="未配置" data-limit-target="' + esc(target.id) + '" /></td></tr>';
+      var selectCell = '<td class="olf-batch-select-cell"><label class="olf-batch-check"><input type="checkbox" data-batch-target-id="' + esc(target.id) + '"' + sceneAttrs + (batchSelectedIds.indexOf(target.id) >= 0 ? " checked" : "") + ' /><span class="olf-sr-only">选择' + esc(targetName) + '</span></label></td>';
+      return '<tr>' + selectCell + '<td><strong>' + esc(targetName) + '</strong>' + (target.count ? '<div class="olf-hint">包含 ' + target.count + ' 个菜品</div>' : '<div class="olf-hint">' + esc(target.category || "") + '</div>') + '</td><td><input class="olf-input olf-limit-input" type="number" min="0" value="' + (cell.configured && cell.value != null ? esc(cell.value) : "") + '" placeholder="未配置" data-limit-target="' + esc(target.id) + '"' + sceneAttrs + ' /></td></tr>';
     }).join("");
+  }
+
+  function renderLimitRows(draft) {
+    return renderLimitRowsForScene(
+      draft,
+      draft.activePartyIndex,
+      draft.period === "multi_round" ? draft.activeRoundIndex : 0
+    );
+  }
+
+  function renderBatchPanelForScene(draft, partyIndex, roundIndex, batchSelectedCount, batchTargetCount) {
+    var sceneAttrs = isSceneTileMode(draft)
+      ? ' data-scene-party="' + partyIndex + '" data-scene-round="' + roundIndex + '"'
+      : "";
+    var idAttr = isSceneTileMode(draft)
+      ? ' id="batchPanel-' + partyIndex + '-' + roundIndex + '"'
+      : ' id="batchPanel"';
+    var inputId = isSceneTileMode(draft)
+      ? 'batchLimitValue-' + partyIndex + '-' + roundIndex
+      : 'batchLimitValue';
+    return '<div' + idAttr + ' class="olf-summary olf-batch-panel"' + sceneAttrs + '><div class="olf-batch-toolbar"><strong class="olf-batch-count" data-batch-selected-count' + sceneAttrs + '>已选 ' + batchSelectedCount + ' 项</strong><button type="button" class="olf-button olf-button--small olf-button--quiet" data-batch-select-all-action' + sceneAttrs + '>全选当前产线</button><button type="button" class="olf-button olf-button--small olf-button--quiet" data-batch-clear' + sceneAttrs + (batchSelectedCount ? '' : ' disabled') + '>清空选择</button><span class="olf-batch-spacer"></span><input class="olf-input olf-limit-input" type="number" min="0" id="' + inputId + '" placeholder="数量"' + sceneAttrs + ' /><button type="button" class="olf-button olf-button--small" data-apply-batch="value"' + sceneAttrs + (batchSelectedCount ? '' : ' disabled') + '>应用数量</button></div></div>';
+  }
+
+  function renderSceneComboBlocks(draft, config) {
+    return sceneCombos(draft).map(function (combo) {
+      var completion = sceneComboCompletion(draft, combo.partyIndex, combo.roundIndex, draft.activeLineId, config);
+      var batchTargets = currentBatchTargets(draft);
+      var batchSelected = selectedBatchTargetsForScene(draft, combo.partyIndex, combo.roundIndex);
+      var selectHeader = '<th class="olf-batch-select-cell"><label class="olf-batch-check"><input type="checkbox" data-batch-select-all data-scene-party="' + combo.partyIndex + '" data-scene-round="' + combo.roundIndex + '"' + (batchTargets.length > 0 && batchSelected.length === batchTargets.length ? ' checked' : '') + ' /><span class="olf-sr-only">全选当前产线</span></label></th>';
+      return '<section class="olf-scene-combo-block" data-scene-block="' + esc(combo.key) + '" data-scene-party="' + combo.partyIndex + '" data-scene-round="' + combo.roundIndex + '"><div class="olf-scene-combo-head"><h4>' + esc(combo.title) + '</h4><span class="olf-scene-combo-completion">已配 ' + completion.label + '</span></div>' +
+        renderBatchPanelForScene(draft, combo.partyIndex, combo.roundIndex, batchSelected.length, batchTargets.length) +
+        '<div class="olf-table-wrap"><table class="olf-table"><thead><tr>' + selectHeader + '<th>' + (draft.targetType === 'dish' ? '菜品' : '分类') + '</th><th>' + (draft.subject === 'party_size' ? '人均上限' : '订单上限') + '</th></tr></thead><tbody>' + renderLimitRowsForScene(draft, combo.partyIndex, combo.roundIndex) + '</tbody></table></div></section>';
+    }).join('');
+  }
+
+  function renderSceneDisplayToggle(draft) {
+    if (draft.period !== "multi_round") return "";
+    var mode = editorState && editorState.sceneDisplayMode === "split" ? "split" : "tile";
+    return '<div class="olf-scene-display"><span class="olf-scene-display-label">场景展示</span><div class="olf-segmented" role="group" aria-label="场景展示">' +
+      '<button type="button" class="olf-segmented__btn' + (mode === "tile" ? ' is-active' : '') + '" data-scene-display-mode="tile">组合平铺</button>' +
+      '<button type="button" class="olf-segmented__btn' + (mode === "split" ? ' is-active' : '') + '" data-scene-display-mode="split">分开选择</button>' +
+      '</div></div>';
   }
 
   function renderStepFourLegacy(draft) {
@@ -1683,6 +1786,7 @@
     var hasConfiguredStores = configuredStores.length > 0;
     if (!hasConfiguredStores || previousActiveStoreId !== draft.activeStoreId) resetBatchSelection();
     var config = activeStoreConfig(draft);
+    var tileMode = isSceneTileMode(draft);
     var batchTargets = currentBatchTargets(draft);
     var batchSelected = selectedBatchTargets(draft);
     var storeOptions = configuredStores.map(function (storeId) {
@@ -1701,13 +1805,28 @@
       return '<button type="button" class="olf-tab' + (draft.activeLineId === lineId ? ' is-active' : '') + '" data-line-tab="' + esc(lineId) + '">' + esc(line ? line.name : lineId) + ' · ' + completionFor(draft, lineId, config) + '</button>';
     }).join('');
     var selectHeader = '<th class="olf-batch-select-cell"><label class="olf-batch-check"><input type="checkbox" data-batch-select-all' + (batchTargets.length > 0 && batchSelected.length === batchTargets.length ? ' checked' : '') + ' /><span class="olf-sr-only">全选当前产线</span></label></th>';
-    var batchPanel = '<div id="batchPanel" class="olf-summary olf-batch-panel"><div class="olf-batch-toolbar"><strong class="olf-batch-count" data-batch-selected-count>已选 ' + batchSelected.length + ' 项</strong><button type="button" class="olf-button olf-button--small olf-button--quiet" data-batch-select-all-action>全选当前产线</button><button type="button" class="olf-button olf-button--small olf-button--quiet" data-batch-clear' + (batchSelected.length ? '' : ' disabled') + '>清空选择</button><span class="olf-batch-spacer"></span><input class="olf-input olf-limit-input" type="number" min="0" id="batchLimitValue" placeholder="数量" /><button type="button" class="olf-button olf-button--small" data-apply-batch="value"' + (batchSelected.length ? '' : ' disabled') + '>应用数量</button></div></div>';
+    var batchPanel = renderBatchPanelForScene(
+      draft,
+      draft.activePartyIndex,
+      draft.period === "multi_round" ? draft.activeRoundIndex : 0,
+      batchSelected.length,
+      batchTargets.length
+    );
     var previewCount = configuredLimitPreviewRows(draft).length;
+    var sceneToggle = hasConfiguredStores ? renderSceneDisplayToggle(draft) : "";
+    var sceneTabsHtml = "";
+    if (hasConfiguredStores && !tileMode) {
+      sceneTabsHtml = '<h3 style="margin-top:20px">人数场景</h3><div class="olf-tabs">' + partyTabs + '</div>' +
+        (roundTabs ? '<h3 style="margin-top:20px">轮次场景</h3><div class="olf-tabs">' + roundTabs + '</div>' : '');
+    }
+    var matrixSection = tileMode
+      ? '<section class="olf-section">' + renderSceneComboBlocks(draft, config) + '</section>'
+      : '<section class="olf-section"><div class="olf-table-wrap"><table class="olf-table"><thead><tr>' + selectHeader + '<th>' + (draft.targetType === 'dish' ? '菜品' : '分类') + '</th><th>' + (draft.subject === 'party_size' ? '人均上限' : '订单上限') + '</th></tr></thead><tbody>' + renderLimitRows(draft) + '</tbody></table></div></section>';
     return '<div class="olf-content-head"><h2 tabindex="-1">设置限购数量</h2></div>' +
-      '<section class="olf-section"><label class="olf-field olf-limit-store-select"><span class="olf-label olf-required">配置门店</span><select class="olf-select" data-limit-store-select' + (hasConfiguredStores ? '' : ' disabled') + '>' + storeOptions + '</select></label>' + (hasConfiguredStores ? '<h3 style="margin-top:20px">人数场景</h3><div class="olf-tabs">' + partyTabs + '</div>' + (roundTabs ? '<h3 style="margin-top:20px">轮次场景</h3><div class="olf-tabs">' + roundTabs + '</div>' : '') : '') + '</section>' +
+      '<section class="olf-section"><label class="olf-field olf-limit-store-select"><span class="olf-label olf-required">配置门店</span><select class="olf-select" data-limit-store-select' + (hasConfiguredStores ? '' : ' disabled') + '>' + storeOptions + '</select></label>' + sceneToggle + sceneTabsHtml + '</section>' +
       (hasConfiguredStores ?
-      '<section class="olf-section"><div class="olf-section-head"><div><h3 id="configuredLimitHeading" tabindex="-1">产线配置</h3><div class="olf-help">当前门店：' + esc((stores.find(function (item) { return item.id === draft.activeStoreId; }) || {}).name || draft.activeStoreId) + '</div></div><button type="button" class="olf-button olf-button--small olf-configured-limit-preview-entry" data-configured-limit-preview-open' + (previewCount ? '' : ' disabled') + '>查看已配置规则（' + previewCount + '）</button></div><div class="olf-tabs">' + lineTabs + '</div>' + batchPanel + '</section>' +
-      '<section class="olf-section"><div class="olf-table-wrap"><table class="olf-table"><thead><tr>' + selectHeader + '<th>' + (draft.targetType === 'dish' ? '菜品' : '分类') + '</th><th>' + (draft.subject === 'party_size' ? '人均上限' : '订单上限') + '</th></tr></thead><tbody>' + renderLimitRows(draft) + '</tbody></table></div></section>' +
+      '<section class="olf-section"><div class="olf-section-head"><div><h3 id="configuredLimitHeading" tabindex="-1">产线配置</h3><div class="olf-help">当前门店：' + esc((stores.find(function (item) { return item.id === draft.activeStoreId; }) || {}).name || draft.activeStoreId) + '</div></div><button type="button" class="olf-button olf-button--small olf-configured-limit-preview-entry" data-configured-limit-preview-open' + (previewCount ? '' : ' disabled') + '>查看已配置规则（' + previewCount + '）</button></div><div class="olf-tabs">' + lineTabs + '</div>' + (tileMode ? '' : batchPanel) + '</section>' +
+      matrixSection +
       '<div class="olf-summary olf-summary--primary"><strong>门店独立配置：</strong>切换门店后，商品范围和数量矩阵均独立保存，不会覆盖其他门店。</div>' :
       '<div class="olf-empty olf-limit-store-empty"><strong>暂无参与门店</strong><span>请返回商品配置，为至少一家门店选择商品。</span></div>');
   }
@@ -2033,25 +2152,53 @@
       return;
     }
     if (button.hasAttribute("data-choice-field")) { changeChoice(button.getAttribute("data-choice-field"), button.getAttribute("data-choice-value")); return; }
+    if (button.hasAttribute("data-scene-display-mode")) {
+      var nextMode = button.getAttribute("data-scene-display-mode") === "split" ? "split" : "tile";
+      if (editorState.sceneDisplayMode === nextMode) return;
+      editorState.sceneDisplayMode = nextMode;
+      resetBatchSelection();
+      renderEditor();
+      return;
+    }
     if (button.hasAttribute("data-add-range")) { addRange(button.getAttribute("data-add-range")); return; }
     if (button.hasAttribute("data-delete-range")) { deleteRange(button.getAttribute("data-delete-range"), Number(button.getAttribute("data-range-index"))); return; }
     if (button.hasAttribute("data-party-tab")) { resetBatchSelection(); editorState.rule.editorDraft.activePartyIndex = Number(button.getAttribute("data-party-tab")); renderEditor(); return; }
     if (button.hasAttribute("data-round-tab")) { resetBatchSelection(); editorState.rule.editorDraft.activeRoundIndex = Number(button.getAttribute("data-round-tab")); renderEditor(); return; }
     if (button.hasAttribute("data-line-tab")) { resetBatchSelection(); editorState.rule.editorDraft.activeLineId = button.getAttribute("data-line-tab"); renderEditor(); return; }
-    if (button.hasAttribute("data-batch-select-all-action")) { setBatchSelection(currentBatchTargets(editorState.rule.editorDraft).map(function (target) { return target.id; })); return; }
-    if (button.hasAttribute("data-batch-clear")) { setBatchSelection([]); return; }
+    if (button.hasAttribute("data-batch-select-all-action")) {
+      var sceneAll = readSceneIndexes(button);
+      setBatchSelection(currentBatchTargets(editorState.rule.editorDraft).map(function (target) { return target.id; }), sceneAll);
+      return;
+    }
+    if (button.hasAttribute("data-batch-clear")) { setBatchSelection([], readSceneIndexes(button)); return; }
     if (button.hasAttribute("data-apply-batch")) {
       var draft = editorState.rule.editorDraft;
       if (button.getAttribute("data-apply-batch") !== "value") return;
-      var input = document.getElementById("batchLimitValue");
-      var batchTargets = selectedBatchTargets(draft);
-      if (!batchTargets.length) { toast("请至少选择一个" + (draft.targetType === "dish" ? "菜品" : "分类"), true); syncBatchControls(); return; }
+      var scene = readSceneIndexes(button);
+      var partyIndex = scene ? scene.partyIndex : draft.activePartyIndex;
+      var roundIndex = scene ? scene.roundIndex : (draft.period === "multi_round" ? draft.activeRoundIndex : 0);
+      var input = scene
+        ? document.getElementById("batchLimitValue-" + partyIndex + "-" + roundIndex)
+        : document.getElementById("batchLimitValue");
+      var batchTargets = scene
+        ? selectedBatchTargetsForScene(draft, partyIndex, roundIndex)
+        : selectedBatchTargets(draft);
+      if (!batchTargets.length) { toast("请至少选择一个" + (draft.targetType === "dish" ? "菜品" : "分类"), true); syncBatchControls(scene); return; }
       if (!input || input.value === "") { toast("请输入大于或等于 0 的整数", true); return; }
       var value = Number(input.value);
       if (!Number.isInteger(value) || value < 0) { toast("请输入大于或等于 0 的整数", true); return; }
       var config = activeStoreConfig(draft);
-      batchTargets.forEach(function (target) { config.limits[limitKey(draft.activePartyIndex, draft.period === "multi_round" ? draft.activeRoundIndex : 0, draft.activeLineId, target.id)] = { configured: true, value: value }; });
-      markEditorDirty(); resetBatchSelection(); renderEditor(); return;
+      batchTargets.forEach(function (target) {
+        config.limits[limitKey(partyIndex, roundIndex, draft.activeLineId, target.id)] = { configured: true, value: value };
+      });
+      markEditorDirty();
+      if (scene) {
+        setBatchSelection([], scene);
+      } else {
+        resetBatchSelection();
+      }
+      renderEditor();
+      return;
     }
     if (button.hasAttribute("data-fix-step")) { goToEditorStep(Number(button.getAttribute("data-fix-step")), true); return; }
     if (button.hasAttribute("data-step")) { var step = Number(button.getAttribute("data-step")); if (step <= editorState.highestStep) goToEditorStep(step, true); return; }
@@ -2226,14 +2373,20 @@
     }
     if (target.hasAttribute("data-batch-target-id")) {
       var batchTargetId = target.getAttribute("data-batch-target-id");
-      var selectedIds = editorState.batchSelectedTargetIds.slice();
+      var sceneCheck = readSceneIndexes(target);
+      var selectedIds = sceneCheck
+        ? (((editorState.batchSelectedByScene || {})[sceneKey(sceneCheck.partyIndex, sceneCheck.roundIndex)]) || []).slice()
+        : editorState.batchSelectedTargetIds.slice();
       var selectedIndex = selectedIds.indexOf(batchTargetId);
       if (target.checked && selectedIndex < 0) selectedIds.push(batchTargetId);
       if (!target.checked && selectedIndex >= 0) selectedIds.splice(selectedIndex, 1);
-      setBatchSelection(selectedIds); return;
+      setBatchSelection(selectedIds, sceneCheck);
+      return;
     }
     if (target.hasAttribute("data-batch-select-all")) {
-      setBatchSelection(target.checked ? currentBatchTargets(draft).map(function (item) { return item.id; }) : []); return;
+      var sceneSelectAll = readSceneIndexes(target);
+      setBatchSelection(target.checked ? currentBatchTargets(draft).map(function (item) { return item.id; }) : [], sceneSelectAll);
+      return;
     }
     if (target.hasAttribute("data-field")) {
       var field = target.getAttribute("data-field");
@@ -2252,7 +2405,10 @@
       markEditorDirty(); return;
     }
     if (target.hasAttribute("data-limit-target")) {
-      var key = limitKey(draft.activePartyIndex, draft.period === "multi_round" ? draft.activeRoundIndex : 0, draft.activeLineId, target.getAttribute("data-limit-target"));
+      var sceneLimit = readSceneIndexes(target);
+      var limitPartyIndex = sceneLimit ? sceneLimit.partyIndex : draft.activePartyIndex;
+      var limitRoundIndex = sceneLimit ? sceneLimit.roundIndex : (draft.period === "multi_round" ? draft.activeRoundIndex : 0);
+      var key = limitKey(limitPartyIndex, limitRoundIndex, draft.activeLineId, target.getAttribute("data-limit-target"));
       activeStoreConfig(draft).limits[key] = target.value === "" ? { configured: false, value: null } : { configured: true, value: Math.max(0, Number(target.value)) };
       markEditorDirty(); return;
     }
