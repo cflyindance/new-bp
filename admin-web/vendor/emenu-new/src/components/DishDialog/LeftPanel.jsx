@@ -147,6 +147,8 @@ export default function LeftPanel({
   isNeedPasswordAuth,
   isSubDish,
   hidePrice = false,
+  /** When true, use side-by-side (narrow left) chrome even without POS options — e.g. seasoning Detail */
+  sideBySide = false,
 }) {
   const { t } = useTranslation(['translation', 'dish'])
 
@@ -163,7 +165,10 @@ export default function LeftPanel({
     return name
   }, [data, t])
 
-  const hasOption = data.itemPrices?.length > 1 || data.optionList?.length > 0
+  const hasOption =
+    sideBySide ||
+    data.itemPrices?.length > 1 ||
+    data.optionList?.length > 0
   const hasRemove = mode === 'edit' && isCombo && count === 1
   const classes = useStyles({ hasOption })
   const { getFinalConfigById } = useSystemConfig()

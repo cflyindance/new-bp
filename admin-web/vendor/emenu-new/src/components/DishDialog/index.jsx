@@ -476,7 +476,12 @@ export default function DishDialog({
         onClose={handleClose}
       >
         {needsWideLayout ? (
-          <Grid container spacing={0} className={classes.container}>
+          <Grid
+            container
+            spacing={0}
+            wrap="nowrap"
+            className={classes.container}
+          >
             <Grid item className={classes.LeftPanel}>
               <LeftPanel
                 {...{
@@ -499,10 +504,11 @@ export default function DishDialog({
                   isNeedPasswordAuth,
                   isSubDish,
                   hidePrice,
+                  sideBySide: true,
                 }}
               />
             </Grid>
-            <Grid item className={classes.RightPanel}>
+            <Grid item className={classes.RightPanel} style={{ flex: 1, minWidth: 0 }}>
               <RightPanel
                 {...{
                   data,
