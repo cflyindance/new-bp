@@ -24,11 +24,9 @@ assert.match(
   /function configuredLimitPreviewRows\(draft\)[\s\S]*?eachLimitCell\(draft/,
   "行汇总应复用 eachLimitCell，避免跨门店串用商品范围",
 );
-assert.match(
-  source,
-  /configuredLimitPreviewRows\(draft\)[\s\S]*?configured === true|cell\.configured/,
-  "仅 configured===true 的单元格进入预览",
-);
+const rowsFn = source.match(/function configuredLimitPreviewRows\(draft\)[\s\S]*?(?=\n\s*function [a-zA-Z]+)/)?.[0] ?? "";
+assert.ok(rowsFn, "应能定位 configuredLimitPreviewRows");
+assert.match(rowsFn, /!cell\.configured|cell\.configured|configured\s*===\s*true/, "仅 configured===true 的单元格进入预览");
 assert.match(source, /0（禁止）/, "数量 0 应展示为禁止文案");
 assert.match(source, /查看已配置规则/, "步骤 4 应提供查看已配置规则入口文案");
 assert.match(source, /data-configured-limit-preview-open/, "应提供打开预览入口标记");
@@ -41,11 +39,9 @@ assert.match(source, /data-configured-limit-preview-search/, "应提供菜单搜
 assert.match(source, /data-configured-limit-preview-page/, "应提供分页");
 assert.match(source, /data-configured-limit-preview-page-size/, "应提供每页条数");
 assert.match(source, /data-configured-limit-preview-close/, "应提供关闭入口");
-assert.doesNotMatch(
-  source.match(/function renderConfiguredLimitPreviewDialog[\s\S]*?(?=\n\s*function [a-zA-Z]+)/)?.[0] ?? "",
-  /data-configured-limit-preview-delete|contenteditable|type="number"/,
-  "预览弹层必须只读，不得提供删除或数量编辑",
-);
+const dialog = source.match(/function renderConfiguredLimitPreviewDialog[\s\S]*?(?=\n\s*function [a-zA-Z]+)/)?.[0];
+assert.ok(dialog, "应能定位已配置规则预览弹层渲染函数");
+assert.doesNotMatch(dialog, /data-configured-limit-preview-delete|contenteditable|type="number"/, "预览弹层必须只读，不得提供删除或数量编辑");
 
 assert.match(source, /function openConfiguredLimitPreview\(\)/, "应提供打开预览函数");
 assert.match(source, /function closeConfiguredLimitPreview\(\)/, "应提供关闭预览函数");
