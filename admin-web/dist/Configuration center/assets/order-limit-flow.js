@@ -758,6 +758,49 @@
   function resetBatchSelection() {
     if (!editorState) return;
     editorState.batchSelectedTargetIds = [];
+    editorState.batchSelectedByScene = {};
+  }
+
+  function resetSceneDisplayMode() {
+    if (!editorState) return;
+    editorState.sceneDisplayMode = "tile";
+  }
+
+  function sceneKey(partyIndex, roundIndex) {
+    return String(partyIndex) + "|" + String(roundIndex);
+  }
+
+  function isSceneTileMode(draft) {
+    return !!(draft && draft.period === "multi_round" && editorState && editorState.sceneDisplayMode === "tile");
+  }
+
+  function sceneCombos(draft) {
+    if (!draft || draft.period !== "multi_round") return [];
+    var combos = [];
+    draft.partyRanges.forEach(function (partyRange, partyIndex) {
+      draft.roundRanges.forEach(function (roundRange, roundIndex) {
+        combos.push({
+          partyIndex: partyIndex,
+          roundIndex: roundIndex,
+          partyRange: partyRange,
+          roundRange: roundRange,
+          key: sceneKey(partyIndex, roundIndex),
+          title: formatRange(partyRange, "人") + " · " + formatRange(roundRange, "轮")
+        });
+      });
+    });
+    return combos;
+  }
+
+  function sceneComboCompletion(draft, partyIndex, roundIndex, lineId, config) {
+    config = config || activeStoreConfig(draft);
+    var targets = targetsForLine(draft, lineId, config);
+    var total = targets.length;
+    var complete = targets.reduce(function (count, target) {
+      var cell = config.limits[limitKey(partyIndex, roundIndex, lineId, target.id)];
+      return count + (cell && cell.configured ? 1 : 0);
+    }, 0);
+    return { complete: complete, total: total, label: complete + "/" + total };
   }
 
   function clearProductSearch() {
@@ -1582,11 +1625,25 @@
   function completionFor(draft, lineId, config) {
     config = config || activeStoreConfig(draft);
     var targets = targetsForLine(draft, lineId, config);
-    var total = targets.length;
-    var complete = targets.reduce(function (count, target) {
-      var cell = config.limits[limitKey(draft.activePartyIndex, draft.period === "multi_round" ? draft.activeRoundIndex : 0, lineId, target.id)];
-      return count + (cell && cell.configured ? 1 : 0);
-    }, 0);
+    if (!targets.length) return "0/0";
+    if (draft.period !== "multi_round") {
+      var completeSingle = targets.reduce(function (count, target) {
+        var cell = config.limits[limitKey(draft.activePartyIndex, 0, lineId, target.id)];
+        return count + (cell && cell.configured ? 1 : 0);
+      }, 0);
+      return completeSingle + "/" + targets.length;
+    }
+    var total = 0;
+    var complete = 0;
+    draft.partyRanges.forEach(function (_, partyIndex) {
+      draft.roundRanges.forEach(function (__, roundIndex) {
+        targets.forEach(function (target) {
+          total += 1;
+          var cell = config.limits[limitKey(partyIndex, roundIndex, lineId, target.id)];
+          if (cell && cell.configured) complete += 1;
+        });
+      });
+    });
     return complete + "/" + total;
   }
 
@@ -1928,6 +1985,7 @@
     }
     if (editorState.currentStep === 4 && step !== 4) {
       resetBatchSelection();
+      resetSceneDisplayMode();
       closeConfiguredLimitPreview();
     }
     if (editorState.currentStep === 2 && step !== 2) clearProductSearch();
@@ -2229,6 +2287,8 @@
       highestStep: Math.max(Number(rule.editorDraft.highestStep) || 1, Number(rule.editorDraft.currentStep) || 1),
       stepErrors: {}, saveTimer: null, dirty: false, dialogConfirm: null, dialogOptions: null, dialogReturnFocus: null,
       batchSelectedTargetIds: [],
+      sceneDisplayMode: "tile",
+      batchSelectedByScene: {},
       productSearchQuery: "", productSearchComposing: false,
       productPickerActiveLineId: "", productPickerActiveGroupId: "", productPickerActiveCategoryId: "",
       selectedPreview: createSelectedPreviewState(),
