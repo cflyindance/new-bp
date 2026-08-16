@@ -12,6 +12,10 @@ import { useGlobalState } from '@/hooks/useGlobalState'
 import { useTranslation } from 'react-i18next'
 import Toast from '../Toast'
 import { cloneDeep } from 'lodash-es'
+import {
+  selectTerminalSeasoning,
+  buildOrderSeasoningSnapshots,
+} from '@/utils/seasoningGuest'
 const useStyles = makeStyles(() => ({
   paper: ({ hasOption }) => ({
     borderRadius: 20,
@@ -59,6 +63,8 @@ export default function DishDialog({
   isShowDisplayNote,
   showPermissionModal,
   isNeedPasswordAuth,
+  entrySource = 'add',
+  seasoningGroups = [],
 }) {
   const { getFinalConfigById } = useSystemConfig()
   const isOpenSpecialDishPermission = getFinalConfigById(36)?.open //是否开启可见不可点的操作按钮
@@ -88,13 +94,22 @@ export default function DishDialog({
     return comboItem && !!data.combo
   }, [comboItem, data])
 
-  const classes = useStyles({ hasOption })
   const [count, setCount] = useState()
   const [priceItem, setPriceItem] = useState()
   const [options, setOptions] = useState()
   const [instructions, setInstructions] = useState()
   const [needAnimate, setNeedAnimate] = useState(false)
   const [openModal, setOpenModal] = useState(false)
+  const [seasoningSelections, setSeasoningSelections] = useState([])
+
+  const showSeasoning =
+    entrySource === 'detail' && seasoningGroups?.length > 0
+  const needsWideLayout = hasOption || showSeasoning
+  const classes = useStyles({ hasOption: needsWideLayout })
+
+  const onToggleSeasoning = (choice) => {
+    setSeasoningSelections((prev) => selectTerminalSeasoning(prev, choice))
+  }
 
   const isValid = useMemo(() => {
     let valid = count > (mode === 'edit' ? -1 : 0)
@@ -249,6 +264,12 @@ export default function DishDialog({
       // 复杂菜的主菜的会员价
       realMainBenefitPrice: realMainBenefitPrice,
     }
+    if (entrySource === 'detail') {
+      paramsItem.seasoningSnapshots = buildOrderSeasoningSnapshots(
+        seasoningSelections,
+        seasoningGroups
+      )
+    }
     // if(!isNeedCheckDishAuth){addToCart(paramsItem);return}
     if (buffetViewOnly || isSpecialDish) {
       if (isOpenSpecialDishPermission) {
@@ -372,6 +393,7 @@ export default function DishDialog({
       }
     }
     setInstructions(mode === 'edit' ? data.instructions : '')
+    setSeasoningSelections([])
   }, [data, fixedSelection, mode, optionsList, pricesList])
 
   useEffect(() => {
@@ -445,7 +467,7 @@ export default function DishDialog({
         open={open}
         onClose={handleClose}
       >
-        {hasOption ? (
+        {needsWideLayout ? (
           <Grid container spacing={0} className={classes.container}>
             <Grid item className={classes.LeftPanel}>
               <LeftPanel
@@ -492,6 +514,10 @@ export default function DishDialog({
                   checkDish,
                   count,
                   hidePrice,
+                  showSeasoning,
+                  seasoningGroups,
+                  seasoningSelections,
+                  onToggleSeasoning,
                 }}
               />
             </Grid>
