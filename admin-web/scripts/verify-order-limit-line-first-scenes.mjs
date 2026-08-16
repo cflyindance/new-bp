@@ -11,15 +11,23 @@ const returnJoin = stepFour.match(/return '<div class="olf-content-head"[\s\S]*/
 
 assert.doesNotMatch(
   returnJoin,
+  /storeOptions[\s\S]{0,80}sceneToggle/,
+  "场景展示分段不得拼在门店下拉同一段落优先于产线",
+);
+assert.doesNotMatch(
+  returnJoin,
   /sceneToggle \+ sceneTabsHtml/,
-  "sceneTabsHtml 不得再与 sceneToggle 拼在同一门店 section",
+  "sceneTabsHtml 不得与 sceneToggle 无间隙地拼成旧门店区结构",
 );
 
 const lineSectionPos = returnJoin.indexOf("lineTabs");
+const sceneTogglePos = returnJoin.indexOf("sceneToggle");
 const sceneTabsPos = returnJoin.indexOf("sceneTabsHtml");
 assert.ok(lineSectionPos >= 0, "return 拼装应包含 lineTabs");
+assert.ok(sceneTogglePos >= 0, "return 拼装应包含 sceneToggle");
 assert.ok(sceneTabsPos >= 0, "return 拼装应包含 sceneTabsHtml（分开选择/非多轮）");
-assert.ok(lineSectionPos < sceneTabsPos, "return 拼装中 lineTabs 应先于 sceneTabsHtml（产线优先）");
+assert.ok(lineSectionPos < sceneTogglePos, "产线 Tab 应先于场景展示分段");
+assert.ok(sceneTogglePos < sceneTabsPos, "场景展示分段应先于人数/轮次场景区");
 
 assert.match(
   returnJoin,
