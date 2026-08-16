@@ -243,14 +243,18 @@ export default function DishDialog({
   }
 
   const handleSubmit = () => {
+    const safeOptions = Array.isArray(options) ? options : []
+    const baseRealPrice = Number.isFinite(realPrice)
+      ? realPrice
+      : Number(priceItem?.price ?? data.price) || 0
     const paramsItem = {
       id,
       count,
       priceItem,
-      options,
+      options: safeOptions,
       instructions,
       // 复杂菜的整体原价
-      realPrice,
+      realPrice: baseRealPrice,
       // 复杂菜的整体会员价
       realBenefitPrice: benefitPrice,
       // 复杂菜的主菜的会员价
@@ -271,7 +275,7 @@ export default function DishDialog({
       )
       paramsItem.seasoningSnapshots = seasoningSnapshots
       const seasoningExtra = seasoningSnapshots.reduce(
-        (sum, s) => sum + (s.transactionPrice || 0),
+        (sum, s) => sum + (Number(s.transactionPrice) || 0),
         0
       )
       paramsItem.realPrice = roundToPrecision(
@@ -476,7 +480,12 @@ export default function DishDialog({
         onClose={handleClose}
       >
         {needsWideLayout ? (
-          <Grid container spacing={0} className={classes.container}>
+          <Grid
+            container
+            spacing={0}
+            wrap="nowrap"
+            className={classes.container}
+          >
             <Grid item className={classes.LeftPanel}>
               <LeftPanel
                 {...{
@@ -499,10 +508,11 @@ export default function DishDialog({
                   isNeedPasswordAuth,
                   isSubDish,
                   hidePrice,
+                  sideBySide: true,
                 }}
               />
             </Grid>
-            <Grid item className={classes.RightPanel}>
+            <Grid item className={classes.RightPanel} style={{ flex: 1, minWidth: 0 }}>
               <RightPanel
                 {...{
                   data,

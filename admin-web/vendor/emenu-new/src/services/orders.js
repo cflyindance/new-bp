@@ -1334,7 +1334,7 @@ export function generateOrder({
         // 当前菜品相同类下总数量, 用于辨别免税情况
         const countByCate = catsCart?.find(
           (each) => each.categoryId === categoryId
-        ).allCount
+        )?.allCount
         // 加拿大税情况下 总价按包含当前税的所有商品价格计算
         const priceLimitByTaxType = getFinalPriceLimitByTaxId(
           countTaxDishCart,
@@ -1698,6 +1698,29 @@ export function generateOrder({
         quantity: 1,
       })
     }
+    // Detail 调味快照：写入 NOTE，价格计入 option，避免 totalPrice 与行项目不一致导致无法下单
+    if (Array.isArray(item.seasoningSnapshots) && item.seasoningSnapshots.length) {
+      const actionLabels = {
+        ADD: '添加',
+        LESS: '少放',
+        MORE: '多放',
+        NONE: '不要',
+      }
+      item.seasoningSnapshots.forEach((snap) => {
+        if (!snap) return
+        const actionLabel = actionLabels[snap.action] || snap.action || ''
+        const name = [actionLabel, snap.optionName || snap.optionCode]
+          .filter(Boolean)
+          .join(' ')
+        if (!name) return
+        options.push({
+          optionName: name,
+          optionType: 'NOTE',
+          price: Number(snap.transactionPrice) || 0,
+          quantity: 1,
+        })
+      })
+    }
     // 积分兑换菜
     const isCrmRewardItem = item.hasOwnProperty('rewardRule')
     if (isCrmRewardItem) {
@@ -1816,8 +1839,9 @@ export function generateOrder({
     // createTime: Date.now(),
     subOrders: [
       {
-        orderItems: data.cart.map((item) => {
-          return resolveDishItem(item)
+        orderItems: data.cart.flatMap((item) => {
+          const resolved = resolveDishItem(item)
+          return Array.isArray(resolved) ? resolved : [resolved]
         }),
       },
     ],
@@ -1940,12 +1964,13 @@ export function generateOrder({
   if (newOrder?.rewardDiscount) {
     taxPrice = taxPrice - newOrder?.rewardDiscount
   }
-  const service = chargeDetail.charge
-  const serviceTax = (service / taxPrice) * totalTax
+  const service = chargeDetail?.charge ?? 0
+  const serviceTax =
+    taxPrice > 0 && totalTax ? (service / taxPrice) * totalTax : 0
   const totalTaxNew = roundToPrecision(totalTax + serviceTax)
 
   const orderTaxNew = beforeRound.map((each) => {
-    const tax = (each.taxAmount / totalTax) * serviceTax
+    const tax = totalTax ? (each.taxAmount / totalTax) * serviceTax : 0
     return {
       ...each,
       taxAmount: roundToPrecision(each.taxAmount + tax),

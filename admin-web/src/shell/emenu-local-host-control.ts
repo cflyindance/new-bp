@@ -85,7 +85,8 @@ export function canUseSameOriginKposProxy(
   const host = loc.hostname.toLowerCase();
   if (host === "localhost" || host === "127.0.0.1") {
     const port = loc.port || (loc.protocol === "https:" ? "443" : "80");
-    return port === "5173" || port === "4173";
+    // Vite 默认 5173；被占用时会升到 5174+；preview 为 4173
+    return port === "5173" || port === "5174" || port === "4173" || /^517\d$/.test(port);
   }
   return false;
 }
