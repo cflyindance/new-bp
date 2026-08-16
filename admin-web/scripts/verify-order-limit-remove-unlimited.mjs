@@ -29,7 +29,7 @@ assert.ok(compatibility, "应能定位兼容规则构建函数");
 assert.match(compatibility, /normalizeUnlimitedLimitCells\(draft\)/, "兼容输出前应防御性归一化");
 
 assert.match(source, /data-apply-batch=["']value["']/, "批量应用数量能力应保留");
-assert.match(source, /data-apply-batch=["']zero["']/, "批量设为禁止能力应保留");
+assert.doesNotMatch(source, /data-apply-batch=["']zero["']/, "批量设为禁止快捷入口应移除");
 assert.match(source, /data-limit-target=/, "单项数量输入能力应保留");
 
 console.log("Menu order limit unlimited removal verification passed");

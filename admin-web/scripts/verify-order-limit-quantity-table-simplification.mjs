@@ -20,9 +20,10 @@ const legacyStepRenderer = source.match(/function renderStepFourLegacy\(draft\)[
 assert.ok(legacyStepRenderer, "应能定位兼容限购数量步骤渲染函数");
 assert.doesNotMatch(legacyStepRenderer, /<th>状态<\/th>|<th>实际限额<\/th>/, "兼容表格也不应保留已移除的冗余表头");
 
-assert.match(source, /data-apply-batch=["']zero["']/, "批量设为禁止能力应继续保留");
-assert.match(source, /mode\s*===\s*["']value["']\s*\?\s*Number\(input\.value\)\s*:\s*0/, "批量设为禁止应继续把数量写为 0");
-assert.match(source, /configured:\s*true,\s*value:\s*value/, "批量数量 0 应继续保存为已配置状态");
+assert.doesNotMatch(source, /data-apply-batch=["']zero["']|>设为禁止</, "批量工具栏不应继续提供设为禁止快捷入口");
+assert.match(source, /input\.value\s*===\s*["']["'][\s\S]{0,240}请输入大于或等于 0 的整数/, "批量应用应先拒绝空输入，避免隐式转换为 0");
+assert.match(source, /var value\s*=\s*Number\(input\.value\)/, "批量应用应仅从数量输入框读取值");
+assert.match(source, /configured:\s*true,\s*value:\s*value/, "批量显式输入 0 应继续保存为已配置状态");
 assert.match(source, /target\.value\s*===\s*["']["'][\s\S]{0,180}configured:\s*true/, "单项输入 0 应继续保存为已配置状态");
 assert.doesNotMatch(css, /\.olf-limit-state(?:\s|\.|\{)/, "状态列移除后不应保留专用状态样式");
 

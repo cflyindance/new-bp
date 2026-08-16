@@ -58,7 +58,7 @@ assert.match(
 
 assert.match(source, /data-limit-target=/, "既有单行数量输入应保留");
 assert.match(source, /data-apply-batch="value"/, "批量应用数量操作应保留");
-assert.match(source, /data-apply-batch="zero"/, "批量设为禁止操作应保留");
+assert.doesNotMatch(source, /data-apply-batch=["']zero["']|>设为禁止<|mode\s*!==\s*["']zero["']/, "批量设为禁止快捷入口和专用模式应移除");
 assert.match(css, /\.olf-batch-select-cell/, "应提供紧凑的批量选择列样式");
 assert.match(css, /\.olf-batch-toolbar/, "应提供可换行的批量操作条样式");
 
