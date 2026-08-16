@@ -337,6 +337,8 @@ button { color: inherit; }
 .olf-flow-card h2 { margin: 0 0 7px; font-size: 20px; }
 .olf-config-store-select { width: min(100%, 320px); margin: 14px 0 18px; }
 .olf-config-store-select .olf-select { width: 100%; }
+.olf-limit-store-select { width: min(100%, 320px); }
+.olf-limit-store-select .olf-select { width: 100%; }
 .olf-product-search { width: min(100%, 440px); margin: 0 0 14px; }
 .olf-product-search-input { width: 100%; }
 .olf-product-search-results { max-height: 360px; overflow-y: auto; border: 1px solid var(--olf-border); border-radius: 12px; background: var(--olf-surface); }
@@ -386,8 +388,6 @@ button { color: inherit; }
 .olf-store-status { display: inline-flex; align-items: center; min-width: 52px; font-weight: 600; }
 .olf-store-status.is-added { color: #16a34a; }
 .olf-store-status.is-missing { color: #ef4444; }
-.olf-store-tabs { margin-top: 14px; }
-.olf-store-tabs .olf-tab { gap: 8px; }
 .olf-store-product-config .olf-structure-summary { margin: 4px 0 0; }
 
 .olf-toast-host { position: fixed; z-index: 120; top: 20px; left: 50%; transform: translateX(-50%); display: grid; gap: 8px; pointer-events: none; }

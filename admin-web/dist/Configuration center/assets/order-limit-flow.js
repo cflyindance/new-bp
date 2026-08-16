@@ -1113,7 +1113,7 @@
     var hasActiveStore = isAvailableStoreId(draft.activeStoreId);
     var config = hasActiveStore ? storeConfigFor(draft, draft.activeStoreId, false) : null;
     var byLine = MenuPicker ? MenuPicker.normalizeByLine(config ? config.structureByLine : MenuPicker.emptyByLine()) : null;
-    var storeOptions = '<option value="">请选择配置门店</option>' + stores.map(function (store) {
+    var storeOptions = '<option value="">请选择参与门店</option>' + stores.map(function (store) {
       return '<option value="' + esc(store.id) + '"' + (draft.activeStoreId === store.id ? ' selected' : '') + '>' + esc(store.name) + '</option>';
     }).join('');
     var query = editorState ? editorState.productSearchQuery : "";
@@ -1124,7 +1124,7 @@
     var previewCount = selectedPreviewRows(draft).length;
     return '<div class="olf-content-head"><h2 tabindex="-1">商品配置</h2></div>' +
       '<section class="olf-section"><h3>基础信息</h3><div class="olf-field-grid"><label class="olf-field olf-field--full"><span class="olf-label olf-required">规则名称</span><input class="olf-input" data-field="name" value="' + esc(draft.name) + '" maxlength="60" /></label><label class="olf-field olf-field--full"><span class="olf-label">规则描述</span><textarea class="olf-textarea" data-field="description" maxlength="200">' + esc(draft.description) + '</textarea></label></div></section>' +
-      '<section class="olf-section olf-store-product-config"><div class="olf-section-head"><div><h3 id="selectedProductHeading" tabindex="-1">选择商品</h3><p class="olf-structure-summary" id="structureSummary">' + esc(summary) + '</p></div><button type="button" class="olf-button olf-button--small olf-selected-preview-entry" data-selected-preview-open' + (previewCount ? '' : ' disabled') + '>查看已选商品（' + previewCount + '）</button></div><label class="olf-field olf-config-store-select"><span class="olf-label olf-required">配置门店</span><select class="olf-select" data-config-store-select>' + storeOptions + '</select></label>' + searchHtml + '</section>';
+      '<section class="olf-section olf-store-product-config"><div class="olf-section-head"><div><h3 id="selectedProductHeading" tabindex="-1">选择商品</h3><p class="olf-structure-summary" id="structureSummary">' + esc(summary) + '</p></div><button type="button" class="olf-button olf-button--small olf-selected-preview-entry" data-selected-preview-open' + (previewCount ? '' : ' disabled') + '>查看已选商品（' + previewCount + '）</button></div><label class="olf-field olf-config-store-select"><span class="olf-label olf-required">参与门店</span><select class="olf-select" data-config-store-select>' + storeOptions + '</select></label>' + searchHtml + '</section>';
   }
 
   function renderSelectedPreviewDialog(draft) {
@@ -1345,16 +1345,20 @@
   }
 
   function renderStepFour(draft) {
+    var previousActiveStoreId = draft.activeStoreId;
     normalizeActiveDimensions(draft, true);
-    var config = activeStoreConfig(draft);
     var configuredStores = addedStoreIds(draft);
+    var hasConfiguredStores = configuredStores.length > 0;
+    if (!hasConfiguredStores || previousActiveStoreId !== draft.activeStoreId) clearBatchSelection();
+    var config = activeStoreConfig(draft);
     var batchMode = !!(editorState && editorState.batchMode);
     var batchTargets = currentBatchTargets(draft);
     var batchSelected = selectedBatchTargets(draft);
-    var storeTabs = configuredStores.map(function (storeId) {
+    var storeOptions = configuredStores.map(function (storeId) {
       var store = stores.find(function (item) { return item.id === storeId; });
-      return '<button type="button" class="olf-tab' + (draft.activeStoreId === storeId ? ' is-active' : '') + '" data-limit-store-tab="' + esc(storeId) + '">' + esc(store ? store.name : storeId) + '</button>';
+      return '<option value="' + esc(storeId) + '"' + (draft.activeStoreId === storeId ? ' selected' : '') + '>' + esc(store ? store.name : storeId) + '</option>';
     }).join('');
+    if (!hasConfiguredStores) storeOptions = '<option value="">暂无参与门店</option>';
     var partyTabs = draft.partyRanges.map(function (range, index) {
       return '<button type="button" class="olf-tab' + (draft.activePartyIndex === index ? ' is-active' : '') + '" data-party-tab="' + index + '">' + esc(formatRange(range, '人')) + '</button>';
     }).join('');
@@ -1368,10 +1372,12 @@
     var selectHeader = batchMode ? '<th class="olf-batch-select-cell"><label class="olf-batch-check"><input type="checkbox" data-batch-select-all' + (batchTargets.length > 0 && batchSelected.length === batchTargets.length ? ' checked' : '') + ' /><span class="olf-sr-only">全选当前产线</span></label></th>' : '';
     var batchPanel = batchMode ? '<div id="batchPanel" class="olf-summary olf-batch-panel"><div class="olf-batch-toolbar"><strong class="olf-batch-count" data-batch-selected-count>已选 ' + batchSelected.length + ' 项</strong><button type="button" class="olf-button olf-button--small olf-button--quiet" data-batch-select-all-action>全选当前产线</button><button type="button" class="olf-button olf-button--small olf-button--quiet" data-batch-clear' + (batchSelected.length ? '' : ' disabled') + '>清空选择</button><span class="olf-batch-spacer"></span><input class="olf-input olf-limit-input" type="number" min="0" id="batchLimitValue" placeholder="数量" /><button type="button" class="olf-button olf-button--small" data-apply-batch="value"' + (batchSelected.length ? '' : ' disabled') + '>应用数量</button><button type="button" class="olf-button olf-button--small" data-apply-batch="zero"' + (batchSelected.length ? '' : ' disabled') + '>设为禁止</button><button type="button" class="olf-button olf-button--small" data-batch-cancel>取消</button></div></div>' : '';
     return '<div class="olf-content-head"><h2 tabindex="-1">设置限购数量</h2></div>' +
-      '<section class="olf-section"><h3>配置门店</h3><div class="olf-tabs olf-store-tabs">' + storeTabs + '</div><h3 style="margin-top:20px">人数场景</h3><div class="olf-tabs">' + partyTabs + '</div>' + (roundTabs ? '<h3 style="margin-top:20px">轮次场景</h3><div class="olf-tabs">' + roundTabs + '</div>' : '') + '</section>' +
+      '<section class="olf-section"><label class="olf-field olf-limit-store-select"><span class="olf-label olf-required">配置门店</span><select class="olf-select" data-limit-store-select' + (hasConfiguredStores ? '' : ' disabled') + '>' + storeOptions + '</select></label>' + (hasConfiguredStores ? '<h3 style="margin-top:20px">人数场景</h3><div class="olf-tabs">' + partyTabs + '</div>' + (roundTabs ? '<h3 style="margin-top:20px">轮次场景</h3><div class="olf-tabs">' + roundTabs + '</div>' : '') : '') + '</section>' +
+      (hasConfiguredStores ?
       '<section class="olf-section"><div class="olf-section-head"><div><h3>产线配置</h3><div class="olf-help">当前门店：' + esc((stores.find(function (item) { return item.id === draft.activeStoreId; }) || {}).name || draft.activeStoreId) + '</div></div><button type="button" class="olf-button olf-button--small" data-toggle-batch>' + (batchMode ? '取消批量设置' : '批量设置') + '</button></div><div class="olf-tabs">' + lineTabs + '</div>' + batchPanel + '</section>' +
       '<section class="olf-section"><div class="olf-table-wrap"><table class="olf-table"><thead><tr>' + selectHeader + '<th>' + (draft.targetType === 'dish' ? '菜品' : '分类') + '</th><th>' + (draft.subject === 'party_size' ? '人均上限' : '订单上限') + '</th><th>状态</th><th>实际限额</th></tr></thead><tbody>' + renderLimitRows(draft) + '</tbody></table></div></section>' +
-      '<div class="olf-summary olf-summary--primary"><strong>门店独立配置：</strong>切换门店后，商品范围和数量矩阵均独立保存，不会覆盖其他门店。</div>';
+      '<div class="olf-summary olf-summary--primary"><strong>门店独立配置：</strong>切换门店后，商品范围和数量矩阵均独立保存，不会覆盖其他门店。</div>' :
+      '<div class="olf-empty olf-limit-store-empty"><strong>暂无参与门店</strong><span>请返回商品配置，为至少一家门店选择商品。</span></div>');
   }
 
   function renderStepFive(draft) {
@@ -1538,7 +1544,12 @@
     draft.activePartyIndex = Math.min(draft.activePartyIndex || 0, Math.max(0, draft.partyRanges.length - 1));
     draft.activeRoundIndex = Math.min(draft.activeRoundIndex || 0, Math.max(0, draft.roundRanges.length - 1));
     var added = addedStoreIds(draft);
-    if (requireAddedStore && added.length && added.indexOf(draft.activeStoreId) < 0) draft.activeStoreId = added[0];
+    if (requireAddedStore && !added.length) {
+      draft.activeStoreId = "";
+      draft.activeLineId = "";
+      return;
+    }
+    if (requireAddedStore && added.indexOf(draft.activeStoreId) < 0) draft.activeStoreId = added[0];
     if (!requireAddedStore && !isAvailableStoreId(draft.activeStoreId)) draft.activeStoreId = "";
     var config = activeStoreConfig(draft);
     if (config.productLines.indexOf(draft.activeLineId) < 0) draft.activeLineId = config.productLines[0] || "kiosk";
@@ -1661,7 +1672,6 @@
     if (button.hasAttribute("data-delete-range")) { deleteRange(button.getAttribute("data-delete-range"), Number(button.getAttribute("data-range-index"))); return; }
     if (button.hasAttribute("data-party-tab")) { clearBatchSelection(); editorState.rule.editorDraft.activePartyIndex = Number(button.getAttribute("data-party-tab")); renderEditor(); return; }
     if (button.hasAttribute("data-round-tab")) { clearBatchSelection(); editorState.rule.editorDraft.activeRoundIndex = Number(button.getAttribute("data-round-tab")); renderEditor(); return; }
-    if (button.hasAttribute("data-limit-store-tab")) { clearBatchSelection(); editorState.rule.editorDraft.activeStoreId = button.getAttribute("data-limit-store-tab"); normalizeActiveDimensions(editorState.rule.editorDraft, true); renderEditor(); return; }
     if (button.hasAttribute("data-line-tab")) { clearBatchSelection(); editorState.rule.editorDraft.activeLineId = button.getAttribute("data-line-tab"); renderEditor(); return; }
     if (button.hasAttribute("data-toggle-batch")) { if (editorState.batchMode) clearBatchSelection(); else { editorState.batchMode = true; editorState.batchSelectedTargetIds = []; } renderEditor(); return; }
     if (button.hasAttribute("data-batch-cancel")) { clearBatchSelection(); renderEditor(); return; }
@@ -1762,6 +1772,15 @@
         if (selectedStoreConfig.productLines.indexOf(draft.activeLineId) < 0) draft.activeLineId = selectedStoreConfig.productLines[0] || "kiosk";
       }
       markEditorDirty(); renderEditor(); return;
+    }
+    if (target.hasAttribute("data-limit-store-select")) {
+      if (event.type !== "change") return;
+      var limitStoreId = target.value;
+      if (addedStoreIds(draft).indexOf(limitStoreId) < 0) { renderEditor(); return; }
+      clearBatchSelection();
+      draft.activeStoreId = limitStoreId;
+      normalizeActiveDimensions(draft, true);
+      renderEditor(); return;
     }
     if (target.hasAttribute("data-effective-store")) {
       if (event.type !== "change") return;

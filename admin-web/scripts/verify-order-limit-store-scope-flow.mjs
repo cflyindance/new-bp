@@ -10,7 +10,7 @@ assert.ok(stepTwo, "商品配置渲染函数应存在");
 assert.match(stepTwo, /data-config-store-select/, "商品配置应使用门店下拉");
 assert.doesNotMatch(stepTwo, /data-participating-store/, "商品配置不应继续展示参与门店表格");
 assert.doesNotMatch(stepTwo, /data-store-tab/, "商品配置不应继续展示门店标签");
-assert.match(stepTwo, /请选择配置门店/, "新建规则应提供未选择门店占位状态");
+assert.match(stepTwo, /请选择参与门店/, "新建规则应提供未选择参与门店占位状态");
 
 const stepFive = source.match(/function renderStepFive\(draft\)[\s\S]*?(?=\n\s*function renderScopeRow)/)?.[0];
 assert.ok(stepFive, "生效范围渲染函数应存在");
