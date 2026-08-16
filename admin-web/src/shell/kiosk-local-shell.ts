@@ -10,6 +10,8 @@ import {
   bindKioskEmbedViewportFit,
 } from "./kiosk-local-embed-fit";
 import { bindEmenuHostIpControl, renderEmenuHostIpControl } from "./emenu-local-host-control-ui";
+import { withEmbedLanguageParam } from "./embed-ui-locale";
+import { bindUiLocaleControl, renderUiLocaleControl } from "./ui-locale-control";
 import {
   KIOSK_LOCAL_NAV_ITEMS,
   getActiveKioskLocalNavItem,
@@ -19,9 +21,14 @@ import {
 } from "./kiosk-local-routes";
 
 /** 本地 dist/kiosklite/.embed-build；挂在 /kpos/kiosklite 以便 API 基址走同源 /kpos 代理 */
-const KIOSKLITE_IFRAME_SRC = `./kpos/kiosklite/index.html?embedded=1&v=${BUILD_STAMP}`;
+function kioskIframeSrc(): string {
+  return withEmbedLanguageParam(`./kpos/kiosklite/index.html?embedded=1&v=${BUILD_STAMP}`);
+}
+
 /** 对应主机配置页 #/configApp；业务数据经 /kpos 代理到 POS */
-const KIOSKLITE_SETTINGS_IFRAME_SRC = `./kpos/kiosklite/index.html?embedded=1&language=zh-cn&v=${BUILD_STAMP}#/configApp`;
+function kioskSettingsIframeSrc(): string {
+  return withEmbedLanguageParam(`./kpos/kiosklite/index.html?embedded=1&v=${BUILD_STAMP}#/configApp`);
+}
 
 function escapeHtml(value: string): string {
   return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -77,7 +84,7 @@ function renderKioskIframePage(): string {
     frameAttr: 'data-kiosk-local-kiosk-frame',
     ariaLabel: t("shell.kioskLocalKiosk"),
     iframeTitle: t("shell.kioskLocalKiosk"),
-    src: KIOSKLITE_IFRAME_SRC,
+    src: kioskIframeSrc(),
   });
 }
 
@@ -86,7 +93,7 @@ function renderKioskSettingsIframePage(): string {
     frameAttr: 'data-kiosk-local-kiosk-settings-frame',
     ariaLabel: t("shell.kioskLocalKioskSettings"),
     iframeTitle: t("shell.kioskLocalKioskSettings"),
-    src: KIOSKLITE_SETTINGS_IFRAME_SRC,
+    src: kioskSettingsIframeSrc(),
   });
 }
 
@@ -98,7 +105,7 @@ function renderMain(path: string): string {
       : active.id === "kiosk-settings"
         ? renderKioskSettingsIframePage()
         : renderPlaceholder(active);
-  return `<div class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"><header class="flex min-h-16 shrink-0 items-center justify-between gap-4 border-b border-border/80 bg-card/95 px-4 py-3 backdrop-blur sm:px-6 lg:px-8"><div class="min-w-0"><p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Kiosk · Local configuration</p><h1 id="main-content" tabindex="-1" class="truncate text-xl font-semibold tracking-tight text-foreground">${escapeHtml(t(active.titleKey))}</h1></div><div class="flex shrink-0 items-center gap-2">${renderEmenuHostIpControl()}<button type="button" id="theme-toggle" class="inline-flex size-10 shrink-0 items-center justify-center rounded-xl border border-border bg-background text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="${escapeHtml(t("header.themeToggle"))}"><svg class="size-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg></button></div></header>${renderMobileNav(path)}<main class="flex min-h-0 flex-1 flex-col overflow-hidden bg-muted/35 p-3 sm:p-5 lg:p-7"><div class="mx-auto flex min-h-0 w-full max-w-[88rem] flex-1 flex-col animate-fade-in">${body}</div></main></div>`;
+  return `<div class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"><header class="flex min-h-16 shrink-0 items-center justify-between gap-4 border-b border-border/80 bg-card/95 px-4 py-3 backdrop-blur sm:px-6 lg:px-8"><div class="min-w-0"><p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">${escapeHtml(t("shell.kioskLocalKicker"))}</p><h1 id="main-content" tabindex="-1" class="truncate text-xl font-semibold tracking-tight text-foreground">${escapeHtml(t(active.titleKey))}</h1></div><div class="flex shrink-0 items-center gap-2">${renderEmenuHostIpControl()}${renderUiLocaleControl()}<button type="button" id="theme-toggle" class="inline-flex size-10 shrink-0 items-center justify-center rounded-xl border border-border bg-background text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="${escapeHtml(t("header.themeToggle"))}"><svg class="size-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg></button></div></header>${renderMobileNav(path)}<main class="flex min-h-0 flex-1 flex-col overflow-hidden bg-muted/35 p-3 sm:p-5 lg:p-7"><div class="mx-auto flex min-h-0 w-full max-w-[88rem] flex-1 flex-col animate-fade-in">${body}</div></main></div>`;
 }
 
 export function mountKioskLocalShell(_onMount: () => void, path: string): string {
@@ -113,4 +120,7 @@ export function bindKioskLocalShell(onMount: () => void): void {
   bindEmenuHostIpControl();
   bindKioskLocalSessionBridge();
   bindKioskEmbedViewportFit();
+  bindUiLocaleControl(() => {
+    onMount();
+  });
 }

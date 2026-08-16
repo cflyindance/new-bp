@@ -6,6 +6,9 @@ import { BUILD_STAMP } from "../generated/build-stamp";
 import { mountDemoSwitchFab } from "./demo-switch-control";
 import { bindViewSwitchControl } from "./view-switch-control";
 import { bindEmenuHostIpControl, renderEmenuHostIpControl } from "./emenu-local-host-control-ui";
+import { bindEmenuLocalSessionBridge } from "./emenu-local-session-bridge";
+import { syncEmenuLangStorage, withEmbedLanguageParam } from "./embed-ui-locale";
+import { bindUiLocaleControl, renderUiLocaleControl } from "./ui-locale-control";
 import {
   bindSeasoningSettingsPage,
   renderSeasoningSettingsPage,
@@ -17,9 +20,14 @@ import {
   type EmenuLocalNavItem,
 } from "./emenu-local-routes";
 
-const EMENU_NEW_IFRAME_SRC = `./emenu-new/index.html?embedded=1&v=${BUILD_STAMP}`;
+function emenuIframeSrc(): string {
+  return withEmbedLanguageParam(`./emenu-new/index.html?embedded=1&v=${BUILD_STAMP}`);
+}
+
 /** 与 eMenu 同一本地构建包，打开设置路由 */
-const EMENU_SETTINGS_IFRAME_SRC = `./emenu-new/index.html?embedded=1&v=${BUILD_STAMP}#/setting`;
+function emenuSettingsIframeSrc(): string {
+  return withEmbedLanguageParam(`./emenu-new/index.html?embedded=1&v=${BUILD_STAMP}#/setting`);
+}
 
 function escapeHtml(value: string): string {
   return value
@@ -145,7 +153,7 @@ function renderEmenuIframePage(): string {
       <iframe
         title="${escapeHtml(t("shell.emenuLocalEmenu"))}"
         class="block h-full min-h-[36rem] w-full flex-1 border-0"
-        src="${escapeHtml(EMENU_NEW_IFRAME_SRC)}"
+        src="${escapeHtml(emenuIframeSrc())}"
         referrerpolicy="no-referrer-when-downgrade"
         allow="clipboard-read; clipboard-write; fullscreen"
       ></iframe>
@@ -162,7 +170,7 @@ function renderEmenuSettingsIframePage(): string {
       <iframe
         title="${escapeHtml(t("shell.emenuLocalEmenuSettings"))}"
         class="block h-full min-h-[36rem] w-full flex-1 border-0"
-        src="${escapeHtml(EMENU_SETTINGS_IFRAME_SRC)}"
+        src="${escapeHtml(emenuSettingsIframeSrc())}"
         referrerpolicy="no-referrer-when-downgrade"
         allow="clipboard-read; clipboard-write; fullscreen"
       ></iframe>
@@ -183,11 +191,12 @@ function renderMain(path: string): string {
     <div class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
       <header class="flex min-h-16 shrink-0 items-center justify-between gap-4 border-b border-border/80 bg-card/95 px-4 py-3 backdrop-blur sm:px-6 lg:px-8">
         <div class="min-w-0">
-          <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">eMenu · Local configuration</p>
+          <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">${escapeHtml(t("shell.emenuLocalKicker"))}</p>
           <h1 id="main-content" tabindex="-1" class="truncate text-xl font-semibold tracking-tight text-foreground">${escapeHtml(t(active.titleKey))}</h1>
         </div>
         <div class="flex shrink-0 items-center gap-2">
           ${renderEmenuHostIpControl()}
+          ${renderUiLocaleControl()}
           <button type="button" id="theme-toggle" class="inline-flex size-10 shrink-0 items-center justify-center rounded-xl border border-border bg-background text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="${escapeHtml(t("header.themeToggle"))}">
             <svg class="size-5 dark:hidden" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
             <svg class="hidden size-5 dark:block" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
@@ -204,6 +213,7 @@ function renderMain(path: string): string {
 }
 
 export function mountEmenuLocalShell(_onMount: () => void, path: string): string {
+  syncEmenuLangStorage();
   const normalized = normalizeEmenuLocalPath(path);
   return `
     <div class="relative h-dvh min-h-0 w-full overflow-hidden bg-muted/35" data-emenu-local-shell>
@@ -225,4 +235,9 @@ export function bindEmenuLocalShell(onMount: () => void): void {
   bindViewSwitchControl(onMount);
   bindSeasoningSettingsPage();
   bindEmenuHostIpControl();
+  bindEmenuLocalSessionBridge();
+  bindUiLocaleControl(() => {
+    syncEmenuLangStorage();
+    onMount();
+  });
 }
