@@ -286,6 +286,7 @@ const RightPanel = ({
             groups={seasoningGroups}
             selections={seasoningSelections}
             onToggleChoice={onToggleSeasoning}
+            hidePrice={hidePrice}
           />
         ) : null}
         <Box hidden={!isShowDisplayNote}>
