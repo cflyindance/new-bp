@@ -681,7 +681,7 @@ class BatchWizardController {
       return;
     }
     if (target.hasAttribute("data-search-products")) {
-      await this.loadMenuStructure(false, undefined, false, this.productQuery, "", "");
+      await this.loadMenuStructure(true, undefined, false, this.productQuery, "", "");
       return;
     }
     const groupId = target.dataset.menuActivateGroup;
