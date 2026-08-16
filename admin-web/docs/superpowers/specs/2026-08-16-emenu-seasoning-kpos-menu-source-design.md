@@ -45,7 +45,7 @@
 eMenu 主机 IP（emenu-local-host-control，与嵌入页同一配置）
         │
         ▼
-  GET /kpos/.../menu/menu
+  GET /kpos/api/menu/menu
   ?product=EMENU&showInactive=false&showDeleted=false
   （不按时段过滤）
         │
