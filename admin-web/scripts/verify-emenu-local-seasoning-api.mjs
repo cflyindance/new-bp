@@ -28,8 +28,29 @@ function migrationAuditCount(db) {
 
 const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "emenu-seasoning-api-"));
 const dbPath = path.join(tempDir, "db.json");
+const seedMenu = createEmenuSeasoningSeedDb();
+const menuViewState = {
+  menuGroups: seedMenu.menuGroups,
+  products: structuredClone(seedMenu.products),
+  categories: seedMenu.categories,
+  sourceMenuVersion: "seed-fixture",
+  fingerprint: "seed-fixture",
+};
+const menuProvider = {
+  async resolve() {
+    return {
+      menuGroups: menuViewState.menuGroups,
+      products: structuredClone(menuViewState.products),
+      categories: menuViewState.categories,
+      sourceMenuVersion: menuViewState.sourceMenuVersion,
+      fingerprint: menuViewState.fingerprint,
+      fromCache: false,
+      source: "fixture",
+    };
+  },
+};
 const server = http.createServer((req, res) => {
-  handleEmenuSeasoningApi(req, res, dbPath).then((handled) => {
+  handleEmenuSeasoningApi(req, res, dbPath, { menuProvider, cacheDir: tempDir }).then((handled) => {
     if (!handled) {
       res.statusCode = 404;
       res.end("Not found");
@@ -328,17 +349,16 @@ try {
   assert(conflictResponse.status === 409, "Stale version must return 409");
 
   const staleSelection = await fetch(`${base}/product-selections`, { method: "POST", headers: sessionHeaders, body: "{}" }).then((response) => response.json());
-  const persisted = JSON.parse(fs.readFileSync(dbPath, "utf8"));
-  const changedProduct = persisted.products.find((product) => product.status === "active" && product.emenuSellable);
-  assert(changedProduct, "Stale product-selection test needs an active product");
-  changedProduct.name = `${changedProduct.name}（已调整）`;
-  fs.writeFileSync(dbPath, JSON.stringify(persisted, null, 2), "utf8");
+  const changedMenuProduct = menuViewState.products.find((product) => product.status === "active" && product.emenuSellable);
+  assert(changedMenuProduct, "Stale product-selection test needs an active product");
+  changedMenuProduct.name = `${changedMenuProduct.name}（已调整）`;
+  menuViewState.fingerprint = "seed-fixture-changed";
   const staleSelectionResponse = await fetch(`${base}/product-selections/${staleSelection.token}`, { headers: sessionHeaders });
   assert(staleSelectionResponse.status === 409, "Menu selection changes must invalidate a product draft");
   const staleSelectionError = await staleSelectionResponse.json();
   assert(staleSelectionError.error === "product_selection_stale", "Stale product selection must return a stable error code");
-  changedProduct.name = changedProduct.name.replace("（已调整）", "");
-  fs.writeFileSync(dbPath, JSON.stringify(persisted, null, 2), "utf8");
+  changedMenuProduct.name = changedMenuProduct.name.replace("（已调整）", "");
+  menuViewState.fingerprint = "seed-fixture";
 
   const snapshot = await fetch(`${base}/snapshot`).then((response) => response.json());
   assert(snapshot.version === 2 && Array.isArray(snapshot.relations), "Terminal snapshot is incomplete");
@@ -513,6 +533,26 @@ try {
   const conflictHealth = await conflictHealthResponse.json();
   assert(conflictHealthResponse.status === 500 && conflictHealth.error === "option_category_migration_conflict", "A migration conflict must be returned to the caller as a server error");
   assert(fs.readFileSync(dbPath, "utf8") === uncategorizedConflictOriginal, "A request-time migration conflict must not replace the database with seed data");
+
+  const healthyForOrphan = createEmenuSeasoningSeedDb();
+  healthyForOrphan.relations = [
+    ...healthyForOrphan.relations,
+    {
+      id: "r-orphan",
+      productId: "p-does-not-exist",
+      action: "ADD",
+      optionId: healthyForOrphan.options[0].id,
+      priceDelta: 0,
+      sortOrder: 10,
+      status: "active",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+  ];
+  writeDb(dbPath, healthyForOrphan);
+  const terminalSnapshot = await fetch(`${base}/snapshot`).then((response) => response.json());
+  assert(!terminalSnapshot.products.some((product) => product.id === "p-does-not-exist"), "snapshot excludes orphan products");
+  assert(!terminalSnapshot.relations.some((relation) => relation.productId === "p-does-not-exist"), "snapshot excludes orphan relations");
 
   console.log("eMenu local seasoning API verification passed");
 } finally {
