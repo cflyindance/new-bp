@@ -1580,10 +1580,10 @@ import {
   type MessageKey,
   navPrimaryLabel,
   pick,
-  setUiLocale,
   t,
   tf,
 } from "./i18n";
+import { bindUiLocaleControl, renderUiLocaleControl } from "./shell/ui-locale-control";
 
 function escapeHtml(s: string): string {
   return s
@@ -3691,36 +3691,6 @@ function replaceHashPath(path: string): void {
 const SIDEBAR_NAV_SCROLL_KEY = "sidebar-primary-nav-scrollTop";
 
 /** 顶栏品牌 / 区域 / 门店筛选，与 `bindHeaderScopeFilters` 同步 */
-
-function renderGlobalUiLocaleControl(): string {
-  const cur = getUiLocale();
-  const lab = escapeHtml(t("locale.label"));
-  return `<div class="flex shrink-0 items-center">
-      <label for="global-ui-locale" class="sr-only">${lab}</label>
-      <select
-        id="global-ui-locale"
-        title="${lab}"
-        class="h-9 max-w-[8.5rem] cursor-pointer rounded-md border border-border bg-background px-2 text-sm text-foreground shadow-sm transition-colors hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:h-11 sm:max-w-none sm:px-2.5"
-        aria-label="${lab}"
-      >
-        <option value="zh" ${cur === "zh" ? "selected" : ""}>${escapeHtml(t("locale.optionZh"))}</option>
-        <option value="en" ${cur === "en" ? "selected" : ""}>${escapeHtml(t("locale.optionEn"))}</option>
-      </select>
-    </div>`;
-}
-
-function bindGlobalUiLocaleControl(): void {
-  const sel = document.getElementById("global-ui-locale") as HTMLSelectElement | null;
-  if (!sel) return;
-  sel.value = getUiLocale();
-  sel.addEventListener("change", () => {
-    const v = sel.value === "en" ? "en" : "zh";
-    setUiLocale(v);
-    applyUiLocaleToDocument(v);
-    window.dispatchEvent(new CustomEvent("menusifu:ui-locale-change", { detail: { locale: v } }));
-    mount();
-  });
-}
 
 function readSidebarNavScrollMemory(): number {
   try {
@@ -11568,7 +11538,7 @@ function renderMain(): string {
           ${restartOnboardingBtn}
           ${aiAssistantBtn}
           ${renderHeaderScopeFilters()}
-          ${renderGlobalUiLocaleControl()}
+          ${renderUiLocaleControl()}
           ${renderHeaderUserCenter()}
           <button type="button" id="theme-toggle" class="inline-flex size-9 shrink-0 items-center justify-center rounded-md border border-border bg-background text-foreground hover:bg-accent hover:text-accent-foreground transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset sm:size-11" aria-label="${escapeHtml(t("header.themeToggle"))}">
             <svg class="size-5 dark:hidden" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
@@ -12851,7 +12821,9 @@ function mount(): void {
   syncScopeFilterMetaForEmbeddedPages();
   bindEffectiveScopeChangeListener(mount);
   bindSidebarGroupSwitcher();
-  bindGlobalUiLocaleControl();
+  bindUiLocaleControl(() => {
+    mount();
+  });
   bindSidebarNavSortControls();
   bindSidebarNavDragReorder();
   ensureInventorySheetEscapeListener();
