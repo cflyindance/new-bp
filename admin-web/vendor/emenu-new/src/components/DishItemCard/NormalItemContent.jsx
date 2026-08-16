@@ -92,6 +92,7 @@ const NormalItemContent = (props) => {
   const seasoningGroups = getSeasoningGroupsForProduct(seasoningSnapshot, id)
 
   const openAsDetail = () => {
+    setDisableBtn(false)
     setEntrySource('detail')
     setTrue()
   }
@@ -204,6 +205,7 @@ const NormalItemContent = (props) => {
         onClose={() => {
           setFalse()
           setEntrySource('add')
+          setDisableBtn(false)
         }}
         isShowDisplayNote={isShowDisplayNote}
         isNeedPasswordAuth={isNeedPasswordAuth}
