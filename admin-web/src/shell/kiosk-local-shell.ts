@@ -21,7 +21,7 @@ import {
 /** 本地 dist/kiosklite/.embed-build；挂在 /kpos/kiosklite 以便 API 基址走同源 /kpos 代理 */
 const KIOSKLITE_IFRAME_SRC = `./kpos/kiosklite/index.html?embedded=1&v=${BUILD_STAMP}`;
 /** 对应主机配置页 #/configApp；业务数据经 /kpos 代理到 POS */
-const KIOSKLITE_SETTINGS_IFRAME_SRC = `./kpos/kiosklite/index.html?embedded=1&v=${BUILD_STAMP}#/configApp`;
+const KIOSKLITE_SETTINGS_IFRAME_SRC = `./kpos/kiosklite/index.html?embedded=1&language=zh-cn&v=${BUILD_STAMP}#/configApp`;
 
 function escapeHtml(value: string): string {
   return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
