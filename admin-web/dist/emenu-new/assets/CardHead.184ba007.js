@@ -1,0 +1,1 @@
+import{w as a,at as t}from"./mui.aaacbc08.js";const n=a(i=>({root:{padding:i.spacing(3)},title:{fontWeight:600,fontSize:18,lineHeight:1.2},subheader:{marginTop:i.spacing(1),fontSize:16,lineHeight:1.2},action:{margin:0}}))(t);export{n as C};

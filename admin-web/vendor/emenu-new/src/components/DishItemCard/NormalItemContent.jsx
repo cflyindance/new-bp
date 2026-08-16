@@ -3,11 +3,16 @@ import SmallContent from './SmallContent'
 import { useBoolean } from 'ahooks'
 import DishDialog from '@/components/DishDialog'
 import BuffetViewOnlyModal from '@/components/BuffetViewOnlyModal'
-import React, { memo, useMemo, useState } from 'react'
+import React, { memo, useEffect, useMemo, useState } from 'react'
 import useShowBenefitPrice from '@/hooks/useShowBenefitPrice'
 import useSystemConfig from '@/hooks/useSystemConfig'
 import { useGlobalState } from '@/hooks/useGlobalState'
 import { shouldHideDishDialogPrice } from '@/utils/crmIntegrationRewards'
+import {
+  ensureSeasoningSnapshot,
+  getSeasoningGroupsForProduct,
+  productShowsSeasoningDetail,
+} from '@/services/seasoningSnapshot'
 
 const NormalItemContent = (props) => {
   const {
@@ -34,6 +39,8 @@ const NormalItemContent = (props) => {
   const [openDishDialog, { setTrue, setFalse }] = useBoolean()
   const [disableBtn, setDisableBtn] = useState(false)
   const [openModal, setOpenModal] = useState(false)
+  const [seasoningSnapshot, setSeasoningSnapshot] = useState(null)
+  const [entrySource, setEntrySource] = useState('add')
   const [, setOrderAdminPermission] = useGlobalState('orderAdminPermission')
   const { showPrice, actualBenefitPrice, isHasBenefitPrice, isShowPrice } =
     useShowBenefitPrice({
@@ -64,6 +71,35 @@ const NormalItemContent = (props) => {
     return configDishIds.includes(id)
   }, [restrictRedeemItem, id, rewardRule])
 
+  useEffect(() => {
+    let cancelled = false
+    ensureSeasoningSnapshot()
+      .then((snap) => {
+        if (!cancelled) setSeasoningSnapshot(snap)
+      })
+      .catch(() => {
+        if (!cancelled) setSeasoningSnapshot(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const showSeasoningDetailBtn = productShowsSeasoningDetail(
+    seasoningSnapshot,
+    id
+  )
+  const seasoningGroups = getSeasoningGroupsForProduct(seasoningSnapshot, id)
+
+  const openAsDetail = () => {
+    setEntrySource('detail')
+    setTrue()
+  }
+  const openAsAdd = () => {
+    setEntrySource('add')
+    setTrue()
+  }
+
   const showPermissionModal = (next) => {
     setOrderAdminPermission({
       open: true,
@@ -88,7 +124,9 @@ const NormalItemContent = (props) => {
         <LargeContent
           {...props}
           setOpenModal={setOpenModal}
-          setTrue={setTrue}
+          setTrue={openAsAdd}
+          openAsDetail={openAsDetail}
+          showSeasoningDetailBtn={showSeasoningDetailBtn}
           setDisable={setDisable}
           showPrice={showPrice}
           actualBenefitPrice={actualBenefitPrice}
@@ -110,7 +148,9 @@ const NormalItemContent = (props) => {
         <SmallContent
           {...props}
           setOpenModal={setOpenModal}
-          setTrue={setTrue}
+          setTrue={openAsAdd}
+          openAsDetail={openAsDetail}
+          showSeasoningDetailBtn={showSeasoningDetailBtn}
           setDisable={setDisable}
           showPrice={showPrice}
           actualBenefitPrice={actualBenefitPrice}
@@ -150,6 +190,8 @@ const NormalItemContent = (props) => {
           marketPriceItem,
         }}
         open={openDishDialog}
+        entrySource={entrySource}
+        seasoningGroups={entrySource === 'detail' ? seasoningGroups : []}
         showPermissionModal={showPermissionModal}
         onSubmit={(data) => {
           // 有详情，需要权限的兑换菜
@@ -159,7 +201,10 @@ const NormalItemContent = (props) => {
           }
           changeCart(data)
         }}
-        onClose={setFalse}
+        onClose={() => {
+          setFalse()
+          setEntrySource('add')
+        }}
         isShowDisplayNote={isShowDisplayNote}
         isNeedPasswordAuth={isNeedPasswordAuth}
         hidePrice={shouldHideDishDialogPrice({
