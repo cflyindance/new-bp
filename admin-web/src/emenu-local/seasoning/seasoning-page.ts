@@ -60,7 +60,7 @@ class SeasoningPageController {
     const workspace = this.root.querySelector<HTMLElement>("[data-seasoning-workspace]");
     if (!workspace) return;
     const content = state.error
-      ? `<div class="flex min-h-80 flex-col items-center justify-center gap-4 p-6 text-center"><p class="font-semibold text-destructive">${t("seasoning.loadError")}</p><button type="button" data-seasoning-retry class="${secondaryButtonClass}">${t("seasoning.retry")}</button></div>`
+      ? `<div class="flex min-h-80 flex-col items-center justify-center gap-4 p-6 text-center"><p class="font-semibold text-destructive">${escapeSeasoningHtml(state.error || t("seasoning.loadError"))}</p><button type="button" data-seasoning-retry class="${secondaryButtonClass}">${t("seasoning.retry")}</button></div>`
         : state.loading && !(state.productGroups || state.options)
         ? `<div class="flex min-h-80 items-center justify-center p-6 text-sm font-medium text-muted-foreground">${t("seasoning.loading")}</div>`
         : state.tab === "relations"

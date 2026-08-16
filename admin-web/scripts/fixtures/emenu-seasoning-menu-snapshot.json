@@ -1,0 +1,235 @@
+{
+  "menuGroups": [
+    {
+      "id": "group-main",
+      "name": "常规菜单",
+      "sortOrder": 10,
+      "categories": [
+        {
+          "id": "cat-hot",
+          "name": "热菜",
+          "sortOrder": 10,
+          "productIds": [
+            "p-kungpao",
+            "p-yuxiang",
+            "p-mapo",
+            "p-beef",
+            "p-retired",
+            "p-not-sellable"
+          ]
+        },
+        {
+          "id": "cat-cold",
+          "name": "凉菜",
+          "sortOrder": 20,
+          "productIds": [
+            "p-salad",
+            "p-chicken-cold"
+          ]
+        },
+        {
+          "id": "cat-soup",
+          "name": "汤羹",
+          "sortOrder": 30,
+          "productIds": [
+            "p-soup",
+            "p-wonton"
+          ]
+        },
+        {
+          "id": "cat-staple",
+          "name": "主食",
+          "sortOrder": 40,
+          "productIds": [
+            "p-noodle",
+            "p-rice",
+            "p-dumpling"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "group-featured",
+      "name": "推荐专区",
+      "sortOrder": 20,
+      "categories": [
+        {
+          "id": "cat-signature",
+          "name": "招牌推荐",
+          "sortOrder": 10,
+          "productIds": [
+            "p-kungpao",
+            "p-beef",
+            "p-chicken-cold"
+          ]
+        },
+        {
+          "id": "cat-quick",
+          "name": "快捷点餐",
+          "sortOrder": 20,
+          "productIds": [
+            "p-noodle",
+            "p-rice",
+            "p-soup"
+          ]
+        }
+      ]
+    }
+  ],
+  "products": [
+    {
+      "id": "p-kungpao",
+      "code": "D1001",
+      "name": "宫保鸡丁",
+      "categoryId": "cat-hot",
+      "categoryName": "热菜",
+      "sortOrder": 10,
+      "emenuSellable": true,
+      "status": "active"
+    },
+    {
+      "id": "p-yuxiang",
+      "code": "D1002",
+      "name": "鱼香肉丝",
+      "categoryId": "cat-hot",
+      "categoryName": "热菜",
+      "sortOrder": 20,
+      "emenuSellable": true,
+      "status": "active"
+    },
+    {
+      "id": "p-mapo",
+      "code": "D1003",
+      "name": "麻婆豆腐",
+      "categoryId": "cat-hot",
+      "categoryName": "热菜",
+      "sortOrder": 30,
+      "emenuSellable": true,
+      "status": "active"
+    },
+    {
+      "id": "p-beef",
+      "code": "D1004",
+      "name": "孜然牛肉",
+      "categoryId": "cat-hot",
+      "categoryName": "热菜",
+      "sortOrder": 40,
+      "emenuSellable": true,
+      "status": "active"
+    },
+    {
+      "id": "p-soup",
+      "code": "D2001",
+      "name": "酸辣汤",
+      "categoryId": "cat-soup",
+      "categoryName": "汤羹",
+      "sortOrder": 10,
+      "emenuSellable": true,
+      "status": "active"
+    },
+    {
+      "id": "p-wonton",
+      "code": "D2002",
+      "name": "馄饨汤",
+      "categoryId": "cat-soup",
+      "categoryName": "汤羹",
+      "sortOrder": 20,
+      "emenuSellable": true,
+      "status": "active"
+    },
+    {
+      "id": "p-noodle",
+      "code": "D3001",
+      "name": "牛肉面",
+      "categoryId": "cat-staple",
+      "categoryName": "主食",
+      "sortOrder": 10,
+      "emenuSellable": true,
+      "status": "active"
+    },
+    {
+      "id": "p-rice",
+      "code": "D3002",
+      "name": "扬州炒饭",
+      "categoryId": "cat-staple",
+      "categoryName": "主食",
+      "sortOrder": 20,
+      "emenuSellable": true,
+      "status": "active"
+    },
+    {
+      "id": "p-dumpling",
+      "code": "D3003",
+      "name": "水饺",
+      "categoryId": "cat-staple",
+      "categoryName": "主食",
+      "sortOrder": 30,
+      "emenuSellable": true,
+      "status": "active"
+    },
+    {
+      "id": "p-salad",
+      "code": "D4001",
+      "name": "凉拌黄瓜",
+      "categoryId": "cat-cold",
+      "categoryName": "凉菜",
+      "sortOrder": 10,
+      "emenuSellable": true,
+      "status": "active"
+    },
+    {
+      "id": "p-chicken-cold",
+      "code": "D4002",
+      "name": "口水鸡",
+      "categoryId": "cat-cold",
+      "categoryName": "凉菜",
+      "sortOrder": 20,
+      "emenuSellable": true,
+      "status": "active"
+    },
+    {
+      "id": "p-retired",
+      "code": "D9998",
+      "name": "已停用菜品",
+      "categoryId": "cat-hot",
+      "categoryName": "热菜",
+      "sortOrder": 999,
+      "emenuSellable": true,
+      "status": "inactive"
+    },
+    {
+      "id": "p-not-sellable",
+      "code": "D9999",
+      "name": "非 eMenu 菜品",
+      "categoryId": "cat-hot",
+      "categoryName": "热菜",
+      "sortOrder": 1000,
+      "emenuSellable": false,
+      "status": "active"
+    }
+  ],
+  "categories": [
+    {
+      "id": "cat-hot",
+      "name": "热菜",
+      "sortOrder": 10
+    },
+    {
+      "id": "cat-soup",
+      "name": "汤羹",
+      "sortOrder": 20
+    },
+    {
+      "id": "cat-staple",
+      "name": "主食",
+      "sortOrder": 30
+    },
+    {
+      "id": "cat-cold",
+      "name": "凉菜",
+      "sortOrder": 40
+    }
+  ],
+  "sourceMenuVersion": "snapshot-v1",
+  "fingerprint": "kpos:snapshot-v1"
+}

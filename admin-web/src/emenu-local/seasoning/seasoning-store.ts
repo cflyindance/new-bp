@@ -1,4 +1,5 @@
 import { seasoningApi } from "./seasoning-api";
+import { SeasoningApiError } from "./seasoning-api-error";
 import type {
   CursorPage,
   SeasoningBootstrap,
@@ -7,6 +8,7 @@ import type {
   SeasoningRelationPageSize,
   SeasoningRelationProductPage,
 } from "./seasoning-types";
+import { t } from "../../i18n";
 
 export type SeasoningTab = "relations" | "options";
 
@@ -23,6 +25,13 @@ export type SeasoningStoreState = {
   relationPageSize: SeasoningRelationPageSize;
   optionFilters: { query: string; status: string; categoryId: string };
 };
+
+function storeErrorMessage(error: unknown): string {
+  if (error instanceof SeasoningApiError && error.code === "menu_unavailable") {
+    return t("seasoning.menuUnavailable");
+  }
+  return error instanceof Error ? error.message : "request_failed";
+}
 
 export class SeasoningStore {
   private listeners = new Set<(state: SeasoningStoreState) => void>();
@@ -57,7 +66,7 @@ export class SeasoningStore {
       this.state.bootstrap = await seasoningApi.bootstrap();
       await this.loadCurrentTab();
     } catch (error) {
-      this.state.error = error instanceof Error ? error.message : "request_failed";
+      this.state.error = storeErrorMessage(error);
     } finally {
       this.state.loading = false;
       this.emit();
@@ -97,7 +106,7 @@ export class SeasoningStore {
       }
       this.state.productGroups = response;
     } catch (error) {
-      this.state.error = error instanceof Error ? error.message : "request_failed";
+      this.state.error = storeErrorMessage(error);
     } finally {
       this.state.loading = false;
       this.emit();
@@ -140,7 +149,7 @@ export class SeasoningStore {
         this.state.optionCategories = categories.items;
       }
     } catch (error) {
-      this.state.error = error instanceof Error ? error.message : "request_failed";
+      this.state.error = storeErrorMessage(error);
     } finally {
       this.state.loading = false;
       this.emit();

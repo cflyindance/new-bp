@@ -144,6 +144,8 @@ export type SeasoningMenuStructure = {
   activeCategoryId: string;
   query: string;
   selectedTotal: number;
+  menuSource?: string | null;
+  menuFromCache?: boolean;
 };
 
 export type ProductSelectionDraft = {
