@@ -1,10 +1,10 @@
 export const SEASONING_ACTION_CODES = ["ADD", "LESS", "MORE", "NONE"];
 
 export const SEASONING_ACTION_LABELS = {
-  ADD: "Add",
-  LESS: "Less",
-  MORE: "More",
-  NONE: "None",
+  ADD: "添加",
+  LESS: "少放",
+  MORE: "多放",
+  NONE: "不要",
 };
 
 export function buildTerminalSeasoningGroups({ product, options, relations }) {
