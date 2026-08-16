@@ -774,6 +774,8 @@
   function createSelectedPreviewState() {
     return {
       open: false,
+      query: "",
+      searchComposing: false,
       storeId: "",
       lineId: "",
       page: 1,
@@ -819,9 +821,12 @@
     return lines.filter(function (line) { return ids.indexOf(line.id) >= 0; });
   }
 
-  function filteredSelectedPreviewRows(rows, state) {
+  function filteredSelectedPreviewRows(rows, state, targetType) {
+    var query = normalizeProductSearchQuery(state.query);
     return rows.filter(function (row) {
-      return (!state.storeId || row.storeId === state.storeId) && (!state.lineId || row.lineId === state.lineId);
+      var targetName = targetType === "category" ? row.categoryName : row.dishName;
+      var matchesQuery = !query || normalizeProductSearchQuery(targetName).indexOf(query) >= 0;
+      return matchesQuery && (!state.storeId || row.storeId === state.storeId) && (!state.lineId || row.lineId === state.lineId);
     });
   }
 
@@ -837,7 +842,7 @@
     if (state.storeId && storeIds.indexOf(state.storeId) < 0) state.storeId = "";
     var lineIds = selectedPreviewLineOptions(rows, state.storeId).map(function (line) { return line.id; });
     if (state.lineId && lineIds.indexOf(state.lineId) < 0) state.lineId = "";
-    var filtered = filteredSelectedPreviewRows(rows, state);
+    var filtered = filteredSelectedPreviewRows(rows, state, draft.targetType);
     var totalPages = Math.max(1, Math.ceil(filtered.length / state.pageSize));
     state.page = Math.max(1, Math.min(Number(state.page) || 1, totalPages));
     var pageRows = pagedSelectedPreviewRows(filtered, state);
@@ -1127,7 +1132,7 @@
       '<section class="olf-section olf-store-product-config"><div class="olf-section-head"><div><h3 id="selectedProductHeading" tabindex="-1">选择商品</h3><p class="olf-structure-summary" id="structureSummary">' + esc(summary) + '</p></div><button type="button" class="olf-button olf-button--small olf-selected-preview-entry" data-selected-preview-open' + (previewCount ? '' : ' disabled') + '>查看已选商品（' + previewCount + '）</button></div><label class="olf-field olf-config-store-select"><span class="olf-label olf-required">参与门店</span><select class="olf-select" data-config-store-select>' + storeOptions + '</select></label>' + searchHtml + '</section>';
   }
 
-  function renderSelectedPreviewDialog(draft) {
+  function renderSelectedPreviewDialog(draft, restoreSearchFocus) {
     var overlay = document.querySelector("[data-selected-preview-overlay]");
     if (!overlay || !editorState || !editorState.selectedPreview.open) return;
     var state = editorState.selectedPreview;
@@ -1146,11 +1151,18 @@
       var detail = draft.targetType === "category" ? row.dishCount + " 个菜品" : row.groupName + " / " + row.categoryName;
       return '<tr class="' + (checked ? 'is-selected' : '') + '" data-selected-preview-row="' + esc(row.rowId) + '"><td><input type="checkbox" data-selected-preview-row-check value="' + esc(row.rowId) + '" aria-label="选择' + esc(row.storeName + '，' + row.lineLabel + '，' + targetName) + '"' + (checked ? ' checked' : '') + ' /></td><td>' + esc(row.storeName) + '</td><td>' + esc(row.lineLabel) + '</td><td><strong>' + esc(targetName) + '</strong></td><td>' + esc(detail) + '</td><td><button type="button" class="olf-button olf-button--small olf-button--link" data-selected-preview-delete="single" data-selected-preview-row-id="' + esc(row.rowId) + '">删除</button></td></tr>';
     }).join("");
-    var emptyHtml = data.filtered.length ? "" : '<div class="olf-empty olf-selected-preview-empty"><strong>暂无已选商品</strong><span>当前筛选条件下暂无已选商品，请调整门店或产线。</span></div>';
+    var emptyHtml = data.filtered.length ? "" : '<div class="olf-empty olf-selected-preview-empty"><strong>暂无已选商品</strong><span>当前筛选条件下暂无已选商品，请调整搜索、门店或产线。</span></div>';
     var targetHeading = draft.targetType === "category" ? "分类名称" : "商品名称";
     var detailHeading = draft.targetType === "category" ? "包含菜品" : "商品分类";
-    overlay.innerHTML = '<section class="olf-selected-preview-dialog" role="dialog" aria-modal="true" aria-labelledby="selectedPreviewTitle"><div class="olf-selected-preview-head"><h3 id="selectedPreviewTitle" tabindex="-1">查看已选商品（' + data.rows.length + '）</h3><button type="button" class="olf-icon-button" data-selected-preview-close aria-label="关闭已选商品预览">' + icon("close", 19) + '</button></div><div class="olf-selected-preview-toolbar"><div class="olf-actions"><button type="button" class="olf-button olf-button--small" data-selected-preview-delete="batch"' + (selectedIds.length ? '' : ' disabled') + '>批量删除</button><button type="button" class="olf-button olf-button--small olf-button--danger" data-selected-preview-delete="all"' + (data.rows.length ? '' : ' disabled') + '>全部删除</button></div><div class="olf-selected-preview-filters"><label class="olf-field"><span class="olf-label">门店</span><select class="olf-select" data-selected-preview-store>' + storeOptions + '</select></label><label class="olf-field"><span class="olf-label">产线</span><select class="olf-select" data-selected-preview-line>' + lineOptions + '</select></label></div></div><div class="olf-selected-preview-table-wrap"><table class="olf-table"><thead><tr><th><input type="checkbox" data-selected-preview-select-all aria-label="全选当前页"' + (allPageSelected ? ' checked' : '') + (data.pageRows.length ? '' : ' disabled') + ' /></th><th>配置门店</th><th>产线</th><th>' + targetHeading + '</th><th>' + detailHeading + '</th><th>操作</th></tr></thead><tbody>' + rowsHtml + '</tbody></table>' + emptyHtml + '</div><div class="olf-selected-preview-pagination"><span>共 ' + data.filtered.length + ' 条</span><div class="olf-actions"><button type="button" class="olf-button olf-button--small" data-selected-preview-page="previous"' + (state.page <= 1 ? ' disabled' : '') + '>上一页</button><span>第 ' + state.page + ' / ' + data.totalPages + ' 页</span><button type="button" class="olf-button olf-button--small" data-selected-preview-page="next"' + (state.page >= data.totalPages ? ' disabled' : '') + '>下一页</button><label class="olf-selected-preview-page-size"><span class="olf-sr-only">每页条数</span><select class="olf-select" data-selected-preview-page-size><option value="10"' + (state.pageSize === 10 ? ' selected' : '') + '>10 条/页</option><option value="20"' + (state.pageSize === 20 ? ' selected' : '') + '>20 条/页</option><option value="50"' + (state.pageSize === 50 ? ' selected' : '') + '>50 条/页</option></select></label></div></div></section>';
+    overlay.innerHTML = '<section class="olf-selected-preview-dialog" role="dialog" aria-modal="true" aria-labelledby="selectedPreviewTitle"><div class="olf-selected-preview-head"><h3 id="selectedPreviewTitle" tabindex="-1">查看已选商品（' + data.rows.length + '）</h3><button type="button" class="olf-icon-button" data-selected-preview-close aria-label="关闭已选商品预览">' + icon("close", 19) + '</button></div><div class="olf-selected-preview-toolbar"><div class="olf-selected-preview-filters"><label class="olf-field olf-selected-preview-search"><span class="olf-label">菜单搜索</span><input class="olf-input" type="search" value="' + esc(state.query) + '" placeholder="搜索商品/分类名称" autocomplete="off" data-selected-preview-search /></label><label class="olf-field"><span class="olf-label">门店</span><select class="olf-select" data-selected-preview-store>' + storeOptions + '</select></label><label class="olf-field"><span class="olf-label">产线</span><select class="olf-select" data-selected-preview-line>' + lineOptions + '</select></label></div></div><div class="olf-selected-preview-table-wrap"><table class="olf-table"><thead><tr><th><input type="checkbox" data-selected-preview-select-all aria-label="全选当前页"' + (allPageSelected ? ' checked' : '') + (data.pageRows.length ? '' : ' disabled') + ' /></th><th>配置门店</th><th>产线</th><th>' + targetHeading + '</th><th>' + detailHeading + '</th><th>操作</th></tr></thead><tbody>' + rowsHtml + '</tbody></table>' + emptyHtml + '</div><div class="olf-selected-preview-pagination"><div class="olf-actions olf-selected-preview-delete-actions"><button type="button" class="olf-button olf-button--small" data-selected-preview-delete="batch"' + (selectedIds.length ? '' : ' disabled') + '>批量删除</button><button type="button" class="olf-button olf-button--small olf-button--danger" data-selected-preview-delete="all"' + (data.rows.length ? '' : ' disabled') + '>全部删除</button></div><div class="olf-actions"><button type="button" class="olf-button olf-button--small" data-selected-preview-page="previous"' + (state.page <= 1 ? ' disabled' : '') + '>上一页</button><span>第 ' + state.page + ' / ' + data.totalPages + ' 页</span><button type="button" class="olf-button olf-button--small" data-selected-preview-page="next"' + (state.page >= data.totalPages ? ' disabled' : '') + '>下一页</button><label class="olf-selected-preview-page-size"><span class="olf-sr-only">每页条数</span><select class="olf-select" data-selected-preview-page-size><option value="10"' + (state.pageSize === 10 ? ' selected' : '') + '>10 条/页</option><option value="20"' + (state.pageSize === 20 ? ' selected' : '') + '>20 条/页</option><option value="50"' + (state.pageSize === 50 ? ' selected' : '') + '>50 条/页</option></select></label></div></div></section>';
     overlay.classList.add("is-open");
+    if (restoreSearchFocus) {
+      var searchInput = overlay.querySelector("[data-selected-preview-search]");
+      if (searchInput) {
+        searchInput.focus();
+        if (searchInput.setSelectionRange) searchInput.setSelectionRange(searchInput.value.length, searchInput.value.length);
+      }
+    }
   }
 
   function openSelectedPreview() {
@@ -1691,6 +1703,14 @@
   function handleEditorInput(event) {
     var target = event.target;
     var draft = editorState.rule.editorDraft;
+    if (target.hasAttribute("data-selected-preview-search")) {
+      if (event.type !== "input") return;
+      editorState.selectedPreview.query = target.value;
+      editorState.selectedPreview.page = 1;
+      editorState.selectedPreview.selectedRowIds = [];
+      if (!editorState.selectedPreview.searchComposing) renderSelectedPreviewDialog(draft, true);
+      return;
+    }
     if (target.hasAttribute("data-selected-preview-store")) {
       if (event.type !== "change") return;
       editorState.selectedPreview.storeId = target.value;
@@ -1867,13 +1887,25 @@
     root.addEventListener("input", handleEditorInput);
     root.addEventListener("change", handleEditorInput);
     root.addEventListener("compositionstart", function (event) {
-      if (event.target && event.target.hasAttribute("data-product-search")) editorState.productSearchComposing = true;
+      if (!event.target) return;
+      if (event.target.hasAttribute("data-product-search")) editorState.productSearchComposing = true;
+      if (event.target.hasAttribute("data-selected-preview-search")) editorState.selectedPreview.searchComposing = true;
     });
     root.addEventListener("compositionend", function (event) {
-      if (!event.target || !event.target.hasAttribute("data-product-search")) return;
-      editorState.productSearchComposing = false;
-      editorState.productSearchQuery = event.target.value;
-      renderProductSearchSurface(editorState.rule.editorDraft);
+      if (!event.target) return;
+      if (event.target.hasAttribute("data-product-search")) {
+        editorState.productSearchComposing = false;
+        editorState.productSearchQuery = event.target.value;
+        renderProductSearchSurface(editorState.rule.editorDraft);
+        return;
+      }
+      if (event.target.hasAttribute("data-selected-preview-search")) {
+        editorState.selectedPreview.searchComposing = false;
+        editorState.selectedPreview.query = event.target.value;
+        editorState.selectedPreview.page = 1;
+        editorState.selectedPreview.selectedRowIds = [];
+        renderSelectedPreviewDialog(editorState.rule.editorDraft, true);
+      }
     });
     root.addEventListener("brand-menu-structure-change", function (event) {
       var draft = editorState.rule.editorDraft;
