@@ -69,6 +69,7 @@ class BatchWizardController {
   private collapsedPreviewProducts = new Set<string>();
   private loading = false;
   private error = "";
+  private menuNotice = "";
   private dirty = false;
 
   constructor(
@@ -198,6 +199,7 @@ class BatchWizardController {
   }
 
   private errorMessage(error: unknown): string {
+    if (error instanceof SeasoningApiError && error.code === "menu_unavailable") return t("seasoning.menuUnavailable");
     if (error instanceof SeasoningApiError && error.code === "version_conflict") return t("seasoning.versionConflict");
     if (error instanceof SeasoningApiError && PRODUCT_SELECTION_ERRORS.has(error.code)) return t("seasoning.productSelectionExpired");
     if (error instanceof SeasoningApiError && error.code === "preview_expired") return "预览已过期，请重新生成";
@@ -360,7 +362,7 @@ class BatchWizardController {
     this.overlay.innerHTML = `
       <section data-seasoning-batch-wizard role="dialog" aria-modal="true" aria-labelledby="seasoning-batch-title" class="flex max-h-[94vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
         <header class="border-b border-border px-5 py-4"><div class="flex items-start justify-between gap-4"><div><p class="text-xs font-semibold uppercase tracking-[0.14em] text-primary">${t("seasoning.title")}</p><h2 id="seasoning-batch-title" class="mt-1 text-xl font-semibold">${t("seasoning.batch.open")}</h2></div><button type="button" data-close class="${secondaryButtonClass}" aria-label="${t("seasoning.close")}">×</button></div><div class="mt-4">${this.renderSteps()}</div></header>
-        <div class="min-h-0 flex-1 overflow-y-auto p-5">${this.error ? `<p class="mb-4 rounded-xl border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive">${escapeSeasoningHtml(this.error)}</p>` : ""}${content}</div>
+        <div class="min-h-0 flex-1 overflow-y-auto p-5">${this.error ? `<p class="mb-4 rounded-xl border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive">${escapeSeasoningHtml(this.error)}</p>` : ""}${this.menuNotice ? `<p class="mb-4 rounded-xl border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">${escapeSeasoningHtml(this.menuNotice)}</p>` : ""}${content}</div>
         <footer class="flex items-center justify-between gap-3 border-t border-border bg-muted/25 px-5 py-4"><button type="button" data-back class="${secondaryButtonClass}" ${this.step === 1 || this.loading ? "disabled" : ""}>${t("seasoning.back")}</button><div class="flex items-center gap-3">${this.step === 2 && this.configuredRelationCount() ? `<span class="hidden text-sm text-muted-foreground sm:inline">${tf("seasoning.batch.configuredRelationCount", { count: String(this.configuredRelationCount()) })}</span>` : ""}<button type="button" data-next class="${primaryButtonClass}" ${!canNext || this.loading ? "disabled" : ""}>${this.step === 3 ? t("seasoning.batch.confirm") : this.step === 2 ? t("seasoning.batch.generatePreview") : t("seasoning.next")}</button></div></footer>
       </section>`;
     syncSeasoningMenuIndeterminate(this.overlay);
@@ -409,6 +411,7 @@ class BatchWizardController {
       this.appliedProductQuery = next.query;
       this.productSelection = { ...this.productSelection, total: next.selectedTotal };
       this.error = "";
+      this.menuNotice = next.menuFromCache ? t("seasoning.menuUsingCache") : "";
     } catch (error) {
       await this.recoverFromError(error);
     } finally {
@@ -681,7 +684,7 @@ class BatchWizardController {
       return;
     }
     if (target.hasAttribute("data-search-products")) {
-      await this.loadMenuStructure(false, undefined, false, this.productQuery, "", "");
+      await this.loadMenuStructure(true, undefined, false, this.productQuery, "", "");
       return;
     }
     const groupId = target.dataset.menuActivateGroup;

@@ -463,7 +463,6 @@ function applyMenuView(db, view) {
 }
 
 function isMenuDependentPath(method, sub) {
-  if (sub === "/bootstrap") return true;
   if (sub === "/menu-structure") return true;
   if (sub === "/products") return true;
   if (sub.startsWith("/products/")) return true;

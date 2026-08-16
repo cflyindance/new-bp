@@ -156,6 +156,8 @@ const keys = [
   "seasoning.save",
   "seasoning.discardConfirm",
   "seasoning.productSelectionExpired",
+  "seasoning.menuUnavailable",
+  "seasoning.menuUsingCache",
   "seasoning.deleteProductConfirm",
   "seasoning.perPage",
   "seasoning.batch.inputPrice",
@@ -170,5 +172,8 @@ for (const key of keys) {
 
 expect(i18n, /"seasoning\.batch\.inputPrice":\s*"输入原价"/, "Chinese configuration label must use 输入原价");
 expect(i18n, /"seasoning\.batch\.inputPrice":\s*"Input base price"/, "English configuration label must use Input base price");
+expect(store, /menu_unavailable/, "Store must map menu_unavailable errors");
+expect(batch, /menu_unavailable/, "Batch wizard must map menu_unavailable errors");
+expect(batch, /menuUsingCache|menuFromCache/, "Batch wizard must surface cached menu notice");
 
 console.log("eMenu local seasoning settings structure verification passed");
