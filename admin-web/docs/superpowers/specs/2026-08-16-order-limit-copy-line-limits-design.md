@@ -43,6 +43,8 @@
 
 ## 写入算法
 
+`config = activeStoreConfig(draft)`，只读写 `config.limits`（当前门店），不写顶层 `draft.limits`。
+
 对每个勾选的目标产线 `targetLineId`：
 
 1. `sourceTargets = targetsForLine(draft, sourceLineId, config)`  
@@ -52,11 +54,17 @@
    - 对每个 `destTarget`：  
      - 若无同 `key` 的源目标 → **跳过**（保留目标原 cell）  
      - 若有：读源 `limitKey(party, round, sourceLineId, sourceTarget.id)`  
-       - 源 cell 已配置 → 写入目标 `limitKey(..., targetLineId, destTarget.id) = { configured: true, value }`  
-       - 源未配置 / 无 cell → 写入 `{ configured: false, value: null }`（或删除该 key，与现网「未配置」表示一致）  
+       - 源 cell 已配置 → 写入目标 `config.limits[limitKey(..., targetLineId, destTarget.id)] = { configured: true, value }`  
+       - 源未配置 / 无 cell → 写入 `{ configured: false, value: null }`（与现网清空输入一致，不另开删 key 分支）  
 5. 不修改源产线；不修改未勾选产线；不修改其他门店。
 
-成功后：`markEditorDirty()`、关闭弹层、toast 摘要（目标产线名列表 + 对齐写入次数 + 跳过商品数）、`renderEditor()`。
+成功后：`markEditorDirty()`、关闭弹层、toast、`renderEditor()`。
+
+### 计数口径
+
+- **对齐写入次数**：目标侧「有同 key 源商品」的 `(destTarget × party × round)` 写入次数（含写成未配置）。  
+- **跳过商品数（toast）**：目标产线上**没有任何**同 `key` 源商品的 `destTarget` 个数（按商品计，不按场景展开）。  
+- 弹层可选摘要另报：源独有 key 数（无法落到目标）、目标独有 key 数（即跳过商品数）。
 
 ## 与平铺 / 分开选择
 
