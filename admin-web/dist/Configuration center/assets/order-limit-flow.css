@@ -256,8 +256,6 @@ button { color: inherit; }
 .olf-tab.is-active { border-color: var(--olf-primary); background: var(--olf-primary-soft); color: var(--olf-primary-text); }
 .olf-completion { font-size: 12px; color: var(--olf-muted); }
 .olf-limit-input { width: 100px; min-height: 40px; padding: 7px 10px; }
-.olf-limit-state { min-width: 64px; font-size: 12px; color: var(--olf-muted); }
-.olf-limit-state.is-blocked { color: var(--olf-danger); }
 
 .olf-switch { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; }
 .olf-switch input { position: absolute; opacity: 0; }
