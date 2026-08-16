@@ -837,8 +837,23 @@
     editorState.configuredLimitPreview = createConfiguredLimitPreviewState();
   }
 
+  function configuredLimitTargetMeta(draft) {
+    var metaById = {};
+    if (!MenuPicker || !MenuPicker.listSelectedTargets) return metaById;
+    addedStoreIds(draft).forEach(function (storeId) {
+      var config = storeConfigFor(draft, storeId, false);
+      if (!config) return;
+      MenuPicker.listSelectedTargets(config.structureByLine, draft.targetType).forEach(function (target) {
+        var targetId = structureTargetId(draft, { lineId: target.lineId, key: target.targetKey });
+        metaById[storeId + "|" + targetId] = target;
+      });
+    });
+    return metaById;
+  }
+
   function configuredLimitPreviewRows(draft) {
     var rows = [];
+    var targetMetaById = configuredLimitTargetMeta(draft);
     eachLimitCell(draft, function (key, partyIndex, roundIndex, lineId, targetId, config, storeId) {
       var cell = config.limits[key];
       if (!cell || !cell.configured) return;
@@ -848,7 +863,17 @@
       if (!store || !target) return;
       var partyRange = draft.partyRanges[partyIndex];
       var roundRange = draft.roundRanges[roundIndex];
-      var menuName = target.shortName || target.name;
+      var meta = targetMetaById[storeId + "|" + targetId];
+      var menuName = draft.targetType === "category"
+        ? ((meta && meta.categoryName) || target.shortName || target.name)
+        : ((meta && meta.dishName) || target.shortName || target.name);
+      var menuDetail = "";
+      if (draft.targetType === "category") {
+        var dishCount = meta && meta.dishCount ? meta.dishCount : target.count;
+        menuDetail = dishCount ? dishCount + " 个菜品" : "";
+      } else if (meta) {
+        menuDetail = [meta.groupName, meta.categoryName].filter(Boolean).join(" / ");
+      }
       rows.push({
         rowId: [storeId, partyIndex, roundIndex, lineId, targetId].join("|"),
         storeId: storeId,
@@ -861,7 +886,7 @@
         lineLabel: line ? line.name : (target.lineLabel || lineId),
         targetId: targetId,
         menuName: menuName,
-        menuDetail: draft.targetType === "category" ? (target.count ? target.count + " 个菜品" : "") : "",
+        menuDetail: menuDetail,
         value: cell.value
       });
     });
