@@ -83,7 +83,7 @@ eMenu 主机 IP（emenu-local-host-control，与嵌入页同一配置）
 
 与嵌入 eMenu 的菜单拉取参数对齐：
 
-- 路径：`/kpos/menu/menu`（相对 POS 主机）
+- 路径：`/kpos/api/menu/menu`（相对 POS 主机；对齐 `emenu-new`：`baseURL=/kpos/api` + `url=/menu/menu`）
 - `product=EMENU`
 - `showInactive=false`
 - `showDeleted=false`
@@ -94,9 +94,9 @@ eMenu 主机 IP（emenu-local-host-control，与嵌入页同一配置）
 调味 live 菜单拉取发生在 **Vite 中间件内的 Node seasoning handler**，不是浏览器直连。契约如下：
 
 1. **主机**：从调味 API 入站请求读取 cookie `menusifu-emenu-kpos-target`（与 `/kpos` 动态代理、`emenu-local-host-control` 写入的同一 cookie）。值为已归一化的 POS 主机 origin（如 `http://192.168.1.10:22080`）。缺失或非法时视为拉取失败，再走缓存 / `menu_unavailable`。
-2. **上游 URL**：Node 使用该 host **直连** `${host}/kpos/menu/menu?...`，不回环本机 Vite `/kpos`（避免中间件自调用死锁）。
-3. **鉴权**：与嵌入 `emenu-new` 拉菜单一致，使用其 `request.js` 中对菜单接口的静态 `Authorization` 头；**不**依赖 `emenu-local-session-bridge` 的 `sessionKey`（该桥接服务于设置页 `getSessionKey`，不是 `/menu/menu` 的前置条件）。
-4. **换主机**：`emenu-local-host-control` 换主机时已清 eMenu session 缓存；Menu Provider 缓存按主机隔离，不得混用。
+2. **上游 URL**：Node 使用该 host **直连** `${host}/kpos/api/menu/menu?...`，不回环本机 Vite `/kpos`（避免中间件自调用死锁）。
+3. **鉴权**：与嵌入 `emenu-new` 拉菜单一致，使用其 `request.js` 中对菜单接口的静态 `Authorization` 头；**不**把 `sessionKey`（含 iframe `getSessionKey` / clientInstanceLogin 会话）作为 `/menu/menu` 的前置条件。
+4. **换主机**：主机切换时已有清理逻辑；Menu Provider 缓存按主机隔离，不得混用。
 
 浏览器演示 / GitHub Pages **不走**上述 live 路径（见 §6）。
 
@@ -201,6 +201,6 @@ Provider 输出须满足现有 seasoning handler 对 `menuGroups` / `products` �
 
 - `scripts/lib/emenu-local-seasoning-api-handler.mjs` 与生成的 browser handler：注入 Menu Provider，替换 `db.products` / `menuGroups` 作为菜单读路径。
 - 新建共享映射模块（KPOS menus → seasoning 视图）与 Node 侧按主机文件缓存。
-- 主机：只读 cookie `menusifu-emenu-kpos-target`；鉴权：对齐 `emenu-new` 菜单静态 `Authorization`；不新造第二套主机配置，也不把 session bridge 当作菜单前置。
+- 主机：只读 cookie `menusifu-emenu-kpos-target`；上游 `${host}/kpos/api/menu/menu`；鉴权对齐 `emenu-new` 菜单静态 `Authorization`；不以 `sessionKey` 为菜单前置。
 - 演示：静态快照文件 + browser runtime 恒快照分轨。
 - 校验脚本：扩展现有 `verify-emenu-local-seasoning-*`，覆盖 cookie 缺失、缓存失败路径与演示无网络断言。
