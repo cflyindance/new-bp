@@ -83,12 +83,22 @@ eMenu 主机 IP（emenu-local-host-control，与嵌入页同一配置）
 
 与嵌入 eMenu 的菜单拉取参数对齐：
 
+- 路径：`/kpos/menu/menu`（相对 POS 主机）
 - `product=EMENU`
 - `showInactive=false`
 - `showDeleted=false`
 - **不做** `filterMenuByHour` 类营业时段过滤
 
-主机基址复用 `emenu-local-host-control`（Vite 下经 `/kpos` 代理；静态托管下直连主机）。会话依赖现有 eMenu 本地会话桥接；未登录或会话失效按现有 KPOS 错误处理，再走缓存 / 硬失败。
+### 主机与鉴权契约（Vite / Node live 路径）
+
+调味 live 菜单拉取发生在 **Vite 中间件内的 Node seasoning handler**，不是浏览器直连。契约如下：
+
+1. **主机**：从调味 API 入站请求读取 cookie `menusifu-emenu-kpos-target`（与 `/kpos` 动态代理、`emenu-local-host-control` 写入的同一 cookie）。值为已归一化的 POS 主机 origin（如 `http://192.168.1.10:22080`）。缺失或非法时视为拉取失败，再走缓存 / `menu_unavailable`。
+2. **上游 URL**：Node 使用该 host **直连** `${host}/kpos/menu/menu?...`，不回环本机 Vite `/kpos`（避免中间件自调用死锁）。
+3. **鉴权**：与嵌入 `emenu-new` 拉菜单一致，使用其 `request.js` 中对菜单接口的静态 `Authorization` 头；**不**依赖 `emenu-local-session-bridge` 的 `sessionKey`（该桥接服务于设置页 `getSessionKey`，不是 `/menu/menu` 的前置条件）。
+4. **换主机**：`emenu-local-host-control` 换主机时已清 eMenu session 缓存；Menu Provider 缓存按主机隔离，不得混用。
+
+浏览器演示 / GitHub Pages **不走**上述 live 路径（见 §6）。
 
 ### 字段映射
 
@@ -100,6 +110,8 @@ eMenu 主机 IP（emenu-local-host-control，与嵌入页同一配置）
 | `saleItem.id` | `product.id`（关系主键） |
 | `itemNumber`（或等价编码字段） | `product.code` |
 | `name` | `product.name` |
+| 组 / 类 / 菜在数组中的顺序（无显式 sort 时） | `sortOrder`（稳定递增；有源字段则优先用源字段） |
+| 菜所属类的 `id` / `name` | `product.categoryId` / `product.categoryName`（多挂载时以当前路径类为准写入该路径节点；扁平 `products` 以首次出现路径为准） |
 | 未隐藏且接口已返回 | `status=active`、`emenuSellable=true` |
 
 同一商品出现在多组 / 多类时：按 `productId` 去重；各路径挂载同一 ID（与现有选择器去重语义一致）。
@@ -122,11 +134,10 @@ Provider 输出须满足现有 seasoning handler 对 `menuGroups` / `products` �
 - **隔离键**：按当前 KPOS 主机归一化地址隔离；更换主机不得复用另一主机的缓存。
 - **内容**：映射后的 `menuGroups` + `products`、源 `menuVersion`（若响应提供）、拉取时间。
 - **写入**：每次成功拉取覆盖。
-- **存储位置**：
-  - Node / Vite：项目 `.cache` 下按主机隔离的菜单缓存文件
-  - 浏览器演示：不写 KPOS 缓存；演示只读静态快照
-  - 真实浏览器若存在「带主机的静态托管」路径：可用 `localStorage` 按主机键缓存（与 Node 语义一致）
-- **读取**：网络 / 会话失败时用缓存；无缓存则菜单相关 API 返回可识别错误码（建议 `menu_unavailable`），UI 空态 + 重试，**禁止**回退 seed 假菜单。
+- **存储位置（本期仅两轨）**：
+  - **Vite / Node live**：项目 `.cache` 下按主机隔离的菜单缓存文件
+  - **浏览器演示 / GitHub Pages**：不建 KPOS 缓存，也不实现 `localStorage` 菜单缓存；恒读静态快照（§6）
+- **读取（仅 Node live）**：上游失败时用该主机缓存；无缓存则菜单相关 API 返回可识别错误码（建议 `menu_unavailable`），UI 空态 + 重试，**禁止**回退 seed 假菜单。
 
 ### 选择草稿指纹
 
@@ -147,7 +158,8 @@ Provider 输出须满足现有 seasoning handler 对 `menuGroups` / `products` �
 - 历史基于 seed 假 ID 的关系：**不**自动迁移。一期默认：
   - 总览仍可列出孤儿关系（`productId` 不在当前菜单视图中），便于发现脏数据；
   - 该商品不可再出现在批量选品 / 可选菜单中；
-  - 单商品编辑若打不开对应菜单商品，展示只读提示。
+  - 单商品编辑若打不开对应菜单商品，展示只读提示；
+  - **终端导出 / checksum 的 products 与 relations：不包含孤儿关系**（只导出当前菜单视图内可售商品及其关系），与「总览可见孤儿」对照，避免终端收到无效 `productId`。
 
 ## 8. 错误与空态
 
@@ -188,7 +200,7 @@ Provider 输出须满足现有 seasoning handler 对 `menuGroups` / `products` �
 优先落点（实施计划阶段细化）：
 
 - `scripts/lib/emenu-local-seasoning-api-handler.mjs` 与生成的 browser handler：注入 Menu Provider，替换 `db.products` / `menuGroups` 作为菜单读路径。
-- 新建共享映射模块（KPOS menus → seasoning 视图）与缓存读写。
-- `emenu-local-host-control` / session bridge：复用主机与会话，不新造第二套主机配置。
-- 演示：静态快照文件 + browser runtime 分轨。
-- 校验脚本：扩展现有 `verify-emenu-local-seasoning-*`，覆盖缓存失败路径与演示无网络断言。
+- 新建共享映射模块（KPOS menus → seasoning 视图）与 Node 侧按主机文件缓存。
+- 主机：只读 cookie `menusifu-emenu-kpos-target`；鉴权：对齐 `emenu-new` 菜单静态 `Authorization`；不新造第二套主机配置，也不把 session bridge 当作菜单前置。
+- 演示：静态快照文件 + browser runtime 恒快照分轨。
+- 校验脚本：扩展现有 `verify-emenu-local-seasoning-*`，覆盖 cookie 缺失、缓存失败路径与演示无网络断言。
