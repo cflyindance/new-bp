@@ -1,1 +1,0 @@
-import{Q as e,a as t}from"./utils.j9ftHBgV.chunk.js";var n=t(`kioskServerIP`)||e;export{n as t};
