@@ -32,7 +32,7 @@
     "verify:order-list-columns": "npx tsx scripts/verify-order-list-columns.ts",
     "verify:order-tip-status": "npx tsx scripts/verify-order-tip-status.ts",
     "verify:tipout-work-hours-layout": "node scripts/verify-tipout-work-hours-layout.mjs",
-    "verify:emenu-local-seasoning": "node scripts/verify-emenu-local-seasoning-settings.mjs && npx tsx scripts/verify-emenu-local-seasoning-domain.ts && node scripts/verify-emenu-local-seasoning-api.mjs && node scripts/verify-emenu-local-seasoning-vite-integration.mjs && node scripts/generate-emenu-local-seasoning-browser-handler.mjs && npx tsx scripts/verify-emenu-local-seasoning-browser-mode.ts",
+    "verify:emenu-local-seasoning": "node scripts/verify-emenu-local-seasoning-settings.mjs && npx tsx scripts/verify-emenu-local-seasoning-domain.ts && node scripts/verify-emenu-local-seasoning-api.mjs && node scripts/verify-emenu-local-seasoning-vite-integration.mjs && node scripts/generate-emenu-local-seasoning-browser-handler.mjs && npx tsx scripts/verify-emenu-local-seasoning-browser-mode.ts && node scripts/verify-emenu-seasoning-guest-parity.mjs",
     "emenu-local-api": "node server/emenu-local-config-api-server.mjs",
     "dev:emenu-local": "node scripts/generate-emenu-local-seasoning-browser-handler.mjs && node server/run-emenu-local-config-dev.mjs",
     "verify:payment-method-apportion": "npx tsx scripts/verify-payment-method-apportion.ts",
