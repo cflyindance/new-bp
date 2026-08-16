@@ -298,6 +298,7 @@ button { color: inherit; }
   margin-top: 18px;
   padding-top: 4px;
   border-top: 1px solid var(--olf-border);
+  scroll-margin-top: 110px;
 }
 .olf-scene-combo-block:first-of-type {
   border-top: 0;
@@ -318,6 +319,65 @@ button { color: inherit; }
 .olf-scene-combo-completion {
   color: var(--olf-secondary);
   font-size: 13px;
+}
+.olf-scene-combo-layout {
+  display: grid;
+  grid-template-columns: 188px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+.olf-scene-combo-nav {
+  position: sticky;
+  top: 110px;
+  display: grid;
+  gap: 4px;
+  align-self: start;
+  max-height: calc(100vh - 140px);
+  overflow: auto;
+  padding: 4px 0;
+}
+.olf-scene-combo-nav__item {
+  appearance: none;
+  width: 100%;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 10px;
+  border: 0;
+  border-left: 3px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--olf-secondary);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+.olf-scene-combo-nav__item:hover {
+  background: rgba(0, 0, 0, 0.035);
+}
+.olf-scene-combo-nav__item.is-active {
+  border-left-color: var(--olf-primary);
+  background: var(--olf-primary-soft);
+  color: var(--olf-primary-text);
+  font-weight: 600;
+}
+.olf-scene-combo-nav__title {
+  min-width: 0;
+}
+.olf-scene-combo-nav__completion {
+  flex: none;
+  color: var(--olf-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.olf-scene-combo-nav__item.is-complete .olf-scene-combo-nav__completion {
+  color: var(--olf-primary);
+}
+.olf-scene-combo-panels {
+  min-width: 0;
 }
 
 .olf-switch { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; }
@@ -476,6 +536,8 @@ button { color: inherit; }
   .olf-step { min-height: 44px; padding: 5px; grid-template-columns: 1fr; justify-items: center; }
   .olf-step-copy, .olf-step-error { display: none; }
   .olf-content { min-height: 520px; padding: 25px 22px 30px; }
+  .olf-scene-combo-layout { grid-template-columns: 1fr; }
+  .olf-scene-combo-nav { display: none; }
 }
 
 @media (max-width: 680px) {

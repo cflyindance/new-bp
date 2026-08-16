@@ -803,6 +803,96 @@
     return { complete: complete, total: total, label: complete + "/" + total };
   }
 
+  var sceneComboNavSpy = null;
+
+  function shouldShowSceneComboNav(draft) {
+    return !!(isSceneTileMode(draft) && sceneCombos(draft).length >= 2);
+  }
+
+  function sceneComboAnchorId(partyIndex, roundIndex) {
+    return "scene-combo-" + String(partyIndex) + "-" + String(roundIndex);
+  }
+
+  function teardownSceneComboNavSpy() {
+    if (sceneComboNavSpy && typeof sceneComboNavSpy.disconnect === "function") {
+      sceneComboNavSpy.disconnect();
+    }
+    sceneComboNavSpy = null;
+  }
+
+  function setActiveSceneComboNavItem(key) {
+    var nav = document.querySelector("[data-scene-combo-nav]");
+    if (!nav) return;
+    var items = nav.querySelectorAll("[data-scene-combo-nav-item]");
+    for (var i = 0; i < items.length; i += 1) {
+      var item = items[i];
+      var itemKey = sceneKey(
+        Number(item.getAttribute("data-scene-party")),
+        Number(item.getAttribute("data-scene-round"))
+      );
+      if (itemKey === key) item.classList.add("is-active");
+      else item.classList.remove("is-active");
+    }
+  }
+
+  function scrollToSceneCombo(partyIndex, roundIndex) {
+    var el = document.getElementById(sceneComboAnchorId(partyIndex, roundIndex));
+    if (!el) return;
+    setActiveSceneComboNavItem(sceneKey(partyIndex, roundIndex));
+    if (typeof el.scrollIntoView === "function") {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }
+
+  function mountSceneComboNavSpy() {
+    teardownSceneComboNavSpy();
+    var draft = editorState && editorState.rule && editorState.rule.editorDraft;
+    if (!shouldShowSceneComboNav(draft)) return;
+    var blocks = document.querySelectorAll(".olf-scene-combo-block[data-scene-block]");
+    if (!blocks.length || typeof IntersectionObserver !== "function") return;
+    var ratios = {};
+    sceneComboNavSpy = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        var key = entry.target.getAttribute("data-scene-block");
+        if (!key) return;
+        ratios[key] = entry.isIntersecting ? entry.intersectionRatio : 0;
+      });
+      var bestKey = "";
+      var bestTop = Infinity;
+      for (var i = 0; i < blocks.length; i += 1) {
+        var block = blocks[i];
+        var blockKey = block.getAttribute("data-scene-block");
+        if (!blockKey || !(ratios[blockKey] > 0)) continue;
+        var top = block.getBoundingClientRect().top;
+        if (top >= 72 && top < bestTop) {
+          bestTop = top;
+          bestKey = blockKey;
+        } else if (!bestKey && top < bestTop) {
+          bestTop = top;
+          bestKey = blockKey;
+        }
+      }
+      if (bestKey) setActiveSceneComboNavItem(bestKey);
+    }, {
+      root: null,
+      threshold: [0, 0.15, 0.35, 0.55, 0.75, 1],
+      rootMargin: "-96px 0px -45% 0px"
+    });
+    for (var j = 0; j < blocks.length; j += 1) sceneComboNavSpy.observe(blocks[j]);
+  }
+
+  function renderSceneComboNav(draft, config) {
+    if (!shouldShowSceneComboNav(draft)) return "";
+    config = config || activeStoreConfig(draft);
+    var items = sceneCombos(draft).map(function (combo, index) {
+      var completion = sceneComboCompletion(draft, combo.partyIndex, combo.roundIndex, draft.activeLineId, config);
+      var completeClass = completion.total > 0 && completion.complete === completion.total ? " is-complete" : "";
+      var activeClass = index === 0 ? " is-active" : "";
+      return '<button type="button" class="olf-scene-combo-nav__item' + activeClass + completeClass + '" data-scene-combo-nav-item data-scene-party="' + combo.partyIndex + '" data-scene-round="' + combo.roundIndex + '"><span class="olf-scene-combo-nav__title">' + esc(combo.title) + '</span><span class="olf-scene-combo-nav__completion">' + esc(completion.label) + '</span></button>';
+    }).join("");
+    return '<nav class="olf-scene-combo-nav" data-scene-combo-nav aria-label="场景组合">' + items + '</nav>';
+  }
+
   function clearProductSearch() {
     if (!editorState) return;
     editorState.productSearchQuery = "";
@@ -1895,7 +1985,7 @@
       var batchTargets = currentBatchTargets(draft);
       var batchSelected = selectedBatchTargetsForScene(draft, combo.partyIndex, combo.roundIndex);
       var selectHeader = '<th class="olf-batch-select-cell"><label class="olf-batch-check"><input type="checkbox" data-batch-select-all data-scene-party="' + combo.partyIndex + '" data-scene-round="' + combo.roundIndex + '"' + (batchTargets.length > 0 && batchSelected.length === batchTargets.length ? ' checked' : '') + ' /><span class="olf-sr-only">全选当前产线</span></label></th>';
-      return '<section class="olf-scene-combo-block" data-scene-block="' + esc(combo.key) + '" data-scene-party="' + combo.partyIndex + '" data-scene-round="' + combo.roundIndex + '"><div class="olf-scene-combo-head"><h4>' + esc(combo.title) + '</h4><span class="olf-scene-combo-completion">已配 ' + completion.label + '</span></div>' +
+      return '<section class="olf-scene-combo-block" id="' + esc(sceneComboAnchorId(combo.partyIndex, combo.roundIndex)) + '" data-scene-block="' + esc(combo.key) + '" data-scene-party="' + combo.partyIndex + '" data-scene-round="' + combo.roundIndex + '"><div class="olf-scene-combo-head"><h4>' + esc(combo.title) + '</h4><span class="olf-scene-combo-completion">已配 ' + completion.label + '</span></div>' +
         renderBatchPanelForScene(draft, combo.partyIndex, combo.roundIndex, batchSelected.length, batchTargets.length) +
         '<div class="olf-table-wrap"><table class="olf-table"><thead><tr>' + selectHeader + '<th>' + (draft.targetType === 'dish' ? '菜品' : '分类') + '</th><th>' + (draft.subject === 'party_size' ? '人均上限' : '订单上限') + '</th></tr></thead><tbody>' + renderLimitRowsForScene(draft, combo.partyIndex, combo.roundIndex) + '</tbody></table></div></section>';
     }).join('');
@@ -1972,9 +2062,21 @@
           batchPanel +
         '</section>';
     }
-    var matrixSection = tileMode
-      ? '<section class="olf-section">' + renderSceneComboBlocks(draft, config) + '</section>'
-      : '<section class="olf-section"><div class="olf-table-wrap"><table class="olf-table"><thead><tr>' + selectHeader + '<th>' + (draft.targetType === 'dish' ? '菜品' : '分类') + '</th><th>' + (draft.subject === 'party_size' ? '人均上限' : '订单上限') + '</th></tr></thead><tbody>' + renderLimitRows(draft) + '</tbody></table></div></section>';
+    var matrixSection;
+    if (tileMode) {
+      var comboBlocksHtml = renderSceneComboBlocks(draft, config);
+      if (shouldShowSceneComboNav(draft)) {
+        matrixSection =
+          '<section class="olf-section olf-scene-combo-layout">' +
+            renderSceneComboNav(draft, config) +
+            '<div class="olf-scene-combo-panels">' + comboBlocksHtml + '</div>' +
+          '</section>';
+      } else {
+        matrixSection = '<section class="olf-section">' + comboBlocksHtml + '</section>';
+      }
+    } else {
+      matrixSection = '<section class="olf-section"><div class="olf-table-wrap"><table class="olf-table"><thead><tr>' + selectHeader + '<th>' + (draft.targetType === 'dish' ? '菜品' : '分类') + '</th><th>' + (draft.subject === 'party_size' ? '人均上限' : '订单上限') + '</th></tr></thead><tbody>' + renderLimitRows(draft) + '</tbody></table></div></section>';
+    }
     return '<div class="olf-content-head"><h2 tabindex="-1">设置限购数量</h2></div>' +
       '<section class="olf-section"><label class="olf-field olf-limit-store-select"><span class="olf-label olf-required">配置门店</span><select class="olf-select" data-limit-store-select' + (hasConfiguredStores ? '' : ' disabled') + '>' + storeOptions + '</select></label></section>' +
       (hasConfiguredStores ?
@@ -2121,6 +2223,8 @@
     } else {
       window.scrollTo(0, scrollY);
     }
+    teardownSceneComboNavSpy();
+    if (editorState.currentStep === 4) mountSceneComboNavSpy();
   }
 
   function openDialog(title, copy, confirmLabel, onConfirm, options) {
@@ -2328,6 +2432,13 @@
       return;
     }
     if (button.hasAttribute("data-choice-field")) { changeChoice(button.getAttribute("data-choice-field"), button.getAttribute("data-choice-value")); return; }
+    if (button.hasAttribute("data-scene-combo-nav-item")) {
+      scrollToSceneCombo(
+        Number(button.getAttribute("data-scene-party")),
+        Number(button.getAttribute("data-scene-round"))
+      );
+      return;
+    }
     if (button.hasAttribute("data-scene-display-mode")) {
       var nextMode = button.getAttribute("data-scene-display-mode") === "split" ? "split" : "tile";
       if (editorState.sceneDisplayMode === nextMode) return;
@@ -2696,12 +2807,12 @@
     document.getElementById("headerSaveButton").addEventListener("click", function () { if (saveEditorDraft(true)) toast("草稿已保存"); });
     document.getElementById("backButton").addEventListener("click", function () {
       if (!saveEditorDraft(true)) return;
-      openDialog("退出新增规则？", "当前内容已保存为草稿，返回列表后可继续编辑。", "保存并返回", function () { go("order-limit.html"); });
+      openDialog("退出新增规则？", "当前内容已保存为草稿，返回列表后可继续编辑。", "保存并返回", function () { teardownSceneComboNavSpy(); go("order-limit.html"); });
     });
     document.getElementById("previousButton").addEventListener("click", function () { if (editorState.currentStep > 1) goToEditorStep(editorState.currentStep - 1, true); });
     document.getElementById("saveReturnButton").addEventListener("click", function () {
       if (!saveEditorDraft(true)) return;
-      openDialog("保存草稿并返回？", "草稿会保留在规则列表中，不会下发或影响门店当前版本。", "保存并返回", function () { go("order-limit.html"); });
+      openDialog("保存草稿并返回？", "草稿会保留在规则列表中，不会下发或影响门店当前版本。", "保存并返回", function () { teardownSceneComboNavSpy(); go("order-limit.html"); });
     });
     document.getElementById("nextButton").addEventListener("click", function () {
       var draft = editorState.rule.editorDraft;
