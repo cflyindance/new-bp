@@ -1451,8 +1451,10 @@
     if (overlay) { overlay.classList.remove("is-open"); overlay.innerHTML = ""; }
     resetConfiguredLimitPreview();
     var entry = root.querySelector("[data-configured-limit-preview-open]");
+    var fallback = document.getElementById("configuredLimitHeading");
     window.setTimeout(function () {
       if (entry && !entry.disabled) entry.focus();
+      else if (fallback) fallback.focus();
     }, 0);
   }
 
@@ -1647,7 +1649,7 @@
     return '<div class="olf-content-head"><h2 tabindex="-1">设置限购数量</h2></div>' +
       '<section class="olf-section"><label class="olf-field olf-limit-store-select"><span class="olf-label olf-required">配置门店</span><select class="olf-select" data-limit-store-select' + (hasConfiguredStores ? '' : ' disabled') + '>' + storeOptions + '</select></label>' + (hasConfiguredStores ? '<h3 style="margin-top:20px">人数场景</h3><div class="olf-tabs">' + partyTabs + '</div>' + (roundTabs ? '<h3 style="margin-top:20px">轮次场景</h3><div class="olf-tabs">' + roundTabs + '</div>' : '') : '') + '</section>' +
       (hasConfiguredStores ?
-      '<section class="olf-section"><div class="olf-section-head"><div><h3>产线配置</h3><div class="olf-help">当前门店：' + esc((stores.find(function (item) { return item.id === draft.activeStoreId; }) || {}).name || draft.activeStoreId) + '</div></div><button type="button" class="olf-button olf-button--small olf-configured-limit-preview-entry" data-configured-limit-preview-open' + (previewCount ? '' : ' disabled') + '>查看已配置规则（' + previewCount + '）</button></div><div class="olf-tabs">' + lineTabs + '</div>' + batchPanel + '</section>' +
+      '<section class="olf-section"><div class="olf-section-head"><div><h3 id="configuredLimitHeading" tabindex="-1">产线配置</h3><div class="olf-help">当前门店：' + esc((stores.find(function (item) { return item.id === draft.activeStoreId; }) || {}).name || draft.activeStoreId) + '</div></div><button type="button" class="olf-button olf-button--small olf-configured-limit-preview-entry" data-configured-limit-preview-open' + (previewCount ? '' : ' disabled') + '>查看已配置规则（' + previewCount + '）</button></div><div class="olf-tabs">' + lineTabs + '</div>' + batchPanel + '</section>' +
       '<section class="olf-section"><div class="olf-table-wrap"><table class="olf-table"><thead><tr>' + selectHeader + '<th>' + (draft.targetType === 'dish' ? '菜品' : '分类') + '</th><th>' + (draft.subject === 'party_size' ? '人均上限' : '订单上限') + '</th></tr></thead><tbody>' + renderLimitRows(draft) + '</tbody></table></div></section>' +
       '<div class="olf-summary olf-summary--primary"><strong>门店独立配置：</strong>切换门店后，商品范围和数量矩阵均独立保存，不会覆盖其他门店。</div>' :
       '<div class="olf-empty olf-limit-store-empty"><strong>暂无参与门店</strong><span>请返回商品配置，为至少一家门店选择商品。</span></div>');
@@ -1937,6 +1939,14 @@
   }
 
   function handleEditorClick(event) {
+    if (event.target && event.target.hasAttribute && event.target.hasAttribute("data-configured-limit-preview-overlay")) {
+      closeConfiguredLimitPreview();
+      return;
+    }
+    if (event.target && event.target.hasAttribute && event.target.hasAttribute("data-selected-preview-overlay")) {
+      closeSelectedPreview();
+      return;
+    }
     var button = event.target.closest("button");
     if (!button) return;
     if (button.hasAttribute("data-selected-preview-open")) { openSelectedPreview(); return; }
@@ -1946,6 +1956,14 @@
       previewState.page += button.getAttribute("data-selected-preview-page") === "next" ? 1 : -1;
       previewState.selectedRowIds = [];
       renderSelectedPreviewDialog(editorState.rule.editorDraft);
+      return;
+    }
+    if (button.hasAttribute("data-configured-limit-preview-open")) { openConfiguredLimitPreview(); return; }
+    if (button.hasAttribute("data-configured-limit-preview-close")) { closeConfiguredLimitPreview(); return; }
+    if (button.hasAttribute("data-configured-limit-preview-page")) {
+      var configuredPreviewState = editorState.configuredLimitPreview;
+      configuredPreviewState.page += button.getAttribute("data-configured-limit-preview-page") === "next" ? 1 : -1;
+      renderConfiguredLimitPreviewDialog(editorState.rule.editorDraft);
       return;
     }
     if (button.hasAttribute("data-selected-preview-delete")) {
@@ -2016,6 +2034,50 @@
       editorState.selectedPreview.page = 1;
       editorState.selectedPreview.selectedRowIds = [];
       renderSelectedPreviewDialog(draft);
+      return;
+    }
+    if (target.hasAttribute("data-configured-limit-preview-search")) {
+      if (event.type !== "input") return;
+      editorState.configuredLimitPreview.query = target.value;
+      editorState.configuredLimitPreview.page = 1;
+      if (!editorState.configuredLimitPreview.searchComposing) renderConfiguredLimitPreviewDialog(draft, true);
+      return;
+    }
+    if (target.hasAttribute("data-configured-limit-preview-store")) {
+      if (event.type !== "change") return;
+      editorState.configuredLimitPreview.storeId = target.value;
+      editorState.configuredLimitPreview.lineId = "";
+      editorState.configuredLimitPreview.page = 1;
+      renderConfiguredLimitPreviewDialog(draft);
+      return;
+    }
+    if (target.hasAttribute("data-configured-limit-preview-party")) {
+      if (event.type !== "change") return;
+      editorState.configuredLimitPreview.partyKey = target.value;
+      editorState.configuredLimitPreview.page = 1;
+      renderConfiguredLimitPreviewDialog(draft);
+      return;
+    }
+    if (target.hasAttribute("data-configured-limit-preview-round")) {
+      if (event.type !== "change") return;
+      editorState.configuredLimitPreview.roundKey = target.value;
+      editorState.configuredLimitPreview.page = 1;
+      renderConfiguredLimitPreviewDialog(draft);
+      return;
+    }
+    if (target.hasAttribute("data-configured-limit-preview-line")) {
+      if (event.type !== "change") return;
+      editorState.configuredLimitPreview.lineId = target.value;
+      editorState.configuredLimitPreview.page = 1;
+      renderConfiguredLimitPreviewDialog(draft);
+      return;
+    }
+    if (target.hasAttribute("data-configured-limit-preview-page-size")) {
+      if (event.type !== "change") return;
+      var configuredPageSize = Number(target.value);
+      editorState.configuredLimitPreview.pageSize = [10, 20, 50].indexOf(configuredPageSize) >= 0 ? configuredPageSize : 20;
+      editorState.configuredLimitPreview.page = 1;
+      renderConfiguredLimitPreviewDialog(draft);
       return;
     }
     if (target.hasAttribute("data-selected-preview-row-check")) {
@@ -2185,6 +2247,7 @@
       if (!event.target) return;
       if (event.target.hasAttribute("data-product-search")) editorState.productSearchComposing = true;
       if (event.target.hasAttribute("data-selected-preview-search")) editorState.selectedPreview.searchComposing = true;
+      if (event.target.hasAttribute("data-configured-limit-preview-search")) editorState.configuredLimitPreview.searchComposing = true;
     });
     root.addEventListener("compositionend", function (event) {
       if (!event.target) return;
@@ -2200,6 +2263,13 @@
         editorState.selectedPreview.page = 1;
         editorState.selectedPreview.selectedRowIds = [];
         renderSelectedPreviewDialog(editorState.rule.editorDraft, true);
+        return;
+      }
+      if (event.target.hasAttribute("data-configured-limit-preview-search")) {
+        editorState.configuredLimitPreview.searchComposing = false;
+        editorState.configuredLimitPreview.query = event.target.value;
+        editorState.configuredLimitPreview.page = 1;
+        renderConfiguredLimitPreviewDialog(editorState.rule.editorDraft, true);
       }
     });
     root.addEventListener("brand-menu-structure-nav", function (event) {
@@ -2241,6 +2311,7 @@
     document.addEventListener("keydown", function (event) {
       if (event.key !== "Escape") return;
       if (document.getElementById("confirmOverlay").classList.contains("is-open")) { cancelDialog(); return; }
+      if (editorState.configuredLimitPreview.open) { closeConfiguredLimitPreview(); return; }
       if (editorState.selectedPreview.open) closeSelectedPreview();
     });
   }

@@ -380,7 +380,7 @@ button { color: inherit; }
 .olf-selected-preview-pagination .olf-actions { align-items: center; flex-wrap: wrap; }
 .olf-selected-preview-delete-actions { flex-shrink: 0; }
 .olf-selected-preview-page-size .olf-select { min-width: 112px; min-height: 36px; }
-.olf-configured-limit-preview-entry { white-space: nowrap; }
+.olf-configured-limit-preview-entry { flex-shrink: 0; white-space: nowrap; }
 .olf-configured-limit-preview-filters { grid-template-columns: repeat(3, minmax(140px, 180px)) minmax(220px, 1fr); }
 .olf-configured-limit-preview-filters.is-multi-round { grid-template-columns: repeat(4, minmax(130px, 170px)) minmax(200px, 1fr); }
 .olf-configured-limit-preview-search { min-width: 200px; }
