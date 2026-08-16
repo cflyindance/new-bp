@@ -875,6 +875,123 @@
     };
   }
 
+  function createLineLimitCopyState() {
+    return { open: false, selectedLineIds: [] };
+  }
+
+  function resetLineLimitCopy() {
+    if (!editorState) return;
+    editorState.lineLimitCopy = createLineLimitCopyState();
+  }
+
+  function closeLineLimitCopy() {
+    if (!editorState) return;
+    editorState.lineLimitCopy = createLineLimitCopyState();
+    var overlay = root.querySelector("[data-line-limit-copy-overlay]");
+    if (overlay) {
+      overlay.classList.remove("is-open");
+      overlay.innerHTML = "";
+    }
+  }
+
+  function sceneRoundCount(draft) {
+    return draft.period === "multi_round" ? draft.roundRanges.length : 1;
+  }
+
+  function lineHasConfiguredLimits(draft, lineId, config) {
+    config = config || activeStoreConfig(draft);
+    var roundCount = sceneRoundCount(draft);
+    var targets = targetsForLine(draft, lineId, config);
+    var found = false;
+    draft.partyRanges.forEach(function (_, partyIndex) {
+      for (var roundIndex = 0; roundIndex < roundCount; roundIndex += 1) {
+        targets.forEach(function (target) {
+          var cell = config.limits[limitKey(partyIndex, roundIndex, lineId, target.id)];
+          if (cell && cell.configured) found = true;
+        });
+      }
+    });
+    return found;
+  }
+
+  function copyLineLimitCandidateLines(draft, config) {
+    config = config || activeStoreConfig(draft);
+    return (config.productLines || []).filter(function (lineId) {
+      return lineId !== draft.activeLineId;
+    });
+  }
+
+  function canOpenLineLimitCopy(draft, config) {
+    config = config || activeStoreConfig(draft);
+    if (!addedStoreIds(draft).length) return false;
+    if (copyLineLimitCandidateLines(draft, config).length < 1) return false;
+    return lineHasConfiguredLimits(draft, draft.activeLineId, config);
+  }
+
+  function estimateLineLimitCopy(draft, sourceLineId, targetLineIds, config) {
+    config = config || activeStoreConfig(draft);
+    var roundCount = sceneRoundCount(draft);
+    var sourceTargets = targetsForLine(draft, sourceLineId, config);
+    var sourceKeys = {};
+    sourceTargets.forEach(function (t) { if (t.key) sourceKeys[t.key] = true; });
+    var writeCount = 0;
+    var skipDestProducts = 0;
+    var sourceOnlyKeys = 0;
+    (targetLineIds || []).forEach(function (targetLineId) {
+      var destTargets = targetsForLine(draft, targetLineId, config);
+      var destKeys = {};
+      destTargets.forEach(function (t) {
+        if (!t.key) return;
+        destKeys[t.key] = true;
+        var sourceHit = sourceTargets.some(function (s) { return s.key === t.key; });
+        if (!sourceHit) skipDestProducts += 1;
+        else writeCount += draft.partyRanges.length * roundCount;
+      });
+      Object.keys(sourceKeys).forEach(function (key) {
+        if (!destKeys[key]) sourceOnlyKeys += 1;
+      });
+    });
+    return {
+      writeCount: writeCount,
+      skipDestProducts: skipDestProducts,
+      sourceOnlyKeys: sourceOnlyKeys
+    };
+  }
+
+  function applyLineLimitCopy(draft, sourceLineId, targetLineIds) {
+    var config = activeStoreConfig(draft);
+    var roundCount = sceneRoundCount(draft);
+    var sourceTargets = targetsForLine(draft, sourceLineId, config);
+    var sourceByKey = {};
+    sourceTargets.forEach(function (t) {
+      if (t.key) sourceByKey[t.key] = t;
+    });
+    var writeCount = 0;
+    var skipDestProducts = 0;
+    (targetLineIds || []).forEach(function (targetLineId) {
+      targetsForLine(draft, targetLineId, config).forEach(function (destTarget) {
+        var sourceTarget = destTarget.key ? sourceByKey[destTarget.key] : null;
+        if (!sourceTarget) {
+          skipDestProducts += 1;
+          return;
+        }
+        draft.partyRanges.forEach(function (_, partyIndex) {
+          for (var roundIndex = 0; roundIndex < roundCount; roundIndex += 1) {
+            var sourceCell = config.limits[limitKey(partyIndex, roundIndex, sourceLineId, sourceTarget.id)];
+            var destKey = limitKey(partyIndex, roundIndex, targetLineId, destTarget.id);
+            if (sourceCell && sourceCell.configured) {
+              config.limits[destKey] = { configured: true, value: sourceCell.value };
+            } else {
+              config.limits[destKey] = { configured: false, value: null };
+            }
+            writeCount += 1;
+          }
+        });
+      });
+    });
+    return { writeCount: writeCount, skipDestProducts: skipDestProducts };
+  }
+
   function resetConfiguredLimitPreview() {
     if (!editorState) return;
     editorState.configuredLimitPreview = createConfiguredLimitPreviewState();
@@ -1524,6 +1641,38 @@
     }, 0);
   }
 
+  function renderLineLimitCopyDialog(draft) {
+    var overlay = root.querySelector("[data-line-limit-copy-overlay]");
+    if (!overlay || !editorState || !editorState.lineLimitCopy.open) return;
+    var config = activeStoreConfig(draft);
+    var state = editorState.lineLimitCopy;
+    var sourceLine = lines.find(function (l) { return l.id === draft.activeLineId; });
+    var candidates = copyLineLimitCandidateLines(draft, config);
+    var estimate = estimateLineLimitCopy(draft, draft.activeLineId, state.selectedLineIds, config);
+    var listHtml = candidates.map(function (lineId) {
+      var line = lines.find(function (l) { return l.id === lineId; });
+      var checked = state.selectedLineIds.indexOf(lineId) >= 0;
+      return '<label class="olf-line-limit-copy-option"><input type="checkbox" data-line-limit-copy-target="' + esc(lineId) + '"' + (checked ? " checked" : "") + " /><span>" + esc(line ? line.name : lineId) + "</span></label>";
+    }).join("");
+    var canApply = state.selectedLineIds.length > 0;
+    overlay.innerHTML = '<section class="olf-dialog olf-line-limit-copy-dialog" role="dialog" aria-modal="true" aria-labelledby="lineLimitCopyTitle"><h3 id="lineLimitCopyTitle" tabindex="-1">复制到其他产线</h3><p>将把「' + esc(sourceLine ? sourceLine.name : draft.activeLineId) + '」的全部人数/轮次数量覆盖到所选产线。仅对齐双方都有的菜单；源未配置的格也会清空目标对应格。</p><div class="olf-line-limit-copy-list">' + listHtml + '</div><div class="olf-help">预计写入 ' + estimate.writeCount + " 格；目标侧跳过 " + estimate.skipDestProducts + " 个商品；源独有 " + estimate.sourceOnlyKeys + ' 个 key。</div><div class="olf-dialog-actions"><button type="button" class="olf-button" data-line-limit-copy-close>取消</button><button type="button" class="olf-button olf-button--primary" data-line-limit-copy-apply' + (canApply ? "" : " disabled") + ">覆盖复制</button></div></section>";
+    overlay.classList.add("is-open");
+  }
+
+  function openLineLimitCopy() {
+    var draft = editorState.rule.editorDraft;
+    if (!canOpenLineLimitCopy(draft)) {
+      toast("需至少两条产线，且当前产线已配置数量", true);
+      return;
+    }
+    editorState.lineLimitCopy = { open: true, selectedLineIds: [] };
+    renderLineLimitCopyDialog(draft);
+    window.setTimeout(function () {
+      var title = document.getElementById("lineLimitCopyTitle");
+      if (title) title.focus();
+    }, 0);
+  }
+
   function selectedPreviewDeleteRequest(draft, kind, rowIds) {
     var allRows = selectedPreviewRows(draft);
     var requested = kind === "all" ? allRows : allRows.filter(function (row) { return rowIds.indexOf(row.rowId) >= 0; });
@@ -1829,7 +1978,7 @@
     return '<div class="olf-content-head"><h2 tabindex="-1">设置限购数量</h2></div>' +
       '<section class="olf-section"><label class="olf-field olf-limit-store-select"><span class="olf-label olf-required">配置门店</span><select class="olf-select" data-limit-store-select' + (hasConfiguredStores ? '' : ' disabled') + '>' + storeOptions + '</select></label></section>' +
       (hasConfiguredStores ?
-      '<section class="olf-section"><div class="olf-section-head"><div><h3 id="configuredLimitHeading" tabindex="-1">产线配置</h3><div class="olf-help">当前门店：' + esc((stores.find(function (item) { return item.id === draft.activeStoreId; }) || {}).name || draft.activeStoreId) + '</div></div><button type="button" class="olf-button olf-button--small olf-configured-limit-preview-entry" data-configured-limit-preview-open' + (previewCount ? '' : ' disabled') + '>查看已配置规则（' + previewCount + '）</button></div><div class="olf-tabs">' + lineTabs + '</div></section>' +
+      '<section class="olf-section"><div class="olf-section-head"><div><h3 id="configuredLimitHeading" tabindex="-1">产线配置</h3><div class="olf-help">当前门店：' + esc((stores.find(function (item) { return item.id === draft.activeStoreId; }) || {}).name || draft.activeStoreId) + '</div></div><div class="olf-line-limit-head-actions"><button type="button" class="olf-button olf-button--small" data-line-limit-copy-open' + (canOpenLineLimitCopy(draft, config) ? '' : ' disabled title="需至少两条产线且当前产线已配置数量"') + '>复制到其他产线</button><button type="button" class="olf-button olf-button--small olf-configured-limit-preview-entry" data-configured-limit-preview-open' + (previewCount ? '' : ' disabled') + '>查看已配置规则（' + previewCount + '）</button></div></div><div class="olf-tabs">' + lineTabs + '</div></section>' +
       sceneToggle +
       (tileMode ? matrixSection : sceneTabsHtml + matrixSection) +
       '<div class="olf-summary olf-summary--primary"><strong>门店独立配置：</strong>切换门店后，商品范围和数量矩阵均独立保存，不会覆盖其他门店。</div>' :
@@ -2111,6 +2260,7 @@
       resetBatchSelection();
       resetSceneDisplayMode();
       closeConfiguredLimitPreview();
+      closeLineLimitCopy();
     }
     if (editorState.currentStep === 2 && step !== 2) clearProductSearch();
     editorState.currentStep = step;
@@ -2121,6 +2271,10 @@
   }
 
   function handleEditorClick(event) {
+    if (event.target && event.target.hasAttribute && event.target.hasAttribute("data-line-limit-copy-overlay")) {
+      closeLineLimitCopy();
+      return;
+    }
     if (event.target && event.target.hasAttribute && event.target.hasAttribute("data-configured-limit-preview-overlay")) {
       closeConfiguredLimitPreview();
       return;
@@ -2141,6 +2295,23 @@
       return;
     }
     if (button.hasAttribute("data-configured-limit-preview-open")) { openConfiguredLimitPreview(); return; }
+    if (button.hasAttribute("data-line-limit-copy-open")) { openLineLimitCopy(); return; }
+    if (button.hasAttribute("data-line-limit-copy-close")) { closeLineLimitCopy(); return; }
+    if (button.hasAttribute("data-line-limit-copy-apply")) {
+      var copyDraft = editorState.rule.editorDraft;
+      var selected = (editorState.lineLimitCopy.selectedLineIds || []).slice();
+      if (!selected.length) { toast("请至少选择一条目标产线", true); return; }
+      var result = applyLineLimitCopy(copyDraft, copyDraft.activeLineId, selected);
+      markEditorDirty();
+      closeLineLimitCopy();
+      var names = selected.map(function (id) {
+        var line = lines.find(function (l) { return l.id === id; });
+        return line ? line.name : id;
+      }).join("、");
+      toast("已复制到 " + names + "（写入 " + result.writeCount + " 格，跳过 " + result.skipDestProducts + " 个商品）");
+      renderEditor();
+      return;
+    }
     if (button.hasAttribute("data-configured-limit-preview-close")) { closeConfiguredLimitPreview(); return; }
     if (button.hasAttribute("data-configured-limit-preview-page")) {
       var configuredPreviewState = editorState.configuredLimitPreview;
@@ -2212,6 +2383,17 @@
   function handleEditorInput(event) {
     var target = event.target;
     var draft = editorState.rule.editorDraft;
+    if (target.hasAttribute("data-line-limit-copy-target")) {
+      if (event.type !== "change") return;
+      var lineId = target.getAttribute("data-line-limit-copy-target");
+      var ids = editorState.lineLimitCopy.selectedLineIds.slice();
+      var idx = ids.indexOf(lineId);
+      if (target.checked && idx < 0) ids.push(lineId);
+      if (!target.checked && idx >= 0) ids.splice(idx, 1);
+      editorState.lineLimitCopy.selectedLineIds = ids;
+      renderLineLimitCopyDialog(draft);
+      return;
+    }
     if (target.hasAttribute("data-selected-preview-search")) {
       if (event.type !== "input") return;
       editorState.selectedPreview.query = target.value;
@@ -2453,12 +2635,14 @@
       productSearchQuery: "", productSearchComposing: false,
       productPickerActiveLineId: "", productPickerActiveGroupId: "", productPickerActiveCategoryId: "",
       selectedPreview: createSelectedPreviewState(),
-      configuredLimitPreview: createConfiguredLimitPreviewState()
+      configuredLimitPreview: createConfiguredLimitPreviewState(),
+      lineLimitCopy: createLineLimitCopyState()
     };
     normalizeActiveDimensions(rule.editorDraft, editorState.currentStep === 4);
     root.innerHTML = '<div class="olf-page"><header class="olf-header"><div class="olf-header-main"><div class="olf-title-group"><button type="button" class="olf-icon-button" id="backButton" aria-label="返回规则列表">' + icon("back", 20) + '</button><div class="olf-title-copy"><h1>' + (rule.sourceRuleId ? "编辑" : "新增") + '数量与频次规则</h1><span class="olf-save-state" id="saveState">草稿已保存</span></div></div><div class="olf-actions"><button type="button" class="olf-button" id="headerSaveButton">保存草稿</button></div></div><div class="olf-progress"><span id="progressFill"></span></div></header><div class="olf-editor-shell"><nav class="olf-step-nav" id="stepNav" aria-label="规则配置步骤"></nav><main class="olf-content" id="editorContent"></main></div><footer class="olf-footer"><span class="olf-footer-note" id="footerNote"></span><div class="olf-actions"><button type="button" class="olf-button" id="previousButton">上一步</button><button type="button" class="olf-button" id="saveReturnButton" style="display:none">保存草稿并返回</button><button type="button" class="olf-button olf-button--primary" id="nextButton">下一步</button></div></footer></div>' +
       '<div class="olf-overlay olf-selected-preview-overlay" data-selected-preview-overlay></div>' +
       '<div class="olf-overlay olf-selected-preview-overlay olf-configured-limit-preview-overlay" data-configured-limit-preview-overlay></div>' +
+      '<div class="olf-overlay olf-line-limit-copy-overlay" data-line-limit-copy-overlay></div>' +
       '<div class="olf-overlay" id="confirmOverlay" role="dialog" aria-modal="true" aria-labelledby="dialogTitle"><div class="olf-dialog"><h3 id="dialogTitle">确认操作</h3><p id="dialogCopy"></p><div class="olf-dialog-actions"><button type="button" class="olf-button" id="dialogCancel">继续编辑</button><button type="button" class="olf-button olf-button--primary" id="dialogConfirm">确定</button></div></div></div>';
     renderEditor();
     root.addEventListener("click", handleEditorClick);
@@ -2532,6 +2716,7 @@
     document.addEventListener("keydown", function (event) {
       if (event.key !== "Escape") return;
       if (document.getElementById("confirmOverlay").classList.contains("is-open")) { cancelDialog(); return; }
+      if (editorState.lineLimitCopy && editorState.lineLimitCopy.open) { closeLineLimitCopy(); return; }
       if (editorState.configuredLimitPreview.open) { closeConfiguredLimitPreview(); return; }
       if (editorState.selectedPreview.open) closeSelectedPreview();
     });
