@@ -19,12 +19,26 @@ const stepTwo = source.match(/function renderStepTwo\(draft\)[\s\S]*?(?=\n\s*fun
 assert.ok(stepTwo, "应能定位商品配置渲染函数");
 assert.match(stepTwo, /data-config-store-select/, "商品配置应使用单选门店下拉");
 assert.match(stepTwo, /stores\.map/, "商品配置门店下拉应展示全部门店");
+assert.match(stepTwo, /请选择参与门店/, "商品配置门店下拉应使用参与门店占位文案");
+assert.match(stepTwo, /olf-config-store-select[\s\S]{0,240}>参与门店</, "商品配置门店字段应命名为参与门店");
 assert.doesNotMatch(stepTwo, /data-participating-store|data-store-tab|商品状态/, "商品配置不应保留参与门店表格或门店 Tab");
 
 const stepFour = source.match(/function renderStepFour\(draft\)[\s\S]*?(?=\n\s*function renderStepFive)/)?.[0];
 assert.ok(stepFour, "应能定位数量配置渲染函数");
-assert.match(stepFour, /data-limit-store-tab/, "数量配置应提供门店 Tab");
+assert.match(stepFour, /data-limit-store-select/, "数量配置应提供参与门店单选下拉");
+assert.doesNotMatch(stepFour, /data-limit-store-tab/, "数量配置不应继续渲染门店 Tab");
+assert.match(stepFour, /configuredStores\.map/, "数量配置门店下拉应只从已添加商品门店生成选项");
+assert.match(stepFour, /暂无参与门店/, "数量配置应提供无参与门店安全空态");
+assert.match(stepFour, /previousActiveStoreId[\s\S]{0,500}clearBatchSelection/, "自动归一化切换门店时应清空批量状态");
 assert.match(stepFour, /activeStoreConfig\(draft\)/, "数量配置应读取当前门店矩阵");
+
+const activeDimensionNormalizer = source.match(/function normalizeActiveDimensions\(draft, requireAddedStore\)[\s\S]*?(?=\n\s*function changeChoice)/)?.[0];
+assert.ok(activeDimensionNormalizer, "应能定位活动维度归一化函数");
+assert.match(activeDimensionNormalizer, /requireAddedStore[\s\S]{0,500}!added\.length[\s\S]{0,500}activeStoreId = ""[\s\S]{0,500}activeLineId = ""/, "无参与门店时应清空活动门店和产线");
+
+const inputHandler = source.match(/function handleEditorInput\(event\)[\s\S]*?(?=\n\s*function mountEditor)/)?.[0];
+assert.ok(inputHandler, "应能定位编辑器输入处理函数");
+assert.match(inputHandler, /data-limit-store-select[\s\S]{0,900}addedStoreIds\(draft\)[\s\S]{0,900}clearBatchSelection\(\)[\s\S]{0,900}activeStoreId[\s\S]{0,900}normalizeActiveDimensions[\s\S]{0,900}renderEditor/, "数量配置门店下拉应校验参与门店并安全切换矩阵");
 
 const stepFive = source.match(/function renderStepFive\(draft\)[\s\S]*?(?=\n\s*function renderStepSix)/)?.[0];
 assert.ok(stepFive, "应能定位生效范围渲染函数");
@@ -44,6 +58,7 @@ assert.match(source, /function buildPublishedDraft\(draft\)/, "正式发布应�
 assert.match(source, /deployStoreIds[\s\S]{0,500}storeConfigs/, "正式快照应按最终发布门店裁剪配置");
 
 assert.match(css, /\.olf-config-store-select/, "应提供商品配置门店下拉样式");
+assert.match(css, /\.olf-limit-store-select/, "应提供数量配置门店下拉样式");
 assert.match(css, /\.olf-effective-stores/, "应提供生效范围门店表格样式");
 assert.match(css, /\.olf-store-status\.is-added/, "应提供已添加状态样式");
 assert.match(css, /\.olf-store-status\.is-missing/, "应提供未添加状态样式");
