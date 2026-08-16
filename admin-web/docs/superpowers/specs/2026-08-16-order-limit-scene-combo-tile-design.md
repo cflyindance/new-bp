@@ -44,7 +44,7 @@
 
 1. 切换模式时清空全部批量勾选。
 2. 不修改任何 `limits` 单元格。
-3. 切到「分开选择」时，用当前 `activePartyIndex` / `activeRoundIndex` 恢复两排 Tab（若索引越界则归一化到 0）。
+3. 平铺模式下编辑数量**不更新** `activePartyIndex` / `activeRoundIndex`；切回「分开选择」时，仍用进入平铺前（或上次分开选择）的 Tab 索引恢复两排 Tab（若索引越界则归一化到 0）。
 4. 离开步骤 4：重置为 `"tile"`，清空勾选。
 5. 切换门店 / 产线：保留展示模式，清空勾选。
 
@@ -58,7 +58,7 @@
 2. 内层：`roundIndex` 升序  
 
 块标题：`formatRange(partyRange, "人") + " · " + formatRange(roundRange, "轮")`。  
-块旁可显示当前门店、当前产线下该组合的完成度 `已配置/总数`。
+块旁**必须显示**完成度（如「已配 2/4」），按当前门店、当前产线下该组合已配置 cell 数统计（与现有 `comboConfiguredCount` 口径一致）。
 
 即使只有 1×1 个组合，多轮规则仍走平铺布局（仅一块），以保持模式一致。
 
