@@ -931,13 +931,14 @@ function DishItemCard(props) {
   const handleChangeCart = (data) => {
     const newCart = [...cart]
     let idx = newCart?.findIndex((e) => {
-      // * 查找购物车中id, priceItem, options, instructions都一样的项
+      // * 查找购物车中id, priceItem, options, instructions, seasoningSnapshots都一样的项
       return (
         e.id === data.id &&
         !e.crmIntegrationPointItemKey &&
         isEqual(e.priceItem, data.priceItem) &&
         isEqual(e.options, data.options) &&
-        e.instructions === data.instructions
+        e.instructions === data.instructions &&
+        isEqual(e.seasoningSnapshots, data.seasoningSnapshots)
       )
     })
     let dishKey = undefined

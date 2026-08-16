@@ -92,7 +92,6 @@ const NormalItemContent = (props) => {
   const seasoningGroups = getSeasoningGroupsForProduct(seasoningSnapshot, id)
 
   const openAsDetail = () => {
-    setDisableBtn(false)
     setEntrySource('detail')
     setTrue()
   }

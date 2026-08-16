@@ -288,6 +288,17 @@ const LargeContent = (props) => {
                   className={styles.seasoningDetailBtn}
                   onClick={(e) => {
                     e.stopPropagation()
+                    if (outOfStock || displayMode) return
+                    if (!checkDishStatus()) return
+                    // Match add path: buffetViewOnly without dish-dialog entry blocks add
+                    if (buffetViewOnly && !isShowDetail) return setOpenModal(true)
+                    setDisable(
+                      !outOfStock &&
+                        (((buffetViewOnly || isSpecial) &&
+                          !isOpenSpecialDishPermission &&
+                          !isSpecialDishServePermission) ||
+                          marketPriceItem)
+                    )
                     openAsDetail?.()
                   }}
                 >
