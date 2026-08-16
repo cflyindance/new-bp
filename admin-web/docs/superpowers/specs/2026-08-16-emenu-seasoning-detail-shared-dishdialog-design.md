@@ -108,9 +108,10 @@
 
 规则：
 
-- `entrySource=detail`：菜品行带 `seasoningSnapshots`。未选任何调味时为 `[]`；有选则为对应 snapshot 数组。
+- `entrySource=detail`：菜品行带 `seasoningSnapshots`。未选任何调味时为 `[]`；有选时，用当前候选项组中的 `TerminalSeasoningChoice` 调用 `createOrderSeasoningSnapshot` 生成数组（入参不是 slim `OrderSeasoningSelection`，需按 `optionId`+`action` 回查 choice）。
 - `entrySource=add`：行上**不出现** `seasoningSnapshots` 字段（不加空数组）。
 - 成交价：在原有菜品价基础上累加所选 `transactionPrice`（即关联 `priceDelta` 快照）。
+- 终端快照供给与缓存回退约定见 `docs/superpowers/specs/2026-08-12-emenu-local-seasoning-settings-design.md`「门店级同步」。
 
 ## 7. 错误与边界
 
