@@ -8,6 +8,17 @@ import {
   DEFAULT_OPTION_CATEGORY_BACKFILL_MIGRATION,
   UNCATEGORIZED_OPTION_CATEGORY_ID,
 } from "../../../../scripts/lib/emenu-local-seasoning-seed.mjs";
+function createLiveMenuProvider() {
+  return {
+    async resolve() {
+      const error = new Error("live_menu_provider_unavailable_in_browser");
+      error.code = "menu_unavailable";
+      error.statusCode = 503;
+      error.payload = { error: "menu_unavailable", message: "live_menu_provider_unavailable_in_browser" };
+      throw error;
+    },
+  };
+}
 
 const API_PREFIX = "/api/v1/emenu-local/seasoning";
 const ACTIONS = ["ADD", "LESS", "MORE", "NONE"];
@@ -439,7 +450,33 @@ function menuGroups(db) {
   }];
 }
 
+function applyMenuView(db, view) {
+  return {
+    ...db,
+    products: view.products,
+    menuGroups: view.menuGroups,
+    categories: view.categories?.length ? view.categories : db.categories,
+    __menuFingerprint: view.fingerprint,
+    __menuFromCache: Boolean(view.fromCache),
+    __menuSource: view.source,
+  };
+}
+
+function isMenuDependentPath(method, sub) {
+  if (sub === "/bootstrap") return true;
+  if (sub === "/menu-structure") return true;
+  if (sub === "/products") return true;
+  if (sub.startsWith("/products/")) return true;
+  if (sub.startsWith("/product-selections")) return true;
+  if (sub.startsWith("/relation-previews")) return true;
+  if (sub.startsWith("/relations")) return true;
+  if (sub === "/snapshot") return true;
+  if (method === "POST" && sub === "/relations/batch") return true;
+  return false;
+}
+
 function menuSelectionFingerprint(db) {
+  if (db.__menuFingerprint) return db.__menuFingerprint;
   const menu = menuGroups(db).map((group) => ({
     id: group.id,
     name: group.name,
@@ -867,6 +904,8 @@ function menuStructure(db, url, scope, session) {
     activeCategoryId: activeCategory?.id ?? "",
     query,
     selectedTotal: draft?.selectedIds.size ?? 0,
+    menuSource: db.__menuSource ?? null,
+    menuFromCache: Boolean(db.__menuFromCache),
   };
 }
 
@@ -1282,16 +1321,23 @@ function requireEditable(db) {
   }
 }
 
-export async function handleEmenuSeasoningApi(req, res, dbPath) {
+export async function handleEmenuSeasoningApi(req, res, dbPath, options = {}) {
   const method = (req.method || "GET").toUpperCase();
   const url = new URL(req.url || "/", "http://local");
   if (!url.pathname.startsWith(API_PREFIX)) return false;
   const sub = url.pathname.slice(API_PREFIX.length) || "/";
   const session = requestSession(req);
   cleanPreviewTokens();
+  const menuProvider = options.menuProvider ?? createLiveMenuProvider();
+  const cacheDir = options.cacheDir ?? path.dirname(dbPath);
 
   try {
     let db = loadEmenuSeasoningDb(dbPath);
+    if (isMenuDependentPath(method, sub)) {
+      const view = await menuProvider.resolve({ req, cacheDir });
+      db = applyMenuView(db, view);
+      if (view.fromCache) res.setHeader("X-Seasoning-Menu-Cache", "1");
+    }
     if (method === "GET" && sub === "/health") {
       sendJson(res, 200, { ok: true, service: "emenu-local-seasoning", version: db.version });
       return true;
@@ -1687,16 +1733,18 @@ export async function handleEmenuSeasoningApi(req, res, dbPath) {
 
 export function attachEmenuSeasoningApi(middlewares, projectRoot) {
   const dbPath = path.join(projectRoot, ".cache", "emenu-local-seasoning-db.json");
+  const cacheDir = path.join(projectRoot, ".cache");
   middlewares.use((req, res, next) => {
     const pathname = decodeURIComponent((req.url || "/").split("?")[0]);
     if (!pathname.startsWith(API_PREFIX)) {
       next();
       return;
     }
-    handleEmenuSeasoningApi(req, res, dbPath).then((handled) => {
+    handleEmenuSeasoningApi(req, res, dbPath, { cacheDir }).then((handled) => {
       if (!handled) next();
     }).catch((error) => {
-      sendJson(res, 500, { error: "internal", message: String(error?.message || error) });
+      const status = error.statusCode || 500;
+      sendJson(res, status, error.payload ?? { error: "internal", message: String(error?.message || error) });
     });
   });
 }

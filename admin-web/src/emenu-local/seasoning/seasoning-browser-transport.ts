@@ -4,6 +4,7 @@ import {
   configureSeasoningBrowserStorage,
   ensureSeasoningBrowserStorage,
 } from "./seasoning-browser-runtime";
+import { EMENU_SEASONING_MENU_SNAPSHOT } from "./seasoning-menu-snapshot";
 
 interface BrowserLockManager {
   request<T>(name: string, callback: () => Promise<T>): Promise<T>;
@@ -25,6 +26,12 @@ interface NodeLikeRequest {
 const SESSION_ID = globalThis.crypto?.randomUUID?.() ?? `seasoning-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 const API_BASE = "/api/v1/emenu-local/seasoning";
 const WRITE_LOCK = "emenu-local:seasoning-demo:write:v1";
+
+const browserMenuProvider = {
+  async resolve() {
+    return { ...EMENU_SEASONING_MENU_SNAPSHOT, fromCache: false, source: "snapshot" as const };
+  },
+};
 
 function createRequest(path: string, init?: RequestInit): NodeLikeRequest {
   const callbacks = new Map<string, (value?: unknown) => void>();
@@ -83,7 +90,10 @@ export function createBrowserSeasoningRequest(dependencies: BrowserTransportDepe
         setHeader() {},
         end(value?: unknown) { raw = value === undefined ? "" : String(value); resolveEnd(); },
       };
-      await handleEmenuSeasoningApi(request, response, STORAGE_SCOPE);
+      await handleEmenuSeasoningApi(request, response, STORAGE_SCOPE, {
+        menuProvider: browserMenuProvider,
+        cacheDir: "browser://emenu-local/seasoning-menu-cache",
+      });
       await ended;
       const payload = raw ? JSON.parse(raw) : undefined;
       if (statusCode < 200 || statusCode >= 300) {

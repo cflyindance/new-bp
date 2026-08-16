@@ -11,7 +11,22 @@ source = source
   .replace(/import crypto from "node:crypto";\r?\n/, "")
   .replace(/import fs from "node:fs";\r?\n/, "")
   .replace(/import path from "node:path";\r?\n/, "")
-  .replace('from "./emenu-local-seasoning-seed.mjs";', 'from "../../../../scripts/lib/emenu-local-seasoning-seed.mjs";');
+  .replace('from "./emenu-local-seasoning-seed.mjs";', 'from "../../../../scripts/lib/emenu-local-seasoning-seed.mjs";')
+  .replace(
+    /import \{ createLiveMenuProvider \} from "\.\/emenu-local-seasoning-menu-provider\.mjs";\r?\n/,
+    `function createLiveMenuProvider() {
+  return {
+    async resolve() {
+      const error = new Error("live_menu_provider_unavailable_in_browser");
+      error.code = "menu_unavailable";
+      error.statusCode = 503;
+      error.payload = { error: "menu_unavailable", message: "live_menu_provider_unavailable_in_browser" };
+      throw error;
+    },
+  };
+}
+`,
+  );
 
 const banner = `// @ts-nocheck\n// Generated from scripts/lib/emenu-local-seasoning-api-handler.mjs. Do not edit directly.\nimport { browserCrypto as crypto, browserFs as fs, browserPath as path, BrowserBuffer as Buffer, BROWSER_PROCESS as process } from "../seasoning-browser-runtime";\n`;
 
