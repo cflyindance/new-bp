@@ -7,8 +7,11 @@ import {
   type ProductSeasoningRelation,
 } from "../src/emenu-local/seasoning/seasoning-domain";
 import {
+  buildOrderSeasoningSnapshots,
   buildTerminalSeasoningGroups,
   createOrderSeasoningSnapshot,
+  productHasGuestSeasoningDetail,
+  selectTerminalSeasoning,
 } from "../src/emenu-local/seasoning/seasoning-terminal-rules";
 import {
   calculateActualMarkupPrice,
@@ -137,5 +140,55 @@ const terminalGroups = buildTerminalSeasoningGroups({
 assert(terminalGroups.length === 1 && terminalGroups[0].action === "ADD", "Terminal groups must hide inactive relations and empty actions");
 const snapshot = createOrderSeasoningSnapshot(terminalGroups[0].choices[0]);
 assert(snapshot.optionCode === "CHILI" && snapshot.transactionPrice === 1, "Order snapshot must preserve code, name, and transaction price");
+
+const guestProduct = {
+  id: "p1",
+  code: "D1",
+  name: "Dish",
+  categoryId: "c1",
+  categoryName: "Category",
+  status: "active" as const,
+  emenuSellable: true,
+  sortOrder: 10,
+};
+const guestOptions = [
+  { id: "o1", code: "CHILI", name: "辣椒", status: "active" as const, sortOrder: 10, createdAt: "", updatedAt: "" },
+  { id: "o2", code: "SALT", name: "盐", status: "active" as const, sortOrder: 20, createdAt: "", updatedAt: "" },
+];
+const guestRelations = [
+  { id: "r1", productId: "p1", action: "ADD" as const, optionId: "o1", priceDelta: 1, sortOrder: 10, status: "active" as const, createdAt: "", updatedAt: "" },
+  { id: "r2", productId: "p1", action: "LESS" as const, optionId: "o1", priceDelta: 0, sortOrder: 10, status: "active" as const, createdAt: "", updatedAt: "" },
+];
+
+assert(
+  productHasGuestSeasoningDetail({
+    product: guestProduct,
+    options: guestOptions,
+    relations: guestRelations,
+  }) === true,
+  "Detail must show when at least one guest choice exists",
+);
+assert(
+  productHasGuestSeasoningDetail({
+    product: { ...guestProduct, status: "inactive" },
+    options: guestOptions,
+    relations: guestRelations,
+  }) === false,
+  "Detail must hide when product is inactive",
+);
+
+const groups = buildTerminalSeasoningGroups({
+  product: guestProduct,
+  options: guestOptions,
+  relations: guestRelations,
+});
+let selections = selectTerminalSeasoning([], groups[0].choices[0]);
+selections = selectTerminalSeasoning(selections, groups.find((g) => g.action === "LESS")!.choices[0]);
+assert(selections.length === 1 && selections[0].action === "LESS", "Guest mutex must keep one action per option");
+
+const snapshots = buildOrderSeasoningSnapshots(selections, groups);
+assert(snapshots.length === 1, "Snapshots must map from current selections via TerminalSeasoningChoice");
+assert(snapshots[0].optionCode === "CHILI" && snapshots[0].action === "LESS", "Snapshot must use choice fields, not slim selection alone");
+assert(JSON.stringify(buildOrderSeasoningSnapshots([], groups)) === "[]", "Empty selection must yield empty snapshots array");
 
 console.log("eMenu local seasoning domain verification passed");
