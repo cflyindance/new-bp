@@ -1,0 +1,44 @@
+{
+  "menuGroups": [
+    {
+      "id": "group-main",
+      "name": "常规菜单",
+      "sortOrder": 10,
+      "categories": [
+        {
+          "id": "cat-hot",
+          "name": "热菜",
+          "sortOrder": 10,
+          "productIds": ["9001", "9002"]
+        }
+      ]
+    }
+  ],
+  "products": [
+    {
+      "id": "9001",
+      "code": "D9001",
+      "name": "宫保鸡丁",
+      "categoryId": "cat-hot",
+      "categoryName": "热菜",
+      "status": "active",
+      "emenuSellable": true,
+      "sortOrder": 10
+    },
+    {
+      "id": "9002",
+      "code": "D9002",
+      "name": "鱼香肉丝",
+      "categoryId": "cat-hot",
+      "categoryName": "热菜",
+      "status": "active",
+      "emenuSellable": true,
+      "sortOrder": 20
+    }
+  ],
+  "categories": [
+    { "id": "cat-hot", "name": "热菜", "sortOrder": 10 }
+  ],
+  "sourceMenuVersion": "snapshot-v1",
+  "fingerprint": "kpos:snapshot-v1"
+}
