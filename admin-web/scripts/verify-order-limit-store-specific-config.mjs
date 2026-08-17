@@ -15,13 +15,14 @@ assert.match(source, /function activeStoreConfig\(draft\)/, "应统一取得当�
 assert.match(source, /function addedStoreIds\(draft\)/, "应统一计算已添加商品门店");
 assert.match(source, /legacyCompatibilityFallback/, "无历史发布门店时应保存兼容回退");
 
-const stepTwo = source.match(/function renderStepTwo\(draft\)[\s\S]*?(?=\n\s*function renderRangeRows)/)?.[0];
+const stepTwo = source.match(/function renderStepTwo\(draft\)[\s\S]*?(?=\n\s*function renderSelectedPreviewDialog|function renderProductAddDialog|function renderRangeRows)/)?.[0];
 assert.ok(stepTwo, "应能定位商品配置渲染函数");
-assert.match(stepTwo, /data-config-store-select/, "商品配置应使用单选门店下拉");
-assert.match(stepTwo, /stores\.map/, "商品配置门店下拉应展示全部门店");
-assert.match(stepTwo, /请选择参与门店/, "商品配置门店下拉应使用参与门店占位文案");
-assert.match(stepTwo, /olf-config-store-select[\s\S]{0,240}>参与门店</, "商品配置门店字段应命名为参与门店");
+assert.doesNotMatch(stepTwo, /data-config-store-select|olf-config-store-select/, "商品配置主区不应再内联参与门店下拉");
+assert.match(source, /data-product-add-store-select/, "添加商品弹层应提供参与门店下拉");
+assert.match(source, /请选择参与门店/, "添加商品弹层门店下拉应使用参与门店占位文案");
+assert.match(source, /stores\.map/, "添加商品弹层门店下拉应展示全部门店");
 assert.doesNotMatch(stepTwo, /data-participating-store|data-store-tab|商品状态/, "商品配置不应保留参与门店表格或门店 Tab");
+assert.match(stepTwo, /data-product-add-open/, "商品配置主区应提供添加商品入口");
 
 const stepFour = source.match(/function renderStepFour\(draft\)[\s\S]*?(?=\n\s*function renderStepFive)/)?.[0];
 assert.ok(stepFour, "应能定位数量配置渲染函数");
@@ -57,7 +58,7 @@ assert.match(source, /function clearAllStoreLimits\(draft\)/, "规则级场景�
 assert.match(source, /function buildPublishedDraft\(draft\)/, "正式发布应构建裁剪后的门店快照");
 assert.match(source, /deployStoreIds[\s\S]{0,500}storeConfigs/, "正式快照应按最终发布门店裁剪配置");
 
-assert.match(css, /\.olf-config-store-select/, "应提供商品配置门店下拉样式");
+assert.match(css, /\.olf-product-add-dialog|\.olf-config-store-select/, "应提供商品配置门店下拉或添加商品弹层样式");
 assert.match(css, /\.olf-limit-store-select/, "应提供数量配置门店下拉样式");
 assert.match(css, /\.olf-effective-stores/, "应提供生效范围门店表格样式");
 assert.match(css, /\.olf-store-status\.is-added/, "应提供已添加状态样式");

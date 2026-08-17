@@ -43,7 +43,9 @@ assert.match(
   /function goToEditorStep[\s\S]*?currentStep === 4[\s\S]*?closeLineLimitCopy\(\)/,
   "离开步骤 4 应关闭复制弹层",
 );
-assert.match(source, /Escape[\s\S]{0,240}closeLineLimitCopy|closeLineLimitCopy[\s\S]{0,240}Escape/, "Esc 应可关闭");
+const escapeHandler = source.match(/event\.key !== "Escape"[\s\S]*?\n\s*\}\);/)?.[0] ?? "";
+assert.ok(escapeHandler, "应存在 Esc 键处理逻辑");
+assert.match(escapeHandler, /closeLineLimitCopy\(\)/, "Esc 应可关闭");
 
 assert.match(css, /\.olf-line-limit-copy|\.olf-selected-preview-dialog/, "应提供或复用弹层样式");
 

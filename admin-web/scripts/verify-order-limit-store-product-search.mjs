@@ -75,38 +75,38 @@ assert.deepEqual(
 assert.equal(picker.isNodeSelected(emptySelection, "missing-line", "d:missing"), false, "无效节点不得视为已选");
 
 for (const marker of [
-  "data-product-search",
+  "data-product-add-search",
   "data-product-search-results",
   "data-product-search-target",
-  "productSearchQuery",
+  "productAddDialog",
   "已按分类加入",
   "当前门店全部产线中未找到相关商品",
-  "applyActiveStoreStructure",
+  "applyStoreStructure",
 ]) {
   assert.match(flowSource, new RegExp(marker), `商品配置流程应包含 ${marker}`);
 }
 
 const defaultDraft = flowSource.match(/function defaultDraft\(\)[\s\S]*?(?=\n\s*function normalizeLoadedEditorDraft)/)?.[0] ?? "";
-assert.doesNotMatch(defaultDraft, /productSearchQuery/, "搜索词不得进入规则默认草稿");
-const compatibilityBuilder = flowSource.match(/function buildCompatibilityRule\(draftRule, status\)[\s\S]*?(?=\n\s*function ruleSummary)/)?.[0] ?? "";
-assert.doesNotMatch(compatibilityBuilder, /productSearchQuery/, "搜索词不得进入兼容规则或发布快照");
+assert.doesNotMatch(defaultDraft, /productAddDialog|productSearchQuery/, "搜索词与弹层状态不得进入规则默认草稿");
+const compatibilityBuilder = flowSource.match(/function buildCompatibilityRule\(draftRule, status\)[\s\S]*?(?=\n\s*function toast)/)?.[0] ?? "";
+assert.doesNotMatch(compatibilityBuilder, /productAddDialog|productSearchQuery/, "搜索词与弹层状态不得进入兼容规则或发布快照");
 
-assert.match(flowSource, /data-config-store-select[\s\S]{0,800}clearProductSearch/, "切换配置门店应清空搜索词");
-assert.match(flowSource, /data-config-store-select[\s\S]{0,900}clearProductPickerNav/, "切换配置门店应清空产线导航记忆");
+assert.match(flowSource, /function switchProductAddStore\([\s\S]*?query:\s*""|query\s*=\s*""/, "切换弹层门店应清空搜索词");
+assert.match(flowSource, /data-product-add-store-select[\s\S]{0,900}clearProductPickerNav|switchProductAddStore[\s\S]{0,500}clearProductPickerNav/, "切换弹层门店应清空产线导航记忆");
 assert.match(
   flowSource,
-  /olf-store-search-row[\s\S]{0,300}data-config-store-select[\s\S]{0,220}searchFieldHtml/,
-  "搜索商品应与参与门店同一行并位于右侧",
+  /olf-store-search-row[\s\S]{0,800}data-product-add-store-select/,
+  "参与门店应位于弹层搜索行内",
 );
 assert.match(
   flowSource,
-  /searchFieldHtml = hasActiveStore[\s\S]{0,220}data-product-search/,
-  "已选门店时应渲染搜索商品输入框",
+  /data-product-add-search[\s\S]{0,1200}data-product-add-store-select|data-product-add-store-select[\s\S]{0,1200}data-product-add-search/,
+  "搜索商品应与参与门店同处添加商品弹层",
 );
 assert.match(
   flowSource,
-  /olf-store-search-row[\s\S]{0,500}searchFieldHtml[\s\S]{0,80}<\/div>[\s\S]{0,80}searchSurfaceHtml/,
-  "搜索结果面板应位于门店与搜索同一行下方",
+  /data-product-add-search[\s\S]{0,500}data-product-search-surface|renderProductAddDialog[\s\S]{0,1200}data-product-search-surface/,
+  "已选门店时应在弹层渲染搜索表面",
 );
 assert.match(cssSource, /\.olf-store-search-row/, "应提供门店与搜索同一行布局样式");
 assert.match(flowSource, /productPickerActiveLineId/, "应记住商品选择器当前产线");
@@ -119,6 +119,7 @@ assert.match(flowSource, /compositionstart/, "搜索应处理输入法组合开�
 assert.match(flowSource, /compositionend/, "搜索应处理输入法组合结束");
 assert.match(flowSource, /targetType === ["']category["'][\s\S]{0,300}categoryKey/, "分类限购应使用所属分类键");
 assert.match(flowSource, /targetType === ["']dish["'][\s\S]{0,300}dishKey/, "菜品限购应使用具体菜品键");
+assert.match(flowSource, /function renderProductSearchResults\(draft,\s*config,\s*queryOverride\)/, "搜索结果渲染应接受 queryOverride");
 
 for (const selector of [
   ".olf-product-search",

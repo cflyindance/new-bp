@@ -45,7 +45,7 @@ assert.equal(dishTargets.length, 2, "菜品模式应逐个输出已选菜品");
 for (const target of dishTargets) {
   for (const field of [
     "lineId", "lineLabel", "groupId", "groupName", "categoryId", "categoryName",
-    "targetKey", "targetType", "dishId", "dishName", "dishCount",
+    "targetKey", "targetType", "dishId", "dishName", "dishCount", "dishNames",
   ]) {
     assert.notEqual(target[field], undefined, `菜品目标应包含 ${field}`);
   }
@@ -73,6 +73,11 @@ assert.equal(categoryTargets[0].targetKey, kioskHotProducts[0].categoryKey, "分
 assert.equal(categoryTargets[0].dishCount, 2, "分类目标应包含分类菜品数量");
 assert.equal(categoryTargets[0].dishId, "", "分类目标不应伪造菜品 ID");
 assert.equal(categoryTargets[0].dishName, "", "分类目标不应伪造菜品名称");
+assert.deepEqual(
+  categoryTargets[0].dishNames,
+  kioskHotProducts.map((item) => item.dishName),
+  "分类目标应带上分类内菜品名称列表",
+);
 
 const emenuHotProduct = allProducts.find(
   (item) => item.lineId === "emenu" && item.categoryName === "热饮",
@@ -107,6 +112,14 @@ for (const marker of [
   "data-selected-preview-select-all",
   "data-selected-preview-row",
   "data-selected-preview-delete",
+  "data-selected-category-dishes-open",
+  "data-selected-category-dishes-overlay",
+  "data-selected-category-dishes-close",
+  "data-selected-category-dishes-search",
+  "openSelectedCategoryDishes",
+  "closeSelectedCategoryDishes",
+  "renderSelectedCategoryDishesDialog",
+  "categoryDishesQuery",
   "不受当前筛选条件限制",
 ]) {
   assert.match(flowSource, new RegExp(marker), `已选商品预览流程应包含 ${marker}`);
@@ -138,9 +151,39 @@ assert.match(flowSource, /data-selected-preview-search[\s\S]{0,900}page\s*=\s*1[
 assert.match(flowSource, /compositionstart[\s\S]{0,500}data-selected-preview-search[\s\S]{0,500}searchComposing\s*=\s*true/, "预览搜索应处理输入法组合开始");
 assert.match(flowSource, /compositionend[\s\S]{0,900}data-selected-preview-search[\s\S]{0,900}searchComposing\s*=\s*false/, "预览搜索应在输入法组合结束后应用搜索");
 
+const categoryDishesDialog = flowSource.match(/function renderSelectedCategoryDishesDialog\([\s\S]*?(?=\n\s*function openSelectedCategoryDishes)/)?.[0] ?? "";
+assert.match(categoryDishesDialog, /data-selected-category-dishes-search/, "包含菜品明细应提供搜索框");
+assert.match(categoryDishesDialog, /normalizeProductSearchQuery/, "包含菜品明细搜索应复用规范化包含匹配");
+assert.match(flowSource, /compositionstart[\s\S]{0,700}data-selected-category-dishes-search[\s\S]{0,200}categoryDishesComposing\s*=\s*true/, "包含菜品明细搜索应处理输入法组合开始");
+assert.match(flowSource, /data-selected-category-dishes-search[\s\S]{0,400}categoryDishesComposing\s*=\s*false/, "包含菜品明细搜索应在输入法组合结束后应用");
+
 const deleteRequest = flowSource.match(/function selectedPreviewDeleteRequest\([\s\S]*?(?=\n\s*function )/)?.[0] ?? "";
 assert.match(deleteRequest, /selectedPreviewRows\(draft\)/, "全部删除应从权威全量预览行生成");
 assert.doesNotMatch(deleteRequest, /filteredSelectedPreviewRows/, "全部删除不得受当前筛选结果限制");
+
+const deleteOpen = flowSource.match(/function requestSelectedPreviewDeletion\([\s\S]*?(?=\n\s*function )/)?.[0] ?? "";
+assert.match(deleteOpen, /cancelLabel:\s*["']取消["']/, "已选商品删除确认取消按钮应为取消");
+assert.match(flowSource, /function openDialog\([\s\S]*?cancelLabel\s*\|\|\s*["']继续编辑["']/, "确认弹框应支持可配置取消文案并默认继续编辑");
+assert.match(flowSource, /id=["']dialogSecondary["']/, "确认弹框应提供第三操作按钮容器");
+assert.match(flowSource, /function openDialog\([\s\S]*?secondaryLabel/, "确认弹框应支持 secondaryLabel 配置");
+assert.match(flowSource, /function discardEditorDraftAndLeave\(/, "新增退出应提供删除草稿并离开");
+assert.match(flowSource, /secondaryLabel:\s*["']退出["']/, "退出新增规则对话框应提供退出按钮");
+assert.match(flowSource, /丢弃本次新增，不会保留草稿/, "退出新增规则应说明退出不保留草稿");
+
+const backHandler = flowSource.match(/getElementById\("backButton"\)\.addEventListener\([\s\S]*?(?=\n\s*document\.getElementById\("previousButton"\))/)?.[0] ?? "";
+assert.ok(backHandler, "返回按钮处理逻辑应存在");
+assert.match(backHandler, /isEditingExistingRule\s*=\s*editorState\.rule\.sourceRuleId != null/, "返回应区分编辑已有规则与新增规则");
+assert.match(backHandler, /isEditingExistingRule && !saveEditorDraft/, "编辑已有规则返回时不应写入草稿");
+assert.match(backHandler, /返回不会保存本次修改，原规则保持不变/, "编辑态返回应说明不保存且原规则不变");
+const editingBranch = backHandler.match(/if \(isEditingExistingRule\)[\s\S]*?return;\s*\}/)?.[0] ?? "";
+assert.ok(editingBranch, "应能定位编辑态返回分支");
+assert.match(editingBranch, /secondaryLabel:\s*["']返回["']/, "编辑态返回应作为左侧次操作按钮");
+assert.match(editingBranch, /onSecondary[\s\S]{0,80}discardEditorDraftAndLeave/, "编辑态返回应丢弃临时草稿");
+assert.match(editingBranch, /hideCancel:\s*true/, "编辑态返回对话框应隐藏默认取消按钮");
+assert.match(editingBranch, /["']继续编辑["'],\s*\n?\s*function/, "编辑态应以继续编辑作为突出的主操作");
+assert.doesNotMatch(editingBranch, /保存并返回/, "编辑态返回对话框不应提供保存并返回");
+assert.match(flowSource, /function openDialog\([\s\S]*?hideCancel/, "确认弹框应支持隐藏默认取消按钮");
+assert.match(cssSource, /#dialogSecondary:not\(\[hidden\]\)[\s\S]{0,60}margin-right:\s*auto/, "次操作按钮应左对齐");
 
 for (const selector of [
   ".olf-selected-preview-entry",
@@ -153,6 +196,10 @@ for (const selector of [
   ".olf-selected-preview-table-wrap",
   ".olf-selected-preview-pagination",
   ".olf-selected-preview-empty",
+  ".olf-selected-category-dishes-overlay",
+  ".olf-selected-category-dishes-dialog",
+  ".olf-selected-category-dishes-list",
+  ".olf-selected-category-dishes-search",
 ]) {
   assert.match(cssSource, new RegExp(selector.replace(".", "\\.")), `应提供 ${selector} 样式`);
 }

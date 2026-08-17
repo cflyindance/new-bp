@@ -30,7 +30,7 @@ removedCopy.forEach((copy) => {
 });
 
 [
-  "data-config-store-select",
+  "data-product-add-store-select",
   "data-limit-target",
   "data-effective-store",
   "data-auth-enabled",

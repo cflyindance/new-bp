@@ -50,7 +50,9 @@ assert.match(
   /function goToEditorStep[\s\S]*?currentStep === 4[\s\S]*?closeConfiguredLimitPreview\(\)/,
   "离开限购数量步骤应关闭预览",
 );
-assert.match(source, /Escape[\s\S]{0,200}closeConfiguredLimitPreview|closeConfiguredLimitPreview[\s\S]{0,200}Escape/, "Esc 应可关闭预览");
+const escapeHandler = source.match(/event\.key !== "Escape"[\s\S]*?\n\s*\}\);/)?.[0] ?? "";
+assert.ok(escapeHandler, "应存在 Esc 键处理逻辑");
+assert.match(escapeHandler, /closeConfiguredLimitPreview\(\)/, "Esc 应可关闭预览");
 
 assert.match(css, /\.olf-configured-limit-preview-filters|\.olf-selected-preview-filters/, "应提供预览筛选布局样式");
 assert.match(css, /\.olf-configured-limit-preview-overlay|\.olf-selected-preview-overlay/, "应复用或扩展弹层遮罩样式");
