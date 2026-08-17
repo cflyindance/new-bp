@@ -1,0 +1,77 @@
+---
+description: 删除/修改/返回等二次确认一律用自定义对话框，禁止 window.alert/confirm/prompt，样式对齐「菜单下单限制」
+alwaysApply: true
+---
+
+# 二次确认一律使用自定义对话框
+
+任何需要用户二次确认的交互（删除、清空、重置、覆盖、放弃修改、返回/离开、发布下发等），**必须**使用页面内自定义对话框；**禁止**使用浏览器/系统原生弹窗。视觉与交互规格统一对齐「前厅 · 菜单下单限制」中的确认弹窗。
+
+## 禁止
+
+- ❌ `window.alert()` / `window.confirm()` / `window.prompt()`，以及不带 `window.` 前缀的 `alert()` / `confirm()` / `prompt()`
+- ❌ 用原生弹窗做成功/失败提示（应使用页面内 toast 或状态提示）
+- ❌ 自己另造一套视觉（圆角、间距、按钮顺序与下方规格不一致）
+
+## 必须使用的 API
+
+| 场景 | API |
+|---|---|
+| 二次确认（原 `confirm`） | `src/ui/app-confirm-dialog.ts` → `openConfirmDialog` |
+| 提示（原 `alert`） | `src/ui/app-toast.ts` → `showAppToast` |
+| 简单输入（原 `prompt`） | `src/ui/app-prompt-dialog.ts` → `openPromptDialog` |
+| 原型页（`dist/Configuration center/**`） | `assets/app-dialogs.js` → `AppDialogs.confirm / showToast / prompt` |
+
+禁止再新增 `window.alert/confirm/prompt`。存量清理见 `docs/superpowers/specs/2026-08-17-native-dialog-cleanup-design.md`。
+
+## 参照实现（SSOT）
+
+| 场景 | 参照文件 |
+|---|---|
+| 应用页公共 API | `src/ui/app-confirm-dialog.ts` / `app-toast.ts` / `app-prompt-dialog.ts` |
+| 应用页历史骨架 | `src/config/hub-search-leave-confirm-dialog.ts` |
+| 原型页 | `dist/Configuration center/assets/app-dialogs.js`；样式对齐 `order-limit-flow.css` 的 `.olf-overlay` / `.olf-dialog` |
+| 原型页既有确认 | `order-limit-flow.js` 的 `openDialog / closeDialog / cancelDialog` |
+
+新写确认弹窗时优先调用上述 API，不要从零设计。
+
+## 视觉规格
+
+- 遮罩：`position: fixed; inset: 0`，背景 `rgba(0, 0, 0, 0.45)`，flex 居中，padding 24px
+- 面板：宽 `min(500px, 100%)`，圆角 16px（Tailwind 侧 `rounded-2xl`），padding 24px，卡片背景 + 大阴影
+- 标题：18px / 600，与正文间距 10px
+- 正文：14px / 行高 22px，次要文字色
+- 按钮区：右对齐，间距 10px，**取消在左、确认在右**
+- 确认按钮：普通操作用主色（`.olf-button--primary`）；删除等破坏性操作用危险色（`.olf-button--danger`）
+- 按钮文案写清具体动作（「确认删除」「删除并重置」「保存并返回」），不要只写「确定」
+
+## 交互与可访问性
+
+1. 面板 `role="dialog"` + `aria-modal="true"` + `aria-labelledby` 指向标题
+2. 打开时把焦点移入面板（原型页参照实现聚焦「取消」按钮）
+3. `Esc` 等价于取消；点击遮罩空白区等价于取消
+4. 关闭后焦点归还触发元素
+5. 对外接口用 `Promise<结果>` 或 `onConfirm` 回调，调用方不得假设同步返回值
+
+## iframe 内：遮罩必须覆盖系统全窗（不是面板区域）
+
+部分原型页（如「菜单下单限制」`order-limit.html`）由应用页用 `<iframe>` 嵌入。此时 `position:fixed; inset:0` 的参照系是**iframe 文档视口**，遮罩只会盖住 iframe 那块面板，看起来像「区域全屏」，与「分类管理」等直接渲染在顶层文档的全窗遮罩不一致。
+
+### 必须
+
+1. 自定义确认 / Toast / Prompt（含 `AppDialogs.*`、同类 overlay）在同源嵌入时，**把遮罩与样式挂到顶层文档**：`window.top.document`（优先 `body` / `head`）
+2. 跨域取不到 `window.top.document` 时，再退回本文档（不要抛错）
+3. Esc 同时监听本文档与顶层文档；关闭后焦点仍归还触发元素（本文档 `activeElement`）
+4. iframe 卸载 / 跳转时主动清理顶层遮罩（如监听 `pagehide`），避免残留挡住整个应用
+5. 参照实现：`dist/Configuration center/assets/app-dialogs.js` 的 `hostDocument()`；视觉效果对齐「前厅 · 分类管理」删除确认（`foh-classification-settings-ui.ts` 的 `fixed inset-0`）
+
+### 禁止
+
+- ❌ 只在 iframe 内 `document.body.appendChild(overlay)`，导致遮罩只覆盖 iframe 区域
+- ❌ 为「全屏」去改对话框组件结构 / 视觉规格；应改**挂载目标文档**，不另造一套 UI
+- ❌ 假设遮罩会随 iframe 销毁而自动消失（挂顶层后不会）
+
+## 存量代码
+
+- 改动某个文件时，**顺手**把该文件里被触及逻辑用到的原生弹窗替换为自定义对话框
+- 不要为此发起与当前任务无关的大范围重构；成批清理需用户明确要求
