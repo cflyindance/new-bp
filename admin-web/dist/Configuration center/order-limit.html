@@ -790,6 +790,17 @@
     .confirm-list { display: grid; gap: 7px; font-size: 13px; }
     .confirm-item { display: grid; grid-template-columns: 72px minmax(0,1fr); gap: 8px; }
     .confirm-k { color: var(--ol-muted); }
+    .rule-name-link {
+      font-weight: 600;
+      color: var(--ol-primary);
+      background: none;
+      border: none;
+      padding: 0;
+      cursor: pointer;
+      text-align: left;
+      font: inherit;
+    }
+    .rule-name-link:hover { text-decoration: underline; }
     .wizard-note {
       border-left: 3px solid var(--ol-primary);
       background: #f8fbff;
@@ -887,7 +898,7 @@
               <th>人数</th>
               <th>时间</th>
               <th>会员</th>
-              <th>关联</th>
+              <th>门店/产线</th>
               <th>状态</th>
               <th>操作</th>
             </tr>
@@ -2925,6 +2936,43 @@
         return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
       }
 
+      var RULE_STORE_CATALOG = [
+        { id: "ny-midtown", name: "纽约中城店" },
+        { id: "flushing", name: "法拉盛店" },
+        { id: "brooklyn", name: "布鲁克林店" },
+        { id: "boston", name: "波士顿店" }
+      ];
+      var RULE_LINE_NAMES = { kiosk: "Kiosk", emenu: "eMenu", sdi: "SDI" };
+
+      function formatRuleStoreLineLabel(rule) {
+        if (!rule) return "未配置门店/产线";
+        if (rule.storeLineLabel) return String(rule.storeLineLabel);
+        var draft = rule.editorDraft || rule.authoringDraft || null;
+        var storeConfigs = rule.storeConfigs || (draft && draft.storeConfigs) || null;
+        var storeIds = [];
+        if (Array.isArray(rule.deployStoreIds) && rule.deployStoreIds.length) storeIds = rule.deployStoreIds.slice();
+        else if (Array.isArray(rule.participatingStoreIds) && rule.participatingStoreIds.length) storeIds = rule.participatingStoreIds.slice();
+        else if (draft && Array.isArray(draft.deployStoreIds) && draft.deployStoreIds.length) storeIds = draft.deployStoreIds.slice();
+        else if (draft && Array.isArray(draft.participatingStoreIds) && draft.participatingStoreIds.length) storeIds = draft.participatingStoreIds.slice();
+        else if (storeConfigs) storeIds = Object.keys(storeConfigs);
+        if (storeConfigs && storeIds.length) {
+          return storeIds.map(function (storeId) {
+            var store = RULE_STORE_CATALOG.find(function (item) { return item.id === storeId; });
+            var config = storeConfigs[storeId] || {};
+            var lineIds = Array.isArray(config.productLines) ? config.productLines : [];
+            var lineText = lineIds.map(function (lineId) { return RULE_LINE_NAMES[lineId] || lineId; }).filter(Boolean).join("、");
+            return (store ? store.name : storeId) + "：" + (lineText || "未选产线");
+          }).join("；");
+        }
+        var legacyLines = Array.isArray(rule.productLines) ? rule.productLines
+          : (draft && Array.isArray(draft.productLines) ? draft.productLines : []);
+        if (legacyLines.length) {
+          return legacyLines.map(function (lineId) { return RULE_LINE_NAMES[lineId] || lineId; }).join("、");
+        }
+        var dishes = String(rule.dishes || "").trim();
+        return dishes || "未配置门店/产线";
+      }
+
       var state = {
         tab: "rules",
         rules: loadRules(),
@@ -3000,13 +3048,13 @@
               "<button class='btn btn-danger' data-rule-action='delete' data-rule-id='" + rule.id + "'>删除</button>";
           return (
             "<tr>" +
-              "<td><div style='font-weight:600;'>" + esc(rule.name) + "</div></td>" +
+              "<td><button type='button' class='rule-name-link' data-rule-view='" + rule.id + "'>" + esc(rule.name) + "</button></td>" +
               "<td style='max-width:220px;'><span class='sub'>" + (descTxt ? esc(descTxt) : "—") + "</span></td>" +
               "<td><span class='sub' style='font-size:12px;color:#374151;'>" + esc(rule.type + " · " + rule.round + " · " + rule.method) + "</span></td>" +
               "<td>" + esc(rule.persons) + "</td>" +
               "<td>" + esc(timeTxt) + "</td>" +
               "<td style='max-width:160px;'>" + esc(memberTxt) + "</td>" +
-              "<td style='max-width:220px;'><span class='sub'>" + esc(rule.dishes) + "</span></td>" +
+              "<td style='max-width:280px;'><span class='sub' style='white-space:pre-line;'>" + esc(formatRuleStoreLineLabel(rule).replace(/；/g, "\n")) + "</span></td>" +
               "<td>" + statusHtml + "</td>" +
               "<td><div class='op-row'>" + actionsHtml + "</div></td>" +
             "</tr>"
@@ -3533,6 +3581,14 @@
           return;
         }
 
+        var ruleViewBtn = e.target.closest("[data-rule-view]");
+        if (ruleViewBtn) {
+          var viewRuleId = ruleViewBtn.getAttribute("data-rule-view");
+          var viewUrl = "order-limit-rule-editor.html?ruleId=" + encodeURIComponent(viewRuleId) + "&view=1";
+          window.location.href = window.appendMenusifuEmbeddedParam(viewUrl);
+          return;
+        }
+
         var ruleActionBtn = e.target.closest("[data-rule-action]");
         if (ruleActionBtn) {
           handleRuleAction(ruleActionBtn.getAttribute("data-rule-action"), Number(ruleActionBtn.getAttribute("data-rule-id")));
@@ -4005,8 +4061,9 @@
       document.getElementById("wizardNext").addEventListener("click", wizardNext);
 
       window.addEventListener("keydown", function (e) {
+        if (e.key !== "Escape") return;
         if (!state.wizardOpen) return;
-        if (e.key === "Escape") closeWizard();
+        closeWizard();
       });
 
       renderAll();

@@ -389,6 +389,7 @@
               dishId: "",
               dishName: "",
               dishCount: c.dishes.length,
+              dishNames: c.dishes.map(function (d) { return d.name; }),
             });
             return;
           }
@@ -407,6 +408,7 @@
               dishId: d.id,
               dishName: d.name,
               dishCount: 1,
+              dishNames: [d.name],
             });
           });
         });
