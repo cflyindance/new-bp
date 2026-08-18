@@ -148,6 +148,7 @@ button { color: inherit; }
 .olf-section h3 { margin: 0 0 14px; font-size: 16px; line-height: 24px; font-weight: 600; }
 .olf-section-head { margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .olf-section-head h3 { margin: 0; }
+.olf-section-head--stack { flex-direction: column; align-items: flex-start; gap: 12px; }
 .olf-help { margin: -7px 0 15px; font-size: 13px; line-height: 21px; color: var(--olf-muted); }
 
 .olf-choice-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
@@ -664,10 +665,12 @@ button { color: inherit; }
 .olf-selected-preview-delete-actions { flex-shrink: 0; }
 .olf-selected-preview-page-size .olf-select { min-width: 112px; min-height: 36px; }
 .olf-configured-limit-preview-entry { flex-shrink: 0; white-space: nowrap; }
-.olf-configured-limit-preview-filters { grid-template-columns: repeat(3, minmax(140px, 180px)) minmax(220px, 1fr); }
-.olf-configured-limit-preview-filters.is-multi-round { grid-template-columns: repeat(4, minmax(130px, 170px)) minmax(200px, 1fr); }
+.olf-configured-limit-preview-filters { grid-template-columns: repeat(4, minmax(120px, 160px)) minmax(200px, 1fr); }
+.olf-configured-limit-preview-filters.is-multi-round { grid-template-columns: repeat(5, minmax(110px, 150px)) minmax(180px, 1fr); }
 .olf-configured-limit-preview-search { min-width: 200px; }
 .olf-configured-limit-preview-empty { min-height: 130px; border-top: 1px solid var(--olf-border); }
+.olf-configured-limit-preview-dialog tr.is-unconfigured td { color: var(--olf-muted); }
+.olf-configured-limit-preview-value.is-empty { color: var(--olf-muted); font-weight: 400; }
 .olf-effective-stores .olf-table-wrap { margin-top: 14px; }
 .olf-store-check-col { width: 44px; }
 .olf-participating-row { transition: background-color .16s ease; }

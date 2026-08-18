@@ -40,6 +40,12 @@ assert.match(source, /data-product-add-store-select/, "弹层内应有门店下�
 const stepTwo = source.match(/function renderStepTwo\(draft\)[\s\S]*?(?=\n\s*function renderSelectedPreviewDialog|function renderProductAddDialog)/)?.[0] ?? "";
 assert.match(stepTwo, /data-product-add-open/, "步骤 2 主区应渲染添加商品入口");
 assert.match(stepTwo, />参与商品</, "步骤 2 主区标题应为参与商品");
+assert.match(
+  stepTwo,
+  /selectedProductHeading[\s\S]*?参与商品[\s\S]*?olf-line-limit-head-actions[\s\S]*?data-product-add-open[\s\S]*?data-selected-preview-open/,
+  "添加商品与查看已选商品应排在参与商品标题下方",
+);
+assert.match(css, /\.olf-section-head--stack/, "应提供标题与操作区纵向堆叠样式");
 assert.doesNotMatch(stepTwo, /structureSummary|olf-structure-summary/, "步骤 2 主区不得再展示选品摘要");
 assert.doesNotMatch(stepTwo, /请通过添加商品为各门店配置限购对象/, "步骤 2 主区不得再展示添加商品引导文案");
 assert.doesNotMatch(stepTwo, /data-config-store-select/, "步骤 2 主区不得再渲染参与门店下拉");

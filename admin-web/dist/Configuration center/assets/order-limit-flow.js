@@ -1192,6 +1192,7 @@
       partyKey: "",
       roundKey: "",
       lineId: "",
+      configStatus: "",
       page: 1,
       pageSize: 20
     };
@@ -1365,7 +1366,7 @@
     var targetMetaById = configuredLimitTargetMeta(draft);
     eachLimitCell(draft, function (key, partyIndex, roundIndex, lineId, targetId, config, storeId) {
       var cell = config.limits[key];
-      if (!cell || !cell.configured) return;
+      var configured = !!(cell && cell.configured);
       var store = stores.find(function (item) { return item.id === storeId; });
       var line = lines.find(function (item) { return item.id === lineId; });
       var target = targetsForLine(draft, lineId, config).find(function (item) { return item.id === targetId; });
@@ -1390,13 +1391,16 @@
         partyIndex: partyIndex,
         partyLabel: formatRange(partyRange, "人"),
         roundIndex: roundIndex,
-        roundLabel: draft.period === "multi_round" ? formatRange(roundRange, "轮") : "—",
+        roundLabel: draft.period === "multi_round"
+          ? formatRange(roundRange, "轮")
+          : (periodLabel(draft.period) || "—"),
         lineId: lineId,
         lineLabel: line ? line.name : (target.lineLabel || lineId),
         targetId: targetId,
         menuName: menuName,
         menuDetail: menuDetail,
-        value: cell.value
+        configured: configured,
+        value: configured ? cell.value : null
       });
     });
     rows.sort(function (a, b) {
@@ -1458,7 +1462,10 @@
       var matchesParty = !state.partyKey || String(row.partyIndex) === state.partyKey;
       var matchesRound = !state.roundKey || String(row.roundIndex) === state.roundKey;
       var matchesLine = !state.lineId || row.lineId === state.lineId;
-      return matchesQuery && matchesStore && matchesParty && matchesRound && matchesLine;
+      var matchesStatus = !state.configStatus
+        || (state.configStatus === "configured" && row.configured)
+        || (state.configStatus === "unconfigured" && !row.configured);
+      return matchesQuery && matchesStore && matchesParty && matchesRound && matchesLine && matchesStatus;
     });
   }
 
@@ -1478,15 +1485,24 @@
     if (state.roundKey && roundKeys.indexOf(state.roundKey) < 0) state.roundKey = "";
     var lineIds = configuredLimitPreviewLineOptions(rows, state.storeId).map(function (line) { return line.id; });
     if (state.lineId && lineIds.indexOf(state.lineId) < 0) state.lineId = "";
+    if (state.configStatus !== "configured" && state.configStatus !== "unconfigured") state.configStatus = "";
     var filtered = filteredConfiguredLimitPreviewRows(rows, state);
     var totalPages = Math.max(1, Math.ceil(filtered.length / state.pageSize) || 1);
     state.page = Math.max(1, Math.min(Number(state.page) || 1, totalPages));
     return { rows: rows, filtered: filtered, pageRows: pagedConfiguredLimitPreviewRows(filtered, state), totalPages: totalPages };
   }
 
-  function formatConfiguredLimitValue(value) {
+  function formatConfiguredLimitValue(value, configured) {
+    if (configured === false || value == null || value === "") return "未配置";
     if (value === 0) return "0（禁止）";
     return String(value);
+  }
+
+  function formatConfiguredLimitPreviewCount(rows) {
+    var total = Array.isArray(rows) ? rows.length : 0;
+    var configured = 0;
+    (rows || []).forEach(function (row) { if (row && row.configured) configured += 1; });
+    return "已配置 " + configured + " / 共 " + total;
   }
 
   function selectedPreviewRows(draft) {
@@ -1878,7 +1894,7 @@
     var previewCount = selectedPreviewRows(draft).length;
     return '<div class="olf-content-head"><h2 tabindex="-1">商品配置</h2></div>' +
       '<section class="olf-section"><h3>基础信息</h3><div class="olf-field-grid"><label class="olf-field olf-field--full"><span class="olf-label olf-required">规则名称</span><input class="olf-input" data-field="name" value="' + esc(draft.name) + '" maxlength="60" /></label><label class="olf-field olf-field--full"><span class="olf-label">规则描述</span><textarea class="olf-textarea" data-field="description" maxlength="200">' + esc(draft.description) + '</textarea></label></div></section>' +
-      '<section class="olf-section olf-store-product-config"><div class="olf-section-head"><div><h3 id="selectedProductHeading" tabindex="-1">参与商品</h3></div><div class="olf-line-limit-head-actions"><button type="button" class="olf-button olf-button--small olf-button--primary" data-product-add-open>添加商品</button><button type="button" class="olf-button olf-button--small olf-selected-preview-entry" data-selected-preview-open' + (previewCount ? '' : ' disabled') + '>查看已选商品（' + previewCount + '）</button></div></div></section>';
+      '<section class="olf-section olf-store-product-config"><div class="olf-section-head olf-section-head--stack"><h3 id="selectedProductHeading" tabindex="-1">参与商品</h3><div class="olf-line-limit-head-actions"><button type="button" class="olf-button olf-button--small olf-button--primary" data-product-add-open>添加商品</button><button type="button" class="olf-button olf-button--small olf-selected-preview-entry" data-selected-preview-open' + (previewCount ? '' : ' disabled') + '>查看已选商品（' + previewCount + '）</button></div></div></section>';
   }
 
   function renderProductAddDialog(draft) {
@@ -2154,11 +2170,16 @@
     var lineOptions = '<option value="">全部产线</option>' + configuredLimitPreviewLineOptions(data.rows, state.storeId).map(function (line) {
       return '<option value="' + esc(line.id) + '"' + (state.lineId === line.id ? ' selected' : '') + '>' + esc(line.name) + '</option>';
     }).join("");
+    var statusOptions = '<option value=""' + (!state.configStatus ? ' selected' : '') + '>全部状态</option>' +
+      '<option value="configured"' + (state.configStatus === "configured" ? ' selected' : '') + '>已配置</option>' +
+      '<option value="unconfigured"' + (state.configStatus === "unconfigured" ? ' selected' : '') + '>未配置</option>';
     var rowsHtml = data.pageRows.map(function (row) {
-      return '<tr data-configured-limit-preview-row="' + esc(row.rowId) + '"><td>' + esc(row.storeName) + '</td><td>' + esc(row.partyLabel) + '</td><td>' + esc(row.roundLabel) + '</td><td>' + esc(row.lineLabel) + '</td><td><strong>' + esc(row.menuName) + '</strong>' + (row.menuDetail ? '<div class="olf-hint">' + esc(row.menuDetail) + '</div>' : '') + '</td><td>' + esc(formatConfiguredLimitValue(row.value)) + '</td></tr>';
+      var valueText = formatConfiguredLimitValue(row.value, row.configured);
+      return '<tr class="' + (row.configured ? '' : 'is-unconfigured') + '" data-configured-limit-preview-row="' + esc(row.rowId) + '"><td>' + esc(row.storeName) + '</td><td>' + esc(row.partyLabel) + '</td><td>' + esc(row.roundLabel) + '</td><td>' + esc(row.lineLabel) + '</td><td><strong>' + esc(row.menuName) + '</strong>' + (row.menuDetail ? '<div class="olf-hint">' + esc(row.menuDetail) + '</div>' : '') + '</td><td class="olf-configured-limit-preview-value' + (row.configured ? '' : ' is-empty') + '">' + esc(valueText) + '</td></tr>';
     }).join("");
-    var emptyHtml = data.filtered.length ? "" : '<div class="olf-empty olf-configured-limit-preview-empty"><strong>暂无已配置规则</strong><span>当前筛选条件下暂无已配置规则，请调整门店、场景或搜索条件。</span></div>';
-    overlay.innerHTML = '<section class="olf-selected-preview-dialog olf-configured-limit-preview-dialog" role="dialog" aria-modal="true" aria-labelledby="configuredLimitPreviewTitle"><div class="olf-selected-preview-head"><h3 id="configuredLimitPreviewTitle" tabindex="-1">查看已配置规则（' + data.rows.length + '）</h3><button type="button" class="olf-icon-button" data-configured-limit-preview-close aria-label="关闭已配置规则预览">' + icon("close", 19) + '</button></div><div class="olf-selected-preview-toolbar"><div class="olf-selected-preview-filters olf-configured-limit-preview-filters' + (draft.period === "multi_round" ? ' is-multi-round' : '') + '"><label class="olf-field"><span class="olf-label">门店</span><select class="olf-select" data-configured-limit-preview-store>' + storeOptions + '</select></label><label class="olf-field"><span class="olf-label">人数场景</span><select class="olf-select" data-configured-limit-preview-party>' + partyOptions + '</select></label>' + roundFilterHtml + '<label class="olf-field"><span class="olf-label">产线</span><select class="olf-select" data-configured-limit-preview-line>' + lineOptions + '</select></label><label class="olf-field olf-configured-limit-preview-search"><span class="olf-label">菜单搜索</span><input class="olf-input" type="search" value="' + esc(state.query) + '" placeholder="搜索菜品/分类名称" autocomplete="off" data-configured-limit-preview-search /></label></div></div><div class="olf-selected-preview-table-wrap"><table class="olf-table"><thead><tr><th>配置门店</th><th>人数场景</th><th>轮次</th><th>产线</th><th>菜单</th><th>限购数量</th></tr></thead><tbody>' + rowsHtml + '</tbody></table>' + emptyHtml + '</div><div class="olf-selected-preview-pagination"><div></div><div class="olf-actions"><button type="button" class="olf-button olf-button--small" data-configured-limit-preview-page="previous"' + (state.page <= 1 ? ' disabled' : '') + '>上一页</button><span>第 ' + state.page + ' / ' + data.totalPages + ' 页</span><button type="button" class="olf-button olf-button--small" data-configured-limit-preview-page="next"' + (state.page >= data.totalPages ? ' disabled' : '') + '>下一页</button><label class="olf-selected-preview-page-size"><span class="olf-sr-only">每页条数</span><select class="olf-select" data-configured-limit-preview-page-size><option value="10"' + (state.pageSize === 10 ? ' selected' : '') + '>10 条/页</option><option value="20"' + (state.pageSize === 20 ? ' selected' : '') + '>20 条/页</option><option value="50"' + (state.pageSize === 50 ? ' selected' : '') + '>50 条/页</option></select></label></div></div></section>';
+    var emptyHtml = data.filtered.length ? "" : '<div class="olf-empty olf-configured-limit-preview-empty"><strong>暂无规则</strong><span>当前筛选条件下暂无商品规则，请调整门店、场景、配置状态或搜索条件。</span></div>';
+    var countLabel = formatConfiguredLimitPreviewCount(data.rows);
+    overlay.innerHTML = '<section class="olf-selected-preview-dialog olf-configured-limit-preview-dialog" role="dialog" aria-modal="true" aria-labelledby="configuredLimitPreviewTitle"><div class="olf-selected-preview-head"><h3 id="configuredLimitPreviewTitle" tabindex="-1">查看已配置规则（' + countLabel + '）</h3><button type="button" class="olf-icon-button" data-configured-limit-preview-close aria-label="关闭已配置规则预览">' + icon("close", 19) + '</button></div><div class="olf-selected-preview-toolbar"><div class="olf-selected-preview-filters olf-configured-limit-preview-filters' + (draft.period === "multi_round" ? ' is-multi-round' : '') + '"><label class="olf-field"><span class="olf-label">门店</span><select class="olf-select" data-configured-limit-preview-store>' + storeOptions + '</select></label><label class="olf-field"><span class="olf-label">人数场景</span><select class="olf-select" data-configured-limit-preview-party>' + partyOptions + '</select></label>' + roundFilterHtml + '<label class="olf-field"><span class="olf-label">产线</span><select class="olf-select" data-configured-limit-preview-line>' + lineOptions + '</select></label><label class="olf-field"><span class="olf-label">配置状态</span><select class="olf-select" data-configured-limit-preview-status>' + statusOptions + '</select></label><label class="olf-field olf-configured-limit-preview-search"><span class="olf-label">菜单搜索</span><input class="olf-input" type="search" value="' + esc(state.query) + '" placeholder="搜索菜品/分类名称" autocomplete="off" data-configured-limit-preview-search /></label></div></div><div class="olf-selected-preview-table-wrap"><table class="olf-table"><thead><tr><th>配置门店</th><th>人数场景</th><th>轮次</th><th>产线</th><th>菜单</th><th>限购数量</th></tr></thead><tbody>' + rowsHtml + '</tbody></table>' + emptyHtml + '</div><div class="olf-selected-preview-pagination"><div></div><div class="olf-actions"><button type="button" class="olf-button olf-button--small" data-configured-limit-preview-page="previous"' + (state.page <= 1 ? ' disabled' : '') + '>上一页</button><span>第 ' + state.page + ' / ' + data.totalPages + ' 页</span><button type="button" class="olf-button olf-button--small" data-configured-limit-preview-page="next"' + (state.page >= data.totalPages ? ' disabled' : '') + '>下一页</button><label class="olf-selected-preview-page-size"><span class="olf-sr-only">每页条数</span><select class="olf-select" data-configured-limit-preview-page-size><option value="10"' + (state.pageSize === 10 ? ' selected' : '') + '>10 条/页</option><option value="20"' + (state.pageSize === 20 ? ' selected' : '') + '>20 条/页</option><option value="50"' + (state.pageSize === 50 ? ' selected' : '') + '>50 条/页</option></select></label></div></div></section>';
     overlay.classList.add("is-open");
     if (restoreSearchFocus) {
       var searchInput = overlay.querySelector("[data-configured-limit-preview-search]");
@@ -2512,7 +2533,9 @@
       batchSelected.length,
       batchTargets.length
     );
-    var previewCount = configuredLimitPreviewRows(draft).length;
+    var previewRows = configuredLimitPreviewRows(draft);
+    var previewCount = previewRows.length;
+    var previewCountLabel = formatConfiguredLimitPreviewCount(previewRows);
     var sceneToggle = hasConfiguredStores ? renderSceneDisplayToggle(draft) : "";
     var sceneTabsHtml = "";
     if (hasConfiguredStores && !tileMode) {
@@ -2541,7 +2564,7 @@
     return '<div class="olf-content-head"><h2 tabindex="-1">设置限购数量</h2></div>' +
       '<section class="olf-section"><label class="olf-field olf-limit-store-select"><span class="olf-label olf-required">配置门店</span><select class="olf-select" data-limit-store-select' + (hasConfiguredStores ? '' : ' disabled') + '>' + storeOptions + '</select></label></section>' +
       (hasConfiguredStores ?
-      '<section class="olf-section"><div class="olf-section-head"><div><h3 id="configuredLimitHeading" tabindex="-1">产线配置</h3><div class="olf-help">当前门店：' + esc((stores.find(function (item) { return item.id === draft.activeStoreId; }) || {}).name || draft.activeStoreId) + '</div></div><div class="olf-line-limit-head-actions"><button type="button" class="olf-button olf-button--small" data-line-limit-copy-open' + (canOpenLineLimitCopy(draft, config) ? '' : ' disabled title="需至少两条产线且当前产线已配置数量"') + '>复制到其他产线</button><button type="button" class="olf-button olf-button--small olf-configured-limit-preview-entry" data-configured-limit-preview-open' + (previewCount ? '' : ' disabled') + '>查看已配置规则（' + previewCount + '）</button></div></div><div class="olf-tabs">' + lineTabs + '</div></section>' +
+      '<section class="olf-section"><div class="olf-section-head"><div><h3 id="configuredLimitHeading" tabindex="-1">产线配置</h3><div class="olf-help">当前门店：' + esc((stores.find(function (item) { return item.id === draft.activeStoreId; }) || {}).name || draft.activeStoreId) + '</div></div><div class="olf-line-limit-head-actions"><button type="button" class="olf-button olf-button--small" data-line-limit-copy-open' + (canOpenLineLimitCopy(draft, config) ? '' : ' disabled title="需至少两条产线且当前产线已配置数量"') + '>复制到其他产线</button><button type="button" class="olf-button olf-button--small olf-configured-limit-preview-entry" data-configured-limit-preview-open' + (previewCount ? '' : ' disabled') + '>查看已配置规则（' + previewCountLabel + '）</button></div></div><div class="olf-tabs">' + lineTabs + '</div></section>' +
       sceneToggle +
       (tileMode ? matrixSection : sceneTabsHtml + matrixSection) +
       '<div class="olf-summary olf-summary--primary"><strong>门店独立配置：</strong>切换门店后，商品范围和数量矩阵均独立保存，不会覆盖其他门店。</div>' :
@@ -3179,6 +3202,14 @@
     if (target.hasAttribute("data-configured-limit-preview-line")) {
       if (event.type !== "change") return;
       editorState.configuredLimitPreview.lineId = target.value;
+      editorState.configuredLimitPreview.page = 1;
+      renderConfiguredLimitPreviewDialog(draft);
+      return;
+    }
+    if (target.hasAttribute("data-configured-limit-preview-status")) {
+      if (event.type !== "change") return;
+      var statusValue = target.value;
+      editorState.configuredLimitPreview.configStatus = statusValue === "configured" || statusValue === "unconfigured" ? statusValue : "";
       editorState.configuredLimitPreview.page = 1;
       renderConfiguredLimitPreviewDialog(draft);
       return;
