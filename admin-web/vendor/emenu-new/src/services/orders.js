@@ -27,6 +27,7 @@ import { CRM_INTEGRATION_REWARD_KIND } from '@/utils/crmIntegrationRewards'
 import { getApplicableCrmIntegrationDiscountOrderReward } from '@/utils/crmIntegrationDiscountMapping'
 import { getI18n } from 'react-i18next'
 import { getItemSizeNameByLanguage } from '@/utils/itemSizeName'
+import { extractSeasoningSnapshotsFromPosOptions } from '@/utils/seasoningGuest'
 
 function getCrmIntegrationOrderDiscountAmount(discountList) {
   const actualDiscountList = Array.isArray(discountList)
@@ -353,6 +354,13 @@ function transformItem({
       }
       options.push([otherOption])
     })
+
+    const seasoningSnapshots = extractSeasoningSnapshotsFromPosOptions(
+      item.options
+    )
+    if (seasoningSnapshots.length) {
+      cartItem.seasoningSnapshots = seasoningSnapshots
+    }
 
     if (menuItem?.comboList) {
       return {

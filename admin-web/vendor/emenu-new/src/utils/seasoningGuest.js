@@ -55,6 +55,83 @@ export function createOrderSeasoningSnapshot(choice) {
   };
 }
 
+export function formatSeasoningSnapshotLabel(snap) {
+  if (!snap) return "";
+  const actionLabel = SEASONING_ACTION_LABELS[snap.action] || snap.action || "";
+  return [actionLabel, snap.optionName || snap.optionCode].filter(Boolean).join(" ");
+}
+
+const SEASONING_NOTE_PREFIX = new RegExp(
+  `^(${Object.values(SEASONING_ACTION_LABELS).join("|")})(?:\\s+|$)`,
+);
+
+export function parseSeasoningNoteLabel(text) {
+  const raw = String(text || "").trim();
+  if (!raw) return null;
+  const match = raw.match(SEASONING_NOTE_PREFIX);
+  if (!match) return null;
+  const actionLabel = match[1];
+  const action = Object.keys(SEASONING_ACTION_LABELS).find(
+    (key) => SEASONING_ACTION_LABELS[key] === actionLabel,
+  );
+  const optionName = raw.slice(match[0].length).trim();
+  return {
+    action,
+    optionName: optionName || actionLabel,
+  };
+}
+
+function seasoningNoteText(option) {
+  return (
+    option?.label ||
+    option?.name ||
+    option?.optionName ||
+    option?.displayText ||
+    ""
+  );
+}
+
+export function isSeasoningNoteOption(option) {
+  if (!option || option.qtyVoid) return false;
+  if (
+    option.optionType &&
+    option.optionType !== "NOTE" &&
+    !option.isCustomOption
+  ) {
+    return false;
+  }
+  return !!parseSeasoningNoteLabel(seasoningNoteText(option));
+}
+
+export function getSeasoningLabelsFromOptions(options) {
+  const labels = [];
+  (options || []).forEach((group) => {
+    const list = Array.isArray(group) ? group : [group];
+    list.forEach((option) => {
+      if (!isSeasoningNoteOption(option)) return;
+      const text = String(seasoningNoteText(option)).trim();
+      if (text) labels.push(text);
+    });
+  });
+  return labels;
+}
+
+export function extractSeasoningSnapshotsFromPosOptions(posOptions) {
+  return (posOptions || [])
+    .filter((option) => option && option.optionType === "NOTE" && !option.qtyVoid)
+    .map((option) => {
+      const parsed = parseSeasoningNoteLabel(option.optionName || option.displayText);
+      if (!parsed) return null;
+      return {
+        action: parsed.action,
+        optionName: parsed.optionName,
+        optionCode: parsed.optionName,
+        transactionPrice: Number(option.price) || 0,
+      };
+    })
+    .filter(Boolean);
+}
+
 export function buildOrderSeasoningSnapshots(selections, groups) {
   const map = new Map();
   for (const g of groups) for (const c of g.choices) map.set(`${c.action}::${c.optionId}`, c);
