@@ -5,6 +5,10 @@ import {
   getCommonItemNameByLanguage,
   getItemSizeNameByLanguage,
 } from '@/utils/itemSizeName'
+import {
+  formatSeasoningSnapshotLabel,
+  isSeasoningNoteOption,
+} from '@/utils/seasoningGuest'
 
 const useTranslateOptions = () => {
   const { i18n } = useTranslation()
@@ -37,7 +41,8 @@ const useTranslateOptions = () => {
     }
   }
 
-  const renderItemOption = (dish, ignoreSize = false) => {
+  const renderItemOption = (dish, ignoreSize = false, options = {}) => {
+    const includeSeasoning = options.includeSeasoning !== false
     const sizeStr = ignoreSize
       ? undefined
       : getItemSizeName(dish.priceItem?.sizeId) ||
@@ -47,7 +52,7 @@ const useTranslateOptions = () => {
     let optionsStrList = []
     dish.options?.forEach((s) =>
       s?.forEach((o) => {
-        if (o.qtyVoid) {
+        if (o.qtyVoid || isSeasoningNoteOption(o)) {
           return
         }
         let modifierActionStr = ''
@@ -99,20 +104,10 @@ const useTranslateOptions = () => {
       sizeStr,
       ...optionsStrList,
       dish.instructions,
-      ...(Array.isArray(dish.seasoningSnapshots)
-        ? dish.seasoningSnapshots.map((snap) => {
-            if (!snap) return null
-            const actionLabels = {
-              ADD: '添加',
-              LESS: '少放',
-              MORE: '多放',
-              NONE: '不要',
-            }
-            const actionLabel = actionLabels[snap.action] || snap.action || ''
-            return [actionLabel, snap.optionName || snap.optionCode]
-              .filter(Boolean)
-              .join(' ')
-          })
+      ...(includeSeasoning && Array.isArray(dish.seasoningSnapshots)
+        ? dish.seasoningSnapshots.map((snap) =>
+            formatSeasoningSnapshotLabel(snap)
+          )
         : []),
     ].filter(Boolean)
   }

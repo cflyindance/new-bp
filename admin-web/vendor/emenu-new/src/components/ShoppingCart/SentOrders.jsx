@@ -25,6 +25,7 @@ import useCheckOrderBenefit from '@/hooks/useCheckOrderBenefit'
 import useCountOrderInfo from '@/hooks/useCountOrderInfo'
 import RED_VOUCHER from '@/assets/image/red_voucher.png'
 import useTranslateOptions from '@/hooks/useTranslateOptions'
+import SeasoningTags from './SeasoningTags'
 import dayjs from 'dayjs'
 import useSystemConfig from '@/hooks/useSystemConfig'
 import { getDiscountedUnitPrice } from '@/utils/cartItemDiscount'
@@ -305,6 +306,9 @@ function SentOrders() {
       redeemPoints > 0 &&
       (e.price === 0 || e.price === e.discount || discountedUnitPrice === 0)
     const isShowPrice = isDisplayZeroPrice ? true : (e.realPrice ?? e.price) > 0
+    const optionText = renderItemOption(e, false, {
+      includeSeasoning: false,
+    })?.join('\n')
     return isCombo ? (
       <Paper key={e.key ?? e.id} className={classes.cartItem}>
         <Box padding={1}>
@@ -322,9 +326,12 @@ function SentOrders() {
               color="textSecondary"
               className={classes.cartItemOption}
             >
-              {renderItemOption(e)?.join('\n')}
+              {renderItemOption(e, false, { includeSeasoning: false })?.join(
+                '\n'
+              )}
             </Typography>
           )}
+          <SeasoningTags snapshots={e.seasoningSnapshots} dish={e} />
           <Box marginTop={1} overflow="hidden">
             {e?.comboCart?.map((c) => {
               return (
@@ -350,8 +357,11 @@ function SentOrders() {
                       color="textSecondary"
                       className={classes.cartItemOption}
                     >
-                      {renderItemOption(c)?.join('\n')}
+                      {renderItemOption(c, false, {
+                        includeSeasoning: false,
+                      })?.join('\n')}
                     </Typography>
+                    <SeasoningTags snapshots={c.seasoningSnapshots} dish={c} />
                   </Box>
                 </Box>
               )
@@ -447,13 +457,16 @@ function SentOrders() {
             >
               {t(e.id, { defaultValue: e.name, ns: 'dish' })}
             </Typography>
-            <Typography
-              variant="body2"
-              color="textSecondary"
-              className={classes.cartItemOption}
-            >
-              {renderItemOption(e)?.join('\n')}
-            </Typography>
+            {optionText ? (
+              <Typography
+                variant="body2"
+                color="textSecondary"
+                className={classes.cartItemOption}
+              >
+                {optionText}
+              </Typography>
+            ) : null}
+            <SeasoningTags snapshots={e.seasoningSnapshots} dish={e} />
             <Box
               display="flex"
               justifyContent="space-between"
