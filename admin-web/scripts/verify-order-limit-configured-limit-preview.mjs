@@ -42,7 +42,6 @@ assert.match(
   "非多轮时轮次列应展示统计周期文案（每轮/与轮次无关）",
 );
 assert.match(source, /function periodLabel\(value\)[\s\S]*?每轮[\s\S]*?与轮次无关/, "periodLabel 应覆盖每轮与与轮次无关");
-
 assert.match(source, /data-configured-limit-preview-open/, "应提供打开预览入口标记");
 assert.match(source, /data-configured-limit-preview-overlay/, "应提供独立预览遮罩");
 assert.match(source, /data-configured-limit-preview-store/, "应提供门店筛选");
@@ -68,7 +67,7 @@ assert.match(source, /function openConfiguredLimitPreview\(\)/, "应提供打开
 assert.match(source, /function closeConfiguredLimitPreview\(\)/, "应提供关闭预览函数");
 assert.match(
   source,
-  /function goToEditorStep[\s\S]*?currentStep === 4[\s\S]*?closeConfiguredLimitPreview\(\)/,
+  /function goToEditorStep[\s\S]*?currentStep === 3[\s\S]*?closeConfiguredLimitPreview\(\)/,
   "离开限购数量步骤应关闭预览",
 );
 const escapeHandler = source.match(/event\.key !== "Escape"[\s\S]*?\n\s*\}\);/)?.[0] ?? "";
