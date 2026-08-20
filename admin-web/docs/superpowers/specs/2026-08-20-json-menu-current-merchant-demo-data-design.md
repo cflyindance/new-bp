@@ -35,7 +35,7 @@
 
 ### 一级菜单
 
-- `NavModule.id` → `MenuNode.id` 与 `key`。
+- `NavModule.id` 作为一级节点的源身份段，最终 `MenuNode.id` 与 `key` 统一使用下述全层级唯一算法生成。
 - `title`、`titleEn` → `name` 与 `i18nInfo`。
 - 图标标识映射到现有 `icon` 字段。
 - 有子项时作为目录，只输出 `children`，不输出页面类型、路径或 URL。
@@ -46,7 +46,8 @@
 - 可点击导航项使用真实 `path`，输出 `type: "inner"`。
 - 有下级目录的导航项作为目录，不输出页面字段。若该项自身 `path` 与首个子项路径相同，视为默认入口别名，不重复生成；若自身路径与所有子项均不同，则在其下生成“概览”叶子保留该路径。
 - 菜单路由编辑器最多支持三级。商家后台实际结构超过三级时，将更深层的可点击项压平到三级，并使用“父分组 · 子项”的名称保留归属关系。
-- 所有节点生成稳定且唯一的 `id` 和 `key`。基础命名空间由完整祖先 ID 链和当前源 ID 组成；没有源 ID 的子项使用规范化完整路由作为当前段。`key` 将命名空间规范化为小写字母、数字和下划线；发生规范化碰撞时追加原始命名空间 FNV-1a 的固定 8 位十六进制后缀。`id` 使用 `demo-` 加相同命名空间规则。重复路径只去重路由，不允许覆盖不同命名空间节点。
+- 所有层级使用同一稳定唯一算法。原始命名空间由完整祖先源身份段与当前源身份段组成；有源 ID 时使用 `id:<源ID>`，没有源 ID 时使用 `path:<完整路由>`。同一父级出现完全相同身份段时，按源数组顺序追加 `occurrence:<序号>`。
+- 生成值由“可读规范化前缀 + 原始命名空间 UTF-8 Base64URL 无损编码”组成：`id` 以 `demo-` 开头，`key` 以 `demo_` 开头。Base64URL 部分无损参与唯一性，不使用可能碰撞的截断哈希。重复路径只对路由覆盖集合去重，不允许覆盖不同命名空间节点。
 
 ### iframe 示例
 
@@ -60,15 +61,15 @@
 
 在以下代表性叶子节点中写入 `accessControl: { bool: true, serviceName, permission: { rule: "some", value } }`：
 
-- 商品列表：`m_master` + `brand_item_menu_manage`。
-- 品牌菜单：`m_master` + `merchant_item_menu_manage`。
-- 门店菜单：`m_master` + `store_item_menu_manage`。
-- 促销活动：`promotion` + `promotion_campaign_view_access`、`promotion_campaign_edit_access`。
-- 抽奖活动：`promotion` + `promotion_lottery_manage_access`。
-- 营业汇总：`cloud_report_service` + `report_revenue_view_access`。
-- 销售订单：`cloud_report_service` + `report_sales_view_access`。
-- 商品排名：`cloud_report_service` + `report_product_view_access`。
-- 打印装修：`print` + `print_template_view_access`、`print_template_edit_access`。
+- `/brand-products/products`：`m_master` + `permission.value: ["brand_item_menu_manage"]`。
+- `/brand-menu/menus`：`m_master` + `permission.value: ["merchant_item_menu_manage"]`。
+- `/menu/store-menu`：`m_master` + `permission.value: ["store_item_menu_manage"]`。
+- `/promotions/campaigns`：`promotion` + `permission.value: ["promotion_campaign_view_access", "promotion_campaign_edit_access"]`。
+- `/promotions/lottery`：`promotion` + `permission.value: ["promotion_lottery_manage_access"]`。
+- `/reports/revenue`：`cloud_report_service` + `permission.value: ["report_revenue_view_access"]`。
+- `/reports/sales/orders`：`cloud_report_service` + `permission.value: ["report_sales_view_access"]`。
+- `/reports/products/ranking`：`cloud_report_service` + `permission.value: ["report_product_view_access"]`。
+- `/print-templates/decoration`：`print` + `permission.value: ["print_template_view_access", "print_template_edit_access"]`。
 
 同一服务在多个节点出现不同权限，用于验证编辑器能从同节点共现关系归纳服务下的权限集合。不得增加服务权限目录字段。
 
@@ -85,7 +86,7 @@
 - 每个模块的源可点击路由集合与生成后的叶子路由集合等价，包含专用常量、`sidebarChildren`、默认入口别名和三级压平结果。
 - 菜单深度不超过三级。
 - 所有节点 ID、Key 在示例内唯一。
-- 覆盖跨模块重复源 ID、同名子项、规范化后缀碰撞和重复路径，验证确定性碰撞后缀不会覆盖节点。
+- 覆盖跨模块重复源 ID、同名子项、同父级重复身份段、相同可读规范化前缀和重复路径，验证无损命名空间编码及 occurrence 序号不会覆盖节点。
 - 所有项目内页面路径以 `/` 开头。
 - iframe 节点同时具有有效 `path` 与固定 HTTPS 演示 URL；HTTP、其他来源和格式错误 URL 均不进入默认示例。
 - 服务与权限示例只使用 `accessControl.serviceName`、`bool` 和 `permission`。
