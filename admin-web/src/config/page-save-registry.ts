@@ -4,24 +4,25 @@
 import { getPageChangeCount, isPageDirty } from "./deployment-change-buffer";
 import { resolvePageSaveKey } from "./page-settings-draft";
 
-type PageSaveHandler = () => boolean;
+type PageSaveHandler = () => boolean | Promise<boolean>;
+type PageDirtyProbe = () => boolean;
 
 const preCommitHandlers = new Map<string, PageSaveHandler>();
-const dirtyProbes = new Map<string, PageSaveHandler>();
+const dirtyProbes = new Map<string, PageDirtyProbe>();
 
 export function registerPageSavePreCommit(pageKey: string, handler: PageSaveHandler): void {
   preCommitHandlers.set(resolvePageSaveKey(pageKey), handler);
 }
 
-export function registerPageSaveDirtyProbe(pageKey: string, probe: PageSaveHandler): void {
+export function registerPageSaveDirtyProbe(pageKey: string, probe: PageDirtyProbe): void {
   dirtyProbes.set(resolvePageSaveKey(pageKey), probe);
 }
 
-export function runPageSavePreCommit(pageKey: string): boolean {
+export async function runPageSavePreCommit(pageKey: string): Promise<boolean> {
   const key = resolvePageSaveKey(pageKey);
   const handler = preCommitHandlers.get(key);
   if (!handler) return true;
-  return handler() !== false;
+  return (await handler()) !== false;
 }
 
 export function isPageSavePending(pageKey: string): boolean {
