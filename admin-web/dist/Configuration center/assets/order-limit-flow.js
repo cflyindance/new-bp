@@ -2954,9 +2954,20 @@
       '<label class="olf-field olf-configured-limit-preview-search"><span class="olf-label">菜单搜索</span><input class="olf-input" type="search" value="' + esc(state.query) + '" placeholder="搜索菜品/分类名称" autocomplete="off" data-limit-rule-search /></label>' +
       '<button type="button" class="olf-button olf-button--small olf-limit-rule-filter-reset" data-limit-rule-filter-reset>重置筛选</button></div>' +
       '<div class="olf-summary olf-batch-panel"><div class="olf-batch-toolbar"><strong>已选 ' + selectedCount + ' 条规则</strong><button type="button" class="olf-button olf-button--small olf-button--danger" data-limit-rule-batch-delete' + (selectedCount ? '' : ' disabled') + '>批量删除</button><span class="olf-batch-spacer"></span><input class="olf-input olf-limit-input" type="number" min="0" placeholder="数量" data-limit-rule-batch-value /><button type="button" class="olf-button olf-button--small" data-limit-rule-batch-apply' + (selectedCount ? '' : ' disabled') + '>应用数量</button></div></div>' +
-      '<div class="olf-table-wrap"><table class="olf-table olf-limit-rule-table"><thead><tr><th class="olf-batch-select-cell"><span class="olf-sr-only">选择</span></th><th>配置门店</th><th>人数场景</th><th>轮次</th><th>产线</th><th>菜单</th><th>限购数量</th><th>操作</th></tr></thead><tbody>' + rowsHtml + '</tbody></table>' +
+      '<div class="olf-table-wrap"><table class="olf-table olf-limit-rule-table"><thead><tr><th class="olf-batch-select-cell"><label class="olf-batch-check"><input type="checkbox" data-limit-rule-select-all aria-label="全选当前页商品规则"' + (data.pageRows.length ? '' : ' disabled') + ' /><span class="olf-sr-only">全选当前页商品规则</span></label></th><th>配置门店</th><th>人数场景</th><th>轮次</th><th>产线</th><th>菜单</th><th>限购数量</th><th>操作</th></tr></thead><tbody>' + rowsHtml + '</tbody></table>' +
       (data.filtered.length ? '' : '<div class="olf-empty olf-configured-limit-preview-empty"><strong>暂无商品规则</strong><span>当前筛选条件下暂无规则，请调整筛选或搜索条件。</span></div>') + '</div>' +
       '<div class="olf-selected-preview-pagination"><span>共 ' + data.filtered.length + ' 条规则</span><div class="olf-actions"><button type="button" class="olf-button olf-button--small" data-limit-rule-page="previous"' + (state.page <= 1 ? ' disabled' : '') + '>上一页</button><span>第 ' + state.page + ' / ' + data.totalPages + ' 页</span><button type="button" class="olf-button olf-button--small" data-limit-rule-page="next"' + (state.page >= data.totalPages ? ' disabled' : '') + '>下一页</button><label class="olf-selected-preview-page-size"><span class="olf-sr-only">每页条数</span><select class="olf-select" data-limit-rule-page-size><option value="10"' + (state.pageSize === 10 ? ' selected' : '') + '>10 条/页</option><option value="20"' + (state.pageSize === 20 ? ' selected' : '') + '>20 条/页</option><option value="50"' + (state.pageSize === 50 ? ' selected' : '') + '>50 条/页</option><option value="100"' + (state.pageSize === 100 ? ' selected' : '') + '>100 条/页</option></select></label></div></div></section>';
+  }
+
+  function syncLimitRuleSelectAllState() {
+    var selectAll = root.querySelector("[data-limit-rule-select-all]");
+    if (!selectAll) return;
+    var rowChecks = Array.prototype.slice.call(root.querySelectorAll("[data-limit-rule-select]"));
+    var checkedCount = rowChecks.filter(function (checkbox) { return checkbox.checked; }).length;
+    selectAll.disabled = rowChecks.length === 0;
+    selectAll.checked = rowChecks.length > 0 && checkedCount === rowChecks.length;
+    selectAll.indeterminate = checkedCount > 0 && checkedCount < rowChecks.length;
+    selectAll.setAttribute("aria-checked", selectAll.indeterminate ? "mixed" : (selectAll.checked ? "true" : "false"));
   }
 
   function renderStepFour(draft) {
@@ -3111,6 +3122,7 @@
     var scrollY = window.scrollY || window.pageYOffset || 0;
     document.getElementById("stepNav").innerHTML = renderEditorNav();
     document.getElementById("editorContent").innerHTML = renderEditorContent();
+    syncLimitRuleSelectAllState();
     if (MenuPicker) {
       var pickerElement = document.querySelector("[data-brand-menu-structure-picker]");
       if (pickerElement) {
@@ -3696,6 +3708,18 @@
       editorState.limitRuleList.pageSize = [10, 20, 50, 100].indexOf(limitRulePageSize) >= 0 ? limitRulePageSize : 20;
       editorState.limitRuleList.page = 1;
       editorState.limitRuleList.selectedRowIds = [];
+      renderEditor();
+      return;
+    }
+    if (target.hasAttribute("data-limit-rule-select-all")) {
+      if (event.type !== "change") return;
+      var currentPageData = normalizeLimitRuleListState(draft);
+      var currentPageIds = currentPageData.pageRows.map(function (row) { return row.rowId; });
+      var nextRuleSelections = editorState.limitRuleList.selectedRowIds.filter(function (rowId) {
+        return currentPageIds.indexOf(rowId) < 0;
+      });
+      if (target.checked) nextRuleSelections = nextRuleSelections.concat(currentPageIds);
+      editorState.limitRuleList.selectedRowIds = nextRuleSelections;
       renderEditor();
       return;
     }
