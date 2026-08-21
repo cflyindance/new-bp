@@ -1,6 +1,7 @@
 import { serializeMenuDocument } from "./json-menu-document-serializer";
-import type { MenuDocument, MenuNode } from "./json-menu-document-domain";
+import type { MenuDocument } from "./json-menu-document-domain";
 import { resolveMenuDocumentRepositoryMode } from "./json-menu-document-repository-mode";
+import { buildCurrentMerchantMenuDemoNodes } from "./json-menu-demo-data";
 
 export interface MenuDocumentRepository {
   readPublished(): Promise<MenuDocument>;
@@ -60,27 +61,14 @@ export class HttpMenuDocumentRepository implements MenuDocumentRepository {
   }
 }
 
-const DEMO_PUBLISHED_KEY = "menusifu:json-menu-editor:published-v2";
-const DEMO_DRAFT_KEY = "menusifu:json-menu-editor:draft-v2";
-
-const demoNodes: MenuNode[] = [
-  { id: "1", name: "Home", key: "home", path: "/home", icon: "HomeOutlined", i18nKey: "home", i18nInfo: { "zh-CN": "首页", "zh-HK": "首頁", "en-US": "Home" }, type: "inner" },
-  { id: "2", name: "Operations", key: "operations", icon: "AppstoreOutlined", i18nInfo: { "zh-CN": "运营中心", "zh-HK": "營運中心", "en-US": "Operations" }, children: [
-    { id: "2-1", name: "Dashboard", key: "operations_dashboard", path: "/operations/dashboard", icon: "AreaChartOutlined", i18nInfo: { "zh-CN": "经营看板", "zh-HK": "經營看板", "en-US": "Dashboard" }, type: "inner" },
-    { id: "2-2", name: "Partner Center", key: "partner_center", path: "/operations/partner", icon: "GlobalOutlined", i18nInfo: { "zh-CN": "合作方中心", "zh-HK": "合作方中心", "en-US": "Partner Center" }, type: "iframe", url: "https://example.com/partner" },
-  ] },
-  { id: "3", name: "Products", key: "products", icon: "ShoppingOutlined", i18nInfo: { "zh-CN": "商品中心", "zh-HK": "商品中心", "en-US": "Products" }, children: [
-    { id: "3-1", name: "Catalog", key: "catalog", icon: "BarsOutlined", i18nInfo: { "zh-CN": "商品目录", "zh-HK": "商品目錄", "en-US": "Catalog" }, children: [
-      { id: "3-1-1", name: "Product List", key: "product_list", path: "/products/list", i18nInfo: { "zh-CN": "商品列表", "zh-HK": "商品列表", "en-US": "Product List" }, type: "inner" },
-    ] },
-  ] },
-];
+export const DEMO_PUBLISHED_KEY = "menusifu:json-menu-editor:published-v3";
+export const DEMO_DRAFT_KEY = "menusifu:json-menu-editor:draft-v3";
 
 function defaultDemoDocument(): MenuDocument {
   return {
     _id: "67d2d3412011b635378d3efc",
     name: "B Platform Menu",
-    menu: structuredClone(demoNodes),
+    menu: buildCurrentMerchantMenuDemoNodes(),
     updatedBy: { userId: "demo", timestamp: new Date().toISOString(), firstname: "Demo", lastname: null },
     createdDate: Date.now(),
   };

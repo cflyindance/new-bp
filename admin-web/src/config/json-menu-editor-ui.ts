@@ -1,4 +1,6 @@
 import { getAuthenticatedEmail } from "../auth/login";
+import { showAppToast } from "../ui/app-toast";
+import { openConfirmDialog } from "../ui/app-confirm-dialog";
 import {
   createMenuObjectId,
   getMenuNodeAtPath,
@@ -10,12 +12,14 @@ import {
   type MenuEditorUser,
   type MenuNode,
   type MenuNodePath,
+  type MenuPermissionRule,
   type MenuValidationIssue,
 } from "./json-menu-document-domain";
 import { jsonMenuEditorStore } from "./json-menu-editor-store";
-import { renderJsonMenuNodeDialog, renderJsonMenuNodeSummary, type MenuNodeDialogState, type MenuPageMode } from "./json-menu-node-form-ui";
+import { renderJsonMenuNodeFormPanel, type MenuNodeDialogState, type MenuPageMode } from "./json-menu-node-form-ui";
 import { renderJsonMenuFullscreenPreview } from "./json-menu-preview-ui";
 import { decodeMenuNodePath, encodeMenuNodePath, renderJsonMenuTree } from "./json-menu-tree-ui";
+import { rerenderPreservingJsonMenuTreeScroll } from "./json-menu-editor-scroll";
 
 function escapeHtml(value: string): string { return value.replace(/[&<>\"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[char]!); }
 function currentUser(): MenuEditorUser {
@@ -66,6 +70,20 @@ function deriveFullscreenPreviewSheetRootPath(path: MenuNodePath): MenuNodePath 
   if (!path.length) return null;
   const rootPath: MenuNodePath = [path[0]!];
   return nodeHasVisibleChildren(rootPath) ? rootPath : null;
+}
+
+function buildEditFormState(path: MenuNodePath): MenuNodeDialogState | null {
+  const document = jsonMenuEditorStore.state.document;
+  const node = document ? getMenuNodeAtPath(document.menu, path) : undefined;
+  if (!document || !node || isCompatibilityProtected(document.menu, path)) return null;
+  const ancestors: MenuNode[] = [];
+  for (let length = 1; length < path.length; length += 1) {
+    const ancestor = getMenuNodeAtPath(document.menu, path.slice(0, length));
+    if (ancestor) ancestors.push(ancestor);
+  }
+  const effectiveType = resolveEffectiveMenuType(node, ancestors);
+  const pageMode: MenuPageMode = isMenuDirectory(node) ? "directory" : effectiveType === "iframe" ? "iframe" : "inner";
+  return { mode: "edit", targetPath: [...path], parentPath: path.slice(0, -1), pageMode, draft: structuredClone(node) };
 }
 
 /** 选中三级（或更深）时，自动展开其二级父目录，便于预览滑层看到当前项 */
@@ -163,6 +181,7 @@ export function renderJsonMenuEditorPage(): string {
   const document = state.document;
   const selected = jsonMenuEditorStore.selectedNode();
   const ancestors = selectedAncestors();
+  if (!dialogState && selected) dialogState = buildEditFormState(state.selectedPath);
   return `<div class="flex min-h-0 flex-1 flex-col overflow-hidden bg-transparent" data-json-menu-editor>
     <header class="shrink-0 bg-transparent px-1 pb-4 pt-1">
       <div class="flex items-center justify-between gap-5">
@@ -174,18 +193,17 @@ export function renderJsonMenuEditorPage(): string {
     </header>
     <div class="flex min-h-0 flex-1 overflow-hidden rounded-2xl bg-white shadow-[0_2px_14px_rgba(15,23,42,0.045)]">
       ${renderJsonMenuTree(document, state.selectedPath, state.issues, searchValue, expandedPaths)}
-      ${renderJsonMenuNodeSummary(document, selected, state.selectedPath, ancestors, state.issues)}
+      ${renderJsonMenuNodeFormPanel(document, dialogState, state.issues)}
     </div>
     <footer class="flex h-14 shrink-0 items-center gap-2 bg-transparent px-1"><div class="flex items-center text-[11px] text-slate-500"><span class="h-1.5 w-1.5 rounded-full ${state.dirty ? "bg-amber-500" : "bg-emerald-500"}"></span><span class="ml-2">${state.dirty ? "有未保存修改" : "所有更改已保存"}</span></div><div class="ml-auto flex gap-2"><button type="button" data-jme-fullscreen-open class="rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-medium text-slate-700 hover:border-teal-600 hover:text-teal-700">商家菜单预览</button><button type="button" data-jme-export class="rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50">导出 JSON</button></div></footer>
-    ${renderJsonMenuNodeDialog(document, dialogState)}
     ${fullscreenPreviewOpen ? renderJsonMenuFullscreenPreview(document, state.locale, state.selectedPath, selected, ancestors, fullscreenPreviewSheetRootPath, fullscreenPreviewSheetExpandedPaths) : ""}
   </div>`;
 }
 
 function openAdd(parentPath: MenuNodePath, onMount: () => void): void {
   const document = jsonMenuEditorStore.state.document;
-  if (!document || parentPath.length >= 3) { window.alert("菜单最多支持三级。"); return; }
-  if (parentPath.length && (isCompatibilityProtected(document.menu, parentPath) || subtreeContainsCompatibility(document.menu, parentPath))) { window.alert("该节点属于兼容保护范围，不能添加子菜单。"); return; }
+  if (!document || parentPath.length >= 3) { showAppToast("菜单最多支持三级。", { variant: "error" }); return; }
+  if (parentPath.length && (isCompatibilityProtected(document.menu, parentPath) || subtreeContainsCompatibility(document.menu, parentPath))) { showAppToast("该节点属于兼容保护范围，不能添加子菜单。", { variant: "error" }); return; }
   dialogState = { mode: "add", parentPath: [...parentPath], pageMode: "inner", draft: { id: createMenuObjectId(), name: "", key: "" } };
   if (parentPath.length) expandedPaths.add(encodeMenuNodePath(parentPath));
   onMount();
@@ -193,14 +211,9 @@ function openAdd(parentPath: MenuNodePath, onMount: () => void): void {
 
 function openEdit(path: MenuNodePath, onMount: () => void): void {
   const document = jsonMenuEditorStore.state.document;
-  const node = document ? getMenuNodeAtPath(document.menu, path) : undefined;
-  if (!document || !node) return;
-  if (isCompatibilityProtected(document.menu, path)) { window.alert("该节点属于历史兼容子树，只能查看，不能编辑。"); return; }
-  const ancestors: MenuNode[] = [];
-  for (let length = 1; length < path.length; length += 1) { const ancestor = getMenuNodeAtPath(document.menu, path.slice(0, length)); if (ancestor) ancestors.push(ancestor); }
-  const effectiveType = resolveEffectiveMenuType(node, ancestors);
-  const pageMode: MenuPageMode = isMenuDirectory(node) ? "directory" : effectiveType === "iframe" ? "iframe" : "inner";
-  dialogState = { mode: "edit", targetPath: [...path], parentPath: path.slice(0, -1), pageMode, draft: structuredClone(node) };
+  if (!document) return;
+  if (isCompatibilityProtected(document.menu, path)) { showAppToast("该节点属于历史兼容子树，只能查看，不能编辑。", { variant: "error" }); return; }
+  dialogState = buildEditFormState(path);
   jsonMenuEditorStore.select(path);
   onMount();
 }
@@ -227,10 +240,124 @@ function assignDialogField(field: string, raw: string): void {
     if (parts[1] === "permission" && parts[2] === "value") {
       const values = raw.split(/[,，]/).map((item) => item.trim()).filter(Boolean);
       if (!values.length) delete node.accessControl.permission;
-      else node.accessControl.permission = { rule: "some", value: values };
+      else node.accessControl.permission = { rule: node.accessControl.permission?.rule, value: values };
     }
     if (!Object.keys(node.accessControl).length) delete node.accessControl;
   }
+}
+
+function applyServicePermissionSelection(services: string[], permissions: string[], rule?: MenuPermissionRule): void {
+  if (!dialogState) return;
+  const node = dialogState.draft;
+  node.accessControl ??= {};
+  const nextServices = Array.from(new Set(services.map((item) => item.trim()).filter(Boolean)));
+  const nextPermissions = Array.from(new Set(permissions.map((item) => item.trim()).filter(Boolean)));
+  if (nextServices.length) node.accessControl.serviceName = nextServices.join(", ");
+  else delete node.accessControl.serviceName;
+  if (nextPermissions.length && rule) node.accessControl.permission = { rule, value: nextPermissions };
+  else delete node.accessControl.permission;
+  if (!Object.keys(node.accessControl).length) delete node.accessControl;
+}
+
+function readServicePermissionDialogSelection(): { services: string[]; permissions: string[]; rule?: MenuPermissionRule } {
+  const overlay = document.querySelector<HTMLElement>("[data-jme-service-permission-overlay]");
+  if (!overlay) return { services: [], permissions: [] };
+  const services = Array.from(overlay.querySelectorAll<HTMLInputElement>("[data-jme-service-permission-service]:checked"))
+    .map((input) => input.dataset.jmeServicePermissionService ?? "")
+    .filter(Boolean);
+  const permissions = Array.from(overlay.querySelectorAll<HTMLInputElement>("[data-jme-service-permission-permission]:checked"))
+    .map((input) => input.dataset.jmeServicePermissionPermission ?? "")
+    .filter(Boolean)
+    .concat(Array.from(overlay.querySelectorAll<HTMLInputElement>("[data-jme-service-permission-unassigned]:checked"))
+      .map((input) => input.dataset.jmeServicePermissionUnassigned ?? "")
+      .filter(Boolean));
+  const rawRule = overlay.querySelector<HTMLInputElement>("[data-jme-service-permission-rule]:checked")?.value;
+  const rule = rawRule === "some" || rawRule === "every" ? rawRule : undefined;
+  return { services, permissions, rule };
+}
+
+function servicePermissionOverlay(): HTMLElement | null {
+  return document.querySelector<HTMLElement>("[data-jme-service-permission-overlay]");
+}
+
+function servicePermissionInputsFor(owner: string): HTMLInputElement[] {
+  const overlay = servicePermissionOverlay();
+  return overlay
+    ? Array.from(overlay.querySelectorAll<HTMLInputElement>("[data-jme-service-permission-owner]"))
+      .filter((input) => input.dataset.jmeServicePermissionOwner === owner)
+    : [];
+}
+
+function servicePermissionServiceInput(service: string): HTMLInputElement | undefined {
+  const overlay = servicePermissionOverlay();
+  return overlay
+    ? Array.from(overlay.querySelectorAll<HTMLInputElement>("[data-jme-service-permission-service]"))
+      .find((input) => input.dataset.jmeServicePermissionService === service)
+    : undefined;
+}
+
+function refreshServicePermissionCount(service: string): void {
+  const overlay = servicePermissionOverlay();
+  if (!overlay) return;
+  const inputs = servicePermissionInputsFor(service);
+  const selected = inputs.filter((input) => input.checked).length;
+  const badge = Array.from(overlay.querySelectorAll<HTMLElement>("[data-jme-service-permission-count]"))
+    .find((item) => item.dataset.jmeServicePermissionCount === service);
+  if (badge) badge.textContent = `${selected}/${inputs.length}`;
+}
+
+function selectedServicePermissionCount(): number {
+  const overlay = servicePermissionOverlay();
+  if (!overlay) return 0;
+  return overlay.querySelectorAll("[data-jme-service-permission-permission]:checked, [data-jme-service-permission-unassigned]:checked").length;
+}
+
+function showServicePermissionRuleError(message: string): void {
+  const error = servicePermissionOverlay()?.querySelector<HTMLElement>("[data-jme-service-permission-rule-error]");
+  if (!error) return;
+  error.textContent = message;
+  error.classList.toggle("hidden", !message);
+}
+
+function resetServicePermissionRuleWhenEmpty(): void {
+  if (selectedServicePermissionCount()) return;
+  servicePermissionOverlay()?.querySelectorAll<HTMLInputElement>("[data-jme-service-permission-rule]").forEach((input) => { input.checked = false; });
+  showServicePermissionRuleError("");
+}
+
+function showServicePermissionPanel(service: string): void {
+  const overlay = servicePermissionOverlay();
+  if (!overlay) return;
+  overlay.querySelectorAll<HTMLElement>("[data-jme-service-permission-panel]").forEach((panel) => {
+    panel.classList.toggle("hidden", panel.dataset.jmeServicePermissionPanel !== service);
+  });
+  overlay.querySelectorAll<HTMLElement>("[data-jme-service-permission-service-row]").forEach((row) => {
+    const active = row.dataset.jmeServicePermissionServiceRow === service;
+    row.classList.toggle("bg-teal-50", active);
+    row.classList.toggle("bg-white", !active);
+    const button = row.querySelector<HTMLElement>("[data-jme-service-permission-view]");
+    button?.classList.toggle("text-teal-800", active);
+    button?.classList.toggle("text-slate-700", !active);
+  });
+}
+
+function toggleServicePermissionService(input: HTMLInputElement): void {
+  const service = input.dataset.jmeServicePermissionService ?? "";
+  if (!service) return;
+  servicePermissionInputsFor(service).forEach((permission) => { permission.checked = input.checked; });
+  refreshServicePermissionCount(service);
+  showServicePermissionPanel(service);
+  resetServicePermissionRuleWhenEmpty();
+}
+
+function toggleServicePermissionPermission(input: HTMLInputElement): void {
+  const service = input.dataset.jmeServicePermissionOwner ?? "";
+  if (!service) return;
+  const permissionInputs = servicePermissionInputsFor(service);
+  const serviceInput = servicePermissionServiceInput(service);
+  if (serviceInput) serviceInput.checked = permissionInputs.some((permission) => permission.checked);
+  refreshServicePermissionCount(service);
+  resetServicePermissionRuleWhenEmpty();
 }
 
 function validateAndNormalizeDialog(): MenuNode | null {
@@ -303,12 +430,14 @@ export function bindJsonMenuEditor(onMount: () => void): void {
       if (fullscreenPreviewOpen) {
         fullscreenPreviewSheetRootPath = deriveFullscreenPreviewSheetRootPath(decoded);
         seedFullscreenSheetExpandedFromPath(decoded);
+        dialogState = buildEditFormState(decoded);
         if (inPreview) {
           refreshFullscreenPreview({ focusSelector: `[data-jme-select="${encodeMenuNodePath(decoded)}"]` });
           return;
         }
       }
-      onMount();
+      if (!fullscreenPreviewOpen) dialogState = buildEditFormState(decoded);
+      rerenderPreservingJsonMenuTreeScroll(onMount);
       if (fullscreenPreviewOpen) requestAnimationFrame(() => applyFullscreenEnvironment());
       return;
     }
@@ -323,6 +452,7 @@ export function bindJsonMenuEditor(onMount: () => void): void {
     if (sheetBackPath != null) {
       const decoded = decodeMenuNodePath(sheetBackPath);
       jsonMenuEditorStore.select(decoded);
+      dialogState = buildEditFormState(decoded);
       fullscreenPreviewSheetRootPath = null;
       refreshFullscreenPreview({ focusSelector: `[data-jme-select="${encodeMenuNodePath(decoded)}"]` });
       return;
@@ -346,8 +476,58 @@ export function bindJsonMenuEditor(onMount: () => void): void {
     if (addPath != null) { openAdd(decodeMenuNodePath(addPath), onMount); return; }
     const editPath = target.closest<HTMLElement>("[data-jme-open-edit]")?.dataset.jmeOpenEdit;
     if (editPath != null) { openEdit(decodeMenuNodePath(editPath), onMount); return; }
+    if (target.closest("[data-jme-service-permission-open]") && dialogState) {
+      dialogState.servicePermissionOpen = true;
+      onMount();
+      return;
+    }
+    const servicePermissionView = target.closest<HTMLElement>("[data-jme-service-permission-view]")?.dataset.jmeServicePermissionView;
+    if (servicePermissionView != null) {
+      showServicePermissionPanel(servicePermissionView);
+      return;
+    }
+    const servicePermissionService = target.closest<HTMLInputElement>("[data-jme-service-permission-service]");
+    if (servicePermissionService) {
+      toggleServicePermissionService(servicePermissionService);
+      return;
+    }
+    const servicePermissionPermission = target.closest<HTMLInputElement>("[data-jme-service-permission-permission]");
+    if (servicePermissionPermission) {
+      toggleServicePermissionPermission(servicePermissionPermission);
+      return;
+    }
+    if (target.closest("[data-jme-service-permission-unassigned]")) {
+      resetServicePermissionRuleWhenEmpty();
+      return;
+    }
+    if (target.closest("[data-jme-service-permission-rule]")) {
+      showServicePermissionRuleError("");
+      return;
+    }
+    if (target.closest("[data-jme-service-permission-clear]") && dialogState) {
+      applyServicePermissionSelection([], []);
+      dialogState.servicePermissionOpen = false;
+      onMount();
+      return;
+    }
+    if (target.closest("[data-jme-service-permission-confirm]") && dialogState) {
+      const next = readServicePermissionDialogSelection();
+      if (next.permissions.length && !next.rule) {
+        showServicePermissionRuleError("请选择权限满足规则");
+        return;
+      }
+      applyServicePermissionSelection(next.services, next.permissions, next.rule);
+      dialogState.servicePermissionOpen = false;
+      onMount();
+      return;
+    }
+    if ((target.closest("[data-jme-service-permission-close]") || target.matches("[data-jme-service-permission-overlay]")) && dialogState) {
+      dialogState.servicePermissionOpen = false;
+      onMount();
+      return;
+    }
     const rowMore = target.closest<HTMLElement>("[data-jme-row-more]")?.dataset.jmeRowMore;
-    if (rowMore != null) { jsonMenuEditorStore.select(decodeMenuNodePath(rowMore)); onMount(); return; }
+    if (rowMore != null) { const decoded = decodeMenuNodePath(rowMore); jsonMenuEditorStore.select(decoded); dialogState = buildEditFormState(decoded); onMount(); return; }
     if (target.closest("[data-jme-fullscreen-open]")) {
       const selected = jsonMenuEditorStore.selectedNode();
       if (!selected || selected.display === false) {
@@ -371,16 +551,16 @@ export function bindJsonMenuEditor(onMount: () => void): void {
       return;
     }
     if (target.closest("[data-jme-fullscreen-close]") || target.matches("[data-jme-fullscreen-preview-panel]")) { clearFullscreenEnvironment(onMount); return; }
-    if (target.closest("[data-jme-dialog-close]") || target.matches("[data-jme-dialog-overlay]")) { dialogState = null; onMount(); return; }
+    if (target.closest("[data-jme-form-cancel]")) { dialogState = buildEditFormState(jsonMenuEditorStore.state.selectedPath); onMount(); return; }
     const pageMode = target.closest<HTMLElement>("[data-jme-page-mode]")?.dataset.jmePageMode as MenuPageMode | undefined;
     if (pageMode && dialogState) { if (pageMode === "directory" && dialogState.parentPath.length >= 2) return; dialogState.pageMode = pageMode; dialogState.error = undefined; onMount(); return; }
-    if (target.closest("[data-jme-duplicate]")) { if (!jsonMenuEditorStore.duplicateSelected()) window.alert("包含兼容保留节点的子树不能复制。"); onMount(); return; }
-    if (target.closest("[data-jme-delete]")) { const node = jsonMenuEditorStore.selectedNode(); if (!node) return; const count = walkMenuNodes(node.children ?? []).length; if (window.confirm(count ? `将同时删除 ${count} 个子节点，确定继续？` : "确定删除当前菜单节点？")) { if (!jsonMenuEditorStore.deleteSelected()) window.alert("包含兼容保留节点的子树不能删除。"); onMount(); } return; }
-    if (target.closest("[data-jme-save]")) { void jsonMenuEditorStore.saveDraft(currentUser()).then(onMount); return; }
-    if (target.closest("[data-jme-publish]")) { void (async () => { let result = await jsonMenuEditorStore.publish(currentUser(), false); if (result.needsWarningConfirmation && window.confirm(`当前有 ${jsonMenuEditorStore.state.issues.filter((issue) => issue.severity === "warning").length} 个兼容警告，确认仍要发布？`)) result = await jsonMenuEditorStore.publish(currentUser(), true); if (!result.ok && !result.needsWarningConfirmation) { const first = jsonMenuEditorStore.state.issues.find((issue) => issue.severity === "error"); if (first?.path) jsonMenuEditorStore.select(first.path); window.alert(first ? `发布被阻止：${first.message}` : jsonMenuEditorStore.state.message || "发布失败"); } onMount(); })(); return; }
-    if (target.closest("[data-jme-export]")) { const content = jsonMenuEditorStore.exportJson(); if (!content) { window.alert("顶部配置不完整，无法导出。"); return; } downloadJson(content, jsonMenuEditorStore.state.document?.name ?? "menu-config"); return; }
-    if (target.closest("[data-jme-discard]")) { if (window.confirm("确定放弃当前未保存修改？将重新读取共享草稿；没有草稿时恢复发布版本。")) void jsonMenuEditorStore.discard().then(onMount); return; }
-    if (target.closest("[data-jme-retry]")) { void jsonMenuEditorStore.load().then(() => { expandAll(); onMount(); }); return; }
+    if (target.closest("[data-jme-duplicate]")) { if (!jsonMenuEditorStore.duplicateSelected()) showAppToast("包含兼容保留节点的子树不能复制。", { variant: "error" }); dialogState = buildEditFormState(jsonMenuEditorStore.state.selectedPath); onMount(); return; }
+    if (target.closest("[data-jme-delete]")) { const node = jsonMenuEditorStore.selectedNode(); if (!node) return; const count = walkMenuNodes(node.children ?? []).length; void (async () => { const ok = await openConfirmDialog({ title: "删除菜单节点", message: count ? `将同时删除 ${count} 个子节点，确定继续？` : "确定删除当前菜单节点？", confirmLabel: "确认删除", danger: true }); if (!ok) return; if (!jsonMenuEditorStore.deleteSelected()) showAppToast("包含兼容保留节点的子树不能删除。", { variant: "error" }); dialogState = buildEditFormState(jsonMenuEditorStore.state.selectedPath); onMount(); })(); return; }
+    if (target.closest("[data-jme-save]")) { void jsonMenuEditorStore.saveDraft(currentUser()).then(() => { dialogState = buildEditFormState(jsonMenuEditorStore.state.selectedPath); onMount(); }); return; }
+    if (target.closest("[data-jme-publish]")) { void (async () => { let result = await jsonMenuEditorStore.publish(currentUser(), false); if (result.needsWarningConfirmation) { const ok = await openConfirmDialog({ title: "确认发布", message: `当前有 ${jsonMenuEditorStore.state.issues.filter((issue) => issue.severity === "warning").length} 个兼容警告，确认仍要发布？`, confirmLabel: "确认发布" }); if (ok) result = await jsonMenuEditorStore.publish(currentUser(), true); } if (!result.ok && !result.needsWarningConfirmation) { const first = jsonMenuEditorStore.state.issues.find((issue) => issue.severity === "error"); if (first?.path) jsonMenuEditorStore.select(first.path); showAppToast(first ? `发布被阻止：${first.message}` : jsonMenuEditorStore.state.message || "发布失败", { variant: "error" }); } dialogState = buildEditFormState(jsonMenuEditorStore.state.selectedPath); onMount(); })(); return; }
+    if (target.closest("[data-jme-export]")) { const content = jsonMenuEditorStore.exportJson(); if (!content) { showAppToast("顶部配置不完整，无法导出。", { variant: "error" }); return; } downloadJson(content, jsonMenuEditorStore.state.document?.name ?? "menu-config"); return; }
+    if (target.closest("[data-jme-discard]")) { void (async () => { const ok = await openConfirmDialog({ title: "放弃修改", message: "确定放弃当前未保存修改？将重新读取共享草稿；没有草稿时恢复发布版本。", confirmLabel: "确认放弃", danger: true }); if (ok) void jsonMenuEditorStore.discard().then(() => { dialogState = buildEditFormState(jsonMenuEditorStore.state.selectedPath); onMount(); }); })(); return; }
+    if (target.closest("[data-jme-retry]")) { void jsonMenuEditorStore.load().then(() => { expandAll(); dialogState = buildEditFormState(jsonMenuEditorStore.state.selectedPath); onMount(); }); return; }
     if (target.closest("[data-jme-next-issue]")) { const located = jsonMenuEditorStore.state.issues.filter((issue) => issue.path); if (located.length) { jsonMenuEditorStore.select(located[issueCursor++ % located.length]!.path!); onMount(); } }
   });
 
@@ -405,20 +585,20 @@ export function bindJsonMenuEditor(onMount: () => void): void {
   });
 
   document.body.addEventListener("submit", (event) => {
-    if (!(event.target as HTMLElement).matches("[data-jme-dialog]")) return;
+    if (!(event.target as HTMLElement).matches("[data-jme-node-form]")) return;
     event.preventDefault();
     const next = validateAndNormalizeDialog();
     if (!next || !dialogState) { onMount(); return; }
     const ok = dialogState.mode === "add" ? jsonMenuEditorStore.addNode(dialogState.parentPath, next) : jsonMenuEditorStore.replaceAndRelocateSelected(next, dialogState.parentPath);
     if (!ok) { dialogState.error = "该操作会影响兼容保留子树、形成循环或超过三级，请调整后重试。"; onMount(); return; }
-    dialogState = null;
     expandAll();
+    dialogState = buildEditFormState(jsonMenuEditorStore.state.selectedPath);
     onMount();
   });
 
   document.body.addEventListener("dragstart", (event) => { const path = (event.target as HTMLElement).closest<HTMLElement>("[data-jme-drag-path]")?.dataset.jmeDragPath; draggedPath = path ? decodeMenuNodePath(path) : null; });
   document.body.addEventListener("dragover", (event) => { if ((event.target as HTMLElement).closest("[data-jme-drop-parent]")) event.preventDefault(); });
-  document.body.addEventListener("drop", (event) => { const zone = (event.target as HTMLElement).closest<HTMLElement>("[data-jme-drop-parent]"); if (!zone || !draggedPath) return; event.preventDefault(); jsonMenuEditorStore.select(draggedPath); if (!jsonMenuEditorStore.moveSelected(decodeMenuNodePath(zone.dataset.jmeDropParent ?? ""), Number(zone.dataset.jmeDropIndex ?? 0))) window.alert("无法移动到该位置：不能形成循环、超过三级或影响兼容保留子树。"); draggedPath = null; expandAll(); onMount(); });
+  document.body.addEventListener("drop", (event) => { const zone = (event.target as HTMLElement).closest<HTMLElement>("[data-jme-drop-parent]"); if (!zone || !draggedPath) return; event.preventDefault(); jsonMenuEditorStore.select(draggedPath); if (!jsonMenuEditorStore.moveSelected(decodeMenuNodePath(zone.dataset.jmeDropParent ?? ""), Number(zone.dataset.jmeDropIndex ?? 0))) showAppToast("无法移动到该位置：不能形成循环、超过三级或影响兼容保留子树。", { variant: "error" }); draggedPath = null; expandAll(); onMount(); });
   document.addEventListener("keydown", (event) => {
     if (!fullscreenPreviewOpen) return;
     if (event.key === "Escape") { event.preventDefault(); clearFullscreenEnvironment(onMount); return; }
