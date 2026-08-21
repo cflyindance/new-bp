@@ -13,7 +13,51 @@ function escapeHtml(value: string): string { return value.replace(/[&<>\"]/g, (c
 export function encodeMenuNodePath(path: MenuNodePath): string { return path.join("."); }
 export function decodeMenuNodePath(value: string): MenuNodePath { return value ? value.split(".").map(Number) : []; }
 function samePath(a: MenuNodePath, b: MenuNodePath): boolean { return encodeMenuNodePath(a) === encodeMenuNodePath(b); }
+function isStrictDescendantPath(parent: MenuNodePath, candidate: MenuNodePath): boolean {
+  return candidate.length > parent.length && parent.every((part, index) => candidate[index] === part);
+}
 function nodeLabel(node: MenuNode): string { return node.i18nInfo?.["zh-CN"] || node.name || "未命名菜单"; }
+
+export interface MenuNodeIssueSummary {
+  ownError: number;
+  ownWarning: number;
+  descendantError: number;
+  descendantWarning: number;
+}
+
+export function summarizeMenuNodeIssues(path: MenuNodePath, issues: MenuValidationIssue[]): MenuNodeIssueSummary {
+  const summary: MenuNodeIssueSummary = { ownError: 0, ownWarning: 0, descendantError: 0, descendantWarning: 0 };
+  issues.forEach((issue) => {
+    if (!issue.path) return;
+    const own = samePath(issue.path, path);
+    const descendant = isStrictDescendantPath(path, issue.path);
+    if (!own && !descendant) return;
+    const key = `${descendant ? "descendant" : "own"}${issue.severity === "error" ? "Error" : "Warning"}` as keyof MenuNodeIssueSummary;
+    summary[key] += 1;
+  });
+  return summary;
+}
+
+export function findFirstDescendantIssuePath(
+  nodes: MenuNode[],
+  parentPath: MenuNodePath,
+  issues: MenuValidationIssue[],
+  severity: MenuValidationIssue["severity"],
+): MenuNodePath | null {
+  return walkMenuNodes(nodes).find((visit) =>
+    isStrictDescendantPath(parentPath, visit.path)
+    && issues.some((issue) => issue.severity === severity && issue.path && samePath(issue.path, visit.path)))?.path ?? null;
+}
+
+function renderIssueBadge(encoded: string, kind: "own" | "descendant", severity: MenuValidationIssue["severity"], count: number): string {
+  if (!count) return "";
+  const isError = severity === "error";
+  const label = `${kind === "descendant" ? "子菜单 " : ""}${count} ${isError ? "错误" : "警告"}`;
+  const tone = kind === "own"
+    ? isError ? "border-red-300 bg-red-50 text-red-700 hover:bg-red-100" : "border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100"
+    : isError ? "border-red-200 bg-white text-red-600 hover:bg-red-50" : "border-amber-200 bg-white text-amber-600 hover:bg-amber-50";
+  return `<button type="button" data-jme-issue-path="${encoded}" data-jme-issue-kind="${kind}" data-jme-issue-severity="${severity}" class="rounded border px-1.5 py-0.5 text-[9px] font-medium leading-4 ${tone} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600/30" title="定位${label}" aria-label="定位${label}">${label}</button>`;
+}
 
 function renderNode(
   document: MenuDocument,
@@ -26,9 +70,9 @@ function renderNode(
   search: string,
 ): string {
   const encoded = encodeMenuNodePath(path);
-  const ownIssues = issues.filter((issue) => issue.path && samePath(issue.path, path));
-  const hasError = ownIssues.some((issue) => issue.severity === "error");
-  const hasWarning = ownIssues.some((issue) => issue.severity === "warning");
+  const issueSummary = summarizeMenuNodeIssues(path, issues);
+  const hasError = issueSummary.ownError > 0;
+  const hasWarning = issueSummary.ownWarning > 0;
   const compatibilityRoot = getCompatibilityRootPath(document.menu, path);
   const protectedNode = Boolean(compatibilityRoot);
   const active = samePath(path, selectedPath);
@@ -37,24 +81,31 @@ function renderNode(
   const effectiveType = resolveEffectiveMenuType(node, ancestors);
   const typeLabel = isMenuDirectory(node) ? "目录" : effectiveType === "iframe" ? "iframe" : effectiveType === "inner" ? "项目内" : effectiveType ?? "未配置";
   const typeClass = protectedNode ? "border-amber-200 bg-amber-50 text-amber-700" : isMenuDirectory(node) ? "border-slate-200 bg-slate-50 text-slate-500" : effectiveType === "iframe" ? "border-sky-200 bg-sky-50 text-sky-700" : "border-teal-200 bg-teal-50 text-teal-700";
+  const cardTone = hasError ? "border-red-300 bg-red-50/70" : hasWarning ? "border-amber-300 bg-amber-50/70" : active ? "border-teal-300 bg-teal-50" : "border-transparent hover:bg-slate-50";
+  const issueBadges = [
+    renderIssueBadge(encoded, "own", "error", issueSummary.ownError),
+    renderIssueBadge(encoded, "own", "warning", issueSummary.ownWarning),
+    renderIssueBadge(encoded, "descendant", "error", issueSummary.descendantError),
+    renderIssueBadge(encoded, "descendant", "warning", issueSummary.descendantWarning),
+  ].join("");
   const searchable = `${nodeLabel(node)} ${node.name ?? ""} ${node.key ?? ""} ${node.path ?? ""}`.toLowerCase();
   const childMatches = node.children?.some((child) => JSON.stringify(child).toLowerCase().includes(search)) ?? false;
   if (search && !searchable.includes(search) && !childMatches) return "";
 
   return `<li class="relative" data-jme-tree-item="${encoded}">
     ${path.length > 1 && path.length <= 4 ? `<span aria-hidden="true" class="pointer-events-none absolute -left-2 top-6 z-[1] w-2 border-t ${path.length === 4 ? "border-dashed border-amber-200" : "border-slate-200"}"></span>` : ""}
-    <div class="group relative flex min-h-12 items-start gap-1 rounded-lg border px-2 py-1.5 transition focus-within:ring-2 focus-within:ring-teal-600/20 ${active ? "border-teal-300 bg-teal-50 text-teal-800 shadow-[inset_4px_0_0_#0f766e]" : "border-transparent hover:bg-slate-50"}" draggable="${protectedNode ? "false" : "true"}" data-jme-drag-path="${encoded}">
+    <div class="group relative flex min-h-12 items-start gap-1 rounded-lg border px-2 py-1.5 transition focus-within:ring-2 focus-within:ring-teal-600/20 ${cardTone} ${active ? "text-teal-800 shadow-[inset_4px_0_0_#0f766e]" : ""}" draggable="${protectedNode ? "false" : "true"}" data-jme-drag-path="${encoded}">
       <button type="button" data-jme-toggle="${encoded}" class="mt-1 grid h-6 w-6 shrink-0 place-items-center rounded text-xs text-slate-400 hover:bg-white ${hasChildren ? "" : "invisible"}" aria-label="${isExpanded ? "收起" : "展开"}">${isExpanded ? "⌄" : "›"}</button>
       <button type="button" data-jme-select="${encoded}" class="min-w-0 flex-1 text-left focus-visible:outline-none">
-        <span class="flex min-w-0 items-center gap-2"><span class="truncate text-[13px] ${active ? "font-bold text-teal-800" : "font-semibold text-slate-800"}" title="${escapeHtml(nodeLabel(node))}">${escapeHtml(nodeLabel(node))}</span>${hasError ? `<span class="h-1.5 w-1.5 shrink-0 rounded-full bg-red-500" title="存在错误"></span>` : hasWarning ? `<span class="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" title="存在警告"></span>` : ""}</span>
-        <span class="mt-0.5 flex min-w-0 items-center gap-1.5 text-[10px] text-slate-400"><code class="min-w-0 truncate" title="${escapeHtml(node.key || "未设置 Key")}">${escapeHtml(node.key || "未设置 Key")}</code><span class="shrink-0">· ${path.length} 级</span></span>
+        <span class="flex min-w-0 items-center gap-2"><span class="truncate text-[13px] ${active ? "font-bold text-teal-800" : "font-semibold text-slate-800"}" title="${escapeHtml(nodeLabel(node))}">${escapeHtml(nodeLabel(node))}</span></span>
+        <span class="mt-0.5 text-[10px] text-slate-400">${path.length} 级</span>
       </button>
-      <div class="ml-1 flex shrink-0 items-start gap-2 self-start">
+      <div class="ml-1 flex max-w-[190px] shrink-0 flex-wrap items-start justify-end gap-1 self-start">
         ${!protectedNode ? `<div class="flex h-6 w-[48px] shrink-0 items-center justify-end gap-0 ${active ? "flex" : "hidden group-hover:flex group-focus-within:flex"}">
           ${path.length < 3 ? `<button type="button" data-jme-open-add="${encoded}" class="grid h-6 w-6 place-items-center rounded text-slate-500 hover:bg-white hover:text-teal-700" title="添加子菜单">＋</button>` : ""}
           <button type="button" data-jme-row-more="${encoded}" class="grid h-6 w-6 place-items-center rounded text-slate-500 hover:bg-white" title="更多">•••</button>
         </div>` : ""}
-        <span class="flex h-6 shrink-0 items-center gap-1"><span class="rounded border px-1.5 py-0.5 text-[9px] font-medium ${active && !protectedNode ? "border-teal-300 bg-white/70 text-teal-700" : typeClass}">${protectedNode ? "兼容保留" : typeLabel}</span>${node.display === false ? `<span class="rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[9px] font-medium text-slate-500">隐藏</span>` : ""}</span>
+        ${issueBadges}<span class="flex h-6 shrink-0 items-center gap-1"><span class="rounded border px-1.5 py-0.5 text-[9px] font-medium ${active && !protectedNode ? "border-teal-300 bg-white/70 text-teal-700" : typeClass}">${protectedNode ? "兼容保留" : typeLabel}</span>${node.display === false ? `<span class="rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[9px] font-medium text-slate-500">隐藏</span>` : ""}</span>
       </div>
     </div>
     ${hasChildren && isExpanded ? `<ol class="${path.length < 4 ? "ml-4 pl-2" : "ml-0 pl-0"} border-l ${path.length >= 3 ? "border-dashed border-amber-200" : "border-slate-200"}">${node.children!.map((child, index) => `<div data-jme-drop-parent="${encoded}" data-jme-drop-index="${index}" class="h-1 rounded hover:bg-teal-300"></div>${renderNode(document, child, [...path, index], [...ancestors, node], selectedPath, issues, expanded, search)}`).join("")}<div data-jme-drop-parent="${encoded}" data-jme-drop-index="${node.children!.length}" class="h-1 rounded hover:bg-teal-300"></div></ol>` : ""}

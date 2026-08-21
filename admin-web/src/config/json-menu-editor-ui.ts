@@ -18,7 +18,7 @@ import {
 import { jsonMenuEditorStore } from "./json-menu-editor-store";
 import { renderJsonMenuNodeFormPanel, type MenuNodeDialogState, type MenuPageMode } from "./json-menu-node-form-ui";
 import { renderJsonMenuFullscreenPreview } from "./json-menu-preview-ui";
-import { decodeMenuNodePath, encodeMenuNodePath, renderJsonMenuTree } from "./json-menu-tree-ui";
+import { decodeMenuNodePath, encodeMenuNodePath, findFirstDescendantIssuePath, renderJsonMenuTree } from "./json-menu-tree-ui";
 import { rerenderPreservingJsonMenuTreeScroll } from "./json-menu-editor-scroll";
 
 function escapeHtml(value: string): string { return value.replace(/[&<>\"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[char]!); }
@@ -70,6 +70,20 @@ function deriveFullscreenPreviewSheetRootPath(path: MenuNodePath): MenuNodePath 
   if (!path.length) return null;
   const rootPath: MenuNodePath = [path[0]!];
   return nodeHasVisibleChildren(rootPath) ? rootPath : null;
+}
+
+function locateTreeIssue(path: MenuNodePath, severity: MenuValidationIssue["severity"], onMount: () => void): void {
+  searchValue = "";
+  for (let length = 1; length < path.length; length += 1) expandedPaths.add(encodeMenuNodePath(path.slice(0, length)));
+  jsonMenuEditorStore.select(path);
+  dialogState = buildEditFormState(path);
+  onMount();
+  requestAnimationFrame(() => {
+    const encoded = encodeMenuNodePath(path);
+    const row = document.querySelector<HTMLElement>(`[data-jme-tree-item="${encoded}"]`);
+    row?.scrollIntoView({ block: "nearest" });
+    row?.querySelector<HTMLButtonElement>(`[data-jme-issue-kind="own"][data-jme-issue-severity="${severity}"]`)?.focus({ preventScroll: true });
+  });
 }
 
 function buildEditFormState(path: MenuNodePath): MenuNodeDialogState | null {
@@ -459,6 +473,16 @@ export function bindJsonMenuEditor(onMount: () => void): void {
     }
     const jumpPath = target.closest<HTMLElement>("[data-jme-jump-path]")?.dataset.jmeJumpPath;
     if (jumpPath != null) { jsonMenuEditorStore.select(decodeMenuNodePath(jumpPath)); onMount(); return; }
+    const issueButton = target.closest<HTMLButtonElement>("[data-jme-issue-path]");
+    if (issueButton) {
+      const sourcePath = decodeMenuNodePath(issueButton.dataset.jmeIssuePath ?? "");
+      const severity = issueButton.dataset.jmeIssueSeverity as MenuValidationIssue["severity"];
+      const targetPath = issueButton.dataset.jmeIssueKind === "descendant"
+        ? findFirstDescendantIssuePath(jsonMenuEditorStore.state.document?.menu ?? [], sourcePath, jsonMenuEditorStore.state.issues, severity)
+        : sourcePath;
+      if (targetPath) locateTreeIssue(targetPath, severity, onMount);
+      return;
+    }
     const togglePath = target.closest<HTMLElement>("[data-jme-toggle]")?.dataset.jmeToggle;
     if (togglePath != null) { expandedPaths.has(togglePath) ? expandedPaths.delete(togglePath) : expandedPaths.add(togglePath); onMount(); return; }
     if (target.closest("[data-jme-toggle-expand-all]")) {
