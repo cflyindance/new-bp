@@ -92,10 +92,23 @@ button { color: inherit; }
   margin: 0 auto;
   padding: 26px 0 108px;
   display: grid;
-  grid-template-columns: 216px minmax(0, 1fr);
-  gap: 24px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 18px;
 }
-.olf-step-nav { position: sticky; top: 110px; align-self: start; display: grid; gap: 5px; }
+.olf-step-nav {
+  position: sticky;
+  top: 84px;
+  z-index: 25;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 5px;
+  padding: 8px;
+  border: 1px solid var(--olf-border);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 5px 18px rgba(0, 0, 0, 0.06);
+  backdrop-filter: blur(10px);
+}
 .olf-step {
   min-height: 56px;
   padding: 8px 10px;
@@ -552,6 +565,60 @@ button { color: inherit; }
 .olf-config-store-select .olf-select { width: 100%; }
 .olf-limit-store-select { width: min(100%, 320px); }
 .olf-limit-store-select .olf-select { width: 100%; }
+.olf-merged-content-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+.olf-merged-content-head > div { min-width: 0; }
+.olf-merged-toolbar {
+  margin: -10px 0 18px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+.olf-limit-store-filter { width: min(100%, 260px); margin: 0; }
+.olf-limit-store-filter .olf-select { width: 100%; min-height: 36px; }
+.olf-merged-toolbar .olf-scene-display { margin: 0 auto 0 0; }
+.olf-merged-store {
+  margin-top: 18px;
+  padding: 22px;
+  border: 1px solid var(--olf-border);
+  border-radius: 14px;
+  background: var(--olf-subtle);
+}
+.olf-merged-store:first-of-type { padding-top: 22px; border-top: 1px solid var(--olf-border); }
+.olf-merged-store-head { margin-bottom: 18px; }
+.olf-merged-store-head .olf-help { margin: 3px 0 0; }
+.olf-merged-line-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.olf-merged-line-head .olf-tabs { margin: 0; }
+.olf-merged-store .olf-scene-combo-block,
+.olf-merged-store .olf-table-wrap,
+.olf-merged-store .olf-summary { background: var(--olf-surface); }
+.olf-merged-store .olf-scene-combo-block { padding: 18px; border: 1px solid var(--olf-border); border-radius: 12px; }
+.olf-merged-store .olf-scene-combo-block + .olf-scene-combo-block { margin-top: 14px; }
+.olf-merged-scene-combo-layout { margin-top: 4px; }
+.olf-merged-scene-tabs { margin-bottom: 14px; }
+.olf-merged-scene-tabs h4 { margin: 12px 0 8px; font-size: 14px; }
+.olf-merged-row-action { width: 76px; text-align: right; }
+.olf-merged-row-action .olf-button--link { min-height: auto; padding: 0; border: 0; background: transparent; color: var(--olf-danger); }
+.olf-limit-rule-list { padding: 0; overflow: hidden; }
+.olf-limit-rule-list > .olf-selected-preview-filters { padding: 22px 22px 0; }
+.olf-limit-rule-list > .olf-batch-panel { margin: 18px 22px 14px; }
+.olf-limit-rule-list > .olf-table-wrap { border-width: 1px 0; border-radius: 0; }
+.olf-limit-rule-table { min-width: 1060px; }
+.olf-limit-rule-table .olf-limit-input { width: 104px; }
+.olf-limit-rule-table th,
+.olf-limit-rule-table td { vertical-align: middle; }
+.olf-limit-store-empty .olf-button { margin-top: 16px; }
 .olf-product-search { width: 100%; min-width: 0; margin: 0; }
 .olf-product-search-input { width: 100%; }
 .olf-product-search-results { max-height: 360px; overflow-y: auto; border: 1px solid var(--olf-border); border-radius: 12px; background: var(--olf-surface); }
@@ -667,6 +734,9 @@ button { color: inherit; }
 .olf-configured-limit-preview-entry { flex-shrink: 0; white-space: nowrap; }
 .olf-configured-limit-preview-filters { grid-template-columns: repeat(4, minmax(120px, 160px)) minmax(200px, 1fr); }
 .olf-configured-limit-preview-filters.is-multi-round { grid-template-columns: repeat(5, minmax(110px, 150px)) minmax(180px, 1fr); }
+.olf-limit-rule-filters { grid-template-columns: repeat(4, minmax(120px, 160px)) minmax(200px, 1fr) auto; }
+.olf-limit-rule-filters.is-multi-round { grid-template-columns: repeat(5, minmax(110px, 150px)) minmax(190px, 1fr) auto; }
+.olf-limit-rule-filter-reset { align-self: end; margin-bottom: 1px; white-space: nowrap; }
 .olf-configured-limit-preview-search { min-width: 200px; }
 .olf-configured-limit-preview-empty { min-height: 130px; border-top: 1px solid var(--olf-border); }
 .olf-configured-limit-preview-dialog tr.is-unconfigured td { color: var(--olf-muted); }
@@ -687,19 +757,28 @@ button { color: inherit; }
 .olf-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 
 @media (max-width: 960px) {
-  .olf-editor-shell { width: min(100% - 28px, 860px); grid-template-columns: 1fr; gap: 14px; padding-top: 16px; }
-  .olf-step-nav { position: static; grid-template-columns: repeat(7, minmax(38px, 1fr)); gap: 5px; overflow-x: auto; }
-  .olf-step { min-height: 44px; padding: 5px; grid-template-columns: 1fr; justify-items: center; }
-  .olf-step-copy, .olf-step-error { display: none; }
+  .olf-editor-shell { width: min(100% - 28px, 860px); gap: 14px; padding-top: 16px; }
+  .olf-step-nav { grid-template-columns: repeat(6, minmax(150px, 1fr)); overflow-x: auto; }
   .olf-content { min-height: 520px; padding: 25px 22px 30px; }
   .olf-scene-combo-layout { grid-template-columns: 1fr; }
   .olf-scene-combo-nav { display: none; }
+  .olf-merged-scene-combo-layout .olf-scene-combo-nav {
+    position: static;
+    display: flex;
+    max-height: none;
+    overflow-x: auto;
+    padding-bottom: 6px;
+  }
+  .olf-merged-scene-combo-layout .olf-scene-combo-nav__item { min-width: 170px; }
 }
 
 @media (max-width: 680px) {
   .olf-header-main { min-height: 72px; padding: 12px 14px; }
   .olf-icon-button { width: 44px; height: 44px; flex-basis: 44px; }
   .olf-title-copy h1 { font-size: 18px; }
+  .olf-step-nav { top: 76px; grid-template-columns: repeat(6, minmax(58px, 1fr)); padding: 6px; }
+  .olf-step { min-height: 44px; padding: 5px; grid-template-columns: 1fr; justify-items: center; }
+  .olf-step-copy, .olf-step-error { display: none; }
   .olf-header .olf-actions .olf-button { display: none; }
   .olf-editor-shell, .olf-flow-main { width: calc(100% - 24px); }
   .olf-content, .olf-flow-card { padding: 22px 16px 26px; }
@@ -719,6 +798,11 @@ button { color: inherit; }
   .olf-product-search-category-state { grid-column: 2; white-space: normal; }
   .olf-product-search-path { white-space: normal; }
   .olf-section-head { align-items: flex-start; }
+  .olf-merged-content-head,
+  .olf-merged-line-head,
+  .olf-merged-toolbar { align-items: stretch; flex-direction: column; }
+  .olf-merged-content-head .olf-button { align-self: flex-start; }
+  .olf-merged-store { padding: 16px 12px; }
   .olf-selected-preview-entry { white-space: nowrap; }
   .olf-selected-preview-overlay { padding: 12px; align-items: flex-start; }
   .olf-selected-preview-dialog { max-height: calc(100vh - 24px); }

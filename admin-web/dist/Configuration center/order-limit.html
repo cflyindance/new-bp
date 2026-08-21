@@ -85,6 +85,45 @@
     }
     .section-head h2 { margin: 0; font-size: 15px; font-weight: 600; }
     .section-body { padding: 12px 16px 16px; }
+    .rule-filters {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(120px, 1fr)) auto auto;
+      gap: 10px;
+      align-items: end;
+      margin-bottom: 12px;
+    }
+    .rule-filter-field { display: grid; gap: 4px; }
+    .rule-filter-field label { font-size: 12px; color: var(--ol-muted); }
+    .rule-column-settings {
+      position: relative;
+      align-self: end;
+    }
+    .rule-column-panel {
+      position: absolute;
+      z-index: 12;
+      top: calc(100% + 8px);
+      right: 0;
+      width: min(420px, calc(100vw - 48px));
+      max-height: min(560px, calc(100vh - 180px));
+      overflow: auto;
+      padding: 14px;
+      border: 1px solid var(--ol-border);
+      border-radius: 12px;
+      background: #fff;
+      box-shadow: 0 14px 36px rgba(15, 23, 42, .16);
+    }
+    .rule-column-panel[hidden] { display: none; }
+    .rule-column-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+    .rule-column-panel-head strong { font-size: 14px; }
+    .rule-column-group + .rule-column-group { margin-top: 14px; padding-top: 12px; border-top: 1px solid #eef2f7; }
+    .rule-column-group-title { margin-bottom: 8px; font-size: 12px; font-weight: 600; color: var(--ol-muted); }
+    .rule-column-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 12px; }
+    .rule-column-option { display: flex; align-items: center; gap: 7px; min-width: 0; font-size: 13px; }
+    .rule-column-option span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .rule-column-option.is-fixed { color: var(--ol-muted); }
+    .rule-cell-main { font-weight: 600; }
+    .rule-cell-sub { margin-top: 3px; color: var(--ol-muted); font-size: 12px; line-height: 1.45; }
+    .rule-cell-clamp { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
     html.embedded-mode,
     html.embedded-mode body {
       height: 100%;
@@ -861,6 +900,7 @@
       .entity-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
     }
     @media (max-width: 900px) {
+      .rule-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .sim-grid { grid-template-columns: 1fr; }
       .steps { grid-template-columns: repeat(3, 1fr); }
       .bmsp-grid { grid-template-columns: 1fr 1fr; }
@@ -890,20 +930,23 @@
         </div>
       </div>
       <div class="section-body">
+        <div class="rule-filters" aria-label="规则筛选">
+          <div class="rule-filter-field"><label for="ruleFilterStore">门店</label><select class="select" id="ruleFilterStore"><option value="">全部门店</option></select></div>
+          <div class="rule-filter-field"><label for="ruleFilterStatus">状态</label><select class="select" id="ruleFilterStatus"><option value="">全部状态</option><option value="active">启用</option><option value="inactive">禁用</option><option value="draft">草稿</option></select></div>
+          <div class="rule-filter-field"><label for="ruleFilterPersons">人数</label><select class="select" id="ruleFilterPersons"><option value="">全部人数</option></select></div>
+          <div class="rule-filter-field"><label for="ruleFilterRound">轮次</label><select class="select" id="ruleFilterRound"><option value="">全部轮次</option><option value="每轮">每轮</option><option value="多轮">多轮</option><option value="与轮次无关">与轮次无关</option></select></div>
+          <div class="rule-filter-field"><label for="ruleFilterTime">时间</label><select class="select" id="ruleFilterTime"><option value="">全部时间</option></select></div>
+          <button type="button" class="btn" id="ruleFilterReset">重置筛选</button>
+          <div class="rule-column-settings">
+            <button type="button" class="btn" id="ruleColumnSettingsToggle" aria-expanded="false" aria-controls="ruleColumnSettingsPanel">字段设置</button>
+            <div class="rule-column-panel" id="ruleColumnSettingsPanel" hidden>
+              <div class="rule-column-panel-head"><strong>列表字段</strong><button type="button" class="btn" id="ruleColumnRestoreDefault">恢复默认</button></div>
+              <div id="ruleColumnSettingsOptions"></div>
+            </div>
+          </div>
+        </div>
         <table>
-          <thead>
-            <tr>
-              <th>规则名称</th>
-              <th>规则描述</th>
-              <th>策略</th>
-              <th>人数</th>
-              <th>时间</th>
-              <th>会员</th>
-              <th>门店/产线</th>
-              <th>状态</th>
-              <th>操作</th>
-            </tr>
-          </thead>
+          <thead><tr id="rulesHeadRow"></tr></thead>
           <tbody id="rulesTbody"></tbody>
         </table>
       </div>
@@ -2944,6 +2987,9 @@
         { id: "boston", name: "波士顿店" }
       ];
       var RULE_LINE_NAMES = { kiosk: "Kiosk", emenu: "eMenu", sdi: "SDI" };
+      var RULE_COLUMN_PREFS_KEY = "order-limit:rule-list-columns:v1";
+      var RULE_DEFAULT_COLUMNS = ["name", "strategy", "persons", "productScope", "effectiveStores", "effectiveTime", "authorization", "status", "actions"];
+      var RULE_FIXED_COLUMNS = ["name", "status", "actions"];
 
       function formatRuleStoreLineLabel(rule) {
         if (!rule) return "未配置门店/产线";
@@ -2974,12 +3020,236 @@
         return dishes || "未配置门店/产线";
       }
 
+      function ruleDraft(rule) {
+        return rule && (rule.editorDraft || rule.authoringDraft) || null;
+      }
+      function ruleRangeSummary(ranges, unit) {
+        if (!Array.isArray(ranges) || !ranges.length) return "";
+        return ranges.map(function (range) {
+          var min = Number(range.min);
+          var max = range.max == null || range.max === "" ? null : Number(range.max);
+          if (max == null) return min + " " + unit + "及以上";
+          return min === max ? min + " " + unit : min + "–" + max + " " + unit;
+        }).join("、");
+      }
+      function ruleSubjectText(rule) {
+        var draft = ruleDraft(rule);
+        if (draft && draft.subject === "party_size") return "按人数限购";
+        if (draft && draft.subject === "order") return "按桌/订单限购";
+        return String(rule.type || "—");
+      }
+      function rulePeriodText(rule) {
+        var draft = ruleDraft(rule);
+        if (draft && draft.period === "per_round") return "每轮";
+        if (draft && draft.period === "multi_round") return "多轮";
+        if (draft && draft.period === "order_lifetime") return "与轮次无关";
+        return String(rule.round || "—");
+      }
+      function ruleTargetTypeText(rule) {
+        var draft = ruleDraft(rule);
+        if (draft && draft.targetType === "category") return "按分类";
+        if (draft && draft.targetType === "dish") return "按菜品";
+        return String(rule.method || "—");
+      }
+      function ruleStrategyText(rule) {
+        return [ruleSubjectText(rule), rulePeriodText(rule), ruleTargetTypeText(rule)].join(" · ");
+      }
+      function ruleStoreNames(ids) {
+        return (ids || []).map(function (id) {
+          var store = RULE_STORE_CATALOG.find(function (item) { return item.id === id; });
+          return store ? store.name : id;
+        }).join("、");
+      }
+      function ruleParticipatingStoreIds(rule) {
+        var draft = ruleDraft(rule);
+        if (draft && Array.isArray(draft.participatingStoreIds)) return draft.participatingStoreIds.slice();
+        if (Array.isArray(rule.participatingStoreIds)) return rule.participatingStoreIds.slice();
+        var configs = rule.storeConfigs || (draft && draft.storeConfigs) || {};
+        return Object.keys(configs);
+      }
+      function ruleStoreConfigs(rule) {
+        var draft = ruleDraft(rule);
+        return rule.storeConfigs || (draft && draft.storeConfigs) || {};
+      }
+      function ruleLineText(rule) {
+        var configs = ruleStoreConfigs(rule);
+        var ids = [];
+        Object.keys(configs).forEach(function (storeId) {
+          (configs[storeId].productLines || []).forEach(function (lineId) { if (ids.indexOf(lineId) < 0) ids.push(lineId); });
+        });
+        if (!ids.length && Array.isArray(rule.productLines)) ids = rule.productLines.slice();
+        return ids.map(function (id) { return RULE_LINE_NAMES[id] || id; }).join("、");
+      }
+      function ruleTargetCount(rule) {
+        var configs = ruleStoreConfigs(rule);
+        var count = Object.keys(configs).reduce(function (sum, storeId) {
+          return sum + (Array.isArray(configs[storeId].targetIds) ? configs[storeId].targetIds.length : 0);
+        }, 0);
+        return count || (Array.isArray(rule.targetIds) ? rule.targetIds.length : 0);
+      }
+      function ruleProductScopeText(rule) {
+        var count = ruleTargetCount(rule);
+        if (count) return count + " 个" + (ruleTargetTypeText(rule) === "按分类" ? "分类" : "菜品");
+        return String(rule.dishes || "—");
+      }
+      function ruleCompletionText(rule) {
+        var configs = ruleStoreConfigs(rule);
+        var configured = 0;
+        var total = 0;
+        Object.keys(configs).forEach(function (storeId) {
+          Object.keys(configs[storeId].limits || {}).forEach(function (key) {
+            total += 1;
+            if (configs[storeId].limits[key] && configs[storeId].limits[key].configured) configured += 1;
+          });
+        });
+        return total ? configured + "/" + total : "—";
+      }
+      function ruleConditions(rule) {
+        var draft = ruleDraft(rule);
+        return draft && draft.conditions || {};
+      }
+      function ruleEffectiveDateText(rule) {
+        var condition = ruleConditions(rule);
+        if (!condition.effectiveFrom) return "—";
+        return condition.effectiveTo ? condition.effectiveFrom + " 至 " + condition.effectiveTo : condition.effectiveFrom + " 起长期";
+      }
+      function ruleActivityCycleText(rule) {
+        var condition = ruleConditions(rule);
+        var dayNames = { mon: "周一", tue: "周二", wed: "周三", thu: "周四", fri: "周五", sat: "周六", sun: "周日" };
+        if (condition.activityCycle === "daily") return "每天";
+        if (condition.activityCycle === "weekly") return "每周 " + ((condition.daysOfWeek || []).map(function (day) { return dayNames[day] || day; }).join("、") || "—");
+        if (condition.activityCycle === "monthly") return "每月 " + ((condition.daysOfMonth || []).map(function (day) { return day + "日"; }).join("、") || "—");
+        return "—";
+      }
+      function ruleBusinessHoursText(rule) {
+        var condition = ruleConditions(rule);
+        if (Array.isArray(condition.businessHourSlots) && condition.businessHourSlots.length) {
+          var slotNames = { all: "全天", lunch: "午市", dinner: "晚市" };
+          return condition.businessHourSlots.map(function (slot) {
+            if (slot.mode === "full") return slotNames[slot.id] || slot.id;
+            return (slotNames[slot.id] || slot.id) + " " + [slot.from, slot.to].filter(Boolean).join("–");
+          }).join("、");
+        }
+        return ruleTimeText(rule);
+      }
+      function ruleEffectiveTimeText(rule) {
+        var dateText = ruleEffectiveDateText(rule);
+        var cycleText = ruleActivityCycleText(rule);
+        var hoursText = ruleBusinessHoursText(rule);
+        if (dateText === "—" && cycleText === "—") return hoursText;
+        return [dateText, cycleText, hoursText].filter(function (text) { return text && text !== "—"; }).join(" · ") || "—";
+      }
+      function ruleMemberText(rule) {
+        var condition = ruleConditions(rule);
+        var ids = condition.memberLevelIds || rule.memberLevels || [];
+        var specified = condition.memberMode === "specified" || rule.enableMemberLevels;
+        if (!specified) return "全部顾客";
+        return ids.map(function (id) {
+          var level = memberLevels.find(function (item) { return item.id === id; });
+          return level ? level.name : id;
+        }).join("、") || "—";
+      }
+      function ruleAuthorization(rule) {
+        var draft = ruleDraft(rule);
+        return draft && draft.authorization || {};
+      }
+      function authScopeText(scope) {
+        return scope === "operation" ? "本次操作" : scope === "round" ? "当前轮" : scope === "order" ? "当前订单" : scope;
+      }
+      function ruleAuthorizationText(rule) {
+        var auth = ruleAuthorization(rule);
+        return auth.enabled ? "允许授权" : "硬性拒绝";
+      }
+      function ruleAuthorizationScopesText(rule) {
+        return (ruleAuthorization(rule).allowedScopes || []).map(authScopeText).join("、") || "—";
+      }
+      function ruleAuthorizationPermissionsText(rule) {
+        var auth = ruleAuthorization(rule);
+        return (auth.allowedScopes || []).map(function (scope) {
+          return authScopeText(scope) + "：" + ((auth.scopePermissions || {})[scope] || "—");
+        }).join("；") || "—";
+      }
+      function ruleStatusHtml(rule) {
+        return rule.status === "active"
+          ? "<span class='badge ok'>启用</span>"
+          : rule.status === "draft"
+            ? "<span class='badge draft'>草稿</span>"
+            : "<span class='badge off'>禁用</span>";
+      }
+      function ruleActionsHtml(rule) {
+        var isDraft = rule.status === "draft";
+        return isDraft
+          ? "<button class='btn' data-rule-action='edit' data-rule-id='" + rule.id + "'>编辑</button>" +
+            "<button class='btn' data-rule-action='copy' data-rule-id='" + rule.id + "'>复制</button>" +
+            "<button class='btn btn-danger' data-rule-action='delete' data-rule-id='" + rule.id + "'>删除</button>"
+          : "<button class='btn' data-rule-action='edit' data-rule-id='" + rule.id + "'>编辑</button>" +
+            "<button class='btn' data-rule-action='copy' data-rule-id='" + rule.id + "'>复制</button>" +
+            "<button class='btn' data-rule-action='toggle' data-rule-id='" + rule.id + "'>" + (rule.status === "active" ? "禁用" : "启用") + "</button>" +
+            "<button class='btn btn-danger' data-rule-action='delete' data-rule-id='" + rule.id + "'>删除</button>";
+      }
+      function ruleTextCell(value, options) {
+        options = options || {};
+        var text = value == null || value === "" ? "—" : String(value);
+        return '<div class="' + (options.strong ? "rule-cell-main " : "") + (options.clamp ? "rule-cell-clamp" : "") + '" title="' + esc(text) + '">' + esc(text) + '</div>';
+      }
+      function ruleColumnDefinitions() {
+        return [
+          { id: "name", label: "规则名称", group: "固定字段", fixed: true, render: function (rule) { return "<button type='button' class='rule-name-link' data-rule-view='" + rule.id + "'>" + esc(rule.name || "未命名规则") + "</button>"; } },
+          { id: "strategy", label: "规则策略", group: "默认字段", render: function (rule) { return ruleTextCell(ruleStrategyText(rule), { clamp: true }); } },
+          { id: "persons", label: "人数场景", group: "默认字段", render: function (rule) { return ruleTextCell(rule.persons || ruleRangeSummary((ruleDraft(rule) || {}).partyRanges, "人")); } },
+          { id: "productScope", label: "商品范围", group: "默认字段", render: function (rule) { return ruleTextCell(ruleProductScopeText(rule), { clamp: true }); } },
+          { id: "effectiveStores", label: "生效门店", group: "默认字段", render: function (rule) { return ruleTextCell(ruleStoreNames(ruleStoreIds(rule)), { clamp: true }); } },
+          { id: "effectiveTime", label: "生效时间", group: "默认字段", render: function (rule) { return ruleTextCell(ruleEffectiveTimeText(rule), { clamp: true }); } },
+          { id: "authorization", label: "超限授权", group: "默认字段", render: function (rule) { return ruleTextCell(ruleAuthorizationText(rule)); } },
+          { id: "description", label: "规则描述", group: "步骤 1 · 规则类型", render: function (rule) { return ruleTextCell(rule.description, { clamp: true }); } },
+          { id: "subject", label: "限购主体", group: "步骤 1 · 规则类型", render: function (rule) { return ruleTextCell(ruleSubjectText(rule)); } },
+          { id: "period", label: "轮次规则", group: "步骤 1 · 规则类型", render: function (rule) { return ruleTextCell(rulePeriodText(rule)); } },
+          { id: "targetType", label: "限购对象", group: "步骤 1 · 规则类型", render: function (rule) { return ruleTextCell(ruleTargetTypeText(rule)); } },
+          { id: "childPolicy", label: "儿童人数口径", group: "步骤 1 · 规则类型", render: function (rule) { var value = ruleConditions(rule).childCountPolicy; return ruleTextCell(value === "include" ? "计入" : value === "exclude" ? "不计入" : "继承门店"); } },
+          { id: "partyRanges", label: "人数区间", group: "步骤 2 · 场景配置", render: function (rule) { return ruleTextCell(ruleRangeSummary((ruleDraft(rule) || {}).partyRanges, "人") || rule.persons, { clamp: true }); } },
+          { id: "roundRanges", label: "轮次区间", group: "步骤 2 · 场景配置", render: function (rule) { var draft = ruleDraft(rule) || {}; return ruleTextCell(draft.period === "multi_round" ? ruleRangeSummary(draft.roundRanges, "轮") : rulePeriodText(rule), { clamp: true }); } },
+          { id: "participatingStores", label: "参与门店", group: "步骤 3 · 限购数量", render: function (rule) { return ruleTextCell(ruleStoreNames(ruleParticipatingStoreIds(rule)), { clamp: true }); } },
+          { id: "lines", label: "适用产线", group: "步骤 3 · 限购数量", render: function (rule) { return ruleTextCell(ruleLineText(rule)); } },
+          { id: "targetCount", label: "目标商品数", group: "步骤 3 · 限购数量", render: function (rule) { var count = ruleTargetCount(rule); return ruleTextCell(count ? count + " 个" : "—"); } },
+          { id: "completion", label: "数量完成度", group: "步骤 3 · 限购数量", render: function (rule) { return ruleTextCell(ruleCompletionText(rule)); } },
+          { id: "authScopes", label: "授权范围", group: "步骤 4 · 超限授权", render: function (rule) { return ruleTextCell(ruleAuthorizationScopesText(rule), { clamp: true }); } },
+          { id: "authDefault", label: "默认授权范围", group: "步骤 4 · 超限授权", render: function (rule) { return ruleTextCell(authScopeText(ruleAuthorization(rule).defaultScope || "")); } },
+          { id: "authPermissions", label: "所需权限", group: "步骤 4 · 超限授权", render: function (rule) { return ruleTextCell(ruleAuthorizationPermissionsText(rule), { clamp: true }); } },
+          { id: "authReason", label: "授权原因", group: "步骤 4 · 超限授权", render: function (rule) { return ruleTextCell(ruleAuthorization(rule).reasonRequired ? "必填" : "选填"); } },
+          { id: "effectiveDates", label: "有效日期", group: "步骤 5 · 生效范围", render: function (rule) { return ruleTextCell(ruleEffectiveDateText(rule), { clamp: true }); } },
+          { id: "activityCycle", label: "活动周期", group: "步骤 5 · 生效范围", render: function (rule) { return ruleTextCell(ruleActivityCycleText(rule), { clamp: true }); } },
+          { id: "businessHours", label: "营业时段", group: "步骤 5 · 生效范围", render: function (rule) { return ruleTextCell(ruleBusinessHoursText(rule), { clamp: true }); } },
+          { id: "members", label: "会员范围", group: "步骤 5 · 生效范围", render: function (rule) { return ruleTextCell(ruleMemberText(rule), { clamp: true }); } },
+          { id: "status", label: "状态", group: "固定字段", fixed: true, render: ruleStatusHtml },
+          { id: "actions", label: "操作", group: "固定字段", fixed: true, render: function (rule) { return "<div class='op-row'>" + ruleActionsHtml(rule) + "</div>"; } }
+        ];
+      }
+      function normalizedVisibleRuleColumns(ids) {
+        var validIds = ruleColumnDefinitions().map(function (column) { return column.id; });
+        var selected = Array.isArray(ids) ? ids.filter(function (id, index) { return validIds.indexOf(id) >= 0 && ids.indexOf(id) === index; }) : RULE_DEFAULT_COLUMNS.slice();
+        RULE_FIXED_COLUMNS.forEach(function (id) { if (selected.indexOf(id) < 0) selected.push(id); });
+        return validIds.filter(function (id) { return selected.indexOf(id) >= 0; });
+      }
+      function loadVisibleRuleColumns() {
+        try {
+          var parsed = JSON.parse(localStorage.getItem(RULE_COLUMN_PREFS_KEY) || "{}");
+          return normalizedVisibleRuleColumns(parsed.visible);
+        } catch (error) {
+          return normalizedVisibleRuleColumns(RULE_DEFAULT_COLUMNS);
+        }
+      }
+      function saveVisibleRuleColumns(ids) {
+        localStorage.setItem(RULE_COLUMN_PREFS_KEY, JSON.stringify({ version: 1, visible: normalizedVisibleRuleColumns(ids) }));
+      }
+
       var state = {
         tab: "rules",
         rules: loadRules(),
         wizardOpen: false,
         editingRuleId: null,
         draft: createEmptyDraft(),
+        ruleFilters: { persons: "", round: "", time: "", storeId: "", status: "" },
+        visibleRuleColumns: loadVisibleRuleColumns(),
         sim: {
           selectedRuleId: null,
           personCount: 4,
@@ -2998,6 +3268,59 @@
       function getActiveRules() {
         return state.rules.filter(function (r) { return r.status === "active"; });
       }
+      function ruleTimeText(rule) {
+        return rule.enableTimeSettings
+          ? (rule.timeLabel || formatSelectedBusinessHoursLabel(rule.selectedBusinessHourIds || []))
+          : "全天生效";
+      }
+      function ruleStoreIds(rule) {
+        var draft = rule.editorDraft || rule.authoringDraft || null;
+        if (Array.isArray(rule.deployStoreIds) && rule.deployStoreIds.length) return rule.deployStoreIds.slice();
+        if (Array.isArray(rule.participatingStoreIds) && rule.participatingStoreIds.length) return rule.participatingStoreIds.slice();
+        if (draft && Array.isArray(draft.deployStoreIds) && draft.deployStoreIds.length) return draft.deployStoreIds.slice();
+        if (draft && Array.isArray(draft.participatingStoreIds) && draft.participatingStoreIds.length) return draft.participatingStoreIds.slice();
+        var storeConfigs = rule.storeConfigs || (draft && draft.storeConfigs) || null;
+        return storeConfigs ? Object.keys(storeConfigs) : [];
+      }
+      function uniqueRuleFilterValues(values) {
+        return values.filter(function (value, index, items) { return value && items.indexOf(value) === index; }).sort(function (a, b) {
+          return String(a).localeCompare(String(b), "zh");
+        });
+      }
+      function renderRuleFilterOptions() {
+        var persons = uniqueRuleFilterValues(state.rules.map(function (rule) { return String(rule.persons || "").trim(); }));
+        var times = uniqueRuleFilterValues(state.rules.map(ruleTimeText));
+        var usedStoreIds = [];
+        state.rules.forEach(function (rule) {
+          ruleStoreIds(rule).forEach(function (storeId) { if (usedStoreIds.indexOf(storeId) < 0) usedStoreIds.push(storeId); });
+        });
+        var personSelect = document.getElementById("ruleFilterPersons");
+        var timeSelect = document.getElementById("ruleFilterTime");
+        var storeSelect = document.getElementById("ruleFilterStore");
+        if (state.ruleFilters.persons && persons.indexOf(state.ruleFilters.persons) < 0) state.ruleFilters.persons = "";
+        if (state.ruleFilters.time && times.indexOf(state.ruleFilters.time) < 0) state.ruleFilters.time = "";
+        if (state.ruleFilters.storeId && usedStoreIds.indexOf(state.ruleFilters.storeId) < 0) state.ruleFilters.storeId = "";
+        personSelect.innerHTML = '<option value="">全部人数</option>' + persons.map(function (value) { return '<option value="' + esc(value) + '">' + esc(value) + '</option>'; }).join("");
+        timeSelect.innerHTML = '<option value="">全部时间</option>' + times.map(function (value) { return '<option value="' + esc(value) + '">' + esc(value) + '</option>'; }).join("");
+        storeSelect.innerHTML = '<option value="">全部门店</option>' + RULE_STORE_CATALOG.filter(function (store) {
+          return usedStoreIds.indexOf(store.id) >= 0;
+        }).map(function (store) { return '<option value="' + esc(store.id) + '">' + esc(store.name) + '</option>'; }).join("");
+        personSelect.value = state.ruleFilters.persons;
+        document.getElementById("ruleFilterRound").value = state.ruleFilters.round;
+        timeSelect.value = state.ruleFilters.time;
+        storeSelect.value = state.ruleFilters.storeId;
+        document.getElementById("ruleFilterStatus").value = state.ruleFilters.status;
+      }
+      function filteredRules() {
+        var filters = state.ruleFilters;
+        return state.rules.filter(function (rule) {
+          return (!filters.persons || String(rule.persons || "").trim() === filters.persons) &&
+            (!filters.round || rule.round === filters.round) &&
+            (!filters.time || ruleTimeText(rule) === filters.time) &&
+            (!filters.storeId || ruleStoreIds(rule).indexOf(filters.storeId) >= 0) &&
+            (!filters.status || rule.status === filters.status);
+        });
+      }
       function buildRulePreview(draft) {
         if (!draft.type || !draft.round || !draft.method) return { typeText: "", descText: "请选择规则类型" };
         return {
@@ -3015,51 +3338,44 @@
         });
       }
 
+      function visibleRuleColumnDefinitions() {
+        var visible = normalizedVisibleRuleColumns(state.visibleRuleColumns);
+        return ruleColumnDefinitions().filter(function (column) { return visible.indexOf(column.id) >= 0; });
+      }
+      function renderRuleColumnSettings() {
+        var container = document.getElementById("ruleColumnSettingsOptions");
+        var groups = [];
+        ruleColumnDefinitions().forEach(function (column) {
+          var group = groups.find(function (item) { return item.name === column.group; });
+          if (!group) { group = { name: column.group, columns: [] }; groups.push(group); }
+          group.columns.push(column);
+        });
+        container.innerHTML = groups.map(function (group) {
+          return '<section class="rule-column-group"><div class="rule-column-group-title">' + esc(group.name) + '</div><div class="rule-column-options">' +
+            group.columns.map(function (column) {
+              var checked = state.visibleRuleColumns.indexOf(column.id) >= 0 || column.fixed;
+              return '<label class="rule-column-option' + (column.fixed ? ' is-fixed' : '') + '"><input type="checkbox" data-rule-column="' + esc(column.id) + '"' + (checked ? ' checked' : '') + (column.fixed ? ' disabled' : '') + ' /><span title="' + esc(column.label) + '">' + esc(column.label) + '</span></label>';
+            }).join("") + '</div></section>';
+        }).join("");
+      }
       function renderRuleTable() {
-        document.getElementById("ruleCountBadge").textContent = "共 " + state.rules.length + " 条";
+        renderRuleFilterOptions();
+        renderRuleColumnSettings();
+        var visibleRules = filteredRules();
+        var columns = visibleRuleColumnDefinitions();
+        document.getElementById("ruleCountBadge").textContent = "筛选 " + visibleRules.length + " / 共 " + state.rules.length + " 条";
+        document.getElementById("rulesHeadRow").innerHTML = columns.map(function (column) {
+          return '<th data-rule-column-head="' + esc(column.id) + '">' + esc(column.label) + '</th>';
+        }).join("");
         var tbody = document.getElementById("rulesTbody");
-        if (!state.rules.length) {
-          tbody.innerHTML = "<tr><td colspan='9' style='text-align:center;color:#6b7280;padding:22px;'>暂无规则</td></tr>";
+        if (!visibleRules.length) {
+          tbody.innerHTML = "<tr><td colspan='" + columns.length + "' style='text-align:center;color:#6b7280;padding:22px;'>" + (state.rules.length ? "暂无匹配规则" : "暂无规则") + "</td></tr>";
           return;
         }
-        tbody.innerHTML = state.rules.map(function (rule) {
-          var timeTxt = rule.enableTimeSettings
-            ? (rule.timeLabel || formatSelectedBusinessHoursLabel(rule.selectedBusinessHourIds || []))
-            : "全天生效";
-          var memberTxt = rule.enableMemberLevels && rule.memberLevels && rule.memberLevels.length
-            ? rule.memberLevels.map(function (id) {
-                var lv = memberLevels.find(function (m) { return m.id === id; });
-                return lv ? (lv.icon + " " + lv.name) : id;
-              }).join("、")
-            : "全部";
-          var descTxt = String(rule.description || "").trim();
-          var isDraft = rule.status === "draft";
-          var statusHtml = rule.status === "active"
-            ? "<span class='badge ok'>启用</span>"
-            : isDraft
-              ? "<span class='badge draft'>草稿</span>"
-              : "<span class='badge off'>禁用</span>";
-          var actionsHtml = isDraft
-            ? "<button class='btn btn-primary' data-rule-action='edit' data-rule-id='" + rule.id + "'>继续编辑</button>" +
-              "<button class='btn' data-rule-action='copy' data-rule-id='" + rule.id + "'>复制</button>" +
-              "<button class='btn btn-danger' data-rule-action='delete' data-rule-id='" + rule.id + "'>删除</button>"
-            : "<button class='btn' data-rule-action='edit' data-rule-id='" + rule.id + "'>编辑</button>" +
-              "<button class='btn' data-rule-action='copy' data-rule-id='" + rule.id + "'>复制</button>" +
-              "<button class='btn' data-rule-action='toggle' data-rule-id='" + rule.id + "'>" + (rule.status === "active" ? "禁用" : "启用") + "</button>" +
-              "<button class='btn btn-danger' data-rule-action='delete' data-rule-id='" + rule.id + "'>删除</button>";
-          return (
-            "<tr>" +
-              "<td><button type='button' class='rule-name-link' data-rule-view='" + rule.id + "'>" + esc(rule.name) + "</button></td>" +
-              "<td style='max-width:220px;'><span class='sub'>" + (descTxt ? esc(descTxt) : "—") + "</span></td>" +
-              "<td><span class='sub' style='font-size:12px;color:#374151;'>" + esc(rule.type + " · " + rule.round + " · " + rule.method) + "</span></td>" +
-              "<td>" + esc(rule.persons) + "</td>" +
-              "<td>" + esc(timeTxt) + "</td>" +
-              "<td style='max-width:160px;'>" + esc(memberTxt) + "</td>" +
-              "<td style='max-width:280px;'><span class='sub' style='white-space:pre-line;'>" + esc(formatRuleStoreLineLabel(rule).replace(/；/g, "\n")) + "</span></td>" +
-              "<td>" + statusHtml + "</td>" +
-              "<td><div class='op-row'>" + actionsHtml + "</div></td>" +
-            "</tr>"
-          );
+        tbody.innerHTML = visibleRules.map(function (rule) {
+          return "<tr>" + columns.map(function (column) {
+            return '<td data-rule-column-cell="' + esc(column.id) + '">' + column.render(rule) + '</td>';
+          }).join("") + "</tr>";
         }).join("");
       }
 
@@ -4070,8 +4386,58 @@
 
       window.addEventListener("keydown", function (e) {
         if (e.key !== "Escape") return;
+        var columnPanel = document.getElementById("ruleColumnSettingsPanel");
+        if (!columnPanel.hidden) {
+          columnPanel.hidden = true;
+          document.getElementById("ruleColumnSettingsToggle").setAttribute("aria-expanded", "false");
+          document.getElementById("ruleColumnSettingsToggle").focus();
+          return;
+        }
         if (!state.wizardOpen) return;
         closeWizard();
+      });
+
+      ["Persons", "Round", "Time", "Store", "Status"].forEach(function (name) {
+        document.getElementById("ruleFilter" + name).addEventListener("change", function (e) {
+          var keyByName = { Persons: "persons", Round: "round", Time: "time", Store: "storeId", Status: "status" };
+          state.ruleFilters[keyByName[name]] = e.target.value;
+          renderRuleTable();
+        });
+      });
+      document.getElementById("ruleFilterReset").addEventListener("click", function () {
+        state.ruleFilters = { persons: "", round: "", time: "", storeId: "", status: "" };
+        renderRuleTable();
+      });
+      document.getElementById("ruleColumnSettingsToggle").addEventListener("click", function () {
+        var panel = document.getElementById("ruleColumnSettingsPanel");
+        panel.hidden = !panel.hidden;
+        this.setAttribute("aria-expanded", panel.hidden ? "false" : "true");
+      });
+      document.getElementById("ruleColumnRestoreDefault").addEventListener("click", function () {
+        state.visibleRuleColumns = normalizedVisibleRuleColumns(RULE_DEFAULT_COLUMNS);
+        saveVisibleRuleColumns(state.visibleRuleColumns);
+        renderRuleTable();
+      });
+      document.getElementById("ruleColumnSettingsOptions").addEventListener("change", function (e) {
+        var checkbox = e.target.closest("[data-rule-column]");
+        if (!checkbox || checkbox.disabled) return;
+        var columnId = checkbox.getAttribute("data-rule-column");
+        var next = state.visibleRuleColumns.slice();
+        var index = next.indexOf(columnId);
+        if (checkbox.checked && index < 0) next.push(columnId);
+        if (!checkbox.checked && index >= 0) next.splice(index, 1);
+        state.visibleRuleColumns = normalizedVisibleRuleColumns(next);
+        saveVisibleRuleColumns(state.visibleRuleColumns);
+        renderRuleTable();
+      });
+      document.addEventListener("click", function (e) {
+        var settings = e.target.closest(".rule-column-settings");
+        if (settings) return;
+        var panel = document.getElementById("ruleColumnSettingsPanel");
+        if (!panel.hidden) {
+          panel.hidden = true;
+          document.getElementById("ruleColumnSettingsToggle").setAttribute("aria-expanded", "false");
+        }
       });
 
       renderAll();

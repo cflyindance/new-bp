@@ -29,7 +29,7 @@ assert.match(applyFn, /configured:\s*false,\s*value:\s*null/, "源未配置应�
 assert.match(applyFn, /target\.key|sourceTarget\.key|\.key\b/, "应按菜单 key 对齐");
 assert.match(applyFn, /limitKey\(/, "应写入 limitKey");
 
-assert.match(source, /复制到其他产线/, "步骤 4 应有入口文案");
+assert.match(source, /复制到其他产线/, "限购数量步骤应有入口文案");
 assert.match(source, /data-line-limit-copy-open/, "应有打开入口标记");
 assert.match(source, /data-line-limit-copy-overlay/, "应有弹层遮罩标记");
 assert.match(source, /data-line-limit-copy-target/, "应有目标产线勾选标记");
@@ -40,8 +40,8 @@ assert.match(source, /function openLineLimitCopy\(/, "应提供打开函数");
 assert.match(source, /function closeLineLimitCopy\(/, "应提供关闭函数");
 assert.match(
   source,
-  /function goToEditorStep[\s\S]*?currentStep === 4[\s\S]*?closeLineLimitCopy\(\)/,
-  "离开步骤 4 应关闭复制弹层",
+  /function goToEditorStep[\s\S]*?currentStep === 3[\s\S]*?closeLineLimitCopy\(\)/,
+  "离开步骤 3 应关闭复制弹层",
 );
 const escapeHandler = source.match(/event\.key !== "Escape"[\s\S]*?\n\s*\}\);/)?.[0] ?? "";
 assert.ok(escapeHandler, "应存在 Esc 键处理逻辑");
