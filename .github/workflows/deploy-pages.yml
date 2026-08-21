@@ -1,6 +1,11 @@
 name: Deploy GitHub Pages
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - "admin-web/dist/**"
+      - ".github/workflows/deploy-pages.yml"
   workflow_run:
     workflows: [Build GitHub Pages dist]
     types: [completed]
