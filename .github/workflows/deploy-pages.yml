@@ -38,10 +38,15 @@ jobs:
       - name: Configure Pages
         uses: actions/configure-pages@v5
 
+      - name: Prepare legacy-compatible Pages artifact
+        run: |
+          mkdir -p pages-artifact/admin-web
+          cp -a admin-web/dist pages-artifact/admin-web/dist
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: admin-web/dist
+          path: pages-artifact
 
       - name: Deploy to GitHub Pages
         id: deployment
