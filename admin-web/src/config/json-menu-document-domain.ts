@@ -15,7 +15,8 @@ export interface MenuMicroAppConfig {
   routeType?: "hash" | "history";
 }
 
-export interface MenuPermission { rule?: "some"; value?: string[]; }
+export type MenuPermissionRule = "some" | "every";
+export interface MenuPermission { rule?: MenuPermissionRule; value?: string[]; }
 export interface MenuAccessControl { bool?: boolean; serviceName?: string; permission?: MenuPermission; }
 
 export interface MenuNode {
@@ -244,8 +245,9 @@ export function validateMenuDocument(document: MenuDocument, publishedBaseline?:
       }
     }
     if (node.microAppConfig?.routeType && !["hash", "history"].includes(node.microAppConfig.routeType)) issues.push({ code: "INVALID_ROUTE_TYPE", severity: "error", message: "routeType 只能是 hash 或 history", path, field: "microAppConfig.routeType" });
-    if (node.accessControl?.permission?.rule && node.accessControl.permission.rule !== "some") issues.push({ code: "INVALID_PERMISSION_RULE", severity: "error", message: "permission.rule 只能是 some", path, field: "accessControl.permission.rule" });
+    if (node.accessControl?.permission?.rule && !["some", "every"].includes(node.accessControl.permission.rule)) issues.push({ code: "INVALID_PERMISSION_RULE", severity: "error", message: "permission.rule 只能是 some 或 every", path, field: "accessControl.permission.rule" });
     if (node.accessControl?.permission?.rule && !node.accessControl.permission.value?.length) issues.push({ code: "EMPTY_PERMISSION_VALUES", severity: "error", message: "配置 permission.rule 后必须填写 permission.value", path, field: "accessControl.permission.value" });
+    if (node.accessControl?.permission?.value?.length && !node.accessControl.permission.rule) issues.push({ code: "MISSING_PERMISSION_RULE", severity: "error", message: "配置功能权限后必须选择 permission.rule", path, field: "accessControl.permission.rule" });
     if (node.i18nInfo && MENU_I18N_FIELDS.some((locale) => !node.i18nInfo?.[locale]?.trim())) issues.push({ code: "INCOMPLETE_I18N", severity: "warning", message: "多语言内容不完整，预览将回退到 name", path, field: "i18nInfo" });
     if (node.icon && /^https?:\/\//.test(node.icon) && !isHttpUrl(node.icon)) issues.push({ code: "INVALID_ICON_URL", severity: "warning", message: "图标 URL 无法识别", path, field: "icon" });
   }

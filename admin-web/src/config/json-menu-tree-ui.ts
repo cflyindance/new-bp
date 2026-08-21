@@ -50,9 +50,8 @@ function renderNode(
         <span class="mt-0.5 flex min-w-0 items-center gap-1.5 text-[10px] text-slate-400"><code class="min-w-0 truncate" title="${escapeHtml(node.key || "未设置 Key")}">${escapeHtml(node.key || "未设置 Key")}</code><span class="shrink-0">· ${path.length} 级</span></span>
       </button>
       <div class="ml-1 flex shrink-0 items-start gap-2 self-start">
-        ${!protectedNode ? `<div class="flex h-6 w-[72px] shrink-0 items-center justify-end gap-0 ${active ? "flex" : "hidden group-hover:flex group-focus-within:flex"}">
+        ${!protectedNode ? `<div class="flex h-6 w-[48px] shrink-0 items-center justify-end gap-0 ${active ? "flex" : "hidden group-hover:flex group-focus-within:flex"}">
           ${path.length < 3 ? `<button type="button" data-jme-open-add="${encoded}" class="grid h-6 w-6 place-items-center rounded text-slate-500 hover:bg-white hover:text-teal-700" title="添加子菜单">＋</button>` : ""}
-          <button type="button" data-jme-open-edit="${encoded}" class="grid h-6 w-6 place-items-center rounded text-slate-500 hover:bg-white hover:text-teal-700" title="编辑">✎</button>
           <button type="button" data-jme-row-more="${encoded}" class="grid h-6 w-6 place-items-center rounded text-slate-500 hover:bg-white" title="更多">•••</button>
         </div>` : ""}
         <span class="flex h-6 shrink-0 items-center gap-1"><span class="rounded border px-1.5 py-0.5 text-[9px] font-medium ${active && !protectedNode ? "border-teal-300 bg-white/70 text-teal-700" : typeClass}">${protectedNode ? "兼容保留" : typeLabel}</span>${node.display === false ? `<span class="rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[9px] font-medium text-slate-500">隐藏</span>` : ""}</span>
@@ -81,7 +80,7 @@ export function renderJsonMenuTree(
       <label class="mt-3 flex min-w-0 items-center rounded-lg border border-slate-200 bg-slate-50 px-2.5 focus-within:border-teal-600 focus-within:bg-white"><span class="text-slate-400">⌕</span><input data-jme-search value="${escapeHtml(searchValue)}" placeholder="搜索菜单名称、Key 或路径" class="h-9 min-w-0 flex-1 bg-transparent px-2 text-xs outline-none"></label>
       <div class="mt-2.5 flex items-center gap-3 text-[10px]"><span class="text-red-600">${errors} 错误</span><span class="text-amber-600">${warnings} 警告</span>${issues.length ? `<button type="button" data-jme-next-issue class="text-teal-700 hover:underline">定位问题 →</button>` : ""}${expandableCount ? `<span class="ml-auto flex gap-2"><button type="button" data-jme-toggle-expand-all class="text-slate-500 hover:text-teal-700">${allExpanded ? "全部收起" : "全部展开"}</button></span>` : ""}</div>
     </header>
-    <div class="min-h-0 flex-1 overflow-y-auto px-3 pb-4 pt-1">
+    <div class="min-h-0 flex-1 overflow-y-auto px-3 pb-4 pt-1" data-jme-tree-scroll>
       ${document.menu.length ? `<ol>${document.menu.map((node, index) => `<div data-jme-drop-parent="" data-jme-drop-index="${index}" class="h-1 rounded hover:bg-teal-300"></div>${renderNode(document, node, [index], [], selectedPath, issues, expanded, search)}`).join("")}<div data-jme-drop-parent="" data-jme-drop-index="${document.menu.length}" class="h-2 rounded hover:bg-teal-300"></div></ol>` : `<div class="grid h-full min-h-72 place-items-center text-center"><div><div class="mx-auto grid h-12 w-12 place-items-center rounded-full bg-slate-100 text-xl text-slate-400">☷</div><p class="mt-3 text-sm font-medium">暂无菜单</p><p class="mt-1 text-xs text-slate-500">从新增一级菜单开始配置</p></div></div>`}
     </div>
   </section>`;
