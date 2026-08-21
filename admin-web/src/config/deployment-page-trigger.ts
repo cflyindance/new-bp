@@ -22,7 +22,7 @@ export async function confirmAndTriggerPageSaveAndDeploy(
 ): Promise<DeploymentBatch | null> {
   const key = resolvePageSaveKey(pageKey);
 
-  if (!runPageSavePreCommit(key)) return null;
+  if (!(await runPageSavePreCommit(key))) return null;
   if (getPageChangeCount(key) === 0) return null;
 
   const scope = await openPageSaveConfirmDialog(key);
@@ -59,7 +59,7 @@ export async function confirmAndTriggerPageSaveAndDeploy(
 /** 仅预览待保存变更（「N 项待保存」入口） */
 export async function previewPageSaveChanges(pageKey: string): Promise<void> {
   const key = resolvePageSaveKey(pageKey);
-  if (!runPageSavePreCommit(key)) return;
+  if (!(await runPageSavePreCommit(key))) return;
   if (getPageChangeCount(key) === 0) return;
   await openPageSaveChangePreviewDialog(key);
 }
