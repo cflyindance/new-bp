@@ -59,8 +59,7 @@
 /kpos/ws/kposService
   ├─ ListAreasType
   ├─ ListTablesType
-  ├─ SaveSeatingAreaType
-  └─ SaveTableType
+  └─ SaveSeatingAreaType（整区域快照，包含桌台）
           │
           ▼
 餐位平面图 KPOS 适配器 → 现有编辑器
@@ -100,27 +99,35 @@
 
 记录至少包含密文、IV、算法版本、创建时间和更新时间。页面仅展示「已保存凭据」，不能回读明文给用户。连接时应用在内存中短暂解密密码，并仅通过 HTTPS 或同源本地开发代理发送到连接接口。切换商家账号时不得复用其他账号记录；退出账号可按产品策略清除当前账号凭据。
 
+「记住密码」未勾选时，不创建或更新 IndexedDB 凭据，并删除当前用户/主机/License 已存在的记录。用户主动断开可以选择保留或删除已记住凭据；删除主机绑定和退出商家账号默认删除对应凭据。不可导出密钥丢失、IndexedDB 记录损坏、认证标签校验失败或算法版本不受支持时，立即删除不可用记录并要求重新输入，不能降级成明文。算法升级使用新密钥/新版本重新加密，成功后删除旧记录；任何失败都保留「需要重新输入」状态而不是猜测恢复。
+
 浏览器加密不能防御已经获得同源脚本执行能力的 XSS，因此实现必须避免不受信任 HTML 注入，并在设计说明和 UI 中明确其安全边界。
 
 ## 7. 代理与安全边界
 
 ### 7.1 会话隔离
 
-代理会话按「商家用户 ID + 规范化主机 + PC License」隔离。服务端只在内存或短期会话存储中保存 KPOS Cookie/令牌与到期时间，不长期保存 Admin 密码。
+代理会话按「商家用户 ID + 商家门店范围 + 规范化主机 + PC License」隔离。服务端只在内存或短期会话存储中保存 KPOS Cookie/令牌与到期时间，不长期保存 Admin 密码。创建连接和所有读写接口都必须通过现有商家后台认证中间件，从服务端会话取得用户及可访问门店，不能接受客户端伪造的用户或门店 ID。
 
-业务请求只提交代理生成的连接 ID，不能每次自由传入目标 URL。连接 ID 必须绑定当前商家用户，服务端不得信任客户端提交的用户 ID。
+业务请求只提交代理生成的连接 ID，不能每次自由传入目标 URL。连接 ID 必须绑定当前商家用户和门店范围，服务端不得信任客户端提交的用户 ID。所有创建连接、续期、断开和写接口必须校验同源 CSRF Token 与 `Origin`；Cookie 使用 `HttpOnly`、`Secure`（非开发环境）和合适的 `SameSite` 策略。
 
 ### 7.2 SSRF 防护
 
 动态主机代理必须：
 
 - 只接受 `http`/`https`。
-- 默认允许 `localhost`、RFC1918 私网 IPv4 和产品明确支持的 HTTPS 隧道域名。
+- 开发模式可显式允许 `localhost`；部署模式默认禁止 `localhost` 和代理服务器自身地址。部署配置按网络拓扑声明允许的 RFC1918 网段、端口范围和 HTTPS 隧道域名后缀，不能使用无边界的公网代理规则。
 - 拒绝 URL 用户信息、路径穿透、非预期协议和无效端口。
-- DNS 解析后再次校验目标地址，防止 DNS rebinding。
+- DNS 解析后再次校验目标地址并将通过校验的 IP 固定到该连接的底层 socket；Host/SNI 仍使用已验证主机名。连接生命周期内不得再次按未校验 DNS 结果发起请求，以防 DNS rebinding。
 - 禁止访问云元数据地址、链路本地地址和未授权公网目标。
 - 限制请求路径在 `/kpos` 范围内，并设置连接、响应和正文大小超时。
 - 对重定向后的目标重复执行校验，或直接禁止代理跟随重定向。
+
+探测与登录按「用户 + 主机」限速，连续失败触发短时退避；每个连接限制并发读取数和串行写入队列长度。超过限制返回 `429`，不得继续向 KPOS 放大请求。
+
+### 7.4 传输要求
+
+开发模式仅允许商家后台运行在 `localhost` / `127.0.0.1` 时使用 HTTP 同源代理。任何非开发部署都必须使用 HTTPS，且浏览器凭据接口拒绝非安全上下文。代理到 KPOS 的 HTTP 仅允许经部署配置批准的受信私网；公网隧道必须使用 HTTPS。密码绝不通过查询参数、重定向或跨源浏览器请求传输。
 
 ### 7.3 日志
 
@@ -172,11 +179,40 @@ type KposConnection = {
 
 解析器必须容忍 KPOS 的单对象/数组两种 XML 结构、字符串数值、缺失可选字段和未知枚举。未知形状或类别保留原始值用于回写，并在 UI 显示兼容提示，不能静默改成默认值后覆盖远端。
 
-## 9. REST 代理契约
+## 9. KPOS Wire Driver 与 REST 代理契约
+
+### 9.1 Wire Driver
+
+代理内部必须通过单一 `KposFloorPlanWireDriver` 封装 KPOS 差异：
+
+```ts
+interface KposFloorPlanWireDriver {
+  probe(target: PinnedKposTarget): Promise<KposProbeResult>;
+  listPcLicenses(target: PinnedKposTarget): Promise<KposPcLicense[]>;
+  login(input: KposLoginInput): Promise<KposWireSession>;
+  listAreas(session: KposWireSession): Promise<KposWireArea[]>;
+  listTables(session: KposWireSession, areaId: string): Promise<KposWireTable[]>;
+  saveAreaSnapshot(session: KposWireSession, area: KposWireAreaSnapshot): Promise<KposWireArea>;
+}
+```
+
+已从参考环境客户端确认的 SOAP 操作如下：
+
+- `ListAreasType` 请求体含 `<fetchOrders>false</fetchOrders>`。
+- `ListTablesType` 请求体含 `<fetchOrders>false</fetchOrders>` 与 `<areaId>`。
+- `SaveSeatingAreaType` 发送一个 `<areaType>`，包含区域 `id`、`name` 和零到多个 `<tables>`。
+- 每个 `<tables>` 包含 `id`、`name`、`shape`、`x`、`y`、`width`、`height`、`defaultGuestCount`、`currentGuestCount` 和 `status`。
+- KPOS 形状值至少包括 `RECTANGLE`、`HIBACHI`、`ROUND`；适配器不得把未知值静默覆盖。
+
+所有 SOAP 调用使用同一 KPOS 登录会话向 `/kpos/ws/kposService` 发起 `POST`。具体 Envelope namespace、认证头/会话 Cookie、License 发现与 PC Admin 登录请求、成功响应根节点、Fault/error 节点，以及「删除桌台/删除区域」的真实表示，必须在实现写操作前通过参考环境网络录制或可审计客户端代码生成脱敏 golden fixtures。fixtures 进入测试目录，禁止包含密码、Cookie 或 token。
+
+删除不是独立 `SaveTableType`：参考客户端以 `SaveSeatingAreaType` 保存整区域快照。桌台删除预期为在区域快照中省略该桌台；区域删除的 wire 语义尚需 fixture 验证。若目标 KPOS 版本无法证明删除语义，代理必须把对应删除能力标记为 `unsupported` 并禁用 UI 操作，不能试探性写生产数据。
+
+Wire Driver 对上层只返回规范化结果或统一错误，SOAP XML 不泄露到浏览器。完成上述 golden fixtures 是实施计划的 P0 门禁；门禁未通过时只允许只读加载。
 
 建议前端只使用以下同源接口：
 
-### 9.1 连接
+### 9.2 连接
 
 - `POST /api/kpos/connections/probe`
   - 输入：规范化前的主机和端口。
@@ -186,21 +222,32 @@ type KposConnection = {
 - `POST /api/kpos/connections/session`
   - 输入：`probeId`、License 名称和 Admin 密码。
   - 输出：连接 ID、状态和到期时间。
+- `POST /api/kpos/connections/session/:connectionId/reauth`
+  - 输入：Admin 密码；仅用于当前用户对原主机和 License 续期。
+  - 输出：新的连接 ID、到期时间和旧连接失效标记。
 - `DELETE /api/kpos/connections/session/:connectionId`
   - 清理当前用户的代理会话。
 
-### 9.2 餐位平面图
+### 9.3 餐位平面图
 
 - `GET /api/kpos/floor-plan?connectionId=...`
   - 组合 `ListAreasType` 与 `ListTablesType`，输出规范化完整布局及远端版本指纹。
+- `PUT /api/kpos/floor-plan/areas/:areaId`
+  - 输入：完整区域快照、该区域基线实体指纹和请求幂等键。
+  - 输出：KPOS 归一化后的完整区域、最新实体指纹和临时 ID 到远端 ID 映射。
 - `POST /api/kpos/floor-plan/areas`
-- `PATCH /api/kpos/floor-plan/areas/:id`
-- `DELETE /api/kpos/floor-plan/areas/:id`
-- `POST /api/kpos/floor-plan/tables`
-- `PATCH /api/kpos/floor-plan/tables/:id`
-- `DELETE /api/kpos/floor-plan/tables/:id`
+  - 输入：完整新区域快照和请求幂等键。
+  - 输出：KPOS 返回的完整区域、真实 ID 和实体指纹。
+- `DELETE /api/kpos/floor-plan/areas/:areaId`
+  - 仅当 Wire Driver fixtures 证明该 KPOS 版本支持区域删除时启用。
 
-写接口接收远端版本指纹或实体指纹，用于尽早发现并发修改。代理将 REST 操作映射到 KPOS `SaveSeatingAreaType` / `SaveTableType` 负载。
+桌台新增、更新、移动和删除都通过其所属区域的完整快照写入，不暴露虚假的独立 Table CRUD wire 能力。代理将区域快照映射到 `SaveSeatingAreaType`。
+
+### 9.4 指纹与并发
+
+KPOS 未确认提供原生版本号，因此 v1 使用规范化实体内容生成 SHA-256 指纹：字段按固定顺序序列化；区域内桌台按稳定 KPOS ID排序，临时 ID 按客户端创建序排序；忽略订单运行态、当前占用人数和无关服务端时间字段，只纳入布局可编辑字段。完整布局指纹由有序区域实体指纹生成。
+
+每次 `GET` 返回布局指纹和每个区域实体指纹。每次 `PUT` 前，代理重新读取目标区域并比较基线指纹；不一致返回 `409 KPOS_CONFLICT` 且不写入。写成功后代理必须重新读取目标区域，以 KPOS 实际返回值计算并返回新指纹。后续区域写使用各自独立的基线指纹，因此同一批次前一个区域成功不会使后一个区域自冲突。若保存操作改变多个区域，保存器串行执行并在每一步更新相应指纹。
 
 ## 10. 页面加载与保存
 
@@ -213,23 +260,33 @@ type KposConnection = {
 
 ### 10.2 保存顺序
 
-页面继续使用现有 diff 与配置变更摘要。用户点击保存后按以下顺序执行：
+页面继续使用现有 diff 与配置变更摘要。用户点击保存后先把变更按所属区域聚合，并按以下顺序执行：
 
 1. 区域新增。
-2. 区域更新。
-3. 桌台新增。
-4. 桌台更新，包括拖拽后的坐标。
-5. 桌台删除。
-6. 区域删除。
-7. 商家后台扩展字段更新。
+2. 现有区域完整快照更新；快照一次包含该区域桌台新增、更新、拖拽和删除。
+3. 已由 Wire Driver fixture 验证支持的区域删除。
+4. 商家后台扩展字段更新。
 
 新增实体获得远端 ID 后立即更新后续操作中的引用。
 
-KPOS SOAP 不提供整批事务。保存器必须记录每项结果，并返回 `succeeded`、`failed` 和 ID 映射。只有全部成功时才将当前草稿设为新基线并清空页面变更。部分失败时：
+KPOS SOAP 不提供整批事务。保存器必须记录每个区域和每条扩展记录的结果，并返回 `succeeded`、`failed`、`ambiguous`、新指纹和 ID 映射。只有全部成功时才将当前草稿设为新基线并清空页面变更。
+
+客户端在保存开始前保留三份数据：`base`（加载基线）、`local`（用户草稿）和保存后从 KPOS 读取的 `remote`。部分失败后按实体 ID 与字段执行确定性三方合并：
+
+- `local === base`：采用 `remote`。
+- `remote === base`：保留 `local` 未保存修改。
+- `local === remote`：采用该共同值并标记已同步。
+- 三者均不同：生成字段级冲突，不自动覆盖，要求用户选择本地或远端。
+- 新增实体只有收到真实 ID 且回读可见时才算成功；否则标记 `ambiguous`，禁止用新幂等键直接重试。
+- 删除请求响应不确定时，先回读确认实体是否仍存在，再决定成功、失败或冲突。
+
+扩展字段写入是同一保存结果的一部分。若 KPOS 成功而扩展存储失败，KPOS 新基线与 ID 映射仍被记录，扩展变更保留为可单独重试的失败项；不能回滚或重复 KPOS 新增。只有 KPOS 与扩展项全部成功时显示整体成功。
+
+部分失败时：
 
 - 保留失败项及错误信息。
 - 合并成功项的远端 ID。
-- 重新读取受影响实体或完整布局，避免客户端继续使用错误基线。
+- 重新读取受影响实体或完整布局，并使用上述三方合并生成新基线和剩余草稿。
 - 不显示整体成功，也不自动重复非幂等新增操作。
 
 ### 10.3 放弃
@@ -248,11 +305,18 @@ KPOS SOAP 不提供整批事务。保存器必须记录每项结果，并返回 
 - `KPOS_CONFLICT`：远端数据已变化。
 - `KPOS_VALIDATION_FAILED`：字段不符合 KPOS 约束。
 - `KPOS_PARTIAL_SAVE`：部分写入成功。
+- `KPOS_WRITE_AMBIGUOUS`：无法确认写入是否到达 KPOS，必须回读。
+- `KPOS_RATE_LIMITED`：探测、登录或并发请求超过限制。
+- `KPOS_CSRF_REJECTED`：来源或 CSRF 校验失败。
 - `KPOS_PROTOCOL_ERROR`：SOAP 响应无法解析或缺少必需字段。
 
-会话过期时代理可使用当前请求提供或浏览器重新提交的保存凭据续期一次。认证失败、License 占用和权限不足不循环重试。网络读取可以有限退避重试；新增、删除等非幂等写操作在无法确认结果时不得自动重放。
+认证失败、License 占用和权限不足不循环重试。网络读取可以有限退避重试；新增、删除等非幂等写操作在无法确认结果时不得自动重放。
 
 页面错误提示必须说明影响对象和下一步操作，例如「Floor 2 · A12 保存失败：License 会话已过期，请重新连接」。重新拉取远端数据会覆盖未保存草稿时必须二次确认。
+
+### 11.1 会话续期
+
+普通业务请求只发送 `connectionId`，不携带密码。代理发现会话过期时返回 `401 KPOS_SESSION_EXPIRED`，并保证该次写操作尚未发出；客户端暂停保存队列但保留 `base`、`local` 和已完成结果。若浏览器存在已记住凭据，客户端解密后调用专用 `reauth` 接口；否则打开连接面板要求重新输入。续期成功返回新连接 ID，旧 ID 立即失效，客户端替换 ID 后只重试尚未发出的当前操作一次。若代理无法确定过期发生在写入前还是写入后，返回 `KPOS_WRITE_AMBIGUOUS`，客户端必须先回读，不得直接重试。
 
 ## 12. 与现有能力的关系
 
@@ -263,6 +327,18 @@ KPOS SOAP 不提供整批事务。保存器必须记录每项结果，并返回 
 - 按时计价等扩展能力继续通过 KPOS 桌台 ID 关联，切换主机后按主机指纹隔离。
 - 复用现有悬浮球主机规范化和主机切换事件，避免出现两套 KPOS 目标配置。
 
+### 12.1 扩展字段仓储
+
+扩展字段使用商家后台同源 API，而不是 KPOS 或浏览器主数据缓存：
+
+- `GET /api/kpos/floor-plan/extensions?connectionId=...`
+- `PUT /api/kpos/floor-plan/extensions/:tableId`
+- `DELETE /api/kpos/floor-plan/extensions/:tableId`
+
+服务端主键为「租户 ID + 门店 ID + 主机指纹 + KPOS 桌台 ID」，并通过当前认证会话校验租户与门店所有权。主机规范身份为 `lowercase(protocol) + // + lowercase(hostname) + : + explicitPort`；IPv6 使用标准方括号形式，去除尾随点和默认路径，不包含凭据、查询或 fragment。主机指纹是该规范身份的 SHA-256，不以短哈希作为唯一键；数据库同时保存规范身份用于碰撞校验。
+
+记录包含扩展 schema 版本、`rotation`、`durationBillingRuleId`、更新时间和软删除时间。读取主布局后再合并扩展记录。KPOS 桌台被确认删除后软删除扩展记录；若删除结果不确定则保留并标记 orphan candidate，定期或下次完整读取确认后清理。KPOS ID 被复用时，若桌台创建指纹/首次见时间不匹配，不自动继承旧扩展。扩展 API 失败遵循第 10.2 节的独立失败和重试规则。
+
 ## 13. 测试与验收
 
 ### 13.1 单元测试
@@ -272,22 +348,31 @@ KPOS SOAP 不提供整批事务。保存器必须记录每项结果，并返回 
 - KPOS SOAP 请求构造和响应解析。
 - 区域/桌台字段映射、未知枚举兼容和临时 ID 替换。
 - 保存排序、部分失败合并和非幂等操作不自动重放。
+- 指纹规范化、区域写入后指纹刷新和多区域保存不自冲突。
+- 三方合并对失败草稿、字段冲突和远端新增/删除的确定性结果。
+- 主机指纹规范化、扩展字段所有权和 KPOS ID 复用保护。
 
 ### 13.2 集成测试
 
 - 探测主机、加载 PC License、连接、续期和断开。
-- 区域与桌台完整 CRUD。
+- 区域与桌台查询、新增和更新，以及经目标版本 fixture 验证后启用的删除。
 - 拖拽位置、尺寸、人数、形状和类别写入后重新加载一致。
 - 主机离线、密码错误、License 占用、会话过期和部分保存失败。
 - 用户 A 不能访问用户 B 的连接或凭据记录。
 - 主机 A 与主机 B 的草稿、扩展字段和连接不串用。
+- CSRF/Origin 拒绝、认证门店越权、探测/登录限速和连接并发上限。
+- DNS rebinding、重定向、代理自身 localhost、链路本地和云元数据地址拒绝。
+- IndexedDB 密钥丢失、密文损坏、认证标签失败和算法轮换。
+- 指纹在保存中途冲突，失败区域的本地草稿经三方合并后仍可继续编辑。
+- KPOS 写入成功但扩展字段写入失败时，只重试扩展项。
+- create/delete 网络结果不确定时先回读，不自动重复非幂等操作。
 
 ### 13.3 真实环境验收
 
 1. 使用 `192.168.96.96:22080` 只读加载区域和桌台，核对 Admin → Table 页面。
 2. 经用户明确授权，在测试区域新增一张桌台并核对 KPOS 原页面。
 3. 编辑名称、人数、尺寸、形状、类别和位置后重新加载核对。
-4. 删除测试桌台和测试区域，确认无残留。
+4. 在 Wire Driver 已验证目标版本删除语义后，删除测试桌台和测试区域并确认无残留；否则验收明确标记删除不受支持且 UI 禁用。
 5. 验证商家后台保存/放弃、变更摘要和扩展字段不回归。
 
 任何真实环境写入测试都必须由用户确认目标区域，不得修改现有生产桌台。
@@ -298,9 +383,8 @@ KPOS SOAP 不提供整批事务。保存器必须记录每项结果，并返回 
 - 勾选记住密码后，浏览器中不存在可直接读取的明文密码记录。
 - 当前连接主机与 License 清晰展示在餐位平面图页。
 - 餐位平面图加载的数据与 KPOS Admin → Table 一致。
-- 区域和桌台的新增、编辑、删除及拖拽位置能写回 KPOS。
+- 区域和桌台的新增、编辑及拖拽位置能写回 KPOS；删除在目标版本 wire fixture 验证后启用并能正确写回，否则以明确不支持状态禁用。
 - 主机切换、会话过期和部分失败不会造成跨主机误写或错误成功提示。
 - KPOS 不支持的扩展字段仍可使用，并按主机和桌台 ID 正确隔离。
 - 代理不能被用于访问未授权目标，日志不泄露凭据或会话。
 - 构建、自动化测试和真实环境只读验证通过。
-
