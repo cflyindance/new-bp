@@ -47,7 +47,10 @@ assert.match(source, /data-limit-rule-batch-apply/, "完整规则列表应支持
 assert.match(source, /data-limit-rule-batch-delete/, "完整规则列表应支持批量删除");
 assert.match(source, /function requestLimitRuleBatchDeletion[\s\S]*?productRowIds[\s\S]*?configuredProducts[\s\S]*?确认批量删除商品/, "批量删除应按商品去重并汇总确认已配置商品");
 const limitRuleListRenderer = source.match(/function renderLimitRuleList\(draft\)[\s\S]*?(?=\n\s*function renderStepFour)/)?.[0] ?? "";
-assert.doesNotMatch(limitRuleListRenderer, /data-limit-rule-select-page|data-limit-rule-clear|选择本页|清空选择/, "完整规则列表不应提供选择本页或清空选择");
+assert.match(limitRuleListRenderer, /data-limit-rule-select-all/, "配置门店左侧表头应提供当前页全选复选框");
+assert.match(limitRuleListRenderer, /data\.pageRows\.length[\s\S]*?disabled/, "当前页无规则时全选复选框应禁用");
+assert.match(source, /function syncLimitRuleSelectAllState[\s\S]*?\.indeterminate\s*=/, "表头复选框应同步半选状态");
+assert.match(source, /data-limit-rule-select-all[\s\S]*?normalizeLimitRuleListState\(draft\)[\s\S]*?pageRows\.map[\s\S]*?selectedRowIds/, "全选处理应仅使用当前页规则更新选择状态");
 assert.match(source, /data-merged-product-remove/, "规则行应提供商品移除入口");
 assert.match(source, /data-limit-store-id[\s\S]*data-limit-line-id/, "数量输入应携带门店和产线上下文");
 assert.match(source, /selectedRowIds/, "批量选择应按规则行保存");
