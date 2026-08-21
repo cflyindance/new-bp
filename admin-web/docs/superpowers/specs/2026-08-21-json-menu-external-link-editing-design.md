@@ -31,7 +31,9 @@
 - `EditableMenuNodeType` 增加 `external`。
 - 可打开菜单仍要求非空 `path`。
 - 显式 `type: "external"` 的节点要求自身具有有效 HTTP(S) `url`，且不得生成 `microAppConfig`；错误信息和错误码使用 external 专属语义。
-- 类型缺省但从 external 祖先继承有效类型的后代继续按原数据解析和导出，不因本次开放而被自动补写 `type/url`；只有用户切换用途并保存时才显式规范化当前节点。
+- 类型缺省但从 external 祖先继承有效类型的后代，URL 取最近的显式 external 祖先的有效 `url`，并在校验、详情和预览中一致使用该有效 URL。
+- 继承 external 的后代继续按原数据导出：仅修改名称、权限、显示或其他非页面用途字段并保存时，不要求当前节点新增 URL，不补写 `type: "external"` 或 `url`，也不改变其他业务字段。
+- 用户主动点击“外部链接”用途或修改外部 URL 时，视为显式规范化当前节点；保存时要求合法 URL，并写入当前节点的 `type: "external"` 与 `url`。
 - 所有可打开类型的 `path` 维持现有非空校验，不新增必须以 `/` 开头的规则，避免改变参考数据兼容性。
 - 既有显式 `external` 节点不再仅因自身类型成为兼容保护节点，可在编辑器中修改。
 - `micro-app` 和历史第四级节点继续只读保护。
@@ -52,10 +54,11 @@
 2. 非 HTTP(S) URL 被阻止并显示明确错误。
 3. external 与 inner/iframe/directory 的每个切换方向均符合清理矩阵，保留 children；iframe ↔ external 复用合法 URL。
 4. 既有显式 external 不再出现兼容警告并可编辑；micro-app、第四级、受保护祖先下 external 仍只读；external 上方或下方存在受保护子树时边界不弱化。
-5. 类型缺省的 external 后代保持继承解析与原样导出，不自动补写字段。
-6. 空白 path 被阻止；相对但非空 path 保持当前兼容行为。
-7. external 有子菜单时，编辑器展开按钮与详情选择互不触发，预览不导航。
-8. 详情、全屏和紧凑预览均显示 path、url、外部链接与新窗口契约文案；标记中不存在可导航链接、iframe、fetch 或 window.open。
-9. 导出字段完全匹配参考 JSON，不包含打开方式新字段；未编辑参考 JSON 的业务数据往返等价。
-10. 生产 `_blank/noopener` 明确记录为下游联调未验证范围。
-11. 参考兼容、权限规则、菜单树问题状态和 TypeScript 回归通过。
+5. 类型缺省的 external 后代从最近显式 external 祖先取得有效 URL；校验、详情和预览显示一致。
+6. 继承 external 的后代仅修改名称、权限或显示并保存时，不要求新 URL、不补写 type/url、不改变其他业务字段；主动选择 external 或修改 URL 后才要求 URL 并写入显式类型。
+7. 空白 path 被阻止；相对但非空 path 保持当前兼容行为。
+8. external 有子菜单时，编辑器展开按钮与详情选择互不触发，预览不导航。
+9. 详情、全屏和紧凑预览均显示 path、有效 url、外部链接与新窗口契约文案；标记中不存在可导航链接、iframe、fetch 或 window.open。
+10. 导出字段完全匹配参考 JSON，不包含打开方式新字段；未编辑参考 JSON 的业务数据往返等价。
+11. 生产 `_blank/noopener` 明确记录为下游联调未验证范围。
+12. 参考兼容、权限规则、菜单树问题状态和 TypeScript 回归通过。
