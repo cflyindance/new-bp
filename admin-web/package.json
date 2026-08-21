@@ -9,7 +9,7 @@
     "dev": "vite",
     "payroll-api": "node server/payroll-api-server.mjs",
     "dev:payroll": "node server/run-payroll-dev.mjs",
-    "build": "node scripts/generate-emenu-local-seasoning-browser-handler.mjs && node scripts/generate-build-stamp.mjs && node scripts/stash-emenu-pro-for-build.mjs stash && tsc && vite build && node scripts/copy-embedded-assets.mjs",
+    "build": "node scripts/generate-emenu-local-seasoning-browser-handler.mjs && node scripts/generate-build-stamp.mjs && node scripts/stash-emenu-pro-for-build.mjs stash && tsc && vite build && node scripts/copy-embedded-assets.mjs && node scripts/generate-github-pages-legacy-route.mjs",
     "build:emenu-new-embed": "node scripts/build-emenu-new-embed.mjs",
     "build:kiosklite-embed": "node scripts/build-kiosklite-embed.mjs",
     "sync:kiosklite-embed": "node scripts/sync-kiosklite-embed-from-host.mjs",
@@ -38,7 +38,8 @@
     "verify:payment-method-apportion": "npx tsx scripts/verify-payment-method-apportion.ts",
     "verify:personal-sales-deduct": "npx tsx scripts/verify-personal-sales-deduct.ts",
     "verify:personal-sales-deduct-pipeline": "npx tsx scripts/verify-personal-sales-deduct-pipeline.ts",
-    "verify:personal-sales-pool": "npx tsx scripts/verify-personal-sales-pool.ts"
+    "verify:personal-sales-pool": "npx tsx scripts/verify-personal-sales-pool.ts",
+    "verify:github-pages-legacy-route": "node scripts/verify-github-pages-legacy-route.mjs"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.0.0",
