@@ -271,7 +271,7 @@ export function validateMenuDocument(document: MenuDocument, publishedBaseline?:
     if (node.path?.trim()) routePaths.set(node.path, [...(routePaths.get(node.path) ?? []), path]);
     if (!node.name?.trim()) issues.push({ code: "MISSING_NAME", severity: "error", message: "菜单名称不能为空", path, field: "name" });
     const expectedParentKey = ancestors.at(-1)?.key?.trim();
-    if ((node.parentKey?.trim() || undefined) !== expectedParentKey) issues.push({ code: "INVALID_PARENT_KEY", severity: "error", message: expectedParentKey ? `parentKey 应为直接父菜单 Key：${expectedParentKey}` : "一级菜单不能配置 parentKey", path, field: "parentKey" });
+    if (node.parentKey !== undefined && (node.parentKey.trim() || undefined) !== expectedParentKey) issues.push({ code: "INVALID_PARENT_KEY", severity: "error", message: expectedParentKey ? `parentKey 应为直接父菜单 Key：${expectedParentKey}` : "一级菜单不能配置 parentKey", path, field: "parentKey" });
 
     if (!compatibility) {
       if (isMenuDirectory(node)) {
