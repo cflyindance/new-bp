@@ -1,0 +1,19 @@
+<h2>设计预览 · 任务状态机与重试</h2>
+<p class="subtitle">开启 / 关闭共用；失败可自动重试 ≤3，之后仅「更新」人工入队。</p>
+
+<div class="section">
+  <pre style="font-size:12px;line-height:1.7;overflow:auto;background:#f8fafc;padding:12px;border-radius:8px">
+待配置 ──成功──▶ 配置成功 ──下发成功──▶ 下发成功（终态）
+   │                  │
+   │失败              │下发失败
+   ▼                  ▼
+配置失败 ◀──自动重试≤3──▶ 下发失败
+   │                      │
+   └──── 人工「更新」入队 ──┘
+  </pre>
+</div>
+
+<div class="section">
+  <div class="label">操作列规则（对齐原型）</div>
+  <p style="font-size:14px">配置失败 / 下发失败 → 显示「更新」；其余状态 → 「/」</p>
+</div>

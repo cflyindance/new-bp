@@ -1,0 +1,52 @@
+<h2>Dual Pricing 放在支付中心的哪一层？</h2>
+<p class="subtitle">现有支付中心：业务入口（滑层）+「设置」滑层内「卡支付规则与合规 · 454 卡付加价策略」。本期自动化要加「门店 DP 列表」和「任务列表」——入口怎么挂最合适？点击选一项。</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>支付中心一级业务入口（推荐）</h3>
+      <p>滑层新增「Dual Pricing」，与「设置」并列。内含：门店 DP 列表 → 任务列表。454 仍在设置里，但 SFDC 驱动门店改为只读镜像。</p>
+      <div class="mockup" style="margin-top:12px">
+        <div class="mockup-header">支付中心 · 滑层</div>
+        <div class="mockup-body" style="font-size:13px;line-height:1.7">
+          <div class="mock-sidebar" style="width:100%;padding:8px 12px">
+            <strong>Dual Pricing</strong> ← 新<br>
+            设置
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>挂在「设置 · 卡支付规则与合规」下</h3>
+      <p>不新增滑层入口。在 454 同组增加「门店生效状态」「开通任务」两个只读/运维页，和现有加价策略配置挤在一起。</p>
+      <div class="mockup" style="margin-top:12px">
+        <div class="mockup-header">设置 · card-fees</div>
+        <div class="mockup-body" style="font-size:13px;line-height:1.7">
+          454 卡付加价策略<br>
+          <strong>门店 DP 列表</strong> ← 新<br>
+          <strong>DP 任务列表</strong> ← 新
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>完全替代 454 手工配置</h3>
+      <p>滑层「Dual Pricing」为唯一入口；设置里移除/隐藏 454 编辑能力，DP 只允许 SFDC Case → 任务开通，商户后台不可手改。</p>
+      <div class="mockup" style="margin-top:12px">
+        <div class="mockup-header">边界</div>
+        <div class="mockup-body" style="font-size:13px;line-height:1.7">
+          Dual Pricing（运维）= SSOT<br>
+          设置 · 454 = 下线或只读摘要
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

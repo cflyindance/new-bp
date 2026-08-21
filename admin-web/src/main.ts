@@ -134,6 +134,18 @@ import {
   bindFinanceRegisterAuditUi,
 } from "./config/finance-register-audit-pages";
 import {
+  bindDualPricingUi,
+  findDualPricingTitle,
+  isDualPricingPath,
+  renderDualPricingPageContent,
+} from "./config/dual-pricing-ui";
+import {
+  bindOrderListUi,
+  findOrderListTitle,
+  isOrderListPath,
+  renderOrderListPageContent,
+} from "./config/order-list-pages";
+import {
   bindNotificationsHubUi,
   isNotificationsHubFeaturePath,
   renderNotificationsHubPageContent,
@@ -3583,8 +3595,12 @@ function findTitle(path: string): { title: string; module?: string } {
   ) {
     return { title: t("findTitle.inventoryChangeTitle"), module: t("findTitle.inventoryChangeModule") };
   }
+  const orderListTitle = findOrderListTitle(path);
+  if (orderListTitle) return orderListTitle;
   const finRegTitle = findFinanceRegisterAuditTitle(path);
   if (finRegTitle) return finRegTitle;
+  const dualPricingTitle = findDualPricingTitle(path);
+  if (dualPricingTitle) return dualPricingTitle;
   const ppTitle = findPlatformPresetPageTitle(path);
   if (ppTitle) return ppTitle;
   const sortedPcNav = [...PRODUCT_CENTER_DEEP_NAV].sort((a, b) => b.path.length - a.path.length);
@@ -4194,9 +4210,8 @@ function normalizeTabModuleHashes(): void {
     replaceHashPath("/dashboard/overview");
     return;
   }
-  /* 订单中心滑层已移除全部订单/退单/订单历史，旧链接统一到设置 */
+  /* 订单中心：/orders/all 已恢复为订单列表模拟页；其余旧业务路径仍落到设置 */
   const legacyOrderPaths = [
-    "/orders/all",
     "/orders/refunds",
     "/orders/history",
     "/orders/dine-in",
@@ -11437,6 +11452,8 @@ function renderMain(): string {
   const isPlatformPreset = isPlatformPresetPath(path);
   const isLoginLogs = isLoginLogsPath(path);
   const isFinanceRegisterAudit = isFinanceRegisterAuditPath(path);
+  const isDualPricing = isDualPricingPath(path);
+  const isOrderList = isOrderListPath(path);
   const isTeamShiftScheduling = isTeamShiftSchedulingPath(path);
   const isTeamBreaksOvertime = isTeamBreaksOvertimePath(path);
   const isTeamClockIn = isTeamClockInPath(path);
@@ -11465,6 +11482,8 @@ function renderMain(): string {
     isTeamPayrollReportIframe ||
     isGiftCardsFactory ||
     isFinanceRegisterAudit ||
+    isDualPricing ||
+    isOrderList ||
     isTeamShiftScheduling ||
     isTeamBreaksOvertime ||
     isFohBrandMenu ||
@@ -11660,8 +11679,12 @@ function renderMain(): string {
                                                           ? renderTeamShiftSchedulingPageWithSettings()
                                                         : isFinanceRegisterAudit
                                                           ? renderFinanceRegisterAuditPageContent(path)
-                                                          : isNotificationsHubFeaturePath(path)
-                                                            ? renderNotificationsHubPageContent(path)
+                                                          : isDualPricing
+                                                            ? renderDualPricingPageContent(path)
+                                                          : isOrderList
+                                                            ? renderOrderListPageContent(path)
+                                                            : isNotificationsHubFeaturePath(path)
+                                                              ? renderNotificationsHubPageContent(path)
                                                             : path === "/settings/overview"
                                                               ? renderSettingsOverview()
                                                               : isNavHomePath(path)
@@ -12964,6 +12987,8 @@ function mount(): void {
   bindWaitlistModeUi();
   bindCashDrawerReconciliationUi();
   bindFinanceRegisterAuditUi(mount);
+  bindDualPricingUi(mount);
+  bindOrderListUi(mount);
   bindNotificationsHubUi(mount);
   bindTeamShiftSchedulingUi(mount);
   bindTeamBreaksOvertimeUi(mount);

@@ -1,0 +1,51 @@
+<h2>「Dual Pricing」模块内，两个页面怎么排？</h2>
+<p class="subtitle">门店 DP 列表（生效态只读）+ 任务列表（可手动重试）。点击选一种信息架构。</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>默认门店列表 + 顶栏 Tab 切任务（推荐）</h3>
+      <p>进入 Dual Pricing 先看品牌下门店生效态；顶栏 Tab「任务列表」切换。门店行「跳转」带 storeId 过滤进任务 Tab。</p>
+      <div class="mockup" style="margin-top:12px">
+        <div class="mockup-header">/transactions/dual-pricing</div>
+        <div class="mockup-body" style="font-size:12px;line-height:1.6">
+          <div class="mock-nav">门店配置 | 任务列表</div>
+          <div style="margin-top:8px;opacity:.85">门店 · 开关 · rate · 生效状态 · 查看/跳转</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>滑层二级：两个并列子菜单</h3>
+      <p>支付中心滑层展开 Dual Pricing →「门店配置」「任务列表」两个子项，各自独立路由，类似商品中心「下发记录」并列法。</p>
+      <div class="mockup" style="margin-top:12px">
+        <div class="mockup-header">支付中心 · 滑层</div>
+        <div class="mockup-body" style="font-size:12px;line-height:1.6">
+          Dual Pricing<br>
+          &nbsp;&nbsp;├ 门店配置<br>
+          &nbsp;&nbsp;└ 任务列表<br>
+          设置
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>单页：门店表为主，任务用抽屉/侧栏</h3>
+      <p>主区只保留门店列表；点「跳转/任务」打开右侧抽屉看该门店任务与「更新」重试，不单独做全量任务页。</p>
+      <div class="mockup" style="margin-top:12px">
+        <div class="mockup-header">门店表 + Drawer</div>
+        <div class="mockup-body" style="font-size:12px;line-height:1.6">
+          左：全部门店 DP 态<br>
+          右抽屉：该店任务流 + 重试
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -243,9 +243,10 @@ export const NAV_MODULES: NavModule[] = [
     icon: "orders",
     path: "/orders",
     subNavPlacement: "sheet",
-    defaultChildPath: "/orders/settings",
+    defaultChildPath: "/orders/all",
     children: [
-      { id: "orders-settings", title: "设置", path: "/orders/settings" },
+      { id: "orders-list", title: "订单列表", titleEn: "Order list", path: "/orders/all" },
+      { id: "orders-settings", title: "设置", titleEn: "Settings", path: "/orders/settings" },
     ],
   },
   {
@@ -257,7 +258,13 @@ export const NAV_MODULES: NavModule[] = [
     subNavPlacement: "sheet",
     defaultChildPath: "/transactions/settings",
     children: [
-      { id: "tx-settings", title: "设置", path: "/transactions/settings" },
+      {
+        id: "tx-dual-pricing",
+        title: "Dual Pricing",
+        titleEn: "Dual Pricing",
+        path: "/transactions/dual-pricing",
+      },
+      { id: "tx-settings", title: "设置", titleEn: "Settings", path: "/transactions/settings" },
     ],
   },
   {
