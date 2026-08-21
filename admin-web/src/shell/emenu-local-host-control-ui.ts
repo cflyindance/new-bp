@@ -10,6 +10,11 @@ import {
   writeEmenuKposHostParts,
 } from "./emenu-local-host-control";
 import { ensureKioskEmbedSession } from "./kiosk-local-session-bridge";
+import {
+  clearKposFloorPlanConnection,
+  connectKposFloorPlanAutomatically,
+  readKposFloorPlanConnection,
+} from "../config/kpos-floor-plan-client";
 
 function escapeHtml(value: string): string {
   return String(value ?? "")
@@ -155,6 +160,10 @@ export function bindGlobalHostIpControl(): void {
       })
       .finally(() => {
         reloadKposHostEmbedFrames();
+        clearKposFloorPlanConnection();
+        void connectKposFloorPlanAutomatically().catch((error) => {
+          console.warn("[kpos-floor-plan] failed to auto-connect current host", error);
+        });
       });
   };
 
@@ -172,6 +181,12 @@ export function bindGlobalHostIpControl(): void {
     syncPortDisabled();
   });
   portInput.addEventListener("input", () => portInput.setCustomValidity(""));
+
+  if (!readKposFloorPlanConnection()) {
+    void connectKposFloorPlanAutomatically().catch(() => {
+      /* 主机尚未可用时由用户再次点击“应用”重试 */
+    });
+  }
 }
 
 /** @deprecated 使用 bindGlobalHostIpControl */
