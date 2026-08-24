@@ -64,6 +64,8 @@
 
 控制器在按钮上显示当前比例。达到上下限时继续缩放不改变状态，并给出轻量触觉或视觉反馈；没有触觉能力时只显示视觉反馈。
 
+连续调节使用原生范围输入：左右或上下方向键按 5% 调整，`PageUp` / `PageDown` 按 10% 调整，`Home` 到 75%，`End` 到 140%。当前比例通过可见文本和 `aria-valuetext` 同步表达。
+
 ### `ResizableMenuViewport`
 
 包裹分类导航和菜品列表。它提供右侧、底部和右下角三个手柄：
@@ -86,9 +88,31 @@
 - 分类导航无法与至少两列卡片共存时，切换为顶部分类入口；
 - 列数使用稳定阈值和少量迟滞区间，避免临界宽度拖拽时反复跳列。
 
+密度只改变结构密度，不绕过文字和触控下限：
+
+| 密度 | 卡片最小宽度 | 网格间距 | 卡片内容内边距 |
+| --- | ---: | ---: | ---: |
+| `compact` | 144 px | 12 px | 12 px |
+| `standard` | 168 px | 16 px | 16 px |
+| `comfortable` | 192 px | 20 px | 20 px |
+
+显示比例再作用于卡片内容、图片高度和文字尺寸令牌；计算列数时使用“密度卡片最小宽度 × 显示比例”。如果结果违反 14 px 正文或 44×44 px 触控下限，控制器以可访问性下限为准。密度不会单独缩小文字。
+
 ### `DisplayPreferenceStore`
 
 负责合并门店默认值与当前会话覆盖值。它不永久写回门店配置。
+
+## 门店配置管理与下发
+
+本功能的门店默认配置属于本次实施范围。它沿用现有 eMenu 配置通路，不新增独立接口：
+
+- 在现有系统设置的“菜单显示”区域（`components/AdminSettings/SettingMenuDisplay.jsx`）增加“顾客显示调整”配置组。
+- 在 `constants/systemConfig.js` 的 `ALL_CONFIG_ITEM` 中增加一个向后兼容的全局配置项，值为本设计的 `EmenuDisplayDefaults`。
+- 保存继续通过 `systemConfig.slice.js` 的 `effects.setConfig()` 和既有 `setEmenuConfig` 请求写入 eMenu 配置 JSON。
+- eMenu 启动继续通过既有 `getEmenuConfig` 流程取得配置；`DisplayPreferenceStore` 从合并后的全局配置读取默认值。
+- 本期只支持门店全局默认，不增加单设备覆盖。现有配置 JSON 缺少新字段时使用默认值，不要求数据迁移或新增后端端点。
+
+如果既有服务端对配置项 ID 存在白名单校验，则补充该 ID 属于本功能的接口适配工作；不改变现有配置数据模型。
 
 ## 配置与状态
 
@@ -115,13 +139,28 @@ type EmenuViewportState = {
   width: number
   height: number
   scale: number
+  density: "compact" | "standard" | "comfortable"
   orientation: "landscape" | "portrait"
   columns: number
-  source: "store-default" | "preset" | "gesture" | "drag"
+  source:
+    | "store-default"
+    | "preset"
+    | "gesture"
+    | "drag"
+    | "window-resize"
+    | "rotation"
+    | "fallback"
 }
 ```
 
 `width` 与 `height` 是经过安全裁剪后的 CSS 像素值。门店配置使用比例，避免把某一设备的像素尺寸直接迁移到另一设备。
+
+三个能力开关按以下优先级解释：
+
+- `allowGuestResize` 是主开关。关闭后隐藏显示大小入口和拖拽手柄，并禁用双指、`Ctrl + 滚轮`及所有顾客主动调整；容器仍响应真实屏幕变化和旋转。
+- `allowPinchZoom` 只在主开关开启时生效，控制双指和 `Ctrl + 滚轮`连续缩放；不影响显示大小按钮。
+- `allowDragResize` 只在主开关开启时生效，控制右侧、底部和右下角手柄；不影响显示大小按钮。
+- 主开关开启而两个子开关都关闭时，顾客仍可使用显示大小预设和连续滑杆。
 
 ## 尺寸与可访问性边界
 
