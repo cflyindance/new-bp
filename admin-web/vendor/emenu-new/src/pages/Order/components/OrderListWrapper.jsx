@@ -9,6 +9,7 @@ import { cloneDeep } from 'lodash-es'
 import { useGlobalState } from '@/hooks/useGlobalState'
 import useIsMemberLogin from '@/hooks/useIsMemberLogin'
 import useSystemConfig from '@/hooks/useSystemConfig'
+import { useEmenuViewport } from '@/context/EmenuViewportContext'
 
 const CONSTANT_CATEGORY_NAME = ['crm-point-item', 'avocado-item-voucher']
 
@@ -33,6 +34,7 @@ const OrderListWrapper = (props) => {
   const { getFinalConfigById } = useSystemConfig()
   const isDisplayDishCode = getFinalConfigById(66)?.open
   const hideSoldOutDish = getFinalConfigById(78)?.open
+  const viewport = useEmenuViewport()
 
   useEffect(() => {
     if (!baseMenu?.length) return setMenu([])
@@ -99,19 +101,19 @@ const OrderListWrapper = (props) => {
       const cateNav = Array.from(
         document.querySelectorAll('div[data-menu-cate]')
       )
+      const menuNavList = document.getElementById('menuNavList')
       const leftMenuNav = cateNav.find((navItem) => {
         const cateId = navItem.getAttribute('data-menu-cate')
         return cateId === rightListCateId
       })
-      if (leftMenuNav) {
+      if (leftMenuNav && menuNavList) {
         let { top, height } = leftMenuNav.getBoundingClientRect()
-        if (top >= 200 && top <= window.innerHeight - 200) return
+        if (top >= 200 && top <= viewport.layoutHeight - 200) return
         const elCenter = top + height / 2
-        const center = window.innerHeight / 2
-        document.getElementById('menuNavList').scrollTo({
+        const center = viewport.layoutHeight / 2
+        menuNavList.scrollTo({
           top:
-            document.getElementById('menuNavList').scrollTop -
-            (center - elCenter),
+            menuNavList.scrollTop - (center - elCenter),
           behavior: 'smooth',
         })
       }
@@ -151,7 +153,7 @@ const OrderListWrapper = (props) => {
   return (
     <div
       className={styles.headerWrapper}
-      style={{ height: `calc(100vh - ${headerHeight}px)` }}
+      style={{ height: viewport.layoutHeight }}
     >
       <OrderMain>
         <LeftMenu

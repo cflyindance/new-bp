@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Outlet, useNavigate } from 'react-router-dom'
+import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useBoolean, useRequest } from 'ahooks'
 import { useLocalStorage } from '@/hooks/useLocalStorage'
 import {
@@ -27,6 +27,14 @@ import Toast from '@/components/Toast'
 import { sendPosLog } from '@/services/setting'
 import { deleteImageCache, preloadImage } from '@/components/CacheImage'
 import { useLocalStorageState } from 'bhooks'
+import useSystemConfig from '@/hooks/useSystemConfig'
+import { EmenuViewportProvider } from '@/context/EmenuViewportContext'
+import ResizableMenuViewport from '@/components/ResizableMenuViewport'
+import { EMENU_DISPLAY_CONFIG_ID } from '@/utils/emenuViewportLayout'
+import {
+  buildEmenuViewportSessionKey,
+  buildEmenuViewportTableKey,
+} from '@/utils/emenuViewportPreference'
 
 const Index = () => {
   const { enqueueSnackbar } = useSnackbar()
@@ -271,7 +279,7 @@ const Index = () => {
         loading={loading}
       />
       <WebSocketUpdate />
-      <Outlet />
+      <CustomerViewportOutlet />
       <MealAlert
         open={isShowAlert}
         onCancel={closeAlert}
@@ -294,6 +302,47 @@ const Index = () => {
       {!isInSettingPage && <ComponentsOutOfSettingPage />}
       <GlobalNetworkModal />
     </GlobalStorageContext.Provider>
+  )
+}
+
+const CUSTOMER_ROUTES = new Set(['/', '/setup', '/order'])
+
+const CustomerViewportOutlet = () => {
+  const { pathname } = useLocation()
+  const { getFinalConfigById } = useSystemConfig()
+  const [orders] = useGlobalState('Orders')
+  const authInfo = getStorageValue('emenu_auth', {})
+  const tableInfo = getStorageValue('emenu_table', {})
+  const orderId = orders?.[0]?.id || tableInfo?.currentOrder?.id
+
+  if (!CUSTOMER_ROUTES.has(pathname)) return <Outlet />
+
+  const temporaryKey = `customer-flow:${authInfo?.instanceName || 'anonymous'}:${
+    window.deviceUuId || 'browser'
+  }`
+  const formalKey = buildEmenuViewportSessionKey(tableInfo, orderId)
+  const tableKey = buildEmenuViewportTableKey(tableInfo)
+
+  return (
+    <EmenuViewportProvider
+      storeConfig={getFinalConfigById(EMENU_DISPLAY_CONFIG_ID)}
+      sessionKey={formalKey || temporaryKey}
+      fallbackSessionKey={formalKey ? tableKey || temporaryKey : temporaryKey}
+    >
+      <div
+        style={{
+          width: '100vw',
+          height: '100vh',
+          display: 'flex',
+          overflow: 'hidden',
+          background: '#eef2f8',
+        }}
+      >
+        <ResizableMenuViewport>
+          <Outlet />
+        </ResizableMenuViewport>
+      </div>
+    </EmenuViewportProvider>
   )
 }
 

@@ -802,6 +802,28 @@ export const memberRedemptionCenter = {
   },
 }
 
+export const showMenuMemberLoginEntry = {
+  id: 94,
+  key: 'showMenuMemberLoginEntry',
+  value: {
+    open: true,
+  },
+}
+
+export const emenuDisplayDefaults = {
+  id: 95,
+  key: 'emenuDisplayDefaults',
+  value: {
+    scale: 1,
+    widthRatio: 1,
+    heightRatio: 1,
+    density: 'standard',
+    allowGuestResize: true,
+    allowPinchZoom: true,
+    allowDragResize: true,
+  },
+}
+
 // G了... 不再是临时需求了...
 export const dishSetQuantityLimit = {
   id: 9999,
@@ -911,6 +933,8 @@ export const ALL_CONFIG_ITEM = [
   submitBuffetFirst,
   cdsMessageEnabled,
   memberRedemptionCenter,
+  showMenuMemberLoginEntry,
+  emenuDisplayDefaults,
 ]
 
 export const configList = {

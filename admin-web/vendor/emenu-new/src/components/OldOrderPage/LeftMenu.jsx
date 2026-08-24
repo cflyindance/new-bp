@@ -13,6 +13,7 @@ import { useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useGlobalState } from '@/hooks/useGlobalState'
 import useSystemConfig from '@/hooks/useSystemConfig'
+import { useEmenuViewport } from '@/context/EmenuViewportContext'
 
 const useStyles = makeStyles((theme) => {
   const borderRadius = theme.shape.borderRadius
@@ -111,6 +112,7 @@ const useStyles = makeStyles((theme) => {
 })
 
 function LeftMenu(props) {
+  const viewport = useEmenuViewport()
   const { menus: originMenus, setMenus, listGap } = props
   const classes = useStyles()
   const { t } = useTranslation()
@@ -160,11 +162,51 @@ function LeftMenu(props) {
     [setActive]
   )
 
+  if (viewport.collapsedSidebar) {
+    return (
+      <Grid
+        item
+        xs={12}
+        style={{ position: 'static', minWidth: '100%', width: '100%' }}
+      >
+        <Box
+          display="flex"
+          overflow="auto"
+          padding="8px 12px"
+          gridGap={8}
+          bgcolor="rgba(0, 0, 0, 0.4)"
+        >
+          {menus.flatMap((group, i) =>
+            group.list.map((category, j) =>
+              category.hidden ? null : (
+                <ListItem
+                  key={`${group.id}-${category.id}`}
+                  button
+                  selected={groupIdx === i && categoryIdx === j}
+                  disabled={category.disabled}
+                  onClick={selectMenu(i, j)}
+                  style={{ minWidth: 112, borderRadius: 8 }}
+                >
+                  <ListItemText
+                    primary={t(category.id, {
+                      ns: 'category',
+                      defaultValue: category.name,
+                    })}
+                  />
+                </ListItem>
+              )
+            )
+          )}
+        </Box>
+      </Grid>
+    )
+  }
+
   return (
     <Grid item className={classes.LeftMenu}>
       <Box
         className={classes.menuWrapper}
-        style={{ height: `calc(100vh - ${listGap}px)` }}
+        style={{ height: Math.max(160, viewport.layoutHeight - 20) }}
       >
         {menus.map((g, i, { length }) => {
           const hiddenGroup =

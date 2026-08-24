@@ -54,6 +54,11 @@ import {
   setRuntimeEnv as saveRuntimeEnv,
 } from '@/utils/runtimeEnv'
 import { isCrmIntegrationRedemptionItemCartItem } from '@/utils/crmIntegrationCartValidation'
+import useDurationBilling from '@/hooks/useDurationBilling'
+import StartTimingButton from '@/components/DurationBilling/StartTimingButton'
+import TimingBar from '@/components/DurationBilling/TimingBar'
+import EndTimingDialog from '@/components/DurationBilling/EndTimingDialog'
+import { isKtvDurationBillingTable } from '@/utils/durationBilling'
 
 const AdminLogin = lazy(() => import('@/components/AdminLogin'))
 const AdminSettings = lazy(() => import('@/components/AdminSettings'))
@@ -64,6 +69,10 @@ const useStyles = makeStyles((theme) => ({
   root: {
     backgroundColor: '#1A2241',
     position: 'relative',
+    isolation: 'isolate',
+    width: '100%',
+    height: '100%',
+    overflow: 'hidden',
   },
   landingHeader: {
     width: '100%',
@@ -146,30 +155,40 @@ const useStyles = makeStyles((theme) => ({
   rightBtns: {},
   main: {
     position: 'relative',
+    zIndex: 2,
     display: 'flex',
-    height: '100vh',
+    height: '100%',
     flexDirection: 'column',
     textAlign: 'center',
     alignItems: 'center',
     justifyContent: 'center',
   },
   video: {
-    position: 'fixed',
-    width: '100vw',
-    height: '100vh',
+    position: 'absolute',
+    inset: 0,
+    zIndex: 0,
+    width: '100%',
+    height: '100%',
     objectFit: 'cover',
     filter: 'brightness(0.8)',
   },
   video_loaded: {
     filter: 'brightness(1)',
   },
+  backgroundOverlay: {
+    position: 'absolute',
+    inset: 0,
+    zIndex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    pointerEvents: 'none',
+  },
   logoName: {
-    marginTop: '-16vh',
-    marginLeft: '-2vw',
+    transform: 'translateY(-16%)',
+    marginLeft: 0,
     marginBottom: theme.spacing(4),
     '&> img': {
       width: 400,
-      maxWidth: '96vw',
+      maxWidth: '96%',
     },
   },
   startBtn: {
@@ -348,6 +367,8 @@ const VideoBackground = ({ className, displayMode, ...props }) => {
 export default function Landing() {
   const [loading, setLoading] = useState(false)
   const [orders, setOrders] = useState([])
+  const [endTimingDialogOpen, setEndTimingDialogOpen] = useState(false)
+  const [durationBillingEndAt, setDurationBillingEndAt] = useState(null)
   const [runtimeEnv, setRuntimeEnvState] = useState(getRuntimeEnv())
   const classes = useStyles()
   const dispatch = useDispatch()
@@ -398,6 +419,29 @@ export default function Landing() {
   const [, setTableInfo] = useLocalStorage('emenu_table', {})
   const tableInfo = getStorageValue('emenu_table', {})
   const { currentArea, currentTable } = tableInfo
+  const waiterInfo = getStorageValue('emenu_user', {})
+  const {
+    durationBilling,
+    status: durationBillingStatus,
+    startTiming,
+    endTiming,
+  } = useDurationBilling()
+  const durationBillingRule = currentTable?.durationBillingRule
+  const isKtvDurationBillingCurrentTable =
+    isKtvDurationBillingTable(currentTable)
+  const durationBillingProductMatches =
+    Boolean(currentTable?.defaultSaleItemId) &&
+    String(currentTable?.defaultSaleItemId) ===
+      String(durationBillingRule?.productBinding?.productId)
+  const canStartDurationBilling =
+    durationBillingStatus === 'idle' &&
+    Boolean(waiterInfo?.userId) &&
+    isKtvDurationBillingCurrentTable &&
+    Boolean(currentTable?.durationBillingRuleId) &&
+    durationBillingRule?.enabled === true &&
+    Boolean(durationBillingRule?.productBinding?.productId) &&
+    durationBillingRule?.productBinding?.requiredTag === 'KTV' &&
+    durationBillingProductMatches
 
   const { orderId, orderNumber, order } = useMemo(() => {
     const order = tableInfo?.currentOrder
@@ -486,6 +530,64 @@ export default function Landing() {
         setOpenAdminSetting()
       },
     })
+
+  const handleStartTiming = async () => {
+    try {
+      setLoading(true)
+      const session = await startTiming({
+        ruleSnapshot: durationBillingRule,
+        tableSnapshot: currentTable,
+        orderId,
+      })
+      if (!session) {
+        Toast.error(t('DurationBilling.startFailed'))
+        return
+      }
+      await runFetchOrder()
+      Toast.success(t('DurationBilling.startSuccess'))
+    } catch {
+      Toast.error(t('DurationBilling.startFailed'))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const orderSubtotal = useMemo(
+    () => orders.reduce((total, item) => total + Number(item?.totalPrice || 0), 0),
+    [orders]
+  )
+
+  const handleOpenEndTiming = () => {
+    setDurationBillingEndAt(Date.now())
+    setEndTimingDialogOpen(true)
+  }
+
+  const handleCancelEndTiming = () => {
+    setEndTimingDialogOpen(false)
+    setDurationBillingEndAt(null)
+  }
+
+  const handleAuthorizeEndTiming = () => {
+    setEndTimingDialogOpen(false)
+    setAdminLogin({
+      open: true,
+      permission: 'durationBillingEnd',
+      next: async (staff) => {
+        try {
+          const ended = await endTiming(staff?.userId, durationBillingEndAt)
+          if (!ended) {
+            Toast.error(t('DurationBilling.endFailed'))
+            return
+          }
+          await runFetchOrder()
+          setDurationBillingEndAt(null)
+          Toast.success(t('DurationBilling.endSuccess'))
+        } catch {
+          Toast.error(t('DurationBilling.endFailed'))
+        }
+      },
+    })
+  }
 
   // 点击 Start
   const handleStartButton = async () => {
@@ -732,18 +834,33 @@ export default function Landing() {
           <BatteryWifi />
         </Space>
       </header>
+      {durationBillingStatus === 'timing' && (
+        <TimingBar
+          tableName={displayTable}
+          session={durationBilling}
+          onEnd={waiterInfo?.userId ? handleOpenEndTiming : undefined}
+        />
+      )}
       <VideoBackground
         className={classes.video}
         poster={videoPoster}
         src={homepageVideoConfigUrl}
         displayMode={homepageVideoConfigDisplayMode}
       />
+      <div className={classes.backgroundOverlay} aria-hidden="true" />
       <main
         className={classes.main}
         {...(!confirmTableVisible && isHideStartButton
           ? { onClick: handleStartButton }
           : {})}
       >
+        {canStartDurationBilling && !confirmTableVisible && !isParentOrder && (
+          <StartTimingButton
+            tableName={displayTable}
+            ruleSnapshot={durationBillingRule}
+            onStart={handleStartTiming}
+          />
+        )}
         {confirmTableVisible ? (
           <div>
             <div className={classes.confirmTable_title}>
@@ -855,6 +972,15 @@ export default function Landing() {
         value={runtimeEnv}
         onCancel={closeEnvironmentDialog}
         onConfirm={handleConfirmEnvironment}
+      />
+      <EndTimingDialog
+        open={endTimingDialogOpen}
+        tableName={displayTable}
+        session={durationBilling}
+        endedAt={durationBillingEndAt}
+        orderSubtotal={orderSubtotal}
+        onCancel={handleCancelEndTiming}
+        onConfirm={handleAuthorizeEndTiming}
       />
     </div>
   )

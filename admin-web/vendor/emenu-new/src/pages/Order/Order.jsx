@@ -22,8 +22,8 @@ const useStyles = makeStyles({
   root: {
     display: 'flex',
     flexFlow: 'column',
-    width: '100vw',
-    height: '100vh',
+    width: '100%',
+    height: '100%',
     backgroundColor: '#1A2241',
     position: 'relative',
   },
@@ -198,23 +198,23 @@ function Order({ crmIntegrationRedemption }) {
 
   return (
     <div className={classes.root}>
-      <TopBar onSearch={handleSearch} />
-      <CRMBanner />
-      {isShowPosterButton ? (
-        <div
-          onClick={() =>
-            setPosterConfig({
-              open: true,
-            })
-          }
-          className={classes.openPoster}
-        >
-          {t('button', { ns: 'Poster' })}
-        </div>
-      ) : null}
-      {isHasMenu ? (
-        isLazyLoading ? (
-          <OrderListWrapper
+        <TopBar onSearch={handleSearch} />
+        <CRMBanner />
+        {isShowPosterButton ? (
+          <div
+            onClick={() =>
+              setPosterConfig({
+                open: true,
+              })
+            }
+            className={classes.openPoster}
+          >
+            {t('button', { ns: 'Poster' })}
+          </div>
+        ) : null}
+        {isHasMenu ? (
+          isLazyLoading ? (
+            <OrderListWrapper
             keyword={keyword}
             baseMenu={baseMenu}
             onCrmIntegrationRewardClick={openCrmIntegrationRewardDialog}
@@ -232,31 +232,31 @@ function Order({ crmIntegrationRedemption }) {
               crmIntegrationPointItemGlobalLocked
             }
             selectedCrmIntegrationBenefitId={selectedCrmIntegrationBenefitId}
-          />
+            />
+          ) : (
+            <OldOrderPage
+            keyword={keyword}
+            baseMenu={baseMenu}
+            onCrmIntegrationRewardClick={openCrmIntegrationRewardDialog}
+            onCrmIntegrationBenefitSelect={handleCrmIntegrationBenefitSelect}
+            crmIntegrationBenefitDisabledOverride={
+              crmIntegrationBenefitDisabledOverride
+            }
+            onCrmIntegrationPointItemChange={
+              handleCrmIntegrationPointItemChange
+            }
+            onCrmIntegrationPointItemBeforeAdd={
+              handleCrmIntegrationPointItemBeforeAdd
+            }
+            crmIntegrationPointItemGlobalLocked={
+              crmIntegrationPointItemGlobalLocked
+            }
+            selectedCrmIntegrationBenefitId={selectedCrmIntegrationBenefitId}
+            />
+          )
         ) : (
-          <OldOrderPage
-            keyword={keyword}
-            baseMenu={baseMenu}
-            onCrmIntegrationRewardClick={openCrmIntegrationRewardDialog}
-            onCrmIntegrationBenefitSelect={handleCrmIntegrationBenefitSelect}
-            crmIntegrationBenefitDisabledOverride={
-              crmIntegrationBenefitDisabledOverride
-            }
-            onCrmIntegrationPointItemChange={
-              handleCrmIntegrationPointItemChange
-            }
-            onCrmIntegrationPointItemBeforeAdd={
-              handleCrmIntegrationPointItemBeforeAdd
-            }
-            crmIntegrationPointItemGlobalLocked={
-              crmIntegrationPointItemGlobalLocked
-            }
-            selectedCrmIntegrationBenefitId={selectedCrmIntegrationBenefitId}
-          />
-        )
-      ) : (
-        <EmptyOrder />
-      )}
+          <EmptyOrder />
+        )}
       <Poster />
       {lotteryConfig?.open ? <Lottery {...lotteryConfig} /> : null}
       <Suspense fallback={<LoadingOverlay loading={true} />}>

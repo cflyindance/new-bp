@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Box, Button, Card, makeStyles, Typography } from '@material-ui/core'
 import { CardHead } from './CardHead'
 import { ExpandMoreRounded } from '@material-ui/icons'
-import { Select, Switch } from 'antd'
+import { Select, Slider, Switch } from 'antd'
 import message from '@/components/Message'
 import { isEqual } from 'lodash-es'
 import { useTranslation } from 'react-i18next'
@@ -12,6 +12,11 @@ import { useDispatch } from 'react-redux'
 import { effects } from '@/store/slices/systemConfig.slice'
 import useSystemConfig from '@/hooks/useSystemConfig'
 import { META_ITEM_GROUP } from '@/constants'
+import {
+  DEFAULT_EMENU_DISPLAY_CONFIG,
+  EMENU_DISPLAY_CONFIG_ID,
+  normalizeEmenuDisplayConfig,
+} from '@/utils/emenuViewportLayout'
 
 const useStyles = makeStyles((theme) => ({
   main: {
@@ -29,6 +34,24 @@ const useStyles = makeStyles((theme) => ({
     fontWeight: 600,
     color: '#333',
     margin: theme.spacing(3, 0),
+  },
+  displayCard: {
+    marginBottom: theme.spacing(2),
+  },
+  displayFields: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: theme.spacing(2, 3),
+    padding: theme.spacing(2, 3, 3),
+    [theme.breakpoints.down('sm')]: {
+      gridTemplateColumns: '1fr',
+    },
+  },
+  fieldLabel: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    color: '#333',
+    fontSize: 14,
   },
   selector: {
     width: '100%',
@@ -63,7 +86,16 @@ function SettingMenuDisplay({ handleClose }) {
   const { menuSource } = useSetMenus()
   const [selected, setSelected] = useState([])
   const [displayMode, setDisplayMode] = useState(false)
-  const { changeDeviceConfig, getDeviceConfig, deviceInfo } = useSystemConfig()
+  const [displayConfig, setDisplayConfig] = useState(
+    DEFAULT_EMENU_DISPLAY_CONFIG
+  )
+  const {
+    changeDeviceConfig,
+    changeGlobalConfig,
+    getDeviceConfig,
+    getGlobalConfig,
+    deviceInfo,
+  } = useSystemConfig()
   const showMenus = useMemo(() => {
     return getDeviceConfig(9)
   }, [deviceInfo])
@@ -71,6 +103,11 @@ function SettingMenuDisplay({ handleClose }) {
   const deviceDisplayMode = useMemo(() => {
     return getDeviceConfig(10)?.open
   }, [deviceInfo])
+
+  const storedDisplayConfig = useMemo(
+    () => normalizeEmenuDisplayConfig(getGlobalConfig(EMENU_DISPLAY_CONFIG_ID)),
+    [getGlobalConfig]
+  )
 
   const { t } = useTranslation(['translation', 'group'])
   const navigate = useNavigate()
@@ -91,6 +128,10 @@ function SettingMenuDisplay({ handleClose }) {
   useEffect(() => {
     setDisplayMode(deviceDisplayMode)
   }, [deviceDisplayMode])
+
+  useEffect(() => {
+    setDisplayConfig(storedDisplayConfig)
+  }, [storedDisplayConfig])
 
   const options = useMemo(
     () => [
@@ -121,8 +162,18 @@ function SettingMenuDisplay({ handleClose }) {
   }, [selected, original, showMenus])
 
   const notChanged = useMemo(
-    () => isMenuSame && displayMode === deviceDisplayMode,
-    [selected, original, displayMode, deviceDisplayMode]
+    () =>
+      isMenuSame &&
+      displayMode === deviceDisplayMode &&
+      isEqual(displayConfig, storedDisplayConfig),
+    [
+      selected,
+      original,
+      displayMode,
+      deviceDisplayMode,
+      displayConfig,
+      storedDisplayConfig,
+    ]
   )
 
   const handleChange = (val) => {
@@ -143,12 +194,14 @@ function SettingMenuDisplay({ handleClose }) {
   const handleReset = () => {
     setSelected(showMenus?.length === 0 ? original : showMenus)
     setDisplayMode(deviceDisplayMode)
+    setDisplayConfig(storedDisplayConfig)
   }
 
   const handleSave = async () => {
     const { deviceUuId } = window
     changeDeviceConfig(deviceUuId, 9, selected)
     changeDeviceConfig(deviceUuId, 10, { open: displayMode })
+    changeGlobalConfig(EMENU_DISPLAY_CONFIG_ID, displayConfig)
     const res = await dispatch(effects.setConfig())
     if (res) {
       handleClose()
@@ -188,6 +241,131 @@ function SettingMenuDisplay({ handleClose }) {
               title={t(`SettingMenuDisplay.display_title`)}
               action={
                 <Switch checked={displayMode} onChange={setDisplayMode} />
+              }
+            />
+          </Card>
+
+          <Typography variant="h6" className={classes.title}>
+            {t('SettingMenuDisplay.guest_display_heading')}
+          </Typography>
+          <Card className={classes.displayCard} elevation={0}>
+            <CardHead
+              title={t('SettingMenuDisplay.guest_display_title')}
+              subheader={t('SettingMenuDisplay.guest_display_subtitle')}
+              action={
+                <Switch
+                  checked={displayConfig.allowGuestResize}
+                  onChange={(checked) =>
+                    setDisplayConfig((current) => ({
+                      ...current,
+                      allowGuestResize: checked,
+                    }))
+                  }
+                />
+              }
+            />
+            <Box className={classes.displayFields}>
+              <Box>
+                <Typography className={classes.fieldLabel}>
+                  <span>{t('SettingMenuDisplay.default_scale')}</span>
+                  <span>{Math.round(displayConfig.scale * 100)}%</span>
+                </Typography>
+                <Slider
+                  min={75}
+                  max={140}
+                  step={5}
+                  value={Math.round(displayConfig.scale * 100)}
+                  onChange={(value) =>
+                    setDisplayConfig((current) => ({
+                      ...current,
+                      scale: value / 100,
+                    }))
+                  }
+                />
+              </Box>
+              <Box>
+                <Typography className={classes.fieldLabel}>
+                  <span>{t('SettingMenuDisplay.default_width')}</span>
+                  <span>{Math.round(displayConfig.widthRatio * 100)}%</span>
+                </Typography>
+                <Slider
+                  min={60}
+                  max={100}
+                  step={5}
+                  value={Math.round(displayConfig.widthRatio * 100)}
+                  onChange={(value) =>
+                    setDisplayConfig((current) => ({
+                      ...current,
+                      widthRatio: value / 100,
+                    }))
+                  }
+                />
+              </Box>
+              <Box>
+                <Typography className={classes.fieldLabel}>
+                  <span>{t('SettingMenuDisplay.default_height')}</span>
+                  <span>{Math.round(displayConfig.heightRatio * 100)}%</span>
+                </Typography>
+                <Slider
+                  min={55}
+                  max={100}
+                  step={5}
+                  value={Math.round(displayConfig.heightRatio * 100)}
+                  onChange={(value) =>
+                    setDisplayConfig((current) => ({
+                      ...current,
+                      heightRatio: value / 100,
+                    }))
+                  }
+                />
+              </Box>
+              <Box>
+                <Typography className={classes.fieldLabel}>
+                  {t('SettingMenuDisplay.density')}
+                </Typography>
+                <Select
+                  className={classes.selector}
+                  value={displayConfig.density}
+                  onChange={(density) =>
+                    setDisplayConfig((current) => ({ ...current, density }))
+                  }
+                  options={['compact', 'standard', 'comfortable'].map(
+                    (value) => ({
+                      value,
+                      label: t(`SettingMenuDisplay.density_${value}`),
+                    })
+                  )}
+                />
+              </Box>
+            </Box>
+            <CardHead
+              title={t('SettingMenuDisplay.pinch_zoom')}
+              action={
+                <Switch
+                  disabled={!displayConfig.allowGuestResize}
+                  checked={displayConfig.allowPinchZoom}
+                  onChange={(checked) =>
+                    setDisplayConfig((current) => ({
+                      ...current,
+                      allowPinchZoom: checked,
+                    }))
+                  }
+                />
+              }
+            />
+            <CardHead
+              title={t('SettingMenuDisplay.drag_resize')}
+              action={
+                <Switch
+                  disabled={!displayConfig.allowGuestResize}
+                  checked={displayConfig.allowDragResize}
+                  onChange={(checked) =>
+                    setDisplayConfig((current) => ({
+                      ...current,
+                      allowDragResize: checked,
+                    }))
+                  }
+                />
               }
             />
           </Card>

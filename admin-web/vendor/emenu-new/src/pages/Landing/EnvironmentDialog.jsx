@@ -7,6 +7,7 @@ import { RUNTIME_ENV_OPTIONS } from '@/utils/runtimeEnv'
 const useStyles = makeStyles((theme) => ({
   paper: {
     width: 420,
+    // emenu-real-screen-exception: this dialog is portaled to document.body.
     maxWidth: 'calc(100vw - 48px)',
     padding: '24px 24px 28px',
     borderRadius: 8,

@@ -1,4 +1,4 @@
-const virtualListData = (allCateList) => {
+const virtualListData = (allCateList, columns = 4) => {
   const categoryList = allCateList.map((cate) => {
     return {
       ...cate,
@@ -10,16 +10,8 @@ const virtualListData = (allCateList) => {
         .every((dish) => dish?.comboList?.length > 0),
     }
   })
-  // 手动根据grid 计算 col
-  const countRowSize = () => {
-    const width = window.innerWidth
-    if (width >= 960) return { large: 2, normal: 4 }
-    return {
-      large: 1,
-      normal: 2,
-    }
-  }
-  const { large, normal } = countRowSize()
+  const normal = Math.max(2, columns)
+  const large = Math.max(1, Math.floor(normal / 2))
   const resolvedList = categoryList.reduce((pre, cur) => {
     const { isHotPot, hidden, id, name, list, icon } = cur
     if (hidden) return pre
@@ -39,10 +31,12 @@ const virtualListData = (allCateList) => {
         for (let i = 0; i < ceilNum; i++) {
           const listObj = { id, name, icon, type: 'cateList', isLargeRow: true }
           // 非整数行, 需要补足小图菜品, 只有一行展示两个大图菜时会有问题, 需要补两个小图菜
-          listObj.list =
-            cateLargeDish.length >= large
-              ? cateLargeDish.splice(0, large)
-              : [...cateLargeDish, ...cateNormalDish.splice(0, 2)]
+          const largeItems = cateLargeDish.splice(0, large)
+          const remainingSlots = Math.max(0, normal - largeItems.length * 2)
+          listObj.list = [
+            ...largeItems,
+            ...cateNormalDish.splice(0, remainingSlots),
+          ]
           cateArr.push(listObj)
         }
       }
