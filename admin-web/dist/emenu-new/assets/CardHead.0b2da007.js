@@ -1,0 +1,1 @@
+import{w as a,au as e}from"./mui.74fe71ca.js";const n=a(i=>({root:{padding:i.spacing(3)},title:{fontWeight:600,fontSize:18,lineHeight:1.2},subheader:{marginTop:i.spacing(1),fontSize:16,lineHeight:1.2},action:{margin:0}}))(e);export{n as C};
