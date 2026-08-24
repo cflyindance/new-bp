@@ -89,17 +89,18 @@ eMenu 小尺寸商品卡片目前为标题和内容区设置固定高度。即�
 样式结构：
 
 1. 保留商品列表现有的 `gridTemplateColumns: repeat(viewport.columns, minmax(0, 1fr))`。
-2. Grid 子项包装层、`DishItemCard` 小卡片根节点、`SmallContent`、`contentOuterWrapper` 和 `contentArea` 建立明确的 `height: 100%`/纵向 Flex 高度传递链；相关节点使用兼容现有全局设置的 `box-sizing: border-box`，确保 padding 不额外撑破测量高度。
+2. Grid 内的商品子项包装层、`DishItemCard` 小卡片根节点、`SmallContent`、`contentOuterWrapper` 和 `contentArea` 建立明确的 `height: 100%`/纵向 Flex 高度传递链；相关节点使用兼容现有全局设置的 `box-sizing: border-box`，确保 padding 不额外撑破测量高度。这条高度链只存在于内层 Grid 及卡片之间，不得连接到 `react-window` 的估算高度。
 3. 内容区改为纵向 Flex，并移除固定 `151px` 高度和最小高度。
 4. 标题行移除固定 `48px` 高度，保留最多两行截断。
 5. 价格操作行通过自动上边距贴至内容区底部。
 6. `isShowPrice` 为假时不再用 `visibility: hidden` 保留价格节点高度；价格节点不渲染或不参与布局，操作区域使用 `margin-left: auto` 保持右侧位置。
-7. 每个 `cateList` 虚拟行的外层容器接入 `ResizeObserver`。观察到的真实块尺寸经像素取整并加上该行所需的明确底部间距后，与已保存高度比较；仅在变化时更新对应 `rowSize`，避免重复渲染循环。
-8. 更新行高后调用 `listRef.current.resetAfterIndex(rowIndex)`，使 `VariableSizeList` 重算当前行及后续行偏移。
-9. 首次渲染仍提供安全的估算高度，测量完成后替换为真实高度，避免 `itemSize` 未定义；估算值不能作为稳定最终高度。
-10. `viewport.columns`、字体/语言、商品内容或价格显示状态变化导致尺寸变化时，由观察器更新；列数变化仍沿用现有分类定位恢复逻辑。
-11. 组件卸载、虚拟行复用或观察目标变化时必须断开旧观察器，避免监听泄漏和把高度写入错误索引。
-12. 不添加逐商品 DOM 高度读取，也不在渲染组件中重新实现 `virtualListData` 的按列数分组。
+7. 每个 `cateList` 使用两层容器：外层仅接收并保留 `react-window` 提供的绝对定位 `style`（其中包含当前 `itemSize` 高度）；内层是无固定高度、无 `height: 100%`、不继承外层估算高度的 Grid 内容包装层。`ResizeObserver` 只观察内层包装层，读取其内容自然撑开的真实块尺寸，禁止观察外层虚拟定位节点。
+8. 最终 `itemSize` 定义为 `Math.ceil(内层 Grid 实测高度) + viewport.gap`。`viewport.gap`（当前默认 16px）同时作为商品横向间距和相邻商品视觉行的纵向间距，仅在虚拟行高度中追加一次；内层包装层不得再设置底部 margin/padding，外层也不得重复追加行间距。分类标题行和火锅特殊行沿用各自既有高度规则。
+9. 更新行高后调用 `listRef.current.resetAfterIndex(rowIndex)`，使 `VariableSizeList` 重算当前行及后续行偏移。
+10. 首次渲染仍提供安全的估算高度，测量完成后替换为真实高度，避免 `itemSize` 未定义；估算值不能作为稳定最终高度。
+11. `viewport.columns`、`viewport.gap`、字体/语言、商品内容或价格显示状态变化导致尺寸变化时，由观察器更新；列数变化仍沿用现有分类定位恢复逻辑。
+12. 组件卸载、虚拟行复用或观察目标变化时必须断开旧观察器，避免监听泄漏和把高度写入错误索引。
+13. 不添加逐商品 DOM 高度读取，也不在渲染组件中重新实现 `virtualListData` 的按列数分组。
 
 ## 边界与降级
 
