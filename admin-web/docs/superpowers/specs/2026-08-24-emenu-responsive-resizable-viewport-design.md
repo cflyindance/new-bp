@@ -50,7 +50,7 @@ eMenu 页面外框小于宿主提供的真实屏幕可用区域时，在该区�
 - 当前列数；
 - 本次变化来源。
 
-`width`、`height`、`widthRatio` 和 `heightRatio` 均描述 eMenu 最外层页面外框相对宿主真实屏幕可用区域的尺寸或比例，不描述内部菜品区。控制器同时测量页面外框内 TopBar 的实际高度，并输出 `innerMenuHeight = outerFrameHeight / scale - measuredHeaderHeight`。现有菜单组件不再直接以 `window.innerWidth`、`window.innerHeight`、`100vw` 或 `100vh` 作为内部布局依据，而是消费外框宽度和剩余菜单高度。
+`width`、`height`、`widthRatio` 和 `heightRatio` 均描述 eMenu 最外层页面外框相对宿主真实屏幕可用区域的可见尺寸或比例，不描述内部菜品区。可见外框本身不参与 `scale` 变换；外框内部建立逻辑坐标层，其逻辑尺寸为 `width / scale` 与 `height / scale`，内部 TopBar、分类和菜品在该层一起渲染，再通过 `scale` 映射回固定的可见外框。控制器以 TopBar 未变换的 `offsetHeight` 测得逻辑头部高度，并输出 `innerMenuLogicalHeight = height / scale - headerLogicalHeight`。响应式网格仍按外框可用宽度主动增减列数，因此这不是把固定桌面页面截图整体压缩。现有菜单组件不再直接以 `window.innerWidth`、`window.innerHeight`、`100vw` 或 `100vh` 作为内部布局依据，而是消费外框逻辑宽度和剩余菜单逻辑高度。
 
 ### `DisplaySizeControl`
 
