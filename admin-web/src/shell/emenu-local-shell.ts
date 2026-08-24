@@ -18,8 +18,16 @@ import {
   normalizeEmenuLocalPath,
   type EmenuLocalNavItem,
 } from "./emenu-local-routes";
+import {
+  bindLocalImageFolderSyncPanel,
+  renderLocalImageFolderSyncPanel,
+} from "../emenu-local/local-image-folder-sync/local-image-folder-sync-ui";
 import { buildKposEmbedSrc } from "./emenu-local-host-control";
 import { syncGlobalHostIpRouting } from "./emenu-local-host-control-ui";
+import {
+  bindProductStrikethroughPricePage,
+  renderProductStrikethroughPricePage,
+} from "../emenu-local/strikethrough-price/strikethrough-price-page";
 
 function emenuIframeSrc(): string {
   return buildKposEmbedSrc(
@@ -49,6 +57,9 @@ function renderIcon(kind: EmenuLocalNavItem["icon"], className = "size-5"): stri
   }
   if (kind === "settings") {
     return `<svg ${attrs}><circle cx="12" cy="12" r="3"/><path d="M12 2.5v2.2M12 19.3v2.2M4.9 4.9l1.6 1.6M17.5 17.5l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.9 19.1l1.6-1.6M17.5 6.5l1.6-1.6"/></svg>`;
+  }
+  if (kind === "price") {
+    return `<svg ${attrs}><path d="M4 7.5h16M6.5 4v7M17.5 4v7"/><rect x="4" y="4" width="16" height="16" rx="2.5"/><path d="M8 15h3M8 17.5h6"/></svg>`;
   }
   return `<svg ${attrs}><path d="M7.4 15.8c-2.4-2.4-2.6-6-.5-8.1s5.7-1.9 8.1.5 3.3 6.8 1.2 8.9-6.4 1.1-8.8-1.3Z"/><path d="m15.6 8.8 3.7-3.7M12.2 11.5l.01.01M9.6 9.8l.01.01M10.3 14.1l.01.01M14.2 14.2l.01.01"/></svg>`;
 }
@@ -157,16 +168,19 @@ function renderEmenuSettingsIframePage(): string {
   return `
     <section
       data-emenu-local-emenu-settings-frame
-      class="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-border/80 bg-card shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+      class="relative flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-hidden"
       aria-label="${escapeHtml(t("shell.emenuLocalEmenuSettings"))}"
     >
-      <iframe
-        title="${escapeHtml(t("shell.emenuLocalEmenuSettings"))}"
-        class="block h-full min-h-[36rem] w-full flex-1 border-0"
-        src="${escapeHtml(emenuSettingsIframeSrc())}"
-        referrerpolicy="no-referrer-when-downgrade"
-        allow="clipboard-read; clipboard-write; fullscreen"
-      ></iframe>
+      ${renderLocalImageFolderSyncPanel()}
+      <div class="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-border/80 bg-card shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+        <iframe
+          title="${escapeHtml(t("shell.emenuLocalEmenuSettings"))}"
+          class="block h-full min-h-[36rem] w-full flex-1 border-0"
+          src="${escapeHtml(emenuSettingsIframeSrc())}"
+          referrerpolicy="no-referrer-when-downgrade"
+          allow="clipboard-read; clipboard-write; fullscreen"
+        ></iframe>
+      </div>
     </section>`;
 }
 
@@ -179,6 +193,8 @@ function renderMain(path: string): string {
         ? renderEmenuIframePage()
         : active.id === "emenu-settings"
           ? renderEmenuSettingsIframePage()
+          : active.id === "product-strikethrough-price"
+            ? renderProductStrikethroughPricePage()
           : renderPlaceholder(active);
   return `
     <div class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
@@ -228,6 +244,8 @@ export function bindEmenuLocalShell(onMount: () => void): void {
   mountDemoSwitchFab({ showVersionSwitch: false });
   bindViewSwitchControl(onMount);
   bindSeasoningSettingsPage();
+  bindLocalImageFolderSyncPanel();
+  bindProductStrikethroughPricePage();
   syncGlobalHostIpRouting();
   bindEmenuLocalSessionBridge();
   bindUiLocaleControl(() => {
