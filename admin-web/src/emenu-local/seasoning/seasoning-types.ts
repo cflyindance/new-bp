@@ -41,6 +41,8 @@ export type SeasoningProduct = {
   categoryName: string;
   status: SeasoningStatus;
   emenuSellable: boolean;
+  price: number;
+  strikethroughPrice?: number | null;
   sortOrder: number;
   relationCount?: number;
   selectedOptionCount?: number;

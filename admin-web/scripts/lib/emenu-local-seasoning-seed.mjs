@@ -67,6 +67,8 @@ const products = [
   ["p-not-sellable", "D9999", "非 eMenu 菜品", "cat-hot", "热菜", 1000, false, "active"],
 ].map(([id, code, name, categoryId, categoryName, sortOrder, emenuSellable, status]) => ({
   id, code, name, categoryId, categoryName, sortOrder, emenuSellable, status,
+  price: 8 + Number(sortOrder) * 0.25,
+  strikethroughPrice: null,
 }));
 
 const menuGroups = [

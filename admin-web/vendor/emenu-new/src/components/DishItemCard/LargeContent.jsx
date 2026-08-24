@@ -69,6 +69,23 @@ const LargeContent = (props) => {
   )
   const { getFinalConfigById } = useSystemConfig()
   const isDisplayDishCode = getFinalConfigById(66)?.open
+  const displayTextLabels = useMemo(
+    () => [
+      ...(strikethDiscount !== undefined && strikethDiscount != null
+        ? [{ id: 'striketh-discount', name: strikethDiscount }]
+        : []),
+      ...allTextLabel,
+    ],
+    [allTextLabel, strikethDiscount]
+  )
+  const hasStrikethroughPrice =
+    !marketPriceItem &&
+    strikethroughPrice !== undefined &&
+    strikethroughPrice != null
+  const showStrikethroughOnPrimary =
+    hasStrikethroughPrice && isHasBenefitPrice
+  const showStrikethroughOnSecondary =
+    hasStrikethroughPrice && !isHasBenefitPrice
 
   const defaultMsg = t('Order.place_order_with_server')
 
@@ -250,35 +267,47 @@ const LargeContent = (props) => {
                 <StarIcon fontSize="small" className={styles.combinationIcon} />
               )}
               <div className={styles.textTagsContainer}>
-                <TextTags allTextLabel={allTextLabel} />
+                <TextTags allTextLabel={displayTextLabels} />
               </div>
             </div>
             <div className={styles.descText}>
               {t(id, { ns: 'description' })}
             </div>
           </div>
-          <div className={styles.rightPrice}>
+          <div
+            data-large-price-operation-row
+            className={styles.priceOperationRow}
+          >
             <div
               className={styles.priceText}
               style={{ visibility: `${isShowPrice ? 'visible' : 'hidden'}` }}
             >
-              <div>{showPrice}</div>
-              {!marketPriceItem && isHasBenefitPrice && (
-                <VipPriceWithImg
-                  style={{ marginTop: 4, fontSize: '1rem' }}
-                  benefitPrice={actualBenefitPrice}
-                />
-              )}
-              {!marketPriceItem &&
-                strikethroughPrice !== undefined &&
-                strikethroughPrice != null && (
-                  <div className={styles.striketh}>
-                    {strikethDiscount}
+              <div data-primary-price-line className={styles.primaryPriceLine}>
+                <span>{showPrice}</span>
+                {showStrikethroughOnPrimary && (
                     <span className={styles.decoration}>
                       ${strikethroughPrice.toFixed(2)}
                     </span>
-                  </div>
-                )}
+                  )}
+              </div>
+              {!marketPriceItem && isHasBenefitPrice && (
+                <div data-member-price-line className={styles.memberPriceLine}>
+                  <VipPriceWithImg
+                    style={{ fontSize: '1rem' }}
+                    benefitPrice={actualBenefitPrice}
+                  />
+                </div>
+              )}
+              {showStrikethroughOnSecondary && (
+                <div
+                  data-secondary-strikethrough-line
+                  className={styles.secondaryStrikethroughLine}
+                >
+                  <span className={styles.decoration}>
+                    ${strikethroughPrice.toFixed(2)}
+                  </span>
+                </div>
+              )}
             </div>
 
             <div className={styles.addActions}>

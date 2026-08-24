@@ -244,7 +244,12 @@ const useStyles = makeStyles((theme) => {
     },
     comboVipPrice: {
       display: 'flex',
-      alignItems: 'center',
+      flexDirection: 'column',
+      alignItems: 'flex-start',
+    },
+    comboPrimaryPriceLine: {
+      display: 'flex',
+      alignItems: 'baseline',
     },
   }
 })
@@ -281,6 +286,15 @@ const ComboItemContent = ({
   const { t } = useTranslation()
   const { t: gt } = useTranslation('dish')
   const [openDishDialog, { setTrue, setFalse }] = useBoolean()
+  const displayTextLabels = useMemo(
+    () => [
+      ...(strikethDiscount !== undefined && strikethDiscount != null
+        ? [{ id: 'striketh-discount', name: strikethDiscount }]
+        : []),
+      ...allTextLabel,
+    ],
+    [allTextLabel, strikethDiscount]
+  )
 
   const globalCount = useMemo(() => {
     return comboCart.reduce((acc, cur) => acc + cur.count, 0)
@@ -313,6 +327,12 @@ const ComboItemContent = ({
       optionList,
       isInFreeQuantity,
     })
+  const hasStrikethroughPrice =
+    strikethroughPrice !== undefined && strikethroughPrice != null
+  const showStrikethroughOnPrimary =
+    hasStrikethroughPrice && isHasBenefitPrice
+  const showStrikethroughOnSecondary =
+    hasStrikethroughPrice && !isHasBenefitPrice
 
   const isHidePrice = useMemo(() => {
     if (combo.isSpecialCombo && isInFreeQuantity) {
@@ -549,7 +569,7 @@ const ComboItemContent = ({
             </Typography>
           </CardActionArea>
           <TextTags
-            allTextLabel={allTextLabel}
+            allTextLabel={displayTextLabels}
             wrapperStyle={{ marginTop: 0 }}
           />
           <CardActionArea disabled={isDisabled}>
@@ -567,45 +587,52 @@ const ComboItemContent = ({
               className={classes.comboVipPrice}
               style={{ visibility: `${isShowPrice ? 'visible' : 'hidden'}` }}
             >
-              {/* 划线折扣 */}
-              {strikethDiscount !== undefined && strikethDiscount != null && (
+              <div
+                data-primary-price-line
+                className={classes.comboPrimaryPriceLine}
+              >
                 <Typography
-                  style={{ marginRight: '5px', color: '#96272f' }}
                   variant="body1"
                   component="h4"
                   className={classes.price}
                 >
-                  {strikethDiscount}
+                  {isHidePrice ? null : showPrice}
                 </Typography>
+
+                {/* 划线价的内容 */}
+                {showStrikethroughOnPrimary && (
+                    <span
+                      style={{
+                        textDecoration: 'line-through',
+                        color: 'gray',
+                        fontSize: '0.8rem',
+                        marginLeft: '5px',
+                      }}
+                    >
+                      ${strikethroughPrice.toFixed(2)}
+                    </span>
+                  )}
+              </div>
+              {isHasBenefitPrice && !isHidePrice && (
+                <div data-member-price-line>
+                  <VipPriceWithImg
+                    style={{ marginTop: 2 }}
+                    benefitPrice={actualBenefitPrice}
+                  />
+                </div>
               )}
-
-              <Typography
-                variant="body1"
-                component="h4"
-                className={classes.price}
-              >
-                {isHidePrice ? null : showPrice}
-              </Typography>
-
-              {/* 划线价的内容 */}
-              {strikethroughPrice !== undefined &&
-                strikethroughPrice != null && (
+              {showStrikethroughOnSecondary && (
+                <div data-secondary-strikethrough-line>
                   <span
                     style={{
                       textDecoration: 'line-through',
                       color: 'gray',
                       fontSize: '0.8rem',
-                      marginLeft: '5px',
                     }}
                   >
                     ${strikethroughPrice.toFixed(2)}
                   </span>
-                )}
-              {isHasBenefitPrice && !isHidePrice && (
-                <VipPriceWithImg
-                  style={{ marginLeft: 4 }}
-                  benefitPrice={actualBenefitPrice}
-                />
+                </div>
               )}
             </div>
             {!displayMode && (
