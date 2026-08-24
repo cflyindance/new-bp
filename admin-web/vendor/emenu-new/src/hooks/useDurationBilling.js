@@ -41,7 +41,7 @@ export default function useDurationBilling() {
   const startInFlightRef = useRef(null)
   const finishInFlightRef = useRef(null)
 
-  const startTiming = useCallback(async ({ ruleSnapshot, tableSnapshot, orderId, previousOrder, userId }, startedAt = Date.now()) => {
+  const startTiming = useCallback(async ({ ruleSnapshot, tableSnapshot, previousOrder, userId }, startedAt = Date.now()) => {
     if (startInFlightRef.current) return startInFlightRef.current
     if (durationBilling?.status === 'timing') return null
     const tableId = tableSnapshot?.id
