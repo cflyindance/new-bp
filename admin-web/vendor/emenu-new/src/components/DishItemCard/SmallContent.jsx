@@ -354,22 +354,21 @@ const SmallContent = ({
             </span>
             <ImgTag allImgLabel={allImgLabel} />
           </div>
-          <div className={styles.textTagsWrapper}>
-            {showCombinationIcon && (
-              <StarIcon fontSize="small" className={styles.combinationIcon} />
-            )}
-            <div className={styles.textTagsContainer}>
-              <TextTags allTextLabel={displayTextLabels} />
+          {(showCombinationIcon || displayTextLabels.length > 0) && (
+            <div className={styles.textTagsWrapper}>
+              {showCombinationIcon && (
+                <StarIcon fontSize="small" className={styles.combinationIcon} />
+              )}
+              <div className={styles.textTagsContainer}>
+                <TextTags allTextLabel={displayTextLabels} />
+              </div>
             </div>
-          </div>
+          )}
           <div className={styles.priceOperationRow}>
             {redeemPoints !== null ? (
               <RedeemPoint points={redeemPoints} />
-            ) : (
-              <div
-                className={styles.pricePart}
-                style={{ visibility: `${isShowPrice ? 'visible' : 'hidden'}` }}
-              >
+            ) : isShowPrice ? (
+              <div className={styles.pricePart}>
                 <div
                   data-primary-price-line
                   className={styles.primaryPriceLine}
@@ -404,7 +403,7 @@ const SmallContent = ({
                   </div>
                 )}
               </div>
-            )}
+            ) : null}
             <div className={styles.counterPart}>
               {showSeasoningDetailBtn ? (
                 <Button
