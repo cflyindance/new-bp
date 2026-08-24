@@ -31,6 +31,7 @@ import HOTPOT from '@/assets/image/hotpot.png'
 import CategoryLabel from '../common/CategoryLabel'
 import DishItemCount from '../DishItemCount'
 import DishItemCard from '../DishItemCard'
+import { useEmenuViewport } from '@/context/EmenuViewportContext'
 import DishDialog from '../DishDialog'
 import LoadingOverlay from '../common/LoadingOverlay'
 import noImageDish from '@/assets/image/noimage-dish.png'
@@ -345,6 +346,7 @@ const useStyles = makeStyles((theme) => ({
 火锅菜特殊布局内容
 */
 function OrderBaseContent(props) {
+  const viewport = useEmenuViewport()
   const { list, listGap, updateList, setFeedbackToastStatus } = props
   const classes = useStyles()
   const navigate = useNavigate()
@@ -936,7 +938,7 @@ function OrderBaseContent(props) {
   return (
     <Box
       className={classes.root}
-      style={{ height: `calc(100vh - ${listGap}px)` }}
+      style={{ height: Math.max(160, viewport.layoutHeight - 20) }}
     >
       <Box className={classes.leftSection}>
         <div className={classes.topRow}>

@@ -20,6 +20,7 @@ import MenuNotFound from '../common/MenuNotFound'
 import useCheckDishBeforeOrder from '@/hooks/useCheckDishBeforeOrder'
 import virtualListData from '@/utils/virtualListData'
 import LoadingOverlay from '../common/LoadingOverlay'
+import { useEmenuViewport } from '@/context/EmenuViewportContext'
 const FeedbackToast = lazy(() => import('../common/FeedbackToast'))
 
 const useStyles = makeStyles((theme) => ({
@@ -244,6 +245,7 @@ export { MemoDishItemCard as DishItemCardWithOrderChecks }
 
 function RightContent(props) {
   const classes = useStyles()
+  const viewport = useEmenuViewport()
   const { t: t_category } = useTranslation('category')
 
   const {
@@ -262,6 +264,7 @@ function RightContent(props) {
     selectedCrmIntegrationBenefitId,
   } = props
   const [rowSize, setRowSize] = useState([])
+  const previousColumns = usePrevious(viewport.columns)
 
   const prevRowSize = usePrevious(rowSize)
 
@@ -274,8 +277,8 @@ function RightContent(props) {
   })
 
   const cateListWithValidDish = useMemo(() => {
-    return virtualListData(allCateList)
-  }, [allCateList, virtualListData])
+    return virtualListData(allCateList, viewport.columns)
+  }, [allCateList, viewport.columns])
 
   useEffect(() => {
     if (cateListWithValidDish?.length) {
@@ -289,7 +292,7 @@ function RightContent(props) {
         }
         if (isHotPot) {
           return {
-            [i]: window.innerHeight - listGap,
+            [i]: Math.max(160, viewport.layoutHeight - 20),
             cateId: cate.id,
           }
         }
@@ -325,6 +328,28 @@ function RightContent(props) {
       }
     }
   }, [prevRowSize, rowSize, listRef.current])
+
+  useEffect(() => {
+    if (
+      previousColumns === undefined ||
+      previousColumns === viewport.columns ||
+      !rightListCateId ||
+      !listRef.current
+    )
+      return
+    const categoryIndex = cateListWithValidDish.findIndex(
+      (item) => item.id === rightListCateId
+    )
+    if (categoryIndex >= 0) {
+      listRef.current.resetAfterIndex(0, true)
+      listRef.current.scrollToItem(categoryIndex, 'start')
+    }
+  }, [
+    cateListWithValidDish,
+    previousColumns,
+    rightListCateId,
+    viewport.columns,
+  ])
 
   const updateList = useCallback((data, rowIndex) => {
     let isNeedUpdate = false //判断是不是重新刷页面数据
@@ -378,7 +403,7 @@ function RightContent(props) {
           // eslint-disable-next-line react/no-unknown-property
           index={rowIndex}
           key={rowIndex}
-          style={{ ...style, width: 'calc(100vw - 241px)' }}
+          style={{ ...style, width: '100%' }}
         >
           {type === 'cateText' && (
             <CategoryLabel fontSize={24} dotSize={32} text={t_category(id)} />
@@ -393,7 +418,15 @@ function RightContent(props) {
               />
             </Grid>
           ) : (
-            <Grid container spacing={3} key={id}>
+            <div
+              key={id}
+              style={{
+                display: 'grid',
+                gridTemplateColumns: `repeat(${viewport.columns}, minmax(0, 1fr))`,
+                gap: viewport.gap,
+                paddingRight: viewport.padding,
+              }}
+            >
               {list?.map((d) => {
                 const key =
                   d.crmIntegrationPointItemKey ||
@@ -401,12 +434,9 @@ function RightContent(props) {
                     ? `${d.rewardRule.redeemRule.parameters.points}${d.id}`
                     : d.id)
                 return (
-                  <Grid
-                    item
+                  <div
                     key={key}
-                    md={d.showLarge ? 6 : 3}
-                    sm={d.showLarge ? 12 : 6}
-                    xs={d.showLarge ? 12 : 6}
+                    style={{ gridColumn: `span ${d.showLarge ? 2 : 1}` }}
                   >
                     {d.crmIntegrationReward ? (
                       <CrmIntegrationRewardCard
@@ -437,10 +467,10 @@ function RightContent(props) {
                         }
                       />
                     )}
-                  </Grid>
+                  </div>
                 )
               })}
-            </Grid>
+            </div>
           )}
         </div>
       )
@@ -494,11 +524,14 @@ function RightContent(props) {
         item
         sm
         className={classes.RightContent}
-        style={{ height: `calc(100vh - ${listGap}px)` }}
+        style={{
+          height: Math.max(160, viewport.layoutHeight - 20),
+          marginLeft: viewport.collapsedSidebar ? 0 : 188,
+        }}
       >
         <List
           className={classes.scrollBar}
-          height={window.innerHeight - listGap}
+          height={Math.max(160, viewport.layoutHeight - 20)}
           itemCount={cateListWithValidDish.length}
           itemSize={getItemSize}
           ref={listRef}

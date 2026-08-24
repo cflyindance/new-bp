@@ -9,6 +9,7 @@ import { cloneDeep } from 'lodash-es'
 import { useMemoizedFn } from 'ahooks'
 import useIsMemberLogin from '@/hooks/useIsMemberLogin'
 import useSystemConfig from '@/hooks/useSystemConfig'
+import { useEmenuViewport } from '@/context/EmenuViewportContext'
 
 const useStyles = makeStyles((theme) => ({
   OrderMain: {
@@ -29,6 +30,7 @@ const useStyles = makeStyles((theme) => ({
 }))
 
 function OrderMain(props) {
+  const viewport = useEmenuViewport()
   const { t } = useTranslation('dish')
   const [active, setActive] = useGlobalState('Active_Menu')
   const [groupIdx, categoryIdx] = active
@@ -125,7 +127,12 @@ function OrderMain(props) {
   const listGap = isHideBar ? 108 : 145
 
   return (
-    <Container maxWidth={false} className={classes.OrderMain} ref={dishListRef}>
+    <Container
+      maxWidth={false}
+      className={classes.OrderMain}
+      ref={dishListRef}
+      style={{ height: viewport.layoutHeight, overflowY: 'auto' }}
+    >
       <Grid container spacing={3}>
         <LeftMenu listGap={listGap} menus={menus} setMenus={setMenus} />
         <RightContent

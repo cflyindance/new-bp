@@ -11,6 +11,7 @@ import OrderBaseContent from '../OrderBaseContent'
 import OrderMiniContent from '../OrderMiniContent'
 import useCheckDishBeforeOrder from '@/hooks/useCheckDishBeforeOrder'
 import LoadingOverlay from '../common/LoadingOverlay'
+import { useEmenuViewport } from '@/context/EmenuViewportContext'
 const FeedbackToast = lazy(() => import('../common/FeedbackToast'))
 
 const useStyles = makeStyles((theme) => ({
@@ -27,6 +28,7 @@ const useStyles = makeStyles((theme) => ({
 const MemoDishItemCard = memo(DishItemCard)
 
 function RightContent(props) {
+  const viewport = useEmenuViewport()
   const {
     menus,
     listGap,
@@ -251,7 +253,12 @@ function RightContent(props) {
 
   return (
     <>
-      <Grid item sm className={classes.RightContent}>
+      <Grid
+        item
+        sm
+        className={classes.RightContent}
+        style={{ marginLeft: viewport.collapsedSidebar ? 0 : 188 }}
+      >
         <Box color="common.white">
           {list?.length > 0 ? (
             // !如果类下所有的非隐藏菜都是 Special Combo，则展示特色锅底页面
@@ -274,7 +281,13 @@ function RightContent(props) {
                   dotSize={32}
                   text={t_category(category.id)}
                 />
-                <Grid container spacing={3}>
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: `repeat(${viewport.columns}, minmax(0, 1fr))`,
+                    gap: viewport.gap,
+                  }}
+                >
                   {list?.map((d) => {
                     const key =
                       d.crmIntegrationPointItemKey ||
@@ -282,12 +295,9 @@ function RightContent(props) {
                         ? `${d.rewardRule.redeemRule.parameters.points}${d.id}`
                         : d.id)
                     return (
-                      <Grid
-                        item
+                      <div
                         key={key}
-                        md={d.showLarge ? 6 : 3}
-                        sm={d.showLarge ? 12 : 6}
-                        xs={d.showLarge ? 12 : 6}
+                        style={{ gridColumn: `span ${d.showLarge ? 2 : 1}` }}
                       >
                         {d.crmIntegrationReward ? (
                           <CrmIntegrationRewardCard
@@ -321,10 +331,10 @@ function RightContent(props) {
                             }
                           />
                         )}
-                      </Grid>
+                      </div>
                     )
                   })}
-                </Grid>
+                </div>
               </>
             )
           ) : (

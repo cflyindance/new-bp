@@ -44,6 +44,8 @@ import SearchInput from '@/components/common/SearchInput'
 import ShoppingCartButton from '../ShoppingCart/ShoppingCartButton'
 import BatteryWifi from '../BatteryWifi'
 import MenuClassify from '@/pages/SetupOrder/components/MenuClassify'
+import DisplaySizeControl from '@/components/DisplaySizeControl'
+import { useEmenuViewport } from '@/context/EmenuViewportContext'
 
 const AdminLogin = lazy(() => import('../AdminLogin'))
 const AdminSettings = lazy(() => import('../AdminSettings'))
@@ -228,6 +230,7 @@ const useStyles = makeStyles((theme) => ({
 
 export default function TopBar(props) {
   const { onSearch } = props
+  const viewport = useEmenuViewport()
   const classes = useStyles()
   const navigate = useNavigate()
   const { t, i18n } = useTranslation()
@@ -391,9 +394,34 @@ export default function TopBar(props) {
     { setTrue: setOpenMenuClassify, setFalse: setCloseMenuClassify },
   ] = useBoolean()
 
+  useEffect(() => {
+    viewport.setModalLocked?.(
+      adminLogin.open ||
+        openAdminSetting ||
+        openShoppingCart ||
+        openBuffetSelect ||
+        openPickSize ||
+        openMenuClassify
+    )
+    return () => viewport.setModalLocked?.(false)
+  }, [
+    adminLogin.open,
+    openAdminSetting,
+    openShoppingCart,
+    openBuffetSelect,
+    openPickSize,
+    openMenuClassify,
+    viewport.setModalLocked,
+  ])
+
   return (
     <>
-      <AppBar position="static" color="transparent" className={classes.AppBar}>
+      <AppBar
+        position="static"
+        color="transparent"
+        className={classes.AppBar}
+        data-emenu-header="true"
+      >
         <Toolbar className={classes.Toolbar}>
           <div className={classes.leftTool}>
             <div className={classes.companyInfo} onClick={() => navigate('/')}>
@@ -530,6 +558,7 @@ export default function TopBar(props) {
               )}
 
               <ServerButton />
+              <DisplaySizeControl />
               <LanguageChange />
               <ShoppingCartButton onClick={setOpenShoppingCart} />
               <CRMLogin />

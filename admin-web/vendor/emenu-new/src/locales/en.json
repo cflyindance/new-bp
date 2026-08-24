@@ -48,7 +48,24 @@
     "split_order_paper_desc": "If you need to continue placing orders, please call your server to merge the orders and try again",
     "split_order_paper_btn_retry": "Retry"
   },
+  "DurationBilling": {
+    "startTiming": "Start timing",
+    "startSuccess": "Timing started",
+    "startFailed": "Unable to start timing",
+    "elapsed": "Elapsed",
+    "estimatedFee": "Estimated fee",
+    "endTiming": "End timing",
+    "endConfirmTitle": "End timing?",
+    "timingFee": "Timing fee",
+    "orderSubtotal": "Order subtotal",
+    "cancel": "Cancel",
+    "confirmAndAuthorize": "Confirm and authorize",
+    "endSuccess": "Timing ended",
+    "endFailed": "Unable to end timing. Check that the timed item is still in the order",
+    "endBeforeCheckout": "End timing for this table before checkout"
+  },
   "AdminLogin": {
+    "permission_durationBillingEnd": "Server authorization required",
     "tip_initial": "Please enter your passcode",
     "tip_wrong": "Passcode is Wrong, Try Again",
     "btn_enter": "Enter",
@@ -121,7 +138,19 @@
     "placeholder": "Please Select",
     "all": "Show all menu groups",
     "display_heading": "Menu Display",
-    "display_title": "Pure Display Mode"
+    "display_title": "Pure Display Mode",
+    "guest_display_heading": "Guest Display Controls",
+    "guest_display_title": "Allow guests to resize the menu",
+    "guest_display_subtitle": "Guest changes last for the current ordering session only",
+    "default_scale": "Default display size",
+    "default_width": "Default menu width",
+    "default_height": "Default menu height",
+    "density": "Menu density",
+    "density_compact": "Compact",
+    "density_standard": "Standard",
+    "density_comfortable": "Comfortable",
+    "pinch_zoom": "Allow pinch or Ctrl + wheel zoom",
+    "drag_resize": "Allow edge dragging to resize"
   },
   "SettingOrderLimit": {
     "placeholder": "Choose...",
@@ -185,6 +214,12 @@
     "limit_isNeedAuthCode_subtitle": "After closing, customers can log in / sign up directly by entering their mobile phone number.",
     "limit_isCrmNeedAuthLogin_title": "Close the member log in / sign up page before placing an order",
     "limit_isCrmNeedAuthLogin_subtitle": "After it is turned on, diners can only log in and sign up by clicking on the personal center on the menu page.",
+    "limit_memberLoginEntry_title": "Show member login entry",
+    "limit_memberLoginEntry_subtitle": "Control where diners can open the member login / sign up page",
+    "limit_preOrderMemberLoginEntry_title": "Show login / sign up page before ordering",
+    "limit_preOrderMemberLoginEntry_subtitle": "When off, Start Order opens the menu directly without showing the login page",
+    "limit_menuMemberLoginEntry_title": "Show login entry on the menu page",
+    "limit_menuMemberLoginEntry_subtitle": "When off, the logged-out profile icon and login banner are hidden; logged-in members can still open their profile",
     "limit_isOpenSpecialDishPermission_title": "Allow visible but non orderable dishes to be added to the shopping cart",
     "limit_isOpenSpecialDishPermission_subtitle": "After closing, diners cannot add restricted dishes to their shopping cart. They need to call the waiter to enter their password before they can add them to the shopping cart. After adding them to the shopping cart, they can place orders directly without a password",
     "limit_isSpecialDishServePermission_title": "Dishes that can be viewed but not ordered will pop up a pop-up window for waiter authorization",
@@ -293,7 +328,12 @@
     "order_again_time": "Order again after {{minutes}}:{{seconds}}",
     "order_again_time_seconds_only": "Order again after 0:{{seconds}}",
     "order_duration_time": "Have dined: {{minutes}} minutes",
-    "order_rest_time": "Remaining meal: {{minutes}} minutes"
+    "order_rest_time": "Remaining meal: {{minutes}} minutes",
+    "displaySize": "Display size",
+    "displaySmall": "Small",
+    "displayStandard": "Standard",
+    "displayLarge": "Large",
+    "displayReset": "Restore store default"
   },
   "DishDialog": {
     "btn_add_to_cart": "Add {{count}} to Cart・${{price}}",
@@ -358,6 +398,7 @@
     "editBase": "Edit soup Base"
   },
   "ShoppingCart": {
+    "pending_products": "Products",
     "pending_orders": "Pending Orders",
     "sent_orders": "Sent Orders",
     "exceed_tips_max": "Please note that you can order up to {{value}} items at once.",
@@ -544,6 +585,8 @@
     "switch_topic_title": "Notice",
     "switch_topic_btn": "Close",
     "switch_topic_content": "To turn on this option, you need to turn off option <strong>{{settingItemName}}</strong> first.",
+    "member_login_conflict_disable_preorder": "To hide the login / sign up page before ordering, first turn off “Member login / sign up is required before ordering”.",
+    "member_login_conflict_enable_required": "To require member login / sign up before ordering, first turn on “Show login / sign up page before ordering”.",
     "waiterSetting": "Waiter settings",
     "menuClassify": "Menu classification settings",
     "menuClassifySetting": "Menu Setting",

@@ -48,7 +48,24 @@
     "split_order_paper_desc": "如需继续点单，<br />请呼叫服务员进行合单后再重试",
     "split_order_paper_btn_retry": "重试"
   },
+  "DurationBilling": {
+    "startTiming": "开单计时",
+    "startSuccess": "计时已开始",
+    "startFailed": "无法开始计时",
+    "elapsed": "已用时长",
+    "estimatedFee": "预估费用",
+    "endTiming": "结束计时",
+    "endConfirmTitle": "确认结束计时？",
+    "timingFee": "计时费",
+    "orderSubtotal": "点单费小计",
+    "cancel": "取消",
+    "confirmAndAuthorize": "确认并授权",
+    "endSuccess": "计时已结束",
+    "endFailed": "无法结束计时，请确认计时商品仍在订单中",
+    "endBeforeCheckout": "请先结束当前桌台的计时，再发起结账"
+  },
   "AdminLogin": {
+    "permission_durationBillingEnd": "需要服务员授权结束计时",
     "tip_initial": "请输入您的密码",
     "tip_wrong": "密码错误，请重试",
     "btn_enter": "确定",
@@ -121,7 +138,19 @@
     "placeholder": "请选择",
     "all": "展示所有菜单组",
     "display_heading": "菜单展示",
-    "display_title": "纯展示模式"
+    "display_title": "纯展示模式",
+    "guest_display_heading": "顾客显示调整",
+    "guest_display_title": "允许顾客调整菜单显示",
+    "guest_display_subtitle": "顾客设置仅在当前点餐会话生效",
+    "default_scale": "默认显示大小",
+    "default_width": "默认菜单宽度",
+    "default_height": "默认菜单高度",
+    "density": "菜单密度",
+    "density_compact": "紧凑",
+    "density_standard": "标准",
+    "density_comfortable": "舒适",
+    "pinch_zoom": "允许双指或 Ctrl + 滚轮缩放",
+    "drag_resize": "允许拖拽菜单边缘调整尺寸"
   },
   "SettingOrderLimit": {
     "placeholder": "请选择",
@@ -185,6 +214,12 @@
     "limit_isNeedAuthCode_subtitle": "关闭后, 食客输入手机号可以直接登录/注册",
     "limit_isCrmNeedAuthLogin_title": "点单前关闭会员登录/注册页",
     "limit_isCrmNeedAuthLogin_subtitle": "开启后，食客只能在菜单页面，主动点击个人中心进行登录注册",
+    "limit_memberLoginEntry_title": "展示会员登录入口",
+    "limit_memberLoginEntry_subtitle": "控制食客可以在哪些位置打开会员登录/注册页",
+    "limit_preOrderMemberLoginEntry_title": "点单前弹出登录/注册页",
+    "limit_preOrderMemberLoginEntry_subtitle": "关闭后，点击首页开始点单不再弹出登录页，直接进入菜单",
+    "limit_menuMemberLoginEntry_title": "菜单页展示登录入口",
+    "limit_menuMemberLoginEntry_subtitle": "关闭后，菜单页不展示未登录头像和登录引导横幅；已登录后仍可通过头像查看会员信息",
     "limit_isOpenSpecialDishPermission_title": "允许可看不可点的菜添加至购物车",
     "limit_isOpenSpecialDishPermission_subtitle": "关闭后，食客不可以添加限制菜至购物车，食客需呼叫服务员输入密码后，才可以加入购物车，加入购物车后，可直接下单，无需密码",
     "limit_isSpecialDishServePermission_title": "可看不可点的菜弹出服务员授权",
@@ -293,7 +328,12 @@
     "order_again_time": "{{minutes}}分{{seconds}}秒后可再下单",
     "order_again_time_seconds_only": "{{seconds}}秒后可再下单",
     "order_duration_time": "已用餐: {{minutes}}分钟",
-    "order_rest_time": "剩余用餐: {{minutes}}分钟"
+    "order_rest_time": "剩余用餐: {{minutes}}分钟",
+    "displaySize": "显示大小",
+    "displaySmall": "小",
+    "displayStandard": "标准",
+    "displayLarge": "大",
+    "displayReset": "恢复门店默认"
   },
   "DishDialog": {
     "btn_add_to_cart": "添加{{count}}份至购物车・${{price}}",
@@ -358,6 +398,7 @@
     "editBase": "修改锅底"
   },
   "ShoppingCart": {
+    "pending_products": "商品费",
     "pending_orders": "新加菜",
     "sent_orders": "已下单",
     "exceed_tips_max": "当前购物车支持最多{{value}}个菜品同时下单.",
@@ -544,6 +585,8 @@
     "switch_topic_title": "注意",
     "switch_topic_btn": "关闭",
     "switch_topic_content": "想要打开此选项，需要先关闭   <strong>{{settingItemName}}</strong>   选项",
+    "member_login_conflict_disable_preorder": "想要关闭点单前弹出登录/注册页，需要先关闭「点单前必须登录/注册会员」",
+    "member_login_conflict_enable_required": "想要打开点单前必须登录/注册会员，需要先打开「点单前弹出登录/注册页」",
     "waiterSetting": "服务员设置",
     "menuClassify": "菜单分类设置",
     "menuClassifySetting": "菜单设置",

@@ -16,6 +16,7 @@ import useSystemConfig from '@/hooks/useSystemConfig'
 import virtualListData from '@/utils/virtualListData'
 import { useMemoizedFn } from 'ahooks'
 import { serverUrl } from '@/utils/env_var'
+import { useEmenuViewport } from '@/context/EmenuViewportContext'
 
 const useStyles = makeStyles((theme) => {
   const borderRadius = theme.shape.borderRadius
@@ -110,6 +111,7 @@ const useStyles = makeStyles((theme) => {
 })
 
 const LeftMenu = (props) => {
+  const viewport = useEmenuViewport()
   const classes = useStyles()
   const { t } = useTranslation()
   const { menu, activeMenu, setActiveMenu, listRef, allCateList, listGap } =
@@ -180,7 +182,10 @@ const LeftMenu = (props) => {
         categoryIdx,
       })
       const selectedCate = sortedMenu[groupIdx]?.list?.[categoryIdx]
-      const cateListWithValidDish = virtualListData(allCateList)
+      const cateListWithValidDish = virtualListData(
+        allCateList,
+        viewport.columns
+      )
       const idx = cateListWithValidDish.findIndex(
         (cate) => cate.id === selectedCate.id
       )
@@ -191,22 +196,62 @@ const LeftMenu = (props) => {
           if (type === 'cateText') {
             height += 48
           } else if (type === 'cateList') {
-            height += isLargeRow ? 400 : 310
+            height += (isLargeRow ? 400 : 310) * viewport.scale
           }
           if (isHotPot) {
-            height += window.innerHeight - listGap
+            height += viewport.layoutHeight - 20
           }
         }
         listRef.current?.scrollTo(height)
       }
     }
   })
+  if (viewport.collapsedSidebar) {
+    return (
+      <Grid
+        item
+        xs={12}
+        style={{ position: 'static', minWidth: '100%', width: '100%' }}
+      >
+        <Box
+          display="flex"
+          overflow="auto"
+          padding="8px 12px"
+          gridGap={8}
+          bgcolor="rgba(0, 0, 0, 0.4)"
+        >
+          {sortedMenu.flatMap((group, i) =>
+            group.list.map((category, j) =>
+              category.hidden ? null : (
+                <ListItem
+                  key={`${group.id}-${category.id}`}
+                  button
+                  selected={groupIdx === i && categoryIdx === j}
+                  disabled={category.disabled}
+                  onClick={selectMenu(i, j)}
+                  style={{ minWidth: 112, borderRadius: 8 }}
+                >
+                  <ListItemText
+                    primary={t(category.id, {
+                      ns: 'category',
+                      defaultValue: category.name,
+                    })}
+                  />
+                </ListItem>
+              )
+            )
+          )}
+        </Box>
+      </Grid>
+    )
+  }
+
   return (
     <Grid item className={classes.LeftMenu}>
       <Box
         className={classes.menuWrapper}
         id="menuNavList"
-        style={{ height: `calc(100vh - ${listGap}px)` }}
+        style={{ height: Math.max(160, viewport.layoutHeight - 20) }}
       >
         {sortedMenu.map((g, i, { length }) => {
           const hiddenGroup =

@@ -1,0 +1,110 @@
+.stage {
+  position: relative;
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.viewport {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: 12px;
+  background: #1a2241;
+  --emenu-scale: 1;
+  --emenu-grid-gap: 16px;
+  --emenu-card-padding: 16px;
+  touch-action: pan-y;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  transform: scale(var(--emenu-scale));
+  transform-origin: top left;
+}
+
+.resizeZone {
+  position: absolute;
+  z-index: 20;
+
+  &::after {
+    content: '';
+    position: absolute;
+    border-radius: 999px;
+    background: rgba(227, 193, 138, 0.82);
+    opacity: 0;
+    transition: opacity 160ms ease;
+  }
+
+  &:hover::after,
+  &:active::after,
+  &:focus-visible::after {
+    opacity: 1;
+  }
+}
+
+.rightEdge {
+  top: 0;
+  right: 0;
+  bottom: 24px;
+  width: 10px;
+  cursor: ew-resize;
+  touch-action: pan-y;
+
+  &::after {
+    inset: 0 0 0 auto;
+    width: 3px;
+  }
+}
+
+.bottomEdge {
+  bottom: 0;
+  left: 0;
+  right: 24px;
+  height: 10px;
+  cursor: ns-resize;
+  touch-action: pan-x;
+
+  &::after {
+    inset: auto 0 0;
+    height: 3px;
+  }
+}
+
+.cornerEdge {
+  right: 0;
+  bottom: 0;
+  width: 24px;
+  height: 24px;
+  cursor: nwse-resize;
+  touch-action: none;
+
+  &::after {
+    right: 5px;
+    bottom: 5px;
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+  }
+}
+
+@media (pointer: coarse) {
+  .rightEdge {
+    width: 20px;
+  }
+
+  .bottomEdge {
+    height: 20px;
+  }
+}
+
+.interacting {
+  user-select: none;
+}
