@@ -8,7 +8,7 @@ export type EmenuLocalNavItem = {
   path: string;
   titleKey: MessageKey;
   descriptionKey: MessageKey;
-  icon: "seasoning" | "emenu" | "settings";
+  icon: "seasoning" | "emenu" | "settings" | "price";
 };
 
 export const EMENU_LOCAL_NAV_ITEMS: readonly EmenuLocalNavItem[] = [
@@ -32,6 +32,13 @@ export const EMENU_LOCAL_NAV_ITEMS: readonly EmenuLocalNavItem[] = [
     titleKey: "shell.emenuLocalEmenuSettings",
     descriptionKey: "shell.emenuLocalEmenuSettingsDesc",
     icon: "settings",
+  },
+  {
+    id: "product-strikethrough-price",
+    path: "/emenu-local/product-strikethrough-price",
+    titleKey: "shell.emenuLocalProductStrikethroughPrice",
+    descriptionKey: "shell.emenuLocalProductStrikethroughPriceDesc",
+    icon: "price",
   },
 ] as const;
 

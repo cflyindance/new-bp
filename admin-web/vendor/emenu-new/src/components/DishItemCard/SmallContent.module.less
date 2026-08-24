@@ -6,7 +6,7 @@
     height: 132px;
     position: relative;
     overflow: hidden;
-    
+
     .dishOrderRemainingTime {
       position: absolute;
       top: 10px;
@@ -72,8 +72,27 @@
 
         .pricePart {
           display: flex;
-          //flex-direction: column;
-          align-items: center;
+          flex-direction: column;
+          align-items: flex-start;
+
+          .primaryPriceLine {
+            display: flex;
+            align-items: baseline;
+          }
+
+          .memberPriceLine {
+            display: flex;
+            margin-top: 2px;
+          }
+
+          .secondaryStrikethroughLine {
+            display: flex;
+            margin-top: 2px;
+
+            .decoration {
+              margin-left: 0;
+            }
+          }
           
           .price {
             font-size: 1rem;
@@ -117,20 +136,10 @@
     }
   }
 }
-.strikethContent{
-  height: 1.5rem;
-}
 .decoration {
   margin-left: 5px;
   text-decoration: line-through;
   // text-decoration-thickness: 2px;
   color: gray;
   font-size: 0.8rem;
-}
-
-.discount {
-  font-size: 1rem;
-  font-weight: 700;
-  color: #96272f;
-  margin-right: 0.5rem;
 }

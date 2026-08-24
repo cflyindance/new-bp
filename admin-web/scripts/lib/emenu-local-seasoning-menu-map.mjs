@@ -42,6 +42,8 @@ export function mapKposMenusToSeasoningView(payload) {
         const id = String(item.id);
         productIds.push(id);
         if (!productsById.has(id)) {
+          const firstTierPrice = Array.isArray(item.itemPrices) ? item.itemPrices.find((entry) => Number.isFinite(Number(entry?.price)))?.price : undefined;
+          const price = Number(item.addPrice ?? item.price ?? firstTierPrice ?? 0);
           productsById.set(id, {
             id,
             code: String(item.itemNumber ?? item.code ?? id),
@@ -50,6 +52,8 @@ export function mapKposMenusToSeasoningView(payload) {
             categoryName: htmlDecode(category.name),
             status: "active",
             emenuSellable: true,
+            price: Number.isFinite(price) ? price : 0,
+            strikethroughPrice: Number.isFinite(Number(item.strikethroughPrice)) ? Number(item.strikethroughPrice) : null,
             sortOrder: Number.isFinite(item.sortOrder) ? item.sortOrder : (itemIndex + 1) * 10,
           });
         }
@@ -101,6 +105,8 @@ export function mapKposMenusToSeasoningView(payload) {
       name: product.name,
       status: product.status,
       emenuSellable: product.emenuSellable,
+      price: product.price,
+      strikethroughPrice: product.strikethroughPrice,
     })),
   };
   const fingerprint = sourceMenuVersion
@@ -108,4 +114,24 @@ export function mapKposMenusToSeasoningView(payload) {
     : crypto.createHash("sha256").update(JSON.stringify(fingerprintBasis)).digest("hex");
 
   return { menuGroups, products, categories, sourceMenuVersion, fingerprint };
+}
+
+export function mapSeasoningViewToBrandMenuTree(view) {
+  const productsById = new Map((view?.products ?? []).map((p) => [String(p.id), p]));
+  return (view?.menuGroups ?? [])
+    .map((group) => ({
+      id: String(group.id),
+      name: String(group.name ?? ""),
+      categories: (group.categories ?? [])
+        .map((category) => ({
+          id: String(category.id),
+          name: String(category.name ?? ""),
+          dishes: (category.productIds ?? [])
+            .map((id) => productsById.get(String(id)))
+            .filter(Boolean)
+            .map((product) => ({ id: String(product.id), name: String(product.name ?? "") })),
+        }))
+        .filter((category) => category.dishes.length > 0),
+    }))
+    .filter((group) => group.categories.length > 0);
 }

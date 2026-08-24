@@ -9,6 +9,7 @@ import setOptions from '@/utils/setOptions'
 import afterResolveOption from '@/utils/resolveOption'
 import { transformLanguageCode } from '@/locales/resources'
 import { META_ITEM_GROUP } from '@/constants'
+import { resolveConfiguredStrikethroughPrice } from '@/services/strikethroughPriceBridge'
 
 dayjs.extend(isBetween)
 
@@ -20,6 +21,11 @@ const allowedTextTags = [
   'VEGGIE',
   'SHELLFISH',
 ]
+
+const formatStrikethDiscount = (strikethroughPrice, price) =>
+  `${Math.abs(
+    ((strikethroughPrice - price) / strikethroughPrice) * 100
+  ).toFixed(0)}% OFF`
 
 export function getMenus({ params = {}, axiosConfig = {} } = {}) {
   // const i18n = getI18n()
@@ -66,6 +72,13 @@ export function getRestaurantHour(params = {}) {
 function transformItem(item, saleItems) {
   if (!item) {
     return void 0
+  }
+  const configuredStrikethroughPrice = resolveConfiguredStrikethroughPrice(item.id)
+  if (configuredStrikethroughPrice.hasOverride) {
+    item = {
+      ...item,
+      strikethroughPrice: configuredStrikethroughPrice.value,
+    }
   }
   const preItemPrices = (() => {
     if (!item.itemPrices?.length) return []
@@ -146,13 +159,10 @@ function transformItem(item, saleItems) {
       item.strikethroughPrice !== null
     ) {
       result.strikethroughPrice = item.strikethroughPrice //划线价
-      result.strikethDiscount =
-        '-' +
-        (
-          ((item.strikethroughPrice - result.price) / item.strikethroughPrice) *
-          100
-        ).toFixed(0) +
-        '%' //划线价和售价计算折扣
+      result.strikethDiscount = formatStrikethDiscount(
+        item.strikethroughPrice,
+        result.price
+      ) //划线价和售价计算折扣
     }
     return result
   } else {
@@ -234,14 +244,10 @@ function transformItem(item, saleItems) {
       item.strikethroughPrice !== null
     ) {
       saleItem.strikethroughPrice = item.strikethroughPrice //划线价
-      saleItem.strikethDiscount =
-        '-' +
-        (
-          ((item.strikethroughPrice - saleItem.price) /
-            item.strikethroughPrice) *
-          100
-        ).toFixed(0) +
-        '%' //划线价和售价计算折扣
+      saleItem.strikethDiscount = formatStrikethDiscount(
+        item.strikethroughPrice,
+        saleItem.price
+      ) //划线价和售价计算折扣
     }
 
     if (item.comboSections) {

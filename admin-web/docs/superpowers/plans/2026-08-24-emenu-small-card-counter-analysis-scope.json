@@ -1,0 +1,77 @@
+{
+  "entryPoints": [
+    "vendor/emenu-new/src/components/RightContent/index.jsx"
+  ],
+  "references": [
+    {
+      "path": "vendor/emenu-new/src/components/DishItemCard/SmallContent.jsx",
+      "symbol": "SmallContent",
+      "relation": "definition",
+      "impact": "affected",
+      "deepRead": true
+    },
+    {
+      "path": "vendor/emenu-new/src/components/DishItemCount/index.jsx",
+      "symbol": "DishItemCount",
+      "relation": "direct_caller",
+      "impact": "affected",
+      "deepRead": true
+    },
+    {
+      "path": "vendor/emenu-new/src/components/DishItemCard/LargeContent.jsx",
+      "symbol": "LargeContent",
+      "relation": "shared_caller",
+      "impact": "affected",
+      "deepRead": true
+    },
+    {
+      "path": "vendor/emenu-new/src/components/DishItemCard/index.jsx",
+      "symbol": "ComboItemContent",
+      "relation": "shared_caller",
+      "impact": "affected",
+      "deepRead": true
+    },
+    {
+      "path": "scripts/verify-emenu-strikethrough-price.mjs",
+      "symbol": "strikethrough card assertions",
+      "relation": "test",
+      "impact": "affected",
+      "deepRead": true
+    }
+  ],
+  "deepReadPaths": [
+    "vendor/emenu-new/src/components/RightContent/index.jsx",
+    "vendor/emenu-new/src/components/DishItemCard/SmallContent.jsx",
+    "vendor/emenu-new/src/components/DishItemCount/index.jsx",
+    "vendor/emenu-new/src/components/DishItemCard/LargeContent.jsx",
+    "vendor/emenu-new/src/components/DishItemCard/index.jsx",
+    "scripts/verify-emenu-strikethrough-price.mjs"
+  ],
+  "dataFlow": [
+    {
+      "from": "vendor/emenu-new/src/components/RightContent/index.jsx",
+      "to": "vendor/emenu-new/src/components/DishItemCard/SmallContent.jsx",
+      "evidence": "菜单网格将商品数据传入小图商品卡"
+    },
+    {
+      "from": "vendor/emenu-new/src/components/DishItemCard/SmallContent.jsx",
+      "to": "vendor/emenu-new/src/components/DishItemCount/index.jsx",
+      "evidence": "小图商品卡根据会员价与划线价组合选择紧凑数量模式"
+    },
+    {
+      "from": "vendor/emenu-new/src/components/DishItemCard/LargeContent.jsx",
+      "to": "vendor/emenu-new/src/components/DishItemCount/index.jsx",
+      "evidence": "大图商品卡保留既有数量交互，仅将价格与操作控件重排到同一底部操作行"
+    }
+  ],
+  "sharedCallers": [
+    "vendor/emenu-new/src/components/DishItemCard/LargeContent.jsx"
+  ],
+  "sharedCallersComplete": true,
+  "workspace": {
+    "status": "unrelated_changes",
+    "evidence": "工作区存在大量其他功能和构建产物改动；本次仅修改已由当前任务持续维护的 eMenu 商品卡文件，不覆盖其他路径。"
+  },
+  "scopeStatus": "bounded",
+  "stopReason": "root_cause_and_impact_bounded"
+}

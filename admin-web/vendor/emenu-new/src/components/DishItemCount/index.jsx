@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState, memo } from 'react'
-import { IconButton, Paper, InputBase } from '@material-ui/core'
+import { Badge, IconButton, Paper, InputBase } from '@material-ui/core'
 import { alpha, makeStyles } from '@material-ui/core/styles'
 import AddCircleRoundedIcon from '@material-ui/icons/AddCircleRounded'
 import RemoveRoundedIcon from '@material-ui/icons/RemoveRounded'
@@ -55,6 +55,10 @@ const useStyles = makeStyles((theme) => ({
     color: 'rgba(0, 0, 0, 0.26)',
     backgroundColor: 'transparent',
   },
+  compactCountBadge: {
+    padding: 4,
+    transform: 'scale(0.8) translate(50%, -50%)',
+  },
 }))
 
 function DishItemCount({
@@ -80,6 +84,7 @@ function DishItemCount({
   canClickDisableBtn,
   disableBtnClassName,
   isDeltaCount = false,
+  compactBadgeMode = false,
 }) {
   const classes = useStyles({ size, width, fontSize, fontWeight })
   const [value, setValue] = useState(count)
@@ -157,7 +162,29 @@ function DishItemCount({
 
   return (
     <>
-      {value === 0 ? (
+      {compactBadgeMode ? (
+        <IconButton
+          color="primary"
+          className={`${classes.addIcon} ${
+            canClickDisableBtn && (disabled || disableBtn)
+              ? `${classes.disableBtn} ${disableBtnClassName ?? ''}`
+              : ''
+          }`}
+          disabled={!canClickDisableBtn && (disabled || disableBtn)}
+          onClick={increase}
+          ref={isInShoppingCart ? undefined : addButtonRef}
+        >
+          <Badge
+            data-compact-count-badge
+            badgeContent={value}
+            color="secondary"
+            overlap="rectangular"
+            classes={{ badge: classes.compactCountBadge }}
+          >
+            <AddCircleRoundedIcon />
+          </Badge>
+        </IconButton>
+      ) : value === 0 ? (
         <IconButton
           color="primary"
           className={`${classes.addIcon} ${

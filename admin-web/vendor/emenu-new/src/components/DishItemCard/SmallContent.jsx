@@ -86,6 +86,25 @@ const SmallContent = ({
   )
   const { getFinalConfigById } = useSystemConfig()
   const isDisplayDishCode = getFinalConfigById(66)?.open
+  const displayTextLabels = useMemo(
+    () => [
+      ...(strikethDiscount !== undefined && strikethDiscount != null
+        ? [{ id: 'striketh-discount', name: strikethDiscount }]
+        : []),
+      ...allTextLabel,
+    ],
+    [allTextLabel, strikethDiscount]
+  )
+  const hasStrikethroughPrice =
+    !marketPriceItem &&
+    strikethroughPrice !== undefined &&
+    strikethroughPrice != null
+  const showStrikethroughOnPrimary =
+    hasStrikethroughPrice && isHasBenefitPrice
+  const showStrikethroughOnSecondary =
+    hasStrikethroughPrice && !isHasBenefitPrice
+  const hasBenefitAndStrikethroughPrice =
+    isHasBenefitPrice && hasStrikethroughPrice
 
   // crm 是否登陆
   const isCRMLogin = useMemo(() => {
@@ -340,7 +359,7 @@ const SmallContent = ({
               <StarIcon fontSize="small" className={styles.combinationIcon} />
             )}
             <div className={styles.textTagsContainer}>
-              <TextTags allTextLabel={allTextLabel} />
+              <TextTags allTextLabel={displayTextLabels} />
             </div>
           </div>
           <div className={styles.priceOperationRow}>
@@ -351,16 +370,38 @@ const SmallContent = ({
                 className={styles.pricePart}
                 style={{ visibility: `${isShowPrice ? 'visible' : 'hidden'}` }}
               >
-                <div className={styles.price}>{showPrice}</div>
+                <div
+                  data-primary-price-line
+                  className={styles.primaryPriceLine}
+                >
+                  <span className={styles.price}>{showPrice}</span>
+                  {showStrikethroughOnPrimary && (
+                      <span className={styles.decoration}>
+                        ${strikethroughPrice.toFixed(2)}
+                      </span>
+                    )}
+                </div>
                 {!marketPriceItem && isHasBenefitPrice && (
-                  <VipPriceWithImg
-                    style={{ marginLeft: 8, fontSize: '1rem' }}
-                    benefitPrice={
-                      benefitPrice
-                        ? `$${benefitPrice.toFixed(2)}`
-                        : actualBenefitPrice
-                    }
-                  />
+                  <div data-member-price-line className={styles.memberPriceLine}>
+                    <VipPriceWithImg
+                      style={{ fontSize: '1rem' }}
+                      benefitPrice={
+                        benefitPrice
+                          ? `$${benefitPrice.toFixed(2)}`
+                          : actualBenefitPrice
+                      }
+                    />
+                  </div>
+                )}
+                {showStrikethroughOnSecondary && (
+                  <div
+                    data-secondary-strikethrough-line
+                    className={styles.secondaryStrikethroughLine}
+                  >
+                    <span className={styles.decoration}>
+                      ${strikethroughPrice.toFixed(2)}
+                    </span>
+                  </div>
                 )}
               </div>
             )}
@@ -442,6 +483,7 @@ const SmallContent = ({
                 <DishItemCount
                   count={count}
                   width={106}
+                  compactBadgeMode={hasBenefitAndStrikethroughPrice}
                   disableBtn={
                     isCrmIntegrationPointItemVisualDisabled ||
                     (!outOfStock &&
@@ -479,21 +521,6 @@ const SmallContent = ({
               )}
             </div>
           </div>
-          {rewardRule || crmIntegrationPointItem ? null : isShowPrice ? (
-            <div className={styles.strikethContent}>
-              {/* 划线价的折扣 */}
-              {strikethDiscount !== undefined && strikethDiscount != null && (
-                <span className={styles.discount}>{strikethDiscount}</span>
-              )}
-              {/* 划线价的内容 */}
-              {strikethroughPrice !== undefined &&
-                strikethroughPrice != null && (
-                  <span className={styles.decoration}>
-                    ${strikethroughPrice.toFixed(2)}
-                  </span>
-                )}
-            </div>
-          ) : null}
         </div>
       </div>
     </div>
