@@ -297,7 +297,10 @@ function RightContent(props) {
                     return (
                       <div
                         key={key}
-                        style={{ gridColumn: `span ${d.showLarge ? 2 : 1}` }}
+                        style={{
+                          gridColumn: `span ${d.showLarge ? 2 : 1}`,
+                          height: '100%',
+                        }}
                       >
                         {d.crmIntegrationReward ? (
                           <CrmIntegrationRewardCard

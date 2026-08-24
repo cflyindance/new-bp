@@ -4,7 +4,9 @@ import {
   Suspense,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react'
 import { useDebounceFn, usePrevious } from 'ahooks'
@@ -22,6 +24,39 @@ import virtualListData from '@/utils/virtualListData'
 import LoadingOverlay from '../common/LoadingOverlay'
 import { useEmenuViewport } from '@/context/EmenuViewportContext'
 const FeedbackToast = lazy(() => import('../common/FeedbackToast'))
+
+const MeasuredVirtualRow = memo(
+  ({ children, index, measure, style, cateId }) => {
+    const contentRef = useRef(null)
+
+    useLayoutEffect(() => {
+      const node = contentRef.current
+      if (!node || typeof ResizeObserver === 'undefined') return undefined
+
+      const reportHeight = () => {
+        measure(index, Math.ceil(node.getBoundingClientRect().height))
+      }
+      const observer = new ResizeObserver(reportHeight)
+      observer.observe(node)
+      reportHeight()
+
+      return () => observer.disconnect()
+    }, [index, measure, style.height])
+
+    return (
+      <div
+        data-cateid={cateId}
+        // eslint-disable-next-line react/no-unknown-property
+        index={index}
+        style={{ ...style, width: '100%' }}
+      >
+        <div ref={contentRef}>{children}</div>
+      </div>
+    )
+  }
+)
+
+MeasuredVirtualRow.displayName = 'MeasuredVirtualRow'
 
 const useStyles = makeStyles((theme) => ({
   RightContent: {
@@ -268,6 +303,20 @@ function RightContent(props) {
 
   const prevRowSize = usePrevious(rowSize)
 
+  const updateMeasuredRowHeight = useCallback(
+    (rowIndex, contentHeight) => {
+      const nextHeight = contentHeight + viewport.gap
+      setRowSize((current) => {
+        const currentRow = current[rowIndex]
+        if (!currentRow || currentRow[rowIndex] === nextHeight) return current
+        const next = [...current]
+        next[rowIndex] = { ...currentRow, [rowIndex]: nextHeight }
+        return next
+      })
+    },
+    [viewport.gap]
+  )
+
   const [feedbackToastStatus, setFeedbackToastStatus] = useState({
     open: false,
     loading: false,
@@ -397,14 +446,8 @@ function RightContent(props) {
     ({ index: rowIndex, style }) => {
       const cate = cateListWithValidDish[rowIndex]
       const { list, id, isHotPot, type } = cate
-      return (
-        <div
-          data-cateid={id}
-          // eslint-disable-next-line react/no-unknown-property
-          index={rowIndex}
-          key={rowIndex}
-          style={{ ...style, width: '100%' }}
-        >
+      const content = (
+        <>
           {type === 'cateText' && (
             <CategoryLabel fontSize={24} dotSize={32} text={t_category(id)} />
           )}
@@ -417,7 +460,7 @@ function RightContent(props) {
                 setFeedbackToastStatus={setFeedbackToastStatus}
               />
             </Grid>
-          ) : (
+          ) : type === 'cateList' ? (
             <div
               key={id}
               style={{
@@ -436,7 +479,10 @@ function RightContent(props) {
                 return (
                   <div
                     key={key}
-                    style={{ gridColumn: `span ${d.showLarge ? 2 : 1}` }}
+                    style={{
+                      gridColumn: `span ${d.showLarge ? 2 : 1}`,
+                      height: '100%',
+                    }}
                   >
                     {d.crmIntegrationReward ? (
                       <CrmIntegrationRewardCard
@@ -471,7 +517,33 @@ function RightContent(props) {
                 )
               })}
             </div>
-          )}
+          ) : null}
+        </>
+      )
+
+      if (type === 'cateList') {
+        return (
+          <MeasuredVirtualRow
+            cateId={id}
+            index={rowIndex}
+            key={rowIndex}
+            measure={updateMeasuredRowHeight}
+            style={style}
+          >
+            {content}
+          </MeasuredVirtualRow>
+        )
+      }
+
+      return (
+        <div
+          data-cateid={id}
+          // eslint-disable-next-line react/no-unknown-property
+          index={rowIndex}
+          key={rowIndex}
+          style={{ ...style, width: '100%' }}
+        >
+          {content}
         </div>
       )
     },
@@ -485,6 +557,10 @@ function RightContent(props) {
       onCrmIntegrationRewardClick,
       selectedCrmIntegrationBenefitId,
       t_category,
+      updateMeasuredRowHeight,
+      viewport.columns,
+      viewport.gap,
+      viewport.padding,
     ]
   )
 
