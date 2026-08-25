@@ -1,0 +1,1 @@
+import{j as r}from"./antd.df96aa72.js";import{u as a}from"./index.58016b2d.js";const n="_systemSetting_header_1i4pc_1";var i={systemSetting_header:n};const d=e=>{const{t}=a(),{title:s}=e;return r("header",{className:i.systemSetting_header,children:t(`${s}`)})};export{d as H};
