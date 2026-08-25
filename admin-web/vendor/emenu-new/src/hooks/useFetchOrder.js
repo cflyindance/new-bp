@@ -15,6 +15,7 @@ import { useDispatch } from 'react-redux'
 import useClassifyOrderMode from '@/hooks/useClassifyOrderMode'
 import { useLocalStorageState } from 'bhooks'
 import { actions as crmIntegrationValidationActions } from '@/store/slices/crmIntegrationValidation.slice'
+import { mergeDurationBillingSessionIntoOrder } from '@/utils/durationBilling'
 
 export function useFetchOrder(errorCb) {
   const dispatch = useDispatch()
@@ -208,9 +209,13 @@ export function useFetchOrder(errorCb) {
         return false
       }
       // 更新订单信息 numOfGuests etc...
+      const currentOrder = mergeDurationBillingSessionIntoOrder(
+        tableInfo?.currentOrder,
+        thisOrder
+      )
       setTableInfo({
         ...tableInfo,
-        currentOrder: thisOrder,
+        currentOrder,
       })
       // 兑换过折扣, 或者POS打过折, 展示结单弹窗 不允许继续下单
       setRedeemDiscountOpen(isRedeemDiscount(thisOrder))

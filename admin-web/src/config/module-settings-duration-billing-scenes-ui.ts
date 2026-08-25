@@ -118,7 +118,7 @@ function renderScenesMultiselectHtml(enabled: boolean): string {
     </div>`;
 }
 
-export function renderDurationBillingPanelHtml(on: boolean): string {
+export function renderDurationBillingPanelHtml(on: boolean, extraHtml = ""): string {
   ensureDurationBillingToggleMigrated();
   const hidden = on ? "" : "hidden";
   return `
@@ -128,6 +128,7 @@ export function renderDurationBillingPanelHtml(on: boolean): string {
       ${on ? "" : 'aria-hidden="true"'}
     >
       ${renderScenesMultiselectHtml(on)}
+      ${extraHtml}
     </div>`;
 }
 

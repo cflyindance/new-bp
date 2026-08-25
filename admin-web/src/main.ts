@@ -1460,12 +1460,9 @@ import {
   renderNotificationCenterTopicsMultiselectHtml,
 } from "./config/module-settings-notification-topics-ui";
 import {
-  isDurationBillingScenesMultiselectSeq,
-  ensureDurationBillingToggleMigrated,
-  renderDurationBillingPanelHtml,
-  setDurationBillingPanelVisible,
-  bindDurationBillingUi,
-} from "./config/module-settings-duration-billing-scenes-ui";
+  bindDurationBillingRulesUi,
+  renderDurationBillingRulesSectionHtml,
+} from "./config/duration-billing-rules-ui";
 import {
   isOrderPickupSmsChannelSeq,
   isOrderPickupSmsContentSeq,
@@ -2164,7 +2161,14 @@ function readNavModuleSheetOpen(moduleId: string): boolean {
   return readNavModuleSheetsOpenState()[moduleId] === true;
 }
 
+/** 仅在滑层真正从关闭变为打开时重置搜索；同一打开周期内的重绘保留查询。 */
+function resetHubSearchOnOpenTransition(hubId: string, wasOpen: boolean, open: boolean): void {
+  if (!wasOpen && open) clearHubSheetSearch(hubId);
+}
+
 function setNavModuleSheetOpen(moduleId: string, open: boolean): void {
+  const wasOpen = readNavModuleSheetOpen(moduleId);
+  resetHubSearchOnOpenTransition(moduleId, wasOpen, open);
   const next = { ...readNavModuleSheetsOpenState() };
   if (open) next[moduleId] = true;
   else {
@@ -2265,6 +2269,8 @@ function readInventorySecondarySheetOpen(): boolean {
 }
 
 function setInventorySecondarySheetOpen(open: boolean): void {
+  const wasOpen = readInventorySecondarySheetOpen();
+  resetHubSearchOnOpenTransition("inventory-ordering", wasOpen, open);
   try {
     if (open) sessionStorage.setItem(INVENTORY_SHEET_OPEN_KEY, "true");
     else {
@@ -2298,6 +2304,8 @@ function readProductCenterMainSecondarySheetOpen(): boolean {
 }
 
 function setProductCenterMainSecondarySheetOpen(open: boolean): void {
+  const wasOpen = readProductCenterMainSecondarySheetOpen();
+  resetHubSearchOnOpenTransition("product-center-main", wasOpen, open);
   try {
     if (open) sessionStorage.setItem(PRODUCT_CENTER_MAIN_SHEET_OPEN_KEY, "true");
     else {
@@ -2322,6 +2330,8 @@ function readMarketingSecondarySheetOpen(): boolean {
 }
 
 function setMarketingSecondarySheetOpen(open: boolean): void {
+  const wasOpen = readMarketingSecondarySheetOpen();
+  resetHubSearchOnOpenTransition("marketing", wasOpen, open);
   try {
     if (open) sessionStorage.setItem(MARKETING_SHEET_OPEN_KEY, "true");
     else {
@@ -2346,6 +2356,8 @@ function readPromotionsSecondarySheetOpen(): boolean {
 }
 
 function setPromotionsSecondarySheetOpen(open: boolean): void {
+  const wasOpen = readPromotionsSecondarySheetOpen();
+  resetHubSearchOnOpenTransition("promotions", wasOpen, open);
   try {
     if (open) sessionStorage.setItem(PROMOTIONS_SHEET_OPEN_KEY, "true");
     else {
@@ -2370,6 +2382,8 @@ function readMembersSecondarySheetOpen(): boolean {
 }
 
 function setMembersSecondarySheetOpen(open: boolean): void {
+  const wasOpen = readMembersSecondarySheetOpen();
+  resetHubSearchOnOpenTransition("members", wasOpen, open);
   try {
     if (open) sessionStorage.setItem(MEMBERS_SHEET_OPEN_KEY, "true");
     else {
@@ -2394,6 +2408,8 @@ function readGiftCardsSecondarySheetOpen(): boolean {
 }
 
 function setGiftCardsSecondarySheetOpen(open: boolean): void {
+  const wasOpen = readGiftCardsSecondarySheetOpen();
+  resetHubSearchOnOpenTransition("gift-cards", wasOpen, open);
   try {
     if (open) sessionStorage.setItem(GIFT_CARDS_SHEET_OPEN_KEY, "true");
     else {
@@ -2414,6 +2430,8 @@ function readReportsSecondarySheetOpen(): boolean {
 }
 
 function setReportsSecondarySheetOpen(open: boolean): void {
+  const wasOpen = readReportsSecondarySheetOpen();
+  resetHubSearchOnOpenTransition("reports-finance", wasOpen, open);
   try {
     if (open) sessionStorage.setItem(REPORTS_SHEET_OPEN_KEY, "true");
     else {
@@ -2438,6 +2456,8 @@ function readPrintSecondarySheetOpen(): boolean {
 }
 
 function setPrintSecondarySheetOpen(open: boolean): void {
+  const wasOpen = readPrintSecondarySheetOpen();
+  resetHubSearchOnOpenTransition("print-templates", wasOpen, open);
   try {
     if (open) sessionStorage.setItem(PRINT_SHEET_OPEN_KEY, "true");
     else {
@@ -2458,6 +2478,8 @@ function readReservationsSecondarySheetOpen(): boolean {
 }
 
 function setReservationsSecondarySheetOpen(open: boolean): void {
+  const wasOpen = readReservationsSecondarySheetOpen();
+  resetHubSearchOnOpenTransition("reservations", wasOpen, open);
   try {
     if (open) sessionStorage.setItem(RESERVATIONS_SHEET_OPEN_KEY, "true");
     else {
@@ -8880,21 +8902,6 @@ function renderModuleSettingNotificationCenterTopicsRow(item: ModuleSettingCatal
         </li>`;
 }
 
-function renderModuleSettingDurationBillingScenesRow(item: ModuleSettingCatalogItem): string {
-  ensureDurationBillingToggleMigrated();
-  const on = readModuleSettingToggleOn(item.seq);
-  return `
-        <li class="list-none" data-module-setting-row-seq="${item.seq}">
-          <div class="border-b border-border px-4 py-3">
-            <div class="flex items-start justify-between gap-3">
-              <div class="min-w-0 flex-1">${renderModuleSettingTitleBlock(item)}</div>
-              <div class="shrink-0 pt-0.5">${renderModuleSettingToggleSwitch(item)}</div>
-            </div>
-            ${renderDurationBillingPanelHtml(on)}
-          </div>
-        </li>`;
-}
-
 function renderModuleSettingStaffOrderAlertRow(item: ModuleSettingCatalogItem): string {
   ensureStaffOrderAlertToggleMigrated(item.seq);
   const on = readModuleSettingToggleOn(item.seq);
@@ -9791,9 +9798,6 @@ function renderModuleSettingRow(item: ModuleSettingCatalogItem): string {
   if (isNotificationCenterTopicsMultiselectSeq(item.seq)) {
     return renderModuleSettingNotificationCenterTopicsRow(item);
   }
-  if (isDurationBillingScenesMultiselectSeq(item.seq)) {
-    return renderModuleSettingDurationBillingScenesRow(item);
-  }
   if (isStaffOrderAlertSeq(item.seq)) {
     return renderModuleSettingStaffOrderAlertRow(item);
   }
@@ -10235,9 +10239,6 @@ function runModuleSettingToggleSideEffects(seq: number, next: boolean): void {
       }
       if (isGuestCategoryModeSeq(seq)) {
         setGuestCategoryModePanelVisible(seq, next);
-      }
-      if (isDurationBillingScenesMultiselectSeq(seq)) {
-        setDurationBillingPanelVisible(next);
       }
       if (isHotpotBaseRequiredSeq(seq)) {
         setHotpotBaseRequiredPanelVisible(next);
@@ -10785,7 +10786,11 @@ function renderModuleHubSettingsPage(path: string, pageTitle: string): string {
             : printSettings
               ? renderPrintSettingsGroupHintHtml(group.groupKey)
               : "";
-      const rows = renderModuleSettingRowsHtml(group.items);
+      const durationBillingRulesRow =
+        group.groupKey === "foh-guest-duration-scenarios"
+          ? `<li class="list-none" data-duration-billing-rules-group-row>${renderDurationBillingRulesSectionHtml()}</li>`
+          : "";
+      const rows = durationBillingRulesRow + renderModuleSettingRowsHtml(group.items);
       return `
       <section
         id="${sectionId}"
@@ -12692,6 +12697,40 @@ function mount(): void {
       _hubSearchComposing?: boolean;
     };
     const inputEl = searchInput as HubSearchInputEl;
+    let userAuthoredSearchInput = false;
+    let autofillGuardActive = !getHubSheetSearchQuery(hubId);
+    let autofillGuardInterval = 0;
+
+    const stopAutofillGuard = (): void => {
+      autofillGuardActive = false;
+      window.clearInterval(autofillGuardInterval);
+    };
+    const markUserAuthoredSearchInput = (): void => {
+      userAuthoredSearchInput = true;
+      stopAutofillGuard();
+    };
+
+    if (autofillGuardActive) {
+      inputEl.value = "";
+      autofillGuardInterval = window.setInterval(() => {
+        if (!inputEl.isConnected) {
+          stopAutofillGuard();
+          return;
+        }
+        if (!userAuthoredSearchInput && !getHubSheetSearchQuery(hubId) && inputEl.value) {
+          inputEl.value = "";
+        }
+      }, 250);
+    }
+
+    inputEl.addEventListener("beforeinput", markUserAuthoredSearchInput);
+    inputEl.addEventListener("paste", markUserAuthoredSearchInput);
+    inputEl.addEventListener("drop", markUserAuthoredSearchInput);
+    inputEl.addEventListener("keydown", (event) => {
+      if (event.key.length === 1 || event.key === "Backspace" || event.key === "Delete") {
+        markUserAuthoredSearchInput();
+      }
+    });
     const flushHubSearch = (): void => {
       if (inputEl._hubSearchComposing) return;
       window.clearTimeout(inputEl._hubSearchTimer);
@@ -12707,6 +12746,7 @@ function mount(): void {
       }, 200);
     };
     inputEl.addEventListener("compositionstart", () => {
+      markUserAuthoredSearchInput();
       inputEl._hubSearchComposing = true;
       window.clearTimeout(inputEl._hubSearchTimer);
     });
@@ -12715,6 +12755,10 @@ function mount(): void {
       flushHubSearch();
     });
     inputEl.addEventListener("input", (ev) => {
+      if (autofillGuardActive && !userAuthoredSearchInput && !getHubSheetSearchQuery(hubId)) {
+        inputEl.value = "";
+        return;
+      }
       if (inputEl._hubSearchComposing || (ev as InputEvent).isComposing) return;
       flushHubSearch();
     });
@@ -12913,7 +12957,7 @@ function mount(): void {
   bindAutoKitchenSendPaymentUi();
   bindGuestEmenuAuthPageUi();
   bindGuestCategoryModeUi();
-  bindDurationBillingUi();
+  bindDurationBillingRulesUi();
   bindHotpotBaseRequiredUi();
   bindHotpotBaseStillShowUi();
   bindGuestDishDetailDisplayUi();

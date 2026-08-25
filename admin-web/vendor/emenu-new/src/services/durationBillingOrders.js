@@ -1,9 +1,11 @@
 import { fetchOrder, generateOrder, saveOrder } from '@/services/orders'
 import { parseEmenuKioskExtendedInfo } from '@/utils/durationBilling'
+import {
+  flattenDurationBillingOrderItems,
+  resolveDurationBillingOrderItem,
+} from './durationBillingOrderItems'
+import { OrderStatus } from '@/constants/order'
 
-function flattenOrderItems(order) {
-  return (order?.subOrders ?? []).flatMap((subOrder) => subOrder?.orderItems ?? [])
-}
 
 function createZeroPriceProduct(product) {
   return {
@@ -44,7 +46,7 @@ export async function createDurationBillingOrderItem({
     userId,
   })
   const result = await saveOrder({ order })
-  const matchingItems = flattenOrderItems(result?.order).filter(
+  const matchingItems = flattenDurationBillingOrderItems(result?.order).filter(
     (item) => String(item?.saleItemId) === String(productId)
   )
   const orderItem =
@@ -56,16 +58,19 @@ export async function createDurationBillingOrderItem({
 export async function updateDurationBillingOrderItemPrice({
   orderId,
   orderItemId,
+  productId,
   sessionId,
   finalAmount,
   authorizedBy,
 }) {
   const fetched = await fetchOrder({ params: { orderId } })
   const order = fetched?.order
-  const orderItem = flattenOrderItems(order).find(
-    (item) => String(item?.id) === String(orderItemId)
-  )
-  if (!order || !orderItem || orderItem?.voided || orderItem?.deleted) return null
+  const orderItem = resolveDurationBillingOrderItem({
+    order,
+    orderItemId,
+    productId,
+  })
+  if (!order || !orderItem) return null
 
   const quantity = Number(orderItem.quantity) || 1
   const previousAmount = (Number(orderItem.price) || 0) * quantity
@@ -73,6 +78,8 @@ export async function updateDurationBillingOrderItemPrice({
   orderItem.price = Number(finalAmount)
   orderItem.originalSalePrice = Number(finalAmount)
   orderItem.totalPrice = nextAmount
+  orderItem.totalAmount = nextAmount
+  order.status = OrderStatus.PARTIALLY_SUBMITTED
   order.totalPrice = Math.max(
     0,
     Number(order.totalPrice || 0) - previousAmount + nextAmount
@@ -84,10 +91,11 @@ export async function updateDurationBillingOrderItemPrice({
     durationBillingPending: null,
     durationBillingFinish: {
       sessionId,
-      orderItemId,
+      orderItemId: orderItem.id,
       finalAmount: Number(finalAmount),
       authorizedBy: authorizedBy ?? null,
     },
   })
-  return saveOrder({ order })
+  const result = await saveOrder({ order })
+  return result ? { ...result, durationBillingOrderItemId: orderItem.id } : result
 }

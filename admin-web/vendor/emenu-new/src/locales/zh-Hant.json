@@ -36,6 +36,8 @@
   },
   "Landing": {
     "start": "開始",
+    "start_new_order": "開始點單",
+    "continue_order": "繼續點單",
     "policy_btn_back": "返回",
     "policy_btn_enter": "好，我知道了",
     "refresh": "刷新",
@@ -53,6 +55,8 @@
     "startSuccess": "計時已開始",
     "startFailed": "無法開始計時",
     "elapsed": "已用時長",
+    "cartElapsed": "用時",
+    "cartEstimated": "預估",
     "estimatedFee": "預估費用",
     "endTiming": "結束計時",
     "endConfirmTitle": "確認結束計時？",

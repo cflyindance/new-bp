@@ -50,10 +50,32 @@ export type DurationBillingIntervalPricing = {
   intervals: DurationBillingInterval[];
 };
 
+export type DurationBillingRate = {
+  id?: string;
+  fromMinutes: number;
+  toMinutes: number | null;
+  charge:
+    | { type: "fixed"; amount: number }
+    | { type: "unit"; amount: number; unitMinutes: number; roundUp: true };
+};
+
+export type DurationBillingRatesPricing = {
+  type: "rates";
+  rates: DurationBillingRate[];
+};
+
 export type DurationBillingPricingMode =
   | DurationBillingUnitPricing
   | DurationBillingIntervalPricing
+  | DurationBillingRatesPricing
   | DurationBillingTieredPricing;
+
+export type DurationBillingProductBinding = {
+  productId: string;
+  productNameSnapshot: string;
+  requiredTag: "KTV";
+  snapshotUpdatedAt: string;
+};
 
 export type DurationBillingRule = {
   id: string;
@@ -62,6 +84,8 @@ export type DurationBillingRule = {
   enabled: boolean;
   remark?: string;
   pricing: DurationBillingPricingMode;
+  /** 历史规则允许缺省；新建、保存及启用时必须绑定有效 KTV 商品。 */
+  productBinding?: DurationBillingProductBinding;
   storeIds: string[];
   lines: DurationBillingLine[];
   createdAt: string;
@@ -76,6 +100,7 @@ export type DurationBillingRuleInput = {
   enabled: boolean;
   remark?: string;
   pricing: DurationBillingPricingMode;
+  productBinding?: DurationBillingProductBinding;
   storeIds?: string[];
   lines?: DurationBillingLine[];
 };
@@ -154,14 +179,24 @@ function normalizeStoredDurationBillingRule(value: unknown): DurationBillingRule
       typeof r.pricing.unitMinutes === "number" &&
       typeof r.pricing.roundUp === "boolean"
     )) return null;
-    return { ...r, scenes };
+    return { ...r, scenes, productBinding: normalizeProductBinding(r.productBinding) ?? undefined };
   }
   if (r.pricing.type === "tiered") {
-    return Array.isArray(r.pricing.tiers) ? { ...r, scenes } : null;
+    return Array.isArray(r.pricing.tiers)
+      ? { ...r, scenes, productBinding: normalizeProductBinding(r.productBinding) ?? undefined }
+      : null;
   }
   if (r.pricing.type === "interval") {
     const pricing = normalizeIntervalPricing(r.pricing);
-    return pricing ? { ...r, scenes, pricing } : null;
+    return pricing
+      ? { ...r, scenes, pricing, productBinding: normalizeProductBinding(r.productBinding) ?? undefined }
+      : null;
+  }
+  if (r.pricing.type === "rates") {
+    const pricing = normalizeRatesPricing(r.pricing);
+    return pricing
+      ? { ...r, scenes, pricing, productBinding: normalizeProductBinding(r.productBinding) ?? undefined }
+      : null;
   }
   return null;
 }
@@ -221,10 +256,59 @@ function normalizeIntervalPricing(pricing: unknown): DurationBillingIntervalPric
   return { type: "interval", intervals: normalized };
 }
 
+function normalizeRatesPricing(pricing: unknown): DurationBillingRatesPricing | null {
+  if (!pricing || typeof pricing !== "object") return null;
+  const rates = (pricing as { rates?: unknown }).rates;
+  if (!Array.isArray(rates) || rates.length < 1) return null;
+  const normalized: DurationBillingRate[] = [];
+  let previousTo = 0;
+  for (let index = 0; index < rates.length; index += 1) {
+    const raw = rates[index];
+    if (!raw || typeof raw !== "object") return null;
+    const item = raw as Partial<DurationBillingRate>;
+    const fromMinutes = Number(item.fromMinutes);
+    if (!Number.isInteger(fromMinutes) || fromMinutes !== previousTo) return null;
+    const isLast = index === rates.length - 1;
+    let toMinutes: number | null = null;
+    if (item.toMinutes !== null && item.toMinutes !== undefined) {
+      toMinutes = Number(item.toMinutes);
+      if (!Number.isInteger(toMinutes) || toMinutes <= fromMinutes) return null;
+    } else if (!isLast) return null;
+    const amount = normalizeAmount(item.charge?.amount);
+    if (amount === null) return null;
+    if (item.charge?.type === "fixed") {
+      normalized.push({ id: item.id, fromMinutes, toMinutes, charge: { type: "fixed", amount } });
+    } else if (item.charge?.type === "unit") {
+      const unitMinutes = normalizeUnitMinutes(item.charge.unitMinutes);
+      if (unitMinutes === null) return null;
+      normalized.push({ id: item.id, fromMinutes, toMinutes, charge: { type: "unit", amount, unitMinutes, roundUp: true } });
+    } else return null;
+    if (toMinutes !== null) previousTo = toMinutes;
+  }
+  return { type: "rates", rates: normalized };
+}
+
 function normalizeName(value: unknown): string | null {
   const name = String(value ?? "").trim();
   if (!name || name.length > MAX_NAME_LENGTH) return null;
   return name;
+}
+
+function normalizeProductBinding(value: unknown): DurationBillingProductBinding | null {
+  if (!value || typeof value !== "object") return null;
+  const binding = value as Partial<DurationBillingProductBinding>;
+  const productId = String(binding.productId ?? "").trim();
+  const productNameSnapshot = String(binding.productNameSnapshot ?? "").trim();
+  const snapshotUpdatedAt = String(binding.snapshotUpdatedAt ?? "").trim();
+  if (!productId || !productNameSnapshot || binding.requiredTag !== "KTV") return null;
+  if (!snapshotUpdatedAt || !Number.isFinite(Date.parse(snapshotUpdatedAt))) return null;
+  return { productId, productNameSnapshot, requiredTag: "KTV", snapshotUpdatedAt };
+}
+
+export function hasValidDurationBillingProductBinding(
+  rule: Pick<DurationBillingRule, "productBinding">,
+): rule is Pick<DurationBillingRule, "productBinding"> & { productBinding: DurationBillingProductBinding } {
+  return normalizeProductBinding(rule.productBinding) !== null;
 }
 
 function normalizeScenes(scenes: unknown): DurationBillingScene[] | null {
@@ -256,6 +340,7 @@ function normalizePricing(
     };
   }
   if (p.type === "interval") return normalizeIntervalPricing(p);
+  if (p.type === "rates") return normalizeRatesPricing(p);
   if (p.type === "tiered") {
     if (!options.allowTiered) return null;
     if (!Array.isArray(p.tiers) || p.tiers.length === 0) return null;
@@ -294,7 +379,15 @@ export function validateDurationBillingRule(
       }
       return { ok: false, message: "区间结束时间必须按分钟递增" };
     }
+    if (draft.pricing?.type === "rates") {
+      return { ok: false, message: "时间区间必须从 0 分钟开始且连续；每个区间只能选择一种有效收费方式" };
+    }
     return { ok: false, message: "请填写有效的计价配置（金额与单位时长）" };
+  }
+
+  const productBinding = normalizeProductBinding(draft.productBinding);
+  if (!productBinding) {
+    return { ok: false, message: "请选择一个主机 POS 返回的 KTV 商品" };
   }
 
   const storeIds =
@@ -320,6 +413,7 @@ export function validateDurationBillingRule(
       enabled: draft.enabled !== false,
       remark: draft.remark?.trim() || undefined,
       pricing,
+      productBinding,
       storeIds,
       lines,
     },
@@ -349,6 +443,17 @@ export function formatRulePricingSummary(rule: DurationBillingRule): string {
     const visible = labels.slice(0, 3).join(" · ");
     return labels.length > 3 ? `${visible} · 共 ${labels.length} 档` : visible;
   }
+  if (pricing.type === "rates") {
+    const labels = pricing.rates.map((rate) => {
+      const range = rate.toMinutes === null ? `${rate.fromMinutes}min以上` : `${rate.fromMinutes}–${rate.toMinutes}min`;
+      const charge = rate.charge.type === "fixed"
+        ? `固定 ¥${rate.charge.amount}`
+        : `¥${rate.charge.amount}/${rate.charge.unitMinutes}min`;
+      return `${range} ${charge}`;
+    });
+    const visible = labels.slice(0, 3).join(" · ");
+    return labels.length > 3 ? `${visible} · 共 ${labels.length} 档` : visible;
+  }
   return "—";
 }
 
@@ -364,6 +469,26 @@ export function resolveDurationBillingIntervalAmount(
     }
   }
   return null;
+}
+
+export function resolveDurationBillingAmount(
+  pricing: DurationBillingRatesPricing,
+  durationMinutes: number,
+): number | null {
+  const normalized = normalizeRatesPricing(pricing);
+  if (!normalized || !Number.isFinite(durationMinutes) || durationMinutes < 0) return null;
+  const minutes = Math.ceil(durationMinutes);
+  if (minutes === 0) return 0;
+  let total = 0;
+  for (const rate of normalized.rates) {
+    const segmentEnd = rate.toMinutes === null ? minutes : Math.min(minutes, rate.toMinutes);
+    const segmentMinutes = Math.max(0, segmentEnd - rate.fromMinutes);
+    if (segmentMinutes <= 0) continue;
+    total += rate.charge.type === "fixed"
+      ? rate.charge.amount
+      : Math.ceil(segmentMinutes / rate.charge.unitMinutes) * rate.charge.amount;
+  }
+  return Math.round((total + Number.EPSILON) * 100) / 100;
 }
 
 export function formatDurationBillingSceneLabels(scenes: DurationBillingScene[]): string {
@@ -387,7 +512,9 @@ export function getDurationBillingRule(
 }
 
 export function listEnabledDurationBillingRules(storeId?: string): DurationBillingRule[] {
-  return listDurationBillingRules(storeId).filter((r) => r.enabled);
+  return listDurationBillingRules(storeId).filter(
+    (rule) => rule.enabled && hasValidDurationBillingProductBinding(rule),
+  );
 }
 
 export function upsertDurationBillingRule(
@@ -422,6 +549,7 @@ export function upsertDurationBillingRule(
       enabled: normalized.enabled,
       remark: normalized.remark,
       pricing: normalized.pricing,
+      productBinding: normalized.productBinding,
       storeIds,
       lines,
       updatedAt: now,
@@ -438,6 +566,7 @@ export function upsertDurationBillingRule(
     enabled: normalized.enabled,
     remark: normalized.remark,
     pricing: normalized.pricing,
+    productBinding: normalized.productBinding,
     storeIds,
     lines,
     createdAt: now,
@@ -471,6 +600,9 @@ export function setDurationBillingRuleEnabled(
   const rule = payload.rules.find((r) => r.id === ruleId);
   if (!rule) {
     return { ok: false, message: "规则不存在或已删除" };
+  }
+  if (enabled && !hasValidDurationBillingProductBinding(rule)) {
+    return { ok: false, message: "请先绑定一个主机 POS KTV 商品再启用规则" };
   }
   rule.enabled = enabled;
   rule.updatedAt = new Date().toISOString();

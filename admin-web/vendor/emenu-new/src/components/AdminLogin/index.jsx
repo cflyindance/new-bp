@@ -238,7 +238,11 @@ function AdminLogin({ isOpen, handleClose, permission = '', next }) {
       setLoginEffectLoading(false)
       handleClose()
       // 登录成功后执行
-      next?.()
+      next?.(
+        permission === 'durationBillingEnd'
+          ? { userId, userName, roles, rules }
+          : undefined
+      )
     },
     onError: (error) => {
       const refresh = () => {
@@ -259,6 +263,9 @@ function AdminLogin({ isOpen, handleClose, permission = '', next }) {
         return
       }
       setTip(error.message ?? 'AdminLogin.tip_wrong')
+      if (permission === 'durationBillingEnd') {
+        Toast.error(t('AdminLogin.tip_wrong'))
+      }
     },
     onFinally: () => {},
   })

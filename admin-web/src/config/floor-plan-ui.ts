@@ -4,6 +4,7 @@
  */
 import { getScopedFilterOptions, readScopeFilters } from "../auth/session-scope";
 import { clearPageConfigChanges } from "./deployment-change-buffer";
+import { showAppToast } from "../ui/app-toast";
 import { diffCollection, type CollectionAdapter } from "./collection-change-diff";
 import { resolveChangeGroupPath } from "./module-settings-deployment-change";
 import { replacePageOrImmediateConfigChange } from "./page-config-change";
@@ -51,7 +52,7 @@ const KPOS_CANVAS_HEIGHT = 650;
 
 export type FloorPlanTableShape = "rectangle" | "circle" | "oval" | "bar" | "ktv";
 export type KposTableShape = "RECTANGLE" | "ROUND" | "HIBACHI" | "BAR" | "KTV";
-export type FloorPlanTableCategory = "standard" | "booth" | "bar" | "private";
+export type FloorPlanTableCategory = "standard" | "booth" | "bar" | "private" | "ktv";
 
 export type FloorPlanTable = {
   id: string;
@@ -67,7 +68,7 @@ export type FloorPlanTable = {
   seatingOrientation?: string;
   defaultSaleItemId?: string;
   category: FloorPlanTableCategory;
-  /** 包间桌位绑定的按时计价规则 id */
+  /** KTV 桌位绑定的按时计价规则 id */
   durationBillingRuleId?: string | null;
   x: number;
   y: number;
@@ -236,6 +237,7 @@ const CATEGORY_LABEL: Record<FloorPlanTableCategory, string> = {
   booth: "卡座",
   bar: "吧台",
   private: "包间",
+  ktv: "KTV",
 };
 
 const FLOOR_PLAN_AREA_ADAPTER: CollectionAdapter<FloorPlanArea> = {
@@ -638,6 +640,7 @@ const CATEGORY_OPTIONS: { value: FloorPlanTableCategory; label: string }[] = [
   { value: "booth", label: "卡座" },
   { value: "bar", label: "吧台" },
   { value: "private", label: "包间" },
+  { value: "ktv", label: "KTV" },
 ];
 
 const FIELD_INPUT_CLASS =
@@ -663,7 +666,7 @@ function isFloorPlanTableShape(v: string): v is FloorPlanTableShape {
 }
 
 function isFloorPlanTableCategory(v: string): v is FloorPlanTableCategory {
-  return v === "standard" || v === "booth" || v === "bar" || v === "private";
+  return v === "standard" || v === "booth" || v === "bar" || v === "private" || v === "ktv";
 }
 
 function shapeFromLabel(text: string): FloorPlanTableShape | null {
@@ -678,9 +681,9 @@ function shapeFromLabel(text: string): FloorPlanTableShape | null {
   return isFloorPlanTableShape(t) ? t : null;
 }
 
-/** 包间 + 存在启用规则时展示绑定下拉 */
+/** KTV 桌位 + 存在启用且商品有效的规则时展示绑定下拉 */
 export function canShowDurationBillingRuleField(category: FloorPlanTableCategory): boolean {
-  if (category !== "private") return false;
+  if (category !== "ktv") return false;
   return listEnabledDurationBillingRules(resolveFloorPlanStoreId()).length > 0;
 }
 
@@ -740,7 +743,7 @@ function mapKposAreas(areas: KposFloorPlanArea[], previous?: FloorPlanState): Fl
         seatingOrientation: table.seatingOrientation,
         defaultSaleItemId: table.defaultSaleItemId,
         category: prior?.category ?? "standard",
-        durationBillingRuleId: prior?.durationBillingRuleId,
+        durationBillingRuleId: null,
         status: table.status,
         currentGuestCount: table.currentGuestCount,
       };
@@ -799,7 +802,7 @@ function renderDurationBillingRuleField(table: FloorPlanTable): string {
       <select data-floor-plan-field="durationBillingRuleId" class="${FIELD_SELECT_CLASS} w-full">
         ${options}
       </select>
-      <p class="text-xs text-muted-foreground">包间桌位可绑定；规则在「食客端·下单与规则」中管理</p>
+      <p class="text-xs text-muted-foreground">仅 KTV 桌位可绑定；切换为其他类型会清除绑定</p>
     </label>`;
 }
 
@@ -808,6 +811,7 @@ function categoryFromLabel(text: string): FloorPlanTableCategory | null {
   if (!t) return null;
   const hit = CATEGORY_OPTIONS.find((o) => o.label === t || o.value === t);
   if (hit) return hit.value;
+  if (t.toUpperCase().includes("KTV") || t.includes("卡拉")) return "ktv";
   if (t.includes("卡座")) return "booth";
   if (t.includes("吧台")) return "bar";
   if (t.includes("包间")) return "private";
@@ -1055,7 +1059,6 @@ function renderFormFields(table: FloorPlanTable, state: FloorPlanState): string 
         <div class="mt-3 space-y-3">
           ${renderComboNumberField("旋转(度)", "rotation", rotation, ROTATION_PRESETS, false, 'step="1"')}
           ${renderEnumComboField("桌位分类", "category", categoryLabel(category), "floor-plan-category-datalist", CATEGORY_OPTIONS.map((o) => `<option value="${escapeHtml(o.label)}"></option>`).join(""))}
-          ${canShowDurationBillingRuleField(category) ? renderDurationBillingRuleField(table) : ""}
         </div>
       </details>
     </fieldset>`;
@@ -1442,16 +1445,7 @@ function readFormTable(base: FloorPlanTable): FloorPlanTable {
   const shape = shapeFromLabel(getInput("shape")) ?? base.shape;
   const kposShape: KposTableShape = shape === "circle" ? "ROUND" : shape === "oval" ? "HIBACHI" : shape === "bar" ? "BAR" : shape === "ktv" ? "KTV" : "RECTANGLE";
   const category = categoryFromLabel(getInput("category")) ?? base.category;
-  let durationBillingRuleId: string | null = base.durationBillingRuleId ?? null;
-  if (canShowDurationBillingRuleField(category)) {
-    const sel = dialog?.querySelector(
-      `[data-floor-plan-field="durationBillingRuleId"]`,
-    ) as HTMLSelectElement | null;
-    const val = sel?.value?.trim() ?? "";
-    durationBillingRuleId = val || null;
-  } else {
-    durationBillingRuleId = null;
-  }
+  const durationBillingRuleId: string | null = null;
   const numericField = (field: string, fallback: number) => {
     const value = Number(getInput(field));
     return Number.isFinite(value) ? value : fallback;
@@ -1469,7 +1463,7 @@ function readFormTable(base: FloorPlanTable): FloorPlanTable {
     tableCategoryId: getInput("tableCategoryId").trim() || base.tableCategoryId,
     hibachiTableShape: getInput("hibachiTableShape").trim() || base.hibachiTableShape,
     seatingOrientation: getInput("seatingOrientation").trim() || base.seatingOrientation,
-    defaultSaleItemId: getInput("defaultSaleItemId").trim() || base.defaultSaleItemId,
+    defaultSaleItemId: kposShape === "KTV" ? (getInput("defaultSaleItemId").trim() || undefined) : undefined,
     category,
     durationBillingRuleId,
   };

@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import {
   Box,
   // Button,
@@ -25,11 +25,17 @@ import useCheckOrderBenefit from '@/hooks/useCheckOrderBenefit'
 import useCountOrderInfo from '@/hooks/useCountOrderInfo'
 import RED_VOUCHER from '@/assets/image/red_voucher.png'
 import useTranslateOptions from '@/hooks/useTranslateOptions'
+import SeasoningTags from './SeasoningTags'
 import dayjs from 'dayjs'
 import useSystemConfig from '@/hooks/useSystemConfig'
 import { getDiscountedUnitPrice } from '@/utils/cartItemDiscount'
 import { roundToPrecision } from '@/utils/number'
 import { getDishItemRedeemPoints } from '@/utils/crmIntegrationRewards'
+import useDurationBilling from '@/hooks/useDurationBilling'
+import {
+  calcDurationBillingFee,
+  formatDurationBillingElapsed,
+} from '@/utils/durationBilling'
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -88,6 +94,9 @@ const useStyles = makeStyles((theme) => ({
     fontWeight: 700,
     lineHeight: '19px',
     color: '#4F4F4F',
+  },
+  durationBillingMeta: {
+    fontVariantNumeric: 'tabular-nums',
   },
   cartItemOriginalPriceDiscounted: {
     textDecoration: 'line-through',
@@ -217,6 +226,32 @@ function SentOrders() {
   const { isCartRedeem, isOrderRedeem } = useCheckOrderBenefit()
   const { subtotal, tax, orderDiscount, charge } = useCountOrderInfo()
   const { renderItemOption } = useTranslateOptions()
+  const { durationBilling, status: durationBillingStatus } =
+    useDurationBilling()
+  const [durationBillingNow, setDurationBillingNow] = useState(Date.now())
+
+  useEffect(() => {
+    if (durationBillingStatus !== 'timing') return undefined
+    setDurationBillingNow(Date.now())
+    const timer = setInterval(
+      () => setDurationBillingNow(Date.now()),
+      1000
+    )
+    return () => clearInterval(timer)
+  }, [durationBillingStatus, durationBilling?.startedAt])
+
+  const durationBillingEstimatedFee = useMemo(() => {
+    if (durationBillingStatus !== 'timing') return null
+    try {
+      return calcDurationBillingFee(
+        durationBilling?.ruleSnapshot,
+        durationBilling?.startedAt,
+        durationBillingNow
+      )
+    } catch {
+      return null
+    }
+  }, [durationBilling, durationBillingNow, durationBillingStatus])
   const giftItemOrderDiscountAmount = useMemo(() => {
     return roundToPrecision(
       orders.reduce((orderTotal, order) => {
@@ -237,7 +272,10 @@ function SentOrders() {
     [subtotal, giftItemOrderDiscountAmount]
   )
   const displayTotal = useMemo(
-    () => roundToPrecision(displaySubtotal + tax + charge - orderDiscount),
+    () =>
+      roundToPrecision(
+        displaySubtotal + tax + charge - orderDiscount
+      ),
     [displaySubtotal, tax, charge, orderDiscount]
   )
   const isHasRedeemItem = useMemo(() => {
@@ -250,6 +288,38 @@ function SentOrders() {
   const isShowSendToKitchenStatus = getFinalConfigById(74)?.open
 
   function cartItem(e, isCombo, order) {
+    const isDurationBillingOrderItem =
+      durationBillingStatus === 'timing' &&
+      durationBilling?.orderItemId !== null &&
+      durationBilling?.orderItemId !== undefined &&
+      String(e?.orderItemId ?? e?.key ?? '') ===
+        String(durationBilling?.orderItemId ?? '')
+    const durationBillingMeta = isDurationBillingOrderItem ? (
+      <Typography
+        variant="body2"
+        component="div"
+        color="textSecondary"
+        className={`${classes.cartItemOption} ${classes.durationBillingMeta}`}
+      >
+        {t('DurationBilling.cartElapsed')}{' '}
+        {formatDurationBillingElapsed(
+          durationBilling?.startedAt,
+          durationBillingNow
+        )}
+      </Typography>
+    ) : null
+    const durationBillingPrice = isDurationBillingOrderItem ? (
+      <Typography
+        variant="body1"
+        component="span"
+        className={classes.cartItemPrice}
+      >
+        {t('DurationBilling.cartEstimated')}{' '}
+        {Number.isFinite(durationBillingEstimatedFee)
+          ? `¥${durationBillingEstimatedFee.toFixed(2)}`
+          : '--'}
+      </Typography>
+    ) : null
     const isBenefitCard = e.id === privilegeItem.id
     const discountedUnitPrice = getDiscountedUnitPrice(e)
     const isVoucher = e?.rewardRule?.rewardType === 'voucher'
@@ -305,6 +375,9 @@ function SentOrders() {
       redeemPoints > 0 &&
       (e.price === 0 || e.price === e.discount || discountedUnitPrice === 0)
     const isShowPrice = isDisplayZeroPrice ? true : (e.realPrice ?? e.price) > 0
+    const optionText = renderItemOption(e, false, {
+      includeSeasoning: false,
+    })?.join('\n')
     return isCombo ? (
       <Paper key={e.key ?? e.id} className={classes.cartItem}>
         <Box padding={1}>
@@ -316,15 +389,19 @@ function SentOrders() {
           >
             {t(e.id, { defaultValue: e.name, ns: 'dish' })}
           </Typography>
-          {e.options && (
+          {!isDurationBillingOrderItem && e.options && (
             <Typography
               variant="body2"
               color="textSecondary"
               className={classes.cartItemOption}
             >
-              {renderItemOption(e)?.join('\n')}
+              {renderItemOption(e, false, { includeSeasoning: false })?.join(
+                '\n'
+              )}
             </Typography>
           )}
+          {durationBillingMeta}
+          <SeasoningTags snapshots={e.seasoningSnapshots} dish={e} />
           <Box marginTop={1} overflow="hidden">
             {e?.comboCart?.map((c) => {
               return (
@@ -350,8 +427,11 @@ function SentOrders() {
                       color="textSecondary"
                       className={classes.cartItemOption}
                     >
-                      {renderItemOption(c)?.join('\n')}
+                      {renderItemOption(c, false, {
+                        includeSeasoning: false,
+                      })?.join('\n')}
                     </Typography>
+                    <SeasoningTags snapshots={c.seasoningSnapshots} dish={c} />
                   </Box>
                 </Box>
               )
@@ -364,31 +444,35 @@ function SentOrders() {
             justifyContent="space-between"
             alignItems="flex-end"
           >
-            {isRedeemItem && isPointFreeRedeem ? (
-              <RedeemPoint points={redeemPoints} />
-            ) : (
-              <Typography
-                variant="body1"
-                component="span"
-                className={classes.cartItemPrice}
-                style={{ visibility: `${isShowPrice ? 'visible' : 'hidden'}` }}
-              >
-                <span
-                  className={
-                    discountedUnitPrice !== null
-                      ? classes.cartItemOriginalPriceDiscounted
-                      : undefined
-                  }
+            <Box>
+              {durationBillingPrice ? (
+                durationBillingPrice
+              ) : isRedeemItem && isPointFreeRedeem ? (
+                <RedeemPoint points={redeemPoints} />
+              ) : (
+                <Typography
+                  variant="body1"
+                  component="span"
+                  className={classes.cartItemPrice}
+                  style={{ visibility: `${isShowPrice ? 'visible' : 'hidden'}` }}
                 >
-                  ${(e.realPrice ?? e.price)?.toFixed(2)}
-                </span>
-                {discountedUnitPrice !== null && (
-                  <span className={classes.cartItemDiscountedPrice}>
-                    ${discountedUnitPrice.toFixed(2)}
+                  <span
+                    className={
+                      discountedUnitPrice !== null
+                        ? classes.cartItemOriginalPriceDiscounted
+                        : undefined
+                    }
+                  >
+                    ${(e.realPrice ?? e.price)?.toFixed(2)}
                   </span>
-                )}
-              </Typography>
-            )}
+                  {discountedUnitPrice !== null && (
+                    <span className={classes.cartItemDiscountedPrice}>
+                      ${discountedUnitPrice.toFixed(2)}
+                    </span>
+                  )}
+                </Typography>
+              )}
+            </Box>
             <div className={classes.cartItemRightBottom}>
               {isShowSendToKitchenStatus &&
                 (e.sendToKitchenTime ? (
@@ -447,45 +531,53 @@ function SentOrders() {
             >
               {t(e.id, { defaultValue: e.name, ns: 'dish' })}
             </Typography>
-            <Typography
-              variant="body2"
-              color="textSecondary"
-              className={classes.cartItemOption}
-            >
-              {renderItemOption(e)?.join('\n')}
-            </Typography>
+            {!isDurationBillingOrderItem && optionText ? (
+              <Typography
+                variant="body2"
+                color="textSecondary"
+                className={classes.cartItemOption}
+              >
+                {optionText}
+              </Typography>
+            ) : null}
+            {durationBillingMeta}
+            <SeasoningTags snapshots={e.seasoningSnapshots} dish={e} />
             <Box
               display="flex"
               justifyContent="space-between"
               alignItems="flex-end"
             >
-              {isRedeemItem && isPointFreeRedeem ? (
-                <RedeemPoint points={redeemPoints} />
-              ) : (
-                <Typography
-                  variant="body1"
-                  component="span"
-                  className={classes.cartItemPrice}
-                  style={{
-                    visibility: `${isShowPrice ? 'visible' : 'hidden'}`,
-                  }}
-                >
-                  <span
-                    className={
-                      discountedUnitPrice !== null
-                        ? classes.cartItemOriginalPriceDiscounted
-                        : undefined
-                    }
+              <Box>
+                {durationBillingPrice ? (
+                  durationBillingPrice
+                ) : isRedeemItem && isPointFreeRedeem ? (
+                  <RedeemPoint points={redeemPoints} />
+                ) : (
+                  <Typography
+                    variant="body1"
+                    component="span"
+                    className={classes.cartItemPrice}
+                    style={{
+                      visibility: `${isShowPrice ? 'visible' : 'hidden'}`,
+                    }}
                   >
-                    ${(e.realPrice ?? e.price)?.toFixed(2)}
-                  </span>
-                  {discountedUnitPrice !== null && (
-                    <span className={classes.cartItemDiscountedPrice}>
-                      ${discountedUnitPrice.toFixed(2)}
+                    <span
+                      className={
+                        discountedUnitPrice !== null
+                          ? classes.cartItemOriginalPriceDiscounted
+                          : undefined
+                      }
+                    >
+                      ${(e.realPrice ?? e.price)?.toFixed(2)}
                     </span>
-                  )}
-                </Typography>
-              )}
+                    {discountedUnitPrice !== null && (
+                      <span className={classes.cartItemDiscountedPrice}>
+                        ${discountedUnitPrice.toFixed(2)}
+                      </span>
+                    )}
+                  </Typography>
+                )}
+              </Box>
               <div className={classes.cartItemRightBottom}>
                 {isShowSendToKitchenStatus &&
                   (e.sendToKitchenTime ? (
@@ -634,7 +726,9 @@ function SentOrders() {
                     </Box>
                   </>
                 )}
-                {!redeemDiscountOpen && <CallerServerCheckout />}
+                {!redeemDiscountOpen && (
+                  <CallerServerCheckout orderSubtotal={displaySubtotal} />
+                )}
               </Box>
             </Box>
           </>

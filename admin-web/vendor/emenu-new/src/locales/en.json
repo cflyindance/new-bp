@@ -36,6 +36,8 @@
   },
   "Landing": {
     "start": "Start",
+    "start_new_order": "Start Order",
+    "continue_order": "Continue Order",
     "policy_btn_back": "Back",
     "policy_btn_enter": "Ok, I get it",
     "refresh": "Refresh",
@@ -53,6 +55,8 @@
     "startSuccess": "Timing started",
     "startFailed": "Unable to start timing",
     "elapsed": "Elapsed",
+    "cartElapsed": "Elapsed",
+    "cartEstimated": "Estimated",
     "estimatedFee": "Estimated fee",
     "endTiming": "End timing",
     "endConfirmTitle": "End timing?",

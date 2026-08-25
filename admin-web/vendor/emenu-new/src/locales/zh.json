@@ -36,6 +36,8 @@
   },
   "Landing": {
     "start": "开始",
+    "start_new_order": "开始点单",
+    "continue_order": "继续点单",
     "policy_btn_back": "返回",
     "policy_btn_enter": "好，我知道了",
     "refresh": "刷新",
@@ -53,6 +55,8 @@
     "startSuccess": "计时已开始",
     "startFailed": "无法开始计时",
     "elapsed": "已用时长",
+    "cartElapsed": "用时",
+    "cartEstimated": "预估",
     "estimatedFee": "预估费用",
     "endTiming": "结束计时",
     "endConfirmTitle": "确认结束计时？",
