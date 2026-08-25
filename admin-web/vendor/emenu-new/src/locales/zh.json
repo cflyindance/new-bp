@@ -36,6 +36,8 @@
   },
   "Landing": {
     "start": "开始",
+    "start_new_order": "开始点单",
+    "continue_order": "继续点单",
     "policy_btn_back": "返回",
     "policy_btn_enter": "好，我知道了",
     "refresh": "刷新",

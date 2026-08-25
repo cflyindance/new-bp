@@ -36,6 +36,8 @@
   },
   "Landing": {
     "start": "Commencer",
+    "start_new_order": "Commencer la commande",
+    "continue_order": "Continuer la commande",
     "policy_btn_back": "Retour",
     "policy_btn_enter": "D'accord",
     "refresh": "Rafraîchir",

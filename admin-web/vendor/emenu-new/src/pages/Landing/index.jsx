@@ -452,6 +452,23 @@ export default function Landing() {
     }
   }, [tableInfo])
 
+  const renderStartButtonLabel = () => {
+    const label = t(
+      orderId ? 'Landing.continue_order' : 'Landing.start_new_order'
+    )
+    const chineseLabelParts = label.match(/^(开始|继续)(点单)$/)
+
+    if (!chineseLabelParts) return label
+
+    return (
+      <>
+        {chineseLabelParts[1]}
+        <br />
+        {chineseLabelParts[2]}
+      </>
+    )
+  }
+
   useEffect(() => {
     if (!orderId) {
       const currentCart = (prev) => {
@@ -908,10 +925,10 @@ export default function Landing() {
           !isHideStartButton && (
             <Button className={classes.startBtn} onClick={handleStartButton}>
               <span className={classes.startBtn_text_visible}>
-                {t('Landing.start')}
+                {renderStartButtonLabel()}
               </span>
               <span className={classes.startBtn_text_hidden}>
-                {t('Landing.start')}
+                {renderStartButtonLabel()}
               </span>
             </Button>
           )

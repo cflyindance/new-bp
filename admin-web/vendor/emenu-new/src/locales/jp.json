@@ -36,6 +36,8 @@
   },
   "Landing": {
     "start": "開始",
+    "start_new_order": "注文を開始",
+    "continue_order": "注文を続ける",
     "policy_btn_back": "戻る",
     "policy_btn_enter": "了解",
     "refresh": "更新",
