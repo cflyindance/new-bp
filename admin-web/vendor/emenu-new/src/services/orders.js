@@ -28,6 +28,10 @@ import { getApplicableCrmIntegrationDiscountOrderReward } from '@/utils/crmInteg
 import { getI18n } from 'react-i18next'
 import { getItemSizeNameByLanguage } from '@/utils/itemSizeName'
 import { extractSeasoningSnapshotsFromPosOptions } from '@/utils/seasoningGuest'
+import {
+  parseEmenuKioskExtendedInfo,
+  readDurationBillingSession,
+} from '@/utils/durationBilling'
 
 function getCrmIntegrationOrderDiscountAmount(discountList) {
   const actualDiscountList = Array.isArray(discountList)
@@ -163,6 +167,7 @@ function transformItem({
     const isBenefitCard = item.saleItemId === memberCard?.id
     let cartItem = {
       key: item.id,
+      orderItemId: item.id,
       id: item.saleItemId,
       price: item.price,
       realPrice: roundToPrecision(item.totalAmount / item.quantity) || 0,
@@ -771,6 +776,8 @@ export function transformOrder({
     orderDiscounts: orderDiscounts,
     orderCharges: order.orderCharges,
     lotteryCount: eMenuExtraData?.lotteryCount,
+    durationBilling: eMenuExtraData?.durationBilling,
+    surcharges: eMenuExtraData?.surcharges,
   }
 }
 
@@ -1993,7 +2000,16 @@ export function generateOrder({
   /**
    * emenu extra data
    **/
+  const storedTableInfo = getStorageValue('emenu_table', {})
+  const storedExtraData = parseEmenuKioskExtendedInfo(
+    storedTableInfo?.currentOrder?.emenuKioskextendedInfo
+  )
+  const durationBilling =
+    data?.durationBilling ??
+    prevOrder?.durationBilling ??
+    readDurationBillingSession(storedTableInfo)
   const eMenuExtraData = {
+    ...storedExtraData,
     menuClassify: data?.menuClassify,
     emenuMealTimeLimit: data?.emenuMealTimeLimit,
     emenuRestAlertTime: data?.emenuRestAlertTime,
@@ -2001,6 +2017,10 @@ export function generateOrder({
     notCountAsGuestNumber: data?.notCountAsGuestNumber,
     itemIdList: data?.buffetItemIdList,
     lotteryCount: data?.lotteryCount,
+    durationBilling,
+    durationBillingPending:
+      data?.durationBillingPending ?? storedExtraData.durationBillingPending,
+    surcharges: storedExtraData.surcharges ?? [],
   }
   newOrder.emenuKioskextendedInfo = JSON.stringify(eMenuExtraData)
 

@@ -55,6 +55,8 @@
     "startSuccess": "Timing started",
     "startFailed": "Unable to start timing",
     "elapsed": "Elapsed",
+    "cartElapsed": "Elapsed",
+    "cartEstimated": "Estimated",
     "estimatedFee": "Estimated fee",
     "endTiming": "End timing",
     "endConfirmTitle": "End timing?",

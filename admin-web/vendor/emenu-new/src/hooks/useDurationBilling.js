@@ -13,6 +13,8 @@ import {
   updateDurationBillingOrderItemPrice,
 } from '@/services/durationBillingOrders'
 import { useSetMenus } from '@/hooks/useSetMenus'
+import { fetchKposHourlyRateRule } from '@/services/kposHourlyRates'
+import { resolveDurationBillingProductId } from '@/services/durationBillingOrderItems'
 
 const TABLE_STORAGE_KEY = 'emenu_table'
 const ESTIMATE_REFRESH_MS = 30 * 1000
@@ -38,8 +40,35 @@ function persistSession(session, currentOrder) {
 export default function useDurationBilling() {
   const { allMenuItem } = useSetMenus()
   const [durationBilling, setDurationBilling] = useState(readStoredSession)
+  const [durationBillingRule, setDurationBillingRule] = useState(null)
+  const [ruleError, setRuleError] = useState(null)
   const startInFlightRef = useRef(null)
   const finishInFlightRef = useRef(null)
+
+  const refreshRule = useCallback(async () => {
+    const table = getStorageValue(TABLE_STORAGE_KEY, {})?.currentTable
+    const saleItemId = table?.defaultSaleItemId
+    setDurationBillingRule(null)
+    setRuleError(null)
+    if (!saleItemId || !isKtvDurationBillingTable(table)) return null
+    try {
+      const rule = await fetchKposHourlyRateRule(saleItemId)
+      const product = allMenuItem.find((item) => String(item?.id) === String(saleItemId))
+      const enriched = rule ? {
+        ...rule,
+        name: product?.name || product?.displayName || `商品 ${saleItemId}`,
+        productBinding: {
+          ...rule.productBinding,
+          productNameSnapshot: product?.name || product?.displayName || `商品 ${saleItemId}`,
+        },
+      } : null
+      setDurationBillingRule(enriched)
+      return enriched
+    } catch (error) {
+      setRuleError(error instanceof Error ? error.message : '无法读取 KPOS 按时计费规则')
+      return null
+    }
+  }, [allMenuItem])
 
   const startTiming = useCallback(async ({ ruleSnapshot, tableSnapshot, previousOrder, userId }, startedAt = Date.now()) => {
     if (startInFlightRef.current) return startInFlightRef.current
@@ -100,16 +129,20 @@ export default function useDurationBilling() {
       if (!Number.isFinite(finalFee) || finalFee < 0) return null
       const idempotencyKey = `duration-finish:${durationBilling.id}:${endedAt}`
       finishInFlightRef.current = (async () => {
-        await updateDurationBillingOrderItemPrice({
+        const finishResult = await updateDurationBillingOrderItemPrice({
           orderId: durationBilling.orderId,
           orderItemId: durationBilling.orderItemId,
+          productId: resolveDurationBillingProductId(durationBilling),
           sessionId: durationBilling.id,
           finalAmount: finalFee,
           authorizedBy: authorizedBy ?? null,
           idempotencyKey,
         })
+        if (!finishResult) return null
         const endedSession = {
           ...durationBilling,
+          orderItemId:
+            finishResult?.durationBillingOrderItemId ?? durationBilling.orderItemId,
           status: 'ended',
           endedAt,
           estimatedFee: finalFee,
@@ -117,7 +150,7 @@ export default function useDurationBilling() {
           authorizedBy: authorizedBy ?? null,
           finishIdempotencyKey: idempotencyKey,
         }
-        persistSession(endedSession)
+        persistSession(endedSession, finishResult?.order)
         setDurationBilling(endedSession)
         return endedSession
       })()
@@ -147,6 +180,10 @@ export default function useDurationBilling() {
   }, [])
 
   useEffect(() => {
+    void refreshRule()
+  }, [refreshRule])
+
+  useEffect(() => {
     if (durationBilling?.status !== 'timing') return undefined
     const updateEstimate = () => {
       setDurationBilling((current) => {
@@ -171,5 +208,8 @@ export default function useDurationBilling() {
     startTiming,
     endTiming,
     refresh,
+    refreshRule,
+    durationBillingRule,
+    ruleError,
   }
 }

@@ -30,6 +30,11 @@ export function useLocalStorage(key, initialValue) {
       // Save to local storage
       if (typeof window !== 'undefined') {
         window.localStorage.setItem(key, JSON.stringify(valueToStore))
+        if (key === 'emenu_table') {
+          window.dispatchEvent(
+            new CustomEvent('emenu_table_changed', { detail: valueToStore })
+          )
+        }
       }
     } catch (error) {
       // A more advanced implementation would handle the error case

@@ -48,7 +48,7 @@ function escapeXml(value: unknown): string {
     .replace(/>/g, "&gt;");
 }
 
-function tag(name: string, value: unknown): string {
+export function kposSoapTag(name: string, value: unknown): string {
   if (value === null || value === undefined) return "";
   return `<app:${name}>${escapeXml(value)}</app:${name}>`;
 }
@@ -81,7 +81,7 @@ function booleanValue(value: unknown): boolean {
   return normalized === "true" || normalized === "1" || normalized === "yes" || normalized === "in use";
 }
 
-async function callSoap(operation: string, body = ""): Promise<Document> {
+export async function callKposSoap(operation: string, body = ""): Promise<Document> {
   const response = await fetch("/kpos/ws/kposService", {
     method: "POST",
     credentials: "include",
@@ -101,6 +101,9 @@ async function callSoap(operation: string, body = ""): Promise<Document> {
   }
   return doc;
 }
+
+const tag = kposSoapTag;
+const callSoap = callKposSoap;
 
 function flattenObjects(value: unknown, output: Record<string, unknown>[] = []): Record<string, unknown>[] {
   if (!value || typeof value !== "object") return output;
@@ -283,13 +286,30 @@ export async function loadKposTableCategories(): Promise<KposNamedOption[]> {
   return singular.length ? singular : parseNamedOptions(doc, "tableCategories");
 }
 
-export async function loadKposKtvSaleItems(): Promise<KposNamedOption[]> {
-  sessionBody();
-  const doc = await callSoap("FindSaleItemsType", tag("onlyKTVItem", true));
-  const items = parseNamedOptions(doc, "saleItem");
-  if (items.length) return items;
-  const plural = parseNamedOptions(doc, "saleItems");
-  return plural.length ? plural : parseNamedOptions(doc, "items");
+const ktvSaleItemsPromiseByConnection = new Map<string, Promise<KposNamedOption[]>>();
+
+/**
+ * 桌台 KTV 房间与按时计价规则共用的主机 POS 商品源。
+ * 同一 host + License 只发起一条并发 SOAP 请求；失败不缓存，允许重试。
+ */
+export function loadKposKtvSaleItems(options: { force?: boolean } = {}): Promise<KposNamedOption[]> {
+  const connection = readKposFloorPlanConnection();
+  const cacheKey = `${connection?.host ?? ""}|${connection?.licenseName ?? ""}`;
+  if (options.force) ktvSaleItemsPromiseByConnection.delete(cacheKey);
+  const cached = ktvSaleItemsPromiseByConnection.get(cacheKey);
+  if (cached) return cached;
+
+  const request = (async () => {
+    sessionBody();
+    const doc = await callSoap("FindSaleItemsType", tag("onlyKTVItem", true));
+    const items = parseNamedOptions(doc, "saleItem");
+    if (items.length) return items;
+    const plural = parseNamedOptions(doc, "saleItems");
+    return plural.length ? plural : parseNamedOptions(doc, "items");
+  })();
+  ktvSaleItemsPromiseByConnection.set(cacheKey, request);
+  request.catch(() => ktvSaleItemsPromiseByConnection.delete(cacheKey));
+  return request;
 }
 
 export async function loadKposFloorPlan(): Promise<KposFloorPlanArea[]> {

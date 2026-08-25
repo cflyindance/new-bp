@@ -13,7 +13,7 @@ const useStyles = makeStyles(() => ({
     display: 'flex',
     alignItems: 'center',
     gap: 24,
-    minWidth: 430,
+    minWidth: 300,
     maxWidth: 'calc(100vw - 48px)',
     padding: '12px 22px',
     borderRadius: 12,
@@ -21,13 +21,6 @@ const useStyles = makeStyles(() => ({
     background: 'rgba(15, 23, 48, 0.94)',
     border: '1px solid rgba(227, 193, 138, 0.6)',
     boxShadow: '0 10px 30px rgba(0, 0, 0, 0.24)',
-  },
-  name: {
-    maxWidth: 180,
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap',
-    fontWeight: 700,
   },
   metric: {
     display: 'flex',
@@ -47,7 +40,7 @@ const useStyles = makeStyles(() => ({
   },
 }))
 
-export default function TimingBar({ tableName, session, onEnd }) {
+export default function TimingBar({ session, onEnd }) {
   const classes = useStyles()
   const { t } = useTranslation()
   const [now, setNow] = useState(Date.now())
@@ -59,17 +52,10 @@ export default function TimingBar({ tableName, session, onEnd }) {
 
   return (
     <div className={classes.bar} role="status" aria-live="polite">
-      <span className={classes.name}>{tableName}</span>
       <span className={classes.metric}>
         {t('DurationBilling.elapsed')}
         <span className={classes.value}>
           {formatDurationBillingElapsed(session?.startedAt, now)}
-        </span>
-      </span>
-      <span className={classes.metric}>
-        {t('DurationBilling.estimatedFee')}
-        <span className={classes.value}>
-          ¥{Number(session?.estimatedFee ?? 0).toFixed(2)}
         </span>
       </span>
       {onEnd && (

@@ -60,12 +60,52 @@ export function calcIntervalPricingFee(ruleSnapshot, startedAt, endedAt) {
   return Number.isFinite(amount) && amount > 0 ? roundMoney(amount) : null
 }
 
+export function calcRatesPricingFee(ruleSnapshot, startedAt, endedAt) {
+  const pricing = ruleSnapshot?.pricing
+  const start = toTimestamp(startedAt)
+  const end = toTimestamp(endedAt)
+  if (pricing?.type !== 'rates' || !Array.isArray(pricing.rates) || start === null || end === null || end < start) {
+    return null
+  }
+  const durationMinutes = Math.ceil((end - start) / MINUTE_MS)
+  if (durationMinutes === 0) return 0
+  let previousTo = 0
+  let total = 0
+  for (let index = 0; index < pricing.rates.length; index += 1) {
+    const rate = pricing.rates[index]
+    const from = Number(rate?.fromMinutes)
+    const to = rate?.toMinutes === null ? null : Number(rate?.toMinutes)
+    const amount = Number(rate?.charge?.amount)
+    if (
+      !Number.isInteger(from) || from !== previousTo ||
+      (to !== null && (!Number.isInteger(to) || to <= from)) ||
+      (to === null && index !== pricing.rates.length - 1) ||
+      !Number.isFinite(amount) || amount <= 0
+    ) return null
+    const segmentEnd = to === null ? durationMinutes : Math.min(durationMinutes, to)
+    const segmentMinutes = Math.max(0, segmentEnd - from)
+    if (segmentMinutes > 0) {
+      if (rate.charge?.type === 'fixed') total += amount
+      else if (rate.charge?.type === 'unit') {
+        const unitMinutes = Number(rate.charge.unitMinutes)
+        if (!Number.isInteger(unitMinutes) || unitMinutes <= 0) return null
+        total += Math.ceil(segmentMinutes / unitMinutes) * amount
+      } else return null
+    }
+    if (to !== null) previousTo = to
+  }
+  return roundMoney(total)
+}
+
 export function calcDurationBillingFee(ruleSnapshot, startedAt, endedAt) {
   if (ruleSnapshot?.pricing?.type === 'unit') {
     return calcUnitPricingFee(ruleSnapshot, startedAt, endedAt)
   }
   if (ruleSnapshot?.pricing?.type === 'interval') {
     return calcIntervalPricingFee(ruleSnapshot, startedAt, endedAt)
+  }
+  if (ruleSnapshot?.pricing?.type === 'rates') {
+    return calcRatesPricingFee(ruleSnapshot, startedAt, endedAt)
   }
   return null
 }
@@ -83,6 +123,19 @@ export function formatDurationBillingRule(ruleSnapshot) {
         const range = item.endMinutes === null ? `${start}min+` : `${start}-${item.endMinutes}min`
         if (item.endMinutes !== null) start = item.endMinutes + 1
         return `${range} ¥${item.amount}`
+      })
+      .join(' · ')
+  }
+  if (pricing?.type === 'rates' && Array.isArray(pricing.rates)) {
+    return pricing.rates
+      .slice(0, 3)
+      .map((rate) => {
+        const range = rate.toMinutes === null
+          ? `${rate.fromMinutes}min+`
+          : `${rate.fromMinutes}-${rate.toMinutes}min`
+        return rate.charge?.type === 'fixed'
+          ? `${range} 固定 ¥${rate.charge.amount}`
+          : `${range} ¥${rate.charge?.amount}/${rate.charge?.unitMinutes}min`
       })
       .join(' · ')
   }

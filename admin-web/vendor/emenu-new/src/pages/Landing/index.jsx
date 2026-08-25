@@ -55,7 +55,6 @@ import {
 } from '@/utils/runtimeEnv'
 import { isCrmIntegrationRedemptionItemCartItem } from '@/utils/crmIntegrationCartValidation'
 import useDurationBilling from '@/hooks/useDurationBilling'
-import StartTimingButton from '@/components/DurationBilling/StartTimingButton'
 import TimingBar from '@/components/DurationBilling/TimingBar'
 import EndTimingDialog from '@/components/DurationBilling/EndTimingDialog'
 import { isKtvDurationBillingTable } from '@/utils/durationBilling'
@@ -79,7 +78,7 @@ const useStyles = makeStyles((theme) => ({
     position: 'absolute',
     top: 0,
     left: 0,
-    zIndex: 2,
+    zIndex: 5,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -425,23 +424,10 @@ export default function Landing() {
     status: durationBillingStatus,
     startTiming,
     endTiming,
+    refresh: refreshDurationBilling,
+    refreshRule: refreshDurationBillingRule,
+    ruleError: durationBillingRuleError,
   } = useDurationBilling()
-  const durationBillingRule = currentTable?.durationBillingRule
-  const isKtvDurationBillingCurrentTable =
-    isKtvDurationBillingTable(currentTable)
-  const durationBillingProductMatches =
-    Boolean(currentTable?.defaultSaleItemId) &&
-    String(currentTable?.defaultSaleItemId) ===
-      String(durationBillingRule?.productBinding?.productId)
-  const canStartDurationBilling =
-    durationBillingStatus === 'idle' &&
-    Boolean(waiterInfo?.userId) &&
-    isKtvDurationBillingCurrentTable &&
-    Boolean(currentTable?.durationBillingRuleId) &&
-    durationBillingRule?.enabled === true &&
-    Boolean(durationBillingRule?.productBinding?.productId) &&
-    durationBillingRule?.productBinding?.requiredTag === 'KTV' &&
-    durationBillingProductMatches
 
   const { orderId, orderNumber, order } = useMemo(() => {
     const order = tableInfo?.currentOrder
@@ -453,22 +439,36 @@ export default function Landing() {
   }, [tableInfo])
 
   const renderStartButtonLabel = () => {
-    const label = t(
-      orderId ? 'Landing.continue_order' : 'Landing.start_new_order'
-    )
-    const chineseLabelParts = label.match(/^(开始|继续)(点单)$/)
+    const label =
+      durationBillingStatus === 'idle' &&
+      isKtvDurationBillingTable(currentTable)
+        ? t('DurationBilling.startTiming')
+        : t(orderId ? 'Landing.continue_order' : 'Landing.start_new_order')
+    const labelParts =
+      label.match(/^(开始|继续)(点单)$/) ||
+      label.match(/^(Start|Continue) (Order)$/) ||
+      label.match(/^(开单)(计时)$/) ||
+      label.match(/^(Start) (timing)$/)
 
-    if (!chineseLabelParts) return label
+    if (!labelParts) return label
 
     return (
       <>
-        {chineseLabelParts[1]}
+        {labelParts[1]}
         <br />
-        {chineseLabelParts[2]}
+        {labelParts[2]}
       </>
     )
   }
 
+  useEffect(() => {
+    refreshDurationBilling()
+    void refreshDurationBillingRule()
+  }, [currentTable?.id, orderId, refreshDurationBilling, refreshDurationBillingRule])
+
+  useEffect(() => {
+    if (durationBillingRuleError) Toast.error(durationBillingRuleError)
+  }, [durationBillingRuleError])
   useEffect(() => {
     if (!orderId) {
       const currentCart = (prev) => {
@@ -552,15 +552,18 @@ export default function Landing() {
     try {
       setLoading(true)
       const session = await startTiming({
-        ruleSnapshot: durationBillingRule,
+        ruleSnapshot: await refreshDurationBillingRule(),
         tableSnapshot: currentTable,
         orderId,
+        previousOrder: orders?.[0],
+        userId: waiterInfo?.userId,
       })
       if (!session) {
         Toast.error(t('DurationBilling.startFailed'))
         return
       }
       await runFetchOrder()
+      navigate('/order')
       Toast.success(t('DurationBilling.startSuccess'))
     } catch {
       Toast.error(t('DurationBilling.startFailed'))
@@ -608,6 +611,14 @@ export default function Landing() {
 
   // 点击 Start
   const handleStartButton = async () => {
+    if (displayTable && isKtvDurationBillingTable(currentTable)) {
+      if (durationBillingStatus === 'timing') {
+        navigate('/order')
+        return
+      }
+      await handleStartTiming()
+      return
+    }
     // 已选桌
     if (displayTable) {
       setLoading(true)
@@ -853,7 +864,6 @@ export default function Landing() {
       </header>
       {durationBillingStatus === 'timing' && (
         <TimingBar
-          tableName={displayTable}
           session={durationBilling}
           onEnd={waiterInfo?.userId ? handleOpenEndTiming : undefined}
         />
@@ -871,13 +881,6 @@ export default function Landing() {
           ? { onClick: handleStartButton }
           : {})}
       >
-        {canStartDurationBilling && !confirmTableVisible && !isParentOrder && (
-          <StartTimingButton
-            tableName={displayTable}
-            ruleSnapshot={durationBillingRule}
-            onStart={handleStartTiming}
-          />
-        )}
         {confirmTableVisible ? (
           <div>
             <div className={classes.confirmTable_title}>
