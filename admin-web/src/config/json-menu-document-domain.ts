@@ -61,7 +61,6 @@ export const MENU_EXTERNAL_CONFIG_FIELDS = ["target", "features"] as const;
 export const MENU_ACCESS_FIELDS = ["bool", "serviceName", "permission"] as const;
 export const MENU_PERMISSION_FIELDS = ["rule", "value"] as const;
 export const EDITABLE_MENU_TYPES: EditableMenuNodeType[] = ["inner", "iframe", "external", "link", "micro-app"];
-export const MAX_EDITABLE_MENU_DEPTH = 3;
 
 function randomHex(length: number): string {
   const bytes = new Uint8Array(Math.ceil(length / 2));
@@ -160,7 +159,7 @@ export function getCompatibilityRootPath(nodes: MenuNode[], path: MenuNodePath):
     const prefix = path.slice(0, depth);
     const node = getMenuNodeAtPath(nodes, prefix);
     if (!node) return null;
-    if (depth > MAX_EDITABLE_MENU_DEPTH || isExplicitCompatibilityType(node)) return prefix;
+    if (isExplicitCompatibilityType(node)) return prefix;
   }
   return null;
 }
@@ -190,7 +189,7 @@ function samePath(a: MenuNodePath, b: MenuNodePath): boolean { return a.length =
 function isPathPrefix(prefix: MenuNodePath, path: MenuNodePath): boolean { return prefix.length <= path.length && prefix.every((part, index) => part === path[index]); }
 
 export function moveMenuNode(nodes: MenuNode[], fromPath: MenuNodePath, targetParentPath: MenuNodePath, targetIndex: number): boolean {
-  if (!fromPath.length || targetParentPath.length >= MAX_EDITABLE_MENU_DEPTH || isPathPrefix(fromPath, targetParentPath)) return false;
+  if (!fromPath.length || isPathPrefix(fromPath, targetParentPath)) return false;
   if (isCompatibilityProtected(nodes, fromPath) || subtreeContainsCompatibility(nodes, fromPath)) return false;
   const sourceParentPath = fromPath.slice(0, -1);
   const sourceIndex = fromPath.at(-1)!;
@@ -198,8 +197,6 @@ export function moveMenuNode(nodes: MenuNode[], fromPath: MenuNodePath, targetPa
   const targetArrayBefore = getMenuNodeArrayAtParentPath(nodes, targetParentPath);
   const moving = sourceArray?.[sourceIndex];
   if (!sourceArray || !targetArrayBefore || !moving) return false;
-  const subtreeDepth = Math.max(...walkMenuNodes([moving]).map((visit) => visit.depth), 1);
-  if (targetParentPath.length + subtreeDepth > MAX_EDITABLE_MENU_DEPTH) return false;
   sourceArray.splice(sourceIndex, 1);
   const adjustedTargetPath = [...targetParentPath];
   if (targetParentPath.length >= fromPath.length && samePath(sourceParentPath, targetParentPath.slice(0, sourceParentPath.length)) && (targetParentPath[sourceParentPath.length] ?? -1) > sourceIndex) {
@@ -264,8 +261,7 @@ export function validateMenuDocument(document: MenuDocument, publishedBaseline?:
     const { node, path, depth, ancestors } = visit;
     const compatibility = isCompatibilityProtected(document.menu, path);
     unknownFields(node, MENU_NODE_FIELDS).forEach((field) => issues.push({ code: "UNKNOWN_NODE_FIELD", severity: "error", message: `节点字段不在参考结构中：${field}`, path, field }));
-    if (depth > MAX_EDITABLE_MENU_DEPTH) issues.push({ code: "LEGACY_DEPTH", severity: "warning", message: "历史四级菜单已进入兼容只读模式", path });
-    if (compatibility && (depth <= MAX_EDITABLE_MENU_DEPTH && isExplicitCompatibilityType(node))) issues.push({ code: "LEGACY_TYPE", severity: "warning", message: `${node.type} 节点及其子树按原数据只读保留`, path, field: "type" });
+    if (compatibility && isExplicitCompatibilityType(node)) issues.push({ code: "LEGACY_TYPE", severity: "warning", message: `${node.type} 节点及其子树按原数据只读保留`, path, field: "type" });
     if (!node.id?.trim()) issues.push({ code: "MISSING_ID", severity: "error", message: "节点 ID 不能为空", path, field: "id" });
     if (!node.key?.trim()) issues.push({ code: "MISSING_KEY", severity: "error", message: "节点 Key 不能为空", path, field: "key" });
     if (node.path?.trim()) routePaths.set(node.path, [...(routePaths.get(node.path) ?? []), path]);
@@ -274,9 +270,7 @@ export function validateMenuDocument(document: MenuDocument, publishedBaseline?:
     if (node.parentKey !== undefined && (node.parentKey.trim() || undefined) !== expectedParentKey) issues.push({ code: "INVALID_PARENT_KEY", severity: "error", message: expectedParentKey ? `parentKey 应为直接父菜单 Key：${expectedParentKey}` : "一级菜单不能配置 parentKey", path, field: "parentKey" });
 
     if (!compatibility) {
-      if (isMenuDirectory(node)) {
-        if (depth >= MAX_EDITABLE_MENU_DEPTH) issues.push({ code: "LEAF_DIRECTORY", severity: "error", message: "三级菜单必须配置可打开的页面", path, field: "type" });
-      } else {
+      if (!isMenuDirectory(node)) {
         const effectiveType = resolveEffectiveMenuType(node, ancestors);
         if (!effectiveType || !EDITABLE_MENU_TYPES.includes(effectiveType as EditableMenuNodeType)) issues.push({ code: "MISSING_EDITABLE_TYPE", severity: "error", message: "请选择菜单用途", path, field: "type" });
         if (effectiveType !== "link" && !node.path?.trim()) issues.push({ code: "MISSING_PATH", severity: "error", message: "当前菜单用途必须配置商家后台路由地址", path, field: "path" });

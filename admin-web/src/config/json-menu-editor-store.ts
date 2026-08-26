@@ -5,8 +5,10 @@ import {
   getMenuNodeAtPath,
   isCompatibilityProtected,
   moveMenuNode,
+  synchronizeMenuParentKeys,
   subtreeContainsCompatibility,
   validateMenuDocument,
+  walkMenuNodes,
   type MenuDocument,
   type MenuEditorUser,
   type MenuLocale,
@@ -34,7 +36,11 @@ function pathExists(document: MenuDocument | null, path: MenuNodePath): boolean 
 }
 
 function structuralSnapshot(node: MenuNode): string {
-  return JSON.stringify({ type: node.type, path: node.path, url: node.url, microAppConfig: node.microAppConfig, children: node.children });
+  return JSON.stringify({ type: node.type, path: node.path, url: node.url, targetKey: node.targetKey, externalConfig: node.externalConfig, microAppConfig: node.microAppConfig, children: node.children });
+}
+
+function hasInheritedMicroAppDescendant(node: MenuNode): boolean {
+  return (node.children ?? []).some((child) => !child.type);
 }
 
 export class JsonMenuEditorStore {
@@ -45,6 +51,7 @@ export class JsonMenuEditorStore {
   constructor(private readonly repository: MenuDocumentRepository = getMenuDocumentRepository()) {}
 
   private refreshIssues(): void {
+    if (this.state.document) synchronizeMenuParentKeys(this.state.document.menu);
     this.state.issues = this.state.document ? validateMenuDocument(this.state.document, this.state.published) : [];
   }
 
@@ -91,7 +98,7 @@ export class JsonMenuEditorStore {
   }
 
   addNode(parentPath: MenuNodePath, node: MenuNode): boolean {
-    if (!this.state.document || parentPath.length >= 3) return false;
+    if (!this.state.document) return false;
     if (parentPath.length && (isCompatibilityProtected(this.state.document.menu, parentPath) || subtreeContainsCompatibility(this.state.document.menu, parentPath))) return false;
     const array = getMenuNodeArrayAtParentPath(this.state.document.menu, parentPath);
     if (!array) return false;
@@ -109,7 +116,13 @@ export class JsonMenuEditorStore {
     const current = array?.[index];
     if (!array || !current) return false;
     if (this.selectedContainsProtectedSubtree() && structuralSnapshot(current) !== structuralSnapshot(next)) return false;
+    if (current.type === "micro-app" && next.type !== "micro-app" && hasInheritedMicroAppDescendant(current)) return false;
+    const oldKey = current.key?.trim();
+    const newKey = next.key?.trim();
     array[index] = structuredClone(next);
+    if (oldKey && newKey && oldKey !== newKey) {
+      for (const visit of walkMenuNodes(this.state.document.menu)) if (visit.node.type === "link" && visit.node.targetKey === oldKey) visit.node.targetKey = newKey;
+    }
     this.markDirty("菜单信息已更新");
     return true;
   }
@@ -158,6 +171,8 @@ export class JsonMenuEditorStore {
     const array = getMenuNodeArrayAtParentPath(this.state.document.menu, parentPath);
     const index = this.state.selectedPath.at(-1)!;
     if (!array?.[index]) return false;
+    const deletingKeys = new Set(walkMenuNodes([array[index]!]).map((visit) => visit.node.key?.trim()).filter((key): key is string => Boolean(key)));
+    if (walkMenuNodes(this.state.document.menu).some((visit) => visit.node.type === "link" && visit.node.targetKey && deletingKeys.has(visit.node.targetKey))) return false;
     array.splice(index, 1);
     this.state.selectedPath = array.length ? [...parentPath, Math.min(index, array.length - 1)] : parentPath;
     this.markDirty("已删除菜单节点");

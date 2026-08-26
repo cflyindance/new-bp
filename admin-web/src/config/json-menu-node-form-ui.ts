@@ -20,11 +20,13 @@ export type MenuDialogMode = "add" | "edit";
 const menuFormSectionLabels: Record<JsonMenuFormSection, string> = {
   basic: "基础信息",
   page: "层级与页面",
-  advanced: "高级设置",
+  localization: "多语言",
+  status: "状态权限",
+  extra: "高级",
 };
 
 function renderMenuFormAnchors(): string {
-  return `<nav class="mt-4 flex items-center gap-6 border-t border-slate-100 pt-3" aria-label="菜单配置区块导航" data-jme-form-anchors>${JSON_MENU_FORM_SECTIONS.map((section, index) => `<button type="button" data-jme-form-anchor="${section}" ${index === 0 ? 'aria-current="location"' : ""} class="border-b-2 px-0.5 pb-2 text-xs font-medium outline-none transition-colors focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-teal-600/30 ${index === 0 ? "border-teal-700 text-teal-700" : "border-transparent text-slate-500 hover:text-slate-800"}">${menuFormSectionLabels[section]}</button>`).join("")}</nav>`;
+  return `<nav class="mt-5 flex items-center gap-8 border-t border-slate-100 pt-3" aria-label="菜单配置区块导航" data-jme-form-anchors>${JSON_MENU_FORM_SECTIONS.map((section, index) => `<button type="button" data-jme-form-anchor="${section}" ${index === 0 ? 'aria-current="location"' : ""} class="border-b-2 px-1 pb-3 text-sm font-semibold outline-none transition-colors focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-blue-500/30 ${index === 0 ? "border-blue-500 text-blue-500" : "border-transparent text-slate-500 hover:text-slate-900"}">${menuFormSectionLabels[section]}</button>`).join("")}</nav>`;
 }
 export type { MenuPageMode } from "./json-menu-page-mode";
 export interface MenuNodeDialogState {
@@ -47,6 +49,7 @@ export interface MenuNodeDialogState {
   parentPickerCollapsedPaths?: Set<string>;
   parentPickerSearch?: string;
   parentPickerReturnScrollTop?: number;
+  movePickerMode?: boolean;
 }
 
 function escapeHtml(value: string): string { return value.replace(/[&<>\"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[char]!); }
@@ -56,15 +59,15 @@ function field(label: string, name: string, inputValue = "", placeholder = "", r
   return `<label class="block text-xs font-medium text-slate-700">${required ? `<span class="mr-1 text-red-500">*</span>` : ""}${label}<input name="${name}" data-jme-dialog-field="${name}" value="${value(inputValue)}" placeholder="${escapeHtml(placeholder)}" class="mt-1.5 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-600/10 ${mono ? "font-mono text-xs" : ""}"></label>`;
 }
 function triState(label: string, name: string, selected: boolean | undefined): string {
-  return `<label class="block text-xs font-medium text-slate-700">${label}<select name="${name}" data-jme-dialog-field="${name}" class="mt-1.5 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm"><option value="missing" ${selected === undefined ? "selected" : ""}>未配置（不输出字段）</option><option value="true" ${selected === true ? "selected" : ""}>是</option><option value="false" ${selected === false ? "selected" : ""}>否</option></select></label>`;
+  return `<label class="block text-xs font-medium text-slate-700">${label}<select name="${name}" data-jme-dialog-field="${name}" class="mt-1.5 h-12 w-full rounded-xl border border-slate-300 bg-white px-4 text-sm text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10"><option value="missing" ${selected === undefined ? "selected" : ""}>未选择</option><option value="true" ${selected === true ? "selected" : ""}>是</option><option value="false" ${selected === false ? "selected" : ""}>否</option></select></label>`;
 }
 function textareaField(label: string, name: string, inputValue = "", placeholder = ""): string {
-  return `<label class="block text-xs font-medium text-slate-700">${label}<textarea name="${name}" data-jme-dialog-field="${name}" placeholder="${escapeHtml(placeholder)}" class="mt-1.5 min-h-28 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 font-mono text-xs text-slate-900 outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/10">${escapeHtml(inputValue)}</textarea></label>`;
+  return `<label class="block text-sm font-medium text-slate-700">${label}<textarea name="${name}" data-jme-dialog-field="${name}" placeholder="${escapeHtml(placeholder)}" class="mt-2 min-h-36 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 font-mono text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10">${escapeHtml(inputValue)}</textarea></label>`;
 }
 
 function purposeButtons(state: MenuNodeDialogState, canBeDirectory: boolean, locked: boolean): string {
-  const items: Array<[MenuPageMode, string]> = [["directory", "仅目录"], ["inner", "项目内页面"], ["iframe", "iframe 嵌入"], ["link", "链接菜单"], ["external", "外部链接"], ["micro-app", "微应用"]];
-  return items.filter(([mode]) => mode !== "directory" || canBeDirectory).map(([mode, text], index) => `<button type="button" data-jme-page-mode="${mode}" ${locked ? "disabled" : ""} class="${index ? "border-l " : ""}border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60 ${state.pageMode === mode ? "bg-teal-700 text-white" : "bg-white text-slate-600 hover:bg-slate-50"}">${text}</button>`).join("");
+  const items: Array<[MenuPageMode, string]> = [["inner", "项目内页面"], ["iframe", "iframe 嵌入"], ["link", "链接菜单"], ["external", "外部链接"], ["micro-app", "微应用"]];
+  return items.map(([mode, text]) => `<button type="button" data-jme-page-mode="${mode}" ${locked ? "disabled" : ""} class="rounded-xl px-5 py-3 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${state.pageMode === mode ? "bg-white text-slate-900 shadow-[0_1px_4px_rgba(15,23,42,0.18)] ring-1 ring-slate-200" : "text-slate-600 hover:bg-white/70 hover:text-slate-900"}">${text}</button>`).join("");
 }
 
 function pageModeFields(document: MenuDocument, state: MenuNodeDialogState, maxWidth = "max-w-4xl"): string {
@@ -74,7 +77,7 @@ function pageModeFields(document: MenuDocument, state: MenuNodeDialogState, maxW
     const target = walkMenuNodes(document.menu).find((visit) => visit.node.key === node.targetKey)?.node;
     return `<div class="mt-4 ${maxWidth} rounded-md border border-slate-200 bg-slate-50 p-4"><p class="text-xs font-medium text-slate-700"><span class="mr-1 text-red-500">*</span>目标菜单</p><button type="button" data-jme-link-target-open class="mt-2 flex h-10 w-full items-center justify-between rounded-lg border border-slate-300 bg-white px-3 text-left text-sm"><span>${escapeHtml(target ? label(target) : "请选择目标菜单")}</span><span class="text-slate-400">选择 ›</span></button></div>`;
   }
-  if (state.pageMode === "micro-app") return `<div class="mt-4 ${maxWidth} space-y-4 rounded-md border border-teal-200 bg-teal-50/40 p-4"><div class="grid grid-cols-2 gap-4">${field("商家后台路由地址", "path", node.path, "/report", true, true)}${field("微应用访问地址", "microAppConfig.url", node.microAppConfig?.url, "https://app.example.com", true, true)}</div><div class="grid grid-cols-2 gap-4">${field("应用名称", "microAppConfig.name", node.microAppConfig?.name, "默认使用根微应用 Key", false, true)}${field("微应用路径", "microAppConfig.path", node.microAppConfig?.path, "默认使用当前路径", false, true)}${field("默认页面", "microAppConfig.defaultPage", node.microAppConfig?.defaultPage, "默认使用配置项 path", false, true)}<label class="block text-xs font-medium text-slate-700">路由类型<select data-jme-dialog-field="microAppConfig.routeType" class="mt-1.5 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm"><option value="missing">未配置</option><option value="history" ${node.microAppConfig?.routeType === "history" ? "selected" : ""}>history</option><option value="hash" ${node.microAppConfig?.routeType === "hash" ? "selected" : ""}>hash</option></select></label>${triState("iframe 沙箱（默认 true）", "microAppConfig.iframe", node.microAppConfig?.iframe)}${triState("保活（默认 false）", "microAppConfig.keepAlive", node.microAppConfig?.keepAlive)}</div></div>`;
+  if (state.pageMode === "micro-app") return `<div class="mt-5 ${maxWidth} space-y-5"><div class="grid grid-cols-2 gap-x-5 gap-y-5">${field("商家后台路由地址", "path", node.path, "/report", true, true)}${field("微应用标识", "microAppConfig.name", node.microAppConfig?.name, "menu-products", true, true)}${field("应用入口 URL", "microAppConfig.url", node.microAppConfig?.url, "https://app.example.com", true, true)}${field("激活规则", "microAppConfig.defaultPage", node.microAppConfig?.defaultPage, "/m-platform/products", true, true)}</div><div class="grid grid-cols-2 gap-5">${triState("隔离沙箱", "microAppConfig.iframe", node.microAppConfig?.iframe)}${triState("保持应用状态", "microAppConfig.keepAlive", node.microAppConfig?.keepAlive)}</div></div>`;
   const needsUrl = state.pageMode === "iframe" || state.pageMode === "external";
   return `<div class="mt-4 ${maxWidth} rounded-md border border-slate-200 bg-slate-50 p-4"><div class="grid gap-4 ${needsUrl ? "grid-cols-2" : "grid-cols-1"}">${field("商家后台路由地址", "path", node.path, "/operations/dashboard", true, true)}${needsUrl ? field(state.pageMode === "iframe" ? "iframe 嵌入地址" : "外部链接地址", "url", node.url ?? state.inheritedExternalUrl, "https://example.com/page", true, true) : ""}</div>${state.pageMode === "external" ? `<div class="mt-4 grid grid-cols-2 gap-4"><label class="block text-xs font-medium text-slate-700">打开目标<select data-jme-dialog-field="externalConfig.target" class="mt-1.5 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm"><option value="missing">未配置</option>${["_blank", "_self", "_parent", "_top"].map((item) => `<option value="${item}" ${node.externalConfig?.target === item ? "selected" : ""}>${item}</option>`).join("")}<option value="custom" ${node.externalConfig?.target && !["_blank", "_self", "_parent", "_top"].includes(node.externalConfig.target) ? "selected" : ""}>自定义窗口名</option></select></label>${field("窗口特性 features", "externalConfig.features", node.externalConfig?.features, "width=1200,height=800", false, true)}${node.externalConfig?.target && !["_blank", "_self", "_parent", "_top"].includes(node.externalConfig.target) ? field("自定义窗口名", "externalConfig.targetCustom", node.externalConfig.target, "reportWindow", false, true) : ""}</div><p class="mt-3 text-xs text-slate-500">发布后由商家后台按窗口设置打开。</p>` : ""}</div>`;
 }
@@ -121,9 +124,9 @@ function renderParentPickerTree(document: MenuDocument, state: MenuNodeDialogSta
     const path = [...parentPath, index];
     const encoded = encodeMenuNodePath(path);
     const children = node.children ?? [];
-    const childMarkup = path.length < 2 ? renderParentPickerTree(document, state, children, path) : "";
+    const childMarkup = renderParentPickerTree(document, state, children, path);
     const matches = label(node).toLocaleLowerCase().includes(search);
-    const eligible = path.length <= 2 && !(state.targetPath && pathIsPrefix(state.targetPath, path)) && !isCompatibilityProtected(document.menu, path) && !subtreeContainsCompatibility(document.menu, path);
+    const eligible = !(state.targetPath && pathIsPrefix(state.targetPath, path)) && !isCompatibilityProtected(document.menu, path) && !subtreeContainsCompatibility(document.menu, path);
     if (search && !matches && !childMarkup) return "";
     if (!search && !eligible && !childMarkup) return "";
     const hasChildren = Boolean(childMarkup);
@@ -143,7 +146,7 @@ function renderParentMenuPicker(document: MenuDocument, state: MenuNodeDialogSta
   const parent = state.parentPath.length ? getNodeLabelAtPath(document.menu, state.parentPath) : "— 作为一级菜单 —";
   const tree = renderParentPickerTree(document, state, document.menu);
   const dialog = state.parentPickerOpen ? `<div class="fixed inset-0 z-[151] flex items-center justify-center bg-slate-950/35 p-4"><section class="flex max-h-[76vh] w-full max-w-xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="jme-parent-picker-title"><header class="border-b px-6 py-4"><div class="flex items-center justify-between"><h3 id="jme-parent-picker-title" class="font-semibold">选择父级菜单</h3><button type="button" data-jme-parent-picker-close class="grid h-8 w-8 place-items-center rounded-lg text-xl text-slate-400 hover:bg-slate-100 hover:text-slate-700" aria-label="关闭">×</button></div><label class="mt-3 flex h-9 items-center rounded-lg border border-slate-200 bg-slate-50 px-2.5 focus-within:border-teal-600 focus-within:bg-white"><span class="text-slate-400">⌕</span><input type="search" name="json-menu-parent-picker-search" data-jme-parent-picker-search value="${escapeHtml(state.parentPickerSearch ?? "")}" placeholder="搜索菜单名称" autocomplete="off" data-1p-ignore data-lpignore="true" class="min-w-0 flex-1 bg-transparent px-2 text-xs outline-none"></label></header><div class="min-h-0 flex-1 overflow-y-auto p-3" data-jme-parent-picker-scroll><button type="button" data-jme-parent-picker-path="" class="flex min-h-11 w-full items-center rounded-lg border px-3 py-2 text-left text-sm font-semibold outline-none focus-visible:ring-2 focus-visible:ring-teal-600/30 ${state.parentPath.length ? "border-transparent text-slate-700 hover:bg-slate-50" : "border-teal-300 bg-teal-50 text-teal-800 shadow-[inset_3px_0_0_#0f766e]"}">— 作为一级菜单 —</button><ol class="mt-1 space-y-1">${tree}</ol>${tree ? "" : `<p class="p-8 text-center text-sm text-slate-500">暂无匹配菜单</p>`}</div></section></div>` : "";
-  return `<label class="mt-4 block max-w-4xl text-xs font-medium text-slate-700">父级菜单<button type="button" data-jme-parent-picker-open ${locked ? "disabled" : ""} class="mt-1.5 flex h-10 w-full items-center justify-between rounded-lg border border-slate-300 bg-white px-3 text-left text-sm disabled:bg-slate-100 disabled:text-slate-400"><span class="truncate">${escapeHtml(parent)}</span><span class="text-slate-400">选择 ›</span></button>${locked ? `<span class="mt-1 block text-[11px] font-normal text-slate-400">该节点包含兼容子树，只允许修改非结构信息。</span>` : ""}</label>${dialog}`;
+  return `<label class="block text-xs font-medium text-slate-700">父级菜单<button type="button" data-jme-parent-picker-open ${locked ? "disabled" : ""} class="mt-1.5 flex h-12 w-full items-center justify-between rounded-xl border border-slate-300 bg-white px-4 text-left text-sm disabled:bg-slate-100 disabled:text-slate-400"><span class="truncate ${state.parentPath.length ? "text-slate-800" : "text-slate-400"}">${escapeHtml(parent)}</span><span class="text-xl leading-none text-slate-400">›</span></button>${locked ? `<span class="mt-1 block text-[11px] font-normal text-slate-400">该节点包含兼容子树，只允许修改非结构信息。</span>` : ""}</label>${dialog}`;
 }
 
 function getNodeLabelAtPath(nodes: MenuNode[], path: MenuNodePath): string {
@@ -190,14 +193,10 @@ function renderServicePermissionSetting(document: MenuDocument, state: MenuNodeD
   const summary = selected.length
     ? selected.slice(0, 3).join("、") + (selected.length > 3 ? ` 等 ${selected.length} 项` : "")
     : "未配置";
-  return `<div class="rounded-xl border border-slate-200 bg-white p-4">
-    <div class="flex items-center justify-between gap-4">
-      <div class="min-w-0">
-        <p class="text-xs font-medium text-slate-700">服务与权限</p>
-        <p class="mt-1 truncate font-mono text-xs text-slate-500" title="${escapeHtml(selected.join(", "))}">${escapeHtml(summary)}</p>
-      </div>
-      <button type="button" data-jme-service-permission-open class="shrink-0 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-700 hover:border-teal-600 hover:text-teal-700">配置</button>
-    </div>
+  return `<div class="rounded-xl border border-slate-300 bg-white px-4 py-3.5">
+    <button type="button" data-jme-service-permission-open class="flex w-full items-center gap-3 text-left">
+      <span class="grid h-7 w-7 shrink-0 place-items-center rounded-lg border border-slate-300 text-sm text-slate-700">♧</span><span class="min-w-0 flex-1"><span class="block text-sm font-semibold text-slate-800">服务与权限</span><span class="mt-0.5 block truncate font-mono text-xs text-slate-400" title="${escapeHtml(selected.join(", "))}">${escapeHtml(summary)}</span></span><span class="text-2xl leading-none text-slate-400">›</span>
+    </button>
     ${state.servicePermissionOpen ? renderServicePermissionDialog(document, state) : ""}
   </div>`;
 }
@@ -236,19 +235,18 @@ function renderServicePermissionDialog(document: MenuDocument, state: MenuNodeDi
     </div>
     <p class="mt-2 text-[11px] text-red-600 ${ruleError ? "" : "hidden"}" data-jme-service-permission-rule-error>${ruleError}</p>
   </fieldset>`;
-  return `<div class="fixed inset-0 z-[130] flex items-center justify-center bg-slate-950/35 p-4 backdrop-blur-[1px]" data-jme-service-permission-overlay>
-    <section class="flex max-h-[82vh] w-full max-w-[760px] flex-col overflow-hidden rounded-2xl bg-white shadow-[0_24px_64px_rgba(15,23,42,0.2)]" role="dialog" aria-modal="true" aria-labelledby="jme-service-permission-title">
-      <header class="flex shrink-0 items-center justify-between border-b border-slate-100 px-6 py-4">
-        <h3 id="jme-service-permission-title" class="text-base font-semibold text-slate-900">设置服务与权限</h3>
-        <button type="button" data-jme-service-permission-close class="grid h-8 w-8 place-items-center rounded-lg text-xl text-slate-400 hover:bg-slate-100 hover:text-slate-700">×</button>
+  return `<div class="fixed inset-0 z-[130] flex items-center justify-center bg-black/45 p-4" data-jme-service-permission-overlay>
+    <section class="flex max-h-[82vh] w-full max-w-[720px] flex-col overflow-hidden rounded-2xl bg-white shadow-[0_24px_64px_rgba(15,23,42,0.24)]" role="dialog" aria-modal="true" aria-labelledby="jme-service-permission-title">
+      <header class="flex shrink-0 items-center justify-between border-b border-slate-100 px-5 py-3">
+        <div class="flex items-center gap-3"><button type="button" data-jme-service-permission-close class="grid h-9 w-9 place-items-center rounded-xl bg-slate-100 text-lg text-slate-600 hover:bg-slate-200">×</button><h3 id="jme-service-permission-title" class="text-base font-bold text-slate-900">设置服务与权限</h3></div><div class="flex gap-2"><button type="button" data-jme-service-permission-clear class="rounded-xl bg-slate-100 px-3 py-2 text-xs font-semibold text-red-500">清空</button><button type="button" data-jme-service-permission-confirm class="rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold text-white">Confirm</button></div>
       </header>
-      <div class="min-h-0 flex-1 overflow-y-auto px-6 py-5">
-        <div class="grid min-h-[340px] overflow-hidden rounded-xl border border-slate-200 md:grid-cols-[260px_minmax(0,1fr)]">
-          <aside class="border-b border-slate-200 bg-slate-50/70 md:border-b-0 md:border-r"><div class="border-b border-slate-200 px-3 py-3 text-xs font-semibold text-slate-700">服务订阅</div>${serviceItems}</aside>
-          <section class="min-w-0 bg-white">${ruleSelector}${permissionPanels}${unassignedPanel}</section>
+      <div class="min-h-0 flex-1 bg-slate-100 px-4 py-4">
+        <div class="grid min-h-[500px] gap-3 md:grid-cols-[1fr_1fr]">
+          <aside class="overflow-hidden rounded-xl bg-white"><div class="hidden border-b border-slate-100 px-3 py-3 text-xs font-semibold text-slate-700">服务订阅</div>${serviceItems}</aside>
+          <section class="min-w-0 overflow-hidden rounded-xl bg-white">${ruleSelector}${permissionPanels}${unassignedPanel}</section>
         </div>
       </div>
-      <footer class="flex shrink-0 justify-end gap-2 border-t border-slate-100 px-6 py-4">
+      <footer class="hidden flex shrink-0 justify-end gap-2 border-t border-slate-100 px-6 py-4">
         <button type="button" data-jme-service-permission-clear class="mr-auto rounded-lg px-3 py-2 text-xs text-red-600 hover:bg-red-50">清空</button>
         <button type="button" data-jme-service-permission-close class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">取消</button>
         <button type="button" data-jme-service-permission-confirm class="rounded-lg bg-teal-700 px-5 py-2 text-sm font-medium text-white shadow-[0_3px_8px_rgba(15,118,110,0.14)] hover:bg-teal-800">确定</button>
@@ -297,42 +295,39 @@ export function renderJsonMenuNodeFormPanel(
   issues: MenuValidationIssue[],
 ): string {
   if (!state) return `<section class="grid min-h-0 flex-1 place-items-center bg-white"><div class="max-w-sm px-8 text-center"><div class="mx-auto grid h-14 w-14 place-items-center rounded-full bg-slate-50 text-2xl text-slate-300">☰</div><h2 class="mt-4 text-base font-semibold text-slate-900">选择一个菜单节点</h2><p class="mt-1 text-sm leading-6 text-slate-500">从左侧选择菜单查看详情，或创建第一个菜单。</p><button type="button" data-jme-open-add="" class="mt-5 rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white shadow-[0_3px_8px_rgba(15,118,110,0.16)] hover:bg-teal-800">＋ 新增一级菜单</button></div></section>`;
-  const depth = state.parentPath.length + 1;
-  const canBeDirectory = depth < 3;
+  const canBeDirectory = true;
   const node = state.draft;
   const structureLocked = Boolean(state.targetPath && subtreeContainsCompatibility(document.menu, state.targetPath));
   const ownIssues = state.targetPath ? issues.filter((issue) => issue.path && encodeMenuNodePath(issue.path) === encodeMenuNodePath(state.targetPath!)) : [];
-  const title = state.mode === "add" ? (state.parentPath.length ? "新增子菜单" : "新增一级菜单") : "菜单配置";
+  const title = state.mode === "add" ? (state.parentPath.length ? "新增子菜单" : "新增一级菜单") : label(state.draft);
   return `<section class="min-h-0 flex-1 overflow-y-auto bg-white" data-jme-detail-panel>
     <form class="flex min-h-full flex-col" data-jme-node-form>
-      <header class="sticky top-0 z-10 shrink-0 border-b border-slate-100 bg-white/95 px-8 pt-5 backdrop-blur-sm" data-jme-form-sticky-header>
-        <div class="flex items-start justify-between gap-4"><div class="min-w-0 flex-1"><h2 class="truncate text-xl font-semibold tracking-tight text-slate-900">${escapeHtml(title)}</h2>${state.mode === "add" ? '<p class="mt-1.5 text-xs text-slate-400">填写后确认写入菜单树</p>' : ""}</div>
-        <div class="flex shrink-0 gap-2"><button type="button" data-jme-form-cancel class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50">取消</button><button type="submit" class="rounded-lg bg-teal-700 px-3.5 py-2 text-xs font-medium text-white shadow-[0_3px_8px_rgba(15,118,110,0.14)] hover:bg-teal-800">${state.mode === "add" ? "确认新增" : "确认写入"}</button></div></div>
+      <header class="sticky top-0 z-10 shrink-0 border-b border-slate-200 bg-white/95 px-8 pt-6 backdrop-blur-sm" data-jme-form-sticky-header>
+        <div class="flex items-start justify-between gap-4"><div class="min-w-0 flex-1"><h2 class="truncate text-xl font-bold tracking-tight text-slate-900">${escapeHtml(title)}</h2></div><button type="button" class="grid h-8 w-8 place-items-center rounded-lg text-lg font-bold text-slate-500 hover:bg-slate-100" aria-label="更多操作">…</button>
+        </div>
         ${renderMenuFormAnchors()}
       </header>
-      <div class="min-h-0 flex-1 px-8 pb-10 pt-6">
+      <div class="min-h-0 flex-1 px-8 pb-12 pt-8">
         ${state.error ? `<div class="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">${escapeHtml(state.error)}</div>` : ""}
         ${ownIssues.length ? `<div class="mb-4 space-y-2">${ownIssues.map((issue) => `<div class="rounded-lg border px-3 py-2 text-xs ${issue.severity === "error" ? "border-red-200 bg-red-50 text-red-700" : "border-amber-200 bg-amber-50 text-amber-700"}">${escapeHtml(issue.message)}</div>`).join("")}</div>` : ""}
-        <section class="border-b border-slate-100 pb-6" data-jme-form-section="basic"><h3 class="text-sm font-semibold text-slate-900">基础信息</h3><div class="mt-4 grid max-w-4xl grid-cols-2 gap-4">${field("菜单名称", "name", node.name, "例如：经营看板", true)}${field("Key", "key", node.key, "例如：operations_dashboard", true, true)}${field("节点 ID", "id", node.id, "唯一 ID", true, true)}${field("图标", "icon", node.icon, "例如：AreaChartOutlined", false, true)}</div></section>
-        <section class="border-b border-slate-100 py-6" data-jme-form-section="page"><h3 class="text-sm font-semibold text-slate-900">层级与页面</h3>${renderParentMenuPicker(document, state, structureLocked)}
-          <div class="mt-5" data-jme-menu-purpose><p class="text-xs font-medium text-slate-700"><span class="mr-1 text-red-500">*</span>菜单用途</p><div class="mt-2 inline-flex overflow-hidden rounded-md border border-slate-300">${purposeButtons(state, canBeDirectory, structureLocked)}</div>${!canBeDirectory ? `<p class="mt-2 text-[11px] text-amber-600">三级菜单必须配置可打开的页面。</p>` : ""}</div>
+        <section class="border-b border-slate-100 pb-8" data-jme-form-section="basic"><h3 class="text-base font-bold text-slate-900">基础信息</h3><div class="mt-5 grid max-w-5xl grid-cols-2 gap-x-5 gap-y-5">${field("菜单名称", "name", node.name, "例如：经营看板", true)}${field("菜单 Key", "key", node.key, "例如：operations_dashboard", true, true)}${field("节点 ID", "id", node.id, "唯一 ID", true, true)}${renderParentMenuPicker(document, state, structureLocked)}<label class="block text-xs font-medium text-slate-700">图标<input name="icon" data-jme-dialog-field="icon" value="${value(node.icon)}" placeholder="上传或填写图标" class="mt-1.5 h-12 w-16 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-2 text-center text-xs text-slate-500 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10"></label></div></section>
+        <section class="border-b border-slate-100 py-8" data-jme-form-section="page"><h3 class="text-base font-bold text-slate-900">菜单用途</h3>
+          <div class="mt-5" data-jme-menu-purpose><div class="mt-3 inline-flex flex-wrap gap-1 rounded-2xl bg-slate-100 p-1.5">${purposeButtons(state, canBeDirectory, structureLocked)}</div></div>
           ${pageModeFields(document, state)}
         </section>
-        <section class="max-w-4xl py-6" data-jme-advanced-settings data-jme-form-section="advanced">
-          <h3 class="text-sm font-semibold text-slate-900">高级设置</h3>
-          <section class="border-b border-slate-100 py-5" data-jme-advanced-group="localization">
-            <h4 class="text-xs font-semibold text-slate-700">多语言设置</h4>
-            <div class="mt-4 grid grid-cols-3 gap-3">${field("简体中文", "i18nInfo.zh-CN", node.i18nInfo?.["zh-CN"])}${field("繁体中文", "i18nInfo.zh-HK", node.i18nInfo?.["zh-HK"])}${field("English", "i18nInfo.en-US", node.i18nInfo?.["en-US"])}</div>
-            <div class="mt-4">${field("i18nKey", "i18nKey", node.i18nKey, "app.menu.key", false, true)}</div>
+        <section class="max-w-5xl py-6" data-jme-advanced-settings>
+          <section class="border-b border-slate-100 py-7" data-jme-advanced-group="localization" data-jme-form-section="localization">
+            <h4 class="text-base font-bold text-slate-900">多语言名称</h4>
+            <div class="mt-5 grid max-w-5xl grid-cols-2 gap-x-5 gap-y-5">${field("简体中文", "i18nInfo.zh-CN", node.i18nInfo?.["zh-CN"], "", true)}${field("繁体中文", "i18nInfo.zh-HK", node.i18nInfo?.["zh-HK"])}${field("English", "i18nInfo.en-US", node.i18nInfo?.["en-US"])}${field("i18nKey", "i18nKey", node.i18nKey, "app.menu.key", false, true)}</div>
           </section>
-          <section class="border-b border-slate-100 py-5" data-jme-advanced-group="status-permission">
-            <h4 class="text-xs font-semibold text-slate-700">状态与权限</h4>
-            <div class="mt-4 grid grid-cols-3 gap-4">${triState("是否显示", "display", node.display)}${triState("是否禁用", "disabled", node.disabled)}${triState("启用权限控制", "accessControl.bool", node.accessControl?.bool)}</div>
-            <div class="mt-4">${renderServicePermissionSetting(document, state)}</div>
+          <section class="border-b border-slate-100 py-7" data-jme-advanced-group="status-permission" data-jme-form-section="status">
+            <h4 class="text-base font-bold text-slate-900">状态与权限</h4>
+            <div class="mt-5 grid max-w-5xl grid-cols-3 gap-5">${triState("是否显示", "display", node.display)}${triState("是否禁用", "disabled", node.disabled)}${triState("启用权限控制", "accessControl.bool", node.accessControl?.bool)}</div>
+            <div class="mt-5 max-w-5xl">${renderServicePermissionSetting(document, state)}</div>
           </section>
-          <section class="pt-5" data-jme-advanced-group="extra-info">
-            <h4 class="text-xs font-semibold text-slate-700">扩展信息</h4>
-            <div class="mt-4">${textareaField("额外信息 extraInfo（JSON 对象或数组）", "extraInfo", state.extraInfoText ?? (node.extraInfo === undefined ? "" : JSON.stringify(node.extraInfo, null, 2)), "{\n  \"source\": \"m-platform\"\n}")}</div>
+          <section class="pt-7" data-jme-advanced-group="extra-info" data-jme-form-section="extra">
+            <h4 class="text-base font-bold text-slate-900">高级扩展</h4><p class="mt-1 text-sm text-slate-400">仅接受 JSON 对象；错误保留原输入并定位</p>
+            <div class="mt-5 max-w-5xl">${textareaField("额外信息 extraInfo（JSON 对象或数组）", "extraInfo", state.extraInfoText ?? (node.extraInfo === undefined ? "" : JSON.stringify(node.extraInfo, null, 2)), "{\n  \"source\": \"m-platform\"\n}")}</div>
           </section>
         </section>
         ${state.mode === "edit" ? `<div class="flex gap-2 pt-6"><button type="button" data-jme-duplicate class="rounded-lg border border-slate-300 px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50" ${structureLocked ? "disabled title=\"包含兼容子树，不能复制\"" : ""}>复制菜单</button><button type="button" data-jme-delete class="rounded-lg px-3 py-2 text-xs text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50" ${structureLocked ? "disabled title=\"包含兼容子树，不能删除\"" : ""}>删除菜单</button></div>` : ""}
@@ -344,7 +339,6 @@ export function renderJsonMenuNodeFormPanel(
 function parentOptions(document: MenuDocument, state: MenuNodeDialogState): string {
   const options = [{ path: [] as MenuNodePath, text: "— 作为一级菜单 —" }];
   for (const visit of walkMenuNodes(document.menu)) {
-    if (visit.depth >= 3) continue;
     if (state.targetPath && pathIsPrefix(state.targetPath, visit.path)) continue;
     if (isCompatibilityProtected(document.menu, visit.path) || subtreeContainsCompatibility(document.menu, visit.path)) continue;
     options.push({ path: visit.path, text: `${"　".repeat(Math.max(0, visit.depth - 1))}${label(visit.node)}` });
@@ -355,8 +349,7 @@ function parentOptions(document: MenuDocument, state: MenuNodeDialogState): stri
 
 export function renderJsonMenuNodeDialog(document: MenuDocument, state: MenuNodeDialogState | null): string {
   if (!state) return "";
-  const depth = state.parentPath.length + 1;
-  const canBeDirectory = depth < 3;
+  const canBeDirectory = true;
   const node = state.draft;
   const structureLocked = Boolean(state.targetPath && subtreeContainsCompatibility(document.menu, state.targetPath));
   return `<div class="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/35 p-4 backdrop-blur-[1px]" data-jme-dialog-overlay>
@@ -366,7 +359,7 @@ export function renderJsonMenuNodeDialog(document: MenuDocument, state: MenuNode
         ${state.error ? `<div class="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">${escapeHtml(state.error)}</div>` : ""}
         <div class="grid grid-cols-2 gap-4">${field("菜单名称", "name", node.name, "例如：经营看板", true)}${field("Key", "key", node.key, "例如：operations_dashboard", true, true)}${field("节点 ID", "id", node.id, "唯一 ID", true, true)}${field("图标", "icon", node.icon, "例如：AreaChartOutlined", false, true)}</div>
         <label class="mt-4 block text-xs font-medium text-slate-700">父级菜单<select name="parentPath" data-jme-dialog-parent ${structureLocked ? "disabled" : ""} class="mt-1.5 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm disabled:bg-slate-100 disabled:text-slate-400">${parentOptions(document, state)}</select>${structureLocked ? `<span class="mt-1 block text-[11px] font-normal text-slate-400">该节点包含兼容子树，只允许修改非结构信息。</span>` : ""}</label>
-        <div class="mt-5"><p class="text-xs font-medium text-slate-700"><span class="mr-1 text-red-500">*</span>菜单用途</p><div class="mt-2 inline-flex overflow-hidden rounded-md border border-slate-300">${purposeButtons(state, canBeDirectory, structureLocked)}</div>${!canBeDirectory ? `<p class="mt-2 text-[11px] text-amber-600">三级菜单必须配置可打开的页面。</p>` : ""}</div>
+        <div class="mt-5"><p class="text-xs font-medium text-slate-700"><span class="mr-1 text-red-500">*</span>菜单用途</p><div class="mt-2 inline-flex overflow-hidden rounded-md border border-slate-300">${purposeButtons(state, canBeDirectory, structureLocked)}</div></div>
         ${pageModeFields(document, state, "")}
         <details class="mt-5 rounded-xl border border-slate-200" open><summary class="cursor-pointer list-none px-4 py-3.5 text-sm font-medium text-slate-800">高级设置 <span class="float-right text-xs font-normal text-slate-400">多语言、权限、显示</span></summary><div class="space-y-4 border-t border-slate-100 p-4"><div class="grid grid-cols-3 gap-3">${field("简体中文", "i18nInfo.zh-CN", node.i18nInfo?.["zh-CN"])}${field("繁体中文", "i18nInfo.zh-HK", node.i18nInfo?.["zh-HK"])}${field("English", "i18nInfo.en-US", node.i18nInfo?.["en-US"])}</div>${field("i18nKey", "i18nKey", node.i18nKey, "app.menu.key", false, true)}<div class="grid grid-cols-2 gap-4">${triState("是否显示", "display", node.display)}${triState("启用权限控制", "accessControl.bool", node.accessControl?.bool)}</div><div class="grid grid-cols-2 gap-4">${field("服务名称", "accessControl.serviceName", node.accessControl?.serviceName, "service_name", false, true)}${field("功能权限（逗号分隔）", "accessControl.permission.value", node.accessControl?.permission?.value?.join(", "), "permission_a, permission_b", false, true)}</div></div></details>
       </div>

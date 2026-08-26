@@ -23,7 +23,6 @@ export function normalizeMenuNodeForPageMode(
 ): NormalizeMenuPageModeResult {
   const node = structuredClone(draft);
   if (pageMode === "directory") {
-    if (options.depth >= 3) return { ok: false, error: "三级菜单必须配置可打开的页面。" };
     delete node.type; delete node.path; delete node.url; delete node.targetKey; delete node.externalConfig; delete node.microAppConfig;
     node.children ??= [];
     return { ok: true, node };
