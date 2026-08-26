@@ -104,9 +104,11 @@ flowchart LR
   MS --> EA[有效能力解析器]
   ORG[当前组织链路] --> EA
   EA --> RG[统一路由守卫]
-  RP[员工角色权限] --> RG
   RG --> NAV[侧栏/搜索/面包屑]
   RG --> URL[直接 URL]
+  RG --> PAGE[页面进入]
+  PAGE --> AA[页面内操作授权]
+  RP[员工角色权限] --> AA
 ```
 
 ### 6.1 配置面
@@ -121,24 +123,27 @@ flowchart LR
 - 组织上下文解析当前集团、品牌和门店链路。
 - 订阅解析器读取链路上所有生效订阅。
 - 能力解析器读取各服务包当前生效版本，并对 `routeNodeId` 取并集。
-- 统一路由守卫再叠加路由状态和员工角色权限。
+- 统一路由守卫叠加路由发布状态与订阅菜单能力，决定页面是否可见、可访问。
+- 用户进入页面后，现有员工角色权限体系继续决定按钮、操作和数据范围；员工角色不重复限制服务包已经授予的页面路由。
 
 ### 6.3 统一判定
 
 ```text
-allowed = routePublishedAndEnabled
-       AND routeIncludedByAnyEffectiveSubscription
-       AND employeeFunctionalPermissionMatched
+routeAllowed = routePublishedAndEnabled
+            AND routeIncludedByAnyEffectiveSubscription
+
+actionAllowed = routeAllowed
+             AND employeeActionPermissionMatched
 ```
 
-菜单渲染、搜索、面包屑和直接 URL 必须复用同一个判定函数。前端隐藏仅用于体验，服务端接口仍需执行自身授权。
+菜单渲染、搜索、面包屑和直接 URL 必须复用同一个 `routeAllowed` 判定函数。页面内按钮和业务接口使用现有角色权限判定；服务包不自动授予具体业务操作。前端隐藏仅用于体验，服务端接口仍需执行自身授权。
 
 ## 7. 数据模型
 
 ### 7.1 服务包稳定身份
 
 ```ts
-type ServicePackageStatus = "draft" | "published" | "disabled";
+type ServicePackageStatus = "unpublished" | "published" | "disabled";
 type BillingInterval = "month" | "quarter" | "year" | "one-time";
 
 interface ServicePackage {
@@ -165,13 +170,43 @@ interface ServicePackage {
 - `published` 必须存在有效的 `activeReleaseId`；
 - 已有有效订阅的服务包不能物理删除，只能停用。
 
-### 7.2 服务包发布版本
+`ServicePackage` 中的名称、说明与价格字段是当前生效版本的查询投影，便于列表检索；编辑动作只写入工作草稿。发布或回滚时，在切换 `activeReleaseId` 的同一事务内用目标版本刷新这些投影字段。
+
+### 7.2 服务包工作草稿
+
+```ts
+interface ServicePackageDraft {
+  packageId: string;
+  baseReleaseId?: string;
+  revision: number;
+  name: string;
+  description?: string;
+  priceMinor: number;
+  currency: string;
+  billingInterval: BillingInterval;
+  routeNodeIds: string[];
+  validationResult?: ServicePackageValidationResult;
+  updatedAt: string;
+  updatedBy: string;
+}
+```
+
+每个服务包最多保留一个当前工作草稿。草稿承载尚未发布的基础信息和路由选择，保存时递增 `revision`，不修改 `activeReleaseId`。`baseReleaseId` 表示草稿基于哪个已发布版本创建；发布时必须同时校验草稿 `revision`、`baseReleaseId` 和路由蓝图版本，任一发生变化都拒绝覆盖并要求重新比较。首次发布时 `baseReleaseId` 为空。
+
+发布成功后，以草稿内容生成不可变发布版本，并将草稿重置为新版本的工作副本。发布失败时草稿保留，当前商家能力不变化。
+
+### 7.3 服务包发布版本
 
 ```ts
 interface ServicePackageRelease {
   id: string;
   packageId: string;
   version: number;
+  name: string;
+  description?: string;
+  priceMinor: number;
+  currency: string;
+  billingInterval: BillingInterval;
   routeNodeIds: string[];
   changeSummary: string;
   validationResult: ServicePackageValidationResult;
@@ -192,11 +227,11 @@ interface ServicePackageValidationResult {
 
 发布版本不可变。订阅引用稳定的 `packageId`，运行时解析 `activeReleaseId`，因此新版本发布后全部有效订阅自动更新。回滚通过原子切换 `activeReleaseId` 完成，不修改历史版本。
 
-### 7.3 商家订阅实例
+### 7.4 商家订阅实例
 
 ```ts
 type SubscriptionSubjectType = "group" | "brand" | "store";
-type SubscriptionStatus = "scheduled" | "active" | "expired" | "disabled";
+type SubscriptionStatus = "scheduled" | "active" | "expired" | "disabled" | "package-disabled";
 
 interface MerchantSubscription {
   id: string;
@@ -227,7 +262,9 @@ AND servicePackage.status = published
 
 同一 `subjectType + subjectId + packageId` 不允许存在有效期重叠记录。续期优先延长当前记录的 `endAt`；未来预约记录可以编辑或取消，但必须重新执行重叠校验。
 
-### 7.4 有效能力结果
+当服务包整体停用时，未被人工停用的订阅记录保留并解析为 `package-disabled`，不提供菜单能力。服务包重新发布时，仍处于自身有效期内的订阅自动恢复为 `active`，尚未到生效时间的订阅恢复为 `scheduled`；重新发布前必须展示将恢复的主体数量并要求确认。
+
+### 7.5 有效能力结果
 
 ```ts
 interface EffectiveRouteEntitlement {
@@ -298,12 +335,14 @@ interface EffectiveEntitlementSnapshot {
 
 ### 9.3 商家登录与路由访问
 
-1. 建立当前员工与集团、品牌、门店上下文。
+1. 建立当前集团、品牌和门店上下文。
 2. 读取组织链路中的有效订阅。
 3. 读取服务包当前生效版本并合并路由节点。
-4. 叠加路由发布状态和员工功能权限。
+4. 叠加路由发布状态，得到页面级可见与可访问范围。
 5. 使用同一结果过滤侧栏、搜索与面包屑。
 6. 直接访问 URL 时再次通过统一守卫检查；无权访问时进入统一 403。
+
+进入页面后，按钮、业务操作和数据范围继续由现有员工角色权限体系独立校验。
 
 ### 9.4 续期、到期与停用
 
@@ -312,6 +351,7 @@ interface EffectiveEntitlementSnapshot {
 - 手动停用要求填写原因，立即失效并清理缓存；
 - 用户停留在已经失效的页面时，下一次路由或接口校验必须拒绝访问；
 - 服务包整体停用后，其所有订阅均不再提供能力，但订阅历史保留。
+- 服务包停用时，预约和有效订阅显示为“服务包已停用”；重新发布后，仍在各自有效期内的订阅自动恢复，无需重新开通。
 
 ## 10. 发布校验与影响分析
 
@@ -336,7 +376,7 @@ interface EffectiveEntitlementSnapshot {
 
 ## 11. 缓存、一致性与降级
 
-- 有效能力结果可以按组织上下文和员工权限摘要缓存，但必须设置短有效期；
+- 有效菜单能力结果可以按组织上下文缓存，但必须设置短有效期；页面内员工角色权限沿用现有独立缓存与失效机制；
 - 服务包发布、回滚、停用，或订阅创建、续期、停用时，主动失效受影响缓存；
 - 发布版本切换与审计记录必须处于同一事务或具备等价原子性；
 - 配置服务暂时不可用时，可使用最近一次成功的短期有效能力快照；
@@ -398,7 +438,8 @@ interface EffectiveEntitlementSnapshot {
 - 集团、品牌、门店继承链路；
 - 多服务包路由并集、去重和来源保留；
 - 父目录补齐与空父目录隐藏；
-- 服务包停用、路由停用和角色权限的组合判定。
+- 服务包停用与路由停用的页面访问组合判定；
+- 已获得页面路由能力时，员工角色只影响页面内按钮、操作和数据范围。
 
 ### 16.2 集成测试
 
@@ -415,13 +456,13 @@ interface EffectiveEntitlementSnapshot {
 - 验证门店最终菜单为三个层级有效服务包的并集；
 - 发布新版本后验证所有订阅主体统一更新；
 - 到期、停用和回滚后验证菜单与直接 URL 同步变化；
-- 验证员工没有角色权限时即使服务包包含页面也不能访问。
+- 验证服务包包含页面时员工可以进入页面；缺少角色权限时页面内受控按钮和业务操作不可用。
 
 ## 17. 与现有项目的集成边界
 
 - 统一路由节点来自现有可视化路由蓝图，不直接复制 `NAV_MODULES` 文本结构；原型阶段可由 `src/config/navigation.ts` 生成稳定节点目录。
 - 运行时能力过滤应接入 `src/config/platform-preset-nav-filter.ts` 所在的统一导航过滤链路，避免为订阅服务新增一套只过滤侧栏的逻辑。
-- 业态预设仍负责推荐或初始功能范围；商业订阅负责已购买能力。最终允许范围需要明确组合规则，建议为“路由蓝图发布范围 ∩ 有效订阅菜单 ∩ 员工权限”。
+- 业态预设仍负责推荐或初始功能范围；商业订阅负责已购买的页面能力。页面路由允许范围为“路由蓝图发布范围 ∩ 有效订阅菜单”；进入页面后的操作范围再由员工角色权限控制。
 - 现有菜单节点的服务订阅字段可作为迁移或兼容输入，但新服务包应以稳定 `routeNodeId` 集合作为唯一权威来源。
 
 ## 18. 后续阶段
