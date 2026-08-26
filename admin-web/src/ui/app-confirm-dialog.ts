@@ -10,6 +10,7 @@ export type ConfirmDialogOptions = {
   confirmLabel: string;
   cancelLabel?: string;
   danger?: boolean;
+  requireText?: string;
 };
 
 const DIALOG_ID = "app-confirm-dialog";
@@ -52,6 +53,7 @@ export function openConfirmDialog(opts: ConfirmDialogOptions): Promise<boolean> 
       >
         <h2 id="app-confirm-title" class="text-lg font-semibold tracking-tight text-card-foreground">${escapeHtml(opts.title)}</h2>
         <p id="app-confirm-message" class="mt-2.5 text-sm leading-[22px] text-muted-foreground whitespace-pre-wrap">${escapeHtml(opts.message)}</p>
+        ${opts.requireText ? `<input data-app-confirm-text class="mt-4 h-10 w-full rounded-xl border border-border px-3 text-sm outline-none" placeholder="${escapeHtml(opts.requireText)}" autocomplete="off">` : ""}
         <div class="mt-[22px] flex flex-wrap justify-end gap-2.5">
           <button type="button" data-app-confirm="cancel" class="rounded-xl border border-border px-5 py-2.5 text-sm text-card-foreground hover:bg-muted/50">${escapeHtml(cancelLabel)}</button>
           <button type="button" data-app-confirm="ok" class="${confirmClass}">${escapeHtml(opts.confirmLabel)}</button>
@@ -76,6 +78,7 @@ export function openConfirmDialog(opts: ConfirmDialogOptions): Promise<boolean> 
       const target = event.target as HTMLElement;
       const action = target.closest<HTMLElement>("[data-app-confirm]")?.dataset.appConfirm;
       if (action === "ok") {
+        if (opts.requireText && overlay.querySelector<HTMLInputElement>("[data-app-confirm-text]")?.value !== opts.requireText) return;
         close(true);
         return;
       }
