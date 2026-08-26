@@ -115,6 +115,8 @@ export class JsonMenuEditorStore {
     const index = this.state.selectedPath.at(-1)!;
     const current = array?.[index];
     if (!array || !current) return false;
+    const publishedNode = this.state.published ? walkMenuNodes(this.state.published.menu).find((visit) => visit.node.id === current.id)?.node : undefined;
+    if (publishedNode && (next.id !== current.id || next.key !== current.key)) return false;
     if (this.selectedContainsProtectedSubtree() && structuralSnapshot(current) !== structuralSnapshot(next)) return false;
     if (current.type === "micro-app" && next.type !== "micro-app" && hasInheritedMicroAppDescendant(current)) return false;
     const oldKey = current.key?.trim();
