@@ -45,6 +45,7 @@ export interface MenuNodeDialogState {
   initialExplicitType?: MenuNode["type"];
   inheritedExternalUrl?: string;
   pageModeTouched?: boolean;
+  dirty?: boolean;
   extraInfoText?: string;
   linkTargetOpen?: boolean;
   linkTargetCollapsedPaths?: Set<string>;
@@ -60,8 +61,8 @@ export interface MenuNodeDialogState {
 function escapeHtml(value: string): string { return value.replace(/[&<>\"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[char]!); }
 function value(input?: string): string { return escapeHtml(input ?? ""); }
 function pathIsPrefix(prefix: MenuNodePath, path: MenuNodePath): boolean { return prefix.length <= path.length && prefix.every((part, index) => path[index] === part); }
-function field(label: string, name: string, inputValue = "", placeholder = "", required = false, mono = false): string {
-  return `<label class="block text-xs font-medium text-slate-700">${required ? `<span class="mr-1 text-red-500">*</span>` : ""}${label}<input name="${name}" data-jme-dialog-field="${name}" value="${value(inputValue)}" placeholder="${escapeHtml(placeholder)}" class="mt-1.5 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-600/10 ${mono ? "font-mono text-xs" : ""}"></label>`;
+function field(label: string, name: string, inputValue = "", placeholder = "", required = false, mono = false, disabled = false): string {
+  return `<label class="block text-xs font-medium text-slate-700">${required ? `<span class="mr-1 text-red-500">*</span>` : ""}${label}<input name="${name}" data-jme-dialog-field="${name}" value="${value(inputValue)}" placeholder="${escapeHtml(placeholder)}" ${disabled ? "disabled" : ""} class="mt-1.5 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-600/10 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 ${mono ? "font-mono text-xs" : ""}"></label>`;
 }
 function triState(label: string, name: string, selected: boolean | undefined): string {
   return `<label class="block text-xs font-medium text-slate-700">${label}<select name="${name}" data-jme-dialog-field="${name}" class="mt-1.5 h-12 w-full rounded-xl border border-slate-300 bg-white px-4 text-sm text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10"><option value="missing" ${selected === undefined ? "selected" : ""}>未选择</option><option value="true" ${selected === true ? "selected" : ""}>是</option><option value="false" ${selected === false ? "selected" : ""}>否</option></select></label>`;
@@ -297,24 +298,26 @@ export function renderJsonMenuNodeFormPanel(
   document: MenuDocument,
   state: MenuNodeDialogState | null,
   issues: MenuValidationIssue[],
+  published: MenuDocument | null = null,
 ): string {
   if (!state) return `<section class="grid min-h-0 flex-1 place-items-center bg-white"><div class="max-w-sm px-8 text-center"><div class="mx-auto grid h-14 w-14 place-items-center rounded-full bg-slate-50 text-2xl text-slate-300">☰</div><h2 class="mt-4 text-base font-semibold text-slate-900">选择一个菜单节点</h2><p class="mt-1 text-sm leading-6 text-slate-500">从左侧选择菜单查看详情，或创建第一个菜单。</p><button type="button" data-jme-open-add="" class="mt-5 rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white shadow-[0_3px_8px_rgba(15,118,110,0.16)] hover:bg-teal-800">＋ 新增一级菜单</button></div></section>`;
   const canBeDirectory = true;
   const node = state.draft;
+  const identityLocked = state.mode === "edit" && Boolean(published && walkMenuNodes(published.menu).some((visit) => visit.node.id === node.id));
   const structureLocked = Boolean(state.targetPath && subtreeContainsCompatibility(document.menu, state.targetPath));
   const ownIssues = state.targetPath ? issues.filter((issue) => issue.path && encodeMenuNodePath(issue.path) === encodeMenuNodePath(state.targetPath!)) : [];
   const title = state.mode === "add" ? (state.parentPath.length ? "新增子菜单" : "新增一级菜单") : label(state.draft);
   return `<section class="min-h-0 flex-1 overflow-y-auto bg-white" data-jme-detail-panel>
     <form class="flex min-h-full flex-col" data-jme-node-form>
       <header class="sticky top-0 z-10 shrink-0 border-b border-slate-200 bg-white/95 px-8 pt-6 backdrop-blur-sm" data-jme-form-sticky-header>
-        <div class="flex items-start justify-between gap-4"><div class="min-w-0 flex-1"><h2 class="truncate text-xl font-bold tracking-tight text-slate-900">${escapeHtml(title)}</h2></div>${state.mode === "edit" ? renderMenuActions(state.targetPath ? encodeMenuNodePath(state.targetPath) : undefined) : ""}
+        <div class="flex items-start justify-between gap-4"><div class="min-w-0 flex-1"><h2 class="truncate text-xl font-bold tracking-tight text-slate-900">${escapeHtml(title)}</h2></div><div class="flex items-center gap-3">${state.mode === "edit" ? `<span class="text-xs text-slate-400">上次发布 · ${escapeHtml(document.updatedBy.timestamp.slice(0, 16).replace("T", " "))}</span><button type="button" data-jme-publish-current ${state.dirty ? "" : "disabled"} class="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-[0_4px_10px_rgba(37,99,235,0.2)] hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none">保存并发布</button>` : ""}</div>
         </div>
         ${renderMenuFormAnchors()}
       </header>
       <div class="min-h-0 flex-1 px-8 pb-12 pt-8">
         ${state.error ? `<div class="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">${escapeHtml(state.error)}</div>` : ""}
         ${ownIssues.length ? `<div class="mb-4 space-y-2">${ownIssues.map((issue) => `<div class="rounded-lg border px-3 py-2 text-xs ${issue.severity === "error" ? "border-red-200 bg-red-50 text-red-700" : "border-amber-200 bg-amber-50 text-amber-700"}">${escapeHtml(issue.message)}</div>`).join("")}</div>` : ""}
-        <section class="border-b border-slate-100 pb-8" data-jme-form-section="basic"><h3 class="text-base font-bold text-slate-900">基础信息</h3><div class="mt-5 grid max-w-5xl grid-cols-2 gap-x-5 gap-y-5">${field("菜单名称", "name", node.name, "例如：经营看板", true)}${field("菜单 Key", "key", node.key, "例如：operations_dashboard", true, true)}${field("节点 ID", "id", node.id, "唯一 ID", true, true)}${renderParentMenuPicker(document, state, structureLocked)}<label class="block text-xs font-medium text-slate-700">图标<input name="icon" data-jme-dialog-field="icon" value="${value(node.icon)}" placeholder="上传或填写图标" class="mt-1.5 h-12 w-16 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-2 text-center text-xs text-slate-500 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10"></label></div></section>
+        <section class="border-b border-slate-100 pb-8" data-jme-form-section="basic"><h3 class="text-base font-bold text-slate-900">基础信息</h3><div class="mt-5 grid max-w-5xl grid-cols-2 gap-x-5 gap-y-5">${field("菜单名称", "name", node.name, "例如：经营看板", true)}${field("菜单 Key", "key", node.key, "例如：operations_dashboard", true, true, identityLocked)}${field("节点 ID", "id", node.id, "唯一 ID", true, true, identityLocked)}${renderParentMenuPicker(document, state, structureLocked)}<label class="block text-xs font-medium text-slate-700">图标<input name="icon" data-jme-dialog-field="icon" value="${value(node.icon)}" placeholder="上传或填写图标" class="mt-1.5 h-12 w-16 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-2 text-center text-xs text-slate-500 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10"></label></div></section>
         <section class="border-b border-slate-100 py-8" data-jme-form-section="page"><h3 class="text-base font-bold text-slate-900">菜单用途</h3>
           <div class="mt-5" data-jme-menu-purpose><div class="mt-3 inline-flex flex-wrap gap-1 rounded-2xl bg-slate-100 p-1.5">${purposeButtons(state, canBeDirectory, structureLocked)}</div></div>
           ${pageModeFields(document, state)}
