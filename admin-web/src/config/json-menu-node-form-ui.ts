@@ -25,8 +25,9 @@ const menuFormSectionLabels: Record<JsonMenuFormSection, string> = {
   extra: "高级",
 };
 
-function renderMenuFormAnchors(): string {
-  return `<nav class="mt-5 flex items-center gap-8 border-t border-slate-100 pt-3" aria-label="菜单配置区块导航" data-jme-form-anchors>${JSON_MENU_FORM_SECTIONS.map((section, index) => `<button type="button" data-jme-form-anchor="${section}" ${index === 0 ? 'aria-current="location"' : ""} class="border-b-2 px-1 pb-3 text-sm font-semibold outline-none transition-colors focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-blue-500/30 ${index === 0 ? "border-blue-500 text-blue-500" : "border-transparent text-slate-500 hover:text-slate-900"}">${menuFormSectionLabels[section]}</button>`).join("")}</nav>`;
+function renderMenuFormAnchors(hasChildren: boolean): string {
+  const sections = hasChildren ? JSON_MENU_FORM_SECTIONS.filter((section) => section !== "page") : JSON_MENU_FORM_SECTIONS;
+  return `<nav class="mt-5 flex items-center gap-8 border-t border-slate-100 pt-3" aria-label="菜单配置区块导航" data-jme-form-anchors>${sections.map((section, index) => `<button type="button" data-jme-form-anchor="${section}" ${index === 0 ? 'aria-current="location"' : ""} class="border-b-2 px-1 pb-3 text-sm font-semibold outline-none transition-colors focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-blue-500/30 ${index === 0 ? "border-blue-500 text-blue-500" : "border-transparent text-slate-500 hover:text-slate-900"}">${menuFormSectionLabels[section]}</button>`).join("")}</nav>`;
 }
 
 function renderMenuActions(encodedPath?: string): string {
@@ -56,10 +57,21 @@ export interface MenuNodeDialogState {
   parentPickerSearch?: string;
   parentPickerReturnScrollTop?: number;
   movePickerMode?: boolean;
+  iconPickerOpen?: boolean;
 }
 
 function escapeHtml(value: string): string { return value.replace(/[&<>\"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[char]!); }
 function value(input?: string): string { return escapeHtml(input ?? ""); }
+const MENU_ICON_OPTIONS = [
+  ["HomeOutlined", "⌂"], ["AppstoreOutlined", "▦"], ["SettingOutlined", "⚙"], ["ShopOutlined", "▣"],
+  ["TeamOutlined", "♧"], ["FileTextOutlined", "▤"], ["BarChartOutlined", "▥"], ["BellOutlined", "♢"],
+  ["StarOutlined", "☆"], ["CalendarOutlined", "□"], ["DollarOutlined", "$"], ["SafetyOutlined", "♙"],
+] as const;
+function renderIconPicker(state: MenuNodeDialogState): string {
+  if (!state.iconPickerOpen) return "";
+  const selected = state.draft.icon ?? "";
+  return `<div class="fixed inset-0 z-[152] flex items-center justify-center bg-slate-950/35 p-4" data-jme-icon-picker-overlay><section class="w-full max-w-xl rounded-2xl bg-white shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="jme-icon-picker-title"><header class="flex items-center justify-between border-b border-slate-100 px-6 py-4"><h3 id="jme-icon-picker-title" class="text-lg font-semibold text-slate-900">选择图标</h3><button type="button" data-jme-icon-picker-close class="grid h-8 w-8 place-items-center rounded-lg text-xl text-slate-400 hover:bg-slate-100">×</button></header><div class="grid grid-cols-6 gap-3 p-6">${MENU_ICON_OPTIONS.map(([name, glyph]) => `<button type="button" data-jme-icon-picker-value="${name}" title="${name}" class="grid aspect-square place-items-center rounded-xl border text-2xl transition ${selected === name ? "border-blue-500 bg-blue-50 text-blue-600 ring-2 ring-blue-500/20" : "border-slate-200 text-slate-600 hover:border-blue-300 hover:bg-slate-50"}"><span>${glyph}</span><span class="sr-only">${name}</span></button>`).join("")}</div></section></div>`;
+}
 function pathIsPrefix(prefix: MenuNodePath, path: MenuNodePath): boolean { return prefix.length <= path.length && prefix.every((part, index) => path[index] === part); }
 function field(label: string, name: string, inputValue = "", placeholder = "", required = false, mono = false, disabled = false): string {
   return `<label class="block text-xs font-medium text-slate-700">${required ? `<span class="mr-1 text-red-500">*</span>` : ""}${label}<input name="${name}" data-jme-dialog-field="${name}" value="${value(inputValue)}" placeholder="${escapeHtml(placeholder)}" ${disabled ? "disabled" : ""} class="mt-1.5 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-600/10 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 ${mono ? "font-mono text-xs" : ""}"></label>`;
@@ -312,16 +324,16 @@ export function renderJsonMenuNodeFormPanel(
       <header class="sticky top-0 z-10 shrink-0 border-b border-slate-200 bg-white/95 px-8 pt-6 backdrop-blur-sm" data-jme-form-sticky-header>
         <div class="flex items-start justify-between gap-4"><div class="min-w-0 flex-1"><h2 class="truncate text-xl font-bold tracking-tight text-slate-900">${escapeHtml(title)}</h2></div><div class="flex items-center gap-3">${state.mode === "edit" ? `<span class="text-xs text-slate-400">上次发布 · ${escapeHtml(document.updatedBy.timestamp.slice(0, 16).replace("T", " "))}</span><button type="button" data-jme-publish-current ${state.dirty ? "" : "disabled"} class="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-[0_4px_10px_rgba(37,99,235,0.2)] hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none">保存并发布</button>` : ""}</div>
         </div>
-        ${renderMenuFormAnchors()}
+        ${renderMenuFormAnchors(Boolean(node.children?.length))}
       </header>
       <div class="min-h-0 flex-1 px-8 pb-12 pt-8">
         ${state.error ? `<div class="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">${escapeHtml(state.error)}</div>` : ""}
         ${ownIssues.length ? `<div class="mb-4 space-y-2">${ownIssues.map((issue) => `<div class="rounded-lg border px-3 py-2 text-xs ${issue.severity === "error" ? "border-red-200 bg-red-50 text-red-700" : "border-amber-200 bg-amber-50 text-amber-700"}">${escapeHtml(issue.message)}</div>`).join("")}</div>` : ""}
-        <section class="border-b border-slate-100 pb-8" data-jme-form-section="basic"><h3 class="text-base font-bold text-slate-900">基础信息</h3><div class="mt-5 grid max-w-5xl grid-cols-2 gap-x-5 gap-y-5">${field("菜单名称", "name", node.name, "例如：经营看板", true)}${field("菜单 Key", "key", node.key, "例如：operations_dashboard", true, true, identityLocked)}${field("节点 ID", "id", node.id, "唯一 ID", true, true, identityLocked)}${renderParentMenuPicker(document, state, structureLocked)}<label class="block text-xs font-medium text-slate-700">图标<input name="icon" data-jme-dialog-field="icon" value="${value(node.icon)}" placeholder="上传或填写图标" class="mt-1.5 h-12 w-16 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-2 text-center text-xs text-slate-500 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10"></label></div></section>
-        <section class="border-b border-slate-100 py-8" data-jme-form-section="page"><h3 class="text-base font-bold text-slate-900">菜单用途</h3>
+        <section class="border-b border-slate-100 pb-8" data-jme-form-section="basic"><h3 class="text-base font-bold text-slate-900">基础信息</h3><div class="mt-5 grid max-w-5xl grid-cols-2 gap-x-5 gap-y-5">${field("菜单名称", "name", node.name, "例如：经营看板", true)}${field("菜单 Key", "key", node.key, "例如：operations_dashboard", true, true, identityLocked)}${field("节点 ID", "id", node.id, "唯一 ID", true, true, identityLocked)}${renderParentMenuPicker(document, state, structureLocked)}<label class="block text-xs font-medium text-slate-700">图标<button type="button" data-jme-icon-picker-open class="mt-1.5 flex h-12 w-full items-center gap-3 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-3 text-left text-sm text-slate-600 hover:border-blue-400 hover:bg-blue-50"><span class="grid h-7 w-7 place-items-center rounded-lg bg-white text-base text-slate-700">${escapeHtml(MENU_ICON_OPTIONS.find(([name]) => name === node.icon)?.[1] ?? "⌁")}</span><span class="truncate">${escapeHtml(node.icon || "选择图标")}</span></button></label></div></section>${renderIconPicker(state)}
+        ${node.children?.length ? "" : `<section class="border-b border-slate-100 py-8" data-jme-form-section="page"><h3 class="text-base font-bold text-slate-900">菜单用途</h3>
           <div class="mt-5" data-jme-menu-purpose><div class="mt-3 inline-flex flex-wrap gap-1 rounded-2xl bg-slate-100 p-1.5">${purposeButtons(state, canBeDirectory, structureLocked)}</div></div>
           ${pageModeFields(document, state)}
-        </section>
+        </section>`}
         <section class="max-w-5xl py-6" data-jme-advanced-settings>
           <section class="border-b border-slate-100 py-7" data-jme-advanced-group="localization" data-jme-form-section="localization">
             <h4 class="text-base font-bold text-slate-900">多语言名称</h4>

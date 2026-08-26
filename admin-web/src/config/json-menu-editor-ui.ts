@@ -742,6 +742,10 @@ export function bindJsonMenuEditor(onMount: () => void): void {
     }
     if (target.closest("[data-jme-fullscreen-close]") || target.matches("[data-jme-fullscreen-preview-panel]")) { clearFullscreenEnvironment(onMount); return; }
     if (target.closest("[data-jme-form-cancel]")) { dialogState = buildEditFormState(jsonMenuEditorStore.state.selectedPath); onMount(); return; }
+    if (target.closest("[data-jme-icon-picker-open]") && dialogState) { dialogState.iconPickerOpen = true; onMount(); return; }
+    if (target.closest("[data-jme-icon-picker-close]") && dialogState) { dialogState.iconPickerOpen = false; rerenderPreservingMenuFormScroll(onMount); return; }
+    const iconPickerValue = target.closest<HTMLElement>("[data-jme-icon-picker-value]")?.dataset.jmeIconPickerValue;
+    if (iconPickerValue && dialogState) { assignDialogField("icon", iconPickerValue); dialogState.iconPickerOpen = false; rerenderPreservingMenuFormScroll(onMount); return; }
     if (target.closest("[data-jme-parent-picker-open]") && dialogState) { dialogState.parentPickerReturnScrollTop = document.querySelector<HTMLElement>("[data-jme-detail-panel]")?.scrollTop ?? 0; dialogState.parentPickerOpen = true; dialogState.parentPickerSearch = ""; dialogState.parentPickerCollapsedPaths = new Set(); onMount(); return; }
     if (target.closest("[data-jme-parent-picker-close]") && dialogState) { dialogState.parentPickerOpen = false; restoreMenuFormScroll(dialogState.parentPickerReturnScrollTop ?? 0, onMount); return; }
     const parentPickerToggle = target.closest<HTMLElement>("[data-jme-parent-picker-toggle]")?.dataset.jmeParentPickerToggle;
