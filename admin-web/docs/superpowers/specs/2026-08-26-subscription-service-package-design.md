@@ -178,6 +178,7 @@ interface ServicePackage {
 interface ServicePackageDraft {
   packageId: string;
   baseReleaseId?: string;
+  routeBlueprintVersion: number;
   revision: number;
   name: string;
   description?: string;
@@ -191,7 +192,7 @@ interface ServicePackageDraft {
 }
 ```
 
-每个服务包最多保留一个当前工作草稿。草稿承载尚未发布的基础信息和路由选择，保存时递增 `revision`，不修改 `activeReleaseId`。`baseReleaseId` 表示草稿基于哪个已发布版本创建；发布时必须同时校验草稿 `revision`、`baseReleaseId` 和路由蓝图版本，任一发生变化都拒绝覆盖并要求重新比较。首次发布时 `baseReleaseId` 为空。
+每个服务包最多保留一个当前工作草稿。草稿承载尚未发布的基础信息和路由选择，保存时递增 `revision`，不修改 `activeReleaseId`。`baseReleaseId` 表示草稿基于哪个已发布服务包版本创建，`routeBlueprintVersion` 固定本次选择和最近一次完整校验所依据的路由蓝图版本。发布时必须同时校验草稿 `revision`、`baseReleaseId` 和 `routeBlueprintVersion`；任一与当前状态不一致都拒绝覆盖并要求重新加载、比较和校验。首次发布时 `baseReleaseId` 为空。
 
 发布成功后，以草稿内容生成不可变发布版本，并将草稿重置为新版本的工作副本。发布失败时草稿保留，当前商家能力不变化。
 
@@ -202,6 +203,7 @@ interface ServicePackageRelease {
   id: string;
   packageId: string;
   version: number;
+  routeBlueprintVersion: number;
   name: string;
   description?: string;
   priceMinor: number;
@@ -216,6 +218,7 @@ interface ServicePackageRelease {
 
 interface ServicePackageValidationResult {
   valid: boolean;
+  routeBlueprintVersion: number;
   invalidRouteNodeIds: string[];
   selectedLeafCount: number;
   effectiveNodeCount: number;
@@ -262,7 +265,7 @@ AND servicePackage.status = published
 
 同一 `subjectType + subjectId + packageId` 不允许存在有效期重叠记录。续期优先延长当前记录的 `endAt`；未来预约记录可以编辑或取消，但必须重新执行重叠校验。
 
-当服务包整体停用时，未被人工停用的订阅记录保留并解析为 `package-disabled`，不提供菜单能力。服务包重新发布时，仍处于自身有效期内的订阅自动恢复为 `active`，尚未到生效时间的订阅恢复为 `scheduled`；重新发布前必须展示将恢复的主体数量并要求确认。
+当服务包整体停用时，未被人工停用的订阅记录保留并解析为 `package-disabled`，不提供菜单能力。停用后的恢复统一称为“重新发布”：必须基于工作草稿执行完整校验并生成一个新的不可变发布版本，不能只把旧版本重新标记为活动。重新发布后，仍处于自身有效期内的订阅自动恢复为 `active`，尚未到生效时间的订阅恢复为 `scheduled`；确认发布前必须展示将恢复的主体数量。
 
 ### 7.5 有效能力结果
 
@@ -351,7 +354,7 @@ interface EffectiveEntitlementSnapshot {
 - 手动停用要求填写原因，立即失效并清理缓存；
 - 用户停留在已经失效的页面时，下一次路由或接口校验必须拒绝访问；
 - 服务包整体停用后，其所有订阅均不再提供能力，但订阅历史保留。
-- 服务包停用时，预约和有效订阅显示为“服务包已停用”；重新发布后，仍在各自有效期内的订阅自动恢复，无需重新开通。
+- 服务包停用时，预约和有效订阅显示为“服务包已停用”；完成重新发布并生成新版本后，仍在各自有效期内的订阅自动恢复，无需重新开通。
 
 ## 10. 发布校验与影响分析
 
@@ -369,7 +372,7 @@ interface EffectiveEntitlementSnapshot {
 
 - 节点已经删除、停用或未发布；
 - 服务包最终不包含任何可访问页面；
-- 路由蓝图版本在校验与提交之间变化；
+- 当前路由蓝图版本与草稿及其最近一次校验记录中的 `routeBlueprintVersion` 不一致；
 - 当前草稿基于过期服务包版本且未完成冲突处理。
 
 发布使用乐观锁或等价版本检查，避免并发编辑覆盖。
