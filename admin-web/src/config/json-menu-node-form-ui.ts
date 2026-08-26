@@ -342,7 +342,7 @@ export function renderJsonMenuNodeFormPanel(
           <section class="border-b border-slate-100 py-7" data-jme-advanced-group="status-permission" data-jme-form-section="status">
             <h4 class="text-base font-bold text-slate-900">状态与权限</h4>
             <div class="mt-5 grid max-w-5xl grid-cols-3 gap-5">${triState("是否显示", "display", node.display)}${triState("是否禁用", "disabled", node.disabled)}${triState("启用权限控制", "accessControl.bool", node.accessControl?.bool)}</div>
-            <div class="mt-5 max-w-5xl">${renderServicePermissionSetting(document, state)}</div>
+            ${node.accessControl?.bool === true ? `<div class="mt-5 max-w-5xl">${textareaField("权限名称（多个权限使用英文逗号分隔）", "accessControl.permission.value", node.accessControl.permission?.value?.join(", "), "例如：menu_view, menu_edit")}</div>` : ""}
           </section>
           <section class="pt-7" data-jme-advanced-group="extra-info" data-jme-form-section="extra">
             <h4 class="text-base font-bold text-slate-900">高级扩展</h4><p class="mt-1 text-sm text-slate-400">仅接受 JSON 对象；错误保留原输入并定位</p>

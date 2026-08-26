@@ -819,7 +819,7 @@ export function bindJsonMenuEditor(onMount: () => void): void {
   document.body.addEventListener("change", (event) => {
     const input = event.target as HTMLInputElement | HTMLSelectElement;
     if (input.dataset.jmeRootField) { jsonMenuEditorStore.updateRoot((document) => (document as unknown as Record<string, unknown>)[input.dataset.jmeRootField!] = input.value); onMount(); return; }
-    if (input.dataset.jmeDialogField) { assignDialogField(input.dataset.jmeDialogField, input.value); return; }
+    if (input.dataset.jmeDialogField) { assignDialogField(input.dataset.jmeDialogField, input.value); if (input.dataset.jmeDialogField === "accessControl.bool") rerenderPreservingMenuFormScroll(onMount); return; }
     if (input.matches("[data-jme-dialog-parent]") && dialogState) { dialogState.parentPath = decodeMenuNodePath(input.value); if (dialogState.pageMode === "directory" && dialogState.parentPath.length >= 2) dialogState.pageMode = "inner"; dialogState.error = undefined; onMount(); }
   });
 
