@@ -28,6 +28,11 @@ const menuFormSectionLabels: Record<JsonMenuFormSection, string> = {
 function renderMenuFormAnchors(): string {
   return `<nav class="mt-5 flex items-center gap-8 border-t border-slate-100 pt-3" aria-label="菜单配置区块导航" data-jme-form-anchors>${JSON_MENU_FORM_SECTIONS.map((section, index) => `<button type="button" data-jme-form-anchor="${section}" ${index === 0 ? 'aria-current="location"' : ""} class="border-b-2 px-1 pb-3 text-sm font-semibold outline-none transition-colors focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-blue-500/30 ${index === 0 ? "border-blue-500 text-blue-500" : "border-transparent text-slate-500 hover:text-slate-900"}">${menuFormSectionLabels[section]}</button>`).join("")}</nav>`;
 }
+
+function renderMenuActions(encodedPath?: string): string {
+  if (!encodedPath) return "";
+  return `<details class="relative" data-jme-menu-actions><summary class="grid h-8 w-8 cursor-pointer place-items-center rounded-lg text-lg font-bold leading-none text-slate-500 hover:bg-slate-100 hover:text-slate-900" aria-label="更多操作">…</summary><div class="absolute right-0 z-30 mt-2 w-60 rounded-[20px] border border-white bg-white p-3 shadow-[0_16px_36px_rgba(15,23,42,0.22)]"><button type="button" data-jme-open-add="${encodedPath}" class="flex h-12 w-full items-center gap-3 rounded-xl px-3 text-left text-lg font-medium text-slate-900 hover:bg-slate-50"><span class="grid w-6 shrink-0 place-items-center text-xl font-normal">✎</span><span>新增子级</span></button><button type="button" data-jme-duplicate-menu="${encodedPath}" class="flex h-12 w-full items-center gap-3 rounded-xl px-3 text-left text-lg font-medium text-slate-900 hover:bg-slate-50"><span class="grid w-6 shrink-0 place-items-center text-xl font-normal">▣</span><span>复制导航及子级</span></button><button type="button" data-jme-move-menu="${encodedPath}" class="flex h-12 w-full items-center gap-3 rounded-xl px-3 text-left text-lg font-medium text-slate-900 hover:bg-slate-50"><span class="grid w-6 shrink-0 place-items-center text-xl font-normal">↕</span><span>指定移动</span></button><button type="button" data-jme-move-up="${encodedPath}" class="flex h-12 w-full items-center gap-3 rounded-xl px-3 text-left text-lg font-medium text-slate-900 hover:bg-slate-50"><span class="grid w-6 shrink-0 place-items-center text-2xl font-light">↑</span><span>上移</span></button><button type="button" data-jme-move-down="${encodedPath}" class="flex h-12 w-full items-center gap-3 rounded-xl px-3 text-left text-lg font-medium text-slate-900 hover:bg-slate-50"><span class="grid w-6 shrink-0 place-items-center text-2xl font-light">↓</span><span>下移</span></button><button type="button" data-jme-delete-menu="${encodedPath}" class="mt-1.5 flex h-14 w-full items-center gap-3 rounded-2xl bg-red-50 px-3 text-left text-lg font-medium text-red-400 hover:bg-red-100"><span class="grid w-6 shrink-0 place-items-center text-xl font-normal">▱</span><span>删除</span></button></div></details>`;
+}
 export type { MenuPageMode } from "./json-menu-page-mode";
 export interface MenuNodeDialogState {
   mode: MenuDialogMode;
@@ -284,7 +289,6 @@ export function renderJsonMenuNodeSummary(
       <section class="border-b border-slate-100 py-6"><div class="flex items-center justify-between"><h3 class="text-sm font-semibold text-slate-900">页面与路由</h3></div><dl class="mt-4 grid max-w-4xl grid-cols-2 gap-x-10 gap-y-5"><div><dt class="text-[11px] text-slate-400">商家后台路由</dt><dd class="mt-1 break-all font-mono text-xs font-medium text-slate-700">${escapeHtml(node.path || "—")}</dd></div><div><dt class="text-[11px] text-slate-400">打开目标</dt><dd class="mt-1 break-all font-mono text-xs font-medium text-slate-700">${escapeHtml(target)}</dd></div></dl></section>
       <section class="border-b border-slate-100 py-6"><h3 class="text-sm font-semibold text-slate-900">多语言名称</h3><div class="mt-4 grid max-w-4xl grid-cols-3 gap-4">${(["zh-CN", "zh-HK", "en-US"] as const).map((locale) => `<div><p class="text-[10px] text-slate-400">${locale}</p><p class="mt-1 truncate text-xs text-slate-700">${escapeHtml(node.i18nInfo?.[locale] || node.name || "—")}</p></div>`).join("")}</div></section>
       ${ownIssues.length ? `<section class="border-b border-slate-100 py-6"><h3 class="text-sm font-semibold text-slate-900">当前节点校验</h3><div class="mt-3 space-y-2">${ownIssues.map((issue) => `<div class="rounded-lg border px-3 py-2 text-xs ${issue.severity === "error" ? "border-red-200 bg-red-50 text-red-700" : "border-amber-200 bg-amber-50 text-amber-700"}">${escapeHtml(issue.message)}</div>`).join("")}</div></section>` : ""}
-      ${!protectedNode ? `<div class="flex gap-2 pt-6"><button type="button" data-jme-duplicate class="rounded-lg border border-slate-300 px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50" ${containsProtected ? "disabled title=\"包含兼容子树，不能复制\"" : ""}>复制菜单</button><button type="button" data-jme-delete class="rounded-lg px-3 py-2 text-xs text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50" ${containsProtected ? "disabled title=\"包含兼容子树，不能删除\"" : ""}>删除菜单</button></div>` : ""}
     </div>
   </section>`;
 }
@@ -303,7 +307,7 @@ export function renderJsonMenuNodeFormPanel(
   return `<section class="min-h-0 flex-1 overflow-y-auto bg-white" data-jme-detail-panel>
     <form class="flex min-h-full flex-col" data-jme-node-form>
       <header class="sticky top-0 z-10 shrink-0 border-b border-slate-200 bg-white/95 px-8 pt-6 backdrop-blur-sm" data-jme-form-sticky-header>
-        <div class="flex items-start justify-between gap-4"><div class="min-w-0 flex-1"><h2 class="truncate text-xl font-bold tracking-tight text-slate-900">${escapeHtml(title)}</h2></div><button type="button" class="grid h-8 w-8 place-items-center rounded-lg text-lg font-bold text-slate-500 hover:bg-slate-100" aria-label="更多操作">…</button>
+        <div class="flex items-start justify-between gap-4"><div class="min-w-0 flex-1"><h2 class="truncate text-xl font-bold tracking-tight text-slate-900">${escapeHtml(title)}</h2></div>${state.mode === "edit" ? renderMenuActions(state.targetPath ? encodeMenuNodePath(state.targetPath) : undefined) : ""}
         </div>
         ${renderMenuFormAnchors()}
       </header>
@@ -330,7 +334,6 @@ export function renderJsonMenuNodeFormPanel(
             <div class="mt-5 max-w-5xl">${textareaField("额外信息 extraInfo（JSON 对象或数组）", "extraInfo", state.extraInfoText ?? (node.extraInfo === undefined ? "" : JSON.stringify(node.extraInfo, null, 2)), "{\n  \"source\": \"m-platform\"\n}")}</div>
           </section>
         </section>
-        ${state.mode === "edit" ? `<div class="flex gap-2 pt-6"><button type="button" data-jme-duplicate class="rounded-lg border border-slate-300 px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50" ${structureLocked ? "disabled title=\"包含兼容子树，不能复制\"" : ""}>复制菜单</button><button type="button" data-jme-delete class="rounded-lg px-3 py-2 text-xs text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50" ${structureLocked ? "disabled title=\"包含兼容子树，不能删除\"" : ""}>删除菜单</button></div>` : ""}
       </div>
     </form>${renderLinkTargetDialog(document, state)}
   </section>`;
