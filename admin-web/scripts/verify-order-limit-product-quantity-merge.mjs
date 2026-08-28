@@ -5,7 +5,7 @@ const jsPath = new URL("../dist/Configuration%20center/assets/order-limit-flow.j
 const cssPath = new URL("../dist/Configuration%20center/assets/order-limit-flow.css", import.meta.url);
 const [source, css] = await Promise.all([readFile(jsPath, "utf8"), readFile(cssPath, "utf8")]);
 
-const steps = source.match(/var steps = \[[\s\S]*?\n\s*\];/)?.[0] ?? "";
+const steps = source.match(/steps:\s*\[[\s\S]*?\n\s*\]/)?.[0] ?? "";
 assert.match(steps, /规则类型[\s\S]*场景配置[\s\S]*限购数量[\s\S]*超限授权[\s\S]*生效范围[\s\S]*确认发布/);
 assert.doesNotMatch(steps, /商品配置/, "独立商品配置步骤应被移除");
 

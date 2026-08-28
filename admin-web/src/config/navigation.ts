@@ -397,6 +397,12 @@ export const NAV_MODULES: NavModule[] = [
         titleEn: "Menu order limits",
         path: "/operations/queue-call/menu-order-limits",
       },
+      {
+        id: "foh-buffet-rules",
+        title: "自助餐规则",
+        titleEn: "Buffet rules",
+        path: "/operations/queue-call/buffet-rules",
+      },
       { id: "qc-settings", title: "设置", titleEn: "Settings", path: "/operations/queue-call/settings" },
     ],
   },

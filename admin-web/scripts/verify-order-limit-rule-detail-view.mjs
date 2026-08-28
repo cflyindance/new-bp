@@ -29,7 +29,7 @@ assert.match(js, /if \(viewMode\) return true;/, "只读模式不应写入草稿
 assert.match(js, /if \(viewMode\) return;[\s\S]{0,80}editorState\.dirty = true;/, "只读模式不应触发脏标记自动保存");
 assert.match(js, /document\.body\.classList\.add\("olf-view-mode"\)/, "只读模式应挂载 olf-view-mode 标识");
 assert.match(js, /viewMode \? "查看"/, "只读模式标题应为查看");
-assert.match(js, /if \(viewMode\) \{ teardownSceneComboNavSpy\(\); go\("order-limit\.html"\); return; \}/, "只读模式返回应直接回列表，不弹保存确认");
+assert.match(js, /if \(viewMode\) \{ teardownSceneComboNavSpy\(\); go\(moduleProfile\.routes\.list\); return; \}/, "只读模式返回应直接回当前模块列表，不弹保存确认");
 assert.match(js, /function applyViewMode\(/, "应提供只读态输入禁用逻辑");
 
 // CSS：隐藏保存/下一步/添加商品等操作
