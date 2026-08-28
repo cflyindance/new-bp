@@ -61,8 +61,8 @@ export class HttpMenuDocumentRepository implements MenuDocumentRepository {
   }
 }
 
-export const DEMO_PUBLISHED_KEY = "menusifu:json-menu-editor:published-v3";
-export const DEMO_DRAFT_KEY = "menusifu:json-menu-editor:draft-v3";
+export const DEMO_PUBLISHED_KEY = "menusifu:json-menu-editor:published-v4";
+export const DEMO_DRAFT_KEY = "menusifu:json-menu-editor:draft-v4";
 
 function defaultDemoDocument(): MenuDocument {
   return {

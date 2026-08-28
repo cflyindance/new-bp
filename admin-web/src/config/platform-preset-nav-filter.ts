@@ -17,6 +17,7 @@ import { isMvpProductVersion } from "./product-version";
 import { getModuleSettingsCatalog } from "./module-settings-catalog";
 import { isModuleSettingsPathAllowedByPreset } from "./platform-preset-settings-filter";
 import { getRuntimePresetSelection } from "./platform-preset-runtime-cache";
+import { filterNavModulesBySubscription, isPathAllowedBySubscription } from "./subscription-service-runtime";
 
 export function l2PresetKey(moduleId: string, featureId: string): string {
   return `${moduleId}:${featureId}`;
@@ -72,7 +73,7 @@ export function filterNavModuleByPlatformPreset(m: NavModule): NavModule | null 
 
 export function filterNavModulesByPlatformPreset(modules: NavModule[]): NavModule[] {
   const selection = getActiveSelection();
-  if (!selection) return applyMvpNavPresentationFilters(modules);
+  if (!selection) return filterNavModulesBySubscription(applyMvpNavPresentationFilters(modules));
   let filtered = modules
     .map((m) => {
       if (!isPresetL1EnabledInSelection(selection, m.id)) return null;
@@ -104,7 +105,7 @@ export function filterNavModulesByPlatformPreset(modules: NavModule[]): NavModul
       if (storeList) filtered = [storeList, ...filtered];
     }
   }
-  return applyMvpNavPresentationFilters(filtered);
+  return filterNavModulesBySubscription(applyMvpNavPresentationFilters(filtered));
 }
 
 export function filterSheetSubnavByPlatformPreset(
@@ -143,6 +144,7 @@ function findMatchingL2Child(m: NavModule, path: string): NavItem | undefined {
 
 /** 当前路由是否被平台预设允许（L1 + 可识别 L2） */
 export function isPathAllowedByPlatformPreset(path: string): boolean {
+  if (!isPathAllowedBySubscription(path)) return false;
   if (!isPlatformPresetNavFilterActive()) return true;
   if (isNavHomePath(path)) return true;
   if (path.startsWith("/settings/platform-preset")) return true;
