@@ -202,6 +202,14 @@ export const DEMO_CONFIG_DOMAINS: DeploymentConfigDomain[] = [
     pagePaths: ["/operations/queue-call/menu-order-limits"],
   },
   {
+    domainKey: "foh.buffet-rules",
+    displayName: "自助餐规则",
+    navRefs: [{ l1Key: "queue-call", l2Key: "foh-buffet-rules" }],
+    productLines: ["POS", "Kiosk", "eMenu"],
+    granularity: "store",
+    pagePaths: ["/operations/queue-call/buffet-rules"],
+  },
+  {
     domainKey: "foh.category-settings",
     displayName: "品类管理",
     navRefs: [{ l1Key: "queue-call", l2Key: "qc-category-settings" }],
