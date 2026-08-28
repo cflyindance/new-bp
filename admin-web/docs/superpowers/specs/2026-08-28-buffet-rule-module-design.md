@@ -361,6 +361,10 @@ targetType:
 - 进入全屏时保存并锁定外层 `html`、`body` 的滚动状态；退出全屏、离开自助餐导航、iframe 卸载或页面重新挂载时必须恢复原值。
 - 同一时刻最多允许一个规则 iframe 全屏；切换模块时先释放旧全屏状态。
 - 全屏控制器应由菜单下单限制与自助餐规则共享，两个模块仅配置各自的步骤页集合、列表页名称和 iframe 选择器，不复制状态机。
+- 页面识别采用 fail-safe 分类：editor/publish 集合进入或保持全屏；列表页退出；任何未知页、空白页、错误页、跨域页或无法读取 URL 的情况均安全退出。
+- 共享控制器持有唯一 `ownerFrame` 和 `ownerToken`。只有当前 owner 可以恢复全局滚动状态；非 owner 的退出事件只清理自身样式。新 owner 接管时原子释放旧 owner，再保存全局原始状态并加锁。
+- `enter`、`exit` 和 `teardown` 必须幂等。绑定接口返回 teardown；外层模块卸载、导航切换和重挂载必须显式调用 teardown，移除 load 等事件监听和绑定标记，使旧 iframe 的迟到事件失效。
+- 进入全屏前逐项保存将被修改的 iframe `position/inset/width/height/z-index/background/border` 内联值、`html/body overflow` 及 `scrollX/scrollY`。退出、异常和 teardown 时逐项恢复；原先不存在的属性才删除，并保持外层滚动位置不变。
 
 ## 9. 冲突与叠加规则
 
@@ -544,6 +548,11 @@ Used_i + Q_i <= EffectiveLimit_i
 - 返回地址始终留在自助餐模块；
 - 刷新和草稿恢复不串入菜单下单限制；
 - 两个模块分别创建相同对象规则时互不影响。
+- 自助餐新增、编辑、复制、查看、继续草稿进入 editor 时全屏，publish 页面保持全屏，返回列表时退出。
+- 浏览器前进/后退、离开模块、iframe 移除和外层重挂载均释放全屏；未知页、错误页、`about:blank` 与无法读取 URL 时 fail-safe 退出。
+- 菜单下单限制与自助餐规则快速互切时，旧 iframe 迟到事件不得解除新 owner 的全屏和滚动锁。
+- 重复 load、重复绑定和重复退出保持幂等，不产生重复监听；两个模块必须通过同一共享控制器接入。
+- 验证全屏 iframe 样式及 `html/body` 滚动锁，退出后原始内联样式与 `scrollX/scrollY` 精确恢复，并确保菜单下单限制原全屏流程无回归。
 - standard 订单只命中菜单规则，buffet 订单只命中自助餐规则；业务模式缺失、无 `buffetSessionId` 或中途切换均被阻止；
 - 多标签页刷新与恢复副本按 `draftId` 隔离；
 - 发布失败保留当前版本和草稿，启用冲突被阻止；
