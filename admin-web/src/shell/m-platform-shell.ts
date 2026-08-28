@@ -28,6 +28,16 @@ import {
 import { bindPermissionsRbac, renderPermissionsRbacPage } from "../permissions/rbac-ui";
 import { bindStaffAccountsPage, renderStaffAccountsPage } from "../permissions/staff-accounts-ui";
 import {
+  findSubscriptionAdminPageTitle,
+  isAnySubscriptionAdminPath,
+  isMerchantSubscriptionsPath,
+  isSubscriptionServiceCreatePath,
+  isSubscriptionServicePath,
+  MERCHANT_SUBSCRIPTIONS_PATH,
+  SUBSCRIPTION_SERVICE_ROUTE_PREFIX,
+} from "../config/subscription-service-scope";
+import { bindSubscriptionServicePage, renderSubscriptionServicePage } from "../config/subscription-service-ui";
+import {
   ENTERPRISE_HARDWARE_ROUTE_PREFIX,
   findHardwarePageTitle,
   hardwareHref,
@@ -87,7 +97,7 @@ function readPermissionsNavExpanded(path: string): boolean {
   } catch {
     /* ignore */
   }
-  return isMPlatformPermissionsPath(path);
+  return isMPlatformPermissionsPath(path) && !isAnySubscriptionAdminPath(path);
 }
 
 function readHardwareNavExpanded(path: string): boolean {
@@ -242,7 +252,7 @@ function renderHardwareNav(path: string): string {
 
 function renderPermissionsNav(path: string): string {
   const prefix = ENTERPRISE_RBAC_SCOPE.routePrefix;
-  const permissionsActive = isMPlatformPermissionsPath(path);
+  const permissionsActive = isMPlatformPermissionsPath(path) && !isAnySubscriptionAdminPath(path);
   const expanded = readPermissionsNavExpanded(path);
   const l1Class = permissionsActive
     ? "flex min-h-10 w-full items-center gap-2 rounded-lg bg-primary/10 px-3 py-2 text-sm font-medium text-primary"
@@ -301,6 +311,8 @@ function renderPermissionsNav(path: string): string {
 export function renderMPlatformSidebar(path: string): string {
   const presetActive = isMPlatformPresetPath(path);
   const blueprintActive = isNavBlueprintPath(path);
+  const subscriptionServiceActive = isSubscriptionServicePath(path);
+  const merchantSubscriptionsActive = isMerchantSubscriptionsPath(path);
   const linkClass = (active: boolean) =>
     active
       ? "flex min-h-10 items-center rounded-lg bg-primary/10 px-3 py-2 text-sm font-medium text-primary"
@@ -316,6 +328,12 @@ export function renderMPlatformSidebar(path: string): string {
         <ul class="space-y-0.5" role="list">
           <li>
             <a href="#${NAV_BLUEPRINT_ROUTE_PREFIX}" class="${linkClass(blueprintActive)}">${escapeHtml(t("shell.mPlatformNavBlueprint"))}</a>
+          </li>
+          <li>
+            <a href="#${SUBSCRIPTION_SERVICE_ROUTE_PREFIX}" class="${linkClass(subscriptionServiceActive)}">服务包管理</a>
+          </li>
+          <li>
+            <a href="#${MERCHANT_SUBSCRIPTIONS_PATH}" class="${linkClass(merchantSubscriptionsActive)}">商家订阅</a>
           </li>
           <li>
             <a href="#${M_PLATFORM_PRESET_PATH}" class="${linkClass(presetActive)}">${escapeHtml(t("shell.mPlatformNavPreset"))}</a>
@@ -338,6 +356,7 @@ export function renderMPlatformSidebar(path: string): string {
 function resolveMPlatformPageTitle(path: string): { title: string; module: string } {
   return (
     findNavBlueprintPageTitle(path) ??
+    findSubscriptionAdminPageTitle(path) ??
     findRbacPageTitle(path, ENTERPRISE_RBAC_SCOPE) ??
     findHardwarePageTitle(path) ??
     findMerchantPageTitle(path) ??
@@ -375,6 +394,7 @@ function renderMPlatformHeader(path: string): string {
 
 function renderMPlatformContent(path: string): string {
   if (isNavBlueprintPath(path)) return renderNavBlueprintPage(path);
+  if (isAnySubscriptionAdminPath(path)) return renderSubscriptionServicePage(path);
   if (isMPlatformPermissionsPath(path)) {
     if (path === `${ENTERPRISE_RBAC_SCOPE.routePrefix}/staff-accounts`) {
       return renderStaffAccountsPage(ENTERPRISE_RBAC_SCOPE);
@@ -405,6 +425,9 @@ function renderMPlatformMain(path: string): string {
 }
 
 export function mountMPlatformShell(_onMount: () => void, path: string): string {
+  if (isSubscriptionServiceCreatePath(path)) {
+    return `<div class="relative h-dvh min-h-0 w-full overflow-hidden">${renderSubscriptionServicePage(path)}</div>`;
+  }
   return `
     <div class="relative h-dvh min-h-0 w-full overflow-hidden">
       <div class="flex h-full min-h-0 w-full">
@@ -415,6 +438,11 @@ export function mountMPlatformShell(_onMount: () => void, path: string): string 
 }
 
 export function bindMPlatformShell(onMount: () => void): void {
+  const currentPath = location.hash.slice(1) || NAV_BLUEPRINT_ROUTE_PREFIX;
+  if (isSubscriptionServiceCreatePath(currentPath)) {
+    bindSubscriptionServicePage(onMount);
+    return;
+  }
   if (consumeMPlatformEntryNoticePending()) {
     showMPlatformEntryNoticeDialog();
   }
@@ -508,9 +536,11 @@ export function bindMPlatformShell(onMount: () => void): void {
     });
   });
 
-  const path = location.hash.slice(1) || NAV_BLUEPRINT_ROUTE_PREFIX;
+  const path = currentPath;
   bindNavBlueprint(onMount);
-  if (isMPlatformPermissionsPath(path)) {
+  if (isAnySubscriptionAdminPath(path)) {
+    bindSubscriptionServicePage(onMount);
+  } else if (isMPlatformPermissionsPath(path)) {
     if (path === `${ENTERPRISE_RBAC_SCOPE.routePrefix}/staff-accounts`) {
       bindStaffAccountsPage(ENTERPRISE_RBAC_SCOPE);
     } else {
