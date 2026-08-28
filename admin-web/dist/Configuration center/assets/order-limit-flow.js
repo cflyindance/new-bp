@@ -4481,9 +4481,18 @@
     return null;
   }
 
+  function validateBuffetRuleConflict(draftRule) {
+    if (!isBuffetProfile() || !moduleProfile.conflictPolicy) return null;
+    var excluded = [draftRule.id];
+    if (draftRule.sourceRuleId != null) excluded.push(draftRule.sourceRuleId);
+    return moduleProfile.conflictPolicy.findConflict(draftRule.editorDraft, loadRules(), excluded);
+  }
+
   function publishDraft(draftRule) {
     var deployError = validateDeployStores(draftRule.editorDraft);
     if (deployError) throw new Error(deployError);
+    var conflict = validateBuffetRuleConflict(draftRule);
+    if (conflict) throw new Error("当前商品或分类已存在冲突的自助餐规则");
     var rules = loadRules();
     var draftIndex = rules.findIndex(function (rule) { return String(rule.id) === String(draftRule.id); });
     if (draftIndex < 0) throw new Error("draft missing");
@@ -4510,6 +4519,8 @@
     var draft = draftRule.editorDraft;
     var check = validateAll(draft);
     if (check) { renderErrorState("规则校验未通过", check.message, "返回规则编辑", function () { go(moduleProfile.routes.editor + "?draftId=" + encodeURIComponent(draftRule.id)); }); return; }
+    var conflict = validateBuffetRuleConflict(draftRule);
+    if (conflict) { renderErrorState("规则存在冲突", "同一门店、产线和商品或分类已存在相同或互斥口径的生效规则。", "返回规则编辑", function () { go(moduleProfile.routes.editor + "?draftId=" + encodeURIComponent(draftRule.id)); }); return; }
     if (!draft.deployStoreIds.length) { renderErrorState("尚未选择生效门店", "请先在生效范围中选择至少一家门店。", "返回规则编辑", function () { go(moduleProfile.routes.editor + "?draftId=" + encodeURIComponent(draftRule.id)); }); return; }
     var completion = limitCompletion(draft, draft.deployStoreIds);
     root.innerHTML = '<div class="olf-page">' + renderFlowHeader("确认发布", 100, "", "确认发布") + '<main class="olf-flow-main"><section class="olf-flow-card"><h2>发布前最终确认</h2><p class="olf-help">发布成功后将生成正式版本；仅本次选择的生效门店进入运行快照。</p><div class="olf-summary olf-summary--success"><strong>校验通过：</strong>规则结构、数量、授权和生效门店均完整。</div><section class="olf-section"><div class="olf-review"><div class="olf-review-row"><span>规则名称</span><strong>' + esc(draft.name) + '</strong><span></span></div><div class="olf-review-row"><span>计算方式</span><strong>' + esc(subjectLabel(draft.subject) + " × " + periodLabel(draft.period) + " × " + targetShortLabel(draft.targetType)) + '</strong><span></span></div><div class="olf-review-row"><span>商品范围</span><strong>' + esc(storeProductSummary(draft, draft.deployStoreIds)) + '</strong><span></span></div><div class="olf-review-row"><span>数量矩阵</span><strong>' + completion.complete + ' 个单元格已确认</strong><span></span></div><div class="olf-review-row"><span>生效门店</span><strong>' + esc(namesFor(stores, draft.deployStoreIds)) + '</strong><span></span></div><div class="olf-review-row"><span>授权范围</span><strong>' + esc(draft.authorization.enabled ? draft.authorization.allowedScopes.map(function (scope) { return scope === "operation" ? "本次操作" : scope === "round" ? "当前轮" : "当前订单"; }).join(" / ") : "硬性拒绝") + '</strong><span></span></div></div></section><div class="olf-summary olf-summary--warning"><strong>原子发布：</strong>若任一生效门店发布失败，本次不会形成混合版本，相关门店继续使用上一完整版本。</div></section></main></div>';

@@ -114,6 +114,7 @@
       listFiltersKey: "buffet-rule:rule-list-filters:v1"
     },
     repository: repository,
+    conflictPolicy: window.BuffetRuleDomain || null,
     steps: [
       { title: "规则类型", note: "确定计算口径" },
       { title: "场景配置", note: "人数与轮次区间" },
