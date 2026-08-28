@@ -7,10 +7,12 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const flowPath = path.join(root, "dist/Configuration center/assets/order-limit-flow.js");
 const flow = fs.readFileSync(flowPath, "utf8");
 
-assert.match(flow, /var RULES_KEY = "restaurantRules";/, "菜单规则权威键发生变化");
-assert.match(flow, /var RECOVERY_PREFIX = "restaurantRuleRecovery:";/, "菜单恢复键前缀发生变化");
+assert.match(flow, /rulesKey:\s*"restaurantRules"/, "菜单规则权威键发生变化");
+assert.match(flow, /recoveryPrefix:\s*"restaurantRuleRecovery:"/, "菜单恢复键前缀发生变化");
+assert.match(flow, /var RULES_KEY = moduleProfile\.storage\.rulesKey;/, "规则存储尚未由 Profile 驱动");
+assert.match(flow, /var RECOVERY_PREFIX = moduleProfile\.storage\.recoveryPrefix;/, "恢复存储尚未由 Profile 驱动");
 
-const stepBlock = flow.match(/var steps = \[([\s\S]*?)\n  \];/);
+const stepBlock = flow.match(/steps:\s*\[([\s\S]*?)\n    \]/);
 assert.ok(stepBlock, "找不到菜单规则步骤定义");
 const titles = [...stepBlock[1].matchAll(/title:\s*"([^"]+)"/g)].map((match) => match[1]);
 assert.deepEqual(titles, ["规则类型", "场景配置", "限购数量", "超限授权", "生效范围", "确认发布"]);

@@ -1,8 +1,30 @@
 (function () {
   "use strict";
 
-  var RULES_KEY = "restaurantRules";
-  var RECOVERY_PREFIX = "restaurantRuleRecovery:";
+  var MENU_ORDER_LIMIT_PROFILE = {
+    moduleId: "menu-order-limit",
+    pageTitle: "菜单下单限制",
+    routes: {
+      list: "order-limit.html",
+      editor: "order-limit-rule-editor.html",
+      publishConfirm: "order-limit-publish-confirm.html"
+    },
+    storage: {
+      rulesKey: "restaurantRules",
+      recoveryPrefix: "restaurantRuleRecovery:"
+    },
+    steps: [
+      { title: "规则类型", note: "确定计算口径" },
+      { title: "场景配置", note: "人数与轮次区间" },
+      { title: "限购数量", note: "按门店选品并配置数量" },
+      { title: "超限授权", note: "授权范围与权限" },
+      { title: "生效范围", note: "时间、会员与门店" },
+      { title: "确认发布", note: "复核并下发" }
+    ]
+  };
+  var moduleProfile = window.ORDER_LIMIT_MODULE_PROFILE || MENU_ORDER_LIMIT_PROFILE;
+  var RULES_KEY = moduleProfile.storage.rulesKey;
+  var RECOVERY_PREFIX = moduleProfile.storage.recoveryPrefix;
   var AUTOSAVE_DELAY = 900;
   var root = document.getElementById("orderLimitFlowRoot");
   var page = document.body.getAttribute("data-order-limit-page");
@@ -10,14 +32,7 @@
   var MenuPicker = window.BrandMenuStructurePicker;
   var viewMode = new URLSearchParams(window.location.search).get("view") === "1";
 
-  var steps = [
-    { title: "规则类型", note: "确定计算口径" },
-    { title: "场景配置", note: "人数与轮次区间" },
-    { title: "限购数量", note: "按门店选品并配置数量" },
-    { title: "超限授权", note: "授权范围与权限" },
-    { title: "生效范围", note: "时间、会员与门店" },
-    { title: "确认发布", note: "复核并下发" }
-  ];
+  var steps = moduleProfile.steps;
   var lines = [
     { id: "kiosk", name: "Kiosk" },
     { id: "emenu", name: "eMenu" },
@@ -981,7 +996,7 @@
     params.delete("copy");
     params.set("draftId", String(id));
     if (window.MENUSIFU_EMBEDDED) params.set("embedded", "1");
-    history.replaceState(null, "", "order-limit-rule-editor.html?" + params.toString());
+    history.replaceState(null, "", moduleProfile.routes.editor + "?" + params.toString());
     return draftRule;
   }
 
@@ -3230,7 +3245,7 @@
     try { sessionStorage.removeItem(RECOVERY_PREFIX + draftId); } catch (error) {}
     teardownSceneComboNavSpy();
     closeDialog(false);
-    go("order-limit.html");
+    go(moduleProfile.routes.list);
   }
 
   function normalizeActiveDimensions(draft, requireAddedStore) {
@@ -4110,7 +4125,7 @@
     if (viewMode) {
       rule = initializeViewRule();
       if (!rule) {
-        renderErrorState("规则不存在", "当前规则可能已被删除或归档。", "返回规则列表", function () { go("order-limit.html"); });
+        renderErrorState("规则不存在", "当前规则可能已被删除或归档。", "返回规则列表", function () { go(moduleProfile.routes.list); });
         return;
       }
       document.body.classList.add("olf-view-mode");
@@ -4120,7 +4135,7 @@
         return;
       }
       if (!rule) {
-        renderErrorState("规则不存在", "当前规则可能已被删除或归档。", "返回规则列表", function () { go("order-limit.html"); });
+        renderErrorState("规则不存在", "当前规则可能已被删除或归档。", "返回规则列表", function () { go(moduleProfile.routes.list); });
         return;
       }
     }
@@ -4240,13 +4255,13 @@
     });
     document.getElementById("headerSaveButton").addEventListener("click", function () { if (saveEditorDraft(true)) toast("草稿已保存"); });
     document.getElementById("backButton").addEventListener("click", function () {
-      if (viewMode) { teardownSceneComboNavSpy(); go("order-limit.html"); return; }
+      if (viewMode) { teardownSceneComboNavSpy(); go(moduleProfile.routes.list); return; }
       var isEditingExistingRule = editorState.rule.sourceRuleId != null;
       if (!isEditingExistingRule && !saveEditorDraft(true)) return;
       var leaveEditor = function () {
         closeDialog(false);
         teardownSceneComboNavSpy();
-        go("order-limit.html");
+        go(moduleProfile.routes.list);
       };
       var confirmLeave = function () {
         if (isEditingExistingRule) {
@@ -4292,7 +4307,7 @@
       if (!saveEditorDraft(true)) return;
       var leaveEditor = function () {
         teardownSceneComboNavSpy();
-        go("order-limit.html");
+        go(moduleProfile.routes.list);
       };
       var confirmLeave = function () {
         openDialog("保存草稿并返回？", "草稿会保留在规则列表中，不会下发或影响门店当前版本。", "保存并返回", function () { leaveEditor(); });
@@ -4314,7 +4329,7 @@
       var check = validateAll(draft);
       if (check) { editorState.stepErrors[check.step] = check.message; toast(check.message, true); goToEditorStep(check.step, true); return; }
       if (!saveEditorDraft(true)) return;
-      go("order-limit-publish-confirm.html?draftId=" + encodeURIComponent(editorState.rule.id));
+      go(moduleProfile.routes.publishConfirm + "?draftId=" + encodeURIComponent(editorState.rule.id));
     });
     document.getElementById("dialogCancel").addEventListener("click", cancelDialog);
     document.getElementById("dialogSecondary").addEventListener("click", function () {
@@ -4362,7 +4377,7 @@
 
   function mountStores() {
     var draftRule = getDraftFromParams();
-    if (!draftRule) { go("order-limit.html"); return; }
+    if (!draftRule) { go(moduleProfile.routes.list); return; }
     var draft = draftRule.editorDraft;
     var highestStep = Math.max(1, Math.min(7, Number(draft.highestStep) || 1));
     var currentStep = Math.max(1, Math.min(highestStep, Number(draft.currentStep) || 1));
@@ -4373,7 +4388,7 @@
       renderErrorState("无法返回规则编辑", "草稿保存失败，请重试。", "重试", function () { window.location.reload(); });
       return;
     }
-    go("order-limit-rule-editor.html?draftId=" + encodeURIComponent(draftRule.id));
+    go(moduleProfile.routes.editor + "?draftId=" + encodeURIComponent(draftRule.id));
   }
 
   function validateDeployStores(draft) {
@@ -4412,14 +4427,14 @@
 
   function mountPublish() {
     var draftRule = getDraftFromParams();
-    if (!draftRule) { renderErrorState("草稿不存在", "请返回规则列表重新进入。", "返回规则列表", function () { go("order-limit.html"); }); return; }
+    if (!draftRule) { renderErrorState("草稿不存在", "请返回规则列表重新进入。", "返回规则列表", function () { go(moduleProfile.routes.list); }); return; }
     var draft = draftRule.editorDraft;
     var check = validateAll(draft);
-    if (check) { renderErrorState("规则校验未通过", check.message, "返回规则编辑", function () { go("order-limit-rule-editor.html?draftId=" + encodeURIComponent(draftRule.id)); }); return; }
-    if (!draft.deployStoreIds.length) { renderErrorState("尚未选择生效门店", "请先在生效范围中选择至少一家门店。", "返回规则编辑", function () { go("order-limit-rule-editor.html?draftId=" + encodeURIComponent(draftRule.id)); }); return; }
+    if (check) { renderErrorState("规则校验未通过", check.message, "返回规则编辑", function () { go(moduleProfile.routes.editor + "?draftId=" + encodeURIComponent(draftRule.id)); }); return; }
+    if (!draft.deployStoreIds.length) { renderErrorState("尚未选择生效门店", "请先在生效范围中选择至少一家门店。", "返回规则编辑", function () { go(moduleProfile.routes.editor + "?draftId=" + encodeURIComponent(draftRule.id)); }); return; }
     var completion = limitCompletion(draft, draft.deployStoreIds);
     root.innerHTML = '<div class="olf-page">' + renderFlowHeader("确认发布", 100, "", "确认发布") + '<main class="olf-flow-main"><section class="olf-flow-card"><h2>发布前最终确认</h2><p class="olf-help">发布成功后将生成正式版本；仅本次选择的生效门店进入运行快照。</p><div class="olf-summary olf-summary--success"><strong>校验通过：</strong>规则结构、数量、授权和生效门店均完整。</div><section class="olf-section"><div class="olf-review"><div class="olf-review-row"><span>规则名称</span><strong>' + esc(draft.name) + '</strong><span></span></div><div class="olf-review-row"><span>计算方式</span><strong>' + esc(subjectLabel(draft.subject) + " × " + periodLabel(draft.period) + " × " + targetShortLabel(draft.targetType)) + '</strong><span></span></div><div class="olf-review-row"><span>商品范围</span><strong>' + esc(storeProductSummary(draft, draft.deployStoreIds)) + '</strong><span></span></div><div class="olf-review-row"><span>数量矩阵</span><strong>' + completion.complete + ' 个单元格已确认</strong><span></span></div><div class="olf-review-row"><span>生效门店</span><strong>' + esc(namesFor(stores, draft.deployStoreIds)) + '</strong><span></span></div><div class="olf-review-row"><span>授权范围</span><strong>' + esc(draft.authorization.enabled ? draft.authorization.allowedScopes.map(function (scope) { return scope === "operation" ? "本次操作" : scope === "round" ? "当前轮" : "当前订单"; }).join(" / ") : "硬性拒绝") + '</strong><span></span></div></div></section><div class="olf-summary olf-summary--warning"><strong>原子发布：</strong>若任一生效门店发布失败，本次不会形成混合版本，相关门店继续使用上一完整版本。</div></section></main></div>';
-    document.getElementById("flowBackButton").addEventListener("click", function () { go("order-limit-rule-editor.html?draftId=" + encodeURIComponent(draftRule.id)); });
+    document.getElementById("flowBackButton").addEventListener("click", function () { go(moduleProfile.routes.editor + "?draftId=" + encodeURIComponent(draftRule.id)); });
     document.getElementById("flowPrimaryButton").addEventListener("click", function () {
       var button = this;
       button.disabled = true;
@@ -4430,7 +4445,7 @@
           publishDraft(draftRule);
           button.textContent = "发布成功";
           toast("规则已发布");
-          window.setTimeout(function () { go("order-limit.html"); }, 500);
+          window.setTimeout(function () { go(moduleProfile.routes.list); }, 500);
         } catch (error) {
           button.disabled = false;
           button.classList.remove("is-loading");
