@@ -145,6 +145,9 @@
   }
 
   function loadRules() {
+    if (moduleProfile.repository && typeof moduleProfile.repository.loadRules === "function") {
+      try { return moduleProfile.repository.loadRules(); } catch (error) { return []; }
+    }
     var rules;
     try {
       var parsed = JSON.parse(localStorage.getItem(RULES_KEY) || "[]");
@@ -161,6 +164,10 @@
   }
 
   function saveRules(rules) {
+    if (moduleProfile.repository && typeof moduleProfile.repository.saveRules === "function") {
+      moduleProfile.repository.saveRules(rules);
+      return;
+    }
     localStorage.setItem(RULES_KEY, JSON.stringify(rules));
   }
 
