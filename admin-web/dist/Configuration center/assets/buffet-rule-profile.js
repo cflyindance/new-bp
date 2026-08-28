@@ -4,6 +4,16 @@
   var REPOSITORY_KEY = "buffet-rule:repository:v1";
   var LOCK_KEY = "buffet-rule:repository-lock:v1";
   var LOCK_TTL = 3000;
+  var DEFAULT_SCENARIOS = [
+    { key: "order|order_lifetime|category", subject: "order", period: "order_lifetime", targetType: "category", name: "按桌/订单·每单/整单累计·按分类限购" },
+    { key: "order|order_lifetime|dish", subject: "order", period: "order_lifetime", targetType: "dish", name: "按桌/订单·每单/整单累计·按菜品限购" },
+    { key: "party_size|order_lifetime|category", subject: "party_size", period: "order_lifetime", targetType: "category", name: "按人数·每单·按分类限购" },
+    { key: "party_size|order_lifetime|dish", subject: "party_size", period: "order_lifetime", targetType: "dish", name: "按人数·每单·按菜品限购" },
+    { key: "party_size|per_round|category", subject: "party_size", period: "per_round", targetType: "category", name: "按人数·每轮·按分类限购" },
+    { key: "party_size|per_round|dish", subject: "party_size", period: "per_round", targetType: "dish", name: "按人数·每轮·按菜品限购" },
+    { key: "party_size|multi_round|category", subject: "party_size", period: "multi_round", targetType: "category", name: "按人数·分轮次·按分类限购" },
+    { key: "party_size|multi_round|dish", subject: "party_size", period: "multi_round", targetType: "dish", name: "按人数·分轮次·按菜品限购" }
+  ];
 
   function clone(value) {
     return JSON.parse(JSON.stringify(value));
@@ -75,11 +85,77 @@
         conflict.code = "BUFFET_REPOSITORY_REVISION_CONFLICT";
         throw conflict;
       }
-      var next = normalizeEnvelope(mutator(clone(current)) || current);
+      var mutated = mutator(clone(current));
+      if (mutated === false) return clone(current);
+      var next = normalizeEnvelope(mutated || current);
       next.revision = current.revision + 1;
       localStorage.setItem(REPOSITORY_KEY, JSON.stringify(next));
       return clone(next);
     });
+  }
+
+  function scenarioKey(rule) {
+    if (!rule || (rule.status !== "active" && rule.status !== "disabled")) return "";
+    var draft = rule.authoringConfig || rule.authoringDraft || rule.editorDraft || rule;
+    var key = [draft.subject, draft.period, draft.targetType].join("|");
+    return DEFAULT_SCENARIOS.some(function (scenario) { return scenario.key === key; }) ? key : "";
+  }
+
+  function missingScenarios(rules) {
+    var covered = {};
+    (rules || []).forEach(function (rule) { var key = scenarioKey(rule); if (key) covered[key] = true; });
+    return DEFAULT_SCENARIOS.filter(function (scenario) { return !covered[scenario.key]; });
+  }
+
+  function nextNumericId(envelope) {
+    return envelope.rules.concat(envelope.drafts).reduce(function (max, rule) {
+      var id = Number(rule && rule.id);
+      return Number.isFinite(id) ? Math.max(max, id) : max;
+    }, 0) + 1;
+  }
+
+  function today() {
+    var now = new Date();
+    return now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0") + "-" + String(now.getDate()).padStart(2, "0");
+  }
+
+  function createDefaultScenarioRule(scenario, id) {
+    var created = today();
+    var draft = {
+      currentStep: 1, highestStep: 1,
+      subject: scenario.subject, period: scenario.period, targetType: scenario.targetType,
+      name: scenario.name, description: "",
+      structureByLine: { kiosk: [], emenu: [], sdi: [] }, productLines: [], targetIds: [],
+      partyRanges: [{ min: 1, max: null }], roundRanges: [{ min: 1, max: null }],
+      limits: {}, activePartyIndex: 0, activeRoundIndex: 0, activeLineId: "kiosk",
+      conditions: {
+        effectiveFrom: created, effectiveTo: "", activityCycle: "weekly",
+        daysOfWeek: [1, 2, 3, 4, 5, 6, 7], daysOfMonth: [],
+        businessHourSlots: [{ id: "dinner", mode: "full", from: "", to: "" }],
+        businessHourSetupMode: "all_full", businessHour: "dinner", businessHourTimeMode: "full",
+        businessHourFrom: "", businessHourTo: "", memberMode: "all", memberLevelIds: [], childCountPolicy: "inherit"
+      },
+      authorization: {
+        enabled: true, allowedScopes: ["operation", "round", "order"], defaultScope: "round",
+        scopePermissions: { operation: "值班经理", round: "主管", order: "店长" }, reasonRequired: true
+      },
+      participatingStoreIds: [], activeStoreId: "", storeConfigs: {}, deployStoreIds: [], deployExcludedStoreIds: [],
+      deploymentSelectionVersion: 1,
+      legacyCompatibilityFallback: { structureByLine: { kiosk: [], emenu: [], sdi: [] }, productLines: [], targetIds: [], limits: {} },
+      productQuantityMergedVersion: 2
+    };
+    return {
+      id: id, name: scenario.name, description: "", status: "disabled", created: created, updatedAt: new Date().toISOString(),
+      origin: "system_default", defaultScenarioKey: scenario.key, publishedSnapshotVersion: null,
+      type: scenario.subject === "party_size" ? "按人数限购" : "按桌/订单限购",
+      round: scenario.period === "multi_round" ? "分轮次" : scenario.period === "per_round" ? "每轮" : "每单/整单累计",
+      method: scenario.targetType === "dish" ? "按每种菜品限购" : "按每个分类限购",
+      persons: "1 人及以上", dishes: "未配置门店/产线", selectedCategories: [], selectedDishes: [],
+      structureByLine: clone(draft.structureByLine), quantitySettings: {}, personRanges: [],
+      productLines: [], limits: [], conditions: clone(draft.conditions), authorization: clone(draft.authorization),
+      participatingStoreIds: [], activeStoreId: "", storeConfigs: {}, deployStoreIds: [], deployExcludedStoreIds: [],
+      legacyCompatibilityFallback: clone(draft.legacyCompatibilityFallback), authoringConfig: clone(draft), editorDraft: clone(draft)
+    };
   }
 
   var repository = {
@@ -89,6 +165,19 @@
     loadRules: function () {
       var envelope = readEnvelope();
       return clone(envelope.rules.concat(envelope.drafts));
+    },
+    loadForAuthoringList: function (factory) {
+      if (typeof factory !== "function") throw new Error("BUFFET_DEFAULT_RULE_FACTORY_REQUIRED");
+      var initial = readEnvelope();
+      if (!missingScenarios(initial.rules).length) return clone(initial.rules.concat(initial.drafts));
+      var updated = mutateEnvelope(null, function (next) {
+        var missing = missingScenarios(next.rules);
+        if (!missing.length) return false;
+        var id = nextNumericId(next);
+        missing.forEach(function (scenario) { next.rules.push(factory(clone(scenario), id++)); });
+        return next;
+      });
+      return clone(updated.rules.concat(updated.drafts));
     },
     saveRules: function (records) {
       return mutateEnvelope(null, function (next) {
@@ -130,6 +219,8 @@
       listFiltersKey: "buffet-rule:rule-list-filters:v1"
     },
     repository: repository,
+    defaultScenarios: clone(DEFAULT_SCENARIOS),
+    createDefaultScenarioRule: createDefaultScenarioRule,
     conflictPolicy: window.BuffetRuleDomain || null,
     steps: [
       { title: "规则类型", note: "确定计算口径" },
