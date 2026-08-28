@@ -31,7 +31,7 @@ assert.match(source, /确认批量删除商品/);
 assert.match(source, /确认移除商品/);
 
 const listRenderer = source.match(/function renderLimitRuleList\(draft\)[\s\S]*?(?=\n  function syncLimitRuleSelectAllState)/)?.[0] ?? "";
-assert.match(listRenderer, /isBuffetProfile\(\) \? ""/, "自助餐数量列表应隐藏人数筛选");
+assert.match(listRenderer, /showsPartyDimension\(draft\)/, "按人数自助餐规则应展示人数筛选与矩阵维度");
 assert.match(listRenderer, /quantityColumnLabel\(draft\)/);
 assert.doesNotMatch(listRenderer, /设为不限制|设为禁止|实际限额/);
 

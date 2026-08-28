@@ -142,14 +142,46 @@
     return range ? Number(range.limit) : NaN;
   }
 
+  function matchingRangeIndex(ranges, value) {
+    var matches = (ranges || []).reduce(function (indexes, range, index) {
+      if (Number.isInteger(value) && value >= Number(range.min) && (range.max == null || value <= Number(range.max))) indexes.push(index);
+      return indexes;
+    }, []);
+    return matches.length === 1 ? matches[0] : -1;
+  }
+
+  function matrixLimit(rule, partySize, roundNo) {
+    var partyIndex = matchingRangeIndex(rule.partyRanges, partySize);
+    if (partyIndex < 0) return { valid: false, code: "PARTY_RANGE_INVALID" };
+    var roundIndex = 0;
+    if (rule.period === "multi_round") {
+      roundIndex = matchingRangeIndex(rule.roundRanges, roundNo);
+      if (roundIndex < 0) return { valid: false, code: "ROUND_RANGE_INVALID" };
+    }
+    var row = rule.limitMatrix && rule.limitMatrix[partyIndex];
+    var limit = row && Number(row[roundIndex]);
+    return Number.isInteger(limit) && limit >= 0
+      ? { valid: true, value: limit }
+      : { valid: false, code: "LIMIT_INVALID" };
+  }
+
   function effectiveLimit(rule, context) {
     if ((rule.period === "per_round" || rule.period === "multi_round") && (!Number.isInteger(context.roundNo) || context.roundNo < 1)) {
       return { valid: false, code: "ROUND_REQUIRED" };
     }
-    var configured = limitForRound(rule, context.roundNo);
-    if (!Number.isInteger(configured) || configured < 0) return { valid: false, code: "LIMIT_INVALID" };
+    if (rule.subject === "party_size" && (!Number.isInteger(context.partySize) || context.partySize < 1)) {
+      return { valid: false, code: "PARTY_SIZE_REQUIRED" };
+    }
+    var configured;
+    if (rule.subject === "party_size" && Array.isArray(rule.partyRanges)) {
+      var selected = matrixLimit(rule, context.partySize, context.roundNo);
+      if (!selected.valid) return selected;
+      configured = selected.value;
+    } else {
+      configured = limitForRound(rule, context.roundNo);
+      if (!Number.isInteger(configured) || configured < 0) return { valid: false, code: "LIMIT_INVALID" };
+    }
     if (rule.subject === "order") return { valid: true, value: configured };
-    if (!Number.isInteger(context.partySize) || context.partySize < 1) return { valid: false, code: "PARTY_SIZE_REQUIRED" };
     return { valid: true, value: configured * context.partySize };
   }
 
@@ -203,6 +235,7 @@
     findConflict: findConflict,
     validateAuthorizationCredential: validateAuthorizationCredential,
     selectRuntimeModule: selectRuntimeModule,
+    matchingRangeIndex: matchingRangeIndex,
     effectiveLimit: effectiveLimit,
     evaluateBatch: evaluateBatch,
     compileRuntimeRules: compileRuntimeRules
