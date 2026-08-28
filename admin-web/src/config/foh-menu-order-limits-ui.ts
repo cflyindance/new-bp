@@ -44,6 +44,7 @@ import {
   renderViewonlyDishRulePanelHtml,
 } from "./module-settings-viewonly-dish-rules-ui";
 import { renderSettingTitleWithHelpHtml, bindModuleSettingSceneDescHelp } from "./module-settings-scene-desc-help-ui";
+import { bindRuleIframeFullscreen, releaseRuleIframeFullscreen } from "./rule-iframe-fullscreen";
 
 export const MENU_ORDER_LIMITS_BASE = "/operations/queue-call/menu-order-limits";
 
@@ -60,9 +61,7 @@ const ORDER_LIMIT_FULLSCREEN_PAGES = new Set([
   "order-limit-publish-confirm.html",
 ]);
 const ORDER_LIMIT_LIST_PAGE = "order-limit.html";
-
-let activeOrderLimitFullscreenFrame: HTMLIFrameElement | null = null;
-let orderLimitDocumentOverflow: { html: string; body: string } | null = null;
+let menuOrderLimitFullscreenTeardown: (() => void) | null = null;
 
 const MENU_ORDER_LIMIT_DISH_RULE_SEQS = [
   MENU_ORDER_LIMIT_DISH_MUTEX_SEQ,
@@ -182,88 +181,19 @@ function escapeHtml(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
-function readIframePageName(frame: HTMLIFrameElement): string | null {
-  try {
-    const pathname = frame.contentWindow?.location.pathname;
-    if (!pathname) return null;
-    return pathname.split("/").filter(Boolean).pop() ?? null;
-  } catch {
-    return null;
-  }
-}
-
-function setOrderLimitIframeFullscreen(frame: HTMLIFrameElement, fullscreen: boolean): void {
-  if (fullscreen) {
-    if (activeOrderLimitFullscreenFrame && activeOrderLimitFullscreenFrame !== frame) {
-      setOrderLimitIframeFullscreen(activeOrderLimitFullscreenFrame, false);
-    }
-    if (!orderLimitDocumentOverflow) {
-      orderLimitDocumentOverflow = {
-        html: document.documentElement.style.overflow,
-        body: document.body.style.overflow,
-      };
-    }
-    activeOrderLimitFullscreenFrame = frame;
-    frame.dataset.orderLimitFullscreen = "1";
-    Object.assign(frame.style, {
-      position: "fixed",
-      inset: "0",
-      width: "100vw",
-      height: "100vh",
-      zIndex: "2147483000",
-      background: "#f5f6f7",
-      border: "0",
-    });
-    document.documentElement.style.overflow = "hidden";
-    document.body.style.overflow = "hidden";
-    return;
-  }
-
-  delete frame.dataset.orderLimitFullscreen;
-  frame.style.removeProperty("position");
-  frame.style.removeProperty("inset");
-  frame.style.removeProperty("width");
-  frame.style.removeProperty("height");
-  frame.style.removeProperty("z-index");
-  frame.style.removeProperty("background");
-  frame.style.removeProperty("border");
-  if (activeOrderLimitFullscreenFrame === frame) activeOrderLimitFullscreenFrame = null;
-  if (orderLimitDocumentOverflow) {
-    document.documentElement.style.overflow = orderLimitDocumentOverflow.html;
-    document.body.style.overflow = orderLimitDocumentOverflow.body;
-    orderLimitDocumentOverflow = null;
-  }
-}
-
 export function releaseFohMenuOrderLimitsFullscreen(): void {
-  if (activeOrderLimitFullscreenFrame) {
-    setOrderLimitIframeFullscreen(activeOrderLimitFullscreenFrame, false);
-  } else if (orderLimitDocumentOverflow) {
-    document.documentElement.style.overflow = orderLimitDocumentOverflow.html;
-    document.body.style.overflow = orderLimitDocumentOverflow.body;
-    orderLimitDocumentOverflow = null;
-  }
+  menuOrderLimitFullscreenTeardown?.();
+  menuOrderLimitFullscreenTeardown = null;
+  releaseRuleIframeFullscreen();
 }
 
 function bindOrderLimitFullscreenFlow(root: HTMLElement): void {
-  const frame = root.querySelector<HTMLIFrameElement>("[data-menu-order-limit-frame]");
-  if (!frame || frame.dataset.orderLimitFullscreenBound === "1") return;
-  frame.dataset.orderLimitFullscreenBound = "1";
-
-  const sync = (): void => {
-    const pageName = readIframePageName(frame);
-    if (!pageName) return;
-    if (ORDER_LIMIT_FULLSCREEN_PAGES.has(pageName)) {
-      setOrderLimitIframeFullscreen(frame, true);
-      return;
-    }
-    if (pageName === ORDER_LIMIT_LIST_PAGE) {
-      setOrderLimitIframeFullscreen(frame, false);
-    }
-  };
-
-  frame.addEventListener("load", sync);
-  sync();
+  menuOrderLimitFullscreenTeardown?.();
+  menuOrderLimitFullscreenTeardown = bindRuleIframeFullscreen(root, {
+    frameSelector: "[data-menu-order-limit-frame]",
+    fullscreenPages: ORDER_LIMIT_FULLSCREEN_PAGES,
+    listPage: ORDER_LIMIT_LIST_PAGE,
+  });
 }
 
 export function isMenuOrderLimitsPath(path: string): boolean {

@@ -721,7 +721,11 @@ import {
   releaseFohMenuOrderLimitsFullscreen,
   renderFohMenuOrderLimitsPanel,
 } from "./config/foh-menu-order-limits-ui";
-import { renderFohBuffetRulesPanel } from "./config/foh-buffet-rules-ui";
+import {
+  bindFohBuffetRulesUi,
+  releaseFohBuffetRulesFullscreen,
+  renderFohBuffetRulesPanel,
+} from "./config/foh-buffet-rules-ui";
 import {
   bindPointsDishAuthOrderUi,
   isPointsDishAuthOrderSeq,
@@ -11962,6 +11966,7 @@ function mountLoginShell(): void {
 
 function mount(): void {
   releaseFohMenuOrderLimitsFullscreen();
+  releaseFohBuffetRulesFullscreen();
   bindChainBrandOrgSyncListener();
   normalizeTabModuleHashes();
   applyUiLocaleToDocument(getUiLocale());
@@ -12921,6 +12926,7 @@ function mount(): void {
     replaceHashPath(getMenuOrderLimitTabHref(tab));
     mount();
   });
+  bindFohBuffetRulesUi();
   bindDeviceManagementPaymentHardware();
   bindDeviceManagementFiscalHardware();
   bindDeviceManagementCallerIdHardware();
