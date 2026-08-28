@@ -45,7 +45,7 @@
 自助餐规则
 ```
 
-建议路由：
+确定路由契约：
 
 ```text
 列表页：buffet-rule.html
@@ -62,6 +62,8 @@ order-limit-publish-confirm.html
 ```
 
 所有返回、编辑、复制、查看和发布跳转必须从当前模块配置读取，不得在共享引擎中写死 `order-limit*.html`。
+
+主应用必须新增稳定导航节点 `foh-buffet-rules`，其 iframe 入口固定为 `dist/Configuration center/buffet-rule.html?embedded=1`。编辑页和发布页透传 `embedded=1`、`mode`、`draftId`、`ruleId` 等既有查询参数；全屏打开时只去除 `embedded`，不得改变资源路径或数据空间。
 
 ## 4. 共享引擎与独立配置
 
@@ -104,20 +106,50 @@ BUFFET_RULE_PROFILE
 
 `MENU_ORDER_LIMIT_PROFILE` 保持现状；`BUFFET_RULE_PROFILE` 只开放本设计定义的 8 种组合。
 
-## 5. 数据隔离
+## 5. 数据隔离与发布存储
 
-建议自助餐规则使用独立且版本化的存储键：
+### 5.1 权威存储表
+
+| 模块 | Storage | 完整键 | 值与读写方 |
+| --- | --- | --- | --- |
+| 菜单下单限制正式规则 | `localStorage` | `restaurantRules` | 既有规则数组；仅 `MENU_ORDER_LIMIT_PROFILE` 读写 |
+| 菜单下单限制恢复副本 | `sessionStorage` | `restaurantRuleRecovery:{draftId}` | 既有编辑恢复数据；仅既有编辑器读写 |
+| 自助餐规则数据仓 | `localStorage` | `buffet-rule:repository:v1` | `BUFFET_RULE_PROFILE` 独占的版本化 envelope |
+| 自助餐编辑恢复副本 | `sessionStorage` | `buffet-rule:recovery:v1:{draftId}` | 单个草稿的临时恢复数据 |
+| 自助餐列表列偏好 | `localStorage` | `buffet-rule:rule-list-columns:v1` | 列显示与顺序 |
+| 自助餐列表筛选 | `sessionStorage` | `buffet-rule:rule-list-filters:v1` | 当前标签页筛选状态 |
+
+`MENU_ORDER_LIMIT_PROFILE` 必须继续使用 `restaurantRules` 和 `restaurantRuleRecovery:{draftId}` 等现有键，不迁移、不改名、不归一化写回。自助餐模块初始化时不得扫描或复制菜单下单限制数据。
+
+### 5.2 自助餐仓库与原子发布
+
+自助餐正式规则、草稿、不可变发布版本和当前版本指针必须位于同一个 envelope 中：
 
 ```text
-buffet-rule:rules:v1
-buffet-rule:drafts:v1
-buffet-rule:recovery:v1
-buffet-rule:rule-list-columns:v1
-buffet-rule:rule-list-filters:v1
-buffet-rule:published-snapshots:v1
+{
+  schemaVersion: 1,
+  revision: number,
+  rules: RuleSummary[],
+  drafts: Draft[],
+  snapshots: Record<snapshotId, PublishedSnapshot>,
+  currentSnapshotId: string | null
+}
 ```
 
-菜单下单限制继续使用自己的 `order-limit:*` 数据空间。
+一次发布先在内存中完成校验并构造完整新 envelope，随后只调用一次 `localStorage.setItem` 覆盖 `buffet-rule:repository:v1`。写入失败时旧值保持权威，列表和运行时继续读取 `currentSnapshotId` 指向的上一完整快照。损坏 JSON、未知 `schemaVersion` 或指针缺失时不得自动覆盖：列表进入只读错误态，编辑器提供返回和导出诊断，不向任何存储写回。
+
+正式规则状态机：
+
+```text
+草稿 --发布--> active/disabled 正式规则 + 新快照
+正式规则 --编辑--> 带 sourceRuleId 的派生草稿
+派生草稿 --发布--> 替换 sourceRuleId 对应规则 + 新快照
+正式规则 --复制--> 无 sourceRuleId 的新草稿
+active <--> disabled（每次切换先校验并生成新快照）
+正式规则 --删除--> 删除规则 + 新快照
+```
+
+快照包含 `snapshotId`、单调递增 `version`、`createdAt` 和完整可运行规则集；至少保留当前版本和上一完整版本。运行时只读取 `currentSnapshotId` 对应的不可变快照，列表读取 envelope 中的 `rules` 与 `drafts`。恢复副本仅用于编辑器崩溃恢复，不属于发布事务。
 
 硬隔离要求：
 
@@ -151,6 +183,17 @@ targetType:
 - `partyRanges` 固定为 `[{ min: 1, max: null }]`，只作为共享数量键的底层占位；
 - 页面不展示、不允许编辑人数区间；
 - 只有 `multi_round` 展示并保存 `roundRanges`。
+
+规则必须携带 `schemaVersion: 1`。加载时执行幂等 normalizer，但仅作用于内存；非法数据不得自动写回。字段切换规则如下：
+
+| 操作 | 数据处理 |
+| --- | --- |
+| 切换 `subject` 或 `period` | 用户确认后清空数量矩阵，保留门店与所选商品 |
+| 切换 `targetType` | 用户确认后清空所选商品及数量矩阵 |
+| 修改已有 `roundRanges` | 用户确认后清空数量矩阵 |
+| 从 `multi_round` 切换为其他周期 | 保存时移除 `roundRanges` |
+
+列表遇到非法规则时显示“数据异常”且禁用启用/发布；查看为只读诊断；编辑进入修复模式；复制必须先通过结构校验。任何异常处理不得污染原存储。
 
 ### 6.2 八种合法组合
 
@@ -262,6 +305,10 @@ targetType:
 - 第 6 步展示自助餐规则计算方式、商品范围、数量完成度、门店和授权范围；
 - 发布采用原子发布语义。
 
+生效范围以菜单下单限制现行 `Conditions` 契约为规范性基线，字段覆盖参与门店、日期区间、营业时段（含跨午夜）、会员等级和儿童是否计入有效人数。匹配使用门店时区；日期按门店营业日边界判断，跨午夜时段归属其开始营业日；运行时以提交操作时的订单与会员快照判断。自助餐模块复制字段结构和校验器，但存储值仍位于自助餐规则 envelope 内。
+
+授权凭证至少绑定：`ruleRefs`（规则 ID 与版本）、门店、订单、`operationId`、请求摘要、`roundNo`、授权范围和员工权限。一次请求命中的每条超限规则都必须被凭证覆盖；未覆盖的任一规则继续阻止。本次操作凭证在成功提交后消费，当前轮凭证在换轮或关单时失效，当前订单凭证在关单或任一相关规则版本变化时失效。授权后数量仍计入 `Used`，授权只绕过额度，不绕过人数/轮次缺失、售罄、停售、生效范围或其他业务校验，并必须记录审计。
+
 ## 8. 列表页与通用操作
 
 自助餐规则列表参照菜单下单限制，支持：
@@ -278,15 +325,27 @@ targetType:
 
 ## 9. 冲突与叠加规则
 
-冲突判断边界：
+冲突检查是表驱动纯函数，输入至少包含：模块、门店 ID、产线 ID、对象类型、对象 ID、`subject`、`period`、生效日期/时段/会员范围、状态、草稿 ID、规则 ID 和 `sourceRuleId`。对象在不同产线的商品身份不同，冲突键包含产线 ID；同一分类跨产线也分别判断。
 
-```text
-模块 = buffet-rule
-+ 门店 ID
-+ 对象类型
-+ 对象 ID
-+ 规则口径
-```
+判定顺序：
+
+1. 只查询 `buffet-rule` 模块，不跨模块；
+2. 排除当前草稿自身及编辑来源 `sourceRuleId`；
+3. 草稿和 `disabled` 正式规则不参与硬冲突，`active` 规则参与；
+4. 门店、产线、对象类型和对象 ID 必须相同；
+5. 生效日期、营业时段与会员范围均存在交集时，才继续判断口径；
+6. 按下表判断允许叠加或冲突。
+
+口径枚举为 `order_lifetime`、`party_order_lifetime`、`party_per_round`、`party_multi_round`。
+
+| 已有口径 × 候选口径 | 整单固定 | 每人每单 | 每人每轮 | 每人分轮次 |
+| --- | --- | --- | --- | --- |
+| 整单固定 | 冲突 | 允许 | 允许 | 允许 |
+| 每人每单 | 允许 | 冲突 | 允许 | 允许 |
+| 每人每轮 | 允许 | 允许 | 冲突 | 冲突 |
+| 每人分轮次 | 允许 | 允许 | 冲突 | 冲突 |
+
+分类规则和分类下单菜品规则因对象类型不同允许叠加；运行时两条规则分别计算并取更严格结果。
 
 ### 9.1 允许叠加
 
@@ -302,11 +361,12 @@ targetType:
 - 同一对象重复配置按桌/订单整单上限；
 - 同一对象重复配置按人数每单；
 - 同一对象重复配置按人数每轮；
+- 同一对象重复配置按人数分轮次；
 - 同一对象同时配置按人数每轮和按人数分轮次；
 - 分轮次规则内部区间重叠；
 - 同一规则内重复选择同门店、同对象。
 
-冲突在保存草稿和发布前均检查。服务员授权不能绕过规则配置冲突。
+草稿只要求结构可持久化：候选冲突键完整时显示非阻塞提示，不阻止自动保存或离开。发布、启用和恢复历史版本时执行同一套硬冲突检查；编辑发布排除自身与 `sourceRuleId`。服务员授权不能绕过规则配置冲突。
 
 ## 10. 运行时计算
 
@@ -317,7 +377,7 @@ targetType:
 按人数：EffectiveLimit = L × N
 ```
 
-每条规则校验：
+一次用户操作先将所有新增明细（包含套餐展开后的受控子项）按每条命中规则聚合为 `Q_i`，再整体校验：
 
 ```text
 Used_i + Q <= EffectiveLimit_i
@@ -326,8 +386,10 @@ Used_i + Q <= EffectiveLimit_i
 多条规则同时命中：
 
 ```text
-最终可追加数量 = min(EffectiveLimit_i - Used_i)
+最终可追加数量 = max(0, min_i(EffectiveLimit_i - Used_i))
 ```
+
+无命中规则时不限制。所有命中规则同时通过后，整批明细与计数使用同一订单版本原子提交；任一失败则整批不写入。请求携带唯一 `operationId`，服务端/目标运行时按 `operationId` 幂等；订单版本冲突时刷新 `Used` 后重试校验，禁止逐行提交绕过分类合计。
 
 统计范围：
 
@@ -335,6 +397,17 @@ Used_i + Q <= EffectiveLimit_i
 - 每轮/分轮次：当前订单当前轮；
 - 分类：分类下所有命中菜品合计；
 - 菜品：当前菜品累计。
+
+`Used` 包含当前订单中购物车待提交、已提交和已送厨的有效数量，也包含经过授权提交的超量；取消、退菜或作废成功后释放对应数量，失败或待审批时不释放。套餐按菜单下单限制现行子项展开/计数策略执行，并在提交前形成稳定快照。分类归属采用订单明细加入时绑定的已发布菜单分类快照，后续改分类不追溯改变历史计数。
+
+### 10.1 命中与计数上下文
+
+- 只有 `currentSnapshotId` 中状态为 `active` 的已发布规则参与计算；
+- `N` 必须是当前订单的正整数有效人数；儿童排除后为 `0` 视为人数缺失并阻止按人数规则；
+- 按桌/订单的累计键始终使用 `orderId`，不使用 `tableId`；
+- 转桌不重置，合并订单按目标订单重新聚合，拆单随明细迁移计数，关单后重开沿用原 `orderId` 才延续计数，新订单号则重新开始；
+- 每轮和分轮次使用提交时订单上的 `roundNo`；
+- 门店、会员、人数、轮次和规则版本均以该次操作校验快照为准。
 
 ## 11. 人数与轮次异常处理
 
@@ -346,6 +419,7 @@ Used_i + Q <= EffectiveLimit_i
 - 历史数量超过新限额时不撤销历史菜品，但禁止继续增加；
 - 无法取得有效人数时阻止下单，不得默认为 1；
 - 数量授权不能绕过有效人数缺失。
+- 有效人数必须为正整数；儿童排除后为 `0` 按缺失处理。
 
 ### 11.2 轮次
 
@@ -356,7 +430,7 @@ Used_i + Q <= EffectiveLimit_i
 
 ## 12. 保存与发布校验
 
-保存草稿允许部分配置不完整，但必须保证结构合法；发布必须全部通过：
+自动保存和“保存草稿”允许业务字段不完整，只要 JSON、`schemaVersion` 和已存在字段结构合法；冲突仅提示，不硬阻断。保存失败时保留 `sessionStorage` 恢复副本、显示明确错误并阻止无提示关闭。发布、启用和恢复历史版本必须全部通过：
 
 1. 主体、周期和对象属于 8 种合法组合；
 2. 分轮次区间连续、不重叠且覆盖后续轮次；
@@ -367,13 +441,16 @@ Used_i + Q <= EffectiveLimit_i
 7. 授权和生效范围配置合法；
 8. 发布快照只包含自助餐规则数据。
 
+发布按 §5.2 的单 envelope 协议执行：先完成全部校验和内存构造，再一次覆盖权威键。任何校验或写入失败均不得改变当前快照、正式规则或删除草稿。发布成功后才清理对应恢复副本；编辑发布以 `sourceRuleId` 替换原规则，复制发布创建新规则 ID。
+
 ## 13. 测试策略
 
 ### 13.1 回归保护
 
 - 现有菜单下单限制验证全部继续通过；
 - 菜单下单限制的路由、存储键、12 场景、列表和向导不变；
-- 自助餐操作不得改变任何 `order-limit:*` 数据。
+- 每项自助餐操作前后对 `restaurantRules`、全部 `restaurantRuleRecovery:*` 以及菜单下单限制现有列偏好/筛选键做快照比较，值和键集合均不得变化；
+- `MENU_ORDER_LIMIT_PROFILE` 不得因读取而迁移、补字段或写回既有菜单数据。
 
 ### 13.2 自助餐规则静态与单元验证
 
@@ -389,6 +466,11 @@ Used_i + Q <= EffectiveLimit_i
 - 人数变化、人数缺失和轮次缺失；
 - 分轮次区间校验；
 - 自助餐发布快照隔离。
+- 参数化验证完整 4×4 冲突矩阵，包括生效范围重叠/不重叠、停用规则、自身与来源排除、发布及启用；
+- 分类内批量多菜、套餐展开、多条规则同时命中及授权覆盖；
+- 发布写入故障注入、旧快照回滚、重复 `operationId` 与订单版本并发；
+- 损坏 JSON、未知 schema、非法组合与幂等 normalizer；
+- 转桌、并单、拆单、退菜、作废、重开订单和人数变化。
 
 ### 13.3 浏览器端到端验证
 
@@ -400,6 +482,10 @@ Used_i + Q <= EffectiveLimit_i
 - 返回地址始终留在自助餐模块；
 - 刷新和草稿恢复不串入菜单下单限制；
 - 两个模块分别创建相同对象规则时互不影响。
+- 多标签页刷新与恢复副本按 `draftId` 隔离；
+- 发布失败保留当前版本和草稿，启用冲突被阻止；
+- `embedded=1` 与全屏入口互相切换后仍停留在自助餐模块；
+- 实际 `restaurantRules` 和 `restaurantRuleRecovery:*` 在完整自助餐流程前后不变。
 
 ## 14. 验收标准
 
