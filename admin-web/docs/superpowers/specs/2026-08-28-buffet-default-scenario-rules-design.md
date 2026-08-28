@@ -39,7 +39,7 @@
 - ID 使用仓库当前最大数字 ID 加一并在同一锁内连续分配，避免与用户规则、草稿碰撞。
 - 正式记录状态为 `disabled`，`publishedSnapshotVersion` 为 `null`，并包含现有正式规则所需的创建/更新时间字段。
 - `authoringConfig` 由共享流程的既有默认草稿工厂生成，再写入场景的 `subject`、`period`、`targetType`、名称和描述；授权、条件及兼容字段全部沿用该工厂，避免另建一套默认值。
-- 默认按人数规则的 `partyRanges` 初始为 `[{min: 1, max: null}]`，用户可在场景配置中新增人数区间；分轮次场景的 `roundRanges` 初始为 `[{min: 1, max: null}]`，用户可新增轮次区间。按桌/订单规则的人数区间继续固定为底层占位。
+- 默认按人数规则的 `partyRanges` 初始为 `[{min: 1, max: null}]`，用户可在场景配置中新增人数区间；分轮次场景的 `roundRanges` 初始为 `[{min: 1, max: null}]`，用户可新增轮次区间。按桌/订单规则的人数区间继续固定为底层占位。区间边界、数量键和既有 v1 单段数据兼容以《自助餐规则独立模块设计》§6.1、§12 和 §12.1 为权威定义。
 - 商品或分类范围为空。
 - 数量矩阵保持未配置。
 - `storeConfigs` 为空，`participatingStoreIds`、`deployStoreIds` 与 `deployExcludedStoreIds` 均为空。

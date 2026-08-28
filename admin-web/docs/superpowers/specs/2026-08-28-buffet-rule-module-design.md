@@ -201,15 +201,20 @@ targetType:
 - `subject = order` 时 `partyRanges` 固定为 `[{ min: 1, max: null }]`，只作为共享数量键的底层占位，页面不展示；
 - 只有 `multi_round` 展示并保存 `roundRanges`。
 
+人数区间和轮次区间使用同一边界契约：至少一段；`min` 为大于 0 的整数；`max` 为不小于 `min` 的整数或 `null`；区间为闭区间 `[min, max]`，`null` 表示无上界；第一段 `min = 1`；下一段 `min = 上一段.max + 1`；仅最后一段可且必须 `max = null`。
+
 规则必须携带 `schemaVersion: 1`。加载时执行幂等 normalizer，但仅作用于内存；非法数据不得自动写回。字段切换规则如下：
 
 | 操作 | 数据处理 |
 | --- | --- |
-| 切换 `subject` 或 `period` | 用户确认后清空数量矩阵，保留门店与所选商品 |
+| 切换 `subject` 或 `period` | 用户确认后清空数量矩阵，保留门店与所选商品；取消确认则完整恢复旧主体、周期、区间和数量 |
+| 切换为 `subject = order` | 强制设置 `partyRanges = [{ min: 1, max: null }]` |
+| 切换为 `subject = party_size` | 以上述单段作为初始可编辑人数区间 |
+| 切换为 `multi_round` | 无合法轮次区间时初始化 `roundRanges = [{ min: 1, max: null }]` |
 | 切换 `targetType` | 用户确认后清空所选商品及数量矩阵 |
 | 修改已有 `roundRanges` | 用户确认后清空数量矩阵 |
 | 修改已有 `partyRanges` | 用户确认后清空数量矩阵 |
-| 从 `multi_round` 切换为其他周期 | 保存时移除 `roundRanges` |
+| 从 `multi_round` 切换为其他周期 | 用户确认后立即移除 `roundRanges` |
 
 列表遇到非法规则时显示“数据异常”且禁用启用/发布；查看为只读诊断；编辑进入修复模式；复制必须先通过结构校验。任何异常处理不得污染原存储。
 
@@ -228,7 +233,7 @@ targetType:
 
 其中：
 
-- `L` 为当前订单有效人数命中人数区间后，该区间配置的每人限购数量；
+- `L` 为当前有效人数区间，以及分轮次时当前轮次区间，共同确定的每人限购数量；
 - `N` 为当前订单有效人数；
 - 按人数规则形成整单共享额度，不区分具体食客。
 
@@ -396,8 +401,12 @@ targetType:
 
 ```text
 按桌/订单：EffectiveLimit = L
-按人数：先以 N 命中唯一人数区间取得 L，再计算 EffectiveLimit = L × N
+按人数＋每单：p = matchPartyRange(N)，L = limit[p, singletonRound]，EffectiveLimit = L × N
+按人数＋每轮：p = matchPartyRange(N)，L = limit[p, singletonRound]，EffectiveLimit = L × N；Used 按当前轮统计
+按人数＋分轮次：p = matchPartyRange(N)，r = matchRoundRange(roundNo)，L = limit[p, r]，EffectiveLimit = L × N
 ```
+
+任一所需维度不能唯一命中时阻止应用规则，不得回退到第一档或默认值。
 
 一次用户操作先将所有新增明细（包含套餐展开后的受控子项）按每条命中规则聚合为 `Q_i`，再整体校验：
 
@@ -427,6 +436,7 @@ Used_i + Q_i <= EffectiveLimit_i
 - 只有 `currentSnapshotId` 中状态为 `active` 的已发布规则参与计算；
 - `N` 必须是当前订单的正整数有效人数；儿童排除后为 `0` 视为人数缺失并阻止按人数规则；
 - 按人数规则的 `N` 必须且只能命中一个 `partyRanges` 区间，否则视为规则数据异常并阻止应用；
+- 分轮次规则的 `roundNo` 必须且只能命中一个 `roundRanges` 区间，否则视为规则数据异常并阻止应用；
 - 按桌/订单的累计键始终使用 `orderId`，不使用 `tableId`；
 - 转桌不重置，合并订单按目标订单重新聚合，拆单随明细迁移计数，关单后重开沿用原 `orderId` 才延续计数，新订单号则重新开始；
 - 每轮和分轮次使用提交时订单上的 `roundNo`；
@@ -465,6 +475,16 @@ Used_i + Q_i <= EffectiveLimit_i
 7. 授权和生效范围配置合法；
 8. 发布快照只包含自助餐规则数据。
 
+数量矩阵沿用共享引擎键 `partyIndex|roundIndex|productLineId|targetId`，并位于对应门店的 `storeConfigs[storeId].limits`。按桌/订单派生 `1 × 1` 单元；按人数每单/每轮派生 `partyRanges.length × 1` 单元；按人数分轮次派生 `partyRanges.length × roundRanges.length` 单元。每个生效门店、产线和已选分类/菜品的全部笛卡尔积单元都必须 `configured = true`，其中 `0` 算已配置；缺少任一单元即阻止发布或启用。区间变化确认后清空并剪枝旧索引单元，不得把旧索引数量静默映射到新档位。
+
+### 12.1 既有 v1 数据兼容
+
+- 既有合法单段 `partyRanges = [{ min: 1, max: null }]` 直接解释为覆盖全部有效人数的一档，原人数索引、数量键和 `L` 保持不变，新运行时结果仍为 `L × N`。
+- 加载兼容数据不修改 repository revision，不重写作者态规则或恢复副本，不生成新快照，也不使既有授权失效。
+- 既有草稿与 `sessionStorage` 恢复副本继续按单段人数区间进入编辑，用户可主动增加区间。
+- 缺失 `partyRanges` 的既有按人数 v1 规则仅在内存 normalizer 中补为单段 `[1, ∞)`；非法但非缺失的区间视为数据异常，必须由用户修复，均不得自动写回。
+- 已发布快照继续按其发布时的单段数量键运行；只有用户编辑并重新发布后才产生包含多人数档的新快照。
+
 发布按 §5.2 的单 envelope 协议执行：先完成全部校验和内存构造，再一次覆盖权威键。任何校验或写入失败均不得改变当前快照、正式规则或删除草稿。发布成功后才清理对应恢复副本；编辑发布以 `sourceRuleId` 替换原规则并保留源状态，复制发布创建新 active 规则 ID。disabled 规则编辑发布只需结构与字段合法，运行快照仍不包含它；其后启用时再执行完整性与冲突校验。
 
 ## 13. 测试策略
@@ -484,6 +504,8 @@ Used_i + Q_i <= EffectiveLimit_i
 - 按订单自动固定整单累计；
 - 按人数 `L × N`；
 - 人数区间新增、删除、连续性、唯一命中及变更后数量矩阵重置；
+- 区间边界覆盖 `min`、有限 `max`、`max + 1` 和开放尾段；
+- 多个人数档 × 多个轮次档的单元总数、缺一格阻止发布，以及不同 `N/roundNo` 精确选取对应 `L`；
 - 每单、每轮、分轮次统计边界；
 - 分类与菜品叠加；
 - 重复和冲突规则校验；
