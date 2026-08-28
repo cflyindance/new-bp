@@ -725,8 +725,8 @@
 
   function subjectLabel(value) { return value === "party_size" ? "按人数限购" : "按桌/订单限购"; }
   function periodLabel(value) {
-    if (value === "multi_round") return "多轮";
-    if (value === "order_lifetime") return "与轮次无关";
+    if (value === "multi_round") return isBuffetProfile() ? "分轮次" : "多轮";
+    if (value === "order_lifetime") return isBuffetProfile() ? "每单/整单累计" : "与轮次无关";
     return "每轮";
   }
   function targetLabel(value) { return value === "dish" ? "按每种菜品限购" : "按每个分类限购"; }
@@ -4242,7 +4242,7 @@
     normalizeActiveDimensions(rule.editorDraft, editorState.currentStep === 3);
     var editorTitlePrefix = viewMode ? "查看" : (rule.sourceRuleId ? "编辑" : "新增");
     var saveStateText = viewMode ? "只读查看" : "草稿已保存";
-    root.innerHTML = '<div class="olf-page"><header class="olf-header"><div class="olf-header-main"><div class="olf-title-group"><button type="button" class="olf-icon-button" id="backButton" aria-label="返回规则列表">' + icon("back", 20) + '</button><div class="olf-title-copy"><h1>' + editorTitlePrefix + '数量与频次规则</h1><span class="olf-save-state" id="saveState">' + saveStateText + '</span></div></div><div class="olf-actions"><button type="button" class="olf-button" id="headerSaveButton">保存草稿</button></div></div><div class="olf-progress"><span id="progressFill"></span></div></header><div class="olf-editor-shell"><nav class="olf-step-nav" id="stepNav" aria-label="规则配置步骤"></nav><main class="olf-content" id="editorContent"></main></div><footer class="olf-footer"><span class="olf-footer-note" id="footerNote"></span><div class="olf-actions"><button type="button" class="olf-button" id="previousButton">上一步</button><button type="button" class="olf-button" id="saveReturnButton" style="display:none">保存草稿并返回</button><button type="button" class="olf-button olf-button--primary" id="nextButton">下一步</button></div></footer></div>' +
+    root.innerHTML = '<div class="olf-page"><header class="olf-header"><div class="olf-header-main"><div class="olf-title-group"><button type="button" class="olf-icon-button" id="backButton" aria-label="返回规则列表">' + icon("back", 20) + '</button><div class="olf-title-copy"><h1>' + editorTitlePrefix + (isBuffetProfile() ? '自助餐规则' : '数量与频次规则') + '</h1><span class="olf-save-state" id="saveState">' + saveStateText + '</span></div></div><div class="olf-actions"><button type="button" class="olf-button" id="headerSaveButton">保存草稿</button></div></div><div class="olf-progress"><span id="progressFill"></span></div></header><div class="olf-editor-shell"><nav class="olf-step-nav" id="stepNav" aria-label="规则配置步骤"></nav><main class="olf-content" id="editorContent"></main></div><footer class="olf-footer"><span class="olf-footer-note" id="footerNote"></span><div class="olf-actions"><button type="button" class="olf-button" id="previousButton">上一步</button><button type="button" class="olf-button" id="saveReturnButton" style="display:none">保存草稿并返回</button><button type="button" class="olf-button olf-button--primary" id="nextButton">下一步</button></div></footer></div>' +
       '<div class="olf-overlay olf-selected-preview-overlay" data-selected-preview-overlay></div>' +
       '<div class="olf-overlay olf-selected-category-dishes-overlay" data-selected-category-dishes-overlay></div>' +
       '<div class="olf-overlay olf-selected-preview-overlay olf-configured-limit-preview-overlay" data-configured-limit-preview-overlay></div>' +
