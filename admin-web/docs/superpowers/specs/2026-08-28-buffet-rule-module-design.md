@@ -466,7 +466,7 @@ Used_i + Q_i <= EffectiveLimit_i
 - 现有菜单下单限制验证全部继续通过；
 - 菜单下单限制的路由、存储键、12 场景、列表和向导不变；
 - 每项自助餐操作前后对 `restaurantRules`、全部 `restaurantRuleRecovery:*` 以及菜单下单限制现有列偏好/筛选键做快照比较，值和键集合均不得变化；
-- `MENU_ORDER_LIMIT_PROFILE` 不得因读取而迁移、补字段或写回既有菜单数据。
+- `BUFFET_RULE_PROFILE` 的任何流程不得读取或写入菜单数据；进入菜单模块时，`MENU_ORDER_LIMIT_PROFILE` 继续执行既有 normalizer 与兼容写回。
 
 ### 13.2 自助餐规则静态与单元验证
 
