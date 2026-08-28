@@ -45,6 +45,8 @@ assert.equal(saved.revision, 1);
 assert.equal(saved.rules.length, 1);
 assert.equal(saved.drafts.length, 1);
 assert.equal(repository.loadRules().length, 2);
+assert.equal(saved.currentSnapshotId, "buffet-snapshot-1");
+assert.equal(saved.snapshots[saved.currentSnapshotId].rules.length, 1);
 
 assert.throws(
   () => repository.mutateEnvelope(0, (next) => next),

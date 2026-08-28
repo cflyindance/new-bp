@@ -92,8 +92,24 @@
     },
     saveRules: function (records) {
       return mutateEnvelope(null, function (next) {
-        next.rules = records.filter(function (rule) { return rule && rule.status !== "draft"; });
+        var previousActive = next.rules.filter(function (rule) { return rule && rule.status === "active"; });
+        next.rules = records.filter(function (rule) { return rule && rule.status !== "draft"; }).map(function (rule) {
+          if (!rule.authoringConfig) rule.authoringConfig = clone(rule.authoringDraft || rule.editorDraft || rule);
+          return rule;
+        });
         next.drafts = records.filter(function (rule) { return rule && rule.status === "draft"; });
+        var active = next.rules.filter(function (rule) { return rule && rule.status === "active"; });
+        if (JSON.stringify(previousActive) !== JSON.stringify(active)) {
+          var version = next.revision + 1;
+          var snapshotId = "buffet-snapshot-" + version;
+          var runtimeRules = window.BuffetRuleDomain
+            ? window.BuffetRuleDomain.compileRuntimeRules(active, version)
+            : clone(active);
+          next.snapshots[snapshotId] = { snapshotId: snapshotId, version: version, createdAt: new Date().toISOString(), rules: runtimeRules };
+          var keep = [next.currentSnapshotId, snapshotId].filter(Boolean);
+          Object.keys(next.snapshots).forEach(function (id) { if (keep.indexOf(id) < 0) delete next.snapshots[id]; });
+          next.currentSnapshotId = snapshotId;
+        }
         return next;
       });
     }

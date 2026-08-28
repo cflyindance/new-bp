@@ -123,6 +123,77 @@
     });
   }
 
+  function selectRuntimeModule(context) {
+    if (!context || (context.orderMode !== "standard" && context.orderMode !== "buffet")) {
+      return { allowed: false, code: "ORDER_MODE_REQUIRED" };
+    }
+    if (context.orderMode === "buffet") {
+      if (!context.buffetSessionId) return { allowed: false, code: "BUFFET_SESSION_REQUIRED" };
+      return { allowed: true, moduleId: "buffet-rule" };
+    }
+    return { allowed: true, moduleId: "menu-order-limit" };
+  }
+
+  function limitForRound(rule, roundNo) {
+    if (rule.period !== "multi_round") return Number(rule.limit);
+    var range = (rule.roundLimits || []).find(function (item) {
+      return roundNo >= item.min && (item.max == null || roundNo <= item.max);
+    });
+    return range ? Number(range.limit) : NaN;
+  }
+
+  function effectiveLimit(rule, context) {
+    if ((rule.period === "per_round" || rule.period === "multi_round") && (!Number.isInteger(context.roundNo) || context.roundNo < 1)) {
+      return { valid: false, code: "ROUND_REQUIRED" };
+    }
+    var configured = limitForRound(rule, context.roundNo);
+    if (!Number.isInteger(configured) || configured < 0) return { valid: false, code: "LIMIT_INVALID" };
+    if (rule.subject === "order") return { valid: true, value: configured };
+    if (!Number.isInteger(context.partySize) || context.partySize < 1) return { valid: false, code: "PARTY_SIZE_REQUIRED" };
+    return { valid: true, value: configured * context.partySize };
+  }
+
+  function evaluateBatch(input) {
+    var selection = selectRuntimeModule(input.context);
+    if (!selection.allowed) return selection;
+    if (selection.moduleId !== "buffet-rule") return { allowed: true, moduleId: selection.moduleId, violations: [] };
+    if (!input.operationId) return { allowed: false, code: "OPERATION_ID_REQUIRED" };
+    if ((input.processedOperationIds || []).indexOf(input.operationId) >= 0) {
+      return { allowed: true, moduleId: selection.moduleId, duplicate: true, violations: [] };
+    }
+    var violations = [];
+    (input.rules || []).forEach(function (rule) {
+      var limit = effectiveLimit(rule, input.context);
+      if (!limit.valid) {
+        violations.push({ ruleId: rule.id, ruleVersion: rule.version, code: limit.code });
+        return;
+      }
+      var used = Number((input.usedByRule || {})[rule.id] || 0);
+      var increment = Number((input.quantityByRule || {})[rule.id] || 0);
+      if (used + increment > limit.value) {
+        violations.push({ ruleId: rule.id, ruleVersion: rule.version, code: "LIMIT_EXCEEDED", used: used, increment: increment, effectiveLimit: limit.value });
+      }
+    });
+    return { allowed: violations.length === 0, moduleId: selection.moduleId, violations: violations };
+  }
+
+  function compileRuntimeRules(records, version) {
+    return (records || []).filter(function (record) { return record && record.status === "active"; }).map(function (record) {
+      var config = record.authoringConfig || record.authoringDraft || record.editorDraft || record;
+      return {
+        id: record.id,
+        version: version,
+        subject: config.subject,
+        period: config.period,
+        targetType: config.targetType,
+        conditions: config.conditions,
+        authorization: config.authorization,
+        deployStoreIds: config.deployStoreIds,
+        storeConfigs: config.storeConfigs
+      };
+    });
+  }
+
   window.BuffetRuleDomain = {
     conflictMatrix: conflictMatrix,
     mouth: mouth,
@@ -130,6 +201,10 @@
     conditionsOverlap: conditionsOverlap,
     targetEntries: targetEntries,
     findConflict: findConflict,
-    validateAuthorizationCredential: validateAuthorizationCredential
+    validateAuthorizationCredential: validateAuthorizationCredential,
+    selectRuntimeModule: selectRuntimeModule,
+    effectiveLimit: effectiveLimit,
+    evaluateBatch: evaluateBatch,
+    compileRuntimeRules: compileRuntimeRules
   };
 })();
