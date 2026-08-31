@@ -9,13 +9,19 @@ import {
   listPitBackups,
   resolvePitBackupDownload,
 } from "./pit-backup-service.mjs";
-import { invalidRequest, notFound } from "./pit-errors.mjs";
+import { invalidRequest, notFound, unsupportedFileType } from "./pit-errors.mjs";
 import { createPitExportService } from "./pit-export-service.mjs";
+import {
+  assertInitialImportOpen,
+  createPitImportService,
+  PIT_IMPORT_MAX_BYTES,
+} from "./pit-import-service.mjs";
 import { createPitRequirementService } from "./pit-requirement-service.mjs";
 import {
   assertSameOrigin,
   clearSessionCookie,
   parseCookies,
+  readBinary,
   readJson,
   sendData,
   sendError,
@@ -36,6 +42,7 @@ export function createPitRouter({
   const admin = createPitAdminService({ db, clock });
   const requirements = createPitRequirementService({ db, clock });
   const exportService = createPitExportService({ db, config, clock });
+  const importService = createPitImportService({ db, config, clock });
 
   async function sendFile(res, file) {
     const stat = fs.statSync(file.filePath);
@@ -81,6 +88,37 @@ export function createPitRouter({
 
   function queryObject(searchParams) {
     return Object.fromEntries(searchParams.entries());
+  }
+
+  function workbookFileName(req) {
+    const raw = req.headers["x-pit-file-name"];
+    if (typeof raw !== "string" || !raw) throw unsupportedFileType("缺少 X-PIT-File-Name");
+    let decoded;
+    try {
+      decoded = decodeURIComponent(raw);
+    } catch {
+      throw unsupportedFileType("X-PIT-File-Name 编码不合法");
+    }
+    if (/%[0-9a-f]{2}/i.test(decoded)) {
+      throw unsupportedFileType("X-PIT-File-Name 不能重复编码");
+    }
+    const fileName = decoded.replace(/\\/g, "/").split("/").pop()?.trim();
+    if (!fileName || fileName === "." || fileName === ".." || pathExtension(fileName) !== ".xlsx") {
+      throw unsupportedFileType("只接受 .xlsx 文件");
+    }
+    return fileName;
+  }
+
+  function pathExtension(fileName) {
+    const index = fileName.lastIndexOf(".");
+    return index < 0 ? "" : fileName.slice(index).toLowerCase();
+  }
+
+  function assertWorkbookMime(req) {
+    const mime = String(req.headers["content-type"] || "").split(";", 1)[0].trim().toLowerCase();
+    if (mime !== "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") {
+      throw unsupportedFileType("Content-Type 必须是 XLSX MIME");
+    }
   }
 
   return async function routePitRequest(req, res) {
@@ -221,6 +259,48 @@ export function createPitRouter({
         auth.requireRole(authentication, "admin");
         sendData(res, requestId, admin.listAuditLog(queryObject(url.searchParams), authentication.user));
         return true;
+      }
+
+      if (method === "POST" && path === "/imports/preview") {
+        auth.requireRole(authentication, "admin");
+        assertInitialImportOpen(db);
+        assertWorkbookMime(req);
+        const fileName = workbookFileName(req);
+        const bytes = await readBinary(req, { maxBytes: PIT_IMPORT_MAX_BYTES });
+        const job = await importService.preview({ fileName, bytes }, authentication.user);
+        res.statusCode = 201;
+        sendData(res, requestId, { job });
+        return true;
+      }
+
+      if (method === "GET" && path === "/imports") {
+        auth.requireRole(authentication, "admin");
+        sendData(res, requestId, importService.list());
+        return true;
+      }
+
+      const importMatch = /^\/imports\/([^/]+)(?:\/(decisions|commit))?$/.exec(path);
+      if (importMatch) {
+        auth.requireRole(authentication, "admin");
+        const action = importMatch[2] || null;
+        if (method === "POST" && (action === "decisions" || action === "commit")) {
+          assertInitialImportOpen(db);
+        }
+        const id = decodeId(importMatch[1], "导入批次");
+        if (!action && method === "GET") {
+          sendData(res, requestId, importService.get(id, queryObject(url.searchParams)));
+          return true;
+        }
+        if (action === "decisions" && method === "POST") {
+          const job = importService.saveDecisions(id, await readJson(req), authentication.user);
+          sendData(res, requestId, { job });
+          return true;
+        }
+        if (action === "commit" && method === "POST") {
+          await readJson(req);
+          sendData(res, requestId, await importService.commit(id, authentication.user));
+          return true;
+        }
       }
 
       if (path === "/exports") {
