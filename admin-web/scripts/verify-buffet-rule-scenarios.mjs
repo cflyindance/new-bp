@@ -9,7 +9,7 @@ const profile = fs.readFileSync(path.join(root, "dist/Configuration center/asset
 
 assert.match(profile, /order:\s*\["order_lifetime"\]/);
 assert.match(profile, /party_size:\s*\["order_lifetime",\s*"per_round",\s*"multi_round"\]/);
-assert.match(profile, /allowedTargetTypes:\s*\["category",\s*"dish"\]/);
+assert.match(profile, /allowedTargetTypes:\s*\["category",\s*"dish",\s*"dish_set"\]/);
 
 assert.match(flow, /function isAllowedCombination\(draft\)/);
 assert.match(flow, /function showsPartyDimension\(draft\)/);

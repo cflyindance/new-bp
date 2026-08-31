@@ -146,7 +146,7 @@
       },
       participatingStoreIds: [], activeStoreId: "", storeConfigs: {}, deployStoreIds: [], deployExcludedStoreIds: [],
       deploymentSelectionVersion: 1,
-      legacyCompatibilityFallback: { structureByLine: { kiosk: [], emenu: [], sdi: [] }, productLines: [], targetIds: [], limits: {} },
+      legacyCompatibilityFallback: { structureByLine: { kiosk: [], emenu: [], sdi: [] }, productLines: [], targetIds: [], limits: {}, dishSetMembers: [], dishSetLimits: {} },
       productQuantityMergedVersion: 2
     };
     return {

@@ -66,6 +66,42 @@
     }
     return draft;
   }
+
+  function dishSetLimitKey(partyIndex, roundIndex) {
+    return [partyIndex, roundIndex].join("|");
+  }
+
+  function normalizeDishSetStoreConfig(config) {
+    var source = config && typeof config === "object" ? config : {};
+    var seen = {};
+    source.dishSetMembers = (Array.isArray(source.dishSetMembers) ? source.dishSetMembers : []).filter(function (member) {
+      if (!member || !member.productLineId || !member.dishId) return false;
+      var identity = member.productLineId + "|" + member.dishId;
+      if (seen[identity]) return false;
+      seen[identity] = true;
+      return true;
+    }).map(function (member) {
+      return {
+        productLineId: String(member.productLineId),
+        dishId: String(member.dishId),
+        menuSnapshotId: member.menuSnapshotId == null ? undefined : String(member.menuSnapshotId)
+      };
+    });
+    source.dishSetLimits = source.dishSetLimits && typeof source.dishSetLimits === "object" ? source.dishSetLimits : {};
+    Object.keys(source.dishSetLimits).forEach(function (key) {
+      var cell = source.dishSetLimits[key];
+      var value = cell && cell.value != null && cell.value !== "" ? Number(cell.value) : null;
+      source.dishSetLimits[key] = cell && cell.configured && Number.isInteger(value) && value >= 0
+        ? { configured: true, value: value }
+        : { configured: false, value: null };
+    });
+    return source;
+  }
+
+  window.BuffetDishSetSchemaTestApi = {
+    dishSetLimitKey: dishSetLimitKey,
+    normalizeDishSetStoreConfig: normalizeDishSetStoreConfig
+  };
   var lines = [
     { id: "kiosk", name: "Kiosk" },
     { id: "emenu", name: "eMenu" },
@@ -228,7 +264,9 @@
       structureByLine: MenuPicker ? MenuPicker.emptyByLine() : { kiosk: [], emenu: [], sdi: [] },
       productLines: [],
       targetIds: [],
-      limits: {}
+      limits: {},
+      dishSetMembers: [],
+      dishSetLimits: {}
     };
   }
 
@@ -240,6 +278,7 @@
     cloned.productLines = Array.isArray(cloned.productLines) ? cloned.productLines : [];
     cloned.targetIds = Array.isArray(cloned.targetIds) ? cloned.targetIds : [];
     cloned.limits = cloned.limits && typeof cloned.limits === "object" ? cloned.limits : {};
+    normalizeDishSetStoreConfig(cloned);
     normalizeUnlimitedLimitCells(cloned);
     return cloned;
   }
@@ -272,6 +311,7 @@
   function clearAllStoreLimits(draft) {
     Object.keys(draft.storeConfigs || {}).forEach(function (storeId) {
       draft.storeConfigs[storeId].limits = {};
+      draft.storeConfigs[storeId].dishSetLimits = {};
     });
     draft.limits = {};
   }
@@ -281,7 +321,9 @@
       structureByLine: draft.structureByLine,
       productLines: draft.productLines,
       targetIds: draft.targetIds,
-      limits: draft.limits
+      limits: draft.limits,
+      dishSetMembers: draft.dishSetMembers,
+      dishSetLimits: draft.dishSetLimits
     });
   }
 
@@ -320,6 +362,7 @@
   function normalizeStoreDraft(draft) {
     if (!draft) return false;
     var before = JSON.stringify(draft);
+    draft.schemaVersion = draft.targetType === "dish_set" ? 2 : 1;
     var hadDeployField = Object.prototype.hasOwnProperty.call(draft, "deployStoreIds");
     var needsDeploymentMigration = !draft.deploymentSelectionVersion;
     draft.participatingStoreIds = Array.isArray(draft.participatingStoreIds) ? draft.participatingStoreIds.slice() : [];
@@ -358,6 +401,8 @@
       draft.structureByLine = cloneValue(compatibility.structureByLine);
       draft.productLines = compatibility.productLines.slice();
       draft.limits = cloneValue(compatibility.limits);
+      draft.dishSetMembers = cloneValue(compatibility.dishSetMembers || []);
+      draft.dishSetLimits = cloneValue(compatibility.dishSetLimits || {});
     }
     return before !== JSON.stringify(draft);
   }
@@ -365,6 +410,7 @@
   function defaultDraft() {
     return normalizeDraftForProfile({
       currentStep: 1,
+      schemaVersion: 1,
       highestStep: 1,
       subject: null,
       period: null,
@@ -377,6 +423,8 @@
       partyRanges: [{ min: 1, max: null }],
       roundRanges: [{ min: 1, max: null }],
       limits: {},
+      dishSetMembers: [],
+      dishSetLimits: {},
       activePartyIndex: 0,
       activeRoundIndex: 0,
       activeLineId: "kiosk",
@@ -735,8 +783,8 @@
     if (value === "order_lifetime") return isBuffetProfile() ? "每单/整单累计" : "与轮次无关";
     return "每轮";
   }
-  function targetLabel(value) { return value === "dish" ? "按每种菜品限购" : "按每个分类限购"; }
-  function targetShortLabel(value) { return value === "dish" ? "按菜品" : "按分类"; }
+  function targetLabel(value) { return value === "dish_set" ? "按菜品集限购" : value === "dish" ? "按每种菜品限购" : "按每个分类限购"; }
+  function targetShortLabel(value) { return value === "dish_set" ? "按菜品集" : value === "dish" ? "按菜品" : "按分类"; }
 
   function targetSource(draft) { return draft.targetType === "dish" ? dishes : categories; }
 
@@ -744,7 +792,7 @@
     var source = config || draft;
     if (!MenuPicker || !source.structureByLine) return [];
     var byLine = MenuPicker.normalizeByLine(source.structureByLine);
-    return draft.targetType === "dish"
+    return draft.targetType === "dish" || draft.targetType === "dish_set"
       ? MenuPicker.listSelectedDishes(byLine)
       : MenuPicker.listSelectedCategories(byLine);
   }
@@ -790,6 +838,12 @@
     config.productLines = lines.map(function (line) { return line.id; }).filter(function (lineId) {
       return items.some(function (item) { return item.lineId === lineId; });
     });
+    if (draft.targetType === "dish_set") {
+      config.dishSetMembers = items.map(function (item) {
+        return { productLineId: item.lineId, dishId: String(item.key) };
+      });
+      normalizeDishSetStoreConfig(config);
+    }
     if (config.productLines.indexOf(draft.activeLineId) < 0) {
       draft.activeLineId = config.productLines[0] || "kiosk";
     }
@@ -829,6 +883,10 @@
       if (!config) return;
       draft.partyRanges.forEach(function (_, partyIndex) {
         for (var roundIndex = 0; roundIndex < roundCount; roundIndex += 1) {
+          if (draft.targetType === "dish_set") {
+            callback(dishSetLimitKey(partyIndex, roundIndex), partyIndex, roundIndex, "", "dish_set", config, storeId);
+            continue;
+          }
           config.productLines.forEach(function (lineId) {
             targetsForLine(draft, lineId, config).forEach(function (target) {
               callback(limitKey(partyIndex, roundIndex, lineId, target.id), partyIndex, roundIndex, lineId, target.id, config, storeId);
@@ -1883,9 +1941,16 @@
     }
     if (stepNumber === 3) {
       if (!draft.targetIds.length) return "请至少选择一个分类或菜品";
+      if (draft.targetType === "dish_set") {
+        var insufficientStore = addedStoreIds(draft).find(function (storeId) {
+          var config = storeConfigFor(draft, storeId, false);
+          return !config || config.dishSetMembers.length < 2;
+        });
+        if (insufficientStore) return "每家参与门店的菜品集至少需要 2 个菜品";
+      }
       var missing = 0;
       eachLimitCell(draft, function (key, partyIndex, roundIndex, lineId, targetId, config) {
-        var cell = config.limits[key];
+        var cell = draft.targetType === "dish_set" ? config.dishSetLimits[key] : config.limits[key];
         if (!cell || !cell.configured) missing += 1;
       });
       if (missing) return "还有 " + missing + " 个数量单元格未配置；请输入数量或 0";
@@ -1955,7 +2020,8 @@
       periodBlock +
       '<section class="olf-section"><h3>限购对象</h3><div class="olf-choice-grid olf-choice-grid--two">' +
       renderChoice("targetType", "category", "按分类限购", "分类内全部菜品共享数量池", draft.targetType === "category") +
-      renderChoice("targetType", "dish", "按菜品限购", "每个指定菜品独立累计", draft.targetType === "dish") + '</div></section>' +
+      renderChoice("targetType", "dish", "按菜品限购", "每个指定菜品独立累计", draft.targetType === "dish") +
+      (isBuffetProfile() ? renderChoice("targetType", "dish_set", "按菜品集限购", "多个指定菜品跨产线共享同一个数量池", draft.targetType === "dish_set") : "") + '</div></section>' +
       childBlock +
       '<div class="olf-summary olf-summary--primary"><strong>规则预览：</strong>' + (draft.subject && draft.period && draft.targetType ? esc(subjectLabel(draft.subject) + " × " + periodLabel(draft.period) + " × " + targetShortLabel(draft.targetType)) : "请完成三个维度的选择") + '</div>';
   }
@@ -2607,6 +2673,27 @@
     var draft = editorState.rule.editorDraft;
     var selectedRuleIds = editorState.limitRuleList.selectedRowIds.slice();
     var selectedRules = limitRuleListRows(draft).filter(function (row) { return selectedRuleIds.indexOf(row.rowId) >= 0; });
+    if (draft.targetType === "dish_set") {
+      if (!selectedRules.length) { toast("请至少选择一条菜品集数量规则", true); return; }
+      openDialog(
+        "确认清空菜品集数量？",
+        "将清空已选择的 " + selectedRules.length + " 个人数/轮次场景数量，不会删除菜品集成员。",
+        "确认清空",
+        function () {
+          closeDialog(false);
+          selectedRules.forEach(function (row) {
+            var config = storeConfigFor(draft, row.storeId, false);
+            if (config) delete config.dishSetLimits[dishSetLimitKey(row.partyIndex, row.roundIndex)];
+          });
+          editorState.limitRuleList.selectedRowIds = [];
+          markEditorDirty();
+          renderEditor();
+          toast("已清空 " + selectedRules.length + " 条数量配置");
+        },
+        { danger: true, cancelLabel: "取消", returnFocus: trigger }
+      );
+      return;
+    }
     var productRowIds = selectedRules.map(function (row) { return row.productRowId; }).filter(function (id, index, ids) {
       return ids.indexOf(id) === index;
     });
@@ -2926,6 +3013,36 @@
       var store = stores.find(function (item) { return item.id === storeId; });
       var config = storeConfigFor(draft, storeId, false);
       if (!store || !config) return;
+      if (draft.targetType === "dish_set") {
+        var lineNames = (config.productLines || []).map(function (lineId) {
+          var line = lines.find(function (item) { return item.id === lineId; });
+          return line ? line.name : lineId;
+        });
+        draft.partyRanges.forEach(function (partyRange, partyIndex) {
+          for (var roundIndex = 0; roundIndex < sceneRoundCount(draft); roundIndex += 1) {
+            var sharedKey = dishSetLimitKey(partyIndex, roundIndex);
+            var sharedCell = config.dishSetLimits[sharedKey] || { configured: false, value: null };
+            rows.push({
+              rowId: [storeId, partyIndex, roundIndex, "dish_set"].join("|"),
+              productRowId: "",
+              storeId: storeId,
+              storeName: store.name,
+              partyIndex: partyIndex,
+              partyLabel: formatRange(partyRange, "人"),
+              roundIndex: roundIndex,
+              roundLabel: draft.period === "multi_round" ? formatRange(draft.roundRanges[roundIndex], "轮") : periodLabel(draft.period),
+              lineId: "",
+              lineLabel: lineNames.join("、"),
+              targetId: "dish_set",
+              menuName: "菜品集",
+              menuDetail: config.dishSetMembers.length + " 个菜品 / " + config.productLines.length + " 条产线",
+              configured: !!sharedCell.configured,
+              value: sharedCell.value
+            });
+          }
+        });
+        return;
+      }
       (config.productLines || []).forEach(function (lineId) {
         var line = lines.find(function (item) { return item.id === lineId; });
         targetsForLine(draft, lineId, config).forEach(function (target) {
@@ -3019,7 +3136,7 @@
         '<td>' + esc(row.storeName) + '</td>' + (showsPartyDimension(draft) ? '<td>' + esc(row.partyLabel) + '</td>' : '') + '<td>' + esc(row.roundLabel) + '</td><td>' + esc(row.lineLabel) + '</td>' +
         '<td><strong>' + esc(row.menuName) + '</strong>' + (row.menuDetail ? '<div class="olf-hint">' + esc(row.menuDetail) + '</div>' : '') + '</td>' +
         '<td><input class="olf-input olf-limit-input" type="number" min="0" value="' + (row.configured && row.value != null ? esc(row.value) : '') + '" placeholder="未配置" data-limit-target="' + esc(row.targetId) + '"' + attrs + ' /></td>' +
-        '<td class="olf-merged-row-action"><button type="button" class="olf-button olf-button--small olf-button--link" data-merged-product-remove="' + esc(row.productRowId) + '">移除</button></td></tr>';
+        '<td class="olf-merged-row-action">' + (row.productRowId ? '<button type="button" class="olf-button olf-button--small olf-button--link" data-merged-product-remove="' + esc(row.productRowId) + '">移除</button>' : '—') + '</td></tr>';
     }).join("");
     var selectedCount = state.selectedRowIds.length;
     var statusOptions = '<option value="">全部状态</option><option value="configured"' + (state.status === "configured" ? ' selected' : '') + '>已配置</option><option value="unconfigured"' + (state.status === "unconfigured" ? ' selected' : '') + '>未配置</option>';
@@ -3030,7 +3147,7 @@
       '<label class="olf-field"><span class="olf-label">配置状态</span><select class="olf-select" data-limit-rule-status>' + statusOptions + '</select></label>' +
       '<label class="olf-field olf-configured-limit-preview-search"><span class="olf-label">菜单搜索</span><input class="olf-input" type="search" value="' + esc(state.query) + '" placeholder="搜索菜品/分类名称" autocomplete="off" data-limit-rule-search /></label>' +
       '<button type="button" class="olf-button olf-button--small olf-limit-rule-filter-reset" data-limit-rule-filter-reset>重置筛选</button></div>' +
-      '<div class="olf-summary olf-batch-panel"><div class="olf-batch-toolbar"><strong>已选 ' + selectedCount + ' 条规则</strong><button type="button" class="olf-button olf-button--small olf-button--danger" data-limit-rule-batch-delete' + (selectedCount ? '' : ' disabled') + '>批量删除</button><span class="olf-batch-spacer"></span><input class="olf-input olf-limit-input" type="number" min="0" placeholder="数量" data-limit-rule-batch-value /><button type="button" class="olf-button olf-button--small" data-limit-rule-batch-apply' + (selectedCount ? '' : ' disabled') + '>应用数量</button></div></div>' +
+      '<div class="olf-summary olf-batch-panel"><div class="olf-batch-toolbar"><strong>已选 ' + selectedCount + ' 条规则</strong><button type="button" class="olf-button olf-button--small olf-button--danger" data-limit-rule-batch-delete' + (selectedCount ? '' : ' disabled') + '>' + (draft.targetType === "dish_set" ? "清空数量" : "批量删除") + '</button><span class="olf-batch-spacer"></span><input class="olf-input olf-limit-input" type="number" min="0" placeholder="数量" data-limit-rule-batch-value /><button type="button" class="olf-button olf-button--small" data-limit-rule-batch-apply' + (selectedCount ? '' : ' disabled') + '>应用数量</button></div></div>' +
       '<div class="olf-table-wrap"><table class="olf-table olf-limit-rule-table"><thead><tr><th class="olf-batch-select-cell"><label class="olf-batch-check"><input type="checkbox" data-limit-rule-select-all aria-label="全选当前页商品规则"' + (data.pageRows.length ? '' : ' disabled') + ' /><span class="olf-sr-only">全选当前页商品规则</span></label></th><th>配置门店</th>' + (showsPartyDimension(draft) ? '<th>人数场景</th>' : '') + '<th>轮次</th><th>产线</th><th>菜单</th><th>' + esc(quantityColumnLabel(draft)) + '</th><th>操作</th></tr></thead><tbody>' + rowsHtml + '</tbody></table>' +
       (data.filtered.length ? '' : '<div class="olf-empty olf-configured-limit-preview-empty"><strong>暂无商品规则</strong><span>当前筛选条件下暂无规则，请调整筛选或搜索条件。</span></div>') + '</div>' +
       '<div class="olf-selected-preview-pagination"><span>共 ' + data.filtered.length + ' 条规则</span><div class="olf-actions"><button type="button" class="olf-button olf-button--small" data-limit-rule-page="previous"' + (state.page <= 1 ? ' disabled' : '') + '>上一页</button><span>第 ' + state.page + ' / ' + data.totalPages + ' 页</span><button type="button" class="olf-button olf-button--small" data-limit-rule-page="next"' + (state.page >= data.totalPages ? ' disabled' : '') + '>下一页</button><label class="olf-selected-preview-page-size"><span class="olf-sr-only">每页条数</span><select class="olf-select" data-limit-rule-page-size><option value="10"' + (state.pageSize === 10 ? ' selected' : '') + '>10 条/页</option><option value="20"' + (state.pageSize === 20 ? ' selected' : '') + '>20 条/页</option><option value="50"' + (state.pageSize === 50 ? ' selected' : '') + '>50 条/页</option><option value="100"' + (state.pageSize === 100 ? ' selected' : '') + '>100 条/页</option></select></label></div></div></section>';
@@ -3107,7 +3224,11 @@
   function limitCompletion(draft, storeIds) {
     var total = 0;
     var complete = 0;
-    eachLimitCell(draft, function (key, partyIndex, roundIndex, lineId, targetId, config) { total += 1; if (config.limits[key] && config.limits[key].configured) complete += 1; }, storeIds);
+    eachLimitCell(draft, function (key, partyIndex, roundIndex, lineId, targetId, config) {
+      var cells = draft.targetType === "dish_set" ? config.dishSetLimits : config.limits;
+      total += 1;
+      if (cells[key] && cells[key].configured) complete += 1;
+    }, storeIds);
     return { complete: complete, total: total };
   }
 
@@ -3115,7 +3236,8 @@
     return (storeIds || addedStoreIds(draft)).map(function (storeId) {
       var store = stores.find(function (item) { return item.id === storeId; });
       var config = storeConfigFor(draft, storeId, false);
-      return (store ? store.name : storeId) + "：" + (config ? config.targetIds.length : 0) + " 个" + (draft.targetType === "dish" ? "菜品" : "分类");
+      var unit = draft.targetType === "dish_set" ? "菜品（1 个菜品集）" : draft.targetType === "dish" ? "菜品" : "分类";
+      return (store ? store.name : storeId) + "：" + (config ? config.targetIds.length : 0) + " 个" + unit;
     }).join("；");
   }
 
@@ -3349,6 +3471,7 @@
     var apply = function () {
       draft[field] = value;
       if (field === "targetType") {
+        draft.schemaVersion = value === "dish_set" ? 2 : 1;
         clearProductSearch();
         clearProductPickerNav();
         draft.structureByLine = MenuPicker ? MenuPicker.emptyByLine() : { kiosk: [], emenu: [], sdi: [] };
@@ -3635,7 +3758,12 @@
       if (!selectedRuleRows.length) { toast("请至少选择一条商品规则", true); return; }
       selectedRuleRows.forEach(function (row) {
         var config = storeConfigFor(editorState.rule.editorDraft, row.storeId, false);
-        if (config) config.limits[limitKey(row.partyIndex, row.roundIndex, row.lineId, row.targetId)] = { configured: true, value: batchValue };
+        if (!config) return;
+        if (editorState.rule.editorDraft.targetType === "dish_set") {
+          config.dishSetLimits[dishSetLimitKey(row.partyIndex, row.roundIndex)] = { configured: true, value: batchValue };
+        } else {
+          config.limits[limitKey(row.partyIndex, row.roundIndex, row.lineId, row.targetId)] = { configured: true, value: batchValue };
+        }
       });
       editorState.limitRuleList.selectedRowIds = [];
       markEditorDirty();
@@ -4105,8 +4233,12 @@
       var inputConfig = inputStoreId ? storeConfigFor(draft, inputStoreId, false) : activeStoreConfig(draft);
       var effectiveLineId = inputLineId || draft.activeLineId;
       if (!inputConfig) return;
-      var key = limitKey(limitPartyIndex, limitRoundIndex, effectiveLineId, target.getAttribute("data-limit-target"));
-      inputConfig.limits[key] = target.value === "" ? { configured: false, value: null } : { configured: true, value: Math.max(0, Number(target.value)) };
+      var isDishSetLimit = draft.targetType === "dish_set" && target.getAttribute("data-limit-target") === "dish_set";
+      var key = isDishSetLimit
+        ? dishSetLimitKey(limitPartyIndex, limitRoundIndex)
+        : limitKey(limitPartyIndex, limitRoundIndex, effectiveLineId, target.getAttribute("data-limit-target"));
+      var limitCells = isDishSetLimit ? inputConfig.dishSetLimits : inputConfig.limits;
+      limitCells[key] = target.value === "" ? { configured: false, value: null } : { configured: true, value: Math.max(0, Number(target.value)) };
       markEditorDirty(); return;
     }
     if (target.hasAttribute("data-business-hour-slot-toggle")) {
