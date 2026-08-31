@@ -7,12 +7,16 @@
   var DEFAULT_SCENARIOS = [
     { key: "order|order_lifetime|category", subject: "order", period: "order_lifetime", targetType: "category", name: "按桌/订单·每单/整单累计·按分类限购" },
     { key: "order|order_lifetime|dish", subject: "order", period: "order_lifetime", targetType: "dish", name: "按桌/订单·每单/整单累计·按菜品限购" },
+    { key: "order|order_lifetime|dish_set", subject: "order", period: "order_lifetime", targetType: "dish_set", name: "按桌/订单·每单/整单累计·按菜品集限购" },
     { key: "party_size|order_lifetime|category", subject: "party_size", period: "order_lifetime", targetType: "category", name: "按人数·每单·按分类限购" },
     { key: "party_size|order_lifetime|dish", subject: "party_size", period: "order_lifetime", targetType: "dish", name: "按人数·每单·按菜品限购" },
+    { key: "party_size|order_lifetime|dish_set", subject: "party_size", period: "order_lifetime", targetType: "dish_set", name: "按人数·每单·按菜品集限购" },
     { key: "party_size|per_round|category", subject: "party_size", period: "per_round", targetType: "category", name: "按人数·每轮·按分类限购" },
     { key: "party_size|per_round|dish", subject: "party_size", period: "per_round", targetType: "dish", name: "按人数·每轮·按菜品限购" },
+    { key: "party_size|per_round|dish_set", subject: "party_size", period: "per_round", targetType: "dish_set", name: "按人数·每轮·按菜品集限购" },
     { key: "party_size|multi_round|category", subject: "party_size", period: "multi_round", targetType: "category", name: "按人数·分轮次·按分类限购" },
-    { key: "party_size|multi_round|dish", subject: "party_size", period: "multi_round", targetType: "dish", name: "按人数·分轮次·按菜品限购" }
+    { key: "party_size|multi_round|dish", subject: "party_size", period: "multi_round", targetType: "dish", name: "按人数·分轮次·按菜品限购" },
+    { key: "party_size|multi_round|dish_set", subject: "party_size", period: "multi_round", targetType: "dish_set", name: "按人数·分轮次·按菜品集限购" }
   ];
 
   function clone(value) {
@@ -122,6 +126,7 @@
   function createDefaultScenarioRule(scenario, id) {
     var created = today();
     var draft = {
+      schemaVersion: scenario.targetType === "dish_set" ? 2 : 1,
       currentStep: 1, highestStep: 1,
       subject: scenario.subject, period: scenario.period, targetType: scenario.targetType,
       name: scenario.name, description: "",
@@ -149,7 +154,7 @@
       origin: "system_default", defaultScenarioKey: scenario.key, publishedSnapshotVersion: null,
       type: scenario.subject === "party_size" ? "按人数限购" : "按桌/订单限购",
       round: scenario.period === "multi_round" ? "分轮次" : scenario.period === "per_round" ? "每轮" : "每单/整单累计",
-      method: scenario.targetType === "dish" ? "按每种菜品限购" : "按每个分类限购",
+      method: scenario.targetType === "dish_set" ? "按菜品集限购" : scenario.targetType === "dish" ? "按每种菜品限购" : "按每个分类限购",
       persons: "1 人及以上", dishes: "未配置门店/产线", selectedCategories: [], selectedDishes: [],
       structureByLine: clone(draft.structureByLine), quantitySettings: {}, personRanges: [],
       productLines: [], limits: [], conditions: clone(draft.conditions), authorization: clone(draft.authorization),
@@ -234,6 +239,6 @@
       order: ["order_lifetime"],
       party_size: ["order_lifetime", "per_round", "multi_round"]
     },
-    allowedTargetTypes: ["category", "dish"]
+    allowedTargetTypes: ["category", "dish", "dish_set"]
   };
 })();

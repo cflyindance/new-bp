@@ -52,9 +52,9 @@ const profile = loadProfile(storage);
 const repository = profile.repository;
 
 const first = repository.loadForAuthoringList(profile.createDefaultScenarioRule);
-assert.equal(first.length, 8);
+assert.equal(first.length, 12);
 assert.equal(first.every((rule) => rule.status === "disabled"), true);
-assert.equal(new Set(first.map((rule) => rule.defaultScenarioKey)).size, 8);
+assert.equal(new Set(first.map((rule) => rule.defaultScenarioKey)).size, 12);
 assert.equal(storage.getItem(menuKey), "menu-rules-must-not-change");
 const firstEnvelope = repository.readEnvelope();
 assert.equal(firstEnvelope.revision, 1);
@@ -64,7 +64,7 @@ assert.deepEqual(Object.keys(firstEnvelope.snapshots), []);
 const serialized = storage.getItem(repositoryKey);
 const writesBeforeSecondLoad = storage.writes;
 const second = repository.loadForAuthoringList(profile.createDefaultScenarioRule);
-assert.equal(second.length, 8);
+assert.equal(second.length, 12);
 assert.equal(storage.getItem(repositoryKey), serialized, "场景完整时不得改写仓库");
 assert.equal(storage.writes, writesBeforeSecondLoad, "幂等加载不得产生 storage 写入");
 
@@ -80,7 +80,7 @@ const partialStorage = storageMock({
 });
 const partialRepository = loadProfile(partialStorage).repository;
 const partial = partialRepository.loadForAuthoringList(factory);
-assert.equal(partial.length, 9, "1 条正式规则、1 条草稿和 7 条补齐规则");
+assert.equal(partial.length, 13, "1 条正式规则、1 条草稿和 11 条补齐规则");
 const partialEnvelope = partialRepository.readEnvelope();
 assert.equal(partialEnvelope.revision, 8);
 assert.equal(partialEnvelope.rules.find((rule) => rule.id === 41).name, "已有规则");
