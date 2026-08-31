@@ -50,33 +50,6 @@
       color: var(--primary); cursor: pointer; text-decoration: none; margin-right: 8px; font-size: 13px;
     }
     .detail-table .action-cell a.danger { color: var(--danger); }
-    .bottom-actions {
-      position: fixed; bottom: 0; right: 0; left: 264px; z-index: 40;
-      display: grid; grid-template-columns: minmax(0, 1fr) auto;
-      align-items: center; column-gap: 12px; padding: 12px 24px;
-      background: #fff; border-top: 1px solid var(--border-light);
-      box-shadow: 0 -2px 8px rgba(0,0,0,0.06);
-      box-sizing: border-box;
-    }
-    body.tipout-embedded .bottom-actions { left: 0; }
-    .bottom-actions-start {
-      display: flex; align-items: center; justify-self: start; min-width: 0; gap: 12px;
-    }
-    .bottom-actions-end {
-      display: flex; align-items: center; justify-content: flex-end; gap: 12px; justify-self: end;
-    }
-    .content-area { padding-bottom: 72px; }
-    @media (max-width: 768px) {
-      .bottom-actions {
-        left: 0; grid-template-columns: 1fr; gap: 8px; padding: 10px 12px;
-      }
-      .bottom-actions-start,
-      .bottom-actions-end {
-        display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; width: 100%;
-      }
-      .bottom-actions .btn { flex: 1 1 auto; min-width: calc(50% - 8px); min-height: 44px; font-size: 14px; }
-      .bottom-actions .btn-lg { padding-left: 12px; padding-right: 12px; }
-    }
     .role-label { display: inline-block; padding: 2px 8px; background: #f5f5f5; border-radius: 4px; font-size: 12px; }
 
     /* Formula detail modal */
@@ -229,14 +202,29 @@
       </header>
 
       <div class="page-tabs">
-        <a href="index.html" class="page-tab">小费分配汇总</a>
+        <a href="index.html" class="page-tab" onclick="returnToSummary();return false">小费分配汇总</a>
         <a href="detail.html" class="page-tab active">小费分配明细</a>
         <a href="rules.html" class="page-tab">小费分配规则</a>
       </div>
 
       <div class="content-area">
-        <!-- Filters：移动端默认折叠，与分配页一致 -->
-        <div class="filter-surface">
+        <div class="tipout-detail-heading">
+          <div class="tipout-detail-heading-copy">
+            <button type="button" class="btn btn-ghost" onclick="returnToSummary()">← 返回汇总</button>
+            <div>
+              <h1>小费分配明细</h1>
+              <p>查看并核对当前日期与门店的小费分配结果</p>
+            </div>
+          </div>
+          <div class="tipout-detail-heading-actions">
+            <button type="button" class="btn btn-lg" onclick="updateTipData()">更新小费数据</button>
+            <button class="btn btn-primary btn-lg" onclick="saveDetail()">保存</button>
+            <button class="btn btn-primary btn-lg" onclick="saveAndNext()">保存并跳转到下一天</button>
+          </div>
+        </div>
+
+        <!-- 当前明细上下文：保留既有日期、门店控件及 onchange 行为 -->
+        <div class="filter-surface tipout-detail-context">
           <button type="button" class="filter-surface-toggle" onclick="toggleFilterSurface(this)" aria-expanded="false" aria-controls="detailFilterCollapsible">
             <span class="filter-surface-toggle-text">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
@@ -263,16 +251,6 @@
         <!-- 每条规则：公式/说明 + 对应明细表 成组展示 -->
         <div id="detailRulesContainer"></div>
 
-      </div>
-
-      <div class="bottom-actions">
-        <div class="bottom-actions-start">
-          <button type="button" class="btn btn-lg" onclick="updateTipData()">更新小费数据</button>
-        </div>
-        <div class="bottom-actions-end">
-          <button class="btn btn-primary btn-lg" onclick="saveDetail()">保存</button>
-          <button class="btn btn-primary btn-lg" onclick="saveAndNext()">保存并跳转到下一天</button>
-        </div>
       </div>
     </div>
   </div>
@@ -476,19 +454,10 @@
       var rules = window.ruleData && ruleData.getRulesForStore ? ruleData.getRulesForStore(store) : [];
       if (rules.length === 0) {
         document.getElementById('detailRulesContainer').innerHTML =
-          '<div style="padding:48px;text-align:center;color:var(--text-secondary);font-size:14px">' +
-          '<p style="margin-bottom:16px">请先创建小费分配规则</p>' +
-          '<a href="rules.html" class="btn btn-primary">去创建规则</a></div>';
-        currentRule = null;
-        return;
-      }
-
-      var allocatedDates = getAllocatedDatesForStore(store);
-      if (!allocatedDates.has(dateKey)) {
-        document.getElementById('detailRulesContainer').innerHTML =
-          '<div style="padding:48px;text-align:center;color:var(--text-secondary);font-size:14px">' +
-          '<p style="margin-bottom:16px">该日期尚未完成小费分配，请先在小费分配页面完成分配</p>' +
-          '<a href="index.html" class="btn btn-primary">去分配小费</a></div>';
+          '<div class="tipout-detail-empty">' +
+          '<h2>还没有小费分配规则</h2>' +
+          '<p>当前门店还没有可用于此日期的小费分配规则。</p>' +
+          '<a href="rules.html" class="btn btn-primary">新增小费分配规则</a></div>';
         currentRule = null;
         return;
       }
@@ -1499,12 +1468,17 @@
       if (stores.length > 0 && !sel.value) sel.value = stores[0];
     }
 
-    function applyUrlParams() {
+    function getDetailUrlParams() {
       var params = {};
       (location.search || '').slice(1).split('&').forEach(function(p) {
         var kv = p.split('=');
         if (kv[0] && kv[1]) params[kv[0]] = decodeURIComponent(kv[1]);
       });
+      return params;
+    }
+
+    function applyUrlParams() {
+      var params = getDetailUrlParams();
       if (params.date) {
         var dateInp = document.getElementById('detailDate');
         if (dateInp) dateInp.value = params.date;
@@ -1513,6 +1487,13 @@
         var storeSel = document.getElementById('storeSelect');
         if (storeSel) storeSel.value = params.store;
       }
+      return params;
+    }
+
+    function returnToSummary() {
+      var params = getDetailUrlParams();
+      if (params.from === 'summary' && history.length > 1) history.back();
+      else window.location.href = 'index.html';
     }
 
     initStoreSelect();

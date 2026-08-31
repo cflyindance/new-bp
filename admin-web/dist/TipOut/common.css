@@ -1228,3 +1228,481 @@ select.form-control {
     display: block;
   }
 }
+
+.tipout-daily-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tipout-daily-row {
+  display: grid;
+  grid-template-columns: minmax(142px, 1.25fr) 84px repeat(4, minmax(0, 1fr)) 20px;
+  gap: 16px;
+  align-items: center;
+  width: 100%;
+  min-height: 76px;
+  padding: 14px 18px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  background: #fff;
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+}
+
+.tipout-daily-row:hover {
+  border-color: var(--primary);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+
+.tipout-daily-row:focus-visible {
+  outline: 3px solid rgba(22, 119, 255, 0.24);
+  outline-offset: 2px;
+  border-color: var(--primary);
+}
+
+.tipout-daily-date,
+.tipout-daily-amount {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.tipout-daily-date strong {
+  font-size: 16px;
+}
+
+.tipout-daily-date small,
+.tipout-daily-amount small {
+  color: var(--text-tertiary);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.tipout-daily-amount strong {
+  overflow: hidden;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tipout-daily-status {
+  justify-self: start;
+  padding: 3px 9px;
+  border: 1px solid;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.tipout-daily-status.allocated {
+  border-color: #b7eb8f;
+  background: #f6ffed;
+  color: var(--success);
+}
+
+.tipout-daily-status.pending {
+  border-color: #ffe58f;
+  background: #fffbe6;
+  color: var(--warning);
+}
+
+.tipout-daily-chevron {
+  color: var(--text-tertiary);
+  font-size: 24px;
+  line-height: 1;
+  text-align: right;
+}
+
+.tipout-detail-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 20px;
+}
+
+.tipout-detail-heading-copy,
+.tipout-detail-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.tipout-detail-heading-copy {
+  align-items: flex-start;
+}
+
+.tipout-detail-heading h1 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 24px;
+  line-height: 1.35;
+}
+
+.tipout-detail-heading p {
+  margin: 4px 0 0;
+  color: var(--text-tertiary);
+  font-size: 13px;
+}
+
+.tipout-detail-context {
+  margin-bottom: 20px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  background: #fff;
+}
+
+.tipout-detail-empty {
+  padding: 56px 24px;
+  border: 1px dashed var(--border-color);
+  border-radius: var(--radius-lg);
+  background: #fff;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.tipout-detail-empty h2 {
+  margin: 0 0 8px;
+  color: var(--text-primary);
+  font-size: 18px;
+}
+
+.tipout-detail-empty p {
+  margin: 0 0 18px;
+  font-size: 14px;
+}
+
+.tipout-rule-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tipout-rule-record {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 20px 22px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  background: #fff;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.tipout-rule-record:hover {
+  border-color: var(--primary-border);
+  box-shadow: var(--shadow-sm);
+}
+
+.tipout-rule-record-main {
+  min-width: 0;
+}
+
+.tipout-rule-record-context {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.tipout-rule-store {
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.tipout-rule-store::after {
+  content: '';
+  display: inline-block;
+  width: 1px;
+  height: 12px;
+  margin-left: 8px;
+  background: var(--border-color);
+  vertical-align: -2px;
+}
+
+.tipout-rule-name {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.tipout-rule-description {
+  margin: 7px 0 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.tipout-rule-record-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.tipout-rule-edit {
+  min-width: 64px;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.tipout-rule-actions {
+  position: relative;
+}
+
+.tipout-rule-more {
+  min-width: 92px;
+  justify-content: center;
+}
+
+.tipout-rule-more[aria-expanded="true"] {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.tipout-rule-actions-menu {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 6px);
+  right: 0;
+  width: 136px;
+  padding: 4px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  background: #fff;
+  box-shadow: var(--shadow-md);
+}
+
+.tipout-rule-actions-menu[hidden] {
+  display: none;
+}
+
+.tipout-rule-actions-menu button {
+  display: block;
+  width: 100%;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tipout-rule-actions-menu button:hover,
+.tipout-rule-actions-menu button:focus-visible {
+  outline: none;
+  background: var(--primary-bg);
+  color: var(--primary);
+}
+
+.tipout-rule-actions-menu button.danger {
+  color: var(--danger);
+}
+
+.tipout-rule-actions-menu button.danger:hover,
+.tipout-rule-actions-menu button.danger:focus-visible {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.tipout-rule-empty {
+  padding: 56px 24px;
+  border: 1px dashed var(--border-color);
+  border-radius: var(--radius-lg);
+  background: #fff;
+  color: var(--text-tertiary);
+  text-align: center;
+}
+
+.tipout-rule-editor-layout {
+  display: grid;
+  grid-template-columns: 196px minmax(0, 1fr);
+  align-items: start;
+  gap: 20px;
+}
+
+.tipout-rule-editor-layout > .page-card {
+  min-width: 0;
+}
+
+.tipout-rule-section-nav {
+  position: sticky;
+  top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  background: #fff;
+  box-shadow: var(--shadow-sm);
+}
+
+.tipout-rule-section-nav-title {
+  padding: 4px 10px 8px;
+  color: var(--text-tertiary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.tipout-rule-section-nav button {
+  width: 100%;
+  min-height: 38px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tipout-rule-section-nav button:hover {
+  background: var(--primary-bg);
+  color: var(--primary);
+}
+
+.tipout-rule-section-nav button:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+  background: var(--primary-bg);
+  color: var(--primary);
+}
+
+.tipout-rule-section-nav button[hidden] {
+  display: none;
+}
+
+.tipout-rule-editor-layout .form-section[id],
+.tipout-rule-distribution-section {
+  scroll-margin-top: 20px;
+}
+
+@media (max-width: 1100px) {
+  .tipout-rule-editor-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tipout-rule-section-nav {
+    z-index: 15;
+    top: 0;
+    flex-direction: row;
+    gap: 6px;
+    overflow-x: auto;
+    padding: 8px;
+    border-radius: var(--radius-md);
+  }
+
+  .tipout-rule-section-nav-title {
+    display: none;
+  }
+
+  .tipout-rule-section-nav button {
+    width: auto;
+    min-height: 40px;
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  .tipout-rule-editor-layout .form-section[id],
+  .tipout-rule-distribution-section {
+    scroll-margin-top: 72px;
+  }
+}
+
+@media (max-width: 768px) {
+  .tipout-detail-heading,
+  .tipout-detail-heading-copy {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .tipout-detail-heading-actions {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .tipout-detail-heading-actions .btn {
+    flex: 1 1 calc(50% - 8px);
+    min-height: 44px;
+  }
+
+  .tipout-daily-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px 16px;
+    padding: 14px;
+  }
+
+  .tipout-daily-date {
+    grid-column: 1;
+  }
+
+  .tipout-daily-status {
+    grid-column: 2;
+    justify-self: end;
+  }
+
+  .tipout-daily-amount {
+    padding-top: 10px;
+    border-top: 1px solid var(--border-light);
+  }
+
+  .tipout-daily-chevron {
+    display: none;
+  }
+
+  .tipout-rule-record {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 18px;
+    padding: 16px;
+  }
+
+  .tipout-rule-record-actions {
+    width: 100%;
+  }
+
+  .tipout-rule-edit,
+  .tipout-rule-actions,
+  .tipout-rule-more {
+    flex: 1 1 0;
+  }
+
+  .tipout-rule-more {
+    width: 100%;
+  }
+
+  .tipout-rule-actions-menu {
+    right: 0;
+    left: 0;
+    width: auto;
+  }
+
+  .tipout-rule-editor-layout {
+    gap: 12px;
+  }
+
+  .tipout-rule-section-nav {
+    margin: 0 -4px;
+  }
+}
