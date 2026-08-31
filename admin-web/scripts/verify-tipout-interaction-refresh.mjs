@@ -91,6 +91,24 @@ assert.doesNotMatch(detailHtml, /allocatedDates\.has\(dateKey\)/);
 assert.doesNotMatch(detailHtml, /该日期尚未完成小费分配/);
 
 const rulesHtml = fs.readFileSync(path.join(root, 'dist/TipOut/rules.html'), 'utf8');
+for (const id of ['ruleCount', 'tipPoolCount', 'surchargePoolCount', 'rulesTableBody']) {
+  assert.match(rulesHtml, new RegExp('id="' + id + '"'));
+}
+assert.match(rulesHtml, /function renderRuleMetrics\(rules\)/);
+assert.match(rulesHtml, /<table[^>]*class="[^"]*tipout-rules-table/);
+assert.match(rulesHtml, /role="menu"/);
+assert.doesNotMatch(rulesHtml, /生效中|待补录|需处理|规则版本|生效日期/);
+assert.match(rulesHtml, /document\.getElementById\('ruleCount'\)\.textContent = String\(list\.length\)/);
+assert.match(rulesHtml, /rule\.poolKind !== 'surcharge'/);
+assert.match(rulesHtml, /rule\.poolKind === 'surcharge'/);
+assert.match(rulesHtml, /renderRuleMetrics\(rules\)/);
+assert.match(rulesHtml, /data-rule-id/);
+assert.match(rulesHtml, /id="storeFilter"[^>]*onchange="renderRulesTable\(\)"/);
+assert.match(rulesHtml, /id="poolTypeModal"/);
+assert.match(rulesHtml, /name="poolType" value="tip"/);
+assert.match(rulesHtml, /name="poolType" value="surcharge"/);
+assert.match(rulesHtml, /function confirmPoolTypeSelection\(\)/);
+assert.match(rulesHtml, /function buildRuleAddUrl\(poolType\)/);
 assert.match(rulesHtml, /tipout-rule-record/);
 assert.match(rulesHtml, /ruleData\.buildRuleDescription/);
 assert.match(rulesHtml, /deleteRule\(this\)/);
@@ -104,7 +122,9 @@ assert.match(rulesHtml, /ruleData\.getNextRuleId\(\)/);
 assert.match(rulesHtml, /ruleName = \(rule\.ruleName \|\| ''\) \+ ' \(副本\)'/);
 assert.match(rulesHtml, /ruleData\.saveRules\(rules\)/);
 assert.match(rulesHtml, /if \(!event\.target\.closest\('\.tipout-rule-actions'\)\) closeRuleActions\(\)/);
-assert.doesNotMatch(rulesHtml, /id="rulesTable"|id="rulesTableBody"/);
+assert.match(rulesHtml, /event\.key !== 'Escape'/);
+assert.match(rulesHtml, /if \(firstAction\) firstAction\.focus\(\)/);
+assert.match(rulesHtml, /openButton\.focus\(\)/);
 assert.doesNotMatch(rulesHtml, /规则版本|生效日期|停用规则|启用规则/);
 const rulesInlineScripts = [...rulesHtml.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)]
   .map((match) => match[1])
