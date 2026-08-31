@@ -24,17 +24,17 @@ vm.runInNewContext(source, {
 const profile = window.ORDER_LIMIT_MODULE_PROFILE;
 assert.ok(profile.allowedTargetTypes.includes("dish_set"), "自助餐 profile 应允许 dish_set");
 const dishSetScenarios = profile.defaultScenarios.filter((item) => item.targetType === "dish_set");
-assert.equal(profile.defaultScenarios.length, 12, "自助餐规则应包含 12 个合法场景");
-assert.equal(dishSetScenarios.length, 4, "应补充 4 个菜品集场景");
+assert.equal(profile.defaultScenarios.length, 19, "自助餐规则应包含 19 个合法场景");
+assert.equal(dishSetScenarios.length, 5, "应包含 5 个菜品集场景");
 assert.deepEqual(
   [...new Set(dishSetScenarios.map((item) => `${item.subject}|${item.period}`))].sort(),
-  ["order|order_lifetime", "party_size|multi_round", "party_size|order_lifetime", "party_size|per_round"].sort(),
+  ["order|order_lifetime", "order|per_round", "party_size|multi_round", "party_size|order_lifetime", "party_size|per_round"].sort(),
 );
 
 for (const scenario of dishSetScenarios) {
   const record = profile.createDefaultScenarioRule(scenario, 1);
   assert.equal(record.status, "disabled");
-  assert.equal(record.authoringConfig.schemaVersion, 2);
+  assert.equal(record.authoringConfig.schemaVersion, scenario.subject === "order" && scenario.period === "per_round" ? 3 : 2);
   assert.equal(record.authoringConfig.targetType, "dish_set");
   assert.equal(record.method, "按菜品集限购");
 }

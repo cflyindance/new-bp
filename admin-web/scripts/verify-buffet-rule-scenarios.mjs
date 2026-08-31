@@ -7,13 +7,13 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const flow = fs.readFileSync(path.join(root, "dist/Configuration center/assets/order-limit-flow.js"), "utf8");
 const profile = fs.readFileSync(path.join(root, "dist/Configuration center/assets/buffet-rule-profile.js"), "utf8");
 
-assert.match(profile, /order:\s*\["order_lifetime"\]/);
+assert.match(profile, /order:\s*\["order_lifetime",\s*"per_round"\]/);
 assert.match(profile, /party_size:\s*\["order_lifetime",\s*"per_round",\s*"multi_round"\]/);
 assert.match(profile, /allowedTargetTypes:\s*\["category",\s*"dish",\s*"dish_set"\]/);
 
 assert.match(flow, /function isAllowedCombination\(draft\)/);
 assert.match(flow, /function showsPartyDimension\(draft\)/);
-assert.match(flow, /if \(draft\.subject === "order"\) \{[\s\S]*?draft\.period = "order_lifetime"/);
+assert.match(flow, /constraintKindOf\(draft\)/);
 assert.match(flow, /draft\.subject === "party_size"[\s\S]*?validateContinuousRanges\(draft\.partyRanges/);
 
 const stepOne = flow.match(/function renderStepOne\(draft\)[\s\S]*?(?=\n  function renderChecks)/)?.[0] ?? "";
@@ -25,7 +25,7 @@ assert.match(stepOne, /"每轮"/);
 assert.match(stepOne, /"分轮次"/);
 
 const sceneStep = flow.match(/function renderStepThree\(draft\)[\s\S]*?(?=\n  function cellFor)/)?.[0] ?? "";
-assert.match(sceneStep, /当前规则按整个订单累计，无需配置人数和轮次/);
+assert.match(sceneStep, /按订单共享额度，无需配置人数区间/);
 assert.match(sceneStep, /data-add-range="party"/);
 assert.match(sceneStep, /data-add-range="round"/);
 

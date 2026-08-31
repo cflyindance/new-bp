@@ -5,19 +5,34 @@
   var LOCK_KEY = "buffet-rule:repository-lock:v1";
   var LOCK_TTL = 3000;
   var DEFAULT_SCENARIOS = [
-    { key: "order|order_lifetime|category", subject: "order", period: "order_lifetime", targetType: "category", name: "按桌/订单·每单/整单累计·按分类限购" },
-    { key: "order|order_lifetime|dish", subject: "order", period: "order_lifetime", targetType: "dish", name: "按桌/订单·每单/整单累计·按菜品限购" },
-    { key: "order|order_lifetime|dish_set", subject: "order", period: "order_lifetime", targetType: "dish_set", name: "按桌/订单·每单/整单累计·按菜品集限购" },
-    { key: "party_size|order_lifetime|category", subject: "party_size", period: "order_lifetime", targetType: "category", name: "按人数·每单·按分类限购" },
-    { key: "party_size|order_lifetime|dish", subject: "party_size", period: "order_lifetime", targetType: "dish", name: "按人数·每单·按菜品限购" },
-    { key: "party_size|order_lifetime|dish_set", subject: "party_size", period: "order_lifetime", targetType: "dish_set", name: "按人数·每单·按菜品集限购" },
-    { key: "party_size|per_round|category", subject: "party_size", period: "per_round", targetType: "category", name: "按人数·每轮·按分类限购" },
-    { key: "party_size|per_round|dish", subject: "party_size", period: "per_round", targetType: "dish", name: "按人数·每轮·按菜品限购" },
-    { key: "party_size|per_round|dish_set", subject: "party_size", period: "per_round", targetType: "dish_set", name: "按人数·每轮·按菜品集限购" },
-    { key: "party_size|multi_round|category", subject: "party_size", period: "multi_round", targetType: "category", name: "按人数·分轮次·按分类限购" },
-    { key: "party_size|multi_round|dish", subject: "party_size", period: "multi_round", targetType: "dish", name: "按人数·分轮次·按菜品限购" },
-    { key: "party_size|multi_round|dish_set", subject: "party_size", period: "multi_round", targetType: "dish_set", name: "按人数·分轮次·按菜品集限购" }
+    { subject: "order", period: "order_lifetime", constraintKind: "target_max", targetType: "category", name: "按桌/订单·每单/整单累计·按分类限购" },
+    { subject: "order", period: "order_lifetime", constraintKind: "target_max", targetType: "dish", name: "按桌/订单·每单/整单累计·按菜品限购" },
+    { subject: "order", period: "order_lifetime", constraintKind: "target_max", targetType: "dish_set", name: "按桌/订单·每单/整单累计·按菜品集限购" },
+    { subject: "party_size", period: "order_lifetime", constraintKind: "target_max", targetType: "category", name: "按人数·每单·按分类限购" },
+    { subject: "party_size", period: "order_lifetime", constraintKind: "target_max", targetType: "dish", name: "按人数·每单·按菜品限购" },
+    { subject: "party_size", period: "order_lifetime", constraintKind: "target_max", targetType: "dish_set", name: "按人数·每单·按菜品集限购" },
+    { subject: "order", period: "per_round", constraintKind: "target_max", targetType: "category", name: "每轮·指定分类最多下单" },
+    { subject: "order", period: "per_round", constraintKind: "target_max", targetType: "dish", name: "每轮·指定菜品最多下单" },
+    { subject: "order", period: "per_round", constraintKind: "target_max", targetType: "dish_set", name: "每轮·指定菜品集最多下单" },
+    { subject: "party_size", period: "per_round", constraintKind: "target_max", targetType: "category", name: "每人每轮·指定分类最多下单" },
+    { subject: "party_size", period: "per_round", constraintKind: "target_max", targetType: "dish", name: "每人每轮·指定菜品最多下单" },
+    { subject: "party_size", period: "per_round", constraintKind: "target_max", targetType: "dish_set", name: "每人每轮·指定菜品集最多下单" },
+    { subject: "party_size", period: "multi_round", constraintKind: "target_max", targetType: "category", name: "按人数·分轮次·按分类限购" },
+    { subject: "party_size", period: "multi_round", constraintKind: "target_max", targetType: "dish", name: "按人数·分轮次·按菜品限购" },
+    { subject: "party_size", period: "multi_round", constraintKind: "target_max", targetType: "dish_set", name: "按人数·分轮次·按菜品集限购" },
+    { subject: "order", period: "per_round", constraintKind: "round_total", targetType: null, name: "每轮·下单菜品总数" },
+    { subject: "party_size", period: "per_round", constraintKind: "round_total", targetType: null, name: "每人每轮·下单菜品总数" },
+    { subject: "order", period: "per_round", constraintKind: "same_dish_max", targetType: null, name: "每轮·相同菜品最多下单" },
+    { subject: "party_size", period: "per_round", constraintKind: "same_dish_max", targetType: null, name: "每人每轮·相同菜品最多下单" }
   ];
+
+  function scenarioKeyFromParts(subject, period, constraintKind, targetType) {
+    return [subject, period, constraintKind || "target_max", targetType || ""].join("|");
+  }
+
+  DEFAULT_SCENARIOS.forEach(function (scenario) {
+    scenario.key = scenarioKeyFromParts(scenario.subject, scenario.period, scenario.constraintKind, scenario.targetType);
+  });
 
   function clone(value) {
     return JSON.parse(JSON.stringify(value));
@@ -101,7 +116,7 @@
   function scenarioKey(rule) {
     if (!rule || (rule.status !== "active" && rule.status !== "disabled")) return "";
     var draft = rule.authoringConfig || rule.authoringDraft || rule.editorDraft || rule;
-    var key = [draft.subject, draft.period, draft.targetType].join("|");
+    var key = scenarioKeyFromParts(draft.subject, draft.period, draft.constraintKind, draft.targetType);
     return DEFAULT_SCENARIOS.some(function (scenario) { return scenario.key === key; }) ? key : "";
   }
 
@@ -126,9 +141,9 @@
   function createDefaultScenarioRule(scenario, id) {
     var created = today();
     var draft = {
-      schemaVersion: scenario.targetType === "dish_set" ? 2 : 1,
+      schemaVersion: scenario.constraintKind !== "target_max" || (scenario.subject === "order" && scenario.period === "per_round") ? 3 : scenario.targetType === "dish_set" ? 2 : 1,
       currentStep: 1, highestStep: 1,
-      subject: scenario.subject, period: scenario.period, targetType: scenario.targetType,
+      subject: scenario.subject, period: scenario.period, constraintKind: scenario.constraintKind, targetType: scenario.targetType,
       name: scenario.name, description: "",
       structureByLine: { kiosk: [], emenu: [], sdi: [] }, productLines: [], targetIds: [],
       partyRanges: [{ min: 1, max: null }], roundRanges: [{ min: 1, max: null }],
@@ -236,9 +251,10 @@
       { title: "确认发布", note: "复核并下发" }
     ],
     allowedPeriodsBySubject: {
-      order: ["order_lifetime"],
+      order: ["order_lifetime", "per_round"],
       party_size: ["order_lifetime", "per_round", "multi_round"]
     },
-    allowedTargetTypes: ["category", "dish", "dish_set"]
+    allowedTargetTypes: ["category", "dish", "dish_set"],
+    allowedConstraintKinds: ["target_max", "round_total", "same_dish_max"]
   };
 })();

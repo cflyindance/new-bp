@@ -28,7 +28,7 @@ const profile = window.ORDER_LIMIT_MODULE_PROFILE;
 assert.equal(profile.moduleId, "buffet-rule");
 assert.equal(profile.storage.rulesKey, "buffet-rule:repository:v1");
 assert.equal(profile.storage.recoveryPrefix, "buffet-rule:recovery:v1:");
-assert.deepEqual(Array.from(profile.allowedPeriodsBySubject.order), ["order_lifetime"]);
+assert.deepEqual(Array.from(profile.allowedPeriodsBySubject.order), ["order_lifetime", "per_round"]);
 assert.equal(profile.allowedPeriodsBySubject.party_size.length, 3);
 
 const repository = profile.repository;

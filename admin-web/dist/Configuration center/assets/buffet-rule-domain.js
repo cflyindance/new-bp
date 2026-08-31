@@ -9,13 +9,14 @@
   };
 
   function mouth(rule) {
-    if (rule.subject === "order") return "order_lifetime";
+    if (rule.subject === "order") return rule.period === "per_round" ? "order_per_round" : "order_lifetime";
     if (rule.period === "order_lifetime") return "party_order_lifetime";
     if (rule.period === "per_round") return "party_per_round";
     return "party_multi_round";
   }
 
   function mouthsConflict(left, right) {
+    if (left === "order_per_round" || right === "order_per_round") return left === right;
     return !!(conflictMatrix[left] && conflictMatrix[left][right]);
   }
 
@@ -85,6 +86,10 @@
     return activeStores.reduce(function (rows, storeId) {
       var config = draft.storeConfigs && draft.storeConfigs[storeId];
       if (!config) return rows;
+      if ((draft.constraintKind || "target_max") !== "target_max") {
+        if (config.included !== false) rows.push({ storeId: storeId, lineId: "", targetType: draft.constraintKind, targetId: draft.constraintKind });
+        return rows;
+      }
       if (draft.targetType === "dish_set") {
         (config.dishSetMembers || []).forEach(function (member) {
           rows.push({ storeId: storeId, lineId: member.productLineId, targetType: "dish_set", targetId: String(member.dishId) });
@@ -111,6 +116,7 @@
       var record = records[index];
       if (!record || record.status !== "active" || excluded.indexOf(String(record.id)) >= 0) continue;
       var existing = record.authoringConfig || record.authoringDraft || record.editorDraft || record;
+      if ((candidate.constraintKind || "target_max") !== (existing.constraintKind || "target_max")) continue;
       if (!mouthsConflict(mouth(candidate), mouth(existing))) continue;
       if (!conditionsOverlap(candidate.conditions, existing.conditions)) continue;
       var existingTargets = targetEntries(existing);
@@ -172,6 +178,10 @@
   }
 
   function effectiveLimit(rule, context) {
+    var supportedMax = Number(rule.supportedPartySizeMax || (rule.storeConfigs && rule.storeConfigs[context.storeId] && rule.storeConfigs[context.storeId].supportedPartySizeMax));
+    if (Number.isInteger(supportedMax) && Number.isInteger(context.partySize) && context.partySize > supportedMax) {
+      return { valid: false, code: "PARTY_SIZE_ABOVE_SUPPORTED_MAX" };
+    }
     if ((rule.period === "per_round" || rule.period === "multi_round") && (!Number.isInteger(context.roundNo) || context.roundNo < 1)) {
       return { valid: false, code: "ROUND_REQUIRED" };
     }
@@ -179,6 +189,27 @@
       return { valid: false, code: "PARTY_SIZE_REQUIRED" };
     }
     var configured;
+    var partyIndex = rule.subject === "party_size" ? matchingRangeIndex(rule.partyRanges, context.partySize) : 0;
+    var roundIndex = rule.period === "multi_round" ? matchingRangeIndex(rule.roundRanges, context.roundNo) : 0;
+    var cellKey = partyIndex + "|" + roundIndex;
+    var scopedStoreConfig = rule.storeConfigs && rule.storeConfigs[context.storeId];
+    if (rule.constraintKind === "round_total") {
+      if (partyIndex < 0) return { valid: false, code: "PARTY_RANGE_INVALID" };
+      var boundCell = scopedStoreConfig && scopedStoreConfig.totalBounds && scopedStoreConfig.totalBounds[cellKey];
+      if (!boundCell) return { valid: false, code: "TOTAL_BOUNDS_INVALID" };
+      var maximum = boundCell.maxConfigured ? Number(boundCell.max) : Infinity;
+      if (boundCell.maxConfigured && (!Number.isInteger(maximum) || maximum < 0)) return { valid: false, code: "TOTAL_BOUNDS_INVALID" };
+      return { valid: true, value: rule.subject === "party_size" ? maximum * context.partySize : maximum };
+    }
+    if (rule.constraintKind === "same_dish_max") {
+      if (partyIndex < 0) return { valid: false, code: "PARTY_RANGE_INVALID" };
+      var sameCell = scopedStoreConfig && scopedStoreConfig.sameDishLimits && scopedStoreConfig.sameDishLimits[cellKey];
+      if (sameCell) {
+        if (!sameCell.configured || !Number.isInteger(Number(sameCell.value)) || Number(sameCell.value) < 0) return { valid: false, code: "LIMIT_INVALID" };
+        configured = Number(sameCell.value);
+        return { valid: true, value: rule.subject === "party_size" ? configured * context.partySize : configured };
+      }
+    }
     if (rule.targetType === "dish_set") {
       var storeConfig = rule.storeConfigs && rule.storeConfigs[context.storeId];
       if (!storeConfig) return { valid: false, code: "STORE_CONFIG_REQUIRED" };
@@ -207,6 +238,102 @@
     return { valid: true, value: configured * context.partySize };
   }
 
+  function totalBoundForRule(rule, context) {
+    var limitCheck = effectiveLimit(rule, context);
+    if (!limitCheck.valid) return limitCheck;
+    var partyIndex = rule.subject === "party_size" ? matchingRangeIndex(rule.partyRanges, context.partySize) : 0;
+    var roundIndex = rule.period === "multi_round" ? matchingRangeIndex(rule.roundRanges, context.roundNo) : 0;
+    var config = rule.storeConfigs && rule.storeConfigs[context.storeId];
+    var cell = config && config.totalBounds && config.totalBounds[partyIndex + "|" + roundIndex];
+    var multiplier = rule.subject === "party_size" ? context.partySize : 1;
+    return {
+      valid: true,
+      min: cell.minConfigured ? Number(cell.min) * multiplier : 0,
+      max: cell.maxConfigured ? Number(cell.max) * multiplier : Infinity
+    };
+  }
+
+  function mergeTotalBounds(rules, context) {
+    var result = { valid: true, min: 0, max: Infinity, minRuleIds: [], maxRuleIds: [] };
+    for (var index = 0; index < (rules || []).length; index += 1) {
+      var rule = rules[index];
+      if (rule.constraintKind !== "round_total") continue;
+      var bound = totalBoundForRule(rule, context);
+      if (!bound.valid) return bound;
+      result.min = Math.max(result.min, bound.min);
+      result.max = Math.min(result.max, bound.max);
+      var config = rule.storeConfigs && rule.storeConfigs[context.storeId];
+      var partyIndex = rule.subject === "party_size" ? matchingRangeIndex(rule.partyRanges, context.partySize) : 0;
+      var cell = config && config.totalBounds && config.totalBounds[partyIndex + "|0"];
+      if (cell && cell.minConfigured) result.minRuleIds.push(rule.id);
+      if (cell && cell.maxConfigured) result.maxRuleIds.push(rule.id);
+    }
+    if (result.min > result.max) return { valid: false, code: "ROUND_TOTAL_UNSATISFIABLE", min: result.min, max: result.max, ruleIds: result.minRuleIds.concat(result.maxRuleIds) };
+    return result;
+  }
+
+  function itemQuantity(items) {
+    return (items || []).reduce(function (sum, item) { return sum + Number(item.quantity || 0); }, 0);
+  }
+
+  function itemKey(item) { return String(item.productLineId) + "|" + String(item.dishId); }
+
+  function targetList(rule, context) {
+    if (Array.isArray(rule.targets)) return rule.targets;
+    var config = rule.storeConfigs && rule.storeConfigs[context.storeId];
+    var rows = [];
+    (config && config.productLines || []).forEach(function (lineId) {
+      (config.targetIds || []).forEach(function (targetId) { rows.push({ productLineId: lineId, targetId: targetId }); });
+    });
+    return rows;
+  }
+
+  function groupedMaximum(rule, context, items) {
+    var groups = {};
+    if (rule.constraintKind === "same_dish_max") {
+      (items || []).forEach(function (item) { groups[itemKey(item)] = (groups[itemKey(item)] || 0) + Number(item.quantity || 0); });
+    } else if (rule.targetType === "dish_set") {
+      var config = rule.storeConfigs && rule.storeConfigs[context.storeId];
+      var members = (config && config.dishSetMembers || []).map(function (member) { return member.productLineId + "|" + member.dishId; });
+      groups.set = (items || []).reduce(function (sum, item) { return members.indexOf(itemKey(item)) >= 0 ? sum + Number(item.quantity || 0) : sum; }, 0);
+    } else {
+      targetList(rule, context).forEach(function (target) {
+        var key = target.productLineId + "|" + target.targetId;
+        groups[key] = (items || []).reduce(function (sum, item) {
+          var value = rule.targetType === "category" ? item.categoryId : item.dishId;
+          return String(item.productLineId) === String(target.productLineId) && String(value) === String(target.targetId) ? sum + Number(item.quantity || 0) : sum;
+        }, 0);
+      });
+    }
+    return Object.keys(groups).reduce(function (maximum, key) { return Math.max(maximum, groups[key]); }, 0);
+  }
+
+  function targetMatrixViolations(rule, context, items) {
+    if (rule.constraintKind !== "target_max" || (rule.targetType !== "dish" && rule.targetType !== "category")) return null;
+    var config = rule.storeConfigs && rule.storeConfigs[context.storeId];
+    if (!config || !config.limits) return null;
+    var partyIndex = rule.subject === "party_size" ? matchingRangeIndex(rule.partyRanges, context.partySize) : 0;
+    var roundIndex = rule.period === "multi_round" ? matchingRangeIndex(rule.roundRanges, context.roundNo) : 0;
+    if (partyIndex < 0) return [{ ruleId: rule.id, ruleVersion: rule.version, code: "PARTY_RANGE_INVALID" }];
+    if (roundIndex < 0) return [{ ruleId: rule.id, ruleVersion: rule.version, code: "ROUND_RANGE_INVALID" }];
+    var multiplier = rule.subject === "party_size" ? context.partySize : 1;
+    return targetList(rule, context).reduce(function (violations, target) {
+      var key = partyIndex + "|" + roundIndex + "|" + target.productLineId + "|" + target.targetId;
+      var cell = config.limits[key];
+      if (!cell || !cell.configured || !Number.isInteger(Number(cell.value)) || Number(cell.value) < 0) {
+        violations.push({ ruleId: rule.id, ruleVersion: rule.version, code: "LIMIT_INVALID", targetId: target.targetId });
+        return violations;
+      }
+      var quantity = (items || []).reduce(function (sum, item) {
+        var identity = rule.targetType === "category" ? item.categoryId : item.dishId;
+        return String(item.productLineId) === String(target.productLineId) && String(identity) === String(target.targetId) ? sum + Number(item.quantity || 0) : sum;
+      }, 0);
+      var limit = Number(cell.value) * multiplier;
+      if (quantity > limit) violations.push({ ruleId: rule.id, ruleVersion: rule.version, code: "LIMIT_EXCEEDED", increment: quantity, effectiveLimit: limit, targetId: target.targetId });
+      return violations;
+    }, []);
+  }
+
   function evaluateBatch(input) {
     var selection = selectRuntimeModule(input.context);
     if (!selection.allowed) return selection;
@@ -216,7 +343,22 @@
       return { allowed: true, moduleId: selection.moduleId, duplicate: true, violations: [] };
     }
     var violations = [];
+    var allItems = (input.usedItems || []).concat(input.items || []);
+    var totals = mergeTotalBounds(input.rules, input.context);
+    if (!totals.valid) return { allowed: false, moduleId: selection.moduleId, violations: [{ code: totals.code, ruleIds: totals.ruleIds }] };
+    var totalQuantity = allItems.length ? itemQuantity(allItems) : Number(input.totalQuantity || 0);
+    if (totalQuantity > totals.max) violations.push({ code: "ROUND_TOTAL_MAX_EXCEEDED", effectiveLimit: totals.max, ruleIds: totals.maxRuleIds });
+    var phase = input.phase || input.context.phase || "add";
+    if (["submit_round", "end_round", "next_round", "checkout"].indexOf(phase) >= 0 && totalQuantity > 0 && totalQuantity < totals.min) {
+      violations.push({ code: "ROUND_TOTAL_MIN_NOT_MET", effectiveMinimum: totals.min, ruleIds: totals.minRuleIds });
+    }
     (input.rules || []).forEach(function (rule) {
+      if (rule.constraintKind === "round_total") return;
+      var matrixViolations = targetMatrixViolations(rule, input.context, allItems);
+      if (matrixViolations) {
+        violations = violations.concat(matrixViolations);
+        return;
+      }
       var limit = effectiveLimit(rule, input.context);
       if (!limit.valid) {
         violations.push({ ruleId: rule.id, ruleVersion: rule.version, code: limit.code });
@@ -224,7 +366,14 @@
       }
       var used = Number((input.usedByRule || {})[rule.id] || 0);
       var increment;
-      if (rule.targetType === "dish_set" && Array.isArray(input.items)) {
+      if (allItems.length && (rule.constraintKind === "same_dish_max" || rule.targetType === "dish" || rule.targetType === "category" || rule.targetType === "dish_set")) {
+        if (Array.isArray(input.usedItems)) {
+          used = 0;
+          increment = groupedMaximum(rule, input.context, allItems);
+        } else {
+          increment = groupedMaximum(rule, input.context, input.items || []);
+        }
+      } else if (rule.targetType === "dish_set" && Array.isArray(input.items)) {
         var storeConfig = rule.storeConfigs && rule.storeConfigs[input.context.storeId];
         var memberKeys = (storeConfig && storeConfig.dishSetMembers || []).map(function (member) {
           return member.productLineId + "|" + member.dishId;
@@ -248,6 +397,8 @@
       return {
         id: record.id,
         version: version,
+        schemaVersion: config.schemaVersion,
+        constraintKind: config.constraintKind || "target_max",
         subject: config.subject,
         period: config.period,
         targetType: config.targetType,
@@ -255,6 +406,12 @@
         authorization: config.authorization,
         deployStoreIds: config.deployStoreIds,
         storeConfigs: config.storeConfigs
+        ,partyRanges: config.partyRanges
+        ,roundRanges: config.roundRanges
+        ,supportedPartySizeMax: config.supportedPartySizeMax
+        ,limit: config.limit
+        ,limitMatrix: config.limitMatrix
+        ,roundLimits: config.roundLimits
       };
     });
   }
@@ -270,6 +427,7 @@
     selectRuntimeModule: selectRuntimeModule,
     matchingRangeIndex: matchingRangeIndex,
     effectiveLimit: effectiveLimit,
+    mergeTotalBounds: mergeTotalBounds,
     evaluateBatch: evaluateBatch,
     compileRuntimeRules: compileRuntimeRules
   };
