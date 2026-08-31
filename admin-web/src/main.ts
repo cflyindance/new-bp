@@ -296,12 +296,14 @@ import {
   enterEmenuLocalShell,
   enterKioskLocalShell,
   enterMPlatformShell,
+  enterPitShell,
   exitEmenuLocalShell,
   exitKioskLocalShell,
   exitMPlatformShell,
   isEmenuLocalShellMode,
   isKioskLocalShellMode,
   isMPlatformShellMode,
+  isPitShellMode,
 } from "./shell/app-shell-mode";
 import {
   bindViewSwitchControl,
@@ -362,6 +364,12 @@ import {
   isKioskLocalContentPath,
   normalizeKioskLocalPath,
 } from "./shell/kiosk-local-routes";
+import { bindPitShell, mountPitShell } from "./pit/pit-shell";
+import {
+  isPitContentPath,
+  normalizePitPath,
+  PIT_DEFAULT_PATH,
+} from "./pit/pit-routes";
 import { NAV_BLUEPRINT_ROUTE_PREFIX } from "./config/nav-blueprint-ui";
 import {
   filterModuleSettingsGroupsForPreset,
@@ -11933,6 +11941,19 @@ function mount(): void {
   syncProductVersionDocumentAttribute();
 
   const authPath = location.hash.slice(1) || "";
+  if (isPitContentPath(authPath) || isPitShellMode()) {
+    const normalizedPath = isPitContentPath(authPath) ? normalizePitPath(authPath) : PIT_DEFAULT_PATH;
+    if (normalizedPath !== authPath) {
+      replaceHashPath(normalizedPath);
+    }
+    if (!isPitShellMode()) enterPitShell();
+    unmountDemoSwitchFab();
+    const app = document.getElementById("app");
+    if (!app) return;
+    app.innerHTML = mountPitShell(mount, normalizedPath);
+    bindPitShell(mount);
+    return;
+  }
   if (!isAuthenticated()) {
     if (authPath !== LOGIN_PATH) {
       replaceHashPath(LOGIN_PATH);
@@ -11968,7 +11989,7 @@ function mount(): void {
 
   if (
     isEmenuLocalContentPath(authPath) ||
-    (isEmenuLocalShellMode() && !isKioskLocalContentPath(authPath) && !isMPlatformContentPath(authPath))
+    (isEmenuLocalShellMode() && !isKioskLocalContentPath(authPath) && !isMPlatformContentPath(authPath) && !isPitContentPath(authPath))
   ) {
     if (isViewSwitchRestricted()) {
       exitEmenuLocalShell();
@@ -11992,7 +12013,7 @@ function mount(): void {
 
   if (
     isKioskLocalContentPath(authPath) ||
-    (isKioskLocalShellMode() && !isEmenuLocalContentPath(authPath) && !isMPlatformContentPath(authPath))
+    (isKioskLocalShellMode() && !isEmenuLocalContentPath(authPath) && !isMPlatformContentPath(authPath) && !isPitContentPath(authPath))
   ) {
     if (isViewSwitchRestricted()) {
       exitKioskLocalShell();
@@ -12014,7 +12035,7 @@ function mount(): void {
     return;
   }
 
-  if (isMPlatformShellMode() || isMPlatformContentPath(authPath)) {
+  if (isMPlatformContentPath(authPath) || (isMPlatformShellMode() && !isPitContentPath(authPath))) {
     if (!shouldShowMPlatformViewSwitchOption()) {
       exitMPlatformShell();
       replaceHashPath(APP_NAV_HOME_PATH);

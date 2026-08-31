@@ -48,6 +48,7 @@
     "verify:pit-export-backup": "node scripts/verify-pit-export-backup.mjs",
     "verify:pit-import": "node scripts/verify-pit-import.mjs",
     "verify:pit-server": "node scripts/verify-pit-server.mjs",
+    "verify:pit-shell": "node scripts/verify-pit-shell.mjs",
     "pit:start": "node server/pit-api-server.mjs",
     "dev:pit": "node server/run-pit-dev.mjs",
     "pit:restore": "node server/pit-restore.mjs"
