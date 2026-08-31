@@ -61,6 +61,33 @@ assert.equal(historyState.tipoutSummaryUiState.returnDate, '2026-08-02');
 assert.equal(ui.readSummaryHistoryState(historyState).scrollY, 420);
 
 const indexHtml = fs.readFileSync(path.join(root, 'dist/TipOut/index.html'), 'utf8');
+assert.match(
+  indexHtml,
+  /id="summaryRuleEntryBtn"[^>]*onclick="openSummaryRuleEntry\(\)"[^>]*>新建\/查看规则<\/button>/,
+);
+assert.match(
+  indexHtml,
+  /id="summaryRuleEntryBtn"[\s\S]*?toggleExportMenu\(\)[\s\S]*?id="allocateBtn"/,
+);
+assert.match(indexHtml, /function openSummaryRuleEntry\(\)/);
+assert.match(indexHtml, /ruleData\.getRules\(\)/);
+assert.match(indexHtml, /rule-add\.html\?poolKind=tip/);
+assert.match(indexHtml, /window\.location\.href = hasRules \? 'rules\.html' : 'rule-add\.html\?poolKind=tip'/);
+const ruleEntryStart = indexHtml.indexOf('function openSummaryRuleEntry()');
+const ruleEntryEnd = indexHtml.indexOf('function hasTipRules()', ruleEntryStart);
+assert.ok(ruleEntryStart >= 0 && ruleEntryEnd > ruleEntryStart);
+const ruleEntrySource = indexHtml.slice(ruleEntryStart, ruleEntryEnd);
+function runSummaryRuleEntry(getRules) {
+  const location = { href: '' };
+  const data = { getRules };
+  const ruleEntryContext = { window: { ruleData: data, location }, ruleData: data };
+  vm.runInNewContext(ruleEntrySource, ruleEntryContext);
+  ruleEntryContext.openSummaryRuleEntry();
+  return location.href;
+}
+assert.equal(runSummaryRuleEntry(() => []), 'rule-add.html?poolKind=tip');
+assert.equal(runSummaryRuleEntry(() => [{ id: 1 }]), 'rules.html');
+assert.equal(runSummaryRuleEntry(() => { throw new Error('unavailable'); }), 'rule-add.html?poolKind=tip');
 for (const id of ['summaryBefore', 'summaryDeducted', 'summaryReceived', 'summaryAfter', 'pendingDateCount']) {
   assert.match(indexHtml, new RegExp('id="' + id + '"'));
 }

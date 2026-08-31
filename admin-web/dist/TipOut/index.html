@@ -175,6 +175,7 @@
               <p>按日期查看、核对并执行当前范围的小费分配。</p>
             </div>
             <div class="tipout-heading-actions">
+              <button id="summaryRuleEntryBtn" type="button" class="btn btn-lg" onclick="openSummaryRuleEntry()">新建/查看规则</button>
               <div class="export-dropdown">
                 <button type="button" class="btn btn-lg" onclick="toggleExportMenu()" aria-haspopup="menu">导出结果</button>
                 <div class="export-menu" id="exportMenu" role="menu">
@@ -800,6 +801,17 @@
       var hasAllocated = dates.some(function(k) { return allocatedDates.has(k); });
       var btn = document.getElementById('allocateBtn');
       if (btn) btn.textContent = hasAllocated ? '重新分配小费' : '分配小费';
+    }
+
+    function openSummaryRuleEntry() {
+      var rules = [];
+      try {
+        rules = window.ruleData && ruleData.getRules ? ruleData.getRules() : [];
+      } catch (e) {
+        rules = [];
+      }
+      var hasRules = Array.isArray(rules) && rules.length > 0;
+      window.location.href = hasRules ? 'rules.html' : 'rule-add.html?poolKind=tip';
     }
 
     function hasTipRules() {
