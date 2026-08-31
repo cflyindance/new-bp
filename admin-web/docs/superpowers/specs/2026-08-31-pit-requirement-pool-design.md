@@ -144,10 +144,11 @@ PIT 壳层沿用现有周边产品后台的视觉结构：左侧导航、顶部�
 | `#pit/highlights` | 重点需求快捷视图 |
 | `#pit/my-tasks` | 当前用户待办 |
 | `#pit/imports` | 导入记录与预检 |
-| `#pit/exports` | 导出记录 |
+| `#pit/exports` | 当前用户的导出记录；管理员可查看全部 |
 | `#pit/dictionaries` | 分类配置，管理员可见 |
 | `#pit/users` | 用户与权限，管理员可见 |
 | `#pit/audit-log` | 操作日志，管理员可见 |
+| `#pit/trash` | 已删除需求与恢复，管理员可见 |
 
 ## 6. 前端信息架构
 
@@ -175,6 +176,13 @@ PIT 壳层沿用现有周边产品后台的视觉结构：左侧导航、顶部�
 
 筛选、排序、分页写入 URL query，刷新、浏览器前进后退和复制链接后均可恢复。
 
+快捷视图的定义固定如下：
+
+- 待我处理：当前用户通过 `requirement_assignees.user_id` 关联为负责人、研发或测试，且需求未删除、状态不是已完成或拒绝。
+- 我关注的：当前用户存在 `requirement_followers` 记录的未删除需求。
+- 开发中、已完成：分别按规范状态过滤。
+- 重点需求页：等价于 `is_highlighted = 1` 的保存视图，不建立第二份需求数据。
+
 ### 6.2 需求详情
 
 桌面端点击列表行打开右侧详情抽屉，同时将需求 ID 写入 URL；移动端和直接访问深链使用完整详情页。关闭抽屉后恢复原列表滚动位置和筛选条件。
@@ -197,7 +205,7 @@ PIT 壳层沿用现有周边产品后台的视觉结构：左侧导航、顶部�
 
 ## 7. 状态模型
 
-### 7.1 主状态
+### 7.1 主流程与异常状态
 
 ```text
 待评审 → 待设计 → 待排期 → 开发中 → 测试中 → 已完成
@@ -214,6 +222,8 @@ PIT 壳层沿用现有周边产品后台的视觉结构：左侧导航、顶部�
 - `paused`
 - `rejected`
 
+前六个状态构成唯一的正常推进流程。`paused` 和 `rejected` 是用户已确认的异常状态，不插入正常流程，也不作为完成进度节点。
+
 ### 7.2 异常动作
 
 - 打回：要求填写原因，目标状态回到 `review_pending`。它作为事件记录，不是长期状态。
@@ -222,7 +232,7 @@ PIT 壳层沿用现有周边产品后台的视觉结构：左侧导航、顶部�
 - 拒绝：要求填写原因，状态变为 `rejected`。
 - 重新开启：仅管理员可将 `rejected` 或 `completed` 重新置为 `review_pending`。
 
-所有状态动作必须写 `requirement_events`，包括操作者、前后状态、原因和时间。
+所有状态动作必须写 `audit_events`，包括操作者、前后状态、原因和时间。
 
 ### 7.3 Excel 状态映射
 
@@ -262,10 +272,7 @@ PIT 壳层沿用现有周边产品后台的视觉结构：左侧导航、顶部�
 | `problem_category_id` | TEXT FK NULL | 菜单、CRM、支付等 |
 | `industry_id` | TEXT FK NULL | 业态 |
 | `customer_manager` | TEXT NULL | 客户经理 |
-| `owner_user_id` | TEXT FK NULL | 需求负责人 |
 | `implementation_side` | TEXT NULL | `frontend/backend/both` |
-| `developer_user_id` | TEXT FK NULL | 研发 |
-| `tester_user_id` | TEXT FK NULL | 测试 |
 | `proposed_at` | TEXT NULL | ISO 日期或月份精度值 |
 | `planned_year` | INTEGER NULL | 计划年度 |
 | `planned_month` | INTEGER NULL | 1–12 |
@@ -280,6 +287,8 @@ PIT 壳层沿用现有周边产品后台的视觉结构：左侧导航、顶部�
 | `source_status` | TEXT NULL | 原状态 |
 | `import_job_id` | TEXT FK NULL | 导入批次 |
 | `row_version` | INTEGER NOT NULL | 乐观锁版本，初始 1 |
+| `deleted_at` | TEXT NULL | 软删除时间 |
+| `deleted_by` | TEXT FK NULL | 软删除操作者 |
 | `created_by/updated_by` | TEXT FK NOT NULL | 操作者 |
 | `created_at/updated_at` | TEXT NOT NULL | ISO 时间 |
 
@@ -287,14 +296,17 @@ PIT 壳层沿用现有周边产品后台的视觉结构：左侧导航、顶部�
 
 - `requirement_product_lines(requirement_id, dictionary_id)`：一条需求可关联多个产品线。
 - `requirement_mids(requirement_id, mid)`：MID 作为文本标识，可多值。
+- `requirement_assignees(requirement_id, role, user_id, display_name, sort_order)`：`role` 为 `owner/developer/tester`；负责人最多一人，研发和测试允许多人。`user_id` 可为空，以保留未创建登录账号的历史人员名称。
+- `requirement_followers(requirement_id, user_id, created_at)`：支撑“我关注的”快捷视图。
 - `dictionaries(id, type, code, label, sort_order, active)`：产品线、来源、类别、问题分类、业态。
 - `users(id, username, display_name, password_hash, role, active, created_at, updated_at)`。
 - `sessions(id_hash, user_id, csrf_hash, expires_at, created_at, last_seen_at)`。
-- `requirement_events(id, requirement_id, event_type, from_status, to_status, reason, diff_json, actor_user_id, created_at)`。
+- `audit_events(id, actor_user_id, action, resource_type, resource_id, before_json, after_json, metadata_json, created_at)`：统一记录需求、状态、字典、用户、导入、导出和备份操作；需求详情时间线按 `resource_type=requirement` 查询。
 - `import_jobs(id, file_name, file_hash, status, summary_json, created_by, created_at, committed_at)`。
 - `import_rows(id, import_job_id, sheet_name, row_number, raw_json, normalized_json, issue_json, decision_json)`。
+- `export_jobs(id, filter_json, row_count, file_name, status, error_message, created_by, created_at, completed_at, expires_at)`：导出历史与临时下载文件元数据。
 
-删除需求采用软删除字段，由管理员恢复；普通列表不展示已删除记录。操作日志和导入追溯不可级联删除。
+删除需求采用 `deleted_at/deleted_by` 软删除。普通列表默认排除已删除记录；管理员在 `#pit/trash` 通过 `deleted=only` 查询并恢复。操作日志和导入追溯不可级联删除。
 
 ## 9. API 契约
 
@@ -356,6 +368,8 @@ Query：
 - `q`。
 - `productLine`、`status`、`priority`、`requirementType`、`problemCategory`、`source`、`owner`，允许重复参数表示多选。
 - `highlighted`、`plannedYear`、`plannedMonth`、`proposedFrom`、`proposedTo`。
+- `mine=true` 表示当前用户是负责人、研发或测试；`followed=true` 表示当前用户已关注。
+- `deleted=only|include` 仅管理员可用；省略时排除软删除需求。
 - `sort`，白名单：`updatedAt`、`createdAt`、`priority`、`plannedDate`；前缀 `-` 表示倒序。
 
 响应：
@@ -397,8 +411,10 @@ Query：
 | `DELETE` | `/api/v1/pit/requirements/:id` | 管理员 | 软删除 |
 | `POST` | `/api/v1/pit/requirements/:id/restore` | 管理员 | 恢复软删除 |
 | `POST` | `/api/v1/pit/requirements/:id/transitions` | 管理员、编辑者 | 状态动作 |
+| `PUT` | `/api/v1/pit/requirements/:id/follow` | 全部 | 当前用户关注需求，幂等 |
+| `DELETE` | `/api/v1/pit/requirements/:id/follow` | 全部 | 当前用户取消关注，幂等 |
 
-`POST` 和 `PATCH` 使用 camelCase 字段，对产品线和 MID 传数组。`PATCH` 必须携带 `rowVersion`。服务端在一个事务中更新主表、关联表、行版本和事件。
+`POST` 和 `PATCH` 使用 camelCase 字段，对产品线、MID 和人员分配传数组。人员项格式为 `{ role, userId, displayName }`；负责人最多一项，研发和测试可多项。`PATCH` 必须携带 `rowVersion`。服务端在一个事务中更新主表、关联表、行版本和审计事件。
 
 状态动作请求：
 
@@ -442,16 +458,20 @@ Query：
 - `merge`：显式选择目标行或现有需求，并指定字段优先级。
 - `skip`：不导入。
 
-只有所有阻断问题都已有决策时才能 commit。commit 前创建操作前备份；数据库写入、字典新增、重点标记和事件记录在同一事务中完成。
+只有所有阻断问题都已有决策时才能 commit。commit 前创建操作前备份；数据库写入、字典新增、重点标记和审计事件记录在同一事务中完成。
 
 ### 9.7 导出与备份
 
 | 方法 | 路径 | 权限 | 说明 |
 | --- | --- | --- | --- |
-| `GET` | `/api/v1/pit/exports/requirements.xlsx` | 全部 | 按列表同一筛选契约导出 |
+| `POST` | `/api/v1/pit/exports` | 全部 | 按列表同一筛选契约生成导出任务 |
+| `GET` | `/api/v1/pit/exports` | 全部 | 当前用户导出历史；管理员可加 `scope=all` |
+| `GET` | `/api/v1/pit/exports/:id/download` | 全部 | 下载本人导出；管理员可下载全部 |
 | `GET` | `/api/v1/pit/backups` | 管理员 | 备份列表 |
 | `POST` | `/api/v1/pit/backups` | 管理员 | 手工创建备份 |
 | `GET` | `/api/v1/pit/backups/:id/download` | 管理员 | 下载备份文件 |
+
+`POST /exports` 返回 `exportJob`。第一版可在同一请求内完成最多 2,227 量级的导出，但仍写 `export_jobs`；文件存放在 `.data/pit/exports/`，24 小时后删除，历史记录保留但显示“文件已过期”，可按原筛选重新生成。
 
 数据库恢复不提供在线 API，只能在停止 PIT 服务后执行 `npm run pit:restore -- <backup-file>`。恢复命令先备份当前数据库，再恢复并执行完整性检查。
 
@@ -464,6 +484,7 @@ Query：
 - Jira Ticket 只做格式清洗和索引，不做唯一约束。
 - 工作表名作为默认产品线；行内产品线若存在则合并并去重。
 - 多 MID、多产品线和多人字段按换行、逗号与中文逗号拆分，预检展示拆分结果。
+- 导入的研发、测试和负责人名称写入 `requirement_assignees.display_name`。只有名称或用户名能唯一匹配现有 PIT 用户时才填写 `user_id`；无法匹配时保留未关联名称，不自动创建登录账号，也不丢弃第二位及后续人员。
 - 日期转换成 ISO 文本；只精确到月份的数据保留月份精度，不伪造具体日期。
 - `待排期` 等非月份值不写入 `planned_month`，而是用于状态建议。
 - 未知字典值默认建议“创建并启用”；管理员可改为映射已有值或留空。
@@ -489,6 +510,7 @@ Query：
 - 登录失败进行基于用户名和来源 IP 的限速，错误信息不区分用户不存在或密码错误。
 - 首次初始化 token 只打印到本机控制台，首个管理员创建后立即失效。
 - 审计日志不记录密码、会话 token、CSRF token 或完整上传文件内容。
+- 会话空闲 12 小时失效，最长存活 7 天。中间件每次请求读取用户当前角色和启用状态；用户停用、密码重置或管理员执行“退出全部设备”时立即删除该用户全部会话，角色变更从下一次请求起生效。
 
 本方案固定使用 HTTP 并面向受信任局域网，不承诺抵抗同网段流量窃听。若部署网络不可信，必须在 PIT 服务前增加 HTTPS 反向代理；不允许直接暴露到公网。
 
@@ -530,6 +552,7 @@ Query：
 - 数据库 busy：在 timeout 内重试；超时后返回 503，不在前端无限重放写请求。
 - 备份失败：普通 CRUD 记录管理员告警；migration 和正式导入必须阻断，避免在无可恢复点时执行高风险操作。
 - 导出失败：返回可读错误，不生成空文件。
+- 导出文件已过期：历史记录仍显示筛选条件和行数，下载返回 `410 export_expired`，用户可按原条件重新生成。
 
 ## 15. 验证策略
 
@@ -538,16 +561,17 @@ Query：
 - 主状态合法流转、打回、暂停恢复、拒绝和管理员重开。
 - `row_version` 乐观锁与 409 冲突。
 - 字典停用后历史需求仍可显示。
-- 软删除、恢复、事件和导入追溯完整。
+- 多研发/测试人员、未关联历史名称、关注关系和“我的待办”查询正确。
+- 软删除、回收站查询、恢复、审计事件和导入追溯完整。
 - migration、WAL、外键、唯一系统编号和事务回滚。
 
 ### 15.2 API
 
 - 登录、退出、会话过期、CSRF、三档角色权限矩阵。
-- 分页、排序、组合筛选、搜索和参数白名单。
+- 分页、排序、组合筛选、搜索、我的待办、我关注的、回收站和参数白名单。
 - 新建、修改、状态动作、重点标记、删除与恢复。
 - 错误 envelope 和状态码。
-- 服务重启后数据、会话策略、字典和日志正确。
+- 服务重启后数据、会话失效策略、字典、导出历史和审计日志正确。
 
 ### 15.3 Excel
 
@@ -562,10 +586,11 @@ Query：
 
 - 悬浮球 PIT 入口与 shell mode 切换。
 - 直接打开 PIT 深链、刷新和返回列表状态恢复。
-- 工作台摘要、快捷视图、筛选、分页和列设置。
+- 工作台摘要、快捷视图、关注/取消关注、筛选、分页和列设置。
 - 详情抽屉、移动端详情页、新增、编辑、状态流转和冲突差异。
 - 管理员、编辑者、只读者的入口和按钮矩阵。
-- 导入预检、冲突决策、提交、导出和错误提示。
+- 导入预检、多人字段保留与账号关联、冲突决策、提交、导出历史、过期重建和错误提示。
+- 管理员回收站的查询、恢复和深链返回。
 - 桌面与移动视口无溢出或遮挡。
 
 ### 15.5 运行验收
