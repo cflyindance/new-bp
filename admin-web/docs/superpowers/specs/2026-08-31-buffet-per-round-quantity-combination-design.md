@@ -27,7 +27,7 @@
 设：
 
 - `N`：当前订单有效就餐人数；
-- `Q_total`：当前订单当前轮全部有效菜品数量；
+- `Q_total`：当前订单当前轮全部有效菜品数量，不限定商品范围；
 - `Q_dish(d)`：当前轮指定菜品 `d` 的有效数量；
 - `Q_category(c)`：当前轮分类 `c` 下全部有效菜品数量之和；
 - `Q_set(s)`：当前轮菜品集 `s` 的全部有效成员数量之和；
@@ -81,7 +81,7 @@ EffectiveLimit = L × N
 | 每轮相同菜品最多 `L` | 当前轮任意菜品 `d` 均满足 `Q_dish(d) <= L` |
 | 每人每轮相同菜品最多 `L` | 当前轮任意菜品 `d` 均满足 `Q_dish(d) <= L × N` |
 
-“相同菜品”规则是统一单品上限，不要求逐项选择菜品。若规则配置了范围，则对范围内每个菜品分别执行；未配置商品范围时，对生效门店当前可下单菜品执行。
+“相同菜品”规则是统一单品上限，不要求逐项选择菜品。本期不提供额外商品范围字段，对生效门店全部菜单菜品分别执行。菜品身份固定为 `storeId + productLineId + dishId`；相同 `dishId` 出现在不同产线时是两个独立身份，各自拥有一份额度。
 
 ## 4. 组合计算
 
@@ -116,7 +116,7 @@ EffectiveMin <= Q_total <= EffectiveMax
 
 ### 4.3 不同层级叠加
 
-一次提交依次受到以下约束：
+一次加菜、改量或提交当前轮时依次受到以下约束：
 
 ```text
 当前轮全部菜品总数
@@ -126,7 +126,7 @@ EffectiveMin <= Q_total <= EffectiveMax
   └─ 任意相同菜品数量
 ```
 
-总量未超限不代表指定分类、菜品集或单品一定允许；任一层超限，整批提交失败。
+总量未超限不代表指定分类、菜品集或单品一定允许；任一上限超限，整批操作失败。总量下限仅在“提交/结束当前轮”时检查，不在逐次加菜、减菜或改量时检查，避免阻止顾客逐步达到最低数量。
 
 ## 5. 组合示例
 
@@ -177,21 +177,21 @@ EffectiveMin <= Q_total <= EffectiveMax
 
 ## 6. 冲突与可满足性校验
 
-保存、发布、启用和下单前至少校验：
+草稿保存只要求 JSON 和字段结构可持久化；业务冲突、配置不完整和不可满足性作为草稿诊断展示，不阻止自动保存或“保存草稿”。发布、启用和运行时执行硬校验，至少包括：
 
 1. 同一规则中总量 `Min <= Max`；
-2. 对规则覆盖的每个人数区间，换算后的 `EffectiveMin <= EffectiveMax`；
-3. 同门店、同主体、同周期、同人数/轮次区间和同生效条件下，不允许重复配置同一菜品、分类或同一口径菜品集；
+2. 在门店权威容量字段 `supportedPartySizeMax` 内，对规则覆盖的每个人数值换算后满足 `EffectiveMin <= EffectiveMax`；该字段来自门店配置并随发布快照固化，必须是大于 0 的整数；当前原型数据未配置时规范化为 `99`；
+3. 同门店、同对象和适用范围存在交集时，不允许相同计算口径的重复规则；适用范围交集按人数区间、轮次区间、日期/周期、营业时段、会员、门店和启用状态的可满足交集计算，不要求区间或条件文本完全相等；
 4. 同口径且生效条件重叠的两个菜品集不得包含相同菜单身份；
 5. 不同口径可以叠加，例如固定每轮分类上限和每人每轮分类上限；
-6. 总量最低要求必须在商品范围、分类/菜品集上限、相同菜品上限和当前可售菜品数量下存在可行解；
+6. 总量最低要求必须在分类/菜品集上限、指定菜品上限、相同菜品上限和当前候选菜品集合下存在可行解；
 7. 批量提交按整批新增后的最终状态校验，任一约束失败则整批不写入。
 
-菜单可满足性可能因售罄、停售或菜单变化而动态改变。配置阶段校验已知菜单结构；下单阶段必须使用当前可售菜单再次校验。动态不可满足时返回明确原因，不得自动绕过总量下限。
+菜单可满足性可能因售罄、停售或菜单变化而动态改变。配置阶段基于发布候选菜单校验；进行中的订单继续使用锁定菜单/规则快照判断历史明细身份和累计量，售罄或停售不会移除已经计数的明细。提交当前轮时，以锁定快照中仍可追加的菜品作为可行性候选集合。若动态变化导致最低数量无法满足，返回明确原因，并只允许具有“取消/作废当前轮”权限的员工取消该轮；数量授权不得绕过最低数量。
 
 ## 7. 产品与数据边界
 
-- 总量约束使用独立规则对象，不伪装成分类、菜品或菜品集。
+- 每个总量、指定菜品、指定分类、指定菜品集或相同菜品约束都是一条独立规则对象；一条规则不同时携带两种对象。不同对象规则可在同一门店部署并共同命中。
 - 指定菜品、分类和菜品集只支持最大值；指定对象最少数量属于未来“必点规则”，不在限购模块实现。
 - 分类身份至少包含 `storeId + productLineId + categoryId`；菜品集成员身份沿用 `storeId + productLineId + dishId`。
 - 每家门店独立保存商品范围与数量矩阵。
@@ -210,8 +210,138 @@ EffectiveMin <= Q_total <= EffectiveMax
 2. 分类内任意成员共同消耗分类额度；菜品集成员跨产线共同消耗菜品集额度。
 3. 固定每轮与每人每轮的同对象规则可以叠加并取更严格上限。
 4. 指定菜品上限、分类/菜品集共享上限和相同菜品上限同时命中时全部执行。
-5. 总量下限高于有效上限时阻止保存、发布、启用或下单，并指出冲突区间。
+5. 总量下限高于有效上限时允许保存草稿，但阻止发布、启用或提交当前轮，并指出冲突区间。
 6. 相同口径重复规则被阻止，不同口径叠加规则被允许。
 7. 指定对象不提供最少数量配置。
 8. 批量下单原子校验，失败时不产生部分写入。
 
+## 10. 规范性数据模型
+
+仓库 envelope 继续使用 `schemaVersion: 1`。使用本文新增能力的规则使用规则级 `schemaVersion: 3`；旧规则保持原版本并按 `constraintKind = target_max` 读取，不因查看而自动升级。
+
+```ts
+type ConstraintKind = "target_max" | "round_total" | "same_dish_max";
+type Subject = "order" | "party_size";
+type Period = "order_lifetime" | "per_round" | "multi_round";
+type TargetType = "dish" | "category" | "dish_set" | null;
+
+type LimitCell = {
+  configured: boolean;
+  value: number | null;
+};
+
+type TotalBoundCell = {
+  minConfigured: boolean;
+  min: number | null;
+  maxConfigured: boolean;
+  max: number | null;
+};
+
+type StoreConfigBaseV3 = {
+  included: boolean;
+  structureByLine: Record<string, unknown[]>;
+  productLines: string[];
+  targetIds: string[];
+};
+
+type TargetDishCategoryStoreConfigV3 = StoreConfigBaseV3 & {
+  limits: Record<string, LimitCell>;
+};
+
+type DishSetStoreConfigV3 = StoreConfigBaseV3 & {
+  dishSetMembers: DishSetMember[];
+  dishSetLimits: Record<string, LimitCell>;
+};
+
+type RoundTotalStoreConfigV3 = StoreConfigBaseV3 & {
+  totalBounds: Record<string, TotalBoundCell>;
+};
+
+type SameDishStoreConfigV3 = StoreConfigBaseV3 & {
+  sameDishLimits: Record<string, LimitCell>;
+};
+
+type StoreConfigV3 =
+  | TargetDishCategoryStoreConfigV3
+  | DishSetStoreConfigV3
+  | RoundTotalStoreConfigV3
+  | SameDishStoreConfigV3;
+
+type BuffetRuleV3 = {
+  schemaVersion: 3;
+  constraintKind: ConstraintKind;
+  subject: Subject;
+  period: Period;
+  targetType: TargetType;
+  partyRanges: Range[];
+  roundRanges: Range[];
+  storeConfigs: Record<string, StoreConfigV3>;
+};
+```
+
+`round_total` 的 `totalBounds`、`same_dish_max` 的 `sameDishLimits` 和 `target_max + dish_set` 的共享 `dishSetLimits` 使用两段键 `partyRangeIndex|roundRangeIndex`。`target_max + dish/category` 继续使用原有四段键 `partyRangeIndex|roundRangeIndex|productLineId|targetId`，以表达多个独立目标。`order` 主体使用 `partyRangeIndex = 0`；`per_round` 使用 `roundRangeIndex = 0`；只有 `multi_round` 根据轮次区间选择索引。
+
+字段有效性和权威来源：
+
+| 组合 | 权威数量字段 | 其他数量字段 |
+|---|---|---|
+| `target_max + dish/category` | `limits` | 忽略 |
+| `target_max + dish_set` | `dishSetLimits` | 忽略 |
+| `round_total` | `totalBounds` | 忽略 |
+| `same_dish_max` | `sameDishLimits` | 忽略 |
+
+从 v1 进入 v3 时，保留 `structureByLine/productLines/targetIds/limits` 并补充 `included`；从 dish-set v2 进入 v3 时，保留 `dishSetMembers/dishSetLimits` 并补充 `included`。切换到不同 `constraintKind` 必须经过重置确认，确认后清空不再权威的数量字段。旧规则仅查看或加载时不得写回升级。
+
+规则合法组合：
+
+| `constraintKind` | 主体 | 周期 | 对象 |
+|---|---|---|---|
+| `round_total` | `order` | `per_round` | `null` |
+| `round_total` | `party_size` | `per_round` | `null` |
+| `same_dish_max` | `order` | `per_round` | `null` |
+| `same_dish_max` | `party_size` | `per_round` | `null` |
+| `target_max` | `order` | `per_round` | `dish/category/dish_set` |
+| `target_max` | `party_size` | `per_round` | `dish/category/dish_set` |
+
+原有 `order_lifetime`、按人数每单和分轮次 `target_max` 组合继续合法。`round_total` 和 `same_dish_max` 本期只支持每轮，不支持整单或分轮次。
+
+`round_total` 和 `same_dish_max` 不要求商品目标，但必须选择至少一家配置门店；通过 `StoreConfigV3.included` 表示门店参与配置。`target_max` 继续以有效商品目标判断配置门店。
+
+## 11. 编辑器与完整性规则
+
+- 规则类型增加“每轮菜品总量”“指定对象上限”“相同菜品统一上限”。
+- 总量规则的数量页每个“门店 × 人数区间”显示最少、最多两个输入；至少配置一侧，双侧配置时必须 `min <= max`。
+- 相同菜品规则的数量页每个“门店 × 人数区间”显示一个最大值输入。
+- 指定对象规则沿用现有商品选择和数量矩阵；每轮固定规则不乘人数，每人每轮规则乘有效人数。
+- 空值为未配置，`0` 为有效配置；总量最少为 `0` 等价于不要求最低数量，但仍是已配置值。
+- 发布、启用前所有生效门店的必需数量单元必须完整；草稿允许不完整。
+
+## 12. 运行时检查时点
+
+| 操作 | 检查上限 | 检查总量下限 |
+|---|---|---|
+| 加菜、批量加菜、增加数量 | 是 | 否 |
+| 减菜、退菜、取消未提交明细 | 重新计算但不因低于下限拒绝 | 否 |
+| 提交/结束当前轮 | 是 | 是 |
+| 进入下一轮 | 先完成上一轮提交检查 | 是 |
+| 结账/关单且存在未提交当前轮 | 先完成当前轮提交检查 | 是 |
+| 取消/作废当前轮 | 按权限和审计执行 | 否 |
+
+空轮不触发最低数量：当前轮从未产生有效菜品明细时允许不创建该轮；一旦存在有效明细并尝试提交/结束，即必须满足下限。已提交轮次后发生退菜导致低于下限时不回滚历史提交，但记录审计事件；再次向该轮追加并提交时重新校验最终状态。
+
+## 13. 可满足性算法
+
+对每个门店、人数值和轮次场景建立有限整数约束模型：
+
+- 每个候选菜单身份 `d` 对应非负整数变量 `x_d`；
+- 总量为 `Σx_d`；
+- 指定菜品和相同菜品上限形成 `x_d <= cap_d`；
+- 分类上限形成 `Σ(category(d)=c)x_d <= cap_c`；
+- 菜品集上限形成 `Σ(d∈set)x_d <= cap_s`；
+- 总量范围形成 `EffectiveMin <= Σx_d <= EffectiveMax`。
+
+候选菜单身份来自门店锁定/发布候选菜单。没有任何单品、分类、菜品集或相同菜品上限约束的身份，其静态容量按 `EffectiveMax` 截断；若没有有效总量上限，则只需证明可以达到 `EffectiveMin`。实现可以使用等价的最大流、整数规划或有界搜索，但必须得到确定的“存在/不存在整数解”结果，不得用可能误判的简单求和代替。
+
+`supportedPartySizeMax` 随门店规则快照固化，保证进行中订单的验证边界不受门店配置变化影响。运行时 `N > supportedPartySizeMax` 时拒绝数量规则计算并返回 `PARTY_SIZE_ABOVE_SUPPORTED_MAX`，不得将其落入开放区间后继续使用未经静态验证的额度。
+
+诊断至少返回门店、人数值/区间、轮次场景、有效上下限和不可满足核心中的全部规则 ID，包括总量最少、总量最多及造成容量不足的对象规则；只有对象容量参与冲突时才要求对象规则 ID。部分重叠的适用范围只在交集场景内参与该模型；不因局部冲突否定完全不重叠的场景。
