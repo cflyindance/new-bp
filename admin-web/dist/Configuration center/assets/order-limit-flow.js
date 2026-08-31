@@ -2002,6 +2002,10 @@
         var roundError = validateContinuousRanges(draft.roundRanges, "轮次区间");
         if (roundError) return roundError;
       }
+      if (modernBuffet) {
+        var v4ScenarioValidation = validateV4Draft(draft, []);
+        if (v4ScenarioValidation && v4ScenarioValidation.step === 2) return v4ScenarioValidation.message;
+      }
     }
     if (stepNumber === 3) {
       if (!draft.targetIds.length) return "请至少选择一个分类或菜品";
@@ -2013,6 +2017,8 @@
         if (insufficientStore) return "每家参与门店的菜品集至少需要 2 个菜品";
       }
       if (modernBuffet) {
+        var v4QuantityValidation = validateV4Draft(draft);
+        if (v4QuantityValidation && v4QuantityValidation.step === 3) return v4QuantityValidation.message;
         var v4Completion = v4QuantityCompletion(draft);
         if (!v4Completion.total || v4Completion.complete !== v4Completion.total) {
           return "还有 " + Math.max(1, v4Completion.total - v4Completion.complete) + " 个启用周期数量单元格未配置；请输入数量或 0";
@@ -3450,6 +3456,89 @@
       : [partyIndex, roundIndex].join("|");
   }
 
+  function v4MenuIdentity(item) {
+    if (window.BuffetRulePolicy && typeof window.BuffetRulePolicy.menuIdentity === "function") return window.BuffetRulePolicy.menuIdentity(item);
+    return String(item && item.productLineId) + "|" + String(item && item.dishId);
+  }
+
+  function v4ConfiguredExceptionRows(rows) {
+    return (Array.isArray(rows) ? rows : []).filter(function (row) {
+      var dish = row && Array.isArray(row.dishes) ? row.dishes[0] : null;
+      return !!(dish && dish.productLineId && dish.dishId);
+    });
+  }
+
+  function v4ExceptionDish(row) {
+    return row && Array.isArray(row.dishes) ? row.dishes[0] : null;
+  }
+
+  function v4ExceptionRows(values, scenario) {
+    return v4ConfiguredExceptionRows(values && values.exceptionDishLimits && values.exceptionDishLimits[scenario]);
+  }
+
+  function selectedDishesFromStructure(config) {
+    if (MenuPicker && config && config.structureByLine && typeof MenuPicker.listSelectedDishes === "function") {
+      return MenuPicker.listSelectedDishes(config.structureByLine).map(function (item) {
+        var parts = String(item.key || "").split(":");
+        return {
+          productLineId: String(item.lineId),
+          dishId: String(item.key),
+          categoryId: parts.length >= 3 ? "c:" + parts[1] + ":" + parts[2] : "",
+          name: item.name || String(item.key)
+        };
+      });
+    }
+    var byLine = config && config.structureByLine && typeof config.structureByLine === "object" ? config.structureByLine : {};
+    var result = [];
+    Object.keys(byLine).forEach(function (lineId) {
+      var entries = Array.isArray(byLine[lineId]) ? byLine[lineId] : [];
+      entries.forEach(function visit(entry) {
+        if (!entry || typeof entry !== "object") return;
+        var dishId = entry.dishId || entry.id;
+        if (dishId && (entry.categoryId || entry.categoryKey || entry.category || entry.isDish || !Array.isArray(entry.children))) {
+          result.push({ productLineId: String(lineId), dishId: String(dishId), categoryId: entry.categoryId || entry.categoryKey || entry.category || "", name: entry.name || String(dishId) });
+        }
+        (Array.isArray(entry.children) ? entry.children : []).forEach(visit);
+      });
+    });
+    return result;
+  }
+
+  // 单品保护只针对当前规则的商品范围。菜品、菜品集按身份直取；分类则展开当前门店已选分类的菜品。
+  function eligibleExceptionDishes(draft, storeId) {
+    var config = storeConfigFor(draft, storeId, false) || {};
+    var candidates = [];
+    if (draft.targetType === "dish") candidates = (config.dishTargets || []).map(function (item) {
+      return { productLineId: String(item.productLineId), dishId: String(item.dishId), name: item.name || String(item.dishId) };
+    });
+    else if (draft.targetType === "dish_set") candidates = (config.dishSetMembers || []).map(function (item) {
+      return { productLineId: String(item.productLineId), dishId: String(item.dishId), name: item.name || String(item.dishId) };
+    });
+    else {
+      var selectedCategories = {};
+      (config.categoryTargets || []).forEach(function (item) { selectedCategories[String(item.productLineId) + "|" + String(item.categoryId)] = true; });
+      candidates = selectedDishesFromStructure(config).filter(function (item) {
+        return !!selectedCategories[item.productLineId + "|" + String(item.categoryId)];
+      });
+    }
+    var seen = {};
+    return candidates.filter(function (item) {
+      if (!item.productLineId || !item.dishId) return false;
+      var key = v4MenuIdentity(item);
+      if (seen[key]) return false;
+      seen[key] = true;
+      return true;
+    });
+  }
+
+  function exceptionLimitFor(draft, storeId, period, scenario, dish) {
+    var config = storeConfigFor(draft, storeId, false);
+    var values = config ? v4PeriodValues(config, period) : null;
+    var identity = v4MenuIdentity(dish);
+    var matched = v4ExceptionRows(values, scenario).find(function (row) { return v4MenuIdentity(v4ExceptionDish(row)) === identity; });
+    return matched ? matched.limit : (values && values.defaultDishLimits ? values.defaultDishLimits[scenario] : null);
+  }
+
   function v4TargetCellKey(partyIndex, roundIndex, lineId, targetId) {
     return window.BuffetRulePolicy && typeof window.BuffetRulePolicy.targetCellKey === "function"
       ? window.BuffetRulePolicy.targetCellKey(partyIndex, roundIndex, lineId, targetId)
@@ -3533,8 +3622,23 @@
         (draft.subject === "party_size" ? renderV4BoundInputs(values, combo, "tableTotalBounds", "整桌每轮兜底") : "") + '</section>' : "";
     var targetBlock = '<section class="olf-v4-quantity-block"><h5>指定对象额度</h5><div class="olf-v4-target-list">' + v4TargetRows(draft, config, combo, values) + '</div></section>';
     var sameDishKey = v4ScenarioKey(combo.partyIndex, combo.roundIndex);
+    var exceptionRows = v4ExceptionRows(values, sameDishKey);
+    var eligible = eligibleExceptionDishes(draft, draft.activeStoreId);
+    var used = {};
+    exceptionRows.forEach(function (row) { used[v4MenuIdentity(v4ExceptionDish(row))] = true; });
+    var exceptionHtml = exceptionRows.map(function (row, index) {
+      var selectedIdentity = v4MenuIdentity(v4ExceptionDish(row));
+      var options = eligible.map(function (dish) {
+        var identity = v4MenuIdentity(dish);
+        var disabled = identity !== selectedIdentity && used[identity];
+        return '<option value="' + esc(identity) + '" data-v4-exception-line="' + esc(dish.productLineId) + '" data-v4-exception-dish-id="' + esc(dish.dishId) + '"' + (identity === selectedIdentity ? ' selected' : '') + (disabled ? ' disabled' : '') + '>' + esc((dish.name || dish.dishId) + '（' + dish.productLineId + '）') + '</option>';
+      }).join("");
+      return '<div class="olf-v4-exception-row" data-v4-exception-row="' + esc(index) + '"><label><span>例外菜品</span><select class="olf-select" data-v4-exception-dish data-v4-period="' + period + '" data-v4-scenario="' + esc(sameDishKey) + '" data-v4-exception-index="' + index + '">' + options + '</select></label>' +
+        renderV4LimitInput(row.limit, 'data-v4-exception-limit data-v4-period="' + period + '" data-v4-scenario="' + esc(sameDishKey) + '" data-v4-exception-index="' + index + '"', "最多") +
+        '<button type="button" class="olf-button olf-button--small olf-button--link" data-v4-exception-remove data-v4-period="' + period + '" data-v4-scenario="' + esc(sameDishKey) + '" data-v4-exception-index="' + index + '">删除</button></div>';
+    }).join("");
     var sameDishBlock = period !== "order_lifetime" && policy.blocks.sameDishEnabled
-      ? '<section class="olf-v4-quantity-block olf-v4-quantity-block--pending"><h5>相同菜品保护</h5><div class="olf-v4-bound-row"><strong>默认每种最多</strong>' + renderV4LimitInput(values.defaultDishLimits[sameDishKey], "data-v4-limit-field data-v4-map=\"defaultDishLimits\" data-v4-period=\"" + period + "\" data-v4-scenario=\"" + esc(sameDishKey) + "\"") + '</div><p>例外商品将在后续配置中完成。</p></section>' : "";
+      ? '<section class="olf-v4-quantity-block"><h5>相同菜品保护</h5><div class="olf-v4-bound-row"><strong>默认每种最多</strong>' + renderV4LimitInput(values.defaultDishLimits[sameDishKey], "data-v4-limit-field data-v4-map=\"defaultDishLimits\" data-v4-period=\"" + period + "\" data-v4-scenario=\"" + esc(sameDishKey) + "\"") + '</div><div class="olf-v4-exception-list">' + exceptionHtml + '</div><button type="button" class="olf-button olf-button--small" data-v4-exception-add data-v4-period="' + period + '" data-v4-scenario="' + esc(sameDishKey) + '"' + (eligible.length ? '' : ' disabled') + '>添加例外商品</button><p class="olf-v4-exception-help">例外额度覆盖默认上限；空输入表示未配置，0 表示禁止下单。</p></section>' : "";
     return '<article class="olf-v4-scenario-card"><header><strong>' + esc(scenarioTitle) + '</strong><span>空输入表示未配置；0 表示禁止下单</span></header>' + totalBlock + targetBlock + sameDishBlock + '</article>';
   }
 
@@ -3710,6 +3814,20 @@
     };
   }
 
+  if (window.__BUFFET_V4_VALIDATION_TEST__) {
+    window.BuffetV4ValidationTestApi = {
+      menuIdentity: v4MenuIdentity,
+      eligibleExceptionDishes: eligibleExceptionDishes,
+      exceptionLimitFor: exceptionLimitFor,
+      validateV4Draft: validateV4Draft,
+      validateBoundPair: validateBoundPair,
+      quantityCompletion: v4QuantityCompletion,
+      renderBuffetV4QuantityEditor: renderBuffetV4QuantityEditor,
+      validateStep: validateStep,
+      validateDeployStores: validateDeployStores
+    };
+  }
+
   function renderStepFour(draft) {
     normalizeStoreDraft(draft);
     var configuredStores = addedStoreIds(draft);
@@ -3759,11 +3877,24 @@
     return '<div class="olf-review-row"><label class="olf-inline"><input type="checkbox" data-auth-scope="' + scope + '"' + (enabled ? " checked" : "") + ' /><span><strong>' + esc(title) + '</strong><span class="olf-hint" style="display:block">' + esc(copy) + '</span></span></label><select class="olf-select" data-auth-role="' + scope + '"' + (enabled ? "" : " disabled") + '>' + roles.map(function (role) { return '<option value="' + esc(role) + '"' + (draft.authorization.scopePermissions[scope] === role ? " selected" : "") + '>' + esc(role) + '</option>'; }).join("") + '</select><span></span></div>';
   }
 
+  function normalizeBuffetAuthorizationScopes(draft) {
+    if (!isBuffetV4Draft(draft) || (draft.enabledPeriods || []).some(function (period) { return period !== "order_lifetime"; })) return false;
+    var auth = draft.authorization || {};
+    var before = (auth.allowedScopes || []).join("|") + "|" + (auth.defaultScope || "") + "|" + (auth.scopePermissions && auth.scopePermissions.round ? auth.scopePermissions.round : "");
+    auth.allowedScopes = (auth.allowedScopes || []).filter(function (scope) { return scope !== "round"; });
+    if (auth.scopePermissions) delete auth.scopePermissions.round;
+    if (auth.defaultScope === "round") auth.defaultScope = auth.allowedScopes.indexOf("operation") >= 0 ? "operation" : auth.allowedScopes[0] || "operation";
+    var after = auth.allowedScopes.join("|") + "|" + (auth.defaultScope || "") + "|" + (auth.scopePermissions && auth.scopePermissions.round ? auth.scopePermissions.round : "");
+    return before !== after;
+  }
+
   function renderStepSix(draft) {
     var auth = draft.authorization;
+    var supportsRoundAuthorization = !isBuffetV4Draft(draft) || (draft.enabledPeriods || []).some(function (period) { return period !== "order_lifetime"; });
+    if (normalizeBuffetAuthorizationScopes(draft) && !viewMode) markEditorDirty();
     return '<div class="olf-content-head"><h2 tabindex="-1">设置超限授权</h2></div>' +
       '<section class="olf-section"><div class="olf-section-head"><div><h3>允许服务员密码授权</h3><div class="olf-help">关闭后，超限将直接拒绝。</div></div><label class="olf-switch"><input type="checkbox" data-auth-enabled' + (auth.enabled ? " checked" : "") + ' /><span class="olf-switch-track"></span><span>' + (auth.enabled ? "已开启" : "已关闭") + '</span></label></div></section>' +
-      (auth.enabled ? '<section class="olf-section"><h3>可选授权范围与权限</h3><div class="olf-review">' + renderScopeRow(draft, "operation", "本次操作", "仅放行当前这一次数量变更") + renderScopeRow(draft, "round", "当前轮", "当前轮内相同规则与目标无需重复输密") + renderScopeRow(draft, "order", "当前订单", "关单前相同规则与目标持续放行") + '</div></section><section class="olf-section"><div class="olf-field-grid"><label class="olf-field"><span class="olf-label olf-required">默认授权范围</span><select class="olf-select" data-auth-default>' + [{id:"operation",name:"本次操作"},{id:"round",name:"当前轮"},{id:"order",name:"当前订单"}].filter(function (item) { return auth.allowedScopes.indexOf(item.id) >= 0; }).map(function (item) { return '<option value="' + item.id + '"' + (auth.defaultScope === item.id ? " selected" : "") + '>' + item.name + '</option>'; }).join("") + '</select></label><label class="olf-check"><input type="checkbox" data-auth-reason' + (auth.reasonRequired ? " checked" : "") + ' /><span>授权原因必须填写</span></label></div></section>' : '<div class="olf-summary olf-summary--warning"><strong>硬性拒绝：</strong>规则超限后不会出现服务员密码放行入口。</div>');
+      (auth.enabled ? '<section class="olf-section"><h3>可选授权范围与权限</h3><div class="olf-review">' + renderScopeRow(draft, "operation", "本次操作", "仅放行当前这一次数量变更") + (supportsRoundAuthorization ? renderScopeRow(draft, "round", "当前轮", "当前轮内相同规则与目标无需重复输密") : "") + renderScopeRow(draft, "order", "当前订单", "关单前相同规则与目标持续放行") + '</div></section><section class="olf-section"><div class="olf-field-grid"><label class="olf-field"><span class="olf-label olf-required">默认授权范围</span><select class="olf-select" data-auth-default>' + [{id:"operation",name:"本次操作"},{id:"round",name:"当前轮"},{id:"order",name:"当前订单"}].filter(function (item) { return auth.allowedScopes.indexOf(item.id) >= 0; }).map(function (item) { return '<option value="' + item.id + '"' + (auth.defaultScope === item.id ? " selected" : "") + '>' + item.name + '</option>'; }).join("") + '</select></label><label class="olf-check"><input type="checkbox" data-auth-reason' + (auth.reasonRequired ? " checked" : "") + ' /><span>授权原因必须填写</span></label></div></section>' : '<div class="olf-summary olf-summary--warning"><strong>硬性拒绝：</strong>规则超限后不会出现服务员密码放行入口。</div>');
   }
 
   function namesFor(items, ids) {
@@ -3807,7 +3938,8 @@
           }
           if (period !== "order_lifetime" && blocks.sameDishEnabled) {
             total += 1;
-            if (values.defaultDishLimits[scenario] && values.defaultDishLimits[scenario].configured) complete += 1;
+            if ((values.defaultDishLimits[scenario] && values.defaultDishLimits[scenario].configured) ||
+                v4ExceptionRows(values, scenario).some(function (row) { return row.limit && row.limit.configured; })) complete += 1;
           }
         });
       });
@@ -3825,6 +3957,80 @@
       if (cells[key] && cells[key].configured) complete += 1;
     }, storeIds);
     return { complete: complete, total: total };
+  }
+
+  function validationResult(step, code, message) { return { step: step, code: code, message: message }; }
+
+  function validateBoundPair(bound) {
+    if (!bound || (!bound.minConfigured && !bound.maxConfigured)) return "BOUND_EMPTY";
+    if (bound.minConfigured && bound.maxConfigured && Number(bound.min) > Number(bound.max)) return "BOUND_REVERSED";
+    return null;
+  }
+
+  function validateV4Draft(draft, storeIds) {
+    if (!isBuffetV4Draft(draft)) return null;
+    var periods = Array.isArray(draft.enabledPeriods) ? draft.enabledPeriods : [];
+    if (!periods.length) return validationResult(2, "PERIOD_REQUIRED", "请至少启用一个限制周期");
+    if (draft.subject === "party_size") {
+      var partyError = validateContinuousRanges(draft.partyRanges, "人数区间");
+      if (partyError) return validationResult(2, "PARTY_RANGE_INVALID", partyError);
+    }
+    if (periods.indexOf("multi_round") >= 0) {
+      var roundError = validateContinuousRanges(draft.roundRanges, "轮次区间");
+      if (roundError) return validationResult(2, "ROUND_RANGE_INVALID", roundError);
+    }
+    var enabledBlocksError = periods.find(function (period) {
+      var blocks = draft.periodPolicies && draft.periodPolicies[period] && draft.periodPolicies[period].blocks;
+      return !blocks || !(blocks.totalEnabled || blocks.targetEnabled || blocks.sameDishEnabled);
+    });
+    if (enabledBlocksError) return validationResult(2, "PERIOD_BLOCK_REQUIRED", "每个启用周期至少保留一个限购维度");
+    var selectedStores = storeIds || (draft.deployStoreIds && draft.deployStoreIds.length ? draft.deployStoreIds : addedStoreIds(draft));
+    for (var storeIndex = 0; storeIndex < selectedStores.length; storeIndex += 1) {
+      var storeId = selectedStores[storeIndex];
+      var config = storeConfigFor(draft, storeId, false);
+      if (!config) return validationResult(3, "STORE_CONFIG_MISSING", "生效门店缺少商品配置");
+      if (draft.targetType === "dish_set" && (config.dishSetMembers || []).length < 2) return validationResult(3, "DISH_SET_MIN_MEMBERS", "每家参与门店的菜品集至少需要 2 个菜品");
+      for (var periodIndex = 0; periodIndex < periods.length; periodIndex += 1) {
+        var period = periods[periodIndex];
+        var policy = draft.periodPolicies[period] || { blocks: {} };
+        var blocks = policy.blocks || {};
+        var values = v4PeriodValues(config, period);
+        var combos = quantityScenarioIndexes(draft, period);
+        for (var comboIndex = 0; comboIndex < combos.length; comboIndex += 1) {
+          var combo = combos[comboIndex];
+          var scenario = v4ScenarioKey(combo.partyIndex, combo.roundIndex);
+          if (period !== "order_lifetime" && blocks.totalEnabled) {
+            var totalBoundCode = validateBoundPair(values.totalBounds[scenario]);
+            if (totalBoundCode) return validationResult(3, totalBoundCode, totalBoundCode === "BOUND_REVERSED" ? "菜品总数最少值不能大于最多值" : "已启用的菜品总数需要至少配置一个上下限");
+            var tableBound = values.tableTotalBounds[scenario];
+            if (tableBound && (tableBound.minConfigured || tableBound.maxConfigured)) {
+              var tableBoundCode = validateBoundPair(tableBound);
+              if (tableBoundCode) return validationResult(3, tableBoundCode === "BOUND_REVERSED" ? "BOUND_REVERSED" : "BOUND_EMPTY", tableBoundCode === "BOUND_REVERSED" ? "整桌兜底最少值不能大于最多值" : "整桌兜底数量无效");
+            }
+          }
+          if (blocks.targetEnabled) {
+            var targetKeys = draft.targetType === "dish_set" ? [scenario] : v4TargetsForConfig(draft, config).map(function (target) { return v4TargetCellKey(combo.partyIndex, combo.roundIndex, target.lineId, target.id); });
+            if (!targetKeys.length || targetKeys.some(function (key) { return !(values.targetLimits[key] && values.targetLimits[key].configured); })) return validationResult(3, "QUANTITY_BLOCK_INCOMPLETE", "已启用的指定对象额度尚未全部配置");
+          }
+          if (period !== "order_lifetime" && blocks.sameDishEnabled) {
+            var seenExceptions = {};
+            var eligible = {};
+            eligibleExceptionDishes(draft, storeId).forEach(function (dish) { eligible[v4MenuIdentity(dish)] = true; });
+            var exceptions = v4ExceptionRows(values, scenario);
+            for (var exceptionIndex = 0; exceptionIndex < exceptions.length; exceptionIndex += 1) {
+              var row = exceptions[exceptionIndex];
+              var identity = v4MenuIdentity(v4ExceptionDish(row));
+              if (!eligible[identity]) return validationResult(3, "EXCEPTION_DISH_OUT_OF_SCOPE", "例外商品必须来自当前规则商品范围");
+              if (seenExceptions[identity]) return validationResult(3, "EXCEPTION_DISH_DUPLICATED", "同一菜品不能重复添加为例外商品");
+              seenExceptions[identity] = true;
+            }
+            var defaultLimit = values.defaultDishLimits[scenario];
+            if (!(defaultLimit && defaultLimit.configured) && !exceptions.some(function (row) { return row.limit && row.limit.configured; })) return validationResult(3, "QUANTITY_BLOCK_INCOMPLETE", "单品保护需要配置默认上限或至少一个例外商品");
+          }
+        }
+      }
+    }
+    return null;
   }
 
   function storeProductSummary(draft, storeIds) {
@@ -4358,6 +4564,45 @@
       );
       return;
     }
+    if (button.hasAttribute("data-v4-exception-add")) {
+      var addExceptionDraft = editorState.rule.editorDraft;
+      if (!isBuffetV4Draft(addExceptionDraft)) return;
+      var addExceptionConfig = activeStoreConfig(addExceptionDraft);
+      var addExceptionPeriod = button.getAttribute("data-v4-period");
+      var addExceptionScenario = button.getAttribute("data-v4-scenario");
+      var addExceptionValues = v4PeriodValues(addExceptionConfig, addExceptionPeriod);
+      var existingExceptionRows = v4ExceptionRows(addExceptionValues, addExceptionScenario);
+      var usedExceptionDishes = {};
+      existingExceptionRows.forEach(function (row) { usedExceptionDishes[v4MenuIdentity(v4ExceptionDish(row))] = true; });
+      var firstEligible = eligibleExceptionDishes(addExceptionDraft, addExceptionDraft.activeStoreId).find(function (dish) { return !usedExceptionDishes[v4MenuIdentity(dish)]; });
+      if (!firstEligible) { toast("当前规则范围内没有可添加的例外商品", true); return; }
+      existingExceptionRows.push({ dishes: [{ productLineId: firstEligible.productLineId, dishId: firstEligible.dishId }], limit: { configured: false, value: null } });
+      addExceptionValues.exceptionDishLimits[addExceptionScenario] = existingExceptionRows;
+      markEditorDirty(); renderEditor(); return;
+    }
+    if (button.hasAttribute("data-v4-exception-remove")) {
+      var removeExceptionDraft = editorState.rule.editorDraft;
+      var removeExceptionConfig = activeStoreConfig(removeExceptionDraft);
+      var removeExceptionPeriod = button.getAttribute("data-v4-period");
+      var removeExceptionScenario = button.getAttribute("data-v4-scenario");
+      var removeExceptionIndex = Number(button.getAttribute("data-v4-exception-index"));
+      var removeExceptionValues = v4PeriodValues(removeExceptionConfig, removeExceptionPeriod);
+      var removeExceptionRows = v4ExceptionRows(removeExceptionValues, removeExceptionScenario);
+      if (!removeExceptionRows[removeExceptionIndex]) { renderEditor(); return; }
+      openDialog(
+        "删除例外商品？",
+        "删除后，该商品将恢复使用默认单品上限。",
+        "确认删除",
+        function () {
+          removeExceptionRows.splice(removeExceptionIndex, 1);
+          removeExceptionValues.exceptionDishLimits[removeExceptionScenario] = removeExceptionRows;
+          closeDialog(false);
+          markEditorDirty(); renderEditor();
+        },
+        { danger: true, cancelLabel: "取消", returnFocus: button, onCancel: function () { renderEditor(); } }
+      );
+      return;
+    }
     if (button.hasAttribute("data-v4-pending-discard")) {
       var pendingDiscardKey = button.getAttribute("data-v4-pending-discard");
       var pendingDiscardConfig = activeStoreConfig(editorState.rule.editorDraft);
@@ -4870,6 +5115,39 @@
       draft.activeStoreId = target.value;
       normalizeActiveDimensions(draft, true);
       markEditorDirty(); renderEditor(); return;
+    }
+    if (target.hasAttribute("data-v4-exception-dish")) {
+      if (event.type !== "change" || !isBuffetV4Draft(draft)) return;
+      var exceptionConfig = activeStoreConfig(draft);
+      var exceptionValues = v4PeriodValues(exceptionConfig, target.getAttribute("data-v4-period"));
+      var exceptionScenario = target.getAttribute("data-v4-scenario");
+      var exceptionIndex = Number(target.getAttribute("data-v4-exception-index"));
+      var exceptionRows = v4ExceptionRows(exceptionValues, exceptionScenario);
+      var option = target.options && target.options[target.selectedIndex];
+      var nextDish = option ? { productLineId: option.getAttribute("data-v4-exception-line"), dishId: option.getAttribute("data-v4-exception-dish-id") } : null;
+      if (!nextDish || !nextDish.productLineId || !nextDish.dishId || !exceptionRows[exceptionIndex]) return;
+      var nextIdentity = v4MenuIdentity(nextDish);
+      if (exceptionRows.some(function (row, index) { return index !== exceptionIndex && v4MenuIdentity(v4ExceptionDish(row)) === nextIdentity; })) {
+        toast("同一菜品不能重复添加为例外商品", true); renderEditor(); return;
+      }
+      if (!eligibleExceptionDishes(draft, draft.activeStoreId).some(function (dish) { return v4MenuIdentity(dish) === nextIdentity; })) {
+        toast("例外商品必须来自当前规则商品范围", true); renderEditor(); return;
+      }
+      exceptionRows[exceptionIndex].dishes = [nextDish];
+      exceptionValues.exceptionDishLimits[exceptionScenario] = exceptionRows;
+      markEditorDirty(); renderEditor(); return;
+    }
+    if (target.hasAttribute("data-v4-exception-limit")) {
+      if (!isBuffetV4Draft(draft)) return;
+      if (isInvalidConfiguredQuantityInput(target)) { toast("请输入 0 至 999999 的整数", true); return; }
+      var limitExceptionConfig = activeStoreConfig(draft);
+      var limitExceptionValues = v4PeriodValues(limitExceptionConfig, target.getAttribute("data-v4-period"));
+      var limitExceptionRows = v4ExceptionRows(limitExceptionValues, target.getAttribute("data-v4-scenario"));
+      var limitExceptionIndex = Number(target.getAttribute("data-v4-exception-index"));
+      if (!limitExceptionRows[limitExceptionIndex]) return;
+      limitExceptionRows[limitExceptionIndex].limit = readLimitCell(target);
+      limitExceptionValues.exceptionDishLimits[target.getAttribute("data-v4-scenario")] = limitExceptionRows;
+      markEditorDirty(); return;
     }
     if (target.hasAttribute("data-v4-limit-field")) {
       if (!isBuffetV4Draft(draft)) return;
@@ -5393,6 +5671,8 @@
     var invalid = deployIds.find(function (storeId) { return added.indexOf(storeId) < 0; });
     if (invalid) return "未添加商品的门店不能发布";
     if (isBuffetV4Draft(draft)) {
+      var v4Validation = validateV4Draft(draft, deployIds);
+      if (v4Validation) return v4Validation.message;
       var pendingStoreId = deployIds.find(function (storeId) {
         return pendingTargetIdentityEntriesForDraft(draft, storeConfigFor(draft, storeId, false)).length > 0;
       });

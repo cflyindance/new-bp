@@ -133,12 +133,55 @@ assert.deepEqual({ ...store.periodValues.per_round.totalBounds["0|0"] }, {
 assert.deepEqual({ ...store.periodValues.per_round.targetLimits["0|0|kiosk|1"] }, { configured: true, value: 0 });
 assert.deepEqual({ ...store.periodValues.per_round.targetLimits.invalid }, { configured: false, value: null });
 assert.deepEqual(
-  Array.from(store.periodValues.per_round.exceptionDishLimits["0|0"][0].dishes, policy.menuIdentity),
-  ["kiosk|1", "emenu|1"]
+  Array.from(store.periodValues.per_round.exceptionDishLimits["0|0"], row => policy.menuIdentity(row.dishes[0])),
+  ["kiosk|1", "emenu|1"],
+  "旧的一行多菜品例外必须拆为保留顺序的多行单菜品例外"
 );
 assert.deepEqual(
   { ...store.periodValues.per_round.exceptionDishLimits["0|0"][0].limit },
   { configured: true, value: 3 }
+);
+assert.deepEqual(
+  { ...store.periodValues.per_round.exceptionDishLimits["0|0"][1].limit },
+  { configured: true, value: 3 },
+  "拆分后的每行必须保留同一上限"
+);
+
+// 例外商品编辑器的旧 dish 单值必须在自动保存规范化后保留为规范 dishes 数组；非法行不得进入持久化结果。
+const exceptionRoundTrip = policy.normalizeRule({
+  enabledPeriods: ["per_round"],
+  storeConfigs: {
+    storeA: {
+      periodValues: {
+        per_round: {
+          exceptionDishLimits: {
+            "0|0": [
+              { dish: { productLineId: "kiosk", dishId: "legacy-dish" }, limit: { configured: true, value: 2 } },
+              { dishes: [{ productLineId: "emenu", dishId: "current-dish" }], limit: { configured: true, value: 0 } },
+              { dishes: [{ productLineId: "kiosk", dishId: "multi-a" }, { productLineId: "sdi", dishId: "multi-b" }], limit: { configured: true, value: 5 } },
+              { dishes: [], dish: { productLineId: "sdi", dishId: "legacy-fallback" }, limit: { configured: true, value: 1 } },
+              { dish: { productLineId: "", dishId: "missing-line" }, limit: { configured: true, value: 3 } },
+              { dishes: [], limit: { configured: true, value: 4 } },
+              null,
+            ],
+          },
+        },
+      },
+    },
+  },
+});
+const roundTripRows = exceptionRoundTrip.storeConfigs.storeA.periodValues.per_round.exceptionDishLimits["0|0"];
+assert.equal(roundTripRows.length, 5, "非法例外行必须安全过滤，并兼容 dishes 为空时的旧 dish 数据与一行多菜品数据");
+assert.deepEqual(
+  Array.from(roundTripRows, row => ({ dishes: Array.from(row.dishes, policy.menuIdentity), limit: { ...row.limit }, hasLegacyDish: Object.hasOwn(row, "dish") })),
+  [
+    { dishes: ["kiosk|legacy-dish"], limit: { configured: true, value: 2 }, hasLegacyDish: false },
+    { dishes: ["emenu|current-dish"], limit: { configured: true, value: 0 }, hasLegacyDish: false },
+    { dishes: ["kiosk|multi-a"], limit: { configured: true, value: 5 }, hasLegacyDish: false },
+    { dishes: ["sdi|multi-b"], limit: { configured: true, value: 5 }, hasLegacyDish: false },
+    { dishes: ["sdi|legacy-fallback"], limit: { configured: true, value: 1 }, hasLegacyDish: false },
+  ],
+  "例外行写回必须使用保留产线身份的唯一 dishes 规范结构"
 );
 assert.ok(store.periodValues.order_lifetime);
 assert.ok(store.periodValues.multi_round);

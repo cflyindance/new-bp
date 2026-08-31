@@ -117,12 +117,21 @@
     var result = Object.create(null);
     Object.keys(isPlainObject(input) ? input : {}).forEach(function (key) {
       var rows = Array.isArray(input[key]) ? input[key] : [];
-      result[key] = rows.map(function (row) {
-        var normalized = clone(row);
-        normalized.dishes = uniqueIdentities(normalized.dishes, "dishId", menuIdentity);
-        normalized.limit = normalizeLimitCell(normalized.limit);
-        return normalized;
-      });
+      result[key] = rows.reduce(function (normalizedRows, row) {
+        if (!isPlainObject(row)) return normalizedRows;
+        // 兼容 Task 5 之前编辑器写入的单值 dish；持久化只输出 dishes 数组。
+        var requestedDishes = Array.isArray(row.dishes) ? row.dishes : [];
+        var dishes = uniqueIdentities(requestedDishes, "dishId", menuIdentity);
+        if (!dishes.length && isPlainObject(row.dish)) {
+          dishes = uniqueIdentities([row.dish], "dishId", menuIdentity);
+        }
+        // 每个例外行只能对应一个菜品。旧数据的一行多菜品拆为多行并保持原有顺序；
+        // 跨行的相同身份不静默丢弃，交由发布前 EXCEPTION_DISH_DUPLICATED 明确阻止。
+        dishes.forEach(function (dish) {
+          normalizedRows.push({ dishes: [dish], limit: normalizeLimitCell(row.limit) });
+        });
+        return normalizedRows;
+      }, []);
     });
     return result;
   }
