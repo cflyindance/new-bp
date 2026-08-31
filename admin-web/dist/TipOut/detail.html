@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>小费分配明细 - TipOut</title>
   <link rel="stylesheet" href="common.css">
+  <link rel="stylesheet" href="prototype-fidelity.css">
   <style>
     .formula-section { margin-bottom: 24px; }
     .formula-display {
@@ -152,7 +153,7 @@
     }
   </style>
 </head>
-<body>
+<body class="tipout-fidelity tipout-page-detail">
   <div class="layout">
     <!-- Sidebar -->
     <aside class="sidebar">
@@ -160,25 +161,17 @@
         <div class="logo-icon">M</div>
         <span class="logo-text">MenuSifu</span>
       </div>
-      <nav class="sidebar-menu">
-        <div class="sidebar-submenu-title open" onclick="this.classList.toggle('open');this.nextElementSibling.style.maxHeight=this.classList.contains('open')?'200px':'0'">
-          <span>Tip Out</span>
-          <svg class="arrow" width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M6 8.825a.5.5 0 0 1-.354-.146l-4-4a.5.5 0 0 1 .708-.708L6 7.617l3.646-3.646a.5.5 0 0 1 .708.708l-4 4A.5.5 0 0 1 6 8.825z"/></svg>
-        </div>
+      <nav class="sidebar-menu" aria-label="小费管理导航">
+        <div class="sidebar-submenu-title open"><span>Tip Out</span></div>
         <div class="sidebar-submenu-items" style="max-height:200px">
-          <a href="index.html" class="sidebar-menu-item active">小费分配汇总</a>
+          <a href="index.html" class="sidebar-menu-item active" onclick="returnToSummary(); return false">小费分配汇总</a>
+          <a href="rules.html" class="sidebar-menu-item">分配规则</a>
         </div>
-        <div class="sidebar-submenu-title open" onclick="this.classList.toggle('open');this.nextElementSibling.style.maxHeight=this.classList.contains('open')?'200px':'0'">
-          <span>员工管理</span>
-          <svg class="arrow" width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M6 8.825a.5.5 0 0 1-.354-.146l-4-4a.5.5 0 0 1 .708-.708L6 7.617l3.646-3.646a.5.5 0 0 1 .708.708l-4 4A.5.5 0 0 1 6 8.825z"/></svg>
-        </div>
+        <div class="sidebar-submenu-title open"><span>员工管理</span></div>
         <div class="sidebar-submenu-items" style="max-height:200px">
           <a href="employees.html" class="sidebar-menu-item">员工列表</a>
         </div>
-        <div class="sidebar-submenu-title open" onclick="this.classList.toggle('open');this.nextElementSibling.style.maxHeight=this.classList.contains('open')?'200px':'0'">
-          <span>Payroll</span>
-          <svg class="arrow" width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M6 8.825a.5.5 0 0 1-.354-.146l-4-4a.5.5 0 0 1 .708-.708L6 7.617l3.646-3.646a.5.5 0 0 1 .708.708l-4 4A.5.5 0 0 1 6 8.825z"/></svg>
-        </div>
+        <div class="sidebar-submenu-title open"><span>Payroll</span></div>
         <div class="sidebar-submenu-items" style="max-height:200px">
           <a href="payroll.html" class="sidebar-menu-item">报税报表</a>
         </div>
@@ -190,7 +183,8 @@
     <div class="main-content">
       <header class="header">
         <div class="header-left">
-          <button class="mobile-menu-btn" onclick="toggleSidebar()">☰</button>
+          <button class="mobile-menu-btn" onclick="toggleSidebar()" aria-label="打开导航菜单">菜单</button>
+          <div class="tipout-breadcrumb"><span>Tip Out</span><b aria-hidden="true">/</b><strong>小费分配明细</strong></div>
         </div>
         <div class="header-right">
           <div class="header-user">
@@ -200,12 +194,6 @@
           </div>
         </div>
       </header>
-
-      <div class="page-tabs">
-        <a href="index.html" class="page-tab" onclick="returnToSummary();return false">小费分配汇总</a>
-        <a href="detail.html" class="page-tab active">小费分配明细</a>
-        <a href="rules.html" class="page-tab">小费分配规则</a>
-      </div>
 
       <div class="content-area">
         <div class="tipout-detail-heading">

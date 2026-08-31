@@ -11,6 +11,23 @@ const context = { window: {} };
 vm.runInNewContext(fs.readFileSync(helperPath, 'utf8'), context);
 const ui = context.window.TipOutSummaryUi;
 
+const fidelityCssPath = path.join(root, 'dist/TipOut/prototype-fidelity.css');
+assert.equal(fs.existsSync(fidelityCssPath), true);
+
+const pageContracts = [
+  ['index.html', 'tipout-page-summary'],
+  ['detail.html', 'tipout-page-detail'],
+  ['rules.html', 'tipout-page-rules'],
+  ['rule-add.html', 'tipout-page-rule-editor'],
+];
+for (const [fileName, pageClass] of pageContracts) {
+  const html = fs.readFileSync(path.join(root, 'dist/TipOut', fileName), 'utf8');
+  assert.match(html, /href="prototype-fidelity\.css"/);
+  assert.match(html, new RegExp('<body class="[^"]*tipout-fidelity[^"]*' + pageClass));
+  assert.match(html, /class="tipout-breadcrumb"/);
+  assert.doesNotMatch(html, /class="page-tabs"/);
+}
+
 assert.deepEqual(
   JSON.parse(JSON.stringify(ui.summarizeDailyResults([
     { before: 10, deducted: 2, received: 4, after: 12 },
