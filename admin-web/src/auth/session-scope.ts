@@ -27,6 +27,7 @@ import {
   readSidebarNavLayoutPreset,
   type SidebarNavLayoutPreset,
 } from "../config/sidebar-nav-order";
+import { clearPlatformPresetContext } from "../config/platform-preset-context";
 import { loadChainBrandOrgForContext, syncChainBrandOrgForGroup, clearActiveMerchantGroupOverride, syncAllActiveMPlatformGroups, listMPlatformGroupsForMerchantBackend, resolveChainBrandContext, type ChainBrandOrgSnapshot, type ChainBrandView, type ChainStoreView } from "../config/merchant-chain-brand-sync";
 import { readActiveImpersonation } from "../config/enterprise-merchant-impersonate";
 import { shouldShowBrandPerspectiveRegionScopeFilter } from "../config/product-version";
@@ -403,6 +404,8 @@ export function ensureScopeFiltersForOrgTier(tier: AccountOrgTier = getAccountOr
 export function syncSessionForAuthenticatedUser(): void {
   clearActiveMerchantGroupOverride();
   clearChainDataPerspectiveState();
+  // 平台预设上下文只服务于当前登录会话；不能让旧会话缓存继续筛掉默认导航。
+  clearPlatformPresetContext();
   refreshUserSessionContext();
   applyDefaultLayoutPresetForOrgTier(getAccountOrgTier());
   ensureChainPerspectiveForCurrentLayout();
