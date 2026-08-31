@@ -7,8 +7,10 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const flow = fs.readFileSync(path.join(root, "dist/Configuration center/assets/order-limit-flow.js"), "utf8");
 const profile = fs.readFileSync(path.join(root, "dist/Configuration center/assets/buffet-rule-profile.js"), "utf8");
 
-assert.match(profile, /order:\s*\["order_lifetime"\]/);
-assert.match(profile, /party_size:\s*\["order_lifetime",\s*"per_round",\s*"multi_round"\]/);
+assert.match(profile, /var ALLOWED_PERIODS = \["order_lifetime", "per_round", "multi_round"\]/);
+assert.match(profile, /order:\s*ALLOWED_PERIODS\.slice\(\)/);
+assert.match(profile, /party_size:\s*ALLOWED_PERIODS\.slice\(\)/);
+assert.match(profile, /periodTemplates:\s*clone\(PERIOD_TEMPLATES\)/);
 assert.match(profile, /allowedTargetTypes:\s*\["category",\s*"dish",\s*"dish_set"\]/);
 
 assert.match(flow, /function isAllowedCombination\(draft\)/);

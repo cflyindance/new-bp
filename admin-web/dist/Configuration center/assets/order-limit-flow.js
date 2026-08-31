@@ -23,6 +23,12 @@
     ]
   };
   var moduleProfile = window.ORDER_LIMIT_MODULE_PROFILE || MENU_ORDER_LIMIT_PROFILE;
+  var usesV4Capability = typeof moduleProfile.usesV4Capability === "function"
+    ? moduleProfile.usesV4Capability
+    : function () { return false; };
+  var upgradeDraftToV4 = typeof moduleProfile.upgradeDraftToV4 === "function"
+    ? moduleProfile.upgradeDraftToV4
+    : function (draft) { return draft; };
   var RULES_KEY = moduleProfile.storage.rulesKey;
   var RECOVERY_PREFIX = moduleProfile.storage.recoveryPrefix;
   var AUTOSAVE_DELAY = 900;
@@ -38,6 +44,11 @@
 
   function isAllowedCombination(draft) {
     if (!isBuffetProfile()) return true;
+    if (Number(draft.schemaVersion) >= 4) {
+      return Array.isArray(draft.enabledPeriods) && draft.enabledPeriods.length > 0 &&
+        draft.enabledPeriods.every(function (period) { return moduleProfile.allowedPeriods.indexOf(period) >= 0; }) &&
+        moduleProfile.allowedTargetTypes.indexOf(draft.targetType) >= 0;
+    }
     var periods = moduleProfile.allowedPeriodsBySubject && moduleProfile.allowedPeriodsBySubject[draft.subject];
     return !!(periods && periods.indexOf(draft.period) >= 0 && moduleProfile.allowedTargetTypes.indexOf(draft.targetType) >= 0);
   }
@@ -52,6 +63,18 @@
 
   function normalizeDraftForProfile(draft) {
     if (!draft || !isBuffetProfile()) return draft;
+    if (Number(draft.schemaVersion) >= 4) {
+      if (!draft.period && Array.isArray(draft.enabledPeriods) && draft.enabledPeriods.length) draft.period = draft.enabledPeriods[0];
+      if (draft.subject === "order") {
+        draft.partyRanges = [{ min: 1, max: null }];
+        draft.activePartyIndex = 0;
+      } else if (!Array.isArray(draft.partyRanges) || !draft.partyRanges.length) {
+        draft.partyRanges = [{ min: 1, max: null }];
+        draft.activePartyIndex = 0;
+      }
+      if (!Array.isArray(draft.roundRanges) || !draft.roundRanges.length) draft.roundRanges = [{ min: 1, max: null }];
+      return draft;
+    }
     if (draft.subject === "order") {
       draft.period = "order_lifetime";
       draft.partyRanges = [{ min: 1, max: null }];
@@ -362,7 +385,13 @@
   function normalizeStoreDraft(draft) {
     if (!draft) return false;
     var before = JSON.stringify(draft);
-    draft.schemaVersion = draft.targetType === "dish_set" ? 2 : 1;
+    if (Number(draft.schemaVersion) >= 4 && window.BuffetRulePolicy) {
+      var normalizedV4 = window.BuffetRulePolicy.normalizeRule(draft);
+      Object.keys(draft).forEach(function (key) { delete draft[key]; });
+      Object.keys(normalizedV4).forEach(function (key) { draft[key] = normalizedV4[key]; });
+    } else {
+      draft.schemaVersion = draft.targetType === "dish_set" ? 2 : 1;
+    }
     var hadDeployField = Object.prototype.hasOwnProperty.call(draft, "deployStoreIds");
     var needsDeploymentMigration = !draft.deploymentSelectionVersion;
     draft.participatingStoreIds = Array.isArray(draft.participatingStoreIds) ? draft.participatingStoreIds.slice() : [];
@@ -408,9 +437,9 @@
   }
 
   function defaultDraft() {
-    return normalizeDraftForProfile({
+    var draft = {
       currentStep: 1,
-      schemaVersion: 1,
+      schemaVersion: isBuffetProfile() ? 4 : 1,
       highestStep: 1,
       subject: null,
       period: null,
@@ -462,7 +491,9 @@
       deployExcludedStoreIds: [],
       deploymentSelectionVersion: 1,
       legacyCompatibilityFallback: createEmptyStoreConfig()
-    });
+    };
+    if (isBuffetProfile()) draft = upgradeDraftToV4(draft);
+    return normalizeDraftForProfile(draft);
   }
 
   function mapLegacyType(value) {
@@ -1004,6 +1035,9 @@
 
   function buildCompatibilityRule(draftRule, status) {
     var draft = cloneValue(draftRule.editorDraft);
+    if (isBuffetProfile() && usesV4Capability(draft) && Number(draft.schemaVersion) < 4) {
+      draft = upgradeDraftToV4(draft);
+    }
     normalizeUnlimitedLimitCells(draft);
     normalizeLoadedEditorDraft(draft);
     var authoringDraft = cloneValue(draft);
@@ -3471,7 +3505,7 @@
     var apply = function () {
       draft[field] = value;
       if (field === "targetType") {
-        draft.schemaVersion = value === "dish_set" ? 2 : 1;
+        if (Number(draft.schemaVersion) < 4) draft.schemaVersion = value === "dish_set" ? 2 : 1;
         clearProductSearch();
         clearProductPickerNav();
         draft.structureByLine = MenuPicker ? MenuPicker.emptyByLine() : { kiosk: [], emenu: [], sdi: [] };
@@ -3489,9 +3523,11 @@
         draft.partyRanges = [{ min: 1, max: null }];
         draft.activePartyIndex = 0;
         if (value === "order") {
-          draft.period = "order_lifetime";
-          draft.roundRanges = [{ min: 1, max: null }];
-          draft.activeRoundIndex = 0;
+          if (Number(draft.schemaVersion) < 4) {
+            draft.period = "order_lifetime";
+            draft.roundRanges = [{ min: 1, max: null }];
+            draft.activeRoundIndex = 0;
+          }
         } else if (moduleProfile.allowedPeriodsBySubject.party_size.indexOf(draft.period) < 0) {
           draft.period = "order_lifetime";
         }

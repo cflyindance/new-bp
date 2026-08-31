@@ -5,6 +5,10 @@ import vm from "node:vm";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const policySource = fs.readFileSync(
+  path.join(root, "dist/Configuration center/assets/buffet-rule-policy.js"),
+  "utf8",
+);
 const source = fs.readFileSync(
   path.join(root, "dist/Configuration center/assets/buffet-rule-profile.js"),
   "utf8",
@@ -22,14 +26,17 @@ function storageMock() {
 
 const localStorage = storageMock();
 const window = {};
-vm.runInNewContext(source, { window, localStorage, Date, Math, JSON, Error });
+const context = { window, localStorage };
+vm.runInNewContext(policySource, context);
+vm.runInNewContext(source, context);
 
 const profile = window.ORDER_LIMIT_MODULE_PROFILE;
 assert.equal(profile.moduleId, "buffet-rule");
 assert.equal(profile.storage.rulesKey, "buffet-rule:repository:v1");
 assert.equal(profile.storage.recoveryPrefix, "buffet-rule:recovery:v1:");
-assert.deepEqual(Array.from(profile.allowedPeriodsBySubject.order), ["order_lifetime"]);
+assert.deepEqual(Array.from(profile.allowedPeriodsBySubject.order), ["order_lifetime", "per_round", "multi_round"]);
 assert.equal(profile.allowedPeriodsBySubject.party_size.length, 3);
+assert.deepEqual(Array.from(profile.allowedPeriods), ["order_lifetime", "per_round", "multi_round"]);
 
 const repository = profile.repository;
 const empty = repository.readEnvelope();
