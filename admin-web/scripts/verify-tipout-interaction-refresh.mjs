@@ -133,22 +133,30 @@ assert.ok(rulesInlineScripts.length > 0);
 rulesInlineScripts.forEach((source) => new vm.Script(source));
 
 const editorHtml = fs.readFileSync(path.join(root, 'dist/TipOut/rule-add.html'), 'utf8');
+const commonJs = fs.readFileSync(path.join(root, 'dist/TipOut/common.js'), 'utf8');
 for (const id of [
   'ruleSectionBasic', 'sharedPoolRulesSection', 'allocationModeSection',
   'deductRulesSection', 'legacyReceiversSection', 'orderTipClaimsSection',
   'orderResidualSection', 'distributionSection',
 ]) assert.match(editorHtml, new RegExp('id="' + id + '"'));
+for (const id of ['ruleEditorWorkspace', 'ruleEditorMain', 'ruleEditorContextRail', 'ruleEditorActions']) {
+  assert.match(editorHtml, new RegExp('id="' + id + '"'));
+}
 for (const field of [
   'poolRules', 'deductRoles', 'deductEmployees', 'deductConfig', 'receivers',
   'tipClaims', 'residual', 'distribution', 'clockin', 'workHoursConfig',
 ]) assert.match(editorHtml, new RegExp(field));
-assert.match(editorHtml, /class="tipout-rule-section-nav"/);
-assert.match(editorHtml, /function scrollToRuleSection\(id\)/);
-assert.match(editorHtml, /function syncRuleSectionNavigator\(allocationMode\)/);
+assert.doesNotMatch(editorHtml, /class="tipout-rule-section-nav"/);
+assert.match(editorHtml, /function syncRuleEditorContext\(\)/);
+assert.match(editorHtml, /class="[^"]*tipout-form-card/);
 assert.match(editorHtml, /function onAllocationModeChange\(skipEnsureClaimRow\)/);
-assert.match(editorHtml, /function collectFormData\(\)/);
-assert.match(editorHtml, /function submitRule\(\)/);
-assert.doesNotMatch(editorHtml, /effectiveDate|ruleVersion|saveDraft|auditLog/);
+for (const handler of ['collectFormData', 'submitRule', 'cancelRule']) {
+  assert.match(editorHtml, new RegExp('function ' + handler + '\\('));
+}
+for (const handler of ['openDrawer', 'closeDrawer']) {
+  assert.match(commonJs, new RegExp('function ' + handler + '\\('));
+}
+assert.doesNotMatch(editorHtml, /effectiveDate|ruleVersion|saveDraft|auditLog|ruleStatus/);
 const editorInlineScripts = [...editorHtml.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)]
   .map((match) => match[1])
   .filter((source) => source.trim());
