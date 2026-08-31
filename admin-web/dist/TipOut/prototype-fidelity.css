@@ -1,0 +1,62 @@
+.tipout-fidelity {
+  --primary: #000000;
+  --primary-hover: #181818;
+  --primary-bg: #f4f4f5;
+  --primary-border: #d4d4d8;
+  --danger: #b83232;
+  --danger-bg: #fff0f0;
+  --success: #168f5b;
+  --success-bg: #eef9f3;
+  --warning: #9a6410;
+  --warning-bg: #fff7e6;
+  --info: #3168a6;
+  --info-bg: #eef5fd;
+  --sidebar-bg: #ffffff;
+  --sidebar-active: #000000;
+  --header-bg: rgba(255, 255, 255, 0.94);
+  --body-bg: #ffffff;
+  --card-bg: #ffffff;
+  --border-color: #d9d9dc;
+  --border-light: #ededf0;
+  --text-primary: #000000;
+  --text-secondary: #55555c;
+  --text-tertiary: #7b7b83;
+  --font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  background: #ffffff;
+}
+
+.tipout-fidelity .sidebar {
+  width: 212px;
+  padding: 16px;
+  border-right: 1px solid var(--border-light);
+  background: #ffffff;
+  color: #000000;
+}
+
+.tipout-fidelity .main-content { margin-left: 212px; background: #ffffff; }
+.tipout-fidelity .header { height: 68px; padding: 0 28px; backdrop-filter: blur(14px); }
+.tipout-fidelity .content-area { padding: 28px; }
+.tipout-fidelity .sidebar-logo { padding: 4px 4px 22px; }
+.tipout-fidelity .sidebar-logo .logo-icon { background: #000000; }
+.tipout-fidelity .sidebar-logo .logo-text,
+.tipout-fidelity .sidebar-submenu-title,
+.tipout-fidelity .sidebar-menu-item { color: #000000; }
+.tipout-fidelity .sidebar-menu-item.active { background: #000000; color: #ffffff; }
+.tipout-fidelity .sidebar-menu-item:hover:not(.active) { background: #f4f4f5; color: #000000; }
+.tipout-fidelity .tipout-breadcrumb { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.tipout-fidelity .tipout-breadcrumb span { color: var(--text-tertiary); }
+.tipout-fidelity .btn-primary { min-height: 36px; border-color: #000000; border-radius: 16px; background: #000000; color: #ffffff; }
+.tipout-fidelity .btn-primary:hover { border-color: #181818; background: #181818; }
+.tipout-fidelity .btn:focus-visible,
+.tipout-fidelity a:focus-visible,
+.tipout-fidelity [tabindex]:focus-visible { outline: 2px solid #000000; outline-offset: 2px; }
+
+@media (max-width: 768px) {
+  .tipout-fidelity .main-content { margin-left: 0; }
+  .tipout-fidelity .sidebar { width: min(280px, 86vw); }
+  .tipout-fidelity .header { height: 60px; padding: 0 16px; }
+  .tipout-fidelity .content-area { padding: 16px; }
+}
