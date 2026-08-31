@@ -37,8 +37,9 @@ assert.deepEqual(
 );
 assert.equal(
   ui.buildDetailUrl({ date: '2026-08-02', store: 'Downtown LA', fromSummary: true }),
-  'detail.html?date=2026-08-02&store=Downtown%20LA&from=summary',
+  'detail.html?date=2026-08-02&store=Downtown%20LA&from=summary&return=history',
 );
+assert.equal(ui.countPendingDates(['2026-08-01', '2026-08-02'], ['2026-08-02']), 1);
 const historyState = ui.buildSummaryHistoryState({
   dateStart: '2026-08-01', dateEnd: '2026-08-07', store: 'Downtown LA',
   roles: ['Server'], employees: ['Olivia Martin'], scrollY: 420, returnDate: '2026-08-02',
@@ -47,6 +48,14 @@ assert.equal(historyState.tipoutSummaryUiState.returnDate, '2026-08-02');
 assert.equal(ui.readSummaryHistoryState(historyState).scrollY, 420);
 
 const indexHtml = fs.readFileSync(path.join(root, 'dist/TipOut/index.html'), 'utf8');
+for (const id of ['summaryBefore', 'summaryDeducted', 'summaryReceived', 'summaryAfter', 'pendingDateCount']) {
+  assert.match(indexHtml, new RegExp('id="' + id + '"'));
+}
+assert.match(indexHtml, /<table[^>]*class="[^"]*tipout-summary-table/);
+assert.match(indexHtml, /<tbody id="dailySummaryList"/);
+assert.match(indexHtml, /function renderSummaryOverview\(dailyRows, allocatedDates\)/);
+assert.match(indexHtml, /function activateDailySummaryRow\(event, dateKey\)/);
+assert.doesNotMatch(indexHtml, /type="checkbox"[^>]*data-date/);
 assert.match(indexHtml, /id="dailySummaryList"/);
 assert.match(indexHtml, /function getDailyEmployeeResults\(dateKey\)/);
 assert.match(indexHtml, /function renderDailySummaryList\(\)/);
