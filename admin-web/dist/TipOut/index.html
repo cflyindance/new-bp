@@ -58,7 +58,6 @@
       background: #fff; border-top: 1px solid var(--border-light);
       box-shadow: 0 -2px 8px rgba(0,0,0,0.06);
     }
-    .content-area { padding-bottom: 72px; }
     @media (max-width: 768px) { .export-bar { left: 0; } }
 
     .export-dropdown { position: relative; }
@@ -168,100 +167,118 @@
       </header>
 
       <div class="content-area">
-        <!-- Filters：移动端默认折叠筛选，操作按钮始终可见 -->
-        <div class="filter-surface">
-          <button type="button" class="filter-surface-toggle" onclick="toggleFilterSurface(this)" aria-expanded="false" aria-controls="indexFilterCollapsible">
-            <span class="filter-surface-toggle-text">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
-              筛选条件
-            </span>
-            <svg class="filter-surface-toggle-chevron" width="14" height="14" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><path d="M6 8.825a.5.5 0 0 1-.354-.146l-4-4a.5.5 0 0 1 .708-.708L6 7.617l3.646-3.646a.5.5 0 0 1 .708.708l-4 4A.5.5 0 0 1 6 8.825z"/></svg>
-          </button>
-          <div id="indexFilterCollapsible" class="filter-surface-collapsible">
-            <div class="filter-bar filter-bar--page filter-bar--index">
-              <div class="filter-field filter-field--daterange">
-                <span class="filter-field-label">日期范围</span>
-                <div class="date-range-group">
-                  <input type="date" id="dateStart" class="form-control form-control-lg" value="2026-01-01" onchange="renderDailySummaryList()">
-                  <span class="date-range-sep" style="color:var(--text-tertiary)">~</span>
-                  <input type="date" id="dateEnd" class="form-control form-control-lg" value="2026-02-28" onchange="renderDailySummaryList()">
-                </div>
-              </div>
-              <div class="filter-field">
-                <label class="filter-field-label" for="storeSelect">门店</label>
-                <select id="storeSelect" class="form-control form-control-lg" onchange="invalidateDayPipelineCache();renderDailySummaryList()">>
-                  <option value="">请选择门店</option>
-                </select>
-              </div>
-              <div class="filter-field">
-                <span class="filter-field-label">角色</span>
-                <div class="multi-select" id="roleFilter" data-placeholder="All Role">
-                <div class="multi-select-input" onclick="toggleIndexMultiSelect('roleFilter')">
-                  <div class="multi-select-tags">
-                    <span class="multi-select-placeholder">All Role</span>
+        <section class="tipout-page-section" aria-labelledby="summaryTitle">
+          <div class="tipout-page-heading">
+            <div>
+              <p class="tipout-kicker">Tip Out 工作台</p>
+              <h1 id="summaryTitle">小费分配汇总</h1>
+              <p>按日期查看、核对并执行当前范围的小费分配。</p>
+            </div>
+            <div class="tipout-heading-actions">
+              <div class="export-dropdown">
+                <button type="button" class="btn btn-lg" onclick="toggleExportMenu()" aria-haspopup="menu">导出结果</button>
+                <div class="export-menu" id="exportMenu" role="menu">
+                  <div class="export-menu-item" onclick="exportAs('pdf')">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="flex-shrink:0"><rect x="2" y="1" width="12" height="14" rx="2" stroke="#ff4d4f" stroke-width="1.2"/><text x="8" y="10.5" text-anchor="middle" fill="#ff4d4f" font-size="5" font-weight="600">PDF</text></svg>
+                    导出为 PDF
                   </div>
-                  <svg class="multi-select-arrow" width="12" height="12" viewBox="0 0 12 12" fill="#999"><path d="M6 8.825a.5.5 0 0 1-.354-.146l-4-4a.5.5 0 0 1 .708-.708L6 7.617l3.646-3.646a.5.5 0 0 1 .708.708l-4 4A.5.5 0 0 1 6 8.825z"/></svg>
-                </div>
-                <div class="multi-select-dropdown">
-                  <label class="multi-select-option multi-select-all" style="border-bottom:1px solid var(--border-light);margin-bottom:4px;padding-bottom:6px"><input type="checkbox" value="__all__" data-select-all> 全选</label>
-                  <label class="multi-select-option"><input type="checkbox" value="Assistant Manager"> Assistant Manager</label>
-                  <label class="multi-select-option"><input type="checkbox" value="Bartender"> Bartender</label>
-                  <label class="multi-select-option"><input type="checkbox" value="Busser"> Busser</label>
-                  <label class="multi-select-option"><input type="checkbox" value="Cashier"> Cashier</label>
-                  <label class="multi-select-option"><input type="checkbox" value="Driver"> Driver</label>
-                  <label class="multi-select-option"><input type="checkbox" value="Host"> Host</label>
-                  <label class="multi-select-option"><input type="checkbox" value="Manager"> Manager</label>
-                  <label class="multi-select-option"><input type="checkbox" value="Runner"> Runner</label>
-                  <label class="multi-select-option"><input type="checkbox" value="Server"> Server</label>
-                  <label class="multi-select-option"><input type="checkbox" value="Shift Lead"> Shift Lead</label>
-                </div>
-              </div>
-              </div>
-              <div class="filter-field">
-                <span class="filter-field-label">员工</span>
-                <div class="multi-select" id="employeeFilter" data-placeholder="All Staff">
-                <div class="multi-select-input" onclick="toggleIndexMultiSelect('employeeFilter')">
-                  <div class="multi-select-tags">
-                    <span class="multi-select-placeholder">All Staff</span>
+                  <div class="export-menu-item" onclick="exportAs('csv')">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="flex-shrink:0"><rect x="2" y="1" width="12" height="14" rx="2" stroke="#52c41a" stroke-width="1.2"/><text x="8" y="10.5" text-anchor="middle" fill="#52c41a" font-size="5" font-weight="600">CSV</text></svg>
+                    导出为 CSV
                   </div>
-                  <svg class="multi-select-arrow" width="12" height="12" viewBox="0 0 12 12" fill="#999"><path d="M6 8.825a.5.5 0 0 1-.354-.146l-4-4a.5.5 0 0 1 .708-.708L6 7.617l3.646-3.646a.5.5 0 0 1 .708.708l-4 4A.5.5 0 0 1 6 8.825z"/></svg>
+                  <div class="export-menu-item" onclick="openEmailModal()">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="flex-shrink:0"><rect x="1.5" y="3" width="13" height="10" rx="2" stroke="#1677ff" stroke-width="1.2"/><path d="M2 4l6 4 6-4" stroke="#1677ff" stroke-width="1.2" stroke-linecap="round"/></svg>
+                    发送到邮箱
+                  </div>
                 </div>
-                <div class="multi-select-dropdown" id="employeeFilterDropdown"></div>
               </div>
+              <button id="allocateBtn" class="btn btn-primary btn-lg" onclick="doAllocateTips()">分配小费</button>
+            </div>
+          </div>
+
+          <div class="tipout-metric-strip" aria-label="小费金额概览">
+            <div><span>分配前</span><strong id="summaryBefore">$0.00</strong></div>
+            <div><span>扣除</span><strong id="summaryDeducted">$0.00</strong></div>
+            <div><span>分得</span><strong id="summaryReceived">$0.00</strong></div>
+            <div class="is-primary"><span>分配后</span><strong id="summaryAfter">$0.00</strong></div>
+          </div>
+
+          <div class="tipout-inline-notice tipout-inline-notice--warning" role="status">
+            <div>
+              <strong>当前范围有 <span id="pendingDateCount">0</span> 天待分配</strong>
+              <p>待分配数量只按日期、门店与当前分配记录计算。</p>
+            </div>
+            <button type="button" class="btn" onclick="doCancelAllocate()">取消分配</button>
+          </div>
+
+          <!-- Filters：移动端默认折叠 -->
+          <div class="filter-surface tipout-compact-toolbar">
+            <button type="button" class="filter-surface-toggle" onclick="toggleFilterSurface(this)" aria-expanded="false" aria-controls="indexFilterCollapsible">
+              <span class="filter-surface-toggle-text">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
+                筛选条件
+              </span>
+              <svg class="filter-surface-toggle-chevron" width="14" height="14" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><path d="M6 8.825a.5.5 0 0 1-.354-.146l-4-4a.5.5 0 0 1 .708-.708L6 7.617l3.646-3.646a.5.5 0 0 1 .708.708l-4 4A.5.5 0 0 1 6 8.825z"/></svg>
+            </button>
+            <div id="indexFilterCollapsible" class="filter-surface-collapsible">
+              <div class="filter-bar filter-bar--page filter-bar--index">
+                <div class="filter-field filter-field--daterange">
+                  <span class="filter-field-label">日期范围</span>
+                  <div class="date-range-group">
+                    <input type="date" id="dateStart" class="form-control form-control-lg" value="2026-01-01" onchange="renderDailySummaryList()">
+                    <span class="date-range-sep" style="color:var(--text-tertiary)">~</span>
+                    <input type="date" id="dateEnd" class="form-control form-control-lg" value="2026-02-28" onchange="renderDailySummaryList()">
+                  </div>
+                </div>
+                <div class="filter-field">
+                  <label class="filter-field-label" for="storeSelect">门店</label>
+                  <select id="storeSelect" class="form-control form-control-lg" onchange="invalidateDayPipelineCache();renderDailySummaryList()">
+                    <option value="">请选择门店</option>
+                  </select>
+                </div>
+                <div class="filter-field">
+                  <span class="filter-field-label">角色</span>
+                  <div class="multi-select" id="roleFilter" data-placeholder="All Role">
+                    <div class="multi-select-input" onclick="toggleIndexMultiSelect('roleFilter')">
+                      <div class="multi-select-tags"><span class="multi-select-placeholder">All Role</span></div>
+                      <svg class="multi-select-arrow" width="12" height="12" viewBox="0 0 12 12" fill="#999"><path d="M6 8.825a.5.5 0 0 1-.354-.146l-4-4a.5.5 0 0 1 .708-.708L6 7.617l3.646-3.646a.5.5 0 0 1 .708.708l-4 4A.5.5 0 0 1 6 8.825z"/></svg>
+                    </div>
+                    <div class="multi-select-dropdown">
+                      <label class="multi-select-option multi-select-all" style="border-bottom:1px solid var(--border-light);margin-bottom:4px;padding-bottom:6px"><input type="checkbox" value="__all__" data-select-all> 全选</label>
+                      <label class="multi-select-option"><input type="checkbox" value="Assistant Manager"> Assistant Manager</label>
+                      <label class="multi-select-option"><input type="checkbox" value="Bartender"> Bartender</label>
+                      <label class="multi-select-option"><input type="checkbox" value="Busser"> Busser</label>
+                      <label class="multi-select-option"><input type="checkbox" value="Cashier"> Cashier</label>
+                      <label class="multi-select-option"><input type="checkbox" value="Driver"> Driver</label>
+                      <label class="multi-select-option"><input type="checkbox" value="Host"> Host</label>
+                      <label class="multi-select-option"><input type="checkbox" value="Manager"> Manager</label>
+                      <label class="multi-select-option"><input type="checkbox" value="Runner"> Runner</label>
+                      <label class="multi-select-option"><input type="checkbox" value="Server"> Server</label>
+                      <label class="multi-select-option"><input type="checkbox" value="Shift Lead"> Shift Lead</label>
+                    </div>
+                  </div>
+                </div>
+                <div class="filter-field">
+                  <span class="filter-field-label">员工</span>
+                  <div class="multi-select" id="employeeFilter" data-placeholder="All Staff">
+                    <div class="multi-select-input" onclick="toggleIndexMultiSelect('employeeFilter')">
+                      <div class="multi-select-tags"><span class="multi-select-placeholder">All Staff</span></div>
+                      <svg class="multi-select-arrow" width="12" height="12" viewBox="0 0 12 12" fill="#999"><path d="M6 8.825a.5.5 0 0 1-.354-.146l-4-4a.5.5 0 0 1 .708-.708L6 7.617l3.646-3.646a.5.5 0 0 1 .708.708l-4 4A.5.5 0 0 1 6 8.825z"/></svg>
+                    </div>
+                    <div class="multi-select-dropdown" id="employeeFilterDropdown"></div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-          <div class="filter-surface-actions">
-            <button type="button" class="btn btn-lg" onclick="doCancelAllocate()" style="color:var(--text-tertiary);font-size:13px" title="用于测试">取消分配</button>
-            <button id="allocateBtn" class="btn btn-primary btn-lg" onclick="doAllocateTips()">分配小费</button>
+
+          <div class="tipout-table-wrap">
+            <table class="data-table tipout-summary-table">
+              <thead><tr><th>日期</th><th>状态</th><th>分配前</th><th>扣除</th><th>分得</th><th>分配后</th><th aria-label="进入明细"></th></tr></thead>
+              <tbody id="dailySummaryList" aria-label="每日小费分配汇总"></tbody>
+            </table>
           </div>
-        </div>
-
-        <div class="tipout-daily-list" id="dailySummaryList" aria-label="每日小费分配汇总"></div>
-
-      </div>
-
-      <div class="export-bar">
-        <div class="export-dropdown">
-          <button class="btn btn-primary btn-lg" onclick="toggleExportMenu()">
-            导出结果
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" style="margin-left:6px"><path d="M6 8.825a.5.5 0 0 1-.354-.146l-4-4a.5.5 0 0 1 .708-.708L6 7.617l3.646-3.646a.5.5 0 0 1 .708.708l-4 4A.5.5 0 0 1 6 8.825z"/></svg>
-          </button>
-          <div class="export-menu" id="exportMenu">
-            <div class="export-menu-item" onclick="exportAs('pdf')">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="flex-shrink:0"><rect x="2" y="1" width="12" height="14" rx="2" stroke="#ff4d4f" stroke-width="1.2"/><text x="8" y="10.5" text-anchor="middle" fill="#ff4d4f" font-size="5" font-weight="600">PDF</text></svg>
-              导出为 PDF
-            </div>
-            <div class="export-menu-item" onclick="exportAs('csv')">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="flex-shrink:0"><rect x="2" y="1" width="12" height="14" rx="2" stroke="#52c41a" stroke-width="1.2"/><text x="8" y="10.5" text-anchor="middle" fill="#52c41a" font-size="5" font-weight="600">CSV</text></svg>
-              导出为 CSV
-            </div>
-            <div class="export-menu-item" onclick="openEmailModal()">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="flex-shrink:0"><rect x="1.5" y="3" width="13" height="10" rx="2" stroke="#1677ff" stroke-width="1.2"/><path d="M2 4l6 4 6-4" stroke="#1677ff" stroke-width="1.2" stroke-linecap="round"/></svg>
-              发送到邮箱
-            </div>
-          </div>
-        </div>
+        </section>
       </div>
 
       <!-- Email Modal -->
@@ -730,27 +747,50 @@
       });
     }
 
+    function activateDailySummaryRow(event, dateKey) {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault();
+      openDailyDetail(dateKey);
+    }
+
+    function renderSummaryOverview(dailyRows, allocatedDates) {
+      var totals = TipOutSummaryUi.summarizeDailyResults(dailyRows.map(function(row) { return row.total; }));
+      document.getElementById('summaryBefore').textContent = money(totals.before);
+      document.getElementById('summaryDeducted').textContent = money(totals.deducted);
+      document.getElementById('summaryReceived').textContent = money(totals.received);
+      document.getElementById('summaryAfter').textContent = money(totals.after);
+      document.getElementById('pendingDateCount').textContent = String(
+        TipOutSummaryUi.countPendingDates(dailyRows.map(function(row) { return row.dateKey; }), Array.from(allocatedDates))
+      );
+    }
+
     function renderDailySummaryList() {
       var dates = getDateRange();
       var allocatedDates = getAllocatedDates();
       var container = document.getElementById('dailySummaryList');
       if (!container) return;
-      container.innerHTML = dates.map(function(dateKey) {
+      var dailyRows = dates.map(function(dateKey) {
         var date = new Date(dateKey + 'T00:00:00');
         var total = TipOutSummaryUi.summarizeDailyResults(getDailyEmployeeResults(dateKey));
-        var allocated = allocatedDates.has(dateKey);
-        return '<button type="button" class="tipout-daily-row" data-date="' + dateKey +
-          '" onclick="openDailyDetail(\'' + dateKey + '\')">' +
-          '<span class="tipout-daily-date"><strong>' + formatTabLabel(date) +
-          '</strong><small>' + dateKey + ' · ' + date.toLocaleDateString('zh-CN', { weekday: 'short' }) + '</small></span>' +
-          '<span class="tipout-daily-status ' + (allocated ? 'allocated' : 'pending') + '">' +
-          (allocated ? '已分配' : '待分配') + '</span>' +
-          '<span class="tipout-daily-amount"><small>分配前</small><strong>' + money(total.before) + '</strong></span>' +
-          '<span class="tipout-daily-amount"><small>扣除</small><strong class="tip-amount--deduct">' + money(total.deducted) + '</strong></span>' +
-          '<span class="tipout-daily-amount"><small>分得</small><strong class="tip-amount--receive">' + money(total.received) + '</strong></span>' +
-          '<span class="tipout-daily-amount"><small>分配后</small><strong>' + money(total.after) + '</strong></span>' +
-          '<span class="tipout-daily-chevron" aria-hidden="true">›</span></button>';
+        return { dateKey: dateKey, date: date, total: total, allocated: allocatedDates.has(dateKey) };
+      });
+      container.innerHTML = dailyRows.map(function(row) {
+        var dateKey = row.dateKey;
+        var total = row.total;
+        return '<tr class="tipout-daily-row" data-date="' + dateKey +
+          '" tabindex="0" role="link" onclick="openDailyDetail(\'' + dateKey +
+          '\')" onkeydown="activateDailySummaryRow(event, \'' + dateKey + '\')">' +
+          '<td><span class="tipout-daily-date"><strong>' + formatTabLabel(row.date) +
+          '</strong><small>' + dateKey + ' · ' + row.date.toLocaleDateString('zh-CN', { weekday: 'short' }) + '</small></span></td>' +
+          '<td><span class="tipout-daily-status ' + (row.allocated ? 'allocated' : 'pending') + '">' +
+          (row.allocated ? '已分配' : '待分配') + '</span></td>' +
+          '<td>' + money(total.before) + '</td>' +
+          '<td><strong class="tip-amount--deduct">' + money(total.deducted) + '</strong></td>' +
+          '<td><strong class="tip-amount--receive">' + money(total.received) + '</strong></td>' +
+          '<td><strong>' + money(total.after) + '</strong></td>' +
+          '<td class="tipout-detail-link">查看明细</td></tr>';
       }).join('');
+      renderSummaryOverview(dailyRows, allocatedDates);
       updateAllocateButton();
     }
 

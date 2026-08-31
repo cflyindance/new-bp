@@ -9,10 +9,19 @@
       return sum;
     }, { before: 0, deducted: 0, received: 0, after: 0 });
   }
+  function countPendingDates(dateKeys, allocatedDateKeys) {
+    var allocated = new Set(allocatedDateKeys || []);
+    return (dateKeys || []).reduce(function (count, dateKey) {
+      return count + (allocated.has(dateKey) ? 0 : 1);
+    }, 0);
+  }
   function buildDetailUrl(context) {
     var query = ['date=' + encodeURIComponent(context.date || '')];
     if (context.store) query.push('store=' + encodeURIComponent(context.store));
-    if (context.fromSummary) query.push('from=summary');
+    if (context.fromSummary) {
+      query.push('from=summary');
+      query.push('return=history');
+    }
     return 'detail.html?' + query.join('&');
   }
   function buildSummaryHistoryState(values) {
@@ -26,5 +35,11 @@
   function readSummaryHistoryState(state) {
     return state && state.tipoutSummaryUiState ? state.tipoutSummaryUiState : null;
   }
-  root.TipOutSummaryUi = { summarizeDailyResults, buildDetailUrl, buildSummaryHistoryState, readSummaryHistoryState };
+  root.TipOutSummaryUi = {
+    summarizeDailyResults,
+    countPendingDates,
+    buildDetailUrl,
+    buildSummaryHistoryState,
+    readSummaryHistoryState
+  };
 })(window);
