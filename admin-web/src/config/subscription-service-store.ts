@@ -312,5 +312,7 @@ export function getEffectiveSubscriptionRoutes(context: EffectiveSubscriptionCon
 
 export function hasConfiguredSubscriptionForContext(context: EffectiveSubscriptionContext): boolean {
   const ids = new Set([context.groupId, context.brandId, context.storeId].filter((item): item is string => Boolean(item)));
-  return readSubscriptionServiceSnapshot().subscriptions.some((item) => ids.has(item.subjectId) && !item.disabledAt);
+  return readSubscriptionServiceSnapshot().subscriptions.some(
+    (item) => ids.has(item.subjectId) && !item.disabledAt && !item.id.startsWith("sub-demo-"),
+  );
 }
