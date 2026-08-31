@@ -55,7 +55,12 @@ targetType: category | dish | dish_set
 
 ## 4. 数据模型
 
-菜品集规则使用 `schemaVersion: 2`。旧规则继续以 `schemaVersion: 1` 读取，加载时不得破坏性写回。
+版本分为仓库 envelope 和单条规则两层：
+
+- `buffet-rule:repository:v1` 的存储键及 envelope `schemaVersion: 1` 保持不变，本期不做仓库迁移。
+- 仅 `targetType = dish_set` 的单条规则携带 `schemaVersion: 2`。
+- 现有按菜品、按分类规则继续携带规则级 `schemaVersion: 1`，加载时不得破坏性写回。
+- 规则 normalizer 按单条规则的 `schemaVersion` 分派；未知规则版本仅使该规则进入只读异常态，不使完整、已知版本的其他规则失效，也不得自动覆盖仓库。
 
 每个门店的商品配置增加菜品集成员语义：
 
@@ -74,6 +79,7 @@ storeConfigs[storeId]:
 约束：
 
 - `dishSetMembers` 去重键为 `productLineId + dishId`。
+- “至少 2 个有效成员”按去重后的菜单身份数量计算；同一 `dishId` 出现在两条不同产线时是两个可独立下单的菜单身份，因此计为两个成员，但仍共同消耗一个菜品集额度。
 - `dishSetLimits` 不包含 `productLineId` 或单个菜品 `targetId`，从而确保跨产线共享一个额度。
 - 按桌/订单派生 `1 × 1` 单元。
 - 按人数每单、每轮派生 `partyRanges.length × 1` 单元。
