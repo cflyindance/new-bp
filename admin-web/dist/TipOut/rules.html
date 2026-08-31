@@ -92,21 +92,45 @@
       </header>
 
       <div class="content-area">
-        <!-- Filter + Add（移动端：纵向堆叠 + 全宽触控） -->
-        <div class="page-toolbar">
-          <div class="filter-bar">
-            <div class="filter-field">
-              <label class="filter-field-label" for="storeFilter">门店</label>
-              <select class="form-control form-control-lg" id="storeFilter" onchange="renderRulesTable()">
-                <option value="">全部门店</option>
-              </select>
+        <section class="tipout-page-section" aria-labelledby="rulesTitle">
+          <div class="tipout-page-heading">
+            <div>
+              <p class="tipout-kicker">规则管理</p>
+              <h1 id="rulesTitle">分配规则</h1>
+              <p>配置当前门店的小费池来源、扣除方和接收方。</p>
+            </div>
+            <div class="tipout-heading-actions">
+              <button type="button" class="btn btn-primary" onclick="openAddRuleModal()">新建规则</button>
             </div>
           </div>
-          <button type="button" class="btn btn-primary page-toolbar-action" onclick="openAddRuleModal()">新增规则</button>
-        </div>
 
-        <!-- Rules List -->
-        <div class="tipout-rule-list" id="rulesList" role="list" aria-label="小费分配规则"></div>
+          <div class="tipout-metric-strip tipout-metric-strip--three" aria-label="规则概览">
+            <div><span>规则总数</span><strong id="ruleCount">0</strong></div>
+            <div><span>小费池</span><strong id="tipPoolCount">0</strong></div>
+            <div><span>加收服务费池</span><strong id="surchargePoolCount">0</strong></div>
+          </div>
+
+          <div class="tipout-compact-toolbar tipout-rules-toolbar">
+            <label class="filter-field-label" for="storeFilter">门店</label>
+            <select class="form-control" id="storeFilter" onchange="renderRulesTable()">
+              <option value="">全部门店</option>
+            </select>
+          </div>
+
+          <div class="tipout-table-wrap">
+            <table class="data-table tipout-rules-table">
+              <thead>
+                <tr>
+                  <th>规则与门店</th>
+                  <th>池类型与规则摘要</th>
+                  <th>分配说明</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="rulesTableBody"></tbody>
+            </table>
+          </div>
+        </section>
       </div>
     </div>
   </div>
@@ -169,6 +193,17 @@
         .replace(/'/g, '&#39;');
     }
 
+    function renderRuleMetrics(rules) {
+      var list = rules || [];
+      document.getElementById('ruleCount').textContent = String(list.length);
+      document.getElementById('tipPoolCount').textContent = String(list.filter(function(rule) {
+        return rule.poolKind !== 'surcharge';
+      }).length);
+      document.getElementById('surchargePoolCount').textContent = String(list.filter(function(rule) {
+        return rule.poolKind === 'surcharge';
+      }).length);
+    }
+
     function renderRulesTable() {
       var rules = ruleData.getRules();
       var storeFilter = document.getElementById('storeFilter');
@@ -176,33 +211,41 @@
       if (filterStore) {
         rules = rules.filter(function(r) { return r.store === filterStore; });
       }
-      var list = document.getElementById('rulesList');
-      list.innerHTML = '';
+      renderRuleMetrics(rules);
+      var tableBody = document.getElementById('rulesTableBody');
+      tableBody.innerHTML = '';
       if (rules.length === 0) {
-        list.innerHTML = '<div class="tipout-rule-empty" role="status">暂无规则，请点击「新增规则」创建</div>';
+        tableBody.innerHTML = '<tr><td colspan="4"><div class="tipout-rule-empty" role="status">暂无规则，请点击「新建规则」创建</div></td></tr>';
         return;
       }
       rules.forEach(function(rule) {
         var desc = ruleData.buildRuleDescription(rule);
-        var record = document.createElement('article');
+        var record = document.createElement('tr');
         record.className = 'tipout-rule-record';
-        record.setAttribute('role', 'listitem');
         record.setAttribute('data-rule-id', rule.id);
         var editUrl = 'rule-add.html?mode=edit&id=' + rule.id;
         if (rule.poolKind === 'surcharge') editUrl += '&poolKind=surcharge';
         var poolKindLabel = ruleData.getRulePoolKindLabel(rule);
         var poolKindTagClass = ruleData.getRulePoolKindTagClass(rule);
+        var poolKindDescription = rule.poolKind === 'surcharge'
+          ? '现金/信用卡加收服务费'
+          : '小费、销售额等来源';
         var menuId = 'ruleActions-' + rule.id;
         record.innerHTML =
-          '<div class="tipout-rule-record-main">' +
-            '<div class="tipout-rule-record-context">' +
+          '<td>' +
+            '<div class="tipout-rule-identity">' +
+              '<strong class="tipout-rule-name">' + escapeHtml(rule.ruleName || '') + '</strong>' +
               '<span class="tipout-rule-store">' + escapeHtml(rule.store || '') + '</span>' +
-              '<span class="' + escapeHtml(poolKindTagClass) + '">' + escapeHtml(poolKindLabel) + '</span>' +
             '</div>' +
-            '<h2 class="tipout-rule-name">' + escapeHtml(rule.ruleName || '') + '</h2>' +
-            '<p class="tipout-rule-description">' + escapeHtml(desc) + '</p>' +
-          '</div>' +
-          '<div class="tipout-rule-record-actions">' +
+          '</td>' +
+          '<td>' +
+            '<div class="tipout-rule-pool-summary">' +
+              '<span class="' + escapeHtml(poolKindTagClass) + '">' + escapeHtml(poolKindLabel) + '</span>' +
+              '<small>' + poolKindDescription + '</small>' +
+            '</div>' +
+          '</td>' +
+          '<td><p class="tipout-rule-description">' + escapeHtml(desc) + '</p></td>' +
+          '<td><div class="tipout-rule-record-actions">' +
             '<a class="btn btn-primary tipout-rule-edit" href="' + editUrl + '">编辑</a>' +
             '<div class="tipout-rule-actions">' +
               '<button type="button" class="btn tipout-rule-more" aria-haspopup="menu" aria-expanded="false" aria-controls="' + menuId + '" onclick="toggleRuleActions(this)">更多操作</button>' +
@@ -211,8 +254,8 @@
                 '<button type="button" role="menuitem" class="danger" onclick="deleteRule(this)">删除规则</button>' +
               '</div>' +
             '</div>' +
-          '</div>';
-        list.appendChild(record);
+          '</div></td>';
+        tableBody.appendChild(record);
       });
     }
 

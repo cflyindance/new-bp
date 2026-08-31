@@ -387,6 +387,180 @@
 .tipout-page-detail .tipout-sticky-actions > div { display: flex; gap: 10px; }
 .tipout-page-detail .tipout-sticky-actions .btn { min-height: 36px; border-radius: 16px; }
 
+.tipout-page-rules .content-area {
+  min-width: 0;
+}
+
+.tipout-page-rules .tipout-metric-strip--three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.tipout-page-rules .tipout-rules-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.tipout-page-rules .tipout-rules-toolbar label {
+  flex: 0 0 auto;
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
+.tipout-page-rules .tipout-rules-toolbar .form-control {
+  width: 260px;
+  min-width: 0;
+}
+
+.tipout-page-rules .tipout-rules-table {
+  display: table;
+  min-width: 860px;
+  table-layout: fixed;
+  overflow: visible;
+}
+
+.tipout-page-rules .tipout-rules-table th {
+  height: 48px;
+  padding: 0 16px;
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
+.tipout-page-rules .tipout-rules-table th:nth-child(1) { width: 27%; }
+.tipout-page-rules .tipout-rules-table th:nth-child(2) { width: 21%; }
+.tipout-page-rules .tipout-rules-table th:nth-child(3) { width: auto; }
+.tipout-page-rules .tipout-rules-table th:nth-child(4) { width: 192px; }
+
+.tipout-page-rules .tipout-rules-table td {
+  height: 64px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border-light);
+  font-size: 12px;
+}
+
+.tipout-page-rules .tipout-rules-table .tipout-rule-record {
+  position: relative;
+  display: table-row;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: #ffffff;
+  box-shadow: none;
+  transition: background 0.16s ease;
+}
+
+.tipout-page-rules .tipout-rules-table .tipout-rule-record:hover {
+  border: 0;
+  background: #f7f7f8;
+  box-shadow: none;
+}
+
+.tipout-page-rules .tipout-rule-identity,
+.tipout-page-rules .tipout-rule-pool-summary {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+}
+
+.tipout-page-rules .tipout-rule-name {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  margin: 0;
+  font-size: 13px;
+  line-height: 18px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tipout-page-rules .tipout-rule-store {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 16px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tipout-page-rules .tipout-rule-store::after { display: none; }
+
+.tipout-page-rules .tipout-rule-pool-summary small {
+  color: var(--text-tertiary);
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.tipout-page-rules .tipout-rule-pool-summary .tag-blue {
+  border-color: #d9d9dc;
+  background: #f4f4f5;
+  color: #000000;
+}
+
+.tipout-page-rules .tipout-rule-description {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 18px;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.tipout-page-rules .tipout-rule-record-actions {
+  width: auto;
+  gap: 6px;
+}
+
+.tipout-page-rules .tipout-rule-edit,
+.tipout-page-rules .tipout-rule-more {
+  min-width: 0;
+  min-height: 32px;
+  height: 32px;
+  padding: 5px 10px;
+  border-radius: 14px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.tipout-page-rules .tipout-rule-more[aria-expanded="true"] {
+  border-color: #000000;
+  color: #000000;
+}
+
+.tipout-page-rules .tipout-rule-actions-menu {
+  border-color: var(--border-light);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.12);
+}
+
+.tipout-page-rules .tipout-rule-actions-menu button:hover,
+.tipout-page-rules .tipout-rule-actions-menu button:focus-visible {
+  background: #f4f4f5;
+  color: #000000;
+}
+
+.tipout-page-rules .tipout-rules-table .tipout-rule-empty {
+  margin: 16px 0;
+  padding: 44px 24px;
+  border: 0;
+  border-radius: 0;
+  background: #ffffff;
+  font-size: 12px;
+}
+
+.tipout-page-rules .pool-type-option:hover,
+.tipout-page-rules .pool-type-option.selected {
+  border-color: #000000;
+  background: #f4f4f5;
+  box-shadow: none;
+}
+
 @media (max-width: 1100px) {
   .tipout-page-detail .tipout-workspace.has-aside { grid-template-columns: minmax(0, 1fr); }
   .tipout-page-detail .tipout-context-rail { position: static; }
@@ -414,4 +588,17 @@
   .tipout-page-detail .tipout-detail-context-bar__current { margin-left: 0; padding: 12px 0 0; border-top: 1px solid var(--border-light); border-left: 0; }
   .tipout-page-detail .tipout-sticky-actions { align-items: stretch; flex-direction: column; bottom: 8px; }
   .tipout-page-detail .tipout-sticky-actions > div { display: grid; grid-template-columns: 1fr; }
+  .tipout-page-rules .tipout-metric-strip--three { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tipout-page-rules .tipout-metric-strip--three > div:nth-child(2) { border-right: 0; }
+  .tipout-page-rules .tipout-metric-strip--three > div:nth-child(3) { grid-column: 1 / -1; border-top: 1px solid var(--border-light); }
+  .tipout-page-rules .tipout-rules-toolbar { align-items: stretch; flex-direction: column; gap: 6px; }
+  .tipout-page-rules .tipout-rules-toolbar .form-control { width: 100%; }
+  .tipout-page-rules .tipout-rules-table { display: table; overflow: visible; }
+  .tipout-page-rules .tipout-rules-table .tipout-rule-record { display: table-row; padding: 0; }
+  .tipout-page-rules .tipout-rule-record-actions { width: auto; }
+  .tipout-page-rules .tipout-rule-edit,
+  .tipout-page-rules .tipout-rule-actions,
+  .tipout-page-rules .tipout-rule-more { flex: 0 0 auto; }
+  .tipout-page-rules .tipout-rule-more { width: auto; }
+  .tipout-page-rules .tipout-rule-actions-menu { right: 0; left: auto; width: 136px; }
 }
