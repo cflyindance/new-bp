@@ -13,6 +13,19 @@ const ui = context.window.TipOutSummaryUi;
 
 const fidelityCssPath = path.join(root, 'dist/TipOut/prototype-fidelity.css');
 assert.equal(fs.existsSync(fidelityCssPath), true);
+const fidelityCss = fs.readFileSync(fidelityCssPath, 'utf8');
+assert.match(
+  fidelityCss,
+  /\.tipout-page-rules \.tipout-table-wrap:has\(\.tipout-rule-more\[aria-expanded="true"\]\)\s*\{[^}]*padding-bottom:\s*92px/s,
+);
+assert.match(
+  fidelityCss,
+  /\.tipout-page-summary \.filter-bar--index\s*\{[^}]*flex-wrap:\s*nowrap/s,
+);
+assert.match(
+  fidelityCss,
+  /\.tipout-fidelity \.mobile-menu-btn\s*\{[^}]*white-space:\s*nowrap/s,
+);
 
 const pageContracts = [
   ['index.html', 'tipout-page-summary'],

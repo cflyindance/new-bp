@@ -539,6 +539,10 @@
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.12);
 }
 
+.tipout-page-rules .tipout-table-wrap:has(.tipout-rule-more[aria-expanded="true"]) {
+  padding-bottom: 92px;
+}
+
 .tipout-page-rules .tipout-rule-actions-menu button:hover,
 .tipout-page-rules .tipout-rule-actions-menu button:focus-visible {
   background: #f4f4f5;
@@ -682,6 +686,20 @@
 .tipout-page-rule-editor .drawer-overlay,
 .tipout-page-rule-editor .modal-overlay { z-index: 1000; }
 
+@media (min-width: 769px) {
+  .tipout-page-summary .filter-bar--index { flex-wrap: nowrap; }
+  .tipout-page-summary .filter-bar--index .filter-field--daterange { flex: 0 0 340px; }
+  .tipout-page-summary .filter-bar--index .filter-field:nth-child(2) {
+    flex: 1 1 260px;
+    max-width: none;
+  }
+  .tipout-page-summary .filter-bar--index .filter-field:nth-child(3),
+  .tipout-page-summary .filter-bar--index .filter-field:nth-child(4) {
+    flex: 0 1 150px;
+    max-width: 150px;
+  }
+}
+
 @media (max-width: 1100px) {
   .tipout-page-detail .tipout-workspace.has-aside { grid-template-columns: minmax(0, 1fr); }
   .tipout-page-detail .tipout-context-rail { position: static; }
@@ -697,6 +715,13 @@
   .tipout-fidelity .main-content { margin-left: 0; }
   .tipout-fidelity .sidebar { width: min(280px, 86vw); }
   .tipout-fidelity .header { height: 60px; padding: 0 16px; }
+  .tipout-fidelity .mobile-menu-btn {
+    width: auto;
+    min-width: 44px;
+    padding: 0 8px;
+    white-space: nowrap;
+    font-size: 12px;
+  }
   .tipout-fidelity .content-area { padding: 16px; }
   .tipout-fidelity .tipout-page-heading { align-items: stretch; flex-direction: column; gap: 14px; }
   .tipout-fidelity .tipout-heading-actions { flex-wrap: wrap; }
