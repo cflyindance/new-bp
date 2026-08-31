@@ -131,6 +131,7 @@ assert.doesNotMatch(detailHtml, /allocatedDates\.has\(dateKey\)/);
 assert.doesNotMatch(detailHtml, /该日期尚未完成小费分配/);
 
 const rulesHtml = fs.readFileSync(path.join(root, 'dist/TipOut/rules.html'), 'utf8');
+assert.match(rulesHtml, /href="index\.html"[^>]*>返回小费分配汇总<\/a>/);
 for (const id of ['ruleCount', 'tipPoolCount', 'surchargePoolCount', 'rulesTableBody']) {
   assert.match(rulesHtml, new RegExp('id="' + id + '"'));
 }

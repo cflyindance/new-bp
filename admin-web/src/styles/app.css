@@ -73,7 +73,8 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-iframe.marketing-screensaver-flow-fullscreen {
+iframe.marketing-screensaver-flow-fullscreen,
+iframe.tipout-rules-flow-fullscreen {
   position: fixed !important;
   inset: 0 !important;
   z-index: 2147483000 !important;

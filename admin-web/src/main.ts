@@ -289,6 +289,7 @@ import { openHubSearchLeaveConfirmDialog } from "./config/hub-search-leave-confi
 import { bindPageSaveGuard, syncPageSaveGuardPath } from "./config/page-save-guard";
 import { bindIframeSaveDeployBridge } from "./config/iframe-save-deploy-bridge";
 import { bindMarketingScreensaverFullscreenFlow } from "./config/marketing-screensaver-fullscreen";
+import { bindTipOutRulesFullscreenFlow } from "./config/tipout-rules-fullscreen";
 import {
   isPageBatchSavePath,
   discardPageDraft,
@@ -2029,6 +2030,7 @@ function renderReportsTipsAllocationIframePanel(): string {
     <div class="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
       <iframe
         title="报表中心小费分配"
+        data-tipout-rules-frame
         class="block h-full w-full flex-1 border-0"
         src="${REPORTS_TIPS_ALLOCATION_IFRAME_SRC}"
         referrerpolicy="no-referrer-when-downgrade"
@@ -2060,6 +2062,7 @@ function renderTeamTipsManagementIframePanel(path: string): string {
     <div class="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
       <iframe
         title="团队管理小费管理"
+        data-tipout-rules-frame
         class="block h-full w-full flex-1 border-0"
         src="${src}"
         referrerpolicy="no-referrer-when-downgrade"
@@ -12222,6 +12225,7 @@ function mount(): void {
   `;
 
   bindMarketingScreensaverFullscreenFlow(app);
+  bindTipOutRulesFullscreenFlow(app);
 
   const applySidebarNavScroll = (): void => {
     const nav = document.getElementById("nav-tree");
