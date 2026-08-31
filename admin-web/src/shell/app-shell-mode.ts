@@ -4,29 +4,7 @@
 export type AppShellMode = "merchant" | "m-platform" | "emenu-local" | "kiosk-local";
 
 const STORAGE_KEY = "menusifu:app-shell-mode-v1";
-const ENTRY_NOTICE_PENDING_KEY = "menusifu:m-platform-entry-notice-pending";
-
 let memoryMode: AppShellMode | undefined;
-
-function markMPlatformEntryNoticePending(): void {
-  try {
-    sessionStorage.setItem(ENTRY_NOTICE_PENDING_KEY, "1");
-  } catch {
-    /* ignore */
-  }
-}
-
-export function consumeMPlatformEntryNoticePending(): boolean {
-  try {
-    if (sessionStorage.getItem(ENTRY_NOTICE_PENDING_KEY) === "1") {
-      sessionStorage.removeItem(ENTRY_NOTICE_PENDING_KEY);
-      return true;
-    }
-  } catch {
-    /* ignore */
-  }
-  return false;
-}
 
 export function readAppShellMode(): AppShellMode {
   if (memoryMode) return memoryMode;
@@ -63,7 +41,6 @@ export function isKioskLocalShellMode(): boolean {
 }
 
 export function enterMPlatformShell(): void {
-  markMPlatformEntryNoticePending();
   writeAppShellMode("m-platform");
 }
 

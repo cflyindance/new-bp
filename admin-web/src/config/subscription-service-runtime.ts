@@ -36,7 +36,7 @@ export function resolveCurrentSubscriptionContext(): CurrentSubscriptionContext 
 function currentRouteIds(): Set<string> | null {
   const context = resolveCurrentSubscriptionContext();
   if (!context) return null;
-  if (!hasConfiguredSubscriptionForContext(context)) return new Set<string>();
+  if (!hasConfiguredSubscriptionForContext(context)) return null;
   return getEffectiveSubscriptionRoutes(context);
 }
 
