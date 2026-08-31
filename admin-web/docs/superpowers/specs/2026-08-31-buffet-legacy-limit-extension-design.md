@@ -134,9 +134,17 @@
 
 - 支持最少和最多；至少配置一个。
 - 按桌/订单直接使用固定值。
-- 按人数使用人均值乘 `N`，并允许固定整桌每轮兜底值。
+- 按人数使用人均值乘 `N`，并允许配置固定整桌每轮最少值和最多值。
+- 人均最少与整桌最少同时配置时取更严格的较大值；人均最多与整桌最多同时配置时取更严格的较小值。
 - 最少数量只在提交或结束非空当前轮时校验。
 - 最大数量在加购、改量和提交时校验。
+
+```text
+EffectiveMin = max(PerPersonMin × N, TableMin)
+EffectiveMax = min(PerPersonMax × N, TableMax)
+```
+
+任一侧未配置时忽略该侧对应项。例如未配置 `TableMin` 时，最低值只使用 `PerPersonMin × N`。
 
 #### B. 每轮指定对象额度
 
@@ -153,6 +161,14 @@
 - 支持统一默认上限和例外商品上限。
 - 未配置默认上限且未进入例外行的菜品，只受其余命中规则限制。
 - 同一菜品不能进入两条例外行。
+
+单品保护只作用于本规则的商品范围，不扩展到门店全部菜单：
+
+- 按菜品：作用于已选菜品。
+- 按分类：作用于已选分类当前快照中的成员菜品。
+- 按菜品集：作用于菜品集成员。
+
+默认单品上限作用于上述完整范围；例外商品必须从同一范围中选择，并覆盖默认值。本文关于作用域的定义取代《自助餐每轮组合数量规则设计》中“作用于全部有效菜品”的旧定义，以符合“一条规则共享商品范围”的已确认方案。
 
 ### 5.3 分轮次
 
@@ -206,7 +222,7 @@ Q_set_kind = 菜品集内数量大于 0 的不同菜单身份数
 每个周期区块按人数区间或轮次区间展示：
 
 - 主额度。
-- 整桌兜底上限。
+- 整桌固定最少值和兜底上限；仅按人数的每轮总量显示固定最少值，其他最大额度只显示兜底上限。
 - 默认单品上限。
 - 例外商品列表。
 - 实时自然语言预览。
@@ -241,6 +257,7 @@ Q_set_kind = 菜品集内数量大于 0 的不同菜单身份数
 ### 8.2 不同规则之间
 
 - 同门店、同生效范围、同主体、同周期、同对象身份的重复规则阻止发布或启用。
+- 两个菜品集规则在门店、生效范围、主体和周期均有交集时，只要成员菜单身份集合存在交集，就按菜品集重叠冲突阻止发布或启用；不得仅按菜品集规则 ID 或完整集合是否相等判重。
 - 不同主体、不同周期或不同对象维度允许叠加。
 - 菜品、分类和菜品集可以交叉命中。
 - 所有命中规则共同生效，任一不通过即拒绝操作。
@@ -265,6 +282,15 @@ Effective(value) = min(PartyLimit, configuredTableCap)
 ```
 
 未配置整桌兜底时，`Effective(value) = PartyLimit`。
+
+对于每轮总量上下限：
+
+```text
+EffectiveMin = max(configured(PerPersonMin × N), configured(TableMin))
+EffectiveMax = min(configured(PerPersonMax × N), configured(TableMax))
+```
+
+其中 `configured(...)` 表示只让已配置项参与合并。若最终同时存在 `EffectiveMin` 和 `EffectiveMax`，必须满足 `EffectiveMin <= EffectiveMax`。
 
 统计桶彼此独立：
 
@@ -351,18 +377,47 @@ type BoundCell = {
 type PeriodKey = "order_lifetime" | "per_round" | "multi_round";
 type MeasureUnit = "piece" | "kind";
 
+type DishIdentity = {
+  productLineId: string;
+  dishId: string;
+};
+
+type CategoryIdentity = {
+  productLineId: string;
+  categoryId: string;
+};
+
 type ExceptionLimit = {
-  dishIds: string[];
+  dishes: DishIdentity[];
   limit: LimitCell;
+};
+
+type QuantityBlockPolicy = {
+  totalEnabled: boolean;
+  targetEnabled: boolean;
+  sameDishEnabled: boolean;
 };
 
 type PeriodPolicy = {
   enabled: boolean;
-  totalBounds?: Record<string, BoundCell>;
+  blocks: QuantityBlockPolicy;
+};
+
+type ScenarioValues = {
+  totalBounds: Record<string, BoundCell>;
+  tableTotalBounds: Record<string, BoundCell>;
   targetLimits: Record<string, LimitCell>;
-  tableCaps: Record<string, LimitCell>;
-  defaultDishLimit: Record<string, LimitCell>;
+  tableTargetCaps: Record<string, LimitCell>;
+  defaultDishLimits: Record<string, LimitCell>;
   exceptionDishLimits: Record<string, ExceptionLimit[]>;
+};
+
+type StoreConfig = {
+  productLines: string[];
+  dishTargets: DishIdentity[];
+  categoryTargets: CategoryIdentity[];
+  dishSetMembers: DishSetMember[];
+  periodValues: Record<PeriodKey, ScenarioValues>;
 };
 
 type BuffetRuleExtended = {
@@ -386,6 +441,29 @@ type BuffetRuleExtended = {
 - 所有数量必须是 `0..999999` 的整数。
 - `enabledPeriods` 至少包含一个值且不得重复。
 - `order` 规则不展示人数区间；`party_size` 规则的人数区间必须完整覆盖支持范围。
+- 周期和三个数量区块的启用状态属于规则级配置，所有门店使用相同组合；数量值和商品范围保存在 `storeConfigs[storeId]` 中。
+- 关闭区块时保留其草稿单元格，但发布载荷和运行时忽略该区块；重新开启时恢复草稿值。删除门店时删除该门店全部周期单元格。
+
+矩阵键规范：
+
+```text
+ScenarioKey = partyRangeIndex|roundRangeIndex
+TargetCellKey = partyRangeIndex|roundRangeIndex|productLineId|targetId
+```
+
+- 按桌/订单使用 `partyRangeIndex = 0`。
+- 整个订单和每轮使用 `roundRangeIndex = 0`。
+- 分轮次使用实际 `roundRangeIndex`。
+- 菜品集共享额度、整桌兜底、总量和默认单品上限使用 `ScenarioKey`。
+- 菜品、分类逐对象额度使用 `TargetCellKey`。
+- `dishTargets`、`categoryTargets`、`dishSetMembers` 和例外商品均显式保存 `productLineId`；不得只用 `dishId` 或 `categoryId`，也不得把不同产线的相同 ID 静默合并。
+
+示例：按人数、分轮次、纽约中城店，第 2 个人数区间、第 3 个轮次区间、Kiosk 产线菜品 A：
+
+```text
+storeConfigs["ny-midtown"].periodValues.multi_round
+  .targetLimits["1|2|kiosk|dish-a"]
+```
 
 ## 14. 兼容与升级
 
