@@ -17,6 +17,7 @@ import {
 } from "./subscription-service-store";
 
 type ModalState =
+  | { kind: "create-subscription" }
   | { kind: "publish"; packageId: string; revision: number }
   | { kind: "disable-package"; packageId: string }
   | { kind: "extend-subscription"; subscriptionId: string }
@@ -27,6 +28,13 @@ let modalState: ModalState = null;
 let feedback = "";
 let routeSearch = "";
 let subscriptionType: SubscriptionSubjectType = "brand";
+let createSubscriptionDraft: { subjectId: string; packageId: string; startAt: string; endAt: string; note: string } | null = null;
+let createSubscriptionError = "";
+let createSubscriptionSubmitting = false;
+let subscriptionDialogKeydownBound = false;
+let activeSubscriptionMount: (() => void) | null = null;
+let previousBodyOverflow = "";
+let subscriptionModalBackgroundLocked = false;
 
 function esc(value: unknown): string {
   return String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -111,10 +119,18 @@ function subjectOptions(type: SubscriptionSubjectType): Array<{ id: string; labe
   return getMerchants({ allEnterprises: true }).flatMap((merchant) => getMerchantStores(merchant.merchantId).map((store) => ({ id: store.storeId, label: `${store.name} · ${merchant.name}` })));
 }
 
-function subjectLabel(type: SubscriptionSubjectType, id: string): string {
+function subjectTypeLabel(type: unknown): "集团" | "品牌" | "门店" | "未知" {
+  if (type === "group") return "集团";
+  if (type === "brand") return "品牌";
+  if (type === "store") return "门店";
+  return "未知";
+}
+
+function subjectLabel(type: unknown, id: string): string {
   if (type === "group") return getGroups({ allEnterprises: true }).find((item) => item.groupId === id)?.name ?? id;
   if (type === "brand") return getMerchantById(id)?.name ?? id;
-  return getStoreById(id)?.name ?? id;
+  if (type === "store") return getStoreById(id)?.name ?? id;
+  return "未知主体";
 }
 
 function renderSubscriptions(): string {
@@ -123,19 +139,49 @@ function renderSubscriptions(): string {
   const rows = snapshot.subscriptions.map((subscription) => {
     const pkg = snapshot.packages.find((item) => item.id === subscription.packageId);
     const status = subscriptionStatusLabel(subscription, pkg?.status);
-    return `<tr class="border-b border-border/70 last:border-0"><td class="px-4 py-4"><div class="font-semibold">${esc(subjectLabel(subscription.subjectType, subscription.subjectId))}</div><div class="mt-1 text-xs text-muted-foreground">${({ group: "集团", brand: "品牌", store: "门店" } as const)[subscription.subjectType]} · ${esc(subscription.subjectId)}</div></td><td class="px-4 py-4"><div class="font-semibold">${esc(pkg?.name ?? "未知服务包")}</div><div class="mt-1 font-mono text-[10px] text-muted-foreground">${esc(pkg?.code)}</div></td><td class="px-4 py-4 text-xs leading-5"><div>${new Date(subscription.startAt).toLocaleDateString("zh-CN")}</div><div class="text-muted-foreground">至 ${subscription.endAt ? new Date(subscription.endAt).toLocaleDateString("zh-CN") : "长期"}</div></td><td class="px-4 py-4">${statusBadge(status)}</td><td class="px-4 py-4 text-right">${!subscription.disabledAt ? `<button type="button" data-sub-extend data-subscription-id="${esc(subscription.id)}" class="mr-2 text-xs font-semibold text-emerald-700">续期</button><button type="button" data-sub-disable data-subscription-id="${esc(subscription.id)}" class="text-xs font-semibold text-rose-700">停用</button>` : ""}</td></tr>`;
+    const typeLabel = subjectTypeLabel(subscription.subjectType);
+    const label = subjectLabel(subscription.subjectType, subscription.subjectId);
+    const subjectIdLine = label === subscription.subjectId ? "" : `<div class="mt-1 font-mono text-[10px] text-muted-foreground">${esc(subscription.subjectId)}</div>`;
+    return `<tr class="border-b border-border/70 last:border-0"><td class="px-4 py-4"><div class="font-semibold">${esc(label)}</div>${subjectIdLine}</td><td class="px-4 py-4"><span class="inline-flex rounded-full border border-border bg-muted px-2.5 py-1 text-xs font-semibold">${typeLabel}</span></td><td class="px-4 py-4"><div class="font-semibold">${esc(pkg?.name ?? "未知服务包")}</div><div class="mt-1 font-mono text-[10px] text-muted-foreground">${esc(pkg?.code)}</div></td><td class="px-4 py-4 text-xs leading-5"><div>${new Date(subscription.startAt).toLocaleDateString("zh-CN")}</div><div class="text-muted-foreground">至 ${subscription.endAt ? new Date(subscription.endAt).toLocaleDateString("zh-CN") : "长期"}</div></td><td class="px-4 py-4">${statusBadge(status)}</td><td class="px-4 py-4 text-right">${!subscription.disabledAt ? `<button type="button" data-sub-extend data-subscription-id="${esc(subscription.id)}" class="mr-2 text-xs font-semibold text-emerald-700">续期</button><button type="button" data-sub-disable data-subscription-id="${esc(subscription.id)}" class="text-xs font-semibold text-rose-700">停用</button>` : ""}</td></tr>`;
   }).join("");
-  const options = subjectOptions(subscriptionType);
-  return `${renderHeader("商家订阅", "在集团、品牌与门店层级开通服务包；下级自动继承上级能力并可继续增配。")}
-    <div class="min-h-0 flex-1 overflow-auto bg-muted/20 p-5 lg:p-7"><div class="mx-auto grid max-w-[92rem] gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
-      <form data-sub-create-subscription class="h-fit rounded-2xl border border-border bg-card p-5 shadow-sm"><p class="text-[11px] font-bold uppercase tracking-[.16em] text-emerald-700">MANUAL ENTITLEMENT</p><h3 class="mt-1 text-lg font-semibold">开通服务</h3><p class="mt-1 text-xs leading-5 text-muted-foreground">业态仅作运营判断，不限制服务包选择。</p><label class="mt-5 block text-xs font-semibold text-muted-foreground">主体层级<select name="subjectType" data-sub-subject-type class="mt-2 h-10 w-full rounded-lg border border-border bg-background px-3 text-sm"><option value="group" ${subscriptionType === "group" ? "selected" : ""}>集团</option><option value="brand" ${subscriptionType === "brand" ? "selected" : ""}>品牌</option><option value="store" ${subscriptionType === "store" ? "selected" : ""}>门店</option></select></label><label class="mt-4 block text-xs font-semibold text-muted-foreground">开通主体<select name="subjectId" class="mt-2 h-10 w-full rounded-lg border border-border bg-background px-3 text-sm">${options.map((item) => `<option value="${esc(item.id)}">${esc(item.label)}</option>`).join("")}</select></label><label class="mt-4 block text-xs font-semibold text-muted-foreground">服务包<select name="packageId" class="mt-2 h-10 w-full rounded-lg border border-border bg-background px-3 text-sm">${publishedPackages.map((pkg) => `<option value="${esc(pkg.id)}">${esc(pkg.name)} · ${money(pkg.priceMinor, pkg.currency)}/${intervalLabel(pkg.billingInterval)}</option>`).join("")}</select></label><div class="mt-4 grid grid-cols-2 gap-3"><label class="text-xs font-semibold text-muted-foreground">生效日期<input name="startAt" type="date" value="${new Date().toISOString().slice(0, 10)}" class="mt-2 h-10 w-full rounded-lg border border-border bg-background px-2 text-sm"></label><label class="text-xs font-semibold text-muted-foreground">到期日期<input name="endAt" type="date" class="mt-2 h-10 w-full rounded-lg border border-border bg-background px-2 text-sm"></label></div><label class="mt-4 block text-xs font-semibold text-muted-foreground">备注<textarea name="note" rows="3" class="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" placeholder="合同号、开通原因等"></textarea></label><button type="submit" ${publishedPackages.length && options.length ? "" : "disabled"} class="mt-5 h-10 w-full rounded-lg bg-emerald-700 text-sm font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-40">确认开通</button></form>
-      <div class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm"><div class="flex flex-wrap items-center justify-between gap-3 border-b border-border p-5"><div><h3 class="font-semibold">订阅明细</h3><p class="mt-1 text-xs text-muted-foreground">${snapshot.subscriptions.length} 条记录 · 状态按生效与到期时间实时计算</p></div><div class="rounded-lg bg-slate-950 px-3 py-2 text-xs font-semibold text-white dark:bg-white dark:text-slate-950">集团 → 品牌 → 门店</div></div><div class="overflow-auto"><table class="w-full min-w-[760px] text-left"><thead class="bg-muted/50 text-xs text-muted-foreground"><tr><th class="px-4 py-3 font-medium">主体</th><th class="px-4 py-3 font-medium">服务包</th><th class="px-4 py-3 font-medium">有效期</th><th class="px-4 py-3 font-medium">状态</th><th class="px-4 py-3"></th></tr></thead><tbody>${rows || `<tr><td colspan="5" class="p-12 text-center text-sm text-muted-foreground">暂无订阅记录</td></tr>`}</tbody></table></div></div>
-    </div></div>${renderModal()}</section>`;
+  return `${renderHeader("商家订阅", "在集团、品牌与门店层级开通服务包；下级自动继承上级能力并可继续增配。", `<button type="button" data-sub-open-create class="inline-flex h-10 items-center rounded-lg bg-emerald-700 px-4 text-sm font-semibold text-white shadow-sm hover:bg-emerald-800">＋ 新增商家</button>`)}
+    <div class="min-h-0 flex-1 overflow-auto bg-muted/20 p-5 lg:p-7"><div class="mx-auto max-w-[92rem] overflow-hidden rounded-2xl border border-border bg-card shadow-sm"><div class="flex flex-wrap items-center justify-between gap-3 border-b border-border p-5"><div><h3 class="font-semibold">订阅明细</h3><p class="mt-1 text-xs text-muted-foreground">${snapshot.subscriptions.length} 条记录 · 状态按生效与到期时间实时计算</p></div><div class="rounded-lg bg-slate-950 px-3 py-2 text-xs font-semibold text-white dark:bg-white dark:text-slate-950">集团 → 品牌 → 门店</div></div><div class="overflow-auto"><table class="w-full min-w-[880px] text-left"><thead class="bg-muted/50 text-xs text-muted-foreground"><tr><th class="px-4 py-3 font-medium">主体</th><th class="px-4 py-3 font-medium">主体类型</th><th class="px-4 py-3 font-medium">服务包</th><th class="px-4 py-3 font-medium">有效期</th><th class="px-4 py-3 font-medium">状态</th><th class="px-4 py-3 text-right font-medium">操作</th></tr></thead><tbody>${rows || `<tr><td colspan="6" class="p-12 text-center text-sm text-muted-foreground">暂无订阅记录</td></tr>`}</tbody></table></div></div></div>${renderModal()}</section>`;
+}
+
+function resetCreateSubscriptionDraft(): void {
+  subscriptionType = "brand";
+  const subjects = subjectOptions(subscriptionType);
+  const firstPackage = readSubscriptionServiceSnapshot().packages.find((item) => item.status === "published");
+  createSubscriptionDraft = { subjectId: subjects[0]?.id ?? "", packageId: firstPackage?.id ?? "", startAt: new Date().toISOString().slice(0, 10), endAt: "", note: "" };
+  createSubscriptionError = "";
+  createSubscriptionSubmitting = false;
+}
+
+function syncCreateSubscriptionDraft(): void {
+  const form = document.querySelector<HTMLFormElement>("[data-sub-create-subscription]");
+  if (!form || !createSubscriptionDraft) return;
+  const data = new FormData(form);
+  createSubscriptionDraft = { subjectId: String(data.get("subjectId") ?? ""), packageId: String(data.get("packageId") ?? ""), startAt: String(data.get("startAt") ?? ""), endAt: String(data.get("endAt") ?? ""), note: String(data.get("note") ?? "") };
+}
+
+function renderCreateSubscriptionModal(): string {
+  const draft = createSubscriptionDraft;
+  if (!draft) return "";
+  let options: Array<{ id: string; label: string }> = [];
+  let publishedPackages: ReturnType<typeof readSubscriptionServiceSnapshot>["packages"] = [];
+  let readError = "";
+  try {
+    options = subjectOptions(subscriptionType);
+    publishedPackages = readSubscriptionServiceSnapshot().packages.filter((item) => item.status === "published");
+  } catch (error) { readError = error instanceof Error ? error.message : "读取开通数据失败，请关闭后重试"; }
+  const disabled = createSubscriptionSubmitting || Boolean(readError) || !options.length || !publishedPackages.length;
+  return `<div class="fixed inset-0 z-[190] grid place-items-center bg-slate-950/45 p-4" data-sub-modal-backdrop role="presentation"><form data-sub-create-subscription role="dialog" aria-modal="true" aria-labelledby="create-subscription-title" class="max-h-[calc(100dvh-2rem)] w-full max-w-xl overflow-auto rounded-2xl border border-border bg-card p-6 shadow-2xl"><div class="flex items-start justify-between gap-4"><div><p class="text-[11px] font-bold uppercase tracking-[.16em] text-emerald-700">MANUAL ENTITLEMENT</p><h3 id="create-subscription-title" class="mt-1 text-xl font-semibold">开通服务</h3><p class="mt-1 text-xs leading-5 text-muted-foreground">保留集团、品牌、门店层级，按需选择服务包。</p></div><button type="button" data-sub-modal-close ${createSubscriptionSubmitting ? "disabled" : ""} class="grid size-9 place-items-center rounded-lg border border-border text-lg hover:bg-muted disabled:opacity-40" aria-label="关闭开通服务弹窗">×</button></div>${createSubscriptionError || readError ? `<div data-sub-create-error class="mt-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800" role="alert" aria-live="assertive">${esc(createSubscriptionError || readError)}</div>` : ""}<label class="mt-5 block text-xs font-semibold text-muted-foreground">主体层级<select name="subjectType" data-sub-subject-type autofocus class="mt-2 h-10 w-full rounded-lg border border-border bg-background px-3 text-sm"><option value="group" ${subscriptionType === "group" ? "selected" : ""}>集团</option><option value="brand" ${subscriptionType === "brand" ? "selected" : ""}>品牌</option><option value="store" ${subscriptionType === "store" ? "selected" : ""}>门店</option></select></label><label class="mt-4 block text-xs font-semibold text-muted-foreground">开通主体<select name="subjectId" required class="mt-2 h-10 w-full rounded-lg border border-border bg-background px-3 text-sm">${options.map((item) => `<option value="${esc(item.id)}" ${draft.subjectId === item.id ? "selected" : ""}>${esc(item.label)}</option>`).join("")}</select>${options.length ? "" : `<span class="mt-1 block text-xs text-amber-700">暂无可选主体</span>`}</label><label class="mt-4 block text-xs font-semibold text-muted-foreground">服务包<select name="packageId" required class="mt-2 h-10 w-full rounded-lg border border-border bg-background px-3 text-sm">${publishedPackages.map((pkg) => `<option value="${esc(pkg.id)}" ${draft.packageId === pkg.id ? "selected" : ""}>${esc(pkg.name)} · ${money(pkg.priceMinor, pkg.currency)}/${intervalLabel(pkg.billingInterval)}</option>`).join("")}</select>${publishedPackages.length ? "" : `<span class="mt-1 block text-xs text-amber-700">暂无已发布服务包</span>`}</label><div class="mt-4 grid grid-cols-2 gap-3"><label class="text-xs font-semibold text-muted-foreground">生效日期<input name="startAt" type="date" required value="${esc(draft.startAt)}" class="mt-2 h-10 w-full rounded-lg border border-border bg-background px-2 text-sm"></label><label class="text-xs font-semibold text-muted-foreground">到期日期<input name="endAt" type="date" value="${esc(draft.endAt)}" class="mt-2 h-10 w-full rounded-lg border border-border bg-background px-2 text-sm"></label></div><label class="mt-4 block text-xs font-semibold text-muted-foreground">备注<textarea name="note" rows="3" class="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" placeholder="合同号、开通原因等">${esc(draft.note)}</textarea></label><div class="mt-6 flex justify-end gap-2"><button type="button" data-sub-modal-close ${createSubscriptionSubmitting ? "disabled" : ""} class="h-10 rounded-lg border border-border px-4 text-sm font-semibold hover:bg-muted disabled:opacity-40">取消</button><button type="submit" ${disabled ? "disabled" : ""} class="h-10 rounded-lg bg-emerald-700 px-5 text-sm font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-40">${createSubscriptionSubmitting ? "开通中…" : "确认开通"}</button></div></form></div>`;
 }
 
 function renderModal(): string {
   if (!modalState) return "";
   const modal = modalState;
+  if (modal.kind === "create-subscription") return renderCreateSubscriptionModal();
   const snapshot = readSubscriptionServiceSnapshot();
   if (modal.kind === "publish") {
     const draft = snapshot.drafts.find((item) => item.packageId === modal.packageId);
@@ -165,14 +211,61 @@ function refresh(onMount: () => void, message = ""): void {
   if (message) window.setTimeout(() => { feedback = ""; }, 2600);
 }
 
+function restoreSubscriptionModalBackground(): void {
+  if (!subscriptionModalBackgroundLocked) return;
+  document.querySelectorAll<HTMLElement>("[data-subscription-service-page] > :not([data-sub-modal-backdrop])").forEach((element) => { element.inert = false; });
+  document.body.style.overflow = previousBodyOverflow;
+  subscriptionModalBackgroundLocked = false;
+}
+
+function closeSubscriptionModal(onMount: () => void): void {
+  if (modalState?.kind === "create-subscription" && createSubscriptionSubmitting) return;
+  const restoreFocus = modalState?.kind === "create-subscription";
+  modalState = null;
+  createSubscriptionDraft = null;
+  createSubscriptionError = "";
+  createSubscriptionSubmitting = false;
+  restoreSubscriptionModalBackground();
+  refresh(onMount);
+  if (restoreFocus) queueMicrotask(() => document.querySelector<HTMLButtonElement>("[data-sub-open-create]")?.focus());
+}
+
+function bindSubscriptionDialogKeyboard(): void {
+  if (subscriptionDialogKeydownBound) return;
+  subscriptionDialogKeydownBound = true;
+  document.addEventListener("keydown", (event) => {
+    if (!modalState || !activeSubscriptionMount) return;
+    if (event.key === "Escape") { if (!createSubscriptionSubmitting) { event.preventDefault(); closeSubscriptionModal(activeSubscriptionMount); } return; }
+    if (event.key !== "Tab") return;
+    const dialog = document.querySelector<HTMLElement>("[role=dialog]");
+    if (!dialog) return;
+    const focusable = [...dialog.querySelectorAll<HTMLElement>("button:not([disabled]), select:not([disabled]), input:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])")];
+    if (!focusable.length) return;
+    const first = focusable[0]!; const last = focusable.at(-1)!;
+    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+  });
+}
+
 export function bindSubscriptionServicePage(onMount: () => void): void {
+  activeSubscriptionMount = onMount;
+  bindSubscriptionDialogKeyboard();
   void ensurePublishedSubscriptionMenuTree().then((changed) => { if (changed) onMount(); });
   if (isSubscriptionServiceCreatePath(location.hash.slice(1))) {
     bindSubscriptionServiceCreateWizard(onMount);
     return;
   }
   initializeSubscriptionMenuTreeIndeterminate();
-  document.querySelectorAll<HTMLButtonElement>("[data-sub-modal-close]").forEach((button) => button.addEventListener("click", () => { modalState = null; refresh(onMount); }));
+  const createModalOpen = modalState?.kind === "create-subscription";
+  document.querySelectorAll<HTMLElement>("[data-subscription-service-page] > :not([data-sub-modal-backdrop])").forEach((element) => { element.inert = createModalOpen; });
+  if (createModalOpen) {
+    if (!subscriptionModalBackgroundLocked) { previousBodyOverflow = document.body.style.overflow; subscriptionModalBackgroundLocked = true; }
+    document.body.style.overflow = "hidden";
+    queueMicrotask(() => document.querySelector<HTMLSelectElement>("[data-sub-create-subscription] [name=subjectType]")?.focus());
+  } else restoreSubscriptionModalBackground();
+  document.querySelector<HTMLButtonElement>("[data-sub-open-create]")?.addEventListener("click", () => { resetCreateSubscriptionDraft(); modalState = { kind: "create-subscription" }; refresh(onMount); });
+  document.querySelector<HTMLElement>("[data-sub-modal-backdrop]")?.addEventListener("click", (event) => { if (event.target === event.currentTarget) closeSubscriptionModal(onMount); });
+  document.querySelectorAll<HTMLButtonElement>("[data-sub-modal-close]").forEach((button) => button.addEventListener("click", () => closeSubscriptionModal(onMount)));
   document.querySelector<HTMLInputElement>("[data-sub-route-search]")?.addEventListener("input", (event) => { routeSearch = (event.currentTarget as HTMLInputElement).value; refresh(onMount); });
   document.querySelector<HTMLFormElement>("[data-sub-package-form]")?.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -186,8 +279,21 @@ export function bindSubscriptionServicePage(onMount: () => void): void {
   document.querySelector<HTMLButtonElement>("[data-sub-confirm-publish]")?.addEventListener("click", (event) => { const button = event.currentTarget as HTMLButtonElement; try { const release = publishServicePackage(button.dataset.packageId!, Number(button.dataset.revision)); modalState = null; refresh(onMount, `已发布 v${release.version}，所有有效订阅已更新`); } catch (error) { modalState = null; refresh(onMount, error instanceof Error ? error.message : "发布失败"); } });
   document.querySelectorAll<HTMLButtonElement>("[data-sub-disable-package]").forEach((button) => button.addEventListener("click", () => { modalState = { kind: "disable-package", packageId: button.dataset.packageId! }; refresh(onMount); }));
   document.querySelectorAll<HTMLButtonElement>("[data-sub-rollback]").forEach((button) => button.addEventListener("click", () => { try { rollbackServicePackage(button.dataset.packageId!, button.dataset.releaseId!); refresh(onMount, "已统一回滚到所选版本"); } catch (error) { refresh(onMount, error instanceof Error ? error.message : "回滚失败"); } }));
-  document.querySelector<HTMLSelectElement>("[data-sub-subject-type]")?.addEventListener("change", (event) => { subscriptionType = (event.currentTarget as HTMLSelectElement).value as SubscriptionSubjectType; refresh(onMount); });
-  document.querySelector<HTMLFormElement>("[data-sub-create-subscription]")?.addEventListener("submit", (event) => { event.preventDefault(); const data = new FormData(event.currentTarget as HTMLFormElement); try { createMerchantSubscription({ subjectType: String(data.get("subjectType")) as SubscriptionSubjectType, subjectId: String(data.get("subjectId") ?? ""), packageId: String(data.get("packageId") ?? ""), startAt: new Date(`${data.get("startAt")}T00:00:00`).toISOString(), endAt: data.get("endAt") ? new Date(`${data.get("endAt")}T00:00:00`).toISOString() : undefined, note: String(data.get("note") ?? "") }); refresh(onMount, "服务已开通，菜单能力立即按层级继承"); } catch (error) { refresh(onMount, error instanceof Error ? error.message : "开通失败"); } });
+  document.querySelector<HTMLSelectElement>("[data-sub-subject-type]")?.addEventListener("change", (event) => { syncCreateSubscriptionDraft(); subscriptionType = (event.currentTarget as HTMLSelectElement).value as SubscriptionSubjectType; if (createSubscriptionDraft) createSubscriptionDraft.subjectId = subjectOptions(subscriptionType)[0]?.id ?? ""; createSubscriptionError = ""; refresh(onMount); });
+  document.querySelector<HTMLFormElement>("[data-sub-create-subscription]")?.addEventListener("input", () => { if (createSubscriptionError) { createSubscriptionError = ""; document.querySelector("[data-sub-create-error]")?.remove(); } });
+  document.querySelector<HTMLFormElement>("[data-sub-create-subscription]")?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    if (createSubscriptionSubmitting) return;
+    syncCreateSubscriptionDraft();
+    if (!createSubscriptionDraft) return;
+    createSubscriptionSubmitting = true;
+    createSubscriptionError = "";
+    const draft = createSubscriptionDraft;
+    try {
+      createMerchantSubscription({ subjectType: subscriptionType, subjectId: draft.subjectId, packageId: draft.packageId, startAt: new Date(`${draft.startAt}T00:00:00`).toISOString(), endAt: draft.endAt ? new Date(`${draft.endAt}T00:00:00`).toISOString() : undefined, note: draft.note });
+      modalState = null; createSubscriptionDraft = null; createSubscriptionSubmitting = false; restoreSubscriptionModalBackground(); refresh(onMount, "服务已开通，菜单能力立即按层级继承"); queueMicrotask(() => document.querySelector<HTMLButtonElement>("[data-sub-open-create]")?.focus());
+    } catch (error) { createSubscriptionSubmitting = false; createSubscriptionError = error instanceof Error ? error.message : "开通失败"; refresh(onMount); }
+  });
   document.querySelectorAll<HTMLButtonElement>("[data-sub-extend]").forEach((button) => button.addEventListener("click", () => { modalState = { kind: "extend-subscription", subscriptionId: button.dataset.subscriptionId! }; refresh(onMount); }));
   document.querySelector<HTMLFormElement>("[data-sub-extend-form]")?.addEventListener("submit", (event) => { event.preventDefault(); const form = event.currentTarget as HTMLFormElement; const data = new FormData(form); try { const raw = String(data.get("endAt") ?? ""); extendMerchantSubscription(form.dataset.subscriptionId!, raw ? new Date(`${raw}T00:00:00`).toISOString() : undefined); modalState = null; refresh(onMount, "订阅有效期已更新"); } catch (error) { refresh(onMount, error instanceof Error ? error.message : "续期失败"); } });
   document.querySelectorAll<HTMLButtonElement>("[data-sub-disable]").forEach((button) => button.addEventListener("click", () => { modalState = { kind: "disable-subscription", subscriptionId: button.dataset.subscriptionId! }; refresh(onMount); }));
