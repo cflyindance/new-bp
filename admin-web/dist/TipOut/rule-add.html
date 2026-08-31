@@ -427,12 +427,23 @@
         <a href="rules.html" class="page-tab" style="color:var(--text-secondary)">← 返回规则列表</a>
       </div>
 
-      <div class="content-area">
+      <div class="content-area tipout-rule-editor-layout">
+        <nav class="tipout-rule-section-nav" aria-label="规则编辑章节导航">
+          <div class="tipout-rule-section-nav-title">规则设置</div>
+          <button type="button" onclick="scrollToRuleSection('ruleSectionBasic')">基础信息</button>
+          <button type="button" onclick="scrollToRuleSection('sharedPoolRulesSection')">小费池贡献规则</button>
+          <button type="button" onclick="scrollToRuleSection('allocationModeSection')">分配模式</button>
+          <button type="button" data-rule-modes="legacy_pool" onclick="scrollToRuleSection('deductRulesSection')">小费扣除方规则</button>
+          <button type="button" data-rule-modes="legacy_pool" onclick="scrollToRuleSection('legacyReceiversSection')">小费接收方规则</button>
+          <button type="button" data-rule-modes="order_tip_then_residual" onclick="scrollToRuleSection('orderTipClaimsSection')">计提小费接收方规则</button>
+          <button type="button" data-rule-modes="order_tip_then_residual" onclick="scrollToRuleSection('orderResidualSection')">剩余小费接收方规则</button>
+          <button type="button" onclick="scrollToRuleSection('distributionSection')">员工分配方式</button>
+        </nav>
         <div class="page-card">
           <div class="page-title" id="pageTitle">小费分配规则</div>
 
           <!-- Rule Name -->
-          <div class="form-section">
+          <div class="form-section" id="ruleSectionBasic">
             <div class="form-group">
               <label class="form-label"><span class="required">*</span>规则名称 <span class="field-desc-wrap" data-field-id="ruleName"><span class="field-desc-icon" data-field-id="ruleName" data-label="规则名称" onclick="event.preventDefault();openFieldDescEditor('ruleName','规则名称')" title="点击编辑字段说明">ⓘ</span></span></label>
               <input type="text" id="ruleName" class="form-control" placeholder="请输入规则名称" style="max-width:460px">
@@ -505,7 +516,7 @@
           </div>
 
           <!-- Receiver Rules -->
-          <div class="form-section">
+          <div class="form-section" id="legacyReceiversSection">
             <div class="form-section-title">
               <span class="field-desc-wrap" data-field-id="receiverRules" data-pool-label="小费接收方规则">小费接收方规则 <span class="field-desc-icon" data-field-id="receiverRules" data-label="小费接收方规则" onclick="event.preventDefault();openFieldDescEditor('receiverRules','小费接收方规则')" title="点击编辑字段说明">ⓘ</span></span>
               <span style="font-size:12px;color:var(--text-tertiary);font-weight:400;margin-left:auto">合计: <span id="totalPercent">0</span>%</span>
@@ -528,7 +539,7 @@
           </div><!-- /legacyAllocationSections -->
 
           <div id="orderTipAllocationSection" style="display:none">
-            <div class="form-section">
+            <div class="form-section" id="orderTipClaimsSection">
               <div class="form-section-title" data-pool-label="计提小费接受方规则">计提小费接受方规则</div>
               <div class="tip-claims-table-wrap">
                 <table class="receiver-table" id="tipClaimsTable">
@@ -546,7 +557,7 @@
               </div>
               <button type="button" class="btn btn-sm" style="margin-top:8px" onclick="addTipClaimRow()"><span style="font-size:14px">+</span> 新增计提</button>
             </div>
-            <div class="form-section">
+            <div class="form-section" id="orderResidualSection">
               <div class="form-section-title">
                 <span data-pool-label="剩余小费接收方规则">剩余小费接收方规则</span>
                 <span style="font-size:12px;color:var(--text-tertiary);font-weight:400;margin-left:auto">合计: <span id="orderResidualTotalPercent">0</span>%</span>
@@ -565,47 +576,49 @@
             </div>
           </div>
 
-          <!-- Clock-in Method -->
-          <div class="form-section">
-            <div class="form-section-title"><span class="field-desc-wrap" data-field-id="clockin">员工打卡方式（单选） <span class="field-desc-icon" data-field-id="clockin" data-label="员工打卡方式" onclick="event.preventDefault();openFieldDescEditor('clockin','员工打卡方式')" title="点击编辑字段说明">ⓘ</span></span></div>
-            <div class="radio-group">
-              <label class="radio-item" id="clockinClockOption">
-                <input type="radio" name="clockin" value="clock" checked onchange="updateDistributionOptions()"> 打卡上班
-              </label>
-              <label class="radio-item">
-                <input type="radio" name="clockin" value="noclock" onchange="updateDistributionOptions()"> 不打卡
-              </label>
-            </div>
-          </div>
-
-          <!-- Distribution Method -->
-          <div class="form-section">
-            <div class="form-section-title"><span class="field-desc-wrap" data-field-id="distribution" data-pool-label="小费分配方式（单选）">小费分配方式（单选） <span class="field-desc-icon" data-field-id="distribution" data-label="小费分配方式" onclick="event.preventDefault();openFieldDescEditor('distribution','小费分配方式')" title="点击编辑字段说明">ⓘ</span></span></div>
-            <div class="radio-group">
-              <label class="radio-item">
-                <input type="radio" name="distribution" value="average" checked onchange="updateWorkHoursConfigUi()"> 按员工数量平均分配
-              </label>
-              <label class="radio-item">
-                <input type="radio" name="distribution" value="hours" onchange="updateWorkHoursConfigUi()"> 按工作时长占比分配
-              </label>
-              <div class="work-hours-config" id="workHoursConfigPanel" style="display:none">
-                <label class="radio-item">
-                  <input type="radio" name="workHoursMode" value="actual" checked onchange="updateWorkHoursConfigUi()">
-                  <span id="workHoursActualLabel">按照实际打卡工时</span>
+          <div id="distributionSection" class="tipout-rule-distribution-section">
+            <!-- Clock-in Method -->
+            <div class="form-section">
+              <div class="form-section-title"><span class="field-desc-wrap" data-field-id="clockin">员工打卡方式（单选） <span class="field-desc-icon" data-field-id="clockin" data-label="员工打卡方式" onclick="event.preventDefault();openFieldDescEditor('clockin','员工打卡方式')" title="点击编辑字段说明">ⓘ</span></span></div>
+              <div class="radio-group">
+                <label class="radio-item" id="clockinClockOption">
+                  <input type="radio" name="clockin" value="clock" checked onchange="updateDistributionOptions()"> 打卡上班
                 </label>
-                <div class="work-hours-cap-row">
-                  <label class="radio-item">
-                    <input type="radio" name="workHoursMode" value="capped" onchange="updateWorkHoursConfigUi()">
-                    <span id="workHoursCappedLabel">打卡工时超出最大工时，按最大工时</span>
-                  </label>
-                  <input class="work-hours-cap-input" id="maxHoursPerDay" type="number" min="0.1" max="24" step="0.1" inputmode="decimal" disabled oninput="clearWorkHoursConfigError()" aria-label="每日最大工时">
-                  <span style="font-size:13px;color:var(--text-secondary)">小时/天</span>
-                </div>
-                <div class="work-hours-config-error" id="workHoursConfigError"></div>
+                <label class="radio-item">
+                  <input type="radio" name="clockin" value="noclock" onchange="updateDistributionOptions()"> 不打卡
+                </label>
               </div>
-              <label class="radio-item" id="distributionOrdersRow">
-                <input type="radio" name="distribution" value="orders" onchange="updateWorkHoursConfigUi()"> 按订单占比分配
-              </label>
+            </div>
+
+            <!-- Distribution Method -->
+            <div class="form-section">
+              <div class="form-section-title"><span class="field-desc-wrap" data-field-id="distribution" data-pool-label="小费分配方式（单选）">小费分配方式（单选） <span class="field-desc-icon" data-field-id="distribution" data-label="小费分配方式" onclick="event.preventDefault();openFieldDescEditor('distribution','小费分配方式')" title="点击编辑字段说明">ⓘ</span></span></div>
+              <div class="radio-group">
+                <label class="radio-item">
+                  <input type="radio" name="distribution" value="average" checked onchange="updateWorkHoursConfigUi()"> 按员工数量平均分配
+                </label>
+                <label class="radio-item">
+                  <input type="radio" name="distribution" value="hours" onchange="updateWorkHoursConfigUi()"> 按工作时长占比分配
+                </label>
+                <div class="work-hours-config" id="workHoursConfigPanel" style="display:none">
+                  <label class="radio-item">
+                    <input type="radio" name="workHoursMode" value="actual" checked onchange="updateWorkHoursConfigUi()">
+                    <span id="workHoursActualLabel">按照实际打卡工时</span>
+                  </label>
+                  <div class="work-hours-cap-row">
+                    <label class="radio-item">
+                      <input type="radio" name="workHoursMode" value="capped" onchange="updateWorkHoursConfigUi()">
+                      <span id="workHoursCappedLabel">打卡工时超出最大工时，按最大工时</span>
+                    </label>
+                    <input class="work-hours-cap-input" id="maxHoursPerDay" type="number" min="0.1" max="24" step="0.1" inputmode="decimal" disabled oninput="clearWorkHoursConfigError()" aria-label="每日最大工时">
+                    <span style="font-size:13px;color:var(--text-secondary)">小时/天</span>
+                  </div>
+                  <div class="work-hours-config-error" id="workHoursConfigError"></div>
+                </div>
+                <label class="radio-item" id="distributionOrdersRow">
+                  <input type="radio" name="distribution" value="orders" onchange="updateWorkHoursConfigUi()"> 按订单占比分配
+                </label>
+              </div>
             </div>
           </div>
 
@@ -1181,6 +1194,24 @@
       return params;
     }
 
+    function scrollToRuleSection(id) {
+      var section = document.getElementById(id);
+      if (!section || section.offsetParent === null) return;
+      section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      var focusTarget = section.querySelector('input, select, button');
+      if (focusTarget) focusTarget.focus({ preventScroll: true });
+    }
+
+    function syncRuleSectionNavigator(allocationMode) {
+      var mode = allocationMode || 'legacy_pool';
+      document.querySelectorAll('.tipout-rule-section-nav button[data-rule-modes]').forEach(function(button) {
+        var modes = (button.dataset.ruleModes || '').split(/\s+/).filter(Boolean);
+        var inactive = modes.length > 0 && modes.indexOf(mode) === -1;
+        button.hidden = inactive;
+        button.setAttribute('aria-hidden', inactive ? 'true' : 'false');
+      });
+    }
+
     function onAllocationModeChange(skipEnsureClaimRow) {
       var r = document.querySelector('input[name="allocationMode"]:checked');
       var v = r ? r.value : 'legacy_pool';
@@ -1196,6 +1227,7 @@
           addOrderResidualReceiverRow({ roles: ['Server'], pct: 100 });
         }
       }
+      syncRuleSectionNavigator(v);
     }
 
     function openTipClaimSalesConditionDrawer(btn) {

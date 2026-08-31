@@ -30,74 +30,6 @@
         min-width: 150px;
       }
     }
-    .day-tab-row {
-      display: flex;
-      align-items: stretch;
-      position: relative;
-      margin-bottom: 16px;
-      border-bottom: 1px solid var(--border-light);
-      min-height: 52px;
-    }
-    .day-tab-scroll {
-      flex: 1 1 auto;
-      min-width: 0;
-      overflow-x: auto;
-      padding-bottom: 4px;
-      -webkit-overflow-scrolling: touch;
-      scrollbar-color: #c8c8c8 transparent;
-    }
-    .day-tab-scroll::-webkit-scrollbar { height: 6px; }
-    .day-tab-scroll::-webkit-scrollbar-track { background: #f0f0f0; border-radius: 3px; }
-    .day-tab-scroll::-webkit-scrollbar-thumb { background: #c0c0c0; border-radius: 3px; min-width: 40px; }
-    .day-tab-scroll::-webkit-scrollbar-thumb:hover { background: #a0a0a0; }
-    .day-tab-list {
-      display: flex;
-      gap: 0;
-    }
-    .day-tab-status-btn {
-      flex: 0 0 48px;
-      width: 48px;
-      align-self: stretch;
-      min-height: 48px;
-      margin: 0;
-      padding: 0;
-      border: none;
-      cursor: pointer;
-      color: var(--primary);
-      background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, #fff 40%, #fff 100%);
-      box-shadow: -10px 0 18px -6px rgba(0, 0, 0, 0.08);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 2;
-      transition: color 0.15s, background 0.15s;
-      -webkit-tap-highlight-color: rgba(22, 119, 255, 0.12);
-    }
-    .day-tab-status-btn:hover { color: var(--primary-hover); }
-    .day-tab-status-btn:active { background: linear-gradient(90deg, rgba(245, 245, 245, 0) 0%, #f5f5f5 40%, #f5f5f5 100%); }
-    #dayAllocationStatusModal .data-table { font-size: 13px; }
-    #dayAllocationStatusModal .data-table th,
-    #dayAllocationStatusModal .data-table td { padding: 8px 10px; }
-    #dayAllocationStatusModal .status-pill {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-size: 12px;
-      font-weight: 500;
-    }
-    #dayAllocationStatusModal .status-pill.allocated { background: #f6ffed; color: var(--success); border: 1px solid #b7eb8f; }
-    #dayAllocationStatusModal .status-pill.pending { background: #fffbe6; color: var(--warning); border: 1px solid #ffe58f; }
-    .day-tab {
-      padding: 10px 16px; font-size: 13px; color: var(--text-secondary);
-      border-bottom: 2px solid transparent; cursor: pointer; white-space: nowrap;
-      transition: all 0.2s; text-align: center; min-width: 80px; flex-shrink: 0;
-    }
-    .day-tab:hover { color: var(--primary); }
-    .day-tab.active { color: var(--primary); font-weight: 600; border-bottom-color: var(--primary); }
-    .day-tab .day-status { font-size: 11px; margin-top: 2px; }
-    .day-tab .day-status.allocated { color: var(--success); }
-    .day-tab .day-status.pending { color: var(--warning); }
-    #employeeResults { overflow-x: hidden; width: 100%; max-width: 100%; }
     .employee-section { margin-bottom: 24px; overflow-x: hidden; width: 100%; max-width: 100%; }
     .employee-section .employee-detail { overflow-x: auto; -webkit-overflow-scrolling: touch; }
     .employee-section .data-table { width: 100%; min-width: 520px; table-layout: fixed; }
@@ -262,14 +194,14 @@
               <div class="filter-field filter-field--daterange">
                 <span class="filter-field-label">日期范围</span>
                 <div class="date-range-group">
-                  <input type="date" id="dateStart" class="form-control form-control-lg" value="2026-01-01" onchange="renderDayTabs()">
+                  <input type="date" id="dateStart" class="form-control form-control-lg" value="2026-01-01" onchange="renderDailySummaryList()">
                   <span class="date-range-sep" style="color:var(--text-tertiary)">~</span>
-                  <input type="date" id="dateEnd" class="form-control form-control-lg" value="2026-02-28" onchange="renderDayTabs()">
+                  <input type="date" id="dateEnd" class="form-control form-control-lg" value="2026-02-28" onchange="renderDailySummaryList()">
                 </div>
               </div>
               <div class="filter-field">
                 <label class="filter-field-label" for="storeSelect">门店</label>
-                <select id="storeSelect" class="form-control form-control-lg" onchange="invalidateDayPipelineCache();renderDayTabs()">>
+                <select id="storeSelect" class="form-control form-control-lg" onchange="invalidateDayPipelineCache();renderDailySummaryList()">>
                   <option value="">请选择门店</option>
                 </select>
               </div>
@@ -317,18 +249,7 @@
           </div>
         </div>
 
-        <!-- Day Tabs：左侧横向滚动 + 右侧渐变遮挡区内的「每日状态」按钮 -->
-        <div class="day-tab-row">
-          <div class="day-tab-scroll">
-            <div class="day-tab-list" id="dayTabs"></div>
-          </div>
-          <button type="button" class="day-tab-status-btn" onclick="openDayAllocationStatusModal(event)" title="查看每日分配状态" aria-label="查看每日分配状态">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h.01M3 12h.01M3 18h.01"/></svg>
-          </button>
-        </div>
-
-        <!-- 员工分配结果 — 根据筛选日期动态生成 -->
-        <div id="employeeResults"></div>
+        <div class="tipout-daily-list" id="dailySummaryList" aria-label="每日小费分配汇总"></div>
 
       </div>
 
@@ -386,22 +307,11 @@
         </div>
       </div>
 
-      <div class="modal-overlay" id="dayAllocationStatusModal">
-        <div class="modal" style="width:min(480px,92vw);max-height:85vh;display:flex;flex-direction:column">
-          <div class="modal-header">
-            <h3>每日分配状态</h3>
-            <button type="button" class="modal-close" onclick="closeModal('dayAllocationStatusModal')">×</button>
-          </div>
-          <div class="modal-body" id="dayAllocationStatusModalBody" style="overflow-y:auto;flex:1;min-height:0"></div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-primary" onclick="closeModal('dayAllocationStatusModal')">关闭</button>
-          </div>
-        </div>
-      </div>
     </div>
   </div>
 
   <script src="common.js"></script>
+  <script src="tipout-summary-ui.js"></script>
   <script src="ruleData.js"></script>
   <script src="personalSalesDeduct.js"></script>
   <script src="tipAllocation.js"></script>
@@ -501,7 +411,7 @@
       refreshIndexMultiTags(selectId);
       syncSelectAllState(selectId);
       if (selectId === 'roleFilter') updateEmployeeFilter();
-      else renderEmployeeResults();
+      else renderDailySummaryList();
     }
 
     function syncSelectAllState(selectId) {
@@ -535,7 +445,7 @@
       }
       refreshIndexMultiTags(selectId);
       if (selectId === 'roleFilter') updateEmployeeFilter();
-      else renderEmployeeResults();
+      else renderDailySummaryList();
     }
 
     function refreshIndexMultiTags(selectId) {
@@ -558,7 +468,7 @@
       });
     }
 
-    function updateEmployeeFilter() {
+    function updateEmployeeFilter(skipRender) {
       var roles = getSelectedRoles();
       var prevSelected = getSelectedEmployees();
       var dropdown = document.getElementById('employeeFilterDropdown');
@@ -574,7 +484,7 @@
       }).join('');
       dropdown.innerHTML = allHtml + itemsHtml;
       refreshIndexMultiTags('employeeFilter');
-      renderEmployeeResults();
+      if (!skipRender) renderDailySummaryList();
     }
 
     function pad(n) { return n < 10 ? '0' + n : '' + n; }
@@ -765,74 +675,95 @@
       return dates;
     }
 
-    function openDayAllocationStatusModal(ev) {
-      if (ev && ev.stopPropagation) ev.stopPropagation();
-      var dates = getDateRange();
-      var allocatedDates = getAllocatedDates();
-      var bodyEl = document.getElementById('dayAllocationStatusModalBody');
-      var storeSel = document.getElementById('storeSelect');
-      var storeText = '';
-      if (storeSel && storeSel.options && storeSel.selectedIndex >= 0) {
-        storeText = (storeSel.options[storeSel.selectedIndex].text || storeSel.value || '').trim();
-      }
-      if (!bodyEl) return;
-      if (dates.length === 0) {
-        bodyEl.innerHTML = '<p style="color:var(--text-secondary);text-align:center;padding:12px 8px">当前日期范围内暂无日期，请先在上方调整日期范围。</p>';
-        openModal('dayAllocationStatusModal');
-        return;
-      }
-      var summaryAlloc = 0;
-      var summaryPending = 0;
-      var rows = [];
-      for (var i = 0; i < dates.length; i++) {
-        var key = dates[i];
-        var d = new Date(key + 'T00:00:00');
-        var shortLabel = formatTabLabel(d);
-        var alloc = allocatedDates.has(key);
-        if (alloc) summaryAlloc++; else summaryPending++;
-        var pillClass = alloc ? 'allocated' : 'pending';
-        var statusText = alloc ? '已分配' : '待分配';
-        rows.push(
-          '<tr><td>' + key + '</td><td>' + shortLabel + '</td><td><span class="status-pill ' + pillClass + '">' + statusText + '</span></td></tr>'
-        );
-      }
-      var meta = '';
-      if (storeText) {
-        meta = '<p style="font-size:13px;color:var(--text-secondary);margin:0 0 12px">门店：<strong style="color:var(--text-primary)">' +
-          String(storeText).replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</strong></p>';
-      }
-      meta += '<p style="font-size:12px;color:var(--text-tertiary);margin:0 0 12px">已分配 <strong style="color:var(--success)">' + summaryAlloc + '</strong> 天 · 待分配 <strong style="color:var(--warning)">' + summaryPending + '</strong> 天</p>';
-      bodyEl.innerHTML =
-        meta +
-        '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch">' +
-        '<table class="data-table"><thead><tr><th>日期</th><th>月/日</th><th>状态</th></tr></thead><tbody>' +
-        rows.join('') +
-        '</tbody></table></div>';
-      openModal('dayAllocationStatusModal');
+    function getDailyEmployeeResults(dateKey) {
+      return getFilteredEmployees().map(function(emp) {
+        return genDailyTip(emp, dateKey);
+      });
     }
 
-    function renderDayTabs() {
+    var restoredSummaryStateSignature = null;
+
+    function captureSummaryUiState(returnDate) {
+      var state = TipOutSummaryUi.buildSummaryHistoryState({
+        dateStart: document.getElementById('dateStart').value,
+        dateEnd: document.getElementById('dateEnd').value,
+        store: document.getElementById('storeSelect').value,
+        roles: getSelectedRoles(),
+        employees: getSelectedEmployees(),
+        scrollY: window.scrollY,
+        returnDate: returnDate
+      });
+      history.replaceState(state, '');
+    }
+
+    function setSummaryFilterSelections(filterId, values) {
+      var selected = Array.isArray(values) ? values : [];
+      var filter = document.getElementById(filterId);
+      if (!filter) return;
+      filter.querySelectorAll('input[type="checkbox"]:not([data-select-all])').forEach(function(input) {
+        input.checked = selected.indexOf(input.value) >= 0;
+      });
+      refreshIndexMultiTags(filterId);
+      syncSelectAllState(filterId);
+    }
+
+    function restoreSummaryUiState() {
+      var saved = TipOutSummaryUi.readSummaryHistoryState(history.state);
+      var signature = saved ? JSON.stringify(saved) : '__no_summary_state__';
+      if (signature === restoredSummaryStateSignature) return false;
+      restoredSummaryStateSignature = signature;
+      if (!saved) return false;
+
+      document.getElementById('dateStart').value = saved.dateStart || '';
+      document.getElementById('dateEnd').value = saved.dateEnd || '';
+      document.getElementById('storeSelect').value = saved.store || '';
+      setSummaryFilterSelections('roleFilter', saved.roles);
+      updateEmployeeFilter(true);
+      setSummaryFilterSelections('employeeFilter', saved.employees);
+      invalidateDayPipelineCache();
+      renderDailySummaryList();
+
+      requestAnimationFrame(function() {
+        window.scrollTo(0, Number(saved.scrollY) || 0);
+        if (!saved.returnDate) return;
+        var row = document.querySelector('[data-date="' + saved.returnDate + '"]');
+        if (row) row.focus({ preventScroll: true });
+      });
+      return true;
+    }
+
+    function openDailyDetail(dateKey) {
+      captureSummaryUiState(dateKey);
+      var store = (document.getElementById('storeSelect') || {}).value || '';
+      window.location.href = TipOutSummaryUi.buildDetailUrl({
+        date: dateKey,
+        store: store,
+        fromSummary: true
+      });
+    }
+
+    function renderDailySummaryList() {
       var dates = getDateRange();
       var allocatedDates = getAllocatedDates();
-      var container = document.getElementById('dayTabs');
+      var container = document.getElementById('dailySummaryList');
       if (!container) return;
-      container.innerHTML = '';
-      dates.forEach(function(key, i) {
-        var d = new Date(key + 'T00:00:00');
-        var label = formatTabLabel(d);
-        var isPending = !allocatedDates.has(key);
-        var tab = document.createElement('div');
-        tab.className = 'day-tab' + (i === 0 ? ' active' : '');
-        tab.setAttribute('data-date', key);
-        tab.setAttribute('data-pending', isPending ? '1' : '0');
-        tab.onclick = function() { selectDay(this); };
-        tab.innerHTML = '<div>' + label + '</div><div class="day-status ' +
-          (isPending ? 'pending' : 'allocated') + '">' +
-          (isPending ? '待分配' : '已分配') + '</div>';
-        container.appendChild(tab);
-      });
+      container.innerHTML = dates.map(function(dateKey) {
+        var date = new Date(dateKey + 'T00:00:00');
+        var total = TipOutSummaryUi.summarizeDailyResults(getDailyEmployeeResults(dateKey));
+        var allocated = allocatedDates.has(dateKey);
+        return '<button type="button" class="tipout-daily-row" data-date="' + dateKey +
+          '" onclick="openDailyDetail(\'' + dateKey + '\')">' +
+          '<span class="tipout-daily-date"><strong>' + formatTabLabel(date) +
+          '</strong><small>' + dateKey + ' · ' + date.toLocaleDateString('zh-CN', { weekday: 'short' }) + '</small></span>' +
+          '<span class="tipout-daily-status ' + (allocated ? 'allocated' : 'pending') + '">' +
+          (allocated ? '已分配' : '待分配') + '</span>' +
+          '<span class="tipout-daily-amount"><small>分配前</small><strong>' + money(total.before) + '</strong></span>' +
+          '<span class="tipout-daily-amount"><small>扣除</small><strong class="tip-amount--deduct">' + money(total.deducted) + '</strong></span>' +
+          '<span class="tipout-daily-amount"><small>分得</small><strong class="tip-amount--receive">' + money(total.received) + '</strong></span>' +
+          '<span class="tipout-daily-amount"><small>分配后</small><strong>' + money(total.after) + '</strong></span>' +
+          '<span class="tipout-daily-chevron" aria-hidden="true">›</span></button>';
+      }).join('');
       updateAllocateButton();
-      renderEmployeeResults();
     }
 
     function updateAllocateButton() {
@@ -858,7 +789,7 @@
       var allocatedDates = getAllocatedDates();
       dates.forEach(function(k) { allocatedDates.add(k); });
       saveAllocatedDates(allocatedDates);
-      renderDayTabs();
+      renderDailySummaryList();
       if (window.TipOutPayrollBridge && TipOutPayrollBridge.syncAfterAllocation) {
         var storeSel = document.getElementById('storeSelect');
         var storeVal = storeSel ? (storeSel.value || '').trim() : '';
@@ -879,7 +810,7 @@
       var allocatedDates = getAllocatedDates();
       dates.forEach(function(k) { allocatedDates.delete(k); });
       saveAllocatedDates(allocatedDates);
-      renderDayTabs();
+      renderDailySummaryList();
       if (window.TipOutPayrollBridge && TipOutPayrollBridge.syncAfterAllocation) {
         var storeSel = document.getElementById('storeSelect');
         var storeVal = storeSel ? (storeSel.value || '').trim() : '';
@@ -901,111 +832,6 @@
       if (roles.length > 0) list = list.filter(function(e) { return roles.indexOf(e.role) >= 0; });
       if (empNames.length > 0) list = list.filter(function(e) { return empNames.indexOf(e.name) >= 0; });
       return list;
-    }
-
-    function renderEmployeeResults() {
-      var dates = getDateRange();
-      var allocatedDates = getAllocatedDates();
-      var container = document.getElementById('employeeResults');
-      container.innerHTML = '';
-
-      var hasAllocated = dates.some(function(k) { return allocatedDates.has(k); });
-      if (!hasAllocated) {
-        if (!hasTipRules()) {
-          container.innerHTML =
-            '<div style="padding:48px;text-align:center;color:var(--text-secondary);font-size:14px">' +
-            '<p style="margin-bottom:16px">还没有小费分配规则</p>' +
-            '<a href="rules.html" class="btn btn-primary">新增小费分配规则</a></div>';
-        } else {
-          container.innerHTML = '<div style="padding:48px;text-align:center;color:var(--text-secondary);font-size:14px">暂无分配结果，请先点击「分配小费」完成分配</div>';
-        }
-        return;
-      }
-
-      var filteredEmps = getFilteredEmployees();
-      filteredEmps.forEach(function(emp) {
-        var idx = employees.indexOf(emp);
-        var dailyData = [];
-        dates.forEach(function(dateKey) {
-          if (allocatedDates.has(dateKey)) {
-            dailyData.push(genDailyTip(emp, dateKey));
-          }
-        });
-
-        if (dailyData.length === 0) return;
-
-        const totalBefore = dailyData.reduce(function(s, d) { return s + d.before; }, 0);
-        const totalDeducted = dailyData.reduce(function(s, d) { return s + d.deducted; }, 0);
-        const totalReceived = dailyData.reduce(function(s, d) { return s + d.received; }, 0);
-        const totalAfter = calcTipAfter(totalBefore, totalDeducted, totalReceived);
-
-        const empId = 'emp_' + idx;
-        const rows = dailyData.map(function(d) {
-          return '<tr><td>' + d.date + '</td><td>' + formatHoursDisplay(d.hours) + '</td><td>' + clockStatusTagHtml(d.clockStatus) + '</td><td>' + money(d.before) + '</td><td class="tip-amount--deduct">' +
-            (d.deducted > 0 ? '−' + money(d.deducted).replace(/^-/, '') : money(0)) + '</td><td class="tip-amount--receive">' +
-            (d.received > 0 ? moneySign(d.received) : money(0)) + '</td><td>' + money(d.after) + '</td></tr>';
-        }).join('');
-
-        const section = document.createElement('div');
-        section.className = 'employee-section';
-        section.id = empId;
-        section.innerHTML =
-          '<div class="employee-header">' +
-            '<span class="employee-name">' + emp.name + '</span>' +
-            '<span class="tag ' + emp.tagClass + '">' + emp.role + '</span>' +
-            '<button class="fold-btn" onclick="toggleFold(\'' + empId + '\')">' +
-              '<span>收起</span>' +
-              '<svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M6 3.175a.5.5 0 0 1 .354.146l4 4a.5.5 0 0 1-.708.708L6 4.383 2.354 8.029a.5.5 0 0 1-.708-.708l4-4A.5.5 0 0 1 6 3.175z"/></svg>' +
-            '</button>' +
-          '</div>' +
-          '<div class="summary-row summary-row--index-totals" style="margin-bottom:8px">' +
-            '<div class="summary-row-cell">' +
-              '<span class="summary-row-label">分配前总计</span>' +
-              '<strong class="summary-row-value">' + money(totalBefore) + '</strong>' +
-            '</div>' +
-            '<div class="summary-row-cell">' +
-              '<span class="summary-row-label">扣除总计</span>' +
-              '<strong class="summary-row-value tip-amount--deduct">' + (totalDeducted > 0 ? '−' + money(totalDeducted).replace(/^-/, '') : money(0)) + '</strong>' +
-            '</div>' +
-            '<div class="summary-row-cell">' +
-              '<span class="summary-row-label">分得总计</span>' +
-              '<strong class="summary-row-value tip-amount--receive">' + moneySign(totalReceived) + '</strong>' +
-            '</div>' +
-            '<div class="summary-row-cell">' +
-              '<span class="summary-row-label">分配后总计</span>' +
-              '<strong class="summary-row-value">' + money(totalAfter) + '</strong>' +
-            '</div>' +
-          '</div>' +
-          '<p class="tip-balance-formula">分配后 = 分配前 − 扣除 + 分得（' + money(totalAfter) + ' = ' + money(totalBefore) +
-            (totalDeducted > 0 ? ' − ' + money(totalDeducted) : '') +
-            (totalReceived > 0 ? ' + ' + money(totalReceived) : '') + '）</p>' +
-          '<div class="employee-detail">' +
-            '<table class="data-table">' +
-              '<thead><tr><th>日期</th><th>员工工时</th><th>打卡状态</th><th>分配前</th><th>扣除</th><th>分得</th><th>分配后</th></tr></thead>' +
-              '<tbody>' + rows + '</tbody>' +
-            '</table>' +
-          '</div>';
-        container.appendChild(section);
-      });
-    }
-
-    function selectDay(el) {
-      var isPending = el.getAttribute('data-pending') === '1';
-      var dateKey = el.getAttribute('data-date') || '';
-      if (isPending && !hasTipRules()) {
-        showNotification('请先创建小费分配规则', 'error');
-        setTimeout(function() { window.location.href = 'rules.html'; }, 1500);
-        return;
-      }
-      if (!isPending && dateKey) {
-        var store = (document.getElementById('storeSelect') || {}).value || '';
-        var url = 'detail.html?date=' + encodeURIComponent(dateKey);
-        if (store) url += '&store=' + encodeURIComponent(store);
-        window.location.href = url;
-        return;
-      }
-      document.querySelectorAll('.day-tab').forEach(function(t) { t.classList.remove('active'); });
-      el.classList.add('active');
     }
 
     function toggleFold(empId) {
@@ -1044,7 +870,7 @@
       refreshIndexMultiTags(id);
       syncSelectAllState(id);
       if (id === 'roleFilter') updateEmployeeFilter();
-      else if (id === 'employeeFilter') renderEmployeeResults();
+      else if (id === 'employeeFilter') renderDailySummaryList();
     });
     document.addEventListener('click', function(e) {
       if (!e.target.closest || !e.target.closest('.filter-bar .multi-select')) {
@@ -1052,9 +878,18 @@
       }
     });
 
-    initStoreSelect();
-    updateEmployeeFilter();
-    renderDayTabs();
+    function initializeSummaryPage() {
+      initStoreSelect();
+      if (!restoreSummaryUiState()) {
+        updateEmployeeFilter();
+        renderDailySummaryList();
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', initializeSummaryPage);
+    window.addEventListener('pageshow', function() {
+      restoreSummaryUiState();
+    });
   </script>
   <script src="export.js"></script>
 </body>
