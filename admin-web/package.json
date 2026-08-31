@@ -44,7 +44,9 @@
     "verify:pit-database": "node scripts/verify-pit-database.mjs",
     "verify:pit-auth-api": "node scripts/verify-pit-auth-api.mjs",
     "verify:pit-requirements-api": "node scripts/verify-pit-requirements-api.mjs",
-    "verify:pit-admin-api": "node scripts/verify-pit-admin-api.mjs"
+    "verify:pit-admin-api": "node scripts/verify-pit-admin-api.mjs",
+    "verify:pit-export-backup": "node scripts/verify-pit-export-backup.mjs",
+    "pit:restore": "node server/pit-restore.mjs"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.0.0",

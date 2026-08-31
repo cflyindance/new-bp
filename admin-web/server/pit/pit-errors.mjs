@@ -17,6 +17,7 @@ export const authenticationRequired = create(401, "authentication_required", "�
 export const permissionDenied = create(403, "permission_denied", "没有权限执行此操作");
 export const notFound = create(404, "not_found", "请求的资源不存在");
 export const versionConflict = create(409, "version_conflict", "数据已被其他用户修改");
+export const exportExpired = create(410, "export_expired", "导出文件已过期，请重新生成");
 export const payloadTooLarge = create(413, "file_too_large", "请求内容过大");
 export const unsupportedFileType = create(415, "unsupported_file_type", "不支持的内容类型");
 export const validationFailed = create(422, "validation_failed", "请求内容不合法");

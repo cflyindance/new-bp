@@ -30,6 +30,11 @@ const SORTS = new Map([
   ["priority", "CASE requirements.priority WHEN 'urgent' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 WHEN 'low' THEN 4 ELSE 5 END"],
   ["plannedDate", "requirements.planned_year"],
 ]);
+const REQUIREMENT_LIST_QUERY_KEYS = new Set([
+  "page", "pageSize", "q", "productLine", "status", "priority", "requirementType",
+  "problemCategory", "source", "owner", "highlighted", "plannedYear", "plannedMonth",
+  "proposedFrom", "proposedTo", "mine", "followed", "deleted", "sort",
+]);
 const SCALAR_FIELDS = new Map([
   ["jiraTicket", "jira_ticket"],
   ["title", "title"],
@@ -453,6 +458,9 @@ function addIn(where, params, expression, values) {
 }
 
 export function parseRequirementListQuery(query = {}, actor) {
+  for (const key of Object.keys(query)) {
+    if (!REQUIREMENT_LIST_QUERY_KEYS.has(key)) fail(`不支持的需求列表参数：${key}`, key);
+  }
   const page = positiveQuery(query.page, "page", 1);
   const pageSize = positiveQuery(query.pageSize, "pageSize", 20, 100);
   const where = [];
@@ -545,6 +553,32 @@ export function parseRequirementListQuery(query = {}, actor) {
   return { page, pageSize, where: where.length ? where.join(" AND ") : "1 = 1", params, orderBy };
 }
 
+export function buildRequirementListSql(compiled, { paginate = true } = {}) {
+  if (!compiled || typeof compiled.where !== "string" || !Array.isArray(compiled.params) || typeof compiled.orderBy !== "string") {
+    throw new TypeError("buildRequirementListSql requires a compiled requirement query");
+  }
+  const selectSql = `
+    SELECT ${REQUIREMENT_SELECT}
+    FROM requirements
+    ${REQUIREMENT_JOINS}
+    WHERE ${compiled.where}
+    ORDER BY ${compiled.orderBy}
+    ${paginate ? "LIMIT ? OFFSET ?" : ""}
+  `;
+  return {
+    countSql: `SELECT count(*) AS count FROM requirements WHERE ${compiled.where}`,
+    countParams: [...compiled.params],
+    selectSql,
+    selectParams: paginate
+      ? [...compiled.params, compiled.pageSize, (compiled.page - 1) * compiled.pageSize]
+      : [...compiled.params],
+  };
+}
+
+export function requirementFromListRow(db, row, actor) {
+  return toRequirement(db, row, actor);
+}
+
 function listItem(db, row, actor) {
   const requirement = toRequirement(db, row, actor);
   const owner = requirement.assignees.find((item) => item.role === "owner") || null;
@@ -577,15 +611,9 @@ export function createPitRequirementService({ db, clock = () => new Date() }) {
 
   function list(query, actor) {
     const compiled = parseRequirementListQuery(query || {}, actor);
-    const total = db.prepare(`SELECT count(*) AS count FROM requirements WHERE ${compiled.where}`).get(...compiled.params).count;
-    const rows = db.prepare(`
-      SELECT ${REQUIREMENT_SELECT}
-      FROM requirements
-      ${REQUIREMENT_JOINS}
-      WHERE ${compiled.where}
-      ORDER BY ${compiled.orderBy}
-      LIMIT ? OFFSET ?
-    `).all(...compiled.params, compiled.pageSize, (compiled.page - 1) * compiled.pageSize);
+    const built = buildRequirementListSql(compiled);
+    const total = db.prepare(built.countSql).get(...built.countParams).count;
+    const rows = db.prepare(built.selectSql).all(...built.selectParams);
     return {
       items: rows.map((row) => listItem(db, row, actor)),
       page: compiled.page,

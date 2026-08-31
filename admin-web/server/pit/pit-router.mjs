@@ -1,7 +1,16 @@
+import fs from "node:fs";
 import { randomUUID } from "node:crypto";
+import { pipeline } from "node:stream/promises";
 import { createPitAdminService } from "./pit-admin-service.mjs";
 import { createPitAuthService } from "./pit-auth-service.mjs";
+import {
+  createPitBackup,
+  enforcePitBackupRetention,
+  listPitBackups,
+  resolvePitBackupDownload,
+} from "./pit-backup-service.mjs";
 import { invalidRequest, notFound } from "./pit-errors.mjs";
+import { createPitExportService } from "./pit-export-service.mjs";
 import { createPitRequirementService } from "./pit-requirement-service.mjs";
 import {
   assertSameOrigin,
@@ -26,6 +35,20 @@ export function createPitRouter({
   const auth = createPitAuthService({ db, setupToken, clock });
   const admin = createPitAdminService({ db, clock });
   const requirements = createPitRequirementService({ db, clock });
+  const exportService = createPitExportService({ db, config, clock });
+
+  async function sendFile(res, file) {
+    const stat = fs.statSync(file.filePath);
+    const asciiName = file.fileName.replace(/[^A-Za-z0-9._-]/g, "_");
+    res.statusCode = 200;
+    res.setHeader("content-type", file.contentType || "application/octet-stream");
+    res.setHeader("content-length", stat.size);
+    res.setHeader(
+      "content-disposition",
+      `attachment; filename="${asciiName}"; filename*=UTF-8''${encodeURIComponent(file.fileName)}`,
+    );
+    await pipeline(fs.createReadStream(file.filePath), res);
+  }
 
   function decodeId(rawId, label = "资源") {
     try {
@@ -200,6 +223,56 @@ export function createPitRouter({
         return true;
       }
 
+      if (path === "/exports") {
+        if (method === "GET") {
+          sendData(res, requestId, exportService.listExports(queryObject(url.searchParams), authentication.user));
+          return true;
+        }
+        if (method === "POST") {
+          const exportJob = await exportService.createExport(await readJson(req), authentication.user);
+          res.statusCode = 201;
+          sendData(res, requestId, { exportJob });
+          return true;
+        }
+      }
+
+      const exportDownloadMatch = /^\/exports\/([^/]+)\/download$/.exec(path);
+      if (exportDownloadMatch && method === "GET") {
+        const id = decodeId(exportDownloadMatch[1], "导出任务");
+        await sendFile(res, exportService.resolveDownload(id, authentication.user));
+        return true;
+      }
+
+      if (path === "/backups") {
+        auth.requireRole(authentication, "admin");
+        if (method === "GET") {
+          sendData(res, requestId, { items: listPitBackups({ db }) });
+          return true;
+        }
+        if (method === "POST") {
+          await readJson(req);
+          const backup = await createPitBackup({
+            db,
+            config,
+            kind: "manual",
+            actorId: authentication.user.id,
+            clock,
+          });
+          enforcePitBackupRetention({ db, config });
+          res.statusCode = 201;
+          sendData(res, requestId, { backup });
+          return true;
+        }
+      }
+
+      const backupDownloadMatch = /^\/backups\/([^/]+)\/download$/.exec(path);
+      if (backupDownloadMatch && method === "GET") {
+        auth.requireRole(authentication, "admin");
+        const id = decodeId(backupDownloadMatch[1], "备份");
+        await sendFile(res, resolvePitBackupDownload({ db, config, id }));
+        return true;
+      }
+
       if (path === "/requirements") {
         if (method === "GET") {
           sendData(res, requestId, requirements.list(requirementQuery(url.searchParams), authentication.user));
@@ -267,7 +340,8 @@ export function createPitRouter({
       if (error?.status === undefined) {
         logger?.error?.(`PIT request ${requestId} failed`, error);
       }
-      sendError(res, requestId, error);
+      if (res.headersSent) res.destroy(error);
+      else sendError(res, requestId, error);
       return true;
     }
   };
