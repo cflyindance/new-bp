@@ -42,7 +42,8 @@
     "verify:emenu-responsive-viewport": "node scripts/verify-emenu-responsive-viewport.mjs",
     "verify:tipout-interaction-refresh": "node scripts/verify-tipout-interaction-refresh.mjs",
     "verify:pit-database": "node scripts/verify-pit-database.mjs",
-    "verify:pit-auth-api": "node scripts/verify-pit-auth-api.mjs"
+    "verify:pit-auth-api": "node scripts/verify-pit-auth-api.mjs",
+    "verify:pit-requirements-api": "node scripts/verify-pit-requirements-api.mjs"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.0.0",
