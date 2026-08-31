@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { createPitAdminService } from "./pit-admin-service.mjs";
 import { createPitAuthService } from "./pit-auth-service.mjs";
 import { invalidRequest, notFound } from "./pit-errors.mjs";
 import { createPitRequirementService } from "./pit-requirement-service.mjs";
@@ -23,15 +24,16 @@ export function createPitRouter({
   sourceIp = (req) => req.socket?.remoteAddress || "unknown",
 }) {
   const auth = createPitAuthService({ db, setupToken, clock });
+  const admin = createPitAdminService({ db, clock });
   const requirements = createPitRequirementService({ db, clock });
 
-  function decodeRequirementId(rawId) {
+  function decodeId(rawId, label = "资源") {
     try {
       const id = decodeURIComponent(rawId);
-      if (!id || id.includes("/")) throw new TypeError("invalid requirement id");
+      if (!id || id.includes("/")) throw new TypeError("invalid id");
       return id;
     } catch {
-      throw invalidRequest("需求 ID 编码不合法");
+      throw invalidRequest(`${label} ID 编码不合法`);
     }
   }
 
@@ -54,6 +56,10 @@ export function createPitRouter({
     return result;
   }
 
+  function queryObject(searchParams) {
+    return Object.fromEntries(searchParams.entries());
+  }
+
   return async function routePitRequest(req, res) {
     const url = new URL(req.url || "/", "http://pit.local");
     if (url.pathname !== API_PREFIX && !url.pathname.startsWith(`${API_PREFIX}/`)) return false;
@@ -64,7 +70,7 @@ export function createPitRouter({
 
     try {
       if (method === "GET" && path === "/health") {
-        sendData(res, requestId, { status: "ok" });
+        sendData(res, requestId, admin.health());
         return true;
       }
 
@@ -118,6 +124,82 @@ export function createPitRouter({
         return true;
       }
 
+      if (method === "GET" && path === "/dashboard/summary") {
+        sendData(res, requestId, admin.dashboardSummary(authentication.user));
+        return true;
+      }
+
+      if (path === "/dictionaries") {
+        if (method === "GET") {
+          sendData(res, requestId, admin.listDictionaries(queryObject(url.searchParams), authentication.user));
+          return true;
+        }
+        if (method === "POST") {
+          auth.requireRole(authentication, "admin");
+          const item = admin.createDictionaryItem(await readJson(req), authentication.user);
+          res.statusCode = 201;
+          sendData(res, requestId, { item });
+          return true;
+        }
+      }
+
+      if (method === "PUT" && path === "/dictionaries/order") {
+        auth.requireRole(authentication, "admin");
+        const items = admin.reorderDictionaryItems(await readJson(req), authentication.user);
+        sendData(res, requestId, { items });
+        return true;
+      }
+
+      const dictionaryMatch = /^\/dictionaries\/([^/]+)$/.exec(path);
+      if (dictionaryMatch && method === "PATCH") {
+        auth.requireRole(authentication, "admin");
+        const id = decodeId(dictionaryMatch[1], "字典项");
+        const item = admin.updateDictionaryItem(id, await readJson(req), authentication.user);
+        sendData(res, requestId, { item });
+        return true;
+      }
+
+      if (path === "/users") {
+        auth.requireRole(authentication, "admin");
+        if (method === "GET") {
+          sendData(res, requestId, admin.listUsers());
+          return true;
+        }
+        if (method === "POST") {
+          const user = await admin.createUser(await readJson(req), authentication.user);
+          res.statusCode = 201;
+          sendData(res, requestId, { user });
+          return true;
+        }
+      }
+
+      const userMatch = /^\/users\/([^/]+)(?:\/(reset-password|revoke-sessions))?$/.exec(path);
+      if (userMatch) {
+        auth.requireRole(authentication, "admin");
+        const id = decodeId(userMatch[1], "用户");
+        const action = userMatch[2] || null;
+        if (!action && method === "PATCH") {
+          const user = admin.updateUser(id, await readJson(req), authentication.user);
+          sendData(res, requestId, { user });
+          return true;
+        }
+        if (action === "reset-password" && method === "POST") {
+          sendData(res, requestId, await admin.resetUserPassword(id, await readJson(req), authentication.user));
+          return true;
+        }
+        if (action === "revoke-sessions" && method === "POST") {
+          await readJson(req);
+          sendData(res, requestId, admin.revokeUserSessions(id, authentication.user));
+          return true;
+        }
+      }
+
+      if (method === "GET" && path === "/audit-log") {
+        auth.requireRole(authentication, "admin");
+        sendData(res, requestId, admin.listAuditLog(queryObject(url.searchParams), authentication.user));
+        return true;
+      }
+
       if (path === "/requirements") {
         if (method === "GET") {
           sendData(res, requestId, requirements.list(requirementQuery(url.searchParams), authentication.user));
@@ -135,7 +217,7 @@ export function createPitRouter({
 
       const requirementMatch = /^\/requirements\/([^/]+)(?:\/(restore|transitions|follow))?$/.exec(path);
       if (requirementMatch) {
-        const id = decodeRequirementId(requirementMatch[1]);
+        const id = decodeId(requirementMatch[1], "需求");
         const action = requirementMatch[2] || null;
         if (!action && method === "GET") {
           const requirement = requirements.getById(id, authentication.user, {
