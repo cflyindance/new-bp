@@ -72,6 +72,13 @@ assert.match(indexHtml, /function restoreSummaryUiState\(\)/);
 assert.match(indexHtml, /window\.addEventListener\('pageshow'/);
 
 const detailHtml = fs.readFileSync(path.join(root, 'dist/TipOut/detail.html'), 'utf8');
+for (const id of ['detailWorkspace', 'detailMain', 'detailContextRail', 'detailActionBar']) {
+  assert.match(detailHtml, new RegExp('id="' + id + '"'));
+}
+assert.match(detailHtml, /function renderDetailContextRail\(rules, dateKey, store\)/);
+assert.match(detailHtml, /params\.from === 'summary' && params\.return === 'history' && history\.length > 1/);
+assert.match(detailHtml, /class="[^"]*tipout-detail-context-bar/);
+assert.match(detailHtml, /class="[^"]*tipout-sticky-actions/);
 assert.match(detailHtml, /function returnToSummary\(\)/);
 assert.match(detailHtml, /params\.from === 'summary'/);
 assert.match(detailHtml, /返回汇总/);
