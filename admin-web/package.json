@@ -40,7 +40,8 @@
     "verify:personal-sales-deduct-pipeline": "npx tsx scripts/verify-personal-sales-deduct-pipeline.ts",
     "verify:personal-sales-pool": "npx tsx scripts/verify-personal-sales-pool.ts",
     "verify:emenu-responsive-viewport": "node scripts/verify-emenu-responsive-viewport.mjs",
-    "verify:tipout-interaction-refresh": "node scripts/verify-tipout-interaction-refresh.mjs"
+    "verify:tipout-interaction-refresh": "node scripts/verify-tipout-interaction-refresh.mjs",
+    "verify:pit-database": "node scripts/verify-pit-database.mjs"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.0.0",
@@ -48,5 +49,8 @@
     "http-proxy": "^1.18.1",
     "typescript": "~5.6.0",
     "vite": "^6.0.0"
+  },
+  "dependencies": {
+    "exceljs": "^4.4.0"
   }
 }
