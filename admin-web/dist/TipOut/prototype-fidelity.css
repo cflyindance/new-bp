@@ -561,9 +561,136 @@
   box-shadow: none;
 }
 
+.tipout-page-rule-editor .content-area {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 20px;
+  padding-bottom: 28px;
+}
+
+.tipout-page-rule-editor .tipout-page-heading--with-back {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: end;
+  justify-content: normal;
+  gap: 16px;
+}
+
+.tipout-page-rule-editor .tipout-page-heading--with-back > .btn {
+  align-self: center;
+  min-height: 36px;
+  border-radius: 16px;
+}
+
+.tipout-page-rule-editor .tipout-workspace.has-aside {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  align-items: start;
+  gap: 20px;
+  min-width: 0;
+}
+
+.tipout-page-rule-editor .tipout-editor-main {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.tipout-page-rule-editor #legacyAllocationSections,
+.tipout-page-rule-editor #orderTipAllocationSection {
+  min-width: 0;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.tipout-page-rule-editor #legacyAllocationSections:not([style*="display: none"]),
+.tipout-page-rule-editor #orderTipAllocationSection:not([style*="display: none"]) {
+  display: flex;
+}
+
+.tipout-page-rule-editor .tipout-form-card {
+  min-width: 0;
+  margin: 0;
+  padding: 20px;
+  overflow: visible;
+  border: 1px solid var(--border-light);
+  border-radius: 20px;
+  background: #f9f9fa;
+}
+
+.tipout-page-rule-editor .tipout-form-card .form-section-title {
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+.tipout-page-rule-editor .tipout-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.tipout-page-rule-editor .tipout-form-grid .form-group { min-width: 0; }
+.tipout-page-rule-editor .tipout-form-grid .form-control {
+  width: 100%;
+  max-width: none !important;
+}
+
+.tipout-page-rule-editor .tipout-context-rail {
+  position: sticky;
+  top: 88px;
+  overflow: hidden;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  background: #ffffff;
+}
+
+.tipout-page-rule-editor .tipout-context-rail section {
+  display: flex;
+  padding: 16px;
+  flex-direction: column;
+  gap: 6px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.tipout-page-rule-editor .tipout-context-rail section:last-child { border-bottom: 0; }
+.tipout-page-rule-editor .tipout-context-rail span { color: var(--text-tertiary); font-size: 12px; }
+.tipout-page-rule-editor .tipout-context-rail strong { font-size: 13px; line-height: 1.55; overflow-wrap: anywhere; }
+
+.tipout-page-rule-editor .tipout-sticky-actions {
+  position: sticky;
+  z-index: 20;
+  bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 64px;
+  padding: 12px 14px 12px 18px;
+  border: 1px solid rgba(217, 217, 220, 0.9);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.09);
+  backdrop-filter: blur(14px);
+}
+
+.tipout-page-rule-editor .tipout-sticky-actions > span { color: var(--text-secondary); font-size: 12px; }
+.tipout-page-rule-editor .tipout-sticky-actions > div { display: flex; gap: 10px; }
+.tipout-page-rule-editor .tipout-sticky-actions .btn { min-height: 36px; border-radius: 16px; }
+
+.tipout-page-rule-editor .drawer-overlay,
+.tipout-page-rule-editor .modal-overlay { z-index: 1000; }
+
 @media (max-width: 1100px) {
   .tipout-page-detail .tipout-workspace.has-aside { grid-template-columns: minmax(0, 1fr); }
   .tipout-page-detail .tipout-context-rail { position: static; }
+  .tipout-page-rule-editor .tipout-workspace.has-aside { grid-template-columns: minmax(0, 1fr); }
+  .tipout-page-rule-editor .tipout-context-rail { position: static; }
+}
+
+@media (max-width: 900px) {
+  .tipout-page-rule-editor .tipout-form-grid { grid-template-columns: minmax(0, 1fr); }
 }
 
 @media (max-width: 768px) {
@@ -601,4 +728,9 @@
   .tipout-page-rules .tipout-rule-more { flex: 0 0 auto; }
   .tipout-page-rules .tipout-rule-more { width: auto; }
   .tipout-page-rules .tipout-rule-actions-menu { right: 0; left: auto; width: 136px; }
+  .tipout-page-rule-editor .tipout-page-heading--with-back { display: flex; align-items: stretch; }
+  .tipout-page-rule-editor .tipout-page-heading--with-back > .btn { align-self: flex-start; }
+  .tipout-page-rule-editor .tipout-form-card { padding: 16px; border-radius: 16px; }
+  .tipout-page-rule-editor .tipout-sticky-actions { align-items: stretch; flex-direction: column; bottom: 8px; }
+  .tipout-page-rule-editor .tipout-sticky-actions > div { display: grid; grid-template-columns: 1fr 1fr; }
 }

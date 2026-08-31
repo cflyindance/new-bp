@@ -418,22 +418,24 @@
       </header>
 
       <div class="content-area tipout-rule-editor-layout">
-        <nav class="tipout-rule-section-nav" aria-label="规则编辑章节导航">
-          <div class="tipout-rule-section-nav-title">规则设置</div>
-          <button type="button" onclick="scrollToRuleSection('ruleSectionBasic')">基础信息</button>
-          <button type="button" onclick="scrollToRuleSection('sharedPoolRulesSection')">小费池贡献规则</button>
-          <button type="button" onclick="scrollToRuleSection('allocationModeSection')">分配模式</button>
-          <button type="button" data-rule-modes="legacy_pool" onclick="scrollToRuleSection('deductRulesSection')">小费扣除方规则</button>
-          <button type="button" data-rule-modes="legacy_pool" onclick="scrollToRuleSection('legacyReceiversSection')">小费接收方规则</button>
-          <button type="button" data-rule-modes="order_tip_then_residual" onclick="scrollToRuleSection('orderTipClaimsSection')">计提小费接收方规则</button>
-          <button type="button" data-rule-modes="order_tip_then_residual" onclick="scrollToRuleSection('orderResidualSection')">剩余小费接收方规则</button>
-          <button type="button" onclick="scrollToRuleSection('distributionSection')">员工分配方式</button>
-        </nav>
-        <div class="page-card">
-          <div class="page-title" id="pageTitle">小费分配规则</div>
+        <div class="tipout-page-heading tipout-page-heading--with-back">
+          <a class="btn" href="rules.html">返回规则列表</a>
+          <div>
+            <p class="tipout-kicker">规则配置</p>
+            <h1 id="pageTitle">小费分配规则</h1>
+            <p>配置现有小费池来源、扣除方、接收方和分配口径。</p>
+          </div>
+          <div class="tipout-heading-actions">
+            <button type="button" class="btn btn-primary" onclick="submitRule()">保存规则</button>
+          </div>
+        </div>
+
+        <div class="tipout-workspace has-aside" id="ruleEditorWorkspace">
+          <main class="tipout-editor-main" id="ruleEditorMain">
 
           <!-- Rule Name -->
-          <div class="form-section" id="ruleSectionBasic">
+          <div class="form-section tipout-form-card" id="ruleSectionBasic">
+            <div class="tipout-form-grid">
             <div class="form-group">
               <label class="form-label"><span class="required">*</span>规则名称 <span class="field-desc-wrap" data-field-id="ruleName"><span class="field-desc-icon" data-field-id="ruleName" data-label="规则名称" onclick="event.preventDefault();openFieldDescEditor('ruleName','规则名称')" title="点击编辑字段说明">ⓘ</span></span></label>
               <input type="text" id="ruleName" class="form-control" placeholder="请输入规则名称" style="max-width:460px">
@@ -447,10 +449,11 @@
                 <option value="El Fuego Tex-Mex Grill - Plano, TX 75074">El Fuego Tex-Mex Grill - Plano, TX 75074</option>
               </select>
             </div>
+            </div>
           </div>
 
           <!-- 小费池贡献规则：两种分配模式共用（位于分配模式之上） -->
-          <div class="form-section" id="sharedPoolRulesSection">
+          <div class="form-section tipout-form-card" id="sharedPoolRulesSection">
             <div class="form-section-title">
               <span class="field-desc-wrap" data-field-id="poolRules" data-pool-label="小费池贡献规则">小费池贡献规则 <span class="field-desc-icon" data-field-id="poolRules" data-label="小费池贡献规则" onclick="event.preventDefault();openFieldDescEditor('poolRules','小费池贡献规则')" title="点击编辑字段说明">ⓘ</span></span>
             </div>
@@ -472,7 +475,7 @@
             </div>
           </div>
 
-          <div class="form-section" id="allocationModeSection">
+          <div class="form-section tipout-form-card" id="allocationModeSection">
             <div class="form-section-title">分配模式</div>
             <div class="radio-group">
               <label class="radio-item">
@@ -489,7 +492,7 @@
 
           <div id="legacyAllocationSections">
           <!-- Deduction Rules -->
-          <div class="form-section" id="deductRulesSection" style="display:none">
+          <div class="form-section tipout-form-card" id="deductRulesSection" style="display:none">
             <div class="form-section-title"><span class="field-desc-wrap" data-field-id="deductRoles" data-pool-label="小费扣除方规则">小费扣除方规则 <span class="field-desc-icon" data-field-id="deductRoles" data-label="小费扣除方规则" onclick="event.preventDefault();openFieldDescEditor('deductRoles','小费扣除方规则')" title="点击编辑字段说明">ⓘ</span></span></div>
             <div id="deductRulesContainer"></div>
             <div id="deductPanelsHost" style="display:none" aria-hidden="true"></div>
@@ -506,7 +509,7 @@
           </div>
 
           <!-- Receiver Rules -->
-          <div class="form-section" id="legacyReceiversSection">
+          <div class="form-section tipout-form-card" id="legacyReceiversSection">
             <div class="form-section-title">
               <span class="field-desc-wrap" data-field-id="receiverRules" data-pool-label="小费接收方规则">小费接收方规则 <span class="field-desc-icon" data-field-id="receiverRules" data-label="小费接收方规则" onclick="event.preventDefault();openFieldDescEditor('receiverRules','小费接收方规则')" title="点击编辑字段说明">ⓘ</span></span>
               <span style="font-size:12px;color:var(--text-tertiary);font-weight:400;margin-left:auto">合计: <span id="totalPercent">0</span>%</span>
@@ -529,7 +532,7 @@
           </div><!-- /legacyAllocationSections -->
 
           <div id="orderTipAllocationSection" style="display:none">
-            <div class="form-section" id="orderTipClaimsSection">
+            <div class="form-section tipout-form-card" id="orderTipClaimsSection">
               <div class="form-section-title" data-pool-label="计提小费接受方规则">计提小费接受方规则</div>
               <div class="tip-claims-table-wrap">
                 <table class="receiver-table" id="tipClaimsTable">
@@ -547,7 +550,7 @@
               </div>
               <button type="button" class="btn btn-sm" style="margin-top:8px" onclick="addTipClaimRow()"><span style="font-size:14px">+</span> 新增计提</button>
             </div>
-            <div class="form-section" id="orderResidualSection">
+            <div class="form-section tipout-form-card" id="orderResidualSection">
               <div class="form-section-title">
                 <span data-pool-label="剩余小费接收方规则">剩余小费接收方规则</span>
                 <span style="font-size:12px;color:var(--text-tertiary);font-weight:400;margin-left:auto">合计: <span id="orderResidualTotalPercent">0</span>%</span>
@@ -566,7 +569,7 @@
             </div>
           </div>
 
-          <div id="distributionSection" class="tipout-rule-distribution-section">
+          <div id="distributionSection" class="tipout-rule-distribution-section tipout-form-card">
             <!-- Clock-in Method -->
             <div class="form-section">
               <div class="form-section-title"><span class="field-desc-wrap" data-field-id="clockin">员工打卡方式（单选） <span class="field-desc-icon" data-field-id="clockin" data-label="员工打卡方式" onclick="event.preventDefault();openFieldDescEditor('clockin','员工打卡方式')" title="点击编辑字段说明">ⓘ</span></span></div>
@@ -630,12 +633,17 @@
           </div>
           -->
 
+          </main>
+          <aside class="tipout-context-rail" id="ruleEditorContextRail" aria-label="当前规则上下文"></aside>
         </div>
-      </div>
 
-      <div class="page-actions">
-        <button class="btn btn-lg" onclick="cancelRule()">取消</button>
-        <button class="btn btn-primary btn-lg" onclick="submitRule()">提交</button>
+        <div class="tipout-sticky-actions" id="ruleEditorActions">
+          <span>规则字段与保存逻辑保持不变</span>
+          <div>
+            <button type="button" class="btn" onclick="cancelRule()">取消</button>
+            <button type="button" class="btn btn-primary" onclick="submitRule()">提交</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -1084,6 +1092,7 @@
       updateAddMenu();
       updateSurchargeConditionMenu();
       updateDeductRulesVisibility();
+      syncRuleEditorContext();
     }
 
     function initPoolKindFromParams(params, isEdit) {
@@ -1182,6 +1191,20 @@
         if (kv[0] && kv[1]) params[kv[0]] = decodeURIComponent(kv[1]);
       });
       return params;
+    }
+
+    function syncRuleEditorContext() {
+      var rail = document.getElementById('ruleEditorContextRail');
+      if (!rail) return;
+      var name = (document.getElementById('ruleName') || {}).value || '未命名规则';
+      var store = (document.getElementById('storeSelect') || {}).value || '未选择门店';
+      var mode = (document.querySelector('input[name="allocationMode"]:checked') || {}).value || 'legacy_pool';
+      var modeLabel = mode === 'order_tip_then_residual' ? '计提小费占比分配' : '小费池汇总分配';
+      rail.innerHTML =
+        '<section><span>规则名称</span><strong>' + escapeHtmlText(name) + '</strong></section>' +
+        '<section><span>门店</span><strong>' + escapeHtmlText(store) + '</strong></section>' +
+        '<section><span>池类型</span><strong>' + (isSurchargePoolKind() ? '加收服务费池' : '小费池') + '</strong></section>' +
+        '<section><span>分配模式</span><strong>' + modeLabel + '</strong></section>';
     }
 
     function scrollToRuleSection(id) {
@@ -1567,6 +1590,7 @@
         document.querySelectorAll('#orderResidualReceiverTableBody .receiver-sub-tbody').forEach(function(tb) { updateSubReceiversRoleOptions(tb); });
         calcOrderResidualTotal();
       }
+      syncRuleEditorContext();
     }
 
     function hasPoolRuleType(type) {
@@ -5846,7 +5870,18 @@
       } else {
         initPoolKindFromParams(params, false);
       }
+      syncRuleEditorContext();
     })();
+
+    document.addEventListener('input', function(event) {
+      if (event.target && event.target.matches('#ruleName')) syncRuleEditorContext();
+    });
+
+    document.addEventListener('change', function(event) {
+      if (event.target && event.target.matches('#storeSelect, input[name="allocationMode"]')) {
+        syncRuleEditorContext();
+      }
+    });
 
     // Multi-Select Dropdown
     function toggleMultiSelect(id) {
