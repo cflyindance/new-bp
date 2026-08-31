@@ -196,49 +196,44 @@
       </header>
 
       <div class="content-area">
-        <div class="tipout-detail-heading">
-          <div class="tipout-detail-heading-copy">
-            <button type="button" class="btn btn-ghost" onclick="returnToSummary()">← 返回汇总</button>
-            <div>
-              <h1>小费分配明细</h1>
-              <p>查看并核对当前日期与门店的小费分配结果</p>
-            </div>
+        <div class="tipout-page-heading tipout-page-heading--with-back">
+          <button type="button" class="btn" onclick="returnToSummary()">返回汇总</button>
+          <div>
+            <p class="tipout-kicker">分配核算</p>
+            <h1>小费分配明细</h1>
+            <p>查看并核对当前日期与门店的小费分配结果。</p>
           </div>
-          <div class="tipout-detail-heading-actions">
-            <button type="button" class="btn btn-lg" onclick="updateTipData()">更新小费数据</button>
-            <button class="btn btn-primary btn-lg" onclick="saveDetail()">保存</button>
-            <button class="btn btn-primary btn-lg" onclick="saveAndNext()">保存并跳转到下一天</button>
+          <div class="tipout-heading-actions">
+            <button type="button" class="btn" onclick="updateTipData()">更新小费数据</button>
           </div>
         </div>
 
-        <!-- 当前明细上下文：保留既有日期、门店控件及 onchange 行为 -->
-        <div class="filter-surface tipout-detail-context">
-          <button type="button" class="filter-surface-toggle" onclick="toggleFilterSurface(this)" aria-expanded="false" aria-controls="detailFilterCollapsible">
-            <span class="filter-surface-toggle-text">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
-              筛选条件
-            </span>
-            <svg class="filter-surface-toggle-chevron" width="14" height="14" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><path d="M6 8.825a.5.5 0 0 1-.354-.146l-4-4a.5.5 0 0 1 .708-.708L6 7.617l3.646-3.646a.5.5 0 0 1 .708.708l-4 4A.5.5 0 0 1 6 8.825z"/></svg>
-          </button>
-          <div id="detailFilterCollapsible" class="filter-surface-collapsible">
-            <div class="filter-bar filter-bar--page filter-bar--detail">
-              <div class="filter-field">
-                <label class="filter-field-label" for="detailDate">日期</label>
-                <input type="date" id="detailDate" class="form-control form-control-lg filter-input-date" value="2026-01-03" onchange="renderDetailPage()">
-              </div>
-              <div class="filter-field">
-                <label class="filter-field-label" for="storeSelect">门店</label>
-                <select id="storeSelect" class="form-control form-control-lg" onchange="renderDetailPage()">
-                  <option value="">请选择门店</option>
-                </select>
-              </div>
-            </div>
+        <div class="tipout-detail-context-bar">
+          <div class="filter-field">
+            <label for="detailDate">日期</label>
+            <input type="date" id="detailDate" class="form-control" value="2026-01-03" onchange="renderDetailPage()">
           </div>
+          <div class="filter-field">
+            <label for="storeSelect">门店</label>
+            <select id="storeSelect" class="form-control" onchange="renderDetailPage()">
+              <option value="">请选择门店</option>
+            </select>
+          </div>
+          <div class="tipout-detail-context-bar__current"><span>当前页面</span><strong>小费分配明细</strong></div>
         </div>
 
-        <!-- 每条规则：公式/说明 + 对应明细表 成组展示 -->
-        <div id="detailRulesContainer"></div>
+        <div class="tipout-workspace has-aside" id="detailWorkspace">
+          <main id="detailMain"><div id="detailRulesContainer"></div></main>
+          <aside class="tipout-context-rail" id="detailContextRail" aria-label="当前明细上下文"></aside>
+        </div>
 
+        <div class="tipout-sticky-actions" id="detailActionBar">
+          <span>保存只沿用当前明细页已有逻辑</span>
+          <div>
+            <button class="btn" onclick="saveDetail()">保存</button>
+            <button class="btn btn-primary" onclick="saveAndNext()">保存并跳转到下一天</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -440,6 +435,7 @@
       if (!dateKey) return;
 
       var rules = window.ruleData && ruleData.getRulesForStore ? ruleData.getRulesForStore(store) : [];
+      renderDetailContextRail(rules, dateKey, store);
       if (rules.length === 0) {
         document.getElementById('detailRulesContainer').innerHTML =
           '<div class="tipout-detail-empty">' +
@@ -474,6 +470,16 @@
         );
       });
       document.getElementById('detailRulesContainer').innerHTML = bundleParts.join('');
+    }
+
+    function renderDetailContextRail(rules, dateKey, store) {
+      var rail = document.getElementById('detailContextRail');
+      if (!rail) return;
+      var names = (rules || []).map(function(rule) { return rule.ruleName || '未命名规则'; });
+      rail.innerHTML =
+        '<section><span>日期</span><strong>' + escHtml(dateKey || '—') + '</strong></section>' +
+        '<section><span>门店</span><strong>' + escHtml(store || '—') + '</strong></section>' +
+        '<section><span>分配规则</span><strong>' + escHtml(names.length ? names.join('、') : '暂无规则') + '</strong></section>';
     }
 
     function genSyntheticOrderTipContext(dateKey, ruleSalt) {
@@ -523,7 +529,7 @@
         ? '<p style="font-size:12px;color:var(--text-tertiary);margin:4px 0 0;line-height:1.5">订单小费钱包 = 按「小费池贡献规则」对单笔订单基数（销售额/小费/加收/手动/自定义等）加权合计，口径与「小费池汇总分配」一致。</p>'
         : '';
       var safeRidJs = String(rid).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-      return '<div class="formula-rule-section" data-rule-id="' + escHtml(rid) + '">' +
+      return '<div class="formula-rule-section tipout-formula-strip" data-rule-id="' + escHtml(rid) + '">' +
         '<h4 class="detail-rule-block-title">' + escHtml(rule.ruleName || '未命名规则') + '</h4>' +
         '<p class="detail-rule-meta">计提小费占比分配（模拟单笔订单）</p>' +
         '<div class="formula-display" style="flex-wrap:wrap;align-items:flex-start">' +
@@ -541,14 +547,14 @@
       var roleAmounts = otResult.roleAmounts || {};
       var roleNames = Object.keys(roleAmounts).sort();
       if (!roleNames.length) {
-        return '<div class="card detail-card" data-rule-id="' + escHtml(rid) + '" data-order-tip-mode="1" data-pool="0">' +
+        return '<div class="card detail-card tipout-allocation-group" data-rule-id="' + escHtml(rid) + '" data-order-tip-mode="1" data-pool="0">' +
           '<div class="card-body" style="padding:24px;color:var(--text-secondary)">无角色分配结果</div></div>';
       }
       var ridSafe = String(rid).replace(/[^a-zA-Z0-9_-]/g, '_');
       var distHint = escHtml(formatRuleDistribution(rule));
       var manualHours = rule.clockin === 'noclock' && rule.distribution === 'hours';
       var hoursHead = manualHours ? '<th>工时</th>' : '';
-      var html = '<div class="card detail-card" data-rule-id="' + escHtml(rid) + '" data-order-tip-mode="1" data-pool="' + (+otResult.tipWallet || 0) + '" data-manual-hours="' + (manualHours ? '1' : '0') + '">' +
+      var html = '<div class="card detail-card tipout-allocation-group" data-rule-id="' + escHtml(rid) + '" data-order-tip-mode="1" data-pool="' + (+otResult.tipWallet || 0) + '" data-manual-hours="' + (manualHours ? '1' : '0') + '">' +
         '<p style="padding:12px 16px 0;font-size:12px;color:var(--text-tertiary);margin:0">以下为按当前规则与模拟订单推算的金额；员工行按「' +
         distHint + '」示意拆分。</p>' +
         '<div class="card-body detail-card-body-alloc" style="padding:16px">';
@@ -575,7 +581,7 @@
           '<span>角色分配金额：<strong class="role-amount">' + money(roleAmount) + '</strong></span>' +
           '</div>' +
           '<div class="employee-detail detail-employee-wrap">' +
-          '<table class="data-table detail-table detail-employee-table" id="' + escHtml(subTableId) + '">' +
+          '<table class="data-table detail-table detail-employee-table tipout-allocation-table" id="' + escHtml(subTableId) + '">' +
           '<thead><tr><th>分配员工</th>' + hoursHead + '<th>员工分配比例</th><th>员工分配金额</th><th>操作</th></tr></thead><tbody>';
 
         emps.forEach(function(emp, ei) {
@@ -1095,7 +1101,7 @@
           (ratePct !== '' && isFinite(ratePct) ? ratePct + '%' : '占比') +
           '，实扣封顶分配前小费；实扣合计进入可分配池再按接收方规则分得（引擎：TipAllocation.runLegacyDayPipeline）。</p>';
       }
-      return '<div class="formula-rule-section formula-section" data-rule-id="' + escHtml(rid) + '">' +
+      return '<div class="formula-rule-section formula-section tipout-formula-strip" data-rule-id="' + escHtml(rid) + '">' +
         '<h4 class="detail-rule-block-title">' + escHtml(rule.ruleName || '未命名规则') + '</h4>' +
         '<p class="detail-rule-meta">小费池汇总分配</p>' +
         '<div class="formula-display">' +
@@ -1186,7 +1192,7 @@
       var roleConfig = buildRoleConfigFromRule(rule);
       var manualHours = isManualHoursDistMode(rule);
       if (roleConfig.length === 0) {
-        return '<div class="card detail-card" data-rule-id="' + escHtml(rid) + '" data-pool="0" data-manual-hours="' + (manualHours ? '1' : '0') + '">' +
+        return '<div class="card detail-card tipout-allocation-group" data-rule-id="' + escHtml(rid) + '" data-pool="0" data-manual-hours="' + (manualHours ? '1' : '0') + '">' +
           '<div class="card-body" style="padding:24px;color:var(--text-secondary)">该规则暂无接收方配置</div></div>';
       }
       var seed = dateKey.split('-').reduce(function(a, b) { return a * 31 + parseInt(b, 10); }, 7);
@@ -1195,7 +1201,7 @@
       var rng = seedRandom(seed);
       var ridSafe = String(rid).replace(/[^a-zA-Z0-9_-]/g, '_');
       var headHours = manualHours ? '<th>工时</th>' : '';
-      var html = '<div class="card detail-card" data-rule-id="' + escHtml(rid) + '" data-pool="' + (+data.pool || 0) + '" data-manual-hours="' + (manualHours ? '1' : '0') + '">' +
+      var html = '<div class="card detail-card tipout-allocation-group" data-rule-id="' + escHtml(rid) + '" data-pool="' + (+data.pool || 0) + '" data-manual-hours="' + (manualHours ? '1' : '0') + '">' +
         '<div class="card-body detail-card-body-alloc" style="padding:16px">';
 
       roleConfig.forEach(function(rc, ri) {
@@ -1246,7 +1252,7 @@
           '<span>角色分配金额：<strong class="role-amount">' + money(roleAmount) + '</strong></span>' +
           '</div>' +
           '<div class="employee-detail detail-employee-wrap">' +
-          '<table class="data-table detail-table detail-employee-table" id="' + escHtml(subTableId) + '">' +
+          '<table class="data-table detail-table detail-employee-table tipout-allocation-table" id="' + escHtml(subTableId) + '">' +
           '<thead><tr><th>分配员工</th>' + headHours + '<th>员工分配比例</th><th>员工分配金额</th><th>操作</th></tr></thead><tbody>';
 
         rc.employees.forEach(function(emp, ei) {
@@ -1480,7 +1486,7 @@
 
     function returnToSummary() {
       var params = getDetailUrlParams();
-      if (params.from === 'summary' && history.length > 1) history.back();
+      if (params.from === 'summary' && params.return === 'history' && history.length > 1) history.back();
       else window.location.href = 'index.html';
     }
 
