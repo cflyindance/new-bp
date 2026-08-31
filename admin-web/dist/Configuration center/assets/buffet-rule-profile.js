@@ -105,7 +105,10 @@
     return DEFAULT_SCENARIOS.some(function (scenario) { return scenario.key === key; }) ? key : "";
   }
 
-  function scenarioKey(rule) {
+  // Keep default-rule coverage keys separate from the party/round scenario cell key below.
+  // Function declarations are hoisted, so sharing this name would make list seeding
+  // miss every existing default rule on the second load.
+  function defaultScenarioKeyForRule(rule) {
     if (!rule || (rule.status !== "active" && rule.status !== "disabled")) return "";
     var draft = rule.authoringConfig || rule.authoringDraft || rule.editorDraft || rule;
     var key = subjectTargetKey(draft.subject, draft.targetType);
@@ -117,7 +120,7 @@
 
   function missingScenarios(rules) {
     var covered = {};
-    (rules || []).forEach(function (rule) { var key = scenarioKey(rule); if (key) covered[key] = true; });
+    (rules || []).forEach(function (rule) { var key = defaultScenarioKeyForRule(rule); if (key) covered[key] = true; });
     return DEFAULT_SCENARIOS.filter(function (scenario) { return !covered[scenario.key]; });
   }
 
