@@ -63,7 +63,9 @@
 - 使用原型的面包屑式当前页面信息和紧凑右侧用户区。
 - 保留当前用户显示与嵌入行为，不新增全局搜索、管理员/只读切换或任务中心。
 - 删除当前独立的蓝色顶部页签条；页面间导航统一落入左侧 TipOut 子导航和页内返回入口。
-- 在独立明细页中，左侧“小费分配汇总”入口取代旧设计中的顶部“汇总”页签，并调用同一个 `returnToSummary()`：当 `from=summary` 且上一历史项包含 `tipoutSummaryUiState` 时恢复筛选、滚动和焦点，否则进入 `index.html`。规则列表和规则编辑页中的左侧导航保持普通页面链接。
+- 在独立明细页中，左侧“小费分配汇总”入口取代旧设计中的顶部“汇总”页签，并调用同一个 `returnToSummary()`。汇总页生成明细 URL 时固定追加 `from=summary&return=history`；这两个 URL 参数是明细页可观察的返回标记，取代旧设计中仅使用 `from=summary` 的约定。
+- `returnToSummary()` 不尝试读取浏览器不可见的上一历史项。当 `from=summary`、`return=history` 且 `history.length > 1` 时调用 `history.back()`；否则直接进入 `index.html`。回到汇总页后，由汇总页读取自己的 `history.state.tipoutSummaryUiState`：存在则恢复筛选、滚动和焦点，不存在则保留页面默认状态。规则列表和规则编辑页中的左侧导航保持普通页面链接。
+- 刷新明细页会保留上述 URL 标记；如果该标签页确实仍有上一历史项，可以返回并由汇总页自行校验状态。复制该 URL 到新标签页时 `history.length` 不满足条件，必须降级进入 `index.html`，不得回退到不相关页面。
 
 ### 5.3 响应式
 
