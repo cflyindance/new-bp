@@ -960,6 +960,9 @@
   }
 
   function buildPublishedDraft(draft) {
+    if (isBuffetProfile() && moduleProfile.lifecycle && typeof moduleProfile.lifecycle.buildPublishedDraft === "function") {
+      return moduleProfile.lifecycle.buildPublishedDraft(draft);
+    }
     var published = cloneValue(draft);
     normalizeStoreDraft(published);
     var deployIds = (published.deployStoreIds || []).filter(function (storeId) {
@@ -1083,8 +1086,11 @@
     built.deployStoreIds = storedDraft.deployStoreIds.slice();
     built.deployExcludedStoreIds = storedDraft.deployExcludedStoreIds.slice();
     built.legacyCompatibilityFallback = cloneStoreConfig(storedDraft.legacyCompatibilityFallback);
-    built.editorDraft = storedDraft;
-    if (status === "active") built.authoringDraft = authoringDraft;
+    // 作者草稿与发布态严格隔离：编辑保留全量门店，运行/冲突只读取 publishedConfig。
+    built.editorDraft = authoringDraft;
+    built.authoringDraft = authoringDraft;
+    built.authoringConfig = cloneValue(authoringDraft);
+    built.publishedConfig = status === "active" ? cloneValue(storedDraft) : null;
     var totalTargets = addedStoreIds(storedDraft).reduce(function (total, storeId) {
       return total + storedDraft.storeConfigs[storeId].targetIds.length;
     }, 0);
@@ -1137,6 +1143,9 @@
     if (sourceRuleId && !sourceRule) return null;
     var id = nextRuleId(rules);
     var editorDraft = draftFromRule(sourceRule);
+    if (isCopy && isBuffetProfile() && moduleProfile.lifecycle && typeof moduleProfile.lifecycle.prepareDraftCopy === "function") {
+      editorDraft = moduleProfile.lifecycle.prepareDraftCopy(editorDraft);
+    }
     if (isCopy && editorDraft.name) editorDraft.name += " (副本)";
     var draftRule = {
       id: id,
@@ -4051,6 +4060,88 @@
     }).join("；");
   }
 
+  function buffetPeriodSummaryLabel(period) {
+    return period === "order_lifetime" ? "整个订单" : period === "per_round" ? "每轮" : "分轮次";
+  }
+
+  function summaryLimit(cell) {
+    return cell && cell.configured ? "最多 " + cell.value + " 份" : "未配置";
+  }
+
+  function summaryBounds(cell, label) {
+    if (!cell || (!cell.minConfigured && !cell.maxConfigured)) return label + "未配置";
+    var parts = [];
+    if (cell.minConfigured) parts.push("最少 " + cell.min + " 份");
+    if (cell.maxConfigured) parts.push("最多 " + cell.max + " 份");
+    return label + parts.join("，");
+  }
+
+  function summaryTargetLimits(draft, config, combo, values) {
+    var scenario = v4ScenarioKey(combo.partyIndex, combo.roundIndex);
+    if (draft.targetType === "dish_set") {
+      var members = (config.dishSetMembers || []).map(function (item) { return item.name || item.dishName || item.dishId; });
+      return "菜品集（" + (draft.measureUnit === "kind" ? "按种" : "按份") + "，" + members.join("、") + "）：" + summaryLimit(values.targetLimits[scenario]);
+    }
+    return v4TargetsForConfig(draft, config).map(function (target) {
+      var key = v4TargetCellKey(combo.partyIndex, combo.roundIndex, target.lineId, target.id);
+      var cap = draft.subject === "party_size" ? values.tableTargetCaps[key] : null;
+      return (target.lineLabel || target.lineId) + " / " + (target.name || target.id) + "：" + summaryLimit(values.targetLimits[key]) + (cap && cap.configured ? "；整桌兜底最多 " + cap.value + " 份" : "");
+    }).join("；");
+  }
+
+  // 将每一家门店的实际周期值展开为可直接复核的文本；不以模板名称或完成格数代替真实规则。
+  function quantityPolicySummary(draft, storeId) {
+    if (!isBuffetV4Draft(draft)) return [];
+    var config = storeConfigFor(draft, storeId, false);
+    if (!config) return [];
+    return (draft.enabledPeriods || []).map(function (period) {
+      var policy = draft.periodPolicies && draft.periodPolicies[period] || { blocks: {} };
+      var blocks = policy.blocks || {};
+      var values = v4PeriodValues(config, period);
+      var rows = quantityScenarioIndexes(draft, period).map(function (combo) {
+        var scenario = v4ScenarioKey(combo.partyIndex, combo.roundIndex);
+        var items = [];
+        if (period !== "order_lifetime" && blocks.totalEnabled) {
+          items.push(summaryBounds(values.totalBounds[scenario], draft.subject === "party_size" ? "每人菜品总数：" : "菜品总数："));
+          if (draft.subject === "party_size" && hasConfiguredBoundCell(values.tableTotalBounds[scenario])) items.push(summaryBounds(values.tableTotalBounds[scenario], "整桌兜底："));
+        }
+        if (blocks.targetEnabled) items.push(summaryTargetLimits(draft, config, combo, values));
+        if (period !== "order_lifetime" && blocks.sameDishEnabled) {
+          var exceptions = v4ExceptionRows(values, scenario).map(function (row) {
+            var dish = v4ExceptionDish(row) || {};
+            return (dish.name || dish.dishName || dish.dishId) + " " + summaryLimit(row.limit);
+          });
+          var defaultLimit = values.defaultDishLimits[scenario];
+          items.push("相同菜品：默认" + summaryLimit(defaultLimit) + (exceptions.length ? "；例外 " + exceptions.join("、") : ""));
+        }
+        return { scenario: v4ScenarioTitle(draft, period, combo), text: items.join("；") || "未启用额度" };
+      });
+      return { period: period, title: buffetPeriodSummaryLabel(period), rows: rows };
+    });
+  }
+
+  function periodSummary(draft, storeIds) {
+    if (!isBuffetV4Draft(draft)) return periodLabel(draft.period);
+    var ids = storeIds || (Array.isArray(draft.deployStoreIds) && draft.deployStoreIds.length ? draft.deployStoreIds : addedStoreIds(draft));
+    var storesText = ids.map(function (storeId) {
+      var store = stores.find(function (item) { return item.id === storeId; });
+      return (store ? store.name : storeId) + "：" + quantityPolicySummary(draft, storeId).map(function (section) {
+        return section.title + "（" + section.rows.map(function (row) { return row.scenario + " " + row.text; }).join("；") + "）";
+      }).join("；");
+    });
+    return (draft.enabledPeriods || []).map(buffetPeriodSummaryLabel).join("＋") + (storesText.length ? "；" + storesText.join(" | ") : "");
+  }
+
+  function renderV4QuantityPolicySummary(draft, storeIds) {
+    return (storeIds || []).map(function (storeId) {
+      var store = stores.find(function (item) { return item.id === storeId; });
+      var sections = quantityPolicySummary(draft, storeId);
+      return '<section class="olf-section"><h3>' + esc(store ? store.name : storeId) + '</h3>' + sections.map(function (section) {
+        return '<div class="olf-review"><div class="olf-review-row"><span>' + esc(section.title) + '</span><strong>' + esc(section.rows.map(function (row) { return row.scenario + '：' + row.text; }).join('；')) + '</strong><span></span></div></div>';
+      }).join("") + '</section>';
+    }).join("");
+  }
+
   function renderStepSevenLegacy(draft) {
     var check = validateAll(draft);
     var completion = limitCompletion(draft);
@@ -4074,6 +4165,23 @@
   }
 
   function renderStepSeven(draft) {
+    if (isBuffetV4Draft(draft)) {
+      var check = validateAll(draft);
+      var completion = limitCompletion(draft, draft.deployStoreIds);
+      var authText = draft.authorization.enabled
+        ? draft.authorization.allowedScopes.map(function (scope) { return scope === "operation" ? "本次操作" : scope === "round" ? "当前轮" : "当前订单"; }).join(" / ")
+        : "不允许授权";
+      return '<div class="olf-content-head"><h2 tabindex="-1">确认规则并发布</h2></div>' +
+        '<div class="olf-summary ' + (check ? "olf-summary--danger" : "olf-summary--success") + '"><strong>' + (check ? "发布前检查未通过：" : "发布前检查通过：") + '</strong>' + esc(check ? check.message : "周期、实际数量、授权和生效门店均完整。") + (check ? ' <button type="button" class="olf-button olf-button--small" data-fix-step="' + check.step + '" style="margin-left:10px">前往修正</button>' : '') + '</div>' +
+        '<section class="olf-section"><div class="olf-review">' +
+        '<div class="olf-review-row"><span>规则</span><strong>' + esc(draft.name || "未命名规则") + '</strong><button class="olf-button olf-button--small" data-fix-step="1">编辑</button></div>' +
+        '<div class="olf-review-row"><span>计算方式</span><strong>' + esc(subjectLabel(draft.subject) + " · " + targetShortLabel(draft.targetType) + " · " + (draft.enabledPeriods || []).map(buffetPeriodSummaryLabel).join("＋")) + '</strong><button class="olf-button olf-button--small" data-fix-step="1">编辑</button></div>' +
+        '<div class="olf-review-row"><span>生效门店</span><strong>' + esc(namesFor(stores, draft.deployStoreIds) || "未选择") + '</strong><button class="olf-button olf-button--small" data-fix-step="5">编辑</button></div>' +
+        '<div class="olf-review-row"><span>数量完成度</span><strong>' + completion.complete + '/' + completion.total + ' 个实际数量项</strong><button class="olf-button olf-button--small" data-fix-step="3">编辑</button></div>' +
+        '<div class="olf-review-row"><span>超限授权</span><strong>' + esc(authText + (draft.authorization.enabled ? "，默认" + (draft.authorization.defaultScope === "operation" ? "本次操作" : draft.authorization.defaultScope === "round" ? "当前轮" : "当前订单") : "")) + '</strong><button class="olf-button olf-button--small" data-fix-step="4">编辑</button></div>' +
+        '</div></section><h3>按门店复核数量策略</h3>' + renderV4QuantityPolicySummary(draft, draft.deployStoreIds) +
+        '<div class="olf-summary olf-summary--primary"><strong>下一步：</strong>保存并下发后直接进入发布确认；只有已选择的生效门店会进入运行快照。</div>';
+    }
     var html = renderStepSevenLegacy(draft);
     var marker = '</div></section><div class="olf-summary olf-summary--primary">';
     var effectiveRow = '<div class="olf-review-row"><span>生效门店</span><strong>' + esc(namesFor(stores, draft.deployStoreIds) || '未选择') + '</strong><button class="olf-button olf-button--small" data-fix-step="5">编辑</button></div>';
@@ -5690,11 +5798,20 @@
     return moduleProfile.conflictPolicy.findConflict(draftRule.editorDraft, loadRules(), excluded);
   }
 
+  function validateBuffetStaticFeasibility(draft) {
+    if (!isBuffetV4Draft(draft) || !moduleProfile.conflictPolicy || typeof moduleProfile.conflictPolicy.validateStaticFeasibility !== "function") return null;
+    var result = moduleProfile.conflictPolicy.validateStaticFeasibility(draft);
+    if (result && !result.valid) return (result.violations[0] || {}).message || "当前额度与人数/轮次区间无法同时满足";
+    return null;
+  }
+
   function publishDraft(draftRule) {
     var deployError = validateDeployStores(draftRule.editorDraft);
     if (deployError) throw new Error(deployError);
     var conflict = validateBuffetRuleConflict(draftRule);
     if (conflict) throw new Error("当前商品或分类已存在冲突的自助餐规则");
+    var feasibilityError = validateBuffetStaticFeasibility(draftRule.editorDraft);
+    if (feasibilityError) throw new Error(feasibilityError);
     var rules = loadRules();
     var draftIndex = rules.findIndex(function (rule) { return String(rule.id) === String(draftRule.id); });
     if (draftIndex < 0) throw new Error("draft missing");
@@ -5723,9 +5840,12 @@
     if (check) { renderErrorState("规则校验未通过", check.message, "返回规则编辑", function () { go(moduleProfile.routes.editor + "?draftId=" + encodeURIComponent(draftRule.id)); }); return; }
     var conflict = validateBuffetRuleConflict(draftRule);
     if (conflict) { renderErrorState("规则存在冲突", "同一门店、产线和商品或分类已存在相同或互斥口径的生效规则。", "返回规则编辑", function () { go(moduleProfile.routes.editor + "?draftId=" + encodeURIComponent(draftRule.id)); }); return; }
+    var feasibilityError = validateBuffetStaticFeasibility(draft);
+    if (feasibilityError) { renderErrorState("规则无法生效", feasibilityError, "返回规则编辑", function () { go(moduleProfile.routes.editor + "?draftId=" + encodeURIComponent(draftRule.id)); }); return; }
     if (!draft.deployStoreIds.length) { renderErrorState("尚未选择生效门店", "请先在生效范围中选择至少一家门店。", "返回规则编辑", function () { go(moduleProfile.routes.editor + "?draftId=" + encodeURIComponent(draftRule.id)); }); return; }
     var completion = limitCompletion(draft, draft.deployStoreIds);
-    root.innerHTML = '<div class="olf-page">' + renderFlowHeader("确认发布", 100, "", "确认发布") + '<main class="olf-flow-main"><section class="olf-flow-card"><h2>发布前最终确认</h2><p class="olf-help">发布成功后将生成正式版本；仅本次选择的生效门店进入运行快照。</p><div class="olf-summary olf-summary--success"><strong>校验通过：</strong>规则结构、数量、授权和生效门店均完整。</div><section class="olf-section"><div class="olf-review"><div class="olf-review-row"><span>规则名称</span><strong>' + esc(draft.name) + '</strong><span></span></div><div class="olf-review-row"><span>计算方式</span><strong>' + esc(subjectLabel(draft.subject) + " × " + periodLabel(draft.period) + " × " + targetShortLabel(draft.targetType)) + '</strong><span></span></div><div class="olf-review-row"><span>商品范围</span><strong>' + esc(storeProductSummary(draft, draft.deployStoreIds)) + '</strong><span></span></div><div class="olf-review-row"><span>数量矩阵</span><strong>' + completion.complete + ' 个单元格已确认</strong><span></span></div><div class="olf-review-row"><span>生效门店</span><strong>' + esc(namesFor(stores, draft.deployStoreIds)) + '</strong><span></span></div><div class="olf-review-row"><span>授权范围</span><strong>' + esc(draft.authorization.enabled ? draft.authorization.allowedScopes.map(function (scope) { return scope === "operation" ? "本次操作" : scope === "round" ? "当前轮" : "当前订单"; }).join(" / ") : "硬性拒绝") + '</strong><span></span></div></div></section><div class="olf-summary olf-summary--warning"><strong>原子发布：</strong>若任一生效门店发布失败，本次不会形成混合版本，相关门店继续使用上一完整版本。</div></section></main></div>';
+    var v4PublishSummary = isBuffetV4Draft(draft) ? '<h3>按门店复核数量策略</h3>' + renderV4QuantityPolicySummary(draft, draft.deployStoreIds) : '';
+    root.innerHTML = '<div class="olf-page">' + renderFlowHeader("确认发布", 100, "", "确认发布") + '<main class="olf-flow-main"><section class="olf-flow-card"><h2>发布前最终确认</h2><p class="olf-help">发布成功后将生成正式版本；仅本次选择的生效门店进入运行快照。</p><div class="olf-summary olf-summary--success"><strong>校验通过：</strong>规则结构、数量、授权、生效门店、冲突与静态可满足性均完整。</div><section class="olf-section"><div class="olf-review"><div class="olf-review-row"><span>规则名称</span><strong>' + esc(draft.name) + '</strong><span></span></div><div class="olf-review-row"><span>计算方式</span><strong>' + esc(isBuffetV4Draft(draft) ? subjectLabel(draft.subject) + " · " + targetShortLabel(draft.targetType) + " · " + (draft.enabledPeriods || []).map(buffetPeriodSummaryLabel).join("＋") : subjectLabel(draft.subject) + " × " + periodLabel(draft.period) + " × " + targetShortLabel(draft.targetType)) + '</strong><span></span></div><div class="olf-review-row"><span>商品范围</span><strong>' + esc(storeProductSummary(draft, draft.deployStoreIds)) + '</strong><span></span></div><div class="olf-review-row"><span>数量矩阵</span><strong>' + completion.complete + ' 个实际数量项已确认</strong><span></span></div><div class="olf-review-row"><span>生效门店</span><strong>' + esc(namesFor(stores, draft.deployStoreIds)) + '</strong><span></span></div><div class="olf-review-row"><span>授权范围</span><strong>' + esc(draft.authorization.enabled ? draft.authorization.allowedScopes.map(function (scope) { return scope === "operation" ? "本次操作" : scope === "round" ? "当前轮" : "当前订单"; }).join(" / ") : "硬性拒绝") + '</strong><span></span></div></div></section>' + v4PublishSummary + '<div class="olf-summary olf-summary--warning"><strong>原子发布：</strong>若任一生效门店发布失败，本次不会形成混合版本，相关门店继续使用上一完整版本。</div></section></main></div>';
     document.getElementById("flowBackButton").addEventListener("click", function () { go(moduleProfile.routes.editor + "?draftId=" + encodeURIComponent(draftRule.id)); });
     document.getElementById("flowPrimaryButton").addEventListener("click", function () {
       var button = this;
@@ -5747,6 +5867,14 @@
       }, 500);
     });
   }
+
+  // 供生命周期回归脚本及宿主的发布复核页面读取；旧版规则仍走原有摘要。
+  window.BuffetRuleLifecycle = {
+    periodSummary: periodSummary,
+    quantityPolicySummary: quantityPolicySummary,
+    buildPublishedDraft: buildPublishedDraft,
+    validateStaticFeasibility: validateBuffetStaticFeasibility
+  };
 
   if (page === "editor") mountEditor();
   else if (page === "stores") mountStores();

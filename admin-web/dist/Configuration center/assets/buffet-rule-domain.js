@@ -190,6 +190,20 @@
     });
   }
 
+  // 作者草稿可保留未生效门店；冲突检测和运行态只允许读取已裁剪的发布配置。
+  function publishedConfig(recordOrConfig) {
+    if (!recordOrConfig || typeof recordOrConfig !== "object") return {};
+    var source = recordOrConfig.publishedConfig || recordOrConfig.editorDraft || recordOrConfig.authoringConfig || recordOrConfig.authoringDraft || recordOrConfig;
+    if (!isV4Rule(source)) return source;
+    var deployStoreIds = Array.isArray(source.deployStoreIds) ? source.deployStoreIds : [];
+    var config = Object.assign({}, source, { storeConfigs: {} });
+    deployStoreIds.forEach(function (storeId) {
+      if (source.storeConfigs && source.storeConfigs[storeId]) config.storeConfigs[storeId] = source.storeConfigs[storeId];
+    });
+    config.deployStoreIds = deployStoreIds.filter(function (storeId) { return !!config.storeConfigs[storeId]; });
+    return config;
+  }
+
   function v4Conflict(candidate, existing, record) {
     if (candidate.subject !== existing.subject) return null;
     if (candidate.targetType !== existing.targetType) return null;
@@ -218,12 +232,13 @@
   }
 
   function findConflict(candidate, records, excludeIds) {
+    candidate = publishedConfig(candidate);
     var candidateTargets = targetEntries(candidate);
     var excluded = (excludeIds || []).map(String);
     for (var index = 0; index < (records || []).length; index += 1) {
       var record = records[index];
       if (!record || record.status !== "active" || excluded.indexOf(String(record.id)) >= 0) continue;
-      var existing = record.authoringConfig || record.authoringDraft || record.editorDraft || record;
+      var existing = publishedConfig(record);
       if (isV4Rule(candidate) || isV4Rule(existing)) {
         var v4Result = v4Conflict(candidate, existing, record);
         if (v4Result) return v4Result;
@@ -786,7 +801,7 @@
 
   function compileRuntimeRules(records, version) {
     return (records || []).filter(function (record) { return record && record.status === "active"; }).map(function (record) {
-      var config = record.authoringConfig || record.authoringDraft || record.editorDraft || record;
+      var config = publishedConfig(record);
       var runtime = {
         id: record.id,
         version: record.version == null ? version : record.version,
@@ -820,6 +835,7 @@
     mouthsConflict: mouthsConflict,
     conditionsOverlap: conditionsOverlap,
     targetEntries: targetEntries,
+    publishedConfig: publishedConfig,
     findConflict: findConflict,
     validateStaticFeasibility: validateStaticFeasibility,
     validateAuthorizationCredential: validateAuthorizationCredential,
