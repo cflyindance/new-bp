@@ -37,7 +37,6 @@ function factory(scenario, id) {
     authoringConfig: {
       subject: scenario.subject,
       period: scenario.period,
-      constraintKind: scenario.constraintKind,
       targetType: scenario.targetType,
       partyRanges: [{ min: 1, max: null }],
       roundRanges: [{ min: 1, max: null }],
@@ -53,9 +52,9 @@ const profile = loadProfile(storage);
 const repository = profile.repository;
 
 const first = repository.loadForAuthoringList(profile.createDefaultScenarioRule);
-assert.equal(first.length, 19);
+assert.equal(first.length, 12);
 assert.equal(first.every((rule) => rule.status === "disabled"), true);
-assert.equal(new Set(first.map((rule) => rule.defaultScenarioKey)).size, 19);
+assert.equal(new Set(first.map((rule) => rule.defaultScenarioKey)).size, 12);
 assert.equal(storage.getItem(menuKey), "menu-rules-must-not-change");
 const firstEnvelope = repository.readEnvelope();
 assert.equal(firstEnvelope.revision, 1);
@@ -65,7 +64,7 @@ assert.deepEqual(Object.keys(firstEnvelope.snapshots), []);
 const serialized = storage.getItem(repositoryKey);
 const writesBeforeSecondLoad = storage.writes;
 const second = repository.loadForAuthoringList(profile.createDefaultScenarioRule);
-assert.equal(second.length, 19);
+assert.equal(second.length, 12);
 assert.equal(storage.getItem(repositoryKey), serialized, "场景完整时不得改写仓库");
 assert.equal(storage.writes, writesBeforeSecondLoad, "幂等加载不得产生 storage 写入");
 
@@ -81,16 +80,16 @@ const partialStorage = storageMock({
 });
 const partialRepository = loadProfile(partialStorage).repository;
 const partial = partialRepository.loadForAuthoringList(factory);
-assert.equal(partial.length, 20, "1 条正式规则、1 条草稿和 18 条补齐规则");
+assert.equal(partial.length, 13, "1 条正式规则、1 条草稿和 11 条补齐规则");
 const partialEnvelope = partialRepository.readEnvelope();
 assert.equal(partialEnvelope.revision, 8);
 assert.equal(partialEnvelope.rules.find((rule) => rule.id === 41).name, "已有规则");
 assert.equal(partialEnvelope.drafts.length, 1);
 assert.equal(partialEnvelope.currentSnapshotId, "stable");
 assert.deepEqual(partialEnvelope.snapshots, { stable: { snapshotId: "stable", rules: [{ id: 41 }] } });
-assert.equal(partialEnvelope.rules.some((rule) => rule.defaultScenarioKey === "order|order_lifetime|target_max|dish"), true, "草稿不应阻止正式默认规则补齐");
+assert.equal(partialEnvelope.rules.some((rule) => rule.defaultScenarioKey === "order|order_lifetime|dish"), true, "草稿不应阻止正式默认规则补齐");
 assert.equal(first.every((rule) => rule.authoringConfig && rule.editorDraft), true, "默认规则必须包含完整作者态配置");
-assert.equal(first.find((rule) => rule.defaultScenarioKey === "party_size|multi_round|target_max|dish").authoringConfig.roundRanges.length, 1);
+assert.equal(first.find((rule) => rule.defaultScenarioKey === "party_size|multi_round|dish").authoringConfig.roundRanges.length, 1);
 
 assert.match(listSource, /loadForAuthoringList/);
 console.log("verify-buffet-default-scenario-rules: OK");
