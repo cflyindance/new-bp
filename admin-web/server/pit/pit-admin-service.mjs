@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import {
   randomBytes,
   randomUUID,
@@ -5,6 +7,7 @@ import {
 } from "node:crypto";
 import { promisify } from "node:util";
 import { listAuditEvents, recordAuditEvent } from "./pit-audit-service.mjs";
+import { verifyPitBackup } from "./pit-backup-service.mjs";
 import { withImmediateTransaction } from "./pit-database.mjs";
 import {
   notFound,
@@ -141,6 +144,7 @@ function normalizeAuditQuery(query) {
 
 export function createPitAdminService({
   db,
+  config = {},
   clock = () => new Date(),
 }) {
   function now() {
@@ -503,7 +507,7 @@ export function createPitAdminService({
     return listAuditEvents(db, normalizeAuditQuery(query || {}));
   }
 
-  function health() {
+  async function health() {
     let database;
     try {
       const integrity = db.prepare("PRAGMA quick_check").get()?.quick_check;
@@ -520,12 +524,47 @@ export function createPitAdminService({
     let backup = { status: "missing", lastCreatedAt: null };
     try {
       const latest = db.prepare(`
-        SELECT created_at, schema_version, byte_size
+        SELECT file_name, manifest_name, sha256, created_at, schema_version, byte_size
         FROM backup_records ORDER BY created_at DESC, id DESC LIMIT 1
       `).get();
       if (latest) {
+        const directory = path.resolve(config.backupsDir || path.join(config.dataDir || ".data/pit", "backups"));
+        const safePath = (fileName) => {
+          if (typeof fileName !== "string" || path.basename(fileName) !== fileName) return null;
+          const candidate = path.resolve(directory, fileName);
+          const relative = path.relative(directory, candidate);
+          return relative.startsWith("..") || path.isAbsolute(relative) ? null : candidate;
+        };
+        const filePath = safePath(latest.file_name);
+        const manifestPath = safePath(latest.manifest_name);
+        let status = "ok";
+        if (!filePath || !manifestPath) status = "invalid_path";
+        else if (path.resolve(filePath.replace(/\.sqlite3$/i, ".manifest.json")) !== manifestPath) status = "invalid_path";
+        else if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) status = "missing_file";
+        else if (!fs.existsSync(manifestPath) || !fs.statSync(manifestPath).isFile()) status = "missing_manifest";
+        else {
+          try {
+            const realDirectory = fs.realpathSync(directory);
+            const isInsideDirectory = (candidate) => {
+              const relative = path.relative(realDirectory, fs.realpathSync(candidate));
+              return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+            };
+            if (!isInsideDirectory(filePath) || !isInsideDirectory(manifestPath)) {
+              status = "invalid_path";
+              throw new Error("PIT backup path escapes the backup directory");
+            }
+            const verified = await verifyPitBackup(filePath, latest.schema_version);
+            if (
+              verified.size !== Number(latest.byte_size)
+              || verified.schemaVersion !== Number(latest.schema_version)
+              || verified.sha256 !== latest.sha256
+            ) throw new Error("PIT backup catalog does not match the verified file");
+          } catch {
+            if (status === "ok") status = "verification_failed";
+          }
+        }
         backup = {
-          status: "ok",
+          status,
           lastCreatedAt: latest.created_at,
           schemaVersion: latest.schema_version,
           byteSize: latest.byte_size,
@@ -536,7 +575,7 @@ export function createPitAdminService({
     }
 
     return {
-      status: database.status === "ok" ? "ok" : "degraded",
+      status: database.status === "ok" && new Set(["ok", "missing"]).has(backup.status) ? "ok" : "degraded",
       process: {
         status: "ok",
         uptimeSeconds: Math.floor(process.uptime()),

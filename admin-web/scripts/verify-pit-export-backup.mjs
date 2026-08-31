@@ -16,7 +16,7 @@ import {
 import { PIT_EXPORT_COLUMNS } from "../server/pit/pit-export-service.mjs";
 import { restorePitDatabase } from "../server/pit-restore.mjs";
 import { openPitDatabase, setSystemSetting } from "../server/pit/pit-database.mjs";
-import { startPitTestServer } from "./lib/pit-test-server.mjs";
+import { requestPitHttp, startPitTestServer } from "./lib/pit-test-server.mjs";
 
 const nodeMajor = Number(process.versions.node.split(".")[0]);
 assert(nodeMajor >= 24, `PIT verification requires Node 24+, received ${process.versions.node}`);
@@ -47,7 +47,7 @@ function createClient() {
       headers.set("content-type", "application/json");
       payload = JSON.stringify(body);
     }
-    const response = await fetch(`${server.baseUrl}${requestPath}`, { method, headers, body: payload });
+    const response = await requestPitHttp(`${server.baseUrl}${requestPath}`, { method, headers, body: payload });
     const bytes = Buffer.from(await response.arrayBuffer());
     const contentType = String(response.headers.get("content-type") || "");
     const responseBody = contentType.includes("application/json") && bytes.length

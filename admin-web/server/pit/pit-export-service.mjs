@@ -161,6 +161,77 @@ function removeIfPresent(filePath) {
   }
 }
 
+export function cleanupExpiredPitExports({ db, config, clock = () => new Date() }) {
+  if (!db) throw new TypeError("cleanupExpiredPitExports requires db");
+  const directory = exportDirectory(config);
+  const now = dateFromClock(clock);
+  const rows = db.prepare(`
+    SELECT id, file_name
+    FROM export_jobs
+    WHERE expires_at IS NOT NULL AND expires_at <= ? AND file_name IS NOT NULL
+  `).all(now.toISOString());
+  const removed = [];
+  const skipped = [];
+  for (const row of rows) {
+    try {
+      removeIfPresent(safeStoredPath(directory, row.file_name));
+      removed.push(row.id);
+    } catch {
+      // Preserve the history row and skip unsafe/corrupt catalog paths.
+      skipped.push(row.id);
+    }
+  }
+  return { removed, skipped };
+}
+
+export function scheduleExpiredPitExportCleanup({
+  db,
+  config,
+  logger = console,
+  clock = () => new Date(),
+  intervalMs = 60 * 60 * 1000,
+}) {
+  if (!Number.isSafeInteger(intervalMs) || intervalMs < 1_000) {
+    throw new TypeError("intervalMs must be an integer of at least 1000 milliseconds");
+  }
+  let stopped = false;
+  let timer = null;
+  let currentRun = null;
+  function runNow() {
+    if (currentRun) return currentRun;
+    currentRun = Promise.resolve()
+      .then(() => cleanupExpiredPitExports({ db, config, clock }))
+      .finally(() => { currentRun = null; });
+    return currentRun;
+  }
+  function arm() {
+    if (stopped) return;
+    timer = setTimeout(async () => {
+      try {
+        await runNow();
+      } catch (error) {
+        logger?.error?.("PIT expired export cleanup failed", error);
+      } finally {
+        arm();
+      }
+    }, intervalMs);
+    timer.unref?.();
+  }
+  const ready = runNow().catch((error) => {
+    logger?.error?.("PIT expired export cleanup failed", error);
+    return { removed: [], skipped: [], failed: true };
+  }).finally(arm);
+  return {
+    ready,
+    runNow,
+    async stop() {
+      stopped = true;
+      if (timer) clearTimeout(timer);
+      await currentRun?.catch(() => undefined);
+    },
+  };
+}
+
 export function createPitExportService({ db, config, clock = () => new Date() }) {
   const directory = exportDirectory(config);
 

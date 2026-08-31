@@ -133,6 +133,7 @@ function attachEmbeddedStaticMiddleware(
 
 const usePayrollApiProxy = process.env.PAYROLL_USE_API_PROXY === "1";
 const useEmenuLocalApiProxy = process.env.EMENU_LOCAL_USE_API_PROXY === "1";
+const usePitApiProxy = process.env.PIT_USE_API_PROXY === "1";
 /** 嵌入 emenu-new / kiosklite 的 /kpos API·WS 转发到 POS（默认本机；可用 cookie / EMENU_KPOS_PROXY_TARGET 覆盖） */
 const emenuKposProxyTarget = process.env.EMENU_KPOS_PROXY_TARGET || "http://localhost:22080";
 const EMENU_KPOS_HOST_COOKIE = "menusifu-emenu-kpos-target";
@@ -283,6 +284,16 @@ export default defineConfig({
             "/api/v1/emenu-local/seasoning": {
               target: "http://127.0.0.1:3011",
               changeOrigin: true,
+            },
+          }
+        : {}),
+      ...(usePitApiProxy
+        ? {
+            "/api/v1/pit": {
+              target: "http://127.0.0.1:3020",
+              // Preserve the browser-facing Vite Host so PIT's strict Origin/Host
+              // comparison continues to protect write requests in development.
+              changeOrigin: false,
             },
           }
         : {}),

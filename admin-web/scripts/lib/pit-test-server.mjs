@@ -5,6 +5,58 @@ import path from "node:path";
 import { openPitDatabase } from "../../server/pit/pit-database.mjs";
 import { createPitRouter } from "../../server/pit/pit-router.mjs";
 
+export function requestPitHttp(input, {
+  method = "GET",
+  headers: inputHeaders = {},
+  body,
+  timeoutMs = 10_000,
+} = {}) {
+  const target = new URL(input);
+  if (target.protocol !== "http:") {
+    throw new TypeError("PIT test HTTP client only supports http:// URLs");
+  }
+  const headers = new Headers(inputHeaders);
+  let payload;
+  if (body !== undefined) {
+    payload = Buffer.isBuffer(body) ? body : Buffer.from(body);
+    if (!headers.has("content-length")) headers.set("content-length", String(payload.byteLength));
+  }
+  return new Promise((resolve, reject) => {
+    const request = http.request({
+      protocol: target.protocol,
+      hostname: target.hostname,
+      port: target.port,
+      method,
+      path: `${target.pathname}${target.search}`,
+      headers: Object.fromEntries(headers.entries()),
+    }, (response) => {
+      const chunks = [];
+      response.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
+      response.once("error", reject);
+      response.on("end", () => {
+        const bytes = Buffer.concat(chunks);
+        const responseHeaders = new Headers();
+        for (let index = 0; index < response.rawHeaders.length; index += 2) {
+          responseHeaders.append(response.rawHeaders[index], response.rawHeaders[index + 1]);
+        }
+        resolve({
+          status: response.statusCode || 0,
+          headers: responseHeaders,
+          arrayBuffer: async () => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength),
+          text: async () => bytes.toString("utf8"),
+          json: async () => JSON.parse(bytes.toString("utf8")),
+        });
+      });
+    });
+    request.once("error", reject);
+    request.setTimeout(timeoutMs, () => {
+      request.destroy(new Error(`PIT test HTTP request timed out after ${timeoutMs}ms`));
+    });
+    if (payload) request.end(payload);
+    else request.end();
+  });
+}
+
 export async function startPitTestServer({
   setupToken = "pit-test-setup-token",
   clock = () => new Date(),
@@ -70,7 +122,7 @@ export async function startPitTestServer({
       if (!headers.has("content-type")) headers.set("content-type", "application/json");
     }
 
-    const response = await fetch(`${baseUrl}${requestPath}`, { method, headers, body });
+    const response = await requestPitHttp(`${baseUrl}${requestPath}`, { method, headers, body });
     const bytes = Buffer.from(await response.arrayBuffer());
     const responseType = String(response.headers.get("content-type") || "").toLowerCase();
     const text = bytes.toString("utf8");

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { startPitTestServer } from "./lib/pit-test-server.mjs";
+import { requestPitHttp, startPitTestServer } from "./lib/pit-test-server.mjs";
 
 const clock = { now: new Date("2026-08-31T08:00:00.000Z") };
 const server = await startPitTestServer({
@@ -21,7 +21,7 @@ function createClient() {
       headers.set("content-type", "application/json");
       payload = JSON.stringify(body);
     }
-    const response = await fetch(`${server.baseUrl}${requestPath}`, { method, headers, body: payload });
+    const response = await requestPitHttp(`${server.baseUrl}${requestPath}`, { method, headers, body: payload });
     const responseBody = await response.json();
     const setCookie = response.headers.get("set-cookie");
     if (setCookie) {

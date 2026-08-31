@@ -204,7 +204,8 @@ export function enforcePitBackupRetention({ db, config }) {
 export function scheduleDailyPitBackup({ db, config, logger = console, clock = () => new Date() }) {
   let stopped = false;
   let timer = null;
-  async function runNow() {
+  let currentRun = null;
+  async function performRun() {
     const date = dateFromClock(clock);
     const dayStart = new Date(date);
     dayStart.setHours(0, 0, 0, 0);
@@ -218,6 +219,13 @@ export function scheduleDailyPitBackup({ db, config, logger = console, clock = (
     const created = await createPitBackup({ db, config, kind: "daily", clock });
     enforcePitBackupRetention({ db, config });
     return created;
+  }
+  function runNow() {
+    if (currentRun) return currentRun;
+    currentRun = performRun().finally(() => {
+      currentRun = null;
+    });
+    return currentRun;
   }
   function arm() {
     if (stopped) return;
@@ -243,9 +251,10 @@ export function scheduleDailyPitBackup({ db, config, logger = console, clock = (
   return {
     ready,
     runNow,
-    stop() {
+    async stop() {
       stopped = true;
       if (timer) clearTimeout(timer);
+      await currentRun?.catch(() => undefined);
     },
   };
 }

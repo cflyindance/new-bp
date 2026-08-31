@@ -39,7 +39,7 @@ export function createPitRouter({
   sourceIp = (req) => req.socket?.remoteAddress || "unknown",
 }) {
   const auth = createPitAuthService({ db, setupToken, clock });
-  const admin = createPitAdminService({ db, clock });
+  const admin = createPitAdminService({ db, config, clock });
   const requirements = createPitRequirementService({ db, clock });
   const exportService = createPitExportService({ db, config, clock });
   const importService = createPitImportService({ db, config, clock });
@@ -131,7 +131,7 @@ export function createPitRouter({
 
     try {
       if (method === "GET" && path === "/health") {
-        sendData(res, requestId, admin.health());
+        sendData(res, requestId, await admin.health());
         return true;
       }
 
