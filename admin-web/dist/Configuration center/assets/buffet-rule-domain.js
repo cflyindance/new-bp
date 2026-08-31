@@ -344,8 +344,8 @@
     var rows = values.exceptionDishLimits && values.exceptionDishLimits[scenario] || [];
     var identity = menuIdentity(dish);
     var row = rows.find(function (candidate) {
-      var member = candidate && Array.isArray(candidate.dishes) ? candidate.dishes[0] : candidate && candidate.dish;
-      return member && menuIdentity(member) === identity;
+      var members = candidate && Array.isArray(candidate.dishes) ? candidate.dishes : [candidate && candidate.dish];
+      return members.some(function (member) { return member && menuIdentity(member) === identity; });
     });
     return row ? row.limit : values.defaultDishLimits && values.defaultDishLimits[scenario];
   }
@@ -484,9 +484,17 @@
   function validateAuthorizationCredential(credential, violations, context) {
     if (!credential || !Array.isArray(credential.ruleRefs)) return false;
     if (credential.storeId !== context.storeId || credential.orderId !== context.orderId) return false;
+    if (["operation", "round", "order"].indexOf(credential.scope) < 0) return false;
+    if (credential.scope === "operation" && (credential.operationId == null || credential.operationId !== context.operationId)) return false;
     if (credential.scope === "round" && (context.roundNo == null || credential.roundNo !== context.roundNo)) return false;
     return (violations || []).every(function (violation) {
-      return credential.ruleRefs.some(function (ref) { return ref.id === violation.ruleId && ref.version === violation.ruleVersion; });
+      // 整单额度没有“当前轮”授权：轮次凭证不能放行整个订单的累计上限。
+      if (credential.scope === "round" && violation.period === "order_lifetime") return false;
+      if (!Array.isArray(violation.allowedScopes) || violation.allowedScopes.indexOf(credential.scope) < 0) return false;
+      return credential.ruleRefs.some(function (ref) {
+        return ref && ref.id === violation.ruleId && ref.version === violation.ruleVersion && ref.period === violation.period && ref.target === violation.target &&
+          Number.isFinite(Number(ref.approvedQuantity)) && Number(ref.approvedQuantity) >= Number(violation.used || 0);
+      });
     });
   }
 
@@ -568,6 +576,171 @@
     return { valid: true, value: configured * context.partySize };
   }
 
+  function nonNegativeQuantity(value) {
+    var parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  function itemKey(item) {
+    return menuIdentity(item);
+  }
+
+  function candidateItems(history, changes) {
+    var buckets = Object.create(null);
+    (history || []).forEach(function (item) {
+      var key = itemKey(item);
+      if (!key || key === "|") return;
+      var current = buckets[key] || { productLineId: identityPart(item.productLineId), dishId: identityPart(item.dishId), categoryId: identityPart(item.categoryId), quantity: 0 };
+      current.quantity += nonNegativeQuantity(item.quantity);
+      buckets[key] = current;
+    });
+    (changes || []).forEach(function (item) {
+      var key = itemKey(item);
+      if (!key || key === "|") return;
+      var current = buckets[key] || { productLineId: identityPart(item.productLineId), dishId: identityPart(item.dishId), categoryId: identityPart(item.categoryId), quantity: 0 };
+      current.quantity += nonNegativeQuantity(item.quantity);
+      buckets[key] = current;
+    });
+    Object.keys(buckets).forEach(function (key) { buckets[key].quantity = Math.max(0, buckets[key].quantity); });
+    return buckets;
+  }
+
+  function candidateArray(bucket) {
+    return Object.keys(bucket || {}).map(function (key) { return bucket[key]; });
+  }
+
+  function v4Scenario(rule, period, context) {
+    var partyIndex = rule.subject === "party_size" ? matchingRangeIndex(rule.partyRanges, context.partySize) : 0;
+    if (partyIndex < 0) return { valid: false, code: rule.subject === "party_size" ? "PARTY_RANGE_INVALID" : "SCENARIO_INVALID" };
+    var roundIndex = 0;
+    if (period === "multi_round") {
+      if (!Number.isInteger(context.roundNo) || context.roundNo < 1) return { valid: false, code: "ROUND_REQUIRED" };
+      roundIndex = matchingRangeIndex(rule.roundRanges, context.roundNo);
+      if (roundIndex < 0) return { valid: false, code: "ROUND_RANGE_INVALID" };
+    }
+    if ((period === "per_round" || period === "multi_round") && (!Number.isInteger(context.roundNo) || context.roundNo < 1)) return { valid: false, code: "ROUND_REQUIRED" };
+    if (rule.subject === "party_size" && (!Number.isInteger(context.partySize) || context.partySize < 1)) return { valid: false, code: "PARTY_SIZE_REQUIRED" };
+    return { valid: true, partyIndex: partyIndex, roundIndex: roundIndex, key: scenarioKey(partyIndex, roundIndex) };
+  }
+
+  function hasTarget(rule, config, item) {
+    if (rule.targetType === "dish_set") {
+      return (config.dishSetMembers || []).some(function (member) { return menuIdentity(member) === menuIdentity(item); });
+    }
+    if (rule.targetType === "category") {
+      return (config.categoryTargets || []).some(function (category) { return categoryIdentity(category) === categoryIdentity(item); });
+    }
+    return (config.dishTargets || []).some(function (dish) { return menuIdentity(dish) === menuIdentity(item); });
+  }
+
+  function bucketForPeriod(period, candidates) {
+    return period === "order_lifetime" ? candidates.order : candidates.round;
+  }
+
+  function violation(rule, period, code, extras) {
+    var authorization = rule.authorization || {};
+    var result = {
+      ruleId: rule.id,
+      ruleVersion: rule.version,
+      period: period,
+      target: "__total__",
+      code: code,
+      allowedScopes: Array.isArray(authorization.allowedScopes) ? authorization.allowedScopes.slice() : []
+    };
+    Object.keys(extras || {}).forEach(function (key) { result[key] = extras[key]; });
+    return result;
+  }
+
+  function v4TargetLimit(values, rule, scenario, item, partyIndex, roundIndex, partySize) {
+    var key = rule.targetType === "dish_set"
+      ? scenario
+      : targetCellKey(partyIndex, roundIndex, item.productLineId, rule.targetType === "dish" ? item.dishId : item.categoryId);
+    return effectiveCellLimit(values.targetLimits && values.targetLimits[key], values.tableTargetCaps && values.tableTargetCaps[key], rule.subject, partySize);
+  }
+
+  function v4RuntimeViolations(rule, input, candidates) {
+    var context = input.context;
+    if (rule.deployStoreIds && rule.deployStoreIds.indexOf(context.storeId) < 0) return [];
+    var config = rule.storeConfigs && rule.storeConfigs[context.storeId];
+    if (!config) return [];
+    var violations = [];
+    rulePeriods(rule).forEach(function (period) {
+      var scenario = v4Scenario(rule, period, context);
+      if (!scenario.valid) {
+        violations.push(violation(rule, period, scenario.code));
+        return;
+      }
+      var values = scenarioValues(config, period);
+      var blocks = v4Blocks(rule, period);
+      var bucketItems = candidateArray(bucketForPeriod(period, candidates));
+      var items = bucketItems.filter(function (item) { return hasTarget(rule, config, item); });
+      // “每轮菜品总数”是整轮点单的总量；它不随着本规则的菜品/分类/菜品集选择范围收缩。
+      // 指定对象额度和单品保护才只统计已选范围。
+      var total = bucketItems.reduce(function (sum, item) { return sum + Math.max(0, item.quantity); }, 0);
+      var checkMaximum = input.phase === "add" || input.phase === "change" || input.phase === "submit_round" || input.phase === "close_round" || input.phase === "next_round" || input.phase === "checkout_with_open_round";
+      var checkMinimum = (input.phase === "submit_round" || input.phase === "close_round" || input.phase === "next_round" || input.phase === "checkout_with_open_round") && total > 0;
+
+      if (blocks.totalEnabled) {
+        var totalBounds = effectiveBounds(values.totalBounds && values.totalBounds[scenario.key], values.tableTotalBounds && values.tableTotalBounds[scenario.key], rule.subject, context.partySize);
+        if (checkMaximum && totalBounds.max != null && total > totalBounds.max) violations.push(violation(rule, period, "TOTAL_LIMIT_EXCEEDED", { used: total, effectiveLimit: totalBounds.max }));
+        if (checkMinimum && totalBounds.min != null && total < totalBounds.min) violations.push(violation(rule, period, "TOTAL_MIN_NOT_MET", { used: total, effectiveLimit: totalBounds.min }));
+      }
+
+      if (blocks.targetEnabled && checkMaximum) {
+        if (rule.targetType === "dish_set") {
+          var targetValue = rule.measureUnit === "kind"
+            ? items.filter(function (item) { return item.quantity > 0; }).length
+            : items.reduce(function (sum, item) { return sum + item.quantity; }, 0);
+          var setLimit = v4TargetLimit(values, rule, scenario.key, items[0] || {}, scenario.partyIndex, scenario.roundIndex, context.partySize);
+          if (setLimit !== Infinity && targetValue > setLimit) violations.push(violation(rule, period, "TARGET_LIMIT_EXCEEDED", { target: "__dish_set__", used: targetValue, effectiveLimit: setLimit }));
+        } else if (rule.targetType === "category") {
+          (config.categoryTargets || []).forEach(function (category) {
+            var categoryItems = items.filter(function (item) { return categoryIdentity(item) === categoryIdentity(category); });
+            var categoryTotal = categoryItems.reduce(function (sum, item) { return sum + item.quantity; }, 0);
+            var categoryLimit = v4TargetLimit(values, rule, scenario.key, category, scenario.partyIndex, scenario.roundIndex, context.partySize);
+            if (categoryLimit !== Infinity && categoryTotal > categoryLimit) violations.push(violation(rule, period, "TARGET_LIMIT_EXCEEDED", { target: categoryIdentity(category), used: categoryTotal, effectiveLimit: categoryLimit }));
+          });
+        } else {
+          items.forEach(function (item) {
+            var dishLimit = v4TargetLimit(values, rule, scenario.key, item, scenario.partyIndex, scenario.roundIndex, context.partySize);
+            if (dishLimit !== Infinity && item.quantity > dishLimit) violations.push(violation(rule, period, "TARGET_LIMIT_EXCEEDED", { target: menuIdentity(item), used: item.quantity, effectiveLimit: dishLimit }));
+          });
+        }
+      }
+
+      if (blocks.sameDishEnabled && checkMaximum) {
+        items.forEach(function (item) {
+          var dishLimit = effectiveCellLimit(exceptionLimit(values, scenario.key, item), null, rule.subject, context.partySize);
+          if (dishLimit !== Infinity && item.quantity > dishLimit) violations.push(violation(rule, period, "SAME_DISH_LIMIT_EXCEEDED", { target: menuIdentity(item), used: item.quantity, effectiveLimit: dishLimit }));
+        });
+      }
+    });
+    return violations;
+  }
+
+  function authorizedUpperViolations(credential, violations, context) {
+    var upperCodes = { TOTAL_LIMIT_EXCEEDED: true, TARGET_LIMIT_EXCEEDED: true, SAME_DISH_LIMIT_EXCEEDED: true, LIMIT_EXCEEDED: true };
+    if (!credential || !validateAuthorizationCredential(credential, violations.filter(function (item) { return upperCodes[item.code]; }), context)) return violations;
+    return violations.filter(function (item) { return !upperCodes[item.code]; });
+  }
+
+  function evaluateV4Batch(input) {
+    var candidates = { order: candidateItems(input.counters && input.counters.order, input.items), round: candidateItems(input.counters && input.counters.round, input.items) };
+    var violations = [];
+    (input.rules || []).forEach(function (rule) {
+      if (isV4Rule(rule)) violations = violations.concat(v4RuntimeViolations(rule, input, candidates));
+    });
+    var authorizationContext = Object.assign({}, input.context, { operationId: input.operationId });
+    violations = authorizedUpperViolations(input.authorizationCredential, violations, authorizationContext);
+    return {
+      allowed: violations.length === 0,
+      moduleId: "buffet-rule",
+      violations: violations,
+      candidate: candidates,
+      acceptedItems: violations.length === 0 ? (input.items || []) : undefined
+    };
+  }
+
   function evaluateBatch(input) {
     var selection = selectRuntimeModule(input.context);
     if (!selection.allowed) return selection;
@@ -576,8 +749,10 @@
     if ((input.processedOperationIds || []).indexOf(input.operationId) >= 0) {
       return { allowed: true, moduleId: selection.moduleId, duplicate: true, violations: [] };
     }
-    var violations = [];
+    var v4Result = (input.rules || []).some(isV4Rule) ? evaluateV4Batch(input) : null;
+    var violations = v4Result ? v4Result.violations.slice() : [];
     (input.rules || []).forEach(function (rule) {
+      if (isV4Rule(rule)) return;
       var limit = effectiveLimit(rule, input.context);
       if (!limit.valid) {
         violations.push({ ruleId: rule.id, ruleVersion: rule.version, code: limit.code });
@@ -600,15 +775,21 @@
         violations.push({ ruleId: rule.id, ruleVersion: rule.version, code: "LIMIT_EXCEEDED", used: used, increment: increment, effectiveLimit: limit.value });
       }
     });
-    return { allowed: violations.length === 0, moduleId: selection.moduleId, violations: violations };
+    return {
+      allowed: violations.length === 0,
+      moduleId: selection.moduleId,
+      violations: violations,
+      candidate: v4Result && v4Result.candidate,
+      acceptedItems: violations.length === 0 && v4Result ? (input.items || []) : undefined
+    };
   }
 
   function compileRuntimeRules(records, version) {
     return (records || []).filter(function (record) { return record && record.status === "active"; }).map(function (record) {
       var config = record.authoringConfig || record.authoringDraft || record.editorDraft || record;
-      return {
+      var runtime = {
         id: record.id,
-        version: version,
+        version: record.version == null ? version : record.version,
         subject: config.subject,
         period: config.period,
         targetType: config.targetType,
@@ -617,6 +798,19 @@
         deployStoreIds: config.deployStoreIds,
         storeConfigs: config.storeConfigs
       };
+      if (isV4Rule(config)) {
+        runtime.schemaVersion = config.schemaVersion;
+        runtime.enabledPeriods = rulePeriods(config);
+        runtime.periodPolicies = config.periodPolicies;
+        runtime.partyRanges = config.partyRanges;
+        runtime.roundRanges = config.roundRanges;
+        runtime.measureUnit = config.measureUnit;
+        runtime.storeConfigs = (config.deployStoreIds || []).reduce(function (result, storeId) {
+          if (config.storeConfigs && config.storeConfigs[storeId]) result[storeId] = config.storeConfigs[storeId];
+          return result;
+        }, {});
+      }
+      return runtime;
     });
   }
 
@@ -632,6 +826,7 @@
     selectRuntimeModule: selectRuntimeModule,
     matchingRangeIndex: matchingRangeIndex,
     effectiveLimit: effectiveLimit,
+    effectiveBounds: effectiveBounds,
     evaluateBatch: evaluateBatch,
     compileRuntimeRules: compileRuntimeRules
   };
