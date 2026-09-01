@@ -85,12 +85,6 @@
     return activeStores.reduce(function (rows, storeId) {
       var config = draft.storeConfigs && draft.storeConfigs[storeId];
       if (!config) return rows;
-      if (draft.targetType === "dish_set") {
-        (config.dishSetMembers || []).forEach(function (member) {
-          rows.push({ storeId: storeId, lineId: member.productLineId, targetType: "dish_set", targetId: String(member.dishId) });
-        });
-        return rows;
-      }
       (config.productLines || []).forEach(function (lineId) {
         (config.targetIds || []).forEach(function (targetId) {
           rows.push({ storeId: storeId, lineId: lineId, targetType: draft.targetType, targetId: targetId });
@@ -179,22 +173,6 @@
       return { valid: false, code: "PARTY_SIZE_REQUIRED" };
     }
     var configured;
-    if (rule.targetType === "dish_set") {
-      var storeConfig = rule.storeConfigs && rule.storeConfigs[context.storeId];
-      if (!storeConfig) return { valid: false, code: "STORE_CONFIG_REQUIRED" };
-      var dishSetPartyIndex = rule.subject === "party_size" ? matchingRangeIndex(rule.partyRanges, context.partySize) : 0;
-      var dishSetRoundIndex = rule.period === "multi_round" ? matchingRangeIndex(rule.roundRanges, context.roundNo) : 0;
-      if (dishSetPartyIndex < 0) return { valid: false, code: "PARTY_RANGE_INVALID" };
-      if (dishSetRoundIndex < 0) return { valid: false, code: "ROUND_RANGE_INVALID" };
-      var dishSetCell = storeConfig.dishSetLimits && storeConfig.dishSetLimits[dishSetPartyIndex + "|" + dishSetRoundIndex];
-      if (!dishSetCell || !dishSetCell.configured || !Number.isInteger(Number(dishSetCell.value)) || Number(dishSetCell.value) < 0) {
-        return { valid: false, code: "LIMIT_INVALID" };
-      }
-      configured = Number(dishSetCell.value);
-      return rule.subject === "order"
-        ? { valid: true, value: configured }
-        : { valid: true, value: configured * context.partySize };
-    }
     if (rule.subject === "party_size" && Array.isArray(rule.partyRanges)) {
       var selected = matrixLimit(rule, context.partySize, context.roundNo);
       if (!selected.valid) return selected;
@@ -223,18 +201,7 @@
         return;
       }
       var used = Number((input.usedByRule || {})[rule.id] || 0);
-      var increment;
-      if (rule.targetType === "dish_set" && Array.isArray(input.items)) {
-        var storeConfig = rule.storeConfigs && rule.storeConfigs[input.context.storeId];
-        var memberKeys = (storeConfig && storeConfig.dishSetMembers || []).map(function (member) {
-          return member.productLineId + "|" + member.dishId;
-        });
-        increment = input.items.reduce(function (sum, item) {
-          return memberKeys.indexOf(item.productLineId + "|" + item.dishId) >= 0 ? sum + Number(item.quantity || 0) : sum;
-        }, 0);
-      } else {
-        increment = Number((input.quantityByRule || {})[rule.id] || 0);
-      }
+      var increment = Number((input.quantityByRule || {})[rule.id] || 0);
       if (used + increment > limit.value) {
         violations.push({ ruleId: rule.id, ruleVersion: rule.version, code: "LIMIT_EXCEEDED", used: used, increment: increment, effectiveLimit: limit.value });
       }
