@@ -613,6 +613,7 @@ function listItem(db, row, actor) {
     sourceStatus: requirement.sourceStatus,
     rowVersion: requirement.rowVersion,
     deletedAt: requirement.deletedAt,
+    deletedBy: requirement.deletedBy,
     updatedAt: requirement.updatedAt,
   };
 }

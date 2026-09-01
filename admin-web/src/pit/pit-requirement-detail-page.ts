@@ -79,6 +79,9 @@ function valueDisplay(value: unknown): string {
   return value === null || value === undefined || value === "" ? "—" : String(value);
 }
 function eventLabel(action: string): string { return action.replace("requirement.create", "创建需求").replace("requirement.update", "编辑需求").replace("requirement.delete", "移入回收站").replace("requirement.restore", "恢复需求").replace("requirement.transition.", "状态动作："); }
+function renderDeleteRestoreDialog(action: "delete" | "restore", title: string): string {
+  return `<div data-pit-detail-confirm="${action}" class="fixed inset-0 z-[125] grid place-items-center bg-slate-950/55 p-4"><div role="dialog" aria-modal="true" aria-labelledby="pit-detail-confirm-title" class="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl dark:bg-slate-900"><h3 id="pit-detail-confirm-title" class="text-lg font-bold">${action === "delete" ? "移入回收站" : "恢复需求"}</h3><p class="mt-3 text-sm leading-6 text-slate-500">${action === "delete" ? `确定将“${escapePitHtml(title)}”移入回收站吗？之后可由管理员恢复。` : `确定恢复“${escapePitHtml(title)}”吗？恢复后将重新出现在需求列表。`}</p><div class="mt-6 flex justify-end gap-2"><button data-pit-detail-confirm-cancel class="rounded-xl border px-4 py-2">取消</button><button data-pit-detail-confirm-submit class="rounded-xl px-4 py-2 font-bold text-white ${action === "delete" ? "bg-rose-600" : "bg-emerald-600"}">${action === "delete" ? "确认删除" : "确认恢复"}</button></div></div></div>`;
+}
 
 export type PitRequirementDetailMode = "page" | "drawer";
 export type PitRequirementDetailContext = { mode: PitRequirementDetailMode; deleted?: "only"; closeHref: string; path: string };
@@ -222,12 +225,11 @@ export function bindPitRequirementPage(
       });
       return;
     }
-    if (target.closest("[data-pit-delete]") && requirement && window.confirm("确定将该需求移入回收站吗？")) {
-      const operation = beginMutation(); void api.deleteRequirement(requirement.id, { signal: operation.signal }).then(() => { if (mutationIsCurrent(operation.generation)) { window.dispatchEvent(new CustomEvent("pit:requirements-changed")); closeDetail(); } }).catch((error) => { if (mutationIsCurrent(operation.generation)) showPitToast(isPitApiError(error) ? error.message : "删除失败", "danger"); }); return;
-    }
-    if (target.closest("[data-pit-restore]") && requirement && window.confirm("确定恢复该需求吗？")) {
-      const operation = beginMutation(); void api.restoreRequirement(requirement.id, { signal: operation.signal }).then((result) => { if (mutationIsCurrent(operation.generation)) location.hash = `#/pit/requirements/${encodeURIComponent(result.requirement.id)}`; }).catch((error) => { if (mutationIsCurrent(operation.generation)) showPitToast(isPitApiError(error) ? error.message : "恢复失败", "danger"); });
-    }
+    if (target.closest("[data-pit-detail-confirm-cancel]")) { target.closest("[data-pit-detail-confirm]")?.remove(); return; }
+    if (target.closest("[data-pit-delete]") && requirement) { host.querySelector<HTMLElement>("[data-pit-detail-overlay]")?.insertAdjacentHTML("beforeend", renderDeleteRestoreDialog("delete", requirement.title)); return; }
+    if (target.closest("[data-pit-restore]") && requirement) { host.querySelector<HTMLElement>("[data-pit-detail-overlay]")?.insertAdjacentHTML("beforeend", renderDeleteRestoreDialog("restore", requirement.title)); return; }
+    const confirmButton = target.closest<HTMLButtonElement>("[data-pit-detail-confirm-submit]"); const confirmation = confirmButton?.closest<HTMLElement>("[data-pit-detail-confirm]");
+    if (confirmButton && confirmation && requirement) { confirmButton.disabled = true; const operation = beginMutation(); const action = confirmation.dataset.pitDetailConfirm; const request = action === "delete" ? api.deleteRequirement(requirement.id, { signal: operation.signal }) : api.restoreRequirement(requirement.id, { signal: operation.signal }); void request.then((result) => { if (!mutationIsCurrent(operation.generation)) return; confirmation.remove(); window.dispatchEvent(new CustomEvent("pit:requirements-changed")); if (action === "delete") closeDetail(); else location.hash = `#/pit/requirements/${encodeURIComponent(result.requirement.id)}`; }).catch((error) => { if (mutationIsCurrent(operation.generation)) { confirmButton.disabled = false; showPitToast(isPitApiError(error) ? error.message : `${action === "delete" ? "删除" : "恢复"}失败`, "danger"); } }); }
   }, { signal: lifetime.signal });
 
   host.addEventListener("submit", (event) => {

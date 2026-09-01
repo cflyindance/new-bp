@@ -142,18 +142,19 @@ export const pitApi = {
   unfollowRequirement: (id: string): Promise<{ following: boolean }> => request<{ following: boolean }>(`/requirements/${encodeURIComponent(id)}/follow`, { method: "DELETE" }),
 
   listDictionaries: (query: { type?: PitDictionaryType; includeInactive?: boolean } = {}, options: { signal?: AbortSignal } = {}) => request<{ items: PitDictionaryItem[] }>(`/dictionaries${queryString(query as QueryInput)}`, { signal: options.signal }),
-  createDictionary: (input: PitDictionaryCreateInput) => request<{ item: PitDictionaryItem }>("/dictionaries", { method: "POST", body: input }),
-  updateDictionary: (id: string, input: PitDictionaryUpdateInput) => request<{ item: PitDictionaryItem }>(`/dictionaries/${encodeURIComponent(id)}`, { method: "PATCH", body: input }),
-  reorderDictionaries: (type: PitDictionaryType, itemIds: string[]) => request<{ items: PitDictionaryItem[] }>("/dictionaries/order", { method: "PUT", body: { type, itemIds } }),
+  createDictionary: (input: PitDictionaryCreateInput, options: { signal?: AbortSignal } = {}) => request<{ item: PitDictionaryItem }>("/dictionaries", { method: "POST", body: input, signal: options.signal }),
+  updateDictionary: (id: string, input: PitDictionaryUpdateInput, options: { signal?: AbortSignal } = {}) => request<{ item: PitDictionaryItem }>(`/dictionaries/${encodeURIComponent(id)}`, { method: "PATCH", body: input, signal: options.signal }),
+  dictionaryUsage: (id: string, options: { signal?: AbortSignal } = {}) => request<{ id: string; activeRequirementCount: number }>(`/dictionaries/${encodeURIComponent(id)}/usage`, { signal: options.signal }),
+  reorderDictionaries: (type: PitDictionaryType, itemIds: string[], options: { signal?: AbortSignal } = {}) => request<{ items: PitDictionaryItem[] }>("/dictionaries/order", { method: "PUT", body: { type, itemIds }, signal: options.signal }),
 
   listUsers: (options: { signal?: AbortSignal } = {}) => request<{ items: PitUser[] }>("/users", { signal: options.signal }),
   listAssignableUsers: (options: { signal?: AbortSignal } = {}) => request<{ items: Array<Pick<PitUser, "id" | "username" | "displayName">> }>("/assignable-users", { signal: options.signal }),
-  createUser: (input: PitUserCreateInput) => request<{ user: PitUser }>("/users", { method: "POST", body: input }),
-  updateUser: (id: string, input: PitUserUpdateInput) => request<{ user: PitUser }>(`/users/${encodeURIComponent(id)}`, { method: "PATCH", body: input }),
-  resetUserPassword: (id: string, password: string) => request<{ reset: boolean; revokedSessions: number }>(`/users/${encodeURIComponent(id)}/reset-password`, { method: "POST", body: { password } }),
-  revokeUserSessions: (id: string) => request<{ revokedSessions: number }>(`/users/${encodeURIComponent(id)}/revoke-sessions`, { method: "POST", body: {} }),
+  createUser: (input: PitUserCreateInput, options: { signal?: AbortSignal } = {}) => request<{ user: PitUser }>("/users", { method: "POST", body: input, signal: options.signal }),
+  updateUser: (id: string, input: PitUserUpdateInput, options: { signal?: AbortSignal } = {}) => request<{ user: PitUser }>(`/users/${encodeURIComponent(id)}`, { method: "PATCH", body: input, signal: options.signal }),
+  resetUserPassword: (id: string, password: string, options: { signal?: AbortSignal } = {}) => request<{ reset: boolean; revokedSessions: number }>(`/users/${encodeURIComponent(id)}/reset-password`, { method: "POST", body: { password }, signal: options.signal }),
+  revokeUserSessions: (id: string, options: { signal?: AbortSignal } = {}) => request<{ revokedSessions: number }>(`/users/${encodeURIComponent(id)}/revoke-sessions`, { method: "POST", body: {}, signal: options.signal }),
 
-  listAuditLog: (query: PitAuditQuery = {}) => request<PitPage<PitAuditEvent>>(`/audit-log${queryString(query as QueryInput)}`),
+  listAuditLog: (query: PitAuditQuery = {}, options: { signal?: AbortSignal } = {}) => request<PitPage<PitAuditEvent>>(`/audit-log${queryString(query as QueryInput)}`, { signal: options.signal }),
 
   previewImport: async (fileName: string, bytes: Blob | ArrayBuffer) => {
     const headers = new Headers();

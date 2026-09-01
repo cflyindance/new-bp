@@ -211,6 +211,14 @@ export function createPitRouter({
         return true;
       }
 
+      const dictionaryUsageMatch = /^\/dictionaries\/([^/]+)\/usage$/.exec(path);
+      if (dictionaryUsageMatch && method === "GET") {
+        auth.requireRole(authentication, "admin");
+        const id = decodeId(dictionaryUsageMatch[1], "字典项");
+        sendData(res, requestId, admin.dictionaryUsage(id, authentication.user));
+        return true;
+      }
+
       const dictionaryMatch = /^\/dictionaries\/([^/]+)$/.exec(path);
       if (dictionaryMatch && method === "PATCH") {
         auth.requireRole(authentication, "admin");

@@ -291,6 +291,11 @@ try {
     status: "review_pending", highlighted: true, plannedYear: 2026, plannedMonth: 7,
     typeId: dictionaries.requirement_type.id, actorId: adminUser.id,
   });
+  const usage = await admin.get(`/dictionaries/${dictionaries.requirement_type.id}/usage`);
+  assert.equal(usage.status, 200);
+  assert.equal(usage.body.data.id, dictionaries.requirement_type.id);
+  assert.equal(usage.body.data.activeRequirementCount, 1, "usage preflight counts active requirements only");
+  assert.equal((await viewer.get(`/dictionaries/${dictionaries.requirement_type.id}/usage`)).status, 403);
   const developmentId = insertRequirement({ status: "development", actorId: adminUser.id });
   insertRequirement({ status: "scheduling_pending", actorId: adminUser.id });
   insertRequirement({ status: "testing", actorId: adminUser.id });

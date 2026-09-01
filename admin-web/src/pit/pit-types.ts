@@ -78,9 +78,10 @@ export type PitRequirementListItem = {
   sourceStatus: string | null;
   rowVersion: number;
   deletedAt: string | null;
+  deletedBy?: { id: string; displayName: string } | null;
   updatedAt: string;
 };
-export type PitRequirement = Omit<PitRequirementListItem, "summary" | "owner"> & {
+export type PitRequirement = Omit<PitRequirementListItem, "summary" | "owner" | "deletedBy"> & {
   description: string;
   requirementTypeId: string | null;
   sourceId: string | null;

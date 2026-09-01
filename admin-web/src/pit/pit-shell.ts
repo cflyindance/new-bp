@@ -6,6 +6,10 @@ import { bindPitLoginPage, renderPitLoginPage } from "./pit-login-page";
 import { bindPitImportPage, renderPitImportPage } from "./pit-import-page";
 import { bindPitExportPage, renderPitExportPage } from "./pit-export-page";
 import { bindPitBackupPage, renderPitBackupPage } from "./pit-backup-page";
+import { bindPitDictionaryPage, renderPitDictionaryPage } from "./pit-dictionary-page";
+import { bindPitUserPage, renderPitUserPage } from "./pit-user-page";
+import { bindPitAuditPage, renderPitAuditPage } from "./pit-audit-page";
+import { bindPitTrashPage, renderPitTrashPage } from "./pit-trash-page";
 import { parsePitListQuery } from "./pit-list-query";
 import { bindPitRequirementListPage, renderPitRequirementListLoadingPage } from "./pit-requirement-list-page";
 import { bindPitRequirementPage, pitRequirementDetailContext, renderPitRequirementCreatePage } from "./pit-requirement-detail-page";
@@ -45,6 +49,7 @@ const PAGE_COPY: Record<PitRouteId, { title: string; description: string }> = {
 
 let shellEventController: AbortController | null = null;
 let activeShellEpoch = 0;
+let permissionChangeBanner = false;
 
 function escapeHtml(value: string): string {
   return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -109,6 +114,10 @@ function renderPageOutlet(route: PitRouteId, requirementId?: string): string {
   if (route === "imports" && user) return renderPitImportPage({ user });
   if (route === "exports" && user) return renderPitExportPage({ user, currentFilter: parsePitListQuery("") });
   if (route === "backups" && user) return renderPitBackupPage({ user });
+  if (route === "dictionaries" && user) return renderPitDictionaryPage({ user, loading: true });
+  if (route === "users" && user) return renderPitUserPage({ user, loading: true });
+  if (route === "audit-log" && user) return renderPitAuditPage({ user, loading: true });
+  if (route === "trash" && user) return renderPitTrashPage({ user, loading: true });
   const copy = PAGE_COPY[route];
   return `<section data-pit-page-outlet data-pit-route="${route}" class="mx-auto w-full max-w-[94rem] animate-fade-in p-4 sm:p-6 lg:p-8"><div class="relative min-h-[28rem] overflow-hidden rounded-2xl border border-slate-200/90 bg-white p-6 shadow-[0_1px_2px_rgba(15,23,42,.04)] dark:border-slate-700 dark:bg-slate-900 sm:p-9"><div class="absolute right-0 top-0 h-28 w-28 border-b border-l border-amber-400/25 bg-[linear-gradient(135deg,transparent_49%,rgba(245,158,11,.12)_50%)]" aria-hidden="true"></div><p class="font-mono text-[11px] uppercase tracking-[0.24em] text-amber-700 dark:text-amber-400">PIT / ${escapeHtml(route.replace(/-/g, " "))}</p><h2 class="mt-3 text-2xl font-semibold tracking-tight text-slate-950 dark:text-white">${escapeHtml(copy.title)}</h2><p class="mt-2 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">${escapeHtml(copy.description)}</p>${requirementId ? `<p class="mt-5 inline-flex rounded-lg bg-slate-100 px-3 py-2 font-mono text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300">ID ${escapeHtml(requirementId)}</p>` : ""}<div class="mt-12 grid gap-4 md:grid-cols-3" aria-hidden="true">${[["信息结构已就绪", "w-1/2"], ["API 契约已连接", "w-2/3"], ["业务视图下一阶段启用", "w-1/2"]].map(([label, width], index) => `<div class="rounded-xl border border-dashed border-slate-200 p-4 dark:border-slate-700"><span class="font-mono text-[10px] text-amber-700 dark:text-amber-400">0${index + 1}</span><div class="mt-4 h-2 ${width} rounded bg-slate-100 dark:bg-slate-800"></div><p class="mt-4 text-xs text-slate-400">${label}</p></div>`).join("")}</div></div></section>`;
 }
@@ -120,7 +129,7 @@ function renderPitDetailLoading(requirementId: string, mode: "page" | "drawer"):
 function renderWorkspace(path: string, user: PitUser, offline = false, message = ""): string {
   const matched = matchPitRoute(path);
   const items = navItems(user.role);
-  return `${renderOfflineBanner(offline, message)}<div class="flex min-h-0 flex-1">
+  return `${renderOfflineBanner(offline, message)}${permissionChangeBanner ? `<div data-pit-permission-banner role="status" class="shrink-0 border-b border-amber-300 bg-amber-50 px-4 py-2.5 text-sm font-medium text-amber-950 dark:border-amber-900 dark:bg-amber-950/70 dark:text-amber-100">你的权限已发生变化，已返回工作台并刷新可用菜单。</div>` : ""}<div class="flex min-h-0 flex-1">
     <aside class="hidden w-64 shrink-0 flex-col border-r border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950 md:flex lg:w-72">
       <div class="flex items-center gap-3 border-b border-slate-200 px-5 py-5 dark:border-slate-800"><span class="grid size-11 place-items-center rounded-xl bg-slate-950 font-mono text-sm font-bold tracking-[0.14em] text-amber-300 dark:bg-amber-400 dark:text-slate-950">PIT</span><div><p class="font-semibold tracking-tight text-slate-950 dark:text-white">需求池</p><p class="text-xs text-slate-500">Requirement operations</p></div></div>
       <nav data-pit-navigation class="min-h-0 flex-1 overflow-y-auto p-3" aria-label="PIT 主导航"><p class="px-3 pb-2 pt-1 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Lifecycle desk</p><div class="space-y-1">${items.map((item) => renderNavLink(item, matched.id)).join("")}</div></nav>
@@ -183,6 +192,10 @@ function bindWorkspace(root: HTMLElement, onMount: () => void, render: (html: st
   if (route.id === "imports") bindPitImportPage(root, user);
   if (route.id === "exports") bindPitExportPage(root, user, path);
   if (route.id === "backups") bindPitBackupPage(root, user);
+  if (route.id === "dictionaries") bindPitDictionaryPage(root, user);
+  if (route.id === "users") bindPitUserPage(root, user);
+  if (route.id === "audit-log") bindPitAuditPage(root, user);
+  if (route.id === "trash") bindPitTrashPage(root, user);
 }
 
 /** Keep the list workbench and its scroll position mounted behind desktop detail drawers. */
@@ -346,7 +359,10 @@ export function bindPitShell(onMount: () => void): void {
     void pitApi.me().then((auth) => {
       if (!isActive()) return;
       setPitSession(auth);
-      renderAuthenticated(shellRoot, onMount, render, isActive);
+      permissionChangeBanner = true;
+      location.hash = `#${PIT_DEFAULT_PATH}`;
+      render(renderWorkspace(PIT_DEFAULT_PATH, auth.user));
+      bindWorkspace(shellRoot, onMount, render, isActive, PIT_DEFAULT_PATH, auth.user);
     }).catch((error) => {
       if (!isActive()) return;
       if (isPitApiError(error) && error.status === 401) {

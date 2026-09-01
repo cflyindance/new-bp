@@ -313,6 +313,27 @@ export function createPitAdminService({
     });
   }
 
+  function dictionaryUsage(id, actor) {
+    assertAdmin(actor);
+    const item = db.prepare("SELECT id, type FROM dictionaries WHERE id = ?").get(id);
+    if (!item) throw notFound("字典项不存在");
+    const scalarColumn = {
+      requirement_source: "source_id",
+      requirement_type: "requirement_type_id",
+      problem_category: "problem_category_id",
+      industry: "industry_id",
+    }[item.type];
+    const activeRequirementCount = item.type === "product_line"
+      ? db.prepare(`
+          SELECT count(DISTINCT requirements.id) AS count
+          FROM requirement_product_lines
+          JOIN requirements ON requirements.id = requirement_product_lines.requirement_id
+          WHERE requirement_product_lines.dictionary_id = ? AND requirements.deleted_at IS NULL
+        `).get(id).count
+      : db.prepare(`SELECT count(*) AS count FROM requirements WHERE ${scalarColumn} = ? AND deleted_at IS NULL`).get(id).count;
+    return { id, activeRequirementCount: Number(activeRequirementCount) };
+  }
+
   function reorderDictionaryItems(input, actor) {
     assertAdmin(actor);
     const type = normalizeDictionaryType(input?.type);
@@ -601,6 +622,7 @@ export function createPitAdminService({
     listDictionaries,
     createDictionaryItem,
     updateDictionaryItem,
+    dictionaryUsage,
     reorderDictionaryItems,
     listUsers,
     listAssignableUsers,
