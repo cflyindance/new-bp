@@ -109,15 +109,19 @@ const legacyKeyStorage = storageMock({
   [repositoryKey]: JSON.stringify({
     schemaVersion: 1,
     revision: 2,
-    rules: [{ id: 81, status: "disabled", origin: "system_default", defaultScenarioKey: "party_size|dish_set", name: "历史默认规则" }],
+    rules: [{
+      id: 81, status: "disabled", origin: "system_default", defaultScenarioKey: "party_size|dish_set",
+      defaultCatalogVersion: 1, name: "历史默认规则",
+      authoringConfig: { subject: "party_size", period: "order_lifetime", enabledPeriods: ["order_lifetime"], targetType: "dish_set" },
+    }],
     drafts: [], snapshots: {}, currentSnapshotId: null,
   }),
 });
 const legacyKeyProfile = loadProfile(legacyKeyStorage);
 const legacyKeyRules = legacyKeyProfile.repository.loadForAuthoringList(legacyKeyProfile.createDefaultScenarioRule);
 assert.equal(legacyKeyRules.length, 8, "旧两段键应安全映射为整单 canonical key，并仅补齐其余 7 条");
-assert.equal(legacyKeyRules.filter((rule) => rule.defaultScenarioKey === "party_size|order_lifetime|dish_set").length, 0);
-assert.equal(legacyKeyRules.filter((rule) => rule.id === 81).length, 1, "旧默认记录自身必须保留给 Task 2 迁移");
+assert.equal(legacyKeyRules.filter((rule) => rule.defaultScenarioKey === "party_size|order_lifetime|dish_set").length, 1);
+assert.equal(legacyKeyRules.find((rule) => rule.id === 81).defaultCatalogVersion, 2, "旧默认记录必须原位迁移至 v2 身份");
 
 assert.match(listSource, /loadForAuthoringList/);
 console.log("verify-buffet-default-scenario-rules: OK");
