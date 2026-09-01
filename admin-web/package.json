@@ -54,6 +54,8 @@
     "verify:pit-detail-ui": "npx tsx scripts/verify-pit-detail-ui.ts",
     "verify:pit-file-workflows-ui": "npx tsx scripts/verify-pit-file-workflows-ui.ts",
     "verify:pit-admin-ui": "npx tsx scripts/verify-pit-admin-ui.ts",
+    "verify:pit-contract-coverage": "node scripts/verify-pit-contract-coverage.mjs",
+    "verify:pit": "npm run verify:pit-database && npm run verify:pit-auth-api && npm run verify:pit-requirements-api && npm run verify:pit-admin-api && npm run verify:pit-export-backup && npm run verify:pit-import && npm run verify:pit-server && npm run verify:pit-shell && npm run verify:pit-list-ui && npm run verify:pit-detail-ui && npm run verify:pit-file-workflows-ui && npm run verify:pit-admin-ui && npm run verify:pit-contract-coverage",
     "pit:start": "node server/pit-api-server.mjs",
     "dev:pit": "node server/run-pit-dev.mjs",
     "pit:restore": "node server/pit-restore.mjs"

@@ -80,7 +80,7 @@ assertIncludes(api, 'headers.set("X-PIT-File-Name"');
 assertIncludes(api, 'deleteRequirement: (id: string, options: { signal?: AbortSignal } = {}) =>', "delete must remain bodyless while supporting lifetime abort");
 assertIncludes(api, 'restoreRequirement: (id: string, options: { signal?: AbortSignal } = {}) =>', "restore must remain bodyless while supporting lifetime abort");
 assertIncludes(api, "Promise<{ following: boolean }>", "follow transport must expose the server's following field");
-assertIncludes(api, 'createBackup: () => request<{ backup: PitBackupRecord }>("/backups", { method: "POST", body: {} })', "backup POST must send the JSON object consumed by the router");
+assertIncludes(api, 'createBackup: (options: { signal?: AbortSignal } = {}) => request<{ backup: PitBackupRecord }>("/backups", { method: "POST", body: {}, signal: options.signal })', "backup POST must send the JSON object consumed by the router and remain abortable");
 assertIncludes(types, 'Pick<PitUser, "username" | "displayName" | "role" | "active">', "user updates must model the server-supported username field");
 assertIncludes(api, "type?: PitDictionaryType", "dictionary query must use the server dictionary enum");
 assertIncludes(api, "reorderDictionaries: (type: PitDictionaryType", "dictionary reorder must use the server dictionary enum");

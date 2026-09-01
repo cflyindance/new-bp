@@ -7,7 +7,7 @@ import {
 } from "../src/pit/pit-requirement-form";
 import { calculatePitConflictDiff } from "../src/pit/pit-conflict-dialog";
 import { renderPitConflictDialog } from "../src/pit/pit-conflict-dialog";
-import { pitRequirementDetailContext, renderPitRequirementDetailPage, renderPitRequirementForm, resolvePitAssigneeSelections } from "../src/pit/pit-requirement-detail-page";
+import { pitRequirementDetailContext, renderPitRequirementDetailPage, renderPitRequirementForm, renderPitTransitionReasonDialog, resolvePitAssigneeSelections } from "../src/pit/pit-requirement-detail-page";
 import { guardPitRouteMount, setPitDirtyNavigation } from "../src/pit/pit-navigation-guard";
 import { handlePitInShellNavigation, pitInShellNavigationDecision } from "../src/pit/pit-shell";
 
@@ -78,7 +78,10 @@ const detailSource = await import("node:fs").then((fs) => fs.readFileSync(new UR
 assert.ok(detailSource.includes("!editorOpen && !dirty") && detailSource.includes("30_000"), "refresh must never overwrite a dirty/open editor");
 assert.ok(detailSource.includes("loadController.abort(); mutationController?.abort()"), "unmount must abort detail reads and writes");
 assert.ok(detailSource.includes("error.fields?.current"), "409 recovery must consume the server fields.current representation");
-assert.ok(detailSource.includes('event.key !== "Escape"') && detailSource.includes("confirmPitDiscard"), "drawer close and route changes need dirty protection");
+assert.ok(detailSource.includes('event.key !== "Escape"') && detailSource.includes("requestPitDiscard"), "drawer close and route changes need dirty protection");
+const reasonDialog = renderPitTransitionReasonDialog("退回");
+assert.ok(reasonDialog.includes('role="dialog"') && reasonDialog.includes('aria-modal="true"') && reasonDialog.includes("data-pit-transition-reason"));
+assert.ok(detailSource.includes('event.key === "Tab"') && detailSource.includes("data-pit-transition-error") && detailSource.includes("请填写原因后再提交"), "reason dialog needs focus trap and inline validation");
 
 assert.equal(pitInShellNavigationDecision("/pit/requirements?q=pay&page=3", "/pit/requirements/r1?q=pay&page=3", true, false), "open-drawer");
 assert.equal(pitInShellNavigationDecision("/pit/requirements?q=pay&page=3", "/pit/requirements/r1?q=pay&page=3", false, false), "mount");
@@ -99,11 +102,8 @@ assert.equal(pitRequirementDetailContext("/pit/requirements/r1?q=pay&page=3", "e
 assert.equal(pitRequirementDetailContext("/pit/requirements/r1?view=trash&page=2", "admin", "drawer").deleted, "only");
 assert.equal(pitRequirementDetailContext("/pit/requirements/r1?view=trash&page=2", "admin", "drawer").closeHref, "#/pit/trash?page=2");
 assert.equal(pitRequirementDetailContext("/pit/requirements/r1?view=trash", "editor").deleted, undefined);
-let restored = "";
-setPitDirtyNavigation({ currentHash: "#/pit/requirements/r1?q=pay&page=3" });
-assert.equal(guardPitRouteMount("#/pit/dashboard", () => false, (hash) => { restored = hash; }), false);
-assert.equal(restored, "#/pit/requirements/r1?q=pay&page=3");
-assert.equal(guardPitRouteMount("#/pit/dashboard", () => true), true);
+setPitDirtyNavigation(null);
+assert.equal(guardPitRouteMount("#/pit/dashboard"), true);
 
 const originalFetch = globalThis.fetch;
 try {

@@ -21,7 +21,7 @@ import {
   type PitRouteId,
 } from "./pit-routes";
 import { clearPitSession, getPitSession, setPitSession } from "./pit-session";
-import { confirmPitDiscard } from "./pit-navigation-guard";
+import { requestPitDiscard } from "./pit-navigation-guard";
 import { bindPitSetupPage, renderPitSetupPage } from "./pit-setup-page";
 import type { PitRole, PitUser } from "./pit-types";
 
@@ -119,7 +119,7 @@ function renderPageOutlet(route: PitRouteId, requirementId?: string): string {
   if (route === "audit-log" && user) return renderPitAuditPage({ user, loading: true });
   if (route === "trash" && user) return renderPitTrashPage({ user, loading: true });
   const copy = PAGE_COPY[route];
-  return `<section data-pit-page-outlet data-pit-route="${route}" class="mx-auto w-full max-w-[94rem] animate-fade-in p-4 sm:p-6 lg:p-8"><div class="relative min-h-[28rem] overflow-hidden rounded-2xl border border-slate-200/90 bg-white p-6 shadow-[0_1px_2px_rgba(15,23,42,.04)] dark:border-slate-700 dark:bg-slate-900 sm:p-9"><div class="absolute right-0 top-0 h-28 w-28 border-b border-l border-amber-400/25 bg-[linear-gradient(135deg,transparent_49%,rgba(245,158,11,.12)_50%)]" aria-hidden="true"></div><p class="font-mono text-[11px] uppercase tracking-[0.24em] text-amber-700 dark:text-amber-400">PIT / ${escapeHtml(route.replace(/-/g, " "))}</p><h2 class="mt-3 text-2xl font-semibold tracking-tight text-slate-950 dark:text-white">${escapeHtml(copy.title)}</h2><p class="mt-2 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">${escapeHtml(copy.description)}</p>${requirementId ? `<p class="mt-5 inline-flex rounded-lg bg-slate-100 px-3 py-2 font-mono text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300">ID ${escapeHtml(requirementId)}</p>` : ""}<div class="mt-12 grid gap-4 md:grid-cols-3" aria-hidden="true">${[["信息结构已就绪", "w-1/2"], ["API 契约已连接", "w-2/3"], ["业务视图下一阶段启用", "w-1/2"]].map(([label, width], index) => `<div class="rounded-xl border border-dashed border-slate-200 p-4 dark:border-slate-700"><span class="font-mono text-[10px] text-amber-700 dark:text-amber-400">0${index + 1}</span><div class="mt-4 h-2 ${width} rounded bg-slate-100 dark:bg-slate-800"></div><p class="mt-4 text-xs text-slate-400">${label}</p></div>`).join("")}</div></div></section>`;
+  return `<section data-pit-page-outlet data-pit-route="${route}" class="mx-auto w-full max-w-[94rem] p-8"><div role="alert" class="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">${escapeHtml(copy.title)}暂时无法装载。</div></section>`;
 }
 
 function renderPitDetailLoading(requirementId: string, mode: "page" | "drawer"): string {
@@ -157,8 +157,8 @@ function bindWorkspace(root: HTMLElement, onMount: () => void, render: (html: st
     toggle.setAttribute("aria-expanded", String(open));
     panel?.classList.toggle("hidden", !open);
   });
-  root.querySelector<HTMLButtonElement>("[data-pit-exit]")?.addEventListener("click", () => {
-    if (!confirmPitDiscard()) return;
+  root.querySelector<HTMLButtonElement>("[data-pit-exit]")?.addEventListener("click", async () => {
+    if (!await requestPitDiscard()) return;
     exitPitShell();
     location.hash = "#/";
     onMount();

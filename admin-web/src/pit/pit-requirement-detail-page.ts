@@ -7,7 +7,7 @@ import {
 } from "./pit-requirement-form";
 import type { PitDictionaryItem, PitRequirement, PitUser } from "./pit-types";
 import { createPitPageLifetime, escapePitHtml, formatPitDate, pitPriorityLabel, pitStatusLabel, renderPitBanner, renderPitStatusBadge, showPitToast } from "./pit-ui";
-import { confirmPitDiscard, setPitDirtyNavigation } from "./pit-navigation-guard";
+import { requestPitDiscard, setPitDirtyNavigation } from "./pit-navigation-guard";
 
 type AssignableUser = Pick<PitUser, "id" | "username" | "displayName">;
 type PageData = { requirement?: PitRequirement; dictionaries: PitDictionaryItem[]; users: AssignableUser[]; user: PitUser; deletedOnly?: boolean };
@@ -82,6 +82,9 @@ function eventLabel(action: string): string { return action.replace("requirement
 function renderDeleteRestoreDialog(action: "delete" | "restore", title: string): string {
   return `<div data-pit-detail-confirm="${action}" class="fixed inset-0 z-[125] grid place-items-center bg-slate-950/55 p-4"><div role="dialog" aria-modal="true" aria-labelledby="pit-detail-confirm-title" class="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl dark:bg-slate-900"><h3 id="pit-detail-confirm-title" class="text-lg font-bold">${action === "delete" ? "移入回收站" : "恢复需求"}</h3><p class="mt-3 text-sm leading-6 text-slate-500">${action === "delete" ? `确定将“${escapePitHtml(title)}”移入回收站吗？之后可由管理员恢复。` : `确定恢复“${escapePitHtml(title)}”吗？恢复后将重新出现在需求列表。`}</p><div class="mt-6 flex justify-end gap-2"><button data-pit-detail-confirm-cancel class="rounded-xl border px-4 py-2">取消</button><button data-pit-detail-confirm-submit class="rounded-xl px-4 py-2 font-bold text-white ${action === "delete" ? "bg-rose-600" : "bg-emerald-600"}">${action === "delete" ? "确认删除" : "确认恢复"}</button></div></div></div>`;
 }
+export function renderPitTransitionReasonDialog(label: string): string {
+  return `<div data-pit-transition-dialog class="fixed inset-0 z-[130] grid place-items-center bg-slate-950/55 p-4"><div role="dialog" aria-modal="true" aria-labelledby="pit-transition-title" aria-describedby="pit-transition-help" class="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl dark:bg-slate-900"><h3 id="pit-transition-title" class="text-lg font-bold">填写“${escapePitHtml(label)}”原因</h3><p id="pit-transition-help" class="mt-2 text-sm text-slate-500">此状态动作必须记录原因，提交后会写入操作时间线。</p><label class="mt-5 block text-sm font-bold" for="pit-transition-reason">原因</label><textarea id="pit-transition-reason" data-pit-transition-reason class="${inputClass} min-h-28" aria-describedby="pit-transition-error"></textarea><p id="pit-transition-error" data-pit-transition-error role="alert" class="mt-2 hidden text-sm text-rose-600"></p><div class="mt-6 flex justify-end gap-2"><button type="button" data-pit-transition-cancel class="rounded-xl border px-4 py-2">取消</button><button type="button" data-pit-transition-submit class="rounded-xl bg-amber-400 px-4 py-2 font-bold text-slate-950">提交动作</button></div></div></div>`;
+}
 
 export type PitRequirementDetailMode = "page" | "drawer";
 export type PitRequirementDetailContext = { mode: PitRequirementDetailMode; deleted?: "only"; closeHref: string; path: string };
@@ -148,9 +151,9 @@ export function bindPitRequirementPage(
     dirty = value;
     setPitDirtyNavigation(value ? { currentHash: location.hash, onDiscard: () => { dirty = false; } } : null);
   };
-  const navigate = (href: string): void => { if (confirmPitDiscard()) location.hash = href.slice(1); };
-  const closeDetail = (): void => {
-    if (!confirmPitDiscard()) return;
+  const navigate = async (href: string): Promise<void> => { if (await requestPitDiscard()) location.hash = href.slice(1); };
+  const closeDetail = async (): Promise<void> => {
+    if (!await requestPitDiscard()) return;
     if (context.mode === "drawer") history.back();
     else location.hash = context.closeHref.slice(1);
   };
@@ -184,9 +187,34 @@ export function bindPitRequirementPage(
     }
   };
 
-  const closeEditor = (): void => {
-    if (!confirmPitDiscard()) return;
+  const closeEditor = async (): Promise<void> => {
+    if (!await requestPitDiscard()) return;
     editorOpen = false; setDirty(false); host.querySelector("[data-pit-edit-drawer]")?.remove();
+  };
+  const closeTransitionDialog = (dialog: HTMLElement | null | undefined, restoreFocus = true): void => {
+    if (!dialog) return;
+    const trigger = (dialog as HTMLElement & { pitTrigger?: HTMLElement }).pitTrigger;
+    dialog.remove();
+    if (restoreFocus && trigger?.isConnected) trigger.focus();
+  };
+  const submitTransition = async (button: HTMLButtonElement, reason?: string, dialog?: HTMLElement): Promise<void> => {
+    if (!requirement) return;
+    const operation = beginMutation(); button.disabled = true;
+    const action = dialog?.dataset.pitAction ?? button.dataset.pitTransition;
+    const targetStatus = (dialog?.dataset.pitTargetStatus ?? button.dataset.pitTargetStatus) || undefined;
+    try {
+      await api.transitionRequirement(requirement.id, { action: action as never, targetStatus: targetStatus as never, reason, rowVersion: requirement.rowVersion }, { signal: operation.signal });
+      if (mutationIsCurrent(operation.generation)) { closeTransitionDialog(dialog, false); window.dispatchEvent(new CustomEvent("pit:requirements-changed")); void load(); }
+    } catch (error) {
+      if (!mutationIsCurrent(operation.generation)) return;
+      if (isPitApiError(error) && error.status === 409) {
+        const current = error.fields?.current as PitRequirement | undefined;
+        if (current) { closeTransitionDialog(dialog); (host.querySelector<HTMLElement>("[data-pit-detail-overlay]") ?? host).insertAdjacentHTML("beforeend", renderPitConflictDialog([{ field: "status", label: "当前状态", submitted: pitStatusLabel(requirement.status), current: pitStatusLabel(current.status) }])); return; }
+      }
+      showPitToast(isPitApiError(error) ? error.message : "状态更新失败", "danger");
+      if (dialog?.isConnected) { delete dialog.dataset.pitBusy; dialog.querySelectorAll<HTMLButtonElement>("button").forEach((item) => { item.disabled = false; }); }
+      else if (button.isConnected) button.disabled = false;
+    }
   };
 
   host.addEventListener("input", (event) => {
@@ -195,41 +223,46 @@ export function bindPitRequirementPage(
 
   host.addEventListener("click", (event) => {
     const target = event.target as Element;
-    if (target.closest("[data-pit-close-detail]")) { closeDetail(); return; }
+    if (target.closest("[data-pit-close-detail]")) { void closeDetail(); return; }
     if (target.closest("[data-pit-open-edit]") && requirement) {
       currentForm = requirementToForm(requirement); editorOpen = true; setDirty(false);
       const overlay = host.querySelector<HTMLElement>("[data-pit-detail-overlay]");
       if (overlay) overlay.innerHTML = `<div data-pit-edit-drawer class="fixed inset-0 z-[110] bg-slate-950/40"><aside class="ml-auto h-full w-full max-w-3xl overflow-y-auto bg-white p-6 shadow-2xl dark:bg-slate-900"><h2 class="mb-6 text-xl font-bold">编辑需求</h2>${renderPitRequirementForm(currentForm, data, "edit")}</aside></div>`;
       return;
     }
-    if (target.closest("[data-pit-form-cancel]")) { editorOpen ? closeEditor() : navigate(context.closeHref); return; }
+    if (target.closest("[data-pit-form-cancel]")) { editorOpen ? void closeEditor() : void navigate(context.closeHref); return; }
     if (target.closest("[data-pit-conflict-cancel]")) { host.querySelector("[data-pit-conflict-dialog]")?.remove(); return; }
     if (target.closest("[data-pit-conflict-load]")) { setDirty(false); editorOpen = false; void load(); return; }
 
     const actionButton = target.closest<HTMLButtonElement>("[data-pit-transition]");
     if (actionButton && requirement) {
       const reasonRequired = actionButton.dataset.pitReasonRequired === "true";
-      const reason = reasonRequired ? window.prompt(`执行“${actionButton.textContent?.trim()}”必须填写原因：`)?.trim() : undefined;
-      if (reasonRequired && !reason) return;
-      const operation = beginMutation(); actionButton.disabled = true;
-      const targetStatus = actionButton.dataset.pitTargetStatus || undefined;
-      void api.transitionRequirement(requirement.id, { action: actionButton.dataset.pitTransition as never, targetStatus: targetStatus as never, reason, rowVersion: requirement.rowVersion }, { signal: operation.signal }).then(() => {
-        if (mutationIsCurrent(operation.generation)) { window.dispatchEvent(new CustomEvent("pit:requirements-changed")); void load(); }
-      }).catch((error) => {
-        if (!mutationIsCurrent(operation.generation)) return;
-        if (isPitApiError(error) && error.status === 409) {
-          const current = error.fields?.current as PitRequirement | undefined;
-          if (current) { (host.querySelector<HTMLElement>("[data-pit-detail-overlay]") ?? host).insertAdjacentHTML("beforeend", renderPitConflictDialog([{ field: "status", label: "当前状态", submitted: pitStatusLabel(requirement!.status), current: pitStatusLabel(current.status) }])); return; }
-        }
-        showPitToast(isPitApiError(error) ? error.message : "状态更新失败", "danger");
-      });
+      if (!reasonRequired) { void submitTransition(actionButton); return; }
+      const overlay = host.querySelector<HTMLElement>("[data-pit-detail-overlay]") ?? host;
+      overlay.insertAdjacentHTML("beforeend", renderPitTransitionReasonDialog(actionButton.textContent?.trim() || "状态动作"));
+      const dialog = overlay.querySelector<HTMLElement>("[data-pit-transition-dialog]")!;
+      dialog.dataset.pitAction = actionButton.dataset.pitTransition ?? "";
+      dialog.dataset.pitTargetStatus = actionButton.dataset.pitTargetStatus ?? "";
+      (dialog as HTMLElement & { pitTrigger?: HTMLElement }).pitTrigger = actionButton;
+      dialog.querySelector<HTMLTextAreaElement>("[data-pit-transition-reason]")?.focus();
       return;
+    }
+    if (target.closest("[data-pit-transition-cancel]")) { closeTransitionDialog(target.closest<HTMLElement>("[data-pit-transition-dialog]")); return; }
+    const transitionSubmit = target.closest<HTMLButtonElement>("[data-pit-transition-submit]");
+    if (transitionSubmit && requirement) {
+      const dialog = transitionSubmit.closest<HTMLElement>("[data-pit-transition-dialog]")!;
+      const reasonField = dialog.querySelector<HTMLTextAreaElement>("[data-pit-transition-reason]")!;
+      const reason = reasonField.value.trim(); const error = dialog.querySelector<HTMLElement>("[data-pit-transition-error]")!;
+      if (!reason) { error.textContent = "请填写原因后再提交。"; error.classList.remove("hidden"); reasonField.focus(); return; }
+      dialog.dataset.pitBusy = "true";
+      dialog.querySelectorAll<HTMLButtonElement>("button").forEach((item) => { item.disabled = true; });
+      void submitTransition(transitionSubmit, reason, dialog); return;
     }
     if (target.closest("[data-pit-detail-confirm-cancel]")) { target.closest("[data-pit-detail-confirm]")?.remove(); return; }
     if (target.closest("[data-pit-delete]") && requirement) { host.querySelector<HTMLElement>("[data-pit-detail-overlay]")?.insertAdjacentHTML("beforeend", renderDeleteRestoreDialog("delete", requirement.title)); return; }
     if (target.closest("[data-pit-restore]") && requirement) { host.querySelector<HTMLElement>("[data-pit-detail-overlay]")?.insertAdjacentHTML("beforeend", renderDeleteRestoreDialog("restore", requirement.title)); return; }
     const confirmButton = target.closest<HTMLButtonElement>("[data-pit-detail-confirm-submit]"); const confirmation = confirmButton?.closest<HTMLElement>("[data-pit-detail-confirm]");
-    if (confirmButton && confirmation && requirement) { confirmButton.disabled = true; const operation = beginMutation(); const action = confirmation.dataset.pitDetailConfirm; const request = action === "delete" ? api.deleteRequirement(requirement.id, { signal: operation.signal }) : api.restoreRequirement(requirement.id, { signal: operation.signal }); void request.then((result) => { if (!mutationIsCurrent(operation.generation)) return; confirmation.remove(); window.dispatchEvent(new CustomEvent("pit:requirements-changed")); if (action === "delete") closeDetail(); else location.hash = `#/pit/requirements/${encodeURIComponent(result.requirement.id)}`; }).catch((error) => { if (mutationIsCurrent(operation.generation)) { confirmButton.disabled = false; showPitToast(isPitApiError(error) ? error.message : `${action === "delete" ? "删除" : "恢复"}失败`, "danger"); } }); }
+    if (confirmButton && confirmation && requirement) { confirmButton.disabled = true; const operation = beginMutation(); const action = confirmation.dataset.pitDetailConfirm; const request = action === "delete" ? api.deleteRequirement(requirement.id, { signal: operation.signal }) : api.restoreRequirement(requirement.id, { signal: operation.signal }); void request.then((result) => { if (!mutationIsCurrent(operation.generation)) return; confirmation.remove(); window.dispatchEvent(new CustomEvent("pit:requirements-changed")); if (action === "delete") void closeDetail(); else location.hash = `#/pit/requirements/${encodeURIComponent(result.requirement.id)}`; }).catch((error) => { if (mutationIsCurrent(operation.generation)) { confirmButton.disabled = false; showPitToast(isPitApiError(error) ? error.message : `${action === "delete" ? "删除" : "恢复"}失败`, "danger"); } }); }
   }, { signal: lifetime.signal });
 
   host.addEventListener("submit", (event) => {
@@ -257,10 +290,20 @@ export function bindPitRequirementPage(
   }, { signal: lifetime.signal });
 
   host.addEventListener("keydown", (event) => {
+    const transitionDialog = host.querySelector<HTMLElement>("[data-pit-transition-dialog]");
+    if (transitionDialog && event.key === "Tab") {
+      const items = [...transitionDialog.querySelectorAll<HTMLElement>('button:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')];
+      const first = items[0], last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+      return;
+    }
+    if (transitionDialog?.dataset.pitBusy === "true") return;
     if (event.key !== "Escape") return;
-    if (editorOpen) { event.preventDefault(); closeEditor(); }
-    else if (context.mode === "drawer") { event.preventDefault(); closeDetail(); }
-    else if (!requirementId) { event.preventDefault(); navigate(context.closeHref); }
+    if (transitionDialog) { event.preventDefault(); closeTransitionDialog(transitionDialog); }
+    else if (editorOpen) { event.preventDefault(); void closeEditor(); }
+    else if (context.mode === "drawer") { event.preventDefault(); void closeDetail(); }
+    else if (!requirementId) { event.preventDefault(); void navigate(context.closeHref); }
   }, { signal: lifetime.signal });
   const beforeUnload = (event: BeforeUnloadEvent) => { if (dirty) { event.preventDefault(); event.returnValue = ""; } };
   window.addEventListener("beforeunload", beforeUnload, { signal: lifetime.signal });
