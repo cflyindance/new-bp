@@ -719,6 +719,11 @@ import {
   renderFohMenuOrderLimitsPanel,
 } from "./config/foh-menu-order-limits-ui";
 import {
+  bindFohBuffetRulesUi,
+  releaseFohBuffetRulesFullscreen,
+  renderFohBuffetRulesPanel,
+} from "./config/foh-buffet-rules-ui";
+import {
   bindPointsDishAuthOrderUi,
   isPointsDishAuthOrderSeq,
   renderPointsDishAuthOrderPanelHtml,
@@ -1806,6 +1811,8 @@ const MARKETING_POSTER_PRO_IFRAME_SRC = embeddedPageSrc("./Configuration%20cente
 const ASSET_CENTER_MATERIALS_IFRAME_SRC = embeddedPageSrc("./Configuration%20center/material.html");
 /** 前厅管理中心 → 菜单下单限制：复用 Configuration center 下单限制配置页（主内容区 iframe） */
 const FOH_MENU_ORDER_LIMIT_IFRAME_SRC = embeddedPageSrc("./Configuration%20center/order-limit.html");
+/** 前厅管理中心 → 自助餐规则：独立配置与数据空间 */
+const FOH_BUFFET_RULES_IFRAME_SRC = embeddedPageSrc("./Configuration%20center/buffet-rule.html");
 /** 前厅管理中心 → eMenu Pro：嵌入 emenuPro 管理端（主内容区 iframe） */
 const FOH_EMENU_PRO_IFRAME_SRC = embeddedPageSrc("./emenu-pro/index.html");
 /** eMenu Pro iframe 向父页索取的演示 sessionKey（与 embedded-mock-api.js 一致） */
@@ -1846,6 +1853,10 @@ function isFohMenuOrderLimitsIframePath(path: string): boolean {
     path === "/operations/queue-call/menu-order-limits" ||
     path.startsWith("/operations/queue-call/menu-order-limits/")
   );
+}
+
+function isFohBuffetRulesIframePath(path: string): boolean {
+  return path === "/operations/queue-call/buffet-rules" || path.startsWith("/operations/queue-call/buffet-rules/");
 }
 
 function isFohEmenuProIframePath(path: string): boolean {
@@ -1989,6 +2000,10 @@ function renderAssetCenterMaterialsIframePanel(): string {
 function renderFohMenuOrderLimitsPagePanel(): string {
   const path = readAppHashPath();
   return renderFohMenuOrderLimitsPanel(FOH_MENU_ORDER_LIMIT_IFRAME_SRC, path);
+}
+
+function renderFohBuffetRulesPagePanel(): string {
+  return renderFohBuffetRulesPanel(FOH_BUFFET_RULES_IFRAME_SRC);
 }
 
 /** 前厅管理中心 · eMenu Pro 设置（嵌入 emenuPro 管理端） */
@@ -11433,6 +11448,7 @@ function renderMain(): string {
   const isTeamTipsManagementIframe = isTeamTipsManagementIframePath(path);
   const isTeamPayrollReportIframe = isTeamPayrollReportIframePath(path);
   const isFohMenuOrderLimitsIframe = isFohMenuOrderLimitsIframePath(path);
+  const isFohBuffetRulesIframe = isFohBuffetRulesIframePath(path);
   const isFohEmenuProIframe = isFohEmenuProIframePath(path);
   const isFohCategorySettings = isFohCategorySettingsPath(path);
   const isFohClassificationSettings = isFohClassificationSettingsPath(path);
@@ -11475,6 +11491,7 @@ function renderMain(): string {
     isMarketingPosterProIframe ||
     isAssetCenterMaterialsIframe ||
     isFohMenuOrderLimitsIframe ||
+    isFohBuffetRulesIframe ||
     isReportsTipsAllocationIframe ||
     isTeamRolesEmployeesIframe ||
     isTeamTipsManagementIframe ||
@@ -11596,6 +11613,8 @@ function renderMain(): string {
                 ? renderAssetCenterMaterialsIframePanel()
                 : isFohMenuOrderLimitsIframe
                   ? renderFohMenuOrderLimitsPagePanel()
+                  : isFohBuffetRulesIframe
+                    ? renderFohBuffetRulesPagePanel()
                   : isFohEmenuProIframe
                     ? renderFohEmenuProIframePanel()
                     : isReportsTipsAllocationIframe
@@ -11935,6 +11954,7 @@ function mountLoginShell(): void {
 
 function mount(): void {
   releaseFohMenuOrderLimitsFullscreen();
+  releaseFohBuffetRulesFullscreen();
   bindChainBrandOrgSyncListener();
   normalizeTabModuleHashes();
   applyUiLocaleToDocument(getUiLocale());
@@ -12908,6 +12928,7 @@ function mount(): void {
     replaceHashPath(getMenuOrderLimitTabHref(tab));
     mount();
   });
+  bindFohBuffetRulesUi();
   bindDeviceManagementPaymentHardware();
   bindDeviceManagementFiscalHardware();
   bindDeviceManagementCallerIdHardware();

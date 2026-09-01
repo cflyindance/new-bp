@@ -143,7 +143,7 @@ PIT 壳层沿用现有周边产品后台的视觉结构：左侧导航、顶部�
 | `#pit/requirements/:id` | 需求详情深链；桌面端仍可表现为抽屉 |
 | `#pit/highlights` | 重点需求快捷视图 |
 | `#pit/my-tasks` | 当前用户待办 |
-| `#pit/imports` | 导入记录与预检 |
+| `#pit/imports` | 首次导入与导入记录；首次提交后只读 |
 | `#pit/exports` | 当前用户的导出记录；管理员可查看全部 |
 | `#pit/dictionaries` | 分类配置，管理员可见 |
 | `#pit/users` | 用户与权限，管理员可见 |
@@ -199,7 +199,7 @@ PIT 壳层沿用现有周边产品后台的视觉结构：左侧导航、顶部�
 
 - 管理员：显示全部页面和操作。
 - 编辑者：可新增、编辑、标记重点和执行状态流转；不显示用户、字典和恢复操作。
-- 只读者：仅显示查询、详情和导出；所有写入入口不可见。
+- 只读者：仅显示查询、详情和导出；所有写入入口（包括关注/取消关注）不可见。
 
 前端隐藏只用于减少误操作，API 必须再次执行相同权限判断。
 
@@ -289,8 +289,10 @@ PIT 壳层沿用现有周边产品后台的视觉结构：左侧导航、顶部�
 | `row_version` | INTEGER NOT NULL | 乐观锁版本，初始 1 |
 | `deleted_at` | TEXT NULL | 软删除时间 |
 | `deleted_by` | TEXT FK NULL | 软删除操作者 |
-| `created_by/updated_by` | TEXT FK NOT NULL | 操作者 |
-| `created_at/updated_at` | TEXT NOT NULL | ISO 时间 |
+| `created_by` | TEXT FK NOT NULL | 创建者 |
+| `updated_by` | TEXT FK NOT NULL | 最近更新者 |
+| `created_at` | TEXT NOT NULL | 创建时间，ISO 格式 |
+| `updated_at` | TEXT NOT NULL | 最近更新时间，ISO 格式 |
 
 ### 8.2 关联表
 
@@ -301,6 +303,7 @@ PIT 壳层沿用现有周边产品后台的视觉结构：左侧导航、顶部�
 - `dictionaries(id, type, code, label, sort_order, active)`：产品线、来源、类别、问题分类、业态。
 - `users(id, username, display_name, password_hash, role, active, created_at, updated_at)`。
 - `sessions(id_hash, user_id, csrf_hash, expires_at, created_at, last_seen_at)`。
+- `system_settings(key, value_json, updated_at)`：保存 `initial_import_completed_at`、schema 版本之外的少量系统开关；不承载需求业务数据。
 - `audit_events(id, actor_user_id, action, resource_type, resource_id, before_json, after_json, metadata_json, created_at)`：统一记录需求、状态、字典、用户、导入、导出和备份操作；需求详情时间线按 `resource_type=requirement` 查询。
 - `import_jobs(id, file_name, file_hash, status, summary_json, created_by, created_at, committed_at)`。
 - `import_rows(id, import_job_id, sheet_name, row_number, raw_json, normalized_json, issue_json, decision_json)`。
@@ -411,8 +414,8 @@ Query：
 | `DELETE` | `/api/v1/pit/requirements/:id` | 管理员 | 软删除 |
 | `POST` | `/api/v1/pit/requirements/:id/restore` | 管理员 | 恢复软删除 |
 | `POST` | `/api/v1/pit/requirements/:id/transitions` | 管理员、编辑者 | 状态动作 |
-| `PUT` | `/api/v1/pit/requirements/:id/follow` | 全部 | 当前用户关注需求，幂等 |
-| `DELETE` | `/api/v1/pit/requirements/:id/follow` | 全部 | 当前用户取消关注，幂等 |
+| `PUT` | `/api/v1/pit/requirements/:id/follow` | 管理员、编辑者 | 当前用户关注需求，幂等 |
+| `DELETE` | `/api/v1/pit/requirements/:id/follow` | 管理员、编辑者 | 当前用户取消关注，幂等 |
 
 `POST` 和 `PATCH` 使用 camelCase 字段，对产品线、MID 和人员分配传数组。人员项格式为 `{ role, userId, displayName }`；负责人最多一项，研发和测试可多项。`PATCH` 必须携带 `rowVersion`。服务端在一个事务中更新主表、关联表、行版本和审计事件。
 
@@ -444,7 +447,7 @@ Query：
 
 | 方法 | 路径 | 权限 | 说明 |
 | --- | --- | --- | --- |
-| `POST` | `/api/v1/pit/imports/preview` | 管理员 | 上传 `.xlsx`，创建预检批次 |
+| `POST` | `/api/v1/pit/imports/preview` | 管理员且首次导入未完成 | 上传 `.xlsx`，创建预检批次 |
 | `GET` | `/api/v1/pit/imports/:id` | 管理员 | 批次摘要、问题和分页行 |
 | `POST` | `/api/v1/pit/imports/:id/decisions` | 管理员 | 批量提交行/重复组决策 |
 | `POST` | `/api/v1/pit/imports/:id/commit` | 管理员 | 事务导入 |
@@ -458,7 +461,9 @@ Query：
 - `merge`：显式选择目标行或现有需求，并指定字段优先级。
 - `skip`：不导入。
 
-只有所有阻断问题都已有决策时才能 commit。commit 前创建操作前备份；数据库写入、字典新增、重点标记和审计事件记录在同一事务中完成。
+只有所有阻断问题都已有决策时才能 commit。commit 前创建操作前备份；数据库写入、字典新增、重点标记、审计事件和 `initial_import_completed_at` 在同一事务中完成。
+
+首次 commit 成功后，PIT 永久关闭新增 preview 和 commit：导入页只展示已提交批次、映射结果和问题处理记录，导入按钮替换为“首次导入已完成”。后续数据只能在 PIT 中新增/编辑并通过 Excel 导出，不提供增量导入或覆盖导入。需要重新初始化时必须由管理员停服、备份并创建全新数据库，不在在线 API 中实现。
 
 ### 9.7 导出与备份
 
@@ -499,7 +504,7 @@ Query：
 
 ### 10.3 幂等与重复导入
 
-对上传文件计算 SHA-256。若相同文件已成功提交，preview 返回 `409 duplicate_import` 并给出原批次，不允许一键重复提交；管理员可显式创建新的预检批次并逐项确认。
+对上传文件计算 SHA-256。首次 commit 前，若相同文件已有进行中或已完成预检，preview 返回 `409 duplicate_preview` 并给出原批次。首次 commit 成功后，任何 preview 或 commit 请求均返回 `409 initial_import_completed`，不允许再次导入。
 
 ## 11. 鉴权与安全
 
@@ -580,13 +585,14 @@ Query：
 - 重点需求唯一匹配、歧义和未匹配。
 - 多值拆分、月份精度、公式结果、空白行和异常单元格。
 - 文件 hash 幂等、20 MiB 上限、错误文件类型与事务回滚。
+- 首次 commit 后永久关闭 preview/commit；重新启动服务也不能绕过。
 - 导出后字段、筛选范围和 UTF-8/中文内容可被 Excel 正常打开。
 
 ### 15.4 前端
 
 - 悬浮球 PIT 入口与 shell mode 切换。
 - 直接打开 PIT 深链、刷新和返回列表状态恢复。
-- 工作台摘要、快捷视图、关注/取消关注、筛选、分页和列设置。
+- 工作台摘要、快捷视图、管理员/编辑者关注与取消关注、筛选、分页和列设置；只读者无关注入口。
 - 详情抽屉、移动端详情页、新增、编辑、状态流转和冲突差异。
 - 管理员、编辑者、只读者的入口和按钮矩阵。
 - 导入预检、多人字段保留与账号关联、冲突决策、提交、导出历史、过期重建和错误提示。
