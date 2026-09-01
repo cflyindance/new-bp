@@ -35,11 +35,16 @@ function factory(scenario, id) {
     status: "disabled",
     origin: "system_default",
     defaultScenarioKey: scenario.key,
+    defaultCatalogVersion: 2,
     name: scenario.name,
     publishedSnapshotVersion: null,
     authoringConfig: {
       subject: scenario.subject,
-      period: "order_lifetime",
+      origin: "system_default",
+      defaultScenarioKey: scenario.key,
+      defaultCatalogVersion: 2,
+      period: scenario.enabledPeriods[0],
+      enabledPeriods: [...scenario.enabledPeriods],
       targetType: scenario.targetType,
       partyRanges: [{ min: 1, max: null }],
       roundRanges: [{ min: 1, max: null }],
@@ -55,9 +60,9 @@ const profile = loadProfile(storage);
 const repository = profile.repository;
 
 const first = repository.loadForAuthoringList(profile.createDefaultScenarioRule);
-assert.equal(first.length, 6);
+assert.equal(first.length, 8);
 assert.equal(first.every((rule) => rule.status === "disabled"), true);
-assert.equal(new Set(first.map((rule) => rule.defaultScenarioKey)).size, 6);
+assert.equal(new Set(first.map((rule) => rule.defaultScenarioKey)).size, 8);
 assert.equal(storage.getItem(menuKey), "menu-rules-must-not-change");
 const firstEnvelope = repository.readEnvelope();
 assert.equal(firstEnvelope.revision, 1);
@@ -67,7 +72,7 @@ assert.deepEqual(Object.keys(firstEnvelope.snapshots), []);
 const serialized = storage.getItem(repositoryKey);
 const writesBeforeSecondLoad = storage.writes;
 const second = repository.loadForAuthoringList(profile.createDefaultScenarioRule);
-assert.equal(second.length, 6);
+assert.equal(second.length, 8);
 assert.equal(storage.getItem(repositoryKey), serialized, "场景完整时不得改写仓库");
 assert.equal(storage.writes, writesBeforeSecondLoad, "幂等加载不得产生 storage 写入");
 
@@ -75,7 +80,11 @@ const partialStorage = storageMock({
   [repositoryKey]: JSON.stringify({
     schemaVersion: 1,
     revision: 7,
-    rules: [{ id: 41, status: "active", name: "已有规则", authoringConfig: { subject: "order", period: "order_lifetime", targetType: "category" } }],
+    rules: [{
+      id: 41, status: "disabled", origin: "system_default", defaultScenarioKey: "order|order_lifetime|dish",
+      defaultCatalogVersion: 2, name: "已有规则",
+      authoringConfig: { subject: "order", period: "order_lifetime", enabledPeriods: ["order_lifetime"], targetType: "dish" },
+    }],
     drafts: [{ id: 42, status: "draft", name: "仅草稿", editorDraft: { subject: "order", period: "order_lifetime", targetType: "dish" } }],
     snapshots: { stable: { snapshotId: "stable", rules: [{ id: 41 }] } },
     currentSnapshotId: "stable",
@@ -83,33 +92,32 @@ const partialStorage = storageMock({
 });
 const partialRepository = loadProfile(partialStorage).repository;
 const partial = partialRepository.loadForAuthoringList(factory);
-assert.equal(partial.length, 7, "1 条正式规则、1 条草稿和 5 条主体 × 对象补齐规则");
+assert.equal(partial.length, 9, "1 条系统默认规则、1 条草稿和 7 条缺失默认规则");
 const partialEnvelope = partialRepository.readEnvelope();
 assert.equal(partialEnvelope.revision, 8);
 assert.equal(partialEnvelope.rules.find((rule) => rule.id === 41).name, "已有规则");
 assert.equal(partialEnvelope.drafts.length, 1);
 assert.equal(partialEnvelope.currentSnapshotId, "stable");
 assert.deepEqual(JSON.parse(JSON.stringify(partialEnvelope.snapshots)), { stable: { snapshotId: "stable", rules: [{ id: 41 }] } });
-assert.equal(partialEnvelope.rules.some((rule) => rule.defaultScenarioKey === "order|dish"), true, "草稿不应阻止正式默认规则补齐");
+assert.equal(partialEnvelope.rules.filter((rule) => rule.defaultScenarioKey === "order|order_lifetime|dish").length, 1);
+assert.equal(partialEnvelope.rules.some((rule) => rule.defaultScenarioKey === "order|per_round|dish"), true, "草稿不应阻止正式默认规则补齐");
 assert.equal(first.every((rule) => rule.authoringConfig && rule.editorDraft), true, "默认规则必须包含完整作者态配置");
-assert.equal(first.find((rule) => rule.defaultScenarioKey === "party_size|dish").authoringConfig.roundRanges.length, 1);
+assert.equal(first.find((rule) => rule.defaultScenarioKey === "party_size|per_round|dish").authoringConfig.roundRanges.length, 1);
 assert.equal(first.every((rule) => rule.authoringConfig.schemaVersion === 4), true, "新增默认规则必须使用 v4");
 
 const legacyKeyStorage = storageMock({
   [repositoryKey]: JSON.stringify({
     schemaVersion: 1,
     revision: 2,
-    rules: [{ id: 81, status: "disabled", defaultScenarioKey: "party_size|per_round|dish_set", name: "历史默认规则" }],
+    rules: [{ id: 81, status: "disabled", origin: "system_default", defaultScenarioKey: "party_size|dish_set", name: "历史默认规则" }],
     drafts: [], snapshots: {}, currentSnapshotId: null,
   }),
 });
 const legacyKeyProfile = loadProfile(legacyKeyStorage);
 const legacyKeyRules = legacyKeyProfile.repository.loadForAuthoringList(legacyKeyProfile.createDefaultScenarioRule);
-assert.equal(legacyKeyRules.length, 6, "历史 defaultScenarioKey 应折叠到主体 × 对象覆盖键");
-assert.equal(legacyKeyRules.filter((rule) => {
-  const draft = rule.authoringConfig || rule.editorDraft || {};
-  return (draft.subject === "party_size" && draft.targetType === "dish_set") || rule.id === 81;
-}).length, 1, "历史默认场景不得触发重复播种");
+assert.equal(legacyKeyRules.length, 8, "旧两段键应安全映射为整单 canonical key，并仅补齐其余 7 条");
+assert.equal(legacyKeyRules.filter((rule) => rule.defaultScenarioKey === "party_size|order_lifetime|dish_set").length, 0);
+assert.equal(legacyKeyRules.filter((rule) => rule.id === 81).length, 1, "旧默认记录自身必须保留给 Task 2 迁移");
 
 assert.match(listSource, /loadForAuthoringList/);
 console.log("verify-buffet-default-scenario-rules: OK");
