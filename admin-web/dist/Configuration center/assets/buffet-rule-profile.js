@@ -12,13 +12,16 @@
     { id: "multi-round-desc", name: "分轮次递减", periods: ["multi_round"], blocks: { multi_round: ["target"] } },
     { id: "custom", name: "自定义配置", periods: [], blocks: {} }
   ];
+  var DEFAULT_CATALOG_VERSION = 2;
   var DEFAULT_SCENARIOS = [
-    { key: "order|category", subject: "order", targetType: "category", name: "按桌/订单·按分类限购" },
-    { key: "order|dish", subject: "order", targetType: "dish", name: "按桌/订单·按菜品限购" },
-    { key: "order|dish_set", subject: "order", targetType: "dish_set", name: "按桌/订单·按菜品集限购" },
-    { key: "party_size|category", subject: "party_size", targetType: "category", name: "按人数·按分类限购" },
-    { key: "party_size|dish", subject: "party_size", targetType: "dish", name: "按人数·按菜品限购" },
-    { key: "party_size|dish_set", subject: "party_size", targetType: "dish_set", name: "按人数·按菜品集限购" }
+    { key: "order|order_lifetime|dish", version: 2, group: "order_lifetime", subject: "order", targetType: "dish", name: "每个订单指定菜品限制下单份数", enabledPeriods: ["order_lifetime"], blocks: { totalEnabled: false, targetEnabled: true, sameDishEnabled: false } },
+    { key: "order|order_lifetime|dish_set", version: 2, group: "order_lifetime", subject: "order", targetType: "dish_set", name: "每个订单指定菜品集限制下单份数", enabledPeriods: ["order_lifetime"], blocks: { totalEnabled: false, targetEnabled: true, sameDishEnabled: false } },
+    { key: "party_size|order_lifetime|dish", version: 2, group: "order_lifetime", subject: "party_size", targetType: "dish", name: "每位食客每单指定菜品限制下单份数", enabledPeriods: ["order_lifetime"], blocks: { totalEnabled: false, targetEnabled: true, sameDishEnabled: false } },
+    { key: "party_size|order_lifetime|dish_set", version: 2, group: "order_lifetime", subject: "party_size", targetType: "dish_set", name: "每位食客每单菜品集限制下单份数", enabledPeriods: ["order_lifetime"], blocks: { totalEnabled: false, targetEnabled: true, sameDishEnabled: false } },
+    { key: "order|per_round|dish", version: 2, group: "per_round", subject: "order", targetType: "dish", name: "每轮指定菜品最多下多少份", enabledPeriods: ["per_round"], blocks: { totalEnabled: true, targetEnabled: true, sameDishEnabled: false } },
+    { key: "order|per_round|dish_set", version: 2, group: "per_round", subject: "order", targetType: "dish_set", name: "每轮指定菜品集最多下多少份", enabledPeriods: ["per_round"], blocks: { totalEnabled: false, targetEnabled: true, sameDishEnabled: true } },
+    { key: "party_size|per_round|dish", version: 2, group: "per_round", subject: "party_size", targetType: "dish", name: "每人每轮指定菜品最多下多少份", enabledPeriods: ["per_round"], blocks: { totalEnabled: true, targetEnabled: true, sameDishEnabled: false } },
+    { key: "party_size|per_round|dish_set", version: 2, group: "per_round", subject: "party_size", targetType: "dish_set", name: "每人每轮指定菜品集最多下多少份", enabledPeriods: ["per_round"], blocks: { totalEnabled: false, targetEnabled: true, sameDishEnabled: true } }
   ];
 
   function clone(value) {
@@ -100,28 +103,326 @@
     });
   }
 
-  function subjectTargetKey(subject, targetType) {
-    var key = [subject, targetType].join("|");
+  function canonicalDefaultKey(subject, period, targetType) {
+    var key = [subject, period, targetType].join("|");
     return DEFAULT_SCENARIOS.some(function (scenario) { return scenario.key === key; }) ? key : "";
   }
 
-  // Keep default-rule coverage keys separate from the party/round scenario cell key below.
-  // Function declarations are hoisted, so sharing this name would make list seeding
-  // miss every existing default rule on the second load.
-  function defaultScenarioKeyForRule(rule) {
-    if (!rule || (rule.status !== "active" && rule.status !== "disabled")) return "";
-    var draft = rule.authoringConfig || rule.authoringDraft || rule.editorDraft || rule;
-    var key = subjectTargetKey(draft.subject, draft.targetType);
-    if (key) return key;
-    var legacyParts = String(rule.defaultScenarioKey || "").split("|");
-    if (legacyParts.length >= 2) return subjectTargetKey(legacyParts[0], legacyParts[legacyParts.length - 1]);
-    return "";
+  function systemIdentity(rule) {
+    var draft = rule && (rule.authoringConfig || rule.authoringDraft || rule.editorDraft) || {};
+    return {
+      origin: rule && (rule.origin || draft.origin),
+      key: String(rule && (rule.defaultScenarioKey || draft.defaultScenarioKey) || ""),
+      version: Number(rule && (rule.defaultCatalogVersion || draft.defaultCatalogVersion) || 0)
+    };
   }
 
-  function missingScenarios(rules) {
+  function exactDefaultKey(rule) {
+    var identity = systemIdentity(rule);
+    var parts = identity.key.split("|");
+    if (identity.origin !== "system_default" || identity.version !== DEFAULT_CATALOG_VERSION || parts.length !== 3) return "";
+    return canonicalDefaultKey(parts[0], parts[1], parts[2]);
+  }
+
+  function verifiedLegacyDefaultKey(rule) {
+    var identity = systemIdentity(rule);
+    var parts = identity.key.split("|");
+    var legacyVersion = Number(identity.version || 1);
+    if (identity.origin !== "system_default" || legacyVersion !== 1 || parts.length !== 2) return "";
+    return canonicalDefaultKey(parts[0], "order_lifetime", parts[1]);
+  }
+
+  function snapshotContainsRule(snapshot, rule) {
+    var id = rule && rule.id;
+    if (id == null) return false;
+    if (!snapshot || typeof snapshot !== "object") return false;
+    return [snapshot.rules, snapshot.publishedRules, snapshot.runtimeRules].some(function (rules) {
+      return Array.isArray(rules) && rules.some(function (snapshotRule) {
+        return snapshotRule && (snapshotRule.id === id || snapshotRule.ruleId === id || snapshotRule.sourceRuleId === id);
+      });
+    });
+  }
+
+  function currentSnapshotReferencesRule(envelope, rule) {
+    var id = envelope && envelope.currentSnapshotId;
+    return !!(id && envelope.snapshots && snapshotContainsRule(envelope.snapshots[id], rule));
+  }
+
+  function historicalSnapshotReferencesRule(envelope, rule) {
+    return Object.keys(envelope && envelope.snapshots || {}).some(function (snapshotId) {
+      return snapshotId !== envelope.currentSnapshotId && snapshotContainsRule(envelope.snapshots[snapshotId], rule);
+    });
+  }
+
+  function authoringCopies(rule) {
+    return [rule, rule && rule.authoringConfig, rule && rule.authoringDraft, rule && rule.editorDraft].filter(function (value, index, values) {
+      return value && typeof value === "object" && values.indexOf(value) === index;
+    });
+  }
+
+  function hasValues(value) {
+    if (Array.isArray(value)) return value.length > 0;
+    return !!(value && typeof value === "object" && Object.keys(value).length);
+  }
+
+  function nestedCollectionHasValues(value) {
+    if (Array.isArray(value)) return value.length > 0;
+    if (!value || typeof value !== "object") return false;
+    return Object.keys(value).some(function (key) { return nestedCollectionHasValues(value[key]); });
+  }
+
+  function legacyDefaultName(rule) {
+    var key = systemIdentity(rule).key;
+    return {
+      "order|category": "按桌/订单·按分类限购", "order|dish": "按桌/订单·按菜品限购",
+      "order|dish_set": "按桌/订单·按菜品集限购", "party_size|category": "按人数·按分类限购",
+      "party_size|dish": "按人数·按菜品限购", "party_size|dish_set": "按人数·按菜品集限购"
+    }[key] || "";
+  }
+
+  function hasNonBaselineValue(value, baseline) {
+    if (value == null || value === "") return false;
+    if (Array.isArray(value)) {
+      if (!value.length) return false;
+      if (!Array.isArray(baseline) || !baseline.length || value.length !== baseline.length) return true;
+      return value.some(function (item, index) { return hasNonBaselineValue(item, baseline[index]); });
+    }
+    if (value && typeof value === "object") {
+      var keys = Object.keys(value);
+      if (!keys.length) return false;
+      if (!baseline || typeof baseline !== "object" || Array.isArray(baseline)) {
+        return keys.some(function (key) { return hasNonBaselineValue(value[key], undefined); });
+      }
+      return keys.some(function (key) { return hasNonBaselineValue(value[key], baseline[key]); });
+    }
+    if (baseline === undefined) return value === false ? false : true;
+    return value !== baseline;
+  }
+
+  function legacyPeriodPoliciesBaseline() {
+    var blocks = { totalEnabled: false, targetEnabled: true, sameDishEnabled: false };
+    return {
+      order_lifetime: { enabled: true, blocks: clone(blocks) },
+      per_round: { enabled: false, blocks: clone(blocks) },
+      multi_round: { enabled: false, blocks: clone(blocks) }
+    };
+  }
+
+  function legacyPeriodValuesBaseline() {
+    function emptyPeriod() {
+      return {
+        totalBounds: {}, tableTotalBounds: {}, targetLimits: {}, tableTargetCaps: {},
+        defaultDishLimits: {}, exceptionDishLimits: {}
+      };
+    }
+    return { order_lifetime: emptyPeriod(), per_round: emptyPeriod(), multi_round: emptyPeriod() };
+  }
+
+  function legacyConditionsBaseline(createdDate) {
+    return {
+      effectiveFrom: createdDate || "", effectiveTo: "", activityCycle: "weekly",
+      daysOfWeek: [1, 2, 3, 4, 5, 6, 7], daysOfMonth: [],
+      businessHourSlots: [{ id: "dinner", mode: "full", from: "", to: "" }],
+      businessHourSetupMode: "all_full", businessHour: "dinner", businessHourTimeMode: "full",
+      businessHourFrom: "", businessHourTo: "", memberMode: "all", memberLevelIds: [], childCountPolicy: "inherit"
+    };
+  }
+
+  function legacyAuthorizationBaseline() {
+    return {
+      enabled: true, allowedScopes: ["operation", "round", "order"], defaultScope: "round",
+      scopePermissions: { operation: "值班经理", round: "主管", order: "店长" }, reasonRequired: true
+    };
+  }
+
+  function hasCustomLegacyConditions(value, createdDate) {
+    return hasNonBaselineValue(value && value.conditions, legacyConditionsBaseline(createdDate));
+  }
+
+  function hasCustomLegacyAuthorization(value) {
+    return hasNonBaselineValue(value && value.authorization, legacyAuthorizationBaseline());
+  }
+
+  function nonEmptyValue(value) {
+    if (value == null || value === "" || value === false) return false;
+    if (Array.isArray(value)) return value.length > 0;
+    if (typeof value === "object") return Object.keys(value).length > 0;
+    return true;
+  }
+
+  function hasCustomLegacyPeriodPolicies(value) {
+    return hasNonBaselineValue(value && value.periodPolicies, legacyPeriodPoliciesBaseline());
+  }
+
+  function configuredFieldScore(rule, envelope) {
+    var score = 0;
+    var createdDate = String(rule && (rule.created || rule.createdAt) || "").slice(0, 10);
+    var initialName = legacyDefaultName(rule);
+    var arrays = ["participatingStoreIds", "deployStoreIds", "deployExcludedStoreIds", "productLines", "targetIds",
+      "selectedCategories", "selectedDishes", "dishSetMembers", "memberLevelIds", "personRanges", "rounds"];
+    var maps = ["storeConfigs", "limits", "dishSetLimits", "quantitySettings"];
+    authoringCopies(rule).forEach(function (copy) {
+      arrays.forEach(function (field) { if (hasValues(copy[field])) score += 1; });
+      maps.forEach(function (field) { if (hasValues(copy[field])) score += 2; });
+      if (nestedCollectionHasValues(copy.structureByLine)) score += 2;
+      if (nestedCollectionHasValues(copy.legacyCompatibilityFallback)) score += 2;
+      Object.keys(copy.periodValues || {}).forEach(function (period) {
+        var values = copy.periodValues[period] || {};
+        ["totalLimits", "tableTotalLimits", "targetLimits", "sameDishLimits"].forEach(function (field) {
+          if (hasConfiguredCellMap(values[field])) score += 2;
+        });
+      });
+      if (hasNonBaselineValue(copy.periodValues, legacyPeriodValuesBaseline())) score += 2;
+      if (Array.isArray(copy.enabledPeriods) && (copy.enabledPeriods.length !== 1 || copy.enabledPeriods[0] !== "order_lifetime")) score += 2;
+      if (Array.isArray(copy.partyRanges) && (copy.partyRanges.length !== 1 || Number(copy.partyRanges[0].min) !== 1 || copy.partyRanges[0].max != null)) score += 1;
+      if (Array.isArray(copy.roundRanges) && (copy.roundRanges.length !== 1 || Number(copy.roundRanges[0].min) !== 1 || copy.roundRanges[0].max != null)) score += 1;
+      if (String(copy.description || "")) score += 2;
+      if (copy.name && copy.name !== initialName) score += 2;
+      if (copy.activeStoreId) score += 1;
+      if (copy.currentStep != null && Number(copy.currentStep) !== 1) score += 1;
+      if (copy.highestStep != null && Number(copy.highestStep) !== 1) score += 1;
+      if (copy.deploymentSelectionVersion != null && Number(copy.deploymentSelectionVersion) !== 1) score += 1;
+      if (copy.productQuantityMergedVersion != null && Number(copy.productQuantityMergedVersion) !== 2) score += 1;
+      if (copy.measureUnit != null && copy.measureUnit !== "piece") score += 1;
+      if (hasCustomLegacyPeriodPolicies(copy)) score += 2;
+      if (hasCustomLegacyConditions(copy, createdDate)) score += 2;
+      if (hasCustomLegacyAuthorization(copy)) score += 2;
+      if (copy.publishedSnapshotVersion != null || copy.publishedConfig || copy.publishedAt || copy.runtimeSnapshotId || copy.runtimeSnapshotRef || copy.runtimeSnapshotVersion != null) score += 16;
+      ["publicationHistory", "deploymentHistory", "releaseHistory", "versionReferences", "downstreamReferences",
+        "authorizationRecords", "authorizationHistory", "authorizationCredentials", "runtimeCounters", "processedOperationIds"].forEach(function (field) {
+        if (hasValues(copy[field])) score += 16;
+      });
+      if (hasUnknownLegacyBusinessData(copy)) score += 64;
+    });
+    if (rule && rule.status === "active") score += 8;
+    return score;
+  }
+
+  function hasUnknownLegacyBusinessData(copy) {
+    var known = {
+      id: true, status: true, origin: true, defaultScenarioKey: true, defaultCatalogVersion: true,
+      schemaVersion: true, currentStep: true, highestStep: true, name: true, description: true,
+      created: true, createdAt: true, updatedAt: true, type: true, round: true, method: true, persons: true, dishes: true,
+      subject: true, period: true, enabledPeriods: true, periodPolicies: true, targetType: true, measureUnit: true,
+      partyRanges: true, roundRanges: true, personRanges: true, rounds: true,
+      activePartyIndex: true, activeRoundIndex: true, activeLineId: true, activeStoreId: true,
+      participatingStoreIds: true, deployStoreIds: true, deployExcludedStoreIds: true,
+      productLines: true, targetIds: true, selectedCategories: true, selectedDishes: true, dishSetMembers: true, memberLevelIds: true,
+      structureByLine: true, storeConfigs: true, limits: true, dishSetLimits: true, quantitySettings: true, periodValues: true,
+      conditions: true, authorization: true, legacyCompatibilityFallback: true,
+      authoringConfig: true, authoringDraft: true, editorDraft: true,
+      publishedSnapshotVersion: true, publishedConfig: true, publishedAt: true,
+      runtimeSnapshotId: true, runtimeSnapshotRef: true, runtimeSnapshotVersion: true,
+      publicationHistory: true, deploymentHistory: true, releaseHistory: true, versionReferences: true,
+      downstreamReferences: true, authorizationRecords: true, authorizationHistory: true, authorizationCredentials: true,
+      runtimeCounters: true, processedOperationIds: true, deploymentSelectionVersion: true, productQuantityMergedVersion: true
+    };
+    return Object.keys(copy || {}).some(function (field) {
+      if (known[field]) return false;
+      var value = copy[field];
+      return nonEmptyValue(value);
+    });
+  }
+
+  function isUntouchedLegacyDefault(rule, envelope) {
+    var candidateIdentity = systemIdentity(rule);
+    if (!verifiedLegacyDefaultKey(rule) && !(candidateIdentity.origin === "system_default" && Number(candidateIdentity.version || 1) === 1 && candidateIdentity.key.split("|").length === 2)) return false;
+    if (!rule || rule.status !== "disabled" || configuredFieldScore(rule, envelope) !== 0) return false;
+    return !currentSnapshotReferencesRule(envelope, rule) && !historicalSnapshotReferencesRule(envelope, rule);
+  }
+
+  function stripSystemIdentity(rule) {
+    [rule, rule && rule.authoringConfig, rule && rule.authoringDraft, rule && rule.editorDraft].forEach(function (value) {
+      if (!value || typeof value !== "object") return;
+      delete value.origin;
+      delete value.defaultScenarioKey;
+      delete value.defaultCatalogVersion;
+    });
+    return rule;
+  }
+
+  function setSystemIdentity(rule, key) {
+    [rule, rule && rule.authoringConfig, rule && rule.authoringDraft, rule && rule.editorDraft].forEach(function (value) {
+      if (!value || typeof value !== "object") return;
+      value.origin = "system_default";
+      value.defaultScenarioKey = key;
+      value.defaultCatalogVersion = DEFAULT_CATALOG_VERSION;
+    });
+    return rule;
+  }
+
+  function legacySemanticsMatch(rule, key) {
+    var parts = key.split("|");
+    var semanticCopies = authoringCopies(rule).filter(function (copy) {
+      return copy.subject != null || copy.targetType != null || copy.period != null || Array.isArray(copy.enabledPeriods);
+    });
+    return semanticCopies.length > 0 && semanticCopies.every(function (copy) {
+      var periods = Array.isArray(copy.enabledPeriods) && copy.enabledPeriods.length ? copy.enabledPeriods : [copy.period || "order_lifetime"];
+      return copy.subject === parts[0] && copy.targetType === parts[2] && periods.length === 1 && periods[0] === "order_lifetime";
+    });
+  }
+
+  function candidateRank(rule, envelope) {
+    var currentSnapshot = currentSnapshotReferencesRule(envelope, rule);
+    var historicalSnapshot = historicalSnapshotReferencesRule(envelope, rule);
+    var published = authoringCopies(rule).some(function (copy) {
+      return copy.publishedSnapshotVersion != null || !!copy.publishedConfig || !!copy.publishedAt;
+    });
+    var active = rule.status === "active";
+    var configured = configuredFieldScore(rule, envelope);
+    var created = Date.parse(rule.created || rule.createdAt || "") || Number.MAX_SAFE_INTEGER;
+    var id = Number(rule.id);
+    return [currentSnapshot ? 1 : 0, published ? 1 : 0, historicalSnapshot ? 1 : 0, active ? 1 : 0, configured, -created, Number.isFinite(id) ? -id : -Number.MAX_SAFE_INTEGER];
+  }
+
+  function compareCandidates(left, right, envelope) {
+    var a = candidateRank(left, envelope);
+    var b = candidateRank(right, envelope);
+    for (var index = 0; index < a.length; index += 1) if (a[index] !== b[index]) return b[index] - a[index];
+    return 0;
+  }
+
+  function reconcileDefaultRules(envelope, factory) {
+    var next = clone(envelope);
+    var before = JSON.stringify(next);
+    var groups = {};
+    var retained = [];
+    next.rules.forEach(function (rule) {
+      var exact = exactDefaultKey(rule);
+      var legacy = verifiedLegacyDefaultKey(rule);
+      var identity = systemIdentity(rule);
+      var isLegacyCategory = identity.origin === "system_default" && Number(identity.version || 1) === 1 && /\|category$/.test(identity.key);
+      if (isLegacyCategory) {
+        if (!isUntouchedLegacyDefault(rule, next)) retained.push(stripSystemIdentity(rule));
+        return;
+      }
+      if (legacy && !legacySemanticsMatch(rule, legacy)) {
+        retained.push(stripSystemIdentity(rule));
+        return;
+      }
+      var key = exact || legacy;
+      if (!key) {
+        retained.push(rule);
+        return;
+      }
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(rule);
+    });
+    Object.keys(groups).forEach(function (key) {
+      var candidates = groups[key].sort(function (left, right) { return compareCandidates(left, right, next); });
+      retained.push(setSystemIdentity(candidates[0], key));
+      candidates.slice(1).forEach(function (candidate) {
+        if (!isUntouchedLegacyDefault(candidate, next)) retained.push(stripSystemIdentity(candidate));
+      });
+    });
+    next.rules = retained;
     var covered = {};
-    (rules || []).forEach(function (rule) { var key = defaultScenarioKeyForRule(rule); if (key) covered[key] = true; });
-    return DEFAULT_SCENARIOS.filter(function (scenario) { return !covered[scenario.key]; });
+    next.rules.forEach(function (rule) { var key = exactDefaultKey(rule); if (key) covered[key] = true; });
+    var id = nextNumericId(next);
+    DEFAULT_SCENARIOS.forEach(function (scenario) {
+      if (!covered[scenario.key]) next.rules.push(factory(clone(scenario), id++));
+    });
+    return { changed: before !== JSON.stringify(next), envelope: next };
   }
 
   function nextNumericId(envelope) {
@@ -364,14 +665,21 @@
   function createDefaultScenarioRule(scenario, id) {
     var created = today();
     var defaultScenario = DEFAULT_SCENARIOS.find(function (item) {
-      return item.subject === scenario.subject && item.targetType === scenario.targetType;
+      return item.key === scenario.key;
     }) || scenario;
-    var scenarioKey = scenario.key || defaultScenario.key || subjectTargetKey(scenario.subject, scenario.targetType);
-    var scenarioName = scenario.name || defaultScenario.name || "自助餐限购规则";
+    var scenarioKey = defaultScenario.key;
+    var scenarioName = defaultScenario.name || "自助餐限购规则";
+    var enabledPeriods = clone(defaultScenario.enabledPeriods || ["order_lifetime"]);
+    var period = enabledPeriods[0] || "order_lifetime";
+    var periodPolicies = {};
+    enabledPeriods.forEach(function (periodKey) {
+      periodPolicies[periodKey] = { enabled: true, blocks: clone(defaultScenario.blocks || {}) };
+    });
     var draft = upgradeDraftToV4({
       schemaVersion: 4,
       currentStep: 1, highestStep: 1,
-      subject: scenario.subject, period: "order_lifetime", enabledPeriods: ["order_lifetime"], targetType: scenario.targetType,
+      origin: "system_default", defaultScenarioKey: scenarioKey, defaultCatalogVersion: DEFAULT_CATALOG_VERSION,
+      subject: defaultScenario.subject, period: period, enabledPeriods: enabledPeriods, periodPolicies: periodPolicies, targetType: defaultScenario.targetType,
       name: scenarioName, description: "",
       structureByLine: { kiosk: [], emenu: [], sdi: [] }, productLines: [], targetIds: [],
       partyRanges: [{ min: 1, max: null }], roundRanges: [{ min: 1, max: null }],
@@ -394,10 +702,10 @@
     });
     return {
       id: id, name: scenarioName, description: "", status: "disabled", created: created, updatedAt: new Date().toISOString(),
-      origin: "system_default", defaultScenarioKey: scenarioKey, publishedSnapshotVersion: null,
-      type: scenario.subject === "party_size" ? "按人数限购" : "按桌/订单限购",
-      round: "每单/整单累计",
-      method: scenario.targetType === "dish_set" ? "按菜品集限购" : scenario.targetType === "dish" ? "按每种菜品限购" : "按每个分类限购",
+      origin: "system_default", defaultScenarioKey: scenarioKey, defaultCatalogVersion: DEFAULT_CATALOG_VERSION, publishedSnapshotVersion: null,
+      type: defaultScenario.subject === "party_size" ? "按人数限购" : "按桌/订单限购",
+      round: period === "per_round" ? "每轮" : "每单/整单累计",
+      method: defaultScenario.targetType === "dish_set" ? "按菜品集限购" : "按每种菜品限购",
       persons: "1 人及以上", dishes: "未配置门店/产线", selectedCategories: [], selectedDishes: [],
       structureByLine: clone(draft.structureByLine), quantitySettings: {}, personRanges: [],
       productLines: [], limits: [], conditions: clone(draft.conditions), authorization: clone(draft.authorization),
@@ -426,7 +734,8 @@
   function prepareDraftCopy(input) {
     var draft = clone(input || {});
     ["publishedAt", "publishedSnapshotVersion", "runtimeSnapshotId", "runtimeSnapshotRef", "runtimeSnapshotVersion",
-      "authorizationRecords", "authorizationHistory", "authorizationCredentials", "runtimeCounters", "processedOperationIds"].forEach(function (field) {
+      "authorizationRecords", "authorizationHistory", "authorizationCredentials", "runtimeCounters", "processedOperationIds",
+      "origin", "defaultScenarioKey", "defaultCatalogVersion"].forEach(function (field) {
       delete draft[field];
     });
     return draft;
@@ -478,13 +787,11 @@
     loadForAuthoringList: function (factory) {
       if (typeof factory !== "function") throw new Error("BUFFET_DEFAULT_RULE_FACTORY_REQUIRED");
       var initial = readEnvelope();
-      if (!missingScenarios(initial.rules).length) return clone(initial.rules.concat(initial.drafts));
+      var preview = reconcileDefaultRules(initial, factory);
+      if (!preview.changed) return clone(initial.rules.concat(initial.drafts));
       var updated = mutateEnvelope(null, function (next) {
-        var missing = missingScenarios(next.rules);
-        if (!missing.length) return false;
-        var id = nextNumericId(next);
-        missing.forEach(function (scenario) { next.rules.push(factory(clone(scenario), id++)); });
-        return next;
+        var result = reconcileDefaultRules(next, factory);
+        return result.changed ? result.envelope : false;
       });
       return clone(updated.rules.concat(updated.drafts));
     },
@@ -533,6 +840,9 @@
     repository: repository,
     defaultScenarios: clone(DEFAULT_SCENARIOS),
     createDefaultScenarioRule: createDefaultScenarioRule,
+    reconcileDefaultRules: reconcileDefaultRules,
+    verifiedLegacyDefaultKey: verifiedLegacyDefaultKey,
+    isUntouchedLegacyDefault: isUntouchedLegacyDefault,
     periodTemplates: clone(PERIOD_TEMPLATES),
     allowedPeriods: ALLOWED_PERIODS.slice(),
     usesV4Capability: usesV4Capability,

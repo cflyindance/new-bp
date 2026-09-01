@@ -49,25 +49,29 @@ assert.deepEqual(Array.from(profile.periodTemplates, (item) => item.id), [
 assert.deepEqual(Array.from(profile.allowedTargetTypes), ["category", "dish", "dish_set"]);
 assert.deepEqual(Array.from(profile.allowedPeriods), ["order_lifetime", "per_round", "multi_round"]);
 
-const defaultRule = profile.createDefaultScenarioRule({
-  subject: "order",
-  targetType: "dish",
-}, 1);
+const defaultRule = profile.createDefaultScenarioRule(
+  profile.defaultScenarios.find((item) => item.key === "order|order_lifetime|dish"),
+  1,
+);
 assert.equal(defaultRule.editorDraft.schemaVersion, 4);
-assert.equal(defaultRule.defaultScenarioKey, "order|dish");
-assert.equal(defaultRule.name, "按桌/订单·按菜品限购");
+assert.equal(defaultRule.defaultScenarioKey, "order|order_lifetime|dish");
+assert.equal(defaultRule.defaultCatalogVersion, 2);
+assert.equal(defaultRule.name, "每个订单指定菜品限制下单份数");
 assert.deepEqual(Array.from(defaultRule.editorDraft.enabledPeriods), ["order_lifetime"]);
 assert.ok(defaultRule.editorDraft.storeConfigs && typeof defaultRule.editorDraft.storeConfigs === "object");
 
 for (const subject of ["order", "party_size"]) {
-  for (const targetType of ["category", "dish", "dish_set"]) {
-    assert.ok(
-      profile.defaultScenarios.some((item) => item.subject === subject && item.targetType === targetType),
-      `默认规则应覆盖 ${subject} × ${targetType}`,
-    );
+  for (const period of ["order_lifetime", "per_round"]) {
+    for (const targetType of ["dish", "dish_set"]) {
+      assert.ok(
+        profile.defaultScenarios.some((item) => item.key === `${subject}|${period}|${targetType}`),
+        `默认规则应覆盖 ${subject} × ${period} × ${targetType}`,
+      );
+    }
   }
 }
-assert.equal(profile.defaultScenarios.length, 6, "默认规则只按主体 × 对象播种，不再按单周期重复");
+assert.equal(profile.defaultScenarios.length, 8, "默认规则应为固定的八场景目录");
+assert.equal(profile.defaultScenarios.some((item) => item.targetType === "category"), false);
 
 const legacyDraft = {
   schemaVersion: 2,
