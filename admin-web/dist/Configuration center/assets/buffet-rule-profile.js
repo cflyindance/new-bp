@@ -734,7 +734,8 @@
   function prepareDraftCopy(input) {
     var draft = clone(input || {});
     ["publishedAt", "publishedSnapshotVersion", "runtimeSnapshotId", "runtimeSnapshotRef", "runtimeSnapshotVersion",
-      "authorizationRecords", "authorizationHistory", "authorizationCredentials", "runtimeCounters", "processedOperationIds"].forEach(function (field) {
+      "authorizationRecords", "authorizationHistory", "authorizationCredentials", "runtimeCounters", "processedOperationIds",
+      "origin", "defaultScenarioKey", "defaultCatalogVersion"].forEach(function (field) {
       delete draft[field];
     });
     return draft;
