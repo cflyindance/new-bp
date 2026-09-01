@@ -41,6 +41,14 @@ function loadFlow(profile) {
 }
 
 const profile = loadProfile();
+profile.conflictPolicy = {
+  dishSetOverlapDetails(candidate, records, excludedIds) {
+    if (candidate.targetType !== "dish_set" || excludedIds.map(String).includes("active-overlap")) return null;
+    return records.some((record) => record.id === "active-overlap")
+      ? { ruleId: "active-overlap", storeIds: ["store1"], dishIds: ["kiosk|dish:a"] }
+      : null;
+  },
+};
 const api = loadFlow(profile);
 
 const copied = profile.lifecycle.prepareDraftCopy({
@@ -173,5 +181,18 @@ assert.match(flowSource, /if \(isSystemDefaultDraft\(draft\)\)[\s\S]*?data-perio
 assert.match(flowSource, /if \(isSystemDefaultDraft\(draft\)\)[\s\S]*?data-period-block[\s\S]*?return/);
 assert.match(cssSource, /\.olf-page \.olf-choice\.is-locked/);
 assert.match(cssSource, /\.olf-page \.olf-system-default-note/);
+
+const overlappingDraftRule = { id: "draft-1", editorDraft: { targetType: "dish_set" } };
+const activeOverlap = { id: "active-overlap", status: "active", authoringConfig: { name: "海鲜菜品集" } };
+assert.equal(
+  api.dishSetDraftOverlapWarning(overlappingDraftRule, [overlappingDraftRule, activeOverlap]),
+  "草稿已保存，但与“海鲜菜品集”在 1 家门店存在菜品集重叠；启用或发布前需要调整。",
+);
+assert.equal(api.dishSetDraftOverlapWarning({ id: "dish", editorDraft: { targetType: "dish" } }, [activeOverlap]), "");
+assert.equal(api.dishSetDraftOverlapWarning({ id: "category", editorDraft: { targetType: "category" } }, [activeOverlap]), "");
+assert.match(flowSource, /saveRules\(rules\);[\s\S]*?dishSetDraftOverlapWarning\(built, loadRules\(\)\)/, "warning must run only after persistence");
+assert.match(flowSource, /if \(overlapWarning\) toast\(overlapWarning, true\)/);
+assert.match(profileSource, /activationValidation[\s\S]*?domain\.findConflict\(draft, records \|\| \[\], \[record && record\.id\]\.filter\(Boolean\)\)/, "activation must block domain conflicts");
+assert.match(flowSource, /function publishDraft\(draftRule\)[\s\S]*?validateBuffetRuleConflict\(draftRule\)[\s\S]*?if \(conflict\) throw new Error/, "publication must block the same domain conflict");
 
 console.log("verify-buffet-system-default-editor: PASS");

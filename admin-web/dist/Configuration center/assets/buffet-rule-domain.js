@@ -123,15 +123,45 @@
       var to = String(slot.to || "23:59").split(":");
       var start = Number(from[0]) * 60 + Number(from[1]);
       var end = Number(to[0]) * 60 + Number(to[1]);
+      // 跨午夜时段保留为跨日区间；后段属于下一自然日，不能再按原营业日单独比较。
       if (end >= start) result.push([start, end]);
-      else { result.push([start, 1440]); result.push([0, end]); }
+      else result.push([start, end + 1440]);
       return result;
     }, []);
   }
 
-  function timeOverlap(left, right) {
-    return slotIntervals(left).some(function (a) {
-      return slotIntervals(right).some(function (b) { return Math.max(a[0], b[0]) <= Math.min(a[1], b[1]); });
+  function effectiveDateBounds(conditions) {
+    return {
+      start: dateValue(conditions && conditions.effectiveFrom, "2000-01-01T00:00:00Z"),
+      end: dateValue(conditions && conditions.effectiveTo, "9999-12-31T00:00:00Z")
+    };
+  }
+
+  function scheduledIntervals(conditions, scanStart, scanEnd) {
+    var bounds = effectiveDateBounds(conditions || {});
+    var result = [];
+    for (var date = new Date(scanStart); date <= scanEnd; date.setUTCDate(date.getUTCDate() + 1)) {
+      if (date < bounds.start || date > bounds.end || !dayMatches(date, conditions || {})) continue;
+      var midnight = date.getTime();
+      slotIntervals(conditions || {}).forEach(function (slot) {
+        result.push([midnight + slot[0] * 60000, midnight + slot[1] * 60000]);
+      });
+    }
+    return result;
+  }
+
+  function scheduleOverlap(left, right) {
+    var leftBounds = effectiveDateBounds(left || {});
+    var rightBounds = effectiveDateBounds(right || {});
+    // 向前扫描一天以捕获前一营业日跨午夜产生的尾段；向后一天覆盖有效期最后一天的尾段。
+    var start = new Date(Math.max(leftBounds.start.getTime(), rightBounds.start.getTime()) - 86400000);
+    var naturalEnd = Math.min(leftBounds.end.getTime(), rightBounds.end.getTime()) + 86400000;
+    var end = new Date(Math.min(naturalEnd, start.getTime() + 400 * 86400000));
+    if (start > end) return false;
+    var leftIntervals = scheduledIntervals(left || {}, start, end);
+    var rightIntervals = scheduledIntervals(right || {}, start, end);
+    return leftIntervals.some(function (a) {
+      return rightIntervals.some(function (b) { return Math.max(a[0], b[0]) < Math.min(a[1], b[1]); });
     });
   }
 
@@ -143,7 +173,21 @@
   function conditionsOverlap(left, right) {
     left = left || {};
     right = right || {};
-    return calendarOverlap(left, right) && timeOverlap(left, right) && memberOverlap(left, right);
+    return memberOverlap(left, right) && scheduleOverlap(left, right);
+  }
+
+  function numericRangesOverlap(left, right) {
+    var leftRanges = Array.isArray(left) && left.length ? left : [{ min: 1, max: null }];
+    var rightRanges = Array.isArray(right) && right.length ? right : [{ min: 1, max: null }];
+    return leftRanges.some(function (a) {
+      var aMin = Number(a && a.min) || 1;
+      var aMax = a && a.max != null && a.max !== "" ? Number(a.max) : Infinity;
+      return rightRanges.some(function (b) {
+        var bMin = Number(b && b.min) || 1;
+        var bMax = b && b.max != null && b.max !== "" ? Number(b.max) : Infinity;
+        return Math.max(aMin, bMin) <= Math.min(aMax, bMax);
+      });
+    });
   }
 
   function targetEntries(draft) {
@@ -209,14 +253,16 @@
     if (candidate.targetType !== existing.targetType) return null;
     if (!v4PeriodsConflict(candidate, existing)) return null;
     if (!conditionsOverlap(candidate.conditions, existing.conditions)) return null;
+    if (!numericRangesOverlap(candidate.partyRanges, existing.partyRanges)) return null;
     var candidateTargets = targetEntries(candidate);
     var existingTargets = targetEntries(existing);
     if (candidate.targetType === "dish_set") {
-      var overlap = targetIntersection(candidateTargets, existingTargets);
-      return overlap ? {
+      var details = dishSetOverlapForRecord(candidate, existing, record);
+      return details ? {
         code: "DISH_SET_MEMBER_OVERLAP",
         ruleId: record.id,
-        target: overlap,
+        storeIds: details.storeIds,
+        dishIds: details.dishIds,
         existingPeriods: rulePeriods(existing),
         candidatePeriods: rulePeriods(candidate)
       } : null;
@@ -229,6 +275,38 @@
       existingPeriods: rulePeriods(existing),
       candidatePeriods: rulePeriods(candidate)
     } : null;
+  }
+
+  function dishSetOverlapForRecord(candidate, existing, record) {
+    if (!candidate || candidate.targetType !== "dish_set" || !existing || existing.targetType !== "dish_set") return null;
+    if (candidate.subject !== existing.subject) return null;
+    if (!v4PeriodsConflict(candidate, existing)) return null;
+    if (!conditionsOverlap(candidate.conditions, existing.conditions)) return null;
+    if (!numericRangesOverlap(candidate.partyRanges, existing.partyRanges)) return null;
+    var candidateTargets = targetEntries(candidate);
+    var existingTargets = targetEntries(existing);
+    var stores = [];
+    var dishes = [];
+    candidateTargets.forEach(function (left) {
+      if (!existingTargets.some(function (right) { return sameTarget(left, right); })) return;
+      if (stores.indexOf(left.storeId) < 0) stores.push(left.storeId);
+      var dishIdentity = left.identity || menuIdentity({ productLineId: left.lineId, dishId: left.targetId });
+      if (dishes.indexOf(dishIdentity) < 0) dishes.push(dishIdentity);
+    });
+    return stores.length && dishes.length ? { ruleId: record.id, storeIds: stores, dishIds: dishes } : null;
+  }
+
+  function dishSetOverlapDetails(candidate, records, excludeIds) {
+    candidate = publishedConfig(candidate);
+    if (!candidate || candidate.targetType !== "dish_set") return null;
+    var excluded = (excludeIds || []).map(String);
+    for (var index = 0; index < (records || []).length; index += 1) {
+      var record = records[index];
+      if (!record || record.status !== "active" || excluded.indexOf(String(record.id)) >= 0) continue;
+      var details = dishSetOverlapForRecord(candidate, publishedConfig(record), record);
+      if (details) return details;
+    }
+    return null;
   }
 
   function findConflict(candidate, records, excludeIds) {
@@ -810,6 +888,7 @@
     targetEntries: targetEntries,
     publishedConfig: publishedConfig,
     findConflict: findConflict,
+    dishSetOverlapDetails: dishSetOverlapDetails,
     validateStaticFeasibility: validateStaticFeasibility,
     validateAuthorizationCredential: validateAuthorizationCredential,
     selectRuntimeModule: selectRuntimeModule,

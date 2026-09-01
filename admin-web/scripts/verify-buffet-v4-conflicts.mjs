@@ -84,6 +84,39 @@ assert.equal(domain.findConflict(v4({ conditions: numericMonday }), [active(v4({
 assert.equal(domain.findConflict(v4({ conditions: numericMonday }), [active(v4({ conditions: legacyMonday }))], []).code, "DUPLICATE_TARGET_RULE", "numeric and historical weekday formats must overlap");
 assert.equal(domain.findConflict(v4({ conditions: numericMonday }), [active(v4({ conditions: numericTuesday }))], []), null, "different numeric weekdays must not overlap");
 
+const mondayOvernight = {
+  ...always,
+  activityCycle: "weekly",
+  daysOfWeek: ["mon"],
+  businessHourSlots: [{ mode: "custom", from: "23:00", to: "01:00" }],
+};
+const tuesdayTail = {
+  ...always,
+  activityCycle: "weekly",
+  daysOfWeek: ["tue"],
+  businessHourSlots: [{ mode: "custom", from: "00:30", to: "00:45" }],
+};
+const mondayEarly = {
+  ...always,
+  activityCycle: "weekly",
+  daysOfWeek: ["mon"],
+  businessHourSlots: [{ mode: "custom", from: "00:30", to: "00:45" }],
+};
+assert.equal(domain.findConflict(v4({ conditions: mondayOvernight }), [active(v4({ conditions: tuesdayTail }))], []).code, "DUPLICATE_TARGET_RULE", "Monday overnight tail belongs to Tuesday");
+assert.equal(domain.findConflict(v4({ conditions: mondayOvernight }), [active(v4({ conditions: mondayEarly }))], []), null, "Monday early time must not intersect the tail produced after Monday night");
+assert.equal(domain.conditionsOverlap(
+  { ...always, businessHourSlots: [{ mode: "custom", from: "23:00", to: "01:00" }] },
+  { ...always, businessHourSlots: [{ mode: "custom", from: "00:30", to: "00:45" }] },
+), true, "daily schedules must compare the next-day overnight tail");
+assert.equal(domain.conditionsOverlap(
+  { ...always, activityCycle: "monthly", daysOfMonth: [31], businessHourSlots: [{ mode: "custom", from: "23:00", to: "01:00" }] },
+  { ...always, activityCycle: "monthly", daysOfMonth: [1], businessHourSlots: [{ mode: "custom", from: "00:30", to: "00:45" }] },
+), true, "monthly schedules must carry an overnight tail into the next month");
+assert.equal(domain.conditionsOverlap(
+  { ...mondayOvernight, effectiveFrom: "2026-01-05", effectiveTo: "2026-01-05" },
+  { ...tuesdayTail, effectiveFrom: "2026-01-06", effectiveTo: "2026-01-06" },
+), true, "the last effective service day may overlap the next calendar day's first effective window");
+
 const setA = v4({
   targetType: "dish_set",
   storeConfigs: { "store-a": { ...v4().storeConfigs["store-a"], dishSetMembers: [{ productLineId: "kiosk", dishId: "dish-a" }, { productLineId: "emenu", dishId: "dish-b" }] } },
@@ -98,6 +131,41 @@ const setDifferentLine = v4({
   storeConfigs: { "store-a": { ...v4().storeConfigs["store-a"], dishSetMembers: [{ productLineId: "sdi", dishId: "dish-a" }, { productLineId: "emenu", dishId: "dish-c" }] } },
 });
 assert.equal(domain.findConflict(setA, [active(setDifferentLine)], []), null, "same dishId in another product line is not an overlap");
+
+const setOverlapDetails = domain.dishSetOverlapDetails(setA, [active(setB, "set-b")], []);
+assert.deepEqual(
+  { ruleId: setOverlapDetails.ruleId, storeIds: Array.from(setOverlapDetails.storeIds), dishIds: Array.from(setOverlapDetails.dishIds) },
+  { ruleId: "set-b", storeIds: ["store-a"], dishIds: ["kiosk|dish-a"] },
+  "dish-set overlap details must expose the conflicting rule, stores and line-qualified dishes",
+);
+assert.equal(domain.dishSetOverlapDetails(v4(), [active(setB)], []), null, "ordinary dish rules do not use dish-set overlap warnings");
+assert.equal(domain.dishSetOverlapDetails(v4({ targetType: "category" }), [active(setB)], []), null, "category rules do not use dish-set overlap warnings");
+assert.equal(domain.dishSetOverlapDetails(setA, [active(setB, "excluded")], ["excluded"]), null, "excluded records are ignored");
+
+const setOtherStore = structuredClone(setB);
+setOtherStore.deployStoreIds = ["store-b"];
+setOtherStore.storeConfigs = { "store-b": setOtherStore.storeConfigs["store-a"] };
+assert.equal(domain.dishSetOverlapDetails(setA, [active(setOtherStore)], []), null, "non-overlapping stores may coexist");
+assert.equal(domain.dishSetOverlapDetails(setA, [active(v4({ ...setB, subject: "order" }))], []), null, "different subjects may coexist");
+assert.equal(domain.dishSetOverlapDetails(setA, [active(v4({ ...setB, enabledPeriods: ["order_lifetime"] }))], []), null, "different periods may coexist");
+const lunchSet = structuredClone(setA);
+lunchSet.conditions = { ...always, businessHourSlots: [{ mode: "custom", from: "11:00", to: "13:00" }] };
+assert.equal(domain.dishSetOverlapDetails(lunchSet, [active(v4({ ...setB, conditions: { ...always, businessHourSlots: [{ mode: "custom", from: "20:00", to: "22:00" }] } }))], []), null, "disjoint time windows do not overlap");
+const januarySet = structuredClone(setA);
+januarySet.conditions = { ...always, effectiveFrom: "2026-01-01", effectiveTo: "2026-01-31" };
+const februarySet = structuredClone(setB);
+februarySet.conditions = { ...always, effectiveFrom: "2026-02-01", effectiveTo: "2026-02-28" };
+assert.equal(domain.dishSetOverlapDetails(januarySet, [active(februarySet)], []), null, "disjoint effective dates do not overlap");
+const goldSet = structuredClone(setA);
+goldSet.conditions = { ...always, memberMode: "specified", memberLevelIds: ["gold"] };
+const silverSet = structuredClone(setB);
+silverSet.conditions = { ...always, memberMode: "specified", memberLevelIds: ["silver"] };
+assert.equal(domain.dishSetOverlapDetails(goldSet, [active(silverSet)], []), null, "disjoint member levels do not overlap");
+const smallPartySet = structuredClone(setA);
+smallPartySet.partyRanges = [{ min: 1, max: 2 }];
+const largePartySet = structuredClone(setB);
+largePartySet.partyRanges = [{ min: 3, max: null }];
+assert.equal(domain.dishSetOverlapDetails(smallPartySet, [active(largePartySet)], []), null, "disjoint party ranges do not overlap");
 
 const impossibleBounds = v4();
 impossibleBounds.storeConfigs["store-a"].periodValues.per_round.totalBounds["0|0"] = bounds(4, 3);

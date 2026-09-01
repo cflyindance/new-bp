@@ -2039,6 +2039,8 @@
       editorState.dirty = false;
       sessionStorage.removeItem(RECOVERY_PREFIX + built.id);
       setSaveState("草稿已保存 · 刚刚", "");
+      var overlapWarning = immediate ? dishSetDraftOverlapWarning(built, loadRules()) : "";
+      if (overlapWarning) toast(overlapWarning, true);
       return true;
     } catch (error) {
       setSaveState("保存失败，请重试", "error");
@@ -2324,6 +2326,21 @@
     });
   }
 
+  function dishSetDraftOverlapWarning(draftRule, records) {
+    var draft = draftRule && (draftRule.editorDraft || draftRule.authoringConfig || draftRule.authoringDraft || draftRule);
+    if (!isBuffetProfile() || !draft || draft.targetType !== "dish_set") return "";
+    var policy = moduleProfile.conflictPolicy;
+    if (!policy || typeof policy.dishSetOverlapDetails !== "function") return "";
+    var excluded = [draftRule && draftRule.id];
+    if (draftRule && draftRule.sourceRuleId != null) excluded.push(draftRule.sourceRuleId);
+    var details = policy.dishSetOverlapDetails(draft, records || [], excluded.filter(function (id) { return id != null; }));
+    if (!details) return "";
+    var conflictRecord = (records || []).find(function (record) { return String(record && record.id) === String(details.ruleId); });
+    var conflictDraft = conflictRecord && (conflictRecord.authoringConfig || conflictRecord.authoringDraft || conflictRecord.editorDraft || conflictRecord);
+    var name = conflictDraft && conflictDraft.name ? conflictDraft.name : "未命名规则";
+    return "草稿已保存，但与“" + name + "”在 " + details.storeIds.length + " 家门店存在菜品集重叠；启用或发布前需要调整。";
+  }
+
   if (window.__BUFFET_SCENARIO_TEST__) {
     window.BuffetPeriodScenarioTestApi = {
       isLegacyBuffetDraft: isLegacyBuffetDraft,
@@ -2335,7 +2352,8 @@
       renderStepOne: renderStepOne,
       renderStepThree: renderStepThree,
       enabledPeriodsHaveQuantityBlocks: enabledPeriodsHaveQuantityBlocks,
-      validateStep: validateStep
+      validateStep: validateStep,
+      dishSetDraftOverlapWarning: dishSetDraftOverlapWarning
     };
   }
 
