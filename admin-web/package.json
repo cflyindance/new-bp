@@ -52,6 +52,7 @@
     "verify:pit-shell": "node scripts/verify-pit-shell.mjs",
     "verify:pit-list-ui": "npx tsx scripts/verify-pit-list-ui.ts",
     "verify:pit-detail-ui": "npx tsx scripts/verify-pit-detail-ui.ts",
+    "verify:pit-file-workflows-ui": "npx tsx scripts/verify-pit-file-workflows-ui.ts",
     "pit:start": "node server/pit-api-server.mjs",
     "dev:pit": "node server/run-pit-dev.mjs",
     "pit:restore": "node server/pit-restore.mjs"

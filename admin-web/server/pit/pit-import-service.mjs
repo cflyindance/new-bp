@@ -11,7 +11,7 @@ import { getSystemSetting, withImmediateTransaction } from "./pit-database.mjs";
 import { PitApiError, notFound, unsupportedFileType, validationFailed } from "./pit-errors.mjs";
 import { parsePitWorkbook } from "./pit-import-parser.mjs";
 
-export const PIT_IMPORT_MAX_BYTES = 50 * 1024 * 1024;
+export const PIT_IMPORT_MAX_BYTES = 20 * 1024 * 1024;
 
 const STATUS_SET = new Set([
   "review_pending",

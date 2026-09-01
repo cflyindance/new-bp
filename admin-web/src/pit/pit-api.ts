@@ -108,8 +108,8 @@ async function request<T>(path: string, options: PitRequestOptions = {}): Promis
   return envelope.data;
 }
 
-async function download(path: string): Promise<Response> {
-  const response = await fetch(`${PIT_API_PREFIX}${path}`, { credentials: "same-origin" });
+async function download(path: string, options: { signal?: AbortSignal } = {}): Promise<Response> {
+  const response = await fetch(`${PIT_API_PREFIX}${path}`, { credentials: "same-origin", signal: options.signal });
   if (!response.ok) return parseFailure(response, true);
   return response;
 }
@@ -161,18 +161,18 @@ export const pitApi = {
     headers.set("X-PIT-File-Name", encodeURIComponent(fileName));
     return request<{ job: PitImportJob }>("/imports/preview", { method: "POST", headers, rawBody: bytes });
   },
-  listImports: () => request<{ items: PitImportJob[] }>("/imports"),
-  getImport: (id: string, query: { page?: number; pageSize?: number } = {}) => request<PitImportDetail>(`/imports/${encodeURIComponent(id)}${queryString(query as QueryInput)}`),
-  saveImportDecisions: (id: string, decisions: PitImportDecisionsInput) => request<{ job: PitImportJob }>(`/imports/${encodeURIComponent(id)}/decisions`, { method: "POST", body: decisions }),
-  commitImport: (id: string) => request<{ job: PitImportJob; importedCount: number; insertedCount: number; backup: PitBackupRecord }>(`/imports/${encodeURIComponent(id)}/commit`, { method: "POST", body: {} }),
+  listImports: (options: { signal?: AbortSignal } = {}) => request<{ items: PitImportJob[] }>("/imports", { signal: options.signal }),
+  getImport: (id: string, query: { page?: number; pageSize?: number } = {}, options: { signal?: AbortSignal } = {}) => request<PitImportDetail>(`/imports/${encodeURIComponent(id)}${queryString(query as QueryInput)}`, { signal: options.signal }),
+  saveImportDecisions: (id: string, decisions: PitImportDecisionsInput, options: { signal?: AbortSignal } = {}) => request<{ job: PitImportJob }>(`/imports/${encodeURIComponent(id)}/decisions`, { method: "POST", body: decisions, signal: options.signal }),
+  commitImport: (id: string, options: { signal?: AbortSignal } = {}) => request<{ job: PitImportJob; importedCount: number; insertedCount: number; backup: PitBackupRecord }>(`/imports/${encodeURIComponent(id)}/commit`, { method: "POST", body: {}, signal: options.signal }),
 
-  createExport: (filter: PitRequirementListQuery) => request<{ exportJob: PitExportJob }>("/exports", { method: "POST", body: filter }),
-  listExports: (query: { scope?: "all" } = {}) => request<{ items: PitExportJob[] }>(`/exports${queryString(query as QueryInput)}`),
-  downloadExport: (id: string) => download(`/exports/${encodeURIComponent(id)}/download`),
+  createExport: (filter: PitRequirementListQuery, options: { signal?: AbortSignal } = {}) => request<{ exportJob: PitExportJob }>("/exports", { method: "POST", body: filter, signal: options.signal }),
+  listExports: (query: { scope?: "all" } = {}, options: { signal?: AbortSignal } = {}) => request<{ items: PitExportJob[] }>(`/exports${queryString(query as QueryInput)}`, { signal: options.signal }),
+  downloadExport: (id: string, options: { signal?: AbortSignal } = {}) => download(`/exports/${encodeURIComponent(id)}/download`, options),
 
-  listBackups: () => request<{ items: PitBackupRecord[] }>("/backups"),
-  createBackup: () => request<{ backup: PitBackupRecord }>("/backups", { method: "POST", body: {} }),
-  downloadBackup: (id: string) => download(`/backups/${encodeURIComponent(id)}/download`),
+  listBackups: (options: { signal?: AbortSignal } = {}) => request<{ items: PitBackupRecord[] }>("/backups", { signal: options.signal }),
+  createBackup: (options: { signal?: AbortSignal } = {}) => request<{ backup: PitBackupRecord }>("/backups", { method: "POST", body: {}, signal: options.signal }),
+  downloadBackup: (id: string, options: { signal?: AbortSignal } = {}) => download(`/backups/${encodeURIComponent(id)}/download`, options),
 };
 
 export type PitApi = typeof pitApi;

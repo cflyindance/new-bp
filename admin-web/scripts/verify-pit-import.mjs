@@ -15,7 +15,7 @@ import {
   listPitBackups,
   resolvePitBackupDownload,
 } from "../server/pit/pit-backup-service.mjs";
-import { createPitImportService } from "../server/pit/pit-import-service.mjs";
+import { createPitImportService, PIT_IMPORT_MAX_BYTES } from "../server/pit/pit-import-service.mjs";
 import {
   PIT_TEST_SOURCE_HEADERS,
   PIT_TEST_STANDARD_SHEETS,
@@ -27,6 +27,7 @@ const nodeMajor = Number(process.versions.node.split(".")[0]);
 assert(nodeMajor >= 24, `PIT verification requires Node 24+, received ${process.versions.node}`);
 assert.deepEqual(PIT_STANDARD_SHEETS, PIT_TEST_STANDARD_SHEETS);
 assert.deepEqual(PIT_SOURCE_HEADERS, PIT_TEST_SOURCE_HEADERS);
+assert.equal(PIT_IMPORT_MAX_BYTES, 20 * 1024 * 1024);
 
 const EXISTING_MERGE_FIELDS = [
   "jiraTicket", "title", "description", "useCase", "notes", "status", "priority",
@@ -389,8 +390,19 @@ try {
   assert.equal(doubleEncoded.status, 415, "filename must be decoded exactly once");
   assert.equal(importFiles(main).length, 0);
 
+  const exactLimit = await main.client.request("POST", "/imports/preview", {
+    rawBody: Buffer.alloc(PIT_IMPORT_MAX_BYTES),
+    csrf: true,
+    headers: {
+      "content-type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "x-pit-file-name": encodeURIComponent("exact-limit.xlsx"),
+    },
+  });
+  assert.notEqual(exactLimit.status, 413, "exactly 20 MiB reaches workbook validation instead of the size guard");
+  assert.notEqual(exactLimit.body.error.code, "file_too_large");
+
   const oversized = await main.client.request("POST", "/imports/preview", {
-    rawBody: Buffer.alloc(50 * 1024 * 1024 + 1),
+    rawBody: Buffer.alloc(PIT_IMPORT_MAX_BYTES + 1),
     csrf: true,
     headers: {
       "content-type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
