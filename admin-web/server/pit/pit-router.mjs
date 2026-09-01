@@ -234,6 +234,12 @@ export function createPitRouter({
         }
       }
 
+      if (method === "GET" && path === "/assignable-users") {
+        auth.requireRole(authentication, "admin", "editor");
+        sendData(res, requestId, admin.listAssignableUsers());
+        return true;
+      }
+
       const userMatch = /^\/users\/([^/]+)(?:\/(reset-password|revoke-sessions))?$/.exec(path);
       if (userMatch) {
         auth.requireRole(authentication, "admin");

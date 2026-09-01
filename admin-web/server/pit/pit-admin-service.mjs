@@ -362,6 +362,15 @@ export function createPitAdminService({
     };
   }
 
+  function listAssignableUsers() {
+    return {
+      items: db.prepare(`
+        SELECT id, username, display_name FROM users
+        WHERE active = 1 ORDER BY display_name COLLATE NOCASE ASC, username ASC, id ASC
+      `).all().map((row) => ({ id: row.id, username: row.username, displayName: row.display_name })),
+    };
+  }
+
   async function createUser(input, actor) {
     assertAdmin(actor);
     const username = normalizeUsername(input?.username);
@@ -594,6 +603,7 @@ export function createPitAdminService({
     updateDictionaryItem,
     reorderDictionaryItems,
     listUsers,
+    listAssignableUsers,
     createUser,
     updateUser,
     resetUserPassword,

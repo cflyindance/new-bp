@@ -129,12 +129,15 @@ export const pitApi = {
   dashboardSummary: (options: { signal?: AbortSignal } = {}) => request<PitDashboardSummary>("/dashboard/summary", { signal: options.signal }),
 
   listRequirements: (query: PitRequirementListQuery = {}, options: { signal?: AbortSignal } = {}) => request<PitRequirementList>(`/requirements${queryString(requirementQuery(query))}`, { signal: options.signal }),
-  createRequirement: (input: PitRequirementWriteInput) => request<{ requirement: PitRequirement }>("/requirements", { method: "POST", body: input }),
-  getRequirement: (id: string, options: { deleted?: "only" | "include" } = {}) => request<{ requirement: PitRequirement }>(`/requirements/${encodeURIComponent(id)}${queryString(options as QueryInput)}`),
-  updateRequirement: (id: string, input: PitRequirementPatchInput) => request<{ requirement: PitRequirement }>(`/requirements/${encodeURIComponent(id)}`, { method: "PATCH", body: input }),
-  deleteRequirement: (id: string) => request<{ requirement: PitRequirement }>(`/requirements/${encodeURIComponent(id)}`, { method: "DELETE" }),
-  restoreRequirement: (id: string) => request<{ requirement: PitRequirement }>(`/requirements/${encodeURIComponent(id)}/restore`, { method: "POST" }),
-  transitionRequirement: (id: string, input: PitRequirementTransitionInput) => request<{ requirement: PitRequirement }>(`/requirements/${encodeURIComponent(id)}/transitions`, { method: "POST", body: input }),
+  createRequirement: (input: PitRequirementWriteInput, options: { signal?: AbortSignal } = {}) => request<{ requirement: PitRequirement }>("/requirements", { method: "POST", body: input, signal: options.signal }),
+  getRequirement: (id: string, options: { deleted?: "only" | "include"; signal?: AbortSignal } = {}) => {
+    const { signal, ...query } = options;
+    return request<{ requirement: PitRequirement }>(`/requirements/${encodeURIComponent(id)}${queryString(query as QueryInput)}`, { signal });
+  },
+  updateRequirement: (id: string, input: PitRequirementPatchInput, options: { signal?: AbortSignal } = {}) => request<{ requirement: PitRequirement }>(`/requirements/${encodeURIComponent(id)}`, { method: "PATCH", body: input, signal: options.signal }),
+  deleteRequirement: (id: string, options: { signal?: AbortSignal } = {}) => request<{ requirement: PitRequirement }>(`/requirements/${encodeURIComponent(id)}`, { method: "DELETE", signal: options.signal }),
+  restoreRequirement: (id: string, options: { signal?: AbortSignal } = {}) => request<{ requirement: PitRequirement }>(`/requirements/${encodeURIComponent(id)}/restore`, { method: "POST", signal: options.signal }),
+  transitionRequirement: (id: string, input: PitRequirementTransitionInput, options: { signal?: AbortSignal } = {}) => request<{ requirement: PitRequirement }>(`/requirements/${encodeURIComponent(id)}/transitions`, { method: "POST", body: input, signal: options.signal }),
   followRequirement: (id: string): Promise<{ following: boolean }> => request<{ following: boolean }>(`/requirements/${encodeURIComponent(id)}/follow`, { method: "PUT" }),
   unfollowRequirement: (id: string): Promise<{ following: boolean }> => request<{ following: boolean }>(`/requirements/${encodeURIComponent(id)}/follow`, { method: "DELETE" }),
 
@@ -144,6 +147,7 @@ export const pitApi = {
   reorderDictionaries: (type: PitDictionaryType, itemIds: string[]) => request<{ items: PitDictionaryItem[] }>("/dictionaries/order", { method: "PUT", body: { type, itemIds } }),
 
   listUsers: (options: { signal?: AbortSignal } = {}) => request<{ items: PitUser[] }>("/users", { signal: options.signal }),
+  listAssignableUsers: (options: { signal?: AbortSignal } = {}) => request<{ items: Array<Pick<PitUser, "id" | "username" | "displayName">> }>("/assignable-users", { signal: options.signal }),
   createUser: (input: PitUserCreateInput) => request<{ user: PitUser }>("/users", { method: "POST", body: input }),
   updateUser: (id: string, input: PitUserUpdateInput) => request<{ user: PitUser }>(`/users/${encodeURIComponent(id)}`, { method: "PATCH", body: input }),
   resetUserPassword: (id: string, password: string) => request<{ reset: boolean; revokedSessions: number }>(`/users/${encodeURIComponent(id)}/reset-password`, { method: "POST", body: { password } }),

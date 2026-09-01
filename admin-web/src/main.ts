@@ -365,6 +365,8 @@ import {
   normalizeKioskLocalPath,
 } from "./shell/kiosk-local-routes";
 import { bindPitShell, mountPitShell } from "./pit/pit-shell";
+import { handlePitInShellNavigation } from "./pit/pit-shell";
+import { guardPitRouteMount } from "./pit/pit-navigation-guard";
 import {
   isPitContentPath,
   normalizePitPath,
@@ -11968,6 +11970,8 @@ function mount(): void {
     }
     if (!isPitShellMode()) enterPitShell();
     unmountDemoSwitchFab();
+    if (!guardPitRouteMount(`#${normalizedPath}`)) return;
+    if (handlePitInShellNavigation(normalizedPath)) return;
     const app = document.getElementById("app");
     if (!app) return;
     app.innerHTML = mountPitShell(mount, normalizedPath);

@@ -5,6 +5,7 @@ import { bindPitDashboardPage, renderPitDashboardPage } from "./pit-dashboard-pa
 import { bindPitLoginPage, renderPitLoginPage } from "./pit-login-page";
 import { parsePitListQuery } from "./pit-list-query";
 import { bindPitRequirementListPage, renderPitRequirementListLoadingPage } from "./pit-requirement-list-page";
+import { bindPitRequirementPage, pitRequirementDetailContext, renderPitRequirementCreatePage } from "./pit-requirement-detail-page";
 import {
   canAccessPitRoute,
   matchPitRoute,
@@ -13,6 +14,7 @@ import {
   type PitRouteId,
 } from "./pit-routes";
 import { clearPitSession, getPitSession, setPitSession } from "./pit-session";
+import { confirmPitDiscard } from "./pit-navigation-guard";
 import { bindPitSetupPage, renderPitSetupPage } from "./pit-setup-page";
 import type { PitRole, PitUser } from "./pit-types";
 
@@ -98,8 +100,14 @@ function renderNavLink(item: NavItem, activeRoute: PitRouteId, mobile = false): 
 function renderPageOutlet(route: PitRouteId, requirementId?: string): string {
   if (route === "dashboard") return renderPitDashboardPage();
   if (route === "requirements") return renderPitRequirementListLoadingPage();
+  if (route === "requirement-new") return renderPitRequirementCreatePage();
+  if (route === "requirement-detail") return renderPitDetailLoading(requirementId ?? "", "page");
   const copy = PAGE_COPY[route];
   return `<section data-pit-page-outlet data-pit-route="${route}" class="mx-auto w-full max-w-[94rem] animate-fade-in p-4 sm:p-6 lg:p-8"><div class="relative min-h-[28rem] overflow-hidden rounded-2xl border border-slate-200/90 bg-white p-6 shadow-[0_1px_2px_rgba(15,23,42,.04)] dark:border-slate-700 dark:bg-slate-900 sm:p-9"><div class="absolute right-0 top-0 h-28 w-28 border-b border-l border-amber-400/25 bg-[linear-gradient(135deg,transparent_49%,rgba(245,158,11,.12)_50%)]" aria-hidden="true"></div><p class="font-mono text-[11px] uppercase tracking-[0.24em] text-amber-700 dark:text-amber-400">PIT / ${escapeHtml(route.replace(/-/g, " "))}</p><h2 class="mt-3 text-2xl font-semibold tracking-tight text-slate-950 dark:text-white">${escapeHtml(copy.title)}</h2><p class="mt-2 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">${escapeHtml(copy.description)}</p>${requirementId ? `<p class="mt-5 inline-flex rounded-lg bg-slate-100 px-3 py-2 font-mono text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300">ID ${escapeHtml(requirementId)}</p>` : ""}<div class="mt-12 grid gap-4 md:grid-cols-3" aria-hidden="true">${[["信息结构已就绪", "w-1/2"], ["API 契约已连接", "w-2/3"], ["业务视图下一阶段启用", "w-1/2"]].map(([label, width], index) => `<div class="rounded-xl border border-dashed border-slate-200 p-4 dark:border-slate-700"><span class="font-mono text-[10px] text-amber-700 dark:text-amber-400">0${index + 1}</span><div class="mt-4 h-2 ${width} rounded bg-slate-100 dark:bg-slate-800"></div><p class="mt-4 text-xs text-slate-400">${label}</p></div>`).join("")}</div></div></section>`;
+}
+
+function renderPitDetailLoading(requirementId: string, mode: "page" | "drawer"): string {
+  return `<section data-pit-requirement-detail data-pit-detail-mode="${mode}" data-pit-route-page data-pit-requirement-id="${escapeHtml(requirementId)}" class="${mode === "drawer" ? "fixed inset-0 z-[105] grid place-items-end bg-slate-950/45 md:pl-[18rem]" : "mx-auto w-full max-w-[94rem] p-4 sm:p-6 lg:p-8"}"><div class="${mode === "drawer" ? "grid h-full w-full max-w-5xl place-items-center bg-slate-50 shadow-2xl dark:bg-slate-950" : "grid min-h-[28rem] place-items-center rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"}"><p class="text-sm text-slate-400">正在读取需求详情…</p></div></section>`;
 }
 
 function renderWorkspace(path: string, user: PitUser, offline = false, message = ""): string {
@@ -134,6 +142,7 @@ function bindWorkspace(root: HTMLElement, onMount: () => void, render: (html: st
     panel?.classList.toggle("hidden", !open);
   });
   root.querySelector<HTMLButtonElement>("[data-pit-exit]")?.addEventListener("click", () => {
+    if (!confirmPitDiscard()) return;
     exitPitShell();
     location.hash = "#/";
     onMount();
@@ -162,6 +171,52 @@ function bindWorkspace(root: HTMLElement, onMount: () => void, render: (html: st
     const queryIndex = path.indexOf("?");
     bindPitRequirementListPage(root, parsePitListQuery(queryIndex >= 0 ? path.slice(queryIndex + 1) : ""), user);
   }
+  if (route.id === "requirement-new") bindPitRequirementPage(root, user);
+  if (route.id === "requirement-detail") bindPitRequirementPage(root, user, route.requirementId, pitApi, pitRequirementDetailContext(path, user.role, "page"));
+}
+
+/** Keep the list workbench and its scroll position mounted behind desktop detail drawers. */
+export type PitInShellNavigationOptions = {
+  root?: HTMLElement | null;
+  user?: PitUser | null;
+  desktop?: boolean;
+  bindDetail?: (root: HTMLElement, user: PitUser, id: string, path: string) => void;
+};
+
+export function handlePitInShellNavigation(path: string, options: PitInShellNavigationOptions = {}): boolean {
+  const root = options.root === undefined ? document.querySelector<HTMLElement>("[data-pit-shell]") : options.root;
+  const user = options.user === undefined ? getPitSession().user : options.user;
+  const desktop = options.desktop ?? (typeof window.matchMedia === "function" && window.matchMedia("(min-width: 768px)").matches);
+  if (!root || !user || !desktop) return false;
+  const currentPath = root.dataset.pitPath ?? "";
+  const current = matchPitRoute(currentPath);
+  const next = matchPitRoute(path);
+  const drawer = root.querySelector<HTMLElement>('[data-pit-requirement-detail][data-pit-detail-mode="drawer"]');
+  const decision = pitInShellNavigationDecision(currentPath, path, true, Boolean(drawer));
+  if (decision === "close-drawer" && drawer) {
+    drawer.remove(); root.dataset.pitPath = path; return true;
+  }
+  if (decision === "open-drawer" && next.requirementId) {
+    const trashContext = current.id === "trash";
+    const nextPath = trashContext && !new URLSearchParams(path.split("?")[1] ?? "").has("view")
+      ? `${path}${path.includes("?") ? "&" : "?"}view=trash`
+      : path;
+    if (nextPath !== path) history.replaceState(history.state, "", `#${nextPath}`);
+    root.insertAdjacentHTML("beforeend", renderPitDetailLoading(next.requirementId, "drawer"));
+    root.dataset.pitPath = nextPath;
+    const bindDetail = options.bindDetail ?? ((targetRoot, targetUser, id, targetPath) => bindPitRequirementPage(targetRoot, targetUser, id, pitApi, pitRequirementDetailContext(targetPath, targetUser.role, "drawer")));
+    bindDetail(root, user, next.requirementId, nextPath);
+    return true;
+  }
+  return false;
+}
+
+export function pitInShellNavigationDecision(currentPath: string, nextPath: string, desktop: boolean, hasDrawer: boolean): "mount" | "open-drawer" | "close-drawer" {
+  if (!desktop) return "mount";
+  const current = matchPitRoute(currentPath); const next = matchPitRoute(nextPath);
+  if (hasDrawer && (next.id === "requirements" || next.id === "trash")) return "close-drawer";
+  if (!hasDrawer && (current.id === "requirements" || current.id === "trash") && next.id === "requirement-detail") return "open-drawer";
+  return "mount";
 }
 
 function renderAuthenticated(root: HTMLElement, onMount: () => void, render: (html: string) => void, isActive: () => boolean): void {

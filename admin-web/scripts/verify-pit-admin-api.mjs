@@ -180,6 +180,14 @@ try {
   assert.equal(users.status, 200);
   assert.equal(users.body.data.items.length, 4);
   assert.equal(/password|hash/i.test(JSON.stringify(users.body.data.items)), false);
+  const adminAssignable = await admin.get("/assignable-users");
+  assert.equal(adminAssignable.status, 200);
+  assert(adminAssignable.body.data.items.every((item) => Object.keys(item).sort().join(",") === "displayName,id,username"));
+  const editorAssignableClient = createClient();
+  await login(editorAssignableClient, "editor", "PIT-editor-2026");
+  const editorAssignable = await editorAssignableClient.get("/assignable-users");
+  assert.equal(editorAssignable.status, 200);
+  assert.deepEqual(editorAssignable.body.data.items, adminAssignable.body.data.items);
 
   server.db.exec(`
     CREATE TRIGGER pit_test_abort_admin_audit
@@ -244,6 +252,7 @@ try {
   const viewer = createClient();
   await login(viewer, "viewer", "PIT-viewer-2026");
   assert.equal((await viewer.get("/users")).status, 403);
+  assert.equal((await viewer.get("/assignable-users")).status, 403);
   assert.equal((await viewer.get("/audit-log")).status, 403);
   assert.equal((await viewer.post("/users", {
     username: "blocked", displayName: "Blocked", password: "PIT-blocked-2026", role: "viewer",

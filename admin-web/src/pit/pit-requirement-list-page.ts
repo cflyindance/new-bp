@@ -724,6 +724,7 @@ export function bindPitRequirementListPage(
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") void refreshData(true);
   }, { signal: lifetime.signal });
+  window.addEventListener("pit:requirements-changed", () => { void refreshData(true); }, { signal: lifetime.signal });
   lifetime.signal.addEventListener("abort", () => window.clearInterval(refreshTimer), { once: true });
   lifetime.signal.addEventListener("abort", () => requestController?.abort(), { once: true });
   void loadInitial();
