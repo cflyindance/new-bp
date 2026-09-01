@@ -589,4 +589,3 @@ Expected: no whitespace errors; no change to calculation formulas, rule serializ
 git add scripts/verify-tipout-interaction-refresh.mjs
 git commit -m "test: verify tipout interaction refresh"
 ```
-
