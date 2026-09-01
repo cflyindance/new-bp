@@ -459,7 +459,9 @@
         var identity = menuIdentity(dish);
         if (seen[identity]) return limits;
         seen[identity] = true;
-        var limit = effectiveCellLimit(exceptionLimit(values, scenario, dish), null, rule.subject, partySize);
+        // 相同菜品保护是整桌当前轮的固定安全帽，不属于人均额度，不能随人数放大。
+        var limit = configuredValue(exceptionLimit(values, scenario, dish));
+        if (limit == null) limit = Infinity;
         limits.push(limit);
         return limits;
       }, []);
@@ -787,7 +789,9 @@
 
       if (blocks.sameDishEnabled && checkMaximum) {
         items.forEach(function (item) {
-          var dishLimit = effectiveCellLimit(exceptionLimit(values, scenario.key, item), null, rule.subject, context.partySize);
+          // 相同菜品保护始终按桌/轮固定；仅菜品集共享总额按人数放大。
+          var dishLimit = configuredValue(exceptionLimit(values, scenario.key, item));
+          if (dishLimit == null) dishLimit = Infinity;
           if (dishLimit !== Infinity && item.quantity > dishLimit) violations.push(violation(rule, period, "SAME_DISH_LIMIT_EXCEEDED", { target: menuIdentity(item), used: item.quantity, effectiveLimit: dishLimit }));
         });
       }
@@ -802,7 +806,13 @@
   }
 
   function evaluateV4Batch(input) {
-    var candidates = { order: candidateItems(input.counters && input.counters.order, input.items), round: candidateItems(input.counters && input.counters.round, input.items) };
+    var roundHistory = input.counters && input.counters.round || [];
+    // Tagged history can span rounds; an untagged bucket remains backward-compatible
+    // and is treated as the caller's current-round bucket.
+    roundHistory = roundHistory.filter(function (item) {
+      return item && (item.roundNo == null || Number(item.roundNo) === Number(input.context && input.context.roundNo));
+    });
+    var candidates = { order: candidateItems(input.counters && input.counters.order, input.items), round: candidateItems(roundHistory, input.items) };
     var violations = [];
     (input.rules || []).forEach(function (rule) {
       if (isV4Rule(rule)) violations = violations.concat(v4RuntimeViolations(rule, input, candidates));
@@ -831,12 +841,30 @@
     (input.rules || []).forEach(function (rule) {
       if (isV4Rule(rule)) return;
       var limit = effectiveLimit(rule, input.context);
+      if (!limit.valid && rule.targetType === "dish_set") {
+        var storeConfig = rule.storeConfigs && rule.storeConfigs[input.context.storeId];
+        var partyIndex = rule.subject === "party_size" ? matchingRangeIndex(rule.partyRanges, input.context.partySize) : 0;
+        var roundIndex = rule.period === "multi_round" ? matchingRangeIndex(rule.roundRanges, input.context.roundNo) : 0;
+        var legacyCell = storeConfig && storeConfig.dishSetLimits && storeConfig.dishSetLimits[scenarioKey(partyIndex, roundIndex)];
+        var legacyValue = configuredValue(legacyCell);
+        if (legacyValue != null) limit = { valid: true, value: legacyValue * (rule.subject === "party_size" ? input.context.partySize : 1) };
+      }
       if (!limit.valid) {
         violations.push({ ruleId: rule.id, ruleVersion: rule.version, code: limit.code });
         return;
       }
       var used = Number((input.usedByRule || {})[rule.id] || 0);
-      var increment = Number((input.quantityByRule || {})[rule.id] || 0);
+      var quantityByRule = input.quantityByRule || {};
+      var hasExplicitIncrement = Object.prototype.hasOwnProperty.call(quantityByRule, rule.id);
+      var increment = hasExplicitIncrement ? Number(quantityByRule[rule.id] || 0) : 0;
+      if (!hasExplicitIncrement && rule.targetType === "dish_set") {
+        var configuredStore = rule.storeConfigs && rule.storeConfigs[input.context.storeId];
+        var members = configuredStore && configuredStore.dishSetMembers || [];
+        increment = (input.items || []).reduce(function (sum, item) {
+          var selected = members.some(function (member) { return menuIdentity(member) === menuIdentity(item); });
+          return sum + (selected ? Math.max(0, nonNegativeQuantity(item.quantity)) : 0);
+        }, 0);
+      }
       if (used + increment > limit.value) {
         violations.push({ ruleId: rule.id, ruleVersion: rule.version, code: "LIMIT_EXCEEDED", used: used, increment: increment, effectiveLimit: limit.value });
       }
