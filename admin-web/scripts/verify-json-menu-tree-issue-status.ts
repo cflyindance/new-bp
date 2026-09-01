@@ -4,6 +4,7 @@ import {
   renderJsonMenuTree,
   summarizeMenuNodeIssues,
 } from "../src/config/json-menu-tree-ui";
+import { shouldIgnoreJsonMenuSearchInput } from "../src/config/json-menu-search-autofill-guard";
 
 const document = {
   menu: [
@@ -44,11 +45,26 @@ assert.deepEqual(findFirstDescendantIssuePath(document.menu, [0], issues, "error
 assert.deepEqual(findFirstDescendantIssuePath(document.menu, [0], issues, "warning"), [0, 0]);
 
 const html = renderJsonMenuTree(document, [0], issues, "", new Set(["0", "0.1"]));
+assert.match(html, /data-jme-toggle="0"[^>]*>[\s\S]*?▼[\s\S]*?<\/button>/);
+const collapsedHtml = renderJsonMenuTree(document, [0], issues, "", new Set());
+assert.match(collapsedHtml, /data-jme-toggle="0"[^>]*>[\s\S]*?▶[\s\S]*?<\/button>/);
 assert.match(html, /data-jme-issue-kind="own"[^>]*data-jme-issue-severity="error"/);
 assert.match(html, />1 错误</);
 assert.match(html, />子菜单 1 错误</);
 assert.match(html, />子菜单 1 警告</);
+assert.doesNotMatch(html, /border-red-300 bg-red-50\/70/, "错误菜单只能通过标签提示，菜单行不能使用红色背景");
+assert.doesNotMatch(html, /border-amber-300 bg-amber-50\/70/, "警告菜单只能通过标签提示，菜单行不能使用橙色背景");
 assert.doesNotMatch(html, /root_key/);
 assert.match(html, />1 级</);
+assert.match(html, /type="search"/);
+assert.match(html, /name="json-menu-tree-search"/);
+assert.match(html, /autocomplete="off"/);
+assert.match(html, /autocapitalize="off"/);
+assert.match(html, /spellcheck="false"/);
+assert.doesNotMatch(html, /data-jme-row-more/, "菜单树不应再展示更多按钮");
+assert.doesNotMatch(html, /title="更多"/, "菜单树不应保留更多按钮文案");
+assert.equal(shouldIgnoreJsonMenuSearchInput("", false, "operator@example.com"), true);
+assert.equal(shouldIgnoreJsonMenuSearchInput("", true, "operator@example.com"), false);
+assert.equal(shouldIgnoreJsonMenuSearchInput("品牌", false, "品牌"), false);
 
 console.log("json-menu tree issue status verification passed");

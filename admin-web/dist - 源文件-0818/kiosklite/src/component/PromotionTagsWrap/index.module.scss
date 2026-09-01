@@ -1,0 +1,50 @@
+.promotionTagsWrap {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+  padding: 0 1.5rem;
+  img {
+    width: 3.3rem;
+    margin: 0 0 0.8rem 0;
+  }
+  .placeholderBlock {
+    display: flex;
+    flex-wrap: wrap;
+    padding: 0 1.5rem;
+    visibility: hidden;
+    img {
+      width: 3.3rem;
+      margin: 0 0 0.8rem 0;
+    }
+  }
+
+  .totalPromotionBlock {
+    position: absolute;
+    display: flex;
+    flex-wrap: wrap;
+    padding: 0 1.5rem;
+    top: 0;
+    left: 0;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .promotionTagItem {
+    width: fit-content;
+    margin: 0 0.8rem 0.8rem 0;
+    background: rgba(251, 231, 234, 1);
+    color: var(--promotion-theme-color);
+    font-size: 2.1rem;
+    font-weight: 600;
+    padding: 0.2rem 0.8rem;
+    border-radius: 0.4rem;
+    border: 0.05rem solid var(--promotion-theme-color);
+  }
+}
+
+:global {
+  .singleWrap {
+    padding: 0;
+  }
+}

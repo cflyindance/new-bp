@@ -1,6 +1,9 @@
 import { seasoningApi, SeasoningApiError } from "./seasoning-api";
 import type { SeasoningOptionCategory } from "./seasoning-types";
 import { escapeSeasoningHtml, primaryButtonClass, secondaryButtonClass } from "./seasoning-ui-helpers";
+import { showAppToast } from "../../ui/app-toast";
+import { openConfirmDialog } from "../../ui/app-confirm-dialog";
+import { openPromptDialog } from "../../ui/app-prompt-dialog";
 
 export function openSeasoningOptionCategoryManager(
   host: HTMLElement,
@@ -51,18 +54,67 @@ export function openSeasoningOptionCategoryManager(
     if (!button) return;
     if (button.hasAttribute("data-category-close")) { overlay.remove(); return; }
     if (button.hasAttribute("data-category-add")) {
-      const name = window.prompt("分类名称"); if (!name?.trim()) return;
-      const code = window.prompt("内部编码", name.trim().toUpperCase().replace(/\s+/g, "_")); if (!code?.trim()) return;
-      const response = await seasoningApi.createOptionCategory({ expectedVersion: version, name: name.trim(), code: code.trim() }); await refresh(response.version); return;
+      const name = await openPromptDialog({
+        title: "新增分类",
+        label: "分类名称",
+        confirmLabel: "下一步",
+      });
+      if (!name?.trim()) return;
+      const code = await openPromptDialog({
+        title: "新增分类",
+        label: "内部编码",
+        initialValue: name.trim().toUpperCase().replace(/\s+/g, "_"),
+        confirmLabel: "确认新增",
+      });
+      if (!code?.trim()) return;
+      const response = await seasoningApi.createOptionCategory({ expectedVersion: version, name: name.trim(), code: code.trim() });
+      await refresh(response.version);
+      return;
     }
     const editId = button.dataset.categoryEdit;
-    if (editId) { const current = categories.find((item) => item.id === editId); const name = window.prompt("分类名称", current?.name); if (!name?.trim()) return; const response = await seasoningApi.updateOptionCategory(editId, { expectedVersion: version, name: name.trim() }); await refresh(response.version); return; }
+    if (editId) {
+      const current = categories.find((item) => item.id === editId);
+      const name = await openPromptDialog({
+        title: "编辑分类",
+        label: "分类名称",
+        initialValue: current?.name ?? "",
+        confirmLabel: "确认保存",
+      });
+      if (!name?.trim()) return;
+      const response = await seasoningApi.updateOptionCategory(editId, { expectedVersion: version, name: name.trim() });
+      await refresh(response.version);
+      return;
+    }
     const toggleId = button.dataset.categoryToggle;
-    if (toggleId) { const current = categories.find((item) => item.id === toggleId); const response = await seasoningApi.updateOptionCategory(toggleId, { expectedVersion: version, status: current?.status === "active" ? "inactive" : "active" }); await refresh(response.version); return; }
+    if (toggleId) {
+      const current = categories.find((item) => item.id === toggleId);
+      const response = await seasoningApi.updateOptionCategory(toggleId, {
+        expectedVersion: version,
+        status: current?.status === "active" ? "inactive" : "active",
+      });
+      await refresh(response.version);
+      return;
+    }
     const deleteId = button.dataset.categoryDelete;
-    if (deleteId && window.confirm("确认删除该分类？有关联 Option 时无法删除。")) {
-      try { const response = await seasoningApi.deleteOptionCategory(deleteId, { expectedVersion: version }); await refresh(response.version); }
-      catch (error) { window.alert(error instanceof SeasoningApiError && error.code === "option_category_in_use" ? "该分类仍有关联 Option，请先迁移。" : String(error instanceof Error ? error.message : error)); }
+    if (deleteId) {
+      const ok = await openConfirmDialog({
+        title: "删除分类",
+        message: "确认删除该分类？有关联 Option 时无法删除。",
+        confirmLabel: "确认删除",
+        danger: true,
+      });
+      if (!ok) return;
+      try {
+        const response = await seasoningApi.deleteOptionCategory(deleteId, { expectedVersion: version });
+        await refresh(response.version);
+      } catch (error) {
+        showAppToast(
+          error instanceof SeasoningApiError && error.code === "option_category_in_use"
+            ? "该分类仍有关联 Option，请先迁移。"
+            : String(error instanceof Error ? error.message : error),
+          { variant: "error" },
+        );
+      }
     }
   });
   host.appendChild(overlay);

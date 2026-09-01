@@ -1,0 +1,1 @@
+(function(){System.register([],function(e,t){return{setters:[],execute:function(){e(`t`,`data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAiBAMAAACthOSOAAAAIVBMVEUAAABmZmZnZ2dmZmZmZmZoaGhmZmZlZWVmZmZoaGhmZmYY28rNAAAACnRSTlMAgD7p7B7UnGsgTYS1SAAAAD5JREFUGNNjYAhlgAGOVQIwJsuqhTAm2yq4MJMVQlh5QIQLYMJeqxahMBEKENoQhtFaEBFQiODDDFSGSBgDADjFMD2IrCmkAAAAAElFTkSuQmCC`)}}})})();

@@ -1,0 +1,71 @@
+.rewardContainer {
+  position: relative;
+  background: var(--background-grey);
+  height: 100vh;
+  overflow: hidden;
+  .rewardList {
+    padding: 0 2rem;
+  }
+  .sectionTitle {
+    font-weight: bold;
+    font-size: 5rem;
+    color: #000;
+    padding-top: 2rem;
+    &.freeItemTitle {
+      padding-top: 3rem;
+    }
+  }
+
+  .bottom {
+    width: 100%;
+    position: fixed;
+    bottom: 0;
+    display: flex;
+    justify-content: space-between;
+    height: 19.3rem;
+    padding: 0 5rem 0 7rem;
+    box-sizing: border-box;
+    background-color: #ffffff;
+    box-shadow: 0 0 10rem 0 rgba(0, 0, 0, 0.03);
+    border-radius: 10rem 0 0 0;
+    align-items: center;
+    z-index: 1;
+    div {
+      height: 10rem;
+      line-height: 10rem;
+      border-radius: 10rem;
+      background: var(--background-grey);
+      font-size: 3rem;
+      text-align: center;
+      font-weight: bold;
+      width: 64rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .skipBtn {
+      background-color: var(--primary-selected-color);
+      color: var(--text-color-black);
+      width: 30rem;
+    }
+    .btnNotConfirm {
+      color: #00000066;
+    }
+    .selectedBtn {
+      background-color: var(--primary-selected-color);
+      color: var(--text-color-black);
+      .star {
+        width: 5rem;
+        height: 6rem;
+        display: inline-block;
+        background-image: url('../../../assets/images/starWhite.png');
+        background-repeat: no-repeat;
+        background-size: 100% 100%;
+        vertical-align: text-bottom;
+        margin: 0 1rem;
+      }
+    }
+  }
+
+}
+

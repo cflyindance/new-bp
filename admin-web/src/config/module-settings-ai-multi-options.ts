@@ -7,11 +7,6 @@ import {
   AVIATO_SERVICE_SEQ,
 } from "./module-settings-advanced-service-switches-ui";
 import {
-  DURATION_BILLING_SCENE_OPTIONS,
-  DURATION_BILLING_SEQ,
-  durationBillingSceneCheckboxFieldId,
-} from "./module-settings-duration-billing-scenes-ui";
-import {
   kitchenOrderTypeCheckboxFieldId,
   KITCHEN_STANDARD_ORDER_TYPES,
 } from "./module-settings-kitchen-order-type-ui";
@@ -131,18 +126,6 @@ function buildRegistry(): Map<number, SubOptionDef[]> {
         o.label,
         orderVoidInvalidationReasonFieldId(ORDER_VOID_INVALIDATION_REASON_SEQ, o.code),
         [o.code.replace(/-/g, " ")],
-      ),
-    ),
-  );
-
-  add(
-    DURATION_BILLING_SEQ,
-    DURATION_BILLING_SCENE_OPTIONS.map((o) =>
-      optionEntry(
-        DURATION_BILLING_SEQ,
-        o.code,
-        o.label,
-        durationBillingSceneCheckboxFieldId(DURATION_BILLING_SEQ, o.code),
       ),
     ),
   );

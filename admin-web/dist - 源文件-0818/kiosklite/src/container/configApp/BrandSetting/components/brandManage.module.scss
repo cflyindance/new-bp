@@ -1,0 +1,36 @@
+.brandManage {
+  padding: 16px;
+  :global {
+    .ant-btn-link {
+      color: var(--primary-color);
+    }
+  }
+  .headerWrapper {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    .headerInfo {
+      display: flex;
+      gap: 20px;
+    }
+    .addBtn {
+      width: 200px;
+      height: 5rem;
+    }
+  }
+  .tableWrapper {
+    margin-top: 24px;
+    .brandItemImg {
+      width: 100px;
+      height: 100px;
+      object-fit: contain;
+    }
+    .noData {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 4rem;
+    }
+  }
+}

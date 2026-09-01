@@ -17,8 +17,8 @@ import {
   STORE_MENU_SUBNAV,
   type NavModule,
 } from "../src/config/navigation";
-import { buildCurrentMerchantMenuDemoNodes, JSON_MENU_DEMO_IFRAME_URL } from "../src/config/json-menu-demo-data";
-import { validateMenuDocument, walkMenuNodes, type MenuDocument, type MenuNode } from "../src/config/json-menu-document-domain";
+import { buildCurrentMerchantMenuDemoNodes, JSON_MENU_DEMO_ERROR_KEY, JSON_MENU_DEMO_IFRAME_URL, JSON_MENU_DEMO_ISSUE_ROOT_KEY, JSON_MENU_DEMO_WARNING_KEY } from "../src/config/json-menu-demo-data";
+import { synchronizeMenuParentKeys, validateMenuDocument, walkMenuNodes, type MenuDocument, type MenuNode } from "../src/config/json-menu-document-domain";
 import { serializeMenuDocument } from "../src/config/json-menu-document-serializer";
 
 interface SourceItem {
@@ -57,7 +57,8 @@ function generatedPaths(node: MenuNode): Set<string> {
 }
 
 const nodes = buildCurrentMerchantMenuDemoNodes();
-assert.equal(nodes.length, NAV_MODULES.length, "一级菜单数量必须与 NAV_MODULES 一致");
+assert.equal(nodes.length, NAV_MODULES.length + 1, "一级菜单必须包含完整商家目录与一个校验状态示例");
+synchronizeMenuParentKeys(nodes);
 const document: MenuDocument = {
   _id: "demo-current-merchant-menu",
   name: "Current Merchant Menu Demo",
@@ -67,10 +68,15 @@ const document: MenuDocument = {
 };
 const serialized = serializeMenuDocument(document);
 assert.deepEqual(serialized.menu, nodes, "序列化不得改变或增加示例节点字段");
-assert.equal(validateMenuDocument(document).filter((issue) => issue.severity === "error").length, 0, "默认示例不得产生菜单校验错误");
+const demoIssues = validateMenuDocument(document);
+assert(demoIssues.some((issue) => issue.severity === "error" && issue.path?.join(".") === "0.0"), "默认示例必须包含可定位的错误状态");
+assert(demoIssues.some((issue) => issue.severity === "warning" && issue.path?.join(".") === "0.1"), "默认示例必须包含可定位的警告状态");
+assert.equal(nodes[0]?.key, JSON_MENU_DEMO_ISSUE_ROOT_KEY);
+assert.equal(nodes[0]?.children?.[0]?.key, JSON_MENU_DEMO_ERROR_KEY);
+assert.equal(nodes[0]?.children?.[1]?.key, JSON_MENU_DEMO_WARNING_KEY);
 
 NAV_MODULES.forEach((module, index) => {
-  const generated = nodes[index];
+  const generated = nodes[index + 1];
   assert(generated, `缺少一级菜单 ${module.id}`);
   let expected: Set<string>;
   if (module.id === "product-center-main") {
@@ -89,7 +95,7 @@ assert.equal(new Set(ids).size, visits.length, "节点 ID 必须存在且唯一"
 assert.equal(new Set(keys).size, visits.length, "节点 Key 必须存在且唯一");
 assert(visits.every((visit) => !visit.node.path || visit.node.path.startsWith("/")), "项目内路由必须以 / 开头");
 
-const iframeNodes = visits.filter((visit) => visit.node.type === "iframe");
+const iframeNodes = visits.filter((visit) => visit.node.type === "iframe" && visit.node.key !== JSON_MENU_DEMO_ERROR_KEY);
 assert.equal(iframeNodes.length, 1, "必须且只能有一个 iframe 示例节点");
 assert.equal(iframeNodes[0]?.node.path, "/gift-cards/cards");
 assert.equal(iframeNodes[0]?.node.url, JSON_MENU_DEMO_IFRAME_URL);

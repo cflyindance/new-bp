@@ -1,0 +1,1 @@
+(function(){System.register([`./toast-legacy.ByTKia61.chunk.js`,`./useTranslation-legacy.DCb02ctU.chunk.js`],function(e,t){var n,r,i;function a(e,t){e.prototype=Object.create(t.prototype),e.prototype.constructor=e,r(e,t)}return e(`t`,a),{setters:[function(e){n=e.c},function(e){r=e.v,i=e.y}],execute:function(){e(`n`,n(function(){i()}))}}})})();

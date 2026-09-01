@@ -12,16 +12,19 @@ import { CardHead } from '@/components/AdminSettings/CardHead'
 import { InputNumber, Switch } from 'antd'
 import { useBoolean, useMount } from 'ahooks'
 import styles from './UserSetting.module.less'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import useSystemConfig from '@/hooks/useSystemConfig'
 // import { useTranslation } from 'react-i18next'
 import { makeStyles } from '@material-ui/core/styles'
-import { useTranslation, Trans } from 'react-i18next'
+import { useTranslation } from 'react-i18next'
 import {
   authBeforeOrder,
   callServerTimeInterval,
   customDishOrderMessages,
+  isCrmNeedAuthLogin,
+  isNeedLoginCRM,
   restrictNewOrder,
+  showMenuMemberLoginEntry,
   switchTableBeforeStartOrder,
 } from '@/constants/systemConfig'
 import CustomDishOrderMessagesConfig from '@/components/ConfigCommon/CustomDishOrderMessagesConfig'
@@ -73,10 +76,7 @@ const UserSetting = (props) => {
   const { t } = useTranslation()
   const { changeGlobalConfig, configList, getGlobalConfig } = useSystemConfig()
   const [open, { setTrue, setFalse }] = useBoolean()
-  // const { getFinalConfigById } = useSystemConfig()
-  // const isNeedLoginCRM = getFinalConfigById(34)?.open
-  // const isCrmNeedAuthLogin = getFinalConfigById(40)?.open
-  const [settingItemName, setSettingItemName] = useState('')
+  const [conflictMessage, setConflictMessage] = useState('')
   const { treeData, runGetMenus } = useSetMenus()
   useMount(() => {
     runGetMenus()
@@ -91,6 +91,33 @@ const UserSetting = (props) => {
       return globalConfig?.find((each) => each.key === typeName)?.value
     },
     [globalConfig]
+  )
+
+  const requiredMemberLoginConfig =
+    getConfigValue(isNeedLoginCRM.key) || isNeedLoginCRM.value
+  const preOrderLoginHiddenConfig =
+    getConfigValue(isCrmNeedAuthLogin.key) || isCrmNeedAuthLogin.value
+  const menuLoginEntryConfig =
+    getConfigValue(showMenuMemberLoginEntry.key) ||
+    showMenuMemberLoginEntry.value
+  const isRequiredMemberLogin = Boolean(requiredMemberLoginConfig.open)
+  const showPreOrderMemberLogin =
+    isRequiredMemberLogin || !preOrderLoginHiddenConfig.open
+
+  useEffect(() => {
+    if (!isRequiredMemberLogin || !preOrderLoginHiddenConfig.open) return
+    changeGlobalConfig(isCrmNeedAuthLogin.id, {
+      ...preOrderLoginHiddenConfig,
+      open: false,
+    })
+  }, [changeGlobalConfig, isRequiredMemberLogin, preOrderLoginHiddenConfig])
+
+  const showConflict = useCallback(
+    (message) => {
+      setConflictMessage(message)
+      setTrue()
+    },
+    [setTrue]
   )
 
   const getCardContent = useCallback(
@@ -173,10 +200,71 @@ const UserSetting = (props) => {
     switchTableBeforeStartOrder.id
   )?.open
 
+  const renderMemberLoginEntryCard = () => (
+    <div className={styles.userSettingItem} key="member-login-entry-settings">
+      <Card elevation={0}>
+        <CardHead
+          title={t('SettingOrderLimit.limit_memberLoginEntry_title')}
+          subheader={t('SettingOrderLimit.limit_memberLoginEntry_subtitle')}
+        />
+        <CardContent className={styles.memberLoginEntryContent}>
+          <Box className={styles.memberLoginEntryItem}>
+            <Box className={styles.memberLoginEntryCopy}>
+              <strong>
+                {t('SettingOrderLimit.limit_preOrderMemberLoginEntry_title')}
+              </strong>
+              <span>
+                {t('SettingOrderLimit.limit_preOrderMemberLoginEntry_subtitle')}
+              </span>
+            </Box>
+            <Switch
+              checked={showPreOrderMemberLogin}
+              disabled={isRequiredMemberLogin}
+              onChange={(checked) => {
+                if (!checked && isRequiredMemberLogin) {
+                  showConflict(
+                    t('SystemSetting.member_login_conflict_disable_preorder')
+                  )
+                  return
+                }
+                changeGlobalConfig(isCrmNeedAuthLogin.id, {
+                  ...preOrderLoginHiddenConfig,
+                  open: !checked,
+                })
+              }}
+            />
+          </Box>
+          <Box className={styles.memberLoginEntryItem}>
+            <Box className={styles.memberLoginEntryCopy}>
+              <strong>
+                {t('SettingOrderLimit.limit_menuMemberLoginEntry_title')}
+              </strong>
+              <span>
+                {t('SettingOrderLimit.limit_menuMemberLoginEntry_subtitle')}
+              </span>
+            </Box>
+            <Switch
+              checked={menuLoginEntryConfig.open !== false}
+              onChange={(checked) =>
+                changeGlobalConfig(showMenuMemberLoginEntry.id, {
+                  ...menuLoginEntryConfig,
+                  open: checked,
+                })
+              }
+            />
+          </Box>
+        </CardContent>
+      </Card>
+    </div>
+  )
+
   return (
     <div className={styles.userSettingWrapper}>
       {data.map((each) => {
         const { key, id } = each
+        if (id === isCrmNeedAuthLogin.id) {
+          return renderMemberLoginEntryCard()
+        }
         return (
           <div className={styles.userSettingItem} key={key}>
             <Card elevation={0}>
@@ -203,21 +291,15 @@ const UserSetting = (props) => {
                     checked={getConfigValue(key)?.open}
                     onChange={(checked) => {
                       if (
-                        id === 34 &&
-                        getConfigValue('isCrmNeedAuthLogin')?.open
+                        id === isNeedLoginCRM.id &&
+                        checked &&
+                        preOrderLoginHiddenConfig.open
                       ) {
-                        setSettingItemName(
-                          t(`SettingOrderLimit.limit_isCrmNeedAuthLogin_title`)
+                        showConflict(
+                          t(
+                            'SystemSetting.member_login_conflict_enable_required'
+                          )
                         )
-                        setTrue()
-                      } else if (
-                        id === 40 &&
-                        getConfigValue('isNeedLoginCRM')?.open
-                      ) {
-                        setSettingItemName(
-                          t(`SettingOrderLimit.limit_isNeedLoginCRM_title`)
-                        )
-                        setTrue()
                       } else {
                         const config = getConfigValue(key)
                         changeGlobalConfig(id, {
@@ -249,11 +331,7 @@ const UserSetting = (props) => {
           </Box>
         </DialogTitle>
         <DialogContent className={classes.optionNote}>
-          <Trans
-            i18nKey="SystemSetting.switch_topic_content"
-            values={{ settingItemName }}
-            components={{ strong: <strong /> }}
-          />
+          {conflictMessage}
         </DialogContent>
         <DialogActions className={classes.actions}>
           <Button

@@ -1,0 +1,37 @@
+@import '../../../assets/scss/themes.scss';
+
+.tipWrap {
+  @include dialog-box-style;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10rem;
+  width: 80rem !important;
+}
+
+.title {
+  font-size: 4rem;
+  font-weight: 700;
+  margin-bottom: 3rem;
+}
+
+.imageWrap {
+  width: 50rem;
+}
+
+// tripos 超时取消按钮样式
+.triposCancelButton {
+  background-color: var(--cta-grey);
+  color: var(--text-color-black);
+  border-radius: 8rem;
+  font-size: 4rem;
+  font-weight: 600;
+  padding: 3rem 0;
+  width: 62rem;
+  margin-top: 4rem;
+  box-sizing: border-box;
+}
+.triposCancelButton:active {
+  background-color: var(--cta-grey-active);
+}

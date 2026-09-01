@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>合并对照 · 商品配置 → 限购数量</title>
+<style>
+  :root {
+    --bg: #f4f5f7;
+    --card: #ffffff;
+    --ink: #1f2329;
+    --sub: #646a73;
+    --line: #e5e6eb;
+    --brand: #2f6fed;
+    --brand-weak: #e8f0ff;
+    --danger: #d9363e;
+    --ok: #16a34a;
+    --warn: #b7791f;
+    --shadow: 0 6px 24px rgba(31, 35, 41, 0.08);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font: 14px/1.6 -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+  }
+  header.top {
+    padding: 24px 32px 8px;
+  }
+  header.top h1 { margin: 0 0 6px; font-size: 22px; }
+  header.top p { margin: 0; color: var(--sub); max-width: 900px; }
+  .wrap { padding: 16px 32px 48px; }
+  .legend {
+    display: flex; gap: 18px; flex-wrap: wrap; align-items: center;
+    margin: 10px 0 20px; color: var(--sub); font-size: 13px;
+  }
+  .legend b { color: var(--ink); }
+  .tag { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+  .tag--keep { background: #eef7f0; color: var(--ok); }
+  .tag--move { background: var(--brand-weak); color: var(--brand); }
+  .tag--merge { background: #fff4e5; color: var(--warn); }
+  .tag--rec { background: var(--brand); color: #fff; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+    gap: 20px;
+    align-items: start;
+  }
+  .panel {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .panel.is-rec { border-color: var(--brand); box-shadow: 0 8px 28px rgba(47, 111, 237, 0.18); }
+  .panel > .head {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; gap: 10px; justify-content: space-between;
+  }
+  .panel > .head h2 { margin: 0; font-size: 16px; }
+  .panel > .head .badge { font-size: 12px; color: var(--sub); }
+  .panel > .body { padding: 16px 18px; }
+  .desc { color: var(--sub); margin: 0 0 14px; font-size: 13px; }
+
+  /* stepper */
+  .steps { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 14px; }
+  .steps .s {
+    font-size: 12px; padding: 4px 9px; border-radius: 8px;
+    background: #f2f3f5; color: var(--sub); border: 1px solid transparent;
+    display: inline-flex; align-items: center; gap: 5px;
+  }
+  .steps .s.cur { background: var(--brand-weak); color: var(--brand); border-color: #c9dcff; font-weight: 600; }
+  .steps .s.merged { background: #fff4e5; color: var(--warn); border-color: #f3dcb0; font-weight: 600; }
+  .steps .arw { color: #c0c4cc; align-self: center; }
+
+  /* fake ui */
+  .ui { border: 1px dashed var(--line); border-radius: 10px; padding: 12px; background: #fafbfc; }
+  .ui + .ui { margin-top: 12px; }
+  .ui-title { font-weight: 600; margin: 0 0 8px; font-size: 13px; display:flex; align-items:center; gap:8px;}
+  .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+  .field label { font-size: 12px; color: var(--sub); }
+  .input, .select {
+    height: 32px; border: 1px solid var(--line); border-radius: 8px; padding: 0 10px;
+    background: #fff; font-size: 13px; color: var(--ink);
+  }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .btn {
+    height: 30px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--line);
+    background: #fff; font-size: 13px; cursor: default; color: var(--ink);
+  }
+  .btn--primary { background: var(--brand); border-color: var(--brand); color: #fff; }
+  .btn--sm { height: 26px; padding: 0 9px; font-size: 12px; }
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0; }
+  .tabs .t { font-size: 12px; padding: 4px 10px; border-radius: 999px; background: #eef0f2; color: var(--sub); }
+  .tabs .t.on { background: var(--brand); color: #fff; }
+  table.tbl { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 6px; }
+  table.tbl th, table.tbl td { border-bottom: 1px solid var(--line); padding: 6px 8px; text-align: left; }
+  table.tbl th { color: var(--sub); font-weight: 600; background: #f7f8fa; }
+  .qty { width: 62px; height: 26px; border: 1px solid var(--line); border-radius: 6px; padding: 0 6px; }
+  .pill { font-size: 11px; padding: 1px 7px; border-radius: 999px; background: #eef0f2; color: var(--sub); }
+  .muted { color: var(--sub); }
+  .callout {
+    margin-top: 12px; padding: 10px 12px; border-radius: 8px; font-size: 12.5px;
+    background: #f7f8fa; border: 1px solid var(--line);
+  }
+  .callout.good { background: #eef7f0; border-color: #cfe9d6; }
+  .callout.warn { background: #fff4e5; border-color: #f3dcb0; }
+  .pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+  .pros-cons ul { margin: 4px 0 0; padding-left: 18px; font-size: 12.5px; }
+  .pros-cons .h { font-size: 12px; font-weight: 700; }
+  .pros-cons .pros .h { color: var(--ok); }
+  .pros-cons .cons .h { color: var(--danger); }
+  .note { font-size: 12px; color: var(--sub); margin-top: 10px; }
+  .kbd { font-family: ui-monospace, Menlo, Consolas, monospace; background:#eef0f2; padding:1px 5px; border-radius:5px; font-size:11.5px;}
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>「商品配置」并入「限购数量」— 合并方案对照</h1>
+  <p>前提：<b>不解耦</b>，保留解耦前的 <span class="kbd">storeConfigs[storeId]</span> 数据模型（每店 <span class="kbd">structureByLine/targetIds/limits</span>）。合并只在 UI 层把两步收成一步；下面对照现状与 3 种合并方案。</p>
+  <div class="legend">
+    <span><span class="tag tag--keep">保留</span> 沿用现有交互</span>
+    <span><span class="tag tag--move">迁移</span> 换个位置放</span>
+    <span><span class="tag tag--merge">合并</span> 两步内容合到一处</span>
+    <span><span class="tag tag--rec">推荐</span> 建议采用</span>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="grid">
+
+    <!-- 现状 -->
+    <section class="panel">
+      <div class="head"><h2>现状（解耦前）</h2><span class="badge">2 个独立步骤</span></div>
+      <div class="body">
+        <div class="steps">
+          <span class="s">类型</span><span class="arw">›</span>
+          <span class="s cur">商品配置</span><span class="arw">›</span>
+          <span class="s">场景</span><span class="arw">›</span>
+          <span class="s cur">限购数量</span><span class="arw">›</span>
+          <span class="s">生效范围</span><span class="arw">›</span>
+          <span class="s">授权</span><span class="arw">›</span>
+          <span class="s">确认</span>
+        </div>
+        <p class="desc">「商品配置」先按店选品；「限购数量」再按店填矩阵。两步分离，用户需在选品与填数间来回跳步。</p>
+
+        <div class="ui">
+          <p class="ui-title">步 · 商品配置</p>
+          <div class="field"><label>规则名称</label><input class="input" value="午市每人限购" readonly /></div>
+          <div class="row">
+            <button class="btn btn--primary btn--sm">添加商品</button>
+            <button class="btn btn--sm">查看已选商品（5）</button>
+          </div>
+          <p class="note">按店：先选门店 → 四级树（产线→组→类→菜）勾选 → 提交。</p>
+        </div>
+
+        <div class="ui">
+          <p class="ui-title">步 · 限购数量</p>
+          <div class="field"><label>配置门店</label><select class="select"><option>纽约中城店</option></select></div>
+          <div class="tabs"><span class="t on">eMenu</span><span class="t">Kiosk</span><span class="t">SDI</span></div>
+          <div class="tabs"><span class="t on">1-2 人</span><span class="t">3-4 人</span></div>
+          <table class="tbl">
+            <thead><tr><th></th><th>菜品</th><th>订单上限</th></tr></thead>
+            <tbody>
+              <tr><td>☐</td><td>清蒸大闸蟹</td><td><input class="qty" value="1" readonly/></td></tr>
+              <tr><td>☐</td><td>红烧肉</td><td><input class="qty" value="2" readonly/></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout warn">痛点：选品在一步、填数在另一步，切换门店/产线要跨步对照；「参与商品」与「矩阵行」是同一批数据却分屏维护。</div>
+      </div>
+    </section>
+
+    <!-- 方案A -->
+    <section class="panel is-rec">
+      <div class="head"><h2>方案 A · 矩阵内联选品 <span class="tag tag--rec">推荐</span></h2><span class="badge">合并为 1 步</span></div>
+      <div class="body">
+        <div class="steps">
+          <span class="s">类型</span><span class="arw">›</span>
+          <span class="s">场景</span><span class="arw">›</span>
+          <span class="s merged">商品与限购</span><span class="arw">›</span>
+          <span class="s">生效范围</span><span class="arw">›</span>
+          <span class="s">授权</span><span class="arw">›</span>
+          <span class="s">确认</span>
+        </div>
+        <p class="desc">矩阵表就是「已选商品」的载体：表头放<b>添加商品</b>入口，矩阵行即已选商品，行末可删除即移除该商品。选品与填数在同一张表完成。</p>
+
+        <div class="ui">
+          <p class="ui-title">步 · 商品与限购 <span class="pill">合并</span></p>
+          <div class="field"><label>配置门店</label><select class="select"><option>纽约中城店</option></select></div>
+          <div class="tabs"><span class="t on">eMenu</span><span class="t">Kiosk</span><span class="t">SDI</span></div>
+          <div class="tabs"><span class="t on">1-2 人</span><span class="t">3-4 人</span></div>
+          <div class="row" style="justify-content:space-between">
+            <span class="muted">共 5 个商品</span>
+            <span class="row">
+              <button class="btn btn--primary btn--sm">添加商品</button>
+              <button class="btn btn--sm">批量填数</button>
+              <button class="btn btn--sm">复制到其他产线</button>
+            </span>
+          </div>
+          <table class="tbl">
+            <thead><tr><th></th><th>菜品</th><th>订单上限</th><th></th></tr></thead>
+            <tbody>
+              <tr><td>☐</td><td>清蒸大闸蟹</td><td><input class="qty" value="1" readonly/></td><td><span class="muted">移除</span></td></tr>
+              <tr><td>☐</td><td>红烧肉</td><td><input class="qty" value="2" readonly/></td><td><span class="muted">移除</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout good">已选商品 = 矩阵行，一处维护；基础信息（名称/描述）迁到「规则类型」步。数据仍写回 <span class="kbd">storeConfigs</span>。</div>
+        <div class="pros-cons">
+          <div class="pros"><div class="h">优点</div><ul><li>选品即见格子，心智最顺</li><li>删除行=移除商品，无冗余</li><li>步骤 -1</li></ul></div>
+          <div class="cons"><div class="h">代价</div><ul><li>矩阵表头改造（加添加/删除）</li><li>基础信息需换位</li></ul></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 方案B -->
+    <section class="panel">
+      <div class="head"><h2>方案 B · 左右分栏</h2><span class="badge">合并为 1 步</span></div>
+      <div class="body">
+        <div class="steps">
+          <span class="s">类型</span><span class="arw">›</span>
+          <span class="s">场景</span><span class="arw">›</span>
+          <span class="s merged">商品与限购</span><span class="arw">›</span>
+          <span class="s">生效范围</span><span class="arw">›</span>
+          <span class="s">授权</span><span class="arw">›</span>
+          <span class="s">确认</span>
+        </div>
+        <p class="desc">左栏管选品（门店+产线+已选清单，可增删），右栏按场景填矩阵。一屏「左选右填」。</p>
+        <div class="ui" style="display:grid;grid-template-columns:0.9fr 1.1fr;gap:12px">
+          <div>
+            <p class="ui-title" style="margin-bottom:6px">选品</p>
+            <select class="select" style="width:100%;margin-bottom:6px"><option>纽约中城店</option></select>
+            <button class="btn btn--primary btn--sm" style="width:100%;margin-bottom:8px">添加商品</button>
+            <div class="pill" style="display:block;margin-bottom:4px">清蒸大闸蟹 ✕</div>
+            <div class="pill" style="display:block">红烧肉 ✕</div>
+          </div>
+          <div>
+            <p class="ui-title" style="margin-bottom:6px">限购矩阵</p>
+            <div class="tabs"><span class="t on">1-2 人</span><span class="t">3-4 人</span></div>
+            <table class="tbl">
+              <thead><tr><th>菜品</th><th>上限</th></tr></thead>
+              <tbody>
+                <tr><td>清蒸大闸蟹</td><td><input class="qty" value="1" readonly/></td></tr>
+                <tr><td>红烧肉</td><td><input class="qty" value="2" readonly/></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="pros-cons">
+          <div class="pros"><div class="h">优点</div><ul><li>选品与填数同屏并列</li><li>结构清晰</li></ul></div>
+          <div class="cons"><div class="h">代价</div><ul><li>窄屏两栏拥挤</li><li>与现有单列矩阵样式差异大，改动量最大</li></ul></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 方案C -->
+    <section class="panel">
+      <div class="head"><h2>方案 C · 上下堆叠（最小改动）</h2><span class="badge">合并为 1 步</span></div>
+      <div class="body">
+        <div class="steps">
+          <span class="s">类型</span><span class="arw">›</span>
+          <span class="s">场景</span><span class="arw">›</span>
+          <span class="s merged">商品与限购</span><span class="arw">›</span>
+          <span class="s">生效范围</span><span class="arw">›</span>
+          <span class="s">授权</span><span class="arw">›</span>
+          <span class="s">确认</span>
+        </div>
+        <p class="desc">同一步里：上半部分照搬原「商品配置」section，下半部分照搬原「限购矩阵」。几乎不改内部 UI，只是把两个 render 函数拼进一个 step。</p>
+        <div class="ui">
+          <p class="ui-title">上 · 参与商品 <span class="pill">照搬</span></p>
+          <div class="row"><button class="btn btn--primary btn--sm">添加商品</button><button class="btn btn--sm">查看已选商品（5）</button></div>
+        </div>
+        <div class="ui">
+          <p class="ui-title">下 · 限购矩阵 <span class="pill">照搬</span></p>
+          <div class="field"><label>配置门店</label><select class="select"><option>纽约中城店</option></select></div>
+          <div class="tabs"><span class="t on">eMenu</span><span class="t">Kiosk</span></div>
+          <table class="tbl">
+            <thead><tr><th>菜品</th><th>上限</th></tr></thead>
+            <tbody><tr><td>清蒸大闸蟹</td><td><input class="qty" value="1" readonly/></td></tr></tbody>
+          </table>
+        </div>
+        <div class="pros-cons">
+          <div class="pros"><div class="h">优点</div><ul><li>改动最小、风险最低</li><li>内部交互零改</li></ul></div>
+          <div class="cons"><div class="h">代价</div><ul><li>页面偏长，需上下滚动</li><li>选品/填数仍是两块，未真正一体化</li></ul></div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <div class="callout" style="margin-top:22px;max-width:980px">
+    <b>门店维一致性问题（三方案共有，需定）：</b>合并后一步内同时含「选门店配商品」和「按门店填数」。现状「商品配置」按 <span class="kbd">activeStoreId</span> 选品、「限购数量」也有独立「配置门店」下拉。合并后应统一为<b>一个门店下拉</b>贯穿选品+填数，避免两个门店选择器打架。方案 A/B/C 我都会统一成单一门店上下文。
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,28 @@
+.fontSizeBox {
+  margin-right: 2rem;
+  display: flex;
+  justify-content: flex-end;
+  width: calc(100% - 26rem);
+  flex-wrap: wrap;
+  .fontSizeOption {
+    display: flex;
+    align-items: center;
+    margin: 0.5rem 0;
+    .fontSizeOptionRow {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .radioText {
+      margin-left: 0.5rem;
+    }
+    .fontSizeInput {
+      margin: 0 0.5rem;
+      padding: 0.5rem;
+      width: 6rem;
+      border: 1px solid #d9d9d9;
+      border-radius: 4px;
+    }
+  }
+}
+

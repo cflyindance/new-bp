@@ -112,15 +112,7 @@ trackPageConfigChange(scopeKey, "/operations/queue-call/settings", {
 });
 bindPageSaveGuard();
 const beforeUnload = windowListeners.get("beforeunload")?.[0];
-assert.ok(beforeUnload, "beforeunload guard should be bound");
-const unloadEvent: Record<string, unknown> = {
-  defaultPrevented: false,
-  returnValue: undefined,
-  preventDefault() { this.defaultPrevented = true; },
-};
-beforeUnload!(unloadEvent);
-assert.equal(unloadEvent.defaultPrevented, true);
-assert.equal(unloadEvent.returnValue, "");
+assert.equal(beforeUnload, undefined, "browser refresh must not register a beforeunload prompt");
 console.log("  ✓ 设置命中不再降级为跳转按钮");
 
 setActiveSettingEditContext(null);

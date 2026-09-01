@@ -36,6 +36,8 @@
   },
   "Landing": {
     "start": "시작",
+    "start_new_order": "주문 시작",
+    "continue_order": "주문 계속",
     "policy_btn_back": "뒤로",
     "policy_btn_enter": "알겠어요",
     "refresh": "새로고침",

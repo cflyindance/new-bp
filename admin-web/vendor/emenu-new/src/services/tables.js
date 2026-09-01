@@ -1,7 +1,7 @@
 import request from '@/utils/request'
 
-export function getAreas() {
-  return request({
+export async function getAreas() {
+  const response = await request({
     url: '/seatingArea/list',
     method: 'get',
     params: {
@@ -9,24 +9,28 @@ export function getAreas() {
       // fetchOrders: true,
     },
   })
+  return response
 }
 
-export function getTables(areaId) {
-  return request({
+export async function getTables(areaId) {
+  const response = await request({
     url: '/table/list',
     method: 'get',
     params: {
       areaId,
     },
   })
+  if (!response?.tables) return response
+  return response
 }
 
-export function fetchTable(id) {
-  return request({
+export async function fetchTable(id, areaId = null) {
+  const response = await request({
     url: '/table/fetch',
     method: 'get',
     params: {
       id,
     },
   })
+  return response
 }

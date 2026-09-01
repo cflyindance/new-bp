@@ -1,0 +1,113 @@
+// .panelBox {
+  // padding: 0 1rem 1rem 0;
+// }
+// .panelBox > div:last-child {
+//   border-radius: 0 0 1rem 1rem;
+// }
+.panelBox {
+  position: relative;
+}
+.preMeasureBox {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  visibility: hidden;
+  pointer-events: none;
+  z-index: -1;
+}
+.comboItemsTitle {
+  // position: sticky;
+  // position: -webkit-sticky;
+  // top: 0;
+  color: #333;
+  font-size: 3.6rem;
+  font-weight: 700;
+  background-color: #fff;
+  padding: 2rem 2rem 0 2rem;
+  padding-right: 0;
+  // z-index: 1;
+  border-radius: 1rem 1rem 0 0;
+  display: flex;
+  align-items: center;
+  // gap: 3rem;
+  .sectionName {
+    white-space: nowrap;
+  }
+  .required {
+    // position: absolute;
+    // right: 2rem;
+    // top: 2rem;
+    color: var(--text-color-black);
+    background-image: url('../../../../assets/images/labelBg.png');
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+    padding: 0.3rem 1.5rem 0.5rem 3rem;
+    font-size: 2.4rem;
+    margin-left: 2.5rem;
+    -webkit-animation: require 0.8s infinite;
+    animation: require 0.8s infinite;
+  }
+  i {
+    font-size: 2.4rem;
+    font-weight: 400;
+    margin-left: 2rem;
+    font-style: normal;
+  }
+  .comboItemsRule {
+    display: block;
+    color: #999;
+  }
+  .noAllow,
+  .comboItemsMust {
+    color: #f00;
+  }
+}
+.comboItemsBox {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  background-color: #fff;
+  border-radius: 0 0 1rem 1rem;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  box-sizing: border-box;
+}
+.comboItemsList {
+  display: flex;
+  flex-wrap: wrap;
+  .comboItems {
+    width: 30rem;
+    margin: 2rem 1rem 0;
+    // border: 1px solid #ddd;
+    border-radius: 1rem;
+  }
+  .simpleModeItems {
+    width: calc(50% - 2rem);
+    margin: 0 0 2rem 0;
+  }
+  .simpleModeItems:nth-child(2n + 1) {
+    margin: 0 2rem 2rem 0;
+  }
+}
+.disabled {
+  opacity: 0.5;
+}
+.optInfo {
+  margin: 2rem 2rem 1rem 0;
+  user-select: none;
+}
+.optDisabled {
+  opacity: 0.5;
+}
+
+@keyframes require {
+  0% {
+    -webkit-transform: translateX(0);
+    transform: translateX(0);
+  }
+  100% {
+    -webkit-transform: translateX(-2rem);
+    transform: translateX(-2rem);
+  }
+}

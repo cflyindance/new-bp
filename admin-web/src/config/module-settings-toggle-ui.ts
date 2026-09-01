@@ -212,9 +212,6 @@ export const GUEST_EMENU_AUTH_PAGE_TOGGLE_SEQ: readonly number[] = [620, 626];
 /** 前厅 · 品类模式（601/571/627 主开关 + 产线多选；601 UI 已迁品类管理·品类设置，见 foh-category-settings-ui / guest-category-mode-ui） */
 export const GUEST_CATEGORY_MODE_TOGGLE_SEQ: readonly number[] = [601, 571, 627];
 
-/** 前厅 · 按照时长收费（443 主开关 + 场景多选，见 duration-billing-scenes-ui） */
-export const DURATION_BILLING_TOGGLE_SEQ: readonly number[] = [443];
-
 /** 前厅 · 菜单分类模式（602 主开关 + eMenu/SDI 产线；602 UI 已迁分类管理·分类设置，见 foh-classification-settings-ui / guest-menu-classification-mode-ui） */
 export const GUEST_MENU_CLASSIFICATION_MODE_TOGGLE_SEQ: readonly number[] = [602];
 
@@ -353,7 +350,6 @@ export const MODULE_SETTING_TOGGLE_SEQ = new Set([
   ...GUEST_KIOSK_FLOW_PAGE_TOGGLE_SEQ,
   ...GUEST_EMENU_AUTH_PAGE_TOGGLE_SEQ,
   ...GUEST_CATEGORY_MODE_TOGGLE_SEQ,
-  ...DURATION_BILLING_TOGGLE_SEQ,
   ...GUEST_MENU_CLASSIFICATION_MODE_TOGGLE_SEQ,
   ...GUEST_MENU_CLASS_NAME_DISPLAY_TOGGLE_SEQ,
   ...HOTPOT_BASE_REQUIRED_TOGGLE_SEQ,

@@ -1,0 +1,179 @@
+@font-face {
+  font-family: 'Inter'; 
+  src: url('../../assets/fonts/Inter-VariableFont_opsz,wght.ttf') format('truetype-variations');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'SansitaSwashed'; 
+  src: url('../../assets/fonts/SansitaSwashed-VariableFont_wght.ttf') format('truetype-variations');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Noto Sans';
+  src: url('../../assets/fonts/NotoSans-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+
+:root {
+  --primary-color: #FFB702; /* 主题色*/
+  --primary-secondary-color: #FFD754; /*浅色主题色*/
+  --primary-selected-color: #FFB600; /*标记色*/
+  --primary-color-darker: #D9B029; /*主题色加深*/
+  --primary-color-disabled: #F1F1F1; /*禁用色*/
+  --background-grey: #f5f5f5; /* 非重点区域背景色*/
+  --cta-grey: #E6E6E6; /* 灰色按钮*/
+  --cta-grey-active: #d3d3d3; /* 灰色按钮active*/
+  --background-crm-login: #fff0cc; /*登录引导区域背景色*/
+  --background-light: #FFF9E8; /* 浅色背景色*/
+  --text-color-white: #ffffff; /* 文本色 */
+  --text-color-black: #000000cc; /* 文本色 */
+  --promotion-theme-color: #D40C27; /* 促销主题色 */
+  
+  --shadow-color: 0px 0px 2rem 0.7rem rgba(0, 0, 0, 0.1); /* 默认阴影色 */
+  --linear-change: linear-gradient( to right, var(--primary-secondary-color) 30%, var(--primary-color) 100%);
+  --linear-change-darker: linear-gradient( to right, #FFCA1E 30%, #DF9F00 100%);
+  --border-radius-cate: 3rem 1rem 3rem 3rem;  /* 类目圆角 */
+  --border-radius-dialog: 4rem;  /* 弹窗圆角 */
+  
+}
+
+html,
+body {
+  font-family: 'Inter', sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+a {
+  color: #000;
+  text-decoration: none;
+}
+
+::-webkit-scrollbar {
+  display: none;
+  /* width: 1rem;
+  height: 1rem;
+  background-color: var(--background-grey); */
+}
+
+/* 全局修复：确保antd下拉组件在安卓WebView中可以正常touch滚动 */
+.ant-picker-dropdown,
+.ant-select-dropdown,
+.ant-tree-select-dropdown {
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+  pointer-events: auto;
+}
+
+.ant-picker-panel-container,
+.ant-picker-panel,
+.ant-select-dropdown .rc-virtual-list,
+.ant-tree-select-dropdown .rc-virtual-list {
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+  pointer-events: auto;
+}
+
+/* TimePicker时间列滚动容器 - 确保可以直接滚动，无需先点击 */
+.ant-picker-time-panel-column {
+  touch-action: pan-y !important;
+  -webkit-overflow-scrolling: touch !important;
+  overflow-y: auto !important;
+  pointer-events: auto !important;
+  /* 确保滚动容器始终可交互 */
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* DatePicker日期面板 */
+.ant-picker-date-panel,
+.ant-picker-month-panel,
+.ant-picker-year-panel {
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+  pointer-events: auto;
+}
+
+/* 纯色按钮的点击动画 */
+.animate-btn {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.animate-btn:active {
+  background: var(--primary-color-darker) !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* 过渡色按钮的点击动画 */
+.linear-animate-btn {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.linear-animate-btn:active {
+  background-image: var(--linear-change-darker) !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* @material-ui/lab Alert：全站统一 box-sizing */
+.MuiAlert-root {
+  box-sizing: border-box;
+}
+.MuiAlert-root *,
+.MuiAlert-root *::before,
+.MuiAlert-root *::after {
+  box-sizing: border-box;
+}
+
+/* ::-webkit-scrollbar-button:start:decrement,
+::-webkit-scrollbar-button:end:increment {
+  display: block;
+}
+
+::-webkit-scrollbar-button:vertical:start:increment,
+::-webkit-scrollbar-button:vertical:end:decrement {
+  display: none;
+}
+
+::-webkit-scrollbar-button:end:increment {
+  -webkit-box-shadow: 0 0 6px rgba(0, 0, 0, 0.5);
+  background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgBAMAAACBVGfHAAAAJ1BMVEUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADdEvm1AAAADHRSTlMAKtSq36J/spVtTEm69Rr7AAAAXUlEQVQoz2MYxGDxBBiLLRpM+RyGCdgcAVMxZwwgfOYzx8G00BmoEpszimCaUQeoBKzgkAADTAlcAVwJTAFcCUwBQglUAUIJVAFCCVQBQglUAUIJRAECSCQyDHIAADIgH/KcAfEAAAAAAElFTkSuQmCC);
+  background-size: contain;
+  background-color: #fff;
+  background-repeat: no-repeat;
+  background-position: center center;
+}
+
+::-webkit-scrollbar-button:start:decrement {
+  -webkit-box-shadow: 0 0 6px rgba(0, 0, 0, 0.5);
+  background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgAgMAAAAOFJJnAAAACVBMVEUAAAAAAAAAAACDY+nAAAAAAnRSTlMAf7YpoZUAAABLSURBVBjTrYtBDQAwCAPHYxOBGiRMx9Qggg8uN1okjITkWo7xccQaljdoNJxsJY9RCXUqvoKKSVIphlJXKAisJbFMgld99S6Y4/tc/sgP8Qua72EAAAAASUVORK5CYII=);
+  background-size: contain;
+  background-color: #fff;
+  background-repeat: no-repeat;
+  background-position: center center;
+}
+
+::-webkit-scrollbar-track {
+  -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
+  background-color: var(--background-grey);
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #999;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-corner {
+  background: #82afff;
+}
+
+::-webkit-scrollbar-resizer {
+  background: #000;
+} */

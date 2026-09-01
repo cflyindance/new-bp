@@ -1,0 +1,1 @@
+import{a as e,nt as t}from"./utils.DfDhn_VA.chunk.js";var n=e(`kioskServerIP`)||t;export{n as t};

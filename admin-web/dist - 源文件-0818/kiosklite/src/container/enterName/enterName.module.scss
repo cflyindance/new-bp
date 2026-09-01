@@ -1,0 +1,146 @@
+@import '../../assets/scss/themes.scss';
+
+.enterNamePage {
+  position: absolute;
+  top: 0;
+  width: 100%;
+  height: 100vh;
+  box-sizing: border-box;
+  background-color: #fff;
+}
+.enterNamePageBox {
+  padding: 19rem 16rem;
+  width: 76rem;
+  margin: 0 auto;
+}
+.enterNameTitle {
+  margin-bottom: 6rem;
+  font-weight: 700;
+  font-size: 4rem;
+  color: #000;
+  text-align: center;
+}
+// .enterNameSubTitle {
+//   margin-bottom: 5rem;
+//   font-size: 3rem;
+//   color: #999;
+//   padding: 0 5rem;
+//   text-align: center;
+//   word-wrap: break-word;
+//   word-break: break-word;
+// }
+
+.enterNameInput {
+  &.enterNoName {
+    font-weight: normal;
+    color: rgba(0, 0, 0, 0.3);
+  }
+  position: relative;
+  display: flex;
+  margin-bottom: 15rem;
+  .searchIpt {
+    color: var(--text-color-black);
+    font-weight: bold;
+    height: 13rem;
+    line-height: 13rem;
+    border-radius: 20rem;
+    background: var(--background-grey);
+    text-align: center;
+    outline: none;
+    border: none;
+    width: 100%;
+    font-size: 6rem;
+    box-shadow: 0.1rem 0.2rem 1rem rgba(0, 0, 0, 0.1) inset;
+  }
+  // .iconEmpty {
+  //   position: absolute;
+  //   left: 55rem;
+  //   font-weight: normal;
+  // }
+}
+
+.never {
+  width: 100%;
+  color: #333;
+  font-size: 4rem;
+  height: 10rem;
+  text-align: center;
+  line-height: 10rem;
+  border-radius: 10rem;
+  background-color: var(--background-grey);
+  font-weight: bold;
+}
+
+.authorizationBox {
+  margin: 0 auto 2rem;
+  width: 100%;
+  color: var(--primary-color);
+  font-size: 3rem;
+  height: 10rem;
+  text-align: center;
+  line-height: 10rem;
+  border-radius: 10rem;
+  border: 1px solid var(--primary-color);
+  font-weight: bold;
+}
+
+.actived {
+  background-color: var(--primary-selected-color);
+}
+.noActived {
+  background: var(--primary-color-disabled);
+  color: #0000004d;
+}
+.confirmCusTip {
+  margin: 2rem auto 0;
+  width: 100%;
+  color: var(--text-color-black);
+  font-size: 4rem;
+  height: 10rem;
+  text-align: center;
+  line-height: 10rem;
+  border-radius: 10rem;
+  font-weight: bold;
+}
+
+.containerBox {
+  @include dialog-box-style;
+  .itemBox {
+    text-align: center;
+    color: #333;
+    .itemName {
+      font-size: 3.6rem;
+      font-weight: bold;
+      margin: 3rem 0;
+    }
+    .subItemName {
+      font-size: 3rem;
+    }
+  }
+  .btnBox {
+    display: flex;
+    justify-content: center;
+    margin-top: 4rem;
+    flex-direction: column;
+    // gap: 2rem;
+    span {
+      display: inline-block;
+      width: 40rem;
+      height: 8rem;
+      font-size: 3rem;
+      text-align: center;
+      line-height: 8rem;
+      margin: 0 1.4rem;
+      color: var(--text-color-black);
+      border-radius: 4rem;
+      font-weight: bold;
+    }
+    span:first-child {
+      background-color: var(--background-grey);
+      margin-bottom: 2rem;
+    }
+    span:last-child {
+      background-color: var(--primary-selected-color);
+    }
+  }
+}

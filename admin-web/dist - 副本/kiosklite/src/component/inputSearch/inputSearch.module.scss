@@ -1,0 +1,78 @@
+.searchBox {
+  position: relative;
+  margin-left: 2rem;
+
+  &.searchBoxFixHeight {
+    height: 5rem;
+  }
+
+  .searchIcon {
+    width: 2.5rem;
+  }
+
+  .iconEmpty {
+    position: absolute;
+    width: 4rem;
+    top: 0.5rem;
+    right: 2rem;
+    z-index: 2;
+  }
+
+  .searchBar {
+    width: 32rem;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 1;
+  }
+
+  .searchIpt {
+    width: 32rem;
+    display: block;
+    height: 100%;
+    line-height: 100%;
+    background-color: var(--background-grey);
+    border-radius: 10rem;
+    color: rgba(0, 0, 0, 0.55);
+    outline-style: none;
+    font-size: 2.4rem;
+    border: none;
+    background-image: url('../../assets/images/search.png');
+    background-size: 2.5rem 2.5rem;
+    background-repeat: no-repeat;
+    background-position-x: 2.5rem;
+    background-position-y: 1.25rem;
+    padding: 0 6rem 0 6rem;
+    box-sizing: border-box;
+  }
+
+  .searchIpt:focus::-webkit-input-placeholder {
+    color: transparent;
+  }
+
+  .searchIpt:focus:-moz-placeholder {
+    color: transparent;
+  }
+
+  .searchIpt:focus::-moz-placeholder {
+    color: transparent;
+  }
+
+  .searchIpt:focus:-ms-input-placeholder {
+    color: transparent;
+  }
+
+  .searchIpt::-webkit-search-cancel-button {
+    position: relative;
+    right: 2rem;
+  }
+
+  ::placeholder {
+    color: rgba(0, 0, 0, 0.25);
+  }
+
+  ::-webkit-input-placeholder {
+    color: rgba(0, 0, 0, 0.25);
+  }
+}

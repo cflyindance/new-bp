@@ -40,6 +40,7 @@
     "verify:personal-sales-deduct-pipeline": "npx tsx scripts/verify-personal-sales-deduct-pipeline.ts",
     "verify:personal-sales-pool": "npx tsx scripts/verify-personal-sales-pool.ts",
     "verify:emenu-responsive-viewport": "node scripts/verify-emenu-responsive-viewport.mjs",
+    "verify:subscription-service": "npx tsx scripts/verify-subscription-service.ts",
     "verify:tipout-interaction-refresh": "node scripts/verify-tipout-interaction-refresh.mjs",
     "verify:pit-database": "node scripts/verify-pit-database.mjs",
     "verify:pit-auth-api": "node scripts/verify-pit-auth-api.mjs",
@@ -49,6 +50,7 @@
     "verify:pit-import": "node scripts/verify-pit-import.mjs",
     "verify:pit-server": "node scripts/verify-pit-server.mjs",
     "verify:pit-shell": "node scripts/verify-pit-shell.mjs",
+    "verify:pit-list-ui": "npx tsx scripts/verify-pit-list-ui.ts",
     "pit:start": "node server/pit-api-server.mjs",
     "dev:pit": "node server/run-pit-dev.mjs",
     "pit:restore": "node server/pit-restore.mjs"

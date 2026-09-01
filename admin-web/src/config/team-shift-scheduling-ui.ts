@@ -20,6 +20,7 @@ import {
   registerPageSaveDirtyProbe,
   registerPageSavePreCommit,
 } from "./page-save-registry";
+import { showAppToast } from "../ui/app-toast";
 import { parseRosterStoreScopeId } from "./team-employee-roster-scope";
 
 export const TEAM_SHIFT_SCHEDULING_PATH = "/team/shift-scheduling";
@@ -1798,7 +1799,7 @@ function closeShiftFormEditor(): void {
 function openShiftFormCreate(): void {
   const storeId = shiftConfigStoreFilter || resolveDefaultScopedStoreId() || readScopeFilters().store || "";
   if (!storeId) {
-    window.alert("请先选择门店，再新增班次。");
+    showAppToast("请先选择门店，再新增班次。", { variant: "error" });
     return;
   }
   shiftFormEditor = {
@@ -2002,17 +2003,19 @@ function bindShiftFormDialog(remount: () => void): void {
       const breakOpt = resolveCustomBreakSelection(breakId, { breakCompensation: compensation }, compensation);
       if (!breakOpt) {
         detail.querySelector<HTMLSelectElement>("[data-shift-type-break-id]")?.focus();
-        window.alert("请选择休息名称。");
+        showAppToast("请选择休息名称。", { variant: "error" });
         return;
       }
     }
     const updated = collectShiftTypeFromDetail(detail, shiftFormEditor.shift.id);
     if (!updated) {
-      window.alert("请填写班次名称。");
+      showAppToast("请填写班次名称。", { variant: "error" });
       return;
     }
     if (!updated.storeId) {
-      window.alert(`班次「${updated.name}」尚未选择门店，请先选择门店后再保存。`);
+      showAppToast(`班次「${updated.name}」尚未选择门店，请先选择门店后再保存。`, {
+        variant: "error",
+      });
       return;
     }
     const types = readShiftTypes().map((t) => ({ ...t }));

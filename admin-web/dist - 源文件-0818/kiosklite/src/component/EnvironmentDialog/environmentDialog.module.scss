@@ -1,0 +1,62 @@
+@import '../../assets/scss/themes.scss';
+
+.containerBox {
+  @include dialog-box-style(70rem);
+}
+
+.title {
+  font-size: 3.6rem;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 4rem;
+}
+
+.optionBox {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.option {
+  flex: 1;
+  height: 9rem;
+  line-height: 9rem;
+  margin: 0 1rem;
+  font-size: 3rem;
+  font-weight: bold;
+  text-align: center;
+  border-radius: 4rem;
+  color: var(--text-color-black);
+  background-color: var(--background-grey);
+}
+
+.optionActive {
+  background-color: var(--primary-selected-color);
+}
+
+.btnBox {
+  display: flex;
+  justify-content: center;
+  margin-top: 5rem;
+
+  span {
+    display: inline-block;
+    width: 26rem;
+    height: 8rem;
+    font-size: 3rem;
+    text-align: center;
+    line-height: 8rem;
+    margin: 0 1.4rem;
+    color: var(--text-color-black);
+    border-radius: 4rem;
+    font-weight: bold;
+  }
+
+  span:first-child {
+    background-color: var(--background-grey);
+  }
+
+  span:last-child {
+    background-color: var(--primary-selected-color);
+  }
+}

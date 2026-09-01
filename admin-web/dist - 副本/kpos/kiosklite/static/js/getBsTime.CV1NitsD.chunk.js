@@ -1,0 +1,1 @@
+var e=[`MON`,`TUE`,`WED`,`THU`,`FRI`,`SAT`,`SUN`],t=t=>t.map(t=>{if(t.fromDayOfWeek&&!t.toDayOfWeek&&(t.bsDay=[]),t.fromDayOfWeek||(t.bsDay=e),t.fromDayOfWeek&&t.toDayOfWeek){let n=e.findIndex(e=>e===t.fromDayOfWeek),r=e.findIndex(e=>e===t.toDayOfWeek);r>n?t.bsDay=e.slice(n,r+1):t.bsDay=e.slice(n).concat(e.slice(0,r+1))}return t});export{t};

@@ -157,7 +157,7 @@ export function createPitAdminService({
     const currentYearMonth = current.getUTCFullYear() * 100 + current.getUTCMonth() + 1;
     const row = db.prepare(`
       SELECT
-        count(*) AS total,
+        count(*) FILTER (WHERE requirements.status NOT IN ('completed', 'rejected')) AS total,
         count(*) FILTER (WHERE requirements.status = 'review_pending') AS review,
         count(*) FILTER (WHERE requirements.status = 'design_pending') AS design_pending,
         count(*) FILTER (WHERE requirements.status = 'scheduling_pending') AS scheduling_pending,
@@ -167,7 +167,7 @@ export function createPitAdminService({
         count(*) FILTER (WHERE requirements.status = 'paused') AS paused,
         count(*) FILTER (WHERE requirements.status = 'rejected') AS rejected,
         count(*) FILTER (WHERE requirements.is_highlighted = 1) AS highlighted,
-        count(*) FILTER (WHERE EXISTS (
+        count(*) FILTER (WHERE requirements.status NOT IN ('completed', 'rejected') AND EXISTS (
           SELECT 1 FROM requirement_assignees mine
           WHERE mine.requirement_id = requirements.id AND mine.user_id = ?
         )) AS mine,

@@ -1,0 +1,520 @@
+@emenuPrimary: #96272f;
+@emenuGold: #e3c18a;
+@emenuGoldActive: #d5a747;
+
+.floatingButton {
+  position: fixed;
+  z-index: 1200;
+  padding: 0;
+  line-height: 0;
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+  background: transparent;
+  border: 0;
+}
+
+.floatingIcon {
+  display: block;
+  width: auto;
+  height: auto;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.defaultFloatingIcon {
+  max-width: 100px;
+  max-height: 100px;
+  width: auto;
+  height: auto;
+}
+
+.dialogPaper {
+  width: min(420px, calc(100vw - 32px));
+  max-width: 420px !important;
+  height: min(80vh, 700px);
+  max-height: calc(100vh - 32px);
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid rgba(227, 193, 138, 0.36);
+  border-radius: 18px !important;
+  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.26);
+}
+
+.dialogTitle {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 54px;
+  padding: 12px 56px 10px;
+  font-size: 17px;
+  font-weight: 700;
+  color: #222;
+
+  > button {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    color: #222;
+    background: #f7f7f7;
+  }
+}
+
+.dialogLayout {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: #fff;
+}
+
+.dialogTop {
+  flex: 0 0 auto;
+  padding: 0 18px 2px;
+}
+
+.typeTabs {
+  display: flex;
+  align-items: center;
+  height: 38px;
+  padding: 3px;
+  margin-bottom: 10px;
+  background: #f7f3ed;
+  border-radius: 20px;
+}
+
+.typeTab {
+  flex: 1;
+  height: 32px;
+  padding: 0 8px;
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 500;
+  color: #222;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  border-radius: 20px;
+}
+
+.selectedTypeTab {
+  font-weight: 700;
+  color: #fff;
+  background: @emenuPrimary;
+  box-shadow: 0 2px 8px rgba(150, 39, 47, 0.18);
+}
+
+.memberInfo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 2px 10px;
+  font-size: 12px;
+  color: #333;
+
+  > * + * {
+    margin-left: 12px;
+  }
+}
+
+.memberPoints {
+  font-weight: 700;
+  color: @emenuPrimary;
+  white-space: nowrap;
+}
+
+.pointFilters {
+  display: flex;
+  padding-bottom: 10px;
+  overflow-x: auto;
+
+  .pointFilter + .pointFilter {
+    margin-left: 7px;
+  }
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.pointFilter {
+  flex: 0 0 auto;
+  min-width: 62px;
+  height: 30px;
+  padding: 0 12px;
+  font-size: 12px;
+  color: #222;
+  cursor: pointer;
+  background: #fff;
+  border: 1px solid rgba(150, 39, 47, 0.32);
+  border-radius: 20px;
+}
+
+.selectedPointFilter {
+  color: #fff;
+  background: @emenuPrimary;
+  border-color: @emenuPrimary;
+  box-shadow: 0 2px 8px rgba(150, 39, 47, 0.18);
+}
+
+.listArea {
+  flex: 1;
+  min-height: 0;
+  padding: 0 14px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.rewardList {
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #a5a5a5;
+    border-radius: 4px;
+  }
+}
+
+.rewardRowWrapper {
+  padding: 0 0 10px;
+  box-sizing: border-box;
+}
+
+.rewardRow {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 112px;
+  padding: 9px;
+  cursor: pointer;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  border-radius: 8px;
+  box-shadow: 0 4px 14px rgba(36, 31, 24, 0.06);
+  box-sizing: border-box;
+}
+
+.selectedRow {
+  border-color: @emenuGoldActive;
+  box-shadow: 0 6px 16px rgba(150, 39, 47, 0.15);
+}
+
+.disabledRow {
+  color: #8d8d8d;
+  background: #f7f7f7;
+  box-shadow: none;
+}
+
+.rewardImage {
+  position: relative;
+  flex: 0 0 auto;
+  width: 76px;
+  height: 76px;
+  overflow: hidden;
+  background: #f0f0f0;
+  border-radius: 6px;
+}
+
+.rewardImageContent,
+.rewardImageFallback {
+  width: 100%;
+  height: 100%;
+}
+
+.rewardImageContent {
+  object-fit: cover;
+}
+
+.rewardImageFallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #bdbdbd;
+  text-align: center;
+  background: #eef1f3;
+  box-sizing: border-box;
+
+  &::before {
+    font-size: 28px;
+    line-height: 1;
+    content: '🍴';
+    opacity: 0.48;
+  }
+}
+
+.voucherImageFallback {
+  flex-direction: column;
+  overflow: hidden;
+  color: @emenuPrimary;
+  letter-spacing: -0.2px;
+  background: #fff0cc;
+  border: 0;
+
+  &::before {
+    content: none;
+  }
+}
+
+.voucherImageValue {
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 22px;
+}
+
+.voucherImageSuffix {
+  margin-top: -2px;
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 24px;
+}
+
+.rewardInfo {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-self: stretch;
+  min-width: 0;
+  padding: 0 8px;
+}
+
+.rewardName {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 17px;
+  color: #333;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.rewardDescriptionRow {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  height: 14px;
+  margin-top: 3px;
+  overflow: hidden;
+}
+
+.rewardDescription {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 10px;
+  line-height: 14px;
+  color: rgba(0, 0, 0, 0.5);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.detailButton {
+  flex: 0 0 auto;
+  padding: 0 0 0 6px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 14px;
+  color: @emenuGoldActive;
+  white-space: nowrap;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+}
+
+.rewardMeta {
+  margin-top: 3px;
+  overflow: hidden;
+  font-size: 10px;
+  color: rgba(0, 0, 0, 0.5);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rewardFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 22px;
+  padding-top: 4px;
+  margin-top: auto;
+
+  > * + * {
+    margin-left: 8px;
+  }
+}
+
+.rewardValue {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  min-width: 0;
+}
+
+.rewardPointCompact {
+  :global {
+    img {
+      width: 20px;
+      height: 20px;
+    }
+
+    h4 {
+      padding-left: 6px;
+      font-size: 15px;
+      line-height: 20px;
+    }
+  }
+}
+
+.rewardOperation {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 38px;
+  color: @emenuPrimary;
+}
+
+.rewardCounter {
+  :global {
+    .MuiIconButton-root.Mui-disabled {
+      color: #e0e0e0 !important;
+    }
+  }
+}
+
+.addRewardButton {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  color: @emenuPrimary !important;
+
+  svg {
+    width: 24px;
+    height: 24px;
+  }
+}
+
+.disabledRow .addRewardButton,
+.addRewardButton:disabled {
+  color: #e0e0e0 !important;
+}
+
+.selectedCount {
+  min-width: 18px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #333;
+  text-align: center;
+}
+
+.dialogFooter {
+  flex: 0 0 auto;
+  padding: 10px 18px 14px;
+  background: #fff;
+}
+
+.footerButton {
+  width: 100%;
+  height: 46px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+  background: @emenuPrimary;
+  border: 0;
+  border-radius: 28px;
+  outline: none;
+}
+
+.loginFooterButton {
+  color: #fff;
+  background: @emenuPrimary;
+}
+
+.footerButton:focus,
+.footerButton:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(150, 39, 47, 0.18);
+}
+
+.footerButton:disabled {
+  color: #777;
+  cursor: not-allowed;
+  background: #cfcfcf;
+}
+
+.descriptionDialogPaper {
+  width: min(540px, calc(100vw - 40px));
+  min-height: 260px;
+  overflow: hidden;
+  background: #fff;
+  border-radius: 20px !important;
+}
+
+.descriptionDialogTitle {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 64px;
+  padding: 18px 56px 8px;
+  font-size: 22px;
+  font-weight: 700;
+  color: #111;
+}
+
+.descriptionDialogClose {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  color: #222;
+  background: #f7f7f7;
+}
+
+.descriptionDialogContent {
+  padding: 8px 36px 36px !important;
+  font-size: 16px;
+  line-height: 24px;
+  color: #111;
+  text-align: center;
+  white-space: pre-wrap;
+}
+
+.empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 220px;
+  font-size: 16px;
+  color: #8c8c8c;
+}
+
+@media (max-width: 600px) {
+  .dialogPaper {
+    width: calc(100vw - 20px);
+    max-height: calc(100vh - 20px);
+  }
+
+  .dialogTop {
+    padding: 0 14px;
+  }
+
+  .listArea {
+    padding: 0 10px;
+  }
+
+  .dialogFooter {
+    padding: 10px 14px 14px;
+  }
+}

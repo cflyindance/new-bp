@@ -1,0 +1,1 @@
+import{r}from"./react.f65d2b19.js";import{O as a,aq as c}from"./index.1702a9c3.js";const i=()=>{const[o,t]=r.exports.useState(null);a(async()=>{try{const s=await e();if(s.status===200){const{version:n}=s.data;t(n)}}catch{}});const e=async()=>c(`/kpos/emenu/version.json?t=${Date.now()}`);return{version:o,checkVersionRequest:e}};var p=i;export{p as u};

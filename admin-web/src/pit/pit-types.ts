@@ -75,6 +75,7 @@ export type PitRequirementListItem = {
   owner: { id: string | null; displayName: string } | null;
   isHighlighted: boolean;
   following: boolean;
+  sourceStatus: string | null;
   rowVersion: number;
   deletedAt: string | null;
   updatedAt: string;
@@ -167,6 +168,8 @@ export type PitRequirementListQuery = {
   proposedTo?: string;
   mine?: boolean;
   followed?: boolean;
+  active?: boolean;
+  overdue?: boolean;
   deleted?: "only" | "include";
   sort?: "updatedAt" | "-updatedAt" | "createdAt" | "-createdAt" | "priority" | "-priority" | "plannedDate" | "-plannedDate";
 };

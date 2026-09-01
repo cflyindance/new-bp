@@ -29,6 +29,8 @@ import PosterSwiper from './components/PosterSwiper'
 import PemiumMemberPoster from '@/components/CRMLogin/PemiumMemberPoster'
 import { nanoid } from 'nanoid'
 import { useLocalStorage } from '@/hooks/useLocalStorage'
+import { isPreOrderMemberLoginShown } from '@/utils/memberLoginEntryPolicy'
+import { isCrmNeedAuthLogin, isNeedLoginCRM } from '@/constants/systemConfig'
 
 const SetupOrder = () => {
   const navigate = useNavigate()
@@ -47,7 +49,10 @@ const SetupOrder = () => {
   )
   const { getFinalConfigById } = useSystemConfig()
   const isSelectGuest = getFinalConfigById(11)?.open
-  const isCrmNeedAuthLogin = getFinalConfigById(40)?.open
+  const shouldShowPreOrderMemberLogin = isPreOrderMemberLoginShown({
+    isRequired: getFinalConfigById(isNeedLoginCRM.id)?.open,
+    isPreOrderLoginHidden: getFinalConfigById(isCrmNeedAuthLogin.id)?.open,
+  })
   const pemiumMemberPosterConfig = getFinalConfigById(86)
   const { isMenuClassifyMode, isPureBrandMode, isBrandModeOpen } =
     useClassifyOrderMode()
@@ -87,7 +92,7 @@ const SetupOrder = () => {
   const [, setMemberInfo] = useGlobalState('memberInfo')
   useLayoutEffect(() => {
     if (step === 1) {
-      if (crmStatus && !isCrmNeedAuthLogin) {
+      if (crmStatus && shouldShowPreOrderMemberLogin) {
         setOpen(true)
         setLoginCrmFnObj({
           onLoginSuccess: () => {},
@@ -97,7 +102,14 @@ const SetupOrder = () => {
       }
       setStep(4)
     }
-  }, [step, crmStatus, setOpen, setLoginCrmFnObj, setStep, isCrmNeedAuthLogin])
+  }, [
+    step,
+    crmStatus,
+    setOpen,
+    setLoginCrmFnObj,
+    setStep,
+    shouldShowPreOrderMemberLogin,
+  ])
 
   const [isOpenPrivilege] = useGlobalState('isOpenPrivilege')
 

@@ -1,0 +1,36 @@
+.brandBusinessWrapper {
+  height: 100%;
+  overflow-y: auto;
+  background-color: #fff;
+  padding: 24px;
+}
+.businessTimeWrapper {
+  padding: 24px;
+  .title {
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 24px;
+  }
+  .hourRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    padding: 12px 0;
+    .bsDay {
+      display: flex;
+      gap: 6px;
+      .dayItem {
+        border: 1px solid #f2f2f2;
+        padding: 2px 4px;
+        &.work {
+          background: #96272f;
+          color: #fff;
+        }
+      }
+    }
+  }
+  .footerOperation {
+    margin-top: 24px;
+    text-align: right;
+  }
+}

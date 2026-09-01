@@ -1,0 +1,12 @@
+.loadingWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: fixed;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.8);
+  top: 0;
+  left: 0;
+}

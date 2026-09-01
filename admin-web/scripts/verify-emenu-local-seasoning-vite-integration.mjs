@@ -20,6 +20,10 @@ try {
   const payload = await response.json();
   assert(response.status === 200, `Vite seasoning facade returned ${response.status}`);
   assert(payload.permissions?.canEdit === true && Number.isInteger(payload.version), "Vite seasoning facade payload is incomplete");
+  const catalogResponse = await fetch(`http://127.0.0.1:${address.port}/api/v1/emenu-local/menu-catalog?product=KIOSK`);
+  const catalog = await catalogResponse.json();
+  assert(catalogResponse.status === 200, `Vite menu catalog returned ${catalogResponse.status}`);
+  assert(catalog.source === "static" && catalog.tree === null, "Vite menu catalog without host falls back to static");
   console.log("eMenu local seasoning Vite integration verification passed");
 } finally {
   await server.close();

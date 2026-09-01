@@ -30,7 +30,6 @@ export const STAFF_GROUPS = new Set([
 /** @type {Record<number, { lines: string[], source: string, module?: string }>} */
 export const SCOPE_MANUAL_OVERRIDES = {
   165: { lines: STAFF_DEFAULT, source: "ui-module", module: "module-settings-default-main-screen-ui.ts" },
-  443: { lines: STORE_WIDE, source: "store-wide" },
   652: {
     lines: ["kiosk", "emenu", "sdi", "cds"],
     source: "ui-module",

@@ -18,6 +18,7 @@ import {
   readModuleSettingToggleOn,
   writeModuleSettingToggleOn,
 } from "./module-settings-toggle-ui";
+import { showAppToast } from "../ui/app-toast";
 import { formatConfigDisplayValue } from "./deployment-change-buffer";
 import { recordPageOrImmediateConfigChange } from "./page-config-change";
 import { TEAM_SHIFT_SCHEDULING_SETTING_SEQS } from "./team-settings-embed-ui";
@@ -1669,7 +1670,7 @@ export function bindTeamClockInUi(remount: () => void): void {
     const select = breakDialogEl.querySelector<HTMLSelectElement>("[data-clock-break-type]");
     const label = select?.value ?? "休息";
     if (!addPunch(breakDialog.employeeId, "break-start", "manager", { breakLabel: label })) {
-      window.alert("当前状态无法开始休息。");
+      showAppToast("当前状态无法开始休息。", { variant: "error" });
       return;
     }
     breakDialog = null;

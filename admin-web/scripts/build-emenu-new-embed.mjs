@@ -22,6 +22,21 @@ function fail(message) {
   process.exit(1);
 }
 
+async function writeFileWithRetry(filePath, content, attempts = 20) {
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      fs.writeFileSync(filePath, content, "utf8");
+      return;
+    } catch (error) {
+      const retryable = ["UNKNOWN", "EPERM", "EACCES", "EBUSY"].includes(
+        error?.code,
+      );
+      if (!retryable || attempt === attempts) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+  }
+}
+
 function run(command, args, cwd, env = {}) {
   const result = spawnSync(command, args, {
     cwd,
@@ -139,10 +154,9 @@ console.log(`[build-emenu-new-embed] Publishing to ${publishDir} …`);
 emptyDir(publishDir);
 copyRecursive(buildDir, publishDir);
 normalizePagesAssetNames(publishDir);
-fs.writeFileSync(
+await writeFileWithRetry(
   path.join(publishDir, ".emenu-embed-build.json"),
   `${JSON.stringify({ base: EMBED_BASE, builtAt: new Date().toISOString(), source: "vendor/emenu-new" }, null, 2)}\n`,
-  "utf8",
 );
 
 console.log("[build-emenu-new-embed] Done. Entry: ./emenu-new/index.html");

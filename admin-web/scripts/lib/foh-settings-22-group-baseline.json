@@ -577,14 +577,6 @@
       "seq": 351
     },
     {
-      "id": "s443-foh-guest-duration-scenarios-按照时长收费",
-      "sceneDesc": "开启后多选适用场景（KTV、VIP包间）；勾选后对应场景按时长收费。",
-      "moduleName": "按时计价",
-      "feature": "按时计价（如KTV按时长收费）",
-      "title": "按照时长收费",
-      "seq": 443
-    },
-    {
       "id": "s483-foh-pos-order-toolbar-分单-删单-保存-退出-付款-送厨-直送-仅付款",
       "sceneDesc": "整单操作相关操作的按钮及排序顺序",
       "moduleName": "整单操作",
@@ -1605,9 +1597,6 @@
       "emenu",
       "paypad",
       "pos-go"
-    ],
-    "443": [
-      "store-wide"
     ],
     "483": [
       "paypad",

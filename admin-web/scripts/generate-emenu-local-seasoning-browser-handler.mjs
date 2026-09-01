@@ -17,11 +17,16 @@ source = source
     `function createLiveMenuProvider() {
   return {
     async resolve() {
-      const error = new Error("live_menu_provider_unavailable_in_browser");
-      error.code = "menu_unavailable";
-      error.statusCode = 503;
-      error.payload = { error: "menu_unavailable", message: "live_menu_provider_unavailable_in_browser" };
-      throw error;
+      return {
+        menuGroups: [],
+        products: [],
+        categories: [],
+        fingerprint: "static",
+        sourceMenuVersion: null,
+        fromCache: false,
+        source: "static",
+        product: "EMENU",
+      };
     },
   };
 }

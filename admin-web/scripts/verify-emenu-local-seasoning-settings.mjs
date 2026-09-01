@@ -158,6 +158,7 @@ const keys = [
   "seasoning.productSelectionExpired",
   "seasoning.menuUnavailable",
   "seasoning.menuUsingCache",
+  "seasoning.menuUsingStatic",
   "seasoning.deleteProductConfirm",
   "seasoning.perPage",
   "seasoning.batch.inputPrice",
@@ -175,5 +176,6 @@ expect(i18n, /"seasoning\.batch\.inputPrice":\s*"Input base price"/, "English co
 expect(store, /menu_unavailable/, "Store must map menu_unavailable errors");
 expect(batch, /menu_unavailable/, "Batch wizard must map menu_unavailable errors");
 expect(batch, /menuUsingCache|menuFromCache/, "Batch wizard must surface cached menu notice");
+expect(batch, /menuUsingStatic|menuSource === \"static\"/, "Batch wizard must surface static menu fallback notice");
 
 console.log("eMenu local seasoning settings structure verification passed");

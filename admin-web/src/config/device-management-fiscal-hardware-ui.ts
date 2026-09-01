@@ -2,6 +2,8 @@
  * 硬件管理中心 → 硬件 → 税控机（seq 406–415）。
  */
 
+import { openConfirmDialog } from "../ui/app-confirm-dialog";
+import { showAppToast } from "../ui/app-toast";
 import { readPrinterHardwareDevices } from "./device-management-printer-hardware-ui";
 import { readModuleSettingJson, writeModuleSettingJson } from "./module-settings-form-ui";
 
@@ -507,7 +509,7 @@ function collectFormState(form: HTMLElement): Partial<FiscalHardwareDevice> | nu
 function saveDevice(deviceId: string, isNew: boolean, form: HTMLElement): boolean {
   const patch = collectFormState(form);
   if (!patch) {
-    window.alert("请填写名称与设备名称。");
+    showAppToast("请填写名称与设备名称。", { variant: "error" });
     return false;
   }
 
@@ -585,9 +587,17 @@ export function bindDeviceManagementFiscalHardware(root: ParentNode = document):
       if (!id) return;
       const device = findFiscalHardwareDevice(id);
       const label = device?.name ?? id;
-      if (!window.confirm(`确定删除税控机「${label}」？删除后不可恢复。`)) return;
-      deleteDevice(id);
-      rerenderList(page, search?.value ?? "");
+      void (async () => {
+        const ok = await openConfirmDialog({
+          title: "删除税控机",
+          message: `确定删除税控机「${label}」？删除后不可恢复。`,
+          confirmLabel: "确认删除",
+          danger: true,
+        });
+        if (!ok) return;
+        deleteDevice(id);
+        rerenderList(page, search?.value ?? "");
+      })();
     });
     return;
   }

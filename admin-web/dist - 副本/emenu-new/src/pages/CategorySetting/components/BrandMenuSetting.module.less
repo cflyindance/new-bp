@@ -1,0 +1,63 @@
+.brandMenuStettingWrapper {
+  height: 100%;
+  overflow-y: auto;
+}
+
+.copyDescription {
+  margin-bottom: 20px;
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.copyTargetTitle {
+  margin-bottom: 8px;
+  font-weight: bold;
+}
+
+.copyTargetList {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-height: 360px;
+  overflow-y: auto;
+  border: 1px solid #f0f0f0;
+}
+
+.copyTargetItem {
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 12px 16px;
+  margin-left: 0 !important;
+  border-bottom: 1px solid #f0f0f0;
+
+  &:last-child {
+    border-bottom: 0;
+  }
+
+  :global {
+    .ant-checkbox {
+      top: 0;
+    }
+
+    .ant-checkbox + span {
+      display: flex;
+      flex: 1;
+      align-items: center;
+      justify-content: space-between;
+      min-width: 0;
+    }
+  }
+}
+
+.copyTargetName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.configurationStatus {
+  flex: none;
+  margin-left: 16px;
+  font-size: 14px;
+  color: rgba(0, 0, 0, 0.45);
+}

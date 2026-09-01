@@ -1,0 +1,2 @@
+(function(){System.register([`./utils-legacy.DY2_ZvXl.chunk.js`],function(e,t){var n,r;return{setters:[function(e){n=e.Q,r=e.a}],execute:function(){e(`t`,r(`kioskServerIP`)||n)}}})})();
+//# source-map-url-disabled=getImageHost-legacy.CMUI1sFJ.chunk.js.map

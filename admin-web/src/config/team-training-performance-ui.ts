@@ -3,6 +3,9 @@
  * 路径：/team/training-performance
  */
 
+import { openConfirmDialog } from "../ui/app-confirm-dialog";
+import { openPromptDialog } from "../ui/app-prompt-dialog";
+
 export const TEAM_TRAINING_PERFORMANCE_PATH = "/team/training-performance";
 
 const COURSES_STORAGE_KEY = "bplant-team-training-courses-v1";
@@ -799,10 +802,19 @@ export function bindTeamTrainingPerformanceUi(remount: () => void): void {
   root.querySelectorAll("[data-course-delete]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const id = btn.getAttribute("data-course-delete");
-      if (!id || !window.confirm("确定删除此课程？")) return;
-      writeCourses(readCourses().filter((c) => c.id !== id));
-      writeCompletions(readCompletions().filter((c) => c.courseId !== id));
-      remount();
+      if (!id) return;
+      void (async () => {
+        const ok = await openConfirmDialog({
+          title: "删除课程",
+          message: "确定删除此课程？",
+          confirmLabel: "确认删除",
+          danger: true,
+        });
+        if (!ok) return;
+        writeCourses(readCourses().filter((c) => c.id !== id));
+        writeCompletions(readCompletions().filter((c) => c.courseId !== id));
+        remount();
+      })();
     });
   });
 
@@ -911,15 +923,24 @@ export function bindTeamTrainingPerformanceUi(remount: () => void): void {
       const employeeId = btn.getAttribute("data-progress-complete");
       const courseId = btn.getAttribute("data-progress-course");
       if (!employeeId || !courseId) return;
-      const scoreStr = window.prompt("测验分数（0–100，可留空）", "85");
-      const item = getOrCreateCompletion(employeeId, courseId);
-      item.status = "completed";
-      item.completedAt = todayIso();
-      if (scoreStr !== null && scoreStr.trim() !== "") {
-        item.score = Math.min(100, Math.max(0, Number(scoreStr) || 0));
-      }
-      upsertCompletion(item);
-      remount();
+      void (async () => {
+        const scoreStr = await openPromptDialog({
+          title: "完成培训",
+          label: "测验分数（0–100，可留空）",
+          initialValue: "85",
+          confirmLabel: "确认完成",
+          required: false,
+        });
+        if (scoreStr === null) return;
+        const item = getOrCreateCompletion(employeeId, courseId);
+        item.status = "completed";
+        item.completedAt = todayIso();
+        if (scoreStr.trim() !== "") {
+          item.score = Math.min(100, Math.max(0, Number(scoreStr) || 0));
+        }
+        upsertCompletion(item);
+        remount();
+      })();
     });
   });
 }

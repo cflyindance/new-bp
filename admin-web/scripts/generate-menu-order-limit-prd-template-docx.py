@@ -1,0 +1,574 @@
+# -*- coding: utf-8 -*-
+"""Generate PRD per 新B平台-前厅管理中心-菜单下单限制-PRD-2026-07-23 template."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+from docx import Document
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.oxml.ns import qn
+from docx.shared import Inches, Pt, RGBColor
+
+ROOT = Path(__file__).resolve().parents[1]
+OUT_DIR = ROOT / "docs/产品PRD/exports/2026-08-19-menu-order-limit"
+OUT_MD = OUT_DIR / "PRD-2026-07-23-template-format.md"
+OUT_DOCX = OUT_DIR / "PRD-2026-07-23-template-format.docx"
+DL_DOCX = Path(r"c:\Users\27273\Downloads\新B平台-前厅管理中心-菜单下单限制-PRD-2026-07-23-项目落地版.docx")
+
+COL4 = ["字段", "逻辑说明", "对应本地字段", "本地处理方式"]
+
+
+def set_doc_font(doc: Document) -> None:
+    style = doc.styles["Normal"]
+    style.font.name = "Arial"
+    style.font.size = Pt(11)
+    style._element.rPr.rFonts.set(qn("w:eastAsia"), "微软雅黑")
+
+
+class Writer:
+    def __init__(self) -> None:
+        self.md: list[str] = []
+        self.doc = Document()
+        set_doc_font(self.doc)
+        for s in self.doc.sections:
+            s.top_margin = Inches(1)
+            s.bottom_margin = Inches(1)
+            s.left_margin = Inches(1)
+            s.right_margin = Inches(1)
+
+    def m(self, line: str = "") -> None:
+        self.md.append(line)
+
+    def m_h1(self, t: str) -> None:
+        self.m(f"\n# {t}\n")
+
+    def m_h2(self, t: str) -> None:
+        self.m(f"\n## {t}\n")
+
+    def m_h3(self, t: str) -> None:
+        self.m(f"\n### {t}\n")
+
+    def m_table(self, headers: list[str], rows: list[list[str]]) -> None:
+        self.m("| " + " | ".join(headers) + " |")
+        self.m("| " + " | ".join(["---"] * len(headers)) + " |")
+        for row in rows:
+            self.m("| " + " | ".join(cell.replace("\n", "<br>") for cell in row) + " |")
+        self.m("")
+
+    def m_code(self, text: str) -> None:
+        self.m("```text\n" + text + "\n```\n")
+
+    def m_status(self, label: str) -> None:
+        self.m(f"> **落地状态：{label}**\n")
+
+    def d_title(self, t: str) -> None:
+        p = self.doc.add_paragraph()
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        r = p.add_run(t)
+        r.bold = True
+        r.font.size = Pt(22)
+
+    def d_h1(self, t: str) -> None:
+        self.doc.add_heading(t, level=1)
+
+    def d_h2(self, t: str) -> None:
+        self.doc.add_heading(t, level=2)
+
+    def d_h3(self, t: str) -> None:
+        self.doc.add_heading(t, level=3)
+
+    def d_p(self, t: str) -> None:
+        self.doc.add_paragraph(t)
+
+    def d_status(self, label: str) -> None:
+        p = self.doc.add_paragraph()
+        r = p.add_run(f"落地状态：{label}")
+        r.bold = True
+        r.font.color.rgb = RGBColor(0x1F, 0x49, 0x7D)
+
+    def d_bullets(self, items: list[str]) -> None:
+        for i in items:
+            self.doc.add_paragraph(i, style="List Bullet")
+
+    def d_table(self, headers: list[str], rows: list[list[str]]) -> None:
+        t = self.doc.add_table(rows=1 + len(rows), cols=len(headers))
+        t.style = "Table Grid"
+        for i, h in enumerate(headers):
+            t.rows[0].cells[i].text = h
+        for ri, row in enumerate(rows):
+            for ci, val in enumerate(row):
+                t.rows[ri + 1].cells[ci].text = val.replace("<br>", "\n")
+        self.doc.add_paragraph("")
+
+    def d_code(self, text: str) -> None:
+        p = self.doc.add_paragraph()
+        r = p.add_run(text)
+        r.font.name = "Consolas"
+        r.font.size = Pt(9)
+
+    def both_h1(self, t: str) -> None:
+        self.m_h1(t)
+        self.d_h1(t)
+
+    def both_h2(self, t: str) -> None:
+        self.m_h2(t)
+        self.d_h2(t)
+
+    def both_h3(self, t: str) -> None:
+        self.m_h3(t)
+        self.d_h3(t)
+
+    def both_p(self, t: str) -> None:
+        self.m(t)
+        self.d_p(t)
+
+    def both_status(self, label: str) -> None:
+        self.m_status(label)
+        self.d_status(label)
+
+    def both_bullets(self, items: list[str]) -> None:
+        for i in items:
+            self.m(f"- {i}")
+        self.d_bullets(items)
+
+    def both_table(self, headers: list[str], rows: list[list[str]]) -> None:
+        self.m_table(headers, rows)
+        self.d_table(headers, rows)
+
+    def both_code(self, text: str) -> None:
+        self.m_code(text)
+        self.d_code(text)
+
+    def field4(self, rows: list[list[str]]) -> None:
+        self.both_table(COL4, rows)
+
+
+SCENARIOS = [
+    ("按桌/订单+每轮+按分类限购", "每个订单，指定分类下的商品每轮可以下单 L 份。例如分类 A 含 a/b/c，限制每轮从分类 A 只能任意点 2 份；达上限后本轮不能再从分类 A 选商品；下一轮可重新获得额度。"),
+    ("按桌/订单+每轮+按菜品限购", "每个订单，指定商品每轮独立限额。例如 a 每轮 1 份、b 每轮 2 份、c 每轮 3 份；某菜品达上限只限该菜品，不连带其他菜品。"),
+    ("按桌/订单+多轮+按分类限购", "每个订单，分类在不同轮次区间配置不同 L。例如第1轮3份、第2轮2份、第3轮1份、第4轮及以后0份；各轮独立数量池。"),
+    ("按桌/订单+多轮+按菜品限购", "每个订单，指定商品在不同轮次配置不同 L。例如第一轮 a1/b2/c3，第二轮 a1/b1/c2，后续轮次可配置为 0 表示禁止。"),
+    ("按桌/订单+与轮次无关+按分类限购", "每个订单生命周期内，指定分类累计上限 L；全单各轮合计不超过 L。"),
+    ("按桌/订单+与轮次无关+按菜品限购", "每个订单生命周期内，每指定菜品累计上限 L；可一次点完或分多轮点，超上限后整单不能再点该菜。"),
+    ("按人数限购+每轮+按分类限购", "每人每轮分类 L 份；实际限额=L×N。例如 L=2、N=4，当前轮分类 A 上限 8 份。"),
+    ("按人数限购+每轮+按菜品限购", "每人每轮每菜品 L 份；实际限额=L×N。例如 a 1/人，4 人订单 a 最多 4 份/轮。"),
+    ("按人数限购+多轮+按分类限购", "每人每轮次区间分类 L 份；实际限额=轮次 L×N。各轮独立池。"),
+    ("按人数限购+多轮+按菜品限购", "每人每轮次区间每菜品 L 份；实际限额=轮次 L×N。"),
+    ("按人数限购+与轮次无关+按分类限购", "每人全单分类累计 L；实际限额=L×N。"),
+    ("按人数限购+与轮次无关+按菜品限购", "每人全单每菜品累计 L；实际限额=L×N。"),
+]
+
+# MOL-01～MOL-31 配置原型验收明细（已落地）
+MOL_ACCEPTANCE = [
+    ("MOL-01", "应用入口与旧路由", "提供菜单下单限制入口；旧 Hash 路由重定向到新入口", "已落地"),
+    ("MOL-02", "三页签容器", "数量与频次限制、每轮菜品互斥/组合、其他设置；键盘可切换", "已落地"),
+    ("MOL-03", "iframe 与全屏流程", "列表 iframe 嵌入；编辑/门店选择/发布确认全窗 iframe", "已落地"),
+    ("MOL-04", "现有规则列表", "筛选条、可配置列、总数/筛选数、状态与操作；滚动区固定表头", "已落地"),
+    ("MOL-05", "组合筛选", "门店/状态/人数/轮次/时间 AND 筛选；可重置", "已落地"),
+    ("MOL-06", "字段设置", "分组显隐列、恢复默认；固定名称/状态/操作列；localStorage 持久化", "已落地"),
+    ("MOL-07", "新增规则", "创建独立 draft 并进入六步编辑器", "已落地"),
+    ("MOL-08", "编辑规则", "正式规则派生草稿，发布后替换源 ID；草稿继续原草稿", "已落地"),
+    ("MOL-09", "复制规则", "独立 draft，名称(副本)，不保留 sourceRuleId", "已落地"),
+    ("MOL-10", "只读查看", "点击规则名称 view=1 只读六步", "已落地"),
+    ("MOL-11", "启用与禁用", "active↔inactive；草稿无启停", "已落地"),
+    ("MOL-12", "删除规则", "自定义确认对话框；取消不删除", "已落地"),
+    ("MOL-13", "六步编辑器", "类型→场景→数量(含商品)→授权→生效→发布（非模板七步）", "已落地"),
+    ("MOL-14", "规则类型", "主体/周期/对象/名称/描述/儿童口径；单选必选不默认", "已落地"),
+    ("MOL-15", "类型校验", "主体/周期/对象必选；规则名称非空", "已落地"),
+    ("MOL-16", "场景区间", "人数区间；multi_round 维护轮次区间", "已落地"),
+    ("MOL-17", "区间连续性", "从 1 连续覆盖、无重叠断档；末段可为「及以上」", "已落地"),
+    ("MOL-18", "添加商品", "门店→产线→组→类→菜；差异提交；全局唯一入口", "已落地"),
+    ("MOL-19", "门店独立配置", "storeConfigs[storeId] 隔离；未添加商品门店不算参与", "已落地"),
+    ("MOL-20", "数量规则列表", "门店/产线/人数/轮次/状态筛选与分页", "已落地"),
+    ("MOL-21", "数量批量与复制", "批量填写(含0=禁止)、跨场景复制、跨产线复制", "已落地"),
+    ("MOL-22", "数量完整性", "参与门店×场景×产线×目标均须配置；空=未配置，0=禁止", "已落地"),
+    ("MOL-23", "配置预览", "已选商品预览、已配置数量预览；检索筛选", "已落地"),
+    ("MOL-24", "超限授权", "开关；operation/round/order 范围；默认范围；权限；原因必填", "已落地"),
+    ("MOL-25", "授权校验", "至少选一范围；默认∈已选；每范围须选权限", "已落地"),
+    ("MOL-26", "生效范围", "日期/活动周期/营业时段/会员/生效门店", "已落地"),
+    ("MOL-27", "生效范围校验", "结束≥开始；weekly 至少一天；未添加商品门店不可选", "已落地"),
+    ("MOL-28", "发布前汇总", "公式/矩阵/授权/门店完成度；前往修正", "已落地"),
+    ("MOL-29", "发布确认", "validateAll→publishDraft→active；失败保留草稿", "已落地"),
+    ("MOL-30", "草稿自动保存", "900ms 防抖写 localStorage；session 恢复副本只写不读", "已落地"),
+    ("MOL-31", "兼容迁移", "normalize 旧字段/七步进度/无数量单元格；幂等写回", "已落地"),
+]
+
+PARAM_TEST_CHECKS = [
+    "当前数量小于上限：允许",
+    "加完正好等于上限：允许",
+    "本次操作导致超过上限：拒绝",
+    "配置为 0：直接命中限制",
+    "未配置单元格：运行时不受该规则限制（配置侧：空=未配置，发布前须填写）",
+    "本次操作授权成功",
+    "当前轮授权成功并在换轮后失效",
+    "当前订单授权成功并在关单后失效",
+    "授权员工无权限时拒绝",
+    "多条规则同时命中时必须全部通过或全部获得授权",
+]
+
+# 模板核心验收标准 26 条 + 项目扩展 4 条 = 30 条运行时验收（对齐模板「38 条」中运行时部分）
+CORE_ACCEPTANCE = [
+    ("1", "分类限购统计分类内所有商品总数。", "目标态", ""),
+    ("2", "一个分类达到上限不影响其他分类。", "目标态", ""),
+    ("3", "菜品达到上限只限制对应菜品。", "目标态", ""),
+    ("4", "每轮规则换轮后重新获得额度。", "目标态", ""),
+    ("5", "多轮规则按当前轮次区间读取不同上限。", "目标态", ""),
+    ("6", "与轮次无关规则累计订单全部轮次。", "目标态", ""),
+    ("7", "按人数实际限额等于人均限额乘有效人数。", "目标态", "EffectiveLimit=L×N"),
+    ("8", "按人数限购不要求绑定具体食客。", "目标态", ""),
+    ("9", "儿童计数策略正确影响有效人数。", "配置已落地；运行时重算为目标态", "childCountPolicy"),
+    ("10", "人数减少后不追溯删除历史商品，但阻止新增超限商品。", "目标态", ""),
+    ("11", "空值和 0 的含义严格不同。", "配置已确认", "空=未配置须填写；0=禁止"),
+    ("12", "分类规则和菜品规则可以同时生效。", "目标态", "多规则 AND"),
+    ("13", "每轮规则和整单规则可以同时生效。", "目标态", "多规则 AND"),
+    ("14", "多规则采用 AND 语义。", "目标态", ""),
+    ("15", "客户端预校验与服务端最终判定结果一致。", "目标态", ""),
+    ("16", "两个终端并发加菜不能共同突破限额。", "目标态", "orderVersion+事务"),
+    ("17", "取消未送厨商品正确释放额度。", "目标态", ""),
+    ("18", "已送厨后退菜不释放额度。", "目标态", ""),
+    ("19", "授权只覆盖指定规则、目标、订单和范围。", "目标态", ""),
+    ("20", "本次操作授权不能被重复消费。", "目标态", "operation 范围"),
+    ("21", "当前轮授权换轮后失效。", "目标态", "round 范围"),
+    ("22", "当前订单授权关单后失效。", "目标态", "order 范围"),
+    ("23", "新规则版本发布后旧授权失效。", "目标态", ""),
+    ("24", "时间、会员、订单类型和门店范围正确过滤。", "配置已落地；运行时过滤为目标态", ""),
+    ("25", "规则发布失败时终端继续使用上一完整版本。", "目标态", "配置侧重试草稿"),
+    ("26", "全部规则命中和授权行为都有审计记录。", "目标态", ""),
+    ("27", "伪造人数/轮次/会员/时间/已用量不能影响服务端判定。", "目标态", "服务端权威"),
+    ("28", "加购态与提交态互斥计数，避免双计。", "目标态", "Committed+Candidate"),
+    ("29", "相同 operationId+requestDigest 重试幂等；不同 digest 拒绝。", "目标态", ""),
+    ("30", "批量命中多权限规则时取违反项共同允许的最小授权范围。", "目标态", ""),
+]
+
+NFR_METRICS = [
+    ("单次规则判定引擎 P95", "< 50ms", "目标态", "配置原型 N/A（本地）"),
+    ("包含网络的判定 API P95", "< 150ms", "目标态", ""),
+    ("授权验证 P95", "< 500ms", "目标态", ""),
+    ("订单写入与规则判定", "同一事务边界", "目标态", ""),
+    ("幂等请求", "重复执行不产生重复商品或额度", "目标态", "operationId+摘要"),
+    ("正式规则版本", "可追溯、可回滚", "目标态", "配置侧重 draft/active/inactive"),
+    ("授权及规则审计覆盖率", "100%", "目标态", ""),
+    ("规则判定服务可用性", "不低于订单服务本身", "目标态", ""),
+]
+
+SUCCESS_METRICS = [
+    "客户端与服务端规则判定不一致率：目标 0",
+    "并发突破限额事件：目标 0",
+    "无审计授权事件：目标 0",
+    "规则发布失败率：低于 0.5%",
+    "因配置错误导致的紧急停用次数",
+    "超限发生次数及授权率",
+    "三种授权范围（operation/round/order）的使用占比",
+    "平均授权耗时",
+    "顾客端因限购放弃订单的比例",
+    "门店主动撤销授权的比例",
+]
+
+RISKS = [
+    ("仅 localStorage，非生产数据源", "明确原型边界；后续 API 迁移", "已缓解（文档标注）"),
+    ("旧「不限制」数据语义", "normalize 即时写回；空=未配置", "已落地"),
+    ("多规则 AND 难理解", "步骤6/发布预览汇总", "已落地"),
+    ("运行时未接入", "配置 DTO 与目标态对齐", "进行中"),
+    ("iframe 内对话框遮罩", "挂 top.document + pagehide 清理", "已落地"),
+    ("模板七步与现六步不一致", "文档统一六步口径", "已确认"),
+]
+
+IMPL_PHASES = [
+    ("规则 DTO、判定公式和测试基线", "1 周", "目标态", "配置 DTO 已对齐"),
+    ("纯规则引擎及参数化测试", "2–3 周", "目标态", ""),
+    ("服务端存储、版本、发布和授权", "2–3 周", "目标态", ""),
+    ("后台六步向导及发布预览", "2–3 周", "已完成", "非模板七步"),
+    ("POS/Kiosk/eMenu/SDI 接入", "3–4 周", "目标态", ""),
+    ("联调、并发、离线和安全测试", "2 周", "目标态", ""),
+    ("单门店灰度及指标观察", "1–2 周", "目标态", ""),
+    ("分批扩大门店范围", "1–2 周", "目标态", ""),
+]
+
+IMPL_RESOURCES = [
+    "产品经理 1 人",
+    "交互/UI 设计 1 人",
+    "后端工程师 2 人",
+    "后台前端工程师 1 人",
+    "终端工程师 2 人",
+    "测试工程师 1–2 人",
+    "安全或权限评审支持 0.5 人",
+]
+
+def build(w: Writer) -> None:
+    w.d_title("新B平台-前厅管理中心-菜单下单限制-PRD")
+    w.both_h1("新B平台-前厅管理中心-菜单下单限制-PRD-2026-07-23")
+
+    w.both_h1("项目全局说明")
+    w.both_table(["导航", "功能模块", "类型", "说明"], [
+        ["前厅管理中心", "菜单下单限制", "部分本地配置", "数量与频次限制为原型本地配置；云下发为目标态"],
+    ])
+    w.both_p("Demo地址：https://cflyindance.github.io/new-bp/admin-web/dist/index.html#/operations/queue-call/menu-order-limits")
+    w.both_p("本地开发入口：/operations/queue-call/menu-order-limits（npm run dev）")
+
+    w.both_h1("规则流程")
+    w.both_bullets([
+        "规则类型 — 确定计算口径（主体/周期/对象/名称/描述）",
+        "场景配置 — 人数与轮次区间",
+        "限购数量 — 按门店选品并配置数量（已合并原独立商品步骤）",
+        "超限授权 — 授权范围与权限",
+        "生效范围 — 时间、会员与门店",
+        "确认发布 — 复核并下发",
+    ])
+    w.both_p("说明：当前为六步向导（非模板原七步）；商品范围并入限购数量。")
+
+    w.both_h1("数量与频次限制-规则列表")
+    w.field4([
+        ["列表", "展示现有规则", "order-limit.html #rulesPanel", "iframe 嵌入；数据区内部滚动"],
+        ["规则名称", "点击只读查看六步", "name / editorDraft.name", "data-rule-view → view=1"],
+        ["规则描述", "列表可选列", "description", "buildCompatibilityRule 投影"],
+        ["策略", "主体+周期+对象摘要", "strategy", "列表列定义"],
+        ["人数场景", "人数区间摘要", "persons", "可选列"],
+        ["生效时间", "日期+周期+时段摘要", "effectiveTime", "可选列"],
+        ["会员", "全部/指定会员", "member 摘要", "可选列"],
+        ["关联商品", "参与门店商品范围", "productScope", "可选列"],
+        ["生效门店", "deployStoreIds 摘要", "effectiveStores", "默认列"],
+        ["超限授权", "授权策略摘要", "authorization", "默认列"],
+        ["状态", "draft/active/inactive", "status", "固定列；草稿无启停"],
+        ["筛选", "门店/状态/人数/轮次/时间 AND", "filteredRules", "重置筛选；无名称关键词"],
+        ["字段设置", "分组显隐列", "order-limit:rule-list-columns:v1", "固定 name/status/actions"],
+        ["操作-编辑", "draft 继续；正式派生草稿", "ruleActionsHtml", "sourceRuleId"],
+        ["操作-复制", "独立 draft，名称(副本)", "copy=1", "不保留 sourceRuleId"],
+        ["操作-删除", "自定义确认框", "confirm delete", "禁止原生 confirm"],
+        ["操作-启用/禁用", "active↔inactive", "toggle status", "仅正式规则"],
+    ])
+
+    w.both_h1("数量与频次限制-新增规则")
+
+    w.both_h2("规则类型")
+    w.field4([
+        ["规则名称", "必填，列表主标识", "editorDraft.name", "maxlength=60；步骤1"],
+        ["规则描述", "可选说明", "editorDraft.description", "maxlength=200"],
+        ["限购主体-按桌/按订单", "整桌/整单共享 L", "subject=order", "单选必选不默认"],
+        ["限购主体-按人数限购", "人均 L×有效人数 N", "subject=party_size", "不追踪具体食客"],
+        ["统计周期-每轮", "各轮独立数量池", "period=per_round", "单选必选不默认"],
+        ["统计周期-多轮", "轮次区间不同 L", "period=multi_round", "需配置 roundRanges"],
+        ["统计周期-与轮次无关", "全单累计", "period=order_lifetime", "轮次列显示「与轮次无关」"],
+        ["限购对象-按分类", "分类内商品共享池", "targetType=category", "切换清空已选商品"],
+        ["限购对象-按菜品", "每菜品独立池", "targetType=dish", "切换清空已选商品"],
+        ["规则类型关系", "3×2×2=12 种场景", "subject+period+targetType", "步骤1 实时公式解释"],
+        ["儿童计入有效人数", "仅按人数限购", "conditions.childCountPolicy", "inherit/include/exclude；默认 inherit"],
+    ])
+
+    w.both_h2("规则类型组合场景与定义说明")
+    w.both_table(["场景组合", "定义说明"], SCENARIOS)
+
+    w.both_h2("场景配置")
+    w.field4([
+        ["人数区间", "从1连续覆盖，末段「及以上」", "partyRanges[]", "失焦自动补全；变更清空 limits"],
+        ["轮次区间", "仅 multi_round", "roundRanges[]", "同人数区间规则"],
+        ["区间校验", "无重叠断档", "validateContinuousRanges", "下一步禁用+title 提示"],
+    ])
+
+    w.both_h2("限购数量")
+    w.field4([
+        ["添加商品", "全局唯一入口", "productAddDialog", "门店→产线→组→类→菜；差异提交"],
+        ["门店商品结构", "按店隔离", "storeConfigs[storeId].structureByLine", "MenuPicker.normalizeByLine"],
+        ["数量矩阵", "场景×产线×目标", "limits[party|round|line|targetId]", "LimitCell configured/value"],
+        ["数量-未配置", "空输入", "configured=false,value=null", "不能发布；非「不限制」"],
+        ["数量-禁止", "输入 0", "configured=true,value=0", "已配置"],
+        ["数量-上限", "正整数", "configured=true,value>0", "已配置"],
+        ["规则行列表", "门店×人数×轮次×产线×商品", "limitRuleList", "筛选/分页/批量/移除"],
+        ["批量应用数量", "含 0=禁止", "selectedRowIds+batch", "无单独「设为禁止」按钮"],
+        ["跨场景复制", "覆盖匹配单元格", "scene copy", "确认后反馈"],
+        ["跨产线复制", "同 target 匹配", "line copy", "≥2 产线且源产线已配置"],
+        ["已选/已配预览", "检索筛选分页", "preview dialogs", "删除走权威行语义"],
+    ])
+
+    w.both_h2("超限授权")
+    w.field4([
+        ["允许授权", "开关", "authorization.enabled", "false=汇总硬性拒绝"],
+        ["本次操作", "operation", "allowedScopes", "配置项；运行时未落地"],
+        ["当前轮", "round", "allowedScopes", "配置项"],
+        ["当前订单", "order", "allowedScopes", "配置项"],
+        ["默认授权范围", "须∈已选范围", "defaultScope", "取消范围时自动切换"],
+        ["所需权限", "每范围角色", "scopePermissions", "值班经理/主管/店长/区域经理"],
+        ["授权原因必填", "配置项", "reasonRequired", "默认 true"],
+    ])
+
+    w.both_h2("生效范围")
+    w.field4([
+        ["开始/结束日期", "结束空=长期", "effectiveFrom/effectiveTo", "结束≥开始"],
+        ["活动周期", "日/周/月", "activityCycle", "daily/weekly/monthly"],
+        ["生效星期", "weekly", "daysOfWeek", "至少一天"],
+        ["生效日期", "monthly", "daysOfMonth", "1-31；当月无则跳过"],
+        ["营业时段", "全天/午/晚多选", "businessHourSlots[]", "all 与午晚互斥"],
+        ["时段模式", "全段/指定时间", "mode full|custom", "custom 在父边界内"],
+        ["会员", "全部/指定", "memberMode/memberLevelIds", "specified 非空"],
+        ["生效门店", "须已添加商品", "deployStoreIds", "未添加禁用；deployExcluded 记忆"],
+    ])
+
+    w.both_h2("确认发布")
+    w.field4([
+        ["步骤6汇总", "公式/矩阵/授权/门店", "renderStepSeven", "失败「前往修正」"],
+        ["保存并下发", "进入发布确认页", "order-limit-publish-confirm.html", "validateAll"],
+        ["确认发布", "写 active", "publishDraft", "buildPublishedDraft 裁剪门店"],
+        ["编辑正式规则", "替换源 ID", "sourceRuleId", "删除临时草稿"],
+        ["草稿自动保存", "900ms 防抖", "saveEditorDraft", "localStorage.restaurantRules"],
+        ["恢复副本", "dirty 写入", "sessionStorage restaurantRuleRecovery:*", "不读取恢复；保存/发布清除"],
+    ])
+
+    # --- 完整方案设计 (template embedded section) ---
+    w.both_h2("完整方案设计")
+    w.both_p("关联文档：docs/superpowers/specs/menu-order-limit/2026-08-20-menu-order-limit-complete-design.md")
+    w.both_bullets([
+        "12 种场景及按人数折算公式",
+        "分类、菜品、轮次和数量三态（已确认：空=未配置，非不限制）",
+        "多规则 AND 叠加（运行时目标态）",
+        "三种密码授权范围（配置已落地，运行时目标态）",
+        "统一 DTO 与服务端判定引擎（目标态）",
+        "后台六步配置流程（已落地）",
+        "localStorage 存储与兼容迁移（已落地）",
+        "38 条验收标准（配置+运行时）",
+    ])
+
+    w.both_h3("第一部分：总体架构与核心口径")
+    w.both_p("目标态：统一规则模型 + 统一判定引擎 + 服务端最终裁决。")
+    w.both_code(
+        "当前落地：iframe + order-limit-flow.js + localStorage\n"
+        "目标态：后台 → API → 门店存储 → 判定引擎 ← POS/Kiosk/eMenu/SDI"
+    )
+    w.field4([
+        ["按人数限额", "EffectiveLimit=L×N", "party_size+limits", "步骤1 公式展示；已配置"],
+        ["分类统计", "分类内总数", "targetType=category", "已配置"],
+        ["数量三态", "未配置/0/正整数", "LimitCell", "已确认；无「不限制」"],
+        ["多规则 AND", "全部满足", "多条 StoredRule", "运行时目标态"],
+        ["授权三范围", "operation/round/order", "authorization", "配置已落地"],
+    ])
+
+    w.both_h3("第二部分：12 种场景的统一规则模型")
+    w.both_table(["符号", "定义"], [
+        ["N", "有效就餐人数（childCountPolicy）"],
+        ["L", "配置数量"],
+        ["Limit", "order: L；party_size: L×N"],
+        ["Used", "已下单+购物车（目标态 Committed+Candidate）"],
+        ["判定", "Used+Δ≤Limit（目标态）"],
+    ])
+    w.both_p("配置侧通过 subject/period/targetType/partyRanges/roundRanges/limits 表达全部 12 场景。")
+
+    w.both_h3("第三部分：服务员密码授权与临时放行")
+    w.both_status("配置已落地；运行时密码/凭证/审计为目标态")
+    w.field4([
+        ["超限处理", "先拒绝再授权", "—", "目标态客户端+服务端"],
+        ["凭证绑定", "orderId/rule/version/target/scope", "—", "目标态 OrderLimitAuthorization"],
+        ["权限建议", "authorize.once/round/order", "scopePermissions", "配置用静态角色下拉"],
+    ])
+
+    w.both_h3("第四部分：后台配置交互方案")
+    w.both_p("当前六步（非模板七步）：类型→场景→数量(含商品)→授权→生效→发布。")
+    w.field4([
+        ["第1步", "规则类型", "renderStepOne", "已落地"],
+        ["第2步", "场景配置", "renderStepThree", "已落地"],
+        ["第3步", "限购数量+商品", "renderStepFour", "已落地；合并原第2步"],
+        ["第4步", "超限授权", "renderStepSix", "已落地"],
+        ["第5步", "生效范围", "renderStepFive", "已落地"],
+        ["第6步", "确认发布", "renderStepSeven+publish", "已落地"],
+        ["生命周期", "draft/active/inactive", "StoredRule.status", "无 pending/archived"],
+    ])
+
+    w.both_h3("第五部分：统一数据模型与规则判定引擎")
+    w.field4([
+        ["StoredRule", "本地规则包装", "restaurantRules[]", "已落地"],
+        ["EditorDraft", "编辑权威", "editorDraft", "已落地"],
+        ["storeConfigs", "门店矩阵", "storeConfigs[storeId]", "已落地"],
+        ["OrderLimitContext", "判定输入", "—", "目标态"],
+        ["OrderLimitDecision", "判定输出", "—", "目标态"],
+    ])
+
+    w.both_h3("第六部分：统计边界与订单生命周期")
+    w.both_status("目标态")
+    w.both_bullets([
+        "轮次以成功提交为界；释放规则：未送厨可释放，已送厨不退额度。",
+        "人数变更重算限额；分类/跨终端共享 orderId 额度。",
+        "并发 orderVersion+operationId 事务判定。",
+    ])
+
+    w.both_h3("第七部分：客户端交互与异常处理")
+    w.both_status("目标态")
+    w.field4([
+        ["剩余额度展示", "客户端提示", "—", "目标态"],
+        ["超限弹窗", "明细+授权", "—", "目标态"],
+        ["批量原子", "全过/全拒", "—", "目标态"],
+        ["配置异常", "步骤禁用/Toast", "validateStep/syncNextButtonState", "已落地"],
+    ])
+
+    w.both_h3("第八部分：接口、存储与发布下发")
+    w.field4([
+        ["restaurantRules", "规则数组", "localStorage", "已落地"],
+        ["列偏好", "visible[]", "localStorage", "已落地"],
+        ["HTTP API", "规则/判定/授权", "—", "目标态见模板接口清单"],
+        ["发布流程", "validateAll→publishDraft", "order-limit-flow.js", "已落地"],
+        ["旧数据迁移", "normalize*", "加载时幂等", "已落地"],
+    ])
+
+    w.both_h3("第九部分：测试、验收、指标与实施计划")
+
+    w.both_h3("参数化测试矩阵")
+    w.both_p("不维护大量重复用例，按三个维度组合生成 12 种场景：")
+    w.both_p("2 种主体 × 3 种统计周期 × 2 种目标类型 = 12 种")
+    w.both_p("每种场景至少验证：")
+    for item in PARAM_TEST_CHECKS:
+        w.both_p(f"- {item}")
+
+    w.both_h3("配置原型验收（MOL-01～MOL-31，已落地）")
+    w.both_p("以下 31 条为后台配置原型验收标准，与 PRD.md 用户故事一一对应。")
+    w.both_table(["编号", "需求项", "验收标准", "落地状态"], [
+        [mid, title, crit, status] for mid, title, crit, status in MOL_ACCEPTANCE
+    ])
+
+    w.both_h3("核心验收标准（运行时，目标态）")
+    w.both_p("对齐模板 26 条核心验收标准，并补充项目已确认扩展 4 条（共 30 条）。")
+    w.both_table(["序号", "验收标准", "落地状态", "备注"], [
+        [no, crit, status, note] for no, crit, status, note in CORE_ACCEPTANCE
+    ])
+
+    w.both_h3("非功能指标")
+    w.both_table(["指标", "目标", "落地状态", "备注"], [
+        [name, target, status, note] for name, target, status, note in NFR_METRICS
+    ])
+
+    w.both_h3("成功指标")
+    w.both_p("上线后重点观察：")
+    for item in SUCCESS_METRICS:
+        w.both_p(f"- {item}")
+    w.both_p("配置阶段成功指标：PRD/SPEC 与代码一致；verify-order-limit-*.mjs 通过。")
+
+    w.both_h3("主要风险与应对")
+    w.both_table(["风险", "应对", "状态"], [[r, m, s] for r, m, s in RISKS])
+
+    w.both_h3("实施阶段")
+    w.both_table(["阶段", "工期", "状态", "备注"], [
+        [phase, weeks, status, note] for phase, weeks, status, note in IMPL_PHASES
+    ])
+    w.both_p("部分工作可并行，预计首个可灰度版本约 10–14 周（模板估算；后台六步配置原型已完成）。")
+    w.both_p("资源：")
+    for res in IMPL_RESOURCES:
+        w.both_p(f"- {res}")
+
+    w.both_h3("完成定义")
+    w.both_p("当前版本（已达成）：12 场景配置语义与数量矩阵完整可用；StoredRule/EditorDraft 与 SPEC 一致；MOL-01～MOL-31 可达；六步发布闭环；localStorage 为唯一数据源。")
+    w.both_p("目标态完成定义：12 场景运行时判定一致；服务端事务+终端下发+授权审计闭环；上述 30 条运行时验收+参数化矩阵全部通过；localStorage 不再为正式数据源。")
+
+
+def main() -> None:
+    w = Writer()
+    build(w)
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    OUT_MD.write_text("\n".join(w.md), encoding="utf-8")
+    w.doc.save(str(OUT_DOCX))
+    try:
+        import shutil
+        shutil.copy2(OUT_DOCX, DL_DOCX)
+    except OSError:
+        pass
+    print(f"Wrote {OUT_MD}")
+    print(f"Wrote {OUT_DOCX}")
+
+
+if __name__ == "__main__":
+    main()

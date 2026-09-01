@@ -36,18 +36,15 @@ assert.match(source, /data-product-add-overlay/, "应有弹层遮罩标记");
 assert.match(source, /data-product-add-submit/, "应有提交按钮标记");
 assert.match(source, /data-product-add-cancel|data-product-add-close/, "应有取消/关闭标记");
 assert.match(source, /data-product-add-store-select/, "弹层内应有门店下拉标记");
+assert.doesNotMatch(source, /data-product-add-store-id/, "门店卡片不应重复提供添加商品入口");
 
-const stepTwo = source.match(/function renderStepTwo\(draft\)[\s\S]*?(?=\n\s*function renderSelectedPreviewDialog|function renderProductAddDialog)/)?.[0] ?? "";
-assert.match(stepTwo, /data-product-add-open/, "步骤 2 主区应渲染添加商品入口");
-assert.match(stepTwo, />参与商品</, "步骤 2 主区标题应为参与商品");
-assert.doesNotMatch(stepTwo, /structureSummary|olf-structure-summary/, "步骤 2 主区不得再展示选品摘要");
-assert.doesNotMatch(stepTwo, /请通过添加商品为各门店配置限购对象/, "步骤 2 主区不得再展示添加商品引导文案");
-assert.doesNotMatch(stepTwo, /data-config-store-select/, "步骤 2 主区不得再渲染参与门店下拉");
-assert.doesNotMatch(stepTwo, /data-brand-menu-structure-picker|data-product-search-surface/, "步骤 2 主区不得再内联矩阵/搜索表面");
-assert.doesNotMatch(stepTwo, /data-product-search[^\-]/, "步骤 2 主区不得再渲染搜索输入");
+const mergedStep = source.match(/function renderStepFour\(draft\)[\s\S]*?(?=\n\s*function renderStepFive)/)?.[0] ?? "";
+assert.match(mergedStep, /data-product-add-open/, "限购数量主区应渲染添加商品入口");
+assert.doesNotMatch(mergedStep, /data-config-store-select|data-limit-store-select/, "合并主区不得再渲染单一门店下拉");
+assert.doesNotMatch(mergedStep, /data-brand-menu-structure-picker|data-product-search-surface/, "选品矩阵与搜索应继续只存在于弹层");
 
-const submitFn = source.match(/function submitProductAddDialog\([\s\S]*?(?=\n\s*function [a-zA-Z])/)?.[0] ?? "";
-assert.match(submitFn, /applyStoreStructure\(/, "提交应调用按门店权威写入");
+const commitFn = source.match(/function commitProductAddDialog\([\s\S]*?(?=\n\s*function [a-zA-Z])/)?.[0] ?? "";
+assert.match(commitFn, /applyStoreStructure\(/, "提交应调用按门店权威写入");
 
 assert.match(
   source,

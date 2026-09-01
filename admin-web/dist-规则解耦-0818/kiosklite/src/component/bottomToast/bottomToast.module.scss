@@ -1,0 +1,8 @@
+.container {
+  padding: 2rem 0 19rem;
+  & > div {
+    text-align: center;
+    font-size: 3rem;
+    color: #999;
+  }
+}

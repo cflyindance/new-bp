@@ -6,6 +6,7 @@ import tailwindcss from "@tailwindcss/vite";
 import { defineConfig, type Plugin, type ViteDevServer } from "vite";
 import { attachPayrollMockApi } from "./scripts/lib/payroll-mock-api-handler.mjs";
 import { attachEmenuSeasoningApi } from "./scripts/lib/emenu-local-seasoning-api-handler.mjs";
+import { attachEmenuMenuCatalogApi } from "./scripts/lib/emenu-local-menu-catalog-api-handler.mjs";
 
 /** 开发态提供 dist 内嵌静态资源（TipOut / Configuration center / emenu-pro / emenu-new / kiosklite） */
 const EMBEDDED_STATIC_ROUTES = [
@@ -138,6 +139,31 @@ const usePitApiProxy = process.env.PIT_USE_API_PROXY === "1";
 const emenuKposProxyTarget = process.env.EMENU_KPOS_PROXY_TARGET || "http://localhost:22080";
 const EMENU_KPOS_HOST_COOKIE = "menusifu-emenu-kpos-target";
 
+function isAllowedBrowserSelectedKposTarget(value: string): boolean {
+  try {
+    const url = new URL(value);
+    const host = url.hostname.toLowerCase();
+    const privateIpv4 =
+      /^127\./.test(host) ||
+      /^10\./.test(host) ||
+      /^192\.168\./.test(host) ||
+      /^172\.(1[6-9]|2\d|3[01])\./.test(host);
+    const approvedTunnel = [
+      ".trycloudflare.com",
+      ".cfargotunnel.com",
+      ".ngrok-free.app",
+      ".ngrok.io",
+      ".loca.lt",
+    ].some((suffix) => host.endsWith(suffix));
+    return (
+      (url.protocol === "http:" || url.protocol === "https:") &&
+      (host === "localhost" || privateIpv4 || approvedTunnel)
+    );
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Vite 内置 proxy 基于 http-proxy，不支持 http-proxy-middleware 的 `router`。
  * 因此按 cookie 动态选目标必须用自定义中间件（proxy.web/ws 的 per-request target）。
@@ -153,7 +179,7 @@ function resolveEmenuKposProxyTarget(req?: { headers?: { cookie?: string } }): s
         .trim()
         .replace(/\/+$/, "")
         .replace(/\/kpos\/?$/i, "");
-      if (/^https?:\/\//i.test(decoded)) {
+      if (isAllowedBrowserSelectedKposTarget(decoded)) {
         return decoded;
       }
     } catch {
@@ -236,6 +262,7 @@ function serveEmbeddedStaticDirs(): Plugin {
       if (!useEmenuLocalApiProxy) {
         attachEmenuSeasoningApi(server.middlewares, process.cwd());
       }
+      attachEmenuMenuCatalogApi(server.middlewares, process.cwd());
     },
     configurePreviewServer(server) {
       attachEmbeddedStaticMiddleware(server.middlewares);
@@ -246,6 +273,7 @@ function serveEmbeddedStaticDirs(): Plugin {
       if (!useEmenuLocalApiProxy) {
         attachEmenuSeasoningApi(server.middlewares, process.cwd());
       }
+      attachEmenuMenuCatalogApi(server.middlewares, process.cwd());
     },
   };
 }

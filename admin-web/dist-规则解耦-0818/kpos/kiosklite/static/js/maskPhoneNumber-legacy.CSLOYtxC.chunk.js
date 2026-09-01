@@ -1,0 +1,1 @@
+(function(){System.register([],function(e,t){return{setters:[],execute:function(){e(`t`,function(e,t){var n=e.replace(/\D/g,``);return t?n.replace(/(\d{3})(\d{3})(\d{4})/,`$1-$2-$3`):n.replace(/(\d{3})(\d{3})(\d{4})/,`$1-XXX-$3`)})}}})})();

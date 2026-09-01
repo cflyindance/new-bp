@@ -122,7 +122,6 @@ for (const f of fs.readdirSync(CONFIG_DIR)) {
 // manual overrides (documented exceptions)
 const MANUAL = {
   165: { lines: STAFF_DEFAULT, source: "ui-module", module: "module-settings-default-main-screen-ui.ts" },
-  443: { lines: STORE_WIDE, source: "store-wide" },
   652: { lines: ["kiosk", "emenu", "sdi", "cds"], source: "manual" },
   653: { lines: ["kiosk", "emenu", "sdi", "cds"], source: "manual" },
   333: { lines: STORE_WIDE, source: "store-wide" },

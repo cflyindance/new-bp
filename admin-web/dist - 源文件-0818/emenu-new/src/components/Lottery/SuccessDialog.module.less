@@ -1,0 +1,45 @@
+.successDialog {
+  width: 400px;
+  padding: 24px 16px 16px;
+
+  .title {
+    font-size: 24px;
+    font-weight: bold;
+    text-align: center;
+  }
+  .subTitle {
+    font-size: 16px;
+    text-align: center;
+  }
+
+  .dishList {
+    margin-top: 16px;
+    max-height: 300px;
+    overflow: auto;
+    margin-right: -4px;
+    padding-right: 4px;
+
+    &::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+      border-radius: 10px;
+      background-color: #aaaaaa;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      border-radius: 10px;
+      background-color: #96272f;
+    }
+  }
+
+  .actions {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    grid-gap: 8px;
+
+    &>button {
+      height: 50px;
+      font-size: 18px;
+    }
+  }
+}

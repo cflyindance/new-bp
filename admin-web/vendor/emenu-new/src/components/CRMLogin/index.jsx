@@ -28,7 +28,9 @@ const useStyles = makeStyles((theme) => ({
 
 const CRMLogin = (props) => {
   const { isShowIcon = true, isShowMask = true } = props
-  const { crmStatus, crmProvider } = useIsMemberLogin()
+  const { crmStatus, crmProvider, isLogin, showMenuLoginEntry } =
+    useIsMemberLogin()
+  const shouldShowEntry = isShowIcon && (isLogin || showMenuLoginEntry)
   const classes = useStyles()
   const [loading, setLoading] = useState(false)
   const [memberInfo, setMemberInfo] = useGlobalState('memberInfo')
@@ -104,7 +106,7 @@ const CRMLogin = (props) => {
   return (
     crmStatus && (
       <>
-        {isShowIcon &&
+        {shouldShowEntry &&
           (props.renderButton ? (
             props.renderButton({ onClick: handleClickUser })
           ) : (

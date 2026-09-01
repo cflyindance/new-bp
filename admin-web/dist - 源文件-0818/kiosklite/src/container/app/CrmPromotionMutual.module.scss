@@ -1,0 +1,152 @@
+.crmPromotionMutualWrapper {
+  padding: 4.7rem 6.5rem;
+  border-radius: 4rem;
+  background: #e6e6e6;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  .title {
+    font-size: 4rem;
+    font-weight: bold;
+    text-align: center;
+  }
+  .subTitle {
+    margin-top: 0.8rem;
+    font-size: 3.6rem;
+  }
+  .conflictItemWrapper {
+    margin: 4.8rem 0 2.4rem;
+    .conflictItem {
+      margin-bottom: 2.4rem;
+      .campaignText {
+        font-size: 3.2rem;
+        font-weight: bold;
+        margin-bottom: 1.6rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+
+        .round {
+          width: 4.4rem;
+          height: 4.4rem;
+          border: 1px solid #000;
+          border-radius: 50%;
+          &.selectedType {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #000;
+          }
+          .rightSign {
+            width: 50%;
+            height: 50%;
+          }
+        }
+      }
+      .itemInfo {
+        position: relative;
+        max-height: 37rem;
+        overflow-y: auto;
+      }
+    }
+  }
+  .confirmBtn {
+    // float: right;
+    min-width: 50rem;
+    height: 10rem;
+    background: var(--primary-selected-color);
+    color: #000;
+    border-radius: 10rem;
+    display: flex;
+    align-items: center;
+    // justify-content: space-between;
+    justify-content: center;
+    padding: 0 0.8rem 0 4rem;
+    font-size: 3.6rem;
+    font-weight: 600;
+    margin-bottom: 2.4rem;
+    .discountInfo {
+      margin-left: 2rem;
+      padding: 1.2rem 2.4rem;
+      background: #000;
+      border-radius: 10rem;
+      display: flex;
+      align-items: center;
+      .right_img {
+        width: 3.6rem;
+        height: 2.7rem;
+        margin-right: 0.8rem;
+      }
+      .savedInfo {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        font-weight: 600;
+        color: #fff;
+        .saved {
+          font-size: 2rem;
+        }
+        .discountNum {
+          font-size: 2.8rem;
+        }
+      }
+    }
+  }
+  .footerBtn {
+    display: flex;
+    justify-content: center;
+    flex-direction: column;
+    div {
+      display: inline-block;
+      width: 50rem;
+      height: 8rem;
+      font-size: 3rem;
+      text-align: center;
+      line-height: 8rem;
+      margin: 1.4rem;
+      color: var(--text-color-black);
+      border-radius: 4rem;
+      font-weight: bold;
+    }
+    div:first-child {
+      background-color: var(--primary-selected-color);
+    }
+    div:last-child {
+      background-color: var(--background-grey);
+      margin-top: 2rem;
+    }
+  }
+}
+
+.activity_discount {
+  font-size: 2rem;
+  margin-right: 0.8rem;
+  display: flex;
+  align-items: center;
+  .price {
+    font-weight: 400;
+    font-size: 1.8rem;
+    text-decoration: line-through;
+    color: rgba(0, 0, 0, 0.5);
+    margin-left: 1rem;
+  }
+  .specialPrice {
+    font-weight: 500;
+    font-size: 2.1rem;
+    color: var(--promotion-theme-color);
+  }
+
+  .promotionTagList {
+    display: flex;
+    margin-left: 1rem;
+    .promotionTag {
+      border: 1px solid var(--promotion-theme-color);
+      background: rgba(212, 12, 39, 0.1);
+      color: var(--promotion-theme-color);
+      padding: 0.2rem 0.4rem;
+      font-size: 2.2rem;
+    }
+  }
+}

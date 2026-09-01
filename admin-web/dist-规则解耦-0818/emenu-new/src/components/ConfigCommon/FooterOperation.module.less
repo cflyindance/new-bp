@@ -1,0 +1,48 @@
+.footerContainer {
+  height: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  .backBtn,
+  .saveBtn {
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    cursor: pointer;
+    flex: none;
+  }
+  .backBtn {
+    position: relative;
+    flex-direction: column;
+    width: 50px;
+    border-radius: 50%;
+    border: 1px solid #999;
+    color: #000;
+    .backIcon {
+      padding-left: 10px;
+    }
+    .backText {
+      font-size: 8px;
+      position: absolute;
+      bottom: 0;
+    }
+  }
+  .saveBtn {
+    width: 180px;
+    border-radius: 100px;
+    background-color: #96272f;
+    color: #fff;
+  }
+  .right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-left: 42vh;
+  }
+  .tip {
+    font-size: 16px;
+  }
+}

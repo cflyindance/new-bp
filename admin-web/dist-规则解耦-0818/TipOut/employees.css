@@ -1,0 +1,730 @@
+/* 员工管理 — 与 common.css 一致 */
+
+.employees-page .employees-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 20px;
+  margin: 0 0 16px;
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+}
+
+.employees-page .employees-tab {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 10px 2px 12px;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.employees-page .employees-tab:hover {
+  color: var(--text-primary);
+}
+
+.employees-page .employees-tab.is-active {
+  color: var(--primary, #1677ff);
+  border-bottom-color: var(--primary, #1677ff);
+  font-weight: 600;
+}
+
+.employees-page .employees-panel[hidden] {
+  display: none !important;
+}
+
+.employees-page .employees-action-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 16px;
+}
+
+.employees-page .employees-action-bar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.employees-page .employees-action-bar-actions .btn[hidden],
+.employees-page .employees-action-bar-actions .btn.is-tab-hidden {
+  display: none !important;
+}
+
+.employees-page .employees-page-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 4px;
+}
+
+.employees-page .employees-page-subtitle {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+/* 门店筛选：仅保留标签 + 下拉 */
+.employees-page .employees-store-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  margin: 0;
+}
+
+.employees-page .employees-store-filter[hidden] {
+  display: none !important;
+}
+
+.employees-page .employees-store-filter-label {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.employees-page .employees-store-filter-select {
+  width: min(100%, 16rem);
+  min-width: 12rem;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--text-primary);
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.employees-page .employees-store-filter-select:focus {
+  outline: none;
+  border-color: var(--primary, #1677ff);
+  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.12);
+}
+
+.employees-page .employees-table-wrap {
+  padding: 0;
+  overflow-x: auto;
+}
+
+.employees-page .employees-table {
+  min-width: 1080px;
+}
+
+.employees-page .employees-roles-table {
+  min-width: 640px;
+}
+
+.employees-page .employees-roles-table .employees-role-desc {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+  max-width: 28rem;
+}
+
+.employees-page .employees-roles-table .employees-role-desc--empty {
+  color: var(--text-tertiary, #9ca3af);
+}
+
+.employees-page .employees-roles-table .employees-role-delete[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: auto;
+  text-decoration: none;
+  color: var(--text-tertiary, #9ca3af);
+}
+
+.employees-page .employees-roles-table .employees-role-kind {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.employees-page .employees-roles-table .employees-role-occupancy {
+  font-variant-numeric: tabular-nums;
+}
+
+.employees-page .employees-roles-table .employees-role-occupancy-link {
+  color: var(--primary, #1677ff);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.employees-page .employees-roles-table .employees-role-occupancy-link:hover {
+  text-decoration: underline;
+}
+
+.employees-page .employees-roles-table .employees-role-occupancy-muted {
+  color: var(--text-tertiary, #9ca3af);
+}
+
+.employees-role-occupants-hint {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.employees-role-occupants-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: min(52vh, 360px);
+  overflow-y: auto;
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 8px;
+}
+
+.employees-role-occupants-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px 12px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+  font-size: 14px;
+}
+
+.employees-role-occupants-list li:last-child {
+  border-bottom: 0;
+}
+
+.employees-role-occupants-list .employees-role-occupant-meta {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.employees-role-occupants-empty {
+  margin: 0;
+  padding: 24px 8px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--text-tertiary, #9ca3af);
+}
+
+.employees-page .employees-table-group-row th {
+  background: var(--bg-secondary, #f8fafc);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-align: center;
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+}
+
+.employees-page .employees-table-actions-head {
+  vertical-align: middle;
+  text-align: right;
+  min-width: 7rem;
+}
+
+.employees-page .employee-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.employees-page .employee-badge--on {
+  background: rgba(34, 197, 94, 0.12);
+  color: #15803d;
+}
+
+.employees-page .employee-badge--off {
+  background: rgba(148, 163, 184, 0.16);
+  color: var(--text-tertiary);
+}
+
+.employees-page .form-grid-add {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 16px;
+}
+
+@media (max-width: 640px) {
+  .employees-page .form-grid-add {
+    grid-template-columns: 1fr;
+  }
+}
+
+.employees-page .form-grid-add .form-group-full {
+  grid-column: 1 / -1;
+}
+
+.employees-page .text-danger {
+  color: var(--danger);
+}
+
+.employees-page .mono-input {
+  font-family: ui-monospace, Menlo, monospace;
+}
+
+.employees-page .field-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+.employees-page .employee-form-section {
+  padding-bottom: 18px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+}
+
+.employees-page .employee-form-section:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+/* 与薪资管理 Date 等字段问号一致（payroll.css · payroll-field-help） */
+.employees-page .payroll-label-with-help,
+.employees-page .payroll-th-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.employees-page label.form-label.payroll-label-with-help {
+  display: inline-flex;
+}
+
+.employees-page .payroll-field-help {
+  cursor: pointer;
+  color: var(--text-tertiary);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.12));
+  border-radius: 50%;
+  background: var(--bg-elevated, #fff);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: color 0.2s, background 0.2s, border-color 0.2s;
+}
+
+.employees-page .payroll-field-help:hover,
+.employees-page .payroll-field-help:focus-visible {
+  color: var(--primary);
+  border-color: rgba(22, 119, 255, 0.35);
+  background: rgba(22, 119, 255, 0.08);
+  outline: none;
+}
+
+.employees-page #employeeFieldHelpModal .field-help-sync {
+  margin-top: 12px;
+  padding: 10px 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  background: rgba(22, 119, 255, 0.06);
+  border: 1px solid rgba(22, 119, 255, 0.15);
+  border-radius: var(--radius-sm);
+}
+
+.employees-page #employeeFieldHelpModal .field-help-sync strong {
+  color: var(--text-primary);
+}
+
+.employees-page .employee-form-section-title {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.employees-page .employee-check-item .payroll-field-help {
+  margin-left: 2px;
+}
+
+.employees-page .employee-form-section-desc {
+  display: none;
+}
+
+.employees-page .employees-modal-body {
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  padding-top: 4px;
+}
+
+/* 弹窗节点位于 .employees-page 之外，故此处不加该前缀 */
+#addEmployeeModal .employee-form-layout {
+  display: flex;
+  align-items: stretch;
+  gap: 20px;
+  min-height: 0;
+  overflow: hidden;
+  padding-right: 12px;
+}
+
+#addEmployeeModal .employee-form-nav {
+  flex: 0 0 176px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 100%;
+  overflow-y: auto;
+  padding-right: 12px;
+  border-right: 1px solid var(--border-light);
+}
+
+#addEmployeeModal .employee-form-nav-item {
+  position: relative;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  padding: 9px 10px 9px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--text-secondary);
+  transition: background 0.2s, color 0.2s;
+}
+
+#addEmployeeModal .employee-form-nav-item::before {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 0;
+  border-radius: 2px;
+  background: var(--primary);
+  transition: height 0.2s;
+}
+
+#addEmployeeModal .employee-form-nav-item:hover {
+  background: rgba(22, 119, 255, 0.06);
+  color: var(--text-primary);
+}
+
+#addEmployeeModal .employee-form-nav-item:focus-visible {
+  outline: 2px solid rgba(22, 119, 255, 0.4);
+  outline-offset: 1px;
+}
+
+#addEmployeeModal .employee-form-nav-item.is-active {
+  background: rgba(22, 119, 255, 0.1);
+  color: var(--primary);
+  font-weight: 600;
+}
+
+#addEmployeeModal .employee-form-nav-item.is-active::before {
+  height: 16px;
+}
+
+#addEmployeeModal .employee-form-scroll {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+@media (max-width: 720px) {
+  #addEmployeeModal .employee-form-layout {
+    flex-direction: column;
+    gap: 12px;
+    padding-right: 0;
+  }
+
+  #addEmployeeModal .employee-form-nav {
+    flex: 0 0 auto;
+    flex-direction: row;
+    max-height: none;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 0 0 8px;
+    border-right: 0;
+    border-bottom: 1px solid var(--border-light);
+  }
+
+  #addEmployeeModal .employee-form-nav-item {
+    flex: 0 0 auto;
+    padding: 7px 12px;
+    white-space: nowrap;
+  }
+
+  #addEmployeeModal .employee-form-nav-item::before {
+    display: none;
+  }
+
+  #addEmployeeModal .employee-form-scroll {
+    padding-right: 0;
+  }
+}
+
+.employees-page .employee-check-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  justify-content: center;
+  padding-top: 24px;
+}
+
+.employees-page .employee-check-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--text-primary);
+  cursor: pointer;
+  user-select: none;
+}
+
+.employees-page .employee-check-item input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+
+.employees-page #field-store {
+  max-width: 100%;
+}
+
+.employees-page .employees-delete-confirm-name {
+  margin: 10px 0 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.employees-role-field {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.employees-role-field .employees-role-multi-select {
+  flex: 1;
+  min-width: 0;
+}
+
+.employees-role-add-btn {
+  flex-shrink: 0;
+  white-space: nowrap;
+  margin-top: 2px;
+}
+
+/* 岗位多选 — 与 TipOut 规则页 multi-select 一致，并适配员工弹窗（modal 在 .employees-page 外） */
+.employees-role-multi-select.multi-select {
+  position: relative;
+}
+
+.employees-role-multi-select .multi-select-input {
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 4px 32px 4px 6px;
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: var(--radius-md);
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  position: relative;
+}
+
+.employees-role-multi-select .multi-select-input:hover {
+  border-color: var(--primary);
+}
+
+.employees-role-multi-select.open .multi-select-input {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1);
+}
+
+.employees-role-multi-select .multi-select-arrow {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  transition: transform 0.2s;
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
+.employees-role-multi-select.open .multi-select-arrow {
+  transform: translateY(-50%) rotate(180deg);
+}
+
+.employees-role-multi-select .multi-select-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex: 1;
+  min-height: 26px;
+  align-items: center;
+}
+
+.employees-role-multi-select .multi-select-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px 2px 10px;
+  background: rgba(22, 119, 255, 0.08);
+  border: 1px solid rgba(22, 119, 255, 0.22);
+  border-radius: 999px;
+  font-size: 12px;
+  line-height: 20px;
+  color: var(--primary);
+  font-weight: 500;
+  max-width: min(100%, 160px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.employees-role-multi-select .multi-select-tag i {
+  font-style: normal;
+  cursor: pointer;
+  color: rgba(22, 119, 255, 0.55);
+  font-size: 14px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.employees-role-multi-select .multi-select-tag i:hover {
+  color: var(--primary);
+}
+
+.employees-role-multi-select .multi-select-placeholder {
+  color: var(--text-tertiary);
+  font-size: 13px;
+  padding: 0 4px;
+}
+
+.employees-role-multi-select .multi-select-dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: var(--radius-lg);
+  padding: 6px;
+  box-shadow: var(--shadow-md, 0 8px 24px rgba(0, 0, 0, 0.12));
+  z-index: 1200;
+  max-height: 260px;
+  overflow: hidden;
+  flex-direction: column;
+}
+
+.employees-role-multi-select.open .multi-select-dropdown {
+  display: flex;
+}
+
+.employees-role-dropdown-portal {
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: var(--radius-lg);
+  padding: 6px;
+  box-shadow: var(--shadow-md, 0 8px 24px rgba(0, 0, 0, 0.12));
+  overflow: hidden;
+}
+
+.employees-role-dropdown-portal .employees-role-options {
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.employees-role-search-wrap {
+  padding: 2px 2px 6px;
+  flex-shrink: 0;
+}
+
+.employees-role-search {
+  width: 100%;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.employees-role-search:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1);
+}
+
+.employees-role-options {
+  overflow-y: auto;
+  max-height: 200px;
+  flex: 1;
+  min-height: 0;
+}
+
+.employees-role-multi-select .multi-select-option,
+.employees-role-dropdown-portal .multi-select-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.15s;
+}
+
+.employees-role-multi-select .multi-select-option:hover,
+.employees-role-dropdown-portal .multi-select-option:hover {
+  background: rgba(22, 119, 255, 0.06);
+}
+
+.employees-role-multi-select .multi-select-option.is-checked,
+.employees-role-dropdown-portal .multi-select-option.is-checked {
+  background: rgba(22, 119, 255, 0.08);
+  color: var(--primary);
+  font-weight: 500;
+}
+
+.employees-role-multi-select .multi-select-option input[type="checkbox"],
+.employees-role-dropdown-portal .multi-select-option input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: var(--primary);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.employees-role-empty {
+  padding: 12px 10px;
+  font-size: 13px;
+  color: var(--text-tertiary);
+  text-align: center;
+}
+
+.employees-role-add-modal-overlay {
+  z-index: 1200;
+}

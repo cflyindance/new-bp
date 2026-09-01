@@ -61,7 +61,6 @@ const expectedLines = ["pos", "pos-go", "paypad", "emenu", "sdi"];
 
 check("duration group inserts seq 674 immediately before seq 577", () => {
   assert.deepEqual(FOH_SETTINGS_ASSIGN_MAP["foh-guest-duration-scenarios"], [
-    443,
     571,
     674,
     577,

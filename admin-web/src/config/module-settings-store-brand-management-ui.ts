@@ -106,7 +106,7 @@ function normalizeMenuStructureByLine(
   const legacy = normalizeMenuStructureKeys(legacyKeys);
   if (legacy.length === 0) return emptyBrandMenuStructureByLine();
   // 旧版全局 menuStructureKeys → 复制到三产线，避免丢勾选
-  return { kiosk: [...legacy], emenu: [...legacy], sdi: [...legacy] };
+  return { kiosk: [...legacy], emenu: [...legacy], pos: [...legacy], sdi: [...legacy] };
 }
 
 function normalizeDisplayChannels(raw: unknown): BrandMenuLineId[] {
@@ -161,6 +161,7 @@ function defaultBrands(): StoreBrandRecord[] {
           dishKey("g-hotpot", "c-hotpot-base", "d-pot-yinyang"),
         ],
         emenu: [dishKey("g-chinese", "c-chinese-hot", "d-kungpao")],
+        pos: [],
         sdi: [dishKey("g-drink", "c-drink-cold", "d-cola")],
       },
     }),
@@ -172,6 +173,7 @@ function defaultBrands(): StoreBrandRecord[] {
       menuStructureByLine: {
         kiosk: [dishKey("g-drink", "c-drink-hot", "d-tea")],
         emenu: [dishKey("g-chinese", "c-chinese-hot", "d-kungpao")],
+        pos: [],
         sdi: [],
       },
     }),
@@ -331,7 +333,7 @@ function renderDisplayChannelPicker(selectedChannels: BrandMenuLineId[]): string
     </label>`;
   }).join("");
   return `
-    <div class="grid grid-cols-1 gap-2 sm:grid-cols-3" data-brand-display-channel-picker>
+    <div class="grid grid-cols-1 gap-2 sm:grid-cols-4" data-brand-display-channel-picker>
       ${options}
     </div>`;
 }

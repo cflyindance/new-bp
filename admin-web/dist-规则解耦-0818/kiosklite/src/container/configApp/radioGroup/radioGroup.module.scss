@@ -1,0 +1,16 @@
+.serviceBottom {
+  display: flex;
+  text-align: right;
+  .checkText {
+    margin-left: 0.5rem;
+  }
+  .radioText {
+    margin-left: 0.2rem;
+  }
+  & > div {
+    display: flex;
+    align-items: center;
+    margin-right: 4rem;
+    cursor: pointer;
+  }
+}

@@ -1401,12 +1401,16 @@ function PendingOrders({ jumpTab, handleClose, toggleOrderPlaceStatus }) {
                     )}
                     {t('ShoppingCart.place_order')}
                     {isDisplayCartOrderPrice &&
-                      `・${Number(totalPrice ?? 0)?.toFixed(2)}`}
+                      `・${roundToPrecision(
+                        Number(totalPrice ?? 0)
+                      ).toFixed(2)}`}
                     {isDisplayCartOrderPrice && isShowBenefitPrice && (
                       <VipPriceWithImg
                         imgType="white"
                         style={{ margin: '4px 0 0 8px', color: '#fff' }}
-                        benefitPrice={`$${totalBenefitPrice?.toFixed(2)}`}
+                        benefitPrice={`$${roundToPrecision(
+                          Number(totalBenefitPrice ?? 0)
+                        ).toFixed(2)}`}
                       />
                     )}
                   </>

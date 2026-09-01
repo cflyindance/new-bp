@@ -1,0 +1,134 @@
+.cardPartPayInfo {
+  width: 100vw;
+  height: 100vh;
+  min-height: calc(100vh - 12rem);
+  padding: 38rem 0 8rem;
+  box-sizing: border-box;
+  background: #f0f0f0;
+}
+
+.content {
+  width: 100%;
+  max-width: 86.6rem;
+  margin: 0 auto;
+}
+
+.title {
+  margin: 0;
+  color: rgba(0, 0, 0, 0.95);
+  font-size: 6rem;
+  font-weight: 700;
+  line-height: 6.8rem;
+  text-align: center;
+}
+
+.amountPanel {
+  width: 57.3rem;
+  margin: 18rem auto 0;
+}
+
+.amountRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.amountLabel,
+.amountValue {
+  font-size: 2.6rem;
+  color: rgba(0, 0, 0, 0.92);
+  font-weight: 500;
+}
+
+.amountValue {
+  text-align: right;
+}
+
+.amountLabelStrong,
+.amountValueStrong {
+  font-size: 3rem;
+  font-weight: 700;
+}
+
+.divider {
+  width: 100%;
+  height: 0.1rem;
+  margin: 2.1rem 0;
+  background: rgba(0, 0, 0, 0.65);
+}
+
+.helperText {
+  margin-top: 4rem;
+  color: rgba(0, 0, 0, 0.5);
+  font-size: 4rem;
+  font-weight: 600;
+  line-height: 4.8rem;
+  text-align: center;
+}
+
+.actionList {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  gap: 4rem;
+  margin-top: 18rem;
+}
+
+.actionCard {
+  width: 20rem;
+  min-height: 20rem;
+  padding: 3.5rem 2rem 3rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2.2rem;
+  border: 0.08rem solid rgba(0, 0, 0, 0.1);
+  border-radius: 1.33rem;
+  background: #fff;
+  box-shadow: 0 0.055rem 1.102rem rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+
+  &:active {
+    transform: scale(0.99);
+  }
+}
+
+.iconWrapper {
+  width: 6.4rem;
+  height: 6.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.actionIcon {
+  display: block;
+  object-fit: contain;
+}
+
+.creditIcon {
+  width: 6.4rem;
+  height: 4.4rem;
+}
+
+.cashIcon {
+  width: 6.4rem;
+  height: 4.8rem;
+}
+
+.giftCardIcon {
+  width: 5.4rem;
+  height: 5.8rem;
+}
+
+.actionLabel {
+  color: rgba(0, 0, 0, 0.85);
+  font-size: 2.2rem;
+  font-weight: 600;
+  line-height: 3rem;
+  text-align: center;
+}

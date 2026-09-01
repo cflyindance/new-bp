@@ -41,6 +41,9 @@ const permissionByPath: Record<string, { serviceName: string; permissions: strin
 
 const IFRAME_DEMO_PATH = "/gift-cards/cards";
 export const JSON_MENU_DEMO_IFRAME_URL = "https://example.com/menusifu-gift-card-demo";
+export const JSON_MENU_DEMO_ISSUE_ROOT_KEY = "demo_validation_state_samples";
+export const JSON_MENU_DEMO_ERROR_KEY = "demo_validation_error_iframe";
+export const JSON_MENU_DEMO_WARNING_KEY = "demo_validation_warning_i18n";
 
 function readableSegment(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "") || "node";
@@ -172,5 +175,32 @@ function moduleNode(module: NavModule): MenuNode {
 }
 
 export function buildCurrentMerchantMenuDemoNodes(modules: NavModule[] = NAV_MODULES): MenuNode[] {
-  return modules.map(moduleNode);
+  const validationSamples: MenuNode = {
+    id: "demo-validation-state-samples",
+    key: JSON_MENU_DEMO_ISSUE_ROOT_KEY,
+    name: "Validation State Samples",
+    i18nInfo: localized("校验状态示例", "Validation State Samples"),
+    children: [
+      {
+        id: "demo-validation-error-iframe",
+        key: JSON_MENU_DEMO_ERROR_KEY,
+        parentKey: JSON_MENU_DEMO_ISSUE_ROOT_KEY,
+        name: "Error Sample",
+        i18nInfo: localized("错误示例 · iframe 地址无效", "Error Sample · Invalid iframe URL"),
+        path: "/demo/validation/error",
+        type: "iframe",
+        url: "invalid-iframe-url",
+      },
+      {
+        id: "demo-validation-warning-i18n",
+        key: JSON_MENU_DEMO_WARNING_KEY,
+        parentKey: JSON_MENU_DEMO_ISSUE_ROOT_KEY,
+        name: "Warning Sample",
+        i18nInfo: { "zh-CN": "警告示例 · 多语言不完整" },
+        path: "/demo/validation/warning",
+        type: "inner",
+      },
+    ],
+  };
+  return [validationSamples, ...modules.map(moduleNode)];
 }

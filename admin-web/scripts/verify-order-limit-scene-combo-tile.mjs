@@ -35,8 +35,8 @@ assert.match(source, /data-scene-apply-batch|data-apply-batch=[\s\S]*data-scene-
 assert.match(source, /data-limit-target=[\s\S]*data-scene-party|data-scene-limit-target/, "平铺数量输入应绑定场景");
 
 const leaveStep = source.match(/function goToEditorStep[\s\S]*?(?=\n\s*function handleEditorClick)/)?.[0] ?? "";
-assert.match(leaveStep, /currentStep === 4[\s\S]*?resetSceneDisplayMode\(\)/, "离开步骤 4 应重置为平铺");
-assert.match(leaveStep, /currentStep === 4[\s\S]*?resetBatchSelection\(\)/, "离开步骤 4 应清空批量勾选");
+assert.match(leaveStep, /currentStep === 3[\s\S]*?resetSceneDisplayMode\(\)/, "离开步骤 3 应重置为平铺");
+assert.match(leaveStep, /currentStep === 3[\s\S]*?resetBatchSelection\(\)/, "离开步骤 3 应清空批量勾选");
 
 assert.match(
   source,

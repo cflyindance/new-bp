@@ -28,7 +28,7 @@ const rowsFn = source.match(/function configuredLimitPreviewRows\(draft\)[\s\S]*
 assert.ok(rowsFn, "应能定位 configuredLimitPreviewRows");
 assert.match(rowsFn, /!cell\.configured|cell\.configured|configured\s*===\s*true/, "仅 configured===true 的单元格进入预览");
 assert.match(source, /0（禁止）/, "数量 0 应展示为禁止文案");
-assert.match(source, /查看已配置规则/, "步骤 4 应提供查看已配置规则入口文案");
+assert.match(source, /查看已配置规则/, "限购数量步骤应提供查看已配置规则入口文案");
 assert.match(source, /data-configured-limit-preview-open/, "应提供打开预览入口标记");
 assert.match(source, /data-configured-limit-preview-overlay/, "应提供独立预览遮罩");
 assert.match(source, /data-configured-limit-preview-store/, "应提供门店筛选");
@@ -47,7 +47,7 @@ assert.match(source, /function openConfiguredLimitPreview\(\)/, "应提供打开
 assert.match(source, /function closeConfiguredLimitPreview\(\)/, "应提供关闭预览函数");
 assert.match(
   source,
-  /function goToEditorStep[\s\S]*?currentStep === 4[\s\S]*?closeConfiguredLimitPreview\(\)/,
+  /function goToEditorStep[\s\S]*?currentStep === 3[\s\S]*?closeConfiguredLimitPreview\(\)/,
   "离开限购数量步骤应关闭预览",
 );
 const escapeHandler = source.match(/event\.key !== "Escape"[\s\S]*?\n\s*\}\);/)?.[0] ?? "";

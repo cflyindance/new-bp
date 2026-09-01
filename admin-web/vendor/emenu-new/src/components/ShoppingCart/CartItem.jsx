@@ -11,6 +11,7 @@ import VipPriceWithImg from '@/components/common/VipPriceWithImg'
 import { useGlobalState } from '@/hooks/useGlobalState'
 import RedeemPoint from '@/components/RedeemPoint'
 import useTranslateOptions from '@/hooks/useTranslateOptions'
+import SeasoningTags from './SeasoningTags'
 import useCheckDishBeforeOrder from '@/hooks/useCheckDishBeforeOrder'
 import useRafCountDown from '@/hooks/useRafCountDown'
 import StarIcon from '@material-ui/icons/Star'
@@ -314,6 +315,10 @@ const CartItem = (props) => {
     return false
   }, [combinationDishConfig, e.id])
 
+  const optionText = renderItemOption(e, e.itemPrices?.length === 1, {
+    includeSeasoning: false,
+  })?.join('\n')
+
   return isComboCart ? (
     <Paper key={e.tempHotPotId ?? e.key ?? e.id} className={classes.cartItem}>
       <Box padding={1}>
@@ -331,9 +336,10 @@ const CartItem = (props) => {
             color="textSecondary"
             className={classes.cartItemOption}
           >
-            {renderItemOption(e)?.join('\n')}
+            {renderItemOption(e, false, { includeSeasoning: false })?.join('\n')}
           </Typography>
         )}
+        <SeasoningTags snapshots={e.seasoningSnapshots} dish={e} />
         <Box marginTop={1} overflow="hidden">
           {e?.comboCart?.map((c) => {
             return (
@@ -354,13 +360,16 @@ const CartItem = (props) => {
                   >
                     {t(c.id, { defaultValue: c.name, ns: 'dish' })}
                   </Typography>
-                  <Typography
-                    variant="body2"
-                    color="textSecondary"
-                    className={classes.cartItemOption}
-                  >
-                    {renderItemOption(c)?.join('\n')}
-                  </Typography>
+                    <Typography
+                      variant="body2"
+                      color="textSecondary"
+                      className={classes.cartItemOption}
+                    >
+                      {renderItemOption(c, false, {
+                        includeSeasoning: false,
+                      })?.join('\n')}
+                    </Typography>
+                    <SeasoningTags snapshots={c.seasoningSnapshots} dish={c} />
                 </Box>
               </Box>
             )
@@ -472,14 +481,17 @@ const CartItem = (props) => {
           >
             {t(e.id, { defaultValue: e.name, ns: 'dish' })}
           </Typography>
-          <Typography
-            variant="body2"
-            color="textSecondary"
-            className={classes.cartItemOption}
-            onClick={handleEditItem(editItem)}
-          >
-            {renderItemOption(e, e.itemPrices?.length === 1)?.join('\n')}
-          </Typography>
+          {optionText ? (
+            <Typography
+              variant="body2"
+              color="textSecondary"
+              className={classes.cartItemOption}
+              onClick={handleEditItem(editItem)}
+            >
+              {optionText}
+            </Typography>
+          ) : null}
+          <SeasoningTags snapshots={e.seasoningSnapshots} dish={e} />
           <Box
             display="flex"
             justifyContent="space-between"

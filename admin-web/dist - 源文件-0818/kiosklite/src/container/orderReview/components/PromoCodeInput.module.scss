@@ -1,0 +1,74 @@
+@import '../../../assets/scss/themes.scss';
+
+.containerBox {
+  @include dialog-box-style;
+  width: 75rem;
+}
+
+.itemBox {
+  text-align: center;
+  color: #000;
+
+  .itemName {
+    font-size: 4rem;
+    font-weight: 700;
+    margin-bottom: 2.4rem;
+  }
+
+  .subItemName {
+    font-weight: 500;
+    font-size: 3rem;
+    margin-bottom: 4.8rem;
+  }
+}
+
+.inputBox {
+  width: 55rem;
+  height: 13rem;
+  border-radius: 20.8rem;
+  background: var(--background-grey);
+  text-align: center;
+  outline: none;
+  border: none;
+  font-size: 6rem;
+  font-weight: 700;
+  color: var(--text-color-black);
+
+  &::placeholder {
+    font-size: 4rem;
+    font-weight: 500;
+  }
+}
+
+.btnBox {
+  display: flex;
+  justify-content: center;
+  margin-top: 2.8rem;
+  flex-direction: column;
+
+  // gap: 2rem;
+  div {
+    font-weight: 600;
+    width: 55rem;
+    height: 10rem;
+    font-size: 3rem;
+    text-align: center;
+    line-height: 10rem;
+    color: var(--text-color-black);
+    border-radius: 8.5rem;
+    margin-top: 2rem;
+  }
+
+  .cancel {
+    background-color: var(--cta-grey);
+  }
+
+  .apply {
+    background-color: var(--primary-selected-color);
+  }
+
+  .disabled {
+    background: var(--primary-color-disabled);
+    color: #0000004d;
+  }
+}

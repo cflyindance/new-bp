@@ -1,0 +1,1 @@
+import{al as r,am as a,an as t}from"./index.7204afee.js";import{r as d}from"./react.70cbc620.js";var e={},i=a.exports,o=t.exports;Object.defineProperty(e,"__esModule",{value:!0});var v=e.default=void 0,l=o(d.exports),n=i(r),u=(0,n.default)(l.createElement("path",{d:"M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"}),"Check");v=e.default=u;export{v as d};

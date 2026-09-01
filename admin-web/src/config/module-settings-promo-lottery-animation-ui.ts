@@ -7,6 +7,7 @@ import {
   writeModuleSettingJson,
 } from "./module-settings-form-ui";
 import type { ModuleSettingCatalogItem } from "./module-settings-catalog";
+import { showAppToast } from "../ui/app-toast";
 
 export const PROMO_LOTTERY_CUSTOM_ANIM_SEQ = 672;
 
@@ -220,16 +221,16 @@ function rerenderEditorPanel(panel: HTMLElement): void {
 
 async function handleFileSelected(slot: "win" | "lose", file: File): Promise<void> {
   if (!isAllowedFile(file)) {
-    window.alert("仅支持 MP4、MOV、AVI、MKV、WMV、GIF 格式");
+    showAppToast("仅支持 MP4、MOV、AVI、MKV、WMV、GIF 格式", { variant: "error" });
     return;
   }
   if (file.size > MAX_BYTES) {
-    window.alert("动画大小不能超过 5M");
+    showAppToast("动画大小不能超过 5M", { variant: "error" });
     return;
   }
   const kind = detectMediaKind(file);
   if (!kind) {
-    window.alert("无法识别文件格式");
+    showAppToast("无法识别文件格式", { variant: "error" });
     return;
   }
   const dataUrl = await readFileAsDataUrl(file);
@@ -269,7 +270,7 @@ export function bindPromoLotteryCustomAnimUpload(root: ParentNode = document): v
           rerenderEditorPanel(panel);
         })
         .catch((err: unknown) => {
-          window.alert(err instanceof Error ? err.message : "上传失败");
+          showAppToast(err instanceof Error ? err.message : "上传失败", { variant: "error" });
         });
     });
 

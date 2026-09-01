@@ -1,7 +1,10 @@
 import { enterPitShell, exitPitShell } from "../shell/app-shell-mode";
 import { isPitApiError } from "./pit-api-error";
 import { pitApi } from "./pit-api";
+import { bindPitDashboardPage, renderPitDashboardPage } from "./pit-dashboard-page";
 import { bindPitLoginPage, renderPitLoginPage } from "./pit-login-page";
+import { parsePitListQuery } from "./pit-list-query";
+import { bindPitRequirementListPage, renderPitRequirementListLoadingPage } from "./pit-requirement-list-page";
 import {
   canAccessPitRoute,
   matchPitRoute,
@@ -93,6 +96,8 @@ function renderNavLink(item: NavItem, activeRoute: PitRouteId, mobile = false): 
 }
 
 function renderPageOutlet(route: PitRouteId, requirementId?: string): string {
+  if (route === "dashboard") return renderPitDashboardPage();
+  if (route === "requirements") return renderPitRequirementListLoadingPage();
   const copy = PAGE_COPY[route];
   return `<section data-pit-page-outlet data-pit-route="${route}" class="mx-auto w-full max-w-[94rem] animate-fade-in p-4 sm:p-6 lg:p-8"><div class="relative min-h-[28rem] overflow-hidden rounded-2xl border border-slate-200/90 bg-white p-6 shadow-[0_1px_2px_rgba(15,23,42,.04)] dark:border-slate-700 dark:bg-slate-900 sm:p-9"><div class="absolute right-0 top-0 h-28 w-28 border-b border-l border-amber-400/25 bg-[linear-gradient(135deg,transparent_49%,rgba(245,158,11,.12)_50%)]" aria-hidden="true"></div><p class="font-mono text-[11px] uppercase tracking-[0.24em] text-amber-700 dark:text-amber-400">PIT / ${escapeHtml(route.replace(/-/g, " "))}</p><h2 class="mt-3 text-2xl font-semibold tracking-tight text-slate-950 dark:text-white">${escapeHtml(copy.title)}</h2><p class="mt-2 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">${escapeHtml(copy.description)}</p>${requirementId ? `<p class="mt-5 inline-flex rounded-lg bg-slate-100 px-3 py-2 font-mono text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300">ID ${escapeHtml(requirementId)}</p>` : ""}<div class="mt-12 grid gap-4 md:grid-cols-3" aria-hidden="true">${[["信息结构已就绪", "w-1/2"], ["API 契约已连接", "w-2/3"], ["业务视图下一阶段启用", "w-1/2"]].map(([label, width], index) => `<div class="rounded-xl border border-dashed border-slate-200 p-4 dark:border-slate-700"><span class="font-mono text-[10px] text-amber-700 dark:text-amber-400">0${index + 1}</span><div class="mt-4 h-2 ${width} rounded bg-slate-100 dark:bg-slate-800"></div><p class="mt-4 text-xs text-slate-400">${label}</p></div>`).join("")}</div></div></section>`;
 }
@@ -118,7 +123,7 @@ function bindRetry(root: HTMLElement, retry: () => void): void {
   root.querySelector<HTMLButtonElement>("[data-pit-retry]")?.addEventListener("click", retry);
 }
 
-function bindWorkspace(root: HTMLElement, onMount: () => void, render: (html: string) => void, isActive: () => boolean): void {
+function bindWorkspace(root: HTMLElement, onMount: () => void, render: (html: string) => void, isActive: () => boolean, path: string, user: PitUser): void {
   root.querySelector<HTMLButtonElement>("[data-pit-theme-toggle]")?.addEventListener("click", () => document.documentElement.classList.toggle("dark"));
   const menu = root.querySelector<HTMLElement>("[data-pit-user-menu]");
   const toggle = root.querySelector<HTMLButtonElement>("[data-pit-user-menu-toggle]");
@@ -151,6 +156,12 @@ function bindWorkspace(root: HTMLElement, onMount: () => void, render: (html: st
       }
     }
   });
+  const route = matchPitRoute(path);
+  if (route.id === "dashboard") bindPitDashboardPage(root);
+  if (route.id === "requirements") {
+    const queryIndex = path.indexOf("?");
+    bindPitRequirementListPage(root, parsePitListQuery(queryIndex >= 0 ? path.slice(queryIndex + 1) : ""), user);
+  }
 }
 
 function renderAuthenticated(root: HTMLElement, onMount: () => void, render: (html: string) => void, isActive: () => boolean): void {
@@ -165,7 +176,7 @@ function renderAuthenticated(root: HTMLElement, onMount: () => void, render: (ht
     return;
   }
   render(renderWorkspace(path, user));
-  bindWorkspace(root, onMount, render, isActive);
+  bindWorkspace(root, onMount, render, isActive, path, user);
 }
 
 export function mountPitShell(_onMount: () => void, path: string): string {
@@ -246,7 +257,7 @@ export function bindPitShell(onMount: () => void): void {
         else if (getPitSession().user) {
           render(renderWorkspace(currentPitPath(), getPitSession().user!, true, isPitApiError(error) ? error.message : "PIT 服务连接中断。"));
           bindRetry(shellRoot, bootstrap);
-          bindWorkspace(shellRoot, onMount, render, isActive);
+          bindWorkspace(shellRoot, onMount, render, isActive, currentPitPath(), getPitSession().user!);
         } else showLogin(isPitApiError(error) ? error.message : "PIT 服务连接中断。", true);
       }
     } catch (error) {
@@ -255,7 +266,7 @@ export function bindPitShell(onMount: () => void): void {
       if (getPitSession().user) {
         render(renderWorkspace(currentPitPath(), getPitSession().user!, true, message));
         bindRetry(shellRoot, bootstrap);
-        bindWorkspace(shellRoot, onMount, render, isActive);
+        bindWorkspace(shellRoot, onMount, render, isActive, currentPitPath(), getPitSession().user!);
       } else showLogin(message, true);
     }
   }

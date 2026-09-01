@@ -34,8 +34,10 @@ const fixed = await fixture.resolve({ req: { headers: {} }, cacheDir: os.tmpdir(
 assert(fixed.fingerprint === "fixture-fp", "fixture");
 
 const cacheDir = fs.mkdtempSync(path.join(os.tmpdir(), "seasoning-live-"));
+const staticView = { ...fixtureView, fingerprint: "static-fp" };
 let fetchCalls = 0;
 const live = createLiveMenuProvider({
+  staticView,
   fetchImpl: async (url, init) => {
     fetchCalls += 1;
     assert(String(url).includes("/kpos/api/menu/menu"), "url path");
@@ -45,23 +47,36 @@ const live = createLiveMenuProvider({
   },
 });
 
-let failed = null;
-try {
-  await live.resolve({
-    req: { headers: { cookie: `${EMENU_KPOS_HOST_COOKIE}=${encodeURIComponent("http://127.0.0.1:22080")}` } },
-    cacheDir,
-  });
-} catch (error) {
-  failed = error;
-}
-assert(failed?.code === "menu_unavailable", "no cache hard fail");
+const missingHost = await live.resolve({ req: { headers: {} }, cacheDir });
+assert(missingHost.source === "static" && missingHost.fingerprint === "static-fp", "missing host uses static");
 
-writeMenuCache(cacheDir, "http://127.0.0.1:22080", { ...fixtureView, fingerprint: "cached-fp" });
+const noCache = await live.resolve({
+  req: { headers: { cookie: `${EMENU_KPOS_HOST_COOKIE}=${encodeURIComponent("http://127.0.0.1:22080")}` } },
+  cacheDir,
+});
+assert(noCache.source === "static" && noCache.fingerprint === "static-fp", "no cache falls back to static");
+
+writeMenuCache(cacheDir, "http://127.0.0.1:22080", { ...fixtureView, fingerprint: "cached-fp" }, "EMENU");
 const cached = await live.resolve({
   req: { headers: { cookie: `${EMENU_KPOS_HOST_COOKIE}=${encodeURIComponent("http://127.0.0.1:22080")}` } },
   cacheDir,
 });
 assert(cached.fingerprint === "cached-fp" && cached.fromCache === true, "cache fallback");
+
+writeMenuCache(cacheDir, "http://127.0.0.1:22080", { ...fixtureView, fingerprint: "kiosk-cached" }, "KIOSK");
+const kioskLive = createLiveMenuProvider({
+  staticView,
+  fetchImpl: async (url) => {
+    assert(String(url).includes("product=KIOSK"), "kiosk product param");
+    throw new Error("network_down");
+  },
+});
+const kioskCached = await kioskLive.resolve({
+  req: { headers: { cookie: `${EMENU_KPOS_HOST_COOKIE}=${encodeURIComponent("http://127.0.0.1:22080")}` } },
+  cacheDir,
+  product: "KIOSK",
+});
+assert(kioskCached.fingerprint === "kiosk-cached" && kioskCached.product === "KIOSK", "kiosk cache isolated");
 
 const okLive = createLiveMenuProvider({
   fetchImpl: async () => ({

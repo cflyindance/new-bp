@@ -1,0 +1,14 @@
+.versionRecordList {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.versionRecordRow {
+  font-size: 3.4rem;
+  line-height: 1.5;
+
+  &.versionRecordCurrent {
+    color: var(--primary-selected-color);
+  }
+}

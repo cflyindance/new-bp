@@ -1,0 +1,1 @@
+var e=(e,t)=>{let n=e.replace(/\D/g,``);return t?n.replace(/(\d{3})(\d{3})(\d{4})/,`$1-$2-$3`):n.replace(/(\d{3})(\d{3})(\d{4})/,`$1-XXX-$3`)};export{e as t};

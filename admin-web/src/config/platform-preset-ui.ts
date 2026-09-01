@@ -60,6 +60,9 @@ import {
   type PlatformPresetNodeSelection,
   type PlatformPresetSnapshot,
 } from "./platform-preset-store";
+import { showAppToast } from "../ui/app-toast";
+import { openConfirmDialog } from "../ui/app-confirm-dialog";
+import { openPromptDialog } from "../ui/app-prompt-dialog";
 
 function escapeHtml(s: string): string {
   return s
@@ -764,10 +767,16 @@ export function bindPlatformPreset(onMount: () => void, scope: PresetScopeConfig
 
     if (target.closest("[data-pp-add-custom]") && listScope?.scope === scope.scope) {
       if (!canAddCustomBusinessTypes(scope)) return;
-      const label = window.prompt("自定义业态名称");
-      if (!label?.trim()) return;
-      scope.store.upsertCustomBusinessType(label.trim());
-      onMount();
+      void (async () => {
+        const label = await openPromptDialog({
+          title: "新增自定义业态",
+          label: "自定义业态名称",
+          confirmLabel: "确认新增",
+        });
+        if (!label?.trim()) return;
+        scope.store.upsertCustomBusinessType(label.trim());
+        onMount();
+      })();
       return;
     }
 
@@ -796,13 +805,20 @@ export function bindPlatformPreset(onMount: () => void, scope: PresetScopeConfig
     }
 
     if (target.closest("[data-pp-sync-merchant]") && listScope?.scope === "enterprise" && scope.scope === "enterprise") {
-      const force = window.confirm(
-        "将企业级平台预设同步到商家后台？\n\n· 未自定义的商家组合将被覆盖\n· 已自定义的组合将跳过\n\n确定继续？",
-      );
-      if (!force) return;
-      const result = syncEnterprisePresetsToMerchant();
-      window.alert(`已同步 ${result.updated} 个组合，跳过 ${result.skipped} 个已自定义组合。`);
-      onMount();
+      void (async () => {
+        const ok = await openConfirmDialog({
+          title: "同步到商家后台",
+          message:
+            "将企业级平台预设同步到商家后台？\n\n· 未自定义的商家组合将被覆盖\n· 已自定义的组合将跳过\n\n确定继续？",
+          confirmLabel: "确认同步",
+        });
+        if (!ok) return;
+        const result = syncEnterprisePresetsToMerchant();
+        showAppToast(`已同步 ${result.updated} 个组合，跳过 ${result.skipped} 个已自定义组合。`, {
+          variant: "success",
+        });
+        onMount();
+      })();
       return;
     }
 
@@ -839,7 +855,7 @@ export function bindPlatformPreset(onMount: () => void, scope: PresetScopeConfig
         selection,
       };
       const published = scope.store.publishPlatformPresetSnapshot(snapshot);
-      window.alert(scope.publishSuccessMessage(published.version));
+      showAppToast(scope.publishSuccessMessage(published.version), { variant: "success" });
       location.hash = `#${scope.routePrefix}`;
       onMount();
       return;

@@ -1,0 +1,50 @@
+.brandInfo {
+  padding: 32px 0px 0;
+  :global {
+    .ant-row {
+      align-items: flex-start;
+      margin-bottom: 16px;
+    }
+    .ant-checkbox-group {
+      display: block;
+    }
+    .ant-checkbox + span {
+      width: 5em;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+  }
+  .uploadImg {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+  .hourRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    .bsDay {
+      display: flex;
+      gap: 6px;
+      .dayItem {
+        border: 1px solid #f2f2f2;
+        padding: 2px 4px;
+        &.work {
+          background: var(--primary-color);
+          color: #fff;
+        }
+      }
+    }
+  }
+  .footerBtn {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 32px;
+    button {
+      &:first-of-type {
+        margin-right: 8px;
+      }
+    }
+  }
+}

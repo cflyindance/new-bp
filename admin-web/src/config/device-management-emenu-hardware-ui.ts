@@ -2,6 +2,8 @@
  * 硬件管理中心 → 硬件 → eMenu：设备列表、编辑、删除及 per-device 菜单/限制配置。
  */
 
+import { openConfirmDialog } from "../ui/app-confirm-dialog";
+import { showAppToast } from "../ui/app-toast";
 import {
   type MenuGroupTag,
   bindMenuGroupDropdownPickers,
@@ -632,7 +634,7 @@ function saveEditedDevice(deviceId: string, form: HTMLElement): boolean {
   if (idx < 0) return false;
   const patch = collectEditFormState(form, deviceId);
   if (!patch.deviceName || !patch.clientBinding?.name) {
-    window.alert("请填写名称");
+    showAppToast("请填写名称", { variant: "error" });
     return false;
   }
   const next = [...devices];
@@ -677,9 +679,17 @@ export function bindDeviceManagementEmenuHardware(root: ParentNode = document): 
       if (!id) return;
       const device = findEmenuHardwareDevice(id);
       const label = device?.deviceName ?? id;
-      if (!window.confirm(`确定删除设备「${label}」？删除后不可恢复。`)) return;
-      deleteDevice(id);
-      rerenderList(page, search?.value ?? "");
+      void (async () => {
+        const ok = await openConfirmDialog({
+          title: "删除设备",
+          message: `确定删除设备「${label}」？删除后不可恢复。`,
+          confirmLabel: "确认删除",
+          danger: true,
+        });
+        if (!ok) return;
+        deleteDevice(id);
+        rerenderList(page, search?.value ?? "");
+      })();
     });
     return;
   }

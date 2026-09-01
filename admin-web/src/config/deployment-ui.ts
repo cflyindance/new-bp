@@ -28,6 +28,7 @@ import type {
   DeploymentBatchStatus,
   DeploymentConfigChange,
 } from "./deployment-types";
+import { openConfirmDialog } from "../ui/app-confirm-dialog";
 
 let listFilterStatus: DeploymentBatchStatus | "" = "";
 
@@ -519,12 +520,18 @@ export function bindDeploymentUi(onRefresh: () => void): void {
       return;
     }
     const seedButton = target.closest<HTMLElement>("[data-deployment-seed-reset]");
-    if (
-      seedButton &&
-      window.confirm("将清空当前记录并恢复演示种子数据，确定继续？")
-    ) {
-      seedDeploymentDemoData();
-      refreshDeploymentUi(onRefresh);
+    if (seedButton) {
+      void (async () => {
+        const ok = await openConfirmDialog({
+          title: "恢复演示数据",
+          message: "将清空当前记录并恢复演示种子数据，确定继续？",
+          confirmLabel: "确认恢复",
+          danger: true,
+        });
+        if (!ok) return;
+        seedDeploymentDemoData();
+        refreshDeploymentUi(onRefresh);
+      })();
     }
   });
 

@@ -1,0 +1,84 @@
+.contentWrapper {
+  padding: 2rem;
+  .defText {
+    font-weight: bold;
+    font-size: 2.4rem;
+    .more {
+      color: var(--primary-color);
+      margin-left: 1rem;
+    }
+  }
+  .promotionItem {
+    border: 1px solid #d9d9d9;
+    padding: 16px;
+    margin-bottom: 16px;
+    :global {
+      .ant-space {
+        width: 100%;
+      }
+      .ant-select-arrow {
+        display: none;
+      }
+    }
+    .title {
+      font-size: 20px;
+      font-weight: bold;
+    }
+    .operation {
+      justify-content: flex-end;
+      :global {
+        .ant-btn-link {
+          color: var(--primary-color);
+        }
+        .ant-btn-link:hover {
+          color: var(--primary-color);
+        }
+      }
+    }
+    .ruleRow {
+      margin-top: 16px;
+      .label {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        padding-right: 8px;
+      }
+      :global {
+        .ant-tree-select {
+          width: 100%;
+        }
+      }
+    }
+    .readonlyTreeSelect {
+      :global {
+        .ant-select-selector {
+          cursor: pointer;
+        }
+      }
+    }
+    .readonlyTreeSelectPopup {
+      :global {
+        .ant-select-tree-checkbox,
+        .ant-select-tree-node-content-wrapper {
+          pointer-events: none;
+          cursor: default;
+        }
+        .ant-select-tree-switcher {
+          pointer-events: auto;
+          cursor: pointer;
+        }
+      }
+    }
+  }
+  .noActivity {
+    text-align: center;
+    font-weight: bold;
+    color: var(--primary-color);
+    font-size: 3.6rem;
+  }
+  .copyBtn {
+    margin-left: 5rem;
+    color: var(--primary-color);
+    cursor: pointer;
+  }
+}

@@ -95,6 +95,7 @@ async function request<T>(path: string, options: PitRequestOptions = {}): Promis
       credentials: "same-origin",
     });
   } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") throw error;
     throw new PitApiError(0, {
       code: "network_unavailable",
       message: "无法连接 PIT 服务，请检查服务是否启动。",
@@ -125,9 +126,9 @@ export const pitApi = {
   me: () => request<PitAuthMe>("/auth/me"),
 
   health: () => request<PitHealth>("/health"),
-  dashboardSummary: () => request<PitDashboardSummary>("/dashboard/summary"),
+  dashboardSummary: (options: { signal?: AbortSignal } = {}) => request<PitDashboardSummary>("/dashboard/summary", { signal: options.signal }),
 
-  listRequirements: (query: PitRequirementListQuery = {}) => request<PitRequirementList>(`/requirements${queryString(requirementQuery(query))}`),
+  listRequirements: (query: PitRequirementListQuery = {}, options: { signal?: AbortSignal } = {}) => request<PitRequirementList>(`/requirements${queryString(requirementQuery(query))}`, { signal: options.signal }),
   createRequirement: (input: PitRequirementWriteInput) => request<{ requirement: PitRequirement }>("/requirements", { method: "POST", body: input }),
   getRequirement: (id: string, options: { deleted?: "only" | "include" } = {}) => request<{ requirement: PitRequirement }>(`/requirements/${encodeURIComponent(id)}${queryString(options as QueryInput)}`),
   updateRequirement: (id: string, input: PitRequirementPatchInput) => request<{ requirement: PitRequirement }>(`/requirements/${encodeURIComponent(id)}`, { method: "PATCH", body: input }),
@@ -137,12 +138,12 @@ export const pitApi = {
   followRequirement: (id: string): Promise<{ following: boolean }> => request<{ following: boolean }>(`/requirements/${encodeURIComponent(id)}/follow`, { method: "PUT" }),
   unfollowRequirement: (id: string): Promise<{ following: boolean }> => request<{ following: boolean }>(`/requirements/${encodeURIComponent(id)}/follow`, { method: "DELETE" }),
 
-  listDictionaries: (query: { type?: PitDictionaryType; includeInactive?: boolean } = {}) => request<{ items: PitDictionaryItem[] }>(`/dictionaries${queryString(query as QueryInput)}`),
+  listDictionaries: (query: { type?: PitDictionaryType; includeInactive?: boolean } = {}, options: { signal?: AbortSignal } = {}) => request<{ items: PitDictionaryItem[] }>(`/dictionaries${queryString(query as QueryInput)}`, { signal: options.signal }),
   createDictionary: (input: PitDictionaryCreateInput) => request<{ item: PitDictionaryItem }>("/dictionaries", { method: "POST", body: input }),
   updateDictionary: (id: string, input: PitDictionaryUpdateInput) => request<{ item: PitDictionaryItem }>(`/dictionaries/${encodeURIComponent(id)}`, { method: "PATCH", body: input }),
   reorderDictionaries: (type: PitDictionaryType, itemIds: string[]) => request<{ items: PitDictionaryItem[] }>("/dictionaries/order", { method: "PUT", body: { type, itemIds } }),
 
-  listUsers: () => request<{ items: PitUser[] }>("/users"),
+  listUsers: (options: { signal?: AbortSignal } = {}) => request<{ items: PitUser[] }>("/users", { signal: options.signal }),
   createUser: (input: PitUserCreateInput) => request<{ user: PitUser }>("/users", { method: "POST", body: input }),
   updateUser: (id: string, input: PitUserUpdateInput) => request<{ user: PitUser }>(`/users/${encodeURIComponent(id)}`, { method: "PATCH", body: input }),
   resetUserPassword: (id: string, password: string) => request<{ reset: boolean; revokedSessions: number }>(`/users/${encodeURIComponent(id)}/reset-password`, { method: "POST", body: { password } }),

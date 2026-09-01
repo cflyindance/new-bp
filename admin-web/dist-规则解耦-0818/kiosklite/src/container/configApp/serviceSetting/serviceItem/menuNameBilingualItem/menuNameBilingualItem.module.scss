@@ -1,0 +1,38 @@
+.wrap {
+  width: 100%;
+  margin-top: 12px;
+  padding-left: 8px;
+  box-sizing: border-box;
+}
+
+.subSection {
+  margin-bottom: 12px;
+}
+
+.subLabel {
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.langBox,
+.radioBox {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.langItem {
+  margin: 0.5rem;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.langItemDisabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.checkText {
+  margin-left: 0.5rem;
+}

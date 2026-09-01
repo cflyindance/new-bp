@@ -33,7 +33,7 @@ const SORTS = new Map([
 const REQUIREMENT_LIST_QUERY_KEYS = new Set([
   "page", "pageSize", "q", "productLine", "status", "priority", "requirementType",
   "problemCategory", "source", "owner", "highlighted", "plannedYear", "plannedMonth",
-  "proposedFrom", "proposedTo", "mine", "followed", "deleted", "sort",
+  "proposedFrom", "proposedTo", "mine", "followed", "active", "overdue", "deleted", "sort",
 ]);
 const SCALAR_FIELDS = new Map([
   ["jiraTicket", "jira_ticket"],
@@ -457,7 +457,7 @@ function addIn(where, params, expression, values) {
   params.push(...values);
 }
 
-export function parseRequirementListQuery(query = {}, actor) {
+export function parseRequirementListQuery(query = {}, actor, { clock = () => new Date() } = {}) {
   for (const key of Object.keys(query)) {
     if (!REQUIREMENT_LIST_QUERY_KEYS.has(key)) fail(`不支持的需求列表参数：${key}`, key);
   }
@@ -539,6 +539,18 @@ export function parseRequirementListQuery(query = {}, actor) {
     where.push("EXISTS (SELECT 1 FROM requirement_followers followed WHERE followed.requirement_id = requirements.id AND followed.user_id = ?)");
     params.push(actor.id);
   }
+  if (booleanQuery(query.active, "active") === true) {
+    where.push("requirements.status NOT IN ('completed', 'rejected')");
+  }
+  if (booleanQuery(query.overdue, "overdue") === true) {
+    const current = dateFromClock(clock);
+    const currentYearMonth = current.getUTCFullYear() * 100 + current.getUTCMonth() + 1;
+    where.push(`requirements.status NOT IN ('completed', 'rejected')
+      AND requirements.planned_year IS NOT NULL
+      AND requirements.planned_month IS NOT NULL
+      AND requirements.planned_year * 100 + requirements.planned_month < ?`);
+    params.push(currentYearMonth);
+  }
 
   const requestedSort = query.sort || "-updatedAt";
   if (typeof requestedSort !== "string") fail("sort 不合法", "sort");
@@ -598,6 +610,7 @@ function listItem(db, row, actor) {
     owner: owner ? { id: owner.userId, displayName: owner.displayName } : null,
     isHighlighted: requirement.isHighlighted,
     following: requirement.following,
+    sourceStatus: requirement.sourceStatus,
     rowVersion: requirement.rowVersion,
     deletedAt: requirement.deletedAt,
     updatedAt: requirement.updatedAt,
@@ -610,7 +623,7 @@ export function createPitRequirementService({ db, clock = () => new Date() }) {
   }
 
   function list(query, actor) {
-    const compiled = parseRequirementListQuery(query || {}, actor);
+    const compiled = parseRequirementListQuery(query || {}, actor, { clock });
     const built = buildRequirementListSql(compiled);
     const total = db.prepare(built.countSql).get(...built.countParams).count;
     const rows = db.prepare(built.selectSql).all(...built.selectParams);

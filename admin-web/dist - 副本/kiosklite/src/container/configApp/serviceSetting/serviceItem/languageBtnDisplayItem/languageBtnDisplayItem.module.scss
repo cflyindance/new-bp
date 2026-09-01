@@ -1,0 +1,23 @@
+.langBox {
+  margin-right: 2rem;
+  display: flex;
+  justify-content: flex-end;
+  width: calc(100% - 26rem);
+  flex-wrap: wrap;
+
+  .langItem {
+    margin: 0.5rem;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+  }
+
+  .langItemDisabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+  }
+
+  .checkText {
+    margin-left: 0.5rem;
+  }
+}

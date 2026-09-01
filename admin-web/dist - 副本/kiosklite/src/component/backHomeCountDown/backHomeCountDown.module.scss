@@ -1,0 +1,77 @@
+.logoBox {
+  width: calc(100vw);
+  position: fixed;
+  top: 0;
+  z-index: 1;
+  justify-content: space-between;
+  align-items: center;
+  height: 8.8rem;
+  background: #fff;
+  // border-radius: 0 0 5rem 5rem;
+  padding: 0 4rem;
+  box-sizing: border-box;
+  box-shadow: 0.1rem 0.2rem 2.3rem rgba(0, 0, 0, 0.1);
+  .indicatorWrapper {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    .homeBtn {
+      width: 4rem;
+      &.rightHome {
+        padding-left: 4rem;
+      }
+    }
+    .backPrePage {
+      transform: rotate(180deg);
+      width: 2rem;
+      padding: 0 4rem 0 4rem;
+      margin-left: -4rem;
+    }
+  }
+  .navigateRight {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    // gap: 2rem;
+
+    .earnReward {
+      display: flex;
+      align-items: center;
+      border-radius: 10rem;
+      padding: 0.8rem 1.6rem;
+      font-weight: 400;
+      color: #000000;
+      font-size: 2rem;
+      background-color: var(--background-crm-login);
+      &.earnRewardLogin {
+        background-color: #f0f0f0;
+      }
+
+      .pointsImg {
+        width: 1.4rem;
+        margin-right: 0.8rem;
+      }
+    }
+  }
+}
+
+.langIcon {
+  z-index: 99;
+  display: flex;
+  align-items: center;
+  margin-left: 2rem;
+  div {
+    font-size: 2.4rem;
+  }
+  span {
+    margin-top: 1rem;
+    display: block;
+    width: 0;
+    height: 0;
+    border: 1rem solid #666;
+    border-top-color: #666;
+    border-bottom-color: transparent;
+    border-left-color: transparent;
+    border-right-color: transparent;
+  }
+}

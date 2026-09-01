@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="default">
+  <head>
+    <script type="module" crossorigin src="./static/js/polyfills.6qqXs5P0.js"></script>
+
+    <script>
+      (function (w, d, s, l, i) {
+        w[l] = w[l] || [];
+        w[l].push({
+          'gtm.start': new Date().getTime(),
+          event: 'gtm.js',
+        });
+        var f = d.getElementsByTagName(s)[0],
+          j = d.createElement(s),
+          dl = l != 'dataLayer' ? '&l=' + l : '';
+        j.async = true;
+        j.src =
+          'https://www.googletagmanager.com/gtm.js?id=' + i + dl;
+        f.parentNode.insertBefore(j, f);
+      })(window, document, 'script', 'dataLayer', 'GTM-TSS3X2L');
+    </script>
+    <meta http-equiv="Expires" content="0" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Cache-control" content="no-cache" />
+    <meta http-equiv="Cache" content="no-cache" />
+    <meta charset="UTF-8" />
+    <meta
+      content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"
+      id="viewport"
+      name="viewport"
+    />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Kiosk</title>
+    <style>
+      html {
+        font-size: 62.5%;
+        -webkit-user-select: none;
+           -moz-user-select: none;
+                user-select: none;
+        /* font-family: 'OpenSans-SemiBold'; */
+        font-family: 'Inter', sans-serif;
+        font: -apple-system-body;
+        overflow: hidden;
+      }
+
+      body {
+        height: 100%;
+        width: 100%;
+        position: fixed;
+        background: #fff;
+        -webkit-text-size-adjust: 100% !important;
+        overflow: hidden;
+      }
+
+      body::before {
+        content: '';
+        position: fixed;
+        top: 1rem;
+        left: 1rem;
+        width: 2rem;
+        height: 2rem;
+        background-color: #ffb702;
+        border-radius: 50%;
+        z-index: 0;
+      }
+
+      #root {
+        height: 100%;
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        user-select: none;
+      }
+
+      /* 初始加载屏幕 - 纯CSS实现，不依赖JavaScript */
+      #initial-loading-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: #fff;
+        display: -moz-box;
+        display: flex;
+        -moz-box-orient: vertical;
+        -moz-box-direction: normal;
+             flex-direction: column;
+        -moz-box-pack: center;
+             justify-content: center;
+        -moz-box-align: center;
+             align-items: center;
+        z-index: 9999;
+        font-family: 'Inter', sans-serif;
+      }
+
+      #initial-loading-screen.hidden {
+        display: none;
+      }
+
+      .loading-spinner {
+        width: 60px;
+        height: 60px;
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #ffb702;
+        border-radius: 50%;
+        -webkit-animation: spin 1s linear infinite;
+           -moz-animation: spin 1s linear infinite;
+                animation: spin 1s linear infinite;
+        margin-bottom: 20px;
+      }
+
+      .loading-text {
+        font-size: 18px;
+        color: #333;
+        margin-bottom: 10px;
+      }
+
+      .network-warning {
+        margin-top: 20px;
+        max-width: 300px;
+        text-align: center;
+      }
+
+      .retry-button {
+        background: #ffb702;
+        color: white;
+        border: none;
+        padding: 1rem 2rem;
+        border-radius: 2rem;
+        font-size: 3rem;
+      }
+
+      button {
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      @-webkit-keyframes spin {
+        0% {
+          -webkit-transform: rotate(0deg);
+                  transform: rotate(0deg);
+        }
+
+        100% {
+          -webkit-transform: rotate(360deg);
+                  transform: rotate(360deg);
+        }
+      }
+
+      @-moz-keyframes spin {
+        0% {
+          -moz-transform: rotate(0deg);
+               transform: rotate(0deg);
+        }
+
+        100% {
+          -moz-transform: rotate(360deg);
+               transform: rotate(360deg);
+        }
+      }
+
+      @keyframes spin {
+        0% {
+          -webkit-transform: rotate(0deg);
+             -moz-transform: rotate(0deg);
+                  transform: rotate(0deg);
+        }
+
+        100% {
+          -webkit-transform: rotate(360deg);
+             -moz-transform: rotate(360deg);
+                  transform: rotate(360deg);
+        }
+      }
+
+      .picker-item-selected {
+        color: white !important;
+      }
+
+      .picker-item {
+        font-size: 4.4rem;
+      }
+
+      .simple-keyboard {
+        font-family:
+          HelveticaNeue-Light, Helvetica Neue Light, Helvetica Neue, Helvetica,
+          Arial, Lucida Grande, sans-serif;
+        width: 100%;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        user-select: none;
+        -moz-box-sizing: border-box;
+             box-sizing: border-box;
+        overflow: hidden;
+        touch-action: manipulation;
+      }
+
+      .simple-keyboard .hg-row {
+        display: -moz-box;
+        display: flex;
+      }
+
+      .simple-keyboard .hg-row:not(:last-child) {
+        margin-bottom: 5px;
+      }
+
+      .simple-keyboard .hg-row .hg-button-container,
+      .simple-keyboard .hg-row .hg-button:not(:last-child) {
+        margin-right: 5px;
+      }
+
+      .simple-keyboard .hg-row > div:last-child {
+        margin-right: 0;
+      }
+
+      .simple-keyboard .hg-row .hg-button-container {
+        display: -moz-box;
+        display: flex;
+      }
+
+      .simple-keyboard .hg-button {
+        display: inline-block;
+        -moz-box-flex: 1;
+             flex-grow: 1;
+        cursor: pointer;
+      }
+
+      .simple-keyboard .hg-button span {
+        pointer-events: none;
+      }
+
+      .simple-keyboard.hg-theme-default {
+        background-color: rgba(0, 0, 0, 0.1);
+        padding: 5px;
+        border-radius: 5px;
+      }
+
+      .simple-keyboard.hg-theme-default .hg-button {
+        box-shadow: 0 0 3px -1px rgba(0, 0, 0, 0.3);
+        height: 60px;
+        border-radius: 5px;
+        -moz-box-sizing: border-box;
+             box-sizing: border-box;
+        font-size: 24px;
+        padding: 5px;
+        background: #fff;
+        border-bottom: 1px solid #b5b5b5;
+        cursor: pointer;
+        display: -moz-box;
+        display: flex;
+        -moz-box-align: center;
+             align-items: center;
+        -moz-box-pack: center;
+             justify-content: center;
+      }
+
+      .simple-keyboard button.hg-button {
+        border-width: 0;
+        outline: 0;
+        font-size: inherit;
+      }
+
+      .simple-keyboard.hg-theme-default:not(.hg-touch-events)
+        .hg-button:active {
+        background: #e4e4e4;
+      }
+
+      .simple-keyboard.hg-theme-default.hg-layout-numeric .hg-button {
+        width: 33.3%;
+        height: 60px;
+        -moz-box-align: center;
+             align-items: center;
+        display: -moz-box;
+        display: flex;
+        -moz-box-pack: center;
+             justify-content: center;
+      }
+
+      .simple-keyboard.hg-theme-default .hg-button.hg-button-numpadadd,
+      .simple-keyboard.hg-theme-default .hg-button.hg-button-numpadenter {
+        height: 85px;
+      }
+
+      .simple-keyboard.hg-theme-default .hg-button.hg-button-numpad0 {
+        width: 105px;
+      }
+
+      .simple-keyboard.hg-theme-default .hg-button.hg-button-com {
+        max-width: 85px;
+      }
+
+      .simple-keyboard.hg-theme-default
+        .hg-button.hg-standardBtn.hg-button-at {
+        max-width: 45px;
+      }
+
+      .simple-keyboard.hg-theme-default .hg-button.hg-selectedButton {
+        background: rgba(5, 25, 70, 0.53);
+        color: #fff;
+      }
+
+      .simple-keyboard.hg-theme-default
+        .hg-button.hg-standardBtn[data-skbtn='.com'] {
+        max-width: 82px;
+      }
+
+      .simple-keyboard.hg-theme-default
+        .hg-button.hg-standardBtn[data-skbtn='@'] {
+        max-width: 60px;
+      }
+    </style>
+    <style>
+      .MuiDrawer-paperAnchorBottom {
+        border-radius: 40px 40px 0 0;
+        -webkit-backface-visibility: hidden;
+        -moz-backface-visibility: hidden;
+        backface-visibility: hidden;
+        -webkit-perspective: 1000;
+        -moz-perspective: 1000;
+        -ms-perspective: 1000;
+        perspective: 1000;
+      }
+
+      .MuiDialog-paperScrollPaper {
+        border-radius: 40px !important;
+      }
+
+      .MuiButton-label {
+        text-transform: none;
+      }
+
+      .MuiTooltip-tooltip {
+        font-size: 1.6rem !important;
+      }
+
+      .MuiSnackbarContent-root {
+        font-size: 1.2rem !important;
+      }
+
+      .MuiAlert-filledError {
+        position: fixed !important;
+        top: 0 !important;
+        width: 100% !important;
+        z-index: 10 !important;
+        left: 0 !important;
+      }
+
+      .MuiAlert-icon {
+        -moz-box-align: center;
+             align-items: center;
+        font-size: 4rem !important;
+      }
+
+      .MuiAlert-message {
+        padding: 1.2rem !important;
+        font-size: 3rem;
+      }
+    </style>
+    <script>window.globalThis = window;</script>
+    <script
+      type="text/javascript"
+      src="../js/jquery-2.0.3.min.js"
+    ></script>
+    <script
+      type="text/javascript"
+      src="/kpos/img/gallery/js/calculator.js?update=TstFr1t"
+    ></script>
+    <script
+      type="text/javascript"
+      src="/kpos/img/gallery/js/promotion.js?update=TstFrt1"
+    ></script>
+    <script
+      type="text/javascript"
+      src="/kpos/img/gallery/js/market.js?update=TstNew2"
+    ></script>
+    <!-- <script type="text/javascript" src="%PUBLIC_URL%/sentry8.min.js"></script> -->
+    <!-- <script type="text/javascript" src="%PUBLIC_URL%/sentry8.init.js"></script> -->
+    <script type="module" crossorigin src="./static/js/index.C6CmhooZ.js"></script>
+    <link rel="modulepreload" crossorigin href="./static/js/toast.CSCQL6mj.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/i18nInstance.DaRIkm-J.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/useTranslation.B73sylN6.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/inheritsLoose.CN9XhpRc.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/react-router.BSaJf7nz.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/classnames.xxiZCMnm.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/objectWithoutProperties.CBsK4NMA.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/es.qVjuCDAb.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/genStyleUtils.XbCgmyiP.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/Compact.hRutQLKm.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/ResizeObserver.es.CWsG3OBb.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/ContextIsolator.D44PScvt.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/CloseOutlined.DAoiM6Fk.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/useId.DK9ObuLu.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/compact-item.6syZYURv.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/CheckOutlined.DelJqhTR.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/PurePanel.DQnjSRA9.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/button.AmXJ9hwD.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/zoom.DfiJkmMI.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/useForceUpdate.aE2hmW5u.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/EyeOutlined.DTe6moEW.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/upload.C36GOczR.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/useCSSVarCls.CK4srWCv.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/KeyCode.CyxpyTZ1.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/RightOutlined.BKfcUCGt.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/useShowArrow.gOlO-O-I.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/context.DYZGp5JM.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/select.D4NYDbiY.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/style.BGqyev1d.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/row.zaUSmudG.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/utils.CfdKItZb.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/useForm.CwPXN7P4.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/useBubbleLock.DCKKSRp2.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/radio.haFCQpP5.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/es.BItZCSvv.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/style.BZ1NjH2j.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/tree-select.BABr7nwB.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/checkbox.CwgBvLuf.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/row.D7PaffZf.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/modal.CjVK2tF-.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/EyeInvisibleOutlined.D9lj2xcS.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/input.GK12KI6G.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/EventBus.pEvSGOOM.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/actions.ZStSd4AC.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/withTranslation.CmiZjMPS.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/dialog.BXiSfQl3.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/icon.BoTHbKtc.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/VtKeyboard.nf7Gi5eK.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/utils.CH15l0li.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/TransitionGroupContext.D2uolwvZ.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/ButtonBase.BvBJ5Glh.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/createSvgIcon.eKyrZlWZ.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/getImageHost.Cj_uOFKP.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/getPromotionCenterDisplayText.vZ4q4BZH.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/PromotionTagsWrap.BJm4n5x9.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/CountRemToPx.HisCP--Y.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/imagePathCache.BgZYrab3.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/star.DpN9Dbnp.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/promotion.DCKyqkJ3.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/moreTip.C_SnlPns.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/process.tyMMa5GY.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/getDeviceDirection.qfiFsUPb.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/rotateLoading.8AePtgZs.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/FallbackLoading.BUiZYKwX.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/handleCountRowNum.oeyVDBBF.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/getStandardCateDish.CPZb-9f9.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/hooks.8G1wDpk8.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/useCrmPromotionContrary.CSBTbMSb.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/usePrevious.Dshf1l9t.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/switch.YDB5PQwN.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/Modal.BKvH2fcf.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/Trans.Dcxw_7be.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/arrow-right.Y10qXdMX.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/backHomeModal.C7QWwxoZ.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/apiPos.DWaRjymk.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/ObjectTree.j7fqicn5.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/chooseTable.BchPsRjP.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/processZeroAmountOrder.AgRX0t3w.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/ComboHeader.ZNstc9xS.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/paymentCountdown.C5vitTA0.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/DescViewModal.Bv4tqeS4.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/checkCRMIntegrationCampaign.8yzEQDsD.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/coin_smile.DMlYM8k6.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/landscapeKeyboardManager.8YPyRXFR.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/NewMemberGift.BF9zM0RJ.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/getLanguageBtnDisplayText.CamB3w7Z.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/loadingText.CJe5kVNz.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/maskPhoneNumber.CI8OFgIi.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/loading.4TcT6xQk.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/Paper.CDj7FGYp.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/Alert.CVa66Wnn.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/numPad.BvehfwHh.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/PhoneNumberEntryLayout.C3dC8ozx.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/SendAuthCode.aamOxuiL.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/handlePaymentTypeRoute.ZLWZSfaT.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/calcTipAmount.zzF_wtQR.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/callModal.CngcRj6L.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/signature.BDQk9JAL.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/getOrderDetail.NOLEt_oW.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/kioskVersionRecord.Bp89aIuU.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/configHeader.B09hXuA1.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/configFooter.bNgv9BaT.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/sushi.thIcvItV.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/getBsTime.CV1NitsD.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/getKioskMenu.1hqRH0h8.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/transformTreeMenu.Cs6FSLdk.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/allSysConfigHelper.BYZ5QOx_.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/login_discount.BZyqDTVb.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/ruaPaymentProgress.CJo7fKZo.chunk.js">
+    <link rel="modulepreload" crossorigin href="./static/js/triposCardInputMode.B1FQJdFH.chunk.js">
+    <link rel="stylesheet" crossorigin href="./static/css/toast.D38AmmTA.css">
+    <link rel="stylesheet" crossorigin href="./static/css/dialog.C5_bKPUX.css">
+    <link rel="stylesheet" crossorigin href="./static/css/icon.Ck2NiSdQ.css">
+    <link rel="stylesheet" crossorigin href="./static/css/VtKeyboard.Phk8q-Qw.css">
+    <link rel="stylesheet" crossorigin href="./static/css/PromotionTagsWrap.DJdgsHqa.css">
+    <link rel="stylesheet" crossorigin href="./static/css/star.DtqXtBpY.css">
+    <link rel="stylesheet" crossorigin href="./static/css/FallbackLoading.DTshi5Mh.css">
+    <link rel="stylesheet" crossorigin href="./static/css/useCrmPromotionContrary.Rck2bqFz.css">
+    <link rel="stylesheet" crossorigin href="./static/css/backHomeModal.B9OngW1A.css">
+    <link rel="stylesheet" crossorigin href="./static/css/processZeroAmountOrder.B2IcNcrg.css">
+    <link rel="stylesheet" crossorigin href="./static/css/ComboHeader.B87JIzuK.css">
+    <link rel="stylesheet" crossorigin href="./static/css/DescViewModal.Ca_8uYDN.css">
+    <link rel="stylesheet" crossorigin href="./static/css/NewMemberGift.DnxkTI_2.css">
+    <link rel="stylesheet" crossorigin href="./static/css/loadingText.oGzi0u7K.css">
+    <link rel="stylesheet" crossorigin href="./static/css/loading.DMvD7_pe.css">
+    <link rel="stylesheet" crossorigin href="./static/css/numPad.e1KBxC6d.css">
+    <link rel="stylesheet" crossorigin href="./static/css/PhoneNumberEntryLayout.BScuZrRk.css">
+    <link rel="stylesheet" crossorigin href="./static/css/SendAuthCode.ClRFfEEJ.css">
+    <link rel="stylesheet" crossorigin href="./static/css/calcTipAmount.DfValp_O.css">
+    <link rel="stylesheet" crossorigin href="./static/css/callModal.C0ZrTGn2.css">
+    <link rel="stylesheet" crossorigin href="./static/css/signature.bBF7B5Ld.css">
+    <link rel="stylesheet" crossorigin href="./static/css/configHeader.D4lOqvLA.css">
+    <link rel="stylesheet" crossorigin href="./static/css/configFooter.CAnSJ8Qa.css">
+    <link rel="stylesheet" crossorigin href="./static/css/index.BzT4BYYz.css">
+    <script type="module">import'data:text/javascript,if(!import.meta.resolve)throw Error("import.meta.resolve not supported")';import.meta.url;import("_").catch(()=>1);(async function*(){})().next();window.__vite_is_modern_browser=true</script>
+    <script type="module">!function(){if(window.__vite_is_modern_browser)return;console.warn("vite: loading legacy chunks, syntax error above and the same error below should be ignored");var e=document.getElementById("vite-legacy-polyfill"),n=document.createElement("script");n.src=e.src,n.onload=function(){System.import(document.getElementById('vite-legacy-entry').getAttribute('data-src'))},document.body.appendChild(n)}();</script>
+  </head>
+
+  <body>
+    <noscript>
+      <iframe
+        src="https://www.googletagmanager.com/ns.html?id=GTM-TSS3X2L"
+        height="0"
+        width="0"
+        style="display: none; visibility: hidden"
+      >
+      </iframe>
+    </noscript>
+
+    <!-- 初始加载屏幕 -->
+    <div id="initial-loading-screen">
+      <div class="loading-spinner"></div>
+      <div class="loading-text">Loading in progress, please wait</div>
+      <div
+        id="network-warning"
+        class="network-warning"
+        style="display: none"
+      >
+        <button class="retry-button" onclick="retryConnection()">
+          refresh
+        </button>
+      </div>
+    </div>
+
+    <section id="root" unselectable="on"></section>
+    <script src="./bridge.js"></script>
+
+    <script type="text/javascript">
+      // 5s后展示刷新按钮
+      function showRefresh() {
+        var warning = document.getElementById('network-warning');
+        var loadingScreen = document.getElementById(
+          'initial-loading-screen'
+        );
+
+        if (window.refreshTimer) {
+          clearTimeout(window.refreshTimer);
+        }
+        window.refreshTimer = setTimeout(function () {
+          if (
+            !window.loadingState ||
+            !loadingScreen.classList.contains('hidden')
+          ) {
+            if (warning) {
+              warning.style.display = 'block';
+            }
+          }
+          window.refreshTimer = null;
+        }, 5000);
+      }
+
+      // 刷新
+      function retryConnection() {
+        window.location.reload();
+      }
+
+      // 隐藏初始加载屏幕
+      function hideInitialLoading() {
+        if (window.refreshTimer) {
+          clearTimeout(window.refreshTimer);
+          window.refreshTimer = null;
+        }
+
+        var loadingScreen = document.getElementById(
+          'initial-loading-screen'
+        );
+        if (loadingScreen) {
+          loadingScreen.classList.add('hidden');
+          setTimeout(function () {
+            loadingScreen.style.display = 'none';
+          }, 100);
+        }
+      }
+
+      // 暴露给全局的隐藏初始loading函数和js加载状态
+      window.retryConnection = retryConnection;
+      window.hideInitialLoading = hideInitialLoading;
+      window.loadingState = false;
+      window.refreshTimer = null;
+      showRefresh();
+    </script>
+    <script nomodule>!function(){var e=document,t=e.createElement("script");if(!("noModule"in t)&&"onbeforeload"in t){var n=!1;e.addEventListener("beforeload",(function(e){if(e.target===t)n=!0;else if(!e.target.hasAttribute("nomodule")||!n)return;e.preventDefault()}),!0),t.type="module",t.src=".",e.head.appendChild(t),t.remove()}}();</script>
+    <script nomodule crossorigin id="vite-legacy-polyfill" src="./static/js/polyfills-legacy.Dkro3fND.js"></script>
+    <script nomodule crossorigin id="vite-legacy-entry" data-src="./static/js/index-legacy.qhaNA4Ea.js">System.import(document.getElementById('vite-legacy-entry').getAttribute('data-src'))</script>
+  </body>
+</html>

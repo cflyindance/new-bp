@@ -124,6 +124,9 @@ import type {
   UpdateGroupInput,
 } from "./enterprise-merchant-types";
 import { hardwareHref } from "./enterprise-hardware-scope";
+import { showAppToast } from "../ui/app-toast";
+import { openConfirmDialog } from "../ui/app-confirm-dialog";
+import { openPromptDialog } from "../ui/app-prompt-dialog";
 
 /** 集团管理页固定展示米聚企业（该页无 Enterprise 切换器） */
 function groupMgmtFilter(extra: GroupFilter = {}): GroupFilter {
@@ -1873,7 +1876,7 @@ export function bindEnterpriseMerchant(onMount: () => void): void {
       const merchantId = btn.dataset.merchantImpersonate;
       if (!merchantId) return;
       if (!enterMerchantBackendAsImpersonator(merchantId, merchantHref(""))) {
-        window.alert("当前品牌状态不支持代登录。");
+        showAppToast("当前品牌状态不支持代登录。", { variant: "error" });
       }
     });
   }
@@ -1917,14 +1920,22 @@ export function bindEnterpriseMerchant(onMount: () => void): void {
     const groupId = btn.dataset.groupDelete;
     const groupName = btn.dataset.groupName ?? groupId;
     if (!groupId) return;
-    if (!window.confirm(`确认删除集团「${groupName}」？此操作不可恢复。`)) return;
-    const result = deleteGroup(groupId, undefined, DEFAULT_ENTERPRISE_ID);
-    if (!result.ok) {
-      window.alert(result.reason);
-      return;
-    }
-    applyGroupFilter();
-    onMount();
+    void (async () => {
+      const ok = await openConfirmDialog({
+        title: "删除集团",
+        message: `确认删除集团「${groupName}」？此操作不可恢复。`,
+        confirmLabel: "确认删除",
+        danger: true,
+      });
+      if (!ok) return;
+      const result = deleteGroup(groupId, undefined, DEFAULT_ENTERPRISE_ID);
+      if (!result.ok) {
+        showAppToast(result.reason, { variant: "error" });
+        return;
+      }
+      applyGroupFilter();
+      onMount();
+    })();
   });
 
   document.querySelector<HTMLFormElement>("[data-enterprise-group-form]")?.addEventListener("submit", (e) => {
@@ -1933,7 +1944,7 @@ export function bindEnterpriseMerchant(onMount: () => void): void {
     const fd = new FormData(form);
     const name = String(fd.get("name") ?? "").trim();
     if (!name) {
-      window.alert("请填写集团名称");
+      showAppToast("请填写集团名称", { variant: "error" });
       return;
     }
     const groupId = form.dataset.groupId;
@@ -1945,7 +1956,7 @@ export function bindEnterpriseMerchant(onMount: () => void): void {
       };
       const updated = updateGroup(groupId, input, undefined, DEFAULT_ENTERPRISE_ID);
       if (!updated) {
-        window.alert("保存失败：集团不存在或无权访问。");
+        showAppToast("保存失败：集团不存在或无权访问。", { variant: "error" });
         return;
       }
     } else {
@@ -1966,14 +1977,22 @@ export function bindEnterpriseMerchant(onMount: () => void): void {
       const groupId = btn.dataset.groupDelete;
       const groupName = btn.dataset.groupName ?? groupId;
       if (!groupId) return;
-      if (!window.confirm(`确认删除集团「${groupName}」？此操作不可恢复。`)) return;
-      const result = deleteGroup(groupId, undefined, DEFAULT_ENTERPRISE_ID);
-      if (!result.ok) {
-        window.alert(result.reason);
-        return;
-      }
-      location.hash = merchantHref("/groups");
-      onMount();
+      void (async () => {
+        const ok = await openConfirmDialog({
+          title: "删除集团",
+          message: `确认删除集团「${groupName}」？此操作不可恢复。`,
+          confirmLabel: "确认删除",
+          danger: true,
+        });
+        if (!ok) return;
+        const result = deleteGroup(groupId, undefined, DEFAULT_ENTERPRISE_ID);
+        if (!result.ok) {
+          showAppToast(result.reason, { variant: "error" });
+          return;
+        }
+        location.hash = merchantHref("/groups");
+        onMount();
+      })();
     });
   });
 
@@ -1984,12 +2003,12 @@ export function bindEnterpriseMerchant(onMount: () => void): void {
     const businessTypeIds = fd.getAll("businessTypeIds").map(String);
     const productLineIds = fd.getAll("productLineIds").map(String);
     if (businessTypeIds.length === 0 || productLineIds.length === 0) {
-      window.alert("请至少选择一个业态和一个产线");
+      showAppToast("请至少选择一个业态和一个产线", { variant: "error" });
       return;
     }
     const groupId = String(fd.get("groupId") ?? "");
     if (!groupId) {
-      window.alert("请选择所属集团");
+      showAppToast("请选择所属集团", { variant: "error" });
       return;
     }
     const input: CreateMerchantInput = {
@@ -2030,14 +2049,14 @@ export function bindEnterpriseMerchant(onMount: () => void): void {
       if (!merchantId || !action) return;
       if (action === "impersonate") {
         if (!enterMerchantBackendAsImpersonator(merchantId, merchantDetailHref(merchantId))) {
-          window.alert("当前品牌状态不支持代登录。");
+          showAppToast("当前品牌状态不支持代登录。", { variant: "error" });
         }
         return;
       }
       if (action === "send-invite") {
         const preview = sendOnboardingInvite(merchantId);
-        if (preview) window.alert(`邀请邮件已发送（演示预览）：\n\n${preview}`);
-        else window.alert("无法发送邀请：品牌状态不符或不存在。");
+        if (preview) showAppToast(`邀请邮件已发送（演示预览）：\n\n${preview}`, { variant: "success" });
+        else showAppToast("无法发送邀请：品牌状态不符或不存在。", { variant: "error" });
         onMount();
         return;
       }
@@ -2052,9 +2071,17 @@ export function bindEnterpriseMerchant(onMount: () => void): void {
         return;
       }
       if (action === "initiate-closing") {
-        if (!window.confirm("确认发起关闭流程？将进入 30 天冷静期（只读）。")) return;
-        initiateMerchantClosing(merchantId);
-        onMount();
+        void (async () => {
+          const ok = await openConfirmDialog({
+            title: "发起关闭流程",
+            message: "确认发起关闭流程？将进入 30 天冷静期（只读）。",
+            confirmLabel: "确认发起关闭",
+            danger: true,
+          });
+          if (!ok) return;
+          initiateMerchantClosing(merchantId);
+          onMount();
+        })();
         return;
       }
       if (action === "cancel-closing") {
@@ -2063,9 +2090,17 @@ export function bindEnterpriseMerchant(onMount: () => void): void {
         return;
       }
       if (action === "finalize-closing" || action === "force-close") {
-        if (!window.confirm("确认立即关闭并归档该品牌？")) return;
-        finalizeMerchantClosing(merchantId);
-        onMount();
+        void (async () => {
+          const ok = await openConfirmDialog({
+            title: "关闭并归档品牌",
+            message: "确认立即关闭并归档该品牌？",
+            confirmLabel: "确认关闭归档",
+            danger: true,
+          });
+          if (!ok) return;
+          finalizeMerchantClosing(merchantId);
+          onMount();
+        })();
       }
     });
   });
@@ -2075,7 +2110,7 @@ export function bindEnterpriseMerchant(onMount: () => void): void {
       const merchantId = btn.dataset.merchantImpersonate;
       if (!merchantId) return;
       if (!enterMerchantBackendAsImpersonator(merchantId, merchantHref(""))) {
-        window.alert("当前品牌状态不支持代登录。");
+        showAppToast("当前品牌状态不支持代登录。", { variant: "error" });
       }
     });
   });
@@ -2101,7 +2136,7 @@ export function bindEnterpriseMerchant(onMount: () => void): void {
       if (!requestId) return;
       const merchant = approveProvisioningRequest(requestId);
       if (merchant) {
-        window.alert(`已通过申请并创建品牌「${merchant.name}」，onboarding 邀请已发送。`);
+        showAppToast(`已通过申请并创建品牌「${merchant.name}」，onboarding 邀请已发送。`, { variant: "success" });
         onMount();
       }
     });
@@ -2112,7 +2147,7 @@ export function bindEnterpriseMerchant(onMount: () => void): void {
       const merchantId = btn.dataset.merchantCrmSync;
       if (!merchantId) return;
       await apiPostCrmSync(merchantId);
-      window.alert("CRM 合同已同步。");
+      showAppToast("CRM 合同已同步。", { variant: "success" });
       onMount();
     });
   });
@@ -2136,7 +2171,7 @@ export function bindEnterpriseMerchant(onMount: () => void): void {
         if (demo === "list") await apiListMerchants();
         else if (demo === "reports") await apiGetMerchantReports();
       } catch {
-        window.alert("API 调用失败");
+        showAppToast("API 调用失败", { variant: "error" });
       }
       onMount();
     });
@@ -2146,10 +2181,16 @@ export function bindEnterpriseMerchant(onMount: () => void): void {
     btn.addEventListener("click", () => {
       const requestId = btn.dataset.merchantRequestReject;
       if (!requestId) return;
-      const reason = window.prompt("请输入驳回原因：");
-      if (reason === null) return;
-      rejectProvisioningRequest(requestId, reason);
-      onMount();
+      void (async () => {
+        const reason = await openPromptDialog({
+          title: "驳回申请",
+          label: "驳回原因",
+          required: true,
+        });
+        if (reason === null) return;
+        rejectProvisioningRequest(requestId, reason);
+        onMount();
+      })();
     });
   });
 
@@ -2174,7 +2215,7 @@ export function bindEnterpriseMerchant(onMount: () => void): void {
       const fd = new FormData(form);
       const linkedMerchantId = String(fd.get("linkedMerchantId") ?? "");
       if (!linkedMerchantId) {
-        window.alert("请选择要挂载的入驻品牌");
+        showAppToast("请选择要挂载的入驻品牌", { variant: "error" });
         return;
       }
       const result = mountMerchantToOrg({
@@ -2184,7 +2225,7 @@ export function bindEnterpriseMerchant(onMount: () => void): void {
         regionId: String(fd.get("regionId") ?? "") || undefined,
       });
       if (!result) {
-        window.alert("挂载失败：该品牌可能已挂载到其他组织，或不可选");
+        showAppToast("挂载失败：该品牌可能已挂载到其他组织，或不可选", { variant: "error" });
         return;
       }
       onMount();
@@ -2212,7 +2253,7 @@ export function bindEnterpriseMerchant(onMount: () => void): void {
       if (!requestId) return;
       const merchant = approvePosStoreRequest(requestId);
       if (!merchant) return;
-      window.alert(`已通过，分配 BID ${merchant.bid ?? "—"}，可在组织页挂载到连锁品牌。`);
+      showAppToast(`已通过，分配 BID ${merchant.bid ?? "—"}，可在组织页挂载到连锁品牌。`, { variant: "success" });
       onMount();
     });
   });
@@ -2221,10 +2262,16 @@ export function bindEnterpriseMerchant(onMount: () => void): void {
     btn.addEventListener("click", () => {
       const requestId = btn.dataset.posStoreRequestReject;
       if (!requestId) return;
-      const reason = window.prompt("请输入驳回原因：");
-      if (reason === null) return;
-      rejectPosStoreRequest(requestId, reason);
-      onMount();
+      void (async () => {
+        const reason = await openPromptDialog({
+          title: "驳回门店申请",
+          label: "驳回原因",
+          required: true,
+        });
+        if (reason === null) return;
+        rejectPosStoreRequest(requestId, reason);
+        onMount();
+      })();
     });
   });
 
@@ -2279,7 +2326,7 @@ export function bindEnterpriseMerchant(onMount: () => void): void {
       const businessTypeIds = parseIds(form.dataset.businessTypeIds);
       const productLineIds = parseIds(form.dataset.productLineIds);
       if (businessTypeIds.length === 0 || productLineIds.length === 0) {
-        window.alert("当前组织缺少业态或产线配置，无法保存服务");
+        showAppToast("当前组织缺少业态或产线配置，无法保存服务", { variant: "error" });
         return;
       }
       const includedSelection = includedRoot ? readFourColumnSelection(includedRoot) : {};
@@ -2292,7 +2339,7 @@ export function bindEnterpriseMerchant(onMount: () => void): void {
         syncToMerchant: true,
         forceSync: false,
       });
-      window.alert(`已保存。平台预设同步：更新 ${result.syncResult?.updated ?? 0} 项，跳过 ${result.syncResult?.skipped ?? 0} 项。`);
+      showAppToast(`已保存。平台预设同步：更新 ${result.syncResult?.updated ?? 0} 项，跳过 ${result.syncResult?.skipped ?? 0} 项。`, { variant: "success" });
       onMount();
     });
   });
@@ -2347,10 +2394,10 @@ export function bindEnterpriseMerchant(onMount: () => void): void {
       const paidSelection = paidRoot ? readFourColumnSelection(paidRoot) : {};
       const result = saveStoreCapability(storeId, { includedSelection, paidSelection });
       if (!result) {
-        window.alert("保存失败：门店或品牌能力不存在");
+        showAppToast("保存失败：门店或品牌能力不存在", { variant: "error" });
         return;
       }
-      window.alert(`已保存本店能力：开通 ${result.enabledKeys.length} 项`);
+      showAppToast(`已保存本店能力：开通 ${result.enabledKeys.length} 项`, { variant: "success" });
       onMount();
     });
   });
@@ -2361,7 +2408,7 @@ export function bindEnterpriseMerchant(onMount: () => void): void {
       if (!merchantId) return;
       const result = syncMerchantCapabilityPresets(merchantId, true);
       recordMerchantPresetSyncOnly(merchantId, result);
-      window.alert(`重新同步完成：更新 ${result.updated} 项，跳过 ${result.skipped} 项。`);
+      showAppToast(`重新同步完成：更新 ${result.updated} 项，跳过 ${result.skipped} 项。`, { variant: "success" });
       onMount();
     });
   });

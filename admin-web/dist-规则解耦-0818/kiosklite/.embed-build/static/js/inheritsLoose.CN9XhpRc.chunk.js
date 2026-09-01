@@ -1,0 +1,1 @@
+import{c as e}from"./toast.CSCQL6mj.chunk.js";import{v as t,y as n}from"./useTranslation.B73sylN6.chunk.js";function r(e,n){e.prototype=Object.create(n.prototype),e.prototype.constructor=e,t(e,n)}var i=e((()=>{n()}));export{i as n,r as t};

@@ -23,6 +23,8 @@ import {
   renderImageSourcePickerModalsHtml,
 } from "./image-source-picker-ui";
 import { readModuleSettingJson, writeModuleSettingJson } from "./module-settings-form-ui";
+import { showAppToast } from "../ui/app-toast";
+import { openConfirmDialog } from "../ui/app-confirm-dialog";
 import {
   ensureGuestCategoryModeToggleMigrated,
   GUEST_MENU_CATEGORY_MODE_SEQ,
@@ -1514,7 +1516,7 @@ function saveCategoryFormDialog(root: HTMLElement, remount: () => void): void {
   ].map((input) => input.value);
   const schedules = readBusinessHourSchedules();
   if (scheduleIds.length === 0 && schedules.length > 0) {
-    window.alert("请至少选择一个营业时段。");
+    showAppToast("请至少选择一个营业时段。", { variant: "error" });
     return;
   }
   const preview = dialog.querySelector<HTMLImageElement>("[data-foh-cat-image-preview]");
@@ -2230,11 +2232,19 @@ function bindFohCategorySpecialMenuUi(root: HTMLElement, remount: () => void): v
     if (deleteBtn) {
       const id = deleteBtn.getAttribute("data-foh-special-menu-delete");
       if (!id) return;
-      if (!window.confirm("确定删除该特殊品类？")) return;
-      const state = readFohCategorySettingsState();
-      state.specialMenus = state.specialMenus.filter((entry) => entry.id !== id);
-      writeFohCategorySettingsState(state);
-      remountFohCategorySettings(remount);
+      void (async () => {
+        const ok = await openConfirmDialog({
+          title: "删除特殊品类",
+          message: "确定删除该特殊品类？",
+          confirmLabel: "确认删除",
+          danger: true,
+        });
+        if (!ok) return;
+        const state = readFohCategorySettingsState();
+        state.specialMenus = state.specialMenus.filter((entry) => entry.id !== id);
+        writeFohCategorySettingsState(state);
+        remountFohCategorySettings(remount);
+      })();
       return;
     }
     if (target.closest("[data-foh-special-menu-image-pick]")) {

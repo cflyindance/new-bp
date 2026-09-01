@@ -1,0 +1,1 @@
+(function(){System.register([`./actions-legacy.3xnNVqao.chunk.js`],function(e,t){var n;return{setters:[function(e){n=e.wi}],execute:function(){e(`t`,function(){var e=n.getState(),t=e.crm.selectedFreeItem,r=e.currentOrder.itemList;return r.length===0?t.length>0:r.every(function(e){return!!e?.isFreeItem})})}}})})();

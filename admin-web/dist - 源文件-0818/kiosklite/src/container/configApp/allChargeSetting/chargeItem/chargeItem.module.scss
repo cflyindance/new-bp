@@ -1,0 +1,55 @@
+.chargeItemBox {
+  padding: 2rem;
+  padding-right: 0;
+  margin-bottom: 0.2rem;
+  background-color: #fff;
+  .chargeItemTitle {
+    font-weight: 600;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem 1rem;
+    .titleDualPriceHint {
+      font-weight: 400;
+      font-size: 1.3rem;
+      color: #e53935;
+      line-height: 1.4;
+    }
+    .checkbox {
+      transform: scale(1.2);
+      margin: 0 1rem 0 2rem;
+    }
+  }
+  .chargeItemData {
+    padding: 2rem 2rem 0 0;
+    overflow: hidden;
+    .chargeItem {
+      margin-right: 2rem;
+      margin-bottom: 1rem;
+      float: left;
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+    }
+    .chargeItemDisabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+      pointer-events: none;
+    }
+    .nocharge {
+      font-size: 1.4rem;
+      i {
+        margin-right: 1rem;
+        display: inline-block;
+        width: 2rem;
+        height: 2rem;
+        text-align: center;
+        line-height: 2rem;
+        font-style: normal;
+        color: #fff;
+        border-radius: 50%;
+        background-color: var(--primary-color);
+      }
+    }
+  }
+}

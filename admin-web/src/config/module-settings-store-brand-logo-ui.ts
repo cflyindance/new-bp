@@ -14,6 +14,7 @@ import {
 } from "./image-material-library";
 import { readModuleSettingJson, writeModuleSettingJson } from "./module-settings-form-ui";
 import type { ModuleSettingCatalogItem } from "./module-settings-catalog";
+import { showAppToast } from "../ui/app-toast";
 
 export const STORE_RESTAURANT_LOGO_SEQ = 433;
 export const STORE_RESTAURANT_LOGO_FIELD_ID = "433-restaurant-logo";
@@ -288,11 +289,11 @@ function updateLibrarySelectedCount(host: HTMLElement, count: number): void {
 
 async function applyLocalLogoFile(host: HTMLElement, file: File): Promise<void> {
   if (!LOGO_ALLOWED_MIME_TYPES.has(file.type)) {
-    window.alert("仅支持 JPG、JPEG、PNG、GIF 格式");
+    showAppToast("仅支持 JPG、JPEG、PNG、GIF 格式", { variant: "error" });
     return;
   }
   if (file.size > LOGO_MAX_BYTES) {
-    window.alert("图片大小不能超过 1MB");
+    showAppToast("图片大小不能超过 1MB", { variant: "error" });
     return;
   }
   let dataUrl: string;
@@ -391,12 +392,12 @@ function bindHost(host: HTMLElement): void {
     }
     if (target.closest("[data-store-logo-library-confirm]")) {
       if (!librarySelectedId) {
-        window.alert("请选择一个素材");
+        showAppToast("请选择一个素材", { variant: "error" });
         return;
       }
       const material = readMaterialImages().find((m) => m.id === librarySelectedId);
       if (!material) {
-        window.alert("素材不存在或已删除");
+        showAppToast("素材不存在或已删除", { variant: "error" });
         return;
       }
       writeStoreRestaurantLogo({
@@ -419,7 +420,7 @@ function bindHost(host: HTMLElement): void {
     try {
       await applyLocalLogoFile(host, file);
     } catch {
-      window.alert("图片读取失败，请重试");
+      showAppToast("图片读取失败，请重试", { variant: "error" });
     }
   });
 

@@ -166,7 +166,7 @@ export const FOH_SETTINGS_ASSIGN_MAP = {
   "foh-guest-menu-home": [599, 604, 601, 602, 600, 611, 532],
   "foh-guest-menu-body": [516, 518, 606, 517, 520, 608, 515, 528, 618, 616, 524, 607, 519, 645, 509, 525, 526, 617],
   "foh-guest-hotpot": [572, 574, 573, 575],
-  "foh-guest-duration-scenarios": [443, 571, 674, 577, 578, 579, 580],
+  "foh-guest-duration-scenarios": [571, 674, 577, 578, 579, 580],
   "foh-tableside-service": [641, 640, 333],
   "foh-guest-order-notes": [521, 522, 523],
   "foh-wait-time-display": [673, 535, 536, 537, 538, 539, 540],

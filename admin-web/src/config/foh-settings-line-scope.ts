@@ -718,13 +718,6 @@ export const FOH_LINE_SCOPE_BY_SEQ: Record<number, FohLineScopeEntry> = {
     "source": "ui-module",
     "module": "module-settings-clear-table-client-notification-ui.ts"
   },
-  "443": {
-    "groupKey": "foh-guest-duration-scenarios",
-    "lines": [
-      "store-wide"
-    ],
-    "source": "store-wide"
-  },
   "483": {
     "groupKey": "foh-pos-order-toolbar",
     "lines": [

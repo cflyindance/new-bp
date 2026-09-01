@@ -2,6 +2,8 @@
  * 硬件管理中心 → 硬件 → 打印机：打印机台账（seq 352–363）。
  */
 
+import { openConfirmDialog } from "../ui/app-confirm-dialog";
+import { showAppToast } from "../ui/app-toast";
 import { readModuleSettingJson, writeModuleSettingJson } from "./module-settings-form-ui";
 
 export const PRINTER_DEVICES_FIELD_ID = "dm-printer-devices";
@@ -584,7 +586,7 @@ function collectFormState(form: HTMLElement): Partial<PrinterHardwareDevice> | n
 function saveDevice(deviceId: string, isNew: boolean, form: HTMLElement): boolean {
   const patch = collectFormState(form);
   if (!patch) {
-    window.alert("请填写名称。");
+    showAppToast("请填写名称。", { variant: "error" });
     return false;
   }
 
@@ -646,9 +648,17 @@ export function bindDeviceManagementPrinterHardware(root: ParentNode = document)
       if (!id) return;
       const device = findPrinterHardwareDevice(id);
       const label = device?.name ?? id;
-      if (!window.confirm(`确定删除打印机「${label}」？删除后不可恢复。`)) return;
-      deleteDevice(id);
-      rerenderList(page, search?.value ?? "");
+      void (async () => {
+        const ok = await openConfirmDialog({
+          title: "删除打印机",
+          message: `确定删除打印机「${label}」？删除后不可恢复。`,
+          confirmLabel: "确认删除",
+          danger: true,
+        });
+        if (!ok) return;
+        deleteDevice(id);
+        rerenderList(page, search?.value ?? "");
+      })();
     });
     return;
   }

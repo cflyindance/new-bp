@@ -21,6 +21,10 @@ import {
 } from "./permission-four-column-ui";
 import { bindNavBlueprintDragSort } from "./nav-blueprint-drag-sort";
 
+import { showAppToast } from "../ui/app-toast";
+
+import { openConfirmDialog } from "../ui/app-confirm-dialog";
+
 import { findL2Node } from "./permission-four-column-nav";
 
 import { l2HasCatalogNavSections } from "./module-settings-subnav";
@@ -986,25 +990,39 @@ export function bindNavBlueprint(onMount: () => void): void {
 
     if (target.closest("[data-nb-sync-presets]")) {
 
-      const published = getPublishedNavBlueprint(DEFAULT_NAV_BLUEPRINT_ID);
+      void (async () => {
 
-      if (!published || published.version <= 0) {
+        const published = getPublishedNavBlueprint(DEFAULT_NAV_BLUEPRINT_ID);
 
-        window.alert("请先发布导航蓝图。");
+        if (!published || published.version <= 0) {
 
-        return;
+          showAppToast("请先发布导航蓝图。", { variant: "error" });
 
-      }
+          return;
 
-      if (!window.confirm(`将 ${formatBlueprintVersionLabel(published)} 同步到全业态×产线平台预设？`)) return;
+        }
 
-      const result = syncBlueprintToEnterprisePresets(published);
+        const ok = await openConfirmDialog({
 
-      window.alert(`已同步到 ${result.updated} 个组合。`);
+          title: "同步到平台预设",
 
-      location.hash = `#${ENTERPRISE_PLATFORM_PRESET_SCOPE.routePrefix}`;
+          message: `将 ${formatBlueprintVersionLabel(published)} 同步到全业态×产线平台预设？`,
 
-      onMount();
+          confirmLabel: "确认同步",
+
+        });
+
+        if (!ok) return;
+
+        const result = syncBlueprintToEnterprisePresets(published);
+
+        showAppToast(`已同步到 ${result.updated} 个组合。`, { variant: "success" });
+
+        location.hash = `#${ENTERPRISE_PLATFORM_PRESET_SCOPE.routePrefix}`;
+
+        onMount();
+
+      })();
 
       return;
 
@@ -1024,11 +1042,27 @@ export function bindNavBlueprint(onMount: () => void): void {
 
     if (target.closest("[data-nb-restore-system]")) {
 
-      if (!window.confirm("确定恢复系统预设导航为默认？仅清空系统模块的启用态与设置重归属。")) return;
+      void (async () => {
 
-      restoreNavBlueprintSystemDefault(blueprintId);
+        const ok = await openConfirmDialog({
 
-      onMount();
+          title: "恢复系统预设",
+
+          message: "确定恢复系统预设导航为默认？仅清空系统模块的启用态与设置重归属。",
+
+          confirmLabel: "确认恢复",
+
+          danger: true,
+
+        });
+
+        if (!ok) return;
+
+        restoreNavBlueprintSystemDefault(blueprintId);
+
+        onMount();
+
+      })();
 
       return;
 
@@ -1038,11 +1072,27 @@ export function bindNavBlueprint(onMount: () => void): void {
 
     if (target.closest("[data-nb-restore-custom]")) {
 
-      if (!window.confirm("确定清空全部自定义导航？自定义 L1/L2/L3 与设置归属将删除。")) return;
+      void (async () => {
 
-      restoreNavBlueprintCustomTree(blueprintId);
+        const ok = await openConfirmDialog({
 
-      onMount();
+          title: "清空自定义导航",
+
+          message: "确定清空全部自定义导航？自定义 L1/L2/L3 与设置归属将删除。",
+
+          confirmLabel: "确认清空",
+
+          danger: true,
+
+        });
+
+        if (!ok) return;
+
+        restoreNavBlueprintCustomTree(blueprintId);
+
+        onMount();
+
+      })();
 
       return;
 
@@ -1084,35 +1134,39 @@ export function bindNavBlueprint(onMount: () => void): void {
 
       ev.stopPropagation();
 
-      const l1Node = getNavBlueprintCustomL1Node(blueprintId, deleteL1Id);
+      void (async () => {
 
-      if (!l1Node) {
+        const l1Node = getNavBlueprintCustomL1Node(blueprintId, deleteL1Id);
 
-        window.alert("未找到该一级导航，可能已被删除。");
+        if (!l1Node) {
+
+          showAppToast("未找到该一级导航，可能已被删除。", { variant: "error" });
+
+          onMount();
+
+          return;
+
+        }
+
+        const ok = await openConfirmDialog({
+
+          title: "删除一级导航",
+
+          message: `确定删除一级导航「${l1Node.label}」？其下二级 / 三级导航与设置归属将一并移除。`,
+
+          confirmLabel: "确认删除",
+
+          danger: true,
+
+        });
+
+        if (!ok) return;
+
+        removeNavBlueprintCustomNode(blueprintId, l1Node.id);
 
         onMount();
 
-        return;
-
-      }
-
-      if (
-
-        !window.confirm(
-
-          `确定删除一级导航「${l1Node.label}」？其下二级 / 三级导航与设置归属将一并移除。`,
-
-        )
-
-      ) {
-
-        return;
-
-      }
-
-      removeNavBlueprintCustomNode(blueprintId, l1Node.id);
-
-      onMount();
+      })();
 
       return;
 
@@ -1128,7 +1182,7 @@ export function bindNavBlueprint(onMount: () => void): void {
 
       if (!parentKey) {
 
-        window.alert("请先在自定义模块左侧选择一级导航。");
+        showAppToast("请先在自定义模块左侧选择一级导航。", { variant: "error" });
 
         return;
 
@@ -1138,7 +1192,7 @@ export function bindNavBlueprint(onMount: () => void): void {
 
       if (blocked) {
 
-        window.alert(blocked);
+        showAppToast(blocked, { variant: "error" });
 
         return;
 
@@ -1164,7 +1218,7 @@ export function bindNavBlueprint(onMount: () => void): void {
 
         if (l1Blocked) {
 
-          window.alert(l1Blocked);
+          showAppToast(l1Blocked, { variant: "error" });
 
           return;
 
@@ -1175,8 +1229,11 @@ export function bindNavBlueprint(onMount: () => void): void {
       const parentKey = customPanel?.dataset.activeL2;
 
       if (!parentKey) {
-        window.alert("请先在自定义模块中选择二级导航。");
+
+        showAppToast("请先在自定义模块中选择二级导航。", { variant: "error" });
+
         return;
+
       }
 
       openNavBlueprintAddL3Dialog(blueprintId, parentKey, onMount);
@@ -1189,49 +1246,63 @@ export function bindNavBlueprint(onMount: () => void): void {
 
     if (target.closest("[data-nb-publish]") || target.closest("[data-nb-publish-sync]")) {
 
-      const snapshot = getSnapshotFromEditor(editor);
+      void (async () => {
 
-      writeNavBlueprintDraft(snapshot);
+        const snapshot = getSnapshotFromEditor(editor);
 
-      const published = publishNavBlueprint(snapshot);
+        writeNavBlueprintDraft(snapshot);
 
-      invalidatePlatformPresetTreeCache();
+        const published = publishNavBlueprint(snapshot);
 
-      const withSync = Boolean(target.closest("[data-nb-publish-sync]"));
+        invalidatePlatformPresetTreeCache();
 
-      const sourceLabel = navigationSourceLabel(published.navigationSource);
+        const withSync = Boolean(target.closest("[data-nb-publish-sync]"));
 
-      const doSync =
+        const sourceLabel = navigationSourceLabel(published.navigationSource);
 
-        withSync ||
+        const doSync =
 
-        window.confirm(
+          withSync ||
 
-          `已发布导航蓝图 v${published.version}（${sourceLabel}）。是否同步到企业级平台预设？`,
+          (await openConfirmDialog({
 
-        );
+            title: "同步到平台预设",
 
-      if (doSync) {
+            message: `已发布导航蓝图 v${published.version}（${sourceLabel}）。是否同步到企业级平台预设？`,
 
-        const result = syncBlueprintToEnterprisePresets(published);
+            confirmLabel: "确认同步",
 
-        window.alert(
+          }));
 
-          `已同步到 ${result.updated} 个业态×产线组合（${sourceLabel}）。请进入平台预设确认各组合可见性。`,
+        if (doSync) {
 
-        );
+          const result = syncBlueprintToEnterprisePresets(published);
 
-        location.hash = `#${ENTERPRISE_PLATFORM_PRESET_SCOPE.routePrefix}`;
+          showAppToast(
 
-      } else {
+            `已同步到 ${result.updated} 个业态×产线组合（${sourceLabel}）。请进入平台预设确认各组合可见性。`,
 
-        window.alert(`已发布导航蓝图 v${published.version}（${sourceLabel}）。`);
+            { variant: "success" },
 
-        location.hash = `#${ROUTE_PREFIX}`;
+          );
 
-      }
+          location.hash = `#${ENTERPRISE_PLATFORM_PRESET_SCOPE.routePrefix}`;
 
-      onMount();
+        } else {
+
+          showAppToast(`已发布导航蓝图 v${published.version}（${sourceLabel}）。`, {
+
+            variant: "success",
+
+          });
+
+          location.hash = `#${ROUTE_PREFIX}`;
+
+        }
+
+        onMount();
+
+      })();
 
       return;
 

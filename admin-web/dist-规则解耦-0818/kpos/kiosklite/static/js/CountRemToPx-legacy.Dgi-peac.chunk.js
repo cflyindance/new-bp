@@ -1,0 +1,1 @@
+(function(){System.register([],function(e,t){var n;return{setters:[],execute:function(){n=Number((document.documentElement.style.fontSize||`62.5%`).replace(`%`,``))/100,e(`t`,function(e){return window.navigator.userAgent.match(/\(i[^;]+;( U;)? CPU.+Mac OS X/)?e*Number(getComputedStyle(document.documentElement).fontSize.replace(`px`,``)):Math.round(e*16*n)})}}})})();

@@ -503,10 +503,13 @@ export function renderHubSheetSearchBox(hubId: string): string {
         </span>
         <input
           type="search"
+          name="hub-sheet-navigation-search"
           data-hub-sheet-search-input="${escapeHtml(hubId)}"
           value="${escapeHtml(q)}"
           placeholder="${placeholder}"
           autocomplete="off"
+          autocapitalize="off"
+          spellcheck="false"
           class="h-9 w-full rounded-lg border border-sidebar-foreground/15 bg-sidebar-foreground/[0.04] py-1.5 pl-8 pr-8 text-sm text-sidebar-foreground placeholder:text-sidebar-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-active dark:border-white/15 dark:bg-white/5"
         />
         ${

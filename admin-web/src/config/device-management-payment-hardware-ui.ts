@@ -4,6 +4,8 @@
  * - PAX：门店手动维护的联网终端（名称、品牌、型号、IP、端口、通讯方式、支付超时）。
  */
 
+import { openConfirmDialog } from "../ui/app-confirm-dialog";
+import { showAppToast } from "../ui/app-toast";
 import { readModuleSettingJson, writeModuleSettingJson } from "./module-settings-form-ui";
 
 export const PAYMENT_DEVICES_FIELD_ID = "dm-payment-devices";
@@ -743,7 +745,7 @@ function saveTriposEditedDevice(deviceId: string, form: HTMLElement): boolean {
   const deviceName =
     form.querySelector<HTMLInputElement>('[data-payment-tripos-field="deviceName"]')?.value.trim() ?? "";
   if (!deviceName) {
-    window.alert("请填写设备名称");
+    showAppToast("请填写设备名称", { variant: "error" });
     return false;
   }
   const current = devices[idx];
@@ -788,7 +790,10 @@ function collectPaxFormState(form: HTMLElement): Partial<PaymentPaxDevice> | nul
 function savePaxDevice(deviceId: string, isNew: boolean, form: HTMLElement): boolean {
   const patch = collectPaxFormState(form);
   if (!patch) {
-    window.alert("请完整填写名称、终端品牌/型号、IP 地址、端口号（1–65535）与支付超时时间（1000–600000 ms）。");
+    showAppToast(
+      "请完整填写名称、终端品牌/型号、IP 地址、端口号（1–65535）与支付超时时间（1000–600000 ms）。",
+      { variant: "error" },
+    );
     return false;
   }
 
@@ -855,9 +860,17 @@ export function bindDeviceManagementPaymentHardware(root: ParentNode = document)
           : device?.hardwareType === "tripos"
             ? device.deviceName
             : id;
-      if (!window.confirm(`确定删除${kind === "pax" ? " PAX 终端" : " Tripos 支付设备"}「${label}」？删除后不可恢复。`)) return;
-      deleteDevice(id, kind);
-      rerenderList(page, search?.value ?? "");
+      void (async () => {
+        const ok = await openConfirmDialog({
+          title: "删除支付设备",
+          message: `确定删除${kind === "pax" ? " PAX 终端" : " Tripos 支付设备"}「${label}」？删除后不可恢复。`,
+          confirmLabel: "确认删除",
+          danger: true,
+        });
+        if (!ok) return;
+        deleteDevice(id, kind);
+        rerenderList(page, search?.value ?? "");
+      })();
     });
     return;
   }

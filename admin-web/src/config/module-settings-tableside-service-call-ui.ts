@@ -15,6 +15,7 @@ import {
   writeModuleSettingJson,
   writeModuleSettingNumber,
 } from "./module-settings-form-ui";
+import { openConfirmDialog } from "../ui/app-confirm-dialog";
 
 /** 与 module-settings-toggle-ui 一致；本地定义以避免与 toggle-ui 循环引用 */
 function moduleSettingToggleStorageKey(seq: number): string {
@@ -845,10 +846,19 @@ function bindOneServiceRequestTypesEditor(editor: HTMLElement): void {
       const config = collectServiceRequestTypesFromEditor(editor);
       const entry = config.types.find((t) => t.id === typeId);
       const label = entry?.label.trim() || "该自定义类型";
-      if (!window.confirm(`确定删除「${label}」？删除后各产线将不再展示该类型。`)) return;
-      config.types = config.types.filter((t) => t.id !== typeId);
-      writeServiceRequestTypesConfig(config);
-      rerenderServiceRequestTypesEditor(editor);
+      void (async () => {
+        const ok = await openConfirmDialog({
+          title: "删除服务类型",
+          message: `确定删除「${label}」？删除后各产线将不再展示该类型。`,
+          confirmLabel: "确认删除",
+          danger: true,
+        });
+        if (!ok) return;
+        const next = collectServiceRequestTypesFromEditor(editor);
+        next.types = next.types.filter((t) => t.id !== typeId);
+        writeServiceRequestTypesConfig(next);
+        rerenderServiceRequestTypesEditor(editor);
+      })();
     }
   });
 }

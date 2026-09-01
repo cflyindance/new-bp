@@ -1,0 +1,33 @@
+
+
+.box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  top: 10rem !important;
+  width: 80vw;
+  padding: 2rem;
+  border-radius: 2rem;
+  background-color: #ffeaea;
+  transform: translate(-50%, 0%);
+  .itemBox {
+    color: #333;
+    .itemName {
+      font-size: 2rem;
+    }
+  }
+  .btnBox {
+    display: flex;
+    span {
+      font-size: 2rem;
+      display: inline-block;
+      width: 10rem;
+      text-align: center;
+      height: 4rem;
+      color: #000;
+      line-height: 4rem;
+      background-color: var(--primary-color);
+      border-radius: 2rem;
+    }
+  }
+}

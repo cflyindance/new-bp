@@ -1,0 +1,115 @@
+
+.configBox {
+  padding: 2rem 2rem 0;
+  font-size: 2rem;
+  .configItem {
+    margin-bottom: 4rem;
+    display: flex;
+    span {
+      padding: 0 2rem;
+      cursor: pointer;
+    }
+    span.actived {
+      font-weight: 700;
+      color: var(--primary-color);
+    }
+  }
+}
+.configBtns {
+  display: flex;
+  font-weight: bold;
+  flex-wrap: wrap;
+  row-gap: 2rem;
+  span {
+    padding: 3rem;
+    margin-right: 3rem;
+    cursor: pointer;
+    border-radius: 1rem;
+    box-shadow: 0px 0px 30px 0px rgba(0, 0, 0, 0.16);
+  }
+}
+
+// 上传图片样式
+.picBox {
+  display: flex;
+  transform-origin: 0 0;
+  .picItem {
+    margin-right: 3rem;
+    .picItemTitle {
+      margin: 0.5rem;
+    }
+    .picItemBox {
+      display: flex;
+      .pic {
+        margin: 1rem 0;
+        vertical-align: bottom;
+        border: 1px solid #eee;
+        img {
+          width: 100%;
+          height: 100%;
+          vertical-align: bottom;
+          object-fit: cover;
+        }
+      }
+      .pic0 {
+        width: 20rem;
+        height: 30rem;
+      }
+      .pic1 {
+        width: 30rem;
+        height: 20rem;
+      }
+      .picLogo,
+      .picBanner {
+        height: 20rem;
+      }
+      .fileBox {
+        margin: 1rem 3rem;
+        font-size: 1.4rem;
+        .file {
+          margin: 0.5rem;
+          margin-bottom: 6rem;
+        }
+        .fileBtn {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 1rem;
+          width: 15rem;
+          border: 1px solid #ccc;
+          border-radius: 0.5rem;
+
+          cursor: pointer;
+          .cloudUpload {
+            width: 2rem;
+            height: 2rem;
+            margin-right: 1rem;
+          }
+        }
+        .fileName {
+          width: 20rem;
+          padding: 1rem 0;
+          word-break: break-word;
+        }
+        .btnDelete {
+          width: 18rem;
+          text-align: center;
+          padding: 1rem;
+          border: 1px solid #ccc;
+          margin-top: 2rem;
+          border-radius: 0.5rem;
+          cursor: pointer;
+        }
+        .btnDelete:hover {
+          background-color: #e6e6e6;
+          border-color: #adadad;
+        }
+      }
+    }
+  }
+}
+
+.logoPicTip,
+.bannerPicTip {
+  font-size: 1.6rem;
+}

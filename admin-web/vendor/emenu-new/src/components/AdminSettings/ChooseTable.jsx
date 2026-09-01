@@ -214,7 +214,7 @@ function ChooseTable(props) {
 
   const clickTable = (t) => () => {
     setActive(t)
-    run(t.id)
+    run(t.id, areas[activeArea]?.id)
   }
 
   const saveInfo = async (order) => {
@@ -334,7 +334,7 @@ function ChooseTable(props) {
   useMount(() => {
     if (currentTable?.id) {
       setActive(currentTable)
-      run(currentTable?.id)
+      run(currentTable?.id, tableInfo?.currentArea?.id)
     }
   })
 

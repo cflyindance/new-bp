@@ -237,7 +237,7 @@ export function createPitExportService({ db, config, clock = () => new Date() })
 
   async function createExport(input, actor) {
     const filter = cleanFilter(input || {});
-    const compiled = parseRequirementListQuery({ ...filter, page: 1, pageSize: 100 }, actor);
+    const compiled = parseRequirementListQuery({ ...filter, page: 1, pageSize: 100 }, actor, { clock });
     const built = buildRequirementListSql(compiled, { paginate: false });
     const id = randomUUID();
     const createdAt = dateFromClock(clock);

@@ -1,8 +1,15 @@
 /**
  * 店中店 · 品牌菜单 · 组 / 类 / 菜三级选择（对齐平台预设一/二/三级列式交互）
- * 品牌编辑可启用左侧产线列（Kiosk / eMenu / SDI），各产线独立商品树与勾选。
- * 原型数据，后续对接商品中心菜单 API。
+ * 品牌编辑可启用左侧产线列（Kiosk / eMenu / POS / SDI），各产线独立商品树与勾选。
+ * 有主机时从 KPOS 菜单注入树；否则回退系统预设静态树。
  */
+
+import { t } from "../i18n";
+import {
+  fetchBrandMenuCatalog,
+  lineIdToMenuProduct,
+  type BrandMenuCatalogSource,
+} from "./brand-menu-catalog-client";
 
 export type BrandMenuDishNode = {
   id: string;
@@ -27,6 +34,7 @@ export type BrandMenuStructureSelection = Record<string, boolean>;
 export const BRAND_MENU_LINE_OPTIONS = [
   { id: "kiosk", label: "Kiosk" },
   { id: "emenu", label: "eMenu" },
+  { id: "pos", label: "POS" },
   { id: "sdi", label: "SDI" },
 ] as const;
 
@@ -42,6 +50,17 @@ function escapeHtml(s: string): string {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+function documentHasKposHostCookie(): boolean {
+  if (typeof document === "undefined") return false;
+  return /(?:^|;\s*)menusifu-emenu-kpos-target=/.test(document.cookie);
+}
+
+function pickerMenuNotice(source?: BrandMenuCatalogSource): string {
+  if (source === "cache") return t("seasoning.menuUsingCache");
+  if (source === "static" && documentHasKposHostCookie()) return t("seasoning.menuUsingStatic");
+  return "";
 }
 
 function cloneTree(tree: BrandMenuGroupNode[]): BrandMenuGroupNode[] {
@@ -192,6 +211,17 @@ export const BRAND_MENU_STRUCTURE_BY_LINE: Record<BrandMenuLineId, BrandMenuGrou
     }
     return tree;
   })(),
+  pos: (() => {
+    const tree = cloneTree(BRAND_MENU_STRUCTURE_TREE).filter((g) =>
+      ["g-chinese", "g-japanese", "g-drink"].includes(g.id),
+    );
+    for (const g of tree) {
+      for (const c of g.categories) {
+        for (const d of c.dishes) d.name = `${d.name}（POS）`;
+      }
+    }
+    return tree;
+  })(),
   sdi: (() => {
     const tree = cloneTree(BRAND_MENU_STRUCTURE_TREE).filter((g) =>
       ["g-chinese", "g-drink"].includes(g.id),
@@ -206,7 +236,7 @@ export const BRAND_MENU_STRUCTURE_BY_LINE: Record<BrandMenuLineId, BrandMenuGrou
 };
 
 export function emptyBrandMenuStructureByLine(): BrandMenuStructureByLine {
-  return { kiosk: [], emenu: [], sdi: [] };
+  return { kiosk: [], emenu: [], pos: [], sdi: [] };
 }
 
 export function cloneBrandMenuStructureByLine(
@@ -215,6 +245,7 @@ export function cloneBrandMenuStructureByLine(
   return {
     kiosk: [...(byLine.kiosk ?? [])],
     emenu: [...(byLine.emenu ?? [])],
+    pos: [...(byLine.pos ?? [])],
     sdi: [...(byLine.sdi ?? [])],
   };
 }
@@ -263,7 +294,7 @@ export function coerceBrandMenuStructureByLine(
     ...new Set(legacyKeysRaw.filter((k): k is string => typeof k === "string" && k.length > 0)),
   ];
   if (legacy.length === 0) return emptyBrandMenuStructureByLine();
-  return { kiosk: [...legacy], emenu: [...legacy], sdi: [...legacy] };
+  return { kiosk: [...legacy], emenu: [...legacy], pos: [...legacy], sdi: [...legacy] };
 }
 
 export function flattenBrandMenuStructureByLine(byLine: BrandMenuStructureByLine): string[] {
@@ -289,6 +320,28 @@ export function categoryKey(groupId: string, categoryId: string): string {
 
 export function dishKey(groupId: string, categoryId: string, dishId: string): string {
   return `d:${groupId}:${categoryId}:${dishId}`;
+}
+
+export function collectBrandMenuTreeKeys(tree: BrandMenuGroupNode[]): Set<string> {
+  const keys = new Set<string>();
+  for (const group of tree) {
+    keys.add(groupKey(group.id));
+    for (const category of group.categories) {
+      keys.add(categoryKey(group.id, category.id));
+      for (const dish of category.dishes) keys.add(dishKey(group.id, category.id, dish.id));
+    }
+  }
+  return keys;
+}
+
+export function mergeKeysOutsideTree(
+  prevKeys: string[],
+  nextKeys: string[],
+  tree: BrandMenuGroupNode[],
+): string[] {
+  const inTree = collectBrandMenuTreeKeys(tree);
+  const outside = prevKeys.filter((key) => !inTree.has(key));
+  return [...new Set([...outside, ...nextKeys])];
 }
 
 function resolveTree(lineId?: BrandMenuLineId | null): BrandMenuGroupNode[] {
@@ -544,6 +597,10 @@ export type RenderBrandMenuStructurePickerOptions = {
   readOnly?: boolean;
   /** 固定使用某产线商品树，且不展示产线列（宿主已按产线分栏时） */
   treeLineId?: BrandMenuLineId;
+  /** 注入的当前菜单树（live/cache）；缺省则用系统预设 */
+  tree?: BrandMenuGroupNode[];
+  menuSource?: BrandMenuCatalogSource;
+  catalogReady?: boolean;
 };
 
 export function renderBrandMenuStructurePickerHtml(
@@ -564,11 +621,13 @@ export function renderBrandMenuStructurePickerHtml(
       ? options.activeLineId
       : DEFAULT_BRAND_MENU_LINE_ID;
 
-  const tree = treeLineId
-    ? resolveTree(treeLineId)
-    : enableLines
-      ? resolveTree(activeLine)
-      : BRAND_MENU_STRUCTURE_TREE;
+  const tree =
+    options?.tree ??
+    (treeLineId
+      ? resolveTree(treeLineId)
+      : enableLines
+        ? resolveTree(activeLine)
+        : BRAND_MENU_STRUCTURE_TREE);
   const lineKeys = enableLines ? (byLine[activeLine] ?? []) : selectedKeys;
   const selection = keysToSelection(lineKeys, tree);
   const groups = tree;
@@ -623,6 +682,12 @@ export function renderBrandMenuStructurePickerHtml(
   const hiddenAttr = enableLines
     ? "data-brand-menu-structure-by-line"
     : "data-brand-menu-structure-keys";
+  const injectedTreeHtml = options?.tree
+    ? `<input type="hidden" data-brand-menu-tree value="${escapeHtml(JSON.stringify(options.tree))}" />`
+    : "";
+  const menuSource = options?.menuSource;
+  const catalogReady = options?.catalogReady || Boolean(options?.tree) || Boolean(menuSource);
+  const notice = pickerMenuNotice(menuSource);
 
   return `
     <div
@@ -631,11 +696,15 @@ export function renderBrandMenuStructurePickerHtml(
       ${enableLines ? 'data-enable-lines="1"' : ""}
       ${readOnly ? 'data-read-only="1"' : ""}
       ${treeLineId ? `data-tree-line="${escapeHtml(treeLineId)}"` : ""}
+      ${menuSource ? `data-menu-source="${escapeHtml(menuSource)}"` : ""}
+      ${catalogReady ? 'data-brand-menu-catalog-ready="1"' : ""}
       data-active-line="${escapeHtml(activeLine)}"
       data-active-group="${escapeHtml(activeG)}"
       data-active-category="${escapeHtml(activeC)}"
     >
       <input type="hidden" ${hiddenAttr} value="${hiddenValue}" />
+      ${injectedTreeHtml}
+      ${notice ? `<p class="border-b border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">${escapeHtml(notice)}</p>` : ""}
       <div class="${gridClass}">
         ${
           enableLines
@@ -697,15 +766,60 @@ function pickerTreeLineId(picker: HTMLElement): BrandMenuLineId | null {
   return isBrandMenuLineId(raw) ? raw : null;
 }
 
-function resolvePickerTree(picker: HTMLElement): BrandMenuGroupNode[] {
-  const treeLine = pickerTreeLineId(picker);
-  if (treeLine) return resolveTree(treeLine);
-  if (pickerUsesLines(picker)) {
-    const activeLineRaw = picker.dataset.activeLine ?? DEFAULT_BRAND_MENU_LINE_ID;
-    const activeLine = isBrandMenuLineId(activeLineRaw) ? activeLineRaw : DEFAULT_BRAND_MENU_LINE_ID;
-    return resolveTree(activeLine);
+function pickerActiveLine(picker: HTMLElement): BrandMenuLineId {
+  const activeLineRaw = picker.dataset.activeLine ?? DEFAULT_BRAND_MENU_LINE_ID;
+  return isBrandMenuLineId(activeLineRaw) ? activeLineRaw : DEFAULT_BRAND_MENU_LINE_ID;
+}
+
+function readInjectedPickerTree(picker: HTMLElement): BrandMenuGroupNode[] | null {
+  const raw = picker.querySelector<HTMLInputElement>("[data-brand-menu-tree]")?.value ?? "";
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return null;
+    return parsed as BrandMenuGroupNode[];
+  } catch {
+    return null;
   }
+}
+
+function pickerMenuSource(picker: HTMLElement): BrandMenuCatalogSource | undefined {
+  const raw = picker.getAttribute("data-menu-source") ?? "";
+  if (raw === "live" || raw === "cache" || raw === "static" || raw === "snapshot" || raw === "fixture") {
+    return raw;
+  }
+  return undefined;
+}
+
+function staticFallbackTree(picker: HTMLElement, lineId?: BrandMenuLineId | null): BrandMenuGroupNode[] {
+  const treeLine = lineId ?? pickerTreeLineId(picker);
+  if (treeLine) return resolveTree(treeLine);
+  if (pickerUsesLines(picker)) return resolveTree(pickerActiveLine(picker));
   return BRAND_MENU_STRUCTURE_TREE;
+}
+
+function catalogProductForPicker(picker: HTMLElement, lineId?: BrandMenuLineId | null): string {
+  const treeLine = lineId ?? pickerTreeLineId(picker);
+  if (treeLine) return lineIdToMenuProduct(treeLine);
+  if (pickerUsesLines(picker)) return lineIdToMenuProduct(lineId ?? pickerActiveLine(picker));
+  return "EMENU";
+}
+
+function resolvePickerTree(picker: HTMLElement): BrandMenuGroupNode[] {
+  return readInjectedPickerTree(picker) ?? staticFallbackTree(picker);
+}
+
+function catalogRenderFields(
+  picker: HTMLElement,
+  tree?: BrandMenuGroupNode[] | null,
+  source?: BrandMenuCatalogSource,
+): Pick<RenderBrandMenuStructurePickerOptions, "tree" | "menuSource" | "catalogReady"> {
+  const injected = tree === undefined ? readInjectedPickerTree(picker) : tree;
+  return {
+    tree: injected ?? undefined,
+    menuSource: source ?? pickerMenuSource(picker),
+    catalogReady: picker.getAttribute("data-brand-menu-catalog-ready") === "1" || Boolean(source),
+  };
 }
 
 /** 在品牌弹窗内绑定组/类/菜三列选择（事件委托到 picker 根）；启用产线时含产线列切换 */
@@ -718,20 +832,24 @@ export function bindBrandMenuStructurePicker(picker: HTMLElement): void {
     activeGroup: string,
     activeCategory: string,
     activeLine?: BrandMenuLineId,
+    catalog?: { tree?: BrandMenuGroupNode[] | null; source?: BrandMenuCatalogSource },
   ) => {
     const enableLines = pickerUsesLines(picker);
     const readOnly = picker.dataset.readOnly === "1";
     const treeLineId = pickerTreeLineId(picker);
+    const catalogFields = catalogRenderFields(picker, catalog?.tree, catalog?.source);
     const html = enableLines
       ? renderBrandMenuStructurePickerHtml([], activeGroup, activeCategory, {
           enableLines: true,
           selectionByLine: keysOrByLine as BrandMenuStructureByLine,
           activeLineId: activeLine ?? DEFAULT_BRAND_MENU_LINE_ID,
           readOnly,
+          ...catalogFields,
         })
       : renderBrandMenuStructurePickerHtml(keysOrByLine as string[], activeGroup, activeCategory, {
           readOnly,
           treeLineId: treeLineId ?? undefined,
+          ...catalogFields,
         });
     const wrap = document.createElement("div");
     wrap.innerHTML = html.trim();
@@ -742,15 +860,44 @@ export function bindBrandMenuStructurePicker(picker: HTMLElement): void {
     bindBrandMenuStructurePicker(next);
   };
 
+  const applyCatalog = async (lineId?: BrandMenuLineId) => {
+    const catalog = await fetchBrandMenuCatalog(catalogProductForPicker(picker, lineId));
+    if (!picker.isConnected) return;
+    const tree = catalog.tree;
+    const nextLine = lineId ?? pickerActiveLine(picker);
+    const displayTree = tree ?? staticFallbackTree(picker, nextLine);
+    const enableLines = pickerUsesLines(picker);
+    if (enableLines) {
+      const byLine = readBrandMenuStructureByLineFromPicker(picker);
+      rerender(
+        byLine,
+        displayTree[0]?.id ?? "",
+        displayTree[0]?.categories[0]?.id ?? "",
+        nextLine,
+        { tree, source: catalog.source },
+      );
+      return;
+    }
+    rerender(
+      readBrandMenuStructureKeysFromPicker(picker),
+      displayTree[0]?.id ?? picker.dataset.activeGroup ?? "",
+      displayTree[0]?.categories[0]?.id ?? picker.dataset.activeCategory ?? "",
+      undefined,
+      { tree, source: catalog.source },
+    );
+  };
+
+  if (picker.getAttribute("data-brand-menu-catalog-ready") !== "1") {
+    void applyCatalog();
+  }
+
   picker.addEventListener("click", (e) => {
     const target = e.target as HTMLElement;
     const lineBtn = target.closest<HTMLElement>("[data-brand-menu-line-select]");
     if (lineBtn && pickerUsesLines(picker)) {
       const lineId = lineBtn.getAttribute("data-brand-menu-line-select") ?? "";
       if (!isBrandMenuLineId(lineId)) return;
-      const byLine = readBrandMenuStructureByLineFromPicker(picker);
-      const tree = resolveTree(lineId);
-      rerender(byLine, tree[0]?.id ?? "", tree[0]?.categories[0]?.id ?? "", lineId);
+      void applyCatalog(lineId);
       return;
     }
 
@@ -758,8 +905,7 @@ export function bindBrandMenuStructurePicker(picker: HTMLElement): void {
     if (!selectBtn || target.closest("[data-brand-menu-enable]")) return;
     const key = selectBtn.getAttribute("data-brand-menu-col-select") ?? "";
     const enableLines = pickerUsesLines(picker);
-    const activeLineRaw = picker.dataset.activeLine ?? DEFAULT_BRAND_MENU_LINE_ID;
-    const activeLine = isBrandMenuLineId(activeLineRaw) ? activeLineRaw : DEFAULT_BRAND_MENU_LINE_ID;
+    const activeLine = pickerActiveLine(picker);
     const tree = resolvePickerTree(picker);
     const keys = enableLines
       ? readBrandMenuStructureByLineFromPicker(picker)
@@ -794,8 +940,7 @@ export function bindBrandMenuStructurePicker(picker: HTMLElement): void {
     const key = input.getAttribute("data-brand-menu-enable");
     if (!key) return;
     const enableLines = pickerUsesLines(picker);
-    const activeLineRaw = picker.dataset.activeLine ?? DEFAULT_BRAND_MENU_LINE_ID;
-    const activeLine = isBrandMenuLineId(activeLineRaw) ? activeLineRaw : DEFAULT_BRAND_MENU_LINE_ID;
+    const activeLine = pickerActiveLine(picker);
     const tree = resolvePickerTree(picker);
     const activeGroup = picker.dataset.activeGroup ?? "";
     const activeCategory = picker.dataset.activeCategory ?? "";
@@ -809,7 +954,7 @@ export function bindBrandMenuStructurePicker(picker: HTMLElement): void {
         input.checked,
         tree,
       );
-      const nextKeys = selectionToKeys(nextSelection);
+      const nextKeys = mergeKeysOutsideTree(prevKeys, selectionToKeys(nextSelection), tree);
       rerender({ ...byLine, [activeLine]: nextKeys }, activeGroup, activeCategory, activeLine);
       return;
     }
@@ -821,7 +966,7 @@ export function bindBrandMenuStructurePicker(picker: HTMLElement): void {
       input.checked,
       tree,
     );
-    const nextKeys = selectionToKeys(nextSelection);
+    const nextKeys = mergeKeysOutsideTree(prevKeys, selectionToKeys(nextSelection), tree);
     rerender(nextKeys, activeGroup, activeCategory);
   });
 

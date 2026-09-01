@@ -1,0 +1,43 @@
+.menuConfigWrapper {
+  height: 100%;
+  .menuConfigHeader {
+    padding: 8px 16px;
+    background: #fff;
+    :global {
+      .ant-tabs-nav {
+        margin-bottom: 0;
+      }
+      .ant-tabs-nav:before {
+        border-bottom: none;
+      }
+      .ant-tabs-tab-btn {
+        font-size: 18px;
+        font-weight: bold;
+      }
+      .ant-tabs-ink-bar {
+        height: 3px;
+      }
+      .ant-tabs-tab + .ant-tabs-tab {
+        margin-left: 48px;
+      }
+    }
+  }
+  .menuConfigMain {
+    margin-top: 8px;
+    padding: 16px;
+    background: #fff;
+    height: calc(100% - 70px);
+    overflow-y: auto;
+    .menuConfigInner {
+      font-weight: 500;
+      font-size: 16px;
+    }
+  }
+}
+.dropDownItem {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: space-between;
+  padding-right: 16px;
+}

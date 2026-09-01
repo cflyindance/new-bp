@@ -1,4 +1,5 @@
 import { t, tf } from "../../i18n";
+import { openConfirmDialog } from "../../ui/app-confirm-dialog";
 import { openSeasoningBatchWizard } from "./seasoning-batch-wizard-ui";
 import { seasoningApi, SeasoningApiError } from "./seasoning-api";
 import { renderSeasoningOptionLibrary, openSeasoningOptionEditor } from "./seasoning-option-library-ui";
@@ -119,7 +120,15 @@ class SeasoningPageController {
     const toggleOptionId = button.dataset.seasoningToggleOption;
     if (toggleOptionId && this.store.state.bootstrap) {
       const status = button.dataset.nextStatus as "active" | "inactive";
-      if (status === "inactive" && !window.confirm("停用后，该 Option 将从食客端隐藏。确定继续吗？")) return;
+      if (status === "inactive") {
+        const ok = await openConfirmDialog({
+          title: "停用 Option",
+          message: "停用后，该 Option 将从食客端隐藏。确定继续吗？",
+          confirmLabel: "确认停用",
+          danger: true,
+        });
+        if (!ok) return;
+      }
       try {
         const response = await seasoningApi.updateOption(toggleOptionId, { expectedVersion: this.store.state.bootstrap.version, status });
         await this.afterMutation(response.version);
@@ -146,7 +155,13 @@ class SeasoningPageController {
     const deleteProductId = button.dataset.seasoningDeleteProduct;
     if (deleteProductId && this.store.state.bootstrap) {
       const productName = button.dataset.productName || deleteProductId;
-      if (!window.confirm(tf("seasoning.deleteProductConfirm", { product: productName }))) return;
+      const ok = await openConfirmDialog({
+        title: "删除菜品关联",
+        message: tf("seasoning.deleteProductConfirm", { product: productName }),
+        confirmLabel: "确认删除",
+        danger: true,
+      });
+      if (!ok) return;
       button.disabled = true;
       try {
         const response = await seasoningApi.saveProductRelations(deleteProductId, { expectedVersion: this.store.state.bootstrap.version, relations: [] });

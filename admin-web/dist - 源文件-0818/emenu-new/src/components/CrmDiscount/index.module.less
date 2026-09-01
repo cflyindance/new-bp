@@ -1,0 +1,138 @@
+.crmDiscountWrapper {
+  width: 100%;
+  line-height: 50px;
+  background: #f4e9ea;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px;
+  margin-bottom: 4px;
+  .text {
+    font-size: 16px;
+    color: #96272f;
+  }
+  .sign {
+    width: 20px;
+    height: 20px;
+  }
+}
+.contentWrapper {
+  position: relative;
+  .closeBtn {
+    position: absolute;
+    right: 8px;
+    top: 8px;
+  }
+  .descWrapper {
+    width: 380px;
+    padding: 24px;
+    .descHeader {
+      color: #96272f;
+      text-align: center;
+      font-size: 26px;
+      font-weight: bold;
+      margin-bottom: 24px;
+    }
+    .descText {
+      font-size: 16px;
+      font-weight: normal;
+    }
+    .iKnowBtn {
+      margin-top: 24px;
+      text-align: center;
+      line-height: 60px;
+      background: #96272f;
+      color: #fff;
+      border-radius: 7px;
+      font-size: 20px;
+      font-weight: bold;
+    }
+  }
+  .discountList {
+    width: 440px;
+    padding: 24px;
+    .descHeader {
+      color: #96272f;
+      font-size: 24px;
+      font-weight: bold;
+      text-align: center;
+      margin-bottom: 16px;
+    }
+    .descArea {
+      background: #f4e9ea;
+      padding: 16px;
+      color: #96272f;
+      margin-bottom: 24px;
+      .title {
+        font-size: 20px;
+        font-weight: bold;
+        margin-bottom: 8px;
+      }
+    }
+    .list {
+      font-size: 16px;
+      font-weight: bold;
+      color: #000;
+      min-height: 100px;
+      max-height: 280px;
+      overflow-y: auto;
+      padding: 8px;
+      &::-webkit-scrollbar {
+        width: 4px;
+        height: 4px;
+        border-radius: 10px;
+        background-color: #aaaaaa;
+      }
+      &::-webkit-scrollbar-thumb {
+        border-radius: 10px;
+        background-color: #96272f;
+      }
+      .item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 8px;
+        &.disabledItem {
+          opacity: 0.5;
+        }
+        .points {
+          display: flex;
+          align-items: center;
+          .pointText {
+            margin-left: 8px;
+          }
+        }
+      }
+      .round {
+        width: 22px;
+        height: 22px;
+        border: 1px solid #96272f;
+        border-radius: 50%;
+        &.selected {
+          background: #96272f;
+        }
+      }
+    }
+    .actualDiscount {
+      margin-top: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: #96272f;
+      font-size: 16px;
+    }
+    .iKnowBtn {
+      margin-top: 24px;
+      text-align: center;
+      line-height: 60px;
+      background: #96272f;
+      color: #fff;
+      border-radius: 7px;
+      font-size: 20px;
+      font-weight: bold;
+      &.disabled {
+        opacity: 0.5;
+      }
+    }
+  }
+}

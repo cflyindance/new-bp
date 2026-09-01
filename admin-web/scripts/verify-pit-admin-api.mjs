@@ -315,14 +315,14 @@ try {
   const summary = await admin.get("/dashboard/summary");
   assert.equal(summary.status, 200);
   assert.deepEqual(summary.body.data, {
-    total: 5,
+    total: 4,
     review: 1,
     schedulingPending: 1,
     development: 1,
     testing: 1,
     completed: 1,
     highlighted: 1,
-    mine: 2,
+    mine: 1,
     followed: 1,
     overdue: 1,
     byStatus: {
@@ -336,6 +336,8 @@ try {
       rejected: 0,
     },
   });
+  assert.equal((await admin.get("/requirements?active=true&pageSize=100")).body.data.total, 4);
+  assert.equal((await admin.get("/requirements?overdue=true&pageSize=100")).body.data.total, 1);
 
   const actorAudit = await admin.get(`/audit-log?actorUserId=${adminUser.id}&resourceType=user&action=user.update&pageSize=100`);
   assert.equal(actorAudit.status, 200);

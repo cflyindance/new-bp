@@ -9,5 +9,6 @@ alwaysApply: true
 
 1. 使用项目 Skill `.cursor/skills/export-prd-spec/`
 2. 必须输出 `PRD.md` + `SPEC.md` + `DIFF.md` 到 `docs/产品PRD/exports/YYYY-MM-DD-<scope>/`
-3. 未指定范围时先询问，禁止整仓盲扫
-4. 不得只写摘要交差
+3. 导出完成后，在对应功能域 `docs/superpowers/specs/<feature-slug>/README.md` 登记 PRD/SPEC 链接（见 `feature-design-docs-organization` 规则）
+4. 未指定范围时先询问，禁止整仓盲扫
+5. 不得只写摘要交差

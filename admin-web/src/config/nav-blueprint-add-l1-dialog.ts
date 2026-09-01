@@ -1,6 +1,8 @@
 /**
  * M 平台 · 新增一级导航对话框
  */
+import { showAppToast } from "../ui/app-toast";
+import { openConfirmDialog } from "../ui/app-confirm-dialog";
 import {
   createNavBlueprintL1WithChildren,
   createNavBlueprintL2UnderL1,
@@ -1542,7 +1544,17 @@ function bindDialogEvents(): void {
             : dialogState.addL2UnderL1Id
               ? "放弃未保存的新增二级导航？"
               : "放弃未保存的新增一级导航？";
-          if (!window.confirm(msg)) return;
+          void (async () => {
+            const ok = await openConfirmDialog({
+              title: "放弃未保存更改",
+              message: msg,
+              confirmLabel: "确认放弃",
+              danger: true,
+            });
+            if (!ok) return;
+            closeDialog();
+          })();
+          return;
         }
       }
       closeDialog();
@@ -1646,7 +1658,7 @@ export function openNavBlueprintEditL1Dialog(
   getNavSettingRegistry();
   const editState = buildEditStateFromL1(blueprintId, l1NodeId);
   if (!editState) {
-    window.alert("未找到该一级导航，可能已被删除");
+    showAppToast("未找到该一级导航，可能已被删除", { variant: "error" });
     return;
   }
   mountDialog(editState);
@@ -1659,7 +1671,7 @@ export function openNavBlueprintAddL2Dialog(
 ): void {
   const blocked = customL2CreationBlockedReason(blueprintId, parentL1Key);
   if (blocked) {
-    window.alert(blocked);
+    showAppToast(blocked, { variant: "error" });
     return;
   }
   bindDialogEvents();
@@ -1670,7 +1682,7 @@ export function openNavBlueprintAddL2Dialog(
   getNavSettingRegistry();
   const addL2State = buildAddL2State(blueprintId, parentL1Key);
   if (!addL2State) {
-    window.alert("未找到该一级导航，可能已被删除");
+    showAppToast("未找到该一级导航，可能已被删除", { variant: "error" });
     return;
   }
   mountDialog(addL2State);
@@ -1683,7 +1695,7 @@ export function openNavBlueprintAddL3Dialog(
 ): boolean {
   const blocked = customL3CreationBlockedReasonForL2(blueprintId, parentL2Key);
   if (blocked) {
-    window.alert(blocked);
+    showAppToast(blocked, { variant: "error" });
     return false;
   }
   bindDialogEvents();
@@ -1694,7 +1706,7 @@ export function openNavBlueprintAddL3Dialog(
   getNavSettingRegistry();
   const addL3State = buildAddL3State(blueprintId, parentL2Key);
   if (!addL3State) {
-    window.alert("未找到该二级导航，可能已被删除");
+    showAppToast("未找到该二级导航，可能已被删除", { variant: "error" });
     return false;
   }
   mountDialog(addL3State);

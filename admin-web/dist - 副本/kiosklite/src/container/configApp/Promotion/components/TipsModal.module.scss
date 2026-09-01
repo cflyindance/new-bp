@@ -1,0 +1,43 @@
+@import '../../../../assets/scss/themes.scss';
+
+.containerBox {
+  @include dialog-box-style;
+}
+.itemBox {
+  text-align: center;
+  color: #333;
+  .itemName {
+    font-size: 3.6rem;
+    font-weight: bold;
+    margin: 3rem 0;
+  }
+  .subItemName {
+    font-size: 3rem;
+  }
+}
+.btnBox {
+  display: flex;
+  justify-content: center;
+  margin-top: 4rem;
+  flex-direction: column;
+  // gap: 2rem;
+  span {
+    display: inline-block;
+    width: 40rem;
+    height: 8rem;
+    font-size: 3rem;
+    text-align: center;
+    line-height: 8rem;
+    margin: 0 1.4rem;
+    color: var(--text-color-black);
+    border-radius: 4rem;
+    font-weight: bold;
+  }
+  span:first-child {
+    background-color: var(--background-grey);
+  }
+  span:last-child {
+    background-color: var(--primary-selected-color);
+    margin-top: 2rem;
+  }
+}

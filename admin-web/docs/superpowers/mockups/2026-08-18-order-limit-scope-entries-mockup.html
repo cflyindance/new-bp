@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>菜单下单限制 · 应用范围交互草图</title>
+<style>
+  :root {
+    --bg: #f5f7fb;
+    --card: #ffffff;
+    --line: rgba(15, 23, 42, 0.1);
+    --text: #0f172a;
+    --muted: #64748b;
+    --primary: #2563eb;
+    --primary-soft: rgba(37, 99, 235, 0.1);
+    --warn: #b45309;
+    --warn-soft: rgba(245, 158, 11, 0.14);
+    --ok: #047857;
+    --ok-soft: rgba(16, 185, 129, 0.14);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 14px/1.6 -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 28px 24px 60px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 22px; }
+  .switcher { display: flex; gap: 8px; margin-bottom: 22px; flex-wrap: wrap; }
+  .switcher button {
+    border: 1px solid var(--line);
+    background: #fff;
+    border-radius: 999px;
+    padding: 8px 16px;
+    font-size: 13px;
+    cursor: pointer;
+    color: var(--muted);
+  }
+  .switcher button.is-active { background: var(--primary); border-color: var(--primary); color: #fff; }
+  .view { display: none; }
+  .view.is-active { display: block; }
+
+  .shell { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 20px; }
+  .rail { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 14px; height: fit-content; }
+  .rail h3 { margin: 4px 8px 12px; font-size: 13px; color: var(--muted); font-weight: 600; }
+  .step { display: flex; gap: 10px; align-items: flex-start; padding: 10px; border-radius: 12px; }
+  .step + .step { margin-top: 2px; }
+  .step .num {
+    width: 24px; height: 24px; border-radius: 50%;
+    background: var(--ok-soft); color: var(--ok);
+    display: grid; place-items: center; font-size: 12px; flex: none; font-weight: 600;
+  }
+  .step.is-current { background: var(--primary-soft); }
+  .step.is-current .num { background: var(--primary); color: #fff; }
+  .step.is-ghost { opacity: 0.55; }
+  .step.is-ghost .num { background: rgba(15,23,42,0.07); color: var(--muted); }
+  .step strong { display: block; font-size: 13px; }
+  .step span { display: block; font-size: 12px; color: var(--muted); }
+
+  .panel { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 24px; }
+  .panel h2 { margin: 0 0 6px; font-size: 19px; }
+  .panel > p.lead { margin: 0 0 20px; color: var(--muted); }
+  .sec-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 0 0 14px; }
+  .sec-head h3 { margin: 0; font-size: 15px; }
+  .btn {
+    border: 1px solid var(--line); background: #fff; border-radius: 10px;
+    padding: 8px 14px; font-size: 13px; cursor: pointer; color: var(--text);
+  }
+  .btn--primary { background: var(--primary); border-color: var(--primary); color: #fff; }
+  .btn--sm { padding: 6px 11px; font-size: 12px; }
+  .btn--danger { color: #b91c1c; }
+
+  .entry-list { display: grid; gap: 12px; }
+  .entry {
+    border: 1px solid var(--line); border-radius: 14px; padding: 16px;
+    display: grid; gap: 12px;
+  }
+  .entry-top { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+  .entry-title { font-size: 15px; font-weight: 600; }
+  .entry-meta { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+  .fact { background: #f8fafc; border-radius: 10px; padding: 10px 12px; }
+  .fact span { display: block; font-size: 11px; color: var(--muted); }
+  .fact strong { font-size: 13px; font-weight: 600; }
+  .tag { display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; padding: 3px 10px; font-size: 12px; }
+  .tag--default { background: var(--ok-soft); color: var(--ok); }
+  .tag--override { background: var(--warn-soft); color: var(--warn); }
+  .empty {
+    border: 1px dashed var(--line); border-radius: 14px; padding: 28px;
+    text-align: center; color: var(--muted);
+  }
+  .empty strong { display: block; color: var(--text); margin-bottom: 4px; }
+
+  .dialog-demo { margin-top: 26px; }
+  .dialog {
+    border: 1px solid var(--line); border-radius: 16px; background: #fff;
+    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.12); overflow: hidden;
+  }
+  .dialog-head { padding: 18px 22px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; }
+  .dialog-head strong { font-size: 16px; }
+  .dots { display: flex; gap: 6px; align-items: center; }
+  .dot { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; background: rgba(15,23,42,0.06); color: var(--muted); cursor: pointer; }
+  .dot.is-active { background: var(--primary); color: #fff; }
+  .dot.is-done { background: var(--ok-soft); color: var(--ok); }
+  .dialog-body { padding: 22px; min-height: 260px; }
+  .dialog-foot { padding: 16px 22px; border-top: 1px solid var(--line); display: flex; justify-content: flex-end; gap: 10px; }
+  .wstep { display: none; }
+  .wstep.is-active { display: block; }
+  .wstep h4 { margin: 0 0 4px; font-size: 15px; }
+  .wstep p { margin: 0 0 16px; color: var(--muted); font-size: 13px; }
+
+  .check-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+  label.check { display: flex; gap: 9px; align-items: flex-start; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; cursor: pointer; }
+  label.check span small { display: block; color: var(--muted); font-size: 11px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); }
+  th { font-size: 12px; color: var(--muted); font-weight: 600; }
+  input[type="number"] { width: 82px; border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; }
+  .radio-row { display: grid; gap: 10px; margin-bottom: 16px; }
+  label.radio { display: flex; gap: 9px; align-items: flex-start; border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; cursor: pointer; }
+  label.radio.is-on { border-color: var(--primary); background: var(--primary-soft); }
+  label.radio strong { display: block; font-size: 13px; }
+  label.radio small { color: var(--muted); }
+  .tree { display: grid; grid-template-columns: 180px 200px minmax(0, 1fr); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  .tree > div { border-right: 1px solid var(--line); padding: 10px; }
+  .tree > div:last-child { border-right: none; }
+  .tree b { display: block; font-size: 11px; color: var(--muted); margin-bottom: 8px; }
+  .tree label { display: block; font-size: 13px; padding: 5px 6px; border-radius: 8px; }
+  .tree label.on { background: var(--primary-soft); }
+  .note { margin-top: 18px; background: #f8fafc; border-left: 3px solid var(--primary); border-radius: 8px; padding: 12px 14px; font-size: 13px; }
+
+  .cmp { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
+  .cmp article { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 20px; }
+  .cmp h3 { margin: 0 0 4px; font-size: 16px; }
+  .cmp .badge { font-size: 11px; border-radius: 999px; padding: 3px 9px; background: var(--primary-soft); color: var(--primary); }
+  .cmp ul { margin: 12px 0 0; padding-left: 18px; }
+  .cmp li { margin-bottom: 6px; }
+  .flowline { display: flex; gap: 8px; flex-wrap: wrap; margin: 14px 0 0; }
+  .chip { background: #f1f5f9; border-radius: 8px; padding: 6px 10px; font-size: 12px; }
+  .chip.hl { background: var(--primary); color: #fff; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>菜单下单限制 · 流程调整与「应用范围」交互草图</h1>
+  <p class="sub">类型 → 场景 → 限购数量 → 超限授权 → 生效范围 → <strong>应用范围</strong>；应用范围采用「新增例外覆盖」式的卡片 + 向导交互。</p>
+
+  <div class="switcher">
+    <button data-view="flow" class="is-active">1 · 新流程与应用范围列表</button>
+    <button data-view="wizard">2 · 新增应用范围向导</button>
+    <button data-view="cmp">3 · 方案 A / B 对比</button>
+  </div>
+
+  <!-- ========== VIEW 1 ========== -->
+  <section class="view is-active" id="view-flow">
+    <div class="shell">
+      <aside class="rail">
+        <h3>规则编辑步骤</h3>
+        <div class="step"><span class="num">✓</span><span><strong>规则类型</strong><span>主体 / 周期 / 对象</span></span></div>
+        <div class="step"><span class="num">✓</span><span><strong>场景配置</strong><span>人数与轮次区间</span></span></div>
+        <div class="step"><span class="num">✓</span><span><strong>限购数量</strong><span>规则级默认上限</span></span></div>
+        <div class="step"><span class="num">✓</span><span><strong>超限授权</strong><span>授权范围与权限</span></span></div>
+        <div class="step"><span class="num">✓</span><span><strong>生效范围</strong><span>日期 / 周期 / 时段 / 会员</span></span></div>
+        <div class="step is-current"><span class="num">6</span><span><strong>应用范围</strong><span>门店 → 产线 → 商品</span></span></div>
+        <div class="step is-ghost"><span class="num">7</span><span><strong>确认发布</strong><span>复核并下发</span></span></div>
+      </aside>
+
+      <div class="panel">
+        <h2>应用范围</h2>
+        <p class="lead">规则本身与授权已定义完毕。现在指定这条规则应用到哪些门店、哪些产线、哪些商品；数量默认沿用第 3 步模板，个别范围可就地覆盖。</p>
+
+        <div class="sec-head">
+          <h3>已配置应用范围（2）</h3>
+          <button class="btn btn--primary btn--sm" data-goto-wizard>＋ 新增应用范围</button>
+        </div>
+
+        <div class="entry-list">
+          <article class="entry">
+            <div class="entry-top">
+              <div>
+                <div class="entry-title">华东标准店</div>
+                <div class="entry-meta">纽约中城店、法拉盛店、布鲁克林店</div>
+              </div>
+              <div>
+                <button class="btn btn--sm">编辑</button>
+                <button class="btn btn--sm btn--danger">删除</button>
+              </div>
+            </div>
+            <div class="facts">
+              <div class="fact"><span>门店</span><strong>3 家</strong></div>
+              <div class="fact"><span>产线</span><strong>Kiosk、eMenu</strong></div>
+              <div class="fact"><span>商品</span><strong>品牌菜单 12 项</strong></div>
+              <div class="fact"><span>限购数量</span><strong><span class="tag tag--default">沿用默认模板</span></strong></div>
+            </div>
+          </article>
+
+          <article class="entry">
+            <div class="entry-top">
+              <div>
+                <div class="entry-title">旗舰店 · 单独放量</div>
+                <div class="entry-meta">波士顿店</div>
+              </div>
+              <div>
+                <button class="btn btn--sm">编辑</button>
+                <button class="btn btn--sm btn--danger">删除</button>
+              </div>
+            </div>
+            <div class="facts">
+              <div class="fact"><span>门店</span><strong>1 家</strong></div>
+              <div class="fact"><span>产线</span><strong>Kiosk</strong></div>
+              <div class="fact"><span>商品</span><strong>品牌 12 + 本地 2</strong></div>
+              <div class="fact"><span>限购数量</span><strong><span class="tag tag--override">覆盖 3 格</span></strong></div>
+            </div>
+          </article>
+        </div>
+
+        <div class="note">
+          <strong>冲突约束：</strong>同一「门店 + 产线」只能出现在一条应用范围里。保存时若与已有条目重叠会被拦下，并提示冲突的门店与产线。
+        </div>
+
+        <div class="dialog-demo">
+          <div class="sec-head"><h3>空态</h3></div>
+          <div class="empty">
+            <strong>尚未配置应用范围</strong>
+            <span>规则与授权已就绪，添加一条应用范围以指定门店、产线与商品。</span>
+            <div style="margin-top:14px"><button class="btn btn--primary btn--sm" data-goto-wizard>＋ 新增应用范围</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== VIEW 2 ========== -->
+  <section class="view" id="view-wizard">
+    <div class="dialog">
+      <div class="dialog-head">
+        <strong>新增应用范围</strong>
+        <div class="dots">
+          <span class="dot is-active" data-w="1">1</span>
+          <span class="dot" data-w="2">2</span>
+          <span class="dot" data-w="3">3</span>
+          <span class="dot" data-w="4">4</span>
+        </div>
+      </div>
+      <div class="dialog-body">
+        <div class="wstep is-active" data-wstep="1">
+          <h4>选择门店</h4>
+          <p>可多选形成一组；一组共享同一份产线、商品与数量设置。</p>
+          <div class="check-grid">
+            <label class="check"><input type="checkbox" checked /><span>纽约中城店<small>MID 100001</small></span></label>
+            <label class="check"><input type="checkbox" checked /><span>法拉盛店<small>MID 100002</small></span></label>
+            <label class="check"><input type="checkbox" checked /><span>布鲁克林店<small>MID 100003</small></span></label>
+            <label class="check"><input type="checkbox" /><span>波士顿店<small>已在「旗舰店 · 单独放量」中使用</small></span></label>
+          </div>
+          <div class="note">已被其它应用范围占用的门店会标注来源，避免重复配置。</div>
+        </div>
+
+        <div class="wstep" data-wstep="2">
+          <h4>选择产线</h4>
+          <p>默认按门店可用产线全选；可整列一键、也可逐格调整。</p>
+          <table>
+            <thead><tr><th>门店</th><th>Kiosk</th><th>eMenu</th><th>SDI</th></tr></thead>
+            <tbody>
+              <tr><td><strong>纽约中城店</strong></td><td><input type="checkbox" checked /></td><td><input type="checkbox" checked /></td><td><input type="checkbox" /></td></tr>
+              <tr><td><strong>法拉盛店</strong></td><td><input type="checkbox" checked /></td><td><input type="checkbox" checked /></td><td><input type="checkbox" /></td></tr>
+              <tr><td><strong>布鲁克林店</strong></td><td><input type="checkbox" checked /></td><td><input type="checkbox" /></td><td><input type="checkbox" /></td></tr>
+            </tbody>
+          </table>
+          <div class="note">整列表头可「全部门店启用该产线」，对应批量场景「华东 10 店只开 Kiosk」。</div>
+        </div>
+
+        <div class="wstep" data-wstep="3">
+          <h4>选择商品</h4>
+          <p>主路径在品牌菜单一次勾选；仅部分门店独有的菜走「本地补选」。</p>
+          <div style="display:flex; gap:8px; margin-bottom:12px">
+            <button class="btn btn--primary btn--sm">品牌菜单</button>
+            <button class="btn btn--sm">门店本地菜（2）</button>
+          </div>
+          <div class="tree">
+            <div><b>产线</b>
+              <label class="on">Kiosk</label><label>eMenu</label><label>SDI</label>
+            </div>
+            <div><b>分组 / 分类</b>
+              <label class="on">前菜</label><label>主食</label><label>饮品</label>
+            </div>
+            <div><b>菜品</b>
+              <label><input type="checkbox" checked /> 蒜香面包</label>
+              <label><input type="checkbox" checked /> 凯撒沙拉</label>
+              <label><input type="checkbox" /> 炸鸡翅</label>
+            </div>
+          </div>
+          <div class="note">品牌菜旁标注「3/3 店有货」；某店无货会在保存时提示，不会静默生成空配置。</div>
+        </div>
+
+        <div class="wstep" data-wstep="4">
+          <h4>限购数量</h4>
+          <p>默认沿用第 3 步模板；只有本组与默认不同时才切到覆盖，并只保存改过的格。</p>
+          <div class="radio-row">
+            <label class="radio is-on"><input type="radio" name="q" checked /><span><strong>沿用默认模板</strong><small>与其它门店一致，无需重复填写</small></span></label>
+            <label class="radio"><input type="radio" name="q" /><span><strong>覆盖部分数量</strong><small>只填与默认不同的格，其余仍回落模板</small></span></label>
+          </div>
+          <table>
+            <thead><tr><th>场景</th><th>产线</th><th>商品</th><th>默认</th><th>本组覆盖</th></tr></thead>
+            <tbody>
+              <tr><td>1–4 人</td><td>Kiosk</td><td>蒜香面包</td><td>2</td><td><input type="number" placeholder="默认" /></td></tr>
+              <tr><td>1–4 人</td><td>Kiosk</td><td>凯撒沙拉</td><td>2</td><td><input type="number" value="3" /></td></tr>
+              <tr><td>5 人及以上</td><td>Kiosk</td><td>蒜香面包</td><td>3</td><td><input type="number" placeholder="默认" /></td></tr>
+            </tbody>
+          </table>
+          <div class="note">留空 = 用默认。卡片上的「覆盖 N 格」就是这里非空格子的数量。</div>
+        </div>
+      </div>
+      <div class="dialog-foot">
+        <button class="btn" data-wprev>上一步</button>
+        <button class="btn btn--primary" data-wnext>下一步</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== VIEW 3 ========== -->
+  <section class="view" id="view-cmp">
+    <div class="cmp">
+      <article>
+        <h3>方案 A · 应用条目吸收例外 <span class="badge">推荐</span></h3>
+        <p style="color:var(--muted); margin:6px 0 0">「例外覆盖」不再是独立步骤，而是每条应用范围里的一个可选项。</p>
+        <div class="flowline">
+          <span class="chip">类型</span><span class="chip">场景</span><span class="chip">限购数量</span>
+          <span class="chip">超限授权</span><span class="chip">生效范围</span><span class="chip hl">应用范围</span><span class="chip">确认发布</span>
+        </div>
+        <ul>
+          <li>步骤数从 7 降到 7（去掉例外步、补回确认步），门店只在应用范围与生效范围出现</li>
+          <li>「这组店卖什么、限多少」在同一张卡片里读完，不用跨步对照</li>
+          <li>数据上仍是模板 + 稀疏覆盖，A 场景一条覆盖都不写</li>
+          <li>代价：一条应用范围承载三件事（店、品、量），卡片信息略密</li>
+        </ul>
+      </article>
+      <article>
+        <h3>方案 B · 应用条目 + 独立例外步</h3>
+        <p style="color:var(--muted); margin:6px 0 0">应用范围只管店 / 产线 / 商品，数量差异仍单独一步维护。</p>
+        <div class="flowline">
+          <span class="chip">类型</span><span class="chip">场景</span><span class="chip">限购数量</span>
+          <span class="chip">超限授权</span><span class="chip">生效范围</span><span class="chip hl">应用范围</span><span class="chip">例外覆盖</span><span class="chip">确认发布</span>
+        </div>
+        <ul>
+          <li>职责更单纯：范围是范围，数量差异是数量差异</li>
+          <li>例外可跨多条应用范围任意组合门店</li>
+          <li>代价：门店在两处重复选择，回到了当前版本被诟病的双选问题</li>
+          <li>步骤达 8 步，与「先规则后应用」的简化目标相悖</li>
+        </ul>
+      </article>
+    </div>
+  </section>
+</div>
+
+<script>
+  document.querySelectorAll(".switcher button").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      document.querySelectorAll(".switcher button").forEach(function (b) { b.classList.remove("is-active"); });
+      btn.classList.add("is-active");
+      document.querySelectorAll(".view").forEach(function (v) { v.classList.remove("is-active"); });
+      document.getElementById("view-" + btn.dataset.view).classList.add("is-active");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+  });
+
+  document.querySelectorAll("[data-goto-wizard]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      document.querySelector('.switcher button[data-view="wizard"]').click();
+    });
+  });
+
+  var current = 1;
+  function showStep(n) {
+    current = Math.min(4, Math.max(1, n));
+    document.querySelectorAll(".wstep").forEach(function (el) {
+      el.classList.toggle("is-active", Number(el.dataset.wstep) === current);
+    });
+    document.querySelectorAll(".dot").forEach(function (d) {
+      var n2 = Number(d.dataset.w);
+      d.classList.toggle("is-active", n2 === current);
+      d.classList.toggle("is-done", n2 < current);
+    });
+    document.querySelector("[data-wnext]").textContent = current === 4 ? "保存应用范围" : "下一步";
+  }
+  document.querySelectorAll(".dot").forEach(function (d) {
+    d.addEventListener("click", function () { showStep(Number(d.dataset.w)); });
+  });
+  document.querySelector("[data-wnext]").addEventListener("click", function () { showStep(current + 1); });
+  document.querySelector("[data-wprev]").addEventListener("click", function () { showStep(current - 1); });
+
+  document.querySelectorAll("label.radio input").forEach(function (input) {
+    input.addEventListener("change", function () {
+      document.querySelectorAll("label.radio").forEach(function (l) { l.classList.remove("is-on"); });
+      input.closest("label.radio").classList.add("is-on");
+    });
+  });
+</script>
+</body>
+</html>

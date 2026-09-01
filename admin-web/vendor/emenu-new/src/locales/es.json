@@ -36,6 +36,8 @@
   },
   "Landing": {
     "start": "Empezar",
+    "start_new_order": "Iniciar pedido",
+    "continue_order": "Continuar pedido",
     "policy_btn_back": "Atrás",
     "policy_btn_enter": "Ok, entendido",
     "refresh": "Actualizar",

@@ -1,0 +1,4094 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>下单限制</title>
+  <link rel="stylesheet" href="assets/common.css" />
+  <script src="assets/embedded-mode.js"></script>
+  <script src="./assets/app-dialogs.js"></script>
+  <style>
+    :root {
+      --ol-bg: #f5f7fa;
+      --ol-card: #fff;
+      --ol-border: #e5e7eb;
+      --ol-fg: #111827;
+      --ol-muted: #6b7280;
+      --ol-primary: #1677ff;
+      --ol-primary-soft: #e8f3ff;
+      --ol-danger: #dc2626;
+      --ol-danger-soft: #fee2e2;
+      --ol-success: #16a34a;
+      --ol-success-soft: #dcfce7;
+      --ol-radius: 14px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: var(--ol-fg);
+      background: var(--ol-bg);
+    }
+    .page {
+      min-height: 100vh;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .card {
+      background: var(--ol-card);
+      border: 1px solid var(--ol-border);
+      border-radius: var(--ol-radius);
+      box-shadow: 0 2px 12px rgba(15, 23, 42, .04);
+    }
+    .header-card {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 16px;
+    }
+    .header-title h1 { margin: 0; font-size: 18px; font-weight: 600; }
+    .header-title p { margin: 3px 0 0; font-size: 12px; color: var(--ol-muted); }
+    .header-actions { display: flex; gap: 8px; align-items: center; }
+    .btn {
+      border: 1px solid var(--ol-border);
+      background: #fff;
+      color: var(--ol-fg);
+      border-radius: 10px;
+      padding: 8px 12px;
+      font-size: 13px;
+      line-height: 1.2;
+      cursor: pointer;
+      transition: .15s;
+    }
+    .btn:hover { border-color: #c7ced9; background: #f8fafc; }
+    .btn-primary { background: var(--ol-primary); color: #fff; border-color: var(--ol-primary); }
+    .btn-primary:hover { background: #0f69df; border-color: #0f69df; }
+    .btn-danger { color: var(--ol-danger); border-color: #fecaca; background: #fff5f5; }
+    .btn-danger:hover { background: #fee2e2; }
+    .pill {
+      border-radius: 999px;
+      padding: 7px 12px;
+      font-size: 12px;
+    }
+    .pill.active { background: var(--ol-primary-soft); border-color: #b9d8ff; color: #0d61cb; }
+    .section-card { overflow: hidden; }
+    .section-head {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--ol-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .section-head h2 { margin: 0; font-size: 15px; font-weight: 600; }
+    .section-body { padding: 12px 16px 16px; }
+    html.embedded-mode,
+    html.embedded-mode body {
+      height: 100%;
+      overflow: hidden;
+      background: transparent;
+    }
+    html.embedded-mode .page {
+      height: 100%;
+      min-height: 0;
+      padding: 0;
+      gap: 0;
+      overflow: hidden;
+      background: transparent;
+    }
+    html.embedded-mode #rulesPanel {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      flex: 1;
+      overflow: hidden;
+      border: 0;
+      border-radius: 0;
+      box-shadow: none;
+    }
+    html.embedded-mode #rulesPanel .section-head { flex: 0 0 auto; }
+    html.embedded-mode #rulesPanel .section-body {
+      min-height: 0;
+      flex: 1;
+      overflow: auto;
+    }
+    html.embedded-mode #rulesPanel thead th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: #fafcff;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 3px 9px;
+      font-size: 12px;
+      border: 1px solid transparent;
+    }
+    .badge.primary { background: var(--ol-primary-soft); color: #0d61cb; border-color: #b9d8ff; }
+    .badge.ok { background: var(--ol-success-soft); color: #166534; border-color: #bbf7d0; }
+    .badge.off { background: var(--ol-danger-soft); color: #991b1b; border-color: #fecaca; }
+    .badge.draft { background: #fff7e6; color: #ad6800; border-color: #ffd591; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td {
+      padding: 10px 8px;
+      border-bottom: 1px solid #eef2f7;
+      text-align: left;
+      vertical-align: top;
+    }
+    th { font-size: 12px; color: var(--ol-muted); font-weight: 500; background: #fafcff; }
+    td .sub { margin-top: 4px; font-size: 12px; color: var(--ol-muted); max-width: 240px; }
+    .op-row { display: flex; flex-wrap: wrap; gap: 6px; }
+
+    .sim-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+      gap: 12px;
+    }
+    .sim-config {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .field { display: grid; gap: 4px; }
+    .field label { font-size: 13px; color: var(--ol-muted); }
+    .input, .select, .textarea {
+      width: 100%;
+      border: 1px solid var(--ol-border);
+      border-radius: 10px;
+      background: #fff;
+      padding: 8px 10px;
+      font-size: 13px;
+      line-height: 1.3;
+      outline: none;
+    }
+    .textarea { min-height: 80px; resize: vertical; }
+    .input:focus, .select:focus, .textarea:focus { border-color: #9cc8ff; box-shadow: 0 0 0 3px #e8f3ff; }
+    .hint-bar {
+      margin-bottom: 12px;
+      border: 1px solid #f7dcb0;
+      background: #fff9ee;
+      color: #8a5b16;
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-size: 12px;
+      display: none;
+    }
+    .cat-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+    .cat-pill {
+      border: 1px solid var(--ol-border);
+      background: #fff;
+      border-radius: 999px;
+      padding: 6px 11px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .cat-pill.active { background: var(--ol-primary); border-color: var(--ol-primary); color: #fff; }
+    .dish-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      max-height: 560px;
+      overflow: auto;
+      padding-right: 2px;
+    }
+    .dish-card {
+      border: 1px solid var(--ol-border);
+      border-radius: 12px;
+      padding: 10px;
+      background: #fff;
+      display: grid;
+      gap: 8px;
+      transition: .15s;
+    }
+    .dish-card.blocked { opacity: .6; }
+    .dish-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+    .dish-name { font-size: 13px; font-weight: 600; }
+    .dish-price { color: var(--ol-primary); font-weight: 700; font-size: 14px; }
+    .dish-meta { font-size: 12px; color: var(--ol-muted); }
+    .dish-err { font-size: 12px; color: var(--ol-danger); }
+    .qty-row { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
+    .qty-btn {
+      width: 28px; height: 28px; border-radius: 999px; border: 1px solid var(--ol-border);
+      background: #f8fafc; cursor: pointer;
+    }
+    .qty-btn.primary { background: var(--ol-primary); border-color: var(--ol-primary); color: #fff; }
+    .qty-btn:disabled { opacity: .4; cursor: not-allowed; }
+    .qty-num { min-width: 20px; text-align: center; font-weight: 600; font-size: 13px; }
+
+    .order-card .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin: 10px 0;
+    }
+    .stat {
+      border-radius: 10px;
+      padding: 8px;
+      background: #f8fafc;
+      text-align: center;
+    }
+    .stat.accent { background: var(--ol-primary-soft); }
+    .stat .num { font-size: 22px; font-weight: 700; }
+    .stat .txt { font-size: 12px; color: var(--ol-muted); }
+    .order-list {
+      max-height: 380px;
+      overflow: auto;
+      display: grid;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .order-item {
+      border: 1px solid #edf2f7;
+      border-radius: 9px;
+      padding: 7px 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 12px;
+      background: #fff;
+    }
+    .order-name { font-weight: 500; }
+    .order-cat { color: var(--ol-muted); margin-top: 2px; }
+    .order-empty {
+      color: var(--ol-muted);
+      font-size: 12px;
+      text-align: center;
+      padding: 18px 0;
+    }
+    .order-actions { display: flex; gap: 8px; margin-top: 10px; }
+
+    .modal-mask {
+      position: fixed; inset: 0; z-index: 1000;
+      display: none; align-items: center; justify-content: center;
+      background: rgba(2, 6, 23, .35); padding: 14px;
+    }
+    .modal-mask.nested { z-index: 1100; background: rgba(2, 6, 23, .45); }
+    .modal {
+      width: min(1020px, 100%);
+      max-height: calc(100vh - 30px);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border-radius: 14px;
+      background: #fff;
+      border: 1px solid var(--ol-border);
+      box-shadow: 0 18px 40px rgba(15, 23, 42, .18);
+    }
+    .modal.modal-sm { width: min(560px, 100%); }
+    .modal-head {
+      flex-shrink: 0;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--ol-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .modal-head h3 { margin: 0; font-size: 16px; font-weight: 600; }
+    .icon-btn {
+      width: 30px; height: 30px; border-radius: 999px;
+      border: 1px solid var(--ol-border);
+      background: #fff;
+      cursor: pointer;
+    }
+    .modal-body {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow: auto;
+      padding: 14px;
+      display: grid;
+      gap: 12px;
+      align-content: start;
+    }
+    .steps { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+    .step {
+      display: grid; justify-items: center; gap: 4px;
+    }
+    .step-dot {
+      width: 26px; height: 26px; border-radius: 999px;
+      display: grid; place-items: center; font-size: 11px; font-weight: 700;
+      background: #f1f5f9; color: #64748b;
+      border: 1px solid #e2e8f0;
+    }
+    .step.done .step-dot { background: #16a34a; border-color: #16a34a; color: #fff; }
+    .step.active .step-dot { background: var(--ol-primary); border-color: var(--ol-primary); color: #fff; }
+    .step-text { font-size: 11px; color: var(--ol-muted); text-align: center; line-height: 1.25; }
+    .wizard-sec { border: 1px solid var(--ol-border); border-radius: 12px; padding: 12px; }
+    .wizard-sec h4 { margin: 0 0 8px; font-size: 15px; font-weight: 600; }
+    .wizard-sec--plain {
+      border: 0;
+      background: transparent;
+      border-radius: 0;
+      padding: 12px;
+    }
+    .choice-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .choice-grid.three { grid-template-columns: repeat(3, 1fr); }
+    .choice {
+      border: 2px solid var(--ol-border);
+      border-radius: 10px;
+      background: #fff;
+      padding: 10px;
+      cursor: pointer;
+      text-align: center;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+    .choice.active { border-color: var(--ol-primary); background: var(--ol-primary-soft); }
+    .round-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 0; }
+    .round-tab { border-radius: 999px; padding: 6px 10px; font-size: 12px; }
+    .round-tab.active {
+      background: var(--ol-primary-soft);
+      border-color: #b9d8ff;
+      color: #0d61cb;
+      font-weight: 600;
+    }
+    .round-chip { display: inline-flex; align-items: center; gap: 4px; }
+    .round-del {
+      width: 22px;
+      height: 22px;
+      border-radius: 999px;
+      border: 1px solid #fecaca;
+      background: #fff5f5;
+      color: #b91c1c;
+      font-size: 12px;
+      line-height: 1;
+      cursor: pointer;
+    }
+    .round-del:hover { background: #fee2e2; }
+    .entity-grid {
+      max-height: 210px; overflow: auto;
+      border: 1px solid var(--ol-border); border-radius: 10px;
+      padding: 8px;
+      display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px;
+      margin-bottom: 8px;
+    }
+    .entity-item {
+      border: 1px solid var(--ol-border); border-radius: 8px; padding: 6px;
+      display: flex; align-items: center; gap: 6px; font-size: 12px;
+      background: #fff;
+    }
+    .bmsp-root {
+      overflow: hidden;
+      border: 1px solid var(--ol-border);
+      border-radius: 10px;
+      background: #fff;
+      margin-bottom: 8px;
+    }
+    .bmsp-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      min-height: 14rem;
+    }
+    .bmsp-grid.bmsp-grid--no-dish {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .bmsp-col {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      border-right: 1px solid var(--ol-border);
+    }
+    .bmsp-col:last-child { border-right: 0; }
+    .bmsp-col-title {
+      margin: 0;
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--ol-border);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      color: var(--ol-muted);
+    }
+    .bmsp-col > div {
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+      padding: 4px;
+    }
+    .bmsp-item {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      border: 0;
+      background: transparent;
+      border-radius: 8px;
+      padding: 6px 8px;
+      text-align: left;
+      cursor: pointer;
+      font-size: 12px;
+      color: #111827;
+    }
+    .bmsp-item:hover { background: #f8fafc; }
+    .bmsp-item.active { background: #eff6ff; }
+    .bmsp-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .bmsp-badge {
+      flex-shrink: 0;
+      min-width: 18px;
+      padding: 0 5px;
+      border-radius: 999px;
+      background: #eef2f7;
+      color: #64748b;
+      font-size: 11px;
+      text-align: center;
+    }
+    .bmsp-cb { flex-shrink: 0; }
+    .bmsp-empty {
+      margin: 0;
+      padding: 12px;
+      font-size: 12px;
+      color: var(--ol-muted);
+    }
+    .bmsp-notice {
+      margin: 0;
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--ol-border);
+      background: #f8fafc;
+      font-size: 12px;
+      color: var(--ol-muted);
+    }
+    .structure-summary {
+      margin: 0 0 8px;
+      font-size: 12px;
+      color: var(--ol-muted);
+    }
+    .qty-scene-block {
+      margin-bottom: 12px;
+      padding: 10px;
+      border: 1px solid #e8edf3;
+      border-radius: 10px;
+      background: #fff;
+    }
+    .qty-sub-label {
+      margin: 0 0 6px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #334155;
+    }
+    .qty-scene-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .qty-scene-head strong { font-size: 13px; }
+    .qty-scene-head .qty-hint { margin: 2px 0 0; }
+    .qty-scene-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .qty-scene-chip {
+      min-width: 112px;
+      text-align: left;
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-size: 12px;
+      line-height: 1.35;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      cursor: pointer;
+    }
+    .qty-scene-chip.active {
+      background: #e8f3ff;
+      border-color: #93c5fd;
+      color: #0d61cb;
+      font-weight: 600;
+    }
+    .qty-scene-chip .qty-scene-status {
+      display: block;
+      margin-top: 2px;
+      font-size: 11px;
+      font-weight: 500;
+    }
+    .qty-scene-chip .qty-scene-status.done { color: #16a34a; }
+    .qty-scene-chip .qty-scene-status.partial { color: #d97706; }
+    .qty-scene-chip .qty-scene-status.empty { color: #94a3b8; }
+    .qty-panel {
+      margin-top: 10px;
+      padding: 12px;
+      border: 1px solid #bfdbfe;
+      border-radius: 10px;
+      background: #f8fbff;
+    }
+    .qty-panel-title {
+      margin: 0 0 8px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .qty-panel-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .qty-copy-list { display: grid; gap: 6px; margin: 8px 0; }
+    .qty-copy-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      background: #fff;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .qty-copy-item.is-checked {
+      border-color: #93c5fd;
+      background: #f8fbff;
+    }
+    .qty-dim-round-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    .qty-step-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .person-range-list { display: grid; gap: 8px; }
+    .person-range-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: center;
+      border: 1px solid #edf2f7;
+      border-radius: 8px;
+      padding: 8px;
+      background: #fff;
+    }
+    .person-range-row .input { width: 100%; }
+    .person-range-sep { font-size: 12px; color: var(--ol-muted); }
+    .qty-person-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+    .qty-round-block { margin-bottom: 12px; }
+    .qty-hint {
+      margin: 6px 0 0;
+      font-size: 12px;
+      color: var(--ol-muted);
+      line-height: 1.4;
+    }
+    .qty-line-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+    .qty-line-tab {
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .qty-line-tab.active {
+      background: var(--ol-primary-soft);
+      border-color: #b9d8ff;
+      color: #0d61cb;
+      font-weight: 600;
+    }
+    .qty-line-tab .qty-line-count {
+      min-width: 18px;
+      padding: 0 5px;
+      border-radius: 999px;
+      background: #eef2f7;
+      color: #64748b;
+      font-size: 11px;
+      text-align: center;
+      font-weight: 600;
+    }
+    .qty-line-tab.active .qty-line-count {
+      background: #dbeafe;
+      color: #1d4ed8;
+    }
+    .qty-list { display: grid; gap: 6px; max-height: 220px; overflow: auto; }
+    .qty-batch-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin: 0 0 8px;
+      padding: 8px 10px;
+      border: 1px solid #e8edf3;
+      border-radius: 10px;
+      background: #f8fafc;
+    }
+    .qty-batch-bar .btn { font-size: 12px; padding: 5px 10px; }
+    .qty-batch-count {
+      font-size: 12px;
+      color: var(--ol-muted);
+      min-width: 64px;
+    }
+    .qty-batch-apply {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-left: auto;
+    }
+    .qty-batch-apply .input {
+      width: 88px;
+      padding: 5px 8px;
+      font-size: 12px;
+    }
+    .qty-row2 {
+      display: grid;
+      grid-template-columns: 18px minmax(0,1fr) 110px;
+      gap: 8px;
+      align-items: center;
+      border: 1px solid #edf2f7;
+      border-radius: 8px;
+      padding: 6px 8px;
+      font-size: 12px;
+    }
+    .qty-row2.is-selected {
+      border-color: #93c5fd;
+      background: #f8fbff;
+    }
+    .qty-row-check { margin: 0; cursor: pointer; }
+    .week-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+    .week-btn { width: 30px; height: 30px; border-radius: 999px; }
+    .week-btn.active { background: var(--ol-primary); border-color: var(--ol-primary); color: #fff; }
+    .weekday-block {
+      border: 1px solid #e8edf3;
+      border-radius: 10px;
+      padding: 10px;
+      background: #fff;
+      display: grid;
+      gap: 8px;
+    }
+    .weekday-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #374151;
+    }
+    .bh-picker {
+      display: grid;
+      gap: 12px;
+      margin-top: 10px;
+    }
+    .bh-card {
+      display: block;
+      border: 1px solid var(--ol-border);
+      border-radius: 12px;
+      padding: 14px;
+      background: #fff;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
+      cursor: pointer;
+      transition: box-shadow .15s, border-color .15s, background .15s;
+    }
+    .bh-card:hover { box-shadow: 0 6px 16px rgba(15, 23, 42, .08); }
+    .bh-card.is-checked {
+      border-color: #93c5fd;
+      background: #f8fbff;
+      box-shadow: 0 0 0 1px rgba(59, 130, 246, .15);
+    }
+    .bh-card-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .bh-card-main { min-width: 0; flex: 1; display: grid; gap: 8px; }
+    .bh-card-title-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+    .bh-card-name {
+      margin: 0;
+      font-size: 13px;
+      font-weight: 600;
+      color: #111827;
+    }
+    .bh-card-date {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      background: #f1f5f9;
+      color: #64748b;
+      padding: 2px 8px;
+      font-size: 11px;
+      font-variant-numeric: tabular-nums;
+    }
+    .bh-card-time {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      font-variant-numeric: tabular-nums;
+      color: #111827;
+    }
+    .bh-card-time span {
+      margin: 0 6px;
+      font-weight: 400;
+      color: var(--ol-muted);
+    }
+    .bh-day-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .bh-day-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 2rem;
+      height: 24px;
+      padding: 0 6px;
+      border-radius: 6px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .04em;
+      background: rgba(22, 119, 255, .12);
+      color: #1677ff;
+      box-shadow: inset 0 0 0 1px rgba(22, 119, 255, .28);
+    }
+    .bh-card-check {
+      flex-shrink: 0;
+      margin-top: 2px;
+      width: 16px;
+      height: 16px;
+    }
+    .bh-empty {
+      border: 1px dashed var(--ol-border);
+      border-radius: 12px;
+      padding: 28px 16px;
+      text-align: center;
+      background: #f8fafc;
+      margin-top: 10px;
+    }
+    .bh-empty-title {
+      margin: 0;
+      font-size: 13px;
+      font-weight: 600;
+      color: #111827;
+    }
+    .bh-empty-desc {
+      margin: 6px 0 0;
+      font-size: 12px;
+      color: var(--ol-muted);
+    }
+    .bh-hint {
+      margin: 8px 0 0;
+      font-size: 12px;
+      color: var(--ol-muted);
+      line-height: 1.4;
+    }
+    .bh-section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .bh-section-head h4 {
+      margin: 0;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .confirm-list { display: grid; gap: 7px; font-size: 13px; }
+    .confirm-item { display: grid; grid-template-columns: 72px minmax(0,1fr); gap: 8px; }
+    .confirm-k { color: var(--ol-muted); }
+    .rule-name-link {
+      font-weight: 600;
+      color: var(--ol-primary);
+      background: none;
+      border: none;
+      padding: 0;
+      cursor: pointer;
+      text-align: left;
+      font: inherit;
+    }
+    .rule-name-link:hover { text-decoration: underline; }
+    .wizard-note {
+      border-left: 3px solid var(--ol-primary);
+      background: #f8fbff;
+      padding: 8px 10px;
+      border-radius: 6px;
+      font-size: 13px;
+      color: #1e3a5f;
+    }
+    .modal-foot {
+      flex-shrink: 0;
+      border-top: 1px solid var(--ol-border);
+      padding: 10px 14px;
+      display: flex; justify-content: space-between; align-items: center; gap: 8px;
+      background: #fff;
+    }
+    .foot-right { display: flex; gap: 8px; }
+
+    .ol-toast-host {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 11000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      pointer-events: none;
+      width: min(420px, calc(100vw - 32px));
+    }
+    .ol-toast {
+      pointer-events: auto;
+      width: 100%;
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1px solid #fecaca;
+      background: #fff;
+      color: #991b1b;
+      box-shadow: 0 10px 28px rgba(15, 23, 42, .14);
+      font-size: 13px;
+      line-height: 1.45;
+      animation: ol-toast-in .18s ease-out;
+    }
+    .ol-toast.is-leaving { animation: ol-toast-out .16s ease-in forwards; }
+    @keyframes ol-toast-in {
+      from { opacity: 0; transform: translateY(-8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes ol-toast-out {
+      from { opacity: 1; transform: translateY(0); }
+      to { opacity: 0; transform: translateY(-8px); }
+    }
+
+    @media (max-width: 1100px) {
+      .sim-config { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .dish-grid { grid-template-columns: 1fr; }
+      .entity-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    }
+    @media (max-width: 900px) {
+      .sim-grid { grid-template-columns: 1fr; }
+      .steps { grid-template-columns: repeat(3, 1fr); }
+      .bmsp-grid { grid-template-columns: 1fr 1fr; }
+      .bmsp-col { border-right: 0; border-bottom: 1px solid var(--ol-border); }
+    }
+  </style>
+  <script>
+    (function () {
+      var params = new URLSearchParams(window.location.search);
+      var embedded = params.get("embedded");
+      var isEmbedded = embedded === "1" || embedded === "true";
+      if (!isEmbedded) {
+        try { isEmbedded = window.self !== window.top; } catch (e) { isEmbedded = false; }
+      }
+      if (isEmbedded) document.documentElement.classList.add("embedded-mode");
+    })();
+  </script>
+</head>
+<body>
+  <div class="page">
+    <section class="card section-card" id="rulesPanel">
+      <div class="section-head">
+        <h2>现有规则</h2>
+        <div class="header-actions">
+          <span class="badge primary" id="ruleCountBadge">共 0 条</span>
+          <button type="button" class="btn btn-primary" id="btnOpenCreate">+ 新增规则</button>
+        </div>
+      </div>
+      <div class="section-body">
+        <table>
+          <thead>
+            <tr>
+              <th>规则名称</th>
+              <th>规则描述</th>
+              <th>策略</th>
+              <th>人数</th>
+              <th>时间</th>
+              <th>会员</th>
+              <th>门店/产线</th>
+              <th>状态</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="rulesTbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card section-card" id="simulatorPanel" style="display:none">
+      <div class="section-head">
+        <h2>点菜模拟验证</h2>
+        <span class="badge primary">规则实时校验</span>
+      </div>
+      <div class="section-body">
+        <div class="sim-config">
+          <label class="field">
+            <span>测试规则</span>
+            <select class="select" id="simRuleSelect"></select>
+          </label>
+          <label class="field">
+            <span>用餐人数</span>
+            <input class="input" id="simPersonCount" type="number" min="1" max="20" value="4" />
+          </label>
+          <label class="field">
+            <span>会员等级</span>
+            <select class="select" id="simMemberLevel"></select>
+          </label>
+          <div class="field">
+            <span>当前轮次</span>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <button class="btn" id="simPrevRound" type="button">←</button>
+              <div class="input" style="text-align:center;flex:1;"><strong id="simRoundLabel">第 1 轮</strong></div>
+              <button class="btn" id="simNextRound" type="button">→</button>
+            </div>
+          </div>
+        </div>
+        <div class="hint-bar" id="simViolations"></div>
+        <div class="sim-grid">
+          <div>
+            <div class="cat-row" id="simCategoryRow"></div>
+            <div class="dish-grid" id="simDishGrid"></div>
+          </div>
+          <aside class="card order-card" style="padding:10px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <strong style="font-size:14px;">本轮回单</strong>
+              <button class="btn btn-danger" type="button" id="simClearRound">清空本轮</button>
+            </div>
+            <div class="stats">
+              <div class="stat accent"><div class="num" id="simRoundTotal">0</div><div class="txt">本轮份数</div></div>
+              <div class="stat"><div class="num" id="simAllTotal">0</div><div class="txt">总份数</div></div>
+            </div>
+            <div class="order-list" id="simOrderList"></div>
+            <div class="order-actions">
+              <button class="btn btn-danger" type="button" id="simClearAll" style="width:100%;">清空全部轮次</button>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="modal-mask" id="wizardMask">
+    <div class="modal">
+      <div class="modal-head">
+        <h3 id="wizardTitle">新建规则</h3>
+        <button class="icon-btn" id="wizardClose" type="button">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="steps" id="wizardSteps"></div>
+        <div id="wizardContent"></div>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" id="wizardPrev">上一步</button>
+        <div class="foot-right">
+          <button type="button" class="btn" id="wizardCancel">取消</button>
+          <button type="button" class="btn btn-primary" id="wizardNext">下一步</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-mask nested" id="dimEditorMask" style="display:none;">
+    <div class="modal modal-sm" role="dialog" aria-modal="true" aria-labelledby="dimEditorTitle">
+      <div class="modal-head">
+        <h3 id="dimEditorTitle">编辑人数 / 轮次区间</h3>
+        <button class="icon-btn" id="dimEditorClose" type="button" data-dim-edit-cancel="1">✕</button>
+      </div>
+      <div class="modal-body" id="dimEditorBody"></div>
+      <div class="modal-foot">
+        <div class="foot-right">
+          <button type="button" class="btn" data-dim-edit-cancel="1">取消</button>
+          <button type="button" class="btn btn-primary" data-dim-edit-save="1">完成</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-mask nested" id="copySceneMask" style="display:none;">
+    <div class="modal modal-sm" role="dialog" aria-modal="true" aria-labelledby="copySceneTitle">
+      <div class="modal-head">
+        <h3 id="copySceneTitle">复制到其他场景</h3>
+        <button class="icon-btn" type="button" data-qty-copy-cancel="1">✕</button>
+      </div>
+      <div class="modal-body" id="copySceneBody"></div>
+      <div class="modal-foot" id="copySceneFoot"></div>
+    </div>
+  </div>
+
+  <script src="assets/brand-menu-structure-picker.js?v=20260817-kpos-menu"></script>
+  <script>
+    (function () {
+      "use strict";
+
+      var STORAGE_KEY = "restaurantRules";
+      var MenuPicker = window.BrandMenuStructurePicker;
+
+      function showToast(message) {
+        var text = String(message || "").trim();
+        if (!text) return;
+        var host = document.getElementById("olToastHost");
+        if (!host) {
+          host = document.createElement("div");
+          host.id = "olToastHost";
+          host.className = "ol-toast-host";
+          document.body.appendChild(host);
+        }
+        var toast = document.createElement("div");
+        toast.className = "ol-toast";
+        toast.setAttribute("role", "status");
+        toast.textContent = text;
+        host.appendChild(toast);
+        window.setTimeout(function () {
+          toast.classList.add("is-leaving");
+          window.setTimeout(function () {
+            if (toast.parentNode) toast.parentNode.removeChild(toast);
+            if (host && !host.childNodes.length && host.parentNode) {
+              host.parentNode.removeChild(host);
+            }
+          }, 180);
+        }, 2600);
+      }
+      var STEPS = ["规则类型", "商品配置", "限购数量", "时间设置", "会员等级", "确认保存"];
+
+      var weekdays = [
+        { id: "mon", name: "周一", short: "一" },
+        { id: "tue", name: "周二", short: "二" },
+        { id: "wed", name: "周三", short: "三" },
+        { id: "thu", name: "周四", short: "四" },
+        { id: "fri", name: "周五", short: "五" },
+        { id: "sat", name: "周六", short: "六" },
+        { id: "sun", name: "周日", short: "日" }
+      ];
+      var memberLevels = [
+        { id: "platinum", name: "白金会员", icon: "💎", color: "#7c3aed" },
+        { id: "gold", name: "黄金会员", icon: "🥇", color: "#d97706" },
+        { id: "silver", name: "白银会员", icon: "🥈", color: "#64748b" },
+        { id: "bronze", name: "青铜会员", icon: "🥉", color: "#b45309" },
+        { id: "normal", name: "普通会员", icon: "👤", color: "#475569" }
+      ];
+      var dishCategories = [
+        { id: 1, name: "海鲜类", count: 12 },
+        { id: 2, name: "肉类", count: 15 },
+        { id: 3, name: "蔬菜类", count: 20 },
+        { id: 4, name: "主食类", count: 10 },
+        { id: 5, name: "汤品类", count: 8 },
+        { id: 6, name: "甜品类", count: 8 },
+        { id: 7, name: "饮料类", count: 12 },
+        { id: 8, name: "水果类", count: 10 }
+      ];
+      var dishes = [
+        { id: 1, name: "清蒸大闸蟹", category: "海鲜类", price: "¥88", description: "秋季限定，肥美鲜嫩" },
+        { id: 2, name: "蒜蓉粉丝扇贝", category: "海鲜类", price: "¥48", description: "蒜香浓郁，粉丝Q弹" },
+        { id: 3, name: "白灼基围虾", category: "海鲜类", price: "¥68", description: "新鲜活虾，原汁原味" },
+        { id: 4, name: "红烧带鱼", category: "海鲜类", price: "¥45", description: "家常味道，鲜美入味" },
+        { id: 5, name: "清蒸鲈鱼", category: "海鲜类", price: "¥78", description: "刺身级食材，肉质鲜嫩" },
+        { id: 6, name: "椒盐鱿鱼", category: "海鲜类", price: "¥52", description: "外酥里嫩，香辣可口" },
+        { id: 7, name: "酱爆花甲", category: "海鲜类", price: "¥42", description: "酱香浓郁，肉质鲜甜" },
+        { id: 8, name: "蒜蓉生蚝", category: "海鲜类", price: "¥56", description: "鲜嫩多汁，蒜香扑鼻" },
+        { id: 9, name: "红烧黄鱼", category: "海鲜类", price: "¥65", description: "肉质细腻，汤汁浓郁" },
+        { id: 10, name: "清蒸石斑鱼", category: "海鲜类", price: "¥128", description: "高档海鱼，刺身级品质" },
+        { id: 11, name: "油焖大虾", category: "海鲜类", price: "¥72", description: "个大肥美，色泽红亮" },
+        { id: 12, name: "香煎三文鱼", category: "海鲜类", price: "¥88", description: "挪威进口，外酥里嫩" },
+        { id: 13, name: "红烧肉", category: "肉类", price: "¥58", description: "肥而不腻，入口即化" },
+        { id: 14, name: "黑椒牛排", category: "肉类", price: "¥78", description: "澳洲进口，肉质鲜嫩" },
+        { id: 15, name: "口水鸡", category: "肉类", price: "¥42", description: "麻辣鲜香，口感丰富" },
+        { id: 16, name: "宫保鸡丁", category: "肉类", price: "¥38", description: "川菜经典，酸甜微辣" },
+        { id: 17, name: "孜然羊肉", category: "肉类", price: "¥55", description: "西北风味，孜然浓郁" },
+        { id: 18, name: "糖醋排骨", category: "肉类", price: "¥62", description: "酸甜适口，色泽红亮" },
+        { id: 19, name: "回锅肉", category: "肉类", price: "¥45", description: "川菜之首，肥而不腻" },
+        { id: 20, name: "京酱肉丝", category: "肉类", price: "¥42", description: "北京特色，酱香浓郁" },
+        { id: 21, name: "蒜泥白肉", category: "肉类", price: "¥48", description: "四川凉菜，蒜香浓郁" },
+        { id: 22, name: "毛血旺", category: "肉类", price: "¥58", description: "重庆特色，麻辣鲜香" },
+        { id: 23, name: "鱼香肉丝", category: "肉类", price: "¥38", description: "川菜经典，酸甜微辣" },
+        { id: 24, name: "东坡肉", category: "肉类", price: "¥68", description: "杭州名菜，肥而不腻" },
+        { id: 25, name: "可乐鸡翅", category: "肉类", price: "¥45", description: "中西合璧，香甜可口" },
+        { id: 26, name: "小炒黄牛肉", category: "肉类", price: "¥58", description: "湖南特色，鲜嫩爽滑" },
+        { id: 27, name: "梅菜扣肉", category: "肉类", price: "¥55", description: "广东名菜，肥而不腻" },
+        { id: 28, name: "清炒时蔬", category: "蔬菜类", price: "¥28", description: "时令蔬菜，清淡健康" },
+        { id: 29, name: "干煸四季豆", category: "蔬菜类", price: "¥32", description: "川菜经典，外酥里嫩" },
+        { id: 30, name: "麻婆豆腐", category: "蔬菜类", price: "¥28", description: "川菜名菜，麻辣鲜香" },
+        { id: 31, name: "地三鲜", category: "蔬菜类", price: "¥32", description: "东北特色，下饭神器" },
+        { id: 32, name: "上汤娃娃菜", category: "蔬菜类", price: "¥35", description: "汤鲜味美，清淡健康" },
+        { id: 33, name: "酸辣土豆丝", category: "蔬菜类", price: "¥22", description: "家常菜，酸辣爽脆" },
+        { id: 34, name: "蒜蓉西兰花", category: "蔬菜类", price: "¥28", description: "营养丰富，口感清淡" },
+        { id: 35, name: "虎皮青椒", category: "蔬菜类", price: "¥25", description: "川菜特色，外酥里嫩" },
+        { id: 36, name: "干锅花菜", category: "蔬菜类", price: "¥35", description: "川菜风味，麻辣鲜香" },
+        { id: 37, name: "手撕包菜", category: "蔬菜类", price: "¥22", description: "简单美味，健康下饭" },
+        { id: 38, name: "素炒青菜", category: "蔬菜类", price: "¥20", description: "清淡健康，时令新鲜" },
+        { id: 39, name: "香菇油菜", category: "蔬菜类", price: "¥32", description: "营养丰富，口感鲜美" },
+        { id: 40, name: "蒜苔炒肉", category: "蔬菜类", price: "¥38", description: "蒜香浓郁，肉嫩菜鲜" },
+        { id: 41, name: "醋溜白菜", category: "蔬菜类", price: "¥22", description: "酸甜爽口，开胃下饭" },
+        { id: 42, name: "拍黄瓜", category: "蔬菜类", price: "¥18", description: "清爽解腻，简单美味" },
+        { id: 43, name: "凉拌木耳", category: "蔬菜类", price: "¥25", description: "爽脆可口，营养丰富" },
+        { id: 44, name: "油焖茄子", category: "蔬菜类", price: "¥32", description: "酱香浓郁，软糯香甜" },
+        { id: 45, name: "干煸苦瓜", category: "蔬菜类", price: "¥28", description: "清热去火，外酥里嫩" },
+        { id: 46, name: "芹菜炒香干", category: "蔬菜类", price: "¥30", description: "清爽下饭，营养丰富" },
+        { id: 47, name: "干锅土豆片", category: "蔬菜类", price: "¥32", description: "外酥里嫩，香辣下饭" },
+        { id: 48, name: "扬州炒饭", category: "主食类", price: "¥35", description: "淮扬名点，配料丰富" },
+        { id: 49, name: "蛋炒饭", category: "主食类", price: "¥22", description: "简单美味，家常味道" },
+        { id: 50, name: "牛肉炒面", category: "主食类", price: "¥32", description: "面条劲道，牛肉鲜嫩" },
+        { id: 51, name: "担担面", category: "主食类", price: "¥28", description: "四川特色，麻辣鲜香" },
+        { id: 52, name: "小笼包", category: "主食类", price: "¥35", description: "上海特色，皮薄馅鲜" },
+        { id: 53, name: "生煎包", category: "主食类", price: "¥32", description: "上海特色，底脆皮薄" },
+        { id: 54, name: "饺子", category: "主食类", price: "¥28", description: "北方主食，馅料多样" },
+        { id: 55, name: "肉夹馍", category: "主食类", price: "¥25", description: "西安特色，馍脆肉香" },
+        { id: 56, name: "凉皮", category: "主食类", price: "¥22", description: "陕西特色，爽滑筋道" },
+        { id: 57, name: "锅贴", category: "主食类", price: "¥30", description: "外酥里嫩，馅料丰富" },
+        { id: 58, name: "南瓜汤", category: "汤品类", price: "¥25", description: "香甜可口，营养丰富" },
+        { id: 59, name: "西红柿鸡蛋汤", category: "汤品类", price: "¥18", description: "家常汤品，简单美味" },
+        { id: 60, name: "紫菜蛋花汤", category: "汤品类", price: "¥16", description: "清爽解腻，做法简单" },
+        { id: 61, name: "鸡汤", category: "汤品类", price: "¥48", description: "营养丰富，汤鲜味美" },
+        { id: 62, name: "排骨汤", category: "汤品类", price: "¥52", description: "滋补养生，肉烂汤鲜" },
+        { id: 63, name: "酸辣汤", category: "汤品类", price: "¥22", description: "酸辣爽口，开胃暖胃" },
+        { id: 64, name: "冬瓜排骨汤", category: "汤品类", price: "¥45", description: "清淡解腻，营养丰富" },
+        { id: 65, name: "三鲜汤", category: "汤品类", price: "¥38", description: "配料丰富，汤鲜味美" },
+        { id: 66, name: "提拉米苏", category: "甜品类", price: "¥32", description: "意大利经典，入口即化" },
+        { id: 67, name: "芒果布丁", category: "甜品类", price: "¥25", description: "热带水果，香甜爽滑" },
+        { id: 68, name: "红豆沙", category: "甜品类", price: "¥18", description: "中式甜品，香甜软糯" },
+        { id: 69, name: "银耳莲子羹", category: "甜品类", price: "¥22", description: "滋补养生，清甜爽口" },
+        { id: 70, name: "冰淇淋", category: "甜品类", price: "¥28", description: "冰凉解暑，口味多样" },
+        { id: 71, name: "汤圆", category: "甜品类", price: "¥20", description: "传统美食，寓意团圆" },
+        { id: 72, name: "桂花糕", category: "甜品类", price: "¥25", description: "传统糕点，桂花清香" },
+        { id: 73, name: "杨枝甘露", category: "甜品类", price: "¥28", description: "港式甜品，香甜清爽" },
+        { id: 74, name: "鲜榨橙汁", category: "饮料类", price: "¥18", description: "新鲜橙子，维生素C丰富" },
+        { id: 75, name: "可乐", category: "饮料类", price: "¥8", description: "经典可乐，清爽解腻" },
+        { id: 76, name: "雪碧", category: "饮料类", price: "¥8", description: "透心凉，心飞扬" },
+        { id: 77, name: "椰汁", category: "饮料类", price: "¥12", description: "海南椰汁，清甜可口" },
+        { id: 78, name: "酸梅汤", category: "饮料类", price: "¥15", description: "酸甜解腻，传统饮品" },
+        { id: 79, name: "鲜榨西瓜汁", category: "饮料类", price: "¥16", description: "夏季解暑，清爽甜美" },
+        { id: 80, name: "鲜榨苹果汁", category: "饮料类", price: "¥16", description: "新鲜苹果，营养丰富" },
+        { id: 81, name: "冰红茶", category: "饮料类", price: "¥10", description: "清爽解腻，经典口味" },
+        { id: 82, name: "柠檬茶", category: "饮料类", price: "¥12", description: "酸甜清新，解腻佳品" },
+        { id: 83, name: "绿豆沙", category: "饮料类", price: "¥14", description: "清热解暑，传统饮品" },
+        { id: 84, name: "奶茶", category: "饮料类", price: "¥18", description: "台式经典，奶香浓郁" },
+        { id: 85, name: "豆浆", category: "饮料类", price: "¥8", description: "营养早餐，豆香浓郁" },
+        { id: 86, name: "水果拼盘", category: "水果类", price: "¥38", description: "时令水果，营养多样" },
+        { id: 87, name: "西瓜", category: "水果类", price: "¥25", description: "夏季解暑，甜爽多汁" },
+        { id: 88, name: "葡萄", category: "水果类", price: "¥28", description: "新鲜饱满，甘甜可口" },
+        { id: 89, name: "草莓", category: "水果类", price: "¥35", description: "新鲜采摘，香甜诱人" },
+        { id: 90, name: "哈密瓜", category: "水果类", price: "¥30", description: "新疆特产，甜蜜多汁" },
+        { id: 91, name: "车厘子", category: "水果类", price: "¥48", description: "进口水果，品质上乘" },
+        { id: 92, name: "猕猴桃", category: "水果类", price: "¥32", description: "营养丰富，酸甜适中" },
+        { id: 93, name: "火龙果", category: "水果类", price: "¥25", description: "热带水果，清甜爽口" },
+        { id: 94, name: "芒果", category: "水果类", price: "¥28", description: "热带水果，香甜浓郁" },
+        { id: 95, name: "橙子", category: "水果类", price: "¥18", description: "富含维C，酸甜可口" }
+      ];
+
+      function initialRules() {
+        return [
+          {
+            id: 1,
+            name: "海鲜类每轮限购",
+            type: "按桌/订单限购",
+            round: "每轮",
+            method: "按每个分类限购",
+            persons: "1-4人",
+            dishes: "海鲜类(12)",
+            status: "active",
+            created: "2024-01-15",
+            description: "每桌每轮海鲜类菜品限购3份",
+            selectedCategories: [1],
+            quantitySettings: { category_1: 3 },
+            maxSameDishSettings: { category_1: 2 },
+            maxTotalQuantity: 10,
+            maxRounds: 3
+          },
+          {
+            id: 2,
+            name: "招牌菜首轮限购",
+            type: "按人限购",
+            round: "多轮",
+            method: "按每种菜品限购",
+            persons: "5-8人",
+            dishes: "招牌菜品(5)",
+            status: "active",
+            created: "2024-01-10",
+            description: "每人第一轮招牌菜品限购1份",
+            rounds: [
+              { min: 1, max: 1, roundName: "第一轮", selectedCategories: [1, 4, 2, 5], selectedDishes: [1, 5, 48, 13, 61], quantitySettings: { dish_1: 1, dish_5: 1, dish_48: 1, dish_13: 1, dish_61: 1 }, maxTotalQuantity: 3 },
+              { min: 2, max: 2, roundName: "第二轮", selectedCategories: [], selectedDishes: [], quantitySettings: {}, maxTotalQuantity: 5 },
+              { min: 3, max: 99, roundName: "第三轮及以上", selectedCategories: [], selectedDishes: [], quantitySettings: {}, maxTotalQuantity: 4 }
+            ],
+            roundRanges: [
+              { min: 1, max: 1 },
+              { min: 2, max: 2 },
+              { min: 3, max: 99 }
+            ]
+          },
+          {
+            id: 3,
+            name: "甜品总量限制",
+            type: "按桌/订单限购",
+            round: "与轮次无关",
+            method: "按每个分类限购",
+            persons: "所有人数",
+            dishes: "甜品类(8)",
+            status: "inactive",
+            created: "2024-01-05",
+            description: "每桌整个用餐期间甜品类限购5份",
+            selectedCategories: [6],
+            quantitySettings: { category_6: 5 },
+            maxSameDishSettings: { category_6: 2 }
+          },
+          {
+            id: 4,
+            name: "蔬菜类每轮限购测试",
+            type: "按桌/订单限购",
+            round: "每轮",
+            method: "按每个分类限购",
+            persons: "1-6人",
+            dishes: "蔬菜类(20)",
+            status: "active",
+            created: "2024-01-20",
+            description: "每桌每轮蔬菜类菜品限购5份，其中相同菜品限购2份",
+            selectedCategories: [3],
+            quantitySettings: { category_3: 5 },
+            maxSameDishSettings: { category_3: 2 },
+            maxTotalQuantity: 15
+          }
+        ];
+      }
+
+      function emptyStructureByLine() {
+        return MenuPicker ? MenuPicker.emptyByLine() : { kiosk: [], emenu: [], sdi: [] };
+      }
+
+      function createEmptyDraft() {
+        return {
+          step: 1,
+          type: null,
+          round: null,
+          method: null,
+          name: "",
+          description: "",
+          personRanges: [createEmptyPersonRange(1, 99, 0)],
+          activePersonRange: 0,
+          structureByLine: emptyStructureByLine(),
+          selectedCategories: [],
+          selectedDishes: [],
+          quantitySettings: {},
+          maxSameDishSettings: {},
+          rounds: [],
+          roundRanges: [],
+          activeRound: 0,
+          activeQtyLine: null,
+          selectedQtyKeys: [],
+          batchQtyValue: "",
+          dimEditorOpen: false,
+          dimEditorDraft: null,
+          copySceneOpen: false,
+          copyTargetSceneIds: [],
+          copyCurrentLineOnly: true,
+          enableMemberLevels: false,
+          selectedMemberLevels: [],
+          enableTimeSettings: false,
+          selectedBusinessHourIds: [],
+          selectedWeekdays: [],
+          timeRanges: [],
+          weekdayTimeRanges: {}
+        };
+      }
+
+      var BH_STORAGE_KEY = "bplant-module-setting-field:418-business-hour-schedules";
+      var BH_DAYS_MON_FIRST = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+      var BH_DAY_BADGES = [
+        { day: "sun", badge: "SUN" },
+        { day: "mon", badge: "MON" },
+        { day: "tue", badge: "TUE" },
+        { day: "wed", badge: "WED" },
+        { day: "thu", badge: "THU" },
+        { day: "fri", badge: "FRI" },
+        { day: "sat", badge: "SAT" }
+      ];
+
+      function currentMonthIsoRange() {
+        var now = new Date();
+        var y = now.getFullYear();
+        var m = String(now.getMonth() + 1).padStart(2, "0");
+        var last = new Date(y, now.getMonth() + 1, 0).getDate();
+        return {
+          fromDate: y + "-" + m + "-01",
+          toDate: y + "-" + m + "-" + String(last).padStart(2, "0")
+        };
+      }
+
+      function defaultBusinessHourSchedules() {
+        var range = currentMonthIsoRange();
+        return [
+          { id: "bh-preset-all-day", name: "All Day", openTime: "00:00", closeTime: "23:50", fromDate: range.fromDate, toDate: range.toDate, fromDay: "sun", toDay: "sat" },
+          { id: "bh-preset-morning", name: "早上", openTime: "06:00", closeTime: "11:00", fromDate: range.fromDate, toDate: range.toDate, fromDay: "sun", toDay: "sat" },
+          { id: "bh-preset-noon", name: "中午", openTime: "11:00", closeTime: "16:00", fromDate: range.fromDate, toDate: range.toDate, fromDay: "sun", toDay: "sat" },
+          { id: "bh-preset-evening", name: "晚上", openTime: "16:00", closeTime: "24:00", fromDate: range.fromDate, toDate: range.toDate, fromDay: "sun", toDay: "sat" }
+        ];
+      }
+
+      function expandBusinessHourActiveDays(fromDay, toDay) {
+        var fromIdx = BH_DAYS_MON_FIRST.indexOf(fromDay);
+        var toIdx = BH_DAYS_MON_FIRST.indexOf(toDay);
+        var out = {};
+        if (fromIdx < 0 || toIdx < 0) {
+          BH_DAYS_MON_FIRST.forEach(function (d) { out[d] = true; });
+          return out;
+        }
+        if (fromIdx <= toIdx) {
+          for (var i = fromIdx; i <= toIdx; i++) out[BH_DAYS_MON_FIRST[i]] = true;
+        } else {
+          for (var j = fromIdx; j < BH_DAYS_MON_FIRST.length; j++) out[BH_DAYS_MON_FIRST[j]] = true;
+          for (var k = 0; k <= toIdx; k++) out[BH_DAYS_MON_FIRST[k]] = true;
+        }
+        return out;
+      }
+
+      function getBusinessHourActiveDays(schedule) {
+        if (schedule.activeDays && schedule.activeDays.length) {
+          var set = {};
+          schedule.activeDays.forEach(function (d) { set[d] = true; });
+          return set;
+        }
+        return expandBusinessHourActiveDays(schedule.fromDay || "sun", schedule.toDay || "sat");
+      }
+
+      function formatBusinessHourDateRange(fromDate, toDate) {
+        if (!fromDate && !toDate) return "未设置日期";
+        if (fromDate && toDate && fromDate === toDate) return fromDate;
+        if (fromDate && toDate) return fromDate + " 至 " + toDate;
+        return fromDate || toDate;
+      }
+
+      function normalizeBusinessHourSchedule(raw) {
+        var range = currentMonthIsoRange();
+        return {
+          id: raw.id,
+          name: raw.name || "营业时间",
+          openTime: raw.openTime || "09:00",
+          closeTime: raw.closeTime || "22:00",
+          fromDate: raw.fromDate || range.fromDate,
+          toDate: raw.toDate || range.toDate,
+          fromDay: raw.fromDay || "sun",
+          toDay: raw.toDay || "sat",
+          activeDays: Array.isArray(raw.activeDays) ? raw.activeDays.slice() : undefined
+        };
+      }
+
+      function readBusinessHourSchedulesFromStore() {
+        try {
+          var raw = localStorage.getItem(BH_STORAGE_KEY);
+          if (raw) {
+            var parsed = JSON.parse(raw);
+            if (Array.isArray(parsed) && parsed.length) {
+              return parsed
+                .filter(function (s) { return s && s.id && s.name; })
+                .map(normalizeBusinessHourSchedule);
+            }
+          }
+        } catch (e) { /* ignore */ }
+        return defaultBusinessHourSchedules().map(normalizeBusinessHourSchedule);
+      }
+
+      function renderBusinessHourDayBadges(schedule) {
+        var active = getBusinessHourActiveDays(schedule);
+        return BH_DAY_BADGES.filter(function (item) { return !!active[item.day]; })
+          .map(function (item) {
+            return "<span class='bh-day-badge' aria-hidden='true'>" + item.badge + "</span>";
+          })
+          .join("");
+      }
+
+      function renderBusinessHourCard(schedule, checked) {
+        return (
+          "<label class='bh-card" + (checked ? " is-checked" : "") + "' data-bh-schedule-card='" + esc(schedule.id) + "'>" +
+            "<div class='bh-card-top'>" +
+              "<div class='bh-card-main'>" +
+                "<div class='bh-card-title-row'>" +
+                  "<h5 class='bh-card-name'>" + esc(schedule.name) + "</h5>" +
+                  "<span class='bh-card-date'>" + esc(formatBusinessHourDateRange(schedule.fromDate, schedule.toDate)) + "</span>" +
+                "</div>" +
+                "<p class='bh-card-time'>" +
+                  esc(schedule.openTime) +
+                  "<span>—</span>" +
+                  esc(schedule.closeTime) +
+                "</p>" +
+                "<div class='bh-day-badges'>" + renderBusinessHourDayBadges(schedule) + "</div>" +
+              "</div>" +
+              "<input class='bh-card-check' type='checkbox' data-bh-schedule-id='" + esc(schedule.id) + "'" + (checked ? " checked" : "") + " />" +
+            "</div>" +
+          "</label>"
+        );
+      }
+
+      function formatBusinessHourSummary(schedule) {
+        return formatBusinessHourDateRange(schedule.fromDate, schedule.toDate) +
+          " · " +
+          (schedule.openTime || "--:--") + "–" + (schedule.closeTime || "--:--");
+      }
+
+      function formatSelectedBusinessHoursLabel(ids) {
+        var schedules = readBusinessHourSchedulesFromStore();
+        var names = (ids || []).map(function (id) {
+          var s = schedules.find(function (x) { return x.id === id; });
+          if (s) return s.name;
+          if (id === "lunch") return "午市 11:00–16:59";
+          if (id === "dinner") return "晚市 17:00–23:00";
+          return null;
+        }).filter(Boolean);
+        if (!names.length) return "未选择营业时间";
+        return names.join("、");
+      }
+
+      function createEmptyRoundRange(min, max) {
+        return {
+          min: min != null ? min : 1,
+          max: max != null ? max : 99
+        };
+      }
+
+      function createEmptyPersonRange(min, max, roundCount) {
+        var roundQuantities = [];
+        for (var i = 0; i < (roundCount || 0); i++) {
+          roundQuantities.push({ quantitySettings: {} });
+        }
+        return {
+          min: min != null ? min : 1,
+          max: max != null ? max : 99,
+          quantitySettings: {},
+          roundQuantities: roundQuantities
+        };
+      }
+
+      function formatPersonRangeLabel(range) {
+        var min = Number(range.min) || 1;
+        var max = Number(range.max) || 99;
+        if (max >= 99) return min <= 1 ? "不限人数" : (min + "人及以上");
+        if (min === max) return min + "人";
+        if (min <= 1) return max + "人及以下";
+        return min + "-" + max + "人";
+      }
+
+      function formatRoundRangeLabel(range) {
+        var min = Number(range.min) || 1;
+        var max = Number(range.max) || 99;
+        if (max >= 99) return min <= 1 ? "不限轮次" : (min + "轮及以上");
+        if (min === max) return "第" + min + "轮";
+        if (min <= 1) return max + "轮及以下";
+        return min + "-" + max + "轮";
+      }
+
+      function formatPersonRangesSummary(ranges) {
+        if (!ranges || !ranges.length) return "未设置";
+        return ranges.map(formatPersonRangeLabel).join(" / ");
+      }
+
+      function formatRoundRangesSummary(ranges) {
+        if (!ranges || !ranges.length) return "未设置";
+        return ranges.map(formatRoundRangeLabel).join(" / ");
+      }
+
+      function normalizeRoundRangesList(list) {
+        if (!Array.isArray(list) || !list.length) return [createEmptyRoundRange(1, 99)];
+        return list.map(function (r, i) {
+          if (r && (r.min != null || r.max != null)) {
+            return createEmptyRoundRange(Number(r.min) || 1, Number(r.max) || 99);
+          }
+          // 兼容旧版具名轮次：第 i 轮 → i+1 ~ i+1
+          return createEmptyRoundRange(i + 1, i + 1);
+        });
+      }
+
+      function ensurePersonRangesShape(draft) {
+        if (!Array.isArray(draft.personRanges) || !draft.personRanges.length) {
+          draft.personRanges = [createEmptyPersonRange(1, 99, draft.round === "multiRound" ? (draft.roundRanges || []).length : 0)];
+        }
+        if (draft.round === "multiRound") {
+          draft.roundRanges = normalizeRoundRangesList(draft.roundRanges && draft.roundRanges.length ? draft.roundRanges : draft.rounds);
+        } else if (!Array.isArray(draft.roundRanges)) {
+          draft.roundRanges = [];
+        }
+        var roundCount = draft.round === "multiRound" ? (draft.roundRanges || []).length : 0;
+        // 原地补齐，避免重建对象导致 setQtyValue 写到失效引用
+        draft.personRanges.forEach(function (pr) {
+          pr.min = Number(pr.min) || 1;
+          pr.max = Number(pr.max) || 99;
+          if (!pr.quantitySettings || typeof pr.quantitySettings !== "object") {
+            pr.quantitySettings = {};
+          }
+          if (!Array.isArray(pr.roundQuantities)) pr.roundQuantities = [];
+          while (pr.roundQuantities.length < roundCount) {
+            pr.roundQuantities.push({ quantitySettings: {} });
+          }
+          if (pr.roundQuantities.length > roundCount) {
+            pr.roundQuantities.length = roundCount;
+          }
+          pr.roundQuantities.forEach(function (rq) {
+            if (!rq) return;
+            if (!rq.quantitySettings || typeof rq.quantitySettings !== "object") {
+              rq.quantitySettings = {};
+            }
+          });
+        });
+        if (draft.activePersonRange == null || draft.activePersonRange < 0 || draft.activePersonRange >= draft.personRanges.length) {
+          draft.activePersonRange = 0;
+        }
+        if (draft.round === "multiRound") {
+          if (draft.activeRound == null || draft.activeRound < 0 || draft.activeRound >= (draft.roundRanges || []).length) {
+            draft.activeRound = Math.max(0, (draft.roundRanges || []).length - 1);
+          }
+        }
+        return draft.personRanges;
+      }
+
+      function getActivePersonRange(draft) {
+        ensurePersonRangesShape(draft);
+        return draft.personRanges[draft.activePersonRange] || draft.personRanges[0];
+      }
+
+      function setQtyValue(draft, qtyKey, num) {
+        ensurePersonRangesShape(draft);
+        var pr = draft.personRanges[draft.activePersonRange] || draft.personRanges[0];
+        if (!pr) return;
+        if (draft.round === "multiRound") {
+          var rq = pr.roundQuantities[draft.activeRound];
+          if (!rq) {
+            rq = { quantitySettings: {} };
+            pr.roundQuantities[draft.activeRound] = rq;
+          }
+          if (!rq.quantitySettings) rq.quantitySettings = {};
+          rq.quantitySettings[qtyKey] = num;
+        } else {
+          if (!pr.quantitySettings) pr.quantitySettings = {};
+          pr.quantitySettings[qtyKey] = num;
+        }
+      }
+
+      function getQtyMap(draft) {
+        ensurePersonRangesShape(draft);
+        var pr = draft.personRanges[draft.activePersonRange] || draft.personRanges[0];
+        if (!pr) return {};
+        if (draft.round === "multiRound") {
+          var rq = (pr.roundQuantities || [])[draft.activeRound];
+          return (rq && rq.quantitySettings) || {};
+        }
+        return pr.quantitySettings || {};
+      }
+
+      function getQtyMapAt(draft, personIndex, roundIndex) {
+        ensurePersonRangesShape(draft);
+        var pr = draft.personRanges[personIndex];
+        if (!pr) return {};
+        if (draft.round === "multiRound") {
+          var rq = (pr.roundQuantities || [])[roundIndex];
+          return (rq && rq.quantitySettings) || {};
+        }
+        return pr.quantitySettings || {};
+      }
+
+      function setQtyValueAt(draft, personIndex, roundIndex, qtyKey, num) {
+        ensurePersonRangesShape(draft);
+        var pr = draft.personRanges[personIndex];
+        if (!pr) return;
+        if (draft.round === "multiRound") {
+          var rq = pr.roundQuantities[roundIndex];
+          if (!rq) {
+            rq = { quantitySettings: {} };
+            pr.roundQuantities[roundIndex] = rq;
+          }
+          if (!rq.quantitySettings) rq.quantitySettings = {};
+          rq.quantitySettings[qtyKey] = num;
+        } else {
+          if (!pr.quantitySettings) pr.quantitySettings = {};
+          pr.quantitySettings[qtyKey] = num;
+        }
+      }
+
+      function listQtyScenes(draft) {
+        ensurePersonRangesShape(draft);
+        var scenes = [];
+        var isMulti = draft.round === "multiRound";
+        draft.personRanges.forEach(function (pr, pi) {
+          if (isMulti) {
+            (draft.roundRanges || []).forEach(function (r, ri) {
+              scenes.push({
+                id: pi + ":" + ri,
+                personIndex: pi,
+                roundIndex: ri,
+                label: formatPersonRangeLabel(pr) + " · " + formatRoundRangeLabel(r)
+              });
+            });
+          } else {
+            scenes.push({
+              id: String(pi),
+              personIndex: pi,
+              roundIndex: null,
+              label: formatPersonRangeLabel(pr)
+            });
+          }
+        });
+        return scenes;
+      }
+
+      function getActiveScene(draft) {
+        var scenes = listQtyScenes(draft);
+        if (!scenes.length) return null;
+        var found = scenes.find(function (s) {
+          if (s.personIndex !== draft.activePersonRange) return false;
+          if (draft.round === "multiRound") return s.roundIndex === draft.activeRound;
+          return true;
+        });
+        return found || scenes[0];
+      }
+
+      function resolveSceneSelection(draft) {
+        var scenes = listQtyScenes(draft);
+        if (!scenes.length) return null;
+        var active = getActiveScene(draft);
+        if (!active || !scenes.some(function (s) { return s.id === active.id; })) {
+          active = scenes[0];
+        }
+        draft.activePersonRange = active.personIndex;
+        if (draft.round === "multiRound") draft.activeRound = active.roundIndex;
+        return active;
+      }
+
+      function sceneHasQtyOnLine(draft, scene, lineId, method) {
+        var byLine = getDraftStructureByLine(draft);
+        var keys = listQtyItems(byLine, method)
+          .filter(function (it) { return it.lineId === lineId; })
+          .map(function (item) { return qtyKeyForItem(method, item); });
+        if (!keys.length) return false;
+        var map = getQtyMapAt(draft, scene.personIndex, scene.roundIndex);
+        return keys.some(function (k) { return Number(map[k]) > 0; });
+      }
+
+      function getSceneCompletion(draft, scene, lineOpts, method) {
+        if (!lineOpts || !lineOpts.length) return "empty";
+        var hit = 0;
+        lineOpts.forEach(function (line) {
+          if (sceneHasQtyOnLine(draft, scene, line.id, method)) hit += 1;
+        });
+        if (hit <= 0) return "empty";
+        if (hit >= lineOpts.length) return "done";
+        return "partial";
+      }
+
+      function completionLabel(status) {
+        if (status === "done") return { cls: "done", text: "● 已配置" };
+        if (status === "partial") return { cls: "partial", text: "◐ 部分产线" };
+        return { cls: "empty", text: "○ 未配置" };
+      }
+
+      function cloneDimEditorDraft(draft) {
+        ensurePersonRangesShape(draft);
+        return {
+          personRanges: (draft.personRanges || []).map(function (pr) {
+            return {
+              min: pr.min,
+              max: pr.max,
+              quantitySettings: Object.assign({}, pr.quantitySettings || {}),
+              roundQuantities: (pr.roundQuantities || []).map(function (rq) {
+                return { quantitySettings: Object.assign({}, (rq && rq.quantitySettings) || {}) };
+              })
+            };
+          }),
+          roundRanges: (draft.roundRanges || []).map(function (r) {
+            return createEmptyRoundRange(r.min, r.max);
+          })
+        };
+      }
+
+      function ensureDimEditorShape(dim, isMulti) {
+        if (!dim.personRanges || !dim.personRanges.length) {
+          dim.personRanges = [createEmptyPersonRange(1, 99, isMulti ? (dim.roundRanges || []).length : 0)];
+        }
+        if (!Array.isArray(dim.roundRanges)) dim.roundRanges = [];
+        if (isMulti && !dim.roundRanges.length) dim.roundRanges = [createEmptyRoundRange(1, 99)];
+        var roundCount = isMulti ? dim.roundRanges.length : 0;
+        dim.personRanges.forEach(function (pr) {
+          pr.min = Number(pr.min) || 1;
+          pr.max = Number(pr.max) || 99;
+          if (!pr.quantitySettings || typeof pr.quantitySettings !== "object") pr.quantitySettings = {};
+          if (!Array.isArray(pr.roundQuantities)) pr.roundQuantities = [];
+          while (pr.roundQuantities.length < roundCount) pr.roundQuantities.push({ quantitySettings: {} });
+          if (pr.roundQuantities.length > roundCount) pr.roundQuantities.length = roundCount;
+          pr.roundQuantities.forEach(function (rq) {
+            if (!rq.quantitySettings || typeof rq.quantitySettings !== "object") rq.quantitySettings = {};
+          });
+        });
+        return dim;
+      }
+
+      function validateRanges(ranges, kind) {
+        var label = kind === "round" ? "轮次区间" : "人数区间";
+        if (!ranges || !ranges.length) return "请至少设置一个" + label;
+        var normalized = ranges.map(function (r, i) {
+          return { min: Number(r.min), max: Number(r.max), index: i };
+        });
+        for (var i = 0; i < normalized.length; i++) {
+          var r = normalized[i];
+          if (!Number.isFinite(r.min) || !Number.isFinite(r.max) || r.min < 1 || r.max < 1) {
+            return "第 " + (i + 1) + " 个" + label + "需为正整数";
+          }
+          if (r.min > r.max) return "第 " + (i + 1) + " 个" + label + "的最小值不能大于最大值";
+        }
+        var sorted = normalized.slice().sort(function (a, b) { return a.min - b.min || a.max - b.max; });
+        for (var j = 0; j < sorted.length; j++) {
+          for (var k = j + 1; k < sorted.length; k++) {
+            var a = sorted[j];
+            var b = sorted[k];
+            if (a.max >= b.min) {
+              return label + "不能重叠（请检查 " + a.min + "-" + a.max + " 与 " + b.min + "-" + b.max + "）";
+            }
+          }
+        }
+        return null;
+      }
+
+      function validatePersonRanges(ranges) {
+        return validateRanges(ranges, "person");
+      }
+
+      function validateRoundRanges(ranges) {
+        return validateRanges(ranges, "round");
+      }
+
+      function findPersonRangeIndexByCount(ranges, personCount) {
+        var count = Number(personCount) || 0;
+        for (var i = 0; i < (ranges || []).length; i++) {
+          var r = ranges[i];
+          if (count >= Number(r.min) && count <= Number(r.max)) return i;
+        }
+        return -1;
+      }
+
+      function findRoundRangeIndexByRound(ranges, roundNo) {
+        return findPersonRangeIndexByCount(ranges, roundNo);
+      }
+
+      function getDraftStructureByLine(draft) {
+        return MenuPicker
+          ? MenuPicker.normalizeByLine(draft.structureByLine)
+          : emptyStructureByLine();
+      }
+
+      function syncEntitiesFromStructure(target, method, byLine) {
+        if (!MenuPicker) return;
+        if (method === "perCategory") {
+          target.selectedCategories = MenuPicker.listSelectedCategories(byLine).map(function (c) {
+            return c.lineId + "|" + c.key;
+          });
+          target.selectedDishes = [];
+        } else {
+          target.selectedDishes = MenuPicker.listSelectedDishes(byLine).map(function (d) {
+            return d.lineId + "|" + d.key;
+          });
+          target.selectedCategories = [];
+        }
+      }
+
+      function applyStructureToDraft(draft, byLine) {
+        byLine = MenuPicker ? MenuPicker.normalizeByLine(byLine) : emptyStructureByLine();
+        draft.structureByLine = byLine;
+        syncEntitiesFromStructure(draft, draft.method, byLine);
+      }
+
+      function qtyKeyForItem(method, item) {
+        return (method === "perCategory" ? "category_" : "dish_") + item.lineId + "_" + item.key;
+      }
+
+      function listQtyItems(byLine, method) {
+        if (!MenuPicker) return [];
+        return method === "perCategory"
+          ? MenuPicker.listSelectedCategories(byLine)
+          : MenuPicker.listSelectedDishes(byLine);
+      }
+
+      function getQtyLineOptions(byLine, method) {
+        if (!MenuPicker) return [];
+        var items = listQtyItems(byLine, method);
+        return MenuPicker.LINE_OPTIONS.map(function (line) {
+          var count = items.filter(function (it) { return it.lineId === line.id; }).length;
+          return { id: line.id, label: line.label, count: count };
+        }).filter(function (line) { return line.count > 0; });
+      }
+
+      function resolveActiveQtyLine(draft, byLine, method) {
+        var lines = getQtyLineOptions(byLine, method);
+        if (!lines.length) return null;
+        if (draft.activeQtyLine && lines.some(function (l) { return l.id === draft.activeQtyLine; })) {
+          return draft.activeQtyLine;
+        }
+        return lines[0].id;
+      }
+
+      function displayQtyItemName(item, method) {
+        if (method !== "perCategory") return item.name;
+        var suffix = "（" + item.lineLabel + "）";
+        if (item.name.length > suffix.length && item.name.slice(-suffix.length) === suffix) {
+          return item.name.slice(0, -suffix.length);
+        }
+        return item.name;
+      }
+
+      function getVisibleQtyKeys(draft, method, activeLine) {
+        var byLine = getDraftStructureByLine(draft);
+        return listQtyItems(byLine, method)
+          .filter(function (it) { return it.lineId === activeLine; })
+          .map(function (item) { return qtyKeyForItem(method, item); });
+      }
+
+      function normalizeSelectedQtyKeys(draft, visibleKeys) {
+        var selected = Array.isArray(draft.selectedQtyKeys) ? draft.selectedQtyKeys : [];
+        var set = {};
+        visibleKeys.forEach(function (k) { set[k] = true; });
+        draft.selectedQtyKeys = selected.filter(function (k) { return set[k]; });
+        return draft.selectedQtyKeys;
+      }
+
+      function renderDimPersonRangesHtml(dim) {
+        var rows = dim.personRanges.map(function (r, i) {
+          return (
+            "<div class='person-range-row'>" +
+              "<input class='input' type='number' min='1' data-dim-person-min='" + i + "' value='" + esc(r.min) + "' />" +
+              "<span class='person-range-sep'>至</span>" +
+              "<input class='input' type='number' min='1' data-dim-person-max='" + i + "' value='" + esc(r.max) + "' title='填 99 表示及以上' />" +
+              "<button type='button' class='btn btn-danger' data-dim-person-del='" + i + "'" +
+                (dim.personRanges.length <= 1 ? " disabled" : "") + ">删除</button>" +
+            "</div>"
+          );
+        }).join("");
+        return (
+          "<div class='person-range-list'>" + rows + "</div>" +
+          "<div style='margin-top:8px;'>" +
+            "<button type='button' class='btn' data-dim-person-add='1'>+ 添加人数区间</button>" +
+          "</div>"
+        );
+      }
+
+      function renderDimRoundsHtml(dim) {
+        var rows = (dim.roundRanges || []).map(function (r, i) {
+          return (
+            "<div class='person-range-row'>" +
+              "<input class='input' type='number' min='1' data-dim-round-min='" + i + "' value='" + esc(r.min) + "' />" +
+              "<span class='person-range-sep'>至</span>" +
+              "<input class='input' type='number' min='1' data-dim-round-max='" + i + "' value='" + esc(r.max) + "' title='填 99 表示及以上' />" +
+              "<button type='button' class='btn btn-danger' data-dim-round-del='" + i + "'" +
+                ((dim.roundRanges || []).length <= 1 ? " disabled" : "") + ">删除</button>" +
+            "</div>"
+          );
+        }).join("");
+        return (
+          "<div class='person-range-list'>" + rows + "</div>" +
+          "<div style='margin-top:8px;'>" +
+            "<button type='button' class='btn' data-dim-round-add='1'>+ 添加轮次区间</button>" +
+          "</div>"
+        );
+      }
+
+      function renderDimEditorBodyHtml(draft) {
+        if (!draft.dimEditorDraft) return "";
+        var isMulti = draft.round === "multiRound";
+        var dim = ensureDimEditorShape(draft.dimEditorDraft, isMulti);
+        return (
+          "<div class='qty-sub-label'>人数区间</div>" +
+          renderDimPersonRangesHtml(dim) +
+          (isMulti
+            ? "<div class='qty-sub-label' style='margin-top:12px;'>轮次区间</div>" + renderDimRoundsHtml(dim)
+            : "")
+        );
+      }
+
+      function syncDimEditorModal() {
+        var mask = document.getElementById("dimEditorMask");
+        var body = document.getElementById("dimEditorBody");
+        var title = document.getElementById("dimEditorTitle");
+        if (!mask || !body || !state.draft) return;
+        var draft = state.draft;
+        if (!draft.dimEditorOpen || !draft.dimEditorDraft) {
+          mask.style.display = "none";
+          body.innerHTML = "";
+          return;
+        }
+        var isMulti = draft.round === "multiRound";
+        if (title) title.textContent = isMulti ? "编辑人数 / 轮次区间" : "编辑人数区间";
+        body.innerHTML = renderDimEditorBodyHtml(draft);
+        mask.style.display = "flex";
+      }
+
+      function openDimEditor() {
+        var draft = state.draft;
+        if (!draft) return;
+        draft.dimEditorOpen = true;
+        draft.dimEditorDraft = cloneDimEditorDraft(draft);
+        draft.copySceneOpen = false;
+        syncDimEditorModal();
+        syncCopySceneModal();
+      }
+
+      function closeDimEditor() {
+        var draft = state.draft;
+        if (draft) {
+          draft.dimEditorOpen = false;
+          draft.dimEditorDraft = null;
+        }
+        syncDimEditorModal();
+      }
+
+      function renderCopySceneBodyHtml(draft, scenes, activeScene) {
+        if (!activeScene) return "<p class='qty-hint'>请先选择场景。</p>";
+        var targets = scenes.filter(function (s) { return s.id !== activeScene.id; });
+        if (!targets.length) {
+          return "<p class='qty-hint' style='margin:0;'>当前只有一个场景，无需复制。</p>";
+        }
+        var selected = Array.isArray(draft.copyTargetSceneIds) ? draft.copyTargetSceneIds : [];
+        var selectedSet = {};
+        selected.forEach(function (id) { selectedSet[id] = true; });
+        var list = targets.map(function (s) {
+          var checked = selectedSet[s.id] ? " checked" : "";
+          var cls = selectedSet[s.id] ? " is-checked" : "";
+          return (
+            "<label class='qty-copy-item" + cls + "'>" +
+              "<input type='checkbox' data-qty-copy-target='" + esc(s.id) + "'" + checked + " />" +
+              "<span>" + esc(s.label) + "</span>" +
+            "</label>"
+          );
+        }).join("");
+        var onlyLine = draft.copyCurrentLineOnly !== false;
+        var lineLabel = draft.activeQtyLine || "";
+        if (MenuPicker && draft.activeQtyLine) {
+          var lo = (MenuPicker.LINE_OPTIONS || []).find(function (l) { return l.id === draft.activeQtyLine; });
+          if (lo) lineLabel = lo.label;
+        }
+        return (
+          "<p class='qty-hint' style='margin-top:0;'>将「" + esc(activeScene.label) + "」的数量复制并覆盖到所选场景</p>" +
+          "<div class='qty-copy-list'>" + list + "</div>" +
+          "<label style='display:flex;align-items:center;gap:8px;font-size:12px;'>" +
+            "<input type='checkbox' data-qty-copy-line-only='1'" + (onlyLine ? " checked" : "") + " />" +
+            "<span>仅复制当前产线" + (lineLabel ? "（" + esc(lineLabel) + "）" : "") + "</span>" +
+          "</label>"
+        );
+      }
+
+      function renderCopySceneFootHtml(draft, scenes, activeScene) {
+        var targets = activeScene
+          ? scenes.filter(function (s) { return s.id !== activeScene.id; })
+          : [];
+        if (!targets.length) {
+          return (
+            "<div class='foot-right'>" +
+              "<button type='button' class='btn' data-qty-copy-cancel='1'>关闭</button>" +
+            "</div>"
+          );
+        }
+        return (
+          "<div class='foot-right'>" +
+            "<button type='button' class='btn' data-qty-copy-cancel='1'>取消</button>" +
+            "<button type='button' class='btn btn-primary' data-qty-copy-apply='1'>复制并覆盖</button>" +
+          "</div>"
+        );
+      }
+
+      function syncCopySceneModal() {
+        var mask = document.getElementById("copySceneMask");
+        var body = document.getElementById("copySceneBody");
+        var foot = document.getElementById("copySceneFoot");
+        if (!mask || !body || !foot) return;
+        var draft = state.draft;
+        if (!draft || !draft.copySceneOpen) {
+          mask.style.display = "none";
+          body.innerHTML = "";
+          foot.innerHTML = "";
+          return;
+        }
+        var scenes = listQtyScenes(draft);
+        var activeScene = resolveSceneSelection(draft);
+        body.innerHTML = renderCopySceneBodyHtml(draft, scenes, activeScene);
+        foot.innerHTML = renderCopySceneFootHtml(draft, scenes, activeScene);
+        mask.style.display = "flex";
+      }
+
+      function openCopySceneModal() {
+        var draft = state.draft;
+        if (!draft) return;
+        closeDimEditor();
+        draft.copySceneOpen = true;
+        draft.copyTargetSceneIds = [];
+        draft.copyCurrentLineOnly = true;
+        syncCopySceneModal();
+      }
+
+      function closeCopySceneModal() {
+        var draft = state.draft;
+        if (draft) {
+          draft.copySceneOpen = false;
+          draft.copyTargetSceneIds = [];
+        }
+        syncCopySceneModal();
+      }
+
+      function renderQtySectionHtml(draft, method) {
+        if (!MenuPicker) return "<div style='font-size:12px;color:#6b7280;'>商品结构选择器未加载</div>";
+        ensurePersonRangesShape(draft);
+        if (draft.round === "multiRound" && !(draft.roundRanges && draft.roundRanges.length)) {
+          draft.roundRanges = [createEmptyRoundRange(1, 99)];
+          draft.activeRound = 0;
+          ensurePersonRangesShape(draft);
+        }
+        var byLine = getDraftStructureByLine(draft);
+        var lineOpts = getQtyLineOptions(byLine, method);
+        var scenes = listQtyScenes(draft);
+        var activeScene = resolveSceneSelection(draft);
+
+        var sceneChips = scenes.map(function (scene) {
+          var status = getSceneCompletion(draft, scene, lineOpts, method);
+          var meta = completionLabel(status);
+          var active = activeScene && scene.id === activeScene.id ? " active" : "";
+          return (
+            "<button type='button' class='qty-scene-chip" + active + "' data-qty-scene='" + esc(scene.id) + "'" +
+              " data-person-index='" + scene.personIndex + "'" +
+              (scene.roundIndex != null ? " data-scene-round='" + scene.roundIndex + "'" : "") + ">" +
+              "<span>" + esc(scene.label) + "</span>" +
+              "<span class='qty-scene-status " + meta.cls + "'>" + meta.text + "</span>" +
+            "</button>"
+          );
+        }).join("");
+
+        var sceneBlock =
+          "<div class='qty-scene-block'>" +
+            "<div class='qty-scene-head'>" +
+              "<div>" +
+                "<strong>配置场景</strong>" +
+                "<p class='qty-hint'>每个场景 = 人数区间" + (draft.round === "multiRound" ? " × 轮次区间" : "") + "。先选场景，再填数量。</p>" +
+              "</div>" +
+              "<button type='button' class='btn' data-dim-edit-open='1'>编辑人数" +
+                (draft.round === "multiRound" ? " / 轮次区间" : "") + "</button>" +
+            "</div>" +
+            "<div class='qty-scene-chips'>" + (sceneChips || "<span class='qty-hint'>暂无场景</span>") + "</div>" +
+          "</div>";
+
+        if (!lineOpts.length) {
+          return (
+            sceneBlock +
+            "<div style='font-size:12px;color:#6b7280;'>请先在「商品配置」步骤选择商品</div>"
+          );
+        }
+
+        var activeLine = resolveActiveQtyLine(draft, byLine, method);
+        draft.activeQtyLine = activeLine;
+        var lineTabs =
+          "<div class='qty-sub-label'>产线</div>" +
+          "<div class='qty-line-tabs'>" +
+            lineOpts.map(function (line) {
+              var active = line.id === activeLine ? " active" : "";
+              return (
+                "<button type='button' class='btn qty-line-tab" + active + "' data-qty-line='" + esc(line.id) + "'>" +
+                  esc(line.label) +
+                  "<span class='qty-line-count'>" + line.count + "</span>" +
+                "</button>"
+              );
+            }).join("") +
+          "</div>";
+
+        var qtyMap = getQtyMap(draft);
+        var items = listQtyItems(byLine, method).filter(function (it) { return it.lineId === activeLine; });
+        var visibleKeys = items.map(function (item) { return qtyKeyForItem(method, item); });
+        var selectedKeys = normalizeSelectedQtyKeys(draft, visibleKeys);
+        var selectedSet = {};
+        selectedKeys.forEach(function (k) { selectedSet[k] = true; });
+        var allSelected = visibleKeys.length > 0 && visibleKeys.every(function (k) { return selectedSet[k]; });
+        var batchValue = draft.batchQtyValue != null ? draft.batchQtyValue : "";
+        var batchBar =
+          "<div class='qty-batch-bar'>" +
+            "<button type='button' class='btn' data-qty-select-all='1'>" + (allSelected ? "取消全选" : "全选") + "</button>" +
+            "<button type='button' class='btn' data-qty-clear-select='1'" + (selectedKeys.length ? "" : " disabled") + ">清空选择</button>" +
+            "<span class='qty-batch-count'>已选 " + selectedKeys.length + " 项</span>" +
+            "<button type='button' class='btn' data-qty-copy-open='1'>复制到其他场景…</button>" +
+            "<div class='qty-batch-apply'>" +
+              "<span style='font-size:12px;color:#64748b;'>批量数量</span>" +
+              "<input class='input' type='number' min='0' id='wBatchQty' data-batch-qty-input='1' value='" + esc(batchValue) + "' placeholder='如 3' />" +
+              "<button type='button' class='btn btn-primary' data-qty-batch-apply='1'" + (selectedKeys.length ? "" : " disabled") + ">应用到所选</button>" +
+            "</div>" +
+          "</div>";
+
+        var rows = items.map(function (item) {
+          var key = qtyKeyForItem(method, item);
+          var value = qtyMap[key] != null ? qtyMap[key] : 0;
+          var checked = selectedSet[key] ? " checked" : "";
+          var selectedCls = selectedSet[key] ? " is-selected" : "";
+          return (
+            "<div class='qty-row2" + selectedCls + "'>" +
+              "<input class='qty-row-check' type='checkbox' data-qty-select='" + esc(key) + "'" + checked + " />" +
+              "<span>" + esc(displayQtyItemName(item, method)) + "</span>" +
+              "<input class='input' type='number' min='0' data-qty-key='" + esc(key) + "' value='" + value + "' />" +
+            "</div>"
+          );
+        }).join("");
+
+        return (
+          sceneBlock +
+          lineTabs +
+          batchBar +
+          "<div class='qty-list' id='wQtyList'>" + rows + "</div>"
+        );
+      }
+
+      function refreshStructureSummaryUi() {
+        var draft = state.draft;
+        if (!draft || !MenuPicker) return;
+        var summaryEl = document.getElementById("wStructureSummary");
+        if (!summaryEl) return;
+        summaryEl.textContent = MenuPicker.formatSummary(getDraftStructureByLine(draft));
+      }
+
+      function refreshStructureQtyUi() {
+        var draft = state.draft;
+        if (!draft || draft.step !== 3 || !MenuPicker) return;
+        var qtySec = document.getElementById("wQtySection");
+        if (qtySec) qtySec.innerHTML = renderQtySectionHtml(draft, draft.method);
+      }
+
+      function typeKeyToLabel(type) {
+        if (type === "perTable") return "按桌/订单限购";
+        if (type === "perPerson") return "按人限购";
+        return "";
+      }
+      function roundKeyToLabel(round) {
+        if (round === "perRound") return "每轮";
+        if (round === "multiRound") return "多轮";
+        if (round === "ignoreRound") return "与轮次无关";
+        return "";
+      }
+      function methodKeyToLabel(method) {
+        if (method === "perCategory") return "按每个分类限购";
+        if (method === "perDish") return "按每种菜品限购";
+        return "";
+      }
+      function labelToTypeKey(type) { return type === "按人限购" ? "perPerson" : "perTable"; }
+      function labelToRoundKey(round) {
+        if (round === "多轮") return "multiRound";
+        if (round === "与轮次无关") return "ignoreRound";
+        return "perRound";
+      }
+      function labelToMethodKey(method) { return method === "按每种菜品限购" ? "perDish" : "perCategory"; }
+
+      function parsePersonRanges(persons) {
+        if (!persons) return [{ min: 1, max: 99 }];
+        if (persons.indexOf("所有") >= 0 || persons.indexOf("不限") >= 0) return [{ min: 1, max: 99 }];
+        var parts = String(persons).split(/\s*[/，,]\s*/);
+        var out = [];
+        for (var i = 0; i < parts.length; i++) {
+          var part = parts[i];
+          if (!part) continue;
+          var mRange = part.match(/(\d+)\s*[-~～至]+\s*(\d+)/);
+          if (mRange) {
+            out.push({ min: Number(mRange[1]), max: Number(mRange[2]) });
+            continue;
+          }
+          var mPlus = part.match(/(\d+)\s*人及以上/);
+          if (mPlus) {
+            out.push({ min: Number(mPlus[1]), max: 99 });
+            continue;
+          }
+          var mSingle = part.match(/(\d+)\s*人/);
+          if (mSingle) {
+            var n = Number(mSingle[1]);
+            out.push({ min: n, max: n });
+          }
+        }
+        return out.length ? out : [{ min: 1, max: 99 }];
+      }
+
+      function ruleToDraft(rule) {
+        var weekdayMap = {};
+        if (rule.weekdayTimeRanges && typeof rule.weekdayTimeRanges === "object") {
+          Object.keys(rule.weekdayTimeRanges).forEach(function (dayId) {
+            var ranges = rule.weekdayTimeRanges[dayId] || [];
+            weekdayMap[dayId] = ranges.map(function (t) { return { start: t.start, end: t.end }; });
+          });
+        } else if (rule.enableTimeSettings && rule.weekdays && rule.weekdays.length) {
+          var legacyRanges = (rule.timeRanges || []).map(function (t) { return { start: t.start, end: t.end }; });
+          rule.weekdays.forEach(function (dayId) {
+            weekdayMap[dayId] = legacyRanges.map(function (t) { return { start: t.start, end: t.end }; });
+          });
+        }
+        var selectedWeekdays = Object.keys(weekdayMap).length
+          ? Object.keys(weekdayMap)
+          : (rule.weekdays || []).slice();
+        var structureByLine = MenuPicker
+          ? MenuPicker.normalizeByLine(rule.structureByLine)
+          : emptyStructureByLine();
+        var selectedCategories = (rule.selectedCategories || []).slice();
+        var selectedDishes = (rule.selectedDishes || []).slice();
+        // 兼容旧数据：多轮曾把商品挂在各轮上，迁移为规则级共享选品
+        if (MenuPicker && MenuPicker.countDishes(structureByLine) <= 0 && rule.rounds && rule.rounds.length) {
+          for (var ri = 0; ri < rule.rounds.length; ri++) {
+            var legacyRound = rule.rounds[ri];
+            var legacyByLine = MenuPicker.normalizeByLine(legacyRound.structureByLine);
+            if (MenuPicker.countDishes(legacyByLine) > 0) {
+              structureByLine = legacyByLine;
+              if (legacyRound.selectedCategories && legacyRound.selectedCategories.length) {
+                selectedCategories = legacyRound.selectedCategories.slice();
+              }
+              if (legacyRound.selectedDishes && legacyRound.selectedDishes.length) {
+                selectedDishes = legacyRound.selectedDishes.slice();
+              }
+              break;
+            }
+          }
+        }
+        var draft = {
+          step: 1,
+          type: labelToTypeKey(rule.type),
+          round: labelToRoundKey(rule.round),
+          method: labelToMethodKey(rule.method),
+          name: rule.name,
+          description: rule.description,
+          personRanges: parsePersonRanges(rule.persons),
+          activePersonRange: 0,
+          structureByLine: structureByLine,
+          selectedCategories: selectedCategories,
+          selectedDishes: selectedDishes,
+          quantitySettings: Object.assign({}, rule.quantitySettings || {}),
+          maxSameDishSettings: Object.assign({}, rule.maxSameDishSettings || {}),
+          minTotalQuantity: rule.minTotalQuantity,
+          maxTotalQuantity: rule.maxTotalQuantity,
+          minPerPersonQuantity: rule.minPerPersonQuantity,
+          maxPerPersonQuantity: rule.maxPerPersonQuantity,
+          minSingleOrder: rule.minSingleOrder,
+          maxSingleOrder: rule.maxSingleOrder,
+          rounds: (rule.rounds || []).slice(),
+          roundRanges: normalizeRoundRangesList(rule.roundRanges && rule.roundRanges.length ? rule.roundRanges : rule.rounds),
+          activeRound: 0,
+          activeQtyLine: null,
+          selectedQtyKeys: [],
+          batchQtyValue: "",
+          dimEditorOpen: false,
+          dimEditorDraft: null,
+          copySceneOpen: false,
+          copyTargetSceneIds: [],
+          copyCurrentLineOnly: true,
+          enableMemberLevels: !!rule.enableMemberLevels,
+          selectedMemberLevels: (rule.memberLevels || []).slice(),
+          enableTimeSettings: !!rule.enableTimeSettings,
+          selectedBusinessHourIds: (rule.selectedBusinessHourIds || []).slice(),
+          selectedWeekdays: selectedWeekdays,
+          timeRanges: (rule.timeRanges || []).map(function (t) { return { start: t.start, end: t.end }; }),
+          weekdayTimeRanges: weekdayMap,
+          maxRounds: rule.maxRounds
+        };
+        // 迁移：优先使用新结构 personRanges；否则从旧 quantitySettings / rounds 灌入第一档区间
+        if (Array.isArray(rule.personRanges) && rule.personRanges.length) {
+          draft.personRanges = rule.personRanges.map(function (pr) {
+            return {
+              min: Number(pr.min) || 1,
+              max: Number(pr.max) || 99,
+              quantitySettings: Object.assign({}, pr.quantitySettings || {}),
+              roundQuantities: Array.isArray(pr.roundQuantities)
+                ? pr.roundQuantities.map(function (rq) {
+                    return { quantitySettings: Object.assign({}, (rq && rq.quantitySettings) || {}) };
+                  })
+                : []
+            };
+          });
+        } else {
+          var legacyRanges = parsePersonRanges(rule.persons || "1-99人");
+          var roundCount = (rule.rounds || []).length;
+          draft.personRanges = legacyRanges.map(function (r, idx) {
+            var pr = createEmptyPersonRange(r.min, r.max, roundCount);
+            if (idx === 0) {
+              pr.quantitySettings = Object.assign({}, rule.quantitySettings || {});
+              if (rule.rounds && rule.rounds.length) {
+                pr.roundQuantities = rule.rounds.map(function (rr) {
+                  return { quantitySettings: Object.assign({}, rr.quantitySettings || {}) };
+                });
+              }
+            }
+            return pr;
+          });
+        }
+        ensurePersonRangesShape(draft);
+        return draft;
+      }
+
+      function buildDishesSummary(draft) {
+        if (!MenuPicker) return "未选商品";
+        var summary = MenuPicker.formatSummary(MenuPicker.normalizeByLine(draft.structureByLine));
+        if (draft.round === "multiRound") {
+          return summary + "（" + (draft.roundRanges || []).length + " 个轮次区间）";
+        }
+        return summary;
+      }
+
+      function draftToRule(draft, existing) {
+        ensurePersonRangesShape(draft);
+        var isMulti = draft.round === "multiRound";
+        var weekdayTimeRanges = undefined;
+        if (draft.enableTimeSettings && draft.selectedWeekdays && draft.selectedWeekdays.length) {
+          weekdayTimeRanges = {};
+          draft.selectedWeekdays.forEach(function (dayId) {
+            var ranges = (draft.weekdayTimeRanges && draft.weekdayTimeRanges[dayId]) || [];
+            weekdayTimeRanges[dayId] = ranges.map(function (t) { return { start: t.start, end: t.end }; });
+          });
+        }
+        var firstWeekdayRanges = [];
+        if (weekdayTimeRanges && Object.keys(weekdayTimeRanges).length) {
+          var firstDay = Object.keys(weekdayTimeRanges)[0];
+          firstWeekdayRanges = (weekdayTimeRanges[firstDay] || []).map(function (t) { return { start: t.start, end: t.end }; });
+        }
+        var selectedBusinessHourIds = draft.enableTimeSettings
+          ? (draft.selectedBusinessHourIds || []).slice()
+          : [];
+        var personRanges = draft.personRanges.map(function (pr) {
+          return {
+            min: Number(pr.min) || 1,
+            max: Number(pr.max) || 99,
+            quantitySettings: isMulti ? undefined : Object.assign({}, pr.quantitySettings || {}),
+            roundQuantities: isMulti
+              ? (pr.roundQuantities || []).map(function (rq) {
+                  return { quantitySettings: Object.assign({}, (rq && rq.quantitySettings) || {}) };
+                })
+              : undefined
+          };
+        });
+        var firstPr = personRanges[0] || createEmptyPersonRange(1, 99, 0);
+        return {
+          id: existing ? existing.id : 0,
+          name: draft.name.trim(),
+          type: typeKeyToLabel(draft.type),
+          round: roundKeyToLabel(draft.round),
+          method: methodKeyToLabel(draft.method),
+          persons: formatPersonRangesSummary(personRanges),
+          personRanges: personRanges,
+          dishes: buildDishesSummary(draft),
+          status: existing ? existing.status : "active",
+          created: existing ? existing.created : new Date().toISOString().split("T")[0],
+          description: draft.description.trim() || draft.name.trim(),
+          structureByLine: draft.structureByLine,
+          selectedCategories: draft.selectedCategories,
+          selectedDishes: draft.selectedDishes,
+          rounds: isMulti
+            ? (draft.roundRanges || []).map(function (r) {
+                return { min: Number(r.min) || 1, max: Number(r.max) || 99 };
+              })
+            : undefined,
+          roundRanges: isMulti
+            ? (draft.roundRanges || []).map(function (r) {
+                return { min: Number(r.min) || 1, max: Number(r.max) || 99 };
+              })
+            : undefined,
+          // 兼容旧模拟器：保留第一档数量快照
+          quantitySettings: !isMulti ? Object.assign({}, firstPr.quantitySettings || {}) : undefined,
+          maxSameDishSettings: !isMulti ? draft.maxSameDishSettings : undefined,
+          minTotalQuantity: !isMulti ? draft.minTotalQuantity : undefined,
+          maxTotalQuantity: !isMulti ? draft.maxTotalQuantity : undefined,
+          minPerPersonQuantity: draft.type === "perTable" && !isMulti ? draft.minPerPersonQuantity : undefined,
+          maxPerPersonQuantity: draft.type === "perTable" && !isMulti ? draft.maxPerPersonQuantity : undefined,
+          minSingleOrder: draft.type === "perTable" && !isMulti ? draft.minSingleOrder : undefined,
+          maxSingleOrder: draft.type === "perTable" && !isMulti ? draft.maxSingleOrder : undefined,
+          enableMemberLevels: !!draft.enableMemberLevels,
+          memberLevels: draft.enableMemberLevels ? draft.selectedMemberLevels : undefined,
+          enableTimeSettings: !!draft.enableTimeSettings,
+          selectedBusinessHourIds: draft.enableTimeSettings ? selectedBusinessHourIds : undefined,
+          weekdays: draft.enableTimeSettings && draft.selectedWeekdays && draft.selectedWeekdays.length
+            ? draft.selectedWeekdays
+            : undefined,
+          timeRanges: draft.enableTimeSettings && firstWeekdayRanges.length ? firstWeekdayRanges : undefined,
+          weekdayTimeRanges: draft.enableTimeSettings ? weekdayTimeRanges : undefined,
+          maxRounds: draft.maxRounds
+        };
+      }
+
+      function validateDraftStep2(draft) {
+        if (!draft.name.trim()) return "请输入规则名称";
+        var byLine = MenuPicker
+          ? MenuPicker.normalizeByLine(draft.structureByLine)
+          : emptyStructureByLine();
+        if (!MenuPicker || MenuPicker.countDishes(byLine) <= 0) return "请至少选择一个商品";
+        return null;
+      }
+
+      function validateDraftStep3(draft) {
+        ensurePersonRangesShape(draft);
+        var personErr = validatePersonRanges(draft.personRanges);
+        if (personErr) return personErr;
+        if (draft.round === "multiRound") {
+          var roundErr = validateRoundRanges(draft.roundRanges);
+          if (roundErr) return roundErr;
+        }
+        var anyQty = draft.personRanges.some(function (pr) {
+          if (draft.round === "multiRound") {
+            return (pr.roundQuantities || []).some(function (rq) {
+              return Object.values((rq && rq.quantitySettings) || {}).some(function (v) { return Number(v) > 0; });
+            });
+          }
+          return Object.values(pr.quantitySettings || {}).some(function (v) { return Number(v) > 0; });
+        });
+        if (!anyQty) return "请至少在某一人数区间设置大于 0 的限购数量（填 0 表示不可点）";
+        return null;
+      }
+
+      function validateDraftStep4(draft) {
+        if (!draft.enableTimeSettings) return null;
+        if (!(draft.selectedBusinessHourIds || []).length) {
+          return "请至少选择一个营业时间段";
+        }
+        return null;
+      }
+
+      function validateDraftStep5(draft) {
+        if (!draft.enableMemberLevels) return null;
+        if (!(draft.selectedMemberLevels || []).length) {
+          return "请至少选择一个会员等级";
+        }
+        return null;
+      }
+
+      /* ─── 同商品规则冲突：选品展开 / 时间会员域 / 冲突引擎 ─── */
+
+      function parseStoredEntityKey(value) {
+        if (typeof value !== "string" || value.indexOf("|") < 0) return null;
+        var idx = value.indexOf("|");
+        var lineId = value.slice(0, idx);
+        var key = value.slice(idx + 1);
+        if (!lineId || !key) return null;
+        return { lineId: lineId, key: key };
+      }
+
+      function restoreStructureByLine(values) {
+        var byLine = emptyStructureByLine();
+        (values || []).forEach(function (value) {
+          var parsed = parseStoredEntityKey(value);
+          if (!parsed) return;
+          if (!byLine[parsed.lineId]) byLine[parsed.lineId] = [];
+          if (byLine[parsed.lineId].indexOf(parsed.key) < 0) {
+            byLine[parsed.lineId].push(parsed.key);
+          }
+        });
+        return MenuPicker ? MenuPicker.normalizeByLine(byLine) : byLine;
+      }
+
+      function mergeStructureByLine(into, from) {
+        var src = MenuPicker ? MenuPicker.normalizeByLine(from) : (from || emptyStructureByLine());
+        Object.keys(src).forEach(function (lineId) {
+          if (!into[lineId]) into[lineId] = [];
+          (src[lineId] || []).forEach(function (key) {
+            if (into[lineId].indexOf(key) < 0) into[lineId].push(key);
+          });
+        });
+        return into;
+      }
+
+      function targetsFromStructure(byLine) {
+        if (!MenuPicker) return [];
+        return MenuPicker.listSelectedDishes(byLine).map(function (d) {
+          return {
+            targetKey: d.lineId + "|" + d.key,
+            lineId: d.lineId,
+            dishName: d.name
+          };
+        });
+      }
+
+      function isStringEntityKey(value) {
+        return typeof value === "string" && value.indexOf("|") >= 0;
+      }
+
+      function isNumericEntityId(value) {
+        return typeof value === "number" || (typeof value === "string" && /^\d+$/.test(value));
+      }
+
+      function collectEntityValues(rule, field) {
+        var out = [];
+        function add(arr) {
+          (arr || []).forEach(function (v) { out.push(v); });
+        }
+        add(rule[field]);
+        (rule.rounds || []).forEach(function (round) {
+          add(round[field]);
+        });
+        return out;
+      }
+
+      function legacyRuleDishTargets(rule) {
+        var out = [];
+        var seen = {};
+        function pushLegacy(dishId, dishName) {
+          var targetKey = "legacy|dish:" + dishId;
+          if (seen[targetKey]) return;
+          seen[targetKey] = true;
+          out.push({ targetKey: targetKey, lineId: "legacy", dishName: dishName || ("菜品#" + dishId) });
+        }
+        collectEntityValues(rule, "selectedDishes").forEach(function (v) {
+          if (!isNumericEntityId(v)) return;
+          var id = Number(v);
+          var dish = dishes.find(function (d) { return d.id === id; });
+          pushLegacy(id, dish ? dish.name : null);
+        });
+        collectEntityValues(rule, "selectedCategories").forEach(function (v) {
+          if (!isNumericEntityId(v)) return;
+          var catId = Number(v);
+          var cat = dishCategories.find(function (c) { return c.id === catId; });
+          if (!cat) return;
+          dishes.forEach(function (d) {
+            if (d.category === cat.name) pushLegacy(d.id, d.name);
+          });
+        });
+        return out;
+      }
+
+      function expandRuleDishTargets(rule) {
+        var seen = {};
+        var out = [];
+        function pushAll(list) {
+          (list || []).forEach(function (item) {
+            if (!item || !item.targetKey || seen[item.targetKey]) return;
+            seen[item.targetKey] = true;
+            out.push(item);
+          });
+        }
+
+        if (MenuPicker && rule.structureByLine) {
+          var topByLine = MenuPicker.normalizeByLine(rule.structureByLine);
+          if (MenuPicker.countDishes(topByLine) > 0) {
+            pushAll(targetsFromStructure(topByLine));
+            return out;
+          }
+        }
+
+        var topStringKeys = []
+          .concat(rule.selectedDishes || [])
+          .concat(rule.selectedCategories || [])
+          .filter(isStringEntityKey);
+        if (topStringKeys.length && MenuPicker) {
+          var restoredTop = restoreStructureByLine(topStringKeys);
+          if (MenuPicker.countDishes(restoredTop) > 0) {
+            pushAll(targetsFromStructure(restoredTop));
+            return out;
+          }
+        }
+
+        var mergedByLine = emptyStructureByLine();
+        var hasRoundStructure = false;
+        var roundStringKeys = [];
+        (rule.rounds || []).forEach(function (round) {
+          if (MenuPicker && round.structureByLine) {
+            var roundByLine = MenuPicker.normalizeByLine(round.structureByLine);
+            if (MenuPicker.countDishes(roundByLine) > 0) {
+              hasRoundStructure = true;
+              mergeStructureByLine(mergedByLine, roundByLine);
+            }
+          }
+          [].concat(round.selectedDishes || []).concat(round.selectedCategories || [])
+            .filter(isStringEntityKey)
+            .forEach(function (k) { roundStringKeys.push(k); });
+        });
+        if (hasRoundStructure && MenuPicker) {
+          pushAll(targetsFromStructure(MenuPicker.normalizeByLine(mergedByLine)));
+          return out;
+        }
+        if (roundStringKeys.length && MenuPicker) {
+          var restoredRounds = restoreStructureByLine(roundStringKeys);
+          if (MenuPicker.countDishes(restoredRounds) > 0) {
+            pushAll(targetsFromStructure(restoredRounds));
+            return out;
+          }
+        }
+
+        pushAll(legacyRuleDishTargets(rule));
+        return out;
+      }
+
+      function parseClockMinutes(value) {
+        if (value == null) return null;
+        var text = String(value).trim();
+        var m = text.match(/^(\d{1,2}):(\d{2})$/);
+        if (!m) return null;
+        var hh = Number(m[1]);
+        var mm = Number(m[2]);
+        if (hh === 24 && mm === 0) return 1440;
+        if (hh < 0 || hh > 23 || mm < 0 || mm > 59) return null;
+        return hh * 60 + mm;
+      }
+
+      function parseIsoDateParts(iso) {
+        if (!iso || typeof iso !== "string") return null;
+        var m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (!m) return null;
+        return { y: Number(m[1]), m: Number(m[2]), d: Number(m[3]) };
+      }
+
+      function formatIsoDateParts(parts) {
+        return parts.y + "-" +
+          String(parts.m).padStart(2, "0") + "-" +
+          String(parts.d).padStart(2, "0");
+      }
+
+      function addDaysToIso(iso, delta) {
+        var parts = parseIsoDateParts(iso);
+        if (!parts) return null;
+        var dt = new Date(parts.y, parts.m - 1, parts.d + delta);
+        return formatIsoDateParts({
+          y: dt.getFullYear(),
+          m: dt.getMonth() + 1,
+          d: dt.getDate()
+        });
+      }
+
+      function weekdayKeyFromIso(iso) {
+        var parts = parseIsoDateParts(iso);
+        if (!parts) return null;
+        var dt = new Date(parts.y, parts.m - 1, parts.d);
+        return ["sun", "mon", "tue", "wed", "thu", "fri", "sat"][dt.getDay()];
+      }
+
+      function compareIsoDate(a, b) {
+        if (a === b) return 0;
+        return a < b ? -1 : 1;
+      }
+
+      function minutesRangesOverlap(aStart, aEnd, bStart, bEnd) {
+        return aStart < bEnd && bStart < aEnd;
+      }
+
+      function splitScheduleWindows(schedule) {
+        var open = parseClockMinutes(schedule.openTime);
+        var close = parseClockMinutes(schedule.closeTime);
+        if (open == null || close == null) return null;
+        var overnight = close <= open && close !== 1440;
+        var active = getBusinessHourActiveDays(schedule);
+        var fromDate = schedule.fromDate;
+        var toDate = schedule.toDate;
+        if (!fromDate || !toDate || compareIsoDate(fromDate, toDate) > 0) return null;
+        var windows = [];
+        var cursor = fromDate;
+        var guard = 0;
+        while (compareIsoDate(cursor, toDate) <= 0 && guard < 4000) {
+          guard += 1;
+          var dayKey = weekdayKeyFromIso(cursor);
+          if (dayKey && active[dayKey]) {
+            if (!overnight) {
+              windows.push({ date: cursor, dayKey: dayKey, startMin: open, endMin: close });
+            } else {
+              windows.push({ date: cursor, dayKey: dayKey, startMin: open, endMin: 1440 });
+              var nextDate = addDaysToIso(cursor, 1);
+              var nextDay = weekdayKeyFromIso(nextDate);
+              if (nextDate && nextDay) {
+                windows.push({ date: nextDate, dayKey: nextDay, startMin: 0, endMin: close });
+              }
+            }
+          }
+          cursor = addDaysToIso(cursor, 1);
+          if (!cursor) break;
+        }
+        return windows;
+      }
+
+      function scheduleWindowsOverlap(scheduleA, scheduleB) {
+        var windowsA = splitScheduleWindows(scheduleA);
+        var windowsB = splitScheduleWindows(scheduleB);
+        if (!windowsA || !windowsB) return true;
+        for (var i = 0; i < windowsA.length; i++) {
+          for (var j = 0; j < windowsB.length; j++) {
+            var a = windowsA[i];
+            var b = windowsB[j];
+            if (a.date === b.date && minutesRangesOverlap(a.startMin, a.endMin, b.startMin, b.endMin)) {
+              return true;
+            }
+          }
+        }
+        return false;
+      }
+
+      function businessHourWindowsOverlap(ruleA, ruleB, schedules) {
+        if (!ruleA.enableTimeSettings || !ruleB.enableTimeSettings) return true;
+        var idsA = ruleA.selectedBusinessHourIds || [];
+        var idsB = ruleB.selectedBusinessHourIds || [];
+        if (!idsA.length || !idsB.length) return true;
+        var map = {};
+        (schedules || []).forEach(function (s) { map[s.id] = s; });
+        for (var i = 0; i < idsA.length; i++) {
+          var sa = map[idsA[i]];
+          if (!sa) return true;
+          for (var j = 0; j < idsB.length; j++) {
+            var sb = map[idsB[j]];
+            if (!sb) return true;
+            if (scheduleWindowsOverlap(sa, sb)) return true;
+          }
+        }
+        return false;
+      }
+
+      function memberScopesOverlap(ruleA, ruleB) {
+        if (!ruleA.enableMemberLevels || !ruleB.enableMemberLevels) return true;
+        var setA = {};
+        (ruleA.memberLevels || []).forEach(function (id) { setA[id] = true; });
+        return (ruleB.memberLevels || []).some(function (id) { return !!setA[id]; });
+      }
+
+      function ruleTypeKey(rule) {
+        return String(rule.type || "") + "|" + String(rule.round || "") + "|" + String(rule.method || "");
+      }
+
+      function findSharedDishTarget(targetsA, targetsB) {
+        var map = {};
+        (targetsA || []).forEach(function (t) { map[t.targetKey] = t; });
+        for (var i = 0; i < (targetsB || []).length; i++) {
+          var hit = map[targetsB[i].targetKey];
+          if (hit) return hit;
+        }
+        return null;
+      }
+
+      function findRuleConflict(candidate, rules, editingRuleId) {
+        if (!candidate || candidate.status !== "active") return null;
+        var candidateTargets = expandRuleDishTargets(candidate);
+        if (!candidateTargets.length) return null;
+        var schedules = readBusinessHourSchedulesFromStore();
+        for (var i = 0; i < (rules || []).length; i++) {
+          var existing = rules[i];
+          if (!existing) continue;
+          if (editingRuleId != null && existing.id === editingRuleId) continue;
+          if (existing.status !== "active") continue;
+          var shared = findSharedDishTarget(candidateTargets, expandRuleDishTargets(existing));
+          if (!shared) continue;
+          if (String(candidate.round) !== String(existing.round)) {
+            return {
+              kind: "round",
+              existingRuleId: existing.id,
+              existingRuleName: existing.name,
+              dishName: shared.dishName,
+              candidateRound: candidate.round,
+              existingRound: existing.round
+            };
+          }
+          if (ruleTypeKey(candidate) === ruleTypeKey(existing)) {
+            if (
+              memberScopesOverlap(candidate, existing) &&
+              businessHourWindowsOverlap(candidate, existing, schedules)
+            ) {
+              return {
+                kind: "sameTypeScope",
+                existingRuleId: existing.id,
+                existingRuleName: existing.name,
+                dishName: shared.dishName,
+                candidateRound: candidate.round,
+                existingRound: existing.round
+              };
+            }
+          }
+        }
+        return null;
+      }
+
+      function formatRuleConflict(conflict) {
+        if (!conflict) return "规则冲突";
+        if (conflict.kind === "round") {
+          return "「" + conflict.dishName + "」已在规则「" + conflict.existingRuleName +
+            "」中使用「" + conflict.existingRound + "」，不可再设置为「" + conflict.candidateRound + "」";
+        }
+        return "「" + conflict.dishName + "」与规则「" + conflict.existingRuleName +
+          "」的规则类型相同，且时间和会员范围均有重叠";
+      }
+
+      function getCategoryIdByName(name) {
+        var c = dishCategories.find(function (x) { return x.name === name; });
+        return c ? c.id : undefined;
+      }
+      function getRoundSettings(rule, round, personCount) {
+        var ranges = rule.personRanges || [];
+        var prIdx = findPersonRangeIndexByCount(ranges, personCount);
+        if (prIdx < 0) {
+          return {
+            roundName: "人数未覆盖",
+            selectedCategories: rule.selectedCategories || [],
+            selectedDishes: rule.selectedDishes || [],
+            quantitySettings: {},
+            unavailable: true,
+            unavailableReason: "当前就餐人数未命中规则的人数区间"
+          };
+        }
+        var pr = ranges[prIdx];
+        var isMultiRound = rule.round === "多轮";
+        if (isMultiRound) {
+          var roundRanges = normalizeRoundRangesList(rule.roundRanges && rule.roundRanges.length ? rule.roundRanges : rule.rounds);
+          var rrIdx = findRoundRangeIndexByRound(roundRanges, round);
+          var rq = rrIdx >= 0 ? (pr.roundQuantities || [])[rrIdx] : null;
+          if (rrIdx < 0 || !rq) {
+            return {
+              roundName: "轮次未覆盖",
+              selectedCategories: rule.selectedCategories || [],
+              selectedDishes: rule.selectedDishes || [],
+              quantitySettings: {},
+              unavailable: true,
+              unavailableReason: "第 " + round + " 轮未命中规则的轮次区间"
+            };
+          }
+          return {
+            roundName: formatRoundRangeLabel(roundRanges[rrIdx]),
+            selectedCategories: rule.selectedCategories || [],
+            selectedDishes: rule.selectedDishes || [],
+            quantitySettings: rq.quantitySettings || {},
+            maxSameDishSettings: rule.maxSameDishSettings,
+            minTotalQuantity: rule.minTotalQuantity,
+            maxTotalQuantity: rule.maxTotalQuantity,
+            minPerPersonQuantity: rule.minPerPersonQuantity,
+            maxPerPersonQuantity: rule.maxPerPersonQuantity,
+            minSingleOrder: rule.minSingleOrder,
+            maxSingleOrder: rule.maxSingleOrder
+          };
+        }
+        return {
+          roundName: "单轮",
+          selectedCategories: rule.selectedCategories || [],
+          selectedDishes: rule.selectedDishes || [],
+          quantitySettings: pr.quantitySettings || rule.quantitySettings || {},
+          maxSameDishSettings: rule.maxSameDishSettings,
+          minTotalQuantity: rule.minTotalQuantity,
+          maxTotalQuantity: rule.maxTotalQuantity,
+          minPerPersonQuantity: rule.minPerPersonQuantity,
+          maxPerPersonQuantity: rule.maxPerPersonQuantity,
+          minSingleOrder: rule.minSingleOrder,
+          maxSingleOrder: rule.maxSingleOrder
+        };
+      }
+      function validateOrderItem(rule, newItem, ctx) {
+        var violations = [];
+        var personCount = ctx.personCount;
+        var currentRoundItems = ctx.currentRoundItems;
+        var isPerTable = rule.type === "按桌/订单限购";
+        var settings = getRoundSettings(rule, newItem.round, personCount);
+
+        if (settings.unavailable) {
+          violations.push({ type: "error", message: settings.unavailableReason || ("第 " + newItem.round + " 轮未配置限购数量，无法下单") });
+          return violations;
+        }
+        if (rule.maxRounds !== undefined && newItem.round > rule.maxRounds) {
+          violations.push({ type: "error", message: "该规则仅在第 1–" + rule.maxRounds + " 轮生效，当前为第 " + newItem.round + " 轮，无法下单" });
+          return violations;
+        }
+        if (settings.maxTotalQuantity !== undefined) {
+          var currentTotal = currentRoundItems.reduce(function (s, i) { return s + i.quantity; }, 0);
+          var newTotal = currentTotal + newItem.quantity;
+          if (newTotal > settings.maxTotalQuantity) {
+            violations.push({ type: "error", message: "每轮总数量不能超过 " + settings.maxTotalQuantity + " 份（当前 " + currentTotal + " 份，拟加 " + newItem.quantity + " 份）" });
+          }
+        }
+        if (isPerTable && settings.maxPerPersonQuantity !== undefined && personCount > 0) {
+          var cur = currentRoundItems.reduce(function (s, i) { return s + i.quantity; }, 0);
+          var next = cur + newItem.quantity;
+          var perPerson = Math.ceil(next / personCount);
+          if (perPerson > settings.maxPerPersonQuantity) {
+            violations.push({ type: "error", message: "每人每轮不能超过 " + settings.maxPerPersonQuantity + " 份（当前约 " + Math.ceil(cur / personCount) + " 份/人）" });
+          }
+        }
+        if (isPerTable && settings.maxSingleOrder !== undefined && newItem.quantity > settings.maxSingleOrder) {
+          violations.push({ type: "error", message: "单次下单不能超过 " + settings.maxSingleOrder + " 份" });
+        }
+        if (rule.method === "按每种菜品限购") {
+          var maxSameDish = settings.quantitySettings["dish_" + newItem.dishId];
+          if (maxSameDish !== undefined) {
+            var existing = currentRoundItems.find(function (i) { return i.dishId === newItem.dishId; });
+            var currentQ = existing ? existing.quantity : 0;
+            var nextQ = currentQ + newItem.quantity;
+            if (nextQ > maxSameDish) {
+              violations.push({ type: "error", message: newItem.dishName + (isPerTable ? "每桌" : "每人") + "每轮限购 " + maxSameDish + " 份（已点 " + currentQ + " 份）", dishName: newItem.dishName });
+            }
+          }
+        }
+        if (rule.method === "按每个分类限购") {
+          var categoryId = getCategoryIdByName(newItem.category);
+          if (categoryId !== undefined && settings.selectedCategories.indexOf(categoryId) >= 0) {
+            var maxCategory = settings.quantitySettings["category_" + categoryId];
+            if (maxCategory !== undefined) {
+              var categoryTotal = currentRoundItems.filter(function (i) { return i.category === newItem.category; }).reduce(function (s, i) { return s + i.quantity; }, 0);
+              var newCategoryTotal = categoryTotal + newItem.quantity;
+              if (newCategoryTotal > maxCategory) {
+                violations.push({ type: "error", message: newItem.category + " 限购 " + maxCategory + " 份（当前 " + categoryTotal + " 份）" });
+              }
+            }
+            var maxSame = settings.maxSameDishSettings && settings.maxSameDishSettings["category_" + categoryId];
+            if (maxSame !== undefined) {
+              var existing2 = currentRoundItems.find(function (i) { return i.dishId === newItem.dishId; });
+              var currentQ2 = existing2 ? existing2.quantity : 0;
+              var nextQ2 = currentQ2 + newItem.quantity;
+              if (nextQ2 > maxSame) {
+                violations.push({ type: "error", message: newItem.dishName + " 限购 " + maxSame + " 份（已点 " + currentQ2 + " 份）", dishName: newItem.dishName });
+              }
+            }
+          }
+        }
+        return violations;
+      }
+      function canAddDish(rule, newItem, ctx) {
+        if (!rule || rule.status !== "active") return { canAdd: true };
+        var violations = validateOrderItem(rule, newItem, ctx);
+        if (violations.length > 0) return { canAdd: false, reason: violations[0].message };
+        return { canAdd: true };
+      }
+
+      function loadRules() {
+        try {
+          var raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) {
+            var seed = initialRules();
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(seed));
+            return seed;
+          }
+          var parsed = JSON.parse(raw);
+          return Array.isArray(parsed) && parsed.length > 0 ? parsed : initialRules();
+        } catch (e) {
+          return initialRules();
+        }
+      }
+      function saveRules(rules) { localStorage.setItem(STORAGE_KEY, JSON.stringify(rules)); }
+      function nextRuleId(rules) { return rules.reduce(function (m, r) { return Math.max(m, r.id); }, 0) + 1; }
+      function esc(s) {
+        return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+      }
+
+      var RULE_STORE_CATALOG = [
+        { id: "ny-midtown", name: "纽约中城店" },
+        { id: "flushing", name: "法拉盛店" },
+        { id: "brooklyn", name: "布鲁克林店" },
+        { id: "boston", name: "波士顿店" }
+      ];
+      var RULE_LINE_NAMES = { kiosk: "Kiosk", emenu: "eMenu", sdi: "SDI" };
+
+      function formatRuleStoreLineLabel(rule) {
+        if (!rule) return "未配置门店/产线";
+        if (rule.storeLineLabel) return String(rule.storeLineLabel);
+        var draft = rule.editorDraft || rule.authoringDraft || null;
+        var storeConfigs = rule.storeConfigs || (draft && draft.storeConfigs) || null;
+        var storeIds = [];
+        if (Array.isArray(rule.deployStoreIds) && rule.deployStoreIds.length) storeIds = rule.deployStoreIds.slice();
+        else if (Array.isArray(rule.participatingStoreIds) && rule.participatingStoreIds.length) storeIds = rule.participatingStoreIds.slice();
+        else if (draft && Array.isArray(draft.deployStoreIds) && draft.deployStoreIds.length) storeIds = draft.deployStoreIds.slice();
+        else if (draft && Array.isArray(draft.participatingStoreIds) && draft.participatingStoreIds.length) storeIds = draft.participatingStoreIds.slice();
+        else if (storeConfigs) storeIds = Object.keys(storeConfigs);
+        if (storeConfigs && storeIds.length) {
+          return storeIds.map(function (storeId) {
+            var store = RULE_STORE_CATALOG.find(function (item) { return item.id === storeId; });
+            var config = storeConfigs[storeId] || {};
+            var lineIds = Array.isArray(config.productLines) ? config.productLines : [];
+            var lineText = lineIds.map(function (lineId) { return RULE_LINE_NAMES[lineId] || lineId; }).filter(Boolean).join("、");
+            return (store ? store.name : storeId) + "：" + (lineText || "未选产线");
+          }).join("；");
+        }
+        var legacyLines = Array.isArray(rule.productLines) ? rule.productLines
+          : (draft && Array.isArray(draft.productLines) ? draft.productLines : []);
+        if (legacyLines.length) {
+          return legacyLines.map(function (lineId) { return RULE_LINE_NAMES[lineId] || lineId; }).join("、");
+        }
+        var dishes = String(rule.dishes || "").trim();
+        return dishes || "未配置门店/产线";
+      }
+
+      var state = {
+        tab: "rules",
+        rules: loadRules(),
+        wizardOpen: false,
+        editingRuleId: null,
+        draft: createEmptyDraft(),
+        sim: {
+          selectedRuleId: null,
+          personCount: 4,
+          memberLevel: "normal",
+          currentRound: 1,
+          totalRounds: 5,
+          orderItems: [],
+          activeCategory: "all",
+          violations: []
+        }
+      };
+
+      function getSelectedRule() {
+        return state.rules.find(function (r) { return r.id === state.sim.selectedRuleId; }) || null;
+      }
+      function getActiveRules() {
+        return state.rules.filter(function (r) { return r.status === "active"; });
+      }
+      function buildRulePreview(draft) {
+        if (!draft.type || !draft.round || !draft.method) return { typeText: "", descText: "请选择规则类型" };
+        return {
+          typeText: typeKeyToLabel(draft.type) + " - " + roundKeyToLabel(draft.round) + " - " + methodKeyToLabel(draft.method),
+          descText: draft.method === "perCategory" ? "按菜品分类设置限购数量" : "按具体菜品设置限购数量"
+        };
+      }
+
+      function setTab(tab) {
+        state.tab = tab;
+        document.getElementById("rulesPanel").style.display = tab === "rules" ? "" : "none";
+        document.getElementById("simulatorPanel").style.display = tab === "simulator" ? "" : "none";
+        Array.prototype.forEach.call(document.querySelectorAll(".pill[data-tab]"), function (btn) {
+          btn.classList.toggle("active", btn.getAttribute("data-tab") === tab);
+        });
+      }
+
+      function renderRuleTable() {
+        document.getElementById("ruleCountBadge").textContent = "共 " + state.rules.length + " 条";
+        var tbody = document.getElementById("rulesTbody");
+        if (!state.rules.length) {
+          tbody.innerHTML = "<tr><td colspan='9' style='text-align:center;color:#6b7280;padding:22px;'>暂无规则</td></tr>";
+          return;
+        }
+        tbody.innerHTML = state.rules.map(function (rule) {
+          var timeTxt = rule.enableTimeSettings
+            ? (rule.timeLabel || formatSelectedBusinessHoursLabel(rule.selectedBusinessHourIds || []))
+            : "全天生效";
+          var memberTxt = rule.enableMemberLevels && rule.memberLevels && rule.memberLevels.length
+            ? rule.memberLevels.map(function (id) {
+                var lv = memberLevels.find(function (m) { return m.id === id; });
+                return lv ? (lv.icon + " " + lv.name) : id;
+              }).join("、")
+            : "全部";
+          var descTxt = String(rule.description || "").trim();
+          var isDraft = rule.status === "draft";
+          var statusHtml = rule.status === "active"
+            ? "<span class='badge ok'>启用</span>"
+            : isDraft
+              ? "<span class='badge draft'>草稿</span>"
+              : "<span class='badge off'>禁用</span>";
+          var actionsHtml = isDraft
+            ? "<button class='btn btn-primary' data-rule-action='edit' data-rule-id='" + rule.id + "'>继续编辑</button>" +
+              "<button class='btn' data-rule-action='copy' data-rule-id='" + rule.id + "'>复制</button>" +
+              "<button class='btn btn-danger' data-rule-action='delete' data-rule-id='" + rule.id + "'>删除</button>"
+            : "<button class='btn' data-rule-action='edit' data-rule-id='" + rule.id + "'>编辑</button>" +
+              "<button class='btn' data-rule-action='copy' data-rule-id='" + rule.id + "'>复制</button>" +
+              "<button class='btn' data-rule-action='toggle' data-rule-id='" + rule.id + "'>" + (rule.status === "active" ? "禁用" : "启用") + "</button>" +
+              "<button class='btn btn-danger' data-rule-action='delete' data-rule-id='" + rule.id + "'>删除</button>";
+          return (
+            "<tr>" +
+              "<td><button type='button' class='rule-name-link' data-rule-view='" + rule.id + "'>" + esc(rule.name) + "</button></td>" +
+              "<td style='max-width:220px;'><span class='sub'>" + (descTxt ? esc(descTxt) : "—") + "</span></td>" +
+              "<td><span class='sub' style='font-size:12px;color:#374151;'>" + esc(rule.type + " · " + rule.round + " · " + rule.method) + "</span></td>" +
+              "<td>" + esc(rule.persons) + "</td>" +
+              "<td>" + esc(timeTxt) + "</td>" +
+              "<td style='max-width:160px;'>" + esc(memberTxt) + "</td>" +
+              "<td style='max-width:280px;'><span class='sub' style='white-space:pre-line;'>" + esc(formatRuleStoreLineLabel(rule).replace(/；/g, "\n")) + "</span></td>" +
+              "<td>" + statusHtml + "</td>" +
+              "<td><div class='op-row'>" + actionsHtml + "</div></td>" +
+            "</tr>"
+          );
+        }).join("");
+      }
+
+      function renderSimulatorSelectors() {
+        var select = document.getElementById("simRuleSelect");
+        var activeRules = getActiveRules();
+        var disabledRules = state.rules.filter(function (r) { return r.status !== "active"; });
+        var options = ["<option value=''>不应用规则</option>"];
+        activeRules.forEach(function (r) {
+          options.push("<option value='" + r.id + "'" + (state.sim.selectedRuleId === r.id ? " selected" : "") + ">" + esc(r.name) + "</option>");
+        });
+        if (disabledRules.length) {
+          options.push("<optgroup label='已禁用'>");
+          disabledRules.forEach(function (r) {
+            options.push("<option value='" + r.id + "' disabled>" + esc(r.name) + "（禁用）</option>");
+          });
+          options.push("</optgroup>");
+        }
+        select.innerHTML = options.join("");
+
+        var memberSelect = document.getElementById("simMemberLevel");
+        memberSelect.innerHTML = memberLevels.map(function (m) {
+          var sel = state.sim.memberLevel === m.id ? " selected" : "";
+          return "<option value='" + m.id + "'" + sel + ">" + esc(m.icon + " " + m.name) + "</option>";
+        }).join("");
+
+        document.getElementById("simPersonCount").value = String(state.sim.personCount);
+        document.getElementById("simRoundLabel").textContent = "第 " + state.sim.currentRound + " 轮";
+      }
+
+      function renderSimulatorCategories() {
+        var row = document.getElementById("simCategoryRow");
+        var html = [];
+        var allActive = state.sim.activeCategory === "all" ? " active" : "";
+        html.push("<button type='button' class='cat-pill" + allActive + "' data-sim-cat='all'>全部 (" + dishes.length + ")</button>");
+        dishCategories.forEach(function (c) {
+          var active = state.sim.activeCategory === c.name ? " active" : "";
+          html.push("<button type='button' class='cat-pill" + active + "' data-sim-cat='" + esc(c.name) + "'>" + esc(c.name) + " (" + c.count + ")</button>");
+        });
+        row.innerHTML = html.join("");
+      }
+
+      function renderSimulatorDishGrid() {
+        var grid = document.getElementById("simDishGrid");
+        var selectedRule = getSelectedRule();
+        var filtered = state.sim.activeCategory === "all"
+          ? dishes
+          : dishes.filter(function (d) { return d.category === state.sim.activeCategory; });
+        var roundItems = state.sim.orderItems.filter(function (i) { return i.round === state.sim.currentRound; });
+        var html = filtered.map(function (dish) {
+          var existing = roundItems.find(function (i) { return i.dishId === dish.id; });
+          var qty = existing ? existing.quantity : 0;
+          var probe = {
+            dishId: dish.id,
+            dishName: dish.name,
+            category: dish.category,
+            price: dish.price,
+            quantity: 1,
+            round: state.sim.currentRound
+          };
+          var check = canAddDish(selectedRule, probe, { personCount: state.sim.personCount, currentRoundItems: roundItems });
+          var blocked = !!selectedRule && !check.canAdd && qty === 0;
+          return (
+            "<article class='dish-card" + (blocked ? " blocked" : "") + "'>" +
+              "<div class='dish-top'><div><div class='dish-name'>" + esc(dish.name) + "</div><div class='dish-meta'>" + esc(dish.description || "") + "</div></div><div class='dish-price'>" + esc(dish.price) + "</div></div>" +
+              (blocked && check.reason ? "<div class='dish-err'>" + esc(check.reason) + "</div>" : "<div class='dish-meta'>" + esc(dish.category) + "</div>") +
+              "<div class='qty-row'>" +
+                "<button class='qty-btn' data-dish-op='minus' data-dish-id='" + dish.id + "'" + (qty <= 0 ? " disabled" : "") + ">−</button>" +
+                "<span class='qty-num'>" + qty + "</span>" +
+                "<button class='qty-btn primary' data-dish-op='plus' data-dish-id='" + dish.id + "'" + (blocked ? " disabled" : "") + ">+</button>" +
+              "</div>" +
+            "</article>"
+          );
+        });
+        grid.innerHTML = html.join("");
+      }
+
+      function renderSimulatorOrder() {
+        var roundItems = state.sim.orderItems.filter(function (i) { return i.round === state.sim.currentRound; });
+        var roundTotal = roundItems.reduce(function (s, i) { return s + i.quantity; }, 0);
+        var allTotal = state.sim.orderItems.reduce(function (s, i) { return s + i.quantity; }, 0);
+        document.getElementById("simRoundTotal").textContent = String(roundTotal);
+        document.getElementById("simAllTotal").textContent = String(allTotal);
+        var list = document.getElementById("simOrderList");
+        if (!roundItems.length) {
+          list.innerHTML = "<div class='order-empty'>点击 + 开始模拟点菜</div>";
+        } else {
+          list.innerHTML = roundItems.map(function (item) {
+            return (
+              "<div class='order-item'>" +
+                "<div><div class='order-name'>" + esc(item.dishName) + "</div><div class='order-cat'>" + esc(item.category) + "</div></div>" +
+                "<div style='display:flex;align-items:center;gap:6px;'>" +
+                  "<button class='qty-btn' data-order-op='minus' data-dish-id='" + item.dishId + "'>−</button>" +
+                  "<span class='qty-num'>" + item.quantity + "</span>" +
+                  "<button class='qty-btn primary' data-order-op='plus' data-dish-id='" + item.dishId + "'>+</button>" +
+                "</div>" +
+              "</div>"
+            );
+          }).join("");
+        }
+
+        var vBox = document.getElementById("simViolations");
+        if (state.sim.violations.length) {
+          vBox.style.display = "block";
+          vBox.innerHTML = "<strong>无法加购：</strong> " + state.sim.violations.map(function (v) { return esc(v.message); }).join("；");
+        } else {
+          vBox.style.display = "none";
+          vBox.textContent = "";
+        }
+      }
+
+      function renderSimulator() {
+        renderSimulatorSelectors();
+        renderSimulatorCategories();
+        renderSimulatorDishGrid();
+        renderSimulatorOrder();
+      }
+
+      function openWizard(editRule) {
+        state.wizardOpen = true;
+        state.editingRuleId = editRule ? editRule.id : null;
+        state.draft = editRule ? ruleToDraft(editRule) : createEmptyDraft();
+        document.getElementById("wizardTitle").textContent = state.editingRuleId ? "编辑规则" : "新建规则";
+        document.getElementById("wizardMask").style.display = "flex";
+        document.body.style.overflow = "hidden";
+        renderWizard();
+      }
+      function closeWizard() {
+        state.wizardOpen = false;
+        state.editingRuleId = null;
+        if (state.draft) {
+          state.draft.dimEditorOpen = false;
+          state.draft.dimEditorDraft = null;
+          state.draft.copySceneOpen = false;
+          state.draft.copyTargetSceneIds = [];
+        }
+        document.getElementById("wizardMask").style.display = "none";
+        syncDimEditorModal();
+        syncCopySceneModal();
+        document.body.style.overflow = "";
+      }
+
+      function renderWizardSteps() {
+        var container = document.getElementById("wizardSteps");
+        container.innerHTML = STEPS.map(function (label, i) {
+          var n = i + 1;
+          var cls = n === state.draft.step ? "step active" : (n < state.draft.step ? "step done" : "step");
+          return "<div class='" + cls + "'><div class='step-dot'>" + (n < state.draft.step ? "✓" : n) + "</div><div class='step-text'>" + esc(label) + "</div></div>";
+        }).join("");
+      }
+
+      function renderStepType() {
+        var draft = state.draft;
+        var preview = buildRulePreview(draft);
+        return (
+          "<div class='wizard-sec wizard-sec--plain'><h4>限购类型</h4><div class='choice-grid'>" +
+            choice("type", "perTable", draft.type, "🍽 按桌/订单", "以每桌为单位限制") +
+            choice("type", "perPerson", draft.type, "👤 按人限购", "以每人为单位限制") +
+          "</div></div>" +
+          "<div class='wizard-sec wizard-sec--plain'><h4>限购轮次</h4><div class='choice-grid three'>" +
+            choice("round", "perRound", draft.round, "每轮", "每轮独立计算") +
+            choice("round", "multiRound", draft.round, "多轮", "按轮次区间设不同数量") +
+            choice("round", "ignoreRound", draft.round, "与轮次无关", "全程总量限制") +
+          "</div></div>" +
+          "<div class='wizard-sec wizard-sec--plain'><h4>限购方式</h4><div class='choice-grid'>" +
+            choice("method", "perCategory", draft.method, "按分类限购", "按菜品分类设限") +
+            choice("method", "perDish", draft.method, "按菜品限购", "按具体菜品设限") +
+          "</div></div>" +
+          "<div class='wizard-note'>预览：" + esc(preview.typeText || "未选择") + "<br/>" + esc(preview.descText) + "</div>"
+        );
+      }
+
+      function renderStepConfig() {
+        var draft = state.draft;
+        var byLine = getDraftStructureByLine(draft);
+        var pickerOpts = { leafLevel: draft.method === "perCategory" ? "category" : "dish" };
+        var structureHtml = MenuPicker
+          ? MenuPicker.renderHtml(byLine, null, null, null, pickerOpts)
+          : "<div style='font-size:12px;color:#b91c1c;'>商品结构选择器未加载</div>";
+        var summaryText = MenuPicker ? MenuPicker.formatSummary(byLine) : "未选商品";
+
+        return (
+          "<div class='wizard-sec'><h4>基础信息</h4>" +
+            "<div class='field'><label>规则名称</label><input class='input' id='wName' value='" + esc(draft.name) + "' /></div>" +
+            "<div class='field'><label>规则描述</label><textarea class='textarea' id='wDesc'>" + esc(draft.description) + "</textarea></div>" +
+          "</div>" +
+          "<div class='wizard-sec'><h4>选择商品</h4>" +
+            (draft.method === "perCategory"
+              ? "<p class='structure-summary'>按分类限购：请勾选组 / 类（不展示菜品）</p>"
+              : "") +
+            "<p class='structure-summary' id='wStructureSummary'>" + esc(summaryText) + "</p>" +
+            structureHtml +
+          "</div>"
+        );
+      }
+
+      function renderStepQuantity() {
+        var draft = state.draft;
+        ensurePersonRangesShape(draft);
+        var isMulti = draft.round === "multiRound";
+        var qtySection = renderQtySectionHtml(draft, draft.method);
+        return (
+          "<div class='wizard-sec'><h4>限购数量</h4><div id='wQtySection'>" + qtySection + "</div></div>" +
+          (!isMulti
+            ? "<div class='wizard-sec'><h4>附加限制</h4><div style='display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;'>" +
+                "<label class='field'><span>每轮最大总份数</span><input class='input' type='number' min='0' id='wMaxTotal' value='" + esc(draft.maxTotalQuantity || "") + "' /></label>" +
+                "<label class='field'><span>最大生效轮次</span><input class='input' type='number' min='1' id='wMaxRounds' value='" + esc(draft.maxRounds || "") + "' /></label>" +
+                "<label class='field'><span>每人每轮上限</span><input class='input' type='number' min='0' id='wMaxPerPerson' value='" + esc(draft.maxPerPersonQuantity || "") + "' /></label>" +
+                "<label class='field'><span>单次下单上限</span><input class='input' type='number' min='0' id='wMaxSingle' value='" + esc(draft.maxSingleOrder || "") + "' /></label>" +
+              "</div></div>"
+            : "")
+        );
+      }
+
+      function renderStepTime() {
+        var draft = state.draft;
+        var schedules = readBusinessHourSchedulesFromStore();
+        var selected = draft.selectedBusinessHourIds || [];
+        var picker = "";
+        if (!schedules.length) {
+          picker =
+            "<div class='bh-empty'>" +
+              "<p class='bh-empty-title'>暂无营业时间</p>" +
+              "<p class='bh-empty-desc'>请先在门店信息「营业与运营 → 营业时段」中新建营业时间规则</p>" +
+            "</div>";
+        } else {
+          picker =
+            "<p class='bh-hint'>勾选门店营业时间，规则仅在所选时段内生效（字段与门店营业时间一致）</p>" +
+            "<div class='bh-picker'>" +
+              schedules.map(function (s) {
+                return renderBusinessHourCard(s, selected.indexOf(s.id) >= 0);
+              }).join("") +
+            "</div>";
+        }
+        return (
+          "<div class='wizard-sec'>" +
+            "<label style='display:flex;align-items:center;justify-content:space-between;gap:8px;'>" +
+              "<strong style='font-size:13px;'>启用时间段限制</strong>" +
+              "<input type='checkbox' id='wEnableTime' " + (draft.enableTimeSettings ? "checked" : "") + " />" +
+            "</label>" +
+            (draft.enableTimeSettings
+              ? "<div class='bh-section-head'><h4>营业时间</h4></div>" + picker
+              : "") +
+          "</div>"
+        );
+      }
+
+      function renderStepMember() {
+        var draft = state.draft;
+        var levelBtns = memberLevels.map(function (m) {
+          var active = draft.selectedMemberLevels.indexOf(m.id) >= 0 ? " active" : "";
+          return "<button type='button' class='btn round-tab" + active + "' data-member-id='" + m.id + "'>" + esc(m.icon + " " + m.name) + "</button>";
+        }).join("");
+        return (
+          "<div class='wizard-sec'>" +
+            "<label style='display:flex;align-items:center;justify-content:space-between;gap:8px;'>" +
+              "<strong style='font-size:13px;'>按会员等级差异化</strong>" +
+              "<input type='checkbox' id='wEnableMember' " + (draft.enableMemberLevels ? "checked" : "") + " />" +
+            "</label>" +
+            (draft.enableMemberLevels ? "<div style='margin-top:10px;display:flex;flex-wrap:wrap;gap:6px;'>" + levelBtns + "</div>" : "") +
+          "</div>"
+        );
+      }
+
+      function renderStepConfirm() {
+        var draft = state.draft;
+        var rule = draftToRule(draft);
+        var timeLabel = rule.enableTimeSettings
+          ? formatSelectedBusinessHoursLabel(rule.selectedBusinessHourIds || [])
+          : "全天生效";
+        return (
+          "<div class='wizard-sec'><div class='confirm-list'>" +
+            cRow("名称", rule.name) +
+            cRow("类型", rule.type + " / " + rule.round + " / " + rule.method) +
+            cRow("人数", formatPersonRangesSummary(draft.personRanges)) +
+            (draft.round === "multiRound"
+              ? cRow("轮次区间", formatRoundRangesSummary(draft.roundRanges))
+              : "") +
+            cRow("关联", rule.dishes) +
+            cRow("时间", timeLabel) +
+            cRow("描述", rule.description) +
+          "</div></div>"
+        );
+      }
+
+      function cRow(k, v) {
+        return "<div class='confirm-item'><span class='confirm-k'>" + esc(k) + "</span><span>" + esc(v || "") + "</span></div>";
+      }
+
+      function choice(field, value, selected, title, desc) {
+        var active = value === selected ? " active" : "";
+        return "<button type='button' class='choice" + active + "' data-choice-field='" + field + "' data-choice-value='" + value + "'><div style='font-weight:600;'>" + esc(title) + "</div><div style='margin-top:2px;color:#6b7280;font-size:11px;'>" + esc(desc) + "</div></button>";
+      }
+
+      function renderWizard() {
+        renderWizardSteps();
+        var content = document.getElementById("wizardContent");
+        if (state.draft.step === 1) content.innerHTML = renderStepType();
+        if (state.draft.step === 2) {
+          content.innerHTML = renderStepConfig();
+          var picker = content.querySelector("[data-brand-menu-structure-picker]");
+          if (picker && MenuPicker) {
+            MenuPicker.bind(picker, {
+              leafLevel: state.draft.method === "perCategory" ? "category" : "dish"
+            });
+          }
+        }
+        if (state.draft.step === 3) content.innerHTML = renderStepQuantity();
+        if (state.draft.step === 4) content.innerHTML = renderStepTime();
+        if (state.draft.step === 5) content.innerHTML = renderStepMember();
+        if (state.draft.step === 6) content.innerHTML = renderStepConfirm();
+
+        var prevBtn = document.getElementById("wizardPrev");
+        prevBtn.style.visibility = state.draft.step === 1 ? "hidden" : "visible";
+        prevBtn.disabled = state.draft.step === 1;
+        document.getElementById("wizardNext").textContent = state.draft.step === 6
+          ? (state.editingRuleId != null ? "更新规则" : "保存规则")
+          : "下一步";
+        if (state.draft.step !== 3) {
+          state.draft.copySceneOpen = false;
+          state.draft.copyTargetSceneIds = [];
+          state.draft.dimEditorOpen = false;
+          state.draft.dimEditorDraft = null;
+        }
+        syncDimEditorModal();
+        syncCopySceneModal();
+      }
+
+      function wizardNext() {
+        var d = state.draft;
+        if (d.step === 1) {
+          if (!d.type || !d.round || !d.method) { showToast("请完成规则类型选择"); return; }
+          if (d.round === "multiRound" && !(d.roundRanges && d.roundRanges.length)) {
+            d.roundRanges = [createEmptyRoundRange(1, 99)];
+            d.activeRound = 0;
+            ensurePersonRangesShape(d);
+          }
+          d.step = 2;
+          renderWizard();
+          return;
+        }
+        if (d.step === 2) {
+          var err = validateDraftStep2(d);
+          if (err) { showToast(err); return; }
+          d.dimEditorOpen = false;
+          d.dimEditorDraft = null;
+          d.copySceneOpen = false;
+          d.step = 3;
+          renderWizard();
+          return;
+        }
+        if (d.step === 3) {
+          var qtyErr = validateDraftStep3(d);
+          if (qtyErr) { showToast(qtyErr); return; }
+          d.step = 4;
+          renderWizard();
+          return;
+        }
+        if (d.step === 4) {
+          var timeErr = validateDraftStep4(d);
+          if (timeErr) { showToast(timeErr); return; }
+          d.step = 5;
+          renderWizard();
+          return;
+        }
+        if (d.step === 5) {
+          var memberErr = validateDraftStep5(d);
+          if (memberErr) { showToast(memberErr); return; }
+          d.step = 6;
+          renderWizard();
+          return;
+        }
+        if (d.step === 6) {
+          var memberSaveErr = validateDraftStep5(d);
+          if (memberSaveErr) { showToast(memberSaveErr); return; }
+          var existing = state.editingRuleId != null
+            ? state.rules.find(function (r) { return r.id === state.editingRuleId; })
+            : null;
+          var candidate = draftToRule(d, existing || undefined);
+          if (existing) {
+            candidate.id = existing.id;
+            candidate.status = existing.status;
+            candidate.created = existing.created;
+          } else {
+            candidate.id = nextRuleId(state.rules);
+          }
+          var conflict = findRuleConflict(candidate, state.rules, state.editingRuleId);
+          if (conflict) {
+            showToast(formatRuleConflict(conflict));
+            return;
+          }
+          if (existing) {
+            state.rules = state.rules.map(function (r) {
+              return r.id === existing.id ? candidate : r;
+            });
+          } else {
+            state.rules.push(candidate);
+          }
+          saveRules(state.rules);
+          closeWizard();
+          renderAll();
+        }
+      }
+
+      function wizardPrev() {
+        if (state.draft.step > 1) {
+          state.draft.step -= 1;
+          renderWizard();
+        }
+      }
+
+      function changeQuantity(dish, delta) {
+        if (delta === 0) return;
+        var sim = state.sim;
+        var existing = sim.orderItems.find(function (i) { return i.dishId === dish.id && i.round === sim.currentRound; });
+        if (delta < 0) {
+          if (!existing) return;
+          var nextQty = existing.quantity + delta;
+          sim.violations = [];
+          if (nextQty <= 0) {
+            sim.orderItems = sim.orderItems.filter(function (i) { return !(i.dishId === dish.id && i.round === sim.currentRound); });
+          } else {
+            sim.orderItems = sim.orderItems.map(function (i) {
+              if (i.dishId === dish.id && i.round === sim.currentRound) return Object.assign({}, i, { quantity: nextQty });
+              return i;
+            });
+          }
+          renderSimulator();
+          return;
+        }
+
+        var newItem = {
+          dishId: dish.id,
+          dishName: dish.name,
+          category: dish.category,
+          price: dish.price,
+          quantity: delta,
+          round: sim.currentRound
+        };
+        var selectedRule = getSelectedRule();
+        if (selectedRule) {
+          var roundItems = sim.orderItems.filter(function (i) { return i.round === sim.currentRound; });
+          var v = validateOrderItem(selectedRule, newItem, { personCount: sim.personCount, currentRoundItems: roundItems });
+          if (v.length) {
+            sim.violations = v;
+            renderSimulator();
+            return;
+          }
+        }
+
+        sim.violations = [];
+        if (existing) {
+          sim.orderItems = sim.orderItems.map(function (i) {
+            if (i.dishId === dish.id && i.round === sim.currentRound) return Object.assign({}, i, { quantity: i.quantity + delta });
+            return i;
+          });
+        } else {
+          sim.orderItems.push(newItem);
+        }
+        renderSimulator();
+      }
+
+      function handleRuleAction(action, id) {
+        var rule = state.rules.find(function (r) { return r.id === id; });
+        if (!rule) return;
+        if (action === "edit") {
+          var editUrl = rule.status === "draft"
+            ? "order-limit-rule-editor.html?draftId=" + encodeURIComponent(rule.id)
+            : "order-limit-rule-editor.html?ruleId=" + encodeURIComponent(rule.id);
+          window.location.href = window.appendMenusifuEmbeddedParam(editUrl);
+          return;
+        }
+        if (action === "copy") {
+          window.location.href = window.appendMenusifuEmbeddedParam(
+            "order-limit-rule-editor.html?ruleId=" + encodeURIComponent(rule.id) + "&copy=1"
+          );
+          return;
+        }
+        if (action === "toggle") {
+          if (rule.status === "active") {
+            rule.status = "inactive";
+            saveRules(state.rules);
+            renderAll();
+            return;
+          }
+          var enableCandidate = Object.assign({}, rule, { status: "active" });
+          var enableConflict = findRuleConflict(enableCandidate, state.rules, id);
+          if (enableConflict) {
+            showToast(formatRuleConflict(enableConflict));
+            return;
+          }
+          rule.status = "active";
+          saveRules(state.rules);
+          renderAll();
+          return;
+        }
+        if (action === "delete") {
+          void AppDialogs.confirm({
+            title: "确认删除",
+            message: "确定删除该规则？",
+            confirmLabel: "确认删除",
+            danger: true
+          }).then(function (ok) {
+            if (!ok) return;
+            state.rules = state.rules.filter(function (r) { return r.id !== id; });
+            saveRules(state.rules);
+            renderAll();
+          });
+        }
+      }
+
+      function renderAll() {
+        renderRuleTable();
+        renderSimulator();
+      }
+
+      document.addEventListener("click", function (e) {
+        var tabBtn = e.target.closest(".pill[data-tab]");
+        if (tabBtn) {
+          setTab(tabBtn.getAttribute("data-tab"));
+          return;
+        }
+
+        var openCreate = e.target.closest("#btnOpenCreate");
+        if (openCreate) {
+          window.location.href = window.appendMenusifuEmbeddedParam("order-limit-rule-editor.html?mode=create");
+          return;
+        }
+
+        var ruleViewBtn = e.target.closest("[data-rule-view]");
+        if (ruleViewBtn) {
+          var viewRuleId = ruleViewBtn.getAttribute("data-rule-view");
+          var viewUrl = "order-limit-rule-editor.html?ruleId=" + encodeURIComponent(viewRuleId) + "&view=1";
+          window.location.href = window.appendMenusifuEmbeddedParam(viewUrl);
+          return;
+        }
+
+        var ruleActionBtn = e.target.closest("[data-rule-action]");
+        if (ruleActionBtn) {
+          handleRuleAction(ruleActionBtn.getAttribute("data-rule-action"), Number(ruleActionBtn.getAttribute("data-rule-id")));
+          return;
+        }
+
+        var simCat = e.target.closest("[data-sim-cat]");
+        if (simCat) {
+          state.sim.activeCategory = simCat.getAttribute("data-sim-cat");
+          renderSimulator();
+          return;
+        }
+
+        var dishOp = e.target.closest("[data-dish-op]");
+        if (dishOp) {
+          var did = Number(dishOp.getAttribute("data-dish-id"));
+          var dish = dishes.find(function (d) { return d.id === did; });
+          if (!dish) return;
+          changeQuantity(dish, dishOp.getAttribute("data-dish-op") === "plus" ? 1 : -1);
+          return;
+        }
+
+        var orderOp = e.target.closest("[data-order-op]");
+        if (orderOp) {
+          var did2 = Number(orderOp.getAttribute("data-dish-id"));
+          var dish2 = dishes.find(function (d) { return d.id === did2; });
+          if (!dish2) return;
+          changeQuantity(dish2, orderOp.getAttribute("data-order-op") === "plus" ? 1 : -1);
+          return;
+        }
+
+        var mask = e.target.closest("#wizardMask");
+        if (mask && e.target.id === "wizardMask") {
+          if (state.draft && (state.draft.dimEditorOpen || state.draft.copySceneOpen)) return;
+          closeWizard();
+          return;
+        }
+        var dimMask = e.target.closest("#dimEditorMask");
+        if (dimMask && e.target.id === "dimEditorMask") {
+          closeDimEditor();
+          return;
+        }
+        var copyMask = e.target.closest("#copySceneMask");
+        if (copyMask && e.target.id === "copySceneMask") {
+          closeCopySceneModal();
+          return;
+        }
+
+        if (!state.wizardOpen) return;
+        var d = state.draft;
+        var choiceBtn = e.target.closest("[data-choice-field]");
+        if (choiceBtn) {
+          d[choiceBtn.getAttribute("data-choice-field")] = choiceBtn.getAttribute("data-choice-value");
+          renderWizard();
+          return;
+        }
+
+        var qtySceneBtn = e.target.closest("[data-qty-scene]");
+        if (qtySceneBtn) {
+          d.activePersonRange = Number(qtySceneBtn.getAttribute("data-person-index")) || 0;
+          var sceneRound = qtySceneBtn.getAttribute("data-scene-round");
+          if (sceneRound != null) d.activeRound = Number(sceneRound) || 0;
+          d.selectedQtyKeys = [];
+          d.batchQtyValue = "";
+          d.copySceneOpen = false;
+          refreshStructureQtyUi();
+          syncCopySceneModal();
+          return;
+        }
+
+        var dimEditOpen = e.target.closest("[data-dim-edit-open]");
+        if (dimEditOpen) {
+          openDimEditor();
+          return;
+        }
+        var dimEditCancel = e.target.closest("[data-dim-edit-cancel]");
+        if (dimEditCancel) {
+          closeDimEditor();
+          return;
+        }
+        var dimEditSave = e.target.closest("[data-dim-edit-save]");
+        if (dimEditSave) {
+          if (!d.dimEditorDraft) return;
+          var isMultiSave = d.round === "multiRound";
+          ensureDimEditorShape(d.dimEditorDraft, isMultiSave);
+          var dimErr = validatePersonRanges(d.dimEditorDraft.personRanges);
+          if (dimErr) { showToast(dimErr); return; }
+          if (isMultiSave) {
+            var roundDimErr = validateRoundRanges(d.dimEditorDraft.roundRanges);
+            if (roundDimErr) { showToast(roundDimErr); return; }
+          }
+          d.personRanges = d.dimEditorDraft.personRanges;
+          if (isMultiSave) d.roundRanges = d.dimEditorDraft.roundRanges;
+          else d.roundRanges = d.roundRanges || [];
+          ensurePersonRangesShape(d);
+          resolveSceneSelection(d);
+          closeDimEditor();
+          d.selectedQtyKeys = [];
+          showToast("维度已更新");
+          refreshStructureQtyUi();
+          return;
+        }
+        var dimPersonAdd = e.target.closest("[data-dim-person-add]");
+        if (dimPersonAdd && d.dimEditorDraft) {
+          ensureDimEditorShape(d.dimEditorDraft, d.round === "multiRound");
+          var lastPr = d.dimEditorDraft.personRanges[d.dimEditorDraft.personRanges.length - 1];
+          var nextMin = lastPr ? Number(lastPr.max) + 1 : 1;
+          if (nextMin > 99) nextMin = 99;
+          d.dimEditorDraft.personRanges.push(
+            createEmptyPersonRange(nextMin, 99, d.round === "multiRound" ? d.dimEditorDraft.roundRanges.length : 0)
+          );
+          syncDimEditorModal();
+          return;
+        }
+        var dimPersonDel = e.target.closest("[data-dim-person-del]");
+        if (dimPersonDel && d.dimEditorDraft) {
+          var pDel = Number(dimPersonDel.getAttribute("data-dim-person-del"));
+          if (d.dimEditorDraft.personRanges.length > 1 && Number.isFinite(pDel)) {
+            d.dimEditorDraft.personRanges.splice(pDel, 1);
+            syncDimEditorModal();
+          }
+          return;
+        }
+        var dimRoundAdd = e.target.closest("[data-dim-round-add]");
+        if (dimRoundAdd && d.dimEditorDraft) {
+          ensureDimEditorShape(d.dimEditorDraft, true);
+          var lastRr = d.dimEditorDraft.roundRanges[d.dimEditorDraft.roundRanges.length - 1];
+          var nextRoundMin = lastRr ? Number(lastRr.max) + 1 : 1;
+          if (nextRoundMin > 99) nextRoundMin = 99;
+          d.dimEditorDraft.roundRanges.push(createEmptyRoundRange(nextRoundMin, 99));
+          ensureDimEditorShape(d.dimEditorDraft, true);
+          syncDimEditorModal();
+          return;
+        }
+        var dimRoundDel = e.target.closest("[data-dim-round-del]");
+        if (dimRoundDel && d.dimEditorDraft) {
+          var rDel = Number(dimRoundDel.getAttribute("data-dim-round-del"));
+          if (Number.isFinite(rDel) && d.dimEditorDraft.roundRanges.length > 1) {
+            d.dimEditorDraft.roundRanges.splice(rDel, 1);
+            d.dimEditorDraft.personRanges.forEach(function (pr) {
+              if (pr.roundQuantities && pr.roundQuantities.length > rDel) pr.roundQuantities.splice(rDel, 1);
+            });
+            ensureDimEditorShape(d.dimEditorDraft, true);
+            syncDimEditorModal();
+          }
+          return;
+        }
+
+        var qtyCopyOpen = e.target.closest("[data-qty-copy-open]");
+        if (qtyCopyOpen) {
+          openCopySceneModal();
+          return;
+        }
+        var qtyCopyCancel = e.target.closest("[data-qty-copy-cancel]");
+        if (qtyCopyCancel) {
+          closeCopySceneModal();
+          return;
+        }
+        var qtyCopyApply = e.target.closest("[data-qty-copy-apply]");
+        if (qtyCopyApply) {
+          var scenesAll = listQtyScenes(d);
+          var fromScene = getActiveScene(d);
+          var targetIds = Array.isArray(d.copyTargetSceneIds) ? d.copyTargetSceneIds : [];
+          if (!fromScene) return;
+          if (!targetIds.length) { showToast("请选择目标场景"); return; }
+          var byLineCopy = getDraftStructureByLine(d);
+          var lineOptsCopy = getQtyLineOptions(byLineCopy, d.method);
+          var lineIds = d.copyCurrentLineOnly !== false
+            ? [d.activeQtyLine].filter(Boolean)
+            : lineOptsCopy.map(function (l) { return l.id; });
+          if (!lineIds.length) { showToast("当前没有可复制的产线"); return; }
+          var itemsCopy = listQtyItems(byLineCopy, d.method);
+          var copied = 0;
+          targetIds.forEach(function (tid) {
+            var toScene = scenesAll.find(function (s) { return s.id === tid; });
+            if (!toScene) return;
+            lineIds.forEach(function (lineId) {
+              itemsCopy.filter(function (it) { return it.lineId === lineId; }).forEach(function (item) {
+                var key = qtyKeyForItem(d.method, item);
+                var srcMap = getQtyMapAt(d, fromScene.personIndex, fromScene.roundIndex);
+                var val = srcMap[key] != null ? Number(srcMap[key]) || 0 : 0;
+                setQtyValueAt(d, toScene.personIndex, toScene.roundIndex, key, val);
+              });
+            });
+            copied += 1;
+          });
+          closeCopySceneModal();
+          showToast("已复制到 " + copied + " 个场景");
+          refreshStructureQtyUi();
+          return;
+        }
+
+        var qtyLineBtn = e.target.closest("[data-qty-line]");
+        if (qtyLineBtn) {
+          d.activeQtyLine = qtyLineBtn.getAttribute("data-qty-line");
+          d.selectedQtyKeys = [];
+          refreshStructureQtyUi();
+          return;
+        }
+        var qtySelectAll = e.target.closest("[data-qty-select-all]");
+        if (qtySelectAll) {
+          var visible = getVisibleQtyKeys(d, d.method, d.activeQtyLine);
+          var allOn = visible.length > 0 && visible.every(function (k) {
+            return (d.selectedQtyKeys || []).indexOf(k) >= 0;
+          });
+          d.selectedQtyKeys = allOn ? [] : visible.slice();
+          refreshStructureQtyUi();
+          return;
+        }
+        var qtyClearSelect = e.target.closest("[data-qty-clear-select]");
+        if (qtyClearSelect) {
+          d.selectedQtyKeys = [];
+          refreshStructureQtyUi();
+          return;
+        }
+        var qtyBatchApply = e.target.closest("[data-qty-batch-apply]");
+        if (qtyBatchApply) {
+          var selected = Array.isArray(d.selectedQtyKeys) ? d.selectedQtyKeys : [];
+          if (!selected.length) {
+            showToast("请先勾选要批量设置的商品");
+            return;
+          }
+          var batchInput = document.getElementById("wBatchQty");
+          var raw = batchInput ? batchInput.value : d.batchQtyValue;
+          if (raw === "" || raw == null) {
+            showToast("请输入批量数量");
+            return;
+          }
+          var batchNum = Number(raw);
+          if (!Number.isFinite(batchNum) || batchNum < 0) {
+            showToast("批量数量需为不小于 0 的数字");
+            return;
+          }
+          selected.forEach(function (key) { setQtyValue(d, key, batchNum); });
+          d.batchQtyValue = String(batchNum);
+          showToast("已将 " + selected.length + " 项数量设为 " + batchNum);
+          refreshStructureQtyUi();
+          return;
+        }
+        var weekBtn = e.target.closest("[data-week-id]");
+        if (weekBtn) {
+          var wid = weekBtn.getAttribute("data-week-id");
+          var idx = d.selectedWeekdays.indexOf(wid);
+          if (idx >= 0) {
+            d.selectedWeekdays.splice(idx, 1);
+            if (d.weekdayTimeRanges) delete d.weekdayTimeRanges[wid];
+          } else {
+            d.selectedWeekdays.push(wid);
+            if (!d.weekdayTimeRanges) d.weekdayTimeRanges = {};
+            if (!d.weekdayTimeRanges[wid] || !d.weekdayTimeRanges[wid].length) {
+              d.weekdayTimeRanges[wid] = [{ start: "11:00", end: "14:00" }];
+            }
+          }
+          renderWizard();
+          return;
+        }
+        var addTime = e.target.closest("[data-time-add-week]");
+        if (addTime) {
+          var addWeek = addTime.getAttribute("data-time-add-week");
+          if (addWeek) {
+            if (!d.weekdayTimeRanges) d.weekdayTimeRanges = {};
+            if (!d.weekdayTimeRanges[addWeek]) d.weekdayTimeRanges[addWeek] = [];
+            d.weekdayTimeRanges[addWeek].push({ start: "11:00", end: "14:00" });
+          }
+          renderWizard();
+          return;
+        }
+        var delTime = e.target.closest("[data-time-del-week]");
+        if (delTime) {
+          var delWeek = delTime.getAttribute("data-time-del-week");
+          var delIdx = Number(delTime.getAttribute("data-time-del-index"));
+          if (delWeek && d.weekdayTimeRanges && d.weekdayTimeRanges[delWeek]) {
+            d.weekdayTimeRanges[delWeek].splice(delIdx, 1);
+          }
+          renderWizard();
+          return;
+        }
+        var memberBtn = e.target.closest("[data-member-id]");
+        if (memberBtn) {
+          var mid = memberBtn.getAttribute("data-member-id");
+          var mIdx = d.selectedMemberLevels.indexOf(mid);
+          if (mIdx >= 0) d.selectedMemberLevels.splice(mIdx, 1);
+          else d.selectedMemberLevels.push(mid);
+          renderWizard();
+        }
+      });
+
+      document.addEventListener("change", function (e) {
+        if (e.target.id === "simRuleSelect") {
+          var val = e.target.value;
+          state.sim.selectedRuleId = val ? Number(val) : null;
+          renderSimulator();
+          return;
+        }
+        if (e.target.id === "simPersonCount") {
+          state.sim.personCount = Math.max(1, Number(e.target.value) || 1);
+          renderSimulator();
+          return;
+        }
+        if (e.target.id === "simMemberLevel") {
+          state.sim.memberLevel = e.target.value;
+          renderSimulator();
+          return;
+        }
+        if (!state.wizardOpen) return;
+
+        if (e.target.closest && e.target.closest("[data-brand-menu-structure-picker]")) return;
+
+        var d = state.draft;
+        if (e.target.id === "wName") d.name = e.target.value;
+        if (e.target.id === "wDesc") d.description = e.target.value;
+        if (e.target.id === "wMaxTotal") d.maxTotalQuantity = e.target.value ? Number(e.target.value) : undefined;
+        if (e.target.id === "wMaxRounds") d.maxRounds = e.target.value ? Number(e.target.value) : undefined;
+        if (e.target.id === "wMaxPerPerson") d.maxPerPersonQuantity = e.target.value ? Number(e.target.value) : undefined;
+        if (e.target.id === "wMaxSingle") d.maxSingleOrder = e.target.value ? Number(e.target.value) : undefined;
+        if (e.target.id === "wEnableTime") {
+          d.enableTimeSettings = !!e.target.checked;
+          if (d.enableTimeSettings && !(d.selectedBusinessHourIds || []).length) {
+            // 默认不自动全选，由用户主动勾选营业时段
+            d.selectedBusinessHourIds = [];
+          }
+        }
+
+        var bhId = e.target.getAttribute && e.target.getAttribute("data-bh-schedule-id");
+        if (bhId) {
+          if (!Array.isArray(d.selectedBusinessHourIds)) d.selectedBusinessHourIds = [];
+          var bhIdx = d.selectedBusinessHourIds.indexOf(bhId);
+          if (e.target.checked) {
+            if (bhIdx < 0) d.selectedBusinessHourIds.push(bhId);
+          } else if (bhIdx >= 0) {
+            d.selectedBusinessHourIds.splice(bhIdx, 1);
+          }
+          renderWizard();
+          return;
+        }
+        if (e.target.id === "wEnableMember") {
+          d.enableMemberLevels = !!e.target.checked;
+          d.selectedMemberLevels = d.enableMemberLevels ? memberLevels.map(function (m) { return m.id; }) : [];
+        }
+
+        var toggle = e.target.getAttribute && e.target.getAttribute("data-entity-toggle");
+        if (toggle) {
+          var id = Number(toggle);
+          var method = d.method;
+          var arr2 = method === "perCategory" ? d.selectedCategories : d.selectedDishes;
+          var j = arr2.indexOf(id);
+          if (j >= 0) arr2.splice(j, 1);
+          else arr2.push(id);
+        }
+
+        if (e.target.getAttribute && e.target.getAttribute("data-dim-person-min") != null) {
+          if (!d.dimEditorDraft) return;
+          var iMin = Number(e.target.getAttribute("data-dim-person-min"));
+          if (d.dimEditorDraft.personRanges[iMin]) {
+            d.dimEditorDraft.personRanges[iMin].min = Math.max(1, Number(e.target.value) || 1);
+          }
+          return;
+        }
+        if (e.target.getAttribute && e.target.getAttribute("data-dim-person-max") != null) {
+          if (!d.dimEditorDraft) return;
+          var iMax = Number(e.target.getAttribute("data-dim-person-max"));
+          if (d.dimEditorDraft.personRanges[iMax]) {
+            d.dimEditorDraft.personRanges[iMax].max = Math.max(1, Number(e.target.value) || 1);
+          }
+          return;
+        }
+        if (e.target.getAttribute && e.target.getAttribute("data-dim-round-min") != null) {
+          if (!d.dimEditorDraft) return;
+          var iRMin = Number(e.target.getAttribute("data-dim-round-min"));
+          if (d.dimEditorDraft.roundRanges[iRMin]) {
+            d.dimEditorDraft.roundRanges[iRMin].min = Math.max(1, Number(e.target.value) || 1);
+          }
+          return;
+        }
+        if (e.target.getAttribute && e.target.getAttribute("data-dim-round-max") != null) {
+          if (!d.dimEditorDraft) return;
+          var iRMax = Number(e.target.getAttribute("data-dim-round-max"));
+          if (d.dimEditorDraft.roundRanges[iRMax]) {
+            d.dimEditorDraft.roundRanges[iRMax].max = Math.max(1, Number(e.target.value) || 1);
+          }
+          return;
+        }
+
+        if (e.target.getAttribute && e.target.getAttribute("data-qty-copy-target") != null) {
+          var tid = e.target.getAttribute("data-qty-copy-target");
+          if (!Array.isArray(d.copyTargetSceneIds)) d.copyTargetSceneIds = [];
+          var tIdx = d.copyTargetSceneIds.indexOf(tid);
+          if (e.target.checked) {
+            if (tIdx < 0) d.copyTargetSceneIds.push(tid);
+          } else if (tIdx >= 0) {
+            d.copyTargetSceneIds.splice(tIdx, 1);
+          }
+          syncCopySceneModal();
+          return;
+        }
+        if (e.target.getAttribute && e.target.getAttribute("data-qty-copy-line-only") != null) {
+          d.copyCurrentLineOnly = !!e.target.checked;
+          return;
+        }
+
+        var qtySelect = e.target.getAttribute && e.target.getAttribute("data-qty-select");
+        if (qtySelect) {
+          if (!Array.isArray(d.selectedQtyKeys)) d.selectedQtyKeys = [];
+          var selIdx = d.selectedQtyKeys.indexOf(qtySelect);
+          if (e.target.checked) {
+            if (selIdx < 0) d.selectedQtyKeys.push(qtySelect);
+          } else if (selIdx >= 0) {
+            d.selectedQtyKeys.splice(selIdx, 1);
+          }
+          refreshStructureQtyUi();
+          return;
+        }
+
+        if (e.target.getAttribute && e.target.getAttribute("data-batch-qty-input")) {
+          d.batchQtyValue = e.target.value;
+          return;
+        }
+
+        var qtyKey = e.target.getAttribute && e.target.getAttribute("data-qty-key");
+        if (qtyKey) {
+          var num = Number(e.target.value) || 0;
+          setQtyValue(d, qtyKey, num);
+          return;
+        }
+
+        var tsWeek = e.target.getAttribute && e.target.getAttribute("data-time-start-week");
+        var tsIdx = e.target.getAttribute && e.target.getAttribute("data-time-start-index");
+        var teWeek = e.target.getAttribute && e.target.getAttribute("data-time-end-week");
+        var teIdx = e.target.getAttribute && e.target.getAttribute("data-time-end-index");
+        if (tsWeek != null && tsIdx != null && d.weekdayTimeRanges && d.weekdayTimeRanges[tsWeek] && d.weekdayTimeRanges[tsWeek][Number(tsIdx)]) {
+          d.weekdayTimeRanges[tsWeek][Number(tsIdx)].start = e.target.value;
+        }
+        if (teWeek != null && teIdx != null && d.weekdayTimeRanges && d.weekdayTimeRanges[teWeek] && d.weekdayTimeRanges[teWeek][Number(teIdx)]) {
+          d.weekdayTimeRanges[teWeek][Number(teIdx)].end = e.target.value;
+        }
+
+        renderWizard();
+      });
+
+      document.addEventListener("brand-menu-structure-change", function (e) {
+        if (!state.wizardOpen || !state.draft || state.draft.step !== 2) return;
+        var byLine = e.detail && e.detail.byLine;
+        if (!byLine) return;
+        applyStructureToDraft(state.draft, byLine);
+        refreshStructureSummaryUi();
+      });
+      document.addEventListener("brand-menu-catalog-ready", function () {
+        if (!state.wizardOpen || !state.draft || state.draft.step !== 2) return;
+        refreshStructureSummaryUi();
+      });
+
+      document.getElementById("simPrevRound").addEventListener("click", function () {
+        state.sim.currentRound = Math.max(1, state.sim.currentRound - 1);
+        renderSimulator();
+      });
+      document.getElementById("simNextRound").addEventListener("click", function () {
+        state.sim.currentRound = Math.min(state.sim.totalRounds, state.sim.currentRound + 1);
+        renderSimulator();
+      });
+      document.getElementById("simClearRound").addEventListener("click", function () {
+        state.sim.orderItems = state.sim.orderItems.filter(function (i) { return i.round !== state.sim.currentRound; });
+        state.sim.violations = [];
+        renderSimulator();
+      });
+      document.getElementById("simClearAll").addEventListener("click", function () {
+        state.sim.orderItems = [];
+        state.sim.violations = [];
+        renderSimulator();
+      });
+
+      document.getElementById("wizardClose").addEventListener("click", closeWizard);
+      document.getElementById("wizardCancel").addEventListener("click", closeWizard);
+      document.getElementById("wizardPrev").addEventListener("click", wizardPrev);
+      document.getElementById("wizardNext").addEventListener("click", wizardNext);
+
+      window.addEventListener("keydown", function (e) {
+        if (e.key !== "Escape") return;
+        if (!state.wizardOpen) return;
+        closeWizard();
+      });
+
+      renderAll();
+      setTab("rules");
+    })();
+  </script>
+</body>
+</html>

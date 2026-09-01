@@ -1,4 +1,4 @@
-import { mapKposMenusToSeasoningView } from "./lib/emenu-local-seasoning-menu-map.mjs";
+import { mapKposMenusToSeasoningView, mapSeasoningViewToBrandMenuTree } from "./lib/emenu-local-seasoning-menu-map.mjs";
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -78,5 +78,11 @@ assert(typeof view.fingerprint === "string" && view.fingerprint.startsWith("kpos
 
 const empty = mapKposMenusToSeasoningView({ menus: [{ menuGroups: [] }] });
 assert(empty.products.length === 0 && empty.menuGroups.length === 0, "empty menu");
+
+const tree = mapSeasoningViewToBrandMenuTree(view);
+assert(tree[0].id === "g1" && tree[0].categories[0].id === "c1", "group/category ids");
+assert(tree[0].categories[0].dishes[0].id === "1001", "dish id from saleItem");
+assert(tree[0].categories[0].dishes[0].name === "宫保鸡丁", "dish name");
+assert(tree[1].id === "g2" && tree[1].categories[0].dishes[0].id === "1001", "multi-path dish");
 
 console.log("verify-emenu-local-seasoning-menu-map: ok");

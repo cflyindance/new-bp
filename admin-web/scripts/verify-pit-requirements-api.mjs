@@ -367,6 +367,7 @@ try {
   assert.equal(created[0].assignees.filter((entry) => entry.role === "owner").length, 1);
   assert.equal(created[0].assignees.filter((entry) => entry.role === "developer").length, 2);
   assert.equal(created[0].assignees.filter((entry) => entry.role === "tester").length, 2);
+  db.prepare("UPDATE requirements SET source_status = ? WHERE id = ?").run("待分配（源状态）", created[0].id);
 
   db.prepare("UPDATE dictionaries SET active = 0 WHERE id = ?").run(ids.sourceProduct);
   const historicalDetail = await client.get(`/requirements/${created[0].id}`);
@@ -403,6 +404,7 @@ try {
     label: "Product",
     active: false,
   });
+  assert.equal(historicalList.body.data.items.find((item) => item.id === created[0].id).sourceStatus, "待分配（源状态）");
   db.prepare("UPDATE dictionaries SET active = 1 WHERE id = ?").run(ids.sourceProduct);
 
   const invalidOwners = await client.post("/requirements", requirementBody({
@@ -508,6 +510,8 @@ try {
     ["?proposedFrom=2026-08&proposedTo=2026-08-31", 3],
     ["?mine=true", 6],
     ["?followed=true", 1],
+    ["?active=true", 6],
+    ["?overdue=true", 0],
   ];
   for (const [query, total] of queryCases) {
     const response = await client.get(`/requirements${query}`);
@@ -526,7 +530,7 @@ try {
   assert.equal(paged.body.data.pageSize, 2);
   assert.equal(paged.body.data.items.length, 2);
   assert.equal(paged.body.data.total, 6);
-  for (const invalidQuery of ["page=0", "pageSize=101", "sort=title", "highlighted=maybe", "plannedMonth=13", "proposedFrom=not-a-date", "status=unknown"]) {
+  for (const invalidQuery of ["page=0", "pageSize=101", "sort=title", "highlighted=maybe", "active=maybe", "overdue=maybe", "plannedMonth=13", "proposedFrom=not-a-date", "status=unknown"]) {
     const response = await client.get(`/requirements?${invalidQuery}`);
     assert([400, 422].includes(response.status), invalidQuery);
   }

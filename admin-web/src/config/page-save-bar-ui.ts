@@ -23,6 +23,7 @@ import {
 import { readFohByLineToggleState } from "./foh-settings-by-line-toggle";
 import type { FohLineNavId } from "./foh-settings-line-scope";
 import { readModuleSettingToggleOn } from "./module-settings-toggle-ui";
+import { openConfirmDialog } from "../ui/app-confirm-dialog";
 
 function escapeHtml(s: string): string {
   return s
@@ -214,14 +215,22 @@ export function bindPageSaveBar(remount: () => void): void {
         const bar = discardBtn.closest<HTMLElement>("[data-page-save-bar]");
         const pageKey = bar?.dataset.pageSaveKey;
         if (!pageKey || !isPageSavePending(pageKey)) return;
-        if (!window.confirm("放弃当前页未保存的修改？")) return;
-        revertToggleDomToPersisted(pageKey);
-        discardPageDraft(pageKey);
-        window.dispatchEvent(
-          new CustomEvent("menusifu:page-settings-discard", { detail: { pageKey } }),
-        );
-        refreshPageSaveBar(pageKey);
-        remount();
+        void (async () => {
+          const ok = await openConfirmDialog({
+            title: "放弃修改",
+            message: "放弃当前页未保存的修改？",
+            confirmLabel: "确认放弃",
+            danger: true,
+          });
+          if (!ok) return;
+          revertToggleDomToPersisted(pageKey);
+          discardPageDraft(pageKey);
+          window.dispatchEvent(
+            new CustomEvent("menusifu:page-settings-discard", { detail: { pageKey } }),
+          );
+          refreshPageSaveBar(pageKey);
+          remount();
+        })();
       }
     });
   }

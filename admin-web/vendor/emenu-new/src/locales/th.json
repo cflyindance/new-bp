@@ -36,6 +36,8 @@
   },
   "Landing": {
     "start": "เริ่ม",
+    "start_new_order": "เริ่มสั่งอาหาร",
+    "continue_order": "สั่งอาหารต่อ",
     "policy_btn_back": "ย้อนกลับ",
     "policy_btn_enter": "โอเค เข้าใจแล้ว",
     "refresh": "รีเฟรช",

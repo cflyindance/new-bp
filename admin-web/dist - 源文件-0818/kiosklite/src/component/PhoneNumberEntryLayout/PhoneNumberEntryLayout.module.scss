@@ -1,0 +1,47 @@
+.entryLayout {
+  width: 76rem;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+.titleWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 -6rem 10rem;
+  color: #000;
+  font-weight: 700;
+  text-align: center;
+}
+
+.titleIcon {
+  width: 5rem;
+  height: 5rem;
+  object-fit: contain;
+  flex: 0 0 auto;
+  margin-right: 4rem;
+}
+
+.title {
+  font-size: 4rem;
+  line-height: 1.2;
+}
+
+.fieldWrapper {
+  position: relative;
+}
+
+.afterField {
+  margin-top: 4rem;
+}
+
+.policyWrapper {
+  display: flex;
+  justify-content: center;
+  margin: 6rem auto 5rem;
+}
+
+.actions {
+  display: flex;
+  justify-content: space-between;
+}

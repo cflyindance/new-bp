@@ -1,0 +1,1 @@
+(function(){System.register([`./utils-legacy.039frGmg.chunk.js`],function(e,t){var n,r;return{setters:[function(e){n=e.a,r=e.nt}],execute:function(){e(`t`,n(`kioskServerIP`)||r)}}})})();

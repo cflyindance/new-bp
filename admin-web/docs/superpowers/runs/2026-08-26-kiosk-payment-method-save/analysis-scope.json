@@ -1,0 +1,185 @@
+{
+  "version": 1,
+  "mode": "standalone",
+  "status": "bounded",
+  "stopReason": "root_cause_and_impact_bounded",
+  "entryPoints": [
+    {
+      "path": "src/shell/kiosk-local-shell.ts",
+      "symbol": "kioskSettingsIframeSrc",
+      "relation": "entry_point",
+      "impact": "affected",
+      "deepRead": true
+    }
+  ],
+  "references": [
+    {
+      "path": "dist/kiosklite/src/index.js",
+      "symbol": "setKioskConfigUserId URL bootstrap",
+      "relation": "data_source",
+      "impact": "affected",
+      "deepRead": true
+    },
+    {
+      "path": "dist/kiosklite/src/container/configApp/serviceSetting/transferPosSetting/index.js",
+      "symbol": "TransferPosSetting.savePosDetail",
+      "relation": "direct_caller",
+      "impact": "affected",
+      "deepRead": true
+    },
+    {
+      "path": "dist/kiosklite/src/container/configApp/serviceSetting/index.js",
+      "symbol": "ServiceSetting.saveData and id 70 hydration",
+      "relation": "direct_caller",
+      "impact": "affected",
+      "deepRead": true
+    },
+    {
+      "path": "dist/kiosklite/src/utils/kioskPaymentTypes.js",
+      "symbol": "resolveKioskPaymentTypes and upsertKioskPaymentTypesConfig",
+      "relation": "definition",
+      "impact": "affected",
+      "deepRead": true
+    },
+    {
+      "path": "dist/kiosklite/src/utils/posConfigSavePolicy.js",
+      "symbol": "getPosConfigSaveDecision and isValidPosConfigUserId",
+      "relation": "definition",
+      "impact": "affected",
+      "deepRead": true
+    },
+    {
+      "path": "dist/kiosklite/src/api/apiPos.js",
+      "symbol": "saveKioskConfigFromPos",
+      "relation": "definition",
+      "impact": "affected",
+      "deepRead": true
+    },
+    {
+      "path": "dist/kiosklite/src/container/mainPage/index.js",
+      "symbol": "syncDualPricePaymentTypesToPos startup overwrite",
+      "relation": "side_effect",
+      "impact": "affected",
+      "deepRead": true
+    },
+    {
+      "path": "dist/kiosklite/src/component/CRM/LoginCRM/index.js",
+      "symbol": "save Kiosk POS config caller",
+      "relation": "shared_caller",
+      "impact": "not_affected",
+      "deepRead": false
+    },
+    {
+      "path": "src/shell/kiosk-local-session-bridge.ts",
+      "symbol": "bindKioskLocalSessionBridge",
+      "relation": "producer",
+      "impact": "affected",
+      "deepRead": true
+    },
+    {
+      "path": "dist/kiosklite/src/container/mainPage/paymentSettingsPersistence.test.js",
+      "symbol": "Kiosk payment method persistence regression",
+      "relation": "test",
+      "impact": "affected",
+      "deepRead": true
+    }
+  ],
+  "deepReadPaths": [
+    "src/shell/kiosk-local-shell.ts",
+    "src/shell/kiosk-local-session-bridge.ts",
+    "dist/kiosklite/src/index.js",
+    "dist/kiosklite/src/container/configApp/serviceSetting/index.js",
+    "dist/kiosklite/src/container/configApp/serviceSetting/transferPosSetting/index.js",
+    "dist/kiosklite/src/api/apiPos.js",
+    "dist/kiosklite/src/container/mainPage/index.js",
+    "dist/kiosklite/src/utils/kioskPaymentTypes.js",
+    "dist/kiosklite/src/utils/posConfigSavePolicy.js",
+    "dist/kiosklite/src/utils/posConfigSavePolicy.test.js",
+    "dist/kiosklite/src/container/configApp/serviceSetting/paymentMethodPersistence.test.js",
+    "dist/kiosklite/src/api/apiPos.test.js",
+    "dist/kiosklite/src/container/mainPage/paymentSettingsPersistence.test.js"
+  ],
+  "sharedCallers": [
+    "dist/kiosklite/src/component/CRM/LoginCRM/index.js"
+  ],
+  "sharedCallersComplete": true,
+  "dataFlow": [
+    {
+      "from": "src/shell/kiosk-local-shell.ts",
+      "to": "dist/kiosklite/src/index.js",
+      "evidence": "本地设置 iframe URL 未包含 userId；Kiosk 入口只在 URL 存在 userId 时写入 Redux。"
+    },
+    {
+      "from": "dist/kiosklite/src/index.js",
+      "to": "dist/kiosklite/src/container/configApp/serviceSetting/transferPosSetting/index.js",
+      "evidence": "空 kioskConfigUserId 经 mapStateToProps 作为 savePosDetail 的 userId。"
+    },
+    {
+      "from": "dist/kiosklite/src/container/configApp/serviceSetting/transferPosSetting/index.js",
+      "to": "dist/kiosklite/src/api/apiPos.js",
+      "evidence": "异常路径把空 userId 交给 saveKioskConfigFromPos；KPOS 运行时返回 ClientUnmarshalling Error: For input string: \"\"。修复后由 posConfigSavePolicy 在任何写入前分类并阻止无认证 POS 请求。"
+    },
+    {
+      "from": "src/shell/kiosk-local-session-bridge.ts",
+      "to": "dist/kiosklite/src/api/apiPos.js",
+      "evidence": "桥接只能建立 Kiosk 设备 session，不能提供管理员 userId；仅传该 session 调用 UpdateSystemConfigurationType 会返回 Exception when finding user。"
+    },
+    {
+      "from": "dist/kiosklite/src/utils/posConfigSavePolicy.js",
+      "to": "dist/kiosklite/src/container/configApp/serviceSetting/index.js",
+      "evidence": "无 userId 且只有支付兼容镜像变化时跳过 POS；无 userId 且 POS-only 字段变化时在 margin 写入前阻止；有认证时确认框在所有写入前执行。"
+    },
+    {
+      "from": "dist/kiosklite/src/container/configApp/serviceSetting/index.js",
+      "to": "KPOS marginappconfig KIOSKLITE row configList id 70",
+      "evidence": "保存时先将当前支付方式写入 kiosk-payment-types(id=70)，成功后才执行 POS KIOSK_PAYMENT_TYPE 兼容同步。"
+    },
+    {
+      "from": "KPOS marginappconfig KIOSKLITE row configList id 70",
+      "to": "dist/kiosklite/src/utils/kioskPaymentTypes.js",
+      "evidence": "id 70 存在时为权威值；只有字段缺失的旧数据才回退读取 POS KIOSK_PAYMENT_TYPE。"
+    },
+    {
+      "from": "dist/kiosklite/src/utils/kioskPaymentTypes.js",
+      "to": "settings hydration and runtime payment routing",
+      "evidence": "设置页、支付方式路由和小费支付方式判断共用同一解析策略，双价格不再补回已取消的支付方式。"
+    }
+  ],
+  "rootCause": {
+    "status": "confirmed",
+    "summary": "本地设置入口只有 Kiosk 设备 session 且没有管理员 userId，但 marginappconfig 保存成功后仍调用 UpdateSystemConfigurationType，并生成空 <userId></userId>；KPOS 因此返回 ClientUnmarshalling Error，页面显示 POS compatibility sync failed。修复后先按严格 userId 与字段差异判定：支付方式单改在本地入口只保存权威 id 70 并跳过 POS；POS-only 修改在 margin 写入前阻止；底层 SOAP 构造器也拒绝无效 userId。"
+  },
+  "wikiQueries": [
+    {
+      "question": "Kiosk 本地设置中 KIOSK_PAYMENT_TYPE 的保存入口、状态与接口数据流是什么？",
+      "mode": "wiki_bypass",
+      "reason": "wiki_not_configured",
+      "pages": [],
+      "sourcePathsReviewed": [
+        "src/shell/kiosk-local-shell.ts",
+        "src/shell/kiosk-local-session-bridge.ts",
+        "dist/kiosklite/src/index.js",
+        "dist/kiosklite/src/container/configApp/serviceSetting/transferPosSetting/index.js",
+        "dist/kiosklite/src/api/apiPos.js",
+        "dist/kiosklite/src/container/mainPage/index.js"
+      ],
+      "unconfirmed": []
+    }
+  ],
+  "workspace": {
+    "status": "unrelated_changes",
+    "evidence": "相关 Kiosk 文件包含本任务链前序已知修改；未发现无法区分来源的重叠编辑，其他大量工作区变更不在本缺陷范围。"
+  },
+  "risk": "high",
+  "build": {
+    "required": true,
+    "reason": "浏览器实际加载 dist/kiosklite/.embed-build，源码修改必须构建发布后才能验证。",
+    "ciBuild": "passed: npm run build:kiosklite-embed -- --skip-install; builtAt 2026-08-26T08:55:41.053Z"
+  },
+  "e2e": {
+    "required": true,
+    "reason": "修改支付设置保存这一用户可见、跨 POS 持久化的数据流。",
+    "status": "passed",
+    "evidence": "在 64907 服务设置→支付点击保存后返回配置首页，未出现兼容同步失败提示；重新进入后信用卡关闭、柜台支付开启。接口回读 marginappconfig id 70=1，而 POS KIOSK_PAYMENT_TYPE 仍为 1,0，证明无认证 POS 请求被跳过且权威配置已保存。"
+  }
+}

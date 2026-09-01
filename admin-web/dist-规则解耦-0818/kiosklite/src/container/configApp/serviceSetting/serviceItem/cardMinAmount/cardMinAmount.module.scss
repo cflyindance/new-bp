@@ -1,0 +1,12 @@
+.minBox {
+  margin-right: 2rem;
+  display: flex;
+  justify-content: flex-end;
+  width: calc(100% - 26rem);
+  flex-wrap: wrap;
+  .minIpt {
+    margin: 0 0.5rem;
+    padding: 0.5rem;
+    width: 5rem;
+  }
+}

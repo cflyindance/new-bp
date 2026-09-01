@@ -21,6 +21,7 @@ import {
   writeModuleSettingJson,
 } from "./module-settings-form-ui";
 import { writeModuleSettingToggleOn } from "./module-settings-toggle-ui";
+import { openConfirmDialog } from "../ui/app-confirm-dialog";
 
 export type DishTag = { id: string; name: string };
 
@@ -1274,7 +1275,15 @@ export function bindDishRoundUnifiedWorkspace(root: ParentNode = document): void
           else if (action === "copy") copyDishRoundListItem(workspace, kind, ruleId);
           else if (action === "toggle") toggleDishRoundListItem(workspace, kind, ruleId);
           else if (action === "delete") {
-            if (window.confirm("确定删除该规则？")) removeDishRoundListItem(workspace, kind, ruleId);
+            void (async () => {
+              const ok = await openConfirmDialog({
+                title: "删除规则",
+                message: "确定删除该规则？",
+                confirmLabel: "确认删除",
+                danger: true,
+              });
+              if (ok) removeDishRoundListItem(workspace, kind, ruleId);
+            })();
           }
         }
         return;

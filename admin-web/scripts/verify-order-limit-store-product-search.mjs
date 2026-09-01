@@ -120,6 +120,58 @@ assert.match(flowSource, /compositionend/, "搜索应处理输入法组合结束
 assert.match(flowSource, /targetType === ["']category["'][\s\S]{0,300}categoryKey/, "分类限购应使用所属分类键");
 assert.match(flowSource, /targetType === ["']dish["'][\s\S]{0,300}dishKey/, "菜品限购应使用具体菜品键");
 assert.match(flowSource, /function renderProductSearchResults\(draft,\s*config,\s*queryOverride\)/, "搜索结果渲染应接受 queryOverride");
+assert.match(pickerSource, /\/api\/v1\/emenu-local\/menu-catalog/, "选择器应请求主机菜单目录");
+assert.match(pickerSource, /loadAllLineCatalogs/, "绑定选择器时应拉取各产线菜单");
+assert.match(flowSource, /brand-menu-catalog-ready/, "菜单加载完成后应刷新搜索表面");
+assert.match(cssSource, /\.bmsp-notice/, "应提供菜单来源提示样式");
+assert.equal(typeof picker.applyCatalogResult, "function", "应导出 catalog 注入接口");
+assert.equal(typeof picker.mergeKeysOutsideTree, "function", "应导出树外勾选合并");
+
+const liveTree = [
+  {
+    id: "g-host",
+    name: "主机组",
+    categories: [
+      {
+        id: "c-host",
+        name: "主机类",
+        dishes: [{ id: "d-host", name: "主机菜" }],
+      },
+    ],
+  },
+];
+picker.applyCatalogResult("kiosk", { tree: liveTree, source: "live" });
+const liveProducts = picker.listAllDishes();
+assert.ok(
+  liveProducts.some((item) => item.lineId === "kiosk" && item.dishName === "主机菜"),
+  "live catalog 应替换 Kiosk 静态树",
+);
+assert.equal(
+  liveProducts.filter((item) => item.lineId === "kiosk" && item.dishName.includes("（Kiosk）")).length,
+  0,
+  "live catalog 后不应再枚举 Kiosk 静态菜",
+);
+assert.ok(
+  liveProducts.some((item) => item.lineId === "emenu" && item.dishName.includes("（eMenu）")),
+  "未注入的产线仍用静态树",
+);
+
+const hostDishKey = "d:g-host:c-host:d-host";
+const outsideKey = "d:old-group:old-cat:old-dish";
+const withOutside = picker.setNodeSelected(
+  { kiosk: [outsideKey], emenu: [], sdi: [] },
+  "kiosk",
+  hostDishKey,
+  true,
+);
+assert.ok(withOutside.kiosk.includes(outsideKey), "当前树没有的旧勾选应保留");
+assert.ok(withOutside.kiosk.includes(hostDishKey), "主机菜单勾选应写入");
+
+picker.clearCatalogResults();
+assert.ok(
+  picker.listAllDishes().some((item) => item.lineId === "kiosk" && item.dishName.includes("（Kiosk）")),
+  "清除 catalog 后应恢复静态树",
+);
 
 for (const selector of [
   ".olf-product-search",

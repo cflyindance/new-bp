@@ -13,6 +13,11 @@ export function getStorageValue(key, defaultValue) {
 
 export function setStorageValue(key, value) {
   localStorage.setItem(key, JSON.stringify(value))
+  if (key === 'emenu_table') {
+    window.dispatchEvent(
+      new CustomEvent('emenu_table_changed', { detail: value })
+    )
+  }
   if (key === 'emenu_auth') {
     window.dispatchEvent(
       new CustomEvent('emenu_auth_changed', {

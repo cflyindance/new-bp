@@ -2,6 +2,8 @@
  * 硬件管理中心 → 硬件 → CDS（客显屏）设备列表与编辑。
  */
 
+import { openConfirmDialog } from "../ui/app-confirm-dialog";
+import { showAppToast } from "../ui/app-toast";
 import {
   bindCdsDisplaySettingsToggles,
   collectCdsDisplaySettingsFromForm,
@@ -464,7 +466,7 @@ function saveEditedDevice(deviceId: string, form: HTMLElement): boolean {
   if (idx < 0) return false;
   const patch = collectEditFormState(form);
   if (!patch.deviceName) {
-    window.alert("请填写设备名称");
+    showAppToast("请填写设备名称", { variant: "error" });
     return false;
   }
   const next = [...devices];
@@ -505,9 +507,17 @@ export function bindDeviceManagementCdsHardware(root: ParentNode = document): vo
       if (!id) return;
       const device = findCdsHardwareDevice(id);
       const label = device?.deviceName ?? id;
-      if (!window.confirm(`确定删除设备「${label}」？删除后不可恢复。`)) return;
-      deleteDevice(id);
-      rerenderList(page, search?.value ?? "");
+      void (async () => {
+        const ok = await openConfirmDialog({
+          title: "删除设备",
+          message: `确定删除设备「${label}」？删除后不可恢复。`,
+          confirmLabel: "确认删除",
+          danger: true,
+        });
+        if (!ok) return;
+        deleteDevice(id);
+        rerenderList(page, search?.value ?? "");
+      })();
     });
     return;
   }

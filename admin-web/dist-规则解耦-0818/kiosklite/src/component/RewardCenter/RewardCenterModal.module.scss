@@ -1,0 +1,40 @@
+.rewardCenterModal {
+  .contentWrapper {
+    position: relative;
+    padding: 4.7rem 6.5rem 0;
+    border-radius: 4rem;
+    background: #e6e6e6;
+    // .title {
+    //   text-align: center;
+    //   font-size: 3rem;
+    //   font-weight: bold;
+    //   margin-bottom: 5.2rem;
+    // }
+    .closeIcon {
+      position: absolute;
+      top: 4.4rem;
+      right: 4.4rem;
+      color: #000;
+      font-size: 4.3rem;
+    }
+  }
+  .footWrapper {
+    position: absolute;
+    bottom: 5.2rem;
+    left: 50%;
+    transform: translateX(-50%);
+
+    .confirmBtn {
+      width: 60rem;
+      height: 10rem;
+      background: var(--primary-selected-color);
+      color: #000;
+      border-radius: 10rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3rem;
+      font-weight: 600;
+    }
+  }
+}

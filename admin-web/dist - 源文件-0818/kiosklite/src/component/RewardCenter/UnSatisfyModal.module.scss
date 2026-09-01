@@ -1,0 +1,44 @@
+@import '../../assets/scss/themes.scss';
+
+.unSatisfyWrapper {
+  @include dialog-box-style;
+}
+
+.unSatisfyWrapper {
+  .header {
+    text-align: center;
+    font-weight: bold;
+    font-size: 3.6rem;
+  }
+  .content {
+    margin-top: 1.2rem;
+    font-weight: bold;
+    font-size: 2.4rem;
+  }
+  .footer {
+    display: flex;
+    justify-content: center;
+    margin-top: 4rem;
+    flex-direction: column;
+    // gap: 2rem;
+    div {
+      display: inline-block;
+      width: 40rem;
+      height: 8rem;
+      font-size: 3rem;
+      text-align: center;
+      line-height: 8rem;
+      margin: 0 1.4rem;
+      color: var(--text-color-black);
+      border-radius: 4rem;
+      font-weight: bold;
+    }
+    div:first-child {
+      background-color: var(--background-grey);
+    }
+    div:last-child {
+      background-color: var(--primary-selected-color);
+      margin-top: 2rem;
+    }
+  }
+}

@@ -62,7 +62,7 @@ const expectedGroups: Array<[string, string, number[]]> = [
   ["foh-guest-menu-home", "点餐首页与入口", [599, 604, 601, 602, 600, 611, 532]],
   ["foh-guest-menu-body", "菜单与购物车展示", [516, 518, 606, 517, 520, 608, 515, 528, 618, 616, 524, 607, 519, 645, 509, 525, 526, 617]],
   ["foh-guest-hotpot", "火锅点餐", [572, 574, 573, 575]],
-  ["foh-guest-duration-scenarios", "计时与自助餐规则", [443, 571, 674, 577, 578, 579, 580]],
+  ["foh-guest-duration-scenarios", "计时与自助餐规则", [571, 674, 577, 578, 579, 580]],
   ["foh-tableside-service", "桌边呼叫", [641, 640, 333]],
   ["foh-guest-order-notes", "点单备注", [521, 522, 523]],
   ["foh-wait-time-display", "等待时长计算与展示", [673, 535, 536, 537, 538, 539, 540]],
@@ -112,8 +112,8 @@ for (const [groupKey, title, seqs] of expectedGroups) {
   assert(same(sorted, seqs), `${groupKey} 运行时组内排序错误`);
   allSeqs.push(...seqs);
 }
-assert(allSeqs.length === 154, `规范 seq 应为 154，实际 ${allSeqs.length}`);
-assert(new Set(allSeqs).size === 154, "规范 seq 存在重复");
+assert(allSeqs.length === 153, `规范 seq 应为 153，实际 ${allSeqs.length}`);
+assert(new Set(allSeqs).size === 153, "规范 seq 存在重复");
 
 const canonical = new Set(expectedOrder);
 for (const [legacy, target] of Object.entries(requiredRedirects)) {
@@ -139,7 +139,7 @@ for (const [legacy, target] of Object.entries(RUNTIME_REDIRECTS)) {
 
 const hub = MODULE_SETTINGS_BY_PATH["/operations/queue-call/settings"];
 const normalizedItems = normalizeFohCatalogItemsForGrouping(hub?.items ?? []);
-assert(normalizedItems.length === 154, `复杂版本 catalog 应为 154 项，实际 ${normalizedItems.length}`);
+assert(normalizedItems.length === 153, `复杂版本 catalog 应为 153 项，实际 ${normalizedItems.length}`);
 assert(same(hub?.groupOrder, expectedOrder), "catalog groupOrder 与规范不一致");
 assert(same(hub?.groupNavSections?.map((s) => s.groupKeys), [expectedOrder.slice(0, 11), expectedOrder.slice(11)]), "catalog 员工端/食客端分段错误");
 
@@ -151,7 +151,7 @@ for (const item of normalizedItems) {
   if (approvedGuestMenuCatalogChanges.has(item.seq)) continue;
   assert(same(stable, baselineItems.get(item.seq)), `seq ${item.seq} 非分组 catalog 字段发生变化`);
 }
-assert(same([...normalizedItems.map((item) => item.seq)].sort((a, b) => a - b), [...allSeqs].sort((a, b) => a - b)), "catalog seq 集合与 154 项规范不一致");
+assert(same([...normalizedItems.map((item) => item.seq)].sort((a, b) => a - b), [...allSeqs].sort((a, b) => a - b)), "catalog seq 集合与 153 项规范不一致");
 
 for (const seq of allSeqs) {
   if (approvedGuestMenuLineScopeChanges.has(seq)) continue;
@@ -174,7 +174,7 @@ for (const [seq, expectedModules] of Object.entries(baseline.uiModulesBySeq)) {
 const mvpHiddenSeqs = new Set<number>(MVP_HIDDEN_MODULE_SETTING_SEQS as readonly number[]);
 const mvpHiddenGroups = new Set<string>(MVP_HIDDEN_MODULE_SETTING_GROUP_KEYS as readonly string[]);
 const mvpItems = normalizedItems.filter((item) => !mvpHiddenSeqs.has(item.seq) && !mvpHiddenGroups.has(item.groupKey));
-assert(mvpItems.length === 119, `MVP 应为 119 项，实际 ${mvpItems.length}`);
+assert(mvpItems.length === 118, `MVP 应为 118 项，实际 ${mvpItems.length}`);
 assert(new Set(mvpItems.map((item) => item.groupKey)).size === 20, "MVP 应为 20 组");
 for (const seq of [164, 176, 177]) {
   assert((RETIRED_MODULE_SETTING_SEQS as readonly number[]).includes(seq), `seq ${seq} 未全版本退役`);
@@ -190,4 +190,4 @@ if (errors.length) {
   process.exit(1);
 }
 
-console.log("FOH 22-group IA verified: future 22/154, MVP 20/119, invariants preserved.");
+console.log("FOH 22-group IA verified: future 22/153, MVP 20/118, invariants preserved.");

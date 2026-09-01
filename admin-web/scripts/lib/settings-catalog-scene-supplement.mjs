@@ -512,10 +512,6 @@ export const SETTINGS_CATALOG_SCENE_OVERRIDE_BY_SEQ = new Map([
     "按 POS / CDS / Kiosk / PayPad 配置刷卡签购单商户联与客户联；已合并原 seq 245、249、670。",
   ],
   [
-    443,
-    "开启后多选适用场景（KTV、VIP包间）；勾选后对应场景按时长收费。",
-  ],
-  [
     571,
     "开启后在所选产线（eMenu、SDI）品类/自助餐模式下，选择套餐后默认先下单再选套餐内商品。",
   ],
@@ -698,7 +694,6 @@ export const SETTINGS_CATALOG_TITLE_OVERRIDE_BY_SEQ = new Map([
   [638, "新订单提醒"],
   [639, "追单提醒"],
   [637, "指定菜品提醒"],
-  [443, "按照时长收费"],
 ]);
 
 export const SETTINGS_CATALOG_FEATURE_OVERRIDE_BY_SEQ = new Map([

@@ -1,4 +1,5 @@
 import { t, tf } from "../../i18n";
+import { openConfirmDialog } from "../../ui/app-confirm-dialog";
 import { SEASONING_ACTIONS } from "./seasoning-domain";
 import { seasoningApi, SeasoningApiError } from "./seasoning-api";
 import {
@@ -86,7 +87,7 @@ class BatchWizardController {
         this.optionPickerOpen = false;
         this.render();
       } else {
-        this.close();
+        void this.close();
       }
     });
     installSeasoningWorkspaceReorder(this.overlay, {
@@ -118,8 +119,16 @@ class BatchWizardController {
     if (selectionToken) await seasoningApi.discardProductSelection(selectionToken).catch(() => undefined);
   }
 
-  private close(force = false): void {
-    if (!force && this.dirty && !window.confirm(t("seasoning.discardConfirm"))) return;
+  private async close(force = false): Promise<void> {
+    if (!force && this.dirty) {
+      const ok = await openConfirmDialog({
+        title: "放弃修改",
+        message: t("seasoning.discardConfirm"),
+        confirmLabel: "确认放弃",
+        danger: true,
+      });
+      if (!ok) return;
+    }
     void this.discardDrafts();
     this.overlay.remove();
   }
@@ -411,7 +420,11 @@ class BatchWizardController {
       this.appliedProductQuery = next.query;
       this.productSelection = { ...this.productSelection, total: next.selectedTotal };
       this.error = "";
-      this.menuNotice = next.menuFromCache ? t("seasoning.menuUsingCache") : "";
+      this.menuNotice = next.menuFromCache
+        ? t("seasoning.menuUsingCache")
+        : next.menuSource === "static" && /(?:^|;\s*)menusifu-emenu-kpos-target=/.test(document.cookie)
+          ? t("seasoning.menuUsingStatic")
+          : "";
     } catch (error) {
       await this.recoverFromError(error);
     } finally {
@@ -541,7 +554,7 @@ class BatchWizardController {
       this.preview = null;
       this.productSelection = null;
       await this.input.onSaved(result);
-      this.close(true);
+      void this.close(true);
     } catch (error) {
       await this.recoverFromError(error);
       this.loading = false;
@@ -560,7 +573,7 @@ class BatchWizardController {
     }
     const target = clicked.closest<HTMLElement>("button");
     if (!target) return;
-    if (target.hasAttribute("data-close")) return this.close();
+    if (target.hasAttribute("data-close")) return void this.close();
     if (target.hasAttribute("data-retry-products")) return void this.initialize();
     if (target.hasAttribute("data-open-action-picker")) {
       this.pendingActions = new Set(this.actionOptions.keys());
@@ -605,7 +618,13 @@ class BatchWizardController {
     }
     if (target.hasAttribute("data-remove-action") && this.activeAction) {
       const action = this.activeAction;
-      if (!window.confirm(tf("seasoning.batch.removeActionConfirm", { action: actionLabel(action) }))) return;
+      const ok = await openConfirmDialog({
+        title: "移除动作",
+        message: tf("seasoning.batch.removeActionConfirm", { action: actionLabel(action) }),
+        confirmLabel: "确认移除",
+        danger: true,
+      });
+      if (!ok) return;
       const actions = [...this.actionOptions.keys()];
       const index = actions.indexOf(action);
       this.actionOptions.delete(action);

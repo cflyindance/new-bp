@@ -1,0 +1,1 @@
+import{am as r,an as a,ao as t}from"./index.9dafe3ef.js";import{r as d}from"./react.db72ebbf.js";var e={},i=a.exports,o=t.exports;Object.defineProperty(e,"__esModule",{value:!0});var v=e.default=void 0,n=o(d.exports),l=i(r),u=(0,l.default)(n.createElement("path",{d:"M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"}),"Check");v=e.default=u;export{v as d};

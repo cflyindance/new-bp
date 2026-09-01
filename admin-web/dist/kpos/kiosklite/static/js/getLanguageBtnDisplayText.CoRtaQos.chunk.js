@@ -1,0 +1,2 @@
+import{oi as e}from"./actions.BIkwpdGb.chunk.js";var t=(t,n,r)=>t?.length?t.map(t=>e.getFixedT(t)(n)).join(`/`):e.t(r);export{t};
+//# source-map-url-disabled=getLanguageBtnDisplayText.CoRtaQos.chunk.js.map

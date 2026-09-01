@@ -1,0 +1,1109 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>新建屏保 - 屏保</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="assets/common.css" />
+  <script src="assets/embedded-mode.js"></script>
+  <script src="assets/toast.js"></script>
+  <script src="assets/kiosk-theme-media-idb.js"></script>
+  <script src="assets/kiosk-theme-overlap.js"></script>
+  <script>
+    tailwind.config = { theme: { extend: { colors: { primary: '#1677ff', 'sidebar-bg': '#fafafa', 'sidebar-active': '#e6f4ff' }, borderRadius: { ant: '6px' } } } };
+  </script>
+  <style>
+    /* 新建屏保：竖/横 素材类型 Segmented（对齐稿中 Tab 风格） */
+    .create-type-toggle { display: inline-flex; gap: 2px; padding: 4px; border-radius: 12px; background: #f5f5f5; }
+    .create-type-toggle label { cursor: pointer; display: inline-flex; align-items: center; margin: 0; }
+    .create-type-toggle label span {
+      display: inline-block; padding: 8px 18px; border-radius: 10px; font-size: 14px; line-height: 22px;
+      color: rgba(0, 0, 0, 0.65); transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .create-type-toggle input { position: absolute; opacity: 0; width: 0; height: 0; margin: 0; }
+    .create-type-toggle input:focus-visible + span { outline: 2px solid #1677ff; outline-offset: 1px; }
+    .create-type-toggle input:checked + span {
+      background: #fff; color: rgba(0, 0, 0, 0.88); font-weight: 500;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03), 0 1px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px rgba(0, 0, 0, 0.02);
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-[#f5f6f7] text-gray-900 antialiased">
+  <div class="flex min-h-screen flex-col">
+    <header class="flex-shrink-0 border-b border-[#f0f0f0] bg-white">
+      <div class="flex items-center justify-between gap-4 px-6 py-4">
+        <div class="flex min-w-0 flex-1 items-center gap-4">
+          <button type="button" id="createBackBtn" class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-black/[0.04] text-[rgba(0,0,0,0.45)] hover:bg-black/[0.08] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary" aria-label="返回">
+            <svg width="20" height="20" viewBox="0 0 1024 1024" fill="currentColor" aria-hidden="true"><path d="M872 474H298.7l413.1-413.1c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L201.4 479.7c-6.2 6.2-9.4 14.4-9.4 22.6s3.1 16.4 9.4 22.6l465.1 465.1c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L298.7 550H872c17.7 0 32-14.3 32-32s-14.3-32-32-32z"/></svg>
+          </button>
+          <h1 class="truncate text-xl font-semibold leading-7 text-[rgba(0,0,0,0.88)]">新建屏保</h1>
+        </div>
+        <button type="button" id="distributeBtn" class="inline-flex h-12 shrink-0 items-center justify-center rounded-xl bg-primary px-5 text-base font-medium text-white shadow-[0_2px_0_rgba(5,145,255,0.1)] hover:bg-[#4096ff] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">选择门店</button>
+      </div>
+      <div class="step-progress h-1 w-full rounded-none bg-[#f0f0f0]">
+        <div class="step-progress-inner h-full rounded-none" style="width: 25%"></div>
+      </div>
+    </header>
+    <main class="flex-1 min-h-0 overflow-auto p-6">
+      <form id="screensaverForm" class="mx-auto w-full max-w-[880px]" action="kiosk-theme-list.html" method="get">
+        <div class="space-y-8 rounded-2xl border border-[#f0f0f0] bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.03)] lg:p-8">
+        <!-- 主题名称 -->
+        <div>
+          <label class="mb-2 block text-sm font-normal leading-[22px] text-[rgba(0,0,0,0.65)]">主题名称</label>
+          <input type="text" name="name" required placeholder="请输入主题名称" class="h-12 w-full rounded-xl border border-[#d9d9d9] bg-white px-4 text-base leading-6 text-[rgba(0,0,0,0.88)] placeholder:text-[rgba(0,0,0,0.25)] focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" />
+        </div>
+        <!-- 屏保参数 -->
+        <div class="grid grid-cols-1 gap-6 md:grid-cols-3 md:gap-5">
+          <div>
+            <label for="idleTimeoutInput" class="mb-2 block text-sm font-normal leading-[22px] text-[rgba(0,0,0,0.65)]">无操作进入屏保时间</label>
+            <div class="flex items-center gap-2">
+              <input id="idleTimeoutInput" type="number" min="1" step="1" value="60" class="h-12 min-w-0 flex-1 rounded-xl border border-[#d9d9d9] bg-white px-4 text-base leading-6 text-[rgba(0,0,0,0.88)] focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" />
+              <span class="shrink-0 text-sm leading-[22px] text-[rgba(0,0,0,0.65)]">秒</span>
+            </div>
+          </div>
+          <div>
+            <label for="transitionEffectSelect" class="mb-2 block text-sm font-normal leading-[22px] text-[rgba(0,0,0,0.65)]">图片切换效果</label>
+            <div class="relative">
+              <select id="transitionEffectSelect" class="ui-select w-full hidden" aria-label="图片切换效果">
+                <option value="" disabled>请选择图片切换效果</option>
+                <option value="slide" selected>slide</option>
+                <option value="fade">fade</option>
+                <option value="zoom">zoom</option>
+                <option value="rotate">rotate</option>
+                <option value="bounce">bounce</option>
+                <option value="flip">flip</option>
+              </select>
+              <button type="button" id="transitionEffectTrigger" class="ui-select-trigger" aria-haspopup="listbox" aria-expanded="false">
+                <span class="ui-select-trigger__label" id="transitionEffectLabel">slide</span>
+                <svg class="ui-select-trigger__chev" viewBox="0 0 1024 1024" fill="currentColor" aria-hidden="true"><path d="M884 256h-75c-5.1 0-9.9 2.5-12.6 6.5L512 654.2 227.9 262.6c-2.7-4-7.5-6.5-12.6-6.5h-75c-6.5 0-10.3 7.4-6.5 12.7l352.6 486.1c12.8 17.6 39 17.6 51.7 0l352.6-486.1c3.9-5.3.1-12.7-6.4-12.7z"/></svg>
+              </button>
+              <div id="transitionEffectMenu" class="ui-select-menu dropdown-menu theme-list-dropdown-menu ui-action-dropdown absolute left-0 top-[calc(100%+8px)] z-20 hidden bg-white" role="listbox" aria-label="图片切换效果选项">
+                <button type="button" class="ui-menu-item" role="option" data-value="slide" aria-selected="true">slide</button>
+                <button type="button" class="ui-menu-item" role="option" data-value="fade" aria-selected="false">fade</button>
+                <button type="button" class="ui-menu-item" role="option" data-value="zoom" aria-selected="false">zoom</button>
+                <button type="button" class="ui-menu-item" role="option" data-value="rotate" aria-selected="false">rotate</button>
+                <button type="button" class="ui-menu-item" role="option" data-value="bounce" aria-selected="false">bounce</button>
+                <button type="button" class="ui-menu-item" role="option" data-value="flip" aria-selected="false">flip</button>
+              </div>
+            </div>
+          </div>
+          <div>
+            <label for="carouselIntervalInput" class="mb-2 block text-sm font-normal leading-[22px] text-[rgba(0,0,0,0.65)]">图片轮播时间间隔</label>
+            <div class="flex items-center gap-2">
+              <input id="carouselIntervalInput" type="number" min="1" step="1" value="3" class="h-12 min-w-0 flex-1 rounded-xl border border-[#d9d9d9] bg-white px-4 text-base leading-6 text-[rgba(0,0,0,0.88)] focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" />
+              <span class="shrink-0 text-sm leading-[22px] text-[rgba(0,0,0,0.65)]">秒</span>
+            </div>
+          </div>
+        </div>
+        <!-- 竖版 -->
+        <div class="border-t border-[#f0f0f0] pt-8">
+          <div class="mb-3 flex flex-wrap items-baseline gap-2">
+            <span class="text-base font-medium leading-6 text-[rgba(0,0,0,0.88)]">竖版</span>
+            <span class="text-sm font-normal leading-[22px] text-[rgba(0,0,0,0.45)]">建议比例 9∶16</span>
+          </div>
+          <div class="create-type-toggle mb-4" role="radiogroup" aria-label="竖版素材类型">
+            <label><input type="radio" name="portraitType" value="image" checked /><span>图片</span></label>
+            <label><input type="radio" name="portraitType" value="video" /><span>视频</span></label>
+          </div>
+          <input type="file" id="filePortrait" accept="image/*" multiple class="hidden" />
+          <div class="flex flex-wrap items-start gap-4">
+            <div id="portraitPreviews" class="flex flex-wrap gap-3"></div>
+            <div id="portraitHints" class="max-w-xs flex-shrink-0 space-y-1 rounded-xl bg-[#fafafa] px-4 py-3 text-xs leading-5 text-[rgba(0,0,0,0.45)]"></div>
+          </div>
+        </div>
+        <!-- 横版 -->
+        <div class="border-t border-[#f0f0f0] pt-8">
+          <div class="mb-3 flex flex-wrap items-baseline gap-2">
+            <span class="text-base font-medium leading-6 text-[rgba(0,0,0,0.88)]">横版</span>
+            <span class="text-sm font-normal leading-[22px] text-[rgba(0,0,0,0.45)]">建议比例 16∶9</span>
+          </div>
+          <div class="create-type-toggle mb-4" role="radiogroup" aria-label="横版素材类型">
+            <label><input type="radio" name="landscapeType" value="image" checked /><span>图片</span></label>
+            <label><input type="radio" name="landscapeType" value="video" /><span>视频</span></label>
+          </div>
+          <input type="file" id="fileLandscape" accept="image/*" multiple class="hidden" />
+          <div class="flex flex-wrap items-start gap-4">
+            <div id="landscapePreviews" class="flex flex-wrap gap-3"></div>
+            <div id="landscapeHints" class="max-w-xs flex-shrink-0 space-y-1 rounded-xl bg-[#fafafa] px-4 py-3 text-xs leading-5 text-[rgba(0,0,0,0.45)]"></div>
+          </div>
+        </div>
+        </div>
+      </form>
+    </main>
+  </div>
+  <!-- 保存：与已生效主题时间重叠确认 -->
+  <div id="saveOverlapConfirmModal" class="fixed inset-0 z-[60] hidden items-center justify-center bg-black/[0.45] p-4" aria-hidden="true">
+    <div class="ui-dialog-panel w-full max-w-sm overflow-hidden" role="dialog" aria-modal="true" aria-labelledby="saveOverlapConfirmTitle">
+      <div class="ui-dialog-header">
+        <h3 id="saveOverlapConfirmTitle" class="ui-dialog-title">提示</h3>
+      </div>
+      <p id="saveOverlapConfirmText" class="ui-dialog-body whitespace-pre-line leading-relaxed"></p>
+      <div class="ui-dialog-footer">
+        <button type="button" id="saveOverlapConfirmCancel" class="ui-dialog-btn">取消</button>
+        <button type="button" id="saveOverlapConfirmOk" class="ui-dialog-btn ui-dialog-btn--primary">确定保存</button>
+      </div>
+    </div>
+  </div>
+  <!-- 上传来源选择模态框 -->
+  <div id="uploadSourceModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/[0.45] p-4">
+    <div class="ui-dialog-panel w-full max-w-sm overflow-hidden">
+      <div class="ui-dialog-header-row">
+        <h3 class="ui-dialog-title">选择上传方式</h3>
+        <button type="button" id="uploadSourceClose" class="ui-dialog-close" aria-label="关闭">×</button>
+      </div>
+      <div class="space-y-3 p-5">
+        <div class="overflow-hidden rounded-xl border border-[#d9d9d9] transition-colors hover:border-primary">
+          <button type="button" id="chooseLocalBtn" class="w-full rounded-t-xl p-4 text-left transition-colors hover:bg-[#e6f4ff]/50">
+            <div class="flex items-center gap-3">
+              <span class="text-2xl">📁</span>
+              <div>
+                <div class="font-medium text-gray-800">本地上传</div>
+                <div class="text-sm text-gray-500">从电脑选择文件上传</div>
+              </div>
+            </div>
+          </button>
+          <div id="saveToLibraryWrap" class="hidden rounded-b-xl border-t border-[#f0f0f0] bg-[#fafafa] px-4 py-3">
+            <label class="flex items-center gap-2 cursor-pointer" onclick="event.stopPropagation();">
+              <input type="checkbox" id="saveToLibraryCheck" class="rounded text-primary" />
+              <span class="text-sm text-gray-600">同时保存到图片素材库</span>
+            </label>
+          </div>
+        </div>
+        <button type="button" id="chooseMaterialBtn" class="w-full rounded-xl border border-[#d9d9d9] p-4 text-left transition-colors hover:border-primary hover:bg-[#e6f4ff]/50">
+          <div class="flex items-center gap-3">
+            <span class="text-2xl">🖼️</span>
+            <div>
+              <div class="font-medium text-gray-800">素材库选择</div>
+              <div class="text-sm text-gray-500">从图片素材库中选择</div>
+            </div>
+          </div>
+        </button>
+      </div>
+    </div>
+  </div>
+  <!-- 素材库选择模态框 -->
+  <div id="materialLibraryModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/[0.45] p-4">
+    <div class="ui-dialog-panel flex max-h-[80vh] w-full max-w-2xl flex-col overflow-hidden">
+      <div class="ui-dialog-header-row flex-shrink-0">
+        <h3 class="ui-dialog-title">选择素材</h3>
+        <button type="button" id="materialLibraryClose" class="ui-dialog-close" aria-label="关闭">×</button>
+      </div>
+      <div class="flex min-h-0 flex-1">
+        <div class="w-40 shrink-0 overflow-auto border-r border-[#f0f0f0] p-3">
+          <div id="materialCategoryList" class="space-y-1"></div>
+        </div>
+        <div class="min-h-0 flex-1 overflow-auto p-4">
+          <div id="materialImageGrid" class="grid grid-cols-3 gap-4"></div>
+          <div id="materialEmptyState" class="hidden text-center py-12 text-gray-400">
+            <div class="text-4xl mb-2">📭</div>
+            <p>该分类暂无素材</p>
+            <p class="text-sm mt-2">请先在<a href="material.html" class="text-primary hover:underline">图片素材</a>中上传素材</p>
+          </div>
+        </div>
+      </div>
+      <div class="ui-dialog-footer ui-dialog-footer--spread flex-shrink-0">
+        <span class="text-sm text-[rgba(0,0,0,0.45)]">已选择 <span id="selectedMaterialCount" class="font-medium text-[rgba(0,0,0,0.88)]">0</span> 个素材</span>
+        <div class="flex gap-2">
+          <button type="button" id="materialCancelBtn" class="ui-dialog-btn">取消</button>
+          <button type="button" id="materialConfirmBtn" class="ui-dialog-btn ui-dialog-btn--primary">确定</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    (function() {
+      var STORAGE_KEY = 'kiosk_themes';
+      var portraitList = [];
+      var landscapeList = [];
+      var currentUploadRole = null;
+      var selectedMaterials = [];
+      var currentMaterialCategory = null;
+      var createDraftThemeId = null;
+      var urlSearchParams = new URLSearchParams(location.search);
+
+      function setupTransitionEffectDropdown() {
+        var selectEl = document.getElementById('transitionEffectSelect');
+        var trigger = document.getElementById('transitionEffectTrigger');
+        var label = document.getElementById('transitionEffectLabel');
+        var menu = document.getElementById('transitionEffectMenu');
+        if (!selectEl || !trigger || !label || !menu) return;
+
+        function closeMenu() {
+          menu.classList.add('hidden');
+          trigger.setAttribute('aria-expanded', 'false');
+        }
+        function syncFromSelect() {
+          var v = selectEl.value || 'slide';
+          selectEl.value = v;
+          label.textContent = v;
+          menu.querySelectorAll('[role=\"option\"]').forEach(function(opt) {
+            opt.setAttribute('aria-selected', opt.getAttribute('data-value') === v ? 'true' : 'false');
+          });
+        }
+
+        syncFromSelect();
+
+        trigger.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          var willOpen = menu.classList.contains('hidden');
+          document.querySelectorAll('.dropdown-menu').forEach(function(m) { m.classList.add('hidden'); });
+          if (willOpen) {
+            menu.classList.remove('hidden');
+            trigger.setAttribute('aria-expanded', 'true');
+          } else {
+            closeMenu();
+          }
+        });
+
+        menu.addEventListener('click', function(e) {
+          var btn = e.target.closest('[role=\"option\"][data-value]');
+          if (!btn) return;
+          e.preventDefault();
+          e.stopPropagation();
+          selectEl.value = btn.getAttribute('data-value') || 'slide';
+          syncFromSelect();
+          closeMenu();
+        });
+
+        document.addEventListener('click', function(e) {
+          if (e.target.closest('#transitionEffectTrigger') || e.target.closest('#transitionEffectMenu')) return;
+          closeMenu();
+        });
+
+        document.addEventListener('keydown', function(e) {
+          if (menu.classList.contains('hidden')) return;
+          if (e.key === 'Escape') {
+            e.preventDefault();
+            closeMenu();
+          }
+        });
+
+        window.__syncTransitionEffectDropdown = syncFromSelect;
+      }
+
+      function getThemes() {
+        try {
+          return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+        } catch (e) {
+          return [];
+        }
+      }
+
+      function saveThemes(list) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+      }
+
+      function buildListFromStoredMedia(images) {
+        if (!images || !images.length) return Promise.resolve([]);
+        var idb = window.KioskThemeMediaIdb;
+        return Promise.all(images.map(function(img) {
+          if (typeof img === 'object' && img.type === 'video' && img.mediaRef && idb && idb.supported()) {
+            return idb.get(img.mediaRef).then(function(blob) {
+              if (!blob) {
+                return { url: '', dataUrl: null, type: 'video', mediaRef: img.mediaRef };
+              }
+              var url = URL.createObjectURL(blob);
+              return { url: url, dataUrl: null, type: 'video', mediaRef: img.mediaRef };
+            });
+          }
+          var dataUrl = typeof img === 'string' ? img : (img.dataUrl || '');
+          var t = (typeof img === 'object' && img.type) ? img.type : 'image';
+          return Promise.resolve({ url: dataUrl, dataUrl: dataUrl, type: t || 'image' });
+        }));
+      }
+
+      function syncTypeRadiosFromLists() {
+        ['portrait', 'landscape'].forEach(function(role) {
+          var list = role === 'portrait' ? portraitList : landscapeList;
+          var isVideo = list.length > 0 && list[0].type === 'video';
+          var name = role === 'portrait' ? 'portraitType' : 'landscapeType';
+          document.querySelectorAll('input[name="' + name + '"]').forEach(function(r) {
+            r.checked = (r.value === 'video') === isVideo;
+          });
+        });
+      }
+
+      function collectVideoMediaRefs(theme) {
+        var refs = [];
+        function scan(arr) {
+          if (!arr) return;
+          arr.forEach(function(m) {
+            if (m && typeof m === 'object' && m.type === 'video' && m.mediaRef) refs.push(m.mediaRef);
+          });
+        }
+        scan(theme.portraitImages);
+        scan(theme.landscapeImages);
+        return refs;
+      }
+
+      function getMediaType(role) {
+        var radioName = role === 'portrait' ? 'portraitType' : 'landscapeType';
+        var checked = document.querySelector('input[name="' + radioName + '"]:checked');
+        return checked ? checked.value : 'image';
+      }
+
+      function getMaxCount(role) {
+        return getMediaType(role) === 'video' ? 1 : 5;
+      }
+
+      function updateHints(role) {
+        var hintsId = role === 'portrait' ? 'portraitHints' : 'landscapeHints';
+        var container = document.getElementById(hintsId);
+        var mediaType = getMediaType(role);
+        var isPortrait = role === 'portrait';
+        var size = isPortrait ? '1080*1920px' : '1920*1080px';
+        var html = '<p class="leading-5">建议尺寸: ' + size + '</p>';
+        if (mediaType === 'video') {
+          html += '<p class="leading-5">视频格式: MP4、AVI 等主流格式</p>';
+          html += '<p class="leading-5">视频大小不超过 20MB，最多 1 个</p>';
+        } else {
+          html += '<p class="leading-5">图片格式: JPEG、PNG、JPG、GIF</p>';
+          html += '<p class="leading-5">图片大小建议 1M 以内，最多 5 张</p>';
+        }
+        container.innerHTML = html;
+      }
+
+      function updateAccept(role) {
+        var inputId = role === 'portrait' ? 'filePortrait' : 'fileLandscape';
+        var input = document.getElementById(inputId);
+        var type = getMediaType(role);
+        input.accept = type === 'video' ? 'video/*' : 'image/*';
+        input.multiple = type !== 'video';
+      }
+
+      function renderPreviews(role) {
+        var list = role === 'portrait' ? portraitList : landscapeList;
+        var containerId = role === 'portrait' ? 'portraitPreviews' : 'landscapePreviews';
+        var inputId = role === 'portrait' ? 'filePortrait' : 'fileLandscape';
+        var container = document.getElementById(containerId);
+        var input = document.getElementById(inputId);
+        var maxCount = getMaxCount(role);
+
+        var isPortrait = role === 'portrait';
+        /* 设备比例：竖版 1080×1920 = 9:16，横版 1920×1080 = 16:9 */
+        var boxClass = isPortrait ? 'w-[5.625rem] aspect-[9/16]' : 'w-[10rem] aspect-video';
+        var canDrag = list.length > 1;
+        var html = '';
+        list.forEach(function(item, index) {
+          var mediaSrc = item.url || item.dataUrl || '';
+          var mediaHtml = '';
+          if (item.type === 'video') {
+            mediaHtml = '<video src="' + mediaSrc + '" class="w-full h-full object-cover muted" draggable="false"></video>' +
+              '<div class="absolute inset-0 flex items-center justify-center pointer-events-none"><span class="w-8 h-8 bg-black/50 rounded-full flex items-center justify-center text-white text-xs">▶</span></div>';
+          } else {
+            mediaHtml = '<img src="' + mediaSrc + '" alt="预览" class="w-full h-full object-cover pointer-events-none" draggable="false" />';
+          }
+          var dragAttr = canDrag ? ' draggable="true"' : '';
+          var dragClass = canDrag ? ' cursor-grab active:cursor-grabbing preview-item' : '';
+          html += '<div class="relative group flex-shrink-0 overflow-hidden rounded-xl border border-[#d9d9d9] bg-[#fafafa] shadow-sm ' + boxClass + dragClass + '" data-role="' + role + '" data-index="' + index + '"' + dragAttr + '>' +
+            (canDrag ? '<span class="absolute bottom-1 left-1 flex h-5 w-5 items-center justify-center rounded bg-black/50 text-xs text-white pointer-events-none" title="拖动排序">⋮⋮</span>' : '') +
+            mediaHtml +
+            '<button type="button" class="img-remove absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-black/50 text-sm text-white transition-colors hover:bg-[#ff4d4f]" data-role="' + role + '" data-index="' + index + '" aria-label="删除">×</button>' +
+            '</div>';
+        });
+        if (list.length < maxCount) {
+          html += '<div class="upload-slot flex flex-shrink-0 cursor-pointer items-center justify-center rounded-xl border-2 border-dashed border-[#d9d9d9] bg-white transition-colors hover:border-primary hover:bg-[#e6f4ff]/40 ' + boxClass + '" data-role="' + role + '">' +
+            '<span class="text-2xl font-light text-[rgba(0,0,0,0.25)]">+</span>' +
+            '</div>';
+        }
+        container.innerHTML = html;
+
+        container.querySelectorAll('.upload-slot').forEach(function(el) {
+          el.addEventListener('click', function() {
+            currentUploadRole = role;
+            openUploadSourceModal();
+          });
+        });
+        container.querySelectorAll('.img-remove').forEach(function(btn) {
+          btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            var r = btn.getAttribute('data-role');
+            var i = parseInt(btn.getAttribute('data-index'), 10);
+            if (r === 'portrait') {
+              if (portraitList[i].url) URL.revokeObjectURL(portraitList[i].url);
+              portraitList.splice(i, 1);
+              renderPreviews('portrait');
+            } else {
+              if (landscapeList[i].url) URL.revokeObjectURL(landscapeList[i].url);
+              landscapeList.splice(i, 1);
+              renderPreviews('landscape');
+            }
+          });
+        });
+
+        if (canDrag) {
+          container.querySelectorAll('.preview-item').forEach(function(el) {
+            el.addEventListener('dragstart', function(e) {
+              e.dataTransfer.setData('text/plain', role + ':' + el.getAttribute('data-index'));
+              e.dataTransfer.effectAllowed = 'move';
+              el.classList.add('opacity-60', 'ring-2', 'ring-primary');
+            });
+            el.addEventListener('dragend', function(e) {
+              el.classList.remove('opacity-60', 'ring-2', 'ring-primary');
+            });
+            el.addEventListener('dragover', function(e) {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = 'move';
+              var target = e.currentTarget;
+              if (target.classList && !target.classList.contains('preview-item')) return;
+              target.classList.add('ring-2', 'ring-primary', 'ring-offset-1');
+            });
+            el.addEventListener('dragleave', function(e) {
+              if (!e.currentTarget.contains(e.relatedTarget)) {
+                e.currentTarget.classList.remove('ring-2', 'ring-primary', 'ring-offset-1');
+              }
+            });
+            el.addEventListener('drop', function(e) {
+              e.preventDefault();
+              e.currentTarget.classList.remove('ring-2', 'ring-primary', 'ring-offset-1');
+              var raw = e.dataTransfer.getData('text/plain');
+              if (!raw) return;
+              var parts = raw.split(':');
+              if (parts[0] !== role) return;
+              var fromIndex = parseInt(parts[1], 10);
+              var toIndex = parseInt(e.currentTarget.getAttribute('data-index'), 10);
+              if (fromIndex === toIndex) return;
+              movePreviewItem(role, fromIndex, toIndex);
+            });
+          });
+        }
+      }
+
+      function movePreviewItem(role, fromIndex, toIndex) {
+        var list = role === 'portrait' ? portraitList : landscapeList;
+        var item = list[fromIndex];
+        list.splice(fromIndex, 1);
+        var insertAt = fromIndex < toIndex ? toIndex - 1 : toIndex;
+        list.splice(insertAt, 0, item);
+        if (role === 'portrait') portraitList = list; else landscapeList = list;
+        renderPreviews(role);
+      }
+
+      var MAX_VIDEO_BYTES = 20 * 1024 * 1024;
+
+      function addFiles(role, files) {
+        if (!files || !files.length) return;
+        var list = role === 'portrait' ? portraitList : landscapeList;
+        var maxCount = getMaxCount(role);
+        var countBefore = list.length;
+        var remain = maxCount - countBefore;
+        var mediaType = getMediaType(role);
+        if (remain <= 0) {
+          if (mediaType === 'image') Toast.validate('最多上传5张图片');
+          return;
+        }
+        var oversizeVideo = false;
+        var imagePickCount = 0;
+        if (mediaType === 'image') {
+          for (var j = 0; j < files.length; j++) {
+            if (files[j].type && files[j].type.startsWith('image/')) imagePickCount++;
+          }
+          if (imagePickCount > remain) Toast.validate('最多上传5张图片');
+        }
+        for (var i = 0; i < files.length && list.length < maxCount; i++) {
+          var file = files[i];
+          if (mediaType === 'video') {
+            if (!file.type || !file.type.startsWith('video/')) continue;
+            if (file.size > MAX_VIDEO_BYTES) {
+              oversizeVideo = true;
+              continue;
+            }
+          } else {
+            if (!file.type || !file.type.startsWith('image/')) continue;
+          }
+          list.push({ url: URL.createObjectURL(file), file: file, type: file.type.startsWith('video/') ? 'video' : 'image' });
+        }
+        if (oversizeVideo) Toast.validate('视频大小不能超过 20MB');
+        if (role === 'portrait') portraitList = list; else landscapeList = list;
+        renderPreviews(role);
+      }
+
+      document.getElementById('filePortrait').addEventListener('change', function() {
+        if (this.files && this.files.length) addFiles('portrait', Array.prototype.slice.call(this.files));
+        this.value = '';
+      });
+      document.getElementById('fileLandscape').addEventListener('change', function() {
+        if (this.files && this.files.length) addFiles('landscape', Array.prototype.slice.call(this.files));
+        this.value = '';
+      });
+
+      document.querySelectorAll('input[name="portraitType"]').forEach(function(radio) {
+        radio.addEventListener('change', function() {
+          portraitList.forEach(function(item) { if (item.url) URL.revokeObjectURL(item.url); });
+          portraitList = [];
+          updateAccept('portrait');
+          updateHints('portrait');
+          renderPreviews('portrait');
+        });
+      });
+      document.querySelectorAll('input[name="landscapeType"]').forEach(function(radio) {
+        radio.addEventListener('change', function() {
+          landscapeList.forEach(function(item) { if (item.url) URL.revokeObjectURL(item.url); });
+          landscapeList = [];
+          updateAccept('landscape');
+          updateHints('landscape');
+          renderPreviews('landscape');
+        });
+      });
+
+      function compressImage(file, maxWidth, maxHeight, quality) {
+        return new Promise(function(resolve, reject) {
+          var img = new Image();
+          img.onload = function() {
+            var canvas = document.createElement('canvas');
+            var w = img.width;
+            var h = img.height;
+            if (w > maxWidth) { h = h * maxWidth / w; w = maxWidth; }
+            if (h > maxHeight) { w = w * maxHeight / h; h = maxHeight; }
+            canvas.width = w;
+            canvas.height = h;
+            var ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, w, h);
+            var dataUrl = canvas.toDataURL('image/jpeg', quality);
+            URL.revokeObjectURL(img.src);
+            resolve(dataUrl);
+          };
+          img.onerror = reject;
+          img.src = URL.createObjectURL(file);
+        });
+      }
+
+      function fileToDataUrl(file) {
+        return new Promise(function(resolve, reject) {
+          var reader = new FileReader();
+          reader.onload = function() { resolve(reader.result); };
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      }
+
+      function processMedia(item, isPortrait) {
+        if (item.type === 'video' && item.mediaRef && !item.file) {
+          return Promise.resolve({ type: 'video', mediaRef: item.mediaRef });
+        }
+        if (!item.file) {
+          return Promise.resolve({ dataUrl: item.url || item.dataUrl, type: item.type || 'image' });
+        }
+        if (item.type === 'video') {
+          if (window.KioskThemeMediaIdb && KioskThemeMediaIdb.supported()) {
+            var vidRef = KioskThemeMediaIdb.newMediaId();
+            return KioskThemeMediaIdb.put(vidRef, item.file).then(function() {
+              return { type: 'video', mediaRef: vidRef };
+            });
+          }
+          return fileToDataUrl(item.file).then(function(dataUrl) {
+            return { dataUrl: dataUrl, type: 'video' };
+          });
+        }
+        var maxW = isPortrait ? 540 : 960;
+        var maxH = isPortrait ? 960 : 540;
+        return compressImage(item.file, maxW, maxH, 0.7).then(function(dataUrl) {
+          return { dataUrl: dataUrl, type: 'image' };
+        });
+      }
+
+      var saveOverlapConfirmModal = document.getElementById('saveOverlapConfirmModal');
+      var saveOverlapConfirmText = document.getElementById('saveOverlapConfirmText');
+      var saveOverlapPending = null;
+
+      function openSaveOverlapConfirm(onConfirm, conflicts) {
+        saveOverlapPending = onConfirm;
+        if (saveOverlapConfirmText && window.KioskThemeOverlap && typeof KioskThemeOverlap.formatOverlapSaveConfirmText === 'function') {
+          saveOverlapConfirmText.textContent = KioskThemeOverlap.formatOverlapSaveConfirmText(conflicts || []);
+        } else if (saveOverlapConfirmText && window.KioskThemeOverlap) {
+          saveOverlapConfirmText.textContent = KioskThemeOverlap.CONFIRM_MESSAGE;
+        }
+        if (!saveOverlapConfirmModal) {
+          if (typeof onConfirm === 'function') onConfirm();
+          return;
+        }
+        saveOverlapConfirmModal.classList.remove('hidden');
+        saveOverlapConfirmModal.classList.add('flex');
+        saveOverlapConfirmModal.setAttribute('aria-hidden', 'false');
+        var okBtn = document.getElementById('saveOverlapConfirmOk');
+        if (okBtn) okBtn.focus();
+      }
+
+      function closeSaveOverlapConfirmModal() {
+        if (!saveOverlapConfirmModal) return;
+        saveOverlapConfirmModal.classList.add('hidden');
+        saveOverlapConfirmModal.classList.remove('flex');
+        saveOverlapConfirmModal.setAttribute('aria-hidden', 'true');
+      }
+
+      function saveThemeAndRedirect(redirectUrl) {
+        var nameInput = document.querySelector('#screensaverForm input[name="name"]');
+        var idleTimeoutInput = document.getElementById('idleTimeoutInput');
+        var transitionEffectSelect = document.getElementById('transitionEffectSelect');
+        var carouselIntervalInput = document.getElementById('carouselIntervalInput');
+        var name = nameInput ? nameInput.value.trim() : '';
+        var idleRaw = idleTimeoutInput ? String(idleTimeoutInput.value).trim() : '';
+        var idleTimeoutSec = parseInt(idleRaw, 10);
+        var carouselRaw = carouselIntervalInput ? String(carouselIntervalInput.value).trim() : '';
+        var carouselIntervalSec = parseInt(carouselRaw, 10);
+        var transitionEffect = transitionEffectSelect ? transitionEffectSelect.value : '';
+        if (!name) {
+          Toast.validate('请输入主题名称');
+          return;
+        }
+        if (idleRaw === '' || isNaN(idleTimeoutSec) || idleTimeoutSec < 1) {
+          Toast.validate('请输入无操作进入屏保时间');
+          return;
+        }
+        if (!transitionEffect) {
+          Toast.validate('请输入图片切换效果');
+          return;
+        }
+        if (carouselRaw === '' || isNaN(carouselIntervalSec) || carouselIntervalSec < 1) {
+          Toast.validate('请输入图片轮播时间间隔');
+          return;
+        }
+        if (portraitList.length === 0 && landscapeList.length === 0) {
+          Toast.validate('请至少上传一个竖版或横版的屏保素材');
+          return;
+        }
+        var allList = getThemes();
+        var oldTheme = createDraftThemeId ? allList.filter(function(t) { return t.id === createDraftThemeId; })[0] : null;
+        var nextThemeId = oldTheme ? oldTheme.id : ('t' + Date.now());
+
+        function runPersistThemeAndRedirect() {
+          var now = new Date();
+          var createTime = now.getFullYear() + '/' + String(now.getMonth() + 1).padStart(2, '0') + '/' + String(now.getDate()).padStart(2, '0') + ' ' + String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+          var theme = {
+            id: nextThemeId,
+            name: name,
+            effectTime: oldTheme && oldTheme.effectTime !== undefined ? oldTheme.effectTime : '',
+            createTime: oldTheme && oldTheme.createTime ? oldTheme.createTime : createTime,
+            idleTimeoutSec: idleTimeoutSec,
+            transitionEffect: transitionEffect,
+            carouselIntervalSec: carouselIntervalSec,
+            portraitImages: [],
+            landscapeImages: [],
+            publishStatus: oldTheme && oldTheme.publishStatus ? oldTheme.publishStatus : 'draft'
+          };
+          if (oldTheme) {
+            if (oldTheme.distributeTime !== undefined) theme.distributeTime = oldTheme.distributeTime;
+            if (oldTheme.distributedStores) theme.distributedStores = oldTheme.distributedStores;
+            if (oldTheme.distributeChannels) theme.distributeChannels = oldTheme.distributeChannels;
+            if (oldTheme.lastDistributePrefs) theme.lastDistributePrefs = oldTheme.lastDistributePrefs;
+          }
+          var portraitPromises = portraitList.map(function(item) {
+            return processMedia(item, true);
+          });
+          var landscapePromises = landscapeList.map(function(item) {
+            return processMedia(item, false);
+          });
+          Promise.all([].concat(portraitPromises, landscapePromises)).then(function(allMedia) {
+            var pCount = portraitList.length;
+            theme.portraitImages = allMedia.slice(0, pCount);
+            theme.landscapeImages = allMedia.slice(pCount, pCount + landscapeList.length);
+            try {
+              var list = getThemes();
+              if (createDraftThemeId && oldTheme) {
+                var idx = list.findIndex(function(t) { return t.id === createDraftThemeId; });
+                if (idx >= 0) {
+                  list[idx] = theme;
+                } else {
+                  list.unshift(theme);
+                }
+              } else {
+                list.unshift(theme);
+              }
+              saveThemes(list);
+              try { localStorage.setItem('current_theme_id_for_distribute', theme.id); } catch (e1) {}
+              var url = redirectUrl.replace('{themeId}', encodeURIComponent(theme.id));
+              window.location.href = window.appendMenusifuEmbeddedParam(url);
+            } catch (err) {
+              console.error('保存失败:', err);
+              Toast.error('保存失败，可能是存储空间不足。请尝试删除一些旧的屏保主题后重试。');
+            }
+          }).catch(function(err) {
+            console.error('图片处理失败:', err);
+            Toast.error('素材处理失败，请重试');
+          });
+        }
+
+        if (window.KioskThemeOverlap) {
+          var ov = KioskThemeOverlap.findActivePublishedOverlaps(nextThemeId, oldTheme || null);
+          if (ov.conflicts && ov.conflicts.length) {
+            openSaveOverlapConfirm(runPersistThemeAndRedirect, ov.conflicts);
+            return;
+          }
+        }
+        runPersistThemeAndRedirect();
+      }
+
+      document.getElementById('screensaverForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+      });
+
+      document.getElementById('distributeBtn').addEventListener('click', function() {
+        saveThemeAndRedirect('store-select.html?themeId={themeId}&from=create');
+      });
+
+      document.getElementById('saveOverlapConfirmOk').addEventListener('click', function() {
+        var fn = saveOverlapPending;
+        saveOverlapPending = null;
+        closeSaveOverlapConfirmModal();
+        if (typeof fn === 'function') fn();
+      });
+      document.getElementById('saveOverlapConfirmCancel').addEventListener('click', function() {
+        saveOverlapPending = null;
+        closeSaveOverlapConfirmModal();
+      });
+      if (saveOverlapConfirmModal) {
+        saveOverlapConfirmModal.addEventListener('click', function(e) {
+          if (e.target === saveOverlapConfirmModal) {
+            saveOverlapPending = null;
+            closeSaveOverlapConfirmModal();
+          }
+        });
+      }
+      document.addEventListener('keydown', function(e) {
+        if (e.key !== 'Escape') return;
+        if (saveOverlapConfirmModal && !saveOverlapConfirmModal.classList.contains('hidden')) {
+          e.preventDefault();
+          saveOverlapPending = null;
+          closeSaveOverlapConfirmModal();
+        }
+      });
+
+      // ========== 上传来源选择模态框 ==========
+      var uploadSourceModal = document.getElementById('uploadSourceModal');
+      var saveToLibraryWrap = document.getElementById('saveToLibraryWrap');
+      var saveToLibraryCheck = document.getElementById('saveToLibraryCheck');
+
+      function openUploadSourceModal() {
+        var mediaType = getMediaType(currentUploadRole);
+        if (mediaType === 'video') {
+          saveToLibraryWrap.classList.add('hidden');
+        } else {
+          saveToLibraryWrap.classList.remove('hidden');
+        }
+        saveToLibraryCheck.checked = false;
+        uploadSourceModal.classList.remove('hidden');
+        uploadSourceModal.classList.add('flex');
+      }
+
+      function closeUploadSourceModal() {
+        uploadSourceModal.classList.add('hidden');
+        uploadSourceModal.classList.remove('flex');
+      }
+
+      document.getElementById('uploadSourceClose').addEventListener('click', closeUploadSourceModal);
+      uploadSourceModal.addEventListener('click', function(e) {
+        if (e.target === uploadSourceModal) closeUploadSourceModal();
+      });
+
+      document.getElementById('chooseLocalBtn').addEventListener('click', function() {
+        closeUploadSourceModal();
+        var inputId = currentUploadRole === 'portrait' ? 'filePortrait' : 'fileLandscape';
+        document.getElementById(inputId).click();
+      });
+
+      document.getElementById('chooseMaterialBtn').addEventListener('click', function() {
+        var mediaType = getMediaType(currentUploadRole);
+        if (mediaType === 'video') {
+          Toast.validate('视频暂不支持从素材库选择');
+          return;
+        }
+        closeUploadSourceModal();
+        openMaterialLibraryModal();
+      });
+
+      // ========== 本地上传后保存到素材库 ==========
+      var defaultMaterialCategories = ['全部', '屏保素材', '广告素材', '其他'];
+
+      function getMaterialCategories() {
+        try {
+          var saved = localStorage.getItem('material_categories');
+          return saved ? JSON.parse(saved) : defaultMaterialCategories.slice();
+        } catch (e) {
+          return defaultMaterialCategories.slice();
+        }
+      }
+
+      function getMaterialImages() {
+        try {
+          var saved = localStorage.getItem('material_images');
+          return saved ? JSON.parse(saved) : [];
+        } catch (e) {
+          return [];
+        }
+      }
+
+      function saveMaterialImages(list) {
+        localStorage.setItem('material_images', JSON.stringify(list));
+      }
+
+      function saveMaterialToLibrary(dataUrl, name) {
+        try {
+          var images = getMaterialImages();
+          images.unshift({
+            id: 'm' + Date.now() + Math.random().toString(36).substr(2, 5),
+            name: name || '屏保图片_' + new Date().toLocaleString(),
+            category: '',
+            url: dataUrl
+          });
+          saveMaterialImages(images);
+        } catch (e) {
+          console.error('保存到素材库失败:', e);
+        }
+      }
+
+      var originalAddFiles = addFiles;
+      addFiles = function(role, files) {
+        var list = role === 'portrait' ? portraitList : landscapeList;
+        var maxCount = getMaxCount(role);
+        var remain = maxCount - list.length;
+        if (remain <= 0) return;
+        var mediaType = getMediaType(role);
+        var shouldSaveToLibrary = saveToLibraryCheck.checked && mediaType === 'image';
+        
+        for (var i = 0; i < files.length && list.length < maxCount; i++) {
+          var file = files[i];
+          if (mediaType === 'video') {
+            if (!file.type.startsWith('video/')) continue;
+          } else {
+            if (!file.type.startsWith('image/')) continue;
+          }
+          var item = { url: URL.createObjectURL(file), file: file, type: file.type.startsWith('video/') ? 'video' : 'image' };
+          list.push(item);
+          
+          if (shouldSaveToLibrary && item.type === 'image') {
+            (function(f) {
+              var maxW = role === 'portrait' ? 540 : 960;
+              var maxH = role === 'portrait' ? 960 : 540;
+              compressImage(f, maxW, maxH, 0.7).then(function(dataUrl) {
+                saveMaterialToLibrary(dataUrl);
+              });
+            })(file);
+          }
+        }
+        if (role === 'portrait') portraitList = list; else landscapeList = list;
+        renderPreviews(role);
+      };
+
+      // ========== 素材库选择模态框 ==========
+      var materialLibraryModal = document.getElementById('materialLibraryModal');
+      var materialCategoryList = document.getElementById('materialCategoryList');
+      var materialImageGrid = document.getElementById('materialImageGrid');
+      var materialEmptyState = document.getElementById('materialEmptyState');
+      var selectedMaterialCountEl = document.getElementById('selectedMaterialCount');
+
+      function openMaterialLibraryModal() {
+        selectedMaterials = [];
+        currentMaterialCategory = null;
+        loadMaterialCategories();
+        materialLibraryModal.classList.remove('hidden');
+        materialLibraryModal.classList.add('flex');
+      }
+
+      function closeMaterialLibraryModal() {
+        materialLibraryModal.classList.add('hidden');
+        materialLibraryModal.classList.remove('flex');
+      }
+
+      document.getElementById('materialLibraryClose').addEventListener('click', closeMaterialLibraryModal);
+      document.getElementById('materialCancelBtn').addEventListener('click', closeMaterialLibraryModal);
+      materialLibraryModal.addEventListener('click', function(e) {
+        if (e.target === materialLibraryModal) closeMaterialLibraryModal();
+      });
+
+      function escapeHtml(s) {
+        var d = document.createElement('div');
+        d.textContent = s || '';
+        return d.innerHTML;
+      }
+
+      var tagColors = { blue: 'bg-blue-100 text-blue-700', red: 'bg-red-100 text-red-700', green: 'bg-emerald-100 text-emerald-700', default: 'bg-gray-100 text-gray-700' };
+
+      function loadMaterialCategories() {
+        var categories = getMaterialCategories();
+        if (categories.length === 0) {
+          materialCategoryList.innerHTML = '<div class="text-sm text-gray-400 p-2">暂无分类</div>';
+          materialImageGrid.innerHTML = '';
+          materialEmptyState.classList.remove('hidden');
+          return;
+        }
+        materialCategoryList.innerHTML = categories.map(function(cat, idx) {
+          var activeClass = idx === 0 ? 'bg-sidebar-active text-primary font-medium' : 'text-gray-700 hover:bg-gray-100';
+          return '<button type="button" class="category-btn w-full text-left px-3 py-2 rounded-ant text-sm transition-colors ' + activeClass + '" data-category="' + escapeHtml(cat) + '">' + escapeHtml(cat) + '</button>';
+        }).join('');
+
+        materialCategoryList.querySelectorAll('.category-btn').forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            materialCategoryList.querySelectorAll('.category-btn').forEach(function(b) {
+              b.classList.remove('bg-sidebar-active', 'text-primary', 'font-medium');
+              b.classList.add('text-gray-700', 'hover:bg-gray-100');
+            });
+            this.classList.add('bg-sidebar-active', 'text-primary', 'font-medium');
+            this.classList.remove('text-gray-700', 'hover:bg-gray-100');
+            currentMaterialCategory = this.getAttribute('data-category');
+            loadMaterialImages(currentMaterialCategory);
+          });
+        });
+
+        currentMaterialCategory = categories[0];
+        loadMaterialImages(currentMaterialCategory);
+      }
+
+      function loadMaterialImages(category) {
+        var allImages = getMaterialImages();
+        var images = allImages.filter(function(img) {
+          return category === '全部' || img.category === category;
+        });
+
+        if (images.length === 0) {
+          materialImageGrid.innerHTML = '';
+          materialEmptyState.classList.remove('hidden');
+          updateSelectedCount();
+          return;
+        }
+        materialEmptyState.classList.add('hidden');
+        
+        materialImageGrid.innerHTML = images.map(function(img) {
+          var isSelected = selectedMaterials.some(function(m) { return m.id === img.id; });
+          var selectedClass = isSelected ? 'ring-2 ring-primary ring-offset-2' : '';
+          var checkClass = isSelected ? '' : 'hidden';
+          var tagCls = tagColors[img.tagColor] || tagColors.default;
+          var imgSrc = img.url || 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="150" viewBox="0 0 200 150"><rect fill="#f3f4f6" width="200" height="150"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#9ca3af" font-size="12">' + escapeHtml(img.name) + '</text></svg>');
+          var tagHtml = img.category ? '<span class="absolute top-2 right-2 px-1.5 py-0.5 rounded text-xs ' + tagCls + '">' + escapeHtml(img.category) + '</span>' : '';
+          return '<div class="material-item relative cursor-pointer rounded-ant overflow-hidden border border-gray-100 group ' + selectedClass + '" data-id="' + escapeHtml(img.id) + '" data-url="' + escapeHtml(imgSrc) + '">' +
+            '<div class="aspect-[4/3] bg-gray-100">' +
+              '<img src="' + imgSrc + '" alt="' + escapeHtml(img.name) + '" class="w-full h-full object-cover" />' +
+            '</div>' +
+            tagHtml +
+            '<div class="material-check absolute top-2 left-2 w-5 h-5 rounded-full bg-primary text-white flex items-center justify-center text-xs shadow ' + checkClass + '">✓</div>' +
+            '<div class="p-2 bg-white">' +
+              '<span class="text-sm text-gray-800 truncate block">' + escapeHtml(img.name) + '</span>' +
+            '</div>' +
+          '</div>';
+        }).join('');
+
+        materialImageGrid.querySelectorAll('.material-item').forEach(function(item) {
+          item.addEventListener('click', function() {
+            var id = this.getAttribute('data-id');
+            var url = this.getAttribute('data-url');
+            var idx = selectedMaterials.findIndex(function(m) { return m.id === id; });
+            
+            if (idx >= 0) {
+              selectedMaterials.splice(idx, 1);
+              this.classList.remove('ring-2', 'ring-primary', 'ring-offset-2');
+              this.querySelector('.material-check').classList.add('hidden');
+            } else {
+              var list = currentUploadRole === 'portrait' ? portraitList : landscapeList;
+              var maxCount = getMaxCount(currentUploadRole);
+              if (list.length + selectedMaterials.length >= maxCount) {
+                Toast.warning('最多选择 ' + maxCount + ' 个素材');
+                return;
+              }
+              selectedMaterials.push({ id: id, dataUrl: url });
+              this.classList.add('ring-2', 'ring-primary', 'ring-offset-2');
+              this.querySelector('.material-check').classList.remove('hidden');
+            }
+            updateSelectedCount();
+          });
+        });
+        updateSelectedCount();
+      }
+
+      function updateSelectedCount() {
+        selectedMaterialCountEl.textContent = selectedMaterials.length;
+      }
+
+      document.getElementById('materialConfirmBtn').addEventListener('click', function() {
+        if (selectedMaterials.length === 0) {
+          Toast.warning('请选择至少一个素材');
+          return;
+        }
+        var list = currentUploadRole === 'portrait' ? portraitList : landscapeList;
+        selectedMaterials.forEach(function(mat) {
+          list.push({ url: mat.dataUrl, dataUrl: mat.dataUrl, type: 'image' });
+        });
+        if (currentUploadRole === 'portrait') portraitList = list; else landscapeList = list;
+        renderPreviews(currentUploadRole);
+        closeMaterialLibraryModal();
+        Toast.success('已添加 ' + selectedMaterials.length + ' 个素材');
+      });
+
+      function bootstrapCreatePage() {
+        var tid = urlSearchParams.get('themeId');
+        if (tid) {
+          var themes = getThemes();
+          var th = themes.filter(function(t) { return t.id === tid; })[0];
+          if (th) {
+            createDraftThemeId = th.id;
+            var nameInput = document.querySelector('#screensaverForm input[name="name"]');
+            if (nameInput) nameInput.value = th.name || '';
+            document.getElementById('idleTimeoutInput').value = th.idleTimeoutSec || 60;
+            document.getElementById('transitionEffectSelect').value = th.transitionEffect || 'slide';
+            if (window.__syncTransitionEffectDropdown) window.__syncTransitionEffectDropdown();
+            document.getElementById('carouselIntervalInput').value = th.carouselIntervalSec || 3;
+            buildListFromStoredMedia(th.portraitImages || []).then(function(pl) {
+              portraitList = pl;
+              return buildListFromStoredMedia(th.landscapeImages || []);
+            }).then(function(ll) {
+              landscapeList = ll;
+              syncTypeRadiosFromLists();
+              updateAccept('portrait');
+              updateAccept('landscape');
+              updateHints('portrait');
+              updateHints('landscape');
+              renderPreviews('portrait');
+              renderPreviews('landscape');
+            }).catch(function() {
+              renderPreviews('portrait');
+              renderPreviews('landscape');
+            });
+            try {
+              history.replaceState({}, '', 'screensaver-create.html?themeId=' + encodeURIComponent(createDraftThemeId));
+            } catch (eH) {}
+            return;
+          }
+          try { history.replaceState({}, '', 'screensaver-create.html'); } catch (eR) {}
+        }
+        renderPreviews('portrait');
+        renderPreviews('landscape');
+        updateAccept('portrait');
+        updateAccept('landscape');
+        updateHints('portrait');
+        updateHints('landscape');
+      }
+
+      function abandonDraftAndGoToList() {
+        if (createDraftThemeId) {
+          var list = getThemes();
+          var doomed = list.filter(function(t) { return t.id === createDraftThemeId; })[0];
+          var refs = doomed && window.KioskThemeMediaIdb && KioskThemeMediaIdb.supported() ? collectVideoMediaRefs(doomed) : [];
+          var nextList = list.filter(function(t) { return t.id !== createDraftThemeId; });
+          function go() {
+            saveThemes(nextList);
+            try { localStorage.removeItem('current_theme_id_for_distribute'); } catch (e1) {}
+            try { localStorage.removeItem('selected_stores_for_distribute'); } catch (e2) {}
+            try { localStorage.removeItem('selected_channels_for_distribute'); } catch (e3) {}
+            window.location.href = window.appendMenusifuEmbeddedParam('kiosk-theme-list.html');
+          }
+          if (refs.length) {
+            Promise.all(refs.map(function(r) { return KioskThemeMediaIdb.del(r).catch(function() {}); })).then(go);
+          } else {
+            go();
+          }
+        } else {
+          window.location.href = window.appendMenusifuEmbeddedParam('kiosk-theme-list.html');
+        }
+      }
+
+      document.getElementById('createBackBtn').addEventListener('click', function() {
+        abandonDraftAndGoToList();
+      });
+
+      setupTransitionEffectDropdown();
+      bootstrapCreatePage();
+    })();
+  </script>
+</body>
+</html>

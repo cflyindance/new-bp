@@ -1,0 +1,1 @@
+import{f as e,o as t}from"./toast.CSCQL6mj.chunk.js";var n=e(t());function r(){let[,e]=n.useReducer(e=>e+1,0);return e}export{r as t};

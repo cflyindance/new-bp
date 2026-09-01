@@ -1,0 +1,34 @@
+---
+description: 修改 vendor/emenu-new 源码后必须及时重建并验证 dist/emenu-new 嵌入包
+alwaysApply: true
+---
+
+# eMenu 源码修改后必须重建嵌入包
+
+管理后台开发服务器中的 eMenu iframe 固定读取 `dist/emenu-new`，不会直接读取
+`vendor/emenu-new`，并且 Vite 会忽略 `vendor/**` 与 `dist/**` 的热更新。因此只修改源码
+不会让当前预览生效。
+
+## 必须执行
+
+任何修改 `vendor/emenu-new/**` 中运行时代码、样式、配置或静态资源的任务，在交付前必须：
+
+1. 完成源码修改后立即运行：
+
+   ```sh
+   node scripts/build-emenu-new-embed.mjs
+   ```
+
+2. 确认命令成功退出，并出现 `Done. Entry: ./emenu-new/index.html`。
+3. 检查 `dist/emenu-new/.emenu-embed-build.json` 已刷新，且 `source` 为
+   `vendor/emenu-new`。
+4. 按本次修改内容抽查 `dist/emenu-new/assets/**`，确认新逻辑或样式已经进入构建产物。
+5. 提醒预览中的用户重新加载 eMenu iframe；缓存未更新时使用强制刷新。
+
+## 禁止
+
+- 禁止只修改 `vendor/emenu-new` 后就宣称浏览器预览已生效。
+- 禁止手工编辑压缩后的 `dist/emenu-new/assets/**` 代替正式构建。
+- 禁止因开发服务器仍在运行而假设 eMenu 嵌入包会自动热更新。
+
+仅修改文档、测试说明，且不影响 eMenu 运行时代码或资源时，可以不重建。

@@ -7,10 +7,12 @@ import {
   isPageSaveDirty,
   resolvePageSaveKey,
 } from "./page-settings-draft";
-import { getActiveSettingEditScopeKey } from "./module-setting-edit-context";
+import { openConfirmDialog } from "../ui/app-confirm-dialog";
 
 let bound = false;
 let lastPath = "";
+let leaveConfirmOpen = false;
+let leaveConfirmPrevPath = "";
 
 function readHashPath(): string {
   return (typeof window !== "undefined" ? window.location.hash.replace(/^#/, "") : "") || "/";
@@ -22,33 +24,43 @@ export function bindPageSaveGuard(): void {
   lastPath = readHashPath();
 
   window.addEventListener("hashchange", () => {
-    const prevPath = lastPath;
-    const nextPath = readHashPath();
-    lastPath = nextPath;
+    void (async () => {
+      const prevPath = lastPath;
+      const nextPath = readHashPath();
 
-    const prevKey = resolvePageSaveKey(prevPath);
-    if (!isPageBatchSavePath(prevKey) || !isPageSaveDirty(prevKey)) return;
-    if (resolvePageSaveKey(nextPath) === prevKey) return;
+      // Concurrent navigation while leave-confirm is open: keep previous path.
+      if (leaveConfirmOpen) {
+        lastPath = leaveConfirmPrevPath;
+        if (readHashPath() !== leaveConfirmPrevPath) {
+          window.location.hash = `#${leaveConfirmPrevPath}`;
+        }
+        return;
+      }
 
-    const stay = window.confirm("当前页有未保存的设置，离开将丢失修改。确定离开吗？");
-    if (!stay) {
-      lastPath = prevPath;
-      window.location.hash = `#${prevPath}`;
-      return;
-    }
-    discardPageDraft(prevKey);
-  });
+      lastPath = nextPath;
 
-  window.addEventListener("beforeunload", (event) => {
-    const activeScopeKey = getActiveSettingEditScopeKey();
-    const currentPageKey = resolvePageSaveKey(readHashPath());
-    const hasUnsavedDraft =
-      Boolean(activeScopeKey && isPageSaveDirty(activeScopeKey)) ||
-      (isPageBatchSavePath(currentPageKey) && isPageSaveDirty(currentPageKey));
-    if (!hasUnsavedDraft) return;
+      const prevKey = resolvePageSaveKey(prevPath);
+      if (!isPageBatchSavePath(prevKey) || !isPageSaveDirty(prevKey)) return;
+      if (resolvePageSaveKey(nextPath) === prevKey) return;
 
-    event.preventDefault();
-    event.returnValue = "";
+      leaveConfirmOpen = true;
+      leaveConfirmPrevPath = prevPath;
+      const ok = await openConfirmDialog({
+        title: "离开未保存页面",
+        message: "当前页有未保存的设置，离开将丢失修改。确定离开吗？",
+        confirmLabel: "确认离开",
+        danger: true,
+      });
+      leaveConfirmOpen = false;
+      leaveConfirmPrevPath = "";
+
+      if (!ok) {
+        lastPath = prevPath;
+        window.location.hash = `#${prevPath}`;
+        return;
+      }
+      discardPageDraft(prevKey);
+    })();
   });
 }
 

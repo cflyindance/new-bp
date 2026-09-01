@@ -2,6 +2,8 @@
  * 硬件管理中心 → 硬件 → 钱箱：钱箱台账（seq 364–369）+ 门店策略（seq 1 / 254 / 255）。
  */
 
+import { openConfirmDialog } from "../ui/app-confirm-dialog";
+import { showAppToast } from "../ui/app-toast";
 import { readModuleSettingJson, writeModuleSettingJson } from "./module-settings-form-ui";
 import {
   getDefaultModuleSettingToggleOn,
@@ -597,7 +599,7 @@ function syncPrinterFieldVisibility(form: HTMLElement): void {
 function saveDevice(deviceId: string, isNew: boolean, form: HTMLElement): boolean {
   const patch = collectFormState(form);
   if (!patch) {
-    window.alert("请填写名称、设备名称；RJ11 类型须选择连接的打印机。");
+    showAppToast("请填写名称、设备名称；RJ11 类型须选择连接的打印机。", { variant: "error" });
     return false;
   }
 
@@ -697,9 +699,17 @@ export function bindDeviceManagementCashDrawerHardware(root: ParentNode = docume
       if (!id) return;
       const device = findCashDrawerHardwareDevice(id);
       const label = device?.name ?? id;
-      if (!window.confirm(`确定删除钱箱「${label}」？删除后不可恢复。`)) return;
-      deleteDevice(id);
-      rerenderList(page, search?.value ?? "");
+      void (async () => {
+        const ok = await openConfirmDialog({
+          title: "删除钱箱",
+          message: `确定删除钱箱「${label}」？删除后不可恢复。`,
+          confirmLabel: "确认删除",
+          danger: true,
+        });
+        if (!ok) return;
+        deleteDevice(id);
+        rerenderList(page, search?.value ?? "");
+      })();
     });
     return;
   }

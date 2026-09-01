@@ -1,0 +1,63 @@
+.menuClassifyWrapper {
+  width: 500px;
+  .titleHeader {
+    padding: 16px;
+    border-bottom: 1px solid #e9e9e9;
+    font-size: 20px;
+    font-weight: bold;
+  }
+  .menuClassifyList {
+    width: calc(100% - 16px);
+    display: grid;
+    grid-template-columns: repeat(3, 33.33%);
+    padding: 16px;
+    grid-gap: 8px 8px;
+    &::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+      border-radius: 10px;
+      background-color: #aaaaaa;
+    }
+    &::-webkit-scrollbar-thumb {
+      border-radius: 10px;
+      background-color: #96272f;
+    }
+    .menuClassifyItem {
+      height: 100px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      word-break: break-word;
+      border: 1px solid #e9e9e9;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: bold;
+      text-align: center;
+      &.selectedType {
+        color: #96272f;
+        border-color: #96272f;
+      }
+      &.disabledType {
+        color: #e9e9e9;
+      }
+    }
+  }
+  .notInTime {
+    padding: 16px;
+    color: #96272f;
+    text-align: center;
+    font-weight: bold;
+  }
+  .footerOperation {
+    border-top: 1px solid #e9e9e9;
+    padding: 16px;
+    text-align: right;
+    :global {
+      .ant-btn {
+        &:not(:last-of-type) {
+          margin-right: 8px;
+        }
+      }
+    }
+  }
+}

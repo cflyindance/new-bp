@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "mode": "standalone",
+  "outcome": "fixed",
+  "rootCauseStatus": "confirmed",
+  "rootCause": "本地设置入口没有管理员 userId，却在 marginappconfig 保存成功后生成空 userId 的 UpdateSystemConfigurationType SOAP 请求；KPOS 返回 ClientUnmarshalling Error，页面因此显示 POS compatibility sync failed。",
+  "analysisScopeStatus": "bounded",
+  "planStatus": "approved",
+  "changedFiles": [
+    "dist/kiosklite/src/api/apiPos.js",
+    "dist/kiosklite/src/api/apiPos.test.js",
+    "dist/kiosklite/src/assets/i18n/locale/En.json",
+    "dist/kiosklite/src/assets/i18n/locale/ZH-CN.json",
+    "dist/kiosklite/src/container/configApp/serviceSetting/index.js",
+    "dist/kiosklite/src/container/configApp/serviceSetting/paymentMethodPersistence.test.js",
+    "dist/kiosklite/src/container/configApp/serviceSetting/transferPosSetting/index.js",
+    "dist/kiosklite/src/utils/posConfigSavePolicy.js",
+    "dist/kiosklite/src/utils/posConfigSavePolicy.test.js",
+    "docs/superpowers/plans/2026-08-26-kiosk-payment-method-marginappconfig-persistence-implementation.md",
+    "docs/superpowers/runs/2026-08-26-kiosk-payment-method-save/analysis-scope.json",
+    "docs/superpowers/specs/2026-08-26-kiosk-payment-method-marginappconfig-persistence-design.md"
+  ],
+  "tdd": {
+    "status": "passed",
+    "redEvidence": [
+      "posConfigSavePolicy.test.js initially failed because the authentication policy module did not exist.",
+      "paymentMethodPersistence.test.js produced three failures for missing pre-write decision, confirmation ordering, and POS compatibility copy.",
+      "apiPos.test.js produced eight failures because invalid userId values still generated SOAP XML.",
+      "selection-order regression failed because 0,1 and 1,0 were incorrectly treated as different selections."
+    ],
+    "greenEvidence": [
+      "Focused authentication, orchestration, and SOAP tests passed: 3 files and 37 tests.",
+      "KioskLite full suite passed after final normalization change: 18 files and 143 tests."
+    ]
+  },
+  "e2e": {
+    "required": true,
+    "status": "passed",
+    "reason": "The change affects the user-visible settings save flow and cross-system persistence.",
+    "evidence": [
+      "On http://127.0.0.1:64907, Service Settings -> Payment -> Save completed without the POS compatibility failure warning and returned to the settings home.",
+      "After re-entering Payment, Credit/Debit remained off and Counter Payment remained on.",
+      "Backend readback showed marginappconfig id 70=1 while POS KIOSK_PAYMENT_TYPE remained 1,0, proving the unauthenticated compatibility request was skipped."
+    ]
+  },
+  "build": {
+    "required": true,
+    "status": "passed",
+    "reason": "The 64907 page serves the generated KioskLite embed; npm run build:kiosklite-embed -- --skip-install completed and builtAt is 2026-08-26T08:55:41.053Z."
+  },
+  "unverifiedScopes": [
+    "A live valid-administrator-userId POS synchronization was not available in the local route; its confirmation, mixed-change, and SOAP branches are covered by automated tests."
+  ]
+}

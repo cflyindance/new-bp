@@ -1,0 +1,2 @@
+import{wi as e}from"./actions.BIkwpdGb.chunk.js";var t=()=>{let{crm:{selectedFreeItem:t},currentOrder:{itemList:n}}=e.getState();return n.length===0?t.length>0:n.every(e=>!!e?.isFreeItem)};export{t};
+//# source-map-url-disabled=judgeOnlyHaveFreeItem.qvQe_gUD.chunk.js.map

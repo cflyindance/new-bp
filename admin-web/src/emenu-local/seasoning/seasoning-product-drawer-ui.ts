@@ -1,4 +1,5 @@
 import { t, tf } from "../../i18n";
+import { openConfirmDialog } from "../../ui/app-confirm-dialog";
 import { seasoningApi, SeasoningApiError } from "./seasoning-api";
 import { calculateActualMarkupPrice, updateBatchInputPrice } from "./seasoning-batch-pricing";
 import {
@@ -58,7 +59,7 @@ class ProductEditWizardController {
         this.actionPickerOpen = false;
         this.optionPickerOpen = false;
         this.render();
-      } else this.close();
+      } else void this.close();
     });
     installSeasoningWorkspaceReorder(this.overlay, {
       moveAction: (source, target) => {
@@ -99,8 +100,16 @@ class ProductEditWizardController {
     }
   }
 
-  private close(force = false): void {
-    if (!force && this.dirty && !window.confirm(t("seasoning.discardConfirm"))) return;
+  private async close(force = false): Promise<void> {
+    if (!force && this.dirty) {
+      const ok = await openConfirmDialog({
+        title: "放弃修改",
+        message: t("seasoning.discardConfirm"),
+        confirmLabel: "确认放弃",
+        danger: true,
+      });
+      if (!ok) return;
+    }
     this.overlay.remove();
   }
 
@@ -213,7 +222,7 @@ class ProductEditWizardController {
       this.version = result.version;
       this.dirty = false;
       await this.input.onSaved(result.version);
-      this.close(true);
+      void this.close(true);
     } catch (error) {
       if (error instanceof SeasoningApiError && error.code === "version_conflict") {
         try {
@@ -242,10 +251,10 @@ class ProductEditWizardController {
     }
     const button = clicked.closest<HTMLButtonElement>("button");
     if (!button) return;
-    if (button.hasAttribute("data-close")) return this.close();
+    if (button.hasAttribute("data-close")) return void this.close();
     if (button.hasAttribute("data-retry")) return void this.load();
     if (button.hasAttribute("data-back")) {
-      if (this.step === 1) this.close(); else { this.step = 1; this.render(); }
+      if (this.step === 1) void this.close(); else { this.step = 1; this.render(); }
       return;
     }
     if (button.hasAttribute("data-next")) {
@@ -308,7 +317,13 @@ class ProductEditWizardController {
       return;
     }
     if (button.hasAttribute("data-remove-action") && this.activeAction) {
-      if (!window.confirm(tf("seasoning.batch.removeActionConfirm", { action: actionLabel(this.activeAction) }))) return;
+      const ok = await openConfirmDialog({
+        title: "移除动作",
+        message: tf("seasoning.batch.removeActionConfirm", { action: actionLabel(this.activeAction) }),
+        confirmLabel: "确认移除",
+        danger: true,
+      });
+      if (!ok) return;
       const index = this.draft.findIndex((group) => group.action === this.activeAction);
       this.draft.splice(index, 1);
       this.activeAction = this.draft[Math.min(index, this.draft.length - 1)]?.action ?? null;

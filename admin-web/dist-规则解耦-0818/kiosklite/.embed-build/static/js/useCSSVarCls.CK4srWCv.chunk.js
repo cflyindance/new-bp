@@ -1,0 +1,1 @@
+import{f as e}from"./genStyleUtils.XbCgmyiP.chunk.js";var t=t=>{let[,,,,n]=e();return n?`${t}-css-var`:``};export{t};
