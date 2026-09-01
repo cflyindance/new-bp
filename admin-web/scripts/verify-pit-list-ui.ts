@@ -22,6 +22,7 @@ import { pitApi } from "../src/pit/pit-api";
 import { pitDashboardRefreshDecision, renderPitDashboardPage } from "../src/pit/pit-dashboard-page";
 import {
   pitListFilterDraftToPatch,
+  pitListRefreshCanStart,
   pitListRefreshDecision,
   renderPitRequirementListPage,
 } from "../src/pit/pit-requirement-list-page";
@@ -101,6 +102,21 @@ assert.deepEqual(pitListRefreshDecision({ summarySucceeded: true, listSucceeded:
   connectionInterrupted: false,
   writesEnabled: true,
 });
+assert.equal(
+  pitListRefreshCanStart({ hasCurrentData: false, lifetimeAborted: false, pendingFollowCount: 0 }),
+  false,
+  "visibility/timer refresh must not abort an in-flight initial load",
+);
+assert.equal(
+  pitListRefreshCanStart({ hasCurrentData: true, lifetimeAborted: false, pendingFollowCount: 0 }),
+  true,
+  "background refresh may start after initial data is committed",
+);
+assert.equal(
+  pitListRefreshCanStart({ hasCurrentData: true, lifetimeAborted: false, pendingFollowCount: 1 }),
+  false,
+  "background refresh must wait for optimistic follow writes",
+);
 assert.equal(pitDashboardRefreshDecision(true), "defer", "focused dashboard cards must survive background refreshes");
 assert.equal(pitDashboardRefreshDecision(false), "apply");
 

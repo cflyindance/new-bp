@@ -111,6 +111,14 @@ export function pitListRefreshDecision(input: {
   };
 }
 
+export function pitListRefreshCanStart(input: {
+  hasCurrentData: boolean;
+  lifetimeAborted: boolean;
+  pendingFollowCount: number;
+}): boolean {
+  return input.hasCurrentData && !input.lifetimeAborted && input.pendingFollowCount === 0;
+}
+
 function selected(query: PitParsedListQuery, key: keyof PitParsedListQuery, value: string | number): boolean {
   const values = query[key];
   return Array.isArray(values) && values.map(String).includes(String(value));
@@ -472,7 +480,14 @@ export function bindPitRequirementListPage(
   };
 
   const refreshData = async (background = true): Promise<void> => {
-    if (lifetime.signal.aborted || pendingFollows.size > 0) return;
+    // Visibility/timer refreshes can fire while the initial four requests are
+    // still pending. They must not abort that generation before currentData
+    // exists, otherwise every later background refresh has nothing to render.
+    if (!pitListRefreshCanStart({
+      hasCurrentData: currentData !== null,
+      lifetimeAborted: lifetime.signal.aborted,
+      pendingFollowCount: pendingFollows.size,
+    })) return;
     const { token, controller } = beginRequestGeneration();
     const [summaryResult, listResult] = await Promise.allSettled([
       api.dashboardSummary({ signal: controller.signal }),
