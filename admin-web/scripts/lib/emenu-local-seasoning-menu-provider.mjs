@@ -1,9 +1,17 @@
 import fs from "node:fs";
 import { mapKposMenusToSeasoningView } from "./emenu-local-seasoning-menu-map.mjs";
-import { readMenuCache, writeMenuCache } from "./emenu-local-seasoning-menu-cache.mjs";
+import { normalizeMenuProduct, readMenuCache, writeMenuCache } from "./emenu-local-seasoning-menu-cache.mjs";
 
 export const EMENU_KPOS_HOST_COOKIE = "menusifu-emenu-kpos-target";
 export const EMENU_MENU_AUTHORIZATION = "UvDU853J9L351BThAC";
+
+const EMPTY_MENU_VIEW = {
+  menuGroups: [],
+  products: [],
+  categories: [],
+  fingerprint: "static",
+  sourceMenuVersion: null,
+};
 
 export function parseKposHostFromCookieHeader(cookieHeader) {
   const raw = String(cookieHeader || "");
@@ -31,29 +39,30 @@ function menuUnavailable(message) {
 
 export function createFixtureMenuProvider(view) {
   return {
-    async resolve() {
-      return { ...view, fromCache: false, source: "fixture" };
+    async resolve({ product } = {}) {
+      return { ...view, fromCache: false, source: "fixture", product: normalizeMenuProduct(product) };
     },
   };
 }
 
 export function createSnapshotMenuProvider(snapshotPath) {
   return {
-    async resolve() {
+    async resolve({ product } = {}) {
       const view = JSON.parse(fs.readFileSync(snapshotPath, "utf8"));
-      return { ...view, fromCache: false, source: "snapshot" };
+      return { ...view, fromCache: false, source: "snapshot", product: normalizeMenuProduct(product) };
     },
   };
 }
 
-export function createLiveMenuProvider({ fetchImpl = fetch } = {}) {
+export function createLiveMenuProvider({ fetchImpl = fetch, staticView } = {}) {
+  const fallbackView = staticView || EMPTY_MENU_VIEW;
   return {
-    async resolve({ req, cacheDir }) {
+    async resolve({ req, cacheDir, product } = {}) {
+      const prod = normalizeMenuProduct(product);
+      const fallback = () => ({ ...fallbackView, fromCache: false, source: "static", product: prod });
       const host = parseKposHostFromCookieHeader(req?.headers?.cookie || req?.headers?.Cookie || "");
-      if (!host) {
-        throw menuUnavailable("missing_kpos_host_cookie");
-      }
-      const url = `${host}/kpos/api/menu/menu?product=EMENU&showInactive=false&showDeleted=false`;
+      if (!host) return fallback();
+      const url = `${host}/kpos/api/menu/menu?product=${encodeURIComponent(prod)}&showInactive=false&showDeleted=false`;
       try {
         const response = await fetchImpl(url, {
           method: "GET",
@@ -65,13 +74,15 @@ export function createLiveMenuProvider({ fetchImpl = fetch } = {}) {
         if (!response.ok) throw new Error(`http_${response.status}`);
         const payload = await response.json();
         const mapped = mapKposMenusToSeasoningView(payload);
-        writeMenuCache(cacheDir, host, mapped);
-        return { ...mapped, fromCache: false, source: "live" };
-      } catch (error) {
-        const cached = readMenuCache(cacheDir, host);
-        if (cached) return { ...cached, fromCache: true, source: "cache" };
-        throw menuUnavailable(error?.message || "menu_fetch_failed");
+        writeMenuCache(cacheDir, host, mapped, prod);
+        return { ...mapped, fromCache: false, source: "live", product: prod };
+      } catch {
+        const cached = readMenuCache(cacheDir, host, prod);
+        if (cached) return { ...cached, fromCache: true, source: "cache", product: prod };
+        return fallback();
       }
     },
   };
 }
+
+export { menuUnavailable };
