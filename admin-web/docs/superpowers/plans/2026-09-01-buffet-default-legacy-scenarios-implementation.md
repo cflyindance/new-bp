@@ -409,7 +409,7 @@ Seed the repository with eight defaults plus one custom rule and assert render o
 
 - [ ] **Step 2: Run to verify RED**
 
-Run: `node scripts/verify-buffet-default-list-ui.mjs`  
+Run: `node scripts/verify-buffet-default-list-ui.mjs`
 Expected: FAIL because the list is currently a single ungrouped table.
 
 - [ ] **Step 3: Render grouped sections**
@@ -643,7 +643,7 @@ Expected: every script prints `OK` or `PASS` and exits 0.
 
 - [ ] **Step 2: Run project build**
 
-Run: `npm.cmd run build`  
+Run: `npm.cmd run build`
 Expected: exit 0. No `vendor/emenu-new` source is changed, so `build:emenu-new-embed` is not required.
 
 - [ ] **Step 3: Start a worktree-local preview service**
@@ -701,5 +701,5 @@ If no files changed, do not create an empty commit.
 
 - [ ] **Step 7: Final status check**
 
-Run: `git status --short`  
+Run: `git status --short`
 Expected: empty output.
