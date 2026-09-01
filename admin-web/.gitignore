@@ -8,3 +8,6 @@ vendor/emenu-new/.yarn/
 vendor/emenu-new/build/
 dist/kiosklite/node_modules/
 dist/kiosklite/.embed-build/
+
+# PIT local runtime data (database, uploads, exports, backups)
+.data/pit/

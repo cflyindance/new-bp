@@ -1,0 +1,61 @@
+import { isPitApiError } from "./pit-api-error";
+import { pitApi, type PitApi } from "./pit-api";
+import type { PitDictionaryItem, PitDictionaryType, PitUser } from "./pit-types";
+import { createPitPageLifetime, escapePitHtml, renderPitBanner, showPitToast } from "./pit-ui";
+import { bindPitAdminModalAccessibility, openPitAdminModal } from "./pit-admin-modal";
+
+type DictionaryApi = Pick<PitApi, "listDictionaries" | "createDictionary" | "updateDictionary" | "reorderDictionaries" | "dictionaryUsage">;
+const TYPES: Array<{ type: PitDictionaryType; label: string }> = [
+  { type: "product_line", label: "产品线" }, { type: "requirement_source", label: "需求来源" },
+  { type: "requirement_type", label: "需求类别" }, { type: "problem_category", label: "问题分类" },
+  { type: "industry", label: "业态" },
+];
+
+export function movePitDictionaryId(ids: string[], id: string, offset: -1 | 1): string[] {
+  const index = ids.indexOf(id); const next = index + offset;
+  if (index < 0 || next < 0 || next >= ids.length) return ids;
+  const result = [...ids]; [result[index], result[next]] = [result[next], result[index]]; return result;
+}
+
+function dialog(title: string, body: string, action: string, confirmLabel: string): string {
+  return `<div data-pit-admin-dialog data-pit-dialog-action="${escapePitHtml(action)}" class="fixed inset-0 z-[130] grid place-items-center bg-slate-950/55 p-4" role="presentation"><div role="dialog" aria-modal="true" aria-labelledby="pit-admin-dialog-title" class="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-700 dark:bg-slate-900"><h3 id="pit-admin-dialog-title" class="text-lg font-bold text-slate-950 dark:text-white">${escapePitHtml(title)}</h3><div class="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-300">${body}</div><div class="mt-6 flex justify-end gap-2"><button type="button" data-pit-dialog-cancel class="rounded-xl border px-4 py-2 text-sm">取消</button><button type="button" data-pit-dialog-confirm class="rounded-xl bg-rose-600 px-4 py-2 text-sm font-bold text-white">${escapePitHtml(confirmLabel)}</button></div></div></div>`;
+}
+
+export function renderPitDictionaryPage(input: { user: PitUser; type?: PitDictionaryType; items?: PitDictionaryItem[]; loading?: boolean; error?: string }): string {
+  const type = input.type ?? "product_line"; const items = (input.items ?? []).filter((item) => item.type === type);
+  if (input.user.role !== "admin") return `<section data-pit-dictionary-page>${renderPitBanner("无权访问字典配置。", "danger")}</section>`;
+  return `<section data-pit-dictionary-page data-pit-route-page class="mx-auto w-full max-w-6xl p-4 sm:p-6 lg:p-8">
+    <div class="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <div class="border-b border-slate-200 p-5 dark:border-slate-800"><p class="font-mono text-[10px] uppercase tracking-[.22em] text-amber-700">Taxonomy controls</p><div class="mt-2 flex flex-wrap items-end justify-between gap-4"><div><h2 class="text-2xl font-bold">业务字典</h2><p class="mt-1 text-sm text-slate-500">代码创建后不可更改；停用不会抹去历史需求中的名称。</p></div><button data-pit-dictionary-create class="rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-bold text-amber-300 dark:bg-amber-400 dark:text-slate-950">新增字典项</button></div></div>
+      <div role="tablist" aria-label="字典类型" class="flex overflow-x-auto border-b border-slate-200 px-3 dark:border-slate-800">${TYPES.map((entry) => `<button role="tab" aria-selected="${entry.type === type}" data-pit-dictionary-tab="${entry.type}" class="min-w-max border-b-2 px-4 py-3 text-sm font-semibold ${entry.type === type ? "border-amber-500 text-slate-950 dark:text-white" : "border-transparent text-slate-500"}">${entry.label}</button>`).join("")}</div>
+      <div data-pit-dictionary-content class="p-5">${input.error ? renderPitBanner(input.error, "danger") : input.loading ? `<p role="status" class="py-16 text-center text-sm text-slate-500">正在读取字典…</p>` : items.length ? `<ol class="space-y-2">${items.map((item, index) => `<li data-pit-dictionary-id="${escapePitHtml(item.id)}" class="grid grid-cols-[auto_1fr_auto] items-center gap-3 rounded-xl border border-slate-200 p-3 dark:border-slate-700 ${item.active ? "" : "opacity-65"}"><span class="font-mono text-xs text-slate-400">${String(index + 1).padStart(2, "0")}</span><div><p class="font-semibold">${escapePitHtml(item.label)} ${item.active ? "" : `<span class="ml-2 rounded bg-slate-100 px-2 py-0.5 text-[10px] text-slate-500">已停用 · 历史可见</span>`}</p><p class="mt-0.5 font-mono text-xs text-slate-500">${escapePitHtml(item.code)}</p></div><div class="flex gap-1"><button data-pit-dictionary-move="up" aria-label="上移 ${escapePitHtml(item.label)}" ${index === 0 ? "disabled" : ""} class="rounded-lg border px-2 py-1 disabled:opacity-30">↑</button><button data-pit-dictionary-move="down" aria-label="下移 ${escapePitHtml(item.label)}" ${index === items.length - 1 ? "disabled" : ""} class="rounded-lg border px-2 py-1 disabled:opacity-30">↓</button><button data-pit-dictionary-edit class="rounded-lg border px-3 py-1 text-xs">编辑</button><button data-pit-dictionary-toggle class="rounded-lg border px-3 py-1 text-xs ${item.active ? "text-rose-600" : "text-emerald-700"}">${item.active ? "停用" : "启用"}</button></div></li>`).join("")}</ol>` : `<p class="py-16 text-center text-sm text-slate-500">此分类还没有字典项。</p>`}</div>
+    </div><div data-pit-admin-dialog-host></div></section>`;
+}
+
+function formDialog(type: PitDictionaryType, item?: PitDictionaryItem): string {
+  return `<div data-pit-admin-dialog class="fixed inset-0 z-[130] grid place-items-center bg-slate-950/55 p-4"><form data-pit-dictionary-form role="dialog" aria-modal="true" aria-labelledby="pit-dictionary-form-title" class="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl dark:bg-slate-900"><h3 id="pit-dictionary-form-title" class="text-lg font-bold">${item ? "编辑字典项" : "新增字典项"}</h3><input type="hidden" name="type" value="${type}"><input type="hidden" name="id" value="${escapePitHtml(item?.id ?? "")}"><label class="mt-5 block text-xs font-bold">名称<input name="label" required maxlength="100" value="${escapePitHtml(item?.label ?? "")}" class="mt-1.5 w-full rounded-xl border px-3 py-2.5 dark:bg-slate-950"></label><label class="mt-4 block text-xs font-bold">代码<input name="code" required maxlength="64" pattern="[a-z0-9][a-z0-9_-]*" value="${escapePitHtml(item?.code ?? "")}" ${item ? "readonly aria-readonly=\"true\"" : ""} class="mt-1.5 w-full rounded-xl border px-3 py-2.5 font-mono dark:bg-slate-950 disabled:opacity-60"></label><p data-pit-form-error role="alert" class="mt-3 text-xs text-rose-600"></p><div class="mt-6 flex justify-end gap-2"><button type="button" data-pit-dialog-cancel class="rounded-xl border px-4 py-2">取消</button><button type="submit" class="rounded-xl bg-amber-400 px-4 py-2 font-bold text-slate-950">保存</button></div></form></div>`;
+}
+
+export function bindPitDictionaryPage(root: HTMLElement, user: PitUser, api: DictionaryApi = pitApi): void {
+  let page = root.querySelector<HTMLElement>("[data-pit-dictionary-page]"); if (!page || user.role !== "admin") return;
+  const lifetime = createPitPageLifetime(page); let activeType: PitDictionaryType = "product_line"; let items: PitDictionaryItem[] = []; let generation = 0;
+  bindPitAdminModalAccessibility(root, lifetime.signal);
+  const active = (g?: number) => !lifetime.signal.aborted && page!.isConnected && (g === undefined || g === generation);
+  const paint = (error?: string) => { if (!active()) return; const wrapper = document.createElement("div"); wrapper.innerHTML = renderPitDictionaryPage({ user, type: activeType, items, error }); const next = wrapper.firstElementChild; if (next) page!.replaceChildren(...Array.from(next.childNodes)); };
+  const load = async () => { const g = ++generation; try { const result = await api.listDictionaries({ includeInactive: true }, { signal: lifetime.signal }); if (!active(g)) return; items = result.items; paint(); } catch (e) { if (active(g) && (e as Error).name !== "AbortError") paint(isPitApiError(e) ? e.message : "读取字典失败"); } };
+  root.addEventListener("click", (event) => {
+    const target = event.target as Element; const tab = target.closest<HTMLElement>("[data-pit-dictionary-tab]");
+    if (tab) { generation += 1; activeType = tab.dataset.pitDictionaryTab as PitDictionaryType; paint(); return; }
+    const host = root.querySelector<HTMLElement>("[data-pit-admin-dialog-host]");
+    if (target.closest("[data-pit-dialog-cancel]")) { target.closest("[data-pit-admin-dialog]")?.remove(); return; }
+    if (target.closest("[data-pit-dictionary-create]")) { if (host) openPitAdminModal(host, formDialog(activeType), target.closest<HTMLElement>("button")); return; }
+    const row = target.closest<HTMLElement>("[data-pit-dictionary-id]"); const item = items.find((entry) => entry.id === row?.dataset.pitDictionaryId); if (!item) return;
+    if (target.closest("[data-pit-dictionary-edit]")) { if (host) openPitAdminModal(host, formDialog(activeType, item), target.closest<HTMLElement>("button")); return; }
+    const move = target.closest<HTMLElement>("[data-pit-dictionary-move]"); if (move) { const requestedType = activeType; const ids = items.filter((entry) => entry.type === requestedType).map((entry) => entry.id); const ordered = movePitDictionaryId(ids, item.id, move.dataset.pitDictionaryMove === "up" ? -1 : 1); const g = ++generation; void api.reorderDictionaries(requestedType, ordered, { signal: lifetime.signal }).then((result) => { if (active(g)) { items = [...items.filter((entry) => entry.type !== requestedType), ...result.items]; paint(); } }).catch((e) => { if (active(g)) showPitToast(isPitApiError(e) ? e.message : "排序失败", "danger"); }); return; }
+    if (target.closest("[data-pit-dictionary-toggle]")) { const trigger = target.closest<HTMLElement>("button"); const g = ++generation; const open = (count: number) => { if (!active(g) || !host) return; openPitAdminModal(host, dialog(item.active ? "停用字典项" : "启用字典项", item.active ? `当前有 <strong>${count}</strong> 条未删除需求使用“${escapePitHtml(item.label)}”。停用后历史名称和代码仍会保留。` : `重新启用“${escapePitHtml(item.label)}”？`, `toggle:${item.id}:${item.active ? "0" : "1"}`, item.active ? "确认停用" : "确认启用"), trigger); }; if (item.active) void api.dictionaryUsage(item.id, { signal: lifetime.signal }).then((result) => open(result.activeRequirementCount)).catch((e) => { if (active(g)) showPitToast(isPitApiError(e) ? e.message : "读取影响范围失败", "danger"); }); else open(0); }
+  }, { signal: lifetime.signal });
+  root.addEventListener("submit", (event) => { const form = event.target as HTMLFormElement; if (!form.matches("[data-pit-dictionary-form]")) return; event.preventDefault(); const data = new FormData(form); const id = String(data.get("id") ?? ""); const label = String(data.get("label") ?? "").trim(); const code = String(data.get("code") ?? "").trim(); const g = ++generation; const call = id ? api.updateDictionary(id, { label }, { signal: lifetime.signal }) : api.createDictionary({ type: activeType, code, label }, { signal: lifetime.signal }); void call.then(() => { if (active(g)) { form.closest("[data-pit-admin-dialog]")?.remove(); void load(); } }).catch((e) => { if (active(g)) { const error = form.querySelector<HTMLElement>("[data-pit-form-error]"); if (error) error.textContent = isPitApiError(e) ? e.message : "保存失败"; } }); }, { signal: lifetime.signal });
+  root.addEventListener("click", (event) => { const button = (event.target as Element).closest<HTMLButtonElement>("[data-pit-dialog-confirm]"); const dialogRoot = button?.closest<HTMLElement>("[data-pit-dialog-action]"); if (!dialogRoot) return; const [kind, id, nextActive] = (dialogRoot.dataset.pitDialogAction ?? "").split(":"); if (kind !== "toggle") return; button!.disabled = true; const g = ++generation; void api.updateDictionary(id, { active: nextActive === "1" }, { signal: lifetime.signal }).then(() => { if (!lifetime.signal.aborted && g === generation) { dialogRoot.remove(); void load(); } }).catch((e) => { if (g === generation) showPitToast(isPitApiError(e) ? e.message : "更新失败", "danger"); }); }, { signal: lifetime.signal });
+  root.addEventListener("keydown", (event) => { if (event.key === "Escape") root.querySelector("[data-pit-admin-dialog]")?.remove(); }, { signal: lifetime.signal });
+  void load();
+}

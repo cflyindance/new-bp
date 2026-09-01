@@ -9,7 +9,7 @@
     "dev": "vite",
     "payroll-api": "node server/payroll-api-server.mjs",
     "dev:payroll": "node server/run-payroll-dev.mjs",
-    "build": "node scripts/generate-emenu-local-seasoning-browser-handler.mjs && node scripts/generate-build-stamp.mjs && node scripts/stash-emenu-pro-for-build.mjs stash && tsc && vite build && node scripts/copy-embedded-assets.mjs && node scripts/generate-github-pages-legacy-route.mjs",
+    "build": "node scripts/generate-emenu-local-seasoning-browser-handler.mjs && node scripts/generate-build-stamp.mjs && node scripts/stash-emenu-pro-for-build.mjs stash && tsc && vite build && node scripts/copy-embedded-assets.mjs",
     "build:emenu-new-embed": "node scripts/build-emenu-new-embed.mjs",
     "build:kiosklite-embed": "node scripts/build-kiosklite-embed.mjs",
     "sync:kiosklite-embed": "node scripts/sync-kiosklite-embed-from-host.mjs",
@@ -39,9 +39,26 @@
     "verify:personal-sales-deduct": "npx tsx scripts/verify-personal-sales-deduct.ts",
     "verify:personal-sales-deduct-pipeline": "npx tsx scripts/verify-personal-sales-deduct-pipeline.ts",
     "verify:personal-sales-pool": "npx tsx scripts/verify-personal-sales-pool.ts",
-    "verify:github-pages-legacy-route": "node scripts/verify-github-pages-legacy-route.mjs",
     "verify:emenu-responsive-viewport": "node scripts/verify-emenu-responsive-viewport.mjs",
-    "verify:tipout-interaction-refresh": "node scripts/verify-tipout-interaction-refresh.mjs"
+    "verify:subscription-service": "npx tsx scripts/verify-subscription-service.ts",
+    "verify:tipout-interaction-refresh": "node scripts/verify-tipout-interaction-refresh.mjs",
+    "verify:pit-database": "node scripts/verify-pit-database.mjs",
+    "verify:pit-auth-api": "node scripts/verify-pit-auth-api.mjs",
+    "verify:pit-requirements-api": "node scripts/verify-pit-requirements-api.mjs",
+    "verify:pit-admin-api": "node scripts/verify-pit-admin-api.mjs",
+    "verify:pit-export-backup": "node scripts/verify-pit-export-backup.mjs",
+    "verify:pit-import": "node scripts/verify-pit-import.mjs",
+    "verify:pit-server": "node scripts/verify-pit-server.mjs",
+    "verify:pit-shell": "node scripts/verify-pit-shell.mjs",
+    "verify:pit-list-ui": "npx tsx scripts/verify-pit-list-ui.ts",
+    "verify:pit-detail-ui": "npx tsx scripts/verify-pit-detail-ui.ts",
+    "verify:pit-file-workflows-ui": "npx tsx scripts/verify-pit-file-workflows-ui.ts",
+    "verify:pit-admin-ui": "npx tsx scripts/verify-pit-admin-ui.ts",
+    "verify:pit-contract-coverage": "node scripts/verify-pit-contract-coverage.mjs",
+    "verify:pit": "npm run verify:pit-database && npm run verify:pit-auth-api && npm run verify:pit-requirements-api && npm run verify:pit-admin-api && npm run verify:pit-export-backup && npm run verify:pit-import && npm run verify:pit-server && npm run verify:pit-shell && npm run verify:pit-list-ui && npm run verify:pit-detail-ui && npm run verify:pit-file-workflows-ui && npm run verify:pit-admin-ui && npm run verify:pit-contract-coverage",
+    "pit:start": "node server/pit-api-server.mjs",
+    "dev:pit": "node server/run-pit-dev.mjs",
+    "pit:restore": "node server/pit-restore.mjs"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.0.0",
@@ -49,5 +66,9 @@
     "http-proxy": "^1.18.1",
     "typescript": "~5.6.0",
     "vite": "^6.0.0"
+  },
+  "dependencies": {
+    "exceljs": "^4.4.0",
+    "jszip": "^3.10.1"
   }
 }

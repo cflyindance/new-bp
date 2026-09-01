@@ -134,18 +134,6 @@ import {
   bindFinanceRegisterAuditUi,
 } from "./config/finance-register-audit-pages";
 import {
-  bindDualPricingUi,
-  findDualPricingTitle,
-  isDualPricingPath,
-  renderDualPricingPageContent,
-} from "./config/dual-pricing-ui";
-import {
-  bindOrderListUi,
-  findOrderListTitle,
-  isOrderListPath,
-  renderOrderListPageContent,
-} from "./config/order-list-pages";
-import {
   bindNotificationsHubUi,
   isNotificationsHubFeaturePath,
   renderNotificationsHubPageContent,
@@ -308,12 +296,14 @@ import {
   enterEmenuLocalShell,
   enterKioskLocalShell,
   enterMPlatformShell,
+  enterPitShell,
   exitEmenuLocalShell,
   exitKioskLocalShell,
   exitMPlatformShell,
   isEmenuLocalShellMode,
   isKioskLocalShellMode,
   isMPlatformShellMode,
+  isPitShellMode,
 } from "./shell/app-shell-mode";
 import {
   bindViewSwitchControl,
@@ -374,6 +364,14 @@ import {
   isKioskLocalContentPath,
   normalizeKioskLocalPath,
 } from "./shell/kiosk-local-routes";
+import { bindPitShell, mountPitShell } from "./pit/pit-shell";
+import { handlePitInShellNavigation } from "./pit/pit-shell";
+import { guardPitRouteMount } from "./pit/pit-navigation-guard";
+import {
+  isPitContentPath,
+  normalizePitPath,
+  PIT_DEFAULT_PATH,
+} from "./pit/pit-routes";
 import { NAV_BLUEPRINT_ROUTE_PREFIX } from "./config/nav-blueprint-ui";
 import {
   filterModuleSettingsGroupsForPreset,
@@ -3635,12 +3633,8 @@ function findTitle(path: string): { title: string; module?: string } {
   ) {
     return { title: t("findTitle.inventoryChangeTitle"), module: t("findTitle.inventoryChangeModule") };
   }
-  const orderListTitle = findOrderListTitle(path);
-  if (orderListTitle) return orderListTitle;
   const finRegTitle = findFinanceRegisterAuditTitle(path);
   if (finRegTitle) return finRegTitle;
-  const dualPricingTitle = findDualPricingTitle(path);
-  if (dualPricingTitle) return dualPricingTitle;
   const ppTitle = findPlatformPresetPageTitle(path);
   if (ppTitle) return ppTitle;
   const sortedPcNav = [...PRODUCT_CENTER_DEEP_NAV].sort((a, b) => b.path.length - a.path.length);
@@ -4250,8 +4244,9 @@ function normalizeTabModuleHashes(): void {
     replaceHashPath("/dashboard/overview");
     return;
   }
-  /* 订单中心：/orders/all 已恢复为订单列表模拟页；其余旧业务路径仍落到设置 */
+  /* 订单中心滑层已移除全部订单/退单/订单历史，旧链接统一到设置 */
   const legacyOrderPaths = [
+    "/orders/all",
     "/orders/refunds",
     "/orders/history",
     "/orders/dine-in",
@@ -11476,8 +11471,6 @@ function renderMain(): string {
   const isPlatformPreset = isPlatformPresetPath(path);
   const isLoginLogs = isLoginLogsPath(path);
   const isFinanceRegisterAudit = isFinanceRegisterAuditPath(path);
-  const isDualPricing = isDualPricingPath(path);
-  const isOrderList = isOrderListPath(path);
   const isTeamShiftScheduling = isTeamShiftSchedulingPath(path);
   const isTeamBreaksOvertime = isTeamBreaksOvertimePath(path);
   const isTeamClockIn = isTeamClockInPath(path);
@@ -11507,8 +11500,6 @@ function renderMain(): string {
     isTeamPayrollReportIframe ||
     isGiftCardsFactory ||
     isFinanceRegisterAudit ||
-    isDualPricing ||
-    isOrderList ||
     isTeamShiftScheduling ||
     isTeamBreaksOvertime ||
     isFohBrandMenu ||
@@ -11706,12 +11697,8 @@ function renderMain(): string {
                                                           ? renderTeamShiftSchedulingPageWithSettings()
                                                         : isFinanceRegisterAudit
                                                           ? renderFinanceRegisterAuditPageContent(path)
-                                                          : isDualPricing
-                                                            ? renderDualPricingPageContent(path)
-                                                          : isOrderList
-                                                            ? renderOrderListPageContent(path)
-                                                            : isNotificationsHubFeaturePath(path)
-                                                              ? renderNotificationsHubPageContent(path)
+                                                          : isNotificationsHubFeaturePath(path)
+                                                            ? renderNotificationsHubPageContent(path)
                                                             : path === "/settings/overview"
                                                               ? renderSettingsOverview()
                                                               : isNavHomePath(path)
@@ -11976,6 +11963,21 @@ function mount(): void {
   syncProductVersionDocumentAttribute();
 
   const authPath = location.hash.slice(1) || "";
+  if (isPitContentPath(authPath) || isPitShellMode()) {
+    const normalizedPath = isPitContentPath(authPath) ? normalizePitPath(authPath) : PIT_DEFAULT_PATH;
+    if (normalizedPath !== authPath) {
+      replaceHashPath(normalizedPath);
+    }
+    if (!isPitShellMode()) enterPitShell();
+    unmountDemoSwitchFab();
+    if (!guardPitRouteMount(`#${normalizedPath}`)) return;
+    if (handlePitInShellNavigation(normalizedPath)) return;
+    const app = document.getElementById("app");
+    if (!app) return;
+    app.innerHTML = mountPitShell(mount, normalizedPath);
+    bindPitShell(mount);
+    return;
+  }
   if (!isAuthenticated()) {
     if (authPath !== LOGIN_PATH) {
       replaceHashPath(LOGIN_PATH);
@@ -12011,7 +12013,7 @@ function mount(): void {
 
   if (
     isEmenuLocalContentPath(authPath) ||
-    (isEmenuLocalShellMode() && !isKioskLocalContentPath(authPath) && !isMPlatformContentPath(authPath))
+    (isEmenuLocalShellMode() && !isKioskLocalContentPath(authPath) && !isMPlatformContentPath(authPath) && !isPitContentPath(authPath))
   ) {
     if (isViewSwitchRestricted()) {
       exitEmenuLocalShell();
@@ -12035,7 +12037,7 @@ function mount(): void {
 
   if (
     isKioskLocalContentPath(authPath) ||
-    (isKioskLocalShellMode() && !isEmenuLocalContentPath(authPath) && !isMPlatformContentPath(authPath))
+    (isKioskLocalShellMode() && !isEmenuLocalContentPath(authPath) && !isMPlatformContentPath(authPath) && !isPitContentPath(authPath))
   ) {
     if (isViewSwitchRestricted()) {
       exitKioskLocalShell();
@@ -12057,7 +12059,7 @@ function mount(): void {
     return;
   }
 
-  if (isMPlatformShellMode() || isMPlatformContentPath(authPath)) {
+  if (isMPlatformContentPath(authPath) || (isMPlatformShellMode() && !isPitContentPath(authPath))) {
     if (!shouldShowMPlatformViewSwitchOption()) {
       exitMPlatformShell();
       replaceHashPath(APP_NAV_HOME_PATH);
@@ -13056,8 +13058,6 @@ function mount(): void {
   bindWaitlistModeUi();
   bindCashDrawerReconciliationUi();
   bindFinanceRegisterAuditUi(mount);
-  bindDualPricingUi(mount);
-  bindOrderListUi(mount);
   bindNotificationsHubUi(mount);
   bindTeamShiftSchedulingUi(mount);
   bindTeamBreaksOvertimeUi(mount);
