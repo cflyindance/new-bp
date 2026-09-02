@@ -1,4 +1,150 @@
-<section class="team-tips-page" data-team-tips-view="details">
+<style data-team-tips-view-style>
+.formula-section { margin-bottom: 24px; }
+    .formula-display {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+      padding: 16px 0; font-size: 14px;
+    }
+    .formula-block {
+      display: flex; flex-direction: column; align-items: center; gap: 2px;
+      min-width: 60px;
+    }
+    .formula-block .val { font-size: 16px; font-weight: 600; color: var(--text-primary); }
+    .formula-block .lbl { font-size: 12px; color: var(--text-tertiary); white-space: nowrap; }
+    .formula-block input.formula-input {
+      width: 90px; height: 32px; padding: 4px 8px; border: 1px solid var(--border-color);
+      border-radius: var(--radius-md); font-size: 14px; text-align: center; font-weight: 600;
+    }
+    .formula-block input.formula-input:focus {
+      border-color: var(--primary); outline: none; box-shadow: 0 0 0 2px rgba(22,119,255,0.1);
+    }
+    .formula-block input.formula-pct { width: 56px; }
+    .formula-operator { font-size: 18px; font-weight: 500; color: var(--text-secondary); padding: 0 4px; }
+    .formula-display .formula-link { margin-left: auto; align-self: center; }
+    .detail-card { margin-bottom: 16px; }
+    .detail-table { width: 100%; border-collapse: collapse; }
+    .detail-table th {
+      background: rgba(0,0,0,0.02); padding: 10px 12px; text-align: left;
+      border-bottom: 1px solid var(--border-light); font-weight: 500; font-size: 13px;
+      white-space: nowrap;
+    }
+    .detail-table td {
+      padding: 10px 12px; border-bottom: 1px solid var(--border-light); font-size: 13px;
+      vertical-align: middle;
+    }
+    .detail-table .input-cell input {
+      width: 60px; height: 28px; padding: 2px 8px; border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm); font-size: 13px; text-align: center;
+    }
+    .detail-table .input-cell input:focus {
+      border-color: var(--primary); outline: none; box-shadow: 0 0 0 2px rgba(22,119,255,0.1);
+    }
+    .detail-table .action-cell { white-space: nowrap; }
+    .detail-table .action-cell a {
+      color: var(--primary); cursor: pointer; text-decoration: none; margin-right: 8px; font-size: 13px;
+    }
+    .detail-table .action-cell a.danger { color: var(--danger); }
+    .role-label { display: inline-block; padding: 2px 8px; background: #f5f5f5; border-radius: 4px; font-size: 12px; }
+
+    /* Formula detail modal */
+    .rule-detail-item { margin-bottom: 12px; }
+    .rule-detail-item .label { font-size: 13px; color: var(--text-secondary); margin-bottom: 4px; }
+    .rule-detail-item .value { font-size: 14px; color: var(--text-primary); white-space: pre-line; }
+    .detail-rule-bundle {
+      margin-bottom: 24px;
+      padding: 18px 20px 20px;
+      background: #fff;
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-md);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    }
+    .detail-rule-bundle .formula-rule-section {
+      margin-bottom: 16px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border-light);
+    }
+    .detail-rule-bundle .detail-card {
+      margin-bottom: 0;
+      border: none;
+      box-shadow: none;
+    }
+    .detail-rule-bundle .detail-card .card-body {
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-light);
+    }
+    .formula-rule-section { margin-bottom: 28px; padding-bottom: 12px; border-bottom: 1px solid var(--border-light); }
+    .formula-rule-section:last-child { border-bottom: none; margin-bottom: 8px; }
+    .detail-rule-block-title { margin: 0 0 6px; font-size: 15px; font-weight: 600; color: var(--text-primary); }
+    .detail-rule-meta { font-size: 12px; color: var(--text-tertiary); margin: 0 0 10px; }
+    /* 对齐小费分配页「分配结果」：角色摘要 + 可折叠员工表 */
+    .detail-card-body-alloc .employee-section {
+      margin-bottom: 20px;
+      overflow-x: auto;
+      width: 100%;
+    }
+    .detail-card-body-alloc .employee-section:last-child { margin-bottom: 0; }
+    .detail-card-body-alloc .employee-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border-light);
+    }
+    .detail-card-body-alloc .employee-name { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+    .detail-card-body-alloc .fold-btn {
+      border: none;
+      background: none;
+      cursor: pointer;
+      color: var(--text-tertiary);
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-left: auto;
+    }
+    .detail-card-body-alloc .fold-btn:hover { color: var(--primary); }
+    .detail-card-body-alloc .employee-detail {
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+      max-height: 2000px;
+    }
+    .detail-card-body-alloc .detail-role-summary-row .input-cell input {
+      width: 64px;
+      height: 28px;
+      padding: 2px 8px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      text-align: center;
+    }
+    .detail-card-body-alloc .data-table { width: 100%; table-layout: fixed; }
+    .detail-card-body-alloc .data-table th,
+    .detail-card-body-alloc .data-table td {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    /* 桌面端：仅日期+门店两项，勿横向拉伸产生过大空隙 */
+    @media (min-width: 769px) {
+      .filter-bar--detail {
+        gap: 10px;
+      }
+      .filter-bar--detail .filter-field {
+        flex: 0 0 auto;
+        max-width: none;
+        min-width: 0;
+      }
+      .filter-bar--detail .filter-field:first-child {
+        width: 200px;
+        max-width: 200px;
+      }
+      .filter-bar--detail .filter-field:nth-child(2) {
+        width: 280px;
+        max-width: 280px;
+      }
+    }
+</style>
+<section class="team-tips-page tipout-fidelity tipout-page-detail" data-team-tips-view="details">
 <div class="content-area">
         <div class="tipout-page-heading tipout-page-heading--with-back">
           <button type="button" class="btn" data-native-onclick="returnToSummary()">返回汇总</button>

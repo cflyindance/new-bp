@@ -1,4 +1,372 @@
-<section class="team-tips-page" data-team-tips-view="rule-editor">
+<style data-team-tips-view-style>
+.page-card {
+      background: #fff; border-radius: 12px; padding: 24px;
+      border: 1px solid rgba(0,0,0,0.06);
+    }
+    .page-title { font-size: 16px; font-weight: 600; margin-bottom: 24px; }
+    .form-section { margin-bottom: 24px; overflow: visible; }
+    .form-section-title {
+      font-size: 14px; font-weight: 600; margin-bottom: 12px;
+      display: flex; align-items: center; gap: 8px;
+    }
+
+    /* Tip Pool Rule Card */
+    .pool-rule-card {
+      border: 1px solid rgba(0,0,0,0.06); border-radius: 10px;
+      overflow: hidden; margin-bottom: 16px;
+    }
+    .pool-rule-header {
+      padding: 16px 24px; background: rgba(0,0,0,0.02);
+      border-bottom: 1px solid rgba(0,0,0,0.06);
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    }
+    .pool-rule-header .pool-rule-label { font-weight: 500; font-size: 14px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .pool-rule-header .pool-rule-label .num { color: var(--primary); font-weight: 600; margin-right: 4px; }
+    .pool-rule-type-tag {
+      display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 500;
+      background: rgba(22,119,255,0.1); color: var(--primary);
+    }
+    .pool-rule-type-tag.sales { background: rgba(82,196,26,0.12); color: #389e0d; }
+    .pool-rule-type-tag.personal_sales { background: rgba(19,194,194,0.14); color: #08979c; }
+    .pool-rule-type-tag.tips { background: rgba(22,119,255,0.1); color: var(--primary); }
+    .pool-rule-type-tag.surcharge { background: rgba(250,173,20,0.15); color: #d48806; }
+    .pool-rule-type-tag.manual { background: rgba(114,46,209,0.12); color: #531dab; }
+    .pool-rule-type-tag.custom { background: rgba(0,0,0,0.06); color: var(--text-secondary); }
+    .pool-rule-type-tag.deduct { background: rgba(245,34,45,0.08); color: #cf1322; }
+    #deductRulesSection .deduct-rule-card { overflow: visible; }
+    #deductRulesSection .multi-select-dropdown { z-index: 60; }
+    #deductRulesSection .deduct-basis-card .pool-rule-conditions { margin-top: 4px; }
+    #deductCondDrawerBody .deduct-basis-panel { display: block; overflow: visible; }
+    #deductPanelsHost .deduct-basis-panel { display: block; overflow: visible; }
+    #deductRulesSection .deduct-scope-card[data-scope-type="employee"] .pool-rule-body {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 12px;
+    }
+    #deductRulesSection .deduct-scope-card[data-scope-type="employee"] .drawer-form-row {
+      width: 100%;
+      max-width: 720px;
+      align-items: flex-start;
+    }
+    #deductRulesSection .deduct-scope-card[data-scope-type="employee"] .drawer-form-row label {
+      min-width: 88px;
+      padding-top: 8px;
+      flex-shrink: 0;
+    }
+    #deductRulesSection .deduct-scope-card[data-scope-type="employee"] .multi-select {
+      flex: 1 1 auto;
+      min-width: 320px;
+      max-width: none;
+      width: 100%;
+    }
+    #deductRulesSection .deduct-scope-card[data-scope-type="role"] .field-group {
+      flex: 1 1 auto;
+      min-width: 320px;
+      max-width: 720px;
+      width: 100%;
+    }
+    #deductRulesSection .deduct-scope-card[data-scope-type="role"] .multi-select {
+      flex: 1;
+      min-width: 0;
+      max-width: none;
+    }
+    .deduct-tabs-bar {
+      display: flex; align-items: center; gap: 0;
+      border-bottom: 1px solid var(--border-light);
+      margin-bottom: 16px;
+    }
+    .deduct-tab {
+      padding: 10px 20px; margin: 0; border: none; background: transparent;
+      font-size: 14px; color: var(--text-secondary); cursor: pointer;
+      border-bottom: 2px solid transparent; transition: color 0.2s, border-color 0.2s;
+    }
+    .deduct-tab:hover { color: var(--primary); }
+    .deduct-tab.active {
+      color: var(--primary); font-weight: 600;
+      border-bottom-color: var(--primary);
+    }
+    .deduct-basis-panel { display: none; overflow: visible; }
+    .deduct-basis-panel.active { display: block; }
+    .deduct-basis-panel .deduct-basis-body {
+      padding: 4px 0 12px; overflow: visible;
+    }
+    .deduct-basis-panel .deduct-scope-wrap { margin-bottom: 12px; }
+    .deduct-basis-panel .deduct-scope-add-wrap { margin-top: 4px; }
+    .pool-rule-type-tag.sales_pct { background: rgba(82,196,26,0.12); color: #389e0d; }
+    .pool-rule-type-tag.tip_income { background: rgba(22,119,255,0.1); color: var(--primary); }
+    .pool-rule-conditions {
+      padding: 10px 24px 14px; font-size: 13px; color: var(--text-secondary);
+      border-top: 1px solid rgba(0,0,0,0.04); background: rgba(0,0,0,0.01);
+    }
+    .pool-rule-conditions .cond-label { color: var(--text-tertiary); margin-right: 6px; }
+    .pool-rule-conditions .cond-text { color: var(--text-secondary); white-space: pre-line; }
+    .pool-rule-conditions.empty .cond-text { color: var(--text-tertiary); font-style: italic; }
+    .pool-rule-body {
+      padding: 16px 24px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    }
+    .pool-rule-body .field-group {
+      display: flex; align-items: center; gap: 8px;
+    }
+    .pool-rule-body .field-label { font-size: 13px; color: var(--text-secondary); white-space: nowrap; }
+    .pool-rule-body input[type="number"] {
+      width: 80px; height: 32px; padding: 4px 8px; border: 1px solid var(--border-color);
+      border-radius: var(--radius-md); font-size: 14px; text-align: center;
+    }
+    .pool-rule-body input[type="number"]:focus {
+      border-color: var(--primary); outline: none; box-shadow: 0 0 0 2px rgba(22,119,255,0.1);
+    }
+
+    /* Receiver Rule Table */
+    .receiver-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+    .receiver-table th {
+      text-align: left; padding: 8px 12px; font-size: 13px; font-weight: 500;
+      border-bottom: 1px solid var(--border-light); background: rgba(0,0,0,0.02);
+    }
+    .receiver-table td {
+      padding: 8px 12px; border-bottom: 1px solid var(--border-light); font-size: 13px;
+    }
+    .receiver-table input[type="number"] {
+      width: 60px; height: 28px; padding: 2px 8px; border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm); font-size: 13px; text-align: center;
+    }
+    .receiver-table input[type="number"]:focus {
+      border-color: var(--primary); outline: none;
+    }
+    .receiver-secondary-block td { border-bottom: 1px solid var(--border-light); vertical-align: top; }
+
+    /* 计提小费接受方规则表：与接收方规则一致，禁止外层裁剪下拉，单元格 overflow 可见 */
+    .tip-claims-table-wrap {
+      overflow: visible;
+      width: 100%;
+    }
+    #tipClaimsTable td {
+      overflow: visible;
+      vertical-align: top;
+    }
+    #tipClaimsTable .multi-select.receiver-role-select {
+      width: 220px;
+      max-width: 100%;
+    }
+    #tipClaimsTable .multi-select.open .multi-select-dropdown {
+      z-index: 120;
+    }
+    .receiver-sub-table { width: 100%; max-width: 640px; border-collapse: collapse; margin-top: 4px; }
+    .receiver-sub-table th { font-size: 12px; font-weight: 500; padding: 6px 8px; text-align: left; color: var(--text-secondary); border-bottom: 1px solid var(--border-light); }
+    .receiver-sub-table td { padding: 8px; font-size: 13px; border-bottom: 1px solid rgba(0,0,0,0.04); }
+
+    .radio-group { display: flex; flex-direction: column; gap: 8px; }
+    .radio-item {
+      display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer;
+    }
+    .radio-item input[type="radio"] {
+      width: 16px; height: 16px; accent-color: var(--primary);
+    }
+    .work-hours-config {
+      margin: 10px 0 0 24px; padding: 12px 14px; max-width: 620px;
+      border: 1px solid var(--border-light); border-radius: var(--radius-md);
+      background: rgba(0,0,0,0.015);
+    }
+    .work-hours-config .radio-item + .work-hours-cap-row { margin-top: 10px; }
+    .work-hours-cap-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .work-hours-cap-input {
+      width: 88px; height: 32px; padding: 4px 8px; text-align: center;
+      border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 14px;
+    }
+    .work-hours-cap-input:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 2px rgba(22,119,255,0.1); }
+    .work-hours-cap-input:disabled { background: rgba(0,0,0,0.04); color: var(--text-tertiary); cursor: not-allowed; }
+    .work-hours-config-error { display: none; margin-top: 8px; font-size: 12px; color: var(--danger); }
+
+    .add-option-dropdown {
+      position: relative; display: inline-block;
+    }
+    .add-option-menu {
+      position: absolute; top: 100%; left: 0; margin-top: 4px;
+      background: #fff; border-radius: var(--radius-lg); padding: 4px;
+      box-shadow: var(--shadow-md); min-width: 160px; z-index: 10;
+      display: none;
+    }
+    .add-option-menu.show { display: block; }
+    .add-option-menu-item {
+      padding: 8px 12px; cursor: pointer; border-radius: var(--radius-sm);
+      font-size: 13px; transition: background 0.2s;
+    }
+    .add-option-menu-item:hover { background: rgba(0,0,0,0.04); }
+    .add-option-menu-item.disabled {
+      color: var(--text-tertiary); pointer-events: none; opacity: 0.5;
+    }
+    .weight-link.disabled {
+      color: var(--text-tertiary); cursor: not-allowed; pointer-events: none; opacity: 0.6;
+    }
+    .field-desc-wrap { display: inline-flex; align-items: center; gap: 4px; }
+    .field-desc-icon {
+      cursor: pointer; color: var(--text-tertiary); font-size: 14px; width: 18px; height: 18px;
+      display: inline-flex; align-items: center; justify-content: center; border-radius: 50%;
+      transition: color 0.2s, background 0.2s; flex-shrink: 0;
+    }
+    .field-desc-icon:hover { color: var(--primary); background: rgba(22,119,255,0.08); }
+    .field-desc-icon.has-desc { color: var(--primary); }
+    .field-desc-tooltip {
+      position: fixed; max-width: 320px; padding: 10px 12px; font-size: 13px; line-height: 1.5;
+      background: var(--bg-elevated, #fff); border: 1px solid var(--border-color, rgba(0,0,0,0.1));
+      border-radius: var(--radius-sm); box-shadow: var(--shadow-md, 0 4px 12px rgba(0,0,0,0.12));
+      z-index: 3000; white-space: pre-wrap; word-break: break-word; pointer-events: none;
+      display: none;
+    }
+    .field-desc-tooltip.show { display: block; }
+
+    .condition-card {
+      border: 1px solid rgba(0,0,0,0.06); border-radius: 10px;
+      margin-bottom: 16px; overflow: hidden;
+    }
+    .condition-card-header {
+      padding: 12px 16px; background: rgba(0,0,0,0.02);
+      border-bottom: 1px solid rgba(0,0,0,0.06);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .condition-card-header .label { font-weight: 500; font-size: 14px; }
+    .condition-card-body { padding: 16px; }
+
+    #salesDrawer .drawer-body,
+    #tipsDrawer .drawer-body,
+    #surchargeDrawer .drawer-body,
+    #manualDrawer .drawer-body,
+    #tipClaimSalesDrawer .drawer-body { overflow-y: auto; min-height: 0; }
+    #salesDrawer .condition-card,
+    #tipsDrawer .condition-card,
+    #surchargeDrawer .condition-card,
+    #manualDrawer .condition-card,
+    #tipClaimSalesDrawer .condition-card { overflow: visible; }
+    #salesDrawer .multi-select-dropdown,
+    #tipsDrawer .multi-select-dropdown,
+    #surchargeDrawer .multi-select-dropdown,
+    #manualDrawer .multi-select-dropdown,
+    #tipClaimSalesDrawer .multi-select-dropdown { z-index: 1100; }
+
+    .page-actions {
+      position: fixed; bottom: 0; right: 0; left: 264px; z-index: 40;
+      display: flex; justify-content: flex-end; gap: 12px; padding: 12px 24px;
+      background: #fff; border-top: 1px solid var(--border-light);
+      box-shadow: 0 -2px 8px rgba(0,0,0,0.06);
+    }
+    .content-area { padding-bottom: 72px; }
+    @media (max-width: 768px) { .page-actions { left: 0; } }
+
+    /* Multi-Select Dropdown */
+    .multi-select { position: relative; }
+    .multi-select-input {
+      display: flex; align-items: center; min-height: 32px;
+      padding: 2px 32px 2px 4px; border: 1px solid var(--border-color);
+      border-radius: var(--radius-md); background: #fff; cursor: pointer;
+      transition: border-color 0.2s; position: relative;
+    }
+    .multi-select-input:hover { border-color: var(--primary); }
+    .multi-select.open .multi-select-input {
+      border-color: var(--primary); box-shadow: 0 0 0 2px rgba(22,119,255,0.1);
+    }
+    .multi-select-arrow {
+      position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+      transition: transform 0.2s; pointer-events: none; flex-shrink: 0;
+    }
+    .multi-select.open .multi-select-arrow { transform: translateY(-50%) rotate(180deg); }
+    .multi-select-tags {
+      display: flex; flex-wrap: wrap; gap: 4px; flex: 1; min-height: 24px;
+      align-items: center;
+    }
+    .multi-select-tag {
+      display: inline-flex; align-items: center; gap: 2px;
+      padding: 1px 8px; background: #f5f5f5; border: 1px solid var(--border-light);
+      border-radius: var(--radius-sm); font-size: 12px; line-height: 20px;
+      white-space: nowrap; max-width: 140px; overflow: hidden; text-overflow: ellipsis;
+    }
+    .multi-select-tag i {
+      font-style: normal; cursor: pointer; color: var(--text-tertiary);
+      margin-left: 2px; font-size: 13px; line-height: 1;
+    }
+    .multi-select-tag i:hover { color: var(--text-primary); }
+    .multi-select-dropdown {
+      display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+      background: #fff; border-radius: var(--radius-lg); padding: 4px;
+      box-shadow: var(--shadow-md); z-index: 20; max-height: 240px; overflow-y: auto;
+    }
+    .multi-select.open .multi-select-dropdown { display: block; }
+    .multi-select-option {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 12px; border-radius: var(--radius-sm); cursor: pointer;
+      font-size: 13px; transition: background 0.15s;
+    }
+    .multi-select-option:hover { background: rgba(0,0,0,0.04); }
+    .multi-select-option input[type="checkbox"] {
+      width: 14px; height: 14px; accent-color: var(--primary); cursor: pointer;
+    }
+    .multi-select-option.shift-option-wrap { align-items: flex-start; }
+    .shift-opt-multiline { display: block; line-height: 1.45; padding: 2px 0; }
+    .shift-opt-line.shift-opt-rules { font-size: 12px; color: var(--text-secondary); white-space: pre-line; }
+    .shift-opt-line.shift-opt-name { font-size: 13px; font-weight: 500; margin-top: 2px; }
+    .shift-opt-line.shift-opt-time { font-size: 12px; color: var(--text-tertiary); margin-top: 2px; }
+    .multi-select-tag.shift-tag-multiline {
+      white-space: normal; align-items: flex-start; max-width: min(100%, 280px);
+      overflow: visible; line-height: 1.35;
+    }
+    .multi-select-tag.shift-tag-multiline .shift-tag-label {
+      white-space: pre-line; flex: 1; min-width: 0; text-align: left;
+    }
+    .multi-select.shift-condition-select .multi-select-tags { align-items: flex-start; }
+    .multi-select-placeholder {
+      color: var(--text-tertiary); font-size: 13px; padding: 0 4px;
+    }
+
+    /* 班次设置弹窗 */
+    .shift-manage-modal .modal-body { max-height: min(72vh, 580px); overflow-y: auto; }
+    .shift-manage-columns { display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start; }
+    .shift-manage-col-list { flex: 1; min-width: 240px; max-width: 340px; }
+    .shift-manage-col-form { flex: 1.25; min-width: 280px; }
+    .shift-manage-col-title { font-size: 13px; font-weight: 600; margin-bottom: 10px; color: var(--text-secondary); }
+    .shift-manage-list-scroll {
+      border: 1px solid var(--border-color); border-radius: 8px; max-height: 300px; overflow-y: auto;
+      background: rgba(0,0,0,0.02);
+    }
+    .shift-manage-row {
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;
+      padding: 10px 12px; border-bottom: 1px solid var(--border-light); font-size: 13px;
+    }
+    .shift-manage-row:last-child { border-bottom: none; }
+    .shift-manage-row-text {
+      flex: 1; min-width: 0; line-height: 1.5; color: var(--text-primary);
+      word-break: break-word;
+    }
+    .shift-manage-row-text .shift-manage-name { font-weight: 600; display: block; }
+    .shift-manage-row-text .shift-manage-meta { margin-top: 6px; }
+    .shift-manage-meta-line { display: block; font-size: 12px; color: var(--text-tertiary); line-height: 1.45; }
+    .shift-manage-meta-line + .shift-manage-meta-line { margin-top: 4px; }
+    .shift-manage-row-actions { flex-shrink: 0; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+    .shift-manage-empty { padding: 20px 12px; text-align: center; color: var(--text-tertiary); font-size: 13px; }
+
+    /* Weight Modal Table */
+    .weight-table { width: 100%; border-collapse: collapse; }
+    .weight-table th {
+      text-align: left; padding: 10px 12px; font-size: 13px; font-weight: 500;
+      border-bottom: 1px solid var(--border-light);
+    }
+    .weight-table td {
+      padding: 10px 12px; border-bottom: 1px solid var(--border-light); font-size: 13px;
+    }
+    .weight-table input[type="number"] {
+      width: 80px; height: 28px; padding: 2px 8px; border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm); font-size: 13px;
+    }
+
+    /* Drawer Form */
+    .drawer-form-group { margin-bottom: 16px; }
+    .drawer-form-label {
+      font-size: 13px; color: var(--text-secondary); margin-bottom: 6px; display: block;
+      white-space: nowrap;
+    }
+    .drawer-form-row {
+      display: flex; align-items: center; gap: 8px;
+    }
+    .drawer-form-row label { font-size: 13px; color: var(--text-secondary); white-space: nowrap; min-width: 80px; }
+</style>
+<section class="team-tips-page tipout-fidelity tipout-page-rule-editor" data-team-tips-view="rule-editor">
 <div class="content-area tipout-rule-editor-layout">
         <div class="tipout-page-heading tipout-page-heading--with-back">
           <a class="btn" href="rules.html">返回规则列表</a>

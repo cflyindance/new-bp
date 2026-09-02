@@ -31,6 +31,11 @@ fs.mkdirSync("src/team/tips/programs", { recursive: true });
 
 for (const [view, name] of Object.entries(views)) {
   const source = fs.readFileSync(`dist/TipOut/${name}`, "utf8");
+  const bodyClasses = source.match(/<body\b[^>]*\bclass=["']([^"']*)["']/i)?.[1]?.trim() ?? "";
+  const inlineStyles = [...source.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi)]
+    .map((item) => item[1].trim())
+    .filter(Boolean)
+    .join("\n\n");
   const contentStart = source.search(/<div class="content-area(?:\s|\")/);
   if (contentStart < 0) throw new Error(`${name}: content area not found`);
   const content = extractBalancedDiv(source, contentStart);
@@ -45,7 +50,9 @@ for (const [view, name] of Object.entries(views)) {
     extras.push(fragment);
     extraPattern.lastIndex = match.index + fragment.length;
   }
-  const template = neutralizeHandlers(`<section class="team-tips-page" data-team-tips-view="${view}">\n${content}\n${extras.join("\n")}\n</section>\n`);
+  const classNames = ["team-tips-page", bodyClasses].filter(Boolean).join(" ");
+  const viewStyle = inlineStyles ? `<style data-team-tips-view-style>\n${inlineStyles}\n</style>\n` : "";
+  const template = neutralizeHandlers(`${viewStyle}<section class="${classNames}" data-team-tips-view="${view}">\n${content}\n${extras.join("\n")}\n</section>\n`);
   if (/\s(on[a-z]+)=/i.test(template) || /href=["']javascript:/i.test(template)) throw new Error(`${name}: executable inline markup remains`);
   fs.writeFileSync(`src/team/tips/templates/${view}.html`, template);
 

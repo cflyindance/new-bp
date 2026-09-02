@@ -1,4 +1,46 @@
-<section class="team-tips-page" data-team-tips-view="rules">
+<style data-team-tips-view-style>
+.pool-type-options {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .pool-type-option {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 14px 16px;
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-lg);
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+    }
+    .pool-type-option:hover {
+      border-color: var(--primary);
+      background: rgba(22, 119, 255, 0.04);
+    }
+    .pool-type-option.selected {
+      border-color: var(--primary);
+      background: rgba(22, 119, 255, 0.08);
+      box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1);
+    }
+    .pool-type-option input {
+      margin-top: 3px;
+      accent-color: var(--primary);
+      flex-shrink: 0;
+    }
+    .pool-type-option-text strong {
+      display: block;
+      font-size: 14px;
+      margin-bottom: 4px;
+      color: var(--text-primary);
+    }
+    .pool-type-option-text span {
+      font-size: 12px;
+      color: var(--text-tertiary);
+      line-height: 1.5;
+    }
+</style>
+<section class="team-tips-page tipout-fidelity tipout-page-rules" data-team-tips-view="rules">
 <div class="content-area">
         <section class="tipout-page-section" aria-labelledby="rulesTitle">
           <div class="tipout-page-heading tipout-page-heading--with-back">

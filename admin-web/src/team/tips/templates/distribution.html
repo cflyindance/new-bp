@@ -1,4 +1,124 @@
-<section class="team-tips-page" data-team-tips-view="distribution">
+<style data-team-tips-view-style>
+.date-range-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; width: 100%; }
+    @media (min-width: 769px) {
+      /* 日期起止 + ~ 同一行，不换行 */
+      .filter-bar--index .date-range-group {
+        flex-wrap: nowrap;
+      }
+      .filter-bar--index .date-range-sep {
+        flex-shrink: 0;
+      }
+      .filter-bar--index .filter-field--daterange {
+        flex: 0 0 auto;
+        min-width: 340px;
+        max-width: 460px;
+      }
+      .filter-bar--index .date-range-group .form-control {
+        flex: 0 0 auto;
+        width: 158px;
+        min-width: 140px;
+        max-width: 200px;
+      }
+      .filter-bar--index .multi-select {
+        min-width: 150px;
+      }
+    }
+    .employee-section { margin-bottom: 24px; overflow-x: hidden; width: 100%; max-width: 100%; }
+    .employee-section .employee-detail { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .employee-section .data-table { width: 100%; min-width: 520px; table-layout: fixed; }
+    .employee-section .data-table td,
+    .employee-section .data-table th { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tip-amount--deduct { color: var(--error, #cf1322); }
+    .tip-amount--receive { color: var(--success, #389e0d); }
+    .tip-balance-formula {
+      font-size: 12px; color: var(--text-tertiary); margin: 0 0 12px; line-height: 1.5; text-align: center;
+    }
+    .employee-header {
+      display: flex; align-items: center; gap: 12px; margin-bottom: 8px;
+      padding-bottom: 8px; border-bottom: 1px solid var(--border-light);
+    }
+    .employee-name { font-size: 14px; font-weight: 600; }
+    .fold-btn {
+      border: none; background: none; cursor: pointer; color: var(--text-tertiary);
+      font-size: 12px; display: flex; align-items: center; gap: 4px;
+    }
+    .fold-btn:hover { color: var(--primary); }
+    .employee-detail { overflow: hidden; transition: max-height 0.3s; }
+    .export-bar {
+      position: fixed; bottom: 0; right: 0; left: 264px; z-index: 40;
+      display: flex; justify-content: flex-end; padding: 12px 24px;
+      background: #fff; border-top: 1px solid var(--border-light);
+      box-shadow: 0 -2px 8px rgba(0,0,0,0.06);
+    }
+    @media (max-width: 768px) { .export-bar { left: 0; } }
+
+    .export-dropdown { position: relative; }
+    .export-menu {
+      display: none; position: absolute; bottom: calc(100% + 8px); right: 0;
+      background: #fff; border-radius: 8px; padding: 4px;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.08), 0 3px 6px -4px rgba(0,0,0,0.12), 0 9px 28px 8px rgba(0,0,0,0.05);
+      min-width: 180px; z-index: 50;
+    }
+    .export-menu.show { display: block; }
+    .export-menu-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 14px; cursor: pointer; border-radius: 6px;
+      font-size: 14px; transition: background 0.2s; white-space: nowrap;
+    }
+    .export-menu-item:hover { background: rgba(0,0,0,0.04); }
+
+    /* Multi-Select (index filter bar) */
+    .filter-bar .multi-select { position: relative; }
+    .filter-bar .multi-select-input {
+      display: flex; align-items: center; min-height: 40px;
+      padding: 4px 32px 4px 12px; border: 1px solid var(--border-color);
+      border-radius: var(--radius-md); background: #fff; cursor: pointer;
+      transition: border-color 0.2s; font-size: 14px;
+    }
+    .filter-bar .multi-select-input:hover { border-color: var(--primary); }
+    .filter-bar .multi-select.open .multi-select-input {
+      border-color: var(--primary); box-shadow: 0 0 0 2px rgba(22,119,255,0.1);
+    }
+    .filter-bar .multi-select-arrow {
+      position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+      transition: transform 0.2s; pointer-events: none; flex-shrink: 0;
+    }
+    .filter-bar .multi-select.open .multi-select-arrow { transform: translateY(-50%) rotate(180deg); }
+    .filter-bar .multi-select-tags {
+      display: flex; flex-wrap: wrap; gap: 4px; flex: 1; min-height: 24px;
+      align-items: center;
+    }
+    .filter-bar .multi-select-tag {
+      display: inline-flex; align-items: center; gap: 2px;
+      padding: 1px 6px; background: #f5f5f5; border: 1px solid var(--border-light);
+      border-radius: var(--radius-sm); font-size: 12px; line-height: 20px;
+      white-space: nowrap; max-width: 120px; overflow: hidden; text-overflow: ellipsis;
+    }
+    .filter-bar .multi-select-tag i {
+      font-style: normal; cursor: pointer; color: var(--text-tertiary);
+      margin-left: 2px; font-size: 13px; line-height: 1;
+    }
+    .filter-bar .multi-select-tag i:hover { color: var(--text-primary); }
+    .filter-bar .multi-select-dropdown {
+      display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+      background: #fff; border-radius: var(--radius-lg); padding: 4px;
+      box-shadow: var(--shadow-md); z-index: 100; max-height: 220px; overflow-y: auto;
+    }
+    .filter-bar .multi-select.open .multi-select-dropdown { display: block; }
+    .filter-bar .multi-select-option {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 12px; border-radius: var(--radius-sm); cursor: pointer;
+      font-size: 13px; transition: background 0.15s;
+    }
+    .filter-bar .multi-select-option:hover { background: rgba(0,0,0,0.04); }
+    .filter-bar .multi-select-option input[type="checkbox"] {
+      width: 14px; height: 14px; accent-color: var(--primary); cursor: pointer;
+    }
+    .filter-bar .multi-select-placeholder {
+      color: var(--text-tertiary); font-size: 13px; padding: 0 4px;
+    }
+</style>
+<section class="team-tips-page tipout-fidelity tipout-page-summary" data-team-tips-view="distribution">
 <div class="content-area">
         <section class="tipout-page-section" aria-labelledby="summaryTitle">
           <div class="tipout-page-heading">
