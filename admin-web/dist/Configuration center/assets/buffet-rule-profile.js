@@ -638,6 +638,102 @@
     return result;
   }
 
+  function emptyComboPeriodValues() {
+    return { tableTotalBounds: {}, tableTargetCaps: {}, targetLimits: {}, defaultDishLimits: {}, totalBounds: {}, exceptionDishLimits: {} };
+  }
+
+  function comboTemplateForDraft(draft) {
+    var key = String(draft && draft.defaultScenarioKey || "");
+    var template = defaultTemplate(key);
+    return template && template.group === "per_round_combo" ? template : null;
+  }
+
+  function ensureComboPeriodValues(draft, storeId) {
+    var config = draft.storeConfigs && draft.storeConfigs[storeId];
+    if (!config) throw new Error("BUFFET_COMBO_STORE_MISSING");
+    config.periodValues = config.periodValues || {};
+    config.periodValues.per_round = config.periodValues.per_round || emptyComboPeriodValues();
+    var values = config.periodValues.per_round;
+    COMBO_VALUE_MAPS.forEach(function (mapName) { if (!values[mapName] || typeof values[mapName] !== "object") values[mapName] = {}; });
+    return values;
+  }
+
+  function comboUsesPartyMultiplier(template) {
+    return !!(template && /\|party_size$/.test(template.key));
+  }
+
+  function comboQuantityTargetKey(template, rangeId, target) {
+    return template.targetType === "dish"
+      ? comboTargetKey(rangeId, target && target.productLineId, target && target.dishId)
+      : comboScenarioKey(rangeId);
+  }
+
+  function writeComboQuantity(draft, storeId, rangeId, field, target, cell) {
+    var template = comboTemplateForDraft(draft);
+    if (!template) throw new Error("BUFFET_COMBO_TEMPLATE_REQUIRED");
+    var values = ensureComboPeriodValues(draft, storeId);
+    var scenario = comboScenarioKey(rangeId);
+    if (field === "total") values.tableTotalBounds[scenario] = clone(cell);
+    else if (field === "same_dish") values.defaultDishLimits[scenario] = clone(cell);
+    else if (field === "target") {
+      var key = comboQuantityTargetKey(template, rangeId, target);
+      var destination = comboUsesPartyMultiplier(template) ? "targetLimits" : "tableTargetCaps";
+      var opposite = destination === "targetLimits" ? "tableTargetCaps" : "targetLimits";
+      values[destination][key] = clone(cell);
+      delete values[opposite][key];
+    } else throw new Error("BUFFET_COMBO_FIELD_INVALID");
+    return clone(values);
+  }
+
+  function projectComboQuantity(draft, storeId, rangeId) {
+    var template = comboTemplateForDraft(draft);
+    if (!template) throw new Error("BUFFET_COMBO_TEMPLATE_REQUIRED");
+    var values = ensureComboPeriodValues(draft, storeId);
+    var scenario = comboScenarioKey(rangeId);
+    var source = comboUsesPartyMultiplier(template) ? values.targetLimits : values.tableTargetCaps;
+    var targets = {};
+    if (template.targetType === "dish") Object.keys(source).forEach(function (key) {
+      if (key.indexOf(scenario + "|") === 0) targets[key] = clone(source[key]);
+    });
+    else targets = clone(source[scenario] || { configured: false, value: null });
+    return {
+      rangeId: rangeId,
+      totalBounds: clone(values.tableTotalBounds[scenario] || { minConfigured: false, min: null, maxConfigured: false, max: null }),
+      targetLimits: targets,
+      sameDishLimit: clone(values.defaultDishLimits[scenario] || { configured: false, value: null })
+    };
+  }
+
+  function validRequiredBound(cell) {
+    return configuredBound(cell, "min") && configuredBound(cell, "max") && Number(cell.min) <= Number(cell.max);
+  }
+
+  function validateComboPublication(draft, storeIds) {
+    var template = comboTemplateForDraft(draft);
+    if (!template) return { valid: true, code: "" };
+    var ranges = draft.partyRanges || [];
+    var rangeCheck = validateComboRanges(ranges);
+    if (!rangeCheck.valid) return { valid: false, code: rangeCheck.code, block: "party_range" };
+    for (var storeIndex = 0; storeIndex < (storeIds || []).length; storeIndex += 1) {
+      var storeId = storeIds[storeIndex], config = draft.storeConfigs && draft.storeConfigs[storeId];
+      if (!config) return { valid: false, code: "STORE_CONFIG_MISSING", storeId: storeId, block: "store" };
+      var values = ensureComboPeriodValues(draft, storeId);
+      var storedMode = storedComboKeyMode(values);
+      if (storedMode === "mixed" || storedMode === "legacy_index") return { valid: false, code: "MIXED_SCENARIO_KEY_MODE", storeId: storeId, block: "key_mode" };
+      var targets = template.targetType === "dish" ? (config.dishTargets || []) : (config.dishSetMembers || []);
+      if (!targets.length || (template.targetType === "dish_set" && targets.length < 2)) return { valid: false, code: "TARGET_SCOPE_MISSING", storeId: storeId, block: "target" };
+      for (var rangeIndex = 0; rangeIndex < ranges.length; rangeIndex += 1) {
+        var rangeId = ranges[rangeIndex].rangeId, scenario = comboScenarioKey(rangeId);
+        if (!validRequiredBound(values.tableTotalBounds[scenario])) return { valid: false, code: "TOTAL_REQUIRED", storeId: storeId, rangeId: rangeId, block: "total" };
+        var source = comboUsesPartyMultiplier(template) ? values.targetLimits : values.tableTargetCaps;
+        var targetKeys = template.targetType === "dish" ? targets.map(function (target) { return comboQuantityTargetKey(template, rangeId, target); }) : [scenario];
+        if (targetKeys.some(function (key) { return !configuredLimit(source[key]); })) return { valid: false, code: "TARGET_REQUIRED", storeId: storeId, rangeId: rangeId, block: "target" };
+        if (template.blocks.sameDishEnabled && !configuredLimit(values.defaultDishLimits[scenario])) return { valid: false, code: "SAME_DISH_REQUIRED", storeId: storeId, rangeId: rangeId, block: "same_dish" };
+      }
+    }
+    return { valid: true, code: "" };
+  }
+
   function hasConfiguredCellMap(value) {
     if (!value || typeof value !== "object") return false;
     return Object.keys(value).some(function (key) {
@@ -713,6 +809,24 @@
   // 此校验同时服务于发布与列表重新启用：不能只因存在一个 map 就允许生效。
   function validateV4Publication(draft) {
     if (!usesV4Capability(draft)) return { valid: true, message: "" };
+    if (comboTemplateForDraft(draft)) {
+      var comboCheck = validateComboPublication(draft, Array.isArray(draft.deployStoreIds) ? draft.deployStoreIds : []);
+      if (!comboCheck.valid) {
+        var comboMessages = {
+          INVALID_RANGE_COVERAGE: "人数区间必须连续、互斥并完整覆盖",
+          MISSING_RANGE_ID: "人数区间缺少稳定身份",
+          DUPLICATE_RANGE_ID: "人数区间身份重复",
+          MIXED_SCENARIO_KEY_MODE: "组合规则数量数据不能混用历史索引键",
+          STORE_CONFIG_MISSING: "生效门店缺少商品与数量配置",
+          TARGET_SCOPE_MISSING: "生效门店缺少有效商品范围",
+          TOTAL_REQUIRED: "每个人数区间都必须配置整桌每轮最少和最多份数",
+          TARGET_REQUIRED: "每个人数区间都必须配置指定对象额度",
+          SAME_DISH_REQUIRED: "每个人数区间都必须配置菜品集内部保护额度"
+        };
+        return { valid: false, message: comboMessages[comboCheck.code] || "组合规则配置不完整", detail: comboCheck };
+      }
+      return { valid: true, message: "" };
+    }
     var periods = Array.isArray(draft.enabledPeriods) ? draft.enabledPeriods : [];
     if (!periods.length) return { valid: false, message: "请至少启用一个限制周期" };
     if (draft.subject === "party_size" && !validRanges(draft.partyRanges)) return { valid: false, message: "人数区间必须连续且有效" };
@@ -1053,6 +1167,12 @@
       validateRanges: validateComboRanges,
       detectStoredKeyMode: storedComboKeyMode,
       removeOrphanKeys: removeOrphanComboKeys
+    },
+    comboQuantities: {
+      emptyPeriodValues: emptyComboPeriodValues,
+      project: projectComboQuantity,
+      write: writeComboQuantity,
+      validatePublication: validateComboPublication
     },
     createDefaultScenarioRule: createDefaultScenarioRule,
     reconcileDefaultRules: reconcileDefaultRules,
