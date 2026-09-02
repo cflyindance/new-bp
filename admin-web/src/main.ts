@@ -1,4 +1,6 @@
 import "./styles/app.css";
+import { mountPayrollPage, type PayrollPageHandle } from "./team/payroll-page";
+import { createPayrollPageContext } from "./team/payroll/payroll-context";
 import { BUILD_STAMP } from "./generated/build-stamp";
 import {
   bindLoginPage,
@@ -1827,9 +1829,6 @@ const TEAM_ROLES_EMPLOYEES_IFRAME_SRC = embeddedPageSrc("./TipOut/employees.html
 const TEAM_TIPS_DISTRIBUTION_IFRAME_SRC = embeddedPageSrc("./TipOut/index.html");
 const TEAM_TIPS_DETAILS_IFRAME_SRC = embeddedPageSrc("./TipOut/detail.html");
 const TEAM_TIPS_RULES_IFRAME_SRC = embeddedPageSrc("./TipOut/rules.html");
-/** 团队管理 → 薪资管理：嵌入 TipOut Payroll */
-const TEAM_PAYROLL_REPORT_IFRAME_SRC = embeddedPageSrc("./TipOut/payroll.html");
-
 function isInventoryExpiryIframePath(path: string): boolean {
   return path === "/operations/inventory-ordering/expiry" || path.startsWith("/operations/inventory-ordering/expiry/");
 }
@@ -1912,7 +1911,7 @@ function isTeamTipsManagementIframePath(path: string): boolean {
   return path === "/team/tips" || path.startsWith("/team/tips/");
 }
 
-function isTeamPayrollReportIframePath(path: string): boolean {
+function isTeamPayrollReportPath(path: string): boolean {
   return path === "/team/payroll-report" || path.startsWith("/team/payroll-report/");
 }
 
@@ -2069,17 +2068,11 @@ function renderTeamTipsManagementIframePanel(path: string): string {
     </div>`;
 }
 
-/** 主区全宽嵌入团队管理薪资管理（TipOut Payroll） */
-function renderTeamPayrollReportIframePanel(): string {
+/** 团队管理原生薪资管理页：保留主项目导航和账号栏，不加载 TipOut iframe。 */
+function renderTeamPayrollReportPanel(): string {
   return `
-    <div class="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-      <iframe
-        title="薪资管理"
-        class="block h-full w-full flex-1 border-0"
-        src="${TEAM_PAYROLL_REPORT_IFRAME_SRC}"
-        referrerpolicy="no-referrer-when-downgrade"
-        allow="clipboard-read; clipboard-write; fullscreen"
-      ></iframe>
+    <div class="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-auto bg-[#f3f4f6]">
+      <div class="min-h-full min-w-0" data-team-payroll-root></div>
     </div>`;
 }
 
@@ -11448,7 +11441,7 @@ function renderMain(): string {
   const isReportsTipsAllocationIframe = isReportsTipsAllocationIframePath(path);
   const isTeamRolesEmployeesIframe = isTeamRolesEmployeesIframePath(path);
   const isTeamTipsManagementIframe = isTeamTipsManagementIframePath(path);
-  const isTeamPayrollReportIframe = isTeamPayrollReportIframePath(path);
+  const isTeamPayrollReport = isTeamPayrollReportPath(path);
   const isFohMenuOrderLimitsIframe = isFohMenuOrderLimitsIframePath(path);
   const isFohBuffetRulesIframe = isFohBuffetRulesIframePath(path);
   const isFohEmenuProIframe = isFohEmenuProIframePath(path);
@@ -11463,7 +11456,7 @@ function renderMain(): string {
     isReportsTipsAllocationIframe ||
     isTeamRolesEmployeesIframe ||
     isTeamTipsManagementIframe ||
-    isTeamPayrollReportIframe;
+    isTeamPayrollReport;
   const isModuleSettingsCatalog = isModuleHubSettingsCatalogPath(path);
   const isDeploymentLog = isDeploymentLogPath(path);
   const isStaffAccounts = isStaffAccountsPath(path);
@@ -11497,7 +11490,7 @@ function renderMain(): string {
     isReportsTipsAllocationIframe ||
     isTeamRolesEmployeesIframe ||
     isTeamTipsManagementIframe ||
-    isTeamPayrollReportIframe ||
+    isTeamPayrollReport ||
     isGiftCardsFactory ||
     isFinanceRegisterAudit ||
     isTeamShiftScheduling ||
@@ -11625,8 +11618,8 @@ function renderMain(): string {
                         ? renderTeamRolesEmployeesIframePanel()
                         : isTeamTipsManagementIframe
                           ? renderTeamTipsManagementIframePanel(path)
-                          : isTeamPayrollReportIframe
-                            ? renderTeamPayrollReportIframePanel()
+                          : isTeamPayrollReport
+                            ? renderTeamPayrollReportPanel()
                             : isDeploymentLog
                               ? renderDeploymentLogPage(path)
                               : isBrandProductsTertiary
@@ -11954,7 +11947,11 @@ function mountLoginShell(): void {
   });
 }
 
+let activePayrollPage: PayrollPageHandle | null = null;
+
 function mount(): void {
+  activePayrollPage?.destroy();
+  activePayrollPage = null;
   releaseFohMenuOrderLimitsFullscreen();
   releaseFohBuffetRulesFullscreen();
   bindChainBrandOrgSyncListener();
@@ -12225,6 +12222,11 @@ function mount(): void {
       ${renderCloudProductRouteNoticeDialog()}
     </div>
   `;
+
+  const payrollRoot = app.querySelector<HTMLElement>("[data-team-payroll-root]");
+  if (payrollRoot) {
+    activePayrollPage = mountPayrollPage(payrollRoot, createPayrollPageContext());
+  }
 
   bindMarketingScreensaverFullscreenFlow(app);
   bindTipOutRulesFullscreenFlow(app);
