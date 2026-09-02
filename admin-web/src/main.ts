@@ -1830,7 +1830,9 @@ const TEAM_TIPS_DISTRIBUTION_IFRAME_SRC = embeddedPageSrc("./TipOut/index.html")
 const TEAM_TIPS_DETAILS_IFRAME_SRC = embeddedPageSrc("./TipOut/detail.html");
 const TEAM_TIPS_RULES_IFRAME_SRC = embeddedPageSrc("./TipOut/rules.html");
 /** 团队管理 → 薪资管理：嵌入 TipOut Payroll */
-const TEAM_PAYROLL_REPORT_IFRAME_SRC = embeddedPageSrc("./TipOut/payroll.html");
+const TEAM_PAYROLL_REPORT_IFRAME_SRC = embeddedPageSrc(
+  import.meta.env.DEV ? "./dist/TipOut/payroll.html" : "./TipOut/payroll.html",
+);
 
 function isInventoryExpiryIframePath(path: string): boolean {
   return path === "/operations/inventory-ordering/expiry" || path.startsWith("/operations/inventory-ordering/expiry/");
