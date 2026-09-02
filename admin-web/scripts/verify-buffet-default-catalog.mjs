@@ -32,6 +32,12 @@ const expectedKeys = [
   "order|order_lifetime|dish_set",
   "party_size|order_lifetime|dish",
   "party_size|order_lifetime|dish_set",
+  "combo|per_round|dish|table",
+  "combo|per_round|dish_set|piece|table",
+  "combo|per_round|dish_set|kind|table",
+  "combo|per_round|dish|party_size",
+  "combo|per_round|dish_set|piece|party_size",
+  "combo|per_round|dish_set|kind|party_size",
   "order|per_round|total",
   "party_size|per_round|total",
   "order|per_round|dish",
@@ -43,11 +49,20 @@ const expectedKeys = [
 ];
 
 assert.deepEqual(Array.from(profile.defaultScenarios, (item) => item.key), expectedKeys);
-assert.equal(profile.defaultScenarios.length, 12);
+assert.equal(profile.defaultScenarios.length, 18);
 assert.deepEqual(Array.from(profile.defaultScenarios, (item) => item.group), [
   "order_lifetime", "order_lifetime", "order_lifetime", "order_lifetime",
+  "per_round_combo", "per_round_combo", "per_round_combo", "per_round_combo", "per_round_combo", "per_round_combo",
   "per_round", "per_round", "per_round", "per_round", "per_round", "per_round", "per_round", "per_round",
 ]);
+
+assert.deepEqual(
+  profile.defaultScenarios.reduce((out, item) => {
+    out[item.group] = (out[item.group] || 0) + 1;
+    return out;
+  }, {}),
+  { order_lifetime: 4, per_round_combo: 6, per_round: 8 },
+);
 
 for (const [index, template] of profile.defaultScenarios.entries()) {
   const rule = profile.createDefaultScenarioRule(template, index + 1);
@@ -64,6 +79,12 @@ for (const [index, template] of profile.defaultScenarios.entries()) {
   assert.deepEqual(Array.from(rule.authoringConfig.participatingStoreIds), []);
   assert.deepEqual(Array.from(rule.authoringConfig.deployStoreIds), []);
   assert.deepEqual(Object.keys(rule.authoringConfig.storeConfigs), []);
+  if (template.group === "per_round_combo") {
+    assert.equal(rule.authoringConfig.subject, "party_size");
+    assert.deepEqual(Array.from(rule.authoringConfig.partyRanges, (range) => [range.min, range.max]), [[1, 3], [4, null]]);
+    assert.equal(rule.authoringConfig.partyRanges.every((range) => /^pr_[a-z0-9]+$/.test(range.rangeId)), true);
+    assert.equal(new Set(Array.from(rule.authoringConfig.partyRanges, (range) => range.rangeId)).size, 2);
+  }
 }
 
 const byKey = Object.fromEntries(profile.defaultScenarios.map((item) => [item.key, item]));

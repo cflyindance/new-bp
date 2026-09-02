@@ -55,6 +55,12 @@
     { key: "order|order_lifetime|dish_set", version: 4, group: "order_lifetime", subject: "order", targetType: "dish_set", defaultVariant: "order_target", measureUnit: "piece", legacyCapabilityIds: ["KPOS-O02", "KPOS-O05", "KPOS-O07", "KPOS-O08"], coverageStatus: "defined_extension", name: "每个订单指定菜品集限制下单份数", enabledPeriods: ["order_lifetime"], blocks: { totalEnabled: false, targetEnabled: true, sameDishEnabled: false } },
     { key: "party_size|order_lifetime|dish", version: 4, group: "order_lifetime", subject: "party_size", targetType: "dish", defaultVariant: "order_target", measureUnit: "piece", legacyCapabilityIds: ["KPOS-O03", "KPOS-O05", "KPOS-O06"], coverageStatus: "complete", name: "每位食客每单指定菜品限制下单份数", enabledPeriods: ["order_lifetime"], blocks: { totalEnabled: false, targetEnabled: true, sameDishEnabled: false } },
     { key: "party_size|order_lifetime|dish_set", version: 4, group: "order_lifetime", subject: "party_size", targetType: "dish_set", defaultVariant: "order_target", measureUnit: "piece", legacyCapabilityIds: ["KPOS-O04", "KPOS-O05", "KPOS-O07", "KPOS-O08"], coverageStatus: "defined_extension", name: "每位食客每单菜品集限制下单份数", enabledPeriods: ["order_lifetime"], blocks: { totalEnabled: false, targetEnabled: true, sameDishEnabled: false } },
+    { key: "combo|per_round|dish|table", version: 1, group: "per_round_combo", subject: "party_size", targetType: "dish", defaultVariant: "combo_round_dish_table", measureUnit: "piece", legacyCapabilityIds: ["KPOS-R01", "KPOS-R04", "KPOS-R12", "KPOS-R13"], coverageStatus: "complete", name: "每轮总量＋每轮指定菜品", enabledPeriods: ["per_round"], blocks: { totalEnabled: true, targetEnabled: true, sameDishEnabled: false } },
+    { key: "combo|per_round|dish_set|piece|table", version: 1, group: "per_round_combo", subject: "party_size", targetType: "dish_set", defaultVariant: "combo_round_dish_set_piece_table", measureUnit: "piece", legacyCapabilityIds: ["KPOS-R01", "KPOS-R06", "KPOS-R10", "KPOS-R12", "KPOS-R13"], coverageStatus: "complete", name: "每轮总量＋每轮菜品集按份", enabledPeriods: ["per_round"], blocks: { totalEnabled: true, targetEnabled: true, sameDishEnabled: true } },
+    { key: "combo|per_round|dish_set|kind|table", version: 1, group: "per_round_combo", subject: "party_size", targetType: "dish_set", defaultVariant: "combo_round_dish_set_kind_table", measureUnit: "kind", legacyCapabilityIds: ["KPOS-R01", "KPOS-R08", "KPOS-R11", "KPOS-R12", "KPOS-R13"], coverageStatus: "complete", name: "每轮总量＋每轮菜品集按种", enabledPeriods: ["per_round"], blocks: { totalEnabled: true, targetEnabled: true, sameDishEnabled: true } },
+    { key: "combo|per_round|dish|party_size", version: 1, group: "per_round_combo", subject: "party_size", targetType: "dish", defaultVariant: "combo_round_dish_party_size", measureUnit: "piece", legacyCapabilityIds: ["KPOS-R01", "KPOS-R05", "KPOS-R12", "KPOS-R13"], coverageStatus: "complete", name: "每轮总量＋每人每轮指定菜品", enabledPeriods: ["per_round"], blocks: { totalEnabled: true, targetEnabled: true, sameDishEnabled: false } },
+    { key: "combo|per_round|dish_set|piece|party_size", version: 1, group: "per_round_combo", subject: "party_size", targetType: "dish_set", defaultVariant: "combo_round_dish_set_piece_party_size", measureUnit: "piece", legacyCapabilityIds: ["KPOS-R01", "KPOS-R07", "KPOS-R10", "KPOS-R12", "KPOS-R13"], coverageStatus: "complete", name: "每轮总量＋每人每轮菜品集按份", enabledPeriods: ["per_round"], blocks: { totalEnabled: true, targetEnabled: true, sameDishEnabled: true } },
+    { key: "combo|per_round|dish_set|kind|party_size", version: 1, group: "per_round_combo", subject: "party_size", targetType: "dish_set", defaultVariant: "combo_round_dish_set_kind_party_size", measureUnit: "kind", legacyCapabilityIds: ["KPOS-R01", "KPOS-R09", "KPOS-R11", "KPOS-R12", "KPOS-R13"], coverageStatus: "complete", name: "每轮总量＋每人每轮菜品集按种", enabledPeriods: ["per_round"], blocks: { totalEnabled: true, targetEnabled: true, sameDishEnabled: true } },
     { key: "order|per_round|total", version: 1, group: "per_round", subject: "order", targetType: "dish", defaultVariant: "round_total", measureUnit: "piece", legacyCapabilityIds: ["KPOS-R01"], coverageStatus: "complete", name: "每轮下单菜品总数限制", enabledPeriods: ["per_round"], blocks: { totalEnabled: true, targetEnabled: false, sameDishEnabled: false } },
     { key: "party_size|per_round|total", version: 1, group: "per_round", subject: "party_size", targetType: "dish", defaultVariant: "round_total", measureUnit: "piece", legacyCapabilityIds: ["KPOS-R02", "KPOS-R03"], coverageStatus: "complete", name: "每人每轮下单菜品总数限制", enabledPeriods: ["per_round"], blocks: { totalEnabled: true, targetEnabled: false, sameDishEnabled: false } },
     { key: "order|per_round|dish", version: 3, group: "per_round", subject: "order", targetType: "dish", defaultVariant: "round_dish", measureUnit: "piece", legacyCapabilityIds: ["KPOS-R04"], coverageStatus: "complete", name: "每轮指定菜品数量限制", enabledPeriods: ["per_round"], blocks: { totalEnabled: false, targetEnabled: true, sameDishEnabled: false } },
@@ -568,6 +574,17 @@
     return now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0") + "-" + String(now.getDate()).padStart(2, "0");
   }
 
+  function createRangeId() {
+    return "pr_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+  }
+
+  function createDefaultPartyRanges() {
+    return [
+      { rangeId: createRangeId(), min: 1, max: 3 },
+      { rangeId: createRangeId(), min: 4, max: null }
+    ];
+  }
+
   function hasConfiguredCellMap(value) {
     if (!value || typeof value !== "object") return false;
     return Object.keys(value).some(function (key) {
@@ -817,7 +834,7 @@
       subject: defaultScenario.subject, period: period, enabledPeriods: enabledPeriods, periodPolicies: periodPolicies, targetType: defaultScenario.targetType, measureUnit: defaultScenario.measureUnit,
       name: scenarioName, description: "",
       structureByLine: { kiosk: [], emenu: [], sdi: [] }, productLines: [], targetIds: [],
-      partyRanges: [{ min: 1, max: null }], roundRanges: [{ min: 1, max: null }],
+      partyRanges: defaultScenario.group === "per_round_combo" ? createDefaultPartyRanges() : [{ min: 1, max: null }], roundRanges: [{ min: 1, max: null }],
       limits: {}, activePartyIndex: 0, activeRoundIndex: 0, activeLineId: "kiosk",
       conditions: {
         effectiveFrom: created, effectiveTo: "", activityCycle: "weekly",
