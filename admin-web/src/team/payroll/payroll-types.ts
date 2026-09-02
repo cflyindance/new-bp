@@ -48,6 +48,9 @@ export interface PayrollEmployee {
   ssn?: string;
   hireDate?: string;
   hourlyRate?: number;
+  rate?: number;
+  otRate?: number;
+  ot2Rate?: number;
   segments: PayrollSegment[];
   adjustments: PayrollAdjustments;
   [key: string]: unknown;
@@ -99,4 +102,3 @@ export interface PayrollResolvedSelection {
   storeFilter: string;
   repaired: boolean;
 }
-
