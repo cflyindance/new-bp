@@ -1,0 +1,19 @@
+/* Payroll visual correction layer. Intentionally loaded after the generated legacy CSS. */
+:host {
+  display: block;
+  min-height: 100%;
+}
+
+.team-payroll-page,
+.team-payroll-page #view-workspace,
+.team-payroll-page .payroll-workspace-layout,
+.team-payroll-page .payroll-workspace-main,
+.team-payroll-page.payroll-workspace-active,
+.team-payroll-page.payroll-workspace-active #view-workspace,
+.team-payroll-page.payroll-workspace-active .payroll-workspace-layout,
+.team-payroll-page.payroll-workspace-active .payroll-workspace-main {
+  height: auto;
+  min-height: 0;
+  max-height: none;
+  overflow-y: visible;
+}

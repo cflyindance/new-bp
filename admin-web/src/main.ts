@@ -2071,8 +2071,8 @@ function renderTeamTipsManagementIframePanel(path: string): string {
 /** 团队管理原生薪资管理页：保留主项目导航和账号栏，不加载 TipOut iframe。 */
 function renderTeamPayrollReportPanel(): string {
   return `
-    <div class="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-auto bg-[#f3f4f6]">
-      <div class="min-h-full min-w-0" data-team-payroll-root></div>
+    <div data-team-payroll-scroll class="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto bg-[#f3f4f6]">
+      <div class="block min-h-full min-w-0" data-team-payroll-root></div>
     </div>`;
 }
 
