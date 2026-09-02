@@ -585,6 +585,59 @@
     ];
   }
 
+  var COMBO_VALUE_MAPS = ["tableTotalBounds", "tableTargetCaps", "targetLimits", "defaultDishLimits", "totalBounds", "exceptionDishLimits"];
+
+  function comboScenarioKey(rangeId) {
+    return "party:" + String(rangeId) + "|round:0";
+  }
+
+  function comboTargetKey(rangeId, productLineId, dishId) {
+    return comboScenarioKey(rangeId) + "|line:" + String(productLineId) + "|target:" + String(dishId);
+  }
+
+  function comboKeyMode(draft) {
+    var ranges = draft && draft.partyRanges;
+    return Array.isArray(ranges) && ranges.length && ranges.every(function (range) { return !!(range && range.rangeId); }) ? "range_id" : "legacy_index";
+  }
+
+  function validateComboRanges(ranges) {
+    if (!validRanges(ranges)) return { valid: false, code: "INVALID_RANGE_COVERAGE" };
+    var seen = {};
+    for (var index = 0; index < ranges.length; index += 1) {
+      var rangeId = String(ranges[index] && ranges[index].rangeId || "");
+      if (!rangeId) return { valid: false, code: "MISSING_RANGE_ID" };
+      if (seen[rangeId]) return { valid: false, code: "DUPLICATE_RANGE_ID" };
+      seen[rangeId] = true;
+    }
+    return { valid: true, code: "" };
+  }
+
+  function storedComboKeyMode(values) {
+    var rangeId = false, legacyIndex = false;
+    COMBO_VALUE_MAPS.forEach(function (mapName) {
+      Object.keys(values && values[mapName] || {}).forEach(function (key) {
+        if (/^party:[^|]+\|round:0(?:\||$)/.test(key)) rangeId = true;
+        else legacyIndex = true;
+      });
+    });
+    return rangeId && legacyIndex ? "mixed" : rangeId ? "range_id" : legacyIndex ? "legacy_index" : "empty";
+  }
+
+  function removeOrphanComboKeys(values, ranges) {
+    var allowed = {};
+    (ranges || []).forEach(function (range) { if (range && range.rangeId) allowed[comboScenarioKey(range.rangeId)] = true; });
+    var result = clone(values || {});
+    COMBO_VALUE_MAPS.forEach(function (mapName) {
+      var source = values && values[mapName] || {};
+      result[mapName] = {};
+      Object.keys(source).forEach(function (key) {
+        var match = key.match(/^(party:[^|]+\|round:0)(?:\||$)/);
+        if (match && allowed[match[1]]) result[mapName][key] = clone(source[key]);
+      });
+    });
+    return result;
+  }
+
   function hasConfiguredCellMap(value) {
     if (!value || typeof value !== "object") return false;
     return Object.keys(value).some(function (key) {
@@ -993,6 +1046,14 @@
     defaultScenarios: clone(DEFAULT_SCENARIOS),
     legacyCapabilities: clone(LEGACY_CAPABILITIES),
     legacyCapabilityGroups: clone(LEGACY_CAPABILITY_GROUPS),
+    comboRanges: {
+      scenarioKey: comboScenarioKey,
+      targetKey: comboTargetKey,
+      keyMode: comboKeyMode,
+      validateRanges: validateComboRanges,
+      detectStoredKeyMode: storedComboKeyMode,
+      removeOrphanKeys: removeOrphanComboKeys
+    },
     createDefaultScenarioRule: createDefaultScenarioRule,
     reconcileDefaultRules: reconcileDefaultRules,
     verifiedLegacyDefaultKey: verifiedLegacyDefaultKey,

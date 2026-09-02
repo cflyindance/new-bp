@@ -71,7 +71,7 @@ for (const subject of ["order", "party_size"]) {
     }
   }
 }
-assert.equal(profile.defaultScenarios.length, 12, "默认规则应为固定的十二场景目录");
+assert.equal(profile.defaultScenarios.length, 18, "默认规则应为四条整单、六条组合和八条每轮原子目录");
 assert.equal(profile.defaultScenarios.some((item) => item.targetType === "category"), false);
 
 const legacyDraft = {
