@@ -60,9 +60,9 @@ const profile = loadProfile(storage);
 const repository = profile.repository;
 
 const first = repository.loadForAuthoringList(profile.createDefaultScenarioRule);
-assert.equal(first.length, 8);
+assert.equal(first.length, 12);
 assert.equal(first.every((rule) => rule.status === "disabled"), true);
-assert.equal(new Set(first.map((rule) => rule.defaultScenarioKey)).size, 8);
+assert.equal(new Set(first.map((rule) => rule.defaultScenarioKey)).size, 12);
 assert.equal(storage.getItem(menuKey), "menu-rules-must-not-change");
 const firstEnvelope = repository.readEnvelope();
 assert.equal(firstEnvelope.revision, 1);
@@ -72,7 +72,7 @@ assert.deepEqual(Object.keys(firstEnvelope.snapshots), []);
 const serialized = storage.getItem(repositoryKey);
 const writesBeforeSecondLoad = storage.writes;
 const second = repository.loadForAuthoringList(profile.createDefaultScenarioRule);
-assert.equal(second.length, 8);
+assert.equal(second.length, 12);
 assert.equal(storage.getItem(repositoryKey), serialized, "场景完整时不得改写仓库");
 assert.equal(storage.writes, writesBeforeSecondLoad, "幂等加载不得产生 storage 写入");
 
@@ -92,7 +92,7 @@ const partialStorage = storageMock({
 });
 const partialRepository = loadProfile(partialStorage).repository;
 const partial = partialRepository.loadForAuthoringList(factory);
-assert.equal(partial.length, 9, "1 条系统默认规则、1 条草稿和 7 条缺失默认规则");
+assert.equal(partial.length, 13, "1 条系统默认规则、1 条草稿和 11 条缺失默认规则");
 const partialEnvelope = partialRepository.readEnvelope();
 assert.equal(partialEnvelope.revision, 8);
 assert.equal(partialEnvelope.rules.find((rule) => rule.id === 41).name, "已有规则");
@@ -119,9 +119,9 @@ const legacyKeyStorage = storageMock({
 });
 const legacyKeyProfile = loadProfile(legacyKeyStorage);
 const legacyKeyRules = legacyKeyProfile.repository.loadForAuthoringList(legacyKeyProfile.createDefaultScenarioRule);
-assert.equal(legacyKeyRules.length, 8, "旧两段键应安全映射为整单 canonical key，并仅补齐其余 7 条");
+assert.equal(legacyKeyRules.length, 12, "旧两段键应安全映射为整单 canonical key，并仅补齐其余 11 条");
 assert.equal(legacyKeyRules.filter((rule) => rule.defaultScenarioKey === "party_size|order_lifetime|dish_set").length, 1);
-assert.equal(legacyKeyRules.find((rule) => rule.id === 81).defaultCatalogVersion, 2, "旧默认记录必须原位迁移至 v2 身份");
+assert.equal(legacyKeyRules.find((rule) => rule.id === 81).defaultCatalogVersion, 3, "旧默认记录必须原位迁移至当前模板身份");
 
 assert.match(listSource, /loadForAuthoringList/);
 console.log("verify-buffet-default-scenario-rules: OK");

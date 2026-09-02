@@ -85,9 +85,9 @@ const modern = {
   conditions: { childCountPolicy: "inherit" }
 };
 api.ensureBuffetScenarioModel(modern);
-assert.equal(modern.periodPolicies.per_round.blocks.targetEnabled, true, "last enabled block cannot be disabled");
-assert.equal(api.enabledPeriodsHaveQuantityBlocks(modern), true);
-assert.equal(api.validateStep(2, modern), null);
+assert.equal(modern.periodPolicies.per_round.blocks.targetEnabled, false, "scenario normalization must preserve an explicit disabled target block");
+assert.equal(api.enabledPeriodsHaveQuantityBlocks(modern), false);
+assert.equal(api.validateStep(2, modern), "每个启用周期至少保留一个限购维度");
 
 const malformedV4 = {
   schemaVersion: 4,
@@ -105,7 +105,7 @@ assert.equal(api.validateStep(2, malformedV4), "每个启用周期至少保留�
 assert.equal(malformedV4.periodPolicies.per_round.blocks.targetEnabled, false, "validation must not normalize a malformed v4 policy");
 
 const periodBlocks = flow.match(/function renderBuffetPeriodBlocks\(draft\)[\s\S]*?(?=\n  function renderBuffetScenarioConfiguration)/)?.[0] ?? "";
-assert.doesNotMatch(periodBlocks, /data-period-block="target"/, "target block is required instead of user-toggleable");
-assert.match(flow, /if \(blockName === "target"\) policy\.blocks\.targetEnabled = true/);
+assert.match(periodBlocks, /data-period-block="target"/, "target block must be independently toggleable for total-only defaults");
+assert.match(flow, /if \(blockName === "target"\) policy\.blocks\.targetEnabled = target\.checked/);
 
 console.log("verify-buffet-period-scenario-editor: PASS");

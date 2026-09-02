@@ -23,8 +23,8 @@ vm.runInNewContext(source, context);
 const profile = window.ORDER_LIMIT_MODULE_PROFILE;
 assert.ok(profile.allowedTargetTypes.includes("dish_set"), "自助餐 profile 应允许 dish_set");
 const dishSetScenarios = profile.defaultScenarios.filter((item) => item.targetType === "dish_set");
-assert.equal(profile.defaultScenarios.length, 8, "自助餐规则应包含 8 个权威默认场景");
-assert.equal(dishSetScenarios.length, 4, "菜品集默认规则应覆盖 2 种主体 × 2 种周期");
+assert.equal(profile.defaultScenarios.length, 12, "自助餐规则应包含 12 个权威默认场景");
+assert.equal(dishSetScenarios.length, 6, "菜品集默认规则应包含 2 条整单和 4 条按份/按种每轮规则");
 assert.equal(profile.defaultScenarios.some((item) => item.targetType === "category"), false, "分类不属于系统默认场景");
 assert.deepEqual(
   [...new Set(dishSetScenarios.map((item) => item.subject))].sort(),
@@ -37,7 +37,7 @@ for (const scenario of dishSetScenarios) {
   assert.equal(record.authoringConfig.schemaVersion, 4);
   assert.equal(record.authoringConfig.targetType, "dish_set");
   assert.equal(record.method, "按菜品集限购");
-  assert.equal(record.defaultScenarioKey.split("|").length, 3);
+  assert.equal(record.defaultScenarioKey.split("|").length, scenario.group === "per_round" ? 4 : 3);
 }
 
 console.log("verify-buffet-dish-set-profile: OK");

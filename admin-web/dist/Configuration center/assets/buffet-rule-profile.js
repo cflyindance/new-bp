@@ -12,16 +12,34 @@
     { id: "multi-round-desc", name: "分轮次递减", periods: ["multi_round"], blocks: { multi_round: ["target"] } },
     { id: "custom", name: "自定义配置", periods: [], blocks: {} }
   ];
-  var DEFAULT_CATALOG_VERSION = 2;
+  var LEGACY_CAPABILITIES = {
+    "KPOS-R01": { id: "KPOS-R01", label: "每轮菜品总数最少/最多", coverageStatus: "complete", level: "rule" },
+    "KPOS-R02": { id: "KPOS-R02", label: "每人每轮菜品总数最少/最多", coverageStatus: "complete", level: "rule" },
+    "KPOS-R03": { id: "KPOS-R03", label: "人均总量之外设置整桌每轮兜底", coverageStatus: "complete", level: "rule" },
+    "KPOS-R04": { id: "KPOS-R04", label: "每轮指定菜品最多份数", coverageStatus: "complete", level: "rule" },
+    "KPOS-R05": { id: "KPOS-R05", label: "每人每轮指定菜品最多份数", coverageStatus: "complete", level: "rule" },
+    "KPOS-R06": { id: "KPOS-R06", label: "每轮指定菜品集最多总份数", coverageStatus: "complete", level: "rule" },
+    "KPOS-R07": { id: "KPOS-R07", label: "每人每轮指定菜品集最多总份数", coverageStatus: "complete", level: "rule" },
+    "KPOS-R08": { id: "KPOS-R08", label: "每轮指定菜品集最多菜品种数", coverageStatus: "complete", level: "rule" },
+    "KPOS-R09": { id: "KPOS-R09", label: "每人每轮指定菜品集最多菜品种数", coverageStatus: "complete", level: "rule" },
+    "KPOS-R10": { id: "KPOS-R10", label: "菜品集按份时限制相同菜品每轮最大份数", coverageStatus: "complete", level: "rule" },
+    "KPOS-R11": { id: "KPOS-R11", label: "菜品集按种时限制每种菜品最大份数", coverageStatus: "complete", level: "rule" },
+    "KPOS-R12": { id: "KPOS-R12", label: "同一人数区间混合配置每轮、每人每轮规则", coverageStatus: "partial", level: "group", gap: "按桌每轮固定额度不能按人数区间变化" },
+    "KPOS-R13": { id: "KPOS-R13", label: "不同人数区间使用不同总量和指定对象额度", coverageStatus: "partial", level: "group", gap: "按人数规则按人均额度乘有效人数，不能表达区间内固定整桌额度" }
+  };
   var DEFAULT_SCENARIOS = [
-    { key: "order|order_lifetime|dish", version: 2, group: "order_lifetime", subject: "order", targetType: "dish", name: "每个订单指定菜品限制下单份数", enabledPeriods: ["order_lifetime"], blocks: { totalEnabled: false, targetEnabled: true, sameDishEnabled: false } },
-    { key: "order|order_lifetime|dish_set", version: 2, group: "order_lifetime", subject: "order", targetType: "dish_set", name: "每个订单指定菜品集限制下单份数", enabledPeriods: ["order_lifetime"], blocks: { totalEnabled: false, targetEnabled: true, sameDishEnabled: false } },
-    { key: "party_size|order_lifetime|dish", version: 2, group: "order_lifetime", subject: "party_size", targetType: "dish", name: "每位食客每单指定菜品限制下单份数", enabledPeriods: ["order_lifetime"], blocks: { totalEnabled: false, targetEnabled: true, sameDishEnabled: false } },
-    { key: "party_size|order_lifetime|dish_set", version: 2, group: "order_lifetime", subject: "party_size", targetType: "dish_set", name: "每位食客每单菜品集限制下单份数", enabledPeriods: ["order_lifetime"], blocks: { totalEnabled: false, targetEnabled: true, sameDishEnabled: false } },
-    { key: "order|per_round|dish", version: 2, group: "per_round", subject: "order", targetType: "dish", name: "每轮指定菜品最多下多少份", enabledPeriods: ["per_round"], blocks: { totalEnabled: true, targetEnabled: true, sameDishEnabled: false } },
-    { key: "order|per_round|dish_set", version: 2, group: "per_round", subject: "order", targetType: "dish_set", name: "每轮指定菜品集最多下多少份", enabledPeriods: ["per_round"], blocks: { totalEnabled: false, targetEnabled: true, sameDishEnabled: true } },
-    { key: "party_size|per_round|dish", version: 2, group: "per_round", subject: "party_size", targetType: "dish", name: "每人每轮指定菜品最多下多少份", enabledPeriods: ["per_round"], blocks: { totalEnabled: true, targetEnabled: true, sameDishEnabled: false } },
-    { key: "party_size|per_round|dish_set", version: 2, group: "per_round", subject: "party_size", targetType: "dish_set", name: "每人每轮指定菜品集最多下多少份", enabledPeriods: ["per_round"], blocks: { totalEnabled: false, targetEnabled: true, sameDishEnabled: true } }
+    { key: "order|order_lifetime|dish", version: 3, group: "order_lifetime", subject: "order", targetType: "dish", defaultVariant: "order_target", measureUnit: "piece", legacyCapabilityIds: [], coverageStatus: "not_applicable", name: "每个订单指定菜品限制下单份数", enabledPeriods: ["order_lifetime"], blocks: { totalEnabled: false, targetEnabled: true, sameDishEnabled: false } },
+    { key: "order|order_lifetime|dish_set", version: 3, group: "order_lifetime", subject: "order", targetType: "dish_set", defaultVariant: "order_target", measureUnit: "piece", legacyCapabilityIds: [], coverageStatus: "not_applicable", name: "每个订单指定菜品集限制下单份数", enabledPeriods: ["order_lifetime"], blocks: { totalEnabled: false, targetEnabled: true, sameDishEnabled: false } },
+    { key: "party_size|order_lifetime|dish", version: 3, group: "order_lifetime", subject: "party_size", targetType: "dish", defaultVariant: "order_target", measureUnit: "piece", legacyCapabilityIds: [], coverageStatus: "not_applicable", name: "每位食客每单指定菜品限制下单份数", enabledPeriods: ["order_lifetime"], blocks: { totalEnabled: false, targetEnabled: true, sameDishEnabled: false } },
+    { key: "party_size|order_lifetime|dish_set", version: 3, group: "order_lifetime", subject: "party_size", targetType: "dish_set", defaultVariant: "order_target", measureUnit: "piece", legacyCapabilityIds: [], coverageStatus: "not_applicable", name: "每位食客每单菜品集限制下单份数", enabledPeriods: ["order_lifetime"], blocks: { totalEnabled: false, targetEnabled: true, sameDishEnabled: false } },
+    { key: "order|per_round|total", version: 1, group: "per_round", subject: "order", targetType: "dish", defaultVariant: "round_total", measureUnit: "piece", legacyCapabilityIds: ["KPOS-R01"], coverageStatus: "complete", name: "每轮下单菜品总数限制", enabledPeriods: ["per_round"], blocks: { totalEnabled: true, targetEnabled: false, sameDishEnabled: false } },
+    { key: "party_size|per_round|total", version: 1, group: "per_round", subject: "party_size", targetType: "dish", defaultVariant: "round_total", measureUnit: "piece", legacyCapabilityIds: ["KPOS-R02", "KPOS-R03"], coverageStatus: "complete", name: "每人每轮下单菜品总数限制", enabledPeriods: ["per_round"], blocks: { totalEnabled: true, targetEnabled: false, sameDishEnabled: false } },
+    { key: "order|per_round|dish", version: 3, group: "per_round", subject: "order", targetType: "dish", defaultVariant: "round_dish", measureUnit: "piece", legacyCapabilityIds: ["KPOS-R04"], coverageStatus: "complete", name: "每轮指定菜品数量限制", enabledPeriods: ["per_round"], blocks: { totalEnabled: false, targetEnabled: true, sameDishEnabled: false } },
+    { key: "party_size|per_round|dish", version: 3, group: "per_round", subject: "party_size", targetType: "dish", defaultVariant: "round_dish", measureUnit: "piece", legacyCapabilityIds: ["KPOS-R05"], coverageStatus: "complete", name: "每人每轮指定菜品数量限制", enabledPeriods: ["per_round"], blocks: { totalEnabled: false, targetEnabled: true, sameDishEnabled: false } },
+    { key: "order|per_round|dish_set|piece", version: 1, group: "per_round", subject: "order", targetType: "dish_set", defaultVariant: "round_dish_set_piece", measureUnit: "piece", legacyCapabilityIds: ["KPOS-R06", "KPOS-R10"], coverageStatus: "complete", name: "每轮指定菜品集按份数限制", enabledPeriods: ["per_round"], blocks: { totalEnabled: false, targetEnabled: true, sameDishEnabled: true } },
+    { key: "party_size|per_round|dish_set|piece", version: 1, group: "per_round", subject: "party_size", targetType: "dish_set", defaultVariant: "round_dish_set_piece", measureUnit: "piece", legacyCapabilityIds: ["KPOS-R07", "KPOS-R10"], coverageStatus: "complete", name: "每人每轮指定菜品集按份数限制", enabledPeriods: ["per_round"], blocks: { totalEnabled: false, targetEnabled: true, sameDishEnabled: true } },
+    { key: "order|per_round|dish_set|kind", version: 1, group: "per_round", subject: "order", targetType: "dish_set", defaultVariant: "round_dish_set_kind", measureUnit: "kind", legacyCapabilityIds: ["KPOS-R08", "KPOS-R11"], coverageStatus: "complete", name: "每轮指定菜品集按种数限制", enabledPeriods: ["per_round"], blocks: { totalEnabled: false, targetEnabled: true, sameDishEnabled: true } },
+    { key: "party_size|per_round|dish_set|kind", version: 1, group: "per_round", subject: "party_size", targetType: "dish_set", defaultVariant: "round_dish_set_kind", measureUnit: "kind", legacyCapabilityIds: ["KPOS-R09", "KPOS-R11"], coverageStatus: "complete", name: "每人每轮指定菜品集按种数限制", enabledPeriods: ["per_round"], blocks: { totalEnabled: false, targetEnabled: true, sameDishEnabled: true } }
   ];
 
   function clone(value) {
@@ -103,9 +121,13 @@
     });
   }
 
+  function defaultTemplate(key) {
+    return DEFAULT_SCENARIOS.find(function (scenario) { return scenario.key === key; }) || null;
+  }
+
   function canonicalDefaultKey(subject, period, targetType) {
     var key = [subject, period, targetType].join("|");
-    return DEFAULT_SCENARIOS.some(function (scenario) { return scenario.key === key; }) ? key : "";
+    return defaultTemplate(key) ? key : "";
   }
 
   function systemIdentity(rule) {
@@ -119,9 +141,8 @@
 
   function exactDefaultKey(rule) {
     var identity = systemIdentity(rule);
-    var parts = identity.key.split("|");
-    if (identity.origin !== "system_default" || identity.version !== DEFAULT_CATALOG_VERSION || parts.length !== 3) return "";
-    return canonicalDefaultKey(parts[0], parts[1], parts[2]);
+    var template = defaultTemplate(identity.key);
+    return identity.origin === "system_default" && template && identity.version === template.version ? template.key : "";
   }
 
   function verifiedLegacyDefaultKey(rule) {
@@ -331,6 +352,35 @@
     return !currentSnapshotReferencesRule(envelope, rule) && !historicalSnapshotReferencesRule(envelope, rule);
   }
 
+  function hasDraftReference(envelope, rule) {
+    var id = rule && rule.id;
+    return id != null && (envelope.drafts || []).some(function (draft) {
+      return String(draft && (draft.sourceRuleId != null ? draft.sourceRuleId : draft.ruleId)) === String(id);
+    });
+  }
+
+  function obsoleteV2DefaultKey(rule) {
+    var identity = systemIdentity(rule);
+    if (identity.origin !== "system_default" || identity.version !== 2) return "";
+    return [
+      "order|order_lifetime|dish", "order|order_lifetime|dish_set", "party_size|order_lifetime|dish", "party_size|order_lifetime|dish_set",
+      "order|per_round|dish", "order|per_round|dish_set", "party_size|per_round|dish", "party_size|per_round|dish_set"
+    ].indexOf(identity.key) >= 0 ? identity.key : "";
+  }
+
+  function blankV2Default(rule, envelope) {
+    var copies = authoringCopies(rule);
+    var hasScope = copies.some(function (copy) {
+      return ["participatingStoreIds", "deployStoreIds", "targetIds", "productLines", "dishSetMembers"].some(function (field) { return hasValues(copy[field]); }) ||
+        ["storeConfigs", "limits", "dishSetLimits", "quantitySettings"].some(function (field) { return nestedCollectionHasValues(copy[field]); }) ||
+        Object.keys(copy.periodValues || {}).some(function (period) {
+          var values = copy.periodValues[period] || {};
+          return ["totalBounds", "tableTotalBounds", "targetLimits", "tableTargetCaps", "defaultDishLimits", "exceptionDishLimits"].some(function (field) { return hasConfiguredCellMap(values[field]); });
+        });
+    });
+    return rule && rule.status === "disabled" && !hasScope && !currentSnapshotReferencesRule(envelope, rule) && !historicalSnapshotReferencesRule(envelope, rule);
+  }
+
   function stripSystemIdentity(rule) {
     [rule, rule && rule.authoringConfig, rule && rule.authoringDraft, rule && rule.editorDraft].forEach(function (value) {
       if (!value || typeof value !== "object") return;
@@ -346,7 +396,7 @@
       if (!value || typeof value !== "object") return;
       value.origin = "system_default";
       value.defaultScenarioKey = key;
-      value.defaultCatalogVersion = DEFAULT_CATALOG_VERSION;
+      value.defaultCatalogVersion = (defaultTemplate(key) || {}).version || 0;
     });
     return rule;
   }
@@ -387,10 +437,43 @@
     var before = JSON.stringify(next);
     var groups = {};
     var retained = [];
+    var deferredCovered = {};
     next.rules.forEach(function (rule) {
       var exact = exactDefaultKey(rule);
       var legacy = verifiedLegacyDefaultKey(rule);
+      var obsolete = obsoleteV2DefaultKey(rule);
       var identity = systemIdentity(rule);
+      if (!exact && legacy && hasDraftReference(next, rule)) {
+        retained.push(rule);
+        deferredCovered[legacy] = true;
+        return;
+      }
+      if (obsolete) {
+        if (hasDraftReference(next, rule)) {
+          retained.push(rule);
+          return;
+        }
+        if (obsolete.indexOf("|order_lifetime|") >= 0) {
+          if (!groups[obsolete]) groups[obsolete] = [];
+          groups[obsolete].push(rule);
+          return;
+        }
+        var upgradedKey = obsolete;
+        if (/\|dish_set$/.test(obsolete)) upgradedKey += ((rule.authoringConfig || rule.editorDraft || rule).measureUnit === "kind" ? "|kind" : "|piece");
+        if (blankV2Default(rule, next)) {
+          var upgradedTemplate = defaultTemplate(upgradedKey);
+          authoringCopies(rule).forEach(function (copy) {
+            copy.measureUnit = upgradedTemplate.measureUnit;
+            copy.enabledPeriods = clone(upgradedTemplate.enabledPeriods);
+            copy.period = upgradedTemplate.enabledPeriods[0];
+            copy.periodPolicies = copy.periodPolicies || {};
+            copy.periodPolicies[copy.period] = { enabled: true, blocks: clone(upgradedTemplate.blocks) };
+          });
+          if (!groups[upgradedKey]) groups[upgradedKey] = [];
+          groups[upgradedKey].push(rule);
+        } else retained.push(stripSystemIdentity(rule));
+        return;
+      }
       var isLegacyCategory = identity.origin === "system_default" && Number(identity.version || 1) === 1 && /\|category$/.test(identity.key);
       if (isLegacyCategory) {
         if (!isUntouchedLegacyDefault(rule, next)) retained.push(stripSystemIdentity(rule));
@@ -418,6 +501,18 @@
     next.rules = retained;
     var covered = {};
     next.rules.forEach(function (rule) { var key = exactDefaultKey(rule); if (key) covered[key] = true; });
+    Object.keys(deferredCovered).forEach(function (key) { covered[key] = true; });
+    next.rules.forEach(function (rule) {
+      var oldKey = obsoleteV2DefaultKey(rule);
+      if (!oldKey || !hasDraftReference(next, rule)) return;
+      if (oldKey.indexOf("|order_lifetime|") >= 0) covered[oldKey] = true;
+      else if (/\|dish$/.test(oldKey)) covered[oldKey] = true;
+      else {
+        var unit = (rule.authoringConfig || rule.editorDraft || rule).measureUnit;
+        if (unit === "piece" || unit === "kind") covered[oldKey + "|" + unit] = true;
+        else { covered[oldKey + "|piece"] = true; covered[oldKey + "|kind"] = true; }
+      }
+    });
     var id = nextNumericId(next);
     DEFAULT_SCENARIOS.forEach(function (scenario) {
       if (!covered[scenario.key]) next.rules.push(factory(clone(scenario), id++));
@@ -581,10 +676,14 @@
     if (!draft.subject || !draft.targetType) return { valid: false, message: "请选择限购主体和限购对象" };
     var deployIds = Array.isArray(draft.deployStoreIds) ? draft.deployStoreIds : [];
     if (!deployIds.length) return { valid: false, message: "请至少选择一家生效门店" };
+    var requiresTargets = (Array.isArray(draft.enabledPeriods) ? draft.enabledPeriods : []).some(function (period) {
+      var blocks = draft.periodPolicies && draft.periodPolicies[period] && draft.periodPolicies[period].blocks;
+      return !!(blocks && (blocks.targetEnabled || blocks.sameDishEnabled));
+    });
     for (var index = 0; index < deployIds.length; index += 1) {
       var config = draft.storeConfigs && draft.storeConfigs[deployIds[index]];
       var selected = draft.targetType === "dish" ? config && config.dishTargets : draft.targetType === "category" ? config && config.categoryTargets : config && config.dishSetMembers;
-      if (!Array.isArray(selected) || !selected.length) return { valid: false, message: "请至少选择一个分类或菜品" };
+      if (requiresTargets && (!Array.isArray(selected) || !selected.length)) return { valid: false, message: "请至少选择一个分类或菜品" };
     }
     var authorization = draft.authorization || {};
     if (authorization.enabled) {
@@ -678,8 +777,8 @@
     var draft = upgradeDraftToV4({
       schemaVersion: 4,
       currentStep: 1, highestStep: 1,
-      origin: "system_default", defaultScenarioKey: scenarioKey, defaultCatalogVersion: DEFAULT_CATALOG_VERSION,
-      subject: defaultScenario.subject, period: period, enabledPeriods: enabledPeriods, periodPolicies: periodPolicies, targetType: defaultScenario.targetType,
+      origin: "system_default", defaultScenarioKey: scenarioKey, defaultCatalogVersion: defaultScenario.version,
+      subject: defaultScenario.subject, period: period, enabledPeriods: enabledPeriods, periodPolicies: periodPolicies, targetType: defaultScenario.targetType, measureUnit: defaultScenario.measureUnit,
       name: scenarioName, description: "",
       structureByLine: { kiosk: [], emenu: [], sdi: [] }, productLines: [], targetIds: [],
       partyRanges: [{ min: 1, max: null }], roundRanges: [{ min: 1, max: null }],
@@ -702,7 +801,7 @@
     });
     return {
       id: id, name: scenarioName, description: "", status: "disabled", created: created, updatedAt: new Date().toISOString(),
-      origin: "system_default", defaultScenarioKey: scenarioKey, defaultCatalogVersion: DEFAULT_CATALOG_VERSION, publishedSnapshotVersion: null,
+      origin: "system_default", defaultScenarioKey: scenarioKey, defaultCatalogVersion: defaultScenario.version, publishedSnapshotVersion: null,
       type: defaultScenario.subject === "party_size" ? "按人数限购" : "按桌/订单限购",
       round: period === "per_round" ? "每轮" : "每单/整单累计",
       method: defaultScenario.targetType === "dish_set" ? "按菜品集限购" : "按每种菜品限购",
@@ -839,6 +938,7 @@
     },
     repository: repository,
     defaultScenarios: clone(DEFAULT_SCENARIOS),
+    legacyCapabilities: clone(LEGACY_CAPABILITIES),
     createDefaultScenarioRule: createDefaultScenarioRule,
     reconcileDefaultRules: reconcileDefaultRules,
     verifiedLegacyDefaultKey: verifiedLegacyDefaultKey,

@@ -105,7 +105,14 @@
     var sourceDraft = source.authoringConfig || source.authoringDraft || source.editorDraft || source;
     var template = systemDefaultTemplate(sourceDraft);
     var draft = draftRule.editorDraft || draftRule;
-    var same = !!template && draft.subject === template.subject && draft.targetType === template.targetType &&
+    var templatePeriod = template && template.enabledPeriods && template.enabledPeriods[0];
+    var draftBlocks = draft.periodPolicies && draft.periodPolicies[templatePeriod] && draft.periodPolicies[templatePeriod].blocks || {};
+    var templateBlocks = template && template.blocks || {};
+    var sameBlocks = ["totalEnabled", "targetEnabled", "sameDishEnabled"].every(function (field) {
+      return !!draftBlocks[field] === !!templateBlocks[field];
+    });
+    var sameMeasure = !template || template.targetType !== "dish_set" || (draft.measureUnit === "kind" ? "kind" : "piece") === template.measureUnit;
+    var same = !!template && draft.subject === template.subject && draft.targetType === template.targetType && sameMeasure && sameBlocks &&
       JSON.stringify(normalizeBuffetPeriods(draft.enabledPeriods)) === JSON.stringify(normalizeBuffetPeriods(template.enabledPeriods));
     return same ? "preserve" : "detach";
   }
@@ -153,8 +160,14 @@
     var subjectConflict = !subjectMissing && draft.subject !== template.subject;
     var targetConflict = !targetMissing && draft.targetType !== template.targetType;
     var periodConflict = !periodsMissing && (draft.enabledPeriods.length !== expectedPeriods.length || draft.enabledPeriods.some(function (period, index) { return period !== expectedPeriods[index]; }));
+    var measureConflict = template.targetType === "dish_set" && (draft.measureUnit === "kind" ? "kind" : "piece") !== template.measureUnit;
+    var blockConflict = expectedPeriods.some(function (period) {
+      var actual = draft.periodPolicies && draft.periodPolicies[period] && draft.periodPolicies[period].blocks;
+      if (!actual) return false;
+      return ["totalEnabled", "targetEnabled", "sameDishEnabled"].some(function (field) { return !!actual[field] !== !!template.blocks[field]; });
+    });
     if (draft.period && expectedPeriods.length === 1 && draft.period !== expectedPeriods[0]) periodConflict = true;
-    if (subjectConflict || targetConflict || periodConflict || ((subjectMissing || targetMissing || periodsMissing) && systemDefaultHasBusinessData(draft))) {
+    if (subjectConflict || targetConflict || periodConflict || measureConflict || blockConflict || ((subjectMissing || targetMissing || periodsMissing) && systemDefaultHasBusinessData(draft))) {
       return stripSystemDefaultIdentity(draft);
     }
     if (subjectMissing || targetMissing || periodsMissing) return enforceSystemDefaultTemplate(draft);
@@ -167,6 +180,7 @@
     var periods = Array.isArray(template.enabledPeriods) ? template.enabledPeriods.slice() : [];
     draft.subject = template.subject;
     draft.targetType = template.targetType;
+    draft.measureUnit = template.measureUnit || "piece";
     draft.enabledPeriods = periods;
     draft.periodPolicies = draft.periodPolicies && typeof draft.periodPolicies === "object" ? draft.periodPolicies : {};
     BUFFET_PERIOD_ORDER.forEach(function (period) {
@@ -2168,8 +2182,13 @@
       }
     }
     if (stepNumber === 3) {
-      if (!draft.targetIds.length) return "请至少选择一个分类或菜品";
-      if (draft.targetType === "dish_set") {
+      var requiresTargets = !modernBuffet || (draft.enabledPeriods || []).some(function (period) {
+        var blocks = draft.periodPolicies && draft.periodPolicies[period] && draft.periodPolicies[period].blocks;
+        return !!(blocks && (blocks.targetEnabled || blocks.sameDishEnabled));
+      });
+      if (modernBuffet && !addedStoreIds(draft).length) return "请至少选择一家参与门店";
+      if (requiresTargets && !draft.targetIds.length) return "请至少选择一个分类或菜品";
+      if (requiresTargets && draft.targetType === "dish_set") {
         var insufficientStore = addedStoreIds(draft).find(function (storeId) {
           var config = storeConfigFor(draft, storeId, false);
           return !config || config.dishSetMembers.length < 2;
@@ -2267,7 +2286,7 @@
         enabled: draft.enabledPeriods.indexOf(period) >= 0,
         blocks: {
           totalEnabled: !!blocks.totalEnabled,
-          targetEnabled: draft.enabledPeriods.indexOf(period) >= 0 ? true : !!blocks.targetEnabled,
+          targetEnabled: !!blocks.targetEnabled,
           sameDishEnabled: !!blocks.sameDishEnabled
         }
       };
@@ -2295,7 +2314,7 @@
     if (!enabled && index >= 0) draft.enabledPeriods.splice(index, 1);
     draft.enabledPeriods.sort(function (a, b) { return BUFFET_PERIOD_ORDER.indexOf(a) - BUFFET_PERIOD_ORDER.indexOf(b); });
     draft.periodPolicies[period].enabled = enabled;
-    if (enabled) draft.periodPolicies[period].blocks.targetEnabled = true;
+    if (enabled && !(draft.periodPolicies[period].blocks.totalEnabled || draft.periodPolicies[period].blocks.targetEnabled || draft.periodPolicies[period].blocks.sameDishEnabled)) draft.periodPolicies[period].blocks.targetEnabled = true;
     syncBuffetLegacyPeriod(draft);
   }
 
@@ -2342,7 +2361,7 @@
       var allowTotal = period !== "order_lifetime";
       return '<section class="olf-period-block"><div><strong>' + esc(title) + '</strong><span>选择此周期需要配置的限购维度</span></div><div class="olf-period-block__checks">' +
         (allowTotal ? '<label class="olf-check"><input type="checkbox" data-period-block="total" data-period-key="' + period + '"' + (policy.blocks.totalEnabled ? " checked" : "") + ' /><span>菜品总数</span></label>' : "") +
-        '<span class="olf-period-block__required">指定对象额度（必选）</span>' +
+        '<label class="olf-check"><input type="checkbox" data-period-block="target" data-period-key="' + period + '"' + (policy.blocks.targetEnabled ? " checked" : "") + ' /><span>指定对象额度</span></label>' +
         (allowTotal ? '<label class="olf-check"><input type="checkbox" data-period-block="same_dish" data-period-key="' + period + '"' + (policy.blocks.sameDishEnabled ? " checked" : "") + ' /><span>单品保护</span></label>' : "") +
       '</div></section>';
     }).join("");
@@ -5149,7 +5168,7 @@
       if (!policy) return;
       var blockName = target.getAttribute("data-period-block");
       if (blockName === "total") policy.blocks.totalEnabled = target.checked;
-      if (blockName === "target") policy.blocks.targetEnabled = true;
+      if (blockName === "target") policy.blocks.targetEnabled = target.checked;
       if (blockName === "same_dish") policy.blocks.sameDishEnabled = target.checked;
       markBuffetTemplateModified(draft);
       markEditorDirty();

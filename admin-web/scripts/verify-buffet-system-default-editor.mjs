@@ -54,7 +54,7 @@ const api = loadFlow(profile);
 const copied = profile.lifecycle.prepareDraftCopy({
   origin: "system_default",
   defaultScenarioKey: "order|per_round|dish",
-  defaultCatalogVersion: 2,
+  defaultCatalogVersion: 3,
   name: "每轮指定菜品最多下多少份",
 });
 assert.equal(copied.origin, undefined);
@@ -77,7 +77,7 @@ assert.equal(api.systemDefaultTemplate(draft).key, template.key);
 assert.deepEqual(Array.from(draft.enabledPeriods), ["per_round"]);
 assert.deepEqual(
   { ...draft.periodPolicies.per_round.blocks },
-  { totalEnabled: true, targetEnabled: true, sameDishEnabled: false },
+  { totalEnabled: false, targetEnabled: true, sameDishEnabled: false },
 );
 assert.equal(JSON.stringify(draft.storeConfigs), beforeQuantity, "template repair must preserve business quantity values");
 
@@ -136,7 +136,7 @@ assert.equal(blankMissingStructure.origin, "system_default", "blank draft may sa
 assert.deepEqual(Array.from(blankMissingStructure.enabledPeriods), ["per_round"]);
 assert.deepEqual(
   { ...blankMissingStructure.periodPolicies.per_round.blocks },
-  { totalEnabled: true, targetEnabled: true, sameDishEnabled: false },
+  { totalEnabled: false, targetEnabled: true, sameDishEnabled: false },
 );
 
 const stepOne = api.renderStepOne(draft);
@@ -144,7 +144,7 @@ assert.doesNotMatch(stepOne, /系统默认场景，规则类型不可修改/);
 assert.doesNotMatch(stepOne, /data-choice-field="subject"[^>]*disabled/);
 assert.doesNotMatch(stepOne, /data-choice-field="targetType"[^>]*disabled/);
 assert.doesNotMatch(stepOne, /olf-choice[^"']*is-locked/);
-assert.match(stepOne, /可以完整编辑/);
+assert.match(stepOne, /限购主体/);
 
 const stepTwo = api.renderStepThree(draft);
 assert.match(stepTwo, /每轮/);

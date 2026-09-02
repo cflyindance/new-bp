@@ -43,7 +43,7 @@ function configuredRecord(template, id) {
   const scenario = "0|0";
   // A finite table fallback max can only be feasible while the per-person minimum
   // remains below it. Cover the runtime N=3 case with the exact valid range.
-  if (template.key === "party_size|per_round|dish") draft.partyRanges = [{ min: 3, max: 3 }];
+  if (template.subject === "party_size" && template.blocks.totalEnabled) draft.partyRanges = [{ min: 3, max: 3 }];
   draft.name = `acceptance-${template.key}`;
   draft.participatingStoreIds = ["store-a"];
   draft.deployStoreIds = ["store-a"];
@@ -83,7 +83,7 @@ function configuredRecord(template, id) {
 }
 
 const records = profile.defaultScenarios.map((template, index) => configuredRecord(template, index + 1));
-assert.equal(records.length, 8);
+assert.equal(records.length, 12);
 for (const record of records) {
   const check = profile.lifecycle.validateActivation(record, []);
   assert.equal(check.valid, true, `${record.defaultScenarioKey}: ${check.message}`);
@@ -119,10 +119,11 @@ result = evaluate(byKey["party_size|order_lifetime|dish_set"], [{ ...dishes[0], 
 assert.equal(result.allowed, false, "party dish-set shared cap 2 becomes 6 for N=3");
 
 // Per-round dish total max is immediate, min is submission-only, target is independent, and the next round is fresh.
+const orderRoundTotal = byKey["order|per_round|total"];
 const orderRoundDish = byKey["order|per_round|dish"];
-assert.equal(evaluate(orderRoundDish, [{ ...dishes[0], quantity: 6 }]).violations.some((v) => v.code === "TOTAL_LIMIT_EXCEEDED"), true);
-assert.equal(evaluate(orderRoundDish, [{ ...dishes[0], quantity: 1 }]).allowed, true);
-assert.equal(evaluate(orderRoundDish, [{ ...dishes[0], quantity: 1 }], { phase: "submit_round" }).violations.some((v) => v.code === "TOTAL_MIN_NOT_MET"), true);
+assert.equal(evaluate(orderRoundTotal, [{ ...dishes[0], quantity: 6 }]).violations.some((v) => v.code === "TOTAL_LIMIT_EXCEEDED"), true);
+assert.equal(evaluate(orderRoundTotal, [{ ...dishes[0], quantity: 1 }]).allowed, true);
+assert.equal(evaluate(orderRoundTotal, [{ ...dishes[0], quantity: 1 }], { phase: "submit_round" }).violations.some((v) => v.code === "TOTAL_MIN_NOT_MET"), true);
 assert.equal(evaluate(orderRoundDish, [{ ...dishes[0], quantity: 3 }]).violations.some((v) => v.code === "TARGET_LIMIT_EXCEEDED"), true);
 assert.equal(evaluate(orderRoundDish, [{ ...dishes[0], quantity: 2 }], { context: { roundNo: 2 } }).allowed, true);
 assert.equal(evaluate(orderRoundDish, [{ ...dishes[0], quantity: 2 }], {
@@ -134,14 +135,15 @@ assert.equal(evaluate(orderRoundDish, [{ ...dishes[0], quantity: 2 }], {
 }).allowed, true, "round 2 ignores tagged counters retained from round 1");
 
 // Per-person total [3,9] merged with table fallback [4,8] => [4,8]; target cap 2*N => 6.
+const partyRoundTotal = byKey["party_size|per_round|total"];
 const partyRoundDish = byKey["party_size|per_round|dish"];
-assert.equal(evaluate(partyRoundDish, [{ ...dishes[0], quantity: 9 }]).violations.some((v) => v.code === "TOTAL_LIMIT_EXCEEDED"), true);
-assert.equal(evaluate(partyRoundDish, [{ ...dishes[0], quantity: 3 }], { phase: "submit_round" }).violations.some((v) => v.code === "TOTAL_MIN_NOT_MET"), true);
+assert.equal(evaluate(partyRoundTotal, [{ ...dishes[0], quantity: 9 }]).violations.some((v) => v.code === "TOTAL_LIMIT_EXCEEDED"), true);
+assert.equal(evaluate(partyRoundTotal, [{ ...dishes[0], quantity: 3 }], { phase: "submit_round" }).violations.some((v) => v.code === "TOTAL_MIN_NOT_MET"), true);
 assert.equal(evaluate(partyRoundDish, [{ ...dishes[0], quantity: 6 }]).allowed, true);
 assert.equal(evaluate(partyRoundDish, [{ ...dishes[0], quantity: 7 }]).violations.some((v) => v.code === "TARGET_LIMIT_EXCEEDED"), true);
 
 // Per-round dish sets share the pool across lines. Party pool multiplies, same-dish protection remains fixed at 2.
-for (const key of ["order|per_round|dish_set", "party_size|per_round|dish_set"]) {
+for (const key of ["order|per_round|dish_set|piece", "party_size|per_round|dish_set|piece"]) {
   const rule = byKey[key];
   const party = key.startsWith("party_size");
   result = evaluate(rule, party
@@ -154,27 +156,27 @@ for (const key of ["order|per_round|dish_set", "party_size|per_round|dish_set"])
 }
 
 // Blank is unconfigured; zero minimum is valid; zero maximum prohibits; min > max blocks activation/publication.
-const blankRule = structuredClone(orderRoundDish);
+const blankRule = structuredClone(orderRoundTotal);
 blankRule.storeConfigs["store-a"].periodValues.per_round.totalBounds["0|0"] = {
   minConfigured: false, min: null, maxConfigured: false, max: null,
 };
 assert.equal(evaluate(blankRule, [{ ...dishes[0], quantity: 1 }]).allowed, true);
-const zeroMin = structuredClone(orderRoundDish);
+const zeroMin = structuredClone(orderRoundTotal);
 zeroMin.storeConfigs["store-a"].periodValues.per_round.totalBounds["0|0"] = bounds(0, null);
 assert.equal(evaluate(zeroMin, [], { phase: "submit_round" }).allowed, true);
-const zeroMax = structuredClone(orderRoundDish);
+const zeroMax = structuredClone(orderRoundTotal);
 zeroMax.storeConfigs["store-a"].periodValues.per_round.totalBounds["0|0"] = bounds(null, 0);
 assert.equal(evaluate(zeroMax, [{ ...dishes[0], quantity: 1 }]).allowed, false);
-const invalidRecord = configuredRecord(profile.defaultScenarios.find((t) => t.key === "order|per_round|dish"), 99);
+const invalidRecord = configuredRecord(profile.defaultScenarios.find((t) => t.key === "order|per_round|total"), 99);
 invalidRecord.authoringConfig.storeConfigs["store-a"].periodValues.per_round.totalBounds["0|0"] = bounds(6, 5);
 assert.equal(profile.lifecycle.validateActivation(invalidRecord, []).valid, false, "min > max blocks publication");
 
 // A cancellation can make a formerly valid round fall below minimum; submission must recheck current counters.
-result = evaluate(orderRoundDish, [{ ...dishes[0], quantity: -1 }], {
+result = evaluate(orderRoundTotal, [{ ...dishes[0], quantity: -1 }], {
   counters: { order: [], round: [{ ...dishes[0], quantity: 2 }] }, phase: "change",
 });
 assert.equal(result.allowed, true);
-result = evaluate(orderRoundDish, [], {
+result = evaluate(orderRoundTotal, [], {
   counters: { order: [], round: [{ ...dishes[0], quantity: 1 }] }, phase: "submit_round",
 });
 assert.equal(result.allowed, false);

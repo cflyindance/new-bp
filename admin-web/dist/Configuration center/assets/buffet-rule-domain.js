@@ -254,32 +254,48 @@
     if (!v4PeriodsConflict(candidate, existing)) return null;
     if (!conditionsOverlap(candidate.conditions, existing.conditions)) return null;
     if (!numericRangesOverlap(candidate.partyRanges, existing.partyRanges)) return null;
+    var sharedPeriods = rulePeriods(candidate).filter(function (period) { return rulePeriods(existing).indexOf(period) >= 0; });
+    var duplicateTotal = sharedPeriods.some(function (period) {
+      var left = candidate.periodPolicies && candidate.periodPolicies[period] && candidate.periodPolicies[period].blocks || {};
+      var right = existing.periodPolicies && existing.periodPolicies[period] && existing.periodPolicies[period].blocks || {};
+      return !!left.totalEnabled && !!right.totalEnabled && !left.targetEnabled && !right.targetEnabled;
+    });
+    var duplicateTarget = sharedPeriods.some(function (period) {
+      var left = candidate.periodPolicies && candidate.periodPolicies[period] && candidate.periodPolicies[period].blocks || {};
+      var right = existing.periodPolicies && existing.periodPolicies[period] && existing.periodPolicies[period].blocks || {};
+      return !!left.targetEnabled && !!right.targetEnabled;
+    });
     var candidateTargets = targetEntries(candidate);
     var existingTargets = targetEntries(existing);
     if (candidate.targetType === "dish_set") {
+      if (!duplicateTarget) return duplicateTotal ? { code: "DUPLICATE_TOTAL_RULE", ruleId: record.id, existingPeriods: rulePeriods(existing), candidatePeriods: rulePeriods(candidate) } : null;
+      if ((candidate.measureUnit === "kind" ? "kind" : "piece") !== (existing.measureUnit === "kind" ? "kind" : "piece")) return duplicateTotal ? { code: "DUPLICATE_TOTAL_RULE", ruleId: record.id, existingPeriods: rulePeriods(existing), candidatePeriods: rulePeriods(candidate) } : null;
       var details = dishSetOverlapForRecord(candidate, existing, record);
-      return details ? {
+      if (details) return {
         code: "DISH_SET_MEMBER_OVERLAP",
         ruleId: record.id,
         storeIds: details.storeIds,
         dishIds: details.dishIds,
         existingPeriods: rulePeriods(existing),
         candidatePeriods: rulePeriods(candidate)
-      } : null;
+      };
+      return duplicateTotal ? { code: "DUPLICATE_TOTAL_RULE", ruleId: record.id, existingPeriods: rulePeriods(existing), candidatePeriods: rulePeriods(candidate) } : null;
     }
-    var duplicate = targetIntersection(candidateTargets, existingTargets);
-    return duplicate ? {
+    var duplicate = duplicateTarget ? targetIntersection(candidateTargets, existingTargets) : null;
+    if (duplicate) return {
       code: "DUPLICATE_TARGET_RULE",
       ruleId: record.id,
       target: duplicate,
       existingPeriods: rulePeriods(existing),
       candidatePeriods: rulePeriods(candidate)
-    } : null;
+    };
+    return duplicateTotal ? { code: "DUPLICATE_TOTAL_RULE", ruleId: record.id, existingPeriods: rulePeriods(existing), candidatePeriods: rulePeriods(candidate) } : null;
   }
 
   function dishSetOverlapForRecord(candidate, existing, record) {
     if (!candidate || candidate.targetType !== "dish_set" || !existing || existing.targetType !== "dish_set") return null;
     if (candidate.subject !== existing.subject) return null;
+    if ((candidate.measureUnit === "kind" ? "kind" : "piece") !== (existing.measureUnit === "kind" ? "kind" : "piece")) return null;
     if (!v4PeriodsConflict(candidate, existing)) return null;
     if (!conditionsOverlap(candidate.conditions, existing.conditions)) return null;
     if (!numericRangesOverlap(candidate.partyRanges, existing.partyRanges)) return null;

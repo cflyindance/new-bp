@@ -24,11 +24,15 @@ const templates = [
   ["order|order_lifetime|dish_set", "order_lifetime"],
   ["party_size|order_lifetime|dish", "order_lifetime"],
   ["party_size|order_lifetime|dish_set", "order_lifetime"],
+  ["order|per_round|total", "per_round"],
+  ["party_size|per_round|total", "per_round"],
   ["order|per_round|dish", "per_round"],
-  ["order|per_round|dish_set", "per_round"],
   ["party_size|per_round|dish", "per_round"],
-  ["party_size|per_round|dish_set", "per_round"],
-].map(([key, group]) => ({ key, group }));
+  ["order|per_round|dish_set|piece", "per_round"],
+  ["party_size|per_round|dish_set|piece", "per_round"],
+  ["order|per_round|dish_set|kind", "per_round"],
+  ["party_size|per_round|dish_set|kind", "per_round"],
+].map(([key, group], index) => ({ key, group, legacyCapabilityIds: group === "per_round" ? [`KPOS-R${String(Math.min(index - 3, 11)).padStart(2, "0")}`] : [] }));
 
 const records = templates.map((template, index) => ({
   id: `default-${index + 1}`,
@@ -49,6 +53,10 @@ const context = {
   window: {
     ORDER_LIMIT_MODULE_PROFILE: {
       defaultScenarios: templates,
+      legacyCapabilities: Object.fromEntries(Array.from({ length: 13 }, (_, index) => {
+        const id = `KPOS-R${String(index + 1).padStart(2, "0")}`;
+        return [id, { id, label: `旧能力${index + 1}`, gap: `能力差距${index + 1}` }];
+      })),
       createDefaultScenarioRule() {},
       routes: { editor: "buffet-rule-editor.html" },
       repository: { loadForAuthoringList: () => records, saveRules() {} },
@@ -69,13 +77,14 @@ const whole = rendered.indexOf("整单限制");
 const round = rendered.indexOf("每轮限制");
 const custom = rendered.indexOf("其他规则");
 assert.ok(whole >= 0 && round > whole && custom > round, "分组顺序应为整单、每轮、其他规则");
-for (let index = 1; index <= 8; index += 1) {
+for (let index = 1; index <= 12; index += 1) {
   const position = rendered.indexOf(`默认规则${index}`);
   if (index <= 4) assert.ok(position > whole && position < round, `默认规则${index}应位于整单限制`);
   else assert.ok(position > round && position < custom, `默认规则${index}应位于每轮限制`);
 }
 assert.ok(rendered.indexOf("自定义规则") > custom, "普通规则应位于其他规则");
-assert.equal((rendered.match(/系统默认/g) || []).length, 8, "仅八条默认规则显示系统默认标识");
+assert.equal((rendered.match(/系统默认/g) || []).length, 12, "仅十二条默认规则显示系统默认标识");
+for (const copy of ["旧 KPOS 调研能力", "覆盖结果", "本调研不适用", "完整覆盖", "KPOS-R12 部分覆盖", "KPOS-R13 部分覆盖"]) assert.ok(rendered.includes(copy), `映射列表缺少：${copy}`);
 
 const api = context.window.__BUFFET_RULE_LIST_TEST_API__;
 assert.ok(api, "列表页应暴露轻量测试接口");
