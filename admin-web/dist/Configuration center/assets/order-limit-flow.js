@@ -3877,7 +3877,7 @@
         renderV4LimitInput(row.limit, 'data-v4-exception-limit data-v4-period="' + period + '" data-v4-scenario="' + esc(sameDishKey) + '" data-v4-exception-index="' + index + '"', "最多") +
         '<button type="button" class="olf-button olf-button--small olf-button--link" data-v4-exception-remove data-v4-period="' + period + '" data-v4-scenario="' + esc(sameDishKey) + '" data-v4-exception-index="' + index + '">删除</button></div>';
     }).join("");
-    var protectionTitle = draft.measureUnit === "kind" ? "每种菜品每轮最多" : "相同菜品每轮最多";
+    var protectionTitle = comboDraft ? (draft.measureUnit === "kind" ? "每种菜品每轮最多" : "相同菜品每轮最多") : "默认每种最多";
     var sameDishBlock = period !== "order_lifetime" && policy.blocks.sameDishEnabled
       ? '<section class="olf-v4-quantity-block"><h5>相同菜品保护 / 菜品集内部保护</h5><div class="olf-v4-bound-row"><strong>' + protectionTitle + '</strong>' + renderV4LimitInput(values.defaultDishLimits[sameDishKey], "data-v4-limit-field data-v4-map=\"defaultDishLimits\" data-v4-period=\"" + period + "\" data-v4-scenario=\"" + esc(sameDishKey) + "\"") + '</div>' + (comboDraft ? '' : '<div class="olf-v4-exception-list">' + exceptionHtml + '</div><button type="button" class="olf-button olf-button--small" data-v4-exception-add data-v4-period="' + period + '" data-v4-scenario="' + esc(sameDishKey) + '"' + (eligible.length ? '' : ' disabled') + '>添加例外商品</button><p class="olf-v4-exception-help">例外额度覆盖默认上限；空输入表示未配置，0 表示禁止下单。</p>') + '</section>' : "";
     return '<article class="olf-v4-scenario-card"><header><strong>' + esc(scenarioTitle) + '</strong><span>空输入表示未配置；0 表示禁止下单</span></header>' + totalBlock + targetBlock + sameDishBlock + '</article>';

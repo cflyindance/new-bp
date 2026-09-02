@@ -40,10 +40,12 @@ function configuredRecord(template, id) {
   const record = profile.createDefaultScenarioRule(template, id);
   const draft = record.authoringConfig;
   const period = template.enabledPeriods[0];
-  const scenario = "0|0";
+  const isCombo = template.group === "per_round_combo";
+  if (isCombo) draft.partyRanges = [{ rangeId: draft.partyRanges[0].rangeId, min: 1, max: null }];
+  const scenario = isCombo ? `party:${draft.partyRanges[0].rangeId}|round:0` : "0|0";
   // A finite table fallback max can only be feasible while the per-person minimum
   // remains below it. Cover the runtime N=3 case with the exact valid range.
-  if (template.subject === "party_size" && template.blocks.totalEnabled) draft.partyRanges = [{ min: 3, max: 3 }];
+  if (!isCombo && template.subject === "party_size" && template.blocks.totalEnabled) draft.partyRanges = [{ min: 3, max: 3 }];
   draft.name = `acceptance-${template.key}`;
   draft.participatingStoreIds = ["store-a"];
   draft.deployStoreIds = ["store-a"];
@@ -65,13 +67,20 @@ function configuredRecord(template, id) {
     periodValues: {},
   };
   const values = { totalBounds: {}, tableTotalBounds: {}, targetLimits: {}, tableTargetCaps: {}, defaultDishLimits: {}, exceptionDishLimits: {} };
-  if (template.blocks.totalEnabled) {
+  if (isCombo) {
+    values.tableTotalBounds[scenario] = bounds(1, 8);
+    const targetMap = template.key.endsWith("|party_size") ? values.targetLimits : values.tableTargetCaps;
+    if (template.targetType === "dish") {
+      for (const dish of dishes) targetMap[`${scenario}|line:${dish.productLineId}|target:${dish.dishId}`] = cell(2);
+    } else targetMap[scenario] = cell(2);
+    if (template.blocks.sameDishEnabled) values.defaultDishLimits[scenario] = cell(2);
+  } else if (template.blocks.totalEnabled) {
     values.totalBounds[scenario] = bounds(template.subject === "party_size" ? 1 : 2, template.subject === "party_size" ? 3 : 5);
     if (template.subject === "party_size") values.tableTotalBounds[scenario] = bounds(4, 8);
   }
-  if (template.targetType === "dish") {
+  if (!isCombo && template.targetType === "dish") {
     for (const dish of dishes) values.targetLimits[`${scenario}|${dish.productLineId}|${dish.dishId}`] = cell(2);
-  } else {
+  } else if (!isCombo) {
     values.targetLimits[scenario] = cell(2);
     if (template.blocks.sameDishEnabled) values.defaultDishLimits[scenario] = cell(2);
   }
@@ -83,7 +92,7 @@ function configuredRecord(template, id) {
 }
 
 const records = profile.defaultScenarios.map((template, index) => configuredRecord(template, index + 1));
-assert.equal(records.length, 12);
+assert.equal(records.length, 18);
 for (const record of records) {
   const check = profile.lifecycle.validateActivation(record, []);
   assert.equal(check.valid, true, `${record.defaultScenarioKey}: ${check.message}`);
