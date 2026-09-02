@@ -45,7 +45,7 @@
 
 组合模板不新增限购主体、额度周期或限购对象枚举。它们只预置既有业务区块的组合、计量单位和额度倍率口径。
 
-建议稳定键：
+以下 6 个值是规范性、永久保留的稳定键：
 
 ```text
 combo|per_round|dish|table
@@ -55,6 +55,8 @@ combo|per_round|dish|party_size
 combo|per_round|dish_set|piece|party_size
 combo|per_round|dish_set|kind|party_size
 ```
+
+稳定键发布后不得改名、复用或根据展示名称重新生成。后续目录版本只能提升各稳定键自己的模板版本，不能以新键替换同一语义；否则会破坏历史身份识别和幂等补齐。
 
 组合模板使用独立 `defaultVariant` 标识目录身份；冲突和运行时不得读取 `defaultVariant`，仍从区块、对象、计量单位和倍率字段推导业务约束。
 
@@ -71,14 +73,15 @@ combo|per_round|dish_set|kind|party_size
 | C05 | `party_size` | `tableTotalBounds` | `targetLimits` | `defaultDishLimits` | 只有 X 乘人数 |
 | C06 | `party_size` | `tableTotalBounds` | `targetLimits` | `defaultDishLimits` | 只有 X 乘人数 |
 
-发布校验和运行时只根据字段推导倍率：
+发布校验和运行时根据 `(subject, 字段)` 联合推导倍率：
 
 - `tableTotalBounds`、`tableTargetCaps`、`defaultDishLimits`：固定整桌额度；
-- `targetLimits`：人均额度，乘当前有效就餐人数；
+- `targetLimits` 且 `subject=party_size`：人均额度，乘当前有效就餐人数；
+- `targetLimits` 且 `subject=order`：固定整桌额度，保持现有整单/每轮按桌原子规则行为；
 - `measureUnit`：区分菜品集按份与按种；
 - `defaultVariant`、模板名称和系统默认身份均不得参与倍率判断。
 
-组合模板编译后仍是标准 v4 规则；原子规则和普通规则使用相同字段时必须得到相同计算结果。
+组合模板编译后仍是标准 v4 规则；原子规则和普通规则使用相同 `(subject, 字段)` 时必须得到相同计算结果。冲突键的倍率模式必须调用同一个推导函数，不能另写一套判断。
 
 ## 4. 人数区间
 
@@ -108,14 +111,15 @@ type PartyRange = {
 
 `rangeId` 在单条规则内唯一且创建后不可修改，建议格式为 `pr_<uuid>`，不得从上下界或数组索引计算。
 
-组合模板数量键：
+组合模板存储键：
 
 ```text
 场景键：party:<rangeId>|round:0
 总量键：party:<rangeId>|round:0
-对象键：party:<rangeId>|round:0|line:<productLineId>|target:<targetId>
-内部保护键：party:<rangeId>|round:0|dish:<dishId 或 default>
+菜品对象键：party:<rangeId>|round:0|line:<productLineId>|target:<dishId>
 ```
+
+`productLineId` 是菜品身份的一部分；不同产线出现相同 `dishId` 时不得错误合并。菜品集父额度和默认内部保护是整个集合共享值，均使用场景键，不追加菜品 ID。存储键与编译后的单品冲突键是两个概念：`defaultDishLimits[scenarioKey]` 在运行时对集合成员逐一编译为 `same_dish|productLineId|dishId` 约束。
 
 新组合模板只按 `rangeId` 写入。现有原子规则和历史规则没有 `rangeId` 时继续使用旧 `partyIndex|roundIndex` 键读取和写入，不自动换键，不修改其业务数据或发布快照。运行时编译器分别识别两种键，单条规则内不得混写。
 
@@ -137,23 +141,56 @@ type PartyRange = {
 每家参与门店、每个人数区间独立保存：
 
 ```ts
-type ComboRangeValues = {
+type ScenarioKey = string;
+type TargetKey = string;
+
+type LimitCell = {
+  configured: boolean;
+  value: number | null;
+};
+
+type BoundCell = {
+  minConfigured: boolean;
+  min: number | null;
+  maxConfigured: boolean;
+  max: number | null;
+};
+
+type ComboPeriodValues = {
+  tableTotalBounds: Record<ScenarioKey, BoundCell>;
+  tableTargetCaps: Record<ScenarioKey | TargetKey, LimitCell>;
+  targetLimits: Record<ScenarioKey | TargetKey, LimitCell>;
+  defaultDishLimits: Record<ScenarioKey, LimitCell>;
+  // 组合模板本期不使用，但为兼容标准 v4 结构继续保留。
+  totalBounds: Record<ScenarioKey, BoundCell>;
+  exceptionDishLimits: Record<ScenarioKey, Array<unknown>>;
+};
+
+type ComboRangeProjection = {
+  rangeId: string;
   totalBounds: {
     minConfigured: boolean;
     min: number | null;
     maxConfigured: boolean;
     max: number | null;
   };
-  targetLimits: Record<TargetKey, {
-    configured: boolean;
-    value: number | null;
-  }>;
-  sameDishLimit?: {
-    configured: boolean;
-    value: number | null;
-  };
+  targetLimits: Record<TargetKey, LimitCell> | LimitCell;
+  sameDishLimit?: LimitCell;
 };
 ```
+
+`ComboPeriodValues` 是持久化的真实 v4 map；`ComboRangeProjection` 只用于页面按区间聚合展示，不单独持久化。
+
+逐字段键规则：
+
+| 业务值 | v4 map | 键 |
+| --- | --- | --- |
+| M/N | `tableTotalBounds` | `scenarioKey` |
+| C01/C04 菜品 X | `tableTargetCaps` / `targetLimits` | `targetKey`，包含 `rangeId + productLineId + dishId` |
+| C02/C03/C05/C06 菜品集 X | `tableTargetCaps` / `targetLimits` | `scenarioKey`，整个集合共享 |
+| C02/C03/C05/C06 默认 P | `defaultDishLimits` | `scenarioKey`，整个集合共享 |
+
+C01～C03 的固定 X 写 `tableTargetCaps`；C04～C06 的人均 X 写 `targetLimits`。不属于当前模板的另一个 map 必须为空，避免同一模板同时产生固定和人均父额度。
 
 数据继续保存在自助餐规则既有 `storeConfigs` 与周期数量结构中，不新增 repository key。新组合规则在现有 v4 结构内使用上述 `rangeId` 键；目录元数据不写入运行快照。
 
@@ -263,6 +300,8 @@ C04～C06：
 
 固定 X 与 `X×人数` 使用不同倍率模式，因此不是同一个父额度冲突键，可以共同生效；两者同时命中时分别校验。C02 与 C03 的父额度因计量单位不同可以共同生效，但它们的 P 都编译为 `same_dish|table_fixed`，成员范围重叠时 P 发生冲突。总量冲突不依赖商品范围，即使两个组合选择的商品完全不相交，重叠人数区间内的两个 `total|table_fixed` 仍冲突。
 
+所有单品冲突身份均使用 `productLineId + dishId`。`targetLimits` 的倍率模式按 §3.1 的 `(subject, 字段)` 规则推导；现有 `subject=order` 的整单/每轮菜品和菜品集原子规则必须保持 `table_fixed`。
+
 规则：
 
 - 草稿允许保存重叠配置，但必须显示冲突对象和原因；
@@ -305,6 +344,7 @@ C04～C06：
 - 空数据进入列表生成且仅生成 18 条系统默认规则；
 - 分组顺序和数量为 4、6、8；
 - 6 条组合模板默认禁用、为空且具有唯一稳定键；
+- 稳定键集合必须精确等于 §3 所列 6 个值，目录升级不得改名或重复补齐；
 - 重复进入不重复生成。
 
 ### 11.2 十二场景
@@ -328,6 +368,7 @@ C04～C06：
 
 - 组合模板之间、组合模板与原子规则之间按业务口径判断冲突；
 - 参数化覆盖：组合总量与原子总量在商品不相交时仍冲突；C02 与 C03 父额度可共存但重叠成员 P 冲突；固定 X 与人均 X 可共存并分别执行；商品范围不相交的对象约束不冲突；
+- 回归断言现有 `subject=order` 的 `order|per_round|dish`、`order|per_round|dish_set|piece` 和 `order|per_round|dish_set|kind` 仍使用固定整桌额度，不因 `targetLimits` 字段被乘人数；
 - 重叠草稿可保存并显示冲突，启用或发布阻断；
 - 总量、指定对象和内部保护共同执行，任一上限超限即拦截；
 - 下限只在提交本轮时校验；
