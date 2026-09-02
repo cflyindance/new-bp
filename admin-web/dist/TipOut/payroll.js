@@ -3156,13 +3156,31 @@
   }
 
   function resolveDefaultEmployeeId(periodId) {
-    const list = getEmployeesForActiveStore(periodId);
+    let list = getEmployeesForActiveStore(periodId);
+    if ((!Array.isArray(list) || list.length === 0) && repairStaleEmployeeStoreFilter(periodId)) {
+      list = getEmployeesForActiveStore(periodId);
+    }
     if (!Array.isArray(list) || list.length === 0) return null;
     return list[0].id;
   }
 
+  function repairStaleEmployeeStoreFilter(periodId) {
+    const allEmployees = (state.data && state.data.employees && state.data.employees[periodId]) || [];
+    if (!Array.isArray(allEmployees) || allEmployees.length === 0) return false;
+    if (filterEmployeesByStore(allEmployees, state.employeeStoreFilter).length > 0) return false;
+
+    const fallbackEmployee =
+      allEmployees.find((employee) => employee && String(employee.store || "").trim()) ||
+      allEmployees.find((employee) => employee && employee.id);
+    if (!fallbackEmployee) return false;
+
+    state.employeeStoreFilter = String(fallbackEmployee.store || "").trim();
+    return true;
+  }
+
   /** 进入 Manage Payroll 工作区（侧栏入口默认落点） */
   function enterManagePayrollWorkspace() {
+    const initialStoreFilter = state.employeeStoreFilter;
     let periodId = state.periodId;
     if (!periodId || !getPeriod(periodId)) {
       periodId = resolveDefaultPeriodId();
@@ -3170,10 +3188,14 @@
     if (!periodId) return false;
 
     let employeeId = state.employeeId;
-    if (!employeeId || !getEmployee(periodId, employeeId)) {
+    const activeEmployees = getEmployeesForActiveStore(periodId);
+    const employeeMatchesActiveStore = activeEmployees.some((employee) => employee && employee.id === employeeId);
+    if (!employeeId || !getEmployee(periodId, employeeId) || !employeeMatchesActiveStore) {
       employeeId = resolveDefaultEmployeeId(periodId);
     }
     if (!employeeId) return false;
+
+    const bootstrapStoreFilterRepaired = initialStoreFilter !== state.employeeStoreFilter;
 
     state.periodId = periodId;
     state.employeeId = employeeId;
@@ -3184,6 +3206,7 @@
     renderManageForm();
     syncWorkspaceDirtyBaseline();
     showView("workspace");
+    if (bootstrapStoreFilterRepaired) saveState();
     return true;
   }
 
