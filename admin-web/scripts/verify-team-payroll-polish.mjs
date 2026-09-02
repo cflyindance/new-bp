@@ -15,6 +15,16 @@ requireText(mount, 'import payrollPolishCss from "./payroll/payroll-polish.css?r
 requireText(mount, "${payrollCss}</style><style>${payrollPolishCss}", "CSS injection order");
 requireText(polish, ":host", "Shadow host sizing");
 requireText(polish, ".team-payroll-page.payroll-workspace-active .payroll-workspace-main", "workspace scroll reset");
+[
+  "--payroll-canvas-radius: 16px",
+  "--payroll-control-height: 42px",
+  "padding: 24px",
+  "border-radius: 14px",
+  "background: #f7f7f7",
+  "border: 1px solid #d9d9d9",
+  ".payroll-period-summary",
+  "order: 4",
+].forEach((token) => requireText(polish, token, "visual reference rule"));
 
 if (/@import/i.test(polish)) failures.push("polish CSS must not import external styles");
 if (/(^|[}\n])\s*(html|body|\*)\b[^,{]*[{,]/m.test(polish)) {
