@@ -1333,9 +1333,14 @@ export async function handleEmenuSeasoningApi(req, res, dbPath, options = {}) {
   try {
     let db = loadEmenuSeasoningDb(dbPath);
     if (isMenuDependentPath(method, sub)) {
-      const view = await menuProvider.resolve({ req, cacheDir });
-      db = applyMenuView(db, view);
+      const view = await menuProvider.resolve({ req, cacheDir, product: "EMENU" });
+      if (view.source === "static") {
+        db = { ...db, __menuSource: "static", __menuFromCache: false };
+      } else {
+        db = applyMenuView(db, view);
+      }
       if (view.fromCache) res.setHeader("X-Seasoning-Menu-Cache", "1");
+      if (view.source) res.setHeader("X-Seasoning-Menu-Source", String(view.source));
     }
     if (method === "GET" && sub === "/health") {
       sendJson(res, 200, { ok: true, service: "emenu-local-seasoning", version: db.version });
