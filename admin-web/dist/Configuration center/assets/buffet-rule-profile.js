@@ -13,6 +13,25 @@
     { id: "custom", name: "自定义配置", periods: [], blocks: {} }
   ];
   var LEGACY_CAPABILITIES = {
+    "KPOS-O01": { id: "KPOS-O01", label: "每个订单的指定菜品分别限制份数", group: "order_lifetime", level: "rule", coverageStatus: "complete", legacyEvidenceStatus: "verified_config" },
+    "KPOS-O02": { id: "KPOS-O02", label: "每个订单的指定菜品集合并限制总份数", group: "order_lifetime", level: "rule", coverageStatus: "complete", legacyEvidenceStatus: "verified_config" },
+    "KPOS-O03": { id: "KPOS-O03", label: "每位食客每单指定菜品额度 × 有效人数", group: "order_lifetime", level: "rule", coverageStatus: "complete", legacyEvidenceStatus: "pending_runtime" },
+    "KPOS-O04": { id: "KPOS-O04", label: "每位食客每单菜品集额度 × 有效人数", group: "order_lifetime", level: "rule", coverageStatus: "complete", legacyEvidenceStatus: "pending_runtime" },
+    "KPOS-O05": { id: "KPOS-O05", label: "选择分类后展开并保存具体菜品", group: "order_lifetime", level: "rule", coverageStatus: "complete", legacyEvidenceStatus: "verified_config" },
+    "KPOS-O06": { id: "KPOS-O06", label: "菜品规则选择多个商品时分别统计", group: "order_lifetime", level: "rule", coverageStatus: "complete", legacyEvidenceStatus: "pending_runtime" },
+    "KPOS-O07": { id: "KPOS-O07", label: "菜品集是规则内临时集合，不新增名称或编码", group: "order_lifetime", level: "rule", coverageStatus: "complete", legacyEvidenceStatus: "verified_config" },
+    "KPOS-O08": { id: "KPOS-O08", label: "菜品集成员跨产线合并统计", group: "order_lifetime", level: "rule", coverageStatus: "defined_extension", legacyEvidenceStatus: "not_legacy" },
+    "KPOS-O09": { id: "KPOS-O09", label: "同一功能支持多条非重叠规则独立生效", group: "order_lifetime", level: "group", coverageStatus: "complete", legacyEvidenceStatus: "verified_config" },
+    "KPOS-O10": { id: "KPOS-O10", label: "同一商品允许跨四种整单功能重复选择", group: "order_lifetime", level: "group", coverageStatus: "complete", legacyEvidenceStatus: "verified_config" },
+    "KPOS-O11": { id: "KPOS-O11", label: "四种整单规则共同生效，任一超限即拦截", group: "order_lifetime", level: "group", coverageStatus: "complete", legacyEvidenceStatus: "verified_config" },
+    "KPOS-O12": { id: "KPOS-O12", label: "数量跨全部下单轮次累计，关单或重新开单后重置", group: "order_lifetime", level: "group", coverageStatus: "complete", legacyEvidenceStatus: "verified_config" },
+    "KPOS-O13": { id: "KPOS-O13", label: "额度空值、0 与正整数采用新系统明确语义", group: "order_lifetime", level: "group", coverageStatus: "product_redefined", legacyEvidenceStatus: "verified_config", gap: "旧页面默认 1、最小值 1；新系统为空值未配置、0 禁止下单、正整数为最大份数" },
+    "KPOS-O14": { id: "KPOS-O14", label: "整单规则与每轮规则使用独立统计桶并可同时命中", group: "order_lifetime", level: "group", coverageStatus: "complete", legacyEvidenceStatus: "verified_config" },
+    "KPOS-OV01": { id: "KPOS-OV01", label: "历史每位食客规则是否确实按有效人数乘算", group: "order_lifetime", level: "group", coverageStatus: "complete", legacyEvidenceStatus: "pending_runtime", gap: "新系统明确按有效人数乘算" },
+    "KPOS-OV02": { id: "KPOS-OV02", label: "历史保存接口是否接受 0", group: "order_lifetime", level: "group", coverageStatus: "product_redefined", legacyEvidenceStatus: "pending_runtime", gap: "新系统明确 0 为禁止下单" },
+    "KPOS-OV03": { id: "KPOS-OV03", label: "历史执行引擎是否对多选菜品逐菜统计", group: "order_lifetime", level: "group", coverageStatus: "complete", legacyEvidenceStatus: "pending_runtime", gap: "新系统菜品规则逐菜统计" },
+    "KPOS-OV04": { id: "KPOS-OV04", label: "修改就餐人数后整单额度如何重算", group: "order_lifetime", level: "group", coverageStatus: "complete", legacyEvidenceStatus: "pending_runtime", gap: "新系统按校验时有效人数重算" },
+    "KPOS-OV05": { id: "KPOS-OV05", label: "历史服务员授权实际放行范围", group: "order_lifetime", level: "group", coverageStatus: "complete", legacyEvidenceStatus: "pending_runtime", gap: "新系统按本次操作／当前轮／当前订单授权配置执行" },
     "KPOS-R01": { id: "KPOS-R01", label: "每轮菜品总数最少/最多", coverageStatus: "complete", level: "rule" },
     "KPOS-R02": { id: "KPOS-R02", label: "每人每轮菜品总数最少/最多", coverageStatus: "complete", level: "rule" },
     "KPOS-R03": { id: "KPOS-R03", label: "人均总量之外设置整桌每轮兜底", coverageStatus: "complete", level: "rule" },
@@ -27,11 +46,15 @@
     "KPOS-R12": { id: "KPOS-R12", label: "同一人数区间混合配置每轮、每人每轮规则", coverageStatus: "partial", level: "group", gap: "按桌每轮固定额度不能按人数区间变化" },
     "KPOS-R13": { id: "KPOS-R13", label: "不同人数区间使用不同总量和指定对象额度", coverageStatus: "partial", level: "group", gap: "按人数规则按人均额度乘有效人数，不能表达区间内固定整桌额度" }
   };
+  var LEGACY_CAPABILITY_GROUPS = [
+    { group: "order_lifetime", capabilityIds: ["KPOS-O09", "KPOS-O10", "KPOS-O11", "KPOS-O12", "KPOS-O13", "KPOS-O14"], evidenceIds: ["KPOS-OV01", "KPOS-OV02", "KPOS-OV03", "KPOS-OV04", "KPOS-OV05"] },
+    { group: "per_round", capabilityIds: ["KPOS-R12", "KPOS-R13"], evidenceIds: [] }
+  ];
   var DEFAULT_SCENARIOS = [
-    { key: "order|order_lifetime|dish", version: 3, group: "order_lifetime", subject: "order", targetType: "dish", defaultVariant: "order_target", measureUnit: "piece", legacyCapabilityIds: [], coverageStatus: "not_applicable", name: "每个订单指定菜品限制下单份数", enabledPeriods: ["order_lifetime"], blocks: { totalEnabled: false, targetEnabled: true, sameDishEnabled: false } },
-    { key: "order|order_lifetime|dish_set", version: 3, group: "order_lifetime", subject: "order", targetType: "dish_set", defaultVariant: "order_target", measureUnit: "piece", legacyCapabilityIds: [], coverageStatus: "not_applicable", name: "每个订单指定菜品集限制下单份数", enabledPeriods: ["order_lifetime"], blocks: { totalEnabled: false, targetEnabled: true, sameDishEnabled: false } },
-    { key: "party_size|order_lifetime|dish", version: 3, group: "order_lifetime", subject: "party_size", targetType: "dish", defaultVariant: "order_target", measureUnit: "piece", legacyCapabilityIds: [], coverageStatus: "not_applicable", name: "每位食客每单指定菜品限制下单份数", enabledPeriods: ["order_lifetime"], blocks: { totalEnabled: false, targetEnabled: true, sameDishEnabled: false } },
-    { key: "party_size|order_lifetime|dish_set", version: 3, group: "order_lifetime", subject: "party_size", targetType: "dish_set", defaultVariant: "order_target", measureUnit: "piece", legacyCapabilityIds: [], coverageStatus: "not_applicable", name: "每位食客每单菜品集限制下单份数", enabledPeriods: ["order_lifetime"], blocks: { totalEnabled: false, targetEnabled: true, sameDishEnabled: false } },
+    { key: "order|order_lifetime|dish", version: 4, group: "order_lifetime", subject: "order", targetType: "dish", defaultVariant: "order_target", measureUnit: "piece", legacyCapabilityIds: ["KPOS-O01", "KPOS-O05", "KPOS-O06"], coverageStatus: "complete", name: "每个订单指定菜品限制下单份数", enabledPeriods: ["order_lifetime"], blocks: { totalEnabled: false, targetEnabled: true, sameDishEnabled: false } },
+    { key: "order|order_lifetime|dish_set", version: 4, group: "order_lifetime", subject: "order", targetType: "dish_set", defaultVariant: "order_target", measureUnit: "piece", legacyCapabilityIds: ["KPOS-O02", "KPOS-O05", "KPOS-O07", "KPOS-O08"], coverageStatus: "defined_extension", name: "每个订单指定菜品集限制下单份数", enabledPeriods: ["order_lifetime"], blocks: { totalEnabled: false, targetEnabled: true, sameDishEnabled: false } },
+    { key: "party_size|order_lifetime|dish", version: 4, group: "order_lifetime", subject: "party_size", targetType: "dish", defaultVariant: "order_target", measureUnit: "piece", legacyCapabilityIds: ["KPOS-O03", "KPOS-O05", "KPOS-O06"], coverageStatus: "complete", name: "每位食客每单指定菜品限制下单份数", enabledPeriods: ["order_lifetime"], blocks: { totalEnabled: false, targetEnabled: true, sameDishEnabled: false } },
+    { key: "party_size|order_lifetime|dish_set", version: 4, group: "order_lifetime", subject: "party_size", targetType: "dish_set", defaultVariant: "order_target", measureUnit: "piece", legacyCapabilityIds: ["KPOS-O04", "KPOS-O05", "KPOS-O07", "KPOS-O08"], coverageStatus: "defined_extension", name: "每位食客每单菜品集限制下单份数", enabledPeriods: ["order_lifetime"], blocks: { totalEnabled: false, targetEnabled: true, sameDishEnabled: false } },
     { key: "order|per_round|total", version: 1, group: "per_round", subject: "order", targetType: "dish", defaultVariant: "round_total", measureUnit: "piece", legacyCapabilityIds: ["KPOS-R01"], coverageStatus: "complete", name: "每轮下单菜品总数限制", enabledPeriods: ["per_round"], blocks: { totalEnabled: true, targetEnabled: false, sameDishEnabled: false } },
     { key: "party_size|per_round|total", version: 1, group: "per_round", subject: "party_size", targetType: "dish", defaultVariant: "round_total", measureUnit: "piece", legacyCapabilityIds: ["KPOS-R02", "KPOS-R03"], coverageStatus: "complete", name: "每人每轮下单菜品总数限制", enabledPeriods: ["per_round"], blocks: { totalEnabled: true, targetEnabled: false, sameDishEnabled: false } },
     { key: "order|per_round|dish", version: 3, group: "per_round", subject: "order", targetType: "dish", defaultVariant: "round_dish", measureUnit: "piece", legacyCapabilityIds: ["KPOS-R04"], coverageStatus: "complete", name: "每轮指定菜品数量限制", enabledPeriods: ["per_round"], blocks: { totalEnabled: false, targetEnabled: true, sameDishEnabled: false } },
@@ -939,6 +962,7 @@
     repository: repository,
     defaultScenarios: clone(DEFAULT_SCENARIOS),
     legacyCapabilities: clone(LEGACY_CAPABILITIES),
+    legacyCapabilityGroups: clone(LEGACY_CAPABILITY_GROUPS),
     createDefaultScenarioRule: createDefaultScenarioRule,
     reconcileDefaultRules: reconcileDefaultRules,
     verifiedLegacyDefaultKey: verifiedLegacyDefaultKey,
