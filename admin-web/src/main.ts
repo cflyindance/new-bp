@@ -1,6 +1,8 @@
 import "./styles/app.css";
 import { mountPayrollPage, type PayrollPageHandle } from "./team/payroll-page";
 import { createPayrollPageContext } from "./team/payroll/payroll-context";
+import { mountEmployeesPage, type EmployeesPageHandle } from "./team/employees-page";
+import { createEmployeesPageContext } from "./team/employees/employees-context";
 import { BUILD_STAMP } from "./generated/build-stamp";
 import {
   bindLoginPage,
@@ -1826,7 +1828,6 @@ const FOH_EMENU_PRO_SESSION_KEY = "bplant-emenu-pro-demo";
 /** 报表中心 → 员工报表 → 小费分配：嵌入 TipOut 项目 */
 const REPORTS_TIPS_ALLOCATION_IFRAME_SRC = embeddedPageSrc("./TipOut/index.html");
 /** 团队管理 → 角色与员工：嵌入 TipOut 员工列表 */
-const TEAM_ROLES_EMPLOYEES_IFRAME_SRC = embeddedPageSrc("./TipOut/employees.html");
 /** 团队管理 → 小费管理：嵌入 TipOut（默认小费分配） */
 const TEAM_TIPS_DISTRIBUTION_IFRAME_SRC = embeddedPageSrc("./TipOut/index.html");
 const TEAM_TIPS_DETAILS_IFRAME_SRC = embeddedPageSrc("./TipOut/detail.html");
@@ -1905,7 +1906,7 @@ function isReportsTipsAllocationIframePath(path: string): boolean {
   return path === "/reports/staff/tips-allocation" || path.startsWith("/reports/staff/tips-allocation/");
 }
 
-function isTeamRolesEmployeesIframePath(path: string): boolean {
+function isTeamRolesEmployeesPath(path: string): boolean {
   return path === "/team/roles-employees" || path.startsWith("/team/roles-employees/");
 }
 
@@ -2038,19 +2039,13 @@ function renderReportsTipsAllocationIframePanel(): string {
     </div>`;
 }
 
-/** 主区全宽嵌入团队管理角色与员工（TipOut 员工列表） */
-function renderTeamRolesEmployeesIframePanel(): string {
+/** 团队管理原生员工与岗位页：保留主项目导航和账号栏，不加载 TipOut iframe。 */
+function renderTeamRolesEmployeesPanel(): string {
   ensureInPageDefaultStoreSelected();
   syncScopeFilterMetaForEmbeddedPages();
   return `
-    <div class="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-      <iframe
-        title="团队管理角色与员工"
-        class="block h-full w-full flex-1 border-0"
-        src="${TEAM_ROLES_EMPLOYEES_IFRAME_SRC}"
-        referrerpolicy="no-referrer-when-downgrade"
-        allow="clipboard-read; clipboard-write; fullscreen"
-      ></iframe>
+    <div data-team-employees-scroll class="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto bg-[#f3f4f6]">
+      <div class="block min-h-full min-w-0" data-team-employees-root></div>
     </div>`;
 }
 
@@ -11441,7 +11436,7 @@ function renderMain(): string {
   const isMarketingPosterProIframe = isMarketingPosterProIframePath(path);
   const isAssetCenterMaterialsIframe = isAssetCenterMaterialsIframePath(path);
   const isReportsTipsAllocationIframe = isReportsTipsAllocationIframePath(path);
-  const isTeamRolesEmployeesIframe = isTeamRolesEmployeesIframePath(path);
+  const isTeamRolesEmployees = isTeamRolesEmployeesPath(path);
   const isTeamTipsManagementIframe = isTeamTipsManagementIframePath(path);
   const isTeamPayrollReport = isTeamPayrollReportPath(path);
   const isFohMenuOrderLimitsIframe = isFohMenuOrderLimitsIframePath(path);
@@ -11456,7 +11451,7 @@ function renderMain(): string {
     isAssetCenterMaterialsIframe ||
     isFohEmenuProIframe ||
     isReportsTipsAllocationIframe ||
-    isTeamRolesEmployeesIframe ||
+    isTeamRolesEmployees ||
     isTeamTipsManagementIframe ||
     isTeamPayrollReport;
   const isModuleSettingsCatalog = isModuleHubSettingsCatalogPath(path);
@@ -11490,7 +11485,7 @@ function renderMain(): string {
     isFohMenuOrderLimitsIframe ||
     isFohBuffetRulesIframe ||
     isReportsTipsAllocationIframe ||
-    isTeamRolesEmployeesIframe ||
+    isTeamRolesEmployees ||
     isTeamTipsManagementIframe ||
     isTeamPayrollReport ||
     isGiftCardsFactory ||
@@ -11616,8 +11611,8 @@ function renderMain(): string {
                     ? renderFohEmenuProIframePanel()
                     : isReportsTipsAllocationIframe
                       ? renderReportsTipsAllocationIframePanel()
-                      : isTeamRolesEmployeesIframe
-                        ? renderTeamRolesEmployeesIframePanel()
+                      : isTeamRolesEmployees
+                        ? renderTeamRolesEmployeesPanel()
                         : isTeamTipsManagementIframe
                           ? renderTeamTipsManagementIframePanel(path)
                           : isTeamPayrollReport
@@ -11950,10 +11945,17 @@ function mountLoginShell(): void {
 }
 
 let activePayrollPage: PayrollPageHandle | null = null;
+let activeEmployeesPage: EmployeesPageHandle | null = null;
+
+function destroyTeamEmployeesPage(): void {
+  activeEmployeesPage?.destroy();
+  activeEmployeesPage = null;
+}
 
 function mount(): void {
   activePayrollPage?.destroy();
   activePayrollPage = null;
+  destroyTeamEmployeesPage();
   releaseFohMenuOrderLimitsFullscreen();
   releaseFohBuffetRulesFullscreen();
   bindChainBrandOrgSyncListener();
@@ -12228,6 +12230,11 @@ function mount(): void {
   const payrollRoot = app.querySelector<HTMLElement>("[data-team-payroll-root]");
   if (payrollRoot) {
     activePayrollPage = mountPayrollPage(payrollRoot, createPayrollPageContext());
+  }
+
+  const employeesRoot = app.querySelector<HTMLElement>("[data-team-employees-root]");
+  if (employeesRoot) {
+    activeEmployeesPage = mountEmployeesPage(employeesRoot, createEmployeesPageContext());
   }
 
   bindMarketingScreensaverFullscreenFlow(app);
