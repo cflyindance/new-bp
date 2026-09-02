@@ -1,0 +1,74 @@
+<section class="team-tips-page" data-team-tips-view="rules">
+<div class="content-area">
+        <section class="tipout-page-section" aria-labelledby="rulesTitle">
+          <div class="tipout-page-heading tipout-page-heading--with-back">
+            <a class="btn" href="index.html">返回小费分配汇总</a>
+            <div>
+              <p class="tipout-kicker">规则管理</p>
+              <h1 id="rulesTitle">分配规则</h1>
+              <p>配置当前门店的小费池来源、扣除方和接收方。</p>
+            </div>
+            <div class="tipout-heading-actions">
+              <button type="button" class="btn btn-primary" data-native-onclick="openAddRuleModal()">新建规则</button>
+            </div>
+          </div>
+
+          <div class="tipout-metric-strip tipout-metric-strip--three" aria-label="规则概览">
+            <div><span>规则总数</span><strong id="ruleCount">0</strong></div>
+            <div><span>小费池</span><strong id="tipPoolCount">0</strong></div>
+            <div><span>加收服务费池</span><strong id="surchargePoolCount">0</strong></div>
+          </div>
+
+          <div class="tipout-compact-toolbar tipout-rules-toolbar">
+            <label class="filter-field-label" for="storeFilter">门店</label>
+            <select class="form-control" id="storeFilter" data-native-onchange="renderRulesTable()">
+              <option value="">全部门店</option>
+            </select>
+          </div>
+
+          <div class="tipout-table-wrap">
+            <table class="data-table tipout-rules-table">
+              <thead>
+                <tr>
+                  <th>规则与门店</th>
+                  <th>池类型与规则摘要</th>
+                  <th>分配说明</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="rulesTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+<div class="modal-overlay" id="poolTypeModal">
+    <div class="modal" style="width:min(480px,92vw)">
+      <div class="modal-header">
+        <h3>选择小费池类型</h3>
+        <button type="button" class="modal-close" data-native-onclick="closePoolTypeModal()" aria-label="关闭">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="pool-type-options">
+          <label class="pool-type-option selected" data-pool-type="tip">
+            <input type="radio" name="poolType" value="tip" checked>
+            <div class="pool-type-option-text">
+              <strong>小费池</strong>
+              <span>配置小费、销售额等来源的小费分配规则</span>
+            </div>
+          </label>
+          <label class="pool-type-option" data-pool-type="surcharge">
+            <input type="radio" name="poolType" value="surcharge">
+            <div class="pool-type-option-text">
+              <strong>加收服务费池</strong>
+              <span>配置现金/信用卡加收服务费的分配规则</span>
+            </div>
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" data-native-onclick="closePoolTypeModal()">取消</button>
+        <button type="button" class="btn btn-primary" data-native-onclick="confirmPoolTypeSelection()">下一步</button>
+      </div>
+    </div>
+  </div>
+</section>

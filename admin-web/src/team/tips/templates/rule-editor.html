@@ -1,0 +1,487 @@
+<section class="team-tips-page" data-team-tips-view="rule-editor">
+<div class="content-area tipout-rule-editor-layout">
+        <div class="tipout-page-heading tipout-page-heading--with-back">
+          <a class="btn" href="rules.html">返回规则列表</a>
+          <div>
+            <p class="tipout-kicker">规则配置</p>
+            <h1 id="pageTitle">小费分配规则</h1>
+            <p>配置现有小费池来源、扣除方、接收方和分配口径。</p>
+          </div>
+          <div class="tipout-heading-actions">
+            <button type="button" class="btn btn-primary" data-native-onclick="submitRule()">保存规则</button>
+          </div>
+        </div>
+
+        <div class="tipout-workspace has-aside" id="ruleEditorWorkspace">
+          <main class="tipout-editor-main" id="ruleEditorMain">
+
+          <!-- Rule Name -->
+          <div class="form-section tipout-form-card" id="ruleSectionBasic">
+            <div class="tipout-form-grid">
+            <div class="form-group">
+              <label class="form-label"><span class="required">*</span>规则名称 <span class="field-desc-wrap" data-field-id="ruleName"><span class="field-desc-icon" data-field-id="ruleName" data-label="规则名称" data-native-onclick="event.preventDefault();openFieldDescEditor('ruleName','规则名称')" title="点击编辑字段说明">ⓘ</span></span></label>
+              <input type="text" id="ruleName" class="form-control" placeholder="请输入规则名称" style="max-width:460px">
+            </div>
+            <div class="form-group">
+              <label class="form-label"><span class="required">*</span>门店 <span class="field-desc-wrap" data-field-id="store"><span class="field-desc-icon" data-field-id="store" data-label="门店" data-native-onclick="event.preventDefault();openFieldDescEditor('store','门店')" title="点击编辑字段说明">ⓘ</span></span></label>
+              <select id="storeSelect" class="form-control" style="max-width:460px">
+                <option value="">请选择门店</option>
+                <option value="Golden Dragon Chinese Kitchen - Dallas, TX 75231">Golden Dragon Chinese Kitchen - Dallas, TX 75231</option>
+                <option value="Sakura Sushi & Ramen House - Dallas, TX 75247">Sakura Sushi & Ramen House - Dallas, TX 75247</option>
+                <option value="El Fuego Tex-Mex Grill - Plano, TX 75074">El Fuego Tex-Mex Grill - Plano, TX 75074</option>
+              </select>
+            </div>
+            </div>
+          </div>
+
+          <!-- 小费池贡献规则：两种分配模式共用（位于分配模式之上） -->
+          <div class="form-section tipout-form-card" id="sharedPoolRulesSection">
+            <div class="form-section-title">
+              <span class="field-desc-wrap" data-field-id="poolRules" data-pool-label="小费池贡献规则">小费池贡献规则 <span class="field-desc-icon" data-field-id="poolRules" data-label="小费池贡献规则" data-native-onclick="event.preventDefault();openFieldDescEditor('poolRules','小费池贡献规则')" title="点击编辑字段说明">ⓘ</span></span>
+            </div>
+
+            <div id="poolRulesContainer"></div>
+
+            <div class="add-option-dropdown">
+              <button class="btn" data-native-onclick="toggleAddMenu()" id="addMenuBtn">
+                <span style="font-size:16px">+</span> 新增选项
+              </button>
+              <div class="add-option-menu" id="addOptionMenu">
+                <div class="add-option-menu-item" data-type="sales" data-native-onclick="addPoolRule('sales')">销售额</div>
+                <div class="add-option-menu-item" data-type="personal_sales" data-native-onclick="addPoolRule('personal_sales')">按个人销售额</div>
+                <div class="add-option-menu-item" data-type="tips" data-pool-label="小费" data-native-onclick="addPoolRule('tips')">小费</div>
+                <div class="add-option-menu-item" data-type="surcharge" data-native-onclick="addPoolRule('surcharge')">加收服务费</div>
+                <div class="add-option-menu-item" data-type="manual" data-pool-label="手动上报小费" data-native-onclick="addPoolRule('manual')">手动上报小费</div>
+                <div class="add-option-menu-item" data-type="custom" data-pool-label="自定义小费" data-native-onclick="addPoolRule('custom')">自定义小费</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section tipout-form-card" id="allocationModeSection">
+            <div class="form-section-title">分配模式</div>
+            <div class="radio-group">
+              <label class="radio-item">
+                <input type="radio" name="allocationMode" value="legacy_pool" checked data-native-onchange="onAllocationModeChange(false)">
+                <span data-pool-label="小费池汇总分配（默认）">小费池汇总分配（默认）</span>
+              </label>
+              <label class="radio-item">
+                <input type="radio" name="allocationMode" value="order_tip_then_residual" data-native-onchange="onAllocationModeChange(false)">
+                <span data-pool-label="计提小费占比分配">计提小费占比分配</span>
+              </label>
+            </div>
+            <p id="allocationModeHint" data-pool-label="「计提小费占比分配」适用于：按菜单销售额等基数从小费池中按比例计提给不同接收方，剩余再按「剩余小费接收方规则」分配（例如酒保按酒水销售额、后厨按菜品销售额计提，剩余归服务员等）。" style="font-size:12px;color:var(--text-tertiary);margin:8px 0 0;line-height:1.5">「计提小费占比分配」适用于：按菜单销售额等基数从小费池中按比例计提给不同接收方，剩余再按「剩余小费接收方规则」分配（例如酒保按酒水销售额、后厨按菜品销售额计提，剩余归服务员等）。</p>
+          </div>
+
+          <div id="legacyAllocationSections">
+          <!-- Deduction Rules -->
+          <div class="form-section tipout-form-card" id="deductRulesSection" style="display:none">
+            <div class="form-section-title"><span class="field-desc-wrap" data-field-id="deductRoles" data-pool-label="小费扣除方规则">小费扣除方规则 <span class="field-desc-icon" data-field-id="deductRoles" data-label="小费扣除方规则" data-native-onclick="event.preventDefault();openFieldDescEditor('deductRoles','小费扣除方规则')" title="点击编辑字段说明">ⓘ</span></span></div>
+            <div id="deductRulesContainer"></div>
+            <div id="deductPanelsHost" style="display:none" aria-hidden="true"></div>
+            <div class="add-option-dropdown" id="deductAddOptionWrap">
+              <button type="button" class="btn" data-native-onclick="toggleDeductAddMenu()" id="deductAddMenuBtn">
+                <span style="font-size:16px">+</span> 新增选项
+              </button>
+              <div class="add-option-menu" id="deductAddOptionMenu">
+                <div class="add-option-menu-item" data-basis="sales_pct" data-native-onclick="addDeductRule('sales_pct')">按照销售额占比</div>
+                <div class="add-option-menu-item" data-basis="personal_sales_pct" data-native-onclick="addDeductRule('personal_sales_pct')">按照个人销售额占比</div>
+                <div class="add-option-menu-item" data-basis="tip_income" data-pool-label="按照小费收入占比" data-native-onclick="addDeductRule('tip_income')">按照小费收入占比</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Receiver Rules -->
+          <div class="form-section tipout-form-card" id="legacyReceiversSection">
+            <div class="form-section-title">
+              <span class="field-desc-wrap" data-field-id="receiverRules" data-pool-label="小费接收方规则">小费接收方规则 <span class="field-desc-icon" data-field-id="receiverRules" data-label="小费接收方规则" data-native-onclick="event.preventDefault();openFieldDescEditor('receiverRules','小费接收方规则')" title="点击编辑字段说明">ⓘ</span></span>
+              <span style="font-size:12px;color:var(--text-tertiary);font-weight:400;margin-left:auto">合计: <span id="totalPercent">0</span>%</span>
+            </div>
+            <table class="receiver-table" id="receiverTable">
+              <thead>
+                <tr>
+                  <th>角色</th>
+                  <th>占比百分比</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="receiverTableBody">
+              </tbody>
+            </table>
+            <button class="btn btn-sm" data-native-onclick="addReceiverRow()">
+              <span style="font-size:14px">+</span> 新增角色
+            </button>
+          </div>
+          </div><!-- /legacyAllocationSections -->
+
+          <div id="orderTipAllocationSection" style="display:none">
+            <div class="form-section tipout-form-card" id="orderTipClaimsSection">
+              <div class="form-section-title" data-pool-label="计提小费接受方规则">计提小费接受方规则</div>
+              <div class="tip-claims-table-wrap">
+                <table class="receiver-table" id="tipClaimsTable">
+                  <thead>
+                    <tr>
+                      <th style="width:236px">接收角色</th>
+                      <th style="min-width:110px" data-pool-label="小费计提占比(%)">小费计提占比(%)</th>
+                      <th style="min-width:148px" data-pool-label="员工小费权重">员工小费权重</th>
+                      <th style="min-width:200px">取值条件</th>
+                      <th style="width:56px">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tipClaimsTableBody"></tbody>
+                </table>
+              </div>
+              <button type="button" class="btn btn-sm" style="margin-top:8px" data-native-onclick="addTipClaimRow()"><span style="font-size:14px">+</span> 新增计提</button>
+            </div>
+            <div class="form-section tipout-form-card" id="orderResidualSection">
+              <div class="form-section-title">
+                <span data-pool-label="剩余小费接收方规则">剩余小费接收方规则</span>
+                <span style="font-size:12px;color:var(--text-tertiary);font-weight:400;margin-left:auto">合计: <span id="orderResidualTotalPercent">0</span>%</span>
+              </div>
+              <table class="receiver-table" id="orderResidualReceiverTable">
+                <thead>
+                  <tr>
+                    <th>角色</th>
+                    <th>占比百分比</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="orderResidualReceiverTableBody"></tbody>
+              </table>
+              <button type="button" class="btn btn-sm" style="margin-top:8px" data-native-onclick="addOrderResidualReceiverRow()"><span style="font-size:14px">+</span> 新增角色</button>
+            </div>
+          </div>
+
+          <div id="distributionSection" class="tipout-rule-distribution-section tipout-form-card">
+            <!-- Clock-in Method -->
+            <div class="form-section">
+              <div class="form-section-title"><span class="field-desc-wrap" data-field-id="clockin">员工打卡方式（单选） <span class="field-desc-icon" data-field-id="clockin" data-label="员工打卡方式" data-native-onclick="event.preventDefault();openFieldDescEditor('clockin','员工打卡方式')" title="点击编辑字段说明">ⓘ</span></span></div>
+              <div class="radio-group">
+                <label class="radio-item" id="clockinClockOption">
+                  <input type="radio" name="clockin" value="clock" checked data-native-onchange="updateDistributionOptions()"> 打卡上班
+                </label>
+                <label class="radio-item">
+                  <input type="radio" name="clockin" value="noclock" data-native-onchange="updateDistributionOptions()"> 不打卡
+                </label>
+              </div>
+            </div>
+
+            <!-- Distribution Method -->
+            <div class="form-section">
+              <div class="form-section-title"><span class="field-desc-wrap" data-field-id="distribution" data-pool-label="小费分配方式（单选）">小费分配方式（单选） <span class="field-desc-icon" data-field-id="distribution" data-label="小费分配方式" data-native-onclick="event.preventDefault();openFieldDescEditor('distribution','小费分配方式')" title="点击编辑字段说明">ⓘ</span></span></div>
+              <div class="radio-group">
+                <label class="radio-item">
+                  <input type="radio" name="distribution" value="average" checked data-native-onchange="updateWorkHoursConfigUi()"> 按员工数量平均分配
+                </label>
+                <label class="radio-item">
+                  <input type="radio" name="distribution" value="hours" data-native-onchange="updateWorkHoursConfigUi()"> 按工作时长占比分配
+                </label>
+                <div class="work-hours-config" id="workHoursConfigPanel" style="display:none">
+                  <label class="radio-item">
+                    <input type="radio" name="workHoursMode" value="actual" checked data-native-onchange="updateWorkHoursConfigUi()">
+                    <span id="workHoursActualLabel">按照实际打卡工时</span>
+                  </label>
+                  <div class="work-hours-cap-row">
+                    <label class="radio-item">
+                      <input type="radio" name="workHoursMode" value="capped" data-native-onchange="updateWorkHoursConfigUi()">
+                      <span id="workHoursCappedLabel">打卡工时超出最大工时，按最大工时</span>
+                    </label>
+                    <input class="work-hours-cap-input" id="maxHoursPerDay" type="number" min="0.1" max="24" step="0.1" inputmode="decimal" disabled data-native-oninput="clearWorkHoursConfigError()" aria-label="每日最大工时">
+                    <span style="font-size:13px;color:var(--text-secondary)">小时/天</span>
+                  </div>
+                  <div class="work-hours-config-error" id="workHoursConfigError"></div>
+                </div>
+                <label class="radio-item" id="distributionOrdersRow">
+                  <input type="radio" name="distribution" value="orders" data-native-onchange="updateWorkHoursConfigUi()"> 按订单占比分配
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Employee Weight -->
+          <!-- 
+          <div class="form-section">
+            <div class="form-section-title">员工权重</div>
+            <div class="radio-group">
+              <label class="radio-item">
+                <input type="radio" name="weight" value="set" data-native-onchange="toggleWeightBtn(true)"> 设置
+              </label>
+              <label class="radio-item">
+                <input type="radio" name="weight" value="unset" checked data-native-onchange="toggleWeightBtn(false)"> 不设置
+              </label>
+            </div>
+            <div id="weightBtnArea" style="margin-top:8px;display:none">
+              <button class="btn" data-native-onclick="openModal('weightModal')">设置员工权重</button>
+            </div>
+          </div>
+          -->
+
+          </main>
+          <aside class="tipout-context-rail" id="ruleEditorContextRail" aria-label="当前规则上下文"></aside>
+        </div>
+
+        <div class="tipout-sticky-actions" id="ruleEditorActions">
+          <span>规则字段与保存逻辑保持不变</span>
+          <div>
+            <button type="button" class="btn" data-native-onclick="cancelRule()">取消</button>
+            <button type="button" class="btn btn-primary" data-native-onclick="submitRule()">提交</button>
+          </div>
+        </div>
+      </div>
+<div class="modal-overlay" id="fieldDescModal">
+    <div class="modal" style="width:420px">
+      <div class="modal-header">
+        <h3>字段说明</h3>
+        <button class="modal-close" data-native-onclick="closeModal('fieldDescModal')">×</button>
+      </div>
+      <div class="modal-body">
+        <p id="fieldDescModalLabel" style="font-size:13px;color:var(--text-secondary);margin-bottom:8px"></p>
+        <textarea id="fieldDescModalText" class="form-control" rows="4" placeholder="输入该字段的定义、逻辑说明，便于开发理解..." style="resize:vertical;min-height:80px"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" data-native-onclick="closeModal('fieldDescModal')">取消</button>
+        <button class="btn btn-primary" data-native-onclick="saveFieldDesc()">保存</button>
+      </div>
+    </div>
+  </div>
+<div class="modal-overlay" id="weightModal">
+    <div class="modal" style="width:520px">
+      <div class="modal-header">
+        <h3>员工权重</h3>
+        <button class="modal-close" data-native-onclick="closeModal('weightModal')">×</button>
+      </div>
+      <div class="modal-body">
+        <table class="weight-table">
+          <thead>
+            <tr>
+              <th style="width:30%">角色</th>
+              <th style="width:35%">员工姓名</th>
+              <th style="width:35%">员工权重</th>
+            </tr>
+          </thead>
+          <tbody id="weightModalBody"></tbody>
+        </table>
+        <div id="weightModalEmpty" data-pool-label="请先在小费接收方规则中选择角色" style="display:none;padding:24px;text-align:center;color:var(--text-tertiary)">请先在小费接收方规则中选择角色</div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" data-native-onclick="closeModal('weightModal')">取消</button>
+        <button class="btn btn-primary" data-native-onclick="saveWeight()">确认</button>
+      </div>
+    </div>
+  </div>
+<div class="modal-overlay" id="shiftManageModal">
+    <div class="modal shift-manage-modal" style="width:720px;max-width:calc(100vw - 32px)">
+      <div class="modal-header">
+        <h3>班次设置</h3>
+        <button class="modal-close" data-native-onclick="closeModal('shiftManageModal')">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="shift-manage-columns">
+          <div class="shift-manage-col shift-manage-col-list">
+            <div class="shift-manage-col-title">已有班次</div>
+            <div id="shiftManageListBody" class="shift-manage-list-scroll" data-native-onclick="shiftManageListBodyClick(event)"></div>
+            <button type="button" class="btn btn-sm btn-primary" style="margin-top:12px" data-native-onclick="shiftManageStartCreate()">+ 新增班次</button>
+          </div>
+          <div class="shift-manage-col shift-manage-col-form">
+            <div class="shift-manage-col-title" id="shiftManageFormTitle">新增班次</div>
+            <input type="hidden" id="shiftManageEditingOriginalName" value="">
+            <div class="drawer-form-row" style="margin-bottom:12px"><label style="width:88px;flex-shrink:0">班次名称</label><input type="text" id="shiftManageName" class="form-control" placeholder="输入班次名称" style="flex:1"></div>
+            <div class="drawer-form-row" style="margin-bottom:12px"><label style="width:88px;flex-shrink:0">时间段</label>
+              <input type="time" id="shiftManageTimeStart" class="form-control" style="width:120px">
+              <span style="color:var(--text-tertiary)">~</span>
+              <input type="time" id="shiftManageTimeEnd" class="form-control" style="width:120px">
+              <span style="color:var(--danger);font-size:12px;margin-left:8px;white-space:nowrap">*</span>
+            </div>
+            <div class="drawer-form-row" style="margin-bottom:0;align-items:flex-start">
+              <label style="width:88px;flex-shrink:0;padding-top:6px" data-pool-label="小费参与">小费参与</label>
+              <div style="flex:1;min-width:0">
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;color:var(--text-secondary)">
+                  <span>该班次至少上班打卡</span>
+                  <input type="number" id="shiftManageMinClockMinutes" class="form-control" min="0" step="1" placeholder="0" style="width:88px" title="分钟">
+                  <span>分钟</span>
+                </div>
+                <p style="font-size:12px;color:var(--text-tertiary);margin:8px 0 0;line-height:1.5">填 0 或不填表示不限制最低打卡时长。</p>
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;color:var(--text-secondary);margin-top:12px">
+                  <span>该班次上班打卡工时最多计</span>
+                  <input type="number" id="shiftManageMaxClockMinutes" class="form-control" min="0" step="1" placeholder="0" style="width:88px" title="分钟">
+                  <span>分钟</span>
+                </div>
+                <p style="font-size:12px;color:var(--text-tertiary);margin:8px 0 0;line-height:1.5">填 0 或不填表示不限制上限；若同时设置上下限，上限须不小于下限。</p>
+              </div>
+            </div>
+            <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap">
+              <button type="button" class="btn btn-primary" data-native-onclick="shiftManageSaveShift()">保存</button>
+              <button type="button" class="btn" data-native-onclick="shiftManageStartCreate()">清空表单</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" data-native-onclick="closeModal('shiftManageModal')">完成</button>
+      </div>
+    </div>
+  </div>
+<div class="drawer-overlay" id="salesDrawer-overlay"></div>
+<div class="drawer" id="salesDrawer">
+    <div class="drawer-header">
+      <h3>设置取值条件</h3>
+      <button class="modal-close" data-native-onclick="closeDrawer('salesDrawer')">×</button>
+    </div>
+    <div class="drawer-body">
+      <div id="salesDrawerDeductExtra" style="display:none;margin-bottom:12px"></div>
+      <div id="salesConditionsContainer"></div>
+      <div class="add-option-dropdown">
+        <button class="btn" type="button" data-native-onclick="toggleAddConditionMenu('salesDrawer')">
+          <span style="font-size:16px">+</span> 新增条件
+        </button>
+        <div class="add-option-menu" id="salesConditionMenu">
+          <div class="add-option-menu-item" data-type="role" data-native-onclick="addSalesCondition('role')">角色</div>
+          <div class="add-option-menu-item" data-type="employee" data-native-onclick="addSalesCondition('employee')">员工</div>
+          <div class="add-option-menu-item" data-type="area" data-native-onclick="addSalesCondition('area')">订单区域</div>
+          <div class="add-option-menu-item" data-type="orderType" data-native-onclick="addSalesCondition('orderType')">订单类型</div>
+          <div class="add-option-menu-item" data-type="menu" data-native-onclick="addSalesCondition('menu')">菜单</div>
+          <div class="add-option-menu-item" data-type="revenueType" data-native-onclick="addSalesCondition('revenueType')">营业额</div>
+          <div class="add-option-menu-item" data-type="orderTipStatus" data-native-onclick="addSalesCondition('orderTipStatus')">订单小费状态</div>
+          <div class="add-option-menu-item" data-type="paymentMethods" data-native-onclick="addSalesCondition('paymentMethods')">支付方式</div>
+          <div class="add-option-menu-item" data-type="hours" data-native-onclick="addSalesCondition('hours')">营业时间</div>
+          <div class="add-option-menu-item" data-type="shift" data-native-onclick="addSalesCondition('shift')">班次</div>
+          <div class="add-option-menu-item" data-type="weekday" data-native-onclick="addSalesCondition('weekday')">周期（星期）</div>
+        </div>
+      </div>
+    </div>
+    <div class="drawer-footer">
+      <button class="btn" data-native-onclick="closeDrawer('salesDrawer')">取消</button>
+      <button class="btn btn-primary" data-native-onclick="saveSalesCondition()">提交</button>
+    </div>
+  </div>
+<div class="drawer-overlay" id="deductCondDrawer-overlay"></div>
+<div class="drawer" id="deductCondDrawer">
+    <div class="drawer-header">
+      <h3 id="deductCondDrawerTitle">设置取值条件</h3>
+      <button class="modal-close" data-native-onclick="cancelDeductConditionsDrawer()">×</button>
+    </div>
+    <div class="drawer-body">
+      <div id="deductCondDrawerBody"></div>
+    </div>
+    <div class="drawer-footer">
+      <button class="btn" type="button" data-native-onclick="cancelDeductConditionsDrawer()">取消</button>
+      <button class="btn btn-primary" type="button" data-native-onclick="saveDeductConditionsDrawer()">提交</button>
+    </div>
+  </div>
+<div class="drawer-overlay" id="tipClaimSalesDrawer-overlay"></div>
+<div class="drawer" id="tipClaimSalesDrawer">
+    <div class="drawer-header">
+      <h3 data-pool-label="计提小费接受方规则 · 取值条件">计提小费接受方规则 · 取值条件</h3>
+      <button class="modal-close" data-native-onclick="closeDrawer('tipClaimSalesDrawer')">×</button>
+    </div>
+    <div class="drawer-body">
+      <div id="tipClaimConditionsContainer"></div>
+      <div class="add-option-dropdown">
+        <button class="btn" type="button" data-native-onclick="toggleAddConditionMenu('tipClaimSalesDrawer')">
+          <span style="font-size:16px">+</span> 新增条件
+        </button>
+        <div class="add-option-menu" id="tipClaimConditionMenu">
+          <div class="add-option-menu-item" data-type="role" data-native-onclick="addTipClaimSalesCondition('role')">角色</div>
+          <div class="add-option-menu-item" data-type="employee" data-native-onclick="addTipClaimSalesCondition('employee')">员工</div>
+          <div class="add-option-menu-item" data-type="area" data-native-onclick="addTipClaimSalesCondition('area')">订单区域</div>
+          <div class="add-option-menu-item" data-type="orderType" data-native-onclick="addTipClaimSalesCondition('orderType')">订单类型</div>
+          <div class="add-option-menu-item" data-type="menu" data-native-onclick="addTipClaimSalesCondition('menu')">菜单</div>
+          <div class="add-option-menu-item" data-type="revenueType" data-native-onclick="addTipClaimSalesCondition('revenueType')">营业额类型</div>
+          <div class="add-option-menu-item" data-type="paymentMethods" data-native-onclick="addTipClaimSalesCondition('paymentMethods')">支付方式</div>
+          <div class="add-option-menu-item" data-type="hours" data-native-onclick="addTipClaimSalesCondition('hours')">营业时间</div>
+          <div class="add-option-menu-item" data-type="shift" data-native-onclick="addTipClaimSalesCondition('shift')">班次</div>
+          <div class="add-option-menu-item" data-type="weekday" data-native-onclick="addTipClaimSalesCondition('weekday')">周期（星期）</div>
+        </div>
+      </div>
+    </div>
+    <div class="drawer-footer">
+      <button class="btn" data-native-onclick="closeDrawer('tipClaimSalesDrawer')">取消</button>
+      <button class="btn btn-primary" data-native-onclick="saveTipClaimSalesConditions()">提交</button>
+    </div>
+  </div>
+<div class="drawer-overlay" id="surchargeDrawer-overlay"></div>
+<div class="drawer" id="surchargeDrawer">
+    <div class="drawer-header">
+      <h3>加收服务费取值条件</h3>
+      <button class="modal-close" data-native-onclick="closeDrawer('surchargeDrawer')">×</button>
+    </div>
+    <div class="drawer-body">
+      <div id="surchargeConditionsContainer"></div>
+      <div class="add-option-dropdown">
+        <button class="btn" type="button" data-native-onclick="toggleAddConditionMenu('surchargeDrawer')">
+          <span style="font-size:16px">+</span> 新增条件
+        </button>
+        <div class="add-option-menu" id="surchargeConditionMenu">
+          <div class="add-option-menu-item" data-type="role" data-native-onclick="addSurchargeCondition('role')">角色</div>
+          <div class="add-option-menu-item" data-type="employee" data-native-onclick="addSurchargeCondition('employee')">员工</div>
+          <div class="add-option-menu-item" data-type="area" data-native-onclick="addSurchargeCondition('area')">订单区域</div>
+          <div class="add-option-menu-item" data-type="orderType" data-native-onclick="addSurchargeCondition('orderType')">订单类型</div>
+          <div class="add-option-menu-item" data-type="hours" data-native-onclick="addSurchargeCondition('hours')">订单时间段</div>
+          <div class="add-option-menu-item" data-type="tipType" data-pool-label="小费类型" data-native-onclick="addSurchargeCondition('tipType')">小费类型</div>
+          <div class="add-option-menu-item" data-type="surchargeType" data-native-onclick="addSurchargeCondition('surchargeType')" style="display:none">加收类型</div>
+          <div class="add-option-menu-item" data-type="shift" data-native-onclick="addSurchargeCondition('shift')">班次</div>
+          <div class="add-option-menu-item" data-type="weekday" data-native-onclick="addSurchargeCondition('weekday')">周期（星期）</div>
+        </div>
+      </div>
+    </div>
+    <div class="drawer-footer">
+      <button class="btn" data-native-onclick="closeDrawer('surchargeDrawer')">取消</button>
+      <button class="btn btn-primary" data-native-onclick="saveSurchargeCondition()">提交</button>
+    </div>
+  </div>
+<div class="drawer-overlay" id="tipsDrawer-overlay"></div>
+<div class="drawer" id="tipsDrawer">
+    <div class="drawer-header">
+      <h3>设置取值条件</h3>
+      <button class="modal-close" data-native-onclick="closeDrawer('tipsDrawer')">×</button>
+    </div>
+    <div class="drawer-body">
+      <div id="tipsConditionsContainer"></div>
+      <div class="add-option-dropdown">
+        <button class="btn" type="button" data-native-onclick="toggleAddConditionMenu('tipsDrawer')">
+          <span style="font-size:16px">+</span> 新增条件
+        </button>
+        <div class="add-option-menu" id="tipsConditionMenu">
+          <div class="add-option-menu-item" data-type="role" data-native-onclick="addTipsCondition('role')">角色</div>
+          <div class="add-option-menu-item" data-type="employee" data-native-onclick="addTipsCondition('employee')">员工</div>
+          <div class="add-option-menu-item" data-type="area" data-native-onclick="addTipsCondition('area')">订单区域</div>
+          <div class="add-option-menu-item" data-type="orderType" data-native-onclick="addTipsCondition('orderType')">订单类型</div>
+          <div class="add-option-menu-item" data-type="hours" data-native-onclick="addTipsCondition('hours')">订单时间段</div>
+          <div class="add-option-menu-item" data-type="tipType" data-pool-label="小费类型" data-native-onclick="addTipsCondition('tipType')">小费类型</div>
+          <div class="add-option-menu-item" data-type="containsProduct" data-native-onclick="addTipsCondition('containsProduct')">订单需包含商品</div>
+          <div class="add-option-menu-item" data-type="shift" data-native-onclick="addTipsCondition('shift')">班次</div>
+          <div class="add-option-menu-item" data-type="weekday" data-native-onclick="addTipsCondition('weekday')">周期（星期）</div>
+        </div>
+      </div>
+    </div>
+    <div class="drawer-footer">
+      <button class="btn" data-native-onclick="closeDrawer('tipsDrawer')">取消</button>
+      <button class="btn btn-primary" data-native-onclick="saveTipsCondition()">提交</button>
+    </div>
+  </div>
+<div class="drawer-overlay" id="manualDrawer-overlay"></div>
+<div class="drawer" id="manualDrawer">
+    <div class="drawer-header">
+      <h3 data-pool-label="手动上报小费 · 取值条件">手动上报小费 · 取值条件</h3>
+      <button class="modal-close" data-native-onclick="closeDrawer('manualDrawer')">×</button>
+    </div>
+    <div class="drawer-body">
+      <div id="manualConditionsContainer"></div>
+      <div class="add-option-dropdown">
+        <button class="btn" type="button" data-native-onclick="toggleAddConditionMenu('manualDrawer')">
+          <span style="font-size:16px">+</span> 新增条件
+        </button>
+        <div class="add-option-menu" id="manualConditionMenu">
+          <div class="add-option-menu-item" data-type="role" data-native-onclick="addManualCondition('role')">角色</div>
+          <div class="add-option-menu-item" data-type="employee" data-native-onclick="addManualCondition('employee')">员工</div>
+          <div class="add-option-menu-item" data-type="hours" data-native-onclick="addManualCondition('hours')">订单时间段</div>
+          <div class="add-option-menu-item" data-type="shift" data-native-onclick="addManualCondition('shift')">班次</div>
+          <div class="add-option-menu-item" data-type="weekday" data-native-onclick="addManualCondition('weekday')">周期（星期）</div>
+        </div>
+      </div>
+    </div>
+    <div class="drawer-footer">
+      <button class="btn" data-native-onclick="closeDrawer('manualDrawer')">取消</button>
+      <button class="btn btn-primary" data-native-onclick="saveManualCondition()">提交</button>
+    </div>
+  </div>
+</section>

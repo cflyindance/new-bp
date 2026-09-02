@@ -1,0 +1,606 @@
+var ALLOC_KEY = 'tipout_allocated';
+    function getAllocatedDates() {
+      try {
+        var store = (document.getElementById('storeSelect') || {}).value || '';
+        var raw = localStorage.getItem(ALLOC_KEY);
+        var obj = raw ? JSON.parse(raw) : {};
+        var arr = obj[store] || [];
+        return new Set(arr);
+      } catch (e) { return new Set(); }
+    }
+    function saveAllocatedDates(dates) {
+      var store = (document.getElementById('storeSelect') || {}).value || '';
+      var raw = localStorage.getItem(ALLOC_KEY);
+      var obj = raw ? JSON.parse(raw) : {};
+      obj[store] = Array.from(dates);
+      localStorage.setItem(ALLOC_KEY, JSON.stringify(obj));
+    }
+
+    const EMPLOYEE_ROSTER_KEY = 'tipout-employees-roster-v1';
+
+    const DEFAULT_EMPLOYEES = [
+      { name: 'Maria Garcia',  role: 'Server',    tagClass: 'tag-blue',  tipType: 'deduct', baseTip: 185, tipRate: 0.15 },
+      { name: 'Jason Chen',    role: 'Server',    tagClass: 'tag-blue',  tipType: 'deduct', baseTip: 168, tipRate: 0.15 },
+      { name: 'Emily Watson',  role: 'Server',    tagClass: 'tag-blue',  tipType: 'deduct', baseTip: 155, tipRate: 0.15 },
+      { name: 'Diego Ramirez', role: 'Server',    tagClass: 'tag-blue',  tipType: 'deduct', baseTip: 142, tipRate: 0.15 },
+      { name: 'Mike Johnson',  role: 'Bartender', tagClass: 'tag-blue',  tipType: 'deduct', baseTip: 156, tipRate: 0.15 },
+      { name: 'Sarah Kim',     role: 'Bartender', tagClass: 'tag-blue',  tipType: 'deduct', baseTip: 138, tipRate: 0.15 },
+      { name: 'Tom Wilson',    role: 'Kitchen',   tagClass: 'tag-blue',  tipType: 'receive', baseTip: 0, tipRate: 0 },
+      { name: 'Amy Liu',       role: 'Kitchen',   tagClass: 'tag-blue',  tipType: 'receive', baseTip: 0, tipRate: 0 },
+      { name: 'Carlos Lopez',  role: 'Busser',    tagClass: 'tag-green', tipType: 'receive', baseTip: 0, tipRate: 0 },
+      { name: 'Tyler Brown',   role: 'Busser',    tagClass: 'tag-green', tipType: 'receive', baseTip: 0, tipRate: 0 },
+      { name: 'Linda Nguyen',  role: 'Cashier',   tagClass: 'tag-orange',tipType: 'deduct', baseTip: 45, tipRate: 0.15 },
+      { name: 'Daniel Ortiz',  role: 'Runner',    tagClass: 'tag-green', tipType: 'receive', baseTip: 0, tipRate: 0 },
+      { name: 'Rachel Scott',  role: 'Host',      tagClass: 'tag-green', tipType: 'receive', baseTip: 0, tipRate: 0 }
+    ];
+
+    function resolveTagClass(emp) {
+      if ((emp.tipType || '') === 'deduct' && (emp.role || '') === 'Cashier') return 'tag-orange';
+      return (emp.tipType || '') === 'deduct' ? 'tag-blue' : 'tag-green';
+    }
+
+    function buildEmployeesFromRoster() {
+      try {
+        var raw = localStorage.getItem(EMPLOYEE_ROSTER_KEY);
+        if (!raw) return DEFAULT_EMPLOYEES.slice();
+        var list = JSON.parse(raw);
+        if (!Array.isArray(list) || list.length === 0) return DEFAULT_EMPLOYEES.slice();
+        return list
+          .filter(function(e) { return e && String(e.name || '').trim(); })
+          .map(function(e) {
+            var role = String(e.role || '').trim();
+            var tipType = String(e.tipType || 'deduct').trim();
+            var baseTip = Number(e.baseTip) || 0;
+            var tipRate = Number(e.tipRate);
+            tipRate = Number.isFinite(tipRate) ? (tipRate > 1 ? tipRate / 100 : tipRate) : 0;
+            return {
+              name: String(e.name || '').trim(),
+              role: role || 'Server',
+              tipType: tipType === 'receive' ? 'receive' : 'deduct',
+              baseTip: baseTip,
+              tipRate: tipRate,
+              tagClass: resolveTagClass({ role: role, tipType: tipType })
+            };
+          });
+      } catch (e) {
+        return DEFAULT_EMPLOYEES.slice();
+      }
+    }
+
+    const employees = buildEmployeesFromRoster();
+
+    function getSelectedRoles() {
+      var el = document.getElementById('roleFilter');
+      if (!el) return [];
+      var cbs = el.querySelectorAll('input[type="checkbox"]:checked');
+      return Array.prototype.map.call(cbs, function(c) { return c.value; }).filter(function(v) { return v !== '__all__'; });
+    }
+
+    function getSelectedEmployees() {
+      var el = document.getElementById('employeeFilter');
+      if (!el) return [];
+      var cbs = el.querySelectorAll('input[type="checkbox"]:checked');
+      return Array.prototype.map.call(cbs, function(c) { return c.value; }).filter(function(v) { return v !== '__all__'; });
+    }
+
+    function toggleSelectAll(selectId, checked) {
+      var container = document.getElementById(selectId);
+      if (!container) return;
+      var allCbs = container.querySelectorAll('input[type="checkbox"]:not([data-select-all])');
+      allCbs.forEach(function(cb) { cb.checked = !!checked; });
+      refreshIndexMultiTags(selectId);
+      syncSelectAllState(selectId);
+      if (selectId === 'roleFilter') updateEmployeeFilter();
+      else renderDailySummaryList();
+    }
+
+    function syncSelectAllState(selectId) {
+      var container = document.getElementById(selectId);
+      if (!container) return;
+      var allCb = container.querySelector('input[data-select-all]');
+      var itemCbs = container.querySelectorAll('input[type="checkbox"]:not([data-select-all])');
+      if (!allCb || !itemCbs.length) return;
+      var allChecked = itemCbs.length > 0 && Array.prototype.every.call(itemCbs, function(c) { return c.checked; });
+      allCb.checked = allChecked;
+    }
+
+    function toggleIndexMultiSelect(id) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      document.querySelectorAll('.filter-bar .multi-select.open').forEach(function(ms) {
+        if (ms.id !== id) ms.classList.remove('open');
+      });
+      el.classList.toggle('open');
+    }
+
+    function removeIndexMultiTag(e, btnEl) {
+      e.stopPropagation();
+      var selectId = btnEl && btnEl.dataset && btnEl.dataset.selectId;
+      var value = btnEl && btnEl.dataset && btnEl.dataset.value;
+      if (!selectId || value === undefined) return;
+      var container = document.getElementById(selectId);
+      var inputs = container ? container.querySelectorAll('input[type="checkbox"]') : [];
+      for (var i = 0; i < inputs.length; i++) {
+        if (inputs[i].value === value) { inputs[i].checked = false; break; }
+      }
+      refreshIndexMultiTags(selectId);
+      if (selectId === 'roleFilter') updateEmployeeFilter();
+      else renderDailySummaryList();
+    }
+
+    function refreshIndexMultiTags(selectId) {
+      var container = document.getElementById(selectId);
+      if (!container) return;
+      var tagsEl = container.querySelector('.multi-select-tags');
+      if (!tagsEl) return;
+      var placeholder = (container.dataset && container.dataset.placeholder) || '请选择';
+      var cbs = container.querySelectorAll('input[type="checkbox"]:checked:not([data-select-all])');
+      tagsEl.innerHTML = '';
+      if (cbs.length === 0) {
+        tagsEl.innerHTML = '<span class="multi-select-placeholder">' + placeholder + '</span>';
+        return;
+      }
+      cbs.forEach(function(cb) {
+        var tag = document.createElement('span');
+        tag.className = 'multi-select-tag';
+        tag.innerHTML = (cb.value || '') + ' <i data-select-id="' + selectId + '" data-value="' + (cb.value || '').replace(/"/g, '&quot;') + '" onclick="removeIndexMultiTag(event, this)">×</i>';
+        tagsEl.appendChild(tag);
+      });
+    }
+
+    function updateEmployeeFilter(skipRender) {
+      var roles = getSelectedRoles();
+      var prevSelected = getSelectedEmployees();
+      var dropdown = document.getElementById('employeeFilterDropdown');
+      if (!dropdown) return;
+      var list = roles.length > 0
+        ? employees.filter(function(e) { return roles.indexOf(e.role) >= 0; })
+        : employees;
+      var allChecked = list.length > 0 && list.every(function(e) { return prevSelected.indexOf(e.name) >= 0; });
+      var allHtml = '<label class="multi-select-option multi-select-all" style="border-bottom:1px solid var(--border-light);margin-bottom:4px;padding-bottom:6px"><input type="checkbox" value="__all__" data-select-all' + (allChecked ? ' checked' : '') + '> 全选</label>';
+      var itemsHtml = list.map(function(e) {
+        var checked = prevSelected.indexOf(e.name) >= 0 ? ' checked' : '';
+        return '<label class="multi-select-option"><input type="checkbox" value="' + (e.name || '').replace(/"/g, '&quot;') + '"' + checked + '> ' + (e.name || '') + '</label>';
+      }).join('');
+      dropdown.innerHTML = allHtml + itemsHtml;
+      refreshIndexMultiTags('employeeFilter');
+      if (!skipRender) renderDailySummaryList();
+    }
+
+    function pad(n) { return n < 10 ? '0' + n : '' + n; }
+    function formatDateKey(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+    function formatTabLabel(d) { return pad(d.getMonth() + 1) + '/' + pad(d.getDate()); }
+    function money(v) { return (v < 0 ? '-' : '') + '$' + Math.abs(v).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+    function moneySign(v) { return (v >= 0 ? '+' : '-') + '$' + Math.abs(v).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+    function roundTip(v) { return +(Number(v) || 0).toFixed(2); }
+    function calcTipAfter(before, deducted, received) {
+      return roundTip(before - deducted + received);
+    }
+
+    function seedRandom(seed) {
+      let s = seed;
+      return function() { s = (s * 16807 + 0) % 2147483647; return (s - 1) / 2147483646; };
+    }
+
+    function getAllocationDeductorContext() {
+      var storeSel = document.getElementById('storeSelect');
+      var store = storeSel ? (storeSel.value || '').trim() : '';
+      if (window.ruleData && ruleData.buildDeductorContextForStore) {
+        return ruleData.buildDeductorContextForStore(store);
+      }
+      return { hasDeductors: false, roles: {}, names: {} };
+    }
+
+    function getLegacyRulesForCurrentStore() {
+      var storeSel = document.getElementById('storeSelect');
+      var store = storeSel ? (storeSel.value || '').trim() : '';
+      if (!window.ruleData || !ruleData.getRulesForStore) return [];
+      return ruleData.getRulesForStore(store).filter(function(r) {
+        return (r.allocationMode || 'legacy_pool') === 'legacy_pool';
+      });
+    }
+
+    function getPersonalSalesPctRule() {
+      var rules = getLegacyRulesForCurrentStore();
+      for (var i = 0; i < rules.length; i++) {
+        var cfg = rules[i].deductConfig;
+        if (cfg && cfg.personalSalesPct && window.TipOutPersonalSalesDeduct &&
+            TipOutPersonalSalesDeduct.entryHasScope(cfg.personalSalesPct)) {
+          return rules[i];
+        }
+      }
+      return null;
+    }
+
+    /** 演示期：由日期+姓名种子生成 Net Sales，隔离于他人销售额 */
+    function genPersonalNetSales(emp, dateKey) {
+      var seed = dateKey.split('-').reduce(function(a, b) { return a * 31 + parseInt(b, 10); }, 0) +
+        emp.name.length * 13 + emp.name.charCodeAt(0) * 17;
+      var rng = seedRandom(seed + 991);
+      var dayOfWeek = new Date(dateKey + 'T00:00:00').getDay();
+      var weekendBoost = (dayOfWeek === 5 || dayOfWeek === 6) ? 1.35 : 1.0;
+      return roundTip((700 + rng() * 1600) * weekendBoost);
+    }
+
+    var dayPipelineCache = {};
+    function invalidateDayPipelineCache() { dayPipelineCache = {}; }
+
+    function ensureDayPipeline(dateKey) {
+      if (dayPipelineCache[dateKey]) return dayPipelineCache[dateKey];
+      var rule = getPersonalSalesPctRule();
+      if (!rule || !window.TipAllocation || !TipAllocation.runLegacyDayPipeline) {
+        dayPipelineCache[dateKey] = null;
+        return null;
+      }
+      var dayEmps = employees.map(function(emp) {
+        var seed = dateKey.split('-').reduce(function(a, b) { return a * 31 + parseInt(b, 10); }, 0) +
+          emp.name.length * 7 + emp.name.charCodeAt(0);
+        var rng = seedRandom(seed);
+        var dayOfWeek = new Date(dateKey + 'T00:00:00').getDay();
+        var weekendBoost = (dayOfWeek === 5 || dayOfWeek === 6) ? 1.35 : 1.0;
+        var tipBefore;
+        var deductCtx = getAllocationDeductorContext();
+        var shouldDeduct = window.ruleData && ruleData.isEmployeeInDeductorContext
+          ? ruleData.isEmployeeInDeductorContext(emp, deductCtx)
+          : false;
+        if (shouldDeduct || (emp.tipType || '') === 'deduct') {
+          tipBefore = roundTip(emp.baseTip * (0.8 + rng() * 0.5) * weekendBoost);
+        } else {
+          var baseBefore = Number(emp.baseTip) > 0
+            ? emp.baseTip * (0.8 + rng() * 0.5)
+            : (5 + rng() * 12);
+          tipBefore = roundTip(baseBefore * weekendBoost);
+        }
+        var attendance = (window.TipOutAttendance && TipOutAttendance.getDayStatus)
+          ? TipOutAttendance.getDayStatus(emp.name, dateKey)
+          : { hours: 0, clockStatus: '未打卡' };
+        return {
+          id: emp.name,
+          name: emp.name,
+          role: emp.role,
+          tipBefore: tipBefore,
+          tipRate: emp.tipRate || 0,
+          salesAmount: genPersonalNetSales(emp, dateKey),
+          hours: rule.clockin === 'noclock' ? 0 : attendance.hours
+        };
+      });
+      var pipeline = TipAllocation.runLegacyDayPipeline(rule, dayEmps);
+      dayPipelineCache[dateKey] = pipeline;
+      return pipeline;
+    }
+
+    function formatHoursDisplay(hours) {
+      var n = Number(hours);
+      if (!isFinite(n) || n === 0) return '0';
+      return (Math.round(n * 100) / 100).toString();
+    }
+
+    function clockStatusTagHtml(clockStatus) {
+      var status = clockStatus || '未打卡';
+      var tagClass = status === '已打卡' ? 'tag-green' : 'tag-orange';
+      return '<span class="tag ' + tagClass + '">' + status + '</span>';
+    }
+
+    function attachAttendance(row, emp, dateKey) {
+      var att = (window.TipOutAttendance && TipOutAttendance.getDayStatus)
+        ? TipOutAttendance.getDayStatus(emp.name, dateKey)
+        : { hours: 0, clockStatus: '未打卡' };
+      row.hours = att.hours;
+      row.clockStatus = att.clockStatus;
+      return row;
+    }
+
+    function genDailyTip(emp, dateKey) {
+      var pipeline = ensureDayPipeline(dateKey);
+      if (pipeline && pipeline.byName && pipeline.byName[emp.name]) {
+        var row = pipeline.byName[emp.name];
+        return attachAttendance({
+          date: dateKey,
+          before: row.before,
+          deducted: row.deducted,
+          received: row.received,
+          after: row.after,
+          due: row.due,
+          shortfall: row.shortfall,
+          salesAmount: row.salesAmount
+        }, emp, dateKey);
+      }
+
+      const seed = dateKey.split('-').reduce((a, b) => a * 31 + parseInt(b), 0) + emp.name.length * 7 + emp.name.charCodeAt(0);
+      const rng = seedRandom(seed);
+      const dayOfWeek = new Date(dateKey + 'T00:00:00').getDay();
+      const weekendBoost = (dayOfWeek === 5 || dayOfWeek === 6) ? 1.35 : 1.0;
+
+      var before = 0;
+      var deducted = 0;
+      var received = 0;
+
+      var deductCtx = getAllocationDeductorContext();
+      var shouldDeduct = window.ruleData && ruleData.isEmployeeInDeductorContext
+        ? ruleData.isEmployeeInDeductorContext(emp, deductCtx)
+        : false;
+
+      if (shouldDeduct) {
+        before = roundTip(emp.baseTip * (0.8 + rng() * 0.5) * weekendBoost);
+        deducted = roundTip(before * (emp.tipRate || 0));
+        if (emp.role === 'Server') {
+          received = roundTip((18 + rng() * 32) * weekendBoost);
+        }
+      } else {
+        var baseBefore = Number(emp.baseTip) > 0
+          ? emp.baseTip * (0.8 + rng() * 0.5)
+          : (5 + rng() * 12);
+        before = roundTip(baseBefore * weekendBoost);
+        received = roundTip((25 + rng() * 45) * weekendBoost);
+        deducted = 0;
+      }
+
+      var after = calcTipAfter(before, deducted, received);
+      return attachAttendance({ date: dateKey, before: before, deducted: deducted, received: received, after: after }, emp, dateKey);
+    }
+
+    function getDateRange() {
+      const s = document.getElementById('dateStart').value;
+      const e = document.getElementById('dateEnd').value;
+      if (!s || !e) return [];
+      const start = new Date(s + 'T00:00:00');
+      const end = new Date(e + 'T00:00:00');
+      if (isNaN(start) || isNaN(end) || start > end) return [];
+      const dates = [];
+      const cur = new Date(start);
+      while (cur <= end) {
+        dates.push(formatDateKey(cur));
+        cur.setDate(cur.getDate() + 1);
+      }
+      return dates;
+    }
+
+    function getDailyEmployeeResults(dateKey) {
+      return getFilteredEmployees().map(function(emp) {
+        return genDailyTip(emp, dateKey);
+      });
+    }
+
+    var restoredSummaryStateSignature = null;
+
+    function captureSummaryUiState(returnDate) {
+      var state = TipOutSummaryUi.buildSummaryHistoryState({
+        dateStart: document.getElementById('dateStart').value,
+        dateEnd: document.getElementById('dateEnd').value,
+        store: document.getElementById('storeSelect').value,
+        roles: getSelectedRoles(),
+        employees: getSelectedEmployees(),
+        scrollY: window.scrollY,
+        returnDate: returnDate
+      });
+      history.replaceState(state, '');
+    }
+
+    function setSummaryFilterSelections(filterId, values) {
+      var selected = Array.isArray(values) ? values : [];
+      var filter = document.getElementById(filterId);
+      if (!filter) return;
+      filter.querySelectorAll('input[type="checkbox"]:not([data-select-all])').forEach(function(input) {
+        input.checked = selected.indexOf(input.value) >= 0;
+      });
+      refreshIndexMultiTags(filterId);
+      syncSelectAllState(filterId);
+    }
+
+    function restoreSummaryUiState() {
+      var saved = TipOutSummaryUi.readSummaryHistoryState(history.state);
+      var signature = saved ? JSON.stringify(saved) : '__no_summary_state__';
+      if (signature === restoredSummaryStateSignature) return false;
+      restoredSummaryStateSignature = signature;
+      if (!saved) return false;
+
+      document.getElementById('dateStart').value = saved.dateStart || '';
+      document.getElementById('dateEnd').value = saved.dateEnd || '';
+      document.getElementById('storeSelect').value = saved.store || '';
+      setSummaryFilterSelections('roleFilter', saved.roles);
+      updateEmployeeFilter(true);
+      setSummaryFilterSelections('employeeFilter', saved.employees);
+      invalidateDayPipelineCache();
+      renderDailySummaryList();
+
+      requestAnimationFrame(function() {
+        window.scrollTo(0, Number(saved.scrollY) || 0);
+        if (!saved.returnDate) return;
+        var row = document.querySelector('[data-date="' + saved.returnDate + '"]');
+        if (row) row.focus({ preventScroll: true });
+      });
+      return true;
+    }
+
+    function openDailyDetail(dateKey) {
+      captureSummaryUiState(dateKey);
+      var store = (document.getElementById('storeSelect') || {}).value || '';
+      window.location.href = TipOutSummaryUi.buildDetailUrl({
+        date: dateKey,
+        store: store,
+        fromSummary: true
+      });
+    }
+
+    function activateDailySummaryRow(event, dateKey) {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault();
+      openDailyDetail(dateKey);
+    }
+
+    function renderSummaryOverview(dailyRows, allocatedDates) {
+      var totals = TipOutSummaryUi.summarizeDailyResults(dailyRows.map(function(row) { return row.total; }));
+      document.getElementById('summaryBefore').textContent = money(totals.before);
+      document.getElementById('summaryDeducted').textContent = money(totals.deducted);
+      document.getElementById('summaryReceived').textContent = money(totals.received);
+      document.getElementById('summaryAfter').textContent = money(totals.after);
+      document.getElementById('pendingDateCount').textContent = String(
+        TipOutSummaryUi.countPendingDates(dailyRows.map(function(row) { return row.dateKey; }), Array.from(allocatedDates))
+      );
+    }
+
+    function renderDailySummaryList() {
+      var dates = getDateRange();
+      var allocatedDates = getAllocatedDates();
+      var container = document.getElementById('dailySummaryList');
+      if (!container) return;
+      var dailyRows = dates.map(function(dateKey) {
+        var date = new Date(dateKey + 'T00:00:00');
+        var total = TipOutSummaryUi.summarizeDailyResults(getDailyEmployeeResults(dateKey));
+        return { dateKey: dateKey, date: date, total: total, allocated: allocatedDates.has(dateKey) };
+      });
+      container.innerHTML = dailyRows.map(function(row) {
+        var dateKey = row.dateKey;
+        var total = row.total;
+        return '<tr class="tipout-daily-row" data-date="' + dateKey +
+          '" tabindex="0" role="link" onclick="openDailyDetail(\'' + dateKey +
+          '\')" onkeydown="activateDailySummaryRow(event, \'' + dateKey + '\')">' +
+          '<td><span class="tipout-daily-date"><strong>' + formatTabLabel(row.date) +
+          '</strong><small>' + dateKey + ' · ' + row.date.toLocaleDateString('zh-CN', { weekday: 'short' }) + '</small></span></td>' +
+          '<td><span class="tipout-daily-status ' + (row.allocated ? 'allocated' : 'pending') + '">' +
+          (row.allocated ? '已分配' : '待分配') + '</span></td>' +
+          '<td>' + money(total.before) + '</td>' +
+          '<td><strong class="tip-amount--deduct">' + money(total.deducted) + '</strong></td>' +
+          '<td><strong class="tip-amount--receive">' + money(total.received) + '</strong></td>' +
+          '<td><strong>' + money(total.after) + '</strong></td>' +
+          '<td class="tipout-detail-link">查看明细</td></tr>';
+      }).join('');
+      renderSummaryOverview(dailyRows, allocatedDates);
+      updateAllocateButton();
+    }
+
+    function updateAllocateButton() {
+      var dates = getDateRange();
+      var allocatedDates = getAllocatedDates();
+      var hasAllocated = dates.some(function(k) { return allocatedDates.has(k); });
+      var btn = document.getElementById('allocateBtn');
+      if (btn) btn.textContent = hasAllocated ? '重新分配小费' : '分配小费';
+    }
+
+    function openSummaryRuleEntry() {
+      var rules = [];
+      try {
+        rules = window.ruleData && ruleData.getRules ? ruleData.getRules() : [];
+      } catch (e) {
+        rules = [];
+      }
+      var hasRules = Array.isArray(rules) && rules.length > 0;
+      window.location.href = hasRules ? 'rules.html' : 'rule-add.html?poolKind=tip';
+    }
+
+    function hasTipRules() {
+      return window.ruleData && ruleData.getRules && ruleData.getRules().length > 0;
+    }
+
+    function doAllocateTips() {
+      if (!hasTipRules()) {
+        showNotification('请先创建小费分配规则', 'error');
+        setTimeout(function() { window.location.href = 'rules.html'; }, 1500);
+        return;
+      }
+      invalidateDayPipelineCache();
+      var dates = getDateRange();
+      var allocatedDates = getAllocatedDates();
+      dates.forEach(function(k) { allocatedDates.add(k); });
+      saveAllocatedDates(allocatedDates);
+      renderDailySummaryList();
+      if (window.TipOutPayrollBridge && TipOutPayrollBridge.syncAfterAllocation) {
+        var storeSel = document.getElementById('storeSelect');
+        var storeVal = storeSel ? (storeSel.value || '').trim() : '';
+        var ds = document.getElementById('dateStart');
+        var de = document.getElementById('dateEnd');
+        TipOutPayrollBridge.syncAfterAllocation(
+          storeVal,
+          ds ? ds.value : '',
+          de ? de.value : ''
+        );
+      }
+      showNotification('小费分配完成，已同步至薪资管理 Tips/SVCW', 'success');
+    }
+
+    function doCancelAllocate() {
+      invalidateDayPipelineCache();
+      var dates = getDateRange();
+      var allocatedDates = getAllocatedDates();
+      dates.forEach(function(k) { allocatedDates.delete(k); });
+      saveAllocatedDates(allocatedDates);
+      renderDailySummaryList();
+      if (window.TipOutPayrollBridge && TipOutPayrollBridge.syncAfterAllocation) {
+        var storeSel = document.getElementById('storeSelect');
+        var storeVal = storeSel ? (storeSel.value || '').trim() : '';
+        var ds = document.getElementById('dateStart');
+        var de = document.getElementById('dateEnd');
+        TipOutPayrollBridge.syncAfterAllocation(
+          storeVal,
+          ds ? ds.value : '',
+          de ? de.value : ''
+        );
+      }
+      showNotification('已取消分配，状态已恢复为待分配', 'info');
+    }
+
+    function getFilteredEmployees() {
+      var roles = getSelectedRoles();
+      var empNames = getSelectedEmployees();
+      var list = employees;
+      if (roles.length > 0) list = list.filter(function(e) { return roles.indexOf(e.role) >= 0; });
+      if (empNames.length > 0) list = list.filter(function(e) { return empNames.indexOf(e.name) >= 0; });
+      return list;
+    }
+
+    function toggleFold(empId) {
+      const section = document.getElementById(empId);
+      const detail = section.querySelector('.employee-detail');
+      const btn = section.querySelector('.fold-btn span');
+      if (detail.style.maxHeight === '0px') { detail.style.maxHeight = '2000px'; btn.textContent = '收起'; }
+      else { detail.style.maxHeight = '0px'; btn.textContent = '展开'; }
+    }
+
+    function initStoreSelect() {
+      var sel = document.getElementById('storeSelect');
+      if (!sel) return;
+      var rules = window.ruleData && ruleData.getRules ? ruleData.getRules() : [];
+      var seen = {};
+      var stores = [];
+      rules.forEach(function(r) {
+        var s = (r.store || '').trim();
+        if (s && !seen[s]) { seen[s] = 1; stores.push(s); }
+      });
+      sel.innerHTML = '<option value="">请选择门店</option>' + stores.map(function(s) {
+        return '<option value="' + s + '">' + s + '</option>';
+      }).join('');
+      if (stores.length > 0 && !sel.value) sel.value = stores[0];
+    }
+
+    document.addEventListener('change', function(e) {
+      var target = e.target;
+      var ms = target && target.closest && target.closest('.filter-bar .multi-select');
+      if (!ms) return;
+      var id = ms.id;
+      if (target.dataset && target.dataset.selectAll !== undefined) {
+        toggleSelectAll(id, target.checked);
+        return;
+      }
+      refreshIndexMultiTags(id);
+      syncSelectAllState(id);
+      if (id === 'roleFilter') updateEmployeeFilter();
+      else if (id === 'employeeFilter') renderDailySummaryList();
+    });
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest || !e.target.closest('.filter-bar .multi-select')) {
+        document.querySelectorAll('.filter-bar .multi-select.open').forEach(function(ms) { ms.classList.remove('open'); });
+      }
+    });
+
+    function initializeSummaryPage() {
+      initStoreSelect();
+      if (!restoreSummaryUiState()) {
+        updateEmployeeFilter();
+        renderDailySummaryList();
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', initializeSummaryPage);
+    window.addEventListener('pageshow', function() {
+      restoreSummaryUiState();
+    });

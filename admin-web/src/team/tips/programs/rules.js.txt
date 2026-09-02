@@ -1,0 +1,215 @@
+function initStoreFilter() {
+      var sel = document.getElementById('storeFilter');
+      if (!sel) return;
+      var rules = ruleData.getRules();
+      var seen = {};
+      var stores = [];
+      rules.forEach(function(r) {
+        var s = (r.store || '').trim();
+        if (s && !seen[s]) { seen[s] = 1; stores.push(s); }
+      });
+      sel.innerHTML = '<option value="">全部门店</option>' + stores.map(function(s) {
+        return '<option value="' + s + '">' + s + '</option>';
+      }).join('');
+    }
+
+    function escapeHtml(value) {
+      return String(value == null ? '' : value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function renderRuleMetrics(rules) {
+      var list = rules || [];
+      document.getElementById('ruleCount').textContent = String(list.length);
+      document.getElementById('tipPoolCount').textContent = String(list.filter(function(rule) {
+        return rule.poolKind !== 'surcharge';
+      }).length);
+      document.getElementById('surchargePoolCount').textContent = String(list.filter(function(rule) {
+        return rule.poolKind === 'surcharge';
+      }).length);
+    }
+
+    function renderRulesTable() {
+      var rules = ruleData.getRules();
+      var storeFilter = document.getElementById('storeFilter');
+      var filterStore = storeFilter ? storeFilter.value : '';
+      if (filterStore) {
+        rules = rules.filter(function(r) { return r.store === filterStore; });
+      }
+      renderRuleMetrics(rules);
+      var tableBody = document.getElementById('rulesTableBody');
+      tableBody.innerHTML = '';
+      if (rules.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="4"><div class="tipout-rule-empty" role="status">暂无规则，请点击「新建规则」创建</div></td></tr>';
+        return;
+      }
+      rules.forEach(function(rule) {
+        var desc = ruleData.buildRuleDescription(rule);
+        var record = document.createElement('tr');
+        record.className = 'tipout-rule-record';
+        record.setAttribute('data-rule-id', rule.id);
+        var editUrl = 'rule-add.html?mode=edit&id=' + rule.id;
+        if (rule.poolKind === 'surcharge') editUrl += '&poolKind=surcharge';
+        var poolKindLabel = ruleData.getRulePoolKindLabel(rule);
+        var poolKindTagClass = ruleData.getRulePoolKindTagClass(rule);
+        var poolKindDescription = rule.poolKind === 'surcharge'
+          ? '现金/信用卡加收服务费'
+          : '小费、销售额等来源';
+        var menuId = 'ruleActions-' + rule.id;
+        record.innerHTML =
+          '<td>' +
+            '<div class="tipout-rule-identity">' +
+              '<strong class="tipout-rule-name">' + escapeHtml(rule.ruleName || '') + '</strong>' +
+              '<span class="tipout-rule-store">' + escapeHtml(rule.store || '') + '</span>' +
+            '</div>' +
+          '</td>' +
+          '<td>' +
+            '<div class="tipout-rule-pool-summary">' +
+              '<span class="' + escapeHtml(poolKindTagClass) + '">' + escapeHtml(poolKindLabel) + '</span>' +
+              '<small>' + poolKindDescription + '</small>' +
+            '</div>' +
+          '</td>' +
+          '<td><p class="tipout-rule-description">' + escapeHtml(desc) + '</p></td>' +
+          '<td><div class="tipout-rule-record-actions">' +
+            '<a class="btn btn-primary tipout-rule-edit" href="' + editUrl + '">编辑</a>' +
+            '<div class="tipout-rule-actions">' +
+              '<button type="button" class="btn tipout-rule-more" aria-haspopup="menu" aria-expanded="false" aria-controls="' + menuId + '" onclick="toggleRuleActions(this)">更多操作</button>' +
+              '<div class="tipout-rule-actions-menu" id="' + menuId + '" role="menu" hidden>' +
+                '<button type="button" role="menuitem" onclick="copyRule(this)">复制规则</button>' +
+                '<button type="button" role="menuitem" class="danger" onclick="deleteRule(this)">删除规则</button>' +
+              '</div>' +
+            '</div>' +
+          '</div></td>';
+        tableBody.appendChild(record);
+      });
+    }
+
+    function closeRuleActions(exceptButton) {
+      document.querySelectorAll('.tipout-rule-more[aria-expanded="true"]').forEach(function(button) {
+        if (button === exceptButton) return;
+        button.setAttribute('aria-expanded', 'false');
+        var menu = document.getElementById(button.getAttribute('aria-controls'));
+        if (menu) menu.hidden = true;
+      });
+    }
+
+    function toggleRuleActions(button) {
+      var willOpen = button.getAttribute('aria-expanded') !== 'true';
+      closeRuleActions(button);
+      button.setAttribute('aria-expanded', String(willOpen));
+      var menu = document.getElementById(button.getAttribute('aria-controls'));
+      if (menu) {
+        menu.hidden = !willOpen;
+        if (willOpen) {
+          var firstAction = menu.querySelector('[role="menuitem"]');
+          if (firstAction) firstAction.focus();
+        }
+      }
+    }
+
+    function deleteRule(el) {
+      confirmAction('确定要删除该规则吗？此操作不可恢复。', function() {
+        var row = el.closest('[data-rule-id]');
+        var id = row.getAttribute('data-rule-id');
+        ruleData.deleteRuleById(id);
+        row.style.opacity = '0';
+        row.style.transition = 'opacity 0.3s';
+        setTimeout(function() { renderRulesTable(); }, 300);
+        showNotification('规则已删除');
+      }, { title: '删除规则', okText: '删除', okClass: 'btn btn-danger' });
+    }
+
+    function openAddRuleModal() {
+      resetPoolTypeSelection();
+      openModal('poolTypeModal');
+    }
+
+    function closePoolTypeModal() {
+      closeModal('poolTypeModal');
+    }
+
+    function resetPoolTypeSelection() {
+      document.querySelectorAll('#poolTypeModal .pool-type-option').forEach(function(el) {
+        var isTip = el.getAttribute('data-pool-type') === 'tip';
+        el.classList.toggle('selected', isTip);
+        var radio = el.querySelector('input[type="radio"]');
+        if (radio) radio.checked = isTip;
+      });
+    }
+
+    function syncPoolTypeOptionStyles() {
+      document.querySelectorAll('#poolTypeModal .pool-type-option').forEach(function(el) {
+        var radio = el.querySelector('input[type="radio"]');
+        el.classList.toggle('selected', !!(radio && radio.checked));
+      });
+    }
+
+    function getSelectedPoolType() {
+      var checked = document.querySelector('#poolTypeModal input[name="poolType"]:checked');
+      return checked ? checked.value : 'tip';
+    }
+
+    function buildRuleAddUrl(poolType) {
+      var params = [];
+      if (poolType) params.push('poolKind=' + encodeURIComponent(poolType));
+      try {
+        var embedded = new URLSearchParams(window.location.search).get('embedded');
+        if (embedded) params.push('embedded=' + encodeURIComponent(embedded));
+      } catch (e) {}
+      return params.length ? ('rule-add.html?' + params.join('&')) : 'rule-add.html';
+    }
+
+    function confirmPoolTypeSelection() {
+      var type = getSelectedPoolType();
+      if (type === 'tip' || type === 'surcharge') {
+        location.href = buildRuleAddUrl(type);
+        return;
+      }
+    }
+
+    document.querySelectorAll('#poolTypeModal .pool-type-option').forEach(function(el) {
+      el.addEventListener('click', function(e) {
+        if (e.target.tagName === 'INPUT') return;
+        var radio = el.querySelector('input[type="radio"]');
+        if (radio) radio.checked = true;
+        syncPoolTypeOptionStyles();
+      });
+      var radio = el.querySelector('input[type="radio"]');
+      if (radio) {
+        radio.addEventListener('change', syncPoolTypeOptionStyles);
+      }
+    });
+
+    function copyRule(el) {
+      var row = el.closest('[data-rule-id]');
+      var id = row.getAttribute('data-rule-id');
+      var rule = ruleData.getRuleById(id);
+      if (!rule) return;
+      var rules = ruleData.getRules();
+      var newRule = JSON.parse(JSON.stringify(rule));
+      newRule.id = ruleData.getNextRuleId();
+      newRule.ruleName = (rule.ruleName || '') + ' (副本)';
+      rules.push(newRule);
+      ruleData.saveRules(rules);
+      renderRulesTable();
+      showNotification('规则复制成功');
+    }
+
+    document.addEventListener('click', function(event) {
+      if (!event.target.closest('.tipout-rule-actions')) closeRuleActions();
+    });
+
+    document.addEventListener('keydown', function(event) {
+      if (event.key !== 'Escape') return;
+      var openButton = document.querySelector('.tipout-rule-more[aria-expanded="true"]');
+      if (!openButton) return;
+      closeRuleActions();
+      openButton.focus();
+    });
+
+    initStoreFilter();
+    renderRulesTable();

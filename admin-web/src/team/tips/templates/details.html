@@ -1,0 +1,56 @@
+<section class="team-tips-page" data-team-tips-view="details">
+<div class="content-area">
+        <div class="tipout-page-heading tipout-page-heading--with-back">
+          <button type="button" class="btn" data-native-onclick="returnToSummary()">返回汇总</button>
+          <div>
+            <p class="tipout-kicker">分配核算</p>
+            <h1>小费分配明细</h1>
+            <p>查看并核对当前日期与门店的小费分配结果。</p>
+          </div>
+          <div class="tipout-heading-actions">
+            <button type="button" class="btn" data-native-onclick="updateTipData()">更新小费数据</button>
+          </div>
+        </div>
+
+        <div class="tipout-detail-context-bar">
+          <div class="filter-field">
+            <label for="detailDate">日期</label>
+            <input type="date" id="detailDate" class="form-control" value="2026-01-03" data-native-onchange="renderDetailPage()">
+          </div>
+          <div class="filter-field">
+            <label for="storeSelect">门店</label>
+            <select id="storeSelect" class="form-control" data-native-onchange="renderDetailPage()">
+              <option value="">请选择门店</option>
+            </select>
+          </div>
+          <div class="tipout-detail-context-bar__current"><span>当前页面</span><strong>小费分配明细</strong></div>
+        </div>
+
+        <div class="tipout-workspace has-aside" id="detailWorkspace">
+          <main id="detailMain"><div id="detailRulesContainer"></div></main>
+          <aside class="tipout-context-rail" id="detailContextRail" aria-label="当前明细上下文"></aside>
+        </div>
+
+        <div class="tipout-sticky-actions" id="detailActionBar">
+          <span>保存只沿用当前明细页已有逻辑</span>
+          <div>
+            <button class="btn" data-native-onclick="saveDetail()">保存</button>
+            <button class="btn btn-primary" data-native-onclick="saveAndNext()">保存并跳转到下一天</button>
+          </div>
+        </div>
+      </div>
+<div class="modal-overlay" id="formulaModal">
+    <div class="modal" style="width:600px">
+      <div class="modal-header">
+        <h3>公式详情 — 小费分配规则</h3>
+        <button class="modal-close" data-native-onclick="closeModal('formulaModal')">×</button>
+      </div>
+      <div class="modal-body" id="formulaModalBody">
+        <div style="padding:24px;color:var(--text-secondary);text-align:center">加载中…</div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" data-native-onclick="closeModal('formulaModal')">关闭</button>
+      </div>
+    </div>
+  </div>
+</section>
