@@ -42,7 +42,7 @@ template = `<section class="team-employees-page employees-page" data-team-employ
 fs.mkdirSync("src/team/employees", { recursive: true });
 fs.writeFileSync("src/team/employees/employees-template.html", template);
 
-const commonCss = fs.readFileSync("dist/TipOut/common.css", "utf8");
+const commonCss = fs.readFileSync("dist/TipOut/common.css", "utf8").replace(":root {", ":host {");
 const employeesCss = fs.readFileSync("dist/TipOut/employees.css", "utf8");
 fs.writeFileSync("src/team/employees/employees-page.css", `${commonCss}\n\n${employeesCss}\n`);
 console.log(`Generated native employees view with ${modals.length} modal overlays.`);
