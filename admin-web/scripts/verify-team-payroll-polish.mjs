@@ -25,6 +25,13 @@ requireText(polish, ".team-payroll-page.payroll-workspace-active .payroll-worksp
   ".payroll-period-summary",
   "order: 4",
 ].forEach((token) => requireText(polish, token, "visual reference rule"));
+[
+  "@media (max-width: 1279px)",
+  "@media (max-width: 1100px)",
+  "grid-template-columns: repeat(2, minmax(0, 1fr))",
+  ".payroll-seg-table-wrap",
+  "overflow-x: auto",
+].forEach((token) => requireText(polish, token, "responsive rule"));
 
 if (/@import/i.test(polish)) failures.push("polish CSS must not import external styles");
 if (/(^|[}\n])\s*(html|body|\*)\b[^,{]*[{,]/m.test(polish)) {
