@@ -32,7 +32,7 @@ const templates = [
   ["party_size|per_round|dish_set|piece", "per_round"],
   ["order|per_round|dish_set|kind", "per_round"],
   ["party_size|per_round|dish_set|kind", "per_round"],
-].map(([key, group], index) => ({ key, group, legacyCapabilityIds: group === "per_round" ? [`KPOS-R${String(Math.min(index - 3, 11)).padStart(2, "0")}`] : [] }));
+].map(([key, group], index) => ({ key, group, legacyCapabilityIds: group === "per_round" ? [`KPOS-R${String(Math.min(index - 3, 11)).padStart(2, "0")}`] : index === 0 ? ["KPOS-O01", "KPOS-O05", "KPOS-O06"] : index === 1 ? ["KPOS-O02", "KPOS-O05", "KPOS-O07", "KPOS-O08"] : index === 2 ? ["KPOS-O03", "KPOS-O05", "KPOS-O06"] : ["KPOS-O04", "KPOS-O05", "KPOS-O07", "KPOS-O08"], coverageStatus: group === "order_lifetime" && (index === 1 || index === 3) ? "defined_extension" : "complete" }));
 
 const records = templates.map((template, index) => ({
   id: `default-${index + 1}`,
@@ -53,10 +53,20 @@ const context = {
   window: {
     ORDER_LIMIT_MODULE_PROFILE: {
       defaultScenarios: templates,
-      legacyCapabilities: Object.fromEntries(Array.from({ length: 13 }, (_, index) => {
+      legacyCapabilities: Object.fromEntries([...Array.from({ length: 14 }, (_, index) => {
+        const id = `KPOS-O${String(index + 1).padStart(2, "0")}`;
+        return [id, { id, label: `整单能力${index + 1}`, coverageStatus: id === "KPOS-O08" ? "defined_extension" : id === "KPOS-O13" ? "product_redefined" : "complete", legacyEvidenceStatus: id === "KPOS-O08" ? "not_legacy" : "verified_config", gap: id === "KPOS-O13" ? "新旧额度语义不同" : "" }];
+      }), ...Array.from({ length: 5 }, (_, index) => {
+        const id = `KPOS-OV${String(index + 1).padStart(2, "0")}`;
+        return [id, { id, label: `待验证能力${index + 1}`, coverageStatus: "complete", legacyEvidenceStatus: "pending_runtime", gap: `新系统定义${index + 1}` }];
+      }), ...Array.from({ length: 13 }, (_, index) => {
         const id = `KPOS-R${String(index + 1).padStart(2, "0")}`;
-        return [id, { id, label: `旧能力${index + 1}`, gap: `能力差距${index + 1}` }];
-      })),
+        return [id, { id, label: `旧能力${index + 1}`, coverageStatus: index > 10 ? "partial" : "complete", gap: `能力差距${index + 1}` }];
+      })]),
+      legacyCapabilityGroups: [
+        { group: "order_lifetime", capabilityIds: ["KPOS-O09", "KPOS-O10", "KPOS-O11", "KPOS-O12", "KPOS-O13", "KPOS-O14"], evidenceIds: ["KPOS-OV01", "KPOS-OV02", "KPOS-OV03", "KPOS-OV04", "KPOS-OV05"] },
+        { group: "per_round", capabilityIds: ["KPOS-R12", "KPOS-R13"], evidenceIds: [] },
+      ],
       createDefaultScenarioRule() {},
       routes: { editor: "buffet-rule-editor.html" },
       repository: { loadForAuthoringList: () => records, saveRules() {} },
@@ -84,7 +94,8 @@ for (let index = 1; index <= 12; index += 1) {
 }
 assert.ok(rendered.indexOf("自定义规则") > custom, "普通规则应位于其他规则");
 assert.equal((rendered.match(/系统默认/g) || []).length, 12, "仅十二条默认规则显示系统默认标识");
-for (const copy of ["旧 KPOS 调研能力", "覆盖结果", "本调研不适用", "完整覆盖", "KPOS-R12 部分覆盖", "KPOS-R13 部分覆盖"]) assert.ok(rendered.includes(copy), `映射列表缺少：${copy}`);
+for (const copy of ["旧 KPOS 调研能力", "覆盖结果", "完整覆盖", "新系统扩展定义", "产品重定义后覆盖", "旧 KPOS 运行行为待验证；新系统已明确定义", "KPOS-R12 部分覆盖", "KPOS-R13 部分覆盖"]) assert.ok(rendered.includes(copy), `映射列表缺少：${copy}`);
+assert.equal(rendered.includes("本调研不适用"), false, "整单能力不得继续显示本调研不适用");
 
 const api = context.window.__BUFFET_RULE_LIST_TEST_API__;
 assert.ok(api, "列表页应暴露轻量测试接口");
