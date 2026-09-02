@@ -2,7 +2,7 @@
 
 ## 目标
 
-以仓库内的 [`team-payroll-visual-reference.png`](../assets/team-payroll-visual-reference.png) 为唯一视觉基准，修正当前原生 Payroll 页面中的滚动、整体留白、卡片、表格和表单控件样式。原图尺寸为 1687×1966；对比时使用中文界面、Golden Dragon Chinese Kitchen、2026 年第 1 期、Bowen one 数据。保留主项目左侧导航、顶部账号栏、现有字段结构、数据与交互行为。
+以仓库内的 [`team-payroll-visual-reference.png`](../assets/team-payroll-visual-reference.png) 为唯一视觉基准，修正当前原生 Payroll 页面中的滚动、整体留白、卡片、表格和表单控件样式。原图尺寸为 1687×1966，其中 1687px 是 Payroll 内容画布宽度，不是浏览器宽度，且基准图不包含主项目外壳。对比时使用中文界面、Golden Dragon Chinese Kitchen、2026 年第 1 期、Bowen one 数据。保留主项目左侧导航、顶部账号栏、现有字段结构、数据与交互行为。
 
 ## 范围
 
@@ -53,4 +53,5 @@
 - 浏览器计算样式断言输入框、Hero、汇总卡及分组容器的高度、边框、圆角、背景和内边距符合上述数值。
 - 断言恰好只有 `[data-team-payroll-scroll]` 一个非弹窗纵向滚动容器；在响应式矩阵三个视口均可从顶部滚动到 Manage Payroll 最后一组，且页面级无横向溢出。
 - 验证考勤表和上文列出的交互流程。
-- 在 1687×1000、1440×900、1024×768 三个视口保存对比截图；1687 宽截图按参考图允许误差验收。
+- 响应式行为使用 1687×1000、1440×900、1024×768 三个浏览器视口分别截图，截图包含主项目外壳，仅检查布局状态和溢出，不直接与基准图像素比较。
+- 像素对比使用独立的 Payroll 画布捕获：测试时把浏览器宽度调到使 `[data-team-payroll-root]` 的实际 `getBoundingClientRect().width` 恰好为 1687px；裁剪掉左侧导航和顶部栏，只截取该宿主的内容区域。分别在 `[data-team-payroll-scroll]` 的 `scrollTop` 为 0、相邻视口高度和最大值时截图，并按宿主坐标无重叠拼接；拼接图预期尺寸为 1687×1966（允许内容总高度 ±4px）。该拼接图才按前述 4px/颜色容差与基准图比较。
