@@ -33,6 +33,9 @@ function runtimeSource(view: TipsView): string {
     "window.TipOutGlobalScopeFilter=Object.assign(window.TipOutGlobalScopeFilter||{},__scopeAdapter);",
     "var TipOutGlobalScopeFilter=window.TipOutGlobalScopeFilter,ruleData=window.ruleData;",
     "var TipOutSummaryUi=window.TipOutSummaryUi,TipOutPaymentMethodApportion=window.TipOutPaymentMethodApportion;",
+    "var TipOutAttendance=window.TipOutAttendance,TipAllocation=window.TipAllocation;",
+    "var TipOutPersonalSalesDeduct=window.TipOutPersonalSalesDeduct,TipOutOrderTipStatus=window.TipOutOrderTipStatus;",
+    "var TipOutPayrollBridge=window.TipOutPayrollBridge;",
     programs[view], view === "distribution" ? exportCode : "",
     "return {runHandler:function(code,event,element){return(function(){return eval(code)}).call(element)}};",
     "//# sourceURL=team-tips-native-runtime.js"].join("\n\n");
@@ -83,6 +86,7 @@ export function mountLegacyTipsRuntime(shadow: ShadowRoot, root: HTMLElement, ro
   let api: { runHandler(code:string,event:Event,element:HTMLElement): unknown };
   try {
     api = new Function("window","document","location","global","globalThis","self","__scopeAdapter",runtimeSource(route.view))(scopedWindow,scopedDocument,locationFacade,scopedWindow,scopedWindow,scopedWindow,scopeAdapter(context,cleanups));
+    root.dispatchEvent(new Event("DOMContentLoaded"));
   } catch (cause) { observer.disconnect(); controller.abort(); throw new Error("Native tips runtime failed to initialize",{cause}); }
   ["click","change","input","submit","mouseover","mouseout"].forEach((type)=>on(root,type,(event:Event)=>{const el=(event.target as Element | null)?.closest<HTMLElement>(`[data-native-on${type}]`);if(!el||!root.contains(el))return;if(type === "click" && el.closest("a"))event.preventDefault();api.runHandler(el.getAttribute(`data-native-on${type}`)??"",event,el);},true));
   return { destroy(){observers.forEach((item)=>item.disconnect());observers.clear();controller.abort();cleanups.forEach((f)=>f());cleanups.clear();timers.forEach(clearTimeout);timers.clear();intervals.forEach(clearInterval);intervals.clear();animationFrames.forEach(cancelAnimationFrame);animationFrames.clear();root.querySelectorAll(".show").forEach((el)=>el.classList.remove("show"));} };

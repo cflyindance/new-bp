@@ -106,8 +106,11 @@
         var list = JSON.parse(raw);
         return Array.isArray(list) ? list : [];
       }
+      var seeded = JSON.parse(JSON.stringify(defaultRules));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(seeded));
+      return seeded;
     } catch (e) {}
-    return [];
+    return JSON.parse(JSON.stringify(defaultRules));
   }
 
   function saveRules(rules) {

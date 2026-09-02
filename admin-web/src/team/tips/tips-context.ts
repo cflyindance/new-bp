@@ -59,7 +59,14 @@ export function createTipsPageContext(dependencies: TipsContextDependencies = br
     },
     navigate(href, state) {
       if (state) history.replaceState({ ...history.state, menusifuTeamTips: state }, "");
-      location.hash = href.startsWith("#") ? href : `#${href}`;
+      const hash = href.startsWith("#") ? href : `#${href}`;
+      const appUrl = `${location.origin}${location.pathname.endsWith("/") ? location.pathname : "/"}${hash}`;
+      if (/\/(?:index|detail|rules|rule-add)\.html$/i.test(location.pathname)) {
+        history.replaceState(history.state, "", appUrl);
+        window.dispatchEvent(new HashChangeEvent("hashchange"));
+      } else {
+        location.hash = hash;
+      }
     },
     getNavigationState() { return (history.state?.menusifuTeamTips as TipsNavigationState | undefined) ?? null; },
     getScrollOwner() { return document.querySelector<HTMLElement>("[data-team-tips-scroll]"); },
