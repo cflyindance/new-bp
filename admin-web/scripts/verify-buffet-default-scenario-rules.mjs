@@ -121,7 +121,7 @@ const legacyKeyProfile = loadProfile(legacyKeyStorage);
 const legacyKeyRules = legacyKeyProfile.repository.loadForAuthoringList(legacyKeyProfile.createDefaultScenarioRule);
 assert.equal(legacyKeyRules.length, 12, "旧两段键应安全映射为整单 canonical key，并仅补齐其余 11 条");
 assert.equal(legacyKeyRules.filter((rule) => rule.defaultScenarioKey === "party_size|order_lifetime|dish_set").length, 1);
-assert.equal(legacyKeyRules.find((rule) => rule.id === 81).defaultCatalogVersion, 3, "旧默认记录必须原位迁移至当前模板身份");
+assert.equal(legacyKeyRules.find((rule) => rule.id === 81).defaultCatalogVersion, 4, "旧默认记录必须原位迁移至当前模板身份");
 
 assert.match(listSource, /loadForAuthoringList/);
 console.log("verify-buffet-default-scenario-rules: OK");

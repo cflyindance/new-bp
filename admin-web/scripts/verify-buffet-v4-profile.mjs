@@ -55,7 +55,7 @@ const defaultRule = profile.createDefaultScenarioRule(
 );
 assert.equal(defaultRule.editorDraft.schemaVersion, 4);
 assert.equal(defaultRule.defaultScenarioKey, "order|order_lifetime|dish");
-assert.equal(defaultRule.defaultCatalogVersion, 3);
+assert.equal(defaultRule.defaultCatalogVersion, 4);
 assert.equal(defaultRule.name, "每个订单指定菜品限制下单份数");
 assert.deepEqual(Array.from(defaultRule.editorDraft.enabledPeriods), ["order_lifetime"]);
 assert.ok(defaultRule.editorDraft.storeConfigs && typeof defaultRule.editorDraft.storeConfigs === "object");
