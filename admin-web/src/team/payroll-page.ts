@@ -21,11 +21,26 @@ export function mountPayrollPage(
   const pageRoot = shadowRoot.querySelector<HTMLElement>("[data-team-payroll-page]");
   if (!pageRoot) throw new Error("Native Payroll page root was not rendered.");
 
+  const scrollOwner = container.closest<HTMLElement>("[data-team-payroll-scroll]");
+  const handleWheel = (event: WheelEvent): void => {
+    if (!scrollOwner || event.deltaY === 0) return;
+    const eventPath = event.composedPath();
+    const isModalInteraction = eventPath.some(
+      (node) => node instanceof HTMLElement && node.classList.contains("modal-overlay") && node.classList.contains("show"),
+    );
+    if (isModalInteraction) return;
+    const before = scrollOwner.scrollTop;
+    scrollOwner.scrollTop += event.deltaY;
+    if (scrollOwner.scrollTop !== before) event.preventDefault();
+  };
+  container.addEventListener("wheel", handleWheel, { passive: false });
+
   let runtime: PayrollRuntimeHandle | null = mountLegacyPayrollRuntime(shadowRoot, pageRoot, context);
   const handle: PayrollPageHandle = {
     destroy() {
       runtime?.destroy();
       runtime = null;
+      container.removeEventListener("wheel", handleWheel);
       shadowRoot.innerHTML = "";
       mountedPages.delete(container);
     },

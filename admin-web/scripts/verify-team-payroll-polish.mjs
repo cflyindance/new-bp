@@ -13,6 +13,8 @@ const requireText = (source, text, label) => {
 requireText(main, "data-team-payroll-scroll", "native route scroll owner");
 requireText(mount, 'import payrollPolishCss from "./payroll/payroll-polish.css?raw"', "polish import");
 requireText(mount, "${payrollCss}</style><style>${payrollPolishCss}", "CSS injection order");
+requireText(mount, 'container.addEventListener("wheel", handleWheel', "mouse-wheel bridge");
+requireText(mount, 'container.removeEventListener("wheel", handleWheel)', "mouse-wheel cleanup");
 requireText(polish, ":host", "Shadow host sizing");
 requireText(polish, ".team-payroll-page.payroll-workspace-active .payroll-workspace-main", "workspace scroll reset");
 [
