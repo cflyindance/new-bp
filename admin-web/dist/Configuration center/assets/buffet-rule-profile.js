@@ -12,16 +12,63 @@
     { id: "multi-round-desc", name: "分轮次递减", periods: ["multi_round"], blocks: { multi_round: ["target"] } },
     { id: "custom", name: "自定义配置", periods: [], blocks: {} }
   ];
-  var DEFAULT_CATALOG_VERSION = 2;
+  var LEGACY_CAPABILITIES = {
+    "KPOS-O01": { id: "KPOS-O01", label: "每个订单的指定菜品分别限制份数", group: "order_lifetime", level: "rule", coverageStatus: "complete", legacyEvidenceStatus: "verified_config" },
+    "KPOS-O02": { id: "KPOS-O02", label: "每个订单的指定菜品集合并限制总份数", group: "order_lifetime", level: "rule", coverageStatus: "complete", legacyEvidenceStatus: "verified_config" },
+    "KPOS-O03": { id: "KPOS-O03", label: "每位食客每单指定菜品额度 × 有效人数", group: "order_lifetime", level: "rule", coverageStatus: "complete", legacyEvidenceStatus: "pending_runtime" },
+    "KPOS-O04": { id: "KPOS-O04", label: "每位食客每单菜品集额度 × 有效人数", group: "order_lifetime", level: "rule", coverageStatus: "complete", legacyEvidenceStatus: "pending_runtime" },
+    "KPOS-O05": { id: "KPOS-O05", label: "选择分类后展开并保存具体菜品", group: "order_lifetime", level: "rule", coverageStatus: "complete", legacyEvidenceStatus: "verified_config" },
+    "KPOS-O06": { id: "KPOS-O06", label: "菜品规则选择多个商品时分别统计", group: "order_lifetime", level: "rule", coverageStatus: "complete", legacyEvidenceStatus: "pending_runtime" },
+    "KPOS-O07": { id: "KPOS-O07", label: "菜品集是规则内临时集合，不新增名称或编码", group: "order_lifetime", level: "rule", coverageStatus: "complete", legacyEvidenceStatus: "verified_config" },
+    "KPOS-O08": { id: "KPOS-O08", label: "菜品集成员跨产线合并统计", group: "order_lifetime", level: "rule", coverageStatus: "defined_extension", legacyEvidenceStatus: "not_legacy" },
+    "KPOS-O09": { id: "KPOS-O09", label: "同一功能支持多条非重叠规则独立生效", group: "order_lifetime", level: "group", coverageStatus: "complete", legacyEvidenceStatus: "verified_config" },
+    "KPOS-O10": { id: "KPOS-O10", label: "同一商品允许跨四种整单功能重复选择", group: "order_lifetime", level: "group", coverageStatus: "complete", legacyEvidenceStatus: "verified_config" },
+    "KPOS-O11": { id: "KPOS-O11", label: "四种整单规则共同生效，任一超限即拦截", group: "order_lifetime", level: "group", coverageStatus: "complete", legacyEvidenceStatus: "verified_config" },
+    "KPOS-O12": { id: "KPOS-O12", label: "数量跨全部下单轮次累计，关单或重新开单后重置", group: "order_lifetime", level: "group", coverageStatus: "complete", legacyEvidenceStatus: "verified_config" },
+    "KPOS-O13": { id: "KPOS-O13", label: "额度空值、0 与正整数采用新系统明确语义", group: "order_lifetime", level: "group", coverageStatus: "product_redefined", legacyEvidenceStatus: "verified_config", gap: "旧页面默认 1、最小值 1；新系统为空值未配置、0 禁止下单、正整数为最大份数" },
+    "KPOS-O14": { id: "KPOS-O14", label: "整单规则与每轮规则使用独立统计桶并可同时命中", group: "order_lifetime", level: "group", coverageStatus: "complete", legacyEvidenceStatus: "verified_config" },
+    "KPOS-OV01": { id: "KPOS-OV01", label: "历史每位食客规则是否确实按有效人数乘算", group: "order_lifetime", level: "group", coverageStatus: "complete", legacyEvidenceStatus: "pending_runtime", gap: "新系统明确按有效人数乘算" },
+    "KPOS-OV02": { id: "KPOS-OV02", label: "历史保存接口是否接受 0", group: "order_lifetime", level: "group", coverageStatus: "product_redefined", legacyEvidenceStatus: "pending_runtime", gap: "新系统明确 0 为禁止下单" },
+    "KPOS-OV03": { id: "KPOS-OV03", label: "历史执行引擎是否对多选菜品逐菜统计", group: "order_lifetime", level: "group", coverageStatus: "complete", legacyEvidenceStatus: "pending_runtime", gap: "新系统菜品规则逐菜统计" },
+    "KPOS-OV04": { id: "KPOS-OV04", label: "修改就餐人数后整单额度如何重算", group: "order_lifetime", level: "group", coverageStatus: "complete", legacyEvidenceStatus: "pending_runtime", gap: "新系统按校验时有效人数重算" },
+    "KPOS-OV05": { id: "KPOS-OV05", label: "历史服务员授权实际放行范围", group: "order_lifetime", level: "group", coverageStatus: "complete", legacyEvidenceStatus: "pending_runtime", gap: "新系统按本次操作／当前轮／当前订单授权配置执行" },
+    "KPOS-R01": { id: "KPOS-R01", label: "每轮菜品总数最少/最多", coverageStatus: "complete", level: "rule" },
+    "KPOS-R02": { id: "KPOS-R02", label: "每人每轮菜品总数最少/最多", coverageStatus: "complete", level: "rule" },
+    "KPOS-R03": { id: "KPOS-R03", label: "人均总量之外设置整桌每轮兜底", coverageStatus: "complete", level: "rule" },
+    "KPOS-R04": { id: "KPOS-R04", label: "每轮指定菜品最多份数", coverageStatus: "complete", level: "rule" },
+    "KPOS-R05": { id: "KPOS-R05", label: "每人每轮指定菜品最多份数", coverageStatus: "complete", level: "rule" },
+    "KPOS-R06": { id: "KPOS-R06", label: "每轮指定菜品集最多总份数", coverageStatus: "complete", level: "rule" },
+    "KPOS-R07": { id: "KPOS-R07", label: "每人每轮指定菜品集最多总份数", coverageStatus: "complete", level: "rule" },
+    "KPOS-R08": { id: "KPOS-R08", label: "每轮指定菜品集最多菜品种数", coverageStatus: "complete", level: "rule" },
+    "KPOS-R09": { id: "KPOS-R09", label: "每人每轮指定菜品集最多菜品种数", coverageStatus: "complete", level: "rule" },
+    "KPOS-R10": { id: "KPOS-R10", label: "菜品集按份时限制相同菜品每轮最大份数", coverageStatus: "complete", level: "rule" },
+    "KPOS-R11": { id: "KPOS-R11", label: "菜品集按种时限制每种菜品最大份数", coverageStatus: "complete", level: "rule" },
+    "KPOS-R12": { id: "KPOS-R12", label: "同一人数区间混合配置每轮、每人每轮规则", coverageStatus: "partial", level: "group", gap: "按桌每轮固定额度不能按人数区间变化" },
+    "KPOS-R13": { id: "KPOS-R13", label: "不同人数区间使用不同总量和指定对象额度", coverageStatus: "partial", level: "group", gap: "按人数规则按人均额度乘有效人数，不能表达区间内固定整桌额度" }
+  };
+  var LEGACY_CAPABILITY_GROUPS = [
+    { group: "order_lifetime", capabilityIds: ["KPOS-O09", "KPOS-O10", "KPOS-O11", "KPOS-O12", "KPOS-O13", "KPOS-O14"], evidenceIds: ["KPOS-OV01", "KPOS-OV02", "KPOS-OV03", "KPOS-OV04", "KPOS-OV05"] },
+    { group: "per_round", capabilityIds: ["KPOS-R12", "KPOS-R13"], evidenceIds: [] }
+  ];
   var DEFAULT_SCENARIOS = [
-    { key: "order|order_lifetime|dish", version: 2, group: "order_lifetime", subject: "order", targetType: "dish", name: "每个订单指定菜品限制下单份数", enabledPeriods: ["order_lifetime"], blocks: { totalEnabled: false, targetEnabled: true, sameDishEnabled: false } },
-    { key: "order|order_lifetime|dish_set", version: 2, group: "order_lifetime", subject: "order", targetType: "dish_set", name: "每个订单指定菜品集限制下单份数", enabledPeriods: ["order_lifetime"], blocks: { totalEnabled: false, targetEnabled: true, sameDishEnabled: false } },
-    { key: "party_size|order_lifetime|dish", version: 2, group: "order_lifetime", subject: "party_size", targetType: "dish", name: "每位食客每单指定菜品限制下单份数", enabledPeriods: ["order_lifetime"], blocks: { totalEnabled: false, targetEnabled: true, sameDishEnabled: false } },
-    { key: "party_size|order_lifetime|dish_set", version: 2, group: "order_lifetime", subject: "party_size", targetType: "dish_set", name: "每位食客每单菜品集限制下单份数", enabledPeriods: ["order_lifetime"], blocks: { totalEnabled: false, targetEnabled: true, sameDishEnabled: false } },
-    { key: "order|per_round|dish", version: 2, group: "per_round", subject: "order", targetType: "dish", name: "每轮指定菜品最多下多少份", enabledPeriods: ["per_round"], blocks: { totalEnabled: true, targetEnabled: true, sameDishEnabled: false } },
-    { key: "order|per_round|dish_set", version: 2, group: "per_round", subject: "order", targetType: "dish_set", name: "每轮指定菜品集最多下多少份", enabledPeriods: ["per_round"], blocks: { totalEnabled: false, targetEnabled: true, sameDishEnabled: true } },
-    { key: "party_size|per_round|dish", version: 2, group: "per_round", subject: "party_size", targetType: "dish", name: "每人每轮指定菜品最多下多少份", enabledPeriods: ["per_round"], blocks: { totalEnabled: true, targetEnabled: true, sameDishEnabled: false } },
-    { key: "party_size|per_round|dish_set", version: 2, group: "per_round", subject: "party_size", targetType: "dish_set", name: "每人每轮指定菜品集最多下多少份", enabledPeriods: ["per_round"], blocks: { totalEnabled: false, targetEnabled: true, sameDishEnabled: true } }
+    { key: "order|order_lifetime|dish", version: 4, group: "order_lifetime", subject: "order", targetType: "dish", defaultVariant: "order_target", measureUnit: "piece", legacyCapabilityIds: ["KPOS-O01", "KPOS-O05", "KPOS-O06"], coverageStatus: "complete", name: "每个订单指定菜品限制下单份数", enabledPeriods: ["order_lifetime"], blocks: { totalEnabled: false, targetEnabled: true, sameDishEnabled: false } },
+    { key: "order|order_lifetime|dish_set", version: 4, group: "order_lifetime", subject: "order", targetType: "dish_set", defaultVariant: "order_target", measureUnit: "piece", legacyCapabilityIds: ["KPOS-O02", "KPOS-O05", "KPOS-O07", "KPOS-O08"], coverageStatus: "defined_extension", name: "每个订单指定菜品集限制下单份数", enabledPeriods: ["order_lifetime"], blocks: { totalEnabled: false, targetEnabled: true, sameDishEnabled: false } },
+    { key: "party_size|order_lifetime|dish", version: 4, group: "order_lifetime", subject: "party_size", targetType: "dish", defaultVariant: "order_target", measureUnit: "piece", legacyCapabilityIds: ["KPOS-O03", "KPOS-O05", "KPOS-O06"], coverageStatus: "complete", name: "每位食客每单指定菜品限制下单份数", enabledPeriods: ["order_lifetime"], blocks: { totalEnabled: false, targetEnabled: true, sameDishEnabled: false } },
+    { key: "party_size|order_lifetime|dish_set", version: 4, group: "order_lifetime", subject: "party_size", targetType: "dish_set", defaultVariant: "order_target", measureUnit: "piece", legacyCapabilityIds: ["KPOS-O04", "KPOS-O05", "KPOS-O07", "KPOS-O08"], coverageStatus: "defined_extension", name: "每位食客每单菜品集限制下单份数", enabledPeriods: ["order_lifetime"], blocks: { totalEnabled: false, targetEnabled: true, sameDishEnabled: false } },
+    { key: "combo|per_round|dish|table", version: 1, group: "per_round_combo", subject: "party_size", targetType: "dish", defaultVariant: "combo_round_dish_table", measureUnit: "piece", legacyCapabilityIds: ["KPOS-R01", "KPOS-R04", "KPOS-R12", "KPOS-R13"], coverageStatus: "complete", name: "每轮总量＋每轮指定菜品", enabledPeriods: ["per_round"], blocks: { totalEnabled: true, targetEnabled: true, sameDishEnabled: false } },
+    { key: "combo|per_round|dish_set|piece|table", version: 1, group: "per_round_combo", subject: "party_size", targetType: "dish_set", defaultVariant: "combo_round_dish_set_piece_table", measureUnit: "piece", legacyCapabilityIds: ["KPOS-R01", "KPOS-R06", "KPOS-R10", "KPOS-R12", "KPOS-R13"], coverageStatus: "complete", name: "每轮总量＋每轮菜品集按份", enabledPeriods: ["per_round"], blocks: { totalEnabled: true, targetEnabled: true, sameDishEnabled: true } },
+    { key: "combo|per_round|dish_set|kind|table", version: 1, group: "per_round_combo", subject: "party_size", targetType: "dish_set", defaultVariant: "combo_round_dish_set_kind_table", measureUnit: "kind", legacyCapabilityIds: ["KPOS-R01", "KPOS-R08", "KPOS-R11", "KPOS-R12", "KPOS-R13"], coverageStatus: "complete", name: "每轮总量＋每轮菜品集按种", enabledPeriods: ["per_round"], blocks: { totalEnabled: true, targetEnabled: true, sameDishEnabled: true } },
+    { key: "combo|per_round|dish|party_size", version: 1, group: "per_round_combo", subject: "party_size", targetType: "dish", defaultVariant: "combo_round_dish_party_size", measureUnit: "piece", legacyCapabilityIds: ["KPOS-R01", "KPOS-R05", "KPOS-R12", "KPOS-R13"], coverageStatus: "complete", name: "每轮总量＋每人每轮指定菜品", enabledPeriods: ["per_round"], blocks: { totalEnabled: true, targetEnabled: true, sameDishEnabled: false } },
+    { key: "combo|per_round|dish_set|piece|party_size", version: 1, group: "per_round_combo", subject: "party_size", targetType: "dish_set", defaultVariant: "combo_round_dish_set_piece_party_size", measureUnit: "piece", legacyCapabilityIds: ["KPOS-R01", "KPOS-R07", "KPOS-R10", "KPOS-R12", "KPOS-R13"], coverageStatus: "complete", name: "每轮总量＋每人每轮菜品集按份", enabledPeriods: ["per_round"], blocks: { totalEnabled: true, targetEnabled: true, sameDishEnabled: true } },
+    { key: "combo|per_round|dish_set|kind|party_size", version: 1, group: "per_round_combo", subject: "party_size", targetType: "dish_set", defaultVariant: "combo_round_dish_set_kind_party_size", measureUnit: "kind", legacyCapabilityIds: ["KPOS-R01", "KPOS-R09", "KPOS-R11", "KPOS-R12", "KPOS-R13"], coverageStatus: "complete", name: "每轮总量＋每人每轮菜品集按种", enabledPeriods: ["per_round"], blocks: { totalEnabled: true, targetEnabled: true, sameDishEnabled: true } },
+    { key: "order|per_round|total", version: 1, group: "per_round", subject: "order", targetType: "dish", defaultVariant: "round_total", measureUnit: "piece", legacyCapabilityIds: ["KPOS-R01"], coverageStatus: "complete", name: "每轮下单菜品总数限制", enabledPeriods: ["per_round"], blocks: { totalEnabled: true, targetEnabled: false, sameDishEnabled: false } },
+    { key: "party_size|per_round|total", version: 1, group: "per_round", subject: "party_size", targetType: "dish", defaultVariant: "round_total", measureUnit: "piece", legacyCapabilityIds: ["KPOS-R02", "KPOS-R03"], coverageStatus: "complete", name: "每人每轮下单菜品总数限制", enabledPeriods: ["per_round"], blocks: { totalEnabled: true, targetEnabled: false, sameDishEnabled: false } },
+    { key: "order|per_round|dish", version: 3, group: "per_round", subject: "order", targetType: "dish", defaultVariant: "round_dish", measureUnit: "piece", legacyCapabilityIds: ["KPOS-R04"], coverageStatus: "complete", name: "每轮指定菜品数量限制", enabledPeriods: ["per_round"], blocks: { totalEnabled: false, targetEnabled: true, sameDishEnabled: false } },
+    { key: "party_size|per_round|dish", version: 3, group: "per_round", subject: "party_size", targetType: "dish", defaultVariant: "round_dish", measureUnit: "piece", legacyCapabilityIds: ["KPOS-R05"], coverageStatus: "complete", name: "每人每轮指定菜品数量限制", enabledPeriods: ["per_round"], blocks: { totalEnabled: false, targetEnabled: true, sameDishEnabled: false } },
+    { key: "order|per_round|dish_set|piece", version: 1, group: "per_round", subject: "order", targetType: "dish_set", defaultVariant: "round_dish_set_piece", measureUnit: "piece", legacyCapabilityIds: ["KPOS-R06", "KPOS-R10"], coverageStatus: "complete", name: "每轮指定菜品集按份数限制", enabledPeriods: ["per_round"], blocks: { totalEnabled: false, targetEnabled: true, sameDishEnabled: true } },
+    { key: "party_size|per_round|dish_set|piece", version: 1, group: "per_round", subject: "party_size", targetType: "dish_set", defaultVariant: "round_dish_set_piece", measureUnit: "piece", legacyCapabilityIds: ["KPOS-R07", "KPOS-R10"], coverageStatus: "complete", name: "每人每轮指定菜品集按份数限制", enabledPeriods: ["per_round"], blocks: { totalEnabled: false, targetEnabled: true, sameDishEnabled: true } },
+    { key: "order|per_round|dish_set|kind", version: 1, group: "per_round", subject: "order", targetType: "dish_set", defaultVariant: "round_dish_set_kind", measureUnit: "kind", legacyCapabilityIds: ["KPOS-R08", "KPOS-R11"], coverageStatus: "complete", name: "每轮指定菜品集按种数限制", enabledPeriods: ["per_round"], blocks: { totalEnabled: false, targetEnabled: true, sameDishEnabled: true } },
+    { key: "party_size|per_round|dish_set|kind", version: 1, group: "per_round", subject: "party_size", targetType: "dish_set", defaultVariant: "round_dish_set_kind", measureUnit: "kind", legacyCapabilityIds: ["KPOS-R09", "KPOS-R11"], coverageStatus: "complete", name: "每人每轮指定菜品集按种数限制", enabledPeriods: ["per_round"], blocks: { totalEnabled: false, targetEnabled: true, sameDishEnabled: true } }
   ];
 
   function clone(value) {
@@ -103,9 +150,13 @@
     });
   }
 
+  function defaultTemplate(key) {
+    return DEFAULT_SCENARIOS.find(function (scenario) { return scenario.key === key; }) || null;
+  }
+
   function canonicalDefaultKey(subject, period, targetType) {
     var key = [subject, period, targetType].join("|");
-    return DEFAULT_SCENARIOS.some(function (scenario) { return scenario.key === key; }) ? key : "";
+    return defaultTemplate(key) ? key : "";
   }
 
   function systemIdentity(rule) {
@@ -119,9 +170,8 @@
 
   function exactDefaultKey(rule) {
     var identity = systemIdentity(rule);
-    var parts = identity.key.split("|");
-    if (identity.origin !== "system_default" || identity.version !== DEFAULT_CATALOG_VERSION || parts.length !== 3) return "";
-    return canonicalDefaultKey(parts[0], parts[1], parts[2]);
+    var template = defaultTemplate(identity.key);
+    return identity.origin === "system_default" && template && identity.version === template.version ? template.key : "";
   }
 
   function verifiedLegacyDefaultKey(rule) {
@@ -331,6 +381,35 @@
     return !currentSnapshotReferencesRule(envelope, rule) && !historicalSnapshotReferencesRule(envelope, rule);
   }
 
+  function hasDraftReference(envelope, rule) {
+    var id = rule && rule.id;
+    return id != null && (envelope.drafts || []).some(function (draft) {
+      return String(draft && (draft.sourceRuleId != null ? draft.sourceRuleId : draft.ruleId)) === String(id);
+    });
+  }
+
+  function obsoleteV2DefaultKey(rule) {
+    var identity = systemIdentity(rule);
+    if (identity.origin !== "system_default" || identity.version !== 2) return "";
+    return [
+      "order|order_lifetime|dish", "order|order_lifetime|dish_set", "party_size|order_lifetime|dish", "party_size|order_lifetime|dish_set",
+      "order|per_round|dish", "order|per_round|dish_set", "party_size|per_round|dish", "party_size|per_round|dish_set"
+    ].indexOf(identity.key) >= 0 ? identity.key : "";
+  }
+
+  function blankV2Default(rule, envelope) {
+    var copies = authoringCopies(rule);
+    var hasScope = copies.some(function (copy) {
+      return ["participatingStoreIds", "deployStoreIds", "targetIds", "productLines", "dishSetMembers"].some(function (field) { return hasValues(copy[field]); }) ||
+        ["storeConfigs", "limits", "dishSetLimits", "quantitySettings"].some(function (field) { return nestedCollectionHasValues(copy[field]); }) ||
+        Object.keys(copy.periodValues || {}).some(function (period) {
+          var values = copy.periodValues[period] || {};
+          return ["totalBounds", "tableTotalBounds", "targetLimits", "tableTargetCaps", "defaultDishLimits", "exceptionDishLimits"].some(function (field) { return hasConfiguredCellMap(values[field]); });
+        });
+    });
+    return rule && rule.status === "disabled" && !hasScope && !currentSnapshotReferencesRule(envelope, rule) && !historicalSnapshotReferencesRule(envelope, rule);
+  }
+
   function stripSystemIdentity(rule) {
     [rule, rule && rule.authoringConfig, rule && rule.authoringDraft, rule && rule.editorDraft].forEach(function (value) {
       if (!value || typeof value !== "object") return;
@@ -346,7 +425,7 @@
       if (!value || typeof value !== "object") return;
       value.origin = "system_default";
       value.defaultScenarioKey = key;
-      value.defaultCatalogVersion = DEFAULT_CATALOG_VERSION;
+      value.defaultCatalogVersion = (defaultTemplate(key) || {}).version || 0;
     });
     return rule;
   }
@@ -360,6 +439,13 @@
       var periods = Array.isArray(copy.enabledPeriods) && copy.enabledPeriods.length ? copy.enabledPeriods : [copy.period || "order_lifetime"];
       return copy.subject === parts[0] && copy.targetType === parts[2] && periods.length === 1 && periods[0] === "order_lifetime";
     });
+  }
+
+  function stableOrderDefaultKey(rule) {
+    var identity = systemIdentity(rule);
+    var template = defaultTemplate(identity.key);
+    if (identity.origin !== "system_default" || !template || template.group !== "order_lifetime") return "";
+    return legacySemanticsMatch(rule, template.key) ? template.key : "";
   }
 
   function candidateRank(rule, envelope) {
@@ -387,10 +473,49 @@
     var before = JSON.stringify(next);
     var groups = {};
     var retained = [];
+    var deferredCovered = {};
     next.rules.forEach(function (rule) {
       var exact = exactDefaultKey(rule);
       var legacy = verifiedLegacyDefaultKey(rule);
+      var obsolete = obsoleteV2DefaultKey(rule);
       var identity = systemIdentity(rule);
+      var stableOrder = stableOrderDefaultKey(rule);
+      if (stableOrder) {
+        if (!groups[stableOrder]) groups[stableOrder] = [];
+        groups[stableOrder].push(rule);
+        return;
+      }
+      if (!exact && legacy && hasDraftReference(next, rule)) {
+        retained.push(rule);
+        deferredCovered[legacy] = true;
+        return;
+      }
+      if (obsolete) {
+        if (hasDraftReference(next, rule)) {
+          retained.push(rule);
+          return;
+        }
+        if (obsolete.indexOf("|order_lifetime|") >= 0) {
+          if (!groups[obsolete]) groups[obsolete] = [];
+          groups[obsolete].push(rule);
+          return;
+        }
+        var upgradedKey = obsolete;
+        if (/\|dish_set$/.test(obsolete)) upgradedKey += ((rule.authoringConfig || rule.editorDraft || rule).measureUnit === "kind" ? "|kind" : "|piece");
+        if (blankV2Default(rule, next)) {
+          var upgradedTemplate = defaultTemplate(upgradedKey);
+          authoringCopies(rule).forEach(function (copy) {
+            copy.measureUnit = upgradedTemplate.measureUnit;
+            copy.enabledPeriods = clone(upgradedTemplate.enabledPeriods);
+            copy.period = upgradedTemplate.enabledPeriods[0];
+            copy.periodPolicies = copy.periodPolicies || {};
+            copy.periodPolicies[copy.period] = { enabled: true, blocks: clone(upgradedTemplate.blocks) };
+          });
+          if (!groups[upgradedKey]) groups[upgradedKey] = [];
+          groups[upgradedKey].push(rule);
+        } else retained.push(stripSystemIdentity(rule));
+        return;
+      }
       var isLegacyCategory = identity.origin === "system_default" && Number(identity.version || 1) === 1 && /\|category$/.test(identity.key);
       if (isLegacyCategory) {
         if (!isUntouchedLegacyDefault(rule, next)) retained.push(stripSystemIdentity(rule));
@@ -418,6 +543,18 @@
     next.rules = retained;
     var covered = {};
     next.rules.forEach(function (rule) { var key = exactDefaultKey(rule); if (key) covered[key] = true; });
+    Object.keys(deferredCovered).forEach(function (key) { covered[key] = true; });
+    next.rules.forEach(function (rule) {
+      var oldKey = obsoleteV2DefaultKey(rule);
+      if (!oldKey || !hasDraftReference(next, rule)) return;
+      if (oldKey.indexOf("|order_lifetime|") >= 0) covered[oldKey] = true;
+      else if (/\|dish$/.test(oldKey)) covered[oldKey] = true;
+      else {
+        var unit = (rule.authoringConfig || rule.editorDraft || rule).measureUnit;
+        if (unit === "piece" || unit === "kind") covered[oldKey + "|" + unit] = true;
+        else { covered[oldKey + "|piece"] = true; covered[oldKey + "|kind"] = true; }
+      }
+    });
     var id = nextNumericId(next);
     DEFAULT_SCENARIOS.forEach(function (scenario) {
       if (!covered[scenario.key]) next.rules.push(factory(clone(scenario), id++));
@@ -435,6 +572,166 @@
   function today() {
     var now = new Date();
     return now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0") + "-" + String(now.getDate()).padStart(2, "0");
+  }
+
+  function createRangeId() {
+    return "pr_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+  }
+
+  function createDefaultPartyRanges() {
+    return [
+      { rangeId: createRangeId(), min: 1, max: 3 },
+      { rangeId: createRangeId(), min: 4, max: null }
+    ];
+  }
+
+  var COMBO_VALUE_MAPS = ["tableTotalBounds", "tableTargetCaps", "targetLimits", "defaultDishLimits", "totalBounds", "exceptionDishLimits"];
+
+  function comboScenarioKey(rangeId) {
+    return "party:" + String(rangeId) + "|round:0";
+  }
+
+  function comboTargetKey(rangeId, productLineId, dishId) {
+    return comboScenarioKey(rangeId) + "|line:" + String(productLineId) + "|target:" + String(dishId);
+  }
+
+  function comboKeyMode(draft) {
+    var ranges = draft && draft.partyRanges;
+    return Array.isArray(ranges) && ranges.length && ranges.every(function (range) { return !!(range && range.rangeId); }) ? "range_id" : "legacy_index";
+  }
+
+  function validateComboRanges(ranges) {
+    if (!validRanges(ranges)) return { valid: false, code: "INVALID_RANGE_COVERAGE" };
+    var seen = {};
+    for (var index = 0; index < ranges.length; index += 1) {
+      var rangeId = String(ranges[index] && ranges[index].rangeId || "");
+      if (!rangeId) return { valid: false, code: "MISSING_RANGE_ID" };
+      if (seen[rangeId]) return { valid: false, code: "DUPLICATE_RANGE_ID" };
+      seen[rangeId] = true;
+    }
+    return { valid: true, code: "" };
+  }
+
+  function storedComboKeyMode(values) {
+    var rangeId = false, legacyIndex = false;
+    COMBO_VALUE_MAPS.forEach(function (mapName) {
+      Object.keys(values && values[mapName] || {}).forEach(function (key) {
+        if (/^party:[^|]+\|round:0(?:\||$)/.test(key)) rangeId = true;
+        else legacyIndex = true;
+      });
+    });
+    return rangeId && legacyIndex ? "mixed" : rangeId ? "range_id" : legacyIndex ? "legacy_index" : "empty";
+  }
+
+  function removeOrphanComboKeys(values, ranges) {
+    var allowed = {};
+    (ranges || []).forEach(function (range) { if (range && range.rangeId) allowed[comboScenarioKey(range.rangeId)] = true; });
+    var result = clone(values || {});
+    COMBO_VALUE_MAPS.forEach(function (mapName) {
+      var source = values && values[mapName] || {};
+      result[mapName] = {};
+      Object.keys(source).forEach(function (key) {
+        var match = key.match(/^(party:[^|]+\|round:0)(?:\||$)/);
+        if (match && allowed[match[1]]) result[mapName][key] = clone(source[key]);
+      });
+    });
+    return result;
+  }
+
+  function emptyComboPeriodValues() {
+    return { tableTotalBounds: {}, tableTargetCaps: {}, targetLimits: {}, defaultDishLimits: {}, totalBounds: {}, exceptionDishLimits: {} };
+  }
+
+  function comboTemplateForDraft(draft) {
+    var key = String(draft && draft.defaultScenarioKey || "");
+    var template = defaultTemplate(key);
+    return template && template.group === "per_round_combo" ? template : null;
+  }
+
+  function ensureComboPeriodValues(draft, storeId) {
+    var config = draft.storeConfigs && draft.storeConfigs[storeId];
+    if (!config) throw new Error("BUFFET_COMBO_STORE_MISSING");
+    config.periodValues = config.periodValues || {};
+    config.periodValues.per_round = config.periodValues.per_round || emptyComboPeriodValues();
+    var values = config.periodValues.per_round;
+    COMBO_VALUE_MAPS.forEach(function (mapName) { if (!values[mapName] || typeof values[mapName] !== "object") values[mapName] = {}; });
+    return values;
+  }
+
+  function comboUsesPartyMultiplier(template) {
+    return !!(template && /\|party_size$/.test(template.key));
+  }
+
+  function comboQuantityTargetKey(template, rangeId, target) {
+    return template.targetType === "dish"
+      ? comboTargetKey(rangeId, target && target.productLineId, target && target.dishId)
+      : comboScenarioKey(rangeId);
+  }
+
+  function writeComboQuantity(draft, storeId, rangeId, field, target, cell) {
+    var template = comboTemplateForDraft(draft);
+    if (!template) throw new Error("BUFFET_COMBO_TEMPLATE_REQUIRED");
+    var values = ensureComboPeriodValues(draft, storeId);
+    var scenario = comboScenarioKey(rangeId);
+    if (field === "total") values.tableTotalBounds[scenario] = clone(cell);
+    else if (field === "same_dish") values.defaultDishLimits[scenario] = clone(cell);
+    else if (field === "target") {
+      var key = comboQuantityTargetKey(template, rangeId, target);
+      var destination = comboUsesPartyMultiplier(template) ? "targetLimits" : "tableTargetCaps";
+      var opposite = destination === "targetLimits" ? "tableTargetCaps" : "targetLimits";
+      values[destination][key] = clone(cell);
+      delete values[opposite][key];
+    } else throw new Error("BUFFET_COMBO_FIELD_INVALID");
+    return clone(values);
+  }
+
+  function projectComboQuantity(draft, storeId, rangeId) {
+    var template = comboTemplateForDraft(draft);
+    if (!template) throw new Error("BUFFET_COMBO_TEMPLATE_REQUIRED");
+    var values = ensureComboPeriodValues(draft, storeId);
+    var scenario = comboScenarioKey(rangeId);
+    var source = comboUsesPartyMultiplier(template) ? values.targetLimits : values.tableTargetCaps;
+    var targets = {};
+    if (template.targetType === "dish") Object.keys(source).forEach(function (key) {
+      if (key.indexOf(scenario + "|") === 0) targets[key] = clone(source[key]);
+    });
+    else targets = clone(source[scenario] || { configured: false, value: null });
+    return {
+      rangeId: rangeId,
+      totalBounds: clone(values.tableTotalBounds[scenario] || { minConfigured: false, min: null, maxConfigured: false, max: null }),
+      targetLimits: targets,
+      sameDishLimit: clone(values.defaultDishLimits[scenario] || { configured: false, value: null })
+    };
+  }
+
+  function validRequiredBound(cell) {
+    return configuredBound(cell, "min") && configuredBound(cell, "max") && Number(cell.min) <= Number(cell.max);
+  }
+
+  function validateComboPublication(draft, storeIds) {
+    var template = comboTemplateForDraft(draft);
+    if (!template) return { valid: true, code: "" };
+    var ranges = draft.partyRanges || [];
+    var rangeCheck = validateComboRanges(ranges);
+    if (!rangeCheck.valid) return { valid: false, code: rangeCheck.code, block: "party_range" };
+    for (var storeIndex = 0; storeIndex < (storeIds || []).length; storeIndex += 1) {
+      var storeId = storeIds[storeIndex], config = draft.storeConfigs && draft.storeConfigs[storeId];
+      if (!config) return { valid: false, code: "STORE_CONFIG_MISSING", storeId: storeId, block: "store" };
+      var values = ensureComboPeriodValues(draft, storeId);
+      var storedMode = storedComboKeyMode(values);
+      if (storedMode === "mixed" || storedMode === "legacy_index") return { valid: false, code: "MIXED_SCENARIO_KEY_MODE", storeId: storeId, block: "key_mode" };
+      var targets = template.targetType === "dish" ? (config.dishTargets || []) : (config.dishSetMembers || []);
+      if (!targets.length || (template.targetType === "dish_set" && targets.length < 2)) return { valid: false, code: "TARGET_SCOPE_MISSING", storeId: storeId, block: "target" };
+      for (var rangeIndex = 0; rangeIndex < ranges.length; rangeIndex += 1) {
+        var rangeId = ranges[rangeIndex].rangeId, scenario = comboScenarioKey(rangeId);
+        if (!validRequiredBound(values.tableTotalBounds[scenario])) return { valid: false, code: "TOTAL_REQUIRED", storeId: storeId, rangeId: rangeId, block: "total" };
+        var source = comboUsesPartyMultiplier(template) ? values.targetLimits : values.tableTargetCaps;
+        var targetKeys = template.targetType === "dish" ? targets.map(function (target) { return comboQuantityTargetKey(template, rangeId, target); }) : [scenario];
+        if (targetKeys.some(function (key) { return !configuredLimit(source[key]); })) return { valid: false, code: "TARGET_REQUIRED", storeId: storeId, rangeId: rangeId, block: "target" };
+        if (template.blocks.sameDishEnabled && !configuredLimit(values.defaultDishLimits[scenario])) return { valid: false, code: "SAME_DISH_REQUIRED", storeId: storeId, rangeId: rangeId, block: "same_dish" };
+      }
+    }
+    return { valid: true, code: "" };
   }
 
   function hasConfiguredCellMap(value) {
@@ -512,6 +809,24 @@
   // 此校验同时服务于发布与列表重新启用：不能只因存在一个 map 就允许生效。
   function validateV4Publication(draft) {
     if (!usesV4Capability(draft)) return { valid: true, message: "" };
+    if (comboTemplateForDraft(draft)) {
+      var comboCheck = validateComboPublication(draft, Array.isArray(draft.deployStoreIds) ? draft.deployStoreIds : []);
+      if (!comboCheck.valid) {
+        var comboMessages = {
+          INVALID_RANGE_COVERAGE: "人数区间必须连续、互斥并完整覆盖",
+          MISSING_RANGE_ID: "人数区间缺少稳定身份",
+          DUPLICATE_RANGE_ID: "人数区间身份重复",
+          MIXED_SCENARIO_KEY_MODE: "组合规则数量数据不能混用历史索引键",
+          STORE_CONFIG_MISSING: "生效门店缺少商品与数量配置",
+          TARGET_SCOPE_MISSING: "生效门店缺少有效商品范围",
+          TOTAL_REQUIRED: "每个人数区间都必须配置整桌每轮最少和最多份数",
+          TARGET_REQUIRED: "每个人数区间都必须配置指定对象额度",
+          SAME_DISH_REQUIRED: "每个人数区间都必须配置菜品集内部保护额度"
+        };
+        return { valid: false, message: comboMessages[comboCheck.code] || "组合规则配置不完整", detail: comboCheck };
+      }
+      return { valid: true, message: "" };
+    }
     var periods = Array.isArray(draft.enabledPeriods) ? draft.enabledPeriods : [];
     if (!periods.length) return { valid: false, message: "请至少启用一个限制周期" };
     if (draft.subject === "party_size" && !validRanges(draft.partyRanges)) return { valid: false, message: "人数区间必须连续且有效" };
@@ -581,10 +896,14 @@
     if (!draft.subject || !draft.targetType) return { valid: false, message: "请选择限购主体和限购对象" };
     var deployIds = Array.isArray(draft.deployStoreIds) ? draft.deployStoreIds : [];
     if (!deployIds.length) return { valid: false, message: "请至少选择一家生效门店" };
+    var requiresTargets = (Array.isArray(draft.enabledPeriods) ? draft.enabledPeriods : []).some(function (period) {
+      var blocks = draft.periodPolicies && draft.periodPolicies[period] && draft.periodPolicies[period].blocks;
+      return !!(blocks && (blocks.targetEnabled || blocks.sameDishEnabled));
+    });
     for (var index = 0; index < deployIds.length; index += 1) {
       var config = draft.storeConfigs && draft.storeConfigs[deployIds[index]];
       var selected = draft.targetType === "dish" ? config && config.dishTargets : draft.targetType === "category" ? config && config.categoryTargets : config && config.dishSetMembers;
-      if (!Array.isArray(selected) || !selected.length) return { valid: false, message: "请至少选择一个分类或菜品" };
+      if (requiresTargets && (!Array.isArray(selected) || !selected.length)) return { valid: false, message: "请至少选择一个分类或菜品" };
     }
     var authorization = draft.authorization || {};
     if (authorization.enabled) {
@@ -678,11 +997,11 @@
     var draft = upgradeDraftToV4({
       schemaVersion: 4,
       currentStep: 1, highestStep: 1,
-      origin: "system_default", defaultScenarioKey: scenarioKey, defaultCatalogVersion: DEFAULT_CATALOG_VERSION,
-      subject: defaultScenario.subject, period: period, enabledPeriods: enabledPeriods, periodPolicies: periodPolicies, targetType: defaultScenario.targetType,
+      origin: "system_default", defaultScenarioKey: scenarioKey, defaultCatalogVersion: defaultScenario.version,
+      subject: defaultScenario.subject, period: period, enabledPeriods: enabledPeriods, periodPolicies: periodPolicies, targetType: defaultScenario.targetType, measureUnit: defaultScenario.measureUnit,
       name: scenarioName, description: "",
       structureByLine: { kiosk: [], emenu: [], sdi: [] }, productLines: [], targetIds: [],
-      partyRanges: [{ min: 1, max: null }], roundRanges: [{ min: 1, max: null }],
+      partyRanges: defaultScenario.group === "per_round_combo" ? createDefaultPartyRanges() : [{ min: 1, max: null }], roundRanges: [{ min: 1, max: null }],
       limits: {}, activePartyIndex: 0, activeRoundIndex: 0, activeLineId: "kiosk",
       conditions: {
         effectiveFrom: created, effectiveTo: "", activityCycle: "weekly",
@@ -702,7 +1021,7 @@
     });
     return {
       id: id, name: scenarioName, description: "", status: "disabled", created: created, updatedAt: new Date().toISOString(),
-      origin: "system_default", defaultScenarioKey: scenarioKey, defaultCatalogVersion: DEFAULT_CATALOG_VERSION, publishedSnapshotVersion: null,
+      origin: "system_default", defaultScenarioKey: scenarioKey, defaultCatalogVersion: defaultScenario.version, publishedSnapshotVersion: null,
       type: defaultScenario.subject === "party_size" ? "按人数限购" : "按桌/订单限购",
       round: period === "per_round" ? "每轮" : "每单/整单累计",
       method: defaultScenario.targetType === "dish_set" ? "按菜品集限购" : "按每种菜品限购",
@@ -839,6 +1158,22 @@
     },
     repository: repository,
     defaultScenarios: clone(DEFAULT_SCENARIOS),
+    legacyCapabilities: clone(LEGACY_CAPABILITIES),
+    legacyCapabilityGroups: clone(LEGACY_CAPABILITY_GROUPS),
+    comboRanges: {
+      scenarioKey: comboScenarioKey,
+      targetKey: comboTargetKey,
+      keyMode: comboKeyMode,
+      validateRanges: validateComboRanges,
+      detectStoredKeyMode: storedComboKeyMode,
+      removeOrphanKeys: removeOrphanComboKeys
+    },
+    comboQuantities: {
+      emptyPeriodValues: emptyComboPeriodValues,
+      project: projectComboQuantity,
+      write: writeComboQuantity,
+      validatePublication: validateComboPublication
+    },
     createDefaultScenarioRule: createDefaultScenarioRule,
     reconcileDefaultRules: reconcileDefaultRules,
     verifiedLegacyDefaultKey: verifiedLegacyDefaultKey,

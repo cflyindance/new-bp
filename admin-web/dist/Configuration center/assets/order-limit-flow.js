@@ -55,11 +55,91 @@
     return !!systemDefaultTemplate(draft);
   }
 
+  function isBuffetComboDraft(draft) {
+    var template = systemDefaultTemplate(draft);
+    return !!(template && template.group === "per_round_combo");
+  }
+
+  function comboScenarioKeyFor(draft, partyIndex) {
+    var range = draft.partyRanges && draft.partyRanges[partyIndex];
+    return moduleProfile.comboRanges && range && range.rangeId ? moduleProfile.comboRanges.scenarioKey(range.rangeId) : v4ScenarioKey(partyIndex, 0);
+  }
+
+  function comboUsesPartyMultiplier(draft) {
+    return isBuffetComboDraft(draft) && /\|party_size$/.test(String(draft.defaultScenarioKey || ""));
+  }
+
   function stripSystemDefaultIdentity(draft) {
     delete draft.origin;
     delete draft.defaultScenarioKey;
     delete draft.defaultCatalogVersion;
     return draft;
+  }
+
+  function systemDefaultIdentityFields(target, source) {
+    if (!target || typeof target !== "object") return;
+    if (source) {
+      target.origin = "system_default";
+      target.defaultScenarioKey = source.defaultScenarioKey;
+      target.defaultCatalogVersion = source.defaultCatalogVersion;
+      return;
+    }
+    delete target.origin;
+    delete target.defaultScenarioKey;
+    delete target.defaultCatalogVersion;
+  }
+
+  function systemDefaultIdentityLayers(rule, includePublished) {
+    var layers = [rule, rule && rule.editorDraft, rule && rule.authoringDraft, rule && rule.authoringConfig];
+    if (includePublished) layers.push(rule && rule.publishedConfig);
+    return layers.filter(function (layer, index) {
+      return layer && typeof layer === "object" && layers.indexOf(layer) === index;
+    });
+  }
+
+  function normalizeBuffetPeriods(periods) {
+    return BUFFET_PERIOD_ORDER.filter(function (period) {
+      return Array.isArray(periods) && periods.indexOf(period) >= 0;
+    });
+  }
+
+  function resolveSystemDefaultSource(draftRule, rules) {
+    if (!isBuffetProfile() || !draftRule) return null;
+    if (draftRule.sourceRuleId == null) return systemDefaultTemplate(draftRule.editorDraft || draftRule) ? draftRule : null;
+    var source = (rules || []).find(function (rule) {
+      return String(rule && rule.id) === String(draftRule.sourceRuleId);
+    });
+    return source && systemDefaultTemplate(source.authoringConfig || source.authoringDraft || source.editorDraft || source) ? source : null;
+  }
+
+  function systemDefaultIdentityDecision(draftRule, rules) {
+    if (!isBuffetProfile()) return "ordinary";
+    var source = resolveSystemDefaultSource(draftRule, rules);
+    if (!source) return "ordinary";
+    var sourceDraft = source.authoringConfig || source.authoringDraft || source.editorDraft || source;
+    var template = systemDefaultTemplate(sourceDraft);
+    var draft = draftRule.editorDraft || draftRule;
+    var templatePeriod = template && template.enabledPeriods && template.enabledPeriods[0];
+    var draftBlocks = draft.periodPolicies && draft.periodPolicies[templatePeriod] && draft.periodPolicies[templatePeriod].blocks || {};
+    var templateBlocks = template && template.blocks || {};
+    var sameBlocks = ["totalEnabled", "targetEnabled", "sameDishEnabled"].every(function (field) {
+      return !!draftBlocks[field] === !!templateBlocks[field];
+    });
+    var sameMeasure = !template || template.targetType !== "dish_set" || (draft.measureUnit === "kind" ? "kind" : "piece") === template.measureUnit;
+    var same = !!template && draft.subject === template.subject && draft.targetType === template.targetType && sameMeasure && sameBlocks &&
+      JSON.stringify(normalizeBuffetPeriods(draft.enabledPeriods)) === JSON.stringify(normalizeBuffetPeriods(template.enabledPeriods));
+    return same ? "preserve" : "detach";
+  }
+
+  function applySystemDefaultIdentityDecision(draftRule, rules, includePublished) {
+    var decision = systemDefaultIdentityDecision(draftRule, rules);
+    if (decision === "ordinary") return decision;
+    var source = resolveSystemDefaultSource(draftRule, rules);
+    var sourceDraft = source && (source.authoringConfig || source.authoringDraft || source.editorDraft || source);
+    systemDefaultIdentityLayers(draftRule, includePublished).forEach(function (layer) {
+      systemDefaultIdentityFields(layer, decision === "preserve" ? sourceDraft : null);
+    });
+    return decision;
   }
 
   function systemDefaultHasBusinessData(draft) {
@@ -94,11 +174,18 @@
     var subjectConflict = !subjectMissing && draft.subject !== template.subject;
     var targetConflict = !targetMissing && draft.targetType !== template.targetType;
     var periodConflict = !periodsMissing && (draft.enabledPeriods.length !== expectedPeriods.length || draft.enabledPeriods.some(function (period, index) { return period !== expectedPeriods[index]; }));
+    var measureConflict = template.targetType === "dish_set" && (draft.measureUnit === "kind" ? "kind" : "piece") !== template.measureUnit;
+    var blockConflict = expectedPeriods.some(function (period) {
+      var actual = draft.periodPolicies && draft.periodPolicies[period] && draft.periodPolicies[period].blocks;
+      if (!actual) return false;
+      return ["totalEnabled", "targetEnabled", "sameDishEnabled"].some(function (field) { return !!actual[field] !== !!template.blocks[field]; });
+    });
     if (draft.period && expectedPeriods.length === 1 && draft.period !== expectedPeriods[0]) periodConflict = true;
-    if (subjectConflict || targetConflict || periodConflict || ((subjectMissing || targetMissing || periodsMissing) && systemDefaultHasBusinessData(draft))) {
+    if (subjectConflict || targetConflict || periodConflict || measureConflict || blockConflict || ((subjectMissing || targetMissing || periodsMissing) && systemDefaultHasBusinessData(draft))) {
       return stripSystemDefaultIdentity(draft);
     }
-    return enforceSystemDefaultTemplate(draft);
+    if (subjectMissing || targetMissing || periodsMissing) return enforceSystemDefaultTemplate(draft);
+    return draft;
   }
 
   function enforceSystemDefaultTemplate(draft) {
@@ -107,6 +194,7 @@
     var periods = Array.isArray(template.enabledPeriods) ? template.enabledPeriods.slice() : [];
     draft.subject = template.subject;
     draft.targetType = template.targetType;
+    draft.measureUnit = template.measureUnit || "piece";
     draft.enabledPeriods = periods;
     draft.periodPolicies = draft.periodPolicies && typeof draft.periodPolicies === "object" ? draft.periodPolicies : {};
     BUFFET_PERIOD_ORDER.forEach(function (period) {
@@ -152,7 +240,6 @@
     if (isLegacyBuffetDraft(draft)) return draft;
     if (Number(draft.schemaVersion) >= 4) {
       ensureBuffetScenarioModel(draft);
-      enforceSystemDefaultTemplate(draft);
       syncBuffetLegacyPeriod(draft);
       if (!draft.period && Array.isArray(draft.enabledPeriods) && draft.enabledPeriods.length) draft.period = draft.enabledPeriods[0];
       if (draft.subject === "order") {
@@ -1178,6 +1265,7 @@
     built.authoringDraft = authoringDraft;
     built.authoringConfig = cloneValue(authoringDraft);
     built.publishedConfig = status === "active" ? cloneValue(storedDraft) : null;
+    systemDefaultIdentityFields(built, authoringDraft.origin === "system_default" ? authoringDraft : null);
     var totalTargets = addedStoreIds(storedDraft).reduce(function (total, storeId) {
       return total + storedDraft.storeConfigs[storeId].targetIds.length;
     }, 0);
@@ -2030,7 +2118,9 @@
       setSaveState("正在保存…", "saving");
       var rules = loadRules();
       var index = rules.findIndex(function (rule) { return String(rule.id) === String(editorState.rule.id); });
-      var built = buildCompatibilityRule(editorState.rule, "draft");
+      var prepared = cloneValue(editorState.rule);
+      applySystemDefaultIdentityDecision(prepared, rules, false);
+      var built = buildCompatibilityRule(prepared, "draft");
       built.editorDraft.currentStep = editorState.currentStep;
       built.editorDraft.highestStep = editorState.highestStep;
       if (index >= 0) rules[index] = built; else rules.push(built);
@@ -2106,8 +2196,13 @@
       }
     }
     if (stepNumber === 3) {
-      if (!draft.targetIds.length) return "请至少选择一个分类或菜品";
-      if (draft.targetType === "dish_set") {
+      var requiresTargets = !modernBuffet || (draft.enabledPeriods || []).some(function (period) {
+        var blocks = draft.periodPolicies && draft.periodPolicies[period] && draft.periodPolicies[period].blocks;
+        return !!(blocks && (blocks.targetEnabled || blocks.sameDishEnabled));
+      });
+      if (modernBuffet && !addedStoreIds(draft).length) return "请至少选择一家参与门店";
+      if (requiresTargets && !draft.targetIds.length) return "请至少选择一个分类或菜品";
+      if (requiresTargets && draft.targetType === "dish_set") {
         var insufficientStore = addedStoreIds(draft).find(function (storeId) {
           var config = storeConfigFor(draft, storeId, false);
           return !config || config.dishSetMembers.length < 2;
@@ -2205,7 +2300,7 @@
         enabled: draft.enabledPeriods.indexOf(period) >= 0,
         blocks: {
           totalEnabled: !!blocks.totalEnabled,
-          targetEnabled: draft.enabledPeriods.indexOf(period) >= 0 ? true : !!blocks.targetEnabled,
+          targetEnabled: !!blocks.targetEnabled,
           sameDishEnabled: !!blocks.sameDishEnabled
         }
       };
@@ -2233,7 +2328,7 @@
     if (!enabled && index >= 0) draft.enabledPeriods.splice(index, 1);
     draft.enabledPeriods.sort(function (a, b) { return BUFFET_PERIOD_ORDER.indexOf(a) - BUFFET_PERIOD_ORDER.indexOf(b); });
     draft.periodPolicies[period].enabled = enabled;
-    if (enabled) draft.periodPolicies[period].blocks.targetEnabled = true;
+    if (enabled && !(draft.periodPolicies[period].blocks.totalEnabled || draft.periodPolicies[period].blocks.targetEnabled || draft.periodPolicies[period].blocks.sameDishEnabled)) draft.periodPolicies[period].blocks.targetEnabled = true;
     syncBuffetLegacyPeriod(draft);
   }
 
@@ -2280,7 +2375,7 @@
       var allowTotal = period !== "order_lifetime";
       return '<section class="olf-period-block"><div><strong>' + esc(title) + '</strong><span>选择此周期需要配置的限购维度</span></div><div class="olf-period-block__checks">' +
         (allowTotal ? '<label class="olf-check"><input type="checkbox" data-period-block="total" data-period-key="' + period + '"' + (policy.blocks.totalEnabled ? " checked" : "") + ' /><span>菜品总数</span></label>' : "") +
-        '<span class="olf-period-block__required">指定对象额度（必选）</span>' +
+        '<label class="olf-check"><input type="checkbox" data-period-block="target" data-period-key="' + period + '"' + (policy.blocks.targetEnabled ? " checked" : "") + ' /><span>指定对象额度</span></label>' +
         (allowTotal ? '<label class="olf-check"><input type="checkbox" data-period-block="same_dish" data-period-key="' + period + '"' + (policy.blocks.sameDishEnabled ? " checked" : "") + ' /><span>单品保护</span></label>' : "") +
       '</div></section>';
     }).join("");
@@ -2288,8 +2383,6 @@
 
   function renderBuffetScenarioConfiguration(draft) {
     ensureBuffetScenarioModel(draft);
-    enforceSystemDefaultTemplate(draft);
-    var systemTemplate = systemDefaultTemplate(draft);
     var templates = (moduleProfile.periodTemplates || []).map(function (template) {
       return '<button type="button" class="olf-template-card' + (draft.buffetTemplateId === template.id ? " is-selected" : "") + '" data-buffet-template="' + esc(template.id) + '"><strong>' + esc(template.name) + '</strong><span>' + esc(template.periods.length ? template.periods.map(periodLabel).join(" ＋ ") : "自行选择周期和区块") + '</span></button>';
     }).join("");
@@ -2300,17 +2393,6 @@
     var roundSection = draft.enabledPeriods.indexOf("multi_round") >= 0
       ? '<section class="olf-section"><div class="olf-section-head"><h3>轮次区间</h3><button type="button" class="olf-button olf-button--small" data-add-range="round">' + icon("plus", 15) + ' 添加区间</button></div><div class="olf-table-wrap"><table class="olf-table"><thead><tr><th>场景</th><th>区间</th><th>页面显示</th><th>操作</th></tr></thead><tbody>' + renderRangeRows(draft.roundRanges, "round") + '</tbody></table></div></section>'
       : "";
-    if (systemTemplate) {
-      var period = systemTemplate.enabledPeriods[0];
-      var blockLabels = [];
-      if (systemTemplate.blocks.totalEnabled) blockLabels.push("菜品总数");
-      if (systemTemplate.blocks.targetEnabled) blockLabels.push("指定对象额度");
-      if (systemTemplate.blocks.sameDishEnabled) blockLabels.push("单品保护");
-      return '<div class="olf-content-head"><h2 tabindex="-1">场景配置</h2></div>' +
-        '<div class="olf-system-default-note"><strong>系统默认场景</strong><span>额度周期和限购维度由系统模板固定，不可修改。</span></div>' +
-        '<section class="olf-section"><h3>额度周期</h3><div class="olf-summary"><strong>' + esc(periodLabel(period)) + '</strong><span>' + esc(blockLabels.join("、")) + '</span></div></section>' +
-        partySection + roundSection;
-    }
     return '<div class="olf-content-head"><h2 tabindex="-1">场景配置</h2></div>' +
       '<section class="olf-section"><h3>常用模板</h3><div class="olf-template-grid">' + templates + '</div>' + changed + '</section>' +
       '<section class="olf-section"><h3>启用限制周期</h3><div class="olf-period-toggle-grid">' + renderBuffetPeriodToggles(draft) + '</div></section>' +
@@ -2353,7 +2435,9 @@
       renderStepThree: renderStepThree,
       enabledPeriodsHaveQuantityBlocks: enabledPeriodsHaveQuantityBlocks,
       validateStep: validateStep,
-      dishSetDraftOverlapWarning: dishSetDraftOverlapWarning
+      dishSetDraftOverlapWarning: dishSetDraftOverlapWarning,
+      systemDefaultIdentityDecision: systemDefaultIdentityDecision,
+      applySystemDefaultIdentityDecision: applySystemDefaultIdentityDecision
     };
   }
 
@@ -2366,19 +2450,9 @@
       ? '<section class="olf-section"><h3>儿童计入有效人数</h3><label class="olf-field" style="max-width:360px"><span class="olf-label">有效人数计算口径</span><select class="olf-select" data-condition="childCountPolicy"><option value="inherit"' + (childPolicy === "inherit" ? " selected" : "") + '>继承门店全局设置</option><option value="include"' + (childPolicy === "include" ? " selected" : "") + '>计入</option><option value="exclude"' + (childPolicy === "exclude" ? " selected" : "") + '>不计入</option></select></label></section>'
       : "";
     var modernBuffet = isBuffetProfile() && !isLegacyBuffetDraft(draft);
-    var systemTemplate = systemDefaultTemplate(draft);
-    var lockedChoice = { disabled: true, locked: true };
-    var subjectChoices = systemTemplate
-      ? (draft.subject === "party_size"
-        ? renderChoice("subject", "party_size", "按人数限购", "人均上限 × 当前订单有效人数，不区分具体食客", true, lockedChoice)
-        : renderChoice("subject", "order", "按桌/订单限购", "整桌共享同一个配置上限", true, lockedChoice))
-      : renderChoice("subject", "order", "按桌/订单限购", "整桌共享同一个配置上限", draft.subject === "order") +
+    var subjectChoices = renderChoice("subject", "order", "按桌/订单限购", "整桌共享同一个配置上限", draft.subject === "order") +
         renderChoice("subject", "party_size", "按人数限购", "人均上限 × 当前订单有效人数，不区分具体食客", draft.subject === "party_size");
-    var targetChoices = systemTemplate
-      ? (draft.targetType === "dish_set"
-        ? renderChoice("targetType", "dish_set", "按菜品集限购", "多个指定菜品跨产线共享同一个数量池", true, lockedChoice)
-        : renderChoice("targetType", "dish", "按菜品限购", "每个指定菜品独立累计", true, lockedChoice))
-      : renderChoice("targetType", "category", "按分类限购", "分类内全部菜品共享数量池", draft.targetType === "category") +
+    var targetChoices = renderChoice("targetType", "category", "按分类限购", "分类内全部菜品共享数量池", draft.targetType === "category") +
         renderChoice("targetType", "dish", "按菜品限购", "每个指定菜品独立累计", draft.targetType === "dish") +
         (isBuffetProfile() ? renderChoice("targetType", "dish_set", "按菜品集限购", "多个指定菜品跨产线共享同一个数量池", draft.targetType === "dish_set") : "");
     var periodBlock = "";
@@ -2395,8 +2469,16 @@
         renderChoice("period", "multi_round", "多轮", "不同轮次区间可以设置不同上限", draft.period === "multi_round") +
         renderChoice("period", "order_lifetime", "与轮次无关", "订单全部轮次累计", draft.period === "order_lifetime") + '</div></section>';
     }
+    var defaultEditStatus = editorState && editorState.rule
+      ? systemDefaultIdentityDecision(editorState.rule, loadRules())
+      : isSystemDefaultDraft(draft) ? "preserve" : "ordinary";
+    var defaultEditNote = defaultEditStatus === "detach"
+      ? '<div class="olf-system-default-note"><strong>规则类型已调整</strong><span>保存后将转为普通规则。</span></div>'
+      : defaultEditStatus === "preserve"
+        ? '<div class="olf-system-default-note"><strong>系统默认规则</strong><span>可以完整编辑；调整限购主体、额度周期或限购对象后，保存时将转为普通规则。</span></div>'
+        : "";
     return '<div class="olf-content-head"><h2 tabindex="-1">选择规则类型</h2></div>' +
-      (systemTemplate ? '<div class="olf-system-default-note"><strong>系统默认场景</strong><span>系统默认场景，规则类型不可修改。</span></div>' : "") +
+      defaultEditNote +
       '<section class="olf-section"><h3>基础信息</h3><div class="olf-field-grid"><label class="olf-field olf-field--full"><span class="olf-label olf-required">规则名称</span><input class="olf-input" data-field="name" value="' + esc(draft.name) + '" maxlength="60" /></label><label class="olf-field olf-field--full"><span class="olf-label">规则描述</span><textarea class="olf-textarea" data-field="description" maxlength="200">' + esc(draft.description) + '</textarea></label></div></section>' +
       '<section class="olf-section"><h3>限购主体</h3><div class="olf-choice-grid olf-choice-grid--two">' +
       subjectChoices + '</div></section>' +
@@ -3699,6 +3781,11 @@
   }
 
   function v4TargetKey(draft, combo, target) {
+    if (isBuffetComboDraft(draft)) {
+      var range = draft.partyRanges && draft.partyRanges[combo.partyIndex];
+      if (draft.targetType === "dish_set") return comboScenarioKeyFor(draft, combo.partyIndex);
+      return moduleProfile.comboRanges.targetKey(range.rangeId, target.lineId, target.id);
+    }
     if (draft.targetType === "dish_set") return v4ScenarioKey(combo.partyIndex, combo.roundIndex);
     return v4TargetCellKey(combo.partyIndex, combo.roundIndex, target.lineId, target.id);
   }
@@ -3722,17 +3809,24 @@
   }
 
   function v4TargetRows(draft, config, combo, values) {
+    var comboDraft = isBuffetComboDraft(draft);
+    var comboMap = comboUsesPartyMultiplier(draft) ? "targetLimits" : "tableTargetCaps";
+    var comboLabel = comboUsesPartyMultiplier(draft) ? "每人每轮最多" : "整桌每轮最多";
     if (draft.targetType === "dish_set") {
-      var setKey = v4ScenarioKey(combo.partyIndex, combo.roundIndex);
+      var setKey = comboDraft ? comboScenarioKeyFor(draft, combo.partyIndex) : v4ScenarioKey(combo.partyIndex, combo.roundIndex);
       return '<div class="olf-v4-target-row"><div><strong>当前菜品集</strong><span>' + config.dishSetMembers.length + ' 个成员，跨产线合并统计</span></div>' +
-        renderV4LimitInput(values.targetLimits[setKey], "data-v4-limit-field data-v4-map=\"targetLimits\" data-v4-period=\"" + combo.period + "\" data-v4-scenario=\"" + esc(setKey) + "\"") +
-        (draft.subject === "party_size" ? renderV4LimitInput(values.tableTargetCaps[setKey], "data-table-target-cap data-v4-limit-field data-v4-map=\"tableTargetCaps\" data-v4-period=\"" + combo.period + "\" data-v4-scenario=\"" + esc(setKey) + "\"", "整桌兜底") : "") + '</div>';
+        (comboDraft
+          ? renderV4LimitInput(values[comboMap][setKey], "data-v4-limit-field data-v4-map=\"" + comboMap + "\" data-v4-period=\"" + combo.period + "\" data-v4-scenario=\"" + esc(setKey) + "\"", comboLabel)
+          : renderV4LimitInput(values.targetLimits[setKey], "data-v4-limit-field data-v4-map=\"targetLimits\" data-v4-period=\"" + combo.period + "\" data-v4-scenario=\"" + esc(setKey) + "\"") +
+            (draft.subject === "party_size" ? renderV4LimitInput(values.tableTargetCaps[setKey], "data-table-target-cap data-v4-limit-field data-v4-map=\"tableTargetCaps\" data-v4-period=\"" + combo.period + "\" data-v4-scenario=\"" + esc(setKey) + "\"", "整桌兜底") : "")) + '</div>';
     }
     return v4TargetsForConfig(draft, config).map(function (target) {
       var key = v4TargetKey(draft, combo, target);
       return '<div class="olf-v4-target-row"><div><strong>' + esc(target.shortName || target.name) + '</strong><span>' + esc(target.lineLabel || target.lineId) + '</span></div>' +
-        renderV4LimitInput(values.targetLimits[key], "data-v4-limit-field data-v4-map=\"targetLimits\" data-v4-period=\"" + combo.period + "\" data-v4-scenario=\"" + esc(key) + "\"") +
-        (draft.subject === "party_size" ? renderV4LimitInput(values.tableTargetCaps[key], "data-table-target-cap data-v4-limit-field data-v4-map=\"tableTargetCaps\" data-v4-period=\"" + combo.period + "\" data-v4-scenario=\"" + esc(key) + "\"", "整桌兜底") : "") + '</div>';
+        (comboDraft
+          ? renderV4LimitInput(values[comboMap][key], "data-v4-limit-field data-v4-map=\"" + comboMap + "\" data-v4-period=\"" + combo.period + "\" data-v4-scenario=\"" + esc(key) + "\"", comboLabel)
+          : renderV4LimitInput(values.targetLimits[key], "data-v4-limit-field data-v4-map=\"targetLimits\" data-v4-period=\"" + combo.period + "\" data-v4-scenario=\"" + esc(key) + "\"") +
+            (draft.subject === "party_size" ? renderV4LimitInput(values.tableTargetCaps[key], "data-table-target-cap data-v4-limit-field data-v4-map=\"tableTargetCaps\" data-v4-period=\"" + combo.period + "\" data-v4-scenario=\"" + esc(key) + "\"", "整桌兜底") : "")) + '</div>';
     }).join("");
   }
 
@@ -3741,8 +3835,8 @@
     return '<label class="olf-v4-limit-field"><span>' + esc(label || "最多") + '</span><input class="olf-input olf-limit-input" type="number" min="0" max="999999" value="' + esc(value) + '" placeholder="未配置" ' + attrs + ' /></label>';
   }
 
-  function renderV4BoundInputs(values, combo, mapName, title) {
-    var key = v4ScenarioKey(combo.partyIndex, combo.roundIndex);
+  function renderV4BoundInputs(draft, values, combo, mapName, title) {
+    var key = isBuffetComboDraft(draft) ? comboScenarioKeyFor(draft, combo.partyIndex) : v4ScenarioKey(combo.partyIndex, combo.roundIndex);
     var cell = values[mapName][key] || {};
     return '<div class="olf-v4-bound-row"><strong>' + esc(title) + '</strong>' +
       '<label><span>最少</span><input class="olf-input olf-limit-input" type="number" min="0" max="999999" value="' + (cell.minConfigured ? esc(cell.min) : "") + '" placeholder="未配置" data-v4-bound-field data-v4-bound=\"min\" data-v4-map=\"' + mapName + '\" data-v4-period=\"' + combo.period + '\" data-v4-scenario=\"' + esc(key) + '\" /></label>' +
@@ -3760,11 +3854,14 @@
     var values = v4PeriodValues(config, period);
     var policy = draft.periodPolicies[period] || { blocks: {} };
     var scenarioTitle = v4ScenarioTitle(draft, period, combo);
+    var comboDraft = isBuffetComboDraft(draft);
     var totalBlock = period !== "order_lifetime" && policy.blocks.totalEnabled
-      ? '<section class="olf-v4-quantity-block"><h5>每轮菜品总数</h5>' + renderV4BoundInputs(values, combo, "totalBounds", draft.subject === "party_size" ? "每人每轮" : "每轮") +
-        (draft.subject === "party_size" ? renderV4BoundInputs(values, combo, "tableTotalBounds", "整桌每轮兜底") : "") + '</section>' : "";
+      ? '<section class="olf-v4-quantity-block"><h5>每轮菜品总数</h5>' + (comboDraft
+        ? renderV4BoundInputs(draft, values, combo, "tableTotalBounds", "整桌每轮")
+        : renderV4BoundInputs(draft, values, combo, "totalBounds", draft.subject === "party_size" ? "每人每轮" : "每轮") +
+          (draft.subject === "party_size" ? renderV4BoundInputs(draft, values, combo, "tableTotalBounds", "整桌每轮兜底") : "")) + '</section>' : "";
     var targetBlock = '<section class="olf-v4-quantity-block"><h5>指定对象额度</h5><div class="olf-v4-target-list">' + v4TargetRows(draft, config, combo, values) + '</div></section>';
-    var sameDishKey = v4ScenarioKey(combo.partyIndex, combo.roundIndex);
+    var sameDishKey = comboDraft ? comboScenarioKeyFor(draft, combo.partyIndex) : v4ScenarioKey(combo.partyIndex, combo.roundIndex);
     var exceptionRows = v4ExceptionRows(values, sameDishKey);
     var eligible = eligibleExceptionDishes(draft, draft.activeStoreId);
     var used = {};
@@ -3780,8 +3877,9 @@
         renderV4LimitInput(row.limit, 'data-v4-exception-limit data-v4-period="' + period + '" data-v4-scenario="' + esc(sameDishKey) + '" data-v4-exception-index="' + index + '"', "最多") +
         '<button type="button" class="olf-button olf-button--small olf-button--link" data-v4-exception-remove data-v4-period="' + period + '" data-v4-scenario="' + esc(sameDishKey) + '" data-v4-exception-index="' + index + '">删除</button></div>';
     }).join("");
+    var protectionTitle = comboDraft ? (draft.measureUnit === "kind" ? "每种菜品每轮最多" : "相同菜品每轮最多") : "默认每种最多";
     var sameDishBlock = period !== "order_lifetime" && policy.blocks.sameDishEnabled
-      ? '<section class="olf-v4-quantity-block"><h5>相同菜品保护</h5><div class="olf-v4-bound-row"><strong>默认每种最多</strong>' + renderV4LimitInput(values.defaultDishLimits[sameDishKey], "data-v4-limit-field data-v4-map=\"defaultDishLimits\" data-v4-period=\"" + period + "\" data-v4-scenario=\"" + esc(sameDishKey) + "\"") + '</div><div class="olf-v4-exception-list">' + exceptionHtml + '</div><button type="button" class="olf-button olf-button--small" data-v4-exception-add data-v4-period="' + period + '" data-v4-scenario="' + esc(sameDishKey) + '"' + (eligible.length ? '' : ' disabled') + '>添加例外商品</button><p class="olf-v4-exception-help">例外额度覆盖默认上限；空输入表示未配置，0 表示禁止下单。</p></section>' : "";
+      ? '<section class="olf-v4-quantity-block"><h5>相同菜品保护 / 菜品集内部保护</h5><div class="olf-v4-bound-row"><strong>' + protectionTitle + '</strong>' + renderV4LimitInput(values.defaultDishLimits[sameDishKey], "data-v4-limit-field data-v4-map=\"defaultDishLimits\" data-v4-period=\"" + period + "\" data-v4-scenario=\"" + esc(sameDishKey) + "\"") + '</div>' + (comboDraft ? '' : '<div class="olf-v4-exception-list">' + exceptionHtml + '</div><button type="button" class="olf-button olf-button--small" data-v4-exception-add data-v4-period="' + period + '" data-v4-scenario="' + esc(sameDishKey) + '"' + (eligible.length ? '' : ' disabled') + '>添加例外商品</button><p class="olf-v4-exception-help">例外额度覆盖默认上限；空输入表示未配置，0 表示禁止下单。</p>') + '</section>' : "";
     return '<article class="olf-v4-scenario-card"><header><strong>' + esc(scenarioTitle) + '</strong><span>空输入表示未配置；0 表示禁止下单</span></header>' + totalBlock + targetBlock + sameDishBlock + '</article>';
   }
 
@@ -4051,6 +4149,34 @@
   function v4QuantityCompletion(draft, storeIds) {
     var total = 0;
     var complete = 0;
+    if (isBuffetComboDraft(draft) && moduleProfile.comboQuantities) {
+      (storeIds || addedStoreIds(draft)).forEach(function (storeId) {
+        var config = storeConfigFor(draft, storeId, false);
+        if (!config) return;
+        (draft.partyRanges || []).forEach(function (range) {
+          var projection = moduleProfile.comboQuantities.project(draft, storeId, range.rangeId);
+          total += 1;
+          if (projection.totalBounds.minConfigured && projection.totalBounds.maxConfigured) complete += 1;
+          if (draft.targetType === "dish") {
+            var targets = v4TargetsForConfig(draft, config);
+            if (!targets.length) total += 1;
+            targets.forEach(function (target) {
+              var key = moduleProfile.comboRanges.targetKey(range.rangeId, target.lineId, target.id);
+              total += 1;
+              if (projection.targetLimits[key] && projection.targetLimits[key].configured) complete += 1;
+            });
+          } else {
+            total += 1;
+            if (projection.targetLimits && projection.targetLimits.configured) complete += 1;
+          }
+          if ((systemDefaultTemplate(draft).blocks || {}).sameDishEnabled) {
+            total += 1;
+            if (projection.sameDishLimit && projection.sameDishLimit.configured) complete += 1;
+          }
+        });
+      });
+      return { complete: complete, total: total };
+    }
     (storeIds || addedStoreIds(draft)).forEach(function (storeId) {
       var config = storeConfigFor(draft, storeId, false);
       if (!config) return;
@@ -4128,6 +4254,24 @@
     });
     if (enabledBlocksError) return validationResult(2, "PERIOD_BLOCK_REQUIRED", "每个启用周期至少保留一个限购维度");
     var selectedStores = storeIds || (draft.deployStoreIds && draft.deployStoreIds.length ? draft.deployStoreIds : addedStoreIds(draft));
+    if (isBuffetComboDraft(draft) && moduleProfile.comboQuantities) {
+      var comboCheck = moduleProfile.comboQuantities.validatePublication(draft, selectedStores);
+      if (!comboCheck.valid) {
+        var comboMessages = {
+          INVALID_RANGE_COVERAGE: "人数区间必须连续、互斥并完整覆盖",
+          MISSING_RANGE_ID: "人数区间缺少稳定身份",
+          DUPLICATE_RANGE_ID: "人数区间身份重复",
+          MIXED_SCENARIO_KEY_MODE: "组合规则数量数据不能混用历史索引键",
+          STORE_CONFIG_MISSING: "生效门店缺少商品配置",
+          TARGET_SCOPE_MISSING: "生效门店缺少有效商品范围",
+          TOTAL_REQUIRED: "每个人数区间都必须配置整桌每轮最少和最多份数",
+          TARGET_REQUIRED: "每个人数区间都必须配置指定对象额度",
+          SAME_DISH_REQUIRED: "每个人数区间都必须配置菜品集内部保护额度"
+        };
+        return validationResult(comboCheck.block === "party_range" ? 2 : 3, comboCheck.code, comboMessages[comboCheck.code] || "组合规则配置不完整");
+      }
+      return null;
+    }
     for (var storeIndex = 0; storeIndex < selectedStores.length; storeIndex += 1) {
       var storeId = selectedStores[storeIndex];
       var config = storeConfigFor(draft, storeId, false);
@@ -4228,6 +4372,22 @@
     if (!isBuffetV4Draft(draft)) return [];
     var config = storeConfigFor(draft, storeId, false);
     if (!config) return [];
+    if (isBuffetComboDraft(draft) && moduleProfile.comboQuantities) {
+      return [{ period: "per_round", title: "每轮", rows: (draft.partyRanges || []).map(function (range) {
+        var projection = moduleProfile.comboQuantities.project(draft, storeId, range.rangeId);
+        var targetText;
+        if (draft.targetType === "dish") {
+          targetText = v4TargetsForConfig(draft, config).map(function (target) {
+            var key = moduleProfile.comboRanges.targetKey(range.rangeId, target.lineId, target.id);
+            return (target.shortName || target.name) + " " + summaryLimit(projection.targetLimits[key]);
+          }).join("、");
+        } else targetText = "当前菜品集 " + summaryLimit(projection.targetLimits) + (draft.measureUnit === "kind" ? " 种" : " 份");
+        var multiplier = comboUsesPartyMultiplier(draft) ? "（每人每轮，按有效人数乘算）" : "（整桌每轮）";
+        var items = [summaryBounds(projection.totalBounds, "整桌每轮总量："), "指定对象：" + targetText + multiplier];
+        if ((systemDefaultTemplate(draft).blocks || {}).sameDishEnabled) items.push((draft.measureUnit === "kind" ? "每种菜品：" : "相同菜品：") + summaryLimit(projection.sameDishLimit) + "（整桌每轮）");
+        return { scenario: formatRange(range, "人"), text: items.join("；") };
+      }) }];
+    }
     return (draft.enabledPeriods || []).map(function (period) {
       var policy = draft.periodPolicies && draft.periodPolicies[period] || { blocks: {} };
       var blocks = policy.blocks || {};
@@ -4492,10 +4652,6 @@
 
   function changeChoice(field, value) {
     var draft = editorState.rule.editorDraft;
-    if (isSystemDefaultDraft(draft) && ["subject", "period", "targetType"].indexOf(field) >= 0) {
-      toast("系统默认规则的限购主体、额度周期和限购对象不可修改", true);
-      return;
-    }
     if (field === "memberMode") {
       draft.conditions.memberMode = value;
       if (value === "all") draft.conditions.memberLevelIds = [];
@@ -4609,7 +4765,12 @@
   function applyRangeMatrixChange(draft, kind, nextRanges) {
     if (kind === "party") draft.partyRanges = nextRanges;
     else draft.roundRanges = nextRanges;
-    clearAllRangeQuantityData(draft);
+    if (isBuffetComboDraft(draft) && kind === "party" && moduleProfile.comboRanges) {
+      Object.keys(draft.storeConfigs || {}).forEach(function (storeId) {
+        var config = draft.storeConfigs[storeId] || {};
+        if (config.periodValues && config.periodValues.per_round) config.periodValues.per_round = moduleProfile.comboRanges.removeOrphanKeys(config.periodValues.per_round, nextRanges);
+      });
+    } else clearAllRangeQuantityData(draft);
     markBuffetTemplateModified(draft);
     normalizeActiveDimensions(draft);
     markEditorDirty();
@@ -4623,6 +4784,11 @@
       closeDialog(false);
       applyRangeMatrixChange(draft, kind, nextRanges);
     };
+    if (isBuffetComboDraft(draft) && kind === "party") {
+      if (nextRanges.length >= draft.partyRanges.length || !hasStoreQuantityData(draft)) { applyRangeMatrixChange(draft, kind, nextRanges); return; }
+      openDialog("删除人数区间？", "删除后，该人数区间在全部门店中的 M/N/X/P 数量配置将一并删除，其他区间配置保持不变。", "确认删除", apply, { danger: true, cancelLabel: "取消", returnFocus: trigger, onCancel: function () { renderEditor(); } });
+      return;
+    }
     if (!hasStoreQuantityData(draft)) { applyRangeMatrixChange(draft, kind, nextRanges); return; }
     openDialog(
       "重建" + label + "区间矩阵？",
@@ -4644,7 +4810,9 @@
     var last = ranges[ranges.length - 1];
     var start = last.max == null ? Number(last.min) + 1 : Number(last.max) + 1;
     if (last.max == null) last.max = Math.max(Number(last.min), start - 1);
-    ranges.push({ min: start, max: null });
+    ranges.push(kind === "party" && isBuffetComboDraft(draft)
+      ? { rangeId: "pr_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 10), min: start, max: null }
+      : { min: start, max: null });
     requestRangeMatrixChange(kind, ranges, document.activeElement);
   }
 
@@ -5091,11 +5259,6 @@
     var draft = editorState.rule.editorDraft;
     if (target.hasAttribute("data-period-toggle")) {
       if (event.type !== "change") return;
-      if (isSystemDefaultDraft(draft)) {
-        toast("系统默认规则的额度周期不可修改", true);
-        renderEditor();
-        return;
-      }
       setPeriodEnabled(draft, target.getAttribute("data-period-toggle"), target.checked);
       markBuffetTemplateModified(draft);
       markEditorDirty();
@@ -5104,17 +5267,12 @@
     }
     if (target.hasAttribute("data-period-block")) {
       if (event.type !== "change") return;
-      if (isSystemDefaultDraft(draft)) {
-        toast("系统默认规则的限购维度不可修改", true);
-        renderEditor();
-        return;
-      }
       ensureBuffetScenarioModel(draft);
       var policy = draft.periodPolicies[target.getAttribute("data-period-key")];
       if (!policy) return;
       var blockName = target.getAttribute("data-period-block");
       if (blockName === "total") policy.blocks.totalEnabled = target.checked;
-      if (blockName === "target") policy.blocks.targetEnabled = true;
+      if (blockName === "target") policy.blocks.targetEnabled = target.checked;
       if (blockName === "same_dish") policy.blocks.sameDishEnabled = target.checked;
       markBuffetTemplateModified(draft);
       markEditorDirty();
@@ -5967,7 +6125,9 @@
     var rules = loadRules();
     var draftIndex = rules.findIndex(function (rule) { return String(rule.id) === String(draftRule.id); });
     if (draftIndex < 0) throw new Error("draft missing");
-    var active = buildCompatibilityRule(draftRule, "active");
+    var prepared = cloneValue(draftRule);
+    applySystemDefaultIdentityDecision(prepared, rules, true);
+    var active = buildCompatibilityRule(prepared, "active");
     active.publishedAt = new Date().toISOString();
     if (draftRule.sourceRuleId != null) {
       var sourceIndex = rules.findIndex(function (rule) { return String(rule.id) === String(draftRule.sourceRuleId); });

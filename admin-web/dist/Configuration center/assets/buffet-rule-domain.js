@@ -248,38 +248,134 @@
     return config;
   }
 
+  function configuredMapHasValues(map) {
+    return Object.keys(map || {}).some(function (key) {
+      var value = map[key];
+      return value && (value.configured === true || value.minConfigured === true || value.maxConfigured === true || Array.isArray(value));
+    });
+  }
+
+  function constraintTargets(rule, storeId, type) {
+    if (type === "total") return ["__all__"];
+    var config = rule.storeConfigs && rule.storeConfigs[storeId] || {};
+    var entries = type === "dish" ? (config.dishTargets || []) : (config.dishSetMembers || []);
+    return entries.map(menuIdentity).filter(function (value, index, values) { return value && value !== "|" && values.indexOf(value) === index; });
+  }
+
+  function compileRuleConstraints(rule) {
+    rule = publishedConfig(rule);
+    var constraints = [];
+    (rule.deployStoreIds || []).forEach(function (storeId) {
+      var config = rule.storeConfigs && rule.storeConfigs[storeId];
+      if (!config) return;
+      rulePeriods(rule).forEach(function (period) {
+        var blocks = v4Blocks(rule, period);
+        var values = scenarioValues(config, period);
+        var push = function (type, block, mode) {
+          constraints.push({ type: type, block: block, mode: mode, period: period, storeId: storeId, targets: constraintTargets(rule, storeId, type), rule: rule });
+        };
+        // 历史自定义复合规则沿用旧冲突口径；新组合模板显式把总量编译为独立约束。
+        if (blocks.totalEnabled && (isComboRule(rule) || !blocks.targetEnabled)) {
+          if (configuredMapHasValues(values.tableTotalBounds)) push("total", "total", "table_fixed");
+          if (configuredMapHasValues(values.totalBounds)) push("total", "total", limitMultiplierMode(rule.subject, "targetLimits"));
+        }
+        if (blocks.targetEnabled) {
+          var type = rule.targetType === "dish_set" ? "dish_set_" + (rule.measureUnit === "kind" ? "kind" : "piece") : rule.targetType;
+          if (configuredMapHasValues(values.tableTargetCaps)) push(type, "target", "table_fixed");
+          if (configuredMapHasValues(values.targetLimits)) push(type, "target", limitMultiplierMode(rule.subject, "targetLimits"));
+        }
+        if (blocks.sameDishEnabled && configuredMapHasValues(values.defaultDishLimits)) push("same_dish", "same_dish", "table_fixed");
+      });
+    });
+    return constraints;
+  }
+
+  function constraintTargetsOverlap(left, right) {
+    if (left.type === "total") return true;
+    return left.targets.some(function (target) { return right.targets.indexOf(target) >= 0; });
+  }
+
+  function compiledConstraintsConflict(left, right) {
+    if (left.storeId !== right.storeId || left.period !== right.period || left.type !== right.type || left.mode !== right.mode) return false;
+    if (!conditionsOverlap(left.rule.conditions, right.rule.conditions)) return false;
+    if (!numericRangesOverlap(left.rule.subject === "party_size" ? left.rule.partyRanges : null, right.rule.subject === "party_size" ? right.rule.partyRanges : null)) return false;
+    return constraintTargetsOverlap(left, right);
+  }
+
+  function constraintConflictResult(left, right, record) {
+    var code = left.type === "total" ? "DUPLICATE_TOTAL_RULE" : left.type.indexOf("dish_set_") === 0 || left.type === "same_dish" ? "DISH_SET_MEMBER_OVERLAP" : "DUPLICATE_TARGET_RULE";
+    return { code: code, block: left.block, constraintType: left.type, multiplierMode: left.mode, ruleId: record.id, storeId: left.storeId, existingPeriods: [right.period], candidatePeriods: [left.period], targets: left.type === "total" ? [] : left.targets.filter(function (target) { return right.targets.indexOf(target) >= 0; }) };
+  }
+
+  function findConflicts(candidate, records, excludeIds) {
+    candidate = publishedConfig(candidate);
+    var excluded = (excludeIds || []).map(String);
+    var candidateConstraints = isV4Rule(candidate) ? compileRuleConstraints(candidate) : [];
+    var results = [];
+    (records || []).forEach(function (record) {
+      if (!record || record.status !== "active" || excluded.indexOf(String(record.id)) >= 0) return;
+      var existing = publishedConfig(record);
+      if (!isV4Rule(candidate) || !isV4Rule(existing)) return;
+      var existingConstraints = compileRuleConstraints(existing);
+      candidateConstraints.forEach(function (left) {
+        existingConstraints.forEach(function (right) {
+          if (!compiledConstraintsConflict(left, right)) return;
+          var result = constraintConflictResult(left, right, record);
+          if (!results.some(function (item) { return item.ruleId === result.ruleId && item.storeId === result.storeId && item.constraintType === result.constraintType && item.multiplierMode === result.multiplierMode; })) results.push(result);
+        });
+      });
+    });
+    return results;
+  }
+
   function v4Conflict(candidate, existing, record) {
     if (candidate.subject !== existing.subject) return null;
     if (candidate.targetType !== existing.targetType) return null;
     if (!v4PeriodsConflict(candidate, existing)) return null;
     if (!conditionsOverlap(candidate.conditions, existing.conditions)) return null;
     if (!numericRangesOverlap(candidate.partyRanges, existing.partyRanges)) return null;
+    var sharedPeriods = rulePeriods(candidate).filter(function (period) { return rulePeriods(existing).indexOf(period) >= 0; });
+    var duplicateTotal = sharedPeriods.some(function (period) {
+      var left = candidate.periodPolicies && candidate.periodPolicies[period] && candidate.periodPolicies[period].blocks || {};
+      var right = existing.periodPolicies && existing.periodPolicies[period] && existing.periodPolicies[period].blocks || {};
+      return !!left.totalEnabled && !!right.totalEnabled && !left.targetEnabled && !right.targetEnabled;
+    });
+    var duplicateTarget = sharedPeriods.some(function (period) {
+      var left = candidate.periodPolicies && candidate.periodPolicies[period] && candidate.periodPolicies[period].blocks || {};
+      var right = existing.periodPolicies && existing.periodPolicies[period] && existing.periodPolicies[period].blocks || {};
+      return !!left.targetEnabled && !!right.targetEnabled;
+    });
     var candidateTargets = targetEntries(candidate);
     var existingTargets = targetEntries(existing);
     if (candidate.targetType === "dish_set") {
+      if (!duplicateTarget) return duplicateTotal ? { code: "DUPLICATE_TOTAL_RULE", ruleId: record.id, existingPeriods: rulePeriods(existing), candidatePeriods: rulePeriods(candidate) } : null;
+      if ((candidate.measureUnit === "kind" ? "kind" : "piece") !== (existing.measureUnit === "kind" ? "kind" : "piece")) return duplicateTotal ? { code: "DUPLICATE_TOTAL_RULE", ruleId: record.id, existingPeriods: rulePeriods(existing), candidatePeriods: rulePeriods(candidate) } : null;
       var details = dishSetOverlapForRecord(candidate, existing, record);
-      return details ? {
+      if (details) return {
         code: "DISH_SET_MEMBER_OVERLAP",
         ruleId: record.id,
         storeIds: details.storeIds,
         dishIds: details.dishIds,
         existingPeriods: rulePeriods(existing),
         candidatePeriods: rulePeriods(candidate)
-      } : null;
+      };
+      return duplicateTotal ? { code: "DUPLICATE_TOTAL_RULE", ruleId: record.id, existingPeriods: rulePeriods(existing), candidatePeriods: rulePeriods(candidate) } : null;
     }
-    var duplicate = targetIntersection(candidateTargets, existingTargets);
-    return duplicate ? {
+    var duplicate = duplicateTarget ? targetIntersection(candidateTargets, existingTargets) : null;
+    if (duplicate) return {
       code: "DUPLICATE_TARGET_RULE",
       ruleId: record.id,
       target: duplicate,
       existingPeriods: rulePeriods(existing),
       candidatePeriods: rulePeriods(candidate)
-    } : null;
+    };
+    return duplicateTotal ? { code: "DUPLICATE_TOTAL_RULE", ruleId: record.id, existingPeriods: rulePeriods(existing), candidatePeriods: rulePeriods(candidate) } : null;
   }
 
   function dishSetOverlapForRecord(candidate, existing, record) {
     if (!candidate || candidate.targetType !== "dish_set" || !existing || existing.targetType !== "dish_set") return null;
     if (candidate.subject !== existing.subject) return null;
+    if ((candidate.measureUnit === "kind" ? "kind" : "piece") !== (existing.measureUnit === "kind" ? "kind" : "piece")) return null;
     if (!v4PeriodsConflict(candidate, existing)) return null;
     if (!conditionsOverlap(candidate.conditions, existing.conditions)) return null;
     if (!numericRangesOverlap(candidate.partyRanges, existing.partyRanges)) return null;
@@ -311,6 +407,11 @@
 
   function findConflict(candidate, records, excludeIds) {
     candidate = publishedConfig(candidate);
+    if (isV4Rule(candidate)) {
+      var compiled = findConflicts(candidate, records, excludeIds);
+      var preferred = compiled.find(function (item) { return item.block !== "total"; });
+      return preferred || (compiled.length ? compiled[0] : null);
+    }
     var candidateTargets = targetEntries(candidate);
     var excluded = (excludeIds || []).map(String);
     for (var index = 0; index < (records || []).length; index += 1) {
@@ -360,6 +461,22 @@
     var tableCap = subject === "party_size" ? configuredValue(tableCell) : null;
     var values = [value == null ? null : value * (subject === "party_size" ? partySize : 1), tableCap].filter(function (item) { return item != null; });
     return values.length ? Math.min.apply(Math, values) : Infinity;
+  }
+
+  function limitMultiplierMode(subject, mapName) {
+    return mapName === "targetLimits" && subject === "party_size" ? "party_multiplier" : "table_fixed";
+  }
+
+  function isComboRule(rule) {
+    return /^combo\|per_round\|/.test(String(rule && rule.defaultScenarioKey || ""));
+  }
+
+  function comboScenarioKey(rangeId) {
+    return "party:" + String(rangeId) + "|round:0";
+  }
+
+  function comboTargetKey(rangeId, productLineId, dishId) {
+    return comboScenarioKey(rangeId) + "|line:" + String(productLineId) + "|target:" + String(dishId);
   }
 
   function flattenDishes(entries, lineId, inheritedCategoryId, result) {
@@ -514,12 +631,12 @@
       var max = range && range.max == null ? 999999 : Number(range.max);
       if (!Number.isInteger(min) || !Number.isInteger(max) || min < 1 || max < min) return;
       if (max - min <= 10000) {
-        for (var value = min; value <= max; value += 1) result.push({ partyRangeIndex: index, partySize: value });
+        for (var value = min; value <= max; value += 1) result.push({ partyRangeIndex: index, rangeId: range.rangeId || "", partySize: value });
         return;
       }
       // 有效上下限均为线性或分段线性函数，范围两端足以发现无解；避免无限区间阻塞发布校验。
-      result.push({ partyRangeIndex: index, partySize: min });
-      result.push({ partyRangeIndex: index, partySize: max });
+      result.push({ partyRangeIndex: index, rangeId: range.rangeId || "", partySize: min });
+      result.push({ partyRangeIndex: index, rangeId: range.rangeId || "", partySize: max });
     });
     return result;
   }
@@ -558,14 +675,15 @@
         var values = scenarioValues(config, period);
         partyValues(rule).forEach(function (party) {
           roundValues(rule, period).forEach(function (round) {
-            var scenario = scenarioKey(party.partyRangeIndex, round.roundRangeIndex);
+            var scenario = isComboRule(rule) && party.rangeId ? comboScenarioKey(party.rangeId) : scenarioKey(party.partyRangeIndex, round.roundRangeIndex);
             var bounds = effectiveBounds(values.totalBounds[scenario], values.tableTotalBounds[scenario], rule.subject, party.partySize);
             if (bounds.min != null && bounds.max != null && bounds.min > bounds.max) {
               violations.push(staticViolation(rule, storeId, period, party.partyRangeIndex, round.roundRangeIndex, "有效最少下单数量大于有效最多下单数量"));
               return;
             }
             if (bounds.min == null) return;
-            var capacity = targetCapacity(rule, config, values, scenario, party.partyRangeIndex, round.roundRangeIndex, party.partySize, blocks);
+            // 组合模板的总量下限可由选中范围之外的菜品满足，不能用指定对象 X/P 推导无解。
+            var capacity = isComboRule(rule) ? Infinity : targetCapacity(rule, config, values, scenario, party.partyRangeIndex, round.roundRangeIndex, party.partySize, blocks);
             if (capacity !== Infinity && bounds.min > capacity) {
               violations.push(staticViolation(rule, storeId, period, party.partyRangeIndex, round.roundRangeIndex, "最少下单数量无法由当前商品范围和单品上限满足"));
             }
@@ -699,7 +817,9 @@
     }
     if ((period === "per_round" || period === "multi_round") && (!Number.isInteger(context.roundNo) || context.roundNo < 1)) return { valid: false, code: "ROUND_REQUIRED" };
     if (rule.subject === "party_size" && (!Number.isInteger(context.partySize) || context.partySize < 1)) return { valid: false, code: "PARTY_SIZE_REQUIRED" };
-    return { valid: true, partyIndex: partyIndex, roundIndex: roundIndex, key: scenarioKey(partyIndex, roundIndex) };
+    var range = rule.partyRanges && rule.partyRanges[partyIndex];
+    var key = isComboRule(rule) && range && range.rangeId ? comboScenarioKey(range.rangeId) : scenarioKey(partyIndex, roundIndex);
+    return { valid: true, partyIndex: partyIndex, roundIndex: roundIndex, rangeId: range && range.rangeId || "", key: key };
   }
 
   function hasTarget(rule, config, item) {
@@ -733,7 +853,9 @@
   function v4TargetLimit(values, rule, scenario, item, partyIndex, roundIndex, partySize) {
     var key = rule.targetType === "dish_set"
       ? scenario
-      : targetCellKey(partyIndex, roundIndex, item.productLineId, rule.targetType === "dish" ? item.dishId : item.categoryId);
+      : isComboRule(rule) && rule.targetType === "dish"
+        ? comboTargetKey((rule.partyRanges[partyIndex] || {}).rangeId, item.productLineId, item.dishId)
+        : targetCellKey(partyIndex, roundIndex, item.productLineId, rule.targetType === "dish" ? item.dishId : item.categoryId);
     return effectiveCellLimit(values.targetLimits && values.targetLimits[key], values.tableTargetCaps && values.tableTargetCaps[key], rule.subject, partySize);
   }
 
@@ -916,6 +1038,8 @@
     targetEntries: targetEntries,
     publishedConfig: publishedConfig,
     findConflict: findConflict,
+    findConflicts: findConflicts,
+    compileRuleConstraints: compileRuleConstraints,
     dishSetOverlapDetails: dishSetOverlapDetails,
     validateStaticFeasibility: validateStaticFeasibility,
     validateAuthorizationCredential: validateAuthorizationCredential,
@@ -923,6 +1047,7 @@
     matchingRangeIndex: matchingRangeIndex,
     effectiveLimit: effectiveLimit,
     effectiveBounds: effectiveBounds,
+    limitMultiplierMode: limitMultiplierMode,
     evaluateBatch: evaluateBatch,
     compileRuntimeRules: compileRuntimeRules
   };

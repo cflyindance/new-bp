@@ -32,52 +32,79 @@ const expectedKeys = [
   "order|order_lifetime|dish_set",
   "party_size|order_lifetime|dish",
   "party_size|order_lifetime|dish_set",
+  "combo|per_round|dish|table",
+  "combo|per_round|dish_set|piece|table",
+  "combo|per_round|dish_set|kind|table",
+  "combo|per_round|dish|party_size",
+  "combo|per_round|dish_set|piece|party_size",
+  "combo|per_round|dish_set|kind|party_size",
+  "order|per_round|total",
+  "party_size|per_round|total",
   "order|per_round|dish",
-  "order|per_round|dish_set",
   "party_size|per_round|dish",
-  "party_size|per_round|dish_set",
+  "order|per_round|dish_set|piece",
+  "party_size|per_round|dish_set|piece",
+  "order|per_round|dish_set|kind",
+  "party_size|per_round|dish_set|kind",
 ];
 
 assert.deepEqual(Array.from(profile.defaultScenarios, (item) => item.key), expectedKeys);
-assert.equal(profile.defaultScenarios.every((item) => item.version === 2), true);
+assert.equal(profile.defaultScenarios.length, 18);
 assert.deepEqual(Array.from(profile.defaultScenarios, (item) => item.group), [
   "order_lifetime", "order_lifetime", "order_lifetime", "order_lifetime",
-  "per_round", "per_round", "per_round", "per_round",
+  "per_round_combo", "per_round_combo", "per_round_combo", "per_round_combo", "per_round_combo", "per_round_combo",
+  "per_round", "per_round", "per_round", "per_round", "per_round", "per_round", "per_round", "per_round",
 ]);
+
+assert.deepEqual(
+  profile.defaultScenarios.reduce((out, item) => {
+    out[item.group] = (out[item.group] || 0) + 1;
+    return out;
+  }, {}),
+  { order_lifetime: 4, per_round_combo: 6, per_round: 8 },
+);
 
 for (const [index, template] of profile.defaultScenarios.entries()) {
   const rule = profile.createDefaultScenarioRule(template, index + 1);
   assert.equal(rule.status, "disabled");
   assert.equal(rule.origin, "system_default");
   assert.equal(rule.defaultScenarioKey, template.key);
-  assert.equal(rule.defaultCatalogVersion, 2);
+  assert.equal(rule.defaultCatalogVersion, template.version);
   assert.equal(rule.authoringConfig.origin, "system_default");
   assert.equal(rule.authoringConfig.defaultScenarioKey, template.key);
-  assert.equal(rule.authoringConfig.defaultCatalogVersion, 2);
+  assert.equal(rule.authoringConfig.defaultCatalogVersion, template.version);
   assert.equal(rule.editorDraft.defaultScenarioKey, template.key);
-  assert.equal(rule.editorDraft.defaultCatalogVersion, 2);
+  assert.equal(rule.editorDraft.defaultCatalogVersion, template.version);
   assert.deepEqual(Array.from(rule.authoringConfig.enabledPeriods), Array.from(template.enabledPeriods));
   assert.deepEqual(Array.from(rule.authoringConfig.participatingStoreIds), []);
   assert.deepEqual(Array.from(rule.authoringConfig.deployStoreIds), []);
   assert.deepEqual(Object.keys(rule.authoringConfig.storeConfigs), []);
+  if (template.group === "per_round_combo") {
+    assert.equal(rule.authoringConfig.subject, "party_size");
+    assert.deepEqual(Array.from(rule.authoringConfig.partyRanges, (range) => [range.min, range.max]), [[1, 3], [4, null]]);
+    assert.equal(rule.authoringConfig.partyRanges.every((range) => /^pr_[a-z0-9]+$/.test(range.rangeId)), true);
+    assert.equal(new Set(Array.from(rule.authoringConfig.partyRanges, (range) => range.rangeId)).size, 2);
+  }
 }
 
 const byKey = Object.fromEntries(profile.defaultScenarios.map((item) => [item.key, item]));
 assert.deepEqual(
   { ...byKey["order|per_round|dish"].blocks },
-  { totalEnabled: true, targetEnabled: true, sameDishEnabled: false },
+  { totalEnabled: false, targetEnabled: true, sameDishEnabled: false },
 );
 assert.deepEqual(
   { ...byKey["party_size|per_round|dish"].blocks },
-  { totalEnabled: true, targetEnabled: true, sameDishEnabled: false },
+  { totalEnabled: false, targetEnabled: true, sameDishEnabled: false },
 );
 assert.deepEqual(
-  { ...byKey["order|per_round|dish_set"].blocks },
+  { ...byKey["order|per_round|dish_set|piece"].blocks },
   { totalEnabled: false, targetEnabled: true, sameDishEnabled: true },
 );
 assert.deepEqual(
-  { ...byKey["party_size|per_round|dish_set"].blocks },
+  { ...byKey["party_size|per_round|dish_set|kind"].blocks },
   { totalEnabled: false, targetEnabled: true, sameDishEnabled: true },
 );
+assert.deepEqual({ ...byKey["order|per_round|total"].blocks }, { totalEnabled: true, targetEnabled: false, sameDishEnabled: false });
+assert.equal(byKey["order|per_round|dish_set|kind"].measureUnit, "kind");
 
 console.log("verify-buffet-default-catalog: OK");

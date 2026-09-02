@@ -59,11 +59,11 @@ function run(seed) {
   return { ...loaded, rules, persisted: loaded.profile.repository.readEnvelope() };
 }
 
-// A/B. Empty repository seeds exactly eight defaults once and is byte/write idempotent.
+// A/B. Empty repository seeds exactly eighteen defaults once and is byte/write idempotent.
 {
   const loaded = load();
   const first = loaded.profile.repository.loadForAuthoringList(loaded.profile.createDefaultScenarioRule);
-  assert.equal(first.length, 8);
+  assert.equal(first.length, 18);
   assert.equal(loaded.profile.repository.readEnvelope().revision, 1);
   const bytes = loaded.storage.getItem(repositoryKey);
   const writes = loaded.storage.writes;
@@ -83,21 +83,21 @@ function run(seed) {
   assert.deepEqual(JSON.parse(JSON.stringify(restored.authoringConfig.storeConfigs)), {});
 }
 
-// D. Four verified v1 defaults migrate in place and four per-round defaults are added.
+// D. Four verified v1 defaults migrate in place and fourteen per-round defaults are added.
 {
   const old = [
     legacy(11, "order", "dish", { name: "保留名称", authoringConfig: { targetIds: ["a"], participatingStoreIds: ["s1"] } }),
     legacy(12, "order", "dish_set", { status: "active" }), legacy(13, "party_size", "dish"), legacy(14, "party_size", "dish_set"),
   ];
   const result = run(envelope(old));
-  assert.equal(result.rules.length, 8);
+  assert.equal(result.rules.length, 18);
   const migrated = result.rules.find((rule) => rule.id === 11);
   assert.equal(migrated.defaultScenarioKey, "order|order_lifetime|dish");
-  assert.equal(migrated.defaultCatalogVersion, 2);
+  assert.equal(migrated.defaultCatalogVersion, 4);
   assert.equal(migrated.name, "保留名称");
   assert.deepEqual(JSON.parse(JSON.stringify(migrated.authoringConfig.targetIds)), ["a"]);
   assert.equal(result.rules.find((rule) => rule.id === 12).status, "active", "迁移不得改变启用状态");
-  assert.equal(result.rules.filter((rule) => rule.defaultScenarioKey?.includes("|per_round|")).length, 4);
+  assert.equal(result.rules.filter((rule) => rule.defaultScenarioKey?.includes("|per_round|")).length, 14);
   const bytes = result.storage.getItem(repositoryKey);
   const writes = result.storage.writes;
   result.profile.repository.loadForAuthoringList(result.profile.createDefaultScenarioRule);
@@ -257,6 +257,60 @@ function run(seed) {
   assert.equal("origin" in demoted, false);
   assert.equal(result.persisted.currentSnapshotId, "stable");
   assert.deepEqual(JSON.parse(JSON.stringify(result.persisted.snapshots)), { stable: { snapshotId: "stable", rules: [{ id: 52 }] } });
+}
+
+function stripCatalogMetadata(value) {
+  const copy = structuredClone(value);
+  for (const candidate of [copy, copy.authoringConfig, copy.authoringDraft, copy.editorDraft]) {
+    if (!candidate) continue;
+    delete candidate.origin;
+    delete candidate.defaultScenarioKey;
+    delete candidate.defaultCatalogVersion;
+  }
+  return copy;
+}
+
+// D2. Configured, active, published and snapshot-backed order defaults upgrade metadata in place.
+{
+  const configured = legacy(15, "order", "dish", { status: "active", publishedSnapshotVersion: 9, authoringConfig: { targetIds: ["dish-a"], participatingStoreIds: ["s1"], deployStoreIds: ["s1"] } });
+  configured.defaultScenarioKey = "order|order_lifetime|dish";
+  configured.defaultCatalogVersion = 3;
+  configured.authoringConfig.defaultScenarioKey = configured.defaultScenarioKey;
+  configured.authoringConfig.defaultCatalogVersion = 3;
+  configured.authoringConfig.origin = "system_default";
+  const editing = { id: 150, status: "draft", sourceRuleId: 15, editorDraft: { name: "独立编辑草稿", targetIds: ["draft-only"] } };
+  const snapshots = {
+    current: { snapshotId: "current", rules: [{ id: 15, targetIds: ["dish-a"] }] },
+    history: { snapshotId: "history", rules: [{ id: 15, targetIds: ["dish-a"] }] },
+  };
+  const beforeDraft = structuredClone(editing);
+  const beforeSnapshots = structuredClone(snapshots);
+  const beforeBusiness = stripCatalogMetadata(configured);
+  const result = run(envelope([configured], { drafts: [editing], snapshots, currentSnapshotId: "current" }));
+  const upgraded = result.rules.find(rule => rule.id === 15);
+  assert.equal(upgraded.origin, "system_default");
+  assert.equal(upgraded.defaultScenarioKey, "order|order_lifetime|dish");
+  assert.equal(upgraded.defaultCatalogVersion, 4);
+  const afterBusiness = stripCatalogMetadata(upgraded);
+  assert.deepEqual(afterBusiness, beforeBusiness);
+  assert.deepEqual(JSON.parse(JSON.stringify(result.persisted.drafts.find(rule => rule.id === 150))), beforeDraft);
+  assert.deepEqual(JSON.parse(JSON.stringify(result.persisted.snapshots)), beforeSnapshots);
+  assert.equal(result.persisted.currentSnapshotId, "current");
+}
+
+// J. An editing draft delays v2 template migration and preserves source/draft identity byte-for-byte.
+{
+  const source = {
+    id: 61, status: "disabled", origin: "system_default", defaultScenarioKey: "order|per_round|dish",
+    defaultCatalogVersion: 2, authoringConfig: draft("order", "dish", { period: "per_round", enabledPeriods: ["per_round"] }),
+  };
+  const editing = { id: 62, status: "draft", sourceRuleId: 61, editorDraft: structuredClone(source.authoringConfig) };
+  const beforeSource = structuredClone(source);
+  const beforeDraft = structuredClone(editing);
+  const result = run(envelope([source], { drafts: [editing] }));
+  assert.deepEqual(JSON.parse(JSON.stringify(result.persisted.rules.find((rule) => rule.id === 61))), beforeSource);
+  assert.deepEqual(JSON.parse(JSON.stringify(result.persisted.drafts.find((rule) => rule.id === 62))), beforeDraft);
+  assert.equal(result.rules.filter((rule) => rule.defaultScenarioKey === "order|per_round|dish" && rule.defaultCatalogVersion === 3).length, 0, "open draft delays replacement template");
 }
 
 // J. A configured duplicate is never deleted; only its system identity is removed.

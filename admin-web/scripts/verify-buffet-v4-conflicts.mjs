@@ -270,4 +270,15 @@ result = domain.validateStaticFeasibility(kindSetWithSingleCap);
 assert.equal(result.valid, false);
 assert.match(result.violations[0].message, /最少/);
 
+const pieceSet = structuredClone(kindSet);
+pieceSet.measureUnit = "piece";
+pieceSet.periodPolicies.per_round.blocks.totalEnabled = false;
+kindSet.periodPolicies.per_round.blocks.totalEnabled = false;
+assert.equal(domain.findConflict(kindSet, [{ id: "piece-rule", status: "active", authoringConfig: pieceSet }], []), null, "同一成员的按份和按种规则允许共同发布");
+const duplicateKind = domain.findConflict(kindSet, [{ id: "kind-rule", status: "active", authoringConfig: structuredClone(kindSet) }], []);
+assert.equal(duplicateKind.code, "DISH_SET_MEMBER_OVERLAP", "同计量口径的成员重叠仍需阻断");
+
+const totalOnly = v4({ subject: "order", targetType: "dish", partyRanges: [], periodPolicies: { per_round: { enabled: true, blocks: { totalEnabled: true, targetEnabled: false, sameDishEnabled: false } } } });
+assert.equal(domain.findConflict(totalOnly, [{ id: "total-rule", status: "active", authoringConfig: structuredClone(totalOnly) }], []).code, "DUPLICATE_TOTAL_RULE");
+
 console.log("verify-buffet-v4-conflicts: PASS");

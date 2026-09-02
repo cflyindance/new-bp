@@ -54,7 +54,7 @@ const api = loadFlow(profile);
 const copied = profile.lifecycle.prepareDraftCopy({
   origin: "system_default",
   defaultScenarioKey: "order|per_round|dish",
-  defaultCatalogVersion: 2,
+  defaultCatalogVersion: 3,
   name: "每轮指定菜品最多下多少份",
 });
 assert.equal(copied.origin, undefined);
@@ -77,9 +77,18 @@ assert.equal(api.systemDefaultTemplate(draft).key, template.key);
 assert.deepEqual(Array.from(draft.enabledPeriods), ["per_round"]);
 assert.deepEqual(
   { ...draft.periodPolicies.per_round.blocks },
-  { totalEnabled: true, targetEnabled: true, sameDishEnabled: false },
+  { totalEnabled: false, targetEnabled: true, sameDishEnabled: false },
 );
 assert.equal(JSON.stringify(draft.storeConfigs), beforeQuantity, "template repair must preserve business quantity values");
+
+draft.periodPolicies.per_round.blocks.totalEnabled = false;
+draft.periodPolicies.per_round.blocks.sameDishEnabled = true;
+api.normalizeDraftForProfile(draft);
+assert.deepEqual(
+  { ...draft.periodPolicies.per_round.blocks },
+  { totalEnabled: false, targetEnabled: true, sameDishEnabled: true },
+  "editable period blocks must not be reset to the system template",
+);
 
 function quantityBearingSystemDraft(overrides = {}) {
   const candidate = JSON.parse(JSON.stringify(profile.createDefaultScenarioRule(template, 102).editorDraft));
@@ -127,20 +136,20 @@ assert.equal(blankMissingStructure.origin, "system_default", "blank draft may sa
 assert.deepEqual(Array.from(blankMissingStructure.enabledPeriods), ["per_round"]);
 assert.deepEqual(
   { ...blankMissingStructure.periodPolicies.per_round.blocks },
-  { totalEnabled: true, targetEnabled: true, sameDishEnabled: false },
+  { totalEnabled: false, targetEnabled: true, sameDishEnabled: false },
 );
 
 const stepOne = api.renderStepOne(draft);
-assert.match(stepOne, /系统默认场景，规则类型不可修改/);
-assert.match(stepOne, /data-choice-field="subject"[^>]*disabled/);
-assert.match(stepOne, /data-choice-field="targetType"[^>]*disabled/);
-assert.match(stepOne, /olf-choice[^"']*is-locked/);
+assert.doesNotMatch(stepOne, /系统默认场景，规则类型不可修改/);
+assert.doesNotMatch(stepOne, /data-choice-field="subject"[^>]*disabled/);
+assert.doesNotMatch(stepOne, /data-choice-field="targetType"[^>]*disabled/);
+assert.doesNotMatch(stepOne, /olf-choice[^"']*is-locked/);
+assert.match(stepOne, /限购主体/);
 
 const stepTwo = api.renderStepThree(draft);
-assert.match(stepTwo, /系统默认场景/);
 assert.match(stepTwo, /每轮/);
-assert.doesNotMatch(stepTwo, /data-period-toggle=/);
-assert.doesNotMatch(stepTwo, /data-period-block=/);
+assert.match(stepTwo, /data-period-toggle="per_round"/);
+assert.match(stepTwo, /data-period-block="total"/);
 
 const ordinary = {
   schemaVersion: 4,
@@ -175,12 +184,35 @@ assert.equal(unsafeIdentity.origin, undefined, "unrecognized identity must be do
 assert.equal(unsafeIdentity.defaultScenarioKey, undefined);
 assert.equal(unsafeIdentity.defaultCatalogVersion, undefined);
 
-assert.match(flowSource, /if \(isSystemDefaultDraft\(draft\) && \["subject", "period", "targetType"\]\.indexOf\(field\) >= 0\)/);
-assert.match(flowSource, /系统默认规则的限购主体、额度周期和限购对象不可修改/);
-assert.match(flowSource, /if \(isSystemDefaultDraft\(draft\)\)[\s\S]*?data-period-toggle[\s\S]*?return/);
-assert.match(flowSource, /if \(isSystemDefaultDraft\(draft\)\)[\s\S]*?data-period-block[\s\S]*?return/);
-assert.match(cssSource, /\.olf-page \.olf-choice\.is-locked/);
+assert.doesNotMatch(flowSource, /系统默认规则的限购主体、额度周期和限购对象不可修改/);
+assert.doesNotMatch(flowSource, /系统默认规则的额度周期不可修改/);
+assert.doesNotMatch(flowSource, /系统默认规则的限购维度不可修改/);
+assert.doesNotMatch(cssSource, /\.olf-page \.olf-choice\.is-locked/);
 assert.match(cssSource, /\.olf-page \.olf-system-default-note/);
+
+const sourceRule = profile.createDefaultScenarioRule(template, 201);
+const editableRule = {
+  id: 301,
+  sourceRuleId: sourceRule.id,
+  status: "draft",
+  editorDraft: JSON.parse(JSON.stringify(sourceRule.editorDraft)),
+};
+assert.equal(api.systemDefaultIdentityDecision(editableRule, [sourceRule, editableRule]), "preserve");
+editableRule.editorDraft.subject = "party_size";
+assert.equal(api.applySystemDefaultIdentityDecision(editableRule, [sourceRule, editableRule]), "detach");
+assert.equal(editableRule.editorDraft.defaultScenarioKey, undefined);
+assert.equal(editableRule.sourceRuleId, sourceRule.id, "detach must preserve immutable source reference");
+editableRule.editorDraft.subject = sourceRule.editorDraft.subject;
+editableRule.editorDraft.targetType = sourceRule.editorDraft.targetType;
+editableRule.editorDraft.enabledPeriods = Array.from(sourceRule.editorDraft.enabledPeriods);
+assert.equal(api.applySystemDefaultIdentityDecision(editableRule, [sourceRule, editableRule]), "preserve");
+assert.equal(editableRule.editorDraft.defaultScenarioKey, template.key, "reverting axes must restore default identity from source");
+
+const ordinaryWrapper = { id: 401, sourceRuleId: "ordinary-source", editorDraft: JSON.parse(JSON.stringify(ordinary)) };
+assert.equal(api.applySystemDefaultIdentityDecision(ordinaryWrapper, [{ id: "ordinary-source", ...ordinary }]), "ordinary");
+assert.equal(ordinaryWrapper.editorDraft.origin, undefined);
+assert.match(flowSource, /function saveEditorDraft\(immediate\)[\s\S]*?applySystemDefaultIdentityDecision\(prepared, rules, false\)/);
+assert.match(flowSource, /function publishDraft\(draftRule\)[\s\S]*?applySystemDefaultIdentityDecision\(prepared, rules, true\)/);
 
 const overlappingDraftRule = { id: "draft-1", editorDraft: { targetType: "dish_set" } };
 const activeOverlap = { id: "active-overlap", status: "active", authoringConfig: { name: "海鲜菜品集" } };
