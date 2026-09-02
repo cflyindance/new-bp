@@ -378,6 +378,22 @@
     return values.length ? Math.min.apply(Math, values) : Infinity;
   }
 
+  function limitMultiplierMode(subject, mapName) {
+    return mapName === "targetLimits" && subject === "party_size" ? "party_multiplier" : "table_fixed";
+  }
+
+  function isComboRule(rule) {
+    return /^combo\|per_round\|/.test(String(rule && rule.defaultScenarioKey || ""));
+  }
+
+  function comboScenarioKey(rangeId) {
+    return "party:" + String(rangeId) + "|round:0";
+  }
+
+  function comboTargetKey(rangeId, productLineId, dishId) {
+    return comboScenarioKey(rangeId) + "|line:" + String(productLineId) + "|target:" + String(dishId);
+  }
+
   function flattenDishes(entries, lineId, inheritedCategoryId, result) {
     (Array.isArray(entries) ? entries : []).forEach(function (entry) {
       if (!entry || typeof entry !== "object") return;
@@ -530,12 +546,12 @@
       var max = range && range.max == null ? 999999 : Number(range.max);
       if (!Number.isInteger(min) || !Number.isInteger(max) || min < 1 || max < min) return;
       if (max - min <= 10000) {
-        for (var value = min; value <= max; value += 1) result.push({ partyRangeIndex: index, partySize: value });
+        for (var value = min; value <= max; value += 1) result.push({ partyRangeIndex: index, rangeId: range.rangeId || "", partySize: value });
         return;
       }
       // 有效上下限均为线性或分段线性函数，范围两端足以发现无解；避免无限区间阻塞发布校验。
-      result.push({ partyRangeIndex: index, partySize: min });
-      result.push({ partyRangeIndex: index, partySize: max });
+      result.push({ partyRangeIndex: index, rangeId: range.rangeId || "", partySize: min });
+      result.push({ partyRangeIndex: index, rangeId: range.rangeId || "", partySize: max });
     });
     return result;
   }
@@ -574,14 +590,15 @@
         var values = scenarioValues(config, period);
         partyValues(rule).forEach(function (party) {
           roundValues(rule, period).forEach(function (round) {
-            var scenario = scenarioKey(party.partyRangeIndex, round.roundRangeIndex);
+            var scenario = isComboRule(rule) && party.rangeId ? comboScenarioKey(party.rangeId) : scenarioKey(party.partyRangeIndex, round.roundRangeIndex);
             var bounds = effectiveBounds(values.totalBounds[scenario], values.tableTotalBounds[scenario], rule.subject, party.partySize);
             if (bounds.min != null && bounds.max != null && bounds.min > bounds.max) {
               violations.push(staticViolation(rule, storeId, period, party.partyRangeIndex, round.roundRangeIndex, "有效最少下单数量大于有效最多下单数量"));
               return;
             }
             if (bounds.min == null) return;
-            var capacity = targetCapacity(rule, config, values, scenario, party.partyRangeIndex, round.roundRangeIndex, party.partySize, blocks);
+            // 组合模板的总量下限可由选中范围之外的菜品满足，不能用指定对象 X/P 推导无解。
+            var capacity = isComboRule(rule) ? Infinity : targetCapacity(rule, config, values, scenario, party.partyRangeIndex, round.roundRangeIndex, party.partySize, blocks);
             if (capacity !== Infinity && bounds.min > capacity) {
               violations.push(staticViolation(rule, storeId, period, party.partyRangeIndex, round.roundRangeIndex, "最少下单数量无法由当前商品范围和单品上限满足"));
             }
@@ -715,7 +732,9 @@
     }
     if ((period === "per_round" || period === "multi_round") && (!Number.isInteger(context.roundNo) || context.roundNo < 1)) return { valid: false, code: "ROUND_REQUIRED" };
     if (rule.subject === "party_size" && (!Number.isInteger(context.partySize) || context.partySize < 1)) return { valid: false, code: "PARTY_SIZE_REQUIRED" };
-    return { valid: true, partyIndex: partyIndex, roundIndex: roundIndex, key: scenarioKey(partyIndex, roundIndex) };
+    var range = rule.partyRanges && rule.partyRanges[partyIndex];
+    var key = isComboRule(rule) && range && range.rangeId ? comboScenarioKey(range.rangeId) : scenarioKey(partyIndex, roundIndex);
+    return { valid: true, partyIndex: partyIndex, roundIndex: roundIndex, rangeId: range && range.rangeId || "", key: key };
   }
 
   function hasTarget(rule, config, item) {
@@ -749,7 +768,9 @@
   function v4TargetLimit(values, rule, scenario, item, partyIndex, roundIndex, partySize) {
     var key = rule.targetType === "dish_set"
       ? scenario
-      : targetCellKey(partyIndex, roundIndex, item.productLineId, rule.targetType === "dish" ? item.dishId : item.categoryId);
+      : isComboRule(rule) && rule.targetType === "dish"
+        ? comboTargetKey((rule.partyRanges[partyIndex] || {}).rangeId, item.productLineId, item.dishId)
+        : targetCellKey(partyIndex, roundIndex, item.productLineId, rule.targetType === "dish" ? item.dishId : item.categoryId);
     return effectiveCellLimit(values.targetLimits && values.targetLimits[key], values.tableTargetCaps && values.tableTargetCaps[key], rule.subject, partySize);
   }
 
@@ -939,6 +960,7 @@
     matchingRangeIndex: matchingRangeIndex,
     effectiveLimit: effectiveLimit,
     effectiveBounds: effectiveBounds,
+    limitMultiplierMode: limitMultiplierMode,
     evaluateBatch: evaluateBatch,
     compileRuntimeRules: compileRuntimeRules
   };
