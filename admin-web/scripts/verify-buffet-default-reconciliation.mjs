@@ -93,7 +93,7 @@ function run(seed) {
   assert.equal(result.rules.length, 12);
   const migrated = result.rules.find((rule) => rule.id === 11);
   assert.equal(migrated.defaultScenarioKey, "order|order_lifetime|dish");
-  assert.equal(migrated.defaultCatalogVersion, 3);
+  assert.equal(migrated.defaultCatalogVersion, 4);
   assert.equal(migrated.name, "保留名称");
   assert.deepEqual(JSON.parse(JSON.stringify(migrated.authoringConfig.targetIds)), ["a"]);
   assert.equal(result.rules.find((rule) => rule.id === 12).status, "active", "迁移不得改变启用状态");
@@ -257,6 +257,45 @@ function run(seed) {
   assert.equal("origin" in demoted, false);
   assert.equal(result.persisted.currentSnapshotId, "stable");
   assert.deepEqual(JSON.parse(JSON.stringify(result.persisted.snapshots)), { stable: { snapshotId: "stable", rules: [{ id: 52 }] } });
+}
+
+function stripCatalogMetadata(value) {
+  const copy = structuredClone(value);
+  for (const candidate of [copy, copy.authoringConfig, copy.authoringDraft, copy.editorDraft]) {
+    if (!candidate) continue;
+    delete candidate.origin;
+    delete candidate.defaultScenarioKey;
+    delete candidate.defaultCatalogVersion;
+  }
+  return copy;
+}
+
+// D2. Configured, active, published and snapshot-backed order defaults upgrade metadata in place.
+{
+  const configured = legacy(15, "order", "dish", { status: "active", publishedSnapshotVersion: 9, authoringConfig: { targetIds: ["dish-a"], participatingStoreIds: ["s1"], deployStoreIds: ["s1"] } });
+  configured.defaultScenarioKey = "order|order_lifetime|dish";
+  configured.defaultCatalogVersion = 3;
+  configured.authoringConfig.defaultScenarioKey = configured.defaultScenarioKey;
+  configured.authoringConfig.defaultCatalogVersion = 3;
+  configured.authoringConfig.origin = "system_default";
+  const editing = { id: 150, status: "draft", sourceRuleId: 15, editorDraft: { name: "独立编辑草稿", targetIds: ["draft-only"] } };
+  const snapshots = {
+    current: { snapshotId: "current", rules: [{ id: 15, targetIds: ["dish-a"] }] },
+    history: { snapshotId: "history", rules: [{ id: 15, targetIds: ["dish-a"] }] },
+  };
+  const beforeDraft = structuredClone(editing);
+  const beforeSnapshots = structuredClone(snapshots);
+  const beforeBusiness = stripCatalogMetadata(configured);
+  const result = run(envelope([configured], { drafts: [editing], snapshots, currentSnapshotId: "current" }));
+  const upgraded = result.rules.find(rule => rule.id === 15);
+  assert.equal(upgraded.origin, "system_default");
+  assert.equal(upgraded.defaultScenarioKey, "order|order_lifetime|dish");
+  assert.equal(upgraded.defaultCatalogVersion, 4);
+  const afterBusiness = stripCatalogMetadata(upgraded);
+  assert.deepEqual(afterBusiness, beforeBusiness);
+  assert.deepEqual(JSON.parse(JSON.stringify(result.persisted.drafts.find(rule => rule.id === 150))), beforeDraft);
+  assert.deepEqual(JSON.parse(JSON.stringify(result.persisted.snapshots)), beforeSnapshots);
+  assert.equal(result.persisted.currentSnapshotId, "current");
 }
 
 // J. An editing draft delays v2 template migration and preserves source/draft identity byte-for-byte.

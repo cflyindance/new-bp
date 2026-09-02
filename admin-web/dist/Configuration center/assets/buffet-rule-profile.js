@@ -435,6 +435,13 @@
     });
   }
 
+  function stableOrderDefaultKey(rule) {
+    var identity = systemIdentity(rule);
+    var template = defaultTemplate(identity.key);
+    if (identity.origin !== "system_default" || !template || template.group !== "order_lifetime") return "";
+    return legacySemanticsMatch(rule, template.key) ? template.key : "";
+  }
+
   function candidateRank(rule, envelope) {
     var currentSnapshot = currentSnapshotReferencesRule(envelope, rule);
     var historicalSnapshot = historicalSnapshotReferencesRule(envelope, rule);
@@ -466,6 +473,12 @@
       var legacy = verifiedLegacyDefaultKey(rule);
       var obsolete = obsoleteV2DefaultKey(rule);
       var identity = systemIdentity(rule);
+      var stableOrder = stableOrderDefaultKey(rule);
+      if (stableOrder) {
+        if (!groups[stableOrder]) groups[stableOrder] = [];
+        groups[stableOrder].push(rule);
+        return;
+      }
       if (!exact && legacy && hasDraftReference(next, rule)) {
         retained.push(rule);
         deferredCovered[legacy] = true;
