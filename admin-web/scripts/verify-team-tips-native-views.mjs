@@ -1,4 +1,6 @@
 import fs from "node:fs";
+import assert from "node:assert/strict";
+import vm from "node:vm";
 
 const required = {
   distribution: ["data-team-tips-view=\"distribution\"", "dailySummaryList", "emailModal"],
@@ -84,5 +86,39 @@ const distributionTemplate = fs.readFileSync("src/team/tips/templates/distributi
 const distributionProgram = fs.readFileSync("src/team/tips/programs/distribution.js.txt", "utf8");
 for (const token of ["日期任务", "员工对账", "employeeReconciliationList"]) if (!distributionTemplate.includes(token)) failures.push(`distribution: employee reconciliation UI missing ${token}`);
 for (const token of ["setSummaryView", "renderEmployeeReconciliationList", "openEmployeeReconciliationDetail", "canonicalEmployeeStore", "dedupeEmployees", "selectedStore"]) if (!distributionProgram.includes(token)) failures.push(`distribution: employee reconciliation program missing ${token}`);
+
+const employeeDetailTemplate = fs.readFileSync("src/team/tips/templates/employee-reconciliation.html", "utf8");
+const employeeDetailProgram = fs.readFileSync("src/team/tips/programs/employee-reconciliation.js.txt", "utf8");
+for (const token of ["employeeDetailStartDate", "employeeDetailEndDate", "employeeDetailRole"]) {
+  if (!employeeDetailTemplate.includes(token)) failures.push(`employee reconciliation detail: missing ${token}`);
+}
+for (const token of ["employeeDetailStore", "employeeDetailChipName", "employeeDetailNotice"]) {
+  if (employeeDetailTemplate.includes(token)) failures.push(`employee reconciliation detail: removed region returned ${token}`);
+}
+const employeeDetailContext = { document: { addEventListener() {} }, window: {}, URLSearchParams };
+vm.createContext(employeeDetailContext);
+vm.runInContext(employeeDetailProgram, employeeDetailContext);
+assert.deepEqual(
+  Array.from(employeeDetailContext.filterEmployeeDetailRows([
+    { dateKey: "2026-01-01" }, { dateKey: "2026-01-02" }, { dateKey: "2026-01-03" }
+  ], "2026-01-02", "2026-01-03"), (row) => row.dateKey),
+  ["2026-01-02", "2026-01-03"]
+);
+assert.deepEqual(
+  JSON.parse(JSON.stringify(employeeDetailContext.normalizeEmployeeDetailRange("2026-01-04", "2026-01-03", "start"))),
+  { start: "2026-01-04", end: "2026-01-04" }
+);
+assert.deepEqual(
+  JSON.parse(JSON.stringify(employeeDetailContext.normalizeEmployeeDetailRange("2026-01-04", "2026-01-03", "end"))),
+  { start: "2026-01-03", end: "2026-01-03" }
+);
+assert.equal(employeeDetailContext.employeeDetailRoleLabel(""), "未设置角色");
+assert.deepEqual(
+  JSON.parse(JSON.stringify(employeeDetailContext.summarizeEmployeeDetailRows([
+    { hours: 8, before: 10.1, deducted: 1, received: 2, after: 11.1 },
+    { hours: 0, before: 3.2, deducted: 0.2, received: 0.4, after: 3.4 }
+  ]))),
+  { shifts: 1, hours: 8, before: 13.3, deducted: 1.2, received: 2.4, after: 14.5 }
+);
 if (failures.length) { failures.forEach((failure) => console.error(failure)); process.exit(1); }
 console.log("Team tips native view verification passed.");
