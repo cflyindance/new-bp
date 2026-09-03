@@ -145,6 +145,17 @@ assert.deepEqual(
   { start: "2026-01-03", end: "2026-01-03" }
 );
 assert.equal(employeeDetailContext.employeeDetailRoleLabel(""), "未设置角色");
+assert.equal(employeeDetailContext.employeeDetailAttendanceStatus({ clockStatus: "已打卡" }), "已打卡");
+assert.equal(employeeDetailContext.employeeDetailAttendanceStatus({ clockStatus: "未打卡" }), "未打卡");
+assert.equal(employeeDetailContext.employeeDetailAttendanceStatus({ requiresAttendance: false }), "未打卡");
+assert.deepEqual(
+  Array.from(employeeDetailContext.filterEmployeeDetailRows([
+    { dateKey: "2026-01-01", clockStatus: "已打卡" },
+    { dateKey: "2026-01-02", clockStatus: "未打卡" },
+    { dateKey: "2026-01-03" },
+  ], "2026-01-01", "2026-01-03", "未打卡"), (row) => row.dateKey),
+  ["2026-01-02", "2026-01-03"]
+);
 assert.deepEqual(
   JSON.parse(JSON.stringify(employeeDetailContext.summarizeEmployeeDetailRows([
     { hours: 8, before: 10.1, deducted: 1, received: 2, after: 11.1 },
