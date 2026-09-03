@@ -7,6 +7,7 @@ const sources = [
   "payroll-i18n.js",
   "payroll-detail-export.js",
   "payroll-api-client.js",
+  "payroll-period-calendar.js",
   "payroll.js",
 ];
 const failures = [];
@@ -18,16 +19,25 @@ for (const name of sources) {
 }
 
 const runtime = fs.readFileSync("src/team/payroll/payroll-legacy-runtime.ts", "utf8");
+const payroll = fs.readFileSync("dist/TipOut/payroll.js", "utf8");
 const page = fs.readFileSync("src/team/payroll-page.ts", "utf8");
 for (const token of [
   "mountLegacyPayrollRuntime",
   "TipOutGlobalScopeFilter",
+  "periodCalendarCode",
   "controller.abort()",
   "timers.clear()",
   "cleanups.clear()",
 ]) {
   if (!runtime.includes(token)) failures.push(`runtime: missing ${token}`);
 }
+if (runtime.indexOf("periodCalendarCode") > runtime.indexOf("payrollCode")) {
+  failures.push("runtime: payroll period calendar must execute before payroll.js");
+}
+for (const token of ["PayrollPeriodCalendar.buildSupportedPeriods", "PayrollPeriodCalendar.migrateSnapshot"]) {
+  if (!payroll.includes(token)) failures.push(`payroll calendar integration: missing ${token}`);
+}
+if (payroll.includes("function buildYearPeriods")) failures.push("payroll calendar integration: legacy annual generator remains");
 for (const token of ["attachShadow", "mountLegacyPayrollRuntime", "destroy()"] ) {
   if (!page.includes(token)) failures.push(`page lifecycle: missing ${token}`);
 }

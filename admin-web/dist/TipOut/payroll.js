@@ -223,32 +223,11 @@
     return formatMdyDot(addDays(periodEndDate, 6));
   }
 
-  /** 生成指定自然年的 26 期（双周 Sun–Sat，每期 14 天） */
-  function buildYearPeriods(year, startDate, statusMap) {
-    const periods = [];
-    const sm = statusMap && typeof statusMap === "object" ? statusMap : {};
-    for (let i = 1; i <= 26; i++) {
-      const s = addDays(startDate, (i - 1) * 14);
-      const e = addDays(s, 13);
-      periods.push({
-        id: `p${year}-${pad2(i)}`,
-        year,
-        periodNumber: i,
-        rangeLabel: `${formatRangeDate(s)} – ${formatRangeDate(e)}`,
-        paycheckDate: buildPaycheckDate(e),
-        status: sm[i] || "draft",
-      });
-    }
-    return periods;
-  }
+  const PAYROLL_PERIOD_STATUS_SEED = { "p2026-09": "draft", "p2026-10": "confirmed", "p2026-11": "draft" };
 
-  /** Payroll 预设期数：2025 / 2026 各 26 期（自然年、双周 Sun–Sat） */
+  /** Payroll 预设期数：按结束年份归属，并覆盖到运行时下一年。 */
   function buildPresetPeriods() {
-    const statusMap2026 = { 8: "draft", 9: "confirmed", 10: "draft" };
-    return [
-      ...buildYearPeriods(2025, new Date(2025, 0, 5)), // 2025 第 1 期：01/05/2025 (Sun) – 01/18/2025 (Sat)
-      ...buildYearPeriods(2026, new Date(2026, 0, 4), statusMap2026), // 2026 第 1 期：01/04/2026 (Sun) – 01/17/2026 (Sat)
-    ];
+    return window.PayrollPeriodCalendar.buildSupportedPeriods(new Date(), PAYROLL_PERIOD_STATUS_SEED);
   }
 
   function formatMdySlash(d) {
@@ -337,7 +316,7 @@
   }
 
   function getEmployeesSeedTemplate(employeesMap) {
-    const preferred = ["p2026-08", "p2026-01", "p2026-12"];
+    const preferred = ["p2026-09", "p2026-02", "p2026-13"];
     for (let i = 0; i < preferred.length; i++) {
       const pid = preferred[i];
       if (Array.isArray(employeesMap[pid]) && employeesMap[pid].length > 0) return employeesMap[pid];
@@ -747,7 +726,7 @@
     coCode: "X0L",
     periods: buildPresetPeriods(),
     employees: {
-      "p2026-08": buildSeedEmployees(
+      "p2026-09": buildSeedEmployees(
         buildDemoSegmentDatesForRange(addDays(new Date(2026, 0, 4), 7 * 14), addDays(new Date(2026, 0, 4), 7 * 14 + 13))
       ),
     },
@@ -769,7 +748,7 @@
     if (!employeesMap || typeof employeesMap !== "object") return;
     const list = Array.isArray(periods) ? periods : [];
     const baseTemplate =
-      (Array.isArray(employeesMap["p2026-08"]) && employeesMap["p2026-08"].length > 0 && employeesMap["p2026-08"]) ||
+      (Array.isArray(employeesMap["p2026-09"]) && employeesMap["p2026-09"].length > 0 && employeesMap["p2026-09"]) ||
       Object.values(employeesMap).find((arr) => Array.isArray(arr) && arr.length > 0) ||
       [];
     list.forEach((p) => {
@@ -788,7 +767,7 @@
   /** 补“部分未确认”演示场景：确保某一期出现部分已确认、部分未确认 */
   function fillPartialConfirmedScenario(employeesMap, periods, refDate) {
     if (!employeesMap || typeof employeesMap !== "object") return;
-    const targetPid = "p2026-10";
+    const targetPid = "p2026-11";
     const periodList = Array.isArray(periods) ? periods : [];
     const period10 = periodList.find((p) => p && p.id === targetPid);
     if (period10 && !periodHasStarted(period10, refDate || new Date())) return;
@@ -808,7 +787,7 @@
   /** 补“未确认”演示场景：确保某一期全部未确认 */
   function fillDraftScenario(employeesMap) {
     if (!employeesMap || typeof employeesMap !== "object") return;
-    const targetPid = "p2026-08";
+    const targetPid = "p2026-09";
     const list = employeesMap[targetPid];
     if (!Array.isArray(list)) return;
     list.forEach((emp) => {
@@ -1421,17 +1400,8 @@
   }
 
   function migratePeriods(data) {
-    const preset = buildPresetPeriods();
-    const old = Array.isArray(data && data.periods) ? data.periods : [];
-    const map = new Map(old.map((p) => [p && p.id, p]));
-    data.periods = preset.map((p) => {
-      const ex = map.get(p.id);
-      if (!ex || typeof ex !== "object") return p;
-      return {
-        ...p,
-        status: ex.status != null ? ex.status : p.status,
-      };
-    });
+    const migrated = window.PayrollPeriodCalendar.migrateSnapshot(data, {}, new Date(), PAYROLL_PERIOD_STATUS_SEED);
+    Object.assign(data, migrated.snapshot);
   }
 
   function migratePayrollData(data) {
@@ -1440,8 +1410,8 @@
     if (!Array.isArray(data.periods)) data.periods = [];
     if (!Array.isArray(data.auditLog)) data.auditLog = [];
     applyAdpMappingToData(data);
-    fillElapsed2026PeriodEmployees(data.employees, data.periods);
     migratePeriods(data);
+    fillElapsed2026PeriodEmployees(data.employees, data.periods);
     syncEmployeesFromUnifiedRoster(data.employees);
     fillDraftScenario(data.employees);
     fillConfirmedPeriodsData(data.employees, data.periods);
@@ -1472,7 +1442,7 @@
     });
 
     // 兼容旧版 localStorage：为示例员工补齐第2周演示数据
-    const p = data.employees["p2026-08"];
+    const p = data.employees["p2026-09"];
     if (Array.isArray(p)) {
       const a29 = p.find((e) => e && e.id === "emp-a29");
       if (a29 && a29.name === "A29") a29.name = "小飞鸽";
@@ -1523,14 +1493,6 @@
 
   function applySnapshot(parsed) {
     if (!parsed || typeof parsed !== "object") return;
-    if (parsed.data) {
-      state.data = parsed.data;
-      try {
-        migratePayrollData(state.data);
-      } catch (_) {
-        state.data = cloneData(DEFAULT_DATA);
-      }
-    }
     if (parsed.view) state.view = parsed.view;
     if (parsed.periodId) state.periodId = parsed.periodId;
     if (parsed.employeeId) state.employeeId = parsed.employeeId;
@@ -1544,6 +1506,16 @@
     if (parsed.activeTab) {
       state.activeTab = parsed.activeTab === "detail" ? "manage" : parsed.activeTab;
       if (state.activeTab !== "manage" && state.activeTab !== "adp") state.activeTab = "manage";
+    }
+    if (parsed.data) {
+      try {
+        const migrated = window.PayrollPeriodCalendar.migrateSnapshot(parsed.data, state, new Date(), PAYROLL_PERIOD_STATUS_SEED);
+        state.data = migrated.snapshot;
+        Object.assign(state, migrated.selection);
+        migratePayrollData(state.data);
+      } catch (_) {
+        state.data = cloneData(DEFAULT_DATA);
+      }
     }
     ensureDataShape();
   }
@@ -2884,14 +2856,8 @@
     return all && all.length ? all[0] : "";
   }
 
-  function getRecentYears(count = 10) {
-    const current = new Date().getFullYear();
-    const years = [];
-    const n = Math.max(1, Number(count) || 10);
-    for (let i = 0; i < n; i++) {
-      years.push(String(current - i));
-    }
-    return years;
+  function getRecentYears() {
+    return [...new Set(buildPresetPeriods().map((period) => String(period.year)))].sort((a, b) => Number(b) - Number(a));
   }
 
   function resolvePeriodIdForYear(year, preferPeriodNumber) {

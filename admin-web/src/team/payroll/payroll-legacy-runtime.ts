@@ -4,6 +4,7 @@ import adpMappingCode from "./legacy/payroll-adp-mapping.js.txt?raw";
 import i18nCode from "./legacy/payroll-i18n.js.txt?raw";
 import detailExportCode from "./legacy/payroll-detail-export.js.txt?raw";
 import apiClientCode from "./legacy/payroll-api-client.js.txt?raw";
+import periodCalendarCode from "./legacy/payroll-period-calendar.js.txt?raw";
 import payrollCode from "./legacy/payroll.js.txt?raw";
 import type { PayrollPageContext } from "./payroll-context";
 import type { PayrollScopeSnapshot } from "./payroll-types";
@@ -86,6 +87,7 @@ function buildRuntimeSource(): string {
     apiClientCode,
     "const PayrollApiClient = window.PayrollApiClient;",
     "const TipOutGlobalScopeFilter = window.TipOutGlobalScopeFilter;",
+    periodCalendarCode,
     payrollCode,
     "//# sourceURL=team-payroll-native-runtime.js",
   ].join("\n\n");
