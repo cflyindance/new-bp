@@ -54,5 +54,10 @@ for (const [file, tokens] of Object.entries(removedHeadingCopy)) {
   const content = fs.readFileSync(file, "utf8");
   for (const token of tokens) if (content.includes(token)) failures.push(`${file}: removed heading copy returned ${token}`);
 }
+for (const file of ["dist/TipOut/rule-add.html", "src/team/tips/templates/rule-editor.html"]) {
+  const content = fs.readFileSync(file, "utf8");
+  if (content.includes("保存规则")) failures.push(`${file}: removed heading save button returned`);
+  if (!content.includes("submitRule()") || !content.includes(">提交</button>")) failures.push(`${file}: bottom submit action missing`);
+}
 if (failures.length) { failures.forEach((failure) => console.error(failure)); process.exit(1); }
 console.log("Team tips native view verification passed.");
