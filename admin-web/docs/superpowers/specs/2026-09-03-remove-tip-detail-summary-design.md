@@ -16,6 +16,6 @@
 - 明细页不再存在摘要卡及其空白布局列。
 - 明细内容横向填满工作区。
 - 日期/门店切换、明细渲染、保存和返回功能不受影响。
-- 自动校验同时检查源 `dist/TipOut/detail.html` 与生成物 `src/team/tips/templates/details.html`，阻止 `detailContextRail`、明细页 `has-aside` 和 `renderDetailContextRail` 回归。
+- 自动校验同时检查源 `dist/TipOut/detail.html`、生成模板 `src/team/tips/templates/details.html` 与生成脚本 `src/team/tips/programs/details.js.txt`，阻止 `detailContextRail`、明细页 `has-aside` 及 `renderDetailContextRail` 的调用或定义回归。
 - 自动校验正向确认 `detailDate`、`storeSelect`、`detailRulesContainer`、返回汇总、保存、保存并跳转下一天等业务入口仍存在。
 - 明细页摘要栏专属 CSS 不再存在，顶部 context bar 与规则编辑页独立样式仍保留。
