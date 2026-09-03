@@ -182,11 +182,12 @@ function detailNumber(value) { return Number(value) || 0; }
     }
 
     function exportEmployeeDetailPdf(data) {
-      var printWindow = window.open('', '_blank', 'noopener,noreferrer');
+      var printWindow = window.open('', '_blank');
       if (!printWindow) {
         showNotification('浏览器阻止了打印窗口，请允许弹窗后重试', 'error');
         return;
       }
+      printWindow.opener = null;
       printWindow.document.open();
       printWindow.document.write(buildEmployeeDetailPrintHtml(data));
       printWindow.document.close();

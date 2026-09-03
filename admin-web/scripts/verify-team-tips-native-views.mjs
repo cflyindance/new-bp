@@ -155,6 +155,18 @@ assert.equal(employeeDetailContext.employeeDetailCsvCell('=SUM(1,1)'), '"\'=SUM(
 assert.equal(employeeDetailContext.employeeDetailSafeFilename('王/店长:2026'), '王_店长_2026');
 assert.deepEqual(Array.from(employeeDetailContext.parseEmployeeDetailEmails('a@example.com, b@example.com')), ['a@example.com', 'b@example.com']);
 assert.equal(employeeDetailContext.parseEmployeeDetailEmails('invalid-address'), null);
+let employeeDetailPrintCalled = false;
+employeeDetailContext.showNotification = () => {};
+employeeDetailContext.window.open = (_url, _target, features) => features?.includes('noopener') ? null : ({
+  document: { open() {}, write() {}, close() {} },
+  focus() {},
+  print() { employeeDetailPrintCalled = true; },
+});
+employeeDetailContext.exportEmployeeDetailPdf({
+  name: '王店长', role: 'Manager', start: '2026-01-01', end: '2026-01-01', attendance: '全部状态',
+  rows: [{ date: '2026-01-01', attendance: '已打卡', shift: '1 个班次 / 8 h', before: '$1.00', deducted: '-$0.00', received: '+$0.00', after: '$1.00', allocation: '已分配' }],
+});
+assert.equal(employeeDetailPrintCalled, true, 'employee detail PDF should reach the browser print dialog');
 if (!employeeDetailProgram.includes("已提交发送")) failures.push("employee reconciliation detail: simulated email wording missing");
 if (!tipsRuntime.includes('view === "distribution" || view === "employee-reconciliation"')) failures.push("employee reconciliation detail: export runtime dependency missing");
 if (employeeDetailProgram.includes("collectExportData()") || employeeDetailProgram.includes("exportAs(")) failures.push("employee reconciliation detail: summary export collector used");
