@@ -9,8 +9,9 @@ const required = {
 const failures = [];
 const pageCss = fs.readFileSync("src/team/tips/tips-page.css", "utf8");
 const sourceCss = fs.readFileSync("dist/TipOut/prototype-fidelity.css", "utf8");
-for (const token of [".tipout-page-rule-editor .content-area", "width: min(100%, 1280px)", "margin-inline: auto"]) {
-  if (!pageCss.includes(token)) failures.push(`rule-editor centered layout missing ${token}`);
+const ruleEditorContentCss = pageCss.match(/\.tipout-page-rule-editor \.content-area\s*\{([^}]*)\}/)?.[1] ?? "";
+for (const token of ["width: min(100%, 1280px)", "margin-inline: auto", "align-items: stretch"]) {
+  if (!ruleEditorContentCss.includes(token)) failures.push(`rule-editor centered layout missing ${token}`);
 }
 for (const [view, tokens] of Object.entries(required)) {
   const template = fs.readFileSync(`src/team/tips/templates/${view}.html`, "utf8");
