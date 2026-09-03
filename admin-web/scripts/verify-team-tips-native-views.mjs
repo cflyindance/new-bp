@@ -8,6 +8,7 @@ const required = {
 };
 const failures = [];
 const pageCss = fs.readFileSync("src/team/tips/tips-page.css", "utf8");
+const sourceCss = fs.readFileSync("dist/TipOut/prototype-fidelity.css", "utf8");
 for (const token of [".tipout-page-rule-editor .content-area", "width: min(100%, 1280px)", "margin-inline: auto"]) {
   if (!pageCss.includes(token)) failures.push(`rule-editor centered layout missing ${token}`);
 }
@@ -22,6 +23,36 @@ for (const [view, tokens] of Object.entries(required)) {
   if (view === "rule-editor" && (template.includes("ruleEditorContextRail") || template.includes("tipout-workspace has-aside"))) {
     failures.push("rule-editor: removed context summary rail returned");
   }
+}
+
+const sourceDetail = fs.readFileSync("dist/TipOut/detail.html", "utf8");
+const nativeDetail = fs.readFileSync("src/team/tips/templates/details.html", "utf8");
+const nativeDetailProgram = fs.readFileSync("src/team/tips/programs/details.js.txt", "utf8");
+for (const token of ["detailContextRail", "tipout-workspace has-aside", "renderDetailContextRail"]) {
+  if (sourceDetail.includes(token)) failures.push(`detail source: removed summary token returned ${token}`);
+}
+for (const token of ["detailContextRail", "tipout-workspace has-aside"]) {
+  if (nativeDetail.includes(token)) failures.push(`detail template: removed summary token returned ${token}`);
+}
+if (nativeDetailProgram.includes("renderDetailContextRail")) failures.push("detail program: removed summary renderer returned");
+for (const token of [".tipout-page-detail .tipout-workspace.has-aside", ".tipout-page-detail .tipout-context-rail"]) {
+  if (sourceCss.includes(token) || pageCss.includes(token)) failures.push(`detail styles: removed summary selector returned ${token}`);
+}
+for (const token of ["detailDate", "storeSelect", "detailRulesContainer", "returnToSummary()", "saveDetail()", "saveAndNext()"]) {
+  if (!sourceDetail.includes(token) || !nativeDetail.includes(token)) failures.push(`detail: required business entry missing ${token}`);
+}
+
+const removedHeadingCopy = {
+  "dist/TipOut/index.html": ["Tip Out 工作台", "按日期查看、核对并执行当前范围的小费分配。"],
+  "dist/TipOut/rules.html": ["规则管理", "配置当前门店的小费池来源、扣除方和接收方。"],
+  "dist/TipOut/rule-add.html": ["规则配置", "配置现有小费池来源、扣除方、接收方和分配口径。"],
+  "src/team/tips/templates/distribution.html": ["Tip Out 工作台", "按日期查看、核对并执行当前范围的小费分配。"],
+  "src/team/tips/templates/rules.html": ["规则管理", "配置当前门店的小费池来源、扣除方和接收方。"],
+  "src/team/tips/templates/rule-editor.html": ["规则配置", "配置现有小费池来源、扣除方、接收方和分配口径。"],
+};
+for (const [file, tokens] of Object.entries(removedHeadingCopy)) {
+  const content = fs.readFileSync(file, "utf8");
+  for (const token of tokens) if (content.includes(token)) failures.push(`${file}: removed heading copy returned ${token}`);
 }
 if (failures.length) { failures.forEach((failure) => console.error(failure)); process.exit(1); }
 console.log("Team tips native view verification passed.");

@@ -173,7 +173,6 @@ var ALLOC_KEY = 'tipout_allocated';
       if (!dateKey) return;
 
       var rules = window.ruleData && ruleData.getRulesForStore ? ruleData.getRulesForStore(store) : [];
-      renderDetailContextRail(rules, dateKey, store);
       if (rules.length === 0) {
         document.getElementById('detailRulesContainer').innerHTML =
           '<div class="tipout-detail-empty">' +
@@ -208,16 +207,6 @@ var ALLOC_KEY = 'tipout_allocated';
         );
       });
       document.getElementById('detailRulesContainer').innerHTML = bundleParts.join('');
-    }
-
-    function renderDetailContextRail(rules, dateKey, store) {
-      var rail = document.getElementById('detailContextRail');
-      if (!rail) return;
-      var names = (rules || []).map(function(rule) { return rule.ruleName || '未命名规则'; });
-      rail.innerHTML =
-        '<section><span>日期</span><strong>' + escHtml(dateKey || '—') + '</strong></section>' +
-        '<section><span>门店</span><strong>' + escHtml(store || '—') + '</strong></section>' +
-        '<section><span>分配规则</span><strong>' + escHtml(names.length ? names.join('、') : '暂无规则') + '</strong></section>';
     }
 
     function genSyntheticOrderTipContext(dateKey, ruleSalt) {

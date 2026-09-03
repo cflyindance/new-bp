@@ -222,9 +222,8 @@
           <div class="tipout-detail-context-bar__current"><span>当前页面</span><strong>小费分配明细</strong></div>
         </div>
 
-        <div class="tipout-workspace has-aside" id="detailWorkspace">
+        <div class="tipout-workspace" id="detailWorkspace">
           <main id="detailMain"><div id="detailRulesContainer"></div></main>
-          <aside class="tipout-context-rail" id="detailContextRail" aria-label="当前明细上下文"></aside>
         </div>
 
         <div class="tipout-sticky-actions" id="detailActionBar">
@@ -435,7 +434,6 @@
       if (!dateKey) return;
 
       var rules = window.ruleData && ruleData.getRulesForStore ? ruleData.getRulesForStore(store) : [];
-      renderDetailContextRail(rules, dateKey, store);
       if (rules.length === 0) {
         document.getElementById('detailRulesContainer').innerHTML =
           '<div class="tipout-detail-empty">' +
@@ -470,16 +468,6 @@
         );
       });
       document.getElementById('detailRulesContainer').innerHTML = bundleParts.join('');
-    }
-
-    function renderDetailContextRail(rules, dateKey, store) {
-      var rail = document.getElementById('detailContextRail');
-      if (!rail) return;
-      var names = (rules || []).map(function(rule) { return rule.ruleName || '未命名规则'; });
-      rail.innerHTML =
-        '<section><span>日期</span><strong>' + escHtml(dateKey || '—') + '</strong></section>' +
-        '<section><span>门店</span><strong>' + escHtml(store || '—') + '</strong></section>' +
-        '<section><span>分配规则</span><strong>' + escHtml(names.length ? names.join('、') : '暂无规则') + '</strong></section>';
     }
 
     function genSyntheticOrderTipContext(dateKey, ruleSalt) {

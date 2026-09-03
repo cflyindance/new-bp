@@ -2000,36 +2000,7 @@ select.form-control {
   font-size: 13px;
 }
 
-.tipout-page-detail .tipout-workspace.has-aside {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 260px;
-  align-items: start;
-  gap: 20px;
-  min-width: 0;
-}
-
 .tipout-page-detail #detailMain { min-width: 0; }
-
-.tipout-page-detail .tipout-context-rail {
-  position: sticky;
-  top: 88px;
-  overflow: hidden;
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-md);
-  background: #ffffff;
-}
-
-.tipout-page-detail .tipout-context-rail section {
-  display: flex;
-  padding: 16px;
-  flex-direction: column;
-  gap: 6px;
-  border-bottom: 1px solid var(--border-light);
-}
-
-.tipout-page-detail .tipout-context-rail section:last-child { border-bottom: 0; }
-.tipout-page-detail .tipout-context-rail span { color: var(--text-tertiary); font-size: 12px; }
-.tipout-page-detail .tipout-context-rail strong { font-size: 13px; line-height: 1.55; overflow-wrap: anywhere; }
 
 .tipout-page-detail .detail-rule-bundle {
   margin-bottom: 20px;
@@ -2427,8 +2398,6 @@ select.form-control {
 }
 
 @media (max-width: 1100px) {
-  .tipout-page-detail .tipout-workspace.has-aside { grid-template-columns: minmax(0, 1fr); }
-  .tipout-page-detail .tipout-context-rail { position: static; }
   .tipout-page-rule-editor .tipout-workspace.has-aside { grid-template-columns: minmax(0, 1fr); }
   .tipout-page-rule-editor .tipout-context-rail { position: static; }
 }
