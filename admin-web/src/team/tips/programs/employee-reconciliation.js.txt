@@ -1,5 +1,7 @@
 function detailNumber(value) { return Number(value) || 0; }
     var employeeDetailViewState = null;
+    var employeeDetailEmailSnapshot = null;
+    var employeeDetailPreparedEmailContent = null;
     function detailMoney(value) {
       var number = detailNumber(value);
       return '$' + Math.abs(number).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
@@ -215,6 +217,47 @@ function detailNumber(value) { return Number(value) || 0; }
       if (!data) return;
       if (type === 'pdf') exportEmployeeDetailPdf(data);
       if (type === 'csv') exportEmployeeDetailCsv(data);
+    }
+
+    function parseEmployeeDetailEmails(value) {
+      var emails = String(value || '').split(',').map(function(email) { return email.trim(); }).filter(Boolean);
+      var emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (emails.length === 0 || emails.some(function(email) { return !emailPattern.test(email); })) return null;
+      return emails;
+    }
+
+    function openEmployeeDetailEmailModal() {
+      closeEmployeeDetailExportMenu();
+      var data = collectEmployeeDetailExportData();
+      if (!data) return;
+      employeeDetailEmailSnapshot = JSON.parse(JSON.stringify(data));
+      employeeDetailPreparedEmailContent = null;
+      openModal('employeeDetailEmailModal');
+    }
+
+    function sendEmployeeDetailEmail() {
+      var emailInput = document.getElementById('employeeDetailExportEmail');
+      var emails = parseEmployeeDetailEmails(emailInput ? emailInput.value : '');
+      if (!emails) {
+        showNotification('请输入正确的邮箱地址，多个邮箱请用逗号分隔', 'error');
+        return;
+      }
+      if (!employeeDetailEmailSnapshot) {
+        showNotification('导出内容已失效，请重新打开邮箱发送', 'error');
+        closeModal('employeeDetailEmailModal');
+        return;
+      }
+      var formatInput = document.querySelector('input[name="employeeDetailEmailFormat"]:checked');
+      var format = formatInput ? formatInput.value : '';
+      if (format !== 'pdf' && format !== 'csv') {
+        showNotification('请选择导出格式', 'error');
+        return;
+      }
+      employeeDetailPreparedEmailContent = format === 'pdf'
+        ? buildEmployeeDetailPrintHtml(employeeDetailEmailSnapshot)
+        : buildEmployeeDetailCsv(employeeDetailEmailSnapshot);
+      closeModal('employeeDetailEmailModal');
+      showNotification(format.toUpperCase() + ' 已提交发送至 ' + emails.join(', ') + '（当前为模拟发送）', 'success');
     }
 
     function renderEmployeeDetailRows(rows) {

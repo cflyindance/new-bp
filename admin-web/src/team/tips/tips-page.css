@@ -2639,6 +2639,20 @@ select.form-control {
 }
 .tipout-page-employee-reconciliation-detail .tipout-detail-export .export-menu-item:hover { background: rgba(0, 0, 0, 0.04); }
 
+.tipout-page-employee-reconciliation-detail .tipout-detail-email-modal { width: min(480px, calc(100vw - 32px)); }
+.tipout-page-employee-reconciliation-detail .tipout-detail-email-modal .form-control { width: 100%; }
+.tipout-page-employee-reconciliation-detail .tipout-detail-email-formats {
+  display: flex;
+  gap: 20px;
+}
+.tipout-page-employee-reconciliation-detail .tipout-detail-email-formats label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+.tipout-page-employee-reconciliation-detail .tipout-detail-email-formats input { accent-color: var(--primary); }
+
 .tipout-page-employee-reconciliation-detail .tipout-role-tag {
   display: inline-flex;
   align-items: center;
