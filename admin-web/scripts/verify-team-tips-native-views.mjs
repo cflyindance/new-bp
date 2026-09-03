@@ -15,6 +15,9 @@ for (const [view, tokens] of Object.entries(required)) {
     if (template.toLowerCase().includes(forbidden)) failures.push(`${view}: forbidden template token ${forbidden}`);
   }
   if (!program.trim()) failures.push(`${view}: page program is empty`);
+  if (view === "rule-editor" && (template.includes("ruleEditorContextRail") || template.includes("tipout-workspace has-aside"))) {
+    failures.push("rule-editor: removed context summary rail returned");
+  }
 }
 if (failures.length) { failures.forEach((failure) => console.error(failure)); process.exit(1); }
 console.log("Team tips native view verification passed.");
