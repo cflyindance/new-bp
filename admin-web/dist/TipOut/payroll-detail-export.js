@@ -56,6 +56,28 @@ function getPayrollDetailExportData() {
 
 }
 
+let payrollDetailExportStatusTimer = null;
+
+function setPayrollDetailExportStatus(state, message) {
+  const status = document.getElementById("employeesDetailExportStatus");
+  const button = document.getElementById("btn-employees-detail-export-toggle");
+  if (payrollDetailExportStatusTimer) clearTimeout(payrollDetailExportStatusTimer);
+  if (status) {
+    status.hidden = !message;
+    status.dataset.state = state || "";
+    status.textContent = message || "";
+  }
+  if (button) {
+    button.disabled = state === "loading";
+    button.setAttribute("aria-busy", state === "loading" ? "true" : "false");
+  }
+  if (message && state !== "loading") {
+    payrollDetailExportStatusTimer = setTimeout(function () {
+      if (status) status.hidden = true;
+    }, 3500);
+  }
+}
+
 
 
 function togglePayrollDetailExportMenu() {
@@ -543,10 +565,13 @@ function exportPayrollDetailPDF(data, variant, pagination) {
 
     if (typeof showNotification === "function") showNotification(T("export.noPrintContent"), "error");
 
+    setPayrollDetailExportStatus("error", "无法生成 PDF：明细内容为空");
+
     return;
 
   }
 
+  setPayrollDetailExportStatus("loading", variant === "compact" ? "正在生成精简明细 PDF…" : "正在生成详细明细 PDF…");
   if (typeof showNotification === "function") showNotification(T("export.generatingPdf"), "info");
 
   loadHtml2CanvasLib(function (h2cReady) {
@@ -558,6 +583,8 @@ function exportPayrollDetailPDF(data, variant, pagination) {
         renderPayrollDetailPdfFromPrintTemplate(docHtml, data);
 
       } else {
+
+        setPayrollDetailExportStatus("error", "PDF 组件加载失败，已打开打印预览");
 
         openPayrollDetailPrintWindowAndPrint(docHtml, data);
 
@@ -747,6 +774,8 @@ function renderPayrollDetailPdfFromPrintTemplate(docHtml, data) {
 
         if (typeof showNotification === "function") showNotification(T("export.pdfSuccess"), "success");
 
+        setPayrollDetailExportStatus("success", data.exportVariant === "compact" ? "精简明细 PDF 已导出" : "详细明细 PDF 已导出");
+
         if (typeof onPayrollDetailExported === "function") onPayrollDetailExported("pdf", data);
 
       })
@@ -754,6 +783,8 @@ function renderPayrollDetailPdfFromPrintTemplate(docHtml, data) {
       .catch(function () {
 
         capturing = false;
+
+        setPayrollDetailExportStatus("error", "PDF 生成失败，已打开打印预览");
 
         finishFallback();
 
@@ -792,6 +823,8 @@ function openPayrollDetailPrintWindowAndPrint(docHtml, data) {
   if (!win) {
 
     if (typeof showNotification === "function") showNotification(T("export.popupBlocked"), "error");
+
+    setPayrollDetailExportStatus("error", "浏览器阻止了打印预览，请允许弹窗后重试");
 
     return;
 

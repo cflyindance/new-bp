@@ -13,6 +13,7 @@ for (const token of [
   'data-print-pagination="paginate"', 'payroll-detail-pages.js',
 ]) if (!html.includes(token)) failures.push(`html missing ${token}`);
 if (html.includes("data-export-variant")) failures.push("export menu must use the active detail tab without a second variant selection");
+if (!html.includes('id="employeesDetailExportStatus"')) failures.push("employee detail modal missing export status region");
 for (const id of ["btn-payroll-detail-email-close", "btn-payroll-detail-email-cancel", "btn-payroll-detail-email-send"]) {
   if (!html.includes(`id="${id}"`)) failures.push(`email modal missing ${id}`);
 }
@@ -25,6 +26,9 @@ for (const token of [
 
 for (const token of ["exportCompactPayrollDetailCSV", "additional_clock_pairs", "payrollEmailExportSnapshot", "_Compact"]) {
   if (!exporter.includes(token)) failures.push(`export missing ${token}`);
+}
+for (const token of ["setPayrollDetailExportStatus", "正在生成详细明细 PDF", "详细明细 PDF 已导出", "PDF 生成失败"]) {
+  if (!exporter.includes(token)) failures.push(`PDF status missing ${token}`);
 }
 if ((exporter.match(/document\.defaultView && document\.defaultView\.document/g) || []).length !== 2) {
   failures.push("PDF libraries must load through the host document when Payroll runs inside Shadow DOM");

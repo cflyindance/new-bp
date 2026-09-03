@@ -3237,6 +3237,15 @@ select.form-control {
 .payroll-print-pagination { display:flex; align-items:center; gap:12px; margin-right:auto; font-size:13px; color:var(--text-secondary); }
 .payroll-print-pagination label { display:flex; align-items:center; gap:5px; cursor:pointer; white-space:nowrap; }
 .payroll-print-pagination input { accent-color:var(--primary); }
+.payroll-detail-export-status { display:flex; align-items:center; gap:7px; min-height:34px; padding:7px 11px; border-radius:8px; font-size:13px; font-weight:600; }
+.payroll-detail-export-status[hidden] { display:none; }
+.payroll-detail-export-status[data-state="loading"] { color:#0958d9; background:#e6f4ff; }
+.payroll-detail-export-status[data-state="loading"]::before { content:""; width:13px; height:13px; border:2px solid #91caff; border-top-color:#1677ff; border-radius:50%; animation:payroll-export-spin .8s linear infinite; }
+.payroll-detail-export-status[data-state="success"] { color:#237804; background:#f6ffed; }
+.payroll-detail-export-status[data-state="success"]::before { content:"✓"; }
+.payroll-detail-export-status[data-state="error"] { color:#cf1322; background:#fff1f0; }
+.payroll-detail-export-status[data-state="error"]::before { content:"!"; }
+@keyframes payroll-export-spin { to { transform:rotate(360deg); } }
 .employees-detail-export-dropdown .export-menu-item { width:100%; border:0; background:transparent; text-align:left; }
 
 #employeesDetailCompactBody { display:flex; justify-content:center; }
