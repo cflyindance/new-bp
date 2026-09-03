@@ -86,6 +86,23 @@ const distributionTemplate = fs.readFileSync("src/team/tips/templates/distributi
 const distributionProgram = fs.readFileSync("src/team/tips/programs/distribution.js.txt", "utf8");
 for (const token of ["日期任务", "员工对账", "employeeReconciliationList"]) if (!distributionTemplate.includes(token)) failures.push(`distribution: employee reconciliation UI missing ${token}`);
 for (const token of ["setSummaryView", "renderEmployeeReconciliationList", "openEmployeeReconciliationDetail", "canonicalEmployeeStore", "dedupeEmployees", "selectedStore"]) if (!distributionProgram.includes(token)) failures.push(`distribution: employee reconciliation program missing ${token}`);
+for (const token of ["tipAllocationModal", "allocationStore", "allocationDateStart", "allocationDateEnd", "allocationScopeError", "confirmAllocateBtn"]) {
+  if (!distributionTemplate.includes(token)) failures.push(`distribution: allocation scope dialog missing ${token}`);
+}
+for (const token of ["openTipAllocationModal", "closeTipAllocationModal", "submitTipAllocationScope", "executeTipAllocationScope", "allocationSubmitting"]) {
+  if (!distributionProgram.includes(token)) failures.push(`distribution: allocation scope behavior missing ${token}`);
+}
+const allocationValidator = distributionProgram.match(/function validateAllocationScope\(scope\)\s*\{[\s\S]*?\n\s*\}/)?.[0];
+if (!allocationValidator) {
+  failures.push("distribution: allocation scope validator missing");
+} else {
+  const allocationContext = {};
+  vm.createContext(allocationContext);
+  vm.runInContext(allocationValidator, allocationContext);
+  assert.deepEqual(JSON.parse(JSON.stringify(allocationContext.validateAllocationScope({ store: "", startDate: "2026-01-01", endDate: "2026-01-02" }))), { field: "store", message: "请选择门店" });
+  assert.deepEqual(JSON.parse(JSON.stringify(allocationContext.validateAllocationScope({ store: "Nai Cha", startDate: "2026-01-03", endDate: "2026-01-02" }))), { field: "dateStart", message: "开始日期不能晚于结束日期" });
+  assert.equal(allocationContext.validateAllocationScope({ store: "Nai Cha", startDate: "2026-01-01", endDate: "2026-01-02" }), null);
+}
 const pendingValueHelper = distributionProgram.match(/function dailySummaryResultValue\(allocated, value\)\s*\{[\s\S]*?\n\s*\}/)?.[0];
 if (!pendingValueHelper) {
   failures.push("distribution: pending result value helper missing");

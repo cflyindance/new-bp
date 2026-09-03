@@ -1,19 +1,25 @@
 var ALLOC_KEY = 'tipout_allocated';
-    function getAllocatedDates() {
+    var allocationSubmitting = false;
+    function getAllocatedDatesForStore(store) {
       try {
-        var store = (document.getElementById('storeSelect') || {}).value || '';
         var raw = localStorage.getItem(ALLOC_KEY);
         var obj = raw ? JSON.parse(raw) : {};
-        var arr = obj[store] || [];
-        return new Set(arr);
+        return new Set(obj[store || ''] || []);
       } catch (e) { return new Set(); }
+    }
+    function getAllocatedDates() {
+      var store = (document.getElementById('storeSelect') || {}).value || '';
+      return getAllocatedDatesForStore(store);
+    }
+    function saveAllocatedDatesForStore(store, dates) {
+      var raw = localStorage.getItem(ALLOC_KEY);
+      var obj = raw ? JSON.parse(raw) : {};
+      obj[store || ''] = Array.from(dates);
+      localStorage.setItem(ALLOC_KEY, JSON.stringify(obj));
     }
     function saveAllocatedDates(dates) {
       var store = (document.getElementById('storeSelect') || {}).value || '';
-      var raw = localStorage.getItem(ALLOC_KEY);
-      var obj = raw ? JSON.parse(raw) : {};
-      obj[store] = Array.from(dates);
-      localStorage.setItem(ALLOC_KEY, JSON.stringify(obj));
+      saveAllocatedDatesForStore(store, dates);
     }
 
     const EMPLOYEE_ROSTER_KEY = 'tipout-employees-roster-v1';
@@ -367,9 +373,7 @@ var ALLOC_KEY = 'tipout_allocated';
       return attachAttendance({ date: dateKey, before: before, deducted: deducted, received: received, after: after }, emp, dateKey);
     }
 
-    function getDateRange() {
-      const s = document.getElementById('dateStart').value;
-      const e = document.getElementById('dateEnd').value;
+    function buildDateRange(s, e) {
       if (!s || !e) return [];
       const start = new Date(s + 'T00:00:00');
       const end = new Date(e + 'T00:00:00');
@@ -381,6 +385,11 @@ var ALLOC_KEY = 'tipout_allocated';
         cur.setDate(cur.getDate() + 1);
       }
       return dates;
+    }
+    function getDateRange() {
+      const s = document.getElementById('dateStart').value;
+      const e = document.getElementById('dateEnd').value;
+      return buildDateRange(s, e);
     }
 
     function getDailyEmployeeResults(dateKey) {
@@ -680,30 +689,154 @@ var ALLOC_KEY = 'tipout_allocated';
       return window.ruleData && ruleData.getRules && ruleData.getRules().length > 0;
     }
 
-    function doAllocateTips() {
+    function redirectToTipRulesWhenMissing() {
       if (!hasTipRules()) {
         showNotification('请先创建小费分配规则', 'error');
         setTimeout(function() { window.location.href = 'rules.html'; }, 1500);
-        return;
+        return true;
       }
+      return false;
+    }
+
+    function validateAllocationScope(scope) {
+      if (!scope.store) return { field: 'store', message: '请选择门店' };
+      if (!scope.startDate) return { field: 'dateStart', message: '请选择起始日期' };
+      if (!scope.endDate) return { field: 'dateEnd', message: '请选择终止日期' };
+      if (scope.startDate > scope.endDate) return { field: 'dateStart', message: '开始日期不能晚于结束日期' };
+      return null;
+    }
+
+    function allocationFieldElement(field) {
+      var ids = { store: 'allocationStore', dateStart: 'allocationDateStart', dateEnd: 'allocationDateEnd' };
+      return document.getElementById(ids[field]);
+    }
+
+    function showAllocationScopeError(error) {
+      ['allocationStore', 'allocationDateStart', 'allocationDateEnd'].forEach(function(id) {
+        var field = document.getElementById(id);
+        if (field) field.removeAttribute('aria-invalid');
+      });
+      var message = document.getElementById('allocationScopeError');
+      message.hidden = !error;
+      message.textContent = error ? error.message : '';
+      if (error) {
+        var field = allocationFieldElement(error.field);
+        if (field) { field.setAttribute('aria-invalid', 'true'); field.focus(); }
+      }
+    }
+
+    function setAllocationSubmitting(submitting) {
+      allocationSubmitting = submitting;
+      ['confirmAllocateBtn', 'cancelTipAllocationBtn', 'closeTipAllocationModalBtn', 'allocateBtn'].forEach(function(id) {
+        var button = document.getElementById(id);
+        if (button) button.disabled = submitting;
+      });
+      var confirmButton = document.getElementById('confirmAllocateBtn');
+      if (confirmButton) confirmButton.textContent = submitting ? '分配中…' : '分配小费';
+    }
+
+    function openTipAllocationModal() {
+      if (redirectToTipRulesWhenMissing()) return;
+      var pageStore = document.getElementById('storeSelect');
+      var modalStore = document.getElementById('allocationStore');
+      modalStore.innerHTML = pageStore.innerHTML;
+      modalStore.value = pageStore.value;
+      document.getElementById('allocationDateStart').value = document.getElementById('dateStart').value;
+      document.getElementById('allocationDateEnd').value = document.getElementById('dateEnd').value;
+      showAllocationScopeError(null);
+      var modal = document.getElementById('tipAllocationModal');
+      modal.classList.add('show');
+      modal.setAttribute('aria-hidden', 'false');
+      var content = document.querySelector('.team-tips-page .content-area');
+      if (content) content.setAttribute('inert', '');
+      modalStore.focus();
+    }
+
+    function closeTipAllocationModal(force) {
+      if (allocationSubmitting && !force) return;
+      var modal = document.getElementById('tipAllocationModal');
+      modal.classList.remove('show');
+      modal.setAttribute('aria-hidden', 'true');
+      var content = document.querySelector('.team-tips-page .content-area');
+      if (content) content.removeAttribute('inert');
+      var trigger = document.getElementById('allocateBtn');
+      if (trigger) trigger.focus();
+    }
+
+    function handleTipAllocationOverlayClick(event) {
+      if (event.target === event.currentTarget) closeTipAllocationModal();
+    }
+
+    function syncPageFiltersToAllocationScope(scope) {
+      document.getElementById('storeSelect').value = scope.store;
+      document.getElementById('dateStart').value = scope.startDate;
+      document.getElementById('dateEnd').value = scope.endDate;
+      updateEmployeeFilter(true);
+    }
+
+    function executeTipAllocationScope(scope) {
       invalidateDayPipelineCache();
-      var dates = getDateRange();
-      var allocatedDates = getAllocatedDates();
+      var dates = buildDateRange(scope.startDate, scope.endDate);
+      var allocatedDates = getAllocatedDatesForStore(scope.store);
       dates.forEach(function(k) { allocatedDates.add(k); });
-      saveAllocatedDates(allocatedDates);
-      renderDailySummaryList();
-      if (window.TipOutPayrollBridge && TipOutPayrollBridge.syncAfterAllocation) {
-        var storeSel = document.getElementById('storeSelect');
-        var storeVal = storeSel ? (storeSel.value || '').trim() : '';
-        var ds = document.getElementById('dateStart');
-        var de = document.getElementById('dateEnd');
-        TipOutPayrollBridge.syncAfterAllocation(
-          storeVal,
-          ds ? ds.value : '',
-          de ? de.value : ''
-        );
+      try {
+        saveAllocatedDatesForStore(scope.store, allocatedDates);
+      } catch (error) {
+        error.allocationStage = 'write';
+        throw error;
       }
-      showNotification('小费分配完成，已同步至薪资管理 Tips/SVCW', 'success');
+      try {
+        if (window.TipOutPayrollBridge && TipOutPayrollBridge.syncAfterAllocation) {
+        TipOutPayrollBridge.syncAfterAllocation(
+            scope.store,
+            scope.startDate,
+            scope.endDate
+        );
+        }
+      } catch (error) {
+        error.allocationStage = 'payroll';
+        throw error;
+      }
+    }
+
+    function submitTipAllocationScope() {
+      if (allocationSubmitting) return;
+      var scope = Object.freeze({
+        store: (document.getElementById('allocationStore').value || '').trim(),
+        startDate: document.getElementById('allocationDateStart').value,
+        endDate: document.getElementById('allocationDateEnd').value
+      });
+      var validationError = validateAllocationScope(scope);
+      if (validationError) { showAllocationScopeError(validationError); return; }
+      showAllocationScopeError(null);
+      setAllocationSubmitting(true);
+      try {
+        executeTipAllocationScope(scope);
+        syncPageFiltersToAllocationScope(scope);
+        renderDailySummaryList();
+        setAllocationSubmitting(false);
+        closeTipAllocationModal(true);
+        showNotification('小费分配完成，已同步至薪资管理 Tips/SVCW', 'success');
+      } catch (error) {
+        setAllocationSubmitting(false);
+        if (error && (error.allocationStage === 'write' || error.allocationStage === 'payroll')) {
+          syncPageFiltersToAllocationScope(scope);
+          renderDailySummaryList();
+          closeTipAllocationModal(true);
+          showNotification(
+            error.allocationStage === 'payroll'
+              ? '分配结果已保存，但薪资同步失败，请重试同步'
+              : '分配未完整完成，请检查结果后重试',
+            'error'
+          );
+          return;
+        }
+        showNotification('小费分配失败，请重试', 'error');
+      }
+    }
+
+    function doAllocateTips() {
+      openTipAllocationModal();
     }
 
     function doCancelAllocate() {
@@ -781,6 +914,22 @@ var ALLOC_KEY = 'tipout_allocated';
       if (!e.target.closest || !e.target.closest('.filter-bar .multi-select')) {
         document.querySelectorAll('.filter-bar .multi-select.open').forEach(function(ms) { ms.classList.remove('open'); });
       }
+    });
+    document.addEventListener('keydown', function(event) {
+      var modal = document.getElementById('tipAllocationModal');
+      if (!modal || !modal.classList.contains('show')) return;
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeTipAllocationModal();
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      var focusable = Array.from(modal.querySelectorAll('button:not([disabled]), select:not([disabled]), input:not([disabled])'));
+      if (!focusable.length) return;
+      var first = focusable[0];
+      var last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
     });
 
     function initializeSummaryPage() {

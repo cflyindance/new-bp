@@ -145,7 +145,7 @@
                   </div>
                 </div>
               </div>
-              <button id="allocateBtn" class="btn btn-primary btn-lg" data-native-onclick="doAllocateTips()">分配小费</button>
+              <button id="allocateBtn" class="btn btn-primary btn-lg" data-native-onclick="openTipAllocationModal()">分配小费</button>
             </div>
           </div>
 
@@ -239,6 +239,34 @@
             <div id="employeeReconciliationEmpty" class="tipout-empty-state" hidden>当前筛选范围暂无员工对账数据</div>
           </div>
         </section>
+      </div>
+      <div class="modal-overlay" id="tipAllocationModal" aria-hidden="true" data-native-onclick="handleTipAllocationOverlayClick(event)">
+        <div class="modal tipout-allocation-modal" role="dialog" aria-modal="true" aria-labelledby="tipAllocationModalTitle" aria-describedby="tipAllocationModalDescription">
+          <div class="modal-header">
+            <h3 id="tipAllocationModalTitle">分配小费</h3>
+            <button type="button" id="closeTipAllocationModalBtn" class="modal-close" aria-label="关闭分配小费弹窗" data-native-onclick="closeTipAllocationModal()">×</button>
+          </div>
+          <div class="modal-body">
+            <p id="tipAllocationModalDescription" class="tipout-allocation-modal__description">如果选择的日期已经分配过小费，新的分配结果会覆盖旧的结果。</p>
+            <div class="form-group">
+              <label class="form-label" for="allocationStore">门店</label>
+              <select id="allocationStore" class="form-control"></select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="allocationDateStart"><span class="tipout-required">*</span> 起始日期</label>
+              <input id="allocationDateStart" type="date" class="form-control">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="allocationDateEnd"><span class="tipout-required">*</span> 终止日期</label>
+              <input id="allocationDateEnd" type="date" class="form-control">
+            </div>
+            <p id="allocationScopeError" class="tipout-allocation-modal__error" role="alert" hidden></p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" id="cancelTipAllocationBtn" class="btn" data-native-onclick="closeTipAllocationModal()">取消</button>
+            <button type="button" id="confirmAllocateBtn" class="btn btn-primary" data-native-onclick="submitTipAllocationScope()">分配小费</button>
+          </div>
+        </div>
       </div>
 <div class="modal-overlay" id="emailModal">
         <div class="modal" style="width:480px">
