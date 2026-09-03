@@ -83,6 +83,6 @@ if (!fs.readFileSync("src/team/tips/programs/distribution.js.txt", "utf8").inclu
 const distributionTemplate = fs.readFileSync("src/team/tips/templates/distribution.html", "utf8");
 const distributionProgram = fs.readFileSync("src/team/tips/programs/distribution.js.txt", "utf8");
 for (const token of ["日期任务", "员工对账", "employeeReconciliationList"]) if (!distributionTemplate.includes(token)) failures.push(`distribution: employee reconciliation UI missing ${token}`);
-for (const token of ["setSummaryView", "renderEmployeeReconciliationList", "openEmployeeReconciliationDetail"]) if (!distributionProgram.includes(token)) failures.push(`distribution: employee reconciliation program missing ${token}`);
+for (const token of ["setSummaryView", "renderEmployeeReconciliationList", "openEmployeeReconciliationDetail", "canonicalEmployeeStore", "dedupeEmployees", "selectedStore"]) if (!distributionProgram.includes(token)) failures.push(`distribution: employee reconciliation program missing ${token}`);
 if (failures.length) { failures.forEach((failure) => console.error(failure)); process.exit(1); }
 console.log("Team tips native view verification passed.");

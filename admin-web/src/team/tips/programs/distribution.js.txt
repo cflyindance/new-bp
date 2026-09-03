@@ -39,6 +39,29 @@ var ALLOC_KEY = 'tipout_allocated';
       return (emp.tipType || '') === 'deduct' ? 'tag-blue' : 'tag-green';
     }
 
+    function canonicalEmployeeStore(value) {
+      var store = String(value || '').trim();
+      var aliases = {
+        'golden dragon chinese kitchen - dallas, tx 75231': '上海陆家嘴店',
+        'sakura sushi & ramen house - dallas, tx 75247': '广州天河店',
+        '张记火锅': '上海陆家嘴店'
+      };
+      return aliases[store.toLowerCase()] || store;
+    }
+
+    function dedupeEmployees(list) {
+      var seenIds = Object.create(null);
+      var seenProfiles = Object.create(null);
+      return list.filter(function(employee) {
+        var id = String(employee.employeeId || '').trim();
+        var profileKey = [canonicalEmployeeStore(employee.store).toLowerCase(), String(employee.name || '').trim().toLowerCase(), String(employee.role || '').trim().toLowerCase()].join('|');
+        if ((id && seenIds[id]) || seenProfiles[profileKey]) return false;
+        if (id) seenIds[id] = true;
+        seenProfiles[profileKey] = true;
+        return true;
+      });
+    }
+
     function buildEmployeesFromRoster() {
       try {
         var raw = localStorage.getItem(EMPLOYEE_ROSTER_KEY);
@@ -56,6 +79,7 @@ var ALLOC_KEY = 'tipout_allocated';
             return {
               employeeId: 'roster:' + String(e.id).trim(),
               name: String(e.name || '').trim(),
+              store: canonicalEmployeeStore(e.store),
               role: role || 'Server',
               tipType: tipType === 'receive' ? 'receive' : 'deduct',
               baseTip: baseTip,
@@ -63,7 +87,7 @@ var ALLOC_KEY = 'tipout_allocated';
               tagClass: resolveTagClass({ role: role, tipType: tipType })
             };
           });
-        return normalized.length ? normalized : DEFAULT_EMPLOYEES.slice();
+        return normalized.length ? dedupeEmployees(normalized) : DEFAULT_EMPLOYEES.slice();
       } catch (e) {
         return DEFAULT_EMPLOYEES.slice();
       }
@@ -703,6 +727,9 @@ var ALLOC_KEY = 'tipout_allocated';
       var roles = getSelectedRoles();
       var empNames = getSelectedEmployees();
       var list = employees;
+      var storeSelect = document.getElementById('storeSelect');
+      var selectedStore = canonicalEmployeeStore(storeSelect ? storeSelect.value : '');
+      if (selectedStore) list = list.filter(function(e) { return !e.store || canonicalEmployeeStore(e.store) === selectedStore; });
       if (roles.length > 0) list = list.filter(function(e) { return roles.indexOf(e.role) >= 0; });
       if (empNames.length > 0) list = list.filter(function(e) { return empNames.indexOf(e.name) >= 0; });
       return list;
