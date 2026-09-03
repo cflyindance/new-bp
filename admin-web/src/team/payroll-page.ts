@@ -10,9 +10,13 @@ export interface PayrollPageHandle {
 
 const mountedPages = new WeakMap<HTMLElement, PayrollPageHandle>();
 
+function isScrollContainer(element: HTMLElement): boolean {
+  return ["auto", "scroll"].includes(window.getComputedStyle(element).overflowY)
+    && element.scrollHeight > element.clientHeight;
+}
+
 function canScroll(element: HTMLElement, deltaY: number): boolean {
-  if (!["auto", "scroll"].includes(window.getComputedStyle(element).overflowY)) return false;
-  if (element.scrollHeight <= element.clientHeight) return false;
+  if (!isScrollContainer(element)) return false;
   if (deltaY < 0) return element.scrollTop > 0;
   return element.scrollTop + element.clientHeight < element.scrollHeight;
 }
@@ -36,10 +40,16 @@ export function mountPayrollPage(
       (node) => node instanceof HTMLElement && node.classList.contains("modal-overlay") && node.classList.contains("show"),
     );
     const localScroller = eventPath.find(
-      (node): node is HTMLElement => node instanceof HTMLElement && canScroll(node, event.deltaY),
+      (node): node is HTMLElement => node instanceof HTMLElement && isScrollContainer(node),
     );
-    if (localScroller && localScroller !== scrollOwner) return;
-    if (isModalInteraction) return;
+    if (localScroller && localScroller !== scrollOwner) {
+      if (!canScroll(localScroller, event.deltaY)) event.preventDefault();
+      return;
+    }
+    if (isModalInteraction) {
+      event.preventDefault();
+      return;
+    }
     const before = scrollOwner.scrollTop;
     scrollOwner.scrollTop += event.deltaY;
     if (scrollOwner.scrollTop !== before) event.preventDefault();
