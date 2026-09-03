@@ -10,6 +10,7 @@ const sources = [
   "payroll-i18n.js",
   "payroll-detail-export.js",
   "payroll-api-client.js",
+  "payroll-period-calendar.js",
   "payroll.js",
 ];
 
