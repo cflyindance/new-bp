@@ -25,7 +25,9 @@
 | 规则列表“返回汇总”或 Esc | back；无有效汇总父状态时 replace | 正常入口退出后 Back 不会立刻重进全屏 |
 | 编辑器无弹层时 Esc | back；无有效规则父状态时 replace 到规则列表 | 第一次 Esc 回规则列表，仍保持全屏 |
 
-每次 push 前在目标 history state 中写入 `menusifuTeamTips.parentHref` 与父页面滚动位置。直接深链或刷新若无可信父状态，采用表中 replace fallback。用户主动使用浏览器 Back/Forward 时尊重历史记录，因此允许从汇总通过 Forward 再进入全屏。
+`menusifuTeamTips` 使用明确的 entry schema：`flowId`、`viewHref`、`scrollTop`、`parentHref`、`summaryHref`、`summaryScrollTop`。`scrollTop` 表示当前 history entry 自身的滚动位置；`parentHref` 表示直接父页；`summary*` 表示本次规则流程的汇总来源及滚动位置。导航前先用 replaceState 更新当前 entry 的 `scrollTop`，再 push 带完整状态的目标 entry。summary→rules 创建 flowId 并同时记录 summary；rules→editor 写入 rules 作为直接父页，同时继承 summary origin。Back 回 rules 时读取 rules entry 自身 scrollTop，再退出时读取 summary origin。
+
+可信状态必须同时满足：`flowId` 是非空受控字符串、`viewHref` 与当前规范化路由完全相等、`parentHref` 属于该动作允许的直接前驱、所有 scrollTop 均为有限非负数、summaryHref 精确等于 `/team/tips/distribution`。不满足任一条件即使用 replace fallback 和 scrollTop 0。直接深链或刷新若无可信父状态同样使用 fallback。用户主动使用浏览器 Back/Forward 时尊重历史记录，因此允许从汇总通过 Forward 再进入全屏。
 
 ## 宿主与视觉行为
 
@@ -33,7 +35,7 @@
 
 Shadow DOM 页面不再创建第二个主滚动区；规则内容、编辑器内容均由 light-DOM 宿主滚动。modal/drawer 仍在 Shadow DOM 内 fixed 定位，其 z-index 80/81 在全屏宿主 stacking context 内覆盖页面内容。打开 modal/drawer 时锁定主滚动容器，弹层内部可滚动；关闭后恢复。全屏时主导航及顶部账号栏被覆盖而非删除。
 
-进入规则页前，将汇总宿主 `scrollTop` 写入新规则 history entry 的 `parentScrollTop`；rules→editor 时继承该值。返回汇总时读取但不删除该状态：先同步设置 scrollTop，再在连续两个 requestAnimationFrame 中按 `min(saved, scrollHeight-clientHeight)` clamp 重试，以适应全量重绘和异步内容撑高。无来源状态、直接深链或刷新时默认恢复为 0。状态跟随 history entry；离开小费模块只清除 DOM 临时状态，不篡改浏览器历史，从而保证 Back/Forward 可恢复。
+进入规则页前，将汇总宿主 `scrollTop` 写入 summary entry 的 `scrollTop`，并复制到规则 entry 的 `summaryScrollTop`；rules→editor 前把规则列表滚动写回 rules entry 的 `scrollTop`，editor entry 继承 `summaryScrollTop`。返回时读取对应 entry，但不删除 history 状态：先同步设置 scrollTop，再在连续两个 requestAnimationFrame 中按 `min(saved, scrollHeight-clientHeight)` clamp 重试，以适应全量重绘和异步内容撑高。无来源状态、直接深链或刷新时默认恢复为 0。状态跟随 history entry；离开小费模块只清除 DOM/内存临时状态，不篡改浏览器历史，从而保证 Back/Forward 可恢复。
 
 ## 交互
 
@@ -41,7 +43,7 @@ Shadow DOM 页面不再创建第二个主滚动区；规则内容、编辑器内
 2. 规则列表进入新增或编辑器时，路由切换到 `/team/tips/rules/editor`，全屏不中断。
 3. 规则编辑器返回规则列表时仍保持全屏。
 4. 规则列表“返回小费分配汇总”按 History 契约退出全屏。
-5. Esc 监听绑定在 light-DOM 宿主的 `window` capture 阶段。若事件已 `defaultPrevented` 则不处理；否则先查询 ShadowRoot 内可见的 native dialog、modal、drawer、dropdown，并只关闭最上层、阻止本次退出。编辑器无弹层时第一次 Esc 等同现有“取消”语义，返回规则列表且不新增未保存确认；规则列表无弹层时 Esc 返回汇总。连续 Esc 依次关闭最上层弹层、退出编辑器、退出全屏。
+5. Esc 监听绑定在 `window` bubble 阶段，让 Shadow DOM 内部 handler 先处理。事件到达 window 时若已 `defaultPrevented` 则不处理；否则查询 ShadowRoot 内可见的 native dialog、modal、drawer、dropdown，并只关闭最上层，随后调用 `preventDefault()` 与 `stopPropagation()`，确保一次 Esc 只消费一层。若 ShadowRoot 的 activeElement 是原生 `select`、可编辑组合框或其他由浏览器管理的展开控件，本次 Esc 不执行页面退出。编辑器无弹层时第一次 Esc 等同现有“取消”语义，返回规则列表且不新增未保存确认；规则列表无弹层时 Esc 返回汇总。连续 Esc 依次关闭最上层弹层、退出编辑器、退出全屏。
 
 ## 组件边界
 
@@ -57,7 +59,7 @@ Shadow DOM 页面不再创建第二个主滚动区；规则内容、编辑器内
 - 页面初始化失败时，Esc 监听仍在 legacy runtime try/catch 之外生效，可按 fallback 路由退出。
 - 全屏类/属性的唯一 owner 是 `TipsPageHandle`。`destroy()` 幂等：移除键盘监听、滚动锁、全屏类和属性。
 - 主应用全量 mount 时先销毁旧实例，再同步渲染带全屏类/属性的新宿主；路由判定在 HTML 提交前完成，rules↔editor 不出现可见的非全屏帧。
-- 离开小费模块时必须清除全屏类、属性和临时滚动记录。
+- 离开小费模块时必须清除全屏类、属性以及 DOM/内存中的临时滚动缓存；history entry 中的恢复状态保留。
 - 全屏切换不修改小费规则、分配结果或 Payroll 同步数据。
 - 原生小费宿主不得出现 `tipout-rules-flow-fullscreen`、`data-tipout-rules-flow-fullscreen` 或任何小费 iframe；旧 iframe binder 对原生宿主无匹配结果。
 
@@ -73,7 +75,7 @@ Shadow DOM 页面不再创建第二个主滚动区；规则内容、编辑器内
 ## 自动化验证矩阵
 
 - 单元测试：精确 route→fullscreen 映射（含尾斜杠、query、非法相似路径）、五类 history transition、重复 destroy 幂等。
-- 集成测试：有滚动的汇总 → 规则 → 编辑器 → Back/返回列表 → 返回汇总；断言 URL、宿主类/属性、header/sidebar 可见性和 scrollTop 容差不超过 2px。
+- 集成测试：有滚动的汇总 → 规则列表滚动 → 编辑器 → Back/返回列表恢复规则滚动 → 返回汇总恢复汇总滚动；断言 URL、宿主类/属性、header/sidebar 可见性和 scrollTop 容差不超过 2px。
 - 深链测试：直接进入规则列表/编辑器、刷新后仍全屏；无父状态的返回使用 replace fallback。
 - 历史测试：Back/Forward 在汇总、规则和编辑器间切换，状态始终与路由一致且无重复退出记录。
 - Esc 测试：无弹层、modal、drawer、dropdown、编辑器未保存字段、初始化失败；监听每次只触发一次。
