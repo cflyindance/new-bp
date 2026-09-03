@@ -15,6 +15,11 @@ requireText(mount, 'import payrollPolishCss from "./payroll/payroll-polish.css?r
 requireText(mount, "${payrollCss}</style><style>${payrollPolishCss}", "CSS injection order");
 requireText(mount, 'container.addEventListener("wheel", handleWheel', "mouse-wheel bridge");
 requireText(mount, 'container.removeEventListener("wheel", handleWheel)', "mouse-wheel cleanup");
+requireText(mount, "function canScroll(element: HTMLElement, deltaY: number)", "local scroll boundary helper");
+requireText(mount, '["auto", "scroll"].includes(window.getComputedStyle(element).overflowY)', "real scroll container detection");
+requireText(mount, "const localScroller = eventPath.find", "local scroll target detection");
+requireText(mount, "if (localScroller && localScroller !== scrollOwner) return", "local scroll ownership");
+requireText(mount, "if (isModalInteraction) return", "modal background scroll lock");
 requireText(polish, ":host", "Shadow host sizing");
 requireText(polish, ".team-payroll-page.payroll-workspace-active .payroll-workspace-main", "workspace scroll reset");
 [
