@@ -566,7 +566,7 @@ select.form-control {
   font-weight: 500;
 }
 
-.card-.team-payroll-page {
+.card-body {
   padding: 16px 24px;
 }
 
@@ -643,7 +643,7 @@ select.form-control {
   color: var(--text-primary);
 }
 
-.modal-.team-payroll-page {
+.modal-body {
   padding: 24px;
   overflow-y: auto;
   flex: 1;
@@ -709,7 +709,7 @@ select.form-control {
   font-weight: 600;
 }
 
-.drawer-.team-payroll-page {
+.drawer-body {
   padding: 24px;
   flex: 1;
   overflow-y: auto;
@@ -2502,7 +2502,7 @@ select.form-control {
   background: rgba(107, 114, 128, 0.12);
 }
 
-.payroll-page .payroll-wide-group-.team-payroll-page {
+.payroll-page .payroll-wide-group-body {
   padding: 14px 16px 16px;
 }
 
@@ -2544,7 +2544,7 @@ select.form-control {
   font-size: 13px;
 }
 
-.payroll-page .payroll-wide-group--compact .payroll-wide-group-.team-payroll-page {
+.payroll-page .payroll-wide-group--compact .payroll-wide-group-body {
   padding-top: 12px;
   padding-bottom: 14px;
 }
@@ -2673,7 +2673,7 @@ select.form-control {
   color: var(--text-tertiary);
 }
 
-.payroll-page .payroll-sum-card-.team-payroll-page {
+.payroll-page .payroll-sum-card-body {
   padding: 14px 18px 16px;
 }
 
@@ -3178,7 +3178,7 @@ select.form-control {
   z-index: 1200;
 }
 
-.employees-detail-preview-.team-payroll-page {
+.employees-detail-preview-body {
   overflow-x: hidden;
   overflow-y: auto;
   flex: 1;
@@ -3272,7 +3272,7 @@ select.form-control {
   flex-direction: column;
 }
 
-.adp-report-preview-.team-payroll-page {
+.adp-report-preview-body {
   overflow: auto;
   flex: 1;
   min-height: 0;
@@ -3491,7 +3491,7 @@ select.form-control {
   vertical-align: baseline;
 }
 
-.payroll-page #detail-declaration-.team-payroll-page .payroll-decl-amount {
+.payroll-page #detail-declaration-body .payroll-decl-amount {
   margin: 0 1px;
 }
 
@@ -3917,7 +3917,7 @@ select.form-control {
   border-bottom: 0;
 }
 
-.payroll-page .payroll-sum-card-.team-payroll-page {
+.payroll-page .payroll-sum-card-body {
   padding: 4px 14px 12px;
 }
 
@@ -3980,7 +3980,7 @@ select.form-control {
   padding: 11px 13px;
 }
 
-.payroll-page .payroll-wide-group-.team-payroll-page {
+.payroll-page .payroll-wide-group-body {
   padding: 10px 13px 13px;
 }
 
@@ -4038,7 +4038,7 @@ select.form-control {
   letter-spacing: -0.015em;
 }
 
-.payroll-page .payroll-employee-picker-.team-payroll-page {
+.payroll-page .payroll-employee-picker-body {
   padding: 14px 20px 16px;
 }
 
@@ -4595,7 +4595,7 @@ select.form-control {
   padding: 15px 16px 8px;
 }
 
-.payroll-page .payroll-sum-card-.team-payroll-page {
+.payroll-page .payroll-sum-card-body {
   padding: 5px 16px 15px;
 }
 
@@ -4836,7 +4836,7 @@ select.form-control {
   font-weight: 400;
 }
 
-.payroll-page .payroll-wide-group-.team-payroll-page {
+.payroll-page .payroll-wide-group-body {
   padding: 14px 16px;
   background: #f7f7f7;
   border-radius: 14px;
@@ -4904,7 +4904,7 @@ select.form-control {
   border-radius: 9px;
 }
 
-.payroll-page .payroll-employee-picker-.team-payroll-page {
+.payroll-page .payroll-employee-picker-body {
   padding: 12px;
   overflow: hidden;
   background: #fff;
@@ -5108,7 +5108,7 @@ select.form-control {
   transform: translateY(1px);
 }
 
-#payrollEmployeeEditModal .payroll-employee-edit-.team-payroll-page {
+#payrollEmployeeEditModal .payroll-employee-edit-body {
   display: flex;
   min-height: 0;
   flex: 1;
@@ -5263,7 +5263,7 @@ select.form-control {
   border-radius: 9px;
 }
 
-#payrollEmployeePickerModal .payroll-employee-picker-.team-payroll-page {
+#payrollEmployeePickerModal .payroll-employee-picker-body {
   padding: 12px;
   overflow: hidden;
   background: #fff;
@@ -5838,7 +5838,7 @@ select.form-control {
   border: 0;
 }
 
-.payroll-page .payroll-sum-card-.team-payroll-page {
+.payroll-page .payroll-sum-card-body {
   padding: 4px 15px 14px;
 }
 
@@ -5972,7 +5972,7 @@ select.form-control {
   font-weight: 400;
 }
 
-.payroll-page .payroll-wide-group-.team-payroll-page {
+.payroll-page .payroll-wide-group-body {
   padding: 13px 14px 15px;
   background: #f7f7f7;
   border-radius: 14px;
@@ -6249,7 +6249,7 @@ select.form-control {
   }
   .team-payroll-page.payroll-printing-from-modal #employeesDetailPreviewModal,
   .team-payroll-page.payroll-printing-from-modal #employeesDetailPreviewModal .modal,
-  .team-payroll-page.payroll-printing-from-modal #employeesDetailPreviewModal .modal-.team-payroll-page,
+  .team-payroll-page.payroll-printing-from-modal #employeesDetailPreviewModal .modal-body,
   .team-payroll-page.payroll-printing-from-modal #employeesDetailModalBody {
     position: static !important;
     inset: auto !important;

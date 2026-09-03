@@ -50,7 +50,7 @@ function makeShadowScopedCss(source) {
   return source
     .replace(/^@import[^;]+;\s*/gm, "")
     .replace(/:root\b/g, ".team-payroll-page")
-    .replace(/\bbody(?=[.#\s,{])/g, ".team-payroll-page")
+    .replace(/(?<![\w-])body(?=[.#\s,{])/g, ".team-payroll-page")
     .replace(/^\s*html\s*,\s*\.team-payroll-page\s*\{/gm, ".team-payroll-page {")
     .replace(/^\s*html\s*\{/gm, ".team-payroll-page {");
 }

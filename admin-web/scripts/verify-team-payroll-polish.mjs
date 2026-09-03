@@ -3,6 +3,7 @@ import fs from "node:fs";
 const read = (path) => fs.readFileSync(path, "utf8");
 const main = read("src/main.ts");
 const mount = read("src/team/payroll-page.ts");
+const generated = read("src/team/payroll/payroll-page.css");
 const polish = read("src/team/payroll/payroll-polish.css");
 const failures = [];
 
@@ -22,6 +23,10 @@ requireText(mount, "const localScroller = eventPath.find", "local scroll target 
 requireText(mount, "isScrollContainer(node)", "local scroll container ownership");
 requireText(mount, "if (!canScroll(localScroller, event.deltaY)) event.preventDefault()", "local scroll boundary containment");
 requireText(mount, "if (isModalInteraction) {", "modal background scroll lock");
+requireText(generated, ".employees-detail-preview-body {", "employee detail body scroll selector");
+if (generated.includes(".employees-detail-preview-.team-payroll-page")) {
+  failures.push("employee detail body selector was corrupted while scoping body selectors");
+}
 requireText(polish, ":host", "Shadow host sizing");
 requireText(polish, ".team-payroll-page.payroll-workspace-active .payroll-workspace-main", "workspace scroll reset");
 [
