@@ -13,6 +13,14 @@
           <input id="employeeDetailStartDate" type="date" aria-label="开始日期">
           <span aria-hidden="true">～</span>
           <input id="employeeDetailEndDate" type="date" aria-label="结束日期">
+          <label class="tipout-detail-attendance-filter">
+            <span>考勤状态</span>
+            <select id="employeeDetailAttendanceFilter" aria-label="考勤状态">
+              <option value="全部状态">全部状态</option>
+              <option value="已打卡">已打卡</option>
+              <option value="未打卡">未打卡</option>
+            </select>
+          </label>
         </div>
         <div class="tipout-employee-detail-metrics" aria-label="员工对账金额概览">
           <div><span>班次</span><strong id="employeeDetailShifts">0</strong></div>
@@ -22,11 +30,14 @@
           <div><span>分配获得</span><strong id="employeeDetailReceived" class="tip-amount--receive">+$0.00</strong></div>
           <div><span>实际获得</span><strong id="employeeDetailAfter">$0.00</strong></div>
         </div>
-        <div class="tipout-table-wrap">
+        <div id="employeeDetailTable" class="tipout-table-wrap">
           <table class="data-table tipout-summary-table tipout-employee-detail-table">
             <thead><tr><th>日期</th><th>考勤</th><th>班次 / 工时</th><th>分配前</th><th>扣除</th><th>分配获得</th><th>实际获得</th><th>分配状态</th></tr></thead>
             <tbody id="employeeDetailRows" aria-label="员工逐日对账明细"></tbody>
           </table>
+        </div>
+        <div id="employeeDetailFilteredEmpty" class="tipout-empty-state tipout-filtered-empty" hidden>
+          <strong>当前筛选条件下暂无对账明细</strong>
         </div>
         <p class="tipout-readonly-note">明细页为只读核对视图，金额来自小费分配汇总的同一份逐日结果，不在此页面重新计算或修改。</p>
       </div>

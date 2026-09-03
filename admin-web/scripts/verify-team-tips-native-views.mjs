@@ -121,9 +121,13 @@ if (!pendingValueHelper) {
 
 const employeeDetailTemplate = fs.readFileSync("src/team/tips/templates/employee-reconciliation.html", "utf8");
 const employeeDetailProgram = fs.readFileSync("src/team/tips/programs/employee-reconciliation.js.txt", "utf8");
-for (const token of ["employeeDetailStartDate", "employeeDetailEndDate", "employeeDetailRole"]) {
+for (const token of ["employeeDetailStartDate", "employeeDetailEndDate", "employeeDetailRole", "employeeDetailAttendanceFilter", "employeeDetailFilteredEmpty"]) {
   if (!employeeDetailTemplate.includes(token)) failures.push(`employee reconciliation detail: missing ${token}`);
 }
+for (const option of ["全部状态", "已打卡", "未打卡"]) {
+  if (!employeeDetailTemplate.includes(`value="${option}"`)) failures.push(`employee reconciliation detail: missing attendance option ${option}`);
+}
+if (employeeDetailTemplate.includes("无需打卡")) failures.push("employee reconciliation detail: unsupported attendance state returned");
 for (const token of ["employeeDetailStore", "employeeDetailChipName", "employeeDetailNotice"]) {
   if (employeeDetailTemplate.includes(token)) failures.push(`employee reconciliation detail: removed region returned ${token}`);
 }
