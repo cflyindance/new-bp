@@ -2561,8 +2561,7 @@ select.form-control {
 }
 
 .tipout-page-employee-reconciliation-detail .tipout-page-heading--with-back {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  display: flex;
   align-items: center;
   gap: 16px;
 }
@@ -2572,50 +2571,46 @@ select.form-control {
   border-radius: 16px;
 }
 
-.tipout-page-employee-reconciliation-detail .tipout-employee-chip {
+.tipout-page-employee-reconciliation-detail .tipout-employee-detail-title {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 10px;
-  min-width: 174px;
-  padding: 9px 12px;
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-md);
-  background: #ffffff;
 }
 
-.tipout-page-employee-reconciliation-detail .tipout-employee-chip > span:last-child {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.tipout-page-employee-reconciliation-detail .tipout-employee-chip strong {
-  overflow: hidden;
+.tipout-page-employee-reconciliation-detail .tipout-role-tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--info-bg);
+  color: var(--info);
   font-size: 12px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-weight: 500;
 }
 
-.tipout-page-employee-reconciliation-detail .tipout-employee-chip small {
-  color: var(--text-tertiary);
-  font-size: 11px;
-}
-
-.tipout-page-employee-reconciliation-detail .tipout-detail-context {
+.tipout-page-employee-reconciliation-detail .tipout-detail-date-range {
   display: flex;
+  align-items: center;
   flex-wrap: wrap;
   gap: 8px;
   margin: 0 0 14px;
 }
 
-.tipout-page-employee-reconciliation-detail .tipout-detail-context span {
+.tipout-page-employee-reconciliation-detail .tipout-detail-date-range input {
+  min-height: 36px;
   padding: 7px 11px;
   border: 1px solid var(--border-light);
-  border-radius: 999px;
+  border-radius: 16px;
   background: #ffffff;
   color: var(--text-secondary);
   font-size: 12px;
+}
+
+.tipout-page-employee-reconciliation-detail .tipout-detail-date-range input:focus {
+  border-color: var(--primary);
+  outline: 2px solid color-mix(in srgb, var(--primary) 18%, transparent);
 }
 
 .tipout-page-employee-reconciliation-detail .tipout-employee-detail-metrics {
@@ -2645,32 +2640,6 @@ select.form-control {
   font-size: 16px;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.tipout-page-employee-reconciliation-detail .tipout-employee-detail-notice {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-top: 14px;
-  padding: 12px 16px;
-  border: 1px solid;
-  border-radius: var(--radius-md);
-}
-
-.tipout-page-employee-reconciliation-detail .tipout-employee-detail-notice.is-complete {
-  border-color: #c9e8d8;
-  background: var(--success-bg);
-}
-.tipout-page-employee-reconciliation-detail .tipout-employee-detail-notice.is-pending {
-  border-color: #ead9b7;
-  background: var(--warning-bg);
-}
-.tipout-page-employee-reconciliation-detail .tipout-employee-detail-notice strong { font-size: 13px; }
-.tipout-page-employee-reconciliation-detail .tipout-employee-detail-notice p {
-  margin: 3px 0 0;
-  color: var(--text-secondary);
-  font-size: 12px;
 }
 
 .tipout-page-employee-reconciliation-detail .tipout-employee-status,
@@ -2728,11 +2697,10 @@ select.form-control {
   .tipout-page-summary .tipout-employee-table { min-width: 1120px; }
   .tipout-page-employee-reconciliation-detail .tipout-page-heading--with-back { display: flex; align-items: stretch; flex-direction: column; }
   .tipout-page-employee-reconciliation-detail .tipout-page-heading--with-back > .btn { align-self: flex-start; }
-  .tipout-page-employee-reconciliation-detail .tipout-employee-chip { width: max-content; max-width: 100%; }
+  .tipout-page-employee-reconciliation-detail .tipout-detail-date-range input { flex: 1 1 150px; }
   .tipout-page-employee-reconciliation-detail .tipout-employee-detail-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .tipout-page-employee-reconciliation-detail .tipout-employee-detail-metrics > div { border-bottom: 1px solid var(--border-light); }
   .tipout-page-employee-reconciliation-detail .tipout-employee-detail-metrics > div:nth-child(2n) { border-right: 0; }
   .tipout-page-employee-reconciliation-detail .tipout-employee-detail-metrics > div:nth-last-child(-n + 2) { border-bottom: 0; }
-  .tipout-page-employee-reconciliation-detail .tipout-employee-detail-notice { align-items: flex-start; flex-direction: column; }
 }
 

@@ -7,11 +7,30 @@ function detailNumber(value) { return Number(value) || 0; }
       var number = detailNumber(value);
       return (Math.round(number * 100) / 100).toString();
     }
-    function detailInitials(name) {
-      var parts = String(name || '').trim().split(/\s+/).filter(Boolean);
-      if (!parts.length) return '—';
-      if (parts.length === 1) return Array.from(parts[0]).slice(0, 2).join('').toUpperCase();
-      return (Array.from(parts[0])[0] + Array.from(parts[parts.length - 1])[0]).toUpperCase();
+    function employeeDetailRoleLabel(role) {
+      return String(role || '').trim() || '未设置角色';
+    }
+    function normalizeEmployeeDetailRange(start, end, changedSide) {
+      if (start <= end) return { start: start, end: end };
+      return changedSide === 'end'
+        ? { start: end, end: end }
+        : { start: start, end: start };
+    }
+    function filterEmployeeDetailRows(rows, start, end) {
+      return (rows || []).filter(function(row) {
+        return row.dateKey >= start && row.dateKey <= end;
+      });
+    }
+    function summarizeEmployeeDetailRows(rows) {
+      return (rows || []).reduce(function(total, row) {
+        total.shifts += detailNumber(row.hours) > 0 ? 1 : 0;
+        total.hours += detailNumber(row.hours);
+        total.before += detailNumber(row.before);
+        total.deducted += detailNumber(row.deducted);
+        total.received += detailNumber(row.received);
+        total.after += detailNumber(row.after);
+        return total;
+      }, { shifts: 0, hours: 0, before: 0, deducted: 0, received: 0, after: 0 });
     }
     function detailDateLabel(dateKey) {
       var parts = String(dateKey || '').split('-');
@@ -85,39 +104,41 @@ function detailNumber(value) { return Number(value) || 0; }
       });
     }
 
-    function renderEmployeeReconciliationDetail(snapshot) {
-      var summary = snapshot.summary || {};
-      setDetailText('employeeDetailName', snapshot.name || '—');
-      setDetailText('employeeDetailChipName', snapshot.name || '—');
-      setDetailText('employeeDetailAvatar', detailInitials(snapshot.name));
-      setDetailText('employeeDetailRole', snapshot.role || '—');
-      setDetailText('employeeDetailStore', snapshot.store || '未选择门店');
-      setDetailText('employeeDetailRange', snapshot.dateStart.replace(/-/g, '/') + ' ～ ' + snapshot.dateEnd.replace(/-/g, '/'));
+    function renderEmployeeDetailSummary(summary) {
+      summary = summary || {};
       setDetailText('employeeDetailShifts', String(detailNumber(summary.shifts)));
       setDetailText('employeeDetailHours', detailHours(summary.hours) + ' h');
       setDetailText('employeeDetailBefore', detailMoney(summary.before));
       setDetailText('employeeDetailDeducted', '-' + detailMoney(summary.deducted));
       setDetailText('employeeDetailReceived', '+' + detailMoney(summary.received));
       setDetailText('employeeDetailAfter', detailMoney(summary.after));
+    }
 
-      var missingAttendance = detailNumber(summary.missingAttendanceDays);
-      var pendingAllocation = detailNumber(summary.pendingAllocationDays);
-      var notice = document.getElementById('employeeDetailNotice');
-      var status = document.getElementById('employeeDetailStatus');
-      status.textContent = '● ' + snapshot.status;
-      status.className = 'tipout-employee-status ' + (snapshot.status === '已完成' ? 'is-complete' : 'is-pending');
-      notice.className = 'tipout-employee-detail-notice ' + (snapshot.status === '已完成' ? 'is-complete' : 'is-pending');
-      if (snapshot.status === '已完成') {
-        setDetailText('employeeDetailNoticeTitle', '当前范围对账记录完整');
-        setDetailText('employeeDetailNoticeText', '所含参与日期均已分配，需要考勤的记录也已完成打卡。');
-      } else {
-        var issueParts = [];
-        if (missingAttendance) issueParts.push(missingAttendance + ' 天考勤数据');
-        if (pendingAllocation) issueParts.push(pendingAllocation + ' 天小费分配');
-        setDetailText('employeeDetailNoticeTitle', '有 ' + (issueParts.length ? issueParts.join('、') : '部分对账记录') + '待补录');
-        setDetailText('employeeDetailNoticeText', '状态仅用于核对提示，不反向修改现有分配结果。');
-      }
-      renderEmployeeDetailRows(snapshot.dailyRows);
+    function renderEmployeeDetailRange(snapshot, changedSide) {
+      var startInput = document.getElementById('employeeDetailStartDate');
+      var endInput = document.getElementById('employeeDetailEndDate');
+      var range = normalizeEmployeeDetailRange(startInput.value, endInput.value, changedSide);
+      startInput.value = range.start;
+      endInput.value = range.end;
+      var rows = filterEmployeeDetailRows(snapshot.dailyRows, range.start, range.end);
+      renderEmployeeDetailSummary(summarizeEmployeeDetailRows(rows));
+      renderEmployeeDetailRows(rows);
+    }
+
+    function renderEmployeeReconciliationDetail(snapshot) {
+      setDetailText('employeeDetailName', snapshot.name || '—');
+      setDetailText('employeeDetailRole', employeeDetailRoleLabel(snapshot.role));
+      var startInput = document.getElementById('employeeDetailStartDate');
+      var endInput = document.getElementById('employeeDetailEndDate');
+      startInput.min = snapshot.dateStart;
+      startInput.max = snapshot.dateEnd;
+      endInput.min = snapshot.dateStart;
+      endInput.max = snapshot.dateEnd;
+      startInput.value = snapshot.dateStart;
+      endInput.value = snapshot.dateEnd;
+      startInput.addEventListener('change', function() { renderEmployeeDetailRange(snapshot, 'start'); });
+      endInput.addEventListener('change', function() { renderEmployeeDetailRange(snapshot, 'end'); });
+      renderEmployeeDetailRange(snapshot, 'start');
     }
 
     function showEmployeeDetailEmpty() {

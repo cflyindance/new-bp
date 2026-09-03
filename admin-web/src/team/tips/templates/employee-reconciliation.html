@@ -3,17 +3,16 @@
     <section class="tipout-page-section" aria-labelledby="employeeDetailName">
       <div class="tipout-page-heading tipout-page-heading--with-back">
         <button type="button" class="btn" data-native-onclick="returnToEmployeeReconciliation()">← 返回员工对账</button>
-        <div>
+        <div class="tipout-employee-detail-title">
           <h1 id="employeeDetailName">—</h1>
-        </div>
-        <div class="tipout-employee-chip">
-          <span class="tipout-employee-avatar" id="employeeDetailAvatar" aria-hidden="true">—</span>
-          <span><strong id="employeeDetailChipName">—</strong><small id="employeeDetailRole">—</small></span>
+          <span id="employeeDetailRole" class="tipout-role-tag">未设置角色</span>
         </div>
       </div>
       <div id="employeeDetailContent">
-        <div class="tipout-detail-context" aria-label="对账范围">
-          <span id="employeeDetailRange">—</span><span id="employeeDetailStore">—</span>
+        <div class="tipout-detail-date-range" aria-label="对账日期范围">
+          <input id="employeeDetailStartDate" type="date" aria-label="开始日期">
+          <span aria-hidden="true">～</span>
+          <input id="employeeDetailEndDate" type="date" aria-label="结束日期">
         </div>
         <div class="tipout-employee-detail-metrics" aria-label="员工对账金额概览">
           <div><span>班次</span><strong id="employeeDetailShifts">0</strong></div>
@@ -22,10 +21,6 @@
           <div><span>扣除</span><strong id="employeeDetailDeducted" class="tip-amount--deduct">-$0.00</strong></div>
           <div><span>分配获得</span><strong id="employeeDetailReceived" class="tip-amount--receive">+$0.00</strong></div>
           <div><span>实际获得</span><strong id="employeeDetailAfter">$0.00</strong></div>
-        </div>
-        <div id="employeeDetailNotice" class="tipout-employee-detail-notice" role="status">
-          <div><strong id="employeeDetailNoticeTitle">—</strong><p id="employeeDetailNoticeText">—</p></div>
-          <span id="employeeDetailStatus" class="tipout-employee-status">—</span>
         </div>
         <div class="tipout-table-wrap">
           <table class="data-table tipout-summary-table tipout-employee-detail-table">
