@@ -22,6 +22,9 @@ for (const token of [
 for (const token of ["exportCompactPayrollDetailCSV", "additional_clock_pairs", "payrollEmailExportSnapshot", "_Compact"]) {
   if (!exporter.includes(token)) failures.push(`export missing ${token}`);
 }
+if ((exporter.match(/document\.defaultView && document\.defaultView\.document/g) || []).length !== 2) {
+  failures.push("PDF libraries must load through the host document when Payroll runs inside Shadow DOM");
+}
 
 for (const token of ["size:A4 portrait", "width:210mm", "min-height:297mm", "padding:8mm", "break-after:auto", "*.995"]) {
   if (!pages.includes(token)) failures.push(`A4 builder missing ${token}`);

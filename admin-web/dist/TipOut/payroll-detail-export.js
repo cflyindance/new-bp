@@ -435,7 +435,10 @@ function loadHtml2CanvasLib(callback) {
 
     };
 
-    document.head.appendChild(s);
+    const hostDocument = document.defaultView && document.defaultView.document
+      ? document.defaultView.document
+      : document;
+    hostDocument.head.appendChild(s);
 
   }
 
@@ -509,7 +512,10 @@ function loadJsPDFLib(callback) {
 
     };
 
-    document.head.appendChild(s);
+    const hostDocument = document.defaultView && document.defaultView.document
+      ? document.defaultView.document
+      : document;
+    hostDocument.head.appendChild(s);
 
   }
 
