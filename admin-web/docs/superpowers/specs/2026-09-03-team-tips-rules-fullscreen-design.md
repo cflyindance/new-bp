@@ -43,7 +43,7 @@ Shadow DOM 页面不再创建第二个主滚动区；规则内容、编辑器内
 2. 规则列表进入新增或编辑器时，路由切换到 `/team/tips/rules/editor`，全屏不中断。
 3. 规则编辑器返回规则列表时仍保持全屏。
 4. 规则列表“返回小费分配汇总”按 History 契约退出全屏。
-5. Esc 监听绑定在 `window` bubble 阶段，让 Shadow DOM 内部 handler 先处理。事件到达 window 时若已 `defaultPrevented` 则不处理；否则查询 ShadowRoot 内可见的 native dialog、modal、drawer、dropdown，并只关闭最上层，随后调用 `preventDefault()` 与 `stopPropagation()`，确保一次 Esc 只消费一层。若 ShadowRoot 的 activeElement 是原生 `select`、可编辑组合框或其他由浏览器管理的展开控件，本次 Esc 不执行页面退出。编辑器无弹层时第一次 Esc 等同现有“取消”语义，返回规则列表且不新增未保存确认；规则列表无弹层时 Esc 返回汇总。连续 Esc 依次关闭最上层弹层、退出编辑器、退出全屏。
+5. Esc 使用同一控制器的 capture + bubble 两阶段协议。window capture 阶段只记录按键发生前是否存在可见 native dialog、modal、drawer、dropdown（包括 `.tipout-rule-more` 操作菜单）及 activeElement，不修改 UI；Shadow DOM 内部 handler 随后优先处理。window bubble 阶段若事件已 `defaultPrevented`，或 capture 快照显示按键前存在打开层，则本次不执行页面退出并调用 `preventDefault()`，从而兼容现有“关闭菜单但不 stopPropagation”的 handler，避免一次 Esc 双动作。若快照层仍可见，则宿主只关闭快照中最上层并调用 `preventDefault()` 与 `stopPropagation()`。若 capture 时 activeElement 是原生 `select`、可编辑组合框或其他由浏览器管理的展开控件，本次 Esc 不执行页面退出。编辑器无弹层时第一次 Esc 等同现有“取消”语义，返回规则列表且不新增未保存确认；规则列表无弹层时 Esc 返回汇总。连续 Esc 依次关闭最上层弹层、退出编辑器、退出全屏。
 
 ## 组件边界
 
@@ -78,6 +78,6 @@ Shadow DOM 页面不再创建第二个主滚动区；规则内容、编辑器内
 - 集成测试：有滚动的汇总 → 规则列表滚动 → 编辑器 → Back/返回列表恢复规则滚动 → 返回汇总恢复汇总滚动；断言 URL、宿主类/属性、header/sidebar 可见性和 scrollTop 容差不超过 2px。
 - 深链测试：直接进入规则列表/编辑器、刷新后仍全屏；无父状态的返回使用 replace fallback。
 - 历史测试：Back/Forward 在汇总、规则和编辑器间切换，状态始终与路由一致且无重复退出记录。
-- Esc 测试：无弹层、modal、drawer、dropdown、编辑器未保存字段、初始化失败；监听每次只触发一次。
+- Esc 测试：无弹层、modal、drawer、dropdown、`.tipout-rule-more` 操作菜单、编辑器未保存字段、初始化失败；断言一次按键只关闭一层且监听每次只触发一次。
 - 生命周期测试：连续 mount/destroy、离开 `/team/tips/*`；断言无残留全屏 class/attribute、滚动锁或 legacy iframe 标记。
 - 滚动测试：规则页和编辑器由唯一宿主滚动；modal/drawer 打开时主区锁定且弹层内部可滚动；safe-area 下无横向溢出。
