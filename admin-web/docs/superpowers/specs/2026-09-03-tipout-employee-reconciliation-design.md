@@ -254,9 +254,10 @@ tipoutSummaryUiState
 
 主页面初始化优先级固定为：
 
-1. `history.state.tipoutSummaryUiState.activeView` 是 `date` 或 `employee` 时使用历史状态；
-2. 否则，URL 查询参数 `view=employee` 时使用员工对账视图；
-3. 其余情况（包含未知 `view` 值和旧历史状态）均使用 `date`。
+1. 存在 `history.state.tipoutSummaryUiState` 且 `activeView` 是 `date` 或 `employee` 时，使用该历史视图；
+2. 存在旧版 `tipoutSummaryUiState` 但没有有效 `activeView` 时，继续恢复其中的筛选、滚动位置和 `returnDate`，仅将视图默认成 `date`；
+3. 不存在汇总历史状态且 URL 查询参数为 `view=employee` 时，使用员工对账视图；
+4. 其余情况（包含未知 `view` 值）均使用 `date`。
 
 有效历史状态优先于 URL 查询参数，避免从详情页返回时被兜底 URL 覆盖。用户在主页面点击切换仅更新内存状态和当前 history entry，不 `pushState`，也不改写 URL。
 
@@ -280,6 +281,18 @@ dateStart
 dateEnd
 createdAt
 dailyRows[]
+  dateKey
+  allocated
+  requiresAttendance
+  employeeId
+  name
+  role
+  before
+  deducted
+  received
+  after
+  hours
+  clockStatus
 summary
 status
 ```
