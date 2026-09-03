@@ -115,7 +115,7 @@
 
 - 员工：头像缩写与姓名；实现阶段可先沿用文本姓名，视觉样式不依赖头像资源。
 - 角色：员工当前角色。
-- 班次：范围内有效日记录数量；当前模型一名员工一天最多计一个班次。
+- 班次：范围内 `hours > 0` 的参与日记录数量；当前模型一名员工一天最多计一个班次。
 - 工时：范围内日记录 `hours` 合计。
 - 分配前：范围内 `before` 合计。
 - 扣除：范围内 `deducted` 合计，以负向红色展示。
@@ -124,7 +124,7 @@
 - 状态：`已完成` 或 `待补录`。
 - 操作：右箭头；整行也支持点击、Enter、空格进入明细。
 
-列表按当前员工筛选结果顺序稳定展示，不在本期新增排序控件。
+列表按当前员工筛选结果顺序稳定展示，不在本期新增排序控件。只有在筛选范围内至少存在一条“参与日记录”的员工才进入列表；参与日记录的精确定义见 6.2。
 
 ### 5.5 员工逐日对账明细页
 
@@ -156,7 +156,9 @@ DailyDataset[]
   dateKey
   date
   allocated
+  requiresAttendance
   employeeResults[]
+    employeeId
     name
     role
     before
@@ -168,13 +170,27 @@ DailyDataset[]
   total
 ```
 
-`employeeResults` 必须继续来自现有 `getDailyEmployeeResults(dateKey)` 和 `genDailyTip` 计算链。为支持分组，只在现有结果上补充员工姓名与角色，不改变金额字段。
+`employeeResults` 必须继续来自现有 `getDailyEmployeeResults(dateKey)` 和 `genDailyTip` 计算链。为支持分组，只在现有结果上补充 `employeeId`、姓名、角色和展示态元数据，不改变金额字段，也不改变 `TipAllocation` 的输入、按姓名查找或任何既有计算键。
+
+员工身份采用以下稳定规则：
+
+1. 来自员工名册的记录使用 `roster:<roster.id>`；名册已有的持久 `id` 原样保留，不使用姓名或角色派生身份。
+2. 页面内置的兜底员工必须声明固定 ID，例如 `fallback:maria-garcia`，不得在渲染时随机生成。
+3. `employeeId` 从筛选后的员工模型一路附加到日结果、聚合行、详情 URL、导航快照和历史焦点；姓名与角色只用于展示。
+4. 两名同名同角色员工只要 `employeeId` 不同，就必须形成两条独立聚合记录。既有按姓名计算链的限制不在本期重构，新增对账层不得再把两人的既有结果二次合并。
 
 `total` 继续使用 `TipOutSummaryUi.summarizeDailyResults(employeeResults)`。
 
 ### 6.2 员工聚合
 
-按员工姓名与角色组成稳定键，对 `DailyDataset.employeeResults` 分组：
+按 `employeeId` 对 `DailyDataset.employeeResults` 分组。定义“参与日记录”为以下条件任一成立的日结果：
+
+- `before`、`deducted`、`received`、`after` 任一数值不为 0；
+- `hours > 0`。
+
+不满足上述条件的全零日结果不进入员工聚合、班次或状态判定；员工在整个筛选范围内均无参与日记录时不展示该员工行。员工明细也只展示参与日记录，因此列表与明细采用同一口径。
+
+聚合公式：
 
 ```text
 before   = Σ daily.before
@@ -189,14 +205,20 @@ shifts   = count(daily.hours > 0)
 
 ### 6.3 状态判定
 
-员工聚合范围内：
+先根据当前门店一次性计算 `requiresAttendance`，并写入同一天的公共日数据集：
 
-- 所有日记录均已分配，且所有需要考勤的参与记录都不是“未打卡”时，为 `已完成`；
-- 存在未分配日记录或缺失考勤时，为 `待补录`。
+1. 读取 `ruleData.getRulesForStore(store)`，仅保留现有计算使用的 `legacy_pool` 规则；
+2. 没有匹配规则或规则模块不可用时，`requiresAttendance = true`，与当前默认附加打卡状态的降级行为一致；
+3. 存在多条匹配规则时，只要任一规则 `clockin !== 'noclock'`，`requiresAttendance = true`；仅当全部匹配规则都是 `noclock` 时为 `false`。
+
+员工聚合范围内只检查参与日记录：
+
+- 所有参与日记录对应日期均已分配，且所有 `requiresAttendance = true` 的参与日记录都不是“未打卡”时，为 `已完成`；
+- 任一参与日记录对应日期未分配，或需要考勤的参与日记录为“未打卡”时，为 `待补录`。
 
 状态是只读提示，不写入 localStorage，也不驱动分配逻辑。较长日期范围可能因任一异常日而显示“待补录”，这是范围聚合状态的预期行为。
 
-如果规则配置为不打卡，则考勤完整性不作为待补录条件；分配状态仍参与判定。
+如果当前门店的全部匹配规则均配置为不打卡，则考勤完整性不作为待补录条件；分配状态仍参与判定。零参与员工已在聚合前排除，不产生虚假的“已完成”记录。
 
 ### 6.4 金额一致性约束
 
@@ -227,18 +249,42 @@ tipoutSummaryUiState
   activeView: "date" | "employee"
   scrollY
   returnDate
-  returnEmployee
+  returnEmployeeId
 ```
 
-旧历史状态没有 `activeView` 时按 `date` 处理，保证向后兼容。
+主页面初始化优先级固定为：
+
+1. `history.state.tipoutSummaryUiState.activeView` 是 `date` 或 `employee` 时使用历史状态；
+2. 否则，URL 查询参数 `view=employee` 时使用员工对账视图；
+3. 其余情况（包含未知 `view` 值和旧历史状态）均使用 `date`。
+
+有效历史状态优先于 URL 查询参数，避免从详情页返回时被兜底 URL 覆盖。用户在主页面点击切换仅更新内存状态和当前 history entry，不 `pushState`，也不改写 URL。
 
 ### 7.2 进入员工明细
 
 点击员工行时：
 
-1. 把当前筛选、`activeView = employee`、滚动位置和员工键写入当前 history entry；
-2. 将该员工的只读逐日结果与汇总上下文写入带版本号的 `sessionStorage` 导航快照；
-3. 跳转到 `employee-reconciliation-detail.html?employee=<encoded>&from=summary&return=history`。
+1. 把当前筛选、`activeView = employee`、滚动位置和 `returnEmployeeId` 写入当前 history entry；
+2. 将该员工的只读逐日结果与汇总上下文写入 `sessionStorage` 键 `tipout-employee-reconciliation-detail-v1`；
+3. 跳转到 `employee-reconciliation-detail.html?employeeId=<encoded>&store=<encoded>&start=<YYYY-MM-DD>&end=<YYYY-MM-DD>&from=summary&return=history`。
+
+导航快照结构固定为：
+
+```text
+version: 1
+employeeId
+name
+role
+store
+dateStart
+dateEnd
+createdAt
+dailyRows[]
+summary
+status
+```
+
+读取时必须校验：`version === 1`；必填标量类型正确；`dailyRows` 为数组；快照中的 `employeeId`、门店、开始日期和结束日期与 URL 上下文完全一致。任一校验失败都视为无效快照，不使用部分数据，也不尝试重新计算。
 
 导航快照仅服务同一浏览器标签页的详情展示，不是业务持久化数据；不得写入 `localStorage`。
 
@@ -246,13 +292,13 @@ tipoutSummaryUiState
 
 - `from=summary&return=history` 且存在历史记录时调用 `history.back()`；
 - 否则返回 `index.html?view=employee`；
-- 主页面在 `pageshow` 中恢复筛选、员工视图、滚动位置，并聚焦原员工行。
+- 主页面在 `pageshow` 中恢复筛选、员工视图、滚动位置，并通过 `[data-employee-id]` 聚焦 `returnEmployeeId` 对应的原员工行。
 
 ## 8. 空状态与降级
 
 - 当前筛选无员工：员工面板展示“当前筛选范围暂无员工对账数据”。
 - 日期范围无效：沿用现有空数据行为，员工面板不抛异常。
-- 员工详情快照缺失、版本不匹配或员工键不一致：展示只读空状态并保留返回入口。
+- 员工详情快照缺失、结构错误、版本不匹配，或员工、门店、日期上下文不一致：展示只读空状态并保留返回入口。
 - 规则或计算管线不可用：继续使用现有 `genDailyTip` 降级路径。
 - 单条数值缺失或非法：聚合时按现有 `Number(value) || 0` 规则处理。
 - 员工名称输出必须进行 HTML 转义，URL 参数必须使用 `encodeURIComponent`。
@@ -305,15 +351,16 @@ tipoutSummaryUiState
 
 ### 11.1 自动化测试
 
-1. 员工跨日期聚合：金额、工时、班次和顺序正确。
+1. 员工跨日期聚合：金额、工时、班次和顺序正确；同名同角色但 ID 不同的员工不合并。
 2. 金额守恒：员工聚合合计等于日汇总合计。
-3. 状态：已分配且考勤完整、不打卡规则、未分配、未打卡四类场景。
-4. 历史状态：旧状态默认日期视图，新状态可恢复员工视图和焦点。
-5. 详情 URL：员工、门店、日期范围正确编码。
-6. 详情快照：有效、缺失、版本不匹配和员工不匹配。
-7. HTML 契约：切换 tab、两个 panel、员工 tbody、空状态与详情页关键节点存在。
-8. 现有 `verify:tipout-interaction-refresh`、规则全屏、工时和个人销售回归继续通过。
-9. TypeScript 项目检查继续通过。
+3. 参与口径：全零日记录不聚合，零参与员工不展示，正金额或正工时均视为参与。
+4. 状态：已分配且考勤完整、全部不打卡规则、未分配、未打卡、无规则以及多规则混合打卡六类场景。
+5. 历史状态：有效历史状态优先于查询参数，旧状态默认日期视图，`view=employee` 仅作为无有效历史状态时的兜底，新状态可恢复员工视图和焦点。
+6. 详情 URL：员工 ID、门店、日期范围正确编码。
+7. 详情快照：有效、缺失、结构错误、版本不匹配，以及员工/门店/日期不匹配。
+8. HTML 契约：切换 tab、两个 panel、员工 tbody、空状态与详情页关键节点存在。
+9. 现有 `verify:tipout-interaction-refresh`、规则全屏、工时和个人销售回归继续通过。
+10. TypeScript 项目检查继续通过。
 
 ### 11.2 浏览器验收
 
