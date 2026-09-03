@@ -10,6 +10,13 @@ export interface PayrollPageHandle {
 
 const mountedPages = new WeakMap<HTMLElement, PayrollPageHandle>();
 
+function canScroll(element: HTMLElement, deltaY: number): boolean {
+  if (!["auto", "scroll"].includes(window.getComputedStyle(element).overflowY)) return false;
+  if (element.scrollHeight <= element.clientHeight) return false;
+  if (deltaY < 0) return element.scrollTop > 0;
+  return element.scrollTop + element.clientHeight < element.scrollHeight;
+}
+
 export function mountPayrollPage(
   container: HTMLElement,
   context: PayrollPageContext = createPayrollPageContext(),
@@ -28,6 +35,10 @@ export function mountPayrollPage(
     const isModalInteraction = eventPath.some(
       (node) => node instanceof HTMLElement && node.classList.contains("modal-overlay") && node.classList.contains("show"),
     );
+    const localScroller = eventPath.find(
+      (node): node is HTMLElement => node instanceof HTMLElement && canScroll(node, event.deltaY),
+    );
+    if (localScroller && localScroller !== scrollOwner) return;
     if (isModalInteraction) return;
     const before = scrollOwner.scrollTop;
     scrollOwner.scrollTop += event.deltaY;
