@@ -89,5 +89,14 @@ export function mountLegacyTipsRuntime(shadow: ShadowRoot, root: HTMLElement, ro
     root.dispatchEvent(new Event("DOMContentLoaded"));
   } catch (cause) { observer.disconnect(); controller.abort(); throw new Error("Native tips runtime failed to initialize",{cause}); }
   ["click","change","input","submit","mouseover","mouseout"].forEach((type)=>on(root,type,(event:Event)=>{const el=(event.target as Element | null)?.closest<HTMLElement>(`[data-native-on${type}]`);if(!el||!root.contains(el))return;if(type === "click" && el.closest("a"))event.preventDefault();api.runHandler(el.getAttribute(`data-native-on${type}`)??"",event,el);},true));
+  on(root,"click",(event:Event)=>{
+    const anchor=(event.target as Element|null)?.closest<HTMLAnchorElement>("a[href]");
+    if(!anchor||!root.contains(anchor)||anchor.hasAttribute("data-native-onclick"))return;
+    const mapped=rewriteLegacyTipsUrl(anchor.getAttribute("href")??"");
+    if(!mapped)return;
+    event.preventDefault();
+    event.stopPropagation();
+    context.navigate(mapped);
+  },true);
   return { destroy(){observers.forEach((item)=>item.disconnect());observers.clear();controller.abort();cleanups.forEach((f)=>f());cleanups.clear();timers.forEach(clearTimeout);timers.clear();intervals.forEach(clearInterval);intervals.clear();animationFrames.forEach(cancelAnimationFrame);animationFrames.clear();root.querySelectorAll(".show").forEach((el)=>el.classList.remove("show"));} };
 }
