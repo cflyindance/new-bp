@@ -68,6 +68,10 @@ for (const file of ["dist/TipOut/index.html", "src/team/tips/templates/distribut
   const ruleIndex = content.indexOf(">新建/查看规则</button>");
   if (cancelIndex < 0 || ruleIndex < 0 || cancelIndex > ruleIndex) failures.push(`${file}: cancel allocation must precede rule entry in heading actions`);
   if (!content.includes("doCancelAllocate()")) failures.push(`${file}: cancel allocation button handler missing`);
+  const headingIndex = content.indexOf("tipout-page-heading");
+  const filterIndex = content.indexOf("filter-surface tipout-compact-toolbar");
+  const metricsIndex = content.indexOf("tipout-metric-strip");
+  if (headingIndex < 0 || filterIndex < headingIndex || metricsIndex < filterIndex) failures.push(`${file}: filters must follow heading and precede metrics`);
 }
 if (!fs.readFileSync("src/team/tips/programs/distribution.js.txt", "utf8").includes("function doCancelAllocate()")) failures.push("distribution program: cancel allocation function missing");
 if (failures.length) { failures.forEach((failure) => console.error(failure)); process.exit(1); }
