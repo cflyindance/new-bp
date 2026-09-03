@@ -59,5 +59,16 @@ for (const file of ["dist/TipOut/rule-add.html", "src/team/tips/templates/rule-e
   if (content.includes("保存规则")) failures.push(`${file}: removed heading save button returned`);
   if (!content.includes("submitRule()") || !content.includes(">提交</button>")) failures.push(`${file}: bottom submit action missing`);
 }
+for (const file of ["dist/TipOut/index.html", "src/team/tips/templates/distribution.html"]) {
+  const content = fs.readFileSync(file, "utf8");
+  for (const token of ["pendingDateCount", "当前范围有", "待分配数量只按日期、门店与当前分配记录计算。", "tipout-inline-notice tipout-inline-notice--warning"]) {
+    if (content.includes(token)) failures.push(`${file}: removed pending summary region returned ${token}`);
+  }
+  const cancelIndex = content.indexOf(">取消分配</button>");
+  const ruleIndex = content.indexOf(">新建/查看规则</button>");
+  if (cancelIndex < 0 || ruleIndex < 0 || cancelIndex > ruleIndex) failures.push(`${file}: cancel allocation must precede rule entry in heading actions`);
+  if (!content.includes("doCancelAllocate()")) failures.push(`${file}: cancel allocation button handler missing`);
+}
+if (!fs.readFileSync("src/team/tips/programs/distribution.js.txt", "utf8").includes("function doCancelAllocate()")) failures.push("distribution program: cancel allocation function missing");
 if (failures.length) { failures.forEach((failure) => console.error(failure)); process.exit(1); }
 console.log("Team tips native view verification passed.");

@@ -173,6 +173,7 @@
               <h1 id="summaryTitle">小费分配汇总</h1>
             </div>
             <div class="tipout-heading-actions">
+              <button type="button" class="btn btn-lg" onclick="doCancelAllocate()">取消分配</button>
               <button id="summaryRuleEntryBtn" type="button" class="btn btn-lg" onclick="openSummaryRuleEntry()">新建/查看规则</button>
               <div class="export-dropdown">
                 <button type="button" class="btn btn-lg" onclick="toggleExportMenu()" aria-haspopup="menu">导出结果</button>
@@ -200,14 +201,6 @@
             <div><span>扣除</span><strong id="summaryDeducted">$0.00</strong></div>
             <div><span>分得</span><strong id="summaryReceived">$0.00</strong></div>
             <div class="is-primary"><span>分配后</span><strong id="summaryAfter">$0.00</strong></div>
-          </div>
-
-          <div class="tipout-inline-notice tipout-inline-notice--warning" role="status">
-            <div>
-              <strong>当前范围有 <span id="pendingDateCount">0</span> 天待分配</strong>
-              <p>待分配数量只按日期、门店与当前分配记录计算。</p>
-            </div>
-            <button type="button" class="btn" onclick="doCancelAllocate()">取消分配</button>
           </div>
 
           <!-- Filters：移动端默认折叠 -->
@@ -758,9 +751,6 @@
       document.getElementById('summaryDeducted').textContent = money(totals.deducted);
       document.getElementById('summaryReceived').textContent = money(totals.received);
       document.getElementById('summaryAfter').textContent = money(totals.after);
-      document.getElementById('pendingDateCount').textContent = String(
-        TipOutSummaryUi.countPendingDates(dailyRows.map(function(row) { return row.dateKey; }), Array.from(allocatedDates))
-      );
     }
 
     function renderDailySummaryList() {

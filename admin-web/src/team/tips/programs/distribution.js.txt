@@ -434,9 +434,6 @@ var ALLOC_KEY = 'tipout_allocated';
       document.getElementById('summaryDeducted').textContent = money(totals.deducted);
       document.getElementById('summaryReceived').textContent = money(totals.received);
       document.getElementById('summaryAfter').textContent = money(totals.after);
-      document.getElementById('pendingDateCount').textContent = String(
-        TipOutSummaryUi.countPendingDates(dailyRows.map(function(row) { return row.dateKey; }), Array.from(allocatedDates))
-      );
     }
 
     function renderDailySummaryList() {
