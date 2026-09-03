@@ -2566,6 +2566,33 @@ select.form-control {
   gap: 16px;
 }
 
+.tipout-page-summary .tipout-allocation-modal {
+  width: min(400px, calc(100vw - 32px));
+  border-radius: 12px;
+}
+
+.tipout-page-summary .tipout-allocation-modal .modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.tipout-page-summary .tipout-allocation-modal .form-group { margin: 0; }
+.tipout-page-summary .tipout-allocation-modal .form-control { width: 100%; min-height: 40px; }
+.tipout-page-summary .tipout-allocation-modal__description {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.65;
+}
+.tipout-page-summary .tipout-required { color: var(--danger); }
+.tipout-page-summary .tipout-allocation-modal__error {
+  margin: -6px 0 0;
+  color: var(--danger);
+  font-size: 12px;
+}
+.tipout-page-summary .tipout-allocation-modal [aria-invalid="true"] { border-color: var(--danger); }
+
 .tipout-page-employee-reconciliation-detail .tipout-page-heading--with-back > .btn {
   min-height: 36px;
   border-radius: 16px;
