@@ -570,6 +570,10 @@ var ALLOC_KEY = 'tipout_allocated';
       });
     }
 
+    function dailySummaryResultValue(allocated, value) {
+      return allocated ? money(value) : '—';
+    }
+
     function renderDateTaskList(dailyRows) {
       var container = document.getElementById('dailySummaryList');
       if (!container) return;
@@ -584,9 +588,9 @@ var ALLOC_KEY = 'tipout_allocated';
           '<td><span class="tipout-daily-status ' + (row.allocated ? 'allocated' : 'pending') + '">' +
           (row.allocated ? '已分配' : '待分配') + '</span></td>' +
           '<td>' + money(total.before) + '</td>' +
-          '<td><strong class="tip-amount--deduct">' + money(total.deducted) + '</strong></td>' +
-          '<td><strong class="tip-amount--receive">' + money(total.received) + '</strong></td>' +
-          '<td><strong>' + money(total.after) + '</strong></td>' +
+          '<td><strong class="tip-amount--deduct">' + dailySummaryResultValue(row.allocated, total.deducted) + '</strong></td>' +
+          '<td><strong class="tip-amount--receive">' + dailySummaryResultValue(row.allocated, total.received) + '</strong></td>' +
+          '<td><strong>' + dailySummaryResultValue(row.allocated, total.after) + '</strong></td>' +
           '<td class="tipout-detail-link">查看明细</td></tr>';
       }).join('');
     }
