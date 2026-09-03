@@ -32,6 +32,10 @@ const nativeDetailProgram = fs.readFileSync("src/team/tips/programs/details.js.t
 for (const token of ["detailContextRail", "tipout-workspace has-aside", "renderDetailContextRail"]) {
   if (sourceDetail.includes(token)) failures.push(`detail source: removed summary token returned ${token}`);
 }
+for (const token of ["分配核算", "查看并核对当前日期与门店的小费分配结果。", "tipout-detail-context-bar__current", "当前页面"]) {
+  if (sourceDetail.includes(token) || nativeDetail.includes(token)) failures.push(`detail: removed helper copy or current-page region returned ${token}`);
+}
+if (sourceCss.includes(".tipout-page-detail .tipout-detail-context-bar__current") || pageCss.includes(".tipout-page-detail .tipout-detail-context-bar__current")) failures.push("detail styles: removed current-page region selector returned");
 for (const token of ["detailContextRail", "tipout-workspace has-aside"]) {
   if (nativeDetail.includes(token)) failures.push(`detail template: removed summary token returned ${token}`);
 }
