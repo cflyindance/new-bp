@@ -206,6 +206,10 @@
                     <div class="multi-select-dropdown" id="employeeFilterDropdown"></div>
                   </div>
                 </div>
+                <div class="tipout-view-switch" id="summaryViewSwitch" role="tablist" aria-label="汇总视图">
+                  <button type="button" id="dateTaskTab" role="tab" aria-selected="true" aria-controls="dateTaskPanel" tabindex="0" data-native-onclick="setSummaryView('date')" data-native-onkeydown="handleSummaryViewKeydown(event)">日期任务</button>
+                  <button type="button" id="employeeReconciliationTab" role="tab" aria-selected="false" aria-controls="employeeReconciliationPanel" tabindex="-1" data-native-onclick="setSummaryView('employee')" data-native-onkeydown="handleSummaryViewKeydown(event)">员工对账</button>
+                </div>
               </div>
             </div>
           </div>
@@ -217,11 +221,22 @@
             <div class="is-primary"><span>分配后</span><strong id="summaryAfter">$0.00</strong></div>
           </div>
 
-          <div class="tipout-table-wrap">
-            <table class="data-table tipout-summary-table">
-              <thead><tr><th>日期</th><th>状态</th><th>分配前</th><th>扣除</th><th>分得</th><th>分配后</th><th aria-label="进入明细"></th></tr></thead>
-              <tbody id="dailySummaryList" aria-label="每日小费分配汇总"></tbody>
-            </table>
+          <div id="dateTaskPanel" role="tabpanel" aria-labelledby="dateTaskTab">
+            <div class="tipout-table-wrap">
+              <table class="data-table tipout-summary-table">
+                <thead><tr><th>日期</th><th>状态</th><th>分配前</th><th>扣除</th><th>分得</th><th>分配后</th><th aria-label="进入明细"></th></tr></thead>
+                <tbody id="dailySummaryList" aria-label="每日小费分配汇总"></tbody>
+              </table>
+            </div>
+          </div>
+          <div id="employeeReconciliationPanel" role="tabpanel" aria-labelledby="employeeReconciliationTab" hidden>
+            <div class="tipout-table-wrap">
+              <table class="data-table tipout-summary-table tipout-employee-table">
+                <thead><tr><th>员工</th><th>角色</th><th>班次 / 工时</th><th>分配前</th><th>扣除</th><th>分配获得</th><th>实际获得</th><th>状态</th><th aria-label="进入明细"></th></tr></thead>
+                <tbody id="employeeReconciliationList" aria-label="员工小费对账汇总"></tbody>
+              </table>
+            </div>
+            <div id="employeeReconciliationEmpty" class="tipout-empty-state" hidden>当前筛选范围暂无员工对账数据</div>
           </div>
         </section>
       </div>

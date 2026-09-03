@@ -2442,3 +2442,296 @@ select.form-control {
   .tipout-page-rule-editor .tipout-sticky-actions > div { display: grid; grid-template-columns: 1fr 1fr; }
 }
 
+.tipout-page-summary .tipout-view-switch {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-self: flex-end;
+  margin-left: auto;
+  padding: 3px;
+  border-radius: 12px;
+  background: #f1f1f2;
+}
+
+.tipout-page-summary .tipout-view-switch [role="tab"] {
+  min-height: 34px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease;
+}
+
+.tipout-page-summary .tipout-view-switch [role="tab"]:hover { color: var(--text-primary); }
+.tipout-page-summary .tipout-view-switch [role="tab"]:focus-visible {
+  outline: 2px solid #f3a000;
+  outline-offset: 1px;
+}
+
+.tipout-page-summary .tipout-view-switch [aria-selected="true"] {
+  background: #ffffff;
+  color: var(--text-primary);
+  font-weight: 600;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.13);
+}
+
+.tipout-page-summary .tipout-employee-table { min-width: 1120px; }
+.tipout-page-summary .tipout-employee-table th:nth-child(n + 4):nth-child(-n + 7),
+.tipout-page-summary .tipout-employee-table td:nth-child(n + 4):nth-child(-n + 7) { text-align: right; }
+.tipout-page-summary .tipout-employee-table th:last-child,
+.tipout-page-summary .tipout-employee-table td:last-child { width: 52px; }
+
+.tipout-page-summary .tipout-employee-row {
+  cursor: pointer;
+  transition: background 0.16s ease;
+}
+
+.tipout-page-summary .tipout-employee-row:hover { background: #f7f7f8; }
+.tipout-page-summary .tipout-employee-row:focus-visible {
+  outline: 2px solid #f3a000;
+  outline-offset: -2px;
+}
+
+.tipout-page-summary .tipout-employee-identity {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tipout-fidelity .tipout-employee-avatar {
+  display: inline-grid;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  place-items: center;
+  border: 1px solid #dddddf;
+  border-radius: 50%;
+  background: #f4f4f5;
+  color: #27272a;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.tipout-page-summary .tipout-shift-summary { display: flex; flex-direction: column; gap: 2px; }
+.tipout-page-summary .tipout-shift-summary strong { font-size: 12px; font-weight: 600; }
+.tipout-page-summary .tipout-shift-summary small { color: var(--text-tertiary); font-size: 11px; }
+
+.tipout-page-summary .tipout-employee-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.tipout-page-summary .tipout-employee-status.is-complete {
+  background: var(--success-bg);
+  color: var(--success);
+}
+
+.tipout-page-summary .tipout-employee-status.is-pending {
+  background: var(--warning-bg);
+  color: var(--warning);
+}
+
+.tipout-fidelity .tipout-empty-state {
+  padding: 64px 24px;
+  border: 1px dashed var(--border-light);
+  border-radius: var(--radius-md);
+  background: #fafafa;
+  color: var(--text-tertiary);
+  font-size: 13px;
+  text-align: center;
+}
+
+.tipout-page-employee-reconciliation-detail .content-area {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 20px;
+  padding-bottom: 28px;
+}
+
+.tipout-page-employee-reconciliation-detail .tipout-page-heading--with-back {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+}
+
+.tipout-page-employee-reconciliation-detail .tipout-page-heading--with-back > .btn {
+  min-height: 36px;
+  border-radius: 16px;
+}
+
+.tipout-page-employee-reconciliation-detail .tipout-employee-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 174px;
+  padding: 9px 12px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  background: #ffffff;
+}
+
+.tipout-page-employee-reconciliation-detail .tipout-employee-chip > span:last-child {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tipout-page-employee-reconciliation-detail .tipout-employee-chip strong {
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tipout-page-employee-reconciliation-detail .tipout-employee-chip small {
+  color: var(--text-tertiary);
+  font-size: 11px;
+}
+
+.tipout-page-employee-reconciliation-detail .tipout-detail-context {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 14px;
+}
+
+.tipout-page-employee-reconciliation-detail .tipout-detail-context span {
+  padding: 7px 11px;
+  border: 1px solid var(--border-light);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.tipout-page-employee-reconciliation-detail .tipout-employee-detail-metrics {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  overflow: hidden;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  background: #ffffff;
+}
+
+.tipout-page-employee-reconciliation-detail .tipout-employee-detail-metrics > div {
+  min-width: 0;
+  padding: 14px 16px;
+  border-right: 1px solid var(--border-light);
+}
+
+.tipout-page-employee-reconciliation-detail .tipout-employee-detail-metrics > div:last-child { border-right: 0; }
+.tipout-page-employee-reconciliation-detail .tipout-employee-detail-metrics span {
+  color: var(--text-tertiary);
+  font-size: 11px;
+}
+.tipout-page-employee-reconciliation-detail .tipout-employee-detail-metrics strong {
+  display: block;
+  margin-top: 5px;
+  overflow: hidden;
+  font-size: 16px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tipout-page-employee-reconciliation-detail .tipout-employee-detail-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 14px;
+  padding: 12px 16px;
+  border: 1px solid;
+  border-radius: var(--radius-md);
+}
+
+.tipout-page-employee-reconciliation-detail .tipout-employee-detail-notice.is-complete {
+  border-color: #c9e8d8;
+  background: var(--success-bg);
+}
+.tipout-page-employee-reconciliation-detail .tipout-employee-detail-notice.is-pending {
+  border-color: #ead9b7;
+  background: var(--warning-bg);
+}
+.tipout-page-employee-reconciliation-detail .tipout-employee-detail-notice strong { font-size: 13px; }
+.tipout-page-employee-reconciliation-detail .tipout-employee-detail-notice p {
+  margin: 3px 0 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.tipout-page-employee-reconciliation-detail .tipout-employee-status,
+.tipout-page-employee-reconciliation-detail .tipout-detail-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.tipout-page-employee-reconciliation-detail .is-complete {
+  background: var(--success-bg);
+  color: var(--success);
+}
+.tipout-page-employee-reconciliation-detail .is-pending {
+  background: var(--warning-bg);
+  color: var(--warning);
+}
+.tipout-page-employee-reconciliation-detail .is-allocated {
+  background: var(--info-bg);
+  color: var(--info);
+}
+.tipout-page-employee-reconciliation-detail .is-neutral {
+  background: #f1f1f2;
+  color: var(--text-secondary);
+}
+
+.tipout-page-employee-reconciliation-detail .tipout-table-wrap { margin-top: 14px; }
+.tipout-page-employee-reconciliation-detail .tipout-employee-detail-table { min-width: 1040px; }
+.tipout-page-employee-reconciliation-detail .tipout-employee-detail-table th:nth-child(n + 4):nth-child(-n + 7),
+.tipout-page-employee-reconciliation-detail .tipout-employee-detail-table td:nth-child(n + 4):nth-child(-n + 7) { text-align: right; }
+.tipout-page-employee-reconciliation-detail .tipout-employee-detail-table tr.has-issue { background: #fffaf0; }
+.tipout-page-employee-reconciliation-detail .tipout-detail-cell-stack { display: flex; flex-direction: column; gap: 2px; }
+.tipout-page-employee-reconciliation-detail .tipout-detail-cell-stack small,
+.tipout-page-employee-reconciliation-detail .tipout-shift-summary small { color: var(--text-tertiary); font-size: 11px; }
+.tipout-page-employee-reconciliation-detail .tipout-readonly-note {
+  margin: 14px 2px 0;
+  color: var(--text-tertiary);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.tipout-page-employee-reconciliation-detail .tipout-empty-state strong {
+  display: block;
+  color: var(--text-primary);
+  font-size: 15px;
+}
+.tipout-page-employee-reconciliation-detail .tipout-empty-state p { margin: 6px 0 0; }
+
+@media (max-width: 768px) {
+  .tipout-page-summary .tipout-view-switch { order: 5; width: 100%; margin-left: 0; }
+  .tipout-page-summary .tipout-view-switch [role="tab"] { flex: 1 1 50%; }
+  .tipout-page-summary .tipout-employee-table { min-width: 1120px; }
+  .tipout-page-employee-reconciliation-detail .tipout-page-heading--with-back { display: flex; align-items: stretch; flex-direction: column; }
+  .tipout-page-employee-reconciliation-detail .tipout-page-heading--with-back > .btn { align-self: flex-start; }
+  .tipout-page-employee-reconciliation-detail .tipout-employee-chip { width: max-content; max-width: 100%; }
+  .tipout-page-employee-reconciliation-detail .tipout-employee-detail-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tipout-page-employee-reconciliation-detail .tipout-employee-detail-metrics > div { border-bottom: 1px solid var(--border-light); }
+  .tipout-page-employee-reconciliation-detail .tipout-employee-detail-metrics > div:nth-child(2n) { border-right: 0; }
+  .tipout-page-employee-reconciliation-detail .tipout-employee-detail-metrics > div:nth-last-child(-n + 2) { border-bottom: 0; }
+  .tipout-page-employee-reconciliation-detail .tipout-employee-detail-notice { align-items: flex-start; flex-direction: column; }
+}
+

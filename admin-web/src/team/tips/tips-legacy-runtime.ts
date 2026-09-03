@@ -13,6 +13,7 @@ import distribution from "./programs/distribution.js.txt?raw";
 import details from "./programs/details.js.txt?raw";
 import rules from "./programs/rules.js.txt?raw";
 import editor from "./programs/rule-editor.js.txt?raw";
+import employeeReconciliation from "./programs/employee-reconciliation.js.txt?raw";
 import type { TipsPageContext } from "./tips-context";
 import { rewriteLegacyTipsUrl, type TipsRoute } from "./tips-navigation";
 import type { TipsView } from "./tips-templates";
@@ -20,12 +21,13 @@ import type { TipsView } from "./tips-templates";
 export interface TipsRuntimeHandle { destroy(): void }
 type Bag = Record<PropertyKey, unknown>;
 
-const programs: Record<TipsView, string> = { distribution, details, rules, "rule-editor": editor };
+const programs: Record<TipsView, string> = { distribution, details, rules, "rule-editor": editor, "employee-reconciliation": employeeReconciliation };
 const dependencies: Record<TipsView, string[]> = {
   distribution: [common, summary, ruleData, personalSales, allocation, attendance, payrollBridge],
   details: [common, ruleData, personalSales, allocation, attendance],
   rules: [common, ruleData],
   "rule-editor": [common, ruleData, orderTipStatus, paymentMethods, personalSales, allocation],
+  "employee-reconciliation": [common, summary],
 };
 
 function runtimeSource(view: TipsView): string {
@@ -88,7 +90,7 @@ export function mountLegacyTipsRuntime(shadow: ShadowRoot, root: HTMLElement, ro
     api = new Function("window","document","location","global","globalThis","self","__scopeAdapter",runtimeSource(route.view))(scopedWindow,scopedDocument,locationFacade,scopedWindow,scopedWindow,scopedWindow,scopeAdapter(context,cleanups));
     root.dispatchEvent(new Event("DOMContentLoaded"));
   } catch (cause) { observer.disconnect(); controller.abort(); throw new Error("Native tips runtime failed to initialize",{cause}); }
-  ["click","change","input","submit","mouseover","mouseout"].forEach((type)=>on(root,type,(event:Event)=>{const el=(event.target as Element | null)?.closest<HTMLElement>(`[data-native-on${type}]`);if(!el||!root.contains(el))return;if(type === "click" && el.closest("a"))event.preventDefault();api.runHandler(el.getAttribute(`data-native-on${type}`)??"",event,el);},true));
+  ["click","change","input","submit","mouseover","mouseout","keydown"].forEach((type)=>on(root,type,(event:Event)=>{const el=(event.target as Element | null)?.closest<HTMLElement>(`[data-native-on${type}]`);if(!el||!root.contains(el))return;if(type === "click" && el.closest("a"))event.preventDefault();api.runHandler(el.getAttribute(`data-native-on${type}`)??"",event,el);},true));
   on(root,"click",(event:Event)=>{
     const anchor=(event.target as Element|null)?.closest<HTMLAnchorElement>("a[href]");
     if(!anchor||!root.contains(anchor)||anchor.hasAttribute("data-native-onclick"))return;

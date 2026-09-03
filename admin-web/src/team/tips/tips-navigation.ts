@@ -29,12 +29,13 @@ export function parseTipsRoute(hash: string): TipsRoute {
   if (path === "/team/tips/rules/editor") view = "rule-editor";
   else if (path === "/team/tips/rules") view = "rules";
   else if (path === "/team/tips/details") view = "details";
+  else if (path === "/team/tips/employee-reconciliation") view = "employee-reconciliation";
   return { view, query, href: `${path}${query}` };
 }
 
 export function isTipsFullscreenRoute(route: TipsRoute): boolean {
   const path = normalizePath(route.href.split("?")[0]);
-  return path === "/team/tips/details" || path === "/team/tips/rules" || path === "/team/tips/rules/editor";
+  return path === "/team/tips/details" || path === "/team/tips/employee-reconciliation" || path === "/team/tips/rules" || path === "/team/tips/rules/editor";
 }
 
 export function isTrustedTipsHistoryState(value: unknown, currentHref: string): value is TipsHistoryEntryState {
@@ -50,11 +51,12 @@ export function isTrustedTipsHistoryState(value: unknown, currentHref: string): 
 
 export function rewriteLegacyTipsUrl(value: string): string | null {
   const raw = String(value || "").trim();
-  const match = raw.match(/(?:^|\/)(index|detail|rules|rule-add)\.html(\?[^#]*)?/i);
+  const match = raw.match(/(?:^|\/)(index|detail|employee-reconciliation-detail|rules|rule-add)\.html(\?[^#]*)?/i);
   if (!match) return null;
   const routes: Record<string, string> = {
     index: "/team/tips/distribution",
     detail: "/team/tips/details",
+    "employee-reconciliation-detail": "/team/tips/employee-reconciliation",
     rules: "/team/tips/rules",
     "rule-add": "/team/tips/rules/editor",
   };

@@ -1,0 +1,45 @@
+<section class="team-tips-page tipout-fidelity tipout-page-employee-reconciliation-detail" data-team-tips-view="employee-reconciliation">
+  <main class="content-area">
+    <section class="tipout-page-section" aria-labelledby="employeeDetailName">
+      <div class="tipout-page-heading tipout-page-heading--with-back">
+        <button type="button" class="btn" data-native-onclick="returnToEmployeeReconciliation()">← 返回员工对账</button>
+        <div>
+          <p class="tipout-kicker">员工对账明细</p>
+          <h1 id="employeeDetailName">—</h1>
+          <p>核对选定日期范围内的班次、工时与逐日小费金额。</p>
+        </div>
+        <div class="tipout-employee-chip">
+          <span class="tipout-employee-avatar" id="employeeDetailAvatar" aria-hidden="true">—</span>
+          <span><strong id="employeeDetailChipName">—</strong><small id="employeeDetailRole">—</small></span>
+        </div>
+      </div>
+      <div id="employeeDetailContent">
+        <div class="tipout-detail-context" aria-label="对账范围">
+          <span id="employeeDetailRange">—</span><span id="employeeDetailStore">—</span>
+        </div>
+        <div class="tipout-employee-detail-metrics" aria-label="员工对账金额概览">
+          <div><span>班次</span><strong id="employeeDetailShifts">0</strong></div>
+          <div><span>总工时</span><strong id="employeeDetailHours">0 h</strong></div>
+          <div><span>分配前</span><strong id="employeeDetailBefore">$0.00</strong></div>
+          <div><span>扣除</span><strong id="employeeDetailDeducted" class="tip-amount--deduct">-$0.00</strong></div>
+          <div><span>分配获得</span><strong id="employeeDetailReceived" class="tip-amount--receive">+$0.00</strong></div>
+          <div><span>实际获得</span><strong id="employeeDetailAfter">$0.00</strong></div>
+        </div>
+        <div id="employeeDetailNotice" class="tipout-employee-detail-notice" role="status">
+          <div><strong id="employeeDetailNoticeTitle">—</strong><p id="employeeDetailNoticeText">—</p></div>
+          <span id="employeeDetailStatus" class="tipout-employee-status">—</span>
+        </div>
+        <div class="tipout-table-wrap">
+          <table class="data-table tipout-summary-table tipout-employee-detail-table">
+            <thead><tr><th>日期</th><th>考勤</th><th>班次 / 工时</th><th>分配前</th><th>扣除</th><th>分配获得</th><th>实际获得</th><th>分配状态</th></tr></thead>
+            <tbody id="employeeDetailRows" aria-label="员工逐日对账明细"></tbody>
+          </table>
+        </div>
+        <p class="tipout-readonly-note">明细页为只读核对视图，金额来自小费分配汇总的同一份逐日结果，不在此页面重新计算或修改。</p>
+      </div>
+      <div id="employeeDetailEmpty" class="tipout-empty-state" hidden>
+        <strong>无法展示对账明细</strong><p>对账明细上下文已失效，请返回员工对账列表重新进入。</p>
+      </div>
+    </section>
+  </main>
+</section>

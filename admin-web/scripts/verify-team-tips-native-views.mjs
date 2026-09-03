@@ -5,6 +5,7 @@ const required = {
   details: ["data-team-tips-view=\"details\"", "detailMain", "formulaModal"],
   rules: ["data-team-tips-view=\"rules\"", "rulesTableBody", "poolTypeModal"],
   "rule-editor": ["data-team-tips-view=\"rule-editor\"", "ruleEditorMain", "fieldDescModal", "salesDrawer"],
+  "employee-reconciliation": ["data-team-tips-view=\"employee-reconciliation\"", "employeeDetailRows", "employeeDetailEmpty"],
 };
 const failures = [];
 const pageCss = fs.readFileSync("src/team/tips/tips-page.css", "utf8");
@@ -79,5 +80,9 @@ for (const file of ["dist/TipOut/index.html", "src/team/tips/templates/distribut
   if (headingIndex < 0 || filterIndex < headingIndex || metricsIndex < filterIndex) failures.push(`${file}: filters must follow heading and precede metrics`);
 }
 if (!fs.readFileSync("src/team/tips/programs/distribution.js.txt", "utf8").includes("function doCancelAllocate()")) failures.push("distribution program: cancel allocation function missing");
+const distributionTemplate = fs.readFileSync("src/team/tips/templates/distribution.html", "utf8");
+const distributionProgram = fs.readFileSync("src/team/tips/programs/distribution.js.txt", "utf8");
+for (const token of ["日期任务", "员工对账", "employeeReconciliationList"]) if (!distributionTemplate.includes(token)) failures.push(`distribution: employee reconciliation UI missing ${token}`);
+for (const token of ["setSummaryView", "renderEmployeeReconciliationList", "openEmployeeReconciliationDetail"]) if (!distributionProgram.includes(token)) failures.push(`distribution: employee reconciliation program missing ${token}`);
 if (failures.length) { failures.forEach((failure) => console.error(failure)); process.exit(1); }
 console.log("Team tips native view verification passed.");

@@ -1,0 +1,156 @@
+function detailNumber(value) { return Number(value) || 0; }
+    function detailMoney(value) {
+      var number = detailNumber(value);
+      return '$' + Math.abs(number).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    }
+    function detailHours(value) {
+      var number = detailNumber(value);
+      return (Math.round(number * 100) / 100).toString();
+    }
+    function detailInitials(name) {
+      var parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+      if (!parts.length) return '—';
+      if (parts.length === 1) return Array.from(parts[0]).slice(0, 2).join('').toUpperCase();
+      return (Array.from(parts[0])[0] + Array.from(parts[parts.length - 1])[0]).toUpperCase();
+    }
+    function detailDateLabel(dateKey) {
+      var parts = String(dateKey || '').split('-');
+      return parts.length === 3 ? parts[1] + '/' + parts[2] : dateKey;
+    }
+    function detailWeekday(dateKey) {
+      var date = new Date(dateKey + 'T00:00:00');
+      return isNaN(date.getTime()) ? '' : date.toLocaleDateString('zh-CN', { weekday: 'short' });
+    }
+    function setDetailText(id, value) {
+      var element = document.getElementById(id);
+      if (element) element.textContent = value;
+    }
+    function makeDetailCell(primary, secondary, className) {
+      var cell = document.createElement('td');
+      var wrap = document.createElement('span');
+      wrap.className = className || 'tipout-detail-cell-stack';
+      var strong = document.createElement('strong');
+      strong.textContent = primary;
+      wrap.appendChild(strong);
+      if (secondary !== undefined && secondary !== '') {
+        var small = document.createElement('small');
+        small.textContent = secondary;
+        wrap.appendChild(small);
+      }
+      cell.appendChild(wrap);
+      return cell;
+    }
+    function makeStatusCell(label, className) {
+      var cell = document.createElement('td');
+      var status = document.createElement('span');
+      status.className = 'tipout-detail-status ' + className;
+      status.textContent = label;
+      cell.appendChild(status);
+      return cell;
+    }
+    function makeMoneyCell(value, kind) {
+      var cell = document.createElement('td');
+      var strong = document.createElement('strong');
+      if (kind === 'deduct') {
+        strong.className = 'tip-amount--deduct';
+        strong.textContent = '-' + detailMoney(value);
+      } else if (kind === 'receive') {
+        strong.className = 'tip-amount--receive';
+        strong.textContent = '+' + detailMoney(value);
+      } else {
+        strong.textContent = detailMoney(value);
+      }
+      cell.appendChild(strong);
+      return cell;
+    }
+
+    function renderEmployeeDetailRows(rows) {
+      var tbody = document.getElementById('employeeDetailRows');
+      tbody.textContent = '';
+      rows.forEach(function(row) {
+        var tr = document.createElement('tr');
+        var attendanceMissing = row.requiresAttendance && row.clockStatus === '未打卡';
+        var hasIssue = attendanceMissing || !row.allocated;
+        if (hasIssue) tr.className = 'has-issue';
+        tr.appendChild(makeDetailCell(detailDateLabel(row.dateKey), detailWeekday(row.dateKey), 'tipout-daily-date'));
+        if (!row.requiresAttendance) tr.appendChild(makeStatusCell('无需打卡', 'is-neutral'));
+        else tr.appendChild(makeStatusCell(row.clockStatus === '未打卡' ? '● 未打卡' : '● 已打卡', attendanceMissing ? 'is-pending' : 'is-complete'));
+        tr.appendChild(makeDetailCell(detailNumber(row.hours) > 0 ? '1 个班次' : '—', detailHours(row.hours) + ' h', 'tipout-shift-summary'));
+        tr.appendChild(makeMoneyCell(row.before));
+        tr.appendChild(makeMoneyCell(row.deducted, 'deduct'));
+        tr.appendChild(makeMoneyCell(row.received, 'receive'));
+        tr.appendChild(makeMoneyCell(row.after));
+        tr.appendChild(makeStatusCell(row.allocated ? '已分配' : '待分配', row.allocated ? 'is-allocated' : 'is-pending'));
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderEmployeeReconciliationDetail(snapshot) {
+      var summary = snapshot.summary || {};
+      setDetailText('employeeDetailName', snapshot.name || '—');
+      setDetailText('employeeDetailChipName', snapshot.name || '—');
+      setDetailText('employeeDetailAvatar', detailInitials(snapshot.name));
+      setDetailText('employeeDetailRole', snapshot.role || '—');
+      setDetailText('employeeDetailStore', snapshot.store || '未选择门店');
+      setDetailText('employeeDetailRange', snapshot.dateStart.replace(/-/g, '/') + ' ～ ' + snapshot.dateEnd.replace(/-/g, '/'));
+      setDetailText('employeeDetailShifts', String(detailNumber(summary.shifts)));
+      setDetailText('employeeDetailHours', detailHours(summary.hours) + ' h');
+      setDetailText('employeeDetailBefore', detailMoney(summary.before));
+      setDetailText('employeeDetailDeducted', '-' + detailMoney(summary.deducted));
+      setDetailText('employeeDetailReceived', '+' + detailMoney(summary.received));
+      setDetailText('employeeDetailAfter', detailMoney(summary.after));
+
+      var missingAttendance = detailNumber(summary.missingAttendanceDays);
+      var pendingAllocation = detailNumber(summary.pendingAllocationDays);
+      var notice = document.getElementById('employeeDetailNotice');
+      var status = document.getElementById('employeeDetailStatus');
+      status.textContent = '● ' + snapshot.status;
+      status.className = 'tipout-employee-status ' + (snapshot.status === '已完成' ? 'is-complete' : 'is-pending');
+      notice.className = 'tipout-employee-detail-notice ' + (snapshot.status === '已完成' ? 'is-complete' : 'is-pending');
+      if (snapshot.status === '已完成') {
+        setDetailText('employeeDetailNoticeTitle', '当前范围对账记录完整');
+        setDetailText('employeeDetailNoticeText', '所含参与日期均已分配，需要考勤的记录也已完成打卡。');
+      } else {
+        var issueParts = [];
+        if (missingAttendance) issueParts.push(missingAttendance + ' 天考勤数据');
+        if (pendingAllocation) issueParts.push(pendingAllocation + ' 天小费分配');
+        setDetailText('employeeDetailNoticeTitle', '有 ' + (issueParts.length ? issueParts.join('、') : '部分对账记录') + '待补录');
+        setDetailText('employeeDetailNoticeText', '状态仅用于核对提示，不反向修改现有分配结果。');
+      }
+      renderEmployeeDetailRows(snapshot.dailyRows);
+    }
+
+    function showEmployeeDetailEmpty() {
+      document.getElementById('employeeDetailContent').hidden = true;
+      document.getElementById('employeeDetailEmpty').hidden = false;
+    }
+
+    function returnToEmployeeReconciliation() {
+      var params = new URLSearchParams(window.location.search);
+      if (params.get('from') === 'summary' && params.get('return') === 'history' && history.length > 1) {
+        history.back();
+        return;
+      }
+      window.location.href = 'index.html?view=employee';
+    }
+
+    function initializeEmployeeReconciliationDetail() {
+      var params = new URLSearchParams(window.location.search);
+      var detailContext = {
+        employeeId: params.get('employeeId') || '',
+        store: params.get('store') || '',
+        dateStart: params.get('start') || '',
+        dateEnd: params.get('end') || ''
+      };
+      var snapshot = TipOutSummaryUi.readEmployeeReconciliationSnapshot(
+        sessionStorage.getItem(TipOutSummaryUi.EMPLOYEE_RECONCILIATION_SNAPSHOT_KEY),
+        detailContext
+      );
+      if (!snapshot) {
+        showEmployeeDetailEmpty();
+        return;
+      }
+      renderEmployeeReconciliationDetail(snapshot);
+    }
+
+    document.addEventListener('DOMContentLoaded', initializeEmployeeReconciliationDetail);
