@@ -4733,15 +4733,7 @@ body{margin:0;padding:24px;background:#fff;}
     $("#btn-employees-detail-export-toggle")?.addEventListener("click", (e) => {
       e.stopPropagation();
       detailPresentation.exportVariant = detailPresentation.activeVariant;
-      document.querySelectorAll("#employeesDetailExportMenu [data-export-variant]").forEach((option) => option.classList.toggle("active", option.dataset.exportVariant === detailPresentation.exportVariant));
       if (typeof toggleEmployeesDetailExportMenu === "function") toggleEmployeesDetailExportMenu();
-    });
-    $("#employeesDetailExportMenu")?.querySelectorAll("[data-export-variant]").forEach((item) => {
-      item.addEventListener("click", (event) => {
-        event.stopPropagation();
-        detailPresentation.exportVariant = item.dataset.exportVariant === "compact" ? "compact" : "detail";
-        document.querySelectorAll("#employeesDetailExportMenu [data-export-variant]").forEach((option) => option.classList.toggle("active", option === item));
-      });
     });
     $("#employeesDetailExportMenu")?.querySelectorAll(".export-menu-item[data-export-type]").forEach((item) => {
       item.addEventListener("click", () => {

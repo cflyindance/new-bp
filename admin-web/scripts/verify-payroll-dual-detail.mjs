@@ -12,6 +12,7 @@ for (const token of [
   'id="employeesDetailCompactBody"', 'data-print-pagination="fit-one-page"',
   'data-print-pagination="paginate"', 'payroll-detail-pages.js',
 ]) if (!html.includes(token)) failures.push(`html missing ${token}`);
+if (html.includes("data-export-variant")) failures.push("export menu must use the active detail tab without a second variant selection");
 
 for (const token of [
   "menusifu.payroll.detail.print-pagination.v1", "compactClockPairs", "remainingClockPairCount",

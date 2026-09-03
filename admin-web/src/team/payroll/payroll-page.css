@@ -3237,9 +3237,7 @@ select.form-control {
 .payroll-print-pagination { display:flex; align-items:center; gap:12px; margin-right:auto; font-size:13px; color:var(--text-secondary); }
 .payroll-print-pagination label { display:flex; align-items:center; gap:5px; cursor:pointer; white-space:nowrap; }
 .payroll-print-pagination input { accent-color:var(--primary); }
-.payroll-export-step-label { padding:7px 12px 4px; color:var(--text-tertiary); font-size:11px; font-weight:600; }
 .employees-detail-export-dropdown .export-menu-item { width:100%; border:0; background:transparent; text-align:left; }
-.employees-detail-export-dropdown .payroll-export-variant.active { color:var(--primary); background:#eaf4ff; }
 
 #employeesDetailCompactBody { display:flex; justify-content:center; }
 #employeesDetailCompactBody[hidden] { display:none; }
