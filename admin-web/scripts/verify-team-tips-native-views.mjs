@@ -7,6 +7,10 @@ const required = {
   "rule-editor": ["data-team-tips-view=\"rule-editor\"", "ruleEditorMain", "fieldDescModal", "salesDrawer"],
 };
 const failures = [];
+const pageCss = fs.readFileSync("src/team/tips/tips-page.css", "utf8");
+for (const token of [".tipout-page-rule-editor .content-area", "width: min(100%, 1280px)", "margin-inline: auto"]) {
+  if (!pageCss.includes(token)) failures.push(`rule-editor centered layout missing ${token}`);
+}
 for (const [view, tokens] of Object.entries(required)) {
   const template = fs.readFileSync(`src/team/tips/templates/${view}.html`, "utf8");
   const program = fs.readFileSync(`src/team/tips/programs/${view}.js.txt`, "utf8");

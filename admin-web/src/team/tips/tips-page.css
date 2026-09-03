@@ -2291,7 +2291,9 @@ select.form-control {
 
 .tipout-page-rule-editor .content-area {
   display: flex;
+  width: min(100%, 1280px);
   min-width: 0;
+  margin-inline: auto;
   flex-direction: column;
   gap: 20px;
   padding-bottom: 28px;
