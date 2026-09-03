@@ -2640,6 +2640,31 @@ select.form-control {
   outline: 2px solid color-mix(in srgb, var(--primary) 18%, transparent);
 }
 
+.tipout-page-employee-reconciliation-detail .tipout-detail-attendance-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 12px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.tipout-page-employee-reconciliation-detail .tipout-detail-attendance-filter select {
+  min-width: 124px;
+  min-height: 36px;
+  padding: 7px 32px 7px 11px;
+  border: 1px solid var(--border-light);
+  border-radius: 16px;
+  background: #ffffff;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.tipout-page-employee-reconciliation-detail .tipout-detail-attendance-filter select:focus {
+  border-color: var(--primary);
+  outline: 2px solid color-mix(in srgb, var(--primary) 18%, transparent);
+}
+
 .tipout-page-employee-reconciliation-detail .tipout-employee-detail-metrics {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -2717,6 +2742,7 @@ select.form-control {
   font-size: 15px;
 }
 .tipout-page-employee-reconciliation-detail .tipout-empty-state p { margin: 6px 0 0; }
+.tipout-page-employee-reconciliation-detail .tipout-filtered-empty { margin-top: 14px; }
 
 @media (max-width: 768px) {
   .tipout-page-summary .tipout-view-switch { order: 0; width: 100%; margin-right: 0; margin-left: 0; }
@@ -2725,6 +2751,7 @@ select.form-control {
   .tipout-page-employee-reconciliation-detail .tipout-page-heading--with-back { display: flex; align-items: stretch; flex-direction: column; }
   .tipout-page-employee-reconciliation-detail .tipout-page-heading--with-back > .btn { align-self: flex-start; }
   .tipout-page-employee-reconciliation-detail .tipout-detail-date-range input { flex: 1 1 150px; }
+  .tipout-page-employee-reconciliation-detail .tipout-detail-attendance-filter { flex: 1 1 100%; margin-left: 0; }
   .tipout-page-employee-reconciliation-detail .tipout-employee-detail-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .tipout-page-employee-reconciliation-detail .tipout-employee-detail-metrics > div { border-bottom: 1px solid var(--border-light); }
   .tipout-page-employee-reconciliation-detail .tipout-employee-detail-metrics > div:nth-child(2n) { border-right: 0; }
