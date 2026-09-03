@@ -106,7 +106,7 @@ document.addEventListener("click", function (e) {
 
 
 
-function exportPayrollDetailAs(type) {
+function exportPayrollDetailAs(type, variant, pagination) {
 
   closePayrollDetailExportMenus();
 
@@ -114,27 +114,31 @@ function exportPayrollDetailAs(type) {
 
   if (!data) return;
 
-  if (type === "pdf") exportPayrollDetailPDF(data);
+  data.exportVariant = variant === "compact" ? "compact" : "detail";
+  data.printPagination = pagination === "paginate" ? "paginate" : "fit-one-page";
+  if (type === "pdf") exportPayrollDetailPDF(data, data.exportVariant, data.printPagination);
 
-  else if (type === "csv") exportPayrollDetailCSV(data);
+  else if (type === "csv") exportPayrollDetailCSV(data, data.exportVariant);
 
 }
 
 
 
-function payrollDetailFileSlug(data) {
+function payrollDetailFileSlug(data, variant) {
 
   const name = String(data.employeeName || "employee").replace(/[^\w\u4e00-\u9fa5-]+/g, "_");
 
   const period = String(data.periodNumber || "period");
 
-  return `PayrollDetail_P${period}_${name}`;
+  return `PayrollDetail_P${period}_${name}${variant === "compact" ? "_Compact" : ""}`;
 
 }
 
 
 
-function exportPayrollDetailCSV(data) {
+function exportPayrollDetailCSV(data, variant) {
+
+  if (variant === "compact") return exportCompactPayrollDetailCSV(data);
 
   if (typeof showNotification === "function") showNotification(T("export.generatingCsv"), "info");
 
@@ -318,6 +322,29 @@ function exportPayrollDetailCSV(data) {
 
 }
 
+function exportCompactPayrollDetailCSV(data) {
+  if (typeof showNotification === "function") showNotification(T("export.generatingCsv"), "info");
+  const headers = ["row_type","employee_name","role","hire_date","rate","ssn","period_number","pay_date","pay_period","store_name","store_address","week","week_range","date","in_1","out_1","in_2","out_2","in_3","out_3","additional_clock_pairs","hours","regular_hours","ot_hours","ot2_hours","regular_amount","ot_amount","ot2_amount","total_amount","service_charge","tips","declaration","pagination"];
+  const rows = [];
+  rows.push(["meta",data.employeeName,data.role,data.hireDate,data.summary.rate,data.ssn,data.periodNumber,data.payDate,data.payPeriod,data.storeName,data.storeAddress,"","","","","","","","","","","","","","","","","","",data.summary.svcw,data.summary.tips,data.declarationText,""]);
+  rows.push(["summary",data.employeeName,data.role,data.hireDate,data.summary.rate,data.ssn,data.periodNumber,data.payDate,data.payPeriod,data.storeName,data.storeAddress,"","","","","","","","","","",data.summary.totalH,data.summary.compactRegularHours,data.summary.otH,data.summary.ot2H,data.summary.compactRegularAmount,data.summary.otAmt,data.summary.ot2Amt,data.summary.totalAmt,data.summary.svcw,data.summary.tips,data.declarationText,""]);
+  (data.weeks || []).forEach(function (week) {
+    (week.days || []).forEach(function (day) {
+      const pairs = day.clockPairs || [];
+      const extra = pairs.slice(3).map(function (pair) { return `${pair.in || ""}-${pair.out || ""}`; }).join(" | ");
+      rows.push([`week-${week.index + 1}`,data.employeeName,data.role,data.hireDate,data.summary.rate,data.ssn,data.periodNumber,data.payDate,data.payPeriod,data.storeName,data.storeAddress,week.index + 1,week.range,day.date,pairs[0]?.in,pairs[0]?.out,pairs[1]?.in,pairs[1]?.out,pairs[2]?.in,pairs[2]?.out,extra,day.totalHours,day.regularHours,day.otHours,day.ot2Hours,"","","","","","","","",""]);
+    });
+    rows.push([`week-${week.index + 1}-total`,data.employeeName,data.role,data.hireDate,data.summary.rate,data.ssn,data.periodNumber,data.payDate,data.payPeriod,data.storeName,data.storeAddress,week.index + 1,week.range,"","","","","","","","","",week.totals.totalHours,week.totals.regularHours,week.totals.otHours,week.totals.ot2Hours,week.totals.regularAmount,week.totals.otAmount,week.totals.ot2Amount,week.totals.totalAmount,"","","","",""]);
+  });
+  rows.push(["declaration",data.employeeName,"","","","",data.periodNumber,data.payDate,data.payPeriod,data.storeName,data.storeAddress,"","","","","","","","","","","","","","","","","","","",data.summary.svcw,data.summary.tips,data.declarationText,""]);
+  const csv = "\uFEFF" + [headers].concat(rows).map(function (row) { return row.map(function (value) { return `"${csvCell(value)}"`; }).join(","); }).join("\r\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a"); a.href = url; a.download = payrollDetailFileSlug(data, "compact") + ".csv"; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  if (typeof showNotification === "function") showNotification(T("export.csvSuccess"), "success");
+  if (typeof onPayrollDetailExported === "function") onPayrollDetailExported("csv", data);
+}
+
 
 
 function csvCell(v) {
@@ -492,19 +519,19 @@ function loadJsPDFLib(callback) {
 
 
 
-function getPayrollDetailPrintDocumentHtml() {
+function getPayrollDetailPrintDocumentHtml(variant, pagination) {
 
   if (typeof buildPayrollDetailPrintDocumentHtml !== "function") return null;
 
-  return buildPayrollDetailPrintDocumentHtml();
+  return buildPayrollDetailPrintDocumentHtml(variant, pagination);
 
 }
 
 
 
-function exportPayrollDetailPDF(data) {
+function exportPayrollDetailPDF(data, variant, pagination) {
 
-  const docHtml = getPayrollDetailPrintDocumentHtml();
+  const docHtml = getPayrollDetailPrintDocumentHtml(variant, pagination);
 
   if (!docHtml) {
 
@@ -708,7 +735,7 @@ function renderPayrollDetailPdfFromPrintTemplate(docHtml, data) {
 
         }
 
-        pdf.save(payrollDetailFileSlug(data) + ".pdf");
+        pdf.save(payrollDetailFileSlug(data, data.exportVariant) + ".pdf");
 
         cleanup();
 
@@ -794,11 +821,28 @@ function openPayrollDetailPrintWindowAndPrint(docHtml, data) {
 
 
 
-function openPayrollDetailEmailModal() {
+function printPayrollDetail(variant, pagination) {
+  const data = getPayrollDetailExportData();
+  if (!data) return;
+  data.exportVariant = variant === "compact" ? "compact" : "detail";
+  data.printPagination = pagination === "paginate" ? "paginate" : "fit-one-page";
+  const html = getPayrollDetailPrintDocumentHtml(data.exportVariant, data.printPagination);
+  if (html) openPayrollDetailPrintWindowAndPrint(html, data);
+}
+
+let payrollEmailExportSnapshot = null;
+
+function openPayrollDetailEmailModal(variant, pagination) {
 
   closePayrollDetailExportMenus();
 
   const data = getPayrollDetailExportData();
+
+  if (data) payrollEmailExportSnapshot = {
+    data: JSON.parse(JSON.stringify(data)),
+    variant: variant === "compact" ? "compact" : "detail",
+    pagination: pagination === "paginate" ? "paginate" : "fit-one-page",
+  };
 
   const input = document.getElementById("payrollDetailExportEmail");
 
@@ -894,9 +938,14 @@ function sendPayrollDetailEmail() {
 
     if (typeof showNotification === "function") showNotification(T("email.success"), "success");
 
-    const data = getPayrollDetailExportData();
+    const data = payrollEmailExportSnapshot ? payrollEmailExportSnapshot.data : getPayrollDetailExportData();
 
-    if (data && typeof onPayrollDetailExported === "function") onPayrollDetailExported("email", data);
+    if (data && typeof onPayrollDetailExported === "function") onPayrollDetailExported("email", Object.assign(data, {
+      exportVariant: payrollEmailExportSnapshot && payrollEmailExportSnapshot.variant,
+      printPagination: payrollEmailExportSnapshot && payrollEmailExportSnapshot.pagination,
+    }));
+
+    payrollEmailExportSnapshot = null;
 
   }, 1500);
 

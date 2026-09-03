@@ -849,28 +849,35 @@
         <button type="button" class="modal-close" id="btn-employees-detail-modal-close" aria-label="关闭">×</button>
       </div>
       <div class="modal-body employees-detail-preview-body">
-        <div id="employeesDetailModalBody" class="payroll-page payroll-entered"></div>
+        <div class="payroll-detail-view-toolbar no-print">
+          <div class="payroll-detail-variant-tabs" role="tablist" aria-label="明细类型">
+            <button type="button" class="payroll-detail-variant-tab active" data-detail-variant="detail" role="tab" aria-selected="true">详细明细</button>
+            <button type="button" class="payroll-detail-variant-tab" data-detail-variant="compact" role="tab" aria-selected="false">精简明细</button>
+          </div>
+        </div>
+        <div id="employeesDetailModalBody" class="payroll-page payroll-entered" data-detail-panel="detail"></div>
+        <div id="employeesDetailCompactBody" class="payroll-page payroll-entered" data-detail-panel="compact" hidden></div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn" id="btn-employees-detail-print">打印</button>
+        <div class="payroll-print-pagination" aria-label="打印分页设置">
+          <span>打印方式</span>
+          <label><input type="radio" name="payrollPrintPagination" data-print-pagination="fit-one-page" value="fit-one-page"> 强制一页</label>
+          <label><input type="radio" name="payrollPrintPagination" data-print-pagination="paginate" value="paginate"> 按内容分页</label>
+        </div>
+        <button type="button" class="btn" id="btn-employees-detail-print">打印当前明细</button>
         <div class="export-dropdown employees-detail-export-dropdown">
           <button type="button" class="btn btn-primary" id="btn-employees-detail-export-toggle">
             导出结果
             <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" style="margin-left:6px"><path d="M6 8.825a.5.5 0 0 1-.354-.146l-4-4a.5.5 0 0 1 .708-.708L6 7.617l3.646-3.646a.5.5 0 0 1 .708.708l-4 4A.5.5 0 0 1 6 8.825z"/></svg>
           </button>
           <div class="export-menu" id="employeesDetailExportMenu">
-            <div class="export-menu-item" data-export-type="pdf">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="flex-shrink:0"><rect x="2" y="1" width="12" height="14" rx="2" stroke="#ff4d4f" stroke-width="1.2"/><text x="8" y="10.5" text-anchor="middle" fill="#ff4d4f" font-size="5" font-weight="600">PDF</text></svg>
-              导出为 PDF
-            </div>
-            <div class="export-menu-item" data-export-type="email">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="flex-shrink:0"><rect x="1.5" y="3" width="13" height="10" rx="2" stroke="#1677ff" stroke-width="1.2"/><path d="M2 4l6 4 6-4" stroke="#1677ff" stroke-width="1.2" stroke-linecap="round"/></svg>
-              发送到邮箱
-            </div>
-            <div class="export-menu-item" data-export-type="csv">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="flex-shrink:0"><rect x="2" y="1" width="12" height="14" rx="2" stroke="#52c41a" stroke-width="1.2"/><text x="8" y="10.5" text-anchor="middle" fill="#52c41a" font-size="5" font-weight="600">CSV</text></svg>
-              导出为 CSV
-            </div>
+            <div class="payroll-export-step-label">1. 选择明细</div>
+            <button type="button" class="export-menu-item payroll-export-variant active" data-export-variant="detail">详细明细</button>
+            <button type="button" class="export-menu-item payroll-export-variant" data-export-variant="compact">精简明细</button>
+            <div class="payroll-export-step-label">2. 选择导出方式</div>
+            <button type="button" class="export-menu-item" data-export-type="pdf">导出为 PDF</button>
+            <button type="button" class="export-menu-item" data-export-type="email">发送到邮箱</button>
+            <button type="button" class="export-menu-item" data-export-type="csv">导出为 CSV</button>
           </div>
         </div>
         <button type="button" class="btn btn-primary" id="btn-employees-detail-modal-ok">关闭</button>
@@ -917,6 +924,7 @@
   <script src="tipout-payroll-bridge.js?v=2026090201"></script>
   <script src="payroll-adp-mapping.js?v=2026090201"></script>
   <script src="payroll-i18n.js?v=2026090201"></script>
+  <script src="payroll-detail-pages.js?v=2026090301"></script>
   <script src="payroll-detail-export.js?v=2026090201"></script>
   <script src="payroll-api-client.js?v=2026090201"></script>
   <script src="payroll-period-calendar.js?v=2026090301"></script>

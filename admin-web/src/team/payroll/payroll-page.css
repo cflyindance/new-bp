@@ -3230,6 +3230,38 @@ select.form-control {
   background: rgba(0, 0, 0, 0.04);
 }
 
+.payroll-detail-view-toolbar { display:flex; justify-content:center; margin:0 0 16px; }
+.payroll-detail-variant-tabs { display:inline-flex; padding:4px; border-radius:10px; background:#f1f3f5; }
+.payroll-detail-variant-tab { border:0; border-radius:8px; padding:8px 22px; background:transparent; color:var(--text-secondary); cursor:pointer; font-weight:600; }
+.payroll-detail-variant-tab.active { background:#fff; color:var(--primary); box-shadow:0 1px 4px rgba(0,0,0,.1); }
+.payroll-print-pagination { display:flex; align-items:center; gap:12px; margin-right:auto; font-size:13px; color:var(--text-secondary); }
+.payroll-print-pagination label { display:flex; align-items:center; gap:5px; cursor:pointer; white-space:nowrap; }
+.payroll-print-pagination input { accent-color:var(--primary); }
+.payroll-export-step-label { padding:7px 12px 4px; color:var(--text-tertiary); font-size:11px; font-weight:600; }
+.employees-detail-export-dropdown .export-menu-item { width:100%; border:0; background:transparent; text-align:left; }
+.employees-detail-export-dropdown .payroll-export-variant.active { color:var(--primary); background:#eaf4ff; }
+
+#employeesDetailCompactBody { display:flex; justify-content:center; }
+#employeesDetailCompactBody[hidden] { display:none; }
+.payroll-compact-detail { width:min(210mm,100%); min-height:297mm; padding:8mm; background:#fff; color:#111; font:8pt/1.35 Arial,sans-serif; box-shadow:0 2px 14px rgba(0,0,0,.08); }
+.payroll-compact-detail header { display:flex; justify-content:space-between; gap:8mm; margin-bottom:3mm; }
+.payroll-compact-detail header>div { flex:1; }
+.payroll-compact-detail header strong { font-size:13pt; }
+.payroll-compact-detail dl { display:grid; grid-template-columns:auto 1fr; gap:1mm 3mm; margin:2mm 0 0; }
+.payroll-compact-detail dt { color:#555; }.payroll-compact-detail dd { margin:0; }
+.payroll-compact-report-meta { text-align:right; }.payroll-compact-report-meta h3 { margin:0 0 2mm; font-size:13pt; }.payroll-compact-report-meta p { margin:1mm 0; }
+.payroll-compact-detail table { width:100%; border-collapse:collapse; table-layout:fixed; }
+.payroll-compact-detail th,.payroll-compact-detail td { border:1px solid #666; padding:4px; text-align:center; }
+.payroll-compact-summary { margin-bottom:2mm; }.payroll-compact-week { margin-top:2mm; }
+.payroll-compact-week h4 { display:flex; justify-content:center; margin:0 0 1mm; font-size:8pt; font-weight:500; }.payroll-compact-week h4 span { margin-left:auto; }
+.payroll-compact-more { margin-right:3px; color:var(--primary); }.payroll-compact-declaration { margin:3mm; font-size:7pt; }
+.payroll-compact-signature>div { display:grid; grid-template-columns:1fr 40mm; gap:4mm; margin-top:8mm; }.payroll-compact-signature span { border-top:1px solid #555; padding-top:2px; text-align:center; }.payroll-compact-signature p { text-align:center; margin:5mm 0 0; font-size:7pt; }
+
+@media (max-width:760px) {
+  .employees-detail-preview-modal .modal-footer { flex-wrap:wrap; }
+  .payroll-print-pagination { width:100%; order:-1; flex-wrap:wrap; }
+}
+
 #employeesDetailModalBody.payroll-page {
   min-height: 0;
 }

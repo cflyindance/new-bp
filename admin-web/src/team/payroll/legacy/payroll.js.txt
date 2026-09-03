@@ -7,6 +7,21 @@
   const STORAGE_KEY = "tipout-payroll-state-v4";
   const ROSTER_STORAGE_KEY = "tipout-employees-roster-v1";
   const DISCLAIMER_ACCEPT_KEY = "tipout-payroll-disclaimer-accepted-v1";
+  const PRINT_PAGINATION_KEY = "menusifu.payroll.detail.print-pagination.v1";
+  const detailPresentation = { activeVariant: "detail", exportVariant: "detail", printPagination: readPrintPagination() };
+
+  function readPrintPagination() {
+    try { return localStorage.getItem(PRINT_PAGINATION_KEY) === "paginate" ? "paginate" : "fit-one-page"; }
+    catch (_) { return "fit-one-page"; }
+  }
+
+  function setPrintPagination(value) {
+    detailPresentation.printPagination = value === "paginate" ? "paginate" : "fit-one-page";
+    try { localStorage.setItem(PRINT_PAGINATION_KEY, detailPresentation.printPagination); } catch (_) { /* non-blocking */ }
+    document.querySelectorAll('[name="payrollPrintPagination"]').forEach((input) => {
+      input.checked = input.value === detailPresentation.printPagination;
+    });
+  }
 
   function T(key, vars) {
     return typeof payrollT === "function" ? payrollT(key, vars) : key;
@@ -1643,6 +1658,11 @@
     clone.querySelectorAll("[id]").forEach((el) => el.removeAttribute("id"));
     target.innerHTML = "";
     target.appendChild(clone);
+    const payload = buildDetailExportPayload(getEmployee(state.periodId, state.employeeId), getPeriod(state.periodId));
+    const compactTarget = $("#employeesDetailCompactBody");
+    if (compactTarget) compactTarget.innerHTML = buildCompactDetailHtml(payload);
+    setPayrollDetailVariant("detail");
+    setPrintPagination(detailPresentation.printPagination);
     const modalId = "employeesDetailPreviewModal";
     if (typeof openModal === "function") openModal(modalId);
     else {
@@ -3602,7 +3622,23 @@
       const amountNum = regAmtNum + paidBreakAmtNum + otAmtNum + ot2AmtNum;
       const weekIdx = resolveWeekIndex(day.date, periodStartDate, dayIdx);
       const wk = weeks[weekIdx];
-      wk.items.push({ day });
+      const slots = day.slots && day.slots.length ? day.slots : emptySlots();
+      const visibleSlots = slots.filter((slot) => hasSlotClock(slot));
+      const clockPairs = (visibleSlots.length ? visibleSlots : [slots[0] || { in: "", out: "" }]).map((slot) => {
+        const parts = slotInOutParts(slot);
+        return { in: parts[0] === "—" ? "" : parts[0], out: parts[1] === "—" ? "" : parts[1] };
+      });
+      wk.items.push({
+        date: day.date || "",
+        clockPairs,
+        compactClockPairs: clockPairs.slice(0, 3),
+        remainingClockPairCount: Math.max(0, clockPairs.length - 3),
+        regularHours: regNum + paidBreakH,
+        otHours: otNum,
+        ot2Hours: ot2Num,
+        totalHours: hoursNum,
+        rate: dayRate,
+      });
       wk.totals.reg += regNum;
       wk.totals.paidBreak += paidBreakH;
       wk.totals.ot += otNum;
@@ -3614,8 +3650,6 @@
       wk.totals.ot2Amt += ot2AmtNum;
       wk.totals.amount += amountNum;
 
-      const slots = day.slots && day.slots.length ? day.slots : emptySlots();
-      const visibleSlots = slots.filter((slot) => hasSlotClock(slot));
       const rowsForExport = visibleSlots.length ? visibleSlots : [slots[0] || { in: "", out: "" }];
       rowsForExport.forEach((slot, slotIdx) => {
         const [cin, cout] = slotInOutParts(slot);
@@ -3669,6 +3703,8 @@
       hireDate: resolveEmployeeHireDate(emp),
       department: emp.department || "",
       store: emp.store || "",
+      storeName: parseEmployeeStoreLocation(resolveEmployeeStore(emp)).name,
+      storeAddress: parseEmployeeStoreLocation(resolveEmployeeStore(emp)).address,
       adpFile: emp.adpFile || "",
       confirmed: !!emp.confirmed,
       periodRange: period.rangeLabel,
@@ -3695,10 +3731,57 @@
         ot2Rate: emp.ot2Rate,
         svcw: Number(emp.adjustments && emp.adjustments.svcw) || 0,
         tips: Number(emp.adjustments && emp.adjustments.tips) || 0,
+        compactRegularHours: sums.reg + sums.paidBreak,
+        compactRegularAmount: regAmt + paidBreakAmt,
       },
       dailyRows,
       weekSummaries,
+      weeks: weeks.filter((wk) => wk.items.length > 0).map((wk) => ({
+        index: wk.index,
+        range: getWeekRangeTextFromPeriod(period.rangeLabel, wk.index),
+        days: wk.items,
+        totals: {
+          regularHours: wk.totals.reg + wk.totals.paidBreak,
+          otHours: wk.totals.ot,
+          ot2Hours: wk.totals.ot2,
+          totalHours: wk.totals.hours,
+          regularAmount: wk.totals.regAmt + wk.totals.paidBreakAmt,
+          otAmount: wk.totals.otAmt,
+          ot2Amount: wk.totals.ot2Amt,
+          totalAmount: wk.totals.amount,
+        },
+      })),
     };
+  }
+
+  function buildCompactDetailHtml(payload) {
+    if (!payload) return "";
+    const money = (value) => `$${fmtMoney(value)}`;
+    const summary = payload.summary;
+    const weeksHtml = (payload.weeks || []).map((week) => {
+      const rows = week.days.map((day) => {
+        const pairCells = [0, 1, 2].map((index) => {
+          const pair = (day.compactClockPairs || [])[index] || {};
+          return `<td>${escapeHtml([pair.in, pair.out].filter(Boolean).join(" - "))}</td>`;
+        }).join("");
+        const more = day.remainingClockPairCount ? `<small class="payroll-compact-more">+${day.remainingClockPairCount}</small>` : "";
+        return `<tr><td>${escapeHtml(day.date)}</td>${pairCells}<td>${more}${fmtMoney(day.totalHours)}</td><td>${fmtMoney(day.regularHours)}</td><td>${fmtMoney(day.otHours)}</td><td>${fmtMoney(day.ot2Hours)}</td></tr>`;
+      }).join("");
+      return `<section class="payroll-compact-week"><h4>${escapeHtml(week.range)} <span>Week ${week.index + 1}</span></h4><table><thead><tr><th>Date</th><th>In / Out</th><th>In / Out</th><th>In / Out</th><th>Hours</th><th>Regular</th><th>OT</th><th>OT2</th></tr></thead><tbody>${rows}</tbody><tfoot><tr><th colspan="4">Total</th><td>${fmtMoney(week.totals.totalHours)}</td><td>${fmtMoney(week.totals.regularHours)}</td><td>${fmtMoney(week.totals.otHours)}</td><td>${fmtMoney(week.totals.ot2Hours)}</td></tr><tr><th colspan="4">Amount</th><td>${money(week.totals.totalAmount)}</td><td>${money(week.totals.regularAmount)}</td><td>${money(week.totals.otAmount)}</td><td>${money(week.totals.ot2Amount)}</td></tr></tfoot></table></section>`;
+    }).join("");
+    return `<article class="payroll-compact-detail payroll-a4-content"><header><div><strong>${escapeHtml(payload.employeeName)}</strong><dl><dt>Roles</dt><dd>${escapeHtml(payload.role || "—")}</dd><dt>Hire Date</dt><dd>${escapeHtml(payload.hireDate || "—")}</dd><dt>Rate</dt><dd>${money(summary.rate)}</dd><dt>SSN</dt><dd>${escapeHtml(payload.ssn || "—")}</dd></dl></div><div class="payroll-compact-report-meta"><h3>Payroll #${escapeHtml(payload.periodNumber)} Report</h3><p><b>Pay Date:</b> ${escapeHtml(payload.payDate || "—")}</p><p><b>Pay Period:</b> ${escapeHtml(payload.payPeriod || "—")}</p></div></header><table class="payroll-compact-summary"><thead><tr><th></th><th>Regular</th><th>OT</th><th>OT2</th><th>Total</th></tr></thead><tbody><tr><th>Hours</th><td>${fmtMoney(summary.compactRegularHours)}</td><td>${fmtMoney(summary.otH)}</td><td>${fmtMoney(summary.ot2H)}</td><td>${fmtMoney(summary.totalH)}</td></tr><tr><th>Amount</th><td>${money(summary.compactRegularAmount)}</td><td>${money(summary.otAmt)}</td><td>${money(summary.ot2Amt)}</td><td>${money(summary.totalAmt)}</td></tr></tbody></table>${weeksHtml}<section class="payroll-compact-declaration">${escapeHtml(payload.declarationText || "")}</section><footer class="payroll-compact-signature"><div><span>Employee Signature</span><span>Date</span></div><p>${escapeHtml(payload.storeName || "")}${payload.storeAddress && payload.storeAddress !== "—" ? ` · ${escapeHtml(payload.storeAddress)}` : ""}</p></footer></article>`;
+  }
+
+  function setPayrollDetailVariant(value) {
+    detailPresentation.activeVariant = value === "compact" ? "compact" : "detail";
+    document.querySelectorAll("[data-detail-variant]").forEach((button) => {
+      const active = button.dataset.detailVariant === detailPresentation.activeVariant;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-selected", String(active));
+    });
+    document.querySelectorAll("[data-detail-panel]").forEach((panel) => {
+      panel.hidden = panel.dataset.detailPanel !== detailPresentation.activeVariant;
+    });
   }
 
   /** 与「打印」相同：克隆 Employees Detail 打印模板 HTML */
@@ -4617,6 +4700,10 @@ body{margin:0;padding:24px;background:#fff;}
 
     function printCurrentEmployeeDetail() {
       syncDerived();
+      if (typeof printPayrollDetail === "function") {
+        printPayrollDetail(detailPresentation.activeVariant, detailPresentation.printPagination);
+        return;
+      }
       const modal = $("#employeesDetailPreviewModal");
       const fromModal = !!(modal && modal.classList.contains("show"));
       document.body.classList.toggle("payroll-printing-from-modal", fromModal);
@@ -4637,18 +4724,33 @@ body{margin:0;padding:24px;background:#fff;}
     $("#btn-audit-log-close")?.addEventListener("click", () => hideAuditLogModal());
     $("#btn-audit-log-ok")?.addEventListener("click", () => hideAuditLogModal());
     $("#btn-employees-detail-modal-close")?.addEventListener("click", () => hideEmployeesDetailModal());
+    document.querySelectorAll("[data-detail-variant]").forEach((button) => {
+      button.addEventListener("click", () => setPayrollDetailVariant(button.dataset.detailVariant));
+    });
+    document.querySelectorAll('[name="payrollPrintPagination"]').forEach((input) => {
+      input.addEventListener("change", () => setPrintPagination(input.value));
+    });
     $("#btn-employees-detail-export-toggle")?.addEventListener("click", (e) => {
       e.stopPropagation();
+      detailPresentation.exportVariant = detailPresentation.activeVariant;
+      document.querySelectorAll("#employeesDetailExportMenu [data-export-variant]").forEach((option) => option.classList.toggle("active", option.dataset.exportVariant === detailPresentation.exportVariant));
       if (typeof toggleEmployeesDetailExportMenu === "function") toggleEmployeesDetailExportMenu();
+    });
+    $("#employeesDetailExportMenu")?.querySelectorAll("[data-export-variant]").forEach((item) => {
+      item.addEventListener("click", (event) => {
+        event.stopPropagation();
+        detailPresentation.exportVariant = item.dataset.exportVariant === "compact" ? "compact" : "detail";
+        document.querySelectorAll("#employeesDetailExportMenu [data-export-variant]").forEach((option) => option.classList.toggle("active", option === item));
+      });
     });
     $("#employeesDetailExportMenu")?.querySelectorAll(".export-menu-item[data-export-type]").forEach((item) => {
       item.addEventListener("click", () => {
         syncDerived();
         const type = item.getAttribute("data-export-type");
         if (type === "email") {
-          if (typeof openPayrollDetailEmailModal === "function") openPayrollDetailEmailModal();
+          if (typeof openPayrollDetailEmailModal === "function") openPayrollDetailEmailModal(detailPresentation.exportVariant, detailPresentation.printPagination);
         } else if (typeof exportPayrollDetailAs === "function") {
-          exportPayrollDetailAs(type);
+          exportPayrollDetailAs(type, detailPresentation.exportVariant, detailPresentation.printPagination);
         }
       });
     });
@@ -4685,8 +4787,13 @@ body{margin:0;padding:24px;background:#fff;}
       });
     }
     if (typeof registerPayrollDetailPrintDocumentBuilder === "function") {
-      registerPayrollDetailPrintDocumentBuilder(buildPayrollDetailPrintDocumentHtml);
+      registerPayrollDetailPrintDocumentBuilder((variant, pagination) => {
+        const payload = buildDetailExportPayload(getEmployee(state.periodId, state.employeeId), getPeriod(state.periodId));
+        if (variant === "compact") return buildPayrollDetailA4DocumentHtml(buildCompactDetailHtml(payload), "compact", pagination);
+        return buildPayrollDetailA4DocumentHtml(buildPayrollDetailPrintDocumentHtml(), "detail", pagination, true);
+      });
     }
+    window.getPayrollDetailPresentation = () => ({ ...detailPresentation });
     window.onPayrollDetailExported = function (type, data) {
       const actionMap = {
         pdf: "export_detail_pdf",

@@ -8,6 +8,7 @@ const sources = [
   "ruleData.js",
   "payroll-adp-mapping.js",
   "payroll-i18n.js",
+  "payroll-detail-pages.js",
   "payroll-detail-export.js",
   "payroll-api-client.js",
   "payroll-period-calendar.js",

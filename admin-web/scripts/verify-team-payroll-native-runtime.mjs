@@ -5,6 +5,7 @@ const sources = [
   "ruleData.js",
   "payroll-adp-mapping.js",
   "payroll-i18n.js",
+  "payroll-detail-pages.js",
   "payroll-detail-export.js",
   "payroll-api-client.js",
   "payroll-period-calendar.js",
@@ -25,6 +26,7 @@ for (const token of [
   "mountLegacyPayrollRuntime",
   "TipOutGlobalScopeFilter",
   "periodCalendarCode",
+  "detailPagesCode",
   "controller.abort()",
   "timers.clear()",
   "cleanups.clear()",
@@ -33,6 +35,9 @@ for (const token of [
 }
 if (runtime.indexOf("periodCalendarCode") > runtime.indexOf("payrollCode")) {
   failures.push("runtime: payroll period calendar must execute before payroll.js");
+}
+if (runtime.indexOf("detailPagesCode") > runtime.indexOf("detailExportCode")) {
+  failures.push("runtime: payroll detail pages must execute before detail export");
 }
 for (const token of ["PayrollPeriodCalendar.buildSupportedPeriods", "PayrollPeriodCalendar.migrateSnapshot"]) {
   if (!payroll.includes(token)) failures.push(`payroll calendar integration: missing ${token}`);

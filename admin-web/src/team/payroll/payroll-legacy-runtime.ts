@@ -2,6 +2,7 @@ import commonCode from "./legacy/common.js.txt?raw";
 import ruleDataCode from "./legacy/ruleData.js.txt?raw";
 import adpMappingCode from "./legacy/payroll-adp-mapping.js.txt?raw";
 import i18nCode from "./legacy/payroll-i18n.js.txt?raw";
+import detailPagesCode from "./legacy/payroll-detail-pages.js.txt?raw";
 import detailExportCode from "./legacy/payroll-detail-export.js.txt?raw";
 import apiClientCode from "./legacy/payroll-api-client.js.txt?raw";
 import periodCalendarCode from "./legacy/payroll-period-calendar.js.txt?raw";
@@ -83,6 +84,8 @@ function buildRuntimeSource(): string {
     "const applyPayrollPageI18n = (...args) => window.applyPayrollPageI18n(...args);",
     "const initPayrollI18n = (...args) => window.initPayrollI18n(...args);",
     "const PAYROLL_ADP_MAPPING = window.PAYROLL_ADP_MAPPING;",
+    detailPagesCode,
+    "const buildPayrollDetailA4DocumentHtml = (...args) => window.buildPayrollDetailA4DocumentHtml(...args);",
     detailExportCode,
     apiClientCode,
     "const PayrollApiClient = window.PayrollApiClient;",
