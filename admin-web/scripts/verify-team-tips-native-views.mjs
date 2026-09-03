@@ -86,6 +86,21 @@ const distributionTemplate = fs.readFileSync("src/team/tips/templates/distributi
 const distributionProgram = fs.readFileSync("src/team/tips/programs/distribution.js.txt", "utf8");
 for (const token of ["日期任务", "员工对账", "employeeReconciliationList"]) if (!distributionTemplate.includes(token)) failures.push(`distribution: employee reconciliation UI missing ${token}`);
 for (const token of ["setSummaryView", "renderEmployeeReconciliationList", "openEmployeeReconciliationDetail", "canonicalEmployeeStore", "dedupeEmployees", "selectedStore"]) if (!distributionProgram.includes(token)) failures.push(`distribution: employee reconciliation program missing ${token}`);
+const pendingValueHelper = distributionProgram.match(/function dailySummaryResultValue\(allocated, value\)\s*\{[\s\S]*?\n\s*\}/)?.[0];
+if (!pendingValueHelper) {
+  failures.push("distribution: pending result value helper missing");
+} else {
+  const pendingValueContext = { money(value) { return `$${Number(value).toFixed(2)}`; } };
+  vm.createContext(pendingValueContext);
+  vm.runInContext(pendingValueHelper, pendingValueContext);
+  const sourceRow = { deducted: 12.34, received: 56.78, after: 69.12 };
+  const originalRow = { ...sourceRow };
+  assert.equal(pendingValueContext.dailySummaryResultValue(false, sourceRow.deducted), "—");
+  assert.equal(pendingValueContext.dailySummaryResultValue(false, sourceRow.received), "—");
+  assert.equal(pendingValueContext.dailySummaryResultValue(false, sourceRow.after), "—");
+  assert.equal(pendingValueContext.dailySummaryResultValue(true, sourceRow.deducted), "$12.34");
+  assert.deepEqual(sourceRow, originalRow);
+}
 
 const employeeDetailTemplate = fs.readFileSync("src/team/tips/templates/employee-reconciliation.html", "utf8");
 const employeeDetailProgram = fs.readFileSync("src/team/tips/programs/employee-reconciliation.js.txt", "utf8");
