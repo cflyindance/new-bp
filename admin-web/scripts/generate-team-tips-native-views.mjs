@@ -23,7 +23,10 @@ function extractBalancedDiv(input, start) {
 function neutralizeHandlers(markup) {
   return markup
     .replace(/\s(on[a-z]+)=(["'])/gi, " data-native-$1=$2")
-    .replace(/\shref=(["'])javascript:([\s\S]*?)\1/gi, " data-native-href=$1javascript:$2$1 href=$1#$1");
+    .replace(/\shref=(["'])javascript:([\s\S]*?)\1/gi, " data-native-href=$1javascript:$2$1 href=$1#$1")
+    .replace(/\shref=(["'])((?:index|detail|rules|rule-add)\.html(?:\?[^"']*)?)\1/gi, (_match, quote, href) =>
+      ` data-native-onclick=${quote}window.location.href='${href}'${quote} href=${quote}#${quote}`,
+    );
 }
 
 fs.mkdirSync("src/team/tips/templates", { recursive: true });

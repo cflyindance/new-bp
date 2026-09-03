@@ -11,7 +11,7 @@ for (const [view, tokens] of Object.entries(required)) {
   const template = fs.readFileSync(`src/team/tips/templates/${view}.html`, "utf8");
   const program = fs.readFileSync(`src/team/tips/programs/${view}.js.txt`, "utf8");
   for (const token of tokens) if (!template.includes(token)) failures.push(`${view}: missing ${token}`);
-  for (const forbidden of ["<html", "<body", "<script", "<link", " onclick=", " onchange=", "href=\"javascript:"]) {
+  for (const forbidden of ["<html", "<body", "<script", "<link", " onclick=", " onchange=", "href=\"javascript:", "href=\"index.html", "href=\"rules.html"]) {
     if (template.toLowerCase().includes(forbidden)) failures.push(`${view}: forbidden template token ${forbidden}`);
   }
   if (!program.trim()) failures.push(`${view}: page program is empty`);
