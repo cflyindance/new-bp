@@ -82,4 +82,29 @@ assert.equal(legacyState.tipoutSummaryUiState.activeView, 'date');
 assert.equal(legacyState.tipoutSummaryUiState.returnDate, '2026-01-02');
 assert.equal(legacyState.tipoutSummaryUiState.scrollY, 320);
 
+const indexPath = path.join(root, 'dist/TipOut/index.html');
+const cssPath = path.join(root, 'dist/TipOut/prototype-fidelity.css');
+const indexHtml = fs.readFileSync(indexPath, 'utf8');
+const css = fs.readFileSync(cssPath, 'utf8');
+
+for (const id of [
+  'summaryViewSwitch', 'dateTaskTab', 'employeeReconciliationTab',
+  'dateTaskPanel', 'employeeReconciliationPanel', 'employeeReconciliationList',
+  'employeeReconciliationEmpty'
+]) assert.match(indexHtml, new RegExp(`id="${id}"`));
+assert.match(indexHtml, /function buildDailyDataset\(\)/);
+assert.match(indexHtml, /function setSummaryView\(view\)/);
+assert.match(indexHtml, /function renderEmployeeReconciliationList\(dailyRows\)/);
+assert.match(indexHtml, /function openEmployeeReconciliationDetail\(employeeId\)/);
+assert.match(indexHtml, /data-employee-id/);
+assert.match(indexHtml, /sessionStorage\.setItem\(TipOutSummaryUi\.EMPLOYEE_RECONCILIATION_SNAPSHOT_KEY/);
+assert.match(css, /\.tipout-view-switch/);
+assert.match(css, /\.tipout-employee-row/);
+assert.match(css, /\.tipout-employee-status/);
+const indexInlineScripts = [...indexHtml.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)]
+  .map((match) => match[1].trim())
+  .filter(Boolean);
+assert.ok(indexInlineScripts.length > 0);
+indexInlineScripts.forEach((source) => new vm.Script(source));
+
 console.log('TipOut employee reconciliation verification passed.');

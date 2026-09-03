@@ -253,6 +253,10 @@
                     <div class="multi-select-dropdown" id="employeeFilterDropdown"></div>
                   </div>
                 </div>
+                <div class="tipout-view-switch" id="summaryViewSwitch" role="tablist" aria-label="汇总视图">
+                  <button type="button" id="dateTaskTab" role="tab" aria-selected="true" aria-controls="dateTaskPanel" tabindex="0" onclick="setSummaryView('date')" onkeydown="handleSummaryViewKeydown(event)">日期任务</button>
+                  <button type="button" id="employeeReconciliationTab" role="tab" aria-selected="false" aria-controls="employeeReconciliationPanel" tabindex="-1" onclick="setSummaryView('employee')" onkeydown="handleSummaryViewKeydown(event)">员工对账</button>
+                </div>
               </div>
             </div>
           </div>
@@ -264,11 +268,22 @@
             <div class="is-primary"><span>分配后</span><strong id="summaryAfter">$0.00</strong></div>
           </div>
 
-          <div class="tipout-table-wrap">
-            <table class="data-table tipout-summary-table">
-              <thead><tr><th>日期</th><th>状态</th><th>分配前</th><th>扣除</th><th>分得</th><th>分配后</th><th aria-label="进入明细"></th></tr></thead>
-              <tbody id="dailySummaryList" aria-label="每日小费分配汇总"></tbody>
-            </table>
+          <div id="dateTaskPanel" role="tabpanel" aria-labelledby="dateTaskTab">
+            <div class="tipout-table-wrap">
+              <table class="data-table tipout-summary-table">
+                <thead><tr><th>日期</th><th>状态</th><th>分配前</th><th>扣除</th><th>分得</th><th>分配后</th><th aria-label="进入明细"></th></tr></thead>
+                <tbody id="dailySummaryList" aria-label="每日小费分配汇总"></tbody>
+              </table>
+            </div>
+          </div>
+          <div id="employeeReconciliationPanel" role="tabpanel" aria-labelledby="employeeReconciliationTab" hidden>
+            <div class="tipout-table-wrap">
+              <table class="data-table tipout-summary-table tipout-employee-table">
+                <thead><tr><th>员工</th><th>角色</th><th>班次 / 工时</th><th>分配前</th><th>扣除</th><th>分配获得</th><th>实际获得</th><th>状态</th><th aria-label="进入明细"></th></tr></thead>
+                <tbody id="employeeReconciliationList" aria-label="员工小费对账汇总"></tbody>
+              </table>
+            </div>
+            <div id="employeeReconciliationEmpty" class="tipout-empty-state" hidden>当前筛选范围暂无员工对账数据</div>
           </div>
         </section>
       </div>
@@ -336,19 +351,19 @@
     const EMPLOYEE_ROSTER_KEY = 'tipout-employees-roster-v1';
 
     const DEFAULT_EMPLOYEES = [
-      { name: 'Maria Garcia',  role: 'Server',    tagClass: 'tag-blue',  tipType: 'deduct', baseTip: 185, tipRate: 0.15 },
-      { name: 'Jason Chen',    role: 'Server',    tagClass: 'tag-blue',  tipType: 'deduct', baseTip: 168, tipRate: 0.15 },
-      { name: 'Emily Watson',  role: 'Server',    tagClass: 'tag-blue',  tipType: 'deduct', baseTip: 155, tipRate: 0.15 },
-      { name: 'Diego Ramirez', role: 'Server',    tagClass: 'tag-blue',  tipType: 'deduct', baseTip: 142, tipRate: 0.15 },
-      { name: 'Mike Johnson',  role: 'Bartender', tagClass: 'tag-blue',  tipType: 'deduct', baseTip: 156, tipRate: 0.15 },
-      { name: 'Sarah Kim',     role: 'Bartender', tagClass: 'tag-blue',  tipType: 'deduct', baseTip: 138, tipRate: 0.15 },
-      { name: 'Tom Wilson',    role: 'Kitchen',   tagClass: 'tag-blue',  tipType: 'receive', baseTip: 0, tipRate: 0 },
-      { name: 'Amy Liu',       role: 'Kitchen',   tagClass: 'tag-blue',  tipType: 'receive', baseTip: 0, tipRate: 0 },
-      { name: 'Carlos Lopez',  role: 'Busser',    tagClass: 'tag-green', tipType: 'receive', baseTip: 0, tipRate: 0 },
-      { name: 'Tyler Brown',   role: 'Busser',    tagClass: 'tag-green', tipType: 'receive', baseTip: 0, tipRate: 0 },
-      { name: 'Linda Nguyen',  role: 'Cashier',   tagClass: 'tag-orange',tipType: 'deduct', baseTip: 45, tipRate: 0.15 },
-      { name: 'Daniel Ortiz',  role: 'Runner',    tagClass: 'tag-green', tipType: 'receive', baseTip: 0, tipRate: 0 },
-      { name: 'Rachel Scott',  role: 'Host',      tagClass: 'tag-green', tipType: 'receive', baseTip: 0, tipRate: 0 }
+      { employeeId: 'fallback:maria-garcia', name: 'Maria Garcia',  role: 'Server',    tagClass: 'tag-blue',  tipType: 'deduct', baseTip: 185, tipRate: 0.15 },
+      { employeeId: 'fallback:jason-chen', name: 'Jason Chen',    role: 'Server',    tagClass: 'tag-blue',  tipType: 'deduct', baseTip: 168, tipRate: 0.15 },
+      { employeeId: 'fallback:emily-watson', name: 'Emily Watson',  role: 'Server',    tagClass: 'tag-blue',  tipType: 'deduct', baseTip: 155, tipRate: 0.15 },
+      { employeeId: 'fallback:diego-ramirez', name: 'Diego Ramirez', role: 'Server',    tagClass: 'tag-blue',  tipType: 'deduct', baseTip: 142, tipRate: 0.15 },
+      { employeeId: 'fallback:mike-johnson', name: 'Mike Johnson',  role: 'Bartender', tagClass: 'tag-blue',  tipType: 'deduct', baseTip: 156, tipRate: 0.15 },
+      { employeeId: 'fallback:sarah-kim', name: 'Sarah Kim',     role: 'Bartender', tagClass: 'tag-blue',  tipType: 'deduct', baseTip: 138, tipRate: 0.15 },
+      { employeeId: 'fallback:tom-wilson', name: 'Tom Wilson',    role: 'Kitchen',   tagClass: 'tag-blue',  tipType: 'receive', baseTip: 0, tipRate: 0 },
+      { employeeId: 'fallback:amy-liu', name: 'Amy Liu',       role: 'Kitchen',   tagClass: 'tag-blue',  tipType: 'receive', baseTip: 0, tipRate: 0 },
+      { employeeId: 'fallback:carlos-lopez', name: 'Carlos Lopez',  role: 'Busser',    tagClass: 'tag-green', tipType: 'receive', baseTip: 0, tipRate: 0 },
+      { employeeId: 'fallback:tyler-brown', name: 'Tyler Brown',   role: 'Busser',    tagClass: 'tag-green', tipType: 'receive', baseTip: 0, tipRate: 0 },
+      { employeeId: 'fallback:linda-nguyen', name: 'Linda Nguyen',  role: 'Cashier',   tagClass: 'tag-orange',tipType: 'deduct', baseTip: 45, tipRate: 0.15 },
+      { employeeId: 'fallback:daniel-ortiz', name: 'Daniel Ortiz',  role: 'Runner',    tagClass: 'tag-green', tipType: 'receive', baseTip: 0, tipRate: 0 },
+      { employeeId: 'fallback:rachel-scott', name: 'Rachel Scott',  role: 'Host',      tagClass: 'tag-green', tipType: 'receive', baseTip: 0, tipRate: 0 }
     ];
 
     function resolveTagClass(emp) {
@@ -362,8 +377,8 @@
         if (!raw) return DEFAULT_EMPLOYEES.slice();
         var list = JSON.parse(raw);
         if (!Array.isArray(list) || list.length === 0) return DEFAULT_EMPLOYEES.slice();
-        return list
-          .filter(function(e) { return e && String(e.name || '').trim(); })
+        var normalized = list
+          .filter(function(e) { return e && String(e.id || '').trim() && String(e.name || '').trim(); })
           .map(function(e) {
             var role = String(e.role || '').trim();
             var tipType = String(e.tipType || 'deduct').trim();
@@ -371,6 +386,7 @@
             var tipRate = Number(e.tipRate);
             tipRate = Number.isFinite(tipRate) ? (tipRate > 1 ? tipRate / 100 : tipRate) : 0;
             return {
+              employeeId: 'roster:' + String(e.id).trim(),
               name: String(e.name || '').trim(),
               role: role || 'Server',
               tipType: tipType === 'receive' ? 'receive' : 'deduct',
@@ -379,12 +395,15 @@
               tagClass: resolveTagClass({ role: role, tipType: tipType })
             };
           });
+        return normalized.length ? normalized : DEFAULT_EMPLOYEES.slice();
       } catch (e) {
         return DEFAULT_EMPLOYEES.slice();
       }
     }
 
     const employees = buildEmployeesFromRoster();
+    var activeSummaryView = 'date';
+    var employeeAggregateById = Object.create(null);
 
     function getSelectedRoles() {
       var el = document.getElementById('roleFilter');
@@ -674,23 +693,53 @@
 
     function getDailyEmployeeResults(dateKey) {
       return getFilteredEmployees().map(function(emp) {
-        return genDailyTip(emp, dateKey);
+        return Object.assign({ employeeId: emp.employeeId, name: emp.name, role: emp.role }, genDailyTip(emp, dateKey));
       });
     }
 
     var restoredSummaryStateSignature = null;
 
-    function captureSummaryUiState(returnDate) {
+    function captureSummaryUiState(returnDate, returnEmployeeId) {
       var state = TipOutSummaryUi.buildSummaryHistoryState({
         dateStart: document.getElementById('dateStart').value,
         dateEnd: document.getElementById('dateEnd').value,
         store: document.getElementById('storeSelect').value,
         roles: getSelectedRoles(),
         employees: getSelectedEmployees(),
+        activeView: activeSummaryView,
         scrollY: window.scrollY,
-        returnDate: returnDate
+        returnDate: returnDate || '',
+        returnEmployeeId: returnEmployeeId || ''
       });
       history.replaceState(state, '');
+    }
+
+    function syncSummaryViewUi() {
+      var employeeActive = activeSummaryView === 'employee';
+      var dateTab = document.getElementById('dateTaskTab');
+      var employeeTab = document.getElementById('employeeReconciliationTab');
+      if (!dateTab || !employeeTab) return;
+      dateTab.setAttribute('aria-selected', employeeActive ? 'false' : 'true');
+      employeeTab.setAttribute('aria-selected', employeeActive ? 'true' : 'false');
+      dateTab.tabIndex = employeeActive ? -1 : 0;
+      employeeTab.tabIndex = employeeActive ? 0 : -1;
+      document.getElementById('dateTaskPanel').hidden = employeeActive;
+      document.getElementById('employeeReconciliationPanel').hidden = !employeeActive;
+    }
+
+    function setSummaryView(view) {
+      activeSummaryView = view === 'employee' ? 'employee' : 'date';
+      syncSummaryViewUi();
+      captureSummaryUiState('', '');
+      renderSummaryViews();
+    }
+
+    function handleSummaryViewKeydown(event) {
+      if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight' && event.key !== 'Home' && event.key !== 'End') return;
+      event.preventDefault();
+      var nextView = event.key === 'ArrowLeft' || event.key === 'Home' ? 'date' : 'employee';
+      setSummaryView(nextView);
+      document.getElementById(nextView === 'employee' ? 'employeeReconciliationTab' : 'dateTaskTab').focus();
     }
 
     function setSummaryFilterSelections(filterId, values) {
@@ -711,6 +760,8 @@
       restoredSummaryStateSignature = signature;
       if (!saved) return false;
 
+      var queryView = new URLSearchParams(window.location.search).get('view');
+      activeSummaryView = TipOutSummaryUi.resolveSummaryView(history.state, queryView);
       document.getElementById('dateStart').value = saved.dateStart || '';
       document.getElementById('dateEnd').value = saved.dateEnd || '';
       document.getElementById('storeSelect').value = saved.store || '';
@@ -718,19 +769,29 @@
       updateEmployeeFilter(true);
       setSummaryFilterSelections('employeeFilter', saved.employees);
       invalidateDayPipelineCache();
+      syncSummaryViewUi();
       renderDailySummaryList();
 
       requestAnimationFrame(function() {
         window.scrollTo(0, Number(saved.scrollY) || 0);
-        if (!saved.returnDate) return;
-        var row = document.querySelector('[data-date="' + saved.returnDate + '"]');
+        var row = null;
+        if (saved.returnDate) row = document.querySelector('[data-date="' + saved.returnDate + '"]');
+        if (!row && saved.returnEmployeeId) {
+          var employeeRows = document.querySelectorAll('[data-employee-id]');
+          for (var i = 0; i < employeeRows.length; i++) {
+            if (employeeRows[i].dataset.employeeId === saved.returnEmployeeId) {
+              row = employeeRows[i];
+              break;
+            }
+          }
+        }
         if (row) row.focus({ preventScroll: true });
       });
       return true;
     }
 
     function openDailyDetail(dateKey) {
-      captureSummaryUiState(dateKey);
+      captureSummaryUiState(dateKey, '');
       var store = (document.getElementById('storeSelect') || {}).value || '';
       window.location.href = TipOutSummaryUi.buildDetailUrl({
         date: dateKey,
@@ -745,6 +806,54 @@
       openDailyDetail(dateKey);
     }
 
+    function activateEmployeeReconciliationRow(event) {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault();
+      openEmployeeReconciliationDetail(event.currentTarget.dataset.employeeId);
+    }
+
+    function openEmployeeReconciliationDetail(employeeId) {
+      var aggregate = employeeAggregateById[employeeId];
+      if (!aggregate) return;
+      var store = (document.getElementById('storeSelect') || {}).value || '';
+      var dateStart = (document.getElementById('dateStart') || {}).value || '';
+      var dateEnd = (document.getElementById('dateEnd') || {}).value || '';
+      var snapshot = TipOutSummaryUi.buildEmployeeReconciliationSnapshot({
+        employeeId: aggregate.employeeId,
+        name: aggregate.name,
+        role: aggregate.role,
+        store: store,
+        dateStart: dateStart,
+        dateEnd: dateEnd,
+        createdAt: Date.now(),
+        dailyRows: aggregate.dailyRows,
+        summary: {
+          shifts: aggregate.shifts,
+          hours: aggregate.hours,
+          before: aggregate.before,
+          deducted: aggregate.deducted,
+          received: aggregate.received,
+          after: aggregate.after,
+          missingAttendanceDays: aggregate.missingAttendanceDays,
+          pendingAllocationDays: aggregate.pendingAllocationDays
+        },
+        status: aggregate.status
+      });
+      try {
+        sessionStorage.setItem(TipOutSummaryUi.EMPLOYEE_RECONCILIATION_SNAPSHOT_KEY, JSON.stringify(snapshot));
+      } catch (error) {
+        showNotification('无法打开员工对账明细，请重试', 'error');
+        return;
+      }
+      captureSummaryUiState('', employeeId);
+      window.location.href = TipOutSummaryUi.buildEmployeeReconciliationDetailUrl({
+        employeeId: employeeId,
+        store: store,
+        dateStart: dateStart,
+        dateEnd: dateEnd
+      });
+    }
+
     function renderSummaryOverview(dailyRows, allocatedDates) {
       var totals = TipOutSummaryUi.summarizeDailyResults(dailyRows.map(function(row) { return row.total; }));
       document.getElementById('summaryBefore').textContent = money(totals.before);
@@ -753,16 +862,25 @@
       document.getElementById('summaryAfter').textContent = money(totals.after);
     }
 
-    function renderDailySummaryList() {
-      var dates = getDateRange();
+    function buildDailyDataset() {
       var allocatedDates = getAllocatedDates();
+      var requiresAttendance = TipOutSummaryUi.resolveRequiresAttendance(getLegacyRulesForCurrentStore());
+      return getDateRange().map(function(dateKey) {
+        var employeeResults = getDailyEmployeeResults(dateKey);
+        return {
+          dateKey: dateKey,
+          date: new Date(dateKey + 'T00:00:00'),
+          allocated: allocatedDates.has(dateKey),
+          requiresAttendance: requiresAttendance,
+          employeeResults: employeeResults,
+          total: TipOutSummaryUi.summarizeDailyResults(employeeResults)
+        };
+      });
+    }
+
+    function renderDateTaskList(dailyRows) {
       var container = document.getElementById('dailySummaryList');
       if (!container) return;
-      var dailyRows = dates.map(function(dateKey) {
-        var date = new Date(dateKey + 'T00:00:00');
-        var total = TipOutSummaryUi.summarizeDailyResults(getDailyEmployeeResults(dateKey));
-        return { dateKey: dateKey, date: date, total: total, allocated: allocatedDates.has(dateKey) };
-      });
       container.innerHTML = dailyRows.map(function(row) {
         var dateKey = row.dateKey;
         var total = row.total;
@@ -779,9 +897,69 @@
           '<td><strong>' + money(total.after) + '</strong></td>' +
           '<td class="tipout-detail-link">查看明细</td></tr>';
       }).join('');
+    }
+
+    function escapeSummaryHtml(value) {
+      return String(value == null ? '' : value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function employeeInitials(name) {
+      var parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+      if (!parts.length) return '—';
+      if (parts.length === 1) return Array.from(parts[0]).slice(0, 2).join('').toUpperCase();
+      return (Array.from(parts[0])[0] + Array.from(parts[parts.length - 1])[0]).toUpperCase();
+    }
+
+    function renderEmployeeReconciliationList(dailyRows) {
+      var container = document.getElementById('employeeReconciliationList');
+      var empty = document.getElementById('employeeReconciliationEmpty');
+      if (!container || !empty) return;
+      var aggregates = TipOutSummaryUi.aggregateEmployeeDailyDatasets(dailyRows);
+      employeeAggregateById = Object.create(null);
+      aggregates.forEach(function(aggregate) { employeeAggregateById[aggregate.employeeId] = aggregate; });
+      empty.hidden = aggregates.length > 0;
+      container.closest('.tipout-table-wrap').hidden = aggregates.length === 0;
+      container.innerHTML = aggregates.map(function(aggregate) {
+        var statusClass = aggregate.status === '已完成' ? 'is-complete' : 'is-pending';
+        var name = escapeSummaryHtml(aggregate.name);
+        return '<tr class="tipout-employee-row" data-employee-id="' + escapeSummaryHtml(aggregate.employeeId) +
+          '" tabindex="0" role="link" onclick="openEmployeeReconciliationDetail(this.dataset.employeeId)" ' +
+          'onkeydown="activateEmployeeReconciliationRow(event)">' +
+          '<td><span class="tipout-employee-identity"><span class="tipout-employee-avatar" aria-hidden="true">' +
+          escapeSummaryHtml(employeeInitials(aggregate.name)) + '</span><strong>' + name + '</strong></span></td>' +
+          '<td>' + escapeSummaryHtml(aggregate.role) + '</td>' +
+          '<td><span class="tipout-shift-summary"><strong>' + aggregate.shifts + ' 个班次</strong><small>' +
+          formatHoursDisplay(aggregate.hours) + ' h</small></span></td>' +
+          '<td>' + money(aggregate.before) + '</td>' +
+          '<td><strong class="tip-amount--deduct">-' + money(Math.abs(aggregate.deducted)) + '</strong></td>' +
+          '<td><strong class="tip-amount--receive">' + moneySign(aggregate.received) + '</strong></td>' +
+          '<td><strong>' + money(aggregate.after) + '</strong></td>' +
+          '<td><span class="tipout-employee-status ' + statusClass + '"><span aria-hidden="true">●</span> ' + aggregate.status + '</span></td>' +
+          '<td class="tipout-detail-link" aria-label="查看 ' + name + ' 对账明细">›</td></tr>';
+      }).join('');
+    }
+
+    function renderSummaryViews() {
+      var dailyRows = buildDailyDataset();
+      var allocatedDates = getAllocatedDates();
       renderSummaryOverview(dailyRows, allocatedDates);
+      if (activeSummaryView === 'employee') {
+        document.getElementById('dailySummaryList').innerHTML = '';
+        renderEmployeeReconciliationList(dailyRows);
+      } else {
+        document.getElementById('employeeReconciliationList').innerHTML = '';
+        document.getElementById('employeeReconciliationEmpty').hidden = true;
+        renderDateTaskList(dailyRows);
+      }
       updateAllocateButton();
     }
+
+    function renderDailySummaryList() { renderSummaryViews(); }
 
     function updateAllocateButton() {
       var dates = getDateRange();
@@ -908,6 +1086,11 @@
 
     function initializeSummaryPage() {
       initStoreSelect();
+      activeSummaryView = TipOutSummaryUi.resolveSummaryView(
+        history.state,
+        new URLSearchParams(window.location.search).get('view')
+      );
+      syncSummaryViewUi();
       if (!restoreSummaryUiState()) {
         updateEmployeeFilter();
         renderDailySummaryList();
