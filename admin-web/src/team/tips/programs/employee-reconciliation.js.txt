@@ -10,15 +10,19 @@ function detailNumber(value) { return Number(value) || 0; }
     function employeeDetailRoleLabel(role) {
       return String(role || '').trim() || '未设置角色';
     }
+    function employeeDetailAttendanceStatus(row) {
+      return row && row.clockStatus === '已打卡' ? '已打卡' : '未打卡';
+    }
     function normalizeEmployeeDetailRange(start, end, changedSide) {
       if (start <= end) return { start: start, end: end };
       return changedSide === 'end'
         ? { start: end, end: end }
         : { start: start, end: start };
     }
-    function filterEmployeeDetailRows(rows, start, end) {
+    function filterEmployeeDetailRows(rows, start, end, attendance) {
       return (rows || []).filter(function(row) {
-        return row.dateKey >= start && row.dateKey <= end;
+        var inDateRange = row.dateKey >= start && row.dateKey <= end;
+        return inDateRange && (!attendance || attendance === '全部状态' || employeeDetailAttendanceStatus(row) === attendance);
       });
     }
     function summarizeEmployeeDetailRows(rows) {
@@ -88,12 +92,12 @@ function detailNumber(value) { return Number(value) || 0; }
       tbody.textContent = '';
       rows.forEach(function(row) {
         var tr = document.createElement('tr');
-        var attendanceMissing = row.requiresAttendance && row.clockStatus === '未打卡';
+        var attendanceStatus = employeeDetailAttendanceStatus(row);
+        var attendanceMissing = attendanceStatus === '未打卡';
         var hasIssue = attendanceMissing || !row.allocated;
         if (hasIssue) tr.className = 'has-issue';
         tr.appendChild(makeDetailCell(detailDateLabel(row.dateKey), detailWeekday(row.dateKey), 'tipout-daily-date'));
-        if (!row.requiresAttendance) tr.appendChild(makeStatusCell('无需打卡', 'is-neutral'));
-        else tr.appendChild(makeStatusCell(row.clockStatus === '未打卡' ? '● 未打卡' : '● 已打卡', attendanceMissing ? 'is-pending' : 'is-complete'));
+        tr.appendChild(makeStatusCell('● ' + attendanceStatus, attendanceMissing ? 'is-pending' : 'is-complete'));
         tr.appendChild(makeDetailCell(detailNumber(row.hours) > 0 ? '1 个班次' : '—', detailHours(row.hours) + ' h', 'tipout-shift-summary'));
         tr.appendChild(makeMoneyCell(row.before));
         tr.appendChild(makeMoneyCell(row.deducted, 'deduct'));
