@@ -4,6 +4,7 @@ import { isTipsFullscreenRoute, isTrustedTipsHistoryState, parseTipsRoute } from
 assert.equal(isTipsFullscreenRoute(parseTipsRoute("#/team/tips/rules")), true);
 assert.equal(isTipsFullscreenRoute(parseTipsRoute("#/team/tips/rules/?store=1")), true);
 assert.equal(isTipsFullscreenRoute(parseTipsRoute("#/team/tips/rules/editor?id=2")), true);
+assert.equal(isTipsFullscreenRoute(parseTipsRoute("#/team/tips/details?date=2026-01-03")), true);
 assert.equal(isTipsFullscreenRoute(parseTipsRoute("#/team/tips/rules-foo")), false);
 const valid = { flowId: "flow-1", viewHref: "/team/tips/rules", scrollTop: 12, parentHref: "/team/tips/distribution", summaryHref: "/team/tips/distribution" as const, summaryScrollTop: 24 };
 assert.equal(isTrustedTipsHistoryState(valid, "/team/tips/rules"), true);

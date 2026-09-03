@@ -8,6 +8,7 @@
 
 - `/team/tips/rules`：进入并保持全屏。
 - `/team/tips/rules/editor`：进入并保持全屏，包括新增与编辑查询参数。
+- `/team/tips/details`：从汇总查看单日明细时进入全屏，返回汇总或按 Esc 时退出。
 - `/team/tips/distribution`：退出全屏并回到小费分配汇总。
 - 离开 `/team/tips/*`：销毁小费页面时无条件清理全屏状态。
 
