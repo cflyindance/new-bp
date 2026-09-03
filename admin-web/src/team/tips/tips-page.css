@@ -2605,6 +2605,40 @@ select.form-control {
   gap: 10px;
 }
 
+.tipout-page-employee-reconciliation-detail .tipout-detail-export {
+  position: relative;
+  margin-left: auto;
+}
+
+.tipout-page-employee-reconciliation-detail .tipout-detail-export .export-menu {
+  display: none;
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 50;
+  min-width: 168px;
+  padding: 4px;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.tipout-page-employee-reconciliation-detail .tipout-detail-export .export-menu.show { display: block; }
+.tipout-page-employee-reconciliation-detail .tipout-detail-export .export-menu-item {
+  display: block;
+  width: 100%;
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+.tipout-page-employee-reconciliation-detail .tipout-detail-export .export-menu-item:hover { background: rgba(0, 0, 0, 0.04); }
+
 .tipout-page-employee-reconciliation-detail .tipout-role-tag {
   display: inline-flex;
   align-items: center;
@@ -2750,6 +2784,7 @@ select.form-control {
   .tipout-page-summary .tipout-employee-table { min-width: 1120px; }
   .tipout-page-employee-reconciliation-detail .tipout-page-heading--with-back { display: flex; align-items: stretch; flex-direction: column; }
   .tipout-page-employee-reconciliation-detail .tipout-page-heading--with-back > .btn { align-self: flex-start; }
+  .tipout-page-employee-reconciliation-detail .tipout-detail-export { align-self: stretch; margin-left: 0; }
   .tipout-page-employee-reconciliation-detail .tipout-detail-date-range input { flex: 1 1 150px; }
   .tipout-page-employee-reconciliation-detail .tipout-detail-attendance-filter { flex: 1 1 100%; margin-left: 0; }
   .tipout-page-employee-reconciliation-detail .tipout-employee-detail-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }

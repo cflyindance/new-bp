@@ -121,7 +121,8 @@ if (!pendingValueHelper) {
 
 const employeeDetailTemplate = fs.readFileSync("src/team/tips/templates/employee-reconciliation.html", "utf8");
 const employeeDetailProgram = fs.readFileSync("src/team/tips/programs/employee-reconciliation.js.txt", "utf8");
-for (const token of ["employeeDetailStartDate", "employeeDetailEndDate", "employeeDetailRole", "employeeDetailAttendanceFilter", "employeeDetailFilteredEmpty"]) {
+const tipsRuntime = fs.readFileSync("src/team/tips/tips-legacy-runtime.ts", "utf8");
+for (const token of ["employeeDetailStartDate", "employeeDetailEndDate", "employeeDetailRole", "employeeDetailAttendanceFilter", "employeeDetailFilteredEmpty", "employeeDetailExportButton", "employeeDetailExportMenu"]) {
   if (!employeeDetailTemplate.includes(token)) failures.push(`employee reconciliation detail: missing ${token}`);
 }
 for (const option of ["全部状态", "已打卡", "未打卡"]) {
@@ -149,6 +150,11 @@ assert.deepEqual(
   { start: "2026-01-03", end: "2026-01-03" }
 );
 assert.equal(employeeDetailContext.employeeDetailRoleLabel(""), "未设置角色");
+assert.equal(employeeDetailContext.employeeDetailCsvCell('a,"b"'), '"a,""b"""');
+assert.equal(employeeDetailContext.employeeDetailCsvCell('=SUM(1,1)'), '"\'=SUM(1,1)"');
+assert.equal(employeeDetailContext.employeeDetailSafeFilename('王/店长:2026'), '王_店长_2026');
+if (!tipsRuntime.includes('view === "distribution" || view === "employee-reconciliation"')) failures.push("employee reconciliation detail: export runtime dependency missing");
+if (employeeDetailProgram.includes("collectExportData()") || employeeDetailProgram.includes("exportAs(")) failures.push("employee reconciliation detail: summary export collector used");
 assert.equal(employeeDetailContext.employeeDetailAttendanceStatus({ clockStatus: "已打卡" }), "已打卡");
 assert.equal(employeeDetailContext.employeeDetailAttendanceStatus({ clockStatus: "未打卡" }), "未打卡");
 assert.equal(employeeDetailContext.employeeDetailAttendanceStatus({ requiresAttendance: false }), "未打卡");

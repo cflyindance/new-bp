@@ -38,7 +38,7 @@ function runtimeSource(view: TipsView): string {
     "var TipOutAttendance=window.TipOutAttendance,TipAllocation=window.TipAllocation;",
     "var TipOutPersonalSalesDeduct=window.TipOutPersonalSalesDeduct,TipOutOrderTipStatus=window.TipOutOrderTipStatus;",
     "var TipOutPayrollBridge=window.TipOutPayrollBridge;",
-    programs[view], view === "distribution" ? exportCode : "",
+    programs[view], (view === "distribution" || view === "employee-reconciliation") ? exportCode : "",
     "return {runHandler:function(code,event,element){return(function(){return eval(code)}).call(element)}};",
     "//# sourceURL=team-tips-native-runtime.js"].join("\n\n");
 }
