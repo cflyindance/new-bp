@@ -24,6 +24,10 @@ requireText(mount, "isScrollContainer(node)", "local scroll container ownership"
 requireText(mount, "if (!canScroll(localScroller, event.deltaY)) event.preventDefault()", "local scroll boundary containment");
 requireText(mount, "if (isModalInteraction) {", "modal background scroll lock");
 requireText(generated, ".employees-detail-preview-body {", "employee detail body scroll selector");
+requireText(generated, "--primary: #1677ff", "payroll theme variables");
+if (generated.includes("display=swap');")) {
+  failures.push("font import removal left invalid CSS before payroll theme variables");
+}
 if (generated.includes(".employees-detail-preview-.team-payroll-page")) {
   failures.push("employee detail body selector was corrupted while scoping body selectors");
 }

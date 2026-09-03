@@ -48,7 +48,7 @@ const template = `<section class="team-payroll-page payroll-page" data-team-payr
 
 function makeShadowScopedCss(source) {
   return source
-    .replace(/^@import[^;]+;\s*/gm, "")
+    .replace(/^@import[^\r\n]*(?:\r?\n|$)/gm, "")
     .replace(/:root\b/g, ".team-payroll-page")
     .replace(/(?<![\w-])body(?=[.#\s,{])/g, ".team-payroll-page")
     .replace(/^\s*html\s*,\s*\.team-payroll-page\s*\{/gm, ".team-payroll-page {")
