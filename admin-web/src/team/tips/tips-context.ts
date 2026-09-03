@@ -1,4 +1,5 @@
 import { getScopedFilterOptions, readScopeFilters, writeScopeFilters, type ScopeFilterState } from "../../auth/session-scope";
+import { isTrustedTipsHistoryState, parseTipsRoute, type TipsHistoryEntryState } from "./tips-navigation";
 
 export interface TipsScopeSnapshot {
   storeId: string;
@@ -9,11 +10,7 @@ export interface TipsScopeSnapshot {
   stores: Array<{ id: string; labelZh: string; labelEn: string }>;
 }
 
-export interface TipsNavigationState {
-  parentHref: string;
-  parentScrollTop: number;
-  payload?: unknown;
-}
+export type TipsNavigationState = TipsHistoryEntryState;
 
 export interface TipsPageContext {
   getScope(): TipsScopeSnapshot;
@@ -36,6 +33,12 @@ function browserDependencies(): TipsContextDependencies {
 }
 
 export function createTipsPageContext(dependencies: TipsContextDependencies = browserDependencies()): TipsPageContext {
+  const commitHash = (href: string, mode: "push" | "replace", state: TipsHistoryEntryState): void => {
+    const hash = href.startsWith("#") ? href : `#${href}`;
+    const url = `${location.origin}/${hash}`;
+    history[mode === "push" ? "pushState" : "replaceState"]({ ...history.state, menusifuTeamTips: state }, "", url);
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+  };
   const getScope = (): TipsScopeSnapshot => {
     const current = dependencies.readScope();
     const stores = dependencies.listScopeOptions().stores;
@@ -58,17 +61,26 @@ export function createTipsPageContext(dependencies: TipsContextDependencies = br
       return () => dependencies.events.removeEventListener("menusifu:scope-filter-change", handler);
     },
     navigate(href, state) {
-      if (state) history.replaceState({ ...history.state, menusifuTeamTips: state }, "");
-      const hash = href.startsWith("#") ? href : `#${href}`;
-      const appUrl = `${location.origin}${location.pathname.endsWith("/") ? location.pathname : "/"}${hash}`;
-      if (/\/(?:index|detail|rules|rule-add)\.html$/i.test(location.pathname)) {
-        history.replaceState(history.state, "", appUrl);
-        window.dispatchEvent(new HashChangeEvent("hashchange"));
-      } else {
-        location.hash = hash;
+      const current = parseTipsRoute(location.hash);
+      const target = parseTipsRoute(href);
+      const scrollTop = document.querySelector<HTMLElement>("[data-team-tips-scroll]")?.scrollTop ?? 0;
+      const existing = history.state?.menusifuTeamTips;
+      const trusted = isTrustedTipsHistoryState(existing, current.href) ? existing : null;
+      const flowId = trusted?.flowId ?? `tips-${Date.now().toString(36)}`;
+      const summaryScrollTop = current.view === "distribution" ? scrollTop : trusted?.summaryScrollTop ?? 0;
+      const next: TipsHistoryEntryState = state ?? { flowId, viewHref: target.href, scrollTop: 0, parentHref: current.href, summaryHref: "/team/tips/distribution", summaryScrollTop };
+      if (trusted) history.replaceState({ ...history.state, menusifuTeamTips: { ...trusted, scrollTop } }, "");
+      if ((current.view === "rule-editor" && target.view === "rules") || (current.view === "rules" && target.view === "distribution")) {
+        commitHash(target.href, "replace", { ...next, parentHref: target.view === "rules" ? "/team/tips/distribution" : target.href });
+        return;
       }
+      commitHash(target.href, "push", next);
     },
-    getNavigationState() { return (history.state?.menusifuTeamTips as TipsNavigationState | undefined) ?? null; },
+    getNavigationState() {
+      const route = parseTipsRoute(location.hash);
+      const value = history.state?.menusifuTeamTips;
+      return isTrustedTipsHistoryState(value, route.href) ? value : null;
+    },
     getScrollOwner() { return document.querySelector<HTMLElement>("[data-team-tips-scroll]"); },
   };
 }
