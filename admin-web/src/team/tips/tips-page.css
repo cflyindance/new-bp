@@ -2447,6 +2447,7 @@ select.form-control {
   flex: 0 0 auto;
   align-self: flex-end;
   margin-left: 0;
+  margin-right: 12px;
   padding: 3px;
   border-radius: 12px;
   background: #f1f1f2;
@@ -2722,7 +2723,7 @@ select.form-control {
 .tipout-page-employee-reconciliation-detail .tipout-empty-state p { margin: 6px 0 0; }
 
 @media (max-width: 768px) {
-  .tipout-page-summary .tipout-view-switch { order: 0; width: 100%; margin-left: 0; }
+  .tipout-page-summary .tipout-view-switch { order: 0; width: 100%; margin-right: 0; margin-left: 0; }
   .tipout-page-summary .tipout-view-switch [role="tab"] { flex: 1 1 50%; }
   .tipout-page-summary .tipout-employee-table { min-width: 1120px; }
   .tipout-page-employee-reconciliation-detail .tipout-page-heading--with-back { display: flex; align-items: stretch; flex-direction: column; }
