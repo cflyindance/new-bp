@@ -105,7 +105,7 @@ assert.match(indexHtml, /data-date/);
 assert.doesNotMatch(indexHtml, /id="dayTabs"/);
 assert.doesNotMatch(indexHtml, /openDayAllocationStatusModal/);
 assert.doesNotMatch(indexHtml, /id="employeeResults"/);
-assert.match(indexHtml, /function captureSummaryUiState\(returnDate\)/);
+assert.match(indexHtml, /function captureSummaryUiState\(returnDate, returnEmployeeId\)/);
 assert.match(indexHtml, /history\.replaceState/);
 assert.match(indexHtml, /fromSummary: true/);
 assert.match(indexHtml, /function restoreSummaryUiState\(\)/);

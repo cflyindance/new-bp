@@ -219,6 +219,115 @@
 .tipout-fidelity .tipout-daily-date small { color: var(--text-tertiary); font-size: 11px; }
 .tipout-fidelity .tipout-detail-link { color: #000000; font-size: 12px; font-weight: 600; text-align: right; }
 
+.tipout-page-summary .tipout-view-switch {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-self: flex-end;
+  margin-left: auto;
+  padding: 3px;
+  border-radius: 12px;
+  background: #f1f1f2;
+}
+
+.tipout-page-summary .tipout-view-switch [role="tab"] {
+  min-height: 34px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease;
+}
+
+.tipout-page-summary .tipout-view-switch [role="tab"]:hover { color: var(--text-primary); }
+.tipout-page-summary .tipout-view-switch [role="tab"]:focus-visible {
+  outline: 2px solid #f3a000;
+  outline-offset: 1px;
+}
+
+.tipout-page-summary .tipout-view-switch [aria-selected="true"] {
+  background: #ffffff;
+  color: var(--text-primary);
+  font-weight: 600;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.13);
+}
+
+.tipout-page-summary .tipout-employee-table { min-width: 1120px; }
+.tipout-page-summary .tipout-employee-table th:nth-child(n + 4):nth-child(-n + 7),
+.tipout-page-summary .tipout-employee-table td:nth-child(n + 4):nth-child(-n + 7) { text-align: right; }
+.tipout-page-summary .tipout-employee-table th:last-child,
+.tipout-page-summary .tipout-employee-table td:last-child { width: 52px; }
+
+.tipout-page-summary .tipout-employee-row {
+  cursor: pointer;
+  transition: background 0.16s ease;
+}
+
+.tipout-page-summary .tipout-employee-row:hover { background: #f7f7f8; }
+.tipout-page-summary .tipout-employee-row:focus-visible {
+  outline: 2px solid #f3a000;
+  outline-offset: -2px;
+}
+
+.tipout-page-summary .tipout-employee-identity {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tipout-fidelity .tipout-employee-avatar {
+  display: inline-grid;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  place-items: center;
+  border: 1px solid #dddddf;
+  border-radius: 50%;
+  background: #f4f4f5;
+  color: #27272a;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.tipout-page-summary .tipout-shift-summary { display: flex; flex-direction: column; gap: 2px; }
+.tipout-page-summary .tipout-shift-summary strong { font-size: 12px; font-weight: 600; }
+.tipout-page-summary .tipout-shift-summary small { color: var(--text-tertiary); font-size: 11px; }
+
+.tipout-page-summary .tipout-employee-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.tipout-page-summary .tipout-employee-status.is-complete {
+  background: var(--success-bg);
+  color: var(--success);
+}
+
+.tipout-page-summary .tipout-employee-status.is-pending {
+  background: var(--warning-bg);
+  color: var(--warning);
+}
+
+.tipout-fidelity .tipout-empty-state {
+  padding: 64px 24px;
+  border: 1px dashed var(--border-light);
+  border-radius: var(--radius-md);
+  background: #fafafa;
+  color: var(--text-tertiary);
+  font-size: 13px;
+  text-align: center;
+}
+
 .tipout-page-detail .content-area {
   display: flex;
   min-width: 0;
@@ -746,6 +855,14 @@
   .tipout-fidelity .tipout-inline-notice { align-items: stretch; flex-direction: column; }
   .tipout-fidelity .tipout-inline-notice .btn { align-self: flex-start; }
   .tipout-fidelity .tipout-compact-toolbar { padding: 0; border: 0; background: transparent; }
+  .tipout-page-summary .filter-bar--index { align-items: stretch; }
+  .tipout-page-summary .tipout-view-switch {
+    order: 5;
+    width: 100%;
+    margin-left: 0;
+  }
+  .tipout-page-summary .tipout-view-switch [role="tab"] { flex: 1 1 50%; }
+  .tipout-page-summary .tipout-employee-table { min-width: 1120px; }
   .tipout-page-detail .tipout-page-heading--with-back { display: flex; align-items: stretch; }
   .tipout-page-detail .tipout-page-heading--with-back > .btn { align-self: flex-start; }
   .tipout-page-detail .tipout-detail-context-bar { align-items: stretch; flex-direction: column; }
