@@ -107,4 +107,25 @@ const indexInlineScripts = [...indexHtml.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?
 assert.ok(indexInlineScripts.length > 0);
 indexInlineScripts.forEach((source) => new vm.Script(source));
 
+const detailPath = path.join(root, 'dist/TipOut/employee-reconciliation-detail.html');
+assert.equal(fs.existsSync(detailPath), true);
+const detailHtml = fs.readFileSync(detailPath, 'utf8');
+for (const id of [
+  'employeeDetailName', 'employeeDetailRole', 'employeeDetailStore', 'employeeDetailRange',
+  'employeeDetailShifts', 'employeeDetailHours', 'employeeDetailBefore',
+  'employeeDetailDeducted', 'employeeDetailReceived', 'employeeDetailAfter',
+  'employeeDetailNotice', 'employeeDetailRows', 'employeeDetailEmpty'
+]) assert.match(detailHtml, new RegExp(`id="${id}"`));
+assert.match(detailHtml, /TipOutSummaryUi\.readEmployeeReconciliationSnapshot/);
+assert.match(detailHtml, /function renderEmployeeReconciliationDetail\(snapshot\)/);
+assert.match(detailHtml, /function returnToEmployeeReconciliation\(\)/);
+assert.match(detailHtml, /history\.back\(\)/);
+assert.match(detailHtml, /index\.html\?view=employee/);
+assert.doesNotMatch(detailHtml, /saveAllocatedDates|doAllocateTips|genDailyTip|runLegacyDayPipeline/);
+const detailInlineScripts = [...detailHtml.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)]
+  .map((match) => match[1].trim())
+  .filter(Boolean);
+assert.ok(detailInlineScripts.length > 0);
+detailInlineScripts.forEach((source) => new vm.Script(source));
+
 console.log('TipOut employee reconciliation verification passed.');

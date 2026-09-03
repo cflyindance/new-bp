@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>员工对账明细 - TipOut</title>
+  <link rel="stylesheet" href="common.css">
+  <link rel="stylesheet" href="prototype-fidelity.css">
+</head>
+<body class="tipout-fidelity tipout-page-employee-reconciliation-detail">
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <div class="logo-icon">M</div>
+        <span class="logo-text">MenuSifu</span>
+      </div>
+      <nav class="sidebar-menu" aria-label="小费管理导航">
+        <div class="sidebar-submenu-title open"><span>Tip Out</span></div>
+        <div class="sidebar-submenu-items" style="max-height:200px">
+          <a href="index.html?view=employee" class="sidebar-menu-item active">小费分配汇总</a>
+          <a href="rules.html" class="sidebar-menu-item">分配规则</a>
+        </div>
+        <div class="sidebar-submenu-title open"><span>员工管理</span></div>
+        <div class="sidebar-submenu-items" style="max-height:200px">
+          <a href="employees.html" class="sidebar-menu-item">员工列表</a>
+        </div>
+        <div class="sidebar-submenu-title open"><span>Payroll</span></div>
+        <div class="sidebar-submenu-items" style="max-height:200px">
+          <a href="payroll.html" class="sidebar-menu-item">报税报表</a>
+        </div>
+      </nav>
+    </aside>
+    <div class="mobile-overlay"></div>
+
+    <div class="main-content">
+      <header class="header">
+        <div class="header-left">
+          <button class="mobile-menu-btn" onclick="toggleSidebar()" aria-label="打开导航菜单">菜单</button>
+          <div class="tipout-breadcrumb"><span>Tip Out</span><b aria-hidden="true">/</b><span>小费分配汇总</span><b aria-hidden="true">/</b><strong>员工对账明细</strong></div>
+        </div>
+        <div class="header-right">
+          <div class="header-user">
+            <div class="avatar">R</div>
+            <span>Robert_W</span>
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><path d="M6 8.825a.5.5 0 0 1-.354-.146l-4-4a.5.5 0 0 1 .708-.708L6 7.617l3.646-3.646a.5.5 0 0 1 .708.708l-4 4A.5.5 0 0 1 6 8.825z"/></svg>
+          </div>
+        </div>
+      </header>
+
+      <main class="content-area">
+        <section class="tipout-page-section" aria-labelledby="employeeDetailName">
+          <div class="tipout-page-heading tipout-page-heading--with-back">
+            <button type="button" class="btn" onclick="returnToEmployeeReconciliation()">← 返回员工对账</button>
+            <div>
+              <p class="tipout-kicker">员工对账明细</p>
+              <h1 id="employeeDetailName">—</h1>
+              <p>核对选定日期范围内的班次、工时与逐日小费金额。</p>
+            </div>
+            <div class="tipout-employee-chip">
+              <span class="tipout-employee-avatar" id="employeeDetailAvatar" aria-hidden="true">—</span>
+              <span><strong id="employeeDetailChipName">—</strong><small id="employeeDetailRole">—</small></span>
+            </div>
+          </div>
+
+          <div id="employeeDetailContent">
+            <div class="tipout-detail-context" aria-label="对账范围">
+              <span id="employeeDetailRange">—</span>
+              <span id="employeeDetailStore">—</span>
+            </div>
+
+            <div class="tipout-employee-detail-metrics" aria-label="员工对账金额概览">
+              <div><span>班次</span><strong id="employeeDetailShifts">0</strong></div>
+              <div><span>总工时</span><strong id="employeeDetailHours">0 h</strong></div>
+              <div><span>分配前</span><strong id="employeeDetailBefore">$0.00</strong></div>
+              <div><span>扣除</span><strong id="employeeDetailDeducted" class="tip-amount--deduct">-$0.00</strong></div>
+              <div><span>分配获得</span><strong id="employeeDetailReceived" class="tip-amount--receive">+$0.00</strong></div>
+              <div><span>实际获得</span><strong id="employeeDetailAfter">$0.00</strong></div>
+            </div>
+
+            <div id="employeeDetailNotice" class="tipout-employee-detail-notice" role="status">
+              <div><strong id="employeeDetailNoticeTitle">—</strong><p id="employeeDetailNoticeText">—</p></div>
+              <span id="employeeDetailStatus" class="tipout-employee-status">—</span>
+            </div>
+
+            <div class="tipout-table-wrap">
+              <table class="data-table tipout-summary-table tipout-employee-detail-table">
+                <thead><tr><th>日期</th><th>考勤</th><th>班次 / 工时</th><th>分配前</th><th>扣除</th><th>分配获得</th><th>实际获得</th><th>分配状态</th></tr></thead>
+                <tbody id="employeeDetailRows" aria-label="员工逐日对账明细"></tbody>
+              </table>
+            </div>
+            <p class="tipout-readonly-note">明细页为只读核对视图，金额来自小费分配汇总的同一份逐日结果，不在此页面重新计算或修改。</p>
+          </div>
+
+          <div id="employeeDetailEmpty" class="tipout-empty-state" hidden>
+            <strong>无法展示对账明细</strong>
+            <p>对账明细上下文已失效，请返回员工对账列表重新进入。</p>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <script src="common.js"></script>
+  <script src="tipout-summary-ui.js"></script>
+  <script>
+    function detailNumber(value) { return Number(value) || 0; }
+    function detailMoney(value) {
+      var number = detailNumber(value);
+      return '$' + Math.abs(number).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    }
+    function detailHours(value) {
+      var number = detailNumber(value);
+      return (Math.round(number * 100) / 100).toString();
+    }
+    function detailInitials(name) {
+      var parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+      if (!parts.length) return '—';
+      if (parts.length === 1) return Array.from(parts[0]).slice(0, 2).join('').toUpperCase();
+      return (Array.from(parts[0])[0] + Array.from(parts[parts.length - 1])[0]).toUpperCase();
+    }
+    function detailDateLabel(dateKey) {
+      var parts = String(dateKey || '').split('-');
+      return parts.length === 3 ? parts[1] + '/' + parts[2] : dateKey;
+    }
+    function detailWeekday(dateKey) {
+      var date = new Date(dateKey + 'T00:00:00');
+      return isNaN(date.getTime()) ? '' : date.toLocaleDateString('zh-CN', { weekday: 'short' });
+    }
+    function setDetailText(id, value) {
+      var element = document.getElementById(id);
+      if (element) element.textContent = value;
+    }
+    function makeDetailCell(primary, secondary, className) {
+      var cell = document.createElement('td');
+      var wrap = document.createElement('span');
+      wrap.className = className || 'tipout-detail-cell-stack';
+      var strong = document.createElement('strong');
+      strong.textContent = primary;
+      wrap.appendChild(strong);
+      if (secondary !== undefined && secondary !== '') {
+        var small = document.createElement('small');
+        small.textContent = secondary;
+        wrap.appendChild(small);
+      }
+      cell.appendChild(wrap);
+      return cell;
+    }
+    function makeStatusCell(label, className) {
+      var cell = document.createElement('td');
+      var status = document.createElement('span');
+      status.className = 'tipout-detail-status ' + className;
+      status.textContent = label;
+      cell.appendChild(status);
+      return cell;
+    }
+    function makeMoneyCell(value, kind) {
+      var cell = document.createElement('td');
+      var strong = document.createElement('strong');
+      if (kind === 'deduct') {
+        strong.className = 'tip-amount--deduct';
+        strong.textContent = '-' + detailMoney(value);
+      } else if (kind === 'receive') {
+        strong.className = 'tip-amount--receive';
+        strong.textContent = '+' + detailMoney(value);
+      } else {
+        strong.textContent = detailMoney(value);
+      }
+      cell.appendChild(strong);
+      return cell;
+    }
+
+    function renderEmployeeDetailRows(rows) {
+      var tbody = document.getElementById('employeeDetailRows');
+      tbody.textContent = '';
+      rows.forEach(function(row) {
+        var tr = document.createElement('tr');
+        var attendanceMissing = row.requiresAttendance && row.clockStatus === '未打卡';
+        var hasIssue = attendanceMissing || !row.allocated;
+        if (hasIssue) tr.className = 'has-issue';
+        tr.appendChild(makeDetailCell(detailDateLabel(row.dateKey), detailWeekday(row.dateKey), 'tipout-daily-date'));
+        if (!row.requiresAttendance) tr.appendChild(makeStatusCell('无需打卡', 'is-neutral'));
+        else tr.appendChild(makeStatusCell(row.clockStatus === '未打卡' ? '● 未打卡' : '● 已打卡', attendanceMissing ? 'is-pending' : 'is-complete'));
+        tr.appendChild(makeDetailCell(detailNumber(row.hours) > 0 ? '1 个班次' : '—', detailHours(row.hours) + ' h', 'tipout-shift-summary'));
+        tr.appendChild(makeMoneyCell(row.before));
+        tr.appendChild(makeMoneyCell(row.deducted, 'deduct'));
+        tr.appendChild(makeMoneyCell(row.received, 'receive'));
+        tr.appendChild(makeMoneyCell(row.after));
+        tr.appendChild(makeStatusCell(row.allocated ? '已分配' : '待分配', row.allocated ? 'is-allocated' : 'is-pending'));
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderEmployeeReconciliationDetail(snapshot) {
+      var summary = snapshot.summary || {};
+      setDetailText('employeeDetailName', snapshot.name || '—');
+      setDetailText('employeeDetailChipName', snapshot.name || '—');
+      setDetailText('employeeDetailAvatar', detailInitials(snapshot.name));
+      setDetailText('employeeDetailRole', snapshot.role || '—');
+      setDetailText('employeeDetailStore', snapshot.store || '未选择门店');
+      setDetailText('employeeDetailRange', snapshot.dateStart.replace(/-/g, '/') + ' ～ ' + snapshot.dateEnd.replace(/-/g, '/'));
+      setDetailText('employeeDetailShifts', String(detailNumber(summary.shifts)));
+      setDetailText('employeeDetailHours', detailHours(summary.hours) + ' h');
+      setDetailText('employeeDetailBefore', detailMoney(summary.before));
+      setDetailText('employeeDetailDeducted', '-' + detailMoney(summary.deducted));
+      setDetailText('employeeDetailReceived', '+' + detailMoney(summary.received));
+      setDetailText('employeeDetailAfter', detailMoney(summary.after));
+
+      var missingAttendance = detailNumber(summary.missingAttendanceDays);
+      var pendingAllocation = detailNumber(summary.pendingAllocationDays);
+      var notice = document.getElementById('employeeDetailNotice');
+      var status = document.getElementById('employeeDetailStatus');
+      status.textContent = '● ' + snapshot.status;
+      status.className = 'tipout-employee-status ' + (snapshot.status === '已完成' ? 'is-complete' : 'is-pending');
+      notice.className = 'tipout-employee-detail-notice ' + (snapshot.status === '已完成' ? 'is-complete' : 'is-pending');
+      if (snapshot.status === '已完成') {
+        setDetailText('employeeDetailNoticeTitle', '当前范围对账记录完整');
+        setDetailText('employeeDetailNoticeText', '所含参与日期均已分配，需要考勤的记录也已完成打卡。');
+      } else {
+        var issueParts = [];
+        if (missingAttendance) issueParts.push(missingAttendance + ' 天考勤数据');
+        if (pendingAllocation) issueParts.push(pendingAllocation + ' 天小费分配');
+        setDetailText('employeeDetailNoticeTitle', '有 ' + (issueParts.length ? issueParts.join('、') : '部分对账记录') + '待补录');
+        setDetailText('employeeDetailNoticeText', '状态仅用于核对提示，不反向修改现有分配结果。');
+      }
+      renderEmployeeDetailRows(snapshot.dailyRows);
+    }
+
+    function showEmployeeDetailEmpty() {
+      document.getElementById('employeeDetailContent').hidden = true;
+      document.getElementById('employeeDetailEmpty').hidden = false;
+    }
+
+    function returnToEmployeeReconciliation() {
+      var params = new URLSearchParams(window.location.search);
+      if (params.get('from') === 'summary' && params.get('return') === 'history' && history.length > 1) {
+        history.back();
+        return;
+      }
+      window.location.href = 'index.html?view=employee';
+    }
+
+    function initializeEmployeeReconciliationDetail() {
+      var params = new URLSearchParams(window.location.search);
+      var detailContext = {
+        employeeId: params.get('employeeId') || '',
+        store: params.get('store') || '',
+        dateStart: params.get('start') || '',
+        dateEnd: params.get('end') || ''
+      };
+      var snapshot = TipOutSummaryUi.readEmployeeReconciliationSnapshot(
+        sessionStorage.getItem(TipOutSummaryUi.EMPLOYEE_RECONCILIATION_SNAPSHOT_KEY),
+        detailContext
+      );
+      if (!snapshot) {
+        showEmployeeDetailEmpty();
+        return;
+      }
+      renderEmployeeReconciliationDetail(snapshot);
+    }
+
+    document.addEventListener('DOMContentLoaded', initializeEmployeeReconciliationDetail);
+  </script>
+</body>
+</html>
