@@ -88,6 +88,135 @@ function detailNumber(value) { return Number(value) || 0; }
       return cell;
     }
 
+    function employeeDetailCsvCell(value) {
+      var text = value === undefined || value === null ? '' : String(value);
+      if (/^[=+\-@]/.test(text)) text = "'" + text;
+      if (/[",\r\n]/.test(text)) return '"' + text.replace(/"/g, '""') + '"';
+      return text;
+    }
+
+    function employeeDetailSafeFilename(value) {
+      return String(value || '员工对账').replace(/[\\/:*?"<>|]/g, '_').replace(/\s+/g, '_');
+    }
+
+    function employeeDetailEscapeHtml(value) {
+      return String(value === undefined || value === null ? '' : value)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    function collectEmployeeDetailExportData() {
+      var state = getEmployeeDetailViewState();
+      if (!state || !state.rows || state.rows.length === 0) {
+        showNotification('当前筛选条件下没有可导出的数据', 'warning');
+        return null;
+      }
+      return {
+        name: state.snapshot.name || '员工',
+        role: employeeDetailRoleLabel(state.snapshot.role),
+        store: state.snapshot.store || '',
+        start: state.range.start,
+        end: state.range.end,
+        attendance: state.attendance,
+        rows: state.rows.map(function(row) {
+          return {
+            date: row.dateKey,
+            attendance: employeeDetailAttendanceStatus(row),
+            shift: detailNumber(row.hours) > 0 ? '1 个班次 / ' + detailHours(row.hours) + ' h' : '— / 0 h',
+            before: detailMoney(row.before),
+            deducted: '-' + detailMoney(row.deducted),
+            received: '+' + detailMoney(row.received),
+            after: detailMoney(row.after),
+            allocation: row.allocated ? '已分配' : '待分配'
+          };
+        })
+      };
+    }
+
+    function employeeDetailExportFilename(data, extension) {
+      return employeeDetailSafeFilename(data.name + '_' + data.start + '_' + data.end) + '.' + extension;
+    }
+
+    function buildEmployeeDetailCsv(data) {
+      var lines = [];
+      lines.push(['员工', data.name].map(employeeDetailCsvCell).join(','));
+      lines.push(['角色', data.role].map(employeeDetailCsvCell).join(','));
+      lines.push(['日期范围', data.start + ' ~ ' + data.end].map(employeeDetailCsvCell).join(','));
+      lines.push(['考勤筛选', data.attendance].map(employeeDetailCsvCell).join(','));
+      lines.push('');
+      lines.push(['日期', '考勤状态', '班次 / 工时', '分配前', '扣除', '分配获得', '实际获得', '分配状态'].map(employeeDetailCsvCell).join(','));
+      data.rows.forEach(function(row) {
+        lines.push([row.date, row.attendance, row.shift, row.before, row.deducted, row.received, row.after, row.allocation].map(employeeDetailCsvCell).join(','));
+      });
+      return '\uFEFF' + lines.join('\r\n');
+    }
+
+    function exportEmployeeDetailCsv(data) {
+      var blob = new Blob([buildEmployeeDetailCsv(data)], { type: 'text/csv;charset=utf-8;' });
+      var url = URL.createObjectURL(blob);
+      var link = document.createElement('a');
+      link.href = url;
+      link.download = employeeDetailExportFilename(data, 'csv');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      showNotification('CSV 导出成功', 'success');
+    }
+
+    function buildEmployeeDetailPrintHtml(data) {
+      var headings = ['日期', '考勤状态', '班次 / 工时', '分配前', '扣除', '分配获得', '实际获得', '分配状态'];
+      var body = data.rows.map(function(row) {
+        return '<tr>' + [row.date, row.attendance, row.shift, row.before, row.deducted, row.received, row.after, row.allocation]
+          .map(function(value) { return '<td>' + employeeDetailEscapeHtml(value) + '</td>'; }).join('') + '</tr>';
+      }).join('');
+      return '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>' +
+        employeeDetailEscapeHtml(employeeDetailExportFilename(data, 'pdf').replace(/\.pdf$/, '')) +
+        '</title><style>@page{size:A4 landscape;margin:12mm}body{font-family:"Microsoft YaHei","PingFang SC",Arial,sans-serif;color:#171717;font-size:12px}h1{font-size:20px;margin:0 0 8px}.meta{color:#666;margin-bottom:16px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:7px;text-align:left}th{background:#f5f6f8}</style></head><body><h1>' +
+        employeeDetailEscapeHtml(data.name) + ' 员工对账</h1><div class="meta">角色：' + employeeDetailEscapeHtml(data.role) +
+        '　日期：' + employeeDetailEscapeHtml(data.start + ' ～ ' + data.end) + '　考勤：' + employeeDetailEscapeHtml(data.attendance) +
+        '</div><table><thead><tr>' + headings.map(function(item) { return '<th>' + item + '</th>'; }).join('') +
+        '</tr></thead><tbody>' + body + '</tbody></table></body></html>';
+    }
+
+    function exportEmployeeDetailPdf(data) {
+      var printWindow = window.open('', '_blank', 'noopener,noreferrer');
+      if (!printWindow) {
+        showNotification('浏览器阻止了打印窗口，请允许弹窗后重试', 'error');
+        return;
+      }
+      printWindow.document.open();
+      printWindow.document.write(buildEmployeeDetailPrintHtml(data));
+      printWindow.document.close();
+      printWindow.focus();
+      printWindow.print();
+    }
+
+    function closeEmployeeDetailExportMenu() {
+      var menu = document.getElementById('employeeDetailExportMenu');
+      var button = document.getElementById('employeeDetailExportButton');
+      if (menu) menu.classList.remove('show');
+      if (button) button.setAttribute('aria-expanded', 'false');
+    }
+
+    function toggleEmployeeDetailExportMenu(event) {
+      if (event && event.stopPropagation) event.stopPropagation();
+      var menu = document.getElementById('employeeDetailExportMenu');
+      var button = document.getElementById('employeeDetailExportButton');
+      if (!menu) return;
+      var open = !menu.classList.contains('show');
+      menu.classList.toggle('show', open);
+      if (button) button.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+
+    function runEmployeeDetailExport(type) {
+      closeEmployeeDetailExportMenu();
+      var data = collectEmployeeDetailExportData();
+      if (!data) return;
+      if (type === 'pdf') exportEmployeeDetailPdf(data);
+      if (type === 'csv') exportEmployeeDetailCsv(data);
+    }
+
     function renderEmployeeDetailRows(rows) {
       var tbody = document.getElementById('employeeDetailRows');
       tbody.textContent = '';
@@ -192,4 +321,7 @@ function detailNumber(value) { return Number(value) || 0; }
       renderEmployeeReconciliationDetail(snapshot);
     }
 
+    document.addEventListener('click', function(event) {
+      if (!event.target || !event.target.closest || !event.target.closest('.export-dropdown')) closeEmployeeDetailExportMenu();
+    });
     document.addEventListener('DOMContentLoaded', initializeEmployeeReconciliationDetail);
