@@ -160,6 +160,10 @@
             </button>
             <div id="indexFilterCollapsible" class="filter-surface-collapsible">
               <div class="filter-bar filter-bar--page filter-bar--index">
+                <div class="tipout-view-switch" id="summaryViewSwitch" role="tablist" aria-label="汇总视图">
+                  <button type="button" id="dateTaskTab" role="tab" aria-selected="true" aria-controls="dateTaskPanel" tabindex="0" data-native-onclick="setSummaryView('date')" data-native-onkeydown="handleSummaryViewKeydown(event)">日期任务</button>
+                  <button type="button" id="employeeReconciliationTab" role="tab" aria-selected="false" aria-controls="employeeReconciliationPanel" tabindex="-1" data-native-onclick="setSummaryView('employee')" data-native-onkeydown="handleSummaryViewKeydown(event)">员工对账</button>
+                </div>
                 <div class="filter-field filter-field--daterange">
                   <span class="filter-field-label">日期范围</span>
                   <div class="date-range-group">
@@ -205,10 +209,6 @@
                     </div>
                     <div class="multi-select-dropdown" id="employeeFilterDropdown"></div>
                   </div>
-                </div>
-                <div class="tipout-view-switch" id="summaryViewSwitch" role="tablist" aria-label="汇总视图">
-                  <button type="button" id="dateTaskTab" role="tab" aria-selected="true" aria-controls="dateTaskPanel" tabindex="0" data-native-onclick="setSummaryView('date')" data-native-onkeydown="handleSummaryViewKeydown(event)">日期任务</button>
-                  <button type="button" id="employeeReconciliationTab" role="tab" aria-selected="false" aria-controls="employeeReconciliationPanel" tabindex="-1" data-native-onclick="setSummaryView('employee')" data-native-onkeydown="handleSummaryViewKeydown(event)">员工对账</button>
                 </div>
               </div>
             </div>
