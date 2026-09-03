@@ -755,7 +755,7 @@
     <div class="modal" style="width:480px">
       <div class="modal-header">
         <h3>发送到邮箱</h3>
-        <button type="button" class="modal-close" onclick="closeModal('payrollDetailEmailModal')" aria-label="关闭">×</button>
+        <button type="button" class="modal-close" id="btn-payroll-detail-email-close" aria-label="关闭">×</button>
       </div>
       <div class="modal-body">
         <p id="payrollDetailExportEmailHint" class="payroll-email-export-hint" style="display:none;margin:0 0 12px;font-size:13px;line-height:1.6;color:var(--text-secondary)"></p>
@@ -777,8 +777,8 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn" onclick="closeModal('payrollDetailEmailModal')">取消</button>
-        <button type="button" class="btn btn-primary" onclick="sendPayrollDetailEmail()">发送</button>
+        <button type="button" class="btn" id="btn-payroll-detail-email-cancel">取消</button>
+        <button type="button" class="btn btn-primary" id="btn-payroll-detail-email-send">发送</button>
       </div>
     </div>
   </div>

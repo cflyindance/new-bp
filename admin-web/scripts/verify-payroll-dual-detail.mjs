@@ -13,6 +13,10 @@ for (const token of [
   'data-print-pagination="paginate"', 'payroll-detail-pages.js',
 ]) if (!html.includes(token)) failures.push(`html missing ${token}`);
 if (html.includes("data-export-variant")) failures.push("export menu must use the active detail tab without a second variant selection");
+for (const id of ["btn-payroll-detail-email-close", "btn-payroll-detail-email-cancel", "btn-payroll-detail-email-send"]) {
+  if (!html.includes(`id="${id}"`)) failures.push(`email modal missing ${id}`);
+}
+if (/payrollDetailEmailModal[\s\S]{0,2000}onclick=/.test(html)) failures.push("email modal must not rely on inline onclick handlers");
 
 for (const token of [
   "menusifu.payroll.detail.print-pagination.v1", "compactClockPairs", "remainingClockPairCount",

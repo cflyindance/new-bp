@@ -4747,6 +4747,15 @@ body{margin:0;padding:24px;background:#fff;}
       });
     });
     $("#btn-employees-detail-modal-ok")?.addEventListener("click", () => hideEmployeesDetailModal());
+    $("#btn-payroll-detail-email-close")?.addEventListener("click", () => {
+      if (typeof cancelPayrollDetailEmail === "function") cancelPayrollDetailEmail();
+    });
+    $("#btn-payroll-detail-email-cancel")?.addEventListener("click", () => {
+      if (typeof cancelPayrollDetailEmail === "function") cancelPayrollDetailEmail();
+    });
+    $("#btn-payroll-detail-email-send")?.addEventListener("click", () => {
+      if (typeof sendPayrollDetailEmail === "function") sendPayrollDetailEmail();
+    });
     $("#btn-adp-report-modal-close")?.addEventListener("click", () => hideAdpReportModal());
     $("#btn-adp-report-modal-ok")?.addEventListener("click", () => hideAdpReportModal());
   }

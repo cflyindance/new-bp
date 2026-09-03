@@ -838,6 +838,12 @@ function printPayrollDetail(variant, pagination) {
 
 let payrollEmailExportSnapshot = null;
 
+function cancelPayrollDetailEmail() {
+  payrollEmailExportSnapshot = null;
+  if (typeof closeModal === "function") closeModal("payrollDetailEmailModal");
+  else document.getElementById("payrollDetailEmailModal")?.classList.remove("show");
+}
+
 function openPayrollDetailEmailModal(variant, pagination) {
 
   closePayrollDetailExportMenus();
@@ -932,6 +938,8 @@ function sendPayrollDetailEmail() {
 
   const fmt = (fmtEl ? fmtEl.value : "pdf").toUpperCase();
 
+  const sendButton = document.getElementById("btn-payroll-detail-email-send");
+  if (sendButton) sendButton.disabled = true;
   if (typeof closeModal === "function") closeModal("payrollDetailEmailModal");
 
   if (typeof showNotification === "function") {
@@ -952,6 +960,8 @@ function sendPayrollDetailEmail() {
     }));
 
     payrollEmailExportSnapshot = null;
+
+    if (sendButton) sendButton.disabled = false;
 
   }, 1500);
 
