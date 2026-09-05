@@ -19,8 +19,9 @@ assert.match(css, /@media \(max-width:768px\)/);
 assert.match(page, /mountPayrollBatchExportController/);
 assert.match(page, /batchExport\?\.destroy\(\)/);
 assert.match(runtime, /getBatchBridge/);
+assert.match(runtime, /injectBatchBridgeIntoPayrollIife/);
+assert.match(runtime, /Payroll legacy runtime IIFE boundary was not found/);
 for (const action of ["batch-select-results", "batch-clear-selection", "beforeunload", "task.retry", "task.cancel"]) {
   assert.match(controller, new RegExp(action.replace(".", "\\.")));
 }
 console.log("Payroll batch export UI verification passed.");
-

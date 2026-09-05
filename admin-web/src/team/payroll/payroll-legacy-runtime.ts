@@ -70,6 +70,42 @@ function createScopeAdapter(context: PayrollPageContext, cleanups: Set<() => voi
   };
 }
 
+const batchBridgeSource = `window.__teamPayrollBatchBridge = {
+  getSnapshot: () => structuredClone(buildSnapshot()),
+  getDetailPayload: (employeeId) => {
+    const period = getPeriod(state.periodId);
+    const employee = getEmployee(state.periodId, employeeId);
+    return employee && period ? structuredClone(buildDetailExportPayload(employee, period)) : null;
+  },
+  getDetailPrintHtml: (employeeId) => {
+    const period = getPeriod(state.periodId);
+    const employee = getEmployee(state.periodId, employeeId);
+    if (!employee || !period) return null;
+    const previousEmployeeId = state.employeeId;
+    const previousDraft = state.workspaceDraft ? structuredClone(state.workspaceDraft) : null;
+    state.employeeId = employeeId;
+    state.workspaceDraft = null;
+    initWorkspaceDraft();
+    renderManageForm();
+    syncDerived();
+    const html = buildPayrollDetailPrintDocumentHtml();
+    state.employeeId = previousEmployeeId;
+    state.workspaceDraft = previousDraft;
+    if (previousEmployeeId) { renderManageForm(); syncDerived(); }
+    return html;
+  },
+  appendExportAudit: (format, employeeIds, result) => {
+    appendAudit("export_batch_detail", { format, employeeIds, result });
+    saveState();
+  },
+};`;
+
+function injectBatchBridgeIntoPayrollIife(source: string): string {
+  const boundary = source.lastIndexOf("})();");
+  if (boundary < 0) throw new Error("Payroll legacy runtime IIFE boundary was not found.");
+  return `${source.slice(0, boundary)}\n${batchBridgeSource}\n${source.slice(boundary)}`;
+}
+
 function buildRuntimeSource(): string {
   return [
     commonCode,
@@ -88,36 +124,7 @@ function buildRuntimeSource(): string {
     apiClientCode,
     "const PayrollApiClient = window.PayrollApiClient;",
     "const TipOutGlobalScopeFilter = window.TipOutGlobalScopeFilter;",
-    payrollCode,
-    `window.__teamPayrollBatchBridge = {
-      getSnapshot: () => structuredClone(buildSnapshot()),
-      getDetailPayload: (employeeId) => {
-        const period = getPeriod(state.periodId);
-        const employee = getEmployee(state.periodId, employeeId);
-        return employee && period ? structuredClone(buildDetailExportPayload(employee, period)) : null;
-      },
-      getDetailPrintHtml: (employeeId) => {
-        const period = getPeriod(state.periodId);
-        const employee = getEmployee(state.periodId, employeeId);
-        if (!employee || !period) return null;
-        const previousEmployeeId = state.employeeId;
-        const previousDraft = state.workspaceDraft ? structuredClone(state.workspaceDraft) : null;
-        state.employeeId = employeeId;
-        state.workspaceDraft = null;
-        initWorkspaceDraft();
-        renderManageForm();
-        syncDerived();
-        const html = buildPayrollDetailPrintDocumentHtml();
-        state.employeeId = previousEmployeeId;
-        state.workspaceDraft = previousDraft;
-        if (previousEmployeeId) { renderManageForm(); syncDerived(); }
-        return html;
-      },
-      appendExportAudit: (format, employeeIds, result) => {
-        appendAudit("export_batch_detail", { format, employeeIds, result });
-        saveState();
-      },
-    };`,
+    injectBatchBridgeIntoPayrollIife(payrollCode),
     "//# sourceURL=team-payroll-native-runtime.js",
   ].join("\n\n");
 }
