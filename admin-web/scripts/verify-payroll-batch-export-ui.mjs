@@ -7,6 +7,8 @@ const page = fs.readFileSync(new URL("../src/team/payroll-page.ts", import.meta.
 const runtime = fs.readFileSync(new URL("../src/team/payroll/payroll-legacy-runtime.ts", import.meta.url), "utf8");
 const controller = fs.readFileSync(new URL("../src/team/payroll/payroll-batch-export-controller.ts", import.meta.url), "utf8");
 
+assert.doesNotMatch(css, /^500;600;700&display=swap'\);$/m);
+
 for (const marker of [
   'data-action="open-batch-detail-export"', 'id="payrollBatchExportModal"', 'role="dialog"',
   'id="payrollBatchEmployeeSearch"', 'id="payrollBatchEmployeeList"', 'id="payrollBatchExportSummary"',
