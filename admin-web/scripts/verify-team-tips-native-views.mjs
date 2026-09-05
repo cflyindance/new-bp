@@ -29,6 +29,21 @@ for (const [view, tokens] of Object.entries(required)) {
   }
 }
 
+const rulesTemplate = fs.readFileSync("src/team/tips/templates/rules.html", "utf8");
+const rulesHeadingIndex = rulesTemplate.indexOf("tipout-page-heading--with-back");
+const rulesToolbarIndex = rulesTemplate.indexOf("tipout-rules-toolbar");
+const rulesMetricsIndex = rulesTemplate.indexOf("tipout-metric-strip--three");
+const rulesTableIndex = rulesTemplate.indexOf("tipout-rules-table");
+if (!(rulesHeadingIndex < rulesToolbarIndex && rulesToolbarIndex < rulesMetricsIndex && rulesMetricsIndex < rulesTableIndex)) {
+  failures.push("rules: store filter must appear between heading and metrics");
+}
+if ((rulesTemplate.match(/id="storeFilter"/g) || []).length !== 1) {
+  failures.push("rules: store filter must be unique");
+}
+if (!rulesTemplate.includes('id="storeFilter" data-native-onchange="renderRulesTable()"')) {
+  failures.push("rules: store filter binding changed");
+}
+
 const sourceDetail = fs.readFileSync("dist/TipOut/detail.html", "utf8");
 const nativeDetail = fs.readFileSync("src/team/tips/templates/details.html", "utf8");
 const nativeDetailProgram = fs.readFileSync("src/team/tips/programs/details.js.txt", "utf8");
