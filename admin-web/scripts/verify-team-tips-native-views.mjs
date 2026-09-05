@@ -89,7 +89,7 @@ for (const file of ["dist/TipOut/index.html", "src/team/tips/templates/distribut
   }
   const cancelIndex = content.indexOf(">取消分配</button>");
   const ruleIndex = content.indexOf(">新建/查看规则</button>");
-  if (cancelIndex < 0 || ruleIndex < 0 || cancelIndex > ruleIndex) failures.push(`${file}: cancel allocation must precede rule entry in heading actions`);
+  if (cancelIndex < 0 || ruleIndex < 0) failures.push(`${file}: summary action entry missing`);
   if (!content.includes("doCancelAllocate()")) failures.push(`${file}: cancel allocation button handler missing`);
   const headingIndex = content.indexOf("tipout-page-heading");
   const filterIndex = content.indexOf("filter-surface tipout-compact-toolbar");
@@ -99,6 +99,21 @@ for (const file of ["dist/TipOut/index.html", "src/team/tips/templates/distribut
 if (!fs.readFileSync("src/team/tips/programs/distribution.js.txt", "utf8").includes("function doCancelAllocate()")) failures.push("distribution program: cancel allocation function missing");
 const distributionTemplate = fs.readFileSync("src/team/tips/templates/distribution.html", "utf8");
 const distributionProgram = fs.readFileSync("src/team/tips/programs/distribution.js.txt", "utf8");
+const distributionExport = fs.readFileSync("src/team/tips/legacy/export.js.txt", "utf8");
+const headingActions = distributionTemplate.match(/<div class="tipout-heading-actions">[\s\S]*?<\/div>\s*<\/div>\s*<\/div>/)?.[0] || "";
+if (!headingActions.includes("summaryRuleEntryBtn")) failures.push("distribution: rule entry must remain in heading actions");
+for (const token of [">取消分配</button>", "id=\"exportMenu\"", "id=\"allocateBtn\""]) {
+  if (headingActions.includes(token)) failures.push(`distribution: ${token} must move out of heading actions`);
+}
+for (const token of ["tipout-summary-action-bar", "summaryDateActions", "summaryAllocateAction", "exportMenu", "allocateBtn"]) {
+  if (!distributionTemplate.includes(token)) failures.push(`distribution: fixed summary action bar missing ${token}`);
+}
+for (const token of ["summaryDateActions", "summaryAllocateAction", "roleFilterField", "employeeFilterField"]) {
+  if (!distributionProgram.includes(token)) failures.push(`distribution: view-aware action/filter sync missing ${token}`);
+}
+for (const token of ["collectDateTaskExportData", "collectEmployeeReconciliationExportData", "collectCurrentSummaryExportData", "EmployeeReconciliation_"]) {
+  if (!distributionExport.includes(token)) failures.push(`distribution export: active-view export contract missing ${token}`);
+}
 for (const token of ["日期任务", "员工对账", "employeeReconciliationList"]) if (!distributionTemplate.includes(token)) failures.push(`distribution: employee reconciliation UI missing ${token}`);
 for (const token of ["setSummaryView", "renderEmployeeReconciliationList", "openEmployeeReconciliationDetail", "canonicalEmployeeStore", "dedupeEmployees", "selectedStore"]) if (!distributionProgram.includes(token)) failures.push(`distribution: employee reconciliation program missing ${token}`);
 for (const token of ["tipAllocationModal", "allocationStore", "allocationDateStart", "allocationDateEnd", "allocationScopeError", "confirmAllocateBtn"]) {

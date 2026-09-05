@@ -126,26 +126,7 @@
               <h1 id="summaryTitle">小费分配汇总</h1>
             </div>
             <div class="tipout-heading-actions">
-              <button type="button" class="btn btn-lg" data-native-onclick="doCancelAllocate()">取消分配</button>
               <button id="summaryRuleEntryBtn" type="button" class="btn btn-lg" data-native-onclick="openSummaryRuleEntry()">新建/查看规则</button>
-              <div class="export-dropdown">
-                <button type="button" class="btn btn-lg" data-native-onclick="toggleExportMenu()" aria-haspopup="menu">导出结果</button>
-                <div class="export-menu" id="exportMenu" role="menu">
-                  <div class="export-menu-item" data-native-onclick="exportAs('pdf')">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="flex-shrink:0"><rect x="2" y="1" width="12" height="14" rx="2" stroke="#ff4d4f" stroke-width="1.2"/><text x="8" y="10.5" text-anchor="middle" fill="#ff4d4f" font-size="5" font-weight="600">PDF</text></svg>
-                    导出为 PDF
-                  </div>
-                  <div class="export-menu-item" data-native-onclick="exportAs('csv')">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="flex-shrink:0"><rect x="2" y="1" width="12" height="14" rx="2" stroke="#52c41a" stroke-width="1.2"/><text x="8" y="10.5" text-anchor="middle" fill="#52c41a" font-size="5" font-weight="600">CSV</text></svg>
-                    导出为 CSV
-                  </div>
-                  <div class="export-menu-item" data-native-onclick="openEmailModal()">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="flex-shrink:0"><rect x="1.5" y="3" width="13" height="10" rx="2" stroke="#1677ff" stroke-width="1.2"/><path d="M2 4l6 4 6-4" stroke="#1677ff" stroke-width="1.2" stroke-linecap="round"/></svg>
-                    发送到邮箱
-                  </div>
-                </div>
-              </div>
-              <button id="allocateBtn" class="btn btn-primary btn-lg" data-native-onclick="openTipAllocationModal()">分配小费</button>
             </div>
           </div>
 
@@ -172,13 +153,13 @@
                     <input type="date" id="dateEnd" class="form-control form-control-lg" value="2026-02-28" data-native-onchange="renderDailySummaryList()">
                   </div>
                 </div>
-                <div class="filter-field">
+                <div class="filter-field" id="roleFilterField">
                   <label class="filter-field-label" for="storeSelect">门店</label>
                   <select id="storeSelect" class="form-control form-control-lg" data-native-onchange="invalidateDayPipelineCache();updateEmployeeFilter()">
                     <option value="">请选择门店</option>
                   </select>
                 </div>
-                <div class="filter-field">
+                <div class="filter-field" id="employeeFilterField">
                   <span class="filter-field-label">角色</span>
                   <div class="multi-select" id="roleFilter" data-placeholder="All Role">
                     <div class="multi-select-input" data-native-onclick="toggleIndexMultiSelect('roleFilter')">
@@ -239,6 +220,31 @@
             <div id="employeeReconciliationEmpty" class="tipout-empty-state" hidden>当前筛选范围暂无员工对账数据</div>
           </div>
         </section>
+      </div>
+      <div id="summaryActionBar" class="tipout-summary-action-bar" aria-label="小费汇总操作">
+        <div id="summaryDateActions" class="tipout-summary-date-actions">
+          <button type="button" class="btn btn-lg" data-native-onclick="doCancelAllocate()">取消分配</button>
+        </div>
+        <div class="export-dropdown">
+          <button type="button" class="btn btn-lg" data-native-onclick="toggleExportMenu()" aria-haspopup="menu">导出结果</button>
+          <div class="export-menu" id="exportMenu" role="menu">
+            <div class="export-menu-item" data-native-onclick="exportAs('pdf')">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="flex-shrink:0"><rect x="2" y="1" width="12" height="14" rx="2" stroke="#ff4d4f" stroke-width="1.2"/><text x="8" y="10.5" text-anchor="middle" fill="#ff4d4f" font-size="5" font-weight="600">PDF</text></svg>
+              导出为 PDF
+            </div>
+            <div class="export-menu-item" data-native-onclick="exportAs('csv')">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="flex-shrink:0"><rect x="2" y="1" width="12" height="14" rx="2" stroke="#52c41a" stroke-width="1.2"/><text x="8" y="10.5" text-anchor="middle" fill="#52c41a" font-size="5" font-weight="600">CSV</text></svg>
+              导出为 CSV
+            </div>
+            <div class="export-menu-item" data-native-onclick="openEmailModal()">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="flex-shrink:0"><rect x="1.5" y="3" width="13" height="10" rx="2" stroke="#1677ff" stroke-width="1.2"/><path d="M2 4l6 4 6-4" stroke="#1677ff" stroke-width="1.2" stroke-linecap="round"/></svg>
+              发送到邮箱
+            </div>
+          </div>
+        </div>
+        <div id="summaryAllocateAction" class="tipout-summary-date-actions">
+          <button id="allocateBtn" class="btn btn-primary btn-lg" data-native-onclick="openTipAllocationModal()">分配小费</button>
+        </div>
       </div>
       <div class="modal-overlay" id="tipAllocationModal" aria-hidden="true" data-native-onclick="handleTipAllocationOverlayClick(event)">
         <div class="modal tipout-allocation-modal" role="dialog" aria-modal="true" aria-labelledby="tipAllocationModalTitle" aria-describedby="tipAllocationModalDescription">
