@@ -3,6 +3,7 @@ import payrollPolishCss from "./payroll/payroll-polish.css?raw";
 import { createPayrollPageContext, type PayrollPageContext } from "./payroll/payroll-context";
 import { mountLegacyPayrollRuntime, type PayrollRuntimeHandle } from "./payroll/payroll-legacy-runtime";
 import { renderPayrollPageTemplate } from "./payroll/payroll-template";
+import { mountPayrollBatchExportController, type PayrollBatchExportControllerHandle } from "./payroll/payroll-batch-export-controller";
 
 export interface PayrollPageHandle {
   destroy(): void;
@@ -57,8 +58,15 @@ export function mountPayrollPage(
   container.addEventListener("wheel", handleWheel, { passive: false });
 
   let runtime: PayrollRuntimeHandle | null = mountLegacyPayrollRuntime(shadowRoot, pageRoot, context);
+  let batchExport: PayrollBatchExportControllerHandle | null = mountPayrollBatchExportController(
+    shadowRoot,
+    pageRoot,
+    runtime.getBatchBridge(),
+  );
   const handle: PayrollPageHandle = {
     destroy() {
+      batchExport?.destroy();
+      batchExport = null;
       runtime?.destroy();
       runtime = null;
       container.removeEventListener("wheel", handleWheel);

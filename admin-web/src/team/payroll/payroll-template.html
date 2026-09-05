@@ -167,6 +167,7 @@
                 </div>
               </div>
               <button type="button" class="btn payroll-workspace-action-btn" data-action="preview-employees-detail">Employees Detail</button>
+              <button type="button" class="btn payroll-workspace-action-btn payroll-batch-export-open" data-action="open-batch-detail-export">批量导出详情</button>
               <button type="button" class="btn btn-primary payroll-workspace-action-btn" id="payroll-header-save" data-action="confirm-employee">确定并保存</button>
             </div>
           </div>
@@ -843,4 +844,40 @@
       </div>
     </div>
   </div>
+<div class="modal-overlay payroll-batch-export-overlay" id="payrollBatchExportModal" aria-hidden="true">
+  <div class="modal payroll-batch-export-modal" role="dialog" aria-modal="true" aria-labelledby="payrollBatchExportTitle">
+    <div class="modal-header">
+      <div><h3 id="payrollBatchExportTitle">批量导出员工详情</h3><p>按当前门店、年份和薪资期生成员工明细。</p></div>
+      <button type="button" class="modal-close" data-action="close-batch-detail-export" aria-label="关闭">×</button>
+    </div>
+    <div class="modal-body payroll-batch-export-body">
+      <section class="payroll-batch-option-section">
+        <h4>员工范围</h4>
+        <div class="payroll-batch-segmented" role="radiogroup" aria-label="员工范围">
+          <label><input type="radio" name="payrollBatchScope" value="all" checked> 全部员工</label>
+          <label><input type="radio" name="payrollBatchScope" value="selected"> 选择员工</label>
+        </div>
+        <div class="payroll-batch-employee-picker" id="payrollBatchEmployeePicker" hidden>
+          <input id="payrollBatchEmployeeSearch" class="form-input" type="search" placeholder="搜索员工姓名、编号或岗位" autocomplete="off">
+          <div class="payroll-batch-picker-toolbar"><button type="button" class="btn btn-sm" data-action="batch-select-results">全选当前结果</button><button type="button" class="btn btn-sm" data-action="batch-clear-selection">清空选择</button><span id="payrollBatchSelectedCount">已选 0 人</span></div>
+          <div id="payrollBatchEmployeeList" class="payroll-batch-employee-list" role="listbox" aria-multiselectable="true"></div>
+        </div>
+      </section>
+      <div class="payroll-batch-option-grid">
+        <section class="payroll-batch-option-section"><h4>明细类型</h4><label><input type="radio" name="payrollBatchDetail" value="summary" checked> 精简明细</label><label><input type="radio" name="payrollBatchDetail" value="detailed"> 详细明细</label></section>
+        <section class="payroll-batch-option-section"><h4>文件格式</h4><label><input type="radio" name="payrollBatchFormat" value="pdf" checked> PDF</label><label><input type="radio" name="payrollBatchFormat" value="csv"> CSV</label></section>
+        <section class="payroll-batch-option-section"><h4>文件方式</h4><label><input type="radio" name="payrollBatchOrganization" value="merged" checked> 合并为一个文件</label><label><input type="radio" name="payrollBatchOrganization" value="zip"> 独立文件并打包 ZIP</label></section>
+      </div>
+      <section class="payroll-batch-option-section" id="payrollBatchPaginationSection"><h4>精简 PDF 分页</h4><label><input type="radio" name="payrollBatchPagination" value="single-page" checked> 强制每位员工一页</label><label><input type="radio" name="payrollBatchPagination" value="auto-pages"> 内容超出时自动分页</label></section>
+      <div id="payrollBatchExportSummary" class="payroll-batch-export-summary" aria-live="polite"></div>
+    </div>
+    <div class="modal-footer"><button type="button" class="btn" data-action="close-batch-detail-export">取消</button><button type="button" class="btn btn-primary" id="payrollBatchExportStart">开始导出</button></div>
+  </div>
+</div>
+<aside id="payrollBatchExportTaskPanel" class="payroll-batch-task-panel" hidden aria-live="polite">
+  <div class="payroll-batch-task-head"><strong id="payrollBatchTaskTitle">正在导出员工详情</strong><span id="payrollBatchTaskStatus"></span></div>
+  <div id="payrollBatchExportTaskProgress" class="payroll-batch-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span></span></div>
+  <p id="payrollBatchTaskMessage"></p><div id="payrollBatchTaskFailures" class="payroll-batch-task-failures" hidden></div>
+  <div class="payroll-batch-task-actions"><button type="button" class="btn btn-sm" id="payrollBatchTaskCancel">取消导出</button><button type="button" class="btn btn-sm" id="payrollBatchTaskRetry" hidden>仅重试失败员工</button><button type="button" class="btn btn-primary btn-sm" id="payrollBatchTaskDownload" hidden>下载文件</button><button type="button" class="btn btn-sm" id="payrollBatchTaskClose" hidden>关闭</button></div>
+</aside>
 </section>

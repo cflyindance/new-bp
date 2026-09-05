@@ -1,5 +1,4 @@
 /* Generated from TipOut common.css + payroll.css for the native Payroll shadow root. */
-
 .team-payroll-page {
   --primary: #1677ff;
   --primary-hover: #4096ff;
@@ -28,6 +27,33 @@
   --radius-md: 6px;
   --radius-lg: 8px;
 }
+
+/* Native batch employee-detail export */
+.payroll-page .payroll-batch-export-open{white-space:nowrap;color:#1677ff}
+.payroll-page .payroll-batch-export-modal{width:min(760px,calc(100vw - 32px));max-height:min(860px,calc(100vh - 32px));overflow:hidden}
+.payroll-page .payroll-batch-export-modal .modal-header{align-items:flex-start}
+.payroll-page .payroll-batch-export-modal .modal-header h3{margin:0}
+.payroll-page .payroll-batch-export-modal .modal-header p{margin:5px 0 0;color:var(--text-tertiary);font-size:12px}
+.payroll-page .payroll-batch-export-body{display:flex;flex-direction:column;gap:16px;overflow:auto;overscroll-behavior:contain}
+.payroll-page .payroll-batch-option-section{padding:14px;border:1px solid var(--border-color);border-radius:12px;background:#fafafa}
+.payroll-page .payroll-batch-option-section h4{margin:0 0 10px;font-size:13px}
+.payroll-page .payroll-batch-option-section label{display:inline-flex;align-items:center;gap:7px;margin-right:22px;font-size:13px;cursor:pointer}
+.payroll-page .payroll-batch-option-section input[type="radio"],.payroll-page .payroll-batch-option-section input[type="checkbox"]{accent-color:#1677ff}
+.payroll-page .payroll-batch-option-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.payroll-page .payroll-batch-option-grid .payroll-batch-option-section label{display:flex;margin:8px 0}
+.payroll-page .payroll-batch-employee-picker{margin-top:12px}
+.payroll-page .payroll-batch-employee-picker .form-input{width:100%;height:40px;border:1px solid var(--border-color);border-radius:9px;padding:0 12px;background:#fff}
+.payroll-page .payroll-batch-picker-toolbar{display:flex;align-items:center;gap:8px;margin:8px 0}.payroll-page .payroll-batch-picker-toolbar span{margin-left:auto;color:var(--text-secondary);font-size:12px}
+.payroll-page .payroll-batch-employee-list{max-height:240px;overflow:auto;overscroll-behavior:contain;border:1px solid var(--border-color);border-radius:10px;background:#fff}
+.payroll-page .payroll-batch-employee-row{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:10px 12px;border-bottom:1px solid #f0f0f0;cursor:pointer}.payroll-page .payroll-batch-employee-row:last-child{border-bottom:0}.payroll-page .payroll-batch-employee-row:hover{background:#f5f9ff}.payroll-page .payroll-batch-employee-row small{display:block;color:var(--text-tertiary);margin-top:2px}
+.payroll-page .payroll-batch-status{padding:3px 7px;border-radius:999px;background:#eef5ff;color:#1677ff;font-size:11px}.payroll-page .payroll-batch-status.is-draft{background:#fff3e8;color:#d46b08}.payroll-page .payroll-batch-status.is-empty{background:#f2f3f5;color:#8c8c8c}
+.payroll-page .payroll-batch-export-summary{padding:12px 14px;border-radius:10px;background:#f0f7ff;color:#334155;font-size:13px;line-height:1.7}.payroll-page .payroll-batch-export-summary strong{color:#111827}
+.payroll-page .payroll-batch-task-panel{position:fixed;right:24px;bottom:24px;z-index:1200;width:min(420px,calc(100vw - 32px));padding:16px;border:1px solid #d9d9d9;border-radius:14px;background:#fff;box-shadow:0 14px 40px rgba(0,0,0,.18)}
+.payroll-page .payroll-batch-task-head{display:flex;justify-content:space-between;gap:16px}.payroll-page .payroll-batch-task-head span{font-size:12px;color:var(--text-secondary)}
+.payroll-page .payroll-batch-progress{height:7px;margin:12px 0 8px;overflow:hidden;border-radius:999px;background:#edf0f3}.payroll-page .payroll-batch-progress span{display:block;width:0;height:100%;background:#1677ff;transition:width .2s ease}
+.payroll-page .payroll-batch-task-panel p{margin:0 0 10px;color:var(--text-secondary);font-size:12px}.payroll-page .payroll-batch-task-failures{max-height:120px;overflow:auto;margin:8px 0;padding:8px;border-radius:8px;background:#fff2f0;color:#a8071a;font-size:12px;overscroll-behavior:contain}.payroll-page .payroll-batch-task-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.payroll-page :is(.payroll-batch-export-modal,.payroll-batch-task-panel) button:focus-visible,.payroll-page .payroll-batch-employee-row:focus-within{outline:2px solid #1677ff;outline-offset:2px}
+@media (max-width:768px){.payroll-page .payroll-batch-option-grid{grid-template-columns:1fr}.payroll-page .payroll-batch-export-modal{max-height:calc(100vh - 16px)}.payroll-page .payroll-batch-task-panel{right:16px;bottom:16px}}
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -6308,4 +6334,3 @@ select.form-control {
     display: none !important;
   }
 }
-

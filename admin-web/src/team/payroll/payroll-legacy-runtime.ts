@@ -9,8 +9,10 @@ import periodCalendarCode from "./legacy/payroll-period-calendar.js.txt?raw";
 import payrollCode from "./legacy/payroll.js.txt?raw";
 import type { PayrollPageContext } from "./payroll-context";
 import type { PayrollScopeSnapshot } from "./payroll-types";
+import type { PayrollBatchBridge } from "./payroll-batch-export-types";
 
 export interface PayrollRuntimeHandle {
+  getBatchBridge(): PayrollBatchBridge;
   destroy(): void;
 }
 
@@ -70,6 +72,42 @@ function createScopeAdapter(context: PayrollPageContext, cleanups: Set<() => voi
   };
 }
 
+const batchBridgeSource = `window.__teamPayrollBatchBridge = {
+  getSnapshot: () => structuredClone(buildSnapshot()),
+  getDetailPayload: (employeeId) => {
+    const period = getPeriod(state.periodId);
+    const employee = getEmployee(state.periodId, employeeId);
+    return employee && period ? structuredClone(buildDetailExportPayload(employee, period)) : null;
+  },
+  getDetailPrintHtml: (employeeId) => {
+    const period = getPeriod(state.periodId);
+    const employee = getEmployee(state.periodId, employeeId);
+    if (!employee || !period) return null;
+    const previousEmployeeId = state.employeeId;
+    const previousDraft = state.workspaceDraft ? structuredClone(state.workspaceDraft) : null;
+    state.employeeId = employeeId;
+    state.workspaceDraft = null;
+    initWorkspaceDraft();
+    renderManageForm();
+    syncDerived();
+    const html = buildPayrollDetailPrintDocumentHtml();
+    state.employeeId = previousEmployeeId;
+    state.workspaceDraft = previousDraft;
+    if (previousEmployeeId) { renderManageForm(); syncDerived(); }
+    return html;
+  },
+  appendExportAudit: (format, employeeIds, result) => {
+    appendAudit("export_batch_detail", { format, employeeIds, result });
+    saveState();
+  },
+};`;
+
+function injectBatchBridgeIntoPayrollIife(source: string): string {
+  const boundary = source.lastIndexOf("})();");
+  if (boundary < 0) throw new Error("Payroll legacy runtime IIFE boundary was not found.");
+  return `${source.slice(0, boundary)}\n${batchBridgeSource}\n${source.slice(boundary)}`;
+}
+
 function buildRuntimeSource(): string {
   return [
     commonCode,
@@ -91,7 +129,7 @@ function buildRuntimeSource(): string {
     "const PayrollApiClient = window.PayrollApiClient;",
     "const TipOutGlobalScopeFilter = window.TipOutGlobalScopeFilter;",
     periodCalendarCode,
-    payrollCode,
+    injectBatchBridgeIntoPayrollIife(payrollCode),
     "//# sourceURL=team-payroll-native-runtime.js",
   ].join("\n\n");
 }
@@ -209,6 +247,11 @@ export function mountLegacyPayrollRuntime(
   execute(scopedWindow, scopedDocument, scopedWindow, scopedWindow, scopedWindow);
 
   return {
+    getBatchBridge() {
+      const bridge = globalTarget.__teamPayrollBatchBridge as PayrollBatchBridge | undefined;
+      if (!bridge) throw new Error("Payroll batch export bridge was not initialized.");
+      return bridge;
+    },
     destroy() {
       controller.abort();
       cleanups.forEach((cleanup) => cleanup());
