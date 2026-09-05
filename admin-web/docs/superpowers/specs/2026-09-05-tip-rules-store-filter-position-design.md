@@ -44,4 +44,6 @@
 3. 规则列表继续展示在统计区块下方。
 4. 切换门店后，统计数字与规则列表继续同步更新。
 5. `storeFilter` 仍保持唯一，事件绑定没有重复或失效。
-6. 原生小费页面验证脚本通过。
+6. 扩展原生小费页面验证脚本，针对 `src/team/tips/templates/rules.html` 明确断言标题区、`tipout-rules-toolbar`、`tipout-metric-strip--three`、规则表格按目标顺序出现。
+7. 验证脚本断言 `id="storeFilter"` 在原生规则模板中恰好出现一次，并继续保留 `data-native-onchange="renderRulesTable()"`。
+8. 原生小费页面验证脚本通过，且不依赖或修改旧 `dist/TipOut` 页面来验证本次布局。
