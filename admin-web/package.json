@@ -43,6 +43,7 @@
     "verify:subscription-service": "npx tsx scripts/verify-subscription-service.ts",
     "verify:tipout-interaction-refresh": "node scripts/verify-tipout-interaction-refresh.mjs",
     "verify:tipout-employee-reconciliation": "node scripts/verify-tipout-employee-reconciliation.mjs",
+    "verify:payroll-batch-export": "npx tsx scripts/verify-payroll-batch-export.ts && node scripts/verify-payroll-batch-export-ui.mjs",
     "verify:pit-database": "node scripts/verify-pit-database.mjs",
     "verify:pit-auth-api": "node scripts/verify-pit-auth-api.mjs",
     "verify:pit-requirements-api": "node scripts/verify-pit-requirements-api.mjs",
