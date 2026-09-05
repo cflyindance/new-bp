@@ -392,10 +392,14 @@ var ALLOC_KEY = 'tipout_allocated';
       return buildDateRange(s, e);
     }
 
-    function getDailyEmployeeResults(dateKey) {
-      return getFilteredEmployees().map(function(emp) {
+    function getDailyEmployeeResultsForEmployees(dateKey, employeeList) {
+      return employeeList.map(function(emp) {
         return Object.assign({ employeeId: emp.employeeId, name: emp.name, role: emp.role }, genDailyTip(emp, dateKey));
       });
+    }
+
+    function getDailyEmployeeResults(dateKey) {
+      return getDailyEmployeeResultsForEmployees(dateKey, getFilteredEmployees());
     }
 
     var restoredSummaryStateSignature = null;
@@ -426,6 +430,26 @@ var ALLOC_KEY = 'tipout_allocated';
       employeeTab.tabIndex = employeeActive ? 0 : -1;
       document.getElementById('dateTaskPanel').hidden = employeeActive;
       document.getElementById('employeeReconciliationPanel').hidden = !employeeActive;
+      var dateActions = document.getElementById('summaryDateActions');
+      var allocateAction = document.getElementById('summaryAllocateAction');
+      var roleFilterField = document.getElementById('roleFilterField');
+      var employeeFilterField = document.getElementById('employeeFilterField');
+      if (dateActions) dateActions.hidden = employeeActive;
+      if (allocateAction) allocateAction.hidden = employeeActive;
+      if (roleFilterField) roleFilterField.hidden = employeeActive;
+      if (employeeFilterField) employeeFilterField.hidden = employeeActive;
+      var exportMenu = document.getElementById('exportMenu');
+      if (exportMenu) exportMenu.classList.remove('show');
+      syncSummaryActionBarBounds();
+    }
+
+    function syncSummaryActionBarBounds() {
+      var root = document.querySelector('.tipout-page-summary');
+      var bar = document.getElementById('summaryActionBar');
+      if (!root || !bar) return;
+      var rect = root.getBoundingClientRect();
+      bar.style.setProperty('--tipout-summary-host-left', Math.max(0, rect.left) + 'px');
+      bar.style.setProperty('--tipout-summary-host-right', Math.max(0, window.innerWidth - rect.right) + 'px');
     }
 
     function setSummaryView(view) {
@@ -563,11 +587,12 @@ var ALLOC_KEY = 'tipout_allocated';
       document.getElementById('summaryAfter').textContent = money(totals.after);
     }
 
-    function buildDailyDataset() {
+    function buildDailyDataset(employeeList) {
       var allocatedDates = getAllocatedDates();
       var requiresAttendance = TipOutSummaryUi.resolveRequiresAttendance(getLegacyRulesForCurrentStore());
+      var scopedEmployees = Array.isArray(employeeList) ? employeeList : getFilteredEmployees();
       return getDateRange().map(function(dateKey) {
-        var employeeResults = getDailyEmployeeResults(dateKey);
+        var employeeResults = getDailyEmployeeResultsForEmployees(dateKey, scopedEmployees);
         return {
           dateKey: dateKey,
           date: new Date(dateKey + 'T00:00:00'),
@@ -650,7 +675,9 @@ var ALLOC_KEY = 'tipout_allocated';
     }
 
     function renderSummaryViews() {
-      var dailyRows = buildDailyDataset();
+      var dailyRows = activeSummaryView === 'employee'
+        ? buildDailyDataset(getStoreEmployees())
+        : buildDailyDataset(getFilteredEmployees());
       var allocatedDates = getAllocatedDates();
       renderSummaryOverview(dailyRows, allocatedDates);
       if (activeSummaryView === 'employee') {
@@ -872,6 +899,15 @@ var ALLOC_KEY = 'tipout_allocated';
       return list;
     }
 
+    function getStoreEmployees() {
+      var storeSelect = document.getElementById('storeSelect');
+      var selectedStore = canonicalEmployeeStore(storeSelect ? storeSelect.value : '');
+      if (!selectedStore) return employees.slice();
+      return employees.filter(function(employee) {
+        return !employee.store || canonicalEmployeeStore(employee.store) === selectedStore;
+      });
+    }
+
     function toggleFold(empId) {
       const section = document.getElementById(empId);
       const detail = section.querySelector('.employee-detail');
@@ -946,6 +982,8 @@ var ALLOC_KEY = 'tipout_allocated';
     }
 
     document.addEventListener('DOMContentLoaded', initializeSummaryPage);
+    window.addEventListener('resize', syncSummaryActionBarBounds);
     window.addEventListener('pageshow', function() {
       restoreSummaryUiState();
+      syncSummaryViewUi();
     });
