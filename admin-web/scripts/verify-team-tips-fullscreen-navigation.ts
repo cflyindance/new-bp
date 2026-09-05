@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { isTipsFullscreenRoute, isTrustedTipsHistoryState, parseTipsRoute } from "../src/team/tips/tips-navigation.ts";
+import { isTipsFullscreenRoute, isTipsSummaryReturnTransition, isTrustedTipsHistoryState, parseTipsRoute } from "../src/team/tips/tips-navigation.ts";
 
 assert.equal(isTipsFullscreenRoute(parseTipsRoute("#/team/tips/rules")), true);
 assert.equal(isTipsFullscreenRoute(parseTipsRoute("#/team/tips/rules/?store=1")), true);
@@ -7,6 +7,9 @@ assert.equal(isTipsFullscreenRoute(parseTipsRoute("#/team/tips/rules/editor?id=2
 assert.equal(isTipsFullscreenRoute(parseTipsRoute("#/team/tips/details?date=2026-01-03")), true);
 assert.equal(isTipsFullscreenRoute(parseTipsRoute("#/team/tips/employee-reconciliation?employeeId=e1")), true);
 assert.equal(isTipsFullscreenRoute(parseTipsRoute("#/team/tips/rules-foo")), false);
+assert.equal(isTipsSummaryReturnTransition(parseTipsRoute("#/team/tips/details?date=2026-01-03"), parseTipsRoute("#/team/tips/distribution")), true);
+assert.equal(isTipsSummaryReturnTransition(parseTipsRoute("#/team/tips/employee-reconciliation?employeeId=e1"), parseTipsRoute("#/team/tips/distribution?view=employee")), true);
+assert.equal(isTipsSummaryReturnTransition(parseTipsRoute("#/team/tips/distribution"), parseTipsRoute("#/team/tips/details")), false);
 const valid = { flowId: "flow-1", viewHref: "/team/tips/rules", scrollTop: 12, parentHref: "/team/tips/distribution", summaryHref: "/team/tips/distribution" as const, summaryScrollTop: 24 };
 assert.equal(isTrustedTipsHistoryState(valid, "/team/tips/rules"), true);
 assert.equal(isTrustedTipsHistoryState({ ...valid, scrollTop: -1 }, "/team/tips/rules"), false);

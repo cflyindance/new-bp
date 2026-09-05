@@ -5,7 +5,7 @@ import { mountEmployeesPage, type EmployeesPageHandle } from "./team/employees-p
 import { createEmployeesPageContext } from "./team/employees/employees-context";
 import { mountTipsPage, type TipsPageHandle } from "./team/tips-page";
 import { createTipsPageContext } from "./team/tips/tips-context";
-import { parseTipsRoute } from "./team/tips/tips-navigation";
+import { isTipsFullscreenRoute, parseTipsRoute } from "./team/tips/tips-navigation";
 import { BUILD_STAMP } from "./generated/build-stamp";
 import {
   bindLoginPage,
@@ -2044,7 +2044,7 @@ function renderTeamRolesEmployeesPanel(): string {
 
 /** 团队管理原生小费管理页：保留主项目导航、账号栏与全局作用域。 */
 function renderTeamTipsManagementPanel(path: string): string {
-  const fullscreen = path === "/team/tips/details" || path.startsWith("/team/tips/details?") || path === "/team/tips/rules" || path.startsWith("/team/tips/rules?") || path === "/team/tips/rules/editor" || path.startsWith("/team/tips/rules/editor?");
+  const fullscreen = isTipsFullscreenRoute(parseTipsRoute(path));
   return `
     <div data-team-tips-scroll ${fullscreen ? "data-team-tips-flow-fullscreen" : ""} class="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto bg-[#f3f4f6] ${fullscreen ? "team-tips-flow-fullscreen" : ""}">
       <div class="block min-h-full min-w-0" data-team-tips-root></div>

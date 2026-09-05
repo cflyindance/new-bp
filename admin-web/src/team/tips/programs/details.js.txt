@@ -1212,9 +1212,7 @@ var ALLOC_KEY = 'tipout_allocated';
     }
 
     function returnToSummary() {
-      var params = getDetailUrlParams();
-      if (params.from === 'summary' && params.return === 'history' && history.length > 1) history.back();
-      else window.location.href = 'index.html';
+      window.location.href = 'index.html';
     }
 
     initStoreSelect();

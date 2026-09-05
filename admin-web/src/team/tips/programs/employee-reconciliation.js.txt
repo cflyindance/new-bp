@@ -338,11 +338,6 @@ function detailNumber(value) { return Number(value) || 0; }
     }
 
     function returnToEmployeeReconciliation() {
-      var params = new URLSearchParams(window.location.search);
-      if (params.get('from') === 'summary' && params.get('return') === 'history' && history.length > 1) {
-        history.back();
-        return;
-      }
       window.location.href = 'index.html?view=employee';
     }
 

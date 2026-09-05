@@ -151,6 +151,9 @@ if (!pendingValueHelper) {
 
 const employeeDetailTemplate = fs.readFileSync("src/team/tips/templates/employee-reconciliation.html", "utf8");
 const employeeDetailProgram = fs.readFileSync("src/team/tips/programs/employee-reconciliation.js.txt", "utf8");
+const detailsProgram = fs.readFileSync("src/team/tips/programs/details.js.txt", "utf8");
+if (!employeeDetailProgram.includes("window.location.href = 'index.html?view=employee';") || employeeDetailProgram.includes("history.back()")) failures.push("employee reconciliation detail: return must target employee summary without browser history back");
+if (!detailsProgram.includes("window.location.href = 'index.html';") || detailsProgram.includes("history.back()")) failures.push("distribution detail: return must target date summary without browser history back");
 const tipsRuntime = fs.readFileSync("src/team/tips/tips-legacy-runtime.ts", "utf8");
 const employeeDetailBackgroundRule = pageCss.match(/\.tipout-page-employee-reconciliation-detail \.tipout-employee-detail-table tr\.has-issue\s*\{([^}]*)\}/)?.[1] ?? "";
 if (!employeeDetailBackgroundRule.includes("background: #ffffff")) failures.push("employee reconciliation detail: issue rows must use a white background");

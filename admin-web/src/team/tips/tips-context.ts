@@ -1,5 +1,5 @@
 import { getScopedFilterOptions, readScopeFilters, writeScopeFilters, type ScopeFilterState } from "../../auth/session-scope";
-import { isTrustedTipsHistoryState, parseTipsRoute, type TipsHistoryEntryState } from "./tips-navigation";
+import { isTipsSummaryReturnTransition, isTrustedTipsHistoryState, parseTipsRoute, type TipsHistoryEntryState } from "./tips-navigation";
 
 export interface TipsScopeSnapshot {
   storeId: string;
@@ -70,7 +70,7 @@ export function createTipsPageContext(dependencies: TipsContextDependencies = br
       const summaryScrollTop = current.view === "distribution" ? scrollTop : trusted?.summaryScrollTop ?? 0;
       const next: TipsHistoryEntryState = state ?? { flowId, viewHref: target.href, scrollTop: 0, parentHref: current.href, summaryHref: "/team/tips/distribution", summaryScrollTop };
       if (trusted) history.replaceState({ ...history.state, menusifuTeamTips: { ...trusted, scrollTop } }, "");
-      if ((current.view === "rule-editor" && target.view === "rules") || ((current.view === "rules" || current.view === "details") && target.view === "distribution")) {
+      if ((current.view === "rule-editor" && target.view === "rules") || (current.view === "rules" && target.view === "distribution") || isTipsSummaryReturnTransition(current, target)) {
         commitHash(target.href, "replace", { ...next, parentHref: target.view === "rules" ? "/team/tips/distribution" : target.href });
         return;
       }
