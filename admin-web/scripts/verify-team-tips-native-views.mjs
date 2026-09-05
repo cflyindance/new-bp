@@ -152,6 +152,9 @@ if (!pendingValueHelper) {
 const employeeDetailTemplate = fs.readFileSync("src/team/tips/templates/employee-reconciliation.html", "utf8");
 const employeeDetailProgram = fs.readFileSync("src/team/tips/programs/employee-reconciliation.js.txt", "utf8");
 const tipsRuntime = fs.readFileSync("src/team/tips/tips-legacy-runtime.ts", "utf8");
+const employeeDetailBackgroundRule = pageCss.match(/\.tipout-page-employee-reconciliation-detail \.tipout-employee-detail-table tr\.has-issue\s*\{([^}]*)\}/)?.[1] ?? "";
+if (!employeeDetailBackgroundRule.includes("background: #ffffff")) failures.push("employee reconciliation detail: issue rows must use a white background");
+if (!pageCss.includes(".tipout-page-employee-reconciliation-detail #employeeDetailContent")) failures.push("employee reconciliation detail: white content surface rule missing");
 for (const token of ["employeeDetailStartDate", "employeeDetailEndDate", "employeeDetailRole", "employeeDetailAttendanceFilter", "employeeDetailFilteredEmpty", "employeeDetailExportButton", "employeeDetailExportMenu", "employeeDetailEmailModal", "employeeDetailExportEmail", "employeeDetailEmailFormat"]) {
   if (!employeeDetailTemplate.includes(token)) failures.push(`employee reconciliation detail: missing ${token}`);
 }
