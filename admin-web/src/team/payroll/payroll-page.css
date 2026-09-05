@@ -618,6 +618,11 @@ select.form-control {
   visibility: visible;
 }
 
+/* The export confirmation opens on top of the ADP report preview. */
+#payrollExportConfirmModal.modal-overlay.show {
+  z-index: 1120;
+}
+
 .modal {
   background: #fff;
   border-radius: var(--radius-lg);
