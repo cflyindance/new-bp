@@ -11,7 +11,8 @@ const profile = {
 };
 const window = { ORDER_LIMIT_MODULE_PROFILE: profile, __BUFFET_V4_VALIDATION_TEST__: true, location: { search: "" }, BuffetRulePolicy: {
   scenarioKey: (party, round) => `${party}|${round}`, targetCellKey: (party, round, line, target) => `${party}|${round}|${line}|${target}`,
-  menuIdentity: (item) => `${item.productLineId}|${item.dishId}`
+  menuIdentity: (item) => `${item.productLineId}|${item.dishId}`,
+  normalizePeriodSelection: (draft) => ({ valid: (draft.enabledPeriods || []).length === 1, mode: "single", periods: draft.enabledPeriods || [], code: "PERIOD_COMBINATION_INVALID" })
 } };
 const document = { body: { getAttribute: () => "test" }, getElementById: () => root };
 vm.runInNewContext(flow, { window, document, URLSearchParams, Number, String, Array, Object, Math, JSON, Date, Set, console });

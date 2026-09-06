@@ -2172,6 +2172,7 @@
         if (partyError) return partyError;
       }
       if (modernBuffet && (!Array.isArray(draft.enabledPeriods) || !draft.enabledPeriods.length)) return "请至少启用一个限制周期";
+      if (modernBuffet && !buffetPeriodSelection(draft).valid) return "限制周期组合不合法，请选择单周期或受控组合模板";
       if (modernBuffet && !enabledPeriodsHaveQuantityBlocks(draft)) return "每个启用周期至少保留一个限购维度";
       if (modernBuffet && !isAllowedCombination(draft)) return "当前限购主体、周期和限购对象组合不适用于自助餐规则";
       if ((modernBuffet ? draft.enabledPeriods.indexOf("multi_round") >= 0 : draft.period === "multi_round")) {
@@ -2256,10 +2257,10 @@
   }
 
   var BUFFET_PERIOD_ORDER = ["order_lifetime", "per_round", "multi_round"];
-  var BUFFET_PERIOD_TOGGLE_ATTRS = {
-    order_lifetime: 'data-period-toggle="order_lifetime"',
-    per_round: 'data-period-toggle="per_round"',
-    multi_round: 'data-period-toggle="multi_round"'
+  var BUFFET_PERIOD_SELECT_ATTRS = {
+    order_lifetime: 'data-period-select="order_lifetime"',
+    per_round: 'data-period-select="per_round"',
+    multi_round: 'data-period-select="multi_round"'
   };
 
   function isLegacyBuffetDraft(draft) {
@@ -2320,12 +2321,38 @@
     syncBuffetLegacyPeriod(draft);
   }
 
+  function buffetPeriodSelection(draft) {
+    ensureBuffetScenarioModel(draft);
+    if (window.BuffetRulePolicy && typeof window.BuffetRulePolicy.normalizePeriodSelection === "function") {
+      return window.BuffetRulePolicy.normalizePeriodSelection(draft);
+    }
+    return { valid: draft.enabledPeriods.length === 1, mode: draft.enabledPeriods.length === 1 ? "single" : "repair", periods: draft.enabledPeriods.slice(), templateId: "" };
+  }
+
+  function selectSingleBuffetPeriod(draft, period) {
+    upgradeBuffetDraftForScenario(draft);
+    ensureBuffetScenarioModel(draft);
+    if (window.BuffetRulePolicy && typeof window.BuffetRulePolicy.selectSinglePeriod === "function") window.BuffetRulePolicy.selectSinglePeriod(draft, period);
+    else {
+      BUFFET_PERIOD_ORDER.forEach(function (candidate) { setPeriodEnabled(draft, candidate, candidate === period); });
+      draft.buffetTemplateId = "custom";
+      draft.buffetTemplateModified = false;
+    }
+    syncBuffetLegacyPeriod(draft);
+  }
+
   function applyBuffetTemplate(draft, templateId) {
     if (!isBuffetProfile()) return;
     upgradeBuffetDraftForScenario(draft);
     var template = (moduleProfile.periodTemplates || []).find(function (item) { return item.id === templateId; });
     if (!template) return;
     ensureBuffetScenarioModel(draft);
+    if (!template.periods.length) {
+      var currentSelection = buffetPeriodSelection(draft);
+      selectSingleBuffetPeriod(draft, currentSelection.mode === "single" ? currentSelection.periods[0] : "per_round");
+      draft.buffetTemplateId = templateId;
+      return;
+    }
     BUFFET_PERIOD_ORDER.forEach(function (period) {
       var enabled = template.periods.indexOf(period) >= 0;
       setPeriodEnabled(draft, period, enabled);
@@ -2343,17 +2370,22 @@
     if (isBuffetProfile() && draft.buffetTemplateId && draft.buffetTemplateId !== "custom") draft.buffetTemplateModified = true;
   }
 
-  function renderBuffetPeriodToggles(draft) {
+  function renderBuffetPeriodSelection(draft) {
     ensureBuffetScenarioModel(draft);
+    var selection = buffetPeriodSelection(draft);
     var labels = {
       order_lifetime: ["整个订单", "按订单全部轮次累计"],
       per_round: ["每轮", "每轮独立累计"],
       multi_round: ["分轮次", "按轮次区间使用不同额度"]
     };
-    return BUFFET_PERIOD_ORDER.map(function (period) {
+    if (selection.mode === "controlled") {
+      return '<div class="olf-summary"><strong>组合模板已锁定周期</strong><span>' + selection.periods.map(periodLabel).join(" ＋ ") + '。如需改为单周期，请选择其他单周期模板或“自定义配置”。</span></div>';
+    }
+    var repair = selection.valid ? "" : '<div class="olf-summary olf-summary--warning"><strong>历史周期组合需要修复</strong><span>当前组合不再允许发布。请选择保留一个周期；如需保留多个周期，请返回列表复制规则后分别配置。</span></div>';
+    return repair + '<div class="olf-period-toggle-grid">' + BUFFET_PERIOD_ORDER.map(function (period) {
       var label = labels[period];
-      return '<label class="olf-period-toggle"><input type="checkbox" ' + BUFFET_PERIOD_TOGGLE_ATTRS[period] + (draft.enabledPeriods.indexOf(period) >= 0 ? " checked" : "") + ' /><span><strong>' + label[0] + '</strong><small>' + label[1] + '</small></span></label>';
-    }).join("");
+      return '<label class="olf-period-toggle"><input type="radio" name="buffet-period" ' + BUFFET_PERIOD_SELECT_ATTRS[period] + (selection.valid && selection.periods[0] === period ? " checked" : "") + ' /><span><strong>' + label[0] + '</strong><small>' + label[1] + '</small></span></label>';
+    }).join("") + '</div>';
   }
 
   function renderBuffetPeriodBlocks(draft) {
@@ -2383,7 +2415,7 @@
       : "";
     return '<div class="olf-content-head"><h2 tabindex="-1">场景配置</h2></div>' +
       '<section class="olf-section"><h3>常用模板</h3><div class="olf-template-grid">' + templates + '</div>' + changed + '</section>' +
-      '<section class="olf-section"><h3>启用限制周期</h3><div class="olf-period-toggle-grid">' + renderBuffetPeriodToggles(draft) + '</div></section>' +
+      '<section class="olf-section"><h3>限制周期</h3>' + renderBuffetPeriodSelection(draft) + '</section>' +
       '<section class="olf-section"><h3>周期内限购维度</h3>' + (draft.enabledPeriods.length ? renderBuffetPeriodBlocks(draft) : '<div class="olf-summary olf-summary--warning">请至少启用一个限制周期。</div>') + '</section>' + partySection + roundSection;
   }
 
@@ -2416,6 +2448,9 @@
       isLegacyBuffetDraft: isLegacyBuffetDraft,
       normalizeDraftForProfile: normalizeDraftForProfile,
       ensureBuffetScenarioModel: ensureBuffetScenarioModel,
+      buffetPeriodSelection: buffetPeriodSelection,
+      selectSingleBuffetPeriod: selectSingleBuffetPeriod,
+      renderBuffetScenarioConfiguration: renderBuffetScenarioConfiguration,
       applyBuffetTemplate: applyBuffetTemplate,
       isSystemDefaultDraft: isSystemDefaultDraft,
       systemDefaultTemplate: systemDefaultTemplate,
@@ -4228,6 +4263,8 @@
     if (!isBuffetV4Draft(draft)) return null;
     var periods = Array.isArray(draft.enabledPeriods) ? draft.enabledPeriods : [];
     if (!periods.length) return validationResult(2, "PERIOD_REQUIRED", "请至少启用一个限制周期");
+    var periodSelection = buffetPeriodSelection(draft);
+    if (!periodSelection.valid) return validationResult(2, periodSelection.code || "PERIOD_COMBINATION_INVALID", "限制周期组合不合法，请选择单周期或受控组合模板");
     if (draft.subject === "party_size") {
       var partyError = validateContinuousRanges(draft.partyRanges, "人数区间");
       if (partyError) return validationResult(2, "PARTY_RANGE_INVALID", partyError);
@@ -4936,10 +4973,6 @@
     var button = event.target.closest("button");
     if (!button) return;
     if (button.hasAttribute("data-buffet-template")) {
-      if (isSystemDefaultDraft(editorState.rule.editorDraft)) {
-        toast("系统默认规则的额度周期和限购维度不可修改", true);
-        return;
-      }
       applyBuffetTemplate(editorState.rule.editorDraft, button.getAttribute("data-buffet-template"));
       markEditorDirty();
       renderEditor();
@@ -5245,10 +5278,10 @@
   function handleEditorInput(event) {
     var target = event.target;
     var draft = editorState.rule.editorDraft;
-    if (target.hasAttribute("data-period-toggle")) {
+    if (target.hasAttribute("data-period-select")) {
       if (event.type !== "change") return;
-      setPeriodEnabled(draft, target.getAttribute("data-period-toggle"), target.checked);
-      markBuffetTemplateModified(draft);
+      if (!target.checked) return;
+      selectSingleBuffetPeriod(draft, target.getAttribute("data-period-select"));
       markEditorDirty();
       renderEditor();
       return;

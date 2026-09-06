@@ -31,6 +31,7 @@
     "generate:default-material-images": "npx tsx scripts/generate-default-material-images-js.mjs",
     "verify:order-list-columns": "npx tsx scripts/verify-order-list-columns.ts",
     "verify:buffet-rule-list": "node scripts/verify-buffet-rule-list-view.mjs",
+    "verify:buffet-period-selection": "node scripts/verify-buffet-period-selection-policy.mjs && node scripts/verify-buffet-period-scenario-editor.mjs && node scripts/verify-buffet-v4-validation.mjs",
     "verify:order-tip-status": "npx tsx scripts/verify-order-tip-status.ts",
     "verify:tipout-work-hours-layout": "node scripts/verify-tipout-work-hours-layout.mjs",
     "verify:emenu-local-seasoning": "node scripts/verify-emenu-local-seasoning-settings.mjs && npx tsx scripts/verify-emenu-local-seasoning-domain.ts && node scripts/verify-emenu-local-seasoning-menu-map.mjs && node scripts/verify-emenu-local-seasoning-menu-cache.mjs && node scripts/verify-emenu-local-seasoning-menu-provider.mjs && node scripts/verify-emenu-local-seasoning-api.mjs && node scripts/verify-emenu-local-menu-catalog.mjs && npx tsx scripts/verify-brand-menu-structure-picker.ts && node scripts/verify-emenu-local-seasoning-vite-integration.mjs && node scripts/generate-emenu-local-seasoning-browser-handler.mjs && npx tsx scripts/verify-emenu-local-seasoning-browser-mode.ts && npx tsx scripts/verify-emenu-seasoning-guest-parity.ts",

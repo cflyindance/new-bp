@@ -5,9 +5,10 @@ import vm from "node:vm";
 const flow = fs.readFileSync("dist/Configuration center/assets/order-limit-flow.js", "utf8");
 
 assert.match(flow, /data-buffet-template/);
-assert.match(flow, /data-period-toggle="order_lifetime"/);
-assert.match(flow, /data-period-toggle="per_round"/);
-assert.match(flow, /data-period-toggle="multi_round"/);
+assert.match(flow, /data-period-select="order_lifetime"/);
+assert.match(flow, /data-period-select="per_round"/);
+assert.match(flow, /data-period-select="multi_round"/);
+assert.doesNotMatch(flow, /data-period-toggle=/);
 assert.match(flow, /function applyBuffetTemplate\(draft, templateId\)/);
 assert.match(flow, /function renderBuffetScenarioConfiguration\(draft\)/);
 
@@ -42,7 +43,18 @@ const profile = {
 const window = {
   ORDER_LIMIT_MODULE_PROFILE: profile,
   __BUFFET_SCENARIO_TEST__: true,
-  location: { search: "" }
+  location: { search: "" },
+  BuffetRulePolicy: {
+    normalizePeriodSelection(draft) {
+      const periods = Array.from(draft.enabledPeriods || []);
+      if (periods.length === 1) return { valid: true, mode: "single", periods, templateId: "" };
+      return { valid: false, mode: "repair", periods, templateId: "", code: "PERIOD_COMBINATION_INVALID" };
+    },
+    selectSinglePeriod(draft, period) {
+      draft.enabledPeriods = [period];
+      draft.buffetTemplateId = "custom";
+    }
+  }
 };
 const document = {
   body: { getAttribute: () => "test" },
@@ -87,7 +99,11 @@ const modern = {
 api.ensureBuffetScenarioModel(modern);
 assert.equal(modern.periodPolicies.per_round.blocks.targetEnabled, false, "scenario normalization must preserve an explicit disabled target block");
 assert.equal(api.enabledPeriodsHaveQuantityBlocks(modern), false);
-assert.equal(api.validateStep(2, modern), "每个启用周期至少保留一个限购维度");
+assert.equal(api.validateStep(2, modern), "限制周期组合不合法，请选择单周期或受控组合模板");
+
+api.selectSingleBuffetPeriod(modern, "multi_round");
+assert.deepEqual(Array.from(modern.enabledPeriods), ["multi_round"]);
+assert.match(api.renderBuffetScenarioConfiguration(modern), /type="radio"/);
 
 const malformedV4 = {
   schemaVersion: 4,
