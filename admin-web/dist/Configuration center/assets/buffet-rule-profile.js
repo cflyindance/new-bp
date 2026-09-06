@@ -9,6 +9,7 @@
     { id: "order-basic", name: "基础整单限购", periods: ["order_lifetime"], blocks: { order_lifetime: ["target"] } },
     { id: "round-party-table-cap", name: "每人每轮＋整桌兜底", periods: ["per_round"], blocks: { per_round: ["total", "target"] } },
     { id: "order-round-protection", name: "整单＋每轮保护", periods: ["order_lifetime", "per_round"], blocks: { order_lifetime: ["target"], per_round: ["target", "same_dish"] } },
+    { id: "order-multi-round-protection", name: "整单＋分轮次保护", periods: ["order_lifetime", "multi_round"], blocks: { order_lifetime: ["target"], multi_round: ["target"] } },
     { id: "multi-round-desc", name: "分轮次递减", periods: ["multi_round"], blocks: { multi_round: ["target"] } },
     { id: "custom", name: "自定义配置", periods: [], blocks: {} }
   ];

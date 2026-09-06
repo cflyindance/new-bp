@@ -2,6 +2,73 @@
   "use strict";
 
   var PERIODS = ["order_lifetime", "per_round", "multi_round"];
+  var CONTROLLED_PERIOD_TEMPLATES = {
+    "order-round-protection": ["order_lifetime", "per_round"],
+    "order-multi-round-protection": ["order_lifetime", "multi_round"]
+  };
+
+  function normalizedPeriods(values) {
+    return PERIODS.filter(function (period) {
+      return Array.isArray(values) && values.indexOf(period) >= 0;
+    });
+  }
+
+  function samePeriods(left, right) {
+    left = normalizedPeriods(left);
+    right = normalizedPeriods(right);
+    return left.length === right.length && left.every(function (period, index) { return period === right[index]; });
+  }
+
+  function controlledTemplateForPeriods(periods) {
+    return Object.keys(CONTROLLED_PERIOD_TEMPLATES).find(function (templateId) {
+      return samePeriods(periods, CONTROLLED_PERIOD_TEMPLATES[templateId]);
+    }) || "";
+  }
+
+  function normalizePeriodSelection(input) {
+    var periods = normalizedPeriods(input && input.enabledPeriods);
+    if (!periods.length) return { valid: false, mode: "repair", code: "PERIOD_REQUIRED", periods: [], templateId: "" };
+    if (periods.length === 1) return { valid: true, mode: "single", code: "", periods: periods, templateId: "" };
+    var inferredTemplateId = controlledTemplateForPeriods(periods);
+    if (inferredTemplateId) {
+      return { valid: true, mode: "controlled", code: "", periods: periods, templateId: inferredTemplateId, inferred: input.buffetTemplateId !== inferredTemplateId };
+    }
+    return {
+      valid: false,
+      mode: "repair",
+      code: periods.length > 2 ? "PERIOD_COMBINATION_TOO_MANY" : "PERIOD_COMBINATION_INVALID",
+      periods: periods,
+      templateId: ""
+    };
+  }
+
+  function setSelectedPeriods(input, periods, templateId) {
+    if (!input || typeof input !== "object") return input;
+    periods = normalizedPeriods(periods);
+    input.enabledPeriods = periods;
+    input.periodPolicies = isPlainObject(input.periodPolicies) ? input.periodPolicies : {};
+    PERIODS.forEach(function (period) {
+      var existing = input.periodPolicies[period] || {};
+      input.periodPolicies[period] = existing;
+      existing.blocks = normalizeBlocks(existing.blocks);
+      existing.enabled = periods.indexOf(period) >= 0;
+      if (existing.enabled && !(existing.blocks.totalEnabled || existing.blocks.targetEnabled || existing.blocks.sameDishEnabled)) existing.blocks.targetEnabled = true;
+    });
+    input.period = periods.indexOf("multi_round") >= 0 ? "multi_round" : periods.indexOf("per_round") >= 0 ? "per_round" : periods[0] || null;
+    input.buffetTemplateId = templateId || "custom";
+    input.buffetTemplateModified = false;
+    return input;
+  }
+
+  function selectSinglePeriod(input, period) {
+    if (PERIODS.indexOf(period) < 0) return input;
+    return setSelectedPeriods(input, [period], "custom");
+  }
+
+  function applyControlledPeriodTemplate(input, templateId) {
+    var periods = CONTROLLED_PERIOD_TEMPLATES[templateId];
+    return periods ? setSelectedPeriods(input, periods, templateId) : input;
+  }
 
   function isPlainObject(value) {
     if (!value || typeof value !== "object" || Array.isArray(value)) return false;
@@ -222,6 +289,10 @@
   window.BuffetRulePolicy = {
     schemaVersion: 4,
     periods: PERIODS.slice(),
+    controlledPeriodTemplates: clone(CONTROLLED_PERIOD_TEMPLATES),
+    normalizePeriodSelection: normalizePeriodSelection,
+    selectSinglePeriod: selectSinglePeriod,
+    applyControlledPeriodTemplate: applyControlledPeriodTemplate,
     scenarioKey: scenarioKey,
     targetCellKey: targetCellKey,
     menuIdentity: menuIdentity,
