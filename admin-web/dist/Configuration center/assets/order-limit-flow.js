@@ -307,19 +307,7 @@
     { id: "emenu", name: "eMenu" },
     { id: "sdi", name: "SDI" }
   ];
-  var stores = [
-    { id: "ny-midtown", name: "纽约中城店", mid: "100001", zone: "America/New_York" },
-    { id: "flushing", name: "法拉盛店", mid: "100002", zone: "America/New_York" },
-    { id: "brooklyn", name: "布鲁克林店", mid: "100003", zone: "America/New_York" },
-    { id: "boston", name: "波士顿店", mid: "100004", zone: "America/New_York" }
-  ];
-  var storeAddresses = {
-    "ny-midtown": "349 5th Ave, New York, NY 10016, USA",
-    flushing: "39-16 Prince St, Flushing, NY 11354, USA",
-    brooklyn: "445 Albee Square W, Brooklyn, NY 11201, USA",
-    boston: "1 Washington Mall, Boston, MA 02108, USA"
-  };
-  stores.forEach(function (store) { store.address = storeAddresses[store.id] || ""; });
+  var stores = (window.OrderLimitStoreCatalog || []).map(function (store) { return Object.assign({}, store); });
   var categories = [
     { id: "category:1", name: "海鲜类", count: 12 },
     { id: "category:2", name: "肉类", count: 15 },
