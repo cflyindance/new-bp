@@ -1,0 +1,101 @@
+(function(root) {
+  'use strict';
+
+  function roundMoney(value) { return +(Number(value) || 0).toFixed(2); }
+  function seedRandom(seed) {
+    var value = seed;
+    return function() { value = (value * 16807 + 0) % 2147483647; return (value - 1) / 2147483646; };
+  }
+  function ruleSaltValue(ruleSalt) {
+    var extra = 0;
+    var text = String(ruleSalt == null ? '' : ruleSalt);
+    for (var i = 0; i < text.length; i++) extra = (extra * 31 + text.charCodeAt(i)) % 100000;
+    return extra;
+  }
+  function buildDayData(dateKey, poolRules, ruleSalt) {
+    var parts = String(dateKey || '').split('-');
+    var seed = parts.reduce(function(total, part) { return total * 31 + parseInt(part, 10); }, 0) + ruleSaltValue(ruleSalt);
+    var rng = seedRandom(seed);
+    var dow = new Date(dateKey + 'T00:00:00').getDay();
+    var weekendBoost = (dow === 5 || dow === 6) ? 1.4 : 1;
+    var sales = roundMoney((3800 + rng() * 4400) * weekendBoost);
+    var tips = roundMoney((650 + rng() * 700) * weekendBoost);
+    var surcharge = roundMoney((120 + rng() * 180) * weekendBoost);
+    var manual = roundMoney((80 + rng() * 170) * weekendBoost);
+    var custom = 0;
+    var pool = 0;
+    var poolByRule = {};
+    var salesCount = 0, tipsCount = 0, surchargeCount = 0;
+    (poolRules || []).forEach(function(rule) {
+      if (rule.type === 'sales') salesCount++;
+      else if (rule.type === 'tips') tipsCount++;
+      else if (rule.type === 'surcharge') surchargeCount++;
+    });
+    var demoEmployees = [
+      { name: 'ServerA', role: 'Server', salesAmount: roundMoney(sales * 0.45) },
+      { name: 'BartenderB', role: 'Bartender', salesAmount: roundMoney(sales * 0.2) },
+      { name: 'OtherC', role: 'Cashier', salesAmount: roundMoney(sales * 0.35) }
+    ];
+    (poolRules || []).forEach(function(rule) {
+      var base = 0;
+      var amount = 0;
+      var id = rule.id || rule.type;
+      if (rule.type === 'personal_sales' && root.TipOutPersonalSalesDeduct && root.TipOutPersonalSalesDeduct.calcPersonalSalesPoolCard) {
+        var card = root.TipOutPersonalSalesDeduct.calcPersonalSalesPoolCard(rule, demoEmployees);
+        base = card.matchedSales || 0;
+        amount = card.contribution || 0;
+      } else {
+        if (rule.type === 'sales') base = salesCount ? sales / salesCount : sales;
+        else if (rule.type === 'tips') base = tipsCount ? tips / tipsCount : tips;
+        else if (rule.type === 'surcharge') base = surchargeCount ? surcharge / surchargeCount : surcharge;
+        else if (rule.type === 'manual') base = manual;
+        else if (rule.type === 'custom') base = rule.amount != null ? rule.amount : custom;
+        amount = roundMoney(base * (rule.pct != null ? rule.pct : 0) / 100);
+      }
+      poolByRule[id] = roundMoney(amount);
+      pool += amount;
+    });
+    var poolBaseByRule = {};
+    (poolRules || []).forEach(function(rule) {
+      var id = rule.id || rule.type;
+      var amount = poolByRule[id] || 0;
+      var pct = rule.pct != null ? rule.pct : 0;
+      if (rule.type === 'personal_sales' && root.TipOutPersonalSalesDeduct && root.TipOutPersonalSalesDeduct.calcPersonalSalesPoolCard) {
+        poolBaseByRule[id] = root.TipOutPersonalSalesDeduct.calcPersonalSalesPoolCard(rule, demoEmployees).matchedSales || 0;
+      } else poolBaseByRule[id] = pct > 0 ? roundMoney(amount * 100 / pct) : 0;
+    });
+    return { sales: sales, tips: tips, surcharge: surcharge, manual: manual, custom: custom, pool: roundMoney(pool), poolRules: poolRules || [], poolByRule: poolByRule, poolBaseByRule: poolBaseByRule, employeeSales: demoEmployees };
+  }
+
+  function projectDate(options) {
+    var rules = Array.isArray(options.rules) ? options.rules : [];
+    var allocated = options.allocated === true;
+    var executions = rules.map(function(rule, index) {
+      var id = rule.id != null && rule.id !== '' ? String(rule.id) : 'pool-' + (index + 1);
+      var dayData = buildDayData(options.dateKey, rule.poolRules || [], id);
+      var amount = roundMoney(dayData.pool);
+      return {
+        id: id,
+        name: rule.name || ((rule.poolKind === 'surcharge' ? '加收服务费池 ' : '小费池 ') + (index + 1)),
+        ruleSummary: root.ruleData && root.ruleData.buildRuleDescription ? root.ruleData.buildRuleDescription(rule) : '',
+        status: allocated ? '已分配' : '未分配',
+        poolAmount: amount,
+        allocatedAmount: allocated ? amount : null,
+        unallocatedAmount: allocated ? 0 : null,
+        dayData: dayData
+      };
+    });
+    var poolAmount = roundMoney(executions.reduce(function(sum, item) { return sum + item.poolAmount; }, 0));
+    return {
+      originalTips: roundMoney(options.originalTips),
+      poolAmount: poolAmount,
+      allocatedAmount: allocated ? poolAmount : null,
+      unallocatedAmount: allocated ? 0 : null,
+      poolCount: executions.length,
+      aggregateStatus: executions.length === 0 ? '无适用规则' : (allocated ? '已分配' : '未分配'),
+      poolExecutions: executions
+    };
+  }
+
+  root.TipOutDatePoolView = { buildDayData: buildDayData, projectDate: projectDate };
+})(window);

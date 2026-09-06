@@ -234,6 +234,12 @@ var ALLOC_KEY = 'tipout_allocated';
       });
     }
 
+    function getRulesForCurrentStore() {
+      var storeSel = document.getElementById('storeSelect');
+      var store = storeSel ? (storeSel.value || '').trim() : '';
+      return window.ruleData && ruleData.getRulesForStore ? ruleData.getRulesForStore(store) : [];
+    }
+
     function getPersonalSalesPctRule() {
       var rules = getLegacyRulesForCurrentStore();
       for (var i = 0; i < rules.length; i++) {
@@ -518,6 +524,12 @@ var ALLOC_KEY = 'tipout_allocated';
     function openDailyDetail(dateKey) {
       captureSummaryUiState(dateKey, '');
       var store = (document.getElementById('storeSelect') || {}).value || '';
+      var snapshotRow = buildDailyDataset(getFilteredEmployees()).filter(function(row) { return row.dateKey === dateKey; })[0];
+      if (snapshotRow) {
+        try {
+          sessionStorage.setItem('tipout-date-pool-summary-v1', JSON.stringify({ dateKey: dateKey, store: store, poolSummary: snapshotRow.poolSummary }));
+        } catch (error) { /* detail page can rebuild a fallback projection */ }
+      }
       window.location.href = TipOutSummaryUi.buildDetailUrl({
         date: dateKey,
         store: store,
@@ -581,25 +593,58 @@ var ALLOC_KEY = 'tipout_allocated';
 
     function renderSummaryOverview(dailyRows, allocatedDates) {
       var totals = TipOutSummaryUi.summarizeDailyResults(dailyRows.map(function(row) { return row.total; }));
-      document.getElementById('summaryBefore').textContent = money(totals.before);
-      document.getElementById('summaryDeducted').textContent = money(totals.deducted);
-      document.getElementById('summaryReceived').textContent = money(totals.received);
-      document.getElementById('summaryAfter').textContent = money(totals.after);
+      var poolMetric = document.getElementById('summaryPoolCountMetric');
+      if (activeSummaryView === 'employee') {
+        document.getElementById('summaryBeforeLabel').textContent = '分配前';
+        document.getElementById('summaryDeductedLabel').textContent = '扣除';
+        document.getElementById('summaryReceivedLabel').textContent = '分配获得';
+        document.getElementById('summaryAfterLabel').textContent = '实际获得';
+        document.getElementById('summaryBefore').textContent = money(totals.before);
+        document.getElementById('summaryDeducted').textContent = money(totals.deducted);
+        document.getElementById('summaryReceived').textContent = money(totals.received);
+        document.getElementById('summaryAfter').textContent = money(totals.after);
+        if (poolMetric) poolMetric.hidden = true;
+        return;
+      }
+      var dateTotals = dailyRows.reduce(function(result, row) {
+        result.originalTips += row.poolSummary.originalTips;
+        result.poolAmount += row.poolSummary.poolAmount;
+        if (row.allocated) {
+          result.allocatedAmount += row.poolSummary.allocatedAmount || 0;
+          result.unallocatedAmount += row.poolSummary.unallocatedAmount || 0;
+        } else result.hasPending = true;
+        result.poolCount = Math.max(result.poolCount, row.poolSummary.poolCount);
+        return result;
+      }, { originalTips: 0, poolAmount: 0, allocatedAmount: 0, unallocatedAmount: 0, poolCount: 0, hasPending: false });
+      document.getElementById('summaryBeforeLabel').textContent = '原始小费';
+      document.getElementById('summaryDeductedLabel').textContent = '入池金额';
+      document.getElementById('summaryReceivedLabel').textContent = '已分配';
+      document.getElementById('summaryAfterLabel').textContent = '未分配';
+      document.getElementById('summaryBefore').textContent = money(dateTotals.originalTips);
+      document.getElementById('summaryDeducted').textContent = dateTotals.hasPending ? '—' : money(dateTotals.poolAmount);
+      document.getElementById('summaryReceived').textContent = dateTotals.hasPending ? '—' : money(dateTotals.allocatedAmount);
+      document.getElementById('summaryAfter').textContent = dateTotals.hasPending ? '—' : money(dateTotals.unallocatedAmount);
+      document.getElementById('summaryPoolCount').textContent = String(dateTotals.poolCount);
+      if (poolMetric) poolMetric.hidden = false;
     }
 
     function buildDailyDataset(employeeList) {
       var allocatedDates = getAllocatedDates();
       var requiresAttendance = TipOutSummaryUi.resolveRequiresAttendance(getLegacyRulesForCurrentStore());
       var scopedEmployees = Array.isArray(employeeList) ? employeeList : getFilteredEmployees();
+      var storeRules = getRulesForCurrentStore();
       return getDateRange().map(function(dateKey) {
         var employeeResults = getDailyEmployeeResultsForEmployees(dateKey, scopedEmployees);
+        var total = TipOutSummaryUi.summarizeDailyResults(employeeResults);
+        var allocated = allocatedDates.has(dateKey);
         return {
           dateKey: dateKey,
           date: new Date(dateKey + 'T00:00:00'),
-          allocated: allocatedDates.has(dateKey),
+          allocated: allocated,
           requiresAttendance: requiresAttendance,
           employeeResults: employeeResults,
-          total: TipOutSummaryUi.summarizeDailyResults(employeeResults)
+          total: total,
+          poolSummary: TipOutDatePoolView.projectDate({ dateKey: dateKey, rules: storeRules, originalTips: total.before, allocated: allocated })
         };
       });
     }
@@ -620,11 +665,12 @@ var ALLOC_KEY = 'tipout_allocated';
           '<td><span class="tipout-daily-date"><strong>' + formatTabLabel(row.date) +
           '</strong><small>' + dateKey + ' · ' + row.date.toLocaleDateString('zh-CN', { weekday: 'short' }) + '</small></span></td>' +
           '<td><span class="tipout-daily-status ' + (row.allocated ? 'allocated' : 'pending') + '">' +
-          (row.allocated ? '已分配' : '待分配') + '</span></td>' +
-          '<td>' + money(total.before) + '</td>' +
-          '<td><strong class="tip-amount--deduct">' + dailySummaryResultValue(row.allocated, total.deducted) + '</strong></td>' +
-          '<td><strong class="tip-amount--receive">' + dailySummaryResultValue(row.allocated, total.received) + '</strong></td>' +
-          '<td><strong>' + dailySummaryResultValue(row.allocated, total.after) + '</strong></td>' +
+          row.poolSummary.aggregateStatus + '</span></td>' +
+          '<td>' + money(row.poolSummary.originalTips) + '</td>' +
+          '<td><strong>' + (row.allocated ? money(row.poolSummary.poolAmount) : '—') + '</strong></td>' +
+          '<td><strong class="tip-amount--receive">' + (row.allocated ? money(row.poolSummary.allocatedAmount || 0) : '—') + '</strong></td>' +
+          '<td><strong>' + (row.allocated ? money(row.poolSummary.unallocatedAmount || 0) : '—') + '</strong></td>' +
+          '<td><button type="button" class="tipout-pool-count-link" tabindex="-1">' + row.poolSummary.poolCount + ' 个</button></td>' +
           '<td class="tipout-detail-link">查看明细</td></tr>';
       }).join('');
     }

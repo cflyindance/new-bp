@@ -169,6 +169,26 @@
           </div>
         </div>
 
+        <div class="tipout-metric-strip tipout-detail-pool-metrics" aria-label="当日小费池金额汇总">
+          <div><span>原始小费</span><strong id="detailOriginalTips">$0.00</strong></div>
+          <div><span>入池金额</span><strong id="detailPoolAmount">—</strong></div>
+          <div><span>已分配</span><strong id="detailAllocatedAmount">—</strong></div>
+          <div class="is-primary"><span>未分配</span><strong id="detailUnallocatedAmount">—</strong></div>
+          <div><span>小费池数量</span><strong id="detailPoolCount">0</strong></div>
+        </div>
+
+        <section class="tipout-detail-pool-section" aria-labelledby="detailPoolHeading">
+          <div class="tipout-section-heading">
+            <div><h2 id="detailPoolHeading">小费池执行结果</h2><p>各小费池独立展示执行状态与金额，规则详情和员工结果保留在下方。</p></div>
+          </div>
+          <div class="tipout-table-wrap">
+            <table class="data-table tipout-pool-execution-table">
+              <thead><tr><th>小费池</th><th>规则摘要</th><th>状态</th><th>入池金额</th><th>已分配</th><th>未分配</th></tr></thead>
+              <tbody id="detailPoolExecutionList"></tbody>
+            </table>
+          </div>
+        </section>
+
         <div class="tipout-workspace" id="detailWorkspace">
           <main id="detailMain"><div id="detailRulesContainer"></div></main>
         </div>

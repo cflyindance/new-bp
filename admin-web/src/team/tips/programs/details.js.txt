@@ -102,6 +102,9 @@ var ALLOC_KEY = 'tipout_allocated';
     }
 
     function genDayData(dateKey, poolRules, ruleSalt) {
+      if (window.TipOutDatePoolView && TipOutDatePoolView.buildDayData) {
+        return TipOutDatePoolView.buildDayData(dateKey, poolRules, ruleSalt);
+      }
       var parts = dateKey.split('-');
       var extra = 0;
       if (ruleSalt != null && ruleSalt !== '') {
@@ -173,6 +176,7 @@ var ALLOC_KEY = 'tipout_allocated';
       if (!dateKey) return;
 
       var rules = window.ruleData && ruleData.getRulesForStore ? ruleData.getRulesForStore(store) : [];
+      renderDatePoolOverview(dateKey, store, rules);
       if (rules.length === 0) {
         document.getElementById('detailRulesContainer').innerHTML =
           '<div class="tipout-detail-empty">' +
@@ -207,6 +211,39 @@ var ALLOC_KEY = 'tipout_allocated';
         );
       });
       document.getElementById('detailRulesContainer').innerHTML = bundleParts.join('');
+    }
+
+    function readDatePoolSnapshot(dateKey, store) {
+      try {
+        var value = JSON.parse(sessionStorage.getItem('tipout-date-pool-summary-v1') || 'null');
+        return value && value.dateKey === dateKey && value.store === store ? value.poolSummary : null;
+      } catch (error) { return null; }
+    }
+
+    function renderDatePoolOverview(dateKey, store, rules) {
+      var snapshot = readDatePoolSnapshot(dateKey, store);
+      var allocatedDates = new Set();
+      try {
+        var allocatedMap = JSON.parse(localStorage.getItem('tipout_allocated') || '{}');
+        allocatedDates = new Set(allocatedMap[store || ''] || []);
+      } catch (error) { allocatedDates = new Set(); }
+      var allocated = allocatedDates.has(dateKey);
+      var summary = snapshot || TipOutDatePoolView.projectDate({ dateKey: dateKey, rules: rules, originalTips: 0, allocated: allocated });
+      document.getElementById('detailOriginalTips').textContent = snapshot ? money(summary.originalTips || 0) : '—';
+      document.getElementById('detailPoolAmount').textContent = allocated ? money(summary.poolAmount || 0) : '—';
+      document.getElementById('detailAllocatedAmount').textContent = allocated ? money(summary.allocatedAmount || 0) : '—';
+      document.getElementById('detailUnallocatedAmount').textContent = allocated ? money(summary.unallocatedAmount || 0) : '—';
+      document.getElementById('detailPoolCount').textContent = String(summary.poolCount || 0);
+      var list = document.getElementById('detailPoolExecutionList');
+      list.innerHTML = (summary.poolExecutions || []).map(function(pool) {
+        return '<tr data-pool-id="' + escHtml(pool.id) + '">' +
+          '<td><strong>' + escHtml(pool.name) + '</strong></td>' +
+          '<td class="tipout-rule-summary-cell">' + escHtml(pool.ruleSummary || '—') + '</td>' +
+          '<td><span class="tipout-daily-status ' + (allocated ? 'allocated' : 'pending') + '">' + escHtml(pool.status) + '</span></td>' +
+          '<td>' + (allocated ? money(pool.poolAmount || 0) : '—') + '</td>' +
+          '<td>' + (allocated ? money(pool.allocatedAmount || 0) : '—') + '</td>' +
+          '<td>' + (allocated ? money(pool.unallocatedAmount || 0) : '—') + '</td></tr>';
+      }).join('') || '<tr><td colspan="6" class="tipout-empty-cell">当前日期没有适用的小费池规则</td></tr>';
     }
 
     function genSyntheticOrderTipContext(dateKey, ruleSalt) {

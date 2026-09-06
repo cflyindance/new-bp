@@ -16,19 +16,31 @@ function exportStoreLabel() {
 }
 
 function collectDateTaskExportData() {
-  var dates = getDateRange();
+  var dailyRows = buildDailyDataset(getFilteredEmployees());
   var data = {
     kind: 'date',
     store: exportStoreLabel(),
     dateStart: document.getElementById('dateStart').value,
     dateEnd: document.getElementById('dateEnd').value,
-    employees: []
+    employees: [],
+    dailySummaries: dailyRows.map(function(row) {
+      return {
+        date: row.dateKey,
+        status: row.poolSummary.aggregateStatus,
+        originalTips: row.poolSummary.originalTips,
+        poolAmount: row.allocated ? row.poolSummary.poolAmount : null,
+        allocatedAmount: row.poolSummary.allocatedAmount,
+        unallocatedAmount: row.poolSummary.unallocatedAmount,
+        poolCount: row.poolSummary.poolCount,
+        pools: row.poolSummary.poolExecutions
+      };
+    })
   };
   var allocatedDates = typeof getAllocatedDates === 'function' ? getAllocatedDates() : new Set();
   var scopedEmployees = typeof getFilteredEmployees === 'function' ? getFilteredEmployees() : employees;
   scopedEmployees.forEach(function(emp) {
     var daily = [];
-    dates.forEach(function(dk) { if (allocatedDates.has(dk)) daily.push(genDailyTip(emp, dk)); });
+    dailyRows.forEach(function(row) { if (allocatedDates.has(row.dateKey)) daily.push(genDailyTip(emp, row.dateKey)); });
     if (daily.length === 0) return;
     var tb = daily.reduce(function(s, d) { return s + d.before; }, 0);
     var td = daily.reduce(function(s, d) { return s + (d.deducted || 0); }, 0);
@@ -81,7 +93,7 @@ function collectExportData() {
 function exportAs(type) {
   document.getElementById('exportMenu').classList.remove('show');
   var data = collectCurrentSummaryExportData();
-  if (data.employees.length === 0) { showNotification('没有可导出的数据', 'warning'); return; }
+  if (data.kind === 'employee' ? data.employees.length === 0 : data.dailySummaries.length === 0) { showNotification('没有可导出的数据', 'warning'); return; }
   if (type === 'pdf') exportPDF(data);
   else if (type === 'csv') exportCSV(data);
 }
@@ -99,24 +111,17 @@ function exportCSV(data) {
   lines.push('"Store","' + data.store.replace(/"/g, '""') + '"');
   lines.push('"Date Range","' + data.dateStart + ' ~ ' + data.dateEnd + '"');
   lines.push('');
-  lines.push('Employee,Role,Date,Tips Before($),Deducted($),Received($),Tips After($)');
-
-  var grandBefore = 0, grandDeducted = 0, grandReceived = 0, grandAfter = 0;
-  data.employees.forEach(function(emp) {
-    emp.daily.forEach(function(d) {
-      lines.push('"' + emp.name + '","' + emp.role + '",' + d.date + ',' +
-        d.before.toFixed(2) + ',' + (d.deducted || 0).toFixed(2) + ',' + (d.received || 0).toFixed(2) + ',' + d.after.toFixed(2));
-    });
-    lines.push('"' + emp.name + ' (Subtotal)","","","' + emp.totalBefore.toFixed(2) + '","' +
-      emp.totalDeducted.toFixed(2) + '","' + emp.totalReceived.toFixed(2) + '","' + emp.totalAfter.toFixed(2) + '"');
-    grandBefore += emp.totalBefore;
-    grandDeducted += emp.totalDeducted;
-    grandReceived += emp.totalReceived;
-    grandAfter += emp.totalAfter;
+  lines.push('Date,Status,Original Tips($),Pool Amount($),Allocated($),Unallocated($),Pool Count');
+  data.dailySummaries.forEach(function(day) {
+    lines.push([day.date, day.status, day.originalTips.toFixed(2), day.poolAmount == null ? '' : day.poolAmount.toFixed(2), day.allocatedAmount == null ? '' : day.allocatedAmount.toFixed(2), day.unallocatedAmount == null ? '' : day.unallocatedAmount.toFixed(2), day.poolCount].map(csvCell).join(','));
   });
   lines.push('');
-  lines.push('"Grand Total","","","' + grandBefore.toFixed(2) + '","' + grandDeducted.toFixed(2) + '","' +
-    grandReceived.toFixed(2) + '","' + grandAfter.toFixed(2) + '"');
+  lines.push('Date,Pool,Rule Summary,Status,Pool Amount($),Allocated($),Unallocated($)');
+  data.dailySummaries.forEach(function(day) {
+    day.pools.forEach(function(pool) {
+      lines.push([day.date, pool.name, pool.ruleSummary, pool.status, pool.poolAmount.toFixed(2), pool.allocatedAmount == null ? '' : pool.allocatedAmount.toFixed(2), pool.unallocatedAmount == null ? '' : pool.unallocatedAmount.toFixed(2)].map(csvCell).join(','));
+    });
+  });
 
   var blob = new Blob([bom + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
   var url = URL.createObjectURL(blob);
@@ -218,6 +223,7 @@ function exportPDF(data) {
 
 /* ─── PDF: print fallback ─── */
 function printAsPDF(data) {
+  if (data.dailySummaries) { printDatePoolAsPDF(data); return; }
   showNotification('正在生成 PDF 预览页面...', 'info');
   var gb = 0, gd = 0, gr = 0, gf = 0;
 
@@ -283,6 +289,24 @@ function printAsPDF(data) {
   showNotification('PDF 预览已打开，请在弹出窗口中保存为 PDF', 'success');
 }
 
+function printDatePoolAsPDF(data) {
+  showNotification('正在生成日期任务 PDF 预览页面...', 'info');
+  var win = window.open('', '_blank');
+  if (!win) { showNotification('弹窗被浏览器拦截，请允许弹窗后重试', 'error'); return; }
+  var doc = win.document;
+  doc.open();
+  doc.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Tip Pool Date Report</title><style>body{font-family:Arial,sans-serif;padding:28px;color:#222;font-size:12px}h1{font-size:20px}table{width:100%;border-collapse:collapse;margin:14px 0}th,td{padding:7px 9px;border-bottom:1px solid #ddd;text-align:left}.pool{background:#f7f7f8;color:#555}@media print{@page{size:landscape;margin:10mm}}</style></head><body>');
+  doc.write('<h1>Tip Pool Date Report</h1><p>Store: ' + escH(data.store) + '</p><p>Date Range: ' + data.dateStart + ' ~ ' + data.dateEnd + '</p>');
+  doc.write('<table><thead><tr><th>Date</th><th>Status</th><th>Original Tips</th><th>Pool Amount</th><th>Allocated</th><th>Unallocated</th><th>Pool Count</th></tr></thead><tbody>');
+  data.dailySummaries.forEach(function(day) {
+    doc.write('<tr><td>' + day.date + '</td><td>' + escH(day.status) + '</td><td>$' + day.originalTips.toFixed(2) + '</td><td>' + (day.poolAmount == null ? '—' : '$' + day.poolAmount.toFixed(2)) + '</td><td>' + (day.allocatedAmount == null ? '—' : '$' + day.allocatedAmount.toFixed(2)) + '</td><td>' + (day.unallocatedAmount == null ? '—' : '$' + day.unallocatedAmount.toFixed(2)) + '</td><td>' + day.poolCount + '</td></tr>');
+    day.pools.forEach(function(pool) { doc.write('<tr class="pool"><td>↳ ' + escH(pool.name) + '</td><td>' + escH(pool.status) + '</td><td colspan="2">' + escH(pool.ruleSummary || '—') + '</td><td>' + (pool.allocatedAmount == null ? '—' : '$' + pool.allocatedAmount.toFixed(2)) + '</td><td>' + (pool.unallocatedAmount == null ? '—' : '$' + pool.unallocatedAmount.toFixed(2)) + '</td><td></td></tr>'); });
+  });
+  doc.write('</tbody></table></body></html>');
+  doc.close();
+  setTimeout(function() { win.focus(); win.print(); }, 500);
+}
+
 function escH(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
@@ -343,6 +367,7 @@ function generateEmployeeReconciliationJsPDF(data) {
 
 /* ─── PDF: jsPDF generation ─── */
 function generateJsPDF(data) {
+  if (data.dailySummaries) { generateDatePoolJsPDF(data); return; }
   showNotification('正在生成 PDF 文件...', 'info');
 
   var doc = new window.jspdf.jsPDF('l', 'mm', 'a4');
@@ -443,6 +468,31 @@ function generateJsPDF(data) {
   showNotification('PDF 导出成功', 'success');
 }
 
+function generateDatePoolJsPDF(data) {
+  var jsPDF = window.jspdf.jsPDF;
+  var doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  doc.setFontSize(16);
+  doc.text('Tip Pool Date Report', 14, 16);
+  doc.setFontSize(9);
+  doc.text('Store: ' + data.store, 14, 23);
+  doc.text('Date Range: ' + data.dateStart + ' ~ ' + data.dateEnd, 14, 28);
+  var rows = [];
+  data.dailySummaries.forEach(function(day) {
+    rows.push([day.date, day.status, '$' + day.originalTips.toFixed(2), day.poolAmount == null ? '—' : '$' + day.poolAmount.toFixed(2), day.allocatedAmount == null ? '—' : '$' + day.allocatedAmount.toFixed(2), day.unallocatedAmount == null ? '—' : '$' + day.unallocatedAmount.toFixed(2), String(day.poolCount)]);
+    day.pools.forEach(function(pool) {
+      rows.push(['  ↳ ' + pool.name, pool.status, pool.ruleSummary || '—', pool.poolAmount == null ? '—' : '$' + pool.poolAmount.toFixed(2), pool.allocatedAmount == null ? '—' : '$' + pool.allocatedAmount.toFixed(2), pool.unallocatedAmount == null ? '—' : '$' + pool.unallocatedAmount.toFixed(2), '']);
+    });
+  });
+  doc.autoTable({
+    startY: 34,
+    head: [['Date', 'Status', 'Original Tips', 'Pool Amount', 'Allocated', 'Unallocated', 'Pool Count']],
+    body: rows,
+    styles: { fontSize: 8 }
+  });
+  doc.save('TipPoolDateReport_' + data.dateStart + '_' + data.dateEnd + '.pdf');
+  showNotification('PDF 导出成功', 'success');
+}
+
 /* ─── Email ─── */
 function openEmailModal() {
   document.getElementById('exportMenu').classList.remove('show');
@@ -461,7 +511,7 @@ function sendEmail() {
     }
   }
   var data = collectCurrentSummaryExportData();
-  if (!data.employees.length) {
+  if (data.kind === 'employee' ? !data.employees.length : !data.dailySummaries.length) {
     showNotification('没有可导出的数据', 'warning');
     return;
   }
