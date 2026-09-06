@@ -77,6 +77,7 @@
 - 选项：全部周期、整个订单、每轮、多轮。
 - 分别匹配 `order_lifetime`、`per_round`、`multi_round`。
 - 兼容 `enabledPeriods` 多值结构：只要规则包含所选周期即命中。
+- 周期归一化：`enabledPeriods` 为非空数组时，过滤、去重合法枚举；否则回退合法单值 `period`；两者均无合法值时视为缺失/未知周期。
 
 ### 3.6 限购对象
 
@@ -92,7 +93,7 @@
 - `subject=party_size` 时，仅接受 `min`、`max` 均为整数、`min >= 1` 且 `max == null || max >= min` 的区间；单个无效区间跳过。
 - `subject=party_size` 且不存在任何有效区间时，不命中具体人数筛选。
 - `[{ min: 1, max: null }]` 归一化为“所有人数”。
-- 非法值不执行筛选，并在输入框附近提示“请输入大于等于 1 的整数”。
+- 非法人数条件不参与计算，其他已生效筛选继续生效；输入框附近提示“请输入大于等于 1 的整数”。
 
 ### 3.8 高级筛选：生效时间
 
@@ -101,7 +102,8 @@
 - 使用 `effectiveTimeKey` 匹配，`effectiveTimeLabel` 仅负责展示，避免文案调整破坏匹配。
 - 新结构优先读取 `conditions.businessHourSlots`；缺失时依次回退 `businessHour`、`businessHourTimeMode`、`businessHourFrom`、`businessHourTo`。
 - 若新旧字段均缺失，按编辑器现有归一化规则处理为 `dinner|full`，展示“晚市全时段”，不等同于全天。
-- 仅保留 `all`、`lunch`、`dinner`，按此顺序排序、按 ID 去重；同时存在 `all` 和其他时段时只保留 `all`。
+- 仅保留 `all`、`lunch`、`dinner`，按此顺序排序、按 ID 去重；同时存在 `all` 和 `lunch`/`dinner` 时，沿用编辑器归一化规则删除 `all`、保留具体时段；仅存在 `all` 时归一化为 `all|full`。
+- 列表只读投影必须复用或等价实现编辑器 `normalizeBusinessHourTimeConditions` 的规则，不得回写配置对象。
 - `mode=full` 的稳定片段为 `<slotId>|full`；`mode=custom` 且起止时间完整时为 `<slotId>|custom|<from>|<to>`；无效自定义时间回退为 full。
 - 多个时段的 key 使用 `;` 连接。label 使用“全天生效”“午市全时段”“晚市全时段”或“午市 11:30–14:30”等文案，并以 `；` 连接。
 - 选项包含全部规则归一化后得到的稳定 key 和展示 label，按 key 精确匹配。
@@ -210,7 +212,7 @@
 - 筛选和表格展示不得回写配置对象。
 - 字段为空时统一展示 `—`；选择具体筛选条件时，缺失对应字段的规则不命中。
 - KPOS 能力从默认场景的 `legacyCapabilityIds` 映射到能力目录，供搜索和可选列使用。
-- KPOS 能力映射仅适用于 `origin=system_default` 且 `defaultScenarioKey` 可识别的规则，不限制状态；草稿也可映射。先直接匹配 `profile.defaultScenarios`，再用 `profile.verifiedLegacyDefaultKey(rule)` 映射旧 key。普通自定义规则、无法识别的 key 或版本统一显示 `—`，且不命中 KPOS 能力搜索。
+- KPOS 能力映射仅适用于 `origin=system_default` 且 `defaultScenarioKey` 可识别的规则，不限制状态；草稿也可映射。当前默认规则仅在 key 命中且 `defaultCatalogVersion === template.version` 时直接映射；否则调用 `profile.verifiedLegacyDefaultKey(rule)` 处理受支持的旧版本。普通自定义规则、两种映射均失败的 key 或版本统一显示 `—`，且不命中 KPOS 能力搜索。
 - 分组首先使用上述可识别默认场景模板的 `group`，系统默认草稿仍留在对应模板分组。
 - 自定义规则按以下优先级推导：`defaultVariant` 以 `combo_` 开头进入“每轮常用组合模板”；全部有效周期均为 `order_lifetime` 进入“整单限制”；任一有效周期为 `per_round` 或 `multi_round` 进入“每轮原子规则”；无周期或存在未识别周期进入“其他规则”。限购对象为 `category` 不改变周期分组。
 - 本地字段偏好 payload 固定为 `{ version: 1, visible: string[] }`。仅接受 `version === 1`；缺失、损坏或版本不匹配时恢复默认，再剔除无效字段并补回固定字段。
@@ -233,6 +235,8 @@
 - 相同菜品限额：读取 `defaultDishLimits`，并包含 `exceptionDishLimits` 中已配置的例外商品额度。单值显示“最多 N 份”。
 - 某 block 未启用显示 `—`；已启用但没有任何配置值显示“未配置”。
 - 同一字段存在多个场景时：总量显示 `N 个场景 · 最少 min–max / 最多 min–max`；上限类显示 `N 个场景 · 上限 min–max`。这里 N 为已展开的场景单元格数，不是去重值数量。
+- 摘要中的 N 为必填场景单元格总数，最小值和最大值仅从 `configured=true` 的数值中计算。若 `0 < 已配置数 C < N`，末尾追加 `（已配置 C/N）`；若 `C=0`，显示“未配置”。
+- 普通原子规则的“每轮总量”和“相同菜品限额”只投影 `per_round`、`multi_round`；`order_lifetime` 中即使存在历史残留 map 也不展示、不计完成度。组合模板按既定 `per_round` 投影。
 - 额度值 `0` 是有效配置，必须参与最小值、最大值和完成度统计。
 
 ### 6.3 数量完成度
@@ -249,7 +253,7 @@
 
 - 无规则：展示“暂无自助餐规则”和新增入口。
 - 有规则但无筛选结果：展示“暂无匹配规则”和重置筛选入口。
-- 人数输入非法：保留当前完整列表，不应用非法条件并展示输入提示。
+- 人数输入非法：不应用非法人数条件，保留其他合法筛选结果并展示输入提示。
 - 本地字段偏好损坏：忽略损坏值并恢复默认字段。
 - 未识别状态或枚举：显示 `—`，并可通过“全部”条件查看。
 
@@ -274,7 +278,7 @@
 - 周期：单个 `order_lifetime`、单个 `per_round`、`multi_round`、多值周期、未知周期；断言筛选和分组。
 - 人数：`1–3`、`3–5`、`4及以上`、`1及以上`、非法区间；断言边界值 3、4 的命中结果。
 - 门店：单门店、多门店、目录缺失 ID；断言选项顺序、未知门店文案和列摘要。
-- 时间：全天、午市全时段、多个时段、自定义时间、仅旧字段、全部字段缺失；断言 key、label 和筛选。
+- 时间：全天、午市全时段、多个时段、自定义时间、`all + lunch`、`all + dinner`、仅旧字段、全部字段缺失；断言组合数据删除 `all` 后保留具体时段的 key、label 和筛选结果。
 - 商品：多门店商品数相同和不同、跨产线重复 ID；断言按复合键去重和每店范围摘要。
 - 数量：组合模板、原子规则、启用/禁用 block、0 值、部分配置和完全配置；断言三个数量摘要及完成度。
 - 默认规则：正式、草稿、旧 key、未知 key、自定义规则；断言 KPOS 搜索、能力列和分组。
