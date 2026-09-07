@@ -63,6 +63,24 @@ const document = {
 vm.runInNewContext(flow, { window, document, URLSearchParams, Number, String, Array, Object, Math, JSON, Date, Set, console });
 const api = window.BuffetPeriodScenarioTestApi;
 
+const incompleteNewDraft = {
+  schemaVersion: 4,
+  name: "新建模板测试",
+  subject: null,
+  targetType: null,
+  enabledPeriods: ["order_lifetime"],
+  periodPolicies: {},
+  partyRanges: [{ min: 1, max: null }],
+  roundRanges: [{ min: 1, max: null }],
+  conditions: { childCountPolicy: "inherit" }
+};
+const incompleteRuleType = api.renderStepOne(incompleteNewDraft);
+const incompleteTemplateButton = incompleteRuleType.match(/<button[^>]*data-buffet-template="round"[^>]*>/)?.[0] ?? "";
+assert.ok(incompleteTemplateButton, "new-rule template must render before subject and target are selected");
+assert.doesNotMatch(incompleteTemplateButton, /disabled/, "new-rule template must remain clickable before subject and target are selected");
+api.applyBuffetTemplate(incompleteNewDraft, "round");
+assert.equal(incompleteNewDraft.buffetTemplateId, "round", "clickable template must become the selected template");
+
 const legacy = {
   schemaVersion: 2,
   subject: "party_size",

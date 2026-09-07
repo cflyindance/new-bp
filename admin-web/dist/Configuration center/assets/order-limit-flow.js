@@ -2541,7 +2541,7 @@
       var availability = template.id === "custom"
         ? { enabled: true, reason: "" }
         : incompleteReason
-          ? { enabled: false, reason: incompleteReason }
+          ? { enabled: true, reason: "" }
           : window.BuffetRulePolicy && window.BuffetRulePolicy.templateAvailability
             ? window.BuffetRulePolicy.templateAvailability(draft, template)
             : { enabled: true, reason: "" };

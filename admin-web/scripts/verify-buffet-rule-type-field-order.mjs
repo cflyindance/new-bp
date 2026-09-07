@@ -32,7 +32,6 @@ for (const marker of orderedMarkers) {
 
 assert.match(flow, /function renderBuffetTemplateSelection\(draft\)/);
 assert.match(flow, /function renderBuffetLimitContent\(draft\)/);
-assert.match(flow, /请先选择限购主体和限购对象/);
 assert.match(flow, /template\.id === "custom"[\s\S]*?enabled: true/, "custom template must remain available for an incomplete draft");
 
 const applyStart = flow.indexOf("function applyBuffetTemplate(draft, templateId)");
