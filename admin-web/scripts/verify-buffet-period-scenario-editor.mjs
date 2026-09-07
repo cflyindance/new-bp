@@ -160,6 +160,9 @@ const periodBlocks = flow.match(/function renderBuffetPeriodBlocks\(draft\)[\s\S
 assert.match(periodBlocks, /data-period-block="target"/, "target block must be independently toggleable for total-only defaults");
 assert.match(flow, /if \(blockName === "target"\) policy\.blocks\.targetEnabled = checked/);
 assert.match(flow, /function requestBuffetStructureChange\(label, mutate, trigger\)/);
+assert.match(flow, /olf-period-toggle-grid--readonly/, "controlled templates must keep the period cards visible");
+assert.match(flow, /type="checkbox"' \+ \(checked \? " checked" : ""\) \+ ' disabled/, "controlled template period cards must be read-only");
+assert.match(flow, /该周期组合由当前模板确定，如需修改请选择其他模板或“自定义配置”/, "controlled templates must explain how to change periods");
 assert.match(flow, /模板会切换限购主体或限购对象，并重置受影响的商品或数量配置/);
 assert.match(flow, /将清除不再适用的配置，其他门店、商品和额度保持不变/);
 assert.match(flow, /else if \(field === "subject" \|\| field === "targetType"\) markBuffetTemplateModified\(draft\)/);

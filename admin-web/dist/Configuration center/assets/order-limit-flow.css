@@ -194,6 +194,11 @@ button { color: inherit; }
 .olf-period-toggle-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
 .olf-period-toggle { min-height: 68px; padding: 12px; display: flex; align-items: flex-start; gap: 10px; border: 1px solid var(--olf-border); border-radius: 10px; cursor: pointer; }
 .olf-period-toggle:has(input:checked) { border-color: var(--olf-primary); background: var(--olf-primary-soft); }
+.olf-period-toggle-grid--readonly .olf-period-toggle { cursor: default; }
+.olf-period-toggle-grid--readonly .olf-period-toggle:not(.is-selected) { opacity: .56; }
+.olf-period-toggle-grid--readonly .olf-period-toggle.is-selected { border-color: var(--olf-primary); background: var(--olf-primary-soft); opacity: 1; }
+.olf-period-toggle-grid--readonly input:disabled { opacity: 1; accent-color: var(--olf-primary); }
+.olf-summary--period-lock { margin-top: 10px; }
 .olf-period-toggle input { margin-top: 3px; }
 .olf-period-toggle span { display: grid; gap: 3px; }
 .olf-period-toggle strong { font-size: 14px; }

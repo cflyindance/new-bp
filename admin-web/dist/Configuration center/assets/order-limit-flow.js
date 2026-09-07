@@ -2501,7 +2501,11 @@
       multi_round: ["分轮次", "按轮次区间使用不同额度"]
     };
     if (selection.mode === "controlled") {
-      return '<div class="olf-summary"><strong>组合模板已锁定周期</strong><span>' + selection.periods.map(periodLabel).join(" ＋ ") + '。如需改为单周期，请选择其他单周期模板或“自定义配置”。</span></div>';
+      return '<div class="olf-period-toggle-grid olf-period-toggle-grid--readonly" aria-label="模板锁定的限制周期">' + BUFFET_PERIOD_ORDER.map(function (period) {
+        var label = labels[period];
+        var checked = selection.periods.indexOf(period) >= 0;
+        return '<label class="olf-period-toggle' + (checked ? " is-selected" : "") + '"><input type="checkbox"' + (checked ? " checked" : "") + ' disabled /><span><strong>' + label[0] + '</strong><small>' + label[1] + '</small></span></label>';
+      }).join("") + '</div><div class="olf-summary olf-summary--period-lock"><strong>组合模板已锁定周期</strong><span>该周期组合由当前模板确定，如需修改请选择其他模板或“自定义配置”。</span></div>';
     }
     var repair = selection.valid ? "" : '<div class="olf-summary olf-summary--warning"><strong>历史周期组合需要修复</strong><span>当前组合不再允许发布。请选择保留一个周期；如需保留多个周期，请返回列表复制规则后分别配置。</span></div>';
     return repair + '<div class="olf-period-toggle-grid">' + BUFFET_PERIOD_ORDER.map(function (period) {
