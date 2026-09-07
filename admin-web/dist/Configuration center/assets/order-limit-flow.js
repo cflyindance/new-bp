@@ -1359,6 +1359,47 @@
     if (!editorState) return;
     editorState.batchSelectedTargetIds = [];
     editorState.batchSelectedByScene = {};
+    clearBuffetQuantitySelection();
+  }
+
+  function createBuffetQuantityWorkbenchState() {
+    return { storeId: "", lineId: "", query: "", page: 1, pageSize: 20, selectionMode: "page", selectedIds: [] };
+  }
+
+  function normalizeBuffetQuantityWorkbenchState(draft) {
+    if (!editorState) return createBuffetQuantityWorkbenchState();
+    if (!editorState.buffetQuantityWorkbench) editorState.buffetQuantityWorkbench = createBuffetQuantityWorkbenchState();
+    var state = editorState.buffetQuantityWorkbench;
+    var availableStores = addedStoreIds(draft);
+    if (!state.storeId || availableStores.indexOf(state.storeId) < 0) state.storeId = draft.activeStoreId || availableStores[0] || "";
+    state.page = Math.max(1, Number(state.page) || 1);
+    state.pageSize = [20, 50, 100].indexOf(Number(state.pageSize)) >= 0 ? Number(state.pageSize) : 20;
+    state.selectionMode = state.selectionMode === "filtered" ? "filtered" : "page";
+    if (!Array.isArray(state.selectedIds)) state.selectedIds = [];
+    return state;
+  }
+
+  function clearBuffetQuantitySelection() {
+    if (!editorState || !editorState.buffetQuantityWorkbench) return;
+    editorState.buffetQuantityWorkbench.selectedIds = [];
+    editorState.buffetQuantityWorkbench.selectionMode = "page";
+  }
+
+  function buffetWorkbenchTargetIdentity(draft, target) {
+    if (!target) return "";
+    return [target.lineId || target.productLineId || "", target.id || target.dishId || target.categoryId || ""].join("|");
+  }
+
+  function filteredBuffetWorkbenchTargets(draft, config, state) {
+    state = state || normalizeBuffetQuantityWorkbenchState(draft);
+    var query = String(state.query || "").trim().toLocaleLowerCase();
+    return v4TargetsForConfig(draft, config).filter(function (target) {
+      if (state.lineId && target.lineId !== state.lineId) return false;
+      if (!query) return true;
+      return [target.name, target.shortName, target.category].some(function (value) {
+        return String(value || "").toLocaleLowerCase().indexOf(query) >= 0;
+      });
+    });
   }
 
   function resetSceneDisplayMode() {
@@ -4255,6 +4296,16 @@
     };
   }
 
+  if (window.__BUFFET_QUANTITY_WORKBENCH_TEST__) {
+    window.BuffetQuantityWorkbenchTestApi = {
+      createState: createBuffetQuantityWorkbenchState,
+      normalizeState: normalizeBuffetQuantityWorkbenchState,
+      clearSelection: clearBuffetQuantitySelection,
+      targetIdentity: buffetWorkbenchTargetIdentity,
+      filteredTargets: filteredBuffetWorkbenchTargets
+    };
+  }
+
   if (window.__BUFFET_V4_VALIDATION_TEST__) {
     window.BuffetV4ValidationTestApi = {
       menuIdentity: v4MenuIdentity,
@@ -4300,13 +4351,41 @@
     return '<section class="olf-section"><div class="olf-section-head"><div><h3>参与门店和商品</h3><span class="olf-hint">已配置 ' + storeCount + ' 家门店、' + productCount + ' 个商品</span></div><button type="button" class="olf-button olf-button--primary" data-product-add-open>' + icon("plus", 15) + ' 添加商品</button></div></section>';
   }
 
+  function renderBuffetRuleContext(draft) {
+    var summary = subjectLabel(draft.subject) + " · " + targetShortLabel(draft.targetType) + " · " +
+      (draft.enabledPeriods || []).map(buffetPeriodSummaryLabel).join("＋") +
+      (draft.targetType === "dish_set" ? " · " + (draft.measureUnit === "kind" ? "按种" : "按份") : "");
+    return '<section class="olf-section olf-quantity-context"><div><h3>当前规则</h3><span>' + esc(summary) + '</span></div><button type="button" class="olf-button olf-button--small" data-modify-rule-type>修改规则类型</button></section>';
+  }
+
+  function renderBuffetScenarioWorkspace(draft) {
+    return '<section class="olf-section olf-scenario-summary"><div class="olf-section-head"><div><h3>适用场景</h3><span class="olf-hint">先定义人数与轮次区间，再选择当前编辑场景</span></div></div>' + renderBuffetQuantityRanges(draft) + '</section>';
+  }
+
+  function renderBuffetActiveScenario(draft) {
+    var partyTabs = showsPartyDimension(draft) ? draft.partyRanges.map(function (range, index) {
+      return '<button type="button" class="olf-tab' + (draft.activePartyIndex === index ? ' is-active' : '') + '" data-party-tab="' + index + '">' + esc(formatRange(range, "人")) + '</button>';
+    }).join("") : '<span class="olf-chip">全部人数</span>';
+    var hasRoundRanges = (draft.enabledPeriods || []).indexOf("multi_round") >= 0;
+    var roundTabs = hasRoundRanges ? draft.roundRanges.map(function (range, index) {
+      return '<button type="button" class="olf-tab' + (draft.activeRoundIndex === index ? ' is-active' : '') + '" data-round-tab="' + index + '">' + esc(formatRange(range, "轮")) + '</button>';
+    }).join("") : '<span class="olf-chip">' + esc((draft.enabledPeriods || []).map(buffetPeriodSummaryLabel).join("＋")) + '</span>';
+    return '<section class="olf-section olf-active-scenario"><h3>当前配置场景</h3><div class="olf-active-scenario__row"><strong>人数</strong><div class="olf-tabs">' + partyTabs + '</div></div><div class="olf-active-scenario__row"><strong>轮次</strong><div class="olf-tabs">' + roundTabs + '</div></div></section>';
+  }
+
+  function renderBuffetQuantityWorkbench(draft) {
+    var storeCount = addedStoreIds(draft).length;
+    var productCount = selectedPreviewRows(draft).length;
+    return '<section class="olf-section olf-quantity-workbench"><div class="olf-section-head"><div><h3>门店与商品数量</h3><span class="olf-hint">已配置 ' + storeCount + ' 家门店、' + productCount + ' 个商品</span></div><button type="button" class="olf-button olf-button--primary" data-product-add-open>' + icon("plus", 15) + ' 添加商品</button></div>' + renderStepFour(draft, { embedded: true, hideHeader: true }) + '</section>';
+  }
+
   function renderBuffetQuantityStep(draft) {
     return '<div class="olf-content-head"><h2 tabindex="-1">设置限购数量</h2></div>' +
-      '<div class="olf-summary olf-summary--primary"><strong>当前规则：</strong>' + esc(subjectLabel(draft.subject) + " · " + targetShortLabel(draft.targetType) + " · " + (draft.enabledPeriods || []).map(buffetPeriodSummaryLabel).join("＋")) + '</div>' +
-      renderBuffetProductScopeSection(draft) +
+      renderBuffetRuleContext(draft) +
       renderBuffetLimitContent(draft) +
-      renderBuffetQuantityRanges(draft) +
-      renderStepFour(draft, { embedded: true, hideHeader: true });
+      renderBuffetScenarioWorkspace(draft) +
+      renderBuffetActiveScenario(draft) +
+      renderBuffetQuantityWorkbench(draft);
   }
 
   function renderStepFive(draft) {
@@ -5514,6 +5593,7 @@
       return;
     }
     if (button.hasAttribute("data-add-range")) { addRange(button.getAttribute("data-add-range")); return; }
+    if (button.hasAttribute("data-modify-rule-type")) { clearBuffetQuantitySelection(); goToEditorStep(1, true); return; }
     if (button.hasAttribute("data-delete-range")) { deleteRange(button.getAttribute("data-delete-range"), Number(button.getAttribute("data-range-index"))); return; }
     if (button.hasAttribute("data-party-tab")) { resetBatchSelection(); editorState.rule.editorDraft.activePartyIndex = Number(button.getAttribute("data-party-tab")); renderEditor(); return; }
     if (button.hasAttribute("data-round-tab")) { resetBatchSelection(); editorState.rule.editorDraft.activeRoundIndex = Number(button.getAttribute("data-round-tab")); renderEditor(); return; }
@@ -6147,6 +6227,7 @@
       productAddDialog: createProductAddDialogState()
     };
     normalizeActiveDimensions(rule.editorDraft, editorState.currentStep === quantityStepNumber());
+    editorState.buffetQuantityWorkbench = createBuffetQuantityWorkbenchState();
     var editorTitlePrefix = viewMode ? "查看" : (rule.sourceRuleId ? "编辑" : "新增");
     var saveStateText = viewMode ? "只读查看" : "草稿已保存";
     root.innerHTML = '<div class="olf-page"><header class="olf-header"><div class="olf-header-main"><div class="olf-title-group"><button type="button" class="olf-icon-button" id="backButton" aria-label="返回规则列表">' + icon("back", 20) + '</button><div class="olf-title-copy"><h1>' + editorTitlePrefix + (isBuffetProfile() ? '自助餐规则' : '数量与频次规则') + '</h1><span class="olf-save-state" id="saveState">' + saveStateText + '</span></div></div><div class="olf-actions"><button type="button" class="olf-button" id="headerSaveButton">保存草稿</button></div></div><div class="olf-progress"><span id="progressFill"></span></div></header><div class="olf-editor-shell"><nav class="olf-step-nav" id="stepNav" aria-label="规则配置步骤"></nav><main class="olf-content" id="editorContent"></main></div><footer class="olf-footer"><span class="olf-footer-note" id="footerNote"></span><div class="olf-actions"><button type="button" class="olf-button" id="previousButton">上一步</button><button type="button" class="olf-button" id="saveReturnButton" style="display:none">保存草稿并返回</button><button type="button" class="olf-button olf-button--primary" id="nextButton">下一步</button></div></footer></div>' +

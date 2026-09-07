@@ -10,7 +10,7 @@ assert.match(flow, /function renderBuffetQuantityStep\(draft\)/, "modern buffet 
 const quantityStart = flow.indexOf("function renderBuffetQuantityStep(draft)");
 const quantityEnd = flow.indexOf("function renderEditorContent", quantityStart);
 const quantityStep = flow.slice(quantityStart, quantityEnd);
-const ordered = ["renderBuffetProductScopeSection(draft)", "renderBuffetLimitContent(draft)", "renderBuffetQuantityRanges(draft)", "renderStepFour(draft, { embedded: true, hideHeader: true })"];
+const ordered = ["renderBuffetRuleContext(draft)", "renderBuffetLimitContent(draft)", "renderBuffetScenarioWorkspace(draft)", "renderBuffetActiveScenario(draft)", "renderBuffetQuantityWorkbench(draft)"];
 let previous = -1;
 for (const marker of ordered) {
   const index = quantityStep.indexOf(marker);

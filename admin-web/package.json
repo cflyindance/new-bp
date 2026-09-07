@@ -33,6 +33,8 @@
     "verify:buffet-rule-list": "node scripts/verify-buffet-rule-list-view.mjs",
     "verify:buffet-rule-type-order": "node scripts/verify-buffet-rule-type-field-order.mjs",
     "verify:buffet-limit-content-quantity-step": "node scripts/verify-buffet-limit-content-quantity-step.mjs",
+    "verify:buffet-quantity-workbench": "node scripts/verify-buffet-quantity-workbench-state.mjs",
+    "verify:buffet-quantity-workbench-layout": "node scripts/verify-buffet-quantity-workbench-layout.mjs",
     "verify:buffet-period-selection": "node scripts/verify-buffet-five-step-migration.mjs && node scripts/verify-buffet-template-applicability.mjs && node scripts/verify-buffet-range-id-migration.mjs && node scripts/verify-buffet-period-selection-policy.mjs && node scripts/verify-buffet-period-scenario-editor.mjs && node scripts/verify-buffet-v4-validation.mjs",
     "verify:order-tip-status": "npx tsx scripts/verify-order-tip-status.ts",
     "verify:tipout-work-hours-layout": "node scripts/verify-tipout-work-hours-layout.mjs",

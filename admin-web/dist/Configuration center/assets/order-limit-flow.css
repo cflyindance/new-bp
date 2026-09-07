@@ -200,6 +200,16 @@ button { color: inherit; }
 .olf-period-toggle-grid--readonly input:disabled { opacity: 1; accent-color: var(--olf-primary); }
 .olf-summary--period-lock { margin-top: 10px; }
 .olf-period-toggle input { margin-top: 3px; }
+.olf-quantity-context { display: flex; align-items: center; justify-content: space-between; gap: 16px; background: var(--olf-primary-soft); border-color: #b9dcff; }
+.olf-quantity-context > div { display: grid; gap: 5px; }
+.olf-quantity-context > div > span { color: var(--olf-muted); font-size: 13px; }
+.olf-scenario-summary > .olf-section { margin: 10px 0 0; background: var(--olf-subtle); }
+.olf-active-scenario { display: grid; gap: 12px; }
+.olf-active-scenario__row { display: grid; grid-template-columns: 52px minmax(0, 1fr); align-items: center; gap: 10px; }
+.olf-active-scenario__row > strong { font-size: 13px; }
+.olf-quantity-workbench { padding: 0; overflow: hidden; }
+.olf-quantity-workbench > .olf-section-head { padding: 16px; margin: 0; border-bottom: 1px solid var(--olf-border); }
+.olf-quantity-workbench > .olf-section { margin: 0; border: 0; border-radius: 0; }
 .olf-period-toggle span { display: grid; gap: 3px; }
 .olf-period-toggle strong { font-size: 14px; }
 .olf-period-block { margin-top: 10px; padding: 14px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border: 1px solid var(--olf-border); border-radius: 10px; background: var(--olf-subtle); }
