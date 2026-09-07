@@ -2524,11 +2524,13 @@
           : missingTarget
             ? "请先选择限购对象"
             : "";
-      var availability = template.id !== "custom" && incompleteReason
-        ? { enabled: false, reason: incompleteReason }
-        : window.BuffetRulePolicy && window.BuffetRulePolicy.templateAvailability
-          ? window.BuffetRulePolicy.templateAvailability(draft, template)
-          : { enabled: true, reason: "" };
+      var availability = template.id === "custom"
+        ? { enabled: true, reason: "" }
+        : incompleteReason
+          ? { enabled: false, reason: incompleteReason }
+          : window.BuffetRulePolicy && window.BuffetRulePolicy.templateAvailability
+            ? window.BuffetRulePolicy.templateAvailability(draft, template)
+            : { enabled: true, reason: "" };
       return '<button type="button" class="olf-template-card' + (draft.buffetTemplateId === template.id ? " is-selected" : "") + '" data-buffet-template="' + esc(template.id) + '"' + (availability.enabled ? "" : ' disabled title="' + esc(availability.reason) + '"') + '><strong>' + esc(template.name) + '</strong><span>' + esc(availability.enabled ? (template.periods.length ? template.periods.map(periodLabel).join(" ＋ ") : "自行选择周期和限购内容") : availability.reason) + '</span></button>';
     }).join("");
     var changed = draft.buffetTemplateModified ? '<div class="olf-summary olf-summary--warning"><strong>已基于模板修改</strong><span>当前以页面上实际选择的周期与限购内容为准。</span></div>' : "";
