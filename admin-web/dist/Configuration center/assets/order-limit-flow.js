@@ -4121,7 +4121,7 @@
     var allFiltered = pageSelected && data.filtered.length > data.pageRows.length && state.selectionMode !== "filtered"
       ? '<button type="button" class="olf-button olf-button--small olf-button--link" data-buffet-workbench-select-filtered>选择全部筛选结果，共 ' + data.filtered.length + ' 项</button>' : "";
     var scenario = isBuffetComboDraft(draft) ? comboScenarioKeyFor(draft, combo.partyIndex) : v4ScenarioKey(combo.partyIndex, combo.roundIndex, draft);
-    return '<div class="olf-v4-workbench-tools"><div class="olf-v4-workbench-filters"><select class="olf-select" data-buffet-workbench-line>' + lineOptions + '</select><input class="olf-input" value="' + esc(state.query) + '" placeholder="搜索商品/分类名称" data-buffet-workbench-query /><button type="button" class="olf-button olf-button--small" data-buffet-workbench-reset>重置筛选</button></div><div class="olf-v4-workbench-batch"><label><input type="checkbox" data-buffet-workbench-page-select' + (pageSelected ? ' checked' : '') + ' /> 当前页全选</label><strong>已选 ' + state.selectedIds.length + ' 项</strong>' + allFiltered + '<span class="olf-batch-spacer"></span><input class="olf-input olf-limit-input" type="number" min="0" placeholder="数量" data-buffet-workbench-bulk-value /><button type="button" class="olf-button olf-button--small" data-buffet-workbench-bulk-apply data-v4-period="' + combo.period + '" data-v4-scenario="' + esc(scenario) + '"' + (state.selectedIds.length ? '' : ' disabled') + '>应用数量</button></div><div class="olf-v4-workbench-pager"><span>共 ' + data.filtered.length + ' 项 · 第 ' + state.page + ' / ' + data.totalPages + ' 页</span><button type="button" class="olf-button olf-button--small" data-buffet-workbench-page="' + (state.page - 1) + '"' + (state.page <= 1 ? ' disabled' : '') + '>上一页</button><button type="button" class="olf-button olf-button--small" data-buffet-workbench-page="' + (state.page + 1) + '"' + (state.page >= data.totalPages ? ' disabled' : '') + '>下一页</button><select class="olf-select" data-buffet-workbench-page-size><option value="20"' + (state.pageSize === 20 ? ' selected' : '') + '>20 条/页</option><option value="50"' + (state.pageSize === 50 ? ' selected' : '') + '>50 条/页</option><option value="100"' + (state.pageSize === 100 ? ' selected' : '') + '>100 条/页</option></select></div></div>';
+    return '<div class="olf-v4-workbench-tools"><div class="olf-v4-workbench-filters"><select class="olf-select" data-buffet-workbench-line>' + lineOptions + '</select><input class="olf-input" value="' + esc(state.query) + '" placeholder="搜索商品/分类名称" data-buffet-workbench-query /><button type="button" class="olf-button olf-button--small" data-buffet-workbench-reset>重置筛选</button></div><div class="olf-v4-workbench-batch"><label><input type="checkbox" data-buffet-workbench-page-select' + (pageSelected ? ' checked' : '') + ' /> 当前页全选</label><strong>已选 ' + state.selectedIds.length + ' 项</strong>' + allFiltered + '<span class="olf-batch-spacer"></span><input class="olf-input olf-limit-input" type="number" min="0" placeholder="数量" data-buffet-workbench-bulk-value /><button type="button" class="olf-button olf-button--small" data-buffet-workbench-bulk-apply data-v4-period="' + combo.period + '" data-v4-scenario="' + esc(scenario) + '" data-scene-party="' + combo.partyIndex + '" data-scene-round="' + combo.roundIndex + '"' + (state.selectedIds.length ? '' : ' disabled') + '>应用数量</button></div><div class="olf-v4-workbench-pager"><span>共 ' + data.filtered.length + ' 项 · 第 ' + state.page + ' / ' + data.totalPages + ' 页</span><button type="button" class="olf-button olf-button--small" data-buffet-workbench-page="' + (state.page - 1) + '"' + (state.page <= 1 ? ' disabled' : '') + '>上一页</button><button type="button" class="olf-button olf-button--small" data-buffet-workbench-page="' + (state.page + 1) + '"' + (state.page >= data.totalPages ? ' disabled' : '') + '>下一页</button><select class="olf-select" data-buffet-workbench-page-size><option value="20"' + (state.pageSize === 20 ? ' selected' : '') + '>20 条/页</option><option value="50"' + (state.pageSize === 50 ? ' selected' : '') + '>50 条/页</option><option value="100"' + (state.pageSize === 100 ? ' selected' : '') + '>100 条/页</option></select></div></div>';
   }
 
   function renderBuffetTargetQuantityPanel(draft, config, combo, values) {
@@ -4221,10 +4221,10 @@
   function renderV4StoreCopy(draft, configuredStores) {
     if (configuredStores.length < 2) return "";
     var targets = configuredStores.filter(function (storeId) { return storeId !== draft.activeStoreId; });
-    return '<div class="olf-v4-store-copy"><span>批量复制当前门店数量</span><select class="olf-select" data-buffet-store-copy-target><option value="">选择目标门店</option>' + targets.map(function (storeId) {
+    return '<div class="olf-v4-store-copy"><span>批量复制当前门店数量</span><select class="olf-select" data-buffet-store-copy-target multiple size="' + Math.min(3, targets.length) + '" aria-label="目标门店（可多选）">' + targets.map(function (storeId) {
       var store = stores.find(function (item) { return item.id === storeId; });
       return '<option value="' + esc(storeId) + '">' + esc(store ? store.name : storeId) + '</option>';
-    }).join("") + '</select><button type="button" class="olf-button olf-button--small" data-buffet-store-copy>复制数量</button></div>';
+    }).join("") + '</select><label class="olf-v4-copy-overwrite"><input type="checkbox" data-buffet-store-copy-overwrite>覆盖目标门店已有配置</label><button type="button" class="olf-button olf-button--small" data-buffet-store-copy>预览并复制</button><small>默认只填充空值</small></div>';
   }
 
   function renderBuffetV4QuantityEditor(draft, configuredStores) {
@@ -4361,6 +4361,64 @@
     return { copied: copiedCount, pending: pendingCount };
   }
 
+  function buffetCopyCellConfigured(cell) {
+    if (Array.isArray(cell)) return cell.length > 0;
+    if (!cell || typeof cell !== "object") return cell !== undefined && cell !== null && cell !== "";
+    if (Object.prototype.hasOwnProperty.call(cell, "configured")) return !!cell.configured;
+    if (Object.prototype.hasOwnProperty.call(cell, "minConfigured") || Object.prototype.hasOwnProperty.call(cell, "maxConfigured")) return !!cell.minConfigured || !!cell.maxConfigured;
+    return Object.keys(cell).length > 0;
+  }
+
+  function buffetCopyAllowedTargetKeys(draft, config, period) {
+    var allowed = {};
+    quantityScenarioIndexes(draft, period).forEach(function (combo) {
+      if (draft.targetType === "dish_set") allowed[v4ScenarioKey(combo.partyIndex, combo.roundIndex, draft)] = true;
+      else v4TargetsForConfig(draft, config).forEach(function (target) { allowed[v4TargetCellKey(combo.partyIndex, combo.roundIndex, target.lineId, target.id, draft)] = true; });
+    });
+    return allowed;
+  }
+
+  function previewBuffetStoreCopy(draft, sourceStoreId, destinationStoreIds, options) {
+    var source = storeConfigFor(draft, sourceStoreId, false);
+    var overwriteConfigured = !!(options && options.overwriteConfigured);
+    var preview = { sourceStoreId: sourceStoreId, destinationStoreIds: (destinationStoreIds || []).slice(), overwriteConfigured: overwriteConfigured, operations: [], summary: { fill: 0, overwrite: 0, preserved: 0, missing: 0 } };
+    if (!source) return preview;
+    preview.destinationStoreIds.forEach(function (destinationStoreId) {
+      var destination = storeConfigFor(draft, destinationStoreId, false);
+      if (!destination || destinationStoreId === sourceStoreId) return;
+      (draft.enabledPeriods || []).forEach(function (period) {
+        var sourceValues = v4PeriodValues(source, period);
+        var destinationValues = v4PeriodValues(destination, period);
+        var allowed = buffetCopyAllowedTargetKeys(draft, destination, period);
+        ["totalBounds", "tableTotalBounds", "defaultDishLimits", "targetLimits", "tableTargetCaps", "exceptionDishLimits"].forEach(function (mapName) {
+          Object.keys(sourceValues[mapName] || {}).forEach(function (key) {
+            var nextCell = sourceValues[mapName][key];
+            if (!buffetCopyCellConfigured(nextCell)) return;
+            var targetScoped = mapName === "targetLimits" || mapName === "tableTargetCaps" || mapName === "exceptionDishLimits";
+            var status = targetScoped && !allowed[key] ? "missing" : buffetCopyCellConfigured(destinationValues[mapName] && destinationValues[mapName][key]) ? (overwriteConfigured ? "overwrite" : "preserved") : "fill";
+            preview.summary[status] += 1;
+            preview.operations.push({ destinationStoreId: destinationStoreId, period: period, map: mapName, key: key, status: status, previous: cloneValue(destinationValues[mapName] && destinationValues[mapName][key]), next: cloneValue(nextCell) });
+          });
+        });
+      });
+    });
+    return preview;
+  }
+
+  function applyBuffetStoreCopyPreview(draft, preview) {
+    var applied = 0;
+    (preview && preview.operations || []).forEach(function (operation) {
+      if (operation.status !== "fill" && operation.status !== "overwrite") return;
+      var destination = storeConfigFor(draft, operation.destinationStoreId, false);
+      if (!destination) return;
+      var values = v4PeriodValues(destination, operation.period);
+      if (!values[operation.map]) values[operation.map] = {};
+      values[operation.map][operation.key] = cloneValue(operation.next);
+      applied += 1;
+    });
+    return { applied: applied, missing: preview && preview.summary ? preview.summary.missing : 0 };
+  }
+
   if (window.__BUFFET_PERIOD_QUANTITY_TEST__) {
     window.BuffetPeriodQuantityTestApi = {
       quantityScenarioIndexes: quantityScenarioIndexes,
@@ -4389,7 +4447,9 @@
       filteredTargets: filteredBuffetWorkbenchTargets,
       pageData: buffetWorkbenchPageData,
       selectPage: selectBuffetWorkbenchPage,
-      selectFiltered: selectAllFilteredBuffetTargets
+      selectFiltered: selectAllFilteredBuffetTargets,
+      previewStoreCopy: previewBuffetStoreCopy,
+      applyStoreCopyPreview: applyBuffetStoreCopyPreview
     };
   }
 
@@ -5443,7 +5503,7 @@
       if (!Number.isInteger(bulkValue) || bulkValue < 0) { toast("请输入大于或等于 0 的整数", true); return; }
       var bulkPeriod = button.getAttribute("data-v4-period");
       var bulkValues = v4PeriodValues(bulkConfig, bulkPeriod);
-      var bulkCombo = { period: bulkPeriod, partyIndex: bulkDraft.activePartyIndex || 0, roundIndex: bulkDraft.activeRoundIndex || 0 };
+      var bulkCombo = { period: bulkPeriod, partyIndex: Number(button.getAttribute("data-scene-party")) || 0, roundIndex: Number(button.getAttribute("data-scene-round")) || 0 };
       if (bulkDraft.targetType === "dish_set") {
         var bulkScenario = button.getAttribute("data-v4-scenario");
         var existingRows = v4ExceptionRows(bulkValues, bulkScenario).filter(function (row) { return bulkState.selectedIds.indexOf(v4MenuIdentity(v4ExceptionDish(row))) < 0; });
@@ -5466,24 +5526,28 @@
     }
     if (button.hasAttribute("data-buffet-store-copy")) {
       var copySelect = root.querySelector("[data-buffet-store-copy-target]");
-      var copyTargetStoreId = copySelect && copySelect.value;
+      var copyTargetStoreIds = copySelect ? Array.from(copySelect.selectedOptions).map(function (option) { return option.value; }).filter(Boolean) : [];
       var copyDraft = editorState.rule.editorDraft;
-      if (!copyTargetStoreId || addedStoreIds(copyDraft).indexOf(copyTargetStoreId) < 0) {
-        toast("请选择要接收数量的参与门店", true);
+      copyTargetStoreIds = copyTargetStoreIds.filter(function (storeId) { return addedStoreIds(copyDraft).indexOf(storeId) >= 0; });
+      if (!copyTargetStoreIds.length) {
+        toast("请至少选择一个要接收数量的参与门店", true);
         return;
       }
       var sourceStore = stores.find(function (item) { return item.id === copyDraft.activeStoreId; });
-      var targetStore = stores.find(function (item) { return item.id === copyTargetStoreId; });
+      var overwriteControl = root.querySelector("[data-buffet-store-copy-overwrite]");
+      var copyPreview = previewBuffetStoreCopy(copyDraft, copyDraft.activeStoreId, copyTargetStoreIds, { overwriteConfigured: !!(overwriteControl && overwriteControl.checked) });
+      var copySummary = copyPreview.summary;
+      var copyDescription = "来源：“" + (sourceStore ? sourceStore.name : copyDraft.activeStoreId) + "”；目标门店 " + copyTargetStoreIds.length + " 家。将填充 " + copySummary.fill + " 项" + (copySummary.overwrite ? "、覆盖 " + copySummary.overwrite + " 项" : "") + "，保留已有配置 " + copySummary.preserved + " 项，跳过未匹配商品 " + copySummary.missing + " 项。";
       openDialog(
-        "复制门店数量？",
-        "将复制“" + (sourceStore ? sourceStore.name : copyDraft.activeStoreId) + "”的周期数量到“" + (targetStore ? targetStore.name : copyTargetStoreId) + "”。仅写入目标门店现有产线和商品身份，未匹配的商品需在目标门店单独完善。",
+        copyPreview.overwriteConfigured && copySummary.overwrite ? "确认覆盖目标门店已有配置？" : "确认复制门店数量？",
+        copyDescription,
         "确认复制",
         function () {
-          var copyResult = copyBuffetV4StorePeriodValues(copyDraft, copyDraft.activeStoreId, copyTargetStoreId);
+          var copyResult = applyBuffetStoreCopyPreview(copyDraft, copyPreview);
           closeDialog(false);
           markEditorDirty();
           renderEditor();
-          toast(copyResult.pending ? "已复制 " + copyResult.copied + " 项；另有 " + copyResult.pending + " 项待完善" : "已复制 " + copyResult.copied + " 项到目标门店");
+          toast("已向 " + copyTargetStoreIds.length + " 家门店应用 " + copyResult.applied + " 项" + (copyResult.missing ? "，跳过 " + copyResult.missing + " 项未匹配商品" : ""));
         },
         { returnFocus: button, cancelLabel: "取消", onCancel: function () { renderEditor(); } }
       );
