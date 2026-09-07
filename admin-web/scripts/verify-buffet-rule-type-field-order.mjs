@@ -8,6 +8,10 @@ const stepOneEnd = flow.indexOf("function renderChecks", stepOneStart);
 assert.ok(stepOneStart >= 0 && stepOneEnd > stepOneStart, "renderStepOne must exist");
 const stepOne = flow.slice(stepOneStart, stepOneEnd);
 
+const markupStart = stepOne.lastIndexOf("return '<div class=\"olf-content-head");
+assert.ok(markupStart >= 0, "renderStepOne markup return must exist");
+const markup = stepOne.slice(markupStart);
+
 const orderedMarkers = [
   "<h3>基础信息</h3>",
   "buffetTemplateBlock",
@@ -22,7 +26,7 @@ const orderedMarkers = [
 
 let previousIndex = -1;
 for (const marker of orderedMarkers) {
-  const markerIndex = stepOne.indexOf(marker, previousIndex + 1);
+  const markerIndex = markup.indexOf(marker, previousIndex + 1);
   assert.ok(markerIndex > previousIndex, `${marker} must appear in the confirmed buffet rule-type order`);
   previousIndex = markerIndex;
 }
