@@ -2258,10 +2258,24 @@
   function validateStep(stepNumber, draft) {
     var modernBuffet = isBuffetProfile() && !isLegacyBuffetDraft(draft);
     if (!modernBuffet) return validateSixStep(stepNumber, draft);
-    if (stepNumber === 1) return validateSixStep(1, draft) || validateSixStep(2, draft);
-    if (stepNumber === 2) return validateSixStep(3, draft);
+    if (stepNumber === 1) return validateBuffetRuleTypeStep(draft);
+    if (stepNumber === 2) return validateSixStep(2, draft) || validateSixStep(3, draft);
     if (stepNumber === 3) return validateSixStep(4, draft);
     if (stepNumber === 4) return validateSixStep(5, draft);
+    return null;
+  }
+
+  function validateBuffetRuleTypeStep(draft) {
+    var baseError = validateSixStep(1, draft);
+    if (baseError) return baseError;
+    if (!Array.isArray(draft.enabledPeriods) || !draft.enabledPeriods.length) return "请至少启用一个限制周期";
+    if (!buffetPeriodSelection(draft).valid) return "限制周期组合不合法，请选择单周期或受控组合模板";
+    if (draft.buffetTemplateId && window.BuffetRulePolicy && window.BuffetRulePolicy.templateAvailability) {
+      var selectedTemplate = (moduleProfile.periodTemplates || []).find(function (template) { return template.id === draft.buffetTemplateId; });
+      var templateState = selectedTemplate && window.BuffetRulePolicy.templateAvailability(draft, selectedTemplate);
+      if (templateState && !templateState.enabled) return templateState.reason;
+    }
+    if (!isAllowedCombination(draft)) return "当前限购主体、周期和限购对象组合不适用于自助餐规则";
     return null;
   }
 
@@ -2610,7 +2624,6 @@
     var modernBuffet = isBuffetProfile() && !isLegacyBuffetDraft(draft);
     var buffetTemplateBlock = modernBuffet ? renderBuffetTemplateSelection(draft) : "";
     var buffetPeriodBlock = modernBuffet ? '<section class="olf-section"><h3>限制周期</h3>' + renderBuffetPeriodSelection(draft) + '</section>' : "";
-    var buffetContentBlock = modernBuffet ? renderBuffetLimitContent(draft) : "";
     var subjectChoices = renderChoice("subject", "order", "按桌/订单限购", "整桌共享同一个配置上限", draft.subject === "order") +
         renderChoice("subject", "party_size", "按人数限购", "人均上限 × 当前订单有效人数，不区分具体食客", draft.subject === "party_size");
     var targetChoices = renderChoice("targetType", "category", "按分类限购", "分类内全部菜品共享数量池", draft.targetType === "category") +
@@ -2652,7 +2665,6 @@
       targetChoices + '</div></section>' +
       measureBlock +
       childBlock +
-      buffetContentBlock +
       '<div class="olf-summary olf-summary--primary"><strong>规则预览：</strong>' + (modernBuffet ? (draft.subject && draft.targetType ? esc(subjectLabel(draft.subject) + " × " + targetShortLabel(draft.targetType)) : "请选择限购主体和限购对象") : (draft.subject && draft.period && draft.targetType ? esc(subjectLabel(draft.subject) + " × " + periodLabel(draft.period) + " × " + targetShortLabel(draft.targetType)) : "请完成三个维度的选择")) + '</div>';
   }
 
@@ -4242,11 +4254,15 @@
     var configuredStores = addedStoreIds(draft);
     var hasConfiguredStores = configuredStores.length > 0;
     if (isBuffetV4Draft(draft) && hasConfiguredStores) {
-      return (options.embedded
+      return (options.hideHeader
+        ? ''
+        : options.embedded
         ? '<div class="olf-content-head olf-merged-content-head"><div></div><button type="button" class="olf-button olf-button--primary" data-product-add-open>' + icon("plus", 15) + ' 添加商品</button></div>'
         : renderBuffetV4QuantityHeader()) + renderBuffetV4QuantityEditor(draft, configuredStores);
     }
-    var heading = options.embedded
+    var heading = options.hideHeader
+      ? ''
+      : options.embedded
       ? '<div class="olf-content-head olf-merged-content-head"><div></div><button type="button" class="olf-button olf-button--primary" data-product-add-open>' + icon("plus", 15) + ' 添加商品</button></div>'
       : '<div class="olf-content-head olf-merged-content-head"><div><h2 tabindex="-1">设置限购数量</h2></div><button type="button" class="olf-button olf-button--primary" data-product-add-open>' + icon("plus", 15) + ' 添加商品</button></div>';
     return heading +
@@ -4254,6 +4270,22 @@
         ? renderLimitRuleList(draft) +
           '<div class="olf-summary olf-summary--primary"><strong>列表说明：</strong>筛选和分页仅影响当前展示；批量填写会作用于所有已勾选规则。</div>'
         : '<div class="olf-empty olf-limit-store-empty"><strong>暂未添加商品</strong><span>点击页面顶部“添加商品”，选择门店及产线商品后开始配置限购数量。</span></div>');
+  }
+
+  function renderBuffetProductScopeSection(draft) {
+    normalizeStoreDraft(draft);
+    var storeCount = addedStoreIds(draft).length;
+    var productCount = selectedPreviewRows(draft).length;
+    return '<section class="olf-section"><div class="olf-section-head"><div><h3>参与门店和商品</h3><span class="olf-hint">已配置 ' + storeCount + ' 家门店、' + productCount + ' 个商品</span></div><button type="button" class="olf-button olf-button--primary" data-product-add-open>' + icon("plus", 15) + ' 添加商品</button></div></section>';
+  }
+
+  function renderBuffetQuantityStep(draft) {
+    return '<div class="olf-content-head"><h2 tabindex="-1">设置限购数量</h2></div>' +
+      '<div class="olf-summary olf-summary--primary"><strong>当前规则：</strong>' + esc(subjectLabel(draft.subject) + " · " + targetShortLabel(draft.targetType) + " · " + (draft.enabledPeriods || []).map(buffetPeriodSummaryLabel).join("＋")) + '</div>' +
+      renderBuffetProductScopeSection(draft) +
+      renderBuffetLimitContent(draft) +
+      renderBuffetQuantityRanges(draft) +
+      renderStepFour(draft, { embedded: true, hideHeader: true });
   }
 
   function renderStepFive(draft) {
@@ -4663,7 +4695,7 @@
     var modernBuffet = isBuffetProfile() && !isLegacyBuffetDraft(draft);
     if (modernBuffet) {
       if (editorState.currentStep === 1) return renderStepOne(draft);
-      if (editorState.currentStep === 2) return '<div class="olf-content-head"><h2 tabindex="-1">设置限购数量</h2></div><div class="olf-summary olf-summary--primary"><strong>当前规则：</strong>' + esc(subjectLabel(draft.subject) + " · " + targetShortLabel(draft.targetType) + " · " + (draft.enabledPeriods || []).map(buffetPeriodSummaryLabel).join("＋")) + '</div>' + renderBuffetQuantityRanges(draft) + renderStepFour(draft, { embedded: true });
+      if (editorState.currentStep === 2) return renderBuffetQuantityStep(draft);
       if (editorState.currentStep === 3) return renderStepSix(draft);
       if (editorState.currentStep === 4) return renderStepFive(draft);
       return renderStepSeven(draft);

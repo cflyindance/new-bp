@@ -107,7 +107,7 @@ assert.match(fusedRuleType, /限购主体/);
 assert.match(fusedRuleType, /限购对象/);
 assert.match(fusedRuleType, /常用模板/);
 assert.match(fusedRuleType, /限制周期/);
-assert.match(fusedRuleType, /限购内容/);
+assert.doesNotMatch(fusedRuleType, /限购内容/);
 assert.doesNotMatch(flow.match(/var MENU_ORDER_LIMIT_PROFILE[\s\S]*?var moduleProfile/)?.[0] ?? "", /按门店、区间配置数量/);
 
 api.selectSingleBuffetPeriod(modern, "multi_round");
@@ -127,7 +127,8 @@ const malformedV4 = {
   roundRanges: [{ min: 1, max: null }],
   conditions: { childCountPolicy: "inherit" }
 };
-assert.equal(api.validateStep(1, malformedV4), "每个启用周期至少保留一个限购维度");
+assert.equal(api.validateStep(1, malformedV4), null, "rule-type step must not validate quantity-step content");
+assert.equal(api.validateStep(2, malformedV4), "每个启用周期至少保留一个限购维度");
 assert.equal(malformedV4.periodPolicies.per_round.blocks.targetEnabled, false, "validation must not normalize a malformed v4 policy");
 
 const periodBlocks = flow.match(/function renderBuffetPeriodBlocks\(draft\)[\s\S]*?(?=\n  function renderBuffetScenarioConfiguration)/)?.[0] ?? "";

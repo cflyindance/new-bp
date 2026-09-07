@@ -20,7 +20,6 @@ const orderedMarkers = [
   "<h3>限购对象</h3>",
   "measureBlock",
   "childBlock",
-  "buffetContentBlock",
   "规则预览："
 ];
 
