@@ -217,6 +217,10 @@ button { color: inherit; }
 .olf-v4-member-table__head { display: flex; justify-content: space-between; padding: 12px 14px; background: var(--olf-subtle); }
 .olf-v4-member-table__head span, .olf-v4-member-status { color: var(--olf-muted); font-size: 12px; }
 .olf-v4-member-status.is-exception { color: var(--olf-primary); }
+.olf-v4-workbench-tools { display: grid; gap: 10px; margin-bottom: 12px; padding: 12px; border: 1px solid var(--olf-border); border-radius: 10px; background: var(--olf-subtle); }
+.olf-v4-workbench-filters, .olf-v4-workbench-batch, .olf-v4-workbench-pager { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.olf-v4-workbench-filters .olf-input { flex: 1 1 240px; }
+.olf-v4-workbench-pager { justify-content: flex-end; }
 .olf-period-toggle span { display: grid; gap: 3px; }
 .olf-period-toggle strong { font-size: 14px; }
 .olf-period-block { margin-top: 10px; padding: 14px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border: 1px solid var(--olf-border); border-radius: 10px; background: var(--olf-subtle); }

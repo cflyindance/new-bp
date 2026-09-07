@@ -1402,6 +1402,35 @@
     });
   }
 
+  function buffetWorkbenchPageData(draft, config) {
+    var state = normalizeBuffetQuantityWorkbenchState(draft);
+    var targets = draft.targetType === "dish_set" ? eligibleExceptionDishes(draft, state.storeId || draft.activeStoreId) : filteredBuffetWorkbenchTargets(draft, config, state);
+    if (draft.targetType === "dish_set") {
+      var query = String(state.query || "").trim().toLocaleLowerCase();
+      targets = targets.filter(function (target) {
+        return (!state.lineId || target.productLineId === state.lineId) && (!query || String(target.name || target.dishId).toLocaleLowerCase().indexOf(query) >= 0);
+      });
+    }
+    var totalPages = Math.max(1, Math.ceil(targets.length / state.pageSize));
+    state.page = Math.min(state.page, totalPages);
+    var start = (state.page - 1) * state.pageSize;
+    return { filtered: targets, pageRows: targets.slice(start, start + state.pageSize), totalPages: totalPages };
+  }
+
+  function selectBuffetWorkbenchPage(draft, config) {
+    var state = normalizeBuffetQuantityWorkbenchState(draft);
+    state.selectedIds = buffetWorkbenchPageData(draft, config).pageRows.map(function (target) { return buffetWorkbenchTargetIdentity(draft, target); });
+    state.selectionMode = "page";
+    return state.selectedIds;
+  }
+
+  function selectAllFilteredBuffetTargets(draft, config) {
+    var state = normalizeBuffetQuantityWorkbenchState(draft);
+    state.selectedIds = buffetWorkbenchPageData(draft, config).filtered.map(function (target) { return buffetWorkbenchTargetIdentity(draft, target); });
+    state.selectionMode = "filtered";
+    return state.selectedIds;
+  }
+
   function resetSceneDisplayMode() {
     if (!editorState) return;
     editorState.sceneDisplayMode = "tile";
@@ -4069,21 +4098,38 @@
     v4ExceptionRows(values, scenario).forEach(function (row) { exceptions[v4MenuIdentity(v4ExceptionDish(row))] = row; });
     var defaultCell = values.defaultDishLimits[scenario];
     var defaultCopy = defaultCell && defaultCell.configured ? "使用默认值 " + defaultCell.value + " 份" : "默认值未配置";
-    var rows = eligibleExceptionDishes(draft, draft.activeStoreId).map(function (dish) {
+    var state = normalizeBuffetQuantityWorkbenchState(draft);
+    var rows = buffetWorkbenchPageData(draft, config).pageRows.map(function (dish) {
       var exception = exceptions[v4MenuIdentity(dish)];
       var limit = exception && exception.limit;
       var status = limit && limit.configured ? "已设置例外 " + limit.value + " 份" : defaultCopy;
-      return '<tr><td><strong>' + esc(dish.name || dish.dishId) + '</strong></td><td>' + esc(dish.productLineId) + '</td><td><span class="olf-v4-member-status' + (exception ? ' is-exception' : '') + '">' + esc(status) + '</span></td></tr>';
+      var identity = buffetWorkbenchTargetIdentity(draft, dish);
+      return '<tr><td class="olf-batch-select-cell"><input type="checkbox" data-buffet-workbench-target="' + esc(identity) + '"' + (state.selectedIds.indexOf(identity) >= 0 ? ' checked' : '') + ' /></td><td><strong>' + esc(dish.name || dish.dishId) + '</strong></td><td>' + esc(dish.productLineId) + '</td><td><span class="olf-v4-member-status' + (exception ? ' is-exception' : '') + '">' + esc(status) + '</span></td></tr>';
     }).join("");
-    return '<div class="olf-v4-member-table"><div class="olf-v4-member-table__head"><strong>菜品集成员</strong><span>' + config.dishSetMembers.length + ' 个商品</span></div><div class="olf-table-wrap"><table class="olf-table"><thead><tr><th>商品名称</th><th>产线</th><th>相同菜品上限</th></tr></thead><tbody>' + rows + '</tbody></table></div></div>';
+    return '<div class="olf-v4-member-table"><div class="olf-v4-member-table__head"><strong>菜品集成员</strong><span>' + config.dishSetMembers.length + ' 个商品</span></div><div class="olf-table-wrap"><table class="olf-table"><thead><tr><th class="olf-batch-select-cell"></th><th>商品名称</th><th>产线</th><th>相同菜品上限</th></tr></thead><tbody>' + rows + '</tbody></table></div></div>';
+  }
+
+  function renderBuffetWorkbenchToolbar(draft, config, combo) {
+    var state = normalizeBuffetQuantityWorkbenchState(draft);
+    var data = buffetWorkbenchPageData(draft, config);
+    var pageIds = data.pageRows.map(function (target) { return buffetWorkbenchTargetIdentity(draft, target); });
+    var pageSelected = pageIds.length && pageIds.every(function (id) { return state.selectedIds.indexOf(id) >= 0; });
+    var lineOptions = '<option value="">全部产线</option>' + config.productLines.map(function (lineId) {
+      var line = lines.find(function (item) { return item.id === lineId; });
+      return '<option value="' + esc(lineId) + '"' + (state.lineId === lineId ? ' selected' : '') + '>' + esc(line ? line.name : lineId) + '</option>';
+    }).join("");
+    var allFiltered = pageSelected && data.filtered.length > data.pageRows.length && state.selectionMode !== "filtered"
+      ? '<button type="button" class="olf-button olf-button--small olf-button--link" data-buffet-workbench-select-filtered>选择全部筛选结果，共 ' + data.filtered.length + ' 项</button>' : "";
+    var scenario = isBuffetComboDraft(draft) ? comboScenarioKeyFor(draft, combo.partyIndex) : v4ScenarioKey(combo.partyIndex, combo.roundIndex, draft);
+    return '<div class="olf-v4-workbench-tools"><div class="olf-v4-workbench-filters"><select class="olf-select" data-buffet-workbench-line>' + lineOptions + '</select><input class="olf-input" value="' + esc(state.query) + '" placeholder="搜索商品/分类名称" data-buffet-workbench-query /><button type="button" class="olf-button olf-button--small" data-buffet-workbench-reset>重置筛选</button></div><div class="olf-v4-workbench-batch"><label><input type="checkbox" data-buffet-workbench-page-select' + (pageSelected ? ' checked' : '') + ' /> 当前页全选</label><strong>已选 ' + state.selectedIds.length + ' 项</strong>' + allFiltered + '<span class="olf-batch-spacer"></span><input class="olf-input olf-limit-input" type="number" min="0" placeholder="数量" data-buffet-workbench-bulk-value /><button type="button" class="olf-button olf-button--small" data-buffet-workbench-bulk-apply data-v4-period="' + combo.period + '" data-v4-scenario="' + esc(scenario) + '"' + (state.selectedIds.length ? '' : ' disabled') + '>应用数量</button></div><div class="olf-v4-workbench-pager"><span>共 ' + data.filtered.length + ' 项 · 第 ' + state.page + ' / ' + data.totalPages + ' 页</span><button type="button" class="olf-button olf-button--small" data-buffet-workbench-page="' + (state.page - 1) + '"' + (state.page <= 1 ? ' disabled' : '') + '>上一页</button><button type="button" class="olf-button olf-button--small" data-buffet-workbench-page="' + (state.page + 1) + '"' + (state.page >= data.totalPages ? ' disabled' : '') + '>下一页</button><select class="olf-select" data-buffet-workbench-page-size><option value="20"' + (state.pageSize === 20 ? ' selected' : '') + '>20 条/页</option><option value="50"' + (state.pageSize === 50 ? ' selected' : '') + '>50 条/页</option><option value="100"' + (state.pageSize === 100 ? ' selected' : '') + '>100 条/页</option></select></div></div>';
   }
 
   function renderBuffetTargetQuantityPanel(draft, config, combo, values) {
     if (draft.targetType === "dish_set") {
       var scenario = isBuffetComboDraft(draft) ? comboScenarioKeyFor(draft, combo.partyIndex) : v4ScenarioKey(combo.partyIndex, combo.roundIndex, draft);
-      return renderBuffetSharedQuotaPanel(draft, config, combo, values) + renderBuffetDishSetMemberRows(draft, config, values, scenario);
+      return renderBuffetWorkbenchToolbar(draft, config, combo) + renderBuffetSharedQuotaPanel(draft, config, combo, values) + renderBuffetDishSetMemberRows(draft, config, values, scenario);
     }
-    return draft.targetType === "category" ? renderBuffetCategoryRows(draft, config, combo, values) : renderBuffetDishRows(draft, config, combo, values);
+    return renderBuffetWorkbenchToolbar(draft, config, combo) + (draft.targetType === "category" ? renderBuffetCategoryRows(draft, config, combo, values) : renderBuffetDishRows(draft, config, combo, values));
   }
 
   function v4TargetRows(draft, config, combo, values) {
@@ -4098,9 +4144,11 @@
           : renderV4LimitInput(values.targetLimits[setKey], "data-v4-limit-field data-v4-map=\"targetLimits\" data-v4-period=\"" + combo.period + "\" data-v4-scenario=\"" + esc(setKey) + "\"") +
             (draft.subject === "party_size" ? renderV4LimitInput(values.tableTargetCaps[setKey], "data-table-target-cap data-v4-limit-field data-v4-map=\"tableTargetCaps\" data-v4-period=\"" + combo.period + "\" data-v4-scenario=\"" + esc(setKey) + "\"", "整桌兜底") : "")) + '</div>';
     }
-    return v4TargetsForConfig(draft, config).map(function (target) {
+    var state = normalizeBuffetQuantityWorkbenchState(draft);
+    return buffetWorkbenchPageData(draft, config).pageRows.map(function (target) {
       var key = v4TargetKey(draft, combo, target);
-      return '<div class="olf-v4-target-row"><div><strong>' + esc(target.shortName || target.name) + '</strong><span>' + esc(target.lineLabel || target.lineId) + (draft.targetType === "category" ? ' · 包含 ' + (target.count || 0) + ' 个菜品' : '') + '</span></div>' +
+      var identity = buffetWorkbenchTargetIdentity(draft, target);
+      return '<div class="olf-v4-target-row"><input type="checkbox" data-buffet-workbench-target="' + esc(identity) + '"' + (state.selectedIds.indexOf(identity) >= 0 ? ' checked' : '') + ' /><div><strong>' + esc(target.shortName || target.name) + '</strong><span>' + esc(target.lineLabel || target.lineId) + (draft.targetType === "category" ? ' · 包含 ' + (target.count || 0) + ' 个菜品' : '') + '</span></div>' +
         (comboDraft
           ? renderV4LimitInput(values[comboMap][key], "data-v4-limit-field data-v4-map=\"" + comboMap + "\" data-v4-period=\"" + combo.period + "\" data-v4-scenario=\"" + esc(key) + "\"", comboLabel)
           : renderV4LimitInput(values.targetLimits[key], "data-v4-limit-field data-v4-map=\"targetLimits\" data-v4-period=\"" + combo.period + "\" data-v4-scenario=\"" + esc(key) + "\"") +
@@ -4181,6 +4229,8 @@
 
   function renderBuffetV4QuantityEditor(draft, configuredStores) {
     normalizeActiveDimensions(draft, true);
+    var workbenchState = normalizeBuffetQuantityWorkbenchState(draft);
+    workbenchState.storeId = draft.activeStoreId;
     var config = storeConfigFor(draft, draft.activeStoreId, true);
     var store = stores.find(function (item) { return item.id === draft.activeStoreId; });
     var storeOptions = configuredStores.map(function (storeId) {
@@ -4336,7 +4386,10 @@
       normalizeState: normalizeBuffetQuantityWorkbenchState,
       clearSelection: clearBuffetQuantitySelection,
       targetIdentity: buffetWorkbenchTargetIdentity,
-      filteredTargets: filteredBuffetWorkbenchTargets
+      filteredTargets: filteredBuffetWorkbenchTargets,
+      pageData: buffetWorkbenchPageData,
+      selectPage: selectBuffetWorkbenchPage,
+      selectFiltered: selectAllFilteredBuffetTargets
     };
   }
 
@@ -5368,6 +5421,44 @@
     }
     var button = event.target.closest("button");
     if (!button) return;
+    if (button.hasAttribute("data-buffet-workbench-reset")) {
+      var resetState = normalizeBuffetQuantityWorkbenchState(editorState.rule.editorDraft);
+      resetState.lineId = ""; resetState.query = ""; resetState.page = 1; clearBuffetQuantitySelection(); renderEditor(); return;
+    }
+    if (button.hasAttribute("data-buffet-workbench-select-filtered")) {
+      var selectDraft = editorState.rule.editorDraft;
+      selectAllFilteredBuffetTargets(selectDraft, storeConfigFor(selectDraft, selectDraft.activeStoreId, true)); renderEditor(); return;
+    }
+    if (button.hasAttribute("data-buffet-workbench-page")) {
+      normalizeBuffetQuantityWorkbenchState(editorState.rule.editorDraft).page = Number(button.getAttribute("data-buffet-workbench-page")) || 1; renderEditor(); return;
+    }
+    if (button.hasAttribute("data-buffet-workbench-bulk-apply")) {
+      var bulkDraft = editorState.rule.editorDraft;
+      var bulkState = normalizeBuffetQuantityWorkbenchState(bulkDraft);
+      var bulkConfig = storeConfigFor(bulkDraft, bulkDraft.activeStoreId, true);
+      var bulkPanel = button.closest(".olf-v4-workbench-tools");
+      var bulkInput = bulkPanel && bulkPanel.querySelector("[data-buffet-workbench-bulk-value]");
+      var bulkValue = bulkInput && bulkInput.value !== "" ? Number(bulkInput.value) : NaN;
+      if (!bulkState.selectedIds.length) { toast("请至少选择一个商品或分类", true); return; }
+      if (!Number.isInteger(bulkValue) || bulkValue < 0) { toast("请输入大于或等于 0 的整数", true); return; }
+      var bulkPeriod = button.getAttribute("data-v4-period");
+      var bulkValues = v4PeriodValues(bulkConfig, bulkPeriod);
+      var bulkCombo = { period: bulkPeriod, partyIndex: bulkDraft.activePartyIndex || 0, roundIndex: bulkDraft.activeRoundIndex || 0 };
+      if (bulkDraft.targetType === "dish_set") {
+        var bulkScenario = button.getAttribute("data-v4-scenario");
+        var existingRows = v4ExceptionRows(bulkValues, bulkScenario).filter(function (row) { return bulkState.selectedIds.indexOf(v4MenuIdentity(v4ExceptionDish(row))) < 0; });
+        buffetWorkbenchPageData(bulkDraft, bulkConfig).filtered.forEach(function (dish) {
+          if (bulkState.selectedIds.indexOf(buffetWorkbenchTargetIdentity(bulkDraft, dish)) >= 0) existingRows.push({ dishes: [{ productLineId: dish.productLineId, dishId: dish.dishId, name: dish.name }], limit: { configured: true, value: bulkValue } });
+        });
+        bulkValues.exceptionDishLimits[bulkScenario] = existingRows;
+      } else {
+        filteredBuffetWorkbenchTargets(bulkDraft, bulkConfig, bulkState).forEach(function (target) {
+          if (bulkState.selectedIds.indexOf(buffetWorkbenchTargetIdentity(bulkDraft, target)) < 0) return;
+          bulkValues.targetLimits[v4TargetKey(bulkDraft, bulkCombo, target)] = { configured: true, value: bulkValue };
+        });
+      }
+      clearBuffetQuantitySelection(); markEditorDirty(); renderEditor(); return;
+    }
     if (button.hasAttribute("data-buffet-template")) {
       var templateId = button.getAttribute("data-buffet-template");
       requestBuffetStructureChange("应用模板", function (nextDraft) { applyBuffetTemplate(nextDraft, templateId); }, button);
@@ -5674,6 +5765,31 @@
   function handleEditorInput(event) {
     var target = event.target;
     var draft = editorState.rule.editorDraft;
+    if (target.hasAttribute("data-buffet-workbench-query")) {
+      var queryState = normalizeBuffetQuantityWorkbenchState(draft);
+      queryState.query = target.value; queryState.page = 1; clearBuffetQuantitySelection(); renderEditor(); return;
+    }
+    if (target.hasAttribute("data-buffet-workbench-line")) {
+      var lineState = normalizeBuffetQuantityWorkbenchState(draft);
+      lineState.lineId = target.value; lineState.page = 1; clearBuffetQuantitySelection(); renderEditor(); return;
+    }
+    if (target.hasAttribute("data-buffet-workbench-page-size")) {
+      var sizeState = normalizeBuffetQuantityWorkbenchState(draft);
+      sizeState.pageSize = Number(target.value) || 20; sizeState.page = 1; clearBuffetQuantitySelection(); renderEditor(); return;
+    }
+    if (target.hasAttribute("data-buffet-workbench-page-select")) {
+      var pageConfig = storeConfigFor(draft, draft.activeStoreId, true);
+      if (target.checked) selectBuffetWorkbenchPage(draft, pageConfig); else clearBuffetQuantitySelection();
+      renderEditor(); return;
+    }
+    if (target.hasAttribute("data-buffet-workbench-target")) {
+      var targetState = normalizeBuffetQuantityWorkbenchState(draft);
+      var targetIdentity = target.getAttribute("data-buffet-workbench-target");
+      var targetIndex = targetState.selectedIds.indexOf(targetIdentity);
+      if (target.checked && targetIndex < 0) targetState.selectedIds.push(targetIdentity);
+      if (!target.checked && targetIndex >= 0) targetState.selectedIds.splice(targetIndex, 1);
+      targetState.selectionMode = "page"; renderEditor(); return;
+    }
     if (target.hasAttribute("data-period-select")) {
       if (event.type !== "change") return;
       if (!target.checked) return;
