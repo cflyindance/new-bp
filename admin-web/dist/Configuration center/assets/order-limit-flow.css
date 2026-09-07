@@ -210,6 +210,13 @@ button { color: inherit; }
 .olf-quantity-workbench { padding: 0; overflow: hidden; }
 .olf-quantity-workbench > .olf-section-head { padding: 16px; margin: 0; border-bottom: 1px solid var(--olf-border); }
 .olf-quantity-workbench > .olf-section { margin: 0; border: 0; border-radius: 0; }
+.olf-v4-shared-quota { display: grid; gap: 10px; padding: 14px; border: 1px solid #b9dcff; border-radius: 10px; background: var(--olf-primary-soft); }
+.olf-v4-shared-quota > div:first-child { display: grid; gap: 3px; }
+.olf-v4-shared-quota > div:first-child span { color: var(--olf-muted); font-size: 12px; }
+.olf-v4-member-table { margin-top: 12px; border: 1px solid var(--olf-border); border-radius: 10px; overflow: hidden; }
+.olf-v4-member-table__head { display: flex; justify-content: space-between; padding: 12px 14px; background: var(--olf-subtle); }
+.olf-v4-member-table__head span, .olf-v4-member-status { color: var(--olf-muted); font-size: 12px; }
+.olf-v4-member-status.is-exception { color: var(--olf-primary); }
 .olf-period-toggle span { display: grid; gap: 3px; }
 .olf-period-toggle strong { font-size: 14px; }
 .olf-period-block { margin-top: 10px; padding: 14px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border: 1px solid var(--olf-border); border-radius: 10px; background: var(--olf-subtle); }

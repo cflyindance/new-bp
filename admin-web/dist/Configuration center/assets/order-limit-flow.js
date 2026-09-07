@@ -4052,6 +4052,40 @@
     });
   }
 
+  function renderBuffetSharedQuotaPanel(draft, config, combo, values) {
+    return '<div class="olf-v4-shared-quota"><div><strong>菜品集共享额度</strong><span>全部成员跨产线合并统计，只需设置一次</span></div>' + v4TargetRows(draft, config, combo, values) + '</div>';
+  }
+
+  function renderBuffetDishRows(draft, config, combo, values) {
+    return '<div class="olf-v4-object-rows olf-v4-object-rows--dish">' + v4TargetRows(draft, config, combo, values) + '</div>';
+  }
+
+  function renderBuffetCategoryRows(draft, config, combo, values) {
+    return '<div class="olf-v4-object-rows olf-v4-object-rows--category">' + v4TargetRows(draft, config, combo, values) + '</div>';
+  }
+
+  function renderBuffetDishSetMemberRows(draft, config, values, scenario) {
+    var exceptions = {};
+    v4ExceptionRows(values, scenario).forEach(function (row) { exceptions[v4MenuIdentity(v4ExceptionDish(row))] = row; });
+    var defaultCell = values.defaultDishLimits[scenario];
+    var defaultCopy = defaultCell && defaultCell.configured ? "使用默认值 " + defaultCell.value + " 份" : "默认值未配置";
+    var rows = eligibleExceptionDishes(draft, draft.activeStoreId).map(function (dish) {
+      var exception = exceptions[v4MenuIdentity(dish)];
+      var limit = exception && exception.limit;
+      var status = limit && limit.configured ? "已设置例外 " + limit.value + " 份" : defaultCopy;
+      return '<tr><td><strong>' + esc(dish.name || dish.dishId) + '</strong></td><td>' + esc(dish.productLineId) + '</td><td><span class="olf-v4-member-status' + (exception ? ' is-exception' : '') + '">' + esc(status) + '</span></td></tr>';
+    }).join("");
+    return '<div class="olf-v4-member-table"><div class="olf-v4-member-table__head"><strong>菜品集成员</strong><span>' + config.dishSetMembers.length + ' 个商品</span></div><div class="olf-table-wrap"><table class="olf-table"><thead><tr><th>商品名称</th><th>产线</th><th>相同菜品上限</th></tr></thead><tbody>' + rows + '</tbody></table></div></div>';
+  }
+
+  function renderBuffetTargetQuantityPanel(draft, config, combo, values) {
+    if (draft.targetType === "dish_set") {
+      var scenario = isBuffetComboDraft(draft) ? comboScenarioKeyFor(draft, combo.partyIndex) : v4ScenarioKey(combo.partyIndex, combo.roundIndex, draft);
+      return renderBuffetSharedQuotaPanel(draft, config, combo, values) + renderBuffetDishSetMemberRows(draft, config, values, scenario);
+    }
+    return draft.targetType === "category" ? renderBuffetCategoryRows(draft, config, combo, values) : renderBuffetDishRows(draft, config, combo, values);
+  }
+
   function v4TargetRows(draft, config, combo, values) {
     var comboDraft = isBuffetComboDraft(draft);
     var comboMap = comboUsesPartyMultiplier(draft) ? "targetLimits" : "tableTargetCaps";
@@ -4066,7 +4100,7 @@
     }
     return v4TargetsForConfig(draft, config).map(function (target) {
       var key = v4TargetKey(draft, combo, target);
-      return '<div class="olf-v4-target-row"><div><strong>' + esc(target.shortName || target.name) + '</strong><span>' + esc(target.lineLabel || target.lineId) + '</span></div>' +
+      return '<div class="olf-v4-target-row"><div><strong>' + esc(target.shortName || target.name) + '</strong><span>' + esc(target.lineLabel || target.lineId) + (draft.targetType === "category" ? ' · 包含 ' + (target.count || 0) + ' 个菜品' : '') + '</span></div>' +
         (comboDraft
           ? renderV4LimitInput(values[comboMap][key], "data-v4-limit-field data-v4-map=\"" + comboMap + "\" data-v4-period=\"" + combo.period + "\" data-v4-scenario=\"" + esc(key) + "\"", comboLabel)
           : renderV4LimitInput(values.targetLimits[key], "data-v4-limit-field data-v4-map=\"targetLimits\" data-v4-period=\"" + combo.period + "\" data-v4-scenario=\"" + esc(key) + "\"") +
@@ -4104,7 +4138,7 @@
         ? renderV4BoundInputs(draft, values, combo, "tableTotalBounds", "整桌每轮")
         : renderV4BoundInputs(draft, values, combo, "totalBounds", draft.subject === "party_size" ? "每人每轮" : "每轮") +
           (draft.subject === "party_size" ? renderV4BoundInputs(draft, values, combo, "tableTotalBounds", "整桌每轮兜底") : "")) + '</section>' : "";
-    var targetBlock = '<section class="olf-v4-quantity-block"><h5>指定对象额度</h5><div class="olf-v4-target-list">' + v4TargetRows(draft, config, combo, values) + '</div></section>';
+    var targetBlock = '<section class="olf-v4-quantity-block"><h5>' + (draft.targetType === "dish_set" ? "共享额度与成员" : "指定对象额度") + '</h5><div class="olf-v4-target-list">' + renderBuffetTargetQuantityPanel(draft, config, combo, values) + '</div></section>';
     var sameDishKey = comboDraft ? comboScenarioKeyFor(draft, combo.partyIndex) : v4ScenarioKey(combo.partyIndex, combo.roundIndex, draft);
     var exceptionRows = v4ExceptionRows(values, sameDishKey);
     var eligible = eligibleExceptionDishes(draft, draft.activeStoreId);
