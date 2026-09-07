@@ -85,6 +85,7 @@ assert.equal(legacy.periodPolicies.per_round.blocks.targetEnabled, true);
 
 const modern = {
   schemaVersion: 4,
+  name: "周期组合测试",
   subject: "party_size",
   targetType: "dish",
   enabledPeriods: ["per_round", "multi_round"],
@@ -99,7 +100,15 @@ const modern = {
 api.ensureBuffetScenarioModel(modern);
 assert.equal(modern.periodPolicies.per_round.blocks.targetEnabled, false, "scenario normalization must preserve an explicit disabled target block");
 assert.equal(api.enabledPeriodsHaveQuantityBlocks(modern), false);
-assert.equal(api.validateStep(2, modern), "限制周期组合不合法，请选择单周期或受控组合模板");
+assert.equal(api.validateStep(1, modern), "限制周期组合不合法，请选择单周期或受控组合模板");
+const fusedRuleType = api.renderStepOne(modern);
+assert.match(fusedRuleType, /基础信息/);
+assert.match(fusedRuleType, /限购主体/);
+assert.match(fusedRuleType, /限购对象/);
+assert.match(fusedRuleType, /常用模板/);
+assert.match(fusedRuleType, /限制周期/);
+assert.match(fusedRuleType, /限购内容/);
+assert.doesNotMatch(flow.match(/var MENU_ORDER_LIMIT_PROFILE[\s\S]*?var moduleProfile/)?.[0] ?? "", /按门店、区间配置数量/);
 
 api.selectSingleBuffetPeriod(modern, "multi_round");
 assert.deepEqual(Array.from(modern.enabledPeriods), ["multi_round"]);
@@ -107,6 +116,7 @@ assert.match(api.renderBuffetScenarioConfiguration(modern), /type="radio"/);
 
 const malformedV4 = {
   schemaVersion: 4,
+  name: "限购维度测试",
   subject: "party_size",
   targetType: "dish",
   enabledPeriods: ["per_round"],
@@ -117,11 +127,25 @@ const malformedV4 = {
   roundRanges: [{ min: 1, max: null }],
   conditions: { childCountPolicy: "inherit" }
 };
-assert.equal(api.validateStep(2, malformedV4), "每个启用周期至少保留一个限购维度");
+assert.equal(api.validateStep(1, malformedV4), "每个启用周期至少保留一个限购维度");
 assert.equal(malformedV4.periodPolicies.per_round.blocks.targetEnabled, false, "validation must not normalize a malformed v4 policy");
 
 const periodBlocks = flow.match(/function renderBuffetPeriodBlocks\(draft\)[\s\S]*?(?=\n  function renderBuffetScenarioConfiguration)/)?.[0] ?? "";
 assert.match(periodBlocks, /data-period-block="target"/, "target block must be independently toggleable for total-only defaults");
-assert.match(flow, /if \(blockName === "target"\) policy\.blocks\.targetEnabled = target\.checked/);
+assert.match(flow, /if \(blockName === "target"\) policy\.blocks\.targetEnabled = checked/);
+assert.match(flow, /function requestBuffetStructureChange\(label, mutate, trigger\)/);
+assert.match(flow, /将清除 " \+ effects\.affected \+ " 个不再适用的额度项/);
+
+const progressDraft = { currentStep: 6, highestStep: 6 };
+api.normalizeBuffetSceneFusionSteps(progressDraft);
+assert.equal(progressDraft.currentStep, 5);
+assert.equal(progressDraft.highestStep, 5);
+assert.equal(progressDraft.buffetSceneFusionVersion, 1);
+api.normalizeBuffetSceneFusionSteps(progressDraft);
+assert.equal(progressDraft.currentStep, 5, "step migration must be idempotent");
+
+assert.match(flow, /function finalStepNumber\(\)/);
+assert.match(flow, /editorState\.currentStep < finalStepNumber\(\)/);
+assert.doesNotMatch(flow, /editorState\.currentStep < 6/);
 
 console.log("verify-buffet-period-scenario-editor: PASS");

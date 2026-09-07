@@ -6,6 +6,21 @@
     "order-round-protection": ["order_lifetime", "per_round"],
     "order-multi-round-protection": ["order_lifetime", "multi_round"]
   };
+  var LEGACY_STEP_MAP = { 1: 1, 2: 2, 3: 2, 4: 3, 5: 4, 6: 5 };
+
+  function migrateEditorProgress(input) {
+    input = input || {};
+    if (Number(input.stepVersion) >= 2) {
+      var retainedCurrent = Math.max(1, Math.min(5, Number(input.currentStep) || 1));
+      var retainedHighest = Math.max(retainedCurrent, Math.min(5, Number(input.highestStep) || retainedCurrent));
+      return { currentStep: retainedCurrent, highestStep: retainedHighest, migrated: false, fallbackApplied: false, stepVersion: 2 };
+    }
+    var oldCurrent = Math.max(1, Math.min(6, Number(input.currentStep) || 1));
+    var oldHighest = Math.max(oldCurrent, Math.min(6, Number(input.highestStep) || oldCurrent));
+    var current = LEGACY_STEP_MAP[oldCurrent] || 1;
+    var highest = LEGACY_STEP_MAP[oldHighest] || current;
+    return { currentStep: current, highestStep: Math.max(current, highest), migrated: true, fallbackApplied: false, stepVersion: 2 };
+  }
 
   function normalizedPeriods(values) {
     return PERIODS.filter(function (period) {
@@ -68,6 +83,98 @@
   function applyControlledPeriodTemplate(input, templateId) {
     var periods = CONTROLLED_PERIOD_TEMPLATES[templateId];
     return periods ? setSelectedPeriods(input, periods, templateId) : input;
+  }
+
+  function templateAvailability(draft, template) {
+    draft = draft || {};
+    template = template || {};
+    if (Array.isArray(template.subjects) && template.subjects.indexOf(draft.subject) < 0) {
+      return { enabled: false, reason: "当前限购主体不适用此模板", requiresRepair: Array.isArray(draft.enabledPeriods) && draft.enabledPeriods.length > 1 };
+    }
+    if (Array.isArray(template.targetTypes) && template.targetTypes.indexOf(draft.targetType) < 0) {
+      return { enabled: false, reason: "当前限购对象不适用此模板", requiresRepair: Array.isArray(draft.enabledPeriods) && draft.enabledPeriods.length > 1 };
+    }
+    return { enabled: true, reason: "", requiresRepair: false };
+  }
+
+  function allowedLimitBlocks(draft, period) {
+    draft = draft || {};
+    var roundBased = period === "per_round" || period === "multi_round";
+    var dishSet = draft.targetType === "dish_set";
+    return {
+      total: roundBased,
+      target: PERIODS.indexOf(period) >= 0,
+      sameDish: roundBased && dishSet,
+      tableFallback: draft.subject === "party_size" && roundBased
+    };
+  }
+
+  function legacyRangeId(kind, range, index) {
+    var min = configuredNumber(range && range.min);
+    var max = range && range.max == null ? "plus" : configuredNumber(range.max);
+    return (kind === "round" ? "rr" : "pr") + "_legacy_" + (index + 1) + "_" + (min == null ? "x" : min) + "_" + (max == null ? "x" : max);
+  }
+
+  function ensureRangeIds(ranges, kind, issues) {
+    var seen = {};
+    return (Array.isArray(ranges) ? ranges : []).map(function (range, index) {
+      var next = Object.assign({}, range || {});
+      var rangeId = typeof next.rangeId === "string" && next.rangeId.trim() ? next.rangeId.trim() : legacyRangeId(kind, next, index);
+      if (seen[rangeId]) issues.push({ code: "DUPLICATE_RANGE_ID", kind: kind, index: index, rangeId: rangeId });
+      seen[rangeId] = true;
+      next.rangeId = rangeId;
+      return next;
+    });
+  }
+
+  function migrateScenarioMap(map, partyRanges, roundRanges, issues, field) {
+    var result = {};
+    Object.keys(isPlainObject(map) ? map : {}).forEach(function (key) {
+      var parts = String(key).split("|");
+      if (!/^\d+$/.test(parts[0] || "") || !/^\d+$/.test(parts[1] || "")) {
+        result[key] = map[key];
+        return;
+      }
+      var party = partyRanges[Number(parts[0])];
+      var round = roundRanges[Number(parts[1])];
+      if (!party || !round) {
+        issues.push({ code: "RANGE_INDEX_OUT_OF_BOUNDS", field: field, key: key });
+        result[key] = map[key];
+        return;
+      }
+      var nextKey = [party.rangeId, round.rangeId].concat(parts.slice(2)).join("|");
+      if (Object.prototype.hasOwnProperty.call(result, nextKey)) {
+        issues.push({ code: "RANGE_KEY_CONFLICT", field: field, key: key, nextKey: nextKey });
+        result[key] = map[key];
+        return;
+      }
+      result[nextKey] = map[key];
+    });
+    return result;
+  }
+
+  function migrateRangeIdentities(input) {
+    var draft = clone(input);
+    var issues = [];
+    if (Number(draft.rangeIdentityVersion) >= 1) return { draft: draft, migrated: false, repairIssues: Array.isArray(draft.migrationIssues) ? draft.migrationIssues : [] };
+    draft.partyRanges = ensureRangeIds(draft.partyRanges && draft.partyRanges.length ? draft.partyRanges : [{ min: 1, max: null }], "party", issues);
+    draft.roundRanges = ensureRangeIds(draft.roundRanges && draft.roundRanges.length ? draft.roundRanges : [{ min: 1, max: null }], "round", issues);
+    Object.keys(isPlainObject(draft.storeConfigs) ? draft.storeConfigs : {}).forEach(function (storeId) {
+      var config = draft.storeConfigs[storeId];
+      Object.keys(isPlainObject(config.periodValues) ? config.periodValues : {}).forEach(function (period) {
+        var values = config.periodValues[period];
+        ["totalBounds", "tableTotalBounds", "targetLimits", "tableTargetCaps", "defaultDishLimits", "exceptionDishLimits"].forEach(function (field) {
+          values[field] = migrateScenarioMap(values[field], draft.partyRanges, draft.roundRanges, issues, storeId + "." + period + "." + field);
+        });
+      });
+    });
+    var partyIndex = Math.max(0, Math.min(draft.partyRanges.length - 1, Number(draft.activePartyIndex) || 0));
+    var roundIndex = Math.max(0, Math.min(draft.roundRanges.length - 1, Number(draft.activeRoundIndex) || 0));
+    draft.activePartyRangeId = draft.partyRanges[partyIndex].rangeId;
+    draft.activeRoundRangeId = draft.roundRanges[roundIndex].rangeId;
+    draft.rangeIdentityVersion = 1;
+    if (issues.length) draft.migrationIssues = issues;
+    return { draft: draft, migrated: true, repairIssues: issues };
   }
 
   function isPlainObject(value) {
@@ -293,6 +400,10 @@
     normalizePeriodSelection: normalizePeriodSelection,
     selectSinglePeriod: selectSinglePeriod,
     applyControlledPeriodTemplate: applyControlledPeriodTemplate,
+    templateAvailability: templateAvailability,
+    allowedLimitBlocks: allowedLimitBlocks,
+    migrateRangeIdentities: migrateRangeIdentities,
+    migrateEditorProgress: migrateEditorProgress,
     scenarioKey: scenarioKey,
     targetCellKey: targetCellKey,
     menuIdentity: menuIdentity,
