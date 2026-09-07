@@ -6,12 +6,12 @@
   var LOCK_TTL = 3000;
   var ALLOWED_PERIODS = ["order_lifetime", "per_round", "multi_round"];
   var PERIOD_TEMPLATES = [
-    { id: "order-basic", name: "基础整单限购", periods: ["order_lifetime"], blocks: { order_lifetime: ["target"] } },
-    { id: "round-party-table-cap", name: "每人每轮＋整桌兜底", periods: ["per_round"], blocks: { per_round: ["total", "target"] } },
-    { id: "order-round-protection", name: "整单＋每轮保护", periods: ["order_lifetime", "per_round"], blocks: { order_lifetime: ["target"], per_round: ["target", "same_dish"] } },
-    { id: "order-multi-round-protection", name: "整单＋分轮次保护", periods: ["order_lifetime", "multi_round"], blocks: { order_lifetime: ["target"], multi_round: ["target"] } },
-    { id: "multi-round-desc", name: "分轮次递减", periods: ["multi_round"], blocks: { multi_round: ["target"] } },
-    { id: "custom", name: "自定义配置", periods: [], blocks: {} }
+    { id: "order-basic", name: "基础整单限购", subjects: ["order", "party_size"], targetTypes: ["category", "dish", "dish_set"], periods: ["order_lifetime"], blocks: { order_lifetime: ["target"] } },
+    { id: "round-party-table-cap", name: "每人每轮＋整桌兜底", subjects: ["party_size"], targetTypes: ["category", "dish", "dish_set"], periods: ["per_round"], blocks: { per_round: ["total", "target"] } },
+    { id: "order-round-protection", name: "整单＋每轮保护", subjects: ["order", "party_size"], targetTypes: ["dish_set"], periods: ["order_lifetime", "per_round"], blocks: { order_lifetime: ["target"], per_round: ["target", "same_dish"] } },
+    { id: "order-multi-round-protection", name: "整单＋分轮次保护", subjects: ["order", "party_size"], targetTypes: ["category", "dish", "dish_set"], periods: ["order_lifetime", "multi_round"], blocks: { order_lifetime: ["target"], multi_round: ["target"] } },
+    { id: "multi-round-desc", name: "分轮次递减", subjects: ["order", "party_size"], targetTypes: ["category", "dish", "dish_set"], periods: ["multi_round"], blocks: { multi_round: ["target"] } },
+    { id: "custom", name: "自定义配置", subjects: ["order", "party_size"], targetTypes: ["category", "dish", "dish_set"], periods: [], blocks: {} }
   ];
   var LEGACY_CAPABILITIES = {
     "KPOS-O01": { id: "KPOS-O01", label: "每个订单的指定菜品分别限制份数", group: "order_lifetime", level: "rule", coverageStatus: "complete", legacyEvidenceStatus: "verified_config" },
@@ -1192,8 +1192,7 @@
     conflictPolicy: window.BuffetRuleDomain || null,
     steps: [
       { title: "规则类型", note: "确定计算口径" },
-      { title: "场景配置", note: "人数与轮次区间" },
-      { title: "限购数量", note: "按门店选品并配置数量" },
+      { title: "限购数量", note: "按门店、区间配置数量" },
       { title: "超限授权", note: "授权范围与权限" },
       { title: "生效范围", note: "时间、会员与门店" },
       { title: "确认发布", note: "复核并下发" }
