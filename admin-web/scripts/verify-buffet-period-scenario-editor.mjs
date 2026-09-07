@@ -31,7 +31,8 @@ const profile = {
   allowedPeriods: ["order_lifetime", "per_round", "multi_round"],
   allowedTargetTypes: ["dish", "category", "dish_set"],
   periodTemplates: [
-    { id: "round", name: "每轮模板", periods: ["per_round"], blocks: { per_round: ["total", "target"] } }
+    { id: "round", name: "每轮模板", presetSubject: "party_size", periods: ["per_round"], blocks: { per_round: ["total", "target"] } },
+    { id: "order-protection", name: "整单保护", presetSubject: "order", presetTargetType: "dish_set", periods: ["order_lifetime", "per_round"], blocks: { order_lifetime: ["target"], per_round: ["target", "same_dish"] } }
   ],
   usesV4Capability(draft) {
     return Number(draft?.schemaVersion) >= 4 || Array.isArray(draft?.enabledPeriods);
@@ -80,6 +81,12 @@ assert.ok(incompleteTemplateButton, "new-rule template must render before subjec
 assert.doesNotMatch(incompleteTemplateButton, /disabled/, "new-rule template must remain clickable before subject and target are selected");
 api.applyBuffetTemplate(incompleteNewDraft, "round");
 assert.equal(incompleteNewDraft.buffetTemplateId, "round", "clickable template must become the selected template");
+assert.equal(incompleteNewDraft.subject, "party_size", "template must link its explicit subject");
+assert.equal(incompleteNewDraft.targetType, null, "template must preserve an unspecified target type");
+
+api.applyBuffetTemplate(incompleteNewDraft, "order-protection");
+assert.equal(incompleteNewDraft.subject, "order", "next template must replace the explicitly linked subject");
+assert.equal(incompleteNewDraft.targetType, "dish_set", "template must link its explicit target type");
 
 const legacy = {
   schemaVersion: 2,
@@ -153,7 +160,9 @@ const periodBlocks = flow.match(/function renderBuffetPeriodBlocks\(draft\)[\s\S
 assert.match(periodBlocks, /data-period-block="target"/, "target block must be independently toggleable for total-only defaults");
 assert.match(flow, /if \(blockName === "target"\) policy\.blocks\.targetEnabled = checked/);
 assert.match(flow, /function requestBuffetStructureChange\(label, mutate, trigger\)/);
-assert.match(flow, /将清除 " \+ effects\.affected \+ " 个不再适用的额度项/);
+assert.match(flow, /模板会切换限购主体或限购对象，并重置受影响的商品或数量配置/);
+assert.match(flow, /将清除不再适用的配置，其他门店、商品和额度保持不变/);
+assert.match(flow, /else if \(field === "subject" \|\| field === "targetType"\) markBuffetTemplateModified\(draft\)/);
 
 const progressDraft = { currentStep: 6, highestStep: 6 };
 api.normalizeBuffetSceneFusionSteps(progressDraft);

@@ -3,6 +3,14 @@ import fs from "node:fs";
 import vm from "node:vm";
 
 const policySource = fs.readFileSync("dist/Configuration center/assets/buffet-rule-policy.js", "utf8");
+const profileSource = fs.readFileSync("dist/Configuration center/assets/buffet-rule-profile.js", "utf8");
+
+assert.match(profileSource, /id: "order-basic"[^\n]*presetSubject: "order"/);
+assert.match(profileSource, /id: "round-party-table-cap"[^\n]*presetSubject: "party_size"/);
+assert.match(profileSource, /id: "order-round-protection"[^\n]*presetSubject: "order"[^\n]*presetTargetType: "dish_set"/);
+assert.match(profileSource, /id: "order-multi-round-protection"[^\n]*presetSubject: "order"/);
+assert.doesNotMatch(profileSource, /id: "multi-round-desc"[^\n]*presetSubject:/);
+assert.doesNotMatch(profileSource, /id: "custom"[^\n]*presetSubject:/);
 const policyWindow = {};
 vm.runInNewContext(policySource, { window: policyWindow, Object, Array, Number, String, JSON, Set, Math });
 const policy = policyWindow.BuffetRulePolicy;

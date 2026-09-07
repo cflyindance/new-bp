@@ -2401,6 +2401,8 @@
     var template = (moduleProfile.periodTemplates || []).find(function (item) { return item.id === templateId; });
     if (!template) return;
     ensureBuffetScenarioModel(draft);
+    if (template.presetSubject) draft.subject = template.presetSubject;
+    if (template.presetTargetType) draft.targetType = template.presetTargetType;
     if (!template.periods.length) {
       var currentSelection = buffetPeriodSelection(draft);
       selectSingleBuffetPeriod(draft, currentSelection.mode === "single" ? currentSelection.periods[0] : "per_round");
@@ -2461,6 +2463,20 @@
     var next = cloneValue(draft);
     mutate(next);
     var effects = clearBuffetRemovedStructureData(draft, next);
+    var subjectChanged = draft.subject !== next.subject;
+    var targetChanged = draft.targetType !== next.targetType;
+    var dimensionAffected = false;
+    if (subjectChanged && hasStoreQuantityData(draft)) {
+      dimensionAffected = true;
+      clearAllStoreLimits(next);
+      next.partyRanges = [{ rangeId: "pr_" + Date.now().toString(36), min: 1, max: null }];
+      next.activePartyIndex = 0;
+    }
+    if (targetChanged && (addedStoreIds(draft).length || hasStoreQuantityData(draft))) {
+      dimensionAffected = true;
+      clearObjectDependentData(next);
+    }
+    if (dimensionAffected) effects.affected += 1;
     var apply = function () {
       Object.keys(draft).forEach(function (key) { delete draft[key]; });
       Object.keys(next).forEach(function (key) { draft[key] = next[key]; });
@@ -2470,7 +2486,8 @@
     };
     if (!effects.affected) { apply(); return; }
     var periodCopy = effects.removedPeriods.length ? "移除周期：" + effects.removedPeriods.map(periodLabel).join("、") + "；" : "";
-    openDialog(label + "？", periodCopy + "将清除 " + effects.affected + " 个不再适用的额度项，其他门店、商品和额度保持不变。", "确认调整", apply, {
+    var dimensionCopy = dimensionAffected ? "模板会切换限购主体或限购对象，并重置受影响的商品或数量配置；" : "";
+    openDialog(label + "？", dimensionCopy + periodCopy + "将清除不再适用的配置，其他门店、商品和额度保持不变。", "确认调整", apply, {
       danger: true, cancelLabel: "取消", returnFocus: trigger, onCancel: function () { renderEditor(); }
     });
   }
@@ -4937,7 +4954,7 @@
       if (templateBecomesInvalid) {
         draft.buffetTemplateId = "custom";
         draft.buffetTemplateModified = false;
-      }
+      } else if (field === "subject" || field === "targetType") markBuffetTemplateModified(draft);
       markEditorDirty(); renderEditor();
     };
     if (destructive) openDialog("重置后续配置？", "修改该选项会清空已配置的商品或数量内容。", "确认重置", function () { closeDialog(); apply(); });

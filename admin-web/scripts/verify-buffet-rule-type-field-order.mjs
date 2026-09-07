@@ -38,8 +38,8 @@ const applyStart = flow.indexOf("function applyBuffetTemplate(draft, templateId)
 const applyEnd = flow.indexOf("function markBuffetTemplateModified", applyStart);
 assert.ok(applyStart >= 0 && applyEnd > applyStart, "applyBuffetTemplate must exist");
 const applyTemplate = flow.slice(applyStart, applyEnd);
-assert.doesNotMatch(applyTemplate, /draft\.subject\s*=/, "templates must not overwrite subject");
-assert.doesNotMatch(applyTemplate, /draft\.targetType\s*=/, "templates must not overwrite target type");
+assert.match(applyTemplate, /if \(template\.presetSubject\) draft\.subject = template\.presetSubject/, "templates may apply an explicitly declared subject");
+assert.match(applyTemplate, /if \(template\.presetTargetType\) draft\.targetType = template\.presetTargetType/, "templates may apply an explicitly declared target type");
 assert.doesNotMatch(applyTemplate, /draft\.measureUnit\s*=/, "templates must not overwrite measure unit");
 assert.doesNotMatch(applyTemplate, /draft\.storeConfigs\s*=/, "templates must not overwrite store products or quantities");
 
