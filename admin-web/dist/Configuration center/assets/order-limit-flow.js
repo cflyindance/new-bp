@@ -2410,6 +2410,57 @@
     if (isBuffetProfile() && draft.buffetTemplateId && draft.buffetTemplateId !== "custom") draft.buffetTemplateModified = true;
   }
 
+  function clearBuffetRemovedStructureData(before, next) {
+    var removedPeriods = (before.enabledPeriods || []).filter(function (period) { return (next.enabledPeriods || []).indexOf(period) < 0; });
+    var clearedBlocks = [];
+    (before.enabledPeriods || []).forEach(function (period) {
+      if ((next.enabledPeriods || []).indexOf(period) < 0) return;
+      var beforeBlocks = before.periodPolicies && before.periodPolicies[period] && before.periodPolicies[period].blocks || {};
+      var nextBlocks = next.periodPolicies && next.periodPolicies[period] && next.periodPolicies[period].blocks || {};
+      ["totalEnabled", "targetEnabled", "sameDishEnabled"].forEach(function (block) {
+        if (beforeBlocks[block] && !nextBlocks[block]) clearedBlocks.push({ period: period, block: block });
+      });
+    });
+    var affected = 0;
+    Object.keys(next.storeConfigs || {}).forEach(function (storeId) {
+      var config = next.storeConfigs[storeId] || {};
+      Object.keys(config.periodValues || {}).forEach(function (period) {
+        var values = config.periodValues[period] || {};
+        var fields = [];
+        if (removedPeriods.indexOf(period) >= 0) fields = ["totalBounds", "tableTotalBounds", "targetLimits", "tableTargetCaps", "defaultDishLimits", "exceptionDishLimits"];
+        clearedBlocks.filter(function (item) { return item.period === period; }).forEach(function (item) {
+          if (item.block === "totalEnabled") fields = fields.concat(["totalBounds", "tableTotalBounds"]);
+          if (item.block === "targetEnabled") fields = fields.concat(["targetLimits", "tableTargetCaps"]);
+          if (item.block === "sameDishEnabled") fields = fields.concat(["defaultDishLimits", "exceptionDishLimits"]);
+        });
+        fields.filter(function (field, index, all) { return all.indexOf(field) === index; }).forEach(function (field) {
+          affected += Object.keys(values[field] || {}).length;
+          values[field] = {};
+        });
+      });
+    });
+    return { affected: affected, removedPeriods: removedPeriods, clearedBlocks: clearedBlocks };
+  }
+
+  function requestBuffetStructureChange(label, mutate, trigger) {
+    var draft = editorState.rule.editorDraft;
+    var next = cloneValue(draft);
+    mutate(next);
+    var effects = clearBuffetRemovedStructureData(draft, next);
+    var apply = function () {
+      Object.keys(draft).forEach(function (key) { delete draft[key]; });
+      Object.keys(next).forEach(function (key) { draft[key] = next[key]; });
+      closeDialog(false);
+      markEditorDirty();
+      renderEditor();
+    };
+    if (!effects.affected) { apply(); return; }
+    var periodCopy = effects.removedPeriods.length ? "移除周期：" + effects.removedPeriods.map(periodLabel).join("、") + "；" : "";
+    openDialog(label + "？", periodCopy + "将清除 " + effects.affected + " 个不再适用的额度项，其他门店、商品和额度保持不变。", "确认调整", apply, {
+      danger: true, cancelLabel: "取消", returnFocus: trigger, onCancel: function () { renderEditor(); }
+    });
+  }
+
   function renderBuffetPeriodSelection(draft) {
     ensureBuffetScenarioModel(draft);
     var selection = buffetPeriodSelection(draft);
@@ -5132,9 +5183,8 @@
     var button = event.target.closest("button");
     if (!button) return;
     if (button.hasAttribute("data-buffet-template")) {
-      applyBuffetTemplate(editorState.rule.editorDraft, button.getAttribute("data-buffet-template"));
-      markEditorDirty();
-      renderEditor();
+      var templateId = button.getAttribute("data-buffet-template");
+      requestBuffetStructureChange("应用模板", function (nextDraft) { applyBuffetTemplate(nextDraft, templateId); }, button);
       return;
     }
     if (button.hasAttribute("data-buffet-store-copy")) {
@@ -5440,23 +5490,24 @@
     if (target.hasAttribute("data-period-select")) {
       if (event.type !== "change") return;
       if (!target.checked) return;
-      selectSingleBuffetPeriod(draft, target.getAttribute("data-period-select"));
-      markEditorDirty();
-      renderEditor();
+      var selectedPeriod = target.getAttribute("data-period-select");
+      requestBuffetStructureChange("切换限制周期", function (nextDraft) { selectSingleBuffetPeriod(nextDraft, selectedPeriod); }, target);
       return;
     }
     if (target.hasAttribute("data-period-block")) {
       if (event.type !== "change") return;
-      ensureBuffetScenarioModel(draft);
-      var policy = draft.periodPolicies[target.getAttribute("data-period-key")];
-      if (!policy) return;
       var blockName = target.getAttribute("data-period-block");
-      if (blockName === "total") policy.blocks.totalEnabled = target.checked;
-      if (blockName === "target") policy.blocks.targetEnabled = target.checked;
-      if (blockName === "same_dish") policy.blocks.sameDishEnabled = target.checked;
-      markBuffetTemplateModified(draft);
-      markEditorDirty();
-      renderEditor();
+      var periodKey = target.getAttribute("data-period-key");
+      var checked = target.checked;
+      requestBuffetStructureChange(checked ? "启用限制内容" : "关闭限制内容", function (nextDraft) {
+        ensureBuffetScenarioModel(nextDraft);
+        var policy = nextDraft.periodPolicies[periodKey];
+        if (!policy) return;
+        if (blockName === "total") policy.blocks.totalEnabled = checked;
+        if (blockName === "target") policy.blocks.targetEnabled = checked;
+        if (blockName === "same_dish") policy.blocks.sameDishEnabled = checked;
+        markBuffetTemplateModified(nextDraft);
+      }, target);
       return;
     }
     if (target.hasAttribute("data-limit-rule-search")) {

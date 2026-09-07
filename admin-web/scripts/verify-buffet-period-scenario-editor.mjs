@@ -132,7 +132,9 @@ assert.equal(malformedV4.periodPolicies.per_round.blocks.targetEnabled, false, "
 
 const periodBlocks = flow.match(/function renderBuffetPeriodBlocks\(draft\)[\s\S]*?(?=\n  function renderBuffetScenarioConfiguration)/)?.[0] ?? "";
 assert.match(periodBlocks, /data-period-block="target"/, "target block must be independently toggleable for total-only defaults");
-assert.match(flow, /if \(blockName === "target"\) policy\.blocks\.targetEnabled = target\.checked/);
+assert.match(flow, /if \(blockName === "target"\) policy\.blocks\.targetEnabled = checked/);
+assert.match(flow, /function requestBuffetStructureChange\(label, mutate, trigger\)/);
+assert.match(flow, /将清除 " \+ effects\.affected \+ " 个不再适用的额度项/);
 
 const progressDraft = { currentStep: 6, highestStep: 6 };
 api.normalizeBuffetSceneFusionSteps(progressDraft);
