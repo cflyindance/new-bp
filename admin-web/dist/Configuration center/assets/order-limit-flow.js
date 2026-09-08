@@ -1363,7 +1363,7 @@
   }
 
   function createBuffetQuantityWorkbenchState() {
-    return { storeId: "", lineId: "", query: "", page: 1, pageSize: 20, selectionMode: "page", selectedIds: [] };
+    return { storeId: "", lineId: "", query: "", page: 1, pageSize: 20, selectionMode: "page", selectedIds: [], copyPanelOpen: false, copyTargetStoreIds: [] };
   }
 
   function normalizeBuffetQuantityWorkbenchState(draft) {
@@ -1376,6 +1376,11 @@
     state.pageSize = [20, 50, 100].indexOf(Number(state.pageSize)) >= 0 ? Number(state.pageSize) : 20;
     state.selectionMode = state.selectionMode === "filtered" ? "filtered" : "page";
     if (!Array.isArray(state.selectedIds)) state.selectedIds = [];
+    state.copyPanelOpen = !!state.copyPanelOpen;
+    if (!Array.isArray(state.copyTargetStoreIds)) state.copyTargetStoreIds = [];
+    state.copyTargetStoreIds = state.copyTargetStoreIds.filter(function (storeId) {
+      return availableStores.indexOf(storeId) >= 0 && storeId !== draft.activeStoreId;
+    });
     return state;
   }
 
@@ -4372,13 +4377,16 @@
       }).join("") + '</section>';
   }
 
-  function renderV4StoreCopy(draft, configuredStores) {
+  function renderV4StoreCopy(draft, configuredStores, workbenchState) {
     if (configuredStores.length < 2) return "";
     var targets = configuredStores.filter(function (storeId) { return storeId !== draft.activeStoreId; });
-    return '<div class="olf-v4-store-copy"><span>批量复制当前门店数量</span><select class="olf-select" data-buffet-store-copy-target multiple size="' + Math.min(3, targets.length) + '" aria-label="目标门店（可多选）">' + targets.map(function (storeId) {
+    var selectedTargets = workbenchState.copyTargetStoreIds || [];
+    var trigger = '<button type="button" class="olf-button olf-button--small olf-v4-store-copy-toggle" data-buffet-store-copy-toggle>' + (workbenchState.copyPanelOpen ? '收起复制' : '复制到其他门店') + '</button>';
+    if (!workbenchState.copyPanelOpen) return trigger;
+    return trigger + '<div class="olf-v4-store-copy" data-buffet-store-copy-panel><strong>复制当前门店数量</strong><label class="olf-field"><span class="olf-label">目标门店</span><select class="olf-select" data-buffet-store-copy-target multiple aria-label="目标门店（可多选）">' + targets.map(function (storeId) {
       var store = stores.find(function (item) { return item.id === storeId; });
-      return '<option value="' + esc(storeId) + '">' + esc(store ? store.name : storeId) + '</option>';
-    }).join("") + '</select><label class="olf-v4-copy-overwrite"><input type="checkbox" data-buffet-store-copy-overwrite>覆盖目标门店已有配置</label><button type="button" class="olf-button olf-button--small" data-buffet-store-copy>预览并复制</button><small>默认只填充空值</small></div>';
+      return '<option value="' + esc(storeId) + '"' + (selectedTargets.indexOf(storeId) >= 0 ? ' selected' : '') + '>' + esc(store ? store.name : storeId) + '</option>';
+    }).join("") + '</select></label><label class="olf-v4-copy-overwrite"><input type="checkbox" data-buffet-store-copy-overwrite>覆盖目标门店已有配置</label><button type="button" class="olf-button olf-button--primary olf-button--small" data-buffet-store-copy' + (selectedTargets.length ? '' : ' disabled') + '>预览并复制</button><small>默认只填充目标门店的未配置项，执行前展示差异预览。</small></div>';
   }
 
   function renderBuffetV4QuantityEditor(draft, configuredStores) {
@@ -4391,8 +4399,8 @@
       var item = stores.find(function (candidate) { return candidate.id === storeId; });
       return '<option value="' + esc(storeId) + '"' + (storeId === draft.activeStoreId ? " selected" : "") + '>' + esc(item ? item.name : storeId) + '</option>';
     }).join("");
-    var rangeSummary = (store ? store.name : draft.activeStoreId) + " · " + config.productLines.length + " 条产线 · " + (draft.targetType === "dish_set" ? config.dishSetMembers.length : config.targetIds.length) + " 个" + (draft.targetType === "category" ? "分类" : "商品");
-    return '<section class="olf-section olf-v4-quantity-editor"><div class="olf-v4-quantity-toolbar"><label class="olf-field"><span class="olf-label">配置门店</span><select class="olf-select" data-buffet-quantity-store>' + storeOptions + '</select></label><div class="olf-v4-store-summary"><strong>商品范围</strong><span>' + esc(rangeSummary) + '</span></div>' + renderV4StoreCopy(draft, configuredStores) + '</div>' +
+    var rangeSummary = config.productLines.length + " 条产线 · " + (draft.targetType === "dish_set" ? config.dishSetMembers.length : config.targetIds.length) + " 个" + (draft.targetType === "category" ? "分类" : "商品");
+    return '<section class="olf-section olf-v4-quantity-editor"><div class="olf-v4-quantity-toolbar"><label class="olf-field"><span class="olf-label">配置门店</span><select class="olf-select" data-buffet-quantity-store>' + storeOptions + '</select></label><div class="olf-v4-store-summary"><strong>商品范围</strong><span>' + esc(rangeSummary) + '</span></div>' + renderV4StoreCopy(draft, configuredStores, workbenchState) + '</div>' +
       draft.enabledPeriods.slice().sort(function (a, b) { return BUFFET_PERIOD_ORDER.indexOf(a) - BUFFET_PERIOD_ORDER.indexOf(b); }).map(function (period) {
         return renderV4PeriodSection(draft, config, period) + renderV4PendingTargetNotice(config, period);
       }).join("") + '</section>';
@@ -5760,9 +5768,16 @@
       requestBuffetStructureChange("应用模板", function (nextDraft) { applyBuffetTemplate(nextDraft, templateId); }, button);
       return;
     }
+    if (button.hasAttribute("data-buffet-store-copy-toggle")) {
+      var copyPanelState = normalizeBuffetQuantityWorkbenchState(editorState.rule.editorDraft);
+      copyPanelState.copyPanelOpen = !copyPanelState.copyPanelOpen;
+      if (!copyPanelState.copyPanelOpen) copyPanelState.copyTargetStoreIds = [];
+      renderEditor();
+      return;
+    }
     if (button.hasAttribute("data-buffet-store-copy")) {
-      var copySelect = root.querySelector("[data-buffet-store-copy-target]");
-      var copyTargetStoreIds = copySelect ? Array.from(copySelect.selectedOptions).map(function (option) { return option.value; }).filter(Boolean) : [];
+      var copyPanelWorkbenchState = normalizeBuffetQuantityWorkbenchState(editorState.rule.editorDraft);
+      var copyTargetStoreIds = copyPanelWorkbenchState.copyTargetStoreIds.slice();
       var copyDraft = editorState.rule.editorDraft;
       copyTargetStoreIds = copyTargetStoreIds.filter(function (storeId) { return addedStoreIds(copyDraft).indexOf(storeId) >= 0; });
       if (!copyTargetStoreIds.length) {
@@ -5782,11 +5797,17 @@
           var copyResult = applyBuffetStoreCopyPreview(copyDraft, copyPreview);
           deriveBuffetQuantityBlocks(copyDraft);
           closeDialog(false);
+          copyPanelWorkbenchState.copyPanelOpen = false;
+          copyPanelWorkbenchState.copyTargetStoreIds = [];
           markEditorDirty();
           renderEditor();
           toast("已向 " + copyTargetStoreIds.length + " 家门店应用 " + copyResult.applied + " 项" + (copyResult.missing ? "，跳过 " + copyResult.missing + " 项未匹配商品" : ""));
         },
-        { returnFocus: button, cancelLabel: "取消", onCancel: function () { renderEditor(); } }
+        { returnFocus: button, cancelLabel: "取消", onCancel: function () {
+          copyPanelWorkbenchState.copyPanelOpen = false;
+          copyPanelWorkbenchState.copyTargetStoreIds = [];
+          renderEditor();
+        } }
       );
       return;
     }
@@ -6372,7 +6393,20 @@
       draft.activeStoreId = target.value;
       normalizeActiveDimensions(draft, true);
       clearBuffetQuantitySelection();
+      var workbenchState = normalizeBuffetQuantityWorkbenchState(draft);
+      workbenchState.copyPanelOpen = false;
+      workbenchState.copyTargetStoreIds = [];
       markEditorDirty(); renderEditor(); return;
+    }
+    if (target.hasAttribute("data-buffet-store-copy-target")) {
+      if (event.type !== "change") return;
+      var copyTargetState = normalizeBuffetQuantityWorkbenchState(draft);
+      copyTargetState.copyTargetStoreIds = Array.from(target.selectedOptions).map(function (option) { return option.value; }).filter(function (storeId) {
+        return addedStoreIds(draft).indexOf(storeId) >= 0 && storeId !== draft.activeStoreId;
+      });
+      var copyAction = root.querySelector("[data-buffet-store-copy]");
+      if (copyAction) copyAction.disabled = !copyTargetState.copyTargetStoreIds.length;
+      return;
     }
     if (target.hasAttribute("data-v4-exception-dish")) {
       if (event.type !== "change" || !isBuffetV4Draft(draft)) return;
