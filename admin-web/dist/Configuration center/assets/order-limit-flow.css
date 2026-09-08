@@ -221,6 +221,19 @@ button { color: inherit; }
 .olf-v4-workbench-filters, .olf-v4-workbench-batch, .olf-v4-workbench-pager { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 .olf-v4-workbench-filters .olf-input { flex: 1 1 240px; }
 .olf-v4-workbench-pager { justify-content: flex-end; }
+.olf-v4-product-table-wrap { margin-top: 0; border: 1px solid var(--olf-border); border-radius: 10px 10px 0 0; }
+.olf-v4-product-table { min-width: 920px; }
+.olf-v4-product-table th { white-space: nowrap; }
+.olf-v4-product-table td { vertical-align: middle; }
+.olf-v4-product-cell { min-width: 170px; }
+.olf-v4-product-cell strong, .olf-v4-product-cell span { display: block; }
+.olf-v4-product-cell strong { font-size: 13px; }
+.olf-v4-product-cell span { margin-top: 2px; color: var(--olf-muted); font-size: 12px; }
+.olf-v4-table-limit { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.olf-v4-table-limit .olf-limit-input { width: 104px; }
+.olf-v4-product-action { width: 76px; text-align: right; }
+.olf-v4-product-table-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border: 1px solid var(--olf-border); border-top: 0; border-radius: 0 0 10px 10px; color: var(--olf-muted); font-size: 13px; }
+.olf-v4-product-table-footer > div { display: flex; align-items: center; gap: 8px; }
 .olf-period-toggle span { display: grid; gap: 3px; }
 .olf-period-toggle strong { font-size: 14px; }
 .olf-period-block { margin-top: 10px; padding: 14px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border: 1px solid var(--olf-border); border-radius: 10px; background: var(--olf-subtle); }
