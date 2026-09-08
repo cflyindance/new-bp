@@ -2586,9 +2586,10 @@
       draft.buffetTemplateId = templateId;
       return;
     }
+    draft.enabledPeriods = template.periods.slice().sort(function (a, b) { return BUFFET_PERIOD_ORDER.indexOf(a) - BUFFET_PERIOD_ORDER.indexOf(b); });
     BUFFET_PERIOD_ORDER.forEach(function (period) {
       var enabled = template.periods.indexOf(period) >= 0;
-      setPeriodEnabled(draft, period, enabled);
+      draft.periodPolicies[period].enabled = enabled;
       var blockNames = (template.blocks && template.blocks[period]) || [];
       draft.periodPolicies[period].blocks.totalEnabled = blockNames.indexOf("total") >= 0;
       draft.periodPolicies[period].blocks.targetEnabled = blockNames.indexOf("target") >= 0;
@@ -2694,7 +2695,7 @@
 
   function renderBuffetScenarioConfiguration(draft) {
     ensureBuffetScenarioModel(draft);
-    var templates = (moduleProfile.periodTemplates || []).map(function (template) {
+    var templates = visibleBuffetPeriodTemplates().map(function (template) {
       return '<button type="button" class="olf-template-card' + (draft.buffetTemplateId === template.id ? " is-selected" : "") + '" data-buffet-template="' + esc(template.id) + '"><strong>' + esc(template.name) + '</strong><span>' + esc(template.periods.length ? template.periods.map(periodLabel).join(" ＋ ") : "自行选择周期和区块") + '</span></button>';
     }).join("");
     var changed = draft.buffetTemplateModified ? '<div class="olf-summary olf-summary--warning"><strong>已基于模板修改</strong><span>模板仅用于快捷填充，当前以页面上实际选择的周期与区块为准。</span></div>' : "";
@@ -2719,9 +2720,13 @@
     return window.BuffetRulePolicy.templateAvailability(projectedDraft, template);
   }
 
+  function visibleBuffetPeriodTemplates() {
+    return (moduleProfile.periodTemplates || []).filter(function (template) { return !template.hidden; });
+  }
+
   function renderBuffetTemplateSelection(draft) {
     ensureBuffetScenarioModel(draft);
-    var templates = (moduleProfile.periodTemplates || []).map(function (template) {
+    var templates = visibleBuffetPeriodTemplates().map(function (template) {
       var missingSubject = !draft.subject;
       var missingTarget = !draft.targetType;
       var incompleteReason = missingSubject && missingTarget

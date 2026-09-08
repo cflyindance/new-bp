@@ -7,10 +7,13 @@
   var ALLOWED_PERIODS = ["order_lifetime", "per_round", "multi_round"];
   var PERIOD_TEMPLATES = [
     { id: "order-basic", name: "基础整单限购", presetSubject: "order", subjects: ["order", "party_size"], targetTypes: ["category", "dish", "dish_set"], periods: ["order_lifetime"], blocks: { order_lifetime: ["target"] } },
+    { id: "party-order-basic", name: "每人整单限购", presetSubject: "party_size", subjects: ["party_size"], targetTypes: ["category", "dish", "dish_set"], periods: ["order_lifetime"], blocks: { order_lifetime: ["target"] } },
+    { id: "order-round-basic", name: "整桌每轮限购", presetSubject: "order", subjects: ["order"], targetTypes: ["category", "dish", "dish_set"], periods: ["per_round"], blocks: { per_round: ["total", "target"] } },
     { id: "round-party-table-cap", name: "每人每轮＋整桌兜底", presetSubject: "party_size", subjects: ["party_size"], targetTypes: ["category", "dish", "dish_set"], periods: ["per_round"], blocks: { per_round: ["total", "target"] } },
     { id: "order-round-protection", name: "整单＋每轮保护", presetSubject: "order", presetTargetType: "dish_set", subjects: ["order", "party_size"], targetTypes: ["dish_set"], periods: ["order_lifetime", "per_round"], blocks: { order_lifetime: ["target"], per_round: ["target", "same_dish"] } },
     { id: "order-multi-round-protection", name: "整单＋分轮次保护", presetSubject: "order", subjects: ["order", "party_size"], targetTypes: ["category", "dish", "dish_set"], periods: ["order_lifetime", "multi_round"], blocks: { order_lifetime: ["target"], multi_round: ["target"] } },
-    { id: "multi-round-desc", name: "分轮次递减", subjects: ["order", "party_size"], targetTypes: ["category", "dish", "dish_set"], periods: ["multi_round"], blocks: { multi_round: ["target"] } },
+    { id: "party-multi-round", name: "每人分轮次限购", presetSubject: "party_size", subjects: ["party_size"], targetTypes: ["category", "dish", "dish_set"], periods: ["multi_round"], blocks: { multi_round: ["target"] } },
+    { id: "multi-round-desc", name: "分轮次递减", hidden: true, subjects: ["order", "party_size"], targetTypes: ["category", "dish", "dish_set"], periods: ["multi_round"], blocks: { multi_round: ["target"] } },
     { id: "custom", name: "自定义配置", subjects: ["order", "party_size"], targetTypes: ["category", "dish", "dish_set"], periods: [], blocks: {} }
   ];
   var LEGACY_CAPABILITIES = {

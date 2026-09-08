@@ -41,11 +41,16 @@ const profile = loadProfile(storageMock());
 
 assert.deepEqual(Array.from(profile.periodTemplates, (item) => item.id), [
   "order-basic",
+  "party-order-basic",
+  "order-round-basic",
   "round-party-table-cap",
   "order-round-protection",
+  "order-multi-round-protection",
+  "party-multi-round",
   "multi-round-desc",
   "custom",
 ]);
+assert.equal(profile.periodTemplates.find((item) => item.id === "multi-round-desc").hidden, true);
 assert.deepEqual(Array.from(profile.allowedTargetTypes), ["category", "dish", "dish_set"]);
 assert.deepEqual(Array.from(profile.allowedPeriods), ["order_lifetime", "per_round", "multi_round"]);
 

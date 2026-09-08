@@ -11,6 +11,8 @@ assert.match(flow, /data-period-select="multi_round"/);
 assert.doesNotMatch(flow, /data-period-toggle=/);
 assert.match(flow, /function applyBuffetTemplate\(draft, templateId\)/);
 assert.match(flow, /function renderBuffetScenarioConfiguration\(draft\)/);
+assert.match(flow, /function visibleBuffetPeriodTemplates\(\)/);
+assert.match(flow, /filter\(function \(template\) \{ return !template\.hidden; \}\)/);
 
 // 区间新增、编辑都必须通过同一条“先确认、后重建”路径；取消只重绘，不改草稿。
 assert.match(flow, /function hasStoreQuantityData\(draft\)/);
@@ -31,8 +33,12 @@ const profile = {
   allowedPeriods: ["order_lifetime", "per_round", "multi_round"],
   allowedTargetTypes: ["dish", "category", "dish_set"],
   periodTemplates: [
+    { id: "party-order-basic", name: "每人整单限购", presetSubject: "party_size", subjects: ["party_size"], targetTypes: ["category", "dish", "dish_set"], periods: ["order_lifetime"], blocks: { order_lifetime: ["target"] } },
+    { id: "order-round-basic", name: "整桌每轮限购", presetSubject: "order", subjects: ["order"], targetTypes: ["category", "dish", "dish_set"], periods: ["per_round"], blocks: { per_round: ["total", "target"] } },
     { id: "round", name: "每轮模板", presetSubject: "party_size", subjects: ["party_size"], targetTypes: ["category", "dish", "dish_set"], periods: ["per_round"], blocks: { per_round: ["total", "target"] } },
-    { id: "order-protection", name: "整单保护", presetSubject: "order", presetTargetType: "dish_set", subjects: ["order"], targetTypes: ["dish_set"], periods: ["order_lifetime", "per_round"], blocks: { order_lifetime: ["target"], per_round: ["target", "same_dish"] } }
+    { id: "order-protection", name: "整单保护", presetSubject: "order", presetTargetType: "dish_set", subjects: ["order"], targetTypes: ["dish_set"], periods: ["order_lifetime", "per_round"], blocks: { order_lifetime: ["target"], per_round: ["target", "same_dish"] } },
+    { id: "party-multi-round", name: "每人分轮次限购", presetSubject: "party_size", subjects: ["party_size"], targetTypes: ["category", "dish", "dish_set"], periods: ["multi_round"], blocks: { multi_round: ["target"] } },
+    { id: "multi-round-desc", name: "分轮次递减", hidden: true, subjects: ["order", "party_size"], targetTypes: ["category", "dish", "dish_set"], periods: ["multi_round"], blocks: { multi_round: ["target"] } }
   ],
   usesV4Capability(draft) {
     return Number(draft?.schemaVersion) >= 4 || Array.isArray(draft?.enabledPeriods);
@@ -81,6 +87,10 @@ const incompleteNewDraft = {
   conditions: { childCountPolicy: "inherit" }
 };
 const incompleteRuleType = api.renderStepOne(incompleteNewDraft);
+assert.match(incompleteRuleType, /每人整单限购/);
+assert.match(incompleteRuleType, /整桌每轮限购/);
+assert.match(incompleteRuleType, /每人分轮次限购/);
+assert.doesNotMatch(incompleteRuleType, /分轮次递减/);
 const incompleteTemplateButton = incompleteRuleType.match(/<button[^>]*data-buffet-template="round"[^>]*>/)?.[0] ?? "";
 assert.ok(incompleteTemplateButton, "new-rule template must render before subject and target are selected");
 assert.doesNotMatch(incompleteTemplateButton, /disabled/, "new-rule template must remain clickable before subject and target are selected");
@@ -88,6 +98,16 @@ api.applyBuffetTemplate(incompleteNewDraft, "round");
 assert.equal(incompleteNewDraft.buffetTemplateId, "round", "clickable template must become the selected template");
 assert.equal(incompleteNewDraft.subject, "party_size", "template must link its explicit subject");
 assert.equal(incompleteNewDraft.targetType, null, "template must preserve an unspecified target type");
+
+api.applyBuffetTemplate(incompleteNewDraft, "party-order-basic");
+assert.equal(incompleteNewDraft.subject, "party_size");
+assert.deepEqual(Array.from(incompleteNewDraft.enabledPeriods), ["order_lifetime"]);
+api.applyBuffetTemplate(incompleteNewDraft, "order-round-basic");
+assert.equal(incompleteNewDraft.subject, "order");
+assert.deepEqual(Array.from(incompleteNewDraft.enabledPeriods), ["per_round"]);
+api.applyBuffetTemplate(incompleteNewDraft, "party-multi-round");
+assert.equal(incompleteNewDraft.subject, "party_size");
+assert.deepEqual(Array.from(incompleteNewDraft.enabledPeriods), ["multi_round"]);
 
 api.applyBuffetTemplate(incompleteNewDraft, "order-protection");
 assert.equal(incompleteNewDraft.subject, "order", "next template must replace the explicitly linked subject");

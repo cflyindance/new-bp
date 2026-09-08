@@ -6,10 +6,13 @@ const policySource = fs.readFileSync("dist/Configuration center/assets/buffet-ru
 const profileSource = fs.readFileSync("dist/Configuration center/assets/buffet-rule-profile.js", "utf8");
 
 assert.match(profileSource, /id: "order-basic"[^\n]*presetSubject: "order"/);
+assert.match(profileSource, /id: "party-order-basic"[^\n]*presetSubject: "party_size"[^\n]*periods: \["order_lifetime"\]/);
+assert.match(profileSource, /id: "order-round-basic"[^\n]*presetSubject: "order"[^\n]*periods: \["per_round"\]/);
 assert.match(profileSource, /id: "round-party-table-cap"[^\n]*presetSubject: "party_size"/);
 assert.match(profileSource, /id: "order-round-protection"[^\n]*presetSubject: "order"[^\n]*presetTargetType: "dish_set"/);
 assert.match(profileSource, /id: "order-multi-round-protection"[^\n]*presetSubject: "order"/);
-assert.doesNotMatch(profileSource, /id: "multi-round-desc"[^\n]*presetSubject:/);
+assert.match(profileSource, /id: "party-multi-round"[^\n]*presetSubject: "party_size"[^\n]*periods: \["multi_round"\]/);
+assert.match(profileSource, /id: "multi-round-desc"[^\n]*hidden: true/);
 assert.doesNotMatch(profileSource, /id: "custom"[^\n]*presetSubject:/);
 const policyWindow = {};
 vm.runInNewContext(policySource, { window: policyWindow, Object, Array, Number, String, JSON, Set, Math });
