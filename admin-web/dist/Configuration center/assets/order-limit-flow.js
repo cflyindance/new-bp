@@ -4703,7 +4703,7 @@
   }
 
   function renderBuffetScenarioWorkspace(draft) {
-    return '<section class="olf-section olf-scenario-summary"><div class="olf-section-head"><div><h3>适用场景</h3><span class="olf-hint">先定义人数与轮次区间，再选择当前编辑场景</span></div></div>' + renderBuffetQuantityRanges(draft) + '</section>';
+    return '<section class="olf-section olf-scenario-summary">' + renderBuffetQuantityRanges(draft) + '</section>';
   }
 
   function renderBuffetQuantityWorkbench(draft) {
