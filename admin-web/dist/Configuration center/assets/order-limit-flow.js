@@ -1363,7 +1363,7 @@
   }
 
   function createBuffetQuantityWorkbenchState() {
-    return { storeId: "", lineId: "", query: "", page: 1, pageSize: 20, selectionMode: "page", selectedIds: [], copyPanelOpen: false, copyTargetStoreIds: [] };
+    return { storeId: "", lineId: "", categoryId: "", status: "", query: "", page: 1, pageSize: 20, selectionMode: "page", selectedIds: [], copyPanelOpen: false, copyTargetStoreIds: [] };
   }
 
   function normalizeBuffetQuantityWorkbenchState(draft) {
@@ -1374,6 +1374,8 @@
     if (!state.storeId || availableStores.indexOf(state.storeId) < 0) state.storeId = draft.activeStoreId || availableStores[0] || "";
     state.page = Math.max(1, Number(state.page) || 1);
     state.pageSize = [20, 50, 100].indexOf(Number(state.pageSize)) >= 0 ? Number(state.pageSize) : 20;
+    state.categoryId = draft.targetType === "category" ? "" : String(state.categoryId || "");
+    state.status = ["configured", "unconfigured", "forbidden"].indexOf(state.status) >= 0 ? state.status : "";
     state.selectionMode = state.selectionMode === "filtered" ? "filtered" : "page";
     if (!Array.isArray(state.selectedIds)) state.selectedIds = [];
     state.copyPanelOpen = !!state.copyPanelOpen;
@@ -1395,25 +1397,50 @@
     return [target.lineId || target.productLineId || "", target.id || target.dishId || target.categoryId || ""].join("|");
   }
 
-  function filteredBuffetWorkbenchTargets(draft, config, state) {
+  function buffetWorkbenchTargetStatus(draft, target, combo, values) {
+    var cell;
+    if (draft.targetType === "dish_set") {
+      var scenario = isBuffetComboDraft(draft) ? comboScenarioKeyFor(draft, combo.partyIndex) : v4ScenarioKey(combo.partyIndex, combo.roundIndex, draft);
+      var exception = v4ExceptionRows(values, scenario).find(function (row) { return v4MenuIdentity(v4ExceptionDish(row)) === v4MenuIdentity(target); });
+      cell = exception ? exception.limit : values.defaultDishLimits[scenario];
+    } else {
+      cell = values.targetLimits[v4TargetKey(draft, combo, target)];
+    }
+    if (!cell || !cell.configured) return "unconfigured";
+    return Number(cell.value) === 0 ? "forbidden" : "configured";
+  }
+
+  function buffetWorkbenchCategoryMeta(config, target) {
+    var meta = buffetProductMeta(config, target);
+    return { id: String(meta.categoryId || ""), name: String(meta.category || "") };
+  }
+
+  function filteredBuffetWorkbenchTargets(draft, config, state, combo, values) {
     state = state || normalizeBuffetQuantityWorkbenchState(draft);
     var query = String(state.query || "").trim().toLocaleLowerCase();
     return v4TargetsForConfig(draft, config).filter(function (target) {
       if (state.lineId && target.lineId !== state.lineId) return false;
+      var categoryMeta = buffetWorkbenchCategoryMeta(config, target);
+      if (state.categoryId && categoryMeta.id !== state.categoryId) return false;
+      if (state.status && combo && values && buffetWorkbenchTargetStatus(draft, target, combo, values) !== state.status) return false;
       if (!query) return true;
-      return [target.name, target.shortName, target.category].some(function (value) {
+      return [target.name, target.shortName, categoryMeta.name].some(function (value) {
         return String(value || "").toLocaleLowerCase().indexOf(query) >= 0;
       });
     });
   }
 
-  function buffetWorkbenchPageData(draft, config) {
+  function buffetWorkbenchPageData(draft, config, combo, values) {
     var state = normalizeBuffetQuantityWorkbenchState(draft);
-    var targets = draft.targetType === "dish_set" ? eligibleExceptionDishes(draft, state.storeId || draft.activeStoreId) : filteredBuffetWorkbenchTargets(draft, config, state);
+    var targets = draft.targetType === "dish_set" ? eligibleExceptionDishes(draft, state.storeId || draft.activeStoreId) : filteredBuffetWorkbenchTargets(draft, config, state, combo, values);
     if (draft.targetType === "dish_set") {
       var query = String(state.query || "").trim().toLocaleLowerCase();
       targets = targets.filter(function (target) {
-        return (!state.lineId || target.productLineId === state.lineId) && (!query || String(target.name || target.dishId).toLocaleLowerCase().indexOf(query) >= 0);
+        var categoryMeta = buffetWorkbenchCategoryMeta(config, target);
+        return (!state.lineId || target.productLineId === state.lineId) &&
+          (!state.categoryId || categoryMeta.id === state.categoryId) &&
+          (!state.status || !combo || !values || buffetWorkbenchTargetStatus(draft, target, combo, values) === state.status) &&
+          (!query || [target.name, categoryMeta.name].some(function (value) { return String(value || "").toLocaleLowerCase().indexOf(query) >= 0; }));
       });
     }
     var totalPages = Math.max(1, Math.ceil(targets.length / state.pageSize));
@@ -1497,16 +1524,16 @@
     return true;
   }
 
-  function selectBuffetWorkbenchPage(draft, config) {
+  function selectBuffetWorkbenchPage(draft, config, combo, values) {
     var state = normalizeBuffetQuantityWorkbenchState(draft);
-    state.selectedIds = buffetWorkbenchPageData(draft, config).pageRows.map(function (target) { return buffetWorkbenchTargetIdentity(draft, target); });
+    state.selectedIds = buffetWorkbenchPageData(draft, config, combo, values).pageRows.map(function (target) { return buffetWorkbenchTargetIdentity(draft, target); });
     state.selectionMode = "page";
     return state.selectedIds;
   }
 
-  function selectAllFilteredBuffetTargets(draft, config) {
+  function selectAllFilteredBuffetTargets(draft, config, combo, values) {
     var state = normalizeBuffetQuantityWorkbenchState(draft);
-    state.selectedIds = buffetWorkbenchPageData(draft, config).filtered.map(function (target) { return buffetWorkbenchTargetIdentity(draft, target); });
+    state.selectedIds = buffetWorkbenchPageData(draft, config, combo, values).filtered.map(function (target) { return buffetWorkbenchTargetIdentity(draft, target); });
     state.selectionMode = "filtered";
     return state.selectedIds;
   }
@@ -4190,7 +4217,7 @@
     });
     var categoryId = selected && selected.categoryId;
     var category = categories.find(function (item) { return String(item.id) === String(categoryId); });
-    return { code: String(target.id || target.dishId || ""), category: selected && selected.categoryName || (category ? category.name : categoryId || "—") };
+    return { code: String(target.id || target.dishId || ""), categoryId: categoryId || "", category: selected && selected.categoryName || (category ? category.name : categoryId || "—") };
   }
 
   function buffetTableLimitCell(cell, attrs) {
@@ -4200,7 +4227,7 @@
 
   function renderBuffetDishTableRows(draft, config, combo, values) {
     var state = normalizeBuffetQuantityWorkbenchState(draft);
-    return buffetWorkbenchPageData(draft, config).pageRows.map(function (target) {
+    return buffetWorkbenchPageData(draft, config, combo, values).pageRows.map(function (target) {
       var key = v4TargetKey(draft, combo, target);
       var identity = buffetWorkbenchTargetIdentity(draft, target);
       var meta = buffetProductMeta(config, target);
@@ -4210,7 +4237,7 @@
 
   function renderBuffetCategoryTableRows(draft, config, combo, values) {
     var state = normalizeBuffetQuantityWorkbenchState(draft);
-    return buffetWorkbenchPageData(draft, config).pageRows.map(function (target) {
+    return buffetWorkbenchPageData(draft, config, combo, values).pageRows.map(function (target) {
       var key = v4TargetKey(draft, combo, target);
       var identity = buffetWorkbenchTargetIdentity(draft, target);
       return '<tr><td class="olf-batch-select-cell"><input type="checkbox" data-buffet-workbench-target="' + esc(identity) + '"' + (state.selectedIds.indexOf(identity) >= 0 ? ' checked' : '') + ' /></td><td class="olf-v4-product-cell"><strong>' + esc(target.shortName || target.name) + '</strong><span>分类内商品共享数量池</span></td><td><button type="button" class="olf-button olf-button--small" data-buffet-category-members="' + esc(identity) + '">查看 ' + (target.count || 0) + ' 个商品</button></td><td>' + esc(target.lineLabel || target.lineId) + '</td><td>' + buffetTableLimitCell(values.targetLimits[key], 'data-v4-limit-field data-v4-map="targetLimits" data-v4-period="' + combo.period + '" data-v4-scenario="' + esc(key) + '"') + '</td>' + (draft.subject === "party_size" ? '<td>' + buffetTableLimitCell(values.tableTargetCaps[key], 'data-table-target-cap data-v4-limit-field data-v4-map="tableTargetCaps" data-v4-period="' + combo.period + '" data-v4-scenario="' + esc(key) + '"') + '</td>' : '') + '<td class="olf-v4-product-action"><button type="button" class="olf-button olf-button--small olf-button--danger" data-buffet-product-remove="' + esc(identity) + '">移除</button></td></tr>';
@@ -4223,7 +4250,7 @@
     v4ExceptionRows(values, scenario).forEach(function (row, index) { exceptions[v4MenuIdentity(v4ExceptionDish(row))] = { row: row, index: index }; });
     var defaultCell = values.defaultDishLimits[scenario];
     var state = normalizeBuffetQuantityWorkbenchState(draft);
-    return buffetWorkbenchPageData(draft, config).pageRows.map(function (dish) {
+    return buffetWorkbenchPageData(draft, config, combo, values).pageRows.map(function (dish) {
       var identity = buffetWorkbenchTargetIdentity(draft, dish);
       var exception = exceptions[v4MenuIdentity(dish)];
       var meta = buffetProductMeta(config, dish);
@@ -4236,7 +4263,7 @@
   }
 
   function renderBuffetProductTable(draft, config, combo, values) {
-    var data = buffetWorkbenchPageData(draft, config);
+    var data = buffetWorkbenchPageData(draft, config, combo, values);
     var state = normalizeBuffetQuantityWorkbenchState(draft);
     var columns = buffetProductTableColumns(draft, combo);
     var rows = draft.targetType === "dish_set" ? renderBuffetDishSetTableRows(draft, config, combo, values) : draft.targetType === "category" ? renderBuffetCategoryTableRows(draft, config, combo, values) : renderBuffetDishTableRows(draft, config, combo, values);
@@ -4258,7 +4285,7 @@
     var defaultCell = values.defaultDishLimits[scenario];
     var defaultCopy = defaultCell && defaultCell.configured ? "使用默认值 " + defaultCell.value + " 份" : "默认值未配置";
     var state = normalizeBuffetQuantityWorkbenchState(draft);
-    var rows = buffetWorkbenchPageData(draft, config).pageRows.map(function (dish) {
+    var rows = buffetWorkbenchPageData(draft, config, null, values).pageRows.map(function (dish) {
       var exception = exceptions[v4MenuIdentity(dish)];
       var limit = exception && exception.limit;
       var status = limit && limit.configured ? "已设置例外 " + limit.value + " 份" : defaultCopy;
@@ -4270,17 +4297,30 @@
 
   function renderBuffetWorkbenchToolbar(draft, config, combo) {
     var state = normalizeBuffetQuantityWorkbenchState(draft);
-    var data = buffetWorkbenchPageData(draft, config);
+    var values = v4PeriodValues(config, combo.period);
+    var data = buffetWorkbenchPageData(draft, config, combo, values);
     var pageIds = data.pageRows.map(function (target) { return buffetWorkbenchTargetIdentity(draft, target); });
     var pageSelected = pageIds.length && pageIds.every(function (id) { return state.selectedIds.indexOf(id) >= 0; });
     var lineOptions = '<option value="">全部产线</option>' + config.productLines.map(function (lineId) {
       var line = lines.find(function (item) { return item.id === lineId; });
       return '<option value="' + esc(lineId) + '"' + (state.lineId === lineId ? ' selected' : '') + '>' + esc(line ? line.name : lineId) + '</option>';
     }).join("");
+    var categoryMap = {};
+    currentBuffetWorkbenchTargets(draft, config).forEach(function (target) {
+      var meta = buffetWorkbenchCategoryMeta(config, target);
+      if (meta.id) categoryMap[meta.id] = meta.name || meta.id;
+    });
+    var categoryOptions = '<option value="">全部分类</option>' + Object.keys(categoryMap).map(function (categoryId) {
+      return '<option value="' + esc(categoryId) + '"' + (state.categoryId === categoryId ? ' selected' : '') + '>' + esc(categoryMap[categoryId]) + '</option>';
+    }).join("");
+    var categoryFilter = draft.targetType !== "category" ? '<select class="olf-select" aria-label="商品分类" data-buffet-workbench-category>' + categoryOptions + '</select>' : '';
+    var statusOptions = [{ id: "", name: "全部状态" }, { id: "configured", name: "已配置" }, { id: "unconfigured", name: "未配置" }, { id: "forbidden", name: "禁止下单" }].map(function (option) {
+      return '<option value="' + option.id + '"' + (state.status === option.id ? ' selected' : '') + '>' + option.name + '</option>';
+    }).join("");
     var allFiltered = pageSelected && data.filtered.length > data.pageRows.length && state.selectionMode !== "filtered"
-      ? '<button type="button" class="olf-button olf-button--small olf-button--link" data-buffet-workbench-select-filtered>选择全部筛选结果，共 ' + data.filtered.length + ' 项</button>' : "";
+      ? '<button type="button" class="olf-button olf-button--small olf-button--link" data-buffet-workbench-select-filtered data-v4-period="' + combo.period + '" data-scene-party="' + combo.partyIndex + '" data-scene-round="' + combo.roundIndex + '">选择全部筛选结果，共 ' + data.filtered.length + ' 项</button>' : "";
     var scenario = isBuffetComboDraft(draft) ? comboScenarioKeyFor(draft, combo.partyIndex) : v4ScenarioKey(combo.partyIndex, combo.roundIndex, draft);
-    return '<div class="olf-v4-workbench-tools"><div class="olf-v4-workbench-filters"><select class="olf-select" data-buffet-workbench-line>' + lineOptions + '</select><input class="olf-input" value="' + esc(state.query) + '" placeholder="搜索商品/分类名称" data-buffet-workbench-query /><button type="button" class="olf-button olf-button--small" data-buffet-workbench-reset>重置筛选</button></div><div class="olf-v4-workbench-batch"><label><input type="checkbox" data-buffet-workbench-page-select' + (pageSelected ? ' checked' : '') + ' /> 当前页全选</label><strong>已选 ' + state.selectedIds.length + ' 项</strong>' + allFiltered + '<button type="button" class="olf-button olf-button--small olf-button--danger" data-buffet-product-bulk-remove' + (state.selectedIds.length ? '' : ' disabled') + '>批量移除</button><span class="olf-batch-spacer"></span><span>' + (draft.targetType === "dish_set" ? '批量设置相同菜品例外' : '批量数量') + '</span><input class="olf-input olf-limit-input" type="number" min="0" placeholder="未配置" data-buffet-workbench-bulk-value /><button type="button" class="olf-button olf-button--small" data-buffet-workbench-bulk-apply data-v4-period="' + combo.period + '" data-v4-scenario="' + esc(scenario) + '" data-scene-party="' + combo.partyIndex + '" data-scene-round="' + combo.roundIndex + '"' + (state.selectedIds.length ? '' : ' disabled') + '>应用数量</button></div></div>';
+    return '<div class="olf-v4-workbench-tools"><div class="olf-v4-workbench-filters"><select class="olf-select" aria-label="产线" data-buffet-workbench-line>' + lineOptions + '</select>' + categoryFilter + '<select class="olf-select" aria-label="配置状态" data-buffet-workbench-status>' + statusOptions + '</select><input class="olf-input" aria-label="商品搜索" value="' + esc(state.query) + '" placeholder="搜索商品/分类名称" data-buffet-workbench-query /><button type="button" class="olf-button olf-button--small" data-buffet-workbench-reset>重置筛选</button></div><div class="olf-v4-workbench-batch"><label><input type="checkbox" data-buffet-workbench-page-select data-v4-period="' + combo.period + '" data-scene-party="' + combo.partyIndex + '" data-scene-round="' + combo.roundIndex + '"' + (pageSelected ? ' checked' : '') + ' /> 当前页全选</label><strong>已选 ' + state.selectedIds.length + ' 项</strong>' + allFiltered + '<button type="button" class="olf-button olf-button--small olf-button--danger" data-buffet-product-bulk-remove' + (state.selectedIds.length ? '' : ' disabled') + '>批量移除</button><span class="olf-batch-spacer"></span><span>' + (draft.targetType === "dish_set" ? '批量设置相同菜品例外' : '批量数量') + '</span><input class="olf-input olf-limit-input" type="number" min="0" placeholder="未配置" data-buffet-workbench-bulk-value /><button type="button" class="olf-button olf-button--small" data-buffet-workbench-bulk-apply data-v4-period="' + combo.period + '" data-v4-scenario="' + esc(scenario) + '" data-scene-party="' + combo.partyIndex + '" data-scene-round="' + combo.roundIndex + '"' + (state.selectedIds.length ? '' : ' disabled') + '>应用数量</button></div></div>';
   }
 
   function renderBuffetTargetQuantityPanel(draft, config, combo, values) {
@@ -4304,7 +4344,7 @@
             (draft.subject === "party_size" ? renderV4LimitInput(values.tableTargetCaps[setKey], "data-table-target-cap data-v4-limit-field data-v4-map=\"tableTargetCaps\" data-v4-period=\"" + combo.period + "\" data-v4-scenario=\"" + esc(setKey) + "\"", "整桌兜底") : "")) + '</div>';
     }
     var state = normalizeBuffetQuantityWorkbenchState(draft);
-    return buffetWorkbenchPageData(draft, config).pageRows.map(function (target) {
+    return buffetWorkbenchPageData(draft, config, combo, values).pageRows.map(function (target) {
       var key = v4TargetKey(draft, combo, target);
       var identity = buffetWorkbenchTargetIdentity(draft, target);
       return '<div class="olf-v4-target-row"><input type="checkbox" data-buffet-workbench-target="' + esc(identity) + '"' + (state.selectedIds.indexOf(identity) >= 0 ? ' checked' : '') + ' /><div><strong>' + esc(target.shortName || target.name) + '</strong><span>' + esc(target.lineLabel || target.lineId) + (draft.targetType === "category" ? ' · 包含 ' + (target.count || 0) + ' 个菜品' : '') + '</span></div>' +
@@ -5684,11 +5724,13 @@
     if (!button) return;
     if (button.hasAttribute("data-buffet-workbench-reset")) {
       var resetState = normalizeBuffetQuantityWorkbenchState(editorState.rule.editorDraft);
-      resetState.lineId = ""; resetState.query = ""; resetState.page = 1; clearBuffetQuantitySelection(); renderEditor(); return;
+      resetState.lineId = ""; resetState.categoryId = ""; resetState.status = ""; resetState.query = ""; resetState.page = 1; clearBuffetQuantitySelection(); renderEditor(); return;
     }
     if (button.hasAttribute("data-buffet-workbench-select-filtered")) {
       var selectDraft = editorState.rule.editorDraft;
-      selectAllFilteredBuffetTargets(selectDraft, storeConfigFor(selectDraft, selectDraft.activeStoreId, true)); renderEditor(); return;
+      var selectConfig = storeConfigFor(selectDraft, selectDraft.activeStoreId, true);
+      var selectCombo = { period: button.getAttribute("data-v4-period"), partyIndex: Number(button.getAttribute("data-scene-party")) || 0, roundIndex: Number(button.getAttribute("data-scene-round")) || 0 };
+      selectAllFilteredBuffetTargets(selectDraft, selectConfig, selectCombo, v4PeriodValues(selectConfig, selectCombo.period)); renderEditor(); return;
     }
     if (button.hasAttribute("data-buffet-workbench-page")) {
       normalizeBuffetQuantityWorkbenchState(editorState.rule.editorDraft).page = Number(button.getAttribute("data-buffet-workbench-page")) || 1; clearBuffetQuantitySelection(); renderEditor(); return;
@@ -6103,13 +6145,22 @@
       var lineState = normalizeBuffetQuantityWorkbenchState(draft);
       lineState.lineId = target.value; lineState.page = 1; clearBuffetQuantitySelection(); renderEditor(); return;
     }
+    if (target.hasAttribute("data-buffet-workbench-category")) {
+      var categoryState = normalizeBuffetQuantityWorkbenchState(draft);
+      categoryState.categoryId = target.value; categoryState.page = 1; clearBuffetQuantitySelection(); renderEditor(); return;
+    }
+    if (target.hasAttribute("data-buffet-workbench-status")) {
+      var statusState = normalizeBuffetQuantityWorkbenchState(draft);
+      statusState.status = target.value; statusState.page = 1; clearBuffetQuantitySelection(); renderEditor(); return;
+    }
     if (target.hasAttribute("data-buffet-workbench-page-size")) {
       var sizeState = normalizeBuffetQuantityWorkbenchState(draft);
       sizeState.pageSize = Number(target.value) || 20; sizeState.page = 1; clearBuffetQuantitySelection(); renderEditor(); return;
     }
     if (target.hasAttribute("data-buffet-workbench-page-select")) {
       var pageConfig = storeConfigFor(draft, draft.activeStoreId, true);
-      if (target.checked) selectBuffetWorkbenchPage(draft, pageConfig); else clearBuffetQuantitySelection();
+      var pageCombo = { period: target.getAttribute("data-v4-period"), partyIndex: Number(target.getAttribute("data-scene-party")) || 0, roundIndex: Number(target.getAttribute("data-scene-round")) || 0 };
+      if (target.checked) selectBuffetWorkbenchPage(draft, pageConfig, pageCombo, v4PeriodValues(pageConfig, pageCombo.period)); else clearBuffetQuantitySelection();
       renderEditor(); return;
     }
     if (target.hasAttribute("data-buffet-workbench-target")) {

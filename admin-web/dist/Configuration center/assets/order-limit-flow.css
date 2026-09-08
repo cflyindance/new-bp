@@ -212,9 +212,14 @@ button { color: inherit; }
 .olf-v4-member-table__head span, .olf-v4-member-status { color: var(--olf-muted); font-size: 12px; }
 .olf-v4-member-status.is-exception { color: var(--olf-primary); }
 .olf-v4-workbench-tools { display: grid; gap: 10px; margin-bottom: 12px; padding: 12px; border: 1px solid var(--olf-border); border-radius: 10px; background: var(--olf-subtle); }
-.olf-v4-workbench-filters, .olf-v4-workbench-batch, .olf-v4-workbench-pager { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
-.olf-v4-workbench-filters .olf-input { flex: 1 1 240px; }
+.olf-v4-workbench-filters { display: grid; grid-template-columns: minmax(150px, .8fr) minmax(150px, .8fr) minmax(150px, .8fr) minmax(260px, 1.8fr) auto; align-items: center; gap: 8px; }
+.olf-v4-workbench-filters .olf-select, .olf-v4-workbench-filters .olf-input { width: 100%; min-width: 0; }
+.olf-v4-workbench-batch, .olf-v4-workbench-pager { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 .olf-v4-workbench-pager { justify-content: flex-end; }
+@media (max-width: 980px) {
+  .olf-v4-workbench-filters { grid-template-columns: repeat(3, minmax(140px, 1fr)); }
+  .olf-v4-workbench-filters .olf-input { grid-column: 1 / 3; }
+}
 .olf-v4-product-table-wrap { margin-top: 0; border: 1px solid var(--olf-border); border-radius: 10px 10px 0 0; }
 .olf-v4-product-table { min-width: 920px; }
 .olf-v4-product-table th { white-space: nowrap; }
