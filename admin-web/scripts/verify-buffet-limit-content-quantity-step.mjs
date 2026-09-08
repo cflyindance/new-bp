@@ -10,7 +10,7 @@ assert.match(flow, /function renderBuffetQuantityStep\(draft\)/, "modern buffet 
 const quantityStart = flow.indexOf("function renderBuffetQuantityStep(draft)");
 const quantityEnd = flow.indexOf("function renderEditorContent", quantityStart);
 const quantityStep = flow.slice(quantityStart, quantityEnd);
-const ordered = ["renderBuffetScenarioWorkspace(draft)", "renderBuffetActiveScenario(draft)", "renderBuffetQuantityWorkbench(draft)"];
+const ordered = ["renderBuffetScenarioWorkspace(draft)", "renderBuffetQuantityWorkbench(draft)"];
 let previous = -1;
 for (const marker of ordered) {
   const index = quantityStep.indexOf(marker);
@@ -18,6 +18,7 @@ for (const marker of ordered) {
   previous = index;
 }
 assert.doesNotMatch(quantityStep, /renderBuffetRuleContext\(draft\)/, "Step 2 must not render the redundant current-limit summary");
+assert.doesNotMatch(quantityStep, /renderBuffetActiveScenario\(draft\)/, "Step 2 must not render the redundant active-scenario summary");
 assert.doesNotMatch(quantityStep, /renderBuffetLimitContent\(draft\)/, "Step 2 must not render a separate limit-content section");
 
 const validationStart = flow.indexOf("function validateStep(stepNumber, draft)");

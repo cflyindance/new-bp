@@ -8,7 +8,6 @@ assert.ok(start >= 0 && end > start);
 const source = flow.slice(start, end);
 const expected = [
   "renderBuffetScenarioWorkspace(draft)",
-  "renderBuffetActiveScenario(draft)",
   "renderBuffetQuantityWorkbench(draft)"
 ];
 let cursor = -1;
@@ -20,7 +19,8 @@ for (const token of expected) {
 assert.doesNotMatch(source, /renderBuffetRuleContext\(draft\)/);
 assert.doesNotMatch(flow, /<h3>当前规则<\/h3>/);
 assert.match(flow, /<h3>适用场景<\/h3>/);
-assert.match(flow, /<h3>当前配置场景<\/h3>/);
+assert.doesNotMatch(flow, /<h3>当前配置场景<\/h3>/);
+assert.doesNotMatch(source, /renderBuffetActiveScenario\(draft\)/);
 assert.match(flow, /<h3>门店与商品数量<\/h3>/);
 
 const styles = fs.readFileSync("dist/Configuration center/assets/order-limit-flow.css", "utf8");

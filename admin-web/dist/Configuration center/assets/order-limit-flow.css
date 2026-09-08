@@ -201,9 +201,6 @@ button { color: inherit; }
 .olf-summary--period-lock { margin-top: 10px; }
 .olf-period-toggle input { margin-top: 3px; }
 .olf-scenario-summary > .olf-section { margin: 10px 0 0; background: var(--olf-subtle); }
-.olf-active-scenario { display: grid; gap: 12px; }
-.olf-active-scenario__row { display: grid; grid-template-columns: 52px minmax(0, 1fr); align-items: center; gap: 10px; }
-.olf-active-scenario__row > strong { font-size: 13px; }
 .olf-quantity-workbench { padding: 0; overflow: hidden; }
 .olf-quantity-workbench > .olf-section-head { padding: 16px; margin: 0; border-bottom: 1px solid var(--olf-border); }
 .olf-quantity-workbench > .olf-section { margin: 0; border: 0; border-radius: 0; }

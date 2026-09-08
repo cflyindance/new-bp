@@ -4666,17 +4666,6 @@
     return '<section class="olf-section olf-scenario-summary"><div class="olf-section-head"><div><h3>适用场景</h3><span class="olf-hint">先定义人数与轮次区间，再选择当前编辑场景</span></div></div>' + renderBuffetQuantityRanges(draft) + '</section>';
   }
 
-  function renderBuffetActiveScenario(draft) {
-    var partyTabs = showsPartyDimension(draft) ? draft.partyRanges.map(function (range, index) {
-      return '<button type="button" class="olf-tab' + (draft.activePartyIndex === index ? ' is-active' : '') + '" data-party-tab="' + index + '">' + esc(formatRange(range, "人")) + '</button>';
-    }).join("") : '<span class="olf-chip">全部人数</span>';
-    var hasRoundRanges = (draft.enabledPeriods || []).indexOf("multi_round") >= 0;
-    var roundTabs = hasRoundRanges ? draft.roundRanges.map(function (range, index) {
-      return '<button type="button" class="olf-tab' + (draft.activeRoundIndex === index ? ' is-active' : '') + '" data-round-tab="' + index + '">' + esc(formatRange(range, "轮")) + '</button>';
-    }).join("") : '<span class="olf-chip">' + esc((draft.enabledPeriods || []).map(buffetPeriodSummaryLabel).join("＋")) + '</span>';
-    return '<section class="olf-section olf-active-scenario"><h3>当前配置场景</h3><div class="olf-active-scenario__row"><strong>人数</strong><div class="olf-tabs">' + partyTabs + '</div></div><div class="olf-active-scenario__row"><strong>轮次</strong><div class="olf-tabs">' + roundTabs + '</div></div></section>';
-  }
-
   function renderBuffetQuantityWorkbench(draft) {
     var storeCount = addedStoreIds(draft).length;
     var productCount = selectedPreviewRows(draft).length;
@@ -4686,7 +4675,6 @@
   function renderBuffetQuantityStep(draft) {
     return '<div class="olf-content-head"><h2 tabindex="-1">设置限购数量</h2></div>' +
       renderBuffetScenarioWorkspace(draft) +
-      renderBuffetActiveScenario(draft) +
       renderBuffetQuantityWorkbench(draft);
   }
 
