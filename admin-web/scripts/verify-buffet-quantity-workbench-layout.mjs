@@ -7,7 +7,6 @@ const end = flow.indexOf("function renderStepFive", start);
 assert.ok(start >= 0 && end > start);
 const source = flow.slice(start, end);
 const expected = [
-  "renderBuffetRuleContext(draft)",
   "renderBuffetLimitContent(draft)",
   "renderBuffetScenarioWorkspace(draft)",
   "renderBuffetActiveScenario(draft)",
@@ -19,9 +18,13 @@ for (const token of expected) {
   assert.ok(next > cursor, `${token} must follow the previous quantity section`);
   cursor = next;
 }
-assert.match(flow, /data-modify-rule-type/);
+assert.doesNotMatch(source, /renderBuffetRuleContext\(draft\)/);
+assert.doesNotMatch(flow, /<h3>当前规则<\/h3>/);
 assert.match(flow, /<h3>适用场景<\/h3>/);
 assert.match(flow, /<h3>当前配置场景<\/h3>/);
 assert.match(flow, /<h3>门店与商品数量<\/h3>/);
+
+const styles = fs.readFileSync("dist/Configuration center/assets/order-limit-flow.css", "utf8");
+assert.doesNotMatch(styles, /\.olf-quantity-context/);
 
 console.log("verify-buffet-quantity-workbench-layout: PASS");

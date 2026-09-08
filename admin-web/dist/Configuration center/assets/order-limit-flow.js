@@ -2693,6 +2693,16 @@
       '<section class="olf-section"><h3>周期内限购维度</h3>' + (draft.enabledPeriods.length ? renderBuffetPeriodBlocks(draft) : '<div class="olf-summary olf-summary--warning">请至少启用一个限制周期。</div>') + '</section>' + partySection + roundSection;
   }
 
+  function buffetTemplateSelectionAvailability(draft, template) {
+    if (!window.BuffetRulePolicy || typeof window.BuffetRulePolicy.templateAvailability !== "function") {
+      return { enabled: true, reason: "" };
+    }
+    var projectedDraft = Object.assign({}, draft);
+    if (template.presetSubject) projectedDraft.subject = template.presetSubject;
+    if (template.presetTargetType) projectedDraft.targetType = template.presetTargetType;
+    return window.BuffetRulePolicy.templateAvailability(projectedDraft, template);
+  }
+
   function renderBuffetTemplateSelection(draft) {
     ensureBuffetScenarioModel(draft);
     var templates = (moduleProfile.periodTemplates || []).map(function (template) {
@@ -2709,9 +2719,7 @@
         ? { enabled: true, reason: "" }
         : incompleteReason
           ? { enabled: true, reason: "" }
-          : window.BuffetRulePolicy && window.BuffetRulePolicy.templateAvailability
-            ? window.BuffetRulePolicy.templateAvailability(draft, template)
-            : { enabled: true, reason: "" };
+          : buffetTemplateSelectionAvailability(draft, template);
       return '<button type="button" class="olf-template-card' + (draft.buffetTemplateId === template.id ? " is-selected" : "") + '" data-buffet-template="' + esc(template.id) + '"' + (availability.enabled ? "" : ' disabled title="' + esc(availability.reason) + '"') + '><strong>' + esc(template.name) + '</strong><span>' + esc(availability.enabled ? (template.periods.length ? template.periods.map(periodLabel).join(" ＋ ") : "自行选择周期和限购内容") : availability.reason) + '</span></button>';
     }).join("");
     var changed = draft.buffetTemplateModified ? '<div class="olf-summary olf-summary--warning"><strong>已基于模板修改</strong><span>当前以页面上实际选择的周期与限购内容为准。</span></div>' : "";
@@ -4664,13 +4672,6 @@
     return '<section class="olf-section"><div class="olf-section-head"><div><h3>参与门店和商品</h3><span class="olf-hint">已配置 ' + storeCount + ' 家门店、' + productCount + ' 个商品</span></div><button type="button" class="olf-button olf-button--primary" data-product-add-open>' + icon("plus", 15) + ' 添加商品</button></div></section>';
   }
 
-  function renderBuffetRuleContext(draft) {
-    var summary = subjectLabel(draft.subject) + " · " + targetShortLabel(draft.targetType) + " · " +
-      (draft.enabledPeriods || []).map(buffetPeriodSummaryLabel).join("＋") +
-      (draft.targetType === "dish_set" ? " · " + (draft.measureUnit === "kind" ? "按种" : "按份") : "");
-    return '<section class="olf-section olf-quantity-context"><div><h3>当前规则</h3><span>' + esc(summary) + '</span></div><button type="button" class="olf-button olf-button--small" data-modify-rule-type>修改规则类型</button></section>';
-  }
-
   function renderBuffetScenarioWorkspace(draft) {
     return '<section class="olf-section olf-scenario-summary"><div class="olf-section-head"><div><h3>适用场景</h3><span class="olf-hint">先定义人数与轮次区间，再选择当前编辑场景</span></div></div>' + renderBuffetQuantityRanges(draft) + '</section>';
   }
@@ -4694,7 +4695,6 @@
 
   function renderBuffetQuantityStep(draft) {
     return '<div class="olf-content-head"><h2 tabindex="-1">设置限购数量</h2></div>' +
-      renderBuffetRuleContext(draft) +
       renderBuffetLimitContent(draft) +
       renderBuffetScenarioWorkspace(draft) +
       renderBuffetActiveScenario(draft) +

@@ -31,8 +31,8 @@ const profile = {
   allowedPeriods: ["order_lifetime", "per_round", "multi_round"],
   allowedTargetTypes: ["dish", "category", "dish_set"],
   periodTemplates: [
-    { id: "round", name: "每轮模板", presetSubject: "party_size", periods: ["per_round"], blocks: { per_round: ["total", "target"] } },
-    { id: "order-protection", name: "整单保护", presetSubject: "order", presetTargetType: "dish_set", periods: ["order_lifetime", "per_round"], blocks: { order_lifetime: ["target"], per_round: ["target", "same_dish"] } }
+    { id: "round", name: "每轮模板", presetSubject: "party_size", subjects: ["party_size"], targetTypes: ["category", "dish", "dish_set"], periods: ["per_round"], blocks: { per_round: ["total", "target"] } },
+    { id: "order-protection", name: "整单保护", presetSubject: "order", presetTargetType: "dish_set", subjects: ["order"], targetTypes: ["dish_set"], periods: ["order_lifetime", "per_round"], blocks: { order_lifetime: ["target"], per_round: ["target", "same_dish"] } }
   ],
   usesV4Capability(draft) {
     return Number(draft?.schemaVersion) >= 4 || Array.isArray(draft?.enabledPeriods);
@@ -54,6 +54,11 @@ const window = {
     selectSinglePeriod(draft, period) {
       draft.enabledPeriods = [period];
       draft.buffetTemplateId = "custom";
+    },
+    templateAvailability(draft, template) {
+      if (template.subjects && !template.subjects.includes(draft.subject)) return { enabled: false, reason: "当前限购主体不适用此模板" };
+      if (template.targetTypes && !template.targetTypes.includes(draft.targetType)) return { enabled: false, reason: "当前限购对象不适用此模板" };
+      return { enabled: true, reason: "" };
     }
   }
 };
@@ -87,6 +92,9 @@ assert.equal(incompleteNewDraft.targetType, null, "template must preserve an uns
 api.applyBuffetTemplate(incompleteNewDraft, "order-protection");
 assert.equal(incompleteNewDraft.subject, "order", "next template must replace the explicitly linked subject");
 assert.equal(incompleteNewDraft.targetType, "dish_set", "template must link its explicit target type");
+const afterOrderProtection = api.renderStepOne(incompleteNewDraft);
+const roundAfterOrderProtection = afterOrderProtection.match(/<button[^>]*data-buffet-template="round"[^>]*>/)?.[0] ?? "";
+assert.doesNotMatch(roundAfterOrderProtection, /disabled/, "a template that replaces the current subject must remain switchable");
 
 const legacy = {
   schemaVersion: 2,
