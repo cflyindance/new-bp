@@ -148,8 +148,8 @@ assert.match(stepOne, /限购主体/);
 
 const stepTwo = api.renderStepThree(draft);
 assert.match(stepTwo, /每轮/);
-assert.match(stepTwo, /data-period-toggle="per_round"/);
-assert.match(stepTwo, /data-period-block="total"/);
+assert.match(stepTwo, /data-period-select="per_round"/);
+assert.doesNotMatch(stepTwo, /data-period-block/);
 
 const ordinary = {
   schemaVersion: 4,
@@ -170,8 +170,8 @@ assert.doesNotMatch(ordinaryStepOne, /系统默认场景，规则类型不可修
 assert.doesNotMatch(ordinaryStepOne, /data-choice-field="subject"[^>]*disabled/);
 assert.doesNotMatch(ordinaryStepOne, /data-choice-field="targetType"[^>]*disabled/);
 const ordinaryStepTwo = api.renderStepThree(ordinary);
-assert.match(ordinaryStepTwo, /data-period-toggle="per_round"/);
-assert.match(ordinaryStepTwo, /data-period-block="total"/);
+assert.match(ordinaryStepTwo, /data-period-select="per_round"/);
+assert.doesNotMatch(ordinaryStepTwo, /data-period-block/);
 
 const unsafeIdentity = {
   ...ordinary,

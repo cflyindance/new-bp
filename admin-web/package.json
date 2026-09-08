@@ -36,6 +36,7 @@
     "verify:buffet-limit-content-quantity-step": "node scripts/verify-buffet-limit-content-quantity-step.mjs",
     "verify:buffet-quantity-workbench": "node scripts/verify-buffet-quantity-workbench-state.mjs",
     "verify:buffet-quantity-workbench-layout": "node scripts/verify-buffet-quantity-workbench-layout.mjs",
+    "verify:buffet-quantity-auto-enable": "node scripts/verify-buffet-quantity-auto-enable.mjs",
     "verify:buffet-quantity-target-presenters": "node scripts/verify-buffet-quantity-target-presenters.mjs",
     "verify:buffet-quantity-bulk-selection": "node scripts/verify-buffet-quantity-bulk-selection.mjs",
     "verify:buffet-product-table": "node scripts/verify-buffet-product-table-shell.mjs && node scripts/verify-buffet-product-table-objects.mjs && node scripts/verify-buffet-product-table-selection.mjs && node scripts/verify-buffet-product-removal.mjs",

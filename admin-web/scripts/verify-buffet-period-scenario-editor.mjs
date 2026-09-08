@@ -132,7 +132,7 @@ const modern = {
 };
 api.ensureBuffetScenarioModel(modern);
 assert.equal(modern.periodPolicies.per_round.blocks.targetEnabled, false, "scenario normalization must preserve an explicit disabled target block");
-assert.equal(api.enabledPeriodsHaveQuantityBlocks(modern), false);
+assert.equal(api.enabledPeriodsHaveConfiguredQuantity(modern), false);
 assert.equal(api.validateStep(1, modern), "限制周期组合不合法，请选择单周期或受控组合模板");
 const fusedRuleType = api.renderStepOne(modern);
 assert.match(fusedRuleType, /基础信息/);
@@ -161,12 +161,11 @@ const malformedV4 = {
   conditions: { childCountPolicy: "inherit" }
 };
 assert.equal(api.validateStep(1, malformedV4), null, "rule-type step must not validate quantity-step content");
-assert.equal(api.validateStep(2, malformedV4), "每个启用周期至少保留一个限购维度");
+assert.equal(api.validateStep(2, malformedV4), "每个启用周期至少配置一个实际限购数量");
 assert.equal(malformedV4.periodPolicies.per_round.blocks.targetEnabled, false, "validation must not normalize a malformed v4 policy");
 
-const periodBlocks = flow.match(/function renderBuffetPeriodBlocks\(draft\)[\s\S]*?(?=\n  function renderBuffetScenarioConfiguration)/)?.[0] ?? "";
-assert.match(periodBlocks, /data-period-block="target"/, "target block must be independently toggleable for total-only defaults");
-assert.match(flow, /if \(blockName === "target"\) policy\.blocks\.targetEnabled = checked/);
+assert.doesNotMatch(flow, /data-period-block/, "quantity values replace manual limit-content toggles");
+assert.match(flow, /function deriveBuffetQuantityBlocks\(draft\)/);
 assert.match(flow, /function requestBuffetStructureChange\(label, mutate, trigger\)/);
 assert.match(flow, /olf-period-toggle-grid--readonly/, "controlled templates must keep the period cards visible");
 assert.match(flow, /type="checkbox"' \+ \(checked \? " checked" : ""\) \+ ' disabled/, "controlled template period cards must be read-only");

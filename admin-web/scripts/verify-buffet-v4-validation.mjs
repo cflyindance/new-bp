@@ -34,10 +34,12 @@ function draft(overrides = {}) {
 assert.equal(api.validateV4Draft(draft()), null, "完整 v4 草稿可发布");
 assert.equal(api.validateV4Draft(draft({ enabledPeriods: [] })).code, "PERIOD_REQUIRED");
 assert.equal(api.validateV4Draft(draft({ subject: "party_size", partyRanges: [{ min: 2, max: null }] })).code, "PARTY_RANGE_INVALID");
-assert.equal(api.validateV4Draft(draft({ periodPolicies: { per_round: { blocks: { totalEnabled: false, targetEnabled: false, sameDishEnabled: false } } } })).code, "PERIOD_BLOCK_REQUIRED");
+const noQuantity = draft({ periodPolicies: { per_round: { blocks: { totalEnabled: true, targetEnabled: true, sameDishEnabled: true } } } });
+noQuantity.storeConfigs["store-a"].periodValues.per_round.targetLimits = {};
+assert.equal(api.validateV4Draft(noQuantity).code, "PERIOD_BLOCK_REQUIRED");
 const missing = draft();
 missing.storeConfigs["store-a"].periodValues.per_round.targetLimits = {};
-assert.equal(api.validateV4Draft(missing).code, "QUANTITY_BLOCK_INCOMPLETE");
+assert.equal(api.validateV4Draft(missing).code, "PERIOD_BLOCK_REQUIRED");
 const reversed = draft();
 reversed.periodPolicies.per_round.blocks.totalEnabled = true;
 reversed.storeConfigs["store-a"].periodValues.per_round.totalBounds = { "0|0": { minConfigured: true, min: 4, maxConfigured: true, max: 2 } };
