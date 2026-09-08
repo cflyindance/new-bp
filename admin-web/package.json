@@ -21,6 +21,7 @@
     "verify:hub-search-direct-edit": "npx tsx scripts/verify-hub-search-direct-setting-edit.ts",
     "build:settings-catalog": "node scripts/verify-foh-line-scope.mjs && node scripts/build-module-settings-catalog.mjs",
     "verify:platform-preset-tree": "node scripts/verify-platform-preset-tree.mjs",
+    "verify:github-pages-legacy-path": "node scripts/verify-github-pages-legacy-path.mjs",
     "verify:foh-platform-preset-l3": "npx tsx scripts/verify-foh-platform-preset-l3.ts",
     "verify:foh-pos-notification-merge": "npx tsx scripts/verify-foh-pos-notification-merge.ts",
     "verify:foh-auto-clear-merge": "npx tsx scripts/verify-foh-auto-clear-merge.ts",
