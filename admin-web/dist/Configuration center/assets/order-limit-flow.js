@@ -2693,6 +2693,16 @@
       '<section class="olf-section"><h3>周期内限购维度</h3>' + (draft.enabledPeriods.length ? renderBuffetPeriodBlocks(draft) : '<div class="olf-summary olf-summary--warning">请至少启用一个限制周期。</div>') + '</section>' + partySection + roundSection;
   }
 
+  function buffetTemplateSelectionAvailability(draft, template) {
+    if (!window.BuffetRulePolicy || typeof window.BuffetRulePolicy.templateAvailability !== "function") {
+      return { enabled: true, reason: "" };
+    }
+    var projectedDraft = Object.assign({}, draft);
+    if (template.presetSubject) projectedDraft.subject = template.presetSubject;
+    if (template.presetTargetType) projectedDraft.targetType = template.presetTargetType;
+    return window.BuffetRulePolicy.templateAvailability(projectedDraft, template);
+  }
+
   function renderBuffetTemplateSelection(draft) {
     ensureBuffetScenarioModel(draft);
     var templates = (moduleProfile.periodTemplates || []).map(function (template) {
@@ -2709,9 +2719,7 @@
         ? { enabled: true, reason: "" }
         : incompleteReason
           ? { enabled: true, reason: "" }
-          : window.BuffetRulePolicy && window.BuffetRulePolicy.templateAvailability
-            ? window.BuffetRulePolicy.templateAvailability(draft, template)
-            : { enabled: true, reason: "" };
+          : buffetTemplateSelectionAvailability(draft, template);
       return '<button type="button" class="olf-template-card' + (draft.buffetTemplateId === template.id ? " is-selected" : "") + '" data-buffet-template="' + esc(template.id) + '"' + (availability.enabled ? "" : ' disabled title="' + esc(availability.reason) + '"') + '><strong>' + esc(template.name) + '</strong><span>' + esc(availability.enabled ? (template.periods.length ? template.periods.map(periodLabel).join(" ＋ ") : "自行选择周期和限购内容") : availability.reason) + '</span></button>';
     }).join("");
     var changed = draft.buffetTemplateModified ? '<div class="olf-summary olf-summary--warning"><strong>已基于模板修改</strong><span>当前以页面上实际选择的周期与限购内容为准。</span></div>' : "";
