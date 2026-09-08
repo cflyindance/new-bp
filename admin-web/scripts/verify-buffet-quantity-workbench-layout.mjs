@@ -7,7 +7,6 @@ const end = flow.indexOf("function renderStepFive", start);
 assert.ok(start >= 0 && end > start);
 const source = flow.slice(start, end);
 const expected = [
-  "renderBuffetLimitContent(draft)",
   "renderBuffetScenarioWorkspace(draft)",
   "renderBuffetActiveScenario(draft)",
   "renderBuffetQuantityWorkbench(draft)"

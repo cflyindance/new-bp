@@ -10,7 +10,7 @@ assert.match(flow, /function renderBuffetQuantityStep\(draft\)/, "modern buffet 
 const quantityStart = flow.indexOf("function renderBuffetQuantityStep(draft)");
 const quantityEnd = flow.indexOf("function renderEditorContent", quantityStart);
 const quantityStep = flow.slice(quantityStart, quantityEnd);
-const ordered = ["renderBuffetLimitContent(draft)", "renderBuffetScenarioWorkspace(draft)", "renderBuffetActiveScenario(draft)", "renderBuffetQuantityWorkbench(draft)"];
+const ordered = ["renderBuffetScenarioWorkspace(draft)", "renderBuffetActiveScenario(draft)", "renderBuffetQuantityWorkbench(draft)"];
 let previous = -1;
 for (const marker of ordered) {
   const index = quantityStep.indexOf(marker);
@@ -18,6 +18,7 @@ for (const marker of ordered) {
   previous = index;
 }
 assert.doesNotMatch(quantityStep, /renderBuffetRuleContext\(draft\)/, "Step 2 must not render the redundant current-limit summary");
+assert.doesNotMatch(quantityStep, /renderBuffetLimitContent\(draft\)/, "Step 2 must not render a separate limit-content section");
 
 const validationStart = flow.indexOf("function validateStep(stepNumber, draft)");
 const validationEnd = flow.indexOf("function validateAll", validationStart);
@@ -25,7 +26,8 @@ const validation = flow.slice(validationStart, validationEnd);
 assert.match(validation, /stepNumber === 1[\s\S]*validateBuffetRuleTypeStep/, "Step 1 must own rule-type validation");
 assert.match(validation, /stepNumber === 2[\s\S]*validateSixStep\(2, draft\)[\s\S]*validateSixStep\(3, draft\)/, "Step 2 must own limit-content, ranges, products and quantities");
 
-assert.match(flow, /data-period-block[\s\S]*requestBuffetStructureChange\(checked \? "启用限制内容" : "关闭限制内容"/, "limit-content toggles must keep structural confirmation");
+assert.doesNotMatch(flow, /data-period-block/, "manual limit-content checkboxes must be removed");
+assert.doesNotMatch(flow, /启用限制内容|关闭限制内容/, "manual limit-content toggle interaction must be removed");
 assert.match(flow, /if \(editorState\.currentStep === 2\) return renderStepThree\(draft\)/, "menu order-limit Step 2 routing must stay unchanged");
 
 console.log("verify-buffet-limit-content-quantity-step: PASS");
