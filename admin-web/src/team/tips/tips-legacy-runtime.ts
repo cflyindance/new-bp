@@ -4,6 +4,7 @@ import ruleData from "./legacy/ruleData.js.txt?raw";
 import personalSales from "./legacy/personalSalesDeduct.js.txt?raw";
 import allocation from "./legacy/tipAllocation.js.txt?raw";
 import attendance from "./legacy/attendanceMock.js.txt?raw";
+import manualHours from "./legacy/tipout-manual-hours-store.js.txt?raw";
 import summary from "./legacy/tipout-summary-ui.js.txt?raw";
 import datePoolView from "./legacy/tipout-date-pool-view.js.txt?raw";
 import payrollBridge from "./legacy/tipout-payroll-bridge.js.txt?raw";
@@ -24,11 +25,11 @@ type Bag = Record<PropertyKey, unknown>;
 
 const programs: Record<TipsView, string> = { distribution, details, rules, "rule-editor": editor, "employee-reconciliation": employeeReconciliation };
 const dependencies: Record<TipsView, string[]> = {
-  distribution: [common, summary, ruleData, personalSales, datePoolView, allocation, attendance, payrollBridge],
-  details: [common, ruleData, personalSales, datePoolView, allocation, attendance],
+  distribution: [common, summary, ruleData, personalSales, datePoolView, allocation, attendance, manualHours, payrollBridge],
+  details: [common, ruleData, personalSales, datePoolView, allocation, attendance, manualHours],
   rules: [common, ruleData],
   "rule-editor": [common, ruleData, orderTipStatus, paymentMethods, personalSales, allocation],
-  "employee-reconciliation": [common, summary],
+  "employee-reconciliation": [common, attendance, summary],
 };
 
 function runtimeSource(view: TipsView): string {
@@ -38,6 +39,7 @@ function runtimeSource(view: TipsView): string {
     "var TipOutSummaryUi=window.TipOutSummaryUi,TipOutPaymentMethodApportion=window.TipOutPaymentMethodApportion;",
     "var TipOutDatePoolView=window.TipOutDatePoolView;",
     "var TipOutAttendance=window.TipOutAttendance,TipAllocation=window.TipAllocation;",
+    "var TipOutManualHours=window.TipOutManualHours;",
     "var TipOutPersonalSalesDeduct=window.TipOutPersonalSalesDeduct,TipOutOrderTipStatus=window.TipOutOrderTipStatus;",
     "var TipOutPayrollBridge=window.TipOutPayrollBridge;",
     programs[view], (view === "distribution" || view === "employee-reconciliation") ? exportCode : "",

@@ -27,12 +27,15 @@
               <option value="全部状态">全部状态</option>
               <option value="已打卡">已打卡</option>
               <option value="未打卡">未打卡</option>
+              <option value="打卡异常">打卡异常</option>
+              <option value="手动工时">手动工时</option>
+              <option value="混合工时">混合工时</option>
             </select>
           </label>
         </div>
         <div class="tipout-employee-detail-metrics" aria-label="员工对账金额概览">
           <div><span>班次</span><strong id="employeeDetailShifts">0</strong></div>
-          <div><span>总工时</span><strong id="employeeDetailHours">0 h</strong></div>
+          <div><span>手动工时记录</span><strong id="employeeDetailManualHours">0 个小费池 / 0 条记录</strong></div>
           <div><span>分配前</span><strong id="employeeDetailBefore">$0.00</strong></div>
           <div><span>扣除</span><strong id="employeeDetailDeducted" class="tip-amount--deduct">-$0.00</strong></div>
           <div><span>分配获得</span><strong id="employeeDetailReceived" class="tip-amount--receive">+$0.00</strong></div>
@@ -40,7 +43,7 @@
         </div>
         <div id="employeeDetailTable" class="tipout-table-wrap">
           <table class="data-table tipout-summary-table tipout-employee-detail-table">
-            <thead><tr><th>日期</th><th>考勤</th><th>班次</th><th>工时</th><th>分配前</th><th>扣除</th><th>分配获得</th><th>实际获得</th><th>分配状态</th></tr></thead>
+            <thead><tr><th>日期</th><th>考勤</th><th>班次</th><th>工时</th><th>上班时间</th><th>下班时间</th><th>分配前</th><th>扣除</th><th>分配获得</th><th>实际获得</th><th>分配状态</th></tr></thead>
             <tbody id="employeeDetailRows" aria-label="员工逐日对账明细"></tbody>
           </table>
         </div>

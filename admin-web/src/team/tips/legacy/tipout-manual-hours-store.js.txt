@@ -1,0 +1,38 @@
+(function(global) {
+  'use strict';
+  var STORAGE_KEY = 'tipout-manual-hours-v1';
+  function text(value, fallback) { return String(value || '').trim() || fallback; }
+  function read() {
+    try { var value = JSON.parse(global.localStorage.getItem(STORAGE_KEY) || '[]'); return Array.isArray(value) ? value : []; }
+    catch (error) { return []; }
+  }
+  function normalize(entry) {
+    entry = entry || {};
+    var hours = Number(entry.hours);
+    if (!entry.ruleId || !entry.dateKey || !entry.employeeName || !isFinite(hours) || hours < 0) return null;
+    return {
+      poolId: text(entry.poolId, String(entry.ruleId)), poolName: text(entry.poolName, '未命名小费池'),
+      ruleId: String(entry.ruleId), ruleName: text(entry.ruleName, '未命名规则'),
+      dateKey: String(entry.dateKey), employeeName: String(entry.employeeName), hours: Math.round(hours * 100) / 100
+    };
+  }
+  function identity(entry) { return entry.ruleId + '|' + entry.dateKey + '|' + entry.employeeName; }
+  function set(entry) {
+    var normalized = normalize(entry); if (!normalized) return false;
+    var rows = read().map(normalize).filter(Boolean), key = identity(normalized), replaced = false;
+    rows = rows.map(function(row) { if (identity(row) === key) { replaced = true; return normalized; } return row; });
+    if (!replaced) rows.push(normalized);
+    global.localStorage.setItem(STORAGE_KEY, JSON.stringify(rows)); return true;
+  }
+  function get(ruleId, dateKey, employeeName) {
+    var key = String(ruleId) + '|' + String(dateKey) + '|' + String(employeeName);
+    var found = read().map(normalize).filter(Boolean).find(function(row) { return identity(row) === key; });
+    return found ? Object.assign({}, found) : null;
+  }
+  function listForEmployee(dateKey, employeeName) {
+    return read().map(normalize).filter(function(row) { return row && row.dateKey === String(dateKey) && row.employeeName === String(employeeName); })
+      .sort(function(a, b) { return [a.poolName, a.ruleName, a.poolId, a.ruleId].join('|').localeCompare([b.poolName, b.ruleName, b.poolId, b.ruleId].join('|')); })
+      .map(function(row) { return Object.assign({}, row); });
+  }
+  global.TipOutManualHours = { set: set, get: get, listForEmployee: listForEmployee, normalize: normalize };
+})(typeof window !== 'undefined' ? window : this);

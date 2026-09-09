@@ -1,0 +1,13 @@
+import fs from 'node:fs'; import vm from 'node:vm'; import assert from 'node:assert/strict';
+const memory = {}; const context = { localStorage: { getItem: k => memory[k] ?? null, setItem: (k,v) => { memory[k] = v; } } }; context.window = context;
+vm.runInNewContext(fs.readFileSync('src/team/tips/legacy/tipout-manual-hours-store.js.txt','utf8'), context);
+const store = context.TipOutManualHours;
+assert.equal(store.set({poolId:'front',poolName:'前厅',ruleId:'r1',ruleName:'规则1',dateKey:'2026-01-02',employeeName:'王店长',hours:6}), true);
+assert.equal(store.set({poolId:'bar',poolName:'酒吧',ruleId:'r2',ruleName:'规则2',dateKey:'2026-01-02',employeeName:'王店长',hours:4}), true);
+store.set({poolId:'front',poolName:'前厅',ruleId:'r1',ruleName:'规则1',dateKey:'2026-01-02',employeeName:'王店长',hours:5});
+assert.deepEqual(Array.from(store.listForEmployee('2026-01-02','王店长'), x => x.hours).sort(), [4,5]);
+assert.equal(store.set({ruleId:'bad',dateKey:'2026-01-02',employeeName:'王店长',hours:-1}), false);
+assert.equal(store.set({ruleId:'zero',dateKey:'2026-01-02',employeeName:'王店长',hours:0}), true);
+assert.equal(store.get('zero','2026-01-02','王店长').poolName, '未命名小费池');
+assert.equal(store.get('zero','2026-01-02','王店长').ruleName, '未命名规则');
+console.log('Manual hours store verification passed.');
