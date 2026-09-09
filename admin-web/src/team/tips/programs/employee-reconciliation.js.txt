@@ -87,6 +87,33 @@ function detailNumber(value) { return Number(value) || 0; }
       cell.appendChild(status);
       return cell;
     }
+    function makeWorkHoursCell(lines) {
+      var cell = document.createElement('td');
+      var stack = document.createElement('span');
+      stack.className = 'tipout-work-hours-stack';
+      (lines || []).forEach(function(line) {
+        var row = document.createElement('span');
+        row.className = 'tipout-work-hours-line';
+        if (line.label) {
+          var label = document.createElement('span');
+          label.className = 'tipout-work-hours-label';
+          label.textContent = line.label;
+          row.appendChild(label);
+        }
+        var value = document.createElement('strong');
+        value.textContent = detailHours(line.hours) + ' h';
+        row.appendChild(value);
+        if (line.source === 'manual') {
+          var badge = document.createElement('span');
+          badge.className = 'tipout-hours-entry-badge';
+          badge.textContent = '录入';
+          row.appendChild(badge);
+        }
+        stack.appendChild(row);
+      });
+      cell.appendChild(stack);
+      return cell;
+    }
     function makeMoneyCell(value, kind) {
       var cell = document.createElement('td');
       var strong = document.createElement('strong');
@@ -141,7 +168,10 @@ function detailNumber(value) { return Number(value) || 0; }
             workHourSource: (attendance.manualEntries || []).length ? (attendance.punchStatus === '未打卡' ? '手动工时' : '混合工时') : '打卡工时',
             attendanceNote: attendance.hasPunchException ? '打卡异常' : '',
             shifts: attendance.shifts > 0 ? attendance.shifts + ' 个班次' : '—',
-            hours: (attendance.hourLines || []).map(function(line) { return line.label + ': ' + detailHours(line.hours) + ' h'; }).join('\n'),
+            hours: (attendance.hourLines || []).map(function(line) {
+              var label = line.label || (line.source === 'punch' ? '打卡工时' : '无工时记录');
+              return label + ': ' + detailHours(line.hours) + ' h';
+            }).join('\n'),
             clockIns: attendance.clockIns.join('\n') || '—',
             clockOuts: attendance.clockOuts.join('\n') || '—',
             manualHourDetails: (attendance.manualEntries || []).map(function(entry) { return entry.poolName + ' · ' + entry.ruleName + ': ' + detailHours(entry.hours) + ' h'; }).join('\n'),
@@ -294,7 +324,7 @@ function detailNumber(value) { return Number(value) || 0; }
         tr.appendChild(makeStatusCell('● ' + attendance.status, attendanceIssue ? 'is-pending' : 'is-complete'));
         if (attendance.hasPunchException && attendance.status === '混合工时') tr.cells[1].appendChild(makeStatusCell('打卡异常', 'is-pending').firstChild);
         tr.appendChild(makeDetailCell(attendance.shifts > 0 ? attendance.shifts + ' 个班次' : '—'));
-        tr.appendChild(makeDetailCell((attendance.hourLines || []).map(function(line) { return line.label + ' ' + detailHours(line.hours) + ' h'; }).join('\n'), '', 'tipout-punch-time-stack'));
+        tr.appendChild(makeWorkHoursCell(attendance.hourLines));
         tr.appendChild(makeDetailCell(attendance.clockIns.join('\n'), '', 'tipout-punch-time-stack'));
         tr.appendChild(makeDetailCell(attendance.clockOuts.join('\n'), '', 'tipout-punch-time-stack'));
         tr.appendChild(makeMoneyCell(row.before));

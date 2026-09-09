@@ -42,7 +42,12 @@ if (!attendance || typeof attendance.summarizeDayAttendance !== "function") {
   if (manual.status !== "手动工时" || manual.shifts !== 0 || manual.hourLines[0].hours !== 6) failures.push("manual-only status incorrect");
 
   const unclocked = attendance.summarizeDayAttendance({ clockStatus: "未打卡", hours: 0 });
-  if (unclocked.hourLines[0].label !== "手动录入工时" || unclocked.hourLines[0].hours !== 0) failures.push("unclocked manual-hours default missing");
+  if (unclocked.hourLines[0].label !== "" || unclocked.hourLines[0].hours !== 0 || unclocked.hourLines[0].source !== "empty") failures.push("unclocked no-entry presentation incorrect");
+
+  const zeroManual = attendance.summarizeDayAttendance({ clockStatus: "未打卡", hours: 0, manualHourEntries: [
+    { poolId: "front", poolName: "前厅小费池", ruleId: "zero", ruleName: "规则", hours: 0 }
+  ] });
+  if (zeroManual.hourLines[0].hours !== 0 || zeroManual.hourLines[0].source !== "manual") failures.push("zero-hour manual record lost its source");
 
   const mixedHours = attendance.summarizeDayAttendance({ punchSessions: [
     { clockIn: "09:00", clockOut: "17:00", durationHours: 8, status: "complete" }

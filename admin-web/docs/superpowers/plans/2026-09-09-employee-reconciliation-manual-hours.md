@@ -245,3 +245,38 @@ Expected: TypeScript and Vite build exit successfully. In the native route, veri
 git add src/team/tips/templates/employee-reconciliation.html src/team/tips/programs/employee-reconciliation.js.txt src/team/tips/tips-page.css scripts/verify-team-tips-employee-manual-hours-view.mjs scripts/verify-team-tips-native-views.mjs
 git commit -m "feat: show manual hours in employee reconciliation"
 ```
+
+### Task 5: Replace work-hour source prose with inline entry badges
+
+**Files:**
+- Modify: `src/team/tips/legacy/attendanceMock.js.txt`
+- Modify: `src/team/tips/programs/employee-reconciliation.js.txt`
+- Modify: `src/team/tips/tips-page.css`
+- Modify: `scripts/verify-team-tips-employee-punch-sessions.mjs`
+- Modify: `scripts/verify-team-tips-employee-manual-hours-view.mjs`
+
+**Interfaces:**
+- Consumes: `hourLines: Array<{ label, hours, source }>` where source is `punch`, `manual`, or `empty`.
+- Produces: numeric work-hour rows with an “录入” badge only for `source === 'manual'`.
+
+- [ ] **Step 1: Add failing tests for absent and zero-valued manual records**
+
+Assert that no-record unclocked rows produce `{ label: '', hours: 0, source: 'empty' }`, while a stored zero-hour record produces a manual line with `source: 'manual'`.
+
+- [ ] **Step 2: Run focused tests and confirm RED**
+
+Run: `node scripts/verify-team-tips-employee-punch-sessions.mjs`
+
+Expected: FAIL because hour lines do not expose a source discriminator.
+
+- [ ] **Step 3: Add source metadata and a structured work-hours cell renderer**
+
+Mark punch, manual, and empty lines explicitly. Render only the numeric value for punch and empty lines. Preserve pool labels for manual lines and append a compact “录入” badge based on source existence rather than `hours > 0`.
+
+- [ ] **Step 4: Run regressions and browser verification**
+
+Run the punch-session, manual-hours-view, and native-view scripts. Verify in the native employee reconciliation route that an unclocked row without a record shows `0 h` without a badge and that abnormal rows have only one status label.
+
+- [ ] **Step 5: Commit and merge**
+
+Commit only source, tests, and this plan, then merge the feature branch into local `main` without touching unrelated generated artifacts.
