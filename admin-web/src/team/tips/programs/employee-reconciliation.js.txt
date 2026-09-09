@@ -292,7 +292,7 @@ function detailNumber(value) { return Number(value) || 0; }
         if (hasIssue) tr.className = 'has-issue';
         tr.appendChild(makeDetailCell(detailDateLabel(row.dateKey), detailWeekday(row.dateKey), 'tipout-daily-date'));
         tr.appendChild(makeStatusCell('● ' + attendance.status, attendanceIssue ? 'is-pending' : 'is-complete'));
-        if (attendance.hasPunchException) tr.cells[1].appendChild(makeStatusCell('打卡异常', 'is-pending').firstChild);
+        if (attendance.hasPunchException && attendance.status === '混合工时') tr.cells[1].appendChild(makeStatusCell('打卡异常', 'is-pending').firstChild);
         tr.appendChild(makeDetailCell(attendance.shifts > 0 ? attendance.shifts + ' 个班次' : '—'));
         tr.appendChild(makeDetailCell((attendance.hourLines || []).map(function(line) { return line.label + ' ' + detailHours(line.hours) + ' h'; }).join('\n'), '', 'tipout-punch-time-stack'));
         tr.appendChild(makeDetailCell(attendance.clockIns.join('\n'), '', 'tipout-punch-time-stack'));

@@ -39,7 +39,7 @@
     summary.punchStatus = punchStatus;
     summary.hasPunchException = hasPunchData && punchStatus === '打卡异常';
     summary.manualEntries = manualEntries;
-    summary.hourLines = hourLines.length ? hourLines : [{ label: '打卡工时', hours: summary.hours }];
+    summary.hourLines = hourLines.length ? hourLines : [{ label: summary.status === '未打卡' ? '手动录入工时' : '打卡工时', hours: summary.hours }];
     return summary;
   }
 
