@@ -62,7 +62,7 @@ for (const token of [
 ]) assert.ok(detail.includes(token), `details demo seed contract missing: ${token}`);
 
 const distribution = fs.readFileSync('src/team/tips/programs/distribution.js.txt', 'utf8');
-assert.ok(distribution.includes('TipOutManualHours.listForEmployee(dateKey, emp.name)'), 'employee reconciliation must read the shared manual-hours store');
+assert.ok(distribution.includes("TipOutManualHours.listForEmployee(dateKey, { employeeId: String(emp.employeeId || '').replace(/^roster:/, ''), name: emp.name })"), 'employee reconciliation must read manual hours by stable employee id');
 assert.ok(!distribution.includes("dateKey === '2026-01-01'"), 'distribution must not hard-code the demo date');
 
 console.log('Default manual-hours demo data verification passed.');
