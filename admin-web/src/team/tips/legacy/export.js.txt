@@ -69,7 +69,8 @@ function collectEmployeeReconciliationExportData() {
         employeeId: aggregate.employeeId,
         name: aggregate.name,
         role: aggregate.role,
-        shiftHours: aggregate.shifts + ' 个班次 / ' + formatHoursDisplay(aggregate.hours) + ' h',
+        shifts: aggregate.shifts + ' 个班次',
+        hours: formatHoursDisplay(aggregate.hours) + ' h',
         before: aggregate.before,
         deducted: aggregate.deducted,
         received: aggregate.received,
@@ -145,12 +146,13 @@ function exportEmployeeReconciliationCSV(data) {
   lines.push(csvCell('Store') + ',' + csvCell(data.store));
   lines.push(csvCell('Date Range') + ',' + csvCell(data.dateStart + ' ~ ' + data.dateEnd));
   lines.push('');
-  lines.push(['Employee', 'Role', 'Shifts / Hours', 'Tips Before($)', 'Deducted($)', 'Received($)', 'Tips After($)', 'Status'].map(csvCell).join(','));
+  lines.push(['Employee', 'Role', 'Shifts', 'Hours', 'Tips Before($)', 'Deducted($)', 'Received($)', 'Tips After($)', 'Status'].map(csvCell).join(','));
   data.employees.forEach(function(employee) {
     lines.push([
       employee.name,
       employee.role,
-      employee.shiftHours,
+      employee.shifts,
+      employee.hours,
       Number(employee.before || 0).toFixed(2),
       Number(employee.deducted || 0).toFixed(2),
       Number(employee.received || 0).toFixed(2),
@@ -316,7 +318,8 @@ function employeeReconciliationRows(data) {
     return [
       employee.name,
       employee.role,
-      employee.shiftHours,
+      employee.shifts,
+      employee.hours,
       '$' + Number(employee.before || 0).toFixed(2),
       '-$' + Math.abs(Number(employee.deducted || 0)).toFixed(2),
       (Number(employee.received || 0) >= 0 ? '+$' : '-$') + Math.abs(Number(employee.received || 0)).toFixed(2),
@@ -337,7 +340,7 @@ function printEmployeeReconciliationAsPDF(data) {
   doc.write('<style>body{font-family:Arial,sans-serif;padding:28px;color:#222;font-size:12px}h1{font-size:20px;margin:0 0 8px}.meta{color:#666;margin:3px 0}table{width:100%;border-collapse:collapse;margin-top:16px}th{background:#111;color:#fff;padding:8px;text-align:left}td{padding:7px 8px;border-bottom:1px solid #eee}.r{text-align:right}@media print{@page{size:landscape;margin:10mm}}</style></head><body>');
   doc.write('<h1>Employee Reconciliation Report</h1><div class="meta">Store: ' + escH(data.store) + '</div>');
   doc.write('<div class="meta">Date Range: ' + escH(data.dateStart + ' ~ ' + data.dateEnd) + '</div>');
-  doc.write('<table><thead><tr>' + ['Employee','Role','Shifts / Hours','Tips Before','Deducted','Received','Tips After','Status'].map(function(label) { return '<th>' + label + '</th>'; }).join('') + '</tr></thead><tbody>');
+  doc.write('<table><thead><tr>' + ['Employee','Role','Shifts','Hours','Tips Before','Deducted','Received','Tips After','Status'].map(function(label) { return '<th>' + label + '</th>'; }).join('') + '</tr></thead><tbody>');
   rows.forEach(function(row) { doc.write('<tr>' + row.map(function(cell) { return '<td>' + escH(cell) + '</td>'; }).join('') + '</tr>'); });
   doc.write('</tbody></table></body></html>');
   doc.close();
@@ -355,7 +358,7 @@ function generateEmployeeReconciliationJsPDF(data) {
   doc.text('Date Range: ' + data.dateStart + ' ~ ' + data.dateEnd, 14, 30);
   doc.autoTable({
     startY: 36,
-    head: [['Employee', 'Role', 'Shifts / Hours', 'Tips Before', 'Deducted', 'Received', 'Tips After', 'Status']],
+    head: [['Employee', 'Role', 'Shifts', 'Hours', 'Tips Before', 'Deducted', 'Received', 'Tips After', 'Status']],
     body: employeeReconciliationRows(data),
     styles: { fontSize: 8, cellPadding: 2.5 },
     headStyles: { fillColor: [22, 119, 255], textColor: 255, fontStyle: 'bold' },

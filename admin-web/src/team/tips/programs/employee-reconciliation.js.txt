@@ -124,7 +124,8 @@ function detailNumber(value) { return Number(value) || 0; }
           return {
             date: row.dateKey,
             attendance: employeeDetailAttendanceStatus(row),
-            shift: detailNumber(row.hours) > 0 ? '1 个班次 / ' + detailHours(row.hours) + ' h' : '— / 0 h',
+            shifts: detailNumber(row.hours) > 0 ? '1 个班次' : '—',
+            hours: detailHours(row.hours) + ' h',
             before: detailMoney(row.before),
             deducted: '-' + detailMoney(row.deducted),
             received: '+' + detailMoney(row.received),
@@ -146,9 +147,9 @@ function detailNumber(value) { return Number(value) || 0; }
       lines.push(['日期范围', data.start + ' ~ ' + data.end].map(employeeDetailCsvCell).join(','));
       lines.push(['考勤筛选', data.attendance].map(employeeDetailCsvCell).join(','));
       lines.push('');
-      lines.push(['日期', '考勤状态', '班次 / 工时', '分配前', '扣除', '分配获得', '实际获得', '分配状态'].map(employeeDetailCsvCell).join(','));
+      lines.push(['日期', '考勤状态', '班次', '工时', '分配前', '扣除', '分配获得', '实际获得', '分配状态'].map(employeeDetailCsvCell).join(','));
       data.rows.forEach(function(row) {
-        lines.push([row.date, row.attendance, row.shift, row.before, row.deducted, row.received, row.after, row.allocation].map(employeeDetailCsvCell).join(','));
+        lines.push([row.date, row.attendance, row.shifts, row.hours, row.before, row.deducted, row.received, row.after, row.allocation].map(employeeDetailCsvCell).join(','));
       });
       return '\uFEFF' + lines.join('\r\n');
     }
@@ -167,9 +168,9 @@ function detailNumber(value) { return Number(value) || 0; }
     }
 
     function buildEmployeeDetailPrintHtml(data) {
-      var headings = ['日期', '考勤状态', '班次 / 工时', '分配前', '扣除', '分配获得', '实际获得', '分配状态'];
+      var headings = ['日期', '考勤状态', '班次', '工时', '分配前', '扣除', '分配获得', '实际获得', '分配状态'];
       var body = data.rows.map(function(row) {
-        return '<tr>' + [row.date, row.attendance, row.shift, row.before, row.deducted, row.received, row.after, row.allocation]
+        return '<tr>' + [row.date, row.attendance, row.shifts, row.hours, row.before, row.deducted, row.received, row.after, row.allocation]
           .map(function(value) { return '<td>' + employeeDetailEscapeHtml(value) + '</td>'; }).join('') + '</tr>';
       }).join('');
       return '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>' +
@@ -272,7 +273,8 @@ function detailNumber(value) { return Number(value) || 0; }
         if (hasIssue) tr.className = 'has-issue';
         tr.appendChild(makeDetailCell(detailDateLabel(row.dateKey), detailWeekday(row.dateKey), 'tipout-daily-date'));
         tr.appendChild(makeStatusCell('● ' + attendanceStatus, attendanceMissing ? 'is-pending' : 'is-complete'));
-        tr.appendChild(makeDetailCell(detailNumber(row.hours) > 0 ? '1 个班次' : '—', detailHours(row.hours) + ' h', 'tipout-shift-summary'));
+        tr.appendChild(makeDetailCell(detailNumber(row.hours) > 0 ? '1 个班次' : '—'));
+        tr.appendChild(makeDetailCell(detailHours(row.hours) + ' h'));
         tr.appendChild(makeMoneyCell(row.before));
         tr.appendChild(makeMoneyCell(row.deducted, 'deduct'));
         tr.appendChild(makeMoneyCell(row.received, 'receive'));
