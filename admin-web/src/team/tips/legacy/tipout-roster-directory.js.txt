@@ -1,0 +1,90 @@
+(function(global) {
+  'use strict';
+  var ROSTER_KEY = 'tipout-employees-roster-v1';
+  var ROLE_OPTIONS_KEY = 'tipout-employee-role-options-v1';
+  var HIDDEN_ROLES_KEY = 'tipout-employee-role-hidden-system-v1';
+  var SYSTEM_ROLES = ['Assistant Manager','Bartender','Busser','Cashier','Driver','Floor','Host','Kitchen','Manager','Online','Runner','Server','Shift Lead','Trainee','Waiter','Chef'];
+
+  function text(value) { return String(value == null ? '' : value).trim(); }
+  function readArray(key) {
+    try { var value = JSON.parse(global.localStorage.getItem(key) || '[]'); return Array.isArray(value) ? value : []; }
+    catch (error) { return []; }
+  }
+  function canonicalRosterStoreName(value) {
+    var store = text(value), key = store.toLowerCase();
+    var aliases = {
+      'golden dragon chinese kitchen - dallas, tx 75231': '上海陆家嘴店',
+      'sakura sushi & ramen house - dallas, tx 75247': '广州天河店',
+      '张记火锅': '上海陆家嘴店'
+    };
+    return aliases[key] || store;
+  }
+  function stableHash(value) {
+    var hash = 2166136261;
+    for (var i = 0; i < value.length; i++) { hash ^= value.charCodeAt(i); hash = Math.imul(hash, 16777619); }
+    return (hash >>> 0).toString(36);
+  }
+  function normalizeRoster() {
+    var source = readArray(ROSTER_KEY), used = Object.create(null), occurrences = Object.create(null), changed = false;
+    var rows = source.map(function(item) { return Object.assign({}, item || {}); });
+    rows.forEach(function(row) {
+      var id = text(row.id);
+      if (id && !used[id]) { used[id] = true; return; }
+      var signature = [canonicalRosterStoreName(row.store).toLowerCase(), text(row.role).toLowerCase(), text(row.name).toLowerCase()].join('|');
+      var ordinal = (occurrences[signature] || 0) + 1, candidate;
+      do { candidate = 'roster-legacy-' + stableHash(signature) + '-' + ordinal; ordinal += 1; } while (used[candidate]);
+      occurrences[signature] = ordinal - 1; row.id = candidate; used[candidate] = true; changed = true;
+    });
+    if (changed) {
+      global.localStorage.setItem(ROSTER_KEY, JSON.stringify(rows));
+      try { global.dispatchEvent(new CustomEvent('tipout-roster-updated')); } catch (error) {}
+    }
+    return rows;
+  }
+  function isActive(row) {
+    var status = text(row && row.status).toLowerCase();
+    return !!row && row.active !== false && status !== 'inactive' && status !== 'disabled';
+  }
+  function listRoles() {
+    var hidden = readArray(HIDDEN_ROLES_KEY).map(text);
+    var roles = SYSTEM_ROLES.filter(function(role) { return hidden.indexOf(role) < 0; }).concat(readArray(ROLE_OPTIONS_KEY).map(text));
+    normalizeRoster().forEach(function(row) { if (isActive(row) && text(row.role)) roles.push(text(row.role)); });
+    var seen = Object.create(null);
+    return roles.filter(function(role) { var key = role.toLowerCase(); if (!role || seen[key]) return false; seen[key] = true; return true; });
+  }
+  function listEmployees(storeName) {
+    var target = canonicalRosterStoreName(storeName).toLowerCase();
+    return normalizeRoster().filter(function(row) {
+      return isActive(row) && (!target || canonicalRosterStoreName(row.store).toLowerCase() === target);
+    }).map(function(row) { return { id: text(row.id), name: text(row.name), role: text(row.role), store: canonicalRosterStoreName(row.store), active: true }; });
+  }
+  function getEmployeeById(id) {
+    var key = text(id); return normalizeRoster().map(function(row) { return { id: text(row.id), name: text(row.name), role: text(row.role), store: canonicalRosterStoreName(row.store), active: isActive(row) }; }).find(function(row) { return row.id === key; }) || null;
+  }
+  function resolveReceiverEmployees(rule, storeName) {
+    var availableRoles = listRoles(), employees = listEmployees(storeName || (rule && rule.store)), resolved = [], issues = [], seen = Object.create(null);
+    (rule && rule.receivers || []).forEach(function(receiver, receiverIndex) {
+      var roles = Array.isArray(receiver.roles) ? receiver.roles.map(text).filter(Boolean) : [];
+      roles.forEach(function(role) { if (availableRoles.indexOf(role) < 0) issues.push({ code: 'missing-role', receiverIndex: receiverIndex, value: role }); });
+      var refs = Array.isArray(receiver.employeeRefs) ? receiver.employeeRefs : [];
+      var candidates = refs.length ? refs.map(function(ref) {
+        var found = employees.find(function(emp) { return emp.id === text(ref && ref.employeeId); });
+        if (!found || (roles.length && roles.indexOf(found.role) < 0)) issues.push({ code: 'missing-employee', receiverIndex: receiverIndex, value: text(ref && (ref.name || ref.employeeId)) });
+        return found;
+      }).filter(Boolean) : employees.filter(function(emp) { return roles.indexOf(emp.role) >= 0; });
+      if (!candidates.length) issues.push({ code: 'empty-receiver', receiverIndex: receiverIndex, value: roles.join('/') });
+      candidates.forEach(function(emp) { if (!seen[emp.id]) { seen[emp.id] = true; resolved.push(emp); } });
+    });
+    return { employees: resolved, issues: issues };
+  }
+  function validateRuleReferences(rule, storeName) { return resolveReceiverEmployees(rule, storeName || (rule && rule.store)).issues; }
+
+  global.TipOutRosterDirectory = {
+    canonicalRosterStoreName: canonicalRosterStoreName,
+    listRoles: listRoles,
+    listEmployees: listEmployees,
+    getEmployeeById: getEmployeeById,
+    resolveReceiverEmployees: resolveReceiverEmployees,
+    validateRuleReferences: validateRuleReferences
+  };
+})(typeof window !== 'undefined' ? window : this);

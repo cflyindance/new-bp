@@ -13,10 +13,14 @@
     return {
       poolId: text(entry.poolId, String(entry.ruleId)), poolName: text(entry.poolName, '未命名小费池'),
       ruleId: String(entry.ruleId), ruleName: text(entry.ruleName, '未命名规则'),
-      dateKey: String(entry.dateKey), employeeName: String(entry.employeeName), hours: Math.round(hours * 100) / 100
+      dateKey: String(entry.dateKey), employeeId: text(entry.employeeId, ''), employeeName: String(entry.employeeName), hours: Math.round(hours * 100) / 100
     };
   }
-  function identity(entry) { return entry.ruleId + '|' + entry.dateKey + '|' + entry.employeeName; }
+  function identity(entry) { return entry.ruleId + '|' + entry.dateKey + '|' + (entry.employeeId ? 'id:' + entry.employeeId : 'name:' + entry.employeeName); }
+  function employeeRef(value) {
+    if (value && typeof value === 'object') return { employeeId: text(value.employeeId || value.id, ''), name: text(value.name || value.employeeName, ''), legacyNames: Array.isArray(value.legacyNames) ? value.legacyNames.map(String) : [] };
+    return { employeeId: '', name: String(value || ''), legacyNames: [] };
+  }
   function set(entry) {
     var normalized = normalize(entry); if (!normalized) return false;
     var rows = read().map(normalize).filter(Boolean), key = identity(normalized), replaced = false;
@@ -24,20 +28,26 @@
     if (!replaced) rows.push(normalized);
     global.localStorage.setItem(STORAGE_KEY, JSON.stringify(rows)); return true;
   }
-  function get(ruleId, dateKey, employeeName) {
-    var key = String(ruleId) + '|' + String(dateKey) + '|' + String(employeeName);
-    var found = read().map(normalize).filter(Boolean).find(function(row) { return identity(row) === key; });
+  function get(ruleId, dateKey, employeeValue) {
+    var ref = employeeRef(employeeValue), names = [ref.name].concat(ref.legacyNames).filter(Boolean);
+    var found = read().map(normalize).filter(Boolean).find(function(row) {
+      return row.ruleId === String(ruleId) && row.dateKey === String(dateKey) &&
+        (ref.employeeId ? row.employeeId === ref.employeeId : names.indexOf(row.employeeName) >= 0);
+    });
     return found ? Object.assign({}, found) : null;
   }
   function seed(entry) {
     var normalized = normalize(entry); if (!normalized) return false;
     var rows = read().map(normalize).filter(Boolean), key = identity(normalized);
-    if (rows.some(function(row) { return identity(row) === key; })) return false;
+    if (rows.some(function(row) {
+      return identity(row) === key || (row.ruleId === normalized.ruleId && row.dateKey === normalized.dateKey && row.employeeName === normalized.employeeName);
+    })) return false;
     rows.push(normalized);
     global.localStorage.setItem(STORAGE_KEY, JSON.stringify(rows)); return true;
   }
-  function listForEmployee(dateKey, employeeName) {
-    return read().map(normalize).filter(function(row) { return row && row.dateKey === String(dateKey) && row.employeeName === String(employeeName); })
+  function listForEmployee(dateKey, employeeValue) {
+    var ref = employeeRef(employeeValue), names = [ref.name].concat(ref.legacyNames).filter(Boolean);
+    return read().map(normalize).filter(function(row) { return row && row.dateKey === String(dateKey) && (ref.employeeId ? row.employeeId === ref.employeeId || (!row.employeeId && names.indexOf(row.employeeName) >= 0) : names.indexOf(row.employeeName) >= 0); })
       .sort(function(a, b) { return [a.poolName, a.ruleName, a.poolId, a.ruleId].join('|').localeCompare([b.poolName, b.ruleName, b.poolId, b.ruleId].join('|')); })
       .map(function(row) { return Object.assign({}, row); });
   }

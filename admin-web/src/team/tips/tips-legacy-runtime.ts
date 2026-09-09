@@ -5,6 +5,7 @@ import personalSales from "./legacy/personalSalesDeduct.js.txt?raw";
 import allocation from "./legacy/tipAllocation.js.txt?raw";
 import attendance from "./legacy/attendanceMock.js.txt?raw";
 import manualHours from "./legacy/tipout-manual-hours-store.js.txt?raw";
+import rosterDirectory from "./legacy/tipout-roster-directory.js.txt?raw";
 import summary from "./legacy/tipout-summary-ui.js.txt?raw";
 import datePoolView from "./legacy/tipout-date-pool-view.js.txt?raw";
 import payrollBridge from "./legacy/tipout-payroll-bridge.js.txt?raw";
@@ -25,11 +26,11 @@ type Bag = Record<PropertyKey, unknown>;
 
 const programs: Record<TipsView, string> = { distribution, details, rules, "rule-editor": editor, "employee-reconciliation": employeeReconciliation };
 const dependencies: Record<TipsView, string[]> = {
-  distribution: [common, summary, ruleData, personalSales, datePoolView, allocation, attendance, manualHours, payrollBridge],
-  details: [common, ruleData, personalSales, datePoolView, allocation, attendance, manualHours],
-  rules: [common, ruleData],
-  "rule-editor": [common, ruleData, orderTipStatus, paymentMethods, personalSales, allocation],
-  "employee-reconciliation": [common, attendance, summary],
+  distribution: [common, summary, ruleData, personalSales, datePoolView, allocation, attendance, manualHours, rosterDirectory, payrollBridge],
+  details: [common, ruleData, personalSales, datePoolView, allocation, attendance, manualHours, rosterDirectory],
+  rules: [common, ruleData, rosterDirectory],
+  "rule-editor": [common, ruleData, rosterDirectory, orderTipStatus, paymentMethods, personalSales, allocation],
+  "employee-reconciliation": [common, attendance, summary, rosterDirectory],
 };
 
 function runtimeSource(view: TipsView): string {
@@ -40,6 +41,7 @@ function runtimeSource(view: TipsView): string {
     "var TipOutDatePoolView=window.TipOutDatePoolView;",
     "var TipOutAttendance=window.TipOutAttendance,TipAllocation=window.TipAllocation;",
     "var TipOutManualHours=window.TipOutManualHours;",
+    "var TipOutRosterDirectory=window.TipOutRosterDirectory;",
     "var TipOutPersonalSalesDeduct=window.TipOutPersonalSalesDeduct,TipOutOrderTipStatus=window.TipOutOrderTipStatus;",
     "var TipOutPayrollBridge=window.TipOutPayrollBridge;",
     programs[view], (view === "distribution" || view === "employee-reconciliation") ? exportCode : "",
