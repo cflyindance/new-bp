@@ -31,15 +31,15 @@
       return entry && entry.ruleId && isFinite(Number(entry.hours)) && Number(entry.hours) >= 0;
     }).map(function(entry) { return Object.assign({}, entry, { hours: roundHours(entry.hours) }); }) : [];
     var punchStatus = summary.status;
-    var hourLines = hasPunchData ? [{ label: '打卡工时', hours: summary.hours }] : [];
+    var hourLines = hasPunchData ? [{ label: '', hours: summary.hours, source: 'punch' }] : [];
     manualEntries.forEach(function(entry) {
-      hourLines.push({ label: (entry.poolName || '未命名小费池') + ' · ' + (entry.ruleName || '未命名规则'), hours: entry.hours });
+      hourLines.push({ label: (entry.poolName || '未命名小费池') + ' · ' + (entry.ruleName || '未命名规则'), hours: entry.hours, source: 'manual' });
     });
     if (manualEntries.length) summary.status = hasPunchData ? '混合工时' : '手动工时';
     summary.punchStatus = punchStatus;
     summary.hasPunchException = hasPunchData && punchStatus === '打卡异常';
     summary.manualEntries = manualEntries;
-    summary.hourLines = hourLines.length ? hourLines : [{ label: summary.status === '未打卡' ? '手动录入工时' : '打卡工时', hours: summary.hours }];
+    summary.hourLines = hourLines.length ? hourLines : [{ label: '', hours: summary.hours, source: 'empty' }];
     return summary;
   }
 
