@@ -120,6 +120,12 @@ const PRESET_EMPLOYEE_TEMPLATES: readonly PresetEmployeeTemplate[] = [
   },
 ];
 
+const GOLDEN_TIP_RECEIVER_EMPLOYEES: readonly (PresetEmployeeTemplate & { id: string })[] = [
+  { id: "roster-tipout-golden-busser-carlos-lopez", name: "Carlos Lopez", role: "Busser", tipType: "receive", baseTip: 0, tipRate: 0, department: "Floor", rate: 14, otRate: 21, ot2Rate: 28 },
+  { id: "roster-tipout-golden-runner-daniel-ortiz", name: "Daniel Ortiz", role: "Runner", tipType: "receive", baseTip: 0, tipRate: 0, department: "Floor", rate: 14, otRate: 21, ot2Rate: 28 },
+  { id: "roster-tipout-golden-host-rachel-scott", name: "Rachel Scott", role: "Host", tipType: "receive", baseTip: 0, tipRate: 0, department: "Front", rate: 15, otRate: 22.5, ot2Rate: 30 },
+];
+
 interface RosterEmployeeRow {
   id?: string;
   name?: string;
@@ -235,32 +241,54 @@ export function ensurePresetEmployeesPerStore(storeNames: string[]): number {
 
   for (const store of stores) {
     const countForStore = (): number => list.filter((e) => employeeMatchesStore(e, store)).length;
-    if (countForStore() >= PRESET_EMPLOYEES_PER_STORE) continue;
+    if (countForStore() < PRESET_EMPLOYEES_PER_STORE) {
+      for (let i = 1; i <= PRESET_EMPLOYEES_PER_STORE; i++) {
+        if (countForStore() >= PRESET_EMPLOYEES_PER_STORE) break;
+        const id = presetEmployeeId(store, i);
+        if (idSet.has(id)) continue;
+        const tpl = PRESET_EMPLOYEE_TEMPLATES[i - 1]!;
+        list.push({
+          id,
+          name: tpl.name,
+          store,
+          role: tpl.role,
+          tipType: tpl.tipType,
+          baseTip: tpl.baseTip,
+          tipRate: tpl.tipRate,
+          department: tpl.department,
+          adpFile: String(800 + i),
+          rate: tpl.rate,
+          otRate: tpl.otRate,
+          ot2Rate: tpl.ot2Rate,
+          requireClockIn: true,
+          requireBatchClose: false,
+          requireCashTipReport: false,
+        });
+        idSet.add(id);
+        added += 1;
+      }
+    }
 
-    for (let i = 1; i <= PRESET_EMPLOYEES_PER_STORE; i++) {
-      if (countForStore() >= PRESET_EMPLOYEES_PER_STORE) break;
-      const id = presetEmployeeId(store, i);
-      if (idSet.has(id)) continue;
-      const tpl = PRESET_EMPLOYEE_TEMPLATES[i - 1]!;
-      list.push({
-        id,
-        name: tpl.name,
-        store,
-        role: tpl.role,
-        tipType: tpl.tipType,
-        baseTip: tpl.baseTip,
-        tipRate: tpl.tipRate,
-        department: tpl.department,
-        adpFile: String(800 + i),
-        rate: tpl.rate,
-        otRate: tpl.otRate,
-        ot2Rate: tpl.ot2Rate,
-        requireClockIn: true,
-        requireBatchClose: false,
-        requireCashTipReport: false,
-      });
-      idSet.add(id);
-      added += 1;
+    if (canonicalRosterStoreDisplayName(store) === "上海陆家嘴店") {
+      for (const tpl of GOLDEN_TIP_RECEIVER_EMPLOYEES) {
+        const duplicate = list.some((employee) =>
+          String(employee.id || "") === tpl.id ||
+          (employeeMatchesStore(employee, store) &&
+            String(employee.name || "").trim().toLowerCase() === tpl.name.toLowerCase() &&
+            String(employee.role || "").trim().toLowerCase() === tpl.role.toLowerCase()),
+        );
+        if (duplicate) continue;
+        list.push({
+          ...tpl,
+          store,
+          adpFile: "",
+          requireClockIn: false,
+          requireBatchClose: false,
+          requireCashTipReport: false,
+        });
+        idSet.add(tpl.id);
+        added += 1;
+      }
     }
   }
 

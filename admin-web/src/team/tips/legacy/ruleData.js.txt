@@ -61,6 +61,20 @@
       receivers: [{ roles: ['Busser'], pct: 100 }],
       distribution: 'average',
       clockin: 'clock'
+    },
+    {
+      id: 5,
+      ruleName: 'Tip Pool — 多角色分配（不打卡按工时）',
+      store: 'Golden Dragon Chinese Kitchen - Dallas, TX 75231',
+      poolRules: [{ type: 'tips', pct: 10 }],
+      deductRoles: ['Server', 'Bartender', 'Cashier'],
+      receivers: [
+        { roles: ['Busser'], pct: 50 },
+        { roles: ['Runner'], pct: 30 },
+        { roles: ['Host'], pct: 20 }
+      ],
+      distribution: 'hours',
+      clockin: 'noclock'
     }
   ];
 
@@ -99,12 +113,23 @@
     return base + (rule.clockin === 'noclock' ? '（按照实际录入工时）' : '（按照实际打卡工时）');
   }
 
+  function ensureDefaultDemoRules(rules) {
+    var list = Array.isArray(rules) ? rules : [];
+    if (list.some(function(rule) { return String(rule && rule.id) === '5'; })) return list;
+    var demoRule = defaultRules.find(function(rule) { return rule.id === 5; });
+    if (!demoRule) return list;
+    var next = list.slice();
+    next.push(JSON.parse(JSON.stringify(demoRule)));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    return next;
+  }
+
   function getRules() {
     try {
       var raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         var list = JSON.parse(raw);
-        return Array.isArray(list) ? list : [];
+        return ensureDefaultDemoRules(Array.isArray(list) ? list : []);
       }
       var seeded = JSON.parse(JSON.stringify(defaultRules));
       localStorage.setItem(STORAGE_KEY, JSON.stringify(seeded));

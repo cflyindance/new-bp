@@ -15,24 +15,124 @@
     return Math.abs(h);
   }
 
-  /**
-   * @param {string} empName
-   * @param {string} dateKey YYYY-MM-DD
-   * @returns {{ hours: number, clockStatus: '已打卡' | '未打卡' }}
-   */
-  function getDayStatus(empName, dateKey) {
-    var seed = hashSeed(empName, dateKey);
-    // 约 1/5 天未打卡
-    if (seed % 5 === 0) {
-      return { hours: 0, clockStatus: '未打卡' };
+  function roundHours(value) {
+    return Math.round((Number(value) || 0) * 100) / 100;
+  }
+
+  function formatTime(totalMinutes) {
+    var minutes = ((Math.round(totalMinutes) % 1440) + 1440) % 1440;
+    var hour = Math.floor(minutes / 60);
+    var minute = minutes % 60;
+    return String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0');
+  }
+
+  function applyManualHours(summary, row, hasPunchData) {
+    var manualEntries = Array.isArray(row.manualHourEntries) ? row.manualHourEntries.filter(function(entry) {
+      return entry && entry.ruleId && isFinite(Number(entry.hours)) && Number(entry.hours) >= 0;
+    }).map(function(entry) { return Object.assign({}, entry, { hours: roundHours(entry.hours) }); }) : [];
+    var punchStatus = summary.status;
+    var hourLines = hasPunchData ? [{ label: '', hours: summary.hours, source: 'punch' }] : [];
+    manualEntries.forEach(function(entry) {
+      hourLines.push({ label: (entry.poolName || '未命名小费池') + ' · ' + (entry.ruleName || '未命名规则'), hours: entry.hours, source: 'manual' });
+    });
+    if (manualEntries.length) summary.status = hasPunchData ? '混合工时' : '手动工时';
+    summary.punchStatus = punchStatus;
+    summary.hasPunchException = hasPunchData && punchStatus === '打卡异常';
+    summary.manualEntries = manualEntries;
+    summary.hourLines = hourLines.length ? hourLines : [{ label: '', hours: summary.hours, source: 'empty' }];
+    return summary;
+  }
+
+  function summarizeDayAttendance(row) {
+    row = row || {};
+    if (!Array.isArray(row.punchSessions)) {
+      var legacyHours = roundHours(row.hours);
+      if (row.clockStatus === '已打卡' && legacyHours > 0) {
+        return applyManualHours({ status: '已打卡', shifts: 1, hours: legacyHours, clockIns: ['—'], clockOuts: ['—'] }, row, true);
+      }
+      if (row.clockStatus === '已打卡') {
+        return applyManualHours({ status: '打卡异常', shifts: 0, hours: 0, clockIns: ['—'], clockOuts: ['—'] }, row, true);
+      }
+      return applyManualHours({ status: '未打卡', shifts: 0, hours: 0, clockIns: ['—'], clockOuts: ['—'] }, row, false);
     }
+
+    if (row.punchSessions.length === 0) {
+      return applyManualHours({ status: '未打卡', shifts: 0, hours: 0, clockIns: ['—'], clockOuts: ['—'] }, row, false);
+    }
+
+    var sessions = row.punchSessions.map(function(session, index) {
+      return { session: session || {}, index: index };
+    }).sort(function(a, b) {
+      var aTime = typeof a.session.clockIn === 'string' && a.session.clockIn ? a.session.clockIn : '99:99';
+      var bTime = typeof b.session.clockIn === 'string' && b.session.clockIn ? b.session.clockIn : '99:99';
+      return aTime === bTime ? a.index - b.index : (aTime < bTime ? -1 : 1);
+    });
+    var shifts = 0;
+    var hours = 0;
+    var hasInvalid = false;
+    var clockIns = [];
+    var clockOuts = [];
+    sessions.forEach(function(item) {
+      var session = item.session;
+      var duration = Number(session.durationHours);
+      var complete = session.status === 'complete' &&
+        typeof session.clockIn === 'string' && !!session.clockIn &&
+        typeof session.clockOut === 'string' && !!session.clockOut &&
+        isFinite(duration) && duration >= 0;
+      clockIns.push(typeof session.clockIn === 'string' && session.clockIn ? session.clockIn : '—');
+      clockOuts.push(typeof session.clockOut === 'string' && session.clockOut ? session.clockOut : '—');
+      if (complete) {
+        shifts += 1;
+        hours += duration;
+      } else hasInvalid = true;
+    });
+    return applyManualHours({
+      status: hasInvalid ? '打卡异常' : '已打卡',
+      shifts: shifts,
+      hours: roundHours(hours),
+      clockIns: clockIns,
+      clockOuts: clockOuts
+    }, row, true);
+  }
+
+  function completeSession(clockInMinutes, durationHours) {
     return {
-      hours: HOURS_OPTIONS[seed % HOURS_OPTIONS.length],
-      clockStatus: '已打卡'
+      clockIn: formatTime(clockInMinutes),
+      clockOut: formatTime(clockInMinutes + durationHours * 60),
+      durationHours: roundHours(durationHours),
+      status: 'complete'
     };
   }
 
+  /**
+   * @param {string} empName
+   * @param {string} dateKey YYYY-MM-DD
+   * @returns {{ hours: number, clockStatus: '已打卡' | '未打卡' | '打卡异常', punchSessions: Array }}
+   */
+  function getDayStatus(empName, dateKey) {
+    var seed = hashSeed(empName, dateKey);
+    if (seed % 5 === 0) {
+      return { hours: 0, clockStatus: '未打卡', punchSessions: [] };
+    }
+    var totalHours = HOURS_OPTIONS[seed % HOURS_OPTIONS.length];
+    var start = 8 * 60 + seed % 45;
+    var sessions;
+    if (seed % 7 === 2) {
+      sessions = [
+        completeSession(start, 4),
+        { clockIn: formatTime(17 * 60 + seed % 25), clockOut: null, durationHours: null, status: 'missing-clock-out' }
+      ];
+    } else if (seed % 3 === 1) {
+      sessions = [completeSession(start, 4), completeSession(17 * 60 + seed % 25, totalHours - 4)];
+    } else {
+      sessions = [completeSession(start, totalHours)];
+    }
+    var summary = summarizeDayAttendance({ punchSessions: sessions });
+    return { hours: summary.hours, clockStatus: summary.status, punchSessions: sessions };
+  }
+
   global.TipOutAttendance = {
-    getDayStatus: getDayStatus
+    getDayStatus: getDayStatus,
+    summarizeDayAttendance: summarizeDayAttendance
   };
 })(typeof window !== 'undefined' ? window : this);

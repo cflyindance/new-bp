@@ -327,6 +327,12 @@ var ALLOC_KEY = 'tipout_allocated';
         : { hours: 0, clockStatus: '未打卡' };
       row.hours = att.hours;
       row.clockStatus = att.clockStatus;
+      row.punchSessions = Array.isArray(att.punchSessions)
+        ? att.punchSessions.map(function(session) { return Object.assign({}, session); })
+        : undefined;
+      row.manualHourEntries = window.TipOutManualHours
+        ? TipOutManualHours.listForEmployee(dateKey, { employeeId: String(emp.employeeId || '').replace(/^roster:/, ''), name: emp.name })
+        : [];
       return row;
     }
 
@@ -709,8 +715,8 @@ var ALLOC_KEY = 'tipout_allocated';
           '<td><span class="tipout-employee-identity"><span class="tipout-employee-avatar" aria-hidden="true">' +
           escapeSummaryHtml(employeeInitials(aggregate.name)) + '</span><strong>' + name + '</strong></span></td>' +
           '<td>' + escapeSummaryHtml(aggregate.role) + '</td>' +
-          '<td><span class="tipout-shift-summary"><strong>' + aggregate.shifts + ' 个班次</strong><small>' +
-          formatHoursDisplay(aggregate.hours) + ' h</small></span></td>' +
+          '<td><strong>' + aggregate.shifts + ' 个班次</strong></td>' +
+          '<td><strong>' + formatHoursDisplay(aggregate.hours) + ' h</strong></td>' +
           '<td>' + money(aggregate.before) + '</td>' +
           '<td><strong class="tip-amount--deduct">-' + money(Math.abs(aggregate.deducted)) + '</strong></td>' +
           '<td><strong class="tip-amount--receive">' + moneySign(aggregate.received) + '</strong></td>' +
@@ -811,6 +817,16 @@ var ALLOC_KEY = 'tipout_allocated';
     function openTipAllocationModal() {
       if (redirectToTipRulesWhenMissing()) return;
       var pageStore = document.getElementById('storeSelect');
+      var selectedStore = pageStore ? pageStore.value : '';
+      if (window.TipOutRosterDirectory && TipOutRosterDirectory.validateRuleReferences && window.ruleData) {
+        var invalidRule = ruleData.getRulesForStore(selectedStore).find(function(rule) {
+          return TipOutRosterDirectory.validateRuleReferences(rule, selectedStore).length > 0;
+        });
+        if (invalidRule) {
+          showNotification('规则「' + (invalidRule.ruleName || '未命名规则') + '」引用的角色或员工已失效，请先修正规则', 'error');
+          return;
+        }
+      }
       var modalStore = document.getElementById('allocationStore');
       modalStore.innerHTML = pageStore.innerHTML;
       modalStore.value = pageStore.value;
@@ -949,8 +965,26 @@ var ALLOC_KEY = 'tipout_allocated';
       var storeSelect = document.getElementById('storeSelect');
       var selectedStore = canonicalEmployeeStore(storeSelect ? storeSelect.value : '');
       if (!selectedStore) return employees.slice();
-      return employees.filter(function(employee) {
+      var storeEmployees = employees.filter(function(employee) {
         return !employee.store || canonicalEmployeeStore(employee.store) === selectedStore;
+      });
+      if (!window.TipOutRosterDirectory || !TipOutRosterDirectory.resolveReceiverEmployees || !window.ruleData) return storeEmployees;
+      var rawStore = storeSelect ? storeSelect.value : '';
+      var rules = ruleData.getRulesForStore ? ruleData.getRulesForStore(rawStore) : ruleData.getRules().filter(function(rule) {
+        return canonicalEmployeeStore(rule.store) === selectedStore;
+      });
+      var receiverIds = Object.create(null), receiverNames = Object.create(null);
+      rules.forEach(function(rule) {
+        var resolution = TipOutRosterDirectory.resolveReceiverEmployees(rule, rawStore);
+        if (resolution.issues.length) return;
+        resolution.employees.forEach(function(employee) {
+          receiverIds[employee.id] = true;
+          receiverNames[employee.name] = true;
+        });
+      });
+      return storeEmployees.filter(function(employee) {
+        var rawId = String(employee.employeeId || '').replace(/^roster:/, '');
+        return !!receiverIds[rawId] || !!receiverNames[employee.name];
       });
     }
 

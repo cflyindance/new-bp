@@ -2544,9 +2544,12 @@ select.form-control {
   box-shadow: 0 1px 5px rgba(0, 0, 0, 0.13);
 }
 
-.tipout-page-summary .tipout-employee-table { min-width: 1120px; }
-.tipout-page-summary .tipout-employee-table th:nth-child(n + 4):nth-child(-n + 7),
-.tipout-page-summary .tipout-employee-table td:nth-child(n + 4):nth-child(-n + 7) { text-align: right; }
+.tipout-page-summary .tipout-employee-table { min-width: 1200px; }
+.tipout-page-summary .tipout-employee-table th:nth-child(2) { width: 110px; }
+.tipout-page-summary .tipout-employee-table th:nth-child(3),
+.tipout-page-summary .tipout-employee-table th:nth-child(4) { width: 100px; }
+.tipout-page-summary .tipout-employee-table th:nth-child(n + 5):nth-child(-n + 8),
+.tipout-page-summary .tipout-employee-table td:nth-child(n + 5):nth-child(-n + 8) { text-align: right; }
 .tipout-page-summary .tipout-employee-table th:last-child,
 .tipout-page-summary .tipout-employee-table td:last-child { width: 52px; }
 
@@ -2846,11 +2849,21 @@ select.form-control {
 }
 
 .tipout-page-employee-reconciliation-detail .tipout-table-wrap { margin-top: 14px; }
-.tipout-page-employee-reconciliation-detail .tipout-employee-detail-table { min-width: 1040px; }
-.tipout-page-employee-reconciliation-detail .tipout-employee-detail-table th:nth-child(n + 4):nth-child(-n + 7),
-.tipout-page-employee-reconciliation-detail .tipout-employee-detail-table td:nth-child(n + 4):nth-child(-n + 7) { text-align: right; }
+.tipout-page-employee-reconciliation-detail .tipout-employee-detail-table { min-width: 1480px; }
+.tipout-page-employee-reconciliation-detail .tipout-employee-detail-table th:nth-child(3),
+.tipout-page-employee-reconciliation-detail .tipout-employee-detail-table th:nth-child(4) { width: 100px; }
+.tipout-page-employee-reconciliation-detail .tipout-employee-detail-table th:nth-child(5),
+.tipout-page-employee-reconciliation-detail .tipout-employee-detail-table th:nth-child(6) { width: 112px; }
+.tipout-page-employee-reconciliation-detail .tipout-employee-detail-table th:nth-child(n + 7):nth-child(-n + 10),
+.tipout-page-employee-reconciliation-detail .tipout-employee-detail-table td:nth-child(n + 7):nth-child(-n + 10) { text-align: right; }
 .tipout-page-employee-reconciliation-detail .tipout-employee-detail-table tr.has-issue { background: #ffffff; }
 .tipout-page-employee-reconciliation-detail .tipout-detail-cell-stack { display: flex; flex-direction: column; gap: 2px; }
+.tipout-page-employee-reconciliation-detail .tipout-punch-time-stack { display: block; white-space: pre-line; font-variant-numeric: tabular-nums; line-height: 1.55; }
+.tipout-page-employee-reconciliation-detail .tipout-work-hours-stack { display: flex; flex-direction: column; gap: 4px; }
+.tipout-page-employee-reconciliation-detail .tipout-work-hours-line { display: flex; align-items: center; gap: 6px; min-height: 20px; font-variant-numeric: tabular-nums; }
+.tipout-page-employee-reconciliation-detail .tipout-work-hours-label { color: var(--text-secondary); }
+.tipout-page-employee-reconciliation-detail .tipout-hours-entry-badge { display: inline-flex; align-items: center; height: 18px; padding: 0 6px; border-radius: 9px; background: #fff4df; color: #a76300; font-size: 11px; font-weight: 600; white-space: nowrap; }
+.tipout-page-employee-reconciliation-detail td .tipout-detail-status + .tipout-detail-status { margin-left: 6px; }
 .tipout-page-employee-reconciliation-detail .tipout-detail-cell-stack small,
 .tipout-page-employee-reconciliation-detail .tipout-shift-summary small { color: var(--text-tertiary); font-size: 11px; }
 .tipout-page-employee-reconciliation-detail .tipout-readonly-note {
@@ -2870,7 +2883,7 @@ select.form-control {
 @media (max-width: 768px) {
   .tipout-page-summary .tipout-view-switch { order: 0; width: 100%; margin-right: 0; margin-left: 0; }
   .tipout-page-summary .tipout-view-switch [role="tab"] { flex: 1 1 50%; }
-  .tipout-page-summary .tipout-employee-table { min-width: 1120px; }
+  .tipout-page-summary .tipout-employee-table { min-width: 1200px; }
   .tipout-page-employee-reconciliation-detail .tipout-page-heading--with-back { display: flex; align-items: stretch; flex-direction: column; }
   .tipout-page-employee-reconciliation-detail .tipout-page-heading--with-back > .btn { align-self: flex-start; }
   .tipout-page-employee-reconciliation-detail .tipout-detail-export { align-self: stretch; margin-left: 0; }

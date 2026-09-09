@@ -49,6 +49,9 @@ function initStoreFilter() {
       }
       rules.forEach(function(rule) {
         var desc = ruleData.buildRuleDescription(rule);
+        var referenceIssues = window.TipOutRosterDirectory && TipOutRosterDirectory.validateRuleReferences
+          ? TipOutRosterDirectory.validateRuleReferences(rule, rule.store)
+          : [];
         var record = document.createElement('tr');
         record.className = 'tipout-rule-record';
         record.setAttribute('data-rule-id', rule.id);
@@ -64,6 +67,7 @@ function initStoreFilter() {
           '<td>' +
             '<div class="tipout-rule-identity">' +
               '<strong class="tipout-rule-name">' + escapeHtml(rule.ruleName || '') + '</strong>' +
+              (referenceIssues.length ? '<span class="status-chip status-warning">引用失效</span>' : '') +
               '<span class="tipout-rule-store">' + escapeHtml(rule.store || '') + '</span>' +
             '</div>' +
           '</td>' +
@@ -73,7 +77,9 @@ function initStoreFilter() {
               '<small>' + poolKindDescription + '</small>' +
             '</div>' +
           '</td>' +
-          '<td><p class="tipout-rule-description">' + escapeHtml(desc) + '</p></td>' +
+          '<td><p class="tipout-rule-description">' + escapeHtml(desc) + '</p>' +
+            (referenceIssues.length ? '<small class="tipout-rule-store">角色或员工已失效，请编辑规则后再分配</small>' : '') +
+          '</td>' +
           '<td><div class="tipout-rule-record-actions">' +
             '<a class="btn btn-primary tipout-rule-edit" href="' + editUrl + '">编辑</a>' +
             '<div class="tipout-rule-actions">' +

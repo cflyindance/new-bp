@@ -18,7 +18,7 @@ var ALLOC_KEY = 'tipout_allocated';
       } catch (e) { return new Set(); }
     }
 
-    const roleEmployees = {
+    const fallbackRoleEmployees = {
       'Server':    ['Maria Garcia', 'Jason Chen', 'Emily Watson', 'Diego Ramirez'],
       'Bartender': ['Mike Johnson', 'Sarah Kim'],
       'Kitchen':   ['Tom Wilson', 'Amy Liu'],
@@ -28,7 +28,16 @@ var ALLOC_KEY = 'tipout_allocated';
       'Runner':    ['Daniel Ortiz', 'Chris Lee'],
       'Shift Lead':['Jessica Martinez']
     };
-    var detailManualHoursState = {};
+
+    function getRoleEmployeesForStore(storeName) {
+      if (!window.TipOutRosterDirectory || !TipOutRosterDirectory.listEmployees) return fallbackRoleEmployees;
+      var grouped = {};
+      TipOutRosterDirectory.listEmployees(storeName).forEach(function(employee) {
+        if (!grouped[employee.role]) grouped[employee.role] = [];
+        grouped[employee.role].push(employee.name);
+      });
+      return grouped;
+    }
 
     function formatRuleDistribution(rule) {
       if (window.ruleData && ruleData.formatDistributionName) return ruleData.formatDistributionName(rule || {});
@@ -50,7 +59,8 @@ var ALLOC_KEY = 'tipout_allocated';
 
     function getDetailEmployeeHours(rule, ruleId, dateKey, employeeName) {
       if (rule && rule.clockin === 'noclock') {
-        return parseHoursInput(detailManualHoursState[detailManualHoursKey(ruleId, dateKey, employeeName)]);
+        var saved = window.TipOutManualHours && TipOutManualHours.get(ruleId, dateKey, employeeName);
+        return parseHoursInput(saved && saved.hours);
       }
       var attendance = (window.TipOutAttendance && TipOutAttendance.getDayStatus)
         ? TipOutAttendance.getDayStatus(employeeName, dateKey)
@@ -60,6 +70,7 @@ var ALLOC_KEY = 'tipout_allocated';
 
     function buildDetailEmployees(rule, ruleId, dateKey) {
       var out = [];
+      var roleEmployees = getRoleEmployeesForStore(rule && rule.store);
       Object.keys(roleEmployees).forEach(function(role) {
         (roleEmployees[role] || []).forEach(function(name) {
           out.push({ name: name, role: role, hours: getDetailEmployeeHours(rule, ruleId, dateKey, name) });
@@ -73,7 +84,13 @@ var ALLOC_KEY = 'tipout_allocated';
       var ruleId = input.getAttribute('data-rule-id') || '';
       var dateKey = input.getAttribute('data-date-key') || '';
       var employeeName = input.getAttribute('data-employee-name') || '';
-      detailManualHoursState[detailManualHoursKey(ruleId, dateKey, employeeName)] = parseHoursInput(input.value);
+      var rules = window.ruleData && ruleData.getRules ? ruleData.getRules() : [];
+      var rule = rules.find(function(item) { return String(item.id || '') === String(ruleId); }) || currentRule || {};
+      if (window.TipOutManualHours) TipOutManualHours.set({
+        poolId: String(rule.poolId || rule.id || ruleId), poolName: rule.poolName || rule.name || '未命名小费池',
+        ruleId: String(rule.id || ruleId), ruleName: rule.name || '未命名规则', dateKey: dateKey,
+        employeeName: employeeName, hours: parseHoursInput(input.value)
+      });
       renderDetailPage();
     }
 
@@ -308,6 +325,7 @@ var ALLOC_KEY = 'tipout_allocated';
     }
 
     function buildOrderTipDetailCardHtml(otResult, dateKey, rule, rid, tableId) {
+      var roleEmployees = getRoleEmployeesForStore(rule && rule.store);
       var roleAmounts = otResult.roleAmounts || {};
       var roleNames = Object.keys(roleAmounts).sort();
       if (!roleNames.length) {
@@ -877,6 +895,7 @@ var ALLOC_KEY = 'tipout_allocated';
 
     function buildRoleConfigFromRule(rule) {
       var config = [];
+      var roleEmployees = getRoleEmployeesForStore(rule && rule.store);
       (rule.receivers || []).forEach(function(r) {
         var roles = r.roles || [];
         var roleLabel = roles.join(' / ');
@@ -889,6 +908,27 @@ var ALLOC_KEY = 'tipout_allocated';
         if (roleLabel) config.push({ role: roleLabel, roles: roles, pct: r.pct || 0, employees: employees });
       });
       return config;
+    }
+
+    function seedDefaultManualHoursForDetail(rule, ruleId, dateKey) {
+      if (!rule || String(ruleId) !== '5' || dateKey !== '2026-01-01' ||
+          rule.store !== 'Golden Dragon Chinese Kitchen - Dallas, TX 75231' ||
+          rule.clockin !== 'noclock' || rule.distribution !== 'hours' ||
+          !window.TipOutManualHours || !TipOutManualHours.seed) return;
+      var resolved = TipOutRosterDirectory && TipOutRosterDirectory.resolveReceiverEmployees
+        ? TipOutRosterDirectory.resolveReceiverEmployees(rule, rule.store).employees
+        : [];
+      resolved.forEach(function(employee) {
+          var employeeName = employee.name;
+          var attendance = window.TipOutAttendance && TipOutAttendance.getDayStatus
+            ? TipOutAttendance.getDayStatus(employeeName, dateKey)
+            : { clockStatus: '未打卡' };
+          if (attendance.clockStatus !== '未打卡') return;
+          TipOutManualHours.seed({
+            poolId: '5', poolName: rule.ruleName, ruleId: '5', ruleName: rule.ruleName,
+            dateKey: dateKey, employeeId: employee.id, employeeName: employeeName, hours: 6
+          });
+      });
     }
 
     function detailAttrSafe(s) {
@@ -953,6 +993,7 @@ var ALLOC_KEY = 'tipout_allocated';
     }
 
     function buildLegacyDetailCardHtml(data, dateKey, rule, rid, tableId) {
+      seedDefaultManualHoursForDetail(rule, rid, dateKey);
       var roleConfig = buildRoleConfigFromRule(rule);
       var manualHours = isManualHoursDistMode(rule);
       if (roleConfig.length === 0) {
@@ -1074,6 +1115,7 @@ var ALLOC_KEY = 'tipout_allocated';
     function getEmployeesForRoleGroup(roleLabel) {
       var roles = (roleLabel || '').split(/\s*\/\s*/).map(function(s) { return s.trim(); }).filter(Boolean);
       var employees = [];
+      var roleEmployees = getRoleEmployeesForStore(currentRule && currentRule.store);
       roles.forEach(function(r) {
         (roleEmployees[r] || []).forEach(function(emp) {
           if (employees.indexOf(emp) === -1) employees.push(emp);
