@@ -41,6 +41,9 @@ if (!attendance || typeof attendance.summarizeDayAttendance !== "function") {
   ] });
   if (manual.status !== "手动工时" || manual.shifts !== 0 || manual.hourLines[0].hours !== 6) failures.push("manual-only status incorrect");
 
+  const unclocked = attendance.summarizeDayAttendance({ clockStatus: "未打卡", hours: 0 });
+  if (unclocked.hourLines[0].label !== "手动录入工时" || unclocked.hourLines[0].hours !== 0) failures.push("unclocked manual-hours default missing");
+
   const mixedHours = attendance.summarizeDayAttendance({ punchSessions: [
     { clockIn: "09:00", clockOut: "17:00", durationHours: 8, status: "complete" }
   ], manualHourEntries: [{ poolId: "front", poolName: "前厅小费池", ruleId: "r1", ruleName: "前厅按工时分配", hours: 6 }] });
