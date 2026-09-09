@@ -1799,7 +1799,10 @@ const CAPITAL_EXTERNAL_URL = "https://www.ezcapital.com/zh";
 
 /** 本地嵌入页 URL：附带 embedded 与构建版本，避免 GitHub Pages / 浏览器长期缓存旧 iframe 内容 */
 function embeddedPageSrc(path: string): string {
-  return buildEmbeddedPageSrc(path, BUILD_STAMP);
+  const applicationBaseUrl = import.meta.env.DEV
+    ? `${window.location.origin}/`
+    : document.baseURI;
+  return buildEmbeddedPageSrc(path, BUILD_STAMP, applicationBaseUrl);
 }
 
 /** 效期管理：WMS 效期分类（主内容区 iframe） */
