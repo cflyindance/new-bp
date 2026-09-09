@@ -1806,7 +1806,10 @@ const CAPITAL_EXTERNAL_URL = "https://www.ezcapital.com/zh";
 const EMBEDDED_PAGE_VERSION = import.meta.env.DEV ? String(Date.now()) : BUILD_STAMP;
 
 function embeddedPageSrc(path: string): string {
-  return buildEmbeddedPageSrc(path, EMBEDDED_PAGE_VERSION);
+  const applicationBaseUrl = import.meta.env.DEV
+    ? `${window.location.origin}/`
+    : document.baseURI;
+  return buildEmbeddedPageSrc(path, EMBEDDED_PAGE_VERSION, applicationBaseUrl);
 }
 
 /** 效期管理：WMS 效期分类（主内容区 iframe） */
