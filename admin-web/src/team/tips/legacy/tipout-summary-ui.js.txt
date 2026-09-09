@@ -83,14 +83,17 @@
           requiresAttendance: day.requiresAttendance !== false
         }, record);
         aggregate.dailyRows.push(daily);
-        aggregate.shifts += number(record.hours) > 0 ? 1 : 0;
-        aggregate.hours += number(record.hours);
+        var attendance = root.TipOutAttendance && root.TipOutAttendance.summarizeDayAttendance
+          ? root.TipOutAttendance.summarizeDayAttendance(daily)
+          : { status: record.clockStatus === '已打卡' ? '已打卡' : '未打卡', shifts: number(record.hours) > 0 ? 1 : 0, hours: number(record.hours) };
+        aggregate.shifts += number(attendance.shifts);
+        aggregate.hours += number(attendance.hours);
         aggregate.before += number(record.before);
         aggregate.deducted += number(record.deducted);
         aggregate.received += number(record.received);
         aggregate.after += number(record.after);
         if (!day.allocated) aggregate.pendingAllocationDays += 1;
-        if (day.requiresAttendance !== false && record.clockStatus === '未打卡') {
+        if (day.requiresAttendance !== false && attendance.status !== '已打卡') {
           aggregate.missingAttendanceDays += 1;
         }
       });
@@ -131,7 +134,12 @@
       dateEnd: String(values.dateEnd || ''),
       createdAt: Number(values.createdAt) || Date.now(),
       dailyRows: Array.isArray(values.dailyRows)
-        ? values.dailyRows.map(function (row) { return Object.assign({}, row); })
+        ? values.dailyRows.map(function (row) {
+          var copy = Object.assign({}, row);
+          if (Array.isArray(row.punchSessions)) copy.punchSessions = row.punchSessions.map(function (session) { return Object.assign({}, session); });
+          if (Array.isArray(row.manualHourEntries)) copy.manualHourEntries = row.manualHourEntries.map(function (entry) { return Object.assign({}, entry); });
+          return copy;
+        })
         : [],
       summary: Object.assign({}, values.summary || {}),
       status: values.status === '已完成' ? '已完成' : '待补录'
@@ -154,7 +162,12 @@
           row.employeeId === value.employeeId && typeof row.name === 'string' && typeof row.role === 'string' &&
           ['before', 'deducted', 'received', 'after', 'hours'].every(function (key) {
             return isFinite(Number(row[key]));
-          }) && typeof row.clockStatus === 'string';
+          }) && typeof row.clockStatus === 'string' && (!Object.prototype.hasOwnProperty.call(row, 'manualHourEntries') ||
+            (Array.isArray(row.manualHourEntries) && row.manualHourEntries.every(function(entry) {
+              return entry && typeof entry.poolId === 'string' && typeof entry.poolName === 'string' &&
+                typeof entry.ruleId === 'string' && typeof entry.ruleName === 'string' &&
+                isFinite(Number(entry.hours)) && Number(entry.hours) >= 0;
+            })));
       });
       if (!validRows) return null;
       if (!context || value.employeeId !== context.employeeId || value.store !== context.store ||

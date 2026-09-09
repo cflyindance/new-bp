@@ -206,7 +206,7 @@ assert.equal(employeeDetailPrintCalled, true, 'employee detail PDF should reach 
 if (!employeeDetailProgram.includes("已提交发送")) failures.push("employee reconciliation detail: simulated email wording missing");
 if (!tipsRuntime.includes('view === "distribution" || view === "employee-reconciliation"')) failures.push("employee reconciliation detail: export runtime dependency missing");
 if (employeeDetailProgram.includes("collectExportData()") || employeeDetailProgram.includes("exportAs(")) failures.push("employee reconciliation detail: summary export collector used");
-assert.equal(employeeDetailContext.employeeDetailAttendanceStatus({ clockStatus: "已打卡" }), "已打卡");
+assert.equal(employeeDetailContext.employeeDetailAttendanceStatus({ clockStatus: "已打卡", hours: 8 }), "已打卡");
 assert.equal(employeeDetailContext.employeeDetailAttendanceStatus({ clockStatus: "未打卡" }), "未打卡");
 assert.equal(employeeDetailContext.employeeDetailAttendanceStatus({ requiresAttendance: false }), "未打卡");
 assert.deepEqual(
@@ -219,10 +219,10 @@ assert.deepEqual(
 );
 assert.deepEqual(
   JSON.parse(JSON.stringify(employeeDetailContext.summarizeEmployeeDetailRows([
-    { hours: 8, before: 10.1, deducted: 1, received: 2, after: 11.1 },
-    { hours: 0, before: 3.2, deducted: 0.2, received: 0.4, after: 3.4 }
+    { clockStatus: "已打卡", hours: 8, before: 10.1, deducted: 1, received: 2, after: 11.1 },
+    { clockStatus: "未打卡", hours: 0, before: 3.2, deducted: 0.2, received: 0.4, after: 3.4 }
   ]))),
-  { shifts: 1, hours: 8, before: 13.3, deducted: 1.2, received: 2.4, after: 14.5 }
+  { shifts: 1, hours: 8, manualPools: {}, manualRecords: 0, before: 13.3, deducted: 1.2, received: 2.4, after: 14.5, manualPoolCount: 0 }
 );
 if (failures.length) { failures.forEach((failure) => console.error(failure)); process.exit(1); }
 console.log("Team tips native view verification passed.");

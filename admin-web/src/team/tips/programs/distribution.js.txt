@@ -327,6 +327,12 @@ var ALLOC_KEY = 'tipout_allocated';
         : { hours: 0, clockStatus: '未打卡' };
       row.hours = att.hours;
       row.clockStatus = att.clockStatus;
+      row.punchSessions = Array.isArray(att.punchSessions)
+        ? att.punchSessions.map(function(session) { return Object.assign({}, session); })
+        : undefined;
+      row.manualHourEntries = window.TipOutManualHours
+        ? TipOutManualHours.listForEmployee(dateKey, emp.name)
+        : [];
       return row;
     }
 
@@ -709,8 +715,8 @@ var ALLOC_KEY = 'tipout_allocated';
           '<td><span class="tipout-employee-identity"><span class="tipout-employee-avatar" aria-hidden="true">' +
           escapeSummaryHtml(employeeInitials(aggregate.name)) + '</span><strong>' + name + '</strong></span></td>' +
           '<td>' + escapeSummaryHtml(aggregate.role) + '</td>' +
-          '<td><span class="tipout-shift-summary"><strong>' + aggregate.shifts + ' 个班次</strong><small>' +
-          formatHoursDisplay(aggregate.hours) + ' h</small></span></td>' +
+          '<td><strong>' + aggregate.shifts + ' 个班次</strong></td>' +
+          '<td><strong>' + formatHoursDisplay(aggregate.hours) + ' h</strong></td>' +
           '<td>' + money(aggregate.before) + '</td>' +
           '<td><strong class="tip-amount--deduct">-' + money(Math.abs(aggregate.deducted)) + '</strong></td>' +
           '<td><strong class="tip-amount--receive">' + moneySign(aggregate.received) + '</strong></td>' +

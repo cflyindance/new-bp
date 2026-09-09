@@ -28,7 +28,6 @@ var ALLOC_KEY = 'tipout_allocated';
       'Runner':    ['Daniel Ortiz', 'Chris Lee'],
       'Shift Lead':['Jessica Martinez']
     };
-    var detailManualHoursState = {};
 
     function formatRuleDistribution(rule) {
       if (window.ruleData && ruleData.formatDistributionName) return ruleData.formatDistributionName(rule || {});
@@ -50,7 +49,8 @@ var ALLOC_KEY = 'tipout_allocated';
 
     function getDetailEmployeeHours(rule, ruleId, dateKey, employeeName) {
       if (rule && rule.clockin === 'noclock') {
-        return parseHoursInput(detailManualHoursState[detailManualHoursKey(ruleId, dateKey, employeeName)]);
+        var saved = window.TipOutManualHours && TipOutManualHours.get(ruleId, dateKey, employeeName);
+        return parseHoursInput(saved && saved.hours);
       }
       var attendance = (window.TipOutAttendance && TipOutAttendance.getDayStatus)
         ? TipOutAttendance.getDayStatus(employeeName, dateKey)
@@ -73,7 +73,13 @@ var ALLOC_KEY = 'tipout_allocated';
       var ruleId = input.getAttribute('data-rule-id') || '';
       var dateKey = input.getAttribute('data-date-key') || '';
       var employeeName = input.getAttribute('data-employee-name') || '';
-      detailManualHoursState[detailManualHoursKey(ruleId, dateKey, employeeName)] = parseHoursInput(input.value);
+      var rules = window.ruleData && ruleData.getRules ? ruleData.getRules() : [];
+      var rule = rules.find(function(item) { return String(item.id || '') === String(ruleId); }) || currentRule || {};
+      if (window.TipOutManualHours) TipOutManualHours.set({
+        poolId: String(rule.poolId || rule.id || ruleId), poolName: rule.poolName || rule.name || '未命名小费池',
+        ruleId: String(rule.id || ruleId), ruleName: rule.name || '未命名规则', dateKey: dateKey,
+        employeeName: employeeName, hours: parseHoursInput(input.value)
+      });
       renderDetailPage();
     }
 
