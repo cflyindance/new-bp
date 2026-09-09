@@ -7,6 +7,7 @@ import { mountTipsPage, type TipsPageHandle } from "./team/tips-page";
 import { createTipsPageContext } from "./team/tips/tips-context";
 import { isTipsFullscreenRoute, parseTipsRoute } from "./team/tips/tips-navigation";
 import { BUILD_STAMP } from "./generated/build-stamp";
+import { embeddedPageSrc as buildEmbeddedPageSrc } from "./shell/embedded-page-src";
 import {
   bindLoginPage,
   isAuthenticated,
@@ -1805,7 +1806,7 @@ const CAPITAL_EXTERNAL_URL = "https://www.ezcapital.com/zh";
 const EMBEDDED_PAGE_VERSION = import.meta.env.DEV ? String(Date.now()) : BUILD_STAMP;
 
 function embeddedPageSrc(path: string): string {
-  return `${path}?embedded=1&v=${EMBEDDED_PAGE_VERSION}`;
+  return buildEmbeddedPageSrc(path, EMBEDDED_PAGE_VERSION);
 }
 
 /** 效期管理：WMS 效期分类（主内容区 iframe） */
