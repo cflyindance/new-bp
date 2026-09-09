@@ -897,6 +897,25 @@ var ALLOC_KEY = 'tipout_allocated';
       return config;
     }
 
+    function seedDefaultManualHoursForDetail(rule, ruleId, dateKey) {
+      if (!rule || String(ruleId) !== '5' || dateKey !== '2026-01-01' ||
+          rule.store !== 'Golden Dragon Chinese Kitchen - Dallas, TX 75231' ||
+          rule.clockin !== 'noclock' || rule.distribution !== 'hours' ||
+          !window.TipOutManualHours || !TipOutManualHours.seed) return;
+      buildRoleConfigFromRule(rule).forEach(function(group) {
+        group.employees.forEach(function(employeeName) {
+          var attendance = window.TipOutAttendance && TipOutAttendance.getDayStatus
+            ? TipOutAttendance.getDayStatus(employeeName, dateKey)
+            : { clockStatus: '未打卡' };
+          if (attendance.clockStatus !== '未打卡') return;
+          TipOutManualHours.seed({
+            poolId: '5', poolName: rule.ruleName, ruleId: '5', ruleName: rule.ruleName,
+            dateKey: dateKey, employeeName: employeeName, hours: 6
+          });
+        });
+      });
+    }
+
     function detailAttrSafe(s) {
       return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
     }
@@ -959,6 +978,7 @@ var ALLOC_KEY = 'tipout_allocated';
     }
 
     function buildLegacyDetailCardHtml(data, dateKey, rule, rid, tableId) {
+      seedDefaultManualHoursForDetail(rule, rid, dateKey);
       var roleConfig = buildRoleConfigFromRule(rule);
       var manualHours = isManualHoursDistMode(rule);
       if (roleConfig.length === 0) {

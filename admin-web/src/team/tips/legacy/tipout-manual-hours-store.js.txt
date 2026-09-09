@@ -29,10 +29,17 @@
     var found = read().map(normalize).filter(Boolean).find(function(row) { return identity(row) === key; });
     return found ? Object.assign({}, found) : null;
   }
+  function seed(entry) {
+    var normalized = normalize(entry); if (!normalized) return false;
+    var rows = read().map(normalize).filter(Boolean), key = identity(normalized);
+    if (rows.some(function(row) { return identity(row) === key; })) return false;
+    rows.push(normalized);
+    global.localStorage.setItem(STORAGE_KEY, JSON.stringify(rows)); return true;
+  }
   function listForEmployee(dateKey, employeeName) {
     return read().map(normalize).filter(function(row) { return row && row.dateKey === String(dateKey) && row.employeeName === String(employeeName); })
       .sort(function(a, b) { return [a.poolName, a.ruleName, a.poolId, a.ruleId].join('|').localeCompare([b.poolName, b.ruleName, b.poolId, b.ruleId].join('|')); })
       .map(function(row) { return Object.assign({}, row); });
   }
-  global.TipOutManualHours = { set: set, get: get, listForEmployee: listForEmployee, normalize: normalize };
+  global.TipOutManualHours = { set: set, get: get, seed: seed, listForEmployee: listForEmployee, normalize: normalize };
 })(typeof window !== 'undefined' ? window : this);

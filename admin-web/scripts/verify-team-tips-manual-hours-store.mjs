@@ -10,4 +10,9 @@ assert.equal(store.set({ruleId:'bad',dateKey:'2026-01-02',employeeName:'王店�
 assert.equal(store.set({ruleId:'zero',dateKey:'2026-01-02',employeeName:'王店长',hours:0}), true);
 assert.equal(store.get('zero','2026-01-02','王店长').poolName, '未命名小费池');
 assert.equal(store.get('zero','2026-01-02','王店长').ruleName, '未命名规则');
+assert.equal(store.seed({poolId:5,poolName:'演示池',ruleId:5,ruleName:'演示规则',dateKey:'2026-01-01',employeeName:'Carlos Lopez',hours:6}), true);
+assert.equal(store.get('5','2026-01-01','Carlos Lopez').hours, 6);
+assert.equal(store.set({poolId:'5',poolName:'演示池',ruleId:'5',ruleName:'演示规则',dateKey:'2026-01-01',employeeName:'Carlos Lopez',hours:0}), true);
+assert.equal(store.seed({poolId:5,poolName:'演示池',ruleId:5,ruleName:'演示规则',dateKey:'2026-01-01',employeeName:'Carlos Lopez',hours:6}), false);
+assert.equal(store.get('5','2026-01-01','Carlos Lopez').hours, 0);
 console.log('Manual hours store verification passed.');
