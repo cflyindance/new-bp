@@ -94,12 +94,6 @@ function detailNumber(value) { return Number(value) || 0; }
       (lines || []).forEach(function(line) {
         var row = document.createElement('span');
         row.className = 'tipout-work-hours-line';
-        if (line.label) {
-          var label = document.createElement('span');
-          label.className = 'tipout-work-hours-label';
-          label.textContent = line.label;
-          row.appendChild(label);
-        }
         var value = document.createElement('strong');
         value.textContent = detailHours(line.hours) + ' h';
         row.appendChild(value);

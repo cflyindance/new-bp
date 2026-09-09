@@ -8,4 +8,6 @@ assert.ok(program.includes('个小费池 / '));
 assert.ok(program.includes("attendance.hasPunchException && attendance.status === '混合工时'"), 'abnormal secondary badge must be limited to mixed hours');
 assert.ok(program.includes("line.source === 'manual'"), 'manual entry badge must depend on record source');
 assert.ok(program.includes('tipout-hours-entry-badge'), 'manual entry badge class missing');
+assert.ok(!program.includes('label.textContent = line.label'), 'work-hours cell must not render tip pool or rule names');
+assert.ok(program.includes("entry.poolName + ' · ' + entry.ruleName"), 'exports must retain manual-hours detail');
 console.log('Employee manual-hours view verification passed.');
