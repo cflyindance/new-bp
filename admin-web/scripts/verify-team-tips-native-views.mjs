@@ -235,7 +235,9 @@ const summaryState = summaryUi.buildSummaryHistoryState({
 assert.deepEqual(JSON.parse(JSON.stringify(summaryUi.readSummaryHistoryState(summaryState))), {
   dateStart: "2026-08-11", dateEnd: "2026-09-11", store: "golden-dragon",
   roles: ["Server"], employees: ["employee-1"], scrollY: 240,
-  returnDate: "", returnEmployeeId: "employee-1", activeView: "employee",
+  returnDate: "", returnEmployeeId: "employee-1",
+  employeeSearch: "", employeeSummaryRole: "", employeeSummaryStatus: "",
+  employeeSortKey: "finalAmount", employeeSortDirection: "desc", activeView: "employee",
 });
 const employeeAggregates = summaryUi.aggregateEmployeeDailyDatasets([
   { dateKey: "2026-09-10", allocated: true, employeeResults: [

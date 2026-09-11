@@ -57,8 +57,9 @@ function collectDateTaskExportData() {
 }
 
 function collectEmployeeReconciliationExportData() {
-  var dailyRows = buildDailyDataset(getStoreEmployees());
-  var aggregates = TipOutSummaryUi.aggregateEmployeeDailyDatasets(dailyRows);
+  var aggregates = typeof getVisibleEmployeeSummaryAggregates === 'function'
+    ? getVisibleEmployeeSummaryAggregates()
+    : TipOutSummaryUi.aggregateEmployeeDailyDatasets(buildDailyDataset(getStoreEmployees()));
   return {
     kind: 'employee',
     store: exportStoreLabel(),
@@ -68,14 +69,16 @@ function collectEmployeeReconciliationExportData() {
       return {
         employeeId: aggregate.employeeId,
         name: aggregate.name,
-        role: aggregate.role,
+        role: (aggregate.roles || []).join(' / ') || aggregate.role,
         shifts: aggregate.shifts + ' 个班次',
         hours: formatHoursDisplay(aggregate.hours) + ' h',
         before: aggregate.before,
         deducted: aggregate.deducted,
         received: aggregate.received,
+        netAdjustment: aggregate.netAdjustmentCents == null ? null : aggregate.netAdjustmentCents / 100,
         after: aggregate.after,
-        status: aggregate.status
+        status: aggregate.status,
+        issueReasons: (aggregate.issueReasons || []).join('；')
       };
     })
   };
@@ -146,18 +149,20 @@ function exportEmployeeReconciliationCSV(data) {
   lines.push(csvCell('Store') + ',' + csvCell(data.store));
   lines.push(csvCell('Date Range') + ',' + csvCell(data.dateStart + ' ~ ' + data.dateEnd));
   lines.push('');
-  lines.push(['Employee', 'Role', 'Shifts', 'Hours', 'Tips Before($)', 'Deducted($)', 'Received($)', 'Tips After($)', 'Status'].map(csvCell).join(','));
+  lines.push(['Employee', 'Role', 'Shifts', 'Hours', 'Original Tips($)', 'Deducted($)', 'Received($)', 'Net Adjustment($)', 'Final Amount($)', 'Status', 'Issue Reasons'].map(csvCell).join(','));
   data.employees.forEach(function(employee) {
     lines.push([
       employee.name,
       employee.role,
       employee.shifts,
       employee.hours,
-      Number(employee.before || 0).toFixed(2),
-      Number(employee.deducted || 0).toFixed(2),
-      Number(employee.received || 0).toFixed(2),
-      Number(employee.after || 0).toFixed(2),
-      employee.status
+      employee.before == null ? '' : Number(employee.before).toFixed(2),
+      employee.deducted == null ? '' : Number(employee.deducted).toFixed(2),
+      employee.received == null ? '' : Number(employee.received).toFixed(2),
+      employee.netAdjustment == null ? '' : Number(employee.netAdjustment).toFixed(2),
+      employee.after == null ? '' : Number(employee.after).toFixed(2),
+      employee.status,
+      employee.issueReasons
     ].map(csvCell).join(','));
   });
   var blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
@@ -314,17 +319,24 @@ function escH(s) {
 }
 
 function employeeReconciliationRows(data) {
+  function amount(value, sign) {
+    if (value == null) return '—';
+    var numeric = Number(value);
+    return (sign && numeric > 0 ? '+' : numeric < 0 ? '-' : '') + '$' + Math.abs(numeric).toFixed(2);
+  }
   return data.employees.map(function(employee) {
     return [
       employee.name,
       employee.role,
       employee.shifts,
       employee.hours,
-      '$' + Number(employee.before || 0).toFixed(2),
-      '-$' + Math.abs(Number(employee.deducted || 0)).toFixed(2),
-      (Number(employee.received || 0) >= 0 ? '+$' : '-$') + Math.abs(Number(employee.received || 0)).toFixed(2),
-      '$' + Number(employee.after || 0).toFixed(2),
-      employee.status
+      amount(employee.before),
+      amount(employee.deducted, true),
+      amount(employee.received, true),
+      amount(employee.netAdjustment, true),
+      amount(employee.after),
+      employee.status,
+      employee.issueReasons || ''
     ];
   });
 }
@@ -340,7 +352,7 @@ function printEmployeeReconciliationAsPDF(data) {
   doc.write('<style>body{font-family:Arial,sans-serif;padding:28px;color:#222;font-size:12px}h1{font-size:20px;margin:0 0 8px}.meta{color:#666;margin:3px 0}table{width:100%;border-collapse:collapse;margin-top:16px}th{background:#111;color:#fff;padding:8px;text-align:left}td{padding:7px 8px;border-bottom:1px solid #eee}.r{text-align:right}@media print{@page{size:landscape;margin:10mm}}</style></head><body>');
   doc.write('<h1>Employee Tip Allocation Summary</h1><div class="meta">Store: ' + escH(data.store) + '</div>');
   doc.write('<div class="meta">Date Range: ' + escH(data.dateStart + ' ~ ' + data.dateEnd) + '</div>');
-  doc.write('<table><thead><tr>' + ['Employee','Role','Shifts','Hours','Tips Before','Deducted','Received','Tips After','Status'].map(function(label) { return '<th>' + label + '</th>'; }).join('') + '</tr></thead><tbody>');
+  doc.write('<table><thead><tr>' + ['Employee','Role','Shifts','Hours','Original Tips','Deducted','Received','Net Adjustment','Final Amount','Status','Issue Reasons'].map(function(label) { return '<th>' + label + '</th>'; }).join('') + '</tr></thead><tbody>');
   rows.forEach(function(row) { doc.write('<tr>' + row.map(function(cell) { return '<td>' + escH(cell) + '</td>'; }).join('') + '</tr>'); });
   doc.write('</tbody></table></body></html>');
   doc.close();
@@ -358,7 +370,7 @@ function generateEmployeeReconciliationJsPDF(data) {
   doc.text('Date Range: ' + data.dateStart + ' ~ ' + data.dateEnd, 14, 30);
   doc.autoTable({
     startY: 36,
-    head: [['Employee', 'Role', 'Shifts', 'Hours', 'Tips Before', 'Deducted', 'Received', 'Tips After', 'Status']],
+    head: [['Employee', 'Role', 'Shifts', 'Hours', 'Original Tips', 'Deducted', 'Received', 'Net Adjustment', 'Final Amount', 'Status', 'Issue Reasons']],
     body: employeeReconciliationRows(data),
     styles: { fontSize: 8, cellPadding: 2.5 },
     headStyles: { fillColor: [22, 119, 255], textColor: 255, fontStyle: 'bold' },

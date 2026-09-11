@@ -41,6 +41,11 @@
       employees: (values.employees || []).slice(), scrollY: Number(values.scrollY) || 0,
       returnDate: values.returnDate || '',
       returnEmployeeId: values.returnEmployeeId || '',
+      employeeSearch: values.employeeSearch || '',
+      employeeSummaryRole: values.employeeSummaryRole || '',
+      employeeSummaryStatus: values.employeeSummaryStatus || '',
+      employeeSortKey: ['employee', 'hours', 'finalAmount'].indexOf(values.employeeSortKey) >= 0 ? values.employeeSortKey : 'finalAmount',
+      employeeSortDirection: values.employeeSortDirection === 'asc' ? 'asc' : 'desc',
       activeView: values.activeView === 'employee' ? 'employee' : 'date'
     } };
   }
