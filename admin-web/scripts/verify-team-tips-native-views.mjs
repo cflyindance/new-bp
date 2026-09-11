@@ -240,6 +240,40 @@ assert.equal(employeeAggregates[0].deducted, 3);
 assert.equal(employeeAggregates[0].received, 42.5);
 assert.equal(employeeAggregates[0].after, 61.5);
 assert.equal(employeeAggregates[0].dailyRows.length, 2);
+const employeeDailyFixture = [
+  { dateKey: "2026-09-10", allocated: true, allocationValidationError: "", ruleIssues: [], employeeResults: [
+    { employeeId: "e1", name: "Olivia", role: "Server", hours: 8, before: 100.10, deducted: 10.05, received: 20.15, after: 110.20, clockStatus: "已打卡" },
+    { employeeId: "e2", name: "Noah", role: "Busser", hours: 6, before: 0, deducted: 0, received: 40, after: 40, clockStatus: "已打卡" },
+  ] },
+  { dateKey: "2026-09-11", allocated: false, allocationValidationError: "", ruleIssues: [], employeeResults: [
+    { employeeId: "e1", name: "Olivia", role: "Bartender", hours: 4, before: 50, deducted: 5, received: 8, after: 53, clockStatus: "已打卡" },
+  ] },
+  { dateKey: "2026-09-12", allocated: true, allocationValidationError: "金额校验失败", ruleIssues: [], employeeResults: [
+    { employeeId: "e3", name: "Emma", role: "Host", hours: 5, before: 25, deducted: 0, received: 10, after: 35, clockStatus: "已打卡" },
+  ] },
+];
+const resultFirstAggregates = summaryUi.aggregateEmployeeDailyDatasets(employeeDailyFixture);
+assert.equal(resultFirstAggregates.length, 3);
+const olivia = resultFirstAggregates.find((item) => item.employeeId === "e1");
+assert.deepEqual(Array.from(olivia.roles), ["Server", "Bartender"]);
+assert.equal(olivia.beforeCents, 10010);
+assert.equal(olivia.netAdjustmentCents, 1010);
+assert.equal(olivia.finalAmountCents, 11020);
+assert.equal(olivia.status, "待处理");
+assert.equal(olivia.hasPartialConfirmed, true);
+assert.equal(olivia.firstActionDate, "2026-09-11");
+const emma = resultFirstAggregates.find((item) => item.employeeId === "e3");
+assert.equal(emma.status, "异常");
+assert.equal(emma.finalAmountCents, null);
+assert.deepEqual(Array.from(emma.issueReasons), ["金额校验失败"]);
+const employeeOverview = summaryUi.summarizeEmployeeAggregates(resultFirstAggregates);
+assert.deepEqual(JSON.parse(JSON.stringify(employeeOverview)), {
+  employeeCount: 3, finalAmountCents: 15020, hasConfirmedAmount: true,
+  completedCount: 1, pendingCount: 1, exceptionCount: 1,
+});
+assert.equal(employeeOverview.employeeCount, employeeOverview.completedCount + employeeOverview.pendingCount + employeeOverview.exceptionCount);
+const filteredEmployees = summaryUi.filterAndSortEmployeeAggregates(resultFirstAggregates, { search: "oliv", roles: ["Bartender"], statuses: ["待处理"] }, { key: "finalAmount", direction: "desc" });
+assert.deepEqual(Array.from(filteredEmployees, (item) => item.employeeId), ["e1"]);
 for (const token of ["collectDateTaskExportData", "collectEmployeeReconciliationExportData", "collectCurrentSummaryExportData"]) {
   if (!distributionExport.includes(token)) failures.push(`distribution export: active-view export contract missing ${token}`);
 }
