@@ -64,6 +64,20 @@ for (const token of [".tipout-page-detail .tipout-workspace.has-aside", ".tipout
 for (const token of ["detailDate", "storeSelect", "detailRulesContainer", "returnToSummary()", "confirmDetailAllocationBtn", "confirmDetailAllocation()"]) {
   if (!nativeDetail.includes(token)) failures.push(`detail: required business entry missing ${token}`);
 }
+const detailContextStart = nativeDetail.indexOf('class="tipout-detail-context-bar"');
+const detailContextEnd = nativeDetail.indexOf('class="tipout-metric-strip', detailContextStart);
+const detailContext = nativeDetail.slice(detailContextStart, detailContextEnd);
+const storeFieldIndex = detailContext.indexOf('class="filter-field tipout-detail-store-field"');
+const dateFieldIndex = detailContext.indexOf('class="filter-field tipout-detail-date-field"');
+if (!(storeFieldIndex >= 0 && dateFieldIndex > storeFieldIndex)) failures.push("detail: context field order must be store then date");
+for (const token of ['id="storeSelect"', 'id="detailDate"', 'data-native-onchange="renderDetailPage()"']) {
+  if (!detailContext.includes(token)) failures.push(`detail: context contract missing ${token}`);
+}
+const storeWidthRule = pageCss.match(/\.tipout-page-detail \.tipout-detail-store-field\s*\{([^}]*)\}/)?.[1] ?? "";
+const dateWidthRule = pageCss.match(/\.tipout-page-detail \.tipout-detail-date-field\s*\{([^}]*)\}/)?.[1] ?? "";
+for (const token of ["width: 260px", "max-width: 260px"]) if (!storeWidthRule.includes(token)) failures.push(`detail: store width missing ${token}`);
+for (const token of ["width: 200px", "max-width: 200px"]) if (!dateWidthRule.includes(token)) failures.push(`detail: date width missing ${token}`);
+if (pageCss.includes(".tipout-page-detail .tipout-detail-context-bar .filter-field:nth-child(2)")) failures.push("detail: field width must not depend on DOM position");
 if (nativeDetail.includes("saveDetail()") || nativeDetail.includes("saveAndNext()")) failures.push("distribution detail: legacy save actions returned");
 
 const removedHeadingCopy = {
