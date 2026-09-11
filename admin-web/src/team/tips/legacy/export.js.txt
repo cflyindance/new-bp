@@ -16,7 +16,9 @@ function exportStoreLabel() {
 }
 
 function collectDateTaskExportData() {
-  var dailyRows = buildDailyDataset(getFilteredEmployees());
+  var dailyRows = typeof getVisibleDailySummaryRows === 'function'
+    ? getVisibleDailySummaryRows()
+    : buildDailyDataset(getFilteredEmployees());
   var data = {
     kind: 'date',
     store: exportStoreLabel(),
