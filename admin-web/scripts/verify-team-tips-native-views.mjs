@@ -101,6 +101,11 @@ if (!fs.readFileSync("src/team/tips/programs/distribution.js.txt", "utf8").inclu
 const distributionTemplate = fs.readFileSync("src/team/tips/templates/distribution.html", "utf8");
 const distributionProgram = fs.readFileSync("src/team/tips/programs/distribution.js.txt", "utf8");
 const distributionExport = fs.readFileSync("src/team/tips/legacy/export.js.txt", "utf8");
+if ((distributionTemplate.match(/id="summaryViewSwitch"/g) || []).length !== 1) failures.push("distribution: summary view switch must be unique");
+if ((distributionTemplate.match(/id="dateTaskTab"/g) || []).length !== 1) failures.push("distribution: date task tab must be unique");
+if ((distributionTemplate.match(/id="employeeReconciliationTab"/g) || []).length !== 1) failures.push("distribution: employee reconciliation tab must be unique");
+if (distributionTemplate.indexOf('id="summaryViewSwitch"') > distributionTemplate.indexOf('class="filter-surface')) failures.push("distribution: summary tabs must appear before the filter surface");
+if (!/<h1 id="summaryTitle" class="sr-only">小费分配<\/h1>/.test(distributionTemplate)) failures.push("distribution: hidden semantic summary title missing");
 const headingActions = distributionTemplate.match(/<div class="tipout-heading-actions">[\s\S]*?<\/div>\s*<\/div>\s*<\/div>/)?.[0] || "";
 if (!headingActions.includes("summaryRuleEntryBtn")) failures.push("distribution: rule entry must remain in heading actions");
 for (const token of [">取消分配</button>", "id=\"exportMenu\"", "id=\"allocateBtn\""]) {
