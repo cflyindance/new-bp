@@ -219,6 +219,7 @@ var ALLOC_KEY = 'tipout_allocated';
       });
       document.getElementById('detailRulesContainer').innerHTML = bundleParts.join('');
       syncDetailAllocationAction();
+      setTimeout(function() { scheduleDetailAutoAllocation(store, dateKey, rules); }, 0);
     }
 
     function readDatePoolSnapshot(dateKey, store) {
@@ -1225,6 +1226,9 @@ var ALLOC_KEY = 'tipout_allocated';
     }
 
     var detailAllocationSubmitting = false;
+    var detailAutoAllocationSelectionKey = '';
+    var detailAutoAllocationAttemptedKey = '';
+    var detailAutoAllocationRunning = false;
 
     function detailNumberFromText(value) {
       var number = Number(String(value == null ? '' : value).replace(/[^0-9.-]/g, ''));
@@ -1308,6 +1312,72 @@ var ALLOC_KEY = 'tipout_allocated';
       button.disabled = detailAllocationSubmitting;
     }
 
+    function getDetailAutoAllocationEligibility(store, dateKey, rules) {
+      if (!String(store || '').trim() || !/^\d{4}-\d{2}-\d{2}$/.test(String(dateKey || ''))) {
+        return { eligible: false, reason: 'invalid-scope' };
+      }
+      if (!Array.isArray(rules) || rules.length === 0) return { eligible: false, reason: 'no-rules' };
+      if (rules.some(function(rule) { return rule && rule.clockin === 'noclock'; })) {
+        return { eligible: false, reason: 'manual-rule' };
+      }
+      if (window.TipOutAllocationResults && TipOutAllocationResults.isAllocated(store, dateKey)) {
+        return { eligible: false, reason: 'allocated' };
+      }
+      return { eligible: true, reason: 'pure-clock-rules' };
+    }
+
+    function executeDetailAllocation(options) {
+      var snapshot = collectDetailAllocationSnapshot(options.store, options.dateKey, options.rules);
+      var validationError = TipOutAllocationResults.validate(snapshot);
+      if (validationError) throw new Error(validationError);
+      TipOutAllocationResults.commit(snapshot);
+      sessionStorage.setItem('tipout-date-pool-summary-v1', JSON.stringify({
+        dateKey: options.dateKey,
+        store: options.store,
+        poolSummary: snapshot.summary
+      }));
+      renderDetailPage();
+      try {
+        if (window.TipOutPayrollBridge && TipOutPayrollBridge.syncAfterAllocation) {
+          TipOutPayrollBridge.syncAfterAllocation(options.store, options.dateKey, options.dateKey);
+        }
+      } catch (payrollError) {
+        showNotification('分配结果已保存，但薪资同步失败，请重试', 'error');
+        return { saved: true, payrollSynced: false };
+      }
+      showNotification(
+        options.automatic ? '已根据打卡规则自动完成分配' : (options.wasAllocated ? '重新分配成功' : '分配成功'),
+        'success'
+      );
+      return { saved: true, payrollSynced: true };
+    }
+
+    function scheduleDetailAutoAllocation(store, dateKey, rules) {
+      var key = String(store || '') + '\u0000' + String(dateKey || '');
+      if (key !== detailAutoAllocationSelectionKey) {
+        detailAutoAllocationSelectionKey = key;
+        detailAutoAllocationAttemptedKey = '';
+      }
+      if (detailAutoAllocationRunning || detailAllocationSubmitting || detailAutoAllocationAttemptedKey === key) return;
+      var eligibility = getDetailAutoAllocationEligibility(store, dateKey, rules);
+      if (!eligibility.eligible) return;
+      detailAutoAllocationAttemptedKey = key;
+      detailAutoAllocationRunning = true;
+      detailAllocationSubmitting = true;
+      syncDetailAllocationAction();
+      var button = document.getElementById('confirmDetailAllocationBtn');
+      if (button) button.textContent = '分配中…';
+      try {
+        executeDetailAllocation({ store: store, dateKey: dateKey, rules: rules, wasAllocated: false, automatic: true });
+      } catch (error) {
+        showNotification(error && error.message ? error.message : '自动分配失败，请手动确认', 'error');
+      } finally {
+        detailAutoAllocationRunning = false;
+        detailAllocationSubmitting = false;
+        syncDetailAllocationAction();
+      }
+    }
+
     function confirmDetailAllocation() {
       if (detailAllocationSubmitting) return;
       var dateKey = (document.getElementById('detailDate').value || '').trim();
@@ -1319,19 +1389,7 @@ var ALLOC_KEY = 'tipout_allocated';
       detailAllocationSubmitting = true;
       if (button) { button.disabled = true; button.textContent = allocated ? '重新分配中…' : '分配中…'; }
       try {
-        var snapshot = collectDetailAllocationSnapshot(store, dateKey, rules);
-        var validationError = TipOutAllocationResults.validate(snapshot);
-        if (validationError) throw new Error(validationError);
-        TipOutAllocationResults.commit(snapshot);
-        sessionStorage.setItem('tipout-date-pool-summary-v1', JSON.stringify({ dateKey: dateKey, store: store, poolSummary: snapshot.summary }));
-        try {
-          if (window.TipOutPayrollBridge && TipOutPayrollBridge.syncAfterAllocation) TipOutPayrollBridge.syncAfterAllocation(store, dateKey, dateKey);
-        } catch (payrollError) {
-          showNotification('分配结果已保存，但薪资同步失败，请重试', 'error');
-          return;
-        }
-        renderDetailPage();
-        showNotification(allocated ? '重新分配成功' : '分配成功', 'success');
+        executeDetailAllocation({ store: store, dateKey: dateKey, rules: rules, wasAllocated: allocated, automatic: false });
       } catch (error) {
         showNotification(error && error.message ? error.message : '分配失败，请重试', 'error');
       } finally {
