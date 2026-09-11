@@ -2495,8 +2495,8 @@ select.form-control {
     flex: 0 0 340px;
     min-width: 340px;
   }
-  .tipout-page-summary .filter-bar--index #roleFilterField,
-  .tipout-page-summary .filter-bar--index #employeeFilterField {
+  .tipout-page-summary .filter-bar--index #dateAllocationStatusField,
+  .tipout-page-summary .filter-bar--index .tipout-employee-multi-filter-field {
     flex: 0 1 150px;
     max-width: 150px;
   }
@@ -2505,6 +2505,11 @@ select.form-control {
     max-width: 132px;
   }
 }
+
+.tipout-page-summary .tipout-employee-multi-filter-field { min-width: 210px; }
+.tipout-page-summary #employeeSummaryEmployeeOptions { max-height: 280px; overflow-y: auto; }
+.tipout-page-summary .tipout-multi-select-empty { color: var(--text-tertiary); cursor: default; }
+.tipout-page-summary .multi-select.is-disabled .multi-select-input { opacity: .6; pointer-events: none; }
 
 @media (min-width: 1280px) {
   .tipout-page-summary .tipout-view-filter-row { flex-wrap: nowrap; }

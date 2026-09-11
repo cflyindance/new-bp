@@ -103,8 +103,11 @@ var ALLOC_KEY = 'tipout_allocated';
     const employees = buildEmployeesFromRoster();
     var activeSummaryView = 'date';
     var employeeAggregateById = Object.create(null);
+    var allEmployeeSummaryAggregates = [];
     var visibleEmployeeSummaryAggregates = [];
-    var employeeSummaryFilters = { search: '', roles: [], statuses: [] };
+    var visibleDailySummaryRows = [];
+    var dateSummaryFilters = { allocationStatus: '' };
+    var employeeSummaryFilters = { role: '', employeeScope: { mode: 'all', ids: [] }, statuses: [] };
     var employeeSummarySort = { key: 'finalAmount', direction: 'desc' };
 
     function getSelectedRoles() {
@@ -121,6 +124,13 @@ var ALLOC_KEY = 'tipout_allocated';
       return Array.prototype.map.call(cbs, function(c) { return c.value; }).filter(function(v) { return v !== '__all__'; });
     }
 
+    function getSelectedValues(filterId) {
+      var el = document.getElementById(filterId);
+      if (!el) return [];
+      var cbs = el.querySelectorAll('input[type="checkbox"]:checked:not([data-select-all])');
+      return Array.prototype.map.call(cbs, function(c) { return c.value; });
+    }
+
     function toggleSelectAll(selectId, checked) {
       var container = document.getElementById(selectId);
       if (!container) return;
@@ -129,6 +139,7 @@ var ALLOC_KEY = 'tipout_allocated';
       refreshIndexMultiTags(selectId);
       syncSelectAllState(selectId);
       if (selectId === 'roleFilter') updateEmployeeFilter();
+      else if (selectId === 'employeeSummaryEmployeeFilter') handleEmployeeSummaryEmployeeChange();
       else renderDailySummaryList();
     }
 
@@ -181,7 +192,8 @@ var ALLOC_KEY = 'tipout_allocated';
       cbs.forEach(function(cb) {
         var tag = document.createElement('span');
         tag.className = 'multi-select-tag';
-        tag.innerHTML = (cb.value || '') + ' <i data-select-id="' + selectId + '" data-value="' + (cb.value || '').replace(/"/g, '&quot;') + '" onclick="removeIndexMultiTag(event, this)">×</i>';
+        var label = cb.dataset && cb.dataset.label ? cb.dataset.label : (cb.value || '');
+        tag.innerHTML = escapeSummaryHtml(label) + ' <i data-select-id="' + selectId + '" data-value="' + escapeSummaryHtml(cb.value || '') + '" onclick="removeIndexMultiTag(event, this)">×</i>';
         tagsEl.appendChild(tag);
       });
     }
@@ -431,9 +443,10 @@ var ALLOC_KEY = 'tipout_allocated';
         scrollY: window.scrollY,
         returnDate: returnDate || '',
         returnEmployeeId: returnEmployeeId || '',
-        employeeSearch: employeeSummaryFilters.search,
-        employeeSummaryRole: employeeSummaryFilters.roles[0] || '',
+        employeeSummaryRole: employeeSummaryFilters.role || '',
         employeeSummaryStatus: employeeSummaryFilters.statuses[0] || '',
+        employeeSummaryScope: employeeSummaryFilters.employeeScope,
+        dateAllocationStatus: dateSummaryFilters.allocationStatus,
         employeeSortKey: employeeSummarySort.key,
         employeeSortDirection: employeeSummarySort.direction
       });
@@ -453,15 +466,13 @@ var ALLOC_KEY = 'tipout_allocated';
       document.getElementById('employeeReconciliationPanel').hidden = !employeeActive;
       var dateActions = document.getElementById('summaryDateActions');
       var allocateAction = document.getElementById('summaryAllocateAction');
-      var roleFilterField = document.getElementById('roleFilterField');
-      var employeeFilterField = document.getElementById('employeeFilterField');
+      var dateAllocationStatusField = document.getElementById('dateAllocationStatusField');
       var dateSortField = document.getElementById('dateSortField');
       var employeeFilters = document.getElementById('employeeSummaryFilters');
       var dateMetrics = document.getElementById('dateSummaryMetrics');
       if (dateActions) dateActions.hidden = employeeActive;
       if (allocateAction) allocateAction.hidden = employeeActive;
-      if (roleFilterField) roleFilterField.hidden = employeeActive;
-      if (employeeFilterField) employeeFilterField.hidden = employeeActive;
+      if (dateAllocationStatusField) dateAllocationStatusField.hidden = employeeActive;
       if (dateSortField) dateSortField.hidden = employeeActive;
       if (employeeFilters) employeeFilters.hidden = !employeeActive;
       if (dateMetrics) dateMetrics.hidden = employeeActive;
@@ -555,24 +566,22 @@ var ALLOC_KEY = 'tipout_allocated';
         applyDefaultSummaryDateRange();
       }
       document.getElementById('storeSelect').value = saved.store || '';
-      setSummaryFilterSelections('roleFilter', saved.roles);
-      updateEmployeeFilter(true);
-      setSummaryFilterSelections('employeeFilter', saved.employees);
+      dateSummaryFilters = { allocationStatus: saved.dateAllocationStatus || '' };
       employeeSummaryFilters = {
-        search: saved.employeeSearch || '',
-        roles: saved.employeeSummaryRole ? [saved.employeeSummaryRole] : [],
+        role: saved.employeeSummaryRole || '',
+        employeeScope: saved.employeeSummaryScope || { mode: 'all', ids: [] },
         statuses: saved.employeeSummaryStatus ? [saved.employeeSummaryStatus] : []
       };
       employeeSummarySort = {
         key: ['employee', 'hours', 'finalAmount'].indexOf(saved.employeeSortKey) >= 0 ? saved.employeeSortKey : 'finalAmount',
         direction: saved.employeeSortDirection === 'asc' ? 'asc' : 'desc'
       };
-      var employeeSearch = document.getElementById('employeeSummarySearch');
       var employeeRole = document.getElementById('employeeSummaryRoleFilter');
       var employeeStatus = document.getElementById('employeeSummaryStatusFilter');
-      if (employeeSearch) employeeSearch.value = employeeSummaryFilters.search;
-      if (employeeRole) employeeRole.value = employeeSummaryFilters.roles[0] || '';
+      var dateAllocationStatus = document.getElementById('dateAllocationStatusFilter');
+      if (employeeRole) employeeRole.value = employeeSummaryFilters.role || '';
       if (employeeStatus) employeeStatus.value = employeeSummaryFilters.statuses[0] || '';
+      if (dateAllocationStatus) dateAllocationStatus.value = dateSummaryFilters.allocationStatus;
       invalidateDayPipelineCache();
       syncSummaryViewUi();
       renderDailySummaryList();
@@ -815,7 +824,7 @@ var ALLOC_KEY = 'tipout_allocated';
     function populateEmployeeSummaryRoleFilter(aggregates) {
       var select = document.getElementById('employeeSummaryRoleFilter');
       if (!select) return;
-      var selected = employeeSummaryFilters.roles[0] || '';
+      var selected = employeeSummaryFilters.role || '';
       var roles = [];
       (aggregates || []).forEach(function(aggregate) {
         aggregate.roles.forEach(function(role) { if (roles.indexOf(role) < 0) roles.push(role); });
@@ -825,22 +834,69 @@ var ALLOC_KEY = 'tipout_allocated';
         return '<option value="' + escapeSummaryHtml(role) + '">' + escapeSummaryHtml(role) + '</option>';
       }).join('');
       select.value = roles.indexOf(selected) >= 0 ? selected : '';
-      employeeSummaryFilters.roles = select.value ? [select.value] : [];
+      employeeSummaryFilters.role = select.value || '';
+    }
+
+    function getEmployeeSummaryCandidates(aggregates) {
+      return (aggregates || []).filter(function(aggregate) {
+        return !employeeSummaryFilters.role || aggregate.roles.indexOf(employeeSummaryFilters.role) >= 0;
+      });
+    }
+
+    function renderEmployeeSummaryEmployeeOptions(aggregates) {
+      var container = document.getElementById('employeeSummaryEmployeeFilter');
+      var dropdown = document.getElementById('employeeSummaryEmployeeOptions');
+      if (!container || !dropdown) return;
+      var candidates = getEmployeeSummaryCandidates(aggregates);
+      var availableIds = candidates.map(function(item) { return String(item.employeeId); });
+      employeeSummaryFilters.employeeScope = TipOutSummaryUi.reconcileEmployeeScope(employeeSummaryFilters.employeeScope, availableIds);
+      var selected = employeeSummaryFilters.employeeScope.mode === 'subset' ? employeeSummaryFilters.employeeScope.ids : availableIds;
+      if (!candidates.length) {
+        dropdown.innerHTML = '<div class="multi-select-option tipout-multi-select-empty">暂无可选员工</div>';
+        container.classList.add('is-disabled');
+      } else {
+        container.classList.remove('is-disabled');
+        dropdown.innerHTML = '<label class="multi-select-option multi-select-all"><input type="checkbox" value="__all__" data-select-all checked> 全选</label>' + candidates.map(function(item) {
+          return '<label class="multi-select-option"><input type="checkbox" value="' + escapeSummaryHtml(item.employeeId) + '" data-label="' + escapeSummaryHtml(item.name) + '"' + (selected.indexOf(String(item.employeeId)) >= 0 ? ' checked' : '') + '> ' + escapeSummaryHtml(item.name) + '</label>';
+        }).join('');
+      }
+      refreshIndexMultiTags('employeeSummaryEmployeeFilter');
+      var tags = container.querySelector('.multi-select-tags');
+      if (tags && employeeSummaryFilters.employeeScope.mode === 'all') tags.innerHTML = '<span class="multi-select-placeholder">全部员工</span>';
+      syncSelectAllState('employeeSummaryEmployeeFilter');
     }
 
     function syncEmployeeSummaryFilterState() {
-      var search = document.getElementById('employeeSummarySearch');
       var role = document.getElementById('employeeSummaryRoleFilter');
       var status = document.getElementById('employeeSummaryStatusFilter');
-      employeeSummaryFilters = {
-        search: search ? search.value : '',
-        roles: role && role.value ? [role.value] : [],
-        statuses: status && status.value ? [status.value] : []
-      };
+      employeeSummaryFilters.role = role && role.value ? role.value : '';
+      employeeSummaryFilters.statuses = status && status.value ? [status.value] : [];
+    }
+
+    function handleEmployeeSummaryRoleChange() {
+      syncEmployeeSummaryFilterState();
+      renderSummaryViews();
+      captureSummaryUiState('', '');
+    }
+
+    function handleEmployeeSummaryEmployeeChange() {
+      var candidates = getEmployeeSummaryCandidates(allEmployeeSummaryAggregates);
+      var availableIds = candidates.map(function(item) { return String(item.employeeId); });
+      var selectedIds = getSelectedValues('employeeSummaryEmployeeFilter');
+      employeeSummaryFilters.employeeScope = TipOutSummaryUi.normalizeEmployeeScope(availableIds, selectedIds);
+      renderEmployeeSummaryEmployeeOptions(allEmployeeSummaryAggregates);
+      renderSummaryViews();
+      captureSummaryUiState('', '');
     }
 
     function handleEmployeeSummaryFilterChange() {
       syncEmployeeSummaryFilterState();
+      renderSummaryViews();
+      captureSummaryUiState('', '');
+    }
+
+    function handleDateAllocationStatusChange(value) {
+      dateSummaryFilters.allocationStatus = value === 'allocated' || value === 'unallocated' ? value : '';
       renderSummaryViews();
       captureSummaryUiState('', '');
     }
@@ -902,17 +958,25 @@ var ALLOC_KEY = 'tipout_allocated';
       if (activeSummaryView === 'employee') {
         document.getElementById('dailySummaryList').innerHTML = '';
         var allAggregates = TipOutSummaryUi.aggregateEmployeeDailyDatasets(dailyRows);
+        allEmployeeSummaryAggregates = allAggregates;
         populateEmployeeSummaryRoleFilter(allAggregates);
-        visibleEmployeeSummaryAggregates = TipOutSummaryUi.filterAndSortEmployeeAggregates(allAggregates, employeeSummaryFilters, employeeSummarySort);
+        renderEmployeeSummaryEmployeeOptions(allAggregates);
+        var employeeFilters = {
+          roles: employeeSummaryFilters.role ? [employeeSummaryFilters.role] : [],
+          employeeScope: employeeSummaryFilters.employeeScope,
+          statuses: employeeSummaryFilters.statuses
+        };
+        visibleEmployeeSummaryAggregates = TipOutSummaryUi.filterAndSortEmployeeAggregates(allAggregates, employeeFilters, employeeSummarySort);
         renderEmployeeSummaryMetrics(visibleEmployeeSummaryAggregates);
         updateEmployeeSummarySortHeaders();
         renderEmployeeReconciliationList(visibleEmployeeSummaryAggregates);
       } else {
-        renderSummaryOverview(dailyRows, allocatedDates);
+        visibleDailySummaryRows = TipOutSummaryUi.filterDailyRowsByAllocationStatus(dailyRows, dateSummaryFilters.allocationStatus);
+        renderSummaryOverview(visibleDailySummaryRows, allocatedDates);
         visibleEmployeeSummaryAggregates = [];
         document.getElementById('employeeReconciliationList').innerHTML = '';
         document.getElementById('employeeReconciliationEmpty').hidden = true;
-        renderDateTaskList(dailyRows);
+        renderDateTaskList(visibleDailySummaryRows);
       }
       updateAllocateButton();
     }
@@ -921,6 +985,10 @@ var ALLOC_KEY = 'tipout_allocated';
 
     function getVisibleEmployeeSummaryAggregates() {
       return visibleEmployeeSummaryAggregates.slice();
+    }
+
+    function getVisibleDailySummaryRows() {
+      return TipOutSummaryDateSort.sortRows(visibleDailySummaryRows, summaryDateSort);
     }
 
     function updateAllocateButton() {
@@ -1203,6 +1271,7 @@ var ALLOC_KEY = 'tipout_allocated';
       syncSelectAllState(id);
       if (id === 'roleFilter') updateEmployeeFilter();
       else if (id === 'employeeFilter') renderDailySummaryList();
+      else if (id === 'employeeSummaryEmployeeFilter') handleEmployeeSummaryEmployeeChange();
     });
     document.addEventListener('click', function(e) {
       if (!e.target.closest || !e.target.closest('.filter-bar .multi-select')) {
