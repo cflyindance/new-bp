@@ -137,6 +137,28 @@ for (const id of [
 ]) {
   if ((distributionTemplate.match(new RegExp(`id="${id}"`, "g")) || []).length !== 1) failures.push(`distribution: ${id} must be unique`);
 }
+for (const token of ['id="detailRuleFilter"', 'id="detailRuleFilterAll"', 'id="detailRuleFilterOptions"', '规则名称', 'toggleAllDetailRules(this.checked)']) {
+  if (!nativeDetail.includes(token)) failures.push(`detail: rule filter contract missing ${token}`);
+}
+for (const token of ['detailAllRules', 'detailSelectedRuleIds', 'renderVisibleRuleView()', 'handleDetailRuleSelection()', 'TipOutDetailRuleFilter.sameRuleSet']) {
+  if (!nativeDetailProgram.includes(token)) failures.push(`detail: rule filter behavior missing ${token}`);
+}
+const filterHandlerSource = nativeDetailProgram.slice(nativeDetailProgram.indexOf('function handleDetailRuleSelection'), nativeDetailProgram.indexOf('function renderVisibleRuleView'));
+for (const forbidden of ['renderDetailPage(', 'scheduleDetailAutoAllocation(', 'TipOutPayrollBridge']) {
+  if (filterHandlerSource.includes(forbidden)) failures.push(`detail: display filter must not call ${forbidden}`);
+}
+const detailRuleFilterContext = vm.createContext({ window: {} });
+vm.runInContext(fs.readFileSync('src/team/tips/legacy/tipout-detail-rule-filter.js.txt', 'utf8'), detailRuleFilterContext);
+const detailRuleFilter = detailRuleFilterContext.window.TipOutDetailRuleFilter;
+const filterRulesFixture = [
+  { id: 'rule-a', ruleName: 'Tip Pool', poolName: 'Main Pool' },
+  { id: 'rule-b', ruleName: 'Tip Pool', poolName: 'Bar Pool' },
+  { id: 'rule-c', ruleName: 'Host Pool', poolName: 'Main Pool' },
+];
+assert.deepEqual(JSON.parse(JSON.stringify(detailRuleFilter.buildOptions(filterRulesFixture))).map(item => item.label), ['Tip Pool · Main Pool', 'Tip Pool · Bar Pool', 'Host Pool']);
+assert.deepEqual(JSON.parse(JSON.stringify(detailRuleFilter.filterRules(filterRulesFixture, ['rule-b']))).map(item => item.id), ['rule-b']);
+assert.equal(detailRuleFilter.sameRuleSet([{ ruleId: 'rule-b' }, { ruleId: 'rule-a' }], filterRulesFixture.slice(0, 2)), true);
+assert.equal(detailRuleFilter.sameRuleSet([{ ruleId: 'rule-a' }], filterRulesFixture.slice(0, 2)), false);
 for (const removedHeading of [">分配前</th>", ">扣除</th>", ">分配获得</th>", ">实际获得</th>"]) {
   if (distributionTemplate.includes(removedHeading)) failures.push(`employee summary: legacy process column returned ${removedHeading}`);
 }

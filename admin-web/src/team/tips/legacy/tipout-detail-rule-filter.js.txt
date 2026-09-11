@@ -1,0 +1,37 @@
+(function(root) {
+  'use strict';
+  function ruleId(rule, index) {
+    return String(rule && (rule.id != null ? rule.id : rule.ruleId) || 'i' + Number(index));
+  }
+  function poolName(rule) { return String(rule && (rule.poolName || rule.name) || '未命名小费池'); }
+  function ruleName(rule) { return String(rule && (rule.ruleName || rule.name) || '未命名规则'); }
+  function buildOptions(rules) {
+    var names = Object.create(null), combined = Object.create(null);
+    (rules || []).forEach(function(rule) { var name = ruleName(rule); names[name] = (names[name] || 0) + 1; });
+    return (rules || []).map(function(rule, index) {
+      var id = ruleId(rule, index), name = ruleName(rule);
+      var label = names[name] > 1 ? name + ' · ' + poolName(rule) : name;
+      combined[label] = (combined[label] || 0) + 1;
+      return { id: id, label: label };
+    }).map(function(option) {
+      if (combined[option.label] > 1) option.label += ' · ' + option.id.slice(-6);
+      return option;
+    });
+  }
+  function normalizeSelection(rules, selectedIds) {
+    var allowed = (rules || []).map(ruleId);
+    return (selectedIds || []).map(String).filter(function(id, index, values) {
+      return allowed.indexOf(id) >= 0 && values.indexOf(id) === index;
+    });
+  }
+  function filterRules(rules, selectedIds) {
+    var selected = normalizeSelection(rules, selectedIds);
+    return (rules || []).filter(function(rule, index) { return selected.indexOf(ruleId(rule, index)) >= 0; });
+  }
+  function sameRuleSet(pools, rules) {
+    var actual = (pools || []).map(function(pool) { return String(pool.ruleId || ''); }).sort();
+    var expected = (rules || []).map(ruleId).sort();
+    return actual.length === expected.length && actual.every(function(id, index) { return id === expected[index]; });
+  }
+  root.TipOutDetailRuleFilter = { ruleId: ruleId, buildOptions: buildOptions, normalizeSelection: normalizeSelection, filterRules: filterRules, sameRuleSet: sameRuleSet };
+})(window);

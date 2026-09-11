@@ -167,6 +167,19 @@
             <label for="detailDate">日期</label>
             <input type="date" id="detailDate" class="form-control" value="2026-01-03" data-native-onchange="renderDetailPage()">
           </div>
+          <div class="filter-field tipout-detail-rule-filter-field">
+            <span id="detailRuleFilterLabel">规则名称</span>
+            <div class="multi-select" id="detailRuleFilter" aria-labelledby="detailRuleFilterLabel">
+              <div class="multi-select-input" role="button" tabindex="0" aria-expanded="false" data-native-onclick="toggleDetailRuleFilter()" data-native-onkeydown="handleDetailRuleFilterKeydown(event)">
+                <div class="multi-select-tags" id="detailRuleFilterTags"><span class="multi-select-placeholder">全部规则</span></div>
+                <span aria-hidden="true">⌄</span>
+              </div>
+              <div class="multi-select-dropdown">
+                <label class="multi-select-option multi-select-all"><input id="detailRuleFilterAll" type="checkbox" data-native-onchange="toggleAllDetailRules(this.checked)"> 全选</label>
+                <div id="detailRuleFilterOptions"></div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="tipout-metric-strip tipout-detail-pool-metrics" aria-label="当日小费池金额汇总">
@@ -182,7 +195,7 @@
         </div>
 
         <div class="tipout-sticky-actions" id="detailActionBar">
-          <span>确认后将生成当天正式小费分配结果</span>
+          <span id="detailAllocationScopeHint">确认后将生成当天正式小费分配结果</span>
           <div>
             <button id="confirmDetailAllocationBtn" class="btn btn-primary" data-native-onclick="confirmDetailAllocation()">确认分配</button>
           </div>

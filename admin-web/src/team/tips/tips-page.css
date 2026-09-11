@@ -2466,6 +2466,13 @@ select.form-control {
   min-width: 0;
 }
 
+.tipout-page-detail .tipout-detail-rule-filter-field { width: min(420px, 100%); max-width: 420px; flex: 1 1 300px; }
+.tipout-page-detail .tipout-detail-rule-filter-field .multi-select { width: 100%; }
+.tipout-page-detail .tipout-detail-rule-filter-field .multi-select-input { min-height: 38px; background: #fff; }
+.tipout-page-detail .tipout-detail-rule-filter-field .multi-select-dropdown { max-height: 280px; overflow-y: auto; }
+.tipout-page-detail .tipout-detail-rule-filter-field .multi-select-all { border-bottom: 1px solid var(--border-light); margin-bottom: 4px; padding-bottom: 8px; }
+.tipout-page-detail .tipout-rule-filter-empty { padding: 48px 24px; border: 1px dashed var(--border-light); border-radius: 12px; color: var(--text-tertiary); text-align: center; }
+
 .tipout-page-summary .tipout-employee-summary-filters {
   display: flex;
   flex: 1 1 auto;
