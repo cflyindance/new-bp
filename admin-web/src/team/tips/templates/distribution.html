@@ -129,6 +129,14 @@
                 <option value="">请选择门店</option>
               </select>
             </div>
+            <div class="filter-field filter-field--daterange tipout-store-date-filter-field" id="dateRangeFilterField">
+              <span class="filter-field-label">日期范围</span>
+              <div class="date-range-group">
+                <input type="date" id="dateStart" class="form-control form-control-lg" data-native-onchange="renderDailySummaryList()">
+                <span class="date-range-sep" style="color:var(--text-tertiary)">~</span>
+                <input type="date" id="dateEnd" class="form-control form-control-lg" data-native-onchange="renderDailySummaryList()">
+              </div>
+            </div>
             <div class="tipout-heading-actions">
               <button id="summaryRuleEntryBtn" type="button" class="btn btn-lg" data-native-onclick="openSummaryRuleEntry()">新建/查看规则</button>
             </div>
@@ -152,14 +160,6 @@
             </button>
             <div id="indexFilterCollapsible" class="filter-surface-collapsible">
               <div class="filter-bar filter-bar--page filter-bar--index">
-                <div class="filter-field filter-field--daterange" id="dateRangeFilterField">
-                  <span class="filter-field-label">日期范围</span>
-                  <div class="date-range-group">
-                    <input type="date" id="dateStart" class="form-control form-control-lg" data-native-onchange="renderDailySummaryList()">
-                    <span class="date-range-sep" style="color:var(--text-tertiary)">~</span>
-                    <input type="date" id="dateEnd" class="form-control form-control-lg" data-native-onchange="renderDailySummaryList()">
-                  </div>
-                </div>
                 <div class="filter-field" id="dateAllocationStatusField">
                   <label class="filter-field-label" for="dateAllocationStatusFilter">分配状态</label>
                   <select id="dateAllocationStatusFilter" class="form-control form-control-lg" data-native-onchange="handleDateAllocationStatusChange(this.value)">

@@ -2440,6 +2440,15 @@ select.form-control {
   min-width: 0;
 }
 
+.tipout-page-summary .tipout-store-date-filter-field {
+  flex: 0 0 340px;
+  min-width: 340px;
+}
+
+.tipout-page-summary .tipout-store-scope-row > .tipout-heading-actions {
+  margin-left: auto;
+}
+
 .tipout-page-summary .tipout-store-filter-field .form-control {
   width: 100%;
   overflow: hidden;
@@ -2490,10 +2499,6 @@ select.form-control {
   .tipout-page-summary .filter-bar--index {
     flex-wrap: nowrap;
     justify-content: flex-end;
-  }
-  .tipout-page-summary .filter-bar--index .filter-field--daterange {
-    flex: 0 0 340px;
-    min-width: 340px;
   }
   .tipout-page-summary .filter-bar--index #dateAllocationStatusField,
   .tipout-page-summary .filter-bar--index .tipout-employee-multi-filter-field {
@@ -2557,9 +2562,11 @@ select.form-control {
     gap: 12px;
   }
   .tipout-page-summary .tipout-store-filter-field,
+  .tipout-page-summary .tipout-store-date-filter-field,
   .tipout-page-summary .tipout-view-filter-group {
     width: 100%;
     max-width: none;
+    min-width: 0;
   }
   .tipout-page-summary .tipout-view-filter-group.tipout-compact-toolbar {
     align-items: stretch;
