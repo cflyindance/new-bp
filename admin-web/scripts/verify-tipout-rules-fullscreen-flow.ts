@@ -52,6 +52,6 @@ assert.match(
   appCss,
   /iframe\.marketing-screensaver-flow-fullscreen,\s*iframe\.tipout-rules-flow-fullscreen\s*\{/,
 );
-assert.match(rulesHtml, /href="index\.html"[^>]*>返回小费分配汇总<\/a>/);
+assert.match(rulesHtml, /href="index\.html"[^>]*>返回小费分配<\/a>/);
 
 console.log("TipOut rules fullscreen flow verification passed.");
