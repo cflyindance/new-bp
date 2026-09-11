@@ -1,2 +1,2 @@
 /** 由 scripts/generate-build-stamp.mjs 在 build 时自动生成，请勿手改 */
-export const BUILD_STAMP = "20260909135451";
+export const BUILD_STAMP = "20260911044948";
