@@ -1,6 +1,6 @@
 /**
  * eMenu Pro 嵌入态：商品组件批量绑定
- * 在「删除菜单」左侧提供【批量添加商品组件】，弹窗内左菜品 / 右组件批量绑定。
+ * 在「删除菜单」左侧提供商品与组件批量绑定入口，弹窗内左菜品 / 右组件批量绑定。
  */
 (function () {
   if (!document.documentElement.classList.contains("menusifu-embedded")) {
@@ -9,6 +9,8 @@
 
   var MODAL_ID = "emenu-batch-binding-modal";
   var BATCH_BTN_ID = "emenu-batch-binding-trigger";
+  var COMPONENT_PRODUCTS_MODAL_ID = "emenu-component-products-modal";
+  var COMPONENT_PRODUCTS_BTN_ID = "emenu-component-products-trigger";
   var NANOID_CHARS = "useandom-26T198340PX75pxJACKVERYMINDBUSHWOLF_GQZbfghjklqvwyzrict";
 
   var PRODUCT_COMPONENT_TYPES = [
@@ -112,6 +114,13 @@
     booted: false,
     store: null,
     unsubscribe: null,
+    componentToProducts: {
+      open: false,
+      selectedType: null,
+      selectedProductIds: [],
+      pageId: null,
+      categoryKey: null,
+    },
   };
 
   function generateId(length) {
@@ -303,30 +312,41 @@
   }
 
   function getBindingRows(pageData, dishId) {
-    var children = getPageChildren(pageData);
     var dishKey = dishId == null ? null : String(dishId);
 
     return PRODUCT_COMPONENT_TYPES.map(function (type) {
-      var instance =
-        children.find(function (block) {
-          return block && block.component === type;
-        }) || null;
-
-      var boundItemId = instance && instance.props ? instance.props.itemId : null;
-      var status = "missing";
-      if (instance) {
-        if (dishKey && String(boundItemId) === dishKey) status = "bound";
-        else if (boundItemId) status = "conflict";
-        else status = "unbound";
-      }
+      var instances = findExactBindingInstances(pageData, type, dishKey);
 
       return {
         type: type,
-        instance: instance,
-        status: status,
-        boundItemId: boundItemId,
+        instances: instances,
+        instance: instances[0] || null,
+        status: instances.length ? "bound" : "missing",
+        boundItemId: dishKey,
       };
     });
+  }
+
+  function findExactBindingInstances(pageData, componentType, itemId) {
+    var itemKey = itemId == null ? null : String(itemId);
+    if (!itemKey) return [];
+    return getPageChildren(pageData).filter(function (block) {
+      return (
+        block &&
+        block.component === componentType &&
+        block.props &&
+        String(block.props.itemId) === itemKey
+      );
+    });
+  }
+
+  function toggleOrderedSelection(ids, id, checked) {
+    var key = String(id);
+    var next = ids.filter(function (value) {
+      return String(value) !== key;
+    });
+    if (checked) next.push(key);
+    return next;
   }
 
   function findOperationFooter() {
@@ -357,6 +377,7 @@
     var existing = document.getElementById(BATCH_BTN_ID);
     if (existing) {
       updateBatchButtonState(existing);
+      ensureComponentProductsButton();
       return existing;
     }
 
@@ -364,13 +385,36 @@
     btn.id = BATCH_BTN_ID;
     btn.type = "button";
     btn.className = "emenu-batch-binding-trigger ant-btn ant-btn-default";
-    btn.textContent = "批量添加商品组件";
+    btn.textContent = "商品绑定批量组件";
     btn.addEventListener("click", function () {
       openModal();
     });
 
     footer.insertBefore(btn, deleteBtn);
     updateBatchButtonState(btn);
+    ensureComponentProductsButton();
+    return btn;
+  }
+
+  function ensureComponentProductsButton() {
+    var footer = findOperationFooter();
+    var existingBatchButton = document.getElementById(BATCH_BTN_ID);
+    if (!footer || !existingBatchButton) return null;
+
+    var existing = document.getElementById(COMPONENT_PRODUCTS_BTN_ID);
+    if (existing) {
+      updateComponentProductsButtonState(existing);
+      return existing;
+    }
+
+    var btn = document.createElement("button");
+    btn.id = COMPONENT_PRODUCTS_BTN_ID;
+    btn.type = "button";
+    btn.className = "emenu-batch-binding-trigger ant-btn ant-btn-default";
+    btn.textContent = "组件绑定批量商品";
+    btn.addEventListener("click", openComponentProductsModal);
+    footer.insertBefore(btn, existingBatchButton);
+    updateComponentProductsButtonState(btn);
     return btn;
   }
 
@@ -387,6 +431,19 @@
       : "为当前页批量添加并绑定商品组件";
   }
 
+  function updateComponentProductsButtonState(btn) {
+    if (!btn) btn = document.getElementById(COMPONENT_PRODUCTS_BTN_ID);
+    if (!btn) return;
+    var disabled = isPageActionsDisabled() || !canUseBatchBinding();
+    btn.disabled = disabled;
+    btn.classList.toggle("is-disabled", disabled);
+    btn.title = disabled
+      ? isPageActionsDisabled()
+        ? "模板已发布，无法修改"
+        : "请先选中当前菜单页"
+      : "为多个商品分别添加同一种组件";
+  }
+
   function ensureModal() {
     var existing = document.getElementById(MODAL_ID);
     if (existing) return existing;
@@ -399,7 +456,7 @@
       '<div class="emenu-batch-binding-dialog" role="dialog" aria-modal="true" aria-labelledby="emenu-batch-binding-title">' +
       '  <header class="emenu-batch-binding-dialog-header">' +
       '    <div>' +
-      '      <h2 id="emenu-batch-binding-title" class="emenu-batch-binding-dialog-title">批量添加商品组件</h2>' +
+      '      <h2 id="emenu-batch-binding-title" class="emenu-batch-binding-dialog-title">商品绑定批量组件</h2>' +
       '      <p class="emenu-batch-binding-dialog-subtitle" data-batch-category>当前分类</p>' +
       "    </div>" +
       '    <button type="button" class="emenu-batch-binding-close" data-batch-close aria-label="关闭">×</button>' +
@@ -653,30 +710,38 @@
   }
 
   function createBlockInstance(def, position, itemId) {
-    var instance = {
-      id: generateId(),
-      component: def.component,
-      style: Object.assign({}, def.style, {
+    function cloneNode(node) {
+      var cloned = cloneJson(node);
+      cloned.id = generateId();
+      if (Array.isArray(node.children)) {
+        cloned.children = node.children.map(cloneNode);
+      }
+      return cloned;
+    }
+
+    var instance = cloneNode(def);
+    instance.style = Object.assign({}, instance.style, {
         position: "absolute",
         top: position.top,
         left: position.left,
         zIndex: position.zIndex == null ? 1 : position.zIndex,
-      }),
-      props: Object.assign(cloneJson(def.props), { itemId: String(itemId) }),
-    };
-
-    if (def.children && def.children.length) {
-      instance.children = def.children.map(function (childDef) {
-        return {
-          id: generateId(),
-          component: childDef.component,
-          style: cloneJson(childDef.style),
-          props: cloneJson(childDef.props),
-        };
       });
-    }
+    instance.props = Object.assign({}, instance.props, { itemId: String(itemId) });
 
     return instance;
+  }
+
+  function computeVerticalProductPositions(componentType, count, palette) {
+    var def = BLOCK_LIBRARY[componentType];
+    var width = parseNumber(def && def.style && def.style.width, 100);
+    var height = parseNumber(def && def.style && def.style.height, 40);
+    var viewportWidth = parseNumber(palette && palette.viewportWidth, 1280);
+    var viewportHeight = parseNumber(palette && palette.viewportHeight, 800);
+    var baseX = Math.round(viewportWidth * 0.5 - width / 2);
+    var baseY = Math.round(viewportHeight * 0.42);
+    return Array.from({ length: count }, function (_, index) {
+      return { top: baseY + index * (height + STACK_GAP), left: baseX, zIndex: 2 };
+    });
   }
 
   function computeLayoutPositions(types, palette) {
@@ -733,7 +798,6 @@
     var positions = computeLayoutPositions(types, palette);
     var created = 0;
     var skipped = 0;
-    var replaced = 0;
 
     types.forEach(function (type) {
       var row = rows.find(function (entry) {
@@ -744,13 +808,6 @@
       if (row.status === "bound") {
         skipped += 1;
         return;
-      }
-
-      if (row.status === "conflict" && row.instance) {
-        children = children.filter(function (block) {
-          return block.id !== row.instance.id;
-        });
-        replaced += 1;
       }
 
       var def = BLOCK_LIBRARY[type];
@@ -771,7 +828,6 @@
     dispatchPalette("setCurrentBlock", {});
 
     var message = "已添加 " + created + " 个组件";
-    if (replaced) message += "，替换 " + replaced + " 个冲突组件";
     showToast(message);
     closeModal();
   }
@@ -784,11 +840,11 @@
     var rows = getBindingRows(pageData, state.selectedDish.id);
     var removeIds = rows
       .filter(function (row) {
-        return state.selectedTypes[row.type] && row.status === "bound" && row.instance;
+        return state.selectedTypes[row.type] && row.status === "bound";
       })
-      .map(function (row) {
-        return row.instance.id;
-      });
+      .reduce(function (ids, row) {
+        return ids.concat(row.instances.map(function (instance) { return instance.id; }));
+      }, []);
 
     if (!removeIds.length) return;
     if (!window.confirm("确定从当前页移除选中的 " + removeIds.length + " 个组件吗？")) return;
@@ -804,10 +860,219 @@
     renderModal();
   }
 
+  function ensureComponentProductsModal() {
+    var existing = document.getElementById(COMPONENT_PRODUCTS_MODAL_ID);
+    if (existing) return existing;
+
+    var modal = document.createElement("div");
+    modal.id = COMPONENT_PRODUCTS_MODAL_ID;
+    modal.className = "emenu-batch-binding-modal emenu-component-products-modal hidden";
+    modal.innerHTML =
+      '<div class="emenu-batch-binding-mask" data-component-products-close></div>' +
+      '<div class="emenu-batch-binding-dialog" role="dialog" aria-modal="true" aria-labelledby="emenu-component-products-title">' +
+      '  <header class="emenu-batch-binding-dialog-header"><div>' +
+      '    <h2 id="emenu-component-products-title" class="emenu-batch-binding-dialog-title">组件绑定批量商品</h2>' +
+      '    <p class="emenu-batch-binding-dialog-subtitle" data-component-products-category>当前分类</p>' +
+      '  </div><button type="button" class="emenu-batch-binding-close" data-component-products-close aria-label="关闭">×</button></header>' +
+      '  <div class="emenu-batch-binding-body emenu-component-products-body">' +
+      '    <aside class="emenu-component-products-pane"><div class="emenu-batch-binding-pane-title">商品组件（单选）</div>' +
+      '      <div class="emenu-component-products-type-list" data-component-products-type-list></div></aside>' +
+      '    <section class="emenu-component-products-pane"><div class="emenu-batch-binding-pane-title">商品（多选）</div>' +
+      '      <div class="emenu-component-products-item-list" data-component-products-item-list></div>' +
+      '      <p class="emenu-batch-binding-empty" data-component-products-empty hidden>当前分类暂无商品</p></section>' +
+      '  </div><footer class="emenu-batch-binding-dialog-footer">' +
+      '    <button type="button" class="emenu-binding-secondary-btn" data-component-products-close>取 消</button>' +
+      '    <button type="button" class="emenu-binding-primary-btn" data-component-products-add disabled>添加到当前页</button>' +
+      '  </footer></div>';
+
+    modal.addEventListener("click", function (event) {
+      if (event.target.closest("[data-component-products-close]")) {
+        closeComponentProductsModal();
+      } else if (event.target.closest("[data-component-products-add]")) {
+        addComponentForProducts();
+      }
+    });
+    modal.addEventListener("change", function (event) {
+      if (event.target.matches("[data-component-products-type]")) {
+        state.componentToProducts.selectedType = event.target.value;
+        state.componentToProducts.selectedProductIds = [];
+        renderComponentProductsModal();
+      } else if (event.target.matches("[data-component-products-item]")) {
+        state.componentToProducts.selectedProductIds = toggleOrderedSelection(
+          state.componentToProducts.selectedProductIds,
+          event.target.value,
+          event.target.checked,
+        );
+        renderComponentProductsModal();
+      }
+    });
+    document.body.appendChild(modal);
+    return modal;
+  }
+
+  function openComponentProductsModal() {
+    if (!canUseBatchBinding()) {
+      showToast("请先选中当前菜单页", "error");
+      return;
+    }
+    if (isPageActionsDisabled()) {
+      showToast("模板已发布，无法修改", "error");
+      return;
+    }
+    var page = getCurrentPageData();
+    var bindingState = state.componentToProducts;
+    bindingState.open = true;
+    bindingState.selectedType = null;
+    bindingState.selectedProductIds = [];
+    bindingState.pageId = String(page.id);
+    bindingState.categoryKey = getCurrentPageCategoryKey();
+    ensureComponentProductsModal().classList.remove("hidden");
+    document.body.classList.add("emenu-batch-binding-open");
+    renderComponentProductsModal();
+  }
+
+  function closeComponentProductsModal() {
+    state.componentToProducts.open = false;
+    var modal = document.getElementById(COMPONENT_PRODUCTS_MODAL_ID);
+    if (modal) modal.classList.add("hidden");
+    if (!state.open) document.body.classList.remove("emenu-batch-binding-open");
+  }
+
+  function syncComponentProductsContext() {
+    var bindingState = state.componentToProducts;
+    var page = getCurrentPageData();
+    var pageId = page && page.id != null ? String(page.id) : null;
+    var categoryKey = getCurrentPageCategoryKey();
+    if (bindingState.pageId === pageId && bindingState.categoryKey === categoryKey) return false;
+    bindingState.pageId = pageId;
+    bindingState.categoryKey = categoryKey;
+    bindingState.selectedType = null;
+    bindingState.selectedProductIds = [];
+    return true;
+  }
+
+  function renderComponentProductsModal() {
+    var bindingState = state.componentToProducts;
+    if (!bindingState.open) return;
+    syncComponentProductsContext();
+    var modal = ensureComponentProductsModal();
+    var category = getCurrentCategoryInfo();
+    var pageData = getCurrentPageData();
+    var products = getSaleItemsForCategory(category && category.key);
+    var categoryEl = modal.querySelector("[data-component-products-category]");
+    var typeList = modal.querySelector("[data-component-products-type-list]");
+    var itemList = modal.querySelector("[data-component-products-item-list]");
+    var empty = modal.querySelector("[data-component-products-empty]");
+    var addButton = modal.querySelector("[data-component-products-add]");
+
+    categoryEl.textContent = category ? category.groupName + " › " + category.categoryName + "（当前菜单页）" : "当前菜单页";
+    typeList.innerHTML = "";
+    PRODUCT_COMPONENT_TYPES.forEach(function (type) {
+      var meta = COMPONENT_META[type];
+      var row = document.createElement("label");
+      row.className = "emenu-component-products-row";
+      row.innerHTML =
+        '<input type="radio" name="emenu-component-products-type" data-component-products-type value="' + type + '" ' +
+        (bindingState.selectedType === type ? "checked" : "") + " />" +
+        '<span class="emenu-icon-circle-wrap"><img class="emenu-product-binding-row-icon" alt="" src="' + iconUrl(meta.icon) + '" /></span>' +
+        '<span class="emenu-product-binding-row-label">' + meta.label + "</span>";
+      typeList.appendChild(row);
+    });
+
+    itemList.innerHTML = "";
+    products.forEach(function (product) {
+      var productId = String(product.id);
+      var bound = !!(bindingState.selectedType && findExactBindingInstances(pageData, bindingState.selectedType, productId).length);
+      var selected = bindingState.selectedProductIds.indexOf(productId) >= 0;
+      var row = document.createElement("label");
+      row.className = "emenu-component-products-row" + (bound ? " is-bound" : "");
+      var checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.value = productId;
+      checkbox.checked = selected;
+      checkbox.disabled = bound || !bindingState.selectedType;
+      checkbox.setAttribute("data-component-products-item", "");
+      var name = document.createElement("span");
+      name.className = "emenu-component-products-product-name";
+      name.textContent = product.name;
+      var status = document.createElement("span");
+      status.className = "emenu-product-binding-row-status" + (bound ? " is-bound" : "");
+      status.textContent = bound ? "已在画布" : "";
+      row.appendChild(checkbox);
+      row.appendChild(document.createElement("span"));
+      row.appendChild(name);
+      row.appendChild(status);
+      itemList.appendChild(row);
+    });
+    empty.hidden = products.length > 0;
+    addButton.disabled = !(bindingState.selectedType && bindingState.selectedProductIds.length);
+    addButton.textContent = bindingState.selectedProductIds.length
+      ? "添加到当前页 (" + bindingState.selectedProductIds.length + ")"
+      : "添加到当前页";
+  }
+
+  function addComponentForProducts() {
+    var bindingState = state.componentToProducts;
+    var palette = getPaletteState();
+    var page = palette && palette.currentPageData;
+    var categoryKey = getCurrentPageCategoryKey();
+    if (isPageActionsDisabled()) {
+      closeComponentProductsModal();
+      showToast("模板已发布，无法修改", "error");
+      return;
+    }
+    if (!page || !page.id || !categoryKey) {
+      showToast("当前页面或分类数据不可用", "error");
+      return;
+    }
+    if (String(page.id) !== bindingState.pageId || categoryKey !== bindingState.categoryKey) {
+      syncComponentProductsContext();
+      renderComponentProductsModal();
+      showToast("页面或分类已切换，请重新选择", "error");
+      return;
+    }
+    var type = bindingState.selectedType;
+    var def = BLOCK_LIBRARY[type];
+    if (!def) return;
+    var currentIds = getSaleItemsForCategory(categoryKey).map(function (product) { return String(product.id); });
+    var selectedIds = bindingState.selectedProductIds.filter(function (id) { return currentIds.indexOf(String(id)) >= 0; });
+    var pendingIds = [];
+    var skipped = 0;
+    selectedIds.forEach(function (id) {
+      if (findExactBindingInstances(page, type, id).length) skipped += 1;
+      else pendingIds.push(String(id));
+    });
+    if (!pendingIds.length) {
+      bindingState.selectedProductIds = [];
+      renderComponentProductsModal();
+      showToast(selectedIds.length ? "所选商品均已绑定" : "请选择当前分类中的商品", "error");
+      return;
+    }
+    var positions = computeVerticalProductPositions(type, pendingIds.length, palette);
+    var nextChildren = getPageChildren(page).slice();
+    pendingIds.forEach(function (id, index) {
+      nextChildren.push(createBlockInstance(def, positions[index], id));
+    });
+    dispatchPalette("setCurrentPageData", Object.assign({}, page, { children: nextChildren }));
+    dispatchPalette("syncPageDataToGroup");
+    dispatchPalette("setCurrentBlock", {});
+    bindingState.selectedProductIds = [];
+    renderComponentProductsModal();
+    var message = "已为 " + pendingIds.length + " 个商品添加〈" + COMPONENT_META[type].label + "〉";
+    if (skipped) message += "，跳过 " + skipped + " 个已绑定商品";
+    showToast(message);
+  }
+
   function refreshUi() {
     ensureBatchButton();
     updateBatchButtonState();
+    updateComponentProductsButtonState();
+    if (isPageActionsDisabled()) {
+      if (state.open) closeModal();
+      if (state.componentToProducts.open) closeComponentProductsModal();
+    }
     if (state.open) renderModal();
+    if (state.componentToProducts.open) renderComponentProductsModal();
   }
 
   function bindStore() {
@@ -846,6 +1111,20 @@
       }
     }
     retry();
+  }
+
+  if (window.__EMENU_PRODUCT_BINDING_TEST_HOOKS__) {
+    Object.assign(window.__EMENU_PRODUCT_BINDING_TEST_HOOKS__, {
+      findExactBindingInstances: findExactBindingInstances,
+      getBindingRows: getBindingRows,
+      createBlockInstance: createBlockInstance,
+      computeVerticalProductPositions: computeVerticalProductPositions,
+      toggleOrderedSelection: toggleOrderedSelection,
+      syncComponentProductsContext: syncComponentProductsContext,
+      addComponentForProducts: addComponentForProducts,
+      BLOCK_LIBRARY: BLOCK_LIBRARY,
+      state: state,
+    });
   }
 
   if (document.readyState === "loading") {
