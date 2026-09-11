@@ -9,6 +9,7 @@ const payroll = fs.readFileSync("src/team/tips/legacy/tipout-payroll-bridge.js.t
 assert.match(template, /id="confirmDetailAllocationBtn"[^>]*confirmDetailAllocation\(\)/);
 assert.doesNotMatch(template, /saveDetail\(\)|saveAndNext\(\)|小费池执行结果|detailPoolExecutionList/);
 assert.match(program, /function collectDetailAllocationSnapshot\(store, dateKey, rules\)/);
+assert.match(program, /split\(\/\\s\*\\\/\\s\*\/\)/, "combined receiver roles must resolve to a real roster role");
 assert.match(program, /function syncDetailAllocationAction\(\)/);
 assert.match(program, /function confirmDetailAllocation\(\)/);
 assert.match(program, /该日期已分配，重新确认将覆盖当天原分配结果。/);

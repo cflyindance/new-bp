@@ -1234,8 +1234,10 @@ var ALLOC_KEY = 'tipout_allocated';
     function findDetailRosterEmployee(store, role, name) {
       if (!window.TipOutRosterDirectory || !TipOutRosterDirectory.listEmployees) return null;
       var employees = TipOutRosterDirectory.listEmployees(store) || [];
+      var acceptedRoles = String(role || '').split(/\s*\/\s*/).filter(Boolean);
       return employees.find(function(employee) {
-        return String(employee.name || '') === String(name || '') && String(employee.role || '') === String(role || '');
+        return String(employee.name || '') === String(name || '') &&
+          (!acceptedRoles.length || acceptedRoles.indexOf(String(employee.role || '')) >= 0);
       }) || null;
     }
 
@@ -1258,7 +1260,7 @@ var ALLOC_KEY = 'tipout_allocated';
             employees.push({
               employeeId: rosterEmployee && String(rosterEmployee.id || rosterEmployee.employeeId || ''),
               name: name,
-              role: role,
+              role: rosterEmployee ? String(rosterEmployee.role || role) : role,
               hours: hoursInput ? Number(hoursInput.value || 0) : getDetailEmployeeHours(rule, ruleId, dateKey, name),
               percentage: pctInput ? Number(pctInput.value || 0) : 0,
               amount: cells.length > 1 ? detailNumberFromText(cells[cells.length - 2].textContent) : NaN
