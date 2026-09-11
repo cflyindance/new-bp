@@ -89,6 +89,8 @@ assert.equal(memberA.props.itemId, "101");
 assert.equal(memberA.children[0].props.itemId, undefined);
 
 assert.match(source, /组件绑定批量商品/);
+assert.equal((source.match(/商品绑定批量组件/g) || []).length, 2);
+assert.doesNotMatch(source, /批量添加商品组件/);
 assert.match(source, /data-component-products-type/);
 assert.match(source, /data-component-products-item/);
 assert.match(source, /data-component-products-add/);
