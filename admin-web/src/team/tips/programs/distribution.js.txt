@@ -678,6 +678,11 @@ var ALLOC_KEY = 'tipout_allocated';
         var employeeResults = getDailyEmployeeResultsForEmployees(dateKey, scopedEmployees);
         var total = TipOutSummaryUi.summarizeDailyResults(employeeResults);
         var allocated = allocatedDates.has(dateKey);
+        var projectedPoolSummary = TipOutDatePoolView.projectDate({ dateKey: dateKey, rules: storeRules, originalTips: total.before, allocated: allocated });
+        var confirmedSnapshot = allocated && window.TipOutAllocationResults ? TipOutAllocationResults.read(document.getElementById('storeSelect').value, dateKey) : null;
+        var poolSummary = confirmedSnapshot
+          ? Object.assign({}, projectedPoolSummary, confirmedSnapshot.summary || {}, { aggregateStatus: '已分配' })
+          : projectedPoolSummary;
         return {
           dateKey: dateKey,
           date: new Date(dateKey + 'T00:00:00'),
@@ -685,7 +690,7 @@ var ALLOC_KEY = 'tipout_allocated';
           requiresAttendance: requiresAttendance,
           employeeResults: employeeResults,
           total: total,
-          poolSummary: TipOutDatePoolView.projectDate({ dateKey: dateKey, rules: storeRules, originalTips: total.before, allocated: allocated })
+          poolSummary: poolSummary
         };
       });
     }

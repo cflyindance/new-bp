@@ -197,6 +197,19 @@
     var hasSvcRules = split.svc.length > 0;
 
     dateKeys.forEach(function (dateKey) {
+      var confirmed = global.TipOutAllocationResults && TipOutAllocationResults.read
+        ? TipOutAllocationResults.read(store, dateKey)
+        : null;
+      if (confirmed && Array.isArray(confirmed.pools)) {
+        confirmed.pools.forEach(function (pool) {
+          (pool.employees || []).forEach(function (employee) {
+            var row = ensureAmountRow(byName, employee.name);
+            if (pool.poolKind === "surcharge") row.svcw = roundTip(row.svcw + Number(employee.amount || 0));
+            else row.tips = roundTip(row.tips + Number(employee.amount || 0));
+          });
+        });
+        return;
+      }
       employees.forEach(function (emp) {
         var row = ensureAmountRow(byName, emp.name);
         if (hasTipRules) {

@@ -1,0 +1,73 @@
+(function (root) {
+  "use strict";
+
+  var RESULT_KEY = "tipout_allocation_results_v1";
+  var ALLOC_KEY = "tipout_allocated";
+
+  function clone(value) { return value == null ? value : JSON.parse(JSON.stringify(value)); }
+  function key(store, dateKey) { return String(store || "") + "\u0000" + String(dateKey || ""); }
+  function parseDocument(storageKey) {
+    var raw = localStorage.getItem(storageKey);
+    if (!raw) return {};
+    var parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("本地分配数据已损坏");
+    return parsed;
+  }
+  function allocatedDocument() { return parseDocument(ALLOC_KEY); }
+  function resultDocument() { return parseDocument(RESULT_KEY); }
+  function isAllocated(store, dateKey) {
+    var dates = allocatedDocument()[String(store || "")];
+    return Array.isArray(dates) && dates.indexOf(String(dateKey || "")) >= 0;
+  }
+  function read(store, dateKey) {
+    if (!isAllocated(store, dateKey)) return null;
+    var value = resultDocument()[key(store, dateKey)];
+    return value && typeof value === "object" && !Array.isArray(value) ? clone(value) : null;
+  }
+  function finiteNonnegative(value) { return typeof value === "number" && isFinite(value) && value >= 0; }
+  function validate(snapshot) {
+    if (!snapshot || typeof snapshot !== "object") return "分配结果无效";
+    if (!String(snapshot.store || "").trim()) return "请选择门店";
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(snapshot.dateKey || ""))) return "请选择有效日期";
+    if (!Array.isArray(snapshot.pools) || !snapshot.pools.length) return "当前门店没有可用的小费分配规则";
+    var invalid = false;
+    function check(value) { if (!finiteNonnegative(value)) invalid = true; }
+    (snapshot.pools || []).forEach(function (pool) {
+      check(pool.poolAmount);
+      (pool.employees || []).forEach(function (employee) {
+        check(employee.hours); check(employee.percentage); check(employee.amount);
+        if (!employee.employeeId || !employee.name || !employee.role) invalid = true;
+      });
+    });
+    var summary = snapshot.summary || {};
+    [summary.originalTips, summary.poolAmount, summary.allocatedAmount, summary.unallocatedAmount].forEach(check);
+    return invalid ? "分配数据存在无效金额、工时、比例或员工" : null;
+  }
+  function commit(snapshot) {
+    var validationError = validate(snapshot);
+    if (validationError) throw new Error(validationError);
+    var oldResultsRaw = localStorage.getItem(RESULT_KEY);
+    var oldAllocatedRaw = localStorage.getItem(ALLOC_KEY);
+    var results = resultDocument();
+    var allocated = allocatedDocument();
+    var store = String(snapshot.store);
+    var dateKey = String(snapshot.dateKey);
+    results[key(store, dateKey)] = clone(snapshot);
+    var dates = Array.isArray(allocated[store]) ? allocated[store].slice() : [];
+    if (dates.indexOf(dateKey) < 0) dates.push(dateKey);
+    allocated[store] = dates;
+    try {
+      localStorage.setItem(RESULT_KEY, JSON.stringify(results));
+      localStorage.setItem(ALLOC_KEY, JSON.stringify(allocated));
+    } catch (error) {
+      try {
+        if (oldResultsRaw == null) localStorage.removeItem(RESULT_KEY); else localStorage.setItem(RESULT_KEY, oldResultsRaw);
+        if (oldAllocatedRaw == null) localStorage.removeItem(ALLOC_KEY); else localStorage.setItem(ALLOC_KEY, oldAllocatedRaw);
+      } catch (_) {}
+      throw error;
+    }
+    return clone(snapshot);
+  }
+
+  root.TipOutAllocationResults = { RESULT_KEY: RESULT_KEY, read: read, isAllocated: isAllocated, validate: validate, commit: commit };
+})(window);

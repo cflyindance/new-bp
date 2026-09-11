@@ -9,6 +9,7 @@ import rosterDirectory from "./legacy/tipout-roster-directory.js.txt?raw";
 import summary from "./legacy/tipout-summary-ui.js.txt?raw";
 import summaryDateSort from "./legacy/tipout-summary-date-sort.js.txt?raw";
 import datePoolView from "./legacy/tipout-date-pool-view.js.txt?raw";
+import allocationResults from "./legacy/tipout-allocation-results-store.js.txt?raw";
 import payrollBridge from "./legacy/tipout-payroll-bridge.js.txt?raw";
 import orderTipStatus from "./legacy/orderTipStatus.js.txt?raw";
 import paymentMethods from "./legacy/paymentMethodApportion.js.txt?raw";
@@ -27,8 +28,8 @@ type Bag = Record<PropertyKey, unknown>;
 
 const programs: Record<TipsView, string> = { distribution, details, rules, "rule-editor": editor, "employee-reconciliation": employeeReconciliation };
 const dependencies: Record<TipsView, string[]> = {
-  distribution: [common, summary, summaryDateSort, ruleData, personalSales, datePoolView, allocation, attendance, manualHours, rosterDirectory, payrollBridge],
-  details: [common, ruleData, personalSales, datePoolView, allocation, attendance, manualHours, rosterDirectory],
+  distribution: [common, summary, summaryDateSort, ruleData, personalSales, datePoolView, allocationResults, allocation, attendance, manualHours, rosterDirectory, payrollBridge],
+  details: [common, ruleData, personalSales, datePoolView, allocationResults, allocation, attendance, manualHours, rosterDirectory, payrollBridge],
   rules: [common, ruleData, rosterDirectory],
   "rule-editor": [common, ruleData, rosterDirectory, orderTipStatus, paymentMethods, personalSales, allocation],
   "employee-reconciliation": [common, attendance, summary, rosterDirectory],
@@ -41,6 +42,7 @@ function runtimeSource(view: TipsView): string {
     "var TipOutSummaryUi=window.TipOutSummaryUi,TipOutPaymentMethodApportion=window.TipOutPaymentMethodApportion;",
     "var TipOutSummaryDateSort=window.TipOutSummaryDateSort;",
     "var TipOutDatePoolView=window.TipOutDatePoolView;",
+    "var TipOutAllocationResults=window.TipOutAllocationResults;",
     "var TipOutAttendance=window.TipOutAttendance,TipAllocation=window.TipAllocation;",
     "var TipOutManualHours=window.TipOutManualHours;",
     "var TipOutRosterDirectory=window.TipOutRosterDirectory;",

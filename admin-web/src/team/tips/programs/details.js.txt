@@ -4,16 +4,6 @@ var ALLOC_KEY = 'tipout_allocated';
         var raw = localStorage.getItem(ALLOC_KEY);
         var obj = raw ? JSON.parse(raw) : {};
         var arr = obj[store];
-        if (!arr && store) {
-          var namePart = (store.split('-')[0] || '').trim();
-          if (namePart) {
-            for (var k in obj) {
-              if (k.indexOf(namePart) === 0 || namePart.indexOf(k.split('-')[0].trim()) === 0) {
-                arr = obj[k]; break;
-              }
-            }
-          }
-        }
         return new Set(arr || []);
       } catch (e) { return new Set(); }
     }
@@ -228,6 +218,7 @@ var ALLOC_KEY = 'tipout_allocated';
         );
       });
       document.getElementById('detailRulesContainer').innerHTML = bundleParts.join('');
+      syncDetailAllocationAction();
     }
 
     function readDatePoolSnapshot(dateKey, store) {
@@ -239,19 +230,20 @@ var ALLOC_KEY = 'tipout_allocated';
 
     function renderDatePoolOverview(dateKey, store, rules) {
       var snapshot = readDatePoolSnapshot(dateKey, store);
-      var allocatedDates = new Set();
-      try {
-        var allocatedMap = JSON.parse(localStorage.getItem('tipout_allocated') || '{}');
-        allocatedDates = new Set(allocatedMap[store || ''] || []);
-      } catch (error) { allocatedDates = new Set(); }
-      var allocated = allocatedDates.has(dateKey);
-      var summary = snapshot || TipOutDatePoolView.projectDate({ dateKey: dateKey, rules: rules, originalTips: 0, allocated: allocated });
+      var allocated = window.TipOutAllocationResults
+        ? TipOutAllocationResults.isAllocated(store, dateKey)
+        : getAllocatedDatesForStore(store).has(dateKey);
+      var confirmed = allocated && window.TipOutAllocationResults ? TipOutAllocationResults.read(store, dateKey) : null;
+      var summary = confirmed
+        ? Object.assign({}, TipOutDatePoolView.projectDate({ dateKey: dateKey, rules: rules, originalTips: 0, allocated: true }), confirmed.summary || {})
+        : (snapshot || TipOutDatePoolView.projectDate({ dateKey: dateKey, rules: rules, originalTips: 0, allocated: allocated }));
       document.getElementById('detailOriginalTips').textContent = snapshot ? money(summary.originalTips || 0) : '—';
       document.getElementById('detailPoolAmount').textContent = allocated ? money(summary.poolAmount || 0) : '—';
       document.getElementById('detailAllocatedAmount').textContent = allocated ? money(summary.allocatedAmount || 0) : '—';
       document.getElementById('detailUnallocatedAmount').textContent = allocated ? money(summary.unallocatedAmount || 0) : '—';
       document.getElementById('detailPoolCount').textContent = String(summary.poolCount || 0);
       var list = document.getElementById('detailPoolExecutionList');
+      if (!list) return;
       list.innerHTML = (summary.poolExecutions || []).map(function(pool) {
         return '<tr data-pool-id="' + escHtml(pool.id) + '">' +
           '<td><strong>' + escHtml(pool.name) + '</strong></td>' +
@@ -1232,24 +1224,123 @@ var ALLOC_KEY = 'tipout_allocated';
       recalcDetailLegacyCard(card);
     }
 
-    function saveDetail() {
-      showNotification('保存成功', 'success');
+    var detailAllocationSubmitting = false;
+
+    function detailNumberFromText(value) {
+      var number = Number(String(value == null ? '' : value).replace(/[^0-9.-]/g, ''));
+      return isFinite(number) ? Math.abs(number) : NaN;
+    }
+
+    function findDetailRosterEmployee(store, role, name) {
+      if (!window.TipOutRosterDirectory || !TipOutRosterDirectory.listEmployees) return null;
+      var employees = TipOutRosterDirectory.listEmployees(store) || [];
+      return employees.find(function(employee) {
+        return String(employee.name || '') === String(name || '') && String(employee.role || '') === String(role || '');
+      }) || null;
+    }
+
+    function collectDetailAllocationSnapshot(store, dateKey, rules) {
+      var pools = [];
+      document.querySelectorAll('#detailRulesContainer .detail-card[data-rule-id]').forEach(function(card) {
+        var ruleId = card.getAttribute('data-rule-id') || '';
+        var rule = (rules || []).find(function(item) { return String(item.id || '') === String(ruleId); }) || {};
+        var employees = [];
+        card.querySelectorAll('.detail-result-section[data-role]').forEach(function(section) {
+          var role = section.getAttribute('data-role') || '';
+          section.querySelectorAll('tbody tr').forEach(function(row) {
+            var select = row.querySelector('td select');
+            var name = select ? select.value : '';
+            if (!name || name === '（未配置员工）') return;
+            var rosterEmployee = findDetailRosterEmployee(store, role, name);
+            var hoursInput = row.querySelector('.detail-emp-hours-input');
+            var pctInput = row.querySelector('.detail-emp-pct-input') || row.querySelector('td:nth-last-child(3) input');
+            var cells = row.querySelectorAll('td');
+            employees.push({
+              employeeId: rosterEmployee && String(rosterEmployee.id || rosterEmployee.employeeId || ''),
+              name: name,
+              role: role,
+              hours: hoursInput ? Number(hoursInput.value || 0) : getDetailEmployeeHours(rule, ruleId, dateKey, name),
+              percentage: pctInput ? Number(pctInput.value || 0) : 0,
+              amount: cells.length > 1 ? detailNumberFromText(cells[cells.length - 2].textContent) : NaN
+            });
+          });
+        });
+        var poolAmount = Number(card.getAttribute('data-pool'));
+        pools.push({
+          poolId: String(rule.poolId || rule.id || ruleId),
+          poolName: rule.poolName || rule.name || rule.ruleName || '未命名小费池',
+          ruleId: String(rule.id || ruleId),
+          ruleName: rule.name || rule.ruleName || '未命名规则',
+          poolKind: rule.poolKind || 'tip',
+          poolAmount: poolAmount,
+          employees: employees
+        });
+      });
+      var poolAmountTotal = pools.reduce(function(sum, pool) { return sum + pool.poolAmount; }, 0);
+      var allocatedTotal = pools.reduce(function(sum, pool) {
+        return sum + pool.employees.reduce(function(employeeSum, employee) { return employeeSum + employee.amount; }, 0);
+      }, 0);
+      return {
+        version: 1,
+        store: store,
+        dateKey: dateKey,
+        confirmedAt: new Date().toISOString(),
+        pools: pools,
+        summary: {
+          originalTips: detailNumberFromText(document.getElementById('detailOriginalTips').textContent) || 0,
+          poolAmount: +poolAmountTotal.toFixed(2),
+          allocatedAmount: +allocatedTotal.toFixed(2),
+          unallocatedAmount: +Math.max(0, poolAmountTotal - allocatedTotal).toFixed(2),
+          poolCount: pools.length
+        }
+      };
+    }
+
+    function syncDetailAllocationAction() {
+      var button = document.getElementById('confirmDetailAllocationBtn');
+      var dateInput = document.getElementById('detailDate');
+      var storeInput = document.getElementById('storeSelect');
+      if (!button || !dateInput || !storeInput) return;
+      var allocated = window.TipOutAllocationResults && TipOutAllocationResults.isAllocated(storeInput.value, dateInput.value);
+      button.textContent = allocated ? '重新确认分配' : '确认分配';
+      button.disabled = detailAllocationSubmitting;
+    }
+
+    function confirmDetailAllocation() {
+      if (detailAllocationSubmitting) return;
+      var dateKey = (document.getElementById('detailDate').value || '').trim();
+      var store = (document.getElementById('storeSelect').value || '').trim();
+      var rules = window.ruleData && ruleData.getRulesForStore ? ruleData.getRulesForStore(store) : [];
+      var allocated = window.TipOutAllocationResults && TipOutAllocationResults.isAllocated(store, dateKey);
+      if (allocated && !window.confirm('该日期已分配，重新确认将覆盖当天原分配结果。')) return;
+      var button = document.getElementById('confirmDetailAllocationBtn');
+      detailAllocationSubmitting = true;
+      if (button) { button.disabled = true; button.textContent = allocated ? '重新分配中…' : '分配中…'; }
+      try {
+        var snapshot = collectDetailAllocationSnapshot(store, dateKey, rules);
+        var validationError = TipOutAllocationResults.validate(snapshot);
+        if (validationError) throw new Error(validationError);
+        TipOutAllocationResults.commit(snapshot);
+        sessionStorage.setItem('tipout-date-pool-summary-v1', JSON.stringify({ dateKey: dateKey, store: store, poolSummary: snapshot.summary }));
+        try {
+          if (window.TipOutPayrollBridge && TipOutPayrollBridge.syncAfterAllocation) TipOutPayrollBridge.syncAfterAllocation(store, dateKey, dateKey);
+        } catch (payrollError) {
+          showNotification('分配结果已保存，但薪资同步失败，请重试', 'error');
+          return;
+        }
+        renderDetailPage();
+        showNotification(allocated ? '重新分配成功' : '分配成功', 'success');
+      } catch (error) {
+        showNotification(error && error.message ? error.message : '分配失败，请重试', 'error');
+      } finally {
+        detailAllocationSubmitting = false;
+        syncDetailAllocationAction();
+      }
     }
 
     function updateTipData() {
       renderDetailPage();
       showNotification('小费数据已更新', 'success');
-    }
-
-    function saveAndNext() {
-      var dateInput = document.getElementById('detailDate');
-      var cur = new Date(dateInput.value + 'T00:00:00');
-      cur.setDate(cur.getDate() + 1);
-      var nextKey = cur.getFullYear() + '-' + pad(cur.getMonth() + 1) + '-' + pad(cur.getDate());
-      dateInput.value = nextKey;
-      renderDetailPage();
-      showNotification('已保存，已跳转到 ' + nextKey, 'success');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     function initStoreSelect() {
