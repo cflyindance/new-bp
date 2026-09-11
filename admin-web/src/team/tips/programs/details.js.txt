@@ -238,7 +238,7 @@ var ALLOC_KEY = 'tipout_allocated';
         ? Object.assign({}, TipOutDatePoolView.projectDate({ dateKey: dateKey, rules: rules, originalTips: 0, allocated: true }), confirmed.summary || {})
         : (snapshot || TipOutDatePoolView.projectDate({ dateKey: dateKey, rules: rules, originalTips: 0, allocated: allocated }));
       document.getElementById('detailOriginalTips').textContent = snapshot ? money(summary.originalTips || 0) : '—';
-      document.getElementById('detailPoolAmount').textContent = allocated ? money(summary.poolAmount || 0) : '—';
+      document.getElementById('detailPoolAmount').textContent = money(summary.poolAmount || 0);
       document.getElementById('detailAllocatedAmount').textContent = allocated ? money(summary.allocatedAmount || 0) : '—';
       document.getElementById('detailUnallocatedAmount').textContent = allocated ? money(summary.unallocatedAmount || 0) : '—';
       document.getElementById('detailPoolCount').textContent = String(summary.poolCount || 0);
@@ -249,7 +249,7 @@ var ALLOC_KEY = 'tipout_allocated';
           '<td><strong>' + escHtml(pool.name) + '</strong></td>' +
           '<td class="tipout-rule-summary-cell">' + escHtml(pool.ruleSummary || '—') + '</td>' +
           '<td><span class="tipout-daily-status ' + (allocated ? 'allocated' : 'pending') + '">' + escHtml(pool.status) + '</span></td>' +
-          '<td>' + (allocated ? money(pool.poolAmount || 0) : '—') + '</td>' +
+          '<td>' + money(pool.poolAmount || 0) + '</td>' +
           '<td>' + (allocated ? money(pool.allocatedAmount || 0) : '—') + '</td>' +
           '<td>' + (allocated ? money(pool.unallocatedAmount || 0) : '—') + '</td></tr>';
       }).join('') || '<tr><td colspan="6" class="tipout-empty-cell">当前日期没有适用的小费池规则</td></tr>';

@@ -662,7 +662,7 @@ var ALLOC_KEY = 'tipout_allocated';
       document.getElementById('summaryReceivedLabel').textContent = '已分配';
       document.getElementById('summaryAfterLabel').textContent = '未分配';
       document.getElementById('summaryBefore').textContent = money(dateTotals.originalTips);
-      document.getElementById('summaryDeducted').textContent = dateTotals.hasPending ? '—' : money(dateTotals.poolAmount);
+      document.getElementById('summaryDeducted').textContent = money(dateTotals.poolAmount);
       document.getElementById('summaryReceived').textContent = dateTotals.hasPending ? '—' : money(dateTotals.allocatedAmount);
       document.getElementById('summaryAfter').textContent = dateTotals.hasPending ? '—' : money(dateTotals.unallocatedAmount);
       document.getElementById('summaryPoolCount').textContent = String(dateTotals.poolCount);
@@ -714,7 +714,7 @@ var ALLOC_KEY = 'tipout_allocated';
           '<td><span class="tipout-daily-status ' + (row.allocated ? 'allocated' : 'pending') + '">' +
           row.poolSummary.aggregateStatus + '</span></td>' +
           '<td>' + money(row.poolSummary.originalTips) + '</td>' +
-          '<td><strong>' + (row.allocated ? money(row.poolSummary.poolAmount) : '—') + '</strong></td>' +
+          '<td><strong>' + money(row.poolSummary.poolAmount) + '</strong></td>' +
           '<td><strong class="tip-amount--receive">' + (row.allocated ? money(row.poolSummary.allocatedAmount || 0) : '—') + '</strong></td>' +
           '<td><strong>' + (row.allocated ? money(row.poolSummary.unallocatedAmount || 0) : '—') + '</strong></td>' +
           '<td><button type="button" class="tipout-pool-count-link" tabindex="-1">' + row.poolSummary.poolCount + ' 个</button></td>' +

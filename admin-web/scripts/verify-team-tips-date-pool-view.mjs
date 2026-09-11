@@ -16,7 +16,9 @@ for (const heading of ["日期", "分配状态", "原始小费", "入池金额",
 if (!template.includes('id="summaryPoolCount"')) failures.push("date task: pool-count metric missing");
 if (!distribution.includes("TipOutDatePoolView.projectDate")) failures.push("date task: shared pool projection missing");
 if (!distribution.includes("row.poolSummary.poolCount + ' 个</button></td>'")) failures.push("date task: pool-count cell missing");
-if (!distribution.includes("row.allocated ? money(row.poolSummary.poolAmount) : '—'")) failures.push("date task: uncalculated pool amount must render dash");
+if (!distribution.includes("money(row.poolSummary.poolAmount)")) failures.push("date task: pool amount must always render");
+if (distribution.includes("row.allocated ? money(row.poolSummary.poolAmount) : '—'")) failures.push("date task: pending pool amount must not render dash");
+if (!details.includes("detailPoolAmount').textContent = money(summary.poolAmount || 0)")) failures.push("date detail: pool amount must always render");
 if (detailTemplate.includes('id="detailPoolExecutionList"') || detailTemplate.includes("小费池执行结果")) failures.push("date detail: removed pool execution block returned");
 if (!detailTemplate.includes('id="detailOriginalTips"')) failures.push("date detail: date metric strip missing");
 if (!details.includes("renderDatePoolOverview")) failures.push("date detail: pool overview renderer missing");
