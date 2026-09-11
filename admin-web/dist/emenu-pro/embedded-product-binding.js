@@ -1,6 +1,6 @@
 /**
  * eMenu Pro 嵌入态：商品组件批量绑定
- * 在「删除菜单」左侧提供【批量添加商品组件】，弹窗内左菜品 / 右组件批量绑定。
+ * 在「删除菜单」左侧提供商品与组件批量绑定入口，弹窗内左菜品 / 右组件批量绑定。
  */
 (function () {
   if (!document.documentElement.classList.contains("menusifu-embedded")) {
@@ -385,7 +385,7 @@
     btn.id = BATCH_BTN_ID;
     btn.type = "button";
     btn.className = "emenu-batch-binding-trigger ant-btn ant-btn-default";
-    btn.textContent = "批量添加商品组件";
+    btn.textContent = "商品绑定批量组件";
     btn.addEventListener("click", function () {
       openModal();
     });
@@ -456,7 +456,7 @@
       '<div class="emenu-batch-binding-dialog" role="dialog" aria-modal="true" aria-labelledby="emenu-batch-binding-title">' +
       '  <header class="emenu-batch-binding-dialog-header">' +
       '    <div>' +
-      '      <h2 id="emenu-batch-binding-title" class="emenu-batch-binding-dialog-title">批量添加商品组件</h2>' +
+      '      <h2 id="emenu-batch-binding-title" class="emenu-batch-binding-dialog-title">商品绑定批量组件</h2>' +
       '      <p class="emenu-batch-binding-dialog-subtitle" data-batch-category>当前分类</p>' +
       "    </div>" +
       '    <button type="button" class="emenu-batch-binding-close" data-batch-close aria-label="关闭">×</button>' +
