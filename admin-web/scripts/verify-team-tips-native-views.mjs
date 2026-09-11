@@ -130,6 +130,38 @@ for (const token of ["historyMode === 'push'", "historyMode === 'replace'", "win
 if ((distributionTemplate.match(/id="summaryViewSwitch"/g) || []).length !== 1) failures.push("distribution: summary view switch must be unique");
 if ((distributionTemplate.match(/id="dateTaskTab"/g) || []).length !== 1) failures.push("distribution: date task tab must be unique");
 if ((distributionTemplate.match(/id="employeeReconciliationTab"/g) || []).length !== 1) failures.push("distribution: employee reconciliation tab must be unique");
+for (const id of [
+  "employeeSummarySearch", "employeeSummaryRoleFilter", "employeeSummaryStatusFilter",
+  "employeeMetricCount", "employeeMetricFinal", "employeeMetricCompleted", "employeeMetricPending",
+  "employeeSortEmployee", "employeeSortHours", "employeeSortFinalAmount",
+]) {
+  if ((distributionTemplate.match(new RegExp(`id="${id}"`, "g")) || []).length !== 1) failures.push(`distribution: ${id} must be unique`);
+}
+for (const token of ['id="detailRuleFilter"', 'id="detailRuleFilterAll"', 'id="detailRuleFilterOptions"', '规则名称', 'toggleAllDetailRules(this.checked)']) {
+  if (!nativeDetail.includes(token)) failures.push(`detail: rule filter contract missing ${token}`);
+}
+for (const token of ['detailAllRules', 'detailSelectedRuleIds', 'renderVisibleRuleView()', 'handleDetailRuleSelection()', 'TipOutDetailRuleFilter.sameRuleSet']) {
+  if (!nativeDetailProgram.includes(token)) failures.push(`detail: rule filter behavior missing ${token}`);
+}
+const filterHandlerSource = nativeDetailProgram.slice(nativeDetailProgram.indexOf('function handleDetailRuleSelection'), nativeDetailProgram.indexOf('function renderVisibleRuleView'));
+for (const forbidden of ['renderDetailPage(', 'scheduleDetailAutoAllocation(', 'TipOutPayrollBridge']) {
+  if (filterHandlerSource.includes(forbidden)) failures.push(`detail: display filter must not call ${forbidden}`);
+}
+const detailRuleFilterContext = vm.createContext({ window: {} });
+vm.runInContext(fs.readFileSync('src/team/tips/legacy/tipout-detail-rule-filter.js.txt', 'utf8'), detailRuleFilterContext);
+const detailRuleFilter = detailRuleFilterContext.window.TipOutDetailRuleFilter;
+const filterRulesFixture = [
+  { id: 'rule-a', ruleName: 'Tip Pool', poolName: 'Main Pool' },
+  { id: 'rule-b', ruleName: 'Tip Pool', poolName: 'Bar Pool' },
+  { id: 'rule-c', ruleName: 'Host Pool', poolName: 'Main Pool' },
+];
+assert.deepEqual(JSON.parse(JSON.stringify(detailRuleFilter.buildOptions(filterRulesFixture))).map(item => item.label), ['Tip Pool · Main Pool', 'Tip Pool · Bar Pool', 'Host Pool']);
+assert.deepEqual(JSON.parse(JSON.stringify(detailRuleFilter.filterRules(filterRulesFixture, ['rule-b']))).map(item => item.id), ['rule-b']);
+assert.equal(detailRuleFilter.sameRuleSet([{ ruleId: 'rule-b' }, { ruleId: 'rule-a' }], filterRulesFixture.slice(0, 2)), true);
+assert.equal(detailRuleFilter.sameRuleSet([{ ruleId: 'rule-a' }], filterRulesFixture.slice(0, 2)), false);
+for (const removedHeading of [">分配前</th>", ">扣除</th>", ">分配获得</th>", ">实际获得</th>"]) {
+  if (distributionTemplate.includes(removedHeading)) failures.push(`employee summary: legacy process column returned ${removedHeading}`);
+}
 const storeScopeRowIndex = distributionTemplate.indexOf('class="tipout-store-scope-row"');
 const viewFilterRowIndex = distributionTemplate.indexOf('class="tipout-view-filter-row"');
 const metricStripIndex = distributionTemplate.indexOf('class="tipout-metric-strip"');
@@ -166,7 +198,11 @@ for (const token of ["ArrowLeft", "ArrowRight", "Home", "End"]) {
   if (!distributionProgram.includes(token)) failures.push(`distribution: Tab keyboard behavior missing ${token}`);
 }
 if (!/<h1 id="summaryTitle" class="sr-only">小费分配<\/h1>/.test(distributionTemplate)) failures.push("distribution: hidden semantic summary title missing");
-const summaryFilterBar = distributionTemplate.match(/<div class="filter-bar filter-bar--page filter-bar--index">([\s\S]*?)<\/div>\s*<\/div>\s*<\/div>\s*<div class="tipout-metric-strip"/)?.[1] || "";
+const summaryFilterBarStart = distributionTemplate.indexOf('<div class="filter-bar filter-bar--page filter-bar--index">');
+const summaryFilterBarEnd = distributionTemplate.indexOf('<div id="dateSummaryMetrics"', summaryFilterBarStart);
+const summaryFilterBar = summaryFilterBarStart >= 0 && summaryFilterBarEnd > summaryFilterBarStart
+  ? distributionTemplate.slice(summaryFilterBarStart, summaryFilterBarEnd)
+  : "";
 const filterOrder = ["dateRangeFilterField", "roleFilterField", "employeeFilterField", "dateSortField"];
 let previousFilterIndex = -1;
 for (const id of filterOrder) {
@@ -221,7 +257,9 @@ const summaryState = summaryUi.buildSummaryHistoryState({
 assert.deepEqual(JSON.parse(JSON.stringify(summaryUi.readSummaryHistoryState(summaryState))), {
   dateStart: "2026-08-11", dateEnd: "2026-09-11", store: "golden-dragon",
   roles: ["Server"], employees: ["employee-1"], scrollY: 240,
-  returnDate: "", returnEmployeeId: "employee-1", activeView: "employee",
+  returnDate: "", returnEmployeeId: "employee-1",
+  employeeSearch: "", employeeSummaryRole: "", employeeSummaryStatus: "",
+  employeeSortKey: "finalAmount", employeeSortDirection: "desc", activeView: "employee",
 });
 const employeeAggregates = summaryUi.aggregateEmployeeDailyDatasets([
   { dateKey: "2026-09-10", allocated: true, employeeResults: [
@@ -240,6 +278,40 @@ assert.equal(employeeAggregates[0].deducted, 3);
 assert.equal(employeeAggregates[0].received, 42.5);
 assert.equal(employeeAggregates[0].after, 61.5);
 assert.equal(employeeAggregates[0].dailyRows.length, 2);
+const employeeDailyFixture = [
+  { dateKey: "2026-09-10", allocated: true, allocationValidationError: "", ruleIssues: [], employeeResults: [
+    { employeeId: "e1", name: "Olivia", role: "Server", hours: 8, before: 100.10, deducted: 10.05, received: 20.15, after: 110.20, clockStatus: "已打卡" },
+    { employeeId: "e2", name: "Noah", role: "Busser", hours: 6, before: 0, deducted: 0, received: 40, after: 40, clockStatus: "已打卡" },
+  ] },
+  { dateKey: "2026-09-11", allocated: false, allocationValidationError: "", ruleIssues: [], employeeResults: [
+    { employeeId: "e1", name: "Olivia", role: "Bartender", hours: 4, before: 50, deducted: 5, received: 8, after: 53, clockStatus: "已打卡" },
+  ] },
+  { dateKey: "2026-09-12", allocated: true, allocationValidationError: "金额校验失败", ruleIssues: [], employeeResults: [
+    { employeeId: "e3", name: "Emma", role: "Host", hours: 5, before: 25, deducted: 0, received: 10, after: 35, clockStatus: "已打卡" },
+  ] },
+];
+const resultFirstAggregates = summaryUi.aggregateEmployeeDailyDatasets(employeeDailyFixture);
+assert.equal(resultFirstAggregates.length, 3);
+const olivia = resultFirstAggregates.find((item) => item.employeeId === "e1");
+assert.deepEqual(Array.from(olivia.roles), ["Server", "Bartender"]);
+assert.equal(olivia.beforeCents, 10010);
+assert.equal(olivia.netAdjustmentCents, 1010);
+assert.equal(olivia.finalAmountCents, 11020);
+assert.equal(olivia.status, "待处理");
+assert.equal(olivia.hasPartialConfirmed, true);
+assert.equal(olivia.firstActionDate, "2026-09-11");
+const emma = resultFirstAggregates.find((item) => item.employeeId === "e3");
+assert.equal(emma.status, "异常");
+assert.equal(emma.finalAmountCents, null);
+assert.deepEqual(Array.from(emma.issueReasons), ["金额校验失败"]);
+const employeeOverview = summaryUi.summarizeEmployeeAggregates(resultFirstAggregates);
+assert.deepEqual(JSON.parse(JSON.stringify(employeeOverview)), {
+  employeeCount: 3, finalAmountCents: 15020, hasConfirmedAmount: true,
+  completedCount: 1, pendingCount: 1, exceptionCount: 1,
+});
+assert.equal(employeeOverview.employeeCount, employeeOverview.completedCount + employeeOverview.pendingCount + employeeOverview.exceptionCount);
+const filteredEmployees = summaryUi.filterAndSortEmployeeAggregates(resultFirstAggregates, { search: "oliv", roles: ["Bartender"], statuses: ["待处理"] }, { key: "finalAmount", direction: "desc" });
+assert.deepEqual(Array.from(filteredEmployees, (item) => item.employeeId), ["e1"]);
 for (const token of ["collectDateTaskExportData", "collectEmployeeReconciliationExportData", "collectCurrentSummaryExportData"]) {
   if (!distributionExport.includes(token)) failures.push(`distribution export: active-view export contract missing ${token}`);
 }

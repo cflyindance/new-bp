@@ -176,6 +176,9 @@ var ALLOC_KEY = 'tipout_allocated';
       return { sales: sales, tips: tips, surcharge: surcharge, manual: manual, custom: custom, pool: pool, poolRules: poolRules, poolByRule: poolByRule, poolBaseByRule: poolBaseByRule, employeeSales: demoEmployees };
     }
 
+    var detailAllRules = [];
+    var detailSelectedRuleIds = [];
+
     function renderDetailPage() {
       var dateKey = document.getElementById('detailDate').value;
       var storeSel = document.getElementById('storeSelect');
@@ -183,7 +186,9 @@ var ALLOC_KEY = 'tipout_allocated';
       if (!dateKey) return;
 
       var rules = window.ruleData && ruleData.getRulesForStore ? ruleData.getRulesForStore(store) : [];
-      renderDatePoolOverview(dateKey, store, rules);
+      detailAllRules = rules.slice();
+      detailSelectedRuleIds = rules.map(function(rule, index) { return TipOutDetailRuleFilter.ruleId(rule, index); });
+      renderDetailRuleFilter();
       if (rules.length === 0) {
         document.getElementById('detailRulesContainer').innerHTML =
           '<div class="tipout-detail-empty">' +
@@ -191,6 +196,10 @@ var ALLOC_KEY = 'tipout_allocated';
           '<p>当前门店还没有可用于此日期的小费分配规则。</p>' +
           '<a href="rules.html" class="btn btn-primary">新增小费分配规则</a></div>';
         currentRule = null;
+        renderDatePoolOverview(dateKey, store, [], true);
+        var noRuleHint = document.getElementById('detailAllocationScopeHint');
+        if (noRuleHint) noRuleHint.textContent = '当前日期没有可确认的小费分配规则';
+        syncDetailAllocationAction();
         return;
       }
 
@@ -218,8 +227,91 @@ var ALLOC_KEY = 'tipout_allocated';
         );
       });
       document.getElementById('detailRulesContainer').innerHTML = bundleParts.join('');
+      renderVisibleRuleView();
       syncDetailAllocationAction();
       setTimeout(function() { scheduleDetailAutoAllocation(store, dateKey, rules); }, 0);
+    }
+
+    function renderDetailRuleFilter() {
+      var filter = document.getElementById('detailRuleFilter');
+      var optionsRoot = document.getElementById('detailRuleFilterOptions');
+      if (!filter || !optionsRoot) return;
+      var options = TipOutDetailRuleFilter.buildOptions(detailAllRules);
+      optionsRoot.innerHTML = options.map(function(option) {
+        return '<label class="multi-select-option"><input type="checkbox" value="' + escHtml(option.id) + '" checked data-native-onchange="handleDetailRuleSelection()"> ' + escHtml(option.label) + '</label>';
+      }).join('') || '<div class="tipout-empty-cell">暂无适用规则</div>';
+      filter.classList.remove('open');
+      filter.querySelector('.multi-select-input').setAttribute('aria-expanded', 'false');
+      syncDetailRuleFilterUi();
+    }
+
+    function syncDetailRuleFilterUi() {
+      var all = document.getElementById('detailRuleFilterAll');
+      var tags = document.getElementById('detailRuleFilterTags');
+      var options = TipOutDetailRuleFilter.buildOptions(detailAllRules);
+      var selected = TipOutDetailRuleFilter.normalizeSelection(detailAllRules, detailSelectedRuleIds);
+      detailSelectedRuleIds = selected;
+      if (all) {
+        all.checked = options.length > 0 && selected.length === options.length;
+        all.indeterminate = selected.length > 0 && selected.length < options.length;
+        all.setAttribute('aria-checked', all.indeterminate ? 'mixed' : String(all.checked));
+        all.disabled = options.length === 0;
+      }
+      if (tags) {
+        if (!selected.length) tags.innerHTML = '<span class="multi-select-placeholder">未选择规则</span>';
+        else if (selected.length === options.length) tags.innerHTML = '<span class="multi-select-placeholder">全部规则（' + selected.length + '）</span>';
+        else tags.innerHTML = selected.map(function(id) {
+          var option = options.find(function(item) { return item.id === id; });
+          return '<span class="multi-select-tag">' + escHtml(option ? option.label : id) + '</span>';
+        }).join('');
+      }
+    }
+
+    function toggleDetailRuleFilter() {
+      var filter = document.getElementById('detailRuleFilter');
+      if (!filter) return;
+      filter.classList.toggle('open');
+      filter.querySelector('.multi-select-input').setAttribute('aria-expanded', String(filter.classList.contains('open')));
+    }
+
+    function handleDetailRuleFilterKeydown(event) {
+      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); toggleDetailRuleFilter(); }
+      else if (event.key === 'Escape') {
+        var filter = document.getElementById('detailRuleFilter');
+        if (filter) { filter.classList.remove('open'); filter.querySelector('.multi-select-input').setAttribute('aria-expanded', 'false'); }
+      }
+    }
+
+    function toggleAllDetailRules(checked) {
+      detailSelectedRuleIds = checked ? detailAllRules.map(function(rule, index) { return TipOutDetailRuleFilter.ruleId(rule, index); }) : [];
+      document.querySelectorAll('#detailRuleFilterOptions input[type="checkbox"]').forEach(function(input) { input.checked = checked; });
+      syncDetailRuleFilterUi();
+      renderVisibleRuleView();
+    }
+
+    function handleDetailRuleSelection() {
+      detailSelectedRuleIds = Array.prototype.map.call(document.querySelectorAll('#detailRuleFilterOptions input[type="checkbox"]:checked'), function(input) { return input.value; });
+      syncDetailRuleFilterUi();
+      renderVisibleRuleView();
+    }
+
+    function renderVisibleRuleView() {
+      var dateKey = document.getElementById('detailDate').value;
+      var store = document.getElementById('storeSelect').value || '';
+      var selectedRules = TipOutDetailRuleFilter.filterRules(detailAllRules, detailSelectedRuleIds);
+      var selectedIds = detailSelectedRuleIds;
+      document.querySelectorAll('#detailRulesContainer .detail-rule-bundle').forEach(function(bundle) {
+        bundle.hidden = selectedIds.indexOf(bundle.getAttribute('data-rule-id') || '') < 0;
+      });
+      var container = document.getElementById('detailRulesContainer');
+      var empty = container.querySelector('.tipout-rule-filter-empty');
+      if (empty) empty.remove();
+      if (!selectedRules.length && detailAllRules.length) container.insertAdjacentHTML('beforeend', '<div class="tipout-rule-filter-empty">当前未选择规则，请在“规则名称”中选择</div>');
+      renderDatePoolOverview(dateKey, store, selectedRules, detailAllRules.length && !selectedRules.length);
+      var hint = document.getElementById('detailAllocationScopeHint');
+      if (hint) hint.textContent = !selectedRules.length && detailAllRules.length
+        ? '确认分配仍将处理当天全部 ' + detailAllRules.length + ' 条规则'
+        : '确认后将生成当天全部 ' + detailAllRules.length + ' 条规则的正式分配结果';
     }
 
     function readDatePoolSnapshot(dateKey, store) {
@@ -229,23 +321,22 @@ var ALLOC_KEY = 'tipout_allocated';
       } catch (error) { return null; }
     }
 
-    function renderDatePoolOverview(dateKey, store, rules) {
+    function renderDatePoolOverview(dateKey, store, rules, emptySelection) {
       var snapshot = readDatePoolSnapshot(dateKey, store);
       var allocated = window.TipOutAllocationResults
         ? TipOutAllocationResults.isAllocated(store, dateKey)
         : getAllocatedDatesForStore(store).has(dateKey);
       var confirmed = allocated && window.TipOutAllocationResults ? TipOutAllocationResults.read(store, dateKey) : null;
-      var summary = confirmed
-        ? Object.assign({}, TipOutDatePoolView.projectDate({ dateKey: dateKey, rules: rules, originalTips: 0, allocated: true }), confirmed.summary || {})
-        : (snapshot || TipOutDatePoolView.projectDate({ dateKey: dateKey, rules: rules, originalTips: 0, allocated: allocated }));
-      document.getElementById('detailOriginalTips').textContent = snapshot ? money(summary.originalTips || 0) : '—';
-      document.getElementById('detailPoolAmount').textContent = money(summary.poolAmount || 0);
-      document.getElementById('detailAllocatedAmount').textContent = allocated ? money(summary.allocatedAmount || 0) : '—';
-      document.getElementById('detailUnallocatedAmount').textContent = allocated ? money(summary.unallocatedAmount || 0) : '—';
+      var originalTips = snapshot ? Number(snapshot.originalTips || 0) : (confirmed && confirmed.summary ? Number(confirmed.summary.originalTips || 0) : 0);
+      var summary = TipOutDatePoolView.projectDate({ dateKey: dateKey, rules: rules, originalTips: originalTips, allocated: allocated });
+      document.getElementById('detailOriginalTips').textContent = emptySelection ? '—' : (snapshot || confirmed ? money(originalTips) : '—');
+      document.getElementById('detailPoolAmount').textContent = emptySelection ? '—' : money(summary.poolAmount || 0);
+      document.getElementById('detailAllocatedAmount').textContent = emptySelection ? '—' : (allocated ? money(summary.allocatedAmount || 0) : '—');
+      document.getElementById('detailUnallocatedAmount').textContent = emptySelection ? '—' : (allocated ? money(summary.unallocatedAmount || 0) : '—');
       document.getElementById('detailPoolCount').textContent = String(summary.poolCount || 0);
       var list = document.getElementById('detailPoolExecutionList');
       if (!list) return;
-      list.innerHTML = (summary.poolExecutions || []).map(function(pool) {
+      list.innerHTML = emptySelection ? '<tr><td colspan="6" class="tipout-empty-cell">当前未选择规则</td></tr>' : (summary.poolExecutions || []).map(function(pool) {
         return '<tr data-pool-id="' + escHtml(pool.id) + '">' +
           '<td><strong>' + escHtml(pool.name) + '</strong></td>' +
           '<td class="tipout-rule-summary-cell">' + escHtml(pool.ruleSummary || '—') + '</td>' +
@@ -1328,6 +1419,9 @@ var ALLOC_KEY = 'tipout_allocated';
 
     function executeDetailAllocation(options) {
       var snapshot = collectDetailAllocationSnapshot(options.store, options.dateKey, options.rules);
+      if (!TipOutDetailRuleFilter.sameRuleSet(snapshot.pools, options.rules)) {
+        throw new Error('规则数据已变化，请刷新页面后重新确认分配');
+      }
       var validationError = TipOutAllocationResults.validate(snapshot);
       if (validationError) throw new Error(validationError);
       TipOutAllocationResults.commit(snapshot);
@@ -1444,6 +1538,14 @@ var ALLOC_KEY = 'tipout_allocated';
     function returnToSummary() {
       window.location.href = 'index.html';
     }
+
+    document.addEventListener('click', function(event) {
+      var filter = document.getElementById('detailRuleFilter');
+      if (!filter || filter.contains(event.target)) return;
+      filter.classList.remove('open');
+      var trigger = filter.querySelector('.multi-select-input');
+      if (trigger) trigger.setAttribute('aria-expanded', 'false');
+    });
 
     initStoreSelect();
     applyUrlParams();

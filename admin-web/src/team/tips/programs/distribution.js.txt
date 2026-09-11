@@ -103,6 +103,9 @@ var ALLOC_KEY = 'tipout_allocated';
     const employees = buildEmployeesFromRoster();
     var activeSummaryView = 'date';
     var employeeAggregateById = Object.create(null);
+    var visibleEmployeeSummaryAggregates = [];
+    var employeeSummaryFilters = { search: '', roles: [], statuses: [] };
+    var employeeSummarySort = { key: 'finalAmount', direction: 'desc' };
 
     function getSelectedRoles() {
       var el = document.getElementById('roleFilter');
@@ -427,7 +430,12 @@ var ALLOC_KEY = 'tipout_allocated';
         activeView: activeSummaryView,
         scrollY: window.scrollY,
         returnDate: returnDate || '',
-        returnEmployeeId: returnEmployeeId || ''
+        returnEmployeeId: returnEmployeeId || '',
+        employeeSearch: employeeSummaryFilters.search,
+        employeeSummaryRole: employeeSummaryFilters.roles[0] || '',
+        employeeSummaryStatus: employeeSummaryFilters.statuses[0] || '',
+        employeeSortKey: employeeSummarySort.key,
+        employeeSortDirection: employeeSummarySort.direction
       });
       history.replaceState(state, '');
     }
@@ -448,11 +456,15 @@ var ALLOC_KEY = 'tipout_allocated';
       var roleFilterField = document.getElementById('roleFilterField');
       var employeeFilterField = document.getElementById('employeeFilterField');
       var dateSortField = document.getElementById('dateSortField');
+      var employeeFilters = document.getElementById('employeeSummaryFilters');
+      var dateMetrics = document.getElementById('dateSummaryMetrics');
       if (dateActions) dateActions.hidden = employeeActive;
       if (allocateAction) allocateAction.hidden = employeeActive;
       if (roleFilterField) roleFilterField.hidden = employeeActive;
       if (employeeFilterField) employeeFilterField.hidden = employeeActive;
       if (dateSortField) dateSortField.hidden = employeeActive;
+      if (employeeFilters) employeeFilters.hidden = !employeeActive;
+      if (dateMetrics) dateMetrics.hidden = employeeActive;
       var exportMenu = document.getElementById('exportMenu');
       if (exportMenu) exportMenu.classList.remove('show');
       syncSummaryActionBarBounds();
@@ -546,6 +558,21 @@ var ALLOC_KEY = 'tipout_allocated';
       setSummaryFilterSelections('roleFilter', saved.roles);
       updateEmployeeFilter(true);
       setSummaryFilterSelections('employeeFilter', saved.employees);
+      employeeSummaryFilters = {
+        search: saved.employeeSearch || '',
+        roles: saved.employeeSummaryRole ? [saved.employeeSummaryRole] : [],
+        statuses: saved.employeeSummaryStatus ? [saved.employeeSummaryStatus] : []
+      };
+      employeeSummarySort = {
+        key: ['employee', 'hours', 'finalAmount'].indexOf(saved.employeeSortKey) >= 0 ? saved.employeeSortKey : 'finalAmount',
+        direction: saved.employeeSortDirection === 'asc' ? 'asc' : 'desc'
+      };
+      var employeeSearch = document.getElementById('employeeSummarySearch');
+      var employeeRole = document.getElementById('employeeSummaryRoleFilter');
+      var employeeStatus = document.getElementById('employeeSummaryStatusFilter');
+      if (employeeSearch) employeeSearch.value = employeeSummaryFilters.search;
+      if (employeeRole) employeeRole.value = employeeSummaryFilters.roles[0] || '';
+      if (employeeStatus) employeeStatus.value = employeeSummaryFilters.statuses[0] || '';
       invalidateDayPipelineCache();
       syncSummaryViewUi();
       renderDailySummaryList();
@@ -621,7 +648,7 @@ var ALLOC_KEY = 'tipout_allocated';
           missingAttendanceDays: aggregate.missingAttendanceDays,
           pendingAllocationDays: aggregate.pendingAllocationDays
         },
-        status: aggregate.status
+        status: aggregate.status === '已完成' ? '已完成' : '待补录'
       });
       try {
         sessionStorage.setItem(TipOutSummaryUi.EMPLOYEE_RECONCILIATION_SNAPSHOT_KEY, JSON.stringify(snapshot));
@@ -639,20 +666,7 @@ var ALLOC_KEY = 'tipout_allocated';
     }
 
     function renderSummaryOverview(dailyRows, allocatedDates) {
-      var totals = TipOutSummaryUi.summarizeDailyResults(dailyRows.map(function(row) { return row.total; }));
       var poolMetric = document.getElementById('summaryPoolCountMetric');
-      if (activeSummaryView === 'employee') {
-        document.getElementById('summaryBeforeLabel').textContent = '分配前';
-        document.getElementById('summaryDeductedLabel').textContent = '扣除';
-        document.getElementById('summaryReceivedLabel').textContent = '分配获得';
-        document.getElementById('summaryAfterLabel').textContent = '实际获得';
-        document.getElementById('summaryBefore').textContent = money(totals.before);
-        document.getElementById('summaryDeducted').textContent = money(totals.deducted);
-        document.getElementById('summaryReceived').textContent = money(totals.received);
-        document.getElementById('summaryAfter').textContent = money(totals.after);
-        if (poolMetric) poolMetric.hidden = true;
-        return;
-      }
       var dateTotals = dailyRows.reduce(function(result, row) {
         result.originalTips += row.poolSummary.originalTips;
         result.poolAmount += row.poolSummary.poolAmount;
@@ -673,6 +687,45 @@ var ALLOC_KEY = 'tipout_allocated';
       document.getElementById('summaryAfter').textContent = dateTotals.hasPending ? '—' : money(dateTotals.unallocatedAmount);
       document.getElementById('summaryPoolCount').textContent = String(dateTotals.poolCount);
       if (poolMetric) poolMetric.hidden = false;
+    }
+
+    function allocationRuleIssueMessage(issue) {
+      if (!issue) return '分配规则引用无效';
+      if (issue.code === 'missing-role') return '规则引用的角色“' + issue.value + '”已失效';
+      if (issue.code === 'missing-employee') return '规则引用的员工“' + issue.value + '”已失效';
+      if (issue.code === 'empty-receiver') return '规则接收方“' + issue.value + '”没有可用员工';
+      return issue.message || issue.code || '分配规则引用无效';
+    }
+
+    function buildEmployeeSummaryDailyDataset() {
+      var rows = buildDailyDataset(getStoreEmployees());
+      var store = (document.getElementById('storeSelect') || {}).value || '';
+      var rules = getRulesForCurrentStore();
+      var storeEmployees = getStoreEmployees();
+      var ruleIssues = [];
+      if (window.TipOutRosterDirectory && TipOutRosterDirectory.validateRuleReferences) {
+        rules.forEach(function(rule) {
+          TipOutRosterDirectory.validateRuleReferences(rule, store).forEach(function(issue) {
+            var employeeIds = storeEmployees.filter(function(employee) {
+              return String(employee.employeeId || '').replace(/^roster:/, '') === issue.value || employee.name === issue.value;
+            }).map(function(employee) { return String(employee.employeeId); });
+            ruleIssues.push({
+              code: issue.code,
+              message: allocationRuleIssueMessage(issue),
+              employeeIds: employeeIds
+            });
+          });
+        });
+      }
+      rows.forEach(function(row) {
+        row.ruleIssues = ruleIssues;
+        if (!row.allocated || !window.TipOutAllocationResults) return;
+        var snapshot = TipOutAllocationResults.read(store, row.dateKey);
+        row.allocationValidationError = snapshot
+          ? TipOutAllocationResults.validate(snapshot)
+          : '已分配日期缺少确认结果';
+      });
+      return rows;
     }
 
     function buildDailyDataset(employeeList) {
@@ -744,45 +797,119 @@ var ALLOC_KEY = 'tipout_allocated';
       return (Array.from(parts[0])[0] + Array.from(parts[parts.length - 1])[0]).toUpperCase();
     }
 
-    function renderEmployeeReconciliationList(dailyRows) {
+    function formatEmployeeSummaryMoney(cents, hasConfirmedAmount) {
+      return !hasConfirmedAmount || cents == null ? '—' : money(cents / 100);
+    }
+
+    function renderEmployeeSummaryMetrics(aggregates) {
+      var summary = TipOutSummaryUi.summarizeEmployeeAggregates(aggregates);
+      document.getElementById('employeeMetricCount').textContent = String(summary.employeeCount);
+      document.getElementById('employeeMetricFinal').textContent = summary.hasConfirmedAmount ? money(summary.finalAmountCents / 100) : '—';
+      document.getElementById('employeeMetricCompleted').textContent = String(summary.completedCount);
+      document.getElementById('employeeMetricPending').textContent = String(summary.pendingCount);
+      var exceptions = document.getElementById('employeeMetricExceptions');
+      exceptions.hidden = summary.exceptionCount === 0;
+      exceptions.textContent = summary.exceptionCount ? '另有异常 ' + summary.exceptionCount + ' 人' : '';
+    }
+
+    function populateEmployeeSummaryRoleFilter(aggregates) {
+      var select = document.getElementById('employeeSummaryRoleFilter');
+      if (!select) return;
+      var selected = employeeSummaryFilters.roles[0] || '';
+      var roles = [];
+      (aggregates || []).forEach(function(aggregate) {
+        aggregate.roles.forEach(function(role) { if (roles.indexOf(role) < 0) roles.push(role); });
+      });
+      roles.sort(function(a, b) { return a.localeCompare(b); });
+      select.innerHTML = '<option value="">全部角色</option>' + roles.map(function(role) {
+        return '<option value="' + escapeSummaryHtml(role) + '">' + escapeSummaryHtml(role) + '</option>';
+      }).join('');
+      select.value = roles.indexOf(selected) >= 0 ? selected : '';
+      employeeSummaryFilters.roles = select.value ? [select.value] : [];
+    }
+
+    function syncEmployeeSummaryFilterState() {
+      var search = document.getElementById('employeeSummarySearch');
+      var role = document.getElementById('employeeSummaryRoleFilter');
+      var status = document.getElementById('employeeSummaryStatusFilter');
+      employeeSummaryFilters = {
+        search: search ? search.value : '',
+        roles: role && role.value ? [role.value] : [],
+        statuses: status && status.value ? [status.value] : []
+      };
+    }
+
+    function handleEmployeeSummaryFilterChange() {
+      syncEmployeeSummaryFilterState();
+      renderSummaryViews();
+      captureSummaryUiState('', '');
+    }
+
+    function updateEmployeeSummarySortHeaders() {
+      [['employeeSortEmployee', 'employee'], ['employeeSortHours', 'hours'], ['employeeSortFinalAmount', 'finalAmount']].forEach(function(entry) {
+        var button = document.getElementById(entry[0]);
+        if (!button) return;
+        var th = button.closest('th');
+        var active = employeeSummarySort.key === entry[1];
+        if (th) th.setAttribute('aria-sort', active ? (employeeSummarySort.direction === 'asc' ? 'ascending' : 'descending') : 'none');
+        var icon = button.querySelector('span');
+        if (icon) icon.remove();
+        if (active) button.insertAdjacentHTML('beforeend', ' <span aria-hidden="true">' + (employeeSummarySort.direction === 'asc' ? '↑' : '↓') + '</span>');
+      });
+    }
+
+    function toggleEmployeeSummarySort(key) {
+      if (employeeSummarySort.key === key) employeeSummarySort.direction = employeeSummarySort.direction === 'asc' ? 'desc' : 'asc';
+      else employeeSummarySort = { key: key, direction: key === 'employee' ? 'asc' : 'desc' };
+      renderSummaryViews();
+      captureSummaryUiState('', '');
+    }
+
+    function renderEmployeeReconciliationList(aggregates) {
       var container = document.getElementById('employeeReconciliationList');
       var empty = document.getElementById('employeeReconciliationEmpty');
       if (!container || !empty) return;
-      var aggregates = TipOutSummaryUi.aggregateEmployeeDailyDatasets(dailyRows);
       employeeAggregateById = Object.create(null);
       aggregates.forEach(function(aggregate) { employeeAggregateById[aggregate.employeeId] = aggregate; });
       empty.hidden = aggregates.length > 0;
       container.closest('.tipout-table-wrap').hidden = aggregates.length === 0;
       container.innerHTML = aggregates.map(function(aggregate) {
-        var statusClass = aggregate.status === '已完成' ? 'is-complete' : 'is-pending';
+        var statusClass = aggregate.status === '已完成' ? 'is-complete' : (aggregate.status === '异常' ? 'is-exception' : 'is-pending');
         var name = escapeSummaryHtml(aggregate.name);
+        var roles = aggregate.roles.map(function(role) { return '<span class="tipout-employee-role-tag">' + escapeSummaryHtml(role) + '</span>'; }).join('');
+        var netClass = aggregate.netAdjustmentCents != null && aggregate.netAdjustmentCents < 0 ? 'tip-amount--deduct' : 'tip-amount--receive';
+        var netValue = formatEmployeeSummaryMoney(aggregate.netAdjustmentCents, aggregate.hasConfirmedAmount);
+        if (netValue !== '—' && aggregate.netAdjustmentCents > 0) netValue = '+' + netValue;
         return '<tr class="tipout-employee-row" data-employee-id="' + escapeSummaryHtml(aggregate.employeeId) +
           '" tabindex="0" role="link" onclick="openEmployeeReconciliationDetail(this.dataset.employeeId)" ' +
           'onkeydown="activateEmployeeReconciliationRow(event)">' +
           '<td><span class="tipout-employee-identity"><span class="tipout-employee-avatar" aria-hidden="true">' +
           escapeSummaryHtml(employeeInitials(aggregate.name)) + '</span><strong>' + name + '</strong></span></td>' +
-          '<td>' + escapeSummaryHtml(aggregate.role) + '</td>' +
-          '<td><strong>' + aggregate.shifts + ' 个班次</strong></td>' +
+          '<td><span class="tipout-employee-role-tags">' + roles + '</span></td>' +
+          '<td><strong>' + aggregate.shifts + '</strong></td>' +
           '<td><strong>' + formatHoursDisplay(aggregate.hours) + ' h</strong></td>' +
-          '<td>' + money(aggregate.before) + '</td>' +
-          '<td><strong class="tip-amount--deduct">-' + money(Math.abs(aggregate.deducted)) + '</strong></td>' +
-          '<td><strong class="tip-amount--receive">' + moneySign(aggregate.received) + '</strong></td>' +
-          '<td><strong>' + money(aggregate.after) + '</strong></td>' +
+          '<td>' + formatEmployeeSummaryMoney(aggregate.beforeCents, aggregate.hasConfirmedAmount) + '</td>' +
+          '<td><strong class="' + netClass + '">' + netValue + '</strong></td>' +
+          '<td><strong class="tipout-employee-final">' + formatEmployeeSummaryMoney(aggregate.finalAmountCents, aggregate.hasConfirmedAmount) + '</strong>' + (aggregate.hasPartialConfirmed ? '<small class="tipout-employee-partial">已确认部分</small>' : '') + '</td>' +
           '<td><span class="tipout-employee-status ' + statusClass + '"><span aria-hidden="true">●</span> ' + aggregate.status + '</span></td>' +
           '<td class="tipout-detail-link" aria-label="查看 ' + name + ' 分配汇总明细">›</td></tr>';
       }).join('');
     }
 
     function renderSummaryViews() {
-      var dailyRows = activeSummaryView === 'employee'
-        ? buildDailyDataset(getStoreEmployees())
-        : buildDailyDataset(getFilteredEmployees());
+      var dailyRows = activeSummaryView === 'employee' ? buildEmployeeSummaryDailyDataset() : buildDailyDataset(getFilteredEmployees());
       var allocatedDates = getAllocatedDates();
-      renderSummaryOverview(dailyRows, allocatedDates);
       if (activeSummaryView === 'employee') {
         document.getElementById('dailySummaryList').innerHTML = '';
-        renderEmployeeReconciliationList(dailyRows);
+        var allAggregates = TipOutSummaryUi.aggregateEmployeeDailyDatasets(dailyRows);
+        populateEmployeeSummaryRoleFilter(allAggregates);
+        visibleEmployeeSummaryAggregates = TipOutSummaryUi.filterAndSortEmployeeAggregates(allAggregates, employeeSummaryFilters, employeeSummarySort);
+        renderEmployeeSummaryMetrics(visibleEmployeeSummaryAggregates);
+        updateEmployeeSummarySortHeaders();
+        renderEmployeeReconciliationList(visibleEmployeeSummaryAggregates);
       } else {
+        renderSummaryOverview(dailyRows, allocatedDates);
+        visibleEmployeeSummaryAggregates = [];
         document.getElementById('employeeReconciliationList').innerHTML = '';
         document.getElementById('employeeReconciliationEmpty').hidden = true;
         renderDateTaskList(dailyRows);
@@ -791,6 +918,10 @@ var ALLOC_KEY = 'tipout_allocated';
     }
 
     function renderDailySummaryList() { renderSummaryViews(); }
+
+    function getVisibleEmployeeSummaryAggregates() {
+      return visibleEmployeeSummaryAggregates.slice();
+    }
 
     function updateAllocateButton() {
       var dates = getDateRange();
