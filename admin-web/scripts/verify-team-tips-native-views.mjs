@@ -130,6 +130,16 @@ for (const token of ["historyMode === 'push'", "historyMode === 'replace'", "win
 if ((distributionTemplate.match(/id="summaryViewSwitch"/g) || []).length !== 1) failures.push("distribution: summary view switch must be unique");
 if ((distributionTemplate.match(/id="dateTaskTab"/g) || []).length !== 1) failures.push("distribution: date task tab must be unique");
 if ((distributionTemplate.match(/id="employeeReconciliationTab"/g) || []).length !== 1) failures.push("distribution: employee reconciliation tab must be unique");
+for (const id of [
+  "employeeSummarySearch", "employeeSummaryRoleFilter", "employeeSummaryStatusFilter",
+  "employeeMetricCount", "employeeMetricFinal", "employeeMetricCompleted", "employeeMetricPending",
+  "employeeSortEmployee", "employeeSortHours", "employeeSortFinalAmount",
+]) {
+  if ((distributionTemplate.match(new RegExp(`id="${id}"`, "g")) || []).length !== 1) failures.push(`distribution: ${id} must be unique`);
+}
+for (const removedHeading of [">分配前</th>", ">扣除</th>", ">分配获得</th>", ">实际获得</th>"]) {
+  if (distributionTemplate.includes(removedHeading)) failures.push(`employee summary: legacy process column returned ${removedHeading}`);
+}
 const storeScopeRowIndex = distributionTemplate.indexOf('class="tipout-store-scope-row"');
 const viewFilterRowIndex = distributionTemplate.indexOf('class="tipout-view-filter-row"');
 const metricStripIndex = distributionTemplate.indexOf('class="tipout-metric-strip"');
@@ -166,7 +176,11 @@ for (const token of ["ArrowLeft", "ArrowRight", "Home", "End"]) {
   if (!distributionProgram.includes(token)) failures.push(`distribution: Tab keyboard behavior missing ${token}`);
 }
 if (!/<h1 id="summaryTitle" class="sr-only">小费分配<\/h1>/.test(distributionTemplate)) failures.push("distribution: hidden semantic summary title missing");
-const summaryFilterBar = distributionTemplate.match(/<div class="filter-bar filter-bar--page filter-bar--index">([\s\S]*?)<\/div>\s*<\/div>\s*<\/div>\s*<div class="tipout-metric-strip"/)?.[1] || "";
+const summaryFilterBarStart = distributionTemplate.indexOf('<div class="filter-bar filter-bar--page filter-bar--index">');
+const summaryFilterBarEnd = distributionTemplate.indexOf('<div id="dateSummaryMetrics"', summaryFilterBarStart);
+const summaryFilterBar = summaryFilterBarStart >= 0 && summaryFilterBarEnd > summaryFilterBarStart
+  ? distributionTemplate.slice(summaryFilterBarStart, summaryFilterBarEnd)
+  : "";
 const filterOrder = ["dateRangeFilterField", "roleFilterField", "employeeFilterField", "dateSortField"];
 let previousFilterIndex = -1;
 for (const id of filterOrder) {

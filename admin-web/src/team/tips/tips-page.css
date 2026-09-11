@@ -2466,6 +2466,19 @@ select.form-control {
   min-width: 0;
 }
 
+.tipout-page-summary .tipout-employee-summary-filters {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 12px;
+  min-width: 0;
+}
+
+.tipout-page-summary .tipout-employee-summary-filters[hidden] { display: none; }
+.tipout-page-summary .tipout-employee-summary-filters .filter-field { flex: 0 1 150px; max-width: 180px; }
+.tipout-page-summary .tipout-employee-summary-filters .tipout-employee-search-field { flex-basis: 220px; max-width: 240px; }
+
 @media (min-width: 769px) {
   .tipout-page-summary .filter-bar--index {
     flex-wrap: nowrap;
@@ -2555,6 +2568,16 @@ select.form-control {
     width: 100%;
   }
   .tipout-page-summary .tipout-view-switch [role="tab"] { flex: 1 1 50%; }
+  .tipout-page-summary .tipout-employee-summary-filters {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .tipout-page-summary .tipout-employee-summary-filters .filter-field,
+  .tipout-page-summary .tipout-employee-summary-filters .tipout-employee-search-field {
+    width: 100%;
+    max-width: none;
+  }
   .tipout-page-summary .filter-bar--index .filter-field {
     width: 100%;
     max-width: none;
@@ -2690,12 +2713,12 @@ select.form-control {
   border-radius: 2px;
 }
 
-.tipout-page-summary .tipout-employee-table { min-width: 1200px; }
+.tipout-page-summary .tipout-employee-table { min-width: 1040px; }
 .tipout-page-summary .tipout-employee-table th:nth-child(2) { width: 110px; }
 .tipout-page-summary .tipout-employee-table th:nth-child(3),
 .tipout-page-summary .tipout-employee-table th:nth-child(4) { width: 100px; }
-.tipout-page-summary .tipout-employee-table th:nth-child(n + 5):nth-child(-n + 8),
-.tipout-page-summary .tipout-employee-table td:nth-child(n + 5):nth-child(-n + 8) { text-align: right; }
+.tipout-page-summary .tipout-employee-table th:nth-child(n + 5):nth-child(-n + 7),
+.tipout-page-summary .tipout-employee-table td:nth-child(n + 5):nth-child(-n + 7) { text-align: right; }
 .tipout-page-summary .tipout-employee-table th:last-child,
 .tipout-page-summary .tipout-employee-table td:last-child { width: 52px; }
 
@@ -2715,6 +2738,32 @@ select.form-control {
   align-items: center;
   gap: 10px;
 }
+
+.tipout-page-summary .tipout-employee-role-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.tipout-page-summary .tipout-employee-role-tag {
+  display: inline-flex;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: #eef4ff;
+  color: #2456a6;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.tipout-page-summary .tipout-employee-final { font-size: 14px; font-weight: 700; }
+.tipout-page-summary .tipout-employee-partial { display: block; margin-top: 2px; color: var(--text-tertiary); font-size: 10px; font-weight: 400; }
+.tipout-page-summary .tipout-table-sort {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.tipout-page-summary .tipout-table-sort:hover,
+.tipout-page-summary .tipout-table-sort:focus-visible { color: var(--text-primary); }
+.tipout-page-summary .tipout-table-sort:focus-visible { outline: 2px solid var(--primary-color, #111827); outline-offset: 3px; border-radius: 2px; }
+.tipout-page-summary .tipout-employee-metrics small { display: block; margin-top: 5px; color: var(--text-tertiary); font-size: 10px; font-weight: 400; }
 
 .tipout-fidelity .tipout-employee-avatar {
   display: inline-grid;
@@ -2753,6 +2802,11 @@ select.form-control {
 .tipout-page-summary .tipout-employee-status.is-pending {
   background: var(--warning-bg);
   color: var(--warning);
+}
+
+.tipout-page-summary .tipout-employee-status.is-exception {
+  background: #fff1f0;
+  color: #cf1322;
 }
 
 .tipout-fidelity .tipout-empty-state {

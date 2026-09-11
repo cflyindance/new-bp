@@ -160,6 +160,27 @@
                     <input type="date" id="dateEnd" class="form-control form-control-lg" data-native-onchange="renderDailySummaryList()">
                   </div>
                 </div>
+                <div id="employeeSummaryFilters" class="tipout-employee-summary-filters" hidden>
+                  <div class="filter-field tipout-employee-search-field">
+                    <label class="filter-field-label" for="employeeSummarySearch">搜索员工</label>
+                    <input id="employeeSummarySearch" class="form-control form-control-lg" type="search" placeholder="输入员工姓名" data-native-oninput="handleEmployeeSummaryFilterChange()">
+                  </div>
+                  <div class="filter-field">
+                    <label class="filter-field-label" for="employeeSummaryRoleFilter">角色</label>
+                    <select id="employeeSummaryRoleFilter" class="form-control form-control-lg" data-native-onchange="handleEmployeeSummaryFilterChange()">
+                      <option value="">全部角色</option>
+                    </select>
+                  </div>
+                  <div class="filter-field">
+                    <label class="filter-field-label" for="employeeSummaryStatusFilter">状态</label>
+                    <select id="employeeSummaryStatusFilter" class="form-control form-control-lg" data-native-onchange="handleEmployeeSummaryFilterChange()">
+                      <option value="">全部状态</option>
+                      <option value="已完成">已完成</option>
+                      <option value="待处理">待处理</option>
+                      <option value="异常">异常</option>
+                    </select>
+                  </div>
+                </div>
                 <div class="filter-field" id="roleFilterField">
                   <span class="filter-field-label">角色</span>
                   <div class="multi-select" id="roleFilter" data-placeholder="All Role">
@@ -204,7 +225,7 @@
           </div>
           </div>
 
-          <div class="tipout-metric-strip" aria-label="小费金额概览">
+          <div id="dateSummaryMetrics" class="tipout-metric-strip" aria-label="小费金额概览">
             <div><span id="summaryBeforeLabel">原始小费</span><strong id="summaryBefore">$0.00</strong></div>
             <div><span id="summaryDeductedLabel">入池金额</span><strong id="summaryDeducted">$0.00</strong></div>
             <div><span id="summaryReceivedLabel">已分配</span><strong id="summaryReceived">—</strong></div>
@@ -221,9 +242,25 @@
             </div>
           </div>
           <div id="employeeReconciliationPanel" role="tabpanel" aria-labelledby="employeeReconciliationTab" hidden>
+            <div id="employeeSummaryMetrics" class="tipout-metric-strip tipout-employee-metrics" aria-label="员工分配结果概览">
+              <div><span>员工人数</span><strong id="employeeMetricCount">0</strong></div>
+              <div class="is-primary"><span>最终获得合计</span><strong id="employeeMetricFinal">—</strong><small>仅统计已确认且校验通过的分配结果</small></div>
+              <div><span>已完成</span><strong id="employeeMetricCompleted">0</strong></div>
+              <div><span>待处理</span><strong id="employeeMetricPending">0</strong><small id="employeeMetricExceptions" hidden></small></div>
+            </div>
             <div class="tipout-table-wrap">
               <table class="data-table tipout-summary-table tipout-employee-table">
-                <thead><tr><th>员工</th><th>角色</th><th>班次</th><th>工时</th><th>分配前</th><th>扣除</th><th>分配获得</th><th>实际获得</th><th>状态</th><th aria-label="进入明细"></th></tr></thead>
+                <thead><tr>
+                  <th aria-sort="none"><button id="employeeSortEmployee" type="button" class="tipout-table-sort" data-native-onclick="toggleEmployeeSummarySort('employee')">员工</button></th>
+                  <th>角色</th>
+                  <th>班次</th>
+                  <th aria-sort="none"><button id="employeeSortHours" type="button" class="tipout-table-sort" data-native-onclick="toggleEmployeeSummarySort('hours')">工时</button></th>
+                  <th>原有小费</th>
+                  <th>净调整</th>
+                  <th aria-sort="descending"><button id="employeeSortFinalAmount" type="button" class="tipout-table-sort" data-native-onclick="toggleEmployeeSummarySort('finalAmount')">最终获得 <span aria-hidden="true">↓</span></button></th>
+                  <th>状态</th>
+                  <th aria-label="进入明细"></th>
+                </tr></thead>
                 <tbody id="employeeReconciliationList" aria-label="员工小费分配汇总"></tbody>
               </table>
             </div>
