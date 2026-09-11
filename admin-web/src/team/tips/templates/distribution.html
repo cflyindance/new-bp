@@ -122,8 +122,12 @@
 <div class="content-area">
         <section class="tipout-page-section" aria-labelledby="summaryTitle">
           <div class="tipout-page-heading">
-            <div>
-              <h1 id="summaryTitle">小费分配</h1>
+            <div class="tipout-heading-tabs">
+              <h1 id="summaryTitle" class="sr-only">小费分配</h1>
+              <div class="tipout-view-switch" id="summaryViewSwitch" role="tablist" aria-label="汇总视图">
+                <button type="button" id="dateTaskTab" role="tab" aria-selected="true" aria-controls="dateTaskPanel" tabindex="0" data-native-onclick="setSummaryView('date')" data-native-onkeydown="handleSummaryViewKeydown(event)">分配汇总</button>
+                <button type="button" id="employeeReconciliationTab" role="tab" aria-selected="false" aria-controls="employeeReconciliationPanel" tabindex="-1" data-native-onclick="setSummaryView('employee')" data-native-onkeydown="handleSummaryViewKeydown(event)">员工对账</button>
+              </div>
             </div>
             <div class="tipout-heading-actions">
               <button id="summaryRuleEntryBtn" type="button" class="btn btn-lg" data-native-onclick="openSummaryRuleEntry()">新建/查看规则</button>
@@ -141,10 +145,6 @@
             </button>
             <div id="indexFilterCollapsible" class="filter-surface-collapsible">
               <div class="filter-bar filter-bar--page filter-bar--index">
-                <div class="tipout-view-switch" id="summaryViewSwitch" role="tablist" aria-label="汇总视图">
-                  <button type="button" id="dateTaskTab" role="tab" aria-selected="true" aria-controls="dateTaskPanel" tabindex="0" data-native-onclick="setSummaryView('date')" data-native-onkeydown="handleSummaryViewKeydown(event)">分配汇总</button>
-                  <button type="button" id="employeeReconciliationTab" role="tab" aria-selected="false" aria-controls="employeeReconciliationPanel" tabindex="-1" data-native-onclick="setSummaryView('employee')" data-native-onkeydown="handleSummaryViewKeydown(event)">员工对账</button>
-                </div>
                 <div class="filter-field filter-field--daterange">
                   <span class="filter-field-label">日期范围</span>
                   <div class="date-range-group">

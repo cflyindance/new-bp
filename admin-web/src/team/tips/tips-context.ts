@@ -17,6 +17,7 @@ export interface TipsPageContext {
   setStoreScope(storeId: string): void;
   subscribeScopeChange(listener: (scope: TipsScopeSnapshot) => void): () => void;
   navigate(href: string, state?: TipsNavigationState): void;
+  replace(href: string, state?: TipsNavigationState): void;
   getNavigationState(): TipsNavigationState | null;
   getScrollOwner(): HTMLElement | null;
 }
@@ -75,6 +76,17 @@ export function createTipsPageContext(dependencies: TipsContextDependencies = br
         return;
       }
       commitHash(target.href, "push", next);
+    },
+    replace(href, state) {
+      const current = parseTipsRoute(location.hash);
+      const target = parseTipsRoute(href);
+      const scrollTop = document.querySelector<HTMLElement>("[data-team-tips-scroll]")?.scrollTop ?? 0;
+      const existing = history.state?.menusifuTeamTips;
+      const trusted = isTrustedTipsHistoryState(existing, current.href) ? existing : null;
+      const flowId = trusted?.flowId ?? `tips-${Date.now().toString(36)}`;
+      const summaryScrollTop = current.view === "distribution" ? scrollTop : trusted?.summaryScrollTop ?? 0;
+      const next: TipsHistoryEntryState = state ?? { flowId, viewHref: target.href, scrollTop: 0, parentHref: current.href, summaryHref: "/team/tips/distribution", summaryScrollTop };
+      commitHash(target.href, "replace", next);
     },
     getNavigationState() {
       const route = parseTipsRoute(location.hash);

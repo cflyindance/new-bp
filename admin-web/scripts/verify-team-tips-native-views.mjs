@@ -101,6 +101,23 @@ if (!fs.readFileSync("src/team/tips/programs/distribution.js.txt", "utf8").inclu
 const distributionTemplate = fs.readFileSync("src/team/tips/templates/distribution.html", "utf8");
 const distributionProgram = fs.readFileSync("src/team/tips/programs/distribution.js.txt", "utf8");
 const distributionExport = fs.readFileSync("src/team/tips/legacy/export.js.txt", "utf8");
+const summaryUiContext = { window: {} };
+vm.createContext(summaryUiContext);
+vm.runInContext(fs.readFileSync("src/team/tips/legacy/tipout-summary-ui.js.txt", "utf8"), summaryUiContext);
+const summaryUi = summaryUiContext.window.TipOutSummaryUi;
+assert.equal(summaryUi.normalizeSummaryView("employee"), "employee");
+assert.equal(summaryUi.normalizeSummaryView("date"), "date");
+assert.equal(summaryUi.normalizeSummaryView("unknown"), "date");
+assert.equal(summaryUi.buildSummaryViewHref("date"), "index.html");
+assert.equal(summaryUi.buildSummaryViewHref("employee"), "index.html?view=employee");
+for (const token of ["historyMode === 'push'", "historyMode === 'replace'", "window.location.href = href", "window.location.replace(href)"]) {
+  if (!distributionProgram.includes(token)) failures.push(`distribution: summary view history contract missing ${token}`);
+}
+if ((distributionTemplate.match(/id="summaryViewSwitch"/g) || []).length !== 1) failures.push("distribution: summary view switch must be unique");
+if ((distributionTemplate.match(/id="dateTaskTab"/g) || []).length !== 1) failures.push("distribution: date task tab must be unique");
+if ((distributionTemplate.match(/id="employeeReconciliationTab"/g) || []).length !== 1) failures.push("distribution: employee reconciliation tab must be unique");
+if (distributionTemplate.indexOf('id="summaryViewSwitch"') > distributionTemplate.indexOf('class="filter-surface')) failures.push("distribution: summary tabs must appear before the filter surface");
+if (!/<h1 id="summaryTitle" class="sr-only">小费分配<\/h1>/.test(distributionTemplate)) failures.push("distribution: hidden semantic summary title missing");
 const headingActions = distributionTemplate.match(/<div class="tipout-heading-actions">[\s\S]*?<\/div>\s*<\/div>\s*<\/div>/)?.[0] || "";
 if (!headingActions.includes("summaryRuleEntryBtn")) failures.push("distribution: rule entry must remain in heading actions");
 for (const token of [">取消分配</button>", "id=\"exportMenu\"", "id=\"allocateBtn\""]) {
@@ -109,9 +126,45 @@ for (const token of [">取消分配</button>", "id=\"exportMenu\"", "id=\"alloca
 for (const token of ["tipout-summary-action-bar", "summaryDateActions", "summaryAllocateAction", "exportMenu", "allocateBtn"]) {
   if (!distributionTemplate.includes(token)) failures.push(`distribution: fixed summary action bar missing ${token}`);
 }
-for (const token of ["summaryDateActions", "summaryAllocateAction", "roleFilterField", "employeeFilterField"]) {
+for (const token of ["summaryDateActions", "summaryAllocateAction", "roleFilterField", "employeeFilterField", "dateSortField"]) {
   if (!distributionProgram.includes(token)) failures.push(`distribution: view-aware action/filter sync missing ${token}`);
 }
+for (const assignment of [
+  "dateActions.hidden = employeeActive",
+  "allocateAction.hidden = employeeActive",
+  "roleFilterField.hidden = employeeActive",
+  "employeeFilterField.hidden = employeeActive",
+  "dateSortField.hidden = employeeActive",
+]) {
+  if (!distributionProgram.includes(assignment)) failures.push(`distribution: incorrect view-specific visibility for ${assignment}`);
+}
+const summaryState = summaryUi.buildSummaryHistoryState({
+  dateStart: "2026-08-11", dateEnd: "2026-09-11", store: "golden-dragon",
+  roles: ["Server"], employees: ["employee-1"], activeView: "employee",
+  scrollY: 240, returnDate: "", returnEmployeeId: "employee-1",
+});
+assert.deepEqual(JSON.parse(JSON.stringify(summaryUi.readSummaryHistoryState(summaryState))), {
+  dateStart: "2026-08-11", dateEnd: "2026-09-11", store: "golden-dragon",
+  roles: ["Server"], employees: ["employee-1"], scrollY: 240,
+  returnDate: "", returnEmployeeId: "employee-1", activeView: "employee",
+});
+const employeeAggregates = summaryUi.aggregateEmployeeDailyDatasets([
+  { dateKey: "2026-09-10", allocated: true, employeeResults: [
+    { employeeId: "employee-1", name: "Alex", role: "Server", hours: 4, before: 10, deducted: 1, received: 20, after: 29, clockStatus: "已打卡" },
+    { employeeId: "employee-2", name: "Sam", role: "Busser", hours: 3, before: 5, deducted: 0, received: 8, after: 13, clockStatus: "已打卡" },
+  ] },
+  { dateKey: "2026-09-11", allocated: true, employeeResults: [
+    { employeeId: "employee-1", name: "Alex renamed", role: "Server", hours: 5, before: 12, deducted: 2, received: 22.5, after: 32.5, clockStatus: "已打卡" },
+  ] },
+]);
+assert.equal(employeeAggregates.length, 2);
+assert.equal(employeeAggregates[0].employeeId, "employee-1");
+assert.equal(employeeAggregates[0].hours, 9);
+assert.equal(employeeAggregates[0].before, 22);
+assert.equal(employeeAggregates[0].deducted, 3);
+assert.equal(employeeAggregates[0].received, 42.5);
+assert.equal(employeeAggregates[0].after, 61.5);
+assert.equal(employeeAggregates[0].dailyRows.length, 2);
 for (const token of ["collectDateTaskExportData", "collectEmployeeReconciliationExportData", "collectCurrentSummaryExportData", "EmployeeReconciliation_"]) {
   if (!distributionExport.includes(token)) failures.push(`distribution export: active-view export contract missing ${token}`);
 }
