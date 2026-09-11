@@ -2552,6 +2552,29 @@ select.form-control {
   display: none;
 }
 
+.tipout-page-summary .tipout-date-sort-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.tipout-page-summary .tipout-date-sort-button:hover,
+.tipout-page-summary .tipout-date-sort-button:focus-visible {
+  color: var(--text-primary);
+}
+
+.tipout-page-summary .tipout-date-sort-button:focus-visible {
+  outline: 2px solid var(--primary-color, #111827);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
 .tipout-page-summary .tipout-employee-table { min-width: 1200px; }
 .tipout-page-summary .tipout-employee-table th:nth-child(2) { width: 110px; }
 .tipout-page-summary .tipout-employee-table th:nth-child(3),

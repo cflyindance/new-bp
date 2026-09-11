@@ -48,8 +48,13 @@ const styles = fs.readFileSync('src/team/tips/tips-page.css', 'utf8');
 assert.match(template, /id="dateSortField"/);
 assert.match(template, /<option value="desc">日期倒序<\/option>/);
 assert.match(template, /<option value="asc">日期顺序<\/option>/);
+assert.match(template, /id="dateSortHeader" aria-sort="descending"/);
+assert.match(template, /id="dateSortHeaderButton"[^>]*onclick="toggleSummaryDateSort\(\)"/);
 assert.match(distribution, /TipOutSummaryDateSort\.sortRows\(dailyRows, summaryDateSort\)/);
+assert.match(distribution, /function toggleSummaryDateSort\(\)/);
+assert.match(distribution, /header\.setAttribute\('aria-sort', descending \? 'descending' : 'ascending'\)/);
 assert.match(distribution, /dateSortField\.hidden = employeeActive/);
+assert.match(styles, /\.tipout-page-summary \.tipout-date-sort-button\s*\{/);
 assert.match(styles, /\.tipout-page-summary \.tipout-date-sort-field\[hidden\]\s*\{\s*display:\s*none/);
 assert.doesNotMatch(distribution, /dateSort[^\n]*buildSummaryHistoryState/i);
 
