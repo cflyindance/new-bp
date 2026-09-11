@@ -101,6 +101,18 @@ if (!fs.readFileSync("src/team/tips/programs/distribution.js.txt", "utf8").inclu
 const distributionTemplate = fs.readFileSync("src/team/tips/templates/distribution.html", "utf8");
 const distributionProgram = fs.readFileSync("src/team/tips/programs/distribution.js.txt", "utf8");
 const distributionExport = fs.readFileSync("src/team/tips/legacy/export.js.txt", "utf8");
+const summaryUiContext = { window: {} };
+vm.createContext(summaryUiContext);
+vm.runInContext(fs.readFileSync("src/team/tips/legacy/tipout-summary-ui.js.txt", "utf8"), summaryUiContext);
+const summaryUi = summaryUiContext.window.TipOutSummaryUi;
+assert.equal(summaryUi.normalizeSummaryView("employee"), "employee");
+assert.equal(summaryUi.normalizeSummaryView("date"), "date");
+assert.equal(summaryUi.normalizeSummaryView("unknown"), "date");
+assert.equal(summaryUi.buildSummaryViewHref("date"), "index.html");
+assert.equal(summaryUi.buildSummaryViewHref("employee"), "index.html?view=employee");
+for (const token of ["historyMode === 'push'", "historyMode === 'replace'", "window.location.href = href", "window.location.replace(href)"]) {
+  if (!distributionProgram.includes(token)) failures.push(`distribution: summary view history contract missing ${token}`);
+}
 if ((distributionTemplate.match(/id="summaryViewSwitch"/g) || []).length !== 1) failures.push("distribution: summary view switch must be unique");
 if ((distributionTemplate.match(/id="dateTaskTab"/g) || []).length !== 1) failures.push("distribution: date task tab must be unique");
 if ((distributionTemplate.match(/id="employeeReconciliationTab"/g) || []).length !== 1) failures.push("distribution: employee reconciliation tab must be unique");

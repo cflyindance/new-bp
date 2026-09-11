@@ -467,10 +467,16 @@ var ALLOC_KEY = 'tipout_allocated';
       bar.style.setProperty('--tipout-summary-host-right', Math.max(0, window.innerWidth - rect.right) + 'px');
     }
 
-    function setSummaryView(view) {
-      activeSummaryView = view === 'employee' ? 'employee' : 'date';
+    function setSummaryView(view, options) {
+      var nextView = TipOutSummaryUi.normalizeSummaryView(view);
+      var historyMode = options && options.historyMode || 'push';
+      if (nextView === activeSummaryView && historyMode === 'push') return;
+      activeSummaryView = nextView;
       syncSummaryViewUi();
       captureSummaryUiState('', '');
+      var href = TipOutSummaryUi.buildSummaryViewHref(nextView);
+      if (historyMode === 'push') window.location.href = href;
+      if (historyMode === 'replace') window.location.replace(href);
       renderSummaryViews();
     }
 
@@ -1093,10 +1099,15 @@ var ALLOC_KEY = 'tipout_allocated';
       initStoreSelect();
       applyDefaultSummaryDateRange();
       syncSummaryDateSortUi();
+      var queryView = new URLSearchParams(window.location.search).get('view');
       activeSummaryView = TipOutSummaryUi.resolveSummaryView(
         history.state,
-        new URLSearchParams(window.location.search).get('view')
+        queryView
       );
+      if (queryView && queryView !== 'employee') {
+        setSummaryView('date', { historyMode: 'replace' });
+        return;
+      }
       syncSummaryViewUi();
       if (!restoreSummaryUiState()) {
         updateEmployeeFilter();

@@ -106,9 +106,18 @@
   }
 
   function resolveSummaryView(historyState, queryView) {
+    if (queryView != null && queryView !== '') return normalizeSummaryView(queryView);
     var saved = readSummaryHistoryState(historyState);
     if (saved) return saved.activeView === 'employee' ? 'employee' : 'date';
-    return queryView === 'employee' ? 'employee' : 'date';
+    return 'date';
+  }
+
+  function normalizeSummaryView(value) {
+    return value === 'employee' ? 'employee' : 'date';
+  }
+
+  function buildSummaryViewHref(view) {
+    return normalizeSummaryView(view) === 'employee' ? 'index.html?view=employee' : 'index.html';
   }
 
   function buildEmployeeReconciliationDetailUrl(context) {
@@ -187,6 +196,8 @@
     isParticipatingEmployeeRecord: isParticipatingEmployeeRecord,
     resolveRequiresAttendance: resolveRequiresAttendance,
     aggregateEmployeeDailyDatasets: aggregateEmployeeDailyDatasets,
+    normalizeSummaryView: normalizeSummaryView,
+    buildSummaryViewHref: buildSummaryViewHref,
     resolveSummaryView: resolveSummaryView,
     buildEmployeeReconciliationDetailUrl: buildEmployeeReconciliationDetailUrl,
     buildEmployeeReconciliationSnapshot: buildEmployeeReconciliationSnapshot,
