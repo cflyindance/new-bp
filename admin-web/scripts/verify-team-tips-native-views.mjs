@@ -61,9 +61,10 @@ if (nativeDetailProgram.includes("renderDetailContextRail")) failures.push("deta
 for (const token of [".tipout-page-detail .tipout-workspace.has-aside", ".tipout-page-detail .tipout-context-rail"]) {
   if (sourceCss.includes(token) || pageCss.includes(token)) failures.push(`detail styles: removed summary selector returned ${token}`);
 }
-for (const token of ["detailDate", "storeSelect", "detailRulesContainer", "returnToSummary()", "saveDetail()", "saveAndNext()"]) {
-  if (!sourceDetail.includes(token) || !nativeDetail.includes(token)) failures.push(`detail: required business entry missing ${token}`);
+for (const token of ["detailDate", "storeSelect", "detailRulesContainer", "returnToSummary()", "confirmDetailAllocationBtn", "confirmDetailAllocation()"]) {
+  if (!nativeDetail.includes(token)) failures.push(`detail: required business entry missing ${token}`);
 }
+if (nativeDetail.includes("saveDetail()") || nativeDetail.includes("saveAndNext()")) failures.push("distribution detail: legacy save actions returned");
 
 const removedHeadingCopy = {
   "dist/TipOut/index.html": ["Tip Out 工作台", "按日期查看、核对并执行当前范围的小费分配。"],

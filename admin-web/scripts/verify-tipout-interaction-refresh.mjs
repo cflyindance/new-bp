@@ -125,8 +125,8 @@ assert.match(detailHtml, /返回汇总/);
 assert.match(detailHtml, /还没有小费分配规则/);
 assert.match(detailHtml, /href="rules\.html"[^>]*>新增小费分配规则/);
 assert.match(detailHtml, /updateTipData\(\)/);
-assert.match(detailHtml, /saveDetail\(\)/);
-assert.match(detailHtml, /saveAndNext\(\)/);
+assert.match(detailHtml, /confirmDetailAllocation\(\)/);
+assert.doesNotMatch(detailHtml, /saveDetail\(\)|saveAndNext\(\)/);
 assert.doesNotMatch(detailHtml, /allocatedDates\.has\(dateKey\)/);
 assert.doesNotMatch(detailHtml, /该日期尚未完成小费分配/);
 
