@@ -1,4 +1,5 @@
 var ALLOC_KEY = 'tipout_allocated';
+    var summaryDateSort = TipOutSummaryDateSort.readDirection();
     var allocationSubmitting = false;
     function getAllocatedDatesForStore(store) {
       try {
@@ -446,10 +447,12 @@ var ALLOC_KEY = 'tipout_allocated';
       var allocateAction = document.getElementById('summaryAllocateAction');
       var roleFilterField = document.getElementById('roleFilterField');
       var employeeFilterField = document.getElementById('employeeFilterField');
+      var dateSortField = document.getElementById('dateSortField');
       if (dateActions) dateActions.hidden = employeeActive;
       if (allocateAction) allocateAction.hidden = employeeActive;
       if (roleFilterField) roleFilterField.hidden = employeeActive;
       if (employeeFilterField) employeeFilterField.hidden = employeeActive;
+      if (dateSortField) dateSortField.hidden = employeeActive;
       var exportMenu = document.getElementById('exportMenu');
       if (exportMenu) exportMenu.classList.remove('show');
       syncSummaryActionBarBounds();
@@ -469,6 +472,23 @@ var ALLOC_KEY = 'tipout_allocated';
       syncSummaryViewUi();
       captureSummaryUiState('', '');
       renderSummaryViews();
+    }
+
+    function syncSummaryDateSortUi() {
+      var select = document.getElementById('dateSortSelect');
+      if (select) select.value = summaryDateSort;
+    }
+
+    function handleDateSortChange(value) {
+      summaryDateSort = TipOutSummaryDateSort.writeDirection(value);
+      syncSummaryDateSortUi();
+      if (activeSummaryView === 'date') renderSummaryViews();
+    }
+
+    function applyDefaultSummaryDateRange() {
+      var range = TipOutSummaryDateSort.defaultDateRange();
+      document.getElementById('dateStart').value = range.startDate;
+      document.getElementById('dateEnd').value = range.endDate;
     }
 
     function handleSummaryViewKeydown(event) {
@@ -499,8 +519,12 @@ var ALLOC_KEY = 'tipout_allocated';
 
       var queryView = new URLSearchParams(window.location.search).get('view');
       activeSummaryView = TipOutSummaryUi.resolveSummaryView(history.state, queryView);
-      document.getElementById('dateStart').value = saved.dateStart || '';
-      document.getElementById('dateEnd').value = saved.dateEnd || '';
+      if (TipOutSummaryDateSort.isValidDateRange(saved.dateStart, saved.dateEnd)) {
+        document.getElementById('dateStart').value = saved.dateStart;
+        document.getElementById('dateEnd').value = saved.dateEnd;
+      } else {
+        applyDefaultSummaryDateRange();
+      }
       document.getElementById('storeSelect').value = saved.store || '';
       setSummaryFilterSelections('roleFilter', saved.roles);
       updateEmployeeFilter(true);
@@ -662,7 +686,8 @@ var ALLOC_KEY = 'tipout_allocated';
     function renderDateTaskList(dailyRows) {
       var container = document.getElementById('dailySummaryList');
       if (!container) return;
-      container.innerHTML = dailyRows.map(function(row) {
+      var visibleRows = TipOutSummaryDateSort.sortRows(dailyRows, summaryDateSort);
+      container.innerHTML = visibleRows.map(function(row) {
         var dateKey = row.dateKey;
         var total = row.total;
         return '<tr class="tipout-daily-row" data-date="' + dateKey +
@@ -1050,6 +1075,8 @@ var ALLOC_KEY = 'tipout_allocated';
 
     function initializeSummaryPage() {
       initStoreSelect();
+      applyDefaultSummaryDateRange();
+      syncSummaryDateSortUi();
       activeSummaryView = TipOutSummaryUi.resolveSummaryView(
         history.state,
         new URLSearchParams(window.location.search).get('view')

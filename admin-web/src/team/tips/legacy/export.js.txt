@@ -292,7 +292,7 @@ function printAsPDF(data) {
 }
 
 function printDatePoolAsPDF(data) {
-  showNotification('正在生成日期任务 PDF 预览页面...', 'info');
+  showNotification('正在生成分配汇总 PDF 预览页面...', 'info');
   var win = window.open('', '_blank');
   if (!win) { showNotification('弹窗被浏览器拦截，请允许弹窗后重试', 'error'); return; }
   var doc = win.document;
@@ -520,7 +520,7 @@ function sendEmail() {
   }
   var fmt = document.querySelector('input[name="emailFormat"]:checked').value.toUpperCase();
   closeModal('emailModal');
-  var reportName = data.kind === 'employee' ? '员工对账' : '日期任务';
+  var reportName = data.kind === 'employee' ? '员工对账' : '分配汇总';
   showNotification('正在发送' + reportName + ' ' + fmt + ' 到 ' + emails.join(', ') + ' ...', 'info');
   setTimeout(function() { showNotification('邮件发送成功', 'success'); }, 1500);
 }
