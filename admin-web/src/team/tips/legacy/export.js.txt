@@ -108,7 +108,7 @@ function exportCSV(data) {
   showNotification('正在生成 CSV 文件...', 'info');
   var bom = '\uFEFF';
   var lines = [];
-  lines.push('Tip Distribution Report');
+  lines.push('Date Tip Allocation Summary');
   lines.push('"Store","' + data.store.replace(/"/g, '""') + '"');
   lines.push('"Date Range","' + data.dateStart + ' ~ ' + data.dateEnd + '"');
   lines.push('');
@@ -128,7 +128,7 @@ function exportCSV(data) {
   var url = URL.createObjectURL(blob);
   var a = document.createElement('a');
   a.href = url;
-  a.download = 'TipDistribution_' + data.dateStart + '_' + data.dateEnd + '.csv';
+  a.download = 'DateTipAllocationSummary_' + data.dateStart + '_' + data.dateEnd + '.csv';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -141,8 +141,8 @@ function csvCell(value) {
 }
 
 function exportEmployeeReconciliationCSV(data) {
-  showNotification('正在生成员工对账 CSV 文件...', 'info');
-  var lines = ['Employee Reconciliation Report'];
+  showNotification('正在生成员工分配汇总 CSV 文件...', 'info');
+  var lines = ['Employee Tip Allocation Summary'];
   lines.push(csvCell('Store') + ',' + csvCell(data.store));
   lines.push(csvCell('Date Range') + ',' + csvCell(data.dateStart + ' ~ ' + data.dateEnd));
   lines.push('');
@@ -164,12 +164,12 @@ function exportEmployeeReconciliationCSV(data) {
   var url = URL.createObjectURL(blob);
   var a = document.createElement('a');
   a.href = url;
-  a.download = 'EmployeeReconciliation_' + data.dateStart + '_' + data.dateEnd + '.csv';
+  a.download = 'EmployeeTipAllocationSummary_' + data.dateStart + '_' + data.dateEnd + '.csv';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  showNotification('员工对账 CSV 导出成功', 'success');
+  showNotification('员工分配汇总 CSV 导出成功', 'success');
 }
 
 /* ─── PDF: CDN loader ─── */
@@ -292,13 +292,13 @@ function printAsPDF(data) {
 }
 
 function printDatePoolAsPDF(data) {
-  showNotification('正在生成分配汇总 PDF 预览页面...', 'info');
+  showNotification('正在生成日期分配汇总 PDF 预览页面...', 'info');
   var win = window.open('', '_blank');
   if (!win) { showNotification('弹窗被浏览器拦截，请允许弹窗后重试', 'error'); return; }
   var doc = win.document;
   doc.open();
-  doc.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Tip Pool Date Report</title><style>body{font-family:Arial,sans-serif;padding:28px;color:#222;font-size:12px}h1{font-size:20px}table{width:100%;border-collapse:collapse;margin:14px 0}th,td{padding:7px 9px;border-bottom:1px solid #ddd;text-align:left}.pool{background:#f7f7f8;color:#555}@media print{@page{size:landscape;margin:10mm}}</style></head><body>');
-  doc.write('<h1>Tip Pool Date Report</h1><p>Store: ' + escH(data.store) + '</p><p>Date Range: ' + data.dateStart + ' ~ ' + data.dateEnd + '</p>');
+  doc.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Date Tip Allocation Summary</title><style>body{font-family:Arial,sans-serif;padding:28px;color:#222;font-size:12px}h1{font-size:20px}table{width:100%;border-collapse:collapse;margin:14px 0}th,td{padding:7px 9px;border-bottom:1px solid #ddd;text-align:left}.pool{background:#f7f7f8;color:#555}@media print{@page{size:landscape;margin:10mm}}</style></head><body>');
+  doc.write('<h1>Date Tip Allocation Summary</h1><p>Store: ' + escH(data.store) + '</p><p>Date Range: ' + data.dateStart + ' ~ ' + data.dateEnd + '</p>');
   doc.write('<table><thead><tr><th>Date</th><th>Status</th><th>Original Tips</th><th>Pool Amount</th><th>Allocated</th><th>Unallocated</th><th>Pool Count</th></tr></thead><tbody>');
   data.dailySummaries.forEach(function(day) {
     doc.write('<tr><td>' + day.date + '</td><td>' + escH(day.status) + '</td><td>$' + day.originalTips.toFixed(2) + '</td><td>' + (day.poolAmount == null ? '—' : '$' + day.poolAmount.toFixed(2)) + '</td><td>' + (day.allocatedAmount == null ? '—' : '$' + day.allocatedAmount.toFixed(2)) + '</td><td>' + (day.unallocatedAmount == null ? '—' : '$' + day.unallocatedAmount.toFixed(2)) + '</td><td>' + day.poolCount + '</td></tr>');
@@ -330,29 +330,29 @@ function employeeReconciliationRows(data) {
 }
 
 function printEmployeeReconciliationAsPDF(data) {
-  showNotification('正在生成员工对账 PDF 预览页面...', 'info');
+  showNotification('正在生成员工分配汇总 PDF 预览页面...', 'info');
   var win = window.open('', '_blank');
   if (!win) { showNotification('弹窗被浏览器拦截，请允许弹窗后重试', 'error'); return; }
   var rows = employeeReconciliationRows(data);
   var doc = win.document;
   doc.open();
-  doc.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Employee Reconciliation Report</title>');
+  doc.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Employee Tip Allocation Summary</title>');
   doc.write('<style>body{font-family:Arial,sans-serif;padding:28px;color:#222;font-size:12px}h1{font-size:20px;margin:0 0 8px}.meta{color:#666;margin:3px 0}table{width:100%;border-collapse:collapse;margin-top:16px}th{background:#111;color:#fff;padding:8px;text-align:left}td{padding:7px 8px;border-bottom:1px solid #eee}.r{text-align:right}@media print{@page{size:landscape;margin:10mm}}</style></head><body>');
-  doc.write('<h1>Employee Reconciliation Report</h1><div class="meta">Store: ' + escH(data.store) + '</div>');
+  doc.write('<h1>Employee Tip Allocation Summary</h1><div class="meta">Store: ' + escH(data.store) + '</div>');
   doc.write('<div class="meta">Date Range: ' + escH(data.dateStart + ' ~ ' + data.dateEnd) + '</div>');
   doc.write('<table><thead><tr>' + ['Employee','Role','Shifts','Hours','Tips Before','Deducted','Received','Tips After','Status'].map(function(label) { return '<th>' + label + '</th>'; }).join('') + '</tr></thead><tbody>');
   rows.forEach(function(row) { doc.write('<tr>' + row.map(function(cell) { return '<td>' + escH(cell) + '</td>'; }).join('') + '</tr>'); });
   doc.write('</tbody></table></body></html>');
   doc.close();
   setTimeout(function() { win.print(); }, 500);
-  showNotification('员工对账 PDF 预览已打开，请在弹出窗口中保存为 PDF', 'success');
+  showNotification('员工分配汇总 PDF 预览已打开，请在弹出窗口中保存为 PDF', 'success');
 }
 
 function generateEmployeeReconciliationJsPDF(data) {
-  showNotification('正在生成员工对账 PDF 文件...', 'info');
+  showNotification('正在生成员工分配汇总 PDF 文件...', 'info');
   var doc = new window.jspdf.jsPDF('l', 'mm', 'a4');
   doc.setFontSize(18);
-  doc.text('Employee Reconciliation Report', 14, 16);
+  doc.text('Employee Tip Allocation Summary', 14, 16);
   doc.setFontSize(10);
   doc.text('Store: ' + data.store, 14, 24);
   doc.text('Date Range: ' + data.dateStart + ' ~ ' + data.dateEnd, 14, 30);
@@ -364,8 +364,8 @@ function generateEmployeeReconciliationJsPDF(data) {
     headStyles: { fillColor: [22, 119, 255], textColor: 255, fontStyle: 'bold' },
     margin: { left: 14, right: 14 }
   });
-  doc.save('EmployeeReconciliation_' + data.dateStart + '_' + data.dateEnd + '.pdf');
-  showNotification('员工对账 PDF 导出成功', 'success');
+  doc.save('EmployeeTipAllocationSummary_' + data.dateStart + '_' + data.dateEnd + '.pdf');
+  showNotification('员工分配汇总 PDF 导出成功', 'success');
 }
 
 /* ─── PDF: jsPDF generation ─── */
@@ -379,7 +379,7 @@ function generateJsPDF(data) {
 
   doc.setFontSize(18);
   doc.setTextColor(30);
-  doc.text('Tip Distribution Report', 14, 16);
+  doc.text('Date Tip Allocation Summary', 14, 16);
   doc.setFontSize(10);
   doc.setTextColor(100);
   doc.text('Store: ' + data.store, 14, 24);
@@ -467,7 +467,7 @@ function generateJsPDF(data) {
     doc.text('Page ' + i + ' / ' + pageCount, pw - 35, ph - 8);
   }
 
-  doc.save('TipDistribution_' + data.dateStart + '_' + data.dateEnd + '.pdf');
+  doc.save('DateTipAllocationSummary_' + data.dateStart + '_' + data.dateEnd + '.pdf');
   showNotification('PDF 导出成功', 'success');
 }
 
@@ -475,7 +475,7 @@ function generateDatePoolJsPDF(data) {
   var jsPDF = window.jspdf.jsPDF;
   var doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
   doc.setFontSize(16);
-  doc.text('Tip Pool Date Report', 14, 16);
+  doc.text('Date Tip Allocation Summary', 14, 16);
   doc.setFontSize(9);
   doc.text('Store: ' + data.store, 14, 23);
   doc.text('Date Range: ' + data.dateStart + ' ~ ' + data.dateEnd, 14, 28);
@@ -492,7 +492,7 @@ function generateDatePoolJsPDF(data) {
     body: rows,
     styles: { fontSize: 8 }
   });
-  doc.save('TipPoolDateReport_' + data.dateStart + '_' + data.dateEnd + '.pdf');
+  doc.save('DateTipAllocationSummary_' + data.dateStart + '_' + data.dateEnd + '.pdf');
   showNotification('PDF 导出成功', 'success');
 }
 
@@ -520,7 +520,7 @@ function sendEmail() {
   }
   var fmt = document.querySelector('input[name="emailFormat"]:checked').value.toUpperCase();
   closeModal('emailModal');
-  var reportName = data.kind === 'employee' ? '员工对账' : '分配汇总';
+  var reportName = data.kind === 'employee' ? '员工分配汇总' : '日期分配汇总';
   showNotification('正在发送' + reportName + ' ' + fmt + ' 到 ' + emails.join(', ') + ' ...', 'info');
   setTimeout(function() { showNotification('邮件发送成功', 'success'); }, 1500);
 }

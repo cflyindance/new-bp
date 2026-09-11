@@ -202,11 +202,27 @@ assert.equal(employeeAggregates[0].deducted, 3);
 assert.equal(employeeAggregates[0].received, 42.5);
 assert.equal(employeeAggregates[0].after, 61.5);
 assert.equal(employeeAggregates[0].dailyRows.length, 2);
-for (const token of ["collectDateTaskExportData", "collectEmployeeReconciliationExportData", "collectCurrentSummaryExportData", "EmployeeReconciliation_"]) {
+for (const token of ["collectDateTaskExportData", "collectEmployeeReconciliationExportData", "collectCurrentSummaryExportData"]) {
   if (!distributionExport.includes(token)) failures.push(`distribution export: active-view export contract missing ${token}`);
 }
-for (const token of ["分配汇总", "员工对账", "employeeReconciliationList"]) if (!distributionTemplate.includes(token)) failures.push(`distribution: employee reconciliation UI missing ${token}`);
+for (const token of ["日期分配汇总", "员工分配汇总", "员工小费分配汇总", "当前筛选范围暂无员工分配汇总数据"]) {
+  if (!distributionTemplate.includes(token)) failures.push(`distribution: renamed summary copy missing ${token}`);
+}
+for (const token of [">分配汇总</button>", ">员工对账</button>"]) {
+  if (distributionTemplate.includes(token)) failures.push(`distribution: obsolete visible copy remains ${token}`);
+}
+for (const token of ["employeeReconciliationTab", "employeeReconciliationPanel", "employeeReconciliationList", "dateTaskTab", "setSummaryView('employee')"]) {
+  if (!distributionTemplate.includes(token)) failures.push(`distribution: technical contract changed ${token}`);
+}
+for (const token of ["Date Tip Allocation Summary", "DateTipAllocationSummary_", "Employee Tip Allocation Summary", "EmployeeTipAllocationSummary_", "正在生成员工分配汇总", "员工分配汇总 CSV 导出成功", "员工分配汇总 PDF 导出成功"]) {
+  if (!distributionExport.includes(token)) failures.push(`distribution export: renamed contract missing ${token}`);
+}
+for (const token of ["Employee Reconciliation Report", "Tip Pool Date Report", "EmployeeReconciliation_", "TipPoolDateReport_", "TipDistribution_"]) {
+  if (distributionExport.includes(token)) failures.push(`distribution export: obsolete name remains ${token}`);
+}
 for (const token of ["setSummaryView", "renderEmployeeReconciliationList", "openEmployeeReconciliationDetail", "canonicalEmployeeStore", "dedupeEmployees", "selectedStore"]) if (!distributionProgram.includes(token)) failures.push(`distribution: employee reconciliation program missing ${token}`);
+if (!distributionProgram.includes(" 分配汇总明细\">›")) failures.push("distribution: employee detail link accessible name missing renamed copy");
+if (distributionProgram.includes(" 对账明细\">›")) failures.push("distribution: obsolete employee detail link accessible name remains");
 for (const token of ["tipAllocationModal", "allocationStore", "allocationDateStart", "allocationDateEnd", "allocationScopeError", "confirmAllocateBtn"]) {
   if (!distributionTemplate.includes(token)) failures.push(`distribution: allocation scope dialog missing ${token}`);
 }
@@ -243,6 +259,12 @@ if (!pendingValueHelper) {
 const employeeDetailTemplate = fs.readFileSync("src/team/tips/templates/employee-reconciliation.html", "utf8");
 const employeeDetailProgram = fs.readFileSync("src/team/tips/programs/employee-reconciliation.js.txt", "utf8");
 const detailsProgram = fs.readFileSync("src/team/tips/programs/details.js.txt", "utf8");
+for (const token of ["← 返回员工分配汇总", "分配汇总日期范围", "员工分配汇总金额概览", "员工逐日分配明细", "当前筛选条件下暂无分配明细", "无法展示分配汇总明细"]) {
+  if (!employeeDetailTemplate.includes(token)) failures.push(`employee detail: renamed copy missing ${token}`);
+}
+for (const token of ["返回员工对账", "员工对账金额概览", "员工逐日对账明细", "暂无对账明细", "无法展示对账明细"]) {
+  if (employeeDetailTemplate.includes(token)) failures.push(`employee detail: obsolete visible copy remains ${token}`);
+}
 if (!employeeDetailProgram.includes("window.location.href = 'index.html?view=employee';") || employeeDetailProgram.includes("history.back()")) failures.push("employee reconciliation detail: return must target employee summary without browser history back");
 if (!detailsProgram.includes("window.location.href = 'index.html';") || detailsProgram.includes("history.back()")) failures.push("distribution detail: return must target date summary without browser history back");
 const tipsRuntime = fs.readFileSync("src/team/tips/tips-legacy-runtime.ts", "utf8");
@@ -280,6 +302,10 @@ assert.equal(employeeDetailContext.employeeDetailRoleLabel(""), "未设置角色
 assert.equal(employeeDetailContext.employeeDetailCsvCell('a,"b"'), '"a,""b"""');
 assert.equal(employeeDetailContext.employeeDetailCsvCell('=SUM(1,1)'), '"\'=SUM(1,1)"');
 assert.equal(employeeDetailContext.employeeDetailSafeFilename('王/店长:2026'), '王_店长_2026');
+assert.equal(employeeDetailContext.employeeDetailExportFilename({ name: '王店长', start: '2026-01-01', end: '2026-01-31' }, 'pdf'), '王店长_2026-01-01_2026-01-31.pdf');
+const detailPrintHtml = employeeDetailContext.buildEmployeeDetailPrintHtml({ name: '王店长', role: 'Manager', start: '2026-01-01', end: '2026-01-31', attendance: '全部状态', rows: [] });
+assert.ok(detailPrintHtml.includes('<h1>王店长 员工分配汇总</h1>'));
+assert.ok(detailPrintHtml.includes('<title>王店长_2026-01-01_2026-01-31</title>'));
 assert.deepEqual(Array.from(employeeDetailContext.parseEmployeeDetailEmails('a@example.com, b@example.com')), ['a@example.com', 'b@example.com']);
 assert.equal(employeeDetailContext.parseEmployeeDetailEmails('invalid-address'), null);
 let employeeDetailPrintCalled = false;

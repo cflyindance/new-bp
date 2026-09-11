@@ -132,7 +132,7 @@ function detailNumber(value) { return Number(value) || 0; }
     }
 
     function employeeDetailSafeFilename(value) {
-      return String(value || '员工对账').replace(/[\\/:*?"<>|]/g, '_').replace(/\s+/g, '_');
+      return String(value || '员工分配汇总').replace(/[\\/:*?"<>|]/g, '_').replace(/\s+/g, '_');
     }
 
     function employeeDetailEscapeHtml(value) {
@@ -219,7 +219,7 @@ function detailNumber(value) { return Number(value) || 0; }
       return '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>' +
         employeeDetailEscapeHtml(employeeDetailExportFilename(data, 'pdf').replace(/\.pdf$/, '')) +
         '</title><style>@page{size:A4 landscape;margin:12mm}body{font-family:"Microsoft YaHei","PingFang SC",Arial,sans-serif;color:#171717;font-size:12px}h1{font-size:20px;margin:0 0 8px}.meta{color:#666;margin-bottom:16px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:7px;text-align:left;white-space:pre-line}th{background:#f5f6f8}</style></head><body><h1>' +
-        employeeDetailEscapeHtml(data.name) + ' 员工对账</h1><div class="meta">角色：' + employeeDetailEscapeHtml(data.role) +
+        employeeDetailEscapeHtml(data.name) + ' 员工分配汇总</h1><div class="meta">角色：' + employeeDetailEscapeHtml(data.role) +
         '　日期：' + employeeDetailEscapeHtml(data.start + ' ～ ' + data.end) + '　考勤：' + employeeDetailEscapeHtml(data.attendance) +
         '</div><table><thead><tr>' + headings.map(function(item) { return '<th>' + item + '</th>'; }).join('') +
         '</tr></thead><tbody>' + body + '</tbody></table></body></html>';

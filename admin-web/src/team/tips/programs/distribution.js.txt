@@ -626,7 +626,7 @@ var ALLOC_KEY = 'tipout_allocated';
       try {
         sessionStorage.setItem(TipOutSummaryUi.EMPLOYEE_RECONCILIATION_SNAPSHOT_KEY, JSON.stringify(snapshot));
       } catch (error) {
-        showNotification('无法打开员工对账明细，请重试', 'error');
+        showNotification('无法打开员工分配汇总明细，请重试', 'error');
         return;
       }
       captureSummaryUiState('', employeeId);
@@ -769,7 +769,7 @@ var ALLOC_KEY = 'tipout_allocated';
           '<td><strong class="tip-amount--receive">' + moneySign(aggregate.received) + '</strong></td>' +
           '<td><strong>' + money(aggregate.after) + '</strong></td>' +
           '<td><span class="tipout-employee-status ' + statusClass + '"><span aria-hidden="true">●</span> ' + aggregate.status + '</span></td>' +
-          '<td class="tipout-detail-link" aria-label="查看 ' + name + ' 对账明细">›</td></tr>';
+          '<td class="tipout-detail-link" aria-label="查看 ' + name + ' 分配汇总明细">›</td></tr>';
       }).join('');
     }
 
