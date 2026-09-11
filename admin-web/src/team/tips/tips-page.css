@@ -2010,14 +2010,17 @@ select.form-control {
 }
 
 .tipout-page-detail .tipout-detail-context-bar .filter-field {
-  width: 200px;
-  max-width: 200px;
   gap: 6px;
 }
 
-.tipout-page-detail .tipout-detail-context-bar .filter-field:nth-child(2) {
+.tipout-page-detail .tipout-detail-store-field {
   width: 260px;
   max-width: 260px;
+}
+
+.tipout-page-detail .tipout-detail-date-field {
+  width: 200px;
+  max-width: 200px;
 }
 
 .tipout-page-detail .tipout-detail-context-bar label,
@@ -2575,8 +2578,7 @@ select.form-control {
   .tipout-page-detail .tipout-page-heading--with-back { display: flex; align-items: stretch; }
   .tipout-page-detail .tipout-page-heading--with-back > .btn { align-self: flex-start; }
   .tipout-page-detail .tipout-detail-context-bar { align-items: stretch; flex-direction: column; }
-  .tipout-page-detail .tipout-detail-context-bar .filter-field,
-  .tipout-page-detail .tipout-detail-context-bar .filter-field:nth-child(2) { width: 100%; max-width: none; }
+  .tipout-page-detail .tipout-detail-context-bar .filter-field { width: 100%; max-width: none; }
   .tipout-page-detail .tipout-sticky-actions { align-items: stretch; flex-direction: column; bottom: 8px; }
   .tipout-page-detail .tipout-sticky-actions > div { display: grid; grid-template-columns: 1fr; }
   .tipout-page-rules .tipout-metric-strip--three { grid-template-columns: repeat(2, minmax(0, 1fr)); }
