@@ -126,9 +126,45 @@ for (const token of [">取消分配</button>", "id=\"exportMenu\"", "id=\"alloca
 for (const token of ["tipout-summary-action-bar", "summaryDateActions", "summaryAllocateAction", "exportMenu", "allocateBtn"]) {
   if (!distributionTemplate.includes(token)) failures.push(`distribution: fixed summary action bar missing ${token}`);
 }
-for (const token of ["summaryDateActions", "summaryAllocateAction", "roleFilterField", "employeeFilterField"]) {
+for (const token of ["summaryDateActions", "summaryAllocateAction", "roleFilterField", "employeeFilterField", "dateSortField"]) {
   if (!distributionProgram.includes(token)) failures.push(`distribution: view-aware action/filter sync missing ${token}`);
 }
+for (const assignment of [
+  "dateActions.hidden = employeeActive",
+  "allocateAction.hidden = employeeActive",
+  "roleFilterField.hidden = employeeActive",
+  "employeeFilterField.hidden = employeeActive",
+  "dateSortField.hidden = employeeActive",
+]) {
+  if (!distributionProgram.includes(assignment)) failures.push(`distribution: incorrect view-specific visibility for ${assignment}`);
+}
+const summaryState = summaryUi.buildSummaryHistoryState({
+  dateStart: "2026-08-11", dateEnd: "2026-09-11", store: "golden-dragon",
+  roles: ["Server"], employees: ["employee-1"], activeView: "employee",
+  scrollY: 240, returnDate: "", returnEmployeeId: "employee-1",
+});
+assert.deepEqual(JSON.parse(JSON.stringify(summaryUi.readSummaryHistoryState(summaryState))), {
+  dateStart: "2026-08-11", dateEnd: "2026-09-11", store: "golden-dragon",
+  roles: ["Server"], employees: ["employee-1"], scrollY: 240,
+  returnDate: "", returnEmployeeId: "employee-1", activeView: "employee",
+});
+const employeeAggregates = summaryUi.aggregateEmployeeDailyDatasets([
+  { dateKey: "2026-09-10", allocated: true, employeeResults: [
+    { employeeId: "employee-1", name: "Alex", role: "Server", hours: 4, before: 10, deducted: 1, received: 20, after: 29, clockStatus: "已打卡" },
+    { employeeId: "employee-2", name: "Sam", role: "Busser", hours: 3, before: 5, deducted: 0, received: 8, after: 13, clockStatus: "已打卡" },
+  ] },
+  { dateKey: "2026-09-11", allocated: true, employeeResults: [
+    { employeeId: "employee-1", name: "Alex renamed", role: "Server", hours: 5, before: 12, deducted: 2, received: 22.5, after: 32.5, clockStatus: "已打卡" },
+  ] },
+]);
+assert.equal(employeeAggregates.length, 2);
+assert.equal(employeeAggregates[0].employeeId, "employee-1");
+assert.equal(employeeAggregates[0].hours, 9);
+assert.equal(employeeAggregates[0].before, 22);
+assert.equal(employeeAggregates[0].deducted, 3);
+assert.equal(employeeAggregates[0].received, 42.5);
+assert.equal(employeeAggregates[0].after, 61.5);
+assert.equal(employeeAggregates[0].dailyRows.length, 2);
 for (const token of ["collectDateTaskExportData", "collectEmployeeReconciliationExportData", "collectCurrentSummaryExportData", "EmployeeReconciliation_"]) {
   if (!distributionExport.includes(token)) failures.push(`distribution export: active-view export contract missing ${token}`);
 }
