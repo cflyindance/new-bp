@@ -10,6 +10,26 @@
     var text = String(value || '').trim();
     if (text && list.indexOf(text) < 0) list.push(text);
   }
+  function uniqueIds(values) {
+    var result = [];
+    (values || []).forEach(function(value) { addUnique(result, value); });
+    return result;
+  }
+  function normalizeEmployeeScope(allIds, selectedIds) {
+    var available = uniqueIds(allIds);
+    var selected = uniqueIds(selectedIds).filter(function(id) { return available.indexOf(id) >= 0; });
+    if (!selected.length || selected.length === available.length) return { mode: 'all', ids: [] };
+    return { mode: 'subset', ids: selected };
+  }
+  function reconcileEmployeeScope(scope, availableIds) {
+    if (!scope || scope.mode !== 'subset') return { mode: 'all', ids: [] };
+    return normalizeEmployeeScope(availableIds, scope.ids);
+  }
+  function filterDailyRowsByAllocationStatus(rows, status) {
+    if (status === 'allocated') return (rows || []).filter(function(row) { return row.allocated === true; });
+    if (status === 'unallocated') return (rows || []).filter(function(row) { return row.allocated !== true; });
+    return (rows || []).slice();
+  }
   function summarizeDailyResults(records) {
     return (records || []).reduce(function (sum, item) {
       sum.before += number(item.before);
@@ -44,6 +64,10 @@
       employeeSearch: values.employeeSearch || '',
       employeeSummaryRole: values.employeeSummaryRole || '',
       employeeSummaryStatus: values.employeeSummaryStatus || '',
+      employeeSummaryScope: values.employeeSummaryScope && values.employeeSummaryScope.mode === 'subset'
+        ? { mode: 'subset', ids: uniqueIds(values.employeeSummaryScope.ids) }
+        : { mode: 'all', ids: [] },
+      dateAllocationStatus: ['allocated', 'unallocated'].indexOf(values.dateAllocationStatus) >= 0 ? values.dateAllocationStatus : '',
       employeeSortKey: ['employee', 'hours', 'finalAmount'].indexOf(values.employeeSortKey) >= 0 ? values.employeeSortKey : 'finalAmount',
       employeeSortDirection: values.employeeSortDirection === 'asc' ? 'asc' : 'desc',
       activeView: values.activeView === 'employee' ? 'employee' : 'date'
@@ -174,9 +198,12 @@
     var search = String(filters && filters.search || '').trim().toLocaleLowerCase();
     var roles = filters && Array.isArray(filters.roles) ? filters.roles : [];
     var statuses = filters && Array.isArray(filters.statuses) ? filters.statuses : [];
+    var employeeScope = filters && filters.employeeScope;
+    var employeeIds = employeeScope && employeeScope.mode === 'subset' ? uniqueIds(employeeScope.ids) : [];
     var result = (aggregates || []).filter(function(item) {
       return (!search || String(item.name || '').toLocaleLowerCase().indexOf(search) >= 0) &&
         (!roles.length || item.roles.some(function(role) { return roles.indexOf(role) >= 0; })) &&
+        (!employeeIds.length || employeeIds.indexOf(String(item.employeeId || '')) >= 0) &&
         (!statuses.length || statuses.indexOf(item.status) >= 0);
     });
     var key = sort && sort.key || 'finalAmount';
@@ -290,6 +317,9 @@
     buildEmployeeReconciliationDetailUrl: buildEmployeeReconciliationDetailUrl,
     buildEmployeeReconciliationSnapshot: buildEmployeeReconciliationSnapshot,
     readEmployeeReconciliationSnapshot: readEmployeeReconciliationSnapshot,
+    normalizeEmployeeScope: normalizeEmployeeScope,
+    reconcileEmployeeScope: reconcileEmployeeScope,
+    filterDailyRowsByAllocationStatus: filterDailyRowsByAllocationStatus,
     EMPLOYEE_RECONCILIATION_SNAPSHOT_KEY: EMPLOYEE_RECONCILIATION_SNAPSHOT_KEY
   };
 })(window);

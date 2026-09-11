@@ -125,7 +125,7 @@
           <div class="tipout-store-scope-row">
             <div class="filter-field tipout-store-filter-field" id="storeFilterField">
               <label class="filter-field-label" for="storeSelect">门店</label>
-              <select id="storeSelect" class="form-control form-control-lg" data-native-onchange="invalidateDayPipelineCache();updateEmployeeFilter()">
+              <select id="storeSelect" class="form-control form-control-lg" data-native-onchange="invalidateDayPipelineCache();renderDailySummaryList()">
                 <option value="">请选择门店</option>
               </select>
             </div>
@@ -160,16 +160,30 @@
                     <input type="date" id="dateEnd" class="form-control form-control-lg" data-native-onchange="renderDailySummaryList()">
                   </div>
                 </div>
+                <div class="filter-field" id="dateAllocationStatusField">
+                  <label class="filter-field-label" for="dateAllocationStatusFilter">分配状态</label>
+                  <select id="dateAllocationStatusFilter" class="form-control form-control-lg" data-native-onchange="handleDateAllocationStatusChange(this.value)">
+                    <option value="">全部状态</option>
+                    <option value="allocated">已分配</option>
+                    <option value="unallocated">未分配</option>
+                  </select>
+                </div>
                 <div id="employeeSummaryFilters" class="tipout-employee-summary-filters" hidden>
-                  <div class="filter-field tipout-employee-search-field">
-                    <label class="filter-field-label" for="employeeSummarySearch">搜索员工</label>
-                    <input id="employeeSummarySearch" class="form-control form-control-lg" type="search" placeholder="输入员工姓名" data-native-oninput="handleEmployeeSummaryFilterChange()">
-                  </div>
                   <div class="filter-field">
                     <label class="filter-field-label" for="employeeSummaryRoleFilter">角色</label>
-                    <select id="employeeSummaryRoleFilter" class="form-control form-control-lg" data-native-onchange="handleEmployeeSummaryFilterChange()">
+                    <select id="employeeSummaryRoleFilter" class="form-control form-control-lg" data-native-onchange="handleEmployeeSummaryRoleChange()">
                       <option value="">全部角色</option>
                     </select>
+                  </div>
+                  <div class="filter-field tipout-employee-multi-filter-field">
+                    <span class="filter-field-label">员工</span>
+                    <div class="multi-select" id="employeeSummaryEmployeeFilter" data-placeholder="全部员工">
+                      <div class="multi-select-input" role="button" tabindex="0" data-native-onclick="toggleIndexMultiSelect('employeeSummaryEmployeeFilter')">
+                        <div class="multi-select-tags"><span class="multi-select-placeholder">全部员工</span></div>
+                        <svg class="multi-select-arrow" width="12" height="12" viewBox="0 0 12 12" fill="#999" aria-hidden="true"><path d="M6 8.825a.5.5 0 0 1-.354-.146l-4-4a.5.5 0 0 1 .708-.708L6 7.617l3.646-3.646a.5.5 0 0 1 .708.708l-4 4A.5.5 0 0 1 6 8.825z"/></svg>
+                      </div>
+                      <div class="multi-select-dropdown" id="employeeSummaryEmployeeOptions"></div>
+                    </div>
                   </div>
                   <div class="filter-field">
                     <label class="filter-field-label" for="employeeSummaryStatusFilter">状态</label>
@@ -179,38 +193,6 @@
                       <option value="待处理">待处理</option>
                       <option value="异常">异常</option>
                     </select>
-                  </div>
-                </div>
-                <div class="filter-field" id="roleFilterField">
-                  <span class="filter-field-label">角色</span>
-                  <div class="multi-select" id="roleFilter" data-placeholder="All Role">
-                    <div class="multi-select-input" data-native-onclick="toggleIndexMultiSelect('roleFilter')">
-                      <div class="multi-select-tags"><span class="multi-select-placeholder">All Role</span></div>
-                      <svg class="multi-select-arrow" width="12" height="12" viewBox="0 0 12 12" fill="#999"><path d="M6 8.825a.5.5 0 0 1-.354-.146l-4-4a.5.5 0 0 1 .708-.708L6 7.617l3.646-3.646a.5.5 0 0 1 .708.708l-4 4A.5.5 0 0 1 6 8.825z"/></svg>
-                    </div>
-                    <div class="multi-select-dropdown">
-                      <label class="multi-select-option multi-select-all" style="border-bottom:1px solid var(--border-light);margin-bottom:4px;padding-bottom:6px"><input type="checkbox" value="__all__" data-select-all> 全选</label>
-                      <label class="multi-select-option"><input type="checkbox" value="Assistant Manager"> Assistant Manager</label>
-                      <label class="multi-select-option"><input type="checkbox" value="Bartender"> Bartender</label>
-                      <label class="multi-select-option"><input type="checkbox" value="Busser"> Busser</label>
-                      <label class="multi-select-option"><input type="checkbox" value="Cashier"> Cashier</label>
-                      <label class="multi-select-option"><input type="checkbox" value="Driver"> Driver</label>
-                      <label class="multi-select-option"><input type="checkbox" value="Host"> Host</label>
-                      <label class="multi-select-option"><input type="checkbox" value="Manager"> Manager</label>
-                      <label class="multi-select-option"><input type="checkbox" value="Runner"> Runner</label>
-                      <label class="multi-select-option"><input type="checkbox" value="Server"> Server</label>
-                      <label class="multi-select-option"><input type="checkbox" value="Shift Lead"> Shift Lead</label>
-                    </div>
-                  </div>
-                </div>
-                <div class="filter-field" id="employeeFilterField">
-                  <span class="filter-field-label">员工</span>
-                  <div class="multi-select" id="employeeFilter" data-placeholder="All Staff">
-                    <div class="multi-select-input" data-native-onclick="toggleIndexMultiSelect('employeeFilter')">
-                      <div class="multi-select-tags"><span class="multi-select-placeholder">All Staff</span></div>
-                      <svg class="multi-select-arrow" width="12" height="12" viewBox="0 0 12 12" fill="#999"><path d="M6 8.825a.5.5 0 0 1-.354-.146l-4-4a.5.5 0 0 1 .708-.708L6 7.617l3.646-3.646a.5.5 0 0 1 .708.708l-4 4A.5.5 0 0 1 6 8.825z"/></svg>
-                    </div>
-                    <div class="multi-select-dropdown" id="employeeFilterDropdown"></div>
                   </div>
                 </div>
                 <div class="filter-field tipout-date-sort-field" id="dateSortField">

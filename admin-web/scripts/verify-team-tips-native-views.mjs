@@ -124,6 +124,15 @@ assert.equal(summaryUi.normalizeSummaryView("date"), "date");
 assert.equal(summaryUi.normalizeSummaryView("unknown"), "date");
 assert.equal(summaryUi.buildSummaryViewHref("date"), "index.html");
 assert.equal(summaryUi.buildSummaryViewHref("employee"), "index.html?view=employee");
+assert.deepEqual(JSON.parse(JSON.stringify(summaryUi.normalizeEmployeeScope(["a", "b"], []))), { mode: "all", ids: [] });
+assert.deepEqual(JSON.parse(JSON.stringify(summaryUi.normalizeEmployeeScope(["a", "b"], ["a"]))), { mode: "subset", ids: ["a"] });
+assert.deepEqual(JSON.parse(JSON.stringify(summaryUi.reconcileEmployeeScope({ mode: "subset", ids: ["a", "x"] }, ["a", "b"]))), { mode: "subset", ids: ["a"] });
+assert.deepEqual(summaryUi.filterDailyRowsByAllocationStatus([{ allocated: true }, { allocated: false }], "allocated").map(row => row.allocated), [true]);
+assert.deepEqual(summaryUi.filterDailyRowsByAllocationStatus([{ allocated: true }, { allocated: false }], "unallocated").map(row => row.allocated), [false]);
+assert.deepEqual(summaryUi.filterAndSortEmployeeAggregates([
+  { employeeId: "a", name: "A", roles: ["Server"], status: "已完成", finalAmountCents: 100 },
+  { employeeId: "b", name: "B", roles: ["Busser"], status: "已完成", finalAmountCents: 200 },
+], { employeeScope: { mode: "subset", ids: ["b"] } }, { key: "employee", direction: "asc" }).map(item => item.employeeId), ["b"]);
 for (const token of ["historyMode === 'push'", "historyMode === 'replace'", "window.location.href = href", "window.location.replace(href)"]) {
   if (!distributionProgram.includes(token)) failures.push(`distribution: summary view history contract missing ${token}`);
 }
@@ -131,7 +140,7 @@ if ((distributionTemplate.match(/id="summaryViewSwitch"/g) || []).length !== 1) 
 if ((distributionTemplate.match(/id="dateTaskTab"/g) || []).length !== 1) failures.push("distribution: date task tab must be unique");
 if ((distributionTemplate.match(/id="employeeReconciliationTab"/g) || []).length !== 1) failures.push("distribution: employee reconciliation tab must be unique");
 for (const id of [
-  "employeeSummarySearch", "employeeSummaryRoleFilter", "employeeSummaryStatusFilter",
+  "dateAllocationStatusFilter", "employeeSummaryRoleFilter", "employeeSummaryEmployeeFilter", "employeeSummaryEmployeeOptions", "employeeSummaryStatusFilter",
   "employeeMetricCount", "employeeMetricFinal", "employeeMetricCompleted", "employeeMetricPending",
   "employeeSortEmployee", "employeeSortHours", "employeeSortFinalAmount",
 ]) {
@@ -171,7 +180,7 @@ for (const token of ['id="storeFilterField"', 'id="summaryRuleEntryBtn"']) {
   if (!storeScopeRow.includes(token)) failures.push(`distribution: store scope row missing ${token}`);
 }
 const viewFilterRow = distributionTemplate.slice(viewFilterRowIndex, metricStripIndex);
-for (const token of ['id="summaryViewSwitch"', 'id="dateRangeFilterField"', 'id="roleFilterField"', 'id="employeeFilterField"', 'id="dateSortField"']) {
+for (const token of ['id="summaryViewSwitch"', 'id="dateRangeFilterField"', 'id="dateAllocationStatusField"', 'id="employeeSummaryFilters"', 'id="dateSortField"']) {
   if (!viewFilterRow.includes(token)) failures.push(`distribution: view/filter row missing ${token}`);
 }
 const filterSurfaceStart = viewFilterRow.indexOf('class="filter-surface tipout-compact-toolbar tipout-view-filter-group"');
@@ -197,18 +206,34 @@ for (const token of [
 for (const token of ["ArrowLeft", "ArrowRight", "Home", "End"]) {
   if (!distributionProgram.includes(token)) failures.push(`distribution: Tab keyboard behavior missing ${token}`);
 }
+for (const token of [
+  "dateSummaryFilters = { allocationStatus: '' }",
+  "handleDateAllocationStatusChange",
+  "filterDailyRowsByAllocationStatus",
+  "employeeScope: { mode: 'all', ids: [] }",
+  "renderEmployeeSummaryEmployeeOptions",
+  "handleEmployeeSummaryRoleChange",
+  "handleEmployeeSummaryEmployeeChange",
+  "getVisibleDailySummaryRows",
+]) {
+  if (!distributionProgram.includes(token)) failures.push(`distribution: summary filter behavior missing ${token}`);
+}
+if (distributionTemplate.includes('id="roleFilterField"') || distributionTemplate.includes('id="employeeFilterField"')) {
+  failures.push("distribution: date summary must not render role or employee filters");
+}
+if (!distributionExport.includes("getVisibleDailySummaryRows()")) failures.push("distribution export: date export must use visible filtered rows");
 if (!/<h1 id="summaryTitle" class="sr-only">小费分配<\/h1>/.test(distributionTemplate)) failures.push("distribution: hidden semantic summary title missing");
 const summaryFilterBarStart = distributionTemplate.indexOf('<div class="filter-bar filter-bar--page filter-bar--index">');
 const summaryFilterBarEnd = distributionTemplate.indexOf('<div id="dateSummaryMetrics"', summaryFilterBarStart);
 const summaryFilterBar = summaryFilterBarStart >= 0 && summaryFilterBarEnd > summaryFilterBarStart
   ? distributionTemplate.slice(summaryFilterBarStart, summaryFilterBarEnd)
   : "";
-const filterOrder = ["dateRangeFilterField", "roleFilterField", "employeeFilterField", "dateSortField"];
+const filterOrder = ["dateRangeFilterField", "dateAllocationStatusField", "employeeSummaryFilters", "dateSortField"];
 let previousFilterIndex = -1;
 for (const id of filterOrder) {
   const index = summaryFilterBar.indexOf(`id="${id}"`);
   if (index < 0) failures.push(`distribution: summary filter field missing ${id}`);
-  if (index >= 0 && index <= previousFilterIndex) failures.push(`distribution: summary filter order must be date, role, employee, sort`);
+  if (index >= 0 && index <= previousFilterIndex) failures.push(`distribution: summary filter order must be date, allocation status, employee filters, sort`);
   previousFilterIndex = index;
 }
 const summarySrOnlyRule = pageCss.match(/\.tipout-page-summary \.sr-only\s*\{([^}]*)\}/)?.[1] ?? "";
@@ -237,14 +262,14 @@ for (const token of [">取消分配</button>", "id=\"exportMenu\"", "id=\"alloca
 for (const token of ["tipout-summary-action-bar", "summaryDateActions", "summaryAllocateAction", "exportMenu", "allocateBtn"]) {
   if (!distributionTemplate.includes(token)) failures.push(`distribution: fixed summary action bar missing ${token}`);
 }
-for (const token of ["summaryDateActions", "summaryAllocateAction", "roleFilterField", "employeeFilterField", "dateSortField"]) {
+for (const token of ["summaryDateActions", "summaryAllocateAction", "dateAllocationStatusField", "employeeSummaryFilters", "dateSortField"]) {
   if (!distributionProgram.includes(token)) failures.push(`distribution: view-aware action/filter sync missing ${token}`);
 }
 for (const assignment of [
   "dateActions.hidden = employeeActive",
   "allocateAction.hidden = employeeActive",
-  "roleFilterField.hidden = employeeActive",
-  "employeeFilterField.hidden = employeeActive",
+  "dateAllocationStatusField.hidden = employeeActive",
+  "employeeFilters.hidden = !employeeActive",
   "dateSortField.hidden = employeeActive",
 ]) {
   if (!distributionProgram.includes(assignment)) failures.push(`distribution: incorrect view-specific visibility for ${assignment}`);
@@ -259,6 +284,7 @@ assert.deepEqual(JSON.parse(JSON.stringify(summaryUi.readSummaryHistoryState(sum
   roles: ["Server"], employees: ["employee-1"], scrollY: 240,
   returnDate: "", returnEmployeeId: "employee-1",
   employeeSearch: "", employeeSummaryRole: "", employeeSummaryStatus: "",
+  employeeSummaryScope: { mode: "all", ids: [] }, dateAllocationStatus: "",
   employeeSortKey: "finalAmount", employeeSortDirection: "desc", activeView: "employee",
 });
 const employeeAggregates = summaryUi.aggregateEmployeeDailyDatasets([
