@@ -2429,6 +2429,7 @@ select.form-control {
 .tipout-page-summary .tipout-store-scope-row,
 .tipout-page-summary .tipout-view-filter-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-end;
   justify-content: space-between;
   gap: 16px;
@@ -2437,12 +2438,29 @@ select.form-control {
 
 .tipout-page-summary .tipout-store-filter-field {
   flex: 1 1 520px;
-  min-width: 0;
+  min-width: 240px;
 }
 
 .tipout-page-summary .tipout-store-date-filter-field {
   flex: 0 0 340px;
   min-width: 340px;
+}
+
+.tipout-page-summary .tipout-store-date-filter-field .date-range-group {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  width: 100%;
+}
+
+.tipout-page-summary .tipout-store-date-filter-field .form-control {
+  flex: 1 1 0;
+  width: auto;
+  min-width: 0;
+}
+
+.tipout-page-summary .tipout-store-date-filter-field .date-range-sep {
+  flex: 0 0 auto;
 }
 
 .tipout-page-summary .tipout-store-scope-row > .tipout-heading-actions {

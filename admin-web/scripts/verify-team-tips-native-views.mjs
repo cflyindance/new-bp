@@ -257,6 +257,12 @@ const summaryStoreDateRule = pageCss.match(/\.tipout-page-summary \.tipout-store
 if (!summaryStoreDateRule.includes("flex: 0 0 340px") || !summaryStoreDateRule.includes("min-width: 340px")) {
   failures.push("distribution: shared date range must keep a stable width beside the store on desktop");
 }
+const summaryDateGroupRule = pageCss.match(/\.tipout-page-summary \.tipout-store-date-filter-field \.date-range-group\s*\{([^}]*)\}/)?.[1] ?? "";
+if (!summaryDateGroupRule.includes("flex-wrap: nowrap")) failures.push("distribution: shared date range controls must stay on one line");
+const summaryDateInputRule = pageCss.match(/\.tipout-page-summary \.tipout-store-date-filter-field \.form-control\s*\{([^}]*)\}/)?.[1] ?? "";
+if (!summaryDateInputRule.includes("min-width: 0") || !summaryDateInputRule.includes("flex: 1 1 0")) failures.push("distribution: shared date inputs must shrink evenly without overflow");
+const summaryStoreFilterRule = pageCss.match(/\.tipout-page-summary \.tipout-store-filter-field\s*\{([^}]*)\}/)?.[1] ?? "";
+if (!summaryStoreFilterRule.includes("min-width: 240px")) failures.push("distribution: desktop store filter minimum width contract missing");
 for (const token of [
   ".tipout-page-summary .tipout-store-scope-row",
   ".tipout-page-summary .tipout-view-filter-row",
