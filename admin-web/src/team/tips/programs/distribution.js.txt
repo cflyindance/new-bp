@@ -477,12 +477,23 @@ var ALLOC_KEY = 'tipout_allocated';
     function syncSummaryDateSortUi() {
       var select = document.getElementById('dateSortSelect');
       if (select) select.value = summaryDateSort;
+      var header = document.getElementById('dateSortHeader');
+      var button = document.getElementById('dateSortHeaderButton');
+      var icon = document.getElementById('dateSortHeaderIcon');
+      var descending = summaryDateSort === 'desc';
+      if (header) header.setAttribute('aria-sort', descending ? 'descending' : 'ascending');
+      if (icon) icon.textContent = descending ? '↓' : '↑';
+      if (button) button.setAttribute('aria-label', '日期，当前' + (descending ? '倒序' : '顺序') + '，点击切换为' + (descending ? '顺序' : '倒序'));
     }
 
     function handleDateSortChange(value) {
       summaryDateSort = TipOutSummaryDateSort.writeDirection(value);
       syncSummaryDateSortUi();
       if (activeSummaryView === 'date') renderSummaryViews();
+    }
+
+    function toggleSummaryDateSort() {
+      handleDateSortChange(summaryDateSort === 'desc' ? 'asc' : 'desc');
     }
 
     function applyDefaultSummaryDateRange() {
