@@ -135,14 +135,14 @@
           </div>
 
           <div class="tipout-view-filter-row">
+            <!-- Filters：移动端默认折叠 -->
+            <div class="filter-surface tipout-compact-toolbar tipout-view-filter-group">
             <div class="tipout-heading-tabs">
               <div class="tipout-view-switch" id="summaryViewSwitch" role="tablist" aria-label="汇总视图">
                 <button type="button" id="dateTaskTab" role="tab" aria-selected="true" aria-controls="dateTaskPanel" tabindex="0" data-native-onclick="setSummaryView('date')" data-native-onkeydown="handleSummaryViewKeydown(event)">日期分配汇总</button>
                 <button type="button" id="employeeReconciliationTab" role="tab" aria-selected="false" aria-controls="employeeReconciliationPanel" tabindex="-1" data-native-onclick="setSummaryView('employee')" data-native-onkeydown="handleSummaryViewKeydown(event)">员工分配汇总</button>
               </div>
             </div>
-            <!-- Filters：移动端默认折叠 -->
-            <div class="filter-surface tipout-compact-toolbar tipout-view-filter-group">
             <button type="button" class="filter-surface-toggle" data-native-onclick="toggleFilterSurface(this)" aria-expanded="false" aria-controls="indexFilterCollapsible">
               <span class="filter-surface-toggle-text">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg>

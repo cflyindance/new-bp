@@ -128,6 +128,29 @@ const viewFilterRow = distributionTemplate.slice(viewFilterRowIndex, metricStrip
 for (const token of ['id="summaryViewSwitch"', 'id="dateRangeFilterField"', 'id="roleFilterField"', 'id="employeeFilterField"', 'id="dateSortField"']) {
   if (!viewFilterRow.includes(token)) failures.push(`distribution: view/filter row missing ${token}`);
 }
+const filterSurfaceStart = viewFilterRow.indexOf('class="filter-surface tipout-compact-toolbar tipout-view-filter-group"');
+const sharedFilterSurface = filterSurfaceStart >= 0 ? viewFilterRow.slice(filterSurfaceStart) : "";
+const sharedTabsIndex = sharedFilterSurface.indexOf('class="tipout-heading-tabs"');
+const sharedToggleIndex = sharedFilterSurface.indexOf('class="filter-surface-toggle"');
+const sharedCollapsibleIndex = sharedFilterSurface.indexOf('id="indexFilterCollapsible"');
+if (!(sharedTabsIndex >= 0 && sharedToggleIndex > sharedTabsIndex && sharedCollapsibleIndex > sharedToggleIndex)) {
+  failures.push("distribution: shared filter surface order must be tabs, toggle, collapsible");
+}
+const sharedCollapsibleContent = sharedCollapsibleIndex >= 0 ? sharedFilterSurface.slice(sharedCollapsibleIndex) : "";
+if (sharedCollapsibleContent.includes('id="summaryViewSwitch"')) failures.push("distribution: summary Tabs must remain outside collapsible filters");
+for (const token of [
+  'id="summaryViewSwitch" role="tablist"',
+  'id="dateTaskTab" role="tab"',
+  'id="employeeReconciliationTab" role="tab"',
+  'aria-controls="dateTaskPanel"',
+  'aria-controls="employeeReconciliationPanel"',
+  'data-native-onkeydown="handleSummaryViewKeydown(event)"',
+]) {
+  if (!sharedFilterSurface.includes(token)) failures.push(`distribution: Tab accessibility contract changed ${token}`);
+}
+for (const token of ["ArrowLeft", "ArrowRight", "Home", "End"]) {
+  if (!distributionProgram.includes(token)) failures.push(`distribution: Tab keyboard behavior missing ${token}`);
+}
 if (!/<h1 id="summaryTitle" class="sr-only">小费分配<\/h1>/.test(distributionTemplate)) failures.push("distribution: hidden semantic summary title missing");
 const summaryFilterBar = distributionTemplate.match(/<div class="filter-bar filter-bar--page filter-bar--index">([\s\S]*?)<\/div>\s*<\/div>\s*<\/div>\s*<div class="tipout-metric-strip"/)?.[1] || "";
 const filterOrder = ["dateRangeFilterField", "roleFilterField", "employeeFilterField", "dateSortField"];
@@ -148,6 +171,7 @@ for (const token of [
   ".tipout-page-summary .tipout-store-scope-row",
   ".tipout-page-summary .tipout-view-filter-row",
   ".tipout-page-summary .tipout-view-filter-group",
+  ".tipout-page-summary .tipout-view-filter-group > .tipout-heading-tabs",
   "@media (min-width: 1280px)",
   "@media (min-width: 769px) and (max-width: 1279px)",
   "min-width: 340px",

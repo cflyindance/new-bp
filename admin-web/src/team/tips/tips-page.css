@@ -2446,9 +2446,20 @@ select.form-control {
 
 .tipout-page-summary .tipout-view-filter-group {
   display: flex;
+  flex: 1 1 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-width: 0;
+  background: #ffffff;
+}
+
+.tipout-page-summary .tipout-view-filter-group > .tipout-heading-tabs {
+  flex: 0 0 auto;
+}
+
+.tipout-page-summary .tipout-view-filter-group > .filter-surface-collapsible {
   flex: 1 1 auto;
-  justify-content: flex-end;
-  gap: 12px;
   min-width: 0;
 }
 
@@ -2474,11 +2485,17 @@ select.form-control {
 
 @media (min-width: 1280px) {
   .tipout-page-summary .tipout-view-filter-row { flex-wrap: nowrap; }
+  .tipout-page-summary .tipout-view-filter-group { flex-wrap: nowrap; }
 }
 
 @media (min-width: 769px) and (max-width: 1279px) {
   .tipout-page-summary .tipout-view-filter-row { flex-wrap: wrap; }
   .tipout-page-summary .tipout-view-filter-group {
+    flex: 1 1 100%;
+    width: 100%;
+    flex-wrap: wrap;
+  }
+  .tipout-page-summary .tipout-view-filter-group > .filter-surface-collapsible {
     flex: 1 1 100%;
     width: 100%;
   }
@@ -2516,6 +2533,18 @@ select.form-control {
     width: 100%;
     max-width: none;
   }
+  .tipout-page-summary .tipout-view-filter-group.tipout-compact-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    background: #ffffff;
+  }
+  .tipout-page-summary .tipout-view-filter-group > .tipout-heading-tabs { order: 0; }
+  .tipout-page-summary .tipout-view-filter-group > .filter-surface-toggle { order: 1; }
+  .tipout-page-summary .tipout-view-filter-group > .filter-surface-collapsible { order: 2; }
   .tipout-page-summary .tipout-store-scope-row .tipout-heading-actions,
   .tipout-page-summary .tipout-store-scope-row .tipout-heading-actions .btn,
   .tipout-page-summary .tipout-heading-tabs,
