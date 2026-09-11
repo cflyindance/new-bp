@@ -12,9 +12,11 @@ assert.match(program, /function collectDetailAllocationSnapshot\(store, dateKey,
 assert.match(program, /split\(\/\\s\*\\\/\\s\*\/\)/, "combined receiver roles must resolve to a real roster role");
 assert.match(program, /function syncDetailAllocationAction\(\)/);
 assert.match(program, /function confirmDetailAllocation\(\)/);
+assert.match(program, /function executeDetailAllocation\(options\)/);
+assert.match(program, /executeDetailAllocation\(\{ store: store, dateKey: dateKey, rules: rules, wasAllocated: allocated, automatic: false \}\)/);
 assert.match(program, /该日期已分配，重新确认将覆盖当天原分配结果。/);
 assert.match(program, /TipOutAllocationResults\.commit\(snapshot\)/);
-assert.match(program, /TipOutPayrollBridge\.syncAfterAllocation\(store, dateKey, dateKey\)/);
+assert.match(program, /TipOutPayrollBridge\.syncAfterAllocation\(options\.store, options\.dateKey, options\.dateKey\)/);
 assert.match(program, /分配结果已保存，但薪资同步失败，请重试/);
 assert.match(distribution, /TipOutAllocationResults\.read/);
 assert.match(payroll, /TipOutAllocationResults\.read/);
