@@ -7,15 +7,17 @@
 ## 布局与交互
 
 - 桌面端条件栏顺序为“门店 → 日期”，两个字段继续在同一行展示。
-- 门店字段保持现有较宽宽度，日期字段保持现有日期输入宽度。
+- 桌面端门店字段保持现有 260px 宽度，日期字段保持现有 200px 宽度。
 - 中小屏空间不足时允许换行，DOM 顺序确保门店始终在日期之前。
 - 直接交换两个 filter-field 节点，不使用 CSS order，保证视觉顺序、键盘 Tab 顺序和读屏顺序一致。
+- 为两个 wrapper 分别增加 tipout-detail-store-field 与 tipout-detail-date-field 语义类；宽度由语义类决定，不再依赖 nth-child 位置选择器。
 
 ## 技术约束
 
 - 保留门店字段的 storeSelect ID、选项、默认值和 data-native-onchange 处理器。
 - 保留日期字段的 detailDate ID、默认值和 data-native-onchange 处理器。
-- 保持 tipout-detail-context-bar 容器及既有响应式规则。
+- 保持 tipout-detail-context-bar 容器；将桌面宽度规则从 nth-child(2) 改为语义类选择器：门店 260px、日期 200px。
+- 768px 及以下继续由现有移动端规则覆盖为 width: 100% 和 max-width: none，门店在上、日期在下。
 - 不修改程序读取字段的方式；脚本继续按 ID 获取门店和日期，因此交换 DOM 顺序不会影响数据流。
 
 ## 不修改范围
@@ -29,6 +31,7 @@
 
 1. 小费分配明细顶部条件栏视觉顺序为“门店 → 日期”。
 2. 键盘焦点和读屏顺序同样为门店优先。
-3. 桌面端保持同一行；移动端换行后门店在上、日期在下。
+3. 桌面端保持同一行，门店为 260px、日期为 200px；移动端两者均为 100%，换行后门店在上、日期在下。
 4. storeSelect、detailDate、两个 onchange 处理器和 tipout-detail-context-bar 保持存在且唯一。
-5. 切换门店或日期仍触发现有 renderDetailPage 流程，URL 上下文和分配业务不变。
+5. CSS 不再使用 tipout-detail-context-bar .filter-field:nth-child(2) 决定字段宽度，改用稳定语义类。
+6. 切换门店或日期仍触发现有 renderDetailPage 流程，URL 上下文和分配业务不变。
