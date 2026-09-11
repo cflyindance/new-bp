@@ -28,21 +28,24 @@
 
 右侧仅展示现有日期范围，不新增角色、员工或日期排序条件。
 
-视图切换后只改变现有筛选项的显隐与列表内容，工具栏白色容器本身保持稳定，避免页面产生不必要的上下跳动。
+视图切换后只改变现有筛选项的显隐与列表内容。工具栏外框不重建、顶边位置不变；由于两个视图的筛选项数量不同，换行区间允许工具栏高度随实际内容变化，不要求两个视图强制等高。
 
 ## 响应式行为
 
-- 宽屏下 Tab 与筛选条件保持同一行，筛选条件右对齐。
-- 中等宽度不足时，工具栏允许换行；Tab 优先完整展示，筛选组换到下一行并尽量右对齐。
-- 移动端 Tab 独占一行并保持两个选项等宽。
-- 移动端筛选条件继续沿用现有“筛选条件”折叠入口和展开逻辑，不新建另一套交互。
+- 1280px 及以上：Tab 与筛选条件保持同一行，Tab 左对齐，筛选组右对齐。
+- 769px 至 1279px：工具栏允许换行；Tab 保持完整，筛选组空间不足时整体换到下一行，换行后占满可用宽度并从右侧排列。
+- 768px 及以下：Tab 独占第一行且两个选项等宽；“筛选条件”折叠按钮位于下一行；展开后的筛选内容位于按钮下方。
+- Tab 必须位于 indexFilterCollapsible 之外，DOM 顺序固定为 Tab、筛选折叠按钮、indexFilterCollapsible。折叠按钮只控制筛选内容，收起筛选时 Tab 始终可见。
+- 响应式校验至少覆盖 1280px、1279px、769px 和 768px 四个边界宽度。
 
 ## 技术方案
 
-- 在 distribution.html 中将 tipout-heading-tabs 移入现有 filter-surface tipout-compact-toolbar tipout-view-filter-group 容器，使 Tab 与筛选折叠按钮、筛选内容共享同一语义和视觉表面。
+- 在 distribution.html 中将 tipout-heading-tabs 移入现有 filter-surface tipout-compact-toolbar tipout-view-filter-group 容器，使 Tab 与筛选折叠按钮、筛选内容共享同一视觉和布局容器；不为无语义 div 虚构新的可访问性语义。
+- 容器内部顺序保持为 tipout-heading-tabs、filter-surface-toggle、indexFilterCollapsible，不能把 Tab 放进 indexFilterCollapsible。
 - 保留 summaryViewSwitch、dateTaskTab、employeeReconciliationTab、indexFilterCollapsible 等 ID，以及所有 data-native-* 处理器。
 - 在 tips-page.css 中调整 tipout-view-filter-row、tipout-view-filter-group、tipout-heading-tabs 与移动端媒体查询的布局规则。
 - 不新增状态、不改变脚本中的视图切换或筛选渲染代码。
+- 保留 tablist/tab 角色、aria-selected、roving tabindex、aria-controls 与受控 panel 的关联，并回归验证方向键、Home、End 和焦点切换行为。
 
 ## 不修改范围
 
@@ -57,6 +60,8 @@
 1. 桌面端两个 Tab 与筛选条件位于同一个连续白色圆角区块内。
 2. Tab 左对齐，当前视图筛选项右对齐。
 3. 日期分配汇总继续展示日期、角色、员工和日期顺序；员工分配汇总仍只展示日期范围。
-4. 切换视图时工具栏容器保持稳定，现有筛选、列表、导出和底部按钮行为不变。
-5. 中等宽度可自然换行；移动端 Tab 等宽独占一行，筛选折叠功能正常。
-6. 专项校验确认 Tab 位于筛选表面内部，同时原有 ID、处理器和技术契约未变化。
+4. 切换视图时工具栏不重建且顶边不移动；换行区间允许高度随筛选项数量变化。现有筛选、列表、导出和底部按钮行为不变。
+5. 在 1280px、1279px、769px、768px 边界分别验证规定的同行、换行与移动端布局。
+6. 移动端 Tab 位于折叠内容之外且始终可见，两个 Tab 等宽；折叠按钮只控制 indexFilterCollapsible。
+7. 专项校验确认 Tab 位于筛选表面内部，同时原有 ID、处理器、tablist/tab 角色、aria-selected、roving tabindex、aria-controls 与 panel 关联未变化。
+8. 键盘方向键、Home、End 和焦点切换行为保持正常。
