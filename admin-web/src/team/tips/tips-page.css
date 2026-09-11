@@ -2423,13 +2423,44 @@ select.form-control {
 .tipout-page-rule-editor .drawer-overlay,
 .tipout-page-rule-editor .modal-overlay { z-index: 1000; }
 
+.tipout-page-summary .tipout-store-scope-row,
+.tipout-page-summary .tipout-view-filter-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  min-width: 0;
+}
+
+.tipout-page-summary .tipout-store-filter-field {
+  flex: 1 1 520px;
+  min-width: 0;
+}
+
+.tipout-page-summary .tipout-store-filter-field .form-control {
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tipout-page-summary .tipout-view-filter-group {
+  display: flex;
+  flex: 1 1 auto;
+  justify-content: flex-end;
+  gap: 12px;
+  min-width: 0;
+}
+
 @media (min-width: 769px) {
-  .tipout-page-summary .filter-bar--index { flex-wrap: nowrap; }
-  .tipout-page-summary .filter-bar--index .tipout-store-filter-field {
-    flex: 1 1 260px;
-    max-width: none;
+  .tipout-page-summary .filter-bar--index {
+    flex-wrap: nowrap;
+    justify-content: flex-end;
   }
-  .tipout-page-summary .filter-bar--index .filter-field--daterange { flex: 0 0 340px; }
+  .tipout-page-summary .filter-bar--index .filter-field--daterange {
+    flex: 0 0 340px;
+    min-width: 340px;
+  }
   .tipout-page-summary .filter-bar--index #roleFilterField,
   .tipout-page-summary .filter-bar--index #employeeFilterField {
     flex: 0 1 150px;
@@ -2438,6 +2469,18 @@ select.form-control {
   .tipout-page-summary .filter-bar--index .tipout-date-sort-field {
     flex: 0 0 132px;
     max-width: 132px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .tipout-page-summary .tipout-view-filter-row { flex-wrap: nowrap; }
+}
+
+@media (min-width: 769px) and (max-width: 1279px) {
+  .tipout-page-summary .tipout-view-filter-row { flex-wrap: wrap; }
+  .tipout-page-summary .tipout-view-filter-group {
+    flex: 1 1 100%;
+    width: 100%;
   }
 }
 
@@ -2462,6 +2505,28 @@ select.form-control {
     font-size: 12px;
   }
   .tipout-fidelity .content-area { padding: 16px; }
+  .tipout-page-summary .tipout-store-scope-row,
+  .tipout-page-summary .tipout-view-filter-row {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .tipout-page-summary .tipout-store-filter-field,
+  .tipout-page-summary .tipout-view-filter-group {
+    width: 100%;
+    max-width: none;
+  }
+  .tipout-page-summary .tipout-store-scope-row .tipout-heading-actions,
+  .tipout-page-summary .tipout-store-scope-row .tipout-heading-actions .btn,
+  .tipout-page-summary .tipout-heading-tabs,
+  .tipout-page-summary .tipout-view-switch {
+    width: 100%;
+  }
+  .tipout-page-summary .tipout-view-switch [role="tab"] { flex: 1 1 50%; }
+  .tipout-page-summary .filter-bar--index .filter-field {
+    width: 100%;
+    max-width: none;
+  }
   .tipout-fidelity .tipout-page-heading { align-items: stretch; flex-direction: column; gap: 14px; }
   .tipout-fidelity .tipout-heading-actions { flex-wrap: wrap; }
   .tipout-fidelity .tipout-heading-actions .btn { flex: 1 1 auto; }

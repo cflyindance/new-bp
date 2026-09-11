@@ -92,10 +92,10 @@ for (const file of ["dist/TipOut/index.html", "src/team/tips/templates/distribut
   const ruleIndex = content.indexOf(">新建/查看规则</button>");
   if (cancelIndex < 0 || ruleIndex < 0) failures.push(`${file}: summary action entry missing`);
   if (!content.includes("doCancelAllocate()")) failures.push(`${file}: cancel allocation button handler missing`);
-  const headingIndex = content.indexOf("tipout-page-heading");
+  const headingIndex = content.indexOf(file.startsWith("src/") ? "tipout-store-scope-row" : "tipout-page-heading");
   const filterIndex = content.indexOf("filter-surface tipout-compact-toolbar");
   const metricsIndex = content.indexOf("tipout-metric-strip");
-  if (headingIndex < 0 || filterIndex < headingIndex || metricsIndex < filterIndex) failures.push(`${file}: filters must follow heading and precede metrics`);
+  if (headingIndex < 0 || filterIndex < headingIndex || metricsIndex < filterIndex) failures.push(`${file}: filters must follow store scope and precede metrics`);
 }
 if (!fs.readFileSync("src/team/tips/programs/distribution.js.txt", "utf8").includes("function doCancelAllocate()")) failures.push("distribution program: cancel allocation function missing");
 const distributionTemplate = fs.readFileSync("src/team/tips/templates/distribution.html", "utf8");
@@ -116,15 +116,26 @@ for (const token of ["historyMode === 'push'", "historyMode === 'replace'", "win
 if ((distributionTemplate.match(/id="summaryViewSwitch"/g) || []).length !== 1) failures.push("distribution: summary view switch must be unique");
 if ((distributionTemplate.match(/id="dateTaskTab"/g) || []).length !== 1) failures.push("distribution: date task tab must be unique");
 if ((distributionTemplate.match(/id="employeeReconciliationTab"/g) || []).length !== 1) failures.push("distribution: employee reconciliation tab must be unique");
-if (distributionTemplate.indexOf('id="summaryViewSwitch"') > distributionTemplate.indexOf('class="filter-surface')) failures.push("distribution: summary tabs must appear before the filter surface");
+const storeScopeRowIndex = distributionTemplate.indexOf('class="tipout-store-scope-row"');
+const viewFilterRowIndex = distributionTemplate.indexOf('class="tipout-view-filter-row"');
+const metricStripIndex = distributionTemplate.indexOf('class="tipout-metric-strip"');
+if (storeScopeRowIndex < 0 || viewFilterRowIndex <= storeScopeRowIndex || metricStripIndex <= viewFilterRowIndex) failures.push("distribution: store scope and view/filter rows must precede metrics");
+const storeScopeRow = distributionTemplate.slice(storeScopeRowIndex, viewFilterRowIndex);
+for (const token of ['id="storeFilterField"', 'id="summaryRuleEntryBtn"']) {
+  if (!storeScopeRow.includes(token)) failures.push(`distribution: store scope row missing ${token}`);
+}
+const viewFilterRow = distributionTemplate.slice(viewFilterRowIndex, metricStripIndex);
+for (const token of ['id="summaryViewSwitch"', 'id="dateRangeFilterField"', 'id="roleFilterField"', 'id="employeeFilterField"', 'id="dateSortField"']) {
+  if (!viewFilterRow.includes(token)) failures.push(`distribution: view/filter row missing ${token}`);
+}
 if (!/<h1 id="summaryTitle" class="sr-only">小费分配<\/h1>/.test(distributionTemplate)) failures.push("distribution: hidden semantic summary title missing");
 const summaryFilterBar = distributionTemplate.match(/<div class="filter-bar filter-bar--page filter-bar--index">([\s\S]*?)<\/div>\s*<\/div>\s*<\/div>\s*<div class="tipout-metric-strip"/)?.[1] || "";
-const filterOrder = ["storeFilterField", "dateRangeFilterField", "roleFilterField", "employeeFilterField", "dateSortField"];
+const filterOrder = ["dateRangeFilterField", "roleFilterField", "employeeFilterField", "dateSortField"];
 let previousFilterIndex = -1;
 for (const id of filterOrder) {
   const index = summaryFilterBar.indexOf(`id="${id}"`);
   if (index < 0) failures.push(`distribution: summary filter field missing ${id}`);
-  if (index >= 0 && index <= previousFilterIndex) failures.push(`distribution: summary filter order must be store, date, role, employee, sort`);
+  if (index >= 0 && index <= previousFilterIndex) failures.push(`distribution: summary filter order must be date, role, employee, sort`);
   previousFilterIndex = index;
 }
 const summarySrOnlyRule = pageCss.match(/\.tipout-page-summary \.sr-only\s*\{([^}]*)\}/)?.[1] ?? "";
@@ -133,6 +144,17 @@ for (const token of ["position: absolute", "width: 1px", "height: 1px", "overflo
 }
 const hiddenFilterRule = pageCss.match(/\.tipout-page-summary \.filter-bar--index \.filter-field\[hidden\]\s*\{([^}]*)\}/)?.[1] ?? "";
 if (!hiddenFilterRule.includes("display: none")) failures.push("distribution: hidden summary filters must override filter-field display");
+for (const token of [
+  ".tipout-page-summary .tipout-store-scope-row",
+  ".tipout-page-summary .tipout-view-filter-row",
+  ".tipout-page-summary .tipout-view-filter-group",
+  "@media (min-width: 1280px)",
+  "@media (min-width: 769px) and (max-width: 1279px)",
+  "min-width: 340px",
+  "text-overflow: ellipsis",
+]) {
+  if (!pageCss.includes(token)) failures.push(`distribution: store-first toolbar CSS missing ${token}`);
+}
 const headingActions = distributionTemplate.match(/<div class="tipout-heading-actions">[\s\S]*?<\/div>\s*<\/div>\s*<\/div>/)?.[0] || "";
 if (!headingActions.includes("summaryRuleEntryBtn")) failures.push("distribution: rule entry must remain in heading actions");
 for (const token of [">取消分配</button>", "id=\"exportMenu\"", "id=\"allocateBtn\""]) {

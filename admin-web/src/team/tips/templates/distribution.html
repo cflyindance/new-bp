@@ -121,21 +121,28 @@
 <section class="team-tips-page tipout-fidelity tipout-page-summary" data-team-tips-view="distribution">
 <div class="content-area">
         <section class="tipout-page-section" aria-labelledby="summaryTitle">
-          <div class="tipout-page-heading">
-            <div class="tipout-heading-tabs">
-              <h1 id="summaryTitle" class="sr-only">小费分配</h1>
-              <div class="tipout-view-switch" id="summaryViewSwitch" role="tablist" aria-label="汇总视图">
-                <button type="button" id="dateTaskTab" role="tab" aria-selected="true" aria-controls="dateTaskPanel" tabindex="0" data-native-onclick="setSummaryView('date')" data-native-onkeydown="handleSummaryViewKeydown(event)">分配汇总</button>
-                <button type="button" id="employeeReconciliationTab" role="tab" aria-selected="false" aria-controls="employeeReconciliationPanel" tabindex="-1" data-native-onclick="setSummaryView('employee')" data-native-onkeydown="handleSummaryViewKeydown(event)">员工对账</button>
-              </div>
+          <h1 id="summaryTitle" class="sr-only">小费分配</h1>
+          <div class="tipout-store-scope-row">
+            <div class="filter-field tipout-store-filter-field" id="storeFilterField">
+              <label class="filter-field-label" for="storeSelect">门店</label>
+              <select id="storeSelect" class="form-control form-control-lg" data-native-onchange="invalidateDayPipelineCache();updateEmployeeFilter()">
+                <option value="">请选择门店</option>
+              </select>
             </div>
             <div class="tipout-heading-actions">
               <button id="summaryRuleEntryBtn" type="button" class="btn btn-lg" data-native-onclick="openSummaryRuleEntry()">新建/查看规则</button>
             </div>
           </div>
 
-          <!-- Filters：移动端默认折叠 -->
-          <div class="filter-surface tipout-compact-toolbar">
+          <div class="tipout-view-filter-row">
+            <div class="tipout-heading-tabs">
+              <div class="tipout-view-switch" id="summaryViewSwitch" role="tablist" aria-label="汇总视图">
+                <button type="button" id="dateTaskTab" role="tab" aria-selected="true" aria-controls="dateTaskPanel" tabindex="0" data-native-onclick="setSummaryView('date')" data-native-onkeydown="handleSummaryViewKeydown(event)">分配汇总</button>
+                <button type="button" id="employeeReconciliationTab" role="tab" aria-selected="false" aria-controls="employeeReconciliationPanel" tabindex="-1" data-native-onclick="setSummaryView('employee')" data-native-onkeydown="handleSummaryViewKeydown(event)">员工对账</button>
+              </div>
+            </div>
+            <!-- Filters：移动端默认折叠 -->
+            <div class="filter-surface tipout-compact-toolbar tipout-view-filter-group">
             <button type="button" class="filter-surface-toggle" data-native-onclick="toggleFilterSurface(this)" aria-expanded="false" aria-controls="indexFilterCollapsible">
               <span class="filter-surface-toggle-text">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
@@ -145,12 +152,6 @@
             </button>
             <div id="indexFilterCollapsible" class="filter-surface-collapsible">
               <div class="filter-bar filter-bar--page filter-bar--index">
-                <div class="filter-field tipout-store-filter-field" id="storeFilterField">
-                  <label class="filter-field-label" for="storeSelect">门店</label>
-                  <select id="storeSelect" class="form-control form-control-lg" data-native-onchange="invalidateDayPipelineCache();updateEmployeeFilter()">
-                    <option value="">请选择门店</option>
-                  </select>
-                </div>
                 <div class="filter-field filter-field--daterange" id="dateRangeFilterField">
                   <span class="filter-field-label">日期范围</span>
                   <div class="date-range-group">
@@ -200,6 +201,7 @@
                 </div>
               </div>
             </div>
+          </div>
           </div>
 
           <div class="tipout-metric-strip" aria-label="小费金额概览">
