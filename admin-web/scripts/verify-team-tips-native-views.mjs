@@ -118,10 +118,21 @@ if ((distributionTemplate.match(/id="dateTaskTab"/g) || []).length !== 1) failur
 if ((distributionTemplate.match(/id="employeeReconciliationTab"/g) || []).length !== 1) failures.push("distribution: employee reconciliation tab must be unique");
 if (distributionTemplate.indexOf('id="summaryViewSwitch"') > distributionTemplate.indexOf('class="filter-surface')) failures.push("distribution: summary tabs must appear before the filter surface");
 if (!/<h1 id="summaryTitle" class="sr-only">小费分配<\/h1>/.test(distributionTemplate)) failures.push("distribution: hidden semantic summary title missing");
+const summaryFilterBar = distributionTemplate.match(/<div class="filter-bar filter-bar--page filter-bar--index">([\s\S]*?)<\/div>\s*<\/div>\s*<\/div>\s*<div class="tipout-metric-strip"/)?.[1] || "";
+const filterOrder = ["storeFilterField", "dateRangeFilterField", "roleFilterField", "employeeFilterField", "dateSortField"];
+let previousFilterIndex = -1;
+for (const id of filterOrder) {
+  const index = summaryFilterBar.indexOf(`id="${id}"`);
+  if (index < 0) failures.push(`distribution: summary filter field missing ${id}`);
+  if (index >= 0 && index <= previousFilterIndex) failures.push(`distribution: summary filter order must be store, date, role, employee, sort`);
+  previousFilterIndex = index;
+}
 const summarySrOnlyRule = pageCss.match(/\.tipout-page-summary \.sr-only\s*\{([^}]*)\}/)?.[1] ?? "";
 for (const token of ["position: absolute", "width: 1px", "height: 1px", "overflow: hidden", "clip:"]) {
   if (!summarySrOnlyRule.includes(token)) failures.push(`distribution: shadow-local sr-only rule missing ${token}`);
 }
+const hiddenFilterRule = pageCss.match(/\.tipout-page-summary \.filter-bar--index \.filter-field\[hidden\]\s*\{([^}]*)\}/)?.[1] ?? "";
+if (!hiddenFilterRule.includes("display: none")) failures.push("distribution: hidden summary filters must override filter-field display");
 const headingActions = distributionTemplate.match(/<div class="tipout-heading-actions">[\s\S]*?<\/div>\s*<\/div>\s*<\/div>/)?.[0] || "";
 if (!headingActions.includes("summaryRuleEntryBtn")) failures.push("distribution: rule entry must remain in heading actions");
 for (const token of [">取消分配</button>", "id=\"exportMenu\"", "id=\"allocateBtn\""]) {

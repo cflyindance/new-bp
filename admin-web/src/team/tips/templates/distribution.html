@@ -145,7 +145,13 @@
             </button>
             <div id="indexFilterCollapsible" class="filter-surface-collapsible">
               <div class="filter-bar filter-bar--page filter-bar--index">
-                <div class="filter-field filter-field--daterange">
+                <div class="filter-field tipout-store-filter-field" id="storeFilterField">
+                  <label class="filter-field-label" for="storeSelect">门店</label>
+                  <select id="storeSelect" class="form-control form-control-lg" data-native-onchange="invalidateDayPipelineCache();updateEmployeeFilter()">
+                    <option value="">请选择门店</option>
+                  </select>
+                </div>
+                <div class="filter-field filter-field--daterange" id="dateRangeFilterField">
                   <span class="filter-field-label">日期范围</span>
                   <div class="date-range-group">
                     <input type="date" id="dateStart" class="form-control form-control-lg" data-native-onchange="renderDailySummaryList()">
@@ -154,12 +160,6 @@
                   </div>
                 </div>
                 <div class="filter-field" id="roleFilterField">
-                  <label class="filter-field-label" for="storeSelect">门店</label>
-                  <select id="storeSelect" class="form-control form-control-lg" data-native-onchange="invalidateDayPipelineCache();updateEmployeeFilter()">
-                    <option value="">请选择门店</option>
-                  </select>
-                </div>
-                <div class="filter-field" id="employeeFilterField">
                   <span class="filter-field-label">角色</span>
                   <div class="multi-select" id="roleFilter" data-placeholder="All Role">
                     <div class="multi-select-input" data-native-onclick="toggleIndexMultiSelect('roleFilter')">
@@ -181,7 +181,7 @@
                     </div>
                   </div>
                 </div>
-                <div class="filter-field">
+                <div class="filter-field" id="employeeFilterField">
                   <span class="filter-field-label">员工</span>
                   <div class="multi-select" id="employeeFilter" data-placeholder="All Staff">
                     <div class="multi-select-input" data-native-onclick="toggleIndexMultiSelect('employeeFilter')">

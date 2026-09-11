@@ -2425,13 +2425,13 @@ select.form-control {
 
 @media (min-width: 769px) {
   .tipout-page-summary .filter-bar--index { flex-wrap: nowrap; }
-  .tipout-page-summary .filter-bar--index .filter-field--daterange { flex: 0 0 340px; }
-  .tipout-page-summary .filter-bar--index .filter-field:nth-child(2) {
+  .tipout-page-summary .filter-bar--index .tipout-store-filter-field {
     flex: 1 1 260px;
     max-width: none;
   }
-  .tipout-page-summary .filter-bar--index .filter-field:nth-child(3),
-  .tipout-page-summary .filter-bar--index .filter-field:nth-child(4) {
+  .tipout-page-summary .filter-bar--index .filter-field--daterange { flex: 0 0 340px; }
+  .tipout-page-summary .filter-bar--index #roleFilterField,
+  .tipout-page-summary .filter-bar--index #employeeFilterField {
     flex: 0 1 150px;
     max-width: 150px;
   }
@@ -2564,6 +2564,10 @@ select.form-control {
 }
 
 .tipout-page-summary .tipout-date-sort-field[hidden] {
+  display: none;
+}
+
+.tipout-page-summary .filter-bar--index .filter-field[hidden] {
   display: none;
 }
 
