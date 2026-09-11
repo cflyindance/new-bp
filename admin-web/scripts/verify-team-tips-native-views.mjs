@@ -176,12 +176,23 @@ const viewFilterRowIndex = distributionTemplate.indexOf('class="tipout-view-filt
 const metricStripIndex = distributionTemplate.indexOf('class="tipout-metric-strip"');
 if (storeScopeRowIndex < 0 || viewFilterRowIndex <= storeScopeRowIndex || metricStripIndex <= viewFilterRowIndex) failures.push("distribution: store scope and view/filter rows must precede metrics");
 const storeScopeRow = distributionTemplate.slice(storeScopeRowIndex, viewFilterRowIndex);
-for (const token of ['id="storeFilterField"', 'id="summaryRuleEntryBtn"']) {
+for (const token of ['id="storeFilterField"', 'id="dateRangeFilterField"', 'id="summaryRuleEntryBtn"']) {
   if (!storeScopeRow.includes(token)) failures.push(`distribution: store scope row missing ${token}`);
 }
+const storeScopeOrder = ['storeFilterField', 'dateRangeFilterField', 'summaryRuleEntryBtn'];
+let previousStoreScopeIndex = -1;
+for (const id of storeScopeOrder) {
+  const index = storeScopeRow.indexOf(`id="${id}"`);
+  if (index >= 0 && index <= previousStoreScopeIndex) failures.push('distribution: store scope order must be store, date range, rule action');
+  previousStoreScopeIndex = index;
+}
 const viewFilterRow = distributionTemplate.slice(viewFilterRowIndex, metricStripIndex);
-for (const token of ['id="summaryViewSwitch"', 'id="dateRangeFilterField"', 'id="dateAllocationStatusField"', 'id="employeeSummaryFilters"', 'id="dateSortField"']) {
+for (const token of ['id="summaryViewSwitch"', 'id="dateAllocationStatusField"', 'id="employeeSummaryFilters"', 'id="dateSortField"']) {
   if (!viewFilterRow.includes(token)) failures.push(`distribution: view/filter row missing ${token}`);
+}
+if (viewFilterRow.includes('id="dateRangeFilterField"')) failures.push('distribution: shared date range must not remain in the view filter row');
+for (const id of ['dateRangeFilterField', 'dateStart', 'dateEnd']) {
+  if (distributionTemplate.split(`id="${id}"`).length !== 2) failures.push(`distribution: ${id} must appear exactly once`);
 }
 const filterSurfaceStart = viewFilterRow.indexOf('class="filter-surface tipout-compact-toolbar tipout-view-filter-group"');
 const sharedFilterSurface = filterSurfaceStart >= 0 ? viewFilterRow.slice(filterSurfaceStart) : "";
@@ -228,12 +239,12 @@ const summaryFilterBarEnd = distributionTemplate.indexOf('<div id="dateSummaryMe
 const summaryFilterBar = summaryFilterBarStart >= 0 && summaryFilterBarEnd > summaryFilterBarStart
   ? distributionTemplate.slice(summaryFilterBarStart, summaryFilterBarEnd)
   : "";
-const filterOrder = ["dateRangeFilterField", "dateAllocationStatusField", "employeeSummaryFilters", "dateSortField"];
+const filterOrder = ["dateAllocationStatusField", "employeeSummaryFilters", "dateSortField"];
 let previousFilterIndex = -1;
 for (const id of filterOrder) {
   const index = summaryFilterBar.indexOf(`id="${id}"`);
   if (index < 0) failures.push(`distribution: summary filter field missing ${id}`);
-  if (index >= 0 && index <= previousFilterIndex) failures.push(`distribution: summary filter order must be date, allocation status, employee filters, sort`);
+  if (index >= 0 && index <= previousFilterIndex) failures.push(`distribution: summary filter order must be allocation status, employee filters, sort`);
   previousFilterIndex = index;
 }
 const summarySrOnlyRule = pageCss.match(/\.tipout-page-summary \.sr-only\s*\{([^}]*)\}/)?.[1] ?? "";
@@ -242,6 +253,10 @@ for (const token of ["position: absolute", "width: 1px", "height: 1px", "overflo
 }
 const hiddenFilterRule = pageCss.match(/\.tipout-page-summary \.filter-bar--index \.filter-field\[hidden\]\s*\{([^}]*)\}/)?.[1] ?? "";
 if (!hiddenFilterRule.includes("display: none")) failures.push("distribution: hidden summary filters must override filter-field display");
+const summaryStoreDateRule = pageCss.match(/\.tipout-page-summary \.tipout-store-date-filter-field\s*\{([^}]*)\}/)?.[1] ?? "";
+if (!summaryStoreDateRule.includes("flex: 0 0 340px") || !summaryStoreDateRule.includes("min-width: 340px")) {
+  failures.push("distribution: shared date range must keep a stable width beside the store on desktop");
+}
 for (const token of [
   ".tipout-page-summary .tipout-store-scope-row",
   ".tipout-page-summary .tipout-view-filter-row",
