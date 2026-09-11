@@ -33,7 +33,7 @@
 ## 列表与数据行为
 
 - canonical `dailyRows` 保持现有生成顺序，金额汇总、员工聚合、分配、员工详情快照和导出继续消费未排序数据。
-- 仅在 `renderDailySummaryList` 向日期表格写入 DOM 前，使用 `dailyRows.slice().sort(...)` 创建展示副本；不得在 `buildDailyDataset` 或 `renderSummaryViews` 的上游改变 canonical 数据顺序。
+- 仅在实际接收日期行并写入 DOM 的 `renderDateTaskList(dailyRows)` 内部，使用 `dailyRows.slice().sort(...)` 创建展示副本并渲染；`renderSummaryViews` 继续把 canonical 数据传给总览和员工聚合，不得在 `buildDailyDataset` 或其他上游改变 canonical 数据顺序。
 - 倒序示例：选择 01/25–01/28 时显示 01/28、01/27、01/26、01/25。
 - 正序显示 01/25、01/26、01/27、01/28。
 - 排序仅影响当前日期列表的可见行顺序，不改变金额统计、小费池执行结果、分配状态、详情 URL 或导出数据范围。
