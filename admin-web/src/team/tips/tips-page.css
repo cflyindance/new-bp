@@ -2548,6 +2548,10 @@ select.form-control {
   box-shadow: 0 1px 5px rgba(0, 0, 0, 0.13);
 }
 
+.tipout-page-summary .tipout-date-sort-field[hidden] {
+  display: none;
+}
+
 .tipout-page-summary .tipout-employee-table { min-width: 1200px; }
 .tipout-page-summary .tipout-employee-table th:nth-child(2) { width: 110px; }
 .tipout-page-summary .tipout-employee-table th:nth-child(3),

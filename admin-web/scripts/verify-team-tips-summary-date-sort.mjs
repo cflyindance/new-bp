@@ -44,11 +44,13 @@ assert.equal(dateSort.writeDirection('asc', { setItem() { throw new Error('block
 
 const template = fs.readFileSync('src/team/tips/templates/distribution.html', 'utf8');
 const distribution = fs.readFileSync('src/team/tips/programs/distribution.js.txt', 'utf8');
+const styles = fs.readFileSync('src/team/tips/tips-page.css', 'utf8');
 assert.match(template, /id="dateSortField"/);
 assert.match(template, /<option value="desc">日期倒序<\/option>/);
 assert.match(template, /<option value="asc">日期顺序<\/option>/);
 assert.match(distribution, /TipOutSummaryDateSort\.sortRows\(dailyRows, summaryDateSort\)/);
 assert.match(distribution, /dateSortField\.hidden = employeeActive/);
+assert.match(styles, /\.tipout-page-summary \.tipout-date-sort-field\[hidden\]\s*\{\s*display:\s*none/);
 assert.doesNotMatch(distribution, /dateSort[^\n]*buildSummaryHistoryState/i);
 
 console.log('team tips summary date sort verification passed');
