@@ -2438,6 +2438,10 @@ select.form-control {
     flex: 0 1 150px;
     max-width: 150px;
   }
+  .tipout-page-summary .filter-bar--index .tipout-date-sort-field {
+    flex: 0 0 132px;
+    max-width: 132px;
+  }
 }
 
 @media (max-width: 1100px) {

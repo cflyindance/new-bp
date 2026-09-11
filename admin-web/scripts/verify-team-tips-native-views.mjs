@@ -114,7 +114,7 @@ for (const token of ["summaryDateActions", "summaryAllocateAction", "roleFilterF
 for (const token of ["collectDateTaskExportData", "collectEmployeeReconciliationExportData", "collectCurrentSummaryExportData", "EmployeeReconciliation_"]) {
   if (!distributionExport.includes(token)) failures.push(`distribution export: active-view export contract missing ${token}`);
 }
-for (const token of ["日期任务", "员工对账", "employeeReconciliationList"]) if (!distributionTemplate.includes(token)) failures.push(`distribution: employee reconciliation UI missing ${token}`);
+for (const token of ["分配汇总", "员工对账", "employeeReconciliationList"]) if (!distributionTemplate.includes(token)) failures.push(`distribution: employee reconciliation UI missing ${token}`);
 for (const token of ["setSummaryView", "renderEmployeeReconciliationList", "openEmployeeReconciliationDetail", "canonicalEmployeeStore", "dedupeEmployees", "selectedStore"]) if (!distributionProgram.includes(token)) failures.push(`distribution: employee reconciliation program missing ${token}`);
 for (const token of ["tipAllocationModal", "allocationStore", "allocationDateStart", "allocationDateEnd", "allocationScopeError", "confirmAllocateBtn"]) {
   if (!distributionTemplate.includes(token)) failures.push(`distribution: allocation scope dialog missing ${token}`);

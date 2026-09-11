@@ -1,0 +1,76 @@
+(function(global) {
+  'use strict';
+
+  var STORAGE_KEY = 'tipout-summary-date-sort-v1';
+
+  function pad(value) {
+    return String(value).padStart(2, '0');
+  }
+
+  function toLocalDateKey(date) {
+    return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate());
+  }
+
+  function subtractOneCalendarMonth(date) {
+    var year = date.getFullYear();
+    var month = date.getMonth();
+    var day = date.getDate();
+    var targetMonthStart = new Date(year, month - 1, 1);
+    var lastDay = new Date(targetMonthStart.getFullYear(), targetMonthStart.getMonth() + 1, 0).getDate();
+    return new Date(targetMonthStart.getFullYear(), targetMonthStart.getMonth(), Math.min(day, lastDay));
+  }
+
+  function defaultDateRange(now) {
+    var supplied = now && typeof now.getFullYear === 'function';
+    var end = supplied ? new Date(now.getFullYear(), now.getMonth(), now.getDate()) : new Date();
+    return { startDate: toLocalDateKey(subtractOneCalendarMonth(end)), endDate: toLocalDateKey(end) };
+  }
+
+  function isValidDateRange(startDate, endDate) {
+    var pattern = /^\d{4}-\d{2}-\d{2}$/;
+    if (!pattern.test(String(startDate || '')) || !pattern.test(String(endDate || ''))) return false;
+    var start = new Date(startDate + 'T00:00:00');
+    var end = new Date(endDate + 'T00:00:00');
+    return !isNaN(start.getTime()) && !isNaN(end.getTime()) &&
+      toLocalDateKey(start) === startDate && toLocalDateKey(end) === endDate && startDate <= endDate;
+  }
+
+  function normalizeDirection(value) {
+    return value === 'asc' ? 'asc' : 'desc';
+  }
+
+  function readDirection(storage) {
+    try {
+      var target = storage || global.localStorage;
+      return normalizeDirection(target && target.getItem(STORAGE_KEY));
+    } catch (error) {
+      return 'desc';
+    }
+  }
+
+  function writeDirection(value, storage) {
+    var normalized = normalizeDirection(value);
+    try {
+      var target = storage || global.localStorage;
+      if (target) target.setItem(STORAGE_KEY, normalized);
+    } catch (error) { /* retain the in-memory choice for this page session */ }
+    return normalized;
+  }
+
+  function sortRows(rows, direction) {
+    var multiplier = normalizeDirection(direction) === 'asc' ? 1 : -1;
+    return (Array.isArray(rows) ? rows : []).slice().sort(function(a, b) {
+      return String(a.dateKey || '').localeCompare(String(b.dateKey || '')) * multiplier;
+    });
+  }
+
+  global.TipOutSummaryDateSort = {
+    STORAGE_KEY: STORAGE_KEY,
+    defaultDateRange: defaultDateRange,
+    isValidDateRange: isValidDateRange,
+    normalizeDirection: normalizeDirection,
+    readDirection: readDirection,
+    writeDirection: writeDirection,
+    sortRows: sortRows
+  };
+})(typeof window !== 'undefined' ? window : globalThis);
