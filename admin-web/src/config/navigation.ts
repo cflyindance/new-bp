@@ -938,9 +938,12 @@ export function getStoreBasicDefaultPath(): string {
 
 /** 三级侧栏内、可折叠分组下的二级链接（交互对齐主导航可折叠模块） */
 export interface ProductCenterSidebarSubchild {
+  id?: string;
   title: string;
   titleEn?: string;
   path: string;
+  /** 允许菜单继续递归到四级及更深层；有子项时本节点只负责下钻。 */
+  sidebarChildren?: ProductCenterSidebarSubchild[];
 }
 
 /** 商品中心 · 品牌商品 / 品牌菜单 / 门店商品：左侧三级导航项（与门店基础信息同交互） */

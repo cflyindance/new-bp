@@ -44,6 +44,7 @@ import {
   NAV_MODULES,
   PRODUCT_CENTER_DEEP_NAV,
   type NavModule,
+  type ProductCenterSidebarSubchild,
   type ProductCenterSidebarSubItem,
   MENU_TAX_TYPES_SUBNAV,
   getActiveMenuTaxSubPath,
@@ -2217,6 +2218,7 @@ function closeAllNavModuleSheets(): void {
 }
 
 function closeAllSidebarSecondarySheets(): void {
+  activeTertiarySheetTrail = [];
   setInventorySecondarySheetOpen(false);
   setProductCenterMainSecondarySheetOpen(false);
   setMarketingSecondarySheetOpen(false);
@@ -2518,6 +2520,9 @@ function setReservationsSecondarySheetOpen(open: boolean): void {
 
 const PCM_SHEET_GROUP_CHEVRON = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>`;
 
+/** 当前侧滑层的递归下钻路径。仅保存在内存中，刷新或路由切换不会恢复。 */
+let activeTertiarySheetTrail: string[] = [];
+
 type PcSheetDarkSubnavOpts = {
   /** 品牌商品：显式「商品管理 → 二级 / 分组下 → 三级」层级与 aria */
   brandProductSecondLevel?: boolean;
@@ -2533,6 +2538,45 @@ function renderPcSheetDarkSubnav(
   getCollapsibleChildActivePath: (p: string, item: ProductCenterSidebarSubItem) => string,
   opts?: PcSheetDarkSubnavOpts,
 ): string {
+  let drilledParent: ProductCenterSidebarSubItem | ProductCenterSidebarSubchild | undefined;
+  let drilledNodes: Array<ProductCenterSidebarSubItem | ProductCenterSidebarSubchild> = items;
+  for (const nodeId of activeTertiarySheetTrail) {
+    const next = drilledNodes.find((node) => (node.id ?? node.path) === nodeId && node.sidebarChildren?.length);
+    if (!next?.sidebarChildren?.length) {
+      drilledParent = undefined;
+      drilledNodes = items;
+      break;
+    }
+    drilledParent = next;
+    drilledNodes = next.sidebarChildren;
+  }
+  if (drilledParent && activeTertiarySheetTrail.length > 0) {
+    return `
+      <div class="space-y-3" data-tertiary-sheet-frame="${escapeHtml(activeTertiarySheetTrail.join("/"))}">
+        <button type="button" data-tertiary-sheet-back
+          class="flex min-h-10 w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm font-medium ${SBR_MUTED_ROW} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-active">
+          <span aria-hidden="true">←</span>
+          <span class="min-w-0 flex-1 truncate">${pick(drilledParent.title, drilledParent.titleEn)}</span>
+        </button>
+        <ul class="space-y-1 border-l-2 border-sidebar-active/40 pl-2.5" role="list">
+          ${drilledNodes
+            .map((child) => {
+              const childId = child.id ?? child.path;
+              if (child.sidebarChildren?.length) {
+                return `<li><button type="button" data-tertiary-sidebar-toggle="${escapeHtml(childId)}"
+                  class="flex min-h-11 w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm ${SBR_MUTED_ROW} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-active">
+                  <span class="min-w-0 flex-1 truncate">${pick(child.title, child.titleEn)}</span><span aria-hidden="true">→</span>
+                </button></li>`;
+              }
+              const selected = path === child.path || path.startsWith(`${child.path}/`);
+              return `<li><a href="#${child.path}" data-navigation-sheet-leaf
+                class="flex min-h-11 items-center rounded-lg px-3 py-2 text-sm transition-colors duration-200 ${selected ? SBR_ACTIVE_FM : SBR_MUTED_ROW} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-active"
+                ${selected ? 'aria-current="page"' : ""}>${pick(child.title, child.titleEn)}</a></li>`;
+            })
+            .join("")}
+        </ul>
+      </div>`;
+  }
   const activeSub = getActiveSubPath(path);
   const bp2 = opts?.brandProductSecondLevel === true;
   const l2ListClass = bp2
@@ -12343,7 +12387,6 @@ function mount(): void {
         setPrintSecondarySheetOpen(false);
         setReservationsSecondarySheetOpen(false);
         setInventorySecondarySheetOpen(true);
-        replaceHashPath(getModuleDefaultChildPath("inventory-ordering", "/operations/inventory-ordering/expiry"));
         mount();
         return;
       }
@@ -12360,7 +12403,6 @@ function mount(): void {
         setPrintSecondarySheetOpen(false);
         setReservationsSecondarySheetOpen(false);
         setProductCenterMainSecondarySheetOpen(true);
-        replaceHashPath(getModuleDefaultChildPath("product-center-main", "/brand-products/products"));
         mount();
         return;
       }
@@ -12377,7 +12419,6 @@ function mount(): void {
         setPrintSecondarySheetOpen(false);
         setReservationsSecondarySheetOpen(false);
         setMarketingSecondarySheetOpen(true);
-        replaceHashPath(getModuleDefaultChildPath("marketing", "/marketing/campaigns"));
         mount();
         return;
       }
@@ -12394,7 +12435,6 @@ function mount(): void {
         setPrintSecondarySheetOpen(false);
         setReservationsSecondarySheetOpen(false);
         setPromotionsSecondarySheetOpen(true);
-        replaceHashPath(getModuleDefaultChildPath("promotions", "/promotions/campaigns"));
         mount();
         return;
       }
@@ -12411,7 +12451,6 @@ function mount(): void {
         setPrintSecondarySheetOpen(false);
         setReservationsSecondarySheetOpen(false);
         setMembersSecondarySheetOpen(true);
-        replaceHashPath(getModuleDefaultChildPath("members", "/members/card/coupon-mgmt"));
         mount();
         return;
       }
@@ -12428,7 +12467,6 @@ function mount(): void {
         setPrintSecondarySheetOpen(false);
         setReservationsSecondarySheetOpen(false);
         setReportsSecondarySheetOpen(true);
-        replaceHashPath(getModuleDefaultChildPath("reports-finance", "/reports/revenue"));
         mount();
         return;
       }
@@ -12445,7 +12483,6 @@ function mount(): void {
         setReportsSecondarySheetOpen(false);
         setReservationsSecondarySheetOpen(false);
         setPrintSecondarySheetOpen(true);
-        replaceHashPath(getModuleDefaultChildPath("print-templates", "/print-templates/decoration"));
         mount();
         return;
       }
@@ -12462,7 +12499,6 @@ function mount(): void {
         setReportsSecondarySheetOpen(false);
         setPrintSecondarySheetOpen(false);
         setReservationsSecondarySheetOpen(true);
-        replaceHashPath(getModuleDefaultChildPath("reservations", "/operations/reservations/waitlist"));
         mount();
         return;
       }
@@ -12479,7 +12515,6 @@ function mount(): void {
         setPrintSecondarySheetOpen(false);
         setReservationsSecondarySheetOpen(false);
         setGiftCardsSecondarySheetOpen(true);
-        replaceHashPath(getModuleDefaultChildPath("gift-cards", "/gift-cards/cards"));
         mount();
         return;
       }
@@ -12499,14 +12534,16 @@ function mount(): void {
         setReservationsSecondarySheetOpen(false);
         closeAllNavModuleSheets();
         setNavModuleSheetOpen(sid, true);
-        const mod = NAV_MODULES.find((x) => x.id === sid);
-        if (mod) replaceHashPath(mod.defaultChildPath ?? mod.path);
         mount();
         return;
       }
       const navLink = (e.target as HTMLElement).closest("a[href^='#']");
       if (navLink && navLink instanceof HTMLAnchorElement) {
         const p = navLink.getAttribute("href")?.slice(1) ?? "";
+        if (navLink.closest("[data-hub-sheet-root]")) {
+          activeTertiarySheetTrail = [];
+          closeAllSidebarSecondarySheets();
+        }
         if (isNavHomePath(p)) {
           closeAllSidebarSecondarySheets();
         }
@@ -12843,10 +12880,25 @@ function mount(): void {
   });
 
   app.firstElementChild?.addEventListener("click", (e) => {
+    const tertiaryBack = (e.target as HTMLElement).closest("[data-tertiary-sheet-back]");
+    if (tertiaryBack) {
+      e.preventDefault();
+      activeTertiarySheetTrail.pop();
+      clearAllHubSheetSearch();
+      mount();
+      return;
+    }
     const el = (e.target as HTMLElement).closest("[data-tertiary-sidebar-toggle]");
     if (!el || !(el instanceof HTMLButtonElement)) return;
     const groupId = el.getAttribute("data-tertiary-sidebar-toggle");
     if (!groupId) return;
+    if (el.closest("[data-hub-sheet-root]")) {
+      e.preventDefault();
+      activeTertiarySheetTrail.push(groupId);
+      clearAllHubSheetSearch();
+      mount();
+      return;
+    }
     const sheetNavTertiaryItem = NAV_MODULES.filter((mod) => mod.subNavPlacement === "sheet").reduce<
       ProductCenterSidebarSubItem | undefined
     >((acc, mod) => {
@@ -12864,17 +12916,8 @@ function mount(): void {
       sheetNavTertiaryItem;
     if (!item?.sidebarChildren?.length) return;
     e.preventDefault();
-    const hash = readAppHashPath();
-    const prefix = item.activePrefix ?? item.path;
-    const inGroup = hash === prefix || hash.startsWith(`${prefix}/`);
-    if (!inGroup) {
-      replaceHashPath(item.path);
-      setTertiarySidebarGroupExpanded(groupId, true);
-      mount();
-      return;
-    }
-    const cur = getTertiarySidebarGroupExpanded(groupId, hash, inGroup);
-    setTertiarySidebarGroupExpanded(groupId, !cur);
+    activeTertiarySheetTrail = [groupId];
+    clearAllHubSheetSearch();
     mount();
   });
 

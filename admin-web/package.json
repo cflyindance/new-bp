@@ -41,6 +41,7 @@
     "verify:personal-sales-pool": "npx tsx scripts/verify-personal-sales-pool.ts",
     "verify:emenu-responsive-viewport": "node scripts/verify-emenu-responsive-viewport.mjs",
     "verify:subscription-service": "npx tsx scripts/verify-subscription-service.ts",
+    "verify:recursive-navigation": "node scripts/verify-recursive-navigation-interaction.mjs",
     "verify:tipout-interaction-refresh": "node scripts/verify-tipout-interaction-refresh.mjs",
     "verify:tipout-employee-reconciliation": "node scripts/verify-tipout-employee-reconciliation.mjs",
     "verify:payroll-batch-export": "npx tsx scripts/verify-payroll-batch-export.ts && node scripts/verify-payroll-batch-export-ui.mjs",
