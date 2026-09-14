@@ -107,7 +107,7 @@ var ALLOC_KEY = 'tipout_allocated';
     var allEmployeeSummaryAggregates = [];
     var visibleEmployeeSummaryAggregates = [];
     var visibleDailySummaryRows = [];
-    var dateSummaryFilters = { allocationStatus: '', businessStatus: '' };
+    var dateSummaryFilters = { allocationStatus: '', businessStatus: '', payoutStatus: '' };
     var employeeSummaryFilters = { role: '', employeeScope: { mode: 'all', ids: [] }, statuses: [] };
     var employeeSummarySort = { key: 'finalAmount', direction: 'desc' };
 
@@ -449,6 +449,7 @@ var ALLOC_KEY = 'tipout_allocated';
         employeeSummaryScope: employeeSummaryFilters.employeeScope,
         dateAllocationStatus: dateSummaryFilters.allocationStatus,
         dateBusinessStatus: dateSummaryFilters.businessStatus,
+        datePayoutStatus: dateSummaryFilters.payoutStatus,
         employeeSortKey: employeeSummarySort.key,
         employeeSortDirection: employeeSummarySort.direction
       });
@@ -470,6 +471,7 @@ var ALLOC_KEY = 'tipout_allocated';
       var allocateAction = document.getElementById('summaryAllocateAction');
       var dateAllocationStatusField = document.getElementById('dateAllocationStatusField');
       var dateBusinessStatusField = document.getElementById('dateBusinessStatusField');
+      var datePayoutStatusField = document.getElementById('datePayoutStatusField');
       var dateSortField = document.getElementById('dateSortField');
       var employeeFilters = document.getElementById('employeeSummaryFilters');
       var dateMetrics = document.getElementById('dateSummaryMetrics');
@@ -477,6 +479,7 @@ var ALLOC_KEY = 'tipout_allocated';
       if (allocateAction) allocateAction.hidden = employeeActive;
       if (dateAllocationStatusField) dateAllocationStatusField.hidden = employeeActive;
       if (dateBusinessStatusField) dateBusinessStatusField.hidden = employeeActive;
+      if (datePayoutStatusField) datePayoutStatusField.hidden = employeeActive;
       if (dateSortField) dateSortField.hidden = employeeActive;
       if (employeeFilters) employeeFilters.hidden = !employeeActive;
       if (dateMetrics) dateMetrics.hidden = employeeActive;
@@ -572,7 +575,8 @@ var ALLOC_KEY = 'tipout_allocated';
       document.getElementById('storeSelect').value = saved.store || '';
       dateSummaryFilters = {
         allocationStatus: saved.dateAllocationStatus || '',
-        businessStatus: saved.dateBusinessStatus === 'open' || saved.dateBusinessStatus === 'closed' ? saved.dateBusinessStatus : ''
+        businessStatus: saved.dateBusinessStatus === 'open' || saved.dateBusinessStatus === 'closed' ? saved.dateBusinessStatus : '',
+        payoutStatus: ['pending-allocation', 'pending-payout', 'paid', 'not-required', 'error'].indexOf(saved.datePayoutStatus) >= 0 ? saved.datePayoutStatus : ''
       };
       var restoredEmployeeStatus = TipOutSummaryUi.normalizeEmployeeAllocationStatusFilter(saved.employeeSummaryStatus);
       employeeSummaryFilters = {
@@ -588,10 +592,12 @@ var ALLOC_KEY = 'tipout_allocated';
       var employeeStatus = document.getElementById('employeeSummaryStatusFilter');
       var dateAllocationStatus = document.getElementById('dateAllocationStatusFilter');
       var dateBusinessStatus = document.getElementById('dateBusinessStatusFilter');
+      var datePayoutStatus = document.getElementById('datePayoutStatusFilter');
       if (employeeRole) employeeRole.value = employeeSummaryFilters.role || '';
       if (employeeStatus) employeeStatus.value = employeeSummaryFilters.statuses[0] || '';
       if (dateAllocationStatus) dateAllocationStatus.value = dateSummaryFilters.allocationStatus;
       if (dateBusinessStatus) dateBusinessStatus.value = dateSummaryFilters.businessStatus;
+      if (datePayoutStatus) datePayoutStatus.value = dateSummaryFilters.payoutStatus;
       invalidateDayPipelineCache();
       syncSummaryViewUi();
       renderDailySummaryList();
@@ -806,11 +812,11 @@ var ALLOC_KEY = 'tipout_allocated';
     function payoutViewForRow(row) {
       var store = (document.getElementById('storeSelect') || {}).value || '';
       var state = window.TipOutDateState ? TipOutDateState.inspect(store, row.dateKey) : { payoutStatus: 'none' };
-      if (state.payoutStatus === 'error') return { label: '发放数据异常', className: 'error', action: false };
-      if (state.payoutStatus === 'paid') return { label: '已发放', className: 'allocated', action: false };
-      if (row.businessStatusResult.status === 'closed') return { label: '无需发放', className: 'closed', action: false };
-      if (row.allocated) return { label: '待发放', className: 'pending', action: !!state.snapshot };
-      return { label: '待分配', className: 'pending', action: false };
+      if (state.payoutStatus === 'error') return { key: 'error', label: '发放数据异常', className: 'error', action: false };
+      if (state.payoutStatus === 'paid') return { key: 'paid', label: '已发放', className: 'allocated', action: false };
+      if (row.businessStatusResult.status === 'closed') return { key: 'not-required', label: '无需发放', className: 'closed', action: false };
+      if (row.allocated) return { key: 'pending-payout', label: '待发放', className: 'pending', action: !!state.snapshot };
+      return { key: 'pending-allocation', label: '待分配', className: 'pending', action: false };
     }
 
     function renderDateTaskList(dailyRows) {
@@ -991,6 +997,12 @@ var ALLOC_KEY = 'tipout_allocated';
       captureSummaryUiState('', '');
     }
 
+    function handleDatePayoutStatusChange(value) {
+      dateSummaryFilters.payoutStatus = ['pending-allocation', 'pending-payout', 'paid', 'not-required', 'error'].indexOf(value) >= 0 ? value : '';
+      renderSummaryViews();
+      captureSummaryUiState('', '');
+    }
+
     function updateEmployeeSummarySortHeaders() {
       [['employeeSortEmployee', 'employee'], ['employeeSortHours', 'hours'], ['employeeSortFinalAmount', 'finalAmount']].forEach(function(entry) {
         var button = document.getElementById(entry[0]);
@@ -1060,6 +1072,9 @@ var ALLOC_KEY = 'tipout_allocated';
       } else {
         visibleDailySummaryRows = TipOutSummaryUi.filterDailyRowsByAllocationStatus(dailyRows, dateSummaryFilters.allocationStatus);
         visibleDailySummaryRows = TipOutSummaryUi.filterDailyRowsByBusinessStatus(visibleDailySummaryRows, dateSummaryFilters.businessStatus);
+        if (dateSummaryFilters.payoutStatus) visibleDailySummaryRows = visibleDailySummaryRows.filter(function(row) {
+          return payoutViewForRow(row).key === dateSummaryFilters.payoutStatus;
+        });
         renderSummaryOverview(visibleDailySummaryRows, allocatedDates);
         visibleEmployeeSummaryAggregates = [];
         document.getElementById('employeeReconciliationList').innerHTML = '';

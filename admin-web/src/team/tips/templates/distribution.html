@@ -176,6 +176,17 @@
                     <option value="unallocated">未分配</option>
                   </select>
                 </div>
+                <div class="filter-field" id="datePayoutStatusField">
+                  <label class="filter-field-label" for="datePayoutStatusFilter">发放状态</label>
+                  <select id="datePayoutStatusFilter" class="form-control form-control-lg" data-native-onchange="handleDatePayoutStatusChange(this.value)">
+                    <option value="">全部状态</option>
+                    <option value="pending-allocation">待分配</option>
+                    <option value="pending-payout">待发放</option>
+                    <option value="paid">已发放</option>
+                    <option value="not-required">无需发放</option>
+                    <option value="error">发放数据异常</option>
+                  </select>
+                </div>
                 <div id="employeeSummaryFilters" class="tipout-employee-summary-filters" hidden>
                   <div class="filter-field">
                     <label class="filter-field-label" for="employeeSummaryRoleFilter">角色</label>

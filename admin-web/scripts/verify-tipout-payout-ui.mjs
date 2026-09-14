@@ -9,10 +9,16 @@ const exportProgram = fs.readFileSync('src/team/tips/legacy/export.js.txt', 'utf
 const manualHours = fs.readFileSync('src/team/tips/legacy/tipout-manual-hours-store.js.txt', 'utf8');
 
 assert.match(summaryTemplate, /<th>发放状态<\/th>/);
+assert.match(summaryTemplate, /id="datePayoutStatusFilter"/);
+for (const option of ['pending-allocation', 'pending-payout', 'paid', 'not-required', 'error']) {
+  assert.match(summaryTemplate, new RegExp(`value="${option}"`));
+}
 for (const id of ['confirmPayoutModal', 'confirmPayoutStore', 'confirmPayoutDate', 'confirmPayoutAmount', 'confirmPayoutEmployees', 'submitConfirmPayoutBtn']) {
   assert.match(summaryTemplate, new RegExp(`id="${id}"`));
 }
 assert.match(summaryProgram, /function payoutViewForRow\(row\)/);
+assert.match(summaryProgram, /function handleDatePayoutStatusChange\(value\)/);
+assert.match(summaryProgram, /payoutViewForRow\(row\)\.key === dateSummaryFilters\.payoutStatus/);
 assert.match(summaryProgram, /async function openConfirmPayoutModal\(dateKey, event\)/);
 assert.match(summaryProgram, /async function submitConfirmPayout\(\)/);
 assert.match(summaryProgram, /TipOutDateState\.confirmPayout\(payoutDraft\)/);
