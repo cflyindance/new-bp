@@ -48,3 +48,60 @@
 在隔离的干净 HEAD 工作树执行完整构建时，被仓库既有基线问题阻断：`src/config/json-menu-editor-ui.ts:25` 引用了未纳入干净 HEAD 的 `./json-menu-search-autofill-guard`。主工作树中存在同名用户未跟踪文件，本次未复制、修改或纳入提交；该失败与 TipOut 变更无关。隔离工作树与临时依赖连接均已清理。
 
 final result: passed
+
+---
+
+# 老 B 平台静态商户页 Design QA
+
+## 对比证据
+
+- Source visual truth: `C:\Users\27273\AppData\Local\Temp\codex-clipboard-352b3e63-d251-471c-b0fc-e6d857e6c01f.png`
+- Implementation: `http://127.0.0.1:59813/#/legacy-b/merchants`
+- Implementation screenshot: Codex in-app Browser tab 6 inline capture（浏览器控制工具未提供本地截图文件路径）
+- Desktop viewport: 1893 × 1079 CSS px，device scale 1；参考图 1893 × 1079 px，无需密度换算。
+- Responsive viewport: 390 × 844 CSS px，device scale 1。
+- State: 已登录，老 B 平台静态商户列表，悬浮球收起。
+
+## Full-view comparison evidence
+
+- 页面背景、品牌区、用户区、标题区、两列网格和四张卡片的整体构图与参考图一致。
+- 桌面端卡片网格左边界约 238px、单卡宽约 700px、间距约 20px、卡片高约 340px，与参考图一致。
+- 修正后标题区与参考图同在页面上方中央，商户卡片起始高度差控制在约 10px 内。
+- 390px 窄屏下网格收为单列，没有横向溢出；长商户名和权限文本按设计截断。
+
+## Focused region comparison evidence
+
+- 顶部：MenuSifu 品牌锁定、`Fei Chen` 用户信息的位置、字号层级与参考图接近。
+- 标题：`请选择` 与 `您的商户` 的字号、左边界和垂直层级已对齐。
+- 卡片：Locations、商户名、用户图标、三行权限的顺序和文案逐项一致；渐变方向、圆角与低透明度水印保持参考图风格。
+- 悬浮球：保留原有黄色悬浮球；展开后可见“老B平台”，并已实测切回门店版。
+
+## Comparison history
+
+1. 首轮发现卡片区比参考图偏上约 30px，标题字号偏小，退出老 B 后浏览器标题残留。
+2. 调整标题宽度与字号、桌面网格上间距及横向边界，并移除独立页面对 `document.title` 的持久修改。
+3. 第二轮同尺寸对比确认上述 P2 问题已消除；补充权限列表衬线字体以贴近参考图。
+
+## Findings
+
+- 无剩余 P0、P1 或 P2 问题。
+- P3：品牌水印是按现有页面能力重绘的近似图形，与旧 B 平台原始商标路径存在细微差异，不影响页面层级与辨识。
+
+## Primary interactions tested
+
+- 登录后直接访问 `/legacy-b/merchants`：通过。
+- 悬浮球展开并显示“老B平台”当前项：通过。
+- 从老 B 平台切回门店版并恢复商家后台壳层：通过。
+- 刷新老 B 专用路径：通过。
+- 390px 单列响应式：通过。
+
+## Implementation Checklist
+
+- [x] 固定商户数据与文案一致。
+- [x] 独立全屏壳层隐藏顶栏和侧栏。
+- [x] 悬浮球保留并可退出。
+- [x] 桌面同尺寸视觉对比通过。
+- [x] 窄屏响应式通过。
+- [x] 静态契约、TypeScript 与 Vite 构建通过。
+
+final result: passed

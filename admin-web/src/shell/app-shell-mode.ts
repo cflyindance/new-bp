@@ -1,7 +1,7 @@
 /**
- * 应用 Shell 模式：商家后台 / M 平台 / eMenu 本地配置后台 / Kiosk 本地配置后台 / PIT 需求池
+ * 应用 Shell 模式：商家后台 / M 平台 / 老 B 平台 / eMenu 本地配置后台 / Kiosk 本地配置后台 / PIT 需求池
  */
-export type AppShellMode = "merchant" | "m-platform" | "emenu-local" | "kiosk-local" | "pit";
+export type AppShellMode = "merchant" | "m-platform" | "legacy-b" | "emenu-local" | "kiosk-local" | "pit";
 
 const STORAGE_KEY = "menusifu:app-shell-mode-v1";
 let memoryMode: AppShellMode | undefined;
@@ -10,7 +10,7 @@ export function readAppShellMode(): AppShellMode {
   if (memoryMode) return memoryMode;
   try {
     const raw = sessionStorage.getItem(STORAGE_KEY);
-    memoryMode = raw === "m-platform" || raw === "emenu-local" || raw === "kiosk-local" || raw === "pit" ? raw : "merchant";
+    memoryMode = raw === "m-platform" || raw === "legacy-b" || raw === "emenu-local" || raw === "kiosk-local" || raw === "pit" ? raw : "merchant";
     return memoryMode;
   } catch {
     memoryMode = "merchant";
@@ -32,6 +32,10 @@ export function isMPlatformShellMode(): boolean {
   return readAppShellMode() === "m-platform";
 }
 
+export function isLegacyBShellMode(): boolean {
+  return readAppShellMode() === "legacy-b";
+}
+
 export function isEmenuLocalShellMode(): boolean {
   return readAppShellMode() === "emenu-local";
 }
@@ -49,6 +53,14 @@ export function enterMPlatformShell(): void {
 }
 
 export function exitMPlatformShell(): void {
+  writeAppShellMode("merchant");
+}
+
+export function enterLegacyBShell(): void {
+  writeAppShellMode("legacy-b");
+}
+
+export function exitLegacyBShell(): void {
   writeAppShellMode("merchant");
 }
 
