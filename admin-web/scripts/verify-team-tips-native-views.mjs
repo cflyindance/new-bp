@@ -10,6 +10,17 @@ const required = {
   "employee-reconciliation": ["data-team-tips-view=\"employee-reconciliation\"", "employeeDetailRows", "employeeDetailEmpty"],
 };
 const failures = [];
+const businessStatusProgram = fs.readFileSync("src/team/tips/legacy/tipout-business-status.js.txt", "utf8");
+const distributionBusinessProgram = fs.readFileSync("src/team/tips/programs/distribution.js.txt", "utf8");
+for (const token of ["isDemoClosedDate", "% 7 === 0"]) {
+  if (!businessStatusProgram.includes(token)) failures.push(`business status: missing closed-day demo behavior ${token}`);
+}
+for (const token of ["TipOutBusinessStatus.isDemoClosedDate(dateKey)", "before: 0", "clockStatus: '未打卡'"]) {
+  if (!distributionBusinessProgram.includes(token)) failures.push(`distribution: missing closed-day demo data ${token}`);
+}
+for (const token of ["当天未营业，无法查看分配明细", "poolAmount: 0", "aggregateStatus: '无需分配'"]) {
+  if (!distributionBusinessProgram.includes(token)) failures.push(`distribution: missing closed-day detail guard ${token}`);
+}
 const pageCss = fs.readFileSync("src/team/tips/tips-page.css", "utf8");
 const sourceCss = fs.readFileSync("dist/TipOut/prototype-fidelity.css", "utf8");
 const ruleEditorContentCss = pageCss.match(/\.tipout-page-rule-editor \.content-area\s*\{([^}]*)\}/)?.[1] ?? "";
@@ -285,7 +296,7 @@ for (const token of ["ArrowLeft", "ArrowRight", "Home", "End"]) {
   if (!distributionProgram.includes(token)) failures.push(`distribution: Tab keyboard behavior missing ${token}`);
 }
 for (const token of [
-  "dateSummaryFilters = { allocationStatus: '' }",
+  "dateSummaryFilters = { allocationStatus: '', businessStatus: '' }",
   "handleDateAllocationStatusChange",
   "filterDailyRowsByAllocationStatus",
   "employeeScope: { mode: 'all', ids: [] }",
@@ -350,13 +361,14 @@ for (const token of [">取消分配</button>", "id=\"exportMenu\"", "id=\"alloca
 for (const token of ["tipout-summary-action-bar", "summaryDateActions", "summaryAllocateAction", "exportMenu", "allocateBtn"]) {
   if (!distributionTemplate.includes(token)) failures.push(`distribution: fixed summary action bar missing ${token}`);
 }
-for (const token of ["summaryDateActions", "summaryAllocateAction", "dateAllocationStatusField", "employeeSummaryFilters", "dateSortField"]) {
+for (const token of ["summaryDateActions", "summaryAllocateAction", "dateAllocationStatusField", "dateBusinessStatusField", "employeeSummaryFilters", "dateSortField"]) {
   if (!distributionProgram.includes(token)) failures.push(`distribution: view-aware action/filter sync missing ${token}`);
 }
 for (const assignment of [
   "dateActions.hidden = employeeActive",
   "allocateAction.hidden = employeeActive",
   "dateAllocationStatusField.hidden = employeeActive",
+  "dateBusinessStatusField.hidden = employeeActive",
   "employeeFilters.hidden = !employeeActive",
   "dateSortField.hidden = employeeActive",
 ]) {
@@ -372,7 +384,7 @@ assert.deepEqual(JSON.parse(JSON.stringify(summaryUi.readSummaryHistoryState(sum
   roles: ["Server"], employees: ["employee-1"], scrollY: 240,
   returnDate: "", returnEmployeeId: "employee-1",
   employeeSearch: "", employeeSummaryRole: "", employeeSummaryStatus: "",
-  employeeSummaryScope: { mode: "all", ids: [] }, dateAllocationStatus: "",
+  employeeSummaryScope: { mode: "all", ids: [] }, dateAllocationStatus: "", dateBusinessStatus: "",
   employeeSortKey: "finalAmount", employeeSortDirection: "desc", activeView: "employee",
 });
 const employeeAggregates = summaryUi.aggregateEmployeeDailyDatasets([

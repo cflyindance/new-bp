@@ -30,6 +30,12 @@
     if (status === 'unallocated') return (rows || []).filter(function(row) { return row.allocated !== true; });
     return (rows || []).slice();
   }
+  function filterDailyRowsByBusinessStatus(rows, status) {
+    if (status !== 'open' && status !== 'closed') return (rows || []).slice();
+    return (rows || []).filter(function(row) {
+      return row.businessStatusResult && row.businessStatusResult.status === status;
+    });
+  }
   function summarizeDailyResults(records) {
     return (records || []).reduce(function (sum, item) {
       sum.before += number(item.before);
@@ -68,6 +74,7 @@
         ? { mode: 'subset', ids: uniqueIds(values.employeeSummaryScope.ids) }
         : { mode: 'all', ids: [] },
       dateAllocationStatus: ['allocated', 'unallocated'].indexOf(values.dateAllocationStatus) >= 0 ? values.dateAllocationStatus : '',
+      dateBusinessStatus: ['open', 'closed'].indexOf(values.dateBusinessStatus) >= 0 ? values.dateBusinessStatus : '',
       employeeSortKey: ['employee', 'hours', 'finalAmount'].indexOf(values.employeeSortKey) >= 0 ? values.employeeSortKey : 'finalAmount',
       employeeSortDirection: values.employeeSortDirection === 'asc' ? 'asc' : 'desc',
       activeView: values.activeView === 'employee' ? 'employee' : 'date'
@@ -359,6 +366,7 @@
     normalizeEmployeeScope: normalizeEmployeeScope,
     reconcileEmployeeScope: reconcileEmployeeScope,
     filterDailyRowsByAllocationStatus: filterDailyRowsByAllocationStatus,
+    filterDailyRowsByBusinessStatus: filterDailyRowsByBusinessStatus,
     employeeAllocationStatus: employeeAllocationStatus,
     normalizeEmployeeAllocationStatusFilter: normalizeEmployeeAllocationStatusFilter,
     EMPLOYEE_RECONCILIATION_SNAPSHOT_KEY: EMPLOYEE_RECONCILIATION_SNAPSHOT_KEY
