@@ -7,6 +7,9 @@ const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
 const assertIncludes = (source, expected, label) => {
   if (!source.includes(expected)) throw new Error(`Missing ${label}: ${expected}`);
 };
+const assertNotIncludes = (source, unexpected, label) => {
+  if (source.includes(unexpected)) throw new Error(`Unexpected ${label}: ${unexpected}`);
+};
 
 const mode = read("src/shell/app-shell-mode.ts");
 const shell = read("src/shell/legacy-b-shell.ts");
@@ -31,7 +34,7 @@ for (const [source, expected, label] of [
   [shell, "暂不切换", "upgrade dialog secondary action"],
   [shell, "data-legacy-b-upgrade-confirm", "upgrade confirm hook"],
   [shell, "data-legacy-b-upgrade-dismiss", "upgrade dismiss hook"],
-  [shell, "switchToBrandView", "brand transition binding"],
+  [shell, "switchLegacyBToBrandView", "legacy B forced brand transition binding"],
   [shell, "data-legacy-b-heading", "dismiss focus target"],
   [shell, "bindLegacyBUpgradeDialog", "upgrade dialog binding"],
   [shell, "beginLegacyBVisit", "visit reset hook"],
@@ -40,8 +43,10 @@ for (const [source, expected, label] of [
   [shell, "data-legacy-b-upgrade-error", "missing-brand error"],
   [shell, 'event.key === "Escape"', "escape dismissal"],
   [shell, 'setAttribute("inert", "")', "background interaction lock"],
-  [switcher, "export function switchToBrandView(onMount: () => void): boolean", "guarded brand transition"],
-  [switcher, "if (!brandId) return false", "missing brand guard"],
+  [switcher, "export function switchToBrandView(onMount: () => void): boolean", "brand transition"],
+  [switcher, 'applyChainPerspective("brand", onMount);', "brand transition after chain layout activation"],
+  [switcher, "export function switchLegacyBToBrandView", "legacy B forced brand transition"],
+  [switcher, "allowRestrictedLegacyB", "legacy B restriction override"],
   [switcher, 'data-view-switch-option="legacy-b"', "legacy-b switch option"],
   [switcher, "LEGACY_B_DEFAULT_PATH", "legacy-b switch route"],
   [main, "mountLegacyBShell", "legacy-b main mount"],
@@ -49,5 +54,11 @@ for (const [source, expected, label] of [
   [main, "previousMountedContentPath", "previous route tracking"],
   [i18n, '"shell.legacyBPlatform"', "legacy-b i18n label"],
 ]) assertIncludes(source, expected, label);
+
+assertNotIncludes(
+  switcher,
+  "const brandId = resolveDefaultAnchorBrandId();\n  if (!brandId) return false;",
+  "pre-layout missing brand guard",
+);
 
 console.log("Legacy B platform verification passed.");

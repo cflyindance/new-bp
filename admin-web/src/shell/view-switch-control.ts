@@ -353,8 +353,9 @@ function applyChainPerspective(
   perspective: ChainViewSwitchPerspective,
   onMount: () => void,
   anchorBrandId?: string,
+  allowRestrictedLegacyB = false,
 ): void {
-  if (isViewSwitchRestricted()) return;
+  if (isViewSwitchRestricted() && !(allowRestrictedLegacyB && isLegacyBShellMode())) return;
   if (perspective === "group-hq" && !shouldShowGroupHqViewSwitchOption()) return;
 
   if (isMPlatformShellMode()) {
@@ -387,9 +388,13 @@ function applyChainPerspective(
 
 export function switchToBrandView(onMount: () => void): boolean {
   if (isViewSwitchRestricted()) return false;
-  const brandId = resolveDefaultAnchorBrandId();
-  if (!brandId) return false;
-  applyChainPerspective("brand", onMount, brandId);
+  applyChainPerspective("brand", onMount);
+  return true;
+}
+
+export function switchLegacyBToBrandView(onMount: () => void): boolean {
+  if (!isLegacyBShellMode()) return false;
+  applyChainPerspective("brand", onMount, undefined, true);
   return true;
 }
 
