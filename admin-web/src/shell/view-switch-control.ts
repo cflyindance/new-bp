@@ -22,12 +22,15 @@ import {
   type SidebarNavLayoutPreset,
 } from "../config/sidebar-nav-order";
 import {
+  enterLegacyBShell,
   enterMPlatformShell,
   exitEmenuLocalShell,
   exitKioskLocalShell,
+  exitLegacyBShell,
   exitMPlatformShell,
   isEmenuLocalShellMode,
   isKioskLocalShellMode,
+  isLegacyBShellMode,
   isMPlatformShellMode,
 } from "./app-shell-mode";
 
@@ -35,8 +38,9 @@ import { shouldShowGroupHqViewSwitchOption, shouldShowMPlatformViewSwitchOption 
 import { renderNonMvpBadgeHtml } from "../config/cloud-product-route-notice-ui";
 import { APP_NAV_HOME_PATH } from "../config/app-routes";
 import { NAV_BLUEPRINT_ROUTE_PREFIX } from "../config/nav-blueprint-ui";
+import { LEGACY_B_DEFAULT_PATH } from "./legacy-b-routes";
 
-export type ViewSwitchMode = SidebarNavLayoutPreset | "m-platform";
+export type ViewSwitchMode = SidebarNavLayoutPreset | "m-platform" | "legacy-b";
 export type ChainViewSwitchPerspective = "group-hq" | "brand";
 
 function escapeHtml(s: string): string {
@@ -48,6 +52,7 @@ function escapeHtml(s: string): string {
 }
 
 function getCurrentViewSwitchMode(): ViewSwitchMode {
+  if (isLegacyBShellMode()) return "legacy-b";
   if (isMPlatformShellMode()) return "m-platform";
   return readSidebarNavLayoutPreset();
 }
@@ -65,12 +70,14 @@ function hintForChainPerspective(perspective: ChainDataPerspective): string {
 }
 
 function labelForMode(mode: ViewSwitchMode): string {
+  if (mode === "legacy-b") return t("shell.legacyBPlatform");
   if (mode === "m-platform") return t("shell.mPlatform");
   if (mode === "chain") return labelForChainPerspective(resolveChainDataPerspective());
   return t("shell.navLayoutStore");
 }
 
 function hintForMode(mode: ViewSwitchMode): string {
+  if (mode === "legacy-b") return t("shell.legacyBPlatformHint");
   if (mode === "m-platform") return t("shell.mPlatformHint");
   if (mode === "chain") return hintForChainPerspective(resolveChainDataPerspective());
   return t("shell.navLayoutStoreHint");
@@ -139,6 +146,22 @@ function renderMPlatformMenuItem(current: ViewSwitchMode): string {
     </button>`;
 }
 
+function renderLegacyBMenuItem(current: ViewSwitchMode): string {
+  const active = current === "legacy-b";
+  return `
+    <button
+      type="button"
+      role="menuitem"
+      data-view-switch-option="legacy-b"
+      class="flex w-full min-h-9 items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${active ? "bg-accent/60 font-medium text-accent-foreground" : "text-foreground"}"
+      title="${escapeHtml(t("shell.legacyBPlatformHint"))}"
+      aria-current="${active ? "true" : "false"}"
+    >
+      <span class="flex size-4 shrink-0 items-center justify-center">${active ? CHECK_ICON : ""}</span>
+      <span class="min-w-0 flex-1 truncate">${escapeHtml(t("shell.legacyBPlatform"))}</span>
+    </button>`;
+}
+
 const FLAT_CARD_CLASS =
   "relative flex min-h-12 w-full items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
@@ -200,6 +223,21 @@ function renderFlatMPlatformCard(current: ViewSwitchMode): string {
     </button>`;
 }
 
+function renderFlatLegacyBCard(current: ViewSwitchMode): string {
+  const active = current === "legacy-b";
+  return `
+    <button
+      type="button"
+      data-view-switch-option="legacy-b"
+      class="${FLAT_CARD_CLASS} ${active ? "border-primary/25 bg-primary/10 font-semibold text-primary" : "border-transparent bg-muted/60 text-foreground hover:border-border hover:bg-muted"}"
+      title="${escapeHtml(t("shell.legacyBPlatformHint"))}"
+      aria-current="${active ? "true" : "false"}"
+    >
+      <span class="flex size-4 shrink-0 items-center justify-center">${active ? CHECK_ICON : ""}</span>
+      <span class="min-w-0 flex-1 leading-5">${escapeHtml(t("shell.legacyBPlatform"))}</span>
+    </button>`;
+}
+
 export function renderFlatViewSwitchGroup(): string {
   const labelId = "demo-switch-view-group-title";
   if (isViewSwitchRestricted()) {
@@ -228,6 +266,7 @@ export function renderFlatViewSwitchGroup(): string {
         ${shouldShowGroupHqViewSwitchOption() ? renderFlatChainCard("group-hq") : ""}
         ${renderFlatChainCard("brand")}
         ${shouldShowMPlatformViewSwitchOption() ? renderFlatMPlatformCard(current) : ""}
+        ${renderFlatLegacyBCard(current)}
       </div>
       ${restrictedHintVisible ? `<p id="demo-view-brand-restricted" class="mt-2 px-1 text-xs leading-5 text-muted-foreground">${escapeHtml(t("shell.perspectiveRestrictedHint"))}</p><span id="demo-view-group-hq-restricted" class="sr-only">${escapeHtml(t("shell.perspectiveRestrictedHint"))}</span>` : ""}
     </div>`;
@@ -295,6 +334,8 @@ export function renderViewSwitchControl(): string {
           ${renderChainPerspectiveItem("brand")}
           ${shouldShowMPlatformViewSwitchOption() ? `<div class="my-1 h-px bg-border" aria-hidden="true"></div>
           ${renderMPlatformMenuItem(current)}` : ""}
+          <div class="my-1 h-px bg-border" aria-hidden="true"></div>
+          ${renderLegacyBMenuItem(current)}
         </div>
       </div>
     </div>`;
@@ -324,6 +365,10 @@ function applyChainPerspective(perspective: ChainViewSwitchPerspective, onMount:
     exitKioskLocalShell();
     location.hash = `#${APP_NAV_HOME_PATH}`;
   }
+  if (isLegacyBShellMode()) {
+    exitLegacyBShell();
+    location.hash = `#${APP_NAV_HOME_PATH}`;
+  }
 
   markSidebarNavLayoutPresetManual();
   writeSidebarNavLayoutPreset("chain");
@@ -337,6 +382,14 @@ function applyChainPerspective(perspective: ChainViewSwitchPerspective, onMount:
 
 function applyViewSwitchMode(mode: ViewSwitchMode, onMount: () => void): void {
   if (isViewSwitchRestricted()) return;
+
+  if (mode === "legacy-b") {
+    if (isLegacyBShellMode()) return;
+    enterLegacyBShell();
+    location.hash = `#${LEGACY_B_DEFAULT_PATH}`;
+    onMount();
+    return;
+  }
 
   if (mode === "m-platform") {
     if (!shouldShowMPlatformViewSwitchOption()) return;
@@ -362,6 +415,10 @@ function applyViewSwitchMode(mode: ViewSwitchMode, onMount: () => void): void {
   }
   if (isKioskLocalShellMode()) {
     exitKioskLocalShell();
+    location.hash = `#${APP_NAV_HOME_PATH}`;
+  }
+  if (isLegacyBShellMode()) {
+    exitLegacyBShell();
     location.hash = `#${APP_NAV_HOME_PATH}`;
   }
 
@@ -425,7 +482,7 @@ export function bindViewSwitchControl(onMount: () => void): void {
     root.querySelectorAll<HTMLButtonElement>("[data-view-switch-option]").forEach((btn) => {
       btn.addEventListener("click", () => {
         const raw = btn.getAttribute("data-view-switch-option");
-        if (raw !== "store" && raw !== "m-platform") return;
+        if (raw !== "store" && raw !== "m-platform" && raw !== "legacy-b") return;
         if (raw === "m-platform" && !shouldShowMPlatformViewSwitchOption()) return;
         setViewSwitchOpen(root, false);
         applyViewSwitchMode(raw, onMount);
