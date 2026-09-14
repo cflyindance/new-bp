@@ -238,6 +238,70 @@
     });
   }
 
+  function stableRoleEmployeeId(record) {
+    var value = record && (record.employeeId || record.rosterEmployeeId || record.id);
+    return value == null || String(value).trim() === '' ? '' : String(value);
+  }
+
+  function aggregateRoleDailyDatasets(dailyRows, options) {
+    options = options || {};
+    var restrictEmployeeIds = Array.isArray(options.employeeIds);
+    var allowedIds = restrictEmployeeIds ? uniqueIds(options.employeeIds) : [];
+    var selectedRole = String(options.role || '');
+    var byRole = Object.create(null);
+    (dailyRows || []).forEach(function(day) {
+      (day.employeeResults || []).forEach(function(record) {
+        if (!record || !isParticipatingEmployeeRecord(record)) return;
+        var employeeId = stableRoleEmployeeId(record);
+        if (restrictEmployeeIds && (!employeeId || allowedIds.indexOf(employeeId) < 0)) return;
+        var role = String(record.role || '').trim() || '未设置角色';
+        if (selectedRole && role !== selectedRole) return;
+        var item = byRole[role];
+        if (!item) {
+          item = byRole[role] = {
+            role: role,
+            employeeIds: [],
+            employeeCount: 0,
+            beforeCents: 0,
+            deductedCents: 0,
+            receivedCents: 0,
+            finalAmountCents: 0,
+            allocatedRecordCount: 0,
+            pendingRecordCount: 0,
+            status: 'pending',
+            hasConfirmedAmount: false
+          };
+        }
+        if (employeeId) addUnique(item.employeeIds, employeeId);
+        var beforeCents = toCents(record.before) || 0;
+        item.beforeCents += beforeCents;
+        if (day.allocated && !day.allocationValidationError) {
+          var deductedCents = toCents(record.deducted) || 0;
+          var receivedCents = toCents(record.received) || 0;
+          item.allocatedRecordCount += 1;
+          item.deductedCents += deductedCents;
+          item.receivedCents += receivedCents;
+          item.finalAmountCents += beforeCents - deductedCents + receivedCents;
+        } else {
+          item.pendingRecordCount += 1;
+        }
+      });
+    });
+    return Object.keys(byRole).map(function(role) {
+      var item = byRole[role];
+      item.employeeCount = item.employeeIds.length;
+      item.hasConfirmedAmount = item.allocatedRecordCount > 0;
+      item.status = item.allocatedRecordCount && item.pendingRecordCount
+        ? 'partial'
+        : item.allocatedRecordCount ? 'complete' : 'pending';
+      return item;
+    }).sort(function(a, b) {
+      if (a.hasConfirmedAmount !== b.hasConfirmedAmount) return a.hasConfirmedAmount ? -1 : 1;
+      if (a.finalAmountCents !== b.finalAmountCents) return b.finalAmountCents - a.finalAmountCents;
+      return a.role.localeCompare(b.role);
+    });
+  }
+
   function normalizeEmployeeDetailDateSort(value) {
     return value === 'asc' ? 'asc' : 'desc';
   }
@@ -354,6 +418,7 @@
     isParticipatingEmployeeRecord: isParticipatingEmployeeRecord,
     resolveRequiresAttendance: resolveRequiresAttendance,
     aggregateEmployeeDailyDatasets: aggregateEmployeeDailyDatasets,
+    aggregateRoleDailyDatasets: aggregateRoleDailyDatasets,
     summarizeEmployeeAggregates: summarizeEmployeeAggregates,
     filterAndSortEmployeeAggregates: filterAndSortEmployeeAggregates,
     normalizeEmployeeDetailDateSort: normalizeEmployeeDetailDateSort,
