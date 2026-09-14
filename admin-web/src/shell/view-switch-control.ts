@@ -349,7 +349,11 @@ function setViewSwitchOpen(root: HTMLElement, open: boolean): void {
   menu.classList.toggle("hidden", !open);
 }
 
-function applyChainPerspective(perspective: ChainViewSwitchPerspective, onMount: () => void): void {
+function applyChainPerspective(
+  perspective: ChainViewSwitchPerspective,
+  onMount: () => void,
+  anchorBrandId?: string,
+): void {
   if (isViewSwitchRestricted()) return;
   if (perspective === "group-hq" && !shouldShowGroupHqViewSwitchOption()) return;
 
@@ -373,15 +377,20 @@ function applyChainPerspective(perspective: ChainViewSwitchPerspective, onMount:
   markSidebarNavLayoutPresetManual();
   writeSidebarNavLayoutPreset("chain");
 
-  const brandId = perspective === "brand" ? resolveDefaultAnchorBrandId() ?? undefined : undefined;
+  const brandId =
+    perspective === "brand" ? anchorBrandId ?? resolveDefaultAnchorBrandId() ?? undefined : undefined;
   writeChainDataPerspective(perspective, brandId ? { brandId } : undefined);
   ensureScopeFiltersForLayoutPreset("chain");
   syncAllActiveMPlatformGroups();
   onMount();
 }
 
-export function switchToBrandView(onMount: () => void): void {
-  applyChainPerspective("brand", onMount);
+export function switchToBrandView(onMount: () => void): boolean {
+  if (isViewSwitchRestricted()) return false;
+  const brandId = resolveDefaultAnchorBrandId();
+  if (!brandId) return false;
+  applyChainPerspective("brand", onMount, brandId);
+  return true;
 }
 
 function applyViewSwitchMode(mode: ViewSwitchMode, onMount: () => void): void {
