@@ -19,15 +19,15 @@ const snapshot = (store, dateKey, amount) => ({
   summary: { originalTips: amount, poolAmount: amount, allocatedAmount: amount, unallocatedAmount: 0, poolCount: 1 },
 });
 
-api.commit(snapshot("Golden Dragon - Dallas", "2026-09-11", 12.34));
+await api.commit(snapshot("Golden Dragon - Dallas", "2026-09-11", 12.34));
 assert.equal(api.read("Golden Dragon - Dallas", "2026-09-11").summary.allocatedAmount, 12.34);
 assert.equal(api.read("Golden Dragon - Plano", "2026-09-11"), null);
-api.commit(snapshot("Golden Dragon - Dallas", "2026-09-11", 20));
+await api.commit(snapshot("Golden Dragon - Dallas", "2026-09-11", 20));
 assert.equal(api.read("Golden Dragon - Dallas", "2026-09-11").summary.allocatedAmount, 20);
 assert.deepEqual(JSON.parse(data.get("tipout_allocated"))["Golden Dragon - Dallas"], ["2026-09-11"]);
 data.set("tipout_allocated", JSON.stringify({ "Golden Dragon - Dallas": [] }));
 assert.equal(api.read("Golden Dragon - Dallas", "2026-09-11"), null);
-assert.throws(() => api.commit(snapshot("", "2026-09-11", 1)), /请选择门店/);
-assert.throws(() => api.commit(snapshot("Store", "2026-09-11", -1)), /无效/);
+await assert.rejects(api.commit(snapshot("", "2026-09-11", 1)), /请选择门店/);
+await assert.rejects(api.commit(snapshot("Store", "2026-09-11", -1)), /无效/);
 
 console.log("Tip allocation result store verification passed.");

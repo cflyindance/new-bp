@@ -11,6 +11,7 @@
     var hours = Number(entry.hours);
     if (!entry.ruleId || !entry.dateKey || !entry.employeeName || !isFinite(hours) || hours < 0) return null;
     return {
+      store: text(entry.store, ''),
       poolId: text(entry.poolId, String(entry.ruleId)), poolName: text(entry.poolName, '未命名小费池'),
       ruleId: String(entry.ruleId), ruleName: text(entry.ruleName, '未命名规则'),
       dateKey: String(entry.dateKey), employeeId: text(entry.employeeId, ''), employeeName: String(entry.employeeName), hours: Math.round(hours * 100) / 100
@@ -23,6 +24,7 @@
   }
   function set(entry) {
     var normalized = normalize(entry); if (!normalized) return false;
+    if (normalized.store && global.TipOutDateState) global.TipOutDateState.assertDateWritable(normalized.store, normalized.dateKey);
     var rows = read().map(normalize).filter(Boolean), key = identity(normalized), replaced = false;
     rows = rows.map(function(row) { if (identity(row) === key) { replaced = true; return normalized; } return row; });
     if (!replaced) rows.push(normalized);
@@ -38,6 +40,7 @@
   }
   function seed(entry) {
     var normalized = normalize(entry); if (!normalized) return false;
+    if (normalized.store && global.TipOutDateState) global.TipOutDateState.assertDateWritable(normalized.store, normalized.dateKey);
     var rows = read().map(normalize).filter(Boolean), key = identity(normalized);
     if (rows.some(function(row) {
       return identity(row) === key || (row.ruleId === normalized.ruleId && row.dateKey === normalized.dateKey && row.employeeName === normalized.employeeName);
