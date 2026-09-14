@@ -1,5 +1,5 @@
 import { mountDemoSwitchFab } from "./demo-switch-control";
-import { bindViewSwitchControl, switchToBrandView } from "./view-switch-control";
+import { bindViewSwitchControl, switchLegacyBToBrandView } from "./view-switch-control";
 
 type LegacyBMerchant = {
   name: string;
@@ -146,7 +146,7 @@ function bindLegacyBUpgradeDialog(onMount: () => void): void {
   dismissButton.addEventListener("click", dismissDialog);
 
   confirmButton.addEventListener("click", () => {
-    if (switchToBrandView(onMount)) return;
+    if (switchLegacyBToBrandView(onMount)) return;
     errorMessage?.classList.remove("hidden");
     confirmButton.focus({ preventScroll: true });
   });
