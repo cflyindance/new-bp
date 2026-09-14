@@ -1,5 +1,5 @@
 import { mountDemoSwitchFab } from "./demo-switch-control";
-import { bindViewSwitchControl } from "./view-switch-control";
+import { bindViewSwitchControl, switchToBrandView } from "./view-switch-control";
 
 type LegacyBMerchant = {
   name: string;
@@ -67,6 +67,65 @@ function renderMerchantCard(merchant: LegacyBMerchant): string {
     </li>`;
 }
 
+function renderLegacyBUpgradeDialog(): string {
+  return `
+    <div data-legacy-b-upgrade-dialog class="fixed inset-0 z-[70] flex items-center justify-center p-4 sm:p-6">
+      <div data-legacy-b-upgrade-backdrop class="absolute inset-0 bg-[#080018]/70 backdrop-blur-[2px]" aria-hidden="true"></div>
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="legacy-b-upgrade-title"
+        aria-describedby="legacy-b-upgrade-description"
+        class="relative w-full max-w-[520px] rounded-3xl bg-white p-6 text-[#160052] shadow-2xl sm:p-8"
+      >
+        <div class="flex size-12 items-center justify-center rounded-2xl bg-[#fff3cd] text-[#160052]" aria-hidden="true">
+          <svg class="size-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/>
+          </svg>
+        </div>
+        <h2 id="legacy-b-upgrade-title" class="mt-5 text-2xl font-extrabold tracking-[-0.02em] sm:text-[1.75rem]">全新后台已上线</h2>
+        <p id="legacy-b-upgrade-description" class="mt-3 text-base leading-7 text-[#51466d]">操作更顺、加载更快、数据更清晰。您当前的旧版入口即将停止维护，建议现在花 1 分钟切换体验。</p>
+        <div class="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <button type="button" data-legacy-b-upgrade-dismiss class="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#d8d3e3] bg-white px-5 py-2.5 text-sm font-semibold text-[#30234f] transition-colors hover:bg-[#f7f5fb] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6d5ca7] focus-visible:ring-offset-2">暂不切换</button>
+          <button type="button" data-legacy-b-upgrade-confirm class="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#160052] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#2a1267] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6d5ca7] focus-visible:ring-offset-2">立即切换到新版</button>
+        </div>
+      </section>
+    </div>`;
+}
+
+function bindLegacyBUpgradeDialog(onMount: () => void): void {
+  const dialogRoot = document.querySelector<HTMLElement>("[data-legacy-b-upgrade-dialog]");
+  const confirmButton = dialogRoot?.querySelector<HTMLButtonElement>("[data-legacy-b-upgrade-confirm]");
+  const dismissButton = dialogRoot?.querySelector<HTMLButtonElement>("[data-legacy-b-upgrade-dismiss]");
+  const demoSwitch = document.querySelector<HTMLElement>("[data-demo-switch-root]");
+  if (!dialogRoot || !confirmButton || !dismissButton) return;
+
+  demoSwitch?.setAttribute("inert", "");
+  demoSwitch?.setAttribute("aria-hidden", "true");
+
+  dialogRoot.addEventListener("keydown", (event) => {
+    if (event.key !== "Tab") return;
+    const target = event.target as Node | null;
+    if (event.shiftKey && target === dismissButton) {
+      event.preventDefault();
+      confirmButton.focus();
+    } else if (!event.shiftKey && target === confirmButton) {
+      event.preventDefault();
+      dismissButton.focus();
+    }
+  });
+
+  dismissButton.addEventListener("click", () => {
+    dialogRoot.remove();
+    demoSwitch?.removeAttribute("inert");
+    demoSwitch?.removeAttribute("aria-hidden");
+    document.querySelector<HTMLElement>("[data-legacy-b-heading]")?.focus({ preventScroll: true });
+  });
+
+  confirmButton.addEventListener("click", () => switchToBrandView(onMount));
+  requestAnimationFrame(() => confirmButton.focus({ preventScroll: true }));
+}
+
 export function mountLegacyBShell(): string {
   return `
     <div class="min-h-dvh w-full overflow-x-hidden bg-[#10002f] text-white">
@@ -85,17 +144,19 @@ export function mountLegacyBShell(): string {
         <main class="pt-7 sm:pt-5">
           <div class="mx-auto w-full max-w-[193px]">
             <p class="text-2xl font-bold">请选择</p>
-            <h1 class="mt-2 whitespace-nowrap text-[3.25rem] font-black leading-none tracking-[-0.05em]">您的商户</h1>
+            <h1 tabindex="-1" data-legacy-b-heading class="mt-2 whitespace-nowrap text-[3.25rem] font-black leading-none tracking-[-0.05em] focus:outline-none">您的商户</h1>
           </div>
           <ul class="mt-24 grid grid-cols-1 gap-5 sm:-mx-2.5 sm:mt-[6.5rem] lg:grid-cols-2" aria-label="商户列表">
             ${LEGACY_B_MERCHANTS.map(renderMerchantCard).join("")}
           </ul>
         </main>
       </div>
+      ${renderLegacyBUpgradeDialog()}
     </div>`;
 }
 
 export function bindLegacyBShell(onMount: () => void): void {
   mountDemoSwitchFab({ showVersionSwitch: false });
   bindViewSwitchControl(onMount);
+  bindLegacyBUpgradeDialog(onMount);
 }
