@@ -380,6 +380,10 @@ function applyChainPerspective(perspective: ChainViewSwitchPerspective, onMount:
   onMount();
 }
 
+export function switchToBrandView(onMount: () => void): void {
+  applyChainPerspective("brand", onMount);
+}
+
 function applyViewSwitchMode(mode: ViewSwitchMode, onMount: () => void): void {
   if (isViewSwitchRestricted()) return;
 
@@ -438,7 +442,7 @@ export function ensureMvpGroupHqViewSwitchHidden(onMount: () => void): boolean {
   if (resolveChainDataPerspective() !== "group-hq") return false;
 
   if (canUseChainDataPerspective("brand")) {
-    applyChainPerspective("brand", onMount);
+    switchToBrandView(onMount);
   } else {
     applyViewSwitchMode("store", onMount);
   }

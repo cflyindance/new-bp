@@ -24,6 +24,7 @@ for (const [source, expected, label] of [
   [shell, "大飞鸽-AD", "first merchant"],
   [shell, "小飞鸽-联想PC", "fourth merchant"],
   [shell, "mountDemoSwitchFab", "floating switch mount"],
+  [switcher, "export function switchToBrandView", "reusable brand view transition"],
   [switcher, 'data-view-switch-option="legacy-b"', "legacy-b switch option"],
   [switcher, "LEGACY_B_DEFAULT_PATH", "legacy-b switch route"],
   [main, "mountLegacyBShell", "legacy-b main mount"],
