@@ -71,9 +71,10 @@
 ## 状态与路由
 
 - 老 B 平台的 shell mode 值确定为 `legacy-b`，专用 hash 路径确定为 `/legacy-b/merchants`。
-- 新增 `isLegacyBContentPath(path)` 路径识别函数；只把 `/legacy-b/merchants` 识别为老 B 平台内容路径，未知的 `/legacy-b/*` 统一规范化到该路径。
-- 挂载判定以内容路径优先：访问 `/legacy-b/merchants` 时写入 `legacy-b` shell mode 并渲染老 B 平台；shell mode 为 `legacy-b` 但当前路径不是老 B 路径时，将 hash 规范化为 `/legacy-b/merchants`。
-- `main.ts` 中老 B 分支置于现有 M 平台、eMenu、Kiosk、PIT 独立壳层分支之前；其他独立壳层的兜底判断应显式排除老 B 内容路径，避免互相纠正或重定向。
+- 新增 `isLegacyBContentPath(path)` 与 `normalizeLegacyBPath(path)`：前者识别 `/legacy-b`、`/legacy-b/` 及全部 `/legacy-b/*` 前缀路径，后者把这些路径统一规范化为 `/legacy-b/merchants`。因此即使当前 shell mode 仍为 `merchant`，直接访问未知 `/legacy-b/foo` 也会先被老 B 分支接管并规范化。
+- 挂载判定以内容路径优先：访问任一老 B 前缀路径时写入 `legacy-b` shell mode，规范化后渲染老 B 平台；shell mode 为 `legacy-b` 但当前路径不是老 B 路径时，也将 hash 规范化为 `/legacy-b/merchants`。
+- 老 B 页面要求已登录，并遵循现有平台预设 onboarding 守卫。`main.ts` 中老 B 分支放在登录校验与 onboarding 处理之后、eMenu/Kiosk/M 平台分支之前；它不得放在 PIT 分支或登录校验之前。
+- eMenu、Kiosk、M 平台独立壳层的 shell-mode 兜底判断应显式排除老 B 内容路径，避免旧 shell mode 抢先纠正老 B URL；老 B shell-mode 兜底同样排除其他已识别的独立壳层内容路径。
 - 从任意现有视角进入老 B 平台时，直接把 shell mode 覆盖为 `legacy-b`，再切换到专用 hash。
 - 从老 B 平台切到门店版或连锁版时，先把 shell mode 写为 `merchant`，再执行现有布局/数据视角写入与商家后台目标路由跳转。
 - 从老 B 平台切到 M 平台时，先把 shell mode 写为 `m-platform`，再跳到 M 平台现有默认路径。
@@ -105,6 +106,7 @@
 7. 刷新老 B 平台专用路径后仍能恢复该独立页面。
 8. 运行项目构建，确认 TypeScript 与 Vite 构建成功。
 9. 在代登录或其他现有切换锁定状态下，不展示老 B 平台入口，也不能通过视角菜单进入。
+10. 未登录直接访问任一 `/legacy-b/*` 地址时进入现有登录页；完成登录与必要 onboarding 后，只有合法老 B 路径才渲染老 B 页面，不绕过认证流程。
 
 ## 非目标
 
