@@ -812,10 +812,12 @@ var ALLOC_KEY = 'tipout_allocated';
 
     function renderEmployeeSummaryMetrics(aggregates) {
       var summary = TipOutSummaryUi.summarizeEmployeeAggregates(aggregates);
-      document.getElementById('employeeMetricCount').textContent = String(summary.employeeCount);
-      document.getElementById('employeeMetricFinal').textContent = summary.hasConfirmedAmount ? money(summary.finalAmountCents / 100) : '—';
-      document.getElementById('employeeMetricCompleted').textContent = String(summary.completedCount);
-      document.getElementById('employeeMetricPending').textContent = String(summary.pendingCount);
+      document.getElementById('employeeMetricCount').textContent = summary.employeeCount + ' 人';
+      document.getElementById('employeeMetricFinal').textContent = summary.hasConfirmedAmount
+        ? money(summary.finalAmountCents / 100)
+        : money(0);
+      document.getElementById('employeeMetricCompleted').textContent = summary.completedCount + ' 人';
+      document.getElementById('employeeMetricPending').textContent = summary.pendingCount + ' 人';
       var exceptions = document.getElementById('employeeMetricExceptions');
       exceptions.hidden = summary.exceptionCount === 0;
       exceptions.textContent = summary.exceptionCount ? '另有异常 ' + summary.exceptionCount + ' 人' : '';

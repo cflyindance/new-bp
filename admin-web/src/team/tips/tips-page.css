@@ -1856,6 +1856,7 @@ select.form-control {
   border-radius: var(--radius-lg);
   background: #ffffff;
 }
+.tipout-page-summary .tipout-metric-strip[hidden] { display: none; }
 .tipout-page-summary .tipout-metric-strip:has(#summaryPoolCountMetric:not([hidden])) { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .tipout-fidelity .tipout-metric-strip > div[hidden] { display: none; }
 .tipout-fidelity .tipout-pool-count-link {
