@@ -1,0 +1,31 @@
+(function(root) {
+  function isDemoClosedDate(dateKey) {
+    var date = new Date(String(dateKey || '') + 'T00:00:00Z');
+    if (isNaN(date.getTime())) return false;
+    return Math.floor(date.getTime() / 86400000) % 7 === 0;
+  }
+  function resolveBusinessStatus(facts) {
+    facts = facts || {};
+    var issues = [];
+    function amount(value, field) {
+      var number = Number(value);
+      if (!isFinite(number) || number < 0) { issues.push({ code: 'invalid_amount', field: field }); return 0; }
+      return number;
+    }
+    var salesAmount = amount(facts.salesAmount || 0, 'salesAmount');
+    var tipAmount = amount(facts.tipAmount || 0, 'tipAmount');
+    var hasPunch = (facts.punchRecords || []).some(function(record) {
+      return record && record.source !== 'manual' && record.status === 'complete' && Number(record.hours) > 0;
+    });
+    return { status: salesAmount > 0 || tipAmount > 0 || hasPunch ? 'open' : 'closed', issues: issues };
+  }
+  function inspectFacts(facts) {
+    var result = resolveBusinessStatus(facts);
+    return { facts: facts, status: result.status, issues: result.issues, allocatable: result.status === 'open' && result.issues.length === 0 };
+  }
+  root.TipOutBusinessStatus = {
+    resolveBusinessStatus: resolveBusinessStatus,
+    inspectFacts: inspectFacts,
+    isDemoClosedDate: isDemoClosedDate
+  };
+})(window);

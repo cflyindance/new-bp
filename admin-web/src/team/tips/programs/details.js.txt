@@ -1393,14 +1393,36 @@ var ALLOC_KEY = 'tipout_allocated';
       };
     }
 
+    function getDetailBusinessStatus(dateKey, rules) {
+      if (TipOutBusinessStatus.isDemoClosedDate(dateKey)) {
+        return TipOutBusinessStatus.inspectFacts({ salesAmount: 0, tipAmount: 0, punchRecords: [] });
+      }
+      var punchRecords = [];
+      (rules || []).forEach(function(rule, index) {
+        if (rule && rule.clockin === 'noclock') return;
+        var ruleId = detailRuleDomId(rule, index);
+        buildDetailEmployees(rule, ruleId, dateKey).forEach(function(employee) {
+          if (Number(employee.hours) > 0) punchRecords.push({ source: 'punch', status: 'complete', hours: Number(employee.hours) });
+        });
+      });
+      return TipOutBusinessStatus.inspectFacts({
+        salesAmount: 0,
+        tipAmount: detailNumberFromText((document.getElementById('detailOriginalTips') || {}).textContent || '0'),
+        punchRecords: punchRecords
+      });
+    }
+
     function syncDetailAllocationAction() {
       var button = document.getElementById('confirmDetailAllocationBtn');
       var dateInput = document.getElementById('detailDate');
       var storeInput = document.getElementById('storeSelect');
       if (!button || !dateInput || !storeInput) return;
       var allocated = window.TipOutAllocationResults && TipOutAllocationResults.isAllocated(storeInput.value, dateInput.value);
+      var rules = window.ruleData && ruleData.getRulesForStore ? ruleData.getRulesForStore(storeInput.value) : [];
+      var business = getDetailBusinessStatus(dateInput.value, rules);
       button.textContent = allocated ? '重新确认分配' : '确认分配';
-      button.disabled = detailAllocationSubmitting;
+      button.disabled = detailAllocationSubmitting || !business.allocatable;
+      button.title = business.allocatable ? '' : '当天未营业，无法进行小费分配';
     }
 
     function getDetailAutoAllocationEligibility(store, dateKey, rules) {
@@ -1408,6 +1430,8 @@ var ALLOC_KEY = 'tipout_allocated';
         return { eligible: false, reason: 'invalid-scope' };
       }
       if (!Array.isArray(rules) || rules.length === 0) return { eligible: false, reason: 'no-rules' };
+      var business = getDetailBusinessStatus(dateKey, rules);
+      if (!business.allocatable) return { eligible: false, reason: 'business-day-closed' };
       if (rules.some(function(rule) { return rule && rule.clockin === 'noclock'; })) {
         return { eligible: false, reason: 'manual-rule' };
       }
@@ -1477,6 +1501,11 @@ var ALLOC_KEY = 'tipout_allocated';
       var dateKey = (document.getElementById('detailDate').value || '').trim();
       var store = (document.getElementById('storeSelect').value || '').trim();
       var rules = window.ruleData && ruleData.getRulesForStore ? ruleData.getRulesForStore(store) : [];
+      var business = getDetailBusinessStatus(dateKey, rules);
+      if (!business.allocatable) {
+        showNotification('当天未营业，无法进行小费分配', 'error');
+        return;
+      }
       var allocated = window.TipOutAllocationResults && TipOutAllocationResults.isAllocated(store, dateKey);
       if (allocated && !window.confirm('该日期已分配，重新确认将覆盖当天原分配结果。')) return;
       var button = document.getElementById('confirmDetailAllocationBtn');

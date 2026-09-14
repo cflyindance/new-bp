@@ -106,7 +106,7 @@ var ALLOC_KEY = 'tipout_allocated';
     var allEmployeeSummaryAggregates = [];
     var visibleEmployeeSummaryAggregates = [];
     var visibleDailySummaryRows = [];
-    var dateSummaryFilters = { allocationStatus: '' };
+    var dateSummaryFilters = { allocationStatus: '', businessStatus: '' };
     var employeeSummaryFilters = { role: '', employeeScope: { mode: 'all', ids: [] }, statuses: [] };
     var employeeSummarySort = { key: 'finalAmount', direction: 'desc' };
 
@@ -447,6 +447,7 @@ var ALLOC_KEY = 'tipout_allocated';
         employeeSummaryStatus: employeeSummaryFilters.statuses[0] || '',
         employeeSummaryScope: employeeSummaryFilters.employeeScope,
         dateAllocationStatus: dateSummaryFilters.allocationStatus,
+        dateBusinessStatus: dateSummaryFilters.businessStatus,
         employeeSortKey: employeeSummarySort.key,
         employeeSortDirection: employeeSummarySort.direction
       });
@@ -467,12 +468,14 @@ var ALLOC_KEY = 'tipout_allocated';
       var dateActions = document.getElementById('summaryDateActions');
       var allocateAction = document.getElementById('summaryAllocateAction');
       var dateAllocationStatusField = document.getElementById('dateAllocationStatusField');
+      var dateBusinessStatusField = document.getElementById('dateBusinessStatusField');
       var dateSortField = document.getElementById('dateSortField');
       var employeeFilters = document.getElementById('employeeSummaryFilters');
       var dateMetrics = document.getElementById('dateSummaryMetrics');
       if (dateActions) dateActions.hidden = employeeActive;
       if (allocateAction) allocateAction.hidden = employeeActive;
       if (dateAllocationStatusField) dateAllocationStatusField.hidden = employeeActive;
+      if (dateBusinessStatusField) dateBusinessStatusField.hidden = employeeActive;
       if (dateSortField) dateSortField.hidden = employeeActive;
       if (employeeFilters) employeeFilters.hidden = !employeeActive;
       if (dateMetrics) dateMetrics.hidden = employeeActive;
@@ -566,7 +569,10 @@ var ALLOC_KEY = 'tipout_allocated';
         applyDefaultSummaryDateRange();
       }
       document.getElementById('storeSelect').value = saved.store || '';
-      dateSummaryFilters = { allocationStatus: saved.dateAllocationStatus || '' };
+      dateSummaryFilters = {
+        allocationStatus: saved.dateAllocationStatus || '',
+        businessStatus: saved.dateBusinessStatus === 'open' || saved.dateBusinessStatus === 'closed' ? saved.dateBusinessStatus : ''
+      };
       var restoredEmployeeStatus = TipOutSummaryUi.normalizeEmployeeAllocationStatusFilter(saved.employeeSummaryStatus);
       employeeSummaryFilters = {
         role: saved.employeeSummaryRole || '',
@@ -580,9 +586,11 @@ var ALLOC_KEY = 'tipout_allocated';
       var employeeRole = document.getElementById('employeeSummaryRoleFilter');
       var employeeStatus = document.getElementById('employeeSummaryStatusFilter');
       var dateAllocationStatus = document.getElementById('dateAllocationStatusFilter');
+      var dateBusinessStatus = document.getElementById('dateBusinessStatusFilter');
       if (employeeRole) employeeRole.value = employeeSummaryFilters.role || '';
       if (employeeStatus) employeeStatus.value = employeeSummaryFilters.statuses[0] || '';
       if (dateAllocationStatus) dateAllocationStatus.value = dateSummaryFilters.allocationStatus;
+      if (dateBusinessStatus) dateBusinessStatus.value = dateSummaryFilters.businessStatus;
       invalidateDayPipelineCache();
       syncSummaryViewUi();
       renderDailySummaryList();
@@ -606,9 +614,13 @@ var ALLOC_KEY = 'tipout_allocated';
     }
 
     function openDailyDetail(dateKey) {
+      var snapshotRow = buildDailyDataset(getFilteredEmployees()).filter(function(row) { return row.dateKey === dateKey; })[0];
+      if (snapshotRow && snapshotRow.businessStatusResult.status === 'closed') {
+        showNotification('当天未营业，无法查看分配明细', 'warning');
+        return;
+      }
       captureSummaryUiState(dateKey, '');
       var store = (document.getElementById('storeSelect') || {}).value || '';
-      var snapshotRow = buildDailyDataset(getFilteredEmployees()).filter(function(row) { return row.dateKey === dateKey; })[0];
       if (snapshotRow) {
         try {
           sessionStorage.setItem('tipout-date-pool-summary-v1', JSON.stringify({ dateKey: dateKey, store: store, poolSummary: snapshotRow.poolSummary }));
@@ -745,6 +757,14 @@ var ALLOC_KEY = 'tipout_allocated';
       var storeRules = getRulesForCurrentStore();
       return getDateRange().map(function(dateKey) {
         var employeeResults = getDailyEmployeeResultsForEmployees(dateKey, scopedEmployees);
+        if (TipOutBusinessStatus.isDemoClosedDate(dateKey)) {
+          employeeResults = employeeResults.map(function(item) {
+            return Object.assign({}, item, {
+              before: 0, deducted: 0, received: 0, after: 0,
+              hours: 0, shifts: 0, clockStatus: '未打卡'
+            });
+          });
+        }
         var total = TipOutSummaryUi.summarizeDailyResults(employeeResults);
         var allocated = allocatedDates.has(dateKey);
         var projectedPoolSummary = TipOutDatePoolView.projectDate({ dateKey: dateKey, rules: storeRules, originalTips: total.before, allocated: allocated });
@@ -752,6 +772,23 @@ var ALLOC_KEY = 'tipout_allocated';
         var poolSummary = confirmedSnapshot
           ? Object.assign({}, projectedPoolSummary, confirmedSnapshot.summary || {}, { aggregateStatus: '已分配' })
           : projectedPoolSummary;
+        var businessStatusResult = TipOutBusinessStatus.inspectFacts({
+          salesAmount: 0,
+          tipAmount: Number(poolSummary.originalTips || 0),
+          punchRecords: employeeResults.filter(function(item) {
+            return Number(item.hours) > 0 && item.clockStatus === '已打卡';
+          }).map(function(item) { return { source: 'punch', status: 'complete', hours: Number(item.hours) }; })
+        });
+        if (businessStatusResult.status === 'closed') {
+          poolSummary = Object.assign({}, poolSummary, {
+            originalTips: 0,
+            poolAmount: 0,
+            allocatedAmount: 0,
+            unallocatedAmount: 0,
+            poolCount: 0,
+            aggregateStatus: '无需分配'
+          });
+        }
         return {
           dateKey: dateKey,
           date: new Date(dateKey + 'T00:00:00'),
@@ -759,7 +796,8 @@ var ALLOC_KEY = 'tipout_allocated';
           requiresAttendance: requiresAttendance,
           employeeResults: employeeResults,
           total: total,
-          poolSummary: poolSummary
+          poolSummary: poolSummary,
+          businessStatusResult: businessStatusResult
         };
       });
     }
@@ -780,8 +818,10 @@ var ALLOC_KEY = 'tipout_allocated';
           '\')" onkeydown="activateDailySummaryRow(event, \'' + dateKey + '\')">' +
           '<td><span class="tipout-daily-date"><strong>' + formatTabLabel(row.date) +
           '</strong><small>' + dateKey + ' · ' + row.date.toLocaleDateString('zh-CN', { weekday: 'short' }) + '</small></span></td>' +
+          '<td><span class="tipout-daily-status ' + (row.businessStatusResult.status === 'open' ? 'allocated' : 'closed') + '">' +
+          (row.businessStatusResult.status === 'open' ? '正常营业' : '未营业') + '</span></td>' +
           '<td><span class="tipout-daily-status ' + (row.allocated ? 'allocated' : 'pending') + '">' +
-          row.poolSummary.aggregateStatus + '</span></td>' +
+          (row.allocated ? row.poolSummary.aggregateStatus : (row.businessStatusResult.status === 'closed' ? '无需分配' : row.poolSummary.aggregateStatus)) + '</span></td>' +
           '<td>' + money(row.poolSummary.originalTips) + '</td>' +
           '<td><strong>' + money(row.poolSummary.poolAmount) + '</strong></td>' +
           '<td><strong class="tip-amount--receive">' + (row.allocated ? money(row.poolSummary.allocatedAmount || 0) : '—') + '</strong></td>' +
@@ -892,6 +932,12 @@ var ALLOC_KEY = 'tipout_allocated';
       captureSummaryUiState('', '');
     }
 
+    function handleDateBusinessStatusChange(value) {
+      dateSummaryFilters.businessStatus = value === 'open' || value === 'closed' ? value : '';
+      renderSummaryViews();
+      captureSummaryUiState('', '');
+    }
+
     function updateEmployeeSummarySortHeaders() {
       [['employeeSortEmployee', 'employee'], ['employeeSortHours', 'hours'], ['employeeSortFinalAmount', 'finalAmount']].forEach(function(entry) {
         var button = document.getElementById(entry[0]);
@@ -960,6 +1006,7 @@ var ALLOC_KEY = 'tipout_allocated';
         renderEmployeeReconciliationList(visibleEmployeeSummaryAggregates);
       } else {
         visibleDailySummaryRows = TipOutSummaryUi.filterDailyRowsByAllocationStatus(dailyRows, dateSummaryFilters.allocationStatus);
+        visibleDailySummaryRows = TipOutSummaryUi.filterDailyRowsByBusinessStatus(visibleDailySummaryRows, dateSummaryFilters.businessStatus);
         renderSummaryOverview(visibleDailySummaryRows, allocatedDates);
         visibleEmployeeSummaryAggregates = [];
         document.getElementById('employeeReconciliationList').innerHTML = '';
@@ -1100,6 +1147,20 @@ var ALLOC_KEY = 'tipout_allocated';
     function executeTipAllocationScope(scope) {
       invalidateDayPipelineCache();
       var dates = buildDateRange(scope.startDate, scope.endDate);
+      var statusByDate = Object.create(null);
+      buildDailyDataset(getStoreEmployees()).forEach(function(row) { statusByDate[row.dateKey] = row.businessStatusResult; });
+      var skippedClosedCount = 0;
+      dates = dates.filter(function(dateKey) {
+        var result = statusByDate[dateKey];
+        var allowed = result && result.allocatable;
+        if (!allowed) skippedClosedCount += 1;
+        return allowed;
+      });
+      if (!dates.length) {
+        var closedError = new Error('所选日期均未营业，无法进行小费分配');
+        closedError.allocationStage = 'eligibility';
+        throw closedError;
+      }
       var allocatedDates = getAllocatedDatesForStore(scope.store);
       dates.forEach(function(k) { allocatedDates.add(k); });
       try {
@@ -1139,7 +1200,7 @@ var ALLOC_KEY = 'tipout_allocated';
         renderDailySummaryList();
         setAllocationSubmitting(false);
         closeTipAllocationModal(true);
-        showNotification('小费分配完成，已同步至薪资管理 Tips/SVCW', 'success');
+        showNotification('小费分配完成，未营业日期已自动跳过', 'success');
       } catch (error) {
         setAllocationSubmitting(false);
         if (error && (error.allocationStage === 'write' || error.allocationStage === 'payroll')) {
@@ -1154,7 +1215,7 @@ var ALLOC_KEY = 'tipout_allocated';
           );
           return;
         }
-        showNotification('小费分配失败，请重试', 'error');
+        showNotification(error && error.message ? error.message : '小费分配失败，请重试', 'error');
       }
     }
 
