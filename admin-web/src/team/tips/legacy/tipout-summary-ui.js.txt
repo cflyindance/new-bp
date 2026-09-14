@@ -75,7 +75,7 @@
         : { mode: 'all', ids: [] },
       dateAllocationStatus: ['allocated', 'unallocated'].indexOf(values.dateAllocationStatus) >= 0 ? values.dateAllocationStatus : '',
       dateBusinessStatus: ['open', 'closed'].indexOf(values.dateBusinessStatus) >= 0 ? values.dateBusinessStatus : '',
-      datePayoutStatus: ['pending-allocation', 'pending-payout', 'paid', 'not-required', 'error'].indexOf(values.datePayoutStatus) >= 0 ? values.datePayoutStatus : '',
+      datePayoutStatus: ['pending-payout', 'paid', 'not-required'].indexOf(values.datePayoutStatus) >= 0 ? values.datePayoutStatus : '',
       employeeSortKey: ['employee', 'hours', 'finalAmount'].indexOf(values.employeeSortKey) >= 0 ? values.employeeSortKey : 'finalAmount',
       employeeSortDirection: values.employeeSortDirection === 'asc' ? 'asc' : 'desc',
       activeView: values.activeView === 'employee' ? 'employee' : 'date'

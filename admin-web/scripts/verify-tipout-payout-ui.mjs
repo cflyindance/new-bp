@@ -10,15 +10,17 @@ const manualHours = fs.readFileSync('src/team/tips/legacy/tipout-manual-hours-st
 
 assert.match(summaryTemplate, /<th>发放状态<\/th>/);
 assert.match(summaryTemplate, /id="datePayoutStatusFilter"/);
-for (const option of ['pending-allocation', 'pending-payout', 'paid', 'not-required', 'error']) {
+for (const option of ['pending-payout', 'paid', 'not-required']) {
   assert.match(summaryTemplate, new RegExp(`value="${option}"`));
 }
+assert.doesNotMatch(summaryTemplate, /value="(?:pending-allocation|error)"/);
 for (const id of ['confirmPayoutModal', 'confirmPayoutStore', 'confirmPayoutDate', 'confirmPayoutAmount', 'confirmPayoutEmployees', 'submitConfirmPayoutBtn']) {
   assert.match(summaryTemplate, new RegExp(`id="${id}"`));
 }
 assert.match(summaryProgram, /function payoutViewForRow\(row\)/);
 assert.match(summaryProgram, /function handleDatePayoutStatusChange\(value\)/);
 assert.match(summaryProgram, /payoutViewForRow\(row\)\.key === dateSummaryFilters\.payoutStatus/);
+assert.match(summaryProgram, /return \{ key: 'pending-payout', label: '待发放', className: 'pending', action: false \};/);
 assert.match(summaryProgram, /async function openConfirmPayoutModal\(dateKey, event\)/);
 assert.match(summaryProgram, /async function submitConfirmPayout\(\)/);
 assert.match(summaryProgram, /TipOutDateState\.confirmPayout\(payoutDraft\)/);
