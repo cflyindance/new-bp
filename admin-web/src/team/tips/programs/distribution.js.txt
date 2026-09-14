@@ -810,19 +810,6 @@ var ALLOC_KEY = 'tipout_allocated';
       return !hasConfirmedAmount || cents == null ? '—' : money(cents / 100);
     }
 
-    function renderEmployeeSummaryMetrics(aggregates) {
-      var summary = TipOutSummaryUi.summarizeEmployeeAggregates(aggregates);
-      document.getElementById('employeeMetricCount').textContent = summary.employeeCount + ' 人';
-      document.getElementById('employeeMetricFinal').textContent = summary.hasConfirmedAmount
-        ? money(summary.finalAmountCents / 100)
-        : money(0);
-      document.getElementById('employeeMetricCompleted').textContent = summary.completedCount + ' 人';
-      document.getElementById('employeeMetricPending').textContent = summary.pendingCount + ' 人';
-      var exceptions = document.getElementById('employeeMetricExceptions');
-      exceptions.hidden = summary.exceptionCount === 0;
-      exceptions.textContent = summary.exceptionCount ? '另有异常 ' + summary.exceptionCount + ' 人' : '';
-    }
-
     function populateEmployeeSummaryRoleFilter(aggregates) {
       var select = document.getElementById('employeeSummaryRoleFilter');
       if (!select) return;
@@ -967,7 +954,6 @@ var ALLOC_KEY = 'tipout_allocated';
           statuses: employeeSummaryFilters.statuses
         };
         visibleEmployeeSummaryAggregates = TipOutSummaryUi.filterAndSortEmployeeAggregates(allAggregates, employeeFilters, employeeSummarySort);
-        renderEmployeeSummaryMetrics(visibleEmployeeSummaryAggregates);
         updateEmployeeSummarySortHeaders();
         renderEmployeeReconciliationList(visibleEmployeeSummaryAggregates);
       } else {

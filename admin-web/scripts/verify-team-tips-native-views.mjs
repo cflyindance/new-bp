@@ -152,33 +152,17 @@ if ((distributionTemplate.match(/id="dateTaskTab"/g) || []).length !== 1) failur
 if ((distributionTemplate.match(/id="employeeReconciliationTab"/g) || []).length !== 1) failures.push("distribution: employee reconciliation tab must be unique");
 for (const id of [
   "dateAllocationStatusFilter", "employeeSummaryRoleFilter", "employeeSummaryEmployeeFilter", "employeeSummaryEmployeeOptions", "employeeSummaryStatusFilter",
-  "employeeMetricCount", "employeeMetricFinal", "employeeMetricCompleted", "employeeMetricPending",
   "employeeSortEmployee", "employeeSortHours", "employeeSortFinalAmount",
 ]) {
   if ((distributionTemplate.match(new RegExp(`id="${id}"`, "g")) || []).length !== 1) failures.push(`distribution: ${id} must be unique`);
 }
-for (const copy of [
-  "当前筛选员工数",
-  "已确认最终获得合计",
-  "已完成人数",
-  "待确认人数",
-  "仅统计已确认且校验通过的结果",
+for (const token of [
+  "employeeSummaryMetrics", "employeeMetricCount", "employeeMetricFinal", "employeeMetricCompleted", "employeeMetricPending", "employeeMetricExceptions",
+  "当前筛选员工数", "已确认最终获得合计", "已完成人数", "待确认人数", "仅统计已确认且校验通过的结果",
 ]) {
-  if (!distributionTemplate.includes(copy)) failures.push(`distribution: employee metric copy missing ${copy}`);
+  if (distributionTemplate.includes(token)) failures.push(`distribution: removed employee metric returned ${token}`);
 }
-const employeeMetricBlock = distributionTemplate.slice(
-  distributionTemplate.indexOf('id="employeeSummaryMetrics"'),
-  distributionTemplate.indexOf('<div class="tipout-table-wrap">', distributionTemplate.indexOf('id="employeeSummaryMetrics"')),
-);
-for (const obsoleteCopy of [">员工人数<", ">最终获得合计<", ">已完成<", ">待处理<"]) {
-  if (employeeMetricBlock.includes(obsoleteCopy)) failures.push(`distribution: ambiguous employee metric copy remains ${obsoleteCopy}`);
-}
-if (!distributionProgram.includes("money(summary.finalAmountCents / 100)")) failures.push("distribution: confirmed employee total must use store money formatter");
-if (!distributionProgram.includes("money(0)")) failures.push("distribution: empty confirmed employee total must render a formatted zero");
-if (!distributionProgram.includes("summary.employeeCount + ' 人'")) failures.push("distribution: employee count must include the 人 unit");
-if (!distributionProgram.includes("summary.completedCount + ' 人'")) failures.push("distribution: completed count must include the 人 unit");
-if (!distributionProgram.includes("summary.pendingCount + ' 人'")) failures.push("distribution: pending count must include the 人 unit");
-if (!pageCss.includes(".tipout-page-summary .tipout-metric-strip[hidden]")) failures.push("distribution: hidden metric strips must not remain visible or readable");
+if (distributionProgram.includes("renderEmployeeSummaryMetrics") || distributionProgram.includes("employeeMetric")) failures.push("distribution: removed employee metric renderer returned");
 const employeeTableHead = distributionTemplate.slice(
   distributionTemplate.indexOf('<table class="data-table tipout-summary-table tipout-employee-table">'),
   distributionTemplate.indexOf('</thead>', distributionTemplate.indexOf('<table class="data-table tipout-summary-table tipout-employee-table">')),
