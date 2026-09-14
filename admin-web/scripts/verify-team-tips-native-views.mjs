@@ -168,6 +168,26 @@ if (!distributionProgram.includes("summary.employeeCount + ' 人'")) failures.pu
 if (!distributionProgram.includes("summary.completedCount + ' 人'")) failures.push("distribution: completed count must include the 人 unit");
 if (!distributionProgram.includes("summary.pendingCount + ' 人'")) failures.push("distribution: pending count must include the 人 unit");
 if (!pageCss.includes(".tipout-page-summary .tipout-metric-strip[hidden]")) failures.push("distribution: hidden metric strips must not remain visible or readable");
+const employeeTableHead = distributionTemplate.slice(
+  distributionTemplate.indexOf('<table class="data-table tipout-summary-table tipout-employee-table">'),
+  distributionTemplate.indexOf('</thead>', distributionTemplate.indexOf('<table class="data-table tipout-summary-table tipout-employee-table">')),
+);
+const employeeAmountHeaders = ["分配前小费", "扣除", "分配获得", "分配后小费"];
+let previousEmployeeAmountHeader = -1;
+for (const header of employeeAmountHeaders) {
+  const index = employeeTableHead.indexOf(header);
+  if (index < 0) failures.push(`distribution: employee amount header missing ${header}`);
+  if (index >= 0 && index <= previousEmployeeAmountHeader) failures.push(`distribution: employee amount headers out of order at ${header}`);
+  previousEmployeeAmountHeader = index;
+}
+for (const obsoleteHeader of [">原有小费<", ">净调整<", ">最终获得 "]) {
+  if (employeeTableHead.includes(obsoleteHeader)) failures.push(`distribution: obsolete employee amount header remains ${obsoleteHeader}`);
+}
+for (const field of ["aggregate.beforeCents", "aggregate.deductedCents", "aggregate.receivedCents", "aggregate.finalAmountCents"]) {
+  if (!distributionProgram.includes(field)) failures.push(`distribution: employee row amount field missing ${field}`);
+}
+if (!distributionProgram.includes('class="tip-amount--deduct"')) failures.push("distribution: employee deduction semantic style missing");
+if (!distributionProgram.includes('class="tip-amount--receive"')) failures.push("distribution: employee received semantic style missing");
 for (const token of ['id="detailRuleFilter"', 'id="detailRuleFilterAll"', 'id="detailRuleFilterOptions"', '规则名称', 'toggleAllDetailRules(this.checked)']) {
   if (!nativeDetail.includes(token)) failures.push(`detail: rule filter contract missing ${token}`);
 }
@@ -190,9 +210,6 @@ assert.deepEqual(JSON.parse(JSON.stringify(detailRuleFilter.buildOptions(filterR
 assert.deepEqual(JSON.parse(JSON.stringify(detailRuleFilter.filterRules(filterRulesFixture, ['rule-b']))).map(item => item.id), ['rule-b']);
 assert.equal(detailRuleFilter.sameRuleSet([{ ruleId: 'rule-b' }, { ruleId: 'rule-a' }], filterRulesFixture.slice(0, 2)), true);
 assert.equal(detailRuleFilter.sameRuleSet([{ ruleId: 'rule-a' }], filterRulesFixture.slice(0, 2)), false);
-for (const removedHeading of [">分配前</th>", ">扣除</th>", ">分配获得</th>", ">实际获得</th>"]) {
-  if (distributionTemplate.includes(removedHeading)) failures.push(`employee summary: legacy process column returned ${removedHeading}`);
-}
 const storeScopeRowIndex = distributionTemplate.indexOf('class="tipout-store-scope-row"');
 const viewFilterRowIndex = distributionTemplate.indexOf('class="tipout-view-filter-row"');
 const metricStripIndex = distributionTemplate.indexOf('class="tipout-metric-strip"');
