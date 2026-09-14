@@ -1,5 +1,6 @@
 function detailNumber(value) { return Number(value) || 0; }
     var employeeDetailViewState = null;
+    var employeeDetailDateSort = 'desc';
     var employeeDetailEmailSnapshot = null;
     var employeeDetailPreparedEmailContent = null;
     function detailMoney(value) {
@@ -340,6 +341,27 @@ function detailNumber(value) { return Number(value) || 0; }
       setDetailText('employeeDetailAfter', detailMoney(summary.after));
     }
 
+    function syncEmployeeDetailDateSortHeader() {
+      var descending = employeeDetailDateSort === 'desc';
+      var header = document.getElementById('employeeDetailDateSortHeader');
+      var button = document.getElementById('employeeDetailDateSortButton');
+      var icon = document.getElementById('employeeDetailDateSortIcon');
+      if (header) header.setAttribute('aria-sort', descending ? 'descending' : 'ascending');
+      if (icon) icon.textContent = descending ? '↓' : '↑';
+      if (button) button.setAttribute('aria-label', descending
+        ? '日期，当前倒序，点击切换为顺序'
+        : '日期，当前顺序，点击切换为倒序');
+    }
+
+    function toggleEmployeeDetailDateSort() {
+      employeeDetailDateSort = employeeDetailDateSort === 'desc' ? 'asc' : 'desc';
+      if (employeeDetailViewState && employeeDetailViewState.snapshot) {
+        renderEmployeeDetailRange(employeeDetailViewState.snapshot, 'sort');
+      } else {
+        syncEmployeeDetailDateSortHeader();
+      }
+    }
+
     function renderEmployeeDetailRange(snapshot, changedSide) {
       var startInput = document.getElementById('employeeDetailStartDate');
       var endInput = document.getElementById('employeeDetailEndDate');
@@ -348,8 +370,10 @@ function detailNumber(value) { return Number(value) || 0; }
       startInput.value = range.start;
       endInput.value = range.end;
       var attendance = attendanceInput ? attendanceInput.value : '全部状态';
-      var rows = filterEmployeeDetailRows(snapshot.dailyRows, range.start, range.end, attendance);
+      var filteredRows = filterEmployeeDetailRows(snapshot.dailyRows, range.start, range.end, attendance);
+      var rows = TipOutSummaryUi.sortEmployeeDetailRows(filteredRows, employeeDetailDateSort);
       employeeDetailViewState = { snapshot: snapshot, range: range, attendance: attendance, rows: rows.slice() };
+      syncEmployeeDetailDateSortHeader();
       renderEmployeeDetailSummary(summarizeEmployeeDetailRows(rows));
       renderEmployeeDetailRows(rows);
       var table = document.getElementById('employeeDetailTable');
@@ -363,6 +387,7 @@ function detailNumber(value) { return Number(value) || 0; }
     }
 
     function renderEmployeeReconciliationDetail(snapshot) {
+      employeeDetailDateSort = 'desc';
       setDetailText('employeeDetailName', snapshot.name || '—');
       setDetailText('employeeDetailRole', employeeDetailRoleLabel(snapshot.role));
       var startInput = document.getElementById('employeeDetailStartDate');

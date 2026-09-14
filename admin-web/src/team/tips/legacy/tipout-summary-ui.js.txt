@@ -218,6 +218,31 @@
     });
   }
 
+  function normalizeEmployeeDetailDateSort(value) {
+    return value === 'asc' ? 'asc' : 'desc';
+  }
+
+  function validEmployeeDetailDateKey(value) {
+    var key = String(value || '');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) return '';
+    var date = new Date(key + 'T00:00:00');
+    if (isNaN(date.getTime())) return '';
+    var normalized = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
+    return normalized === key ? key : '';
+  }
+
+  function sortEmployeeDetailRows(rows, direction) {
+    var multiplier = normalizeEmployeeDetailDateSort(direction) === 'asc' ? 1 : -1;
+    return (Array.isArray(rows) ? rows : []).map(function(row, index) {
+      return { row: row, index: index, dateKey: validEmployeeDetailDateKey(row && row.dateKey) };
+    }).sort(function(a, b) {
+      if (!a.dateKey && !b.dateKey) return a.index - b.index;
+      if (!a.dateKey) return 1;
+      if (!b.dateKey) return -1;
+      return a.dateKey.localeCompare(b.dateKey) * multiplier || a.index - b.index;
+    }).map(function(item) { return item.row; });
+  }
+
   function resolveSummaryView(historyState, queryView) {
     if (queryView != null && queryView !== '') return normalizeSummaryView(queryView);
     var saved = readSummaryHistoryState(historyState);
@@ -311,6 +336,8 @@
     aggregateEmployeeDailyDatasets: aggregateEmployeeDailyDatasets,
     summarizeEmployeeAggregates: summarizeEmployeeAggregates,
     filterAndSortEmployeeAggregates: filterAndSortEmployeeAggregates,
+    normalizeEmployeeDetailDateSort: normalizeEmployeeDetailDateSort,
+    sortEmployeeDetailRows: sortEmployeeDetailRows,
     normalizeSummaryView: normalizeSummaryView,
     buildSummaryViewHref: buildSummaryViewHref,
     resolveSummaryView: resolveSummaryView,

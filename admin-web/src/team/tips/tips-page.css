@@ -2728,7 +2728,8 @@ select.form-control {
   display: none;
 }
 
-.tipout-page-summary .tipout-date-sort-button {
+.tipout-page-summary .tipout-date-sort-button,
+.tipout-page-employee-reconciliation-detail .tipout-date-sort-button {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -2741,11 +2742,14 @@ select.form-control {
 }
 
 .tipout-page-summary .tipout-date-sort-button:hover,
-.tipout-page-summary .tipout-date-sort-button:focus-visible {
+.tipout-page-summary .tipout-date-sort-button:focus-visible,
+.tipout-page-employee-reconciliation-detail .tipout-date-sort-button:hover,
+.tipout-page-employee-reconciliation-detail .tipout-date-sort-button:focus-visible {
   color: var(--text-primary);
 }
 
-.tipout-page-summary .tipout-date-sort-button:focus-visible {
+.tipout-page-summary .tipout-date-sort-button:focus-visible,
+.tipout-page-employee-reconciliation-detail .tipout-date-sort-button:focus-visible {
   outline: 2px solid var(--primary-color, #111827);
   outline-offset: 3px;
   border-radius: 2px;

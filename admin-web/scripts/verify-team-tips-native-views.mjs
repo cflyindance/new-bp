@@ -119,6 +119,17 @@ const summaryUiContext = { window: {} };
 vm.createContext(summaryUiContext);
 vm.runInContext(fs.readFileSync("src/team/tips/legacy/tipout-summary-ui.js.txt", "utf8"), summaryUiContext);
 const summaryUi = summaryUiContext.window.TipOutSummaryUi;
+assert.equal(summaryUi.normalizeEmployeeDetailDateSort("asc"), "asc");
+assert.equal(summaryUi.normalizeEmployeeDetailDateSort("unknown"), "desc");
+const detailRowsToSort = [
+  { id: "old", dateKey: "2026-08-12" },
+  { id: "invalid-a", dateKey: "" },
+  { id: "new", dateKey: "2026-09-14" },
+  { id: "invalid-b", dateKey: "not-a-date" },
+];
+assert.deepEqual(summaryUi.sortEmployeeDetailRows(detailRowsToSort, "desc").map(row => row.id), ["new", "old", "invalid-a", "invalid-b"]);
+assert.deepEqual(summaryUi.sortEmployeeDetailRows(detailRowsToSort, "asc").map(row => row.id), ["old", "new", "invalid-a", "invalid-b"]);
+assert.deepEqual(detailRowsToSort.map(row => row.id), ["old", "invalid-a", "new", "invalid-b"]);
 assert.equal(summaryUi.normalizeSummaryView("employee"), "employee");
 assert.equal(summaryUi.normalizeSummaryView("date"), "date");
 assert.equal(summaryUi.normalizeSummaryView("unknown"), "date");
@@ -455,6 +466,23 @@ if (!pendingValueHelper) {
 const employeeDetailTemplate = fs.readFileSync("src/team/tips/templates/employee-reconciliation.html", "utf8");
 const employeeDetailProgram = fs.readFileSync("src/team/tips/programs/employee-reconciliation.js.txt", "utf8");
 const detailsProgram = fs.readFileSync("src/team/tips/programs/details.js.txt", "utf8");
+for (const token of [
+  'id="employeeDetailDateSortHeader" aria-sort="descending"',
+  'id="employeeDetailDateSortButton"',
+  'id="employeeDetailDateSortIcon" aria-hidden="true">↓',
+  'data-native-onclick="toggleEmployeeDetailDateSort()"',
+]) {
+  if (!employeeDetailTemplate.includes(token)) failures.push(`employee reconciliation detail: date sort template contract missing ${token}`);
+}
+for (const token of [
+  "var employeeDetailDateSort = 'desc'",
+  "function toggleEmployeeDetailDateSort()",
+  "function syncEmployeeDetailDateSortHeader()",
+  "TipOutSummaryUi.sortEmployeeDetailRows(filteredRows, employeeDetailDateSort)",
+  "employeeDetailDateSort = 'desc'",
+]) {
+  if (!employeeDetailProgram.includes(token)) failures.push(`employee reconciliation detail: date sort behavior missing ${token}`);
+}
 for (const token of ["← 返回员工分配汇总", "分配汇总日期范围", "员工分配汇总金额概览", "员工逐日分配明细", "当前筛选条件下暂无分配明细", "无法展示分配汇总明细"]) {
   if (!employeeDetailTemplate.includes(token)) failures.push(`employee detail: renamed copy missing ${token}`);
 }
