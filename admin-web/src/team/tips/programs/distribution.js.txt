@@ -1293,6 +1293,7 @@ var ALLOC_KEY = 'tipout_allocated';
         error.allocationStage = 'payroll';
         throw error;
       }
+      return { successCount: dates.length, paidSkippedCount: skippedPaidCount, closedSkippedCount: skippedClosedCount };
     }
 
     function submitTipAllocationScope() {
@@ -1329,7 +1330,6 @@ var ALLOC_KEY = 'tipout_allocated';
         }
         showNotification(error && error.message ? error.message : '小费分配失败，请重试', 'error');
       }
-      return { successCount: dates.length, paidSkippedCount: skippedPaidCount, closedSkippedCount: skippedClosedCount };
     }
 
     function doAllocateTips() {

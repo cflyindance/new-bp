@@ -517,6 +517,14 @@ for (const token of ["tipAllocationModal", "allocationStore", "allocationDateSta
 for (const token of ["openTipAllocationModal", "closeTipAllocationModal", "submitTipAllocationScope", "executeTipAllocationScope", "allocationSubmitting"]) {
   if (!distributionProgram.includes(token)) failures.push(`distribution: allocation scope behavior missing ${token}`);
 }
+const allocationExecutorStart = distributionProgram.indexOf("function executeTipAllocationScope(scope)");
+const allocationExecutorEnd = distributionProgram.indexOf("function submitTipAllocationScope()", allocationExecutorStart);
+const allocationExecutor = allocationExecutorStart >= 0 && allocationExecutorEnd > allocationExecutorStart
+  ? distributionProgram.slice(allocationExecutorStart, allocationExecutorEnd)
+  : "";
+if (!allocationExecutor || !allocationExecutor.includes("return { successCount: dates.length, paidSkippedCount: skippedPaidCount, closedSkippedCount: skippedClosedCount };")) {
+  failures.push("distribution: allocation executor must return batch result counters");
+}
 const allocationValidator = distributionProgram.match(/function validateAllocationScope\(scope\)\s*\{[\s\S]*?\n\s*\}/)?.[0];
 if (!allocationValidator) {
   failures.push("distribution: allocation scope validator missing");
