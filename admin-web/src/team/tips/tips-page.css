@@ -2555,6 +2555,46 @@ select.form-control {
 .tipout-page-summary .tipout-multi-select-empty { color: var(--text-tertiary); cursor: default; }
 .tipout-page-summary .multi-select.is-disabled .multi-select-input { opacity: .6; pointer-events: none; }
 
+.tipout-employee-role-summary {
+  margin-bottom: 14px;
+  padding: 16px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  background: #fff;
+}
+.tipout-role-summary-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.tipout-role-summary-heading h2 { margin: 0; font-size: 16px; }
+.tipout-role-summary-heading span { color: var(--text-tertiary); font-size: 12px; }
+.tipout-role-summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.tipout-role-summary-card {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .2s, background .2s, box-shadow .2s;
+}
+.tipout-role-summary-card:hover { border-color: var(--primary); }
+.tipout-role-summary-card:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.tipout-role-summary-card.is-active { border-color: var(--primary); background: rgba(22, 119, 255, 0.04); box-shadow: 0 0 0 1px rgba(22, 119, 255, 0.08); }
+.tipout-role-summary-title { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.tipout-role-summary-title small { color: var(--text-tertiary); font-weight: 500; }
+.tipout-role-summary-card > span:not(.tipout-role-summary-title):not(.tipout-role-summary-status) { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.tipout-role-summary-card > span > small { color: var(--text-tertiary); font-size: 12px; }
+.tipout-role-summary-card > span > strong { overflow: hidden; font-size: 15px; text-overflow: ellipsis; white-space: nowrap; }
+.tipout-role-summary-status { grid-column: 1 / -1; width: max-content; padding: 2px 7px; border-radius: 10px; background: #fff4df; color: #ad6800; font-size: 11px; }
+.tipout-role-summary-empty { padding: 24px; color: var(--text-tertiary); text-align: center; }
+
+@media (max-width: 1400px) { .tipout-role-summary-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 1000px) { .tipout-role-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .tipout-role-summary-grid { grid-template-columns: minmax(0, 1fr); } }
+
 @media (min-width: 1280px) {
   .tipout-page-summary .tipout-view-filter-row { flex-wrap: nowrap; }
   .tipout-page-summary .tipout-view-filter-group { flex-wrap: nowrap; }

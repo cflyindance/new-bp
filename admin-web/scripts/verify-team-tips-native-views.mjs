@@ -486,6 +486,22 @@ for (const token of [">分配汇总</button>", ">员工对账</button>"]) {
 for (const token of ["employeeReconciliationTab", "employeeReconciliationPanel", "employeeReconciliationList", "dateTaskTab", "setSummaryView('employee')"]) {
   if (!distributionTemplate.includes(token)) failures.push(`distribution: technical contract changed ${token}`);
 }
+for (const token of ['id="employeeRoleSummary"', 'id="employeeRoleSummaryCards"', 'id="employeeRoleSummaryEmpty"', '角色汇总']) {
+  if (!distributionTemplate.includes(token)) failures.push(`distribution: role summary markup missing ${token}`);
+}
+for (const token of [
+  'function renderEmployeeRoleSummaryCards(roleAggregates)',
+  'function toggleEmployeeRoleSummary(role)',
+  'TipOutSummaryUi.aggregateRoleDailyDatasets(dailyRows',
+  "employeeSummaryFilters.role === role ? '' : role",
+  'handleEmployeeSummaryRoleChange()',
+  'aria-pressed',
+]) {
+  if (!distributionProgram.includes(token)) failures.push(`distribution: role summary behavior missing ${token}`);
+}
+for (const token of ['.tipout-employee-role-summary', '.tipout-role-summary-grid', '.tipout-role-summary-card', '.tipout-role-summary-card.is-active']) {
+  if (!pageCss.includes(token)) failures.push(`distribution: role summary style missing ${token}`);
+}
 for (const token of ["Date Tip Allocation Summary", "DateTipAllocationSummary_", "Employee Tip Allocation Summary", "EmployeeTipAllocationSummary_", "正在生成员工分配汇总", "员工分配汇总 CSV 导出成功", "员工分配汇总 PDF 导出成功"]) {
   if (!distributionExport.includes(token)) failures.push(`distribution export: renamed contract missing ${token}`);
 }

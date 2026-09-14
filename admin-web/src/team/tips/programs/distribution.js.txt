@@ -1023,6 +1023,37 @@ var ALLOC_KEY = 'tipout_allocated';
       captureSummaryUiState('', '');
     }
 
+    function renderEmployeeRoleSummaryCards(roleAggregates) {
+      var container = document.getElementById('employeeRoleSummaryCards');
+      var empty = document.getElementById('employeeRoleSummaryEmpty');
+      if (!container || !empty) return;
+      empty.hidden = roleAggregates.length > 0;
+      container.hidden = roleAggregates.length === 0;
+      container.innerHTML = roleAggregates.map(function(item) {
+        var active = employeeSummaryFilters.role === item.role;
+        var status = item.status === 'partial'
+          ? '<span class="tipout-role-summary-status">部分待分配</span>'
+          : item.status === 'pending' ? '<span class="tipout-role-summary-status">待分配</span>' : '';
+        return '<button type="button" class="tipout-role-summary-card' + (active ? ' is-active' : '') +
+          '" aria-pressed="' + active + '" data-role="' + escapeSummaryHtml(item.role) +
+          '" onclick="toggleEmployeeRoleSummary(this.dataset.role)">' +
+          '<span class="tipout-role-summary-title"><strong>' + escapeSummaryHtml(item.role) + '</strong><small>' + item.employeeCount + ' 人</small></span>' +
+          status +
+          '<span><small>分配前小费</small><strong>' + formatEmployeeSummaryMoney(item.beforeCents, true) + '</strong></span>' +
+          '<span><small>扣除</small><strong class="tip-amount--deduct">' + formatEmployeeSummaryMoney(item.deductedCents, item.hasConfirmedAmount) + '</strong></span>' +
+          '<span><small>分配获得</small><strong class="tip-amount--receive">' + formatEmployeeSummaryMoney(item.receivedCents, item.hasConfirmedAmount) + '</strong></span>' +
+          '<span><small>分配后小费</small><strong>' + formatEmployeeSummaryMoney(item.finalAmountCents, item.hasConfirmedAmount) + '</strong></span>' +
+          '</button>';
+      }).join('');
+    }
+
+    function toggleEmployeeRoleSummary(role) {
+      employeeSummaryFilters.role = employeeSummaryFilters.role === role ? '' : role;
+      var select = document.getElementById('employeeSummaryRoleFilter');
+      if (select) select.value = employeeSummaryFilters.role;
+      handleEmployeeSummaryRoleChange();
+    }
+
     function renderEmployeeReconciliationList(aggregates) {
       var container = document.getElementById('employeeReconciliationList');
       var empty = document.getElementById('employeeReconciliationEmpty');
@@ -1067,6 +1098,13 @@ var ALLOC_KEY = 'tipout_allocated';
           statuses: employeeSummaryFilters.statuses
         };
         visibleEmployeeSummaryAggregates = TipOutSummaryUi.filterAndSortEmployeeAggregates(allAggregates, employeeFilters, employeeSummarySort);
+        var eligibleIds = visibleEmployeeSummaryAggregates.map(function(item) { return item.employeeId; });
+        var roleAggregateOptions = { role: employeeSummaryFilters.role };
+        if (employeeSummaryFilters.employeeScope.mode === 'subset' || employeeSummaryFilters.statuses.length) {
+          roleAggregateOptions.employeeIds = eligibleIds;
+        }
+        var roleAggregates = TipOutSummaryUi.aggregateRoleDailyDatasets(dailyRows, roleAggregateOptions);
+        renderEmployeeRoleSummaryCards(roleAggregates);
         updateEmployeeSummarySortHeaders();
         renderEmployeeReconciliationList(visibleEmployeeSummaryAggregates);
       } else {
@@ -1077,6 +1115,7 @@ var ALLOC_KEY = 'tipout_allocated';
         });
         renderSummaryOverview(visibleDailySummaryRows, allocatedDates);
         visibleEmployeeSummaryAggregates = [];
+        renderEmployeeRoleSummaryCards([]);
         document.getElementById('employeeReconciliationList').innerHTML = '';
         document.getElementById('employeeReconciliationEmpty').hidden = true;
         renderDateTaskList(visibleDailySummaryRows);
