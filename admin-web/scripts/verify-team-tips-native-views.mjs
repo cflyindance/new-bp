@@ -119,6 +119,17 @@ const summaryUiContext = { window: {} };
 vm.createContext(summaryUiContext);
 vm.runInContext(fs.readFileSync("src/team/tips/legacy/tipout-summary-ui.js.txt", "utf8"), summaryUiContext);
 const summaryUi = summaryUiContext.window.TipOutSummaryUi;
+assert.equal(summaryUi.normalizeEmployeeDetailDateSort("asc"), "asc");
+assert.equal(summaryUi.normalizeEmployeeDetailDateSort("unknown"), "desc");
+const detailRowsToSort = [
+  { id: "old", dateKey: "2026-08-12" },
+  { id: "invalid-a", dateKey: "" },
+  { id: "new", dateKey: "2026-09-14" },
+  { id: "invalid-b", dateKey: "not-a-date" },
+];
+assert.deepEqual(summaryUi.sortEmployeeDetailRows(detailRowsToSort, "desc").map(row => row.id), ["new", "old", "invalid-a", "invalid-b"]);
+assert.deepEqual(summaryUi.sortEmployeeDetailRows(detailRowsToSort, "asc").map(row => row.id), ["old", "new", "invalid-a", "invalid-b"]);
+assert.deepEqual(detailRowsToSort.map(row => row.id), ["old", "invalid-a", "new", "invalid-b"]);
 assert.equal(summaryUi.normalizeSummaryView("employee"), "employee");
 assert.equal(summaryUi.normalizeSummaryView("date"), "date");
 assert.equal(summaryUi.normalizeSummaryView("unknown"), "date");
@@ -129,6 +140,29 @@ assert.deepEqual(JSON.parse(JSON.stringify(summaryUi.normalizeEmployeeScope(["a"
 assert.deepEqual(JSON.parse(JSON.stringify(summaryUi.reconcileEmployeeScope({ mode: "subset", ids: ["a", "x"] }, ["a", "b"]))), { mode: "subset", ids: ["a"] });
 assert.deepEqual(summaryUi.filterDailyRowsByAllocationStatus([{ allocated: true }, { allocated: false }], "allocated").map(row => row.allocated), [true]);
 assert.deepEqual(summaryUi.filterDailyRowsByAllocationStatus([{ allocated: true }, { allocated: false }], "unallocated").map(row => row.allocated), [false]);
+assert.equal(summaryUi.employeeAllocationStatus([{ allocated: true }, { allocated: true }]), "已完成");
+assert.equal(summaryUi.employeeAllocationStatus([{ allocated: true }, { allocated: false }]), "部分待分配");
+assert.equal(summaryUi.employeeAllocationStatus([{ allocated: false }, { allocated: false }]), "待分配");
+assert.equal(summaryUi.employeeAllocationStatus([{ allocated: true, allocationValidationError: "金额异常" }]), "已完成");
+assert.equal(summaryUi.normalizeEmployeeAllocationStatusFilter("部分待分配"), "部分待分配");
+assert.equal(summaryUi.normalizeEmployeeAllocationStatusFilter("待处理"), "");
+assert.equal(summaryUi.normalizeEmployeeAllocationStatusFilter("异常"), "");
+const allocationStatusEmployees = [
+  { employeeId: "complete", name: "Complete", roles: ["Server"], status: "已完成", finalAmountCents: 300 },
+  { employeeId: "partial", name: "Partial", roles: ["Server"], status: "部分待分配", finalAmountCents: 200 },
+  { employeeId: "pending", name: "Pending", roles: ["Server"], status: "待分配", finalAmountCents: 100 },
+];
+for (const status of ["已完成", "部分待分配", "待分配"]) {
+  assert.deepEqual(
+    summaryUi.filterAndSortEmployeeAggregates(allocationStatusEmployees, { statuses: [status] }, { key: "employee", direction: "asc" }).map(item => item.status),
+    [status]
+  );
+}
+assert.equal(summaryUi.aggregateEmployeeDailyDatasets([
+  { dateKey: "2026-09-01", allocated: false, employeeResults: [
+    { employeeId: "range-employee", name: "Range", role: "Server", hours: 0, before: 1, deducted: 0, received: 0, after: 1, clockStatus: "未打卡" },
+  ] },
+])[0].status, "待分配");
 assert.deepEqual(summaryUi.filterAndSortEmployeeAggregates([
   { employeeId: "a", name: "A", roles: ["Server"], status: "已完成", finalAmountCents: 100 },
   { employeeId: "b", name: "B", roles: ["Busser"], status: "已完成", finalAmountCents: 200 },
@@ -141,11 +175,47 @@ if ((distributionTemplate.match(/id="dateTaskTab"/g) || []).length !== 1) failur
 if ((distributionTemplate.match(/id="employeeReconciliationTab"/g) || []).length !== 1) failures.push("distribution: employee reconciliation tab must be unique");
 for (const id of [
   "dateAllocationStatusFilter", "employeeSummaryRoleFilter", "employeeSummaryEmployeeFilter", "employeeSummaryEmployeeOptions", "employeeSummaryStatusFilter",
-  "employeeMetricCount", "employeeMetricFinal", "employeeMetricCompleted", "employeeMetricPending",
   "employeeSortEmployee", "employeeSortHours", "employeeSortFinalAmount",
 ]) {
   if ((distributionTemplate.match(new RegExp(`id="${id}"`, "g")) || []).length !== 1) failures.push(`distribution: ${id} must be unique`);
 }
+for (const token of [
+  "employeeSummaryMetrics", "employeeMetricCount", "employeeMetricFinal", "employeeMetricCompleted", "employeeMetricPending", "employeeMetricExceptions",
+  "当前筛选员工数", "已确认最终获得合计", "已完成人数", "待确认人数", "仅统计已确认且校验通过的结果",
+]) {
+  if (distributionTemplate.includes(token)) failures.push(`distribution: removed employee metric returned ${token}`);
+}
+if (distributionProgram.includes("renderEmployeeSummaryMetrics") || distributionProgram.includes("employeeMetric")) failures.push("distribution: removed employee metric renderer returned");
+const employeeTableHead = distributionTemplate.slice(
+  distributionTemplate.indexOf('<table class="data-table tipout-summary-table tipout-employee-table">'),
+  distributionTemplate.indexOf('</thead>', distributionTemplate.indexOf('<table class="data-table tipout-summary-table tipout-employee-table">')),
+);
+if (!distributionTemplate.includes('for="employeeSummaryStatusFilter">分配状态</label>')) failures.push("distribution: employee allocation status filter label missing");
+for (const option of ['<option value="已完成">已完成</option>', '<option value="部分待分配">部分待分配</option>', '<option value="待分配">待分配</option>']) {
+  if (!distributionTemplate.includes(option)) failures.push(`distribution: employee allocation status option missing ${option}`);
+}
+if (!employeeTableHead.includes('<th>分配状态</th>')) failures.push("distribution: employee allocation status table header missing");
+for (const obsoleteOption of ['<option value="待处理">待处理</option>', '<option value="异常">异常</option>']) {
+  if (distributionTemplate.includes(obsoleteOption)) failures.push(`distribution: obsolete employee allocation status option remains ${obsoleteOption}`);
+}
+if (!distributionProgram.includes("normalizeEmployeeAllocationStatusFilter(saved.employeeSummaryStatus)")) failures.push("distribution: restored employee allocation status must be normalized");
+if (!distributionProgram.includes("normalizeEmployeeAllocationStatusFilter(status && status.value)")) failures.push("distribution: live employee allocation status must be normalized");
+const employeeAmountHeaders = ["分配前小费", "扣除", "分配获得", "分配后小费"];
+let previousEmployeeAmountHeader = -1;
+for (const header of employeeAmountHeaders) {
+  const index = employeeTableHead.indexOf(header);
+  if (index < 0) failures.push(`distribution: employee amount header missing ${header}`);
+  if (index >= 0 && index <= previousEmployeeAmountHeader) failures.push(`distribution: employee amount headers out of order at ${header}`);
+  previousEmployeeAmountHeader = index;
+}
+for (const obsoleteHeader of [">原有小费<", ">净调整<", ">最终获得 "]) {
+  if (employeeTableHead.includes(obsoleteHeader)) failures.push(`distribution: obsolete employee amount header remains ${obsoleteHeader}`);
+}
+for (const field of ["aggregate.beforeCents", "aggregate.deductedCents", "aggregate.receivedCents", "aggregate.finalAmountCents"]) {
+  if (!distributionProgram.includes(field)) failures.push(`distribution: employee row amount field missing ${field}`);
+}
+if (!distributionProgram.includes('class="tip-amount--deduct"')) failures.push("distribution: employee deduction semantic style missing");
+if (!distributionProgram.includes('class="tip-amount--receive"')) failures.push("distribution: employee received semantic style missing");
 for (const token of ['id="detailRuleFilter"', 'id="detailRuleFilterAll"', 'id="detailRuleFilterOptions"', '规则名称', 'toggleAllDetailRules(this.checked)']) {
   if (!nativeDetail.includes(token)) failures.push(`detail: rule filter contract missing ${token}`);
 }
@@ -168,9 +238,6 @@ assert.deepEqual(JSON.parse(JSON.stringify(detailRuleFilter.buildOptions(filterR
 assert.deepEqual(JSON.parse(JSON.stringify(detailRuleFilter.filterRules(filterRulesFixture, ['rule-b']))).map(item => item.id), ['rule-b']);
 assert.equal(detailRuleFilter.sameRuleSet([{ ruleId: 'rule-b' }, { ruleId: 'rule-a' }], filterRulesFixture.slice(0, 2)), true);
 assert.equal(detailRuleFilter.sameRuleSet([{ ruleId: 'rule-a' }], filterRulesFixture.slice(0, 2)), false);
-for (const removedHeading of [">分配前</th>", ">扣除</th>", ">分配获得</th>", ">实际获得</th>"]) {
-  if (distributionTemplate.includes(removedHeading)) failures.push(`employee summary: legacy process column returned ${removedHeading}`);
-}
 const storeScopeRowIndex = distributionTemplate.indexOf('class="tipout-store-scope-row"');
 const viewFilterRowIndex = distributionTemplate.indexOf('class="tipout-view-filter-row"');
 const metricStripIndex = distributionTemplate.indexOf('class="tipout-metric-strip"');
@@ -344,20 +411,20 @@ assert.deepEqual(Array.from(olivia.roles), ["Server", "Bartender"]);
 assert.equal(olivia.beforeCents, 10010);
 assert.equal(olivia.netAdjustmentCents, 1010);
 assert.equal(olivia.finalAmountCents, 11020);
-assert.equal(olivia.status, "待处理");
+assert.equal(olivia.status, "部分待分配");
 assert.equal(olivia.hasPartialConfirmed, true);
 assert.equal(olivia.firstActionDate, "2026-09-11");
 const emma = resultFirstAggregates.find((item) => item.employeeId === "e3");
-assert.equal(emma.status, "异常");
+assert.equal(emma.status, "已完成");
 assert.equal(emma.finalAmountCents, null);
 assert.deepEqual(Array.from(emma.issueReasons), ["金额校验失败"]);
 const employeeOverview = summaryUi.summarizeEmployeeAggregates(resultFirstAggregates);
 assert.deepEqual(JSON.parse(JSON.stringify(employeeOverview)), {
   employeeCount: 3, finalAmountCents: 15020, hasConfirmedAmount: true,
-  completedCount: 1, pendingCount: 1, exceptionCount: 1,
+  completedCount: 2, pendingCount: 1, exceptionCount: 0,
 });
 assert.equal(employeeOverview.employeeCount, employeeOverview.completedCount + employeeOverview.pendingCount + employeeOverview.exceptionCount);
-const filteredEmployees = summaryUi.filterAndSortEmployeeAggregates(resultFirstAggregates, { search: "oliv", roles: ["Bartender"], statuses: ["待处理"] }, { key: "finalAmount", direction: "desc" });
+const filteredEmployees = summaryUi.filterAndSortEmployeeAggregates(resultFirstAggregates, { search: "oliv", roles: ["Bartender"], statuses: ["部分待分配"] }, { key: "finalAmount", direction: "desc" });
 assert.deepEqual(Array.from(filteredEmployees, (item) => item.employeeId), ["e1"]);
 for (const token of ["collectDateTaskExportData", "collectEmployeeReconciliationExportData", "collectCurrentSummaryExportData"]) {
   if (!distributionExport.includes(token)) failures.push(`distribution export: active-view export contract missing ${token}`);
@@ -416,6 +483,23 @@ if (!pendingValueHelper) {
 const employeeDetailTemplate = fs.readFileSync("src/team/tips/templates/employee-reconciliation.html", "utf8");
 const employeeDetailProgram = fs.readFileSync("src/team/tips/programs/employee-reconciliation.js.txt", "utf8");
 const detailsProgram = fs.readFileSync("src/team/tips/programs/details.js.txt", "utf8");
+for (const token of [
+  'id="employeeDetailDateSortHeader" aria-sort="descending"',
+  'id="employeeDetailDateSortButton"',
+  'id="employeeDetailDateSortIcon" aria-hidden="true">↓',
+  'data-native-onclick="toggleEmployeeDetailDateSort()"',
+]) {
+  if (!employeeDetailTemplate.includes(token)) failures.push(`employee reconciliation detail: date sort template contract missing ${token}`);
+}
+for (const token of [
+  "var employeeDetailDateSort = 'desc'",
+  "function toggleEmployeeDetailDateSort()",
+  "function syncEmployeeDetailDateSortHeader()",
+  "TipOutSummaryUi.sortEmployeeDetailRows(filteredRows, employeeDetailDateSort)",
+  "employeeDetailDateSort = 'desc'",
+]) {
+  if (!employeeDetailProgram.includes(token)) failures.push(`employee reconciliation detail: date sort behavior missing ${token}`);
+}
 for (const token of ["← 返回员工分配汇总", "分配汇总日期范围", "员工分配汇总金额概览", "员工逐日分配明细", "当前筛选条件下暂无分配明细", "无法展示分配汇总明细"]) {
   if (!employeeDetailTemplate.includes(token)) failures.push(`employee detail: renamed copy missing ${token}`);
 }
@@ -428,13 +512,16 @@ const tipsRuntime = fs.readFileSync("src/team/tips/tips-legacy-runtime.ts", "utf
 const employeeDetailBackgroundRule = pageCss.match(/\.tipout-page-employee-reconciliation-detail \.tipout-employee-detail-table tr\.has-issue\s*\{([^}]*)\}/)?.[1] ?? "";
 if (!employeeDetailBackgroundRule.includes("background: #ffffff")) failures.push("employee reconciliation detail: issue rows must use a white background");
 if (!pageCss.includes(".tipout-page-employee-reconciliation-detail #employeeDetailContent")) failures.push("employee reconciliation detail: white content surface rule missing");
-for (const token of ["employeeDetailStartDate", "employeeDetailEndDate", "employeeDetailRole", "employeeDetailAttendanceFilter", "employeeDetailFilteredEmpty", "employeeDetailExportButton", "employeeDetailExportMenu", "employeeDetailEmailModal", "employeeDetailExportEmail", "employeeDetailEmailFormat"]) {
+for (const token of ["employeeDetailStartDate", "employeeDetailEndDate", "employeeDetailRole", "employeeDetailAttendanceFilter", "employeeDetailAllocationStatusFilter", "employeeDetailFilteredEmpty", "employeeDetailExportButton", "employeeDetailExportMenu", "employeeDetailEmailModal", "employeeDetailExportEmail", "employeeDetailEmailFormat"]) {
   if (!employeeDetailTemplate.includes(token)) failures.push(`employee reconciliation detail: missing ${token}`);
 }
 for (const option of ["全部状态", "已打卡", "未打卡"]) {
   if (!employeeDetailTemplate.includes(`value="${option}"`)) failures.push(`employee reconciliation detail: missing attendance option ${option}`);
 }
 if (employeeDetailTemplate.includes("无需打卡")) failures.push("employee reconciliation detail: unsupported attendance state returned");
+for (const option of ["全部状态", "已分配", "待分配"]) {
+  if (!employeeDetailTemplate.includes(`value="${option}"`)) failures.push(`employee reconciliation detail: missing allocation option ${option}`);
+}
 for (const token of ["employeeDetailStore", "employeeDetailChipName", "employeeDetailNotice"]) {
   if (employeeDetailTemplate.includes(token)) failures.push(`employee reconciliation detail: removed region returned ${token}`);
 }
@@ -447,6 +534,25 @@ assert.deepEqual(
   ], "2026-01-02", "2026-01-03"), (row) => row.dateKey),
   ["2026-01-02", "2026-01-03"]
 );
+assert.deepEqual(
+  Array.from(employeeDetailContext.filterEmployeeDetailRows([
+    { dateKey: "2026-01-01", clockStatus: "已打卡", hours: 8, allocated: true },
+    { dateKey: "2026-01-02", clockStatus: "已打卡", hours: 8, allocated: false },
+    { dateKey: "2026-01-03", clockStatus: "未打卡", allocated: true },
+  ], "2026-01-01", "2026-01-03", "全部状态", "已分配"), (row) => row.dateKey),
+  ["2026-01-01", "2026-01-03"]
+);
+assert.deepEqual(
+  Array.from(employeeDetailContext.filterEmployeeDetailRows([
+    { dateKey: "2026-01-01", clockStatus: "已打卡", hours: 8, allocated: true },
+    { dateKey: "2026-01-02", clockStatus: "已打卡", hours: 8, allocated: false },
+    { dateKey: "2026-01-03", clockStatus: "未打卡", allocated: false },
+  ], "2026-01-01", "2026-01-02", "已打卡", "待分配"), (row) => row.dateKey),
+  ["2026-01-02"]
+);
+for (const token of ["allocationStatus: allocationStatus", "employeeDetailAllocationStatusFilter", "分配状态筛选"]) {
+  if (!employeeDetailProgram.includes(token)) failures.push(`employee reconciliation detail: allocation status contract missing ${token}`);
+}
 assert.deepEqual(
   JSON.parse(JSON.stringify(employeeDetailContext.normalizeEmployeeDetailRange("2026-01-04", "2026-01-03", "start"))),
   { start: "2026-01-04", end: "2026-01-04" }

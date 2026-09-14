@@ -567,10 +567,11 @@ var ALLOC_KEY = 'tipout_allocated';
       }
       document.getElementById('storeSelect').value = saved.store || '';
       dateSummaryFilters = { allocationStatus: saved.dateAllocationStatus || '' };
+      var restoredEmployeeStatus = TipOutSummaryUi.normalizeEmployeeAllocationStatusFilter(saved.employeeSummaryStatus);
       employeeSummaryFilters = {
         role: saved.employeeSummaryRole || '',
         employeeScope: saved.employeeSummaryScope || { mode: 'all', ids: [] },
-        statuses: saved.employeeSummaryStatus ? [saved.employeeSummaryStatus] : []
+        statuses: restoredEmployeeStatus ? [restoredEmployeeStatus] : []
       };
       employeeSummarySort = {
         key: ['employee', 'hours', 'finalAmount'].indexOf(saved.employeeSortKey) >= 0 ? saved.employeeSortKey : 'finalAmount',
@@ -810,17 +811,6 @@ var ALLOC_KEY = 'tipout_allocated';
       return !hasConfirmedAmount || cents == null ? '—' : money(cents / 100);
     }
 
-    function renderEmployeeSummaryMetrics(aggregates) {
-      var summary = TipOutSummaryUi.summarizeEmployeeAggregates(aggregates);
-      document.getElementById('employeeMetricCount').textContent = String(summary.employeeCount);
-      document.getElementById('employeeMetricFinal').textContent = summary.hasConfirmedAmount ? money(summary.finalAmountCents / 100) : '—';
-      document.getElementById('employeeMetricCompleted').textContent = String(summary.completedCount);
-      document.getElementById('employeeMetricPending').textContent = String(summary.pendingCount);
-      var exceptions = document.getElementById('employeeMetricExceptions');
-      exceptions.hidden = summary.exceptionCount === 0;
-      exceptions.textContent = summary.exceptionCount ? '另有异常 ' + summary.exceptionCount + ' 人' : '';
-    }
-
     function populateEmployeeSummaryRoleFilter(aggregates) {
       var select = document.getElementById('employeeSummaryRoleFilter');
       if (!select) return;
@@ -870,7 +860,8 @@ var ALLOC_KEY = 'tipout_allocated';
       var role = document.getElementById('employeeSummaryRoleFilter');
       var status = document.getElementById('employeeSummaryStatusFilter');
       employeeSummaryFilters.role = role && role.value ? role.value : '';
-      employeeSummaryFilters.statuses = status && status.value ? [status.value] : [];
+      var normalizedStatus = TipOutSummaryUi.normalizeEmployeeAllocationStatusFilter(status && status.value);
+      employeeSummaryFilters.statuses = normalizedStatus ? [normalizedStatus] : [];
     }
 
     function handleEmployeeSummaryRoleChange() {
@@ -930,12 +921,9 @@ var ALLOC_KEY = 'tipout_allocated';
       empty.hidden = aggregates.length > 0;
       container.closest('.tipout-table-wrap').hidden = aggregates.length === 0;
       container.innerHTML = aggregates.map(function(aggregate) {
-        var statusClass = aggregate.status === '已完成' ? 'is-complete' : (aggregate.status === '异常' ? 'is-exception' : 'is-pending');
+        var statusClass = aggregate.status === '已完成' ? 'is-complete' : 'is-pending';
         var name = escapeSummaryHtml(aggregate.name);
         var roles = aggregate.roles.map(function(role) { return '<span class="tipout-employee-role-tag">' + escapeSummaryHtml(role) + '</span>'; }).join('');
-        var netClass = aggregate.netAdjustmentCents != null && aggregate.netAdjustmentCents < 0 ? 'tip-amount--deduct' : 'tip-amount--receive';
-        var netValue = formatEmployeeSummaryMoney(aggregate.netAdjustmentCents, aggregate.hasConfirmedAmount);
-        if (netValue !== '—' && aggregate.netAdjustmentCents > 0) netValue = '+' + netValue;
         return '<tr class="tipout-employee-row" data-employee-id="' + escapeSummaryHtml(aggregate.employeeId) +
           '" tabindex="0" role="link" onclick="openEmployeeReconciliationDetail(this.dataset.employeeId)" ' +
           'onkeydown="activateEmployeeReconciliationRow(event)">' +
@@ -945,7 +933,8 @@ var ALLOC_KEY = 'tipout_allocated';
           '<td><strong>' + aggregate.shifts + '</strong></td>' +
           '<td><strong>' + formatHoursDisplay(aggregate.hours) + ' h</strong></td>' +
           '<td>' + formatEmployeeSummaryMoney(aggregate.beforeCents, aggregate.hasConfirmedAmount) + '</td>' +
-          '<td><strong class="' + netClass + '">' + netValue + '</strong></td>' +
+          '<td><strong class="tip-amount--deduct">' + formatEmployeeSummaryMoney(aggregate.deductedCents, aggregate.hasConfirmedAmount) + '</strong></td>' +
+          '<td><strong class="tip-amount--receive">' + formatEmployeeSummaryMoney(aggregate.receivedCents, aggregate.hasConfirmedAmount) + '</strong></td>' +
           '<td><strong class="tipout-employee-final">' + formatEmployeeSummaryMoney(aggregate.finalAmountCents, aggregate.hasConfirmedAmount) + '</strong>' + (aggregate.hasPartialConfirmed ? '<small class="tipout-employee-partial">已确认部分</small>' : '') + '</td>' +
           '<td><span class="tipout-employee-status ' + statusClass + '"><span aria-hidden="true">●</span> ' + aggregate.status + '</span></td>' +
           '<td class="tipout-detail-link" aria-label="查看 ' + name + ' 分配汇总明细">›</td></tr>';
@@ -967,7 +956,6 @@ var ALLOC_KEY = 'tipout_allocated';
           statuses: employeeSummaryFilters.statuses
         };
         visibleEmployeeSummaryAggregates = TipOutSummaryUi.filterAndSortEmployeeAggregates(allAggregates, employeeFilters, employeeSummarySort);
-        renderEmployeeSummaryMetrics(visibleEmployeeSummaryAggregates);
         updateEmployeeSummarySortHeaders();
         renderEmployeeReconciliationList(visibleEmployeeSummaryAggregates);
       } else {

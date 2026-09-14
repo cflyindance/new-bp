@@ -88,6 +88,19 @@
     return rules.some(function (rule) { return !rule || rule.clockin !== 'noclock'; });
   }
 
+  function employeeAllocationStatus(rows) {
+    var dailyRows = Array.isArray(rows) ? rows : [];
+    var allocatedDays = dailyRows.filter(function(row) { return row && row.allocated === true; }).length;
+    var unallocatedDays = dailyRows.length - allocatedDays;
+    if (allocatedDays > 0 && unallocatedDays === 0) return '已完成';
+    if (allocatedDays > 0 && unallocatedDays > 0) return '部分待分配';
+    return '待分配';
+  }
+
+  function normalizeEmployeeAllocationStatusFilter(value) {
+    return ['已完成', '部分待分配', '待分配'].indexOf(value) >= 0 ? value : '';
+  }
+
   function aggregateEmployeeDailyDatasets(dailyRows) {
     var order = [];
     var byId = Object.create(null);
@@ -170,7 +183,7 @@
         aggregate.receivedCents = null;
       }
       aggregate.hasPartialConfirmed = aggregate.confirmedAllocationDays > 0 && aggregate.pendingAllocationDays > 0;
-      aggregate.status = invalid ? '异常' : (aggregate.pendingAllocationDays > 0 ? '待处理' : '已完成');
+      aggregate.status = employeeAllocationStatus(aggregate.dailyRows);
       aggregate.role = aggregate.roles.join(' / ');
       aggregate.before = aggregate.beforeCents == null ? null : aggregate.beforeCents / 100;
       aggregate.deducted = aggregate.deductedCents == null ? null : aggregate.deductedCents / 100;
@@ -183,9 +196,8 @@
   function summarizeEmployeeAggregates(aggregates) {
     return (aggregates || []).reduce(function(summary, item) {
       summary.employeeCount += 1;
-      if (item.status === '异常') summary.exceptionCount += 1;
-      else if (item.status === '待处理') summary.pendingCount += 1;
-      else summary.completedCount += 1;
+      if (item.status === '已完成') summary.completedCount += 1;
+      else summary.pendingCount += 1;
       if (item.status !== '异常' && item.hasConfirmedAmount && item.finalAmountCents != null) {
         summary.finalAmountCents += item.finalAmountCents;
         summary.hasConfirmedAmount = true;
@@ -216,6 +228,31 @@
       if (b[field] == null) return -1;
       return direction * (a[field] - b[field]) || String(a.name).localeCompare(String(b.name));
     });
+  }
+
+  function normalizeEmployeeDetailDateSort(value) {
+    return value === 'asc' ? 'asc' : 'desc';
+  }
+
+  function validEmployeeDetailDateKey(value) {
+    var key = String(value || '');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) return '';
+    var date = new Date(key + 'T00:00:00');
+    if (isNaN(date.getTime())) return '';
+    var normalized = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
+    return normalized === key ? key : '';
+  }
+
+  function sortEmployeeDetailRows(rows, direction) {
+    var multiplier = normalizeEmployeeDetailDateSort(direction) === 'asc' ? 1 : -1;
+    return (Array.isArray(rows) ? rows : []).map(function(row, index) {
+      return { row: row, index: index, dateKey: validEmployeeDetailDateKey(row && row.dateKey) };
+    }).sort(function(a, b) {
+      if (!a.dateKey && !b.dateKey) return a.index - b.index;
+      if (!a.dateKey) return 1;
+      if (!b.dateKey) return -1;
+      return a.dateKey.localeCompare(b.dateKey) * multiplier || a.index - b.index;
+    }).map(function(item) { return item.row; });
   }
 
   function resolveSummaryView(historyState, queryView) {
@@ -311,6 +348,8 @@
     aggregateEmployeeDailyDatasets: aggregateEmployeeDailyDatasets,
     summarizeEmployeeAggregates: summarizeEmployeeAggregates,
     filterAndSortEmployeeAggregates: filterAndSortEmployeeAggregates,
+    normalizeEmployeeDetailDateSort: normalizeEmployeeDetailDateSort,
+    sortEmployeeDetailRows: sortEmployeeDetailRows,
     normalizeSummaryView: normalizeSummaryView,
     buildSummaryViewHref: buildSummaryViewHref,
     resolveSummaryView: resolveSummaryView,
@@ -320,6 +359,8 @@
     normalizeEmployeeScope: normalizeEmployeeScope,
     reconcileEmployeeScope: reconcileEmployeeScope,
     filterDailyRowsByAllocationStatus: filterDailyRowsByAllocationStatus,
+    employeeAllocationStatus: employeeAllocationStatus,
+    normalizeEmployeeAllocationStatusFilter: normalizeEmployeeAllocationStatusFilter,
     EMPLOYEE_RECONCILIATION_SNAPSHOT_KEY: EMPLOYEE_RECONCILIATION_SNAPSHOT_KEY
   };
 })(window);

@@ -1,5 +1,6 @@
 function detailNumber(value) { return Number(value) || 0; }
     var employeeDetailViewState = null;
+    var employeeDetailDateSort = 'desc';
     var employeeDetailEmailSnapshot = null;
     var employeeDetailPreparedEmailContent = null;
     function detailMoney(value) {
@@ -31,10 +32,13 @@ function detailNumber(value) { return Number(value) || 0; }
         ? { start: end, end: end }
         : { start: start, end: start };
     }
-    function filterEmployeeDetailRows(rows, start, end, attendance) {
+    function filterEmployeeDetailRows(rows, start, end, attendance, allocationStatus) {
       return (rows || []).filter(function(row) {
         var inDateRange = row.dateKey >= start && row.dateKey <= end;
-        return inDateRange && (!attendance || attendance === '全部状态' || employeeDetailAttendanceStatus(row) === attendance);
+        var attendanceMatches = !attendance || attendance === '全部状态' || employeeDetailAttendanceStatus(row) === attendance;
+        var rowAllocationStatus = row.allocated ? '已分配' : '待分配';
+        var allocationMatches = !allocationStatus || allocationStatus === '全部状态' || rowAllocationStatus === allocationStatus;
+        return inDateRange && attendanceMatches && allocationMatches;
       });
     }
     function summarizeEmployeeDetailRows(rows) {
@@ -154,6 +158,7 @@ function detailNumber(value) { return Number(value) || 0; }
         start: state.range.start,
         end: state.range.end,
         attendance: state.attendance,
+        allocationStatus: state.allocationStatus,
         rows: state.rows.map(function(row) {
           var attendance = employeeDetailAttendanceSummary(row);
           return {
@@ -189,6 +194,7 @@ function detailNumber(value) { return Number(value) || 0; }
       lines.push(['角色', data.role].map(employeeDetailCsvCell).join(','));
       lines.push(['日期范围', data.start + ' ~ ' + data.end].map(employeeDetailCsvCell).join(','));
       lines.push(['考勤筛选', data.attendance].map(employeeDetailCsvCell).join(','));
+      lines.push(['分配状态筛选', data.allocationStatus].map(employeeDetailCsvCell).join(','));
       lines.push('');
       lines.push(['日期', '考勤状态', '工时来源', '考勤备注', '班次', '工时', '上班时间', '下班时间', '手动工时明细', '分配前', '扣除', '分配获得', '实际获得', '分配状态'].map(employeeDetailCsvCell).join(','));
       data.rows.forEach(function(row) {
@@ -221,6 +227,7 @@ function detailNumber(value) { return Number(value) || 0; }
         '</title><style>@page{size:A4 landscape;margin:12mm}body{font-family:"Microsoft YaHei","PingFang SC",Arial,sans-serif;color:#171717;font-size:12px}h1{font-size:20px;margin:0 0 8px}.meta{color:#666;margin-bottom:16px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:7px;text-align:left;white-space:pre-line}th{background:#f5f6f8}</style></head><body><h1>' +
         employeeDetailEscapeHtml(data.name) + ' 员工分配汇总</h1><div class="meta">角色：' + employeeDetailEscapeHtml(data.role) +
         '　日期：' + employeeDetailEscapeHtml(data.start + ' ～ ' + data.end) + '　考勤：' + employeeDetailEscapeHtml(data.attendance) +
+        '　分配状态：' + employeeDetailEscapeHtml(data.allocationStatus) +
         '</div><table><thead><tr>' + headings.map(function(item) { return '<th>' + item + '</th>'; }).join('') +
         '</tr></thead><tbody>' + body + '</tbody></table></body></html>';
     }
@@ -340,16 +347,41 @@ function detailNumber(value) { return Number(value) || 0; }
       setDetailText('employeeDetailAfter', detailMoney(summary.after));
     }
 
+    function syncEmployeeDetailDateSortHeader() {
+      var descending = employeeDetailDateSort === 'desc';
+      var header = document.getElementById('employeeDetailDateSortHeader');
+      var button = document.getElementById('employeeDetailDateSortButton');
+      var icon = document.getElementById('employeeDetailDateSortIcon');
+      if (header) header.setAttribute('aria-sort', descending ? 'descending' : 'ascending');
+      if (icon) icon.textContent = descending ? '↓' : '↑';
+      if (button) button.setAttribute('aria-label', descending
+        ? '日期，当前倒序，点击切换为顺序'
+        : '日期，当前顺序，点击切换为倒序');
+    }
+
+    function toggleEmployeeDetailDateSort() {
+      employeeDetailDateSort = employeeDetailDateSort === 'desc' ? 'asc' : 'desc';
+      if (employeeDetailViewState && employeeDetailViewState.snapshot) {
+        renderEmployeeDetailRange(employeeDetailViewState.snapshot, 'sort');
+      } else {
+        syncEmployeeDetailDateSortHeader();
+      }
+    }
+
     function renderEmployeeDetailRange(snapshot, changedSide) {
       var startInput = document.getElementById('employeeDetailStartDate');
       var endInput = document.getElementById('employeeDetailEndDate');
       var attendanceInput = document.getElementById('employeeDetailAttendanceFilter');
+      var allocationStatusInput = document.getElementById('employeeDetailAllocationStatusFilter');
       var range = normalizeEmployeeDetailRange(startInput.value, endInput.value, changedSide);
       startInput.value = range.start;
       endInput.value = range.end;
       var attendance = attendanceInput ? attendanceInput.value : '全部状态';
-      var rows = filterEmployeeDetailRows(snapshot.dailyRows, range.start, range.end, attendance);
-      employeeDetailViewState = { snapshot: snapshot, range: range, attendance: attendance, rows: rows.slice() };
+      var allocationStatus = allocationStatusInput ? allocationStatusInput.value : '全部状态';
+      var filteredRows = filterEmployeeDetailRows(snapshot.dailyRows, range.start, range.end, attendance, allocationStatus);
+      var rows = TipOutSummaryUi.sortEmployeeDetailRows(filteredRows, employeeDetailDateSort);
+      employeeDetailViewState = { snapshot: snapshot, range: range, attendance: attendance, allocationStatus: allocationStatus, rows: rows.slice() };
+      syncEmployeeDetailDateSortHeader();
       renderEmployeeDetailSummary(summarizeEmployeeDetailRows(rows));
       renderEmployeeDetailRows(rows);
       var table = document.getElementById('employeeDetailTable');
@@ -363,20 +395,24 @@ function detailNumber(value) { return Number(value) || 0; }
     }
 
     function renderEmployeeReconciliationDetail(snapshot) {
+      employeeDetailDateSort = 'desc';
       setDetailText('employeeDetailName', snapshot.name || '—');
       setDetailText('employeeDetailRole', employeeDetailRoleLabel(snapshot.role));
       var startInput = document.getElementById('employeeDetailStartDate');
       var endInput = document.getElementById('employeeDetailEndDate');
       var attendanceInput = document.getElementById('employeeDetailAttendanceFilter');
+      var allocationStatusInput = document.getElementById('employeeDetailAllocationStatusFilter');
       startInput.min = snapshot.dateStart;
       startInput.max = snapshot.dateEnd;
       endInput.min = snapshot.dateStart;
       endInput.max = snapshot.dateEnd;
       startInput.value = snapshot.dateStart;
       endInput.value = snapshot.dateEnd;
+      if (allocationStatusInput) allocationStatusInput.value = '全部状态';
       startInput.addEventListener('change', function() { renderEmployeeDetailRange(snapshot, 'start'); });
       endInput.addEventListener('change', function() { renderEmployeeDetailRange(snapshot, 'end'); });
       if (attendanceInput) attendanceInput.addEventListener('change', function() { renderEmployeeDetailRange(snapshot, 'attendance'); });
+      if (allocationStatusInput) allocationStatusInput.addEventListener('change', function() { renderEmployeeDetailRange(snapshot, 'allocation'); });
       renderEmployeeDetailRange(snapshot, 'start');
     }
 
