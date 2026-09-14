@@ -2130,6 +2130,8 @@ let lastSidebarMountPathForReportsSheet = "";
 let lastSidebarMountPathForPrintSheet = "";
 /** 预约等位中心滑层：离开 `/operations/reservations` 域时关闭 */
 let lastSidebarMountPathForReservationsSheet = "";
+/** 主壳上一次渲染的路由：用于区分“导航回主页”和“主页内打开二级菜单后的重绘”。 */
+let lastPrimaryShellMountPath = "";
 
 /** `subNavPlacement: "sheet"` 的模块：二级滑层打开状态（sessionStorage JSON） */
 const NAV_MODULE_SHEETS_OPEN_KEY = "sidebar-nav-module-sheets-open-json-v1";
@@ -12193,10 +12195,13 @@ function mount(): void {
   }
 
   const mountPathForSheet = readAppHashPath();
-  if (isNavHomePath(mountPathForSheet)) {
+  const enteredNavHome =
+    isNavHomePath(mountPathForSheet) && !isNavHomePath(lastPrimaryShellMountPath);
+  if (enteredNavHome) {
     closeAllSidebarSecondarySheets();
     lastNavHubMountPathByModuleId = {};
   }
+  lastPrimaryShellMountPath = mountPathForSheet;
   if (
     lastSidebarMountPathForInventorySheet !== mountPathForSheet &&
     !isInventoryManagementPath(mountPathForSheet)

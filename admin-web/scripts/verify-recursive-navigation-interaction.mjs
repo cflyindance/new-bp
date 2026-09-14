@@ -33,5 +33,15 @@ assert.doesNotMatch(
   "drilling into a branch must not navigate",
 );
 assert.match(source, /navLink\.closest\("\[data-hub-sheet-root\]"\)[\s\S]*closeAllSidebarSecondarySheets\(\)/);
+assert.match(
+  source,
+  /let lastPrimaryShellMountPath = "";/,
+  "home navigation needs route memory so a same-route menu redraw does not close the sheet",
+);
+assert.match(
+  source,
+  /const enteredNavHome =\s*isNavHomePath\(mountPathForSheet\)\s*&&\s*!isNavHomePath\(lastPrimaryShellMountPath\);[\s\S]*if \(enteredNavHome\) \{[\s\S]*closeAllSidebarSecondarySheets\(\);[\s\S]*\}[\s\S]*lastPrimaryShellMountPath = mountPathForSheet;/,
+  "secondary sheets must close only when entering home, not on every home redraw",
+);
 
 console.log("recursive navigation interaction verified");
