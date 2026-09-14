@@ -36,12 +36,22 @@
    - 桌面端为两列网格。
    - 卡片使用蓝、粉、橙的柔和渐变，圆角矩形，右侧叠加低透明度品牌水印。
    - 每张卡片依次展示 Locations 数量、商户名称、用户图标与权限列表。
-   - 固定展示截图中完整可辨识的四张卡片：`大飞鸽-AD`、`敦煌`、`小飞鸽-连锁集团-13041自…`、`小飞鸽-联想PC`。
-   - 权限文本按截图固定为 `Cloud Report Full Access`、`Cloud Report Open API Full Access`，以及对应卡片的 `Cloud Report BO - Overview` 或 `Cloud Report - Payment Internal Access`。
+   - 固定展示截图中完整可辨识的四张卡片，具体数据见下表。
 4. 悬浮球
    - 复用现有悬浮球及其视角切换菜单。
    - 当前选中项显示为“老B平台”。
    - 切换至其他视角时退出老 B 平台壳层，并进入对应现有页面。
+
+### 固定卡片数据
+
+第三张卡片在参考截图中只显示到省略号，本静态页将 `小飞鸽-连锁集团-13041自…` 作为确定的展示字符串，不再推测被截断的真实名称。
+
+| 顺序 | 展示名称 | Locations | 权限列表（按展示顺序） |
+| --- | --- | ---: | --- |
+| 1 | 大飞鸽-AD | 1 | `Cloud Report Full Access`；`Cloud Report Open API Full Access`；`Cloud Report BO - Overview` |
+| 2 | 敦煌 | 1 | `Cloud Report Full Access`；`Cloud Report Open API Full Access`；`Cloud Report - Payment Internal Access` |
+| 3 | 小飞鸽-连锁集团-13041自… | 3 | `Cloud Report Full Access`；`Cloud Report Open API Full Access`；`Cloud Report - Payment Internal Access` |
+| 4 | 小飞鸽-联想PC | 1 | `Cloud Report Full Access`；`Cloud Report Open API Full Access`；`Cloud Report - Payment Internal Access` |
 
 ## 响应式行为
 
@@ -60,10 +70,22 @@
 
 ## 状态与路由
 
-- 老 B 平台状态沿用现有 shell mode 的 sessionStorage 持久化方式。
-- 进入时使用专用 hash 路径，确保刷新后仍能回到老 B 平台页面。
-- 从老 B 平台切换到门店版、连锁版或 M 平台时，复用现有视角切换的状态清理和目标路由逻辑。
+- 老 B 平台的 shell mode 值确定为 `legacy-b`，专用 hash 路径确定为 `/legacy-b/merchants`。
+- 新增 `isLegacyBContentPath(path)` 路径识别函数；只把 `/legacy-b/merchants` 识别为老 B 平台内容路径，未知的 `/legacy-b/*` 统一规范化到该路径。
+- 挂载判定以内容路径优先：访问 `/legacy-b/merchants` 时写入 `legacy-b` shell mode 并渲染老 B 平台；shell mode 为 `legacy-b` 但当前路径不是老 B 路径时，将 hash 规范化为 `/legacy-b/merchants`。
+- `main.ts` 中老 B 分支置于现有 M 平台、eMenu、Kiosk、PIT 独立壳层分支之前；其他独立壳层的兜底判断应显式排除老 B 内容路径，避免互相纠正或重定向。
+- 从任意现有视角进入老 B 平台时，直接把 shell mode 覆盖为 `legacy-b`，再切换到专用 hash。
+- 从老 B 平台切到门店版或连锁版时，先把 shell mode 写为 `merchant`，再执行现有布局/数据视角写入与商家后台目标路由跳转。
+- 从老 B 平台切到 M 平台时，先把 shell mode 写为 `m-platform`，再跳到 M 平台现有默认路径。
+- 刷新 `/legacy-b/merchants` 时，路径优先规则会恢复 `legacy-b` shell mode 和独立页面。
 - 老 B 平台不维护卡片选中态，也不产生业务数据写入。
+
+## 入口可见性与限制
+
+- 老 B 平台入口遵循现有 `isViewSwitchRestricted()`：代登录或其他视角切换锁定状态下不展示，也不可进入。
+- 在允许视角切换的正常登录状态下，老 B 平台入口始终展示。
+- 老 B 平台入口不受 MVP / 复杂版本开关控制；该开关继续只影响现有选项及导航，不影响本次新增入口。
+- 因此“入口出现”和“可切换”的验收前置条件是：当前登录状态未触发视角切换限制。
 
 ## 可访问性
 
@@ -74,14 +96,15 @@
 
 ## 验证与验收
 
-1. 悬浮球“视角切换”中出现“老B平台”。
+1. 在未触发视角切换限制的正常登录状态下，悬浮球“视角切换”中出现“老B平台”，且 MVP / 复杂版本均可见。
 2. 点击入口后，商家后台顶栏和侧栏消失，老 B 平台全屏页出现。
 3. 页面仍展示并可操作悬浮球，菜单当前项为“老B平台”。
 4. 从悬浮球切换任一现有视角后，可正常退出老 B 平台。
-5. 四张商户卡片的名称、Locations 数量与权限文本和参考截图一致。
+5. 四张商户卡片的名称、Locations 数量与权限文本逐项符合“固定卡片数据”表。
 6. 桌面端呈现两列卡片；窄屏呈现单列且无横向溢出。
 7. 刷新老 B 平台专用路径后仍能恢复该独立页面。
 8. 运行项目构建，确认 TypeScript 与 Vite 构建成功。
+9. 在代登录或其他现有切换锁定状态下，不展示老 B 平台入口，也不能通过视角菜单进入。
 
 ## 非目标
 
