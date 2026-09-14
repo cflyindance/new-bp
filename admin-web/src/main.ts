@@ -376,7 +376,7 @@ import {
   isKioskLocalContentPath,
   normalizeKioskLocalPath,
 } from "./shell/kiosk-local-routes";
-import { bindLegacyBShell, mountLegacyBShell } from "./shell/legacy-b-shell";
+import { beginLegacyBVisit, bindLegacyBShell, mountLegacyBShell } from "./shell/legacy-b-shell";
 import {
   isLegacyBContentPath,
   normalizeLegacyBPath,
@@ -11991,6 +11991,7 @@ function mountLoginShell(): void {
 let activePayrollPage: PayrollPageHandle | null = null;
 let activeEmployeesPage: EmployeesPageHandle | null = null;
 let activeTipsPage: TipsPageHandle | null = null;
+let lastMountedContentPath = "";
 
 function destroyTeamEmployeesPage(): void {
   activeEmployeesPage?.destroy();
@@ -12015,6 +12016,8 @@ function mount(): void {
   syncProductVersionDocumentAttribute();
 
   const authPath = location.hash.slice(1) || "";
+  const previousMountedContentPath = lastMountedContentPath;
+  lastMountedContentPath = authPath;
   if (isPitContentPath(authPath) || isPitShellMode()) {
     const normalizedPath = isPitContentPath(authPath) ? normalizePitPath(authPath) : PIT_DEFAULT_PATH;
     if (normalizedPath !== authPath) {
@@ -12084,6 +12087,7 @@ function mount(): void {
       return;
     }
     if (!isLegacyBShellMode()) enterLegacyBShell();
+    if (!isLegacyBContentPath(previousMountedContentPath)) beginLegacyBVisit();
     const app = document.getElementById("app");
     if (!app) return;
     app.innerHTML = mountLegacyBShell();

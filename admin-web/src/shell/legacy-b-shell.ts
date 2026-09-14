@@ -35,6 +35,12 @@ const LEGACY_B_MERCHANTS: readonly LegacyBMerchant[] = [
   },
 ] as const;
 
+let legacyBDialogDismissedForVisit = false;
+
+export function beginLegacyBVisit(): void {
+  legacyBDialogDismissedForVisit = false;
+}
+
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
@@ -85,6 +91,7 @@ function renderLegacyBUpgradeDialog(): string {
         </div>
         <h2 id="legacy-b-upgrade-title" class="mt-5 text-2xl font-extrabold tracking-[-0.02em] sm:text-[1.75rem]">全新后台已上线</h2>
         <p id="legacy-b-upgrade-description" class="mt-3 text-base leading-7 text-[#51466d]">操作更顺、加载更快、数据更清晰。您当前的旧版入口即将停止维护，建议现在花 1 分钟切换体验。</p>
+        <p data-legacy-b-upgrade-error role="alert" class="mt-3 hidden rounded-xl bg-red-50 px-3 py-2 text-sm font-medium text-red-700">暂无可切换的品牌，请联系管理员</p>
         <div class="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <button type="button" data-legacy-b-upgrade-dismiss class="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#d8d3e3] bg-white px-5 py-2.5 text-sm font-semibold text-[#30234f] transition-colors hover:bg-[#f7f5fb] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6d5ca7] focus-visible:ring-offset-2">暂不切换</button>
           <button type="button" data-legacy-b-upgrade-confirm class="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#160052] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#2a1267] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6d5ca7] focus-visible:ring-offset-2">立即切换到新版</button>
@@ -97,13 +104,34 @@ function bindLegacyBUpgradeDialog(onMount: () => void): void {
   const dialogRoot = document.querySelector<HTMLElement>("[data-legacy-b-upgrade-dialog]");
   const confirmButton = dialogRoot?.querySelector<HTMLButtonElement>("[data-legacy-b-upgrade-confirm]");
   const dismissButton = dialogRoot?.querySelector<HTMLButtonElement>("[data-legacy-b-upgrade-dismiss]");
+  const errorMessage = dialogRoot?.querySelector<HTMLElement>("[data-legacy-b-upgrade-error]");
+  const pageContent = document.querySelector<HTMLElement>("[data-legacy-b-page-content]");
   const demoSwitch = document.querySelector<HTMLElement>("[data-demo-switch-root]");
   if (!dialogRoot || !confirmButton || !dismissButton) return;
 
+  pageContent?.setAttribute("inert", "");
+  pageContent?.setAttribute("aria-hidden", "true");
   demoSwitch?.setAttribute("inert", "");
   demoSwitch?.setAttribute("aria-hidden", "true");
 
+  const dismissDialog = (): void => {
+    legacyBDialogDismissedForVisit = true;
+    dialogRoot.remove();
+    pageContent?.removeAttribute("inert");
+    pageContent?.removeAttribute("aria-hidden");
+    demoSwitch?.removeAttribute("inert");
+    demoSwitch?.removeAttribute("aria-hidden");
+    requestAnimationFrame(() => {
+      document.querySelector<HTMLElement>("[data-legacy-b-heading]")?.focus({ preventScroll: true });
+    });
+  };
+
   dialogRoot.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      dismissDialog();
+      return;
+    }
     if (event.key !== "Tab") return;
     const target = event.target as Node | null;
     if (event.shiftKey && target === dismissButton) {
@@ -115,21 +143,20 @@ function bindLegacyBUpgradeDialog(onMount: () => void): void {
     }
   });
 
-  dismissButton.addEventListener("click", () => {
-    dialogRoot.remove();
-    demoSwitch?.removeAttribute("inert");
-    demoSwitch?.removeAttribute("aria-hidden");
-    document.querySelector<HTMLElement>("[data-legacy-b-heading]")?.focus({ preventScroll: true });
-  });
+  dismissButton.addEventListener("click", dismissDialog);
 
-  confirmButton.addEventListener("click", () => switchToBrandView(onMount));
+  confirmButton.addEventListener("click", () => {
+    if (switchToBrandView(onMount)) return;
+    errorMessage?.classList.remove("hidden");
+    confirmButton.focus({ preventScroll: true });
+  });
   requestAnimationFrame(() => confirmButton.focus({ preventScroll: true }));
 }
 
 export function mountLegacyBShell(): string {
   return `
     <div class="min-h-dvh w-full overflow-x-hidden bg-[#10002f] text-white">
-      <div class="mx-auto min-h-dvh w-full max-w-[1480px] px-5 pb-16 pt-5 sm:px-8 lg:px-10">
+      <div data-legacy-b-page-content class="mx-auto min-h-dvh w-full max-w-[1480px] px-5 pb-16 pt-5 sm:px-8 lg:px-10">
         <header class="flex items-start justify-between gap-6">
           <div class="flex items-center gap-3" aria-label="MenuSifu">
             <div class="flex size-12 items-center justify-center rounded-[10px] bg-[#ffbf00] p-1.5 text-[#100044]">${BRAND_MARK}</div>
@@ -151,7 +178,7 @@ export function mountLegacyBShell(): string {
           </ul>
         </main>
       </div>
-      ${renderLegacyBUpgradeDialog()}
+      ${legacyBDialogDismissedForVisit ? "" : renderLegacyBUpgradeDialog()}
     </div>`;
 }
 
