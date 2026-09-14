@@ -51,6 +51,30 @@ final result: passed
 
 ---
 
+# 老 B 平台升级提示对话框 Design QA（2026-09-14）
+
+## 验证环境
+
+- Route: `http://127.0.0.1:59813/#/legacy-b/merchants`
+- Desktop visual check: Codex in-app Browser tab 6
+- Commands: `node scripts/verify-legacy-b-platform.mjs`, `npx.cmd tsc --noEmit`, `npx.cmd vite build`
+
+## 结果
+
+- 每次刷新老 B 商户页均默认显示升级提示，主按钮获得初始焦点。
+- 对话框标题、正文、主次按钮文案与需求一致；桌面端居中展示，无溢出。
+- 遮罩点击不会关闭对话框；实现未绑定 Escape 关闭逻辑。
+- 弹窗期间黄色 Demo 悬浮球保持可见，并通过 `inert` 与 `aria-hidden` 暂停交互。
+- 点击「暂不切换」后弹窗移除，焦点落到「您的商户」标题，悬浮球恢复交互。
+- 刷新路由后弹窗重新展示，不持久化关闭状态。
+- 点击「立即切换到新版」后退出老 B 壳层、进入品牌版新版后台；应用把内部目标 `#/nav-home` 规范化显示为 `#/home`。
+- 窄屏使用 `p-4`、`w-full max-w-[520px]` 和 `flex-col-reverse sm:flex-row`，确保卡片限宽、按钮纵向排列。
+- 静态契约、TypeScript 检查和生产构建均通过；构建仅报告既有动态导入与大 chunk 警告。
+
+final result: passed
+
+---
+
 # 老 B 平台静态商户页 Design QA
 
 ## 对比证据
