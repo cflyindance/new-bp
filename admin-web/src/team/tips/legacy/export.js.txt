@@ -96,8 +96,25 @@ function collectExportData() {
   return collectCurrentSummaryExportData();
 }
 
+function assertPaidExportSnapshotsAvailable() {
+  if (!window.TipOutDateState) return true;
+  var storeEl = document.getElementById('storeSelect');
+  var store = storeEl ? storeEl.value : '';
+  var dates = [];
+  var detailDate = document.getElementById('detailDate');
+  if (detailDate && detailDate.value) dates = [detailDate.value];
+  else if (typeof getDateRange === 'function') dates = getDateRange();
+  for (var i = 0; i < dates.length; i += 1) {
+    var state = TipOutDateState.inspect(store, dates[i]);
+    if (state.payoutStatus === 'error') throw new Error('发放快照不可用');
+  }
+  return true;
+}
+
 function exportAs(type) {
   document.getElementById('exportMenu').classList.remove('show');
+  try { assertPaidExportSnapshotsAvailable(); }
+  catch (error) { if (typeof showNotification === 'function') showNotification(error.message, 'error'); return; }
   var data = collectCurrentSummaryExportData();
   if (data.kind === 'employee' ? data.employees.length === 0 : data.dailySummaries.length === 0) { showNotification('没有可导出的数据', 'warning'); return; }
   if (type === 'pdf') exportPDF(data);

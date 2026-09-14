@@ -1,0 +1,142 @@
+(function (root) {
+  'use strict';
+
+  var PAYOUT_KEY = 'tipout-payout-records-v1';
+  var RESULT_KEY = 'tipout_allocation_results_v1';
+  var ALLOC_KEY = 'tipout_allocated';
+  var CHANNEL_NAME = 'tipout-date-state-changed';
+
+  function clone(value) { return value == null ? value : JSON.parse(JSON.stringify(value)); }
+  function pairKey(storeId, businessDate) { return String(storeId || '') + '\u0000' + String(businessDate || ''); }
+  function lockKey(storeId, businessDate) { return 'tipout-date-write:' + encodeURIComponent(String(storeId || '')) + ':' + String(businessDate || ''); }
+  function readObject(storageKey) {
+    var raw = root.localStorage.getItem(storageKey);
+    if (!raw) return {};
+    var value = JSON.parse(raw);
+    if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('本地小费数据已损坏');
+    return value;
+  }
+  function canonical(value) {
+    if (value === null || typeof value !== 'object') return JSON.stringify(value);
+    if (Array.isArray(value)) return '[' + value.map(canonical).join(',') + ']';
+    return '{' + Object.keys(value).sort().filter(function (key) { return key !== 'snapshotHash'; }).map(function (key) {
+      return JSON.stringify(key) + ':' + canonical(value[key]);
+    }).join(',') + '}';
+  }
+  function bytesToHex(buffer) {
+    return Array.prototype.map.call(new Uint8Array(buffer), function (value) { return value.toString(16).padStart(2, '0'); }).join('');
+  }
+  async function hashSnapshot(snapshot) {
+    if (!root.crypto || !root.crypto.subtle || !root.TextEncoder) throw new Error('当前浏览器不支持安全的小费快照校验');
+    return bytesToHex(await root.crypto.subtle.digest('SHA-256', new root.TextEncoder().encode(canonical(snapshot))));
+  }
+  function readPayoutDocument() { return readObject(PAYOUT_KEY); }
+  function readAllocation(storeId, businessDate) {
+    var results = readObject(RESULT_KEY);
+    var snapshot = results[pairKey(storeId, businessDate)];
+    return snapshot && typeof snapshot === 'object' && !Array.isArray(snapshot) ? clone(snapshot) : null;
+  }
+  function readPayout(storeId, businessDate) {
+    var record = readPayoutDocument()[pairKey(storeId, businessDate)];
+    return record && typeof record === 'object' && !Array.isArray(record) ? clone(record) : null;
+  }
+  function currentVersion(storeId, businessDate) {
+    var snapshot = readAllocation(storeId, businessDate);
+    return snapshot && Number(snapshot.snapshotVersion || snapshot.version) || 0;
+  }
+  function inspect(storeId, businessDate) {
+    var snapshot;
+    var payout;
+    try { snapshot = readAllocation(storeId, businessDate); payout = readPayout(storeId, businessDate); }
+    catch (error) { return { allocationStatus: 'error', payoutStatus: 'error', locked: true, error: error.message, snapshot: null, payout: null }; }
+    if (!payout) return { allocationStatus: snapshot ? 'allocated' : 'pending', payoutStatus: snapshot ? 'pending' : 'none', locked: false, error: '', snapshot: snapshot, payout: null };
+    var valid = snapshot && payout.snapshotId && payout.snapshotId === snapshot.snapshotId &&
+      Number(payout.snapshotVersion) === Number(snapshot.snapshotVersion) && payout.snapshotHash === snapshot.snapshotHash;
+    return { allocationStatus: snapshot ? 'allocated' : 'error', payoutStatus: valid ? 'paid' : 'error', locked: true,
+      error: valid ? '' : '发放快照不可用', snapshot: valid ? snapshot : null, payout: payout };
+  }
+  function assertDateWritable(storeId, businessDate) {
+    var state = inspect(storeId, businessDate);
+    if (state.locked) throw new Error('小费已发放，分配结果已锁定，无法修改');
+    return state;
+  }
+  async function withLock(storeId, businessDate, callback) {
+    if (!root.navigator || !root.navigator.locks || !root.navigator.locks.request) throw new Error('当前浏览器不支持安全修改小费数据');
+    return root.navigator.locks.request(lockKey(storeId, businessDate), { mode: 'exclusive' }, callback);
+  }
+  function notify(storeId, businessDate) {
+    var detail = { storeId: storeId, businessDate: businessDate, version: currentVersion(storeId, businessDate) };
+    try { if (root.BroadcastChannel) { var channel = new root.BroadcastChannel(CHANNEL_NAME); channel.postMessage(detail); channel.close(); } } catch (_) {}
+    try { root.dispatchEvent(new root.CustomEvent(CHANNEL_NAME, { detail: detail })); } catch (_) {}
+  }
+  function requestId() {
+    if (root.crypto && root.crypto.randomUUID) return root.crypto.randomUUID();
+    return 'payout-' + Date.now() + '-' + Math.random().toString(16).slice(2);
+  }
+  async function prepareSnapshot(snapshot) {
+    var copy = clone(snapshot);
+    var previous = readAllocation(copy.store, copy.dateKey);
+    copy.snapshotId = requestId();
+    copy.snapshotVersion = (previous && Number(previous.snapshotVersion || previous.version) || 0) + 1;
+    copy.schemaVersion = 1;
+    copy.confirmedAt = copy.confirmedAt || new Date().toISOString();
+    copy.snapshotHash = await hashSnapshot(copy);
+    return copy;
+  }
+  async function ensureSnapshot(storeId, businessDate) {
+    return withLock(storeId, businessDate, async function () {
+      assertDateWritable(storeId, businessDate);
+      var snapshot = readAllocation(storeId, businessDate);
+      if (!snapshot) throw new Error('请先完成当天小费分配');
+      if (snapshot.snapshotId && snapshot.snapshotVersion && snapshot.snapshotHash && snapshot.snapshotHash === await hashSnapshot(snapshot)) return snapshot;
+      var prepared = await prepareSnapshot(snapshot);
+      var results = readObject(RESULT_KEY);
+      results[pairKey(storeId, businessDate)] = prepared;
+      root.localStorage.setItem(RESULT_KEY, JSON.stringify(results));
+      notify(storeId, businessDate);
+      return clone(prepared);
+    });
+  }
+  async function confirmPayout(input) {
+    input = input || {};
+    var storeId = String(input.storeId || '');
+    var businessDate = String(input.businessDate || '');
+    return withLock(storeId, businessDate, async function () {
+      var payouts = readPayoutDocument();
+      var key = pairKey(storeId, businessDate);
+      var existing = payouts[key];
+      if (existing) {
+        if (existing.requestId === input.requestId) return clone(existing);
+        throw new Error('该日期小费已确认发放');
+      }
+      var snapshot = readAllocation(storeId, businessDate);
+      if (!snapshot) throw new Error('请先完成当天小费分配');
+      if (!snapshot.snapshotId || Number(snapshot.snapshotVersion) !== Number(input.expectedSnapshotVersion) ||
+          snapshot.snapshotId !== input.expectedSnapshotId || snapshot.snapshotHash !== input.expectedSnapshotHash ||
+          snapshot.snapshotHash !== await hashSnapshot(snapshot)) throw new Error('分配结果已更新，请刷新后重新确认');
+      var record = {
+        recordId: requestId(), schemaVersion: 1, storeId: storeId, businessDate: businessDate, status: 'paid',
+        paidAt: new Date().toISOString(), paidById: String(input.paidById || 'demo-manager'),
+        paidByDisplayNameAtConfirmation: String(input.paidByDisplayName || '当前用户'),
+        snapshotId: snapshot.snapshotId, snapshotVersion: snapshot.snapshotVersion, snapshotHash: snapshot.snapshotHash,
+        requestId: String(input.requestId || requestId()), source: 'manual-confirm'
+      };
+      payouts[key] = record;
+      root.localStorage.setItem(PAYOUT_KEY, JSON.stringify(payouts));
+      notify(storeId, businessDate);
+      return clone(record);
+    });
+  }
+  function listPaidDates(storeId) {
+    var payouts = readPayoutDocument();
+    return Object.keys(payouts).filter(function (key) { return key.indexOf(String(storeId || '') + '\u0000') === 0; })
+      .map(function (key) { return key.split('\u0000')[1]; });
+  }
+
+  root.TipOutDateState = {
+    PAYOUT_KEY: PAYOUT_KEY, CHANNEL_NAME: CHANNEL_NAME, canonical: canonical, hashSnapshot: hashSnapshot,
+    prepareSnapshot: prepareSnapshot, ensureSnapshot: ensureSnapshot, readAllocation: readAllocation, readPayout: readPayout, inspect: inspect,
+    assertDateWritable: assertDateWritable, withLock: withLock, confirmPayout: confirmPayout,
+    listPaidDates: listPaidDates, requestId: requestId, notify: notify
+  };
+})(typeof window !== 'undefined' ? window : this);

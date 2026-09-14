@@ -4,13 +4,14 @@ import vm from "node:vm";
 
 const program = fs.readFileSync("src/team/tips/programs/details.js.txt", "utf8");
 const helperStart = program.indexOf("function getDetailAutoAllocationEligibility(store, dateKey, rules)");
-const helperEnd = program.indexOf("function executeDetailAllocation(options)", helperStart);
+const helperEnd = program.indexOf("async function executeDetailAllocation(options)", helperStart);
 const helper = helperStart >= 0 && helperEnd > helperStart ? program.slice(helperStart, helperEnd) : "";
 assert.ok(helper, "auto-allocation eligibility helper must exist");
 
 const context = {
   window: { TipOutAllocationResults: { isAllocated: () => false } },
   TipOutAllocationResults: { isAllocated: () => false },
+  getDetailBusinessStatus: () => ({ allocatable: true }),
 };
 vm.createContext(context);
 vm.runInContext(helper, context);
@@ -28,8 +29,8 @@ assert.equal(eligible("Store", "2026-09-11", [{ clockin: "clock" }]).reason, "al
 assert.match(program, /setTimeout\(function\(\) \{ scheduleDetailAutoAllocation\(store, dateKey, rules\); \}, 0\)/);
 assert.match(program, /detailAutoAllocationAttemptedKey === key/);
 assert.match(program, /automatic:\s*true/);
-const schedulerStart = program.indexOf("function scheduleDetailAutoAllocation(store, dateKey, rules)");
-const schedulerEnd = program.indexOf("function confirmDetailAllocation()", schedulerStart);
+const schedulerStart = program.indexOf("async function scheduleDetailAutoAllocation(store, dateKey, rules)");
+const schedulerEnd = program.indexOf("async function confirmDetailAllocation()", schedulerStart);
 assert.doesNotMatch(program.slice(schedulerStart, schedulerEnd), /window\.confirm/);
 
 console.log("Tip clock-rule auto allocation verification passed.");

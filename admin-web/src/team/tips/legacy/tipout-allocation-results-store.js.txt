@@ -43,9 +43,19 @@
     [summary.originalTips, summary.poolAmount, summary.allocatedAmount, summary.unallocatedAmount].forEach(check);
     return invalid ? "分配数据存在无效金额、工时、比例或员工" : null;
   }
-  function commit(snapshot) {
+  async function commit(snapshot) {
     var validationError = validate(snapshot);
     if (validationError) throw new Error(validationError);
+    if (root.TipOutDateState) {
+      return root.TipOutDateState.withLock(snapshot.store, snapshot.dateKey, async function () {
+        root.TipOutDateState.assertDateWritable(snapshot.store, snapshot.dateKey);
+        var prepared = await root.TipOutDateState.prepareSnapshot(snapshot);
+        return commitPrepared(prepared);
+      });
+    }
+    return commitPrepared(snapshot);
+  }
+  function commitPrepared(snapshot) {
     var oldResultsRaw = localStorage.getItem(RESULT_KEY);
     var oldAllocatedRaw = localStorage.getItem(ALLOC_KEY);
     var results = resultDocument();
@@ -69,5 +79,21 @@
     return clone(snapshot);
   }
 
-  root.TipOutAllocationResults = { RESULT_KEY: RESULT_KEY, read: read, isAllocated: isAllocated, validate: validate, commit: commit };
+  async function cancel(store, dateKey) {
+    function execute() {
+      if (root.TipOutDateState) root.TipOutDateState.assertDateWritable(store, dateKey);
+      var results = resultDocument();
+      var allocated = allocatedDocument();
+      delete results[key(store, dateKey)];
+      var dates = Array.isArray(allocated[String(store || '')]) ? allocated[String(store || '')].slice() : [];
+      allocated[String(store || '')] = dates.filter(function (item) { return item !== String(dateKey || ''); });
+      localStorage.setItem(RESULT_KEY, JSON.stringify(results));
+      localStorage.setItem(ALLOC_KEY, JSON.stringify(allocated));
+      if (root.TipOutDateState) root.TipOutDateState.notify(store, dateKey);
+    }
+    if (root.TipOutDateState) return root.TipOutDateState.withLock(store, dateKey, execute);
+    execute();
+  }
+
+  root.TipOutAllocationResults = { RESULT_KEY: RESULT_KEY, read: read, isAllocated: isAllocated, validate: validate, commit: commit, cancel: cancel };
 })(window);
