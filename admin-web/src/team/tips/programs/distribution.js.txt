@@ -576,7 +576,7 @@ var ALLOC_KEY = 'tipout_allocated';
       dateSummaryFilters = {
         allocationStatus: saved.dateAllocationStatus || '',
         businessStatus: saved.dateBusinessStatus === 'open' || saved.dateBusinessStatus === 'closed' ? saved.dateBusinessStatus : '',
-        payoutStatus: ['pending-allocation', 'pending-payout', 'paid', 'not-required', 'error'].indexOf(saved.datePayoutStatus) >= 0 ? saved.datePayoutStatus : ''
+        payoutStatus: ['pending-payout', 'paid', 'not-required'].indexOf(saved.datePayoutStatus) >= 0 ? saved.datePayoutStatus : ''
       };
       var restoredEmployeeStatus = TipOutSummaryUi.normalizeEmployeeAllocationStatusFilter(saved.employeeSummaryStatus);
       employeeSummaryFilters = {
@@ -812,11 +812,11 @@ var ALLOC_KEY = 'tipout_allocated';
     function payoutViewForRow(row) {
       var store = (document.getElementById('storeSelect') || {}).value || '';
       var state = window.TipOutDateState ? TipOutDateState.inspect(store, row.dateKey) : { payoutStatus: 'none' };
-      if (state.payoutStatus === 'error') return { key: 'error', label: '发放数据异常', className: 'error', action: false };
+      if (state.payoutStatus === 'error') return { key: 'pending-payout', label: '待发放', className: 'pending', action: false };
       if (state.payoutStatus === 'paid') return { key: 'paid', label: '已发放', className: 'allocated', action: false };
       if (row.businessStatusResult.status === 'closed') return { key: 'not-required', label: '无需发放', className: 'closed', action: false };
       if (row.allocated) return { key: 'pending-payout', label: '待发放', className: 'pending', action: !!state.snapshot };
-      return { key: 'pending-allocation', label: '待分配', className: 'pending', action: false };
+      return { key: 'pending-payout', label: '待发放', className: 'pending', action: false };
     }
 
     function renderDateTaskList(dailyRows) {
@@ -998,7 +998,7 @@ var ALLOC_KEY = 'tipout_allocated';
     }
 
     function handleDatePayoutStatusChange(value) {
-      dateSummaryFilters.payoutStatus = ['pending-allocation', 'pending-payout', 'paid', 'not-required', 'error'].indexOf(value) >= 0 ? value : '';
+      dateSummaryFilters.payoutStatus = ['pending-payout', 'paid', 'not-required'].indexOf(value) >= 0 ? value : '';
       renderSummaryViews();
       captureSummaryUiState('', '');
     }
