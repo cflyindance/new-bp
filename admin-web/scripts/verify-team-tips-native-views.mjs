@@ -495,13 +495,16 @@ const tipsRuntime = fs.readFileSync("src/team/tips/tips-legacy-runtime.ts", "utf
 const employeeDetailBackgroundRule = pageCss.match(/\.tipout-page-employee-reconciliation-detail \.tipout-employee-detail-table tr\.has-issue\s*\{([^}]*)\}/)?.[1] ?? "";
 if (!employeeDetailBackgroundRule.includes("background: #ffffff")) failures.push("employee reconciliation detail: issue rows must use a white background");
 if (!pageCss.includes(".tipout-page-employee-reconciliation-detail #employeeDetailContent")) failures.push("employee reconciliation detail: white content surface rule missing");
-for (const token of ["employeeDetailStartDate", "employeeDetailEndDate", "employeeDetailRole", "employeeDetailAttendanceFilter", "employeeDetailFilteredEmpty", "employeeDetailExportButton", "employeeDetailExportMenu", "employeeDetailEmailModal", "employeeDetailExportEmail", "employeeDetailEmailFormat"]) {
+for (const token of ["employeeDetailStartDate", "employeeDetailEndDate", "employeeDetailRole", "employeeDetailAttendanceFilter", "employeeDetailAllocationStatusFilter", "employeeDetailFilteredEmpty", "employeeDetailExportButton", "employeeDetailExportMenu", "employeeDetailEmailModal", "employeeDetailExportEmail", "employeeDetailEmailFormat"]) {
   if (!employeeDetailTemplate.includes(token)) failures.push(`employee reconciliation detail: missing ${token}`);
 }
 for (const option of ["全部状态", "已打卡", "未打卡"]) {
   if (!employeeDetailTemplate.includes(`value="${option}"`)) failures.push(`employee reconciliation detail: missing attendance option ${option}`);
 }
 if (employeeDetailTemplate.includes("无需打卡")) failures.push("employee reconciliation detail: unsupported attendance state returned");
+for (const option of ["全部状态", "已分配", "待分配"]) {
+  if (!employeeDetailTemplate.includes(`value="${option}"`)) failures.push(`employee reconciliation detail: missing allocation option ${option}`);
+}
 for (const token of ["employeeDetailStore", "employeeDetailChipName", "employeeDetailNotice"]) {
   if (employeeDetailTemplate.includes(token)) failures.push(`employee reconciliation detail: removed region returned ${token}`);
 }
@@ -514,6 +517,25 @@ assert.deepEqual(
   ], "2026-01-02", "2026-01-03"), (row) => row.dateKey),
   ["2026-01-02", "2026-01-03"]
 );
+assert.deepEqual(
+  Array.from(employeeDetailContext.filterEmployeeDetailRows([
+    { dateKey: "2026-01-01", clockStatus: "已打卡", hours: 8, allocated: true },
+    { dateKey: "2026-01-02", clockStatus: "已打卡", hours: 8, allocated: false },
+    { dateKey: "2026-01-03", clockStatus: "未打卡", allocated: true },
+  ], "2026-01-01", "2026-01-03", "全部状态", "已分配"), (row) => row.dateKey),
+  ["2026-01-01", "2026-01-03"]
+);
+assert.deepEqual(
+  Array.from(employeeDetailContext.filterEmployeeDetailRows([
+    { dateKey: "2026-01-01", clockStatus: "已打卡", hours: 8, allocated: true },
+    { dateKey: "2026-01-02", clockStatus: "已打卡", hours: 8, allocated: false },
+    { dateKey: "2026-01-03", clockStatus: "未打卡", allocated: false },
+  ], "2026-01-01", "2026-01-02", "已打卡", "待分配"), (row) => row.dateKey),
+  ["2026-01-02"]
+);
+for (const token of ["allocationStatus: allocationStatus", "employeeDetailAllocationStatusFilter", "分配状态筛选"]) {
+  if (!employeeDetailProgram.includes(token)) failures.push(`employee reconciliation detail: allocation status contract missing ${token}`);
+}
 assert.deepEqual(
   JSON.parse(JSON.stringify(employeeDetailContext.normalizeEmployeeDetailRange("2026-01-04", "2026-01-03", "start"))),
   { start: "2026-01-04", end: "2026-01-04" }
