@@ -746,9 +746,7 @@ var ALLOC_KEY = 'tipout_allocated';
         row.ruleIssues = ruleIssues;
         if (!row.allocated || !window.TipOutAllocationResults) return;
         var snapshot = TipOutAllocationResults.read(store, row.dateKey);
-        row.allocationValidationError = snapshot
-          ? TipOutAllocationResults.validate(snapshot)
-          : '已分配日期缺少确认结果';
+        row.allocationValidationError = snapshot ? TipOutAllocationResults.validate(snapshot) : null;
       });
       return rows;
     }

@@ -525,6 +525,9 @@ const allocationExecutor = allocationExecutorStart >= 0 && allocationExecutorEnd
 if (!allocationExecutor || !allocationExecutor.includes("return { successCount: dates.length, paidSkippedCount: skippedPaidCount, closedSkippedCount: skippedClosedCount };")) {
   failures.push("distribution: allocation executor must return batch result counters");
 }
+if (!distributionProgram.includes("row.allocationValidationError = snapshot ? TipOutAllocationResults.validate(snapshot) : null;")) {
+  failures.push("distribution: batch allocations without detail snapshots must remain valid in employee summary");
+}
 const allocationValidator = distributionProgram.match(/function validateAllocationScope\(scope\)\s*\{[\s\S]*?\n\s*\}/)?.[0];
 if (!allocationValidator) {
   failures.push("distribution: allocation scope validator missing");
