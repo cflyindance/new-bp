@@ -12197,7 +12197,6 @@ function mount(): void {
 
   const mountPathForSheet = readAppHashPath();
   if (isNavHomePath(mountPathForSheet)) {
-    closeAllSidebarSecondarySheets();
     lastNavHubMountPathByModuleId = {};
   }
   if (

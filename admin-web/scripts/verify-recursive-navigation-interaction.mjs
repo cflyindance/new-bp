@@ -34,4 +34,14 @@ assert.doesNotMatch(
 );
 assert.match(source, /navLink\.closest\("\[data-hub-sheet-root\]"\)[\s\S]*closeAllSidebarSecondarySheets\(\)/);
 
+const navHomeMountGuard = source.slice(
+  source.indexOf("if (isNavHomePath(mountPathForSheet))"),
+  source.indexOf("lastSidebarMountPathForInventorySheet", source.indexOf("if (isNavHomePath(mountPathForSheet))")),
+);
+assert.doesNotMatch(
+  navHomeMountGuard,
+  /closeAllSidebarSecondarySheets\(\)/,
+  "same-route #/home remount must preserve a sheet opened by a primary menu click",
+);
+
 console.log("recursive navigation interaction verified");
