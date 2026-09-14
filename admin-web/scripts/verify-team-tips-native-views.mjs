@@ -230,6 +230,14 @@ if (!distributionProgram.includes('class="tip-amount--receive"')) failures.push(
 for (const token of ['id="detailRuleFilter"', 'id="detailRuleFilterAll"', 'id="detailRuleFilterOptions"', '规则名称', 'toggleAllDetailRules(this.checked)']) {
   if (!nativeDetail.includes(token)) failures.push(`detail: rule filter contract missing ${token}`);
 }
+for (const token of [
+  '.tipout-page-detail .tipout-detail-rule-filter-field .multi-select { position: relative;',
+  '.tipout-page-detail .tipout-detail-rule-filter-field .multi-select-dropdown {',
+  'display: none;',
+  '.tipout-page-detail .tipout-detail-rule-filter-field .multi-select.open .multi-select-dropdown { display: block; }',
+]) {
+  if (!pageCss.includes(token)) failures.push(`detail: rule filter dropdown presentation missing ${token}`);
+}
 for (const token of ['detailAllRules', 'detailSelectedRuleIds', 'renderVisibleRuleView()', 'handleDetailRuleSelection()', 'TipOutDetailRuleFilter.sameRuleSet']) {
   if (!nativeDetailProgram.includes(token)) failures.push(`detail: rule filter behavior missing ${token}`);
 }

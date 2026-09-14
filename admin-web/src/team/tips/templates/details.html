@@ -170,11 +170,11 @@
           <div class="filter-field tipout-detail-rule-filter-field">
             <span id="detailRuleFilterLabel">规则名称</span>
             <div class="multi-select" id="detailRuleFilter" aria-labelledby="detailRuleFilterLabel">
-              <div class="multi-select-input" role="button" tabindex="0" aria-expanded="false" data-native-onclick="toggleDetailRuleFilter()" data-native-onkeydown="handleDetailRuleFilterKeydown(event)">
+              <div class="multi-select-input" role="button" tabindex="0" aria-haspopup="listbox" aria-expanded="false" data-native-onclick="toggleDetailRuleFilter()" data-native-onkeydown="handleDetailRuleFilterKeydown(event)">
                 <div class="multi-select-tags" id="detailRuleFilterTags"><span class="multi-select-placeholder">全部规则</span></div>
-                <span aria-hidden="true">⌄</span>
+                <span class="multi-select-arrow" aria-hidden="true">⌄</span>
               </div>
-              <div class="multi-select-dropdown">
+              <div class="multi-select-dropdown" role="listbox" aria-multiselectable="true">
                 <label class="multi-select-option multi-select-all"><input id="detailRuleFilterAll" type="checkbox" data-native-onchange="toggleAllDetailRules(this.checked)"> 全选</label>
                 <div id="detailRuleFilterOptions"></div>
               </div>
