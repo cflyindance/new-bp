@@ -689,7 +689,6 @@ var ALLOC_KEY = 'tipout_allocated';
     }
 
     function renderSummaryOverview(dailyRows, allocatedDates) {
-      var poolMetric = document.getElementById('summaryPoolCountMetric');
       var dateTotals = dailyRows.reduce(function(result, row) {
         result.originalTips += row.poolSummary.originalTips;
         result.poolAmount += row.poolSummary.poolAmount;
@@ -697,9 +696,8 @@ var ALLOC_KEY = 'tipout_allocated';
           result.allocatedAmount += row.poolSummary.allocatedAmount || 0;
           result.unallocatedAmount += row.poolSummary.unallocatedAmount || 0;
         } else result.hasPending = true;
-        result.poolCount = Math.max(result.poolCount, row.poolSummary.poolCount);
         return result;
-      }, { originalTips: 0, poolAmount: 0, allocatedAmount: 0, unallocatedAmount: 0, poolCount: 0, hasPending: false });
+      }, { originalTips: 0, poolAmount: 0, allocatedAmount: 0, unallocatedAmount: 0, hasPending: false });
       document.getElementById('summaryBeforeLabel').textContent = '原始小费';
       document.getElementById('summaryDeductedLabel').textContent = '入池金额';
       document.getElementById('summaryReceivedLabel').textContent = '已分配';
@@ -708,8 +706,6 @@ var ALLOC_KEY = 'tipout_allocated';
       document.getElementById('summaryDeducted').textContent = money(dateTotals.poolAmount);
       document.getElementById('summaryReceived').textContent = dateTotals.hasPending ? '—' : money(dateTotals.allocatedAmount);
       document.getElementById('summaryAfter').textContent = dateTotals.hasPending ? '—' : money(dateTotals.unallocatedAmount);
-      document.getElementById('summaryPoolCount').textContent = String(dateTotals.poolCount);
-      if (poolMetric) poolMetric.hidden = false;
     }
 
     function allocationRuleIssueMessage(issue) {
