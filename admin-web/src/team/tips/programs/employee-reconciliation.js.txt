@@ -48,11 +48,14 @@ function detailNumber(value) { return Number(value) || 0; }
         total.hours += detailNumber(attendance.hours);
         (attendance.manualEntries || []).forEach(function(entry) { total.manualPools[entry.poolId] = true; total.manualRecords += 1; });
         total.before += detailNumber(row.before);
-        total.deducted += detailNumber(row.deducted);
-        total.received += detailNumber(row.received);
-        total.after += detailNumber(row.after);
+        if (row.allocated) {
+          total.allocatedCount += 1;
+          total.deducted += detailNumber(row.deducted);
+          total.received += detailNumber(row.received);
+          total.after += detailNumber(row.after);
+        }
         return total;
-      }, { shifts: 0, hours: 0, manualPools: {}, manualRecords: 0, before: 0, deducted: 0, received: 0, after: 0 });
+      }, { shifts: 0, hours: 0, manualPools: {}, manualRecords: 0, before: 0, deducted: 0, received: 0, after: 0, allocatedCount: 0 });
       summary.manualPoolCount = Object.keys(summary.manualPools).length;
       return summary;
     }
@@ -127,6 +130,15 @@ function detailNumber(value) { return Number(value) || 0; }
       cell.appendChild(strong);
       return cell;
     }
+    function makeAllocationMoneyCell(row, value, kind) {
+      return row && row.allocated ? makeMoneyCell(value, kind) : makeDetailCell('—');
+    }
+    function employeeDetailAllocationMoney(row, value, kind) {
+      if (!row || !row.allocated) return '—';
+      if (kind === 'deduct') return '-' + detailMoney(value);
+      if (kind === 'receive') return '+' + detailMoney(value);
+      return detailMoney(value);
+    }
 
     function employeeDetailCsvCell(value) {
       var text = value === undefined || value === null ? '' : String(value);
@@ -175,9 +187,9 @@ function detailNumber(value) { return Number(value) || 0; }
             clockOuts: attendance.clockOuts.join('\n') || '—',
             manualHourDetails: (attendance.manualEntries || []).map(function(entry) { return entry.poolName + ' · ' + entry.ruleName + ': ' + detailHours(entry.hours) + ' h'; }).join('\n'),
             before: detailMoney(row.before),
-            deducted: '-' + detailMoney(row.deducted),
-            received: '+' + detailMoney(row.received),
-            after: detailMoney(row.after),
+            deducted: employeeDetailAllocationMoney(row, row.deducted, 'deduct'),
+            received: employeeDetailAllocationMoney(row, row.received, 'receive'),
+            after: employeeDetailAllocationMoney(row, row.after),
             allocation: row.allocated ? '已分配' : '待分配'
           };
         })
@@ -329,9 +341,9 @@ function detailNumber(value) { return Number(value) || 0; }
         tr.appendChild(makeDetailCell(attendance.clockIns.join('\n'), '', 'tipout-punch-time-stack'));
         tr.appendChild(makeDetailCell(attendance.clockOuts.join('\n'), '', 'tipout-punch-time-stack'));
         tr.appendChild(makeMoneyCell(row.before));
-        tr.appendChild(makeMoneyCell(row.deducted, 'deduct'));
-        tr.appendChild(makeMoneyCell(row.received, 'receive'));
-        tr.appendChild(makeMoneyCell(row.after));
+        tr.appendChild(makeAllocationMoneyCell(row, row.deducted, 'deduct'));
+        tr.appendChild(makeAllocationMoneyCell(row, row.received, 'receive'));
+        tr.appendChild(makeAllocationMoneyCell(row, row.after));
         tr.appendChild(makeStatusCell(row.allocated ? '已分配' : '待分配', row.allocated ? 'is-allocated' : 'is-pending'));
         tbody.appendChild(tr);
       });
@@ -342,9 +354,9 @@ function detailNumber(value) { return Number(value) || 0; }
       setDetailText('employeeDetailShifts', String(detailNumber(summary.shifts)));
       setDetailText('employeeDetailManualHours', detailNumber(summary.manualPoolCount) + ' 个小费池 / ' + detailNumber(summary.manualRecords) + ' 条记录');
       setDetailText('employeeDetailBefore', detailMoney(summary.before));
-      setDetailText('employeeDetailDeducted', '-' + detailMoney(summary.deducted));
-      setDetailText('employeeDetailReceived', '+' + detailMoney(summary.received));
-      setDetailText('employeeDetailAfter', detailMoney(summary.after));
+      setDetailText('employeeDetailDeducted', summary.allocatedCount ? '-' + detailMoney(summary.deducted) : '—');
+      setDetailText('employeeDetailReceived', summary.allocatedCount ? '+' + detailMoney(summary.received) : '—');
+      setDetailText('employeeDetailAfter', summary.allocatedCount ? detailMoney(summary.after) : '—');
     }
 
     function syncEmployeeDetailDateSortHeader() {

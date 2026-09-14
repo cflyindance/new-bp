@@ -296,7 +296,7 @@ for (const token of ["ArrowLeft", "ArrowRight", "Home", "End"]) {
   if (!distributionProgram.includes(token)) failures.push(`distribution: Tab keyboard behavior missing ${token}`);
 }
 for (const token of [
-  "dateSummaryFilters = { allocationStatus: '', businessStatus: '' }",
+  "dateSummaryFilters = { allocationStatus: '', businessStatus: '', payoutStatus: '' }",
   "handleDateAllocationStatusChange",
   "filterDailyRowsByAllocationStatus",
   "employeeScope: { mode: 'all', ids: [] }",
@@ -384,7 +384,7 @@ assert.deepEqual(JSON.parse(JSON.stringify(summaryUi.readSummaryHistoryState(sum
   roles: ["Server"], employees: ["employee-1"], scrollY: 240,
   returnDate: "", returnEmployeeId: "employee-1",
   employeeSearch: "", employeeSummaryRole: "", employeeSummaryStatus: "",
-  employeeSummaryScope: { mode: "all", ids: [] }, dateAllocationStatus: "", dateBusinessStatus: "",
+  employeeSummaryScope: { mode: "all", ids: [] }, dateAllocationStatus: "", dateBusinessStatus: "", datePayoutStatus: "",
   employeeSortKey: "finalAmount", employeeSortDirection: "desc", activeView: "employee",
 });
 const employeeAggregates = summaryUi.aggregateEmployeeDailyDatasets([
@@ -574,6 +574,16 @@ assert.deepEqual(
   { start: "2026-01-03", end: "2026-01-03" }
 );
 assert.equal(employeeDetailContext.employeeDetailRoleLabel(""), "未设置角色");
+assert.equal(employeeDetailContext.employeeDetailAllocationMoney({ allocated: false }, 12.34, "deduct"), "—");
+assert.equal(employeeDetailContext.employeeDetailAllocationMoney({ allocated: false }, 45.67, "receive"), "—");
+assert.equal(employeeDetailContext.employeeDetailAllocationMoney({ allocated: false }, 89.01), "—");
+assert.equal(employeeDetailContext.employeeDetailAllocationMoney({ allocated: true }, 12.34, "deduct"), "-$12.34");
+assert.equal(employeeDetailContext.employeeDetailAllocationMoney({ allocated: true }, 45.67, "receive"), "+$45.67");
+assert.equal(employeeDetailContext.employeeDetailAllocationMoney({ allocated: true }, 89.01), "$89.01");
+assert.deepEqual(
+  JSON.parse(JSON.stringify(employeeDetailContext.summarizeEmployeeDetailRows([{ allocated: false, before: 100, deducted: 10, received: 20, after: 110 }]))),
+  { shifts: 0, hours: 0, manualPools: {}, manualRecords: 0, before: 100, deducted: 0, received: 0, after: 0, allocatedCount: 0, manualPoolCount: 0 }
+);
 assert.equal(employeeDetailContext.employeeDetailCsvCell('a,"b"'), '"a,""b"""');
 assert.equal(employeeDetailContext.employeeDetailCsvCell('=SUM(1,1)'), '"\'=SUM(1,1)"');
 assert.equal(employeeDetailContext.employeeDetailSafeFilename('王/店长:2026'), '王_店长_2026');
@@ -611,10 +621,10 @@ assert.deepEqual(
 );
 assert.deepEqual(
   JSON.parse(JSON.stringify(employeeDetailContext.summarizeEmployeeDetailRows([
-    { clockStatus: "已打卡", hours: 8, before: 10.1, deducted: 1, received: 2, after: 11.1 },
-    { clockStatus: "未打卡", hours: 0, before: 3.2, deducted: 0.2, received: 0.4, after: 3.4 }
+    { clockStatus: "已打卡", hours: 8, before: 10.1, deducted: 1, received: 2, after: 11.1, allocated: true },
+    { clockStatus: "未打卡", hours: 0, before: 3.2, deducted: 0.2, received: 0.4, after: 3.4, allocated: true }
   ]))),
-  { shifts: 1, hours: 8, manualPools: {}, manualRecords: 0, before: 13.3, deducted: 1.2, received: 2.4, after: 14.5, manualPoolCount: 0 }
+  { shifts: 1, hours: 8, manualPools: {}, manualRecords: 0, before: 13.3, deducted: 1.2, received: 2.4, after: 14.5, allocatedCount: 2, manualPoolCount: 0 }
 );
 if (failures.length) { failures.forEach((failure) => console.error(failure)); process.exit(1); }
 console.log("Team tips native view verification passed.");
