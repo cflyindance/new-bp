@@ -140,6 +140,29 @@ assert.deepEqual(JSON.parse(JSON.stringify(summaryUi.normalizeEmployeeScope(["a"
 assert.deepEqual(JSON.parse(JSON.stringify(summaryUi.reconcileEmployeeScope({ mode: "subset", ids: ["a", "x"] }, ["a", "b"]))), { mode: "subset", ids: ["a"] });
 assert.deepEqual(summaryUi.filterDailyRowsByAllocationStatus([{ allocated: true }, { allocated: false }], "allocated").map(row => row.allocated), [true]);
 assert.deepEqual(summaryUi.filterDailyRowsByAllocationStatus([{ allocated: true }, { allocated: false }], "unallocated").map(row => row.allocated), [false]);
+assert.equal(summaryUi.employeeAllocationStatus([{ allocated: true }, { allocated: true }]), "已完成");
+assert.equal(summaryUi.employeeAllocationStatus([{ allocated: true }, { allocated: false }]), "部分待分配");
+assert.equal(summaryUi.employeeAllocationStatus([{ allocated: false }, { allocated: false }]), "待分配");
+assert.equal(summaryUi.employeeAllocationStatus([{ allocated: true, allocationValidationError: "金额异常" }]), "已完成");
+assert.equal(summaryUi.normalizeEmployeeAllocationStatusFilter("部分待分配"), "部分待分配");
+assert.equal(summaryUi.normalizeEmployeeAllocationStatusFilter("待处理"), "");
+assert.equal(summaryUi.normalizeEmployeeAllocationStatusFilter("异常"), "");
+const allocationStatusEmployees = [
+  { employeeId: "complete", name: "Complete", roles: ["Server"], status: "已完成", finalAmountCents: 300 },
+  { employeeId: "partial", name: "Partial", roles: ["Server"], status: "部分待分配", finalAmountCents: 200 },
+  { employeeId: "pending", name: "Pending", roles: ["Server"], status: "待分配", finalAmountCents: 100 },
+];
+for (const status of ["已完成", "部分待分配", "待分配"]) {
+  assert.deepEqual(
+    summaryUi.filterAndSortEmployeeAggregates(allocationStatusEmployees, { statuses: [status] }, { key: "employee", direction: "asc" }).map(item => item.status),
+    [status]
+  );
+}
+assert.equal(summaryUi.aggregateEmployeeDailyDatasets([
+  { dateKey: "2026-09-01", allocated: false, employeeResults: [
+    { employeeId: "range-employee", name: "Range", role: "Server", hours: 0, before: 1, deducted: 0, received: 0, after: 1, clockStatus: "未打卡" },
+  ] },
+])[0].status, "待分配");
 assert.deepEqual(summaryUi.filterAndSortEmployeeAggregates([
   { employeeId: "a", name: "A", roles: ["Server"], status: "已完成", finalAmountCents: 100 },
   { employeeId: "b", name: "B", roles: ["Busser"], status: "已完成", finalAmountCents: 200 },
@@ -167,6 +190,16 @@ const employeeTableHead = distributionTemplate.slice(
   distributionTemplate.indexOf('<table class="data-table tipout-summary-table tipout-employee-table">'),
   distributionTemplate.indexOf('</thead>', distributionTemplate.indexOf('<table class="data-table tipout-summary-table tipout-employee-table">')),
 );
+if (!distributionTemplate.includes('for="employeeSummaryStatusFilter">分配状态</label>')) failures.push("distribution: employee allocation status filter label missing");
+for (const option of ['<option value="已完成">已完成</option>', '<option value="部分待分配">部分待分配</option>', '<option value="待分配">待分配</option>']) {
+  if (!distributionTemplate.includes(option)) failures.push(`distribution: employee allocation status option missing ${option}`);
+}
+if (!employeeTableHead.includes('<th>分配状态</th>')) failures.push("distribution: employee allocation status table header missing");
+for (const obsoleteOption of ['<option value="待处理">待处理</option>', '<option value="异常">异常</option>']) {
+  if (distributionTemplate.includes(obsoleteOption)) failures.push(`distribution: obsolete employee allocation status option remains ${obsoleteOption}`);
+}
+if (!distributionProgram.includes("normalizeEmployeeAllocationStatusFilter(saved.employeeSummaryStatus)")) failures.push("distribution: restored employee allocation status must be normalized");
+if (!distributionProgram.includes("normalizeEmployeeAllocationStatusFilter(status && status.value)")) failures.push("distribution: live employee allocation status must be normalized");
 const employeeAmountHeaders = ["分配前小费", "扣除", "分配获得", "分配后小费"];
 let previousEmployeeAmountHeader = -1;
 for (const header of employeeAmountHeaders) {
@@ -378,20 +411,20 @@ assert.deepEqual(Array.from(olivia.roles), ["Server", "Bartender"]);
 assert.equal(olivia.beforeCents, 10010);
 assert.equal(olivia.netAdjustmentCents, 1010);
 assert.equal(olivia.finalAmountCents, 11020);
-assert.equal(olivia.status, "待处理");
+assert.equal(olivia.status, "部分待分配");
 assert.equal(olivia.hasPartialConfirmed, true);
 assert.equal(olivia.firstActionDate, "2026-09-11");
 const emma = resultFirstAggregates.find((item) => item.employeeId === "e3");
-assert.equal(emma.status, "异常");
+assert.equal(emma.status, "已完成");
 assert.equal(emma.finalAmountCents, null);
 assert.deepEqual(Array.from(emma.issueReasons), ["金额校验失败"]);
 const employeeOverview = summaryUi.summarizeEmployeeAggregates(resultFirstAggregates);
 assert.deepEqual(JSON.parse(JSON.stringify(employeeOverview)), {
   employeeCount: 3, finalAmountCents: 15020, hasConfirmedAmount: true,
-  completedCount: 1, pendingCount: 1, exceptionCount: 1,
+  completedCount: 2, pendingCount: 1, exceptionCount: 0,
 });
 assert.equal(employeeOverview.employeeCount, employeeOverview.completedCount + employeeOverview.pendingCount + employeeOverview.exceptionCount);
-const filteredEmployees = summaryUi.filterAndSortEmployeeAggregates(resultFirstAggregates, { search: "oliv", roles: ["Bartender"], statuses: ["待处理"] }, { key: "finalAmount", direction: "desc" });
+const filteredEmployees = summaryUi.filterAndSortEmployeeAggregates(resultFirstAggregates, { search: "oliv", roles: ["Bartender"], statuses: ["部分待分配"] }, { key: "finalAmount", direction: "desc" });
 assert.deepEqual(Array.from(filteredEmployees, (item) => item.employeeId), ["e1"]);
 for (const token of ["collectDateTaskExportData", "collectEmployeeReconciliationExportData", "collectCurrentSummaryExportData"]) {
   if (!distributionExport.includes(token)) failures.push(`distribution export: active-view export contract missing ${token}`);

@@ -88,6 +88,19 @@
     return rules.some(function (rule) { return !rule || rule.clockin !== 'noclock'; });
   }
 
+  function employeeAllocationStatus(rows) {
+    var dailyRows = Array.isArray(rows) ? rows : [];
+    var allocatedDays = dailyRows.filter(function(row) { return row && row.allocated === true; }).length;
+    var unallocatedDays = dailyRows.length - allocatedDays;
+    if (allocatedDays > 0 && unallocatedDays === 0) return '已完成';
+    if (allocatedDays > 0 && unallocatedDays > 0) return '部分待分配';
+    return '待分配';
+  }
+
+  function normalizeEmployeeAllocationStatusFilter(value) {
+    return ['已完成', '部分待分配', '待分配'].indexOf(value) >= 0 ? value : '';
+  }
+
   function aggregateEmployeeDailyDatasets(dailyRows) {
     var order = [];
     var byId = Object.create(null);
@@ -170,7 +183,7 @@
         aggregate.receivedCents = null;
       }
       aggregate.hasPartialConfirmed = aggregate.confirmedAllocationDays > 0 && aggregate.pendingAllocationDays > 0;
-      aggregate.status = invalid ? '异常' : (aggregate.pendingAllocationDays > 0 ? '待处理' : '已完成');
+      aggregate.status = employeeAllocationStatus(aggregate.dailyRows);
       aggregate.role = aggregate.roles.join(' / ');
       aggregate.before = aggregate.beforeCents == null ? null : aggregate.beforeCents / 100;
       aggregate.deducted = aggregate.deductedCents == null ? null : aggregate.deductedCents / 100;
@@ -183,9 +196,8 @@
   function summarizeEmployeeAggregates(aggregates) {
     return (aggregates || []).reduce(function(summary, item) {
       summary.employeeCount += 1;
-      if (item.status === '异常') summary.exceptionCount += 1;
-      else if (item.status === '待处理') summary.pendingCount += 1;
-      else summary.completedCount += 1;
+      if (item.status === '已完成') summary.completedCount += 1;
+      else summary.pendingCount += 1;
       if (item.status !== '异常' && item.hasConfirmedAmount && item.finalAmountCents != null) {
         summary.finalAmountCents += item.finalAmountCents;
         summary.hasConfirmedAmount = true;
@@ -347,6 +359,8 @@
     normalizeEmployeeScope: normalizeEmployeeScope,
     reconcileEmployeeScope: reconcileEmployeeScope,
     filterDailyRowsByAllocationStatus: filterDailyRowsByAllocationStatus,
+    employeeAllocationStatus: employeeAllocationStatus,
+    normalizeEmployeeAllocationStatusFilter: normalizeEmployeeAllocationStatusFilter,
     EMPLOYEE_RECONCILIATION_SNAPSHOT_KEY: EMPLOYEE_RECONCILIATION_SNAPSHOT_KEY
   };
 })(window);
