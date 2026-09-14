@@ -446,6 +446,34 @@ assert.deepEqual(JSON.parse(JSON.stringify(employeeOverview)), {
 assert.equal(employeeOverview.employeeCount, employeeOverview.completedCount + employeeOverview.pendingCount + employeeOverview.exceptionCount);
 const filteredEmployees = summaryUi.filterAndSortEmployeeAggregates(resultFirstAggregates, { search: "oliv", roles: ["Bartender"], statuses: ["部分待分配"] }, { key: "finalAmount", direction: "desc" });
 assert.deepEqual(Array.from(filteredEmployees, (item) => item.employeeId), ["e1"]);
+const roleDailyRows = [
+  { dateKey: "2026-09-13", allocated: true, employeeResults: [
+    { employeeId: "e1", role: "Server", before: 10, deducted: 2, received: 5 },
+    { employeeId: "e2", role: "Busser", before: 4, deducted: 0, received: 8 },
+  ] },
+  { dateKey: "2026-09-14", allocated: false, employeeResults: [
+    { employeeId: "e1", role: "Bartender", before: 7, deducted: 99, received: 99 },
+    { employeeId: "e3", role: "Server", before: 3, deducted: 99, received: 99 },
+    { role: "Server", before: 2, deducted: 99, received: 99 },
+  ] },
+];
+const roleAggregates = summaryUi.aggregateRoleDailyDatasets(roleDailyRows, {});
+assert.deepEqual(Array.from(roleAggregates, (item) => item.role), ["Server", "Busser", "Bartender"]);
+assert.deepEqual(JSON.parse(JSON.stringify(roleAggregates.find((item) => item.role === "Server"))), {
+  role: "Server", employeeIds: ["e1", "e3"], employeeCount: 2,
+  beforeCents: 1500, deductedCents: 200, receivedCents: 500, finalAmountCents: 1300,
+  allocatedRecordCount: 1, pendingRecordCount: 2, status: "partial", hasConfirmedAmount: true,
+});
+const pendingBartender = roleAggregates.find((item) => item.role === "Bartender");
+assert.equal(pendingBartender.deductedCents, 0);
+assert.equal(pendingBartender.receivedCents, 0);
+assert.equal(pendingBartender.finalAmountCents, 0);
+assert.equal(pendingBartender.hasConfirmedAmount, false);
+assert.deepEqual(
+  Array.from(summaryUi.aggregateRoleDailyDatasets(roleDailyRows, { employeeIds: ["e1"], role: "Server" }), (item) => item.role),
+  ["Server"]
+);
+assert.deepEqual(Array.from(summaryUi.aggregateRoleDailyDatasets(roleDailyRows, { employeeIds: [] })), []);
 for (const token of ["collectDateTaskExportData", "collectEmployeeReconciliationExportData", "collectCurrentSummaryExportData"]) {
   if (!distributionExport.includes(token)) failures.push(`distribution export: active-view export contract missing ${token}`);
 }
