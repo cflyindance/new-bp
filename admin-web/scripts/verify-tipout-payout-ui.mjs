@@ -28,7 +28,21 @@ assert.match(summaryProgram, /所选范围均已发放，未执行任何变更/)
 assert.match(summaryProgram, /canceledCount > 0 && window\.TipOutPayrollBridge/);
 
 assert.match(detailTemplate, /id="updateTipDataBtn"/);
+for (const id of ['confirmDetailPayoutBtn', 'detailConfirmPayoutModal', 'detailPayoutStore', 'detailPayoutDate', 'detailPayoutAmount', 'detailPayoutEmployees', 'submitDetailPayoutBtn']) {
+  assert.match(detailTemplate, new RegExp(`id="${id}"`));
+}
+assert.match(detailTemplate, /id="confirmDetailPayoutBtn"[\s\S]*id="confirmDetailAllocationBtn"/);
+assert.match(detailTemplate, /确认后分配结果将锁定，无法修改或取消/);
 assert.match(detailProgram, /function renderPaidDetailState\(state\)/);
+assert.match(detailProgram, /function syncDetailPayoutAction\(\)/);
+assert.match(detailProgram, /async function openDetailPayoutModal\(event\)/);
+assert.match(detailProgram, /async function submitDetailPayout\(\)/);
+assert.match(detailProgram, /TipOutDateState\.ensureSnapshot\(scope\.store, scope\.dateKey\)/);
+assert.match(detailProgram, /TipOutDateState\.confirmPayout\(draft\)/);
+assert.match(detailProgram, /state\.allocationStatus === 'allocated'[\s\S]*state\.payoutStatus === 'pending'[\s\S]*!state\.locked/);
+assert.match(detailProgram, /function reconcileDetailPayout\(intentVersion, draft\)/);
+assert.match(detailProgram, /intentVersion !== detailPayoutIntentVersion/);
+assert.match(detailProgram, /if \(detailPayoutDomainWriteActive\) return;/);
 assert.match(detailProgram, /state\.payoutStatus === 'error'/);
 assert.match(detailProgram, /actionBar\.style\.display = 'none'/);
 assert.match(detailProgram, /updateButton\.style\.display = 'none'/);
