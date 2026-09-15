@@ -4,6 +4,7 @@
   var PAYOUT_KEY = 'tipout-payout-records-v1';
   var RESULT_KEY = 'tipout_allocation_results_v1';
   var ALLOC_KEY = 'tipout_allocated';
+  var UPDATE_KEY = 'tipout_unconfirmed_updates_v1';
   var CHANNEL_NAME = 'tipout-date-state-changed';
 
   function clone(value) { return value == null ? value : JSON.parse(JSON.stringify(value)); }
@@ -31,6 +32,7 @@
     return bytesToHex(await root.crypto.subtle.digest('SHA-256', new root.TextEncoder().encode(canonical(snapshot))));
   }
   function readPayoutDocument() { return readObject(PAYOUT_KEY); }
+  function readUpdateDocument() { return readObject(UPDATE_KEY); }
   function readAllocation(storeId, businessDate) {
     var results = readObject(RESULT_KEY);
     var snapshot = results[pairKey(storeId, businessDate)];
@@ -39,6 +41,22 @@
   function readPayout(storeId, businessDate) {
     var record = readPayoutDocument()[pairKey(storeId, businessDate)];
     return record && typeof record === 'object' && !Array.isArray(record) ? clone(record) : null;
+  }
+  function readUnconfirmedUpdate(storeId, businessDate) {
+    var value = readUpdateDocument()[pairKey(storeId, businessDate)];
+    return value && typeof value === 'object' && !Array.isArray(value) ? clone(value) : null;
+  }
+  function hasUnconfirmedUpdate(storeId, businessDate) { return !!readUnconfirmedUpdate(storeId, businessDate); }
+  function markUnconfirmedUpdate(storeId, businessDate, fingerprint) {
+    var document = readUpdateDocument();
+    document[pairKey(storeId, businessDate)] = { storeId: String(storeId || ''), businessDate: String(businessDate || ''), fingerprint: String(fingerprint || ''), updatedAt: new Date().toISOString() };
+    root.localStorage.setItem(UPDATE_KEY, JSON.stringify(document)); notify(storeId, businessDate);
+    return clone(document[pairKey(storeId, businessDate)]);
+  }
+  function clearUnconfirmedUpdate(storeId, businessDate) {
+    var document = readUpdateDocument(), key = pairKey(storeId, businessDate);
+    if (!document[key]) return false;
+    delete document[key]; root.localStorage.setItem(UPDATE_KEY, JSON.stringify(document)); notify(storeId, businessDate); return true;
   }
   function currentVersion(storeId, businessDate) {
     var snapshot = readAllocation(storeId, businessDate);
@@ -49,7 +67,7 @@
     var payout;
     try { snapshot = readAllocation(storeId, businessDate); payout = readPayout(storeId, businessDate); }
     catch (error) { return { allocationStatus: 'error', payoutStatus: 'error', locked: true, error: error.message, snapshot: null, payout: null }; }
-    if (!payout) return { allocationStatus: snapshot ? 'allocated' : 'pending', payoutStatus: snapshot ? 'pending' : 'none', locked: false, error: '', snapshot: snapshot, payout: null };
+    if (!payout) return { allocationStatus: snapshot ? 'allocated' : 'pending', payoutStatus: snapshot ? 'pending' : 'none', locked: false, error: '', snapshot: snapshot, payout: null, unconfirmedUpdate: readUnconfirmedUpdate(storeId, businessDate) };
     var valid = snapshot && payout.snapshotId && payout.snapshotId === snapshot.snapshotId &&
       Number(payout.snapshotVersion) === Number(snapshot.snapshotVersion) && payout.snapshotHash === snapshot.snapshotHash;
     return { allocationStatus: snapshot ? 'allocated' : 'error', payoutStatus: valid ? 'paid' : 'error', locked: true,
@@ -85,6 +103,7 @@
   }
   async function ensureSnapshot(storeId, businessDate) {
     return withLock(storeId, businessDate, async function () {
+      if (hasUnconfirmedUpdate(storeId, businessDate)) throw new Error('请先重新确认分配后再确认发放');
       assertDateWritable(storeId, businessDate);
       var snapshot = readAllocation(storeId, businessDate);
       if (!snapshot) throw new Error('请先完成当天小费分配');
@@ -102,6 +121,7 @@
     var storeId = String(input.storeId || '');
     var businessDate = String(input.businessDate || '');
     return withLock(storeId, businessDate, async function () {
+      if (hasUnconfirmedUpdate(storeId, businessDate)) throw new Error('请先重新确认分配后再确认发放');
       var payouts = readPayoutDocument();
       var key = pairKey(storeId, businessDate);
       var existing = payouts[key];
@@ -134,9 +154,11 @@
   }
 
   root.TipOutDateState = {
-    PAYOUT_KEY: PAYOUT_KEY, CHANNEL_NAME: CHANNEL_NAME, canonical: canonical, hashSnapshot: hashSnapshot,
+    PAYOUT_KEY: PAYOUT_KEY, UPDATE_KEY: UPDATE_KEY, CHANNEL_NAME: CHANNEL_NAME, canonical: canonical, hashSnapshot: hashSnapshot,
     prepareSnapshot: prepareSnapshot, ensureSnapshot: ensureSnapshot, readAllocation: readAllocation, readPayout: readPayout, inspect: inspect,
     assertDateWritable: assertDateWritable, withLock: withLock, confirmPayout: confirmPayout,
-    listPaidDates: listPaidDates, requestId: requestId, notify: notify
+    listPaidDates: listPaidDates, requestId: requestId, notify: notify,
+    readUnconfirmedUpdate: readUnconfirmedUpdate, hasUnconfirmedUpdate: hasUnconfirmedUpdate,
+    markUnconfirmedUpdate: markUnconfirmedUpdate, clearUnconfirmedUpdate: clearUnconfirmedUpdate
   };
 })(typeof window !== 'undefined' ? window : this);

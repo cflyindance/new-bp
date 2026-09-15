@@ -197,10 +197,47 @@
         <div class="tipout-sticky-actions" id="detailActionBar">
           <span id="detailAllocationScopeHint">确认后将生成当天正式小费分配结果</span>
           <div>
+            <button id="confirmDetailPayoutBtn" class="btn" hidden data-native-onclick="openDetailPayoutModal(event)">确认已发放</button>
             <button id="confirmDetailAllocationBtn" class="btn btn-primary" data-native-onclick="confirmDetailAllocation()">确认分配</button>
           </div>
         </div>
       </div>
+<div class="modal-overlay" id="tipDataUpdateModal" aria-hidden="true" data-native-onclick="handleTipDataUpdateOverlayClick(event)">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="tipDataUpdateTitle" aria-describedby="tipDataUpdateWarning" style="width:560px">
+    <div class="modal-header">
+      <h3 id="tipDataUpdateTitle">确认更新小费数据？</h3>
+      <button id="closeTipDataUpdateBtn" class="modal-close" aria-label="关闭" data-native-onclick="cancelTipDataUpdate()">×</button>
+    </div>
+    <div class="modal-body">
+      <p id="tipDataUpdateWarning" class="tipout-payout-warning">更新后将重新获取当前有效的小费规则并重新计算。当前手工新增的员工、手工工时、分配比例及调整结果将被清除，新的小费结果会覆盖现有数据。如仍需手工调整，请在更新完成后重新录入。</p>
+    </div>
+    <div class="modal-footer">
+      <button id="cancelTipDataUpdateBtn" class="btn" data-native-onclick="cancelTipDataUpdate()">取消</button>
+      <button id="confirmTipDataUpdateBtn" class="btn btn-primary" data-native-onclick="confirmTipDataUpdate()">确认更新</button>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="detailConfirmPayoutModal" aria-hidden="true" data-native-onclick="handleDetailPayoutOverlayClick(event)">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="detailConfirmPayoutTitle" style="width:520px">
+    <div class="modal-header">
+      <h3 id="detailConfirmPayoutTitle">确认已发放</h3>
+      <button id="closeDetailPayoutBtn" class="modal-close" aria-label="关闭" data-native-onclick="closeDetailPayoutModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="tipout-payout-confirm-grid">
+        <span>门店</span><strong id="detailPayoutStore">—</strong>
+        <span>营业日期</span><strong id="detailPayoutDate">—</strong>
+        <span>已分配金额</span><strong id="detailPayoutAmount">—</strong>
+        <span>涉及员工</span><strong id="detailPayoutEmployees">—</strong>
+      </div>
+      <p class="tipout-payout-warning">确认该日期的小费已全部发放？确认后分配结果将锁定，无法修改或取消。</p>
+    </div>
+    <div class="modal-footer">
+      <button id="cancelDetailPayoutBtn" class="btn" data-native-onclick="closeDetailPayoutModal()">取消</button>
+      <button id="submitDetailPayoutBtn" class="btn btn-primary" data-native-onclick="submitDetailPayout()">确认已发放</button>
+    </div>
+  </div>
+</div>
 <div class="modal-overlay" id="formulaModal">
     <div class="modal" style="width:600px">
       <div class="modal-header">

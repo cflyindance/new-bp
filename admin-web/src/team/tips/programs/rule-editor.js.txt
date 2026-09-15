@@ -4017,6 +4017,24 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
       wrap.style.display = parts.length ? '' : 'none';
     }
 
+    function formatWeightAsPercentage(value) {
+      if (value === '' || value === null || value === undefined) return '—';
+      var weight = Number(value);
+      if (!Number.isFinite(weight) || weight < 0) return '—';
+      var percentage = Math.round((weight * 100 + Number.EPSILON) * 100) / 100;
+      return percentage.toLocaleString('en-US', {
+        useGrouping: false,
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2
+      }) + '%';
+    }
+
+    function syncWeightPercentage(input) {
+      var row = input ? input.closest('tr') : null;
+      var output = row ? row.querySelector('.weight-percentage-value') : null;
+      if (output) output.textContent = formatWeightAsPercentage(input.value);
+    }
+
     function openWeightModalForRow(linkEl) {
       if (linkEl.classList.contains('disabled')) return;
       var row = linkEl.closest('tr');
@@ -4046,7 +4064,8 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
             html += '<tr>' +
               (i === 0 ? '<td rowspan="' + emps.length + '">' + role + '</td>' : '') +
               '<td>' + emp + '</td>' +
-              '<td><input type="number" value="' + w + '" step="0.1" min="0"></td></tr>';
+              '<td><input type="number" value="' + w + '" step="0.1" min="0" data-native-oninput="syncWeightPercentage(this)"></td>' +
+              '<td class="weight-percentage-value">' + formatWeightAsPercentage(w) + '</td></tr>';
           });
         });
         tbody.innerHTML = html;
