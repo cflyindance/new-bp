@@ -31,12 +31,17 @@ const committed = await results.commit(snapshot);
 assert.equal(committed.snapshotVersion, 1);
 assert.match(committed.snapshotHash, /^[0-9a-f]{64}$/);
 assert.equal(state.inspect(snapshot.store, snapshot.dateKey).payoutStatus, 'pending');
+state.markUnconfirmedUpdate(snapshot.store, snapshot.dateKey, 'draft-v2');
+assert.equal(state.hasUnconfirmedUpdate(snapshot.store, snapshot.dateKey), true);
 const request = {
   storeId: snapshot.store, businessDate: snapshot.dateKey,
   expectedSnapshotId: committed.snapshotId, expectedSnapshotVersion: committed.snapshotVersion,
   expectedSnapshotHash: committed.snapshotHash, requestId: 'req-1',
   paidById: 'demo-manager', paidByDisplayName: '王店长'
 };
+await assert.rejects(state.confirmPayout(request), /重新确认分配/);
+state.clearUnconfirmedUpdate(snapshot.store, snapshot.dateKey);
+assert.equal(state.hasUnconfirmedUpdate(snapshot.store, snapshot.dateKey), false);
 const paid = await state.confirmPayout(request);
 const retry = await state.confirmPayout(request);
 assert.equal(retry.recordId, paid.recordId);

@@ -186,6 +186,9 @@ var ALLOC_KEY = 'tipout_allocated';
     var detailPayoutSubmitting = false;
     var detailPayoutIntentVersion = 0;
     var detailPayoutDomainWriteActive = false;
+    var tipDataUpdateContext = null;
+    var isTipDataUpdatePending = false;
+    var tipDataUpdateIntentVersion = 0;
 
     function renderPaidDetailState(state) {
       var container = document.getElementById('detailRulesContainer');
@@ -237,9 +240,11 @@ var ALLOC_KEY = 'tipout_allocated';
       var scope = getDetailPayoutScope();
       var state = window.TipOutDateState ? TipOutDateState.inspect(scope.store, scope.dateKey) : null;
       var visible = !!state && state.allocationStatus === 'allocated' && state.payoutStatus === 'pending' && !state.locked;
+      var hasUnconfirmedUpdate = visible && TipOutDateState.hasUnconfirmedUpdate(scope.store, scope.dateKey);
       button.hidden = !visible;
       button.style.display = visible ? '' : 'none';
-      button.disabled = detailPayoutSubmitting;
+      button.disabled = detailPayoutSubmitting || hasUnconfirmedUpdate;
+      button.title = hasUnconfirmedUpdate ? '请先重新确认分配后再确认发放' : '';
     }
 
     function setDetailPayoutModalSubmitting(submitting) {
@@ -285,6 +290,7 @@ var ALLOC_KEY = 'tipout_allocated';
       try {
         var state = TipOutDateState.inspect(scope.store, scope.dateKey);
         if (state.allocationStatus !== 'allocated' || state.payoutStatus !== 'pending' || state.locked) throw new Error('当前日期无法确认发放');
+        if (TipOutDateState.hasUnconfirmedUpdate(scope.store, scope.dateKey)) throw new Error('请先重新确认分配后再确认发放');
         var snapshot = await TipOutDateState.ensureSnapshot(scope.store, scope.dateKey);
         var intentVersion = ++detailPayoutIntentVersion;
         detailPayoutDraft = {
@@ -1709,13 +1715,59 @@ var ALLOC_KEY = 'tipout_allocated';
       }
     }
 
-    function updateTipData() {
+    function buildTipUpdateContext() {
       var dateKey = ((document.getElementById('detailDate') || {}).value || '').trim();
       var store = ((document.getElementById('storeSelect') || {}).value || '').trim();
-      try { if (window.TipOutDateState) TipOutDateState.assertDateWritable(store, dateKey); }
+      return { store: store, dateKey: dateKey, intentVersion: ++tipDataUpdateIntentVersion };
+    }
+    function buildTipUpdateFingerprint(context, rules) {
+      var metrics = ['detailOriginalTips', 'detailPoolAmount'].map(function(id) { return ((document.getElementById(id) || {}).textContent || '').trim(); });
+      var payload = { store: context.store, dateKey: context.dateKey, rules: rules || [], originalTipMetrics: metrics };
+      return TipOutDateState.canonical ? TipOutDateState.canonical(payload) : JSON.stringify(payload);
+    }
+    function setTipDataUpdatePending(pending) {
+      isTipDataUpdatePending = pending;
+      ['confirmTipDataUpdateBtn', 'cancelTipDataUpdateBtn', 'closeTipDataUpdateBtn'].forEach(function(id) { var control = document.getElementById(id); if (control) control.disabled = pending; });
+      var submit = document.getElementById('confirmTipDataUpdateBtn'); if (submit) submit.textContent = pending ? '更新中…' : '确认更新';
+    }
+    function cancelTipDataUpdate(options) {
+      if (isTipDataUpdatePending && !(options && options.force)) return;
+      tipDataUpdateContext = null;
+      var modal = document.getElementById('tipDataUpdateModal'); if (modal) { modal.classList.remove('show'); modal.setAttribute('aria-hidden', 'true'); }
+      if (!(options && options.returnFocus === false)) { var trigger = document.getElementById('updateTipDataBtn'); if (trigger && !trigger.hidden) trigger.focus(); }
+    }
+    function handleTipDataUpdateOverlayClick(event) { if (!isTipDataUpdatePending && event.target === event.currentTarget) cancelTipDataUpdate(); }
+    function updateTipData() {
+      if (isTipDataUpdatePending) return;
+      var context = buildTipUpdateContext();
+      try { TipOutDateState.assertDateWritable(context.store, context.dateKey); }
       catch (error) { showNotification(error.message, 'error'); return; }
-      renderDetailPage();
-      showNotification('小费数据已更新', 'success');
+      tipDataUpdateContext = context;
+      var modal = document.getElementById('tipDataUpdateModal'); if (modal) { modal.classList.add('show'); modal.setAttribute('aria-hidden', 'false'); }
+      var confirmButton = document.getElementById('confirmTipDataUpdateBtn'); if (confirmButton) confirmButton.focus();
+    }
+    async function confirmTipDataUpdate() {
+      if (!tipDataUpdateContext || isTipDataUpdatePending) return;
+      var context = tipDataUpdateContext, manualBackup = [];
+      setTipDataUpdatePending(true);
+      try {
+        TipOutDateState.assertDateWritable(context.store, context.dateKey);
+        var rules = ruleData.getRulesForStore(context.store);
+        var fingerprint = buildTipUpdateFingerprint(context, rules);
+        if (!rules.length) throw new Error('当前门店没有可用的小费分配规则');
+        var currentScope = getDetailPayoutScope();
+        if (context.intentVersion !== tipDataUpdateIntentVersion || currentScope.store !== context.store || currentScope.dateKey !== context.dateKey) throw new Error('门店或日期已变化，请重新更新小费数据');
+        TipOutDateState.assertDateWritable(context.store, context.dateKey);
+        if (buildTipUpdateFingerprint(context, ruleData.getRulesForStore(context.store)) !== fingerprint) throw new Error('小费规则或原始小费已变化，请重新更新');
+        if (window.TipOutManualHours && TipOutManualHours.listForScope) { manualBackup = TipOutManualHours.listForScope(context.store, context.dateKey); TipOutManualHours.clearForScope(context.store, context.dateKey); }
+        try { renderDetailPage(); }
+        catch (renderError) { if (window.TipOutManualHours && TipOutManualHours.replaceScope) TipOutManualHours.replaceScope(context.store, context.dateKey, manualBackup); throw renderError; }
+        TipOutDateState.markUnconfirmedUpdate(context.store, context.dateKey, fingerprint);
+        cancelTipDataUpdate({ force: true }); syncDetailPayoutAction();
+        showNotification('小费数据已更新，请重新检查并补充需要的手工调整。', 'success');
+      } catch (error) {
+        if (context.intentVersion === tipDataUpdateIntentVersion) showNotification(error && error.message ? error.message : '更新小费数据失败，请重试', 'error');
+      } finally { setTipDataUpdatePending(false); }
     }
 
     function initStoreSelect() {
@@ -1792,4 +1844,5 @@ var ALLOC_KEY = 'tipout_allocated';
     }
     document.addEventListener('keydown', function(event) {
       if (event.key === 'Escape' && document.getElementById('detailConfirmPayoutModal').classList.contains('show') && !detailPayoutSubmitting) closeDetailPayoutModal();
+      if (event.key === 'Escape' && document.getElementById('tipDataUpdateModal').classList.contains('show') && !isTipDataUpdatePending) cancelTipDataUpdate();
     });

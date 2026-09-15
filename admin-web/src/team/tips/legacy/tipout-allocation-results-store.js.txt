@@ -69,6 +69,7 @@
     try {
       localStorage.setItem(RESULT_KEY, JSON.stringify(results));
       localStorage.setItem(ALLOC_KEY, JSON.stringify(allocated));
+      if (root.TipOutDateState && root.TipOutDateState.clearUnconfirmedUpdate) root.TipOutDateState.clearUnconfirmedUpdate(store, dateKey);
     } catch (error) {
       try {
         if (oldResultsRaw == null) localStorage.removeItem(RESULT_KEY); else localStorage.setItem(RESULT_KEY, oldResultsRaw);
