@@ -4,7 +4,6 @@ import MainContent from './components/MainContent'
 import styles from './index.module.less'
 import DataBackupButton from './components/Backup/DataBackupButton'
 import DataRestoreButton from './components/Backup/DataRestoreButton'
-import LocalImageFolderSync from './components/LocalImageFolderSync'
 
 const SystemSetting = () => {
   const { version } = useCheckVersion()
@@ -19,7 +18,6 @@ const SystemSetting = () => {
           <DataBackupButton />
           <DataRestoreButton />
         </div>
-        <LocalImageFolderSync />
       </div>
     </div>
   )

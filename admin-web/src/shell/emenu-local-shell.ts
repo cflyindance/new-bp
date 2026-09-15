@@ -18,10 +18,6 @@ import {
   normalizeEmenuLocalPath,
   type EmenuLocalNavItem,
 } from "./emenu-local-routes";
-import {
-  bindLocalImageFolderSyncPanel,
-  renderLocalImageFolderSyncPanel,
-} from "../emenu-local/local-image-folder-sync/local-image-folder-sync-ui";
 import { buildKposEmbedSrc } from "./emenu-local-host-control";
 import { syncGlobalHostIpRouting } from "./emenu-local-host-control-ui";
 import {
@@ -171,7 +167,6 @@ function renderEmenuSettingsIframePage(): string {
       class="relative flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-hidden"
       aria-label="${escapeHtml(t("shell.emenuLocalEmenuSettings"))}"
     >
-      ${renderLocalImageFolderSyncPanel()}
       <div class="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-border/80 bg-card shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
         <iframe
           title="${escapeHtml(t("shell.emenuLocalEmenuSettings"))}"
@@ -244,7 +239,6 @@ export function bindEmenuLocalShell(onMount: () => void): void {
   mountDemoSwitchFab({ showVersionSwitch: false });
   bindViewSwitchControl(onMount);
   bindSeasoningSettingsPage();
-  bindLocalImageFolderSyncPanel();
   bindProductStrikethroughPricePage();
   syncGlobalHostIpRouting();
   bindEmenuLocalSessionBridge();
