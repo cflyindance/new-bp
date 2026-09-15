@@ -7,11 +7,19 @@ const distribution = fs.readFileSync("src/team/tips/programs/distribution.js.txt
 const payroll = fs.readFileSync("src/team/tips/legacy/tipout-payroll-bridge.js.txt", "utf8");
 
 assert.match(template, /id="confirmDetailAllocationBtn"[^>]*confirmDetailAllocation\(\)/);
+assert.match(template, /id="tipDataUpdateModal"/);
+assert.match(template, /确认更新小费数据？/);
+assert.match(template, /当前手工新增的员工、手工工时、分配比例及调整结果将被清除/);
+assert.match(template, /id="confirmTipDataUpdateBtn"[^>]*confirmTipDataUpdate\(\)/);
 assert.doesNotMatch(template, /saveDetail\(\)|saveAndNext\(\)|小费池执行结果|detailPoolExecutionList/);
 assert.match(program, /function collectDetailAllocationSnapshot\(store, dateKey, rules\)/);
 assert.match(program, /split\(\/\\s\*\\\/\\s\*\/\)/, "combined receiver roles must resolve to a real roster role");
 assert.match(program, /function syncDetailAllocationAction\(\)/);
 assert.match(program, /async function confirmDetailAllocation\(\)/);
+assert.match(program, /function cancelTipDataUpdate\(options\)/);
+assert.match(program, /async function confirmTipDataUpdate\(\)/);
+assert.match(program, /小费数据已更新，请重新检查并补充需要的手工调整。/);
+assert.match(program, /TipOutDateState\.markUnconfirmedUpdate/);
 assert.match(program, /async function executeDetailAllocation\(options\)/);
 assert.match(program, /executeDetailAllocation\(\{ store: store, dateKey: dateKey, rules: rules, wasAllocated: allocated, automatic: false \}\)/);
 assert.match(program, /该日期已分配，重新确认将覆盖当天原分配结果。/);

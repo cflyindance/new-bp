@@ -54,5 +54,15 @@
       .sort(function(a, b) { return [a.poolName, a.ruleName, a.poolId, a.ruleId].join('|').localeCompare([b.poolName, b.ruleName, b.poolId, b.ruleId].join('|')); })
       .map(function(row) { return Object.assign({}, row); });
   }
-  global.TipOutManualHours = { set: set, get: get, seed: seed, listForEmployee: listForEmployee, normalize: normalize };
+  function listForScope(store, dateKey) {
+    return read().map(normalize).filter(function(row) { return row && row.store === String(store || '') && row.dateKey === String(dateKey || ''); }).map(function(row) { return Object.assign({}, row); });
+  }
+  function replaceScope(store, dateKey, replacement) {
+    if (global.TipOutDateState) global.TipOutDateState.assertDateWritable(store, dateKey);
+    var kept = read().map(normalize).filter(function(row) { return row && !(row.store === String(store || '') && row.dateKey === String(dateKey || '')); });
+    (replacement || []).map(normalize).filter(Boolean).forEach(function(row) { kept.push(row); });
+    global.localStorage.setItem(STORAGE_KEY, JSON.stringify(kept)); return true;
+  }
+  function clearForScope(store, dateKey) { return replaceScope(store, dateKey, []); }
+  global.TipOutManualHours = { STORAGE_KEY: STORAGE_KEY, set: set, get: get, seed: seed, listForEmployee: listForEmployee, listForScope: listForScope, replaceScope: replaceScope, clearForScope: clearForScope, normalize: normalize };
 })(typeof window !== 'undefined' ? window : this);

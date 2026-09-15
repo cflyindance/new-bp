@@ -202,6 +202,21 @@
           </div>
         </div>
       </div>
+<div class="modal-overlay" id="tipDataUpdateModal" aria-hidden="true" data-native-onclick="handleTipDataUpdateOverlayClick(event)">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="tipDataUpdateTitle" aria-describedby="tipDataUpdateWarning" style="width:560px">
+    <div class="modal-header">
+      <h3 id="tipDataUpdateTitle">确认更新小费数据？</h3>
+      <button id="closeTipDataUpdateBtn" class="modal-close" aria-label="关闭" data-native-onclick="cancelTipDataUpdate()">×</button>
+    </div>
+    <div class="modal-body">
+      <p id="tipDataUpdateWarning" class="tipout-payout-warning">更新后将重新获取当前有效的小费规则并重新计算。当前手工新增的员工、手工工时、分配比例及调整结果将被清除，新的小费结果会覆盖现有数据。如仍需手工调整，请在更新完成后重新录入。</p>
+    </div>
+    <div class="modal-footer">
+      <button id="cancelTipDataUpdateBtn" class="btn" data-native-onclick="cancelTipDataUpdate()">取消</button>
+      <button id="confirmTipDataUpdateBtn" class="btn btn-primary" data-native-onclick="confirmTipDataUpdate()">确认更新</button>
+    </div>
+  </div>
+</div>
 <div class="modal-overlay" id="detailConfirmPayoutModal" aria-hidden="true" data-native-onclick="handleDetailPayoutOverlayClick(event)">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="detailConfirmPayoutTitle" style="width:520px">
     <div class="modal-header">
