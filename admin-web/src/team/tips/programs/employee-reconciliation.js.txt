@@ -59,10 +59,13 @@ function detailNumber(value) { return Number(value) || 0; }
       }, { punchHours: 0, punchValidDays: 0, recordDays: 0, manualPools: {}, manualRecords: 0, before: 0, deducted: 0, received: 0, after: 0, allocatedCount: 0 });
       summary.manualPoolCount = Object.keys(summary.manualPools).length;
       summary.punchHoursDisplay = summary.punchValidDays
-        ? detailHours(summary.punchHours) + ' h' + (summary.punchValidDays < summary.recordDays ? '（' + summary.punchValidDays + '/' + summary.recordDays + ' 天有记录）' : '')
+        ? detailHours(summary.punchHours) + ' h'
         : '—';
       summary.allocationHourSummaries = typeof TipOutSummaryUi !== 'undefined' && TipOutSummaryUi.aggregateAllocationHourEntries
         ? TipOutSummaryUi.aggregateAllocationHourEntries(rows) : [];
+      summary.allocationHoursSummary = typeof TipOutSummaryUi !== 'undefined' && TipOutSummaryUi.summarizeAllocationHourValues
+        ? TipOutSummaryUi.summarizeAllocationHourValues(summary.allocationHourSummaries)
+        : { kind: summary.allocationHourSummaries.length ? 'multiple' : 'empty', display: summary.allocationHourSummaries.length ? '多口径（' + summary.allocationHourSummaries.length + '）' : '—' };
       return summary;
     }
     function detailDateLabel(dateKey) {
@@ -125,23 +128,44 @@ function detailNumber(value) { return Number(value) || 0; }
       var valid = row.punchHoursValid === undefined ? attendance.status !== '未打卡' : !!row.punchHoursValid;
       return makeDetailCell(valid ? detailHours(row.punchHours === undefined ? attendance.hours : row.punchHours) + ' h' : '—');
     }
+    var employeeDetailAllocationHoursTrigger = null;
+    var employeeDetailRangeHourEntries = [];
+    function employeeDetailHourSourceLabel(source) {
+      return ({ 'original-punch': '原始打卡', 'pos-corrected': 'POS 修正', 'max-hours': '最大工时', manual: '手工录入', mixed: '混合来源', 'not-applicable': '不适用' })[source] || '原始打卡';
+    }
     function makeAllocationHoursCell(row) {
       var cell = document.createElement('td');
-      var stack = document.createElement('span');
-      stack.className = 'tipout-allocation-hours-stack';
-      var punch = row.punchHoursValid === false ? null : row.punchHours;
       var entries = TipOutSummaryUi.normalizeEmployeeHoursRow(row).allocationHourEntries;
-      if (!entries.length) entries = [{ label: '', usesHours: true, hoursValid: false }];
-      entries.forEach(function(entry) {
-        var line = document.createElement('span');
-        line.className = 'tipout-allocation-hours-line' + (TipOutSummaryUi.shouldHighlightAllocationHours(punch, entry) ? ' tipout-allocation-hours--changed' : '');
-        var label = entry.poolName && entry.ruleName ? entry.poolName + ' · ' + entry.ruleName + ' ' : '';
-        line.textContent = label + (entry.usesHours && entry.hoursValid ? detailHours(entry.hours) + ' h' : '—');
-        stack.appendChild(line);
-      });
-      cell.appendChild(stack);
+      var summary = TipOutSummaryUi.summarizeAllocationHourValues(entries);
+      if (summary.kind === 'empty') { cell.textContent = '—'; return cell; }
+      var button = document.createElement('button');
+      button.type = 'button'; button.className = 'tipout-allocation-hours-button'; button.textContent = summary.display;
+      button._tipoutEntries = entries;
+      button.addEventListener('click', function(event) { openEmployeeDetailAllocationHours(event, button._tipoutEntries, row.dateKey); });
+      cell.appendChild(button);
       return cell;
     }
+    function openEmployeeDetailAllocationHours(event, entries, dateKey) {
+      employeeDetailAllocationHoursTrigger = event && event.currentTarget;
+      var title = document.getElementById('employeeDetailHoursModalTitle');
+      if (title) title.textContent = dateKey ? dateKey + ' 分配工时明细' : '分配工时明细';
+      var body = document.getElementById('employeeDetailHoursRows');
+      body.textContent = '';
+      (entries || []).forEach(function(entry) {
+        var tr = document.createElement('tr');
+        [entry.poolName, entry.ruleName, employeeDetailHourSourceLabel(entry.source), entry.hoursValid ? detailHours(entry.hours) + ' h' : '—'].forEach(function(value, index) {
+          var td = document.createElement('td'); td.textContent = value; if (index === 3) { var strong = document.createElement('strong'); strong.textContent = value; td.textContent = ''; td.appendChild(strong); } tr.appendChild(td);
+        });
+        body.appendChild(tr);
+      });
+      var modal = document.getElementById('employeeDetailHoursModal'); modal.classList.add('show'); modal.setAttribute('aria-hidden', 'false');
+      var close = document.getElementById('employeeDetailHoursClose'); if (close) close.focus();
+    }
+    function closeEmployeeDetailAllocationHours() {
+      var modal = document.getElementById('employeeDetailHoursModal'); if (modal) { modal.classList.remove('show'); modal.setAttribute('aria-hidden', 'true'); }
+      if (employeeDetailAllocationHoursTrigger) employeeDetailAllocationHoursTrigger.focus(); employeeDetailAllocationHoursTrigger = null;
+    }
+    function handleEmployeeDetailHoursOverlay(event) { if (event.target === event.currentTarget) closeEmployeeDetailAllocationHours(); }
     function makeMoneyCell(value, kind) {
       var cell = document.createElement('td');
       var strong = document.createElement('strong');
@@ -207,7 +231,7 @@ function detailNumber(value) { return Number(value) || 0; }
             attendanceNote: attendance.hasPunchException ? '打卡异常' : '',
             punchHours: row.punchHoursValid === false || (row.punchHoursValid === undefined && attendance.status === '未打卡') ? '—' : detailHours(row.punchHours === undefined ? attendance.hours : row.punchHours) + ' h',
             allocationHours: TipOutSummaryUi.normalizeEmployeeHoursRow(row).allocationHourEntries.map(function(entry) {
-              return entry.poolName + ' · ' + entry.ruleName + ': ' + (entry.usesHours && entry.hoursValid ? detailHours(entry.hours) + ' h' : '—');
+              return entry.poolName + ' · ' + entry.ruleName + ': ' + (entry.usesHours && entry.hoursValid ? detailHours(entry.hours) + ' h' : '—') + '（' + employeeDetailHourSourceLabel(entry.source) + '）';
             }).join('\n') || '—',
             manualHourDetails: (attendance.manualEntries || []).map(function(entry) { return entry.poolName + ' · ' + entry.ruleName + ': ' + detailHours(entry.hours) + ' h'; }).join('\n'),
             before: detailMoney(row.before),
@@ -374,7 +398,12 @@ function detailNumber(value) { return Number(value) || 0; }
     function renderEmployeeDetailSummary(summary) {
       summary = summary || {};
       setDetailText('employeeDetailPunchHours', summary.punchHoursDisplay);
-      setDetailText('employeeDetailAllocationHours', summary.allocationHourSummaries.length ? summary.allocationHourSummaries.map(function(item) { return item.display; }).join(' / ') : '—');
+      employeeDetailRangeHourEntries = summary.allocationHourSummaries || [];
+      var allocationButton = document.getElementById('employeeDetailAllocationHours');
+      if (allocationButton) {
+        allocationButton.textContent = summary.allocationHoursSummary ? summary.allocationHoursSummary.display : '—';
+        allocationButton.disabled = !summary.allocationHoursSummary || summary.allocationHoursSummary.kind === 'empty';
+      }
       setDetailText('employeeDetailManualHours', detailNumber(summary.manualPoolCount) + ' 个小费池 / ' + detailNumber(summary.manualRecords) + ' 条记录');
       setDetailText('employeeDetailBefore', detailMoney(summary.before));
       setDetailText('employeeDetailDeducted', summary.allocatedCount ? '-' + detailMoney(summary.deducted) : '—');
@@ -481,5 +510,9 @@ function detailNumber(value) { return Number(value) || 0; }
 
     document.addEventListener('click', function(event) {
       if (!event.target || !event.target.closest || !event.target.closest('.export-dropdown')) closeEmployeeDetailExportMenu();
+    });
+    document.addEventListener('keydown', function(event) {
+      var modal = document.getElementById('employeeDetailHoursModal');
+      if (event.key === 'Escape' && modal && modal.classList.contains('show')) { event.preventDefault(); closeEmployeeDetailAllocationHours(); }
     });
     document.addEventListener('DOMContentLoaded', initializeEmployeeReconciliationDetail);

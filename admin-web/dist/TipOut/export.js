@@ -73,7 +73,10 @@ function collectEmployeeReconciliationExportData() {
         name: aggregate.name,
         role: (aggregate.roles || []).join(' / ') || aggregate.role,
         punchHours: aggregate.punchHoursDisplay,
-        allocationHours: (aggregate.allocationHourSummaries || []).map(function(item) { return item.display; }).join('\n') || '—',
+        allocationHours: (aggregate.allocationHourSummaries || []).map(function(item) {
+          var source = ({ 'original-punch': '原始打卡', 'pos-corrected': 'POS 修正', 'max-hours': '最大工时', manual: '手工录入', mixed: '混合来源', 'not-applicable': '不适用' })[item.source] || '原始打卡';
+          return item.label + ': ' + (item.hoursValid ? item.hours + ' h' : '—') + '（' + source + '）';
+        }).join('\n') || '—',
         before: aggregate.before,
         deducted: aggregate.deducted,
         received: aggregate.received,

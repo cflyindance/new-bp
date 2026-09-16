@@ -342,8 +342,10 @@ var ALLOC_KEY = 'tipout_allocated';
       var att = (window.TipOutAttendance && TipOutAttendance.getDayStatus)
         ? TipOutAttendance.getDayStatus(emp.name, dateKey)
         : { hours: 0, clockStatus: '未打卡' };
-      row.hours = att.hours;
-      row.punchHours = att.hours;
+      row.hours = att.effectiveHours === undefined ? att.hours : att.effectiveHours;
+      row.originalPunchHours = att.originalHours === undefined ? att.hours : att.originalHours;
+      row.posEffectiveHours = att.effectiveHours === undefined ? att.hours : att.effectiveHours;
+      row.punchHours = row.originalPunchHours;
       row.punchHoursValid = att.clockStatus !== '未打卡' && isFinite(Number(att.hours)) && Number(att.hours) >= 0;
       row.clockStatus = att.clockStatus;
       row.punchSessions = Array.isArray(att.punchSessions)
@@ -359,22 +361,31 @@ var ALLOC_KEY = 'tipout_allocated';
         var ruleId = String(rule.id || rule.ruleId || ('rule-' + index));
         var manual = manualByRule[poolId + '::' + ruleId] || row.manualHourEntries.find(function(entry) { return String(entry.ruleId) === ruleId; });
         var usesHours = rule.distributionMethod !== 'average' && rule.method !== 'average';
-        var value = manual ? manual.hours : (rule.clockin === 'noclock' ? null : att.hours);
+        var maxHours = rule.workHoursConfig && rule.workHoursConfig.mode === 'capped' ? rule.workHoursConfig.maxHoursPerDay : null;
+        var resolved = TipOutSummaryUi.resolveRuleAllocationHours({
+          usesHours: usesHours,
+          clockMode: rule.clockin,
+          originalPunchHours: row.originalPunchHours,
+          posEffectiveHours: row.posEffectiveHours,
+          manualHours: manual ? manual.hours : null,
+          maxHours: maxHours
+        });
         return {
           poolId: poolId,
           poolName: rule.poolName || rule.name || '未命名小费池',
           ruleId: ruleId,
           ruleName: rule.ruleName || rule.name || '未命名规则',
           usesHours: usesHours,
-          hours: value,
-          hoursValid: usesHours && value !== null && value !== undefined && isFinite(Number(value)) && Number(value) >= 0,
+          hours: resolved.hours,
+          hoursValid: resolved.hoursValid,
+          source: resolved.source,
           dateKey: dateKey
         };
       });
       row.manualHourEntries.forEach(function(entry) {
         var key = String(entry.poolId) + '::' + String(entry.ruleId);
         if (!row.allocationHourEntries.some(function(item) { return item.poolId + '::' + item.ruleId === key; })) {
-          row.allocationHourEntries.push(Object.assign({}, entry, { usesHours: true, hoursValid: true, dateKey: dateKey }));
+          row.allocationHourEntries.push(Object.assign({}, entry, { usesHours: true, hoursValid: true, source: 'manual', dateKey: dateKey }));
         }
       });
       return row;
@@ -1099,9 +1110,7 @@ var ALLOC_KEY = 'tipout_allocated';
           escapeSummaryHtml(employeeInitials(aggregate.name)) + '</span><strong>' + name + '</strong></span></td>' +
           '<td><span class="tipout-employee-role-tags">' + roles + '</span></td>' +
           '<td><strong>' + escapeSummaryHtml(aggregate.punchHoursDisplay) + '</strong></td>' +
-          '<td><span class="tipout-allocation-hours-stack">' + aggregate.allocationHourSummaries.map(function(item) {
-            return '<span class="tipout-allocation-hours-line">' + escapeSummaryHtml(item.display) + '</span>';
-          }).join('') + '</span></td>' +
+          '<td>' + renderAllocationHoursSummaryButton(aggregate.employeeId, aggregate.allocationHoursSummary) + '</td>' +
           '<td>' + formatEmployeeSummaryMoney(aggregate.beforeCents, aggregate.hasConfirmedAmount) + '</td>' +
           '<td><strong class="tip-amount--deduct">' + formatEmployeeSummaryMoney(aggregate.deductedCents, aggregate.hasConfirmedAmount) + '</strong></td>' +
           '<td><strong class="tip-amount--receive">' + formatEmployeeSummaryMoney(aggregate.receivedCents, aggregate.hasConfirmedAmount) + '</strong></td>' +
@@ -1110,6 +1119,39 @@ var ALLOC_KEY = 'tipout_allocated';
           '<td class="tipout-detail-link" aria-label="查看 ' + name + ' 分配汇总明细">›</td></tr>';
       }).join('');
     }
+
+    var allocationHoursDetailTrigger = null;
+    function allocationHourSourceLabel(source) {
+      return ({ 'original-punch': '原始打卡', 'pos-corrected': 'POS 修正', 'max-hours': '最大工时', manual: '手工录入', mixed: '混合来源', 'not-applicable': '不适用' })[source] || '原始打卡';
+    }
+    function renderAllocationHoursSummaryButton(employeeId, summary) {
+      summary = summary || { kind: 'empty', display: '—' };
+      if (summary.kind === 'empty') return '<span class="tipout-allocation-hours-empty">—</span>';
+      return '<button type="button" class="tipout-allocation-hours-button" data-native-onclick="openAllocationHoursDetail(event, &quot;' +
+        escapeSummaryHtml(employeeId) + '&quot;)">' + escapeSummaryHtml(summary.display) + '</button>';
+    }
+    function openAllocationHoursDetail(event, employeeId) {
+      if (event && event.stopPropagation) event.stopPropagation();
+      var aggregate = employeeAggregateById[employeeId];
+      if (!aggregate) return;
+      allocationHoursDetailTrigger = event && event.currentTarget;
+      var body = document.getElementById('allocationHoursDetailRows');
+      body.innerHTML = (aggregate.allocationHourSummaries || []).map(function(entry) {
+        return '<tr><td>' + escapeSummaryHtml(entry.poolName) + '</td><td>' + escapeSummaryHtml(entry.ruleName) + '</td><td>' +
+          escapeSummaryHtml(allocationHourSourceLabel(entry.source)) + '</td><td><strong>' +
+          escapeSummaryHtml(entry.hoursValid ? String(entry.hours) + ' h' : '—') + '</strong></td></tr>';
+      }).join('');
+      var modal = document.getElementById('allocationHoursDetailModal');
+      modal.classList.add('show'); modal.setAttribute('aria-hidden', 'false');
+      var close = document.getElementById('allocationHoursDetailClose'); if (close) close.focus();
+    }
+    function closeAllocationHoursDetail() {
+      var modal = document.getElementById('allocationHoursDetailModal');
+      if (modal) { modal.classList.remove('show'); modal.setAttribute('aria-hidden', 'true'); }
+      if (allocationHoursDetailTrigger) allocationHoursDetailTrigger.focus();
+      allocationHoursDetailTrigger = null;
+    }
+    function handleAllocationHoursDetailOverlay(event) { if (event.target === event.currentTarget) closeAllocationHoursDetail(); }
 
     function renderSummaryViews() {
       var dailyRows = activeSummaryView === 'employee' ? buildEmployeeSummaryDailyDataset() : buildDailyDataset(getFilteredEmployees());
@@ -1473,6 +1515,7 @@ var ALLOC_KEY = 'tipout_allocated';
       }
     });
     document.addEventListener('keydown', function(event) {
+      if (event.key === 'Escape' && document.getElementById('allocationHoursDetailModal') && document.getElementById('allocationHoursDetailModal').classList.contains('show')) closeAllocationHoursDetail();
       var payoutModal = document.getElementById('confirmPayoutModal');
       if (payoutModal && payoutModal.classList.contains('show') && event.key === 'Escape') {
         event.preventDefault(); closeConfirmPayoutModal(); return;

@@ -3167,6 +3167,23 @@ select.form-control {
 .tipout-allocation-hours--changed { color: #d97706; font-weight: 700; }
 .tipout-page-employee-reconciliation-detail .tipout-work-hours-line { display: flex; align-items: center; gap: 6px; min-height: 20px; font-variant-numeric: tabular-nums; }
 .tipout-page-employee-reconciliation-detail .tipout-work-hours-label { color: var(--text-secondary); }
+.tipout-allocation-hours-button {
+  border: 0;
+  background: transparent;
+  color: #1677ff;
+  padding: 2px 0;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.tipout-allocation-hours-button:hover { color: #0958d9; }
+.tipout-allocation-hours-button:focus-visible { outline: 2px solid rgba(22, 119, 255, 0.35); outline-offset: 3px; border-radius: 3px; }
+.tipout-allocation-hours-button:disabled { color: var(--text-primary); cursor: default; text-decoration: none; }
+.tipout-hours-detail-modal { width: min(760px, calc(100vw - 32px)); }
+.tipout-hours-detail-modal .tipout-table-wrap { max-height: min(56vh, 520px); overflow: auto; }
+.tipout-hours-detail-modal .data-table { min-width: 620px; }
 .tipout-page-employee-reconciliation-detail .tipout-hours-entry-badge { display: inline-flex; align-items: center; height: 18px; padding: 0 6px; border-radius: 9px; background: #fff4df; color: #a76300; font-size: 11px; font-weight: 600; white-space: nowrap; }
 .tipout-page-employee-reconciliation-detail td .tipout-detail-status + .tipout-detail-status { margin-left: 6px; }
 .tipout-page-employee-reconciliation-detail .tipout-detail-cell-stack small,

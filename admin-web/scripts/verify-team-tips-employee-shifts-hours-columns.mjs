@@ -13,7 +13,12 @@ if (summaryTemplate.includes('<th>班次</th>')) failures.push('summary still ex
 if (/employeeDetailDateSortIcon[\s\S]*<th>班次<\/th>/.test(detailTemplate)) failures.push('detail still exposes shifts');
 if (detailTemplate.includes('<th>上班时间</th>') || detailTemplate.includes('<th>下班时间</th>')) failures.push('detail still exposes punch times');
 if (!summaryProgram.includes('aggregate.punchHoursDisplay')) failures.push('summary punch hours missing');
-if (!summaryProgram.includes('aggregate.allocationHourSummaries.map')) failures.push('summary allocation hours missing');
+if (!summaryProgram.includes('renderAllocationHoursSummaryButton(aggregate.employeeId, aggregate.allocationHoursSummary)')) failures.push('summary allocation hours summary missing');
+if (!summaryTemplate.includes('id="allocationHoursDetailModal"')) failures.push('summary allocation hours detail modal missing');
+if (!detailTemplate.includes('id="employeeDetailHoursModal"')) failures.push('detail allocation hours modal missing');
+if (summaryProgram.includes("aggregate.allocationHourSummaries.map(function(item)")) failures.push('summary still exposes rule rows inline');
+if (detailProgram.includes("line.textContent = label +")) failures.push('detail still exposes rule rows inline');
+if (detailProgram.includes('天有记录')) failures.push('detail punch hours still exposes coverage text');
 if (!detailProgram.includes('punchHours: row.punchHoursValid')) failures.push('detail export punch hours missing');
 if (!detailProgram.includes('allocationHours: TipOutSummaryUi.normalizeEmployeeHoursRow')) failures.push('detail export allocation hours missing');
 if (!exportProgram.includes('punchHours: aggregate.punchHoursDisplay')) failures.push('summary export punch hours missing');

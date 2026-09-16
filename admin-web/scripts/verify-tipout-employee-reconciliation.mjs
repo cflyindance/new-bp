@@ -39,7 +39,7 @@ assert.equal(aggregates.length, 2);
 assert.deepEqual(aggregates.map((row) => row.employeeId), ['roster:a', 'roster:b']);
 assert.equal(aggregates[0].employeeId, 'roster:a');
 assert.equal(aggregates[0].punchHours, 8);
-assert.equal(aggregates[0].punchHoursDisplay, '8 h（1/2 天有记录）');
+assert.equal(aggregates[0].punchHoursDisplay, '8 h');
 assert.equal(aggregates[0].before, 20);
 assert.equal(aggregates[0].deducted, 3);
 assert.equal(aggregates[0].received, 5);

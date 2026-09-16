@@ -645,7 +645,7 @@ assert.equal(employeeDetailContext.employeeDetailAllocationMoney({ allocated: tr
 assert.equal(employeeDetailContext.employeeDetailAllocationMoney({ allocated: true }, 89.01), "$89.01");
 assert.deepEqual(
   JSON.parse(JSON.stringify(employeeDetailContext.summarizeEmployeeDetailRows([{ allocated: false, before: 100, deducted: 10, received: 20, after: 110 }]))),
-  { punchHours: 0, punchValidDays: 0, recordDays: 1, manualPools: {}, manualRecords: 0, before: 100, deducted: 0, received: 0, after: 0, allocatedCount: 0, manualPoolCount: 0, punchHoursDisplay: '—', allocationHourSummaries: [] }
+  { punchHours: 0, punchValidDays: 0, recordDays: 1, manualPools: {}, manualRecords: 0, before: 100, deducted: 0, received: 0, after: 0, allocatedCount: 0, manualPoolCount: 0, punchHoursDisplay: '—', allocationHourSummaries: [], allocationHoursSummary: { kind: 'empty', display: '—' } }
 );
 assert.equal(employeeDetailContext.employeeDetailCsvCell('a,"b"'), '"a,""b"""');
 assert.equal(employeeDetailContext.employeeDetailCsvCell('=SUM(1,1)'), '"\'=SUM(1,1)"');
@@ -687,7 +687,7 @@ assert.deepEqual(
     { clockStatus: "已打卡", hours: 8, before: 10.1, deducted: 1, received: 2, after: 11.1, allocated: true },
     { clockStatus: "未打卡", hours: 0, before: 3.2, deducted: 0.2, received: 0.4, after: 3.4, allocated: true }
   ]))),
-  { punchHours: 8, punchValidDays: 1, recordDays: 2, manualPools: {}, manualRecords: 0, before: 13.3, deducted: 1.2, received: 2.4, after: 14.5, allocatedCount: 2, manualPoolCount: 0, punchHoursDisplay: '8 h（1/2 天有记录）', allocationHourSummaries: [] }
+  { punchHours: 8, punchValidDays: 1, recordDays: 2, manualPools: {}, manualRecords: 0, before: 13.3, deducted: 1.2, received: 2.4, after: 14.5, allocatedCount: 2, manualPoolCount: 0, punchHoursDisplay: '8 h', allocationHourSummaries: [], allocationHoursSummary: { kind: 'empty', display: '—' } }
 );
 if (failures.length) { failures.forEach((failure) => console.error(failure)); process.exit(1); }
 console.log("Team tips native view verification passed.");

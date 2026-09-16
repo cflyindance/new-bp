@@ -100,6 +100,26 @@
     return value !== null && value !== undefined && value !== '' && isFinite(Number(value)) && Number(value) >= 0;
   }
   function roundHours(value) { return Math.round(Number(value) * 100) / 100; }
+  function resolveRuleAllocationHours(input) {
+    input = input || {};
+    if (input.usesHours === false) return { hours: null, hoursValid: false, source: 'not-applicable' };
+    if (input.clockMode === 'noclock') {
+      return validHours(input.manualHours)
+        ? { hours: roundHours(input.manualHours), hoursValid: true, source: 'manual' }
+        : { hours: null, hoursValid: false, source: 'manual' };
+    }
+    var hasPosHours = validHours(input.posEffectiveHours);
+    var hasPunchHours = validHours(input.originalPunchHours);
+    var hours = hasPosHours ? roundHours(input.posEffectiveHours) : (hasPunchHours ? roundHours(input.originalPunchHours) : null);
+    if (hours === null) return { hours: null, hoursValid: false, source: 'original-punch' };
+    var source = hasPosHours && (!hasPunchHours || roundHours(input.posEffectiveHours) !== roundHours(input.originalPunchHours))
+      ? 'pos-corrected' : 'original-punch';
+    if (validHours(input.maxHours) && hours > roundHours(input.maxHours)) {
+      hours = roundHours(input.maxHours);
+      source = 'max-hours';
+    }
+    return { hours: hours, hoursValid: true, source: source };
+  }
   function normalizeAllocationHourEntry(entry, dateKey) {
     entry = entry || {};
     var usesHours = entry.usesHours !== false;
@@ -115,6 +135,7 @@
       usesHours: usesHours,
       hours: hoursValid ? roundHours(entry.hours) : null,
       hoursValid: hoursValid,
+      source: String(entry.source || (entry.manual ? 'manual' : (usesHours ? 'original-punch' : 'not-applicable'))),
       dateKey: String(entry.dateKey || dateKey || '')
     };
   }
@@ -135,6 +156,18 @@
     var base = formatHoursNumber(total);
     return validDays < eligibleDays ? base + '（' + validDays + '/' + eligibleDays + ' 天有记录）' : base;
   }
+  function summarizeAllocationHourValues(entries) {
+    var normalized = [];
+    (entries || []).forEach(function(entry) {
+      if (!entry || entry.usesHours === false || !entry.hoursValid || !validHours(entry.hours)) return;
+      var value = roundHours(entry.hours);
+      if (normalized.indexOf(value) < 0) normalized.push(value);
+    });
+    normalized.sort(function(a, b) { return a - b; });
+    if (!normalized.length) return { kind: 'empty', display: '—', distinctCount: 0, values: [] };
+    if (normalized.length === 1) return { kind: 'single', display: formatHoursNumber(normalized[0]), distinctCount: 1, values: normalized };
+    return { kind: 'multiple', display: '多口径（' + normalized.length + '）', distinctCount: normalized.length, values: normalized };
+  }
   function shouldHighlightAllocationHours(punchHours, entry) {
     if (!entry || entry.usesHours === false || !entry.hoursValid) return false;
     if (!validHours(punchHours)) return true;
@@ -148,19 +181,25 @@
         var item = byKey[entry.key] || (byKey[entry.key] = {
           key: entry.key, poolId: entry.poolId, ruleId: entry.ruleId,
           poolName: entry.poolName, ruleName: entry.ruleName, usesHours: entry.usesHours,
-          totalHours: 0, validDays: 0, eligibleDays: 0, latestDate: ''
+          totalHours: 0, validDays: 0, eligibleDays: 0, latestDate: '', sources: []
         });
         if (entry.dateKey >= item.latestDate) {
           item.latestDate = entry.dateKey; item.poolName = entry.poolName; item.ruleName = entry.ruleName;
         }
         if (!entry.usesHours) { item.usesHours = false; return; }
         item.eligibleDays += 1;
-        if (entry.hoursValid) { item.validDays += 1; item.totalHours += entry.hours; }
+        if (entry.hoursValid) {
+          item.validDays += 1; item.totalHours += entry.hours;
+          if (item.sources.indexOf(entry.source) < 0) item.sources.push(entry.source);
+        }
       });
     });
     var rows = Object.keys(byKey).map(function(key) {
       var item = byKey[key];
       item.totalHours = roundHours(item.totalHours);
+      item.hours = item.totalHours;
+      item.hoursValid = item.usesHours && item.validDays > 0;
+      item.source = item.sources.length > 1 ? 'mixed' : (item.sources[0] || (item.usesHours ? 'original-punch' : 'not-applicable'));
       item.label = item.poolName + ' · ' + item.ruleName;
       item.display = item.label + ' ' + (item.usesHours ? formatHoursCoverage(item.totalHours, item.validDays, item.eligibleDays) : '—');
       return item;
@@ -283,8 +322,9 @@
       aggregate.hasPartialConfirmed = aggregate.confirmedAllocationDays > 0 && aggregate.pendingAllocationDays > 0;
       aggregate.punchHours = roundHours(aggregate.punchHours);
       aggregate.hours = aggregate.punchHours;
-      aggregate.punchHoursDisplay = formatHoursCoverage(aggregate.punchHours, aggregate.punchValidDays, aggregate.recordDays);
+      aggregate.punchHoursDisplay = aggregate.punchValidDays ? formatHoursNumber(aggregate.punchHours) : '—';
       aggregate.allocationHourSummaries = aggregateAllocationHourEntries(aggregate.dailyRows);
+      aggregate.allocationHoursSummary = summarizeAllocationHourValues(aggregate.allocationHourSummaries);
       aggregate.status = employeeAllocationStatus(aggregate.dailyRows);
       aggregate.role = aggregate.roles.join(' / ');
       aggregate.before = aggregate.beforeCents == null ? null : aggregate.beforeCents / 100;
@@ -536,6 +576,8 @@
     employeeAllocationStatus: employeeAllocationStatus,
     normalizeEmployeeAllocationStatusFilter: normalizeEmployeeAllocationStatusFilter,
     normalizeEmployeeHoursRow: normalizeEmployeeHoursRow,
+    resolveRuleAllocationHours: resolveRuleAllocationHours,
+    summarizeAllocationHourValues: summarizeAllocationHourValues,
     aggregateAllocationHourEntries: aggregateAllocationHourEntries,
     formatHoursCoverage: formatHoursCoverage,
     shouldHighlightAllocationHours: shouldHighlightAllocationHours,

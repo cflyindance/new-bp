@@ -43,7 +43,7 @@
         </div>
         <div class="tipout-employee-detail-metrics" aria-label="员工分配汇总金额概览">
           <div><span>打卡工时</span><strong id="employeeDetailPunchHours">—</strong></div>
-          <div><span>分配工时</span><strong id="employeeDetailAllocationHours">—</strong></div>
+          <div><span>分配工时</span><button id="employeeDetailAllocationHours" type="button" class="tipout-allocation-hours-button" disabled data-native-onclick="openEmployeeDetailAllocationHours(event, employeeDetailRangeHourEntries, '')">—</button></div>
           <div><span>手动工时记录</span><strong id="employeeDetailManualHours">0 个小费池 / 0 条记录</strong></div>
           <div><span>分配前</span><strong id="employeeDetailBefore">$0.00</strong></div>
           <div><span>扣除</span><strong id="employeeDetailDeducted" class="tip-amount--deduct">-$0.00</strong></div>
@@ -89,6 +89,13 @@
         <button type="button" class="btn" data-native-onclick="closeModal('employeeDetailEmailModal')">取消</button>
         <button type="button" class="btn btn-primary" data-native-onclick="sendEmployeeDetailEmail()">发送</button>
       </div>
+    </div>
+  </div>
+  <div class="modal-overlay" id="employeeDetailHoursModal" aria-hidden="true" data-native-onclick="handleEmployeeDetailHoursOverlay(event)">
+    <div class="modal tipout-hours-detail-modal" role="dialog" aria-modal="true" aria-labelledby="employeeDetailHoursModalTitle">
+      <div class="modal-header"><h3 id="employeeDetailHoursModalTitle">分配工时明细</h3><button id="employeeDetailHoursClose" type="button" class="modal-close" aria-label="关闭分配工时明细" data-native-onclick="closeEmployeeDetailAllocationHours()">×</button></div>
+      <div class="modal-body"><div class="tipout-table-wrap"><table class="data-table"><thead><tr><th>小费池</th><th>规则</th><th>工时来源</th><th>分配工时</th></tr></thead><tbody id="employeeDetailHoursRows"></tbody></table></div></div>
+      <div class="modal-footer"><button type="button" class="btn" data-native-onclick="closeEmployeeDetailAllocationHours()">取消</button></div>
     </div>
   </div>
 </section>

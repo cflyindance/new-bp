@@ -112,7 +112,7 @@
   function getDayStatus(empName, dateKey) {
     var seed = hashSeed(empName, dateKey);
     if (seed % 5 === 0) {
-      return { hours: 0, clockStatus: '未打卡', punchSessions: [] };
+      return { hours: 0, originalHours: 0, effectiveHours: 0, clockStatus: '未打卡', punchSessions: [] };
     }
     var totalHours = HOURS_OPTIONS[seed % HOURS_OPTIONS.length];
     var start = 8 * 60 + seed % 45;
@@ -128,7 +128,7 @@
       sessions = [completeSession(start, totalHours)];
     }
     var summary = summarizeDayAttendance({ punchSessions: sessions });
-    return { hours: summary.hours, clockStatus: summary.status, punchSessions: sessions };
+    return { hours: summary.hours, originalHours: summary.hours, effectiveHours: summary.hours, clockStatus: summary.status, punchSessions: sessions };
   }
 
   global.TipOutAttendance = {
