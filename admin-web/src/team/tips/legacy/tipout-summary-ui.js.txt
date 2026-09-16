@@ -96,6 +96,86 @@
     return rules.some(function (rule) { return !rule || rule.clockin !== 'noclock'; });
   }
 
+  function validHours(value) {
+    return value !== null && value !== undefined && value !== '' && isFinite(Number(value)) && Number(value) >= 0;
+  }
+  function roundHours(value) { return Math.round(Number(value) * 100) / 100; }
+  function normalizeAllocationHourEntry(entry, dateKey) {
+    entry = entry || {};
+    var usesHours = entry.usesHours !== false;
+    var hoursValid = usesHours && (entry.hoursValid === undefined ? validHours(entry.hours) : !!entry.hoursValid);
+    var poolId = String(entry.poolId || '');
+    var ruleId = String(entry.ruleId || '');
+    return {
+      key: poolId + '::' + ruleId,
+      poolId: poolId,
+      poolName: String(entry.poolName || '未命名小费池'),
+      ruleId: ruleId,
+      ruleName: String(entry.ruleName || '未命名规则'),
+      usesHours: usesHours,
+      hours: hoursValid ? roundHours(entry.hours) : null,
+      hoursValid: hoursValid,
+      dateKey: String(entry.dateKey || dateKey || '')
+    };
+  }
+  function normalizeEmployeeHoursRow(row) {
+    row = row || {};
+    var punchValid = row.punchHoursValid === undefined ? validHours(row.punchHours) : !!row.punchHoursValid;
+    return Object.assign({}, row, {
+      punchHours: punchValid ? roundHours(row.punchHours) : null,
+      punchHoursValid: punchValid,
+      allocationHourEntries: (row.allocationHourEntries || []).map(function(entry) {
+        return normalizeAllocationHourEntry(entry, row.dateKey);
+      })
+    });
+  }
+  function formatHoursNumber(value) { return roundHours(value).toString() + ' h'; }
+  function formatHoursCoverage(total, validDays, eligibleDays) {
+    if (!validDays) return '—';
+    var base = formatHoursNumber(total);
+    return validDays < eligibleDays ? base + '（' + validDays + '/' + eligibleDays + ' 天有记录）' : base;
+  }
+  function shouldHighlightAllocationHours(punchHours, entry) {
+    if (!entry || entry.usesHours === false || !entry.hoursValid) return false;
+    if (!validHours(punchHours)) return true;
+    return roundHours(punchHours) !== roundHours(entry.hours);
+  }
+  function aggregateAllocationHourEntries(dailyRows) {
+    var byKey = Object.create(null);
+    (dailyRows || []).forEach(function(row) {
+      normalizeEmployeeHoursRow(row).allocationHourEntries.forEach(function(entry) {
+        if (!entry.poolId || !entry.ruleId) return;
+        var item = byKey[entry.key] || (byKey[entry.key] = {
+          key: entry.key, poolId: entry.poolId, ruleId: entry.ruleId,
+          poolName: entry.poolName, ruleName: entry.ruleName, usesHours: entry.usesHours,
+          totalHours: 0, validDays: 0, eligibleDays: 0, latestDate: ''
+        });
+        if (entry.dateKey >= item.latestDate) {
+          item.latestDate = entry.dateKey; item.poolName = entry.poolName; item.ruleName = entry.ruleName;
+        }
+        if (!entry.usesHours) { item.usesHours = false; return; }
+        item.eligibleDays += 1;
+        if (entry.hoursValid) { item.validDays += 1; item.totalHours += entry.hours; }
+      });
+    });
+    var rows = Object.keys(byKey).map(function(key) {
+      var item = byKey[key];
+      item.totalHours = roundHours(item.totalHours);
+      item.label = item.poolName + ' · ' + item.ruleName;
+      item.display = item.label + ' ' + (item.usesHours ? formatHoursCoverage(item.totalHours, item.validDays, item.eligibleDays) : '—');
+      return item;
+    }).sort(function(a, b) {
+      return [a.poolName, a.ruleName, a.poolId, a.ruleId].join('|').localeCompare([b.poolName, b.ruleName, b.poolId, b.ruleId].join('|'));
+    });
+    var labels = Object.create(null);
+    rows.forEach(function(item) { labels[item.label] = (labels[item.label] || 0) + 1; });
+    rows.forEach(function(item) {
+      if (labels[item.label] > 1) item.label += '（' + item.poolId.slice(-3) + '/' + item.ruleId.slice(-3) + '）';
+      item.display = item.label + ' ' + (item.usesHours ? formatHoursCoverage(item.totalHours, item.validDays, item.eligibleDays) : '—');
+    });
+    return rows;
+  }
+
   function employeeAllocationStatus(rows) {
     var dailyRows = Array.isArray(rows) ? rows : [];
     var allocatedDays = dailyRows.filter(function(row) { return row && row.allocated === true; }).length;
@@ -122,8 +202,10 @@
             name: record.name || '',
             role: record.role || '',
             roles: [],
+            punchHours: 0,
+            punchValidDays: 0,
+            recordDays: 0,
             shifts: 0,
-            hours: 0,
             beforeCents: 0,
             deductedCents: 0,
             receivedCents: 0,
@@ -152,8 +234,16 @@
         var attendance = root.TipOutAttendance && root.TipOutAttendance.summarizeDayAttendance
           ? root.TipOutAttendance.summarizeDayAttendance(daily)
           : { status: record.clockStatus === '已打卡' ? '已打卡' : '未打卡', shifts: number(record.hours) > 0 ? 1 : 0, hours: number(record.hours) };
+        var hourRow = normalizeEmployeeHoursRow(Object.assign({}, daily, {
+          punchHours: Object.prototype.hasOwnProperty.call(daily, 'punchHours') ? daily.punchHours : attendance.hours,
+          punchHoursValid: Object.prototype.hasOwnProperty.call(daily, 'punchHoursValid') ? daily.punchHoursValid : attendance.status !== '未打卡'
+        }));
+        daily.punchHours = hourRow.punchHours;
+        daily.punchHoursValid = hourRow.punchHoursValid;
+        daily.allocationHourEntries = hourRow.allocationHourEntries;
+        aggregate.recordDays += 1;
         aggregate.shifts += number(attendance.shifts);
-        aggregate.hours += number(attendance.hours);
+        if (hourRow.punchHoursValid) { aggregate.punchValidDays += 1; aggregate.punchHours += hourRow.punchHours; }
         if (day.allocated && !day.allocationValidationError) {
           aggregate.hasConfirmedAmount = true;
           aggregate.confirmedAllocationDays += 1;
@@ -191,6 +281,10 @@
         aggregate.receivedCents = null;
       }
       aggregate.hasPartialConfirmed = aggregate.confirmedAllocationDays > 0 && aggregate.pendingAllocationDays > 0;
+      aggregate.punchHours = roundHours(aggregate.punchHours);
+      aggregate.hours = aggregate.punchHours;
+      aggregate.punchHoursDisplay = formatHoursCoverage(aggregate.punchHours, aggregate.punchValidDays, aggregate.recordDays);
+      aggregate.allocationHourSummaries = aggregateAllocationHourEntries(aggregate.dailyRows);
       aggregate.status = employeeAllocationStatus(aggregate.dailyRows);
       aggregate.role = aggregate.roles.join(' / ');
       aggregate.before = aggregate.beforeCents == null ? null : aggregate.beforeCents / 100;
@@ -230,7 +324,13 @@
     var direction = sort && sort.direction === 'asc' ? 1 : -1;
     return result.slice().sort(function(a, b) {
       if (key === 'employee') return direction * String(a.name).localeCompare(String(b.name));
-      var field = key === 'hours' ? 'hours' : 'finalAmountCents';
+      var field = key === 'hours' ? 'punchHours' : 'finalAmountCents';
+      if (key === 'hours') {
+        var aMissing = !a.punchValidDays, bMissing = !b.punchValidDays;
+        if (aMissing && bMissing) return String(a.name).localeCompare(String(b.name));
+        if (aMissing) return 1;
+        if (bMissing) return -1;
+      }
       if (a[field] == null && b[field] == null) return String(a.name).localeCompare(String(b.name));
       if (a[field] == null) return 1;
       if (b[field] == null) return -1;
@@ -435,6 +535,10 @@
     filterDailyRowsByBusinessStatus: filterDailyRowsByBusinessStatus,
     employeeAllocationStatus: employeeAllocationStatus,
     normalizeEmployeeAllocationStatusFilter: normalizeEmployeeAllocationStatusFilter,
+    normalizeEmployeeHoursRow: normalizeEmployeeHoursRow,
+    aggregateAllocationHourEntries: aggregateAllocationHourEntries,
+    formatHoursCoverage: formatHoursCoverage,
+    shouldHighlightAllocationHours: shouldHighlightAllocationHours,
     EMPLOYEE_RECONCILIATION_SNAPSHOT_KEY: EMPLOYEE_RECONCILIATION_SNAPSHOT_KEY
   };
 })(window);

@@ -17,7 +17,7 @@
       dateKey: String(entry.dateKey), employeeId: text(entry.employeeId, ''), employeeName: String(entry.employeeName), hours: Math.round(hours * 100) / 100
     };
   }
-  function identity(entry) { return entry.ruleId + '|' + entry.dateKey + '|' + (entry.employeeId ? 'id:' + entry.employeeId : 'name:' + entry.employeeName); }
+  function identity(entry) { return entry.poolId + '|' + entry.ruleId + '|' + entry.dateKey + '|' + (entry.employeeId ? 'id:' + entry.employeeId : 'name:' + entry.employeeName); }
   function employeeRef(value) {
     if (value && typeof value === 'object') return { employeeId: text(value.employeeId || value.id, ''), name: text(value.name || value.employeeName, ''), legacyNames: Array.isArray(value.legacyNames) ? value.legacyNames.map(String) : [] };
     return { employeeId: '', name: String(value || ''), legacyNames: [] };

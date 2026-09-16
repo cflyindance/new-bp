@@ -343,6 +343,8 @@ var ALLOC_KEY = 'tipout_allocated';
         ? TipOutAttendance.getDayStatus(emp.name, dateKey)
         : { hours: 0, clockStatus: '未打卡' };
       row.hours = att.hours;
+      row.punchHours = att.hours;
+      row.punchHoursValid = att.clockStatus !== '未打卡' && isFinite(Number(att.hours)) && Number(att.hours) >= 0;
       row.clockStatus = att.clockStatus;
       row.punchSessions = Array.isArray(att.punchSessions)
         ? att.punchSessions.map(function(session) { return Object.assign({}, session); })
@@ -350,6 +352,31 @@ var ALLOC_KEY = 'tipout_allocated';
       row.manualHourEntries = window.TipOutManualHours
         ? TipOutManualHours.listForEmployee(dateKey, { employeeId: String(emp.employeeId || '').replace(/^roster:/, ''), name: emp.name })
         : [];
+      var manualByRule = {};
+      row.manualHourEntries.forEach(function(entry) { manualByRule[String(entry.poolId) + '::' + String(entry.ruleId)] = entry; });
+      row.allocationHourEntries = getRulesForCurrentStore().map(function(rule, index) {
+        var poolId = String(rule.poolId || rule.id || ('pool-' + index));
+        var ruleId = String(rule.id || rule.ruleId || ('rule-' + index));
+        var manual = manualByRule[poolId + '::' + ruleId] || row.manualHourEntries.find(function(entry) { return String(entry.ruleId) === ruleId; });
+        var usesHours = rule.distributionMethod !== 'average' && rule.method !== 'average';
+        var value = manual ? manual.hours : (rule.clockin === 'noclock' ? null : att.hours);
+        return {
+          poolId: poolId,
+          poolName: rule.poolName || rule.name || '未命名小费池',
+          ruleId: ruleId,
+          ruleName: rule.ruleName || rule.name || '未命名规则',
+          usesHours: usesHours,
+          hours: value,
+          hoursValid: usesHours && value !== null && value !== undefined && isFinite(Number(value)) && Number(value) >= 0,
+          dateKey: dateKey
+        };
+      });
+      row.manualHourEntries.forEach(function(entry) {
+        var key = String(entry.poolId) + '::' + String(entry.ruleId);
+        if (!row.allocationHourEntries.some(function(item) { return item.poolId + '::' + item.ruleId === key; })) {
+          row.allocationHourEntries.push(Object.assign({}, entry, { usesHours: true, hoursValid: true, dateKey: dateKey }));
+        }
+      });
       return row;
     }
 
@@ -668,8 +695,9 @@ var ALLOC_KEY = 'tipout_allocated';
         createdAt: Date.now(),
         dailyRows: aggregate.dailyRows,
         summary: {
-          shifts: aggregate.shifts,
-          hours: aggregate.hours,
+          punchHours: aggregate.punchHours,
+          punchHoursDisplay: aggregate.punchHoursDisplay,
+          allocationHourSummaries: aggregate.allocationHourSummaries,
           before: aggregate.before,
           deducted: aggregate.deducted,
           received: aggregate.received,
@@ -1070,8 +1098,10 @@ var ALLOC_KEY = 'tipout_allocated';
           '<td><span class="tipout-employee-identity"><span class="tipout-employee-avatar" aria-hidden="true">' +
           escapeSummaryHtml(employeeInitials(aggregate.name)) + '</span><strong>' + name + '</strong></span></td>' +
           '<td><span class="tipout-employee-role-tags">' + roles + '</span></td>' +
-          '<td><strong>' + aggregate.shifts + '</strong></td>' +
-          '<td><strong>' + formatHoursDisplay(aggregate.hours) + ' h</strong></td>' +
+          '<td><strong>' + escapeSummaryHtml(aggregate.punchHoursDisplay) + '</strong></td>' +
+          '<td><span class="tipout-allocation-hours-stack">' + aggregate.allocationHourSummaries.map(function(item) {
+            return '<span class="tipout-allocation-hours-line">' + escapeSummaryHtml(item.display) + '</span>';
+          }).join('') + '</span></td>' +
           '<td>' + formatEmployeeSummaryMoney(aggregate.beforeCents, aggregate.hasConfirmedAmount) + '</td>' +
           '<td><strong class="tip-amount--deduct">' + formatEmployeeSummaryMoney(aggregate.deductedCents, aggregate.hasConfirmedAmount) + '</strong></td>' +
           '<td><strong class="tip-amount--receive">' + formatEmployeeSummaryMoney(aggregate.receivedCents, aggregate.hasConfirmedAmount) + '</strong></td>' +
