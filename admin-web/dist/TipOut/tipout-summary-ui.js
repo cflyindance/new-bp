@@ -2,6 +2,40 @@
   var EMPLOYEE_RECONCILIATION_SNAPSHOT_KEY = 'tipout-employee-reconciliation-detail-v1';
 
   function number(value) { return Number(value) || 0; }
+  function toCents(value) {
+    var numeric = Number(value);
+    return isFinite(numeric) ? Math.round(numeric * 100) : null;
+  }
+  function addUnique(list, value) {
+    var text = String(value || '').trim();
+    if (text && list.indexOf(text) < 0) list.push(text);
+  }
+  function uniqueIds(values) {
+    var result = [];
+    (values || []).forEach(function(value) { addUnique(result, value); });
+    return result;
+  }
+  function normalizeEmployeeScope(allIds, selectedIds) {
+    var available = uniqueIds(allIds);
+    var selected = uniqueIds(selectedIds).filter(function(id) { return available.indexOf(id) >= 0; });
+    if (!selected.length || selected.length === available.length) return { mode: 'all', ids: [] };
+    return { mode: 'subset', ids: selected };
+  }
+  function reconcileEmployeeScope(scope, availableIds) {
+    if (!scope || scope.mode !== 'subset') return { mode: 'all', ids: [] };
+    return normalizeEmployeeScope(availableIds, scope.ids);
+  }
+  function filterDailyRowsByAllocationStatus(rows, status) {
+    if (status === 'allocated') return (rows || []).filter(function(row) { return row.allocated === true; });
+    if (status === 'unallocated') return (rows || []).filter(function(row) { return row.allocated !== true; });
+    return (rows || []).slice();
+  }
+  function filterDailyRowsByBusinessStatus(rows, status) {
+    if (status !== 'open' && status !== 'closed') return (rows || []).slice();
+    return (rows || []).filter(function(row) {
+      return row.businessStatusResult && row.businessStatusResult.status === status;
+    });
+  }
   function summarizeDailyResults(records) {
     return (records || []).reduce(function (sum, item) {
       sum.before += number(item.before);
@@ -33,6 +67,17 @@
       employees: (values.employees || []).slice(), scrollY: Number(values.scrollY) || 0,
       returnDate: values.returnDate || '',
       returnEmployeeId: values.returnEmployeeId || '',
+      employeeSearch: values.employeeSearch || '',
+      employeeSummaryRole: values.employeeSummaryRole || '',
+      employeeSummaryStatus: values.employeeSummaryStatus || '',
+      employeeSummaryScope: values.employeeSummaryScope && values.employeeSummaryScope.mode === 'subset'
+        ? { mode: 'subset', ids: uniqueIds(values.employeeSummaryScope.ids) }
+        : { mode: 'all', ids: [] },
+      dateAllocationStatus: ['allocated', 'unallocated'].indexOf(values.dateAllocationStatus) >= 0 ? values.dateAllocationStatus : '',
+      dateBusinessStatus: ['open', 'closed'].indexOf(values.dateBusinessStatus) >= 0 ? values.dateBusinessStatus : '',
+      datePayoutStatus: ['pending-payout', 'paid', 'not-required'].indexOf(values.datePayoutStatus) >= 0 ? values.datePayoutStatus : '',
+      employeeSortKey: ['employee', 'hours', 'finalAmount'].indexOf(values.employeeSortKey) >= 0 ? values.employeeSortKey : 'finalAmount',
+      employeeSortDirection: values.employeeSortDirection === 'asc' ? 'asc' : 'desc',
       activeView: values.activeView === 'employee' ? 'employee' : 'date'
     } };
   }
@@ -51,6 +96,99 @@
     return rules.some(function (rule) { return !rule || rule.clockin !== 'noclock'; });
   }
 
+  function validHours(value) {
+    return value !== null && value !== undefined && value !== '' && isFinite(Number(value)) && Number(value) >= 0;
+  }
+  function roundHours(value) { return Math.round(Number(value) * 100) / 100; }
+  function normalizeAllocationHourEntry(entry, dateKey) {
+    entry = entry || {};
+    var usesHours = entry.usesHours !== false;
+    var hoursValid = usesHours && (entry.hoursValid === undefined ? validHours(entry.hours) : !!entry.hoursValid);
+    var poolId = String(entry.poolId || '');
+    var ruleId = String(entry.ruleId || '');
+    return {
+      key: poolId + '::' + ruleId,
+      poolId: poolId,
+      poolName: String(entry.poolName || '未命名小费池'),
+      ruleId: ruleId,
+      ruleName: String(entry.ruleName || '未命名规则'),
+      usesHours: usesHours,
+      hours: hoursValid ? roundHours(entry.hours) : null,
+      hoursValid: hoursValid,
+      dateKey: String(entry.dateKey || dateKey || '')
+    };
+  }
+  function normalizeEmployeeHoursRow(row) {
+    row = row || {};
+    var punchValid = row.punchHoursValid === undefined ? validHours(row.punchHours) : !!row.punchHoursValid;
+    return Object.assign({}, row, {
+      punchHours: punchValid ? roundHours(row.punchHours) : null,
+      punchHoursValid: punchValid,
+      allocationHourEntries: (row.allocationHourEntries || []).map(function(entry) {
+        return normalizeAllocationHourEntry(entry, row.dateKey);
+      })
+    });
+  }
+  function formatHoursNumber(value) { return roundHours(value).toString() + ' h'; }
+  function formatHoursCoverage(total, validDays, eligibleDays) {
+    if (!validDays) return '—';
+    var base = formatHoursNumber(total);
+    return validDays < eligibleDays ? base + '（' + validDays + '/' + eligibleDays + ' 天有记录）' : base;
+  }
+  function shouldHighlightAllocationHours(punchHours, entry) {
+    if (!entry || entry.usesHours === false || !entry.hoursValid) return false;
+    if (!validHours(punchHours)) return true;
+    return roundHours(punchHours) !== roundHours(entry.hours);
+  }
+  function aggregateAllocationHourEntries(dailyRows) {
+    var byKey = Object.create(null);
+    (dailyRows || []).forEach(function(row) {
+      normalizeEmployeeHoursRow(row).allocationHourEntries.forEach(function(entry) {
+        if (!entry.poolId || !entry.ruleId) return;
+        var item = byKey[entry.key] || (byKey[entry.key] = {
+          key: entry.key, poolId: entry.poolId, ruleId: entry.ruleId,
+          poolName: entry.poolName, ruleName: entry.ruleName, usesHours: entry.usesHours,
+          totalHours: 0, validDays: 0, eligibleDays: 0, latestDate: ''
+        });
+        if (entry.dateKey >= item.latestDate) {
+          item.latestDate = entry.dateKey; item.poolName = entry.poolName; item.ruleName = entry.ruleName;
+        }
+        if (!entry.usesHours) { item.usesHours = false; return; }
+        item.eligibleDays += 1;
+        if (entry.hoursValid) { item.validDays += 1; item.totalHours += entry.hours; }
+      });
+    });
+    var rows = Object.keys(byKey).map(function(key) {
+      var item = byKey[key];
+      item.totalHours = roundHours(item.totalHours);
+      item.label = item.poolName + ' · ' + item.ruleName;
+      item.display = item.label + ' ' + (item.usesHours ? formatHoursCoverage(item.totalHours, item.validDays, item.eligibleDays) : '—');
+      return item;
+    }).sort(function(a, b) {
+      return [a.poolName, a.ruleName, a.poolId, a.ruleId].join('|').localeCompare([b.poolName, b.ruleName, b.poolId, b.ruleId].join('|'));
+    });
+    var labels = Object.create(null);
+    rows.forEach(function(item) { labels[item.label] = (labels[item.label] || 0) + 1; });
+    rows.forEach(function(item) {
+      if (labels[item.label] > 1) item.label += '（' + item.poolId.slice(-3) + '/' + item.ruleId.slice(-3) + '）';
+      item.display = item.label + ' ' + (item.usesHours ? formatHoursCoverage(item.totalHours, item.validDays, item.eligibleDays) : '—');
+    });
+    return rows;
+  }
+
+  function employeeAllocationStatus(rows) {
+    var dailyRows = Array.isArray(rows) ? rows : [];
+    var allocatedDays = dailyRows.filter(function(row) { return row && row.allocated === true; }).length;
+    var unallocatedDays = dailyRows.length - allocatedDays;
+    if (allocatedDays > 0 && unallocatedDays === 0) return '已完成';
+    if (allocatedDays > 0 && unallocatedDays > 0) return '部分待分配';
+    return '待分配';
+  }
+
+  function normalizeEmployeeAllocationStatusFilter(value) {
+    return ['已完成', '部分待分配', '待分配'].indexOf(value) >= 0 ? value : '';
+  }
+
   function aggregateEmployeeDailyDatasets(dailyRows) {
     var order = [];
     var byId = Object.create(null);
@@ -63,49 +201,245 @@
             employeeId: employeeId,
             name: record.name || '',
             role: record.role || '',
+            roles: [],
+            punchHours: 0,
+            punchValidDays: 0,
+            recordDays: 0,
             shifts: 0,
-            hours: 0,
-            before: 0,
-            deducted: 0,
-            received: 0,
-            after: 0,
+            beforeCents: 0,
+            deductedCents: 0,
+            receivedCents: 0,
+            netAdjustmentCents: 0,
+            finalAmountCents: 0,
+            hasConfirmedAmount: false,
+            hasPartialConfirmed: false,
             status: '已完成',
             missingAttendanceDays: 0,
             pendingAllocationDays: 0,
+            confirmedAllocationDays: 0,
+            issueReasons: [],
+            firstActionDate: '',
             dailyRows: []
           };
           order.push(employeeId);
         }
         var aggregate = byId[employeeId];
+        addUnique(aggregate.roles, record.role);
         var daily = Object.assign({
           dateKey: day.dateKey || '',
           allocated: !!day.allocated,
           requiresAttendance: day.requiresAttendance !== false
         }, record);
         aggregate.dailyRows.push(daily);
-        aggregate.shifts += number(record.hours) > 0 ? 1 : 0;
-        aggregate.hours += number(record.hours);
-        aggregate.before += number(record.before);
-        aggregate.deducted += number(record.deducted);
-        aggregate.received += number(record.received);
-        aggregate.after += number(record.after);
-        if (!day.allocated) aggregate.pendingAllocationDays += 1;
-        if (day.requiresAttendance !== false && record.clockStatus === '未打卡') {
+        var attendance = root.TipOutAttendance && root.TipOutAttendance.summarizeDayAttendance
+          ? root.TipOutAttendance.summarizeDayAttendance(daily)
+          : { status: record.clockStatus === '已打卡' ? '已打卡' : '未打卡', shifts: number(record.hours) > 0 ? 1 : 0, hours: number(record.hours) };
+        var hourRow = normalizeEmployeeHoursRow(Object.assign({}, daily, {
+          punchHours: Object.prototype.hasOwnProperty.call(daily, 'punchHours') ? daily.punchHours : attendance.hours,
+          punchHoursValid: Object.prototype.hasOwnProperty.call(daily, 'punchHoursValid') ? daily.punchHoursValid : attendance.status !== '未打卡'
+        }));
+        daily.punchHours = hourRow.punchHours;
+        daily.punchHoursValid = hourRow.punchHoursValid;
+        daily.allocationHourEntries = hourRow.allocationHourEntries;
+        aggregate.recordDays += 1;
+        aggregate.shifts += number(attendance.shifts);
+        if (hourRow.punchHoursValid) { aggregate.punchValidDays += 1; aggregate.punchHours += hourRow.punchHours; }
+        if (day.allocated && !day.allocationValidationError) {
+          aggregate.hasConfirmedAmount = true;
+          aggregate.confirmedAllocationDays += 1;
+          aggregate.beforeCents += toCents(record.before) || 0;
+          aggregate.deductedCents += toCents(record.deducted) || 0;
+          aggregate.receivedCents += toCents(record.received) || 0;
+        } else if (!day.allocated) {
+          aggregate.pendingAllocationDays += 1;
+          if (!aggregate.firstActionDate) aggregate.firstActionDate = day.dateKey || '';
+        }
+        if (day.allocationValidationError) {
+          addUnique(aggregate.issueReasons, day.allocationValidationError);
+          if (!aggregate.firstActionDate) aggregate.firstActionDate = day.dateKey || '';
+        }
+        (day.ruleIssues || []).forEach(function(issue) {
+          var employeeIds = Array.isArray(issue.employeeIds) ? issue.employeeIds : [];
+          if (!employeeIds.length || employeeIds.indexOf(employeeId) >= 0) {
+            addUnique(aggregate.issueReasons, issue.message || issue.code);
+            if (!aggregate.firstActionDate) aggregate.firstActionDate = day.dateKey || '';
+          }
+        });
+        if (day.requiresAttendance !== false && attendance.status !== '已打卡') {
           aggregate.missingAttendanceDays += 1;
         }
       });
     });
     return order.map(function (employeeId) {
       var aggregate = byId[employeeId];
-      aggregate.status = aggregate.pendingAllocationDays || aggregate.missingAttendanceDays ? '待补录' : '已完成';
+      var invalid = aggregate.issueReasons.length > 0;
+      aggregate.netAdjustmentCents = invalid ? null : aggregate.receivedCents - aggregate.deductedCents;
+      aggregate.finalAmountCents = invalid ? null : aggregate.beforeCents - aggregate.deductedCents + aggregate.receivedCents;
+      if (invalid) {
+        aggregate.beforeCents = null;
+        aggregate.deductedCents = null;
+        aggregate.receivedCents = null;
+      }
+      aggregate.hasPartialConfirmed = aggregate.confirmedAllocationDays > 0 && aggregate.pendingAllocationDays > 0;
+      aggregate.punchHours = roundHours(aggregate.punchHours);
+      aggregate.hours = aggregate.punchHours;
+      aggregate.punchHoursDisplay = formatHoursCoverage(aggregate.punchHours, aggregate.punchValidDays, aggregate.recordDays);
+      aggregate.allocationHourSummaries = aggregateAllocationHourEntries(aggregate.dailyRows);
+      aggregate.status = employeeAllocationStatus(aggregate.dailyRows);
+      aggregate.role = aggregate.roles.join(' / ');
+      aggregate.before = aggregate.beforeCents == null ? null : aggregate.beforeCents / 100;
+      aggregate.deducted = aggregate.deductedCents == null ? null : aggregate.deductedCents / 100;
+      aggregate.received = aggregate.receivedCents == null ? null : aggregate.receivedCents / 100;
+      aggregate.after = aggregate.finalAmountCents == null ? null : aggregate.finalAmountCents / 100;
       return aggregate;
     });
   }
 
+  function summarizeEmployeeAggregates(aggregates) {
+    return (aggregates || []).reduce(function(summary, item) {
+      summary.employeeCount += 1;
+      if (item.status === '已完成') summary.completedCount += 1;
+      else summary.pendingCount += 1;
+      if (item.status !== '异常' && item.hasConfirmedAmount && item.finalAmountCents != null) {
+        summary.finalAmountCents += item.finalAmountCents;
+        summary.hasConfirmedAmount = true;
+      }
+      return summary;
+    }, { employeeCount: 0, finalAmountCents: 0, hasConfirmedAmount: false, completedCount: 0, pendingCount: 0, exceptionCount: 0 });
+  }
+
+  function filterAndSortEmployeeAggregates(aggregates, filters, sort) {
+    var search = String(filters && filters.search || '').trim().toLocaleLowerCase();
+    var roles = filters && Array.isArray(filters.roles) ? filters.roles : [];
+    var statuses = filters && Array.isArray(filters.statuses) ? filters.statuses : [];
+    var employeeScope = filters && filters.employeeScope;
+    var employeeIds = employeeScope && employeeScope.mode === 'subset' ? uniqueIds(employeeScope.ids) : [];
+    var result = (aggregates || []).filter(function(item) {
+      return (!search || String(item.name || '').toLocaleLowerCase().indexOf(search) >= 0) &&
+        (!roles.length || item.roles.some(function(role) { return roles.indexOf(role) >= 0; })) &&
+        (!employeeIds.length || employeeIds.indexOf(String(item.employeeId || '')) >= 0) &&
+        (!statuses.length || statuses.indexOf(item.status) >= 0);
+    });
+    var key = sort && sort.key || 'finalAmount';
+    var direction = sort && sort.direction === 'asc' ? 1 : -1;
+    return result.slice().sort(function(a, b) {
+      if (key === 'employee') return direction * String(a.name).localeCompare(String(b.name));
+      var field = key === 'hours' ? 'punchHours' : 'finalAmountCents';
+      if (key === 'hours') {
+        var aMissing = !a.punchValidDays, bMissing = !b.punchValidDays;
+        if (aMissing && bMissing) return String(a.name).localeCompare(String(b.name));
+        if (aMissing) return 1;
+        if (bMissing) return -1;
+      }
+      if (a[field] == null && b[field] == null) return String(a.name).localeCompare(String(b.name));
+      if (a[field] == null) return 1;
+      if (b[field] == null) return -1;
+      return direction * (a[field] - b[field]) || String(a.name).localeCompare(String(b.name));
+    });
+  }
+
+  function stableRoleEmployeeId(record) {
+    var value = record && (record.employeeId || record.rosterEmployeeId || record.id);
+    return value == null || String(value).trim() === '' ? '' : String(value);
+  }
+
+  function aggregateRoleDailyDatasets(dailyRows, options) {
+    options = options || {};
+    var restrictEmployeeIds = Array.isArray(options.employeeIds);
+    var allowedIds = restrictEmployeeIds ? uniqueIds(options.employeeIds) : [];
+    var selectedRole = String(options.role || '');
+    var byRole = Object.create(null);
+    (dailyRows || []).forEach(function(day) {
+      (day.employeeResults || []).forEach(function(record) {
+        if (!record || !isParticipatingEmployeeRecord(record)) return;
+        var employeeId = stableRoleEmployeeId(record);
+        if (restrictEmployeeIds && (!employeeId || allowedIds.indexOf(employeeId) < 0)) return;
+        var role = String(record.role || '').trim() || '未设置角色';
+        if (selectedRole && role !== selectedRole) return;
+        var item = byRole[role];
+        if (!item) {
+          item = byRole[role] = {
+            role: role,
+            employeeIds: [],
+            employeeCount: 0,
+            beforeCents: 0,
+            deductedCents: 0,
+            receivedCents: 0,
+            finalAmountCents: 0,
+            allocatedRecordCount: 0,
+            pendingRecordCount: 0,
+            status: 'pending',
+            hasConfirmedAmount: false
+          };
+        }
+        if (employeeId) addUnique(item.employeeIds, employeeId);
+        var beforeCents = toCents(record.before) || 0;
+        item.beforeCents += beforeCents;
+        if (day.allocated && !day.allocationValidationError) {
+          var deductedCents = toCents(record.deducted) || 0;
+          var receivedCents = toCents(record.received) || 0;
+          item.allocatedRecordCount += 1;
+          item.deductedCents += deductedCents;
+          item.receivedCents += receivedCents;
+          item.finalAmountCents += beforeCents - deductedCents + receivedCents;
+        } else {
+          item.pendingRecordCount += 1;
+        }
+      });
+    });
+    return Object.keys(byRole).map(function(role) {
+      var item = byRole[role];
+      item.employeeCount = item.employeeIds.length;
+      item.hasConfirmedAmount = item.allocatedRecordCount > 0;
+      item.status = item.allocatedRecordCount && item.pendingRecordCount
+        ? 'partial'
+        : item.allocatedRecordCount ? 'complete' : 'pending';
+      return item;
+    }).sort(function(a, b) {
+      if (a.hasConfirmedAmount !== b.hasConfirmedAmount) return a.hasConfirmedAmount ? -1 : 1;
+      if (a.finalAmountCents !== b.finalAmountCents) return b.finalAmountCents - a.finalAmountCents;
+      return a.role.localeCompare(b.role);
+    });
+  }
+
+  function normalizeEmployeeDetailDateSort(value) {
+    return value === 'asc' ? 'asc' : 'desc';
+  }
+
+  function validEmployeeDetailDateKey(value) {
+    var key = String(value || '');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) return '';
+    var date = new Date(key + 'T00:00:00');
+    if (isNaN(date.getTime())) return '';
+    var normalized = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
+    return normalized === key ? key : '';
+  }
+
+  function sortEmployeeDetailRows(rows, direction) {
+    var multiplier = normalizeEmployeeDetailDateSort(direction) === 'asc' ? 1 : -1;
+    return (Array.isArray(rows) ? rows : []).map(function(row, index) {
+      return { row: row, index: index, dateKey: validEmployeeDetailDateKey(row && row.dateKey) };
+    }).sort(function(a, b) {
+      if (!a.dateKey && !b.dateKey) return a.index - b.index;
+      if (!a.dateKey) return 1;
+      if (!b.dateKey) return -1;
+      return a.dateKey.localeCompare(b.dateKey) * multiplier || a.index - b.index;
+    }).map(function(item) { return item.row; });
+  }
+
   function resolveSummaryView(historyState, queryView) {
+    if (queryView != null && queryView !== '') return normalizeSummaryView(queryView);
     var saved = readSummaryHistoryState(historyState);
     if (saved) return saved.activeView === 'employee' ? 'employee' : 'date';
-    return queryView === 'employee' ? 'employee' : 'date';
+    return 'date';
+  }
+
+  function normalizeSummaryView(value) {
+    return value === 'employee' ? 'employee' : 'date';
+  }
+
+  function buildSummaryViewHref(view) {
+    return normalizeSummaryView(view) === 'employee' ? 'index.html?view=employee' : 'index.html';
   }
 
   function buildEmployeeReconciliationDetailUrl(context) {
@@ -131,7 +465,12 @@
       dateEnd: String(values.dateEnd || ''),
       createdAt: Number(values.createdAt) || Date.now(),
       dailyRows: Array.isArray(values.dailyRows)
-        ? values.dailyRows.map(function (row) { return Object.assign({}, row); })
+        ? values.dailyRows.map(function (row) {
+          var copy = Object.assign({}, row);
+          if (Array.isArray(row.punchSessions)) copy.punchSessions = row.punchSessions.map(function (session) { return Object.assign({}, session); });
+          if (Array.isArray(row.manualHourEntries)) copy.manualHourEntries = row.manualHourEntries.map(function (entry) { return Object.assign({}, entry); });
+          return copy;
+        })
         : [],
       summary: Object.assign({}, values.summary || {}),
       status: values.status === '已完成' ? '已完成' : '待补录'
@@ -154,7 +493,12 @@
           row.employeeId === value.employeeId && typeof row.name === 'string' && typeof row.role === 'string' &&
           ['before', 'deducted', 'received', 'after', 'hours'].every(function (key) {
             return isFinite(Number(row[key]));
-          }) && typeof row.clockStatus === 'string';
+          }) && typeof row.clockStatus === 'string' && (!Object.prototype.hasOwnProperty.call(row, 'manualHourEntries') ||
+            (Array.isArray(row.manualHourEntries) && row.manualHourEntries.every(function(entry) {
+              return entry && typeof entry.poolId === 'string' && typeof entry.poolName === 'string' &&
+                typeof entry.ruleId === 'string' && typeof entry.ruleName === 'string' &&
+                isFinite(Number(entry.hours)) && Number(entry.hours) >= 0;
+            })));
       });
       if (!validRows) return null;
       if (!context || value.employeeId !== context.employeeId || value.store !== context.store ||
@@ -174,10 +518,27 @@
     isParticipatingEmployeeRecord: isParticipatingEmployeeRecord,
     resolveRequiresAttendance: resolveRequiresAttendance,
     aggregateEmployeeDailyDatasets: aggregateEmployeeDailyDatasets,
+    aggregateRoleDailyDatasets: aggregateRoleDailyDatasets,
+    summarizeEmployeeAggregates: summarizeEmployeeAggregates,
+    filterAndSortEmployeeAggregates: filterAndSortEmployeeAggregates,
+    normalizeEmployeeDetailDateSort: normalizeEmployeeDetailDateSort,
+    sortEmployeeDetailRows: sortEmployeeDetailRows,
+    normalizeSummaryView: normalizeSummaryView,
+    buildSummaryViewHref: buildSummaryViewHref,
     resolveSummaryView: resolveSummaryView,
     buildEmployeeReconciliationDetailUrl: buildEmployeeReconciliationDetailUrl,
     buildEmployeeReconciliationSnapshot: buildEmployeeReconciliationSnapshot,
     readEmployeeReconciliationSnapshot: readEmployeeReconciliationSnapshot,
+    normalizeEmployeeScope: normalizeEmployeeScope,
+    reconcileEmployeeScope: reconcileEmployeeScope,
+    filterDailyRowsByAllocationStatus: filterDailyRowsByAllocationStatus,
+    filterDailyRowsByBusinessStatus: filterDailyRowsByBusinessStatus,
+    employeeAllocationStatus: employeeAllocationStatus,
+    normalizeEmployeeAllocationStatusFilter: normalizeEmployeeAllocationStatusFilter,
+    normalizeEmployeeHoursRow: normalizeEmployeeHoursRow,
+    aggregateAllocationHourEntries: aggregateAllocationHourEntries,
+    formatHoursCoverage: formatHoursCoverage,
+    shouldHighlightAllocationHours: shouldHighlightAllocationHours,
     EMPLOYEE_RECONCILIATION_SNAPSHOT_KEY: EMPLOYEE_RECONCILIATION_SNAPSHOT_KEY
   };
 })(window);

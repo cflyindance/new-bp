@@ -37,20 +37,23 @@ const rows = [
 const aggregates = JSON.parse(JSON.stringify(ui.aggregateEmployeeDailyDatasets(rows)));
 assert.equal(aggregates.length, 2);
 assert.deepEqual(aggregates.map((row) => row.employeeId), ['roster:a', 'roster:b']);
-assert.deepEqual(aggregates[0], {
-  employeeId: 'roster:a', name: 'Alex', role: 'Server', shifts: 2, hours: 14,
-  before: 32, deducted: 5, received: 9, after: 36, status: '待补录',
-  missingAttendanceDays: 0, pendingAllocationDays: 1,
-  dailyRows: [
-    { dateKey: '2026-01-01', allocated: true, requiresAttendance: true, employeeId: 'roster:a', name: 'Alex', role: 'Server', before: 20, deducted: 3, received: 5, after: 22, hours: 8, clockStatus: '已打卡' },
-    { dateKey: '2026-01-02', allocated: false, requiresAttendance: false, employeeId: 'roster:a', name: 'Alex', role: 'Server', before: 12, deducted: 2, received: 4, after: 14, hours: 6, clockStatus: '未打卡' }
-  ]
-});
-assert.equal(aggregates[1].status, '待补录');
+assert.equal(aggregates[0].employeeId, 'roster:a');
+assert.equal(aggregates[0].punchHours, 8);
+assert.equal(aggregates[0].punchHoursDisplay, '8 h（1/2 天有记录）');
+assert.equal(aggregates[0].before, 20);
+assert.equal(aggregates[0].deducted, 3);
+assert.equal(aggregates[0].received, 5);
+assert.equal(aggregates[0].after, 22);
+assert.equal(aggregates[0].status, '部分待分配');
+assert.equal(aggregates[0].pendingAllocationDays, 1);
+assert.equal(aggregates[0].dailyRows.length, 2);
+assert.equal(aggregates[0].dailyRows[0].punchHoursValid, true);
+assert.equal(aggregates[0].dailyRows[1].punchHoursValid, false);
+assert.equal(aggregates[1].status, '已完成');
 assert.equal(aggregates[1].missingAttendanceDays, 1);
 
-assert.equal(ui.resolveSummaryView({ tipoutSummaryUiState: { activeView: 'date' } }, 'employee'), 'date');
-assert.equal(ui.resolveSummaryView({ tipoutSummaryUiState: {} }, 'employee'), 'date');
+assert.equal(ui.resolveSummaryView({ tipoutSummaryUiState: { activeView: 'date' } }, 'employee'), 'employee');
+assert.equal(ui.resolveSummaryView({ tipoutSummaryUiState: {} }, 'employee'), 'employee');
 assert.equal(ui.resolveSummaryView(null, 'employee'), 'employee');
 assert.equal(ui.resolveSummaryView(null, 'unknown'), 'date');
 

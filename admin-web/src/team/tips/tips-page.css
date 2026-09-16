@@ -3162,6 +3162,9 @@ select.form-control {
 .tipout-page-employee-reconciliation-detail .tipout-detail-cell-stack { display: flex; flex-direction: column; gap: 2px; }
 .tipout-page-employee-reconciliation-detail .tipout-punch-time-stack { display: block; white-space: pre-line; font-variant-numeric: tabular-nums; line-height: 1.55; }
 .tipout-page-employee-reconciliation-detail .tipout-work-hours-stack { display: flex; flex-direction: column; gap: 4px; }
+.tipout-allocation-hours-stack { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.tipout-allocation-hours-line { display: block; white-space: nowrap; }
+.tipout-allocation-hours--changed { color: #d97706; font-weight: 700; }
 .tipout-page-employee-reconciliation-detail .tipout-work-hours-line { display: flex; align-items: center; gap: 6px; min-height: 20px; font-variant-numeric: tabular-nums; }
 .tipout-page-employee-reconciliation-detail .tipout-work-hours-label { color: var(--text-secondary); }
 .tipout-page-employee-reconciliation-detail .tipout-hours-entry-badge { display: inline-flex; align-items: center; height: 18px; padding: 0 6px; border-radius: 9px; background: #fff4df; color: #a76300; font-size: 11px; font-weight: 600; white-space: nowrap; }

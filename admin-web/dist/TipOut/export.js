@@ -10,19 +10,39 @@ document.addEventListener('click', function(e) {
   }
 });
 
-function collectExportData() {
-  var dates = getDateRange();
+function exportStoreLabel() {
   var storeSel = document.getElementById('storeSelect') || document.querySelector('.filter-bar select:nth-of-type(3)');
+  return storeSel ? (storeSel.options[storeSel.selectedIndex] ? storeSel.options[storeSel.selectedIndex].text : storeSel.value || '') : '';
+}
+
+function collectDateTaskExportData() {
+  var dailyRows = typeof getVisibleDailySummaryRows === 'function'
+    ? getVisibleDailySummaryRows()
+    : buildDailyDataset(getFilteredEmployees());
   var data = {
-    store: storeSel ? (storeSel.options[storeSel.selectedIndex] ? storeSel.options[storeSel.selectedIndex].text : storeSel.value || '') : '',
+    kind: 'date',
+    store: exportStoreLabel(),
     dateStart: document.getElementById('dateStart').value,
     dateEnd: document.getElementById('dateEnd').value,
-    employees: []
+    employees: [],
+    dailySummaries: dailyRows.map(function(row) {
+      return {
+        date: row.dateKey,
+        status: row.poolSummary.aggregateStatus,
+        originalTips: row.poolSummary.originalTips,
+        poolAmount: row.allocated ? row.poolSummary.poolAmount : null,
+        allocatedAmount: row.poolSummary.allocatedAmount,
+        unallocatedAmount: row.poolSummary.unallocatedAmount,
+        poolCount: row.poolSummary.poolCount,
+        pools: row.poolSummary.poolExecutions
+      };
+    })
   };
   var allocatedDates = typeof getAllocatedDates === 'function' ? getAllocatedDates() : new Set();
-  employees.forEach(function(emp) {
+  var scopedEmployees = typeof getFilteredEmployees === 'function' ? getFilteredEmployees() : employees;
+  scopedEmployees.forEach(function(emp) {
     var daily = [];
-    dates.forEach(function(dk) { if (allocatedDates.has(dk)) daily.push(genDailyTip(emp, dk)); });
+    dailyRows.forEach(function(row) { if (allocatedDates.has(row.dateKey)) daily.push(genDailyTip(emp, row.dateKey)); });
     if (daily.length === 0) return;
     var tb = daily.reduce(function(s, d) { return s + d.before; }, 0);
     var td = daily.reduce(function(s, d) { return s + (d.deducted || 0); }, 0);
@@ -38,52 +58,142 @@ function collectExportData() {
   return data;
 }
 
+function collectEmployeeReconciliationExportData() {
+  var aggregates = typeof getVisibleEmployeeSummaryAggregates === 'function'
+    ? getVisibleEmployeeSummaryAggregates()
+    : TipOutSummaryUi.aggregateEmployeeDailyDatasets(buildDailyDataset(getStoreEmployees()));
+  return {
+    kind: 'employee',
+    store: exportStoreLabel(),
+    dateStart: document.getElementById('dateStart').value,
+    dateEnd: document.getElementById('dateEnd').value,
+    employees: aggregates.map(function(aggregate) {
+      return {
+        employeeId: aggregate.employeeId,
+        name: aggregate.name,
+        role: (aggregate.roles || []).join(' / ') || aggregate.role,
+        punchHours: aggregate.punchHoursDisplay,
+        allocationHours: (aggregate.allocationHourSummaries || []).map(function(item) { return item.display; }).join('\n') || '—',
+        before: aggregate.before,
+        deducted: aggregate.deducted,
+        received: aggregate.received,
+        netAdjustment: aggregate.netAdjustmentCents == null ? null : aggregate.netAdjustmentCents / 100,
+        after: aggregate.after,
+        status: aggregate.status,
+        issueReasons: (aggregate.issueReasons || []).join('；')
+      };
+    })
+  };
+}
+
+function collectCurrentSummaryExportData() {
+  return activeSummaryView === 'employee'
+    ? collectEmployeeReconciliationExportData()
+    : collectDateTaskExportData();
+}
+
+function collectExportData() {
+  return collectCurrentSummaryExportData();
+}
+
+function assertPaidExportSnapshotsAvailable() {
+  if (!window.TipOutDateState) return true;
+  var storeEl = document.getElementById('storeSelect');
+  var store = storeEl ? storeEl.value : '';
+  var dates = [];
+  var detailDate = document.getElementById('detailDate');
+  if (detailDate && detailDate.value) dates = [detailDate.value];
+  else if (typeof getDateRange === 'function') dates = getDateRange();
+  for (var i = 0; i < dates.length; i += 1) {
+    var state = TipOutDateState.inspect(store, dates[i]);
+    if (state.payoutStatus === 'error') throw new Error('发放快照不可用');
+  }
+  return true;
+}
+
 function exportAs(type) {
   document.getElementById('exportMenu').classList.remove('show');
-  var data = collectExportData();
-  if (data.employees.length === 0) { showNotification('没有可导出的数据', 'warning'); return; }
+  try { assertPaidExportSnapshotsAvailable(); }
+  catch (error) { if (typeof showNotification === 'function') showNotification(error.message, 'error'); return; }
+  var data = collectCurrentSummaryExportData();
+  if (data.kind === 'employee' ? data.employees.length === 0 : data.dailySummaries.length === 0) { showNotification('没有可导出的数据', 'warning'); return; }
   if (type === 'pdf') exportPDF(data);
   else if (type === 'csv') exportCSV(data);
 }
 
 /* ─── CSV ─── */
 function exportCSV(data) {
+  if (data.kind === 'employee') {
+    exportEmployeeReconciliationCSV(data);
+    return;
+  }
   showNotification('正在生成 CSV 文件...', 'info');
   var bom = '\uFEFF';
   var lines = [];
-  lines.push('Tip Distribution Report');
+  lines.push('Date Tip Allocation Summary');
   lines.push('"Store","' + data.store.replace(/"/g, '""') + '"');
   lines.push('"Date Range","' + data.dateStart + ' ~ ' + data.dateEnd + '"');
   lines.push('');
-  lines.push('Employee,Role,Date,Tips Before($),Deducted($),Received($),Tips After($)');
-
-  var grandBefore = 0, grandDeducted = 0, grandReceived = 0, grandAfter = 0;
-  data.employees.forEach(function(emp) {
-    emp.daily.forEach(function(d) {
-      lines.push('"' + emp.name + '","' + emp.role + '",' + d.date + ',' +
-        d.before.toFixed(2) + ',' + (d.deducted || 0).toFixed(2) + ',' + (d.received || 0).toFixed(2) + ',' + d.after.toFixed(2));
-    });
-    lines.push('"' + emp.name + ' (Subtotal)","","","' + emp.totalBefore.toFixed(2) + '","' +
-      emp.totalDeducted.toFixed(2) + '","' + emp.totalReceived.toFixed(2) + '","' + emp.totalAfter.toFixed(2) + '"');
-    grandBefore += emp.totalBefore;
-    grandDeducted += emp.totalDeducted;
-    grandReceived += emp.totalReceived;
-    grandAfter += emp.totalAfter;
+  lines.push('Date,Status,Original Tips($),Pool Amount($),Allocated($),Unallocated($),Pool Count');
+  data.dailySummaries.forEach(function(day) {
+    lines.push([day.date, day.status, day.originalTips.toFixed(2), day.poolAmount == null ? '' : day.poolAmount.toFixed(2), day.allocatedAmount == null ? '' : day.allocatedAmount.toFixed(2), day.unallocatedAmount == null ? '' : day.unallocatedAmount.toFixed(2), day.poolCount].map(csvCell).join(','));
   });
   lines.push('');
-  lines.push('"Grand Total","","","' + grandBefore.toFixed(2) + '","' + grandDeducted.toFixed(2) + '","' +
-    grandReceived.toFixed(2) + '","' + grandAfter.toFixed(2) + '"');
+  lines.push('Date,Pool,Rule Summary,Status,Pool Amount($),Allocated($),Unallocated($)');
+  data.dailySummaries.forEach(function(day) {
+    day.pools.forEach(function(pool) {
+      lines.push([day.date, pool.name, pool.ruleSummary, pool.status, pool.poolAmount.toFixed(2), pool.allocatedAmount == null ? '' : pool.allocatedAmount.toFixed(2), pool.unallocatedAmount == null ? '' : pool.unallocatedAmount.toFixed(2)].map(csvCell).join(','));
+    });
+  });
 
   var blob = new Blob([bom + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
   var url = URL.createObjectURL(blob);
   var a = document.createElement('a');
   a.href = url;
-  a.download = 'TipDistribution_' + data.dateStart + '_' + data.dateEnd + '.csv';
+  a.download = 'DateTipAllocationSummary_' + data.dateStart + '_' + data.dateEnd + '.csv';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
   showNotification('CSV 导出成功', 'success');
+}
+
+function csvCell(value) {
+  return '"' + String(value == null ? '' : value).replace(/"/g, '""') + '"';
+}
+
+function exportEmployeeReconciliationCSV(data) {
+  showNotification('正在生成员工分配汇总 CSV 文件...', 'info');
+  var lines = ['Employee Tip Allocation Summary'];
+  lines.push(csvCell('Store') + ',' + csvCell(data.store));
+  lines.push(csvCell('Date Range') + ',' + csvCell(data.dateStart + ' ~ ' + data.dateEnd));
+  lines.push('');
+  lines.push(['Employee', 'Role', 'Punch Hours', 'Allocation Hours', 'Original Tips($)', 'Deducted($)', 'Received($)', 'Net Adjustment($)', 'Final Amount($)', 'Status', 'Issue Reasons'].map(csvCell).join(','));
+  data.employees.forEach(function(employee) {
+    lines.push([
+      employee.name,
+      employee.role,
+      employee.punchHours,
+      employee.allocationHours,
+      employee.before == null ? '' : Number(employee.before).toFixed(2),
+      employee.deducted == null ? '' : Number(employee.deducted).toFixed(2),
+      employee.received == null ? '' : Number(employee.received).toFixed(2),
+      employee.netAdjustment == null ? '' : Number(employee.netAdjustment).toFixed(2),
+      employee.after == null ? '' : Number(employee.after).toFixed(2),
+      employee.status,
+      employee.issueReasons
+    ].map(csvCell).join(','));
+  });
+  var blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'EmployeeTipAllocationSummary_' + data.dateStart + '_' + data.dateEnd + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showNotification('员工分配汇总 CSV 导出成功', 'success');
 }
 
 /* ─── PDF: CDN loader ─── */
@@ -128,15 +238,18 @@ function exportPDF(data) {
   showNotification('正在加载 PDF 组件...', 'info');
   loadJsPDFLib(function(loaded) {
     if (loaded) {
-      generateJsPDF(data);
+      if (data.kind === 'employee') generateEmployeeReconciliationJsPDF(data);
+      else generateJsPDF(data);
     } else {
-      printAsPDF(data);
+      if (data.kind === 'employee') printEmployeeReconciliationAsPDF(data);
+      else printAsPDF(data);
     }
   });
 }
 
 /* ─── PDF: print fallback ─── */
 function printAsPDF(data) {
+  if (data.dailySummaries) { printDatePoolAsPDF(data); return; }
   showNotification('正在生成 PDF 预览页面...', 'info');
   var gb = 0, gd = 0, gr = 0, gf = 0;
 
@@ -202,12 +315,93 @@ function printAsPDF(data) {
   showNotification('PDF 预览已打开，请在弹出窗口中保存为 PDF', 'success');
 }
 
+function printDatePoolAsPDF(data) {
+  showNotification('正在生成日期分配汇总 PDF 预览页面...', 'info');
+  var win = window.open('', '_blank');
+  if (!win) { showNotification('弹窗被浏览器拦截，请允许弹窗后重试', 'error'); return; }
+  var doc = win.document;
+  doc.open();
+  doc.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Date Tip Allocation Summary</title><style>body{font-family:Arial,sans-serif;padding:28px;color:#222;font-size:12px}h1{font-size:20px}table{width:100%;border-collapse:collapse;margin:14px 0}th,td{padding:7px 9px;border-bottom:1px solid #ddd;text-align:left}.pool{background:#f7f7f8;color:#555}@media print{@page{size:landscape;margin:10mm}}</style></head><body>');
+  doc.write('<h1>Date Tip Allocation Summary</h1><p>Store: ' + escH(data.store) + '</p><p>Date Range: ' + data.dateStart + ' ~ ' + data.dateEnd + '</p>');
+  doc.write('<table><thead><tr><th>Date</th><th>Status</th><th>Original Tips</th><th>Pool Amount</th><th>Allocated</th><th>Unallocated</th><th>Pool Count</th></tr></thead><tbody>');
+  data.dailySummaries.forEach(function(day) {
+    doc.write('<tr><td>' + day.date + '</td><td>' + escH(day.status) + '</td><td>$' + day.originalTips.toFixed(2) + '</td><td>' + (day.poolAmount == null ? '—' : '$' + day.poolAmount.toFixed(2)) + '</td><td>' + (day.allocatedAmount == null ? '—' : '$' + day.allocatedAmount.toFixed(2)) + '</td><td>' + (day.unallocatedAmount == null ? '—' : '$' + day.unallocatedAmount.toFixed(2)) + '</td><td>' + day.poolCount + '</td></tr>');
+    day.pools.forEach(function(pool) { doc.write('<tr class="pool"><td>↳ ' + escH(pool.name) + '</td><td>' + escH(pool.status) + '</td><td colspan="2">' + escH(pool.ruleSummary || '—') + '</td><td>' + (pool.allocatedAmount == null ? '—' : '$' + pool.allocatedAmount.toFixed(2)) + '</td><td>' + (pool.unallocatedAmount == null ? '—' : '$' + pool.unallocatedAmount.toFixed(2)) + '</td><td></td></tr>'); });
+  });
+  doc.write('</tbody></table></body></html>');
+  doc.close();
+  setTimeout(function() { win.focus(); win.print(); }, 500);
+}
+
 function escH(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+function employeeReconciliationRows(data) {
+  function amount(value, sign) {
+    if (value == null) return '—';
+    var numeric = Number(value);
+    return (sign && numeric > 0 ? '+' : numeric < 0 ? '-' : '') + '$' + Math.abs(numeric).toFixed(2);
+  }
+  return data.employees.map(function(employee) {
+    return [
+      employee.name,
+      employee.role,
+      employee.punchHours,
+      employee.allocationHours,
+      amount(employee.before),
+      amount(employee.deducted, true),
+      amount(employee.received, true),
+      amount(employee.netAdjustment, true),
+      amount(employee.after),
+      employee.status,
+      employee.issueReasons || ''
+    ];
+  });
+}
+
+function printEmployeeReconciliationAsPDF(data) {
+  showNotification('正在生成员工分配汇总 PDF 预览页面...', 'info');
+  var win = window.open('', '_blank');
+  if (!win) { showNotification('弹窗被浏览器拦截，请允许弹窗后重试', 'error'); return; }
+  var rows = employeeReconciliationRows(data);
+  var doc = win.document;
+  doc.open();
+  doc.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Employee Tip Allocation Summary</title>');
+  doc.write('<style>body{font-family:Arial,sans-serif;padding:28px;color:#222;font-size:12px}h1{font-size:20px;margin:0 0 8px}.meta{color:#666;margin:3px 0}table{width:100%;border-collapse:collapse;margin-top:16px}th{background:#111;color:#fff;padding:8px;text-align:left}td{padding:7px 8px;border-bottom:1px solid #eee}.r{text-align:right}@media print{@page{size:landscape;margin:10mm}}</style></head><body>');
+  doc.write('<h1>Employee Tip Allocation Summary</h1><div class="meta">Store: ' + escH(data.store) + '</div>');
+  doc.write('<div class="meta">Date Range: ' + escH(data.dateStart + ' ~ ' + data.dateEnd) + '</div>');
+  doc.write('<table><thead><tr>' + ['Employee','Role','Punch Hours','Allocation Hours','Original Tips','Deducted','Received','Net Adjustment','Final Amount','Status','Issue Reasons'].map(function(label) { return '<th>' + label + '</th>'; }).join('') + '</tr></thead><tbody>');
+  rows.forEach(function(row) { doc.write('<tr>' + row.map(function(cell) { return '<td>' + escH(cell) + '</td>'; }).join('') + '</tr>'); });
+  doc.write('</tbody></table></body></html>');
+  doc.close();
+  setTimeout(function() { win.print(); }, 500);
+  showNotification('员工分配汇总 PDF 预览已打开，请在弹出窗口中保存为 PDF', 'success');
+}
+
+function generateEmployeeReconciliationJsPDF(data) {
+  showNotification('正在生成员工分配汇总 PDF 文件...', 'info');
+  var doc = new window.jspdf.jsPDF('l', 'mm', 'a4');
+  doc.setFontSize(18);
+  doc.text('Employee Tip Allocation Summary', 14, 16);
+  doc.setFontSize(10);
+  doc.text('Store: ' + data.store, 14, 24);
+  doc.text('Date Range: ' + data.dateStart + ' ~ ' + data.dateEnd, 14, 30);
+  doc.autoTable({
+    startY: 36,
+    head: [['Employee', 'Role', 'Punch Hours', 'Allocation Hours', 'Original Tips', 'Deducted', 'Received', 'Net Adjustment', 'Final Amount', 'Status', 'Issue Reasons']],
+    body: employeeReconciliationRows(data),
+    styles: { fontSize: 8, cellPadding: 2.5 },
+    headStyles: { fillColor: [22, 119, 255], textColor: 255, fontStyle: 'bold' },
+    margin: { left: 14, right: 14 }
+  });
+  doc.save('EmployeeTipAllocationSummary_' + data.dateStart + '_' + data.dateEnd + '.pdf');
+  showNotification('员工分配汇总 PDF 导出成功', 'success');
+}
+
 /* ─── PDF: jsPDF generation ─── */
 function generateJsPDF(data) {
+  if (data.dailySummaries) { generateDatePoolJsPDF(data); return; }
   showNotification('正在生成 PDF 文件...', 'info');
 
   var doc = new window.jspdf.jsPDF('l', 'mm', 'a4');
@@ -216,7 +410,7 @@ function generateJsPDF(data) {
 
   doc.setFontSize(18);
   doc.setTextColor(30);
-  doc.text('Tip Distribution Report', 14, 16);
+  doc.text('Date Tip Allocation Summary', 14, 16);
   doc.setFontSize(10);
   doc.setTextColor(100);
   doc.text('Store: ' + data.store, 14, 24);
@@ -304,7 +498,32 @@ function generateJsPDF(data) {
     doc.text('Page ' + i + ' / ' + pageCount, pw - 35, ph - 8);
   }
 
-  doc.save('TipDistribution_' + data.dateStart + '_' + data.dateEnd + '.pdf');
+  doc.save('DateTipAllocationSummary_' + data.dateStart + '_' + data.dateEnd + '.pdf');
+  showNotification('PDF 导出成功', 'success');
+}
+
+function generateDatePoolJsPDF(data) {
+  var jsPDF = window.jspdf.jsPDF;
+  var doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  doc.setFontSize(16);
+  doc.text('Date Tip Allocation Summary', 14, 16);
+  doc.setFontSize(9);
+  doc.text('Store: ' + data.store, 14, 23);
+  doc.text('Date Range: ' + data.dateStart + ' ~ ' + data.dateEnd, 14, 28);
+  var rows = [];
+  data.dailySummaries.forEach(function(day) {
+    rows.push([day.date, day.status, '$' + day.originalTips.toFixed(2), day.poolAmount == null ? '—' : '$' + day.poolAmount.toFixed(2), day.allocatedAmount == null ? '—' : '$' + day.allocatedAmount.toFixed(2), day.unallocatedAmount == null ? '—' : '$' + day.unallocatedAmount.toFixed(2), String(day.poolCount)]);
+    day.pools.forEach(function(pool) {
+      rows.push(['  ↳ ' + pool.name, pool.status, pool.ruleSummary || '—', pool.poolAmount == null ? '—' : '$' + pool.poolAmount.toFixed(2), pool.allocatedAmount == null ? '—' : '$' + pool.allocatedAmount.toFixed(2), pool.unallocatedAmount == null ? '—' : '$' + pool.unallocatedAmount.toFixed(2), '']);
+    });
+  });
+  doc.autoTable({
+    startY: 34,
+    head: [['Date', 'Status', 'Original Tips', 'Pool Amount', 'Allocated', 'Unallocated', 'Pool Count']],
+    body: rows,
+    styles: { fontSize: 8 }
+  });
+  doc.save('DateTipAllocationSummary_' + data.dateStart + '_' + data.dateEnd + '.pdf');
   showNotification('PDF 导出成功', 'success');
 }
 
@@ -325,8 +544,14 @@ function sendEmail() {
       return;
     }
   }
+  var data = collectCurrentSummaryExportData();
+  if (data.kind === 'employee' ? !data.employees.length : !data.dailySummaries.length) {
+    showNotification('没有可导出的数据', 'warning');
+    return;
+  }
   var fmt = document.querySelector('input[name="emailFormat"]:checked').value.toUpperCase();
   closeModal('emailModal');
-  showNotification('正在发送 ' + fmt + ' 到 ' + emails.join(', ') + ' ...', 'info');
+  var reportName = data.kind === 'employee' ? '员工分配汇总' : '日期分配汇总';
+  showNotification('正在发送' + reportName + ' ' + fmt + ' 到 ' + emails.join(', ') + ' ...', 'info');
   setTimeout(function() { showNotification('邮件发送成功', 'success'); }, 1500);
 }

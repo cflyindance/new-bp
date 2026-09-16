@@ -7,16 +7,18 @@ const detailProgram = fs.readFileSync("src/team/tips/programs/employee-reconcili
 const exportProgram = fs.readFileSync("src/team/tips/legacy/export.js.txt", "utf8");
 const failures = [];
 
-if (!summaryTemplate.includes("<th>班次</th><th>工时</th>")) failures.push("summary headers are not split");
-if (!detailTemplate.includes("<th>班次</th><th>工时</th>")) failures.push("detail headers are not split");
-if (!summaryProgram.includes("aggregate.shifts + ' 个班次</strong></td>'")) failures.push("summary shifts cell missing");
-if (!summaryProgram.includes("formatHoursDisplay(aggregate.hours) + ' h</strong></td>'")) failures.push("summary hours cell missing");
-if (!detailProgram.includes("shifts: attendance.shifts > 0 ? attendance.shifts + ' 个班次' : '—'")) failures.push("detail export shifts missing");
-if (!detailProgram.includes("hours: (attendance.hourLines || []).map")) failures.push("detail export hours missing");
-if (!exportProgram.includes("shifts: aggregate.shifts + ' 个班次'")) failures.push("summary export shifts missing");
-if (!exportProgram.includes("hours: formatHoursDisplay(aggregate.hours) + ' h'")) failures.push("summary export hours missing");
-if (detailProgram.includes("'班次 / 工时'")) failures.push("detail export still uses combined header");
-if (exportProgram.includes("'Shifts / Hours'")) failures.push("summary export still uses combined header");
+if (!summaryTemplate.includes('>打卡工时</button></th>') || !summaryTemplate.includes('<th>分配工时</th>')) failures.push('summary dual-hours headers missing');
+if (!detailTemplate.includes('<th>打卡工时</th><th>分配工时</th>')) failures.push('detail dual-hours headers missing');
+if (summaryTemplate.includes('<th>班次</th>')) failures.push('summary still exposes shifts');
+if (/employeeDetailDateSortIcon[\s\S]*<th>班次<\/th>/.test(detailTemplate)) failures.push('detail still exposes shifts');
+if (detailTemplate.includes('<th>上班时间</th>') || detailTemplate.includes('<th>下班时间</th>')) failures.push('detail still exposes punch times');
+if (!summaryProgram.includes('aggregate.punchHoursDisplay')) failures.push('summary punch hours missing');
+if (!summaryProgram.includes('aggregate.allocationHourSummaries.map')) failures.push('summary allocation hours missing');
+if (!detailProgram.includes('punchHours: row.punchHoursValid')) failures.push('detail export punch hours missing');
+if (!detailProgram.includes('allocationHours: TipOutSummaryUi.normalizeEmployeeHoursRow')) failures.push('detail export allocation hours missing');
+if (!exportProgram.includes('punchHours: aggregate.punchHoursDisplay')) failures.push('summary export punch hours missing');
+if (!exportProgram.includes('allocationHours: (aggregate.allocationHourSummaries')) failures.push('summary export allocation hours missing');
+if (exportProgram.includes("'Shifts', 'Hours'")) failures.push('summary export still uses old columns');
 
 if (failures.length) {
   console.error(failures.join("\n"));
