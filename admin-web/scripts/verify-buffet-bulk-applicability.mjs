@@ -1,0 +1,18 @@
+import fs from 'node:fs';
+import vm from 'node:vm';
+import assert from 'node:assert/strict';
+const source = fs.readFileSync('dist/Configuration center/assets/order-limit-flow.js', 'utf8');
+const start = source.indexOf('  function decorateQuantityWorkbench(');
+const end = source.indexOf('  function closeQuantitySceneDialog(', start);
+const window = {};
+vm.runInNewContext(fs.readFileSync('dist/Configuration center/assets/buffet-rule-policy.js', 'utf8'), { window });
+const context = { normalizeBuffetQuantityWorkbenchState: () => ({ selectedIds: [] }), renderScenarioBulkFields: () => '<input data-buffet-workbench-bulk-value>', buffetAllowedLimitBlocks: window.BuffetRulePolicy.allowedLimitBlocks };
+vm.createContext(context);
+vm.runInContext(source.slice(start, end), context);
+const html = '<div class="olf-v4-workbench-batch"><span>批量数量</span><input data-buffet-workbench-bulk-value/><button type="button" class="olf-button olf-button--small" data-buffet-workbench-bulk-apply>应用数量</button></div>';
+const render = (targetType, period) => context.decorateQuantityWorkbench(html, { targetType }, { period }, false);
+assert.ok(render('dish_set', 'order_lifetime').includes('data-quantity-scene-batch-toggle'), '整单菜品集支持批量设置');
+assert.equal(window.BuffetRulePolicy.allowedLimitBlocks({targetType:'dish_set'}, 'order_lifetime').sameDish, true);
+for (const period of ['per_round', 'multi_round']) assert.ok(render('dish_set', period).includes('data-quantity-scene-batch-toggle'));
+assert.ok(render('dish', 'order_lifetime').includes('data-quantity-scene-batch-toggle'));
+console.log('verify-buffet-bulk-applicability: PASS');

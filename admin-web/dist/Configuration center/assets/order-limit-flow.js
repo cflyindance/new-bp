@@ -4243,7 +4243,7 @@
       { key: "category", label: draft.targetType === "category" ? "包含商品" : "所属分类" },
       { key: "line", label: "产线" }
     ];
-    if (draft.targetType === "dish_set") columns.push({ key: "sameDish", label: "每轮每种最多份数" }, { key: "status", label: "状态" });
+    if (draft.targetType === "dish_set") columns.push({ key: "sameDish", label: combo.period === "order_lifetime" ? "每种整单最多份数" : "每轮每种最多份数" }, { key: "status", label: "状态" });
     else columns.push({ key: "limit", label: buffetTargetLimitLabel(draft, combo) });
     if (draft.subject === "party_size" && draft.targetType !== "dish_set") columns.push({ key: "tableCap", label: "整桌兜底" });
     columns.push({ key: "action", label: "操作", className: "olf-v4-product-action" });
@@ -4516,6 +4516,9 @@
   }
 
   function decorateQuantityWorkbench(content, draft, combo, batchOpen) {
+    if (draft.targetType === "dish_set" && !buffetAllowedLimitBlocks(draft, combo.period).sameDish) {
+      return content.replace('<div class="olf-v4-workbench-batch">', '<div class="olf-v4-workbench-batch" hidden>');
+    }
     var selection = normalizeBuffetQuantityWorkbenchState(draft).selectedIds.length;
     content = content.replace(/<span>批量(?:设置每轮每种最多份数|数量)<\/span><input[^>]*data-buffet-workbench-bulk-value[^>]*\/>/, renderScenarioBulkFields(draft, combo));
     content = content.replace('<button type="button" class="olf-button olf-button--small" data-buffet-workbench-bulk-apply', '<button type="button" class="olf-button olf-scene-bulk-cancel" data-quantity-scene-batch-cancel>取消批量设置</button><button type="button" class="olf-button olf-button--primary olf-button--small" data-buffet-workbench-bulk-apply');
@@ -4952,7 +4955,7 @@
   function buffetAllowedLimitBlocks(draft, period) {
     return window.BuffetRulePolicy && typeof window.BuffetRulePolicy.allowedLimitBlocks === "function"
       ? window.BuffetRulePolicy.allowedLimitBlocks(draft, period)
-      : { total: period !== "order_lifetime", target: true, sameDish: period !== "order_lifetime" && draft.targetType === "dish_set" };
+      : { total: period !== "order_lifetime", target: true, sameDish: draft.targetType === "dish_set" };
   }
 
   function deriveBuffetQuantityBlocks(draft) {
@@ -5044,7 +5047,7 @@
               });
             }
           }
-          if (period !== "order_lifetime" && blocks.sameDishEnabled) {
+          if (buffetAllowedLimitBlocks(draft, period).sameDish && blocks.sameDishEnabled) {
             total += 1;
             if ((values.defaultDishLimits[scenario] && values.defaultDishLimits[scenario].configured) ||
                 v4ExceptionRows(values, scenario).some(function (row) { return row.limit && row.limit.configured; })) complete += 1;
@@ -5141,7 +5144,7 @@
             var targetKeys = draft.targetType === "dish_set" ? [scenario] : v4TargetsForConfig(draft, config).map(function (target) { return v4TargetCellKey(combo.partyIndex, combo.roundIndex, target.lineId, target.id, draft); });
             if (!targetKeys.length || targetKeys.some(function (key) { return !(values.targetLimits[key] && values.targetLimits[key].configured); })) return validationResult(3, "QUANTITY_BLOCK_INCOMPLETE", "商品或分类限购数量尚未全部配置");
           }
-          if (period !== "order_lifetime" && blocks.sameDishEnabled) {
+          if (buffetAllowedLimitBlocks(draft, period).sameDish && blocks.sameDishEnabled) {
             var seenExceptions = {};
             var eligible = {};
             eligibleExceptionDishes(draft, storeId).forEach(function (dish) { eligible[v4MenuIdentity(dish)] = true; });
@@ -5242,7 +5245,7 @@
           if (draft.subject === "party_size" && hasConfiguredBoundCell(values.tableTotalBounds[scenario])) items.push(summaryBounds(values.tableTotalBounds[scenario], "整桌兜底："));
         }
         if (blocks.targetEnabled) items.push(summaryTargetLimits(draft, config, combo, values));
-        if (period !== "order_lifetime" && blocks.sameDishEnabled) {
+        if (buffetAllowedLimitBlocks(draft, period).sameDish && blocks.sameDishEnabled) {
           var exceptions = v4ExceptionRows(values, scenario).map(function (row) {
             var dish = v4ExceptionDish(row) || {};
             return (dish.name || dish.dishName || dish.dishId) + " " + summaryLimit(row.limit);
@@ -6081,7 +6084,7 @@
       var bulkValues = v4PeriodValues(bulkConfig, bulkPeriod);
       var bulkCombo = { period: bulkPeriod, partyIndex: Number(button.getAttribute("data-scene-party")) || 0, roundIndex: Number(button.getAttribute("data-scene-round")) || 0 };
       if (bulkDraft.targetType === "dish_set") {
-        if (!buffetAllowedLimitBlocks(bulkDraft, bulkPeriod).sameDish) { toast("当前周期不支持商品每轮份数上限", true); return; }
+        if (!buffetAllowedLimitBlocks(bulkDraft, bulkPeriod).sameDish) { toast("当前周期不支持商品份数上限", true); return; }
         var bulkScenario = button.getAttribute("data-v4-scenario");
         expandDishSetDefaultLimit(bulkDraft, bulkValues, bulkScenario);
         var existingRows = v4ExceptionRows(bulkValues, bulkScenario).filter(function (row) { return bulkState.selectedIds.indexOf(buffetWorkbenchTargetIdentity(bulkDraft, v4ExceptionDish(row))) < 0; });
