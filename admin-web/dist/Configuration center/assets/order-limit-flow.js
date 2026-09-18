@@ -2283,6 +2283,7 @@
 
   function saveEditorDraft(immediate) {
     if (!editorState || !editorState.rule) return false;
+    if (editorState.quantitySceneDialog) return false;
     if (viewMode) return true;
     window.clearTimeout(editorState.saveTimer);
     try {
@@ -4457,11 +4458,59 @@
 
   function renderV4PeriodSection(draft, config, period) {
     var labels = { order_lifetime: "整个订单", per_round: "每轮", multi_round: "分轮次" };
+    if (draft.subject === "party_size" || period === "multi_round") {
+      var combos = quantityScenarioIndexes(draft, period);
+      var both = draft.subject === "party_size" && period === "multi_round";
+      var groups = both ? (draft.partyRanges || []).map(function (_, i) { return i; }) : [null];
+      return '<section class="olf-v4-period-section"><div class="olf-v4-period-head"><h3>' + labels[period] + '</h3><span>' + combos.length + ' 个场景</span></div>' + groups.map(function (partyIndex) {
+        return '<div class="olf-scene-group">' + (both ? '<h4>就餐人数 · ' + esc(formatRange(draft.partyRanges[partyIndex], "人")) + '</h4>' : '') + '<div class="olf-scene-grid">' + combos.filter(function (combo) { return partyIndex == null || combo.partyIndex === partyIndex; }).map(function (combo) {
+          combo.period = period;
+          var title = period === "multi_round" ? formatRange(draft.roundRanges[combo.roundIndex], "轮") : formatRange(draft.partyRanges[combo.partyIndex], "人");
+          var values = v4PeriodValues(config, period);
+          var targets = currentBuffetWorkbenchTargets(draft, config);
+          var configured = targets.filter(function (target) { return buffetWorkbenchTargetStatus(draft, target, combo, values) !== "unconfigured"; }).length;
+          var sceneKey = isBuffetComboDraft(draft) ? comboScenarioKeyFor(draft, combo.partyIndex) : v4ScenarioKey(combo.partyIndex, combo.roundIndex, draft);
+          var hasBounds = ["totalBounds", "tableTotalBounds"].some(function (map) { return hasConfiguredBoundCell(values[map] && values[map][sceneKey]); });
+          var hasSet = draft.targetType === "dish_set" && ["targetLimits", "tableTargetCaps"].some(function (map) { return values[map] && values[map][sceneKey] && values[map][sceneKey].configured; });
+          var done = configured > 0 || hasBounds || hasSet;
+          return '<button type="button" class="olf-scene-card' + (done ? ' is-configured' : '') + '" data-quantity-scene-open data-v4-period="' + period + '" data-scene-party="' + combo.partyIndex + '" data-scene-round="' + combo.roundIndex + '"><strong>' + esc(title) + '</strong><span>' + (done ? '已配置' : '未配置') + '</span><small>商品上限：' + configured + ' / ' + targets.length + ' 项</small><b aria-hidden="true">→</b></button>';
+        }).join('') + '</div></div>';
+      }).join('') + '</section>';
+    }
     return '<section class="olf-v4-period-section" data-period-section="' + period + '"><div class="olf-v4-period-head"><h3>' + labels[period] + '</h3><span>' + (period === "order_lifetime" ? "整个订单累计" : period === "per_round" ? "每轮独立累计" : "按轮次区间独立配置") + '</span></div>' +
       quantityScenarioIndexes(draft, period).map(function (combo) {
         combo.period = period;
         return renderV4PeriodScenario(draft, config, period, combo);
       }).join("") + '</section>';
+  }
+
+  function renderQuantitySceneDialog(draft, config) {
+    var scene = editorState.quantitySceneDialog;
+    if (!scene) return '';
+    var store = stores.find(function (item) { return item.id === draft.activeStoreId; });
+    return '<dialog id="quantitySceneDialog" class="olf-scene-dialog" aria-labelledby="quantitySceneTitle"><header><div><h3 id="quantitySceneTitle">' + esc(v4ScenarioTitle(draft, scene.combo.period, scene.combo)) + '</h3><span>' + esc(store ? store.name : draft.activeStoreId) + ' · 当前场景数量配置</span></div><button type="button" class="olf-button" aria-label="关闭场景配置" data-quantity-scene-cancel>关闭</button></header><div class="olf-scene-dialog-body">' + renderV4PeriodScenario(draft, config, scene.combo.period, scene.combo) + '</div><footer><span>仅保存当前场景的数量</span><button type="button" class="olf-button" data-quantity-scene-cancel>取消</button><button type="button" class="olf-button olf-button--primary" data-quantity-scene-save>保存当前场景</button></footer></dialog>';
+  }
+
+  function closeQuantitySceneDialog(discard) {
+    var scene = editorState.quantitySceneDialog;
+    if (!scene) return;
+    var draft = editorState.rule.editorDraft;
+    if (!discard) {
+      var modal = document.getElementById("quantitySceneDialog");
+      if (modal && Array.prototype.some.call(modal.querySelectorAll('input[type="number"]'), function (input) { return input.value !== "" && isInvalidConfiguredQuantityInput(input); })) { toast("请输入 0 至 999999 的整数", true); return; }
+      var sceneValues = v4PeriodValues(activeStoreConfig(draft), scene.combo.period);
+      var sceneKey = isBuffetComboDraft(draft) ? comboScenarioKeyFor(draft, scene.combo.partyIndex) : v4ScenarioKey(scene.combo.partyIndex, scene.combo.roundIndex, draft);
+      if (["totalBounds", "tableTotalBounds"].some(function (map) { var bound = sceneValues[map] && sceneValues[map][sceneKey]; return bound && bound.minConfigured && bound.maxConfigured && bound.min > bound.max; })) { toast("最少份数不能大于最多份数", true); return; }
+    }
+    if (discard) draft.storeConfigs[scene.storeId] = cloneValue(scene.snapshot);
+    editorState.quantitySceneDialog = null;
+    clearBuffetQuantitySelection();
+    deriveBuffetQuantityBlocks(draft);
+    markEditorDirty();
+    renderEditor();
+    if (!discard) saveEditorDraft(true);
+    var sceneCard = document.querySelector('[data-quantity-scene-open][data-v4-period="' + scene.combo.period + '"][data-scene-party="' + scene.combo.partyIndex + '"][data-scene-round="' + scene.combo.roundIndex + '"]');
+    if (sceneCard) sceneCard.focus();
   }
 
   function renderV4StoreCopy(draft, configuredStores, workbenchState) {
@@ -4490,7 +4539,7 @@
     return '<section class="olf-section olf-v4-quantity-editor"><div class="olf-v4-quantity-toolbar"><label class="olf-field"><span class="olf-label">配置门店</span><select class="olf-select" data-buffet-quantity-store>' + storeOptions + '</select></label><div class="olf-v4-store-summary"><strong>商品范围</strong><span>' + esc(rangeSummary) + '</span></div>' + renderV4StoreCopy(draft, configuredStores, workbenchState) + '</div>' +
       draft.enabledPeriods.slice().sort(function (a, b) { return BUFFET_PERIOD_ORDER.indexOf(a) - BUFFET_PERIOD_ORDER.indexOf(b); }).map(function (period) {
         return renderV4PeriodSection(draft, config, period) + renderV4PendingTargetNotice(config, period);
-      }).join("") + '</section>';
+      }).join("") + '</section>' + renderQuantitySceneDialog(draft, config);
   }
 
   function pendingTargetIdentityEntries(config, period) {
@@ -5292,6 +5341,12 @@
     var scrollY = window.scrollY || window.pageYOffset || 0;
     document.getElementById("stepNav").innerHTML = renderEditorNav();
     document.getElementById("editorContent").innerHTML = renderEditorContent();
+    var quantityDialog = document.getElementById("quantitySceneDialog");
+    if (quantityDialog) {
+      quantityDialog.showModal();
+      quantityDialog.querySelectorAll("[data-buffet-product-remove], [data-buffet-product-bulk-remove]").forEach(function (button) { button.hidden = true; });
+      quantityDialog.addEventListener("cancel", function (event) { event.preventDefault(); closeQuantitySceneDialog(true); });
+    }
     syncLimitRuleSelectAllState();
     if (MenuPicker) {
       var pickerElement = document.querySelector("[data-brand-menu-structure-picker]");
@@ -5753,6 +5808,16 @@
   }
 
   function handleEditorClick(event) {
+    var sceneAction = event.target && event.target.closest && event.target.closest("[data-quantity-scene-open], [data-quantity-scene-save], [data-quantity-scene-cancel]");
+    if (sceneAction) {
+      if (sceneAction.hasAttribute("data-quantity-scene-open")) {
+        var sceneDraft = editorState.rule.editorDraft;
+        var sceneConfig = activeStoreConfig(sceneDraft);
+        editorState.quantitySceneDialog = { storeId: sceneDraft.activeStoreId, snapshot: cloneValue(sceneConfig), combo: { period: sceneAction.getAttribute("data-v4-period"), partyIndex: Number(sceneAction.getAttribute("data-scene-party")), roundIndex: Number(sceneAction.getAttribute("data-scene-round")) } };
+        clearBuffetQuantitySelection(); renderEditor();
+      } else closeQuantitySceneDialog(sceneAction.hasAttribute("data-quantity-scene-cancel"));
+      return;
+    }
     if (editorState && editorState.businessHourDropdownOpen) {
       var insideBhDropdown = event.target && event.target.closest && event.target.closest("[data-business-hour-dropdown]");
       var bhRemoveEl = event.target && event.target.closest && event.target.closest("[data-business-hour-slot-remove]");
