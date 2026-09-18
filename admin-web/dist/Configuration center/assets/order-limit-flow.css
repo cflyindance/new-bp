@@ -990,6 +990,8 @@ button { color: inherit; }
 .olf-range-dialog-error { color:#e23e45; font-size:12px; }
 @media(max-width:650px) { .olf-range-collections { grid-template-columns:1fr; } .olf-range-dialog-row { gap:6px; } }
 .olf-scene-workbench { background:#f0f1f3; }
+.olf-inline-workbench .olf-v4-scenario-card { padding:14px; }
+.olf-inline-workbench .olf-v4-period-head { background:white; }
 .olf-scene-workbench > header { background:#f0f1f3; padding:14px 16px; justify-content:flex-start; flex-shrink:0; }
 .olf-scene-heading { flex:1; min-width:0; }
 .olf-scene-workbench .olf-scene-heading h3 { margin:0 0 5px; font-size:18px; }

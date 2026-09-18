@@ -4491,10 +4491,10 @@
         }).join('') + '</div></div>';
       }).join('') + '</section>';
     }
-    return '<section class="olf-v4-period-section" data-period-section="' + period + '"><div class="olf-v4-period-head"><h3>' + labels[period] + '</h3><span>' + (period === "order_lifetime" ? "整个订单累计" : period === "per_round" ? "每轮独立累计" : "按轮次区间独立配置") + '</span></div>' +
+    return '<section class="olf-v4-period-section olf-scene-workbench olf-inline-workbench" data-period-section="' + period + '"><div class="olf-v4-period-head"><h3>' + labels[period] + '</h3><span>' + (period === "order_lifetime" ? "整个订单累计" : period === "per_round" ? "每轮独立累计" : "按轮次区间独立配置") + '</span></div>' +
       quantityScenarioIndexes(draft, period).map(function (combo) {
         combo.period = period;
-        return renderV4PeriodScenario(draft, config, period, combo);
+        return decorateQuantityWorkbench(renderV4PeriodScenario(draft, config, period, combo), draft, combo, false);
       }).join("") + '</section>';
   }
 
@@ -4511,13 +4511,17 @@
     var store = stores.find(function (item) { return item.id === draft.activeStoreId; });
     var combos = quantityScenarioIndexes(draft, scene.combo.period);
     var position = combos.findIndex(function (combo) { return combo.partyIndex === scene.combo.partyIndex && combo.roundIndex === scene.combo.roundIndex; });
+    var content = decorateQuantityWorkbench(renderV4PeriodScenario(draft, config, scene.combo.period, scene.combo), draft, scene.combo, !!scene.batchOpen);
+    return '<dialog id="quantitySceneDialog" class="olf-scene-dialog olf-scene-workbench' + (scene.batchOpen ? ' is-batch-open' : '') + '" aria-labelledby="quantitySceneTitle"><header><button type="button" class="olf-button" aria-label="关闭场景配置" data-quantity-scene-cancel>×</button><div class="olf-scene-heading"><h3 id="quantitySceneTitle">配置额度</h3><span>' + esc((store ? store.name : draft.activeStoreId) + ' · ' + periodLabel(scene.combo.period) + ' · ' + v4ScenarioTitle(draft, scene.combo.period, scene.combo)) + '</span></div><span class="olf-scene-position">场景 ' + (position + 1) + ' / ' + combos.length + '</span><button type="button" class="olf-button" data-quantity-scene-save>保存并返回</button><button type="button" class="olf-button olf-button--primary" data-quantity-scene-next' + (position < 0 || position === combos.length - 1 ? ' disabled' : '') + '>保存并配置下一场景 →</button></header><div class="olf-scene-dialog-body">' + content + '</div></dialog>';
+  }
+
+  function decorateQuantityWorkbench(content, draft, combo, batchOpen) {
     var selection = normalizeBuffetQuantityWorkbenchState(draft).selectedIds.length;
-    var content = renderV4PeriodScenario(draft, config, scene.combo.period, scene.combo);
-    content = content.replace(/<span>批量(?:设置每轮每种最多份数|数量)<\/span><input[^>]*data-buffet-workbench-bulk-value[^>]*\/>/, renderScenarioBulkFields(draft, scene.combo));
+    content = content.replace(/<span>批量(?:设置每轮每种最多份数|数量)<\/span><input[^>]*data-buffet-workbench-bulk-value[^>]*\/>/, renderScenarioBulkFields(draft, combo));
     content = content.replace('<button type="button" class="olf-button olf-button--small" data-buffet-workbench-bulk-apply', '<button type="button" class="olf-button olf-scene-bulk-cancel" data-quantity-scene-batch-cancel>取消批量设置</button><button type="button" class="olf-button olf-button--primary olf-button--small" data-buffet-workbench-bulk-apply');
     content = content.replace('>应用数量</button>', '>批量应用</button>');
-    content = content.replace('<div class="olf-v4-workbench-batch">', '<button type="button" class="olf-button olf-scene-batch-toggle" data-quantity-scene-batch-toggle aria-expanded="' + !!scene.batchOpen + '">批量设置（' + selection + '）' + (scene.batchOpen ? ' 收起' : ' 展开') + '</button><div class="olf-v4-workbench-batch">');
-    return '<dialog id="quantitySceneDialog" class="olf-scene-dialog olf-scene-workbench' + (scene.batchOpen ? ' is-batch-open' : '') + '" aria-labelledby="quantitySceneTitle"><header><button type="button" class="olf-button" aria-label="关闭场景配置" data-quantity-scene-cancel>×</button><div class="olf-scene-heading"><h3 id="quantitySceneTitle">配置额度</h3><span>' + esc((store ? store.name : draft.activeStoreId) + ' · ' + periodLabel(scene.combo.period) + ' · ' + v4ScenarioTitle(draft, scene.combo.period, scene.combo)) + '</span></div><span class="olf-scene-position">场景 ' + (position + 1) + ' / ' + combos.length + '</span><button type="button" class="olf-button" data-quantity-scene-save>保存并返回</button><button type="button" class="olf-button olf-button--primary" data-quantity-scene-next' + (position < 0 || position === combos.length - 1 ? ' disabled' : '') + '>保存并配置下一场景 →</button></header><div class="olf-scene-dialog-body">' + content + '</div></dialog>';
+    content = content.replace('<div class="olf-v4-workbench-batch">', '<button type="button" class="olf-button olf-scene-batch-toggle" data-quantity-scene-batch-toggle aria-expanded="' + batchOpen + '">批量设置（' + selection + '）' + (batchOpen ? ' 收起' : ' 展开') + '</button><div class="olf-v4-workbench-batch">');
+    return content;
   }
 
   function closeQuantitySceneDialog(discard) {
@@ -5378,6 +5382,9 @@
     }
     if (quantityDialog) {
       quantityDialog.showModal();
+      quantityDialog.addEventListener("cancel", function (event) { event.preventDefault(); closeQuantitySceneDialog(true); });
+    }
+    document.querySelectorAll("#quantitySceneDialog, .olf-inline-workbench").forEach(function (quantityDialog) {
       if (draft.targetType === "dish_set") {
         var sharedQuota = quantityDialog.querySelector(".olf-v4-shared-quota");
         var memberBlock = sharedQuota && sharedQuota.closest(".olf-v4-quantity-block");
@@ -5407,7 +5414,7 @@
         }
         headings[2].textContent = editorState.rule.editorDraft.targetType === "category" ? "产线 · 包含商品" : "产线 · 分类 · 编码";
         headings[3].hidden = true;
-        headings[headings.length - 1].hidden = true;
+        headings[headings.length - 1].hidden = !quantityDialog.classList.contains("olf-inline-workbench");
         table.querySelectorAll("tbody tr").forEach(function (row) {
           var cells = row.querySelectorAll("td");
           if (cells.length !== headings.length) return;
@@ -5416,12 +5423,11 @@
           if (code) code.hidden = true;
           cells[2].classList.add("olf-scene-product-meta");
           cells[3].hidden = true;
-          cells[cells.length - 1].hidden = true;
+          cells[cells.length - 1].hidden = !quantityDialog.classList.contains("olf-inline-workbench");
         });
       });
-      quantityDialog.querySelectorAll("[data-buffet-product-remove], [data-buffet-product-bulk-remove]").forEach(function (button) { button.hidden = true; });
-      quantityDialog.addEventListener("cancel", function (event) { event.preventDefault(); closeQuantitySceneDialog(true); });
-    }
+      if (!quantityDialog.classList.contains("olf-inline-workbench")) quantityDialog.querySelectorAll("[data-buffet-product-remove], [data-buffet-product-bulk-remove]").forEach(function (button) { button.hidden = true; });
+    });
     syncLimitRuleSelectAllState();
     if (MenuPicker) {
       var pickerElement = document.querySelector("[data-brand-menu-structure-picker]");
@@ -5884,6 +5890,17 @@
 
   function handleEditorClick(event) {
     var sceneTool = event.target && event.target.closest && event.target.closest("[data-quantity-scene-next], [data-quantity-scene-batch-toggle], [data-quantity-scene-batch-cancel]");
+    var inlineWorkbench = sceneTool && sceneTool.closest(".olf-inline-workbench");
+    if (inlineWorkbench) {
+      var open = sceneTool.hasAttribute("data-quantity-scene-batch-toggle") && !inlineWorkbench.classList.contains("is-batch-open");
+      inlineWorkbench.classList.toggle("is-batch-open", open);
+      if (!open) inlineWorkbench.querySelectorAll("[data-buffet-workbench-bulk-value], [data-buffet-workbench-bulk-cap]").forEach(function (input) { input.value = ""; });
+      var inlineToggle = inlineWorkbench.querySelector("[data-quantity-scene-batch-toggle]");
+      inlineToggle.setAttribute("aria-expanded", String(open));
+      inlineToggle.textContent = "批量设置（" + normalizeBuffetQuantityWorkbenchState(editorState.rule.editorDraft).selectedIds.length + "）" + (open ? " 收起" : " 展开");
+      if (!open) inlineToggle.focus();
+      return;
+    }
     if (sceneTool && editorState.quantitySceneDialog) {
       var currentScene = editorState.quantitySceneDialog;
       if (sceneTool.hasAttribute("data-quantity-scene-batch-cancel")) {
