@@ -974,3 +974,18 @@ button { color: inherit; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
 }
+.olf-range-collections { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; margin-top:18px; }
+.olf-range-collection { display:flex; align-items:center; gap:14px; text-align:left; border:1px solid transparent; background:#f7f7f8; padding:18px; border-radius:12px; cursor:pointer; }
+.olf-range-collection:hover { border-color:#1677ff; }
+.olf-range-collection strong,.olf-range-collection small { display:block; }
+.olf-range-collection small { margin-top:6px; color:#8a95a1; }
+.olf-range-collection-icon { display:grid; place-items:center; width:42px; height:42px; background:#454545; color:white; border-radius:10px; }
+.olf-range-edit { margin-left:auto; }
+.olf-range-dialog { width:min(630px,94vw); }
+.olf-range-dialog header h3 { margin:0; flex:1; }
+.olf-range-dialog-row { display:flex; gap:10px; align-items:center; margin-bottom:14px; }
+.olf-range-dialog-row .olf-input { width:0; min-width:60px; flex:1; }
+.olf-range-dialog-row label { white-space:nowrap; font-size:12px; }
+.olf-range-number { display:grid; place-items:center; background:#f6f7f8; border-radius:50%; width:30px; height:30px; flex-shrink:0; }
+.olf-range-dialog-error { color:#e23e45; font-size:12px; }
+@media(max-width:650px) { .olf-range-collections { grid-template-columns:1fr; } .olf-range-dialog-row { gap:6px; } }

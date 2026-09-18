@@ -2758,13 +2758,24 @@
 
   function renderBuffetQuantityRanges(draft) {
     ensureBuffetScenarioModel(draft);
-    var partySection = draft.subject === "party_size"
-      ? '<section class="olf-section"><div class="olf-section-head"><h3>人数区间</h3><button type="button" class="olf-button olf-button--small" data-add-range="party">' + icon("plus", 15) + ' 添加区间</button></div><div class="olf-table-wrap"><table class="olf-table"><thead><tr><th>场景</th><th>区间</th><th>页面显示</th><th>操作</th></tr></thead><tbody>' + renderRangeRows(draft.partyRanges, "party") + '</tbody></table></div></section>'
-      : "";
-    var roundSection = draft.enabledPeriods.indexOf("multi_round") >= 0
-      ? '<section class="olf-section"><div class="olf-section-head"><h3>轮次区间</h3><button type="button" class="olf-button olf-button--small" data-add-range="round">' + icon("plus", 15) + ' 添加区间</button></div><div class="olf-table-wrap"><table class="olf-table"><thead><tr><th>场景</th><th>区间</th><th>页面显示</th><th>操作</th></tr></thead><tbody>' + renderRangeRows(draft.roundRanges, "round") + '</tbody></table></div></section>'
-      : "";
-    return partySection + roundSection;
+    var kinds = [];
+    if (draft.subject === "party_size") kinds.push("party");
+    if (draft.enabledPeriods.indexOf("multi_round") >= 0) kinds.push("round");
+    if (!kinds.length) return "";
+    return '<h3>数量场景</h3><div class="olf-range-collections">' + kinds.map(function (kind) {
+      var ranges = kind === "party" ? draft.partyRanges : draft.roundRanges;
+      var title = kind === "party" ? "人数区间" : "轮次区间";
+      return '<button type="button" class="olf-range-collection" data-range-dialog-open="' + kind + '"><span class="olf-range-collection-icon">' + icon(kind === "party" ? "users" : "list", 22) + '</span><span><strong>' + title + '</strong><small>共 ' + ranges.length + ' 个区间</small></span><span class="olf-range-edit">' + icon("edit", 16) + '</span></button>';
+    }).join("") + '</div>' + renderRangeCollectionDialog();
+  }
+
+  function renderRangeCollectionDialog() {
+    var state = editorState.rangeCollectionDialog;
+    if (!state) return "";
+    var party = state.kind === "party";
+    return '<dialog id="rangeCollectionDialog" class="olf-scene-dialog olf-range-dialog" aria-labelledby="rangeCollectionTitle"><header><button type="button" class="olf-button" data-range-dialog-cancel aria-label="关闭区间设置">×</button><h3 id="rangeCollectionTitle">' + (party ? '人数区间' : '轮次区间') + '</h3><button type="button" class="olf-button olf-button--primary" data-range-dialog-save>保存</button></header><div class="olf-scene-dialog-body">' + state.ranges.map(function (range, i) {
+      return '<div class="olf-range-dialog-row"><span class="olf-range-number">' + (i + 1) + '</span><label>' + (party ? '最少' : '起始') + '</label><input class="olf-input" type="number" min="1" max="999999" aria-label="区间' + (i + 1) + '起始" value="' + esc(range.min == null ? '' : range.min) + '" data-range-dialog-index="' + i + '" data-range-dialog-part="min"><span>至</span><label>' + (party ? '最多' : '结束') + '</label><input class="olf-input" type="number" min="1" max="999999" aria-label="区间' + (i + 1) + '结束" placeholder="及以上" value="' + esc(range.max == null ? '' : range.max) + '" data-range-dialog-index="' + i + '" data-range-dialog-part="max"><button type="button" class="olf-button olf-button--danger" aria-label="删除区间' + (i + 1) + '" data-range-dialog-delete="' + i + '"' + (state.ranges.length === 1 ? ' disabled' : '') + '>' + icon("trash", 15) + '</button></div>';
+    }).join('') + '<button type="button" class="olf-button olf-button--link" data-range-dialog-add>＋ 添加区间</button><button type="button" class="olf-button" data-range-dialog-cancel>取消</button><p class="olf-range-dialog-error" role="alert">' + esc(state.error || '') + '</p></div></dialog>';
   }
 
   function enabledPeriodsHaveConfiguredQuantity(draft) {
@@ -5342,6 +5353,11 @@
     document.getElementById("stepNav").innerHTML = renderEditorNav();
     document.getElementById("editorContent").innerHTML = renderEditorContent();
     var quantityDialog = document.getElementById("quantitySceneDialog");
+    var rangeDialog = document.getElementById("rangeCollectionDialog");
+    if (rangeDialog) {
+      rangeDialog.showModal();
+      rangeDialog.addEventListener("cancel", function (event) { event.preventDefault(); editorState.rangeCollectionDialog = null; renderEditor(); });
+    }
     if (quantityDialog) {
       quantityDialog.showModal();
       quantityDialog.querySelectorAll("[data-buffet-product-remove], [data-buffet-product-bulk-remove]").forEach(function (button) { button.hidden = true; });
@@ -5808,6 +5824,39 @@
   }
 
   function handleEditorClick(event) {
+    var rangeAction = event.target && event.target.closest && event.target.closest("[data-range-dialog-open], [data-range-dialog-cancel], [data-range-dialog-save], [data-range-dialog-add], [data-range-dialog-delete]");
+    if (rangeAction) {
+      var rangeDraft = editorState.rule.editorDraft;
+      if (rangeAction.hasAttribute("data-range-dialog-open")) {
+        var rangeKind = rangeAction.getAttribute("data-range-dialog-open");
+        editorState.rangeCollectionDialog = { kind: rangeKind, ranges: cloneValue(rangeKind === "party" ? rangeDraft.partyRanges : rangeDraft.roundRanges) };
+      } else if (rangeAction.hasAttribute("data-range-dialog-cancel")) {
+        editorState.rangeCollectionDialog = null;
+      } else {
+        var rangeState = editorState.rangeCollectionDialog;
+        if (!rangeState) return;
+        rangeState.error = "";
+        if (rangeAction.hasAttribute("data-range-dialog-add")) {
+          var lastRange = rangeState.ranges[rangeState.ranges.length - 1];
+          if (!Number.isInteger(lastRange.min) || lastRange.min < 1) { rangeState.error = "请先填写有效的起始值"; renderEditor(); return; }
+          if (lastRange.max == null) lastRange.max = lastRange.min;
+          rangeState.ranges.push({ rangeId: (rangeState.kind === "party" ? "pr_" : "rr_") + Date.now().toString(36) + Math.random().toString(36).slice(2, 10), min: lastRange.max + 1, max: null });
+        } else if (rangeAction.hasAttribute("data-range-dialog-delete")) {
+          if (rangeState.ranges.length > 1) { rangeState.ranges.splice(Number(rangeAction.getAttribute("data-range-dialog-delete")), 1); recalculateSequentialRanges(rangeState.ranges); }
+        } else {
+          var rangeError = validateContinuousRanges(rangeState.ranges, rangeState.kind === "party" ? "人数区间" : "轮次区间");
+          if (rangeState.ranges.some(function (r) { return r.min == null || r.min > 999999 || (r.max != null && r.max > 999999); })) rangeError = "请输入 1 至 999999 的整数";
+          if (rangeError) { rangeState.error = rangeError; renderEditor(); return; }
+          var nextRanges = cloneValue(rangeState.ranges);
+          editorState.rangeCollectionDialog = null;
+          renderEditor();
+          var originalRanges = rangeState.kind === "party" ? rangeDraft.partyRanges : rangeDraft.roundRanges;
+          if (JSON.stringify(originalRanges) !== JSON.stringify(nextRanges)) requestRangeMatrixChange(rangeState.kind, nextRanges, document.querySelector('[data-range-dialog-open="' + rangeState.kind + '"]'));
+          return;
+        }
+      }
+      renderEditor(); return;
+    }
     var sceneAction = event.target && event.target.closest && event.target.closest("[data-quantity-scene-open], [data-quantity-scene-save], [data-quantity-scene-cancel]");
     if (sceneAction) {
       if (sceneAction.hasAttribute("data-quantity-scene-open")) {
@@ -6770,6 +6819,16 @@
     }
     if (target.name === "daysOfWeek" || target.name === "daysOfMonth" || target.name === "memberLevelIds") {
       updateCheckedList(target.name, target.value, target.checked); return;
+    }
+    if (target.hasAttribute("data-range-dialog-part")) {
+      var dialogState = editorState.rangeCollectionDialog;
+      if (dialogState) {
+        var dialogRange = dialogState.ranges[Number(target.getAttribute("data-range-dialog-index"))];
+        var dialogPart = target.getAttribute("data-range-dialog-part");
+        dialogRange[dialogPart] = target.value === "" ? null : Number(target.value);
+        dialogState.error = "";
+      }
+      return;
     }
     if (target.hasAttribute("data-range-kind")) {
       if (event.type !== "change") return;
