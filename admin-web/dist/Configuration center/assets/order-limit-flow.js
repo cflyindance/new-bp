@@ -4385,11 +4385,14 @@
     var allowed = buffetAllowedLimitBlocks(draft, period);
     var scenarioTitle = v4ScenarioTitle(draft, period, combo);
     var comboDraft = isBuffetComboDraft(draft);
+    var totalExample = comboDraft || draft.subject !== "party_size"
+      ? "示例：商品A设置每轮最多2份，商品B每轮最多4，每轮最多可以点6份，但又设置每轮最少3 份，每轮最多点 5 份；则该轮提交时合计至少点 3 份，至多点5份。"
+      : "示例：3 人就餐，每人每轮最多 2 份，可以点6份，但又设置每轮最少3 份，每轮最多点 5 份；则该轮提交时合计至少点 3 份，至多点5份。";
     var totalBlock = allowed.total
-      ? '<section class="olf-v4-quantity-block"><h5>每轮菜品总数</h5>' + (comboDraft
+      ? '<section class="olf-v4-quantity-block"><h5>每轮菜品总数<details class="olf-bound-example"><summary aria-label="查看每轮菜品总数限制示例">？</summary><div class="olf-bound-example-content">' + esc(totalExample) + '</div></details></h5>' + (comboDraft
         ? renderV4BoundInputs(draft, values, combo, "tableTotalBounds", "整桌每轮")
         : renderV4BoundInputs(draft, values, combo, "totalBounds", draft.subject === "party_size" ? "每人每轮" : "每轮") +
-          (draft.subject === "party_size" ? renderV4BoundInputs(draft, values, combo, "tableTotalBounds", "整桌每轮兜底") : "")) + '</section>' : "";
+          (draft.subject === "party_size" ? renderV4BoundInputs(draft, values, combo, "tableTotalBounds", "整桌每轮") : "")) + '</section>' : "";
     var targetBlock = allowed.target ? '<section class="olf-v4-quantity-block"><h5>' + (draft.targetType === "dish_set" ? "菜品集额度与成员" : (draft.targetType === "category" ? "分类限购数量" : "商品限购数量")) + '</h5><div class="olf-v4-target-list">' + renderBuffetTargetQuantityPanel(draft, config, combo, values) + '</div></section>' : "";
     var sameDishKey = comboDraft ? comboScenarioKeyFor(draft, combo.partyIndex) : v4ScenarioKey(combo.partyIndex, combo.roundIndex, draft);
     var exceptionRows = v4ExceptionRows(values, sameDishKey);

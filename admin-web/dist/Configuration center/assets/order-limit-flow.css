@@ -274,6 +274,12 @@ button { color: inherit; }
 .olf-v4-quantity-block h5 { margin: 0 0 10px; font-size: 14px; }
 .olf-v4-bound-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .olf-v4-bound-row > strong { min-width: 118px; font-size: 13px; font-weight: 500; color: var(--olf-secondary); }
+.olf-bound-example { display: inline-block; position: relative; margin-left: 6px; vertical-align: middle; }
+.olf-bound-example > summary { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border: 1px solid var(--olf-border); border-radius: 50%; color: var(--olf-secondary); background: #fff; cursor: pointer; list-style: none; font-size: 12px; }
+.olf-bound-example > summary::-webkit-details-marker { display: none; }
+.olf-bound-example > summary:focus-visible { outline: 2px solid #1677ff; outline-offset: 2px; }
+.olf-bound-example[open] > summary { color: #1677ff; border-color: #1677ff; }
+.olf-bound-example-content { position: absolute; z-index: 20; top: 26px; left: 0; width: min(340px, 65vw); padding: 12px 14px; border: 1px solid var(--olf-border); border-radius: 8px; background: #fff; box-shadow: 0 4px 16px rgba(0, 0, 0, .12); color: var(--olf-secondary); font-size: 13px; font-weight: 400; line-height: 1.7; }
 .olf-v4-bound-row label, .olf-v4-limit-field { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; color: var(--olf-secondary); }
 .olf-v4-bound-row .olf-limit-input, .olf-v4-limit-field .olf-limit-input { width: 112px; }
 .olf-v4-target-list { display: grid; gap: 8px; }
@@ -929,7 +935,8 @@ button { color: inherit; }
 .olf-view-mode #editorContent [data-config-store-select],
 .olf-view-mode #editorContent [data-line-tab],
 .olf-view-mode #editorContent [data-selected-preview-open],
-.olf-view-mode #editorContent [data-configured-limit-preview-open] { pointer-events: auto; }
+.olf-view-mode #editorContent [data-configured-limit-preview-open],
+.olf-view-mode #editorContent .olf-bound-example { pointer-events: auto; }
 .olf-view-mode #headerSaveButton,
 .olf-view-mode #saveReturnButton,
 .olf-view-mode #nextButton,
