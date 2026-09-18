@@ -4225,7 +4225,7 @@
   }
 
   function renderBuffetSharedQuotaPanel(draft, config, combo, values) {
-    return '<div class="olf-v4-shared-quota"><div><strong>菜品集共享额度</strong><span>全部成员跨产线合并统计，只需设置一次</span></div>' + v4TargetRows(draft, config, combo, values) + '</div>';
+    return '<div class="olf-v4-shared-quota"><div><strong>' + (draft.measureUnit === "kind" ? '菜品集共享额度·按种（SPU）' : '菜品集共享额度·按份') + '</strong><span>全部成员跨产线合并统计，只需设置一次</span></div>' + v4TargetRows(draft, config, combo, values) + '</div>';
   }
 
   function buffetTargetLimitLabel(draft, combo) {
@@ -5378,6 +5378,18 @@
     }
     if (quantityDialog) {
       quantityDialog.showModal();
+      if (draft.targetType === "dish_set") {
+        var sharedQuota = quantityDialog.querySelector(".olf-v4-shared-quota");
+        var memberBlock = sharedQuota && sharedQuota.closest(".olf-v4-quantity-block");
+        if (memberBlock) {
+          var quotaCard = document.createElement("section");
+          quotaCard.className = "olf-v4-quantity-block olf-scene-piece-quota";
+          memberBlock.parentNode.insertBefore(quotaCard, memberBlock);
+          quotaCard.appendChild(sharedQuota);
+          var memberHeading = memberBlock.querySelector("h5");
+          if (memberHeading) memberHeading.textContent = "菜品集商品限购数量";
+        }
+      }
       var sceneFilters = quantityDialog.querySelector(".olf-v4-workbench-filters");
       var sceneBatchToggle = quantityDialog.querySelector("[data-quantity-scene-batch-toggle]");
       if (sceneFilters && sceneBatchToggle) sceneFilters.appendChild(sceneBatchToggle);
