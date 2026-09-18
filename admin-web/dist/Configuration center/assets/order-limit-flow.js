@@ -2752,8 +2752,7 @@
     ].map(function (group) {
       return '<div class="olf-template-group"><h4>' + esc(group.name) + '</h4><div class="olf-template-grid">' + group.ids.map(function (id) { return templateCards[id] || ""; }).join("") + '</div></div>';
     }).join("");
-    var changed = draft.buffetTemplateModified ? '<div class="olf-summary olf-summary--warning"><strong>已基于模板修改</strong><span>当前以页面上实际选择的周期和数量为准。</span></div>' : "";
-    return '<section class="olf-section"><h3>常用模板</h3>' + templates + changed + '</section>';
+    return '<section class="olf-section"><h3>常用模板</h3>' + templates + '</section>';
   }
 
   function renderBuffetQuantityRanges(draft) {
@@ -5521,6 +5520,19 @@
     });
   }
 
+  function hasObjectDependentData(draft) {
+    function hasData(config) {
+      if (["targetIds", "dishTargets", "categoryTargets", "dishSetMembers"].some(function (key) { return (config[key] || []).length > 0; })) return true;
+      if (Object.keys(config.structureByLine || {}).some(function (key) { return (config.structureByLine[key] || []).length > 0; })) return true;
+      if (["limits", "dishSetLimits", "pendingTargetIdentities"].some(function (key) { return Object.keys(config[key] || {}).length > 0; })) return true;
+      return Object.keys(config.periodValues || {}).some(function (period) {
+        var values = config.periodValues[period] || {};
+        return ["targetLimits", "tableTargetCaps", "defaultDishLimits", "exceptionDishLimits"].some(function (key) { return Object.keys(values[key] || {}).length > 0; });
+      });
+    }
+    return hasData(draft) || Object.keys(draft.storeConfigs || {}).some(function (storeId) { return hasData(draft.storeConfigs[storeId] || {}); });
+  }
+
   function clearObjectDependentData(draft) {
     draft.structureByLine = MenuPicker ? MenuPicker.emptyByLine() : { kiosk: [], emenu: [], sdi: [] };
     draft.targetIds = [];
@@ -6549,6 +6561,13 @@
       if (event.type !== "change" || !isBuffetV4Draft(draft) || target.checked !== true) return;
       var nextMeasureUnit = target.value === "kind" ? "kind" : "piece";
       if (draft.measureUnit === nextMeasureUnit) return;
+      if (!hasObjectDependentData(draft)) {
+        draft.measureUnit = nextMeasureUnit;
+        markBuffetTemplateModified(draft);
+        markEditorDirty();
+        renderEditor();
+        return;
+      }
       openDialog(
         "切换菜品集计量方式？",
         "切换为“" + (nextMeasureUnit === "kind" ? "种" : "份") + "”会清空所有门店的菜品集商品、对象额度和单品保护数量；不依赖对象的总量额度会保留。",
