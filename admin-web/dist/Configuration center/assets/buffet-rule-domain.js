@@ -284,7 +284,10 @@
           if (configuredMapHasValues(values.tableTargetCaps)) push(type, "target", "table_fixed");
           if (configuredMapHasValues(values.targetLimits)) push(type, "target", limitMultiplierMode(rule.subject, "targetLimits"));
         }
-        if (blocks.sameDishEnabled && configuredMapHasValues(values.defaultDishLimits)) push("same_dish", "same_dish", "table_fixed");
+        var hasMemberLimits = Object.keys(values.exceptionDishLimits || {}).some(function (scenario) {
+          return (values.exceptionDishLimits[scenario] || []).some(function (row) { return row && row.limit && row.limit.configured === true; });
+        });
+        if (blocks.sameDishEnabled && (configuredMapHasValues(values.defaultDishLimits) || hasMemberLimits)) push("same_dish", "same_dish", "table_fixed");
       });
     });
     return constraints;

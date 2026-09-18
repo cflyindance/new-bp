@@ -89,7 +89,7 @@
   function targetLabel(type) { return type === "dish" ? "菜品" : type === "category" ? "分类" : type === "dish_set" ? "菜品集" : "—"; }
   function periodLabel(period) { return period === "order_lifetime" ? "整个订单" : period === "per_round" ? "每轮" : period === "multi_round" ? "多轮" : "—"; }
   function statusLabel(status) { return status === "active" ? "已启用" : status === "disabled" ? "已禁用" : status === "draft" ? "草稿" : "—"; }
-  function measurementLabel(value) { return value === "types" || value === "kind" ? "种" : "份"; }
+  function measurementLabel(value) { return value === "types" || value === "kind" ? "种（SPU）" : "份"; }
   function storeMap(stores) { var map = {}; copyArray(stores).forEach(function (store) { map[store.id] = store; }); return map; }
   function storesLabel(ids, stores) {
     ids = unique(copyArray(ids)); if (!ids.length) return "0 家";
