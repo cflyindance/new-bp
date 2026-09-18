@@ -187,6 +187,8 @@ button { color: inherit; }
 .olf-page .olf-system-default-note strong { flex-shrink: 0; color: var(--olf-primary-text); }
 
 .olf-template-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.olf-template-group + .olf-template-group { margin-top: 18px; }
+.olf-template-group > h4 { margin: 0 0 10px; color: var(--olf-secondary); font-size: 13px; font-weight: 500; }
 .olf-template-card { min-height: 82px; padding: 14px; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; border: 1px solid var(--olf-border); border-radius: 10px; background: var(--olf-surface); color: var(--olf-text); text-align: left; cursor: pointer; }
 .olf-template-card:hover, .olf-template-card.is-selected { border-color: var(--olf-primary); background: var(--olf-primary-soft); }
 .olf-template-card strong { font-size: 14px; }
