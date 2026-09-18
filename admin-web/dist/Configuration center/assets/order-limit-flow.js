@@ -4126,9 +4126,20 @@
     if (draft.targetType === "dish") candidates = (config.dishTargets || []).map(function (item) {
       return { productLineId: String(item.productLineId), dishId: String(item.dishId), name: item.name || String(item.dishId) };
     });
-    else if (draft.targetType === "dish_set") candidates = (config.dishSetMembers || []).map(function (item) {
-      return { productLineId: String(item.productLineId), dishId: String(item.dishId), name: item.name || String(item.dishId) };
-    });
+    else if (draft.targetType === "dish_set") {
+      var selectedMembers = structureItems(draft, config);
+      candidates = (config.dishSetMembers || []).map(function (item) {
+        var selected = selectedMembers.find(function (dish) {
+          return String(dish.lineId) === String(item.productLineId) && String(dish.key) === String(item.dishId);
+        });
+        var line = lines.find(function (entry) { return entry.id === item.productLineId; });
+        return {
+          productLineId: String(item.productLineId), dishId: String(item.dishId),
+          name: selected && selected.name || item.name || String(item.dishId),
+          lineLabel: selected && selected.lineLabel || (line ? line.name : item.productLineId)
+        };
+      });
+    }
     else {
       var selectedCategories = {};
       (config.categoryTargets || []).forEach(function (item) { selectedCategories[String(item.productLineId) + "|" + String(item.categoryId)] = true; });
