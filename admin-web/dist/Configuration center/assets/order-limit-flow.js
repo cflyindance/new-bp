@@ -4228,7 +4228,7 @@
       { key: "category", label: draft.targetType === "category" ? "包含商品" : "所属分类" },
       { key: "line", label: "产线" }
     ];
-    if (draft.targetType === "dish_set") columns.push({ key: "sameDish", label: "每个 SPU 每轮最多份数" }, { key: "status", label: "状态" });
+    if (draft.targetType === "dish_set") columns.push({ key: "sameDish", label: "每轮每种最多份数" }, { key: "status", label: "状态" });
     else columns.push({ key: "limit", label: buffetTargetLimitLabel(draft, combo) });
     if (draft.subject === "party_size" && draft.targetType !== "dish_set") columns.push({ key: "tableCap", label: "整桌兜底" });
     columns.push({ key: "action", label: "操作", className: "olf-v4-product-action" });
@@ -4359,13 +4359,13 @@
     var allFiltered = pageSelected && data.filtered.length > data.pageRows.length && state.selectionMode !== "filtered"
       ? '<button type="button" class="olf-button olf-button--small olf-button--link" data-buffet-workbench-select-filtered data-v4-period="' + combo.period + '" data-scene-party="' + combo.partyIndex + '" data-scene-round="' + combo.roundIndex + '">选择全部筛选结果，共 ' + data.filtered.length + ' 项</button>' : "";
     var scenario = isBuffetComboDraft(draft) ? comboScenarioKeyFor(draft, combo.partyIndex) : v4ScenarioKey(combo.partyIndex, combo.roundIndex, draft);
-    return '<div class="olf-v4-workbench-tools"><div class="olf-v4-workbench-filters"><select class="olf-select" aria-label="产线" data-buffet-workbench-line>' + lineOptions + '</select>' + categoryFilter + '<select class="olf-select" aria-label="配置状态" data-buffet-workbench-status>' + statusOptions + '</select><input class="olf-input" aria-label="商品搜索" value="' + esc(state.query) + '" placeholder="搜索商品/分类名称" data-buffet-workbench-query /><button type="button" class="olf-button olf-button--small" data-buffet-workbench-reset>重置筛选</button></div><div class="olf-v4-workbench-batch"><label><input type="checkbox" data-buffet-workbench-page-select data-v4-period="' + combo.period + '" data-scene-party="' + combo.partyIndex + '" data-scene-round="' + combo.roundIndex + '"' + (pageSelected ? ' checked' : '') + ' /> 当前页全选</label><strong>已选 ' + state.selectedIds.length + ' 项</strong>' + allFiltered + '<button type="button" class="olf-button olf-button--small olf-button--danger" data-buffet-product-bulk-remove' + (state.selectedIds.length ? '' : ' disabled') + '>批量移除</button><span class="olf-batch-spacer"></span><span>' + (draft.targetType === "dish_set" ? '批量设置 SPU 每轮份数上限' : '批量数量') + '</span><input class="olf-input olf-limit-input" type="number" min="0" placeholder="未配置" data-buffet-workbench-bulk-value /><button type="button" class="olf-button olf-button--small" data-buffet-workbench-bulk-apply data-v4-period="' + combo.period + '" data-v4-scenario="' + esc(scenario) + '" data-scene-party="' + combo.partyIndex + '" data-scene-round="' + combo.roundIndex + '"' + (state.selectedIds.length ? '' : ' disabled') + '>应用数量</button></div></div>';
+    return '<div class="olf-v4-workbench-tools"><div class="olf-v4-workbench-filters"><select class="olf-select" aria-label="产线" data-buffet-workbench-line>' + lineOptions + '</select>' + categoryFilter + '<select class="olf-select" aria-label="配置状态" data-buffet-workbench-status>' + statusOptions + '</select><input class="olf-input" aria-label="商品搜索" value="' + esc(state.query) + '" placeholder="搜索商品/分类名称" data-buffet-workbench-query /><button type="button" class="olf-button olf-button--small" data-buffet-workbench-reset>重置筛选</button></div><div class="olf-v4-workbench-batch"><label><input type="checkbox" data-buffet-workbench-page-select data-v4-period="' + combo.period + '" data-scene-party="' + combo.partyIndex + '" data-scene-round="' + combo.roundIndex + '"' + (pageSelected ? ' checked' : '') + ' /> 当前页全选</label><strong>已选 ' + state.selectedIds.length + ' 项</strong>' + allFiltered + '<button type="button" class="olf-button olf-button--small olf-button--danger" data-buffet-product-bulk-remove' + (state.selectedIds.length ? '' : ' disabled') + '>批量移除</button><span class="olf-batch-spacer"></span><span>' + (draft.targetType === "dish_set" ? '批量设置每轮每种最多份数' : '批量数量') + '</span><input class="olf-input olf-limit-input" type="number" min="0" placeholder="未配置" data-buffet-workbench-bulk-value /><button type="button" class="olf-button olf-button--small" data-buffet-workbench-bulk-apply data-v4-period="' + combo.period + '" data-v4-scenario="' + esc(scenario) + '" data-scene-party="' + combo.partyIndex + '" data-scene-round="' + combo.roundIndex + '"' + (state.selectedIds.length ? '' : ' disabled') + '>应用数量</button></div></div>';
   }
 
   function renderBuffetTargetQuantityPanel(draft, config, combo, values) {
     if (draft.targetType === "dish_set") {
       var scenario = isBuffetComboDraft(draft) ? comboScenarioKeyFor(draft, combo.partyIndex) : v4ScenarioKey(combo.partyIndex, combo.roundIndex, draft);
-      return renderBuffetWorkbenchToolbar(draft, config, combo) + renderBuffetSharedQuotaPanel(draft, config, combo, values) + renderBuffetProductTable(draft, config, combo, values);
+      return renderBuffetSharedQuotaPanel(draft, config, combo, values) + renderBuffetWorkbenchToolbar(draft, config, combo) + renderBuffetProductTable(draft, config, combo, values);
     }
     return renderBuffetWorkbenchToolbar(draft, config, combo) + renderBuffetProductTable(draft, config, combo, values);
   }
@@ -5851,13 +5851,15 @@
       var bulkInput = bulkPanel && bulkPanel.querySelector("[data-buffet-workbench-bulk-value]");
       var bulkValue = bulkInput && bulkInput.value !== "" ? Number(bulkInput.value) : NaN;
       if (!bulkState.selectedIds.length) { toast("请至少选择一个商品或分类", true); return; }
-      if (!Number.isInteger(bulkValue) || bulkValue < 0) { toast("请输入大于或等于 0 的整数", true); return; }
+      if (!Number.isInteger(bulkValue) || bulkValue < 0 || bulkValue > 999999) { toast("请输入 0 至 999999 的整数", true); return; }
       var bulkPeriod = button.getAttribute("data-v4-period");
       var bulkValues = v4PeriodValues(bulkConfig, bulkPeriod);
       var bulkCombo = { period: bulkPeriod, partyIndex: Number(button.getAttribute("data-scene-party")) || 0, roundIndex: Number(button.getAttribute("data-scene-round")) || 0 };
       if (bulkDraft.targetType === "dish_set") {
+        if (!buffetAllowedLimitBlocks(bulkDraft, bulkPeriod).sameDish) { toast("当前周期不支持商品每轮份数上限", true); return; }
         var bulkScenario = button.getAttribute("data-v4-scenario");
-        var existingRows = v4ExceptionRows(bulkValues, bulkScenario).filter(function (row) { return bulkState.selectedIds.indexOf(v4MenuIdentity(v4ExceptionDish(row))) < 0; });
+        expandDishSetDefaultLimit(bulkDraft, bulkValues, bulkScenario);
+        var existingRows = v4ExceptionRows(bulkValues, bulkScenario).filter(function (row) { return bulkState.selectedIds.indexOf(buffetWorkbenchTargetIdentity(bulkDraft, v4ExceptionDish(row))) < 0; });
         currentBuffetWorkbenchTargets(bulkDraft, bulkConfig).forEach(function (dish) {
           if (bulkState.selectedIds.indexOf(buffetWorkbenchTargetIdentity(bulkDraft, dish)) >= 0) existingRows.push({ dishes: [{ productLineId: dish.productLineId, dishId: dish.dishId, name: dish.name }], limit: { configured: true, value: bulkValue } });
         });
