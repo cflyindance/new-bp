@@ -4769,13 +4769,31 @@
     return before !== after;
   }
 
+  function renderAuthorizationDefault(draft, supportsRoundAuthorization) {
+    var auth = draft.authorization;
+    var buffet = isBuffetProfile();
+    var retainedOperation = buffet && auth.defaultScope === "operation";
+    var options = [{id:"operation",name:"本次操作"},{id:"round",name:"当前轮"},{id:"order",name:"当前订单"}].filter(function (item) {
+      return auth.allowedScopes.indexOf(item.id) >= 0 &&
+        (!buffet || (item.id !== "operation" && (item.id !== "round" || supportsRoundAuthorization)));
+    });
+    // 只隐藏入口，不把已有 operation 默认值隐式改成范围更大的授权。
+    var retainedHint = retainedOperation ? '<span class="olf-hint" data-auth-retained-default>沿用原默认授权范围：本次操作</span>' : "";
+    if (buffet && !options.length) return retainedHint || '<span class="olf-hint">请先启用至少一种授权范围。</span>';
+    var needsSelection = buffet && !options.some(function (item) { return item.id === auth.defaultScope; });
+    var placeholder = needsSelection ? '<option value="" disabled selected>' + (retainedOperation ? "请选择以更改默认授权范围" : "请选择默认授权范围") + '</option>' : "";
+    return retainedHint + '<select class="olf-select" data-auth-default>' + placeholder + options.map(function (item) {
+      return '<option value="' + item.id + '"' + (auth.defaultScope === item.id ? " selected" : "") + '>' + item.name + '</option>';
+    }).join("") + '</select>';
+  }
+
   function renderStepSix(draft) {
     var auth = draft.authorization;
     var supportsRoundAuthorization = !isBuffetV4Draft(draft) || (draft.enabledPeriods || []).some(function (period) { return period !== "order_lifetime"; });
     if (normalizeBuffetAuthorizationScopes(draft) && !viewMode) markEditorDirty();
     return '<div class="olf-content-head"><h2 tabindex="-1">设置超限授权</h2></div>' +
       '<section class="olf-section"><div class="olf-section-head"><div><h3>允许服务员密码授权</h3><div class="olf-help">关闭后，超限将直接拒绝。</div></div><label class="olf-switch"><input type="checkbox" data-auth-enabled' + (auth.enabled ? " checked" : "") + ' /><span class="olf-switch-track"></span><span>' + (auth.enabled ? "已开启" : "已关闭") + '</span></label></div></section>' +
-      (auth.enabled ? '<section class="olf-section"><h3>可选授权范围与权限</h3><div class="olf-review">' + renderScopeRow(draft, "operation", "本次操作", "仅放行当前这一次数量变更") + (supportsRoundAuthorization ? renderScopeRow(draft, "round", "当前轮", "当前轮内相同规则与目标无需重复输密") : "") + renderScopeRow(draft, "order", "当前订单", "关单前相同规则与目标持续放行") + '</div></section><section class="olf-section"><div class="olf-field-grid"><label class="olf-field"><span class="olf-label olf-required">默认授权范围</span><select class="olf-select" data-auth-default>' + [{id:"operation",name:"本次操作"},{id:"round",name:"当前轮"},{id:"order",name:"当前订单"}].filter(function (item) { return auth.allowedScopes.indexOf(item.id) >= 0; }).map(function (item) { return '<option value="' + item.id + '"' + (auth.defaultScope === item.id ? " selected" : "") + '>' + item.name + '</option>'; }).join("") + '</select></label><label class="olf-check"><input type="checkbox" data-auth-reason' + (auth.reasonRequired ? " checked" : "") + ' /><span>授权原因必须填写</span></label></div></section>' : '<div class="olf-summary olf-summary--warning"><strong>硬性拒绝：</strong>规则超限后不会出现服务员密码放行入口。</div>');
+      (auth.enabled ? '<section class="olf-section"><h3>可选授权范围与权限</h3><div class="olf-review">' + (isBuffetProfile() ? "" : renderScopeRow(draft, "operation", "本次操作", "仅放行当前这一次数量变更")) + (supportsRoundAuthorization ? renderScopeRow(draft, "round", "当前轮", "当前轮内相同规则与目标无需重复输密") : "") + renderScopeRow(draft, "order", "当前订单", "关单前相同规则与目标持续放行") + '</div></section><section class="olf-section"><div class="olf-field-grid"><label class="olf-field"><span class="olf-label olf-required">默认授权范围</span>' + renderAuthorizationDefault(draft, supportsRoundAuthorization) + '</label><label class="olf-check"><input type="checkbox" data-auth-reason' + (auth.reasonRequired ? " checked" : "") + ' /><span>授权原因必须填写</span></label></div></section>' : '<div class="olf-summary olf-summary--warning"><strong>硬性拒绝：</strong>规则超限后不会出现服务员密码放行入口。</div>');
   }
 
   function namesFor(items, ids) {
