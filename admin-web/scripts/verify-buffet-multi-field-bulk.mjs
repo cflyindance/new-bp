@@ -1,0 +1,30 @@
+import fs from 'node:fs';
+import vm from 'node:vm';
+import assert from 'node:assert/strict';
+const source=fs.readFileSync(new URL('../dist/Configuration center/assets/order-limit-flow.js',import.meta.url),'utf8');
+const start=source.indexOf('    if (button.hasAttribute("data-buffet-workbench-bulk-apply"))');
+const end=source.indexOf('    if (button.hasAttribute("data-buffet-template"))',start);
+assert.ok(start>=0&&end>start);
+function run(primary,cap){
+ const values={targetLimits:{a:{configured:true,value:3},b:{configured:true,value:4}},tableTargetCaps:{a:{configured:true,value:5},b:{configured:true,value:6}}};
+ const errors=[];
+ const draft={subject:'party_size',targetType:'dish',activeStoreId:'s'};
+ const ctx=vm.createContext({button:{hasAttribute:()=>true,getAttribute:key=>key==='data-v4-period'?'per_round':'0',closest:()=>({querySelector:key=>({value:key==='[data-buffet-workbench-bulk-value]'?primary:cap})})},editorState:{rule:{editorDraft:draft}},normalizeBuffetQuantityWorkbenchState:()=>({selectedIds:['a']}),storeConfigFor:()=>({}),toast:m=>errors.push(m),v4PeriodValues:()=>values,currentBuffetWorkbenchTargets:()=>[{id:'a'},{id:'b'}],buffetWorkbenchTargetIdentity:(_,t)=>t.id,v4TargetKey:(_,combo,t)=>t.id,deriveBuffetQuantityBlocks(){},clearBuffetQuantitySelection(){},markEditorDirty(){},renderEditor(){}});
+ vm.runInContext('(function(){'+source.slice(start,end)+'})()',ctx);
+ return {values,errors};
+}
+let result=run('2','7');
+assert.equal(result.values.targetLimits.a.value,2);
+assert.equal(result.values.tableTargetCaps.a.value,7);
+assert.equal(result.values.targetLimits.b.value,4);
+assert.equal(result.values.tableTargetCaps.b.value,6);
+result=run('','0');
+assert.equal(result.values.targetLimits.a.value,3,'空主字段保留原值');
+assert.equal(result.values.tableTargetCaps.a.value,0,'0 必须实际应用');
+result=run('8','');
+assert.equal(result.values.tableTargetCaps.a.value,5,'空整桌字段保留原值');
+result=run('8','-1');
+assert.equal(result.values.targetLimits.a.value,3,'任一值无效不得部分写入');
+assert.equal(result.errors.length,1);
+assert.equal(run('','').errors.length,1);
+console.log('verify-buffet-multi-field-bulk: PASS');
