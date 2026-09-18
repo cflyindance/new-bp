@@ -1019,3 +1019,21 @@ button { color: inherit; }
 .olf-scene-workbench .olf-v4-bound-row:has(+ .olf-v4-bound-row) { margin-right:16px; }
 .olf-scene-workbench .olf-v4-bound-row:has(+ .olf-v4-bound-row) > strong, .olf-scene-workbench .olf-v4-bound-row + .olf-v4-bound-row > strong { grid-column:1 / -1; }
 @media(max-width:800px) { .olf-scene-workbench .olf-v4-bound-row:has(+ .olf-v4-bound-row), .olf-scene-workbench .olf-v4-bound-row + .olf-v4-bound-row { width:100%; margin-right:0; } }
+.olf-scene-workbench .olf-scene-bulk-field { flex:1; min-width:180px; display:flex; flex-direction:column; gap:8px; align-items:stretch; }
+.olf-scene-workbench .olf-scene-bulk-field > div { display:flex; align-items:center; gap:8px; }
+.olf-scene-workbench .olf-scene-bulk-field .olf-input { width:100%; }
+.olf-scene-workbench:not(.is-batch-open) .olf-scene-bulk-field { display:none; }
+.olf-scene-workbench .olf-v4-workbench-filters .olf-scene-batch-toggle { margin:0 0 0 auto; flex-shrink:0; white-space:nowrap; }
+.olf-scene-workbench:not(.is-batch-open) .olf-v4-workbench-batch { display:none; }
+.olf-scene-workbench .olf-v4-product-table th.olf-batch-select-cell { width:38px; }
+.olf-scene-workbench.is-batch-open .olf-v4-workbench-batch { display:flex; align-items:flex-end; gap:12px; background:#f7f7f8; padding:14px; border:0; margin:12px 0 0; }
+.olf-scene-workbench .olf-v4-workbench-batch > strong,
+.olf-scene-workbench .olf-v4-workbench-batch > .olf-batch-spacer { display:none; }
+.olf-scene-workbench .olf-v4-workbench-batch > button:not([data-buffet-workbench-bulk-apply]):not([data-quantity-scene-batch-cancel]) { display:none; }
+.olf-scene-workbench .olf-scene-bulk-field { font-size:12px; color:var(--olf-text); }
+.olf-scene-workbench .olf-scene-bulk-field > div { position:relative; }
+.olf-scene-workbench .olf-scene-bulk-field .olf-input { padding-right:32px; height:40px; border-radius:9px; }
+.olf-scene-workbench .olf-scene-bulk-field > div > span { position:absolute; right:12px; color:var(--olf-secondary); }
+.olf-scene-workbench .olf-scene-bulk-cancel { background:#e9eaec; border:0; color:var(--olf-text); }
+.olf-scene-workbench .olf-scene-bulk-cancel,.olf-scene-workbench [data-buffet-workbench-bulk-apply] { flex-shrink:0; height:40px; white-space:nowrap; }
+.olf-scene-workbench:not(.is-batch-open) .olf-scene-bulk-cancel { display:none; }

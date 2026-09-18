@@ -4498,6 +4498,13 @@
       }).join("") + '</section>';
   }
 
+  function renderScenarioBulkFields(draft, combo) {
+    return buffetProductTableColumns(draft, combo).filter(function (column) { return ["limit", "tableCap", "sameDish"].indexOf(column.key) >= 0; }).map(function (column) {
+      var attribute = column.key === "tableCap" ? "data-buffet-workbench-bulk-cap" : "data-buffet-workbench-bulk-value";
+      return '<label class="olf-scene-bulk-field"><span>' + esc(column.label) + '</span><div><input class="olf-input" type="number" min="0" max="999999" placeholder="未填写则不修改" ' + attribute + '><span>份</span></div></label>';
+    }).join("");
+  }
+
   function renderQuantitySceneDialog(draft, config) {
     var scene = editorState.quantitySceneDialog;
     if (!scene) return '';
@@ -4506,6 +4513,9 @@
     var position = combos.findIndex(function (combo) { return combo.partyIndex === scene.combo.partyIndex && combo.roundIndex === scene.combo.roundIndex; });
     var selection = normalizeBuffetQuantityWorkbenchState(draft).selectedIds.length;
     var content = renderV4PeriodScenario(draft, config, scene.combo.period, scene.combo);
+    content = content.replace(/<span>批量(?:设置每轮每种最多份数|数量)<\/span><input[^>]*data-buffet-workbench-bulk-value[^>]*\/>/, renderScenarioBulkFields(draft, scene.combo));
+    content = content.replace('<button type="button" class="olf-button olf-button--small" data-buffet-workbench-bulk-apply', '<button type="button" class="olf-button olf-scene-bulk-cancel" data-quantity-scene-batch-cancel>取消批量设置</button><button type="button" class="olf-button olf-button--primary olf-button--small" data-buffet-workbench-bulk-apply');
+    content = content.replace('>应用数量</button>', '>批量应用</button>');
     content = content.replace('<div class="olf-v4-workbench-batch">', '<button type="button" class="olf-button olf-scene-batch-toggle" data-quantity-scene-batch-toggle aria-expanded="' + !!scene.batchOpen + '">批量设置（' + selection + '）' + (scene.batchOpen ? ' 收起' : ' 展开') + '</button><div class="olf-v4-workbench-batch">');
     return '<dialog id="quantitySceneDialog" class="olf-scene-dialog olf-scene-workbench' + (scene.batchOpen ? ' is-batch-open' : '') + '" aria-labelledby="quantitySceneTitle"><header><button type="button" class="olf-button" aria-label="关闭场景配置" data-quantity-scene-cancel>×</button><div class="olf-scene-heading"><h3 id="quantitySceneTitle">配置额度</h3><span>' + esc((store ? store.name : draft.activeStoreId) + ' · ' + periodLabel(scene.combo.period) + ' · ' + v4ScenarioTitle(draft, scene.combo.period, scene.combo)) + '</span></div><span class="olf-scene-position">场景 ' + (position + 1) + ' / ' + combos.length + '</span><button type="button" class="olf-button" data-quantity-scene-save>保存并返回</button><button type="button" class="olf-button olf-button--primary" data-quantity-scene-next' + (position < 0 || position === combos.length - 1 ? ' disabled' : '') + '>保存并配置下一场景 →</button></header><div class="olf-scene-dialog-body">' + content + '</div></dialog>';
   }
@@ -5368,9 +5378,21 @@
     }
     if (quantityDialog) {
       quantityDialog.showModal();
+      var sceneFilters = quantityDialog.querySelector(".olf-v4-workbench-filters");
+      var sceneBatchToggle = quantityDialog.querySelector("[data-quantity-scene-batch-toggle]");
+      if (sceneFilters && sceneBatchToggle) sceneFilters.appendChild(sceneBatchToggle);
       quantityDialog.querySelectorAll(".olf-v4-product-table").forEach(function (table) {
         var headings = table.querySelectorAll("thead th");
         if (headings.length < 5) return;
+        var pageSelect = quantityDialog.querySelector("[data-buffet-workbench-page-select]");
+        if (pageSelect) {
+          var pageSelectLabel = pageSelect.closest("label");
+          pageSelect.setAttribute("aria-label", "全选当前页商品");
+          var visibleRowChecks = Array.prototype.slice.call(table.querySelectorAll("tbody [data-buffet-workbench-target]"));
+          pageSelect.indeterminate = visibleRowChecks.some(function (input) { return input.checked; }) && !visibleRowChecks.every(function (input) { return input.checked; });
+          headings[0].appendChild(pageSelect);
+          if (pageSelectLabel) pageSelectLabel.remove();
+        }
         headings[2].textContent = editorState.rule.editorDraft.targetType === "category" ? "产线 · 包含商品" : "产线 · 分类 · 编码";
         headings[3].hidden = true;
         headings[headings.length - 1].hidden = true;
@@ -5849,10 +5871,17 @@
   }
 
   function handleEditorClick(event) {
-    var sceneTool = event.target && event.target.closest && event.target.closest("[data-quantity-scene-next], [data-quantity-scene-batch-toggle]");
+    var sceneTool = event.target && event.target.closest && event.target.closest("[data-quantity-scene-next], [data-quantity-scene-batch-toggle], [data-quantity-scene-batch-cancel]");
     if (sceneTool && editorState.quantitySceneDialog) {
       var currentScene = editorState.quantitySceneDialog;
-      if (sceneTool.hasAttribute("data-quantity-scene-batch-toggle")) {
+      if (sceneTool.hasAttribute("data-quantity-scene-batch-cancel")) {
+        currentScene.batchOpen = false;
+        var cancelModal = document.getElementById("quantitySceneDialog");
+        cancelModal.classList.remove("is-batch-open");
+        cancelModal.querySelectorAll("[data-buffet-workbench-bulk-value], [data-buffet-workbench-bulk-cap]").forEach(function (input) { input.value = ""; });
+        var cancelToggle = cancelModal.querySelector("[data-quantity-scene-batch-toggle]");
+        if (cancelToggle) { cancelToggle.setAttribute("aria-expanded", "false"); cancelToggle.textContent = "批量设置（" + normalizeBuffetQuantityWorkbenchState(editorState.rule.editorDraft).selectedIds.length + "） 展开"; cancelToggle.focus(); }
+      } else if (sceneTool.hasAttribute("data-quantity-scene-batch-toggle")) {
         currentScene.batchOpen = !currentScene.batchOpen;
         var currentModal = document.getElementById("quantitySceneDialog");
         currentModal.classList.toggle("is-batch-open", currentScene.batchOpen);
@@ -6011,9 +6040,14 @@
       var bulkConfig = storeConfigFor(bulkDraft, bulkDraft.activeStoreId, true);
       var bulkPanel = button.closest(".olf-v4-workbench-tools");
       var bulkInput = bulkPanel && bulkPanel.querySelector("[data-buffet-workbench-bulk-value]");
+      var bulkCapInput = bulkPanel && bulkPanel.querySelector("[data-buffet-workbench-bulk-cap]");
+      var hasBulkValue = !!(bulkInput && bulkInput.value !== "");
+      var hasBulkCap = !!(bulkCapInput && bulkCapInput.value !== "");
       var bulkValue = bulkInput && bulkInput.value !== "" ? Number(bulkInput.value) : NaN;
+      var bulkCap = hasBulkCap ? Number(bulkCapInput.value) : NaN;
       if (!bulkState.selectedIds.length) { toast("请至少选择一个商品或分类", true); return; }
-      if (!Number.isInteger(bulkValue) || bulkValue < 0 || bulkValue > 999999) { toast("请输入 0 至 999999 的整数", true); return; }
+      if (!hasBulkValue && !hasBulkCap) { toast("请至少填写一个批量设置数量", true); return; }
+      if ((hasBulkValue && (!Number.isInteger(bulkValue) || bulkValue < 0 || bulkValue > 999999)) || (hasBulkCap && (!Number.isInteger(bulkCap) || bulkCap < 0 || bulkCap > 999999))) { toast("请输入 0 至 999999 的整数", true); return; }
       var bulkPeriod = button.getAttribute("data-v4-period");
       var bulkValues = v4PeriodValues(bulkConfig, bulkPeriod);
       var bulkCombo = { period: bulkPeriod, partyIndex: Number(button.getAttribute("data-scene-party")) || 0, roundIndex: Number(button.getAttribute("data-scene-round")) || 0 };
@@ -6029,7 +6063,9 @@
       } else {
         currentBuffetWorkbenchTargets(bulkDraft, bulkConfig).forEach(function (target) {
           if (bulkState.selectedIds.indexOf(buffetWorkbenchTargetIdentity(bulkDraft, target)) < 0) return;
-          bulkValues.targetLimits[v4TargetKey(bulkDraft, bulkCombo, target)] = { configured: true, value: bulkValue };
+          var bulkKey = v4TargetKey(bulkDraft, bulkCombo, target);
+          if (hasBulkValue) bulkValues.targetLimits[bulkKey] = { configured: true, value: bulkValue };
+          if (hasBulkCap && bulkDraft.subject === "party_size") bulkValues.tableTargetCaps[bulkKey] = { configured: true, value: bulkCap };
         });
       }
       deriveBuffetQuantityBlocks(bulkDraft);
