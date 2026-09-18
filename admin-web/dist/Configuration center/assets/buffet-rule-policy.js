@@ -104,7 +104,7 @@
     return {
       total: roundBased,
       target: PERIODS.indexOf(period) >= 0,
-      sameDish: roundBased && dishSet,
+      sameDish: PERIODS.indexOf(period) >= 0 && dishSet,
       tableFallback: draft.subject === "party_size" && roundBased
     };
   }
