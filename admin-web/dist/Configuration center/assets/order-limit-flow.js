@@ -2726,7 +2726,8 @@
 
   function renderBuffetTemplateSelection(draft) {
     ensureBuffetScenarioModel(draft);
-    var templates = visibleBuffetPeriodTemplates().map(function (template) {
+    var templateCards = {};
+    visibleBuffetPeriodTemplates().forEach(function (template) {
       var missingSubject = !draft.subject;
       var missingTarget = !draft.targetType;
       var incompleteReason = missingSubject && missingTarget
@@ -2741,10 +2742,18 @@
         : incompleteReason
           ? { enabled: true, reason: "" }
           : buffetTemplateSelectionAvailability(draft, template);
-      return '<button type="button" class="olf-template-card' + (draft.buffetTemplateId === template.id ? " is-selected" : "") + '" data-buffet-template="' + esc(template.id) + '"' + (availability.enabled ? "" : ' disabled title="' + esc(availability.reason) + '"') + '><strong>' + esc(template.name) + '</strong><span>' + esc(availability.enabled ? (template.periods.length ? template.periods.map(periodLabel).join(" ＋ ") : "自行选择周期并配置数量") : availability.reason) + '</span></button>';
+      templateCards[template.id] = '<button type="button" class="olf-template-card' + (draft.buffetTemplateId === template.id ? " is-selected" : "") + '" data-buffet-template="' + esc(template.id) + '"' + (availability.enabled ? "" : ' disabled title="' + esc(availability.reason) + '"') + '><strong>' + esc(template.name) + '</strong><span>' + esc(availability.enabled ? (template.periods.length ? template.periods.map(periodLabel).join(" ＋ ") : "自行选择周期并配置数量") : availability.reason) + '</span></button>';
+    });
+    var templates = [
+      { name: "基础限购", ids: ["order-basic", "order-round-basic", "order-multi-round-basic"] },
+      { name: "人均限购", ids: ["party-order-basic", "party-round-basic", "party-multi-round"] },
+      { name: "组合限购", ids: ["round-party-table-cap", "order-round-protection", "order-multi-round-protection"] },
+      { name: "自定义", ids: ["custom"] }
+    ].map(function (group) {
+      return '<div class="olf-template-group"><h4>' + esc(group.name) + '</h4><div class="olf-template-grid">' + group.ids.map(function (id) { return templateCards[id] || ""; }).join("") + '</div></div>';
     }).join("");
     var changed = draft.buffetTemplateModified ? '<div class="olf-summary olf-summary--warning"><strong>已基于模板修改</strong><span>当前以页面上实际选择的周期和数量为准。</span></div>' : "";
-    return '<section class="olf-section"><h3>常用模板</h3><div class="olf-template-grid">' + templates + '</div>' + changed + '</section>';
+    return '<section class="olf-section"><h3>常用模板</h3>' + templates + changed + '</section>';
   }
 
   function renderBuffetQuantityRanges(draft) {
