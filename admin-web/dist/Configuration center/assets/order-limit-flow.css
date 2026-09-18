@@ -187,6 +187,25 @@ button { color: inherit; }
 .olf-page .olf-system-default-note strong { flex-shrink: 0; color: var(--olf-primary-text); }
 
 .olf-template-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.olf-scene-group { padding: 16px; background: var(--olf-background, #f7f8fa); border-radius: 10px; margin: 12px 0; }
+.olf-scene-group h4 { margin: 0 0 12px; color: var(--olf-secondary); font-size: 13px; font-weight: 500; }
+.olf-scene-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.olf-scene-card { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding: 16px; min-height: 108px; border: 1px solid var(--olf-border); border-radius: 10px; background: white; text-align: left; cursor: pointer; }
+.olf-scene-card:hover, .olf-scene-card.is-configured { border-color: var(--olf-primary); }
+.olf-scene-card span { font-size: 12px; color: var(--olf-primary); }
+.olf-scene-card small { color: var(--olf-secondary); }
+.olf-scene-card b { position: absolute; top: 16px; right: 16px; color: var(--olf-primary); }
+.olf-scene-dialog { padding: 0; width: min(1100px, 94vw); max-height: 90vh; border: 1px solid var(--olf-border); border-radius: 14px; color: var(--olf-text); box-shadow: 0 16px 60px #15223844; }
+.olf-scene-dialog::backdrop { background: #15223866; }
+.olf-scene-dialog[open] { display: flex; flex-direction: column; }
+.olf-scene-dialog > header, .olf-scene-dialog > footer { padding: 18px 24px; display: flex; align-items: center; gap: 12px; justify-content: space-between; background: white; }
+.olf-scene-dialog > header { border-bottom: 1px solid var(--olf-border); }
+.olf-scene-dialog h3 { margin: 0 0 8px; }
+.olf-scene-dialog header span, .olf-scene-dialog footer span { font-size: 12px; color: var(--olf-secondary); }
+.olf-scene-dialog footer span { margin-right: auto; }
+.olf-scene-dialog > footer { border-top: 1px solid var(--olf-border); }
+.olf-scene-dialog-body { padding: 20px 24px; overflow: auto; }
+@media (max-width: 800px) { .olf-scene-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .olf-template-group + .olf-template-group { margin-top: 18px; }
 .olf-template-group > h4 { margin: 0 0 10px; color: var(--olf-secondary); font-size: 13px; font-weight: 500; }
 .olf-template-card { min-height: 82px; padding: 14px; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; border: 1px solid var(--olf-border); border-radius: 10px; background: var(--olf-surface); color: var(--olf-text); text-align: left; cursor: pointer; }
