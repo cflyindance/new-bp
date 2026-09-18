@@ -992,7 +992,7 @@
     if (value === "order_lifetime") return isBuffetProfile() ? "每单/整单累计" : "与轮次无关";
     return "每轮";
   }
-  function targetLabel(value) { return value === "dish_set" ? "按菜品集限购" : value === "dish" ? "按每种菜品限购" : "按每个分类限购"; }
+  function targetLabel(value) { return value === "dish_set" ? "按菜品集限购" : value === "dish" ? "按每种（SPU）菜品限购" : "按每个分类限购"; }
   function targetShortLabel(value) { return value === "dish_set" ? "按菜品集" : value === "dish" ? "按菜品" : "按分类"; }
 
   function targetSource(draft) { return draft.targetType === "dish" ? dishes : categories; }
@@ -2830,7 +2830,7 @@
         renderChoice("targetType", "dish", "按菜品限购", "每个指定菜品独立累计", draft.targetType === "dish") +
         (isBuffetProfile() ? renderChoice("targetType", "dish_set", "按菜品集限购", "多个指定菜品跨产线共享同一个数量池", draft.targetType === "dish_set") : "");
     var measureBlock = modernBuffet && draft.targetType === "dish_set"
-      ? '<section class="olf-section"><h3>计量方式</h3><div class="olf-choice-grid olf-choice-grid--two"><label class="olf-period-toggle"><input type="radio" name="buffetMeasureUnit" value="piece" data-buffet-measure-unit' + (draft.measureUnit !== "kind" ? " checked" : "") + ' /><span><strong>按份</strong><small>菜品集成员合计份数</small></span></label><label class="olf-period-toggle"><input type="radio" name="buffetMeasureUnit" value="kind" data-buffet-measure-unit' + (draft.measureUnit === "kind" ? " checked" : "") + ' /><span><strong>按种</strong><small>菜品集内不同菜品种数</small></span></label></div></section>'
+      ? '<section class="olf-section"><h3>计量方式</h3><div class="olf-choice-grid olf-choice-grid--two"><label class="olf-period-toggle"><input type="radio" name="buffetMeasureUnit" value="piece" data-buffet-measure-unit' + (draft.measureUnit !== "kind" ? " checked" : "") + ' /><span><strong>按份</strong><small>菜品集成员合计份数</small></span></label><label class="olf-period-toggle"><input type="radio" name="buffetMeasureUnit" value="kind" data-buffet-measure-unit' + (draft.measureUnit === "kind" ? " checked" : "") + ' /><span><strong>按种（SPU）</strong><small>菜品集内不同菜品种（SPU）数</small></span></label></div></section>'
       : "";
     var periodBlock = "";
     if (!modernBuffet && isBuffetProfile() && draft.subject === "order") {
@@ -4228,7 +4228,7 @@
       { key: "category", label: draft.targetType === "category" ? "包含商品" : "所属分类" },
       { key: "line", label: "产线" }
     ];
-    if (draft.targetType === "dish_set") columns.push({ key: "sameDish", label: "相同菜品上限" }, { key: "status", label: "状态" });
+    if (draft.targetType === "dish_set") columns.push({ key: "sameDish", label: "每个 SPU 每轮最多份数" }, { key: "status", label: "状态" });
     else columns.push({ key: "limit", label: buffetTargetLimitLabel(draft, combo) });
     if (draft.subject === "party_size" && draft.targetType !== "dish_set") columns.push({ key: "tableCap", label: "整桌兜底" });
     columns.push({ key: "action", label: "操作", className: "olf-v4-product-action" });
@@ -4268,6 +4268,20 @@
     }).join("");
   }
 
+  function expandDishSetDefaultLimit(draft, values, scenario) {
+    var defaultLimit = values.defaultDishLimits[scenario];
+    if (!defaultLimit) return;
+    var rows = v4ExceptionRows(values, scenario);
+    if (defaultLimit.configured) eligibleExceptionDishes(draft, draft.activeStoreId).forEach(function (dish) {
+      if (!rows.some(function (row) { return v4MenuIdentity(v4ExceptionDish(row)) === v4MenuIdentity(dish); })) {
+        rows.push({ dishes: [{ productLineId: dish.productLineId, dishId: dish.dishId, name: dish.name }], limit: cloneValue(defaultLimit) });
+      }
+    });
+    values.exceptionDishLimits[scenario] = rows;
+    delete values.defaultDishLimits[scenario];
+    markEditorDirty();
+  }
+
   function renderBuffetDishSetTableRows(draft, config, combo, values) {
     var scenario = isBuffetComboDraft(draft) ? comboScenarioKeyFor(draft, combo.partyIndex) : v4ScenarioKey(combo.partyIndex, combo.roundIndex, draft);
     var exceptions = {};
@@ -4278,11 +4292,12 @@
       var identity = buffetWorkbenchTargetIdentity(draft, dish);
       var exception = exceptions[v4MenuIdentity(dish)];
       var meta = buffetProductMeta(config, dish);
-      var limitHtml = exception ? buffetTableLimitCell(exception.row.limit, 'data-v4-exception-limit data-v4-period="' + combo.period + '" data-v4-scenario="' + esc(scenario) + '" data-v4-exception-index="' + exception.index + '"') : '<span class="olf-v4-member-status">' + (defaultCell && defaultCell.configured ? '使用默认值 ' + esc(defaultCell.value) + ' 份' : '默认值未配置') + '</span>';
-      var exceptionAction = exception
-        ? '<button type="button" class="olf-button olf-button--small olf-button--link" data-v4-exception-remove data-v4-period="' + combo.period + '" data-v4-scenario="' + esc(scenario) + '" data-v4-exception-index="' + exception.index + '">清除例外</button>'
-        : '<button type="button" class="olf-button olf-button--small olf-button--link" data-v4-exception-add-member="' + esc(identity) + '" data-v4-period="' + combo.period + '" data-v4-scenario="' + esc(scenario) + '">设为例外</button>';
-      return '<tr><td class="olf-batch-select-cell"><input type="checkbox" data-buffet-workbench-target="' + esc(identity) + '"' + (state.selectedIds.indexOf(identity) >= 0 ? ' checked' : '') + ' /></td><td class="olf-v4-product-cell"><strong>' + esc(dish.name || dish.dishId) + '</strong><span>' + esc(meta.code) + '</span></td><td>' + esc(meta.category) + '</td><td>' + esc(dish.lineLabel || dish.productLineId) + '</td><td>' + limitHtml + '</td><td><span class="olf-v4-member-status' + (exception ? ' is-exception' : '') + '">' + (exception ? '已设例外' : '默认') + '</span>' + exceptionAction + '</td><td class="olf-v4-product-action"><button type="button" class="olf-button olf-button--small olf-button--danger" data-buffet-product-remove="' + esc(identity) + '">移除</button></td></tr>';
+      var memberCell = exception ? exception.row.limit : defaultCell;
+      var limitHtml = buffetAllowedLimitBlocks(draft, combo.period).sameDish
+        ? buffetTableLimitCell(memberCell, 'data-v4-member-limit="' + esc(identity) + '" data-v4-period="' + combo.period + '" data-v4-scenario="' + esc(scenario) + '"')
+        : '<span class="olf-v4-member-status">不适用</span>';
+      var memberStatus = !memberCell || !memberCell.configured ? "未配置" : Number(memberCell.value) === 0 ? "禁止下单" : "已配置";
+      return '<tr><td class="olf-batch-select-cell"><input type="checkbox" data-buffet-workbench-target="' + esc(identity) + '"' + (state.selectedIds.indexOf(identity) >= 0 ? ' checked' : '') + ' /></td><td class="olf-v4-product-cell"><strong>' + esc(dish.name || dish.dishId) + '</strong><span>' + esc(meta.code) + '</span></td><td>' + esc(meta.category) + '</td><td>' + esc(dish.lineLabel || dish.productLineId) + '</td><td>' + limitHtml + '</td><td><span class="olf-v4-member-status">' + memberStatus + '</span></td><td class="olf-v4-product-action"><button type="button" class="olf-button olf-button--small olf-button--danger" data-buffet-product-remove="' + esc(identity) + '">移除</button></td></tr>';
     }).join("");
   }
 
@@ -4344,7 +4359,7 @@
     var allFiltered = pageSelected && data.filtered.length > data.pageRows.length && state.selectionMode !== "filtered"
       ? '<button type="button" class="olf-button olf-button--small olf-button--link" data-buffet-workbench-select-filtered data-v4-period="' + combo.period + '" data-scene-party="' + combo.partyIndex + '" data-scene-round="' + combo.roundIndex + '">选择全部筛选结果，共 ' + data.filtered.length + ' 项</button>' : "";
     var scenario = isBuffetComboDraft(draft) ? comboScenarioKeyFor(draft, combo.partyIndex) : v4ScenarioKey(combo.partyIndex, combo.roundIndex, draft);
-    return '<div class="olf-v4-workbench-tools"><div class="olf-v4-workbench-filters"><select class="olf-select" aria-label="产线" data-buffet-workbench-line>' + lineOptions + '</select>' + categoryFilter + '<select class="olf-select" aria-label="配置状态" data-buffet-workbench-status>' + statusOptions + '</select><input class="olf-input" aria-label="商品搜索" value="' + esc(state.query) + '" placeholder="搜索商品/分类名称" data-buffet-workbench-query /><button type="button" class="olf-button olf-button--small" data-buffet-workbench-reset>重置筛选</button></div><div class="olf-v4-workbench-batch"><label><input type="checkbox" data-buffet-workbench-page-select data-v4-period="' + combo.period + '" data-scene-party="' + combo.partyIndex + '" data-scene-round="' + combo.roundIndex + '"' + (pageSelected ? ' checked' : '') + ' /> 当前页全选</label><strong>已选 ' + state.selectedIds.length + ' 项</strong>' + allFiltered + '<button type="button" class="olf-button olf-button--small olf-button--danger" data-buffet-product-bulk-remove' + (state.selectedIds.length ? '' : ' disabled') + '>批量移除</button><span class="olf-batch-spacer"></span><span>' + (draft.targetType === "dish_set" ? '批量设置相同菜品例外' : '批量数量') + '</span><input class="olf-input olf-limit-input" type="number" min="0" placeholder="未配置" data-buffet-workbench-bulk-value /><button type="button" class="olf-button olf-button--small" data-buffet-workbench-bulk-apply data-v4-period="' + combo.period + '" data-v4-scenario="' + esc(scenario) + '" data-scene-party="' + combo.partyIndex + '" data-scene-round="' + combo.roundIndex + '"' + (state.selectedIds.length ? '' : ' disabled') + '>应用数量</button></div></div>';
+    return '<div class="olf-v4-workbench-tools"><div class="olf-v4-workbench-filters"><select class="olf-select" aria-label="产线" data-buffet-workbench-line>' + lineOptions + '</select>' + categoryFilter + '<select class="olf-select" aria-label="配置状态" data-buffet-workbench-status>' + statusOptions + '</select><input class="olf-input" aria-label="商品搜索" value="' + esc(state.query) + '" placeholder="搜索商品/分类名称" data-buffet-workbench-query /><button type="button" class="olf-button olf-button--small" data-buffet-workbench-reset>重置筛选</button></div><div class="olf-v4-workbench-batch"><label><input type="checkbox" data-buffet-workbench-page-select data-v4-period="' + combo.period + '" data-scene-party="' + combo.partyIndex + '" data-scene-round="' + combo.roundIndex + '"' + (pageSelected ? ' checked' : '') + ' /> 当前页全选</label><strong>已选 ' + state.selectedIds.length + ' 项</strong>' + allFiltered + '<button type="button" class="olf-button olf-button--small olf-button--danger" data-buffet-product-bulk-remove' + (state.selectedIds.length ? '' : ' disabled') + '>批量移除</button><span class="olf-batch-spacer"></span><span>' + (draft.targetType === "dish_set" ? '批量设置 SPU 每轮份数上限' : '批量数量') + '</span><input class="olf-input olf-limit-input" type="number" min="0" placeholder="未配置" data-buffet-workbench-bulk-value /><button type="button" class="olf-button olf-button--small" data-buffet-workbench-bulk-apply data-v4-period="' + combo.period + '" data-v4-scenario="' + esc(scenario) + '" data-scene-party="' + combo.partyIndex + '" data-scene-round="' + combo.roundIndex + '"' + (state.selectedIds.length ? '' : ' disabled') + '>应用数量</button></div></div>';
   }
 
   function renderBuffetTargetQuantityPanel(draft, config, combo, values) {
@@ -4361,11 +4376,12 @@
     var comboLabel = comboUsesPartyMultiplier(draft) ? "每人每轮最多" : "整桌每轮最多";
     if (draft.targetType === "dish_set") {
       var setKey = comboDraft ? comboScenarioKeyFor(draft, combo.partyIndex) : v4ScenarioKey(combo.partyIndex, combo.roundIndex, draft);
+      var setUnit = draft.measureUnit === "kind" ? "种（SPU）" : "份";
       return '<div class="olf-v4-target-row"><div><strong>当前菜品集</strong><span>' + config.dishSetMembers.length + ' 个成员，跨产线合并统计</span></div>' +
         (comboDraft
-          ? renderV4LimitInput(values[comboMap][setKey], "data-v4-limit-field data-v4-map=\"" + comboMap + "\" data-v4-period=\"" + combo.period + "\" data-v4-scenario=\"" + esc(setKey) + "\"", comboLabel)
-          : renderV4LimitInput(values.targetLimits[setKey], "data-v4-limit-field data-v4-map=\"targetLimits\" data-v4-period=\"" + combo.period + "\" data-v4-scenario=\"" + esc(setKey) + "\"") +
-            (draft.subject === "party_size" ? renderV4LimitInput(values.tableTargetCaps[setKey], "data-table-target-cap data-v4-limit-field data-v4-map=\"tableTargetCaps\" data-v4-period=\"" + combo.period + "\" data-v4-scenario=\"" + esc(setKey) + "\"", "整桌兜底") : "")) + '</div>';
+          ? renderV4LimitInput(values[comboMap][setKey], "data-v4-limit-field data-v4-map=\"" + comboMap + "\" data-v4-period=\"" + combo.period + "\" data-v4-scenario=\"" + esc(setKey) + "\"", comboLabel, setUnit)
+          : renderV4LimitInput(values.targetLimits[setKey], "data-v4-limit-field data-v4-map=\"targetLimits\" data-v4-period=\"" + combo.period + "\" data-v4-scenario=\"" + esc(setKey) + "\"", "最多", setUnit) +
+            (draft.subject === "party_size" ? renderV4LimitInput(values.tableTargetCaps[setKey], "data-table-target-cap data-v4-limit-field data-v4-map=\"tableTargetCaps\" data-v4-period=\"" + combo.period + "\" data-v4-scenario=\"" + esc(setKey) + "\"", "整桌兜底", setUnit) : "")) + '</div>';
     }
     var state = normalizeBuffetQuantityWorkbenchState(draft);
     return buffetWorkbenchPageData(draft, config, combo, values).pageRows.map(function (target) {
@@ -4379,9 +4395,9 @@
     }).join("");
   }
 
-  function renderV4LimitInput(cell, attrs, label) {
+  function renderV4LimitInput(cell, attrs, label, unit) {
     var value = cell && cell.configured ? cell.value : "";
-    return '<label class="olf-v4-limit-field"><span>' + esc(label || "最多") + '</span><input class="olf-input olf-limit-input" type="number" min="0" max="999999" value="' + esc(value) + '" placeholder="未配置" ' + attrs + ' /></label>';
+    return '<label class="olf-v4-limit-field"><span>' + esc(label || "最多") + '</span><input class="olf-input olf-limit-input" type="number" min="0" max="999999" value="' + esc(value) + '" placeholder="未配置" ' + attrs + ' />' + (unit ? '<span>' + esc(unit) + '</span>' : '') + '</label>';
   }
 
   function renderV4BoundInputs(draft, values, combo, mapName, title) {
@@ -4402,6 +4418,10 @@
   function renderV4PeriodScenario(draft, config, period, combo) {
     var values = v4PeriodValues(config, period);
     var allowed = buffetAllowedLimitBlocks(draft, period);
+    if (draft.targetType === "dish_set" && allowed.sameDish) {
+      var memberScenario = isBuffetComboDraft(draft) ? comboScenarioKeyFor(draft, combo.partyIndex) : v4ScenarioKey(combo.partyIndex, combo.roundIndex, draft);
+      expandDishSetDefaultLimit(draft, values, memberScenario);
+    }
     var scenarioTitle = v4ScenarioTitle(draft, period, combo);
     var comboDraft = isBuffetComboDraft(draft);
     var totalExample = comboDraft || draft.subject !== "party_size"
@@ -4429,8 +4449,8 @@
         renderV4LimitInput(row.limit, 'data-v4-exception-limit data-v4-period="' + period + '" data-v4-scenario="' + esc(sameDishKey) + '" data-v4-exception-index="' + index + '"', "最多") +
         '<button type="button" class="olf-button olf-button--small olf-button--link" data-v4-exception-remove data-v4-period="' + period + '" data-v4-scenario="' + esc(sameDishKey) + '" data-v4-exception-index="' + index + '">删除</button></div>';
     }).join("");
-    var protectionTitle = comboDraft ? (draft.measureUnit === "kind" ? "每种菜品每轮最多" : "相同菜品每轮最多") : "默认每种最多";
-    var sameDishBlock = allowed.sameDish
+    var protectionTitle = comboDraft ? (draft.measureUnit === "kind" ? "每种（SPU）菜品每轮最多" : "相同菜品每轮最多") : "默认每种（SPU）最多";
+    var sameDishBlock = allowed.sameDish && draft.targetType !== "dish_set"
       ? '<section class="olf-v4-quantity-block"><h5>相同菜品保护 / 菜品集内部保护</h5><div class="olf-v4-bound-row"><strong>' + protectionTitle + '</strong>' + renderV4LimitInput(values.defaultDishLimits[sameDishKey], "data-v4-limit-field data-v4-map=\"defaultDishLimits\" data-v4-period=\"" + period + "\" data-v4-scenario=\"" + esc(sameDishKey) + "\"") + '</div>' + (comboDraft ? '' : '<div class="olf-v4-exception-list">' + exceptionHtml + '</div><button type="button" class="olf-button olf-button--small" data-v4-exception-add data-v4-period="' + period + '" data-v4-scenario="' + esc(sameDishKey) + '"' + (eligible.length ? '' : ' disabled') + '>添加例外商品</button><p class="olf-v4-exception-help">例外额度覆盖默认上限；空输入表示未配置，0 表示禁止下单。</p>') + '</section>' : "";
     return '<article class="olf-v4-scenario-card"><header><strong>' + esc(scenarioTitle) + '</strong><span>空输入表示未配置；0 表示禁止下单</span></header>' + totalBlock + targetBlock + sameDishBlock + '</article>';
   }
@@ -5098,7 +5118,7 @@
     var scenario = v4ScenarioKey(combo.partyIndex, combo.roundIndex, draft);
     if (draft.targetType === "dish_set") {
       var members = (config.dishSetMembers || []).map(function (item) { return item.name || item.dishName || item.dishId; });
-      return "菜品集（" + (draft.measureUnit === "kind" ? "按种" : "按份") + "，" + members.join("、") + "）：" + summaryLimit(values.targetLimits[scenario]);
+      return "菜品集（" + (draft.measureUnit === "kind" ? "按种（SPU）" : "按份") + "，" + members.join("、") + "）：" + summaryLimit(values.targetLimits[scenario]);
     }
     return v4TargetsForConfig(draft, config).map(function (target) {
       var key = v4TargetCellKey(combo.partyIndex, combo.roundIndex, target.lineId, target.id, draft);
@@ -5121,10 +5141,10 @@
             var key = moduleProfile.comboRanges.targetKey(range.rangeId, target.lineId, target.id);
             return (target.shortName || target.name) + " " + summaryLimit(projection.targetLimits[key]);
           }).join("、");
-        } else targetText = "当前菜品集 " + summaryLimit(projection.targetLimits) + (draft.measureUnit === "kind" ? " 种" : " 份");
+        } else targetText = "当前菜品集 " + summaryLimit(projection.targetLimits) + (draft.measureUnit === "kind" ? " 种（SPU）" : " 份");
         var multiplier = comboUsesPartyMultiplier(draft) ? "（每人每轮，按有效人数乘算）" : "（整桌每轮）";
         var items = [summaryBounds(projection.totalBounds, "整桌每轮总量："), "指定对象：" + targetText + multiplier];
-        if ((systemDefaultTemplate(draft).blocks || {}).sameDishEnabled) items.push((draft.measureUnit === "kind" ? "每种菜品：" : "相同菜品：") + summaryLimit(projection.sameDishLimit) + "（整桌每轮）");
+        if ((systemDefaultTemplate(draft).blocks || {}).sameDishEnabled) items.push((draft.measureUnit === "kind" ? "每种（SPU）菜品：" : "相同菜品：") + summaryLimit(projection.sameDishLimit) + "（整桌每轮）");
         return { scenario: formatRange(range, "人"), text: items.join("；") };
       }) }];
     }
@@ -6526,6 +6546,27 @@
       exceptionValues.exceptionDishLimits[exceptionScenario] = exceptionRows;
       markEditorDirty(); renderEditor(); return;
     }
+    if (target.hasAttribute("data-v4-member-limit")) {
+      if (!isBuffetV4Draft(draft) || draft.targetType !== "dish_set") return;
+      if (isInvalidConfiguredQuantityInput(target)) { toast("请输入 0 至 999999 的整数", true); return; }
+      var memberConfig = activeStoreConfig(draft);
+      var memberPeriod = target.getAttribute("data-v4-period");
+      if (!buffetAllowedLimitBlocks(draft, memberPeriod).sameDish) return;
+      var memberValues = v4PeriodValues(memberConfig, memberPeriod);
+      var memberScenarioKey = target.getAttribute("data-v4-scenario");
+      var memberDish = eligibleExceptionDishes(draft, draft.activeStoreId).find(function (dish) { return buffetWorkbenchTargetIdentity(draft, dish) === target.getAttribute("data-v4-member-limit"); });
+      if (!memberDish) return;
+      expandDishSetDefaultLimit(draft, memberValues, memberScenarioKey);
+      var memberRows = v4ExceptionRows(memberValues, memberScenarioKey);
+      var memberRow = memberRows.find(function (row) { return v4MenuIdentity(v4ExceptionDish(row)) === v4MenuIdentity(memberDish); });
+      if (!memberRow) { memberRow = { dishes: [{ productLineId: memberDish.productLineId, dishId: memberDish.dishId, name: memberDish.name }], limit: null }; memberRows.push(memberRow); }
+      memberRow.limit = readLimitCell(target);
+      memberValues.exceptionDishLimits[memberScenarioKey] = memberRows;
+      deriveBuffetQuantityBlocks(draft);
+      markEditorDirty();
+      if (event.type === "change") renderEditor();
+      return;
+    }
     if (target.hasAttribute("data-v4-exception-limit")) {
       if (!isBuffetV4Draft(draft)) return;
       if (isInvalidConfiguredQuantityInput(target)) { toast("请输入 0 至 999999 的整数", true); return; }
@@ -6581,7 +6622,7 @@
       }
       openDialog(
         "切换菜品集计量方式？",
-        "切换为“" + (nextMeasureUnit === "kind" ? "种" : "份") + "”会清空所有门店的菜品集商品、对象额度和单品保护数量；不依赖对象的总量额度会保留。",
+        "切换为“" + (nextMeasureUnit === "kind" ? "种（SPU）" : "份") + "”会清空所有门店的菜品集商品、对象额度和单品保护数量；不依赖对象的总量额度会保留。",
         "确认切换并清空数量",
         function () {
           clearObjectDependentData(draft);
