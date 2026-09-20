@@ -393,7 +393,34 @@
     return { min: min, max: max, valid: min == null || max == null || min <= max };
   }
 
+  function scenarioTargetKey(draft, period, partyIndex, roundIndex) {
+    partyIndex = draft.subject === "party_size" ? partyIndex : 0;
+    roundIndex = period === "multi_round" ? roundIndex : 0;
+    var party = draft.partyRanges && draft.partyRanges[partyIndex];
+    var round = draft.roundRanges && draft.roundRanges[roundIndex];
+    return party && party.rangeId && round && round.rangeId
+      ? String(party.rangeId) + "|" + String(round.rangeId)
+      : scenarioKey(partyIndex, roundIndex);
+  }
+
+  function resolveScenarioTargets(draft, config, period, partyIndex, roundIndex) {
+    config = config || {};
+    var map = config.scenarioTargets && config.scenarioTargets[period] || {};
+    var key = scenarioTargetKey(draft, period, partyIndex, roundIndex);
+    var indexKey = scenarioKey(draft.subject === "party_size" ? partyIndex : 0, period === "multi_round" ? roundIndex : 0);
+    var record = Object.prototype.hasOwnProperty.call(map, key) ? map[key]
+      : Object.prototype.hasOwnProperty.call(map, indexKey) ? map[indexKey] : config;
+    record = record || {};
+    return {
+      dishTargets: JSON.parse(JSON.stringify(Array.isArray(record.dishTargets) ? record.dishTargets : [])),
+      categoryTargets: JSON.parse(JSON.stringify(Array.isArray(record.categoryTargets) ? record.categoryTargets : [])),
+      dishSetMembers: JSON.parse(JSON.stringify(Array.isArray(record.dishSetMembers) ? record.dishSetMembers : []))
+    };
+  }
+
   window.BuffetRulePolicy = {
+    scenarioTargetKey: scenarioTargetKey,
+    resolveScenarioTargets: resolveScenarioTargets,
     schemaVersion: 4,
     periods: PERIODS.slice(),
     controlledPeriodTemplates: clone(CONTROLLED_PERIOD_TEMPLATES),

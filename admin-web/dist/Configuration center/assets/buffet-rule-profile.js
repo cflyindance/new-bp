@@ -730,6 +730,9 @@
       if (!targets.length || (template.targetType === "dish_set" && targets.length < 2)) return { valid: false, code: "TARGET_SCOPE_MISSING", storeId: storeId, block: "target" };
       for (var rangeIndex = 0; rangeIndex < ranges.length; rangeIndex += 1) {
         var rangeId = ranges[rangeIndex].rangeId, scenario = comboScenarioKey(rangeId);
+        var scope = window.BuffetRulePolicy && window.BuffetRulePolicy.resolveScenarioTargets ? window.BuffetRulePolicy.resolveScenarioTargets(draft, config, "per_round", rangeIndex, 0) : config;
+        targets = template.targetType === "dish" ? scope.dishTargets || [] : scope.dishSetMembers || [];
+        if (targets.length < (template.targetType === "dish_set" ? 2 : 1)) return {valid:false,code:"TARGET_SCOPE_MISSING",storeId:storeId,rangeId:rangeId,block:"target"};
         if (!validRequiredBound(values.tableTotalBounds[scenario])) return { valid: false, code: "TOTAL_REQUIRED", storeId: storeId, rangeId: rangeId, block: "total" };
         var source = comboUsesPartyMultiplier(template) ? values.targetLimits : values.tableTargetCaps;
         var targetKeys = template.targetType === "dish" ? targets.map(function (target) { return comboQuantityTargetKey(template, rangeId, target); }) : [scenario];
@@ -855,6 +858,10 @@
         var roundCount = currentPeriod === "multi_round" ? (draft.roundRanges || []).length : 1;
         for (var partyIndex = 0; partyIndex < partyCount; partyIndex += 1) for (var roundIndex = 0; roundIndex < roundCount; roundIndex += 1) {
           var scenario = scenarioKey(partyIndex, roundIndex);
+          var scope = window.BuffetRulePolicy && window.BuffetRulePolicy.resolveScenarioTargets ? Object.assign({}, config, window.BuffetRulePolicy.resolveScenarioTargets(draft, config, currentPeriod, partyIndex, roundIndex)) : config;
+          var stable = window.BuffetRulePolicy && window.BuffetRulePolicy.scenarioTargetKey ? window.BuffetRulePolicy.scenarioTargetKey(draft,currentPeriod,partyIndex,roundIndex) : scenario;
+          if (Object.keys(values).some(function(map){return Object.keys(values[map] || {}).some(function(key){return key === stable || key.indexOf(stable + "|") === 0;});})) scenario = stable;
+          if ((draft.targetType === "dish_set" ? scope.dishSetMembers || [] : draft.targetType === "category" ? scope.categoryTargets || [] : scope.dishTargets || []).length < (draft.targetType === "dish_set" ? 2 : 1)) return {valid:false,message:"当前场景商品范围不足，请补选商品"};
           if (currentPeriod !== "order_lifetime" && currentBlocks.totalEnabled) {
             var total = values.totalBounds && values.totalBounds[scenario];
             var minSet = configuredBound(total, "min"), maxSet = configuredBound(total, "max");
@@ -867,8 +874,8 @@
             var targetKeys;
             if (draft.targetType === "dish_set") targetKeys = [scenario];
             else {
-              var targets = draft.targetType === "category" ? (config.categoryTargets || []) : (config.dishTargets || []);
-              targetKeys = targets.map(function (target) { return targetKey(partyIndex, roundIndex, target.productLineId, draft.targetType === "category" ? target.categoryId : target.dishId); });
+              var targets = draft.targetType === "category" ? (scope.categoryTargets || []) : (scope.dishTargets || []);
+              targetKeys = targets.map(function (target) { return scenario + "|" + target.productLineId + "|" + (draft.targetType === "category" ? target.categoryId : target.dishId); });
             }
             if (!targetKeys.length || targetKeys.some(function (key) { return !configuredLimit(values.targetLimits && values.targetLimits[key]); })) return { valid: false, message: "已启用的指定对象额度尚未全部配置" };
           }
@@ -876,7 +883,7 @@
             var defaultLimit = values.defaultDishLimits && values.defaultDishLimits[scenario];
             var exceptions = values.exceptionDishLimits && values.exceptionDishLimits[scenario];
             var seen = {};
-            var eligible = exceptionEligibleKeys(draft, config);
+            var eligible = exceptionEligibleKeys(draft, scope);
             var hasException = false;
             for (var exceptionIndex = 0; exceptionIndex < (Array.isArray(exceptions) ? exceptions.length : 0); exceptionIndex += 1) {
               var row = exceptions[exceptionIndex];

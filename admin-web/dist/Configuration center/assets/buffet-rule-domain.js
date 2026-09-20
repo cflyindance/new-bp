@@ -255,11 +255,11 @@
     });
   }
 
-  function constraintTargets(rule, storeId, type) {
+  function constraintTargets(rule, storeId, type, scopeConfig) {
     if (type === "total") return ["__all__"];
-    var config = rule.storeConfigs && rule.storeConfigs[storeId] || {};
-    var entries = type === "dish" ? (config.dishTargets || []) : (config.dishSetMembers || []);
-    return entries.map(menuIdentity).filter(function (value, index, values) { return value && value !== "|" && values.indexOf(value) === index; });
+    var config = scopeConfig || rule.storeConfigs && rule.storeConfigs[storeId] || {};
+    var entries = type === "category" ? (config.categoryTargets || []) : type === "dish" ? (config.dishTargets || []) : (config.dishSetMembers || []);
+    return entries.map(type === "category" ? categoryIdentity : menuIdentity).filter(function (value, index, values) { return value && value !== "|" && values.indexOf(value) === index; });
   }
 
   function compileRuleConstraints(rule) {
@@ -271,18 +271,38 @@
       rulePeriods(rule).forEach(function (period) {
         var blocks = v4Blocks(rule, period);
         var values = scenarioValues(config, period);
-        var push = function (type, block, mode) {
+        var push = function (type, block, mode, mapName) {
+          if (config.scenarioTargets && window.BuffetRulePolicy && window.BuffetRulePolicy.resolveScenarioTargets) {
+            var parties = rule.subject === "party_size" ? rule.partyRanges || [] : [null];
+            var rounds = period === "multi_round" ? rule.roundRanges || [] : [null];
+            parties.forEach(function (party, pi) { rounds.forEach(function (round, ri) {
+              var stable = window.BuffetRulePolicy.scenarioTargetKey(rule, period, pi, ri);
+              var indexed = scenarioKey(pi, ri);
+              var maps = mapName ? [mapName] : ["defaultDishLimits", "exceptionDishLimits"];
+              var configured = maps.some(function (map) { return Object.keys(values[map] || {}).some(function (key) {
+                if (key !== stable && key !== indexed && key.indexOf(stable + "|") !== 0 && key.indexOf(indexed + "|") !== 0) return false;
+                var cell = values[map][key];
+                if (Array.isArray(cell)) return cell.some(function (row) { return row.limit && row.limit.configured; });
+                return configuredMapHasValues({cell:cell});
+              }); });
+              if (!configured) return;
+              var scope = Object.assign({}, config, window.BuffetRulePolicy.resolveScenarioTargets(rule, config, period, pi, ri));
+              var sceneRule = Object.assign({}, rule, {partyRanges: party ? [party] : rule.partyRanges, roundRanges: round ? [round] : rule.roundRanges});
+              constraints.push({type:type, block:block, mode:mode, period:period, storeId:storeId, targets:constraintTargets(rule,storeId,type,scope), rule:sceneRule});
+            }); });
+            return;
+          }
           constraints.push({ type: type, block: block, mode: mode, period: period, storeId: storeId, targets: constraintTargets(rule, storeId, type), rule: rule });
         };
         // 历史自定义复合规则沿用旧冲突口径；新组合模板显式把总量编译为独立约束。
         if (blocks.totalEnabled && (isComboRule(rule) || !blocks.targetEnabled)) {
-          if (configuredMapHasValues(values.tableTotalBounds)) push("total", "total", "table_fixed");
-          if (configuredMapHasValues(values.totalBounds)) push("total", "total", limitMultiplierMode(rule.subject, "targetLimits"));
+          if (configuredMapHasValues(values.tableTotalBounds)) push("total", "total", "table_fixed", "tableTotalBounds");
+          if (configuredMapHasValues(values.totalBounds)) push("total", "total", limitMultiplierMode(rule.subject, "targetLimits"), "totalBounds");
         }
         if (blocks.targetEnabled) {
           var type = rule.targetType === "dish_set" ? "dish_set_" + (rule.measureUnit === "kind" ? "kind" : "piece") : rule.targetType;
-          if (configuredMapHasValues(values.tableTargetCaps)) push(type, "target", "table_fixed");
-          if (configuredMapHasValues(values.targetLimits)) push(type, "target", limitMultiplierMode(rule.subject, "targetLimits"));
+          if (configuredMapHasValues(values.tableTargetCaps)) push(type, "target", "table_fixed", "tableTargetCaps");
+          if (configuredMapHasValues(values.targetLimits)) push(type, "target", limitMultiplierMode(rule.subject, "targetLimits"), "targetLimits");
         }
         var hasMemberLimits = Object.keys(values.exceptionDishLimits || {}).some(function (scenario) {
           return (values.exceptionDishLimits[scenario] || []).some(function (row) { return row && row.limit && row.limit.configured === true; });
@@ -302,6 +322,7 @@
     if (left.storeId !== right.storeId || left.period !== right.period || left.type !== right.type || left.mode !== right.mode) return false;
     if (!conditionsOverlap(left.rule.conditions, right.rule.conditions)) return false;
     if (!numericRangesOverlap(left.rule.subject === "party_size" ? left.rule.partyRanges : null, right.rule.subject === "party_size" ? right.rule.partyRanges : null)) return false;
+    if (left.period === "multi_round" && !numericRangesOverlap(left.rule.roundRanges, right.rule.roundRanges)) return false;
     return constraintTargetsOverlap(left, right);
   }
 
@@ -679,6 +700,10 @@
         partyValues(rule).forEach(function (party) {
           roundValues(rule, period).forEach(function (round) {
             var scenario = isComboRule(rule) && party.rangeId ? comboScenarioKey(party.rangeId) : scenarioKey(party.partyRangeIndex, round.roundRangeIndex);
+            if (config.scenarioTargets && window.BuffetRulePolicy && window.BuffetRulePolicy.scenarioTargetKey) {
+              var stable = window.BuffetRulePolicy.scenarioTargetKey(rule,period,party.partyRangeIndex,round.roundRangeIndex);
+              if (Object.keys(values).some(function(map){return Object.keys(values[map] || {}).some(function(key){return key === stable || key.indexOf(stable + "|") === 0;});})) scenario = stable;
+            }
             var bounds = effectiveBounds(values.totalBounds[scenario], values.tableTotalBounds[scenario], rule.subject, party.partySize);
             if (bounds.min != null && bounds.max != null && bounds.min > bounds.max) {
               violations.push(staticViolation(rule, storeId, period, party.partyRangeIndex, round.roundRangeIndex, "有效最少下单数量大于有效最多下单数量"));
@@ -686,7 +711,7 @@
             }
             if (bounds.min == null) return;
             // 组合模板的总量下限可由选中范围之外的菜品满足，不能用指定对象 X/P 推导无解。
-            var capacity = isComboRule(rule) ? Infinity : targetCapacity(rule, config, values, scenario, party.partyRangeIndex, round.roundRangeIndex, party.partySize, blocks);
+            var capacity = isComboRule(rule) || config.scenarioTargets ? Infinity : targetCapacity(rule, config, values, scenario, party.partyRangeIndex, round.roundRangeIndex, party.partySize, blocks);
             if (capacity !== Infinity && bounds.min > capacity) {
               violations.push(staticViolation(rule, storeId, period, party.partyRangeIndex, round.roundRangeIndex, "最少下单数量无法由当前商品范围和单品上限满足"));
             }
@@ -874,10 +899,18 @@
         violations.push(violation(rule, period, scenario.code));
         return;
       }
+      var periodConfig = config;
+      var scopeMap = config.scenarioTargets && config.scenarioTargets[period];
+      if (scopeMap && window.BuffetRulePolicy && window.BuffetRulePolicy.resolveScenarioTargets) {
+        periodConfig = Object.assign({}, config, window.BuffetRulePolicy.resolveScenarioTargets(rule, config, period, scenario.partyIndex, scenario.roundIndex));
+        var stableScopeKey = window.BuffetRulePolicy.scenarioTargetKey(rule, period, scenario.partyIndex, scenario.roundIndex);
+        var stableValues = scenarioValues(config, period);
+        if (Object.keys(stableValues).some(function (map) { return stableValues[map] && Object.keys(stableValues[map]).some(function (key) { return key === stableScopeKey || key.indexOf(stableScopeKey + "|") === 0; }); })) scenario.key = stableScopeKey;
+      }
       var values = scenarioValues(config, period);
       var blocks = v4Blocks(rule, period);
       var bucketItems = candidateArray(bucketForPeriod(period, candidates));
-      var items = bucketItems.filter(function (item) { return hasTarget(rule, config, item); });
+      var items = bucketItems.filter(function (item) { return hasTarget(rule, periodConfig, item); });
       // “每轮菜品总数”是整轮点单的总量；它不随着本规则的菜品/分类/菜品集选择范围收缩。
       // 指定对象额度和单品保护才只统计已选范围。
       var total = bucketItems.reduce(function (sum, item) { return sum + Math.max(0, item.quantity); }, 0);
@@ -898,7 +931,7 @@
           var setLimit = v4TargetLimit(values, rule, scenario.key, items[0] || {}, scenario.partyIndex, scenario.roundIndex, context.partySize);
           if (setLimit !== Infinity && targetValue > setLimit) violations.push(violation(rule, period, "TARGET_LIMIT_EXCEEDED", { target: "__dish_set__", used: targetValue, effectiveLimit: setLimit }));
         } else if (rule.targetType === "category") {
-          (config.categoryTargets || []).forEach(function (category) {
+          (periodConfig.categoryTargets || []).forEach(function (category) {
             var categoryItems = items.filter(function (item) { return categoryIdentity(item) === categoryIdentity(category); });
             var categoryTotal = categoryItems.reduce(function (sum, item) { return sum + item.quantity; }, 0);
             var categoryLimit = v4TargetLimit(values, rule, scenario.key, category, scenario.partyIndex, scenario.roundIndex, context.partySize);

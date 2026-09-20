@@ -15,7 +15,8 @@ const context = vm.createContext({
   esc: String,
   formatRange: (range, unit) => `${range.min}${unit}`,
   v4PeriodValues: () => ({}),
-  currentBuffetWorkbenchTargets: () => [],
+  sceneScopeConfig: (draft, config, combo) => ({targets: config.scopes?.[combo.partyIndex] || []}),
+  currentBuffetWorkbenchTargets: (draft, config) => config.targets,
   buffetWorkbenchTargetStatus: () => 'unconfigured',
   isBuffetComboDraft: () => false,
   v4ScenarioKey: (party, round) => `${party}:${round}`,
@@ -38,3 +39,6 @@ for (let p = 0; p < 3; p++) for (let r = 0; r < 4; r++) {
   assert.ok(both.includes(`data-scene-party="${p}" data-scene-round="${r}"`));
 }
 console.log('verify-buffet-scene-cards: PASS');
+const scoped = context.renderV4PeriodSection(draft, {scopes: {0:[{id:'a'},{id:'b'}],1:[{id:'c'},{id:'d'},{id:'e'}]}}, 'per_round');
+assert.ok(scoped.includes('商品上限：0 / 2 项'));
+assert.ok(scoped.includes('商品上限：0 / 3 项'), '场景卡片使用该场景的对象数量');

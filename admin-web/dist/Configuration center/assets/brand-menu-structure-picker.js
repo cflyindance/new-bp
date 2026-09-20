@@ -359,6 +359,7 @@
           name: cat.name + "（" + line.label + "）",
           lineId: line.id,
           lineLabel: line.label,
+          count: cat.dishes.length,
         });
       });
     });
