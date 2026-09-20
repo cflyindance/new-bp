@@ -1420,7 +1420,8 @@
 
   function buffetWorkbenchCategoryMeta(config, target) {
     var meta = buffetProductMeta(config, target);
-    return { id: String(meta.categoryId || ""), name: String(meta.category || "") };
+    var lineName = target && (target.lineLabel || target.lineId || target.productLineId);
+    return { id: String(meta.categoryId || ""), name: buffetSceneNameWithoutLineSuffix(meta.category, lineName) };
   }
 
   function filteredBuffetWorkbenchTargets(draft, config, state, combo, values) {
@@ -4275,26 +4276,40 @@
   function buffetProductMeta(config, target) {
     var targetLineId = String(target.lineId || target.productLineId || "");
     var targetDishId = String(target.id || target.dishId || "");
-    var selected = selectedDishesFromStructure(config).find(function (dish) {
+    var targetRawDishId = targetDishId.split(":").pop();
+    var selectedDishes = selectedDishesFromStructure(config);
+    var selected = selectedDishes.find(function (dish) {
       return String(dish.productLineId).toLowerCase() === targetLineId.toLowerCase() && String(dish.dishId) === targetDishId;
     });
-    var catalogProduct = MenuPicker && typeof MenuPicker.listAllDishes === "function" ? MenuPicker.listAllDishes().find(function (dish) {
-      return String(dish.lineId).toLowerCase() === targetLineId.toLowerCase() && String(dish.dishKey) === targetDishId;
-    }) : null;
+    if (!selected) selected = selectedDishes.find(function (dish) { return String(dish.dishId) === targetDishId; });
+    var catalogDishes = MenuPicker && typeof MenuPicker.listAllDishes === "function" ? MenuPicker.listAllDishes() : [];
+    var catalogProduct = catalogDishes.find(function (dish) {
+      return String(dish.lineId).toLowerCase() === targetLineId.toLowerCase() && (String(dish.dishKey) === targetDishId || String(dish.dishId) === targetDishId || String(dish.dishId) === targetRawDishId);
+    });
+    if (!catalogProduct) catalogProduct = catalogDishes.find(function (dish) { return String(dish.dishKey) === targetDishId || String(dish.dishId) === targetDishId || String(dish.dishId) === targetRawDishId; });
     var categoryId = target.categoryId || selected && selected.categoryId || catalogProduct && (catalogProduct.categoryId || catalogProduct.categoryKey);
     var category = categories.find(function (item) { return String(item.id) === String(categoryId); });
+    var productNameCandidates = [
+      catalogProduct && (catalogProduct.shortName || catalogProduct.name || catalogProduct.dishName),
+      selected && selected.name,
+      target.shortName,
+      target.name
+    ].map(function (name) { return name == null ? "" : String(name).trim(); });
     return {
       code: String(target.id || target.dishId || ""),
       categoryId: categoryId || "",
       category: target.categoryName || selected && selected.categoryName || catalogProduct && (catalogProduct.categoryName || catalogProduct.categoryLabel) || (category ? category.name : categoryId || "—"),
-      productName: target.shortName || target.name || selected && selected.name || catalogProduct && (catalogProduct.shortName || catalogProduct.name || catalogProduct.dishName) || ""
+      productName: productNameCandidates.find(function (name) { return name && name !== targetDishId; }) || ""
     };
   }
 
   function buffetDisplayName(target, lineName, fallbackName) {
+    var identity = String(target && (target.id || target.dishId) || "").trim();
     var shortName = target && target.shortName != null ? String(target.shortName).trim() : "";
     var fullName = target && target.name != null ? String(target.name).trim() : "";
     var fallback = fallbackName != null ? String(fallbackName).trim() : "";
+    shortName = shortName === identity ? "" : shortName;
+    fullName = fullName === identity ? "" : fullName;
     var name = shortName || fullName || fallback;
     if (!name) return "—";
     var line = lineName != null ? String(lineName).trim() : "";
@@ -4414,7 +4429,9 @@
       return '<option value="' + esc(lineId) + '"' + (state.lineId === lineId ? ' selected' : '') + '>' + esc(line ? line.name : lineId) + '</option>';
     }).join("");
     var categoryMap = {};
-    currentBuffetWorkbenchTargets(draft, config).forEach(function (target) {
+    currentBuffetWorkbenchTargets(draft, config).filter(function (target) {
+      return !state.lineId || String(target.lineId || target.productLineId) === String(state.lineId);
+    }).forEach(function (target) {
       var meta = buffetWorkbenchCategoryMeta(config, target);
       if (meta.id) categoryMap[meta.id] = meta.name || meta.id;
     });
@@ -6144,8 +6161,11 @@
   function buffetSceneNameWithoutLineSuffix(value, lineName) {
     var name = buffetSceneFilterName(value);
     var normalizedLineName = buffetSceneFilterName(lineName);
-    var suffix = normalizedLineName ? "（" + normalizedLineName + "）" : "";
-    return suffix && name.slice(-suffix.length) === suffix ? name.slice(0, -suffix.length).trim() : name;
+    if (!name || !normalizedLineName) return name;
+    var suffixes = ["（" + normalizedLineName + "）", "(" + normalizedLineName + ")"];
+    var lowerName = name.toLocaleLowerCase();
+    var matched = suffixes.find(function (suffix) { return lowerName.slice(-suffix.length) === suffix.toLocaleLowerCase(); });
+    return matched ? name.slice(0, -matched.length).trim() : name;
   }
 
   function filteredBuffetSceneRows(draft, combo, state) {

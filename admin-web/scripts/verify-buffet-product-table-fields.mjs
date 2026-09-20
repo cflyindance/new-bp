@@ -5,6 +5,13 @@ const flow = fs.readFileSync('dist/Configuration center/assets/order-limit-flow.
 
 assert.match(flow, /function buffetDisplayName\(target, lineName, fallbackName\)/);
 assert.match(flow, /MenuPicker\.listAllDishes\(\)\.find/);
+assert.match(flow, /if \(!selected\) selected = selectedDishes\.find/);
+assert.match(flow, /if \(!catalogProduct\) catalogProduct = catalogDishes\.find/);
+assert.match(flow, /String\(dish\.dishKey\) === targetDishId \|\| String\(dish\.dishId\) === targetDishId/);
+assert.match(flow, /var targetRawDishId = targetDishId\.split\(":"\)\.pop\(\)/);
+assert.match(flow, /productNameCandidates\.find\(function \(name\) \{ return name && name !== targetDishId; \}\)/);
+assert.match(flow, /fullName === identity \? "" : fullName/);
+assert.match(flow, /function buffetSceneNameWithoutLineSuffix\(value, lineName\)[\s\S]*?toLocaleLowerCase\(\)/);
 assert.match(flow, /function buffetActiveStoreName\(draft, config\)/);
 assert.match(flow, /\{ key: "object", label: draft\.targetType === "category" \? "分类" : "商品" \}/);
 assert.match(flow, /\{ key: "line", label: "产线" \}/);
@@ -13,6 +20,8 @@ assert.match(flow, /\{ key: "store", label: "门店" \}/);
 assert.match(flow, /renderBuffetDishTableRows[\s\S]*?buffetDisplayName\(target, lineName, meta\.productName\)/);
 assert.match(flow, /renderBuffetDishSetTableRows[\s\S]*?buffetDisplayName\(dish, lineName, meta\.productName\)/);
 assert.match(flow, /renderCrossStoreSceneRow[\s\S]*?buffetDisplayName\(target, lineName\)/);
+assert.match(flow, /buffetWorkbenchCategoryMeta[\s\S]*?buffetSceneNameWithoutLineSuffix\(meta\.category, lineName\)/);
+assert.match(flow, /currentBuffetWorkbenchTargets\(draft, config\)\.filter[\s\S]*?!state\.lineId \|\| String\(target\.lineId \|\| target\.productLineId\) === String\(state\.lineId\)/);
 assert.doesNotMatch(flow, /<span>' \+ esc\(meta\.code\) \+ '<\/span>/);
 assert.doesNotMatch(flow, /headings\[2\]\.textContent = .*产线 · 分类 · 编码/);
 assert.doesNotMatch(flow, /cells\[2\]\.textContent = cells\[3\]\.textContent/);
