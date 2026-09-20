@@ -3772,6 +3772,12 @@
     return `<article class="payroll-compact-detail payroll-a4-content"><header><div><strong>${escapeHtml(payload.employeeName)}</strong><dl><dt>Roles</dt><dd>${escapeHtml(payload.role || "—")}</dd><dt>Hire Date</dt><dd>${escapeHtml(payload.hireDate || "—")}</dd><dt>Rate</dt><dd>${money(summary.rate)}</dd><dt>SSN</dt><dd>${escapeHtml(payload.ssn || "—")}</dd></dl></div><div class="payroll-compact-report-meta"><h3>Payroll #${escapeHtml(payload.periodNumber)} Report</h3><p><b>Pay Date:</b> ${escapeHtml(payload.payDate || "—")}</p><p><b>Pay Period:</b> ${escapeHtml(payload.payPeriod || "—")}</p></div></header><table class="payroll-compact-summary"><thead><tr><th></th><th>Regular</th><th>OT</th><th>OT2</th><th>Total</th></tr></thead><tbody><tr><th>Hours</th><td>${fmtMoney(summary.compactRegularHours)}</td><td>${fmtMoney(summary.otH)}</td><td>${fmtMoney(summary.ot2H)}</td><td>${fmtMoney(summary.totalH)}</td></tr><tr><th>Amount</th><td>${money(summary.compactRegularAmount)}</td><td>${money(summary.otAmt)}</td><td>${money(summary.ot2Amt)}</td><td>${money(summary.totalAmt)}</td></tr></tbody></table>${weeksHtml}<section class="payroll-compact-declaration">${escapeHtml(payload.declarationText || "")}</section><footer class="payroll-compact-signature"><div><span>Employee Signature</span><span>Date</span></div><p>${escapeHtml(payload.storeName || "")}${payload.storeAddress && payload.storeAddress !== "—" ? ` · ${escapeHtml(payload.storeAddress)}` : ""}</p></footer></article>`;
   }
 
+  function syncPrintPaginationVisibility() {
+    document.querySelectorAll(".payroll-print-pagination").forEach((el) => {
+      el.hidden = true;
+    });
+  }
+
   function setPayrollDetailVariant(value) {
     detailPresentation.activeVariant = value === "compact" ? "compact" : "detail";
     document.querySelectorAll("[data-detail-variant]").forEach((button) => {
@@ -3782,6 +3788,22 @@
     document.querySelectorAll("[data-detail-panel]").forEach((panel) => {
       panel.hidden = panel.dataset.detailPanel !== detailPresentation.activeVariant;
     });
+    syncPrintPaginationVisibility();
+  }
+
+  /** 打印文档需自带样式：原生页样式挂在 Shadow DOM，相对路径的 CSS 取不到 */
+  function collectPayrollDetailPrintStyleAssets() {
+    const head = document.head || document;
+    if (!head || typeof head.querySelectorAll !== "function") return "";
+    const assets = [];
+    head.querySelectorAll('link[rel="stylesheet"], style').forEach((node) => {
+      if (node.tagName === "LINK") {
+        if (node.href) assets.push(`<link rel="stylesheet" href="${node.href}">`);
+      } else if (node.textContent) {
+        assets.push(`<style>${node.textContent}</style>`);
+      }
+    });
+    return assets.join("\n");
   }
 
   /** 与「打印」相同：克隆 Employees Detail 打印模板 HTML */
@@ -3794,10 +3816,12 @@
       el.style.display = "block";
     });
     const baseUrl = new URL(".", window.location.href).href;
+    const styleAssets =
+      collectPayrollDetailPrintStyleAssets() ||
+      `<link rel="stylesheet" href="${baseUrl}common.css">\n<link rel="stylesheet" href="${baseUrl}payroll.css">`;
     const htmlLang = typeof getPayrollLocale === "function" && getPayrollLocale() === "en" ? "en-US" : "zh-CN";
     return `<!DOCTYPE html><html lang="${htmlLang}"><head><meta charset="UTF-8"><title>${escapeHtml(T("detail.title"))}</title>
-<link rel="stylesheet" href="${baseUrl}common.css">
-<link rel="stylesheet" href="${baseUrl}payroll.css">
+${styleAssets}
 <style>
 body{margin:0;padding:24px;background:#fff;}
 .payroll-page .payroll-detail-print{max-width:none;width:100%;margin:0;border:none;border-radius:0;box-shadow:none;}

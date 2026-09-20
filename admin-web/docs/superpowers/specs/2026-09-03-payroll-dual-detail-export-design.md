@@ -8,7 +8,7 @@
 
 - 员工详情标题栏使用“详细明细 / 精简明细”两个页签。
 - 初次进入默认详细明细；同一次页面会话内记住最后查看的页签。
-- 打印分页设置提供“强制一页”和“按内容分页”，跨会话记住最后选择。
+- 打印分页设置提供“强制一页”和“按内容分页”，跨会话记住最后选择。员工详情底栏「打印方式」在详细明细与精简明细中均仅隐藏，不删除控件与 localStorage / 打印导出逻辑。
 - 打印按钮打印当前页签对应版本。
 - 导出采用两步选择：先选明细版本，再选 PDF、CSV 或邮箱。
 - 导出面板默认选中当前查看版本，但允许独立切换，不强制改变页面页签。
@@ -32,7 +32,7 @@ Employees Payroll Detail   [详细明细] [精简明细]                    [×]
 底栏结构：
 
 ```text
-打印分页  [强制一页 | 按内容分页]  已记住        [打印] [导出结果] [关闭]
+详细明细 / 精简明细：打印分页隐藏（逻辑保留）        [打印] [导出结果] [关闭]
 ```
 
 窄屏时分页设置独占一行，操作按钮换行但不被裁切。
@@ -88,7 +88,7 @@ interface PayrollEmailExportSnapshot {
 
 两种版本均使用 A4 portrait，打印内容排除弹窗标题栏、页签、底栏、菜单和遮罩。直接打印、下载 PDF 和邮件 PDF 共用 `buildPayrollDetailPages(payload, variant, pagination)`，其输出是已经分页的 A4 page DOM 列表；三个出口不得各自分页。
 
-分页文档在同源、视口外的打印 iframe 中构建。iframe 写入完整独立 HTML、Payroll 打印样式、`@page { size: A4 portrait; margin: 0; }` 和绝对资源 URL，不依赖 Shadow DOM 样式继承。iframe 使用 `position: fixed; left: -10000px; top: 0; width: 210mm; height: 297mm; pointer-events: none`，始终保持 `display:block`、`visibility:visible`、`opacity:1`，保证可布局、可测量并可被 html2canvas 捕获；禁止通过 display、visibility 或 opacity 隐藏。测量样式与 `@media print` 的几何尺寸必须一致。每个 `.payroll-a4-page` 固定为 `210mm × 297mm`，自身 padding 为 `8mm`，内容区为 `194mm × 281mm`，`box-sizing: border-box`。非最后一页使用 `break-after: page`，最后一页显式为 `break-after: auto`，防止空白尾页。直接打印调用 iframe 的 `contentWindow.print()`；native Shadow DOM 与 standalone 页面走完全相同路径。
+分页文档在同源、视口外的打印 iframe 中构建。iframe 写入完整独立 HTML、Payroll 打印样式、`@page { size: A4 portrait; margin: 0; }` 和绝对资源 URL，不依赖 Shadow DOM 样式继承。详细明细打印文档的样式取自当前文档（原生页为 Shadow DOM 内的 `<style>`，独立原型页为 `<head>` 中的样式表链接）并内联进打印文档，不再按页面地址拼接相对路径的 `common.css` / `payroll.css`；原生页下那两个相对地址会命中 SPA fallback 返回 HTML，导致打印内容失去样式。原生 runtime 对 `window.location` 的代理必须让原生访问器以真实 `Location` 为 receiver 取值，否则详细明细构造打印文档时读取 `location.href` 会抛 `Illegal invocation`，打印对话框无法弹出。iframe 使用 `position: fixed; left: -10000px; top: 0; width: 210mm; height: 297mm; pointer-events: none`，始终保持 `display:block`、`visibility:visible`、`opacity:1`，保证可布局、可测量并可被 html2canvas 捕获；禁止通过 display、visibility 或 opacity 隐藏。测量样式与 `@media print` 的几何尺寸必须一致。每个 `.payroll-a4-page` 固定为 `210mm × 297mm`，自身 padding 为 `8mm`，内容区为 `194mm × 281mm`，`box-sizing: border-box`。非最后一页使用 `break-after: page`，最后一页显式为 `break-after: auto`，防止空白尾页。直接打印调用 iframe 的 `contentWindow.print()`，在当前页面内直接唤起浏览器打印对话框，不再 `window.open` 新标签页展示明细；native Shadow DOM 与 standalone 页面走完全相同路径。打印结束（`afterprint`）或超时后移除 iframe。
 
 调用测量前等待 iframe `load`、`document.fonts.ready` 以及文档内全部图片完成或失败。实现和测试假设浏览器打印对话框关闭额外页眉页脚；应用自身不输出浏览器 URL、日期或页码头。若用户在系统打印设置中强制开启浏览器页眉页脚，应用不承诺 8mm 安全边距。
 
@@ -164,7 +164,7 @@ total_amount,declaration,store_name,store_address
 
 打印、PDF、CSV、邮箱不得各自重新计算薪资。所有金额、工时、Period 编号和日期都来自同一 payload；不同版本仅负责选择字段和布局。
 
-独立 `dist/TipOut/payroll.html` 是行为源，相关 HTML/CSS/JS 修改后同步到 `src/team/payroll` 原生模板、样式和 legacy runtime，继续通过现有一致性校验。主应用 Shell、左侧导航和顶部账号栏不变。
+行为源为原生页 `src/team/payroll/**`（模板、样式、legacy runtime、数据与导出模块），验收入口是原生路由 `#/team/payroll-report`。嵌入原型 `dist/TipOut/payroll.html` 不再作为行为源，也不再随改动同步；`scripts/verify-team-payroll-native-runtime.mjs` 的 `native runtime copy is stale` 提示属于该口径变更后的预期结果。主应用 Shell、左侧导航和顶部账号栏不变。详见规则 `.cursor/rules/payroll-tipout-native-only.mdc`。
 
 ## 错误与边界处理
 
@@ -181,6 +181,8 @@ total_amount,declaration,store_name,store_address
 - 员工详情可在两个页签间切换，详细明细与当前实现一致。精简明细以用户提供的纸质 Payroll Report 为视觉方向，但验收以本文档为准：A4 使用 8mm 页边距；身份/周期头 10–12pt，表格 7–9pt，声明 7–8pt；字段顺序严格为“身份与周期 → 汇总 → Week 1 → Week 2 → 声明 → 签名 → 门店”。
 - 切换员工或 Period 后两个版本显示同一工时、金额、日期和身份数据。
 - “打印”始终打印当前页签版本。
+- 详细明细与精简明细底栏均不显示「打印方式」。隐藏后打印/PDF 仍使用已记住的分页设置。
+- 详细明细与精简明细的「打印」走同一条路径：在当前页面内的离屏 iframe 唤起浏览器打印对话框，且两者的打印文档都自带完整样式，不出现无样式的裸 HTML。
 - “强制一页”在包含完整 14 天、每天最多三组打卡的测试数据下只生成一张 A4。
 - “按内容分页”保持字号，并优先在周边界分页，表头在续页重复。
 - 分页设置刷新后仍保持；非法持久值安全回退。

@@ -185,6 +185,11 @@ export function mountLegacyPayrollRuntime(
   });
 
   const locationFacade = new Proxy(realWindow.location, {
+    // Location 的属性是原生访问器，receiver 必须是真实 location，否则读 href 会抛 Illegal invocation
+    get(target, property) {
+      const value = Reflect.get(target, property, target);
+      return typeof value === "function" ? value.bind(target) : value;
+    },
     set(target, property, value) {
       if (property === "href" && /(?:^|\/)employees\.html(?:$|[?#])/.test(String(value))) {
         history.pushState({}, "", "/team/employees");

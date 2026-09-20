@@ -1,0 +1,41 @@
+---
+description: Payroll / TipOut 相关改动只在原生页实现，不再修改 dist/TipOut 嵌入副本
+alwaysApply: true
+---
+
+# Payroll / TipOut 只改原生页
+
+薪资（Payroll）功能已完成原生化，运行时不再读取 `dist/TipOut`。涉及 Payroll、TipOut 的任何行为、样式、文案、打印逻辑修改，**一律只改原生页源码**。
+
+## 权威实现位置
+
+| 内容 | 权威路径 |
+|---|---|
+| 页面结构 | `src/team/payroll/payroll-template.html` |
+| 样式 | `src/team/payroll/payroll-page.css`、`payroll-polish.css` |
+| 运行时桥接（document / window / location 代理） | `src/team/payroll/payroll-legacy-runtime.ts` |
+| 业务逻辑 | `src/team/payroll/legacy/*.js.txt` |
+| 数据与导出 | `src/team/payroll/payroll-*.ts` |
+
+预览与验收入口：管理后台原生路由 `#/team/payroll-report`。
+
+## 必须
+
+1. 改 Payroll / TipOut 行为时，只编辑 `src/team/payroll/**`，并在原生路由下验证。
+2. 只在原生页复现问题时，优先排查 `payroll-legacy-runtime.ts` 里的 `document` / `window` / `location` 代理差异（历史故障：`location` 代理缺 `get` 陷阱，读 `href` 抛 `Illegal invocation`）。
+3. 打印、导出等会新建文档的能力，样式必须从宿主文档（含 Shadow DOM）内联收集，不能依赖相对路径 CSS——原生页下相对路径会落到 SPA fallback。
+
+## 禁止
+
+- ❌ 修改 `dist/TipOut/**`（`payroll.html` / `payroll.js` / `payroll.css` / `payroll-detail-*.js` 等）来实现 Payroll 需求
+- ❌ 把 `dist/TipOut/payroll.html` 当作行为源或验收对象（该历史口径已作废）
+- ❌ 运行 `scripts/generate-team-payroll-native-runtime.mjs`、`scripts/generate-team-payroll-native-view.mjs` 从 `dist/TipOut` 覆盖 `src`（会回滚原生改动）
+- ❌ 为消除校验差异而回头同步 `dist/TipOut`
+
+## 已知副作用
+
+`node scripts/verify-team-payroll-native-runtime.mjs` 仍会逐字节比较 `src/team/payroll/legacy/*` 与 `dist/TipOut/*`，只改原生后会报 `native runtime copy is stale`。该失败属于口径变更后的预期结果，不得通过改 `dist/TipOut` 消除；若需要恢复该校验的价值，先与用户确认是否调整脚本。
+
+## 例外：尚未原生化的 TipOut 小费页面
+
+`/team/tips`、`/team/tips/rules`、`/team/tips/details`、`/team/roles-employees`、`/reports/staff/tips-allocation` 目前仍由 iframe 嵌入 `admin-web/TipOut/*.html`，没有对应原生页。遇到这些页面的需求时，**先告知用户当前没有原生实现**，由用户决定改嵌入页还是先做原生化，不得默认按本规则只改 `src`。
