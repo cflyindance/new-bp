@@ -246,3 +246,91 @@ git diff --check
 ```
 
 Expected: all commands pass. In the browser, confirm the toolbar has no “当前页全选” field; the checkbox is left of “商品” or “分类”; selecting it checks only the visible page; selecting one row produces a half-selected header checkbox; clearing it clears the current page.
+
+### Task 5: Unify identity columns in every buffet product list
+
+**Files:**
+- Modify: `dist/Configuration center/assets/order-limit-flow.js`
+- Create: `scripts/verify-buffet-product-table-fields.mjs`
+- Modify: `scripts/verify-buffet-cross-store-scene-ui.mjs`
+
+**Interfaces:**
+- Consumes: `buffetProductTableColumns(draft, combo)`, `buffetProductMeta(config, target)`, `renderBuffetDishTableRows`, `renderBuffetDishSetTableRows`, `renderBuffetCategoryTableRows`, and the existing cross-store row model.
+- Produces: `buffetDisplayName(target, lineName): string`, `buffetActiveStoreName(draft, config): string`, and consistent identity cells for every direct and dialog product table.
+
+- [ ] **Step 1: Add failing structural assertions**
+
+Create `scripts/verify-buffet-product-table-fields.mjs` with assertions that require:
+
+```js
+assert.match(flow, /function buffetDisplayName\(target, lineName\)/);
+assert.match(flow, /function buffetActiveStoreName\(draft, config\)/);
+assert.match(flow, /\{ key: "object", label: draft\.targetType === "category" \? "分类" : "商品" \}/);
+assert.match(flow, /\{ key: "line", label: "产线" \}/);
+assert.match(flow, /\{ key: "category", label: "分类" \}/);
+assert.match(flow, /\{ key: "store", label: "门店" \}/);
+assert.doesNotMatch(flow, /<span>' \+ esc\(meta\.code\) \+ '<\/span>/);
+assert.doesNotMatch(flow, /headings\[2\]\.textContent = .*产线 · 分类 · 编码/);
+```
+
+Also assert that dish and dish-set row renderers use `buffetDisplayName`, and that category rows do not render a second category identity cell.
+
+- [ ] **Step 2: Run the new verification and confirm failure**
+
+Run: `node scripts/verify-buffet-product-table-fields.mjs`
+
+Expected: FAIL because direct-config tables still use combined metadata, include product codes, omit the store column, and do not share normalized display helpers.
+
+- [ ] **Step 3: Add normalized display helpers**
+
+Implement:
+
+```js
+function buffetDisplayName(target, lineName) {
+  var shortName = target && target.shortName != null ? String(target.shortName).trim() : "";
+  var fullName = target && target.name != null ? String(target.name).trim() : "";
+  var name = shortName || fullName;
+  if (!name) return "—";
+  var line = lineName != null ? String(lineName).trim() : "";
+  var suffix = line ? "（" + line + "）" : "";
+  return suffix && name.slice(-suffix.length) === suffix ? name.slice(0, -suffix.length).trim() || "—" : name;
+}
+
+function buffetActiveStoreName(draft, config) {
+  var storeId = config && config.storeId || draft.activeStoreId;
+  var store = stores.find(function (item) { return String(item.id) === String(storeId); });
+  return store && store.name || storeId || "—";
+}
+```
+
+Do not fall back to product code, `key`, `dishId`, or category ID for a missing product name.
+
+- [ ] **Step 4: Normalize columns and row order**
+
+For dish and dish-set rows, render identity cells in this order: product, line, category, store. For category rows, render category, line, store; keep the “查看 N 个商品” control inside the category cell so the table does not create a duplicate category/product identity column. Update `buffetProductTableColumns` to the same order before quota/status/action columns.
+
+Use `buffetSceneNameWithoutLineSuffix(meta.category, lineName) || "—"` for the category cell and `buffetActiveStoreName(draft, config)` for the store cell. Remove product-code spans.
+
+- [ ] **Step 5: Remove dialog-only metadata merging**
+
+In the quantity-dialog table decorator, keep only page-select placement and indeterminate-state calculation for non-cross-store tables. Remove the logic that rewrites headings to `产线 · 分类 · 编码`, hides the former metadata column, concatenates cell text, or hides the product-code span. The renderer is now the single source of table structure.
+
+- [ ] **Step 6: Run automated regression**
+
+Run:
+
+```powershell
+node --check "dist/Configuration center/assets/order-limit-flow.js"
+node scripts/verify-buffet-product-table-fields.mjs
+node scripts/verify-buffet-cross-store-scene-ui.mjs
+node scripts/verify-buffet-cross-store-scene-rows.mjs
+node scripts/verify-buffet-cross-store-scene-mutations.mjs
+node scripts/verify-buffet-scene-unified-picker.mjs
+git diff --check
+```
+
+Expected: all commands pass.
+
+- [ ] **Step 7: Browser acceptance across representative scenarios**
+
+Verify at least one direct-config rule and one scenario-dialog rule for each target type that renders products: dish and dish set. Check an order-lifetime rule, a per-round or multi-round rule, and a party-size rule. Every product table must show independent product, line, category, and store columns; product names must be readable without line suffixes; no product code or combined `产线 · 分类 · 编码` heading may appear. Verify a category rule separately: it must show category, line, and store without a duplicate product/category identity column. Confirm quota editing, selection, removal, filtering, and pagination still work.

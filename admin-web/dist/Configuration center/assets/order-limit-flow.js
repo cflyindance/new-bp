@@ -4261,9 +4261,10 @@
     var columns = [
       { key: "select", label: "", className: "olf-batch-select-cell" },
       { key: "object", label: draft.targetType === "category" ? "分类" : "商品" },
-      { key: "category", label: draft.targetType === "category" ? "包含商品" : "所属分类" },
       { key: "line", label: "产线" }
     ];
+    if (draft.targetType !== "category") columns.push({ key: "category", label: "分类" });
+    columns.push({ key: "store", label: "门店" });
     if (draft.targetType === "dish_set") columns.push({ key: "sameDish", label: combo.period === "order_lifetime" ? "每种整单最多份数" : "每轮每种最多份数" }, { key: "status", label: "状态" });
     else columns.push({ key: "limit", label: buffetTargetLimitLabel(draft, combo) });
     if (draft.subject === "party_size" && draft.targetType !== "dish_set") columns.push({ key: "tableCap", label: "整桌兜底" });
@@ -4272,12 +4273,39 @@
   }
 
   function buffetProductMeta(config, target) {
+    var targetLineId = String(target.lineId || target.productLineId || "");
+    var targetDishId = String(target.id || target.dishId || "");
     var selected = selectedDishesFromStructure(config).find(function (dish) {
-      return String(dish.productLineId) === String(target.lineId || target.productLineId) && String(dish.dishId) === String(target.id || target.dishId);
+      return String(dish.productLineId).toLowerCase() === targetLineId.toLowerCase() && String(dish.dishId) === targetDishId;
     });
-    var categoryId = target.categoryId || selected && selected.categoryId;
+    var catalogProduct = MenuPicker && typeof MenuPicker.listAllDishes === "function" ? MenuPicker.listAllDishes().find(function (dish) {
+      return String(dish.lineId).toLowerCase() === targetLineId.toLowerCase() && String(dish.dishKey) === targetDishId;
+    }) : null;
+    var categoryId = target.categoryId || selected && selected.categoryId || catalogProduct && (catalogProduct.categoryId || catalogProduct.categoryKey);
     var category = categories.find(function (item) { return String(item.id) === String(categoryId); });
-    return { code: String(target.id || target.dishId || ""), categoryId: categoryId || "", category: target.categoryName || selected && selected.categoryName || (category ? category.name : categoryId || "—") };
+    return {
+      code: String(target.id || target.dishId || ""),
+      categoryId: categoryId || "",
+      category: target.categoryName || selected && selected.categoryName || catalogProduct && (catalogProduct.categoryName || catalogProduct.categoryLabel) || (category ? category.name : categoryId || "—"),
+      productName: target.shortName || target.name || selected && selected.name || catalogProduct && (catalogProduct.shortName || catalogProduct.name || catalogProduct.dishName) || ""
+    };
+  }
+
+  function buffetDisplayName(target, lineName, fallbackName) {
+    var shortName = target && target.shortName != null ? String(target.shortName).trim() : "";
+    var fullName = target && target.name != null ? String(target.name).trim() : "";
+    var fallback = fallbackName != null ? String(fallbackName).trim() : "";
+    var name = shortName || fullName || fallback;
+    if (!name) return "—";
+    var line = lineName != null ? String(lineName).trim() : "";
+    var suffix = line ? "（" + line + "）" : "";
+    return suffix && name.slice(-suffix.length) === suffix ? name.slice(0, -suffix.length).trim() || "—" : name;
+  }
+
+  function buffetActiveStoreName(draft, config) {
+    var storeId = config && config.storeId || draft.activeStoreId;
+    var store = stores.find(function (item) { return String(item.id) === String(storeId); });
+    return store && store.name || storeId || "—";
   }
 
   function buffetTableLimitCell(cell, attrs) {
@@ -4291,7 +4319,9 @@
       var key = v4TargetKey(draft, combo, target);
       var identity = buffetWorkbenchTargetIdentity(draft, target);
       var meta = buffetProductMeta(config, target);
-      return '<tr><td class="olf-batch-select-cell"><input type="checkbox" data-buffet-workbench-target="' + esc(identity) + '"' + (state.selectedIds.indexOf(identity) >= 0 ? ' checked' : '') + ' /></td><td class="olf-v4-product-cell"><strong>' + esc(target.shortName || target.name) + '</strong><span>' + esc(meta.code) + '</span></td><td>' + esc(meta.category) + '</td><td>' + esc(target.lineLabel || target.lineId) + '</td><td>' + buffetTableLimitCell(values.targetLimits[key], 'data-v4-limit-field data-v4-map="targetLimits" data-v4-period="' + combo.period + '" data-v4-scenario="' + esc(key) + '"') + '</td>' + (draft.subject === "party_size" ? '<td>' + buffetTableLimitCell(values.tableTargetCaps[key], 'data-table-target-cap data-v4-limit-field data-v4-map="tableTargetCaps" data-v4-period="' + combo.period + '" data-v4-scenario="' + esc(key) + '"') + '</td>' : '') + '<td class="olf-v4-product-action"><button type="button" class="olf-button olf-button--small olf-button--danger" data-buffet-product-remove="' + esc(identity) + '">移除</button></td></tr>';
+      var lineName = target.lineLabel || target.lineId || "—";
+      var categoryName = buffetSceneNameWithoutLineSuffix(meta.category, lineName) || "—";
+      return '<tr><td class="olf-batch-select-cell"><input type="checkbox" data-buffet-workbench-target="' + esc(identity) + '"' + (state.selectedIds.indexOf(identity) >= 0 ? ' checked' : '') + ' /></td><td class="olf-v4-product-cell"><strong>' + esc(buffetDisplayName(target, lineName, meta.productName)) + '</strong></td><td>' + esc(lineName) + '</td><td>' + esc(categoryName) + '</td><td>' + esc(buffetActiveStoreName(draft, config)) + '</td><td>' + buffetTableLimitCell(values.targetLimits[key], 'data-v4-limit-field data-v4-map="targetLimits" data-v4-period="' + combo.period + '" data-v4-scenario="' + esc(key) + '"') + '</td>' + (draft.subject === "party_size" ? '<td>' + buffetTableLimitCell(values.tableTargetCaps[key], 'data-table-target-cap data-v4-limit-field data-v4-map="tableTargetCaps" data-v4-period="' + combo.period + '" data-v4-scenario="' + esc(key) + '"') + '</td>' : '') + '<td class="olf-v4-product-action"><button type="button" class="olf-button olf-button--small olf-button--danger" data-buffet-product-remove="' + esc(identity) + '">移除</button></td></tr>';
     }).join("");
   }
 
@@ -4300,7 +4330,8 @@
     return buffetWorkbenchPageData(draft, config, combo, values).pageRows.map(function (target) {
       var key = v4TargetKey(draft, combo, target);
       var identity = buffetWorkbenchTargetIdentity(draft, target);
-      return '<tr><td class="olf-batch-select-cell"><input type="checkbox" data-buffet-workbench-target="' + esc(identity) + '"' + (state.selectedIds.indexOf(identity) >= 0 ? ' checked' : '') + ' /></td><td class="olf-v4-product-cell"><strong>' + esc(target.shortName || target.name) + '</strong><span>分类内商品共享数量池</span></td><td><button type="button" class="olf-button olf-button--small" data-buffet-category-members="' + esc(identity) + '">查看 ' + (target.count || 0) + ' 个商品</button></td><td>' + esc(target.lineLabel || target.lineId) + '</td><td>' + buffetTableLimitCell(values.targetLimits[key], 'data-v4-limit-field data-v4-map="targetLimits" data-v4-period="' + combo.period + '" data-v4-scenario="' + esc(key) + '"') + '</td>' + (draft.subject === "party_size" ? '<td>' + buffetTableLimitCell(values.tableTargetCaps[key], 'data-table-target-cap data-v4-limit-field data-v4-map="tableTargetCaps" data-v4-period="' + combo.period + '" data-v4-scenario="' + esc(key) + '"') + '</td>' : '') + '<td class="olf-v4-product-action"><button type="button" class="olf-button olf-button--small olf-button--danger" data-buffet-product-remove="' + esc(identity) + '">移除</button></td></tr>';
+      var lineName = target.lineLabel || target.lineId || "—";
+      return '<tr><td class="olf-batch-select-cell"><input type="checkbox" data-buffet-workbench-target="' + esc(identity) + '"' + (state.selectedIds.indexOf(identity) >= 0 ? ' checked' : '') + ' /></td><td class="olf-v4-product-cell"><strong>' + esc(buffetDisplayName(target, lineName)) + '</strong><span>分类内商品共享数量池</span><button type="button" class="olf-button olf-button--small" data-buffet-category-members="' + esc(identity) + '">查看 ' + (target.count || 0) + ' 个商品</button></td><td>' + esc(lineName) + '</td><td>' + esc(buffetActiveStoreName(draft, config)) + '</td><td>' + buffetTableLimitCell(values.targetLimits[key], 'data-v4-limit-field data-v4-map="targetLimits" data-v4-period="' + combo.period + '" data-v4-scenario="' + esc(key) + '"') + '</td>' + (draft.subject === "party_size" ? '<td>' + buffetTableLimitCell(values.tableTargetCaps[key], 'data-table-target-cap data-v4-limit-field data-v4-map="tableTargetCaps" data-v4-period="' + combo.period + '" data-v4-scenario="' + esc(key) + '"') + '</td>' : '') + '<td class="olf-v4-product-action"><button type="button" class="olf-button olf-button--small olf-button--danger" data-buffet-product-remove="' + esc(identity) + '">移除</button></td></tr>';
     }).join("");
   }
 
@@ -4333,7 +4364,9 @@
         ? buffetTableLimitCell(memberCell, 'data-v4-member-limit="' + esc(identity) + '" data-v4-period="' + combo.period + '" data-v4-scenario="' + esc(scenario) + '"')
         : '<span class="olf-v4-member-status">不适用</span>';
       var memberStatus = !memberCell || !memberCell.configured ? "未配置" : Number(memberCell.value) === 0 ? "禁止下单" : "已配置";
-      return '<tr><td class="olf-batch-select-cell"><input type="checkbox" data-buffet-workbench-target="' + esc(identity) + '"' + (state.selectedIds.indexOf(identity) >= 0 ? ' checked' : '') + ' /></td><td class="olf-v4-product-cell"><strong>' + esc(dish.name || dish.dishId) + '</strong><span>' + esc(meta.code) + '</span></td><td>' + esc(meta.category) + '</td><td>' + esc(dish.lineLabel || dish.productLineId) + '</td><td>' + limitHtml + '</td><td><span class="olf-v4-member-status">' + memberStatus + '</span></td><td class="olf-v4-product-action"><button type="button" class="olf-button olf-button--small olf-button--danger" data-buffet-product-remove="' + esc(identity) + '">移除</button></td></tr>';
+      var lineName = dish.lineLabel || dish.productLineId || "—";
+      var categoryName = buffetSceneNameWithoutLineSuffix(meta.category, lineName) || "—";
+      return '<tr><td class="olf-batch-select-cell"><input type="checkbox" data-buffet-workbench-target="' + esc(identity) + '"' + (state.selectedIds.indexOf(identity) >= 0 ? ' checked' : '') + ' /></td><td class="olf-v4-product-cell"><strong>' + esc(buffetDisplayName(dish, lineName, meta.productName)) + '</strong></td><td>' + esc(lineName) + '</td><td>' + esc(categoryName) + '</td><td>' + esc(buffetActiveStoreName(draft, config)) + '</td><td>' + limitHtml + '</td><td><span class="olf-v4-member-status">' + memberStatus + '</span></td><td class="olf-v4-product-action"><button type="button" class="olf-button olf-button--small olf-button--danger" data-buffet-product-remove="' + esc(identity) + '">移除</button></td></tr>';
     }).join("");
   }
 
@@ -4429,9 +4462,7 @@
     var attrs = ' data-limit-store-id="' + esc(row.storeId) + '" data-buffet-row-key="' + esc(row.rowKey) + '"';
     var limitHtml, status = row.status === "configured" ? "已配置" : row.status === "forbidden" ? "禁止下单" : "未配置";
     var lineName = row.lineLabel || "—";
-    var rawItemName = target.shortName || target.name || target.dishId || target.categoryId || "—";
-    var lineSuffix = lineName === "—" ? "" : "（" + lineName + "）";
-    var itemName = lineSuffix && rawItemName.slice(-lineSuffix.length) === lineSuffix ? rawItemName.slice(0, -lineSuffix.length) : rawItemName;
+    var itemName = buffetDisplayName(target, lineName);
     var categoryName = buffetSceneNameWithoutLineSuffix(row.categoryName, lineName) || "—";
     var storeName = row.storeName || row.storeId || "—";
     if (draft.targetType === "dish_set") {
@@ -5552,19 +5583,6 @@
           headings[0].appendChild(pageSelect);
           if (pageSelectLabel) pageSelectLabel.remove();
         }
-        headings[2].textContent = editorState.rule.editorDraft.targetType === "category" ? "产线 · 包含商品" : "产线 · 分类 · 编码";
-        headings[3].hidden = true;
-        headings[headings.length - 1].hidden = false;
-        table.querySelectorAll("tbody tr").forEach(function (row) {
-          var cells = row.querySelectorAll("td");
-          if (cells.length !== headings.length) return;
-          var code = cells[1].querySelector("small, .olf-v4-product-cell > span");
-          cells[2].textContent = cells[3].textContent.trim() + " · " + cells[2].textContent.trim() + (code ? " · " + code.textContent.trim() : "");
-          if (code) code.hidden = true;
-          cells[2].classList.add("olf-scene-product-meta");
-          cells[3].hidden = true;
-          cells[cells.length - 1].hidden = false;
-        });
       });
       if (!quantityDialog.classList.contains("olf-inline-workbench")) {
         quantityDialog.querySelectorAll("[data-buffet-product-bulk-remove]").forEach(function (button) { button.hidden = true; });
