@@ -1056,3 +1056,23 @@ button { color: inherit; }
 .olf-scene-product-options { display:grid; gap:8px; max-height:50vh; overflow:auto; margin:20px 0; }
 .olf-scene-product-options label { display:flex; align-items:center; gap:8px; padding:12px; border:1px solid var(--olf-border,#e8e8e8); border-radius:8px; }
 .olf-scene-workbench .olf-v4-quantity-block h5:has([data-scene-product-add]) { display:flex; align-items:center; justify-content:space-between; gap:16px; }
+.olf-cross-store-workbench-tools [data-buffet-workbench-store] {
+  min-width: 180px;
+}
+
+.olf-cross-store-table {
+  min-width: 1040px;
+}
+
+.olf-cross-store-table .olf-cross-store-name {
+  min-width: 140px;
+  font-weight: 600;
+}
+
+.olf-cross-store-table .olf-cross-store-limits {
+  min-width: 210px;
+}
+
+.olf-cross-store-table .olf-cross-store-limits .olf-v4-table-limit + .olf-v4-table-limit {
+  margin-top: 8px;
+}

@@ -75,4 +75,9 @@ api.removeSceneTargetValues(values, ['oldKey']);
 assert.equal(values.targetLimits.oldKey, undefined);
 assert.equal(values.tableTargetCaps.oldKey, undefined);
 
+assert.match(source, /statesByStoreId: \{\}/, '场景商品选择器按门店保存临时状态');
+assert.match(source, /dirtyStoreIds: \[\]/, '场景商品选择器只提交发生变化的门店');
+assert.match(source, /data-scene-product-store/, '选择器支持在参与门店间切换');
+assert.match(source, /pickerContainer\.dirtyStoreIds\.map/, '确认时应用全部已修改门店');
+
 console.log('verify-buffet-scene-unified-picker: PASS');
