@@ -12,7 +12,8 @@ assert.match(flow, /addedStoreIds\(draft\)\.forEach\(function \(storeId\)/);
 assert.match(flow, /rowKey: buffetSceneRowIdentity\(draft, combo, storeId, target\)/);
 assert.match(flow, /function filteredBuffetSceneRows\(draft, combo, state\)/);
 assert.match(flow, /state\.storeId && row\.storeId !== state\.storeId/);
-assert.match(flow, /stableBuffetKey\(\[row\.storeId, row\.lineId\]\)/);
+assert.match(flow, /stableBuffetKey\(\["line-name", lineName\]\)/);
+assert.match(flow, /stableBuffetKey\(\["category-name", categoryName\]\)/);
 assert.match(flow, /function buffetScenePageData\(draft, combo\)/);
 
 console.log('verify-buffet-cross-store-scene-rows: PASS');

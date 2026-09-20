@@ -6,8 +6,25 @@ const css = fs.readFileSync('dist/Configuration center/assets/order-limit-flow.c
 
 assert.match(flow, /data-buffet-workbench-store/);
 assert.match(flow, /全部参与门店（/);
-assert.match(flow, /<th>所属门店<\/th>/);
-assert.match(flow, /row\.storeName/);
+assert.match(flow, /<th>产线<\/th>/);
+assert.match(flow, /<th>分类<\/th>/);
+assert.match(flow, /<th>门店<\/th>/);
+assert.match(flow, /row\.lineLabel \|\| "—"/);
+assert.match(flow, /buffetSceneNameWithoutLineSuffix\(row\.categoryName, lineName\) \|\| "—"/);
+assert.match(flow, /row\.storeName \|\| row\.storeId \|\| "—"/);
+assert.match(flow, /rawItemName\.slice\(-lineSuffix\.length\) === lineSuffix/);
+assert.match(flow, /draft\.targetType === "category" \? 7 : 8/);
+assert.doesNotMatch(flow, /<th>产线 · 分类 · 编码<\/th>/);
+assert.doesNotMatch(flow, /<span>' \+ esc\(row\.code\)/);
+assert.match(flow, /table\.classList\.contains\("olf-cross-store-table"\)\) return/);
+assert.match(flow, /function buffetSceneFilterName\(value\)/);
+assert.match(flow, /stableBuffetKey\(\["line-name", lineName\]\)/);
+assert.match(flow, /stableBuffetKey\(\["category-name", categoryName\]\)/);
+assert.doesNotMatch(flow, /\(state\.storeId \? "" : row\.storeName \+ " · "\) \+ row\.lineLabel/);
+assert.doesNotMatch(flow, /\(state\.storeId \? "" : row\.storeName \+ " · "\) \+ row\.categoryName/);
+assert.match(flow, /if \(state\.lineId\) optionRows = optionRows\.filter/);
+assert.match(flow, /lineState\.categoryId = ""/);
+assert.match(flow, /function buffetSceneNameWithoutLineSuffix\(value, lineName\)/);
 assert.match(flow, /限购对象 .* 条，来自 .* 家门店；筛选结果/);
 assert.match(flow, /data-limit-store-id/);
 assert.match(flow, /buffetScenePageData\(draft, pageCombo\)\.pageRows/);

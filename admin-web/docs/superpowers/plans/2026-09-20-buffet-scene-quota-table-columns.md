@@ -14,7 +14,7 @@
 
 - Product/dish-set columns are: selection, product, production line, category, store, quota, status, operation.
 - Category-target columns are: selection, category, production line, store, quota, status, operation.
-- Product names come directly from the row name source; do not trim legitimate source text.
+- Product names prefer `shortName`; legacy full names remove only a trailing `（lineName）` that exactly matches the current production line.
 - The scene quota table must not render product codes.
 - Missing line/category values render `—`; missing store name falls back to store id, then `—`.
 - Filtering, pagination, selection, bulk operations, removal, and per-store mutation routing must remain unchanged.
@@ -74,8 +74,12 @@ git commit -m "test: define buffet quota table columns"
 - [ ] **Step 1: Add explicit display-value fallbacks in the row renderer**
 
 ```js
-var itemName = target.shortName || target.name || target.dishId || target.categoryId || "—";
 var lineName = row.lineLabel || "—";
+var rawItemName = target.shortName || target.name || target.dishId || target.categoryId || "—";
+var lineSuffix = lineName === "—" ? "" : "（" + lineName + "）";
+var itemName = lineSuffix && rawItemName.slice(-lineSuffix.length) === lineSuffix
+  ? rawItemName.slice(0, -lineSuffix.length)
+  : rawItemName;
 var categoryName = row.categoryName || "—";
 var storeName = row.storeName || row.storeId || "—";
 ```
@@ -142,3 +146,47 @@ git commit -m "feat: split buffet quota product fields"
 - Spec coverage: independent product/line/category/store columns, category-target non-duplication, code removal, direct name rendering, fallbacks, behavior preservation, and browser acceptance are each covered.
 - Placeholder scan: no deferred implementation steps or unspecified tests remain.
 - Type consistency: the plan uses existing `row` fields and existing renderer/test names without introducing new external interfaces.
+
+### Task 3: Merge cross-store filter options by visible name
+
+**Files:**
+- Modify: `dist/Configuration center/assets/order-limit-flow.js`
+- Modify: `scripts/verify-buffet-cross-store-scene-ui.mjs`
+
+**Interfaces:**
+- Consumes: current-scene rows from `buffetSceneRows(draft, combo)` and `state.storeId`.
+- Produces: one line/category option per trimmed, case-sensitive display name and filters every matching store row.
+
+- [ ] **Step 1: Add failing assertions for name-only, deduplicated filters**
+
+```js
+assert.match(flow, /function buffetSceneFilterName\(value\)/);
+assert.match(flow, /stableBuffetKey\(\["line-name", lineName\]\)/);
+assert.match(flow, /stableBuffetKey\(\["category-name", categoryName\]\)/);
+assert.doesNotMatch(flow, /row\.storeName \+ " · "\) \+ row\.lineLabel/);
+assert.doesNotMatch(flow, /row\.storeName \+ " · "\) \+ row\.categoryName/);
+```
+
+- [ ] **Step 2: Run the UI verification and confirm failure**
+
+Run: `node scripts/verify-buffet-cross-store-scene-ui.mjs`
+
+Expected: FAIL because the current keys are scoped by store ID and labels include store names.
+
+- [ ] **Step 3: Implement canonical visible-name keys**
+
+```js
+function buffetSceneFilterName(value) {
+  if (value == null) return "";
+  var name = String(value).trim();
+  return name && name !== "—" ? name : "";
+}
+```
+
+Build line/category maps with `stableBuffetKey(["line-name", name])` and `stableBuffetKey(["category-name", name])`; use `name` as the option label. Apply the same key generation in `filteredBuffetSceneRows`.
+
+When a line is selected, derive category options only from rows whose normalized line key matches the selection. Reset `state.categoryId` whenever `data-buffet-workbench-line` changes. Strip only an exact trailing `（lineName）` from category display names in both the selector and table cell.
+
+- [ ] **Step 4: Run focused tests and browser acceptance**
+
+Run the existing syntax check and four cross-store scripts. In the browser, verify the all-store line selector contains `Kiosk`; after selecting it, the category selector resets to `全部分类` and contains only `锅底` and `肉类`, without store prefixes, production-line suffixes, or duplicates. Selecting a merged value includes matching rows from all participating stores, while selecting a store resets line/category filters.
