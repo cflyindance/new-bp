@@ -190,3 +190,59 @@ When a line is selected, derive category options only from rows whose normalized
 - [ ] **Step 4: Run focused tests and browser acceptance**
 
 Run the existing syntax check and four cross-store scripts. In the browser, verify the all-store line selector contains `Kiosk`; after selecting it, the category selector resets to `全部分类` and contains only `锅底` and `肉类`, without store prefixes, production-line suffixes, or duplicates. Selecting a merged value includes matching rows from all participating stores, while selecting a store resets line/category filters.
+
+### Task 4: Move current-page selection into the table header
+
+**Files:**
+- Modify: `dist/Configuration center/assets/order-limit-flow.js`
+- Modify: `scripts/verify-buffet-cross-store-scene-ui.mjs`
+
+**Interfaces:**
+- Consumes: `buffetScenePageData(draft, combo).pageRows`, `normalizeBuffetQuantityWorkbenchState(draft).selectedIds`, and the existing `data-buffet-workbench-page-select` change handler.
+- Produces: one header checkbox that keeps the existing current-page selection behavior and exposes `checked`, `indeterminate`, and `aria-label="全选当前页商品"` state.
+
+- [ ] **Step 1: Add failing UI assertions**
+
+Add assertions requiring the cross-store table header to contain `data-buffet-workbench-page-select`, requiring the toolbar to omit the `当前页全选` label, and requiring the dialog decorator to calculate the checkbox's indeterminate state for the cross-store table.
+
+```js
+assert.match(flow, /<th class="olf-batch-select-cell"><input type="checkbox" data-buffet-workbench-page-select/);
+assert.doesNotMatch(flow, /data-buffet-workbench-page-select[^>]*\/> 当前页全选/);
+assert.match(flow, /pageSelect\.indeterminate = visibleRowChecks\.some/);
+```
+
+- [ ] **Step 2: Run the focused verification and confirm failure**
+
+Run: `node scripts/verify-buffet-cross-store-scene-ui.mjs`
+
+Expected: FAIL because the current checkbox is still rendered in the toolbar and the cross-store decorator returns before attaching header state.
+
+- [ ] **Step 3: Render the existing page-select control in the table header**
+
+Remove the page-select label from `renderCrossStoreSceneToolbar`. In `renderCrossStoreSceneTable`, render the checkbox in the leading header cell with the current combo attributes and `checked` state derived from whether every current-page row key is present in `state.selectedIds`. Do not add a second selection handler.
+
+```js
+var pageSelected = data.pageRows.length > 0 && data.pageRows.every(function (row) {
+  return state.selectedIds.indexOf(row.rowKey) >= 0;
+});
+var pageSelect = '<input type="checkbox" aria-label="全选当前页商品" data-buffet-workbench-page-select data-v4-period="' + combo.period + '" data-scene-party="' + combo.partyIndex + '" data-scene-round="' + combo.roundIndex + '"' + (pageSelected ? ' checked' : '') + ' />';
+```
+
+- [ ] **Step 4: Apply the half-selected state after rendering**
+
+Allow `.olf-cross-store-table` through the existing table decorator, or add a focused cross-store branch before its early return. Resolve the checkbox from the current table header and set `indeterminate` when some, but not all, visible row checkboxes are selected. Keep the current-page selection handler unchanged.
+
+- [ ] **Step 5: Run automated and browser acceptance**
+
+Run:
+
+```powershell
+node --check "dist/Configuration center/assets/order-limit-flow.js"
+node scripts/verify-buffet-cross-store-scene-ui.mjs
+node scripts/verify-buffet-cross-store-scene-rows.mjs
+node scripts/verify-buffet-cross-store-scene-mutations.mjs
+node scripts/verify-buffet-scene-unified-picker.mjs
+git diff --check
+```
+
+Expected: all commands pass. In the browser, confirm the toolbar has no “当前页全选” field; the checkbox is left of “商品” or “分类”; selecting it checks only the visible page; selecting one row produces a half-selected header checkbox; clearing it clears the current page.
