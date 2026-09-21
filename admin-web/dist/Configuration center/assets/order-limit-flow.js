@@ -5650,12 +5650,10 @@
   }
 
   function dismissBuffetSummary(restoreFocus) {
-    var origin = editorState && editorState.buffetSummaryOrigin;
     editorState.buffetSummary = null;
-    editorState.buffetSummaryOrigin = null;
     renderEditor();
-    if (!restoreFocus || !origin) return;
-    var opener = document.querySelector('[data-buffet-summary-open][data-buffet-summary-origin="' + origin + '"]');
+    if (!restoreFocus) return;
+    var opener = document.querySelector('[data-buffet-summary-open][data-buffet-summary-origin="outer"]');
     if (opener) opener.focus();
   }
 
@@ -5721,9 +5719,8 @@
         quantityDialog.querySelectorAll("[data-buffet-product-bulk-remove]").forEach(function (button) { button.hidden = true; });
         var memberTools = quantityDialog.querySelector(".olf-v4-workbench-filters");
         var productHeading = quantityDialog.querySelector(".olf-v4-quantity-block:last-child h5");
-        var summaryButton = document.createElement("button"); summaryButton.type = "button"; summaryButton.className = "olf-button"; summaryButton.setAttribute("data-buffet-summary-open", ""); summaryButton.setAttribute("data-buffet-summary-origin", "scene"); summaryButton.textContent = "查看全部配置";
         var addButton = document.createElement("button"); addButton.type = "button"; addButton.className = "olf-button olf-button--primary"; addButton.setAttribute("data-scene-product-add", ""); addButton.textContent = "＋ 添加" + (draft.targetType === "category" ? "分类" : "商品");
-        if (productHeading) { productHeading.appendChild(summaryButton); productHeading.appendChild(addButton); } else { quantityDialog.querySelector(".olf-scene-dialog-body").appendChild(summaryButton); quantityDialog.querySelector(".olf-scene-dialog-body").appendChild(addButton); }
+        if (productHeading) productHeading.appendChild(addButton); else quantityDialog.querySelector(".olf-scene-dialog-body").appendChild(addButton);
         if (memberTools) { var deleteButton = document.createElement("button"); deleteButton.type = "button"; deleteButton.className = "olf-button olf-button--danger"; deleteButton.setAttribute("data-scene-product-delete-selected", ""); deleteButton.textContent = "批量删除"; memberTools.appendChild(deleteButton); }
       }
     });
@@ -6573,7 +6570,6 @@
     if (summaryAction) {
       var summaryDraft = editorState.rule.editorDraft;
       if (summaryAction.hasAttribute("data-buffet-summary-open")) {
-        editorState.buffetSummaryOrigin = summaryAction.getAttribute("data-buffet-summary-origin") || "scene";
         editorState.buffetSummary = defaultBuffetSummaryState();
       }
       else if (summaryAction.hasAttribute("data-buffet-summary-close")) { dismissBuffetSummary(true); return; }
@@ -6586,7 +6582,6 @@
         if (!resolved || !resolved.valid) { toast(resolved && resolved.reason || "该场景已不存在，请刷新汇总结果", true); return; }
         summaryDraft.activeStoreId = resolved.storeId;
         editorState.buffetSummary = null;
-        editorState.buffetSummaryOrigin = null;
         editorState.quantitySceneDialog = createQuantitySceneSession(summaryDraft, resolved.combo);
         normalizeBuffetQuantityWorkbenchState(summaryDraft).storeId = resolved.storeId;
       }
@@ -7855,7 +7850,6 @@
       productAddDialog: createProductAddDialogState()
     };
     editorState.buffetSummary = null;
-    editorState.buffetSummaryOrigin = null;
     normalizeActiveDimensions(rule.editorDraft, editorState.currentStep === quantityStepNumber());
     editorState.buffetQuantityWorkbench = createBuffetQuantityWorkbenchState();
     var editorTitlePrefix = viewMode ? "查看" : (rule.sourceRuleId ? "编辑" : "新增");
