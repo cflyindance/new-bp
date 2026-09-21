@@ -4816,7 +4816,7 @@
       if (draft.targetType === "dish_set" && window.BuffetRulePolicy && window.BuffetRulePolicy.validateDishSetMeasures) {
         var measureCheck = window.BuffetRulePolicy.validateDishSetMeasures(draft, config, session.combo.period, session.combo.partyIndex, session.combo.roundIndex);
         if (!measureCheck.valid) {
-          invalid = { storeId: storeId, message: measureCheck.code === "DISH_SET_MEASURE_REQUIRED" ? "至少启用一种计量方式" : "已启用的" + (measureCheck.metric === "kind" ? "按种" : "按份") + "限制至少配置一个上限" };
+          invalid = { storeId: storeId, message: "已启用的" + (measureCheck.metric === "kind" ? "按种" : "按份") + "限制至少配置一个上限" };
           return true;
         }
       }
@@ -7758,9 +7758,7 @@
       var toggleValues = v4PeriodValues(toggleConfig, target.getAttribute("data-v4-period"));
       toggleValues.measures = toggleValues.measures || window.BuffetRulePolicy.emptyDishSetMeasures();
       var toggleMetric = target.getAttribute("data-v4-measure-metric");
-      var otherMetric = toggleMetric === "piece" ? "kind" : "piece";
       var toggleKey = target.getAttribute("data-v4-scenario");
-      if (!target.checked && toggleValues.measures[otherMetric].enabled[toggleKey] !== true) { toast("至少启用一种计量方式", true); renderEditor(); return; }
       var metricValues = toggleValues.measures[toggleMetric];
       var hasValues = ["perPersonMax", "perTableMax"].some(function (map) { return metricValues[map][toggleKey] && metricValues[map][toggleKey].configured; });
       if (!target.checked && hasValues && typeof window.confirm === "function" && !window.confirm("关闭后将清除当前场景该计量额度，是否继续？")) { renderEditor(); return; }

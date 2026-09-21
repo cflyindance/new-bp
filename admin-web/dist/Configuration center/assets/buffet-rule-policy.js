@@ -394,7 +394,7 @@
   function validateDishSetMeasures(rule, config, period, partyIndex, roundIndex) {
     var state = dishSetSceneMeasures(rule, config, period, partyIndex, roundIndex);
     var enabled = ["piece", "kind"].filter(function (name) { return state[name].enabled; });
-    if (!enabled.length) return { valid: false, code: "DISH_SET_MEASURE_REQUIRED", sceneKey: state.sceneKey };
+    if (!enabled.length) return { valid: true, empty: true, sceneKey: state.sceneKey };
     for (var index = 0; index < enabled.length; index += 1) {
       var name = enabled[index];
       var cells = state[name];

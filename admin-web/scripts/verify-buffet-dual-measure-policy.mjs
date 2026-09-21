@@ -37,7 +37,7 @@ assert.equal(state.piece.perTableMax.value, 3);
 assert.deepEqual(plain(policy.validateDishSetMeasures(migratedOrder.rule, migratedOrder.rule.storeConfigs.s1, "per_round", 0, 0)), { valid: true, sceneKey: "p1|r1" });
 
 const empty = policy.normalizeRule({ targetType: "dish_set", subject: "order", enabledPeriods: ["per_round"], partyRanges: [{ rangeId: "p1" }], roundRanges: [{ rangeId: "r1" }], storeConfigs: { s1: { periodValues: {} } } });
-assert.equal(policy.validateDishSetMeasures(empty, empty.storeConfigs.s1, "per_round", 0, 0).code, "DISH_SET_MEASURE_REQUIRED");
+assert.deepEqual(plain(policy.validateDishSetMeasures(empty, empty.storeConfigs.s1, "per_round", 0, 0)), { valid: true, empty: true, sceneKey: "p1|r1" }, "全部关闭应作为未配置状态，而不是校验错误");
 
 const copied = policy.copyDishSetSceneQuota(migratedOrder.rule.storeConfigs.s1.periodValues.per_round, {}, "p1|r1", "p2|r1");
 assert.equal(copied.measures.piece.enabled["p2|r1"], true);
@@ -53,8 +53,9 @@ let batch = policy.applyDishSetMetricBatch(batchSource, [
   { storeId: "s1", period: "per_round", partyIndex: 0, roundIndex: 0 },
   { storeId: "s1", period: "per_round", partyIndex: 1, roundIndex: 0 }
 ], { piece: { mode: "disable_and_clear" }, kind: { mode: "ignore" } });
-assert.equal(batch.ok, false, "关闭唯一计量方式必须整体失败");
-assert.deepEqual(plain(batchSource), batchOriginal, "批量失败不能修改原草稿");
+assert.equal(batch.ok, true, "关闭唯一计量方式应成功并回到未配置状态");
+assert.notEqual(batch.draft.storeConfigs.s1.periodValues.per_round.measures.piece.enabled["p1|r1"], true);
+assert.deepEqual(plain(batchSource), batchOriginal, "批量操作不能修改传入的原草稿");
 batch = policy.applyDishSetMetricBatch(batchSource, [
   { storeId: "s1", period: "per_round", partyIndex: 0, roundIndex: 0 },
   { storeId: "s1", period: "per_round", partyIndex: 1, roundIndex: 0 }

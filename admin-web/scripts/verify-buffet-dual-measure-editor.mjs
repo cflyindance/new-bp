@@ -16,7 +16,7 @@ assert.match(targets, /按份限制/);
 assert.match(targets, /按种限制（SPU）/);
 assert.match(targets, /data-v4-measure-toggle/);
 assert.match(targets, /data-v4-measure-field/);
-assert.match(source, /至少启用一种计量方式/);
+assert.doesNotMatch(source, /!target\.checked && toggleValues\.measures\[otherMetric\]\.enabled\[toggleKey\] !== true/);
 assert.match(source, /关闭后将清除当前场景该计量额度/);
 assert.match(source, /全部计量方式/);
 assert.match(source, /按份＋按种/);
