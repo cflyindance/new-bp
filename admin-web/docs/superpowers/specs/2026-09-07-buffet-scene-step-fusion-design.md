@@ -918,4 +918,19 @@ A3+B2 是 2 种、5 份，允许；再加 C1 变 3 种，超集合种数；A4+B1
 | QA-64 | 关闭、取消或 Escape 解散汇总 | 焦点返回最外层“查看全部配置”入口 |
 | QA-65 | 从外层汇总进入其他场景 | 按稳定身份打开对应门店和场景，不返回外层入口焦点 |
 
-对应验证脚本：`verify-buffet-all-scene-summary-model.mjs`、`verify-buffet-all-scene-summary-ui.mjs`、`verify-buffet-all-scene-summary-navigation.mjs`、`verify-buffet-all-scene-summary-outer-entry.mjs`。
+### 15.4 配置额度商品表格宽度
+
+- 单场景配置额度商品表格在 `1024 × 768` 及以上桌面视口禁止横向滚动。
+- 商品、产线、分类、门店、限购数量、状态、操作及勾选列全部保留；长文本及多个额度输入在单元格内换行。
+- 添加商品、全选、单选、批量设置、移除、分页与纵向滚动保持可用。
+- 跨门店商品表格遵循相同规则；“全部场景商品配置”汇总表不受影响，继续使用既有宽表展示。
+
+| 编号 | 场景 | 预期 |
+| --- | --- | --- |
+| QA-66 | 普通按份商品表格 | 表格容器 `scrollWidth` 不大于 `clientWidth`，所有字段与操作可见 |
+| QA-67 | 菜品集多输入 | 输入组在限购数量单元格内换行，不撑宽表格 |
+| QA-68 | 跨门店或长文本 | 门店与长名称可换行，添加商品和每行移除仍可点击 |
+| QA-69 | `1024 × 768` 桌面视口 | 页面和商品表格均无横向溢出，分页与纵向滚动可用 |
+| QA-70 | 全部场景汇总弹窗 | 既有宽表横向滚动规则保持不变 |
+
+对应验证脚本：`verify-buffet-all-scene-summary-model.mjs`、`verify-buffet-all-scene-summary-ui.mjs`、`verify-buffet-all-scene-summary-navigation.mjs`、`verify-buffet-all-scene-summary-outer-entry.mjs`、`verify-buffet-quota-table-no-horizontal-scroll.mjs`。
