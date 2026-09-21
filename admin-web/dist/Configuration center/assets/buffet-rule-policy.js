@@ -227,6 +227,10 @@
     return compositeKey([identityPart(item && item.productLineId), identityPart(item && item.dishId)]);
   }
 
+  function productKey(item) {
+    return identityPart(item && item.productLineId) + ":" + identityPart(item && item.dishId);
+  }
+
   function categoryIdentity(item) {
     return compositeKey([identityPart(item && item.productLineId), identityPart(item && item.categoryId)]);
   }
@@ -312,14 +316,93 @@
 
   function normalizeScenarioValues(input) {
     var source = isPlainObject(input) ? input : {};
+    var sourceMeasures = isPlainObject(source.measures) ? source.measures : {};
+    function normalizeMetric(inputMetric) {
+      inputMetric = isPlainObject(inputMetric) ? inputMetric : {};
+      return {
+        enabled: Object.keys(isPlainObject(inputMetric.enabled) ? inputMetric.enabled : {}).reduce(function (result, key) {
+          result[key] = inputMetric.enabled[key] === true;
+          return result;
+        }, Object.create(null)),
+        perPersonMax: normalizeCellMap(inputMetric.perPersonMax, normalizeLimitCell),
+        perTableMax: normalizeCellMap(inputMetric.perTableMax, normalizeLimitCell)
+      };
+    }
     return {
       totalBounds: normalizeCellMap(source.totalBounds, normalizeBoundCell),
       tableTotalBounds: normalizeCellMap(source.tableTotalBounds, normalizeBoundCell),
       targetLimits: normalizeCellMap(source.targetLimits, normalizeLimitCell),
       tableTargetCaps: normalizeCellMap(source.tableTargetCaps, normalizeLimitCell),
       defaultDishLimits: normalizeCellMap(source.defaultDishLimits, normalizeLimitCell),
-      exceptionDishLimits: normalizeExceptionMap(source.exceptionDishLimits)
+      exceptionDishLimits: normalizeExceptionMap(source.exceptionDishLimits),
+      measures: {
+        piece: normalizeMetric(sourceMeasures.piece),
+        kind: normalizeMetric(sourceMeasures.kind)
+      },
+      productLimits: isPlainObject(source.productLimits) ? clone(source.productLimits) : { defaults: {}, exceptions: {} }
     };
+  }
+
+  function emptyDishSetMeasures() {
+    return normalizeScenarioValues({}).measures;
+  }
+
+  function dishSetSceneMeasures(rule, config, period, partyIndex, roundIndex) {
+    var values = config && config.periodValues && config.periodValues[period] || normalizeScenarioValues({});
+    var measures = values.measures || emptyDishSetMeasures();
+    var key = scenarioTargetKey(rule, period, partyIndex, roundIndex);
+    function metric(name) {
+      var source = measures[name] || {};
+      return {
+        enabled: source.enabled && source.enabled[key] === true,
+        perPersonMax: normalizeLimitCell(source.perPersonMax && source.perPersonMax[key]),
+        perTableMax: normalizeLimitCell(source.perTableMax && source.perTableMax[key])
+      };
+    }
+    return { sceneKey: key, piece: metric("piece"), kind: metric("kind") };
+  }
+
+  function migrateDishSetQuotaV2(input) {
+    var rule = clone(input);
+    if (Number(rule.quotaSchemaVersion) >= 2 || rule.targetType !== "dish_set") return { rule: rule, migrated: false };
+    var metricName = rule.measureUnit === "kind" ? "kind" : "piece";
+    Object.keys(isPlainObject(rule.storeConfigs) ? rule.storeConfigs : {}).forEach(function (storeId) {
+      var config = rule.storeConfigs[storeId];
+      Object.keys(isPlainObject(config.periodValues) ? config.periodValues : {}).forEach(function (period) {
+        var values = normalizeScenarioValues(config.periodValues[period]);
+        var metric = values.measures[metricName];
+        var destination = rule.subject === "party_size" ? "perPersonMax" : "perTableMax";
+        Object.keys(values.targetLimits).forEach(function (key) {
+          metric[destination][key] = normalizeLimitCell(values.targetLimits[key]);
+          metric.enabled[key.split("|").slice(0, 2).join("|")] = true;
+        });
+        Object.keys(values.tableTargetCaps).forEach(function (key) {
+          metric.perTableMax[key] = normalizeLimitCell(values.tableTargetCaps[key]);
+          metric.enabled[key.split("|").slice(0, 2).join("|")] = true;
+        });
+        values.productLimits = {
+          defaults: clone(values.defaultDishLimits),
+          exceptions: clone(values.exceptionDishLimits)
+        };
+        config.periodValues[period] = values;
+      });
+    });
+    rule.quotaSchemaVersion = 2;
+    return { rule: rule, migrated: true };
+  }
+
+  function validateDishSetMeasures(rule, config, period, partyIndex, roundIndex) {
+    var state = dishSetSceneMeasures(rule, config, period, partyIndex, roundIndex);
+    var enabled = ["piece", "kind"].filter(function (name) { return state[name].enabled; });
+    if (!enabled.length) return { valid: false, code: "DISH_SET_MEASURE_REQUIRED", sceneKey: state.sceneKey };
+    for (var index = 0; index < enabled.length; index += 1) {
+      var name = enabled[index];
+      var cells = state[name];
+      var hasPerPerson = rule.subject === "party_size" && cells.perPersonMax.configured;
+      var hasPerTable = cells.perTableMax.configured;
+      if (!hasPerPerson && !hasPerTable) return { valid: false, code: "DISH_SET_MEASURE_LIMIT_REQUIRED", metric: name, sceneKey: state.sceneKey };
+    }
+    return { valid: true, sceneKey: state.sceneKey };
   }
 
   function normalizeStoreConfig(input) {
@@ -434,6 +517,11 @@
     scenarioKey: scenarioKey,
     targetCellKey: targetCellKey,
     menuIdentity: menuIdentity,
+    productKey: productKey,
+    emptyDishSetMeasures: emptyDishSetMeasures,
+    dishSetSceneMeasures: dishSetSceneMeasures,
+    migrateDishSetQuotaV2: migrateDishSetQuotaV2,
+    validateDishSetMeasures: validateDishSetMeasures,
     effectiveBounds: effectiveBounds,
     normalizeRule: normalizeRule,
     normalizeStoreConfig: normalizeStoreConfig
