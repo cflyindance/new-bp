@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 在“设置限购数量”的最外层“门店与商品数量”区块增加“查看全部配置”，并与单场景入口复用同一汇总弹窗、空状态和精确场景跳转。
+**Goal:** 仅在“设置限购数量”的最外层“门店与商品数量”区块保留“查看全部配置”，单场景配置额度页不展示该入口。
 
-**Architecture:** 继续以 `buffetAllSceneSummaryRows()` 作为唯一数据投影，不新增汇总存储。把汇总弹窗从 `quantitySceneDialog` 的附属渲染提升到编辑器第 2 步的公共渲染层，外层和单场景入口只记录不同的 `origin`；关闭时按 origin 恢复焦点，“进入配置”继续通过稳定场景标识创建场景会话。
+**Architecture:** 继续以 `buffetAllSceneSummaryRows()` 作为唯一数据投影，不新增汇总存储。汇总弹窗挂载在编辑器第 2 步公共层，仅由外层按钮打开；关闭时恢复外层按钮焦点，“进入配置”继续通过稳定场景标识创建场景会话。
 
 **Tech Stack:** 原生 JavaScript、HTML `<dialog>`、现有 Order Limit Flow CSS、Node.js 静态验证脚本、Codex 本地浏览器验收。
 
@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - 外层按钮位于“门店与商品数量”标题右侧，`查看全部配置` 为次级按钮，`+ 添加商品` 为主按钮。
-- 内外入口必须复用同一个 `renderBuffetAllSceneSummaryDialog()` 和 `buffetAllSceneSummaryRows()`。
+- 单场景“配置额度”页不得展示“查看全部配置”。
 - 没有商品时按钮仍可用，空状态固定为“暂无商品配置，请先添加商品”。
 - 关闭、取消或 Escape 恢复到本次入口；“进入配置”不恢复入口焦点，而是进入准确场景。
 - 不修改现有商品添加、删除、额度保存作用域。
@@ -33,7 +33,7 @@
 
 **Interfaces:**
 - Consumes: `renderBuffetAllSceneSummaryDialog(draft) -> string`, `defaultBuffetSummaryState() -> SummaryState`, `resolveBuffetSummaryScene(draft, row) -> {valid, storeId, combo}`.
-- Produces: outer button `[data-buffet-summary-open][data-buffet-summary-origin="outer"]`; inner button `[data-buffet-summary-origin="scene"]`; `editorState.buffetSummaryOrigin: "outer" | "scene" | null`; one globally rendered `#buffetAllSceneSummaryDialog` on modern buffet step 2.
+- Produces: one outer button `[data-buffet-summary-open][data-buffet-summary-origin="outer"]`; no inner summary button; one globally rendered `#buffetAllSceneSummaryDialog` on modern buffet step 2.
 
 - [ ] **Step 1: Write the failing outer-entry verification**
 
@@ -46,10 +46,10 @@ import assert from 'node:assert/strict';
 const flow = fs.readFileSync('dist/Configuration center/assets/order-limit-flow.js', 'utf8');
 
 assert.match(flow, /门店与商品数量[\s\S]*data-buffet-summary-open[\s\S]*data-buffet-summary-origin="outer"[\s\S]*查看全部配置[\s\S]*data-product-add-open/);
-assert.ok(flow.includes('data-buffet-summary-origin", "scene"'), '单场景入口应标记 scene 来源');
+assert.ok(!flow.includes('data-buffet-summary-origin", "scene"'), '单场景配置额度不应展示汇总入口');
 assert.match(flow, /renderBuffetQuantityWorkbench\(draft\)\s*\+\s*renderBuffetAllSceneSummaryDialog\(draft\)/, '汇总弹窗应在第 2 步公共层渲染');
 assert.ok(!/renderQuantitySceneDialog\(draft, config\)[\s\S]{0,900}renderBuffetAllSceneSummaryDialog\(draft\)/.test(flow), '汇总弹窗不得依赖单场景弹窗渲染');
-assert.ok(flow.includes('buffetSummaryOrigin'), '应保存打开入口来源以恢复焦点');
+assert.ok(flow.includes('data-buffet-summary-origin="outer"'), '关闭后应恢复唯一外层入口焦点');
 
 console.log('verify-buffet-all-scene-summary-outer-entry: PASS');
 ```
@@ -92,33 +92,35 @@ return '<div class="olf-content-head"><h2 tabindex="-1">设置限购数量</h2><
 
 `renderBuffetQuantityWorkbench()` already reaches `renderQuantitySceneDialog(draft, config)` through `renderStepFour()` / `renderBuffetV4QuantityEditor()`; do not call the scene renderer again. Do not create a second summary dialog or a second row projection.
 
-- [ ] **Step 5: Track opener origin and restore focus only on dismiss**
+- [ ] **Step 5: Remove the inner entry and restore focus to the outer entry**
 
-When building the existing inner button, add:
+Delete the dynamic `summaryButton` construction from `renderEditor()` and retain only the scene add button:
 
 ```js
-summaryButton.setAttribute("data-buffet-summary-origin", "scene");
+var addButton = document.createElement("button");
+addButton.type = "button";
+addButton.className = "olf-button olf-button--primary";
+addButton.setAttribute("data-scene-product-add", "");
+addButton.textContent = "＋ 添加" + (draft.targetType === "category" ? "分类" : "商品");
+if (productHeading) productHeading.appendChild(addButton);
 ```
 
-On open:
+Keep only the existing scene “添加商品” button. On outer open:
 
 ```js
-editorState.buffetSummaryOrigin = summaryAction.getAttribute("data-buffet-summary-origin") || "scene";
 editorState.buffetSummary = defaultBuffetSummaryState();
 ```
 
-On close/cancel/Escape, save the origin before clearing state, re-render, then focus:
+On close/cancel/Escape, clear state, re-render, then focus the only outer opener:
 
 ```js
-var origin = editorState.buffetSummaryOrigin;
 editorState.buffetSummary = null;
-editorState.buffetSummaryOrigin = null;
 renderEditor();
-var opener = document.querySelector('[data-buffet-summary-open][data-buffet-summary-origin="' + origin + '"]');
+var opener = document.querySelector('[data-buffet-summary-open][data-buffet-summary-origin="outer"]');
 if (opener) opener.focus();
 ```
 
-Keep “进入配置” on the existing `resolveBuffetSummaryScene()` path and clear `buffetSummaryOrigin` without refocusing an opener.
+Keep “进入配置” on the existing `resolveBuffetSummaryScene()` path without refocusing the outer opener.
 
 - [ ] **Step 6: Run focused tests**
 
@@ -153,7 +155,7 @@ git commit -m "feat: expose buffet summary from quantity overview"
 
 **Interfaces:**
 - Consumes: `buffetSummaryPageData(draft, state)` with `allRows`, `filtered`, and `pageRows`.
-- Produces: canonical empty text `暂无商品配置，请先添加商品`; responsive `.olf-section-actions`; authority-document QA rows for outer/inner parity.
+- Produces: canonical empty text `暂无商品配置，请先添加商品`; responsive `.olf-section-actions`; authority-document QA rows for outer-only entry behavior.
 
 - [ ] **Step 1: Extend the failing test for empty-state and action layout**
 
@@ -199,11 +201,11 @@ Preserve the secondary/primary hierarchy shown in approved visual option A.
 Add to `docs/superpowers/specs/2026-09-07-buffet-scene-step-fusion-design.md` section 15:
 
 ```markdown
-- “查看全部配置”同时存在于最外层“门店与商品数量”和单场景“商品限购数量”；两处入口复用相同汇总结果。
+- “查看全部配置”仅存在于最外层“门店与商品数量”；单场景“商品限购数量”不展示该入口。
 - 无商品时入口仍可点击并显示“暂无商品配置，请先添加商品”。
 ```
 
-Add acceptance rows verifying outer placement, inner/outer parity, empty state, dismiss focus restoration, and exact-scene navigation.
+Add acceptance rows verifying outer placement, inner entry absence, empty state, dismiss focus restoration, and exact-scene navigation.
 
 - [ ] **Step 5: Run regression suite**
 
@@ -232,8 +234,8 @@ Using the local browser on the feature branch:
 2. Open the summary and verify all scenes are listed.
 3. Close with the × button and verify focus returns to the outer button.
 4. Remove all products in a disposable draft; verify the button remains and the canonical empty message appears.
-5. Open a scene, use the inner summary entry, and verify its results equal the outer entry.
-6. Click a row from a non-current scene and verify the target scene opens.
+5. Open a scene and verify “商品限购数量” only shows the add action, without “查看全部配置”.
+6. Return to the outer summary, click a row from a non-current scene, and verify the target scene opens.
 
 - [ ] **Step 7: Commit the polish and authority update**
 
@@ -248,4 +250,4 @@ git commit -m "test: verify buffet summary entry parity"
 
 - Spec coverage: outer placement, shared dialog/model, empty state, focus restoration, exact navigation, responsive action layout, authority-document synchronization, automated and browser verification are each assigned to a task.
 - Placeholder scan: no TBD/TODO or unspecified implementation step remains.
-- Type consistency: both entries use `data-buffet-summary-origin`, state uses `buffetSummaryOrigin`, and the existing `buffetSummary` data model remains unchanged.
+- Type consistency: the only opener uses `data-buffet-summary-origin="outer"`, and the existing `buffetSummary` data model remains unchanged.
