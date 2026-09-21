@@ -1466,7 +1466,7 @@
   }
 
   function currentBuffetWorkbenchTargets(draft, config) {
-    if (editorState.quantitySceneDialog && !config.sceneScopeProjected) config = sceneScopeConfig(draft, config, editorState.quantitySceneDialog.combo);
+    if (editorState && editorState.quantitySceneDialog && !config.sceneScopeProjected) config = sceneScopeConfig(draft, config, editorState.quantitySceneDialog.combo);
     if (draft.targetType === "dish_set" && config && config.sceneScopeProjected) return (config.dishSetMembers || []).map(function (dish) {
       var line = lines.find(function (item) { return item.id === dish.productLineId; });
       return Object.assign({}, dish, { name: dish.name || dish.dishId, lineLabel: dish.lineLabel || (line && line.name) || dish.productLineId });
@@ -4058,6 +4058,23 @@
     }, []);
   }
 
+  function allQuantityScenarios(draft) {
+    return (draft.enabledPeriods || []).slice().sort(function (a, b) {
+      return BUFFET_PERIOD_ORDER.indexOf(a) - BUFFET_PERIOD_ORDER.indexOf(b);
+    }).reduce(function (items, period) {
+      return items.concat(quantityScenarioIndexes(draft, period).map(function (combo) {
+        var scenario = { period: period, partyIndex: combo.partyIndex, roundIndex: combo.roundIndex };
+        scenario.uiKey = buffetSceneIdentity(draft, scenario);
+        return scenario;
+      }));
+    }, []);
+  }
+
+  function quantityScenarioPosition(draft, combo) {
+    var key = buffetSceneIdentity(draft, combo);
+    return allQuantityScenarios(draft).findIndex(function (item) { return item.uiKey === key; });
+  }
+
   function configuredQuantityValue(value) {
     if (value === "" || value == null) return null;
     var raw = String(value == null ? "" : value);
@@ -4606,30 +4623,23 @@
 
   function renderV4PeriodSection(draft, config, period) {
     var labels = { order_lifetime: "整个订单", per_round: "每轮", multi_round: "分轮次" };
-    if (draft.subject === "party_size" || period === "multi_round") {
-      var combos = quantityScenarioIndexes(draft, period);
-      var both = draft.subject === "party_size" && period === "multi_round";
-      var groups = both ? (draft.partyRanges || []).map(function (_, i) { return i; }) : [null];
-      return '<section class="olf-v4-period-section"><div class="olf-v4-period-head"><h3>' + labels[period] + '</h3><span>' + combos.length + ' 个场景</span></div>' + groups.map(function (partyIndex) {
-        return '<div class="olf-scene-group">' + (both ? '<h4>就餐人数 · ' + esc(formatRange(draft.partyRanges[partyIndex], "人")) + '</h4>' : '') + '<div class="olf-scene-grid">' + combos.filter(function (combo) { return partyIndex == null || combo.partyIndex === partyIndex; }).map(function (combo) {
-          combo.period = period;
-          var title = period === "multi_round" ? formatRange(draft.roundRanges[combo.roundIndex], "轮") : formatRange(draft.partyRanges[combo.partyIndex], "人");
-          var values = v4PeriodValues(config, period);
-          var targets = currentBuffetWorkbenchTargets(draft, sceneScopeConfig(draft, config, combo));
-          var configured = targets.filter(function (target) { return buffetWorkbenchTargetStatus(draft, target, combo, values) !== "unconfigured"; }).length;
-          var sceneKey = isBuffetComboDraft(draft) ? comboScenarioKeyFor(draft, combo.partyIndex) : v4ScenarioKey(combo.partyIndex, combo.roundIndex, draft);
-          var hasBounds = ["totalBounds", "tableTotalBounds"].some(function (map) { return hasConfiguredBoundCell(values[map] && values[map][sceneKey]); });
-          var hasSet = draft.targetType === "dish_set" && ["targetLimits", "tableTargetCaps"].some(function (map) { return values[map] && values[map][sceneKey] && values[map][sceneKey].configured; });
-          var done = configured > 0 || hasBounds || hasSet;
-          return '<button type="button" class="olf-scene-card' + (done ? ' is-configured' : '') + '" data-quantity-scene-open data-v4-period="' + period + '" data-scene-party="' + combo.partyIndex + '" data-scene-round="' + combo.roundIndex + '"><strong>' + esc(title) + '</strong><span>' + (done ? '已配置' : '未配置') + '</span><small>商品上限：' + configured + ' / ' + targets.length + ' 项</small><b aria-hidden="true">→</b></button>';
-        }).join('') + '</div></div>';
-      }).join('') + '</section>';
-    }
-    return '<section class="olf-v4-period-section olf-scene-workbench olf-inline-workbench" data-period-section="' + period + '"><div class="olf-v4-period-head"><h3>' + labels[period] + '</h3><span>' + (period === "order_lifetime" ? "整个订单累计" : period === "per_round" ? "每轮独立累计" : "按轮次区间独立配置") + '</span></div>' +
-      quantityScenarioIndexes(draft, period).map(function (combo) {
+    var combos = quantityScenarioIndexes(draft, period);
+    var groupedByParty = draft.subject === "party_size" && period === "multi_round";
+    var groups = groupedByParty ? (draft.partyRanges || []).map(function (_, i) { return i; }) : [null];
+    return '<section class="olf-v4-period-section" data-period-section="' + period + '"><div class="olf-v4-period-head"><h3>' + labels[period] + '</h3><span>' + combos.length + ' 个场景</span></div>' + groups.map(function (partyIndex) {
+      return '<div class="olf-scene-group">' + (groupedByParty ? '<h4>就餐人数 · ' + esc(formatRange(draft.partyRanges[partyIndex], "人")) + '</h4>' : '') + '<div class="olf-scene-grid">' + combos.filter(function (combo) { return partyIndex == null || combo.partyIndex === partyIndex; }).map(function (combo) {
         combo.period = period;
-        return decorateQuantityWorkbench(renderV4PeriodScenario(draft, config, period, combo), draft, combo, false);
-      }).join("") + '</section>';
+        var title = period === "multi_round" ? formatRange(draft.roundRanges[combo.roundIndex], "轮") : draft.subject === "party_size" ? formatRange(draft.partyRanges[combo.partyIndex], "人") : period === "order_lifetime" ? "整单限购" : "每轮限购";
+        var values = v4PeriodValues(config, period);
+        var targets = currentBuffetWorkbenchTargets(draft, sceneScopeConfig(draft, config, combo));
+        var configured = targets.filter(function (target) { return buffetWorkbenchTargetStatus(draft, target, combo, values) !== "unconfigured"; }).length;
+        var sceneKey = isBuffetComboDraft(draft) ? comboScenarioKeyFor(draft, combo.partyIndex) : v4ScenarioKey(combo.partyIndex, combo.roundIndex, draft);
+        var hasBounds = ["totalBounds", "tableTotalBounds"].some(function (map) { return hasConfiguredBoundCell(values[map] && values[map][sceneKey]); });
+        var hasSet = draft.targetType === "dish_set" && ["targetLimits", "tableTargetCaps"].some(function (map) { return values[map] && values[map][sceneKey] && values[map][sceneKey].configured; });
+        var done = configured > 0 || hasBounds || hasSet;
+        return '<button type="button" class="olf-scene-card' + (done ? ' is-configured' : '') + '" data-quantity-scene-open data-v4-period="' + period + '" data-scene-party="' + combo.partyIndex + '" data-scene-round="' + combo.roundIndex + '"><strong>' + esc(title) + '</strong><span>' + (done ? '已配置' : '未配置') + '</span><small>商品上限：' + configured + ' / ' + targets.length + ' 项</small><b aria-hidden="true">→</b></button>';
+      }).join('') + '</div></div>';
+    }).join('') + '</section>';
   }
 
   function renderScenarioBulkFields(draft, combo) {
@@ -4639,13 +4649,65 @@
     }).join("");
   }
 
+  function createQuantitySceneSession(draft, combo) {
+    var snapshotsByStoreId = {};
+    addedStoreIds(draft).forEach(function (storeId) {
+      var config = storeConfigFor(draft, storeId, true);
+      v4PeriodValues(config, combo.period);
+      snapshotsByStoreId[storeId] = cloneValue(config);
+    });
+    return {
+      storeId: draft.activeStoreId,
+      snapshotsByStoreId: snapshotsByStoreId,
+      combo: { period: combo.period, partyIndex: combo.partyIndex, roundIndex: combo.roundIndex },
+      batchOpen: false
+    };
+  }
+
+  function quantitySceneIsDirty(draft, session) {
+    return Object.keys(session.snapshotsByStoreId || {}).some(function (storeId) {
+      return JSON.stringify(session.snapshotsByStoreId[storeId]) !== JSON.stringify(storeConfigFor(draft, storeId, true));
+    });
+  }
+
+  function restoreQuantitySceneSnapshots(draft, scene) {
+    Object.keys(scene.snapshotsByStoreId || {}).forEach(function (storeId) {
+      draft.storeConfigs[storeId] = cloneValue(scene.snapshotsByStoreId[storeId]);
+    });
+  }
+
+  function validateQuantitySceneForAllStores(draft, session) {
+    var invalid = null;
+    addedStoreIds(draft).some(function (storeId) {
+      var config = storeConfigFor(draft, storeId, true);
+      var currentScope = sceneScopeConfig(draft, config, session.combo);
+      var scopeItems = draft.targetType === "dish_set" ? currentScope.dishSetMembers : draft.targetType === "dish" ? currentScope.dishTargets : currentScope.categoryTargets;
+      if (scopeItems.length < (draft.targetType === "dish_set" ? 2 : 1)) {
+        invalid = { storeId: storeId, message: draft.targetType === "dish_set" ? "当前场景菜品集至少需要 2 个成员" : "当前场景至少需要一个限购对象" };
+        return true;
+      }
+      var values = v4PeriodValues(config, session.combo.period);
+      var scenario = isBuffetComboDraft(draft) ? comboScenarioKeyFor(draft, session.combo.partyIndex) : v4ScenarioKey(session.combo.partyIndex, session.combo.roundIndex, draft);
+      var invalidBounds = ["totalBounds", "tableTotalBounds"].some(function (map) {
+        var bound = values[map] && values[map][scenario];
+        return bound && bound.minConfigured && bound.maxConfigured && bound.min > bound.max;
+      });
+      if (invalidBounds) {
+        invalid = { storeId: storeId, message: "最少份数不能大于最多份数" };
+        return true;
+      }
+      return false;
+    });
+    return invalid ? { valid: false, storeId: invalid.storeId, message: invalid.message } : { valid: true };
+  }
+
   function renderQuantitySceneDialog(draft, config) {
-    var scene = editorState.quantitySceneDialog;
+    var scene = editorState && editorState.quantitySceneDialog;
     if (!scene) return '';
-    var combos = quantityScenarioIndexes(draft, scene.combo.period);
-    var position = combos.findIndex(function (combo) { return combo.partyIndex === scene.combo.partyIndex && combo.roundIndex === scene.combo.roundIndex; });
+    var scenarios = allQuantityScenarios(draft);
+    var position = quantityScenarioPosition(draft, scene.combo);
     var content = decorateQuantityWorkbench(renderV4PeriodScenario(draft, config, scene.combo.period, scene.combo), draft, scene.combo, !!scene.batchOpen);
-    return '<dialog id="quantitySceneDialog" class="olf-scene-dialog olf-scene-workbench' + (scene.batchOpen ? ' is-batch-open' : '') + '" aria-labelledby="quantitySceneTitle"><header><button type="button" class="olf-button" aria-label="关闭场景配置" data-quantity-scene-cancel>×</button><div class="olf-scene-heading"><h3 id="quantitySceneTitle">配置额度</h3><span>' + esc(addedStoreIds(draft).length + ' 家参与门店 · ' + periodLabel(scene.combo.period) + ' · ' + v4ScenarioTitle(draft, scene.combo.period, scene.combo)) + '</span></div><span class="olf-scene-position">场景 ' + (position + 1) + ' / ' + combos.length + '</span><button type="button" class="olf-button" data-quantity-scene-save>保存并返回</button><button type="button" class="olf-button olf-button--primary" data-quantity-scene-next' + (position < 0 || position === combos.length - 1 ? ' disabled' : '') + '>保存并配置下一场景 →</button></header><div class="olf-scene-dialog-body">' + content + '</div></dialog>';
+    return '<dialog id="quantitySceneDialog" class="olf-scene-dialog olf-scene-workbench' + (scene.batchOpen ? ' is-batch-open' : '') + '" aria-labelledby="quantitySceneTitle"><header><button type="button" class="olf-button" aria-label="关闭场景配置" data-quantity-scene-cancel>×</button><div class="olf-scene-heading"><h3 id="quantitySceneTitle">配置额度</h3><span>' + esc(addedStoreIds(draft).length + ' 家参与门店 · ' + periodLabel(scene.combo.period) + ' · ' + v4ScenarioTitle(draft, scene.combo.period, scene.combo)) + '</span></div><span class="olf-scene-position">场景 ' + (position + 1) + ' / ' + scenarios.length + '</span><button type="button" class="olf-button" data-quantity-scene-save>保存并返回</button><button type="button" class="olf-button olf-button--primary" data-quantity-scene-next' + (position < 0 || position === scenarios.length - 1 ? ' hidden' : '') + '>保存并配置下一场景 →</button></header><div class="olf-scene-dialog-body">' + content + '</div></dialog>';
   }
 
   function decorateQuantityWorkbench(content, draft, combo, batchOpen) {
@@ -4662,18 +4724,21 @@
 
   function closeQuantitySceneDialog(discard) {
     var scene = editorState.quantitySceneDialog;
-    if (!scene) return;
+    if (!scene) return false;
     var draft = editorState.rule.editorDraft;
+    if (discard && quantitySceneIsDirty(draft, scene) && typeof window.confirm === "function" && !window.confirm("当前场景存在未保存修改，确认放弃吗？")) return false;
     if (!discard) {
-      var invalidStoreId = addedStoreIds(draft).find(function (storeId) { var currentScope = sceneScopeConfig(draft, storeConfigFor(draft, storeId, true), scene.combo); var scopeItems = draft.targetType === "dish_set" ? currentScope.dishSetMembers : draft.targetType === "dish" ? currentScope.dishTargets : currentScope.categoryTargets; return scopeItems.length < (draft.targetType === "dish_set" ? 2 : 1); });
-      if (invalidStoreId) { var invalidStore = stores.find(function (item) { return item.id === invalidStoreId; }); toast((invalidStore ? invalidStore.name + "：" : "") + (draft.targetType === "dish_set" ? "当前场景菜品集至少需要 2 个成员" : "当前场景至少需要一个限购对象"), true); return; }
       var modal = document.getElementById("quantitySceneDialog");
-      if (modal && Array.prototype.some.call(modal.querySelectorAll('input[type="number"]'), function (input) { return input.value !== "" && isInvalidConfiguredQuantityInput(input); })) { toast("请输入 0 至 999999 的整数", true); return; }
-      var sceneValues = v4PeriodValues(activeStoreConfig(draft), scene.combo.period);
-      var sceneKey = isBuffetComboDraft(draft) ? comboScenarioKeyFor(draft, scene.combo.partyIndex) : v4ScenarioKey(scene.combo.partyIndex, scene.combo.roundIndex, draft);
-      if (["totalBounds", "tableTotalBounds"].some(function (map) { var bound = sceneValues[map] && sceneValues[map][sceneKey]; return bound && bound.minConfigured && bound.maxConfigured && bound.min > bound.max; })) { toast("最少份数不能大于最多份数", true); return; }
+      var invalidInput = modal && Array.prototype.find.call(modal.querySelectorAll('input[type="number"]'), function (input) { return input.value !== "" && isInvalidConfiguredQuantityInput(input); });
+      if (invalidInput) { toast("请输入 0 至 999999 的整数", true); invalidInput.focus(); return false; }
+      var validation = validateQuantitySceneForAllStores(draft, scene);
+      if (!validation.valid) {
+        var invalidStore = stores.find(function (item) { return item.id === validation.storeId; });
+        toast((invalidStore ? invalidStore.name + "：" : "") + validation.message, true);
+        return false;
+      }
     }
-    if (discard) Object.keys(scene.snapshotsByStoreId || {}).forEach(function (storeId) { draft.storeConfigs[storeId] = cloneValue(scene.snapshotsByStoreId[storeId]); });
+    if (discard) restoreQuantitySceneSnapshots(draft, scene);
     editorState.quantitySceneDialog = null;
     clearBuffetQuantitySelection();
     deriveBuffetQuantityBlocks(draft);
@@ -4682,6 +4747,7 @@
     if (!discard) saveEditorDraft(true);
     var sceneCard = document.querySelector('[data-quantity-scene-open][data-v4-period="' + scene.combo.period + '"][data-scene-party="' + scene.combo.partyIndex + '"][data-scene-round="' + scene.combo.roundIndex + '"]');
     if (sceneCard) sceneCard.focus();
+    return true;
   }
 
   function renderV4StoreCopy(draft, configuredStores, workbenchState) {
@@ -4699,7 +4765,7 @@
   function renderBuffetV4QuantityEditor(draft, configuredStores) {
     normalizeActiveDimensions(draft, true);
     var workbenchState = normalizeBuffetQuantityWorkbenchState(draft);
-    if (!editorState.quantitySceneDialog) workbenchState.storeId = draft.activeStoreId;
+    if (!editorState || !editorState.quantitySceneDialog) workbenchState.storeId = draft.activeStoreId;
     var config = storeConfigFor(draft, draft.activeStoreId, true);
     var store = stores.find(function (item) { return item.id === draft.activeStoreId; });
     var storeOptions = configuredStores.map(function (storeId) {
@@ -6417,14 +6483,13 @@
         sceneTool.textContent = "批量设置（" + normalizeBuffetQuantityWorkbenchState(editorState.rule.editorDraft).selectedIds.length + "）" + (currentScene.batchOpen ? " 收起" : " 展开");
       } else {
         var nextDraft = editorState.rule.editorDraft;
-        var sceneCombos = quantityScenarioIndexes(nextDraft, currentScene.combo.period);
-        var currentPosition = sceneCombos.findIndex(function (combo) { return combo.partyIndex === currentScene.combo.partyIndex && combo.roundIndex === currentScene.combo.roundIndex; });
+        var sceneCombos = allQuantityScenarios(nextDraft);
+        var currentPosition = quantityScenarioPosition(nextDraft, currentScene.combo);
         var nextCombo = sceneCombos[currentPosition + 1];
         if (currentPosition < 0 || !nextCombo) return;
-        closeQuantitySceneDialog(false);
+        if (!closeQuantitySceneDialog(false)) return;
         if (editorState.quantitySceneDialog) return;
-        nextCombo.period = currentScene.combo.period;
-        editorState.quantitySceneDialog = { storeId: nextDraft.activeStoreId, snapshot: cloneValue(activeStoreConfig(nextDraft)), combo: nextCombo };
+        editorState.quantitySceneDialog = createQuantitySceneSession(nextDraft, nextCombo);
         clearBuffetQuantitySelection(); renderEditor();
       }
       return;
@@ -6466,9 +6531,7 @@
     if (sceneAction) {
       if (sceneAction.hasAttribute("data-quantity-scene-open")) {
         var sceneDraft = editorState.rule.editorDraft;
-        var snapshotsByStoreId = {};
-        addedStoreIds(sceneDraft).forEach(function (storeId) { snapshotsByStoreId[storeId] = cloneValue(storeConfigFor(sceneDraft, storeId, true)); });
-        editorState.quantitySceneDialog = { storeId: sceneDraft.activeStoreId, snapshotsByStoreId: snapshotsByStoreId, combo: { period: sceneAction.getAttribute("data-v4-period"), partyIndex: Number(sceneAction.getAttribute("data-scene-party")), roundIndex: Number(sceneAction.getAttribute("data-scene-round")) } };
+        editorState.quantitySceneDialog = createQuantitySceneSession(sceneDraft, { period: sceneAction.getAttribute("data-v4-period"), partyIndex: Number(sceneAction.getAttribute("data-scene-party")), roundIndex: Number(sceneAction.getAttribute("data-scene-round")) });
         normalizeBuffetQuantityWorkbenchState(sceneDraft).storeId = "";
         clearBuffetQuantitySelection(); renderEditor();
       } else closeQuantitySceneDialog(sceneAction.hasAttribute("data-quantity-scene-cancel"));

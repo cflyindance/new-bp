@@ -53,7 +53,7 @@ assert.match(closeDialog, /restoreQuantitySceneSnapshots/);
 
 assert.match(source, /function createQuantitySceneSession\(draft, combo\)/);
 assert.match(source, /function quantitySceneIsDirty\(draft, session\)/);
-assert.match(source, /function restoreQuantitySceneSnapshots\(draft, session\)/);
+assert.match(source, /function restoreQuantitySceneSnapshots\(draft, (?:session|scene)\)/);
 assert.match(source, /function validateQuantitySceneForAllStores\(draft, session\)/);
 
 assert.match(source, /v4ScenarioKey/);
