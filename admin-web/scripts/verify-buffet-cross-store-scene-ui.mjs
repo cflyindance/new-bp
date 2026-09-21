@@ -12,7 +12,7 @@ assert.match(flow, /<th>门店<\/th>/);
 assert.match(flow, /row\.lineLabel \|\| "—"/);
 assert.match(flow, /buffetSceneNameWithoutLineSuffix\(row\.categoryName, lineName\) \|\| "—"/);
 assert.match(flow, /row\.storeName \|\| row\.storeId \|\| "—"/);
-assert.match(flow, /var itemName = buffetDisplayName\(target, lineName\)/);
+assert.match(flow, /var itemName = buffetDisplayName\(target, lineName, row\.productName\)/);
 assert.match(flow, /draft\.targetType === "category" \? 7 : 8/);
 assert.doesNotMatch(flow, /<th>产线 · 分类 · 编码<\/th>/);
 assert.doesNotMatch(flow, /<span>' \+ esc\(row\.code\)/);

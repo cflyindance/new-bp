@@ -5,7 +5,8 @@ const source=fs.readFileSync(new URL('../dist/Configuration center/assets/order-
 const start=source.indexOf('  function renderScenarioBulkFields(');
 const end=source.indexOf('  function closeQuantitySceneDialog(',start);
 const editorState={quantitySceneDialog:{combo:{period:'multi_round',partyIndex:0,roundIndex:0}}};
-const ctx=vm.createContext({editorState,stores:[{id:'s',name:'测试店'}],esc:String,buffetProductTableColumns:draft=>draft.targetType==='dish_set'?[{key:'sameDish',label:'每轮每种最多份数'}]:[{key:'limit',label:'每人每轮最多'},...(draft.subject==='party_size'?[{key:'tableCap',label:'整桌兜底'}]:[])],periodLabel:()=> '分轮次',v4ScenarioTitle:()=> '1 人 · 1 轮',normalizeBuffetQuantityWorkbenchState:()=>({selectedIds:['a']}),quantityScenarioIndexes:()=>[{partyIndex:0,roundIndex:0},{partyIndex:0,roundIndex:1}],renderV4PeriodScenario:()=>'<div class="olf-v4-workbench-batch"><span>批量数量</span><input data-buffet-workbench-bulk-value /></div>'});
+const scenarios=[{period:'multi_round',partyIndex:0,roundIndex:0},{period:'multi_round',partyIndex:0,roundIndex:1}];
+const ctx=vm.createContext({editorState,stores:[{id:'s',name:'测试店'}],esc:String,buffetProductTableColumns:draft=>draft.targetType==='dish_set'?[{key:'sameDish',label:'每轮每种最多份数'}]:[{key:'limit',label:'每人每轮最多'},...(draft.subject==='party_size'?[{key:'tableCap',label:'整桌兜底'}]:[])],periodLabel:()=> '分轮次',v4ScenarioTitle:()=> '1 人 · 1 轮',normalizeBuffetQuantityWorkbenchState:()=>({selectedIds:['a']}),allQuantityScenarios:()=>scenarios,quantityScenarioPosition:(draft,combo)=>combo.roundIndex,addedStoreIds:()=>['s'],renderV4PeriodScenario:()=>'<div class="olf-v4-workbench-batch"><span>批量数量</span><input data-buffet-workbench-bulk-value /></div>'});
 vm.runInContext(source.slice(start,end),ctx);
 let html=ctx.renderQuantitySceneDialog({activeStoreId:'s'},{});
 assert.ok(html.includes('场景 1 / 2'));
@@ -17,7 +18,7 @@ editorState.quantitySceneDialog.batchOpen=true;
 editorState.quantitySceneDialog.combo.roundIndex=1;
 html=ctx.renderQuantitySceneDialog({activeStoreId:'s'},{});
 assert.ok(html.includes('场景 2 / 2'));
-assert.ok(html.includes('data-quantity-scene-next disabled'));
+assert.ok(html.includes('data-quantity-scene-next hidden'));
 assert.ok(html.includes('olf-scene-workbench is-batch-open'));
 editorState.quantitySceneDialog=null;
 assert.equal(ctx.renderQuantitySceneDialog({},{}),'');
