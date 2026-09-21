@@ -405,6 +405,60 @@
     return { valid: true, sceneKey: state.sceneKey };
   }
 
+  function copyDishSetSceneQuota(source, destination, sourceKey, destinationKey) {
+    var from = source && source.measures ? source : normalizeScenarioValues(source);
+    var to = normalizeScenarioValues(destination);
+    ["piece", "kind"].forEach(function (metric) {
+      var sourceMetric = from.measures[metric];
+      var targetMetric = to.measures[metric];
+      targetMetric.enabled[destinationKey] = sourceMetric.enabled[sourceKey] === true;
+      ["perPersonMax", "perTableMax"].forEach(function (map) {
+        if (Object.prototype.hasOwnProperty.call(sourceMetric[map], sourceKey)) targetMetric[map][destinationKey] = JSON.parse(JSON.stringify(sourceMetric[map][sourceKey]));
+        else delete targetMetric[map][destinationKey];
+      });
+    });
+    ["defaults", "exceptions"].forEach(function (map) {
+      var sourceMap = from.productLimits && from.productLimits[map] || {};
+      var targetMap = to.productLimits && to.productLimits[map] || {};
+      if (Object.prototype.hasOwnProperty.call(sourceMap, sourceKey)) targetMap[destinationKey] = JSON.parse(JSON.stringify(sourceMap[sourceKey]));
+      else delete targetMap[destinationKey];
+    });
+    return to;
+  }
+
+  function applyDishSetMetricBatch(input, scenes, command) {
+    var draft = clone(input);
+    var errors = [];
+    (scenes || []).forEach(function (scene) {
+      var config = draft.storeConfigs && draft.storeConfigs[scene.storeId];
+      if (!config) { errors.push({ sceneKey: scene.sceneKey || "", code: "STORE_CONFIG_REQUIRED" }); return; }
+      var values = normalizeScenarioValues(config.periodValues && config.periodValues[scene.period]);
+      config.periodValues[scene.period] = values;
+      var key = scene.sceneKey || scenarioTargetKey(draft, scene.period, scene.partyIndex || 0, scene.roundIndex || 0);
+      ["piece", "kind"].forEach(function (metric) {
+        var operation = command && command[metric] || { mode: "ignore" };
+        var target = values.measures[metric];
+        if (operation.mode === "ignore") return;
+        if (operation.mode === "disable_and_clear") {
+          target.enabled[key] = false;
+          delete target.perPersonMax[key];
+          delete target.perTableMax[key];
+          return;
+        }
+        if (operation.mode === "enable_and_set") {
+          target.enabled[key] = true;
+          ["perPersonMax", "perTableMax"].forEach(function (map) {
+            if (!Object.prototype.hasOwnProperty.call(operation, map) || operation[map] === "") return;
+            target[map][key] = normalizeLimitCell({ configured: true, value: operation[map] });
+          });
+        }
+      });
+      var result = validateDishSetMeasures(draft, config, scene.period, scene.partyIndex || 0, scene.roundIndex || 0);
+      if (!result.valid) errors.push({ sceneKey: key, code: result.code, metric: result.metric });
+    });
+    return errors.length ? { ok: false, errors: errors } : { ok: true, draft: draft };
+  }
+
   function normalizeStoreConfig(input) {
     var source = clone(input);
     source.productLines = uniqueStrings(source.productLines);
@@ -525,6 +579,8 @@
     dishSetSceneMeasures: dishSetSceneMeasures,
     migrateDishSetQuotaV2: migrateDishSetQuotaV2,
     validateDishSetMeasures: validateDishSetMeasures,
+    copyDishSetSceneQuota: copyDishSetSceneQuota,
+    applyDishSetMetricBatch: applyDishSetMetricBatch,
     effectiveBounds: effectiveBounds,
     normalizeRule: normalizeRule,
     normalizeStoreConfig: normalizeStoreConfig

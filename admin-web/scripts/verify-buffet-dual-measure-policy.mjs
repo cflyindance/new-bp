@@ -39,4 +39,27 @@ assert.deepEqual(plain(policy.validateDishSetMeasures(migratedOrder.rule, migrat
 const empty = policy.normalizeRule({ targetType: "dish_set", subject: "order", enabledPeriods: ["per_round"], partyRanges: [{ rangeId: "p1" }], roundRanges: [{ rangeId: "r1" }], storeConfigs: { s1: { periodValues: {} } } });
 assert.equal(policy.validateDishSetMeasures(empty, empty.storeConfigs.s1, "per_round", 0, 0).code, "DISH_SET_MEASURE_REQUIRED");
 
+const copied = policy.copyDishSetSceneQuota(migratedOrder.rule.storeConfigs.s1.periodValues.per_round, {}, "p1|r1", "p2|r1");
+assert.equal(copied.measures.piece.enabled["p2|r1"], true);
+assert.deepEqual(plain(copied.measures.piece.perTableMax["p2|r1"]), cell(3));
+copied.measures.piece.perTableMax["p2|r1"].value = 8;
+assert.equal(migratedOrder.rule.storeConfigs.s1.periodValues.per_round.measures.piece.perTableMax["p1|r1"].value, 3, "复制后不能共享引用");
+
+const batchSource = plain(migratedOrder.rule);
+batchSource.subject = "party_size";
+batchSource.partyRanges.push({ min: 4, max: null, rangeId: "p2" });
+const batchOriginal = plain(batchSource);
+let batch = policy.applyDishSetMetricBatch(batchSource, [
+  { storeId: "s1", period: "per_round", partyIndex: 0, roundIndex: 0 },
+  { storeId: "s1", period: "per_round", partyIndex: 1, roundIndex: 0 }
+], { piece: { mode: "disable_and_clear" }, kind: { mode: "ignore" } });
+assert.equal(batch.ok, false, "关闭唯一计量方式必须整体失败");
+assert.deepEqual(plain(batchSource), batchOriginal, "批量失败不能修改原草稿");
+batch = policy.applyDishSetMetricBatch(batchSource, [
+  { storeId: "s1", period: "per_round", partyIndex: 0, roundIndex: 0 },
+  { storeId: "s1", period: "per_round", partyIndex: 1, roundIndex: 0 }
+], { piece: { mode: "enable_and_set", perTableMax: 0 }, kind: { mode: "ignore" } });
+assert.equal(batch.ok, true);
+assert.equal(batch.draft.storeConfigs.s1.periodValues.per_round.measures.piece.perTableMax["p2|r1"].value, 0, "显式零值必须保留");
+
 console.log("buffet dual measure policy verification passed");
