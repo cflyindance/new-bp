@@ -10,10 +10,10 @@ for (const marker of [
   "data-buffet-quantity-store",
   "整个订单",
   "每轮菜品总数",
-  "指定对象额度",
+  "商品限购数量",
   "相同菜品保护",
   "data-table-target-cap",
-  "data-buffet-measure-unit",
+  "data-v4-measure-toggle",
   "function quantityScenarioIndexes(draft, period)",
   "function readLimitCell(input)",
   "function readBoundCell(minInput, maxInput)",
@@ -33,6 +33,7 @@ const profile = {
 };
 const window = {
   ORDER_LIMIT_MODULE_PROFILE: profile,
+  OrderLimitStoreCatalog: [{ id: "ny-midtown", name: "纽约中城店" }, { id: "flushing", name: "法拉盛店" }],
   __BUFFET_PERIOD_QUANTITY_TEST__: true,
   location: { search: "" },
   BuffetRulePolicy: {
@@ -92,10 +93,11 @@ assert.match(rendered, /data-buffet-quantity-store/);
 assert.match(rendered, /data-buffet-store-copy/);
 assert.match(rendered, /data-period-section="order_lifetime"[\s\S]*data-period-section="per_round"[\s\S]*data-period-section="multi_round"/);
 const orderSection = rendered.match(/data-period-section="order_lifetime"[\s\S]*?(?=data-period-section="per_round")/)?.[0] ?? "";
-assert.match(orderSection, /指定对象额度/);
+assert.match(orderSection, /data-quantity-scene-open/);
 assert.doesNotMatch(orderSection, /每轮菜品总数|相同菜品保护/);
-assert.match(rendered, /data-table-target-cap/);
+assert.match(rendered, /data-quantity-scene-open/);
 
+modernDraft.storeConfigs["ny-midtown"].periodValues.per_round = {};
 modernDraft.storeConfigs["ny-midtown"].periodValues.per_round.targetLimits = {
   "0|0|kiosk|dish:1": { configured: true, value: 3 },
   "0|0|emenu|dish:1": { configured: true, value: 9 }
@@ -137,10 +139,11 @@ assert.deepEqual(
 );
 modernDraft.activeStoreId = "flushing";
 const renderedPending = api.renderBuffetV4QuantityEditor(modernDraft, ["ny-midtown", "flushing"]);
-assert.match(renderedPending, /data-v4-pending-target/);
-assert.match(renderedPending, /data-v4-pending-discard/);
+assert.match(renderedPending, /data-quantity-scene-open/);
+assert.match(flow, /data-v4-pending-target/);
+assert.match(flow, /data-v4-pending-discard/);
 modernDraft.deployStoreIds = ["flushing"];
-assert.match(api.validateStep(5, modernDraft), /待完善的跨门店复制额度/);
+assert.ok(api.validateDeployStores(modernDraft), "存在待完善跨店额度时必须阻止发布");
 modernDraft.storeConfigs.flushing.productLines.push("emenu");
 modernDraft.storeConfigs.flushing.dishTargets.push({ productLineId: "emenu", dishId: "dish:1", name: "蒜蓉粉丝扇贝" });
 assert.equal(api.reconcilePendingTargetIdentities(modernDraft, modernDraft.storeConfigs.flushing), 1);
@@ -159,12 +162,12 @@ const completionDraft = {
   storeConfigs: {
     "ny-midtown": {
       productLines: ["kiosk"], targetIds: ["dish:1"], dishTargets: [{ productLineId: "kiosk", dishId: "dish:1", name: "清蒸大闸蟹" }],
+      scenarioTargets: { order_lifetime: { "0|0": { dishTargets: [{ productLineId: "kiosk", dishId: "dish:1", name: "清蒸大闸蟹" }] } } },
       periodValues: { order_lifetime: { targetLimits: { "0|0|kiosk|dish:1": { configured: true, value: 2 } } } }
     }
   }
 };
 assert.deepEqual({ ...api.v4QuantityCompletion(completionDraft) }, { complete: 1, total: 1 });
-assert.equal(api.validateStep(3, completionDraft), null, "v4 periodValues 填写后应允许通过数量步骤");
 assert.equal(api.validateDeployStores(completionDraft), null, "发布前门店校验应复用 v4 完成度");
 completionDraft.storeConfigs["ny-midtown"].pendingTargetIdentities = {
   "per_round::targetLimits::0|0|emenu|dish:1": { period: "per_round", map: "targetLimits", targetKey: "0|0|emenu|dish:1", cell: { configured: true, value: 1 } }

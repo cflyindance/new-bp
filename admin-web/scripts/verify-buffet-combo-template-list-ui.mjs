@@ -18,12 +18,12 @@ for (const marker of [
   "整桌每轮最多",
   "整桌每轮总量：",
   "相同菜品每轮最多",
-  "每种菜品每轮最多",
+  "每种（SPU）菜品每轮最多",
   "按有效人数乘算",
   "删除后，该人数区间在全部门店中的 M/N/X/P 数量配置将一并删除",
 ]) assert.ok(flow.includes(marker), `组合模板流程缺少：${marker}`);
 
-assert.ok(flow.includes('"tableTotalBounds", "整桌每轮"'));
+assert.ok(flow.includes('"tableTotalBounds", tableTotalTitle'));
 assert.ok(flow.includes('values.defaultDishLimits[sameDishKey]'));
 assert.ok(flow.includes('comboUsesPartyMultiplier(draft) ? "targetLimits" : "tableTargetCaps"'));
 

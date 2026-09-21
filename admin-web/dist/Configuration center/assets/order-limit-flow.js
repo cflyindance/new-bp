@@ -4186,7 +4186,7 @@
   // 单品保护只针对当前规则的商品范围。菜品、菜品集按身份直取；分类则展开当前门店已选分类的菜品。
   function eligibleExceptionDishes(draft, storeId, scopeConfig) {
     var config = scopeConfig || storeConfigFor(draft, storeId, false) || {};
-    if (!scopeConfig && editorState.quantitySceneDialog && editorState.quantitySceneDialog.storeId === storeId) config = sceneScopeConfig(draft, config, editorState.quantitySceneDialog.combo);
+    if (!scopeConfig && editorState && editorState.quantitySceneDialog && editorState.quantitySceneDialog.storeId === storeId) config = sceneScopeConfig(draft, config, editorState.quantitySceneDialog.combo);
     var candidates = [];
     if (draft.targetType === "dish") candidates = (config.dishTargets || []).map(function (item) {
       return { productLineId: String(item.productLineId), dishId: String(item.dishId), name: item.name || String(item.dishId) };

@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 
 const flow = fs.readFileSync("dist/Configuration center/assets/order-limit-flow.js", "utf8");
-assert.match(flow, /function buffetWorkbenchPageData\(draft, config\)/);
-assert.match(flow, /function selectBuffetWorkbenchPage\(draft, config\)/);
-assert.match(flow, /function selectAllFilteredBuffetTargets\(draft, config\)/);
+assert.match(flow, /function buffetWorkbenchPageData\(draft, config, combo, values\)/);
+assert.match(flow, /function selectBuffetWorkbenchPage\(draft, config, combo, values\)/);
+assert.match(flow, /function selectAllFilteredBuffetTargets\(draft, config, combo, values\)/);
 assert.match(flow, /data-buffet-workbench-query/);
 assert.match(flow, /data-buffet-workbench-line/);
 assert.match(flow, /data-buffet-workbench-page-select/);

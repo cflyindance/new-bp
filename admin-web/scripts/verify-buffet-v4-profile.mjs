@@ -43,6 +43,8 @@ assert.deepEqual(Array.from(profile.periodTemplates, (item) => item.id), [
   "order-basic",
   "party-order-basic",
   "order-round-basic",
+  "order-multi-round-basic",
+  "party-round-basic",
   "round-party-table-cap",
   "order-round-protection",
   "order-multi-round-protection",

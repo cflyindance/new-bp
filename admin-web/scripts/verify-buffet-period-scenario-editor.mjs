@@ -91,12 +91,12 @@ assert.match(incompleteRuleType, /每人整单限购/);
 assert.match(incompleteRuleType, /整桌每轮限购/);
 assert.match(incompleteRuleType, /每人分轮次限购/);
 assert.doesNotMatch(incompleteRuleType, /分轮次递减/);
-const incompleteTemplateButton = incompleteRuleType.match(/<button[^>]*data-buffet-template="round"[^>]*>/)?.[0] ?? "";
+const incompleteTemplateButton = incompleteRuleType.match(/<button[^>]*data-buffet-template="order-round-basic"[^>]*>/)?.[0] ?? "";
 assert.ok(incompleteTemplateButton, "new-rule template must render before subject and target are selected");
 assert.doesNotMatch(incompleteTemplateButton, /disabled/, "new-rule template must remain clickable before subject and target are selected");
-api.applyBuffetTemplate(incompleteNewDraft, "round");
-assert.equal(incompleteNewDraft.buffetTemplateId, "round", "clickable template must become the selected template");
-assert.equal(incompleteNewDraft.subject, "party_size", "template must link its explicit subject");
+api.applyBuffetTemplate(incompleteNewDraft, "order-round-basic");
+assert.equal(incompleteNewDraft.buffetTemplateId, "order-round-basic", "clickable template must become the selected template");
+assert.equal(incompleteNewDraft.subject, "order", "template must link its explicit subject");
 assert.equal(incompleteNewDraft.targetType, null, "template must preserve an unspecified target type");
 
 api.applyBuffetTemplate(incompleteNewDraft, "party-order-basic");

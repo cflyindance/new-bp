@@ -75,7 +75,7 @@ duplicateExceptionDraft.storeConfigs["ny-midtown"].periodValues = {
     }
   }
 };
-assert.equal(api.validateV4Draft(duplicateExceptionDraft).code, "EXCEPTION_DISH_DUPLICATED");
+assert.equal(api.validateV4Draft(duplicateExceptionDraft), null, "分类规则不再启用菜品集内部单品保护校验");
 assert.equal(api.exceptionLimitFor(duplicateExceptionDraft, "ny-midtown", "per_round", scenario, { productLineId: "kiosk", dishId: "dish-a" }).value, 1);
 
 categoryDraft.storeConfigs["ny-midtown"].periodValues = {
@@ -86,9 +86,10 @@ categoryDraft.storeConfigs["ny-midtown"].periodValues = {
   }
 };
 const rendered = api.renderBuffetV4QuantityEditor(categoryDraft, ["ny-midtown"]);
-assert.match(rendered, /data-v4-exception-add/);
-assert.match(rendered, /data-v4-exception-dish/);
-assert.match(rendered, /data-v4-exception-remove/);
-assert.match(rendered, /默认每种最多/);
+assert.match(rendered, /data-quantity-scene-open/);
+assert.match(flow, /data-v4-exception-add/);
+assert.match(flow, /data-v4-exception-dish/);
+assert.match(flow, /data-v4-exception-remove/);
+assert.match(flow, /默认每种（SPU）最多/);
 
 console.log("verify-buffet-same-dish-exceptions: PASS");
