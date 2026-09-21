@@ -44,6 +44,14 @@ assert.match(renderDialog, /allQuantityScenarios\(draft\)/);
 assert.match(renderDialog, /data-quantity-scene-next/);
 assert.match(renderDialog, /position === scenarios\.length - 1 \? ['"] hidden['"] : ['"]/);
 
+const renderTargetPanel = functionBody("renderBuffetTargetQuantityPanel");
+assert.doesNotMatch(
+  renderTargetPanel,
+  /if \(editorState\.quantitySceneDialog\) return renderCrossStoreSceneToolbar/,
+  "统一额度弹窗不能在菜品集共享额度渲染前直接返回",
+);
+assert.match(renderTargetPanel, /editorState\.quantitySceneDialog[\s\S]*draft\.targetType === "dish_set" \? renderBuffetSharedQuotaPanel/);
+
 const clickHandler = functionBody("handleEditorClick");
 assert.match(clickHandler, /createQuantitySceneSession\(nextDraft, nextCombo\)/);
 

@@ -4527,7 +4527,10 @@
   }
 
   function renderBuffetTargetQuantityPanel(draft, config, combo, values) {
-    if (editorState.quantitySceneDialog) return renderCrossStoreSceneToolbar(draft, combo) + renderCrossStoreSceneTable(draft, combo);
+    if (editorState.quantitySceneDialog) {
+      return (draft.targetType === "dish_set" ? renderBuffetSharedQuotaPanel(draft, config, combo, values) : "") +
+        renderCrossStoreSceneToolbar(draft, combo) + renderCrossStoreSceneTable(draft, combo);
+    }
     if (draft.targetType === "dish_set") {
       var scenario = isBuffetComboDraft(draft) ? comboScenarioKeyFor(draft, combo.partyIndex) : v4ScenarioKey(combo.partyIndex, combo.roundIndex, draft);
       return renderBuffetSharedQuotaPanel(draft, config, combo, values) + renderBuffetWorkbenchToolbar(draft, config, combo) + renderBuffetProductTable(draft, config, combo, values);
