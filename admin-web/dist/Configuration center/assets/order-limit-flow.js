@@ -4748,7 +4748,10 @@
         var configured = targets.filter(function (target) { return buffetWorkbenchTargetStatus(draft, target, combo, values) !== "unconfigured"; }).length;
         var sceneKey = isBuffetComboDraft(draft) ? comboScenarioKeyFor(draft, combo.partyIndex) : v4ScenarioKey(combo.partyIndex, combo.roundIndex, draft);
         var hasBounds = ["totalBounds", "tableTotalBounds"].some(function (map) { return hasConfiguredBoundCell(values[map] && values[map][sceneKey]); });
-        var hasSet = draft.targetType === "dish_set" && ["targetLimits", "tableTargetCaps"].some(function (map) { return values[map] && values[map][sceneKey] && values[map][sceneKey].configured; });
+        var hasSet = draft.targetType === "dish_set" && values.measures && ["piece", "kind"].some(function (metric) {
+          var item = values.measures[metric] || {};
+          return item.enabled && item.enabled[sceneKey] === true && ["perPersonMax", "perTableMax"].some(function (map) { return item[map] && item[map][sceneKey] && item[map][sceneKey].configured; });
+        });
         var done = configured > 0 || hasBounds || hasSet;
         return '<button type="button" class="olf-scene-card' + (done ? ' is-configured' : '') + '" data-quantity-scene-open data-v4-period="' + period + '" data-scene-party="' + combo.partyIndex + '" data-scene-round="' + combo.roundIndex + '"><strong>' + esc(title) + '</strong><span>' + (done ? '已配置' : '未配置') + '</span><small>商品上限：' + configured + ' / ' + targets.length + ' 项</small><b aria-hidden="true">→</b></button>';
       }).join('') + '</div></div>';
@@ -4809,6 +4812,13 @@
       if (invalidBounds) {
         invalid = { storeId: storeId, message: "最少份数不能大于最多份数" };
         return true;
+      }
+      if (draft.targetType === "dish_set" && Number(draft.quotaSchemaVersion) >= 2 && window.BuffetRulePolicy && window.BuffetRulePolicy.validateDishSetMeasures) {
+        var measureCheck = window.BuffetRulePolicy.validateDishSetMeasures(draft, config, session.combo.period, session.combo.partyIndex, session.combo.roundIndex);
+        if (!measureCheck.valid) {
+          invalid = { storeId: storeId, message: measureCheck.code === "DISH_SET_MEASURE_REQUIRED" ? "至少启用一种计量方式" : "已启用的" + (measureCheck.metric === "kind" ? "按种" : "按份") + "限制至少配置一个上限" };
+          return true;
+        }
       }
       return false;
     });
