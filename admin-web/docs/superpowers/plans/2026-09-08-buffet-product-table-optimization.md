@@ -229,7 +229,7 @@ Assert:
 assert.equal(dishPreview.removedObjects, 1);
 assert.ok(dishPreview.removedCells >= 2);
 assert.deepEqual(otherStoreAfter, otherStoreBefore);
-assert.equal(setPreview.blockedReason, "菜品集至少保留 2 个成员");
+assert.equal(setPreview.blockedReason, "菜品集至少保留 2 个商品");
 assert.deepEqual(destination.periodValues.per_round.targetLimits, sharedQuotaBefore);
 assert.equal(destination.periodValues.per_round.exceptionDishLimits[scenario].length, 0);
 ```

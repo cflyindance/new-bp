@@ -33,7 +33,7 @@ context.expandDishSetDefaultLimit({}, values, "scene");
 assert.equal(dirty, 1, "重复渲染不重复迁移");
 dishes.push({ productLineId: "kiosk", dishId: "c", name: "羊肉" });
 context.expandDishSetDefaultLimit({}, values, "scene");
-assert.equal(values.exceptionDishLimits.scene.length, 2, "新成员不继承默认上限");
+assert.equal(values.exceptionDishLimits.scene.length, 2, "新商品不继承默认上限");
 const zero = { defaultDishLimits: { scene: { configured: true, value: 0 } }, exceptionDishLimits: {} };
 context.expandDishSetDefaultLimit({}, zero, "scene");
 assert.ok(zero.exceptionDishLimits.scene.every(row => row.limit.configured && row.limit.value === 0));

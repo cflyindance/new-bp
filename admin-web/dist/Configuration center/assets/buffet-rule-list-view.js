@@ -117,7 +117,7 @@
   function productScope(record, config) {
     var counts = targetCounts(record, config); if (!counts.length || !counts.some(function (count) { return count > 0; })) return "—";
     var noun = config.targetType === "dish_set" ? "菜品集" : config.targetType === "category" ? "分类" : "指定菜品";
-    if (counts.length === 1) return noun + " " + counts[0] + (config.targetType === "dish_set" ? " 个成员" : " 个");
+    if (counts.length === 1) return noun + " " + counts[0] + " 个";
     var min = Math.min.apply(Math, counts), max = Math.max.apply(Math, counts);
     return counts.length + " 家 · 每店 " + (min === max ? min : min + "–" + max) + " 个";
   }

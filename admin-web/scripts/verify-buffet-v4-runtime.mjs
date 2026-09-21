@@ -116,7 +116,7 @@ result = domain.evaluateBatch({ ...base, operationId: "op-total-min", rules: [to
 assert.equal(result.allowed, false, "仅有未选菜品时仍须按完整轮次桶检查最低总量");
 assert.equal(result.violations[0].code, "TOTAL_MIN_NOT_MET");
 
-// 菜品集按份只统计集合成员；集合外菜品不应占用该集合的目标额度。
+// 菜品集按份只统计集合商品；集合外菜品不应占用该集合的目标额度。
 const pieceRule = rule({ id: "piece", subject: "order", measureUnit: "piece", enabledPeriods: ["per_round"], periodPolicies: { per_round: { blocks: { targetEnabled: true } } }, storeConfigs: {
   "store-a": { productLines: ["kiosk"], dishTargets: [], categoryTargets: [], dishSetMembers: [{ productLineId: "kiosk", dishId: "a" }], periodValues: { per_round: { targetLimits: { "0|0": cell(1) } } } }
 } });

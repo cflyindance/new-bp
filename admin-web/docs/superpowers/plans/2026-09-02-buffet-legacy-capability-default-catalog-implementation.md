@@ -18,7 +18,7 @@
 - 4 条整单默认规则在本次每轮调研列中显示“本调研不适用”。
 - 能力文案只存于统一注册表；模板仅保存 `legacyCapabilityIds`。
 - `defaultVariant` 只用于目录身份和展示，不进入运行快照或冲突键。
-- 菜品集按份与按种允许共同发布；同口径成员重叠继续阻断。
+- 菜品集按份与按种允许共同发布；同口径商品重叠继续阻断。
 - 有独立草稿或 `sourceRuleId` 引用时延迟迁移，不修改 source rule、草稿或身份。
 - 不修改 `vendor/emenu-new`；因此不触发 eMenu 嵌入包构建要求。
 
@@ -288,13 +288,13 @@ git commit -m "feat: show buffet legacy capability coverage"
 
 - [ ] **Step 1: 写冲突矩阵失败测试**
 
-断言同门店、同主体、同周期、相同菜品集成员的 piece 与 kind 两条规则 `findConflict(...) === null`；两条 piece 规则仍返回 `DISH_SET_MEMBER_OVERLAP`；总量与指定菜品可叠加；两个相同总量规则返回重复冲突。
+断言同门店、同主体、同周期、相同菜品集商品的 piece 与 kind 两条规则 `findConflict(...) === null`；两条 piece 规则仍返回 `DISH_SET_MEMBER_OVERLAP`；总量与指定菜品可叠加；两个相同总量规则返回重复冲突。
 
 - [ ] **Step 2: 运行测试确认失败**
 
 Run: `node scripts/verify-buffet-v4-conflicts.mjs`
 
-Expected: FAIL，当前菜品集只按成员重叠阻断。
+Expected: FAIL，当前菜品集只按商品重叠阻断。
 
 - [ ] **Step 3: 推导规范约束类型**
 
@@ -311,7 +311,7 @@ function constraintTypes(rule, period) {
 }
 ```
 
-只有共同约束类型才进入相应重复/成员重叠判断；不得读取 `origin`、`defaultScenarioKey` 或 `defaultVariant`。
+只有共同约束类型才进入相应重复/商品重叠判断；不得读取 `origin`、`defaultScenarioKey` 或 `defaultVariant`。
 
 - [ ] **Step 4: 运行冲突和运行时回归**
 

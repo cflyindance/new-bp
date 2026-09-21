@@ -18,7 +18,7 @@
 - 本期不新增整单菜品总数最少/最多；整个订单区块只配置指定对象最大额度。
 - 每轮和分轮次支持总量、指定对象、单品保护三个独立开关，并按逻辑 AND 同时生效。
 - `EffectiveMin = max(PerPersonMin × N, TableMin)`；`EffectiveMax = min(PerPersonMax × N, TableMax)`，仅已配置项参与。
-- 菜品集每店恰好一个逻辑集合，至少 2 个有效成员，支持跨产线合并统计“份”或“种”。
+- 菜品集每店恰好一个逻辑集合，至少 2 个有效商品，支持跨产线合并统计“份”或“种”。
 - 单品保护只作用于本规则商品范围，例外商品覆盖默认上限。
 - 商品身份必须包含 `productLineId + dishId`；分类身份必须包含 `productLineId + categoryId`。
 - 空值表示未配置；`0` 表示禁止下单；所有数量是 `0..999999` 的整数。
@@ -465,7 +465,7 @@ git commit -m "feat: edit buffet limits by period and store"
 
 - [ ] **Step 1: 写单品保护和校验失败测试**
 
-覆盖以下断言：例外商品只能来自当前规则范围；同一菜品不能进入两条例外行；默认上限可为空；例外值覆盖默认值；菜品集每店少于 2 个成员、区间不连续、`min > max`、启用区块无任何有效值均阻止发布但允许保存草稿。
+覆盖以下断言：例外商品只能来自当前规则范围；同一菜品不能进入两条例外行；默认上限可为空；例外值覆盖默认值；菜品集每店少于 2 个商品、区间不连续、`min > max`、启用区块无任何有效值均阻止发布但允许保存草稿。
 
 ```js
 assert.deepEqual(api.eligibleExceptionDishes(categoryDraft, "store-a").map(api.menuIdentity), ["kiosk|dish-a", "emenu|dish-b"]);
@@ -491,7 +491,7 @@ function validateBoundPair(bound) {
 }
 ```
 
-对每个生效门店、人数区间、轮次区间验证：已启用区块存在有效配置；整桌上下限与人均换算后仍有解；所有身份包含产线；菜品集成员数不少于 2；周期至少一个。`validateStep`、`validateAll`、`validateDeployStores` 和启用动作统一调用同一验证函数。
+对每个生效门店、人数区间、轮次区间验证：已启用区块存在有效配置；整桌上下限与人均换算后仍有解；所有身份包含产线；菜品集商品数不少于 2；周期至少一个。`validateStep`、`validateAll`、`validateDeployStores` 和启用动作统一调用同一验证函数。
 
 - [ ] **Step 5: 限制授权范围**
 
@@ -524,7 +524,7 @@ git commit -m "feat: validate buffet dish protections and exceptions"
 
 - [ ] **Step 1: 写冲突矩阵失败测试**
 
-覆盖：同门店/条件/主体/周期/对象身份重复阻止；不同主体或不同周期允许；菜品、分类和菜品集交叉命中允许叠加；两个菜品集成员有任意交集时阻止；跨产线相同 `dishId` 不视为同一身份。
+覆盖：同门店/条件/主体/周期/对象身份重复阻止；不同主体或不同周期允许；菜品、分类和菜品集交叉命中允许叠加；两个菜品集商品有任意交集时阻止；跨产线相同 `dishId` 不视为同一身份。
 
 ```js
 assert.equal(domain.findConflict(setA, [active(setB)], []).code, "DISH_SET_MEMBER_OVERLAP");
@@ -546,7 +546,7 @@ function mouths(rule) {
 }
 ```
 
-冲突必须先判断门店、生效日期/时段/会员、主体和周期交集，再判断对象身份。菜品集使用成员身份交集，不使用规则 ID 或完整集合相等判重。
+冲突必须先判断门店、生效日期/时段/会员、主体和周期交集，再判断对象身份。菜品集使用商品身份交集，不使用规则 ID 或完整集合相等判重。
 
 - [ ] **Step 4: 实现静态可满足性检查**
 
@@ -633,7 +633,7 @@ order bucket     = 当前订单全部有效数量
 round bucket     = 当前订单当前轮有效数量
 dish bucket      = productLineId|dishId
 category bucket  = productLineId|categoryId
-dish-set pieces  = 成员有效份数之和
+dish-set pieces  = 商品有效份数之和
 dish-set kinds   = 数量 > 0 的不同 productLineId|dishId 数量
 ```
 

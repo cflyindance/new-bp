@@ -16,7 +16,7 @@
 - 商品、产线、分类、门店必须独立列展示；商品编码不进入商品列。
 - 场景定位必须使用 `partyRanges[].rangeId`、`roundRanges[].rangeId` 和 `periodKey`，不得把数组索引作为持久身份。
 - 空值显示“未配置”，显式 `0` 显示“禁止下单”。
-- 分类规则按分类行展示；菜品集成员按商品行展示并标记共享额度。
+- 分类规则按分类行展示；菜品集商品按商品行展示并标记共享额度。
 - 本期固定分页，每页默认 20 条。
 - 仅修改 `dist/Configuration center` 自助餐规则实现及对应验证脚本；不得触碰 `vendor/emenu-new`，因此不触发 eMenu 嵌入包构建要求。
 
@@ -137,7 +137,7 @@ assert.equal(rows.find((row) => row.result.prohibited).resultText, "禁止下单
 
 ```js
 assert.equal(emptyExceptionRow.result.effectiveMemberProtection.status, "no_protection");
-assert.match(emptyExceptionRow.resultText, /该成员未设置保护/);
+assert.match(emptyExceptionRow.resultText, /该商品未设置保护/);
 ```
 
 - [ ] **Step 2: 运行模型测试确认失败**
@@ -479,7 +479,7 @@ Expected: 开发服务器成功启动并可访问 `#/operations/queue-call/buffe
 1. 人数 × 轮次至少 2 × 2 个场景，汇总行完整。
 2. 整单 + 每轮、整单 + 分轮次同时展示，整单轮次为“—”。
 3. 两家门店的同名商品/分类不合并。
-4. 菜品、分类、菜品集按份、按种以及成员例外文案正确。
+4. 菜品、分类、菜品集按份、按种以及商品例外文案正确。
 5. 门店 → 产线 → 分类联动，分类只显示分类名称。
 6. 仅看差异、未配置、0、分页和空状态正确。
 7. 每类行“进入配置”准确定位并高亮目标。

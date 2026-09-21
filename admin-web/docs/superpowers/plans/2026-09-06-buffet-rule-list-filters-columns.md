@@ -243,7 +243,7 @@ Expected: FAIL，提示投影结果缺失或摘要不匹配。
 
 - [ ] **Step 3: 实现商品范围与门店摘要**
 
-按 `deployStoreIds`、草稿回退 `participatingStoreIds` 取得统计门店；菜品与菜品集成员使用 `productLineId + "::" + dishId`，分类使用 `productLineId + "::" + categoryId` 去重。多门店只比较每店数量，不跨店合并。
+按 `deployStoreIds`、草稿回退 `participatingStoreIds` 取得统计门店；菜品与菜品集商品使用 `productLineId + "::" + dishId`，分类使用 `productLineId + "::" + categoryId` 去重。多门店只比较每店数量，不跨店合并。
 
 - [ ] **Step 4: 实现数量投影与完成度**
 

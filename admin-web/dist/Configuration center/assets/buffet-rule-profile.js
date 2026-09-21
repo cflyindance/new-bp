@@ -26,7 +26,7 @@
     "KPOS-O05": { id: "KPOS-O05", label: "选择分类后展开并保存具体菜品", group: "order_lifetime", level: "rule", coverageStatus: "complete", legacyEvidenceStatus: "verified_config" },
     "KPOS-O06": { id: "KPOS-O06", label: "菜品规则选择多个商品时分别统计", group: "order_lifetime", level: "rule", coverageStatus: "complete", legacyEvidenceStatus: "pending_runtime" },
     "KPOS-O07": { id: "KPOS-O07", label: "菜品集是规则内临时集合，不新增名称或编码", group: "order_lifetime", level: "rule", coverageStatus: "complete", legacyEvidenceStatus: "verified_config" },
-    "KPOS-O08": { id: "KPOS-O08", label: "菜品集成员跨产线合并统计", group: "order_lifetime", level: "rule", coverageStatus: "defined_extension", legacyEvidenceStatus: "not_legacy" },
+    "KPOS-O08": { id: "KPOS-O08", label: "菜品集商品跨产线合并统计", group: "order_lifetime", level: "rule", coverageStatus: "defined_extension", legacyEvidenceStatus: "not_legacy" },
     "KPOS-O09": { id: "KPOS-O09", label: "同一功能支持多条非重叠规则独立生效", group: "order_lifetime", level: "group", coverageStatus: "complete", legacyEvidenceStatus: "verified_config" },
     "KPOS-O10": { id: "KPOS-O10", label: "同一商品允许跨四种整单功能重复选择", group: "order_lifetime", level: "group", coverageStatus: "complete", legacyEvidenceStatus: "verified_config" },
     "KPOS-O11": { id: "KPOS-O11", label: "四种整单规则共同生效，任一超限即拦截", group: "order_lifetime", level: "group", coverageStatus: "complete", legacyEvidenceStatus: "verified_config" },

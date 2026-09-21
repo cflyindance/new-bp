@@ -12,7 +12,7 @@ for (const marker of [
   'function filterBuffetSummaryRows(rows,state)',
   'function buffetSummaryPageData(draft,state)',
   'effectiveMemberProtection',
-  '该成员未设置保护',
+  '该商品未设置保护',
   '禁止下单',
   'not_applicable',
 ]) assert.ok(flow.includes(marker), `缺少全部场景汇总模型：${marker}`);

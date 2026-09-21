@@ -119,7 +119,7 @@ type PartyRange = {
 菜品对象键：party:<rangeId>|round:0|line:<productLineId>|target:<dishId>
 ```
 
-`productLineId` 是菜品身份的一部分；不同产线出现相同 `dishId` 时不得错误合并。菜品集父额度和默认内部保护是整个集合共享值，均使用场景键，不追加菜品 ID。存储键与编译后的单品冲突键是两个概念：`defaultDishLimits[scenarioKey]` 在运行时对集合成员逐一编译为 `same_dish|productLineId|dishId` 约束。
+`productLineId` 是菜品身份的一部分；不同产线出现相同 `dishId` 时不得错误合并。菜品集父额度和默认内部保护是整个集合共享值，均使用场景键，不追加菜品 ID。存储键与编译后的单品冲突键是两个概念：`defaultDishLimits[scenarioKey]` 在运行时对集合商品逐一编译为 `same_dish|productLineId|dishId` 约束。
 
 新组合模板只按 `rangeId` 写入。现有原子规则和历史规则没有 `rangeId` 时继续使用旧 `partyIndex|roundIndex` 键读取和写入，不自动换键，不修改其业务数据或发布快照。运行时编译器分别识别两种键，单条规则内不得混写。
 
@@ -282,7 +282,7 @@ C04～C06：
 6. 任一上限超限即拦截；提交本轮时再校验下限；
 7. 新轮次使用新的每轮统计桶，整单规则使用独立统计桶。
 
-菜品集成员跨产线进入同一个共享统计池。按份统计总份数；按种统计不同菜品标识数量。内部保护始终按单品统计。
+菜品集商品跨产线进入同一个共享统计池。按份统计总份数；按种统计不同菜品标识数量。内部保护始终按单品统计。
 
 ## 8. 冲突规则
 
@@ -294,13 +294,13 @@ C04～C06：
 | --- | --- | --- | --- |
 | `total` | 无 | 全部有效菜品，不读取组合所选对象 | `table_fixed` |
 | `dish` | 菜品标识 | 指定菜品交集 | `table_fixed` 或 `party_multiplier` |
-| `dish_set_piece` | 集合成员标识＋`piece` | 菜品集成员交集 | `table_fixed` 或 `party_multiplier` |
-| `dish_set_kind` | 集合成员标识＋`kind` | 菜品集成员交集 | `table_fixed` 或 `party_multiplier` |
-| `same_dish` | 单品标识或默认保护范围 | 菜品集成员交集 | `table_fixed` |
+| `dish_set_piece` | 集合商品标识＋`piece` | 菜品集商品交集 | `table_fixed` 或 `party_multiplier` |
+| `dish_set_kind` | 集合商品标识＋`kind` | 菜品集商品交集 | `table_fixed` 或 `party_multiplier` |
+| `same_dish` | 单品标识或默认保护范围 | 菜品集商品交集 | `table_fixed` |
 
 在单个编译约束层面，固定 X 与 `X×人数` 使用不同倍率模式，因此父额度约束彼此兼容；C02 与 C03 的父额度也因计量单位不同而兼容。但 C01～C06 每条完整组合规则都强制包含 `total|table_fixed`，所以两个完整组合模板的门店、人数区间和生效域重叠时，仍会先因总量约束重复而阻断，不能据此宣称两条完整组合规则可共同启用。
 
-C02 与 C03 的 P 都编译为 `same_dish|table_fixed`，成员范围重叠时还会同时产生 P 冲突。冲突诊断返回全部命中区块，而不是发现第一个冲突后停止。总量冲突不依赖商品范围，即使两个组合选择的商品完全不相交，重叠人数区间内的两个 `total|table_fixed` 仍冲突。
+C02 与 C03 的 P 都编译为 `same_dish|table_fixed`，商品范围重叠时还会同时产生 P 冲突。冲突诊断返回全部命中区块，而不是发现第一个冲突后停止。总量冲突不依赖商品范围，即使两个组合选择的商品完全不相交，重叠人数区间内的两个 `total|table_fixed` 仍冲突。
 
 所有单品冲突身份均使用 `productLineId + dishId`。`targetLimits` 的倍率模式按 §3.1 的 `(subject, 字段)` 规则推导；现有 `subject=order` 的整单/每轮菜品和菜品集原子规则必须保持 `table_fixed`。
 
@@ -369,8 +369,8 @@ C02 与 C03 的 P 都编译为 `same_dish|table_fixed`，成员范围重叠时�
 ### 11.4 冲突与运行
 
 - 组合模板之间、组合模板与原子规则之间按业务口径判断冲突；
-- 约束编译单测覆盖：C02 与 C03 父额度约束兼容但重叠成员 P 冲突；固定 X 与人均 X 父额度约束兼容；商品范围不相交的对象约束不冲突；
-- 完整规则端到端覆盖：组合总量与原子总量在商品不相交时仍冲突；任意两个范围重叠的完整组合模板至少报告 `total` 冲突；C02 与 C03 范围及成员均重叠时同时报告 `total` 和 `same_dish` 冲突；
+- 约束编译单测覆盖：C02 与 C03 父额度约束兼容但重叠商品 P 冲突；固定 X 与人均 X 父额度约束兼容；商品范围不相交的对象约束不冲突；
+- 完整规则端到端覆盖：组合总量与原子总量在商品不相交时仍冲突；任意两个范围重叠的完整组合模板至少报告 `total` 冲突；C02 与 C03 范围及商品均重叠时同时报告 `total` 和 `same_dish` 冲突；
 - 回归断言现有 `subject=order` 的 `order|per_round|dish`、`order|per_round|dish_set|piece` 和 `order|per_round|dish_set|kind` 仍使用固定整桌额度，不因 `targetLimits` 字段被乘人数；
 - 重叠草稿可保存并显示冲突，启用或发布阻断；
 - 总量、指定对象和内部保护共同执行，任一上限超限即拦截；

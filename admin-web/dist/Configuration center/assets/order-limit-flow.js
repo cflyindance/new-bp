@@ -1507,7 +1507,7 @@
     var targets = (targetIds || []).map(function (identity) { return existing[identity]; }).filter(Boolean);
     var remaining = currentBuffetWorkbenchTargets(draft, config).length - targets.length;
     var blockedReason = draft.targetType === "dish_set" && remaining < 2
-      ? "菜品集至少需要保留 2 个成员，请调整后再移除。" : "";
+      ? "菜品集至少需要保留 2 个商品，请调整后再移除。" : "";
     var cellCount = 0;
     BUFFET_PERIOD_ORDER.forEach(function (period) {
       var values = v4PeriodValues(config, period);
@@ -2879,7 +2879,7 @@
         renderChoice("targetType", "dish", "按菜品限购", "每个指定菜品独立累计", draft.targetType === "dish") +
         (isBuffetProfile() ? renderChoice("targetType", "dish_set", "按菜品集限购", "多个指定菜品跨产线共享同一个数量池", draft.targetType === "dish_set") : "");
     var measureBlock = modernBuffet && draft.targetType === "dish_set"
-      ? '<section class="olf-section"><h3>计量方式</h3><div class="olf-choice-grid olf-choice-grid--two"><label class="olf-period-toggle"><input type="radio" name="buffetMeasureUnit" value="piece" data-buffet-measure-unit' + (draft.measureUnit !== "kind" ? " checked" : "") + ' /><span><strong>按份</strong><small>菜品集成员合计份数</small></span></label><label class="olf-period-toggle"><input type="radio" name="buffetMeasureUnit" value="kind" data-buffet-measure-unit' + (draft.measureUnit === "kind" ? " checked" : "") + ' /><span><strong>按种（SPU）</strong><small>菜品集内不同菜品种（SPU）数</small></span></label></div></section>'
+      ? '<section class="olf-section"><h3>计量方式</h3><div class="olf-choice-grid olf-choice-grid--two"><label class="olf-period-toggle"><input type="radio" name="buffetMeasureUnit" value="piece" data-buffet-measure-unit' + (draft.measureUnit !== "kind" ? " checked" : "") + ' /><span><strong>按份</strong><small>菜品集商品合计份数</small></span></label><label class="olf-period-toggle"><input type="radio" name="buffetMeasureUnit" value="kind" data-buffet-measure-unit' + (draft.measureUnit === "kind" ? " checked" : "") + ' /><span><strong>按种（SPU）</strong><small>菜品集内不同菜品种（SPU）数</small></span></label></div></section>'
       : "";
     var periodBlock = "";
     if (!modernBuffet && isBuffetProfile() && draft.subject === "order") {
@@ -3568,7 +3568,7 @@
       if (!selectedRules.length) { toast("请至少选择一条菜品集数量规则", true); return; }
       openDialog(
         "确认清空菜品集数量？",
-        "将清空已选择的 " + selectedRules.length + " 个人数/轮次场景数量，不会删除菜品集成员。",
+        "将清空已选择的 " + selectedRules.length + " 个人数/轮次场景数量，不会删除菜品集商品。",
         "确认清空",
         function () {
           closeDialog(false);
@@ -4280,7 +4280,7 @@
   }
 
   function renderBuffetSharedQuotaPanel(draft, config, combo, values) {
-    return '<div class="olf-v4-shared-quota"><div><strong>' + (draft.measureUnit === "kind" ? '菜品集共享额度·按种（SPU）' : '菜品集共享额度·按份') + '</strong><span>全部成员跨产线合并统计，只需设置一次</span></div>' + v4TargetRows(draft, config, combo, values) + '</div>';
+    return '<div class="olf-v4-shared-quota"><div><strong>' + (draft.measureUnit === "kind" ? '菜品集共享额度·按种（SPU）' : '菜品集共享额度·按份') + '</strong><span>全部商品跨产线合并统计，只需设置一次</span></div>' + v4TargetRows(draft, config, combo, values) + '</div>';
   }
 
   function buffetTargetLimitLabel(draft, combo) {
@@ -4477,7 +4477,7 @@
       var identity = buffetWorkbenchTargetIdentity(draft, dish);
       return '<tr><td class="olf-batch-select-cell"><input type="checkbox" data-buffet-workbench-target="' + esc(identity) + '"' + (state.selectedIds.indexOf(identity) >= 0 ? ' checked' : '') + ' /></td><td><strong>' + esc(dish.name || dish.dishId) + '</strong></td><td>' + esc(dish.productLineId) + '</td><td><span class="olf-v4-member-status' + (exception ? ' is-exception' : '') + '">' + esc(status) + '</span></td></tr>';
     }).join("");
-    return '<div class="olf-v4-member-table"><div class="olf-v4-member-table__head"><strong>菜品集成员</strong><span>' + config.dishSetMembers.length + ' 个商品</span></div><div class="olf-table-wrap"><table class="olf-table"><thead><tr><th class="olf-batch-select-cell"></th><th>商品名称</th><th>产线</th><th>相同菜品上限</th></tr></thead><tbody>' + rows + '</tbody></table></div></div>';
+    return '<div class="olf-v4-member-table"><div class="olf-v4-member-table__head"><strong>菜品集商品</strong><span>' + config.dishSetMembers.length + ' 个商品</span></div><div class="olf-table-wrap"><table class="olf-table"><thead><tr><th class="olf-batch-select-cell"></th><th>商品名称</th><th>产线</th><th>相同菜品上限</th></tr></thead><tbody>' + rows + '</tbody></table></div></div>';
   }
 
   function renderBuffetWorkbenchToolbar(draft, config, combo) {
@@ -4601,7 +4601,7 @@
       var setKey = comboDraft ? comboScenarioKeyFor(draft, combo.partyIndex) : v4ScenarioKey(combo.partyIndex, combo.roundIndex, draft);
       var setUnit = draft.measureUnit === "kind" ? "种（SPU）" : "份";
       var quotaLabels = buffetDishSetQuotaLabels(draft, combo);
-      return '<div class="olf-v4-target-row"><div><strong>当前菜品集</strong><span>' + config.dishSetMembers.length + ' 个成员，跨产线合并统计</span></div>' +
+      return '<div class="olf-v4-target-row"><div><strong>当前菜品集</strong><span>' + config.dishSetMembers.length + ' 个商品，跨产线合并统计</span></div>' +
         (comboDraft
           ? renderV4LimitInput(values[comboMap][setKey], "data-v4-limit-field data-v4-map=\"" + comboMap + "\" data-v4-period=\"" + combo.period + "\" data-v4-scenario=\"" + esc(setKey) + "\"", comboLabel, setUnit)
           : renderV4LimitInput(values.targetLimits[setKey], "data-v4-limit-field data-v4-map=\"targetLimits\" data-v4-period=\"" + combo.period + "\" data-v4-scenario=\"" + esc(setKey) + "\"", quotaLabels.primary, setUnit) +
@@ -4657,7 +4657,7 @@
         ? renderV4BoundInputs(draft, values, combo, "tableTotalBounds", "整桌每轮")
         : renderV4BoundInputs(draft, values, combo, "totalBounds", draft.subject === "party_size" ? "每人每轮" : "每轮") +
           (draft.subject === "party_size" ? renderV4BoundInputs(draft, values, combo, "tableTotalBounds", "整桌每轮") : "")) + '</section>' : "";
-    var targetBlock = allowed.target ? '<section class="olf-v4-quantity-block"><h5>' + (draft.targetType === "dish_set" ? "菜品集额度与成员" : (draft.targetType === "category" ? "分类限购数量" : "商品限购数量")) + '</h5><div class="olf-v4-target-list">' + renderBuffetTargetQuantityPanel(draft, config, combo, values) + '</div></section>' : "";
+    var targetBlock = allowed.target ? '<section class="olf-v4-quantity-block"><h5>' + (draft.targetType === "dish_set" ? "菜品集额度与商品" : (draft.targetType === "category" ? "分类限购数量" : "商品限购数量")) + '</h5><div class="olf-v4-target-list">' + renderBuffetTargetQuantityPanel(draft, config, combo, values) + '</div></section>' : "";
     var sameDishKey = comboDraft ? comboScenarioKeyFor(draft, combo.partyIndex) : v4ScenarioKey(combo.partyIndex, combo.roundIndex, draft);
     var exceptionRows = v4ExceptionRows(values, sameDishKey);
     var eligible = eligibleExceptionDishes(draft, draft.activeStoreId);
@@ -4743,7 +4743,7 @@
       var currentScope = sceneScopeConfig(draft, config, session.combo);
       var scopeItems = draft.targetType === "dish_set" ? currentScope.dishSetMembers : draft.targetType === "dish" ? currentScope.dishTargets : currentScope.categoryTargets;
       if (scopeItems.length < (draft.targetType === "dish_set" ? 2 : 1)) {
-        invalid = { storeId: storeId, message: draft.targetType === "dish_set" ? "当前场景菜品集至少需要 2 个成员" : "当前场景至少需要一个限购对象" };
+        invalid = { storeId: storeId, message: draft.targetType === "dish_set" ? "当前场景菜品集至少需要 2 个商品" : "当前场景至少需要一个限购对象" };
         return true;
       }
       var values = v4PeriodValues(config, session.combo.period);
@@ -6393,9 +6393,9 @@
     if (tableMin != null || tableMax != null) parts.push("整桌" + periodLabel(combo.period) + "总量 " + (tableMin == null ? "—" : tableMin) + "～" + (tableMax == null ? "—" : tableMax) + " 份");
     if (protection.status === "inherited") parts.push("每种最多 " + protection.value + " 份（继承默认）");
     if (protection.status === "exception") parts.push("每种最多 " + protection.value + " 份（例外）");
-    if (protection.status === "prohibited") parts.push("该成员禁止下单");
-    if (protection.status === "no_protection") parts.push("该成员未设置保护");
-    if (protection.status === "unconfigured") parts.push("成员保护未配置");
+    if (protection.status === "prohibited") parts.push("该商品禁止下单");
+    if (protection.status === "no_protection") parts.push("该商品未设置保护");
+    if (protection.status === "unconfigured") parts.push("商品保护未配置");
     return { configured:target.configured || cap.configured || min != null || max != null || tableMin != null || tableMax != null || ["inherited","exception","prohibited"].indexOf(protection.status) >= 0, prohibited:target.prohibited || cap.prohibited || protection.status === "prohibited", targetLimit:target, tableTargetCap:cap, totalMin:min, totalMax:max, tableTotalMin:tableMin, tableTotalMax:tableMax, effectiveMemberProtection:protection, text:parts.length ? parts.join("；") : "未配置" };
   }
 
@@ -6617,7 +6617,7 @@
         return { storeId: storeId, pickerState: pickerState, selection: scenePickerSelection(draft, pickerState.byLine, pickerState.initialEntries) };
       });
       var invalidChange = changes.find(function (change) { return !change.pickerState.wasParticipating && change.selection.length < minimum; });
-      if (invalidChange) { var invalidStore = stores.find(function (item) { return item.id === invalidChange.storeId; }); toast((invalidStore ? invalidStore.name + "：" : "") + (draft.targetType === "dish_set" ? "当前场景菜品集至少需要 2 个成员" : "当前场景至少需要一个限购对象"), true); return true; }
+      if (invalidChange) { var invalidStore = stores.find(function (item) { return item.id === invalidChange.storeId; }); toast((invalidStore ? invalidStore.name + "：" : "") + (draft.targetType === "dish_set" ? "当前场景菜品集至少需要 2 个商品" : "当前场景至少需要一个限购对象"), true); return true; }
       applyScenePickerChanges(draft, changes, scene, field);
       targetPicker.remove(); clearBuffetQuantitySelection(); markEditorDirty(); renderEditor(); return true;
     }
