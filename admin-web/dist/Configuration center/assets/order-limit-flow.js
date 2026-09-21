@@ -6237,6 +6237,16 @@
     return map[key];
   }
 
+  function readSceneTargets(draft, storeId) {
+    var scene = editorState.quantitySceneDialog;
+    var config = storeConfigFor(draft, storeId || draft.activeStoreId, false);
+    if (!config || !scene || !window.BuffetRulePolicy) return {};
+    var key = window.BuffetRulePolicy.scenarioTargetKey(draft, scene.combo.period, scene.combo.partyIndex, scene.combo.roundIndex);
+    var map = config.scenarioTargets && config.scenarioTargets[scene.combo.period];
+    if (map && Object.prototype.hasOwnProperty.call(map, key)) return cloneValue(map[key]);
+    return cloneValue(window.BuffetRulePolicy.resolveScenarioTargets(draft, config, scene.combo.period, scene.combo.partyIndex, scene.combo.roundIndex) || {});
+  }
+
   function stableBuffetKey(parts) {
     return (parts || []).map(function (part) { return encodeURIComponent(String(part == null ? "" : part)); }).join("|");
   }
@@ -6473,8 +6483,58 @@
   function ensureScenePickerStoreState(picker, draft, storeId) {
     var container = picker.scenePickerState;
     var field = draft.targetType === "dish_set" ? "dishSetMembers" : draft.targetType === "category" ? "categoryTargets" : "dishTargets";
-    if (!container.statesByStoreId[storeId]) container.statesByStoreId[storeId] = scenePickerInitialState(draft, editableSceneTargets(draft, storeId)[field]);
+    if (!container.statesByStoreId[storeId]) {
+      container.statesByStoreId[storeId] = scenePickerInitialState(draft, readSceneTargets(draft, storeId)[field]);
+      container.statesByStoreId[storeId].wasParticipating = addedStoreIds(draft).indexOf(storeId) >= 0;
+    }
     return container.statesByStoreId[storeId];
+  }
+
+  function mergeSceneSelectionIntoStoreStructure(config, selection) {
+    var byLine = MenuPicker.normalizeByLine(config.structureByLine);
+    selection.forEach(function (item) {
+      byLine = MenuPicker.setNodeSelected(byLine, item.productLineId || item.lineId, item.targetKey, true);
+    });
+    config.structureByLine = byLine;
+  }
+
+  function applyScenePickerChanges(draft, changes, scene, field) {
+    var nextDraft = cloneValue(draft);
+    changes.forEach(function (change) {
+      var config = storeConfigFor(nextDraft, change.storeId, false);
+      if (!config) {
+        config = createEmptyStoreConfig();
+        config.structureByLine = MenuPicker.normalizeByLine(change.pickerState.byLine);
+        nextDraft.storeConfigs[change.storeId] = config;
+      } else {
+        mergeSceneSelectionIntoStoreStructure(config, change.selection);
+      }
+      syncStoreTargetsFromStructure(nextDraft, config, true);
+      if (nextDraft.participatingStoreIds.indexOf(change.storeId) < 0) nextDraft.participatingStoreIds.push(change.storeId);
+
+      var diff = scenePickerDiff(change.pickerState.initialKeys, change.selection);
+      var key = window.BuffetRulePolicy.scenarioTargetKey(nextDraft, scene.combo.period, scene.combo.partyIndex, scene.combo.roundIndex);
+      config.scenarioTargets = config.scenarioTargets || {};
+      var map = config.scenarioTargets[scene.combo.period] = config.scenarioTargets[scene.combo.period] || {};
+      var record = Object.prototype.hasOwnProperty.call(map, key)
+        ? cloneValue(map[key])
+        : cloneValue(window.BuffetRulePolicy.resolveScenarioTargets(nextDraft, config, scene.combo.period, scene.combo.partyIndex, scene.combo.roundIndex) || {});
+      record[field] = change.selection.map(function (item) { var next = cloneValue(item); delete next.targetKey; return next; });
+      map[key] = record;
+
+      var values = v4PeriodValues(config, scene.combo.period);
+      if (nextDraft.targetType === "dish_set") {
+        var removedIdentities = change.pickerState.initialEntries.filter(function (entry) { return diff.removedKeys.indexOf(entry.key) >= 0; }).map(function (entry) { return v4MenuIdentity(entry.target); });
+        var scenario = v4ScenarioKey(scene.combo.partyIndex, scene.combo.roundIndex, nextDraft);
+        values.exceptionDishLimits[scenario] = v4ExceptionRows(values, scenario).filter(function (row) { return removedIdentities.indexOf(v4MenuIdentity(v4ExceptionDish(row))) < 0; });
+      } else {
+        var removedValueKeys = change.pickerState.initialEntries.filter(function (entry) { return diff.removedKeys.indexOf(entry.key) >= 0; }).map(function (entry) { var target = entry.target; return v4TargetCellKey(scene.combo.partyIndex, scene.combo.roundIndex, target.lineId || target.productLineId, target.id || (nextDraft.targetType === "category" ? target.categoryId : target.dishId), nextDraft); });
+        removeSceneTargetValues(values, removedValueKeys);
+      }
+    });
+    normalizeStoreDraft(nextDraft);
+    Object.keys(draft).forEach(function (key) { delete draft[key]; });
+    Object.keys(nextDraft).forEach(function (key) { draft[key] = nextDraft[key]; });
   }
 
   function renderSceneProductPicker(picker, draft) {
@@ -6503,9 +6563,10 @@
     } else {
       surface = MenuPicker.renderHtml(state.byLine, "kiosk", "", "", { leafLevel: state.leafLevel });
     }
-    var storeOptions = addedStoreIds(draft).map(function (storeId) { var item = stores.find(function (candidate) { return candidate.id === storeId; }); return '<option value="' + esc(storeId) + '"' + (sceneStoreId === storeId ? ' selected' : '') + '>' + esc(item ? item.name : storeId) + '</option>'; }).join("");
+    var participatingIds = addedStoreIds(draft);
+    var storeOptions = stores.map(function (item) { var participating = participatingIds.indexOf(item.id) >= 0; return '<option value="' + esc(item.id) + '"' + (sceneStoreId === item.id ? ' selected' : '') + '>' + esc(item.name + (participating ? '' : '（未参与）')) + '</option>'; }).join("");
     picker.innerHTML = '<section class="olf-product-add-dialog" role="document"><div class="olf-product-add-head"><h3>添加当前场景' + (state.leafLevel === "category" ? '分类' : '商品') + '</h3><button type="button" class="olf-icon-button" data-scene-product-picker-close aria-label="关闭">' + icon("close", 19) + '</button></div>' +
-      '<div class="olf-product-add-body"><div class="olf-store-search-row"><label class="olf-field olf-config-store-select"><span class="olf-label">参与门店</span><select class="olf-select" data-scene-product-store>' + storeOptions + '</select></label><label class="olf-field olf-product-search"><span class="olf-label">搜索' + (state.leafLevel === "category" ? '分类' : '商品') + '</span><input class="olf-input" type="search" data-scene-product-search value="' + esc(state.query) + '" placeholder="搜索当前门店全部产线商品" autocomplete="off"></label></div>' + surface + '<p class="olf-help">可切换参与门店分别调整当前场景；新增对象额度为未配置，取消勾选仅删除所属门店当前场景额度。</p></div>' +
+      '<div class="olf-product-add-body"><div class="olf-store-search-row"><label class="olf-field olf-config-store-select"><span class="olf-label">参与门店</span><select class="olf-select" data-scene-product-store>' + storeOptions + '</select></label><label class="olf-field olf-product-search"><span class="olf-label">搜索' + (state.leafLevel === "category" ? '分类' : '商品') + '</span><input class="olf-input" type="search" data-scene-product-search value="' + esc(state.query) + '" placeholder="搜索当前门店全部产线商品" autocomplete="off"></label></div>' + surface + '<p class="olf-help">可从全部门店选择当前场景商品；选择未参与门店的商品并保存后，该门店将自动加入规则。取消勾选仅删除所属门店当前场景商品及额度，不会自动移出门店。</p></div>' +
       '<div class="olf-product-add-footer"><button type="button" class="olf-button" data-scene-product-picker-close>取消</button><button type="button" class="olf-button olf-button--primary" data-scene-product-picker-save>确认并返回配置</button></div></section>';
     var structure = picker.querySelector("[data-brand-menu-structure-picker]");
     if (structure) MenuPicker.bind(structure, { leafLevel: state.leafLevel });
@@ -6528,7 +6589,7 @@
     if (action.hasAttribute("data-scene-product-add")) {
       var picker = document.createElement("dialog");
       picker.className = "olf-scene-product-picker";
-      picker.scenePickerState = { activeStoreId: draft.activeStoreId || addedStoreIds(draft)[0], statesByStoreId: {}, dirtyStoreIds: [] };
+      picker.scenePickerState = { activeStoreId: (isAvailableStoreId(draft.activeStoreId) ? draft.activeStoreId : "") || (stores[0] && stores[0].id), statesByStoreId: {}, dirtyStoreIds: [] };
       ensureScenePickerStoreState(picker, draft, picker.scenePickerState.activeStoreId);
       document.getElementById("quantitySceneDialog").appendChild(picker);
       picker.addEventListener("cancel", function (event) { event.preventDefault(); picker.remove(); });
@@ -6555,24 +6616,9 @@
         var pickerState = ensureScenePickerStoreState(targetPicker, draft, storeId);
         return { storeId: storeId, pickerState: pickerState, selection: scenePickerSelection(draft, pickerState.byLine, pickerState.initialEntries) };
       });
-      var invalidChange = changes.find(function (change) { return change.selection.length < minimum; });
+      var invalidChange = changes.find(function (change) { return !change.pickerState.wasParticipating && change.selection.length < minimum; });
       if (invalidChange) { var invalidStore = stores.find(function (item) { return item.id === invalidChange.storeId; }); toast((invalidStore ? invalidStore.name + "：" : "") + (draft.targetType === "dish_set" ? "当前场景菜品集至少需要 2 个成员" : "当前场景至少需要一个限购对象"), true); return true; }
-      changes.forEach(function (change) {
-        var pickerState = change.pickerState;
-        var selection = change.selection;
-        var diff = scenePickerDiff(pickerState.initialKeys, selection);
-        var record = editableSceneTargets(draft, change.storeId);
-        var values = v4PeriodValues(storeConfigFor(draft, change.storeId, true), scene.combo.period);
-        if (draft.targetType === "dish_set") {
-          var removedIdentities = pickerState.initialEntries.filter(function (entry) { return diff.removedKeys.indexOf(entry.key) >= 0; }).map(function (entry) { return v4MenuIdentity(entry.target); });
-          var scenario = v4ScenarioKey(scene.combo.partyIndex, scene.combo.roundIndex, draft);
-          values.exceptionDishLimits[scenario] = v4ExceptionRows(values, scenario).filter(function (row) { return removedIdentities.indexOf(v4MenuIdentity(v4ExceptionDish(row))) < 0; });
-        } else {
-          var removedValueKeys = pickerState.initialEntries.filter(function (entry) { return diff.removedKeys.indexOf(entry.key) >= 0; }).map(function (entry) { var target = entry.target; return v4TargetCellKey(scene.combo.partyIndex, scene.combo.roundIndex, target.lineId || target.productLineId, target.id || (draft.targetType === "category" ? target.categoryId : target.dishId), draft); });
-          removeSceneTargetValues(values, removedValueKeys);
-        }
-        record[field] = selection.map(function (item) { var next = cloneValue(item); delete next.targetKey; return next; });
-      });
+      applyScenePickerChanges(draft, changes, scene, field);
       targetPicker.remove(); clearBuffetQuantitySelection(); markEditorDirty(); renderEditor(); return true;
     }
     var ids = action.hasAttribute("data-buffet-product-remove") ? [action.getAttribute("data-buffet-product-remove")] : normalizeBuffetQuantityWorkbenchState(draft).selectedIds.slice();
