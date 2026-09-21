@@ -8,6 +8,13 @@ assert.match(flow, /function renderBuffetCategoryRows\(draft, config, combo, val
 assert.match(flow, /function renderBuffetDishSetMemberRows\(draft, config, values, scenario\)/);
 assert.match(flow, /菜品集共享额度/);
 assert.match(flow, /跨产线合并统计，只需设置一次/);
+assert.match(flow, /function buffetDishSetQuotaLabels\(draft, combo\)/);
+assert.match(flow, /每人整单最多/);
+assert.match(flow, /整桌整单最多/);
+assert.match(flow, /每人每轮最多/);
+assert.match(flow, /整桌每轮最多/);
+assert.match(flow, /每人本轮最多/);
+assert.match(flow, /整桌本轮最多/);
 assert.match(flow, /使用默认值/);
 assert.match(flow, /已设置例外/);
 assert.match(flow, /包含 ' \+ \(target\.count \|\| 0\) \+ ' 个菜品/);

@@ -4538,6 +4538,15 @@
     return renderBuffetWorkbenchToolbar(draft, config, combo) + renderBuffetProductTable(draft, config, combo, values);
   }
 
+  function buffetDishSetQuotaLabels(draft, combo) {
+    var labels = {
+      order_lifetime: { person: "每人整单最多", table: "整桌整单最多" },
+      per_round: { person: "每人每轮最多", table: "整桌每轮最多" },
+      multi_round: { person: "每人本轮最多", table: "整桌本轮最多" }
+    }[combo.period] || { person: "每人最多", table: "整桌最多" };
+    return { primary: draft.subject === "party_size" ? labels.person : labels.table, table: labels.table };
+  }
+
   function v4TargetRows(draft, config, combo, values) {
     var comboDraft = isBuffetComboDraft(draft);
     var comboMap = comboUsesPartyMultiplier(draft) ? "targetLimits" : "tableTargetCaps";
@@ -4545,11 +4554,12 @@
     if (draft.targetType === "dish_set") {
       var setKey = comboDraft ? comboScenarioKeyFor(draft, combo.partyIndex) : v4ScenarioKey(combo.partyIndex, combo.roundIndex, draft);
       var setUnit = draft.measureUnit === "kind" ? "种（SPU）" : "份";
+      var quotaLabels = buffetDishSetQuotaLabels(draft, combo);
       return '<div class="olf-v4-target-row"><div><strong>当前菜品集</strong><span>' + config.dishSetMembers.length + ' 个成员，跨产线合并统计</span></div>' +
         (comboDraft
           ? renderV4LimitInput(values[comboMap][setKey], "data-v4-limit-field data-v4-map=\"" + comboMap + "\" data-v4-period=\"" + combo.period + "\" data-v4-scenario=\"" + esc(setKey) + "\"", comboLabel, setUnit)
-          : renderV4LimitInput(values.targetLimits[setKey], "data-v4-limit-field data-v4-map=\"targetLimits\" data-v4-period=\"" + combo.period + "\" data-v4-scenario=\"" + esc(setKey) + "\"", "最多", setUnit) +
-            (draft.subject === "party_size" ? renderV4LimitInput(values.tableTargetCaps[setKey], "data-table-target-cap data-v4-limit-field data-v4-map=\"tableTargetCaps\" data-v4-period=\"" + combo.period + "\" data-v4-scenario=\"" + esc(setKey) + "\"", "整桌兜底", setUnit) : "")) + '</div>';
+          : renderV4LimitInput(values.targetLimits[setKey], "data-v4-limit-field data-v4-map=\"targetLimits\" data-v4-period=\"" + combo.period + "\" data-v4-scenario=\"" + esc(setKey) + "\"", quotaLabels.primary, setUnit) +
+            (draft.subject === "party_size" ? renderV4LimitInput(values.tableTargetCaps[setKey], "data-table-target-cap data-v4-limit-field data-v4-map=\"tableTargetCaps\" data-v4-period=\"" + combo.period + "\" data-v4-scenario=\"" + esc(setKey) + "\"", quotaLabels.table, setUnit) : "")) + '</div>';
     }
     var state = normalizeBuffetQuantityWorkbenchState(draft);
     return buffetWorkbenchPageData(draft, config, combo, values).pageRows.map(function (target) {
