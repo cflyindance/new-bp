@@ -735,8 +735,13 @@
       if (credential.scope === "round" && violation.period === "order_lifetime") return false;
       if (!Array.isArray(violation.allowedScopes) || violation.allowedScopes.indexOf(credential.scope) < 0) return false;
       return credential.ruleRefs.some(function (ref) {
-        return ref && ref.id === violation.ruleId && ref.version === violation.ruleVersion && ref.period === violation.period && ref.target === violation.target &&
-          Number.isFinite(Number(ref.approvedQuantity)) && Number(ref.approvedQuantity) >= Number(violation.used || 0);
+        if (!ref || ref.id !== violation.ruleId || ref.version !== violation.ruleVersion || ref.period !== violation.period) return false;
+        if (violation.exactAuthorization === true) {
+          return ref.metric === violation.metric && ref.sceneKey === violation.sceneKey && ref.targetKey === violation.targetKey &&
+            Number(ref.approvedLimit) === Number(violation.configuredLimit) &&
+            Number.isFinite(Number(ref.approvedQuantity)) && Number(ref.approvedQuantity) >= Number(violation.candidateValue || violation.used || 0);
+        }
+        return ref.target === violation.target && Number.isFinite(Number(ref.approvedQuantity)) && Number(ref.approvedQuantity) >= Number(violation.used || 0);
       });
     });
   }
@@ -939,7 +944,7 @@
                 : items.reduce(function (sum, item) { return sum + item.quantity; }, 0);
               var setLimit = effectiveCellLimit(metricValues.perPersonMax && metricValues.perPersonMax[scenario.key], metricValues.perTableMax && metricValues.perTableMax[scenario.key], rule.subject, context.partySize);
               if (setLimit !== Infinity && targetValue > setLimit) violations.push(violation(rule, period, metric === "kind" ? "DISH_SET_KIND_LIMIT_EXCEEDED" : "DISH_SET_PIECE_LIMIT_EXCEEDED", {
-                metric: metric, sceneKey: scenario.key, targetKey: "dish_set:" + rule.id,
+                metric: metric, sceneKey: scenario.key, targetKey: "dish_set:" + rule.id, exactAuthorization: true,
                 target: "__dish_set__", used: targetValue, candidateValue: targetValue,
                 effectiveLimit: setLimit, configuredLimit: setLimit
               }));
@@ -971,7 +976,7 @@
           // 相同菜品保护始终按桌/轮固定；仅菜品集共享总额按人数放大。
           var dishLimit = configuredValue(exceptionLimit(values, scenario.key, item));
           if (dishLimit == null) dishLimit = Infinity;
-          if (dishLimit !== Infinity && item.quantity > dishLimit) violations.push(violation(rule, period, "SAME_DISH_LIMIT_EXCEEDED", { metric: "product_piece", sceneKey: scenario.key, targetKey: identityPart(item.productLineId) + ":" + identityPart(item.dishId), target: menuIdentity(item), used: item.quantity, candidateValue: item.quantity, effectiveLimit: dishLimit, configuredLimit: dishLimit }));
+          if (dishLimit !== Infinity && item.quantity > dishLimit) violations.push(violation(rule, period, "SAME_DISH_LIMIT_EXCEEDED", { metric: "product_piece", sceneKey: scenario.key, targetKey: identityPart(item.productLineId) + ":" + identityPart(item.dishId), exactAuthorization: Number(rule.quotaSchemaVersion) >= 2, target: menuIdentity(item), used: item.quantity, candidateValue: item.quantity, effectiveLimit: dishLimit, configuredLimit: dishLimit }));
         });
       }
     });
@@ -980,8 +985,10 @@
 
   function authorizedUpperViolations(credential, violations, context) {
     var upperCodes = { TOTAL_LIMIT_EXCEEDED: true, TARGET_LIMIT_EXCEEDED: true, DISH_SET_PIECE_LIMIT_EXCEEDED: true, DISH_SET_KIND_LIMIT_EXCEEDED: true, SAME_DISH_LIMIT_EXCEEDED: true, LIMIT_EXCEEDED: true };
-    if (!credential || !validateAuthorizationCredential(credential, violations.filter(function (item) { return upperCodes[item.code]; }), context)) return violations;
-    return violations.filter(function (item) { return !upperCodes[item.code]; });
+    if (!credential) return violations;
+    return violations.filter(function (item) {
+      return !upperCodes[item.code] || !validateAuthorizationCredential(credential, [item], context);
+    });
   }
 
   function evaluateV4Batch(input) {
