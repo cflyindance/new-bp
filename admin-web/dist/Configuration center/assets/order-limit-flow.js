@@ -1063,8 +1063,19 @@
       }
     }
     if (draft.targetType === "dish_set") {
+      var dishMetadata = selectedDishesFromStructure(config);
       config.dishSetMembers = items.map(function (item) {
-        return { productLineId: item.lineId, dishId: String(item.key) };
+        var meta = dishMetadata.find(function (dish) {
+          return String(dish.productLineId) === String(item.lineId) && String(dish.dishId) === String(item.key);
+        });
+        return {
+          productLineId: item.lineId,
+          dishId: String(item.key),
+          name: meta && meta.name || item.name || "",
+          lineLabel: item.lineLabel || "",
+          categoryId: meta && meta.categoryId || "",
+          categoryName: meta && meta.categoryName || ""
+        };
       });
       normalizeDishSetStoreConfig(config);
     }
@@ -4496,7 +4507,7 @@
     var attrs = ' data-limit-store-id="' + esc(row.storeId) + '" data-buffet-row-key="' + esc(row.rowKey) + '"';
     var limitHtml, status = row.status === "configured" ? "已配置" : row.status === "forbidden" ? "禁止下单" : "未配置";
     var lineName = row.lineLabel || "—";
-    var itemName = buffetDisplayName(target, lineName);
+    var itemName = buffetDisplayName(target, lineName, row.productName);
     var categoryName = buffetSceneNameWithoutLineSuffix(row.categoryName, lineName) || "—";
     var storeName = row.storeName || row.storeId || "—";
     if (draft.targetType === "dish_set") {
@@ -6221,6 +6232,7 @@
           lineLabel: target.lineLabel || target.productLineId || target.lineId || "—",
           categoryId: meta.categoryId || "",
           categoryName: meta.category || "—",
+          productName: meta.productName || "",
           code: meta.code || "—",
           status: buffetWorkbenchTargetStatus(draft, target, combo, values)
         });
