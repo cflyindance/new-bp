@@ -449,6 +449,9 @@
     Object.keys(source.storeConfigs).forEach(function (storeId) {
       source.storeConfigs[storeId] = normalizeStoreConfig(source.storeConfigs[storeId]);
     });
+    if (source.targetType === "dish_set" && Number(source.quotaSchemaVersion) < 2) {
+      source = migrateDishSetQuotaV2(source).rule;
+    }
     return source;
   }
 

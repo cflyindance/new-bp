@@ -1116,3 +1116,4 @@ button { color: inherit; }
 .olf-cross-store-table .olf-cross-store-limits .olf-v4-table-limit + .olf-v4-table-limit {
   margin-top: 8px;
 }
+.olf-v4-target-row--dish-set{align-items:flex-start;display:grid;grid-template-columns:minmax(180px,260px) minmax(0,1fr);gap:16px}.olf-dish-set-measures{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.olf-dish-set-measure{border:1px solid #e5e6eb;border-radius:10px;padding:12px;background:#fff}.olf-dish-set-measure.is-enabled{border-color:#8fb4ff;background:#f5f8ff}.olf-dish-set-measure__switch{display:flex;align-items:center;gap:8px}.olf-dish-set-measure__fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}.olf-dish-set-measure__fields .olf-field{min-width:0}@media(max-width:900px){.olf-v4-target-row--dish-set{grid-template-columns:1fr}.olf-dish-set-measures{grid-template-columns:1fr}.olf-dish-set-measure__fields{grid-template-columns:1fr}}

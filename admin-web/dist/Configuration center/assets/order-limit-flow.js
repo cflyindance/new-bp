@@ -2878,9 +2878,7 @@
     var targetChoices = renderChoice("targetType", "category", "按分类限购", "分类内全部菜品共享数量池", draft.targetType === "category") +
         renderChoice("targetType", "dish", "按菜品限购", "每个指定菜品独立累计", draft.targetType === "dish") +
         (isBuffetProfile() ? renderChoice("targetType", "dish_set", "按菜品集限购", "多个指定菜品跨产线共享同一个数量池", draft.targetType === "dish_set") : "");
-    var measureBlock = modernBuffet && draft.targetType === "dish_set"
-      ? '<section class="olf-section"><h3>计量方式</h3><div class="olf-choice-grid olf-choice-grid--two"><label class="olf-period-toggle"><input type="radio" name="buffetMeasureUnit" value="piece" data-buffet-measure-unit' + (draft.measureUnit !== "kind" ? " checked" : "") + ' /><span><strong>按份</strong><small>菜品集商品合计份数</small></span></label><label class="olf-period-toggle"><input type="radio" name="buffetMeasureUnit" value="kind" data-buffet-measure-unit' + (draft.measureUnit === "kind" ? " checked" : "") + ' /><span><strong>按种（SPU）</strong><small>菜品集内不同菜品种（SPU）数</small></span></label></div></section>'
-      : "";
+    var measureBlock = "";
     var periodBlock = "";
     if (!modernBuffet && isBuffetProfile() && draft.subject === "order") {
       periodBlock = '<section class="olf-section"><h3>额度周期</h3><div class="olf-summary"><strong>整单累计</strong><span>按整个订单累计，不按人数或轮次拆分。</span></div></section>';
@@ -4280,8 +4278,8 @@
   }
 
   function renderBuffetSharedQuotaPanel(draft, config, combo, values) {
-    var help = buffetRuleHelpContent({ kind: "shared", targetType: "dish_set", measureUnit: draft.measureUnit });
-    return '<div class="olf-v4-shared-quota"><div><strong>' + esc(help.label) + renderBuffetHelpExample(help) + '</strong><span>全部商品跨产线合并统计，只需设置一次；不同门店分别计算</span></div>' + v4TargetRows(draft, config, combo, values) + '</div>';
+    var help = buffetRuleHelpContent({ kind: "shared", targetType: "dish_set", measureUnit: "piece" });
+    return '<div class="olf-v4-shared-quota"><div><strong>菜品集共享额度' + renderBuffetHelpExample(help) + '</strong><span>全部商品跨产线合并统计，只需设置一次；按当前场景独立启用，两类限制可共同生效</span></div>' + v4TargetRows(draft, config, combo, values) + '</div>';
   }
 
   function buffetTargetLimitLabel(draft, combo) {
@@ -4614,13 +4612,19 @@
     var comboLabel = comboUsesPartyMultiplier(draft) ? "每人每轮最多" : "整桌每轮最多";
     if (draft.targetType === "dish_set") {
       var setKey = comboDraft ? comboScenarioKeyFor(draft, combo.partyIndex) : v4ScenarioKey(combo.partyIndex, combo.roundIndex, draft);
-      var setUnit = draft.measureUnit === "kind" ? "种（SPU）" : "份";
       var quotaLabels = buffetDishSetQuotaLabels(draft, combo);
-      return '<div class="olf-v4-target-row"><div><strong>当前菜品集</strong><span>' + config.dishSetMembers.length + ' 个商品，跨产线合并统计</span></div>' +
-        (comboDraft
-          ? renderV4LimitInput(values[comboMap][setKey], "data-v4-limit-field data-v4-map=\"" + comboMap + "\" data-v4-period=\"" + combo.period + "\" data-v4-scenario=\"" + esc(setKey) + "\"", comboLabel, setUnit, buffetRuleHelpContent({ kind: "quota", subject: comboUsesPartyMultiplier(draft) ? "party_size" : "order", period: combo.period, scope: comboUsesPartyMultiplier(draft) ? "person" : "table" }))
-          : renderV4LimitInput(values.targetLimits[setKey], "data-v4-limit-field data-v4-map=\"targetLimits\" data-v4-period=\"" + combo.period + "\" data-v4-scenario=\"" + esc(setKey) + "\"", quotaLabels.primary, setUnit, buffetRuleHelpContent({ kind: "quota", subject: draft.subject, period: combo.period, scope: draft.subject === "party_size" ? "person" : "table" })) +
-            (draft.subject === "party_size" ? renderV4LimitInput(values.tableTargetCaps[setKey], "data-table-target-cap data-v4-limit-field data-v4-map=\"tableTargetCaps\" data-v4-period=\"" + combo.period + "\" data-v4-scenario=\"" + esc(setKey) + "\"", quotaLabels.table, setUnit, buffetRuleHelpContent({ kind: "quota", subject: draft.subject, period: combo.period, scope: "table" })) : "")) + '</div>';
+      values.measures = values.measures || (window.BuffetRulePolicy && window.BuffetRulePolicy.emptyDishSetMeasures ? window.BuffetRulePolicy.emptyDishSetMeasures() : { piece: { enabled: {}, perPersonMax: {}, perTableMax: {} }, kind: { enabled: {}, perPersonMax: {}, perTableMax: {} } });
+      function metricBlock(metric, label, unit) {
+        var metricValues = values.measures[metric];
+        var enabled = metricValues.enabled[setKey] === true;
+        function input(mapName, labelText) {
+          var cell = metricValues[mapName] && metricValues[mapName][setKey];
+          return renderV4LimitInput(cell, 'data-v4-measure-field data-v4-measure-metric="' + metric + '" data-v4-measure-map="' + mapName + '" data-v4-period="' + combo.period + '" data-v4-scenario="' + esc(setKey) + '"', labelText, unit);
+        }
+        var fields = draft.subject === "party_size" ? input("perPersonMax", quotaLabels.primary) + input("perTableMax", quotaLabels.table) : input("perTableMax", quotaLabels.primary);
+        return '<section class="olf-dish-set-measure' + (enabled ? ' is-enabled' : '') + '" data-measure-card="' + metric + '"><label class="olf-dish-set-measure__switch"><input type="checkbox" data-v4-measure-toggle data-v4-measure-metric="' + metric + '" data-v4-period="' + combo.period + '" data-v4-scenario="' + esc(setKey) + '"' + (enabled ? ' checked' : '') + '><strong>' + label + '</strong></label>' + (enabled ? '<div class="olf-dish-set-measure__fields">' + fields + '</div>' : '') + '</section>';
+      }
+      return '<div class="olf-v4-target-row olf-v4-target-row--dish-set"><div><strong>当前菜品集</strong><span>' + config.dishSetMembers.length + ' 个商品，跨产线合并统计</span></div><div class="olf-dish-set-measures">' + metricBlock("piece", "按份限制", "份") + metricBlock("kind", "按种限制（SPU）", "种（SPU）") + '</div></div>';
     }
     var state = normalizeBuffetQuantityWorkbenchState(draft);
     return buffetWorkbenchPageData(draft, config, combo, values).pageRows.map(function (target) {
@@ -7712,6 +7716,33 @@
       v4LimitValues[v4LimitMap][v4LimitKey] = readLimitCell(target);
       deriveBuffetQuantityBlocks(draft);
       markEditorDirty(); return;
+    }
+    if (target.hasAttribute("data-v4-measure-field")) {
+      if (!isBuffetV4Draft(draft) || isInvalidConfiguredQuantityInput(target)) { if (isInvalidConfiguredQuantityInput(target)) toast("请输入 0 至 999999 的整数", true); return; }
+      var measureConfig = storeConfigFor(draft, target.getAttribute("data-limit-store-id") || draft.activeStoreId, true);
+      var measureValues = v4PeriodValues(measureConfig, target.getAttribute("data-v4-period"));
+      measureValues.measures = measureValues.measures || window.BuffetRulePolicy.emptyDishSetMeasures();
+      var measureMetric = target.getAttribute("data-v4-measure-metric");
+      var measureMap = target.getAttribute("data-v4-measure-map");
+      var measureKey = target.getAttribute("data-v4-scenario");
+      measureValues.measures[measureMetric][measureMap][measureKey] = readLimitCell(target);
+      markEditorDirty(); return;
+    }
+    if (target.hasAttribute("data-v4-measure-toggle")) {
+      if (event.type !== "change" || !isBuffetV4Draft(draft)) return;
+      var toggleConfig = activeStoreConfig(draft);
+      var toggleValues = v4PeriodValues(toggleConfig, target.getAttribute("data-v4-period"));
+      toggleValues.measures = toggleValues.measures || window.BuffetRulePolicy.emptyDishSetMeasures();
+      var toggleMetric = target.getAttribute("data-v4-measure-metric");
+      var otherMetric = toggleMetric === "piece" ? "kind" : "piece";
+      var toggleKey = target.getAttribute("data-v4-scenario");
+      if (!target.checked && toggleValues.measures[otherMetric].enabled[toggleKey] !== true) { toast("至少启用一种计量方式", true); renderEditor(); return; }
+      var metricValues = toggleValues.measures[toggleMetric];
+      var hasValues = ["perPersonMax", "perTableMax"].some(function (map) { return metricValues[map][toggleKey] && metricValues[map][toggleKey].configured; });
+      if (!target.checked && hasValues && typeof window.confirm === "function" && !window.confirm("关闭后将清除当前场景该计量额度，是否继续？")) { renderEditor(); return; }
+      metricValues.enabled[toggleKey] = target.checked;
+      if (!target.checked) { delete metricValues.perPersonMax[toggleKey]; delete metricValues.perTableMax[toggleKey]; }
+      markEditorDirty(); renderEditor(); return;
     }
     if (target.hasAttribute("data-v4-bound-field")) {
       if (!isBuffetV4Draft(draft)) return;
