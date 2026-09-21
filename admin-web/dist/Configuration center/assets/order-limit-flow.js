@@ -4730,9 +4730,9 @@
     var state=editorState.buffetSummary,data=buffetSummaryPageData(draft,state),storesSeen={},linesSeen={},categoriesSeen={};
     data.allRows.forEach(function(row){storesSeen[row.storeId]=row.storeName;if(!state.storeId||state.storeId===row.storeId)linesSeen[row.lineId]=row.lineLabel;if((!state.storeId||state.storeId===row.storeId)&&(!state.lineId||state.lineId===row.lineId)&&row.categoryIdentity)categoriesSeen[row.categoryIdentity]=row.categoryName;});
     var partyOptions=(draft.partyRanges||[]).map(function(r){return buffetSummaryOption(r.rangeId,formatRange(r,"人"),state.partyRangeId);}).join(""),hasMultiRound=(draft.enabledPeriods||[]).indexOf("multi_round")>=0,roundOptions=hasMultiRound?(draft.roundRanges||[]).map(function(r){return buffetSummaryOption(r.rangeId,formatRange(r,"轮"),state.roundRangeId);}).join(""):"";
-    var rows=data.pageRows.map(function(row){return '<tr><td class="olf-summary-product"><strong>'+esc(row.displayName)+'</strong>'+(row.scopeLabel?'<span>'+esc(row.scopeLabel)+'</span>':'')+'</td><td>'+esc(row.lineLabel)+'</td><td>'+esc(row.categoryName)+'</td><td>'+esc(row.storeName)+'</td><td>'+esc(periodLabel(row.periodKey))+'</td><td>'+(row.subject==="party_size"?"按人数":"按桌")+'</td><td>'+esc(row.partyLabel)+'</td><td>'+esc(row.roundLabel)+'</td><td class="olf-summary-result">'+esc(row.resultText)+(row.hasDifference?'<b>存在差异</b>':'')+'</td><td><button type="button" class="olf-button olf-button--link" data-buffet-summary-enter="'+esc(row.summaryKey)+'">进入配置</button></td></tr>';}).join("");
+    var rows=data.pageRows.map(function(row){return '<tr><td class="olf-summary-product"><strong>'+esc(row.displayName)+'</strong>'+(row.scopeLabel?'<span>'+esc(row.scopeLabel)+'</span>':'')+'</td><td>'+esc(row.lineLabel)+'</td><td>'+esc(row.categoryName)+'</td><td>'+esc(row.storeName)+'</td><td>'+esc(periodLabel(row.periodKey))+'</td><td>'+(row.subject==="party_size"?"按人数":"按桌")+'</td><td>'+esc(row.partyLabel)+'</td><td>'+esc(row.roundLabel)+'</td><td class="olf-summary-result">'+esc(row.resultText)+(row.hasDifference?'<b>存在差异</b>':'')+'</td><td><button type="button" class="olf-button olf-button--link" data-buffet-summary-enter="'+esc(row.summaryKey)+'">进入配置</button></td></tr>';}).join(""),emptyText=data.allRows.length?"没有符合筛选条件的商品配置":"暂无商品配置，请先添加商品";
     var more=state.moreOpen?'<div class="olf-buffet-summary-more"><select class="olf-select" data-buffet-summary-filter="lineId">'+buffetSummaryOption("","全部产线",state.lineId)+Object.keys(linesSeen).map(function(id){return buffetSummaryOption(id,linesSeen[id],state.lineId);}).join("")+'</select><select class="olf-select" data-buffet-summary-filter="categoryIdentity">'+buffetSummaryOption("","全部分类",state.categoryIdentity)+Object.keys(categoriesSeen).map(function(id){return buffetSummaryOption(id,categoriesSeen[id],state.categoryIdentity);}).join("")+'</select><select class="olf-select" data-buffet-summary-filter="configStatus">'+buffetSummaryOption("","全部配置状态",state.configStatus)+buffetSummaryOption("configured","已配置",state.configStatus)+buffetSummaryOption("unconfigured","未配置",state.configStatus)+buffetSummaryOption("different","存在差异",state.configStatus)+'</select></div>':'';
-    return '<dialog id="buffetAllSceneSummaryDialog" class="olf-buffet-summary-dialog" data-buffet-summary-dialog aria-labelledby="buffetSummaryTitle"><header><div><h3 id="buffetSummaryTitle">全部场景商品配置</h3><span>共 '+data.filtered.length+' 条规则 · '+data.productCount+' 个商品 · '+data.storeCount+' 家门店</span></div><button type="button" class="olf-icon-button" data-buffet-summary-close aria-label="关闭">×</button></header><div class="olf-buffet-summary-body"><div class="olf-buffet-summary-filters"><input class="olf-input" value="'+esc(state.query)+'" placeholder="搜索商品名称" data-buffet-summary-filter="query"><select class="olf-select" data-buffet-summary-filter="storeId">'+buffetSummaryOption("","全部门店",state.storeId)+Object.keys(storesSeen).map(function(id){return buffetSummaryOption(id,storesSeen[id],state.storeId);}).join("")+'</select><select class="olf-select" data-buffet-summary-filter="period">'+buffetSummaryOption("","全部周期",state.period)+buffetSummaryOption("order_lifetime","整单",state.period)+buffetSummaryOption("per_round","每轮",state.period)+buffetSummaryOption("multi_round","分轮次",state.period)+'</select><select class="olf-select" data-buffet-summary-filter="partyRangeId"'+(draft.subject==="party_size"?'':' disabled')+'>'+buffetSummaryOption("",draft.subject==="party_size"?"全部人数区间":"人数不适用",state.partyRangeId)+partyOptions+'</select><select class="olf-select" data-buffet-summary-filter="roundRangeId"'+(state.period==="order_lifetime"||!hasMultiRound?' disabled':'')+'>'+buffetSummaryOption("",state.period==="order_lifetime"||!hasMultiRound?"轮次不适用":"全部轮次区间",state.roundRangeId)+roundOptions+'</select><button type="button" class="olf-button" data-buffet-summary-more>更多筛选 '+(state.moreOpen?"收起":"展开")+'</button><button type="button" class="olf-button" data-buffet-summary-reset>重置</button></div>'+more+'<label class="olf-buffet-summary-difference"><input type="checkbox" data-buffet-summary-difference'+(state.differenceOnly?' checked':'')+'> 仅看额度存在差异的商品</label><div class="olf-buffet-summary-table-wrap"><table class="olf-table olf-buffet-summary-table"><thead><tr><th>商品</th><th>产线</th><th>分类</th><th>门店</th><th>周期</th><th>计算方式</th><th>人数区间</th><th>轮次区间</th><th>限购结果</th><th>操作</th></tr></thead><tbody>'+(rows||'<tr><td colspan="10" class="olf-empty">没有符合筛选条件的商品配置</td></tr>')+'</tbody></table></div><div class="olf-v4-workbench-pager"><span>第 '+data.page+' / '+data.totalPages+' 页</span><button type="button" class="olf-button" data-buffet-summary-page="'+(data.page-1)+'"'+(data.page<=1?' disabled':'')+'>上一页</button><button type="button" class="olf-button" data-buffet-summary-page="'+(data.page+1)+'"'+(data.page>=data.totalPages?' disabled':'')+'>下一页</button></div></div></dialog>';
+    return '<dialog id="buffetAllSceneSummaryDialog" class="olf-buffet-summary-dialog" data-buffet-summary-dialog aria-labelledby="buffetSummaryTitle"><header><div><h3 id="buffetSummaryTitle">全部场景商品配置</h3><span>共 '+data.filtered.length+' 条规则 · '+data.productCount+' 个商品 · '+data.storeCount+' 家门店</span></div><button type="button" class="olf-icon-button" data-buffet-summary-close aria-label="关闭">×</button></header><div class="olf-buffet-summary-body"><div class="olf-buffet-summary-filters"><input class="olf-input" value="'+esc(state.query)+'" placeholder="搜索商品名称" data-buffet-summary-filter="query"><select class="olf-select" data-buffet-summary-filter="storeId">'+buffetSummaryOption("","全部门店",state.storeId)+Object.keys(storesSeen).map(function(id){return buffetSummaryOption(id,storesSeen[id],state.storeId);}).join("")+'</select><select class="olf-select" data-buffet-summary-filter="period">'+buffetSummaryOption("","全部周期",state.period)+buffetSummaryOption("order_lifetime","整单",state.period)+buffetSummaryOption("per_round","每轮",state.period)+buffetSummaryOption("multi_round","分轮次",state.period)+'</select><select class="olf-select" data-buffet-summary-filter="partyRangeId"'+(draft.subject==="party_size"?'':' disabled')+'>'+buffetSummaryOption("",draft.subject==="party_size"?"全部人数区间":"人数不适用",state.partyRangeId)+partyOptions+'</select><select class="olf-select" data-buffet-summary-filter="roundRangeId"'+(state.period==="order_lifetime"||!hasMultiRound?' disabled':'')+'>'+buffetSummaryOption("",state.period==="order_lifetime"||!hasMultiRound?"轮次不适用":"全部轮次区间",state.roundRangeId)+roundOptions+'</select><button type="button" class="olf-button" data-buffet-summary-more>更多筛选 '+(state.moreOpen?"收起":"展开")+'</button><button type="button" class="olf-button" data-buffet-summary-reset>重置</button></div>'+more+'<label class="olf-buffet-summary-difference"><input type="checkbox" data-buffet-summary-difference'+(state.differenceOnly?' checked':'')+'> 仅看额度存在差异的商品</label><div class="olf-buffet-summary-table-wrap"><table class="olf-table olf-buffet-summary-table"><thead><tr><th>商品</th><th>产线</th><th>分类</th><th>门店</th><th>周期</th><th>计算方式</th><th>人数区间</th><th>轮次区间</th><th>限购结果</th><th>操作</th></tr></thead><tbody>'+(rows||'<tr><td colspan="10" class="olf-empty">'+esc(emptyText)+'</td></tr>')+'</tbody></table></div><div class="olf-v4-workbench-pager"><span>第 '+data.page+' / '+data.totalPages+' 页</span><button type="button" class="olf-button" data-buffet-summary-page="'+(data.page-1)+'"'+(data.page<=1?' disabled':'')+'>上一页</button><button type="button" class="olf-button" data-buffet-summary-page="'+(data.page+1)+'"'+(data.page>=data.totalPages?' disabled':'')+'>下一页</button></div></div></dialog>';
   }
 
   function renderQuantitySceneDialog(draft, config) {
@@ -4741,7 +4741,7 @@
     var scenarios = allQuantityScenarios(draft);
     var position = quantityScenarioPosition(draft, scene.combo);
     var content = decorateQuantityWorkbench(renderV4PeriodScenario(draft, config, scene.combo.period, scene.combo), draft, scene.combo, !!scene.batchOpen);
-    return '<dialog id="quantitySceneDialog" class="olf-scene-dialog olf-scene-workbench' + (scene.batchOpen ? ' is-batch-open' : '') + '" aria-labelledby="quantitySceneTitle"><header><button type="button" class="olf-button" aria-label="关闭场景配置" data-quantity-scene-cancel>×</button><div class="olf-scene-heading"><h3 id="quantitySceneTitle">配置额度</h3><span>' + esc(addedStoreIds(draft).length + ' 家参与门店 · ' + periodLabel(scene.combo.period) + ' · ' + v4ScenarioTitle(draft, scene.combo.period, scene.combo)) + '</span></div><span class="olf-scene-position">场景 ' + (position + 1) + ' / ' + scenarios.length + '</span><button type="button" class="olf-button" data-quantity-scene-save>保存并返回</button><button type="button" class="olf-button olf-button--primary" data-quantity-scene-next' + (position < 0 || position === scenarios.length - 1 ? ' hidden' : '') + '>保存并配置下一场景 →</button></header><div class="olf-scene-dialog-body">' + content + '</div></dialog>'+renderBuffetAllSceneSummaryDialog(draft);
+    return '<dialog id="quantitySceneDialog" class="olf-scene-dialog olf-scene-workbench' + (scene.batchOpen ? ' is-batch-open' : '') + '" aria-labelledby="quantitySceneTitle"><header><button type="button" class="olf-button" aria-label="关闭场景配置" data-quantity-scene-cancel>×</button><div class="olf-scene-heading"><h3 id="quantitySceneTitle">配置额度</h3><span>' + esc(addedStoreIds(draft).length + ' 家参与门店 · ' + periodLabel(scene.combo.period) + ' · ' + v4ScenarioTitle(draft, scene.combo.period, scene.combo)) + '</span></div><span class="olf-scene-position">场景 ' + (position + 1) + ' / ' + scenarios.length + '</span><button type="button" class="olf-button" data-quantity-scene-save>保存并返回</button><button type="button" class="olf-button olf-button--primary" data-quantity-scene-next' + (position < 0 || position === scenarios.length - 1 ? ' hidden' : '') + '>保存并配置下一场景 →</button></header><div class="olf-scene-dialog-body">' + content + '</div></dialog>';
   }
 
   function decorateQuantityWorkbench(content, draft, combo, batchOpen) {
@@ -5116,13 +5116,14 @@
   function renderBuffetQuantityWorkbench(draft) {
     var storeCount = addedStoreIds(draft).length;
     var productCount = selectedPreviewRows(draft).length;
-    return '<section class="olf-section olf-quantity-workbench"><div class="olf-section-head"><div><h3>门店与商品数量</h3><span class="olf-hint">已配置 ' + storeCount + ' 家门店、' + productCount + ' 个商品</span></div><button type="button" class="olf-button olf-button--primary" data-product-add-open>' + icon("plus", 15) + ' 添加商品</button></div>' + renderStepFour(draft, { embedded: true, hideHeader: true }) + '</section>';
+    return '<section class="olf-section olf-quantity-workbench"><div class="olf-section-head"><div><h3>门店与商品数量</h3><span class="olf-hint">已配置 ' + storeCount + ' 家门店、' + productCount + ' 个商品</span></div><div class="olf-section-actions"><button type="button" class="olf-button" data-buffet-summary-open data-buffet-summary-origin="outer">查看全部配置</button><button type="button" class="olf-button olf-button--primary" data-product-add-open>' + icon("plus", 15) + ' 添加商品</button></div></div>' + renderStepFour(draft, { embedded: true, hideHeader: true }) + '</section>';
   }
 
   function renderBuffetQuantityStep(draft) {
     return '<div class="olf-content-head"><h2 tabindex="-1">设置限购数量</h2></div>' +
       renderBuffetScenarioWorkspace(draft) +
-      renderBuffetQuantityWorkbench(draft);
+      renderBuffetQuantityWorkbench(draft) +
+      renderBuffetAllSceneSummaryDialog(draft);
   }
 
   function renderStepFive(draft) {
@@ -5648,6 +5649,16 @@
     else nextButton.removeAttribute("title");
   }
 
+  function dismissBuffetSummary(restoreFocus) {
+    var origin = editorState && editorState.buffetSummaryOrigin;
+    editorState.buffetSummary = null;
+    editorState.buffetSummaryOrigin = null;
+    renderEditor();
+    if (!restoreFocus || !origin) return;
+    var opener = document.querySelector('[data-buffet-summary-open][data-buffet-summary-origin="' + origin + '"]');
+    if (opener) opener.focus();
+  }
+
   function renderEditor(options) {
     options = options || {};
     var draft = editorState.rule.editorDraft;
@@ -5669,7 +5680,7 @@
     }
     if (summaryDialog) {
       summaryDialog.showModal();
-      summaryDialog.addEventListener("cancel", function (event) { event.preventDefault(); editorState.buffetSummary = null; renderEditor(); });
+      summaryDialog.addEventListener("cancel", function (event) { event.preventDefault(); dismissBuffetSummary(true); });
     }
     document.querySelectorAll("#quantitySceneDialog, .olf-inline-workbench").forEach(function (quantityDialog) {
       if (draft.targetType === "dish_set") {
@@ -5710,7 +5721,7 @@
         quantityDialog.querySelectorAll("[data-buffet-product-bulk-remove]").forEach(function (button) { button.hidden = true; });
         var memberTools = quantityDialog.querySelector(".olf-v4-workbench-filters");
         var productHeading = quantityDialog.querySelector(".olf-v4-quantity-block:last-child h5");
-        var summaryButton = document.createElement("button"); summaryButton.type = "button"; summaryButton.className = "olf-button"; summaryButton.setAttribute("data-buffet-summary-open", ""); summaryButton.textContent = "查看全部配置";
+        var summaryButton = document.createElement("button"); summaryButton.type = "button"; summaryButton.className = "olf-button"; summaryButton.setAttribute("data-buffet-summary-open", ""); summaryButton.setAttribute("data-buffet-summary-origin", "scene"); summaryButton.textContent = "查看全部配置";
         var addButton = document.createElement("button"); addButton.type = "button"; addButton.className = "olf-button olf-button--primary"; addButton.setAttribute("data-scene-product-add", ""); addButton.textContent = "＋ 添加" + (draft.targetType === "category" ? "分类" : "商品");
         if (productHeading) { productHeading.appendChild(summaryButton); productHeading.appendChild(addButton); } else { quantityDialog.querySelector(".olf-scene-dialog-body").appendChild(summaryButton); quantityDialog.querySelector(".olf-scene-dialog-body").appendChild(addButton); }
         if (memberTools) { var deleteButton = document.createElement("button"); deleteButton.type = "button"; deleteButton.className = "olf-button olf-button--danger"; deleteButton.setAttribute("data-scene-product-delete-selected", ""); deleteButton.textContent = "批量删除"; memberTools.appendChild(deleteButton); }
@@ -6561,8 +6572,11 @@
     var summaryAction = event.target && event.target.closest && event.target.closest("[data-buffet-summary-open], [data-buffet-summary-close], [data-buffet-summary-more], [data-buffet-summary-reset], [data-buffet-summary-page], [data-buffet-summary-enter]");
     if (summaryAction) {
       var summaryDraft = editorState.rule.editorDraft;
-      if (summaryAction.hasAttribute("data-buffet-summary-open")) editorState.buffetSummary = defaultBuffetSummaryState();
-      else if (summaryAction.hasAttribute("data-buffet-summary-close")) editorState.buffetSummary = null;
+      if (summaryAction.hasAttribute("data-buffet-summary-open")) {
+        editorState.buffetSummaryOrigin = summaryAction.getAttribute("data-buffet-summary-origin") || "scene";
+        editorState.buffetSummary = defaultBuffetSummaryState();
+      }
+      else if (summaryAction.hasAttribute("data-buffet-summary-close")) { dismissBuffetSummary(true); return; }
       else if (summaryAction.hasAttribute("data-buffet-summary-more")) editorState.buffetSummary.moreOpen = !editorState.buffetSummary.moreOpen;
       else if (summaryAction.hasAttribute("data-buffet-summary-reset")) editorState.buffetSummary = defaultBuffetSummaryState();
       else if (summaryAction.hasAttribute("data-buffet-summary-page")) editorState.buffetSummary.page = Number(summaryAction.getAttribute("data-buffet-summary-page")) || 1;
@@ -6572,6 +6586,7 @@
         if (!resolved || !resolved.valid) { toast(resolved && resolved.reason || "该场景已不存在，请刷新汇总结果", true); return; }
         summaryDraft.activeStoreId = resolved.storeId;
         editorState.buffetSummary = null;
+        editorState.buffetSummaryOrigin = null;
         editorState.quantitySceneDialog = createQuantitySceneSession(summaryDraft, resolved.combo);
         normalizeBuffetQuantityWorkbenchState(summaryDraft).storeId = resolved.storeId;
       }
@@ -7840,6 +7855,7 @@
       productAddDialog: createProductAddDialogState()
     };
     editorState.buffetSummary = null;
+    editorState.buffetSummaryOrigin = null;
     normalizeActiveDimensions(rule.editorDraft, editorState.currentStep === quantityStepNumber());
     editorState.buffetQuantityWorkbench = createBuffetQuantityWorkbenchState();
     var editorTitlePrefix = viewMode ? "查看" : (rule.sourceRuleId ? "编辑" : "新增");
