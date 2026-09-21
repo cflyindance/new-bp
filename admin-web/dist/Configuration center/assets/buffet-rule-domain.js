@@ -682,7 +682,9 @@
       targetLimits: values.targetLimits || {},
       tableTargetCaps: values.tableTargetCaps || {},
       defaultDishLimits: values.defaultDishLimits || {},
-      exceptionDishLimits: values.exceptionDishLimits || {}
+      exceptionDishLimits: values.exceptionDishLimits || {},
+      measures: values.measures || null,
+      productLimits: values.productLimits || {}
     };
   }
 
@@ -908,6 +910,9 @@
         if (Object.keys(stableValues).some(function (map) { return stableValues[map] && Object.keys(stableValues[map]).some(function (key) { return key === stableScopeKey || key.indexOf(stableScopeKey + "|") === 0; }); })) scenario.key = stableScopeKey;
       }
       var values = scenarioValues(config, period);
+      if (rule.targetType === "dish_set" && Number(rule.quotaSchemaVersion) >= 2 && window.BuffetRulePolicy && window.BuffetRulePolicy.scenarioTargetKey) {
+        scenario.key = window.BuffetRulePolicy.scenarioTargetKey(rule, period, scenario.partyIndex, scenario.roundIndex);
+      }
       var blocks = v4Blocks(rule, period);
       var bucketItems = candidateArray(bucketForPeriod(period, candidates));
       var items = bucketItems.filter(function (item) { return hasTarget(rule, periodConfig, item); });
@@ -925,11 +930,27 @@
 
       if (blocks.targetEnabled && checkMaximum) {
         if (rule.targetType === "dish_set") {
-          var targetValue = rule.measureUnit === "kind"
-            ? items.filter(function (item) { return item.quantity > 0; }).length
-            : items.reduce(function (sum, item) { return sum + item.quantity; }, 0);
-          var setLimit = v4TargetLimit(values, rule, scenario.key, items[0] || {}, scenario.partyIndex, scenario.roundIndex, context.partySize);
-          if (setLimit !== Infinity && targetValue > setLimit) violations.push(violation(rule, period, "TARGET_LIMIT_EXCEEDED", { target: "__dish_set__", used: targetValue, effectiveLimit: setLimit }));
+          if (Number(rule.quotaSchemaVersion) >= 2 && values.measures) {
+            ["kind", "piece"].forEach(function (metric) {
+              var metricValues = values.measures[metric] || {};
+              if (!metricValues.enabled || metricValues.enabled[scenario.key] !== true) return;
+              var targetValue = metric === "kind"
+                ? items.filter(function (item) { return item.quantity > 0; }).length
+                : items.reduce(function (sum, item) { return sum + item.quantity; }, 0);
+              var setLimit = effectiveCellLimit(metricValues.perPersonMax && metricValues.perPersonMax[scenario.key], metricValues.perTableMax && metricValues.perTableMax[scenario.key], rule.subject, context.partySize);
+              if (setLimit !== Infinity && targetValue > setLimit) violations.push(violation(rule, period, metric === "kind" ? "DISH_SET_KIND_LIMIT_EXCEEDED" : "DISH_SET_PIECE_LIMIT_EXCEEDED", {
+                metric: metric, sceneKey: scenario.key, targetKey: "dish_set:" + rule.id,
+                target: "__dish_set__", used: targetValue, candidateValue: targetValue,
+                effectiveLimit: setLimit, configuredLimit: setLimit
+              }));
+            });
+          } else {
+            var targetValue = rule.measureUnit === "kind"
+              ? items.filter(function (item) { return item.quantity > 0; }).length
+              : items.reduce(function (sum, item) { return sum + item.quantity; }, 0);
+            var setLimit = v4TargetLimit(values, rule, scenario.key, items[0] || {}, scenario.partyIndex, scenario.roundIndex, context.partySize);
+            if (setLimit !== Infinity && targetValue > setLimit) violations.push(violation(rule, period, "TARGET_LIMIT_EXCEEDED", { target: "__dish_set__", used: targetValue, effectiveLimit: setLimit }));
+          }
         } else if (rule.targetType === "category") {
           (periodConfig.categoryTargets || []).forEach(function (category) {
             var categoryItems = items.filter(function (item) { return categoryIdentity(item) === categoryIdentity(category); });
@@ -950,7 +971,7 @@
           // 相同菜品保护始终按桌/轮固定；仅菜品集共享总额按人数放大。
           var dishLimit = configuredValue(exceptionLimit(values, scenario.key, item));
           if (dishLimit == null) dishLimit = Infinity;
-          if (dishLimit !== Infinity && item.quantity > dishLimit) violations.push(violation(rule, period, "SAME_DISH_LIMIT_EXCEEDED", { target: menuIdentity(item), used: item.quantity, effectiveLimit: dishLimit }));
+          if (dishLimit !== Infinity && item.quantity > dishLimit) violations.push(violation(rule, period, "SAME_DISH_LIMIT_EXCEEDED", { metric: "product_piece", sceneKey: scenario.key, targetKey: identityPart(item.productLineId) + ":" + identityPart(item.dishId), target: menuIdentity(item), used: item.quantity, candidateValue: item.quantity, effectiveLimit: dishLimit, configuredLimit: dishLimit }));
         });
       }
     });
@@ -958,7 +979,7 @@
   }
 
   function authorizedUpperViolations(credential, violations, context) {
-    var upperCodes = { TOTAL_LIMIT_EXCEEDED: true, TARGET_LIMIT_EXCEEDED: true, SAME_DISH_LIMIT_EXCEEDED: true, LIMIT_EXCEEDED: true };
+    var upperCodes = { TOTAL_LIMIT_EXCEEDED: true, TARGET_LIMIT_EXCEEDED: true, DISH_SET_PIECE_LIMIT_EXCEEDED: true, DISH_SET_KIND_LIMIT_EXCEEDED: true, SAME_DISH_LIMIT_EXCEEDED: true, LIMIT_EXCEEDED: true };
     if (!credential || !validateAuthorizationCredential(credential, violations.filter(function (item) { return upperCodes[item.code]; }), context)) return violations;
     return violations.filter(function (item) { return !upperCodes[item.code]; });
   }
@@ -1057,6 +1078,7 @@
         runtime.partyRanges = config.partyRanges;
         runtime.roundRanges = config.roundRanges;
         runtime.measureUnit = config.measureUnit;
+        runtime.quotaSchemaVersion = config.quotaSchemaVersion;
         runtime.storeConfigs = (config.deployStoreIds || []).reduce(function (result, storeId) {
           if (config.storeConfigs && config.storeConfigs[storeId]) result[storeId] = config.storeConfigs[storeId];
           return result;
