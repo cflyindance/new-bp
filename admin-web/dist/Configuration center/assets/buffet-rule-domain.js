@@ -300,9 +300,27 @@
           if (configuredMapHasValues(values.totalBounds)) push("total", "total", limitMultiplierMode(rule.subject, "targetLimits"), "totalBounds");
         }
         if (blocks.targetEnabled) {
-          var type = rule.targetType === "dish_set" ? "dish_set_" + (rule.measureUnit === "kind" ? "kind" : "piece") : rule.targetType;
-          if (configuredMapHasValues(values.tableTargetCaps)) push(type, "target", "table_fixed", "tableTargetCaps");
-          if (configuredMapHasValues(values.targetLimits)) push(type, "target", limitMultiplierMode(rule.subject, "targetLimits"), "targetLimits");
+          if (rule.targetType === "dish_set" && Number(rule.quotaSchemaVersion) >= 2 && values.measures) {
+            var parties = rule.subject === "party_size" ? rule.partyRanges || [] : [null];
+            var rounds = period === "multi_round" ? rule.roundRanges || [] : [null];
+            ["piece", "kind"].forEach(function (metric) {
+              var metricValues = values.measures[metric] || {};
+              parties.forEach(function (party, pi) { rounds.forEach(function (round, ri) {
+                var sceneKey = window.BuffetRulePolicy.scenarioTargetKey(rule, period, pi, ri);
+                if (!metricValues.enabled || metricValues.enabled[sceneKey] !== true) return;
+                var sceneRule = Object.assign({}, rule, { partyRanges: party ? [party] : rule.partyRanges, roundRanges: round ? [round] : rule.roundRanges });
+                var targets = constraintTargets(rule, storeId, "dish_set", config);
+                var perPerson = metricValues.perPersonMax && metricValues.perPersonMax[sceneKey];
+                var perTable = metricValues.perTableMax && metricValues.perTableMax[sceneKey];
+                if (perPerson && perPerson.configured === true) constraints.push({ type: "dish_set_" + metric, block: "target", mode: rule.subject === "party_size" ? "party_multiplier" : "table_fixed", metric: metric, sceneKey: sceneKey, targetKey: "dish_set:" + rule.id, period: period, storeId: storeId, targets: targets, rule: sceneRule });
+                if (perTable && perTable.configured === true) constraints.push({ type: "dish_set_" + metric, block: "target", mode: "table_fixed", metric: metric, sceneKey: sceneKey, targetKey: "dish_set:" + rule.id, period: period, storeId: storeId, targets: targets, rule: sceneRule });
+              }); });
+            });
+          } else {
+            var type = rule.targetType === "dish_set" ? "dish_set_" + (rule.measureUnit === "kind" ? "kind" : "piece") : rule.targetType;
+            if (configuredMapHasValues(values.tableTargetCaps)) push(type, "target", "table_fixed", "tableTargetCaps");
+            if (configuredMapHasValues(values.targetLimits)) push(type, "target", limitMultiplierMode(rule.subject, "targetLimits"), "targetLimits");
+          }
         }
         var hasMemberLimits = Object.keys(values.exceptionDishLimits || {}).some(function (scenario) {
           return (values.exceptionDishLimits[scenario] || []).some(function (row) { return row && row.limit && row.limit.configured === true; });
@@ -1086,6 +1104,7 @@
         runtime.roundRanges = config.roundRanges;
         runtime.measureUnit = config.measureUnit;
         runtime.quotaSchemaVersion = config.quotaSchemaVersion;
+        runtime.constraints = compileRuleConstraints(config);
         runtime.storeConfigs = (config.deployStoreIds || []).reduce(function (result, storeId) {
           if (config.storeConfigs && config.storeConfigs[storeId]) result[storeId] = config.storeConfigs[storeId];
           return result;

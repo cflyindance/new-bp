@@ -24,6 +24,8 @@ const rule = {
 };
 const input = items => ({ context: { orderMode: "buffet", buffetSessionId: "x", storeId: "s", orderId: "o", partySize: 1, roundNo: 1 }, operationId: Math.random().toString(), rules: [rule], counters: { order: [], round: [] }, items, phase: "add" });
 
+assert.deepEqual(Array.from(domain.compileRuleConstraints(rule), item => item.metric).sort(), ["kind", "piece"], "运行快照应显式编译两种计量约束");
+
 let result = domain.evaluateBatch(input([{ productLineId: "kiosk", dishId: "a", quantity: 2 }]));
 assert.equal(result.allowed, true, "达到份数上限且只有一种时允许");
 result = domain.evaluateBatch(input([{ productLineId: "kiosk", dishId: "a", quantity: 2 }, { productLineId: "kiosk", dishId: "b", quantity: 1 }]));

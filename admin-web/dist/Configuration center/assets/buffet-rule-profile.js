@@ -1046,6 +1046,19 @@
     };
   }
 
+  function requiredCapability(input) {
+    var rule = input && (input.authoringConfig || input.authoringDraft || input.editorDraft || input) || {};
+    return rule.targetType === "dish_set" && Number(rule.quotaSchemaVersion) >= 2
+      ? "buffet_dish_set_dual_measure_v1"
+      : null;
+  }
+
+  function canMutateRule(input, capabilities) {
+    var capability = requiredCapability(input);
+    if (!capability || (Array.isArray(capabilities) && capabilities.indexOf(capability) >= 0)) return { allowed: true };
+    return { allowed: false, status: 409, code: "UNSUPPORTED_BUFFET_QUOTA_SCHEMA", requiredCapability: capability };
+  }
+
   // 发布版本只携带本次生效门店；作者草稿仍由调用方完整保留，以便后续再次启用门店时继续编辑。
   function buildPublishedDraft(input) {
     var draft = clone(input || {});
@@ -1188,6 +1201,8 @@
       validatePublication: validateComboPublication
     },
     createDefaultScenarioRule: createDefaultScenarioRule,
+    requiredCapability: requiredCapability,
+    canMutateRule: canMutateRule,
     reconcileDefaultRules: reconcileDefaultRules,
     verifiedLegacyDefaultKey: verifiedLegacyDefaultKey,
     isUntouchedLegacyDefault: isUntouchedLegacyDefault,
