@@ -302,6 +302,13 @@ button { color: inherit; }
 .olf-bound-example > summary:focus-visible { outline: 2px solid #1677ff; outline-offset: 2px; }
 .olf-bound-example[open] > summary { color: #1677ff; border-color: #1677ff; }
 .olf-bound-example-content { position: absolute; z-index: 20; top: 26px; left: 0; width: min(340px, 65vw); padding: 12px 14px; border: 1px solid var(--olf-border); border-radius: 8px; background: #fff; box-shadow: 0 4px 16px rgba(0, 0, 0, .12); color: var(--olf-secondary); font-size: 13px; font-weight: 400; line-height: 1.7; }
+.olf-bound-example--right .olf-bound-example-content { right: 0; left: auto; }
+.olf-bound-example-content p { margin: 0; }
+.olf-bound-example-content p + p { margin-top: 6px; }
+.olf-bound-example-content strong { color: var(--olf-primary); }
+.olf-v4-limit-field > span:first-child,
+.olf-v4-bound-row > strong { display: inline-flex; align-items: center; gap: 6px; }
+.olf-heading-with-help { display: inline-flex; align-items: center; gap: 6px; }
 .olf-v4-bound-row label, .olf-v4-limit-field { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; color: var(--olf-secondary); }
 .olf-v4-bound-row .olf-limit-input, .olf-v4-limit-field .olf-limit-input { width: 112px; }
 .olf-v4-target-list { display: grid; gap: 8px; }
