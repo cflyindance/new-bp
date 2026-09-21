@@ -934,3 +934,35 @@ A3+B2 是 2 种、5 份，允许；再加 C1 变 3 种，超集合种数；A4+B1
 | QA-70 | 全部场景汇总弹窗 | 既有宽表横向滚动规则保持不变 |
 
 对应验证脚本：`verify-buffet-all-scene-summary-model.mjs`、`verify-buffet-all-scene-summary-ui.mjs`、`verify-buffet-all-scene-summary-navigation.mjs`、`verify-buffet-all-scene-summary-outer-entry.mjs`、`verify-buffet-quota-table-no-horizontal-scroll.mjs`。
+
+## 16. 配置额度的字段化额度列
+
+配置额度表格不得把多个额度输入框堆叠在一个笼统的“限购数量”列中。单门店、跨门店、分类对象和批量设置共同使用同一份额度列定义：普通按人数规则在每轮/分轮次场景显示“每人每轮最多”“整桌每轮最多”，在整单场景显示“每人每单最多”“整桌整单最多”；按桌规则只显示“每轮最多”或“每单最多”。
+
+六个固定组合按真实计算字段展示，不因都使用人数区间而混淆额度口径：
+
+| 组合 | 额度列 | 读写字段 | 单位 |
+| --- | --- | --- | --- |
+| C01 每轮总量＋每轮指定菜品 | 整桌每轮最多 | `tableTargetCaps` | 份 |
+| C02 每轮总量＋每轮菜品集按份 | 整桌每轮最多 | `tableTargetCaps` | 份 |
+| C03 每轮总量＋每轮菜品集按种 | 整桌每轮最多 | `tableTargetCaps` | 种（SPU） |
+| C04 每轮总量＋每人每轮指定菜品 | 每人每轮最多 | `targetLimits` | 份 |
+| C05 每轮总量＋每人每轮菜品集按份 | 每人每轮最多 | `targetLimits` | 份 |
+| C06 每轮总量＋每人每轮菜品集按种 | 每人每轮最多 | `targetLimits` | 种（SPU） |
+
+菜品集共享额度仍位于成员表上方的独立卡片；按种共享额度使用“种（SPU）”，成员保护始终使用“份”。批量设置只生成当前可见额度列对应的字段，空输入不修改原值。
+
+状态只读取当前可见列绑定的真实字段。任一可见额度显式配置为 `0` 时“禁止下单”优先；没有 `0` 且至少一个可见额度已配置时显示“已配置”；全部为空时显示“未配置”。固定组合未使用的另一个 map 为空不得导致误判。
+
+| 编号 | 场景 | 预期 |
+| --- | --- | --- |
+| QA-71 | 普通按人数每轮商品 | 两个输入分别位于“每人每轮最多”“整桌每轮最多”列 |
+| QA-72 | 普通按人数整单商品 | 两个输入分别位于“每人每单最多”“整桌整单最多”列 |
+| QA-73 | C01～C03 | 只显示整桌额度列并读写 `tableTargetCaps` |
+| QA-74 | C04～C06 | 只显示人均额度列并读写 `targetLimits` |
+| QA-75 | 双额度中一个字段为 `0`、另一个为正数 | 状态显示“禁止下单” |
+| QA-76 | 分类对象与跨门店场景 | 表头、行单元格、批量设置和保存回显使用同一字段顺序 |
+| QA-77 | 按人数＋分轮次 | 当前轮次批量修改不影响其他轮次场景 |
+| QA-78 | `1024 × 768` 单场景配置额度 | 各额度独立列且表格无横向滚动；全部场景汇总仍可横向滚动 |
+
+对应验证脚本：`verify-buffet-quota-labeled-columns.mjs`、`verify-buffet-scene-workbench.mjs`、`verify-buffet-multi-field-bulk.mjs`、`verify-buffet-cross-store-scene-ui.mjs`、`verify-buffet-quota-table-no-horizontal-scroll.mjs`。
