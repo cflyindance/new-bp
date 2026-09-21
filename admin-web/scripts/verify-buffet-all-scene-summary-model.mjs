@@ -21,5 +21,7 @@ assert.match(flow, /partyRangeId:draft\.subject === "party_size"/);
 assert.match(flow, /roundRangeId:combo\.period === "multi_round"/);
 assert.match(flow, /peers\.length>1&&signatures\.length>1/);
 assert.match(flow, /pageSize:20/);
+assert.match(flow, /draft\.targetType === "dish_set" && values\.measures/);
+assert.doesNotMatch(flow, /draft\.targetType === "dish_set" && Number\(draft\.quotaSchemaVersion\) >= 2 && values\.measures/);
 
 console.log('verify-buffet-all-scene-summary-model: PASS');

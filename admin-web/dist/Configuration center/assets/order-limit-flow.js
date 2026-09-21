@@ -4813,7 +4813,7 @@
         invalid = { storeId: storeId, message: "最少份数不能大于最多份数" };
         return true;
       }
-      if (draft.targetType === "dish_set" && Number(draft.quotaSchemaVersion) >= 2 && window.BuffetRulePolicy && window.BuffetRulePolicy.validateDishSetMeasures) {
+      if (draft.targetType === "dish_set" && window.BuffetRulePolicy && window.BuffetRulePolicy.validateDishSetMeasures) {
         var measureCheck = window.BuffetRulePolicy.validateDishSetMeasures(draft, config, session.combo.period, session.combo.partyIndex, session.combo.roundIndex);
         if (!measureCheck.valid) {
           invalid = { storeId: storeId, message: measureCheck.code === "DISH_SET_MEASURE_REQUIRED" ? "至少启用一种计量方式" : "已启用的" + (measureCheck.metric === "kind" ? "按种" : "按份") + "限制至少配置一个上限" };
@@ -6465,7 +6465,7 @@
     }
     var parts = [], unit = draft.targetType === "dish_set" && draft.measureUnit === "kind" ? "种（SPU）" : "份";
     var measureResult = { piece:{enabled:false,perPerson:null,perTable:null,text:"未启用"}, kind:{enabled:false,perPerson:null,perTable:null,text:"未启用"} };
-    if (draft.targetType === "dish_set" && Number(draft.quotaSchemaVersion) >= 2 && values.measures) {
+    if (draft.targetType === "dish_set" && values.measures) {
       ["piece","kind"].forEach(function(metric){
         var source=values.measures[metric]||{},enabled=source.enabled&&source.enabled[scenario]===true,person=buffetSummaryCell(source.perPersonMax&&source.perPersonMax[scenario]),table=buffetSummaryCell(source.perTableMax&&source.perTableMax[scenario]),metricUnit=metric==="kind"?"种（SPU）":"份",texts=[];
         if(enabled&&person.configured)texts.push((draft.subject==="party_size"?"每人":"整桌")+periodLabel(combo.period)+"最多 "+person.value+" "+metricUnit);
@@ -7741,6 +7741,7 @@
     }
     if (target.hasAttribute("data-v4-measure-field")) {
       if (!isBuffetV4Draft(draft) || isInvalidConfiguredQuantityInput(target)) { if (isInvalidConfiguredQuantityInput(target)) toast("请输入 0 至 999999 的整数", true); return; }
+      draft.quotaSchemaVersion = 2;
       var measureConfig = storeConfigFor(draft, target.getAttribute("data-limit-store-id") || draft.activeStoreId, true);
       var measureValues = v4PeriodValues(measureConfig, target.getAttribute("data-v4-period"));
       measureValues.measures = measureValues.measures || window.BuffetRulePolicy.emptyDishSetMeasures();
@@ -7752,6 +7753,7 @@
     }
     if (target.hasAttribute("data-v4-measure-toggle")) {
       if (event.type !== "change" || !isBuffetV4Draft(draft)) return;
+      draft.quotaSchemaVersion = 2;
       var toggleConfig = activeStoreConfig(draft);
       var toggleValues = v4PeriodValues(toggleConfig, target.getAttribute("data-v4-period"));
       toggleValues.measures = toggleValues.measures || window.BuffetRulePolicy.emptyDishSetMeasures();
