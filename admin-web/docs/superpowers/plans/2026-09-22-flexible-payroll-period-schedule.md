@@ -19,6 +19,7 @@
 - Pay date policy is `calendarDaysAfterPeriodEnd`, applied to the **actual** end of standard and transition periods; legacy offset is 6 days.
 - Payroll frequency does not change the independent fixed workweek overtime calculation.
 - Historical alternate-frequency simulation is hours-only; no simulated pay, tax, manual adjustment, payslip, or ADP export.
+- The 2026-09-22 visual interaction was approved: current-rule overview → same-screen configuration and before/after preview → adjustment reassignment and blocked-state review → second publish confirmation; simulation remains a separate clearly marked page.
 - California/Texas demo compliance policies must carry a reviewed version; unknown jurisdiction/classification blocks publishing.
 - This repository's current payroll API is a local mock without authentication. Do not represent the delivered UI as a production payroll authorization or legal-compliance service.
 - Do not modify `vendor/emenu-new`; if later work does, run the project-mandated `npm run build:emenu-new-embed -- --skip-install` and verify published artifacts.
