@@ -1117,3 +1117,4 @@ button { color: inherit; }
   margin-top: 8px;
 }
 .olf-v4-target-row--dish-set,.olf-scene-piece-quota .olf-v4-target-row--dish-set{align-items:flex-start;display:grid;grid-template-columns:1fr;gap:16px}.olf-dish-set-measures{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;width:100%}.olf-dish-set-measure{border:1px solid #e5e6eb;border-radius:10px;padding:12px;background:#fff}.olf-dish-set-measure.is-enabled{border-color:#8fb4ff;background:#f5f8ff}.olf-dish-set-measure__switch{display:flex;align-items:center;gap:8px}.olf-dish-set-measure__fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}.olf-dish-set-measure__fields .olf-field{min-width:0}@media(max-width:720px){.olf-dish-set-measures{grid-template-columns:1fr}.olf-dish-set-measure__fields{grid-template-columns:1fr}}
+.olf-dish-set-measure__heading{display:flex;align-items:center;gap:2px}.olf-dish-set-measure__heading .olf-bound-example{margin-left:0}

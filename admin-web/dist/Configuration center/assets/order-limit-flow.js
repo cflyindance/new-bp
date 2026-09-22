@@ -4279,7 +4279,7 @@
   }
 
   function renderBuffetSharedQuotaPanel(draft, config, combo, values) {
-    var help = buffetRuleHelpContent({ kind: "shared", targetType: "dish_set", measureUnit: "piece" });
+    var help = buffetRuleHelpContent({ kind: "shared" });
     return '<div class="olf-v4-shared-quota"><div><strong>菜品集共享额度' + renderBuffetHelpExample(help) + '</strong><span>全部商品跨产线合并统计，只需设置一次；按当前场景独立启用，两类限制可共同生效</span></div>' + v4TargetRows(draft, config, combo, values) + '</div>';
   }
 
@@ -4623,7 +4623,7 @@
           return renderV4LimitInput(cell, 'data-v4-measure-field data-v4-measure-metric="' + metric + '" data-v4-measure-map="' + mapName + '" data-v4-period="' + combo.period + '" data-v4-scenario="' + esc(setKey) + '"', labelText, unit);
         }
         var fields = draft.subject === "party_size" ? input("perPersonMax", quotaLabels.primary) + input("perTableMax", quotaLabels.table) : input("perTableMax", quotaLabels.primary);
-        return '<section class="olf-dish-set-measure' + (enabled ? ' is-enabled' : '') + '" data-measure-card="' + metric + '"><label class="olf-dish-set-measure__switch"><input type="checkbox" data-v4-measure-toggle data-v4-measure-metric="' + metric + '" data-v4-period="' + combo.period + '" data-v4-scenario="' + esc(setKey) + '"' + (enabled ? ' checked' : '') + '><strong>' + label + '</strong></label>' + (enabled ? '<div class="olf-dish-set-measure__fields">' + fields + '</div>' : '') + '</section>';
+        return '<section class="olf-dish-set-measure' + (enabled ? ' is-enabled' : '') + '" data-measure-card="' + metric + '"><div class="olf-dish-set-measure__heading"><label class="olf-dish-set-measure__switch"><input type="checkbox" data-v4-measure-toggle data-v4-measure-metric="' + metric + '" data-v4-period="' + combo.period + '" data-v4-scenario="' + esc(setKey) + '"' + (enabled ? ' checked' : '') + '><strong>' + label + '</strong></label>' + renderBuffetHelpExample(buffetRuleHelpContent({ kind: "shared_metric", metric: metric })) + '</div>' + (enabled ? '<div class="olf-dish-set-measure__fields">' + fields + '</div>' : '') + '</section>';
       }
       return '<div class="olf-v4-target-row olf-v4-target-row--dish-set"><div><strong>当前菜品集</strong><span>' + config.dishSetMembers.length + ' 个商品，跨产线合并统计</span></div><div class="olf-dish-set-measures">' + metricBlock("piece", "按份限制", "份") + metricBlock("kind", "按种限制（SPU）", "种（SPU）") + '</div></div>';
     }
@@ -4649,8 +4649,9 @@
     if (context.kind === "target" && context.targetType === "dish") return { label: "商品限购数量", description: "每个商品分别计算额度，不与其他商品合并；不同门店分别保存、分别计算。", example: "牛肉每轮最多 2 份、羊肉每轮最多 3 份，则两种商品分别受限，合计最多可以点 5 份。" };
     if (context.kind === "target" && context.targetType === "category") return { label: "分类限购数量", description: "同一门店、同一产线、同一分类下的商品共享额度；不同产线或不同门店分别计算。", example: "Kiosk 产线肉类每轮最多 5 份，牛肉 2 份、羊肉 3 份后，该分类本轮不能继续添加商品。" };
     if (context.kind === "target" && context.targetType === "dish_set") return { label: "菜品集额度与商品", description: "菜品集内所有商品共享一个额度，并可对同一个商品设置额外的份数保护。", example: "牛肉、羊肉、虾滑共享每轮最多 6 份；牛肉另设每种最多 2 份时，牛肉最多 2 份，三种商品合计仍不能超过 6 份。" };
-    if (context.kind === "shared" && context.measureUnit === "kind") return { label: "菜品集共享额度·按种（SPU）", description: "统计菜品集内不同菜品种类数；同一门店内跨产线合并统计，不同门店额度不共享。", example: "最多 2 种时，牛肉点 3 份、羊肉点 2 份仍只计算 2 种；再添加虾滑即超过限制。" };
-    if (context.kind === "shared") return { label: "菜品集共享额度·按份", description: "统计菜品集内所有商品的合计份数；同一门店内跨产线合并统计，不同门店额度不共享。", example: "每人每轮最多 2 份，3 人就餐时菜品集合计最多 6 份，不是每个商品各 6 份。" };
+    if (context.kind === "shared") return { label: "菜品集共享额度", description: "当前场景选中的商品合并统计；按份统计总份数，按种统计不同商品种数。两项可单独或同时启用；同时启用时须分别满足。同一门店跨产线合并，不同门店额度不共享。", example: "牛肉 3 份、羊肉 2 份，合计 5 份、2 种。若本场景按份最多 5 份且按种最多 2 种，当前符合两项限制；再加牛肉 1 份超按份，再加虾滑 1 份则同时超两项。" };
+    if (context.kind === "shared_metric" && context.metric === "piece") return { label: "按份限制", description: "当前场景菜品集商品的份数相加，同一商品点多份按实际份数计入。人均上限乘订单有效人数，整桌上限不乘人数；两者同时配置时取更严格的上限。", example: "3 人就餐，每人最多 2 份、整桌最多 5 份，则当前场景合计最多 5 份；牛肉 3 份加羊肉 2 份正好达到上限。" };
+    if (context.kind === "shared_metric" && context.metric === "kind") return { label: "按种限制（SPU）", description: "统计当前场景至少点 1 份的不同商品种数，同一商品点多份仍算 1 种。人均上限乘订单有效人数，整桌上限不乘人数；两者同时配置时取更严格的上限。", example: "3 人就餐，每人最多 1 种、整桌最多 2 种，则当前场景最多 2 种；牛肉 3 份与羊肉 2 份算 2 种，再加虾滑会超限。" };
     if (context.kind === "protection") return { label: "相同菜品保护 / 菜品集内部保护", description: "在菜品集共享额度外限制同一个商品的份数，按整桌固定值计算，不乘人数。例外覆盖默认值；0 表示禁止下单。", example: "默认每种最多 2 份，牛肉例外 3 份，则牛肉最多 3 份；保留空例外表示牛肉不使用默认保护，删除例外记录后才恢复默认保护。" };
     if (context.kind === "quota") {
       var person = context.scope === "person";
