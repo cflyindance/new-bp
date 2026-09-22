@@ -30,6 +30,13 @@ for (const marker of orderedMarkers) {
   previousIndex = markerIndex;
 }
 
+assert.match(stepOne, /var targetGridClass = isBuffetProfile\(\) \? "olf-choice-grid" : "olf-choice-grid olf-choice-grid--two";/);
+assert.match(markup, /<h3>限购对象<\/h3><div class="' \+ targetGridClass \+ '">/);
+const css = fs.readFileSync("dist/Configuration center/assets/order-limit-flow.css", "utf8");
+assert.match(css, /\.olf-choice-grid \{[^}]*grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/);
+assert.match(css, /\.olf-choice-grid--two \{[^}]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
+assert.match(css, /\.olf-choice-grid, \.olf-choice-grid--two,[^}]*grid-template-columns: 1fr/);
+
 assert.match(flow, /function renderBuffetTemplateSelection\(draft\)/);
 assert.doesNotMatch(flow, /function renderBuffetLimitContent\(draft\)/);
 assert.match(flow, /template\.id === "custom"[\s\S]*?enabled: true/, "custom template must remain available for an incomplete draft");

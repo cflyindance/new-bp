@@ -2878,6 +2878,7 @@
     var targetChoices = renderChoice("targetType", "category", "按分类限购", "分类内全部菜品共享数量池", draft.targetType === "category") +
         renderChoice("targetType", "dish", "按菜品限购", "每个指定菜品独立累计", draft.targetType === "dish") +
         (isBuffetProfile() ? renderChoice("targetType", "dish_set", "按菜品集限购", "多个指定菜品跨产线共享同一个数量池", draft.targetType === "dish_set") : "");
+    var targetGridClass = isBuffetProfile() ? "olf-choice-grid" : "olf-choice-grid olf-choice-grid--two";
     var measureBlock = "";
     var periodBlock = "";
     if (!modernBuffet && isBuffetProfile() && draft.subject === "order") {
@@ -2908,7 +2909,7 @@
       '<section class="olf-section"><h3>限购主体</h3><div class="olf-choice-grid olf-choice-grid--two">' +
       subjectChoices + '</div></section>' +
       (modernBuffet ? buffetPeriodBlock : periodBlock) +
-      '<section class="olf-section"><h3>限购对象</h3><div class="olf-choice-grid olf-choice-grid--two">' +
+      '<section class="olf-section"><h3>限购对象</h3><div class="' + targetGridClass + '">' +
       targetChoices + '</div></section>' +
       measureBlock +
       childBlock +
