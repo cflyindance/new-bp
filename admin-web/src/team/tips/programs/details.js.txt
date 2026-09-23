@@ -590,6 +590,7 @@ var ALLOC_KEY = 'tipout_allocated';
         : getAllocatedDatesForStore(store).has(dateKey);
       var confirmed = allocated && window.TipOutAllocationResults ? TipOutAllocationResults.read(store, dateKey) : null;
       var originalTips = snapshot ? Number(snapshot.originalTips || 0) : (confirmed && confirmed.summary ? Number(confirmed.summary.originalTips || 0) : 0);
+      if (window.TipOutScenarioSource && !confirmed) originalTips = window.TipOutScenarioSource.totals(window.TipOutScenarioSource.day(dateKey, store)).originalTips;
       var summary = TipOutDatePoolView.projectDate({ dateKey: dateKey, rules: rules, originalTips: originalTips, allocated: allocated });
       if (detailSavedSnapshot && !detailForceRebuild) {
         var visibleIds = rules.map(function(rule) { return String(rule.id); });
@@ -600,7 +601,7 @@ var ALLOC_KEY = 'tipout_allocated';
         summary.unallocatedAmount = Math.max(0,summary.poolAmount - summary.allocatedAmount);
         summary.poolCount = savedPools.length;
       }
-      document.getElementById('detailOriginalTips').textContent = emptySelection ? '—' : (snapshot || confirmed ? money(originalTips) : '—');
+      document.getElementById('detailOriginalTips').textContent = emptySelection ? '—' : (snapshot || confirmed || window.TipOutScenarioSource ? money(originalTips) : '—');
       document.getElementById('detailPoolAmount').textContent = emptySelection ? '—' : money(summary.poolAmount || 0);
       document.getElementById('detailAllocatedAmount').textContent = emptySelection ? '—' : (allocated ? money(summary.allocatedAmount || 0) : '—');
       document.getElementById('detailUnallocatedAmount').textContent = emptySelection ? '—' : (allocated ? money(summary.unallocatedAmount || 0) : '—');
@@ -619,6 +620,14 @@ var ALLOC_KEY = 'tipout_allocated';
     }
 
     function genSyntheticOrderTipContext(dateKey, ruleSalt) {
+      if (window.TipOutScenarioSource) {
+        var facts = window.TipOutScenarioSource.day(dateKey), totals = window.TipOutScenarioSource.totals(facts), lines = [], tipByType = {};
+        facts.forEach(function(f) { f.orders.forEach(function(order) {
+          lines = lines.concat(order.lines);
+          tipByType[order.tipType] = Math.round(((tipByType[order.tipType] || 0) + order.tipAmount) * 100) / 100;
+        }); });
+        return { lines: lines, tipByType: tipByType, surcharge: totals.surcharge, manual: totals.manual };
+      }
       var parts = dateKey.split('-');
       var extra = 0;
       if (ruleSalt != null && ruleSalt !== '') {
@@ -1660,6 +1669,7 @@ var ALLOC_KEY = 'tipout_allocated';
         store: store,
         dateKey: dateKey,
         confirmedAt: new Date().toISOString(),
+        scenarioFacts: window.TipOutScenarioSource ? window.TipOutScenarioSource.day(dateKey,store) : undefined,
         editorState: window.TipOutDetailSnapshot ? window.TipOutDetailSnapshot.capture(document, rules) : undefined,
         pools: pools,
         summary: {

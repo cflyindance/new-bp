@@ -1,0 +1,52 @@
+(function(root) {
+  function mount() {
+    var anchor = document.getElementById('dateTaskTab');
+    if (!anchor || document.getElementById('tipoutScenarioListButton')) return;
+    var trigger = document.createElement('button');
+    trigger.id = 'tipoutScenarioListButton'; trigger.type = 'button'; trigger.className = 'btn';
+    trigger.textContent = '测试场景清单'; trigger.style.marginLeft = '16px';
+    anchor.parentElement.appendChild(trigger);
+    trigger.addEventListener('click', function() {
+      var existing = document.getElementById('tipoutScenarioDialog'); if (existing) existing.remove();
+      var dialog = document.createElement('dialog'); dialog.id = 'tipoutScenarioDialog'; dialog.setAttribute('aria-label','测试场景清单');
+      dialog.style.cssText = 'width:min(1200px,94vw);max-height:85vh;border:1px solid #e5e7eb;border-radius:16px;padding:24px;color:#182230;background:white;overflow:auto';
+      var heading = document.createElement('h2'); heading.textContent = '测试场景清单'; dialog.appendChild(heading);
+      var store = root.TipOutScenarioSource.store(), today = new Date();
+      var dateKey = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+      var note = document.createElement('p'); note.textContent = store + ' · 演示数据 · 最近一个月全部员工；已有快照以历史结果为准，未营业日期显示全零。'; dialog.appendChild(note);
+      var close = document.createElement('button'); close.className = 'btn'; close.textContent = '关闭'; close.type = 'button';
+      close.addEventListener('click', function() { dialog.close(); }); dialog.appendChild(close);
+      var download = document.createElement('button'); download.className = 'btn'; download.style.marginLeft = '12px'; download.textContent = '导出 CSV'; dialog.appendChild(download);
+      var headers = ['日期','员工','角色','场景','考勤','订单数','分配前小费','原始打卡工时','POS有效工时','说明'];
+      var rows = [];
+      var rules = root.ruleData.getRulesForStore(store);
+      var participants = new Set();
+      rules.forEach(function(rule) { root.TipOutRosterDirectory.resolveReceiverEmployees(rule,store).employees.forEach(function(e) { participants.add(e.id); }); });
+      root.TipOutScenarioData.monthDates(dateKey).reverse().forEach(function(date) {
+        var snapshot = root.TipOutAllocationResults.read(store,date);
+        root.TipOutScenarioSource.day(date,store).sort(function(a,b) { return a.name.localeCompare(b.name) || a.employeeId.localeCompare(b.employeeId); }).forEach(function(f) {
+          var expected = f.attendance.punchSessions.length ? '按规则参与分配' : '未打卡，从池分得为0';
+          if (!participants.has(f.employeeId)) expected += '；未参与规则';
+          if (f.closed) expected = '未营业，不分配（基础场景被营业状态覆盖）';
+          if (snapshot) expected = '已有快照，以历史结果为准；' + expected;
+          rows.push({ id:f.employeeId, values:[date,f.name,f.role,f.scenarioId,f.attendance.clockStatus,f.orders.length,f.originalTips.toFixed(2),f.attendance.originalHours,f.attendance.effectiveHours,expected] });
+        });
+      });
+      var table = document.createElement('table'); table.style.cssText = 'width:100%;margin-top:16px;border-collapse:collapse;font-size:13px';
+      function append(values, id) {
+        var tr = document.createElement('tr'); if (id) tr.setAttribute('data-scenario-employee-id',id);
+        values.forEach(function(v) { var cell = document.createElement(id ? 'td':'th'); cell.textContent = String(v); cell.style.cssText='padding:10px;text-align:left;border-bottom:1px solid #e5e7eb'; tr.appendChild(cell); }); table.appendChild(tr);
+      }
+      append(headers); rows.forEach(function(row) { append(row.values,row.id); }); dialog.appendChild(table);
+      download.addEventListener('click', function() {
+        function cell(v) { var s=String(v); if (/^[=+@\-\t\r]/.test(s)) s="'"+s; return '"'+s.replace(/"/g,'""')+'"'; }
+        var csv=[headers].concat(rows.map(function(r){return r.values;})).map(function(row){return row.map(cell).join(',');}).join('\r\n');
+        var url=URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'}));
+        var a=document.createElement('a'); a.href=url; a.download='tipout-scenarios-'+dateKey+'.csv'; a.click(); setTimeout(function(){URL.revokeObjectURL(url);},1000);
+      });
+      dialog.addEventListener('close',function(){dialog.remove();trigger.focus();});
+      anchor.parentElement.appendChild(dialog); dialog.showModal(); close.focus();
+    });
+  }
+  root.TipOutScenarioList={mount:mount};
+})(window);

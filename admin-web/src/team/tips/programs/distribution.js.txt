@@ -64,7 +64,7 @@ var ALLOC_KEY = 'tipout_allocated';
       return list.filter(function(employee) {
         var id = String(employee.employeeId || '').trim();
         var profileKey = [canonicalEmployeeStore(employee.store).toLowerCase(), String(employee.name || '').trim().toLowerCase(), String(employee.role || '').trim().toLowerCase()].join('|');
-        if ((id && seenIds[id]) || seenProfiles[profileKey]) return false;
+        if ((id && seenIds[id]) || (!id && seenProfiles[profileKey])) return false;
         if (id) seenIds[id] = true;
         seenProfiles[profileKey] = true;
         return true;
@@ -78,7 +78,7 @@ var ALLOC_KEY = 'tipout_allocated';
         var list = JSON.parse(raw);
         if (!Array.isArray(list) || list.length === 0) return DEFAULT_EMPLOYEES.slice();
         var normalized = list
-          .filter(function(e) { return e && String(e.id || '').trim() && String(e.name || '').trim(); })
+          .filter(function(e) { return e && e.active !== false && ['inactive','disabled'].indexOf(String(e.status || '').toLowerCase()) < 0 && String(e.id || '').trim() && String(e.name || '').trim(); })
           .map(function(e) {
             var role = String(e.role || '').trim();
             var tipType = String(e.tipType || 'deduct').trim();
@@ -341,7 +341,7 @@ var ALLOC_KEY = 'tipout_allocated';
 
     function attachAttendance(row, emp, dateKey) {
       var att = (window.TipOutAttendance && TipOutAttendance.getDayStatus)
-        ? TipOutAttendance.getDayStatus(emp.name, dateKey)
+        ? TipOutAttendance.getDayStatus(emp.name, dateKey, { employeeId: emp.employeeId, storeId: (document.getElementById('storeSelect') || {}).value })
         : { hours: 0, clockStatus: '未打卡' };
       row.hours = att.effectiveHours === undefined ? att.hours : att.effectiveHours;
       row.originalPunchHours = att.originalHours === undefined ? att.hours : att.originalHours;
@@ -393,6 +393,31 @@ var ALLOC_KEY = 'tipout_allocated';
     }
 
     function genDailyTip(emp, dateKey) {
+      if (window.TipOutScenarioSource) {
+        var scenarioStore = (document.getElementById('storeSelect') || {}).value;
+        var savedResult = window.TipOutAllocationResults && TipOutAllocationResults.read(scenarioStore,dateKey);
+        var fact = window.TipOutScenarioSource.employee(emp.name, dateKey, { employeeId: emp.employeeId, storeId: scenarioStore });
+        if (!savedResult || Array.isArray(savedResult.scenarioFacts)) {
+          if (savedResult) fact = savedResult.scenarioFacts.find(function(f) { return f.employeeId === String(emp.employeeId).replace(/^roster:/,''); }) || fact;
+          var scenarioRow = attachAttendance({ date: dateKey, before: fact.originalTips, deducted: 0, received: 0, after: fact.originalTips,
+            salesAmount: fact.salesAmount, orderCount: fact.orders.length, scenarioId: fact.scenarioId }, emp, dateKey);
+          if (savedResult) {
+            // Retain the existing employee contribution policy; this adapter changes facts, not rule semantics.
+            var contributionContext = getAllocationDeductorContext();
+            if (window.ruleData && ruleData.isEmployeeInDeductorContext(emp, contributionContext)) scenarioRow.deducted = roundTip(fact.originalTips * (emp.tipRate || 0));
+            savedResult.pools.forEach(function(pool) { pool.employees.forEach(function(e) {
+              if (String(e.employeeId) === String(emp.employeeId).replace(/^roster:/,'')) scenarioRow.received += Number(e.amount || 0);
+            }); });
+            scenarioRow.received = roundTip(scenarioRow.received);
+            scenarioRow.after = calcTipAfter(scenarioRow.before,scenarioRow.deducted,scenarioRow.received);
+            scenarioRow.hours = fact.attendance.effectiveHours;
+            scenarioRow.originalPunchHours = scenarioRow.punchHours = fact.attendance.originalHours;
+            scenarioRow.clockStatus = fact.attendance.clockStatus;
+            scenarioRow.punchSessions = fact.attendance.punchSessions;
+          }
+          return scenarioRow;
+        }
+      }
       var pipeline = ensureDayPipeline(dateKey);
       if (pipeline && pipeline.byName && pipeline.byName[emp.name]) {
         var row = pipeline.byName[emp.name];
@@ -1202,6 +1227,7 @@ var ALLOC_KEY = 'tipout_allocated';
     function handleAllocationHoursDetailOverlay(event) { if (event.target === event.currentTarget) closeAllocationHoursDetail(); }
 
     function renderSummaryViews() {
+      if (window.TipOutScenarioList) window.TipOutScenarioList.mount();
       var dailyRows = activeSummaryView === 'employee' ? buildEmployeeSummaryDailyDataset() : buildDailyDataset(getFilteredEmployees());
       var allocatedDates = getAllocatedDates();
       if (activeSummaryView === 'employee') {

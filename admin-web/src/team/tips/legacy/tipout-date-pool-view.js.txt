@@ -23,6 +23,11 @@
     var surcharge = roundMoney((120 + rng() * 180) * weekendBoost);
     var manual = roundMoney((80 + rng() * 170) * weekendBoost);
     var custom = 0;
+    var scenarioFacts = root.TipOutScenarioSource ? root.TipOutScenarioSource.day(dateKey) : null;
+    if (scenarioFacts) {
+      var sourceTotals = root.TipOutScenarioSource.totals(scenarioFacts);
+      sales = sourceTotals.sales; tips = sourceTotals.tips; manual = sourceTotals.manual; surcharge = sourceTotals.surcharge;
+    }
     var pool = 0;
     var poolByRule = {};
     var salesCount = 0, tipsCount = 0, surchargeCount = 0;
@@ -36,6 +41,7 @@
       { name: 'BartenderB', role: 'Bartender', salesAmount: roundMoney(sales * 0.2) },
       { name: 'OtherC', role: 'Cashier', salesAmount: roundMoney(sales * 0.35) }
     ];
+    if (scenarioFacts) demoEmployees = scenarioFacts.map(function(f) { return { employeeId: f.employeeId, name: f.name, role: f.role, salesAmount: f.salesAmount }; });
     (poolRules || []).forEach(function(rule) {
       var base = 0;
       var amount = 0;

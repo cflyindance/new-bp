@@ -109,7 +109,8 @@
    * @param {string} dateKey YYYY-MM-DD
    * @returns {{ hours: number, clockStatus: '已打卡' | '未打卡' | '打卡异常', punchSessions: Array }}
    */
-  function getDayStatus(empName, dateKey) {
+  function getDayStatus(empName, dateKey, identity) {
+    if (global.TipOutScenarioSource) return global.TipOutScenarioSource.employee(empName, dateKey, identity).attendance;
     var seed = hashSeed(empName, dateKey);
     if (seed % 5 === 0) {
       return { hours: 0, originalHours: 0, effectiveHours: 0, clockStatus: '未打卡', punchSessions: [] };

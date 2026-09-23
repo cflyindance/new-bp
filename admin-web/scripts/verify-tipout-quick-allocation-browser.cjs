@@ -27,6 +27,12 @@ const { chromium } = process.env.TIPOUT_BROWSER_PACKAGES ? createRequire(path.jo
     });
     const button = page.locator('.tipout-quick-allocate').first();
     await button.waitFor();
+    const storageBeforeList = await page.evaluate(()=>JSON.stringify(Object.fromEntries(Object.entries(localStorage))));
+    await page.getByRole('button',{name:'测试场景清单',exact:true}).click();
+    assert.equal(await page.locator('[data-scenario-employee-id]').evaluateAll(rows=>new Set(rows.map(r=>r.dataset.scenarioEmployeeId)).size),6);
+    assert.match(await page.locator('#tipoutScenarioDialog').textContent(),/POS有效工时/);
+    await page.getByRole('button',{name:'关闭',exact:true}).click();
+    assert.equal(await page.evaluate(()=>JSON.stringify(Object.fromEntries(Object.entries(localStorage)))),storageBeforeList);
     const date = await button.evaluate(el => el.closest('tr').dataset.date);
     await button.click();
     await page.waitForFunction(() => Object.keys(JSON.parse(localStorage.getItem('tipout_allocation_results_v1')||'{}')).length > 0);
@@ -34,6 +40,8 @@ const { chromium } = process.env.TIPOUT_BROWSER_PACKAGES ? createRequire(path.jo
     assert.equal(Object.keys(results).length,1);
     const snapshot = Object.values(results)[0];
     assert.equal(snapshot.dateKey,date);
+    assert.equal(snapshot.scenarioFacts.length,6);
+    assert.equal(snapshot.summary.originalTips,Math.round(snapshot.scenarioFacts.reduce((sum,f)=>sum+f.originalTips,0)*100)/100);
     assert.ok(snapshot.pools.length > 0);
     assert.ok(snapshot.pools.some(p=>p.employees.length));
     const absent = snapshot.pools.flatMap(p=>p.employees).filter(e=>e.attendanceStatus==='absent');
@@ -56,7 +64,7 @@ const { chromium } = process.env.TIPOUT_BROWSER_PACKAGES ? createRequire(path.jo
     const before = await page.evaluate(()=>localStorage.getItem('tipout_allocation_results_v1'));
     await page.evaluate(date=>window.mountDetailTest(date),date);
     assert.equal(await page.evaluate(()=>localStorage.getItem('tipout_allocation_results_v1')),before);
-    const pct = page.locator('.detail-emp-pct-input').first();
+    const pct = page.locator('tr[data-attendance-status="clock"] .detail-emp-pct-input').first();
     await pct.fill('25'); await pct.dispatchEvent('change');
     assert.equal(await page.locator('#confirmDetailAllocationBtn').isEnabled(),true);
     assert.equal(await page.locator('#confirmDetailPayoutBtn').isDisabled(),true);
@@ -78,9 +86,9 @@ const { chromium } = process.env.TIPOUT_BROWSER_PACKAGES ? createRequire(path.jo
     await page.waitForFunction(()=>document.querySelector('#test-host').shadowRoot.querySelector('#confirmDetailAllocationBtn').disabled);
     assert.equal(await page.locator('#confirmDetailPayoutBtn').isEnabled(),true);
     await page.evaluate(date=>window.mountDetailTest(date),date);
-    assert.equal(await page.locator('.detail-emp-pct-input').first().inputValue(),'25');
-    await page.locator('.detail-emp-pct-input').first().fill('30');
-    await page.locator('.detail-emp-pct-input').first().dispatchEvent('change');
+    assert.equal(await pct.inputValue(),'25');
+    await pct.fill('30');
+    await pct.dispatchEvent('change');
     page.once('dialog',dialog=>dialog.dismiss());
     await page.locator('#detailDate').fill('2026-09-22');
     await page.locator('#detailDate').dispatchEvent('change');
@@ -88,7 +96,7 @@ const { chromium } = process.env.TIPOUT_BROWSER_PACKAGES ? createRequire(path.jo
     page.once('dialog',dialog=>dialog.accept());
     await page.getByRole('button',{name:'返回汇总',exact:true}).click();
     await page.evaluate(date=>window.mountDetailTest(date),date);
-    assert.equal(await page.locator('.detail-emp-pct-input').first().inputValue(),'25');
+    assert.equal(await pct.inputValue(),'25');
     await page.evaluate(()=>{const rules=JSON.parse(localStorage.getItem('tipout_rules'));rules.forEach(r=>r.clockin='clock');localStorage.setItem('tipout_rules',JSON.stringify(rules));window.mountDetailTest('2026-09-22');});
     await page.waitForFunction(()=>Object.keys(JSON.parse(localStorage.getItem('tipout_allocation_results_v1'))).length===2);
     await page.waitForFunction(()=>document.querySelector('#test-host').shadowRoot.querySelector('#confirmDetailAllocationBtn').disabled);

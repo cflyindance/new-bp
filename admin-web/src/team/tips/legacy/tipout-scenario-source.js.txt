@@ -1,0 +1,38 @@
+/** Page adapter for deterministic demo facts. Never writes business records. */
+(function(root) {
+  function store() { return String((document.getElementById('storeSelect') || {}).value || '').trim(); }
+  function roster(storeName) {
+    var directory = root.TipOutRosterDirectory;
+    if (!directory) return [];
+    // Read without normalizeRoster: viewing demo facts must not edit employee IDs.
+    var rows = JSON.parse(root.localStorage.getItem('tipout-employees-roster-v1') || '[]');
+    var canonical = directory.canonicalRosterStoreName(storeName);
+    return rows.filter(function(row) {
+      return row && row.id && row.active !== false && ['inactive','disabled'].indexOf(String(row.status || '').toLowerCase()) < 0 && directory.canonicalRosterStoreName(row.store) === canonical;
+    }).map(function(row) { return { id: String(row.id), name: row.name, role: row.role }; });
+  }
+  function day(dateKey, storeName) {
+    storeName = storeName || store();
+    var storeId = root.TipOutRosterDirectory.canonicalRosterStoreName(storeName);
+    if (!storeId) return [];
+    var facts = root.TipOutScenarioData.day({ storeId: storeId, employees: roster(storeName), dateKey: dateKey });
+    if (root.TipOutBusinessStatus && root.TipOutBusinessStatus.isDemoClosedDate(dateKey)) facts = facts.map(function(f) {
+      return Object.assign({}, f, { closed: true, orders: [], salesAmount: 0, orderTips: 0, reportedTips: 0, originalTips: 0, surcharge: 0,
+        attendance: { hours: 0, originalHours: 0, effectiveHours: 0, clockStatus: '未打卡', punchSessions: [], adjustment: null } });
+    });
+    return facts;
+  }
+  function employee(name, dateKey, identity) {
+    var facts = day(dateKey, identity && identity.storeId);
+    var id = identity && String(identity.employeeId || '').replace(/^roster:/, '');
+    var matches = facts.filter(function(f) { return id ? f.employeeId === id : f.name === name; });
+    if (matches.length > 1) throw new Error('同名员工无法唯一识别，请使用员工 ID：' + name);
+    if (!matches.length) throw new Error('当前门店未找到员工：' + name);
+    return matches[0];
+  }
+  function totals(facts) {
+    function sum(field) { return facts.reduce(function(n, f) { return n + Math.round(f[field] * 100); }, 0) / 100; }
+    return { sales: sum('salesAmount'), tips: sum('orderTips'), manual: sum('reportedTips'), surcharge: sum('surcharge'), originalTips: sum('originalTips') };
+  }
+  root.TipOutScenarioSource = { day: day, employee: employee, totals: totals, store: store, roster: roster };
+})(window);
