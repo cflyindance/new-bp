@@ -1,4 +1,5 @@
 import payrollCss from "./payroll/payroll-page.css?raw";
+import { mountPayrollScheduleController } from './payroll/payroll-schedule-controller';
 import payrollPolishCss from "./payroll/payroll-polish.css?raw";
 import { createPayrollPageContext, type PayrollPageContext } from "./payroll/payroll-context";
 import { mountLegacyPayrollRuntime, type PayrollRuntimeHandle } from "./payroll/payroll-legacy-runtime";
@@ -37,8 +38,16 @@ export function mountPayrollPage(
   const handleWheel = (event: WheelEvent): void => {
     if (!scrollOwner || event.deltaY === 0) return;
     const eventPath = event.composedPath();
+    const isFilterInteraction = eventPath.some(
+      (node) => node instanceof HTMLElement && node.classList.contains("payroll-filter-popover"),
+    );
+    if (isFilterInteraction) {
+      // Leave native scrolling to the list; never forward it to the workspace.
+      event.stopPropagation();
+      return;
+    }
     const isModalInteraction = eventPath.some(
-      (node) => node instanceof HTMLElement && node.classList.contains("modal-overlay") && node.classList.contains("show"),
+      (node) => node instanceof HTMLElement && ((node.classList.contains("modal-overlay") && node.classList.contains("show")) || (node.tagName === 'DIALOG' && node.hasAttribute('open'))),
     );
     const localScroller = eventPath.find(
       (node): node is HTMLElement => node instanceof HTMLElement && isScrollContainer(node),
@@ -65,6 +74,7 @@ export function mountPayrollPage(
   );
   const handle: PayrollPageHandle = {
     destroy() {
+      schedule.destroy();
       batchExport?.destroy();
       batchExport = null;
       runtime?.destroy();
@@ -74,6 +84,7 @@ export function mountPayrollPage(
       mountedPages.delete(container);
     },
   };
+  const schedule = mountPayrollScheduleController(shadowRoot, runtime.getBatchBridge(), context);
   mountedPages.set(container, handle);
   return handle;
 }

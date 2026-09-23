@@ -10,6 +10,10 @@ export class PayrollStorageUnavailableError extends Error {
   }
 }
 
+export class PayrollRevisionConflictError extends Error {
+  constructor() { super('薪资数据已被其他页面更新，请重新加载后再保存'); this.name = 'PayrollRevisionConflictError'; }
+}
+
 export interface PayrollRepository {
   load(): Promise<{ source: "api" | "local" | "default"; snapshot: PayrollSnapshot }>;
   save(snapshot: PayrollSnapshot): Promise<"api" | "local">;
@@ -31,6 +35,7 @@ export function createPayrollRepository(deps: {
   storage: Storage;
   defaultSnapshot: PayrollSnapshot;
 }): PayrollRepository {
+  let revision = 0;
   const readLocal = (): PayrollSnapshot | null => {
     const raw = deps.storage.getItem(STORAGE_KEY);
     if (!raw) return null;
@@ -48,7 +53,7 @@ export function createPayrollRepository(deps: {
         const response = await deps.fetch(`${API_BASE}/state`, { headers: { Accept: "application/json" } });
         if (response.ok) {
           const parsed = (await readJson(response)) as PayrollSnapshot;
-          if (parsed && typeof parsed === "object") return { source: "api", snapshot: parsed };
+          if (parsed && typeof parsed === "object") { revision = Number(parsed.revision || 0); return { source: "api", snapshot: parsed }; }
         }
       } catch {
         // Continue to the browser-storage fallback.
@@ -64,26 +69,23 @@ export function createPayrollRepository(deps: {
     },
 
     async save(snapshot) {
-      let localSaved = false;
-      try {
-        writeLocal(snapshot);
-        localSaved = true;
-      } catch {
-        // The API may still be available.
-      }
-
       try {
         const response = await deps.fetch(`${API_BASE}/state`, {
           method: "PUT",
-          headers: { Accept: "application/json", "Content-Type": "application/json" },
+          headers: { Accept: "application/json", "Content-Type": "application/json", "If-Match": String(revision) },
           body: JSON.stringify(snapshot),
         });
-        if (response.ok) return "api";
-      } catch {
-        // Return the successful local fallback below.
+        if (response.status === 409 || response.status === 428) throw new PayrollRevisionConflictError();
+        if (response.ok) {
+          const result = await readJson(response) as {revision?:number} | null;
+          revision = Number(result?.revision ?? revision + 1);
+          try { writeLocal({...snapshot, revision}); } catch { /* Remote save remains successful. */ }
+          return "api";
+        }
+      } catch (error) {
+        if (error instanceof PayrollRevisionConflictError) throw error;
       }
-
-      if (localSaved) return "local";
+      try { writeLocal(snapshot); return "local"; } catch { /* Neither destination is available. */ }
       throw new PayrollStorageUnavailableError();
     },
 
@@ -101,4 +103,3 @@ export function createPayrollRepository(deps: {
     },
   };
 }
-

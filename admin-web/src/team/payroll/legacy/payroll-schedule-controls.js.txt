@@ -1,0 +1,80 @@
+  // Runtime-local fixture state: never persisted into the actual payroll snapshot.
+  let actualPayrollSnapshot = null;
+  function changePayrollDemoScenario(scenario) {
+    if (!payrollReady) return;
+    readFormIntoDraft();
+    runAfterUnsavedWorkspaceConfirm(() => {
+      clearTimeout(remoteSaveTimer);
+      if (!scenario) {
+        if (!actualPayrollSnapshot) return;
+        const snapshot = actualPayrollSnapshot;
+        actualPayrollSnapshot = null;
+        Object.assign(state, snapshot);
+      } else {
+        if (!actualPayrollSnapshot) actualPayrollSnapshot = structuredClone(buildSnapshot());
+        const scope = window.TipOutGlobalScopeFilter.readGlobalScopeFilter();
+        const store = $('#payroll-store-filter')?.value || scope.storeLabel || '示例门店';
+        state.data = window.createPayrollScheduleDemo(scenario, store);
+        const target = scenario === 'switch' ? '2027-07-01' : scenario === 'transition' ? '2027-09-01' : '2027-07-01';
+        const period = state.data.periods.find(p => p.startDate <= target && p.endDate >= target);
+        state.periodId = period.id;
+        state.employeeId = state.data.employees[period.id][0].id;
+        state.employeeStoreFilter = store;
+        state.workspacePeriodYearFilter = '2027';
+        state.view = 'workspace';
+      }
+      state.workspaceDraft = null;
+      markWorkspaceEntrySnapshot();
+      renderPeriods(); renderEmployees(); renderManageForm(); syncWorkspaceDirtyBaseline(); showView(state.view);
+      $all('[data-payroll-scenario]').forEach(button => {
+        const active = button.dataset.payrollScenario === scenario;
+        button.classList.toggle('is-active', active); button.setAttribute('aria-pressed', String(active));
+      });
+      $('#payroll-demo-indicator').textContent = scenario ? '示例数据 · 本次修改仅用于演示' : '';
+      if ($('#payroll-store-trigger')) $('#payroll-store-trigger').disabled = !!scenario;
+    });
+  }
+  $all('[data-payroll-scenario]').forEach(button => button.addEventListener('click', () => changePayrollDemoScenario(button.dataset.payrollScenario)));
+  $all('[data-attendance-view]').forEach(button => button.addEventListener('click', () => {
+    readFormIntoDraft();
+    payrollAttendanceView = button.dataset.attendanceView;
+    $all('[data-weeks-expand], [data-weeks-collapse]').forEach(item => { item.hidden = payrollAttendanceView !== 'week'; });
+    $all('[data-attendance-view]').forEach(item => {
+      const active = item.dataset.attendanceView === payrollAttendanceView;
+      item.classList.toggle('is-active', active); item.setAttribute('aria-pressed', String(active));
+    });
+    renderManageForm();
+  }));
+  document.body.addEventListener('click', event => {
+    const collapse = event.target.closest('[data-week-toggle], [data-weeks-expand], [data-weeks-collapse]');
+    if (collapse) {
+      const expanded = collapse.hasAttribute('data-week-toggle') ? collapse.getAttribute('aria-expanded') !== 'true' : collapse.hasAttribute('data-weeks-expand');
+      const sections = collapse.hasAttribute('data-week-toggle') ? [collapse.closest('.payroll-seg-week-block')] : $all('.payroll-seg-week-block');
+      sections.forEach(section => {
+        section.querySelector('table').hidden = !expanded;
+        const toggle = section.querySelector('[data-week-toggle]');
+        toggle.setAttribute('aria-expanded', String(expanded));toggle.textContent = expanded ? '收起' : '展开';
+      });
+      return;
+    }
+    const button = event.target.closest('[data-schedule-week]');
+    if (!button) return;
+    const period = getPeriod(state.periodId), employee = getEmployee(state.periodId, state.employeeId);
+    const start = getPeriodStartDate(period.rangeLabel);
+    const weekStart = addDays(start, -((start.getDay() - getPayrollWorkweekStartDay(period) + 7) % 7) + Number(button.dataset.scheduleWeek) * 7);
+    const { end } = getPeriodDateRange(period.rangeLabel);
+    const rows = [];
+    for (let offset = 0; offset < 7; offset++) {
+      const day = addDays(weekStart, offset), dateLabel = formatMdyDate(day), inside = day >= start && day <= end;
+      let segment = null;
+      for (const candidate of state.data.periods) {
+        const person = (state.data.employees[candidate.id] || []).find(e => e.id === employee.id && e.store === employee.store);
+        segment = person?.segments?.find(s => s.date === dateLabel);
+        if (segment) break;
+      }
+      rows.push(`<tr style="${inside ? '' : 'color:#8895a4;background:#f6f7f8'}"><td>${escapeHtml(dateLabel)}</td><td>${inside ? '本期' : '期外，仅核对'}</td><td>${segment ? fmtMoney(segment.reg || 0) : '—'}</td><td>${segment ? fmtMoney(segment.ot || 0) : '—'}</td><td>${segment ? fmtMoney(segment.ot2 || 0) : '—'}</td></tr>`);
+    }
+    const dialog = $('#payroll-schedule-week-dialog');
+    dialog.querySelector('[data-week-content]').innerHTML = `<p>期外数据仅用于核对，不计入当前期合计；“—”表示未找到对应记录。</p><table class="data-table"><thead><tr><th>日期</th><th>归属</th><th>Regular</th><th>OT</th><th>OT2</th></tr></thead><tbody>${rows.join('')}</tbody></table>`;
+    dialog.showModal();
+  });

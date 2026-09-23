@@ -7,6 +7,8 @@ import detailExportCode from "./legacy/payroll-detail-export.js.txt?raw";
 import apiClientCode from "./legacy/payroll-api-client.js.txt?raw";
 import periodCalendarCode from "./legacy/payroll-period-calendar.js.txt?raw";
 import payrollCode from "./legacy/payroll.js.txt?raw";
+import scheduleControlsCode from "./legacy/payroll-schedule-controls.js.txt?raw";
+import { createPayrollScheduleDemo } from './payroll-schedule-demo';
 import type { PayrollPageContext } from "./payroll-context";
 import type { PayrollScopeSnapshot } from "./payroll-types";
 import type { PayrollBatchBridge } from "./payroll-batch-export-types";
@@ -105,7 +107,7 @@ const batchBridgeSource = `window.__teamPayrollBatchBridge = {
 function injectBatchBridgeIntoPayrollIife(source: string): string {
   const boundary = source.lastIndexOf("})();");
   if (boundary < 0) throw new Error("Payroll legacy runtime IIFE boundary was not found.");
-  return `${source.slice(0, boundary)}\n${batchBridgeSource}\n${source.slice(boundary)}`;
+  return `${source.slice(0, boundary)}\n${scheduleControlsCode}\n${batchBridgeSource}\n${source.slice(boundary)}`;
 }
 
 function buildRuntimeSource(): string {
@@ -201,6 +203,7 @@ export function mountLegacyPayrollRuntime(
   });
 
   const globalTarget: LegacyGlobal = {
+    createPayrollScheduleDemo,
     document: scopedDocument,
     location: locationFacade,
     parent: null,

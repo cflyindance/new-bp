@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import { generatePeriods, calculatePlannedPayDate, numberPeriods } from '../src/team/payroll/payroll-schedule-engine';
+import type { PayrollScheduleRule } from '../src/team/payroll/payroll-schedule-types';
+const rule: PayrollScheduleRule = {id:'r',storeId:'s',version:1,effectiveFrom:'2027-07-08',frequency:'semimonthly',timezone:'America/Chicago',status:'pending'};
+assert.deepEqual(generatePeriods(rule,'2027-07-08','2027-07-31').map(p=>[p.startDate,p.endDate]),[['2027-07-08','2027-07-15'],['2027-07-16','2027-07-31']]);
+assert.equal(generatePeriods({...rule,frequency:'monthly',effectiveFrom:'2028-02-01'},'2028-02-01','2028-02-29')[0].endDate,'2028-02-29');
+assert.deepEqual(generatePeriods({...rule,frequency:'weekly',effectiveFrom:'2026-09-01',anchorDate:'2026-09-05'},'2026-09-01','2026-09-05').map(p=>p.endDate),['2026-09-04','2026-09-11']);
+assert.equal(calculatePlannedPayDate('2027-07-31',{kind:'daysAfterEnd',days:6}),'2027-08-06');
+assert.equal(calculatePlannedPayDate('2027-07-30',{kind:'weekdayAfterEnd',weekday:5}),'2027-08-06');
+assert.equal(calculatePlannedPayDate('2028-01-31',{kind:'monthlyFixed',nextMonthDay:31}),'2028-02-29');
+assert.equal(calculatePlannedPayDate('2027-07-15',{kind:'semiMonthlyFixed',firstHalfDay:20,secondHalfNextMonthDay:5}),'2027-07-20');
+assert.equal(calculatePlannedPayDate('2027-07-31',{kind:'semiMonthlyFixed',firstHalfDay:20,secondHalfNextMonthDay:5}),'2027-08-05');
+assert.throws(()=>generatePeriods({...rule,frequency:'custom',customDays:0},'2027-07-08','2027-07-31'));
+assert.throws(()=>generatePeriods(rule,'2027-02-30','2027-07-31'));
+const next=numberPeriods(generatePeriods(rule,'2027-07-08','2027-07-31'),[{periodYear:2027,periodNumber:14}]);
+assert.equal(next[0].periodNumber,15);
+console.log('Payroll schedule engine passed');

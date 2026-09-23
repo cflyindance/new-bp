@@ -43,7 +43,9 @@ function loadDb(dbPath) {
 function saveDb(dbPath, db) {
   fs.mkdirSync(path.dirname(dbPath), { recursive: true });
   db.updatedAt = new Date().toISOString();
-  fs.writeFileSync(dbPath, JSON.stringify(db, null, 2), "utf8");
+  const temporary = `${dbPath}.${process.pid}.tmp`;
+  fs.writeFileSync(temporary, JSON.stringify(db, null, 2), "utf8");
+  fs.renameSync(temporary, dbPath);
 }
 
 /**
@@ -73,7 +75,7 @@ export async function handlePayrollMockApi(req, res, dbPath) {
         sendJson(res, 404, { error: "no_snapshot", message: "Payroll state not initialized" });
         return true;
       }
-      sendJson(res, 200, db.snapshot);
+      sendJson(res, 200, { ...db.snapshot, revision: Number(db.revision || 0) });
       return true;
     }
 
@@ -84,9 +86,23 @@ export async function handlePayrollMockApi(req, res, dbPath) {
         return true;
       }
       const db = loadDb(dbPath);
+      const revision = Number(db.revision || 0);
+      const expected = req.headers['if-match'];
+      if (expected === undefined && revision > 0) {
+        sendJson(res, 428, { error: 'revision_required', revision });
+        return true;
+      }
+      if (expected !== undefined && (!/^\d+$/.test(String(expected)) || Number(expected) !== revision)) {
+        sendJson(res, 409, { error: 'stale_revision', revision });
+        return true;
+      }
+      // No await between reading the revision and the atomic rename: requests in
+      // this single-process local mock cannot interleave this critical section.
+      db.revision = revision + 1;
+      body.revision = db.revision;
       db.snapshot = body;
       saveDb(dbPath, db);
-      sendJson(res, 200, { ok: true, updatedAt: db.updatedAt });
+      sendJson(res, 200, { ok: true, updatedAt: db.updatedAt, revision: db.revision });
       return true;
     }
 

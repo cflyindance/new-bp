@@ -6,6 +6,8 @@
 
   var API_BASE = "/api/v1/payroll";
   var apiAvailable = null;
+  var revision = 0;
+  var saves = Promise.resolve();
 
   function joinUrl(path) {
     return API_BASE + (path.startsWith("/") ? path : "/" + path);
@@ -14,6 +16,7 @@
   function request(method, path, body) {
     var opts = { method: method, headers: { Accept: "application/json" } };
     if (body !== undefined) {
+      if (method === 'PUT' && path === '/state') opts.headers['If-Match'] = String(revision);
       opts.headers["Content-Type"] = "application/json";
       opts.body = JSON.stringify(body);
     }
@@ -41,15 +44,17 @@
 
   function getRemoteState() {
     return request("GET", "/state").then(function (r) {
-      if (r.status === 404) return null;
+      if (r.status === 404) { revision = 0; return null; }
       if (!r.ok) throw new Error("payroll_api_state_failed");
+      revision = Number(r.json.revision || 0);
       return r.json;
     });
   }
 
   function putRemoteState(snapshot) {
     return request("PUT", "/state", snapshot).then(function (r) {
-      if (!r.ok) throw new Error("payroll_api_save_failed");
+      if (!r.ok) throw new Error(r.status === 409 || r.status === 428 ? 'payroll_revision_conflict_reload_required' : 'payroll_api_save_failed');
+      revision = Number(r.json.revision);
       return r.json;
     });
   }
@@ -76,12 +81,15 @@
       });
     },
     saveSnapshot: function (snapshot) {
-      return probeApi().then(function (on) {
+      const captured = JSON.parse(JSON.stringify(snapshot));
+      const operation = saves.then(function () { return probeApi().then(function (on) {
         if (!on) return { source: "local" };
-        return putRemoteState(snapshot).then(function () {
+        return putRemoteState(captured).then(function () {
           return { source: "api" };
         });
-      });
+      }); });
+      saves = operation.catch(function () {});
+      return operation;
     },
     fetchAuditLog: function (limit) {
       return probeApi().then(function (on) {

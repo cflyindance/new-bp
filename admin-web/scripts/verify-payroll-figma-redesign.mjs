@@ -125,6 +125,8 @@ expectExcludes(html, "payroll-identity-editor", "retired inline identity editor"
   "trapFocusInModal",
   "setEmployeeEditBackgroundInert",
   "closeWorkspaceMenus",
+  "repairStaleEmployeeStoreFilter",
+  "bootstrapStoreFilterRepaired",
 ].forEach((token) => expectIncludes(js, token, "payroll JS"));
 
 [

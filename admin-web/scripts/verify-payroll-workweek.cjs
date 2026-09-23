@@ -1,0 +1,18 @@
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const code=fs.readFileSync('src/team/payroll/legacy/payroll.js.txt','utf8');
+const start=code.indexOf('  function resolveWeekIndex(');
+const end=code.indexOf('\n  function ',start+5);
+const fn=new Function('parseMdyDate','addDays','getPayrollWorkweekStartDay',`${code.slice(start,end)};return resolveWeekIndex`)(s=>new Date(s),(d,n)=>{const r=new Date(d);r.setDate(r.getDate()+n);return r;},p=>p.workweekStartDay??0);
+assert.equal(fn('07/04/2027',new Date('07/01/2027'),0,{workweekStartDay:1}),0);
+assert.equal(fn('07/05/2027',new Date('07/01/2027'),0,{workweekStartDay:1}),1);
+assert.equal(fn('07/31/2027',new Date('07/01/2027'),0,{workweekStartDay:0}),4);
+assert.match(code,/data-week-toggle/);
+const getterStart=code.indexOf('  function getPayrollWorkweekStartDay(');
+const getterEnd=code.indexOf('\n  function ',getterStart+5);
+const getWeekStart=new Function('state',`${code.slice(getterStart,getterEnd)};return getPayrollWorkweekStartDay`);
+assert.equal(getWeekStart(undefined)(),0,'Legacy seed generation must work before runtime state exists');
+assert.equal(getWeekStart(undefined)({workweekStartDay:1}),1);
+assert.equal(getWeekStart({employeeStoreFilter:'s',data:{workweekSettings:{s:1}}})({}),1);
+assert.ok(code.indexOf('let state;') < code.indexOf('  fillElapsed2026PeriodEmployees(DEFAULT_DATA'), 'Declare runtime state before seeding');
+console.log('Configured workweek and collapse contract passed');

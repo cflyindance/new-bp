@@ -112,6 +112,11 @@
     const source = clone(snapshot && typeof snapshot === "object" ? snapshot : {});
     const sourceSelection = clone(selection && typeof selection === "object" ? selection : {});
     const oldPeriods = Array.isArray(source.periods) ? source.periods : [];
+    // Versioned flexible schedules already own their dates and identities.
+    // Keep the legacy biweekly migration only for legacy snapshots.
+    if (oldPeriods.some((period) => period && (period.frequency || period.scheduleRuleId))) {
+      return { snapshot: source, selection: sourceSelection, legacyPeriods: source.legacyPayrollPeriods || [] };
+    }
     const oldEmployees = source.employees && typeof source.employees === "object" ? source.employees : {};
     const targetPeriods = buildSupportedPeriods(now, statusById);
     const targetByKey = new Map(targetPeriods.map((item) => [periodDateKey(item), item]));

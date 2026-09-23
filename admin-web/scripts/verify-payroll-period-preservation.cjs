@@ -1,0 +1,10 @@
+const fs=require('node:fs'),assert=require('node:assert/strict'),vm=require('node:vm');
+const window={};
+vm.runInNewContext(fs.readFileSync('src/team/payroll/legacy/payroll-period-calendar.js.txt','utf8'),{window});
+const migrate=data=>Object.assign(data,window.PayrollPeriodCalendar.migrateSnapshot(data,{},new Date()).snapshot);
+const data={periods:[{id:'legacy',rangeLabel:'locked historical range',periodNumber:2,status:'confirmed',exportBatch:'keep'},{id:'new-rule',startDate:'2027-07-01',endDate:'2027-07-15',frequency:'semimonthly'}]};
+const before=JSON.stringify(data);
+migrate(data);assert.equal(JSON.stringify(data),before);
+migrate(data);assert.equal(JSON.stringify(data),before);
+const empty={periods:[]};migrate(empty);assert.ok(empty.periods.length);
+console.log('Historical and new payroll periods preserved');
