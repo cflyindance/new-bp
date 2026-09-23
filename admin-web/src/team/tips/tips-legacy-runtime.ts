@@ -25,9 +25,9 @@ import editor from "./programs/rule-editor.js.txt?raw";
 import employeeReconciliation from "./programs/employee-reconciliation.js.txt?raw";
 import type { TipsPageContext } from "./tips-context";
 import { rewriteLegacyTipsUrl, type TipsRoute } from "./tips-navigation";
-import type { TipsView } from "./tips-templates";
+import { renderTipsTemplate, type TipsView } from "./tips-templates";
 
-export interface TipsRuntimeHandle { destroy(): void }
+export interface TipsRuntimeHandle { destroy(): void; prepareQuickSnapshot(): unknown }
 type Bag = Record<PropertyKey, unknown>;
 
 const programs: Record<TipsView, string> = { distribution, details, rules, "rule-editor": editor, "employee-reconciliation": employeeReconciliation };
@@ -56,7 +56,7 @@ function runtimeSource(view: TipsView): string {
     "var TipOutPayrollBridge=window.TipOutPayrollBridge;",
     "var TipOutDetailRuleFilter=window.TipOutDetailRuleFilter;",
     programs[view], (view === "distribution" || view === "employee-reconciliation") ? exportCode : "",
-    "return {runHandler:function(code,event,element){return(function(){return eval(code)}).call(element)}};",
+    "return {prepareQuickSnapshot:function(){return prepareQuickAllocationSnapshot()},runHandler:function(code,event,element){return(function(){return eval(code)}).call(element)}};",
     "//# sourceURL=team-tips-native-runtime.js"].join("\n\n");
 }
 
@@ -70,7 +70,7 @@ function scopeAdapter(context: TipsPageContext, cleanups: Set<() => void>) {
   };
 }
 
-export function mountLegacyTipsRuntime(shadow: ShadowRoot, root: HTMLElement, route: TipsRoute, context: TipsPageContext): TipsRuntimeHandle {
+export function mountLegacyTipsRuntime(shadow: ShadowRoot, root: HTMLElement, route: TipsRoute, context: TipsPageContext, quickPreparation = false): TipsRuntimeHandle {
   const controller = new AbortController();
   const cleanups = new Set<() => void>(), timers = new Set<number>(), intervals = new Set<number>(), animationFrames = new Set<number>();
   const observers = new Set<MutationObserver>();
@@ -87,6 +87,18 @@ export function mountLegacyTipsRuntime(shadow: ShadowRoot, root: HTMLElement, ro
   const scopedDocument = new Proxy(docTarget, { get(t, p) { if (p === "activeElement") return shadow.activeElement; if (p in t) return t[p]; const v = Reflect.get(realDocument, p, realDocument); return typeof v === "function" ? v.bind(realDocument) : v; }, set(t,p,v){t[p]=v;return true;} });
   const locationFacade = new Proxy({} as Location, { get(_t,p){ if(p === "search") return route.query; if(p === "href") return `${realWindow.location.origin}/#${route.href}`; if(p === "replace") return (value: string) => { const mapped=rewriteLegacyTipsUrl(String(value)); context.replace(mapped ?? String(value)); }; const v=Reflect.get(realWindow.location,p,realWindow.location); return typeof v === "function" ? v.bind(realWindow.location) : v; }, set(_t,p,v){ if(p === "href"){ const mapped=rewriteLegacyTipsUrl(String(v)); context.navigate(mapped ?? String(v)); return true; } return Reflect.set(realWindow.location,p,v); } });
   const winTarget: Bag = {
+    tipoutQuickPreparation: quickPreparation,
+    prepareTipoutQuickSnapshot: (store: string, dateKey: string) => {
+      const host = realDocument.createElement('div');
+      const isolatedShadow = host.attachShadow({ mode: 'open' });
+      const isolatedRoot = realDocument.createElement('div');
+      isolatedRoot.innerHTML = renderTipsTemplate('details');
+      isolatedShadow.append(isolatedRoot);
+      const query = `?store=${encodeURIComponent(store)}&date=${encodeURIComponent(dateKey)}`;
+      const isolatedContext: TipsPageContext = { ...context, setStoreScope: () => {}, subscribeScopeChange: () => () => {}, navigate: () => {}, replace: () => {}, getScrollOwner: () => null };
+      const runtime = mountLegacyTipsRuntime(isolatedShadow, isolatedRoot, { view: 'details', query, href: `/team/tips/details${query}` }, isolatedContext, true);
+      try { return runtime.prepareQuickSnapshot(); } finally { runtime.destroy(); }
+    },
     document: scopedDocument, location: locationFacade, parent: null, top: null, self: null,
     addEventListener: (t:string,l:EventListenerOrEventListenerObject,o?:boolean|AddEventListenerOptions)=>on(realWindow,t,l,o), removeEventListener: realWindow.removeEventListener.bind(realWindow),
     setTimeout:(h:TimerHandler,n?:number,...a:unknown[])=>{const id=realWindow.setTimeout(()=>{timers.delete(id);typeof h === "function" ? h(...a) : realWindow.eval(h)},n);timers.add(id);return id;},
@@ -102,7 +114,7 @@ export function mountLegacyTipsRuntime(shadow: ShadowRoot, root: HTMLElement, ro
   const observer = new MutationObserver((items)=>items.forEach((item)=>item.addedNodes.forEach((node)=>{if(node instanceof HTMLElement){normalizeHandlers(node);Array.from(node.attributes).forEach((a)=>{if(/^on/i.test(a.name)){node.setAttribute(`data-native-${a.name.toLowerCase()}`,a.value);node.removeAttribute(a.name);}})}})));
   observer.observe(root,{childList:true,subtree:true});
   observers.add(observer);
-  let api: { runHandler(code:string,event:Event,element:HTMLElement): unknown };
+  let api: { prepareQuickSnapshot(): unknown; runHandler(code:string,event:Event,element:HTMLElement): unknown };
   try {
     api = new Function("window","document","location","global","globalThis","self","__scopeAdapter",runtimeSource(route.view))(scopedWindow,scopedDocument,locationFacade,scopedWindow,scopedWindow,scopedWindow,scopeAdapter(context,cleanups));
     root.dispatchEvent(new Event("DOMContentLoaded"));
@@ -117,5 +129,5 @@ export function mountLegacyTipsRuntime(shadow: ShadowRoot, root: HTMLElement, ro
     event.stopPropagation();
     context.navigate(mapped);
   },true);
-  return { destroy(){observers.forEach((item)=>item.disconnect());observers.clear();controller.abort();cleanups.forEach((f)=>f());cleanups.clear();timers.forEach(clearTimeout);timers.clear();intervals.forEach(clearInterval);intervals.clear();animationFrames.forEach(cancelAnimationFrame);animationFrames.clear();root.querySelectorAll(".show").forEach((el)=>el.classList.remove("show"));} };
+  return { prepareQuickSnapshot: () => api.prepareQuickSnapshot(), destroy(){observers.forEach((item)=>item.disconnect());observers.clear();controller.abort();cleanups.forEach((f)=>f());cleanups.clear();timers.forEach(clearTimeout);timers.clear();intervals.forEach(clearInterval);intervals.clear();animationFrames.forEach(cancelAnimationFrame);animationFrames.clear();root.querySelectorAll(".show").forEach((el)=>el.classList.remove("show"));} };
 }

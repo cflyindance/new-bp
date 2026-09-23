@@ -43,16 +43,18 @@
     [summary.originalTips, summary.poolAmount, summary.allocatedAmount, summary.unallocatedAmount].forEach(check);
     return invalid ? "分配数据存在无效金额、工时、比例或员工" : null;
   }
-  async function commit(snapshot) {
+  async function commit(snapshot, options) {
     var validationError = validate(snapshot);
     if (validationError) throw new Error(validationError);
     if (root.TipOutDateState) {
       return root.TipOutDateState.withLock(snapshot.store, snapshot.dateKey, async function () {
         root.TipOutDateState.assertDateWritable(snapshot.store, snapshot.dateKey);
+        if (options && options.onlyIfUnallocated && isAllocated(snapshot.store, snapshot.dateKey)) throw new Error('当天已分配，请刷新查看结果');
         var prepared = await root.TipOutDateState.prepareSnapshot(snapshot);
         return commitPrepared(prepared);
       });
     }
+    if (options && options.onlyIfUnallocated) throw new Error('当前环境不支持安全快捷分配');
     return commitPrepared(snapshot);
   }
   function commitPrepared(snapshot) {

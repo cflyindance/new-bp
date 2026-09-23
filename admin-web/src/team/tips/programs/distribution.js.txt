@@ -1,4 +1,5 @@
 var ALLOC_KEY = 'tipout_allocated';
+    var quickAllocationPending = new Set();
     var summaryDateSort = TipOutSummaryDateSort.readDirection();
     var allocationSubmitting = false;
     var payoutDraft = null;
@@ -880,8 +881,48 @@ var ALLOC_KEY = 'tipout_allocated';
           '<td><strong class="tip-amount--receive">' + (row.allocated ? money(row.poolSummary.allocatedAmount || 0) : '—') + '</strong></td>' +
           '<td><strong>' + (row.allocated ? money(row.poolSummary.unallocatedAmount || 0) : '—') + '</strong></td>' +
           '<td><button type="button" class="tipout-pool-count-link" tabindex="-1">' + row.poolSummary.poolCount + ' 个</button></td>' +
-          '<td class="tipout-detail-link"><span>查看明细</span>' + (payout.key === 'paid' ? '<button type="button" class="btn btn-sm" onclick="openPayoutRecord(\'' + dateKey + '\',event)">查看发放记录</button>' : (payout.action ? '<button type="button" class="btn btn-sm tipout-confirm-payout" onclick="openConfirmPayoutModal(\'' + dateKey + '\',event)">确认已发放</button>' : '')) + '</td></tr>';
+          '<td class="tipout-detail-link"><span>查看明细</span>' + quickAllocationButton(row, payout) + (payout.key === 'paid' ? '<button type="button" class="btn btn-sm" onclick="openPayoutRecord(\'' + dateKey + '\',event)">查看发放记录</button>' : (payout.action ? '<button type="button" class="btn btn-sm tipout-confirm-payout" onclick="openConfirmPayoutModal(\'' + dateKey + '\',event)">确认已发放</button>' : '')) + '</td></tr>';
       }).join('');
+    }
+
+    function quickAllocationButton(row, payout) {
+      if (row.allocated || !row.businessStatusResult.allocatable || payout.key === 'paid') return '';
+      var store = document.getElementById('storeSelect').value;
+      var pending = quickAllocationPending.has(store + '\u0000' + row.dateKey);
+      return '<button type="button" class="btn btn-sm tipout-quick-allocate" ' + (pending ? 'disabled aria-busy="true" ' : '') + 'onclick="quickAllocateDay(\'' + row.dateKey + '\',event)">' + (pending ? '分配中…' : '分配') + '</button>';
+    }
+
+    async function quickAllocateDay(dateKey, event) {
+      if (event) { event.preventDefault(); event.stopPropagation(); }
+      var store = document.getElementById('storeSelect').value;
+      var key = store + '\u0000' + dateKey;
+      if (quickAllocationPending.has(key)) return;
+      try {
+        var row = buildDailyDataset().find(function(item) { return item.dateKey === dateKey; });
+        TipOutDateState.assertDateWritable(store, dateKey);
+        if (!row || !row.businessStatusResult.allocatable || row.allocated) throw new Error('当天不符合快捷分配条件，请刷新查看');
+        var rules = getRulesForCurrentStore();
+        if (!rules.length) throw new Error('当前门店没有可用的小费分配规则');
+        if (rules.some(function(rule) { return rule.clockin === 'noclock'; })) {
+          showNotification('当天包含需手动录入的规则，请补全明细后确认分配', 'info');
+          openDailyDetail(dateKey);
+          return;
+        }
+        quickAllocationPending.add(key);
+        renderDailySummaryList();
+        var snapshot = window.prepareTipoutQuickSnapshot(store, dateKey);
+        await TipOutAllocationResults.commit(snapshot, { onlyIfUnallocated: true });
+        TipOutDateState.notify(store, dateKey);
+        try {
+          if (window.TipOutPayrollBridge) TipOutPayrollBridge.syncAfterAllocation(store, dateKey, dateKey);
+          showNotification('当天小费分配成功', 'success');
+        } catch (syncError) { showNotification('分配已保存，Payroll 同步失败', 'error'); }
+      } catch (error) { showNotification(error.message || '分配失败，请重试', 'error'); }
+      finally {
+        quickAllocationPending.delete(key);
+        invalidateDayPipelineCache();
+        renderDailySummaryList();
+      }
     }
 
     function openPayoutRecord(dateKey, event) {

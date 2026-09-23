@@ -1,0 +1,51 @@
+const { createRequire } = require('node:module');
+const assert = require('node:assert/strict');
+const path = require('node:path');
+const { chromium } = process.env.TIPOUT_BROWSER_PACKAGES ? createRequire(path.join(process.env.TIPOUT_BROWSER_PACKAGES,'package.json'))('playwright') : require('playwright');
+(async () => {
+  const browser = await chromium.launch({ channel: 'chrome', headless: true });
+  try {
+    const page = await browser.newPage();
+    const errors = [];
+    page.on('pageerror', e => errors.push(e.message));
+    await page.goto(process.env.TIPOUT_PREVIEW_URL || 'http://127.0.0.1:65021/');
+    await page.evaluate(async () => {
+      localStorage.clear();
+      const { mountLegacyTipsRuntime } = await import('/src/team/tips/tips-legacy-runtime.ts');
+      const { renderTipsTemplate } = await import('/src/team/tips/tips-templates.ts');
+      const store = 'Golden Dragon Chinese Kitchen - Dallas, TX 75231';
+      localStorage.setItem('tipout-employees-roster-v1',JSON.stringify(['Server','Bartender','Busser','Runner','Host','Cashier'].map((role,i)=>({id:'test-'+i,name:['Maria Garcia','Mike Johnson','Carlos Lopez','Daniel Ortiz','Rachel Scott','Linda Nguyen'][i],role,store,active:true}))));
+      document.body.innerHTML = '<div id="test-host"></div>';
+      const shadow = document.querySelector('#test-host').attachShadow({mode:'open'});
+      const root = document.createElement('div'); shadow.append(root);
+      const context = {getScope:()=>({storeId:store,storeLabel:store,storeLabelEn:store,isAllStores:false,usesInPageStorePicker:true,stores:[{id:store,labelZh:store,labelEn:store}]}),setStoreScope:()=>{},subscribeScopeChange:()=>()=>{},navigate:href=>window.testNavigation=href,replace:()=>{},getNavigationState:()=>null,getScrollOwner:()=>null};
+      window.mountTest = () => { window.testRuntime?.destroy(); root.innerHTML=renderTipsTemplate('distribution'); window.testRuntime=mountLegacyTipsRuntime(shadow,root,{view:'distribution',query:'',href:'/team/tips/distribution'},context); };
+      window.mountTest();
+      const rules=JSON.parse(localStorage.getItem('tipout_rules')); rules.forEach(r=>r.clockin='clock'); localStorage.setItem('tipout_rules',JSON.stringify(rules));
+      window.mountTest();
+    });
+    const button = page.locator('.tipout-quick-allocate').first();
+    await button.waitFor();
+    const date = await button.evaluate(el => el.closest('tr').dataset.date);
+    await button.click();
+    await page.waitForFunction(() => Object.keys(JSON.parse(localStorage.getItem('tipout_allocation_results_v1')||'{}')).length > 0);
+    const results = await page.evaluate(() => JSON.parse(localStorage.getItem('tipout_allocation_results_v1')));
+    assert.equal(Object.keys(results).length,1);
+    const snapshot = Object.values(results)[0];
+    assert.equal(snapshot.dateKey,date);
+    assert.ok(snapshot.pools.length > 0);
+    assert.ok(snapshot.pools.some(p=>p.employees.length));
+    assert.equal(await page.locator(`tr[data-date="${date}"] .tipout-quick-allocate`).count(),0);
+    assert.equal(await page.evaluate(()=>window.testNavigation),undefined);
+    await page.locator('#employeeReconciliationTab').click();
+    assert.match(await page.locator('#employeeReconciliationPanel').textContent(), /部分待分配/);
+    assert.match(await page.locator('#employeeReconciliationPanel').textContent(), /\$[\d,]+\.\d{2}/);
+    await page.evaluate(()=>{const rules=JSON.parse(localStorage.getItem('tipout_rules')); rules[0].clockin='noclock';localStorage.setItem('tipout_rules',JSON.stringify(rules));window.mountTest();});
+    await page.locator('#dateTaskTab').click();
+    await page.locator('.tipout-quick-allocate').first().click();
+    assert.match(await page.evaluate(()=>window.testNavigation), /details/);
+    assert.equal(await page.evaluate(()=>Object.keys(JSON.parse(localStorage.getItem('tipout_allocation_results_v1'))).length),1);
+    assert.deepEqual(errors,[]);
+    console.log('Quick allocation: real runtime snapshot, single day, in-place refresh and manual navigation passed');
+  } finally { await browser.close(); }
+})().catch(e=>{console.error(e);process.exitCode=1;});

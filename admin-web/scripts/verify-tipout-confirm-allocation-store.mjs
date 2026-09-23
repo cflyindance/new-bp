@@ -31,3 +31,20 @@ await assert.rejects(api.commit(snapshot("", "2026-09-11", 1)), /请选择门店
 await assert.rejects(api.commit(snapshot("Store", "2026-09-11", -1)), /无效/);
 
 console.log("Tip allocation result store verification passed.");
+
+// Quick allocation must check the current state inside the date lock.
+let queue = Promise.resolve();
+let locked = false;
+context.window.TipOutDateState = {
+  withLock(store, day, fn) { const next = queue.then(fn); queue = next.catch(() => {}); return next; },
+  assertDateWritable() { if (locked) throw new Error('已发放'); },
+  prepareSnapshot: async value => value,
+};
+const quick = snapshot('Quick store', '2026-09-23', 30);
+const concurrent = await Promise.allSettled([api.commit(quick, {onlyIfUnallocated:true}), api.commit(quick, {onlyIfUnallocated:true})]);
+assert.deepEqual(concurrent.map(x=>x.status), ['fulfilled','rejected']);
+assert.equal(api.read('Quick store','2026-09-23').summary.allocatedAmount,30);
+locked = true;
+await assert.rejects(api.commit(snapshot('Quick store','2026-09-22',40), {onlyIfUnallocated:true}), /已发放/);
+assert.equal(api.read('Quick store','2026-09-22'),null);
+console.log('Quick allocation duplicate and locked-date guards passed.');

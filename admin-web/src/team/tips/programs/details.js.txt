@@ -427,7 +427,7 @@ var ALLOC_KEY = 'tipout_allocated';
       document.getElementById('detailRulesContainer').innerHTML = bundleParts.join('');
       renderVisibleRuleView();
       syncDetailAllocationAction();
-      setTimeout(function() { scheduleDetailAutoAllocation(store, dateKey, rules); }, 0);
+      if (!window.tipoutQuickPreparation) setTimeout(function() { scheduleDetailAutoAllocation(store, dateKey, rules); }, 0);
     }
 
     function renderDetailRuleFilter() {
@@ -1641,6 +1641,19 @@ var ALLOC_KEY = 'tipout_allocated';
       return { eligible: true, reason: 'pure-clock-rules' };
     }
 
+    function prepareQuickAllocationSnapshot() {
+      var scope = getDetailPayoutScope();
+      var rules = ruleData.getRulesForStore(scope.store);
+      var eligibility = getDetailAutoAllocationEligibility(scope.store, scope.dateKey, rules);
+      if (!eligibility.eligible) throw new Error('当天不符合快捷分配条件，请检查营业状态、规则和分配状态后重试');
+      rules.forEach(function(rule) {
+        if (TipOutRosterDirectory.validateRuleReferences(rule, scope.store).length) throw new Error('规则引用的角色或员工已失效，请先修正规则');
+      });
+      var snapshot = collectDetailAllocationSnapshot(scope.store, scope.dateKey, rules);
+      if (!TipOutDetailRuleFilter.sameRuleSet(snapshot.pools, rules)) throw new Error('规则数据已变化，请刷新');
+      return snapshot;
+    }
+
     async function executeDetailAllocation(options) {
       var snapshot = collectDetailAllocationSnapshot(options.store, options.dateKey, options.rules);
       if (!TipOutDetailRuleFilter.sameRuleSet(snapshot.pools, options.rules)) {
@@ -1844,7 +1857,7 @@ var ALLOC_KEY = 'tipout_allocated';
       if (detailPayoutDomainWriteActive) return;
       handleDetailDateStateChange(event.detail);
     });
-    if (window.BroadcastChannel) {
+    if (window.BroadcastChannel && !window.tipoutQuickPreparation) {
       var tipoutDetailDateStateChannel = new BroadcastChannel('tipout-date-state-changed');
       tipoutDetailDateStateChannel.addEventListener('message', function(event) { handleDetailDateStateChange(event.data); });
     }
