@@ -1,0 +1,29 @@
+{
+  "entryPoints": ["/team/tips/details", "/team/tips/rules"],
+  "scopeStatus": "bounded",
+  "stopReason": "root_cause_and_impact_bounded",
+  "workspace": {"status":"unrelated_changes","evidence":["git status: unrelated buffet-rule-editor.html and seasoning-browser-handler.ts preserved"]},
+  "wikiQueries": [{"question":"Why can attendance tags coexist with zero hours and positive allocations?","mode":"wiki_bypass","reason":"resolve-query-context returned wiki_not_configured during diagnosis"}],
+  "references": [
+    {"path":"src/team/tips/programs/details.js.txt","symbol":"getDetailEmployeeHours/renderDetailAttendance","relation":"entry_point","status":"affected"},
+    {"path":"src/team/tips/legacy/ruleData.js.txt","symbol":"getRules","relation":"data_source","status":"affected"},
+    {"path":"src/team/tips/legacy/tipAllocation.js.txt","symbol":"distributeRoleAmountsToEmployees","relation":"definition","status":"affected"},
+    {"path":"src/team/tips/legacy/tipout-detail-snapshot.js.txt","symbol":"rulesFor/restore","relation":"consumer","status":"not_affected"},
+    {"path":"src/team/tips/legacy/tipout-attendance-label.js.txt","symbol":"inspect","relation":"data_source","status":"not_affected"}
+  ],
+  "deepReadPaths": ["src/team/tips/programs/details.js.txt","src/team/tips/legacy/ruleData.js.txt","src/team/tips/legacy/tipAllocation.js.txt","src/team/tips/legacy/tipout-detail-snapshot.js.txt","src/team/tips/legacy/tipout-attendance-label.js.txt"],
+  "dataFlow": [
+    {"from":"src/team/tips/legacy/ruleData.js.txt","to":"src/team/tips/programs/details.js.txt","evidence":"Legacy noclock selects missing manual hours instead of attendance; live getRules now projects clock without storage rewrite"},
+    {"from":"src/team/tips/programs/details.js.txt","to":"src/team/tips/legacy/tipAllocation.js.txt","evidence":"buildLegacyDetailCardHtml passes employee hours to role allocation; zero total previously fell through to equal distribution"},
+    {"from":"src/team/tips/legacy/tipout-detail-snapshot.js.txt","to":"src/team/tips/programs/details.js.txt","evidence":"Saved rules and values override live rules on revisit; retained unchanged"}
+  ],
+  "sharedCallersComplete": true,
+  "sharedCallers": [
+    {"path":"src/team/tips/legacy/tipAllocation.js.txt","symbol":"computeOrderTipThenResidual/allocatePoolToReceivers","status":"affected","verification":"zero hours now returns zero in shared distribution helper; positive and capped unit cases"},
+    {"path":"src/team/tips/programs/details.js.txt","symbol":"buildLegacyDetailCardHtml","status":"affected","verification":"browser regression"},
+    {"path":"src/team/tips/programs/distribution.js.txt","symbol":"getRulesForCurrentStore/quickAllocateDate","status":"affected","verification":"browser legacy noclock projection and quick allocation"},
+    {"path":"src/team/tips/programs/rules.js.txt","symbol":"ruleData.getRules","status":"affected","verification":"getRules/getRuleById use same nonmutating projection"},
+    {"path":"src/team/tips/programs/rule-editor.js.txt","symbol":"ruleData.getRuleById","status":"affected","verification":"unit confirms clock-mode returned for legacy record"}
+  ],
+  "plan": {"status":"approved","steps":["Reproduce zero-hour positive allocation with failing unit test","Remove hours-mode equal fallback","Project live legacy rules as clock and stop injecting old demo rules into persisted lists","Show readonly capped effective hours and refresh added employee rows","Run focused unit, browser, payout-lock and type checks"],"risk":"Shared financial calculation; no writes to existing snapshots or payouts","rollback":"Revert scoped commit; no storage migration to reverse","build":"skipped: no build boundary changed"}
+}

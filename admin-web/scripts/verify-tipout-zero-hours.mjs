@@ -1,0 +1,16 @@
+import fs from 'node:fs';
+import vm from 'node:vm';
+import assert from 'node:assert/strict';
+const stored = JSON.stringify([{id:99,store:'test',clockin:'noclock',distribution:'hours',ruleName:'Legacy'}]);
+const storage = new Map([['tipout_rules',stored]]);
+const context={window:{},localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)}};
+vm.createContext(context);
+for(const name of ['tipAllocation','ruleData','tipout-detail-snapshot']) vm.runInContext(fs.readFileSync('src/team/tips/legacy/'+name+'.js.txt','utf8'),context);
+const calc=context.window.TipAllocation;
+assert.equal(calc.distributeRoleAmountsToEmployees({Runner:10},{distribution:'hours'},[{name:'A',role:'Runner',hours:0}]).receivedByName.A,0,'zero hours must not fall back to equal allocation');
+const capped=calc.distributeRoleAmountsToEmployees({Runner:10},{distribution:'hours',workHoursConfig:{mode:'capped',maxHoursPerDay:5}},[{name:'A',role:'Runner',hours:10},{name:'B',role:'Runner',hours:0}]);
+assert.equal(capped.effectiveHoursByName.A,5); assert.equal(capped.receivedByName.B,0); assert.equal(capped.receivedByName.A,10);
+assert.equal(context.window.ruleData.getRuleById(99).clockin,'clock');
+assert.equal(storage.get('tipout_rules'),stored,'read compatibility must not rewrite persisted rules');
+assert.equal(context.window.TipOutDetailSnapshot.rulesFor({editorState:{rules:[{clockin:'noclock'}]}},[])[0].clockin,'noclock','saved snapshot must retain historical rules');
+console.log('Zero-hour rejection, capped hours, clock-only live rules and historical snapshot preservation passed');

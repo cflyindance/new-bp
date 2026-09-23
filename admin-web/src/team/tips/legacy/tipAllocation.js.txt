@@ -249,6 +249,8 @@
           });
           return;
         }
+        // A time-based rule without eligible hours must leave the role amount unallocated.
+        return;
       }
 
       var base = roundMoney(roleAmount / members.length);

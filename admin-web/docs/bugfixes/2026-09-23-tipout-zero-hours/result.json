@@ -1,0 +1,10 @@
+{
+  "version":1,"mode":"standalone","outcome":"fixed","rootCauseStatus":"confirmed",
+  "rootCause":"Old noclock rules read missing manual hours as zero while tags use actual attendance; hours allocation fell through to equal split at zero total.",
+  "analysisScopeStatus":"bounded","planStatus":"approved",
+  "changedFiles":["src/team/tips/legacy/ruleData.js.txt","src/team/tips/legacy/tipAllocation.js.txt","src/team/tips/programs/details.js.txt","scripts/verify-tipout-zero-hours.mjs","scripts/verify-tipout-quick-allocation-browser.cjs"],
+  "tdd":{"status":"passed","redEvidence":["verify-tipout-zero-hours.mjs: zero hours received 10 instead of 0"],"greenEvidence":["verify-tipout-zero-hours.mjs passed: zero, positive, capped, legacy rule projection, unchanged rule storage and snapshot rule preservation"]},
+  "e2e":{"required":true,"status":"passed","reason":"Visible detail hours and shared allocation logic changed","evidence":["Repository verify-tipout-quick-allocation-browser.cjs: quick allocation, legacy clock projection, read-only positive hours, absent zero amounts, saved editing and failure rollback passed in isolated Chrome"]},
+  "build":{"required":false,"status":"skipped","reason":"No dependency, import, bundling, or other build boundary changed; tsc --noEmit passed"},
+  "unverifiedScopes":["User's old snapshots intentionally not recalculated","Production POS data not connected; tests use demo facts","Historical noclock snapshots remain displayed with saved rules until explicit update"]
+}

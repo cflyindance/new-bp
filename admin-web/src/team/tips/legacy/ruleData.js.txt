@@ -24,7 +24,7 @@
     },
     {
       id: 2,
-      ruleName: 'Tip Pool — 多角色分配（不打卡按工时）',
+      ruleName: 'Tip Pool — 多角色分配（打卡按工时）',
       store: 'Sakura Sushi & Ramen House - Dallas, TX 75247',
       poolRules: [{ type: 'tips', pct: 10 }],
       deductRoles: ['Server', 'Bartender', 'Cashier'],
@@ -34,7 +34,7 @@
         { roles: ['Host'], pct: 20 }
       ],
       distribution: 'hours',
-      clockin: 'noclock'
+      clockin: 'clock'
     },
     {
       id: 3,
@@ -64,7 +64,7 @@
     },
     {
       id: 5,
-      ruleName: 'Tip Pool — 多角色分配（不打卡按工时）',
+      ruleName: 'Tip Pool — 多角色分配（打卡按工时）',
       store: 'Golden Dragon Chinese Kitchen - Dallas, TX 75231',
       poolRules: [{ type: 'tips', pct: 10 }],
       deductRoles: ['Server', 'Bartender', 'Cashier'],
@@ -74,7 +74,7 @@
         { roles: ['Host'], pct: 20 }
       ],
       distribution: 'hours',
-      clockin: 'noclock'
+      clockin: 'clock'
     }
   ];
 
@@ -129,7 +129,13 @@
       var raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         var list = JSON.parse(raw);
-        return ensureDefaultDemoRules(Array.isArray(list) ? list : []);
+        return (Array.isArray(list) ? list : []).map(function(rule) {
+          // Compatibility projection only. Historical snapshot rules remain immutable.
+          if (rule.clockin !== 'noclock') return rule;
+          var result = Object.assign({}, rule, { clockin: 'clock' });
+          if (result.ruleName === 'Tip Pool — 多角色分配（不打卡按工时）') result.ruleName = 'Tip Pool — 多角色分配（打卡按工时）';
+          return result;
+        });
       }
       var seeded = JSON.parse(JSON.stringify(defaultRules));
       localStorage.setItem(STORAGE_KEY, JSON.stringify(seeded));

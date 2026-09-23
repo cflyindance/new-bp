@@ -54,9 +54,11 @@ const { chromium } = process.env.TIPOUT_BROWSER_PACKAGES ? createRequire(path.jo
     assert.match(await page.locator('#employeeReconciliationPanel').textContent(), /\$[\d,]+\.\d{2}/);
     await page.evaluate(()=>{const rules=JSON.parse(localStorage.getItem('tipout_rules')); rules[0].clockin='noclock';localStorage.setItem('tipout_rules',JSON.stringify(rules));window.mountTest();});
     await page.locator('#dateTaskTab').click();
+    const secondDate = await page.locator('.tipout-quick-allocate').first().evaluate(el=>el.closest('tr').dataset.date);
+    const navigationBeforeQuick = await page.evaluate(()=>window.testNavigation);
     await page.locator('.tipout-quick-allocate').first().click();
-    assert.match(await page.evaluate(()=>window.testNavigation), /details/);
-    assert.equal(await page.evaluate(()=>Object.keys(JSON.parse(localStorage.getItem('tipout_allocation_results_v1'))).length),1);
+    await page.waitForFunction(()=>Object.keys(JSON.parse(localStorage.getItem('tipout_allocation_results_v1'))).length===2);
+    assert.equal(await page.evaluate(()=>window.testNavigation),navigationBeforeQuick);
     await page.evaluate(date=>window.mountDetailTest(date),date);
     assert.equal(await page.locator('#confirmDetailAllocationBtn').isDisabled(),true);
     assert.ok(await page.locator('.tipout-attendance-label').count() > 0);
@@ -97,10 +99,13 @@ const { chromium } = process.env.TIPOUT_BROWSER_PACKAGES ? createRequire(path.jo
     await page.getByRole('button',{name:'返回汇总',exact:true}).click();
     await page.evaluate(date=>window.mountDetailTest(date),date);
     assert.equal(await pct.inputValue(),'25');
-    await page.evaluate(()=>{const rules=JSON.parse(localStorage.getItem('tipout_rules'));rules.forEach(r=>r.clockin='clock');localStorage.setItem('tipout_rules',JSON.stringify(rules));window.mountDetailTest('2026-09-22');});
+    await page.evaluate(date=>window.mountDetailTest(date),secondDate);
     await page.waitForFunction(()=>Object.keys(JSON.parse(localStorage.getItem('tipout_allocation_results_v1'))).length===2);
     await page.waitForFunction(()=>document.querySelector('#test-host').shadowRoot.querySelector('#confirmDetailAllocationBtn').disabled);
     assert.deepEqual(errors,[]);
-    console.log('Quick allocation and snapshot editing: single day, employee sync, manual navigation, clean revisit, draft isolation, leave cancellation, reconfirm and saved values passed');
+    const clockHours = await page.locator('tr[data-attendance-status="clock"] .detail-emp-hours-input').evaluateAll(inputs=>inputs.map(i=>({hours:Number(i.value),readonly:i.readOnly})));
+    assert.ok(clockHours.length > 0);
+    assert.ok(clockHours.every(i=>i.hours>0 && i.readonly));
+    console.log('Quick allocation, legacy clock projection, read-only positive attendance hours, absent zero amounts and snapshot editing passed');
   } finally { await browser.close(); }
 })().catch(e=>{console.error(e);process.exitCode=1;});

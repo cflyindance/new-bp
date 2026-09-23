@@ -44,7 +44,10 @@ var ALLOC_KEY = 'tipout_allocated';
           var old = row.querySelector('.tipout-attendance-label'); if (old) old.remove();
           select.parentElement.appendChild(window.TipOutAttendanceLabel.badge(document,status));
           if (enforce && rule && rule.clockin !== 'noclock') {
-            if (status === 'absent') {
+            var adoptedHours = getDetailEmployeeHours(rule, rule.id, dateKey, select.value);
+            var clockHoursInput = row.querySelector('.detail-emp-hours-input');
+            if (clockHoursInput) clockHoursInput.value = adoptedHours;
+            if (status === 'absent' || (rule.distribution === 'hours' && adoptedHours <= 0)) {
               var pct = row.querySelector('.detail-emp-pct-input') || row.querySelector('td:nth-last-child(3) input'); if (pct) pct.value = 0;
               var hours = row.querySelector('.detail-emp-hours-input'); if (hours) hours.value = 0;
               row.setAttribute('data-snapshot-hours','0');
@@ -114,7 +117,8 @@ var ALLOC_KEY = 'tipout_allocated';
       var attendance = (window.TipOutAttendance && TipOutAttendance.getDayStatus)
         ? TipOutAttendance.getDayStatus(employeeName, dateKey)
         : { hours: 0 };
-      return parseHoursInput(attendance && attendance.hours);
+      var hours = parseHoursInput(attendance && (attendance.effectiveHours === undefined ? attendance.hours : attendance.effectiveHours));
+      return window.TipAllocation ? TipAllocation.getEffectiveHours({ hours: hours }, rule) : hours;
     }
 
     function buildDetailEmployees(rule, ruleId, dateKey) {
@@ -1370,7 +1374,8 @@ var ALLOC_KEY = 'tipout_allocated';
       for (var sj = 0; sj < rs.length; sj++) seed = (seed * 31 + rs.charCodeAt(sj)) % 2000000000;
       var rng = seedRandom(seed);
       var ridSafe = String(rid).replace(/[^a-zA-Z0-9_-]/g, '_');
-      var headHours = manualHours ? '<th>工时</th>' : '';
+      var showHours = rule.distribution === 'hours';
+      var headHours = showHours ? '<th>分配工时</th>' : '';
       var html = '<div class="card detail-card tipout-allocation-group" data-rule-id="' + escHtml(rid) + '" data-pool="' + (+data.pool || 0) + '" data-manual-hours="' + (manualHours ? '1' : '0') + '">' +
         '<div class="card-body detail-card-body-alloc" style="padding:16px">';
 
@@ -1430,9 +1435,9 @@ var ALLOC_KEY = 'tipout_allocated';
           var opts = rc.employees.map(function(e) {
             return '<option' + (e === emp ? ' selected' : '') + '>' + e + '</option>';
           }).join('');
-          var hoursCell = manualHours
+          var hoursCell = showHours
             ? '<td class="input-cell"><input type="number" class="detail-emp-hours-input" value="' + getDetailEmployeeHours(rule, rid, dateKey, emp) + '" min="0" step="0.1" ' +
-              'data-rule-id="' + escHtml(rid) + '" data-date-key="' + escHtml(dateKey) + '" data-employee-name="' + escHtml(emp) + '" onchange="onDetailManualHoursInput(this)"> h</td>'
+              (manualHours ? '' : 'readonly aria-label="分配工时（来自打卡）" ') + 'data-rule-id="' + escHtml(rid) + '" data-date-key="' + escHtml(dateKey) + '" data-employee-name="' + escHtml(emp) + '" onchange="onDetailManualHoursInput(this)"> h</td>'
             : '';
           html += '<tr>' +
             '<td><select class="form-control" style="width:140px;height:28px;font-size:13px">' + opts + '</select></td>' +
@@ -1502,8 +1507,9 @@ var ALLOC_KEY = 'tipout_allocated';
       var table = document.getElementById(tableId);
       var card = table ? table.closest('.detail-card') : null;
       var manualHours = card && card.getAttribute('data-manual-hours') === '1';
-      var hoursCell = manualHours
-        ? '<td class="input-cell"><input type="number" class="detail-emp-hours-input" value="0" min="0" step="0.1" onchange="onEmpHoursChange(\'' + tableId + '\')"> h</td>'
+      var showHours = manualHours || !!(table && table.querySelector('.detail-emp-hours-input'));
+      var hoursCell = showHours
+        ? '<td class="input-cell"><input type="number" class="detail-emp-hours-input" value="0" min="0" step="0.1" ' + (manualHours ? '' : 'readonly ') + 'onchange="onEmpHoursChange(\'' + tableId + '\')"> h</td>'
         : '';
       var newRow = document.createElement('tr');
       newRow.innerHTML =
