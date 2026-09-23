@@ -1976,6 +1976,8 @@ select.form-control {
 .tipout-fidelity .tipout-daily-date strong { font-size: 13px; }
 .tipout-fidelity .tipout-daily-date small { color: var(--text-tertiary); font-size: 11px; }
 .tipout-fidelity .tipout-detail-link { color: #000000; font-size: 12px; font-weight: 600; text-align: right; }
+.tipout-fidelity .tipout-detail-link > .btn { margin-left: 12px; white-space: nowrap; vertical-align: middle; }
+.tipout-fidelity .tipout-detail-link { white-space: nowrap; }
 
 .tipout-page-detail .content-area {
   display: flex;
