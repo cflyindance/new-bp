@@ -9,14 +9,25 @@
     trigger.addEventListener('click', function() {
       var existing = document.getElementById('tipoutScenarioDialog'); if (existing) existing.remove();
       var dialog = document.createElement('dialog'); dialog.id = 'tipoutScenarioDialog'; dialog.setAttribute('aria-label','测试场景清单');
-      dialog.style.cssText = 'width:min(1200px,94vw);max-height:85vh;border:1px solid #e5e7eb;border-radius:16px;padding:24px;color:#182230;background:white;overflow:auto';
-      var heading = document.createElement('h2'); heading.textContent = '测试场景清单'; dialog.appendChild(heading);
+      dialog.style.cssText = 'position:fixed;inset:0;margin:auto;width:min(1320px,calc(100vw - 48px));height:min(820px,calc(100dvh - 48px));max-width:none;max-height:none;box-sizing:border-box;border:1px solid #e2e8f0;border-radius:20px;padding:0;color:#182230;background:#fff;overflow:hidden;box-shadow:0 24px 80px #0f172a33;font-family:inherit';
+      var style = document.createElement('style');
+      style.textContent = '#tipoutScenarioDialog::backdrop{background:rgba(15,23,42,.38)}#tipoutScenarioDialog .sc-layout{display:flex;flex-direction:column;height:100%;min-height:0}#tipoutScenarioDialog .sc-header{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;padding:24px 28px 18px}#tipoutScenarioDialog h2{margin:0 0 8px;font-size:22px;line-height:1.4;font-weight:650}#tipoutScenarioDialog .sc-subtitle{margin:0;color:#64748b;font-size:13px;line-height:1.6}#tipoutScenarioDialog .sc-actions{display:flex;gap:10px;flex-shrink:0}#tipoutScenarioDialog button{border:1px solid #d8dee7;border-radius:9px;background:white;color:#334155;padding:9px 14px;cursor:pointer;white-space:nowrap;font:inherit;font-size:13px}#tipoutScenarioDialog button.sc-primary{background:#172b45;color:white;border-color:#172b45}#tipoutScenarioDialog button:disabled{opacity:.45;cursor:not-allowed}#tipoutScenarioDialog :is(button,input,select):focus-visible{outline:2px solid #3b82f6;outline-offset:2px}#tipoutScenarioDialog .sc-filters{display:flex;align-items:flex-end;flex-wrap:wrap;gap:12px;padding:0 28px 18px}#tipoutScenarioDialog .sc-field{display:flex;flex-direction:column;gap:6px;font-size:12px;color:#64748b;min-width:150px}#tipoutScenarioDialog .sc-search{flex:1;min-width:220px}#tipoutScenarioDialog :is(input,select){box-sizing:border-box;width:100%;height:38px;border:1px solid #d8dee7;border-radius:9px;background:#fff;color:#182230;padding:0 12px;font:inherit;font-size:13px}#tipoutScenarioDialog .sc-note{margin:0 28px 16px;padding:10px 14px;background:#f2f6fb;border-radius:8px;color:#52657d;font-size:12px;line-height:1.6}#tipoutScenarioDialog .sc-scroll{flex:1;min-height:0;overflow:auto;border-top:1px solid #e5eaf0}#tipoutScenarioDialog table{width:100%;min-width:1080px;border-collapse:separate;border-spacing:0;font-size:13px;font-variant-numeric:tabular-nums}#tipoutScenarioDialog :is(th,td){padding:13px 16px;text-align:left;border-bottom:1px solid #edf0f4;vertical-align:middle;white-space:nowrap}#tipoutScenarioDialog th{position:sticky;top:0;z-index:1;background:#f7f9fc;color:#64748b;font-size:12px;font-weight:500}#tipoutScenarioDialog tbody tr:hover{background:#f8faff}#tipoutScenarioDialog td:nth-child(2){font-weight:600}#tipoutScenarioDialog .sc-number{text-align:right}#tipoutScenarioDialog .sc-explanation{white-space:normal;min-width:220px;max-width:320px;color:#64748b;line-height:1.6}#tipoutScenarioDialog .sc-tag{display:inline-block;padding:3px 8px;border-radius:6px;background:#f1f5f9;color:#64748b;font-size:12px}#tipoutScenarioDialog .sc-tag--ok{background:#eaf7f1;color:#178258}#tipoutScenarioDialog .sc-tag--warning{background:#fff5df;color:#a96c12}#tipoutScenarioDialog .sc-footer{display:flex;justify-content:space-between;gap:12px;padding:14px 28px;color:#64748b;font-size:12px;border-top:1px solid #e5eaf0}#tipoutScenarioDialog .sc-empty{text-align:center;padding:60px 24px;color:#64748b}@media(max-width:700px){#tipoutScenarioDialog .sc-header{flex-direction:column;padding:18px}#tipoutScenarioDialog .sc-filters{padding:0 18px 14px}#tipoutScenarioDialog .sc-field{flex:1;min-width:120px}#tipoutScenarioDialog .sc-note{margin:0 18px 12px}#tipoutScenarioDialog .sc-footer{padding:12px 18px}}';
+      dialog.appendChild(style);
+      function element(tag, className, text, parent) { var el=document.createElement(tag); el.className=className || ''; if(text != null) el.textContent=text; if(parent) parent.appendChild(el); return el; }
+      var layout=element('div','sc-layout',null,dialog), header=element('div','sc-header',null,layout), title=element('div','',null,header);
+      element('h2','','测试场景清单',title);
       var store = root.TipOutScenarioSource.store(), today = new Date();
       var dateKey = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
-      var note = document.createElement('p'); note.textContent = store + ' · 演示数据 · 最近一个月全部员工；已有快照以历史结果为准，未营业日期显示全零。'; dialog.appendChild(note);
-      var close = document.createElement('button'); close.className = 'btn'; close.textContent = '关闭'; close.type = 'button';
-      close.addEventListener('click', function() { dialog.close(); }); dialog.appendChild(close);
-      var download = document.createElement('button'); download.className = 'btn'; download.style.marginLeft = '12px'; download.textContent = '导出 CSV'; dialog.appendChild(download);
+      element('p','sc-subtitle',store + ' · 最近一个月 · 演示数据',title);
+      var actions=element('div','sc-actions',null,header);
+      var download=element('button','sc-primary','导出 CSV',actions); download.type='button';
+      var close=element('button','','关闭',actions); close.type='button'; close.addEventListener('click',function(){dialog.close();});
+      var filters=element('div','sc-filters',null,layout);
+      function field(label, tag, cls) { var wrap=element('label','sc-field '+(cls||''),null,filters); element('span','',label,wrap); var input=element(tag,'',null,wrap); input.setAttribute('aria-label',label); return input; }
+      var search=field('搜索','input','sc-search'); search.type='search'; search.placeholder='员工姓名 / 角色 / 场景编号';
+      var roleFilter=field('角色','select'), attendanceFilter=field('考勤状态','select'), scenarioFilter=field('场景类型','select');
+      var reset=element('button','','重置',filters); reset.type='button';
+      element('p','sc-note','仅用于验证，不修改业务数据。已有快照以历史结果为准；未营业日期显示全零。',layout);
       var headers = ['日期','员工','角色','场景','考勤','订单数','分配前小费','原始打卡工时','POS有效工时','说明'];
       var rows = [];
       var rules = root.ruleData.getRulesForStore(store);
@@ -32,20 +43,35 @@
           rows.push({ id:f.employeeId, values:[date,f.name,f.role,f.scenarioId,f.attendance.clockStatus,f.orders.length,f.originalTips.toFixed(2),f.attendance.originalHours,f.attendance.effectiveHours,expected] });
         });
       });
-      var table = document.createElement('table'); table.style.cssText = 'width:100%;margin-top:16px;border-collapse:collapse;font-size:13px';
-      function append(values, id) {
-        var tr = document.createElement('tr'); if (id) tr.setAttribute('data-scenario-employee-id',id);
-        values.forEach(function(v) { var cell = document.createElement(id ? 'td':'th'); cell.textContent = String(v); cell.style.cssText='padding:10px;text-align:left;border-bottom:1px solid #e5e7eb'; tr.appendChild(cell); }); table.appendChild(tr);
+      function options(select,label,values) { var option=element('option','',label,select); option.value=''; values.forEach(function(v){var o=element('option','',v,select);o.value=v;}); }
+      options(roleFilter,'全部角色',Array.from(new Set(rows.map(function(r){return r.values[2];}))).sort());
+      options(attendanceFilter,'全部考勤',['已打卡','未打卡','打卡异常']);
+      options(scenarioFilter,'全部场景',Array.from(new Set(rows.map(function(r){return r.values[3];}))).sort());
+      var scroll=element('div','sc-scroll',null,layout), table=element('table','',null,scroll);
+      var head=element('thead','',null,table), headRow=element('tr','',null,head), body=element('tbody','',null,table);
+      headers.forEach(function(v,i){var th=element('th',i>=5&&i<=8?'sc-number':'',v,headRow);th.scope='col';});
+      var footer=element('div','sc-footer',null,layout), count=element('span','',null,footer); count.setAttribute('role','status'); count.setAttribute('aria-live','polite');
+      element('span','','导出内容与当前搜索、筛选结果一致',footer);
+      var visibleRows=[];
+      function render() {
+        var query=search.value.trim().toLocaleLowerCase();
+        visibleRows=rows.filter(function(r){var v=r.values;return (!query || [v[1],v[2],v[3]].some(function(s){return String(s).toLocaleLowerCase().indexOf(query)>=0;})) && (!roleFilter.value||v[2]===roleFilter.value) && (!attendanceFilter.value||v[4]===attendanceFilter.value) && (!scenarioFilter.value||v[3]===scenarioFilter.value);});
+        body.textContent='';
+        visibleRows.forEach(function(row){var tr=element('tr','',null,body);tr.setAttribute('data-scenario-employee-id',row.id);row.values.forEach(function(v,i){var cell=element('td',i>=5&&i<=8?'sc-number':i===9?'sc-explanation':'',null,tr);if(i===4){element('span','sc-tag'+(v==='已打卡'?' sc-tag--ok':v==='打卡异常'?' sc-tag--warning':''),v,cell);}else if(i===3){element('span','sc-tag',v,cell);}else cell.textContent=String(v);});});
+        if(!visibleRows.length){var tr=element('tr','',null,body);var cell=element('td','sc-empty','没有匹配记录，请调整搜索词或筛选条件',tr);cell.colSpan=headers.length;}
+        count.textContent='显示 '+visibleRows.length+' / '+rows.length+' 条记录';download.disabled=!visibleRows.length; scroll.scrollTop=0;
       }
-      append(headers); rows.forEach(function(row) { append(row.values,row.id); }); dialog.appendChild(table);
+      search.addEventListener('input',render);[roleFilter,attendanceFilter,scenarioFilter].forEach(function(select){select.addEventListener('change',render);});
+      reset.addEventListener('click',function(){search.value=roleFilter.value=attendanceFilter.value=scenarioFilter.value='';render();search.focus();});
+      render();
       download.addEventListener('click', function() {
         function cell(v) { var s=String(v); if (/^[=+@\-\t\r]/.test(s)) s="'"+s; return '"'+s.replace(/"/g,'""')+'"'; }
-        var csv=[headers].concat(rows.map(function(r){return r.values;})).map(function(row){return row.map(cell).join(',');}).join('\r\n');
+        var csv=[headers].concat(visibleRows.map(function(r){return r.values;})).map(function(row){return row.map(cell).join(',');}).join('\r\n');
         var url=URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'}));
         var a=document.createElement('a'); a.href=url; a.download='tipout-scenarios-'+dateKey+'.csv'; a.click(); setTimeout(function(){URL.revokeObjectURL(url);},1000);
       });
       dialog.addEventListener('close',function(){dialog.remove();trigger.focus();});
-      anchor.parentElement.appendChild(dialog); dialog.showModal(); close.focus();
+      anchor.parentElement.appendChild(dialog); dialog.showModal(); search.focus();
     });
   }
   root.TipOutScenarioList={mount:mount};
