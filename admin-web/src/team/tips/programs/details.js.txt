@@ -223,8 +223,14 @@ var ALLOC_KEY = 'tipout_allocated';
         }).join('');
         return '<div class="detail-rule-bundle"><h2 class="detail-rule-block-title">' + escHtml(pool.poolName || pool.ruleName || '小费池') + '</h2><p class="detail-rule-meta">规则：' + escHtml(pool.ruleName || '—') + ' · 入池金额 ' + money(Number(pool.poolAmount) || 0) + '</p><table class="detail-table"><thead><tr><th>员工</th><th>角色</th><th>工时</th><th>比例</th><th>分配获得</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
       }).join('');
-      container.innerHTML = banner + cards;
+      container.innerHTML = banner + '<button type="button" class="btn" onclick="openDetailPayoutRecord()">查看发放记录</button>' + cards;
       return true;
+    }
+
+    function openDetailPayoutRecord() {
+      var scope = getDetailPayoutScope();
+      try { window.TipOutPayoutRecordUi.open(scope.store, scope.dateKey); }
+      catch (error) { showNotification(error.message || '发放记录不可用', 'error'); }
     }
 
     function getDetailPayoutScope() {

@@ -11,6 +11,7 @@ import summaryDateSort from "./legacy/tipout-summary-date-sort.js.txt?raw";
 import businessStatus from "./legacy/tipout-business-status.js.txt?raw";
 import datePoolView from "./legacy/tipout-date-pool-view.js.txt?raw";
 import dateState from "./legacy/tipout-date-state-store.js.txt?raw";
+import payoutRecordUi from "./legacy/tipout-payout-record-ui.js.txt?raw";
 import allocationResults from "./legacy/tipout-allocation-results-store.js.txt?raw";
 import payrollBridge from "./legacy/tipout-payroll-bridge.js.txt?raw";
 import detailRuleFilter from "./legacy/tipout-detail-rule-filter.js.txt?raw";
@@ -39,7 +40,7 @@ const dependencies: Record<TipsView, string[]> = {
 };
 
 function runtimeSource(view: TipsView): string {
-  return [scope, ...dependencies[view],
+  return [scope, ...dependencies[view], payoutRecordUi,
     "window.TipOutGlobalScopeFilter=Object.assign(window.TipOutGlobalScopeFilter||{},__scopeAdapter);",
     "var TipOutGlobalScopeFilter=window.TipOutGlobalScopeFilter,ruleData=window.ruleData;",
     "var TipOutSummaryUi=window.TipOutSummaryUi,TipOutPaymentMethodApportion=window.TipOutPaymentMethodApportion;",

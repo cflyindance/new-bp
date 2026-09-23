@@ -332,17 +332,18 @@
       <div class="modal-overlay" id="confirmPayoutModal" aria-hidden="true" data-native-onclick="handleConfirmPayoutOverlayClick(event)">
         <div class="modal tipout-payout-modal" role="dialog" aria-modal="true" aria-labelledby="confirmPayoutTitle" aria-describedby="confirmPayoutWarning">
           <div class="modal-header">
-            <h3 id="confirmPayoutTitle">确认小费已发放</h3>
+            <h3 id="confirmPayoutTitle">确认整日小费已发放？</h3>
             <button type="button" class="modal-close" aria-label="关闭" data-native-onclick="closeConfirmPayoutModal()">×</button>
           </div>
           <div class="modal-body">
             <dl class="tipout-payout-summary">
               <div><dt>门店</dt><dd id="confirmPayoutStore">—</dd></div>
               <div><dt>日期</dt><dd id="confirmPayoutDate">—</dd></div>
-              <div><dt>发放金额</dt><dd id="confirmPayoutAmount">—</dd></div>
+              <div><dt>已分配金额（参考）</dt><dd id="confirmPayoutAmount">—</dd></div>
               <div><dt>员工人数</dt><dd id="confirmPayoutEmployees">—</dd></div>
             </dl>
-            <p id="confirmPayoutWarning" class="tipout-payout-warning">确认后分配结果将永久锁定，不能重新分配、取消或修改。请确认小费已经实际发放。</p>
+            <p>以上为整日分配结果参考金额，不是剩余应发金额。</p>
+            <p id="confirmPayoutWarning" class="tipout-payout-warning">请在线下核对现金及其他已支付金额，确认当天员工小费均已结清。本操作仅记录发放状态，不执行转账。确认后分配结果将永久锁定，不能重新分配、取消、更新或修改。</p>
           </div>
           <div class="modal-footer">
             <button type="button" class="btn" data-native-onclick="closeConfirmPayoutModal()">取消</button>

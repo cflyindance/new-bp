@@ -1,0 +1,49 @@
+(function (root) {
+  'use strict';
+  function read(store, date) {
+    var state = root.TipOutDateState.inspect(store, date);
+    if (state.payoutStatus !== 'paid' || !state.snapshot || !state.payout) throw new Error('发放记录不可用，请刷新后重试');
+    var snapshot = state.snapshot, payout = state.payout, ids = new Set();
+    (snapshot.pools || []).forEach(function (pool) {
+      (pool.employees || []).forEach(function (employee) { ids.add(employee.employeeId || employee.name); });
+    });
+    return { store: store, date: date, amount: Number((snapshot.summary || {}).allocatedAmount) || 0,
+      employeeCount: ids.size, actor: payout.paidByDisplayNameAtConfirmation || '—', paidAt: payout.paidAt || '—',
+      recordId: payout.recordId || '—', snapshotId: snapshot.snapshotId || '—' };
+  }
+  function open(store, date) {
+    var record = read(store, date), document = root.document;
+    var existing = document.getElementById('tipoutPayoutRecordModal');
+    if (existing) return;
+    var trigger = document.activeElement;
+    var overlay = document.createElement('div');
+    overlay.id = 'tipoutPayoutRecordModal';
+    overlay.className = 'modal-overlay show';
+    overlay.innerHTML = '<div class="modal tipout-payout-modal" role="dialog" aria-modal="true" aria-labelledby="tipoutPayoutRecordTitle">' +
+      '<div class="modal-header"><h3 id="tipoutPayoutRecordTitle">发放确认记录</h3><button type="button" class="modal-close" aria-label="关闭">×</button></div>' +
+      '<div class="modal-body"><dl class="tipout-payout-summary"></dl><p class="tipout-payout-warning">已发放 · 当天全部分配结果已锁定。此记录为门店人工确认，不是支付渠道回执；已分配金额仅供参考，不是剩余应发金额。</p></div>' +
+      '<div class="modal-footer"><button type="button" class="btn">关闭</button></div></div>';
+    var list = overlay.querySelector('dl');
+    [['门店', record.store], ['营业日期', record.date], ['已分配金额（参考）', '$' + record.amount.toFixed(2)],
+      ['涉及员工', record.employeeCount + ' 人（整日）'], ['确认人', record.actor], ['确认时间', record.paidAt],
+      ['记录编号', record.recordId], ['快照编号', record.snapshotId]].forEach(function (entry) {
+      var row = document.createElement('div'), term = document.createElement('dt'), value = document.createElement('dd');
+      term.textContent = entry[0]; value.textContent = entry[1]; value.style.overflowWrap = 'anywhere';
+      row.appendChild(term); row.appendChild(value); list.appendChild(row);
+    });
+    function close() { overlay.remove(); if (trigger && trigger.isConnected) trigger.focus(); }
+    var buttons = overlay.querySelectorAll('button');
+    buttons.forEach(function (button) { button.addEventListener('click', close); });
+    overlay.addEventListener('click', function (event) { if (event.target === overlay) close(); });
+    overlay.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close(); }
+      if (event.key === 'Tab') {
+        var first = buttons[0], last = buttons[buttons.length - 1];
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+      }
+    });
+    document.body.appendChild(overlay); buttons[0].focus();
+  }
+  root.TipOutPayoutRecordUi = { read: read, open: open };
+})(window);

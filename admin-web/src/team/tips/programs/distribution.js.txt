@@ -679,6 +679,7 @@ var ALLOC_KEY = 'tipout_allocated';
     }
 
     function activateDailySummaryRow(event, dateKey) {
+      if (event.target !== event.currentTarget) return;
       if (event.key !== 'Enter' && event.key !== ' ') return;
       event.preventDefault();
       openDailyDetail(dateKey);
@@ -879,8 +880,14 @@ var ALLOC_KEY = 'tipout_allocated';
           '<td><strong class="tip-amount--receive">' + (row.allocated ? money(row.poolSummary.allocatedAmount || 0) : '—') + '</strong></td>' +
           '<td><strong>' + (row.allocated ? money(row.poolSummary.unallocatedAmount || 0) : '—') + '</strong></td>' +
           '<td><button type="button" class="tipout-pool-count-link" tabindex="-1">' + row.poolSummary.poolCount + ' 个</button></td>' +
-          '<td class="tipout-detail-link"><span>查看明细</span>' + (payout.action ? '<button type="button" class="btn btn-sm tipout-confirm-payout" onclick="openConfirmPayoutModal(\'' + dateKey + '\',event)">确认已发放</button>' : '') + '</td></tr>';
+          '<td class="tipout-detail-link"><span>查看明细</span>' + (payout.key === 'paid' ? '<button type="button" class="btn btn-sm" onclick="openPayoutRecord(\'' + dateKey + '\',event)">查看发放记录</button>' : (payout.action ? '<button type="button" class="btn btn-sm tipout-confirm-payout" onclick="openConfirmPayoutModal(\'' + dateKey + '\',event)">确认已发放</button>' : '')) + '</td></tr>';
       }).join('');
+    }
+
+    function openPayoutRecord(dateKey, event) {
+      if (event) { event.preventDefault(); event.stopPropagation(); }
+      try { window.TipOutPayoutRecordUi.open((document.getElementById('storeSelect') || {}).value || '', dateKey); }
+      catch (error) { showNotification(error.message || '发放记录不可用', 'error'); }
     }
 
     async function openConfirmPayoutModal(dateKey, event) {
