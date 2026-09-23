@@ -1084,8 +1084,8 @@ var ALLOC_KEY = 'tipout_allocated';
           '<span class="tipout-role-summary-title"><strong>' + escapeSummaryHtml(item.role) + '</strong><small>' + item.employeeCount + ' 人</small></span>' +
           status +
           '<span><small>分配前小费</small><strong>' + formatEmployeeSummaryMoney(item.beforeCents, true) + '</strong></span>' +
-          '<span><small>扣除</small><strong class="tip-amount--deduct">' + formatEmployeeSummaryMoney(item.deductedCents, item.hasConfirmedAmount) + '</strong></span>' +
-          '<span><small>分配获得</small><strong class="tip-amount--receive">' + formatEmployeeSummaryMoney(item.receivedCents, item.hasConfirmedAmount) + '</strong></span>' +
+          '<span><small>贡献入池</small><strong class="tip-amount--deduct">' + formatEmployeeSummaryMoney(item.deductedCents, item.hasConfirmedAmount) + '</strong></span>' +
+          '<span><small>从池分得</small><strong class="tip-amount--receive">' + formatEmployeeSummaryMoney(item.receivedCents, item.hasConfirmedAmount) + '</strong></span>' +
           '<span><small>分配后小费</small><strong>' + formatEmployeeSummaryMoney(item.finalAmountCents, item.hasConfirmedAmount) + '</strong></span>' +
           '</button>';
       }).join('');

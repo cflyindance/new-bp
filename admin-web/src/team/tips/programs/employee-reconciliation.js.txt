@@ -256,7 +256,7 @@ function detailNumber(value) { return Number(value) || 0; }
       lines.push(['考勤筛选', data.attendance].map(employeeDetailCsvCell).join(','));
       lines.push(['分配状态筛选', data.allocationStatus].map(employeeDetailCsvCell).join(','));
       lines.push('');
-      lines.push(['日期', '考勤状态', '工时来源', '考勤备注', '打卡工时', '分配工时', '手动工时明细', '分配前', '扣除', '分配获得', '实际获得', '分配状态'].map(employeeDetailCsvCell).join(','));
+      lines.push(['日期', '考勤状态', '工时来源', '考勤备注', '打卡工时', '分配工时', '手动工时明细', '分配前', '贡献入池', '从池分得', '实际获得', '分配状态'].map(employeeDetailCsvCell).join(','));
       data.rows.forEach(function(row) {
         lines.push([row.date, row.attendance, row.workHourSource, row.attendanceNote, row.punchHours, row.allocationHours, row.manualHourDetails, row.before, row.deducted, row.received, row.after, row.allocation].map(employeeDetailCsvCell).join(','));
       });
@@ -277,7 +277,7 @@ function detailNumber(value) { return Number(value) || 0; }
     }
 
     function buildEmployeeDetailPrintHtml(data) {
-      var headings = ['日期', '考勤状态', '工时来源', '考勤备注', '打卡工时', '分配工时', '手动工时明细', '分配前', '扣除', '分配获得', '实际获得', '分配状态'];
+      var headings = ['日期', '考勤状态', '工时来源', '考勤备注', '打卡工时', '分配工时', '手动工时明细', '分配前', '贡献入池', '从池分得', '实际获得', '分配状态'];
       var body = data.rows.map(function(row) {
         return '<tr>' + [row.date, row.attendance, row.workHourSource, row.attendanceNote, row.punchHours, row.allocationHours, row.manualHourDetails, row.before, row.deducted, row.received, row.after, row.allocation]
           .map(function(value) { return '<td>' + employeeDetailEscapeHtml(value) + '</td>'; }).join('') + '</tr>';

@@ -46,13 +46,13 @@
           <div><span>分配工时</span><button id="employeeDetailAllocationHours" type="button" class="tipout-allocation-hours-button" disabled data-native-onclick="openEmployeeDetailAllocationHours(event, employeeDetailRangeHourEntries, '')">—</button></div>
           <div><span>手动工时记录</span><strong id="employeeDetailManualHours">0 个小费池 / 0 条记录</strong></div>
           <div><span>分配前</span><strong id="employeeDetailBefore">$0.00</strong></div>
-          <div><span>扣除</span><strong id="employeeDetailDeducted" class="tip-amount--deduct">-$0.00</strong></div>
-          <div><span>分配获得</span><strong id="employeeDetailReceived" class="tip-amount--receive">+$0.00</strong></div>
+          <div><span>贡献入池</span><strong id="employeeDetailDeducted" class="tip-amount--deduct">-$0.00</strong></div>
+          <div><span>从池分得</span><strong id="employeeDetailReceived" class="tip-amount--receive">+$0.00</strong></div>
           <div><span>实际获得</span><strong id="employeeDetailAfter">$0.00</strong></div>
         </div>
         <div id="employeeDetailTable" class="tipout-table-wrap">
           <table class="data-table tipout-summary-table tipout-employee-detail-table">
-            <thead><tr><th id="employeeDetailDateSortHeader" aria-sort="descending"><button type="button" id="employeeDetailDateSortButton" class="tipout-date-sort-button" aria-label="日期，当前倒序，点击切换为顺序" data-native-onclick="toggleEmployeeDetailDateSort()">日期 <span id="employeeDetailDateSortIcon" aria-hidden="true">↓</span></button></th><th>考勤</th><th>打卡工时</th><th>分配工时</th><th>分配前</th><th>扣除</th><th>分配获得</th><th>实际获得</th><th>分配状态</th></tr></thead>
+            <thead><tr><th id="employeeDetailDateSortHeader" aria-sort="descending"><button type="button" id="employeeDetailDateSortButton" class="tipout-date-sort-button" aria-label="日期，当前倒序，点击切换为顺序" data-native-onclick="toggleEmployeeDetailDateSort()">日期 <span id="employeeDetailDateSortIcon" aria-hidden="true">↓</span></button></th><th>考勤</th><th>打卡工时</th><th>分配工时</th><th>分配前</th><th>贡献入池</th><th>从池分得</th><th>实际获得</th><th>分配状态</th></tr></thead>
             <tbody id="employeeDetailRows" aria-label="员工逐日分配明细"></tbody>
           </table>
         </div>

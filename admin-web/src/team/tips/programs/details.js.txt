@@ -221,7 +221,7 @@ var ALLOC_KEY = 'tipout_allocated';
         var rows = (pool.employees || []).map(function(employee) {
           return '<tr><td>' + escHtml(employee.name) + '</td><td>' + escHtml(employee.role) + '</td><td>' + Number(employee.hours || 0) + ' h</td><td>' + Number(employee.percentage || 0).toFixed(2) + '%</td><td><strong>' + money(Number(employee.amount) || 0) + '</strong></td></tr>';
         }).join('');
-        return '<div class="detail-rule-bundle"><h2 class="detail-rule-block-title">' + escHtml(pool.poolName || pool.ruleName || '小费池') + '</h2><p class="detail-rule-meta">规则：' + escHtml(pool.ruleName || '—') + ' · 入池金额 ' + money(Number(pool.poolAmount) || 0) + '</p><table class="detail-table"><thead><tr><th>员工</th><th>角色</th><th>工时</th><th>比例</th><th>分配获得</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+        return '<div class="detail-rule-bundle"><h2 class="detail-rule-block-title">' + escHtml(pool.poolName || pool.ruleName || '小费池') + '</h2><p class="detail-rule-meta">规则：' + escHtml(pool.ruleName || '—') + ' · 入池金额 ' + money(Number(pool.poolAmount) || 0) + '</p><table class="detail-table"><thead><tr><th>员工</th><th>角色</th><th>工时</th><th>比例</th><th>从池分得</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
       }).join('');
       container.innerHTML = banner + '<button type="button" class="btn" onclick="openDetailPayoutRecord()">查看发放记录</button>' + cards;
       return true;

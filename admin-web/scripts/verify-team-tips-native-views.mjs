@@ -211,7 +211,7 @@ for (const obsoleteOption of ['<option value="待处理">待处理</option>', '<
 }
 if (!distributionProgram.includes("normalizeEmployeeAllocationStatusFilter(saved.employeeSummaryStatus)")) failures.push("distribution: restored employee allocation status must be normalized");
 if (!distributionProgram.includes("normalizeEmployeeAllocationStatusFilter(status && status.value)")) failures.push("distribution: live employee allocation status must be normalized");
-const employeeAmountHeaders = ["分配前小费", "扣除", "分配获得", "分配后小费"];
+const employeeAmountHeaders = ["分配前小费", "贡献入池", "从池分得", "分配后小费"];
 let previousEmployeeAmountHeader = -1;
 for (const header of employeeAmountHeaders) {
   const index = employeeTableHead.indexOf(header);
