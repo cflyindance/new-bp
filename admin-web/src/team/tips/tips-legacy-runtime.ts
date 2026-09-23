@@ -7,6 +7,7 @@ import attendance from "./legacy/attendanceMock.js.txt?raw";
 import scenarioData from "./legacy/tipout-scenario-data.js.txt?raw";
 import scenarioSource from "./legacy/tipout-scenario-source.js.txt?raw";
 import scenarioList from "./legacy/tipout-scenario-list.js.txt?raw";
+import demoRules from "./legacy/tipout-demo-rules.js.txt?raw";
 import manualHours from "./legacy/tipout-manual-hours-store.js.txt?raw";
 import rosterDirectory from "./legacy/tipout-roster-directory.js.txt?raw";
 import summary from "./legacy/tipout-summary-ui.js.txt?raw";
@@ -39,7 +40,7 @@ const programs: Record<TipsView, string> = { distribution, details, rules, "rule
 const dependencies: Record<TipsView, string[]> = {
   distribution: [common, summary, summaryDateSort, businessStatus, ruleData, personalSales, datePoolView, dateState, allocationResults, allocation, attendance, manualHours, rosterDirectory, payrollBridge],
   details: [common, businessStatus, ruleData, personalSales, datePoolView, dateState, allocationResults, allocation, attendance, manualHours, rosterDirectory, payrollBridge, detailRuleFilter, detailSnapshot, attendanceLabel],
-  rules: [common, ruleData, rosterDirectory],
+  rules: [common, ruleData, rosterDirectory, demoRules],
   "rule-editor": [common, ruleData, rosterDirectory, orderTipStatus, paymentMethods, personalSales, allocation],
   "employee-reconciliation": [common, attendance, summary, rosterDirectory],
 };

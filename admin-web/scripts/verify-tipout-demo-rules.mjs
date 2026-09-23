@@ -1,0 +1,27 @@
+import fs from 'node:fs';
+import vm from 'node:vm';
+import assert from 'node:assert/strict';
+const source = fs.readFileSync('src/team/tips/legacy/tipout-demo-rules.js.txt', 'utf8');
+let rules = [{id: 40, store: 'Test', ruleName: 'Keep', clockin: 'clock'}];
+const original = JSON.stringify(rules[0]);
+const storage = new Map();
+let roles = ['Server', 'Busser', 'Runner', 'Host', 'Bartender'];
+const context = {localStorage: {getItem: k => storage.get(k) ?? null, setItem: (k,v) => storage.set(k,v)},
+  ruleData: {getRules: () => structuredClone(rules), saveRules: v => {rules = structuredClone(v);}},
+  TipOutRosterDirectory: {canonicalRosterStoreName: s => s, listEmployees: () => roles.map(role => ({role}))}};
+context.window = context;
+vm.runInNewContext(source, context);
+assert.equal(context.TipOutDemoRules.ensure(), 5);
+assert.equal(context.TipOutDemoRules.ensure(), 0);
+assert.equal(JSON.stringify(rules[0]), original);
+assert.equal(new Set(rules.map(r => r.id)).size, 6);
+assert.ok(rules.slice(1).every(r => r.clockin === 'clock'));
+rules.splice(1, 1);
+assert.equal(context.TipOutDemoRules.ensure(), 0, 'deleted scenarios must not return');
+storage.clear();
+assert.equal(context.TipOutDemoRules.ensure(), 1, 'existing scenario keys prevent duplicates without marker');
+storage.clear(); rules = [{id: 1, store: 'Test'}]; roles = ['Server'];
+assert.equal(context.TipOutDemoRules.ensure(), 0, 'missing required roles must not be fabricated');
+roles = ['Server', 'Busser', 'Runner', 'Host', 'Bartender'];
+assert.equal(context.TipOutDemoRules.ensure(), 5);
+console.log('PASS: demo rules seeding, idempotency, deletion, missing roles and preservation');

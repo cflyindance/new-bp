@@ -217,5 +217,11 @@ function initStoreFilter() {
       openButton.focus();
     });
 
+    try {
+      var demoRuleCount = window.TipOutDemoRules ? window.TipOutDemoRules.ensure() : 0;
+      if (demoRuleCount) showNotification('已生成 ' + demoRuleCount + ' 条演示规则，可编辑或删除；不会修改历史分配快照');
+    } catch (error) {
+      showNotification('演示规则生成失败，请检查本地存储后重试');
+    }
     initStoreFilter();
     renderRulesTable();

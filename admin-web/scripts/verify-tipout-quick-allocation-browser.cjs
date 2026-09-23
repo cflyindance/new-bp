@@ -20,6 +20,7 @@ const { chromium } = process.env.TIPOUT_BROWSER_PACKAGES ? createRequire(path.jo
       const root = document.createElement('div'); shadow.append(root);
       const context = {getScope:()=>({storeId:store,storeLabel:store,storeLabelEn:store,isAllStores:false,usesInPageStorePicker:true,stores:[{id:store,labelZh:store,labelEn:store}]}),setStoreScope:()=>{},subscribeScopeChange:()=>()=>{},navigate:href=>window.testNavigation=href,replace:()=>{},getNavigationState:()=>null,getScrollOwner:()=>null};
       window.mountTest = () => { window.testRuntime?.destroy(); root.innerHTML=renderTipsTemplate('distribution'); window.testRuntime=mountLegacyTipsRuntime(shadow,root,{view:'distribution',query:'',href:'/team/tips/distribution'},context); };
+      window.mountRulesTest = () => { window.testRuntime?.destroy(); root.innerHTML=renderTipsTemplate('rules'); window.testRuntime=mountLegacyTipsRuntime(shadow,root,{view:'rules',query:'',href:'/team/tips/rules'},context); };
       window.mountDetailTest = date => { window.testRuntime?.destroy(); root.innerHTML=renderTipsTemplate('details'); const query='?store='+encodeURIComponent(store)+'&date='+date; window.testRuntime=mountLegacyTipsRuntime(shadow,root,{view:'details',query,href:'/team/tips/details'+query},context); };
       window.mountTest();
       const rules=JSON.parse(localStorage.getItem('tipout_rules')); rules.forEach(r=>r.clockin='clock'); localStorage.setItem('tipout_rules',JSON.stringify(rules));
@@ -131,6 +132,13 @@ const { chromium } = process.env.TIPOUT_BROWSER_PACKAGES ? createRequire(path.jo
     const clockHours = await page.locator('tr[data-attendance-status="clock"] .detail-emp-hours-input').evaluateAll(inputs=>inputs.map(i=>({hours:Number(i.value),readonly:i.readOnly})));
     assert.ok(clockHours.length > 0);
     assert.ok(clockHours.every(i=>i.hours>0 && i.readonly));
-    console.log('Quick allocation, legacy clock projection, read-only positive attendance hours, absent zero amounts and snapshot editing passed');
+    const snapshotsBeforeDemo = await page.evaluate(()=>localStorage.getItem('tipout_allocation_results_v1'));
+    await page.evaluate(()=>window.mountRulesTest());
+    assert.equal(await page.locator('.tipout-rule-name').filter({hasText:'【演示】'}).count(),5);
+    await page.evaluate(()=>window.mountRulesTest());
+    assert.equal(await page.locator('.tipout-rule-name').filter({hasText:'【演示】'}).count(),5);
+    assert.equal(await page.evaluate(()=>localStorage.getItem('tipout_allocation_results_v1')),snapshotsBeforeDemo);
+    assert.deepEqual(errors,[]);
+    console.log('Quick allocation, snapshot editing and demo rules page seeding passed');
   } finally { await browser.close(); }
 })().catch(e=>{console.error(e);process.exitCode=1;});

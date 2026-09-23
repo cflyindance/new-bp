@@ -1,0 +1,50 @@
+(function(global) {
+  'use strict';
+  var markerKey = 'tipout-demo-rule-scenarios-v1';
+  var support = [{roles:['Busser'],pct:50},{roles:['Runner'],pct:30},{roles:['Host'],pct:20}];
+  var scenarios = [
+    {key:'front-hours',name:'前厅小费共享 · 按打卡工时',roles:['Server','Busser','Runner','Host'],type:'tips',pct:100,distribution:'hours'},
+    {key:'bar-average',name:'吧台小费共享 · 平均分配',roles:['Bartender'],type:'tips',pct:100,distribution:'average'},
+    {key:'support-hours',name:'辅助岗位分配 · 50/30/20',roles:['Busser','Runner','Host'],type:'tips',pct:15,distribution:'hours',receivers:support},
+    {key:'capped-hours',name:'前厅工时上限 · 每日最多5小时',roles:['Server','Busser','Runner','Host'],type:'tips',pct:100,distribution:'hours',maxHours:5},
+    {key:'sales-support',name:'销售额贡献入池 · 3%',roles:['Busser','Runner','Host'],type:'sales',pct:3,distribution:'hours',receivers:support}
+  ];
+  function ensure() {
+    var projected = global.ruleData.getRules();
+    // Keep existing stored records byte-for-byte in content, including historical fields.
+    var raw = global.localStorage.getItem('tipout_rules');
+    var rules = raw ? JSON.parse(raw) : projected;
+    if (!Array.isArray(rules)) throw new Error('规则数据格式异常，未生成演示规则');
+    var markers = JSON.parse(global.localStorage.getItem(markerKey) || '[]');
+    if (!Array.isArray(markers)) throw new Error('演示规则标记异常');
+    var directory = global.TipOutRosterDirectory;
+    var stores = [];
+    rules.forEach(function(rule) {
+      if (rule && rule.store && !stores.some(function(store) { return directory.canonicalRosterStoreName(store) === directory.canonicalRosterStoreName(rule.store); })) stores.push(rule.store);
+    });
+    var nextId = rules.reduce(function(max, rule) { return Math.max(max, Number(rule.id) || 0); }, 0);
+    var added = 0;
+    stores.forEach(function(store) {
+      var employees = directory.listEmployees(store);
+      scenarios.forEach(function(scenario) {
+        var key = JSON.stringify([directory.canonicalRosterStoreName(store),scenario.key]);
+        if (markers.indexOf(key) >= 0) return;
+        if (rules.some(function(rule) { return rule.demoScenarioKey === key; })) { markers.push(key); return; }
+        if (!scenario.roles.every(function(role) { return employees.some(function(employee) { return employee.role === role; }); })) return;
+        var rule = {
+          id: ++nextId, ruleName: '【演示】' + scenario.name, store: store,
+          demoScenarioKey: key, poolKind:'tip', allocationMode:'legacy_pool',
+          poolRules:[{type:scenario.type,pct:scenario.pct}],
+          receivers: JSON.parse(JSON.stringify(scenario.receivers || [{roles:scenario.roles,pct:100}])),
+          distribution:scenario.distribution, clockin:'clock',
+          workHoursConfig:{mode:scenario.maxHours ? 'capped':'actual',maxHoursPerDay:scenario.maxHours || null}
+        };
+        rules.push(rule); markers.push(key); added += 1;
+      });
+    });
+    if (added) global.ruleData.saveRules(rules);
+    global.localStorage.setItem(markerKey, JSON.stringify(markers));
+    return added;
+  }
+  global.TipOutDemoRules = {ensure:ensure};
+})(window);
