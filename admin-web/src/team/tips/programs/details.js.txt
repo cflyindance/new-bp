@@ -32,6 +32,29 @@ var ALLOC_KEY = 'tipout_allocated';
       discardDetailDraft(); return true;
     }
     window.tipoutAllowLeave = allowDetailLeave;
+    function renderDetailAttendance(enforce) {
+      var dateKey = document.getElementById('detailDate').value;
+      document.querySelectorAll('#detailRulesContainer .detail-card[data-rule-id]').forEach(function(card) {
+        var rule = detailAllRules.find(function(item) { return String(item.id) === card.getAttribute('data-rule-id'); });
+        card.querySelectorAll('tbody tr').forEach(function(row) {
+          var select = row.querySelector('td select'); if (!select) return;
+          var saved = row.getAttribute('data-attendance-status');
+          var status = !enforce && row.getAttribute('data-snapshot-name') === select.value ? (saved || 'unknown') : window.TipOutAttendanceLabel.inspect(select.value,dateKey).status;
+          row.setAttribute('data-attendance-status',status);
+          var old = row.querySelector('.tipout-attendance-label'); if (old) old.remove();
+          select.parentElement.appendChild(window.TipOutAttendanceLabel.badge(document,status));
+          if (enforce && rule && rule.clockin !== 'noclock') {
+            if (status === 'absent') {
+              var pct = row.querySelector('.detail-emp-pct-input') || row.querySelector('td:nth-last-child(3) input'); if (pct) pct.value = 0;
+              var hours = row.querySelector('.detail-emp-hours-input'); if (hours) hours.value = 0;
+              row.setAttribute('data-snapshot-hours','0');
+              var cells = row.querySelectorAll('td'); cells[cells.length-2].textContent = money(0);
+            }
+          }
+        });
+        if (enforce && rule && rule.clockin !== 'noclock') recalcDetailLegacyCard(card);
+      });
+    }
     function getAllocatedDatesForStore(store) {
       try {
         var raw = localStorage.getItem(ALLOC_KEY);
@@ -254,6 +277,8 @@ var ALLOC_KEY = 'tipout_allocated';
         return '<div class="detail-rule-bundle"><h2 class="detail-rule-block-title">' + escHtml(pool.poolName || pool.ruleName || '小费池') + '</h2><p class="detail-rule-meta">规则：' + escHtml(pool.ruleName || '—') + ' · 入池金额 ' + money(Number(pool.poolAmount) || 0) + '</p><table class="detail-table"><thead><tr><th>员工</th><th>角色</th><th>工时</th><th>比例</th><th>从池分得</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
       }).join('');
       container.innerHTML = banner + '<button type="button" class="btn" onclick="openDetailPayoutRecord()">查看发放记录</button>' + cards;
+      var savedEmployees = snapshot.pools.reduce(function(all,pool) { return all.concat(pool.employees || []); }, []);
+      container.querySelectorAll('tbody tr').forEach(function(row,index) { row.cells[0].appendChild(window.TipOutAttendanceLabel.badge(document, (savedEmployees[index] || {}).attendanceStatus || 'unknown')); });
       return true;
     }
 
@@ -464,6 +489,7 @@ var ALLOC_KEY = 'tipout_allocated';
       document.getElementById('detailRulesContainer').innerHTML = bundleParts.join('');
       renderVisibleRuleView();
       if (detailSavedSnapshot) window.TipOutDetailSnapshot.restore(document, detailSavedSnapshot, money);
+      renderDetailAttendance(!detailSavedSnapshot);
       syncDetailAllocationAction();
       if (!window.tipoutQuickPreparation) setTimeout(function() { scheduleDetailAutoAllocation(store, dateKey, rules); }, 0);
     }
@@ -1479,6 +1505,7 @@ var ALLOC_KEY = 'tipout_allocated';
         '<td class="action-cell"><a href="javascript:void(0)" onclick="addDetailRow(\'' + tableId + '\',this)">新增行</a>' +
         '<a href="javascript:void(0)" class="danger" onclick="removeDetailRow(\'' + tableId + '\',this)">删除行</a></td>';
       lastRow.after(newRow);
+      renderDetailAttendance(true);
       markDetailDirty();
       recalcAfterRowChange(tableId);
       showNotification('已在 ' + role + ' 角色组新增员工行');
@@ -1585,6 +1612,7 @@ var ALLOC_KEY = 'tipout_allocated';
     }
 
     function collectDetailAllocationSnapshot(store, dateKey, rules) {
+      renderDetailAttendance(true);
       var pools = [];
       document.querySelectorAll('#detailRulesContainer .detail-card[data-rule-id]').forEach(function(card) {
         var ruleId = card.getAttribute('data-rule-id') || '';
@@ -1596,6 +1624,7 @@ var ALLOC_KEY = 'tipout_allocated';
             var select = row.querySelector('td select');
             var name = select ? select.value : '';
             if (!name || name === '（未配置员工）') return;
+            if (rule.clockin !== 'noclock' && row.getAttribute('data-attendance-status') === 'unknown') throw new Error('无法获取员工考勤，请刷新后重试');
             var rosterEmployee = findDetailRosterEmployee(store, role, name);
             var hoursInput = row.querySelector('.detail-emp-hours-input');
             var pctInput = row.querySelector('.detail-emp-pct-input') || row.querySelector('td:nth-last-child(3) input');
@@ -1603,6 +1632,7 @@ var ALLOC_KEY = 'tipout_allocated';
             employees.push({
               employeeId: rosterEmployee && String(rosterEmployee.id || rosterEmployee.employeeId || ''),
               name: name,
+              attendanceStatus: row.getAttribute('data-attendance-status') || 'unknown',
               role: rosterEmployee ? String(rosterEmployee.role || role) : role,
               hours: hoursInput ? Number(hoursInput.value || 0) : (row.getAttribute('data-snapshot-name') === name ? Number(row.getAttribute('data-snapshot-hours')) : getDetailEmployeeHours(rule, ruleId, dateKey, name)),
               percentage: pctInput ? Number(pctInput.value || 0) : 0,
@@ -1906,7 +1936,7 @@ var ALLOC_KEY = 'tipout_allocated';
     renderDetailPage();
     ['input', 'change'].forEach(function(type) {
       document.addEventListener(type, function(event) {
-        if (event.target.closest && event.target.closest('#detailRulesContainer') && event.target.matches('input,select')) markDetailDirty();
+        if (event.target.closest && event.target.closest('#detailRulesContainer') && event.target.matches('input,select')) { renderDetailAttendance(true); markDetailDirty(); }
       });
     });
     window.addEventListener('beforeunload', function(event) { if (detailDirty || detailAllocationSubmitting) { event.preventDefault(); event.returnValue = ''; } });

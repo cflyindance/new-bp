@@ -1,0 +1,17 @@
+(function(root) {
+  function inspect(name, dateKey) {
+    if (!root.TipOutAttendance || !root.TipOutAttendance.getDayStatus) return { status: 'unknown', label: '考勤未知' };
+    var day;
+    try { day = root.TipOutAttendance.getDayStatus(name, dateKey); }
+    catch (_) { return { status: 'unknown', label: '考勤未知' }; }
+    if (!day || !Array.isArray(day.punchSessions)) return { status: 'unknown', label: '考勤未知' };
+    return day.punchSessions.length ? { status: 'clock', label: '打卡' } : { status: 'absent', label: '未打卡' };
+  }
+  function badge(document, status) {
+    var tag = document.createElement('span');
+    tag.className = 'tipout-attendance-label tipout-attendance-label--' + (status === 'clock' ? 'clock' : 'muted');
+    tag.textContent = status === 'clock' ? '打卡' : status === 'absent' ? '未打卡' : '考勤未知';
+    return tag;
+  }
+  root.TipOutAttendanceLabel = { inspect: inspect, badge: badge };
+})(window);

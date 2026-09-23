@@ -16,6 +16,7 @@ import allocationResults from "./legacy/tipout-allocation-results-store.js.txt?r
 import payrollBridge from "./legacy/tipout-payroll-bridge.js.txt?raw";
 import detailRuleFilter from "./legacy/tipout-detail-rule-filter.js.txt?raw";
 import detailSnapshot from "./legacy/tipout-detail-snapshot.js.txt?raw";
+import attendanceLabel from "./legacy/tipout-attendance-label.js.txt?raw";
 import orderTipStatus from "./legacy/orderTipStatus.js.txt?raw";
 import paymentMethods from "./legacy/paymentMethodApportion.js.txt?raw";
 import exportCode from "./legacy/export.js.txt?raw";
@@ -34,7 +35,7 @@ type Bag = Record<PropertyKey, unknown>;
 const programs: Record<TipsView, string> = { distribution, details, rules, "rule-editor": editor, "employee-reconciliation": employeeReconciliation };
 const dependencies: Record<TipsView, string[]> = {
   distribution: [common, summary, summaryDateSort, businessStatus, ruleData, personalSales, datePoolView, dateState, allocationResults, allocation, attendance, manualHours, rosterDirectory, payrollBridge],
-  details: [common, businessStatus, ruleData, personalSales, datePoolView, dateState, allocationResults, allocation, attendance, manualHours, rosterDirectory, payrollBridge, detailRuleFilter, detailSnapshot],
+  details: [common, businessStatus, ruleData, personalSales, datePoolView, dateState, allocationResults, allocation, attendance, manualHours, rosterDirectory, payrollBridge, detailRuleFilter, detailSnapshot, attendanceLabel],
   rules: [common, ruleData, rosterDirectory],
   "rule-editor": [common, ruleData, rosterDirectory, orderTipStatus, paymentMethods, personalSales, allocation],
   "employee-reconciliation": [common, attendance, summary, rosterDirectory],

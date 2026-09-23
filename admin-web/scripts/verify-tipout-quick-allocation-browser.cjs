@@ -36,6 +36,9 @@ const { chromium } = process.env.TIPOUT_BROWSER_PACKAGES ? createRequire(path.jo
     assert.equal(snapshot.dateKey,date);
     assert.ok(snapshot.pools.length > 0);
     assert.ok(snapshot.pools.some(p=>p.employees.length));
+    const absent = snapshot.pools.flatMap(p=>p.employees).filter(e=>e.attendanceStatus==='absent');
+    assert.ok(absent.length > 0, 'fixture must include unclocked employees');
+    assert.ok(absent.every(e=>e.amount===0 && e.hours===0));
     assert.equal(await page.locator(`tr[data-date="${date}"] .tipout-quick-allocate`).count(),0);
     assert.equal(await page.evaluate(()=>window.testNavigation),undefined);
     await page.locator('#employeeReconciliationTab').click();
@@ -48,6 +51,8 @@ const { chromium } = process.env.TIPOUT_BROWSER_PACKAGES ? createRequire(path.jo
     assert.equal(await page.evaluate(()=>Object.keys(JSON.parse(localStorage.getItem('tipout_allocation_results_v1'))).length),1);
     await page.evaluate(date=>window.mountDetailTest(date),date);
     assert.equal(await page.locator('#confirmDetailAllocationBtn').isDisabled(),true);
+    assert.ok(await page.locator('.tipout-attendance-label').count() > 0);
+    assert.ok(await page.locator('.tipout-attendance-label').filter({hasText:'未打卡'}).count() > 0);
     const before = await page.evaluate(()=>localStorage.getItem('tipout_allocation_results_v1'));
     await page.evaluate(date=>window.mountDetailTest(date),date);
     assert.equal(await page.evaluate(()=>localStorage.getItem('tipout_allocation_results_v1')),before);

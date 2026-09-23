@@ -522,10 +522,11 @@
                 <label class="radio-item" id="clockinClockOption">
                   <input type="radio" name="clockin" value="clock" checked data-native-onchange="updateDistributionOptions()"> 打卡上班
                 </label>
-                <label class="radio-item">
-                  <input type="radio" name="clockin" value="noclock" data-native-onchange="updateDistributionOptions()"> 不打卡
+                <label class="radio-item" hidden style="display:none">
+                  <input type="radio" name="clockin" value="noclock" disabled> 不打卡（历史规则）
                 </label>
               </div>
+              <p class="field-desc">仅支持打卡上班；未打卡员工从池分得为 0。历史不打卡规则不会自动迁移，编辑保存前请明确选择打卡上班。</p>
             </div>
 
             <!-- Distribution Method -->

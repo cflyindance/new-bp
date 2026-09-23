@@ -3221,6 +3221,9 @@ select.form-control {
 }
 
 .tipout-confirm-payout { margin-left: 8px; white-space: nowrap; }
+.tipout-attendance-label { display: inline-block; margin-left: 8px; padding: 2px 7px; border-radius: 10px; font-size: 12px; font-weight: 400; white-space: nowrap; }
+.tipout-attendance-label--clock { color: #087f5b; background: #eaf8f1; }
+.tipout-attendance-label--muted { color: #667085; background: #f0f1f3; }
 .tipout-payout-modal { width: min(520px, calc(100vw - 32px)); }
 .tipout-payout-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 24px; margin: 0; }
 .tipout-payout-summary div { padding: 10px 0; border-bottom: 1px solid var(--border-light); }

@@ -1,0 +1,17 @@
+import fs from 'node:fs';
+import vm from 'node:vm';
+import assert from 'node:assert/strict';
+const context = { window: { TipOutAttendance: { getDayStatus: () => ({hours:0,punchSessions:[{clockIn:'08:00'}]}) } } };
+vm.runInNewContext(fs.readFileSync('src/team/tips/legacy/tipout-attendance-label.js.txt','utf8'),context);
+const api=context.window.TipOutAttendanceLabel;
+assert.equal(api.inspect('A','2026-09-23').status,'clock');
+context.window.TipOutAttendance.getDayStatus=()=>({hours:10,punchSessions:[]});
+assert.equal(api.inspect('A','2026-09-23').status,'absent');
+context.window.TipOutAttendance.getDayStatus=()=>{throw new Error('network');};
+assert.equal(api.inspect('A','2026-09-23').status,'unknown');
+const editor=fs.readFileSync('src/team/tips/templates/rule-editor.html','utf8');
+assert.match(editor,/value="noclock" disabled/);
+const program=fs.readFileSync('src/team/tips/programs/rule-editor.js.txt','utf8');
+assert.match(program,/attendanceChoice.value !== 'clock'/);
+assert.doesNotMatch(program,/noClockIn.checked = true/);
+console.log('Attendance identity and clock-only editor guards passed');
