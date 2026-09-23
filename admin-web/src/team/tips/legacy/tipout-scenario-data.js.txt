@@ -1,0 +1,88 @@
+/** Read-only demo facts. No clock, DOM, roster mutation, or business-storage writes. */
+(function(root) {
+  'use strict';
+  var VERSION = 'tipout-scenarios-v1';
+  var DAY = 86400000;
+  function required(value, label) {
+    if (typeof value !== 'string' || !value.trim()) throw new Error(label + ' is required');
+    return value.trim();
+  }
+  function dateValue(key) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(key))) throw new Error('Invalid scenario date');
+    var value = Date.parse(key + 'T00:00:00Z');
+    if (!isFinite(value) || new Date(value).toISOString().slice(0, 10) !== key) throw new Error('Invalid scenario date');
+    return value;
+  }
+  function hash(value) {
+    var result = 2166136261;
+    for (var i = 0; i < value.length; i++) { result ^= value.charCodeAt(i); result = Math.imul(result, 16777619); }
+    return result >>> 0;
+  }
+  function monthDates(todayKey) {
+    var end = dateValue(todayKey), today = new Date(end);
+    var previous = new Date(end);
+    previous.setUTCDate(1);
+    previous.setUTCMonth(previous.getUTCMonth() - 1);
+    var last = new Date(end);
+    last.setUTCDate(0);
+    previous.setUTCDate(Math.min(today.getUTCDate(), last.getUTCDate()));
+    var dates = [];
+    for (var cursor = previous.getTime(); cursor <= end; cursor += DAY) dates.push(new Date(cursor).toISOString().slice(0, 10));
+    return dates;
+  }
+  function time(minutes) { return String(Math.floor(minutes / 60)).padStart(2, '0') + ':' + String(minutes % 60).padStart(2, '0'); }
+  function session(start, hours) { return { clockIn: time(start), clockOut: time(start + hours * 60), durationHours: hours, status: 'complete' }; }
+  function attendance(clock, variant) {
+    if (!clock) return { hours: 0, originalHours: 0, effectiveHours: 0, clockStatus: '未打卡', punchSessions: [], adjustment: null };
+    var sessions, original = 8, effective = 8, status = '已打卡';
+    if (variant === 1) sessions = [session(480, 4), session(1020, 4)];
+    else if (variant === 2) {
+      original = effective = 4; status = '打卡异常';
+      sessions = [session(480, 4), { clockIn: '17:00', clockOut: null, durationHours: null, status: 'missing-clock-out' }];
+    } else sessions = [session(480, 8)];
+    if (variant === 3) effective = 10;
+    return { hours: effective, originalHours: original, effectiveHours: effective, clockStatus: status, punchSessions: sessions,
+      adjustment: variant === 3 ? { source: 'POS', fromHours: 8, toHours: 10 } : null };
+  }
+  function fact(options) {
+    var storeId = required(options.storeId, 'storeId');
+    var employee = options.employee || {}, employeeId = required(employee.id, 'employeeId');
+    var calendarDay = dateValue(options.dateKey) / DAY;
+    var identity = JSON.stringify([VERSION, storeId, employeeId]);
+    var seed = hash(identity), combination = ((calendarDay + seed) % 8 + 8) % 8;
+    var key = JSON.stringify([VERSION, storeId, employeeId, options.dateKey]);
+    var dailySeed = hash(key), hasOrders = combination % 4 < 2, hasTips = combination % 2 === 0;
+    var salesCents = hasOrders ? 12000 + dailySeed % 50001 : 0;
+    var tipCents = hasTips ? 1 + hash(key + ':tip') % 6000 : 0;
+    var surchargeCents = hasOrders ? hash(key + ':surcharge') % 1500 : 0;
+    var orders = [];
+    if (hasOrders) {
+      // Split integer cents once; sums are exact and shared by all rules.
+      var firstSales = Math.floor(salesCents / 2), firstTip = Math.floor(tipCents / 2), firstSurcharge = Math.floor(surchargeCents / 2);
+      for (var i = 0; i < 2; i++) {
+        var sale = i ? salesCents - firstSales : firstSales;
+        var tip = i ? tipCents - firstTip : firstTip;
+        var charge = i ? surchargeCents - firstSurcharge : firstSurcharge;
+        orders.push({ id: key + ':order:' + i, employeeId: employeeId, salesAmount: sale / 100, tipAmount: tip / 100, surcharge: charge / 100,
+          tipType: i ? 'Cash Tips (现金小费)' : 'Credit Card Tips (信用卡小费)',
+          lines: [{ productLine: 'POS', category: i ? '酒水' : '主菜', amount: sale / 100 }] });
+      }
+    }
+    return { version: VERSION, key: key, storeId: storeId, employeeId: employeeId, name: String(employee.name || ''), role: String(employee.role || ''),
+      dateKey: options.dateKey, scenarioId: 'B0' + (combination + 1), attendance: attendance(combination < 4, hash(key + ':attendance') % 4),
+      orders: orders, salesAmount: salesCents / 100, orderTips: hasOrders ? tipCents / 100 : 0,
+      reportedTips: hasOrders ? 0 : tipCents / 100, originalTips: tipCents / 100, surcharge: surchargeCents / 100 };
+  }
+  function day(options) {
+    required(options.storeId, 'storeId'); dateValue(options.dateKey);
+    if (!Array.isArray(options.employees)) throw new Error('employees must be an array');
+    var seen = Object.create(null);
+    return options.employees.map(function(employee) {
+      var id = required(employee && employee.id, 'employeeId');
+      if (seen[id]) throw new Error('Duplicate employeeId: ' + id);
+      seen[id] = true;
+      return fact({ storeId: options.storeId, employee: employee, dateKey: options.dateKey });
+    });
+  }
+  root.TipOutScenarioData = { version: VERSION, fact: fact, day: day, monthDates: monthDates };
+})(typeof window !== 'undefined' ? window : this);
