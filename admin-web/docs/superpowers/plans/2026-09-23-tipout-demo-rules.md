@@ -31,3 +31,18 @@ Interface: rules 初始化前调用 ensure；失败显示提示且继续展示�
 - [ ] 仅提交本次文件到本地 main，不推送远程。
 
 当前环境未提供 executing-plans 技能，按本计划在当前任务内执行。
+
+## 追加：已确认的贡献入池方演示规则
+
+用户确认新增三类，沿用初始化器，不增加模板交互或新算法：
+
+- Server 个人销售额 3%，Busser 60% / Runner 40%。
+- Server 个人销售额 1%，Bartender 100%。
+- Server、Bartender 各自销售额 2%，Busser 50% / Runner 30% / Host 20%。
+
+均使用 `personal_sales` 池、`deductConfig.personalSalesPct` 的角色范围和小数 rate，按打卡工时分配；同时检查贡献方和接收方岗位。复用现有个人销售额扣除封顶逻辑，不修改历史快照。
+
+- [x] 先调整数据层测试预期 5 → 8，确认失败。
+- [x] 追加三个独立场景 key，保持原五个标记不变。
+- [x] 验证 rate、角色范围、接收比例总和、去重与删除行为；类型检查通过。
+- [x] 浏览器验证 8 条演示规则、重入去重和快照保留。

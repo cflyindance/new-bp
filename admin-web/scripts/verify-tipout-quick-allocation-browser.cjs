@@ -134,9 +134,9 @@ const { chromium } = process.env.TIPOUT_BROWSER_PACKAGES ? createRequire(path.jo
     assert.ok(clockHours.every(i=>i.hours>0 && i.readonly));
     const snapshotsBeforeDemo = await page.evaluate(()=>localStorage.getItem('tipout_allocation_results_v1'));
     await page.evaluate(()=>window.mountRulesTest());
-    assert.equal(await page.locator('.tipout-rule-name').filter({hasText:'【演示】'}).count(),5);
+    assert.equal(await page.locator('.tipout-rule-name').filter({hasText:'【演示】'}).count(),8);
     await page.evaluate(()=>window.mountRulesTest());
-    assert.equal(await page.locator('.tipout-rule-name').filter({hasText:'【演示】'}).count(),5);
+    assert.equal(await page.locator('.tipout-rule-name').filter({hasText:'【演示】'}).count(),8);
     assert.equal(await page.evaluate(()=>localStorage.getItem('tipout_allocation_results_v1')),snapshotsBeforeDemo);
     assert.deepEqual(errors,[]);
     console.log('Quick allocation, snapshot editing and demo rules page seeding passed');

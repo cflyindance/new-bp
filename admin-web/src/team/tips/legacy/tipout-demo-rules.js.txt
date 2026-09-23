@@ -7,7 +7,10 @@
     {key:'bar-average',name:'吧台小费共享 · 平均分配',roles:['Bartender'],type:'tips',pct:100,distribution:'average'},
     {key:'support-hours',name:'辅助岗位分配 · 50/30/20',roles:['Busser','Runner','Host'],type:'tips',pct:15,distribution:'hours',receivers:support},
     {key:'capped-hours',name:'前厅工时上限 · 每日最多5小时',roles:['Server','Busser','Runner','Host'],type:'tips',pct:100,distribution:'hours',maxHours:5},
-    {key:'sales-support',name:'销售额贡献入池 · 3%',roles:['Busser','Runner','Host'],type:'sales',pct:3,distribution:'hours',receivers:support}
+    {key:'sales-support',name:'销售额贡献入池 · 3%',roles:['Busser','Runner','Host'],type:'sales',pct:3,distribution:'hours',receivers:support},
+    {key:'server-deduct-support',name:'服务员贡献入池 · 个人销售额3%',roles:['Server','Busser','Runner'],donors:['Server'],type:'personal_sales',pct:3,distribution:'hours',receivers:[{roles:['Busser'],pct:60},{roles:['Runner'],pct:40}]},
+    {key:'server-deduct-bar',name:'吧台支持 · 服务员个人销售额1%',roles:['Server','Bartender'],donors:['Server'],type:'personal_sales',pct:1,distribution:'hours',receivers:[{roles:['Bartender'],pct:100}]},
+    {key:'shared-deduct-support',name:'多岗位共同贡献 · 个人销售额2%',roles:['Server','Bartender','Busser','Runner','Host'],donors:['Server','Bartender'],type:'personal_sales',pct:2,distribution:'hours',receivers:support}
   ];
   function ensure() {
     var projected = global.ruleData.getRules();
@@ -39,6 +42,12 @@
           distribution:scenario.distribution, clockin:'clock',
           workHoursConfig:{mode:scenario.maxHours ? 'capped':'actual',maxHoursPerDay:scenario.maxHours || null}
         };
+        if (scenario.donors) {
+          var conditions = {revenueType:'Net Sales (税前营业额)',role:scenario.donors.slice()};
+          rule.poolRules[0].conditions = conditions;
+          rule.deductRoles = scenario.donors.slice();
+          rule.deductConfig = {personalSalesPct:{scopeType:'role',roles:scenario.donors.slice(),rate:scenario.pct / 100,salesConditions:JSON.parse(JSON.stringify(conditions))}};
+        }
         rules.push(rule); markers.push(key); added += 1;
       });
     });
