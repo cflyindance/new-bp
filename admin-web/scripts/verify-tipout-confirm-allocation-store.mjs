@@ -44,6 +44,8 @@ const quick = snapshot('Quick store', '2026-09-23', 30);
 const concurrent = await Promise.allSettled([api.commit(quick, {onlyIfUnallocated:true}), api.commit(quick, {onlyIfUnallocated:true})]);
 assert.deepEqual(concurrent.map(x=>x.status), ['fulfilled','rejected']);
 assert.equal(api.read('Quick store','2026-09-23').summary.allocatedAmount,30);
+await assert.rejects(api.commit(snapshot('Quick store','2026-09-23',99), {expectedSnapshotHash:'stale-hash'}), /其他页面修改/);
+assert.equal(api.read('Quick store','2026-09-23').summary.allocatedAmount,30);
 locked = true;
 await assert.rejects(api.commit(snapshot('Quick store','2026-09-22',40), {onlyIfUnallocated:true}), /已发放/);
 assert.equal(api.read('Quick store','2026-09-22'),null);

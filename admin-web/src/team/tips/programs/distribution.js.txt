@@ -1612,6 +1612,6 @@ var ALLOC_KEY = 'tipout_allocated';
     });
     window.addEventListener('tipout-date-state-changed', function() { renderDailySummaryList(); });
     if (window.BroadcastChannel) {
-      var tipoutDateStateChannel = new BroadcastChannel('tipout-date-state-changed');
+      var tipoutDateStateChannel = new window.BroadcastChannel('tipout-date-state-changed');
       tipoutDateStateChannel.addEventListener('message', function() { renderDailySummaryList(); });
     }

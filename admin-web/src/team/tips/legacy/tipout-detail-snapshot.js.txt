@@ -1,0 +1,68 @@
+(function(root) {
+  function clone(value) { return JSON.parse(JSON.stringify(value)); }
+  function capture(document, rules) {
+    var sections = Array.from(document.querySelectorAll('.formula-rule-section'));
+    return { rules: clone(rules), formulas: sections.some(function(section) { return section.hidden; }) ? null : sections.map(function(section) {
+      return { id: section.getAttribute('data-rule-id'), values: Array.from(section.querySelectorAll('input')).map(function(input) { return input.value; }) };
+    }) };
+  }
+  function rulesFor(snapshot, liveRules) {
+    if (snapshot.editorState && Array.isArray(snapshot.editorState.rules)) return clone(snapshot.editorState.rules);
+    return snapshot.pools.map(function(pool) {
+      var rule = clone(liveRules.find(function(item) { return String(item.id) === pool.ruleId; }) || {});
+      rule.id = pool.ruleId; rule.store = snapshot.store; rule.ruleName = pool.ruleName;
+      // Old snapshots have no rule source: group only the employees actually saved.
+      var roles = Array.from(new Set(pool.employees.map(function(employee) { return employee.role; })));
+      rule.receivers = roles.map(function(role) { return { roles: [role], pct: pool.poolAmount ? pool.employees.filter(function(e) { return e.role === role; }).reduce(function(sum,e) { return sum + e.amount; },0) / pool.poolAmount * 100 : 0 }; });
+      return rule;
+    });
+  }
+  function restore(document, snapshot, money) {
+    snapshot.pools.forEach(function(pool) {
+      var card = Array.from(document.querySelectorAll('.detail-card[data-rule-id]')).find(function(el) { return el.getAttribute('data-rule-id') === pool.ruleId; });
+      if (!card) throw new Error('历史分配规则无法回显，请先更新小费数据');
+      card.setAttribute('data-pool', pool.poolAmount);
+      var formula = card.closest('.detail-rule-bundle').querySelector('.formula-pool-val'); if (formula) formula.textContent = money(pool.poolAmount);
+      card.querySelectorAll('.detail-result-section[data-role]').forEach(function(section) {
+        var roles = section.getAttribute('data-role').split(/\s*\/\s*/);
+        var employees = pool.employees.filter(function(e) { return roles.indexOf(e.role) >= 0; });
+        var tbody = section.querySelector('tbody'), template = tbody && tbody.querySelector('tr');
+        if (!tbody || !template) { if (employees.length) throw new Error('历史员工明细无法回显'); return; }
+        template = template.cloneNode(true); tbody.textContent = '';
+        employees.forEach(function(employee) {
+          var row = template.cloneNode(true), select = row.querySelector('select');
+          row.setAttribute('data-snapshot-hours', employee.hours);
+          row.setAttribute('data-snapshot-name', employee.name);
+          if (select) {
+            if (!Array.from(select.options).some(function(o) { return o.value === employee.name; })) {
+              var option = document.createElement('option'); option.value = employee.name; option.textContent = employee.name; select.appendChild(option);
+            }
+            select.value = employee.name;
+          }
+          var hours = row.querySelector('.detail-emp-hours-input'); if (hours) hours.value = employee.hours;
+          var pct = row.querySelector('.detail-emp-pct-input') || row.querySelector('td:nth-last-child(3) input'); if (pct) pct.value = employee.percentage;
+          var cells = row.querySelectorAll('td'); cells[cells.length - 2].textContent = money(employee.amount);
+          tbody.appendChild(row);
+        });
+        var amount = employees.reduce(function(sum,e) { return sum + e.amount; },0);
+        var pct = section.querySelector('.detail-role-pct-input'); if (pct) pct.value = pool.poolAmount ? amount / pool.poolAmount * 100 : 0;
+        var label = section.querySelector('.role-amount'); if (label) label.textContent = money(amount);
+      });
+    });
+    var formulas = snapshot.editorState && snapshot.editorState.formulas;
+    if (!formulas) {
+      var note = document.createElement('div'); note.className = 'tipout-lock-banner';
+      note.textContent = '当前展示历史分配快照。该快照未保留公式输入，更新小费数据后可重新获取规则并计算。';
+      document.getElementById('detailRulesContainer').prepend(note);
+    }
+    document.querySelectorAll('.formula-rule-section').forEach(function(section,index) {
+      var saved = formulas && formulas[index];
+      if (saved) section.querySelectorAll('input').forEach(function(input,i) { if (saved.values[i] !== undefined) input.value = saved.values[i]; });
+      else { section.hidden = true; }
+    });
+    var summary = snapshot.summary;
+    [['detailOriginalTips','originalTips'],['detailPoolAmount','poolAmount'],['detailAllocatedAmount','allocatedAmount'],['detailUnallocatedAmount','unallocatedAmount']].forEach(function(pair) { document.getElementById(pair[0]).textContent = money(summary[pair[1]]); });
+    document.getElementById('detailPoolCount').textContent = summary.poolCount;
+  }
+  root.TipOutDetailSnapshot = { capture: capture, rulesFor: rulesFor, restore: restore };
+})(window);

@@ -23,7 +23,7 @@ assert.match(program, /TipOutDateState\.markUnconfirmedUpdate/);
 assert.match(program, /async function executeDetailAllocation\(options\)/);
 assert.match(program, /executeDetailAllocation\(\{ store: store, dateKey: dateKey, rules: rules, wasAllocated: allocated, automatic: false \}\)/);
 assert.match(program, /该日期已分配，重新确认将覆盖当天原分配结果。/);
-assert.match(program, /await TipOutAllocationResults\.commit\(snapshot\)/);
+assert.match(program, /await TipOutAllocationResults\.commit\(snapshot,/);
 assert.match(program, /TipOutPayrollBridge\.syncAfterAllocation\(options\.store, options\.dateKey, options\.dateKey\)/);
 assert.match(program, /分配结果已保存，但薪资同步失败，请重试/);
 assert.match(distribution, /TipOutAllocationResults\.read/);

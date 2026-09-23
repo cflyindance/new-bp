@@ -15,6 +15,7 @@ import payoutRecordUi from "./legacy/tipout-payout-record-ui.js.txt?raw";
 import allocationResults from "./legacy/tipout-allocation-results-store.js.txt?raw";
 import payrollBridge from "./legacy/tipout-payroll-bridge.js.txt?raw";
 import detailRuleFilter from "./legacy/tipout-detail-rule-filter.js.txt?raw";
+import detailSnapshot from "./legacy/tipout-detail-snapshot.js.txt?raw";
 import orderTipStatus from "./legacy/orderTipStatus.js.txt?raw";
 import paymentMethods from "./legacy/paymentMethodApportion.js.txt?raw";
 import exportCode from "./legacy/export.js.txt?raw";
@@ -33,7 +34,7 @@ type Bag = Record<PropertyKey, unknown>;
 const programs: Record<TipsView, string> = { distribution, details, rules, "rule-editor": editor, "employee-reconciliation": employeeReconciliation };
 const dependencies: Record<TipsView, string[]> = {
   distribution: [common, summary, summaryDateSort, businessStatus, ruleData, personalSales, datePoolView, dateState, allocationResults, allocation, attendance, manualHours, rosterDirectory, payrollBridge],
-  details: [common, businessStatus, ruleData, personalSales, datePoolView, dateState, allocationResults, allocation, attendance, manualHours, rosterDirectory, payrollBridge, detailRuleFilter],
+  details: [common, businessStatus, ruleData, personalSales, datePoolView, dateState, allocationResults, allocation, attendance, manualHours, rosterDirectory, payrollBridge, detailRuleFilter, detailSnapshot],
   rules: [common, ruleData, rosterDirectory],
   "rule-editor": [common, ruleData, rosterDirectory, orderTipStatus, paymentMethods, personalSales, allocation],
   "employee-reconciliation": [common, attendance, summary, rosterDirectory],
@@ -75,6 +76,7 @@ export function mountLegacyTipsRuntime(shadow: ShadowRoot, root: HTMLElement, ro
   const cleanups = new Set<() => void>(), timers = new Set<number>(), intervals = new Set<number>(), animationFrames = new Set<number>();
   const observers = new Set<MutationObserver>();
   const realWindow = window, realDocument = document;
+  const mountedUrl = realWindow.location.href, mountedHistoryState = realWindow.history.state;
   const on = (target: EventTarget, type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions) =>
     target.addEventListener(type, listener, { ...(typeof options === "boolean" ? { capture: options } : options), signal: controller.signal });
   const docTarget: Bag = {
@@ -87,6 +89,9 @@ export function mountLegacyTipsRuntime(shadow: ShadowRoot, root: HTMLElement, ro
   const scopedDocument = new Proxy(docTarget, { get(t, p) { if (p === "activeElement") return shadow.activeElement; if (p in t) return t[p]; const v = Reflect.get(realDocument, p, realDocument); return typeof v === "function" ? v.bind(realDocument) : v; }, set(t,p,v){t[p]=v;return true;} });
   const locationFacade = new Proxy({} as Location, { get(_t,p){ if(p === "search") return route.query; if(p === "href") return `${realWindow.location.origin}/#${route.href}`; if(p === "replace") return (value: string) => { const mapped=rewriteLegacyTipsUrl(String(value)); context.replace(mapped ?? String(value)); }; const v=Reflect.get(realWindow.location,p,realWindow.location); return typeof v === "function" ? v.bind(realWindow.location) : v; }, set(_t,p,v){ if(p === "href"){ const mapped=rewriteLegacyTipsUrl(String(v)); context.navigate(mapped ?? String(v)); return true; } return Reflect.set(realWindow.location,p,v); } });
   const winTarget: Bag = {
+    BroadcastChannel: realWindow.BroadcastChannel ? class extends BroadcastChannel {
+      constructor(name: string) { super(name); cleanups.add(() => this.close()); }
+    } : undefined,
     tipoutQuickPreparation: quickPreparation,
     prepareTipoutQuickSnapshot: (store: string, dateKey: string) => {
       const host = realDocument.createElement('div');
@@ -108,6 +113,16 @@ export function mountLegacyTipsRuntime(shadow: ShadowRoot, root: HTMLElement, ro
     scrollTo:(_x:number,y:number)=>{const el=context.getScrollOwner();if(el)el.scrollTop=y}, scrollBy:(_x:number,y:number)=>{const el=context.getScrollOwner();if(el)el.scrollTop+=y},
   };
   const scopedWindow = new Proxy(winTarget, { get(t,p){ if(p in t)return t[p]; const v=Reflect.get(realWindow,p,realWindow); return typeof v === "function" ? v.bind(realWindow) : v; }, set(t,p,v){t[p]=v;return true;} });
+  if (route.view === 'details' && !quickPreparation) {
+    on(realWindow, 'hashchange', (event: Event) => {
+      if (realWindow.location.href === mountedUrl) return;
+      const allow = winTarget.tipoutAllowLeave;
+      if (typeof allow === 'function' && !allow()) {
+        event.stopImmediatePropagation();
+        realWindow.history.replaceState(mountedHistoryState, '', mountedUrl);
+      }
+    }, { capture: true });
+  }
   winTarget.parent=scopedWindow; winTarget.top=scopedWindow; winTarget.self=scopedWindow;
   const normalizeHandlers = (node: ParentNode) => node.querySelectorAll<HTMLElement>("*").forEach((el) => Array.from(el.attributes).forEach((a) => { if(/^on/i.test(a.name)){el.setAttribute(`data-native-${a.name.toLowerCase()}`,a.value);el.removeAttribute(a.name);} }));
   normalizeHandlers(root);

@@ -50,6 +50,7 @@
       return root.TipOutDateState.withLock(snapshot.store, snapshot.dateKey, async function () {
         root.TipOutDateState.assertDateWritable(snapshot.store, snapshot.dateKey);
         if (options && options.onlyIfUnallocated && isAllocated(snapshot.store, snapshot.dateKey)) throw new Error('当天已分配，请刷新查看结果');
+        if (options && options.expectedSnapshotHash && (!read(snapshot.store, snapshot.dateKey) || read(snapshot.store, snapshot.dateKey).snapshotHash !== options.expectedSnapshotHash)) throw new Error('分配结果已被其他页面修改，请刷新后重试');
         var prepared = await root.TipOutDateState.prepareSnapshot(snapshot);
         return commitPrepared(prepared);
       });
