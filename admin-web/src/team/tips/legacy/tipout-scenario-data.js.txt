@@ -54,6 +54,14 @@
     var dailySeed = hash(key), hasOrders = combination % 4 < 2, hasTips = combination % 2 === 0;
     var salesCents = hasOrders ? 12000 + dailySeed % 50001 : 0;
     var tipCents = hasTips ? 1 + hash(key + ':tip') % 6000 : 0;
+    // Preserve B01–B08 coverage; enrich clocked sales/tip days with donor cases.
+    var contributionScenario = null;
+    if (combination === 0 && (employee.role === 'Server' || employee.role === 'Bartender')) {
+      var insufficient = Math.floor(calendarDay / 8) % 2 === 0;
+      salesCents = employee.role === 'Server' ? 100000 : 60000;
+      tipCents = insufficient ? 100 : 6000;
+      contributionScenario = insufficient ? '贡献入池封顶' : (employee.role === 'Server' ? '服务员贡献入池' : '调酒师贡献并接收');
+    }
     var surchargeCents = hasOrders ? hash(key + ':surcharge') % 1500 : 0;
     var orders = [];
     if (hasOrders) {
@@ -69,7 +77,7 @@
       }
     }
     return { version: VERSION, key: key, storeId: storeId, employeeId: employeeId, name: String(employee.name || ''), role: String(employee.role || ''),
-      dateKey: options.dateKey, scenarioId: 'B0' + (combination + 1), attendance: attendance(combination < 4, hash(key + ':attendance') % 4),
+      dateKey: options.dateKey, scenarioId: 'B0' + (combination + 1), contributionScenario: contributionScenario, attendance: attendance(combination < 4, contributionScenario ? 0 : hash(key + ':attendance') % 4),
       orders: orders, salesAmount: salesCents / 100, orderTips: hasOrders ? tipCents / 100 : 0,
       reportedTips: hasOrders ? 0 : tipCents / 100, originalTips: tipCents / 100, surcharge: surchargeCents / 100 };
   }

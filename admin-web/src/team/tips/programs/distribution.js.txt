@@ -405,6 +405,10 @@ var ALLOC_KEY = 'tipout_allocated';
             // Retain the existing employee contribution policy; this adapter changes facts, not rule semantics.
             var contributionContext = getAllocationDeductorContext();
             if (window.ruleData && ruleData.isEmployeeInDeductorContext(emp, contributionContext)) scenarioRow.deducted = roundTip(fact.originalTips * (emp.tipRate || 0));
+            if (Array.isArray(savedResult.employeeContributions)) {
+              var contribution = savedResult.employeeContributions.find(function(item) { return String(item.employeeId) === String(emp.employeeId).replace(/^roster:/,''); });
+              scenarioRow.deducted = contribution ? roundTip(contribution.amount) : 0;
+            }
             savedResult.pools.forEach(function(pool) { pool.employees.forEach(function(e) {
               if (String(e.employeeId) === String(emp.employeeId).replace(/^roster:/,'')) scenarioRow.received += Number(e.amount || 0);
             }); });

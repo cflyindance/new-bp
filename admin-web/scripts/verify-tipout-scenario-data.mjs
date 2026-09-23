@@ -6,6 +6,16 @@ const context = { window: {}, Date, Math };
 context.window.localStorage = { setItem() { throw Error('Facts must be read-only'); } };
 vm.runInNewContext(fs.readFileSync(new URL('../src/team/tips/legacy/tipout-scenario-data.js.txt', import.meta.url), 'utf8'), context);
 const api = context.window.TipOutScenarioData;
+for (const role of ['Server','Bartender']) {
+  const month = api.monthDates('2026-09-23').map(dateKey=>api.fact({storeId:'s1',employee:{id:'donor',name:'Donor',role},dateKey}));
+  assert.ok(month.some(f=>f.contributionScenario==='贡献入池封顶' && f.originalTips===1 && f.salesAmount>=600));
+  assert.ok(month.some(f=>f.contributionScenario && f.originalTips===60 && f.attendance.effectiveHours===8));
+}
+for (const file of ['personalSalesDeduct','tipAllocation']) vm.runInNewContext(fs.readFileSync(new URL('../src/team/tips/legacy/'+file+'.js.txt',import.meta.url),'utf8'),context);
+const donorRules = [.03,.01,.02].map(rate=>({deductConfig:{personalSalesPct:{scopeType:'role',roles:['Server'],rate}}}));
+const contributionFacts = [{employeeId:'a',name:'A',role:'Server',salesAmount:1000,originalTips:60},{employeeId:'b',name:'B',role:'Server',salesAmount:1000,originalTips:1},{employeeId:'c',name:'C',role:'Busser',salesAmount:1000,originalTips:60}];
+assert.deepEqual(JSON.parse(JSON.stringify(context.window.TipAllocation.collectScenarioContributions(donorRules,contributionFacts))),[{employeeId:'a',amount:60},{employeeId:'b',amount:1},{employeeId:'c',amount:0}]);
+assert.equal(contributionFacts[1].originalTips,1);
 const plain = value => JSON.parse(JSON.stringify(value));
 const employee = { id: 'e1', name: '同名员工', role: 'Server' };
 const input = { storeId: 's1', employee, dateKey: '2026-09-23' };

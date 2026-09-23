@@ -534,7 +534,24 @@
     };
   }
 
+  // New snapshots record actual contributions in rule order, capped by remaining tips.
+  function collectScenarioContributions(rules, facts) {
+    var employees = (facts || []).map(function(fact) {
+      return {id:fact.employeeId,name:fact.name,role:fact.role,salesAmount:fact.salesAmount,tipBefore:fact.originalTips};
+    });
+    var totals = employees.map(function(employee) { return {employeeId:employee.id,amount:0}; });
+    (rules || []).forEach(function(rule) {
+      if (!rule.deductConfig || (rule.allocationMode && rule.allocationMode !== 'legacy_pool')) return;
+      var result = runDeductPipeline(rule, employees);
+      result.employeeResults.forEach(function(row, index) {
+        totals[index].amount = roundMoney(totals[index].amount + row.deducted);
+        employees[index].tipBefore = row.tipAfterDeduct;
+      });
+    });
+    return totals;
+  }
   var api = {
+    collectScenarioContributions: collectScenarioContributions,
     roundMoney: roundMoney,
     normalizeHours: normalizeHours,
     normalizeWorkHoursConfig: normalizeWorkHoursConfig,

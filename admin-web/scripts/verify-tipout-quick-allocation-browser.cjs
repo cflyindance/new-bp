@@ -67,6 +67,8 @@ const { chromium } = process.env.TIPOUT_BROWSER_PACKAGES ? createRequire(path.jo
     const snapshot = Object.values(results)[0];
     assert.equal(snapshot.dateKey,date);
     assert.equal(snapshot.scenarioFacts.length,6);
+    assert.equal(snapshot.employeeContributions.length,6);
+    assert.ok(snapshot.employeeContributions.every(row=>Number.isFinite(row.amount) && row.amount>=0));
     assert.equal(snapshot.summary.originalTips,Math.round(snapshot.scenarioFacts.reduce((sum,f)=>sum+f.originalTips,0)*100)/100);
     assert.ok(snapshot.pools.length > 0);
     assert.ok(snapshot.pools.some(p=>p.employees.length));

@@ -37,6 +37,7 @@
         var snapshot = root.TipOutAllocationResults.read(store,date);
         root.TipOutScenarioSource.day(date,store).sort(function(a,b) { return a.name.localeCompare(b.name) || a.employeeId.localeCompare(b.employeeId); }).forEach(function(f) {
           var expected = f.attendance.punchSessions.length ? '按规则参与分配' : '未打卡，从池分得为0';
+          if (f.contributionScenario) expected += '；' + f.contributionScenario;
           if (!participants.has(f.employeeId)) expected += '；未参与规则';
           if (f.closed) expected = '未营业，不分配（基础场景被营业状态覆盖）';
           if (snapshot) expected = '已有快照，以历史结果为准；' + expected;
