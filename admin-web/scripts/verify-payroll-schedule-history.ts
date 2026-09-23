@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import {scheduleHistory,editPendingRule,withdrawPendingRule} from '../src/team/payroll/payroll-schedule-history';
+import type {PayrollScheduleRule} from '../src/team/payroll/payroll-schedule-types';
+const rule:PayrollScheduleRule={id:'old',storeId:'s',version:1,effectiveFrom:'2025-01-01',frequency:'biweekly',timezone:'America/Chicago',status:'active',plannedPayDatePolicy:{kind:'daysAfterEnd',days:6}};
+const pending:PayrollScheduleRule={...rule,id:'next',version:2,effectiveFrom:'2027-07-01',status:'pending'};
+const rules=[rule,pending];
+assert.deepEqual(scheduleHistory(rules,'s','2027-07-02').map(r=>[r.status,r.endDate]),[['expired','2027-06-30'],['active',undefined]]);
+assert.equal(scheduleHistory(rules,'another','2026-01-01').length,0);
+assert.throws(()=>editPendingRule(rules,rule,'2026-01-01',[]));
+assert.throws(()=>editPendingRule(rules,{...pending,storeId:'another'},'2026-01-01',[]));
+assert.throws(()=>withdrawPendingRule(rules,'next','2026-01-01',['next']));
+assert.equal(withdrawPendingRule(rules,'next','2026-01-01',[])[1].status,'withdrawn');
+assert.equal(editPendingRule(rules,{...pending,frequency:'weekly'},'2026-01-01',[])[1].frequency,'weekly');
+assert.equal(rules[1].frequency,'biweekly');
+console.log('Payroll history lifecycle passed');

@@ -1,0 +1,11 @@
+const fs=require('node:fs'),assert=require('node:assert/strict');
+const source=fs.readFileSync('src/team/payroll/legacy/payroll.js.txt','utf8');
+const start=source.indexOf('  function migratePeriods(data)');
+const end=source.indexOf('\n  function ',start+5);
+const migrate=new Function('buildPresetPeriods',`${source.slice(start,end)};return migratePeriods`)(()=>[{id:'legacy',rangeLabel:'new preset',status:'draft'}]);
+const data={periods:[{id:'legacy',rangeLabel:'locked historical range',periodNumber:2,status:'confirmed',exportBatch:'keep'},{id:'new-rule',startDate:'2027-07-01',endDate:'2027-07-15',frequency:'semimonthly'}]};
+const before=JSON.stringify(data);
+migrate(data);assert.equal(JSON.stringify(data),before);
+migrate(data);assert.equal(JSON.stringify(data),before);
+const empty={periods:[]};migrate(empty);assert.equal(empty.periods[0].id,'legacy');
+console.log('Historical and new payroll periods preserved');

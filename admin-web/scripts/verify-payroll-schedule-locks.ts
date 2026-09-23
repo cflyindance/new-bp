@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import {findScheduleLocks} from '../src/team/payroll/payroll-schedule-locks';
+import type {PayrollData} from '../src/team/payroll/payroll-types';
+const data:PayrollData={periods:[{id:'old',endDate:'2027-06-30',status:'confirmed'},{id:'next',endDate:'2027-07-17',status:'draft'}],employees:{old:[{id:'e',name:'test',segments:[],adjustments:{}}],next:[{id:'e',name:'test',confirmed:true,segments:[],adjustments:{}}]},auditLog:[]};
+assert.deepEqual(findScheduleLocks(data,'s','2027-07-01',new Set(['e'])).map(l=>l.periodId),['next']);
+assert.equal(findScheduleLocks(data,'s','2027-07-01',new Set(['other'])).length,0);
+data.employees.next[0].confirmed=false;
+assert.equal(findScheduleLocks(data,'s','2027-07-01',new Set(['e'])).length,0);
+delete data.periods[1].endDate;
+assert.equal(findScheduleLocks(data,'s','2027-07-01',new Set(['e'])).length,1);
+console.log('Payroll schedule lock guards passed');

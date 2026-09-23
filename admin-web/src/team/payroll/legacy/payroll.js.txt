@@ -404,8 +404,10 @@
     return 0;
   }
 
+  let payrollAttendanceView = 'week';
+  let payrollReady = false;
   function shouldGroupManageSegmentsByWeek(period) {
-    return periodHasStarted(period, new Date());
+    return payrollAttendanceView === 'week';
   }
 
   function buildManageSegmentWeekGroups(segments, period) {
@@ -416,10 +418,10 @@
       dayIdx,
     }));
     items.sort((a, b) => compareSegmentDayDates(a.day, b.day));
-    const weeks = [[], []];
+    const weeks = [];
     items.forEach((item, sortedIdx) => {
-      const wk = resolveWeekIndex(item.day.date, periodStart, sortedIdx);
-      weeks[wk].push(item);
+      const wk = resolveWeekIndex(item.day.date, periodStart, sortedIdx, period);
+      (weeks[wk] || (weeks[wk] = [])).push(item);
     });
     return weeks;
   }
@@ -453,11 +455,11 @@
   }
 
   function renderManageWeekTitleHtml(period, weekIndex) {
-    const rangeText = getWeekRangeTextFromPeriod(period && period.rangeLabel, weekIndex);
+    const rangeText = getWeekRangeTextFromPeriod(period && period.rangeLabel, weekIndex, period);
     const title = rangeText
       ? T("detail.weekRange", { n: weekIndex + 1, range: rangeText })
       : T("detail.weekN", { n: weekIndex + 1 });
-    return `<h4 class="payroll-seg-week-title">${escapeHtml(title)}</h4>`;
+    return `<h4 class="payroll-seg-week-title">${escapeHtml(title)}${rangeText.includes('部分工作周') ? `<button type="button" class="btn btn-sm no-print" data-schedule-week="${weekIndex}">查看完整工作周</button>` : ''}</h4>`;
   }
 
   function sumWeekSegmentTotals(group) {
@@ -515,6 +517,7 @@
       const totals = sumWeekSegmentTotals(group);
       blocks.push(`<section class="payroll-seg-week-block">
         <div class="payroll-seg-week-toolbar">
+          <button type="button" class="btn btn-sm no-print" data-week-toggle aria-expanded="true">收起</button>
           ${renderManageWeekTitleHtml(period, weekIndex)}
           ${renderManageWeekSummaryHtml(totals, weekIndex)}
         </div>
@@ -931,6 +934,7 @@
   }
 
   function updateUnifiedRosterFromEmployee(emp) {
+    if (state.data.demo) return;
     if (!emp) return;
     try {
       const raw = localStorage.getItem(ROSTER_STORAGE_KEY);
@@ -1097,6 +1101,7 @@
     });
   }
 
+  let state;
   fillElapsed2026PeriodEmployees(DEFAULT_DATA.employees, DEFAULT_DATA.periods);
   syncEmployeesFromUnifiedRoster(DEFAULT_DATA.employees);
   fillDraftScenario(DEFAULT_DATA.employees);
@@ -1104,7 +1109,7 @@
   fillPartialConfirmedScenario(DEFAULT_DATA.employees, DEFAULT_DATA.periods);
   syncPeriodStatuses(DEFAULT_DATA.periods, DEFAULT_DATA.employees);
 
-  let state = {
+  state = {
     data: cloneData(DEFAULT_DATA),
     view: "periods",
     periodId: null,
@@ -1377,7 +1382,9 @@
     const unpaidMeal = mealMinutes(day.unpaidMealBreak);
     const paidBreak = mealMinutes(day.paidMealBreak);
     const net = Math.max(0, work - unpaidMeal - paidBreak);
-    return Math.round((net / 60) * 100) / 100;
+    // OT/OT2 classify hours already included in the clock interval, not extra hours.
+    const overtime = Math.max(0, Number(day.ot) || 0) + Math.max(0, Number(day.ot2) || 0);
+    return Math.round(Math.max(0, net / 60 - overtime) * 100) / 100;
   }
 
   function applyAutoRegularHours(emp) {
@@ -1421,17 +1428,11 @@
   }
 
   function migratePeriods(data) {
-    const preset = buildPresetPeriods();
     const old = Array.isArray(data && data.periods) ? data.periods : [];
-    const map = new Map(old.map((p) => [p && p.id, p]));
-    data.periods = preset.map((p) => {
-      const ex = map.get(p.id);
-      if (!ex || typeof ex !== "object") return p;
-      return {
-        ...p,
-        status: ex.status != null ? ex.status : p.status,
-      };
-    });
+    // Stored period identities, dates and export metadata are historical facts.
+    // Presets only initialize an empty workspace; loading must never regenerate them.
+    if (old.length) return;
+    data.periods = buildPresetPeriods();
   }
 
   function migratePayrollData(data) {
@@ -1576,14 +1577,23 @@
   }
 
   function scheduleRemoteSave() {
+    if (state.data.demo) return;
     if (typeof PayrollApiClient === "undefined") return;
     clearTimeout(remoteSaveTimer);
     remoteSaveTimer = setTimeout(() => {
-      PayrollApiClient.saveSnapshot(buildSnapshot()).catch(() => {});
+      if (state.data.demo) return;
+      PayrollApiClient.saveSnapshot(buildSnapshot()).catch((error) => {
+        if (String(error && error.message).includes('revision_conflict')) {
+          showNotification('薪资数据已在其他页面更新，本次未同步。请重新加载后核对再保存。', 'error');
+        } else {
+          showNotification('薪资数据尚未同步到服务，请检查连接后重试。', 'error');
+        }
+      });
     }, 400);
   }
 
   function saveState() {
+    if (state.data.demo) return;
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(buildSnapshot()));
     } catch (_) {
@@ -2885,11 +2895,12 @@
   }
 
   function getRecentYears(count = 10) {
+    if (state.data.demo) return [...new Set(state.data.periods.map(p => String(p.year)))].sort().reverse();
     const current = new Date().getFullYear();
     const years = [];
     const n = Math.max(1, Number(count) || 10);
     for (let i = 0; i < n; i++) {
-      years.push(String(current - i));
+      years.push(String(current + 1 - i));
     }
     return years;
   }
@@ -3009,7 +3020,7 @@
     const activePeriod = getPeriod(state.periodId);
     if (periodValue) {
       periodValue.textContent = activePeriod && activePeriod.periodNumber != null
-        ? String(activePeriod.periodNumber)
+        ? `${activePeriod.periodNumber} · ${activePeriod.rangeLabel || ''}`
         : "—";
     }
 
@@ -3050,7 +3061,7 @@
         const selected = option.value === periodSelect.value;
         const number = period && period.periodNumber != null ? period.periodNumber : option.textContent;
         return `<button type="button" class="payroll-filter-option payroll-compact-option${selected ? " is-selected" : ""}" data-action="select-workspace-period" data-value="${escapeHtml(option.value)}" role="option" aria-selected="${selected ? "true" : "false"}">
-          <span class="payroll-filter-radio" aria-hidden="true"></span><strong>${escapeHtml(String(number || "—"))}</strong>${isCurrentPayrollPeriod(period) ? `<span class="payroll-period-now">${escapeHtml(T("workspace.now"))}</span>` : ""}
+          <span class="payroll-filter-radio" aria-hidden="true"></span><span><strong>${escapeHtml(String(number || "—"))} · ${escapeHtml(({weekly:'单周',biweekly:'双周',semimonthly:'半月',monthly:'一月',custom:'自定义 10 天'})[period?.frequency] || '双周')}${period?.transition ? ' · 过渡期' : ''}</strong><small style="display:block">${escapeHtml(period?.rangeLabel || '')}</small></span>${isCurrentPayrollPeriod(period) ? `<span class="payroll-period-now">${escapeHtml(T("workspace.now"))}</span>` : ""}
         </button>`;
       }).join("");
     }
@@ -3410,25 +3421,37 @@
   }
 
   /** 周标题按周期自然周段展示：第1周(start~start+6) 第2周(start+7~end) */
-  function getWeekRangeTextFromPeriod(rangeLabel, weekIndex) {
-    const { start, end } = getPeriodDateRange(rangeLabel);
-    if (!start) return "";
-    const weekStart = addDays(start, weekIndex * 7);
-    if (!weekStart) return "";
-    const rawWeekEnd = addDays(weekStart, 6);
-    const weekEnd = end && rawWeekEnd && rawWeekEnd.getTime() > end.getTime() ? end : rawWeekEnd;
-    if (!weekEnd) return "";
-    return `${formatMdyDate(weekStart)} - ${formatMdyDate(weekEnd)}`;
+  function getPayrollWorkweekStartDay(period) {
+    const configured = period && period.workweekStartDay;
+    if (Number.isInteger(configured) && configured >= 0 && configured <= 6) return configured;
+    const store = period && period.storeId || (state && state.employeeStoreFilter);
+    const settings = state && state.data && state.data.workweekSettings;
+    const setting = settings && settings[store];
+    if (Number.isInteger(setting) && setting >= 0 && setting <= 6) return setting;
+    // Historical data without metadata retains its existing Sunday grouping.
+    return 0;
   }
 
-  function resolveWeekIndex(dayDateStr, periodStartDate, fallbackDayIdx) {
+  function getWeekRangeTextFromPeriod(rangeLabel, weekIndex, period) {
+    const { start, end } = getPeriodDateRange(rangeLabel);
+    if (!start) return "";
+    const weekStart = addDays(start, -((start.getDay() - getPayrollWorkweekStartDay(period) + 7) % 7) + weekIndex * 7);
+    if (!weekStart) return "";
+    const rawWeekEnd = addDays(weekStart, 6);
+    const weekEnd = rawWeekEnd;
+    if (!weekEnd) return "";
+    const partial = weekStart < start || (end && weekEnd > end);
+    return `${formatMdyDate(weekStart)} - ${formatMdyDate(weekEnd)}${partial ? ' · 部分工作周' : ''}`;
+  }
+
+  function resolveWeekIndex(dayDateStr, periodStartDate, fallbackDayIdx, period) {
     const d = parseMdyDate(dayDateStr);
     if (d && periodStartDate) {
-      const diff = Math.floor((d.getTime() - periodStartDate.getTime()) / (24 * 60 * 60 * 1000));
-      if (diff >= 0 && diff <= 6) return 0;
-      return 1;
+      const base = addDays(periodStartDate, -((periodStartDate.getDay() - getPayrollWorkweekStartDay(period) + 7) % 7));
+      const diff = Math.round((Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) - Date.UTC(base.getFullYear(), base.getMonth(), base.getDate())) / 86400000);
+      return Math.max(0, Math.floor(diff / 7));
     }
-    return fallbackDayIdx <= 6 ? 0 : 1;
+    return Math.floor(fallbackDayIdx / 7);
   }
 
   function buildDayRowsHtml(day, emp) {
@@ -3512,10 +3535,7 @@
     }
 
     const periodStartDate = getPeriodStartDate(period && period.rangeLabel);
-    const weeks = [
-      { index: 0, totals: createWeekTotals(), items: [] },
-      { index: 1, totals: createWeekTotals(), items: [] },
-    ];
+    const weeks = [];
 
     segments.forEach((raw, dayIdx) => {
       const day = normalizeDay(raw);
@@ -3529,8 +3549,8 @@
       const otAmtNum = otNum * getDayOtRate(day, emp);
       const ot2AmtNum = ot2Num * getDayOt2Rate(day, emp);
       const amountNum = regAmtNum + paidBreakAmtNum + otAmtNum + ot2AmtNum;
-      const weekIdx = resolveWeekIndex(day.date, periodStartDate, dayIdx);
-      const wk = weeks[weekIdx];
+      const weekIdx = resolveWeekIndex(day.date, periodStartDate, dayIdx, period);
+      const wk = weeks[weekIdx] || (weeks[weekIdx] = { index: weekIdx, totals: createWeekTotals(), items: [] });
       wk.items.push({ day, dayIdx });
       wk.totals.reg += regNum;
       wk.totals.paidBreak += paidBreakH;
@@ -3551,7 +3571,7 @@
         const body = wk.items.map((it) => buildDayRowsHtml(it.day, emp)).join("");
         const amountText = formatDetailWeekAmountSummary(wk.totals);
         const hoursText = formatDetailWeekHoursSummary(wk.totals);
-        const rangeText = getWeekRangeTextFromPeriod(period && period.rangeLabel, wk.index);
+        const rangeText = getWeekRangeTextFromPeriod(period && period.rangeLabel, wk.index, period);
         const weekTitle = rangeText
           ? T("detail.weekRange", { n: wk.index + 1, range: rangeText })
           : T("detail.weekN", { n: wk.index + 1 });
@@ -3614,10 +3634,7 @@
     const periodStartDate = getPeriodStartDate(period.rangeLabel);
     const dailyRows = [];
     const weekSummaries = [];
-    const weeks = [
-      { index: 0, totals: createWeekTotals(), items: [] },
-      { index: 1, totals: createWeekTotals(), items: [] },
-    ];
+    const weeks = [];
 
     segments.forEach((raw, dayIdx) => {
       const day = normalizeDay(raw);
@@ -3634,8 +3651,8 @@
       const otAmtNum = otNum * dayOtRate;
       const ot2AmtNum = ot2Num * dayOt2Rate;
       const amountNum = regAmtNum + paidBreakAmtNum + otAmtNum + ot2AmtNum;
-      const weekIdx = resolveWeekIndex(day.date, periodStartDate, dayIdx);
-      const wk = weeks[weekIdx];
+      const weekIdx = resolveWeekIndex(day.date, periodStartDate, dayIdx, period);
+      const wk = weeks[weekIdx] || (weeks[weekIdx] = { index: weekIdx, totals: createWeekTotals(), items: [] });
       wk.items.push({ day });
       wk.totals.reg += regNum;
       wk.totals.paidBreak += paidBreakH;
@@ -3677,7 +3694,7 @@
     weeks
       .filter((wk) => wk.items.length > 0)
       .forEach((wk) => {
-        const rangeText = getWeekRangeTextFromPeriod(period.rangeLabel, wk.index);
+        const rangeText = getWeekRangeTextFromPeriod(period.rangeLabel, wk.index, period);
         weekSummaries.push({
           title: T("detail.weekN", { n: wk.index + 1 }),
           range: rangeText || "",
@@ -3763,6 +3780,7 @@ body{margin:0;padding:24px;background:#fff;}
   }
 
   function applyTipOutBridgeForCurrentPeriod() {
+    if (state.data.demo) return;
     if (typeof TipOutPayrollBridge === "undefined" || !state.data || !state.periodId) return;
     if (TipOutPayrollBridge.applyBridgeToPeriod(state.data, state.periodId)) {
       saveState();
@@ -3806,7 +3824,7 @@ body{margin:0;padding:24px;background:#fff;}
       if (day.ot2Rate == null) day.ot2Rate = Number(editEmp.ot2Rate) || 0;
       return day;
     });
-    ensureManageBiweeklySegments(editEmp, period);
+    // Viewing a period must not synthesize attendance records.
     state.workspaceDraft.segments = editEmp.segments.map((d) => normalizeDay(d));
 
     const segWrap = $("#manage-segments-wrap");
@@ -3816,9 +3834,9 @@ body{margin:0;padding:24px;background:#fff;}
       const weekGroups = buildManageSegmentWeekGroups(segments, period);
       if (segWrap) segWrap.innerHTML = renderManageBiweeklySegmentsHtml(period, weekGroups, editEmp);
     } else {
-      segments.forEach((rawDay, dayIdx) => {
-        appendManageSegmentDayRows(rowHtml, normalizeDay(rawDay), dayIdx, editEmp);
-      });
+      segments.map((rawDay, dayIdx) => ({ day: normalizeDay(rawDay), dayIdx }))
+        .sort((a, b) => compareSegmentDayDates(a.day, b.day))
+        .forEach(({ day, dayIdx }) => appendManageSegmentDayRows(rowHtml, day, dayIdx, editEmp));
       if (segWrap) segWrap.innerHTML = renderManageSingleSegmentTableHtml(rowHtml);
     }
 
@@ -4117,6 +4135,7 @@ body{margin:0;padding:24px;background:#fff;}
   }
 
   function refreshEmployeeDataFromThirdParty() {
+    if (state.data.demo) { showNotification('示例数据无需从员工档案更新', 'info'); return; }
     showRefreshEmployeeDataConfirmDialog().then((confirmed) => {
       if (!confirmed) return;
       runAfterUnsavedWorkspaceConfirm(() => {
@@ -4708,6 +4727,7 @@ body{margin:0;padding:24px;background:#fff;}
   }
 
   function finishBootstrap() {
+    payrollReady = true;
     applyAdpMappingToData(state.data);
     if (typeof initPayrollI18n === "function") {
       initPayrollI18n(refreshPayrollLocale);
@@ -4746,9 +4766,12 @@ body{margin:0;padding:24px;background:#fff;}
       state.employeeId = null;
       showView("periods");
     }
+    // Wait for injected scenario controls to initialize, including synchronous bootstrap.
+    queueMicrotask(() => changePayrollDemoScenario('biweekly'));
   }
 
   function applyRosterSyncFromEvent() {
+    if (state.data.demo) return;
     try {
       syncEmployeesFromUnifiedRoster(state.data.employees);
       syncPeriodStatuses(state.data.periods, state.data.employees);
@@ -4778,6 +4801,10 @@ body{margin:0;padding:24px;background:#fff;}
   }
 
   function handleGlobalScopeFilterChange() {
+    if (state.data.demo) {
+      changePayrollDemoScenario('');
+      return;
+    }
     const apply = () => {
       const list = state.data.employees[state.periodId] || [];
       resolveEmployeeStoreFilter(list);

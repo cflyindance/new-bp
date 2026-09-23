@@ -636,3 +636,68 @@
     overflow-x: auto;
   }
 }
+:host .payroll-scenario-bar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:10px 12px; margin-bottom:16px; background:#f0f6ff; border-radius:8px; font-size:12px; }
+:host .payroll-scenario-bar button, :host .payroll-attendance-toggle button { border:1px solid transparent; background:transparent; color:#51667f; border-radius:6px; padding:7px 11px; cursor:pointer; }
+:host .payroll-scenario-bar button.is-active, :host .payroll-attendance-toggle button.is-active { background:white; border-color:#b8d6ff; color:#1677ff; }
+:host .payroll-attendance-toggle { display:flex; justify-content:flex-end; gap:4px; margin:12px 0; }
+:host #payroll-period-menu { min-width:340px; }
+:host .payroll-filter-popover,
+:host .payroll-filter-options {
+  overscroll-behavior: contain;
+}
+:host #payroll-period-trigger { max-width:420px; }
+:host #payroll-period-trigger-value { overflow:hidden; text-overflow:ellipsis; }
+:host #payroll-schedule-week-dialog { width:min(800px,90vw); max-height:85vh; overflow:auto; overscroll-behavior:contain; border:1px solid #dce2ea; border-radius:12px; padding:24px; }
+:host #payroll-schedule-week-dialog::backdrop { background:#17233377; }
+@media print {
+  :host .payroll-seg-week-block table[hidden] { display: table !important; }
+}
+:host .payroll-schedule-dialog { width:min(1080px,94vw); max-height:88vh; overflow:auto; border:1px solid #dce3ec; border-radius:16px; padding:24px; color:#172b46; background:white; }
+/* The legacy reset removes the UA dialog margin; explicitly restore viewport centering. */
+:host .payroll-schedule-dialog,
+:host #payroll-schedule-week-dialog {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  box-sizing: border-box;
+  overscroll-behavior: contain;
+}
+:host .payroll-schedule-dialog::backdrop { background:rgb(15 23 42 / 35%); }
+:host .payroll-schedule-page {
+  width: 100vw;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  padding: 28px max(24px, calc((100vw - 1440px) / 2));
+  background: #f5f7fa;
+  overflow: auto;
+}
+:host .payroll-schedule-dialog.payroll-schedule-page > header {
+  justify-content: flex-start;
+}
+:host .payroll-schedule-page .payroll-schedule-current,
+:host .payroll-schedule-page .payroll-schedule-table {
+  background: white;
+}
+:host .payroll-schedule-page .payroll-schedule-table {
+  padding: 16px;
+  border: 1px solid #e5eaf1;
+  border-radius: 12px;
+}
+:host .payroll-schedule-dialog header,:host .payroll-schedule-tools,:host .payroll-schedule-dialog footer { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:20px; }
+:host .payroll-schedule-dialog footer { justify-content:flex-end; margin-top:24px; margin-bottom:0; }
+:host .payroll-schedule-dialog label { display:grid; gap:8px; margin-bottom:16px; }
+:host .payroll-schedule-dialog select,:host .payroll-schedule-dialog input,:host .payroll-schedule-dialog button { padding:9px 12px; border:1px solid #dce3ec; border-radius:7px; background:white; color:inherit; font:inherit; }
+:host .payroll-schedule-dialog button { cursor:pointer; }
+:host .payroll-schedule-dialog button:disabled { opacity:.45; cursor:not-allowed; }
+:host .payroll-schedule-dialog fieldset { border:0; padding:0; margin:0; }
+:host .payroll-schedule-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:18px; }
+:host .payroll-schedule-dialog [hidden] { display:none!important; }
+:host .payroll-schedule-table { overflow:auto; }
+:host .payroll-schedule-table table { width:100%; border-collapse:collapse; }
+:host .payroll-schedule-table td,:host .payroll-schedule-table th { padding:12px; border-bottom:1px solid #e5eaf1; text-align:left; white-space:nowrap; }
+:host .payroll-schedule-dialog [role=alert] { color:#b42318; }
+:host .payroll-schedule-current { display:flex; flex-wrap:wrap; gap:24px; padding:20px; margin:16px 0 24px; border:1px solid #e5eaf1; border-radius:12px; }

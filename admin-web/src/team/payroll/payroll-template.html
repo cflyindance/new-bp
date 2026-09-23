@@ -1,4 +1,20 @@
 <section class="team-payroll-page payroll-page" data-team-payroll-page>
+  <dialog id="payroll-schedule-week-dialog" aria-label="完整工作周核对">
+    <h3>完整工作周核对</h3><div data-week-content></div>
+    <form method="dialog" style="text-align:right;margin-top:16px"><button class="btn" type="submit">关闭</button></form>
+  </dialog>
+  <div class="payroll-scenario-bar no-print" aria-label="示例场景">
+    <strong>示例场景</strong>
+    <button type="button" data-payroll-scenario="" class="is-active" aria-pressed="true">实际数据</button>
+    <button type="button" data-payroll-scenario="biweekly">双周</button>
+    <button type="button" data-payroll-scenario="weekly">单周</button>
+    <button type="button" data-payroll-scenario="semimonthly">半月</button>
+    <button type="button" data-payroll-scenario="monthly">一月</button>
+    <button type="button" data-payroll-scenario="custom">自定义 10 天</button>
+    <button type="button" data-payroll-scenario="switch">双周 → 半月</button>
+    <button type="button" data-payroll-scenario="transition">4 天过渡期</button>
+    <span id="payroll-demo-indicator" role="status"></span>
+  </div>
   <div class="payroll-native-status no-print" data-payroll-status hidden></div>
 <div id="payroll-mode-banner" class="payroll-mode-banner no-print" role="status">
           <div class="payroll-mode-banner-text">
@@ -225,6 +241,12 @@
             <section class="payroll-manage-section payroll-attendance-section" aria-label="考勤明细">
               <h3 class="payroll-manage-section-title" id="manage-timecard-title">考勤明细</h3>
               <div class="card payroll-attendance-card">
+                <div class="payroll-attendance-toggle no-print" aria-label="考勤展示方式">
+                  <button type="button" data-attendance-view="week" class="is-active" aria-pressed="true">按周展示</button>
+                  <button type="button" data-attendance-view="date" aria-pressed="false">日期列表</button>
+                  <button type="button" data-weeks-expand>展开全部</button>
+                  <button type="button" data-weeks-collapse>收起全部</button>
+                </div>
                 <div class="payroll-seg-wrap" id="manage-segments-wrap"></div>
               </div>
             </section>

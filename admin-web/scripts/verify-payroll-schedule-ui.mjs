@@ -1,0 +1,10 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+const source=fs.readFileSync('src/team/payroll/payroll-schedule-controller.ts','utf8');
+const page=fs.readFileSync('src/team/payroll-page.ts','utf8');
+for(const marker of ['发薪周期设置','data-store','data-add','data-edit','data-delete','每期从哪天开始','计划发薪日','confirmAction','showModal()','scheduleHistory','editPendingRule','withdrawPendingRule'])assert.ok(source.includes(marker),marker);
+assert.match(page,/mountPayrollScheduleController\(shadowRoot, runtime.getBatchBridge\(\), context\)/);
+assert.match(page,/schedule.destroy\(\)/);
+assert.match(source,/!demo\(\)\|\|!selected/);
+assert.doesNotMatch(source,/localStorage\.setItem|fetch\(/);
+console.log('Schedule settings isolated UI contract passed (not browser E2E)');
