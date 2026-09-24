@@ -404,7 +404,6 @@ function detailNumber(value) { return Number(value) || 0; }
         allocationButton.textContent = summary.allocationHoursSummary ? summary.allocationHoursSummary.display : '—';
         allocationButton.disabled = !summary.allocationHoursSummary || summary.allocationHoursSummary.kind === 'empty';
       }
-      setDetailText('employeeDetailManualHours', detailNumber(summary.manualPoolCount) + ' 个小费池 / ' + detailNumber(summary.manualRecords) + ' 条记录');
       setDetailText('employeeDetailBefore', detailMoney(summary.before));
       setDetailText('employeeDetailDeducted', summary.allocatedCount ? '-' + detailMoney(summary.deducted) : '—');
       setDetailText('employeeDetailReceived', summary.allocatedCount ? '+' + detailMoney(summary.received) : '—');
