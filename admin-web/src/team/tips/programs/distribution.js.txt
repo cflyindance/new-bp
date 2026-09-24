@@ -412,6 +412,16 @@ var ALLOC_KEY = 'tipout_allocated';
             savedResult.pools.forEach(function(pool) { pool.employees.forEach(function(e) {
               if (String(e.employeeId) === String(emp.employeeId).replace(/^roster:/,'')) scenarioRow.received += Number(e.amount || 0);
             }); });
+            var employeeAmounts = Array.isArray(savedResult.employeeAmounts) ? savedResult.employeeAmounts : null;
+            if (!employeeAmounts && Array.isArray(savedResult.scenarioFacts) && savedResult.scenarioFacts.some(function(item) { return item && item.version === 'tipout-scenarios-v1'; })) {
+              var demoRules = getRulesForCurrentStore().filter(function(rule) { return !!rule.demoScenarioKey && !!rule.deductConfig; });
+              employeeAmounts = window.TipAllocation.collectScenarioEmployeeAmounts(demoRules,savedResult.scenarioFacts);
+            }
+            if (employeeAmounts) {
+              var employeeAmount = employeeAmounts.find(function(item) { return String(item.employeeId) === String(emp.employeeId).replace(/^roster:/,''); });
+              scenarioRow.deducted = employeeAmount ? roundTip(employeeAmount.deducted) : 0;
+              scenarioRow.received = employeeAmount ? roundTip(employeeAmount.received) : 0;
+            }
             scenarioRow.received = roundTip(scenarioRow.received);
             scenarioRow.after = calcTipAfter(scenarioRow.before,scenarioRow.deducted,scenarioRow.received);
             scenarioRow.hours = fact.attendance.effectiveHours;

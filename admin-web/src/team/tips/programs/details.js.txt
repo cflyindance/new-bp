@@ -1676,6 +1676,7 @@ var ALLOC_KEY = 'tipout_allocated';
         dateKey: dateKey,
         confirmedAt: new Date().toISOString(),
         scenarioFacts: window.TipOutScenarioSource ? window.TipOutScenarioSource.day(dateKey,store) : undefined,
+        employeeAmounts: window.TipOutScenarioSource ? window.TipAllocation.collectScenarioEmployeeAmounts(rules,window.TipOutScenarioSource.day(dateKey,store)) : undefined,
         employeeContributions: window.TipOutScenarioSource ? window.TipAllocation.collectScenarioContributions(rules,window.TipOutScenarioSource.day(dateKey,store)) : undefined,
         editorState: window.TipOutDetailSnapshot ? window.TipOutDetailSnapshot.capture(document, rules) : undefined,
         pools: pools,

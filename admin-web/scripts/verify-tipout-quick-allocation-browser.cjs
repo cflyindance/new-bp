@@ -21,6 +21,7 @@ const { chromium } = process.env.TIPOUT_BROWSER_PACKAGES ? createRequire(path.jo
       const context = {getScope:()=>({storeId:store,storeLabel:store,storeLabelEn:store,isAllStores:false,usesInPageStorePicker:true,stores:[{id:store,labelZh:store,labelEn:store}]}),setStoreScope:()=>{},subscribeScopeChange:()=>()=>{},navigate:href=>window.testNavigation=href,replace:()=>{},getNavigationState:()=>null,getScrollOwner:()=>null};
       window.mountTest = () => { window.testRuntime?.destroy(); root.innerHTML=renderTipsTemplate('distribution'); window.testRuntime=mountLegacyTipsRuntime(shadow,root,{view:'distribution',query:'',href:'/team/tips/distribution'},context); };
       window.mountRulesTest = () => { window.testRuntime?.destroy(); root.innerHTML=renderTipsTemplate('rules'); window.testRuntime=mountLegacyTipsRuntime(shadow,root,{view:'rules',query:'',href:'/team/tips/rules'},context); };
+      window.mountEmployeeSummaryTest = () => { window.testRuntime?.destroy(); root.innerHTML=renderTipsTemplate('distribution'); window.testRuntime=mountLegacyTipsRuntime(shadow,root,{view:'distribution',query:'?view=employee',href:'/team/tips/distribution?view=employee'},context); };
       window.mountDetailTest = date => { window.testRuntime?.destroy(); root.innerHTML=renderTipsTemplate('details'); const query='?store='+encodeURIComponent(store)+'&date='+date; window.testRuntime=mountLegacyTipsRuntime(shadow,root,{view:'details',query,href:'/team/tips/details'+query},context); };
       window.mountTest();
       const rules=JSON.parse(localStorage.getItem('tipout_rules')); rules.forEach(r=>r.clockin='clock'); localStorage.setItem('tipout_rules',JSON.stringify(rules));
@@ -142,6 +143,24 @@ const { chromium } = process.env.TIPOUT_BROWSER_PACKAGES ? createRequire(path.jo
     await page.evaluate(()=>window.mountRulesTest());
     assert.equal(await page.locator('.tipout-rule-name').filter({hasText:'【演示】'}).count(),8);
     assert.equal(await page.evaluate(()=>localStorage.getItem('tipout_allocation_results_v1')),snapshotsBeforeDemo);
+    await page.evaluate(() => {
+      const document = JSON.parse(localStorage.getItem('tipout_allocation_results_v1'));
+      const snapshot = Object.values(document)[0];
+      const attendance = {effectiveHours:8,originalHours:8,clockStatus:'已打卡',punchSessions:[{clockIn:'08:00',clockOut:'16:00',durationHours:8,status:'complete'}]};
+      snapshot.scenarioFacts = [
+        {version:'tipout-scenarios-v1',employeeId:'test-0',name:'Maria Garcia',role:'Server',salesAmount:1000,originalTips:60,attendance,orders:[]},
+        {version:'tipout-scenarios-v1',employeeId:'test-2',name:'Carlos Lopez',role:'Busser',salesAmount:0,originalTips:0,attendance,orders:[]}
+      ];
+      delete snapshot.employeeAmounts;
+      delete snapshot.employeeContributions;
+      localStorage.setItem('tipout_allocation_results_v1',JSON.stringify(document));
+      window.mountEmployeeSummaryTest();
+    });
+    const mariaSummary = page.locator('#employeeReconciliationList tr').filter({hasText:'Maria Garcia'});
+    const carlosSummary = page.locator('#employeeReconciliationList tr').filter({hasText:'Carlos Lopez'});
+    await mariaSummary.waitFor();
+    assert.notEqual((await mariaSummary.locator('td').nth(5).textContent()).trim(),'$0.00');
+    assert.notEqual((await carlosSummary.locator('td').nth(6).textContent()).trim(),'$0.00');
     assert.deepEqual(errors,[]);
     console.log('Quick allocation, snapshot editing and demo rules page seeding passed');
   } finally { await browser.close(); }

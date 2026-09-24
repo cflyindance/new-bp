@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "mode": "standalone",
+  "entryPoints": [
+    "src/team/tips/programs/distribution.js.txt: buildDailyDataset -> genDailyTip",
+    "#/team/tips/distribution?view=employee"
+  ],
+  "currentBehavior": "旧演示快照不含 employeeAmounts；员工汇总回退到员工固定 tipRate 和旧 pool employees，当前测试数据均得到 0。",
+  "expectedBehavior": "演示员工汇总中 Server 等贡献方显示非零贡献入池，Busser/Runner/Host 等接收方显示非零从池分得。",
+  "rootCauseStatus": "confirmed",
+  "rootCause": "演示规则新增晚于已保存快照，而员工汇总只读取快照金额；旧演示快照缺少规则级员工贡献与接收金额，且不会因规则新增自动重算。",
+  "references": [
+    {"path":"src/team/tips/programs/distribution.js.txt","symbol":"genDailyTip","relation":"entry_point","impact":"affected","deepRead":true},
+    {"path":"src/team/tips/legacy/tipAllocation.js.txt","symbol":"runLegacyDayPipeline","relation":"definition","impact":"affected","deepRead":true},
+    {"path":"src/team/tips/programs/details.js.txt","symbol":"collectDetailAllocationSnapshot","relation":"producer","impact":"affected","deepRead":true},
+    {"path":"src/team/tips/legacy/tipout-summary-ui.js.txt","symbol":"aggregateEmployeeDailyDatasets","relation":"consumer","impact":"not_affected","deepRead":true},
+    {"path":"src/team/tips/legacy/tipout-allocation-results-store.js.txt","symbol":"read/commit","relation":"side_effect","impact":"not_affected","deepRead":true},
+    {"path":"scripts/verify-tipout-scenario-data.mjs","symbol":"scenario employee amounts assertions","relation":"test","impact":"affected","deepRead":true},
+    {"path":"scripts/verify-tipout-quick-allocation-browser.cjs","symbol":"legacy demo snapshot employee summary","relation":"test","impact":"affected","deepRead":true}
+  ],
+  "dataFlow": [
+    {"from":"src/team/tips/legacy/tipout-scenario-data.js.txt","to":"src/team/tips/programs/details.js.txt","evidence":"scenarioFacts are captured into new allocation snapshots"},
+    {"from":"src/team/tips/legacy/tipAllocation.js.txt","to":"src/team/tips/programs/details.js.txt","evidence":"employeeAmounts are calculated and stored for new snapshots"},
+    {"from":"src/team/tips/programs/distribution.js.txt","to":"src/team/tips/legacy/tipout-summary-ui.js.txt","evidence":"genDailyTip produces deducted/received rows aggregated by employee"}
+  ],
+  "sharedCallers": [
+    {"path":"src/team/tips/programs/details.js.txt","impact":"new snapshots store both amounts"},
+    {"path":"src/team/tips/programs/distribution.js.txt","impact":"old demo snapshots receive read-only compatibility projection"}
+  ],
+  "sharedCallersComplete": true,
+  "workspace": {
+    "status": "unrelated_changes",
+    "evidence": "Existing changes are buffet-rule-editor, seasoning generated file, .tmp and an unrelated buffet plan; none overlaps TipOut files changed here."
+  },
+  "risk": "medium",
+  "scopeStatus": "bounded",
+  "stopReason": "root_cause_and_impact_bounded",
+  "wikiQueries": [
+    {"question":"小费演示快照是否有既定兼容约定？","mode":"wiki_bypass","reason":"resolve-query-context returned wiki_not_configured"}
+  ],
+  "plan": {
+    "change": "Add a shared per-employee amount calculator; store amounts in new snapshots; derive amounts only for legacy tipout-scenarios-v1 snapshots using demo rules without writing storage.",
+    "tdd": "Unit RED/GREEN plus isolated Playwright employee summary assertion.",
+    "build": "skipped: no build boundary touched",
+    "rollback": "Remove employeeAmounts production/compatibility reads and shared helper."
+  }
+}

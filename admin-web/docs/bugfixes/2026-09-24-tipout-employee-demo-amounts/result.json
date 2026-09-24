@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "mode": "standalone",
+  "outcome": "fixed",
+  "rootCauseStatus": "confirmed",
+  "rootCause": "旧演示快照早于贡献规则及 employeeAmounts 字段，员工汇总只能读取到固定比例与旧池金额，因而贡献入池和从池分得均为 0。",
+  "analysisScopeStatus": "bounded",
+  "planStatus": "approved",
+  "changedFiles": [
+    "src/team/tips/legacy/tipAllocation.js.txt",
+    "src/team/tips/programs/details.js.txt",
+    "src/team/tips/programs/distribution.js.txt",
+    "scripts/verify-tipout-scenario-data.mjs",
+    "scripts/verify-tipout-quick-allocation-browser.cjs",
+    "docs/bugfixes/2026-09-24-tipout-employee-demo-amounts/analysis-scope.json",
+    "docs/bugfixes/2026-09-24-tipout-employee-demo-amounts/result.json"
+  ],
+  "tdd": {
+    "status": "passed",
+    "redEvidence": ["verify-tipout-scenario-data.mjs failed: collectScenarioEmployeeAmounts is not a function"],
+    "greenEvidence": ["scenario data test passed with Server deducted 50/1 and Busser received 51", "typecheck passed", "zero-hours, employee reconciliation, allocation store and payout lock regressions passed"]
+  },
+  "e2e": {
+    "required": true,
+    "status": "passed",
+    "reason": "修改用户可见员工汇总及浏览器快照兼容数据流。",
+    "evidence": ["verify-tipout-quick-allocation-browser.cjs passed; legacy demo snapshot renders non-zero Maria contribution and Carlos receipt"]
+  },
+  "build": {
+    "required": false,
+    "status": "skipped",
+    "reason": "未修改依赖、构建配置、入口、动态导入或产物生成边界。"
+  },
+  "unverifiedScopes": ["未修改或重新计算非 tipout-scenarios-v1 的真实历史快照。"]
+}

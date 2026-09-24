@@ -16,6 +16,13 @@ const donorRules = [.03,.01,.02].map(rate=>({deductConfig:{personalSalesPct:{sco
 const contributionFacts = [{employeeId:'a',name:'A',role:'Server',salesAmount:1000,originalTips:60},{employeeId:'b',name:'B',role:'Server',salesAmount:1000,originalTips:1},{employeeId:'c',name:'C',role:'Busser',salesAmount:1000,originalTips:60}];
 assert.deepEqual(JSON.parse(JSON.stringify(context.window.TipAllocation.collectScenarioContributions(donorRules,contributionFacts))),[{employeeId:'a',amount:60},{employeeId:'b',amount:1},{employeeId:'c',amount:0}]);
 assert.equal(contributionFacts[1].originalTips,1);
+const displayRules = [.03,.02].map(rate=>({demoScenarioKey:'demo',distribution:'hours',receivers:[{roles:['Busser'],pct:100}],deductConfig:{personalSalesPct:{scopeType:'role',roles:['Server'],rate}}}));
+const displayFacts = [{employeeId:'a',name:'A',role:'Server',salesAmount:1000,originalTips:60,attendance:{effectiveHours:8},version:'tipout-scenarios-v1'},{employeeId:'b',name:'B',role:'Server',salesAmount:1000,originalTips:1,attendance:{effectiveHours:8},version:'tipout-scenarios-v1'},{employeeId:'c',name:'C',role:'Busser',salesAmount:0,originalTips:0,attendance:{effectiveHours:8},version:'tipout-scenarios-v1'}];
+assert.deepEqual(JSON.parse(JSON.stringify(context.window.TipAllocation.collectScenarioEmployeeAmounts(displayRules,displayFacts))),[
+  {employeeId:'a',deducted:50,received:0},
+  {employeeId:'b',deducted:1,received:0},
+  {employeeId:'c',deducted:0,received:51}
+]);
 const plain = value => JSON.parse(JSON.stringify(value));
 const employee = { id: 'e1', name: '同名员工', role: 'Server' };
 const input = { storeId: 's1', employee, dateKey: '2026-09-23' };

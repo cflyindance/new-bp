@@ -534,23 +534,31 @@
     };
   }
 
-  // New snapshots record actual contributions in rule order, capped by remaining tips.
-  function collectScenarioContributions(rules, facts) {
+  // Snapshot employee amounts use rule order; contributions cannot exceed each employee's remaining tips.
+  function collectScenarioEmployeeAmounts(rules, facts) {
     var employees = (facts || []).map(function(fact) {
-      return {id:fact.employeeId,name:fact.name,role:fact.role,salesAmount:fact.salesAmount,tipBefore:fact.originalTips};
+      return {id:fact.employeeId,name:fact.name,role:fact.role,salesAmount:fact.salesAmount,tipBefore:fact.originalTips,
+        hours:fact.attendance ? fact.attendance.effectiveHours : 0};
     });
-    var totals = employees.map(function(employee) { return {employeeId:employee.id,amount:0}; });
+    var totals = employees.map(function(employee) { return {employeeId:employee.id,deducted:0,received:0}; });
     (rules || []).forEach(function(rule) {
       if (!rule.deductConfig || (rule.allocationMode && rule.allocationMode !== 'legacy_pool')) return;
-      var result = runDeductPipeline(rule, employees);
-      result.employeeResults.forEach(function(row, index) {
-        totals[index].amount = roundMoney(totals[index].amount + row.deducted);
-        employees[index].tipBefore = row.tipAfterDeduct;
+      var result = runLegacyDayPipeline(rule, employees);
+      result.rows.forEach(function(row, index) {
+        totals[index].deducted = roundMoney(totals[index].deducted + row.deducted);
+        totals[index].received = roundMoney(totals[index].received + row.received);
+        employees[index].tipBefore = roundMoney(employees[index].tipBefore - row.deducted);
       });
     });
     return totals;
   }
+  function collectScenarioContributions(rules, facts) {
+    return collectScenarioEmployeeAmounts(rules, facts).map(function(row) {
+      return {employeeId:row.employeeId,amount:row.deducted};
+    });
+  }
   var api = {
+    collectScenarioEmployeeAmounts: collectScenarioEmployeeAmounts,
     collectScenarioContributions: collectScenarioContributions,
     roundMoney: roundMoney,
     normalizeHours: normalizeHours,
