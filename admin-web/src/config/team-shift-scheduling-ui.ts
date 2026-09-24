@@ -423,6 +423,7 @@ function writeShiftTypes(types: ShiftType[]): void {
   if (JSON.stringify(before) === JSON.stringify(types)) return;
   ensureShiftTypesBaseline(before);
   localStorage.setItem(SHIFT_TYPES_STORAGE_KEY, JSON.stringify(types));
+  shiftSchedulingDirty = true;
   rerecordShiftTypesChange(types);
 }
 
@@ -431,11 +432,13 @@ function writeAssignments(assignments: ShiftAssignment[]): void {
   if (JSON.stringify(before) === JSON.stringify(assignments)) return;
   ensureAssignmentsBaseline(before);
   localStorage.setItem(ASSIGNMENTS_STORAGE_KEY, JSON.stringify(assignments));
+  shiftSchedulingDirty = true;
   rerecordAssignmentsChange(assignments);
 }
 
 let shiftTypesBaseline: ShiftType[] | null = null;
 let assignmentsBaseline: ShiftAssignment[] | null = null;
+let shiftSchedulingDirty = false;
 
 function cloneJson<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
@@ -624,18 +627,7 @@ function ensureShiftSchedulingPageSaveRegistry(): void {
     return true;
   });
 
-  registerPageSaveDirtyProbe(TEAM_SHIFT_SCHEDULING_PATH, () => {
-    try {
-      const typesDirty =
-        !!shiftTypesBaseline && JSON.stringify(shiftTypesBaseline) !== JSON.stringify(readShiftTypes());
-      const assignmentsDirty =
-        !!assignmentsBaseline &&
-        JSON.stringify(assignmentsBaseline) !== JSON.stringify(readAssignments());
-      return typesDirty || assignmentsDirty;
-    } catch {
-      return false;
-    }
-  });
+  registerPageSaveDirtyProbe(TEAM_SHIFT_SCHEDULING_PATH, () => shiftSchedulingDirty);
 
   window.addEventListener("menusifu:page-settings-discard", (event) => {
     const pageKey = (event as CustomEvent<{ pageKey?: string }>).detail?.pageKey;
@@ -646,6 +638,12 @@ function ensureShiftSchedulingPageSaveRegistry(): void {
     if (assignmentsBaseline) {
       localStorage.setItem(ASSIGNMENTS_STORAGE_KEY, JSON.stringify(assignmentsBaseline));
     }
+    cellEditor = null;
+    shiftFormEditor = null;
+    shiftDeleteConfirmId = null;
+    editEmployeeDropdownOpen = false;
+    editEmployeeSearchQuery = "";
+    shiftSchedulingDirty = false;
     clearPageConfigChanges(TEAM_SHIFT_SCHEDULING_PATH);
   });
 
@@ -654,6 +652,7 @@ function ensureShiftSchedulingPageSaveRegistry(): void {
     if (pageKey !== TEAM_SHIFT_SCHEDULING_PATH) return;
     shiftTypesBaseline = cloneJson(readShiftTypes());
     assignmentsBaseline = cloneJson(readAssignments());
+    shiftSchedulingDirty = false;
   });
 }
 

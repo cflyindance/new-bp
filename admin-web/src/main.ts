@@ -13005,7 +13005,6 @@ function mount(): void {
   bindLoginLogsPage(mount);
   bindDeploymentUi(mount);
   bindDeploymentAutoTrigger();
-  bindPageSaveGuard();
   bindPageSaveBar(mount);
   syncPageSaveGuardPath(mountPathForSheet);
   bindHeaderScopeFilters();
@@ -13197,6 +13196,7 @@ function mount(): void {
   bindModuleSettingsScrollSpy();
 }
 
+bindPageSaveGuard();
 window.addEventListener("hashchange", mount);
 
 if (typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches) {

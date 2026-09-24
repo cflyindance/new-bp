@@ -18,11 +18,17 @@ import {
   readModuleSettingToggleOn,
   writeModuleSettingToggleOn,
 } from "./module-settings-toggle-ui";
-import { formatConfigDisplayValue } from "./deployment-change-buffer";
+import {
+  clearPageConfigChanges,
+  formatConfigDisplayValue,
+  isPageDirty,
+} from "./deployment-change-buffer";
 import { recordPageOrImmediateConfigChange } from "./page-config-change";
+import { registerPageSaveDirtyProbe } from "./page-save-registry";
 import { TEAM_SHIFT_SCHEDULING_SETTING_SEQS } from "./team-settings-embed-ui";
 
 export const TEAM_CLOCK_IN_PATH = "/team/clock-in";
+const SHIFT_SCHEDULING_PATH = "/team/shift-scheduling";
 const CLOCK_TAB_STORAGE_KEY = "team-clock-in-tab";
 const REQUIRE_SHIFT_SEQ = TEAM_SHIFT_SCHEDULING_SETTING_SEQS[0];
 
@@ -169,6 +175,11 @@ export function requestTeamClockInRecordsTab(): void {
 export function shouldShowTeamClockInSaveBar(): boolean {
   return clockTab === "rules";
 }
+
+registerPageSaveDirtyProbe(
+  TEAM_CLOCK_IN_PATH,
+  () => shouldShowTeamClockInSaveBar() && isPageDirty(TEAM_CLOCK_IN_PATH),
+);
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
@@ -601,6 +612,12 @@ function readAssignments(): ShiftAssignment[] {
 
 function writeAssignmentsQuiet(assignments: ShiftAssignment[]): void {
   localStorage.setItem(ASSIGNMENTS_STORAGE_KEY, JSON.stringify(assignments));
+  clearPageConfigChanges(SHIFT_SCHEDULING_PATH);
+  window.dispatchEvent(
+    new CustomEvent("menusifu:page-settings-saved", {
+      detail: { pageKey: SHIFT_SCHEDULING_PATH },
+    }),
+  );
 }
 
 function pickDemoShiftPair(): { morning: ShiftType; evening: ShiftType } | null {

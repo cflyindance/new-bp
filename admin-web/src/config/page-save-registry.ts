@@ -27,13 +27,15 @@ export async function runPageSavePreCommit(pageKey: string): Promise<boolean> {
 
 export function isPageSavePending(pageKey: string): boolean {
   const key = resolvePageSaveKey(pageKey);
-  if (isPageDirty(key)) return true;
   const probe = dirtyProbes.get(key);
-  return probe?.() === true;
+  if (probe) return probe() === true;
+  return isPageDirty(key);
 }
 
 export function getPageSavePendingCount(pageKey: string): number {
   const key = resolvePageSaveKey(pageKey);
+  const probe = dirtyProbes.get(key);
+  if (probe && probe() !== true) return 0;
   const bucketCount = getPageChangeCount(key);
   if (bucketCount > 0) return bucketCount;
   return isPageSavePending(key) ? 1 : 0;
