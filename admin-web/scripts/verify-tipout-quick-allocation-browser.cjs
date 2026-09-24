@@ -139,9 +139,9 @@ const { chromium } = process.env.TIPOUT_BROWSER_PACKAGES ? createRequire(path.jo
     assert.ok(clockHours.every(i=>i.hours>0 && i.readonly));
     const snapshotsBeforeDemo = await page.evaluate(()=>localStorage.getItem('tipout_allocation_results_v1'));
     await page.evaluate(()=>window.mountRulesTest());
-    assert.equal(await page.locator('.tipout-rule-name').filter({hasText:'【演示】'}).count(),8);
+    assert.equal(await page.locator('.tipout-rule-name').filter({hasText:'【演示】'}).count(),9);
     await page.evaluate(()=>window.mountRulesTest());
-    assert.equal(await page.locator('.tipout-rule-name').filter({hasText:'【演示】'}).count(),8);
+    assert.equal(await page.locator('.tipout-rule-name').filter({hasText:'【演示】'}).count(),9);
     assert.equal(await page.evaluate(()=>localStorage.getItem('tipout_allocation_results_v1')),snapshotsBeforeDemo);
     await page.evaluate(() => {
       const document = JSON.parse(localStorage.getItem('tipout_allocation_results_v1'));
@@ -162,6 +162,11 @@ const { chromium } = process.env.TIPOUT_BROWSER_PACKAGES ? createRequire(path.jo
     const receiptTexts=await summaryRows.locator('td:nth-child(7)').allTextContents();
     assert.ok(contributionTexts.some(text=>text.trim()!=='$0.00'&&text.trim()!=='—'));
     assert.ok(receiptTexts.some(text=>text.trim()!=='$0.00'&&text.trim()!=='—'));
+    const mixedRows=await summaryRows.evaluateAll(rows=>rows.filter(row=>{
+      const cells=row.querySelectorAll('td');
+      return cells.length>6&&cells[5].textContent.trim()!=='$0.00'&&cells[5].textContent.trim()!=='—'&&cells[6].textContent.trim()!=='$0.00'&&cells[6].textContent.trim()!=='—';
+    }).map(row=>row.textContent.trim()));
+    assert.ok(mixedRows.length>0,'Expected one employee to contribute and receive in the same summary range');
     assert.deepEqual(errors,[]);
     console.log('Quick allocation, snapshot editing and demo rules page seeding passed');
   } finally { await browser.close(); }

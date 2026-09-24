@@ -10,7 +10,8 @@
     {key:'sales-support',name:'销售额贡献入池 · 3%',roles:['Busser','Runner','Host'],type:'sales',pct:3,distribution:'hours',receivers:support},
     {key:'server-deduct-support',name:'服务员贡献入池 · 个人销售额3%',roles:['Server','Busser','Runner'],donors:['Server'],type:'personal_sales',pct:3,distribution:'hours',receivers:[{roles:['Busser'],pct:60},{roles:['Runner'],pct:40}]},
     {key:'server-deduct-bar',name:'吧台支持 · 服务员个人销售额1%',roles:['Server','Bartender'],donors:['Server'],type:'personal_sales',pct:1,distribution:'hours',receivers:[{roles:['Bartender'],pct:100}]},
-    {key:'shared-deduct-support',name:'多岗位共同贡献 · 个人销售额2%',roles:['Server','Bartender','Busser','Runner','Host'],donors:['Server','Bartender'],type:'personal_sales',pct:2,distribution:'hours',receivers:support}
+    {key:'shared-deduct-support',name:'多岗位共同贡献 · 个人销售额2%',roles:['Server','Bartender','Busser','Runner','Host'],donors:['Server','Bartender'],type:'personal_sales',pct:2,distribution:'hours',receivers:support},
+    {key:'reciprocal-front-pool',name:'前厅互助池 · 贡献并参与分配',roles:['Server','Bartender','Busser','Runner','Host'],donors:['Server','Bartender'],type:'personal_sales',pct:2,distribution:'hours',receivers:[{roles:['Bartender'],pct:40},{roles:['Busser'],pct:30},{roles:['Runner'],pct:20},{roles:['Host'],pct:10}]}
   ];
   function ensure() {
     var projected = global.ruleData.getRules();

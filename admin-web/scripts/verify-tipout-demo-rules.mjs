@@ -11,15 +11,16 @@ const context = {localStorage: {getItem: k => storage.get(k) ?? null, setItem: (
   TipOutRosterDirectory: {canonicalRosterStoreName: s => s, listEmployees: () => roles.map(role => ({role}))}};
 context.window = context;
 vm.runInNewContext(source, context);
-assert.equal(context.TipOutDemoRules.ensure(), 8);
+assert.equal(context.TipOutDemoRules.ensure(), 9);
 assert.equal(context.TipOutDemoRules.ensure(), 0);
 assert.equal(JSON.stringify(rules[0]), original);
-assert.equal(new Set(rules.map(r => r.id)).size, 9);
+assert.equal(new Set(rules.map(r => r.id)).size, 10);
 const donorRules = rules.filter(r => r.deductConfig);
-assert.equal(donorRules.length, 3);
-assert.deepEqual(donorRules.map(r => r.deductConfig.personalSalesPct.rate), [0.03,0.01,0.02]);
-assert.deepEqual(donorRules.map(r => r.deductConfig.personalSalesPct.roles), [['Server'],['Server'],['Server','Bartender']]);
+assert.equal(donorRules.length, 4);
+assert.deepEqual(donorRules.map(r => r.deductConfig.personalSalesPct.rate), [0.03,0.01,0.02,0.02]);
+assert.deepEqual(donorRules.map(r => r.deductConfig.personalSalesPct.roles), [['Server'],['Server'],['Server','Bartender'],['Server','Bartender']]);
 assert.ok(donorRules.every(r => r.distribution === 'hours' && r.receivers.reduce((s,v)=>s+v.pct,0) === 100));
+assert.ok(donorRules.some(r=>r.deductRoles.includes('Bartender')&&r.receivers.some(receiver=>receiver.roles.includes('Bartender'))));
 assert.ok(rules.slice(1).every(r => r.clockin === 'clock'));
 rules.splice(1, 1);
 assert.equal(context.TipOutDemoRules.ensure(), 0, 'deleted scenarios must not return');
@@ -28,5 +29,5 @@ assert.equal(context.TipOutDemoRules.ensure(), 1, 'existing scenario keys preven
 storage.clear(); rules = [{id: 1, store: 'Test'}]; roles = ['Server'];
 assert.equal(context.TipOutDemoRules.ensure(), 0, 'missing required roles must not be fabricated');
 roles = ['Server', 'Busser', 'Runner', 'Host', 'Bartender'];
-assert.equal(context.TipOutDemoRules.ensure(), 8);
+assert.equal(context.TipOutDemoRules.ensure(), 9);
 console.log('PASS: demo rules seeding, idempotency, deletion, missing roles and preservation');

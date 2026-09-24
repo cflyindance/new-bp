@@ -23,6 +23,27 @@ assert.deepEqual(JSON.parse(JSON.stringify(context.window.TipAllocation.collectS
   {employeeId:'b',deducted:1,received:0},
   {employeeId:'c',deducted:0,received:51}
 ]);
+const reciprocalRules = [{demoScenarioKey:'reciprocal',allocationMode:'legacy_pool',distribution:'hours',receivers:[{roles:['Bartender'],pct:50},{roles:['Busser'],pct:50}],deductConfig:{personalSalesPct:{scopeType:'role',roles:['Server','Bartender'],rate:.02}}}];
+const reciprocalFacts = [
+  {employeeId:'server',name:'Server A',role:'Server',salesAmount:1000,originalTips:80,attendance:{effectiveHours:8}},
+  {employeeId:'bartender',name:'Bartender B',role:'Bartender',salesAmount:600,originalTips:60,attendance:{effectiveHours:8}},
+  {employeeId:'busser',name:'Busser C',role:'Busser',salesAmount:0,originalTips:0,attendance:{effectiveHours:8}}
+];
+const reciprocalAmounts = JSON.parse(JSON.stringify(context.window.TipAllocation.collectScenarioEmployeeAmounts(reciprocalRules,reciprocalFacts)));
+assert.ok(reciprocalAmounts.some(row=>row.employeeId==='bartender'&&row.deducted>0&&row.received>0),'典型演示规则必须让至少一名员工同时贡献入池并从池分得');
+const demoStorage = new Map();
+const seededRules = [{id:1,ruleName:'Base',store:'s1'}];
+const demoContext = {window:{}};
+demoContext.window.localStorage = {getItem:key=>demoStorage.get(key)??null,setItem:(key,value)=>demoStorage.set(key,String(value))};
+demoContext.window.ruleData = {getRules:()=>seededRules,saveRules:rules=>{seededRules.splice(0,seededRules.length,...rules); demoStorage.set('tipout_rules',JSON.stringify(rules));}};
+demoContext.window.TipOutRosterDirectory = {canonicalRosterStoreName:value=>value,listEmployees:()=>[
+  {id:'server',name:'Server A',role:'Server'},{id:'bartender',name:'Bartender B',role:'Bartender'},
+  {id:'busser',name:'Busser C',role:'Busser'},{id:'runner',name:'Runner D',role:'Runner'},{id:'host',name:'Host E',role:'Host'}
+]};
+vm.runInNewContext(fs.readFileSync(new URL('../src/team/tips/legacy/tipout-demo-rules.js.txt',import.meta.url),'utf8'),demoContext);
+demoContext.window.TipOutDemoRules.ensure();
+const overlapRule = seededRules.find(rule=>rule.demoScenarioKey&&rule.deductConfig&&rule.receivers?.some(receiver=>receiver.roles?.includes('Bartender'))&&rule.deductRoles?.includes('Bartender'));
+assert.ok(overlapRule,'默认演示规则必须包含同时作为贡献方与接收方的 Bartender');
 const plain = value => JSON.parse(JSON.stringify(value));
 const employee = { id: 'e1', name: '同名员工', role: 'Server' };
 const input = { storeId: 's1', employee, dateKey: '2026-09-23' };
