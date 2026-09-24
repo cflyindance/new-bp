@@ -87,7 +87,7 @@ export function buildDemoScenarioCatalog(snapshot: EnterpriseMerchantSnapshot): 
         groupId: merchant.groupId,
         name: store.name,
         timezone: merchant.timezone || "Asia/Shanghai",
-        volumeFactor: 0.85 + index * 0.18,
+        volumeFactor: 0.85 + index * 0.35,
         averageTicketFactor: 0.95 + index * 0.08,
         productOverrides,
       };
