@@ -139,6 +139,10 @@ const { chromium } = process.env.TIPOUT_BROWSER_PACKAGES ? createRequire(path.jo
     assert.ok(clockHours.every(i=>i.hours>0 && i.readonly));
     const snapshotsBeforeDemo = await page.evaluate(()=>localStorage.getItem('tipout_allocation_results_v1'));
     await page.evaluate(()=>window.mountRulesTest());
+    for (const retiredName of ['Tip Pool — Server & Bartender to Busser','Tip Pool — Server to Busser/Runner','Bar Tip Pool']) {
+      assert.equal(await page.locator('.tipout-rule-name').filter({hasText:retiredName}).count(),0);
+    }
+    assert.equal(await page.locator('.tipout-rule-store').filter({hasText:'Sakura Sushi & Ramen House - Dallas, TX 75247'}).count(),0);
     assert.equal(await page.locator('.tipout-rule-name').filter({hasText:'【演示】'}).count(),9);
     await page.evaluate(()=>window.mountRulesTest());
     assert.equal(await page.locator('.tipout-rule-name').filter({hasText:'【演示】'}).count(),9);

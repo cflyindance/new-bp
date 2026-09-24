@@ -4,64 +4,14 @@
 (function() {
   var STORAGE_KEY = 'tipout_rules';
 
+  var retiredDefaultRuleKeys = [
+    '1\u0000Tip Pool — Server & Bartender to Busser\u0000Golden Dragon Chinese Kitchen - Dallas, TX 75231',
+    '2\u0000Tip Pool — 多角色分配（打卡按工时）\u0000Sakura Sushi & Ramen House - Dallas, TX 75247',
+    '3\u0000Tip Pool — Server to Busser/Runner\u0000El Fuego Tex-Mex Grill - Plano, TX 75074',
+    '4\u0000Bar Tip Pool\u0000Golden Dragon Chinese Kitchen - Dallas, TX 75231'
+  ];
+
   var defaultRules = [
-    {
-      id: 1,
-      ruleName: 'Tip Pool — Server & Bartender to Busser',
-      store: 'Golden Dragon Chinese Kitchen - Dallas, TX 75231',
-      poolRules: [
-        { type: 'sales', pct: 4.5 },
-        { type: 'tips', pct: 5.5 },
-        { type: 'manual', pct: 6.5 }
-      ],
-      deductRoles: ['Server', 'Bartender', 'Cashier'],
-      receivers: [
-        { roles: ['Server'], pct: 30 },
-        { roles: ['Busser', 'Runner'], pct: 70 }
-      ],
-      distribution: 'average',
-      clockin: 'clock'
-    },
-    {
-      id: 2,
-      ruleName: 'Tip Pool — 多角色分配（打卡按工时）',
-      store: 'Sakura Sushi & Ramen House - Dallas, TX 75247',
-      poolRules: [{ type: 'tips', pct: 10 }],
-      deductRoles: ['Server', 'Bartender', 'Cashier'],
-      receivers: [
-        { roles: ['Busser'], pct: 50 },
-        { roles: ['Runner'], pct: 30 },
-        { roles: ['Host'], pct: 20 }
-      ],
-      distribution: 'hours',
-      clockin: 'clock'
-    },
-    {
-      id: 3,
-      ruleName: 'Tip Pool — Server to Busser/Runner',
-      store: 'El Fuego Tex-Mex Grill - Plano, TX 75074',
-      poolRules: [
-        { type: 'sales', pct: 3 },
-        { type: 'manual', pct: 8 }
-      ],
-      deductRoles: ['Server'],
-      receivers: [
-        { roles: ['Busser'], pct: 60 },
-        { roles: ['Runner'], pct: 40 }
-      ],
-      distribution: 'orders',
-      clockin: 'clock'
-    },
-    {
-      id: 4,
-      ruleName: 'Bar Tip Pool',
-      store: 'Golden Dragon Chinese Kitchen - Dallas, TX 75231',
-      poolRules: [{ type: 'tips', pct: 8 }],
-      deductRoles: ['Bartender'],
-      receivers: [{ roles: ['Busser'], pct: 100 }],
-      distribution: 'average',
-      clockin: 'clock'
-    },
     {
       id: 5,
       ruleName: 'Tip Pool — 多角色分配（打卡按工时）',
@@ -129,7 +79,13 @@
       var raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         var list = JSON.parse(raw);
-        return (Array.isArray(list) ? list : []).map(function(rule) {
+        var storedList = Array.isArray(list) ? list : [];
+        var filteredList = storedList.filter(function(rule) {
+          var key = [rule && rule.id, rule && rule.ruleName, rule && rule.store].join('\u0000');
+          return retiredDefaultRuleKeys.indexOf(key) < 0;
+        });
+        if (filteredList.length !== storedList.length) localStorage.setItem(STORAGE_KEY, JSON.stringify(filteredList));
+        return filteredList.map(function(rule) {
           // Compatibility projection only. Historical snapshot rules remain immutable.
           if (rule.clockin !== 'noclock') return rule;
           var result = Object.assign({}, rule, { clockin: 'clock' });
