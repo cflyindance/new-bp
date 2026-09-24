@@ -7,6 +7,7 @@ import { generateOrders } from "./demo-scenario-orders";
 import { resolveStoreCatalog } from "./demo-scenario-products";
 import { generatePayrollEntries, generateTeamBase } from "./demo-scenario-team";
 import type { DemoScenario, DemoStoreProduct, LocalBusinessDate } from "./demo-scenario-types";
+import { assertValidDemoScenario } from "./demo-scenario-validation";
 
 export interface GenerateDemoScenarioInput {
   snapshot: EnterpriseMerchantSnapshot;
@@ -29,7 +30,7 @@ export function generateDemoScenario(input: GenerateDemoScenarioInput): DemoScen
   const commerce = generateOrders({ scenarioVersion: input.scenarioVersion, dates, stores: catalog.storeProfiles, products: catalog.products, storeProducts, employees: team.employees, campaigns });
   const payrollEntries = generatePayrollEntries(team.employees, team.attendance, commerce.orders);
   const financeEntries = generateFinanceEntries(commerce.orders, payrollEntries);
-  return {
+  const scenario: DemoScenario = {
     metadata: { scenarioId: input.scenarioId, scenarioVersion: input.scenarioVersion, anchorDate: input.anchorDate, generatedAt: `${input.anchorDate}T00:00:00.000Z` },
     scopeIndex: {
       groupIds: [...new Set(Object.values(catalog.storeProfiles).map((store) => store.groupId))].sort(),
@@ -40,4 +41,6 @@ export function generateDemoScenario(input: GenerateDemoScenarioInput): DemoScen
     employees: team.employees, shifts: team.shifts, attendance: team.attendance, campaigns,
     orders: commerce.orders, payments: commerce.payments, refunds: commerce.refunds, payrollEntries, financeEntries,
   };
+  assertValidDemoScenario(scenario);
+  return scenario;
 }

@@ -41,7 +41,7 @@
     "verify:personal-sales-pool": "npx tsx scripts/verify-personal-sales-pool.ts",
     "verify:emenu-responsive-viewport": "node scripts/verify-emenu-responsive-viewport.mjs",
     "verify:subscription-service": "npx tsx scripts/verify-subscription-service.ts",
-    "verify:demo-scenario": "npx tsx scripts/verify-demo-scenario-types.ts && npx tsx scripts/verify-demo-scenario-determinism.ts && npx tsx scripts/verify-demo-scenario-catalog.ts && npx tsx scripts/verify-demo-scenario-generation.ts",
+    "verify:demo-scenario": "npx tsx scripts/verify-demo-scenario-types.ts && npx tsx scripts/verify-demo-scenario-determinism.ts && npx tsx scripts/verify-demo-scenario-catalog.ts && npx tsx scripts/verify-demo-scenario-generation.ts && npx tsx scripts/verify-demo-scenario-integrity.ts",
     "verify:recursive-navigation": "node scripts/verify-recursive-navigation-interaction.mjs",
     "verify:tipout-interaction-refresh": "node scripts/verify-tipout-interaction-refresh.mjs",
     "verify:tipout-employee-reconciliation": "node scripts/verify-tipout-employee-reconciliation.mjs",
