@@ -782,3 +782,4 @@ export function bindFinanceRegisterAuditUi(remount: () => void): void {
     remount();
   });
 }
+export { listDemoFinanceEntries, summarizeDemoFinance } from "../demo-scenario/adapters/finance-demo-adapter";

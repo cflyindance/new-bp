@@ -44,4 +44,14 @@ assert.match(
   "secondary sheets must close only when entering home, not on every home redraw",
 );
 
+const navHomeMountGuard = source.slice(
+  source.indexOf("if (isNavHomePath(mountPathForSheet))"),
+  source.indexOf("lastSidebarMountPathForInventorySheet", source.indexOf("if (isNavHomePath(mountPathForSheet))")),
+);
+assert.doesNotMatch(
+  navHomeMountGuard,
+  /closeAllSidebarSecondarySheets\(\)/,
+  "same-route #/home remount must preserve a sheet opened by a primary menu click",
+);
+
 console.log("recursive navigation interaction verified");

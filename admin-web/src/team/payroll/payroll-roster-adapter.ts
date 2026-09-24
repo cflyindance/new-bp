@@ -11,6 +11,8 @@ export interface PayrollRosterEmployee {
   [key: string]: unknown;
 }
 
+export { toPayrollRoster as projectDemoScenarioPayrollRoster } from "../../demo-scenario/adapters/team-demo-adapter";
+
 export function readPayrollRoster(storage: Storage = localStorage): PayrollRosterEmployee[] {
   try {
     const raw = storage.getItem(TEAM_EMPLOYEE_ROSTER_STORAGE_KEY);
@@ -37,4 +39,3 @@ export function subscribePayrollRoster(
     events.removeEventListener("storage", storageUpdated);
   };
 }
-
