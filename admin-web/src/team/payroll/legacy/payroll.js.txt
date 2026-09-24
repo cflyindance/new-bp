@@ -2592,6 +2592,7 @@
 
   function resolveEmployeeStoreFilter(employeeList) {
     const stores = getPayrollStoreOptions(employeeList);
+    if (state.data.demo && stores.includes(state.employeeStoreFilter)) return state.employeeStoreFilter;
     if (window.TipOutGlobalScopeFilter && typeof TipOutGlobalScopeFilter.readGlobalScopeFilter === "function") {
       const scope = TipOutGlobalScopeFilter.readGlobalScopeFilter();
       if (scope.isAllStores) {
@@ -2661,7 +2662,7 @@
     state.employeeStoreFilter = next;
     renderCustomFilterMenus();
 
-    if (next && (!active || active !== next)) {
+    if (!state.data.demo && next && (!active || active !== next)) {
       if (
         window.TipOutGlobalScopeFilter &&
         typeof TipOutGlobalScopeFilter.writeGlobalStoreFilter === "function"
@@ -2687,6 +2688,10 @@
       select.dataset.bound = "1";
       select.addEventListener("change", () => {
         const storeName = String(select.value || "").trim();
+        if (state.data.demo) {
+          changePayrollDemoScenario(activePayrollDemoScenario, storeName);
+          return;
+        }
         const previousStore = state.employeeStoreFilter;
         const apply = () => {
           state.employeeStoreFilter = storeName;

@@ -1,6 +1,7 @@
   // Runtime-local fixture state: never persisted into the actual payroll snapshot.
   let actualPayrollSnapshot = null;
-  function changePayrollDemoScenario(scenario) {
+  let activePayrollDemoScenario = '';
+  function changePayrollDemoScenario(scenario, selectedStore) {
     if (!payrollReady) return;
     readFormIntoDraft();
     runAfterUnsavedWorkspaceConfirm(() => {
@@ -13,16 +14,19 @@
       } else {
         if (!actualPayrollSnapshot) actualPayrollSnapshot = structuredClone(buildSnapshot());
         const scope = window.TipOutGlobalScopeFilter.readGlobalScopeFilter();
-        const store = $('#payroll-store-filter')?.value || scope.storeLabel || '示例门店';
+        const store = selectedStore || $('#payroll-store-filter')?.value || scope.storeLabel || '示例门店';
+        const previousPeriodId = state.periodId;
+        const previousEmployeeId = state.employeeId;
         state.data = window.createPayrollScheduleDemo(scenario, store);
         const target = scenario === 'switch' ? '2027-07-01' : scenario === 'transition' ? '2027-09-01' : '2027-07-01';
-        const period = state.data.periods.find(p => p.startDate <= target && p.endDate >= target);
+        const period = (selectedStore && state.data.periods.find(p => p.id === previousPeriodId)) || state.data.periods.find(p => p.startDate <= target && p.endDate >= target);
         state.periodId = period.id;
-        state.employeeId = state.data.employees[period.id][0].id;
+        state.employeeId = (selectedStore && state.data.employees[period.id].find(e => e.id === previousEmployeeId)?.id) || state.data.employees[period.id][0].id;
         state.employeeStoreFilter = store;
-        state.workspacePeriodYearFilter = '2027';
+        state.workspacePeriodYearFilter = String(period.year);
         state.view = 'workspace';
       }
+      activePayrollDemoScenario = scenario;
       state.workspaceDraft = null;
       markWorkspaceEntrySnapshot();
       renderPeriods(); renderEmployees(); renderManageForm(); syncWorkspaceDirtyBaseline(); showView(state.view);
@@ -31,7 +35,10 @@
         button.classList.toggle('is-active', active); button.setAttribute('aria-pressed', String(active));
       });
       $('#payroll-demo-indicator').textContent = scenario ? '示例数据 · 本次修改仅用于演示' : '';
-      if ($('#payroll-store-trigger')) $('#payroll-store-trigger').disabled = !!scenario;
+      if ($('#payroll-store-trigger')) $('#payroll-store-trigger').disabled = false;
+    }, () => {
+      if ($('#payroll-store-filter')) $('#payroll-store-filter').value = state.employeeStoreFilter;
+      renderCustomFilterMenus();
     });
   }
   $all('[data-payroll-scenario]').forEach(button => button.addEventListener('click', () => changePayrollDemoScenario(button.dataset.payrollScenario)));

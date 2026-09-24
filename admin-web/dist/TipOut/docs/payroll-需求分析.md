@@ -1,5 +1,7 @@
 # KOI Palace Payroll 报表需求分析
 
+> 历史需求分析，保留客户原始双周场景。2026-09-23 起已确认的灵活周期、原生页面、双明细和批量导出，以[薪资已确认方案索引](../../../docs/项目文档/PayRoll-发薪周期规则-交互原型说明.md)及其权威专项文档为准；本文“一年约 26 期/两周明细”不构成其他周期的限制。
+
 基于《KOI palace payroll报表需求》及样例 CSV（EmployeesPayroll Detail、ADP PAYROLL REPORT、Manage Payroll）整理。**本文为需求与场景分析，非实现说明。**
 
 ---
