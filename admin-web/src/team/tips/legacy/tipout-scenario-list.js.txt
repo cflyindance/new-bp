@@ -1,11 +1,11 @@
 (function(root) {
   function mount() {
-    var anchor = document.getElementById('dateTaskTab');
+    var anchor = document.getElementById('summaryTestActions');
     if (!anchor || document.getElementById('tipoutScenarioListButton')) return;
     var trigger = document.createElement('button');
     trigger.id = 'tipoutScenarioListButton'; trigger.type = 'button'; trigger.className = 'btn';
-    trigger.textContent = '测试场景清单'; trigger.style.marginLeft = '16px';
-    anchor.parentElement.appendChild(trigger);
+    trigger.textContent = '测试场景清单'; trigger.classList.add('btn-lg');
+    anchor.insertBefore(trigger, anchor.firstChild);
     trigger.addEventListener('click', function() {
       var existing = document.getElementById('tipoutScenarioDialog'); if (existing) existing.remove();
       var dialog = document.createElement('dialog'); dialog.id = 'tipoutScenarioDialog'; dialog.setAttribute('aria-label','测试场景清单');

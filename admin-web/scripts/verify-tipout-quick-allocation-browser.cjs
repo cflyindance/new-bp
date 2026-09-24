@@ -28,6 +28,8 @@ const { chromium } = process.env.TIPOUT_BROWSER_PACKAGES ? createRequire(path.jo
     });
     const button = page.locator('.tipout-quick-allocate').first();
     await button.waitFor();
+    assert.equal(await page.locator('#summaryTestActions').getByRole('button',{name:'测试场景清单',exact:true}).count(),1);
+    assert.equal(await page.locator('#summaryTestActions').getByRole('button',{name:'取消分配',exact:true}).count(),1);
     const storageBeforeList = await page.evaluate(()=>JSON.stringify(Object.fromEntries(Object.entries(localStorage))));
     await page.getByRole('button',{name:'测试场景清单',exact:true}).click();
     assert.equal(await page.locator('[data-scenario-employee-id]').evaluateAll(rows=>new Set(rows.map(r=>r.dataset.scenarioEmployeeId)).size),6);

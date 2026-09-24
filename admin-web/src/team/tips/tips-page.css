@@ -1839,6 +1839,14 @@ select.form-control {
   display: contents;
 }
 
+.tipout-summary-action-bar .tipout-summary-test-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-right: auto;
+}
+
 .tipout-summary-action-bar .tipout-summary-date-actions[hidden] {
   display: none;
 }
