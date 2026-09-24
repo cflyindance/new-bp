@@ -397,8 +397,9 @@ var ALLOC_KEY = 'tipout_allocated';
         var scenarioStore = (document.getElementById('storeSelect') || {}).value;
         var savedResult = window.TipOutAllocationResults && TipOutAllocationResults.read(scenarioStore,dateKey);
         var fact = window.TipOutScenarioSource.employee(emp.name, dateKey, { employeeId: emp.employeeId, storeId: scenarioStore });
-        if (!savedResult || Array.isArray(savedResult.scenarioFacts)) {
-          if (savedResult) fact = savedResult.scenarioFacts.find(function(f) { return f.employeeId === String(emp.employeeId).replace(/^roster:/,''); }) || fact;
+        var hasContributionDemoRules = getRulesForCurrentStore().some(function(rule) { return !!rule.demoScenarioKey && !!rule.deductConfig; });
+        if (!savedResult || Array.isArray(savedResult.scenarioFacts) || hasContributionDemoRules) {
+          if (savedResult && Array.isArray(savedResult.scenarioFacts)) fact = savedResult.scenarioFacts.find(function(f) { return f.employeeId === String(emp.employeeId).replace(/^roster:/,''); }) || fact;
           var scenarioRow = attachAttendance({ date: dateKey, before: fact.originalTips, deducted: 0, received: 0, after: fact.originalTips,
             salesAmount: fact.salesAmount, orderCount: fact.orders.length, scenarioId: fact.scenarioId }, emp, dateKey);
           if (savedResult) {
@@ -413,9 +414,12 @@ var ALLOC_KEY = 'tipout_allocated';
               if (String(e.employeeId) === String(emp.employeeId).replace(/^roster:/,'')) scenarioRow.received += Number(e.amount || 0);
             }); });
             var employeeAmounts = Array.isArray(savedResult.employeeAmounts) ? savedResult.employeeAmounts : null;
-            if (!employeeAmounts && Array.isArray(savedResult.scenarioFacts) && savedResult.scenarioFacts.some(function(item) { return item && item.version === 'tipout-scenarios-v1'; })) {
+            if (!employeeAmounts) {
               var demoRules = getRulesForCurrentStore().filter(function(rule) { return !!rule.demoScenarioKey && !!rule.deductConfig; });
-              employeeAmounts = window.TipAllocation.collectScenarioEmployeeAmounts(demoRules,savedResult.scenarioFacts);
+              var compatibilityFacts = Array.isArray(savedResult.scenarioFacts) && savedResult.scenarioFacts.some(function(item) { return item && item.version === 'tipout-scenarios-v1'; })
+                ? savedResult.scenarioFacts
+                : (demoRules.length && window.TipOutScenarioSource ? window.TipOutScenarioSource.day(dateKey,scenarioStore) : null);
+              if (demoRules.length && compatibilityFacts) employeeAmounts = window.TipAllocation.collectScenarioEmployeeAmounts(demoRules,compatibilityFacts);
             }
             if (employeeAmounts) {
               var employeeAmount = employeeAmounts.find(function(item) { return String(item.employeeId) === String(emp.employeeId).replace(/^roster:/,''); });
@@ -1625,6 +1629,9 @@ var ALLOC_KEY = 'tipout_allocated';
     });
 
     function initializeSummaryPage() {
+      if (window.TipOutDemoRules) {
+        try { window.TipOutDemoRules.ensure(); } catch (_) {}
+      }
       initStoreSelect();
       applyDefaultSummaryDateRange();
       syncSummaryDateSortUi();

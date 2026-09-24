@@ -3,13 +3,14 @@
   "mode": "standalone",
   "outcome": "fixed",
   "rootCauseStatus": "confirmed",
-  "rootCause": "旧演示快照早于贡献规则及 employeeAmounts 字段，员工汇总只能读取到固定比例与旧池金额，因而贡献入池和从池分得均为 0。",
+  "rootCause": "旧演示快照缺少 employeeAmounts，部分还缺少 scenarioFacts；原兼容入口排除了无 scenarioFacts 的快照，导致贡献规则计算没有执行。",
   "analysisScopeStatus": "bounded",
   "planStatus": "approved",
   "changedFiles": [
     "src/team/tips/legacy/tipAllocation.js.txt",
     "src/team/tips/programs/details.js.txt",
     "src/team/tips/programs/distribution.js.txt",
+    "src/team/tips/tips-legacy-runtime.ts",
     "scripts/verify-tipout-scenario-data.mjs",
     "scripts/verify-tipout-quick-allocation-browser.cjs",
     "docs/bugfixes/2026-09-24-tipout-employee-demo-amounts/analysis-scope.json",
@@ -17,14 +18,14 @@
   ],
   "tdd": {
     "status": "passed",
-    "redEvidence": ["verify-tipout-scenario-data.mjs failed: collectScenarioEmployeeAmounts is not a function"],
-    "greenEvidence": ["scenario data test passed with Server deducted 50/1 and Busser received 51", "typecheck passed", "zero-hours, employee reconciliation, allocation store and payout lock regressions passed"]
+    "redEvidence": ["verify-tipout-scenario-data.mjs failed: collectScenarioEmployeeAmounts is not a function", "browser regression reproduced a full legacy snapshot range with contribution cell still $0.00"],
+    "greenEvidence": ["scenario data test passed with Server deducted 50/1 and Busser received 51", "typecheck passed", "zero-hours, employee reconciliation and payout lock regressions passed"]
   },
   "e2e": {
     "required": true,
     "status": "passed",
     "reason": "修改用户可见员工汇总及浏览器快照兼容数据流。",
-    "evidence": ["verify-tipout-quick-allocation-browser.cjs passed; legacy demo snapshot renders non-zero Maria contribution and Carlos receipt"]
+    "evidence": ["verify-tipout-quick-allocation-browser.cjs passed; across 2026-08-24 through 2026-09-24 legacy demo snapshots, employee summary contains at least one non-zero contribution and one non-zero receipt"]
   },
   "build": {
     "required": false,

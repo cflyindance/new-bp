@@ -38,7 +38,7 @@ type Bag = Record<PropertyKey, unknown>;
 
 const programs: Record<TipsView, string> = { distribution, details, rules, "rule-editor": editor, "employee-reconciliation": employeeReconciliation };
 const dependencies: Record<TipsView, string[]> = {
-  distribution: [common, summary, summaryDateSort, businessStatus, ruleData, personalSales, datePoolView, dateState, allocationResults, allocation, attendance, manualHours, rosterDirectory, payrollBridge],
+  distribution: [common, summary, summaryDateSort, businessStatus, ruleData, personalSales, datePoolView, dateState, allocationResults, allocation, attendance, manualHours, rosterDirectory, payrollBridge, demoRules],
   details: [common, businessStatus, ruleData, personalSales, datePoolView, dateState, allocationResults, allocation, attendance, manualHours, rosterDirectory, payrollBridge, detailRuleFilter, detailSnapshot, attendanceLabel],
   rules: [common, ruleData, rosterDirectory, demoRules],
   "rule-editor": [common, ruleData, rosterDirectory, orderTipStatus, paymentMethods, personalSales, allocation],

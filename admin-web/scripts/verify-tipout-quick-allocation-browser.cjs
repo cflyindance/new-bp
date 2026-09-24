@@ -145,22 +145,23 @@ const { chromium } = process.env.TIPOUT_BROWSER_PACKAGES ? createRequire(path.jo
     assert.equal(await page.evaluate(()=>localStorage.getItem('tipout_allocation_results_v1')),snapshotsBeforeDemo);
     await page.evaluate(() => {
       const document = JSON.parse(localStorage.getItem('tipout_allocation_results_v1'));
-      const snapshot = Object.values(document)[0];
-      const attendance = {effectiveHours:8,originalHours:8,clockStatus:'已打卡',punchSessions:[{clockIn:'08:00',clockOut:'16:00',durationHours:8,status:'complete'}]};
-      snapshot.scenarioFacts = [
-        {version:'tipout-scenarios-v1',employeeId:'test-0',name:'Maria Garcia',role:'Server',salesAmount:1000,originalTips:60,attendance,orders:[]},
-        {version:'tipout-scenarios-v1',employeeId:'test-2',name:'Carlos Lopez',role:'Busser',salesAmount:0,originalTips:0,attendance,orders:[]}
-      ];
-      delete snapshot.employeeAmounts;
-      delete snapshot.employeeContributions;
-      localStorage.setItem('tipout_allocation_results_v1',JSON.stringify(document));
+      const baseSnapshot = Object.values(document)[0];
+      const results={},dates=[];
+      for(let cursor=Date.parse('2026-08-24T00:00:00Z');cursor<=Date.parse('2026-09-24T00:00:00Z');cursor+=86400000){
+        const dateKey=new Date(cursor).toISOString().slice(0,10),snapshot=JSON.parse(JSON.stringify(baseSnapshot));
+        snapshot.dateKey=dateKey; delete snapshot.employeeAmounts; delete snapshot.employeeContributions; delete snapshot.scenarioFacts;
+        results[snapshot.store+'\u0000'+dateKey]=snapshot; dates.push(dateKey);
+      }
+      localStorage.setItem('tipout_allocation_results_v1',JSON.stringify(results));
+      localStorage.setItem('tipout_allocated',JSON.stringify({[baseSnapshot.store]:dates}));
       window.mountEmployeeSummaryTest();
     });
-    const mariaSummary = page.locator('#employeeReconciliationList tr').filter({hasText:'Maria Garcia'});
-    const carlosSummary = page.locator('#employeeReconciliationList tr').filter({hasText:'Carlos Lopez'});
-    await mariaSummary.waitFor();
-    assert.notEqual((await mariaSummary.locator('td').nth(5).textContent()).trim(),'$0.00');
-    assert.notEqual((await carlosSummary.locator('td').nth(6).textContent()).trim(),'$0.00');
+    const summaryRows=page.locator('#employeeReconciliationList tr');
+    await summaryRows.first().waitFor();
+    const contributionTexts=await summaryRows.locator('td:nth-child(6)').allTextContents();
+    const receiptTexts=await summaryRows.locator('td:nth-child(7)').allTextContents();
+    assert.ok(contributionTexts.some(text=>text.trim()!=='$0.00'&&text.trim()!=='—'));
+    assert.ok(receiptTexts.some(text=>text.trim()!=='$0.00'&&text.trim()!=='—'));
     assert.deepEqual(errors,[]);
     console.log('Quick allocation, snapshot editing and demo rules page seeding passed');
   } finally { await browser.close(); }
