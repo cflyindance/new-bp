@@ -2,8 +2,7 @@
  * Dual Pricing 上游同步到商家后台的门店费率 Snapshot（设置页只读 + 演示模拟）。
  * 正式环境由 SFDC Case → DP 任务 → 写配置 → 触发云端下发；P0 demo 用内存状态。
  */
-import { DEFAULT_DEMO_STORE_ID } from "../permissions/m-platform-store-scope";
-import { resolveAutoDeploymentScope } from "./deployment-mock-devices";
+import { listAllMockStores, resolveAutoDeploymentScope } from "./deployment-mock-devices";
 import { createDeploymentBatch } from "./deployment-store";
 import type { DeploymentBatch } from "./deployment-types";
 
@@ -28,7 +27,7 @@ export type DualPricingUpstreamSnapshot = {
   updatedAt: string;
 };
 
-export const DP_SETTINGS_DEMO_STORE_ID = DEFAULT_DEMO_STORE_ID;
+export const DP_SETTINGS_DEMO_STORE_ID = listAllMockStores()[0]?.storeId ?? "";
 export const DP_DEMO_DEFAULT_RATE = 3.5;
 
 const PAYMENT_CARD_PRICING_DOMAIN = "payment.card-pricing";
@@ -53,20 +52,9 @@ function createInitialSnapshot(storeId: string, storeName: string): DualPricingU
   };
 }
 
-const snapshots: DualPricingUpstreamSnapshot[] = [
-  createInitialSnapshot(DP_SETTINGS_DEMO_STORE_ID, "上海陆家嘴店"),
-  {
-    storeId: "store-demo-nanjing",
-    storeName: "南京演示店",
-    scene: "upstream_not_configured",
-    rate: null,
-    pendingUpstreamRate: null,
-    lockedBySfdc: false,
-    lastError: null,
-    lastDeploymentBatchId: null,
-    updatedAt: "2026-07-01 09:00:00",
-  },
-];
+const snapshots: DualPricingUpstreamSnapshot[] = listAllMockStores().map((store, index) => index === 0
+  ? createInitialSnapshot(store.storeId, store.storeName)
+  : { storeId: store.storeId, storeName: store.storeName, scene: "upstream_not_configured", rate: null, pendingUpstreamRate: null, lockedBySfdc: false, lastError: null, lastDeploymentBatchId: null, updatedAt: "2026-07-01 09:00:00" });
 
 let activeStoreId = DP_SETTINGS_DEMO_STORE_ID;
 

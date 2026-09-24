@@ -30,19 +30,15 @@ export const DEFAULT_VISIBLE_DEPLOYMENT_SEED_IDS = new Set([
   "DEP-SEED-009",
 ]);
 
-const GUANGZHOU_TIANHE_STORE_IDS = ["M00000002", "guangzhou-tzh"] as const;
-const GUANGZHOU_TIANHE_STORE_NAMES = ["广州天河店"] as const;
+const GUANGZHOU_TIANHE_STORE_IDS = ["M00000002"] as const;
 
 function pickStore(
   stores: MockStoreRef[],
   preferredIds: readonly string[],
-  preferredNames: readonly string[],
   fallback?: MockStoreRef,
 ): MockStoreRef {
   const byId = stores.find((s) => preferredIds.includes(s.storeId));
   if (byId) return byId;
-  const byName = stores.find((s) => preferredNames.includes(s.storeName));
-  if (byName) return byName;
   return fallback ?? stores[0]!;
 }
 
@@ -52,7 +48,7 @@ function buildDeploymentSeedBatches(
   const s0 = stores[0]!;
   const s1 = stores[1] ?? s0;
   const s2 = stores[2] ?? s1;
-  const gz = pickStore(stores, GUANGZHOU_TIANHE_STORE_IDS, GUANGZHOU_TIANHE_STORE_NAMES, s1);
+  const gz = pickStore(stores, GUANGZHOU_TIANHE_STORE_IDS, s1);
 
   const seeds: DeploymentBatch[] = [
     {
@@ -577,7 +573,7 @@ export function ensureDefaultVisibleDeploymentSeeds(existingBatches: DeploymentB
   const stores = listAllMockStores();
   if (stores.length === 0) return [];
 
-  const gz = pickStore(stores, GUANGZHOU_TIANHE_STORE_IDS, GUANGZHOU_TIANHE_STORE_NAMES, stores[1] ?? stores[0]);
+  const gz = pickStore(stores, GUANGZHOU_TIANHE_STORE_IDS, stores[1] ?? stores[0]);
   const defaults = buildDeploymentSeedBatches(stores).filter((batch) =>
     DEFAULT_VISIBLE_DEPLOYMENT_SEED_IDS.has(batch.id),
   );
