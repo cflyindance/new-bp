@@ -9,6 +9,7 @@ import {
   type ScopeFilterState,
 } from "./session-scope";
 import { migrateLegacyBrandId, migrateLegacyStoreId } from "../permissions/m-platform-store-scope";
+import type { DemoScenarioScope } from "../demo-scenario/demo-scenario-types";
 
 export type { EffectiveScope, ScopeFilterState };
 
@@ -43,6 +44,14 @@ export function toEffectiveScopeQuery(scope: EffectiveScope = resolveEffectiveSc
     regionName: scope.regionName,
     isAggregated: scope.isAggregated,
     filters: { ...scope.filters },
+  };
+}
+
+export function toDemoScenarioScope(scope: EffectiveScope = resolveEffectiveScope()): DemoScenarioScope {
+  return {
+    groupId: scope.groupId ?? undefined,
+    brandIds: [...scope.brandIds],
+    storeIds: [...scope.storeIds],
   };
 }
 

@@ -38,7 +38,7 @@ import { TEAM_EMPLOYEE_ROSTER_STORAGE_KEY, ensurePresetEmployeesForScopeStores }
 import { formatScopeAggregationNote, resolveScopeAggregationMeta } from "./auth/scope-aggregation";
 import { bindEffectiveScopeChangeListener, describeEffectiveScope, resolveEffectiveScope } from "./auth/effective-scope-api";
 import { resolveDefaultAnchorBrandId, isBrandDataPerspective, writeChainDataPerspective } from "./auth/merchant-scope-context";
-import { ensureDemoScenario } from "./demo-scenario/demo-scenario-repository";
+import { ensureDemoScenario } from "./demo-scenario/demo-scenario-browser";
 import { bindHeaderUserCenter, renderHeaderUserCenter } from "./auth/user-center";
 import { bindLoginLogsPage, isLoginLogsPath, renderLoginLogsPage } from "./log-management/login-logs-ui";
 import {

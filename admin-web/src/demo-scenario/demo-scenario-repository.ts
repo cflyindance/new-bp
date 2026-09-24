@@ -1,4 +1,3 @@
-import { getEnterpriseMerchantSnapshot } from "../config/enterprise-merchant-store";
 import { buildBusinessDateWindow, toLocalBusinessDate } from "./demo-scenario-date";
 import { generateDemoScenario } from "./demo-scenario-generator";
 import { clearRegisteredBusinessDemoData, readRuntimeOverrides, readStoredScenario, writeRuntimeOverrides, writeStoredScenario, type DemoRuntimeOverride } from "./demo-scenario-storage";
@@ -49,19 +48,4 @@ export function createDemoScenarioRepository(deps: DemoScenarioRepositoryDeps) {
     },
     readRuntimeOverrides(): DemoRuntimeOverride[] { return readRuntimeOverrides(deps.storage); },
   };
-}
-
-let browserRepository: ReturnType<typeof createDemoScenarioRepository> | null = null;
-
-function getBrowserRepository() {
-  if (!browserRepository) browserRepository = createDemoScenarioRepository({ storage: localStorage, getSnapshot: getEnterpriseMerchantSnapshot, now: () => new Date(), scenarioId: "restaurant-chain", scenarioVersion: 1 });
-  return browserRepository;
-}
-
-export function ensureDemoScenario(): DemoScenario { return getBrowserRepository().ensureDemoScenario(); }
-export function readDemoScenario(): DemoScenario | null { return getBrowserRepository().readDemoScenario(); }
-export function resetDemoScenario(): DemoScenario { return getBrowserRepository().resetDemoScenario(); }
-export function applyRuntimeOverride(override: DemoRuntimeOverride): void {
-  getBrowserRepository().applyRuntimeOverride(override);
-  if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("menusifu:demo-scenario-change"));
 }
