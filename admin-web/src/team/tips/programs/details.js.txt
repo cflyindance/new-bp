@@ -271,7 +271,7 @@ var ALLOC_KEY = 'tipout_allocated';
           '</td><td>' + money(line.amount) + '</td><td>' + people + '</td><td>' + money(line.unallocated) + '</td></tr>';
       }).join('');
       return '<div class="card detail-card tipout-allocation-group" data-rule-id="' + escHtml(rid) + '" data-time-window="1" data-pool="' + result.poolAmount + '">' +
-        '<div class="card-body detail-card-body-alloc" style="padding:16px"><strong>按小费发生时段在岗参与</strong>' +
+        '<div class="card-body detail-card-body-alloc" style="padding:16px"><strong>仅限小费产生时在岗员工</strong>' +
         '<p class="field-desc">以订单支付完成或手动小费实际发生时间匹配有效打卡区间；区间采用左闭右开。未匹配金额保留为未分配。</p>' +
         '<div class="detail-employee-wrap"><table class="data-table detail-table"><thead><tr><th>发生时间</th><th>来源</th><th>入池金额</th><th>接收员工</th><th>未分配</th></tr></thead><tbody>' +
         (rows || '<tr><td colspan="5">当日没有符合计算条件的小费事件</td></tr>') + '</tbody></table></div></div></div>';

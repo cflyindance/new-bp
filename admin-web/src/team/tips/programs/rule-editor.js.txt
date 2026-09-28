@@ -3421,15 +3421,36 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
       var clockRadio = document.querySelector('input[name="clockin"]:checked');
       var isHours = !!(distRadio && distRadio.value === 'hours');
       var isNoClock = !!(clockRadio && clockRadio.value === 'noclock');
-      var hint = document.getElementById('participationHint');
-      if (hint) {
-        var showParticipationHint = !!(clockRadio && (clockRadio.value === 'unrestricted' || clockRadio.value === 'time_window'));
-        hint.style.display = showParticipationHint ? '' : 'none';
-        hint.textContent = clockRadio && clockRadio.value === 'time_window'
-          ? '逐笔按小费发生时间匹配有效打卡区间；不在该时段的员工不参与。缺少发生时间或关键打卡记录时暂不能确认分配。'
-          : showParticipationHint
-            ? (distRadio && distRadio.value === 'orders' ? '不限打卡状态，按员工有效订单笔数分配；无有效订单不参与分配。' : isHours ? '打卡员工自动获取工时；未打卡员工需每日手动补录分配工时，工时为 0 不获得分配。' : '打卡员工自动参与；未打卡员工需每日手动加入参与名单，休息员工不会自动参与。')
-            : '';
+      var distributionMode = distRadio ? distRadio.value : 'average';
+      var participationExamples = {
+        average: {
+          clock: 'A、B 已打卡，C 未打卡；可分配 $120 时，A、B 各得 $60，C 不参与。',
+          unrestricted: 'A 已打卡，B 未打卡但已手动加入参与名单；可分配 $120 时，两人各得 $60。',
+          timeWindow: '18:30 的 $60 由当时在岗的 A、B 各得 $30；19:30 的 $60 仅 B 在岗，由 B 独得。'
+        },
+        hours: {
+          clock: 'A、B 已打卡，分配工时分别为 2 h、1 h，C 未打卡；可分配 $120 时，A 得 $80、B 得 $40，C 不参与。',
+          unrestricted: 'A 已打卡且分配工时为 2 h，B 未打卡但手动补录 1 h；可分配 $120 时，A 得 $80、B 得 $40。',
+          timeWindow: '18:30 的 $60 只由当时在岗的 A、B 按该时段有效工时分配；19:30 的 $60 仅 B 在岗，由 B 获得，不使用全天工时跨时段分摊。'
+        },
+        orders: {
+          clock: 'A、B 已打卡，分别有 3、1 笔有效归属订单，C 未打卡；可分配 $120 时，A 得 $90、B 得 $30，C 不参与。',
+          unrestricted: 'A 已打卡、B 未打卡，分别有 3、1 笔有效归属订单；可分配 $120 时，A 得 $90、B 得 $30。',
+          timeWindow: '18:30 的 $60，A、B 当时在岗且该时段有效订单为 3:1，各得 $45、$15；19:30 的 $60 仅 B 在岗，由 B 独得。'
+        }
+      };
+      var examples = participationExamples[distributionMode] || participationExamples.average;
+      [['clockParticipationExample', examples.clock], ['unrestrictedParticipationExample', examples.unrestricted], ['timeWindowParticipationExample', examples.timeWindow]].forEach(function(entry) {
+        var el = document.getElementById(entry[0]);
+        if (el) el.textContent = entry[1];
+      });
+      var unrestrictedHelp = document.getElementById('unrestrictedParticipationHelp');
+      if (unrestrictedHelp) {
+        unrestrictedHelp.textContent = distRadio && distRadio.value === 'orders'
+          ? '不限打卡状态，按员工有效订单笔数分配；无有效订单不参与分配。'
+          : isHours
+            ? '打卡员工自动获取工时；未打卡员工需每日手动补录分配工时，工时为 0 不获得分配。'
+            : '打卡员工自动参与；未打卡员工需每日手动加入参与名单，休息员工不会自动参与。';
       }
       panel.style.display = isHours ? '' : 'none';
       var actualLabel = document.getElementById('workHoursActualLabel');
@@ -4886,7 +4907,7 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
       var data = collectFormData();
       if (data.clockin === 'time_window') {
         if (data.allocationMode !== 'legacy_pool' || data.poolKind !== 'tip') {
-          showNotification('按小费发生时段在岗参与目前仅支持普通小费池规则', 'error');
+          showNotification('仅限小费产生时在岗员工目前仅支持普通小费池规则', 'error');
           return;
         }
         var unsupportedTimeRule = (data.poolRules || []).find(function(item) {
