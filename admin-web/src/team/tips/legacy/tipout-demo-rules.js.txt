@@ -5,6 +5,7 @@
   var scenarios = [
     {key:'front-hours',name:'前厅小费共享 · 按打卡工时',roles:['Server','Busser','Runner','Host'],type:'tips',pct:100,distribution:'hours'},
     {key:'bar-average',name:'吧台小费共享 · 平均分配',roles:['Bartender'],type:'tips',pct:100,distribution:'average'},
+    {key:'front-orders',name:'前厅小费共享 · 按订单占比',roles:['Server','Bartender','Busser','Runner','Host'],type:'tips',pct:1,distribution:'orders',clockin:'unrestricted'},
     {key:'support-hours',name:'辅助岗位分配 · 50/30/20',roles:['Busser','Runner','Host'],type:'tips',pct:15,distribution:'hours',receivers:support},
     {key:'capped-hours',name:'前厅工时上限 · 每日最多5小时',roles:['Server','Busser','Runner','Host'],type:'tips',pct:100,distribution:'hours',maxHours:5},
     {key:'sales-support',name:'销售额贡献入池 · 3%',roles:['Busser','Runner','Host'],type:'sales',pct:3,distribution:'hours',receivers:support},
@@ -29,6 +30,9 @@
     var nextId = rules.reduce(function(max, rule) { return Math.max(max, Number(rule.id) || 0); }, 0);
     var added = 0;
     stores.forEach(function(store) {
+      // Do not inject legacy demo semantics into a deliberately configured funded store.
+      if (rules.some(function(rule) { return rule.funding && directory.canonicalRosterStoreName(rule.store) === directory.canonicalRosterStoreName(store); })) return;
+      if (rules.some(function(rule) { return rule && !rule.demoScenarioKey && Number(rule.id) !== 5 && directory.canonicalRosterStoreName(rule.store) === directory.canonicalRosterStoreName(store); })) return;
       var employees = directory.listEmployees(store);
       scenarios.forEach(function(scenario) {
         var key = JSON.stringify([directory.canonicalRosterStoreName(store),scenario.key]);
@@ -40,7 +44,7 @@
           demoScenarioKey: key, poolKind:'tip', allocationMode:'legacy_pool',
           poolRules:[{type:scenario.type,pct:scenario.pct}],
           receivers: JSON.parse(JSON.stringify(scenario.receivers || [{roles:scenario.roles,pct:100}])),
-          distribution:scenario.distribution, clockin:'clock',
+          distribution:scenario.distribution, clockin:scenario.clockin || 'clock',
           workHoursConfig:{mode:scenario.maxHours ? 'capped':'actual',maxHoursPerDay:scenario.maxHours || null}
         };
         if (scenario.donors) {

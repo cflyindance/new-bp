@@ -1,0 +1,286 @@
+(function(root) {
+  'use strict';
+  function cents(n) { n=Number(n); if(!Number.isFinite(n)||n<0) throw new Error('金额必须为非负有效数值'); return Math.round(n*100); }
+  function split(total, weights) {
+    var sum=weights.reduce(function(a,b){return a+b;},0);
+    if(!sum) return weights.map(function(){return 0;});
+    var raw=weights.map(function(w){return total*w/sum;}), result=raw.map(Math.floor);
+    var left=total-result.reduce(function(a,b){return a+b;},0);
+    raw.map(function(v,i){return {i:i,r:v-result[i]};}).sort(function(a,b){return b.r-a.r||a.i-b.i;}).slice(0,left).forEach(function(v){result[v.i]++;});
+    return result;
+  }
+  function matches(f, scope) {
+    return scope.kind==='employee' ? (scope.values||[]).indexOf(String(f.employeeId))>=0 : (scope.values||[]).indexOf(f.role)>=0;
+  }
+  function validateRule(rule, facts) {
+    var c=rule.funding;
+    if(!c||c.version!==1) throw new Error('旧规则需明确转换并试算后启用资金归集');
+    if(rule.allocationMode && rule.allocationMode!=='legacy_pool') throw new Error('计提模式需转换为接收分配规则后使用资金归集');
+    if(!Number.isInteger(c.priority)||c.priority<1) throw new Error('请填写大于 0 的整数归集顺序');
+    if(!c.formulas||!c.formulas.length) throw new Error('请添加入池金额计算规则');
+    c.formulas.forEach(function(f){
+      if(['sales','tips','manual'].indexOf(f.source)<0) throw new Error('不支持的入池计算依据');
+      if(!Number.isFinite(f.rate)||f.rate<=0||f.rate>100) throw new Error('计算比例须大于 0 且不超过 100%');
+      if(f.category && f.source!=='sales') throw new Error('商品分类筛选只适用于销售额');
+      if(f.productId && f.source!=='sales') throw new Error('商品筛选只适用于销售额');
+      if(f.source==='manual'&&(f.orderType||f.paymentMethod||f.area||f.timeStart||f.timeEnd))throw new Error('手动上报小费不支持订单条件');
+      if(!!f.timeStart!==!!f.timeEnd)throw new Error('请完整选择计算时间范围');
+      if(f.timeStart&&(!/^\d{2}:\d{2}$/.test(f.timeStart)||!/^\d{2}:\d{2}$/.test(f.timeEnd)))throw new Error('计算时间范围无效');
+    });
+    if(['balance','fixed'].indexOf(c.method)<0) throw new Error('请选择贡献承担方式');
+    if(!c.groups||!c.groups.length) throw new Error('请添加贡献角色或员工');
+    var seen={};
+    c.groups.forEach(function(g){
+      if(['role','employee'].indexOf(g.kind)<0||!g.values||!g.values.length) throw new Error('请选择贡献范围');
+      if(c.method==='fixed' && (!Number.isFinite(g.pct)||g.pct<=0)) throw new Error('贡献组承担比例必须大于 0');
+      if(facts) {
+        var members=facts.filter(function(f){return matches(f,g);});
+        if(!members.length) throw new Error('贡献范围没有有效员工，请检查门店和人员引用');
+        members.forEach(function(f){if(seen[f.employeeId]&&c.method==='fixed') throw new Error('指定比例的贡献组人员重叠，请调整范围');seen[f.employeeId]=true;});
+      }
+    });
+    if(c.method==='fixed'&&Math.abs(c.groups.reduce(function(s,g){return s+g.pct;},0)-100)>0.00001) throw new Error('贡献组比例合计必须为 100%');
+    if(!c.tipSources||!c.tipSources.length||c.tipSources.some(function(s){return ['order','reported'].indexOf(s)<0;})) throw new Error('请选择可贡献小费范围');
+    if(new Set(c.tipSources).size!==c.tipSources.length) throw new Error('小费来源不能重复');
+    var receivers=rule.receivers||[];
+    if(!receivers.length||receivers.some(function(r){return !(r.roles||[]).length||!Number.isFinite(r.pct)||r.pct<=0;})) throw new Error('请配置接收角色及比例');
+    if(receivers.some(function(r){return (r.subReceivers||[]).length;})) throw new Error('请将子角色份额展平为接收角色行后转换');
+    if(receivers.some(function(r){return r.roles.length!==1;})) throw new Error('每个接收角色请单独设置一行和份额');
+    if(receivers.some(function(r){return Object.keys(r.employeeWeights||{}).length;})) throw new Error('新资金模式暂不支持旧员工权重，请清空权重后试算');
+    if(Math.abs(receivers.reduce(function(s,r){return s+r.pct;},0)-100)>0.00001) throw new Error('接收角色比例合计必须为 100%');
+    if(['average','hours','orders'].indexOf(rule.distribution)<0) throw new Error('请选择小费分配方式');
+    if(['clock','unrestricted'].indexOf(rule.clockin)<0) throw new Error('请选择参与资格');
+    if(facts&&(c.receiverEmployeeIds||[]).some(function(id){return !facts.some(function(f){return f.employeeId===id&&receivers.some(function(r){return r.roles.indexOf(f.role)>=0;});});}))throw new Error('指定接收员工不在当前接收角色或门店范围内');
+  }
+  function calculate(rules,facts,dateKey,overrides) {
+    var ids={}, errors=[], remaining={}, outputs=[], totals={};
+    facts.forEach(function(f){
+      if(!f.employeeId||ids[f.employeeId]) throw new Error('员工身份缺失或重复'); ids[f.employeeId]=true;
+      remaining[f.employeeId]={order:cents(f.orderTips),reported:cents(f.reportedTips)};
+      if(remaining[f.employeeId].order+remaining[f.employeeId].reported!==cents(f.originalTips))throw new Error('员工小费来源与原始小费不一致');
+      totals[f.employeeId]={employeeId:f.employeeId,deducted:0,received:0};
+    });
+    var ordered=rules.slice().sort(function(a,b){return (a.funding&&a.funding.priority||0)-(b.funding&&b.funding.priority||0)||String(a.id).localeCompare(String(b.id));});
+    var priorities={};
+    ordered.forEach(function(rule){
+      validateRule(rule,facts);
+      if(priorities[rule.funding.priority]) throw new Error('归集顺序重复，请为同一门店规则设置不同顺序'); priorities[rule.funding.priority]=true;
+      var cfg=rule.funding, rid=String(rule.id), used={}, formulas=[];
+      cfg.formulas.forEach(function(formula,index){
+        var base=0, overlaps=0, sources=[];
+        facts.forEach(function(f){
+          if(formula.role && formula.role!==f.role) return;
+          if(formula.employeeId && String(formula.employeeId)!==String(f.employeeId)) return;
+          if((formula.weekdays||[]).length && formula.weekdays.indexOf(new Date(dateKey+'T12:00:00').getDay())<0) return;
+          if(formula.source==='manual') {
+            var reported=cents(f.reportedTips);base+=reported; var key=f.employeeId+':reported'; if(used[key]) overlaps++; used[key]=true;if(reported)sources.push({employeeId:f.employeeId,name:f.name,orderId:null,base:reported/100}); return;
+          }
+          (f.orders||[]).forEach(function(o){
+            if(formula.orderType && o.orderType!==formula.orderType) { if(o.orderType==null) throw new Error('订单缺少订单类型，无法按此条件试算'); return; }
+            if(formula.paymentMethod && o.paymentMethod!==formula.paymentMethod) { if(o.paymentMethod==null) throw new Error('订单缺少支付方式，无法按此条件试算'); return; }
+            if(formula.area && o.area!==formula.area) {if(o.area==null)throw new Error('订单缺少区域，无法按此条件试算');return;}
+            if(formula.timeStart){if(!o.localTime)throw new Error('订单缺少营业时间，无法按此条件试算');var hit=formula.timeStart<=formula.timeEnd?o.localTime>=formula.timeStart&&o.localTime<=formula.timeEnd:o.localTime>=formula.timeStart||o.localTime<=formula.timeEnd;if(!hit)return;}
+            if((formula.category||formula.productId)&&!Array.isArray(o.lines))throw new Error('订单缺少商品明细，无法按此条件试算');
+            var lines=(o.lines||[]).map(function(l,i){return {line:l,index:i};}).filter(function(l){return (!formula.category||l.line.category===formula.category)&&(!formula.productId||l.line.productId===formula.productId);});
+            var amount=formula.source==='tips'?cents(o.tipAmount):(formula.category||formula.productId)?lines.reduce(function(s,l){return s+cents(l.line.amount);},0):cents(o.salesAmount);
+            if(!amount) return; base+=amount;
+            sources.push({employeeId:f.employeeId,name:f.name,orderId:o.id,base:amount/100});
+            var keys=formula.source==='sales'&&lines.length?lines.map(function(l){return o.id+':sales:'+l.index;}):[o.id+':'+formula.source];keys.forEach(function(key){if(used[key])overlaps++;used[key]=true;});
+          });
+        });
+        formulas.push({label:'公式 '+(index+1),base:base/100,rate:formula.rate,amount:Math.round(base*formula.rate/100)/100,overlaps:overlaps,sources:sources});
+      });
+      var target=formulas.reduce(function(s,f){return s+cents(f.amount);},0);
+      var contributions=[];
+      function available(f){return cfg.tipSources.reduce(function(s,t){return s+remaining[f.employeeId][t];},0);}
+      function contribute(members,due){
+        var balances=members.map(available), capacity=balances.reduce(function(s,v){return s+v;},0), actual=Math.min(due,capacity);
+        var assigned=split(actual,balances), demands=split(due,balances);
+        members.forEach(function(f,i){
+          var amount=assigned[i], left=amount, buckets={};
+          cfg.tipSources.forEach(function(t){var take=Math.min(left,remaining[f.employeeId][t]);remaining[f.employeeId][t]-=take;left-=take;buckets[t]=take/100;});
+          contributions.push({employeeId:f.employeeId,name:f.name,role:f.role,before:f.originalTips,available:balances[i]/100,due:demands[i]/100,amount:amount/100,sources:buckets});
+          totals[f.employeeId].deducted+=amount;
+        });
+        return actual;
+      }
+      var actual=0;
+      if(cfg.method==='balance') actual=contribute(facts.filter(function(f){return cfg.groups.some(function(g){return matches(f,g);});}),target);
+      else {var groupTargets=split(target,cfg.groups.map(function(g){return g.pct;}));cfg.groups.forEach(function(g,i){actual+=contribute(facts.filter(function(f){return matches(f,g);}),groupTargets[i]);});}
+      var gap=target-actual;
+      if(gap) errors.push((rule.ruleName||rid)+'：入池缺口 $'+(gap/100).toFixed(2));
+      var employees=[], roleRows=[];
+      var rowAmounts=split(actual,rule.receivers.map(function(r){return r.pct;}));
+      rule.receivers.forEach(function(rec,index){
+        var roleAmounts=split(rowAmounts[index],rec.roles.map(function(){return 1;}));
+        rec.roles.forEach(function(role,ri){
+          if(roleRows.indexOf(role)>=0) throw new Error('接收角色重复，请合并份额'); roleRows.push(role);
+          var members=facts.filter(function(f){return f.role===role&&(!(cfg.receiverEmployeeIds||[]).length||cfg.receiverEmployeeIds.indexOf(f.employeeId)>=0)&&(!(rec.employeeRefs||[]).length||rec.employeeRefs.some(function(ref){return ref.employeeId===f.employeeId;}));}), roleTotal=roleAmounts[ri];
+          var entries=members.map(function(f){
+            var edit=(overrides&&overrides[rid]&&overrides[rid][f.employeeId])||{};
+            var present=!!(f.attendance && (f.attendance.punchSessions||[]).length);
+            var h=Number(f.attendance&&f.attendance.effectiveHours||0), config=rule.workHoursConfig||{};
+            if(config.mode==='capped') h=Math.min(h,Number(config.maxHoursPerDay));
+            if(edit.hours!==undefined) h=Number(edit.hours);
+            if(!Number.isFinite(h)||h<0||Math.abs(Math.round(h*100)-h*100)>0.000001) throw new Error('分配工时须为非负数，最多两位小数');
+            var eligible=present||edit.included===true||(rule.clockin==='unrestricted'&&rule.distribution==='orders');
+            var weight=!eligible?0:rule.distribution==='hours'?h:rule.distribution==='orders'?(f.orders||[]).length:1;
+            return {f:f,edit:edit,h:h,weight:weight,present:present};
+          });
+          var ratios=split(10000,entries.map(function(e){return e.weight;}));
+          entries.forEach(function(e,i){if(e.edit.percentage!==undefined){var p=Number(e.edit.percentage);if(!Number.isFinite(p)||p<0||p>100||Math.abs(p*100-Math.round(p*100))>0.000001)throw new Error('员工比例无效');ratios[i]=Math.round(p*100);}});
+          var totalPct=ratios.reduce(function(s,v){return s+v;},0);if(totalPct>10000)throw new Error('同角色员工比例合计不能超过 100%');
+          var amounts=split(Math.round(roleTotal*totalPct/10000),ratios);
+          entries.forEach(function(e,i){
+            totals[e.f.employeeId].received+=amounts[i];
+            employees.push({employeeId:e.f.employeeId,name:e.f.name,role:role,attendanceStatus:e.present?'clock':'absent',hours:e.h,hoursSource:e.edit.hours!==undefined?'manual':'attendance',percentage:ratios[i]/100,amount:amounts[i]/100,orderCount:(e.f.orders||[]).length});
+          });
+        });
+      });
+      var received=employees.reduce(function(s,e){return s+cents(e.amount);},0);
+      outputs.push({ruleId:rid,ruleName:rule.ruleName,poolId:rid,poolName:rule.ruleName,poolKind:'tip',poolAmount:actual/100,employees:employees,
+        funding:{version:1,priority:cfg.priority,target:target/100,actual:actual/100,gap:gap/100,unallocated:(actual-received)/100,formulas:formulas,contributions:contributions}});
+    });
+    var amounts=Object.keys(totals).map(function(id){return {employeeId:id,deducted:totals[id].deducted/100,received:totals[id].received/100};});
+    var pooled=outputs.reduce(function(s,p){return s+cents(p.poolAmount);},0), received=amounts.reduce(function(s,e){return s+cents(e.received);},0);
+    return {pools:outputs,employeeAmounts:amounts,employeeContributions:amounts.map(function(e){return {employeeId:e.employeeId,amount:e.deducted};}),errors:errors,
+      summary:{originalTips:facts.reduce(function(s,f){return s+cents(f.originalTips);},0)/100,poolAmount:pooled/100,allocatedAmount:received/100,unallocatedAmount:(pooled-received)/100,poolCount:outputs.length}};
+  }
+  function validateSnapshot(s) {
+    if(!s)return;
+    var pools=(s.pools||[]).filter(function(p){return p.funding;});if(!pools.length)return;
+    if(pools.length!==s.pools.length)throw new Error('新旧资金模式不能混合确认，请先明确转换旧规则');
+    var contributed={},received={};
+    pools.forEach(function(p){
+      var f=p.funding;if(cents(f.gap)!==0||cents(f.target)!==cents(f.actual))throw new Error('资金归集不足，不能确认');
+      var sum=0;f.contributions.forEach(function(e){var n=cents(e.amount);if(n>cents(e.available))throw new Error('贡献超过员工可用余额');sum+=n;contributed[e.employeeId]=(contributed[e.employeeId]||0)+n;});
+      var paid=0;p.employees.forEach(function(e){var n=cents(e.amount);paid+=n;received[e.employeeId]=(received[e.employeeId]||0)+n;});
+      if(sum!==cents(p.poolAmount)||sum!==cents(f.actual)||paid+cents(f.unallocated)!==sum)throw new Error('贡献、入池与接收金额不守恒');
+    });
+    var facts=s.scenarioFacts||[], ids=new Set(facts.map(function(f){return f.employeeId;}));
+    if(!facts.length||ids.size!==facts.length)throw new Error('来源员工快照缺失或重复');
+    facts.forEach(function(f){if((contributed[f.employeeId]||0)>cents(f.originalTips))throw new Error('跨池贡献超过员工原始小费');});
+    if(Object.keys(contributed).concat(Object.keys(received)).some(function(id){return !ids.has(id);}))throw new Error('流水员工不在来源快照内');
+    var amounts=s.employeeAmounts||[], entries=new Set();
+    amounts.forEach(function(e){if(entries.has(e.employeeId)||!ids.has(e.employeeId)||cents(e.deducted)!==(contributed[e.employeeId]||0)||cents(e.received)!==(received[e.employeeId]||0))throw new Error('员工汇总与池流水不一致');entries.add(e.employeeId);});
+    if(entries.size!==ids.size)throw new Error('员工汇总不完整');
+    var sum=s.summary||{}, pooled=pools.reduce(function(n,p){return n+cents(p.poolAmount);},0), paid=amounts.reduce(function(n,e){return n+cents(e.received);},0);
+    if(cents(sum.originalTips)!==facts.reduce(function(n,f){return n+cents(f.originalTips);},0)||cents(sum.poolAmount)!==pooled||cents(sum.allocatedAmount)!==paid||cents(sum.unallocatedAmount)!==pooled-paid||sum.poolCount!==pools.length)throw new Error('日期汇总与池流水不一致');
+    var ledger=s.employeeContributions||[];
+    if(ledger.length!==ids.size||new Set(ledger.map(function(e){return e.employeeId;})).size!==ids.size||ledger.some(function(e){return !ids.has(e.employeeId)||cents(e.amount)!==(contributed[e.employeeId]||0);}))throw new Error('贡献汇总与流水不一致');
+  }
+  function supportsExisting(rules){return rules.length>0&&rules.every(function(r){return !r.funding&&(r.poolKind||'tip')==='tip'&&(!r.allocationMode||['legacy_pool','order_tip_then_residual'].indexOf(r.allocationMode)>=0)&&(r.poolRules||[]).every(function(p){return ['sales','personal_sales','tips','manual'].indexOf(p.type)>=0;});});}
+  function round(value){return cents(value)/100;}
+  function selectedMenuValues(menu,key,legacyKey){var value=menu&&(menu[key]||menu[legacyKey])||[];return Array.isArray(value)?value:(value?[value]:[]);}
+  function checkMenuSource(menu){
+    if(!menu)return;
+    if(selectedMenuValues(menu,'menuGroup','groups').length||selectedMenuValues(menu,'item','items').length)throw new Error('当前演示数据缺少菜单层级或商品身份，无法核对菜单条件');
+    if(Object.keys(menu).some(function(k){return ['productLine','menuGroup','category','item','productLines','groups','categories','items'].indexOf(k)<0;}))throw new Error('当前演示数据无法核对所选菜单条件');
+  }
+  function matchingMenuLine(line,menu){
+    var products=selectedMenuValues(menu,'productLine','productLines'),categories=selectedMenuValues(menu,'category','categories');
+    return (!products.length||products.indexOf(line.productLine)>=0)&&(!categories.length||categories.some(function(value){return value===line.category||String(value).split('|||').pop()===line.category;}));
+  }
+  function sourceBase(poolRule,facts,dateKey){
+    var c=poolRule.conditions||{},type=poolRule.type;
+    if(['sales','personal_sales','tips','manual'].indexOf(type)<0)throw new Error('当前入池来源需单独确认兼容方式');
+    if((c.shift||[]).length||c.surchargeType||c.types)throw new Error('当前演示数据没有班次或加收服务费明细，无法核对取值条件');
+    checkMenuSource(c.containsProduct);checkMenuSource(c.menu);
+    if(c.revenueType&&['全部','Net Sales (税前营业额)'].indexOf(c.revenueType)<0)throw new Error('当前演示数据没有所选销售口径');
+    if((c.paymentMethods||[]).some(function(p){return ['cash','credit_card'].indexOf(p)<0;}))throw new Error('当前演示数据没有所选支付方式的实付明细');
+    var day=new Date(dateKey+'T12:00:00').getDay();
+    var weekdays=c.weekdays||[];
+    if(weekdays.length&&!weekdays.some(function(value){var s=String(value);return s===String(day||7)||s.indexOf('日一二三四五六'[day])>=0;}))return 0;
+    var sum=0;
+    facts.forEach(function(f){
+      if((c.role||[]).length&&c.role.indexOf(f.role)<0)return;
+      if((c.employee||[]).length&&c.employee.indexOf(f.employeeId)<0&&c.employee.indexOf(f.name)<0)return;
+      if((c.employeeRoles||[]).length&&c.employeeRoles.indexOf(f.role)<0)return;
+      if(type==='manual'){sum+=cents(f.reportedTips);return;}
+      (f.orders||[]).forEach(function(o){
+        var area=o.area==='main'?'Main Dining':o.area==='bar'?'Bar Area':o.area;
+        var orderType=o.orderType==='dine_in'?'Dine In':o.orderType==='takeout'?'To Go':o.orderType;
+        if(c.area&&c.area!=='全部'&&c.area!==area)return;
+        if(c.orderType&&c.orderType!=='全部'&&c.orderType!==orderType)return;
+        if((c.paymentMethods||[]).length&&!c.paymentMethods.some(function(p){return p===o.paymentMethod||(p==='credit_card'&&o.paymentMethod==='card');}))return;
+        if(c.orderTipStatus==='has_tip'&&!cents(o.tipAmount))return;
+        if(c.orderTipStatus==='no_tip'&&cents(o.tipAmount))return;
+        if(c.tipType&&c.tipType!=='全部'&&c.tipType!==o.tipType)return;
+        if(c.hours&&(c.hours.start||c.hours.end)){if(!o.localTime)throw new Error('订单缺少发生时间');if(c.hours.start&&o.localTime<c.hours.start)return;if(c.hours.end&&o.localTime>c.hours.end)return;}
+        if(type==='tips'){
+          if(c.containsProduct){
+            var product=c.containsProduct;
+            if(!Array.isArray(o.lines))throw new Error('订单缺少商品明细');
+            var contains=o.lines.some(function(l){return matchingMenuLine(l,product);});
+            if(!contains)return;
+          }
+          sum+=cents(o.tipAmount);return;
+        }
+        var menu=c.menu||{};
+        if(Object.keys(menu).length&& !Array.isArray(o.lines))throw new Error('订单缺少商品明细');
+        var lines=o.lines||[];
+        if(Object.keys(menu).length)lines=lines.filter(function(l){return matchingMenuLine(l,menu);});
+        sum+=(Object.keys(menu).length?lines.reduce(function(n,l){return n+cents(l.amount);},0):cents(o.salesAmount));
+      });
+    });
+    return sum/100;
+  }
+  function existingGroups(rule,facts){
+    var config=rule.deductConfig||{}, raw=[];
+    ['salesPct','personalSalesPct','tipIncome'].forEach(function(key){var entries=config[key];if(entries)raw=raw.concat(Array.isArray(entries)?entries:[entries]);});
+    var groups=raw.map(function(entry){
+      var names=(entry.employees||entry.employee||[]).map(String),roles=entry.roles||entry.role||[];
+      var members=facts.filter(function(f){return names.indexOf(f.name)>=0||names.indexOf(f.employeeId)>=0||roles.indexOf(f.role)>=0;});
+      return {members:members,weight:Number(entry.rate)||0};
+    }).filter(function(g){return g.members.length;});
+    if(!groups.length){var names=rule.deductEmployees||[],roles=rule.deductRoles||[];
+      var members=facts.filter(function(f){return roles.indexOf(f.role)>=0||names.indexOf(f.name)>=0||names.indexOf(f.employeeId)>=0;});
+      if(members.length)groups=[{members:members,weight:1}];
+    }
+    if(!groups.length&&!raw.length&&!((rule.deductRoles||[]).length)&&!((rule.deductEmployees||[]).length))groups=[{members:facts.filter(function(f){return cents(f.originalTips)>0;}),weight:1}];
+    if(!groups.length)throw new Error((rule.ruleName||'小费规则')+'：没有符合贡献条件且持有小费的员工');
+    if(groups.length>1){var seen=new Set();groups.forEach(function(g){g.members.forEach(function(f){if(seen.has(f.employeeId))throw new Error((rule.ruleName||'小费规则')+'：多个贡献组包含同一员工，请调整条件');seen.add(f.employeeId);});});}
+    return groups;
+  }
+  function reconcileExisting(snapshot,rules){
+    if(!supportsExisting(rules)){
+      if(rules.some(function(r){return (r.poolKind||'tip')==='tip'&&!r.funding;}))throw new Error('当前小费规则包含尚未支持资金归集的来源或分配模式，请调整规则后再确认');
+      return snapshot;
+    }
+    var facts=snapshot.scenarioFacts||[], byId={}, remaining={}, deducted={}, received={}, errors=[];
+    facts.forEach(function(f){byId[f.employeeId]=f;remaining[f.employeeId]=cents(f.originalTips);deducted[f.employeeId]=0;received[f.employeeId]=0;});
+    if(new Set(facts.map(function(f){return f.employeeId;})).size!==facts.length)throw new Error('员工来源数据缺失或重复');
+    var ruleById={};rules.forEach(function(rule){ruleById[String(rule.id)]=rule;});
+    snapshot.pools.forEach(function(pool,index){
+      var rule=ruleById[String(pool.ruleId)];if(!rule)throw new Error('分配快照规则与页面不一致，请刷新');
+      var sourceBases=(rule.poolRules||[]).map(function(p){return sourceBase(p,facts,snapshot.dateKey);});
+      var target=cents(pool.poolAmount), groups=existingGroups(rule,facts), groupTargets=groups.length===1?[target]:split(target,groups.map(function(g){return g.weight;}));
+      var actual=0, contributions=[];
+      groups.forEach(function(group,gi){
+        var capacities=group.members.map(function(f){return remaining[f.employeeId];}),capacity=capacities.reduce(function(a,b){return a+b;},0),value=Math.min(groupTargets[gi],capacity);
+        var assigned=split(value,capacities),dues=split(groupTargets[gi],capacities);
+        group.members.forEach(function(f,i){var n=assigned[i],id=f.employeeId;remaining[id]-=n;deducted[id]+=n;actual+=n;
+          contributions.push({employeeId:id,name:f.name,role:f.role,before:f.originalTips,available:capacities[i]/100,due:dues[i]/100,amount:n/100,sources:{original:n/100}});
+        });
+      });
+      var gap=target-actual;if(gap)errors.push((rule.ruleName||pool.ruleName)+'：入池缺口 $'+(gap/100).toFixed(2));
+      var paid=0;pool.employees.forEach(function(e){var fact=byId[e.employeeId];if(!fact)throw new Error('接收员工不在来源数据中');var n=cents(e.amount);received[e.employeeId]+=n;paid+=n;});
+      if(paid>actual)errors.push((rule.ruleName||pool.ruleName)+'：接收分配额超过实际可入池金额');
+      var formulaState=snapshot.editorState&&Array.isArray(snapshot.editorState.formulas)&&snapshot.editorState.formulas.find(function(item){return String(item.id)===String(pool.ruleId);});
+      var sourceInputs=formulaState&&formulaState.values||[];
+      if(sourceInputs.length&&sourceInputs.length!==(rule.poolRules||[]).length*2)throw new Error((rule.ruleName||pool.ruleName)+'：公式输入不完整，请刷新后重试');
+      var configured=(rule.poolRules||[]).map(function(p,i){var base=sourceInputs.length?Number(sourceInputs[i*2]):sourceBases[i],rate=sourceInputs.length?Number(sourceInputs[i*2+1]):Number(p.pct)||0;
+        if(!Number.isFinite(base)||base<0||!Number.isFinite(rate)||rate<0||rate>100)throw new Error((rule.ruleName||pool.ruleName)+'：公式基数或比例无效');
+        return {label:p.name||'公式 '+(i+1),base:round(base),rate:rate,amount:round(base*rate/100),overlaps:0};});
+      if(sourceInputs.length&&(rule.allocationMode||'legacy_pool')==='legacy_pool'&&configured.reduce(function(n,item){return n+cents(item.amount);},0)!==target)throw new Error((rule.ruleName||pool.ruleName)+'：公式合计与小费池金额不一致，请重新计算');
+      pool.funding={version:1,priority:index+1,target:target/100,actual:actual/100,gap:gap/100,unallocated:Math.max(0,actual-paid)/100,formulas:configured,contributions:contributions};
+    });
+    if(errors.length)throw new Error(errors.join('；'));
+    snapshot.employeeAmounts=facts.map(function(f){return {employeeId:f.employeeId,deducted:deducted[f.employeeId]/100,received:received[f.employeeId]/100};});
+    snapshot.employeeContributions=facts.map(function(f){return {employeeId:f.employeeId,amount:deducted[f.employeeId]/100};});
+    snapshot.fundingVersion=1;
+    snapshot.summary={originalTips:facts.reduce(function(n,f){return n+cents(f.originalTips);},0)/100,poolAmount:snapshot.pools.reduce(function(n,p){return n+cents(p.poolAmount);},0)/100,allocatedAmount:Object.values(received).reduce(function(a,b){return a+b;},0)/100,unallocatedAmount:snapshot.pools.reduce(function(n,p){return n+cents(p.funding.unallocated);},0)/100,poolCount:snapshot.pools.length};
+    validateSnapshot(snapshot);return snapshot;
+  }
+  root.TipOutFunding={calculate:calculate,validateRule:validateRule,validateSnapshot:validateSnapshot,split:split,supportsExisting:supportsExisting,reconcileExisting:reconcileExisting,sourceBase:sourceBase};
+})(window);

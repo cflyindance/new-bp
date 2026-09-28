@@ -406,7 +406,7 @@
           </div>
 
           <div class="form-section tipout-form-card" id="employeeDistributionMethodSection">
-            <div class="form-section-title"><span class="field-desc-wrap" data-field-id="distribution">员工分配方式 <span class="field-desc-icon" data-field-id="distribution" data-label="员工分配方式" data-native-onclick="event.preventDefault();openFieldDescEditor('distribution','员工分配方式')" title="点击编辑字段说明">ⓘ</span></span></div>
+            <div class="form-section-title"><span class="field-desc-wrap" data-field-id="distribution">小费分配方式 <span class="field-desc-icon" data-field-id="distribution" data-label="小费分配方式" data-native-onclick="event.preventDefault();openFieldDescEditor('distribution','小费分配方式')" title="点击编辑字段说明">ⓘ</span></span></div>
             <p class="field-desc" style="margin-bottom:16px">决定同一角色内的员工如何分配；角色之间的份额在接收方规则中设置。</p>
             <div class="distribution-method-cards">
               <label class="distribution-method-card">
@@ -427,7 +427,7 @@
           <!-- 小费池贡献规则：两种计算模式共用 -->
           <div class="form-section tipout-form-card" id="sharedPoolRulesSection">
             <div class="form-section-title">
-              <span class="field-desc-wrap" data-field-id="poolRules" data-pool-label="小费池贡献规则">小费池贡献规则 <span class="field-desc-icon" data-field-id="poolRules" data-label="小费池贡献规则" data-native-onclick="event.preventDefault();openFieldDescEditor('poolRules','小费池贡献规则')" title="点击编辑字段说明">ⓘ</span></span>
+              <span class="field-desc-wrap" data-field-id="poolRules" data-pool-label="小费池金额计算规则">小费池金额计算规则 <span class="field-desc-icon" data-field-id="poolRules" data-label="小费池金额计算规则" data-native-onclick="event.preventDefault();openFieldDescEditor('poolRules','小费池金额计算规则')" title="点击编辑字段说明">ⓘ</span></span>
             </div>
 
             <div id="poolRulesContainer"></div>
@@ -465,7 +465,7 @@
           <div id="legacyAllocationSections">
           <!-- Deduction Rules -->
           <div class="form-section tipout-form-card" id="deductRulesSection" style="display:none">
-            <div class="form-section-title"><span class="field-desc-wrap" data-field-id="deductRoles" data-pool-label="小费扣除方规则">小费扣除方规则 <span class="field-desc-icon" data-field-id="deductRoles" data-label="小费扣除方规则" data-native-onclick="event.preventDefault();openFieldDescEditor('deductRoles','小费扣除方规则')" title="点击编辑字段说明">ⓘ</span></span></div>
+            <div class="form-section-title"><span class="field-desc-wrap" data-field-id="deductRoles" data-pool-label="小费贡献方规则">小费贡献方规则 <span class="field-desc-icon" data-field-id="deductRoles" data-label="小费贡献方规则" data-native-onclick="event.preventDefault();openFieldDescEditor('deductRoles','小费贡献方规则')" title="点击编辑字段说明">ⓘ</span></span></div>
             <div id="deductRulesContainer"></div>
             <div id="deductPanelsHost" style="display:none" aria-hidden="true"></div>
             <div class="add-option-dropdown" id="deductAddOptionWrap">
@@ -556,7 +556,7 @@
                   <input type="radio" name="clockin" value="noclock" disabled> 不打卡（历史规则）
                 </label>
               </div>
-              <p class="field-desc" id="participationHint">未打卡员工需每日在小费分配明细中手动补录</p>
+              <p class="field-desc" id="participationHint" style="display:none"></p>
             </div>
 
                 <div class="work-hours-config" id="workHoursConfigPanel" style="display:none">
@@ -602,7 +602,7 @@
           <span>保存后可在小费分配明细中查看分配结果</span>
           <div>
             <button type="button" class="btn" data-native-onclick="cancelRule()">取消</button>
-            <button type="button" class="btn btn-primary" data-native-onclick="submitRule()">提交</button>
+            <button type="button" class="btn btn-primary" data-native-onclick="submitRule()">保存规则</button>
           </div>
         </div>
       </div>

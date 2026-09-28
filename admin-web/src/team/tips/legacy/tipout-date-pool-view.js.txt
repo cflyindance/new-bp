@@ -29,7 +29,7 @@
       sales = sourceTotals.sales; tips = sourceTotals.tips; manual = sourceTotals.manual; surcharge = sourceTotals.surcharge;
     }
     var pool = 0;
-    var poolByRule = {};
+    var poolByRule = {}, poolBaseByRule = {}, sourceErrors=[];
     var salesCount = 0, tipsCount = 0, surchargeCount = 0;
     (poolRules || []).forEach(function(rule) {
       if (rule.type === 'sales') salesCount++;
@@ -46,7 +46,11 @@
       var base = 0;
       var amount = 0;
       var id = rule.id || rule.type;
-      if (rule.type === 'personal_sales' && root.TipOutPersonalSalesDeduct && root.TipOutPersonalSalesDeduct.calcPersonalSalesPoolCard) {
+      if(scenarioFacts && root.TipOutFunding && ['sales','personal_sales','tips','manual'].indexOf(rule.type)>=0){
+        try{base=root.TipOutFunding.sourceBase(rule,scenarioFacts,dateKey);}
+        catch(error){base=0;sourceErrors.push((rule.name||rule.type)+'：'+error.message);}
+        amount=roundMoney(base*(Number(rule.pct)||0)/100);
+      } else if (rule.type === 'personal_sales' && root.TipOutPersonalSalesDeduct && root.TipOutPersonalSalesDeduct.calcPersonalSalesPoolCard) {
         var card = root.TipOutPersonalSalesDeduct.calcPersonalSalesPoolCard(rule, demoEmployees);
         base = card.matchedSales || 0;
         amount = card.contribution || 0;
@@ -59,18 +63,10 @@
         amount = roundMoney(base * (rule.pct != null ? rule.pct : 0) / 100);
       }
       poolByRule[id] = roundMoney(amount);
+      poolBaseByRule[id] = roundMoney(base);
       pool += amount;
     });
-    var poolBaseByRule = {};
-    (poolRules || []).forEach(function(rule) {
-      var id = rule.id || rule.type;
-      var amount = poolByRule[id] || 0;
-      var pct = rule.pct != null ? rule.pct : 0;
-      if (rule.type === 'personal_sales' && root.TipOutPersonalSalesDeduct && root.TipOutPersonalSalesDeduct.calcPersonalSalesPoolCard) {
-        poolBaseByRule[id] = root.TipOutPersonalSalesDeduct.calcPersonalSalesPoolCard(rule, demoEmployees).matchedSales || 0;
-      } else poolBaseByRule[id] = pct > 0 ? roundMoney(amount * 100 / pct) : 0;
-    });
-    return { sales: sales, tips: tips, surcharge: surcharge, manual: manual, custom: custom, pool: roundMoney(pool), poolRules: poolRules || [], poolByRule: poolByRule, poolBaseByRule: poolBaseByRule, employeeSales: demoEmployees };
+    return { sales: sales, tips: tips, surcharge: surcharge, manual: manual, custom: custom, pool: roundMoney(pool), poolRules: poolRules || [], poolByRule: poolByRule, poolBaseByRule: poolBaseByRule, employeeSales: demoEmployees,sourceErrors:sourceErrors };
   }
 
   function projectDate(options) {
@@ -82,7 +78,7 @@
       var amount = roundMoney(dayData.pool);
       return {
         id: id,
-        name: rule.name || ((rule.poolKind === 'surcharge' ? '加收服务费池 ' : '小费池 ') + (index + 1)),
+        name: rule.ruleName || rule.name || ((rule.poolKind === 'surcharge' ? '加收服务费池 ' : '小费池 ') + (index + 1)),
         ruleSummary: root.ruleData && root.ruleData.buildRuleDescription ? root.ruleData.buildRuleDescription(rule) : '',
         status: allocated ? '已分配' : '未分配',
         poolAmount: amount,

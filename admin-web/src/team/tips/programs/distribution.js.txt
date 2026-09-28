@@ -1572,17 +1572,39 @@ var ALLOC_KEY = 'tipout_allocated';
         return canonicalEmployeeStore(rule.store) === selectedStore;
       });
       var receiverIds = Object.create(null), receiverNames = Object.create(null);
+      var contributorIds = Object.create(null), contributorNames = Object.create(null), contributorRoles = Object.create(null);
+      var allEmployeesContribute = false;
       rules.forEach(function(rule) {
         var resolution = TipOutRosterDirectory.resolveReceiverEmployees(rule, rawStore);
-        if (resolution.issues.length) return;
-        resolution.employees.forEach(function(employee) {
+        if (!resolution.issues.length) resolution.employees.forEach(function(employee) {
           receiverIds[employee.id] = true;
           receiverNames[employee.name] = true;
+        });
+        var config = rule.deductConfig || {};
+        var entries = ['salesPct', 'personalSalesPct', 'tipIncome'].reduce(function(list, key) {
+          var value = config[key];
+          return value ? list.concat(Array.isArray(value) ? value : [value]) : list;
+        }, []);
+        if (!entries.length) {
+          var legacyEmployees = rule.deductEmployees;
+          var names = Array.isArray(legacyEmployees) ? legacyEmployees :
+            (legacyEmployees && (legacyEmployees.employee || legacyEmployees.employees)) || [];
+          entries = [{ employee: names, roles: rule.deductRoles || [] }];
+          if (!names.length && !(rule.deductRoles || []).length) allEmployeesContribute = true;
+        }
+        entries.forEach(function(entry) {
+          (entry.roles || entry.role || []).forEach(function(role) { contributorRoles[String(role)] = true; });
+          (entry.employees || entry.employee || []).forEach(function(employee) {
+            var ref = String(employee && (employee.employeeId || employee.id || employee.name) || employee);
+            contributorIds[ref.replace(/^roster:/, '')] = true;
+            contributorNames[ref] = true;
+          });
         });
       });
       return storeEmployees.filter(function(employee) {
         var rawId = String(employee.employeeId || '').replace(/^roster:/, '');
-        return !!receiverIds[rawId] || !!receiverNames[employee.name];
+        return allEmployeesContribute || !!receiverIds[rawId] || !!receiverNames[employee.name] ||
+          !!contributorIds[rawId] || !!contributorNames[employee.name] || !!contributorRoles[employee.role];
       });
     }
 

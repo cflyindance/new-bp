@@ -201,6 +201,19 @@
         ? TipOutAllocationResults.read(store, dateKey)
         : null;
       if (confirmed && Array.isArray(confirmed.pools)) {
+        if (confirmed.fundingVersion === 1) {
+          var names = Object.create(null);
+          (confirmed.scenarioFacts || []).forEach(function(fact) {
+            var nameKey = normalizeName(fact.name);
+            if (names[nameKey] && names[nameKey] !== fact.employeeId) throw new Error('薪资接口无法区分同名员工，请按员工身份核对后同步');
+            names[nameKey] = fact.employeeId;
+            var amount = confirmed.employeeAmounts.find(function(item) { return item.employeeId === fact.employeeId; });
+            if (!amount) throw new Error('员工小费汇总缺失，无法同步薪资');
+            var row = ensureAmountRow(byName, fact.name);
+            row.tips = roundTip(row.tips + calcTipAfter(fact.originalTips, amount.deducted, amount.received));
+          });
+          return;
+        }
         confirmed.pools.forEach(function (pool) {
           (pool.employees || []).forEach(function (employee) {
             var row = ensureAmountRow(byName, employee.name);

@@ -3422,9 +3422,13 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
       var isHours = !!(distRadio && distRadio.value === 'hours');
       var isNoClock = !!(clockRadio && clockRadio.value === 'noclock');
       var hint = document.getElementById('participationHint');
-      if (hint) hint.textContent = clockRadio && clockRadio.value === 'unrestricted'
-        ? (distRadio && distRadio.value === 'orders' ? '不限打卡状态，按员工有效订单笔数分配；无有效订单不参与分配。' : isHours ? '打卡员工自动获取工时；未打卡员工需每日手动补录分配工时，工时为 0 不获得分配。' : '打卡员工自动参与；未打卡员工需每日手动加入参与名单，休息员工不会自动参与。')
-        : '未打卡员工需每日在小费分配明细中手动补录';
+      if (hint) {
+        var showParticipationHint = !!(clockRadio && clockRadio.value === 'unrestricted');
+        hint.style.display = showParticipationHint ? '' : 'none';
+        hint.textContent = showParticipationHint
+          ? (distRadio && distRadio.value === 'orders' ? '不限打卡状态，按员工有效订单笔数分配；无有效订单不参与分配。' : isHours ? '打卡员工自动获取工时；未打卡员工需每日手动补录分配工时，工时为 0 不获得分配。' : '打卡员工自动参与；未打卡员工需每日手动加入参与名单，休息员工不会自动参与。')
+          : '';
+      }
       panel.style.display = isHours ? '' : 'none';
       var actualLabel = document.getElementById('workHoursActualLabel');
       var cappedLabel = document.getElementById('workHoursCappedLabel');
@@ -4774,7 +4778,7 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
       var allocMode = (document.querySelector('input[name="allocationMode"]:checked') || {}).value || 'legacy_pool';
       if (allocMode === 'legacy_pool') {
         if (document.querySelectorAll('.pool-rule-card').length === 0) {
-          showNotification(tipTerm('请至少添加一项小费池贡献规则'), 'error');
+          showNotification(tipTerm('请至少添加一项小费池金额计算规则'), 'error');
           return;
         }
         var receivers = document.querySelectorAll('#receiverTableBody tr.receiver-primary-row');
@@ -4786,7 +4790,7 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
           if (ms && ms.querySelectorAll('input[type="checkbox"]:checked').length > 0 && pct > 0) hasReceiver = true;
         });
         if (!hasReceiver) {
-          showNotification(tipTerm('请至少添加一条小费接收方规则（角色、占比均需填写）'), 'error');
+          showNotification(tipTerm('请至少添加一条小费池接收方规则（角色、占比均需填写）'), 'error');
           return;
         }
         var condErr = null;
@@ -4858,7 +4862,7 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
           return;
         }
         if (document.querySelectorAll('.pool-rule-card').length === 0) {
-          showNotification(tipTerm('请至少添加一项小费池贡献规则'), 'error');
+          showNotification(tipTerm('请至少添加一项小费池金额计算规则'), 'error');
           return;
         }
         var condErrOt = null;

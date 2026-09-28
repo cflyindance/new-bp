@@ -44,8 +44,8 @@ const rulesTemplate = fs.readFileSync("src/team/tips/templates/rules.html", "utf
 const currentRuleEditorTemplate = fs.readFileSync("src/team/tips/templates/rule-editor.html", "utf8");
 for (const text of [
   'data-field-id="clockin">参与资格 <span',
-  '<p class="field-desc" id="participationHint">未打卡员工需每日在小费分配明细中手动补录</p>',
-  '员工分配方式',
+  '<p class="field-desc" id="participationHint" style="display:none"></p>',
+  '小费分配方式',
 ]) {
   if (!currentRuleEditorTemplate.includes(text)) failures.push(`rule-editor: clock-in copy missing ${text}`);
 }
@@ -116,8 +116,8 @@ for (const [file, tokens] of Object.entries(removedHeadingCopy)) {
 }
 for (const file of ["dist/TipOut/rule-add.html", "src/team/tips/templates/rule-editor.html"]) {
   const content = fs.readFileSync(file, "utf8");
-  if (content.includes("保存规则")) failures.push(`${file}: removed heading save button returned`);
-  if (!content.includes("submitRule()") || !content.includes(">提交</button>")) failures.push(`${file}: bottom submit action missing`);
+  const expectedLabel = file.includes("templates/rule-editor.html") ? "保存规则" : "提交";
+  if (!content.includes("submitRule()") || !content.includes(`>${expectedLabel}</button>`)) failures.push(`${file}: bottom ${expectedLabel} action missing`);
 }
 for (const file of ["dist/TipOut/index.html", "src/team/tips/templates/distribution.html"]) {
   const content = fs.readFileSync(file, "utf8");

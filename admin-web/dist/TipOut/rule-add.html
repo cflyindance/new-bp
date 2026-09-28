@@ -450,7 +450,7 @@
           <!-- 小费池贡献规则：两种分配模式共用（位于分配模式之上） -->
           <div class="form-section tipout-form-card" id="sharedPoolRulesSection">
             <div class="form-section-title">
-              <span class="field-desc-wrap" data-field-id="poolRules" data-pool-label="小费池贡献规则">小费池贡献规则 <span class="field-desc-icon" data-field-id="poolRules" data-label="小费池贡献规则" onclick="event.preventDefault();openFieldDescEditor('poolRules','小费池贡献规则')" title="点击编辑字段说明">ⓘ</span></span>
+              <span class="field-desc-wrap" data-field-id="poolRules" data-pool-label="小费池金额计算规则">小费池金额计算规则 <span class="field-desc-icon" data-field-id="poolRules" data-label="小费池金额计算规则" onclick="event.preventDefault();openFieldDescEditor('poolRules','小费池金额计算规则')" title="点击编辑字段说明">ⓘ</span></span>
             </div>
 
             <div id="poolRulesContainer"></div>
@@ -488,7 +488,7 @@
           <div id="legacyAllocationSections">
           <!-- Deduction Rules -->
           <div class="form-section tipout-form-card" id="deductRulesSection" style="display:none">
-            <div class="form-section-title"><span class="field-desc-wrap" data-field-id="deductRoles" data-pool-label="小费扣除方规则">小费扣除方规则 <span class="field-desc-icon" data-field-id="deductRoles" data-label="小费扣除方规则" onclick="event.preventDefault();openFieldDescEditor('deductRoles','小费扣除方规则')" title="点击编辑字段说明">ⓘ</span></span></div>
+            <div class="form-section-title"><span class="field-desc-wrap" data-field-id="deductRoles" data-pool-label="小费贡献方规则">小费贡献方规则 <span class="field-desc-icon" data-field-id="deductRoles" data-label="小费贡献方规则" onclick="event.preventDefault();openFieldDescEditor('deductRoles','小费贡献方规则')" title="点击编辑字段说明">ⓘ</span></span></div>
             <div id="deductRulesContainer"></div>
             <div id="deductPanelsHost" style="display:none" aria-hidden="true"></div>
             <div class="add-option-dropdown" id="deductAddOptionWrap">
@@ -5671,7 +5671,7 @@
       var allocMode = (document.querySelector('input[name="allocationMode"]:checked') || {}).value || 'legacy_pool';
       if (allocMode === 'legacy_pool') {
         if (document.querySelectorAll('.pool-rule-card').length === 0) {
-          showNotification(tipTerm('请至少添加一项小费池贡献规则'), 'error');
+          showNotification(tipTerm('请至少添加一项小费池金额计算规则'), 'error');
           return;
         }
         var receivers = document.querySelectorAll('#receiverTableBody tr.receiver-primary-row');
@@ -5683,7 +5683,7 @@
           if (ms && ms.querySelectorAll('input[type="checkbox"]:checked').length > 0 && pct > 0) hasReceiver = true;
         });
         if (!hasReceiver) {
-          showNotification(tipTerm('请至少添加一条小费接收方规则（角色、占比均需填写）'), 'error');
+          showNotification(tipTerm('请至少添加一条小费池接收方规则（角色、占比均需填写）'), 'error');
           return;
         }
         var condErr = null;
@@ -5755,7 +5755,7 @@
           return;
         }
         if (document.querySelectorAll('.pool-rule-card').length === 0) {
-          showNotification(tipTerm('请至少添加一项小费池贡献规则'), 'error');
+          showNotification(tipTerm('请至少添加一项小费池金额计算规则'), 'error');
           return;
         }
         var condErrOt = null;

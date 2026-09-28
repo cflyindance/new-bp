@@ -511,7 +511,7 @@
         }).join('；');
       }
       var poolNote = (rule.poolRules && rule.poolRules.length)
-        ? '<p style="font-size:12px;color:var(--text-tertiary);margin:4px 0 0;line-height:1.5">订单小费钱包 = 按「小费池贡献规则」对单笔订单基数（销售额/小费/加收/手动/自定义等）加权合计，口径与「小费池汇总分配」一致。</p>'
+        ? '<p style="font-size:12px;color:var(--text-tertiary);margin:4px 0 0;line-height:1.5">订单小费钱包 = 按「小费池金额计算规则」对单笔订单基数（销售额/小费/加收/手动/自定义等）加权合计，口径与「小费池汇总分配」一致。</p>'
         : '';
       var safeRidJs = String(rid).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
       return '<div class="formula-rule-section tipout-formula-strip" data-rule-id="' + escHtml(rid) + '">' +
@@ -884,7 +884,7 @@
         var htmlOt = '<div class="rule-detail-item"><div class="label">规则名称</div><div class="value">' + (rule.ruleName || '') + '</div></div>' +
           '<div class="rule-detail-item"><div class="label">门店</div><div class="value">' + (storeVal || rule.store || '') + '</div></div>' +
           '<div class="rule-detail-item"><div class="label">分配模式</div><div class="value">计提小费占比分配</div></div>' +
-          '<div class="divider"></div><h4 style="margin-bottom:12px;font-size:14px">小费池贡献规则（订单小费钱包口径与汇总分配一致）</h4>';
+          '<div class="divider"></div><h4 style="margin-bottom:12px;font-size:14px">小费池金额计算规则（订单小费钱包口径与汇总分配一致）</h4>';
         (rule.poolRules || []).forEach(function(pr) {
           var name = pr.name || poolTypeNames2[pr.type] || pr.type;
           var valStr = '';
@@ -953,7 +953,7 @@
       var storeVal = store ? store.value : rule.store || '';
       var html = '<div class="rule-detail-item"><div class="label">规则名称</div><div class="value">' + (rule.ruleName || '') + '</div></div>' +
         '<div class="rule-detail-item"><div class="label">门店</div><div class="value">' + (storeVal || rule.store || '') + '</div></div>' +
-        '<div class="divider"></div><h4 style="margin-bottom:12px;font-size:14px">小费池贡献规则</h4>';
+        '<div class="divider"></div><h4 style="margin-bottom:12px;font-size:14px">小费池金额计算规则</h4>';
       var poolRuleNames = {};
       (rule.poolRules || []).forEach(function(pr) {
         poolRuleNames[pr.id || pr.type] = pr.name || poolTypeNames[pr.type] || pr.type;
@@ -971,7 +971,7 @@
         }
         html += '<div class="rule-detail-item"><div class="label">' + name + '</div><div class="value">' + valStr + '</div></div>';
       });
-      html += '<div class="divider"></div><h4 style="margin-bottom:12px;font-size:14px">小费扣除方规则</h4>' +
+      html += '<div class="divider"></div><h4 style="margin-bottom:12px;font-size:14px">小费贡献方规则</h4>' +
         '<div class="rule-detail-item"><div class="value">' + formatDeductRulesDisplay(rule) + '</div></div>' +
         '<div class="divider"></div><h4 style="margin-bottom:12px;font-size:14px">小费接收方规则</h4>';
       (rule.receivers || []).forEach(function(r) {

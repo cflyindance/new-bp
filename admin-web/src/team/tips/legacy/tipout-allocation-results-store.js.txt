@@ -26,6 +26,7 @@
   }
   function finiteNonnegative(value) { return typeof value === "number" && isFinite(value) && value >= 0; }
   function validate(snapshot) {
+    if (root.TipOutFunding) { try { root.TipOutFunding.validateSnapshot(snapshot); } catch (error) { return error.message; } }
     if (!snapshot || typeof snapshot !== "object") return "分配结果无效";
     if (!String(snapshot.store || "").trim()) return "请选择门店";
     if (!/^\d{4}-\d{2}-\d{2}$/.test(String(snapshot.dateKey || ""))) return "请选择有效日期";
@@ -86,13 +87,22 @@
   async function cancel(store, dateKey) {
     function execute() {
       if (root.TipOutDateState) root.TipOutDateState.assertDateWritable(store, dateKey);
+      var oldResultsRaw = localStorage.getItem(RESULT_KEY), oldAllocatedRaw = localStorage.getItem(ALLOC_KEY);
       var results = resultDocument();
       var allocated = allocatedDocument();
       delete results[key(store, dateKey)];
       var dates = Array.isArray(allocated[String(store || '')]) ? allocated[String(store || '')].slice() : [];
       allocated[String(store || '')] = dates.filter(function (item) { return item !== String(dateKey || ''); });
-      localStorage.setItem(RESULT_KEY, JSON.stringify(results));
-      localStorage.setItem(ALLOC_KEY, JSON.stringify(allocated));
+      try {
+        localStorage.setItem(RESULT_KEY, JSON.stringify(results));
+        localStorage.setItem(ALLOC_KEY, JSON.stringify(allocated));
+      } catch (error) {
+        try {
+          if (oldResultsRaw == null) localStorage.removeItem(RESULT_KEY); else localStorage.setItem(RESULT_KEY, oldResultsRaw);
+          if (oldAllocatedRaw == null) localStorage.removeItem(ALLOC_KEY); else localStorage.setItem(ALLOC_KEY, oldAllocatedRaw);
+        } catch (_) {}
+        throw error;
+      }
       if (root.TipOutDateState) root.TipOutDateState.notify(store, dateKey);
     }
     if (root.TipOutDateState) return root.TipOutDateState.withLock(store, dateKey, execute);

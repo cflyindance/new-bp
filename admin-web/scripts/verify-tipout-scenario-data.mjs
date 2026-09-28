@@ -32,7 +32,7 @@ const reciprocalFacts = [
 const reciprocalAmounts = JSON.parse(JSON.stringify(context.window.TipAllocation.collectScenarioEmployeeAmounts(reciprocalRules,reciprocalFacts)));
 assert.ok(reciprocalAmounts.some(row=>row.employeeId==='bartender'&&row.deducted>0&&row.received>0),'典型演示规则必须让至少一名员工同时贡献入池并从池分得');
 const demoStorage = new Map();
-const seededRules = [{id:1,ruleName:'Base',store:'s1'}];
+const seededRules = [{id:5,ruleName:'Base',store:'s1'}];
 const demoContext = {window:{}};
 demoContext.window.localStorage = {getItem:key=>demoStorage.get(key)??null,setItem:(key,value)=>demoStorage.set(key,String(value))};
 demoContext.window.ruleData = {getRules:()=>seededRules,saveRules:rules=>{seededRules.splice(0,seededRules.length,...rules); demoStorage.set('tipout_rules',JSON.stringify(rules));}};
@@ -44,10 +44,17 @@ vm.runInNewContext(fs.readFileSync(new URL('../src/team/tips/legacy/tipout-demo-
 demoContext.window.TipOutDemoRules.ensure();
 const overlapRule = seededRules.find(rule=>rule.demoScenarioKey&&rule.deductConfig&&rule.receivers?.some(receiver=>receiver.roles?.includes('Bartender'))&&rule.deductRoles?.includes('Bartender'));
 assert.ok(overlapRule,'默认演示规则必须包含同时作为贡献方与接收方的 Bartender');
+const seededOrderRule = seededRules.find(rule=>rule.distribution==='orders');
+assert.ok(seededOrderRule && seededOrderRule.clockin==='unrestricted','默认规则应覆盖不限打卡的订单占比分配');
 const plain = value => JSON.parse(JSON.stringify(value));
 const employee = { id: 'e1', name: '同名员工', role: 'Server' };
 const input = { storeId: 's1', employee, dateKey: '2026-09-23' };
 const dates = api.monthDates(input.dateKey);
+const orderCounts = dates.map(dateKey=>api.fact({...input,dateKey})).filter(f=>f.orders.length).map(f=>f.orders.length);
+assert.ok(orderCounts.includes(1)&&orderCounts.includes(3),'演示订单应提供不同的正数笔数以验证占比分配');
+assert.deepEqual(plain(context.window.TipAllocation.distributeRoleAmountsToEmployees({Server:40},seededOrderRule,[
+  {name:'A',role:'Server',orderCount:3,clockedIn:true},{name:'B',role:'Server',orderCount:1,clockedIn:false},{name:'C',role:'Server',orderCount:0,clockedIn:true}
+]).receivedByName),{A:30,B:10,C:0});
 assert.equal(dates[0], '2026-08-23');
 assert.equal(dates.at(-1), input.dateKey);
 assert.equal(api.monthDates('2026-03-31')[0], '2026-02-28');

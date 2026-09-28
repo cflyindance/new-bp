@@ -65,15 +65,19 @@
     var surchargeCents = hasOrders ? hash(key + ':surcharge') % 1500 : 0;
     var orders = [];
     if (hasOrders) {
-      // Split integer cents once; sums are exact and shared by all rules.
-      var firstSales = Math.floor(salesCents / 2), firstTip = Math.floor(tipCents / 2), firstSurcharge = Math.floor(surchargeCents / 2);
-      for (var i = 0; i < 2; i++) {
-        var sale = i ? salesCents - firstSales : firstSales;
-        var tip = i ? tipCents - firstTip : firstTip;
-        var charge = i ? surchargeCents - firstSurcharge : firstSurcharge;
+      // Vary attributable order counts without changing this employee's daily totals.
+      var orderCount = 1 + hash(key + ':order-count') % 3;
+      var remainingSales = salesCents, remainingTips = tipCents, remainingSurcharge = surchargeCents;
+      for (var i = 0; i < orderCount; i++) {
+        var remainingOrders = orderCount - i;
+        var sale = Math.floor(remainingSales / remainingOrders);
+        var tip = Math.floor(remainingTips / remainingOrders);
+        var charge = Math.floor(remainingSurcharge / remainingOrders);
+        remainingSales -= sale; remainingTips -= tip; remainingSurcharge -= charge;
         orders.push({ id: key + ':order:' + i, employeeId: employeeId, salesAmount: sale / 100, tipAmount: tip / 100, surcharge: charge / 100,
           tipType: i ? 'Cash Tips (现金小费)' : 'Credit Card Tips (信用卡小费)',
-          lines: [{ productLine: 'POS', category: i ? '酒水' : '主菜', amount: sale / 100 }] });
+          orderType: i ? 'takeout' : 'dine_in', area: i ? 'bar' : 'main', paymentMethod: i ? 'cash' : 'card', localTime: i ? '19:30' : '11:30',
+          lines: [{ productId: i ? 'demo-beverage' : 'demo-main', productLine: 'POS', category: i ? '酒水' : '主菜', amount: sale / 100 }] });
       }
     }
     return { version: VERSION, key: key, storeId: storeId, employeeId: employeeId, name: String(employee.name || ''), role: String(employee.role || ''),
