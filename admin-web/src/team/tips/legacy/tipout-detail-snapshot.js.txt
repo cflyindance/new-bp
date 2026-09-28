@@ -2,7 +2,12 @@
   function clone(value) { return JSON.parse(JSON.stringify(value)); }
   function capture(document, rules) {
     var sections = Array.from(document.querySelectorAll('.formula-rule-section'));
-    return { rules: clone(rules), formulas: sections.some(function(section) { return section.hidden; }) ? null : sections.map(function(section) {
+    var roleAllocations = Array.from(document.querySelectorAll('.detail-card[data-rule-id] .detail-result-section[data-role]')).map(function(section) {
+      var card = section.closest('.detail-card'), input = section.querySelector('.detail-role-pct-input');
+      return { ruleId: card.getAttribute('data-rule-id'), role: section.getAttribute('data-role'),
+        percentage: input ? input.value : null, amount: (section.querySelector('.role-amount') || {}).textContent || '' };
+    });
+    return { rules: clone(rules), roleAllocations: roleAllocations, formulas: sections.some(function(section) { return section.hidden; }) ? null : sections.map(function(section) {
       return { id: section.getAttribute('data-rule-id'), values: Array.from(section.querySelectorAll('input')).map(function(input) { return input.value; }) };
     }) };
   }
@@ -34,6 +39,8 @@
           row.setAttribute('data-snapshot-hours', employee.hours);
           row.setAttribute('data-snapshot-name', employee.name);
           row.setAttribute('data-attendance-status', employee.attendanceStatus || 'unknown');
+          if (employee.hoursSource === 'manual') row.setAttribute('data-hours-manual', '1');
+          else row.removeAttribute('data-hours-manual');
           if (select) {
             if (!Array.from(select.options).some(function(o) { return o.value === employee.name; })) {
               var option = document.createElement('option'); option.value = employee.name; option.textContent = employee.name; select.appendChild(option);
@@ -46,8 +53,12 @@
           tbody.appendChild(row);
         });
         var amount = employees.reduce(function(sum,e) { return sum + e.amount; },0);
-        var pct = section.querySelector('.detail-role-pct-input'); if (pct) pct.value = pool.poolAmount ? amount / pool.poolAmount * 100 : 0;
-        var label = section.querySelector('.role-amount'); if (label) label.textContent = money(amount);
+        var savedRole = (snapshot.editorState && snapshot.editorState.roleAllocations || []).find(function(item) {
+          return item.ruleId === pool.ruleId && item.role === section.getAttribute('data-role');
+        });
+        var pct = section.querySelector('.detail-role-pct-input');
+        if (pct) pct.value = savedRole && savedRole.percentage !== null ? savedRole.percentage : (pool.poolAmount ? amount / pool.poolAmount * 100 : 0);
+        var label = section.querySelector('.role-amount'); if (label) label.textContent = savedRole && savedRole.amount ? savedRole.amount : money(amount);
       });
     });
     var formulas = snapshot.editorState && snapshot.editorState.formulas;

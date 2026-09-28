@@ -43,19 +43,12 @@ var ALLOC_KEY = 'tipout_allocated';
           row.setAttribute('data-attendance-status',status);
           var old = row.querySelector('.tipout-attendance-label'); if (old) old.remove();
           select.parentElement.appendChild(window.TipOutAttendanceLabel.badge(document,status));
-          if (enforce && rule && rule.clockin !== 'noclock') {
-            var adoptedHours = getDetailEmployeeHours(rule, rule.id, dateKey, select.value);
-            var clockHoursInput = row.querySelector('.detail-emp-hours-input');
-            if (clockHoursInput) clockHoursInput.value = adoptedHours;
-            if (status === 'absent' || (rule.distribution === 'hours' && adoptedHours <= 0)) {
-              var pct = row.querySelector('.detail-emp-pct-input') || row.querySelector('td:nth-last-child(3) input'); if (pct) pct.value = 0;
-              var hours = row.querySelector('.detail-emp-hours-input'); if (hours) hours.value = 0;
-              row.setAttribute('data-snapshot-hours','0');
-              var cells = row.querySelectorAll('td'); cells[cells.length-2].textContent = money(0);
-            }
+          if (enforce && rule && rule.distribution !== 'hours' && rule.clockin !== 'noclock' && status === 'absent') {
+            var pct = row.querySelector('.detail-emp-pct-input'); if (pct) pct.value = 0;
+            var cells = row.querySelectorAll('td'); if (cells.length > 1) cells[cells.length - 2].textContent = money(0);
           }
         });
-        if (enforce && rule && rule.clockin !== 'noclock') recalcDetailLegacyCard(card);
+        if (enforce && rule && rule.distribution !== 'hours' && rule.clockin !== 'noclock') recalcDetailLegacyCard(card);
       });
     }
     function getAllocatedDatesForStore(store) {
@@ -134,15 +127,39 @@ var ALLOC_KEY = 'tipout_allocated';
 
     function onDetailManualHoursInput(input) {
       if (!input) return;
-      var ruleId = input.getAttribute('data-rule-id') || '';
-      var dateKey = input.getAttribute('data-date-key') || '';
-      var employeeName = input.getAttribute('data-employee-name') || '';
-      var store = ((document.getElementById('storeSelect') || {}).value || '').trim();
-      try { if (window.TipOutDateState) TipOutDateState.assertDateWritable(store, dateKey); }
+      var scope = getDetailPayoutScope();
+      try { if (window.TipOutDateState) TipOutDateState.assertDateWritable(scope.store, scope.dateKey); }
       catch (error) { showNotification(error.message, 'error'); renderDetailPage(); return; }
       var table = input.closest('table');
-      if (table) onEmpHoursChange(table.id);
+      input.closest('tr').setAttribute('data-hours-manual', '1');
+      try { if (table) onEmpHoursChange(table.id); }
+      catch (error) { showNotification(error.message || '分配工时无效', 'error'); }
       markDetailDirty();
+    }
+
+    function onDetailEmployeePctInput(input) {
+      if (!input) return;
+      input.closest('tr').setAttribute('data-pct-manual', '1');
+      var table = input.closest('table');
+      if (table) recalcRoleAmount(table.id);
+      markDetailDirty();
+    }
+
+    function resetDetailEmployeeSelection(select) {
+      var row = select.closest('tr');
+      var card = select.closest('.detail-card');
+      if (!row || !card || card.getAttribute('data-hours-based') !== '1') return;
+      var ruleId = card.getAttribute('data-rule-id');
+      var rule = detailAllRules.find(function(item) { return String(item.id) === ruleId; });
+      var hoursInput = row.querySelector('.detail-emp-hours-input');
+      if (hoursInput && rule) hoursInput.value = String(Math.round(getDetailEmployeeHours(rule, ruleId, document.getElementById('detailDate').value, select.value) * 100) / 100);
+      row.removeAttribute('data-hours-manual');
+      row.removeAttribute('data-pct-manual');
+      row.removeAttribute('data-snapshot-name');
+      row.removeAttribute('data-snapshot-hours');
+      row.removeAttribute('data-snapshot-hours-source');
+      var table = select.closest('table');
+      if (table) onEmpHoursChange(table.id);
     }
 
     var currentRule = null;
@@ -696,9 +713,9 @@ var ALLOC_KEY = 'tipout_allocated';
       }
       var ridSafe = String(rid).replace(/[^a-zA-Z0-9_-]/g, '_');
       var distHint = escHtml(formatRuleDistribution(rule));
-      var manualHours = rule.clockin === 'noclock' && rule.distribution === 'hours';
-      var hoursHead = manualHours ? '<th>工时</th>' : '';
-      var html = '<div class="card detail-card tipout-allocation-group" data-rule-id="' + escHtml(rid) + '" data-order-tip-mode="1" data-pool="' + (+otResult.tipWallet || 0) + '" data-manual-hours="' + (manualHours ? '1' : '0') + '">' +
+      var hoursBased = rule.distribution === 'hours';
+      var hoursHead = hoursBased ? '<th>分配工时</th>' : '';
+      var html = '<div class="card detail-card tipout-allocation-group" data-rule-id="' + escHtml(rid) + '" data-order-tip-mode="1" data-pool="' + (+otResult.tipWallet || 0) + '" data-manual-hours="' + (hoursBased ? '1' : '0') + '" data-hours-based="' + (hoursBased ? '1' : '0') + '">' +
         '<p style="padding:12px 16px 0;font-size:12px;color:var(--text-tertiary);margin:0">以下为按当前规则与模拟订单推算的金额；员工行按「' +
         distHint + '」示意拆分。</p>' +
         '<div class="card-body detail-card-body-alloc" style="padding:16px">';
@@ -710,6 +727,14 @@ var ALLOC_KEY = 'tipout_allocated';
         if (!emps.length) emps = ['（未配置员工）'];
         var empAmounts = emps.map(function(emp) { return +(otResult.receivedByName && otResult.receivedByName[emp] || 0); });
         var empPcts = empAmounts.map(function(amount) { return roleAmount > 0 ? roundPct(amount / roleAmount * 100) : 0; });
+        if (hoursBased) {
+          var hourRatios = window.TipOutDetailManualAllocation.ratiosFromHours(emps.map(function(emp) {
+            return emp === '（未配置员工）' ? 0 : getDetailEmployeeHours(rule, rid, dateKey, emp);
+          }));
+          var hourAmounts = window.TipOutDetailManualAllocation.amountsFromPcts(Math.round(roleAmount * 100), hourRatios);
+          empPcts = hourRatios.map(function(value) { return value / 100; });
+          empAmounts = hourAmounts.cents.map(function(value) { return value / 100; });
+        }
         var sectionId = 'detailOtSec_' + ridSafe + '_r' + ri;
         var sectionIdJs = String(sectionId).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
         html += '<div class="employee-section detail-result-section" id="' + escHtml(sectionId) + '" data-role="' + detailAttrSafe(roleName) + '">' +
@@ -733,13 +758,13 @@ var ALLOC_KEY = 'tipout_allocated';
           var opts = emps.map(function(e) {
             return '<option' + (e === emp ? ' selected' : '') + '>' + e + '</option>';
           }).join('');
-          var hoursCell = manualHours && emp !== '（未配置员工）'
-            ? '<td class="input-cell"><input type="number" class="detail-emp-hours-input" value="' + getDetailEmployeeHours(rule, rid, dateKey, emp) + '" min="0" step="0.1" data-rule-id="' + escHtml(rid) + '" data-date-key="' + escHtml(dateKey) + '" data-employee-name="' + escHtml(emp) + '" onchange="onDetailManualHoursInput(this)"> h</td>'
-            : (manualHours ? '<td>—</td>' : '');
+          var hoursCell = hoursBased && emp !== '（未配置员工）'
+            ? '<td class="input-cell"><input type="number" class="detail-emp-hours-input" value="' + (Math.round(getDetailEmployeeHours(rule, rid, dateKey, emp) * 100) / 100) + '" min="0" step="0.01" data-rule-id="' + escHtml(rid) + '" data-date-key="' + escHtml(dateKey) + '" data-employee-name="' + escHtml(emp) + '" onchange="onDetailManualHoursInput(this)"> h</td>'
+            : (hoursBased ? '<td>—</td>' : '');
           html += '<tr>' +
             '<td><select class="form-control" style="width:140px;height:28px;font-size:13px">' + opts + '</select></td>' +
             hoursCell +
-            '<td class="input-cell"><input type="number" value="' + empPcts[ei] + '" readonly style="background:rgba(0,0,0,0.04)"> %</td>' +
+            '<td class="input-cell"><input type="number"' + (hoursBased ? ' class="detail-emp-pct-input" min="0" max="100" step="0.01" onchange="onDetailEmployeePctInput(this)"' : ' readonly style="background:rgba(0,0,0,0.04)"') + ' value="' + empPcts[ei] + '"> %</td>' +
             '<td>' + money(empAmount) + '</td>' +
             '<td class="action-cell">—</td>' +
             '</tr>';
@@ -1179,14 +1204,16 @@ var ALLOC_KEY = 'tipout_allocated';
         var card = bundle.querySelector('.detail-card');
         if (card) {
           card.setAttribute('data-pool', pool);
-          if (!card.getAttribute('data-order-tip-mode')) recalcDetailLegacyCard(card);
+          if (card.getAttribute('data-hours-based') === '1') recalcDetailHoursCard(card);
+          else if (!card.getAttribute('data-order-tip-mode')) recalcDetailLegacyCard(card);
         }
       } else if (ruleRid) {
         var escSel = (typeof CSS !== 'undefined' && CSS.escape) ? CSS.escape(ruleRid) : String(ruleRid).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
         var card = document.querySelector('#detailRulesContainer .detail-card[data-rule-id="' + escSel + '"]');
         if (card) {
           card.setAttribute('data-pool', pool);
-          if (!card.getAttribute('data-order-tip-mode')) recalcDetailLegacyCard(card);
+          if (card.getAttribute('data-hours-based') === '1') recalcDetailHoursCard(card);
+          else if (!card.getAttribute('data-order-tip-mode')) recalcDetailLegacyCard(card);
         }
       }
       return pool;
@@ -1313,10 +1340,6 @@ var ALLOC_KEY = 'tipout_allocated';
       }
     }
 
-    function isManualHoursDistMode(rule) {
-      return !!(rule && rule.clockin === 'noclock' && rule.distribution === 'hours');
-    }
-
     function parseHoursInput(val) {
       if (val == null || val === '') return 0;
       var n = parseFloat(val);
@@ -1326,6 +1349,29 @@ var ALLOC_KEY = 'tipout_allocated';
 
     function roundPct(x) {
       return Math.round(x * 10) / 10;
+    }
+
+    function recalcDetailHoursCard(card) {
+      var helper = window.TipOutDetailManualAllocation;
+      var poolCents = Math.round((Number(card.getAttribute('data-pool')) || 0) * 100);
+      card.querySelectorAll('.detail-result-section[data-role]').forEach(function(section) {
+        var rolePctInput = section.querySelector('.detail-role-pct-input');
+        var roleCents = rolePctInput
+          ? Math.round(poolCents * (parseFloat(rolePctInput.value) || 0) / 100)
+          : Math.round(detailNumberFromText((section.querySelector('.role-amount') || {}).textContent || '0') * 100);
+        var amountLabel = section.querySelector('.role-amount');
+        if (amountLabel) amountLabel.textContent = money(roleCents / 100);
+        var rows = Array.from(section.querySelectorAll('tbody tr'));
+        var pcts = rows.map(function(row) {
+          var input = row.querySelector('.detail-emp-pct-input');
+          return input ? helper.parsePct(input.value) : 0;
+        });
+        var result = helper.amountsFromPcts(roleCents, pcts);
+        rows.forEach(function(row, index) {
+          var cells = row.querySelectorAll('td');
+          if (cells.length > 1) cells[cells.length - 2].textContent = money(result.cents[index] / 100);
+        });
+      });
     }
 
     function recalcDetailLegacyCard(card) {
@@ -1358,9 +1404,9 @@ var ALLOC_KEY = 'tipout_allocated';
     function buildLegacyDetailCardHtml(data, dateKey, rule, rid, tableId) {
       seedDefaultManualHoursForDetail(rule, rid, dateKey);
       var roleConfig = buildRoleConfigFromRule(rule);
-      var manualHours = isManualHoursDistMode(rule);
+      var hoursBased = rule.distribution === 'hours';
       if (roleConfig.length === 0) {
-        return '<div class="card detail-card tipout-allocation-group" data-rule-id="' + escHtml(rid) + '" data-pool="0" data-manual-hours="' + (manualHours ? '1' : '0') + '">' +
+        return '<div class="card detail-card tipout-allocation-group" data-rule-id="' + escHtml(rid) + '" data-pool="0" data-manual-hours="' + (hoursBased ? '1' : '0') + '" data-hours-based="' + (hoursBased ? '1' : '0') + '">' +
           '<div class="card-body" style="padding:24px;color:var(--text-secondary)">该规则暂无接收方配置</div></div>';
       }
       var seed = dateKey.split('-').reduce(function(a, b) { return a * 31 + parseInt(b, 10); }, 7);
@@ -1370,7 +1416,7 @@ var ALLOC_KEY = 'tipout_allocated';
       var ridSafe = String(rid).replace(/[^a-zA-Z0-9_-]/g, '_');
       var showHours = rule.distribution === 'hours';
       var headHours = showHours ? '<th>分配工时</th>' : '';
-      var html = '<div class="card detail-card tipout-allocation-group" data-rule-id="' + escHtml(rid) + '" data-pool="' + (+data.pool || 0) + '" data-manual-hours="' + (manualHours ? '1' : '0') + '">' +
+      var html = '<div class="card detail-card tipout-allocation-group" data-rule-id="' + escHtml(rid) + '" data-pool="' + (+data.pool || 0) + '" data-manual-hours="' + (hoursBased ? '1' : '0') + '" data-hours-based="' + (hoursBased ? '1' : '0') + '">' +
         '<div class="card-body detail-card-body-alloc" style="padding:16px">';
 
       roleConfig.forEach(function(rc, ri) {
@@ -1383,15 +1429,12 @@ var ALLOC_KEY = 'tipout_allocated';
         var empCount = rc.employees.length;
         var empPcts = [];
         var empAmounts = [];
-        if (rule.distribution === 'hours' && window.TipAllocation && TipAllocation.distributeRoleAmountsToEmployees) {
-          var roleAmountMap = {};
-          roleAmountMap[rc.role] = roleAmount;
-          var weightedEmployees = rc.employees.map(function(emp) {
-            return { name: emp, role: rc.role, hours: getDetailEmployeeHours(rule, rid, dateKey, emp) };
-          });
-          var weighted = TipAllocation.distributeRoleAmountsToEmployees(roleAmountMap, rule, weightedEmployees);
-          empAmounts = rc.employees.map(function(emp) { return +(weighted.receivedByName[emp] || 0); });
-          empPcts = empAmounts.map(function(amount) { return roleAmount > 0 ? roundPct(amount / roleAmount * 100) : 0; });
+        if (hoursBased) {
+          var initialHours = rc.employees.map(function(emp) { return getDetailEmployeeHours(rule, rid, dateKey, emp); });
+          var initialRatios = window.TipOutDetailManualAllocation.ratiosFromHours(initialHours);
+          var initialAmounts = window.TipOutDetailManualAllocation.amountsFromPcts(Math.round(roleAmount * 100), initialRatios);
+          empPcts = initialRatios.map(function(value) { return value / 100; });
+          empAmounts = initialAmounts.cents.map(function(value) { return value / 100; });
         } else {
           var remaining = 100;
           for (var i = 0; i < empCount; i++) {
@@ -1430,14 +1473,13 @@ var ALLOC_KEY = 'tipout_allocated';
             return '<option' + (e === emp ? ' selected' : '') + '>' + e + '</option>';
           }).join('');
           var hoursCell = showHours
-            ? '<td class="input-cell"><input type="number" class="detail-emp-hours-input" value="' + getDetailEmployeeHours(rule, rid, dateKey, emp) + '" min="0" step="0.1" ' +
-              (manualHours ? '' : 'readonly aria-label="分配工时（来自打卡）" ') + 'data-rule-id="' + escHtml(rid) + '" data-date-key="' + escHtml(dateKey) + '" data-employee-name="' + escHtml(emp) + '" onchange="onDetailManualHoursInput(this)"> h</td>'
+            ? '<td class="input-cell"><input type="number" class="detail-emp-hours-input" value="' + (Math.round(getDetailEmployeeHours(rule, rid, dateKey, emp) * 100) / 100) + '" min="0" step="0.01" data-rule-id="' + escHtml(rid) + '" data-date-key="' + escHtml(dateKey) + '" data-employee-name="' + escHtml(emp) + '" onchange="onDetailManualHoursInput(this)"> h</td>'
             : '';
           html += '<tr>' +
             '<td><select class="form-control" style="width:140px;height:28px;font-size:13px">' + opts + '</select></td>' +
             hoursCell +
             '<td class="input-cell"><input type="number" class="detail-emp-pct-input" value="' + empPcts[ei] +
-            '" onchange="recalcRoleAmount(\'' + tidJs + '\')"> %</td>' +
+            '"' + (hoursBased ? ' min="0" max="100" step="0.01" onchange="onDetailEmployeePctInput(this)"' : ' onchange="recalcRoleAmount(\'' + tidJs + '\')"') + '> %</td>' +
             '<td>' + money(empAmount) + '</td>' +
             '<td class="action-cell">' +
             '<a href="javascript:void(0)" onclick="addDetailRow(\'' + tidJs + '\',this)">新增行</a>' +
@@ -1503,13 +1545,13 @@ var ALLOC_KEY = 'tipout_allocated';
       var manualHours = card && card.getAttribute('data-manual-hours') === '1';
       var showHours = manualHours || !!(table && table.querySelector('.detail-emp-hours-input'));
       var hoursCell = showHours
-        ? '<td class="input-cell"><input type="number" class="detail-emp-hours-input" value="0" min="0" step="0.1" ' + (manualHours ? '' : 'readonly ') + 'onchange="onEmpHoursChange(\'' + tableId + '\')"> h</td>'
+        ? '<td class="input-cell"><input type="number" class="detail-emp-hours-input" value="0" min="0" step="0.01" onchange="onDetailManualHoursInput(this)"> h</td>'
         : '';
       var newRow = document.createElement('tr');
       newRow.innerHTML =
         '<td><select class="form-control" style="width:140px;height:28px;font-size:13px">' + options + '</select></td>' +
         hoursCell +
-        '<td class="input-cell"><input type="number" class="detail-emp-pct-input" value="0" onchange="recalcRoleAmount(\'' + tableId + '\')"> %</td>' +
+        '<td class="input-cell"><input type="number" class="detail-emp-pct-input" value="0"' + (manualHours ? ' min="0" max="100" step="0.01" onchange="onDetailEmployeePctInput(this)"' : ' onchange="recalcRoleAmount(\'' + tableId + '\')"') + '> %</td>' +
         '<td>$0.00</td>' +
         '<td class="action-cell"><a href="javascript:void(0)" onclick="addDetailRow(\'' + tableId + '\',this)">新增行</a>' +
         '<a href="javascript:void(0)" class="danger" onclick="removeDetailRow(\'' + tableId + '\',this)">删除行</a></td>';
@@ -1561,34 +1603,18 @@ var ALLOC_KEY = 'tipout_allocated';
       var card = table.closest('.detail-card');
       if (!card || card.getAttribute('data-manual-hours') !== '1') return;
 
-      var rows = table.querySelectorAll('tbody tr');
-      var hoursList = [];
-      var sumH = 0;
-      rows.forEach(function(tr) {
+      var rows = Array.from(table.querySelectorAll('tbody tr'));
+      var hoursList = rows.map(function(tr) {
         var hInp = tr.querySelector('.detail-emp-hours-input');
-        var h = parseHoursInput(hInp ? hInp.value : 0);
-        hoursList.push(h);
-        sumH += h;
+        return hInp ? window.TipOutDetailManualAllocation.parseHours(hInp.value) : 0;
       });
-
+      var ratios = window.TipOutDetailManualAllocation.ratiosFromHours(hoursList);
       rows.forEach(function(tr, i) {
         var pctInp = tr.querySelector('.detail-emp-pct-input');
         if (!pctInp) return;
-        var pct = sumH > 0 ? roundPct(hoursList[i] / sumH * 100) : 0;
-        pctInp.value = pct;
+        pctInp.value = String(ratios[i] / 100);
+        tr.removeAttribute('data-pct-manual');
       });
-
-      if (sumH > 0 && rows.length > 1) {
-        var sumPct = 0;
-        rows.forEach(function(tr, i) {
-          if (i < rows.length - 1) {
-            sumPct += parseFloat(tr.querySelector('.detail-emp-pct-input').value) || 0;
-          }
-        });
-        var lastPctInp = rows[rows.length - 1].querySelector('.detail-emp-pct-input');
-        if (lastPctInp) lastPctInp.value = roundPct(100 - sumPct);
-      }
-
       recalcRoleAmount(tableId);
     }
 
@@ -1596,6 +1622,11 @@ var ALLOC_KEY = 'tipout_allocated';
       var table = document.getElementById(tableId);
       var card = table ? table.closest('.detail-card') : null;
       if (!card || !table) return;
+      if (card.getAttribute('data-hours-based') === '1') {
+        try { recalcDetailHoursCard(card); }
+        catch (error) { showNotification(error.message || '分配比例无效', 'error'); }
+        return;
+      }
       if (card.getAttribute('data-order-tip-mode') === '1') return;
       recalcDetailLegacyCard(card);
     }
@@ -1626,6 +1657,10 @@ var ALLOC_KEY = 'tipout_allocated';
       document.querySelectorAll('#detailRulesContainer .detail-card[data-rule-id]').forEach(function(card) {
         var ruleId = card.getAttribute('data-rule-id') || '';
         var rule = (rules || []).find(function(item) { return String(item.id || '') === String(ruleId); }) || {};
+        if (card.getAttribute('data-hours-based') === '1') {
+          card.querySelectorAll('.detail-emp-hours-input').forEach(function(input) { window.TipOutDetailManualAllocation.parseHours(input.value); });
+          recalcDetailHoursCard(card);
+        }
         var employees = [];
         card.querySelectorAll('.detail-result-section[data-role]').forEach(function(section) {
           var role = section.getAttribute('data-role') || '';
@@ -1644,6 +1679,7 @@ var ALLOC_KEY = 'tipout_allocated';
               attendanceStatus: row.getAttribute('data-attendance-status') || 'unknown',
               role: rosterEmployee ? String(rosterEmployee.role || role) : role,
               hours: hoursInput ? Number(hoursInput.value || 0) : (row.getAttribute('data-snapshot-name') === name ? Number(row.getAttribute('data-snapshot-hours')) : getDetailEmployeeHours(rule, ruleId, dateKey, name)),
+              hoursSource: row.getAttribute('data-hours-manual') === '1' || rule.clockin === 'noclock' ? 'manual' : undefined,
               percentage: pctInput ? Number(pctInput.value || 0) : 0,
               amount: cells.length > 1 ? detailNumberFromText(cells[cells.length - 2].textContent) : NaN
             });
@@ -1948,7 +1984,13 @@ var ALLOC_KEY = 'tipout_allocated';
     renderDetailPage();
     ['input', 'change'].forEach(function(type) {
       document.addEventListener(type, function(event) {
-        if (event.target.closest && event.target.closest('#detailRulesContainer') && event.target.matches('input,select')) { renderDetailAttendance(true); markDetailDirty(); }
+        if (!event.target.closest || !event.target.closest('#detailRulesContainer') || !event.target.matches('input,select')) return;
+        var hoursBased = !!event.target.closest('.detail-card[data-hours-based="1"]');
+        if (hoursBased && type === 'input' && event.target.matches('.detail-emp-hours-input')) event.target.closest('tr').setAttribute('data-hours-manual', '1');
+        if (hoursBased && type === 'input' && event.target.matches('.detail-emp-pct-input')) event.target.closest('tr').setAttribute('data-pct-manual', '1');
+        if (hoursBased && type === 'change' && event.target.matches('select')) resetDetailEmployeeSelection(event.target);
+        renderDetailAttendance(!hoursBased);
+        markDetailDirty();
       });
     });
     window.addEventListener('beforeunload', function(event) { if (detailDirty || detailAllocationSubmitting) { event.preventDefault(); event.returnValue = ''; } });

@@ -390,6 +390,32 @@ var ALLOC_KEY = 'tipout_allocated';
           row.allocationHourEntries.push(Object.assign({}, entry, { usesHours: true, hoursValid: true, source: 'manual', dateKey: dateKey }));
         }
       });
+      var store = (document.getElementById('storeSelect') || {}).value || '';
+      var confirmed = window.TipOutAllocationResults && TipOutAllocationResults.read(store, dateKey);
+      if (confirmed && Array.isArray(confirmed.pools)) {
+        var confirmedRules = confirmed.editorState && Array.isArray(confirmed.editorState.rules)
+          ? confirmed.editorState.rules : getRulesForCurrentStore();
+        confirmed.pools.forEach(function(pool) {
+          var ruleId = String(pool.ruleId || '');
+          var rule = confirmedRules.find(function(item) { return String(item.id || '') === ruleId; });
+          if (!rule || rule.distribution !== 'hours') return;
+          var employee = (pool.employees || []).find(function(item) {
+            var currentId = String(emp.employeeId || '').replace(/^roster:/, '');
+            return currentId && item.employeeId ? String(item.employeeId) === currentId : item.name === emp.name;
+          });
+          if (!employee) return;
+          var poolId = String(pool.poolId || rule.poolId || rule.id || '');
+          var entry = row.allocationHourEntries.find(function(item) { return item.poolId === poolId && item.ruleId === ruleId; });
+          if (!entry) {
+            entry = { poolId: poolId, poolName: pool.poolName || '未命名小费池', poolKind: pool.poolKind || 'tip',
+              ruleId: ruleId, ruleName: pool.ruleName || '未命名规则', usesHours: true, dateKey: dateKey };
+            row.allocationHourEntries.push(entry);
+          }
+          entry.hours = Number(employee.hours);
+          entry.hoursValid = isFinite(entry.hours) && entry.hours >= 0;
+          if (employee.hoursSource === 'manual') entry.source = 'manual';
+        });
+      }
       return row;
     }
 
