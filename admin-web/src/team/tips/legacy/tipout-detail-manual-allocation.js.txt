@@ -1,0 +1,49 @@
+(function(root) {
+  'use strict';
+  function parseDecimal(value, label) {
+    var text = String(value == null ? '' : value).trim();
+    if (!/^\d+(?:\.\d{1,2})?$/.test(text)) throw new Error(label + '须为非负数，最多两位小数');
+    var number = Number(text);
+    if (!isFinite(number) || !Number.isSafeInteger(Math.round(number * 100))) throw new Error(label + '超出有效范围');
+    return number;
+  }
+  function parseHours(value) { return parseDecimal(value, '分配工时'); }
+  function parsePct(value) {
+    var basisPoints = Math.round(parseDecimal(value, '员工分配比例') * 100);
+    if (basisPoints > 10000) throw new Error('员工分配比例不能超过 100%');
+    return basisPoints;
+  }
+  function apportion(target, weights) {
+    if (!Number.isSafeInteger(target) || target < 0) throw new Error('分配金额无效');
+    var sum = weights.reduce(function(total, value) { return total + value; }, 0);
+    if (!isFinite(sum) || sum < 0) throw new Error('分配权重无效');
+    if (!sum || !target) return weights.map(function() { return 0; });
+    var exact = weights.map(function(value) { return target * value / sum; });
+    var amounts = exact.map(function(value) { return Math.floor(value); });
+    var remainder = target - amounts.reduce(function(total, value) { return total + value; }, 0);
+    var order = weights.map(function(_value, index) { return index; }).sort(function(a, b) {
+      return (exact[b] - amounts[b]) - (exact[a] - amounts[a]) || a - b;
+    });
+    for (var i = 0; i < remainder; i++) amounts[order[i]] += 1;
+    return amounts;
+  }
+  function ratiosFromHours(hours) {
+    var weights = hours.map(function(value) { return Math.round(parseHours(value) * 100); });
+    return apportion(weights.some(function(value) { return value > 0; }) ? 10000 : 0, weights);
+  }
+  function amountsFromPcts(roleCents, basisPoints) {
+    if (!Number.isSafeInteger(roleCents) || roleCents < 0) throw new Error('角色分配金额无效');
+    var weights = basisPoints.map(function(value) {
+      if (!Number.isSafeInteger(value) || value < 0 || value > 10000) throw new Error('员工分配比例无效');
+      return value;
+    });
+    var total = weights.reduce(function(sum, value) { return sum + value; }, 0);
+    if (total > 10000) throw new Error('同角色员工分配比例合计不能超过 100%');
+    var target = Math.round(roleCents * total / 10000);
+    return { cents: apportion(target, weights), undistributedCents: roleCents - target };
+  }
+  root.TipOutDetailManualAllocation = {
+    parseHours: parseHours, parsePct: parsePct,
+    ratiosFromHours: ratiosFromHours, amountsFromPcts: amountsFromPcts
+  };
+})(window);
