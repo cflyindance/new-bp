@@ -126,8 +126,10 @@
     var hoursValid = usesHours && (entry.hoursValid === undefined ? validHours(entry.hours) : !!entry.hoursValid);
     var poolId = String(entry.poolId || '');
     var ruleId = String(entry.ruleId || '');
+    var poolKind = entry.poolKind === 'tip' || entry.poolKind === 'surcharge' ? entry.poolKind : '';
     return {
       key: poolId + '::' + ruleId,
+      poolKind: poolKind,
       poolId: poolId,
       poolName: String(entry.poolName || '未命名小费池'),
       ruleId: ruleId,
@@ -173,13 +175,17 @@
     if (!validHours(punchHours)) return true;
     return roundHours(punchHours) !== roundHours(entry.hours);
   }
+  function allocationHourPoolKindLabel(kind) {
+    return kind === 'tip' ? '小费池' : (kind === 'surcharge' ? '加收服务费池' : '—');
+  }
   function aggregateAllocationHourEntries(dailyRows) {
     var byKey = Object.create(null);
     (dailyRows || []).forEach(function(row) {
       normalizeEmployeeHoursRow(row).allocationHourEntries.forEach(function(entry) {
         if (!entry.poolId || !entry.ruleId) return;
-        var item = byKey[entry.key] || (byKey[entry.key] = {
-          key: entry.key, poolId: entry.poolId, ruleId: entry.ruleId,
+        var groupKey = entry.key + (entry.poolKind ? '::' + entry.poolKind : '');
+        var item = byKey[groupKey] || (byKey[groupKey] = {
+          key: groupKey, poolId: entry.poolId, ruleId: entry.ruleId, poolKind: entry.poolKind,
           poolName: entry.poolName, ruleName: entry.ruleName, usesHours: entry.usesHours,
           totalHours: 0, validDays: 0, eligibleDays: 0, latestDate: '', sources: []
         });
@@ -579,6 +585,7 @@
     resolveRuleAllocationHours: resolveRuleAllocationHours,
     summarizeAllocationHourValues: summarizeAllocationHourValues,
     aggregateAllocationHourEntries: aggregateAllocationHourEntries,
+    allocationHourPoolKindLabel: allocationHourPoolKindLabel,
     formatHoursCoverage: formatHoursCoverage,
     shouldHighlightAllocationHours: shouldHighlightAllocationHours,
     EMPLOYEE_RECONCILIATION_SNAPSHOT_KEY: EMPLOYEE_RECONCILIATION_SNAPSHOT_KEY

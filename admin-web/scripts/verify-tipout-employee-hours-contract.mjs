@@ -31,6 +31,21 @@ assert.equal(summaries.length, 3);
 assert.equal(summaries.find(x => x.key === 'P1::R1').totalHours, 10);
 assert.match(summaries.find(x => x.key === 'P1::R1').display, /前厅新名称 · 服务员新名称 10 h/);
 assert.equal(summaries.find(x => x.key === 'P2::R1').display.endsWith('—'), true);
+assert.equal(ui.allocationHourPoolKindLabel('tip'), '小费池');
+assert.equal(ui.allocationHourPoolKindLabel('surcharge'), '加收服务费池');
+assert.equal(ui.allocationHourPoolKindLabel(''), '—');
+const typedRow = ui.normalizeEmployeeHoursRow({ dateKey: '2026-09-17', allocationHourEntries: [
+  { poolId: 'P1', ruleId: 'R1', poolKind: 'tip', hours: 2, hoursValid: true },
+  { poolId: 'P1', ruleId: 'R1', poolKind: 'surcharge', hours: 3, hoursValid: true },
+  { poolId: 'P1', ruleId: 'R1', hours: 4, hoursValid: true }
+] });
+assert.equal(JSON.stringify(typedRow.allocationHourEntries.map(x => x.poolKind)), JSON.stringify(['tip', 'surcharge', '']));
+const typedSummaries = ui.aggregateAllocationHourEntries([typedRow]);
+assert.equal(typedSummaries.length, 3);
+assert.equal(JSON.stringify(typedSummaries.map(x => x.poolKind).sort()), JSON.stringify(['', 'surcharge', 'tip']));
+assert.equal(typedSummaries.find(x => x.poolKind === 'tip').totalHours, 2);
+assert.equal(typedSummaries.find(x => x.poolKind === 'surcharge').totalHours, 3);
+assert.equal(typedSummaries.find(x => x.poolKind === '').totalHours, 4);
 assert.equal(ui.formatHoursCoverage(12, 2, 3), '12 h（2/3 天有记录）');
 assert.equal(JSON.stringify(ui.resolveRuleAllocationHours({ usesHours: true, clockMode: 'clock', originalPunchHours: 8, posEffectiveHours: 10 })), JSON.stringify({ hours: 10, hoursValid: true, source: 'pos-corrected' }));
 assert.equal(JSON.stringify(ui.resolveRuleAllocationHours({ usesHours: true, clockMode: 'clock', originalPunchHours: 8, posEffectiveHours: 10, maxHours: 5 })), JSON.stringify({ hours: 5, hoursValid: true, source: 'max-hours' }));

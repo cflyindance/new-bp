@@ -374,6 +374,7 @@ var ALLOC_KEY = 'tipout_allocated';
         return {
           poolId: poolId,
           poolName: rule.poolName || rule.name || '未命名小费池',
+          poolKind: rule.poolKind === 'surcharge' ? 'surcharge' : 'tip',
           ruleId: ruleId,
           ruleName: rule.ruleName || rule.name || '未命名规则',
           usesHours: usesHours,
@@ -1229,6 +1230,7 @@ var ALLOC_KEY = 'tipout_allocated';
       var body = document.getElementById('allocationHoursDetailRows');
       body.innerHTML = (aggregate.allocationHourSummaries || []).map(function(entry) {
         return '<tr><td>' + escapeSummaryHtml(entry.poolName) + '</td><td>' + escapeSummaryHtml(entry.ruleName) + '</td><td>' +
+          escapeSummaryHtml(TipOutSummaryUi.allocationHourPoolKindLabel(entry.poolKind)) + '</td><td>' +
           escapeSummaryHtml(allocationHourSourceLabel(entry.source)) + '</td><td><strong>' +
           escapeSummaryHtml(entry.hoursValid ? String(entry.hours) + ' h' : '—') + '</strong></td></tr>';
       }).join('');

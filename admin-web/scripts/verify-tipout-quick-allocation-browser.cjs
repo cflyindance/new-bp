@@ -22,6 +22,7 @@ const { chromium } = process.env.TIPOUT_BROWSER_PACKAGES ? createRequire(path.jo
       window.mountTest = () => { window.testRuntime?.destroy(); root.innerHTML=renderTipsTemplate('distribution'); window.testRuntime=mountLegacyTipsRuntime(shadow,root,{view:'distribution',query:'',href:'/team/tips/distribution'},context); };
       window.mountRulesTest = () => { window.testRuntime?.destroy(); root.innerHTML=renderTipsTemplate('rules'); window.testRuntime=mountLegacyTipsRuntime(shadow,root,{view:'rules',query:'',href:'/team/tips/rules'},context); };
       window.mountEmployeeSummaryTest = () => { window.testRuntime?.destroy(); root.innerHTML=renderTipsTemplate('distribution'); window.testRuntime=mountLegacyTipsRuntime(shadow,root,{view:'distribution',query:'?view=employee',href:'/team/tips/distribution?view=employee'},context); };
+      window.mountEmployeeDetailTest = employeeId => { window.testRuntime?.destroy(); root.innerHTML=renderTipsTemplate('employee-reconciliation'); const query='?employeeId='+encodeURIComponent(employeeId)+'&store='+encodeURIComponent(store)+'&start=2026-08-24&end=2026-09-24&from=summary&return=history'; window.testRuntime=mountLegacyTipsRuntime(shadow,root,{view:'employee-reconciliation',query,href:'/team/tips/employee-reconciliation'+query},context); };
       window.mountDetailTest = date => { window.testRuntime?.destroy(); root.innerHTML=renderTipsTemplate('details'); const query='?store='+encodeURIComponent(store)+'&date='+date; window.testRuntime=mountLegacyTipsRuntime(shadow,root,{view:'details',query,href:'/team/tips/details'+query},context); };
       window.mountTest();
       const rules=JSON.parse(localStorage.getItem('tipout_rules')); rules.forEach(r=>r.clockin='clock'); localStorage.setItem('tipout_rules',JSON.stringify(rules));
@@ -173,6 +174,34 @@ const { chromium } = process.env.TIPOUT_BROWSER_PACKAGES ? createRequire(path.jo
     });
     const summaryRows=page.locator('#employeeReconciliationList tr');
     await summaryRows.first().waitFor();
+    assert.deepEqual(await page.locator('#allocationHoursDetailModal thead th').allTextContents(),['小费池','规则名称','规则类型','工时来源','分配工时']);
+    const hoursSummaryRow=summaryRows.filter({has:page.locator('.tipout-allocation-hours-button')}).first();
+    const hoursEmployeeId=await hoursSummaryRow.getAttribute('data-employee-id');
+    await hoursSummaryRow.locator('.tipout-allocation-hours-button').click();
+    const summaryHourCells=page.locator('#allocationHoursDetailRows tr').first().locator('td');
+    assert.equal(await summaryHourCells.count(),5);
+    assert.ok((await summaryHourCells.nth(1).textContent()).trim().length>0);
+    assert.equal((await summaryHourCells.nth(2).textContent()).trim(),'小费池');
+    await page.evaluate(employeeId=>{
+      const store='Golden Dragon Chinese Kitchen - Dallas, TX 75231';
+      sessionStorage.setItem('tipout-employee-reconciliation-detail-v1',JSON.stringify({
+        version:1,employeeId,name:'Demo Employee',role:'Server',store,dateStart:'2026-08-24',dateEnd:'2026-09-24',createdAt:Date.now(),status:'已完成',summary:{},
+        dailyRows:[{dateKey:'2026-09-24',employeeId,name:'Demo Employee',role:'Server',allocated:true,requiresAttendance:true,clockStatus:'已打卡',hours:5,before:10,deducted:0,received:1,after:11,
+          allocationHourEntries:[
+            {poolId:'P1',poolName:'前厅池',ruleId:'R1',ruleName:'前厅分配',poolKind:'tip',hours:5,hoursValid:true},
+            {poolId:'P2',poolName:'服务费池',ruleId:'R2',ruleName:'服务费分配',poolKind:'surcharge',hours:5,hoursValid:true},
+            {poolId:'P3',poolName:'旧记录',ruleId:'R3',ruleName:'历史规则',hours:5,hoursValid:true}
+          ]}]
+      }));
+      window.mountEmployeeDetailTest(employeeId);
+    },hoursEmployeeId);
+    assert.deepEqual(await page.locator('#employeeDetailHoursModal thead th').allTextContents(),['小费池','规则名称','规则类型','工时来源','分配工时']);
+    await page.locator('#employeeDetailAllocationHours').click();
+    const detailHourCells=page.locator('#employeeDetailHoursRows tr').first().locator('td');
+    assert.equal(await detailHourCells.count(),5);
+    assert.ok((await detailHourCells.nth(1).textContent()).trim().length>0);
+    assert.deepEqual((await page.locator('#employeeDetailHoursRows tr td:nth-child(3)').allTextContents()).sort(),['小费池','加收服务费池','—'].sort());
+    await page.evaluate(()=>window.mountEmployeeSummaryTest());
     const contributionTexts=await summaryRows.locator('td:nth-child(6)').allTextContents();
     const receiptTexts=await summaryRows.locator('td:nth-child(7)').allTextContents();
     assert.ok(contributionTexts.some(text=>text.trim()!=='$0.00'&&text.trim()!=='—'));
