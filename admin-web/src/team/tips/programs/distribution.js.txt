@@ -1229,7 +1229,7 @@ var ALLOC_KEY = 'tipout_allocated';
       allocationHoursDetailTrigger = event && event.currentTarget;
       var body = document.getElementById('allocationHoursDetailRows');
       body.innerHTML = (aggregate.allocationHourSummaries || []).map(function(entry) {
-        return '<tr><td>' + escapeSummaryHtml(entry.poolName) + '</td><td>' + escapeSummaryHtml(entry.ruleName) + '</td><td>' +
+        return '<tr><td>' + escapeSummaryHtml(entry.ruleName) + '</td><td>' +
           escapeSummaryHtml(TipOutSummaryUi.allocationHourPoolKindLabel(entry.poolKind)) + '</td><td>' +
           escapeSummaryHtml(allocationHourSourceLabel(entry.source)) + '</td><td><strong>' +
           escapeSummaryHtml(entry.hoursValid ? String(entry.hours) + ' h' : '—') + '</strong></td></tr>';

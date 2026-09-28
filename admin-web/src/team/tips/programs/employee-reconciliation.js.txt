@@ -153,8 +153,8 @@ function detailNumber(value) { return Number(value) || 0; }
       body.textContent = '';
       (entries || []).forEach(function(entry) {
         var tr = document.createElement('tr');
-        [entry.poolName, entry.ruleName, TipOutSummaryUi.allocationHourPoolKindLabel(entry.poolKind), employeeDetailHourSourceLabel(entry.source), entry.hoursValid ? detailHours(entry.hours) + ' h' : '—'].forEach(function(value, index) {
-          var td = document.createElement('td'); td.textContent = value; if (index === 4) { var strong = document.createElement('strong'); strong.textContent = value; td.textContent = ''; td.appendChild(strong); } tr.appendChild(td);
+        [entry.ruleName, TipOutSummaryUi.allocationHourPoolKindLabel(entry.poolKind), employeeDetailHourSourceLabel(entry.source), entry.hoursValid ? detailHours(entry.hours) + ' h' : '—'].forEach(function(value, index) {
+          var td = document.createElement('td'); td.textContent = value; if (index === 3) { var strong = document.createElement('strong'); strong.textContent = value; td.textContent = ''; td.appendChild(strong); } tr.appendChild(td);
         });
         body.appendChild(tr);
       });

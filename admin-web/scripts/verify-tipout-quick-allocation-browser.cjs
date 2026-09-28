@@ -174,14 +174,14 @@ const { chromium } = process.env.TIPOUT_BROWSER_PACKAGES ? createRequire(path.jo
     });
     const summaryRows=page.locator('#employeeReconciliationList tr');
     await summaryRows.first().waitFor();
-    assert.deepEqual(await page.locator('#allocationHoursDetailModal thead th').allTextContents(),['小费池','规则名称','规则类型','工时来源','分配工时']);
+    assert.deepEqual(await page.locator('#allocationHoursDetailModal thead th').allTextContents(),['规则名称','规则类型','工时来源','分配工时']);
     const hoursSummaryRow=summaryRows.filter({has:page.locator('.tipout-allocation-hours-button')}).first();
     const hoursEmployeeId=await hoursSummaryRow.getAttribute('data-employee-id');
     await hoursSummaryRow.locator('.tipout-allocation-hours-button').click();
     const summaryHourCells=page.locator('#allocationHoursDetailRows tr').first().locator('td');
-    assert.equal(await summaryHourCells.count(),5);
-    assert.ok((await summaryHourCells.nth(1).textContent()).trim().length>0);
-    assert.equal((await summaryHourCells.nth(2).textContent()).trim(),'小费池');
+    assert.equal(await summaryHourCells.count(),4);
+    assert.ok((await summaryHourCells.nth(0).textContent()).trim().length>0);
+    assert.equal((await summaryHourCells.nth(1).textContent()).trim(),'小费池');
     await page.evaluate(employeeId=>{
       const store='Golden Dragon Chinese Kitchen - Dallas, TX 75231';
       sessionStorage.setItem('tipout-employee-reconciliation-detail-v1',JSON.stringify({
@@ -195,12 +195,12 @@ const { chromium } = process.env.TIPOUT_BROWSER_PACKAGES ? createRequire(path.jo
       }));
       window.mountEmployeeDetailTest(employeeId);
     },hoursEmployeeId);
-    assert.deepEqual(await page.locator('#employeeDetailHoursModal thead th').allTextContents(),['小费池','规则名称','规则类型','工时来源','分配工时']);
+    assert.deepEqual(await page.locator('#employeeDetailHoursModal thead th').allTextContents(),['规则名称','规则类型','工时来源','分配工时']);
     await page.locator('#employeeDetailAllocationHours').click();
     const detailHourCells=page.locator('#employeeDetailHoursRows tr').first().locator('td');
-    assert.equal(await detailHourCells.count(),5);
-    assert.ok((await detailHourCells.nth(1).textContent()).trim().length>0);
-    assert.deepEqual((await page.locator('#employeeDetailHoursRows tr td:nth-child(3)').allTextContents()).sort(),['小费池','加收服务费池','—'].sort());
+    assert.equal(await detailHourCells.count(),4);
+    assert.ok((await detailHourCells.nth(0).textContent()).trim().length>0);
+    assert.deepEqual((await page.locator('#employeeDetailHoursRows tr td:nth-child(2)').allTextContents()).sort(),['小费池','加收服务费池','—'].sort());
     await page.evaluate(()=>window.mountEmployeeSummaryTest());
     const contributionTexts=await summaryRows.locator('td:nth-child(6)').allTextContents();
     const receiptTexts=await summaryRows.locator('td:nth-child(7)').allTextContents();
