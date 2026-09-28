@@ -139,6 +139,17 @@ const { chromium } = process.env.TIPOUT_BROWSER_PACKAGES ? createRequire(path.jo
     assert.ok(clockHours.every(i=>i.hours>0 && i.readonly));
     const snapshotsBeforeDemo = await page.evaluate(()=>localStorage.getItem('tipout_allocation_results_v1'));
     await page.evaluate(()=>window.mountRulesTest());
+    assert.deepEqual(await page.locator('.tipout-rules-table thead th').allTextContents(), ['规则名称','门店','池类型与规则摘要','分配说明','操作']);
+    const firstRule = page.locator('#rulesTableBody tr.tipout-rule-record').first();
+    assert.equal(await firstRule.locator('td').count(),5);
+    assert.equal(await firstRule.locator('td:nth-child(1) .tipout-rule-name').count(),1);
+    assert.equal(await firstRule.locator('td:nth-child(2) .tipout-rule-store').count(),1);
+    assert.equal(await firstRule.locator('td:nth-child(5) .tipout-rule-edit').count(),1);
+    assert.equal(await firstRule.evaluate(row=>{const name=row.cells[0].getBoundingClientRect();const store=row.cells[1].getBoundingClientRect();return name.right<=store.left+1;}),true);
+    await page.evaluate(()=>{const select=document.querySelector('#test-host').shadowRoot.querySelector('#storeFilter');const option=document.createElement('option');option.value='__no_rules__';option.textContent='无规则门店';select.append(option);});
+    await page.locator('#storeFilter').selectOption('__no_rules__');
+    assert.equal(await page.locator('#rulesTableBody tr td').first().getAttribute('colspan'),'5');
+    await page.locator('#storeFilter').selectOption('');
     for (const retiredName of ['Tip Pool — Server & Bartender to Busser','Tip Pool — Server to Busser/Runner','Bar Tip Pool']) {
       assert.equal(await page.locator('.tipout-rule-name').filter({hasText:retiredName}).count(),0);
     }

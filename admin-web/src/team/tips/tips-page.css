@@ -2173,10 +2173,11 @@ select.form-control {
   font-size: 12px;
 }
 
-.tipout-page-rules .tipout-rules-table th:nth-child(1) { width: 27%; }
-.tipout-page-rules .tipout-rules-table th:nth-child(2) { width: 21%; }
-.tipout-page-rules .tipout-rules-table th:nth-child(3) { width: auto; }
-.tipout-page-rules .tipout-rules-table th:nth-child(4) { width: 192px; }
+.tipout-page-rules .tipout-rules-table th:nth-child(1) { width: 22%; }
+.tipout-page-rules .tipout-rules-table th:nth-child(2) { width: 19%; }
+.tipout-page-rules .tipout-rules-table th:nth-child(3) { width: 17%; }
+.tipout-page-rules .tipout-rules-table th:nth-child(4) { width: auto; }
+.tipout-page-rules .tipout-rules-table th:nth-child(5) { width: 192px; }
 
 .tipout-page-rules .tipout-rules-table td {
   height: 64px;
@@ -2214,20 +2215,18 @@ select.form-control {
 .tipout-page-rules .tipout-rule-name {
   display: block;
   max-width: 100%;
-  overflow: hidden;
   margin: 0;
   font-size: 13px;
   line-height: 18px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .tipout-page-rules .tipout-rule-store {
   display: block;
   max-width: 100%;
   overflow: hidden;
-  color: var(--text-tertiary);
-  font-size: 11px;
+  color: var(--text-secondary);
+  font-size: 12px;
   font-weight: 400;
   line-height: 16px;
   text-overflow: ellipsis;

@@ -44,7 +44,7 @@ function initStoreFilter() {
       var tableBody = document.getElementById('rulesTableBody');
       tableBody.innerHTML = '';
       if (rules.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="4"><div class="tipout-rule-empty" role="status">暂无规则，请点击「新建规则」创建</div></td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="5"><div class="tipout-rule-empty" role="status">暂无规则，请点击「新建规则」创建</div></td></tr>';
         return;
       }
       rules.forEach(function(rule) {
@@ -68,9 +68,9 @@ function initStoreFilter() {
             '<div class="tipout-rule-identity">' +
               '<strong class="tipout-rule-name">' + escapeHtml(rule.ruleName || '') + '</strong>' +
               (referenceIssues.length ? '<span class="status-chip status-warning">引用失效</span>' : '') +
-              '<span class="tipout-rule-store">' + escapeHtml(rule.store || '') + '</span>' +
             '</div>' +
           '</td>' +
+          '<td><span class="tipout-rule-store" title="' + escapeHtml(rule.store || '') + '">' + escapeHtml(rule.store || '') + '</span></td>' +
           '<td>' +
             '<div class="tipout-rule-pool-summary">' +
               '<span class="' + escapeHtml(poolKindTagClass) + '">' + escapeHtml(poolKindLabel) + '</span>' +
