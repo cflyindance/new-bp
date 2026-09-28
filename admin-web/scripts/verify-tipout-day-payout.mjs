@@ -29,7 +29,7 @@ for (const name of ['distribution', 'details']) {
   assert.match(template, /不是剩余应发金额/);
   assert.doesNotMatch(template, /部分发放/);
   const program = fs.readFileSync(`src/team/tips/programs/${name}.js.txt`, 'utf8');
-  assert.match(program, /查看发放记录/);
-  assert.match(program, /TipOutPayoutRecordUi.open/);
+  assert.doesNotMatch(program, /查看发放记录/);
+  assert.doesNotMatch(program, /TipOutPayoutRecordUi.open/);
 }
 console.log('Whole-day payout contract passed.');
