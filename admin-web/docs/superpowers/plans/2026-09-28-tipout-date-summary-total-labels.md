@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Make only the four date-range summary amount labels explicitly identify totals.
+**Goal:** Make the four date-range summary amount labels and four corresponding daily-table amount headers explicitly identify totals.
 
-**Architecture:** Change the initial HTML labels and the dynamic summary render assignments together. A browser regression verifies rendered labels after mounting, including the unchanged daily-table headers.
+**Architecture:** Change the initial HTML labels, the daily-table headers and the dynamic summary render assignments together. A browser regression verifies rendered labels after mounting.
 
 **Tech Stack:** HTML template, legacy JavaScript runtime, Node.js/Playwright browser verification.
 
@@ -13,12 +13,12 @@
 ## Global Constraints
 
 - Top labels are exactly `原始总小费`, `入池总金额`, `已分配总额`, `未分配总额` in that order.
-- Daily-table headers and all calculation/filter/state behavior remain unchanged.
+- The four daily-table amount headers use the same new labels; calculation/filter/state behavior remains unchanged.
 - Preserve unrelated dirty files in the existing main worktree.
 
 ## File Structure
 
-- `src/team/tips/templates/distribution.html`: initial top labels, daily-table headers unchanged.
+- `src/team/tips/templates/distribution.html`: initial top labels and four daily-table amount headers.
 - `src/team/tips/programs/distribution.js.txt`: runtime re-render of the top labels.
 - `scripts/verify-tipout-quick-allocation-browser.cjs`: browser regression for both top and daily-table text.
 
@@ -40,7 +40,7 @@ Insert after the initial `page.evaluate` mount in `scripts/verify-tipout-quick-a
 ```js
 const totalLabels = ['原始总小费','入池总金额','已分配总额','未分配总额'];
 assert.deepEqual(await page.locator('#dateSummaryMetrics span[id$="Label"]').allTextContents(), totalLabels);
-assert.deepEqual((await page.locator('#dateTaskPanel thead th').allTextContents()).slice(4,8), ['原始小费','入池金额','已分配','未分配']);
+assert.deepEqual((await page.locator('#dateTaskPanel thead th').allTextContents()).slice(4,8), ['原始总小费','入池总金额','已分配总额','未分配总额']);
 ```
 
 - [x] **Step 2: Run the test and confirm the intended failure**
@@ -49,7 +49,7 @@ Run `scripts/verify-tipout-quick-allocation-browser.cjs` with `TIPOUT_BROWSER_PA
 
 - [x] **Step 3: Change the four labels at both render sites**
 
-Replace the four old strings in the initial template and in `renderSummaryOverview` with `原始总小费`, `入池总金额`, `已分配总额`, `未分配总额` respectively. Leave the daily `<thead>` unchanged.
+Replace the four old strings in the initial template, the corresponding daily `<thead>` cells and in `renderSummaryOverview` with `原始总小费`, `入池总金额`, `已分配总额`, `未分配总额` respectively.
 
 - [x] **Step 4: Run verification**
 

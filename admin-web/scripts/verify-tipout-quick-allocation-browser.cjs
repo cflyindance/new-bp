@@ -30,7 +30,7 @@ const { chromium } = process.env.TIPOUT_BROWSER_PACKAGES ? createRequire(path.jo
       window.mountTest();
     });
     assert.deepEqual(await page.locator('#dateSummaryMetrics span[id$="Label"]').allTextContents(), ['原始总小费','入池总金额','已分配总额','未分配总额']);
-    assert.deepEqual((await page.locator('#dateTaskPanel thead th').allTextContents()).slice(4,8), ['原始小费','入池金额','已分配','未分配']);
+    assert.deepEqual((await page.locator('#dateTaskPanel thead th').allTextContents()).slice(4,8), ['原始总小费','入池总金额','已分配总额','未分配总额']);
     const button = page.locator('.tipout-quick-allocate').first();
     await button.waitFor();
     assert.equal(await page.locator('#summaryTestActions').getByRole('button',{name:'测试场景清单',exact:true}).count(),1);
