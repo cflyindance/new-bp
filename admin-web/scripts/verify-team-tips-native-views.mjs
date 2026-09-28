@@ -583,6 +583,14 @@ for (const token of [
 for (const token of ["← 返回员工分配汇总", "分配汇总日期范围", "员工分配汇总金额概览", "员工逐日分配明细", "当前筛选条件下暂无分配明细", "无法展示分配汇总明细"]) {
   if (!employeeDetailTemplate.includes(token)) failures.push(`employee detail: renamed copy missing ${token}`);
 }
+const employeeDetailMetricsMarkup = employeeDetailTemplate.split('class="tipout-employee-detail-metrics"')[1]?.split('</div>\n        </div>')[0] ?? '';
+for (const label of ['打卡总工时','分配工时','分配前总小费','贡献入池总额','从池分得总额','分配后总小费']) {
+  if (!employeeDetailMetricsMarkup.includes('<span>' + label + '</span>')) failures.push(`employee detail: total metric label missing ${label}`);
+}
+const employeeDetailHeadMarkup = employeeDetailTemplate.split('class="data-table tipout-summary-table tipout-employee-detail-table"')[1]?.split('</thead>')[0] ?? '';
+for (const label of ['打卡工时','分配工时','分配前小费','贡献入池','从池分得','分配后小费']) {
+  if (!employeeDetailHeadMarkup.includes('<th>' + label + '</th>')) failures.push(`employee detail: daily column label missing ${label}`);
+}
 for (const token of ["返回员工对账", "员工对账金额概览", "员工逐日对账明细", "暂无对账明细", "无法展示对账明细"]) {
   if (employeeDetailTemplate.includes(token)) failures.push(`employee detail: obsolete visible copy remains ${token}`);
 }

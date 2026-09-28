@@ -206,6 +206,8 @@ const { chromium } = process.env.TIPOUT_BROWSER_PACKAGES ? createRequire(path.jo
       }));
       window.mountEmployeeDetailTest(employeeId);
     },hoursEmployeeId);
+    assert.deepEqual(await page.locator('.tipout-employee-detail-metrics > div > span').allTextContents(),['打卡总工时','分配工时','分配前总小费','贡献入池总额','从池分得总额','分配后总小费']);
+    assert.deepEqual((await page.locator('.tipout-employee-detail-table thead th').allTextContents()).map(text=>text.trim().replace(/\s*↓$/, '')),['日期','考勤','打卡工时','分配工时','分配前小费','贡献入池','从池分得','分配后小费','分配状态']);
     assert.deepEqual(await page.locator('#employeeDetailHoursModal thead th').allTextContents(),['规则名称','规则类型','工时来源','分配工时']);
     await page.locator('#employeeDetailAllocationHours').click();
     const detailHourCells=page.locator('#employeeDetailHoursRows tr').first().locator('td');
