@@ -21,6 +21,7 @@ const { chromium } = process.env.TIPOUT_BROWSER_PACKAGES ? createRequire(path.jo
       const context = {getScope:()=>({storeId:store,storeLabel:store,storeLabelEn:store,isAllStores:false,usesInPageStorePicker:true,stores:[{id:store,labelZh:store,labelEn:store}]}),setStoreScope:()=>{},subscribeScopeChange:()=>()=>{},navigate:href=>window.testNavigation=href,replace:()=>{},getNavigationState:()=>null,getScrollOwner:()=>null};
       window.mountTest = () => { window.testRuntime?.destroy(); root.innerHTML=renderTipsTemplate('distribution'); window.testRuntime=mountLegacyTipsRuntime(shadow,root,{view:'distribution',query:'',href:'/team/tips/distribution'},context); };
       window.mountRulesTest = () => { window.testRuntime?.destroy(); root.innerHTML=renderTipsTemplate('rules'); window.testRuntime=mountLegacyTipsRuntime(shadow,root,{view:'rules',query:'',href:'/team/tips/rules'},context); };
+      window.mountRuleEditorTest = () => { window.testRuntime?.destroy(); root.innerHTML=renderTipsTemplate('rule-editor'); window.testRuntime=mountLegacyTipsRuntime(shadow,root,{view:'rule-editor',query:'?poolKind=tip',href:'/team/tips/rule-add?poolKind=tip'},context); };
       window.mountEmployeeSummaryTest = () => { window.testRuntime?.destroy(); root.innerHTML=renderTipsTemplate('distribution'); window.testRuntime=mountLegacyTipsRuntime(shadow,root,{view:'distribution',query:'?view=employee',href:'/team/tips/distribution?view=employee'},context); };
       window.mountEmployeeDetailTest = employeeId => { window.testRuntime?.destroy(); root.innerHTML=renderTipsTemplate('employee-reconciliation'); const query='?employeeId='+encodeURIComponent(employeeId)+'&store='+encodeURIComponent(store)+'&start=2026-08-24&end=2026-09-24&from=summary&return=history'; window.testRuntime=mountLegacyTipsRuntime(shadow,root,{view:'employee-reconciliation',query,href:'/team/tips/employee-reconciliation'+query},context); };
       window.mountDetailTest = date => { window.testRuntime?.destroy(); root.innerHTML=renderTipsTemplate('details'); const query='?store='+encodeURIComponent(store)+'&date='+date; window.testRuntime=mountLegacyTipsRuntime(shadow,root,{view:'details',query,href:'/team/tips/details'+query},context); };
@@ -224,6 +225,11 @@ const { chromium } = process.env.TIPOUT_BROWSER_PACKAGES ? createRequire(path.jo
       return cells.length>6&&cells[5].textContent.trim()!=='$0.00'&&cells[5].textContent.trim()!=='—'&&cells[6].textContent.trim()!=='$0.00'&&cells[6].textContent.trim()!=='—';
     }).map(row=>row.textContent.trim()));
     assert.ok(mixedRows.length>0,'Expected one employee to contribute and receive in the same summary range');
+    await page.evaluate(()=>window.mountRuleEditorTest());
+    const clockinSection=page.locator('.field-desc-wrap[data-field-id="clockin"]').locator('xpath=../..');
+    assert.equal((await page.locator('.field-desc-wrap[data-field-id="clockin"]').textContent()).trim().replace('ⓘ','').trim(),'员工打卡方式');
+    assert.equal((await clockinSection.locator('.field-desc').textContent()).trim(),'未打卡员工需每日在小费分配明细中手动补录');
+    assert.ok((await page.locator('.field-desc-wrap[data-field-id="distribution"]').textContent()).includes('小费分配方式（单选）'));
     assert.deepEqual(errors,[]);
     console.log('Quick allocation, snapshot editing and demo rules page seeding passed');
   } finally { await browser.close(); }

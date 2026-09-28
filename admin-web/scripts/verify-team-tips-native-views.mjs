@@ -41,6 +41,17 @@ for (const [view, tokens] of Object.entries(required)) {
 }
 
 const rulesTemplate = fs.readFileSync("src/team/tips/templates/rules.html", "utf8");
+const currentRuleEditorTemplate = fs.readFileSync("src/team/tips/templates/rule-editor.html", "utf8");
+for (const text of [
+  'data-field-id="clockin">员工打卡方式 <span',
+  '<p class="field-desc">未打卡员工需每日在小费分配明细中手动补录</p>',
+  '小费分配方式（单选）',
+]) {
+  if (!currentRuleEditorTemplate.includes(text)) failures.push(`rule-editor: clock-in copy missing ${text}`);
+}
+for (const obsolete of ['员工打卡方式（单选）', '仅支持打卡上班；未打卡员工从池分得为 0。']) {
+  if (currentRuleEditorTemplate.includes(obsolete)) failures.push(`rule-editor: obsolete clock-in copy remains ${obsolete}`);
+}
 const rulesHeadingIndex = rulesTemplate.indexOf("tipout-page-heading--with-back");
 const rulesToolbarIndex = rulesTemplate.indexOf("tipout-rules-toolbar");
 const rulesMetricsIndex = rulesTemplate.indexOf("tipout-metric-strip--three");
