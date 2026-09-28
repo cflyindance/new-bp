@@ -32,6 +32,7 @@ import employeeReconciliation from "./programs/employee-reconciliation.js.txt?ra
 import type { TipsPageContext } from "./tips-context";
 import { rewriteLegacyTipsUrl, type TipsRoute } from "./tips-navigation";
 import { renderTipsTemplate, type TipsView } from "./tips-templates";
+import { ensurePresetEmployeesPerStore } from "../../config/team-employee-roster-scope";
 
 export interface TipsRuntimeHandle { destroy(): void; prepareQuickSnapshot(): unknown }
 type Bag = Record<PropertyKey, unknown>;
@@ -77,6 +78,10 @@ function scopeAdapter(context: TipsPageContext, cleanups: Set<() => void>) {
 }
 
 export function mountLegacyTipsRuntime(shadow: ShadowRoot, root: HTMLElement, route: TipsRoute, context: TipsPageContext, quickPreparation = false): TipsRuntimeHandle {
+  ensurePresetEmployeesPerStore([
+    "上海陆家嘴店",
+    ...context.getScope().stores.map((store) => store.labelZh || store.labelEn || store.id),
+  ]);
   const controller = new AbortController();
   const cleanups = new Set<() => void>(), timers = new Set<number>(), intervals = new Set<number>(), animationFrames = new Set<number>();
   const observers = new Set<MutationObserver>();

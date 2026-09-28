@@ -125,6 +125,7 @@ const GOLDEN_TIP_RECEIVER_EMPLOYEES: readonly (PresetEmployeeTemplate & { id: st
   { id: "roster-tipout-golden-runner-daniel-ortiz", name: "Daniel Ortiz", role: "Runner", tipType: "receive", baseTip: 0, tipRate: 0, department: "Floor", rate: 14, otRate: 21, ot2Rate: 28 },
   { id: "roster-tipout-golden-host-rachel-scott", name: "Rachel Scott", role: "Host", tipType: "receive", baseTip: 0, tipRate: 0, department: "Front", rate: 15, otRate: 22.5, ot2Rate: 30 },
 ];
+const GOLDEN_TIP_RECEIVER_SEED_MARKER = "tipout-golden-receiver-seeds-v2";
 
 interface RosterEmployeeRow {
   id?: string;
@@ -237,6 +238,7 @@ export function ensurePresetEmployeesPerStore(storeNames: string[]): number {
 
   const list = readRosterRows();
   const idSet = new Set(list.map((e) => String(e.id || "")));
+  const seedGoldenReceivers = !localStorage.getItem(GOLDEN_TIP_RECEIVER_SEED_MARKER);
   let added = 0;
 
   for (const store of stores) {
@@ -269,30 +271,38 @@ export function ensurePresetEmployeesPerStore(storeNames: string[]): number {
       }
     }
 
-    if (canonicalRosterStoreDisplayName(store) === "上海陆家嘴店") {
+    if (canonicalRosterStoreDisplayName(store) === "上海陆家嘴店" && seedGoldenReceivers) {
       for (const tpl of GOLDEN_TIP_RECEIVER_EMPLOYEES) {
-        const duplicate = list.some((employee) =>
-          String(employee.id || "") === tpl.id ||
-          (employeeMatchesStore(employee, store) &&
-            String(employee.name || "").trim().toLowerCase() === tpl.name.toLowerCase() &&
-            String(employee.role || "").trim().toLowerCase() === tpl.role.toLowerCase()),
+        const hasActiveRole = list.some((employee) =>
+          employeeMatchesStore(employee, store) &&
+          String(employee.role || "").trim().toLowerCase() === tpl.role.toLowerCase() &&
+          employee.active !== false &&
+          !["inactive", "disabled"].includes(String(employee.status || "").toLowerCase()),
         );
-        if (duplicate) continue;
+        if (hasActiveRole) continue;
+        // Keep deactivated records untouched; a one-time demo replacement restores a valid rule receiver.
+        let id = tpl.id;
+        if (idSet.has(id)) id = `${tpl.id}-v2`;
+        if (idSet.has(id)) continue;
         list.push({
           ...tpl,
+          id,
           store,
           adpFile: "",
           requireClockIn: false,
           requireBatchClose: false,
           requireCashTipReport: false,
         });
-        idSet.add(tpl.id);
+        idSet.add(id);
         added += 1;
       }
     }
   }
 
   if (added > 0) writeRosterRows(list);
+  if (seedGoldenReceivers && stores.some((store) => canonicalRosterStoreDisplayName(store) === "上海陆家嘴店")) {
+    localStorage.setItem(GOLDEN_TIP_RECEIVER_SEED_MARKER, "1");
+  }
   return added;
 }
 
