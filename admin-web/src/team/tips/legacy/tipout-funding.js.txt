@@ -49,7 +49,7 @@
     if(receivers.some(function(r){return Object.keys(r.employeeWeights||{}).length;})) throw new Error('新资金模式暂不支持旧员工权重，请清空权重后试算');
     if(Math.abs(receivers.reduce(function(s,r){return s+r.pct;},0)-100)>0.00001) throw new Error('接收角色比例合计必须为 100%');
     if(['average','hours','orders'].indexOf(rule.distribution)<0) throw new Error('请选择小费分配方式');
-    if(['clock','unrestricted'].indexOf(rule.clockin)<0) throw new Error('请选择参与资格');
+    if(['clock','unrestricted','time_window'].indexOf(rule.clockin)<0) throw new Error('请选择参与资格');
     if(facts&&(c.receiverEmployeeIds||[]).some(function(id){return !facts.some(function(f){return f.employeeId===id&&receivers.some(function(r){return r.roles.indexOf(f.role)>=0;});});}))throw new Error('指定接收员工不在当前接收角色或门店范围内');
   }
   function calculate(rules,facts,dateKey,overrides) {
@@ -153,6 +153,22 @@
     var contributed={},received={};
     pools.forEach(function(p){
       var f=p.funding;if(cents(f.gap)!==0||cents(f.target)!==cents(f.actual))throw new Error('资金归集不足，不能确认');
+      if(p.timeWindow){
+        if(!root.TipOutTimeWindow||p.timeWindow.version!==1||!Array.isArray(p.timeWindow.lines))throw new Error('按时段分配快照缺少逐笔依据');
+        var eventTotal=0,eventPaid=0,eventUnallocated=0,eventIds={};
+        p.timeWindow.lines.forEach(function(line){
+          if(!line.id||eventIds[line.id])throw new Error('按时段分配事件重复');eventIds[line.id]=true;
+          var at=root.TipOutTimeWindow.moment(line.occurredAt),paid=0;
+          (line.participants||[]).forEach(function(person){
+            var valid=(person.punchIntervals||[]).some(function(interval){return root.TipOutTimeWindow.moment(interval.clockInAt)<=at&&at<root.TipOutTimeWindow.moment(interval.clockOutAt);});
+            if(cents(person.amount)>0&&!valid)throw new Error('员工不在小费发生时段，不能参与分配');
+            paid+=cents(person.amount);
+          });
+          if(paid+cents(line.unallocated)!==cents(line.amount))throw new Error('逐笔小费分配金额不守恒');
+          eventTotal+=cents(line.amount);eventPaid+=paid;eventUnallocated+=cents(line.unallocated);
+        });
+        if(eventTotal!==cents(p.poolAmount)||eventPaid!==p.employees.reduce(function(n,e){return n+cents(e.amount);},0)||eventUnallocated!==cents(p.timeWindow.unallocated))throw new Error('按时段分配汇总与逐笔结果不一致');
+      }
       var sum=0;f.contributions.forEach(function(e){var n=cents(e.amount);if(n>cents(e.available))throw new Error('贡献超过员工可用余额');sum+=n;contributed[e.employeeId]=(contributed[e.employeeId]||0)+n;});
       var paid=0;p.employees.forEach(function(e){var n=cents(e.amount);paid+=n;received[e.employeeId]=(received[e.employeeId]||0)+n;});
       if(sum!==cents(p.poolAmount)||sum!==cents(f.actual)||paid+cents(f.unallocated)!==sum)throw new Error('贡献、入池与接收金额不守恒');
@@ -253,6 +269,7 @@
     var ruleById={};rules.forEach(function(rule){ruleById[String(rule.id)]=rule;});
     snapshot.pools.forEach(function(pool,index){
       var rule=ruleById[String(pool.ruleId)];if(!rule)throw new Error('分配快照规则与页面不一致，请刷新');
+      if(rule.clockin==='time_window'&&(!pool.timeWindow||pool.timeWindow.version!==1))throw new Error('按时段参与规则缺少逐笔分配结果，不能退回整日计算');
       var sourceBases=(rule.poolRules||[]).map(function(p){return sourceBase(p,facts,snapshot.dateKey);});
       var target=cents(pool.poolAmount), groups=existingGroups(rule,facts), groupTargets=groups.length===1?[target]:split(target,groups.map(function(g){return g.weight;}));
       var actual=0, contributions=[];

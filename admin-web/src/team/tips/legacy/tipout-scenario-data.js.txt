@@ -31,7 +31,21 @@
     return dates;
   }
   function time(minutes) { return String(Math.floor(minutes / 60)).padStart(2, '0') + ':' + String(minutes % 60).padStart(2, '0'); }
+  function chicagoOffset(dateKey) {
+    var label = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Chicago', timeZoneName: 'shortOffset' })
+      .formatToParts(new Date(dateKey + 'T12:00:00Z')).filter(function(part) { return part.type === 'timeZoneName'; })[0].value;
+    var hours = Number((label.match(/GMT([+-]\d+)/) || [])[1]);
+    if (!Number.isFinite(hours)) throw new Error('Cannot resolve store time zone');
+    return (hours < 0 ? '-' : '+') + String(Math.abs(hours)).padStart(2, '0') + ':00';
+  }
   function session(start, hours) { return { clockIn: time(start), clockOut: time(start + hours * 60), durationHours: hours, status: 'complete' }; }
+  function datedSession(item, dateKey) {
+    var copy = Object.assign({}, item);
+    var offset = chicagoOffset(dateKey);
+    copy.clockInAt = dateKey + 'T' + item.clockIn + ':00' + offset;
+    if (item.clockOut) copy.clockOutAt = dateKey + 'T' + item.clockOut + ':00' + offset;
+    return copy;
+  }
   function attendance(clock, variant) {
     if (!clock) return { hours: 0, originalHours: 0, effectiveHours: 0, clockStatus: '未打卡', punchSessions: [], adjustment: null };
     var sessions, original = 8, effective = 8, status = '已打卡';
@@ -74,16 +88,23 @@
         var tip = Math.floor(remainingTips / remainingOrders);
         var charge = Math.floor(remainingSurcharge / remainingOrders);
         remainingSales -= sale; remainingTips -= tip; remainingSurcharge -= charge;
-        orders.push({ id: key + ':order:' + i, employeeId: employeeId, salesAmount: sale / 100, tipAmount: tip / 100, surcharge: charge / 100,
+        orders.push({ id: key + ':order:' + i, employeeId: employeeId, businessDate: options.dateKey,
+          salesAmount: sale / 100, tipAmount: tip / 100, surcharge: charge / 100,
           tipType: i ? 'Cash Tips (现金小费)' : 'Credit Card Tips (信用卡小费)',
           orderType: i ? 'takeout' : 'dine_in', area: i ? 'bar' : 'main', paymentMethod: i ? 'cash' : 'card', localTime: i ? '19:30' : '11:30',
+          completedPaymentAt: options.dateKey + 'T' + (i ? '19:30' : '11:30') + ':00' + chicagoOffset(options.dateKey), timeZone: 'America/Chicago',
           lines: [{ productId: i ? 'demo-beverage' : 'demo-main', productLine: 'POS', category: i ? '酒水' : '主菜', amount: sale / 100 }] });
       }
     }
+    var punch = attendance(combination < 4, contributionScenario ? 0 : hash(key + ':attendance') % 4);
+    punch.punchSessions = punch.punchSessions.map(function(item) { return datedSession(item, options.dateKey); });
+    var reportedTipEvents = !hasOrders && tipCents ? [{ id: key + ':reported:0', employeeId: employeeId, businessDate: options.dateKey, amount: tipCents / 100,
+      occurredAt: options.dateKey + 'T12:30:00' + chicagoOffset(options.dateKey), timeZone: 'America/Chicago' }] : [];
     return { version: VERSION, key: key, storeId: storeId, employeeId: employeeId, name: String(employee.name || ''), role: String(employee.role || ''),
-      dateKey: options.dateKey, scenarioId: 'B0' + (combination + 1), contributionScenario: contributionScenario, attendance: attendance(combination < 4, contributionScenario ? 0 : hash(key + ':attendance') % 4),
+      dateKey: options.dateKey, scenarioId: 'B0' + (combination + 1), contributionScenario: contributionScenario, attendance: punch,
       orders: orders, salesAmount: salesCents / 100, orderTips: hasOrders ? tipCents / 100 : 0,
-      reportedTips: hasOrders ? 0 : tipCents / 100, originalTips: tipCents / 100, surcharge: surchargeCents / 100 };
+      reportedTips: hasOrders ? 0 : tipCents / 100, reportedTipEvents: reportedTipEvents,
+      originalTips: tipCents / 100, surcharge: surchargeCents / 100 };
   }
   function day(options) {
     required(options.storeId, 'storeId'); dateValue(options.dateKey);

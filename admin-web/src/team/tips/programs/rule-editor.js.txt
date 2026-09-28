@@ -3423,11 +3423,13 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
       var isNoClock = !!(clockRadio && clockRadio.value === 'noclock');
       var hint = document.getElementById('participationHint');
       if (hint) {
-        var showParticipationHint = !!(clockRadio && clockRadio.value === 'unrestricted');
+        var showParticipationHint = !!(clockRadio && (clockRadio.value === 'unrestricted' || clockRadio.value === 'time_window'));
         hint.style.display = showParticipationHint ? '' : 'none';
-        hint.textContent = showParticipationHint
-          ? (distRadio && distRadio.value === 'orders' ? '不限打卡状态，按员工有效订单笔数分配；无有效订单不参与分配。' : isHours ? '打卡员工自动获取工时；未打卡员工需每日手动补录分配工时，工时为 0 不获得分配。' : '打卡员工自动参与；未打卡员工需每日手动加入参与名单，休息员工不会自动参与。')
-          : '';
+        hint.textContent = clockRadio && clockRadio.value === 'time_window'
+          ? '逐笔按小费发生时间匹配有效打卡区间；不在该时段的员工不参与。缺少发生时间或关键打卡记录时暂不能确认分配。'
+          : showParticipationHint
+            ? (distRadio && distRadio.value === 'orders' ? '不限打卡状态，按员工有效订单笔数分配；无有效订单不参与分配。' : isHours ? '打卡员工自动获取工时；未打卡员工需每日手动补录分配工时，工时为 0 不获得分配。' : '打卡员工自动参与；未打卡员工需每日手动加入参与名单，休息员工不会自动参与。')
+            : '';
       }
       panel.style.display = isHours ? '' : 'none';
       var actualLabel = document.getElementById('workHoursActualLabel');
@@ -4759,8 +4761,8 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
 
     function submitRule() {
       var attendanceChoice = document.querySelector('input[name="clockin"]:checked');
-      if (!attendanceChoice || ['clock', 'unrestricted'].indexOf(attendanceChoice.value) < 0) {
-        showNotification('请选择仅打卡员工或不限打卡状态后保存', 'warning');
+      if (!attendanceChoice || ['clock', 'unrestricted', 'time_window'].indexOf(attendanceChoice.value) < 0) {
+        showNotification('请选择参与资格后保存', 'warning');
         return;
       }
       var ruleName = document.getElementById('ruleName').value.trim();
@@ -4882,6 +4884,22 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
         }
       }
       var data = collectFormData();
+      if (data.clockin === 'time_window') {
+        if (data.allocationMode !== 'legacy_pool' || data.poolKind !== 'tip') {
+          showNotification('按小费发生时段在岗参与目前仅支持普通小费池规则', 'error');
+          return;
+        }
+        var unsupportedTimeRule = (data.poolRules || []).find(function(item) {
+          var conditions = item.conditions || {};
+          return ['tips', 'sales', 'personal_sales', 'manual'].indexOf(item.type) < 0 ||
+            !!conditions.containsProduct || !!conditions.menu || !!conditions.surchargeType || !!conditions.types ||
+            !!(conditions.shift && conditions.shift.length);
+        });
+        if (unsupportedTimeRule) {
+          showNotification('按时段参与暂不支持所选的小费池来源或筛选条件，请调整后保存', 'error');
+          return;
+        }
+      }
       if (data.allocationMode !== 'order_tip_then_residual' && window.TipOutRosterDirectory && TipOutRosterDirectory.validateRuleReferences) {
         var referenceIssues = TipOutRosterDirectory.validateRuleReferences({
           store: data.store,

@@ -17,7 +17,7 @@
     if (!storeId) return [];
     var facts = root.TipOutScenarioData.day({ storeId: storeId, employees: roster(storeName), dateKey: dateKey });
     if (root.TipOutBusinessStatus && root.TipOutBusinessStatus.isDemoClosedDate(dateKey)) facts = facts.map(function(f) {
-      return Object.assign({}, f, { closed: true, orders: [], salesAmount: 0, orderTips: 0, reportedTips: 0, originalTips: 0, surcharge: 0,
+      return Object.assign({}, f, { closed: true, orders: [], reportedTipEvents: [], salesAmount: 0, orderTips: 0, reportedTips: 0, originalTips: 0, surcharge: 0,
         attendance: { hours: 0, originalHours: 0, effectiveHours: 0, clockStatus: '未打卡', punchSessions: [], adjustment: null } });
     });
     return facts;

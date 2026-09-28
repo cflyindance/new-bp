@@ -6,6 +6,7 @@ import personalSales from "./legacy/personalSalesDeduct.js.txt?raw";
 import allocation from "./legacy/tipAllocation.js.txt?raw";
 import attendance from "./legacy/attendanceMock.js.txt?raw";
 import scenarioData from "./legacy/tipout-scenario-data.js.txt?raw";
+import timeWindow from "./legacy/tipout-time-window.js.txt?raw";
 import scenarioSource from "./legacy/tipout-scenario-source.js.txt?raw";
 import scenarioList from "./legacy/tipout-scenario-list.js.txt?raw";
 import demoRules from "./legacy/tipout-demo-rules.js.txt?raw";
@@ -49,7 +50,7 @@ const dependencies: Record<TipsView, string[]> = {
 };
 
 function runtimeSource(view: TipsView): string {
-  return [scope, ...dependencies[view], scenarioData, scenarioSource, scenarioList, payoutRecordUi, funding,
+  return [scope, ...dependencies[view], scenarioData, scenarioSource, timeWindow, scenarioList, payoutRecordUi, funding,
     "window.TipOutGlobalScopeFilter=Object.assign(window.TipOutGlobalScopeFilter||{},__scopeAdapter);",
     "var TipOutGlobalScopeFilter=window.TipOutGlobalScopeFilter,ruleData=window.ruleData;",
     "var TipOutSummaryUi=window.TipOutSummaryUi,TipOutPaymentMethodApportion=window.TipOutPaymentMethodApportion;",

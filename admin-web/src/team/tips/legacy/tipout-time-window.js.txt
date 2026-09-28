@@ -1,0 +1,244 @@
+(function(root) {
+  'use strict';
+  var TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/;
+  function moment(value) {
+    if (typeof value !== 'string' || !TIME.test(value)) throw new Error('缺少完整的小费发生或打卡时间');
+    var parsed = Date.parse(value);
+    if (!Number.isFinite(parsed)) throw new Error('小费发生或打卡时间无效');
+    return parsed;
+  }
+  function cents(value) {
+    var number = Number(value);
+    if (!Number.isFinite(number) || number < 0) throw new Error('小费金额必须为非负数');
+    return Math.round(number * 100);
+  }
+  function split(total, weights) {
+    var sum = weights.reduce(function(a, b) { return a + b; }, 0);
+    if (!sum) return weights.map(function() { return 0; });
+    var raw = weights.map(function(w) { return total * w / sum; });
+    var result = raw.map(Math.floor), left = total - result.reduce(function(a, b) { return a + b; }, 0);
+    raw.map(function(value, index) { return { index: index, remainder: value - result[index] }; })
+      .sort(function(a, b) { return b.remainder - a.remainder || a.index - b.index; })
+      .slice(0, left).forEach(function(item) { result[item.index]++; });
+    return result;
+  }
+  function intervals(employee) {
+    var sessions = (employee.attendance && employee.attendance.punchSessions) || [];
+    return sessions.filter(function(session) {
+      return session.status === 'complete' && session.clockInAt && session.clockOutAt;
+    }).map(function(session) {
+      var start = moment(session.clockInAt), end = moment(session.clockOutAt);
+      if (end <= start) throw new Error('打卡区间结束时间必须晚于开始时间');
+      return { start: start, end: end, clockInAt: session.clockInAt, clockOutAt: session.clockOutAt };
+    });
+  }
+  function sourceEvents(facts) {
+    var events = [];
+    (facts || []).forEach(function(fact) {
+      (fact.orders || []).forEach(function(order) {
+        if (!cents(order.tipAmount)) return;
+        events.push({ id: order.id, source: 'order', employeeId: fact.employeeId,
+          occurredAt: order.completedPaymentAt, timeZone: order.timeZone, amount: order.tipAmount, order: order });
+      });
+      (fact.reportedTipEvents || []).forEach(function(item) {
+        if (!cents(item.amount)) return;
+        events.push({ id: item.id, source: 'reported', employeeId: fact.employeeId,
+          occurredAt: item.occurredAt, timeZone: item.timeZone, amount: item.amount });
+      });
+      if (cents(fact.reportedTips) !== (fact.reportedTipEvents || []).reduce(function(sum, item) { return sum + cents(item.amount); }, 0)) {
+        throw new Error('手动上报小费缺少逐笔发生时间，请补齐后再分配');
+      }
+    });
+    var seen = {};
+    events.forEach(function(event) {
+      if (!event.id || seen[event.id]) throw new Error('小费事件标识缺失或重复');
+      seen[event.id] = true;
+      event.at = moment(event.occurredAt);
+      if (!event.timeZone) throw new Error('小费事件缺少门店时区');
+    });
+    return events.sort(function(a, b) { return a.at - b.at || String(a.id).localeCompare(String(b.id)); });
+  }
+  function ruleEvents(rule, facts, dateKey) {
+    var events = [], formulas = rule.poolRules || [];
+    formulas.forEach(function(formula, formulaIndex) {
+      var conditions = formula.conditions || {};
+      if (['tips', 'sales', 'personal_sales', 'manual'].indexOf(formula.type) < 0) throw new Error('按时段参与暂不支持该入池来源');
+      if (conditions.containsProduct || conditions.menu || (conditions.shift || []).length || conditions.surchargeType || conditions.types ||
+          (conditions.paymentMethods || []).some(function(method) { return ['cash', 'credit_card'].indexOf(method) < 0; })) {
+        throw new Error('按时段参与尚不能核对该入池筛选条件');
+      }
+      var rate = Number(formula.pct);
+      if (!Number.isFinite(rate) || rate < 0 || rate > 100) throw new Error('小费池计算比例无效');
+      (facts || []).forEach(function(fact) {
+        if ((conditions.weekdays || []).length) {
+          var day = new Date(dateKey + 'T12:00:00').getDay();
+          if (!conditions.weekdays.some(function(value) { var text = String(value); return text === String(day || 7) || text.indexOf('日一二三四五六'[day]) >= 0; })) return;
+        }
+        if ((conditions.role || []).length && conditions.role.indexOf(fact.role) < 0) return;
+        if ((conditions.employee || []).length && conditions.employee.indexOf(fact.employeeId) < 0 && conditions.employee.indexOf(fact.name) < 0) return;
+        if ((conditions.employeeRoles || []).length && conditions.employeeRoles.indexOf(fact.role) < 0) return;
+        var source = formula.type === 'manual' ? (fact.reportedTipEvents || []) : (fact.orders || []);
+        if (formula.type === 'manual' && cents(fact.reportedTips) && !source.length) throw new Error('手动上报小费缺少发生时间');
+        source.forEach(function(item) {
+          var occurredAt = formula.type === 'manual' ? item.occurredAt : item.completedPaymentAt;
+          moment(occurredAt);
+          if (!item.timeZone) throw new Error('小费事件缺少门店时区');
+          if (String(item.businessDate || fact.dateKey || occurredAt.slice(0, 10)) !== dateKey) return;
+          if (formula.type !== 'manual') {
+            var area = item.area === 'main' ? 'Main Dining' : item.area === 'bar' ? 'Bar Area' : item.area;
+            var orderType = item.orderType === 'dine_in' ? 'Dine In' : item.orderType === 'takeout' ? 'To Go' : item.orderType;
+            if (conditions.area && conditions.area !== '全部' && conditions.area !== area) return;
+            if (conditions.orderType && conditions.orderType !== '全部' && conditions.orderType !== orderType) return;
+            if ((conditions.paymentMethods || []).length && !conditions.paymentMethods.some(function(p) { return p === item.paymentMethod || (p === 'credit_card' && item.paymentMethod === 'card'); })) return;
+            if (conditions.orderTipStatus === 'has_tip' && !cents(item.tipAmount)) return;
+            if (conditions.orderTipStatus === 'no_tip' && cents(item.tipAmount)) return;
+            if (conditions.tipType && conditions.tipType !== '全部' && conditions.tipType !== item.tipType) return;
+            if (conditions.hours && (conditions.hours.start || conditions.hours.end)) {
+              var localTime = occurredAt.slice(11, 16);
+              if (conditions.hours.start && localTime < conditions.hours.start) return;
+              if (conditions.hours.end && localTime > conditions.hours.end) return;
+            }
+          }
+          var base = formula.type === 'manual' ? item.amount : formula.type === 'tips' ? item.tipAmount : item.salesAmount;
+          var amount = Math.round(cents(base) * rate / 100);
+          if (!amount) return;
+          events.push({ id: String(formula.id || formulaIndex) + ':' + String(item.id), source: formula.type,
+            employeeId: fact.employeeId, sourceEmployeeName: fact.name, occurredAt: occurredAt, timeZone: item.timeZone, amount: amount / 100,
+            formulaId: String(formula.id || formulaIndex), sourceId: String(item.id) });
+        });
+      });
+    });
+    var seen = {};
+    events.forEach(function(event) {
+      if (seen[event.id]) throw new Error('小费来源事件重复，不能再次分配');
+      seen[event.id] = true;
+    });
+    return events.sort(function(a, b) { return moment(a.occurredAt) - moment(b.occurredAt) || a.id.localeCompare(b.id); });
+  }
+  function allocate(events, facts, options) {
+    options = options || {};
+    var mode = options.distribution || 'average';
+    if (['average', 'hours', 'orders'].indexOf(mode) < 0) throw new Error('不支持的小费分配方式');
+    var employees = (facts || []).filter(function(f) { return !options.roles || options.roles.indexOf(f.role) >= 0; });
+    var punches = {};
+    employees.forEach(function(f) { punches[f.employeeId] = intervals(f); });
+    var boundaries = employees.reduce(function(list, f) {
+      punches[f.employeeId].forEach(function(p) { list.push(p.start, p.end); }); return list;
+    }, []).sort(function(a, b) { return a - b; });
+    var allOrders = [];
+    (facts || []).forEach(function(f) { (f.orders || []).forEach(function(o) {
+      if (mode === 'orders' && !o.completedPaymentAt) throw new Error('订单缺少完成支付时间，不能按时段统计订单权重');
+      if (o.completedPaymentAt) allOrders.push({ employeeId: f.employeeId, at: moment(o.completedPaymentAt) });
+    }); });
+    var lines = [], totals = {}, unallocated = 0;
+    (events || []).forEach(function(event) {
+      var at = event.at === undefined ? moment(event.occurredAt) : event.at;
+      var amount = cents(event.amount);
+      employees.forEach(function(f) {
+        ((f.attendance && f.attendance.punchSessions) || []).forEach(function(session) {
+          if (session.status === 'break') return;
+          if (session.status === 'complete' && session.clockInAt && session.clockOutAt) return;
+          var from = session.clockInAt ? moment(session.clockInAt) : null;
+          var to = session.clockOutAt ? moment(session.clockOutAt) : null;
+          if ((!from && !to) || (from !== null && at >= from && (to === null || at < to)) ||
+              (from === null && to !== null && at < to)) {
+            throw new Error((f.name || '员工') + '在小费发生时段的打卡区间不完整，需补齐后再分配');
+          }
+        });
+      });
+      var windowStart = event.windowStartAt ? moment(event.windowStartAt) : boundaries.filter(function(value) { return value <= at; }).pop();
+      var windowEnd = event.windowEndAt ? moment(event.windowEndAt) : boundaries.find(function(value) { return value > at; });
+      if (!Number.isFinite(windowStart)) windowStart = at;
+      if (!Number.isFinite(windowEnd)) windowEnd = at + 1;
+      var active = employees.filter(function(f) { return punches[f.employeeId].some(function(p) { return p.start <= at && at < p.end; }); });
+      var weights = active.map(function(f) {
+        if (mode === 'orders') {
+          return allOrders.filter(function(o) { return o.employeeId === f.employeeId && windowStart <= o.at && o.at < windowEnd &&
+            punches[f.employeeId].some(function(p) { return p.start <= o.at && o.at < p.end; }); }).length;
+        }
+        if (mode === 'hours') {
+          var interval = punches[f.employeeId].find(function(p) { return p.start <= at && at < p.end; });
+          return Math.max(0, Math.min(interval.end, windowEnd) - Math.max(interval.start, windowStart));
+        }
+        return 1;
+      });
+      var pieces = split(amount, weights);
+      var assigned = pieces.reduce(function(a, b) { return a + b; }, 0);
+      unallocated += amount - assigned;
+      lines.push({ id: event.id, occurredAt: event.occurredAt, timeZone: event.timeZone, source: event.source,
+        windowStartAt: new Date(windowStart).toISOString(), windowEndAt: new Date(windowEnd).toISOString(),
+        amount: amount / 100, status: assigned ? 'allocated' : 'unallocated',
+        participants: active.map(function(f, index) {
+          totals[f.employeeId] = (totals[f.employeeId] || 0) + pieces[index];
+          return { employeeId: f.employeeId, name: f.name, role: f.role, weight: weights[index], amount: pieces[index] / 100,
+            punchIntervals: punches[f.employeeId].filter(function(p) { return p.start <= at && at < p.end; }).map(function(p) { return { clockInAt: p.clockInAt, clockOutAt: p.clockOutAt }; }) };
+        }) });
+    });
+    return { version: 1, distribution: mode, lines: lines, employeeAmounts: Object.keys(totals).map(function(id) { return { employeeId: id, amount: totals[id] / 100 }; }), unallocated: unallocated / 100 };
+  }
+  function allocateRule(rule, facts, dateKey) {
+    var events = ruleEvents(rule, facts, dateKey), receivers = rule.receivers || [];
+    if (!receivers.length) throw new Error('按时段参与需要配置接收方');
+    var distributionFacts = facts;
+    if (rule.distribution === 'hours' && rule.workHoursConfig && rule.workHoursConfig.mode === 'capped') {
+      var max = Number(rule.workHoursConfig.maxHoursPerDay);
+      if (!Number.isFinite(max) || max <= 0 || max > 24) throw new Error('最大分配工时无效');
+      distributionFacts = facts.map(function(fact) {
+        var remaining = Math.round(max * 3600000);
+        var adjusted = intervals(fact).map(function(interval) {
+          var end = Math.min(interval.end, interval.start + Math.max(0, remaining));
+          remaining -= Math.max(0, end - interval.start);
+          return end > interval.start ? { status: 'complete', clockInAt: new Date(interval.start).toISOString(), clockOutAt: new Date(end).toISOString() } : null;
+        }).filter(Boolean);
+        var uncertain = ((fact.attendance && fact.attendance.punchSessions) || []).filter(function(session) {
+          return session.status !== 'complete' || !session.clockInAt || !session.clockOutAt;
+        });
+        return Object.assign({}, fact, { attendance: Object.assign({}, fact.attendance, { punchSessions: adjusted.concat(uncertain) }) });
+      });
+    }
+    var rows = [];
+    receivers.forEach(function(receiver) {
+      var targets = receiver.subReceivers && receiver.subReceivers.length ? receiver.subReceivers : [receiver];
+      targets.forEach(function(target) {
+        (target.roles || []).forEach(function(role) {
+          rows.push({ role: role, pct: Number(receiver.pct || 0) * (target === receiver ? 1 : Number(target.pct || 0) / 100) / (target.roles || []).length,
+            employeeRefs: target.employeeRefs || receiver.employeeRefs || [] });
+        });
+      });
+    });
+    var totalPct = rows.reduce(function(sum, row) { return sum + row.pct; }, 0);
+    if (Math.abs(totalPct - 100) > 0.001) throw new Error('接收方占比合计必须为 100%');
+    var lines = [], totals = {}, unallocated = 0;
+    var boundaries = distributionFacts.filter(function(f) { return rows.some(function(row) { return row.role === f.role; }); })
+      .reduce(function(list, f) { intervals(f).forEach(function(p) { list.push(p.start, p.end); }); return list; }, [])
+      .sort(function(a, b) { return a - b; });
+    events.forEach(function(event) {
+      var at = moment(event.occurredAt);
+      var from = boundaries.filter(function(value) { return value <= at; }).pop();
+      var to = boundaries.find(function(value) { return value > at; });
+      var timedEvent = Object.assign({}, event, { windowStartAt: new Date(Number.isFinite(from) ? from : at).toISOString(),
+        windowEndAt: new Date(Number.isFinite(to) ? to : at + 1).toISOString() });
+      var shares = split(cents(event.amount), rows.map(function(row) { return row.pct; }));
+      var participants = [], missed = 0;
+      rows.forEach(function(row, index) {
+        var subset = distributionFacts.filter(function(f) { return f.role === row.role && (!row.employeeRefs.length || row.employeeRefs.some(function(ref) { return String(ref.employeeId) === String(f.employeeId); })); });
+        var piece = allocate([Object.assign({}, timedEvent, { amount: shares[index] / 100, id: event.id + ':' + index })], subset, { distribution: rule.distribution });
+        missed += cents(piece.unallocated);
+        piece.lines[0].participants.forEach(function(person) {
+          participants.push(person);
+          totals[person.employeeId] = (totals[person.employeeId] || 0) + cents(person.amount);
+        });
+      });
+      unallocated += missed;
+      lines.push({ id: event.id, formulaId: event.formulaId, sourceId: event.sourceId, source: event.source,
+        sourceEmployeeId: event.employeeId, sourceEmployeeName: event.sourceEmployeeName,
+        occurredAt: event.occurredAt, timeZone: event.timeZone, windowStartAt: timedEvent.windowStartAt, windowEndAt: timedEvent.windowEndAt,
+        amount: event.amount, unallocated: missed / 100,
+        status: missed === cents(event.amount) ? 'unallocated' : missed ? 'partial' : 'allocated', participants: participants });
+    });
+    return { version: 1, dateKey: dateKey, distribution: rule.distribution, lines: lines,
+      poolAmount: events.reduce(function(sum, event) { return sum + cents(event.amount); }, 0) / 100,
+      unallocated: unallocated / 100, employeeAmounts: facts.map(function(f) { return { employeeId: f.employeeId, name: f.name, role: f.role, amount: (totals[f.employeeId] || 0) / 100 }; }) };
+  }
+  root.TipOutTimeWindow = { moment: moment, intervals: intervals, sourceEvents: sourceEvents, ruleEvents: ruleEvents, allocate: allocate, allocateRule: allocateRule, split: split };
+})(typeof window !== 'undefined' ? window : this);

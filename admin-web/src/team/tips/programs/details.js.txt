@@ -48,7 +48,7 @@ var ALLOC_KEY = 'tipout_allocated';
             var cells = row.querySelectorAll('td'); if (cells.length > 1) cells[cells.length - 2].textContent = money(0);
           }
         });
-        if (enforce && rule && rule.distribution !== 'hours' && rule.clockin !== 'noclock') recalcDetailLegacyCard(card);
+        if (enforce && rule && rule.distribution !== 'hours' && rule.clockin !== 'noclock' && rule.clockin !== 'time_window') recalcDetailLegacyCard(card);
       });
     }
     function getAllocatedDatesForStore(store) {
@@ -258,6 +258,24 @@ var ALLOC_KEY = 'tipout_allocated';
     }
 
     var detailAllRules = [];
+    var detailTimeWindowResults = {};
+    var detailTimeWindowErrors = {};
+    function buildTimeWindowDetailCardHtml(rule, rid, result) {
+      var rows = result.lines.map(function(line) {
+        var people = line.participants.filter(function(person) { return person.amount > 0; }).map(function(person) {
+          return escHtml(person.name) + ' ' + money(person.amount);
+        }).join('、') || '无人符合参与资格';
+        var sourceLabel = (line.source === 'manual' ? '手动上报' : '订单') + ' · ' + (line.sourceEmployeeName || line.sourceEmployeeId || '') +
+          ' #' + String(line.sourceId || '').split(':').pop();
+        return '<tr><td>' + escHtml(line.occurredAt.replace('T', ' ')) + '</td><td title="' + escHtml(line.sourceId) + '">' + escHtml(sourceLabel) +
+          '</td><td>' + money(line.amount) + '</td><td>' + people + '</td><td>' + money(line.unallocated) + '</td></tr>';
+      }).join('');
+      return '<div class="card detail-card tipout-allocation-group" data-rule-id="' + escHtml(rid) + '" data-time-window="1" data-pool="' + result.poolAmount + '">' +
+        '<div class="card-body detail-card-body-alloc" style="padding:16px"><strong>按小费发生时段在岗参与</strong>' +
+        '<p class="field-desc">以订单支付完成或手动小费实际发生时间匹配有效打卡区间；区间采用左闭右开。未匹配金额保留为未分配。</p>' +
+        '<div class="detail-employee-wrap"><table class="data-table detail-table"><thead><tr><th>发生时间</th><th>来源</th><th>入池金额</th><th>接收员工</th><th>未分配</th></tr></thead><tbody>' +
+        (rows || '<tr><td colspan="5">当日没有符合计算条件的小费事件</td></tr>') + '</tbody></table></div></div></div>';
+    }
     var detailSelectedRuleIds = [];
     var detailPayoutDraft = null;
     var detailPayoutSubmitting = false;
@@ -482,13 +500,28 @@ var ALLOC_KEY = 'tipout_allocated';
       }
 
       currentRule = rules[0];
+      detailTimeWindowResults = {};
+      detailTimeWindowErrors = {};
       var bundleParts = [];
       rules.forEach(function(rule, idx) {
         var rid = detailRuleDomId(rule, idx);
         var tableId = detailSafeTableId(rid);
         var topHtml = '';
         var cardHtml = '';
-        if ((rule.allocationMode || 'legacy_pool') === 'order_tip_then_residual' && window.TipAllocation) {
+        if (rule.clockin === 'time_window') {
+          try {
+            if ((rule.allocationMode || 'legacy_pool') !== 'legacy_pool') throw new Error('该计提模式尚不支持按发生时段在岗参与');
+            if (!window.TipOutScenarioSource || !window.TipOutTimeWindow) throw new Error('逐笔时间来源尚未就绪');
+            var savedTimePool = detailSavedSnapshot && (detailSavedSnapshot.pools || []).find(function(pool) { return String(pool.ruleId) === String(rid); });
+            var timeResult = savedTimePool ? savedTimePool.timeWindow : TipOutTimeWindow.allocateRule(rule, TipOutScenarioSource.day(dateKey, store), dateKey);
+            if (!timeResult || timeResult.version !== 1) throw new Error('已保存的按时段分配快照缺少逐笔依据');
+            detailTimeWindowResults[String(rid)] = timeResult;
+            cardHtml = buildTimeWindowDetailCardHtml(rule, rid, timeResult);
+          } catch (timeError) {
+            detailTimeWindowErrors[String(rid)] = timeError.message || '逐笔小费数据暂不可分配';
+            cardHtml = '<div class="card detail-card tipout-allocation-group" data-rule-id="' + escHtml(rid) + '" data-time-window="1" data-pool="0"><div class="card-body" style="padding:24px;color:#b42318">' + escHtml(detailTimeWindowErrors[String(rid)]) + '</div></div>';
+          }
+        } else if ((rule.allocationMode || 'legacy_pool') === 'order_tip_then_residual' && window.TipAllocation) {
           var otCtx = genSyntheticOrderTipContext(dateKey, rid);
           otCtx.employees = buildDetailEmployees(rule, rid, dateKey);
           var otResult = TipAllocation.allocateOrderTipResidual(rule, otCtx);
@@ -610,6 +643,18 @@ var ALLOC_KEY = 'tipout_allocated';
       var originalTips = snapshot ? Number(snapshot.originalTips || 0) : (confirmed && confirmed.summary ? Number(confirmed.summary.originalTips || 0) : 0);
       if (window.TipOutScenarioSource && !confirmed) originalTips = window.TipOutScenarioSource.totals(window.TipOutScenarioSource.day(dateKey, store)).originalTips;
       var summary = TipOutDatePoolView.projectDate({ dateKey: dateKey, rules: rules, originalTips: originalTips, allocated: allocated });
+      if (!confirmed && summary.poolExecutions && rules.some(function(rule) { return rule.clockin === 'time_window'; })) {
+        summary.poolExecutions.forEach(function(item) {
+          var result = detailTimeWindowResults[String(item.id)];
+          if (!result) return;
+          item.poolAmount = result.poolAmount;
+          item.allocatedAmount = result.poolAmount - result.unallocated;
+          item.unallocatedAmount = result.unallocated;
+        });
+        summary.poolAmount = summary.poolExecutions.reduce(function(sum, item) { return sum + item.poolAmount; }, 0);
+        summary.allocatedAmount = summary.poolExecutions.reduce(function(sum, item) { return sum + (item.allocatedAmount || 0); }, 0);
+        summary.unallocatedAmount = summary.poolAmount - summary.allocatedAmount;
+      }
       if (detailSavedSnapshot && !detailForceRebuild) {
         var visibleIds = rules.map(function(rule) { return String(rule.id); });
         var savedPools = detailSavedSnapshot.pools.filter(function(pool) { return visibleIds.indexOf(pool.ruleId) >= 0; });
@@ -1662,6 +1707,17 @@ var ALLOC_KEY = 'tipout_allocated';
       document.querySelectorAll('#detailRulesContainer .detail-card[data-rule-id]').forEach(function(card) {
         var ruleId = card.getAttribute('data-rule-id') || '';
         var rule = (rules || []).find(function(item) { return String(item.id || '') === String(ruleId); }) || {};
+        if (card.getAttribute('data-time-window') === '1') {
+          if (detailTimeWindowErrors[ruleId]) throw new Error((rule.ruleName || ruleId) + '：' + detailTimeWindowErrors[ruleId]);
+          var result = detailTimeWindowResults[ruleId];
+          if (!result) throw new Error('按时段分配结果缺失，请刷新后重试');
+          pools.push({ poolId: String(rule.poolId || rule.id || ruleId), poolName: rule.poolName || rule.name || rule.ruleName || '未命名小费池',
+            ruleId: ruleId, ruleName: rule.name || rule.ruleName || '未命名规则', poolKind: rule.poolKind || 'tip',
+            poolAmount: result.poolAmount, timeWindow: result,
+            employees: result.employeeAmounts.map(function(entry) { return { employeeId: entry.employeeId, name: entry.name, role: entry.role,
+              attendanceStatus: entry.amount > 0 ? 'clock' : 'absent', hours: 0, percentage: 0, amount: entry.amount }; }) });
+          return;
+        }
         if (card.getAttribute('data-hours-based') === '1') {
           card.querySelectorAll('.detail-emp-hours-input').forEach(function(input) { window.TipOutDetailManualAllocation.parseHours(input.value); });
           recalcDetailHoursCard(card);
@@ -1711,8 +1767,8 @@ var ALLOC_KEY = 'tipout_allocated';
         dateKey: dateKey,
         confirmedAt: new Date().toISOString(),
         scenarioFacts: window.TipOutScenarioSource ? window.TipOutScenarioSource.day(dateKey,store) : undefined,
-        employeeAmounts: window.TipOutScenarioSource ? window.TipAllocation.collectScenarioEmployeeAmounts(rules,window.TipOutScenarioSource.day(dateKey,store)) : undefined,
-        employeeContributions: window.TipOutScenarioSource ? window.TipAllocation.collectScenarioContributions(rules,window.TipOutScenarioSource.day(dateKey,store)) : undefined,
+        employeeAmounts: window.TipOutScenarioSource && !rules.some(function(rule) { return rule.clockin === 'time_window'; }) ? window.TipAllocation.collectScenarioEmployeeAmounts(rules,window.TipOutScenarioSource.day(dateKey,store)) : undefined,
+        employeeContributions: window.TipOutScenarioSource && !rules.some(function(rule) { return rule.clockin === 'time_window'; }) ? window.TipAllocation.collectScenarioContributions(rules,window.TipOutScenarioSource.day(dateKey,store)) : undefined,
         editorState: window.TipOutDetailSnapshot ? window.TipOutDetailSnapshot.capture(document, rules) : undefined,
         pools: pools,
         summary: {
