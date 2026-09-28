@@ -174,6 +174,17 @@ const { chromium } = process.env.TIPOUT_BROWSER_PACKAGES ? createRequire(path.jo
     });
     const summaryRows=page.locator('#employeeReconciliationList tr');
     await summaryRows.first().waitFor();
+    assert.deepEqual((await page.locator('.tipout-employee-table thead th').allTextContents()).map(text=>text.trim().replace(/\s*↓$/, '')),['员工','角色','打卡总工时','分配工时','分配前总小费','贡献入池总额','从池分得总额','分配后总小费','分配状态','']);
+    const roleCardText=await page.locator('#employeeRoleSummaryCards .tipout-role-summary-card').first().textContent();
+    for (const label of ['分配前总小费','贡献入池总额','从池分得总额','分配后总小费']) assert.ok(roleCardText.includes(label),`Missing role label: ${label}`);
+    await page.locator('#employeeSortHours').click();
+    assert.equal(await page.locator('#employeeSortHours').locator('xpath=..').getAttribute('aria-sort'),'descending');
+    await page.locator('#employeeSortFinalAmount').click();
+    const firstRoleCard=page.locator('#employeeRoleSummaryCards .tipout-role-summary-card').first();
+    await firstRoleCard.click();
+    assert.equal(await page.locator('#employeeSummaryRoleFilter').inputValue(),await firstRoleCard.getAttribute('data-role'));
+    await firstRoleCard.click();
+    assert.equal(await page.locator('#employeeSummaryRoleFilter').inputValue(),'');
     assert.deepEqual(await page.locator('#allocationHoursDetailModal thead th').allTextContents(),['规则名称','规则类型','工时来源','分配工时']);
     const hoursSummaryRow=summaryRows.filter({has:page.locator('.tipout-allocation-hours-button')}).first();
     const hoursEmployeeId=await hoursSummaryRow.getAttribute('data-employee-id');

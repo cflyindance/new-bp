@@ -211,13 +211,18 @@ for (const obsoleteOption of ['<option value="待处理">待处理</option>', '<
 }
 if (!distributionProgram.includes("normalizeEmployeeAllocationStatusFilter(saved.employeeSummaryStatus)")) failures.push("distribution: restored employee allocation status must be normalized");
 if (!distributionProgram.includes("normalizeEmployeeAllocationStatusFilter(status && status.value)")) failures.push("distribution: live employee allocation status must be normalized");
-const employeeAmountHeaders = ["分配前小费", "贡献入池", "从池分得", "分配后小费"];
+if (!employeeTableHead.includes('>打卡总工时</button>')) failures.push("distribution: employee total punch hours header missing");
+if (!employeeTableHead.includes('<th>分配工时</th>')) failures.push("distribution: employee allocation hours header missing");
+const employeeAmountHeaders = ["分配前总小费", "贡献入池总额", "从池分得总额", "分配后总小费"];
 let previousEmployeeAmountHeader = -1;
 for (const header of employeeAmountHeaders) {
   const index = employeeTableHead.indexOf(header);
   if (index < 0) failures.push(`distribution: employee amount header missing ${header}`);
   if (index >= 0 && index <= previousEmployeeAmountHeader) failures.push(`distribution: employee amount headers out of order at ${header}`);
   previousEmployeeAmountHeader = index;
+}
+for (const label of employeeAmountHeaders) {
+  if (!distributionProgram.includes('<small>' + label + '</small>')) failures.push(`distribution: role summary label missing ${label}`);
 }
 for (const obsoleteHeader of [">原有小费<", ">净调整<", ">最终获得 "]) {
   if (employeeTableHead.includes(obsoleteHeader)) failures.push(`distribution: obsolete employee amount header remains ${obsoleteHeader}`);
