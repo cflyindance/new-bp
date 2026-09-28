@@ -95,6 +95,7 @@ const { chromium } = process.env.TIPOUT_BROWSER_PACKAGES ? createRequire(path.jo
     await page.waitForFunction(()=>Object.keys(JSON.parse(localStorage.getItem('tipout_allocation_results_v1'))).length===2);
     assert.equal(await page.evaluate(()=>window.testNavigation),navigationBeforeQuick);
     await page.evaluate(date=>window.mountDetailTest(date),date);
+    assert.deepEqual(await page.locator('.tipout-detail-pool-metrics span').allTextContents(), ['原始总小费','入池总金额','已分配总额','未分配总额','小费池数量']);
     assert.equal(await page.locator('#confirmDetailAllocationBtn').isDisabled(),true);
     assert.ok(await page.locator('.tipout-attendance-label').count() > 0);
     assert.ok(await page.locator('.tipout-attendance-label').filter({hasText:'未打卡'}).count() > 0);
