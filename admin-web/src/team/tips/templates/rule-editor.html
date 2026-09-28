@@ -161,6 +161,14 @@
     .radio-item input[type="radio"] {
       width: 16px; height: 16px; accent-color: var(--primary);
     }
+    .distribution-method-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    .distribution-method-card { display: flex; align-items: flex-start; gap: 10px; padding: 18px; border: 1px solid var(--border-color); border-radius: 10px; cursor: pointer; background: #fff; }
+    .distribution-method-card:has(input:checked) { border-color: var(--primary); background: rgba(22,119,255,0.04); box-shadow: inset 0 0 0 1px var(--primary); }
+    .distribution-method-card:focus-within { outline: 2px solid var(--primary); outline-offset: 3px; }
+    .distribution-method-card input { margin-top: 3px; accent-color: var(--primary); flex-shrink: 0; }
+    .distribution-method-card strong { display: block; font-size: 14px; margin-bottom: 8px; }
+    .distribution-method-card small { display: block; font-size: 12px; color: var(--text-secondary); line-height: 1.7; }
+    @media (max-width: 900px) { .distribution-method-cards { grid-template-columns: 1fr; } }
     .work-hours-config {
       margin: 10px 0 0 24px; padding: 12px 14px; max-width: 620px;
       border: 1px solid var(--border-light); border-radius: var(--radius-md);
@@ -397,7 +405,26 @@
             </div>
           </div>
 
-          <!-- 小费池贡献规则：两种分配模式共用（位于分配模式之上） -->
+          <div class="form-section tipout-form-card" id="employeeDistributionMethodSection">
+            <div class="form-section-title"><span class="field-desc-wrap" data-field-id="distribution">员工分配方式 <span class="field-desc-icon" data-field-id="distribution" data-label="员工分配方式" data-native-onclick="event.preventDefault();openFieldDescEditor('distribution','员工分配方式')" title="点击编辑字段说明">ⓘ</span></span></div>
+            <p class="field-desc" style="margin-bottom:16px">决定同一角色内的员工如何分配；角色之间的份额在接收方规则中设置。</p>
+            <div class="distribution-method-cards">
+              <label class="distribution-method-card">
+                <input type="radio" name="distribution" value="average" checked data-native-onchange="updateWorkHoursConfigUi()">
+                <span><strong>按员工数量平均分配</strong><small>同角色内符合参与资格的员工平均分配。</small><small>示例：$100，2 位员工各分 $50。</small></span>
+              </label>
+              <label class="distribution-method-card">
+                <input type="radio" name="distribution" value="hours" data-native-onchange="updateWorkHoursConfigUi()">
+                <span><strong>按工作时长占比分配</strong><small>按员工有效分配工时的占比分配。</small><small>示例：工时 6 : 4，分得 $60 : $40。</small></span>
+              </label>
+              <label class="distribution-method-card" id="distributionOrdersRow">
+                <input type="radio" name="distribution" value="orders" data-native-onchange="updateWorkHoursConfigUi()">
+                <span><strong>按订单占比分配</strong><small>按员工归属订单笔数的占比分配。</small><small>示例：订单 3 : 2，分得 $60 : $40。</small></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- 小费池贡献规则：两种计算模式共用 -->
           <div class="form-section tipout-form-card" id="sharedPoolRulesSection">
             <div class="form-section-title">
               <span class="field-desc-wrap" data-field-id="poolRules" data-pool-label="小费池贡献规则">小费池贡献规则 <span class="field-desc-icon" data-field-id="poolRules" data-label="小费池贡献规则" data-native-onclick="event.preventDefault();openFieldDescEditor('poolRules','小费池贡献规则')" title="点击编辑字段说明">ⓘ</span></span>
@@ -421,7 +448,7 @@
           </div>
 
           <div class="form-section tipout-form-card" id="allocationModeSection">
-            <div class="form-section-title">分配模式</div>
+            <div class="form-section-title">小费池计算模式</div>
             <div class="radio-group">
               <label class="radio-item">
                 <input type="radio" name="allocationMode" value="legacy_pool" checked data-native-onchange="onAllocationModeChange(false)">
@@ -520,26 +547,20 @@
               <div class="form-section-title"><span class="field-desc-wrap" data-field-id="clockin">参与资格 <span class="field-desc-icon" data-field-id="clockin" data-label="参与资格" data-native-onclick="event.preventDefault();openFieldDescEditor('clockin','参与资格')" title="点击编辑字段说明">ⓘ</span></span></div>
               <div class="radio-group">
                 <label class="radio-item" id="clockinClockOption">
-                  <input type="radio" name="clockin" value="clock" checked data-native-onchange="updateDistributionOptions()"> 打卡上班
+                  <input type="radio" name="clockin" value="clock" checked data-native-onchange="updateDistributionOptions()"> 仅打卡员工
+                </label>
+                <label class="radio-item">
+                  <input type="radio" name="clockin" value="unrestricted" data-native-onchange="updateDistributionOptions()"> 不限打卡状态
                 </label>
                 <label class="radio-item" hidden style="display:none">
                   <input type="radio" name="clockin" value="noclock" disabled> 不打卡（历史规则）
                 </label>
               </div>
-              <p class="field-desc">未打卡员工需每日在小费分配明细中手动补录</p>
+              <p class="field-desc" id="participationHint">未打卡员工需每日在小费分配明细中手动补录</p>
             </div>
 
-            <!-- Distribution Method -->
-            <div class="form-section">
-              <div class="form-section-title"><span class="field-desc-wrap" data-field-id="distribution" data-pool-label="小费分配方式（单选）">小费分配方式（单选） <span class="field-desc-icon" data-field-id="distribution" data-label="小费分配方式" data-native-onclick="event.preventDefault();openFieldDescEditor('distribution','小费分配方式')" title="点击编辑字段说明">ⓘ</span></span></div>
-              <div class="radio-group">
-                <label class="radio-item">
-                  <input type="radio" name="distribution" value="average" checked data-native-onchange="updateWorkHoursConfigUi()"> 按员工数量平均分配
-                </label>
-                <label class="radio-item">
-                  <input type="radio" name="distribution" value="hours" data-native-onchange="updateWorkHoursConfigUi()"> 按工作时长占比分配
-                </label>
                 <div class="work-hours-config" id="workHoursConfigPanel" style="display:none">
+                  <div class="form-section-title">分配工时设置</div>
                   <label class="radio-item">
                     <input type="radio" name="workHoursMode" value="actual" checked data-native-onchange="updateWorkHoursConfigUi()">
                     <span id="workHoursActualLabel">按照实际打卡工时</span>
@@ -554,11 +575,6 @@
                   </div>
                   <div class="work-hours-config-error" id="workHoursConfigError"></div>
                 </div>
-                <label class="radio-item" id="distributionOrdersRow">
-                  <input type="radio" name="distribution" value="orders" data-native-onchange="updateWorkHoursConfigUi()"> 按订单占比分配
-                </label>
-              </div>
-            </div>
           </div>
 
           <!-- Employee Weight -->
@@ -583,7 +599,7 @@
         </div>
 
         <div class="tipout-sticky-actions" id="ruleEditorActions">
-          <span>规则字段与保存逻辑保持不变</span>
+          <span>保存后可在小费分配明细中查看分配结果</span>
           <div>
             <button type="button" class="btn" data-native-onclick="cancelRule()">取消</button>
             <button type="button" class="btn btn-primary" data-native-onclick="submitRule()">提交</button>

@@ -227,23 +227,29 @@
     Object.keys(roleAmounts).forEach(function (role) {
       var roleAmount = roundMoney(roleAmounts[role]);
       var members = employees.filter(function (employee) {
-        return employee && employee.name && String(employee.role || '').trim() === role;
+        if (!employee || !employee.name || String(employee.role || '').trim() !== role) return false;
+        if (employee.manuallyIncluded) return true;
+        if (rule && rule.clockin === 'unrestricted' && mode === 'orders') return true;
+        return employee.clockedIn !== false;
       });
       if (!members.length || roleAmount <= 0) return;
 
-      if (mode === 'hours') {
+      if (mode === 'hours' || mode === 'orders') {
+        function allocationWeight(member) {
+          return mode === 'orders' ? Math.max(0, Math.floor(Number(member.orderCount) || 0)) : effectiveHoursByName[member.name];
+        }
         var positiveMembers = members.filter(function (member) {
-          return effectiveHoursByName[member.name] > 0;
+          return allocationWeight(member) > 0;
         });
         var totalHours = positiveMembers.reduce(function (sum, member) {
-          return sum + effectiveHoursByName[member.name];
+          return sum + allocationWeight(member);
         }, 0);
         if (totalHours > 0) {
           var weightedUsed = 0;
           positiveMembers.forEach(function (member, index) {
             var piece = index === positiveMembers.length - 1
               ? roundMoney(roleAmount - weightedUsed)
-              : roundMoney(roleAmount * effectiveHoursByName[member.name] / totalHours);
+              : roundMoney(roleAmount * allocationWeight(member) / totalHours);
             weightedUsed = roundMoney(weightedUsed + piece);
             receivedByName[member.name] = roundMoney((receivedByName[member.name] || 0) + piece);
           });
@@ -538,7 +544,8 @@
   function collectScenarioEmployeeAmounts(rules, facts) {
     var employees = (facts || []).map(function(fact) {
       return {id:fact.employeeId,name:fact.name,role:fact.role,salesAmount:fact.salesAmount,tipBefore:fact.originalTips,
-        hours:fact.attendance ? fact.attendance.effectiveHours : 0};
+        hours:fact.attendance ? fact.attendance.effectiveHours : 0,
+        clockedIn: !!(fact.attendance && fact.attendance.clockStatus !== '未打卡'), orderCount:(fact.orders || []).length};
     });
     var totals = employees.map(function(employee) { return {employeeId:employee.id,deducted:0,received:0}; });
     (rules || []).forEach(function(rule) {

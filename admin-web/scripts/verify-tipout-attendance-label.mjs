@@ -12,6 +12,6 @@ assert.equal(api.inspect('A','2026-09-23').status,'unknown');
 const editor=fs.readFileSync('src/team/tips/templates/rule-editor.html','utf8');
 assert.match(editor,/value="noclock" disabled/);
 const program=fs.readFileSync('src/team/tips/programs/rule-editor.js.txt','utf8');
-assert.match(program,/attendanceChoice.value !== 'clock'/);
+assert.match(program,/\['clock', 'unrestricted'\].indexOf\(attendanceChoice.value\)/);
 assert.doesNotMatch(program,/noClockIn.checked = true/);
-console.log('Attendance identity and clock-only editor guards passed');
+console.log('Attendance identity and participation editor guards passed');

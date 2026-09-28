@@ -10,6 +10,7 @@ const { chromium } = process.env.TIPOUT_BROWSER_PACKAGES
   try {
     const page = await browser.newPage();
     const errors = [];
+    page.on('console', message => { if (message.type() === 'error') console.error(message.text()); });
     page.on('pageerror', error => errors.push(error.message));
     await page.goto(process.env.TIPOUT_PREVIEW_URL || 'http://127.0.0.1:65021/');
     await page.evaluate(async () => {
@@ -41,10 +42,10 @@ const { chromium } = process.env.TIPOUT_BROWSER_PACKAGES
       window.testHost = { shadow, root, context, mountLegacyTipsRuntime, renderTipsTemplate };
       root.innerHTML = renderTipsTemplate('details');
       const date = '2026-09-25';
-      window.testRuntime = mountLegacyTipsRuntime(shadow, root, {
+      try { window.testRuntime = mountLegacyTipsRuntime(shadow, root, {
         view: 'details', query: '?store=' + encodeURIComponent(store) + '&date=' + date,
         href: '/team/tips/details?store=' + encodeURIComponent(store) + '&date=' + date
-      }, context);
+      }, context); } catch (error) { throw error.cause || error; }
     });
     const card = page.locator('.detail-card[data-order-tip-mode="1"][data-hours-based="1"]');
     await card.waitFor();

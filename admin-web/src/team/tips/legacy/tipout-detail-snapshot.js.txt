@@ -7,7 +7,10 @@
       return { ruleId: card.getAttribute('data-rule-id'), role: section.getAttribute('data-role'),
         percentage: input ? input.value : null, amount: (section.querySelector('.role-amount') || {}).textContent || '' };
     });
-    return { rules: clone(rules), roleAllocations: roleAllocations, formulas: sections.some(function(section) { return section.hidden; }) ? null : sections.map(function(section) {
+    var manualParticipants = Array.from(document.querySelectorAll('.detail-card[data-rule-id] tr[data-manual-participant="1"]')).map(function(row) {
+      return { ruleId: row.closest('.detail-card').getAttribute('data-rule-id'), name: row.querySelector('select').value };
+    });
+    return { rules: clone(rules), manualParticipants: manualParticipants, roleAllocations: roleAllocations, formulas: sections.some(function(section) { return section.hidden; }) ? null : sections.map(function(section) {
       return { id: section.getAttribute('data-rule-id'), values: Array.from(section.querySelectorAll('input')).map(function(input) { return input.value; }) };
     }) };
   }
@@ -39,6 +42,8 @@
           row.setAttribute('data-snapshot-hours', employee.hours);
           row.setAttribute('data-snapshot-name', employee.name);
           row.setAttribute('data-attendance-status', employee.attendanceStatus || 'unknown');
+          row.removeAttribute('data-manual-participant');
+          if ((snapshot.editorState && snapshot.editorState.manualParticipants || []).some(function(item) { return item.ruleId === pool.ruleId && item.name === employee.name; })) row.setAttribute('data-manual-participant','1');
           if (employee.hoursSource === 'manual') row.setAttribute('data-hours-manual', '1');
           else row.removeAttribute('data-hours-manual');
           if (select) {

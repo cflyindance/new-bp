@@ -257,7 +257,17 @@ const { chromium } = process.env.TIPOUT_BROWSER_PACKAGES ? createRequire(path.jo
     const clockinSection=page.locator('.field-desc-wrap[data-field-id="clockin"]').locator('xpath=../..');
     assert.equal((await page.locator('.field-desc-wrap[data-field-id="clockin"]').textContent()).trim().replace('ⓘ','').trim(),'参与资格');
     assert.equal((await clockinSection.locator('.field-desc').textContent()).trim(),'未打卡员工需每日在小费分配明细中手动补录');
-    assert.ok((await page.locator('.field-desc-wrap[data-field-id="distribution"]').textContent()).includes('小费分配方式（单选）'));
+    assert.ok((await page.locator('.field-desc-wrap[data-field-id="distribution"]').textContent()).includes('员工分配方式'));
+    assert.equal(await page.locator('input[name="distribution"]').count(),3);
+    await page.locator('input[name="distribution"][value="hours"]').check();
+    assert.equal(await page.locator('#workHoursConfigPanel').isVisible(),true);
+    await page.locator('input[name="distribution"][value="average"]').check();
+    assert.equal(await page.locator('#workHoursConfigPanel').isVisible(),false);
+    await page.locator('input[name="clockin"][value="unrestricted"]').check();
+    assert.ok((await page.locator('#participationHint').textContent()).includes('休息员工不会自动参与'));
+    await page.locator('input[name="distribution"][value="orders"]').check();
+    assert.ok((await page.locator('#participationHint').textContent()).includes('有效订单笔数'));
+    assert.equal(await page.locator('input[name="distribution"][value="orders"]').isChecked(),true);
     assert.deepEqual(errors,[]);
     console.log('Quick allocation, snapshot editing and demo rules page seeding passed');
   } finally { await browser.close(); }

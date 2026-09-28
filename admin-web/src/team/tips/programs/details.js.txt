@@ -43,7 +43,7 @@ var ALLOC_KEY = 'tipout_allocated';
           row.setAttribute('data-attendance-status',status);
           var old = row.querySelector('.tipout-attendance-label'); if (old) old.remove();
           select.parentElement.appendChild(window.TipOutAttendanceLabel.badge(document,status));
-          if (enforce && rule && rule.distribution !== 'hours' && rule.clockin !== 'noclock' && status === 'absent') {
+          if (enforce && rule && rule.distribution !== 'hours' && rule.clockin !== 'noclock' && !(rule.clockin === 'unrestricted' && rule.distribution === 'orders') && row.getAttribute('data-manual-participant') !== '1' && status === 'absent') {
             var pct = row.querySelector('.detail-emp-pct-input'); if (pct) pct.value = 0;
             var cells = row.querySelectorAll('td'); if (cells.length > 1) cells[cells.length - 2].textContent = money(0);
           }
@@ -119,7 +119,9 @@ var ALLOC_KEY = 'tipout_allocated';
       var roleEmployees = getRoleEmployeesForStore(rule && rule.store);
       Object.keys(roleEmployees).forEach(function(role) {
         (roleEmployees[role] || []).forEach(function(name) {
-          out.push({ name: name, role: role, hours: getDetailEmployeeHours(rule, ruleId, dateKey, name) });
+          var fact = window.TipOutScenarioSource ? window.TipOutScenarioSource.employee(name,dateKey,{storeId:rule.store}) : null;
+          out.push({ name: name, role: role, hours: getDetailEmployeeHours(rule, ruleId, dateKey, name),
+            clockedIn: window.TipOutAttendanceLabel.inspect(name,dateKey).status !== 'absent', orderCount: fact ? fact.orders.length : 0 });
         });
       });
       return out;
@@ -140,6 +142,7 @@ var ALLOC_KEY = 'tipout_allocated';
     function onDetailEmployeePctInput(input) {
       if (!input) return;
       input.closest('tr').setAttribute('data-pct-manual', '1');
+      input.closest('tr').setAttribute('data-manual-participant', '1');
       var table = input.closest('table');
       if (table) recalcRoleAmount(table.id);
       markDetailDirty();
@@ -1436,18 +1439,16 @@ var ALLOC_KEY = 'tipout_allocated';
           empPcts = initialRatios.map(function(value) { return value / 100; });
           empAmounts = initialAmounts.cents.map(function(value) { return value / 100; });
         } else {
-          var remaining = 100;
-          for (var i = 0; i < empCount; i++) {
-            if (i < empCount - 1) {
-              var p = Math.round((100 / empCount) + (rng() - 0.5) * 10);
-              p = Math.max(5, Math.min(remaining - (empCount - i - 1) * 5, p));
-              empPcts.push(p);
-              remaining -= p;
-            } else {
-              empPcts.push(remaining);
-            }
-          }
-          empAmounts = empPcts.map(function(pct) { return +(roleAmount * pct / 100).toFixed(2); });
+          var weights = rc.employees.map(function(name) {
+            var present = window.TipOutAttendanceLabel.inspect(name,dateKey).status !== 'absent';
+            if (!present && !(rule.clockin === 'unrestricted' && rule.distribution === 'orders')) return 0;
+            if (rule.distribution !== 'orders') return 1;
+            var fact = window.TipOutScenarioSource ? window.TipOutScenarioSource.employee(name,dateKey,{storeId:rule.store}) : null;
+            return fact ? fact.orders.length : 0;
+          });
+          var ratios = window.TipOutDetailManualAllocation.ratiosFromHours(weights);
+          empPcts = ratios.map(function(value) { return value / 100; });
+          empAmounts = window.TipOutDetailManualAllocation.amountsFromPcts(Math.round(roleAmount * 100),ratios).cents.map(function(value) { return value / 100; });
         }
 
         html += '<div class="employee-section detail-result-section" id="' + escHtml(sectionId) + '" data-role="' + detailAttrSafe(rc.role) + '">' +
@@ -1479,7 +1480,7 @@ var ALLOC_KEY = 'tipout_allocated';
             '<td><select class="form-control" style="width:140px;height:28px;font-size:13px">' + opts + '</select></td>' +
             hoursCell +
             '<td class="input-cell"><input type="number" class="detail-emp-pct-input" value="' + empPcts[ei] +
-            '"' + (hoursBased ? ' min="0" max="100" step="0.01" onchange="onDetailEmployeePctInput(this)"' : ' onchange="recalcRoleAmount(\'' + tidJs + '\')"') + '> %</td>' +
+            '" min="0" max="100" step="0.01" onchange="onDetailEmployeePctInput(this)"> %</td>' +
             '<td>' + money(empAmount) + '</td>' +
             '<td class="action-cell">' +
             '<a href="javascript:void(0)" onclick="addDetailRow(\'' + tidJs + '\',this)">新增行</a>' +
@@ -1548,6 +1549,7 @@ var ALLOC_KEY = 'tipout_allocated';
         ? '<td class="input-cell"><input type="number" class="detail-emp-hours-input" value="0" min="0" step="0.01" onchange="onDetailManualHoursInput(this)"> h</td>'
         : '';
       var newRow = document.createElement('tr');
+      newRow.setAttribute('data-manual-participant', '1');
       newRow.innerHTML =
         '<td><select class="form-control" style="width:140px;height:28px;font-size:13px">' + options + '</select></td>' +
         hoursCell +
@@ -1668,7 +1670,7 @@ var ALLOC_KEY = 'tipout_allocated';
             var select = row.querySelector('td select');
             var name = select ? select.value : '';
             if (!name || name === '（未配置员工）') return;
-            if (rule.clockin !== 'noclock' && row.getAttribute('data-attendance-status') === 'unknown') throw new Error('无法获取员工考勤，请刷新后重试');
+            if (rule.clockin !== 'noclock' && rule.clockin !== 'unrestricted' && row.getAttribute('data-attendance-status') === 'unknown') throw new Error('无法获取员工考勤，请刷新后重试');
             var rosterEmployee = findDetailRosterEmployee(store, role, name);
             var hoursInput = row.querySelector('.detail-emp-hours-input');
             var pctInput = row.querySelector('.detail-emp-pct-input') || row.querySelector('td:nth-last-child(3) input');

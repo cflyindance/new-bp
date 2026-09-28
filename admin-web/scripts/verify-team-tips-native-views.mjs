@@ -44,8 +44,8 @@ const rulesTemplate = fs.readFileSync("src/team/tips/templates/rules.html", "utf
 const currentRuleEditorTemplate = fs.readFileSync("src/team/tips/templates/rule-editor.html", "utf8");
 for (const text of [
   'data-field-id="clockin">参与资格 <span',
-  '<p class="field-desc">未打卡员工需每日在小费分配明细中手动补录</p>',
-  '小费分配方式（单选）',
+  '<p class="field-desc" id="participationHint">未打卡员工需每日在小费分配明细中手动补录</p>',
+  '员工分配方式',
 ]) {
   if (!currentRuleEditorTemplate.includes(text)) failures.push(`rule-editor: clock-in copy missing ${text}`);
 }

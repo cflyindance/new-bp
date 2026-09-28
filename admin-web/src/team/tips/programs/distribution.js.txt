@@ -319,7 +319,9 @@ var ALLOC_KEY = 'tipout_allocated';
           tipBefore: tipBefore,
           tipRate: emp.tipRate || 0,
           salesAmount: genPersonalNetSales(emp, dateKey),
-          hours: rule.clockin === 'noclock' ? 0 : attendance.hours
+          hours: rule.clockin === 'noclock' ? 0 : attendance.hours,
+          clockedIn: attendance.clockStatus !== '未打卡',
+          orderCount: window.TipOutScenarioSource ? window.TipOutScenarioSource.employee(emp.name,dateKey,{storeId:rule.store}).orders.length : 0
         };
       });
       var pipeline = TipAllocation.runLegacyDayPipeline(rule, dayEmps);
