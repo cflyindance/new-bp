@@ -5152,9 +5152,27 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
     });
 
     document.addEventListener('click', function(e) {
+      var distributionCard = e.target.closest('.distribution-method-card');
+      if (distributionCard && !e.target.closest('.distribution-method-help, .distribution-method-choice')) {
+        var distributionInput = distributionCard.querySelector('input[name="distribution"]');
+        if (distributionInput) distributionInput.click();
+      }
       if (!e.target.closest('.multi-select')) {
         document.querySelectorAll('.multi-select.open').forEach(ms => ms.classList.remove('open'));
       }
+      var activeHelp = e.target.closest('.distribution-method-help');
+      document.querySelectorAll('.distribution-method-help[open]').forEach(function(details) {
+        if (details !== activeHelp) details.removeAttribute('open');
+      });
+    });
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key !== 'Escape') return;
+      var openHelp = document.querySelector('.distribution-method-help[open]');
+      if (!openHelp) return;
+      e.preventDefault();
+      openHelp.removeAttribute('open');
+      openHelp.querySelector('summary').focus();
     });
 
     initFieldDescTooltip();

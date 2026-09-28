@@ -162,12 +162,23 @@
       width: 16px; height: 16px; accent-color: var(--primary);
     }
     .distribution-method-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
-    .distribution-method-card { display: flex; align-items: flex-start; gap: 10px; padding: 18px; border: 1px solid var(--border-color); border-radius: 10px; cursor: pointer; background: #fff; }
+    .distribution-method-card { display: flex; align-items: center; gap: 4px; padding: 18px; border: 1px solid var(--border-color); border-radius: 10px; background: #fff; min-width: 0; cursor: pointer; }
+    .distribution-method-card:hover { border-color: var(--primary); background: rgba(22,119,255,0.04); }
     .distribution-method-card:has(input:checked) { border-color: var(--primary); background: rgba(22,119,255,0.04); box-shadow: inset 0 0 0 1px var(--primary); }
     .distribution-method-card:focus-within { outline: 2px solid var(--primary); outline-offset: 3px; }
-    .distribution-method-card input { margin-top: 3px; accent-color: var(--primary); flex-shrink: 0; }
-    .distribution-method-card strong { display: block; font-size: 14px; margin-bottom: 8px; }
-    .distribution-method-card small { display: block; font-size: 12px; color: var(--text-secondary); line-height: 1.7; }
+    .distribution-method-choice { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; min-width: 0; }
+    .distribution-method-choice input { margin: 0; accent-color: var(--primary); flex-shrink: 0; }
+    .distribution-method-choice strong { font-size: 14px; }
+    .distribution-method-help { display: inline-block; position: relative; flex-shrink: 0; }
+    .distribution-method-help > summary { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border: 1px solid var(--border-color); border-radius: 50%; color: var(--text-secondary); background: #fff; cursor: pointer; list-style: none; font-size: 12px; }
+    .distribution-method-help > summary::-webkit-details-marker { display: none; }
+    .distribution-method-help > summary:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+    .distribution-method-help[open] > summary { color: var(--primary); border-color: var(--primary); }
+    .distribution-method-help-content { position: absolute; z-index: 20; top: 26px; left: 0; width: min(340px, 65vw); padding: 12px 14px; border: 1px solid var(--border-color); border-radius: 8px; background: #fff; box-shadow: 0 4px 16px rgba(0,0,0,0.12); color: var(--text-secondary); font-size: 13px; font-weight: 400; line-height: 1.7; }
+    .distribution-method-help--right .distribution-method-help-content { right: 0; left: auto; }
+    .distribution-method-help-content p { margin: 0; }
+    .distribution-method-help-content p + p { margin-top: 6px; }
+    .distribution-method-help-content strong { color: var(--text-primary); }
     @media (max-width: 900px) { .distribution-method-cards { grid-template-columns: 1fr; } }
     .work-hours-config {
       margin: 10px 0 0 24px; padding: 12px 14px; max-width: 620px;
@@ -407,20 +418,20 @@
 
           <div class="form-section tipout-form-card" id="employeeDistributionMethodSection">
             <div class="form-section-title"><span class="field-desc-wrap" data-field-id="distribution">小费分配方式 <span class="field-desc-icon" data-field-id="distribution" data-label="小费分配方式" data-native-onclick="event.preventDefault();openFieldDescEditor('distribution','小费分配方式')" title="点击编辑字段说明">ⓘ</span></span></div>
-            <p class="field-desc" style="margin-bottom:16px">决定同一角色内的员工如何分配；角色之间的份额在接收方规则中设置。</p>
+            <p class="field-desc" style="margin-bottom:16px">选择接收员工之间的小费分配方式；参与角色在接收方规则中设置。</p>
             <div class="distribution-method-cards">
-              <label class="distribution-method-card">
-                <input type="radio" name="distribution" value="average" checked data-native-onchange="updateWorkHoursConfigUi()">
-                <span><strong>按员工数量平均分配</strong><small>同角色内符合参与资格的员工平均分配。</small><small>示例：$100，2 位员工各分 $50。</small></span>
-              </label>
-              <label class="distribution-method-card">
-                <input type="radio" name="distribution" value="hours" data-native-onchange="updateWorkHoursConfigUi()">
-                <span><strong>按工作时长占比分配</strong><small>按员工有效分配工时的占比分配。</small><small>示例：工时 6 : 4，分得 $60 : $40。</small></span>
-              </label>
-              <label class="distribution-method-card" id="distributionOrdersRow">
-                <input type="radio" name="distribution" value="orders" data-native-onchange="updateWorkHoursConfigUi()">
-                <span><strong>按订单占比分配</strong><small>按员工归属订单笔数的占比分配。</small><small>示例：订单 3 : 2，分得 $60 : $40。</small></span>
-              </label>
+              <div class="distribution-method-card">
+                <label class="distribution-method-choice"><input type="radio" name="distribution" value="average" checked data-native-onchange="updateWorkHoursConfigUi()"><strong>按员工数量平均分配</strong></label>
+                <details class="distribution-method-help"><summary aria-label="查看按员工数量平均分配说明示例">？</summary><div class="distribution-method-help-content"><p><strong>说明：</strong>所选接收角色中符合参与资格的员工共同平均分配。</p><p><strong>示例：</strong>Server 2 人、Busser 1 人，共分配 $120，3 人各得 $40。</p></div></details>
+              </div>
+              <div class="distribution-method-card">
+                <label class="distribution-method-choice"><input type="radio" name="distribution" value="hours" data-native-onchange="updateWorkHoursConfigUi()"><strong>按工作时长占比分配</strong></label>
+                <details class="distribution-method-help"><summary aria-label="查看按工作时长占比分配说明示例">？</summary><div class="distribution-method-help-content"><p><strong>说明：</strong>按员工有效分配工时的占比分配。</p><p><strong>示例：</strong>工时 6 : 4，分得 $60 : $40。</p></div></details>
+              </div>
+              <div class="distribution-method-card" id="distributionOrdersRow">
+                <label class="distribution-method-choice"><input type="radio" name="distribution" value="orders" data-native-onchange="updateWorkHoursConfigUi()"><strong>按订单占比分配</strong></label>
+                <details class="distribution-method-help distribution-method-help--right"><summary aria-label="查看按订单占比分配说明示例">？</summary><div class="distribution-method-help-content"><p><strong>说明：</strong>按员工归属订单笔数的占比分配。</p><p><strong>示例：</strong>订单 3 : 2，分得 $60 : $40。</p></div></details>
+              </div>
             </div>
           </div>
 
