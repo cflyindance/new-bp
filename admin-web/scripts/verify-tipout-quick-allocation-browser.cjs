@@ -255,7 +255,7 @@ const { chromium } = process.env.TIPOUT_BROWSER_PACKAGES ? createRequire(path.jo
     assert.ok(mixedRows.length>0,'Expected one employee to contribute and receive in the same summary range');
     await page.evaluate(()=>window.mountRuleEditorTest());
     const clockinSection=page.locator('.field-desc-wrap[data-field-id="clockin"]').locator('xpath=../..');
-    assert.equal((await page.locator('.field-desc-wrap[data-field-id="clockin"]').textContent()).trim().replace('ⓘ','').trim(),'员工打卡方式');
+    assert.equal((await page.locator('.field-desc-wrap[data-field-id="clockin"]').textContent()).trim().replace('ⓘ','').trim(),'参与资格');
     assert.equal((await clockinSection.locator('.field-desc').textContent()).trim(),'未打卡员工需每日在小费分配明细中手动补录');
     assert.ok((await page.locator('.field-desc-wrap[data-field-id="distribution"]').textContent()).includes('小费分配方式（单选）'));
     assert.deepEqual(errors,[]);
