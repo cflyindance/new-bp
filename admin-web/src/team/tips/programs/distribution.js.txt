@@ -363,7 +363,8 @@ var ALLOC_KEY = 'tipout_allocated';
         var poolId = String(rule.poolId || rule.id || ('pool-' + index));
         var ruleId = String(rule.id || rule.ruleId || ('rule-' + index));
         var manual = manualByRule[poolId + '::' + ruleId] || row.manualHourEntries.find(function(entry) { return String(entry.ruleId) === ruleId; });
-        var usesHours = rule.distributionMethod !== 'average' && rule.method !== 'average';
+        var method = rule.distribution || rule.distributionMethod || rule.method;
+        var usesHours = method === 'hours';
         var maxHours = rule.workHoursConfig && rule.workHoursConfig.mode === 'capped' ? rule.workHoursConfig.maxHoursPerDay : null;
         var resolved = TipOutSummaryUi.resolveRuleAllocationHours({
           usesHours: usesHours,
@@ -1291,7 +1292,7 @@ var ALLOC_KEY = 'tipout_allocated';
     }
     function renderAllocationHoursSummaryButton(employeeId, summary) {
       summary = summary || { kind: 'empty', display: '—' };
-      if (summary.kind === 'empty') return '<span class="tipout-allocation-hours-empty">—</span>';
+      if (summary.kind === 'empty' || summary.kind === 'not-applicable') return '<span class="tipout-allocation-hours-empty">'+escapeSummaryHtml(summary.display)+'</span>';
       return '<button type="button" class="tipout-allocation-hours-button" data-native-onclick="openAllocationHoursDetail(event, &quot;' +
         escapeSummaryHtml(employeeId) + '&quot;)">' + escapeSummaryHtml(summary.display) + '</button>';
     }
@@ -1304,8 +1305,8 @@ var ALLOC_KEY = 'tipout_allocated';
       body.innerHTML = (aggregate.allocationHourSummaries || []).map(function(entry) {
         return '<tr><td>' + escapeSummaryHtml(entry.ruleName) + '</td><td>' +
           escapeSummaryHtml(TipOutSummaryUi.allocationHourPoolKindLabel(entry.poolKind)) + '</td><td>' +
-          escapeSummaryHtml(allocationHourSourceLabel(entry.source)) + '</td><td><strong>' +
-          escapeSummaryHtml(entry.hoursValid ? String(entry.hours) + ' h' : '—') + '</strong></td></tr>';
+          escapeSummaryHtml(TipOutSummaryUi.allocationHourExplanation(entry)) + '</td><td><strong>' +
+          escapeSummaryHtml(TipOutSummaryUi.allocationHourEntryDisplay(entry)) + '</strong></td><td>'+escapeSummaryHtml(TipOutSummaryUi.allocationHourCoverage(entry))+'</td></tr>';
       }).join('');
       var modal = document.getElementById('allocationHoursDetailModal');
       modal.classList.add('show'); modal.setAttribute('aria-hidden', 'false');

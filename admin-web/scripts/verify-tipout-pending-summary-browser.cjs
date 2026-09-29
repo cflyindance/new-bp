@@ -26,6 +26,7 @@ const {chromium}=createRequire(path.join(process.env.TIPOUT_BROWSER_PACKAGES,'pa
     window.runtime=mountLegacyTipsRuntime(shadow,root,{view:'employee-reconciliation',query,href:'/team/tips/employee-reconciliation'+query},context);
    };
    window.shortage=()=>{rule.poolRules=[{type:'sales',pct:100}];localStorage.setItem('tipout_rules',JSON.stringify([rule]));window.mountSummary();};
+   window.hourRules=()=>{localStorage.setItem('tipout_rules',JSON.stringify([{...rule,distribution:'hours',poolRules:[{type:'tips',pct:1}]},{...rule,id:9002,ruleName:'每日工时上限',distribution:'hours',poolRules:[{type:'tips',pct:1}],workHoursConfig:{mode:'capped',maxHoursPerDay:1}}]));window.mountSummary();};
    window.mountSummary();
   });
   await page.locator('#dateStart').fill('2026-09-05');await page.locator('#dateEnd').fill('2026-09-05');await page.locator('#dateEnd').dispatchEvent('change');
@@ -37,6 +38,7 @@ const {chromium}=createRequire(path.join(process.env.TIPOUT_BROWSER_PACKAGES,'pa
   assert.ok(values.every(r=>r.before!=='—'));
   assert.ok(values.every(r=>!r.contribution.includes('预计') && r.contribution.includes('?')));
   assert.ok(values.every(r=>r.received==='—'));
+  assert.equal(await rows.first().locator('td').nth(3).innerText(),'不适用');
   const help=page.locator('#employeeReconciliationList .tipout-contribution-help').first();
   await help.click();
   assert.match(await page.locator('#contributionBreakdown').innerText(),/已确认：\$0.00\n预计：\$[\d.]+\n合计：\$[\d.]+/);
@@ -65,6 +67,22 @@ const {chromium}=createRequire(path.join(process.env.TIPOUT_BROWSER_PACKAGES,'pa
   assert.equal(await page.locator('#employeeContributionBreakdown').isVisible(),false);
   assert.equal(await page.locator('#employeeDetailReceived').innerText(),'—');
   assert.equal(await page.locator('#employeeDetailAfter').innerText(),'—');
+  await page.evaluate(()=>window.hourRules());
+  await page.locator('#dateStart').fill('2026-09-01');await page.locator('#dateEnd').fill('2026-09-29');await page.locator('#dateEnd').dispatchEvent('change');
+  const hoursButton=page.locator('#employeeReconciliationList .tipout-allocation-hours-button').first();
+  assert.match(await hoursButton.innerText(),/按规则查看/);
+  await hoursButton.click();
+  await page.locator('#allocationHoursDetailRows tr').first().waitFor({state:'visible'});
+  assert.deepEqual(errors,[]);
+  assert.match(await page.locator('#allocationHoursDetailRows').innerText(),/工时上限/);
+  assert.match(await page.locator('#allocationHoursDetailRows').innerText(),/\d+ \/ \d+ 天/);
+  await page.locator('#allocationHoursDetailClose').click();
+  await page.locator('#employeeReconciliationList tr').first().click();await page.evaluate(()=>window.mountDetail());
+  await page.locator('#employeeDetailAllocationHours').click();
+  await page.locator('#employeeDetailHoursRows tr').first().waitFor({state:'visible'});
+  assert.match(await page.locator('#employeeDetailHoursRows').innerText(),/工时上限/);
+  assert.match(await page.locator('#employeeDetailHoursRows').innerText(),/\d+ \/ \d+ 天/);
+  await page.locator('#employeeDetailHoursClose').click();
   await page.evaluate(()=>window.shortage());
   await page.locator('#dateStart').fill('2026-09-05');await page.locator('#dateEnd').fill('2026-09-05');await page.locator('#dateEnd').dispatchEvent('change');
   assert.match(await page.locator('#employeeReconciliationList').innerText(),/无法试算/);
