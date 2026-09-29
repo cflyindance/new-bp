@@ -3209,11 +3209,13 @@ select.form-control {
   overflow-y: auto;
   flex: 1;
   min-height: 0;
+  overscroll-behavior: contain;
   padding: 16px 20px;
   background: var(--bg-secondary, #fafafa);
 }
 
 .employees-detail-preview-modal .modal-footer {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -6331,9 +6333,38 @@ select.form-control {
     box-shadow: none !important;
     border: none !important;
   }
+  .team-payroll-page.payroll-printing-from-modal #employeesDetailPreviewModal .employees-detail-view-tabs,
   .team-payroll-page.payroll-printing-from-modal #employeesDetailPreviewModal .modal-header,
   .team-payroll-page.payroll-printing-from-modal #employeesDetailPreviewModal .modal-footer {
     display: none !important;
   }
 }
-
+/* Payroll declaration template manager */
+@media screen {
+  .payroll-page #employeesDetailPreviewModal .employees-detail-preview-modal{height:min(92dvh,900px);overflow:hidden}
+  .employees-detail-preview-modal .modal-header,.employees-detail-view-tabs{flex-shrink:0}
+  .employees-detail-view-tabs{display:flex;gap:8px;padding:12px 20px;border-bottom:1px solid #e2e8f0}
+  .employees-detail-view-tabs [aria-pressed="true"]{color:#1677ff;background:#edf4ff;border-color:#1677ff}
+}
+.payroll-compact-attendance{width:100%;border-collapse:collapse;font-size:12px}
+.payroll-compact-attendance th,.payroll-compact-attendance td{border:1px solid #cbd5e1;padding:5px;text-align:center}
+.payroll-declaration-library{grid-template-columns:1fr!important}
+.payroll-declaration-dialog-overlay{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(15,23,42,.4);overscroll-behavior:contain}
+.payroll-declaration-dialog{width:min(100%,1000px);max-height:calc(100dvh - 48px);overflow:auto;overscroll-behavior:contain;box-shadow:0 20px 60px rgba(15,23,42,.2)}
+.payroll-declaration-dialog-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;gap:16px}
+.payroll-declaration-dialog-header h3{margin:0;font-size:20px}
+.payroll-declaration-settings-screen:has(.payroll-declaration-dialog-overlay){overflow:hidden}
+.team-payroll-page{position:relative}
+.payroll-declaration-settings-screen{position:fixed;inset:0;width:100vw;height:100dvh;max-width:none;max-height:none;margin:0;border:0;border-radius:0;box-sizing:border-box;z-index:2147483000;background:#f6f8fb;color:#172033;overflow:auto;overscroll-behavior:contain;padding:0 28px 32px}
+.payroll-declaration-settings-screen::backdrop{background:#f6f8fb}
+.payroll-declaration-settings-open>.content-area,.payroll-declaration-settings-open>.modal-overlay{visibility:hidden;pointer-events:none}
+.payroll-declaration-settings-header{position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;min-height:76px;padding:14px 0;background:#f6f8fb;border-bottom:1px solid #e2e8f0}
+.payroll-declaration-settings-header p,.payroll-declaration-settings-toolbar p{margin:0;color:#6b778c;font-size:12px}.payroll-declaration-settings-header h2{margin:2px 0 0;font-size:24px}
+.payroll-declaration-settings-toolbar{display:flex;align-items:center;justify-content:space-between;padding:22px 0 14px}
+.payroll-declaration-settings-layout{display:grid;grid-template-columns:minmax(260px,340px) minmax(0,1fr);gap:18px;align-items:start}
+.payroll-declaration-settings-layout>aside,.payroll-declaration-editor{background:#fff;border:1px solid #dfe6ef;border-radius:12px}
+.payroll-declaration-template-list{padding:8px}.payroll-declaration-template-row{width:100%;border:0;background:transparent;border-radius:9px;padding:12px;display:flex;align-items:center;justify-content:space-between;text-align:left;color:inherit;cursor:pointer}
+.payroll-declaration-template-row:hover,.payroll-declaration-template-row.is-active{background:#edf4ff}.payroll-declaration-template-row span{display:flex;flex-direction:column;gap:2px}.payroll-declaration-template-row span:last-child{align-items:flex-end}.payroll-declaration-template-row small{color:#7b8798}.payroll-declaration-template-row em{font-style:normal;font-size:12px;color:#137a4e}
+.payroll-declaration-empty{padding:20px;color:#7b8798;text-align:center}.payroll-declaration-editor{padding:20px}.payroll-declaration-editor-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.payroll-declaration-editor label{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600}.payroll-declaration-editor input,.payroll-declaration-editor select,.payroll-declaration-editor textarea{width:100%;border:1px solid #cfd8e5;border-radius:8px;padding:10px 11px;background:#fff;color:#172033;font:inherit}.payroll-declaration-source-label{margin-top:16px}.payroll-declaration-variables{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}.payroll-declaration-variables button{border:1px solid #cfe0f8;border-radius:6px;background:#f4f8ff;color:#1765c0;padding:4px 7px;font-size:12px}.payroll-declaration-preview{margin-top:16px;border:1px solid #dfe6ef;border-radius:9px;padding:14px}.payroll-declaration-preview h3{margin:0 0 8px;font-size:14px}.payroll-declaration-preview p{white-space:pre-wrap}.payroll-declaration-editor-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}.payroll-declaration-settings-message{min-height:20px;margin:10px 0 0;color:#b45309}.payroll-declaration-meta{margin:0 0 8px;color:#64748b;font-size:12px}.payroll-declaration-english{margin-top:14px;padding-top:12px;border-top:1px dashed #cbd5e1}.payroll-declaration-english-heading{margin:0 0 5px;font-weight:700}.payroll-declaration-english p:last-child{margin:0;color:var(--text-secondary);white-space:pre-wrap}
+.payroll-detail-declaration [dir="rtl"]{direction:rtl;text-align:right;unicode-bidi:isolate}.payroll-declaration-template-row:focus-visible,.payroll-declaration-settings-screen button:focus-visible,.payroll-declaration-settings-screen input:focus-visible,.payroll-declaration-settings-screen select:focus-visible,.payroll-declaration-settings-screen textarea:focus-visible{outline:3px solid #2563eb;outline-offset:2px}
+@media(max-width:900px){.payroll-declaration-settings-layout{grid-template-columns:1fr}.payroll-declaration-editor-grid{grid-template-columns:1fr}.payroll-declaration-settings-screen{padding-inline:16px}}

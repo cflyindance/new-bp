@@ -85,6 +85,8 @@
   }
 
   function renderDeclarationText(emp) {
+    const localized = emp && emp.declarationPresentation && emp.declarationPresentation.primary;
+    if (localized && localized.renderedText) return localized.renderedText;
     const tpl = getDeclarationTemplate();
     const { svc, tips } = getDeclarationAmounts(emp);
     return tpl
@@ -94,6 +96,8 @@
 
   /** 声明正文 HTML：gratuity / tips 金额加粗、加大并下划线，便于员工核对 */
   function renderDeclarationHtml(emp) {
+    const localized = emp && emp.declarationPresentation && emp.declarationPresentation.primary;
+    if (localized && localized.renderedText) return escapeHtml(localized.renderedText).replace(/\n/g, "<br>");
     const tpl = getDeclarationTemplate();
     const { svc, tips } = getDeclarationAmounts(emp);
     const SVC_TOKEN = "@@PAYROLL_DECL_SVC@@";
@@ -106,6 +110,55 @@
     return escapeHtml(marked)
       .replace(SVC_TOKEN, amountHtml(svc))
       .replace(TIPS_TOKEN, amountHtml(tips));
+  }
+
+  function buildDeclarationVariables(emp, period, totals) {
+    const amounts = getDeclarationAmounts(emp);
+    return {
+      employee_name: emp && emp.name || "",
+      pay_period_start: period && (period.startDate || period.rangeLabel && period.rangeLabel.split(" - ")[0]) || "",
+      pay_period_end: period && (period.endDate || period.rangeLabel && period.rangeLabel.split(" - ")[1]) || "",
+      regular_hours: fmtMoney(totals && totals.reg),
+      overtime_hours: fmtMoney(totals && totals.ot),
+      total_hours: fmtMoney(totals && totals.total),
+      tips_amount: amounts.tips,
+      gratuity_amount: amounts.svc,
+      store_name: emp && emp.store || "",
+    };
+  }
+
+  function refreshDeclarationPresentation(emp, period, totals) {
+    if (!emp || !period || typeof PayrollDeclarationBridge === "undefined" || !PayrollDeclarationBridge.resolve) return;
+    const preference = emp.declarationPreference || null;
+    const key = JSON.stringify({ periodId: period.id, preference, tips: emp.adjustments && emp.adjustments.tips, svcw: emp.adjustments && emp.adjustments.svcw, totals });
+    if (emp.__declarationPresentationKey === key || emp.__declarationPresentationPending === key) return;
+    emp.__declarationPresentationPending = key;
+    PayrollDeclarationBridge.resolve(emp, period, buildDeclarationVariables(emp, period, totals)).then((presentation) => {
+      if (emp.__declarationPresentationPending !== key) return;
+      emp.__declarationPresentationPending = "";
+      emp.__declarationPresentationKey = key;
+      emp.declarationPresentation = presentation;
+      const current = getEmployee(state.periodId, state.employeeId);
+      if (current !== emp) return;
+      const body = $("#detail-declaration-body");
+      if (body) {
+        body.innerHTML = renderDeclarationHtml(emp);
+        body.setAttribute("dir", presentation.primary && /^(ar|fa|he|ur)(-|$)/i.test(presentation.primary.localeCode) ? "rtl" : "auto");
+      }
+      const englishWrap = $("#detail-declaration-english");
+      const englishBody = $("#detail-declaration-english-body");
+      if (englishWrap && englishBody) {
+        englishWrap.hidden = !presentation.english;
+        englishBody.textContent = presentation.english ? presentation.english.renderedText : "";
+      }
+      const meta = $("#detail-declaration-meta");
+        if (meta) meta.textContent = presentation.status === "blocked" ? "声明尚未配置：" + presentation.blockers.join(", ") : `${presentation.primary.localeCode} · ${presentation.primary.versionId}`;
+        if ($("#employeesDetailPreviewModal")?.classList.contains("show")) renderEmployeeDetailPreview();
+    }).catch((error) => {
+      emp.__declarationPresentationPending = "";
+      const meta = $("#detail-declaration-meta");
+      if (meta) meta.textContent = error && error.message ? error.message : "声明加载失败";
+    });
   }
 
   function csvEscapeCell(c) {
@@ -1665,7 +1718,7 @@
     $("#payrollAuditLogModal")?.classList.remove("show");
   }
 
-  function showEmployeesDetailModal() {
+  function renderEmployeeDetailPreview() {
     syncDerived();
     const source = document.querySelector("#tab-panel-detail .payroll-detail-print");
     const target = $("#employeesDetailModalBody");
@@ -1677,6 +1730,10 @@
     const payload = buildDetailExportPayload(getEmployee(state.periodId, state.employeeId), getPeriod(state.periodId));
     const compactTarget = $("#employeesDetailCompactBody");
     if (compactTarget) compactTarget.innerHTML = buildCompactDetailHtml(payload);
+  }
+
+  function showEmployeesDetailModal() {
+    renderEmployeeDetailPreview();
     setPayrollDetailVariant("detail");
     setPrintPagination(detailPresentation.printPagination);
     const modalId = "employeesDetailPreviewModal";
@@ -2030,6 +2087,8 @@
       adpFile: $("#field-adp-file")?.value || "",
       ssn: $("#field-ssn")?.value || "",
       hireDate: $("#field-hire-date")?.value || "",
+      declarationLocale: $("#field-declaration-locale")?.value || "",
+      declarationPrintMode: $("#field-declaration-print-mode")?.value || "employee-only",
     };
   }
 
@@ -2038,9 +2097,13 @@
     const adpInput = $("#field-adp-file");
     const ssnInput = $("#field-ssn");
     const hireDateInput = $("#field-hire-date");
+    const declarationLocaleInput = $("#field-declaration-locale");
+    const declarationPrintModeInput = $("#field-declaration-print-mode");
     if (adpInput) adpInput.value = snapshot.adpFile;
     if (ssnInput) ssnInput.value = snapshot.ssn;
     if (hireDateInput) hireDateInput.value = snapshot.hireDate;
+    if (declarationLocaleInput) declarationLocaleInput.value = snapshot.declarationLocale || "";
+    if (declarationPrintModeInput) declarationPrintModeInput.value = snapshot.declarationPrintMode || "employee-only";
   }
 
   function showEmployeeEditModal(trigger) {
@@ -2170,6 +2233,7 @@
           })
         : [],
       adjustments: mergeAdjustments(emp.adjustments),
+      declarationPreference: emp.declarationPreference || null,
     };
     return JSON.stringify(safe);
   }
@@ -2204,6 +2268,7 @@
       hireDate: resolveEmployeeHireDate(emp),
       segments: cloneData(segments),
       adjustments: mergeAdjustments(emp.adjustments),
+      declarationPreference: emp.declarationPreference ? cloneData(emp.declarationPreference) : null,
     };
   }
 
@@ -2224,6 +2289,7 @@
       hireDate: draft.hireDate,
       segments: draft.segments,
       adjustments: draft.adjustments,
+      declarationPreference: draft.declarationPreference,
     };
   }
 
@@ -2454,6 +2520,7 @@
     emp.adpFile = draft.adpFile;
     emp.ssn = draft.ssn;
     emp.hireDate = draft.hireDate;
+    emp.declarationPreference = draft.declarationPreference ? cloneData(draft.declarationPreference) : null;
     updateUnifiedRosterFromEmployee(emp);
     emp.segments = cloneData(draft.segments);
     emp.adjustments = mergeAdjustments(draft.adjustments);
@@ -3738,6 +3805,7 @@
       periodReportTitle: formatPayrollPeriodReportTitle(period),
       declarationVersion: (mapping && mapping.declarationVersion) || "",
       declarationText: renderDeclarationText(emp),
+      declarationPresentation: emp.declarationPresentation ? cloneData(emp.declarationPresentation) : null,
       summary: {
         regH: sums.reg,
         paidBreakH: sums.paidBreak,
@@ -3777,6 +3845,13 @@
     };
   }
 
+  function buildCompactDeclarationHtml(payload) {
+    const presentation = payload.declarationPresentation;
+    const partHtml = (part) => `<div lang="${escapeHtml(part.localeCode)}" dir="${/^(ar|fa|he|ur)(-|$)/i.test(part.localeCode) ? "rtl" : "auto"}">${escapeHtml(part.renderedText || "").replace(/\n/g, "<br>")}</div>`;
+    if (!presentation || !presentation.primary) return escapeHtml(payload.declarationText || "");
+    return partHtml(presentation.primary) + (presentation.english ? `<div class="payroll-declaration-english">${partHtml(presentation.english)}</div>` : "");
+  }
+
   function buildCompactDetailHtml(payload) {
     if (!payload) return "";
     const money = (value) => `$${fmtMoney(value)}`;
@@ -3792,7 +3867,7 @@
       }).join("");
       return `<section class="payroll-compact-week"><h4>${escapeHtml(week.range)} <span>Week ${week.index + 1}</span></h4><table><thead><tr><th>Date</th><th>In / Out</th><th>In / Out</th><th>In / Out</th><th>Hours</th><th>Regular</th><th>OT</th><th>OT2</th></tr></thead><tbody>${rows}</tbody><tfoot><tr><th colspan="4">Total</th><td>${fmtMoney(week.totals.totalHours)}</td><td>${fmtMoney(week.totals.regularHours)}</td><td>${fmtMoney(week.totals.otHours)}</td><td>${fmtMoney(week.totals.ot2Hours)}</td></tr><tr><th colspan="4">Amount</th><td>${money(week.totals.totalAmount)}</td><td>${money(week.totals.regularAmount)}</td><td>${money(week.totals.otAmount)}</td><td>${money(week.totals.ot2Amount)}</td></tr></tfoot></table></section>`;
     }).join("");
-    return `<article class="payroll-compact-detail payroll-a4-content"><header><div><strong>${escapeHtml(payload.employeeName)}</strong><dl><dt>Roles</dt><dd>${escapeHtml(payload.role || "—")}</dd><dt>Hire Date</dt><dd>${escapeHtml(payload.hireDate || "—")}</dd><dt>Rate</dt><dd>${money(summary.rate)}</dd><dt>SSN</dt><dd>${escapeHtml(payload.ssn || "—")}</dd></dl></div><div class="payroll-compact-report-meta"><h3>Payroll #${escapeHtml(payload.periodNumber)} Report</h3><p><b>Pay Date:</b> ${escapeHtml(payload.payDate || "—")}</p><p><b>Pay Period:</b> ${escapeHtml(payload.payPeriod || "—")}</p></div></header><table class="payroll-compact-summary"><thead><tr><th></th><th>Regular</th><th>OT</th><th>OT2</th><th>Total</th></tr></thead><tbody><tr><th>Hours</th><td>${fmtMoney(summary.compactRegularHours)}</td><td>${fmtMoney(summary.otH)}</td><td>${fmtMoney(summary.ot2H)}</td><td>${fmtMoney(summary.totalH)}</td></tr><tr><th>Amount</th><td>${money(summary.compactRegularAmount)}</td><td>${money(summary.otAmt)}</td><td>${money(summary.ot2Amt)}</td><td>${money(summary.totalAmt)}</td></tr></tbody></table>${weeksHtml}<section class="payroll-compact-declaration">${escapeHtml(payload.declarationText || "")}</section><footer class="payroll-compact-signature"><div><span>Employee Signature</span><span>Date</span></div><p>${escapeHtml(payload.storeName || "")}${payload.storeAddress && payload.storeAddress !== "—" ? ` · ${escapeHtml(payload.storeAddress)}` : ""}</p></footer></article>`;
+    return `<article class="payroll-compact-detail payroll-a4-content"><header><div><strong>${escapeHtml(payload.employeeName)}</strong><dl><dt>Roles</dt><dd>${escapeHtml(payload.role || "—")}</dd><dt>Hire Date</dt><dd>${escapeHtml(payload.hireDate || "—")}</dd><dt>Rate</dt><dd>${money(summary.rate)}</dd><dt>SSN</dt><dd>${escapeHtml(payload.ssn || "—")}</dd></dl></div><div class="payroll-compact-report-meta"><h3>Payroll #${escapeHtml(payload.periodNumber)} Report</h3><p><b>Pay Date:</b> ${escapeHtml(payload.payDate || "—")}</p><p><b>Pay Period:</b> ${escapeHtml(payload.payPeriod || "—")}</p></div></header><table class="payroll-compact-summary"><thead><tr><th></th><th>Regular</th><th>OT</th><th>OT2</th><th>Total</th></tr></thead><tbody><tr><th>Hours</th><td>${fmtMoney(summary.compactRegularHours)}</td><td>${fmtMoney(summary.otH)}</td><td>${fmtMoney(summary.ot2H)}</td><td>${fmtMoney(summary.totalH)}</td></tr><tr><th>Amount</th><td>${money(summary.compactRegularAmount)}</td><td>${money(summary.otAmt)}</td><td>${money(summary.ot2Amt)}</td><td>${money(summary.totalAmt)}</td></tr></tbody></table>${weeksHtml}<section class="payroll-compact-declaration">${buildCompactDeclarationHtml(payload)}</section><footer class="payroll-compact-signature"><div><span>Employee Signature</span><span>Date</span></div><p>${escapeHtml(payload.storeName || "")}${payload.storeAddress && payload.storeAddress !== "—" ? ` · ${escapeHtml(payload.storeAddress)}` : ""}</p></footer></article>`;
   }
 
   function syncPrintPaginationVisibility() {
@@ -3832,26 +3907,32 @@
   /** 与「打印」相同：克隆 Employees Detail 打印模板 HTML */
   function buildPayrollDetailPrintDocumentHtml() {
     syncDerived();
-    const article = document.querySelector(".payroll-detail-print");
+    const article = $("#employeesDetailPreviewModal")?.classList.contains("show")
+      ? $("#employeesDetailModalBody .payroll-detail-print")
+      : document.querySelector(".payroll-detail-print");
     if (!article) return null;
     const clone = article.cloneNode(true);
     clone.querySelectorAll(".print-only").forEach((el) => {
       el.style.display = "block";
     });
-    const baseUrl = new URL(".", window.location.href).href;
+    const baseUrl = new URL("/TipOut/", window.location.href).href;
     const styleAssets =
-      collectPayrollDetailPrintStyleAssets() ||
-      `<link rel="stylesheet" href="${baseUrl}common.css">\n<link rel="stylesheet" href="${baseUrl}payroll.css">`;
+        collectPayrollDetailPrintStyleAssets() ||
+        `<link rel="stylesheet" href="${baseUrl}common.css">\n<link rel="stylesheet" href="${baseUrl}payroll.css">`;
     const htmlLang = typeof getPayrollLocale === "function" && getPayrollLocale() === "en" ? "en-US" : "zh-CN";
     return `<!DOCTYPE html><html lang="${htmlLang}"><head><meta charset="UTF-8"><title>${escapeHtml(T("detail.title"))}</title>
 ${styleAssets}
 <style>
 body{margin:0;padding:24px;background:#fff;}
+.payroll-compact-attendance{width:100%;border-collapse:collapse;font-size:11px}.payroll-compact-attendance th,.payroll-compact-attendance td{border:1px solid #aaa;padding:4px;text-align:center}
 .payroll-page .payroll-detail-print{max-width:none;width:100%;margin:0;border:none;border-radius:0;box-shadow:none;}
 .payroll-page .payroll-detail-daily-wrap{overflow:visible!important;}
-.payroll-page .payroll-detail-daily-table{min-width:1080px;width:max-content;max-width:none;font-size:11px;}
+.payroll-page .payroll-detail-daily-table{min-width:0!important;width:100%!important;max-width:100%;font-size:8px;}
 .payroll-page .payroll-detail-daily-table th,
-.payroll-page .payroll-detail-daily-table td{padding:6px 8px;white-space:nowrap;}
+.payroll-page .payroll-detail-daily-table td{padding:3px 2px;white-space:normal;overflow-wrap:anywhere;}
+.no-print{display:none!important}
+html,body{height:auto!important;overflow:visible!important}
+.payroll-detail-print{position:static!important;overflow:visible!important}
 .payroll-page .payroll-decl-amount{display:inline-block;font-size:1.35em;font-weight:800;color:#111;line-height:1.25;padding:0 2px 3px;border-bottom:2px solid #111;text-decoration:none;letter-spacing:.02em;}
 .print-only{display:block !important;}
 @media print{body{padding:15px 20px}@page{margin:10mm}}
@@ -3895,6 +3976,10 @@ body{margin:0;padding:24px;background:#fff;}
     if (ssnInput) ssnInput.value = resolveEmployeeSsn(editEmp);
     const hireInput = $("#field-hire-date");
     if (hireInput) hireInput.value = mdyToIsoDateInput(resolveEmployeeHireDate(editEmp));
+    const declarationLocaleInput = $("#field-declaration-locale");
+    const declarationPrintModeInput = $("#field-declaration-print-mode");
+    if (declarationLocaleInput) declarationLocaleInput.value = editEmp.declarationPreference?.defaultLocaleCode || "";
+    if (declarationPrintModeInput) declarationPrintModeInput.value = editEmp.declarationPreference?.defaultPrintMode || "employee-only";
 
     editEmp.segments = editEmp.segments.map((seg) => {
       const day = migrateLegacySegmentToDay(seg);
@@ -3945,6 +4030,13 @@ body{margin:0;padding:24px;background:#fff;}
     draft.adpFile = $("#field-adp-file").value.trim();
     draft.ssn = ($("#field-ssn") && $("#field-ssn").value.trim()) || "";
     draft.hireDate = isoDateInputToMdy($("#field-hire-date") && $("#field-hire-date").value);
+    const declarationLocale = ($("#field-declaration-locale") && $("#field-declaration-locale").value) || "";
+    const declarationOption = $("#field-declaration-locale")?.selectedOptions?.[0];
+    draft.declarationPreference = declarationLocale ? {
+      defaultFamilyId: declarationOption?.dataset?.familyId || draft.declarationPreference?.defaultFamilyId || "legacy-english",
+      defaultLocaleCode: declarationLocale,
+      defaultPrintMode: ($("#field-declaration-print-mode") && $("#field-declaration-print-mode").value) || "employee-only",
+    } : null;
 
     const dayIdxList = [
       ...new Set(
@@ -4065,6 +4157,14 @@ body{margin:0;padding:24px;background:#fff;}
     syncDetailSignFooter(emp);
     const declBody = $("#detail-declaration-body");
     if (declBody) declBody.innerHTML = renderDeclarationHtml(emp);
+    const initialEnglishWrap = $("#detail-declaration-english");
+    const initialEnglishBody = $("#detail-declaration-english-body");
+    const initialEnglish = emp.declarationPresentation && emp.declarationPresentation.english;
+    if (initialEnglishWrap && initialEnglishBody) {
+      initialEnglishWrap.hidden = !initialEnglish;
+      initialEnglishBody.textContent = initialEnglish ? initialEnglish.renderedText : "";
+    }
+    refreshDeclarationPresentation(emp, period, { reg: sums.reg, ot: sums.ot, total: totalHours });
 
     const paidBreakLabel = escapeHtml(T("manage.paidBreak"));
     $("#detail-hours-grid").innerHTML = `
@@ -4136,10 +4236,7 @@ body{margin:0;padding:24px;background:#fff;}
     saveState();
   }
 
-  function applyConfirmEmployeeSave(changeCount) {
-    const emp = getEmployee(state.periodId, state.employeeId);
-    if (!emp) return;
-    commitDraftToEmployee();
+  function finalizeConfirmEmployeeSave(emp, changeCount) {
     emp.confirmed = true;
     emp.confirmedAt = new Date().toISOString();
     state.workspaceConfirmedInSession = true;
@@ -4149,11 +4246,49 @@ body{margin:0;padding:24px;background:#fff;}
     saveState();
     renderManageForm();
     renderManagePeriodNav();
-    if (typeof showNotification === "function") {
-      showNotification(T("confirm.success"), "success");
-    } else {
-      alert(T("confirm.success"));
+    if (typeof showNotification === "function") showNotification(T("confirm.success"), "success");
+    else alert(T("confirm.success"));
+  }
+
+  function applyConfirmEmployeeSave(changeCount) {
+    const emp = getEmployee(state.periodId, state.employeeId);
+    if (!emp) return;
+    commitDraftToEmployee();
+    if (!emp.declarationPreference || typeof PayrollDeclarationBridge === "undefined") {
+      finalizeConfirmEmployeeSave(emp, changeCount);
+      return;
     }
+    const period = getPeriod(state.periodId);
+    const presentation = emp.declarationPresentation;
+    if (!period || !presentation || presentation.status === "blocked" || !presentation.primary) {
+      if (typeof showNotification === "function") showNotification("请先完成员工声明语言与模板配置", "warning");
+      return;
+    }
+    const exportPayload = buildDetailExportPayload(emp, period);
+    const variables = buildDeclarationVariables(emp, period, {
+      reg: exportPayload.summary.regH,
+      ot: exportPayload.summary.otH,
+      total: exportPayload.summary.totalH,
+    });
+    PayrollDeclarationBridge.saveEmployeePreference({
+      employeeId: emp.id,
+      defaultFamilyId: emp.declarationPreference.defaultFamilyId,
+      defaultLocaleCode: emp.declarationPreference.defaultLocaleCode,
+      defaultPrintMode: emp.declarationPreference.defaultPrintMode,
+    }).then(() => PayrollDeclarationBridge.confirm({
+      employeeId: emp.id,
+      periodId: period.id,
+      primaryVersionId: presentation.primary.versionId,
+      englishVersionId: presentation.english && presentation.english.versionId,
+      printMode: presentation.printMode,
+      variables,
+    })).then((snapshot) => {
+      emp.declarationSnapshot = snapshot;
+      emp.__declarationPresentationKey = "";
+      finalizeConfirmEmployeeSave(emp, changeCount);
+    }).catch((error) => {
+      if (typeof showNotification === "function") showNotification(error && error.message ? error.message : "员工声明确认失败", "error");
+    });
   }
 
   function confirmEmployee() {
@@ -4747,7 +4882,7 @@ body{margin:0;padding:24px;background:#fff;}
       renderPeriods();
     });
 
-    function printCurrentEmployeeDetail() {
+    async function printCurrentEmployeeDetail() {
       syncDerived();
       if (typeof printPayrollDetail === "function") {
         printPayrollDetail(detailPresentation.activeVariant, detailPresentation.printPagination);
@@ -4755,15 +4890,28 @@ body{margin:0;padding:24px;background:#fff;}
       }
       const modal = $("#employeesDetailPreviewModal");
       const fromModal = !!(modal && modal.classList.contains("show"));
-      document.body.classList.toggle("payroll-printing-from-modal", fromModal);
-      document.body.classList.add("payroll-printing-detail");
-      const cleanup = () => {
-        document.body.classList.remove("payroll-printing-detail", "payroll-printing-from-modal");
-        window.removeEventListener("afterprint", cleanup);
-      };
-      window.addEventListener("afterprint", cleanup);
-      window.print();
-      setTimeout(cleanup, 1500);
+      // Rebuild the chosen view before printing; never replace it with the hidden detailed source.
+      if (fromModal) renderEmployeeDetailPreview();
+      const html = buildPayrollDetailPrintDocumentHtml();
+      if (!html) return;
+      const frame = document.createElement("iframe");
+      frame.title = "员工考勤薪资明细打印";
+      frame.style.cssText = "position:fixed;left:-10000px;top:0;width:1100px;height:800px;border:0;";
+      const loaded = new Promise(resolve => frame.addEventListener("load", resolve, { once: true }));
+      frame.srcdoc = html;
+      document.body.appendChild(frame);
+      try {
+        await loaded;
+        await frame.contentDocument.fonts.ready;
+        const printWindow = frame.contentWindow;
+        if (!printWindow) { frame.remove(); return; }
+        printWindow.addEventListener("afterprint", () => frame.remove(), { once: true });
+        printWindow.focus();
+        printWindow.print();
+      } catch (error) {
+        frame.remove();
+        console.error("Employee detail printing failed", error);
+      }
     }
 
     $("#btn-print-detail")?.addEventListener("click", () => printCurrentEmployeeDetail());

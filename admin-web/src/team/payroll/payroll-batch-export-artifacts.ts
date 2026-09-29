@@ -30,11 +30,26 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+function declarationBlockerMessage(record: BatchEmployeeRecord): string | null {
+  const presentation = record.declarationPresentation;
+  if (!presentation) return "Employee declaration language or template is not configured";
+  if (presentation.status === "blocked") return `Employee declaration is unavailable: ${presentation.blockers.join(", ")}`;
+  if (!presentation.primary?.renderedText) return "Employee declaration text is unavailable";
+  return null;
+}
+
+function declarationHtml(record: BatchEmployeeRecord): string {
+  const presentation = record.declarationPresentation;
+  if (!presentation?.primary) return "";
+  const part = (text: string, localeCode: string) => `<p lang="${localeCode}" dir="${/^(ar|fa|he|ur)(-|$)/i.test(localeCode) ? "rtl" : "ltr"}">${text.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char] || char).replace(/\n/g, "<br>")}</p>`;
+  return `<section class="declaration"><strong>Declaration</strong>${part(presentation.primary.renderedText, presentation.primary.localeCode)}${presentation.english ? part(presentation.english.renderedText, presentation.english.localeCode) : ""}</section>`;
+}
+
 function summaryHtml(record: BatchEmployeeRecord): string {
   const employee = record.employee;
   const period = record.period;
   const rows = (employee.segments ?? []).map((segment) => `<tr><td>${segment.date ?? ""}</td><td>${segment.in ?? ""}</td><td>${segment.out ?? ""}</td><td>${Number(segment.reg ?? segment.regular ?? 0).toFixed(2)}</td><td>${Number(segment.ot ?? 0).toFixed(2)}</td><td>${Number(segment.ot2 ?? 0).toFixed(2)}</td></tr>`).join("");
-  return `<!doctype html><html><head><meta charset="utf-8"><style>body{font:11px Arial;margin:0;color:#111}.sheet{box-sizing:border-box;width:794px;min-height:1123px;padding:42px;background:#fff}.draft{color:#b91c1c;font-weight:700}.meta{display:flex;justify-content:space-between}.title{font-size:20px;font-weight:700}table{width:100%;border-collapse:collapse;margin-top:18px}th,td{border:1px solid #666;padding:5px;text-align:center}.sign{margin-top:28px;border-top:1px solid #aaa;padding-top:12px}</style></head><body><article class="sheet"><div class="meta"><div><div class="title">${employee.name}</div><div>Role: ${employee.role ?? ""}</div><div>Hire Date: ${employee.hireDate ?? ""}</div><div>Employee ID: ${employee.id}</div></div><div><div class="title">Payroll #${period.periodNumber ?? ""} Report</div><div>Pay Date: ${period.paycheckDate ?? ""}</div><div>Pay Period: ${period.rangeLabel ?? `${period.startDate ?? ""} - ${period.endDate ?? ""}`}</div><div class="draft">${draftLabel(record)}</div></div></div><table><thead><tr><th>Date</th><th>In</th><th>Out</th><th>Regular</th><th>OT</th><th>OT2</th></tr></thead><tbody>${rows || '<tr><td colspan="6">No attendance rows</td></tr>'}</tbody></table><div class="sign">Employee Signature ____________________ &nbsp;&nbsp; Date ____________</div></article></body></html>`;
+  return `<!doctype html><html><head><meta charset="utf-8"><style>body{font:11px Arial;margin:0;color:#111}.sheet{box-sizing:border-box;width:794px;min-height:1123px;padding:42px;background:#fff}.draft{color:#b91c1c;font-weight:700}.meta{display:flex;justify-content:space-between}.title{font-size:20px;font-weight:700}table{width:100%;border-collapse:collapse;margin-top:18px}th,td{border:1px solid #666;padding:5px;text-align:center}.declaration{margin-top:18px;border:1px solid #aaa;padding:10px}.declaration p{white-space:normal;overflow-wrap:anywhere;line-height:1.45}.sign{margin-top:28px;border-top:1px solid #aaa;padding-top:12px}</style></head><body><article class="sheet"><div class="meta"><div><div class="title">${employee.name}</div><div>Role: ${employee.role ?? ""}</div><div>Hire Date: ${employee.hireDate ?? ""}</div><div>Employee ID: ${employee.id}</div></div><div><div class="title">Payroll #${period.periodNumber ?? ""} Report</div><div>Pay Date: ${period.paycheckDate ?? ""}</div><div>Pay Period: ${period.rangeLabel ?? `${period.startDate ?? ""} - ${period.endDate ?? ""}`}</div><div class="draft">${draftLabel(record)}</div></div></div><table><thead><tr><th>Date</th><th>In</th><th>Out</th><th>Regular</th><th>OT</th><th>OT2</th></tr></thead><tbody>${rows || '<tr><td colspan="6">No attendance rows</td></tr>'}</tbody></table>${declarationHtml(record)}<div class="sign">Employee Signature ____________________ &nbsp;&nbsp; Date ____________</div></article></body></html>`;
 }
 
 function loadScript(src: string, ready: () => boolean): Promise<void> {
@@ -125,6 +140,8 @@ export async function createBatchArtifact(
   for (const record of exportable) {
     if (signal.aborted) throw new DOMException("Batch export cancelled", "AbortError");
     try {
+      const blocker = declarationBlockerMessage(record);
+      if (blocker) throw new Error(blocker);
       if (input.options.format === "csv") {
         const csv = buildEmployeeCsv(record, input.options.detailType);
         if (input.options.organization === "zip") individualFiles.push({ name: `${employeeFileBase(record)}.csv`, blob: new Blob([csv], { type: "text/csv;charset=utf-8" }) });

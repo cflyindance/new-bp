@@ -5,6 +5,8 @@ import { createPayrollPageContext, type PayrollPageContext } from "./payroll/pay
 import { mountLegacyPayrollRuntime, type PayrollRuntimeHandle } from "./payroll/payroll-legacy-runtime";
 import { renderPayrollPageTemplate } from "./payroll/payroll-template";
 import { mountPayrollBatchExportController, type PayrollBatchExportControllerHandle } from "./payroll/payroll-batch-export-controller";
+import { createPayrollDeclarationSettingsController, type PayrollDeclarationSettingsHandle } from "./payroll/payroll-declaration-settings";
+import { createPayrollDeclarationRepository } from "./payroll/payroll-declaration-api";
 
 export interface PayrollPageHandle {
   destroy(): void;
@@ -38,6 +40,7 @@ export function mountPayrollPage(
   const handleWheel = (event: WheelEvent): void => {
     if (!scrollOwner || event.deltaY === 0) return;
     const eventPath = event.composedPath();
+    if (eventPath.some(node => node instanceof HTMLElement && node.hasAttribute("data-payroll-declaration-settings"))) return;
     const isFilterInteraction = eventPath.some(
       (node) => node instanceof HTMLElement && node.classList.contains("payroll-filter-popover"),
     );
@@ -66,15 +69,25 @@ export function mountPayrollPage(
   };
   container.addEventListener("wheel", handleWheel, { passive: false });
 
-  let runtime: PayrollRuntimeHandle | null = mountLegacyPayrollRuntime(shadowRoot, pageRoot, context);
+  const declarationScope = context.getScope();
+  const declarationRepository = createPayrollDeclarationRepository({
+    organizationId: declarationScope.brandId || "demo-organization",
+    storeId: declarationScope.storeId || undefined,
+    actorId: "payroll-admin",
+    permission: "publish",
+  });
+  let runtime: PayrollRuntimeHandle | null = mountLegacyPayrollRuntime(shadowRoot, pageRoot, context, declarationRepository);
   let batchExport: PayrollBatchExportControllerHandle | null = mountPayrollBatchExportController(
     shadowRoot,
     pageRoot,
     runtime.getBatchBridge(),
   );
+  let declarationSettings: PayrollDeclarationSettingsHandle | null = createPayrollDeclarationSettingsController({ shadowRoot, pageRoot, context, repository: declarationRepository });
   const handle: PayrollPageHandle = {
     destroy() {
       schedule.destroy();
+      declarationSettings?.destroy();
+      declarationSettings = null;
       batchExport?.destroy();
       batchExport = null;
       runtime?.destroy();

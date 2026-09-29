@@ -517,7 +517,12 @@
               <div id="detail-hours-grid"></div>
               <div style="margin-top:24px;padding:16px;border:1px dashed var(--border-color);border-radius:var(--radius-md);background:rgba(0,0,0,0.02);font-size:13px;line-height:1.6">
                 <p id="detail-declaration-heading" style="font-weight:600;margin:0 0 4px">声明</p>
+                <p id="detail-declaration-meta" class="payroll-declaration-meta" aria-live="polite"></p>
                 <p id="detail-declaration-body" style="margin:0;color:var(--text-secondary)"></p>
+                <div id="detail-declaration-english" class="payroll-declaration-english" hidden>
+                  <p class="payroll-declaration-english-heading">English</p>
+                  <p id="detail-declaration-english-body" dir="ltr"></p>
+                </div>
               </div>
               <p class="payroll-print-disclaimer print-only">薪酬报税 — 本页非法定 Pay Stub。实际发薪与报税以 ADP/会计师为准。</p>
               <footer class="payroll-detail-sign-footer" style="margin-top:48px;border-top:1px solid var(--border-light);padding-top:24px">
@@ -625,6 +630,20 @@
             <button type="button" class="payroll-field-help" data-field-help="hire-date" aria-label="Hire Date 字段说明">?</button>
           </label>
           <input id="field-hire-date" type="date" class="payroll-employee-edit-input payroll-employee-edit-date" />
+        </div>
+        <div class="payroll-employee-edit-field">
+          <label class="payroll-employee-edit-label" for="field-declaration-locale"><span>默认声明语言</span></label>
+          <select id="field-declaration-locale" class="payroll-employee-edit-input">
+            <option value="">请选择已发布模板</option>
+            <option value="en-US" data-family-id="legacy-english">English</option>
+          </select>
+        </div>
+        <div class="payroll-employee-edit-field">
+          <label class="payroll-employee-edit-label" for="field-declaration-print-mode"><span>默认打印格式</span></label>
+          <select id="field-declaration-print-mode" class="payroll-employee-edit-input">
+            <option value="employee-only">仅员工语言</option>
+            <option value="bilingual-english">员工语言 + English</option>
+          </select>
         </div>
       </div>
     </div>

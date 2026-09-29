@@ -53,6 +53,11 @@ export interface PayrollEmployee {
   ot2Rate?: number;
   segments: PayrollSegment[];
   adjustments: PayrollAdjustments;
+  declarationPreference?: {
+    defaultFamilyId: string;
+    defaultLocaleCode: string;
+    defaultPrintMode: "employee-only" | "bilingual-english";
+  };
   [key: string]: unknown;
 }
 

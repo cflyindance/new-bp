@@ -52,6 +52,16 @@ function getPayrollDetailExportData() {
 
   }
 
+  if (data.declarationPresentation && data.declarationPresentation.status === "blocked") {
+
+    const blockers = (data.declarationPresentation.blockers || []).join(", ");
+
+    if (typeof showNotification === "function") showNotification(`员工声明尚未完成配置：${blockers}`, "warning");
+
+    return null;
+
+  }
+
   return data;
 
 }
@@ -558,6 +568,20 @@ function getPayrollDetailPrintDocumentHtml(variant, pagination) {
 
 
 function exportPayrollDetailPDF(data, variant, pagination) {
+
+  const declaration = data.declarationPresentation;
+
+  const declarationLength = declaration && declaration.primary
+
+    ? String(declaration.primary.renderedText || "").length + String(declaration.english && declaration.english.renderedText || "").length
+
+    : 0;
+
+  if (declarationLength > 1800 && typeof showNotification === "function") {
+
+    showNotification("声明内容较长，将按内容分页以保持至少 7pt 的可读字号", "info");
+
+  }
 
   const docHtml = getPayrollDetailPrintDocumentHtml(variant, pagination);
 

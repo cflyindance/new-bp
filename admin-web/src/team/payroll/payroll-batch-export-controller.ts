@@ -1,5 +1,5 @@
 import { createBatchArtifact, downloadBatchArtifact } from "./payroll-batch-export-artifacts";
-import { buildBatchExportInput, classifyBatchEmployee } from "./payroll-batch-export-data";
+import { attachBatchDeclarationPresentations, buildBatchExportInput, classifyBatchEmployee } from "./payroll-batch-export-data";
 import { createPayrollBatchExportTask, loadBatchExportPreferences, saveBatchExportPreferences, type BatchTaskSnapshot } from "./payroll-batch-export-task";
 import type { BatchEmployeeRecord, BatchExportInput, BatchExportOptions, PayrollBatchBridge } from "./payroll-batch-export-types";
 
@@ -144,7 +144,7 @@ export function mountPayrollBatchExportController(
     options = readOptions();
     saveBatchExportPreferences(localStorage, options);
     try {
-      currentInput = buildBatchExportInput(bridge.getSnapshot(), options, Array.from(selectedIds));
+      currentInput = attachBatchDeclarationPresentations(buildBatchExportInput(bridge.getSnapshot(), options, Array.from(selectedIds)), bridge.getDetailPayload);
     } catch (error) {
       if (summary) summary.innerHTML = `<span style="color:#cf1322">${escapeHtml(error instanceof Error ? error.message : error)}</span>`;
       return;
@@ -174,7 +174,7 @@ export function mountPayrollBatchExportController(
   startButton?.addEventListener("click", () => { void start(); }, { signal: controller.signal });
   $("#payrollBatchTaskCancel")?.addEventListener("click", () => task.cancel(), { signal: controller.signal });
   $("#payrollBatchTaskDownload")?.addEventListener("click", () => { const result = task.getSnapshot().result; if (result) { if (downloadUrl) URL.revokeObjectURL(downloadUrl); downloadUrl = downloadBatchArtifact(result); } }, { signal: controller.signal });
-  $("#payrollBatchTaskRetry")?.addEventListener("click", () => { const result = task.getSnapshot().result; if (!currentInput || !result) return; const ids = result.failures.map((item) => item.employeeId); currentInput = buildBatchExportInput(bridge.getSnapshot(), { ...currentInput.options, scope: "selected" }, ids); void task.retry(currentInput); }, { signal: controller.signal });
+  $("#payrollBatchTaskRetry")?.addEventListener("click", () => { const result = task.getSnapshot().result; if (!currentInput || !result) return; const ids = result.failures.map((item) => item.employeeId); currentInput = attachBatchDeclarationPresentations(buildBatchExportInput(bridge.getSnapshot(), { ...currentInput.options, scope: "selected" }, ids), bridge.getDetailPayload); void task.retry(currentInput); }, { signal: controller.signal });
   $("#payrollBatchTaskClose")?.addEventListener("click", () => { if (taskPanel) taskPanel.hidden = true; }, { signal: controller.signal });
   const unsubscribe = task.subscribe(renderTask);
   window.addEventListener("beforeunload", beforeUnload);

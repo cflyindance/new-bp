@@ -1,4 +1,5 @@
 import type { PayrollEmployee, PayrollPeriod, PayrollSnapshot } from "./payroll-types";
+import type { EmployeeDeclarationPresentation } from "./payroll-declaration-presentation";
 
 export type BatchEmployeeStatus = "ready" | "incomplete" | "unconfirmed" | "no_data";
 export type BatchDetailType = "detailed" | "summary";
@@ -37,6 +38,7 @@ export interface BatchEmployeeRecord {
   period: PayrollPeriod;
   status: BatchEmployeeStatus;
   missingFields: BatchMissingField[];
+  declarationPresentation?: EmployeeDeclarationPresentation | null;
 }
 
 export interface BatchExportCounts {

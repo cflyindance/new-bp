@@ -103,6 +103,20 @@ export function buildBatchExportInput(
   };
 }
 
+export function attachBatchDeclarationPresentations(input: BatchExportInput, getPayload: (employeeId: string) => Record<string, unknown> | null): BatchExportInput {
+  const records = input.records.map((record) => {
+    const payload = getPayload(record.employee.id);
+    const presentation = payload?.declarationPresentation;
+    return {
+      ...record,
+      declarationPresentation: presentation && typeof presentation === "object"
+        ? structuredClone(presentation) as BatchEmployeeRecord["declarationPresentation"]
+        : null,
+    };
+  });
+  return { ...input, records };
+}
+
 export function sanitizePayrollFilePart(value: unknown): string {
   const safe = text(value)
     .replace(/[<>:"/\\|?*\u0000-\u001f]/g, " ")
