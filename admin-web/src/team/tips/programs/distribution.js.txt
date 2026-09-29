@@ -867,6 +867,21 @@ var ALLOC_KEY = 'tipout_allocated';
       }
       rows.forEach(function(row) {
         row.ruleIssues = ruleIssues;
+        if (!row.allocated) {
+          var estimates={}, previewError='';
+          try {
+            if (ruleIssues.length) throw new Error(ruleIssues.map(function(issue){return issue.message;}).join('；'));
+            if (!window.TipOutFunding || !window.TipOutScenarioSource) throw new Error('小费来源数据尚未就绪');
+            var facts=window.TipOutScenarioSource.day(row.dateKey,store);
+            var projection=row.businessStatusResult.status==='closed' ? facts.map(function(f){return {employeeId:f.employeeId,amount:0};}) : window.TipOutFunding.previewContributions(rules,facts,row.dateKey);
+            projection.forEach(function(item){estimates[String(item.employeeId)]=item.amount;});
+          } catch(error) { previewError=error.message || '贡献试算失败'; }
+          row.employeeResults.forEach(function(employee){
+            var id=String(employee.employeeId).replace(/^roster:/,'');
+            employee.estimatedDeducted=previewError ? null : Object.prototype.hasOwnProperty.call(estimates,id) ? estimates[id] : null;
+            employee.contributionPreviewError=previewError || (employee.estimatedDeducted==null ? '缺少员工小费来源数据' : '');
+          });
+        }
         if (!row.allocated || !window.TipOutAllocationResults) return;
         var snapshot = TipOutAllocationResults.read(store, row.dateKey);
         row.allocationValidationError = snapshot ? TipOutAllocationResults.validate(snapshot) : null;
@@ -1183,6 +1198,33 @@ var ALLOC_KEY = 'tipout_allocated';
       captureSummaryUiState('', '');
     }
 
+    function renderContributionSummary(item) {
+      var errors=item.contributionPreviewErrors || [];
+      var confirmed=item.deductedCents==null ? null : item.hasConfirmedAmount ? item.deductedCents : 0;
+      var estimated=item.estimatedContributionDays ? item.estimatedDeductedCents : 0;
+      var invalid=confirmed==null || errors.length>0;
+      var total=invalid ? '无法试算' : formatEmployeeSummaryMoney(confirmed+estimated,true);
+      var detail='已确认：'+formatEmployeeSummaryMoney(confirmed,true)+'\n预计：'+(errors.length ? '无法试算' : formatEmployeeSummaryMoney(estimated,true))+'\n合计：'+total;
+      if(errors.length) detail+='\n'+errors.join('；');
+      return total+' <span class="tipout-contribution-help" role="button" tabindex="0" aria-label="查看贡献入池金额明细" aria-haspopup="dialog" data-detail="'+escapeSummaryHtml(detail)+'" onclick="openContributionBreakdown(this,event)" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){openContributionBreakdown(this,event);}">?</span>';
+    }
+
+    function openContributionBreakdown(trigger,event) {
+      event.preventDefault(); event.stopPropagation();
+      var previous=document.getElementById('contributionBreakdown');
+      if(previous) previous.remove();
+      var popup=document.createElement('div');
+      popup.id='contributionBreakdown'; popup.className='tipout-contribution-popover';
+      popup.setAttribute('popover','auto'); popup.setAttribute('role','dialog');
+      popup.setAttribute('aria-label','贡献入池金额明细');
+      popup.textContent=trigger.dataset.detail;
+      document.body.appendChild(popup);
+      popup.showPopover();
+      var rect=trigger.getBoundingClientRect();
+      popup.style.left=Math.max(8,Math.min(rect.left,window.innerWidth-popup.offsetWidth-8))+'px';
+      popup.style.top=Math.max(8,Math.min(rect.bottom+8,window.innerHeight-popup.offsetHeight-8))+'px';
+    }
+
     function renderEmployeeRoleSummaryCards(roleAggregates) {
       var container = document.getElementById('employeeRoleSummaryCards');
       var empty = document.getElementById('employeeRoleSummaryEmpty');
@@ -1200,7 +1242,7 @@ var ALLOC_KEY = 'tipout_allocated';
           '<span class="tipout-role-summary-title"><strong>' + escapeSummaryHtml(item.role) + '</strong><small>' + item.employeeCount + ' 人</small></span>' +
           status +
           '<span><small>分配前总小费</small><strong>' + formatEmployeeSummaryMoney(item.beforeCents, true) + '</strong></span>' +
-          '<span><small>贡献入池总额</small><strong class="tip-amount--deduct">' + formatEmployeeSummaryMoney(item.deductedCents, item.hasConfirmedAmount) + '</strong></span>' +
+          '<span><small>贡献入池总额</small><strong class="tip-amount--deduct">' + renderContributionSummary(item) + '</strong></span>' +
           '<span><small>从池分得总额</small><strong class="tip-amount--receive">' + formatEmployeeSummaryMoney(item.receivedCents, item.hasConfirmedAmount) + '</strong></span>' +
           '<span><small>分配后总小费</small><strong>' + formatEmployeeSummaryMoney(item.finalAmountCents, item.hasConfirmedAmount) + '</strong></span>' +
           '</button>';
@@ -1234,8 +1276,8 @@ var ALLOC_KEY = 'tipout_allocated';
           '<td><span class="tipout-employee-role-tags">' + roles + '</span></td>' +
           '<td><strong>' + escapeSummaryHtml(aggregate.punchHoursDisplay) + '</strong></td>' +
           '<td>' + renderAllocationHoursSummaryButton(aggregate.employeeId, aggregate.allocationHoursSummary) + '</td>' +
-          '<td>' + formatEmployeeSummaryMoney(aggregate.beforeCents, aggregate.hasConfirmedAmount) + '</td>' +
-          '<td><strong class="tip-amount--deduct">' + formatEmployeeSummaryMoney(aggregate.deductedCents, aggregate.hasConfirmedAmount) + '</strong></td>' +
+          '<td>' + formatEmployeeSummaryMoney(aggregate.beforeCents, true) + '</td>' +
+          '<td><strong class="tip-amount--deduct">' + renderContributionSummary(aggregate) + '</strong></td>' +
           '<td><strong class="tip-amount--receive">' + formatEmployeeSummaryMoney(aggregate.receivedCents, aggregate.hasConfirmedAmount) + '</strong></td>' +
           '<td><strong class="tipout-employee-final">' + formatEmployeeSummaryMoney(aggregate.finalAmountCents, aggregate.hasConfirmedAmount) + '</strong>' + (aggregate.hasPartialConfirmed ? '<small class="tipout-employee-partial">已确认部分</small>' : '') + '</td>' +
           '<td><span class="tipout-employee-status ' + statusClass + '"><span aria-hidden="true">●</span> ' + aggregate.status + '</span></td>' +

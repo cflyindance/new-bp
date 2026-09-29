@@ -252,6 +252,10 @@
             recordDays: 0,
             shifts: 0,
             beforeCents: 0,
+            confirmedBeforeCents: 0,
+            estimatedDeductedCents: 0,
+            estimatedContributionDays: 0,
+            contributionPreviewErrors: [],
             deductedCents: 0,
             receivedCents: 0,
             netAdjustmentCents: 0,
@@ -263,6 +267,7 @@
             pendingAllocationDays: 0,
             confirmedAllocationDays: 0,
             issueReasons: [],
+            hasInvalidConfirmedAmount: false,
             firstActionDate: '',
             dailyRows: []
           };
@@ -289,17 +294,22 @@
         aggregate.recordDays += 1;
         aggregate.shifts += number(attendance.shifts);
         if (hourRow.punchHoursValid) { aggregate.punchValidDays += 1; aggregate.punchHours += hourRow.punchHours; }
+        aggregate.beforeCents += toCents(record.before) || 0;
         if (day.allocated && !day.allocationValidationError) {
           aggregate.hasConfirmedAmount = true;
           aggregate.confirmedAllocationDays += 1;
-          aggregate.beforeCents += toCents(record.before) || 0;
+          aggregate.confirmedBeforeCents += toCents(record.before) || 0;
           aggregate.deductedCents += toCents(record.deducted) || 0;
           aggregate.receivedCents += toCents(record.received) || 0;
         } else if (!day.allocated) {
           aggregate.pendingAllocationDays += 1;
+          aggregate.estimatedContributionDays += 1;
+          if (record.contributionPreviewError || record.estimatedDeducted == null) addUnique(aggregate.contributionPreviewErrors,record.contributionPreviewError || '待分配贡献尚未试算');
+          else aggregate.estimatedDeductedCents += toCents(record.estimatedDeducted) || 0;
           if (!aggregate.firstActionDate) aggregate.firstActionDate = day.dateKey || '';
         }
         if (day.allocationValidationError) {
+          if(day.allocated) aggregate.hasInvalidConfirmedAmount=true;
           addUnique(aggregate.issueReasons, day.allocationValidationError);
           if (!aggregate.firstActionDate) aggregate.firstActionDate = day.dateKey || '';
         }
@@ -317,11 +327,10 @@
     });
     return order.map(function (employeeId) {
       var aggregate = byId[employeeId];
-      var invalid = aggregate.issueReasons.length > 0;
+      var invalid = aggregate.hasInvalidConfirmedAmount;
       aggregate.netAdjustmentCents = invalid ? null : aggregate.receivedCents - aggregate.deductedCents;
-      aggregate.finalAmountCents = invalid ? null : aggregate.beforeCents - aggregate.deductedCents + aggregate.receivedCents;
+      aggregate.finalAmountCents = invalid ? null : aggregate.confirmedBeforeCents - aggregate.deductedCents + aggregate.receivedCents;
       if (invalid) {
-        aggregate.beforeCents = null;
         aggregate.deductedCents = null;
         aggregate.receivedCents = null;
       }
@@ -409,6 +418,9 @@
             employeeIds: [],
             employeeCount: 0,
             beforeCents: 0,
+            estimatedDeductedCents: 0,
+            estimatedContributionDays: 0,
+            contributionPreviewErrors: [],
             deductedCents: 0,
             receivedCents: 0,
             finalAmountCents: 0,
@@ -430,6 +442,11 @@
           item.finalAmountCents += beforeCents - deductedCents + receivedCents;
         } else {
           item.pendingRecordCount += 1;
+          if (!day.allocated) {
+            item.estimatedContributionDays += 1;
+            if (record.contributionPreviewError || record.estimatedDeducted == null) addUnique(item.contributionPreviewErrors,record.contributionPreviewError || '待分配贡献尚未试算');
+            else item.estimatedDeductedCents += toCents(record.estimatedDeducted) || 0;
+          }
         }
       });
     });

@@ -238,7 +238,7 @@ for (const label of employeeAmountHeaders) {
 for (const obsoleteHeader of [">原有小费<", ">净调整<", ">最终获得 "]) {
   if (employeeTableHead.includes(obsoleteHeader)) failures.push(`distribution: obsolete employee amount header remains ${obsoleteHeader}`);
 }
-for (const field of ["aggregate.beforeCents", "aggregate.deductedCents", "aggregate.receivedCents", "aggregate.finalAmountCents"]) {
+for (const field of ["aggregate.beforeCents", "renderContributionSummary(aggregate)", "aggregate.receivedCents", "aggregate.finalAmountCents"]) {
   if (!distributionProgram.includes(field)) failures.push(`distribution: employee row amount field missing ${field}`);
 }
 if (!distributionProgram.includes('class="tip-amount--deduct"')) failures.push("distribution: employee deduction semantic style missing");
@@ -444,7 +444,8 @@ const resultFirstAggregates = summaryUi.aggregateEmployeeDailyDatasets(employeeD
 assert.equal(resultFirstAggregates.length, 3);
 const olivia = resultFirstAggregates.find((item) => item.employeeId === "e1");
 assert.deepEqual(Array.from(olivia.roles), ["Server", "Bartender"]);
-assert.equal(olivia.beforeCents, 10010);
+assert.equal(olivia.beforeCents, 15010);
+assert.equal(olivia.confirmedBeforeCents, 10010);
 assert.equal(olivia.netAdjustmentCents, 1010);
 assert.equal(olivia.finalAmountCents, 11020);
 assert.equal(olivia.status, "部分待分配");
@@ -478,6 +479,8 @@ assert.deepEqual(Array.from(roleAggregates, (item) => item.role), ["Server", "Bu
 assert.deepEqual(JSON.parse(JSON.stringify(roleAggregates.find((item) => item.role === "Server"))), {
   role: "Server", employeeIds: ["e1", "e3"], employeeCount: 2,
   beforeCents: 1500, deductedCents: 200, receivedCents: 500, finalAmountCents: 1300,
+  estimatedDeductedCents: 0, estimatedContributionDays: 2,
+  contributionPreviewErrors: ["待分配贡献尚未试算"],
   allocatedRecordCount: 1, pendingRecordCount: 2, status: "partial", hasConfirmedAmount: true,
 });
 const pendingBartender = roleAggregates.find((item) => item.role === "Bartender");

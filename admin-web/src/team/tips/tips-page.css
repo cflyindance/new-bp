@@ -2589,6 +2589,9 @@ select.form-control {
   cursor: pointer;
   transition: border-color .2s, background .2s, box-shadow .2s;
 }
+.tipout-contribution-help { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border: 1px solid var(--text-tertiary, #999); border-radius: 50%; color: var(--text-secondary, #666); font-size: 12px; font-weight: normal; cursor: pointer; vertical-align: middle; }
+.tipout-contribution-help:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.tipout-contribution-popover { position: fixed; inset: auto; margin: 0; padding: 14px 16px; max-width: min(320px, calc(100vw - 32px)); border: 1px solid var(--border-color, #ddd); border-radius: 10px; background: var(--bg-primary, #fff); color: var(--text-primary, #222); box-shadow: 0 4px 18px #0002; font-size: 13px; font-weight: normal; line-height: 1.8; white-space: pre-line; overflow-wrap: anywhere; }
 .tipout-role-summary-card:hover { border-color: var(--primary); }
 .tipout-role-summary-card:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 .tipout-role-summary-card.is-active { border-color: var(--primary); background: rgba(22, 119, 255, 0.04); box-shadow: 0 0 0 1px rgba(22, 119, 255, 0.08); }
