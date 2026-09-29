@@ -2336,6 +2336,16 @@ select.form-control {
   border-radius: 16px;
 }
 
+.tipout-page-rule-editor .tipout-rule-heading-actions {
+  display: flex;
+  align-items: center;
+  align-self: center;
+  justify-self: end;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.tipout-page-rule-editor .tipout-rule-heading-actions .btn { min-height: 36px; border-radius: 16px; white-space: nowrap; }
+
 .tipout-page-rule-editor .tipout-workspace.has-aside {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 260px;
@@ -2731,6 +2741,7 @@ select.form-control {
   .tipout-page-rules .tipout-page-heading--with-back > .btn { align-self: flex-start; }
   .tipout-page-rule-editor .tipout-page-heading--with-back { display: flex; align-items: stretch; }
   .tipout-page-rule-editor .tipout-page-heading--with-back > .btn { align-self: flex-start; }
+  .tipout-page-rule-editor .tipout-rule-heading-actions { align-self: flex-end; }
   .tipout-page-rule-editor .tipout-form-card { padding: 16px; border-radius: 16px; }
   .tipout-page-rule-editor .tipout-sticky-actions { align-items: stretch; flex-direction: column; bottom: 8px; }
   .tipout-page-rule-editor .tipout-sticky-actions > div { display: grid; grid-template-columns: 1fr 1fr; }
