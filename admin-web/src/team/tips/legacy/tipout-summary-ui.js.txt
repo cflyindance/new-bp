@@ -159,6 +159,10 @@
     return validDays < eligibleDays ? base + '（' + validDays + '/' + eligibleDays + ' 天有记录）' : base;
   }
   function summarizeAllocationHourValues(entries) {
+    entries = entries || [];
+    var applicable=entries.filter(function(entry){ return entry && entry.usesHours!==false; });
+    if(entries.length && !applicable.length) return {kind:'not-applicable',display:'不适用',distinctCount:0,values:[]};
+    var missing=applicable.some(function(entry){return !entry.hoursValid || !validHours(entry.hours) || (entry.eligibleDays>entry.validDays);});
     var normalized = [];
     (entries || []).forEach(function(entry) {
       if (!entry || entry.usesHours === false || !entry.hoursValid || !validHours(entry.hours)) return;
@@ -166,9 +170,23 @@
       if (normalized.indexOf(value) < 0) normalized.push(value);
     });
     normalized.sort(function(a, b) { return a - b; });
-    if (!normalized.length) return { kind: 'empty', display: '—', distinctCount: 0, values: [] };
-    if (normalized.length === 1) return { kind: 'single', display: formatHoursNumber(normalized[0]), distinctCount: 1, values: normalized };
-    return { kind: 'multiple', display: '多口径（' + normalized.length + '）', distinctCount: normalized.length, values: normalized };
+    if (!normalized.length) return { kind: applicable.length ? 'missing' : 'empty', display: applicable.length ? '待补录' : '—', distinctCount: 0, values: [] };
+    if (normalized.length === 1 && !missing) return { kind: 'single', display: formatHoursNumber(normalized[0])+' ⓘ', distinctCount: 1, values: normalized };
+    return { kind: 'multiple', display: '按规则查看 ›', distinctCount: normalized.length, values: normalized };
+  }
+  function allocationHourEntryDisplay(entry) {
+    if(entry.usesHours===false) return '不适用';
+    if(!entry.hoursValid) return '待补录';
+    return formatHoursNumber(entry.hours)+(entry.eligibleDays>entry.validDays ? '（记录不完整）' : '');
+  }
+  function allocationHourExplanation(entry) {
+    if(entry.usesHours===false) return '此规则不使用工时计算分配比例';
+    var labels={'original-punch':'按有效打卡工时计入','pos-corrected':'按 POS 修正后的工时计入','max-hours':'按每日工时上限计入后累计',manual:'按手动调整的工时计入',mixed:'各日期工时来源不同，按日计入后累计','time-window':'按符合规则的在岗时段计入'};
+    return labels[entry.source] || '按规则记录的有效工时计入';
+  }
+  function allocationHourCoverage(entry) {
+    if(entry.usesHours===false) return '不适用';
+    return (entry.validDays===undefined ? (entry.hoursValid?1:0) : entry.validDays)+' / '+(entry.eligibleDays===undefined ? 1 : entry.eligibleDays)+' 天';
   }
   function shouldHighlightAllocationHours(punchHours, entry) {
     if (!entry || entry.usesHours === false || !entry.hoursValid) return false;
@@ -573,6 +591,9 @@
   }
 
   root.TipOutSummaryUi = {
+    allocationHourEntryDisplay: allocationHourEntryDisplay,
+    allocationHourExplanation: allocationHourExplanation,
+    allocationHourCoverage: allocationHourCoverage,
     summarizeDailyResults: summarizeDailyResults,
     countPendingDates: countPendingDates,
     buildDetailUrl: buildDetailUrl,

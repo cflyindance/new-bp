@@ -50,9 +50,9 @@ assert.equal(ui.formatHoursCoverage(12, 2, 3), '12 h（2/3 天有记录）');
 assert.equal(JSON.stringify(ui.resolveRuleAllocationHours({ usesHours: true, clockMode: 'clock', originalPunchHours: 8, posEffectiveHours: 10 })), JSON.stringify({ hours: 10, hoursValid: true, source: 'pos-corrected' }));
 assert.equal(JSON.stringify(ui.resolveRuleAllocationHours({ usesHours: true, clockMode: 'clock', originalPunchHours: 8, posEffectiveHours: 10, maxHours: 5 })), JSON.stringify({ hours: 5, hoursValid: true, source: 'max-hours' }));
 assert.equal(JSON.stringify(ui.resolveRuleAllocationHours({ usesHours: true, clockMode: 'noclock', manualHours: 4 })), JSON.stringify({ hours: 4, hoursValid: true, source: 'manual' }));
-assert.equal(ui.summarizeAllocationHourValues([{ hours: 4, hoursValid: true }, { hours: 6, hoursValid: true }]).display, '多口径（2）');
-assert.equal(ui.summarizeAllocationHourValues([{ hours: 8, hoursValid: true }, { hours: 8, hoursValid: true }]).display, '8 h');
-assert.equal(ui.summarizeAllocationHourValues([{ hours: 0, hoursValid: true }, { hours: null, hoursValid: false }]).display, '0 h');
+assert.equal(ui.summarizeAllocationHourValues([{ hours: 4, hoursValid: true }, { hours: 6, hoursValid: true }]).display, '按规则查看 ›');
+assert.equal(ui.summarizeAllocationHourValues([{ hours: 8, hoursValid: true }, { hours: 8, hoursValid: true }]).display, '8 h ⓘ');
+assert.equal(ui.summarizeAllocationHourValues([{ hours: 0, hoursValid: true }, { hours: null, hoursValid: false }]).display, '按规则查看 ›');
 assert.equal(ui.formatHoursCoverage(0, 0, 3), '—');
 
 console.log('TipOut employee hours contract verification passed.');

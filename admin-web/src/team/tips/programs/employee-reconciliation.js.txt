@@ -70,7 +70,7 @@ function detailNumber(value) { return Number(value) || 0; }
         ? TipOutSummaryUi.aggregateAllocationHourEntries(rows) : [];
       summary.allocationHoursSummary = typeof TipOutSummaryUi !== 'undefined' && TipOutSummaryUi.summarizeAllocationHourValues
         ? TipOutSummaryUi.summarizeAllocationHourValues(summary.allocationHourSummaries)
-        : { kind: summary.allocationHourSummaries.length ? 'multiple' : 'empty', display: summary.allocationHourSummaries.length ? '多口径（' + summary.allocationHourSummaries.length + '）' : '—' };
+        : { kind: summary.allocationHourSummaries.length ? 'multiple' : 'empty', display: summary.allocationHourSummaries.length ? '按规则查看 ›' : '—' };
       return summary;
     }
     function detailDateLabel(dateKey) {
@@ -142,7 +142,7 @@ function detailNumber(value) { return Number(value) || 0; }
       var cell = document.createElement('td');
       var entries = TipOutSummaryUi.normalizeEmployeeHoursRow(row).allocationHourEntries;
       var summary = TipOutSummaryUi.summarizeAllocationHourValues(entries);
-      if (summary.kind === 'empty') { cell.textContent = '—'; return cell; }
+      if (summary.kind === 'empty' || summary.kind === 'not-applicable') { cell.textContent = summary.display; return cell; }
       var button = document.createElement('button');
       button.type = 'button'; button.className = 'tipout-allocation-hours-button'; button.textContent = summary.display;
       button._tipoutEntries = entries;
@@ -158,7 +158,7 @@ function detailNumber(value) { return Number(value) || 0; }
       body.textContent = '';
       (entries || []).forEach(function(entry) {
         var tr = document.createElement('tr');
-        [entry.ruleName, TipOutSummaryUi.allocationHourPoolKindLabel(entry.poolKind), employeeDetailHourSourceLabel(entry.source), entry.hoursValid ? detailHours(entry.hours) + ' h' : '—'].forEach(function(value, index) {
+        [entry.ruleName, TipOutSummaryUi.allocationHourPoolKindLabel(entry.poolKind), TipOutSummaryUi.allocationHourExplanation(entry), TipOutSummaryUi.allocationHourEntryDisplay(entry), TipOutSummaryUi.allocationHourCoverage(entry)].forEach(function(value, index) {
           var td = document.createElement('td'); td.textContent = value; if (index === 3) { var strong = document.createElement('strong'); strong.textContent = value; td.textContent = ''; td.appendChild(strong); } tr.appendChild(td);
         });
         body.appendChild(tr);
@@ -262,7 +262,7 @@ function detailNumber(value) { return Number(value) || 0; }
             attendanceNote: attendance.hasPunchException ? '打卡异常' : '',
             punchHours: row.punchHoursValid === false || (row.punchHoursValid === undefined && attendance.status === '未打卡') ? '—' : detailHours(row.punchHours === undefined ? attendance.hours : row.punchHours) + ' h',
             allocationHours: TipOutSummaryUi.normalizeEmployeeHoursRow(row).allocationHourEntries.map(function(entry) {
-              return entry.poolName + ' · ' + entry.ruleName + ': ' + (entry.usesHours && entry.hoursValid ? detailHours(entry.hours) + ' h' : '—') + '（' + employeeDetailHourSourceLabel(entry.source) + '）';
+              return entry.ruleName + ': ' + TipOutSummaryUi.allocationHourEntryDisplay(entry) + '（' + TipOutSummaryUi.allocationHourExplanation(entry) + '）';
             }).join('\n') || '—',
             manualHourDetails: (attendance.manualEntries || []).map(function(entry) { return entry.poolName + ' · ' + entry.ruleName + ': ' + detailHours(entry.hours) + ' h'; }).join('\n'),
             before: detailMoney(row.before),
@@ -287,7 +287,7 @@ function detailNumber(value) { return Number(value) || 0; }
       lines.push(['考勤筛选', data.attendance].map(employeeDetailCsvCell).join(','));
       lines.push(['分配状态筛选', data.allocationStatus].map(employeeDetailCsvCell).join(','));
       lines.push('');
-      lines.push(['日期', '考勤状态', '工时来源', '考勤备注', '打卡工时', '分配工时', '手动工时明细', '分配前', '贡献入池', '从池分得', '实际获得', '分配状态'].map(employeeDetailCsvCell).join(','));
+      lines.push(['日期', '考勤状态', '工时来源', '考勤备注', '打卡工时', '分配计入工时', '手动工时明细', '分配前', '贡献入池', '从池分得', '实际获得', '分配状态'].map(employeeDetailCsvCell).join(','));
       data.rows.forEach(function(row) {
         lines.push([row.date, row.attendance, row.workHourSource, row.attendanceNote, row.punchHours, row.allocationHours, row.manualHourDetails, row.before, row.deducted, row.received, row.after, row.allocation].map(employeeDetailCsvCell).join(','));
       });
@@ -308,7 +308,7 @@ function detailNumber(value) { return Number(value) || 0; }
     }
 
     function buildEmployeeDetailPrintHtml(data) {
-      var headings = ['日期', '考勤状态', '工时来源', '考勤备注', '打卡工时', '分配工时', '手动工时明细', '分配前', '贡献入池', '从池分得', '实际获得', '分配状态'];
+      var headings = ['日期', '考勤状态', '工时来源', '考勤备注', '打卡工时', '分配计入工时', '手动工时明细', '分配前', '贡献入池', '从池分得', '实际获得', '分配状态'];
       var body = data.rows.map(function(row) {
         return '<tr>' + [row.date, row.attendance, row.workHourSource, row.attendanceNote, row.punchHours, row.allocationHours, row.manualHourDetails, row.before, row.deducted, row.received, row.after, row.allocation]
           .map(function(value) { return '<td>' + employeeDetailEscapeHtml(value) + '</td>'; }).join('') + '</tr>';
@@ -433,7 +433,7 @@ function detailNumber(value) { return Number(value) || 0; }
       var allocationButton = document.getElementById('employeeDetailAllocationHours');
       if (allocationButton) {
         allocationButton.textContent = summary.allocationHoursSummary ? summary.allocationHoursSummary.display : '—';
-        allocationButton.disabled = !summary.allocationHoursSummary || summary.allocationHoursSummary.kind === 'empty';
+        allocationButton.disabled = !summary.allocationHoursSummary || summary.allocationHoursSummary.kind === 'empty' || summary.allocationHoursSummary.kind === 'not-applicable';
       }
       setDetailText('employeeDetailBefore', detailMoney(summary.before));
       var errors=summary.contributionErrors || [];
