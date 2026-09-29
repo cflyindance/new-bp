@@ -824,17 +824,17 @@ var ALLOC_KEY = 'tipout_allocated';
         if (row.allocated) {
           result.allocatedAmount += row.poolSummary.allocatedAmount || 0;
           result.unallocatedAmount += row.poolSummary.unallocatedAmount || 0;
-        } else result.hasPending = true;
+        } else result.unallocatedAmount += row.poolSummary.poolAmount || 0;
         return result;
-      }, { originalTips: 0, poolAmount: 0, allocatedAmount: 0, unallocatedAmount: 0, hasPending: false });
+      }, { originalTips: 0, poolAmount: 0, allocatedAmount: 0, unallocatedAmount: 0 });
       document.getElementById('summaryBeforeLabel').textContent = '原始总小费';
       document.getElementById('summaryDeductedLabel').textContent = '入池总金额';
       document.getElementById('summaryReceivedLabel').textContent = '已分配总额';
       document.getElementById('summaryAfterLabel').textContent = '未分配总额';
       document.getElementById('summaryBefore').textContent = money(dateTotals.originalTips);
       document.getElementById('summaryDeducted').textContent = money(dateTotals.poolAmount);
-      document.getElementById('summaryReceived').textContent = dateTotals.hasPending ? '—' : money(dateTotals.allocatedAmount);
-      document.getElementById('summaryAfter').textContent = dateTotals.hasPending ? '—' : money(dateTotals.unallocatedAmount);
+      document.getElementById('summaryReceived').textContent = money(dateTotals.allocatedAmount);
+      document.getElementById('summaryAfter').textContent = money(dateTotals.unallocatedAmount);
     }
 
     function allocationRuleIssueMessage(issue) {
@@ -952,7 +952,7 @@ var ALLOC_KEY = 'tipout_allocated';
           '" tabindex="0" role="link" onclick="openDailyDetail(\'' + dateKey +
           '\')" onkeydown="activateDailySummaryRow(event, \'' + dateKey + '\')">' +
           '<td><span class="tipout-daily-date"><strong>' + formatTabLabel(row.date) +
-          '</strong><small>' + dateKey + ' · ' + row.date.toLocaleDateString('zh-CN', { weekday: 'short' }) + '</small></span></td>' +
+          '</strong><small>' + row.date.toLocaleDateString('zh-CN', { weekday: 'short' }) + '</small></span></td>' +
           '<td><span class="tipout-daily-status ' + (row.businessStatusResult.status === 'open' ? 'allocated' : 'closed') + '">' +
           (row.businessStatusResult.status === 'open' ? '正常营业' : '未营业') + '</span></td>' +
           '<td><span class="tipout-daily-status ' + (row.allocated ? 'allocated' : 'pending') + '">' +
@@ -960,9 +960,8 @@ var ALLOC_KEY = 'tipout_allocated';
           '<td><span class="tipout-daily-status ' + payout.className + '">' + payout.label + '</span></td>' +
           '<td>' + money(row.poolSummary.originalTips) + '</td>' +
           '<td><strong>' + money(row.poolSummary.poolAmount) + '</strong></td>' +
-          '<td><strong class="tip-amount--receive">' + (row.allocated ? money(row.poolSummary.allocatedAmount || 0) : '—') + '</strong></td>' +
-          '<td><strong>' + (row.allocated ? money(row.poolSummary.unallocatedAmount || 0) : '—') + '</strong></td>' +
-          '<td><button type="button" class="tipout-pool-count-link" tabindex="-1">' + row.poolSummary.poolCount + ' 个</button></td>' +
+          '<td><strong class="tip-amount--receive">' + money(row.allocated ? row.poolSummary.allocatedAmount || 0 : 0) + '</strong></td>' +
+          '<td><strong>' + money(row.allocated ? row.poolSummary.unallocatedAmount || 0 : row.poolSummary.poolAmount || 0) + '</strong></td>' +
           '<td class="tipout-detail-link"><span>查看明细</span>' + quickAllocationButton(row, payout) + (payout.action ? '<button type="button" class="btn btn-sm tipout-confirm-payout" onclick="openConfirmPayoutModal(\'' + dateKey + '\',event)">确认已发放</button>' : '') + '</td></tr>';
       }).join('');
     }

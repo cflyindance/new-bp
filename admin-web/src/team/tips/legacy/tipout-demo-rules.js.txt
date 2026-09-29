@@ -3,23 +3,74 @@
   var markerKey = 'tipout-demo-rule-scenarios-v1';
   var support = [{roles:['Busser'],pct:50},{roles:['Runner'],pct:30},{roles:['Host'],pct:20}];
   var scenarios = [
-    {key:'front-hours',name:'前厅小费共享 · 按打卡工时',roles:['Server','Busser','Runner','Host'],type:'tips',pct:100,distribution:'hours'},
-    {key:'bar-average',name:'吧台小费共享 · 平均分配',roles:['Bartender'],type:'tips',pct:100,distribution:'average'},
+    {key:'front-hours',name:'前厅小费共享 · 按打卡工时',roles:['Server','Busser','Runner','Host'],type:'tips',pct:10,distribution:'hours'},
+    {key:'bar-average',name:'吧台小费共享 · 平均分配',roles:['Bartender'],type:'tips',pct:5,distribution:'average'},
     {key:'front-orders',name:'前厅小费共享 · 按订单占比',roles:['Server','Bartender','Busser','Runner','Host'],type:'tips',pct:1,distribution:'orders',clockin:'unrestricted'},
-    {key:'support-hours',name:'辅助岗位分配 · 50/30/20',roles:['Busser','Runner','Host'],type:'tips',pct:15,distribution:'hours',receivers:support},
-    {key:'capped-hours',name:'前厅工时上限 · 每日最多5小时',roles:['Server','Busser','Runner','Host'],type:'tips',pct:100,distribution:'hours',maxHours:5},
+    {key:'support-hours',name:'辅助岗位分配 · 50/30/20',roles:['Busser','Runner','Host'],type:'tips',pct:5,distribution:'hours',receivers:support},
+    {key:'capped-hours',name:'前厅工时上限 · 每日最多5小时',roles:['Server','Busser','Runner','Host'],type:'tips',pct:5,distribution:'hours',maxHours:5},
     {key:'sales-support',name:'销售额贡献入池 · 3%',roles:['Busser','Runner','Host'],type:'sales',pct:3,distribution:'hours',receivers:support},
     {key:'server-deduct-support',name:'服务员贡献入池 · 个人销售额3%',roles:['Server','Busser','Runner'],donors:['Server'],type:'personal_sales',pct:3,distribution:'hours',receivers:[{roles:['Busser'],pct:60},{roles:['Runner'],pct:40}]},
     {key:'server-deduct-bar',name:'吧台支持 · 服务员个人销售额1%',roles:['Server','Bartender'],donors:['Server'],type:'personal_sales',pct:1,distribution:'hours',receivers:[{roles:['Bartender'],pct:100}]},
     {key:'shared-deduct-support',name:'多岗位共同贡献 · 个人销售额2%',roles:['Server','Bartender','Busser','Runner','Host'],donors:['Server','Bartender'],type:'personal_sales',pct:2,distribution:'hours',receivers:support},
     {key:'reciprocal-front-pool',name:'前厅互助池 · 贡献并参与分配',roles:['Server','Bartender','Busser','Runner','Host'],donors:['Server','Bartender'],type:'personal_sales',pct:2,distribution:'hours',receivers:[{roles:['Bartender'],pct:40},{roles:['Busser'],pct:30},{roles:['Runner'],pct:20},{roles:['Host'],pct:10}]}
   ];
+  function canonical(value) {
+    if (Array.isArray(value)) return '[' + value.map(canonical).join(',') + ']';
+    if (value && typeof value === 'object') return '{' + Object.keys(value).sort().map(function(key) { return JSON.stringify(key) + ':' + canonical(value[key]); }).join(',') + '}';
+    return JSON.stringify(value);
+  }
+  function makeRule(scenario, store, id, key, legacy) {
+    var oldRates = {'front-hours':100,'bar-average':100,'support-hours':15,'capped-hours':100};
+    var rule = {
+      id:id, ruleName:'【演示】' + scenario.name, store:store, demoScenarioKey:key,
+      poolKind:'tip', allocationMode:'legacy_pool',
+      poolRules:[{type:scenario.type,pct:legacy && oldRates[scenario.key] || scenario.pct}],
+      receivers:JSON.parse(JSON.stringify(scenario.receivers || [{roles:scenario.roles,pct:100}])),
+      distribution:scenario.distribution, clockin:scenario.clockin || 'clock',
+      workHoursConfig:{mode:scenario.maxHours ? 'capped':'actual',maxHoursPerDay:scenario.maxHours || null}
+    };
+    if (scenario.donors) {
+      var conditions = {revenueType:'Net Sales (税前营业额)',role:scenario.donors.slice()};
+      if (!legacy) conditions.orderTipStatus = 'has_tip';
+      rule.poolRules[0].conditions = conditions;
+      rule.deductRoles = scenario.donors.slice();
+      rule.deductConfig = {personalSalesPct:{scopeType:'role',roles:scenario.donors.slice(),rate:scenario.pct / 100,salesConditions:JSON.parse(JSON.stringify(conditions))}};
+    } else if (!legacy && scenario.type === 'sales') {
+      rule.poolRules[0].conditions = {orderTipStatus:'has_tip'};
+    }
+    return rule;
+  }
+  function migrateUneditedDefaults(rules) {
+    var changed = false;
+    rules.forEach(function(rule, index) {
+      if (!rule || rule.funding) return;
+      var scenario = scenarios.find(function(item) {
+        return rule.demoScenarioKey === JSON.stringify([global.TipOutRosterDirectory.canonicalRosterStoreName(rule.store),item.key]);
+      });
+      if (scenario) {
+        var baseline = makeRule(scenario,rule.store,rule.id,rule.demoScenarioKey,true);
+        if (canonical(rule) === canonical(baseline)) {
+          var next = makeRule(scenario,rule.store,rule.id,rule.demoScenarioKey,false);
+          if (canonical(next) !== canonical(rule)) { rules[index] = next; changed = true; }
+        }
+      } else {
+        var original = {id:5,ruleName:'Tip Pool — 多角色分配（打卡按工时）',store:'Golden Dragon Chinese Kitchen - Dallas, TX 75231',poolRules:[{type:'tips',pct:10}],deductRoles:['Server','Bartender','Cashier'],receivers:JSON.parse(JSON.stringify(support)),distribution:'hours',clockin:'clock'};
+        if (canonical(rule) === canonical(original)) {
+          rule.poolRules[0].conditions = {role:rule.deductRoles.slice()};
+          changed = true;
+        }
+      }
+    });
+    return changed;
+  }
   function ensure() {
     var projected = global.ruleData.getRules();
     // Keep existing stored records byte-for-byte in content, including historical fields.
     var raw = global.localStorage.getItem('tipout_rules');
     var rules = raw ? JSON.parse(raw) : projected;
     if (!Array.isArray(rules)) throw new Error('规则数据格式异常，未生成演示规则');
+    // Migrate only exact untouched seed records; edited rules and saved snapshots stay intact.
+    var migrated = migrateUneditedDefaults(rules);
     var markers = JSON.parse(global.localStorage.getItem(markerKey) || '[]');
     if (!Array.isArray(markers)) throw new Error('演示规则标记异常');
     var directory = global.TipOutRosterDirectory;
@@ -39,24 +90,11 @@
         if (markers.indexOf(key) >= 0) return;
         if (rules.some(function(rule) { return rule.demoScenarioKey === key; })) { markers.push(key); return; }
         if (!scenario.roles.every(function(role) { return employees.some(function(employee) { return employee.role === role; }); })) return;
-        var rule = {
-          id: ++nextId, ruleName: '【演示】' + scenario.name, store: store,
-          demoScenarioKey: key, poolKind:'tip', allocationMode:'legacy_pool',
-          poolRules:[{type:scenario.type,pct:scenario.pct}],
-          receivers: JSON.parse(JSON.stringify(scenario.receivers || [{roles:scenario.roles,pct:100}])),
-          distribution:scenario.distribution, clockin:scenario.clockin || 'clock',
-          workHoursConfig:{mode:scenario.maxHours ? 'capped':'actual',maxHoursPerDay:scenario.maxHours || null}
-        };
-        if (scenario.donors) {
-          var conditions = {revenueType:'Net Sales (税前营业额)',role:scenario.donors.slice()};
-          rule.poolRules[0].conditions = conditions;
-          rule.deductRoles = scenario.donors.slice();
-          rule.deductConfig = {personalSalesPct:{scopeType:'role',roles:scenario.donors.slice(),rate:scenario.pct / 100,salesConditions:JSON.parse(JSON.stringify(conditions))}};
-        }
+        var rule = makeRule(scenario,store,++nextId,key,false);
         rules.push(rule); markers.push(key); added += 1;
       });
     });
-    if (added) global.ruleData.saveRules(rules);
+    if (added || migrated) global.ruleData.saveRules(rules);
     global.localStorage.setItem(markerKey, JSON.stringify(markers));
     return added;
   }

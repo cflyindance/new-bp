@@ -8,8 +8,12 @@ vm.runInNewContext(fs.readFileSync(new URL('../src/team/tips/legacy/tipout-scena
 const api = context.window.TipOutScenarioData;
 for (const role of ['Server','Bartender']) {
   const month = api.monthDates('2026-09-23').map(dateKey=>api.fact({storeId:'s1',employee:{id:'donor',name:'Donor',role},dateKey}));
-  assert.ok(month.some(f=>f.contributionScenario==='贡献入池封顶' && f.originalTips===1 && f.salesAmount>=600));
-  assert.ok(month.some(f=>f.contributionScenario && f.originalTips===60 && f.attendance.effectiveHours===8));
+  assert.ok(month.some(f=>f.contributionScenario && f.originalTips===f.salesAmount * 0.2 && f.attendance.effectiveHours===8));
+  assert.ok(month.every(f=>f.contributionScenario!=='贡献入池封顶'));
+  const normal = month.find(f=>f.contributionScenario);
+  const shortage = api.fact({storeId:'s1',employee:{id:'donor',name:'Donor',role},dateKey:normal.dateKey,fundingShortfall:true});
+  assert.equal(shortage.contributionScenario, '贡献入池封顶');
+  assert.equal(shortage.originalTips, 1);
 }
 for (const file of ['personalSalesDeduct','tipAllocation']) vm.runInNewContext(fs.readFileSync(new URL('../src/team/tips/legacy/'+file+'.js.txt',import.meta.url),'utf8'),context);
 const donorRules = [.03,.01,.02].map(rate=>({deductConfig:{personalSalesPct:{scopeType:'role',roles:['Server'],rate}}}));
