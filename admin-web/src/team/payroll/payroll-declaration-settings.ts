@@ -1,4 +1,5 @@
 import { createPayrollDeclarationRepository, type PayrollDeclarationRepository } from "./payroll-declaration-api";
+import { isDeclarationBrowserDemo } from './payroll-declaration-browser';
 import type { PayrollPageContext } from "./payroll-context";
 import type { DeclarationTemplateFamily, DeclarationTemplateVersion } from "./payroll-declaration-types";
 
@@ -49,7 +50,7 @@ function renderSettings(surface: HTMLElement, state: SettingsState): void {
       <button type="button" class="btn" data-declaration-close>返回薪资管理</button>
     </header>
     <div class="payroll-declaration-settings-toolbar">
-      <div><strong>企业声明模板库</strong><p>维护员工确认时使用的已审核语言版本</p></div>
+      <div><strong>企业声明模板库</strong><p>${isDeclarationBrowserDemo() ? '演示模式：仅保存在当前浏览器，清除站点数据后会丢失，不同设备不共享。' : '维护员工确认时使用的已审核语言版本'}</p></div>
       <button type="button" class="btn btn-primary" data-declaration-new>新增语言模板</button>
     </div>
     <div class="payroll-declaration-settings-layout payroll-declaration-library">

@@ -6,6 +6,8 @@ import type {
   EmployeeDeclarationPreference,
 } from "./payroll-declaration-types";
 
+import { createBrowserDeclarationRepository, isDeclarationBrowserDemo } from './payroll-declaration-browser';
+
 const API_BASE = "/api/v1/payroll/declaration";
 
 export class PayrollDeclarationVersionConflictError extends Error {
@@ -60,6 +62,7 @@ export function createPayrollDeclarationRepository(
   scope: DeclarationRepositoryScope,
   fetchImpl: typeof fetch = fetch,
 ): PayrollDeclarationRepository {
+  if (isDeclarationBrowserDemo()) return createBrowserDeclarationRepository(scope);
   const request = async <T>(path: string, init: RequestInit = {}): Promise<T> => {
     const response = await fetchImpl(`${API_BASE}${path}`, {
       ...init,
