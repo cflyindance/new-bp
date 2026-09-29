@@ -33,7 +33,7 @@
       var formula = card.closest('.detail-rule-bundle').querySelector('.formula-pool-val'); if (formula) formula.textContent = money(pool.poolAmount);
       card.querySelectorAll('.detail-result-section[data-role]').forEach(function(section) {
         var roles = section.getAttribute('data-role').split(/\s*\/\s*/);
-        var employees = pool.employees.filter(function(e) { return roles.indexOf(e.role) >= 0; });
+        var employees = pool.employees.filter(function(e) { return e.receiverIndex != null ? e.receiverIndex === Number(section.getAttribute('data-receiver-index')) : roles.indexOf(e.role) >= 0; });
         var tbody = section.querySelector('tbody'), template = tbody && tbody.querySelector('tr');
         if (!tbody || !template) { if (employees.length) throw new Error('历史员工明细无法回显'); return; }
         template = template.cloneNode(true); tbody.textContent = '';
@@ -53,6 +53,13 @@
             select.value = employee.name;
           }
           var hours = row.querySelector('.detail-emp-hours-input'); if (hours) hours.value = employee.hours;
+          var weight = row.querySelector('.detail-emp-weight-input');
+          if (weight) {
+            weight.value = employee.employeeWeight == null ? '' : employee.employeeWeight;
+            weight.placeholder = '—';
+            if (employee.employeeWeight == null) weight.setAttribute('data-weight-unrecorded','1');
+            else weight.removeAttribute('data-weight-unrecorded');
+          }
           var pct = row.querySelector('.detail-emp-pct-input') || row.querySelector('td:nth-last-child(3) input'); if (pct) pct.value = employee.percentage;
           var cells = row.querySelectorAll('td'); cells[cells.length - 2].textContent = money(employee.amount);
           tbody.appendChild(row);

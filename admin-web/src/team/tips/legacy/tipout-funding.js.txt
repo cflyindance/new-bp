@@ -46,7 +46,7 @@
     if(!receivers.length||receivers.some(function(r){return !(r.roles||[]).length||!Number.isFinite(r.pct)||r.pct<=0;})) throw new Error('请配置接收角色及比例');
     if(receivers.some(function(r){return (r.subReceivers||[]).length;})) throw new Error('请将子角色份额展平为接收角色行后转换');
     if(receivers.some(function(r){return r.roles.length!==1;})) throw new Error('每个接收角色请单独设置一行和份额');
-    if(receivers.some(function(r){return Object.keys(r.employeeWeights||{}).length;})) throw new Error('新资金模式暂不支持旧员工权重，请清空权重后试算');
+    receivers.forEach(function(r){Object.keys(r.employeeWeights||{}).forEach(function(role){Object.values(r.employeeWeights[role]||{}).forEach(function(w){if(w==null||w===''||!Number.isFinite(Number(w))||Number(w)<0||Number(w)>1000000)throw new Error('员工权重无效');});});});
     if(Math.abs(receivers.reduce(function(s,r){return s+r.pct;},0)-100)>0.00001) throw new Error('接收角色比例合计必须为 100%');
     if(['average','hours','orders'].indexOf(rule.distribution)<0) throw new Error('请选择小费分配方式');
     if(['clock','unrestricted','time_window'].indexOf(rule.clockin)<0) throw new Error('请选择参与资格');
@@ -123,9 +123,12 @@
             if(config.mode==='capped') h=Math.min(h,Number(config.maxHoursPerDay));
             if(edit.hours!==undefined) h=Number(edit.hours);
             if(!Number.isFinite(h)||h<0||Math.abs(Math.round(h*100)-h*100)>0.000001) throw new Error('分配工时须为非负数，最多两位小数');
-            var eligible=present||edit.included===true||(rule.clockin==='unrestricted'&&rule.distribution==='orders');
+            var eligible=present||edit.included===true||rule.clockin==='unrestricted';
+            var weightMap=(rec.employeeWeights||{})[role]||{};
+            var employeeWeight=edit.employeeWeight!==undefined?edit.employeeWeight:Object.prototype.hasOwnProperty.call(weightMap,f.name)?weightMap[f.name]:1;
+            if(employeeWeight==null||employeeWeight===''||!Number.isFinite(Number(employeeWeight))||Number(employeeWeight)<0||Number(employeeWeight)>1000000)throw new Error('员工权重无效');
             var weight=!eligible?0:rule.distribution==='hours'?h:rule.distribution==='orders'?(f.orders||[]).length:1;
-            return {f:f,edit:edit,h:h,weight:weight,present:present};
+            return {f:f,edit:edit,h:h,weight:weight*Number(employeeWeight),employeeWeight:Number(employeeWeight),present:present};
           });
           var ratios=split(10000,entries.map(function(e){return e.weight;}));
           entries.forEach(function(e,i){if(e.edit.percentage!==undefined){var p=Number(e.edit.percentage);if(!Number.isFinite(p)||p<0||p>100||Math.abs(p*100-Math.round(p*100))>0.000001)throw new Error('员工比例无效');ratios[i]=Math.round(p*100);}});
@@ -133,7 +136,7 @@
           var amounts=split(Math.round(roleTotal*totalPct/10000),ratios);
           entries.forEach(function(e,i){
             totals[e.f.employeeId].received+=amounts[i];
-            employees.push({employeeId:e.f.employeeId,name:e.f.name,role:role,attendanceStatus:e.present?'clock':'absent',hours:e.h,hoursSource:e.edit.hours!==undefined?'manual':'attendance',percentage:ratios[i]/100,amount:amounts[i]/100,orderCount:(e.f.orders||[]).length});
+            employees.push({employeeId:e.f.employeeId,name:e.f.name,role:role,employeeWeight:e.employeeWeight,attendanceStatus:e.present?'clock':'absent',hours:e.h,hoursSource:e.edit.hours!==undefined?'manual':'attendance',percentage:ratios[i]/100,amount:amounts[i]/100,orderCount:(e.f.orders||[]).length});
           });
         });
       });

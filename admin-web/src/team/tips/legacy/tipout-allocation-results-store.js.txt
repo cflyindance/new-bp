@@ -37,6 +37,7 @@
       check(pool.poolAmount);
       (pool.employees || []).forEach(function (employee) {
         check(employee.hours); check(employee.percentage); check(employee.amount);
+        if (employee.employeeWeight != null) check(employee.employeeWeight);
         if (!employee.employeeId || !employee.name || !employee.role) invalid = true;
       });
     });

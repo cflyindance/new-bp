@@ -1,4 +1,90 @@
 var ALLOC_KEY = 'tipout_allocated';
+    function detailSavedWeightText(employee) {
+      if (employee.employeeWeight != null) return escHtml(employee.employeeWeight);
+      return (employee.employeeWeightDetails || []).length ? employee.employeeWeightDetails.map(escHtml).join(' / ') : '—';
+    }
+    function detailWeightRule(card) {
+      return detailAllRules.find(function(r) { return String(r.id) === card.getAttribute('data-rule-id'); }) || {};
+    }
+    function detailWeightDefault(section, name) {
+      var card = section.closest('.detail-card'), rule = detailWeightRule(card);
+      var person = findDetailRosterEmployee(rule.store, section.getAttribute('data-role'), name);
+      var role = person ? person.role : section.getAttribute('data-role');
+      var index = Number(section.getAttribute('data-receiver-index'));
+      var receiver = (buildRoleConfigFromRule(rule)[index] || {}).receiver;
+      if (card.getAttribute('data-order-tip-mode') === '1') {
+        receiver = JSON.parse(section.getAttribute('data-weight-receiver') || '{}');
+      }
+      return window.TipOutEmployeeWeights.read(receiver, role, name);
+    }
+    function installDetailWeightRow(row, section) {
+      var select = row.querySelector('select');
+      if (!select || row.querySelector('.detail-emp-weight-input')) return;
+      var cell = document.createElement('td'), input = document.createElement('input');
+      cell.className = 'input-cell'; input.type = 'number'; input.min = '0'; input.max = '1000000'; input.step = 'any';
+      input.className = 'detail-emp-weight-input'; input.setAttribute('aria-label','员工权重');
+      input.value = detailWeightDefault(section,select.value);
+      cell.appendChild(input); row.children[0].after(cell);
+    }
+    function installDetailWeights() {
+      document.querySelectorAll('#detailRulesContainer .detail-card[data-rule-id]').forEach(function(card) {
+        card.querySelectorAll('.detail-result-section[data-role]').forEach(function(section,index) {
+          section.setAttribute('data-receiver-index',index);
+          var head = section.querySelector('thead tr');
+          if (head && !head.querySelector('.detail-weight-head')) {
+            var th = document.createElement('th'); th.className = 'detail-weight-head'; th.textContent = '员工权重';
+            th.title = '默认 1；修改后重算同接收方比例和金额，覆盖手动比例，仅影响当天本规则。';
+            head.children[0].after(th);
+          }
+          section.querySelectorAll('tbody tr').forEach(function(row) { installDetailWeightRow(row,section); });
+          if (!detailSavedSnapshot) recalcDetailWeightSection(section);
+        });
+      });
+    }
+    function recalcDetailWeightSection(section) {
+      var card = section.closest('.detail-card'), rule = detailWeightRule(card);
+      var date = document.getElementById('detailDate').value;
+      var rows = Array.from(section.querySelectorAll('tbody tr'));
+      var bases = rows.map(function(row) {
+        var weight = row.querySelector('.detail-emp-weight-input');
+        if (weight && weight.getAttribute('data-weight-unrecorded') === '1') {
+          weight.value = detailWeightDefault(section,row.querySelector('select').value);
+          weight.removeAttribute('data-weight-unrecorded');
+        }
+        var multiplier = weight ? window.TipOutEmployeeWeights.parse(weight.value) : 1;
+        var select = row.querySelector('select'), name = select ? select.value : '';
+        if (!name || name === '（未配置员工）') return 0;
+        var hours = row.querySelector('.detail-emp-hours-input');
+        if (rule.distribution === 'hours') return (hours ? window.TipOutDetailManualAllocation.parseHours(hours.value) : 0) * multiplier;
+        var present = window.TipOutAttendanceLabel.inspect(name,date).status !== 'absent';
+        if (!present && rule.clockin !== 'unrestricted' && rule.clockin !== 'noclock' && row.getAttribute('data-manual-participant') !== '1') return 0;
+        if (rule.distribution === 'orders') {
+          var fact = window.TipOutScenarioSource ? window.TipOutScenarioSource.employee(name,date,{storeId:rule.store}) : null;
+          return (fact ? fact.orders.length : 0) * multiplier;
+        }
+        return multiplier;
+      });
+      var ratios = window.TipOutEmployeeWeights.split(10000,bases);
+      rows.forEach(function(row,i) {
+        var pct = row.querySelector('.detail-emp-pct-input') || row.querySelector('td:nth-last-child(3) input');
+        if (pct) { pct.value = ratios[i]/100; pct.classList.add('detail-emp-pct-input'); }
+        row.removeAttribute('data-pct-manual');
+      });
+      var roleInput = section.querySelector('.detail-role-pct-input');
+      var cents = roleInput ? Math.round(Number(card.getAttribute('data-pool'))*Number(roleInput.value)) : Math.round(detailNumberFromText(section.querySelector('.role-amount').textContent)*100);
+      var amounts = window.TipOutEmployeeWeights.split(cents,ratios);
+      rows.forEach(function(row,i) { var cells=row.querySelectorAll('td'); cells[cells.length-2].textContent=money(amounts[i]/100); });
+    }
+    function onDetailWeightInput(input) {
+      input.removeAttribute('data-weight-unrecorded');
+      var scope = getDetailPayoutScope();
+      try {
+        TipOutDateState.assertDateWritable(scope.store,scope.dateKey);
+        recalcDetailWeightSection(input.closest('.detail-result-section'));
+        input.setCustomValidity('');
+      } catch(error) { input.setCustomValidity(error.message); showNotification(error.message,'error'); }
+      markDetailDirty();
+    }
     var detailDirty = false, detailRenderedScope = null, detailSavedSnapshot = null;
     var detailOwnUpdate = false, detailPreviousUpdate = null, detailForceRebuild = false;
     var detailEditToken = 'detail-edit-' + Date.now() + '-' + Math.random(), detailBaseHash = null;
@@ -43,7 +129,7 @@ var ALLOC_KEY = 'tipout_allocated';
           row.setAttribute('data-attendance-status',status);
           var old = row.querySelector('.tipout-attendance-label'); if (old) old.remove();
           select.parentElement.appendChild(window.TipOutAttendanceLabel.badge(document,status));
-          if (enforce && rule && rule.distribution !== 'hours' && rule.clockin !== 'noclock' && !(rule.clockin === 'unrestricted' && rule.distribution === 'orders') && row.getAttribute('data-manual-participant') !== '1' && status === 'absent') {
+          if (enforce && rule && rule.distribution !== 'hours' && rule.clockin !== 'noclock' && rule.clockin !== 'unrestricted' && row.getAttribute('data-manual-participant') !== '1' && status === 'absent') {
             var pct = row.querySelector('.detail-emp-pct-input'); if (pct) pct.value = 0;
             var cells = row.querySelectorAll('td'); if (cells.length > 1) cells[cells.length - 2].textContent = money(0);
           }
@@ -260,6 +346,61 @@ var ALLOC_KEY = 'tipout_allocated';
     var detailAllRules = [];
     var detailTimeWindowResults = {};
     var detailTimeWindowErrors = {};
+    function timeWeightReceivers(rule) {
+      var out=[];
+      (rule.receivers || []).forEach(function(receiver) {
+        (receiver.subReceivers && receiver.subReceivers.length ? receiver.subReceivers : [receiver]).forEach(function(target) { out.push(target); });
+      });
+      return out;
+    }
+    function buildTimeWeightInputs(rule,result) {
+      var people=getRoleEmployeesForStore(rule.store), rows=[];
+      timeWeightReceivers(rule).forEach(function(receiver,index) {
+        (receiver.roles || []).forEach(function(role) { (people[role] || []).forEach(function(name) {
+          var saved=result.weightOverrides && result.weightOverrides[index];
+          var weight=window.TipOutEmployeeWeights.read(saved ? {employeeWeights:saved} : receiver,role,name);
+          rows.push('<tr><td>'+escHtml(name)+'</td><td>'+escHtml(role)+'</td><td><input type="number" class="detail-time-weight-input" min="0" max="1000000" step="any" aria-label="员工权重" data-receiver="'+index+'" data-role="'+escHtml(role)+'" data-name="'+escHtml(name)+'" '+(result.weightSchemaVersion===1?'value="'+weight+'"':'value="" placeholder="—" data-weight-unrecorded="1"')+'></td></tr>');
+        }); });
+      });
+      return '<table class="data-table detail-table"><thead><tr><th>接收员工</th><th>角色</th><th title="默认 1，仅影响当天本规则，在每笔小费的在岗员工中加权计算">员工权重</th></tr></thead><tbody>'+rows.join('')+'</tbody></table>';
+    }
+    function timeSavedWeights(rule,result,entry) {
+      var weights=[];
+      if(result.weightSchemaVersion===1) timeWeightReceivers(rule).forEach(function(receiver,index) {
+        if((receiver.roles || []).indexOf(entry.role)<0) return;
+        var saved=result.weightOverrides && result.weightOverrides[index];
+        var value=window.TipOutEmployeeWeights.read(saved ? {employeeWeights:saved} : receiver,entry.role,entry.name);
+        if(weights.indexOf(value)<0) weights.push(value);
+      });
+      return weights;
+    }
+    function onDetailTimeWeightInput(input) {
+      var card=input.closest('.detail-card'), rule=detailWeightRule(card), scope=getDetailPayoutScope();
+      try {
+        TipOutDateState.assertDateWritable(scope.store,scope.dateKey);
+        var copy=JSON.parse(JSON.stringify(rule)), targets=timeWeightReceivers(copy), overrides={};
+        card.querySelectorAll('.detail-time-weight-input').forEach(function(field) {
+          var index=field.getAttribute('data-receiver'),role=field.getAttribute('data-role'),name=field.getAttribute('data-name');
+          if(field.getAttribute('data-weight-unrecorded')==='1') { field.value=window.TipOutEmployeeWeights.read(targets[index],role,name); field.removeAttribute('data-weight-unrecorded'); }
+          if (!overrides[index]) overrides[index]={};
+          if (!overrides[index][role]) overrides[index][role]={};
+          overrides[index][role][name]=window.TipOutEmployeeWeights.parse(field.value);
+        });
+        targets.forEach(function(target,index) { target.employeeWeights=overrides[index] || {}; });
+        var result=TipOutTimeWindow.allocateRule(copy,TipOutScenarioSource.day(scope.dateKey,scope.store),scope.dateKey);
+        result.weightOverrides=overrides;
+        detailTimeWindowResults[String(rule.id)]=result;
+        delete detailTimeWindowErrors[String(rule.id)];
+        // Keep the focused weight input mounted: replacing its card can fire a
+        // nested blur/change while the browser is still removing that card.
+        var preview=document.createElement('div');
+        preview.innerHTML=buildTimeWindowDetailCardHtml(rule,String(rule.id),result);
+        var bodies=card.querySelectorAll('tbody'), nextBodies=preview.querySelectorAll('tbody');
+        bodies[bodies.length-1].innerHTML=nextBodies[nextBodies.length-1].innerHTML;
+        card.setAttribute('data-pool',result.poolAmount);
+      } catch(error) { detailTimeWindowErrors[String(rule.id)]=error.message; showNotification(error.message,'error'); }
+      markDetailDirty();
+    }
     function buildTimeWindowDetailCardHtml(rule, rid, result) {
       var rows = result.lines.map(function(line) {
         var people = line.participants.filter(function(person) { return person.amount > 0; }).map(function(person) {
@@ -272,6 +413,7 @@ var ALLOC_KEY = 'tipout_allocated';
       }).join('');
       return '<div class="card detail-card tipout-allocation-group" data-rule-id="' + escHtml(rid) + '" data-time-window="1" data-pool="' + result.poolAmount + '">' +
         '<div class="card-body detail-card-body-alloc" style="padding:16px"><strong>仅限小费产生时在岗员工</strong>' +
+        buildTimeWeightInputs(rule,result) +
         '<p class="field-desc">以订单支付完成或手动小费实际发生时间匹配有效打卡区间；区间采用左闭右开。未匹配金额保留为未分配。</p>' +
         '<div class="detail-employee-wrap"><table class="data-table detail-table"><thead><tr><th>发生时间</th><th>来源</th><th>入池金额</th><th>接收员工</th><th>未分配</th></tr></thead><tbody>' +
         (rows || '<tr><td colspan="5">当日没有符合计算条件的小费事件</td></tr>') + '</tbody></table></div></div></div>';
@@ -314,9 +456,9 @@ var ALLOC_KEY = 'tipout_allocated';
       var banner = '<div class="tipout-lock-banner"><strong>已发放 · 分配结果已锁定</strong><span>' + escHtml(payout.paidAt || '') + ' · ' + escHtml(payout.paidByDisplayNameAtConfirmation || '当前用户') + '</span><p>以下内容来自确认发放时保存的快照，不能重新分配、取消或修改。</p></div>';
       var cards = (snapshot.pools || []).map(function(pool) {
         var rows = (pool.employees || []).map(function(employee) {
-          return '<tr><td>' + escHtml(employee.name) + '</td><td>' + escHtml(employee.role) + '</td><td>' + Number(employee.hours || 0) + ' h</td><td>' + Number(employee.percentage || 0).toFixed(2) + '%</td><td><strong>' + money(Number(employee.amount) || 0) + '</strong></td></tr>';
+          return '<tr><td>' + escHtml(employee.name) + '</td><td>' + escHtml(employee.role) + '</td><td>' + detailSavedWeightText(employee) + '</td><td>' + Number(employee.hours || 0) + ' h</td><td>' + Number(employee.percentage || 0).toFixed(2) + '%</td><td><strong>' + money(Number(employee.amount) || 0) + '</strong></td></tr>';
         }).join('');
-        return '<div class="detail-rule-bundle"><h2 class="detail-rule-block-title">' + escHtml(pool.poolName || pool.ruleName || '小费池') + '</h2><p class="detail-rule-meta">规则：' + escHtml(pool.ruleName || '—') + ' · 入池金额 ' + money(Number(pool.poolAmount) || 0) + '</p><table class="detail-table"><thead><tr><th>员工</th><th>角色</th><th>工时</th><th>比例</th><th>从池分得</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+        return '<div class="detail-rule-bundle"><h2 class="detail-rule-block-title">' + escHtml(pool.poolName || pool.ruleName || '小费池') + '</h2><p class="detail-rule-meta">规则：' + escHtml(pool.ruleName || '—') + ' · 入池金额 ' + money(Number(pool.poolAmount) || 0) + '</p><table class="detail-table"><thead><tr><th>员工</th><th>角色</th><th>员工权重</th><th>工时</th><th>比例</th><th>从池分得</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
       }).join('');
       container.innerHTML = banner + cards;
       var savedEmployees = snapshot.pools.reduce(function(all,pool) { return all.concat(pool.employees || []); }, []);
@@ -539,6 +681,7 @@ var ALLOC_KEY = 'tipout_allocated';
       });
       document.getElementById('detailRulesContainer').innerHTML = bundleParts.join('');
       renderVisibleRuleView();
+      installDetailWeights();
       if (detailSavedSnapshot) window.TipOutDetailSnapshot.restore(document, detailSavedSnapshot, money);
       renderDetailAttendance(!detailSavedSnapshot);
       syncDetailAllocationAction();
@@ -754,7 +897,28 @@ var ALLOC_KEY = 'tipout_allocated';
     function buildOrderTipDetailCardHtml(otResult, dateKey, rule, rid, tableId) {
       var roleEmployees = getRoleEmployeesForStore(rule && rule.store);
       var roleAmounts = otResult.roleAmounts || {};
-      var roleNames = Object.keys(roleAmounts).sort();
+      var groups = [];
+      function addWeightGroup(amount, receiver, label) {
+        var roles=receiver.roles || receiver.receiverRoles || [];
+        var parts=window.TipOutEmployeeWeights.split(Math.round(amount*100),roles.map(function(){return 1;}));
+        roles.forEach(function(role,i){groups.push({role:role,amount:parts[i]/100,receiver:receiver,label:label});});
+      }
+      (otResult.claimResults || []).forEach(function(claim){addWeightGroup(claim.paid,claim,claim.name || '计提接收方');});
+      var residual=(rule.residual || {}), receivers=residual.receivers || [];
+      if(receivers.length) {
+        var parts=window.TipOutEmployeeWeights.split(Math.round(otResult.residual*100),receivers.map(function(r){return Number(r.pct)||0;}));
+        receivers.forEach(function(r,i){
+          if(r.subReceivers && r.subReceivers.length) {
+            var sub=window.TipOutEmployeeWeights.split(parts[i],r.subReceivers.map(function(s){return Number(s.pct)||0;}));
+            r.subReceivers.forEach(function(s,j){addWeightGroup(sub[j]/100,s,'剩余接收方');});
+          } else addWeightGroup(parts[i]/100,r,'剩余接收方');
+        });
+      } else addWeightGroup(otResult.residual,{roles:otResult.residualRoles || []},'剩余接收方');
+      var oldPool=detailSavedSnapshot && detailSavedSnapshot.pools.find(function(p){return String(p.ruleId)===String(rid);});
+      if(oldPool && oldPool.employees.some(function(e){return e.receiverIndex==null;})) {
+        groups=Object.keys(roleAmounts).sort().map(function(role){return {role:role,amount:roleAmounts[role],receiver:{},label:'历史接收方'};});
+      }
+      var roleNames = groups.map(function(g){return g.role;});
       if (!roleNames.length) {
         return '<div class="card detail-card tipout-allocation-group" data-rule-id="' + escHtml(rid) + '" data-order-tip-mode="1" data-pool="0">' +
           '<div class="card-body" style="padding:24px;color:var(--text-secondary)">无角色分配结果</div></div>';
@@ -770,7 +934,7 @@ var ALLOC_KEY = 'tipout_allocated';
 
       roleNames.forEach(function(roleName, ri) {
         var subTableId = tableId + '_r' + ri;
-        var roleAmount = +(roleAmounts[roleName] || 0).toFixed(2);
+        var roleAmount = groups[ri].amount;
         var emps = roleEmployees[roleName] || [];
         if (!emps.length) emps = ['（未配置员工）'];
         var empAmounts = emps.map(function(emp) { return +(otResult.receivedByName && otResult.receivedByName[emp] || 0); });
@@ -785,10 +949,10 @@ var ALLOC_KEY = 'tipout_allocated';
         }
         var sectionId = 'detailOtSec_' + ridSafe + '_r' + ri;
         var sectionIdJs = String(sectionId).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-        html += '<div class="employee-section detail-result-section" id="' + escHtml(sectionId) + '" data-role="' + detailAttrSafe(roleName) + '">' +
+        html += '<div class="employee-section detail-result-section" data-weight-receiver="' + escHtml(JSON.stringify(groups[ri].receiver)) + '" id="' + escHtml(sectionId) + '" data-role="' + detailAttrSafe(roleName) + '">' +
           '<div class="employee-header detail-result-header">' +
           '<span class="employee-name">' + escHtml(roleName) + '</span>' +
-          '<span class="tag" style="font-size:12px;padding:2px 8px">计提接收方</span>' +
+          '<span class="tag" style="font-size:12px;padding:2px 8px">' + escHtml(groups[ri].label) + '</span>' +
           '<button type="button" class="fold-btn" onclick="toggleDetailFold(\'' + sectionIdJs + '\')">' +
           '<span>收起</span>' +
           '<svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M6 3.175a.5.5 0 0 1 .354.146l4 4a.5.5 0 0 1-.708.708L6 4.383 2.354 8.029a.5.5 0 0 1-.708-.708l4-4A.5.5 0 0 1 6 3.175z"/></svg>' +
@@ -1336,7 +1500,12 @@ var ALLOC_KEY = 'tipout_allocated';
     function buildRoleConfigFromRule(rule) {
       var config = [];
       var roleEmployees = getRoleEmployeesForStore(rule && rule.store);
+      var receiverRows=[];
       (rule.receivers || []).forEach(function(r) {
+        if(r.subReceivers && r.subReceivers.length) r.subReceivers.forEach(function(s){receiverRows.push(Object.assign({},s,{pct:Number(r.pct)*Number(s.pct)/100}));});
+        else receiverRows.push(r);
+      });
+      receiverRows.forEach(function(r) {
         var roles = r.roles || [];
         var roleLabel = roles.join(' / ');
         var employees = [];
@@ -1345,7 +1514,7 @@ var ALLOC_KEY = 'tipout_allocated';
             if (employees.indexOf(emp) === -1) employees.push(emp);
           });
         });
-        if (roleLabel) config.push({ role: roleLabel, roles: roles, pct: r.pct || 0, employees: employees });
+        if (roleLabel) config.push({ receiver:r, role: roleLabel, roles: roles, pct: r.pct || 0, employees: employees });
       });
       return config;
     }
@@ -1436,18 +1605,17 @@ var ALLOC_KEY = 'tipout_allocated';
         if (amtEl) amtEl.textContent = money(roleAmt);
         var table = section.querySelector('table.detail-employee-table');
         if (!table) return;
-        var empPctSum = 0;
-        table.querySelectorAll('tbody tr').forEach(function(tr) {
+        var rows = Array.from(table.querySelectorAll('tbody tr'));
+        var weights = rows.map(function(tr) {
           var ic = tr.querySelector('.detail-emp-pct-input');
-          if (ic) empPctSum += parseFloat(ic.value) || 0;
+          return ic ? Math.max(0, parseFloat(ic.value) || 0) : 0;
         });
-        table.querySelectorAll('tbody tr').forEach(function(tr) {
+        var amounts = window.TipOutDetailManualAllocation.amountsFromWeights(Math.round(roleAmt * 100), weights);
+        rows.forEach(function(tr, index) {
           var empInp = tr.querySelector('.detail-emp-pct-input');
           var pctCell = empInp ? empInp.closest('td') : null;
           var amtCell = pctCell && pctCell.nextElementSibling;
-          var empPct = empInp ? (parseFloat(empInp.value) || 0) : 0;
-          var empAmt = empPctSum > 0 ? +(roleAmt * empPct / empPctSum).toFixed(2) : 0;
-          if (amtCell) amtCell.textContent = money(empAmt);
+          if (amtCell) amtCell.textContent = money(amounts[index] / 100);
         });
       });
     }
@@ -1606,6 +1774,7 @@ var ALLOC_KEY = 'tipout_allocated';
         '<td class="action-cell"><a href="javascript:void(0)" onclick="addDetailRow(\'' + tableId + '\',this)">新增行</a>' +
         '<a href="javascript:void(0)" class="danger" onclick="removeDetailRow(\'' + tableId + '\',this)">删除行</a></td>';
       lastRow.after(newRow);
+      installDetailWeightRow(newRow,newRow.closest('.detail-result-section'));
       renderDetailAttendance(true);
       markDetailDirty();
       recalcAfterRowChange(tableId);
@@ -1639,6 +1808,7 @@ var ALLOC_KEY = 'tipout_allocated';
 
     function recalcAfterRowChange(tableId) {
       var table = document.getElementById(tableId);
+      if (table && table.querySelector('.detail-emp-weight-input')) { recalcDetailWeightSection(table.closest('.detail-result-section')); return; }
       var card = table ? table.closest('.detail-card') : null;
       if (card && card.getAttribute('data-manual-hours') === '1' && tableHoursSum(table) > 0) {
         onEmpHoursChange(tableId);
@@ -1650,6 +1820,7 @@ var ALLOC_KEY = 'tipout_allocated';
     function onEmpHoursChange(tableId) {
       var table = document.getElementById(tableId);
       if (!table) return;
+      if (table.querySelector('.detail-emp-weight-input')) { recalcDetailWeightSection(table.closest('.detail-result-section')); return; }
       var card = table.closest('.detail-card');
       if (!card || card.getAttribute('data-manual-hours') !== '1') return;
 
@@ -1706,6 +1877,9 @@ var ALLOC_KEY = 'tipout_allocated';
       var pools = [];
       document.querySelectorAll('#detailRulesContainer .detail-card[data-rule-id]').forEach(function(card) {
         var ruleId = card.getAttribute('data-rule-id') || '';
+        card.querySelectorAll('.detail-emp-weight-input,.detail-time-weight-input').forEach(function(input) {
+          if (input.getAttribute('data-weight-unrecorded') !== '1') window.TipOutEmployeeWeights.parse(input.value);
+        });
         var rule = (rules || []).find(function(item) { return String(item.id || '') === String(ruleId); }) || {};
         if (card.getAttribute('data-time-window') === '1') {
           if (detailTimeWindowErrors[ruleId]) throw new Error((rule.ruleName || ruleId) + '：' + detailTimeWindowErrors[ruleId]);
@@ -1714,7 +1888,8 @@ var ALLOC_KEY = 'tipout_allocated';
           pools.push({ poolId: String(rule.poolId || rule.id || ruleId), poolName: rule.poolName || rule.name || rule.ruleName || '未命名小费池',
             ruleId: ruleId, ruleName: rule.name || rule.ruleName || '未命名规则', poolKind: rule.poolKind || 'tip',
             poolAmount: result.poolAmount, timeWindow: result,
-            employees: result.employeeAmounts.map(function(entry) { return { employeeId: entry.employeeId, name: entry.name, role: entry.role,
+            employees: result.employeeAmounts.map(function(entry) { var savedWeights=timeSavedWeights(rule,result,entry); return { employeeId: entry.employeeId, name: entry.name, role: entry.role,
+              employeeWeight: savedWeights.length===1 ? savedWeights[0] : undefined, employeeWeightDetails:savedWeights,
               attendanceStatus: entry.amount > 0 ? 'clock' : 'absent', hours: 0, percentage: 0, amount: entry.amount }; }) });
           return;
         }
@@ -1737,6 +1912,8 @@ var ALLOC_KEY = 'tipout_allocated';
             employees.push({
               employeeId: rosterEmployee && String(rosterEmployee.id || rosterEmployee.employeeId || ''),
               name: name,
+              employeeWeight: row.querySelector('.detail-emp-weight-input') && row.querySelector('.detail-emp-weight-input').value !== '' ? window.TipOutEmployeeWeights.parse(row.querySelector('.detail-emp-weight-input').value) : undefined,
+              receiverIndex: Number(section.getAttribute('data-receiver-index')),
               attendanceStatus: row.getAttribute('data-attendance-status') || 'unknown',
               role: rosterEmployee ? String(rosterEmployee.role || role) : role,
               hours: hoursInput ? Number(hoursInput.value || 0) : (row.getAttribute('data-snapshot-name') === name ? Number(row.getAttribute('data-snapshot-hours')) : getDetailEmployeeHours(rule, ruleId, dateKey, name)),
@@ -2047,7 +2224,16 @@ var ALLOC_KEY = 'tipout_allocated';
     ['input', 'change'].forEach(function(type) {
       document.addEventListener(type, function(event) {
         if (!event.target.closest || !event.target.closest('#detailRulesContainer') || !event.target.matches('input,select')) return;
+        if (event.target.matches('.detail-time-weight-input')) { event.target.removeAttribute('data-weight-unrecorded'); if(type === 'change') onDetailTimeWeightInput(event.target); else markDetailDirty(); return; }
         var hoursBased = !!event.target.closest('.detail-card[data-hours-based="1"]');
+        if (event.target.matches('.detail-emp-weight-input')) { onDetailWeightInput(event.target); return; }
+        if (type === 'change' && event.target.matches('select')) {
+          var weight = event.target.closest('tr').querySelector('.detail-emp-weight-input');
+          if (weight) {
+            weight.value = detailWeightDefault(event.target.closest('.detail-result-section'),event.target.value);
+            if (!hoursBased) onDetailWeightInput(weight);
+          }
+        }
         if (hoursBased && type === 'input' && event.target.matches('.detail-emp-hours-input')) event.target.closest('tr').setAttribute('data-hours-manual', '1');
         if (hoursBased && type === 'input' && event.target.matches('.detail-emp-pct-input')) event.target.closest('tr').setAttribute('data-pct-manual', '1');
         if (hoursBased && type === 'change' && event.target.matches('select')) resetDetailEmployeeSelection(event.target);

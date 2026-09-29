@@ -7,6 +7,7 @@ import allocation from "./legacy/tipAllocation.js.txt?raw";
 import attendance from "./legacy/attendanceMock.js.txt?raw";
 import scenarioData from "./legacy/tipout-scenario-data.js.txt?raw";
 import timeWindow from "./legacy/tipout-time-window.js.txt?raw";
+import employeeWeights from "./legacy/tipout-employee-weights.js.txt?raw";
 import scenarioSource from "./legacy/tipout-scenario-source.js.txt?raw";
 import scenarioList from "./legacy/tipout-scenario-list.js.txt?raw";
 import demoRules from "./legacy/tipout-demo-rules.js.txt?raw";
@@ -50,13 +51,14 @@ const dependencies: Record<TipsView, string[]> = {
 };
 
 function runtimeSource(view: TipsView): string {
-  return [scope, ...dependencies[view], scenarioData, scenarioSource, timeWindow, scenarioList, payoutRecordUi, funding,
+  return [scope, ...dependencies[view], scenarioData, scenarioSource, employeeWeights, timeWindow, scenarioList, payoutRecordUi, funding,
     "window.TipOutGlobalScopeFilter=Object.assign(window.TipOutGlobalScopeFilter||{},__scopeAdapter);",
     "var TipOutGlobalScopeFilter=window.TipOutGlobalScopeFilter,ruleData=window.ruleData;",
     "var TipOutSummaryUi=window.TipOutSummaryUi,TipOutPaymentMethodApportion=window.TipOutPaymentMethodApportion;",
     "var TipOutSummaryDateSort=window.TipOutSummaryDateSort;",
     "var TipOutBusinessStatus=window.TipOutBusinessStatus;",
     "var TipOutDatePoolView=window.TipOutDatePoolView;",
+    "var TipOutTimeWindow=window.TipOutTimeWindow,TipOutScenarioSource=window.TipOutScenarioSource;",
     "var TipOutDateState=window.TipOutDateState;",
     "var TipOutAllocationResults=window.TipOutAllocationResults;",
     "var TipOutAttendance=window.TipOutAttendance,TipAllocation=window.TipAllocation;",

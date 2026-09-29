@@ -44,6 +44,7 @@
   }
   root.TipOutDetailManualAllocation = {
     parseHours: parseHours, parsePct: parsePct,
-    ratiosFromHours: ratiosFromHours, amountsFromPcts: amountsFromPcts
+    ratiosFromHours: ratiosFromHours, amountsFromPcts: amountsFromPcts,
+    amountsFromWeights: apportion
   };
 })(window);
