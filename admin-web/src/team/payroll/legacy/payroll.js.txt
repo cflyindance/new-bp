@@ -130,6 +130,12 @@
         body.innerHTML = renderDeclarationHtml(emp);
         body.setAttribute("dir", presentation.primary && /^(ar|fa|he|ur)(-|$)/i.test(presentation.primary.localeCode) ? "rtl" : "auto");
       }
+      const englishWrap = $("#detail-declaration-english");
+      const englishBody = $("#detail-declaration-english-body");
+      if (englishWrap && englishBody) {
+        englishWrap.hidden = !presentation.english;
+        englishBody.textContent = presentation.english ? presentation.english.renderedText : "";
+      }
       const meta = $("#detail-declaration-meta");
       if (meta) meta.textContent = presentation.status === "blocked" ? "声明尚未配置：" + presentation.blockers.join(", ") : `${presentation.primary.localeCode} · ${presentation.primary.versionId}`;
     }).catch((error) => {
@@ -3769,6 +3775,7 @@
       periodReportTitle: formatPayrollPeriodReportTitle(period),
       declarationVersion: (mapping && mapping.declarationVersion) || "",
       declarationText: renderDeclarationText(emp),
+      declarationPresentation: emp.declarationPresentation ? cloneData(emp.declarationPresentation) : null,
       summary: {
         regH: sums.reg,
         paidBreakH: sums.paidBreak,
@@ -4035,6 +4042,13 @@ body{margin:0;padding:24px;background:#fff;}
     syncDetailSignFooter(emp);
     const declBody = $("#detail-declaration-body");
     if (declBody) declBody.innerHTML = renderDeclarationHtml(emp);
+    const initialEnglishWrap = $("#detail-declaration-english");
+    const initialEnglishBody = $("#detail-declaration-english-body");
+    const initialEnglish = emp.declarationPresentation && emp.declarationPresentation.english;
+    if (initialEnglishWrap && initialEnglishBody) {
+      initialEnglishWrap.hidden = !initialEnglish;
+      initialEnglishBody.textContent = initialEnglish ? initialEnglish.renderedText : "";
+    }
     refreshDeclarationPresentation(emp, period, { reg: sums.reg, ot: sums.ot, total: totalHours });
 
     const paidBreakLabel = escapeHtml(T("manage.paidBreak"));
