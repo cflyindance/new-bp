@@ -77,6 +77,7 @@ export function createPayrollDeclarationSettingsController(input: {
   shadowRoot: ShadowRoot;
   pageRoot: HTMLElement;
   context: PayrollPageContext;
+  repository?: PayrollDeclarationRepository;
   repositoryFactory?: (organizationId: string, storeId?: string) => PayrollDeclarationRepository;
 }): PayrollDeclarationSettingsHandle {
   const state: SettingsState = { families: [], versions: [], selectedFamilyId: null, message: "", busy: false };
@@ -101,7 +102,7 @@ export function createPayrollDeclarationSettingsController(input: {
     if (repository) return repository;
     const scope = input.context.getScope();
     const organizationId = scope.brandId || "demo-organization";
-    repository = input.repositoryFactory?.(organizationId, scope.storeId) ?? createPayrollDeclarationRepository({ organizationId, storeId: scope.storeId || undefined, actorId: "payroll-admin", permission: "publish" });
+    repository = input.repository ?? input.repositoryFactory?.(organizationId, scope.storeId) ?? createPayrollDeclarationRepository({ organizationId, storeId: scope.storeId || undefined, actorId: "payroll-admin", permission: "publish" });
     return repository;
   };
 

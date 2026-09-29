@@ -70,6 +70,8 @@
   }
 
   function renderDeclarationText(emp) {
+    const localized = emp && emp.declarationPresentation && emp.declarationPresentation.primary;
+    if (localized && localized.renderedText) return localized.renderedText;
     const tpl = getDeclarationTemplate();
     const { svc, tips } = getDeclarationAmounts(emp);
     return tpl
@@ -79,6 +81,8 @@
 
   /** 声明正文 HTML：gratuity / tips 金额加粗、加大并下划线，便于员工核对 */
   function renderDeclarationHtml(emp) {
+    const localized = emp && emp.declarationPresentation && emp.declarationPresentation.primary;
+    if (localized && localized.renderedText) return escapeHtml(localized.renderedText).replace(/\n/g, "<br>");
     const tpl = getDeclarationTemplate();
     const { svc, tips } = getDeclarationAmounts(emp);
     const SVC_TOKEN = "@@PAYROLL_DECL_SVC@@";
@@ -91,6 +95,48 @@
     return escapeHtml(marked)
       .replace(SVC_TOKEN, amountHtml(svc))
       .replace(TIPS_TOKEN, amountHtml(tips));
+  }
+
+  function buildDeclarationVariables(emp, period, totals) {
+    const amounts = getDeclarationAmounts(emp);
+    return {
+      employee_name: emp && emp.name || "",
+      pay_period_start: period && (period.startDate || period.rangeLabel && period.rangeLabel.split(" - ")[0]) || "",
+      pay_period_end: period && (period.endDate || period.rangeLabel && period.rangeLabel.split(" - ")[1]) || "",
+      regular_hours: fmtMoney(totals && totals.reg),
+      overtime_hours: fmtMoney(totals && totals.ot),
+      total_hours: fmtMoney(totals && totals.total),
+      tips_amount: amounts.tips,
+      gratuity_amount: amounts.svc,
+      store_name: emp && emp.store || "",
+    };
+  }
+
+  function refreshDeclarationPresentation(emp, period, totals) {
+    if (!emp || !period || typeof PayrollDeclarationBridge === "undefined" || !PayrollDeclarationBridge.resolve) return;
+    const preference = emp.declarationPreference || null;
+    const key = JSON.stringify({ periodId: period.id, preference, tips: emp.adjustments && emp.adjustments.tips, svcw: emp.adjustments && emp.adjustments.svcw, totals });
+    if (emp.__declarationPresentationKey === key || emp.__declarationPresentationPending === key) return;
+    emp.__declarationPresentationPending = key;
+    PayrollDeclarationBridge.resolve(emp, period, buildDeclarationVariables(emp, period, totals)).then((presentation) => {
+      if (emp.__declarationPresentationPending !== key) return;
+      emp.__declarationPresentationPending = "";
+      emp.__declarationPresentationKey = key;
+      emp.declarationPresentation = presentation;
+      const current = getEmployee(state.periodId, state.employeeId);
+      if (current !== emp) return;
+      const body = $("#detail-declaration-body");
+      if (body) {
+        body.innerHTML = renderDeclarationHtml(emp);
+        body.setAttribute("dir", presentation.primary && /^(ar|fa|he|ur)(-|$)/i.test(presentation.primary.localeCode) ? "rtl" : "auto");
+      }
+      const meta = $("#detail-declaration-meta");
+      if (meta) meta.textContent = presentation.status === "blocked" ? "声明尚未配置：" + presentation.blockers.join(", ") : `${presentation.primary.localeCode} · ${presentation.primary.versionId}`;
+    }).catch((error) => {
+      emp.__declarationPresentationPending = "";
+      const meta = $("#detail-declaration-meta");
+      if (meta) meta.textContent = error && error.message ? error.message : "声明加载失败";
+    });
   }
 
   function csvEscapeCell(c) {
@@ -3989,6 +4035,7 @@ body{margin:0;padding:24px;background:#fff;}
     syncDetailSignFooter(emp);
     const declBody = $("#detail-declaration-body");
     if (declBody) declBody.innerHTML = renderDeclarationHtml(emp);
+    refreshDeclarationPresentation(emp, period, { reg: sums.reg, ot: sums.ot, total: totalHours });
 
     const paidBreakLabel = escapeHtml(T("manage.paidBreak"));
     $("#detail-hours-grid").innerHTML = `

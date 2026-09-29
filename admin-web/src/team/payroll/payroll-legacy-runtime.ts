@@ -8,10 +8,42 @@ import payrollCode from "./legacy/payroll.js.txt?raw";
 import type { PayrollPageContext } from "./payroll-context";
 import type { PayrollScopeSnapshot } from "./payroll-types";
 import type { PayrollBatchBridge } from "./payroll-batch-export-types";
+import type { PayrollDeclarationRepository } from "./payroll-declaration-api";
+import { resolveEmployeeDeclarationPresentation } from "./payroll-declaration-presentation";
+import type { DeclarationVariables } from "./payroll-declaration-types";
+import type { PayrollEmployee, PayrollPeriod } from "./payroll-types";
 
 export interface PayrollRuntimeHandle {
   getBatchBridge(): PayrollBatchBridge;
   destroy(): void;
+}
+
+function createDeclarationBridge(context: PayrollPageContext, repository: PayrollDeclarationRepository) {
+  return {
+    async resolve(employee: PayrollEmployee, period: PayrollPeriod, variables: DeclarationVariables) {
+      const scope = context.getScope();
+      const [{ families, versions }, snapshot] = await Promise.all([
+        repository.listTemplates(),
+        repository.loadSnapshot(employee.id, period.id),
+      ]);
+      return resolveEmployeeDeclarationPresentation({
+        employeeId: employee.id,
+        periodId: period.id,
+        organizationId: scope.brandId || "demo-organization",
+        storeId: scope.storeId || undefined,
+        families,
+        versions,
+        preference: employee.declarationPreference
+          ? { employeeId: employee.id, ...employee.declarationPreference, updatedBy: "payroll-admin", updatedAt: "" }
+          : null,
+        snapshot,
+        variables,
+      });
+    },
+    confirm: (input: Record<string, unknown>) => repository.confirmDeclaration(input),
+    saveEmployeePreference: (input: Parameters<PayrollDeclarationRepository["saveEmployeePreference"]>[0]) => repository.saveEmployeePreference(input),
+    savePeriodOverride: (input: Parameters<PayrollDeclarationRepository["savePeriodOverride"]>[0]) => repository.savePeriodOverride(input),
+  };
 }
 
 type LegacyGlobal = Record<PropertyKey, unknown>;
@@ -133,6 +165,7 @@ export function mountLegacyPayrollRuntime(
   shadowRoot: ShadowRoot,
   pageRoot: HTMLElement,
   context: PayrollPageContext,
+  declarationRepository: PayrollDeclarationRepository,
 ): PayrollRuntimeHandle {
   const controller = new AbortController();
   const timers = new Set<number>();
@@ -197,6 +230,7 @@ export function mountLegacyPayrollRuntime(
     top: null,
     self: null,
     TipOutGlobalScopeFilter: createScopeAdapter(context, cleanups),
+    PayrollDeclarationBridge: createDeclarationBridge(context, declarationRepository),
     addEventListener: (type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions) =>
       addScopedListener(realWindow, type, listener, options),
     removeEventListener: realWindow.removeEventListener.bind(realWindow),
