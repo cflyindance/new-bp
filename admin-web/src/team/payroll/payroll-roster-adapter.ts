@@ -8,6 +8,11 @@ export interface PayrollRosterEmployee {
   adpFile?: string;
   ssn?: string;
   hireDate?: string;
+  declarationPreference?: {
+    defaultFamilyId: string;
+    defaultLocaleCode: string;
+    defaultPrintMode: "employee-only" | "bilingual-english";
+  };
   [key: string]: unknown;
 }
 

@@ -2022,6 +2022,8 @@
       adpFile: $("#field-adp-file")?.value || "",
       ssn: $("#field-ssn")?.value || "",
       hireDate: $("#field-hire-date")?.value || "",
+      declarationLocale: $("#field-declaration-locale")?.value || "",
+      declarationPrintMode: $("#field-declaration-print-mode")?.value || "employee-only",
     };
   }
 
@@ -2030,9 +2032,13 @@
     const adpInput = $("#field-adp-file");
     const ssnInput = $("#field-ssn");
     const hireDateInput = $("#field-hire-date");
+    const declarationLocaleInput = $("#field-declaration-locale");
+    const declarationPrintModeInput = $("#field-declaration-print-mode");
     if (adpInput) adpInput.value = snapshot.adpFile;
     if (ssnInput) ssnInput.value = snapshot.ssn;
     if (hireDateInput) hireDateInput.value = snapshot.hireDate;
+    if (declarationLocaleInput) declarationLocaleInput.value = snapshot.declarationLocale || "";
+    if (declarationPrintModeInput) declarationPrintModeInput.value = snapshot.declarationPrintMode || "employee-only";
   }
 
   function showEmployeeEditModal(trigger) {
@@ -2162,6 +2168,7 @@
           })
         : [],
       adjustments: mergeAdjustments(emp.adjustments),
+      declarationPreference: emp.declarationPreference || null,
     };
     return JSON.stringify(safe);
   }
@@ -2196,6 +2203,7 @@
       hireDate: resolveEmployeeHireDate(emp),
       segments: cloneData(segments),
       adjustments: mergeAdjustments(emp.adjustments),
+      declarationPreference: emp.declarationPreference ? cloneData(emp.declarationPreference) : null,
     };
   }
 
@@ -2216,6 +2224,7 @@
       hireDate: draft.hireDate,
       segments: draft.segments,
       adjustments: draft.adjustments,
+      declarationPreference: draft.declarationPreference,
     };
   }
 
@@ -2446,6 +2455,7 @@
     emp.adpFile = draft.adpFile;
     emp.ssn = draft.ssn;
     emp.hireDate = draft.hireDate;
+    emp.declarationPreference = draft.declarationPreference ? cloneData(draft.declarationPreference) : null;
     updateUnifiedRosterFromEmployee(emp);
     emp.segments = cloneData(draft.segments);
     emp.adjustments = mergeAdjustments(draft.adjustments);
@@ -3156,13 +3166,31 @@
   }
 
   function resolveDefaultEmployeeId(periodId) {
-    const list = getEmployeesForActiveStore(periodId);
+    let list = getEmployeesForActiveStore(periodId);
+    if ((!Array.isArray(list) || list.length === 0) && repairStaleEmployeeStoreFilter(periodId)) {
+      list = getEmployeesForActiveStore(periodId);
+    }
     if (!Array.isArray(list) || list.length === 0) return null;
     return list[0].id;
   }
 
+  function repairStaleEmployeeStoreFilter(periodId) {
+    const allEmployees = (state.data && state.data.employees && state.data.employees[periodId]) || [];
+    if (!Array.isArray(allEmployees) || allEmployees.length === 0) return false;
+    if (filterEmployeesByStore(allEmployees, state.employeeStoreFilter).length > 0) return false;
+
+    const fallbackEmployee =
+      allEmployees.find((employee) => employee && String(employee.store || "").trim()) ||
+      allEmployees.find((employee) => employee && employee.id);
+    if (!fallbackEmployee) return false;
+
+    state.employeeStoreFilter = String(fallbackEmployee.store || "").trim();
+    return true;
+  }
+
   /** 进入 Manage Payroll 工作区（侧栏入口默认落点） */
   function enterManagePayrollWorkspace() {
+    const initialStoreFilter = state.employeeStoreFilter;
     let periodId = state.periodId;
     if (!periodId || !getPeriod(periodId)) {
       periodId = resolveDefaultPeriodId();
@@ -3170,10 +3198,14 @@
     if (!periodId) return false;
 
     let employeeId = state.employeeId;
-    if (!employeeId || !getEmployee(periodId, employeeId)) {
+    const activeEmployees = getEmployeesForActiveStore(periodId);
+    const employeeMatchesActiveStore = activeEmployees.some((employee) => employee && employee.id === employeeId);
+    if (!employeeId || !getEmployee(periodId, employeeId) || !employeeMatchesActiveStore) {
       employeeId = resolveDefaultEmployeeId(periodId);
     }
     if (!employeeId) return false;
+
+    const bootstrapStoreFilterRepaired = initialStoreFilter !== state.employeeStoreFilter;
 
     state.periodId = periodId;
     state.employeeId = employeeId;
@@ -3184,6 +3216,7 @@
     renderManageForm();
     syncWorkspaceDirtyBaseline();
     showView("workspace");
+    if (bootstrapStoreFilterRepaired) saveState();
     return true;
   }
 
@@ -3775,6 +3808,10 @@ body{margin:0;padding:24px;background:#fff;}
     if (ssnInput) ssnInput.value = resolveEmployeeSsn(editEmp);
     const hireInput = $("#field-hire-date");
     if (hireInput) hireInput.value = mdyToIsoDateInput(resolveEmployeeHireDate(editEmp));
+    const declarationLocaleInput = $("#field-declaration-locale");
+    const declarationPrintModeInput = $("#field-declaration-print-mode");
+    if (declarationLocaleInput) declarationLocaleInput.value = editEmp.declarationPreference?.defaultLocaleCode || "";
+    if (declarationPrintModeInput) declarationPrintModeInput.value = editEmp.declarationPreference?.defaultPrintMode || "employee-only";
 
     editEmp.segments = editEmp.segments.map((seg) => {
       const day = migrateLegacySegmentToDay(seg);
@@ -3825,6 +3862,13 @@ body{margin:0;padding:24px;background:#fff;}
     draft.adpFile = $("#field-adp-file").value.trim();
     draft.ssn = ($("#field-ssn") && $("#field-ssn").value.trim()) || "";
     draft.hireDate = isoDateInputToMdy($("#field-hire-date") && $("#field-hire-date").value);
+    const declarationLocale = ($("#field-declaration-locale") && $("#field-declaration-locale").value) || "";
+    const declarationOption = $("#field-declaration-locale")?.selectedOptions?.[0];
+    draft.declarationPreference = declarationLocale ? {
+      defaultFamilyId: declarationOption?.dataset?.familyId || draft.declarationPreference?.defaultFamilyId || "legacy-english",
+      defaultLocaleCode: declarationLocale,
+      defaultPrintMode: ($("#field-declaration-print-mode") && $("#field-declaration-print-mode").value) || "employee-only",
+    } : null;
 
     const dayIdxList = [
       ...new Set(
