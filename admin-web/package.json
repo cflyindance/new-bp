@@ -47,6 +47,7 @@
     "verify:tipout-employee-reconciliation": "node scripts/verify-tipout-employee-reconciliation.mjs",
     "verify:payroll-batch-export": "npx tsx scripts/verify-payroll-batch-export.ts && node scripts/verify-payroll-batch-export-ui.mjs",
     "verify:payroll-declaration-engine": "npx tsx scripts/verify-payroll-declaration-engine.ts",
+    "verify:payroll-declaration-api": "node scripts/verify-payroll-declaration-api.mjs",
     "verify:pit-database": "node scripts/verify-pit-database.mjs",
     "verify:pit-auth-api": "node scripts/verify-pit-auth-api.mjs",
     "verify:pit-requirements-api": "node scripts/verify-pit-requirements-api.mjs",
