@@ -3955,13 +3955,13 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
               try {
                 if (sr.dataset.employeeWeights) sew = JSON.parse(sr.dataset.employeeWeights);
               } catch (e2) {}
-              if (sroles.length > 0 && spct > 0) subReceivers.push({ roles: sroles, pct: spct, employeeWeights: sew });
+              subReceivers.push({ roles: sroles, pct: spct, employeeWeights: sew });
             });
           }
         }
         var rec = { roles: roles, pct: pct, employeeWeights: employeeWeights };
         if (subReceivers.length) rec.subReceivers = subReceivers;
-        if (roles.length > 0 && pct > 0) receivers.push(rec);
+        receivers.push(rec);
       });
       return receivers;
     }
@@ -4937,6 +4937,10 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
         }
       }
       var data = collectFormData();
+      if (data.allocationMode !== 'order_tip_then_residual') {
+        try { window.TipOutEmployeeWeights.groups(data.receivers); }
+        catch (error) { showNotification(error.message, 'error'); return; }
+      }
       if (data.clockin === 'time_window') {
         if (data.allocationMode !== 'legacy_pool' || data.poolKind !== 'tip') {
           showNotification('仅限小费产生时在岗员工目前仅支持普通小费池规则', 'error');

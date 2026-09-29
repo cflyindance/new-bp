@@ -18,5 +18,33 @@
       .slice(0,cents-result.reduce(function(a,b) { return a+b; },0)).forEach(function(e) { result[e.i]++; });
     return result;
   }
-  root.TipOutEmployeeWeights = { parse:parse, read:read, split:split };
+  // A receiver row owns one budget, even when it contains several roles.
+  function groups(receivers, validate) {
+    var result=[];
+    function visit(rows, multiplier, parent) {
+      if (!Array.isArray(rows) || !rows.length) { if(validate===false) return; throw new Error('请配置接收角色及占比'); }
+      var total=0;
+      rows.forEach(function(row) {
+        if (validate!==false && (!row || !Number.isFinite(Number(row.pct)) || Number(row.pct)<=0 || Number(row.pct)>100)) throw new Error('接收组占比须大于 0 且不超过 100%');
+        total+=Number(row.pct);
+      });
+      if (validate!==false && Math.abs(total-100)>0.000001) throw new Error('接收组占比合计必须为 100%');
+      rows.forEach(function(row) {
+        var value=Object.assign({},row,{pct:multiplier*Number(row.pct),
+          employeeWeights:row.employeeWeights || (parent && parent.employeeWeights) || {},
+          employeeRefs:row.employeeRefs || (parent && parent.employeeRefs) || []});
+        if ((row.subReceivers||[]).length) { visit(row.subReceivers,value.pct/100,value); return; }
+        if (!Array.isArray(row.roles) || !row.roles.length || row.roles.some(function(role){return typeof role!=='string'||!role.trim();})) throw new Error('请选择接收组角色');
+        value.roles=Array.from(new Set(row.roles));
+        result.push(value);
+      });
+    }
+    visit(receivers,1,null);
+    return result;
+  }
+  function eligible(rule, present, included) {
+    return !!present || included===true || rule.clockin==='noclock' ||
+      (rule.clockin==='unrestricted' && rule.distribution!=='average');
+  }
+  root.TipOutEmployeeWeights = { parse:parse, read:read, split:split, groups:groups, eligible:eligible };
 })(typeof window !== 'undefined' ? window : this);

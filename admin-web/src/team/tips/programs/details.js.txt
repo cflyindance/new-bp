@@ -41,6 +41,17 @@ var ALLOC_KEY = 'tipout_allocated';
         });
       });
     }
+    function detailReceiverBudget(section) {
+      var card=section.closest('.detail-card');
+      var groups=Array.from(card.querySelectorAll('.detail-result-section[data-role]'));
+      if (card.getAttribute('data-order-tip-mode')==='1') return Math.round(detailNumberFromText(section.querySelector('.role-amount').textContent)*100);
+      var pcts=groups.map(function(group){var field=group.querySelector('.detail-role-pct-input');return field ? window.TipOutEmployeeWeights.parse(field.value) : 0;});
+      var totalPct=pcts.reduce(function(sum,pct){return sum+pct;},0);
+      var cents=Math.round(Number(card.getAttribute('data-pool'))*totalPct);
+      var budgets=window.TipOutEmployeeWeights.split(cents,pcts);
+      groups.forEach(function(group,index){var label=group.querySelector('.role-amount');if(label)label.textContent=money(budgets[index]/100);});
+      return budgets[groups.indexOf(section)] || 0;
+    }
     function recalcDetailWeightSection(section) {
       var card = section.closest('.detail-card'), rule = detailWeightRule(card);
       var date = document.getElementById('detailDate').value;
@@ -57,7 +68,7 @@ var ALLOC_KEY = 'tipout_allocated';
         var hours = row.querySelector('.detail-emp-hours-input');
         if (rule.distribution === 'hours') return (hours ? window.TipOutDetailManualAllocation.parseHours(hours.value) : 0) * multiplier;
         var present = window.TipOutAttendanceLabel.inspect(name,date).status !== 'absent';
-        if (!present && rule.clockin !== 'unrestricted' && rule.clockin !== 'noclock' && row.getAttribute('data-manual-participant') !== '1') return 0;
+        if (!window.TipOutEmployeeWeights.eligible(rule,present,row.getAttribute('data-manual-participant')==='1')) return 0;
         if (rule.distribution === 'orders') {
           var fact = window.TipOutScenarioSource ? window.TipOutScenarioSource.employee(name,date,{storeId:rule.store}) : null;
           return (fact ? fact.orders.length : 0) * multiplier;
@@ -69,10 +80,10 @@ var ALLOC_KEY = 'tipout_allocated';
         var pct = row.querySelector('.detail-emp-pct-input') || row.querySelector('td:nth-last-child(3) input');
         if (pct) { pct.value = ratios[i]/100; pct.classList.add('detail-emp-pct-input'); }
         row.removeAttribute('data-pct-manual');
+        row.setAttribute('data-computed-base',bases[i]);
       });
-      var roleInput = section.querySelector('.detail-role-pct-input');
-      var cents = roleInput ? Math.round(Number(card.getAttribute('data-pool'))*Number(roleInput.value)) : Math.round(detailNumberFromText(section.querySelector('.role-amount').textContent)*100);
-      var amounts = window.TipOutEmployeeWeights.split(cents,ratios);
+      var cents = detailReceiverBudget(section);
+      var amounts = window.TipOutEmployeeWeights.split(cents,bases);
       rows.forEach(function(row,i) { var cells=row.querySelectorAll('td'); cells[cells.length-2].textContent=money(amounts[i]/100); });
     }
     function onDetailWeightInput(input) {
@@ -348,14 +359,13 @@ var ALLOC_KEY = 'tipout_allocated';
     var detailTimeWindowErrors = {};
     function timeWeightReceivers(rule) {
       var out=[];
-      (rule.receivers || []).forEach(function(receiver) {
-        (receiver.subReceivers && receiver.subReceivers.length ? receiver.subReceivers : [receiver]).forEach(function(target) { out.push(target); });
-      });
+      function visit(rows) { (rows||[]).forEach(function(receiver){if((receiver.subReceivers||[]).length)visit(receiver.subReceivers);else out.push(receiver);}); }
+      visit(rule.receivers);
       return out;
     }
     function buildTimeWeightInputs(rule,result) {
       var people=getRoleEmployeesForStore(rule.store), rows=[];
-      timeWeightReceivers(rule).forEach(function(receiver,index) {
+      window.TipOutEmployeeWeights.groups(rule.receivers,false).forEach(function(receiver,index) {
         (receiver.roles || []).forEach(function(role) { (people[role] || []).forEach(function(name) {
           var saved=result.weightOverrides && result.weightOverrides[index];
           var weight=window.TipOutEmployeeWeights.read(saved ? {employeeWeights:saved} : receiver,role,name);
@@ -366,7 +376,7 @@ var ALLOC_KEY = 'tipout_allocated';
     }
     function timeSavedWeights(rule,result,entry) {
       var weights=[];
-      if(result.weightSchemaVersion===1) timeWeightReceivers(rule).forEach(function(receiver,index) {
+      if(result.weightSchemaVersion===1) window.TipOutEmployeeWeights.groups(rule.receivers,false).forEach(function(receiver,index) {
         if((receiver.roles || []).indexOf(entry.role)<0) return;
         var saved=result.weightOverrides && result.weightOverrides[index];
         var value=window.TipOutEmployeeWeights.read(saved ? {employeeWeights:saved} : receiver,entry.role,entry.name);
@@ -381,7 +391,7 @@ var ALLOC_KEY = 'tipout_allocated';
         var copy=JSON.parse(JSON.stringify(rule)), targets=timeWeightReceivers(copy), overrides={};
         card.querySelectorAll('.detail-time-weight-input').forEach(function(field) {
           var index=field.getAttribute('data-receiver'),role=field.getAttribute('data-role'),name=field.getAttribute('data-name');
-          if(field.getAttribute('data-weight-unrecorded')==='1') { field.value=window.TipOutEmployeeWeights.read(targets[index],role,name); field.removeAttribute('data-weight-unrecorded'); }
+          if(field.getAttribute('data-weight-unrecorded')==='1') { field.value=window.TipOutEmployeeWeights.read(window.TipOutEmployeeWeights.groups(rule.receivers,false)[index],role,name); field.removeAttribute('data-weight-unrecorded'); }
           if (!overrides[index]) overrides[index]={};
           if (!overrides[index][role]) overrides[index][role]={};
           overrides[index][role][name]=window.TipOutEmployeeWeights.parse(field.value);
@@ -1500,11 +1510,7 @@ var ALLOC_KEY = 'tipout_allocated';
     function buildRoleConfigFromRule(rule) {
       var config = [];
       var roleEmployees = getRoleEmployeesForStore(rule && rule.store);
-      var receiverRows=[];
-      (rule.receivers || []).forEach(function(r) {
-        if(r.subReceivers && r.subReceivers.length) r.subReceivers.forEach(function(s){receiverRows.push(Object.assign({},s,{pct:Number(r.pct)*Number(s.pct)/100}));});
-        else receiverRows.push(r);
-      });
+      var receiverRows=window.TipOutEmployeeWeights.groups(rule.receivers,false);
       receiverRows.forEach(function(r) {
         var roles = r.roles || [];
         var roleLabel = roles.join(' / ');
@@ -1573,12 +1579,8 @@ var ALLOC_KEY = 'tipout_allocated';
 
     function recalcDetailHoursCard(card) {
       var helper = window.TipOutDetailManualAllocation;
-      var poolCents = Math.round((Number(card.getAttribute('data-pool')) || 0) * 100);
       card.querySelectorAll('.detail-result-section[data-role]').forEach(function(section) {
-        var rolePctInput = section.querySelector('.detail-role-pct-input');
-        var roleCents = rolePctInput
-          ? Math.round(poolCents * (parseFloat(rolePctInput.value) || 0) / 100)
-          : Math.round(detailNumberFromText((section.querySelector('.role-amount') || {}).textContent || '0') * 100);
+        var roleCents = detailReceiverBudget(section);
         var amountLabel = section.querySelector('.role-amount');
         if (amountLabel) amountLabel.textContent = money(roleCents / 100);
         var rows = Array.from(section.querySelectorAll('tbody tr'));
@@ -1586,7 +1588,8 @@ var ALLOC_KEY = 'tipout_allocated';
           var input = row.querySelector('.detail-emp-pct-input');
           return input ? helper.parsePct(input.value) : 0;
         });
-        var result = helper.amountsFromPcts(roleCents, pcts);
+        var automatic=rows.every(function(row){return row.hasAttribute('data-computed-base') && row.getAttribute('data-pct-manual')!=='1';});
+        var result = automatic ? {cents:window.TipOutEmployeeWeights.split(roleCents,rows.map(function(row){return Number(row.getAttribute('data-computed-base'));}))} : helper.amountsFromPcts(roleCents, pcts);
         rows.forEach(function(row, index) {
           var cells = row.querySelectorAll('td');
           if (cells.length > 1) cells[cells.length - 2].textContent = money(result.cents[index] / 100);
@@ -1596,12 +1599,9 @@ var ALLOC_KEY = 'tipout_allocated';
 
     function recalcDetailLegacyCard(card) {
       if (!card || card.getAttribute('data-order-tip-mode') === '1') return;
-      var pool = parseFloat(card.getAttribute('data-pool')) || 0;
       card.querySelectorAll('.detail-result-section[data-role]').forEach(function(section) {
-        var pctInp = section.querySelector('.detail-role-pct-input');
         var amtEl = section.querySelector('.role-amount');
-        var pct = pctInp ? (parseFloat(pctInp.value) || 0) : 0;
-        var roleAmt = +(pool * pct / 100).toFixed(2);
+        var roleAmt = detailReceiverBudget(section)/100;
         if (amtEl) amtEl.textContent = money(roleAmt);
         var table = section.querySelector('table.detail-employee-table');
         if (!table) return;
@@ -1610,7 +1610,8 @@ var ALLOC_KEY = 'tipout_allocated';
           var ic = tr.querySelector('.detail-emp-pct-input');
           return ic ? Math.max(0, parseFloat(ic.value) || 0) : 0;
         });
-        var amounts = window.TipOutDetailManualAllocation.amountsFromWeights(Math.round(roleAmt * 100), weights);
+        var automatic=rows.every(function(row){return row.hasAttribute('data-computed-base') && row.getAttribute('data-pct-manual')!=='1';});
+        var amounts = automatic ? window.TipOutEmployeeWeights.split(Math.round(roleAmt*100),rows.map(function(row){return Number(row.getAttribute('data-computed-base'));})) : window.TipOutDetailManualAllocation.amountsFromWeights(Math.round(roleAmt * 100), weights);
         rows.forEach(function(tr, index) {
           var empInp = tr.querySelector('.detail-emp-pct-input');
           var pctCell = empInp ? empInp.closest('td') : null;
@@ -1881,6 +1882,14 @@ var ALLOC_KEY = 'tipout_allocated';
           if (input.getAttribute('data-weight-unrecorded') !== '1') window.TipOutEmployeeWeights.parse(input.value);
         });
         var rule = (rules || []).find(function(item) { return String(item.id || '') === String(ruleId); }) || {};
+        if (rule.allocationMode !== 'order_tip_then_residual') {
+          window.TipOutEmployeeWeights.groups(rule.receivers);
+          var receiverSections=Array.from(card.querySelectorAll('.detail-result-section[data-role]'));
+          if (receiverSections.length) window.TipOutEmployeeWeights.groups(receiverSections.map(function(section){
+            var pct=section.querySelector('.detail-role-pct-input');
+            return {roles:[section.getAttribute('data-role')],pct:pct ? Number(pct.value) : 0};
+          }));
+        }
         if (card.getAttribute('data-time-window') === '1') {
           if (detailTimeWindowErrors[ruleId]) throw new Error((rule.ruleName || ruleId) + '：' + detailTimeWindowErrors[ruleId]);
           var result = detailTimeWindowResults[ruleId];
@@ -1914,6 +1923,8 @@ var ALLOC_KEY = 'tipout_allocated';
               name: name,
               employeeWeight: row.querySelector('.detail-emp-weight-input') && row.querySelector('.detail-emp-weight-input').value !== '' ? window.TipOutEmployeeWeights.parse(row.querySelector('.detail-emp-weight-input').value) : undefined,
               receiverIndex: Number(section.getAttribute('data-receiver-index')),
+              allocationBase: row.hasAttribute('data-computed-base') && row.getAttribute('data-pct-manual')!=='1' ? Number(row.getAttribute('data-computed-base')) : undefined,
+              percentageSource: row.getAttribute('data-pct-manual')==='1' ? 'manual' : 'automatic',
               attendanceStatus: row.getAttribute('data-attendance-status') || 'unknown',
               role: rosterEmployee ? String(rosterEmployee.role || role) : role,
               hours: hoursInput ? Number(hoursInput.value || 0) : (row.getAttribute('data-snapshot-name') === name ? Number(row.getAttribute('data-snapshot-hours')) : getDetailEmployeeHours(rule, ruleId, dateKey, name)),
