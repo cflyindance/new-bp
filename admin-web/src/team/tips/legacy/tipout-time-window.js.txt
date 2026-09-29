@@ -162,6 +162,10 @@
         }
         return 1;
       });
+      var employeeWeights = active.map(function(f) {
+        return root.TipOutEmployeeWeights ? root.TipOutEmployeeWeights.read(options, f.role, f.name) : 1;
+      });
+      weights = weights.map(function(base,index) { return base * employeeWeights[index]; });
       var pieces = split(amount, weights);
       var assigned = pieces.reduce(function(a, b) { return a + b; }, 0);
       unallocated += amount - assigned;
@@ -170,7 +174,7 @@
         amount: amount / 100, status: assigned ? 'allocated' : 'unallocated',
         participants: active.map(function(f, index) {
           totals[f.employeeId] = (totals[f.employeeId] || 0) + pieces[index];
-          return { employeeId: f.employeeId, name: f.name, role: f.role, weight: weights[index], amount: pieces[index] / 100,
+          return { employeeId: f.employeeId, name: f.name, role: f.role, employeeWeight: employeeWeights[index], weight: weights[index], amount: pieces[index] / 100,
             punchIntervals: punches[f.employeeId].filter(function(p) { return p.start <= at && at < p.end; }).map(function(p) { return { clockInAt: p.clockInAt, clockOutAt: p.clockOutAt }; }) };
         }) });
     });
@@ -202,7 +206,7 @@
       targets.forEach(function(target) {
         (target.roles || []).forEach(function(role) {
           rows.push({ role: role, pct: Number(receiver.pct || 0) * (target === receiver ? 1 : Number(target.pct || 0) / 100) / (target.roles || []).length,
-            employeeRefs: target.employeeRefs || receiver.employeeRefs || [] });
+            employeeWeights: target.employeeWeights || receiver.employeeWeights || {}, employeeRefs: target.employeeRefs || receiver.employeeRefs || [] });
         });
       });
     });
@@ -222,7 +226,7 @@
       var participants = [], missed = 0;
       rows.forEach(function(row, index) {
         var subset = distributionFacts.filter(function(f) { return f.role === row.role && (!row.employeeRefs.length || row.employeeRefs.some(function(ref) { return String(ref.employeeId) === String(f.employeeId); })); });
-        var piece = allocate([Object.assign({}, timedEvent, { amount: shares[index] / 100, id: event.id + ':' + index })], subset, { distribution: rule.distribution });
+        var piece = allocate([Object.assign({}, timedEvent, { amount: shares[index] / 100, id: event.id + ':' + index })], subset, { distribution: rule.distribution, employeeWeights:row.employeeWeights });
         missed += cents(piece.unallocated);
         piece.lines[0].participants.forEach(function(person) {
           participants.push(person);
@@ -236,7 +240,7 @@
         amount: event.amount, unallocated: missed / 100,
         status: missed === cents(event.amount) ? 'unallocated' : missed ? 'partial' : 'allocated', participants: participants });
     });
-    return { version: 1, dateKey: dateKey, distribution: rule.distribution, lines: lines,
+    return { version: 1, weightSchemaVersion: 1, dateKey: dateKey, distribution: rule.distribution, lines: lines,
       poolAmount: events.reduce(function(sum, event) { return sum + cents(event.amount); }, 0) / 100,
       unallocated: unallocated / 100, employeeAmounts: facts.map(function(f) { return { employeeId: f.employeeId, name: f.name, role: f.role, amount: (totals[f.employeeId] || 0) / 100 }; }) };
   }

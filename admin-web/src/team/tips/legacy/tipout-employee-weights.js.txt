@@ -1,0 +1,22 @@
+(function(root) {
+  'use strict';
+  function parse(value) {
+    if (value === '' || value == null || !Number.isFinite(Number(value)) || Number(value) < 0 || Number(value) > 1000000) throw new Error('员工权重须为 0 至 1000000 的有效数字');
+    return Number(value);
+  }
+  function read(receiver, role, name) {
+    var map = receiver && receiver.employeeWeights && receiver.employeeWeights[role];
+    return map && Object.prototype.hasOwnProperty.call(map, name) ? parse(map[name]) : 1;
+  }
+  function split(cents, bases) {
+    bases.forEach(function(value) { if(!Number.isFinite(value) || value<0) throw new Error('分配基数无效'); });
+    var sum = bases.reduce(function(a,b) { return a+b; },0);
+    if (!Number.isSafeInteger(cents) || cents < 0 || !Number.isFinite(sum)) throw new Error('分配金额或权重无效');
+    if (!sum) return bases.map(function() { return 0; });
+    var raw = bases.map(function(w) { return cents * (w / sum); }), result = raw.map(Math.floor);
+    raw.map(function(v,i) { return {i:i,r:v-result[i]}; }).sort(function(a,b) { return b.r-a.r || a.i-b.i; })
+      .slice(0,cents-result.reduce(function(a,b) { return a+b; },0)).forEach(function(e) { result[e.i]++; });
+    return result;
+  }
+  root.TipOutEmployeeWeights = { parse:parse, read:read, split:split };
+})(typeof window !== 'undefined' ? window : this);
