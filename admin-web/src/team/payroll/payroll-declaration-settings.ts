@@ -15,6 +15,7 @@ interface SettingsState {
   selectedFamilyId: string | null;
   message: string;
   busy: boolean;
+  editorOpen: boolean;
 }
 
 function escapeHtml(value: unknown): string {
@@ -51,9 +52,12 @@ function renderSettings(surface: HTMLElement, state: SettingsState): void {
       <div><strong>企业声明模板库</strong><p>维护员工确认时使用的已审核语言版本</p></div>
       <button type="button" class="btn btn-primary" data-declaration-new>新增语言模板</button>
     </div>
-    <div class="payroll-declaration-settings-layout">
+    <div class="payroll-declaration-settings-layout payroll-declaration-library">
       <aside aria-label="声明模板列表"><div class="payroll-declaration-template-list">${rows || '<p class="payroll-declaration-empty">暂无模板</p>'}</div></aside>
-      <main class="payroll-declaration-editor">
+    </div>
+    ${state.editorOpen ? `<div class="payroll-declaration-dialog-overlay">
+      <section class="payroll-declaration-editor payroll-declaration-dialog" role="dialog" aria-modal="true" aria-labelledby="declaration-dialog-title">
+        <header class="payroll-declaration-dialog-header"><h3 id="declaration-dialog-title">${selected ? "语言模板" : "新增语言模板"}</h3><button type="button" class="btn" data-declaration-editor-close>关闭</button></header>
         <div class="payroll-declaration-editor-grid">
           <label>语言名称<input data-declaration-language value="${escapeHtml(selected?.languageDisplayName ?? "")}" ${state.busy ? "disabled" : ""}></label>
           <label>语言代码<input data-declaration-locale value="${escapeHtml(selected?.localeCode ?? "")}" placeholder="例如 es-US" ${selected ? "disabled" : ""}></label>
@@ -62,15 +66,26 @@ function renderSettings(surface: HTMLElement, state: SettingsState): void {
         </div>
         <label class="payroll-declaration-source-label">声明正文<textarea data-declaration-source rows="10" ${selectedVersion?.status === "published" || state.busy ? "disabled" : ""}>${escapeHtml(selectedVersion?.source ?? "")}</textarea></label>
         <div class="payroll-declaration-variables" aria-label="可用变量">
-          ${["employee_name","pay_period_start","pay_period_end","regular_hours","overtime_hours","total_hours","tips_amount","gratuity_amount","store_name","confirmation_date"].map((name) => `<button type="button" data-declaration-variable="${name}" ${selectedVersion?.status === "published" ? "disabled" : ""}>{{${name}}}</button>`).join("")}
+          ${[
+            ["employee_name", "员工姓名"],
+            ["pay_period_start", "薪资周期开始日期"],
+            ["pay_period_end", "薪资周期结束日期"],
+            ["regular_hours", "正常工时"],
+            ["overtime_hours", "加班工时"],
+            ["total_hours", "总工时"],
+            ["tips_amount", "小费金额（Tips）"],
+            ["gratuity_amount", "服务费金额（Gratuity）"],
+            ["store_name", "门店名称"],
+            ["confirmation_date", "员工确认日期"],
+          ].map(([name, label]) => `<button type="button" data-declaration-variable="${name}" title="点击插入：${label}" ${selectedVersion?.status === "published" ? "disabled" : ""}><span>${label}</span> <code>{{${name}}}</code></button>`).join("")}
         </div>
         <section class="payroll-declaration-preview"><h3>打印预览</h3><p dir="auto">${escapeHtml(selectedVersion?.source || "输入声明正文后在此预览")}</p></section>
         <div class="payroll-declaration-editor-actions">
           ${selectedVersion?.status === "published" ? '<button type="button" class="btn" data-declaration-new-version>创建新版本</button><button type="button" class="btn" data-declaration-retire>停用</button>' : '<button type="button" class="btn" data-declaration-save>保存草稿</button><button type="button" class="btn btn-primary" data-declaration-publish>审核并发布</button>'}
         </div>
         <p class="payroll-declaration-settings-message" aria-live="polite">${escapeHtml(state.message)}</p>
-      </main>
-    </div>`;
+      </section>
+    </div>` : `<p class="payroll-declaration-settings-message" aria-live="polite">${escapeHtml(state.message)}</p>`}`;
 }
 
 export function createPayrollDeclarationSettingsController(input: {
@@ -80,7 +95,7 @@ export function createPayrollDeclarationSettingsController(input: {
   repository?: PayrollDeclarationRepository;
   repositoryFactory?: (organizationId: string, storeId?: string) => PayrollDeclarationRepository;
 }): PayrollDeclarationSettingsHandle {
-  const state: SettingsState = { families: [], versions: [], selectedFamilyId: null, message: "", busy: false };
+  const state: SettingsState = { families: [], versions: [], selectedFamilyId: null, message: "", busy: false, editorOpen: false };
   const surface = document.createElement("section");
   surface.className = "payroll-declaration-settings-screen";
   surface.dataset.payrollDeclarationSettings = "";
@@ -112,12 +127,13 @@ export function createPayrollDeclarationSettingsController(input: {
     try {
       const result = await getRepository().listTemplates();
       state.families = result.families; state.versions = result.versions;
-      if (!state.selectedFamilyId || !state.families.some((item) => item.familyId === state.selectedFamilyId)) state.selectedFamilyId = state.families[0]?.familyId ?? null;
+      if (state.selectedFamilyId && !state.families.some((item) => item.familyId === state.selectedFamilyId)) state.selectedFamilyId = null;
       state.message = "";
     } catch (error) { state.message = error instanceof Error ? error.message : "模板加载失败"; }
     finally { state.busy = false; paint(); }
   };
   const open = async () => {
+    state.editorOpen = false; state.selectedFamilyId = null;
     returnFocus = input.shadowRoot.activeElement instanceof HTMLElement ? input.shadowRoot.activeElement : openButton;
     input.pageRoot.classList.add("payroll-declaration-settings-open"); surface.hidden = false; openButton.setAttribute("aria-expanded", "true");
     await refresh(); surface.querySelector<HTMLElement>("[data-declaration-close]")?.focus();
@@ -130,11 +146,11 @@ export function createPayrollDeclarationSettingsController(input: {
     const source = surface.querySelector<HTMLTextAreaElement>("[data-declaration-source]")?.value.trim() ?? "";
     const languageDisplayName = surface.querySelector<HTMLInputElement>("[data-declaration-language]")?.value.trim() ?? "";
     const localeCode = surface.querySelector<HTMLInputElement>("[data-declaration-locale]")?.value.trim() ?? "";
+    const storeScope = surface.querySelector<HTMLSelectElement>("[data-declaration-scope]")?.value === "store";
     let family = selected();
     state.busy = true; paint();
     try {
       if (!family) {
-        const storeScope = surface.querySelector<HTMLSelectElement>("[data-declaration-scope]")?.value === "store";
         family = await getRepository().createFamily({ localeCode, languageDisplayName, ...(storeScope ? { storeId: input.context.getScope().storeId } : {}) });
         state.selectedFamilyId = family.familyId;
       }
@@ -165,10 +181,12 @@ export function createPayrollDeclarationSettingsController(input: {
   const onClick = (event: Event) => {
     const target = event.target instanceof Element ? event.target : null;
     if (!target) return;
+    if (state.busy) return;
+    if (target.closest("[data-declaration-editor-close]")) { closeEditor(); return; }
     if (target.closest("[data-declaration-close]")) { close(); return; }
-    if (target.closest("[data-declaration-new]")) { state.selectedFamilyId = null; state.message = ""; paint(); return; }
+    if (target.closest("[data-declaration-new]")) { state.selectedFamilyId = null; state.editorOpen = true; state.message = ""; paint(); surface.querySelector<HTMLElement>("[data-declaration-language]")?.focus(); return; }
     const familyButton = target.closest<HTMLElement>("[data-declaration-family]");
-    if (familyButton) { state.selectedFamilyId = familyButton.dataset.declarationFamily ?? null; state.message = ""; paint(); return; }
+    if (familyButton) { state.selectedFamilyId = familyButton.dataset.declarationFamily ?? null; state.editorOpen = true; state.message = ""; paint(); surface.querySelector<HTMLElement>("[data-declaration-editor-close]")?.focus(); return; }
     const variableButton = target.closest<HTMLElement>("[data-declaration-variable]");
     if (variableButton) {
       const editor = surface.querySelector<HTMLTextAreaElement>("[data-declaration-source]");
@@ -185,8 +203,22 @@ export function createPayrollDeclarationSettingsController(input: {
       return;
     }
   };
+  const closeEditor = () => {
+    state.editorOpen = false; state.selectedFamilyId = null; state.message = ""; paint();
+    surface.querySelector<HTMLElement>("[data-declaration-new]")?.focus();
+  };
+  const onKeyDown = (event: KeyboardEvent) => {
+    if (!state.editorOpen) return;
+    if (event.key === "Escape" && !state.busy) { event.preventDefault(); event.stopPropagation(); closeEditor(); return; }
+    if (event.key !== "Tab") return;
+    const controls = Array.from(surface.querySelectorAll<HTMLElement>('[role="dialog"] button:not(:disabled), [role="dialog"] input:not(:disabled), [role="dialog"] select:not(:disabled), [role="dialog"] textarea:not(:disabled)'));
+    const first = controls[0], last = controls[controls.length - 1];
+    if (event.shiftKey && input.shadowRoot.activeElement === first) { event.preventDefault(); last?.focus(); }
+    else if (!event.shiftKey && input.shadowRoot.activeElement === last) { event.preventDefault(); first?.focus(); }
+  };
   openButton.addEventListener("click", () => { void open(); });
   surface.addEventListener("click", onClick);
+  surface.addEventListener("keydown", onKeyDown);
 
-  return { open, close, refresh, destroy() { destroyed = true; surface.removeEventListener("click", onClick); surface.remove(); openButton.remove(); } };
+  return { open, close, refresh, destroy() { destroyed = true; surface.removeEventListener("click", onClick); surface.removeEventListener("keydown", onKeyDown); surface.remove(); openButton.remove(); } };
 }

@@ -6301,6 +6301,12 @@ select.form-control {
   }
 }
 /* Payroll declaration template manager */
+.payroll-declaration-library{grid-template-columns:1fr!important}
+.payroll-declaration-dialog-overlay{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(15,23,42,.4);overscroll-behavior:contain}
+.payroll-declaration-dialog{width:min(100%,1000px);max-height:calc(100dvh - 48px);overflow:auto;overscroll-behavior:contain;box-shadow:0 20px 60px rgba(15,23,42,.2)}
+.payroll-declaration-dialog-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;gap:16px}
+.payroll-declaration-dialog-header h3{margin:0;font-size:20px}
+.payroll-declaration-settings-screen:has(.payroll-declaration-dialog-overlay){overflow:hidden}
 .team-payroll-page{position:relative}
 .payroll-declaration-settings-screen{position:absolute;inset:0;z-index:120;background:#f6f8fb;color:#172033;overflow:auto;padding:0 28px 32px}
 .payroll-declaration-settings-open>.content-area,.payroll-declaration-settings-open>.modal-overlay{visibility:hidden;pointer-events:none}
