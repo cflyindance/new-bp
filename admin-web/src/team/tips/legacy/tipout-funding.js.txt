@@ -302,5 +302,38 @@
     snapshot.summary={originalTips:facts.reduce(function(n,f){return n+cents(f.originalTips);},0)/100,poolAmount:snapshot.pools.reduce(function(n,p){return n+cents(p.poolAmount);},0)/100,allocatedAmount:Object.values(received).reduce(function(a,b){return a+b;},0)/100,unallocatedAmount:snapshot.pools.reduce(function(n,p){return n+cents(p.funding.unallocated);},0)/100,poolCount:snapshot.pools.length};
     validateSnapshot(snapshot);return snapshot;
   }
-  root.TipOutFunding={calculate:calculate,validateRule:validateRule,validateSnapshot:validateSnapshot,split:split,supportsExisting:supportsExisting,reconcileExisting:reconcileExisting,sourceBase:sourceBase};
+  // Read-only contribution projection. Never commits allocation or payout state.
+  function previewContributions(rules,facts,dateKey) {
+    if(!rules.length)return facts.map(function(f){return {employeeId:f.employeeId,amount:0};});
+    if(rules.every(function(r){return !!r.funding;})) {
+      var calculated=calculate(rules,facts,dateKey);
+      if(calculated.errors.length)throw new Error(calculated.errors.join('；'));
+      return calculated.employeeContributions;
+    }
+    if(!supportsExisting(rules))throw new Error('当前规则暂不支持贡献试算，请查看分配明细');
+    var remaining={}, totals={};
+    facts.forEach(function(f){if(Object.prototype.hasOwnProperty.call(remaining,f.employeeId))throw new Error('员工来源数据重复');remaining[f.employeeId]=cents(f.originalTips);totals[f.employeeId]=0;});
+    rules.forEach(function(rule){
+      if((rule.allocationMode||'legacy_pool')!=='legacy_pool')throw new Error((rule.ruleName||'规则')+'：计提模式请在分配明细中试算');
+      var target;
+      if(rule.clockin==='time_window') {
+        if(!root.TipOutTimeWindow)throw new Error('时段数据尚未就绪');
+        target=root.TipOutTimeWindow.ruleEvents(rule,facts,dateKey).reduce(function(sum,e){return sum+cents(e.amount);},0);
+      } else target=(rule.poolRules||[]).reduce(function(sum,p){
+        var rate=Number(p.pct);
+        if(!Number.isFinite(rate)||rate<0||rate>100)throw new Error('小费池计算比例无效');
+        return sum+cents(round(sourceBase(p,facts,dateKey)*rate/100));
+      },0);
+      var groups=existingGroups(rule,facts), shares=groups.length===1?[target]:split(target,groups.map(function(g){return g.weight;})), actual=0;
+      groups.forEach(function(group,index){
+        var capacities=group.members.map(function(f){return remaining[f.employeeId];});
+        var available=capacities.reduce(function(a,b){return a+b;},0);
+        var pieces=split(Math.min(shares[index],available),capacities);
+        group.members.forEach(function(f,i){remaining[f.employeeId]-=pieces[i];totals[f.employeeId]+=pieces[i];actual+=pieces[i];});
+      });
+      if(actual<target)throw new Error((rule.ruleName||'规则')+'：入池缺口 $'+((target-actual)/100).toFixed(2));
+    });
+    return facts.map(function(f){return {employeeId:f.employeeId,amount:totals[f.employeeId]/100};});
+  }
+  root.TipOutFunding={previewContributions:previewContributions,calculate:calculate,validateRule:validateRule,validateSnapshot:validateSnapshot,split:split,supportsExisting:supportsExisting,reconcileExisting:reconcileExisting,sourceBase:sourceBase};
 })(window);
