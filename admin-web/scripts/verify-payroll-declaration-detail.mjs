@@ -10,6 +10,8 @@ assert.match(runtime, /resolveEmployeeDeclarationPresentation/);
 assert.match(legacy, /refreshDeclarationPresentation/);
 assert.match(legacy, /declarationPresentation\.primary/);
 assert.match(legacy, /setAttribute\("dir"/);
+assert.match(legacy, /PayrollDeclarationBridge\.confirm/);
+assert.match(legacy, /saveEmployeePreference/);
 assert.match(template, /detail-declaration-meta/);
 
 console.log("Payroll declaration detail verification passed.");

@@ -4107,10 +4107,7 @@ body{margin:0;padding:24px;background:#fff;}
     saveState();
   }
 
-  function applyConfirmEmployeeSave(changeCount) {
-    const emp = getEmployee(state.periodId, state.employeeId);
-    if (!emp) return;
-    commitDraftToEmployee();
+  function finalizeConfirmEmployeeSave(emp, changeCount) {
     emp.confirmed = true;
     emp.confirmedAt = new Date().toISOString();
     state.workspaceConfirmedInSession = true;
@@ -4120,11 +4117,49 @@ body{margin:0;padding:24px;background:#fff;}
     saveState();
     renderManageForm();
     renderManagePeriodNav();
-    if (typeof showNotification === "function") {
-      showNotification(T("confirm.success"), "success");
-    } else {
-      alert(T("confirm.success"));
+    if (typeof showNotification === "function") showNotification(T("confirm.success"), "success");
+    else alert(T("confirm.success"));
+  }
+
+  function applyConfirmEmployeeSave(changeCount) {
+    const emp = getEmployee(state.periodId, state.employeeId);
+    if (!emp) return;
+    commitDraftToEmployee();
+    if (!emp.declarationPreference || typeof PayrollDeclarationBridge === "undefined") {
+      finalizeConfirmEmployeeSave(emp, changeCount);
+      return;
     }
+    const period = getPeriod(state.periodId);
+    const presentation = emp.declarationPresentation;
+    if (!period || !presentation || presentation.status === "blocked" || !presentation.primary) {
+      if (typeof showNotification === "function") showNotification("请先完成员工声明语言与模板配置", "warning");
+      return;
+    }
+    const exportPayload = buildDetailExportPayload(emp, period);
+    const variables = buildDeclarationVariables(emp, period, {
+      reg: exportPayload.summary.regH,
+      ot: exportPayload.summary.otH,
+      total: exportPayload.summary.totalH,
+    });
+    PayrollDeclarationBridge.saveEmployeePreference({
+      employeeId: emp.id,
+      defaultFamilyId: emp.declarationPreference.defaultFamilyId,
+      defaultLocaleCode: emp.declarationPreference.defaultLocaleCode,
+      defaultPrintMode: emp.declarationPreference.defaultPrintMode,
+    }).then(() => PayrollDeclarationBridge.confirm({
+      employeeId: emp.id,
+      periodId: period.id,
+      primaryVersionId: presentation.primary.versionId,
+      englishVersionId: presentation.english && presentation.english.versionId,
+      printMode: presentation.printMode,
+      variables,
+    })).then((snapshot) => {
+      emp.declarationSnapshot = snapshot;
+      emp.__declarationPresentationKey = "";
+      finalizeConfirmEmployeeSave(emp, changeCount);
+    }).catch((error) => {
+      if (typeof showNotification === "function") showNotification(error && error.message ? error.message : "员工声明确认失败", "error");
+    });
   }
 
   function confirmEmployee() {
