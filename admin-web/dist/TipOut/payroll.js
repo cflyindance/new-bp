@@ -1714,15 +1714,32 @@
     $("#payrollAuditLogModal")?.classList.remove("show");
   }
 
-  function showEmployeesDetailModal() {
+  let employeeDetailView = "detailed";
+
+  function renderEmployeeDetailPreview() {
     syncDerived();
     const source = document.querySelector("#tab-panel-detail .payroll-detail-print");
     const target = $("#employeesDetailModalBody");
     if (!source || !target) return;
     const clone = source.cloneNode(true);
+    if (employeeDetailView === "summary") {
+      const employee = getEmployee(state.periodId, state.employeeId);
+      const period = getPeriod(state.periodId);
+      const payload = buildDetailExportPayload(employee, period);
+      const daily = clone.querySelector(".payroll-detail-daily");
+      if (daily && payload) {
+        daily.innerHTML = `<table class="payroll-compact-attendance"><thead><tr><th>日期</th><th>上班</th><th>下班</th><th>正常工时</th><th>加班</th><th>双倍加班</th><th>总工时</th><th>金额</th></tr></thead><tbody>${payload.dailyRows.map(row => `<tr>${[row.date,row.in,row.out,row.reg,row.ot,row.ot2,row.hours,row.totalAmt].map(value => `<td>${escapeHtml(typeof value === "number" ? value.toFixed(2) : value || "—")}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+      }
+      clone.classList.add("payroll-detail-compact");
+    }
     clone.querySelectorAll("[id]").forEach((el) => el.removeAttribute("id"));
     target.innerHTML = "";
     target.appendChild(clone);
+    $all("[data-detail-view]").forEach(button => button.setAttribute("aria-pressed", String(button.dataset.detailView === employeeDetailView)));
+  }
+
+  function showEmployeesDetailModal() {
+    renderEmployeeDetailPreview();
     const modalId = "employeesDetailPreviewModal";
     if (typeof openModal === "function") openModal(modalId);
     else {
@@ -3801,24 +3818,30 @@
   /** 与「打印」相同：克隆 Employees Detail 打印模板 HTML */
   function buildPayrollDetailPrintDocumentHtml() {
     syncDerived();
-    const article = document.querySelector(".payroll-detail-print");
+    const article = $("#employeesDetailPreviewModal")?.classList.contains("show")
+      ? $("#employeesDetailModalBody .payroll-detail-print")
+      : document.querySelector(".payroll-detail-print");
     if (!article) return null;
     const clone = article.cloneNode(true);
     clone.querySelectorAll(".print-only").forEach((el) => {
       el.style.display = "block";
     });
-    const baseUrl = new URL(".", window.location.href).href;
+    const baseUrl = new URL("/TipOut/", window.location.href).href;
     const htmlLang = typeof getPayrollLocale === "function" && getPayrollLocale() === "en" ? "en-US" : "zh-CN";
     return `<!DOCTYPE html><html lang="${htmlLang}"><head><meta charset="UTF-8"><title>${escapeHtml(T("detail.title"))}</title>
 <link rel="stylesheet" href="${baseUrl}common.css">
 <link rel="stylesheet" href="${baseUrl}payroll.css">
 <style>
 body{margin:0;padding:24px;background:#fff;}
+.payroll-compact-attendance{width:100%;border-collapse:collapse;font-size:11px}.payroll-compact-attendance th,.payroll-compact-attendance td{border:1px solid #aaa;padding:4px;text-align:center}
 .payroll-page .payroll-detail-print{max-width:none;width:100%;margin:0;border:none;border-radius:0;box-shadow:none;}
 .payroll-page .payroll-detail-daily-wrap{overflow:visible!important;}
-.payroll-page .payroll-detail-daily-table{min-width:1080px;width:max-content;max-width:none;font-size:11px;}
+.payroll-page .payroll-detail-daily-table{min-width:0!important;width:100%!important;max-width:100%;font-size:8px;}
 .payroll-page .payroll-detail-daily-table th,
-.payroll-page .payroll-detail-daily-table td{padding:6px 8px;white-space:nowrap;}
+.payroll-page .payroll-detail-daily-table td{padding:3px 2px;white-space:normal;overflow-wrap:anywhere;}
+.no-print{display:none!important}
+html,body{height:auto!important;overflow:visible!important}
+.payroll-detail-print{position:static!important;overflow:visible!important}
 .payroll-page .payroll-decl-amount{display:inline-block;font-size:1.35em;font-weight:800;color:#111;line-height:1.25;padding:0 2px 3px;border-bottom:2px solid #111;text-decoration:none;letter-spacing:.02em;}
 .print-only{display:block !important;}
 @media print{body{padding:15px 20px}@page{margin:10mm}}
@@ -4466,6 +4489,11 @@ body{margin:0;padding:24px;background:#fff;}
       const btn = e.target.closest("[data-action]");
       if (!btn) return;
       const act = btn.getAttribute("data-action");
+      if (act === "switch-employee-detail") {
+        employeeDetailView = btn.dataset.detailView === "summary" ? "summary" : "detailed";
+        renderEmployeeDetailPreview();
+        return;
+      }
       if (act === "open-period") {
         state.periodId = btn.getAttribute("data-period-id");
         const filtered = getEmployeesForActiveStore(state.periodId);
@@ -4766,19 +4794,32 @@ body{margin:0;padding:24px;background:#fff;}
       renderPeriods();
     });
 
-    function printCurrentEmployeeDetail() {
+    async function printCurrentEmployeeDetail() {
       syncDerived();
       const modal = $("#employeesDetailPreviewModal");
       const fromModal = !!(modal && modal.classList.contains("show"));
-      document.body.classList.toggle("payroll-printing-from-modal", fromModal);
-      document.body.classList.add("payroll-printing-detail");
-      const cleanup = () => {
-        document.body.classList.remove("payroll-printing-detail", "payroll-printing-from-modal");
-        window.removeEventListener("afterprint", cleanup);
-      };
-      window.addEventListener("afterprint", cleanup);
-      window.print();
-      setTimeout(cleanup, 1500);
+      // Rebuild the chosen view before printing; never replace it with the hidden detailed source.
+      if (fromModal) renderEmployeeDetailPreview();
+      const html = buildPayrollDetailPrintDocumentHtml();
+      if (!html) return;
+      const frame = document.createElement("iframe");
+      frame.title = "员工考勤薪资明细打印";
+      frame.style.cssText = "position:fixed;left:-10000px;top:0;width:1100px;height:800px;border:0;";
+      const loaded = new Promise(resolve => frame.addEventListener("load", resolve, { once: true }));
+      frame.srcdoc = html;
+      document.body.appendChild(frame);
+      try {
+        await loaded;
+        await frame.contentDocument.fonts.ready;
+        const printWindow = frame.contentWindow;
+        if (!printWindow) { frame.remove(); return; }
+        printWindow.addEventListener("afterprint", () => frame.remove(), { once: true });
+        printWindow.focus();
+        printWindow.print();
+      } catch (error) {
+        frame.remove();
+        console.error("Employee detail printing failed", error);
+      }
     }
 
     $("#btn-print-detail")?.addEventListener("click", () => printCurrentEmployeeDetail());

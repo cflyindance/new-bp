@@ -213,6 +213,10 @@ export function mountLegacyPayrollRuntime(
   });
 
   const locationFacade = new Proxy(realWindow.location, {
+    get(target, property) {
+      const value = Reflect.get(target, property, target);
+      return typeof value === "function" ? value.bind(target) : value;
+    },
     set(target, property, value) {
       if (property === "href" && /(?:^|\/)employees\.html(?:$|[?#])/.test(String(value))) {
         history.pushState({}, "", "/team/employees");

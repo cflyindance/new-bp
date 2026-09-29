@@ -799,6 +799,10 @@
         <h3 id="employees-detail-modal-title">Employees Payroll Detail</h3>
         <button type="button" class="modal-close" id="btn-employees-detail-modal-close" aria-label="关闭">×</button>
       </div>
+      <div class="employees-detail-view-tabs no-print" role="group" aria-label="明细展示方式">
+        <button type="button" class="btn" data-action="switch-employee-detail" data-detail-view="detailed" aria-pressed="true">详细明细</button>
+        <button type="button" class="btn" data-action="switch-employee-detail" data-detail-view="summary" aria-pressed="false">精简明细</button>
+      </div>
       <div class="modal-body employees-detail-preview-body">
         <div id="employeesDetailModalBody" class="payroll-page payroll-entered"></div>
       </div>
