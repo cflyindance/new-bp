@@ -50,6 +50,12 @@ const rule = { distribution: 'average', receivers: [{ roles: ['Server'], pct: 10
   poolRules: [{ id: 'formula', type: 'tips', pct: 50, conditions: {} }] };
 const sourceFacts = [employee('x', 'Server', [[at('18:00'), at('20:00')]], [{ id: 'order', completedPaymentAt: at('19:00'), timeZone: 'America/Chicago', tipAmount: 10 }])];
 const calculated = engine.allocateRule(rule, sourceFacts, '2026-09-28');
+const hoursRule={...rule,distribution:'hours',clockin:'time_window',workHoursConfig:{mode:'actual',maxHoursPerDay:null}};
+const lateFacts=[employee('late','Server',[[at('18:00'),at('22:00')]], [{id:'late-tip',completedPaymentAt:at('21:00'),timeZone:'America/Chicago',tipAmount:10}])];
+assert.equal(engine.allocateRule(hoursRule,lateFacts,'2026-09-28').employeeAmounts[0].amount,5);
+const unchanged=JSON.stringify(lateFacts);
+assert.throws(()=>engine.allocateRule({...hoursRule,workHoursConfig:{mode:'capped',maxHoursPerDay:2}},lateFacts,'2026-09-28'),/编辑规则并确认取消上限/);
+assert.equal(JSON.stringify(lateFacts),unchanged);
 assert.equal(calculated.poolAmount, 5);
 assert.equal(calculated.employeeAmounts[0].amount, 5);
 assert.throws(() => engine.allocateRule(rule, [employee('x', 'Server', [[at('18:00'), at('20:00')]], [{ id: 'order', tipAmount: 10 }])], '2026-09-28'), /时间/);

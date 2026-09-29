@@ -585,17 +585,25 @@
 
                 <div class="work-hours-config" id="workHoursConfigPanel" style="display:none">
                   <div class="form-section-title">分配工时设置</div>
+                  <div id="workHoursTimeWindowInfo" hidden>
+                    <div>按小费产生时段内的有效在岗工时 <details class="distribution-method-help"><summary aria-label="查看时段工时说明">？</summary><div class="distribution-method-help-content"><p>按小费发生时段分别计算，不用全天工时跨时段分摊。</p><p>例如员工 18:00—22:00 在岗，21:00 产生的小费仍可参与。此模式不设置每日工时上限；补录需要具体上下班时间，仅填写总小时数不能改变在岗资格。</p></div></details></div>
+                    <p id="workHoursTimeWindowCapNotice" class="field-desc" hidden>当前模式不使用每日工时上限，保存后按实际在岗时段计算。</p>
+                    <label id="legacyTimeWindowHoursNotice" hidden><input id="legacyTimeWindowHoursAck" type="checkbox"> 确认取消旧规则的每日工时上限。此前超出上限的时段不参与；保存后按实际在岗时段参与，历史分配结果不变。</label>
+                  </div>
+                  <div id="workHoursEditableOptions">
+                  <details class="distribution-method-help"><summary aria-label="查看分配工时设置说明">？</summary><div class="distribution-method-help-content"><p id="workHoursSourceHelp"></p></div></details>
                   <label class="radio-item">
                     <input type="radio" name="workHoursMode" value="actual" checked data-native-onchange="updateWorkHoursConfigUi()">
-                    <span id="workHoursActualLabel">按照实际打卡工时</span>
+                    <span id="workHoursActualLabel">按有效打卡工时</span>
                   </label>
                   <div class="work-hours-cap-row">
                     <label class="radio-item">
                       <input type="radio" name="workHoursMode" value="capped" data-native-onchange="updateWorkHoursConfigUi()">
-                      <span id="workHoursCappedLabel">打卡工时超出最大工时，按最大工时</span>
+                      <span id="workHoursCappedLabel">每日计入工时上限</span>
                     </label>
                     <input class="work-hours-cap-input" id="maxHoursPerDay" type="number" min="0.1" max="24" step="0.1" inputmode="decimal" disabled data-native-oninput="clearWorkHoursConfigError()" aria-label="每日最大工时">
                     <span style="font-size:13px;color:var(--text-secondary)">小时/天</span>
+                  </div>
                   </div>
                   <div class="work-hours-config-error" id="workHoursConfigError"></div>
                 </div>
