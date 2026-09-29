@@ -394,6 +394,10 @@
           <div>
             <h1 id="pageTitle">小费分配规则</h1>
           </div>
+          <div class="tipout-rule-heading-actions" id="ruleEditorActions">
+            <button type="button" class="btn" data-native-onclick="cancelRule()">取消</button>
+            <button type="button" class="btn btn-primary" data-native-onclick="submitRule()">保存规则</button>
+          </div>
         </div>
 
         <div class="tipout-workspace" id="ruleEditorWorkspace">
@@ -420,7 +424,6 @@
 
           <div class="form-section tipout-form-card" id="employeeDistributionMethodSection">
             <div class="form-section-title"><span class="field-desc-wrap" data-field-id="distribution">小费分配方式 <span class="field-desc-icon" data-field-id="distribution" data-label="小费分配方式" data-native-onclick="event.preventDefault();openFieldDescEditor('distribution','小费分配方式')" title="点击编辑字段说明">ⓘ</span></span></div>
-            <p class="field-desc" style="margin-bottom:16px">选择接收员工之间的小费分配方式；参与角色在接收方规则中设置。</p>
             <div class="distribution-method-cards">
               <div class="distribution-method-card">
                 <label class="distribution-method-choice"><input type="radio" name="distribution" value="average" checked data-native-onchange="updateWorkHoursConfigUi()"><strong>按员工数量平均分配</strong></label>
@@ -630,13 +633,6 @@
           </main>
         </div>
 
-        <div class="tipout-sticky-actions" id="ruleEditorActions">
-          <span>保存后可在小费分配明细中查看分配结果</span>
-          <div>
-            <button type="button" class="btn" data-native-onclick="cancelRule()">取消</button>
-            <button type="button" class="btn btn-primary" data-native-onclick="submitRule()">保存规则</button>
-          </div>
-        </div>
       </div>
 <div class="modal-overlay" id="fieldDescModal">
     <div class="modal" style="width:420px">

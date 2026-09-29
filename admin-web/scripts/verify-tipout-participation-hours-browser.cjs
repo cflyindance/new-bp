@@ -19,6 +19,18 @@ const {chromium}=createRequire(path.join(process.env.TIPOUT_BROWSER_PACKAGES,'pa
    window.mountEditor=(edit=false)=>{window.runtime?.destroy();root.innerHTML=renderTipsTemplate('rule-editor');const query=edit?'?poolKind=tip&mode=edit&id=901':'?poolKind=tip';window.runtime=mountLegacyTipsRuntime(shadow,root,{view:'rule-editor',query,href:'/team/tips/rules/editor'+query},context);};
    window.mountEditor();
   });
+  assert.equal(await page.locator('#ruleEditorActions button').count(),2);
+  assert.equal(await page.locator('.tipout-page-heading #ruleEditorActions').count(),1);
+  assert.equal(await page.locator('.tipout-page-rule-editor .tipout-sticky-actions').count(),0);
+  const titleBox=await page.locator('#pageTitle').boundingBox(),actionsBox=await page.locator('#ruleEditorActions').boundingBox();
+  assert.ok(actionsBox.x>titleBox.x+titleBox.width-1);
+  assert.ok(Math.abs((actionsBox.y+actionsBox.height/2)-(titleBox.y+titleBox.height/2))<20);
+  await page.locator('#ruleEditorActions button').last().click();
+  assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('tipout_rules')).length),1,'invalid form must not save');
+  await page.setViewportSize({width:390,height:844});
+  const mobileActions=await page.locator('#ruleEditorActions').boundingBox();
+  assert.ok(mobileActions.x>=0 && mobileActions.x+mobileActions.width<=390);
+  await page.setViewportSize({width:1280,height:720});
   await page.locator('input[name="distribution"][value="hours"]').check();
   assert.equal(await page.locator('#workHoursActualLabel').innerText(),'按有效打卡工时');
   await page.locator('input[name="workHoursMode"][value="capped"]').check();
