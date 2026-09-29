@@ -19,6 +19,12 @@ const {chromium}=createRequire(path.join(process.env.TIPOUT_BROWSER_PACKAGES,'pa
    const style=document.createElement('style');style.textContent=(await import('/src/team/tips/tips-page.css?inline')).default;shadow.append(style);
    const context={getScope:()=>({storeId:store,storeLabel:store,storeLabelEn:store,isAllStores:false,usesInPageStorePicker:true,stores:[{id:store,labelZh:store,labelEn:store}]}),setStoreScope:()=>{},subscribeScopeChange:()=>()=>{},navigate:()=>{},replace:()=>{},getNavigationState:()=>null,getScrollOwner:()=>null};
    window.mountSummary=()=>{window.runtime?.destroy();root.innerHTML=renderTipsTemplate('distribution');window.runtime=mountLegacyTipsRuntime(shadow,root,{view:'distribution',query:'?view=employee',href:'/team/tips/distribution?view=employee'},context);};
+   window.mountDetail=()=>{
+    const data=JSON.parse(sessionStorage.getItem('tipout-employee-reconciliation-detail-v1'));
+    const query='?'+new URLSearchParams({employeeId:data.employeeId,store:data.store,start:data.dateStart,end:data.dateEnd});
+    window.runtime.destroy();root.innerHTML=renderTipsTemplate('employee-reconciliation');
+    window.runtime=mountLegacyTipsRuntime(shadow,root,{view:'employee-reconciliation',query,href:'/team/tips/employee-reconciliation'+query},context);
+   };
    window.shortage=()=>{rule.poolRules=[{type:'sales',pct:100}];localStorage.setItem('tipout_rules',JSON.stringify([rule]));window.mountSummary();};
    window.mountSummary();
   });
@@ -49,9 +55,23 @@ const {chromium}=createRequire(path.join(process.env.TIPOUT_BROWSER_PACKAGES,'pa
   assert.equal(employeeBefore,roleBefore);
   assert.equal(await page.evaluate(()=>localStorage.getItem('tipout_allocation_results_v1')),null);
   assert.equal(await page.evaluate(()=>localStorage.getItem('tipout_allocated')),null);
+  await rows.first().click();
+  await page.evaluate(()=>window.mountDetail());
+  assert.match(await page.locator('#employeeDetailRows').innerText(),/预计/);
+  assert.doesNotMatch(await page.locator('#employeeDetailDeducted').innerText(),/无法试算/);
+  await page.locator('#employeeDetailDeducted .tipout-contribution-help').click();
+  assert.match(await page.locator('#employeeContributionBreakdown').innerText(),/已确认：-\$0.00\n预计：-\$/);
+  await page.keyboard.press('Escape');
+  assert.equal(await page.locator('#employeeContributionBreakdown').isVisible(),false);
+  assert.equal(await page.locator('#employeeDetailReceived').innerText(),'—');
+  assert.equal(await page.locator('#employeeDetailAfter').innerText(),'—');
   await page.evaluate(()=>window.shortage());
   await page.locator('#dateStart').fill('2026-09-05');await page.locator('#dateEnd').fill('2026-09-05');await page.locator('#dateEnd').dispatchEvent('change');
   assert.match(await page.locator('#employeeReconciliationList').innerText(),/无法试算/);
+  await page.locator('#employeeReconciliationList tr').first().click();
+  await page.evaluate(()=>window.mountDetail());
+  assert.match(await page.locator('#employeeDetailDeducted').innerText(),/无法试算/);
+  assert.match(await page.locator('#employeeDetailRows').innerText(),/无法试算/);
   assert.equal(await page.evaluate(()=>localStorage.getItem('tipout_allocation_results_v1')),null);
   assert.deepEqual(errors,[]);
   console.log('PASS: browser pending tips/estimates, role-employee consistency, shortage display and no allocation writes');

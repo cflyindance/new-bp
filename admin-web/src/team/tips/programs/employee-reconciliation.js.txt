@@ -52,11 +52,16 @@ function detailNumber(value) { return Number(value) || 0; }
         if (row.allocated) {
           total.allocatedCount += 1;
           total.deducted += detailNumber(row.deducted);
+          total.confirmedContributionCents += Math.round(detailNumber(row.deducted)*100);
           total.received += detailNumber(row.received);
           total.after += detailNumber(row.after);
+        } else {
+          var error=employeeDetailContributionError(row);
+          if(error) { if(total.contributionErrors.indexOf(error)<0) total.contributionErrors.push(error); }
+          else total.estimatedContributionCents += Math.round(Number(row.estimatedDeducted)*100);
         }
         return total;
-      }, { punchHours: 0, punchValidDays: 0, recordDays: 0, manualPools: {}, manualRecords: 0, before: 0, deducted: 0, received: 0, after: 0, allocatedCount: 0 });
+      }, { punchHours: 0, punchValidDays: 0, recordDays: 0, manualPools: {}, manualRecords: 0, before: 0, deducted: 0, received: 0, after: 0, allocatedCount: 0, confirmedContributionCents: 0, estimatedContributionCents: 0, contributionErrors: [] });
       summary.manualPoolCount = Object.keys(summary.manualPools).length;
       summary.punchHoursDisplay = summary.punchValidDays
         ? detailHours(summary.punchHours) + ' h'
@@ -182,9 +187,35 @@ function detailNumber(value) { return Number(value) || 0; }
       return cell;
     }
     function makeAllocationMoneyCell(row, value, kind) {
+      if(row && !row.allocated && kind==='deduct') {
+        var error=employeeDetailContributionError(row);
+        var cell=makeDetailCell(error ? '无法试算' : '-'+detailMoney(row.estimatedDeducted),error ? '' : '预计');
+        if(error) cell.appendChild(makeEmployeeContributionHelp(error));
+        return cell;
+      }
       return row && row.allocated ? makeMoneyCell(value, kind) : makeDetailCell('—');
     }
+    function employeeDetailContributionError(row) {
+      return row.contributionPreviewError || (row.estimatedDeducted==null || !isFinite(Number(row.estimatedDeducted)) ? '缺少贡献试算数据，请返回员工分配汇总刷新后重新进入' : '');
+    }
+    function makeEmployeeContributionHelp(text) {
+      var button=document.createElement('button');
+      button.type='button'; button.className='tipout-contribution-help'; button.textContent='?';
+      button.setAttribute('aria-label','查看贡献入池金额明细'); button.setAttribute('aria-haspopup','dialog');
+      button.addEventListener('click',function(event){
+        event.preventDefault(); event.stopPropagation();
+        var previous=document.getElementById('employeeContributionBreakdown'); if(previous) previous.remove();
+        var popup=document.createElement('div'); popup.id='employeeContributionBreakdown'; popup.className='tipout-contribution-popover';
+        popup.setAttribute('popover','auto'); popup.setAttribute('role','dialog'); popup.setAttribute('aria-label','贡献入池金额明细');
+        popup.textContent=text; document.body.appendChild(popup); popup.showPopover();
+        var rect=button.getBoundingClientRect();
+        popup.style.left=Math.max(8,Math.min(rect.left,window.innerWidth-popup.offsetWidth-8))+'px';
+        popup.style.top=Math.max(8,Math.min(rect.bottom+8,window.innerHeight-popup.offsetHeight-8))+'px';
+      });
+      return button;
+    }
     function employeeDetailAllocationMoney(row, value, kind) {
+      if(row && !row.allocated && kind==='deduct') return employeeDetailContributionError(row) ? '无法试算：'+employeeDetailContributionError(row) : '-'+detailMoney(row.estimatedDeducted)+'（预计）';
       if (!row || !row.allocated) return '—';
       if (kind === 'deduct') return '-' + detailMoney(value);
       if (kind === 'receive') return '+' + detailMoney(value);
@@ -405,7 +436,12 @@ function detailNumber(value) { return Number(value) || 0; }
         allocationButton.disabled = !summary.allocationHoursSummary || summary.allocationHoursSummary.kind === 'empty';
       }
       setDetailText('employeeDetailBefore', detailMoney(summary.before));
-      setDetailText('employeeDetailDeducted', summary.allocatedCount ? '-' + detailMoney(summary.deducted) : '—');
+      var errors=summary.contributionErrors || [];
+      var confirmed=(summary.confirmedContributionCents || 0)/100, estimated=(summary.estimatedContributionCents || 0)/100;
+      var total=errors.length ? '无法试算' : '-'+detailMoney(confirmed+estimated);
+      setDetailText('employeeDetailDeducted',total+' ');
+      var contribution=document.getElementById('employeeDetailDeducted');
+      if(contribution) contribution.appendChild(makeEmployeeContributionHelp('已确认：-'+detailMoney(confirmed)+'\n预计：'+(errors.length ? '无法试算' : '-'+detailMoney(estimated))+'\n合计：'+total+(errors.length ? '\n'+errors.join('；') : '')));
       setDetailText('employeeDetailReceived', summary.allocatedCount ? '+' + detailMoney(summary.received) : '—');
       setDetailText('employeeDetailAfter', summary.allocatedCount ? detailMoney(summary.after) : '—');
     }
