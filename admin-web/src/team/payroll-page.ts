@@ -4,6 +4,7 @@ import { createPayrollPageContext, type PayrollPageContext } from "./payroll/pay
 import { mountLegacyPayrollRuntime, type PayrollRuntimeHandle } from "./payroll/payroll-legacy-runtime";
 import { renderPayrollPageTemplate } from "./payroll/payroll-template";
 import { mountPayrollBatchExportController, type PayrollBatchExportControllerHandle } from "./payroll/payroll-batch-export-controller";
+import { createPayrollDeclarationSettingsController, type PayrollDeclarationSettingsHandle } from "./payroll/payroll-declaration-settings";
 
 export interface PayrollPageHandle {
   destroy(): void;
@@ -42,8 +43,11 @@ export function mountPayrollPage(
     pageRoot,
     runtime.getBatchBridge(),
   );
+  let declarationSettings: PayrollDeclarationSettingsHandle | null = createPayrollDeclarationSettingsController({ shadowRoot, pageRoot, context });
   const handle: PayrollPageHandle = {
     destroy() {
+      declarationSettings?.destroy();
+      declarationSettings = null;
       batchExport?.destroy();
       batchExport = null;
       runtime?.destroy();
