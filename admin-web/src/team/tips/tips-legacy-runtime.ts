@@ -33,7 +33,7 @@ import rules from "./programs/rules.js.txt?raw";
 import editor from "./programs/rule-editor.js.txt?raw";
 import employeeReconciliation from "./programs/employee-reconciliation.js.txt?raw";
 import type { TipsPageContext } from "./tips-context";
-import { rewriteLegacyTipsUrl, type TipsRoute } from "./tips-navigation";
+import { parseTipsRoute, rewriteLegacyTipsUrl, type TipsRoute } from "./tips-navigation";
 import { renderTipsTemplate, type TipsView } from "./tips-templates";
 import { ensurePresetEmployeesPerStore } from "../../config/team-employee-roster-scope";
 
@@ -100,7 +100,7 @@ export function mountLegacyTipsRuntime(shadow: ShadowRoot, root: HTMLElement, ro
     removeEventListener: root.removeEventListener.bind(root),
   };
   const scopedDocument = new Proxy(docTarget, { get(t, p) { if (p === "activeElement") return shadow.activeElement; if (p in t) return t[p]; const v = Reflect.get(realDocument, p, realDocument); return typeof v === "function" ? v.bind(realDocument) : v; }, set(t,p,v){t[p]=v;return true;} });
-  const locationFacade = new Proxy({} as Location, { get(_t,p){ if(p === "search") return route.query; if(p === "href") return `${realWindow.location.origin}/#${route.href}`; if(p === "replace") return (value: string) => { const mapped=rewriteLegacyTipsUrl(String(value)); context.replace(mapped ?? String(value)); }; const v=Reflect.get(realWindow.location,p,realWindow.location); return typeof v === "function" ? v.bind(realWindow.location) : v; }, set(_t,p,v){ if(p === "href"){ const mapped=rewriteLegacyTipsUrl(String(v)); context.navigate(mapped ?? String(v)); return true; } return Reflect.set(realWindow.location,p,v); } });
+  const locationFacade = new Proxy({} as Location, { get(_t,p){ if(p === "search") return route.view === "distribution" ? parseTipsRoute(realWindow.location.hash).query : route.query; if(p === "href") return `${realWindow.location.origin}/#${route.href}`; if(p === "replace") return (value: string) => { const mapped=rewriteLegacyTipsUrl(String(value)); context.replace(mapped ?? String(value)); }; const v=Reflect.get(realWindow.location,p,realWindow.location); return typeof v === "function" ? v.bind(realWindow.location) : v; }, set(_t,p,v){ if(p === "href"){ const mapped=rewriteLegacyTipsUrl(String(v)); context.navigate(mapped ?? String(v)); return true; } return Reflect.set(realWindow.location,p,v); } });
   const winTarget: Bag = {
     BroadcastChannel: realWindow.BroadcastChannel ? class extends BroadcastChannel {
       constructor(name: string) { super(name); cleanups.add(() => this.close()); }

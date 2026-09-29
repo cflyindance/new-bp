@@ -564,7 +564,7 @@ var ALLOC_KEY = 'tipout_allocated';
         employeeSortKey: employeeSummarySort.key,
         employeeSortDirection: employeeSummarySort.direction
       });
-      history.replaceState(state, '');
+      history.replaceState(Object.assign({}, history.state || {}, state), '');
     }
 
     function syncSummaryViewUi() {
@@ -612,12 +612,22 @@ var ALLOC_KEY = 'tipout_allocated';
       var nextView = TipOutSummaryUi.normalizeSummaryView(view);
       var historyMode = options && options.historyMode || 'push';
       if (nextView === activeSummaryView && historyMode === 'push') return;
+      // Preserve the previous entry before creating the next tab's history entry.
+      captureSummaryUiState('', '');
       activeSummaryView = nextView;
       syncSummaryViewUi();
+      var nativeRoute = /^#\/team\/tips\/distribution(?:\?|$)/.test(window.location.hash || '');
+      var href = nativeRoute
+        ? '#/team/tips/distribution' + (nextView === 'employee' ? '?view=employee' : '')
+        : TipOutSummaryUi.buildSummaryViewHref(nextView);
+      var nextState = Object.assign({}, history.state || {});
+      if (nativeRoute && nextState.menusifuTeamTips) {
+        nextState.menusifuTeamTips = Object.assign({}, nextState.menusifuTeamTips, {
+          viewHref: '/team/tips/distribution' + (nextView === 'employee' ? '?view=employee' : '')
+        });
+      }
+      history[historyMode === 'replace' ? 'replaceState' : 'pushState'](nextState, '', href);
       captureSummaryUiState('', '');
-      var href = TipOutSummaryUi.buildSummaryViewHref(nextView);
-      if (historyMode === 'push') window.location.href = href;
-      if (historyMode === 'replace') window.location.replace(href);
       renderSummaryViews();
     }
 
