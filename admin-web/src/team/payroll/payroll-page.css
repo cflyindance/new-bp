@@ -6319,7 +6319,8 @@ select.form-control {
 .payroll-declaration-dialog-header h3{margin:0;font-size:20px}
 .payroll-declaration-settings-screen:has(.payroll-declaration-dialog-overlay){overflow:hidden}
 .team-payroll-page{position:relative}
-.payroll-declaration-settings-screen{position:absolute;inset:0;z-index:120;background:#f6f8fb;color:#172033;overflow:auto;padding:0 28px 32px}
+.payroll-declaration-settings-screen{position:fixed;inset:0;width:100vw;height:100dvh;max-width:none;max-height:none;margin:0;border:0;border-radius:0;box-sizing:border-box;z-index:2147483000;background:#f6f8fb;color:#172033;overflow:auto;overscroll-behavior:contain;padding:0 28px 32px}
+.payroll-declaration-settings-screen::backdrop{background:#f6f8fb}
 .payroll-declaration-settings-open>.content-area,.payroll-declaration-settings-open>.modal-overlay{visibility:hidden;pointer-events:none}
 .payroll-declaration-settings-header{position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;min-height:76px;padding:14px 0;background:#f6f8fb;border-bottom:1px solid #e2e8f0}
 .payroll-declaration-settings-header p,.payroll-declaration-settings-toolbar p{margin:0;color:#6b778c;font-size:12px}.payroll-declaration-settings-header h2{margin:2px 0 0;font-size:24px}

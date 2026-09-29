@@ -96,7 +96,8 @@ export function createPayrollDeclarationSettingsController(input: {
   repositoryFactory?: (organizationId: string, storeId?: string) => PayrollDeclarationRepository;
 }): PayrollDeclarationSettingsHandle {
   const state: SettingsState = { families: [], versions: [], selectedFamilyId: null, message: "", busy: false, editorOpen: false };
-  const surface = document.createElement("section");
+  const surface = document.createElement("dialog");
+  surface.setAttribute("aria-label", "员工声明设置");
   surface.className = "payroll-declaration-settings-screen";
   surface.dataset.payrollDeclarationSettings = "";
   surface.hidden = true;
@@ -136,9 +137,11 @@ export function createPayrollDeclarationSettingsController(input: {
     state.editorOpen = false; state.selectedFamilyId = null;
     returnFocus = input.shadowRoot.activeElement instanceof HTMLElement ? input.shadowRoot.activeElement : openButton;
     input.pageRoot.classList.add("payroll-declaration-settings-open"); surface.hidden = false; openButton.setAttribute("aria-expanded", "true");
+    if (!surface.open) surface.showModal();
     await refresh(); surface.querySelector<HTMLElement>("[data-declaration-close]")?.focus();
   };
   const close = () => {
+    surface.close();
     input.pageRoot.classList.remove("payroll-declaration-settings-open"); surface.hidden = true; openButton.setAttribute("aria-expanded", "false"); returnFocus?.focus();
   };
   const selected = () => state.families.find((family) => family.familyId === state.selectedFamilyId) ?? null;
@@ -219,6 +222,12 @@ export function createPayrollDeclarationSettingsController(input: {
   openButton.addEventListener("click", () => { void open(); });
   surface.addEventListener("click", onClick);
   surface.addEventListener("keydown", onKeyDown);
+  surface.addEventListener("cancel", (event) => {
+    event.preventDefault();
+    if (state.busy) return;
+    if (state.editorOpen) closeEditor();
+    else close();
+  });
 
   return { open, close, refresh, destroy() { destroyed = true; surface.removeEventListener("click", onClick); surface.removeEventListener("keydown", onKeyDown); surface.remove(); openButton.remove(); } };
 }

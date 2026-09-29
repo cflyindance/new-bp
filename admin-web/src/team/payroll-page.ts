@@ -28,6 +28,7 @@ export function mountPayrollPage(
   const handleWheel = (event: WheelEvent): void => {
     if (!scrollOwner || event.deltaY === 0) return;
     const eventPath = event.composedPath();
+    if (eventPath.some(node => node instanceof HTMLElement && node.hasAttribute("data-payroll-declaration-settings"))) return;
     const isModalInteraction = eventPath.some(
       (node) => node instanceof HTMLElement && node.classList.contains("modal-overlay") && node.classList.contains("show"),
     );
