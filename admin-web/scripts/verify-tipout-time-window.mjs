@@ -4,6 +4,7 @@ import vm from 'node:vm';
 
 const context = { window: {} };
 vm.createContext(context);
+vm.runInContext(fs.readFileSync(new URL('../src/team/tips/legacy/tipout-employee-weights.js.txt',import.meta.url),'utf8'),context);
 vm.runInContext(fs.readFileSync(new URL('../src/team/tips/legacy/tipout-time-window.js.txt', import.meta.url), 'utf8'), context);
 const engine = context.window.TipOutTimeWindow;
 const employee = (id, role, sessions, orders = []) => ({ employeeId: id, name: id, role,

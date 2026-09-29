@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 const context={window:{}};vm.createContext(context);
+vm.runInContext(fs.readFileSync(new URL('../src/team/tips/legacy/tipout-employee-weights.js.txt',import.meta.url),'utf8'),context);
 vm.runInContext(fs.readFileSync(new URL('../src/team/tips/legacy/tipout-funding.js.txt',import.meta.url),'utf8'),context);
 const engine=context.window.TipOutFunding;
 const clone=x=>JSON.parse(JSON.stringify(x));

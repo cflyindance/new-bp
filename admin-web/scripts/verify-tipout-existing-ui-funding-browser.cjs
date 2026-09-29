@@ -45,7 +45,8 @@ const {chromium}=process.env.TIPOUT_BROWSER_PACKAGES?createRequire(path.join(pro
   await sourceRow.waitFor();
   const sourceAmount=snapshot.employeeAmounts.find(e=>e.employeeId==='source');
   const receiverAmount=snapshot.employeeAmounts.find(e=>e.employeeId==='receiver');
-  assert.equal((await sourceRow.locator('td').nth(5).textContent()).trim(),'$'+sourceAmount.deducted.toFixed(2),'contributor deduction appears in employee summary');
+  assert.equal(await sourceRow.locator('td').nth(5).evaluate(cell=>{const copy=cell.cloneNode(true);copy.querySelectorAll('.tipout-contribution-help').forEach(el=>el.remove());return copy.textContent.trim();}),'$'+sourceAmount.deducted.toFixed(2),'contributor deduction appears beside its breakdown help');
+  assert.equal(await sourceRow.locator('.tipout-contribution-help').count(),1);
   assert.equal((await sourceRow.locator('td').nth(7).textContent()).trim(),'$'+(snapshot.scenarioFacts.find(f=>f.employeeId==='source').originalTips-sourceAmount.deducted+sourceAmount.received).toFixed(2),'contributor final tips subtract the contribution');
   assert.equal((await receiverRow.locator('td').nth(6).textContent()).trim(),'$'+receiverAmount.received.toFixed(2),'receiver amount appears in employee summary');
   await page.evaluate(()=>{const rules=JSON.parse(localStorage.getItem('tipout_rules'));rules[0].poolRules[0]={type:'sales',pct:100,conditions:{role:['Server']}};localStorage.setItem('tipout_rules',JSON.stringify(rules));});
@@ -59,7 +60,7 @@ const {chromium}=process.env.TIPOUT_BROWSER_PACKAGES?createRequire(path.join(pro
   await page.locator('#dateEnd').fill(shortDate);
   await page.locator('#dateEnd').dispatchEvent('change');
   await page.locator('#employeeReconciliationTab').click();
-  assert.equal((await page.locator('#employeeReconciliationList tr').filter({hasText:'Maria Garcia'}).locator('td').nth(5).textContent()).trim(),'—','unconfirmed contribution stays hidden');
+  assert.match((await page.locator('#employeeReconciliationList tr').filter({hasText:'Maria Garcia'}).locator('td').nth(5).textContent()).trim(),/无法试算/,'funding shortage cannot appear as an estimated zero');
   const seededOrderRule=await page.evaluate(({store})=>{
     localStorage.clear();
     localStorage.setItem('tipout-employees-roster-v1',JSON.stringify(['Server','Bartender','Busser','Runner','Host'].map((role,index)=>({id:'demo-'+index,name:'Demo '+role,role,store,active:true}))));

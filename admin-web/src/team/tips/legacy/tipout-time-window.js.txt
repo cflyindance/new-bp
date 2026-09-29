@@ -187,20 +187,9 @@
     if (rule.distribution === 'hours' && rule.workHoursConfig && rule.workHoursConfig.mode === 'capped') {
       throw new Error('旧在岗规则配置了每日工时上限，请编辑规则并确认取消上限后再分配；历史分配结果不变');
     }
-    var rows = [];
-    receivers.forEach(function(receiver) {
-      var targets = receiver.subReceivers && receiver.subReceivers.length ? receiver.subReceivers : [receiver];
-      targets.forEach(function(target) {
-        (target.roles || []).forEach(function(role) {
-          rows.push({ role: role, pct: Number(receiver.pct || 0) * (target === receiver ? 1 : Number(target.pct || 0) / 100) / (target.roles || []).length,
-            employeeWeights: target.employeeWeights || receiver.employeeWeights || {}, employeeRefs: target.employeeRefs || receiver.employeeRefs || [] });
-        });
-      });
-    });
-    var totalPct = rows.reduce(function(sum, row) { return sum + row.pct; }, 0);
-    if (Math.abs(totalPct - 100) > 0.001) throw new Error('接收方占比合计必须为 100%');
+    var rows = root.TipOutEmployeeWeights.groups(receivers);
     var lines = [], totals = {}, unallocated = 0;
-    var boundaries = distributionFacts.filter(function(f) { return rows.some(function(row) { return row.role === f.role; }); })
+    var boundaries = distributionFacts.filter(function(f) { return rows.some(function(row) { return row.roles.indexOf(f.role)>=0 && (!row.employeeRefs.length || row.employeeRefs.some(function(ref){return String(ref.employeeId)===String(f.employeeId);})); }); })
       .reduce(function(list, f) { intervals(f).forEach(function(p) { list.push(p.start, p.end); }); return list; }, [])
       .sort(function(a, b) { return a - b; });
     events.forEach(function(event) {
@@ -212,7 +201,7 @@
       var shares = split(cents(event.amount), rows.map(function(row) { return row.pct; }));
       var participants = [], missed = 0;
       rows.forEach(function(row, index) {
-        var subset = distributionFacts.filter(function(f) { return f.role === row.role && (!row.employeeRefs.length || row.employeeRefs.some(function(ref) { return String(ref.employeeId) === String(f.employeeId); })); });
+        var subset = distributionFacts.filter(function(f) { return row.roles.indexOf(f.role)>=0 && (!row.employeeRefs.length || row.employeeRefs.some(function(ref) { return String(ref.employeeId) === String(f.employeeId); })); });
         var piece = allocate([Object.assign({}, timedEvent, { amount: shares[index] / 100, id: event.id + ':' + index })], subset, { distribution: rule.distribution, employeeWeights:row.employeeWeights });
         missed += cents(piece.unallocated);
         piece.lines[0].participants.forEach(function(person) {

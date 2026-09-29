@@ -1,0 +1,63 @@
+const {createRequire}=require('node:module');
+const path=require('node:path'),assert=require('node:assert/strict');
+const {chromium}=createRequire(path.join(process.env.TIPOUT_BROWSER_PACKAGES,'package.json'))('playwright');
+(async()=>{
+ const browser=await chromium.launch({channel:'chrome',headless:true});
+ try {
+  const page=await browser.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());
+  await page.goto('http://127.0.0.1:65021/');
+  await page.evaluate(async()=>{
+   const {mountLegacyTipsRuntime}=await import('/src/team/tips/tips-legacy-runtime.ts');
+   const {renderTipsTemplate}=await import('/src/team/tips/tips-templates.ts');
+   const store='Golden Dragon Chinese Kitchen - Dallas, TX 75231';
+   localStorage.clear();
+   const rule={id:9001,ruleName:'共同接收组回归',store,poolKind:'tip',allocationMode:'legacy_pool',poolRules:[{type:'tips',pct:5,conditions:{role:['Server','Busser']}}],receivers:[{roles:['Server','Busser'],pct:100}],distribution:'average',clockin:'unrestricted'};
+   localStorage.setItem('tipout_rules',JSON.stringify([rule]));
+   localStorage.setItem('tipout-employees-roster-v1',JSON.stringify([{id:'a',name:'A',role:'Server',store,active:true},{id:'b',name:'B',role:'Server',store,active:true},{id:'c',name:'C',role:'Busser',store,active:true}]));
+   document.body.innerHTML='<div id="test-host"></div>';
+   const shadow=document.querySelector('#test-host').attachShadow({mode:'open'}),root=document.createElement('div');shadow.append(root);
+   const context={getScope:()=>({storeId:store,storeLabel:store,storeLabelEn:store,isAllStores:false,usesInPageStorePicker:true,stores:[{id:store,labelZh:store,labelEn:store}]}),setStoreScope:()=>{},subscribeScopeChange:()=>()=>{},navigate:()=>{},replace:()=>{},getNavigationState:()=>null,getScrollOwner:()=>null};
+   window.notices=[];new MutationObserver(rs=>rs.forEach(r=>r.addedNodes.forEach(n=>{if(n.classList?.contains('notification'))window.notices.push(n.textContent.trim());}))).observe(root,{childList:true,subtree:true});
+   window.mountContract=(view='details')=>{window.runtime?.destroy();root.innerHTML=renderTipsTemplate(view);const query=view==='details'?'?store='+encodeURIComponent(store)+'&date=2026-09-05':view==='rule-editor'?'?poolKind=tip&mode=edit&id=9001':'';window.runtime=mountLegacyTipsRuntime(shadow,root,{view,query,href:'/team/tips/'+view+query},context);};
+   window.mountContract('distribution');
+  });
+  await page.locator('tr[data-date="2026-09-05"] .tipout-quick-allocate').click();
+  await page.waitForFunction(()=>!!localStorage.getItem('tipout_allocation_results_v1'));
+  await page.evaluate(()=>window.mountContract());
+  assert.equal(await page.locator('.detail-result-section').count(),1,'two roles stay one receiver group');
+  const rows=page.locator('.detail-result-section tbody tr');
+  const initial=await rows.evaluateAll(xs=>xs.map(r=>({status:r.dataset.attendanceStatus,pct:Number(r.querySelector('.detail-emp-pct-input').value)})));
+  assert.ok(initial.some(r=>r.status==='absent'));
+  assert.ok(initial.filter(r=>r.status==='absent').every(r=>r.pct===0));
+  const absentIndex=initial.findIndex(r=>r.status==='absent');
+  await rows.nth(absentIndex).locator('.detail-emp-weight-input').fill('2');
+  assert.equal(Number(await rows.nth(absentIndex).locator('.detail-emp-pct-input').inputValue()),0,'weight edit must not admit absence');
+  const pct=rows.nth(absentIndex).locator('.detail-emp-pct-input');
+  await pct.fill('0');await pct.dispatchEvent('change'); // existing explicit daily inclusion interaction
+  await rows.nth(absentIndex).locator('.detail-emp-weight-input').fill('1');
+  assert.ok(Number(await pct.inputValue())>0);
+  await page.getByRole('button',{name:'重新确认分配',exact:true}).click();
+  await page.waitForFunction(()=>Object.values(JSON.parse(localStorage.getItem('tipout_allocation_results_v1')))[0].editorState.manualParticipants.length>0);
+  const saved=await page.evaluate(()=>localStorage.getItem('tipout_allocation_results_v1'));
+  await page.evaluate(()=>window.mountContract());
+  assert.equal(await page.evaluate(()=>localStorage.getItem('tipout_allocation_results_v1')),saved,'reopening does not rewrite results');
+  assert.ok(Number(await rows.nth(absentIndex).locator('.detail-emp-pct-input').inputValue())>0);
+  await page.locator('.detail-role-pct-input').fill('90');await page.locator('.detail-role-pct-input').dispatchEvent('change');
+  await page.getByRole('button',{name:'重新确认分配',exact:true}).click();
+  await page.waitForFunction(()=>window.notices.some(x=>x.includes('合计必须为 100%')));
+  assert.equal(await page.evaluate(()=>localStorage.getItem('tipout_allocation_results_v1')),saved,'invalid shares cannot replace snapshot');
+  await page.evaluate(()=>{window.notices=[];window.mountContract('rule-editor');});
+  const ruleBefore=await page.evaluate(()=>localStorage.getItem('tipout_rules'));
+  const share=page.locator('#receiverTableBody tr.receiver-primary-row input[type="number"]').first();
+  await share.fill('90');await share.dispatchEvent('input');
+  await page.getByRole('button',{name:'保存规则',exact:true}).click();
+  await page.waitForFunction(()=>window.notices.some(x=>x.includes('合计必须为 100%')));
+  assert.equal(await page.evaluate(()=>localStorage.getItem('tipout_rules')),ruleBefore);
+  await share.fill('100');await share.dispatchEvent('input');
+  await page.getByRole('button',{name:'保存规则',exact:true}).click();
+  await page.waitForFunction(()=>window.notices.some(x=>x.includes('成功')));
+  assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('tipout_rules'))[0].receivers[0].roles.length),2);
+  assert.deepEqual(errors,[]);
+  console.log('PASS: real editor/details, multi-role group, absent admission, weight override, reopen, invalid save and snapshot protection');
+ } finally {await browser.close();}
+})().catch(e=>{console.error(e);process.exitCode=1;});

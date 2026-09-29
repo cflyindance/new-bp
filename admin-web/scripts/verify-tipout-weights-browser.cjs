@@ -33,6 +33,9 @@ const {chromium}=createRequire(path.join(process.env.TIPOUT_BROWSER_PACKAGES,'pa
   await page.waitForFunction(()=>!!localStorage.getItem('tipout_allocation_results_v1'));
   assert.equal(await weight.count(),3);
   assert.deepEqual(await weight.evaluateAll(xs=>xs.map(x=>x.value)),['1','1','1']);
+  assert.deepEqual(await page.locator('.detail-emp-pct-input').evaluateAll(xs=>xs.map(x=>x.value)),['100','0','0']);
+  // Explicit daily participation precedes weights; unrestricted is not automatic admission.
+  for(const input of await page.locator('.detail-emp-pct-input').all()) { await input.fill('0'); await input.dispatchEvent('change'); }
   await weight.nth(1).fill('2');
   assert.deepEqual(await page.locator('.detail-emp-pct-input').evaluateAll(xs=>xs.map(x=>x.value)),['25','50','25']);
   const initialRules=await page.evaluate(()=>localStorage.getItem('tipout_rules'));

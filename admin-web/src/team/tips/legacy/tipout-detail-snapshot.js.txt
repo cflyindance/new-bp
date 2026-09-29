@@ -43,6 +43,10 @@
           row.setAttribute('data-snapshot-name', employee.name);
           row.setAttribute('data-attendance-status', employee.attendanceStatus || 'unknown');
           row.removeAttribute('data-manual-participant');
+          row.removeAttribute('data-computed-base');
+          row.removeAttribute('data-pct-manual');
+          if (employee.percentageSource==='manual') row.setAttribute('data-pct-manual','1');
+          else if (Number.isFinite(employee.allocationBase) && employee.allocationBase>=0) row.setAttribute('data-computed-base',employee.allocationBase);
           if ((snapshot.editorState && snapshot.editorState.manualParticipants || []).some(function(item) { return item.ruleId === pool.ruleId && item.name === employee.name; })) row.setAttribute('data-manual-participant','1');
           if (employee.hoursSource === 'manual') row.setAttribute('data-hours-manual', '1');
           else row.removeAttribute('data-hours-manual');
