@@ -185,20 +185,7 @@
     if (!receivers.length) throw new Error('按时段参与需要配置接收方');
     var distributionFacts = facts;
     if (rule.distribution === 'hours' && rule.workHoursConfig && rule.workHoursConfig.mode === 'capped') {
-      var max = Number(rule.workHoursConfig.maxHoursPerDay);
-      if (!Number.isFinite(max) || max <= 0 || max > 24) throw new Error('最大分配工时无效');
-      distributionFacts = facts.map(function(fact) {
-        var remaining = Math.round(max * 3600000);
-        var adjusted = intervals(fact).map(function(interval) {
-          var end = Math.min(interval.end, interval.start + Math.max(0, remaining));
-          remaining -= Math.max(0, end - interval.start);
-          return end > interval.start ? { status: 'complete', clockInAt: new Date(interval.start).toISOString(), clockOutAt: new Date(end).toISOString() } : null;
-        }).filter(Boolean);
-        var uncertain = ((fact.attendance && fact.attendance.punchSessions) || []).filter(function(session) {
-          return session.status !== 'complete' || !session.clockInAt || !session.clockOutAt;
-        });
-        return Object.assign({}, fact, { attendance: Object.assign({}, fact.attendance, { punchSessions: adjusted.concat(uncertain) }) });
-      });
+      throw new Error('旧在岗规则配置了每日工时上限，请编辑规则并确认取消上限后再分配；历史分配结果不变');
     }
     var rows = [];
     receivers.forEach(function(receiver) {

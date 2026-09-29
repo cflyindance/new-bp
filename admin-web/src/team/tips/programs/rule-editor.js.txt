@@ -576,6 +576,9 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
       var clock = document.querySelector('input[name="clockin"][value="' + (rule.clockin || 'clock') + '"]');
       if (clock) clock.checked = true;
       var workHoursConfig = normalizeWorkHoursConfig(rule.workHoursConfig);
+      legacyTimeWindowHoursCap = rule.clockin === 'time_window' && rule.distribution === 'hours' && workHoursConfig.mode === 'capped';
+      var legacyHoursAck = document.getElementById('legacyTimeWindowHoursAck');
+      if (legacyHoursAck) legacyHoursAck.checked = false;
       var workHoursMode = document.querySelector('input[name="workHoursMode"][value="' + workHoursConfig.mode + '"]');
       if (workHoursMode) workHoursMode.checked = true;
       var maxHoursPerDayInput = document.getElementById('maxHoursPerDay');
@@ -3414,6 +3417,7 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
       }
     }
 
+    var legacyTimeWindowHoursCap = false;
     function updateWorkHoursConfigUi() {
       var panel = document.getElementById('workHoursConfigPanel');
       if (!panel) return;
@@ -3421,6 +3425,8 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
       var clockRadio = document.querySelector('input[name="clockin"]:checked');
       var isHours = !!(distRadio && distRadio.value === 'hours');
       var isNoClock = !!(clockRadio && clockRadio.value === 'noclock');
+      var isUnrestricted = !!(clockRadio && clockRadio.value === 'unrestricted');
+      var isTimeWindow = !!(clockRadio && clockRadio.value === 'time_window');
       var distributionMode = distRadio ? distRadio.value : 'average';
       var participationExamples = {
         average: {
@@ -3455,18 +3461,42 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
       panel.style.display = isHours ? '' : 'none';
       var actualLabel = document.getElementById('workHoursActualLabel');
       var cappedLabel = document.getElementById('workHoursCappedLabel');
-      if (actualLabel) actualLabel.textContent = isNoClock ? '按照实际录入工时' : '按照实际打卡工时';
-      if (cappedLabel) cappedLabel.textContent = isNoClock ? '录入工时超出最大工时，按最大工时' : '打卡工时超出最大工时，按最大工时';
+      if (actualLabel) actualLabel.textContent = isNoClock ? '按有效录入工时' : isUnrestricted ? '按有效分配工时' : '按有效打卡工时';
+      if (cappedLabel) cappedLabel.textContent = '每日计入工时上限';
+      var options = document.getElementById('workHoursEditableOptions');
+      if (options) options.hidden = isTimeWindow;
+      var timeHelp = document.getElementById('workHoursTimeWindowInfo');
+      if (timeHelp) timeHelp.hidden = !isTimeWindow;
+      var sourceHelp = document.getElementById('workHoursSourceHelp');
+      if (sourceHelp) sourceHelp.textContent = isUnrestricted || isNoClock
+        ? '有打卡记录自动获取有效工时；未打卡员工需手动补录。工时为 0 不获得分配。规则上限用于默认计算，每日明细中的明确手动调整优先。'
+        : '自动获取符合参与资格员工的有效打卡工时。上限只限制默认计入时长，不修改实际打卡记录；每日明细中的明确手动调整优先。';
+      var capNotice = document.getElementById('workHoursTimeWindowCapNotice');
+      var cappedSelected = document.querySelector('input[name="workHoursMode"]:checked');
+      if (capNotice) capNotice.hidden = !isTimeWindow || !cappedSelected || cappedSelected.value !== 'capped';
+      var legacyNotice = document.getElementById('legacyTimeWindowHoursNotice');
+      if (legacyNotice) legacyNotice.hidden = !isTimeWindow || !legacyTimeWindowHoursCap;
+      document.querySelectorAll('input[name="workHoursMode"]').forEach(function(input){input.disabled=!isHours || isTimeWindow;});
       var modeRadio = document.querySelector('input[name="workHoursMode"]:checked');
       var maxInput = document.getElementById('maxHoursPerDay');
-      if (maxInput) maxInput.disabled = !isHours || !modeRadio || modeRadio.value !== 'capped';
-      if (!isHours || !modeRadio || modeRadio.value !== 'capped') clearWorkHoursConfigError();
+      if (maxInput) maxInput.disabled = !isHours || isTimeWindow || !modeRadio || modeRadio.value !== 'capped';
+      if (!isHours || isTimeWindow || !modeRadio || modeRadio.value !== 'capped') clearWorkHoursConfigError();
     }
 
     function validateWorkHoursConfig() {
       clearWorkHoursConfigError();
       var distRadio = document.querySelector('input[name="distribution"]:checked');
       var modeRadio = document.querySelector('input[name="workHoursMode"]:checked');
+      var clockRadio = document.querySelector('input[name="clockin"]:checked');
+      if (distRadio && distRadio.value === 'hours' && clockRadio && clockRadio.value === 'time_window') {
+        var ack=document.getElementById('legacyTimeWindowHoursAck');
+        if(legacyTimeWindowHoursCap && (!ack || !ack.checked)) {
+          showNotification('请先确认取消旧规则的每日工时上限；历史分配结果不会改变', 'error');
+          if(ack) ack.focus();
+          return false;
+        }
+        return true;
+      }
       if (!distRadio || distRadio.value !== 'hours' || !modeRadio || modeRadio.value !== 'capped') return true;
       var input = document.getElementById('maxHoursPerDay');
       var raw = input ? String(input.value || '').trim() : '';
@@ -3488,6 +3518,8 @@ var poolRuleCounter = { sales: 0, tips: 0, surcharge: 0, personal_sales: 0 };
     function collectWorkHoursConfig() {
       var distRadio = document.querySelector('input[name="distribution"]:checked');
       if (!distRadio || distRadio.value !== 'hours') return null;
+      var clockRadio = document.querySelector('input[name="clockin"]:checked');
+      if(clockRadio && clockRadio.value==='time_window') return {mode:'actual',maxHoursPerDay:null};
       var modeRadio = document.querySelector('input[name="workHoursMode"]:checked');
       var mode = modeRadio && modeRadio.value === 'capped' ? 'capped' : 'actual';
       if (mode === 'actual') return { mode: 'actual', maxHoursPerDay: null };
