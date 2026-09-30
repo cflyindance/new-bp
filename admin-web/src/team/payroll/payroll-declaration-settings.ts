@@ -47,11 +47,14 @@ function renderSettings(surface: HTMLElement, state: SettingsState): void {
   const rows = state.families.map((family) => {
     const version = applicableVersion(family, state.versions);
     const active = family.familyId === state.selectedFamilyId ? " is-active" : "";
-    const scope = family.scope.storeId ? storeLabel(family.scope.storeId) : "企业通用";
-    return `<button type="button" class="payroll-declaration-template-row${active}" data-declaration-family="${escapeHtml(family.familyId)}">
-      <span><strong>${escapeHtml(family.languageDisplayName)}</strong><small>${escapeHtml(family.localeCode)} · ${escapeHtml(scope)}</small></span>
-      <span><small>V${Number(version?.version ?? 0)}</small><em data-status="${escapeHtml(version?.status ?? "empty")}">${statusLabel(version?.status ?? "empty")}</em></span>
-    </button>`;
+    const scope = family.scope.storeId ? storeLabel(family.scope.storeId) : "全部门店";
+    return `<tr class="payroll-declaration-table-row${active}">
+      <td><button type="button" class="payroll-declaration-name" data-declaration-family="${escapeHtml(family.familyId)}" ${state.busy ? 'disabled' : ''}>${escapeHtml(family.languageDisplayName)}</button></td>
+      <td>${family.scope.storeId ? '指定门店' : '企业通用'}</td>
+      <td>${escapeHtml(scope)}</td>
+      <td><span class="payroll-declaration-status" data-status="${escapeHtml(version?.status ?? 'empty')}">${statusLabel(version?.status ?? 'empty')}</span></td>
+      <td><div class="payroll-declaration-content-preview" dir="auto">${escapeHtml(version?.source || '—')}</div></td>
+    </tr>`;
   }).join("");
   surface.innerHTML = `
     <header class="payroll-declaration-settings-header">
@@ -64,7 +67,13 @@ function renderSettings(surface: HTMLElement, state: SettingsState): void {
     </div>
     ${state.loadWarning ? `<p role="status" class="payroll-declaration-settings-message">${escapeHtml(state.loadWarning)}</p>` : ''}
     <div class="payroll-declaration-settings-layout payroll-declaration-library">
-      <aside aria-label="声明模板列表"><div class="payroll-declaration-template-list">${rows || '<p class="payroll-declaration-empty">暂无模板</p>'}</div></aside>
+      <div class="payroll-declaration-table-scroll" role="region" aria-label="声明模板表格滚动区域" tabindex="0">
+        <table class="payroll-declaration-table" aria-label="声明模板列表">
+          <colgroup><col style="width:18%"><col style="width:12%"><col style="width:20%"><col style="width:10%"><col style="width:40%"></colgroup>
+          <thead><tr><th scope="col">模板名称</th><th scope="col">模板范围</th><th scope="col">门店</th><th scope="col">状态</th><th scope="col">声明内容</th></tr></thead>
+          <tbody>${rows || `<tr><td colspan="5" class="payroll-declaration-empty">${state.busy ? '正在加载模板…' : '暂无模板'}</td></tr>`}</tbody>
+        </table>
+      </div>
     </div>
     ${state.editorOpen ? `<div class="payroll-declaration-dialog-overlay">
       <section class="payroll-declaration-editor payroll-declaration-dialog" role="dialog" aria-modal="true" aria-labelledby="declaration-dialog-title">
@@ -73,11 +82,11 @@ function renderSettings(surface: HTMLElement, state: SettingsState): void {
           <label>语言名称<input data-declaration-language value="${escapeHtml(draft.languageDisplayName)}" ${selected || state.busy ? "disabled" : ""}></label>
           <label>语言代码<input data-declaration-locale value="${escapeHtml(draft.localeCode)}" placeholder="例如 es-US" ${selected || state.busy ? "disabled" : ""}></label>
           <label>模板范围<select data-declaration-scope ${selected || state.busy ? "disabled" : ""}><option value="enterprise" ${draft.scopeMode === 'enterprise' ? 'selected' : ''}>企业通用</option><option value="store" ${draft.scopeMode === 'store' ? 'selected' : ''}>指定门店</option></select></label>
-          ${draft.scopeMode === 'store' ? `<label>门店<select data-declaration-store required ${selected || state.busy ? 'disabled' : ''}>
+          ${draft.scopeMode === 'store' ? `<label>适用门店<select data-declaration-store required ${selected || state.busy ? 'disabled' : ''}>
             <option value="">${state.stores.length ? '请选择门店' : '暂无可选择的门店'}</option>
             ${state.stores.map(store => `<option value="${escapeHtml(store.id)}" ${draft.storeId === store.id ? 'selected' : ''}>${escapeHtml(store.labelZh || store.id)}</option>`).join('')}
             ${selected?.scope.storeId && !state.stores.some(store => store.id === selected.scope.storeId) ? `<option selected value="${escapeHtml(selected.scope.storeId)}">${escapeHtml(selected.scope.storeId)}</option>` : ''}
-          </select></label>` : ''}
+          </select></label>` : '<label>适用门店<input value="全部门店" disabled></label>'}
           <label>当前状态<input value="${escapeHtml(statusLabel(state.newVersion ? 'draft' : selectedVersion?.status ?? "empty"))}" disabled></label>
         </div>
         <label class="payroll-declaration-source-label">声明正文<textarea data-declaration-source rows="10" ${published || state.busy ? "disabled" : ""}>${escapeHtml(draft.source)}</textarea></label>
