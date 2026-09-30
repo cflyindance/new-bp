@@ -1,0 +1,14 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import vm from 'node:vm';
+import {transformSync} from 'esbuild';
+const root=new URL('../../',import.meta.url);
+const read=p=>readFileSync(new URL(p,root),'utf8');
+function navigation(product){const opened=[],nodes=[];const ctx=vm.createContext({URL,location:{href:'http://localhost:5173/admin/index.html#/home'},module:{exports:{}},document:{documentElement:{dataset:{product}},getElementById:()=>null,createElement:()=>({setAttribute(){},append(){},remove(){}}),body:{append:n=>nodes.push(n)}},window:{open:(...args)=>opened.push(args)}});vm.runInContext(transformSync(read('../src/shell/menu-design-entry.ts'),{loader:'ts',format:'cjs'}).code,ctx);return {api:ctx.module.exports,opened,nodes};}
+test('new product resolves subdirectory deployment and opens without touching merchant location',()=>{const {api,opened,nodes}=navigation();assert.equal(api.getMenuDesignUrl(),'http://localhost:5173/admin/menu-design/');api.openMenuDesign();assert.equal(opened.length,1);assert.deepEqual(Array.from(opened[0]),['http://localhost:5173/admin/menu-design/','_blank','noopener,noreferrer']);assert.equal(nodes.length,1);});
+test('current menu design never opens another copy of itself',()=>{const {api,opened}=navigation('menu-design');api.openMenuDesign();assert.equal(opened.length,0);});
+test('launch prepares the same session-aware URL for the popup',()=>{const {api,opened}=navigation();api.openMenuDesign(url=>url+'?menuSession=test');assert.match(opened[0][0],/\?menuSession=test$/);});
+test('both product menus include the new entry and retain restrictions',()=>{const s=read('../src/shell/peripheral-products-control.ts');assert.equal((s.match(/renderFlatProductCard\("menu-design"/g)||[]).length,2);assert.match(s,/if \(isViewSwitchRestricted\(\)\) return;/);assert.match(s,/onNavigate\("pit"\)/);});
+test('static deployment publishes blobs without uploading to remote server',async()=>{const ctx=vm.createContext({TextEncoder,Blob,Uint8Array,location:{hostname:'example.com'},URL:{createObjectURL:()=> 'blob:local-test'}});ctx.window=ctx;vm.runInContext(read('menu-design/public/workspace/export.js'),ctx);const result=await ctx.MenuExport.publish([{name:'menu.pdf',blob:new Blob(['test'])}]);assert.equal(result[0].url,'blob:local-test');});
+test('local exports use independent endpoint, not the prototype',async()=>{let requested;const ctx=vm.createContext({TextEncoder,Blob,Uint8Array,location:{hostname:'localhost'},fetch:async u=>{requested=u;return {ok:true,status:200,json:async()=>({url:'/menu-design/exports/test'})}}});ctx.window=ctx;vm.runInContext(read('menu-design/public/workspace/export.js'),ctx);const result=await ctx.MenuExport.publish([{name:'menu.pdf',blob:new Blob(['test'])}]);assert.equal(requested,'/menu-design/exports');assert.equal(result[0].url,'/menu-design/exports/test');});

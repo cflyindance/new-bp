@@ -1,0 +1,6 @@
+import test from 'node:test';import assert from 'node:assert/strict';import contract from './codex-contract.cjs';
+const valid=()=>({styleName:'自然',summary:'浅色背景',composition:'双列',typography:'衬线',decoration:'少量线条',recipe:'grid',capacity:2,palette:{bg:'#ffffff',ink:'#111111',accent:'#aa3333',card:'#ffffff',muted:'#555555',line:'#eeeeee'},slots:[{x:0,y:0,w:.48,h:1},{x:.52,y:0,w:.48,h:1}]});
+test('valid AI design retains safe palette and normalized geometry',()=>assert.equal(contract.validateResult(valid()).capacity,2));
+test('reject overlapping and out of bounds layouts',()=>{const v=valid();v.slots[1].x=.2;assert.throws(()=>contract.validateResult(v),/重叠/);v.slots[1].x=.9;assert.throws(()=>contract.validateResult(v),/安全范围/);});
+test('reject unsafe output colors and unsupported capacities',()=>{const v=valid();v.palette.bg='url(http://evil)';assert.throws(()=>contract.validateResult(v),/配色/);v.capacity=20;assert.throws(()=>contract.validateResult(v));});
+test('require consent and reject remote image URLs or oversized inputs',()=>{assert.throws(()=>contract.validateInput({kind:'analyze'}));assert.throws(()=>contract.validateInput({kind:'analyze',consent:true,width:1920,height:1080,image:'https://remote.test/a.png'}));assert.equal(contract.validateInput({kind:'generate',consent:true,width:1920,height:1080,brief:'测试'}).kind,'generate');});

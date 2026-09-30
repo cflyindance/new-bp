@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "mode": "standalone",
+  "outcome": "needs_attention",
+  "rootCauseStatus": "code_supported",
+  "rootCause": "Merchant login uses per-tab sessionStorage. The noopener independent tab does not inherit that session, so return navigation reaches the existing login guard.",
+  "analysisScopeStatus": "bounded",
+  "planStatus": "approved",
+  "changedFiles": ["src/auth/menu-session-bridge.ts", "src/shell/menu-design-entry.ts", "src/shell/peripheral-products-control.ts", "apps/menu-design/src/main.ts", "apps/menu-design/tests/session-bridge.test.mjs", "apps/menu-design/tests/entry.test.mjs", "apps/menu-design/tests/navigation.test.mjs"],
+  "tdd": {"status":"passed","redEvidence":["Baseline bridge returned null: authenticated handoff test failed with expected user@menusifu.com, actual null (72/73 passed)."],"greenEvidence":["npm run test:menu-design: 74/74 passed","npx tsc --noEmit -p apps/menu-design/tsconfig.json: exit 0","git diff --check for changed code: exit 0"]},
+  "e2e": {"required":true,"status":"not_run","reason":"Authenticated cross-tab E2E requires user login; only login tab 10 was available. No fake credentials were used.","evidence":["CUA tab 11: direct /menu-design/ rendered without login; FAB Store click reached /#/login, preserving anonymous authentication guard."]},
+  "build": {"required":true,"status":"passed","reason":"Independent application entry changed. npm run build:menu-design exited 0, publishing dist/menu-design/index.html referencing assets/index-Bva0J-49.js; referenced assets verified by build script. CI build unknown."},
+  "unverifiedScopes":["Authenticated source -> new menu tab -> merchant/M/legacy view browser E2E","Source logout/restricted-state behavior tested in unit harness, not a real authenticated browser","Source refresh/closure invalidates the live bridge; reopen menu from source. Old tabs lack bridge identifier."]
+}
