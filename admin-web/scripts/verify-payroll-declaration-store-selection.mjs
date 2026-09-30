@@ -18,12 +18,12 @@ const state = { families: [{ familyId: 'enterprise', languageDisplayName: '中�
 const surface = { innerHTML: '' };
 sandbox.renderSettings(surface, state);
 assert.doesNotMatch(surface.innerHTML, /当前状态/);
-assert.deepEqual([...surface.innerHTML.matchAll(/<th scope="col">([^<]+)<\/th>/g)].map(match => match[1]), ['模板名称', '模板范围', '门店', '状态', '声明内容', '操作']);
+assert.deepEqual([...surface.innerHTML.matchAll(/<th scope="col">([^<]+)<\/th>/g)].map(match => match[1]), ['模板名称', '模板范围', '门店', '状态', '使用员工总数', '声明内容', '操作']);
 assert.match(surface.innerHTML, /<td>全部门店<\/td>/, 'Enterprise row must have its own store cell');
 assert.match(surface.innerHTML, /<td>B店<\/td>/, 'Store row must have its own store cell');
 const rows = surface.innerHTML.match(/<tr class="payroll-declaration-table-row[^]*?<\/tr>/g) ?? [];
 assert.equal(rows.length, 2);
-for (const row of rows) assert.equal((row.match(/<td[ >]/g) ?? []).length, 6);
+for (const row of rows) assert.equal((row.match(/<td[ >]/g) ?? []).length, 7);
 assert.match(rows[0], /data-declaration-family="enterprise"/);
 assert.match(surface.innerHTML, /<label>适用门店<input[^>]*value="全部门店"/, 'New enterprise template must always show its store field');
 state.draft.scopeMode = 'store';
@@ -61,7 +61,7 @@ assert.doesNotMatch(surface.innerHTML, /data-declaration-delete|data-declaration
 assert.match(surface.innerHTML, /data-declaration-source rows="10" disabled/);
 state.families = [];
 sandbox.renderSettings(surface, state);
-assert.match(surface.innerHTML, /colspan="6"[^>]*>暂无模板/);
+assert.match(surface.innerHTML, /colspan="7"[^>]*>暂无模板/);
 const css = fs.readFileSync(new URL('../src/team/payroll/payroll-page.css', import.meta.url), 'utf8');
 assert.match(css, /\.payroll-declaration-content-preview\s*\{[^}]*-webkit-line-clamp:\s*2/);
 console.log('Declaration store selection UI contracts passed');

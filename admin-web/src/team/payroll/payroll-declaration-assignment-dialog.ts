@@ -113,6 +113,7 @@ export function createDeclarationAssignmentDialog(parent: HTMLElement, manager: 
           if (!result.failed.length) {
             busy=false; close(); onSaved?.(`分配完成：成功 ${result.succeeded.length}，跳过 ${result.skipped.length}。`); return;
           }
+          if (result.succeeded.length) onSaved?.(message);
         }
         rows=await listEmployees();
       }

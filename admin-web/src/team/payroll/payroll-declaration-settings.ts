@@ -7,6 +7,7 @@ import { validateDeclarationSource } from './payroll-declaration-engine';
 import type { PayrollScopeSnapshot } from './payroll-types';
 import type { PayrollRuntimeHandle } from './payroll-legacy-runtime';
 import { createDeclarationAssignmentDialog } from './payroll-declaration-assignment-dialog';
+import { countDeclarationEmployees } from './payroll-declaration-usage';
 
 export interface PayrollDeclarationSettingsHandle {
   open(): Promise<void>;
@@ -16,6 +17,7 @@ export interface PayrollDeclarationSettingsHandle {
 }
 
 interface SettingsState {
+  employeeCounts?: Record<string, number | null>;
   filters?: { storeId: string; scope: string; status: string };
   families: DeclarationTemplateFamily[];
   versions: DeclarationTemplateVersion[];
@@ -63,6 +65,7 @@ function renderSettings(surface: HTMLElement, state: SettingsState): void {
       <td>${family.scope.storeId ? '指定门店' : '企业通用'}</td>
       <td>${escapeHtml(scope)}</td>
       <td><span class="payroll-declaration-status" data-status="${escapeHtml(version?.status ?? 'empty')}">${statusLabel(version?.status ?? 'empty')}</span></td>
+      <td>${state.employeeCounts?.[family.familyId] ?? '—'}</td>
       <td><div class="payroll-declaration-content-preview" dir="auto">${escapeHtml(version?.source || '—')}</div></td>
       <td>${version?.status === 'draft' ? `<button type="button" class="btn" data-declaration-family="${escapeHtml(family.familyId)}" ${state.busy?'disabled':''}>修改</button> <button type="button" class="btn" data-declaration-delete-family="${escapeHtml(family.familyId)}" ${state.busy?'disabled':''}>删除</button>` : version?.status === 'retired' ? `<button type="button" class="btn" data-declaration-family="${escapeHtml(family.familyId)}" ${state.busy?'disabled':''}>查看</button>` : `<button type="button" class="btn" data-declaration-assign-family="${escapeHtml(family.familyId)}" ${state.busy || !assignable ? 'disabled' : ''}>选择员工</button>${version?.status === 'published' ? ` <button type="button" class="btn" data-declaration-retire-family="${escapeHtml(family.familyId)}" ${state.busy?'disabled':''}>停用</button>` : ''}`}${version?.status === 'draft' && assignable ? '<small class="payroll-declaration-action-note">详情可使用当前已发布版本选择员工</small>' : ''}</td>
     </tr>`;
@@ -86,9 +89,9 @@ function renderSettings(surface: HTMLElement, state: SettingsState): void {
       </div>
       <div class="payroll-declaration-table-scroll" role="region" aria-label="声明模板表格滚动区域" tabindex="0">
         <table class="payroll-declaration-table" aria-label="声明模板列表">
-          <colgroup><col style="width:16%"><col style="width:12%"><col style="width:18%"><col style="width:10%"><col style="width:30%"><col style="width:14%"></colgroup>
-          <thead><tr><th scope="col">模板名称</th><th scope="col">模板范围</th><th scope="col">门店</th><th scope="col">状态</th><th scope="col">声明内容</th><th scope="col">操作</th></tr></thead>
-          <tbody>${rows || `<tr><td colspan="6" class="payroll-declaration-empty">${state.busy ? '正在加载模板…' : state.families.length ? '暂无符合条件的模板' : '暂无模板'}</td></tr>`}</tbody>
+          <colgroup><col style="width:15%"><col style="width:11%"><col style="width:16%"><col style="width:9%"><col style="width:10%"><col style="width:25%"><col style="width:14%"></colgroup>
+          <thead><tr><th scope="col">模板名称</th><th scope="col">模板范围</th><th scope="col">门店</th><th scope="col">状态</th><th scope="col">使用员工总数</th><th scope="col">声明内容</th><th scope="col">操作</th></tr></thead>
+          <tbody>${rows || `<tr><td colspan="7" class="payroll-declaration-empty">${state.busy ? '正在加载模板…' : state.families.length ? '暂无符合条件的模板' : '暂无模板'}</td></tr>`}</tbody>
         </table>
       </div>
     </div>
@@ -181,6 +184,7 @@ export function createPayrollDeclarationSettingsController(input: {
   const assignment = input.runtime ? createDeclarationAssignmentDialog(input.pageRoot, manager, input.runtime, input.context, message => {
     state.message = message;
     paint();
+    void reloadCounts(generation).then(paint);
   }) : null;
   const selected = () => state.families.find((family) => family.familyId === state.selectedFamilyId) ?? null;
   const loadEditor = () => {
@@ -191,6 +195,14 @@ export function createPayrollDeclarationSettingsController(input: {
   };
 
   const paint = () => { if (!destroyed) renderSettings(surface, state); };
+  let countsRequest = 0;
+  const reloadCounts = async (token: number) => {
+    const request = ++countsRequest;
+    state.employeeCounts = {};
+    if (!input.runtime) return;
+    const counts = await countDeclarationEmployees(state.families, input.runtime.getDeclarationEmployees(), manager.stores(), manager.repositoryFor);
+    if (current(token) && request === countsRequest) state.employeeCounts = counts;
+  };
   const reloadTemplates = async (token: number) => {
     const result = await manager.listTemplates();
     if (!current(token)) return;
@@ -202,6 +214,8 @@ export function createPayrollDeclarationSettingsController(input: {
     }
     state.families = result.families; state.versions = result.versions;
     state.stores = manager.stores();
+    await reloadCounts(token);
+    if (!current(token)) return;
     state.loadWarning = result.failedStores.length ? `部分模板未加载：${result.failedStores.join('、')}，请重新打开设置重试。` : '';
     if (state.selectedFamilyId && !state.families.some(item => item.familyId === state.selectedFamilyId)) {
       state.selectedFamilyId = null; state.editorOpen = false;
