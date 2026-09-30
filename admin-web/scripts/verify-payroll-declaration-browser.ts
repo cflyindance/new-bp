@@ -11,6 +11,13 @@ async function main() {
   const repo = createPayrollDeclarationRepository(scope, fetchMock);
   const defaultPreference = await repo.saveEmployeePreference({ employeeId: 'default-employee', defaultFamilyId: 'system-default', defaultLocaleCode: 'en-US', defaultPrintMode: 'employee-only' });
   assert.equal(defaultPreference.defaultFamilyId, 'system-default');
+  assert.deepEqual(await repo.loadEmployeePreference('default-employee'), defaultPreference);
+  assert.equal(await repo.loadEmployeePreference('missing'), null);
+  const otherStore = createPayrollDeclarationRepository({ ...scope, storeId: 'store-2' }, fetchMock);
+  assert.equal(await otherStore.loadEmployeePreference('default-employee'), null);
+  const readOnly = createPayrollDeclarationRepository({ ...scope, permission: 'view' }, fetchMock);
+  assert.deepEqual(await readOnly.loadEmployeePreference('default-employee'), defaultPreference);
+  await assert.rejects(readOnly.saveEmployeePreference(defaultPreference), /权限/);
   assert.deepEqual(await repo.listTemplates(), { families: [], versions: [] });
   const family = await repo.createFamily({ localeCode: 'es-US', languageDisplayName: 'Español' });
   const draft = await repo.saveDraft({ familyId: family.familyId, source: 'Horas {{total_hours}}', variableSchemaVersion: 'v1' });

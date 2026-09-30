@@ -64,6 +64,9 @@ export function createBrowserDeclarationRepository(scope: DeclarationRepositoryS
     return { family, version };
   };
   return {
+    async loadEmployeePreference(employeeId) {
+      return read().preferences[entryKey(employeeId)] ?? null;
+    },
     async listTemplates() {
       const data = read(); const families = data.families.filter(visible);
       return { families, versions: data.versions.filter(item => families.some(family => family.familyId === item.familyId)) };

@@ -5,6 +5,8 @@ import type { DeclarationTemplateFamily, DeclarationTemplateVersion } from "./pa
 import { createDeclarationManagement } from './payroll-declaration-management';
 import { validateDeclarationSource } from './payroll-declaration-engine';
 import type { PayrollScopeSnapshot } from './payroll-types';
+import type { PayrollRuntimeHandle } from './payroll-legacy-runtime';
+import { createDeclarationAssignmentDialog } from './payroll-declaration-assignment-dialog';
 
 export interface PayrollDeclarationSettingsHandle {
   open(): Promise<void>;
@@ -106,6 +108,7 @@ function renderSettings(surface: HTMLElement, state: SettingsState): void {
         </div>
         <section class="payroll-declaration-preview"><h3>打印预览</h3><p dir="auto">${escapeHtml(draft.source || "输入声明正文后在此预览")}</p></section>
         <fieldset class="payroll-declaration-editor-actions" style="border:0;padding:0;margin:0" ${state.busy || (draft.scopeMode === 'store' && !state.stores.some(store => store.id === draft.storeId)) ? 'disabled' : ''}>
+          ${selected && state.versions.some(v=>v.versionId===selected.activeVersionId && v.status==='published') ? '<button type="button" class="btn" data-declaration-assign>批量分配员工</button>' : ''}
           ${published ? '<button type="button" class="btn" data-declaration-new-version>创建新版本</button><button type="button" class="btn" data-declaration-retire>停用</button>' : '<button type="button" class="btn" data-declaration-save>保存草稿</button><button type="button" class="btn btn-primary" data-declaration-publish>审核并发布</button>'}
         </fieldset>
         <p class="payroll-declaration-settings-message" aria-live="polite">${escapeHtml(state.message)}</p>
@@ -117,6 +120,7 @@ export function createPayrollDeclarationSettingsController(input: {
   shadowRoot: ShadowRoot;
   pageRoot: HTMLElement;
   context: PayrollPageContext;
+  runtime?: PayrollRuntimeHandle;
   repository?: PayrollDeclarationRepository;
   repositoryFactory?: (organizationId: string, storeId?: string) => PayrollDeclarationRepository;
 }): PayrollDeclarationSettingsHandle {
@@ -144,6 +148,7 @@ export function createPayrollDeclarationSettingsController(input: {
     ?? input.repository
     ?? createPayrollDeclarationRepository({ organizationId, storeId, actorId: 'payroll-admin', permission: 'publish' }));
   const current = (token: number) => !destroyed && generation === token;
+  const assignment = input.runtime ? createDeclarationAssignmentDialog(input.pageRoot, manager, input.runtime, input.context) : null;
   const selected = () => state.families.find((family) => family.familyId === state.selectedFamilyId) ?? null;
   const loadEditor = () => {
     const family = selected();
@@ -252,6 +257,7 @@ export function createPayrollDeclarationSettingsController(input: {
   const onClick = (event: Event) => {
     const target = event.target instanceof Element ? event.target : null;
     if (!target) return;
+    if (target.closest('[data-declaration-assign]')) { const family = selected(); if (family && !state.busy) void assignment?.open(family); return; }
     if (state.busy) return;
     if (target.closest("[data-declaration-editor-close]")) { closeEditor(); return; }
     if (target.closest("[data-declaration-close]")) { close(); return; }
@@ -327,5 +333,5 @@ export function createPayrollDeclarationSettingsController(input: {
     else close();
   });
 
-  return { open, close, refresh, destroy() { destroyed = true; generation++; manager.invalidate(); unsubscribe(); surface.removeEventListener("click", onClick); surface.removeEventListener('input', onInput); surface.removeEventListener('change', onChange); surface.removeEventListener("keydown", onKeyDown); surface.remove(); openButton.remove(); } };
+  return { open, close, refresh, destroy() { assignment?.destroy(); destroyed = true; generation++; manager.invalidate(); unsubscribe(); surface.removeEventListener("click", onClick); surface.removeEventListener('input', onInput); surface.removeEventListener('change', onChange); surface.removeEventListener("keydown", onKeyDown); surface.remove(); openButton.remove(); } };
 }

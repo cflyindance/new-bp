@@ -4045,7 +4045,7 @@ html,body{height:auto!important;overflow:visible!important}
     const hint = $("#declaration-language-hint");
     if (!input || typeof PayrollDeclarationBridge === "undefined" || !PayrollDeclarationBridge.listPublishedTemplates) return;
     const request = ++employeeDeclarationLanguageRequest;
-    const preference = {
+    let preference = {
       defaultLocaleCode: input.value,
       defaultFamilyId: input.selectedOptions?.[0]?.dataset?.familyId || "",
     };
@@ -4053,7 +4053,17 @@ html,body{height:auto!important;overflow:visible!important}
     if (hint) hint.textContent = "正在加载已发布模板…";
     try {
       const families = await PayrollDeclarationBridge.listPublishedTemplates();
+      const employeeId = state.employeeId;
+      const savedPreference = PayrollDeclarationBridge.loadEmployeePreference
+        ? await PayrollDeclarationBridge.loadEmployeePreference(employeeId) : null;
       if (request !== employeeDeclarationLanguageRequest) return;
+      if (savedPreference) {
+        preference = savedPreference.defaultFamilyId === 'system-default'
+          ? { defaultFamilyId: '', defaultLocaleCode: '' } : savedPreference;
+        const employee = getEmployee(state.periodId, employeeId);
+        if (employee) employee.declarationPreference = savedPreference.defaultFamilyId === 'system-default' ? null : cloneData(savedPreference);
+        if (state.workspaceDraft) state.workspaceDraft.declarationPreference = employee?.declarationPreference || null;
+      }
       input.replaceChildren();
       const placeholder = document.createElement("option");
       placeholder.value = "";

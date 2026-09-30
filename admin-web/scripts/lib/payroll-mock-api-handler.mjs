@@ -201,6 +201,11 @@ export async function handlePayrollMockApi(req, res, dbPath) {
       }
 
       const preferenceMatch = route.match(/^\/preferences\/([^/]+)$/);
+      if (method === "GET" && preferenceMatch) {
+        const employeeId = decodeURIComponent(preferenceMatch[1]);
+        const preference = db.declarationPreferences.find((item) => item.employeeId === employeeId && item.organizationId === viewScope.organizationId && (item.storeId || null) === (viewScope.storeId || null));
+        sendJson(res, 200, { preference: preference || null }); return true;
+      }
       if (method === "PUT" && preferenceMatch) {
         const scope = requireDeclarationScope(req, res, "manage");
         if (!scope) return true;
@@ -209,7 +214,7 @@ export async function handlePayrollMockApi(req, res, dbPath) {
         const systemDefault = body?.defaultFamilyId === "system-default" && body?.defaultLocaleCode === "en-US";
         if (!systemDefault && !family?.activeVersionId) { sendJson(res, 422, { error: "template_unavailable", message: "An applicable published template is required" }); return true; }
         const preference = { ...body, employeeId: decodeURIComponent(preferenceMatch[1]), updatedBy: scope.actorId, updatedAt: new Date().toISOString(), organizationId: scope.organizationId, storeId: scope.storeId || null };
-        db.declarationPreferences = db.declarationPreferences.filter((item) => !(item.employeeId === preference.employeeId && item.organizationId === scope.organizationId));
+        db.declarationPreferences = db.declarationPreferences.filter((item) => !(item.employeeId === preference.employeeId && item.organizationId === scope.organizationId && (item.storeId || null) === (scope.storeId || null)));
         db.declarationPreferences.push(preference); appendDeclarationAudit(db, scope, "preference_saved", preference.employeeId); saveDb(dbPath, db); sendJson(res, 200, preference); return true;
       }
 

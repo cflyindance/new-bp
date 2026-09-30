@@ -36,6 +36,7 @@ const hint = { textContent: '' };
 let available = [families[0], { ...families[0], familyId: 'zh-store', scope: { organizationId: 'org', storeId: 'store' } }];
 let reject = false;
 const ui = vm.runInNewContext(`(() => {${uiSource}; return { refreshEmployeeDeclarationLanguages, selectEmployeeDeclarationPreference }; })()`, {
+  state: { employeeId: 'employee-1' },
   $: selector => selector === '#field-declaration-locale' ? input : hint,
   document: { createElement: () => ({ dataset: {}, value: '', textContent: '', disabled: false }) },
   PayrollDeclarationBridge: { listPublishedTemplates: async () => { if (reject) throw Error('offline'); return available; } },
