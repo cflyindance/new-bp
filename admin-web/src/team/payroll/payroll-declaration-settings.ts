@@ -178,7 +178,10 @@ export function createPayrollDeclarationSettingsController(input: {
     input.pageRoot.append(dialog); dialog.showModal();
     dialog.querySelector<HTMLElement>('[data-cancel]')!.focus();
   });
-  const assignment = input.runtime ? createDeclarationAssignmentDialog(input.pageRoot, manager, input.runtime, input.context) : null;
+  const assignment = input.runtime ? createDeclarationAssignmentDialog(input.pageRoot, manager, input.runtime, input.context, message => {
+    state.message = message;
+    paint();
+  }) : null;
   const selected = () => state.families.find((family) => family.familyId === state.selectedFamilyId) ?? null;
   const loadEditor = () => {
     const family = selected();
