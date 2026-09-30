@@ -25,8 +25,10 @@ for (const name of ['distribution', 'details']) {
   const template = fs.readFileSync(`src/team/tips/templates/${name}.html`, 'utf8');
   assert.match(template, /已分配金额（参考）/);
   assert.match(template, /不执行转账/);
-  assert.match(template, /现金及其他已支付金额/);
-  assert.match(template, /不是剩余应发金额/);
+  assert.doesNotMatch(template, /请在线下核对现金及其他已支付金额，确认当天员工小费均已结清。/);
+  assert.doesNotMatch(template, /以上为整日分配结果参考金额，不是剩余应发金额。/);
+  assert.match(template, /确认小费已发放？/);
+  assert.match(template, /<strong>本操作仅记录发放状态，不执行转账。确认后分配结果将永久锁定，不能重新分配、取消、更新或修改。<\/strong>/);
   assert.doesNotMatch(template, /部分发放/);
   const program = fs.readFileSync(`src/team/tips/programs/${name}.js.txt`, 'utf8');
   assert.doesNotMatch(program, /查看发放记录/);
