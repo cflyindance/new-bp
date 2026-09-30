@@ -41,6 +41,8 @@ export interface DeclarationRepositoryScope {
 }
 
 export interface PayrollDeclarationRepository {
+  updateDraft(input: { versionId: string; source: string; expectedFamilyRevision: number }): Promise<DeclarationTemplateVersion>;
+  deleteDraft(input: { versionId: string; expectedFamilyRevision: number }): Promise<void>;
   loadEmployeePreference(employeeId: string): Promise<EmployeeDeclarationPreference | null>;
   listTemplates(): Promise<{ families: DeclarationTemplateFamily[]; versions: DeclarationTemplateVersion[] }>;
   createFamily(input: { localeCode: string; languageDisplayName: string; storeId?: string }): Promise<DeclarationTemplateFamily>;
@@ -89,6 +91,8 @@ export function createPayrollDeclarationRepository(
   const body = (value: unknown): string => JSON.stringify(value);
 
   return {
+    updateDraft: input => request(`/versions/${encodeURIComponent(input.versionId)}`, { method: 'PUT', body: body(input) }),
+    deleteDraft: async input => { await request(`/versions/${encodeURIComponent(input.versionId)}`, { method: 'DELETE', body: body(input) }); },
     loadEmployeePreference: async (employeeId) => {
       const result = await request<{ preference: EmployeeDeclarationPreference | null }>(`/preferences/${encodeURIComponent(employeeId)}`);
       return result.preference ?? null;

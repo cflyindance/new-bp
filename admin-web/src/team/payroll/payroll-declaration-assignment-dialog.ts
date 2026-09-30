@@ -8,7 +8,7 @@ const esc = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp
 export function createDeclarationAssignmentDialog(parent: HTMLElement, manager: ReturnType<typeof createDeclarationManagement>, runtime: PayrollRuntimeHandle, context: PayrollPageContext) {
   const dialog = document.createElement('dialog');
   dialog.setAttribute('aria-label', '批量分配员工');
-  dialog.style.cssText = 'width:min(1000px,94vw);max-height:88vh;padding:24px;border:1px solid #d8e2ef;border-radius:12px;overflow:auto;color:#17324d;background:white';
+  dialog.className = 'payroll-declaration-assignment';
   parent.append(dialog);
   let family: DeclarationTemplateFamily;
   let rows: AssignmentEmployee[] = [];

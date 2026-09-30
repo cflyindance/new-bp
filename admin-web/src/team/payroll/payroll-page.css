@@ -6381,3 +6381,51 @@ select.form-control {
 .payroll-declaration-empty{padding:20px;color:#7b8798;text-align:center}.payroll-declaration-editor{padding:20px}.payroll-declaration-editor-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.payroll-declaration-editor label{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600}.payroll-declaration-editor input,.payroll-declaration-editor select,.payroll-declaration-editor textarea{width:100%;border:1px solid #cfd8e5;border-radius:8px;padding:10px 11px;background:#fff;color:#172033;font:inherit}.payroll-declaration-source-label{margin-top:16px}.payroll-declaration-variables{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}.payroll-declaration-variables button{border:1px solid #cfe0f8;border-radius:6px;background:#f4f8ff;color:#1765c0;padding:4px 7px;font-size:12px}.payroll-declaration-preview{margin-top:16px;border:1px solid #dfe6ef;border-radius:9px;padding:14px}.payroll-declaration-preview h3{margin:0 0 8px;font-size:14px}.payroll-declaration-preview p{white-space:pre-wrap}.payroll-declaration-editor-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}.payroll-declaration-settings-message{min-height:20px;margin:10px 0 0;color:#b45309}.payroll-declaration-meta{margin:0 0 8px;color:#64748b;font-size:12px}.payroll-declaration-english{margin-top:14px;padding-top:12px;border-top:1px dashed #cbd5e1}.payroll-declaration-english-heading{margin:0 0 5px;font-weight:700}.payroll-declaration-english p:last-child{margin:0;color:var(--text-secondary);white-space:pre-wrap}
 .payroll-detail-declaration [dir="rtl"]{direction:rtl;text-align:right;unicode-bidi:isolate}.payroll-declaration-template-row:focus-visible,.payroll-declaration-settings-screen button:focus-visible,.payroll-declaration-settings-screen input:focus-visible,.payroll-declaration-settings-screen select:focus-visible,.payroll-declaration-settings-screen textarea:focus-visible{outline:3px solid #2563eb;outline-offset:2px}
 @media(max-width:900px){.payroll-declaration-settings-layout{grid-template-columns:1fr}.payroll-declaration-editor-grid{grid-template-columns:1fr}.payroll-declaration-settings-screen{padding-inline:16px}}
+.payroll-declaration-assignment {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: min(1000px, calc(100vw - 48px));
+  max-width: none;
+  max-height: calc(100dvh - 48px);
+  box-sizing: border-box;
+  padding: 24px;
+  border: 1px solid #d8e2ef;
+  border-radius: 12px;
+  background: #fff;
+  color: #17324d;
+  box-shadow: 0 20px 60px #0f172a33;
+  overflow: auto;
+  overscroll-behavior: contain;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  outline: none;
+}
+.payroll-declaration-assignment::backdrop { background: #0f172a66; }
+.payroll-declaration-assignment header { align-items: center; gap: 16px; margin-bottom: 8px; }
+.payroll-declaration-assignment h2 { margin: 0; font-size: 20px; }
+.payroll-declaration-assignment p { margin: 12px 0; }
+.payroll-declaration-assignment > label { display: inline-flex; flex-direction: column; gap: 6px; margin: 8px 16px 0 0; min-width: 220px; font-weight: 500; }
+.payroll-declaration-assignment select,
+.payroll-declaration-assignment input:not([type="checkbox"]) { height: 40px; padding: 8px 12px; border: 1px solid #cfd8e5; border-radius: 6px; background: #fff; color: inherit; font: inherit; box-sizing: border-box; }
+.payroll-declaration-assignment button { min-height: 36px; padding: 7px 16px; border: 1px solid #d8e2ef; border-radius: 6px; color: inherit; background: white; font: inherit; cursor: pointer; }
+.payroll-declaration-assignment button[data-submit] { color: white; background: #1677ff; border-color: #1677ff; float: right; }
+.payroll-declaration-assignment button:disabled { cursor: not-allowed; opacity: .45; }
+.payroll-declaration-assignment th,
+.payroll-declaration-assignment td { padding: 12px 14px; text-align: left; border-bottom: 1px solid #e5ebf3; vertical-align: middle; }
+.payroll-declaration-assignment th { position: sticky; top: 0; background: #f6f8fb; font-weight: 600; white-space: nowrap; }
+.payroll-declaration-assignment th:first-child { width: 36px; }
+.payroll-declaration-assignment input[type="checkbox"] { width: 16px; height: 16px; accent-color: #1677ff; vertical-align: middle; }
+.payroll-declaration-assignment > div { overscroll-behavior: contain; border: 1px solid #e5ebf3; border-radius: 8px; }
+.payroll-declaration-assignment table { min-width: 660px; }
+.payroll-declaration-assignment :focus-visible { outline: 2px solid #1677ff; outline-offset: 2px; }
+@media (max-width: 600px) {
+  .payroll-declaration-assignment { width: calc(100vw - 24px); max-height: calc(100dvh - 24px); padding: 16px; }
+  .payroll-declaration-assignment > label { display: flex; min-width: 0; margin-right: 0; }
+}
+.payroll-declaration-filters { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px; margin-bottom: 20px; }
+.payroll-declaration-filters label { display: flex; flex-direction: column; gap: 6px; min-width: 160px; font-size: 13px; font-weight: 500; }
+.payroll-declaration-filters select { min-height: 40px; padding: 8px 32px 8px 12px; border: 1px solid #cfd8e5; border-radius: 6px; color: #17324d; background: #fff; font: inherit; }
+.payroll-declaration-filters button { min-height: 40px; }
+.payroll-declaration-action-note { display: block; margin-top: 6px; color: #748095; font-size: 12px; }

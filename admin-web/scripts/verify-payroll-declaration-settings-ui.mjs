@@ -10,7 +10,7 @@ assert.match(source, /dataset\.payrollDeclarationSettings/);
 assert.match(source, /open-declaration-settings/);
 assert.match(source, /新增语言模板/);
 assert.match(source, /创建新版本/);
-assert.match(source, /审核并发布/);
+assert.match(source, /保存并发布/);
 assert.match(page, /declarationSettings\?\.destroy/);
 assert.match(css, /payroll-declaration-settings-screen\{position:fixed;inset:0/);
 assert.match(source, /showModal\(/);
