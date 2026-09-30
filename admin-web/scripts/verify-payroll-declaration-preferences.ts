@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { resolveEmployeeDeclarationPresentation } from "../src/team/payroll/payroll-declaration-presentation";
+import { resolveEmployeeDeclarationPresentation, renderDeclarationPartHtml } from "../src/team/payroll/payroll-declaration-presentation";
 import type { DeclarationSnapshot, DeclarationTemplateFamily, DeclarationTemplateVersion } from "../src/team/payroll/payroll-declaration-types";
 
 const families: DeclarationTemplateFamily[] = [
@@ -40,5 +40,19 @@ const currentEnglish = mapping.match(/declarationBodyEn:\s*"([^"]+)"/)![1].repla
 assert.equal(systemDefault.primary?.source, currentEnglish, "System default keeps the existing English wording");
 assert.equal(resolveEmployeeDeclarationPresentation({ ...defaults, snapshot }).primary?.renderedText, "Bản đã xác nhận", "Historical snapshot wins over system default");
 assert.deepEqual(resolveEmployeeDeclarationPresentation({ ...base, families: [], versions: [] }).blockers, ["missing_primary_template"], "Explicit missing template never silently falls back");
+
+const emphasized = renderDeclarationPartHtml(systemDefault.primary!);
+assert.match(emphasized, /<strong[^>]*><u[^>]*>\$144\.00<\/u><\/strong>/);
+assert.match(emphasized, /<strong[^>]*><u[^>]*>\$12\.50<\/u><\/strong>/);
+const special = { ...systemDefault.primary!, source: 'literal 10 {{employee_name}} / {{employee_name}}\n{{total_hours}}', renderedText: 'literal 10 <img> / <img>\n10', variables: { employee_name: '<img>', total_hours: '10' } };
+const escaped = renderDeclarationPartHtml(special);
+assert.equal((escaped.match(/<strong/g) || []).length, 3);
+assert.match(escaped, /^literal 10 /, 'Literal numbers are not variables');
+assert.doesNotMatch(escaped, /<img>/);
+assert.match(escaped, /&lt;img&gt;/);
+assert.match(escaped, /<br>/);
+const frozenWithVariables = resolveEmployeeDeclarationPresentation({ ...base, snapshot: { ...snapshot, source: 'Tips {{tips_amount}}', variables: { tips_amount: '$5.00' }, renderedText: 'Tips $5.00' } });
+assert.match(renderDeclarationPartHtml(frozenWithVariables.primary!), /<u[^>]*>\$5\.00<\/u>/);
+assert.equal(renderDeclarationPartHtml({ ...special, renderedText: 'Original historical text' }), 'Original historical text', 'Never rewrite frozen text if variables cannot reproduce it');
 
 console.log("Payroll declaration preference verification passed.");

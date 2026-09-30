@@ -1,4 +1,5 @@
 import JSZip from "jszip";
+import { renderDeclarationPartHtml, type DeclarationPresentationPart } from "./payroll-declaration-presentation";
 import { buildDetailedCsv, buildEmployeeCsv, buildSummaryCsv } from "./payroll-batch-export-csv";
 import { draftLabel, sanitizePayrollFilePart } from "./payroll-batch-export-data";
 import type { BatchArtifactResult, BatchEmployeeRecord, BatchExportInput, PayrollBatchBridge } from "./payroll-batch-export-types";
@@ -41,8 +42,8 @@ function declarationBlockerMessage(record: BatchEmployeeRecord): string | null {
 function declarationHtml(record: BatchEmployeeRecord): string {
   const presentation = record.declarationPresentation;
   if (!presentation?.primary) return "";
-  const part = (text: string, localeCode: string) => `<p lang="${localeCode}" dir="${/^(ar|fa|he|ur)(-|$)/i.test(localeCode) ? "rtl" : "ltr"}">${text.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char] || char).replace(/\n/g, "<br>")}</p>`;
-  return `<section class="declaration"><strong>Declaration</strong>${part(presentation.primary.renderedText, presentation.primary.localeCode)}${presentation.english ? part(presentation.english.renderedText, presentation.english.localeCode) : ""}</section>`;
+  const part = (value: DeclarationPresentationPart) => `<p dir="${/^(ar|fa|he|ur)(-|$)/i.test(value.localeCode) ? "rtl" : "ltr"}">${renderDeclarationPartHtml(value)}</p>`;
+  return `<section class="declaration"><strong>Declaration</strong>${part(presentation.primary)}${presentation.english ? part(presentation.english) : ""}</section>`;
 }
 
 function summaryHtml(record: BatchEmployeeRecord): string {

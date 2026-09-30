@@ -13,7 +13,7 @@ import type { PayrollPageContext } from "./payroll-context";
 import type { PayrollScopeSnapshot } from "./payroll-types";
 import type { PayrollBatchBridge } from "./payroll-batch-export-types";
 import type { PayrollDeclarationRepository } from "./payroll-declaration-api";
-import { resolveEmployeeDeclarationPresentation } from "./payroll-declaration-presentation";
+import { resolveEmployeeDeclarationPresentation, renderDeclarationPartHtml } from "./payroll-declaration-presentation";
 import type { DeclarationVariables, DeclarationSnapshot } from "./payroll-declaration-types";
 import type { PayrollEmployee, PayrollPeriod } from "./payroll-types";
 
@@ -24,6 +24,7 @@ export interface PayrollRuntimeHandle {
 
 function createDeclarationBridge(context: PayrollPageContext, repository: PayrollDeclarationRepository) {
   return {
+    renderPartHtml: renderDeclarationPartHtml,
     systemDefault(employee: PayrollEmployee, variables: DeclarationVariables) {
       return resolveEmployeeDeclarationPresentation({
         employeeId: employee.id, periodId: "", organizationId: context.getScope().brandId || "demo-organization",

@@ -21,6 +21,25 @@ export interface DeclarationPresentationPart {
   sourceScope: "store" | "enterprise" | "system";
   source: string;
   renderedText: string;
+  variables?: DeclarationVariables;
+}
+
+/** Emphasize bound values only, without changing stored or historical declaration text. */
+export function renderDeclarationPartHtml(part: DeclarationPresentationPart): string {
+  const escape = (text: string) => text.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]!).replace(/\n/g, "<br>");
+  if (!part.variables) return escape(part.renderedText);
+  let plain = "", html = "", cursor = 0;
+  for (const match of part.source.matchAll(/\{\{\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*\}\}/g)) {
+    const value = Object.prototype.hasOwnProperty.call(part.variables, match[1]) ? part.variables[match[1] as keyof DeclarationVariables] : undefined;
+    if (value === undefined || value === null) return escape(part.renderedText);
+    const prefix = part.source.slice(cursor, match.index);
+    plain += prefix + String(value);
+    html += escape(prefix) + `<strong class="payroll-decl-variable" style="font-size:1.35em;font-weight:800;line-height:1.25;padding:0 2px;color:inherit"><u style="text-underline-offset:4px;text-decoration-thickness:2px">${escape(String(value))}</u></strong>`;
+    cursor = match.index! + match[0].length;
+  }
+  plain += part.source.slice(cursor);
+  html += escape(part.source.slice(cursor));
+  return plain.normalize("NFC") === part.renderedText.normalize("NFC") ? html : escape(part.renderedText);
 }
 
 export interface EmployeeDeclarationPresentation {
@@ -46,9 +65,9 @@ export interface EmployeeDeclarationPresentationInput {
 }
 
 function snapshotPresentation(snapshot: DeclarationSnapshot): EmployeeDeclarationPresentation {
-  const primary: DeclarationPresentationPart = { localeCode: snapshot.localeCode, familyId: "snapshot", versionId: snapshot.primaryVersionId, sourceScope: "enterprise", source: snapshot.source, renderedText: snapshot.renderedText };
+  const primary: DeclarationPresentationPart = { localeCode: snapshot.localeCode, familyId: "snapshot", versionId: snapshot.primaryVersionId, sourceScope: "enterprise", source: snapshot.source, renderedText: snapshot.renderedText, variables: snapshot.variables };
   const english = snapshot.renderedEnglishText && snapshot.englishVersionId
-    ? { localeCode: "en-US", familyId: "snapshot", versionId: snapshot.englishVersionId, sourceScope: "enterprise" as const, source: snapshot.englishSource ?? "", renderedText: snapshot.renderedEnglishText }
+    ? { localeCode: "en-US", familyId: "snapshot", versionId: snapshot.englishVersionId, sourceScope: "enterprise" as const, source: snapshot.englishSource ?? "", renderedText: snapshot.renderedEnglishText, variables: snapshot.variables }
     : null;
   return { status: "frozen", primary, english, printMode: snapshot.printMode, blockers: [], snapshot };
 }
@@ -60,7 +79,7 @@ function findFamilyForVersion(version: DeclarationTemplateVersion, families: Dec
 function toPart(version: DeclarationTemplateVersion, families: DeclarationTemplateFamily[], variables: DeclarationVariables): DeclarationPresentationPart | null {
   const family = findFamilyForVersion(version, families);
   if (!family) return null;
-  return { localeCode: family.localeCode, familyId: family.familyId, versionId: version.versionId, sourceScope: family.scope.storeId ? "store" : "enterprise", source: version.source, renderedText: renderDeclarationText(version.source, variables) };
+  return { localeCode: family.localeCode, familyId: family.familyId, versionId: version.versionId, sourceScope: family.scope.storeId ? "store" : "enterprise", source: version.source, renderedText: renderDeclarationText(version.source, variables), variables };
 }
 
 export function resolveEmployeeDeclarationPresentation(input: EmployeeDeclarationPresentationInput): EmployeeDeclarationPresentation {
@@ -73,6 +92,7 @@ export function resolveEmployeeDeclarationPresentation(input: EmployeeDeclaratio
           localeCode: "en-US", familyId: "system-default", versionId: "system-default-en-v1",
           sourceScope: "system", source: SYSTEM_DEFAULT_DECLARATION_SOURCE,
           renderedText: renderDeclarationText(SYSTEM_DEFAULT_DECLARATION_SOURCE, input.variables),
+          variables: input.variables,
         },
       };
     } catch (error) {

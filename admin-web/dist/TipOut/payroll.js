@@ -95,9 +95,13 @@
   }
 
   /** 声明正文 HTML：gratuity / tips 金额加粗、加大并下划线，便于员工核对 */
+  function declarationPartHtml(part) {
+    if (typeof PayrollDeclarationBridge !== "undefined" && PayrollDeclarationBridge.renderPartHtml) return PayrollDeclarationBridge.renderPartHtml(part);
+    return escapeHtml(part.renderedText || "").replace(/\n/g, "<br>");
+  }
   function renderDeclarationHtml(emp) {
     const localized = emp && emp.declarationPresentation && emp.declarationPresentation.primary;
-    if (localized && localized.renderedText) return escapeHtml(localized.renderedText).replace(/\n/g, "<br>");
+    if (localized && localized.renderedText) return declarationPartHtml(localized);
     const tpl = getDeclarationTemplate();
     const { svc, tips } = getDeclarationAmounts(emp);
     const SVC_TOKEN = "@@PAYROLL_DECL_SVC@@";
@@ -162,10 +166,10 @@
       const englishBody = $("#detail-declaration-english-body");
       if (englishWrap && englishBody) {
         englishWrap.hidden = !presentation.english;
-        englishBody.textContent = presentation.english ? presentation.english.renderedText : "";
+        englishBody.innerHTML = presentation.english ? declarationPartHtml(presentation.english) : "";
       }
       const meta = $("#detail-declaration-meta");
-        if (meta) meta.textContent = presentation.status === "blocked" ? "声明尚未配置：" + presentation.blockers.join(", ") : presentation.primary.familyId === "system-default" ? "系统默认语言 · English" : `${presentation.primary.localeCode} · ${presentation.primary.versionId}`;
+        if (meta) meta.textContent = presentation.status === "blocked" ? "声明尚未配置：" + presentation.blockers.join(", ") : "";
         if ($("#employeesDetailPreviewModal")?.classList.contains("show")) renderEmployeeDetailPreview();
     }).catch((error) => {
       emp.__declarationPresentationPending = "";
@@ -3908,7 +3912,7 @@
 
   function buildCompactDeclarationHtml(payload) {
     const presentation = payload.declarationPresentation;
-    const partHtml = (part) => `<div lang="${escapeHtml(part.localeCode)}" dir="${/^(ar|fa|he|ur)(-|$)/i.test(part.localeCode) ? "rtl" : "auto"}">${escapeHtml(part.renderedText || "").replace(/\n/g, "<br>")}</div>`;
+    const partHtml = (part) => `<div lang="${escapeHtml(part.localeCode)}" dir="${/^(ar|fa|he|ur)(-|$)/i.test(part.localeCode) ? "rtl" : "auto"}">${declarationPartHtml(part)}</div>`;
     if (!presentation || !presentation.primary) return escapeHtml(payload.declarationText || "");
     return partHtml(presentation.primary) + (presentation.english ? `<div class="payroll-declaration-english">${partHtml(presentation.english)}</div>` : "");
   }
@@ -4283,7 +4287,7 @@ html,body{height:auto!important;overflow:visible!important}
     const initialEnglish = emp.declarationPresentation && emp.declarationPresentation.english;
     if (initialEnglishWrap && initialEnglishBody) {
       initialEnglishWrap.hidden = !initialEnglish;
-      initialEnglishBody.textContent = initialEnglish ? initialEnglish.renderedText : "";
+      initialEnglishBody.innerHTML = initialEnglish ? declarationPartHtml(initialEnglish) : "";
     }
     refreshDeclarationPresentation(emp, period, { reg: sums.reg, ot: sums.ot, total: totalHours });
 

@@ -18,7 +18,7 @@ const sandbox = {
   fmtMoney: (value) => Number(value ?? 0).toFixed(2),
 };
 vm.createContext(sandbox);
-vm.runInContext(functionSource("buildCompactDeclarationHtml") + functionSource("buildCompactDetailHtml"), sandbox);
+vm.runInContext(functionSource("declarationPartHtml") + functionSource("buildCompactDeclarationHtml") + functionSource("buildCompactDetailHtml"), sandbox);
 const payload = {
   summary: {}, weeks: [], employeeName: "Test", periodNumber: 1,
   declarationText: "Legacy declaration",
