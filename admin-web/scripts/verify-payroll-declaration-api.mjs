@@ -31,6 +31,9 @@ try {
   assert.equal(listed.body.versions[0].status, "published");
   const forbidden = await fetch(`${origin}/api/v1/payroll/declaration/_templates`, { headers: { ...headers, "X-Payroll-Organization-Id": "" } });
   assert.equal(forbidden.status, 403);
+  const systemDefault = await request("PUT", "/api/v1/payroll/declaration/preferences/default-employee", { defaultFamilyId: "system-default", defaultLocaleCode: "en-US", defaultPrintMode: "employee-only" });
+  assert.equal(systemDefault.status, 200);
+  assert.equal(systemDefault.body.defaultFamilyId, "system-default");
   console.log("Payroll declaration API verification passed.");
 } finally {
   await new Promise((resolve) => server.close(resolve));

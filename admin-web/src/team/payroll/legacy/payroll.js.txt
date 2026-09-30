@@ -147,7 +147,12 @@
       emp.__declarationPresentationKey = key;
       emp.declarationPresentation = presentation;
       const current = getEmployee(state.periodId, state.employeeId);
-      if (current !== emp) return;
+      if (!current || current.id !== emp.id || JSON.stringify(getDraftAsEmployeeShape()?.declarationPreference || null) !== JSON.stringify(preference)) return;
+      if (JSON.stringify(current.declarationPreference || null) === JSON.stringify(preference)) {
+        current.declarationPresentation = presentation;
+        current.__declarationPresentationKey = key;
+        current.__declarationPresentationPending = "";
+      }
       const body = $("#detail-declaration-body");
       if (body) {
         body.innerHTML = renderDeclarationHtml(emp);
@@ -2136,6 +2141,7 @@
   }
 
   function hideEmployeeEditModal({ accept = false, restoreFocus = true } = {}) {
+    if (employeeEditModalState.saving) return;
     const modal = $("#payrollEmployeeEditModal");
     if (!modal || !modal.classList.contains("show")) return;
     employeeDeclarationLanguageRequest += 1;
@@ -2157,8 +2163,51 @@
     if (restoreFocus && trigger?.isConnected) window.setTimeout(() => trigger.focus?.(), 0);
   }
 
-  function confirmEmployeeEditModal() {
-    hideEmployeeEditModal({ accept: true, restoreFocus: true });
+  async function confirmEmployeeEditModal() {
+    const button = $("#btn-employee-edit-confirm");
+    if (employeeEditModalState.saving || $("#field-declaration-locale")?.disabled) return;
+    readFormIntoDraft();
+    const emp = getEmployee(state.periodId, state.employeeId);
+    const draft = state.workspaceDraft;
+    if (!emp || !draft) return;
+    const identity = {
+      adpFile: draft.adpFile, ssn: draft.ssn, hireDate: draft.hireDate,
+      declarationPreference: draft.declarationPreference ? cloneData(draft.declarationPreference) : null,
+    };
+    const previousLabel = button?.textContent;
+    employeeEditModalState.saving = true;
+    if (button) { button.disabled = true; button.textContent = "保存中…"; }
+    try {
+      if (typeof PayrollDeclarationBridge !== "undefined") {
+        await PayrollDeclarationBridge.saveEmployeePreference({
+          employeeId: emp.id,
+          defaultFamilyId: identity.declarationPreference?.defaultFamilyId || "system-default",
+          defaultLocaleCode: identity.declarationPreference?.defaultLocaleCode || "en-US",
+          defaultPrintMode: identity.declarationPreference?.defaultPrintMode || "employee-only",
+        });
+      }
+      Object.assign(emp, identity);
+      emp.__declarationPresentationKey = "";
+      emp.__declarationPresentationPending = "";
+      if (emp.declarationPresentation?.status !== "frozen") emp.declarationPresentation = null;
+      // Only move the identity baseline. Attendance/amount drafts remain unconfirmed.
+      if (state.workspaceEntrySnapshot) {
+        const baseline = JSON.parse(state.workspaceEntrySnapshot);
+        Object.assign(baseline, identity);
+        state.workspaceEntrySnapshot = JSON.stringify(baseline);
+      }
+      updateUnifiedRosterFromEmployee(emp);
+      saveState();
+      employeeEditModalState.saving = false;
+      hideEmployeeEditModal({ accept: true, restoreFocus: true });
+      renderManageForm();
+      if (typeof showNotification === "function") showNotification("员工信息已保存", "success");
+    } catch (error) {
+      if (typeof showNotification === "function") showNotification(error?.message || "员工信息保存失败，请重试", "error");
+    } finally {
+      employeeEditModalState.saving = false;
+      if (button) { button.disabled = false; button.textContent = previousLabel; }
+    }
   }
 
   function setAdpExportMenuOpen(open) {
@@ -4322,7 +4371,7 @@ html,body{height:auto!important;overflow:visible!important}
     else alert(T("confirm.success"));
   }
 
-  function applyConfirmEmployeeSave(changeCount) {
+  async function applyConfirmEmployeeSave(changeCount) {
     const emp = getEmployee(state.periodId, state.employeeId);
     if (!emp) return;
     commitDraftToEmployee();
@@ -4331,36 +4380,44 @@ html,body{height:auto!important;overflow:visible!important}
       return;
     }
     const period = getPeriod(state.periodId);
-    const presentation = emp.declarationPresentation;
-    if (!period || !presentation || presentation.status === "blocked" || !presentation.primary) {
-      if (typeof showNotification === "function") showNotification("请先完成员工声明语言与模板配置", "warning");
-      return;
-    }
+    if (!period) return;
     const exportPayload = buildDetailExportPayload(emp, period);
     const variables = buildDeclarationVariables(emp, period, {
       reg: exportPayload.summary.regH,
       ot: exportPayload.summary.otH,
       total: exportPayload.summary.totalH,
     });
-    PayrollDeclarationBridge.saveEmployeePreference({
-      employeeId: emp.id,
-      defaultFamilyId: emp.declarationPreference.defaultFamilyId,
-      defaultLocaleCode: emp.declarationPreference.defaultLocaleCode,
-      defaultPrintMode: emp.declarationPreference.defaultPrintMode,
-    }).then(() => PayrollDeclarationBridge.confirm({
-      employeeId: emp.id,
-      periodId: period.id,
-      primaryVersionId: presentation.primary.versionId,
-      englishVersionId: presentation.english && presentation.english.versionId,
-      printMode: presentation.printMode,
-      variables,
-    })).then((snapshot) => {
+    try {
+      const presentation = await PayrollDeclarationBridge.resolve(emp, period, variables);
+      emp.declarationPresentation = presentation;
+      if (presentation.status === "frozen") {
+        finalizeConfirmEmployeeSave(emp, changeCount);
+        return;
+      }
+      if (presentation.status === "blocked" || !presentation.primary) {
+        if (typeof showNotification === "function") showNotification("请先完成员工声明语言与模板配置", "warning");
+        return;
+      }
+      await PayrollDeclarationBridge.saveEmployeePreference({
+        employeeId: emp.id,
+        defaultFamilyId: emp.declarationPreference.defaultFamilyId,
+        defaultLocaleCode: emp.declarationPreference.defaultLocaleCode,
+        defaultPrintMode: emp.declarationPreference.defaultPrintMode,
+      });
+      const snapshot = await PayrollDeclarationBridge.confirm({
+        employeeId: emp.id,
+        periodId: period.id,
+        primaryVersionId: presentation.primary.versionId,
+        englishVersionId: presentation.english && presentation.english.versionId,
+        printMode: presentation.printMode,
+        variables,
+      });
       emp.declarationSnapshot = snapshot;
       emp.__declarationPresentationKey = "";
       finalizeConfirmEmployeeSave(emp, changeCount);
-    }).catch((error) => {
+    } catch (error) {
       if (typeof showNotification === "function") showNotification(error && error.message ? error.message : "员工声明确认失败", "error");
-    });
+    }
   }
 
   function confirmEmployee() {

@@ -206,7 +206,8 @@ export async function handlePayrollMockApi(req, res, dbPath) {
         if (!scope) return true;
         const body = await readBody(req);
         const family = scopedFamily(db, body?.defaultFamilyId, scope);
-        if (!family?.activeVersionId) { sendJson(res, 422, { error: "template_unavailable", message: "An applicable published template is required" }); return true; }
+        const systemDefault = body?.defaultFamilyId === "system-default" && body?.defaultLocaleCode === "en-US";
+        if (!systemDefault && !family?.activeVersionId) { sendJson(res, 422, { error: "template_unavailable", message: "An applicable published template is required" }); return true; }
         const preference = { ...body, employeeId: decodeURIComponent(preferenceMatch[1]), updatedBy: scope.actorId, updatedAt: new Date().toISOString(), organizationId: scope.organizationId, storeId: scope.storeId || null };
         db.declarationPreferences = db.declarationPreferences.filter((item) => !(item.employeeId === preference.employeeId && item.organizationId === scope.organizationId));
         db.declarationPreferences.push(preference); appendDeclarationAudit(db, scope, "preference_saved", preference.employeeId); saveDb(dbPath, db); sendJson(res, 200, preference); return true;

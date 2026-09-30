@@ -84,7 +84,11 @@ export function createBrowserDeclarationRepository(scope: DeclarationRepositoryS
     publishVersion: input => changeStatus(input.versionId, input.expectedFamilyRevision, true),
     retireVersion: input => changeStatus(input.versionId, input.expectedFamilyRevision, false),
     async saveEmployeePreference(input) {
-      authorize(); const data = read(); familyFor(data, input.defaultFamilyId);
+      authorize(); const data = read();
+      if (input.defaultFamilyId !== 'system-default') {
+        const family = familyFor(data, input.defaultFamilyId);
+        if (!data.versions.some(version => version.versionId === family.activeVersionId && version.familyId === family.familyId && version.status === 'published')) throw new Error('请先发布声明模板');
+      } else if (input.defaultLocaleCode !== 'en-US') throw new Error('系统默认声明语言为 English');
       const preference = { ...input, updatedBy: scope.actorId, updatedAt: new Date().toISOString() };
       data.preferences[entryKey(input.employeeId)] = preference; write(data); return preference;
     },

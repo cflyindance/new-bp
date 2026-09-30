@@ -9,9 +9,12 @@ async function main() {
   const fetchMock = (async () => { requests++; return new Response('405 Not Allowed', { status: 405 }); }) as typeof fetch;
   const scope = { organizationId: 'test-org', storeId: 'store-1', actorId: 'test-admin', permission: 'publish' as const };
   const repo = createPayrollDeclarationRepository(scope, fetchMock);
+  const defaultPreference = await repo.saveEmployeePreference({ employeeId: 'default-employee', defaultFamilyId: 'system-default', defaultLocaleCode: 'en-US', defaultPrintMode: 'employee-only' });
+  assert.equal(defaultPreference.defaultFamilyId, 'system-default');
   assert.deepEqual(await repo.listTemplates(), { families: [], versions: [] });
   const family = await repo.createFamily({ localeCode: 'es-US', languageDisplayName: 'Español' });
   const draft = await repo.saveDraft({ familyId: family.familyId, source: 'Horas {{total_hours}}', variableSchemaVersion: 'v1' });
+  await assert.rejects(repo.saveEmployeePreference({ employeeId: 'e1', defaultFamilyId: family.familyId, defaultLocaleCode: 'es-US', defaultPrintMode: 'employee-only' }), /发布/);
   await repo.publishVersion({ versionId: draft.versionId, expectedFamilyRevision: 0 });
   const reopened = createPayrollDeclarationRepository(scope, fetchMock);
   assert.equal((await reopened.listTemplates()).versions[0].status, 'published');
