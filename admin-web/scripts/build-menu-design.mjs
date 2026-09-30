@@ -1,0 +1,13 @@
+import {build} from 'vite';
+import {cp,mkdir,readFile,stat} from 'node:fs/promises';
+import {fileURLToPath} from 'node:url';
+import path from 'node:path';
+const root=fileURLToPath(new URL('../',import.meta.url));
+const source=path.join(root,'apps/menu-design/build');
+const destination=path.join(root,'dist/menu-design');
+await build({configFile:path.join(root,'apps/menu-design/vite.config.ts')});
+await mkdir(destination,{recursive:true});
+await cp(source,destination,{recursive:true});
+const html=await readFile(path.join(destination,'index.html'),'utf8');
+for(const match of html.matchAll(/(?:src|href)="\.\/(assets\/[^\"]+)"/g))await stat(path.join(destination,match[1]));
+console.log('Menu Design built and published to dist/menu-design (other embedded products unchanged).');

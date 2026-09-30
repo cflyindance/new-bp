@@ -1,0 +1,26 @@
+{
+  "status":"bounded",
+  "stopReason":"root_cause_and_impact_bounded",
+  "entryPoints":["src/shell/peripheral-products-control.ts","apps/menu-design/src/main.ts"],
+  "references":[
+    {"path":"src/shell/peripheral-products-control.ts","symbol":"bindPeripheralProductsControl","relation":"entry_point","status":"affected"},
+    {"path":"src/shell/menu-design-entry.ts","symbol":"openMenuDesign","relation":"definition","status":"affected"},
+    {"path":"apps/menu-design/src/main.ts","symbol":"goHost","relation":"consumer","status":"affected"},
+    {"path":"src/auth/login.ts","symbol":"getAuthenticatedEmail / setAuthenticated","relation":"data_source","status":"not_affected"},
+    {"path":"src/auth/session-scope.ts","symbol":"isViewSwitchRestricted","relation":"definition","status":"not_affected"},
+    {"path":"src/main.ts","symbol":"isAuthenticated guard","relation":"consumer","status":"not_affected"},
+    {"path":"src/auth/user-center.ts","symbol":"clearAuthenticated caller","relation":"shared_caller","status":"not_affected"}
+  ],
+  "deepReadPaths":["src/shell/menu-design-entry.ts","src/shell/peripheral-products-control.ts","apps/menu-design/src/main.ts","src/auth/login.ts","apps/menu-design/tests/navigation.test.mjs","apps/menu-design/tests/entry.test.mjs"],
+  "dataFlow":[
+    {"from":"src/shell/peripheral-products-control.ts","to":"src/shell/menu-design-entry.ts","evidence":"Only openMenuDesign caller; noopener new tab."},
+    {"from":"src/auth/login.ts","to":"apps/menu-design/src/main.ts","evidence":"Current authenticated email supplied only through live same-origin channel when returning."},
+    {"from":"apps/menu-design/src/main.ts","to":"src/main.ts","evidence":"goHost navigates to existing route and original authentication guard."}
+  ],
+  "sharedCallers":["src/main.ts","src/auth/user-center.ts","src/shell/peripheral-products-control.ts"],
+  "sharedCallersComplete":true,
+  "workspace":{"status":"unrelated_changes","evidence":"git status has numerous existing unrelated source/vendor/dist changes. Prior menu implementation is continued; unrelated edits preserved."},
+  "wikiQueries":[{"question":"Where is login state stored and how can independent navigation retain it?","mode":"wiki_bypass","reason":"resolve-query-context.mjs returned matched:false, wiki_not_configured","sourceChecks":["src/auth/login.ts","src/shell/menu-design-entry.ts","apps/menu-design/src/main.ts"]}],
+  "expansions":[{"question":"Can a return authorize a restricted or logged-out source?","trigger":"high_risk_side_effect","addedPaths":["src/auth/session-scope.ts","src/config/enterprise-merchant-impersonate.ts"],"expectedEvidence":"Source must re-check live identity and restriction before each response."}],
+  "plan":{"scope":"Preserve noopener and independent UI; use same-origin live handoff, never persistent credentials or URL identity; fail closed when source unavailable.","risk":"high: authentication continuity","tdd":"RED authenticated handoff, GREEN and focused regression","e2e":"required; authenticated branch waiting for user login","build":"required: application entry changed","ciBuild":"unknown"}
+}

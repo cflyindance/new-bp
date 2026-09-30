@@ -10,6 +10,8 @@ import { renderFlatVersionSwitchGroup } from "./version-switch-control";
 export type DemoSwitchControlOptions = {
   /** 商家后台为 true；M 平台为 false（无版本切换） */
   showVersionSwitch?: boolean;
+  /** Independent products navigate back to the host rather than mutating their own hash. */
+  onProductNavigate?: (product: string) => void;
 };
 
 const FAB_ROOT_ID = "demo-switch-fab-root";
@@ -325,7 +327,7 @@ export function mountDemoSwitchFab(options: DemoSwitchControlOptions = {}): void
   applyFabPosition(root);
   bindFabDragAndToggle(root);
   bindBackdropDismiss();
-  bindPeripheralProductsControl();
+  bindPeripheralProductsControl(options.onProductNavigate);
   bindGlobalHostIpControl();
   ensureDemoSwitchDismissBound();
 }
