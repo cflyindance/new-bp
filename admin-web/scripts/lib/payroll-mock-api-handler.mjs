@@ -178,6 +178,30 @@ export async function handlePayrollMockApi(req, res, dbPath) {
       }
 
       const versionActionMatch = route.match(/^\/versions\/([^/]+)\/(publish|retire)$/);
+      const draftMutation = route.match(/^\/versions\/([^/]+)$/);
+      if (draftMutation && ["PUT", "DELETE"].includes(method)) {
+        const scope = requireDeclarationScope(req, res, "manage");
+        if (!scope) return true;
+        const version = db.declarationVersions.find(v => v.versionId === decodeURIComponent(draftMutation[1]));
+        const family = version ? scopedFamily(db, version.familyId, scope) : null;
+        if (!family || !version) { sendJson(res,404,{message:"草稿不存在"}); return true; }
+        const body = await readBody(req);
+        if (version.status !== "draft" || family.activeVersionId === version.versionId || Number(family.revision || 0) !== body?.expectedFamilyRevision) { sendJson(res,409,{message:"模板状态或版本已变化，请重新加载"}); return true; }
+        if (method === "PUT") {
+          if (typeof body.source !== "string" || !body.source.trim() || /<[^>]+>/.test(body.source)) { sendJson(res,422,{message:"请填写有效纯文本声明"}); return true; }
+          version.source = body.source;
+        } else {
+          const remaining = db.declarationVersions.filter(v => v.familyId === family.familyId && v.versionId !== version.versionId);
+          const referenced = db.declarationSnapshots.some(s=>s.primaryVersionId===version.versionId || s.englishVersionId===version.versionId)
+            || (!remaining.length && (db.declarationPreferences.some(p=>p.defaultFamilyId===family.familyId) || db.declarationOverrides.some(o=>o.familyId===family.familyId)));
+          if (referenced) { sendJson(res,409,{message:"模板存在关联，不能删除"}); return true; }
+          db.declarationVersions = db.declarationVersions.filter(v=>v.versionId!==version.versionId);
+          if (!remaining.length) db.declarationFamilies = db.declarationFamilies.filter(f=>f.familyId!==family.familyId);
+        }
+        family.revision = Number(family.revision || 0) + 1;
+        appendDeclarationAudit(db,scope,method === "PUT" ? "draft_updated" : "draft_deleted",version.versionId);
+        saveDb(dbPath,db); sendJson(res,200,method === "PUT" ? version : {ok:true}); return true;
+      }
       if (method === "POST" && versionActionMatch) {
         const scope = requireDeclarationScope(req, res, "publish");
         if (!scope) return true;
@@ -186,6 +210,7 @@ export async function handlePayrollMockApi(req, res, dbPath) {
         if (!version || !family) { sendJson(res, 404, { error: "version_not_found" }); return true; }
         const body = await readBody(req);
         if (Number(body?.expectedFamilyRevision) !== Number(family.revision || 0)) { sendJson(res, 409, { error: "stale_family", message: "Declaration family changed", revision: family.revision }); return true; }
+        if (versionActionMatch[2] === "publish" ? version.status !== "draft" : version.status !== "published" || family.activeVersionId !== version.versionId) { sendJson(res,409,{message:"当前状态不允许该操作"}); return true; }
         const now = new Date().toISOString();
         if (versionActionMatch[2] === "publish") {
           db.declarationVersions.forEach((item) => { if (item.familyId === family.familyId && item.status === "published") { item.status = "retired"; item.retiredAt = now; } });
@@ -201,14 +226,20 @@ export async function handlePayrollMockApi(req, res, dbPath) {
       }
 
       const preferenceMatch = route.match(/^\/preferences\/([^/]+)$/);
+      if (method === "GET" && preferenceMatch) {
+        const employeeId = decodeURIComponent(preferenceMatch[1]);
+        const preference = db.declarationPreferences.find((item) => item.employeeId === employeeId && item.organizationId === viewScope.organizationId && (item.storeId || null) === (viewScope.storeId || null));
+        sendJson(res, 200, { preference: preference || null }); return true;
+      }
       if (method === "PUT" && preferenceMatch) {
         const scope = requireDeclarationScope(req, res, "manage");
         if (!scope) return true;
         const body = await readBody(req);
         const family = scopedFamily(db, body?.defaultFamilyId, scope);
-        if (!family?.activeVersionId) { sendJson(res, 422, { error: "template_unavailable", message: "An applicable published template is required" }); return true; }
+        const systemDefault = body?.defaultFamilyId === "system-default" && body?.defaultLocaleCode === "en-US";
+        if (!systemDefault && !family?.activeVersionId) { sendJson(res, 422, { error: "template_unavailable", message: "An applicable published template is required" }); return true; }
         const preference = { ...body, employeeId: decodeURIComponent(preferenceMatch[1]), updatedBy: scope.actorId, updatedAt: new Date().toISOString(), organizationId: scope.organizationId, storeId: scope.storeId || null };
-        db.declarationPreferences = db.declarationPreferences.filter((item) => !(item.employeeId === preference.employeeId && item.organizationId === scope.organizationId));
+        db.declarationPreferences = db.declarationPreferences.filter((item) => !(item.employeeId === preference.employeeId && item.organizationId === scope.organizationId && (item.storeId || null) === (scope.storeId || null)));
         db.declarationPreferences.push(preference); appendDeclarationAudit(db, scope, "preference_saved", preference.employeeId); saveDb(dbPath, db); sendJson(res, 200, preference); return true;
       }
 

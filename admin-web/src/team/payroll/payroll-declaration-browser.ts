@@ -64,6 +64,33 @@ export function createBrowserDeclarationRepository(scope: DeclarationRepositoryS
     return { family, version };
   };
   return {
+    async updateDraft(input) {
+      authorize(); const data = read();
+      const version = data.versions.find(v => v.versionId === input.versionId);
+      if (!version) throw new Error('草稿不存在，请重新加载');
+      const family = familyFor(data, version.familyId);
+      if (version.status !== 'draft' || family.revision !== input.expectedFamilyRevision) throw new Error('模板状态或版本已变化，请重新加载');
+      if (!input.source.trim() || validateDeclarationSource(input.source).length) throw new Error('请填写有效声明正文');
+      version.source = input.source; family.revision = (family.revision ?? 0) + 1;
+      write(data); return version;
+    },
+    async deleteDraft(input) {
+      authorize(); const data = read();
+      const version = data.versions.find(v => v.versionId === input.versionId);
+      if (!version) throw new Error('草稿不存在，请重新加载');
+      const family = familyFor(data, version.familyId);
+      if (version.status !== 'draft' || family.activeVersionId === version.versionId || (family.revision ?? 0) !== input.expectedFamilyRevision) throw new Error('仅可删除未变化的草稿，请重新加载');
+      if (Object.values(data.snapshots).some(s => s.primaryVersionId === version.versionId || s.englishVersionId === version.versionId)) throw new Error('版本已关联历史声明，不能删除');
+      const remaining = data.versions.filter(v => v.familyId === family.familyId && v.versionId !== version.versionId);
+      if (!remaining.length && (Object.values(data.preferences).some(p => p.defaultFamilyId === family.familyId) || Object.values(data.overrides).some(o => o.familyId === family.familyId))) throw new Error('模板存在员工关联，不能删除');
+      data.versions = data.versions.filter(v => v.versionId !== version.versionId);
+      if (!remaining.length) data.families = data.families.filter(f => f.familyId !== family.familyId);
+      else family.revision = (family.revision ?? 0) + 1;
+      write(data);
+    },
+    async loadEmployeePreference(employeeId) {
+      return read().preferences[entryKey(employeeId)] ?? null;
+    },
     async listTemplates() {
       const data = read(); const families = data.families.filter(visible);
       return { families, versions: data.versions.filter(item => families.some(family => family.familyId === item.familyId)) };
@@ -84,7 +111,11 @@ export function createBrowserDeclarationRepository(scope: DeclarationRepositoryS
     publishVersion: input => changeStatus(input.versionId, input.expectedFamilyRevision, true),
     retireVersion: input => changeStatus(input.versionId, input.expectedFamilyRevision, false),
     async saveEmployeePreference(input) {
-      authorize(); const data = read(); familyFor(data, input.defaultFamilyId);
+      authorize(); const data = read();
+      if (input.defaultFamilyId !== 'system-default') {
+        const family = familyFor(data, input.defaultFamilyId);
+        if (!data.versions.some(version => version.versionId === family.activeVersionId && version.familyId === family.familyId && version.status === 'published')) throw new Error('请先发布声明模板');
+      } else if (input.defaultLocaleCode !== 'en-US') throw new Error('系统默认声明语言为 English');
       const preference = { ...input, updatedBy: scope.actorId, updatedAt: new Date().toISOString() };
       data.preferences[entryKey(input.employeeId)] = preference; write(data); return preference;
     },

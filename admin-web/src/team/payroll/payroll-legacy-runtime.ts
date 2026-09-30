@@ -13,21 +13,42 @@ import type { PayrollPageContext } from "./payroll-context";
 import type { PayrollScopeSnapshot } from "./payroll-types";
 import type { PayrollBatchBridge } from "./payroll-batch-export-types";
 import type { PayrollDeclarationRepository } from "./payroll-declaration-api";
-import { resolveEmployeeDeclarationPresentation } from "./payroll-declaration-presentation";
-import type { DeclarationVariables } from "./payroll-declaration-types";
+import { resolveEmployeeDeclarationPresentation, renderDeclarationPartHtml } from "./payroll-declaration-presentation";
+import type { DeclarationVariables, DeclarationSnapshot } from "./payroll-declaration-types";
 import type { PayrollEmployee, PayrollPeriod } from "./payroll-types";
 
 export interface PayrollRuntimeHandle {
+  getDeclarationEmployees(): PayrollEmployee[];
+  applyDeclarationPreference(employeeId: string, store: string, preference: unknown): void;
   getBatchBridge(): PayrollBatchBridge;
   destroy(): void;
 }
 
 function createDeclarationBridge(context: PayrollPageContext, repository: PayrollDeclarationRepository) {
   return {
+    renderPartHtml: renderDeclarationPartHtml,
+    loadEmployeePreference: (employeeId: string) => repository.loadEmployeePreference(employeeId),
+    systemDefault(employee: PayrollEmployee, variables: DeclarationVariables) {
+      return resolveEmployeeDeclarationPresentation({
+        employeeId: employee.id, periodId: "", organizationId: context.getScope().brandId || "demo-organization",
+        families: [], versions: [], variables,
+        snapshot: employee.declarationSnapshot as DeclarationSnapshot | null | undefined,
+      });
+    },
+    async listPublishedTemplates() {
+      const scope = context.getScope();
+      const { families, versions } = await repository.listTemplates();
+      return families.filter((family) =>
+        family.scope.organizationId === (scope.brandId || "demo-organization") &&
+        (!family.scope.storeId || family.scope.storeId === scope.storeId) &&
+        versions.some((version) => version.familyId === family.familyId &&
+          version.versionId === family.activeVersionId && version.status === "published"),
+      );
+    },
     async resolve(employee: PayrollEmployee, period: PayrollPeriod, variables: DeclarationVariables) {
       const scope = context.getScope();
       const [{ families, versions }, snapshot] = await Promise.all([
-        repository.listTemplates(),
+        employee.declarationPreference ? repository.listTemplates() : Promise.resolve({ families: [], versions: [] }),
         repository.loadSnapshot(employee.id, period.id),
       ]);
       return resolveEmployeeDeclarationPresentation({
@@ -107,6 +128,37 @@ function createScopeAdapter(context: PayrollPageContext, cleanups: Set<() => voi
 }
 
 const batchBridgeSource = `window.__teamPayrollBatchBridge = {
+  getDeclarationEmployees: () => {
+    const employees = Object.values(state.data.employees).flat();
+    const missing = getUnifiedRoster().filter(r => !employees.some(e =>
+      String(e.store || '') === String(r.store || '') && (
+        e.id === 'emp-' + String(r.id || '').replace(/^roster-seed-/, 'seed-') ||
+        (e.__rosterId && e.__rosterId === r.id) ||
+        (e.adpFile && String(e.adpFile) === String(r.adpFile || ''))
+      )));
+    // Roster identity does not depend on payroll records, attendance, or an employee number.
+    return structuredClone([...employees, ...missing.map(r => ({ ...r, id: r.id ? 'emp-' + String(r.id).replace(/^roster-seed-/, 'seed-') : '', segments: [], adjustments: {}, __rosterId: r.id }))]);
+  },
+  applyDeclarationPreference: (employeeId, store, preference) => {
+    Object.values(state.data.employees).flat().forEach(emp => {
+      if (emp.id !== employeeId || String(emp.store || '') !== store) return;
+      emp.declarationPreference = structuredClone(preference);
+      emp.__declarationPresentationKey = '';
+      emp.__declarationPresentationPending = '';
+      if (emp.declarationPresentation?.status !== 'frozen') emp.declarationPresentation = null;
+    });
+    const active = getEmployee(state.periodId, state.employeeId);
+    if (active?.id === employeeId && String(active.store || '') === store) {
+      if (state.workspaceDraft) state.workspaceDraft.declarationPreference = structuredClone(preference);
+      if (state.workspaceEntrySnapshot) {
+        const baseline = JSON.parse(state.workspaceEntrySnapshot);
+        baseline.declarationPreference = structuredClone(preference);
+        state.workspaceEntrySnapshot = JSON.stringify(baseline);
+      }
+      renderManageForm();
+    }
+    saveState();
+  },
   getSnapshot: () => structuredClone(buildSnapshot()),
   getDetailPayload: (employeeId) => {
     const period = getPeriod(state.periodId);
@@ -162,6 +214,7 @@ function buildRuntimeSource(): string {
     apiClientCode,
     "const PayrollApiClient = window.PayrollApiClient;",
     "const TipOutGlobalScopeFilter = window.TipOutGlobalScopeFilter;",
+    "const PayrollDeclarationBridge = window.PayrollDeclarationBridge;",
     periodCalendarCode,
     injectBatchBridgeIntoPayrollIife(payrollCode),
     "//# sourceURL=team-payroll-native-runtime.js",
@@ -288,11 +341,37 @@ export function mountLegacyPayrollRuntime(
   );
   execute(scopedWindow, scopedDocument, scopedWindow, scopedWindow, scopedWindow);
 
+  // Restore saved employee defaults after demo scenarios rebuild their period data.
+  const preferenceScope = context.getScope();
+  const declarationRuntime = globalTarget.__teamPayrollBatchBridge as {
+    getDeclarationEmployees(): PayrollEmployee[];
+    applyDeclarationPreference(id: string, store: string, preference: unknown): void;
+  };
+  if (declarationRepository && preferenceScope.storeId) {
+    const employees = new Map(declarationRuntime.getDeclarationEmployees()
+      .filter(e => [preferenceScope.storeId, preferenceScope.storeLabel, preferenceScope.storeLabelEn].includes(String(e.store || '')))
+      .map(e => [JSON.stringify([e.id, e.store]), e]));
+    for (const employee of employees.values()) {
+      void declarationRepository.loadEmployeePreference(employee.id).then(preference => {
+        if (controller.signal.aborted || !preference || JSON.stringify(context.getScope()) !== JSON.stringify(preferenceScope)) return;
+        const current = declarationRuntime.getDeclarationEmployees().find(e => e.id === employee.id && e.store === employee.store);
+        if (JSON.stringify(current?.declarationPreference) !== JSON.stringify(employee.declarationPreference)) return;
+        declarationRuntime.applyDeclarationPreference(employee.id, String(employee.store || ''), preference.defaultFamilyId === 'system-default' ? null : preference);
+      }).catch(error => { console.warn('读取员工声明偏好失败', error); });
+    }
+  }
+
   return {
     getBatchBridge() {
       const bridge = globalTarget.__teamPayrollBatchBridge as PayrollBatchBridge | undefined;
       if (!bridge) throw new Error("Payroll batch export bridge was not initialized.");
       return bridge;
+    },
+    getDeclarationEmployees() {
+      return (globalTarget.__teamPayrollBatchBridge as any).getDeclarationEmployees();
+    },
+    applyDeclarationPreference(employeeId, store, preference) {
+      (globalTarget.__teamPayrollBatchBridge as any).applyDeclarationPreference(employeeId, store, preference);
     },
     destroy() {
       controller.abort();

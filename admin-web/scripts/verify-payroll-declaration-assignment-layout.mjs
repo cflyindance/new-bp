@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const source = fs.readFileSync(new URL('../src/team/payroll/payroll-declaration-assignment-dialog.ts', import.meta.url), 'utf8');
+const css = fs.readFileSync(new URL('../src/team/payroll/payroll-page.css', import.meta.url), 'utf8');
+assert.match(source, /dialog\.className = 'payroll-declaration-assignment'/);
+assert.match(css, /\.payroll-declaration-assignment\s*\{[^}]*margin:\s*auto/s);
+assert.match(css, /\.payroll-declaration-assignment\s*\{[^}]*inset:\s*0/s);
+assert.match(css, /\.payroll-declaration-assignment th[\s\S]*padding:/);
+assert.match(css, /\.payroll-declaration-assignment button/);
+console.log('Declaration assignment layout passed');

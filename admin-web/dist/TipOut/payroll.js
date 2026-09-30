@@ -79,8 +79,8 @@
   }
 
   function getDeclarationAmounts(emp) {
-    const svc = emp && emp.adjustments ? fmtMoney(emp.adjustments.svcw) : "0.00";
-    const tips = emp && emp.adjustments ? fmtMoney(emp.adjustments.tips) : "0.00";
+    const svc = emp && emp.adjustments ? fmtMoney(emp.adjustments.svcw ?? 0) : "0.00";
+    const tips = emp && emp.adjustments ? fmtMoney(emp.adjustments.tips ?? 0) : "0.00";
     return { svc: "$" + svc, tips: "$" + tips };
   }
 
@@ -95,9 +95,13 @@
   }
 
   /** 声明正文 HTML：gratuity / tips 金额加粗、加大并下划线，便于员工核对 */
+  function declarationPartHtml(part) {
+    if (typeof PayrollDeclarationBridge !== "undefined" && PayrollDeclarationBridge.renderPartHtml) return PayrollDeclarationBridge.renderPartHtml(part);
+    return escapeHtml(part.renderedText || "").replace(/\n/g, "<br>");
+  }
   function renderDeclarationHtml(emp) {
     const localized = emp && emp.declarationPresentation && emp.declarationPresentation.primary;
-    if (localized && localized.renderedText) return escapeHtml(localized.renderedText).replace(/\n/g, "<br>");
+    if (localized && localized.renderedText) return declarationPartHtml(localized);
     const tpl = getDeclarationTemplate();
     const { svc, tips } = getDeclarationAmounts(emp);
     const SVC_TOKEN = "@@PAYROLL_DECL_SVC@@";
@@ -127,7 +131,15 @@
     };
   }
 
+  function ensureSystemDefaultDeclaration(emp, period, totals) {
+    if (!emp || emp.declarationPreference || emp.declarationPresentation?.status === "frozen") return;
+    if (typeof PayrollDeclarationBridge !== "undefined" && PayrollDeclarationBridge.systemDefault) {
+      emp.declarationPresentation = PayrollDeclarationBridge.systemDefault(emp, buildDeclarationVariables(emp, period, totals));
+    }
+  }
+
   function refreshDeclarationPresentation(emp, period, totals) {
+    ensureSystemDefaultDeclaration(emp, period, totals);
     if (!emp || !period || typeof PayrollDeclarationBridge === "undefined" || !PayrollDeclarationBridge.resolve) return;
     const preference = emp.declarationPreference || null;
     const key = JSON.stringify({ periodId: period.id, preference, tips: emp.adjustments && emp.adjustments.tips, svcw: emp.adjustments && emp.adjustments.svcw, totals });
@@ -139,7 +151,12 @@
       emp.__declarationPresentationKey = key;
       emp.declarationPresentation = presentation;
       const current = getEmployee(state.periodId, state.employeeId);
-      if (current !== emp) return;
+      if (!current || current.id !== emp.id || JSON.stringify(getDraftAsEmployeeShape()?.declarationPreference || null) !== JSON.stringify(preference)) return;
+      if (JSON.stringify(current.declarationPreference || null) === JSON.stringify(preference)) {
+        current.declarationPresentation = presentation;
+        current.__declarationPresentationKey = key;
+        current.__declarationPresentationPending = "";
+      }
       const body = $("#detail-declaration-body");
       if (body) {
         body.innerHTML = renderDeclarationHtml(emp);
@@ -149,10 +166,10 @@
       const englishBody = $("#detail-declaration-english-body");
       if (englishWrap && englishBody) {
         englishWrap.hidden = !presentation.english;
-        englishBody.textContent = presentation.english ? presentation.english.renderedText : "";
+        englishBody.innerHTML = presentation.english ? declarationPartHtml(presentation.english) : "";
       }
       const meta = $("#detail-declaration-meta");
-        if (meta) meta.textContent = presentation.status === "blocked" ? "声明尚未配置：" + presentation.blockers.join(", ") : `${presentation.primary.localeCode} · ${presentation.primary.versionId}`;
+        if (meta) meta.textContent = presentation.status === "blocked" ? "声明尚未配置：" + presentation.blockers.join(", ") : "";
         if ($("#employeesDetailPreviewModal")?.classList.contains("show")) renderEmployeeDetailPreview();
     }).catch((error) => {
       emp.__declarationPresentationPending = "";
@@ -2088,6 +2105,7 @@
       ssn: $("#field-ssn")?.value || "",
       hireDate: $("#field-hire-date")?.value || "",
       declarationLocale: $("#field-declaration-locale")?.value || "",
+      declarationFamilyId: $("#field-declaration-locale")?.selectedOptions?.[0]?.dataset?.familyId || "",
       declarationPrintMode: $("#field-declaration-print-mode")?.value || "employee-only",
     };
   }
@@ -2102,7 +2120,7 @@
     if (adpInput) adpInput.value = snapshot.adpFile;
     if (ssnInput) ssnInput.value = snapshot.ssn;
     if (hireDateInput) hireDateInput.value = snapshot.hireDate;
-    if (declarationLocaleInput) declarationLocaleInput.value = snapshot.declarationLocale || "";
+    if (declarationLocaleInput) selectEmployeeDeclarationPreference({ defaultLocaleCode: snapshot.declarationLocale, defaultFamilyId: snapshot.declarationFamilyId });
     if (declarationPrintModeInput) declarationPrintModeInput.value = snapshot.declarationPrintMode || "employee-only";
   }
 
@@ -2120,14 +2138,17 @@
     modal.removeAttribute("aria-hidden");
     modal.removeAttribute("inert");
     setEmployeeEditBackgroundInert(true);
+    refreshEmployeeDeclarationLanguages();
     window.setTimeout(() => {
       if (modal.classList.contains("show")) $("#field-adp-file")?.focus({ preventScroll: true });
     }, 80);
   }
 
   function hideEmployeeEditModal({ accept = false, restoreFocus = true } = {}) {
+    if (employeeEditModalState.saving) return;
     const modal = $("#payrollEmployeeEditModal");
     if (!modal || !modal.classList.contains("show")) return;
+    employeeDeclarationLanguageRequest += 1;
     if ($("#fieldHelpModal")?.classList.contains("show")) hideFieldHelp(false);
     if (!accept) restoreEmployeeIdentityValues(employeeEditModalState.snapshot);
     readFormIntoDraft();
@@ -2146,8 +2167,51 @@
     if (restoreFocus && trigger?.isConnected) window.setTimeout(() => trigger.focus?.(), 0);
   }
 
-  function confirmEmployeeEditModal() {
-    hideEmployeeEditModal({ accept: true, restoreFocus: true });
+  async function confirmEmployeeEditModal() {
+    const button = $("#btn-employee-edit-confirm");
+    if (employeeEditModalState.saving || $("#field-declaration-locale")?.disabled) return;
+    readFormIntoDraft();
+    const emp = getEmployee(state.periodId, state.employeeId);
+    const draft = state.workspaceDraft;
+    if (!emp || !draft) return;
+    const identity = {
+      adpFile: draft.adpFile, ssn: draft.ssn, hireDate: draft.hireDate,
+      declarationPreference: draft.declarationPreference ? cloneData(draft.declarationPreference) : null,
+    };
+    const previousLabel = button?.textContent;
+    employeeEditModalState.saving = true;
+    if (button) { button.disabled = true; button.textContent = "保存中…"; }
+    try {
+      if (typeof PayrollDeclarationBridge !== "undefined") {
+        await PayrollDeclarationBridge.saveEmployeePreference({
+          employeeId: emp.id,
+          defaultFamilyId: identity.declarationPreference?.defaultFamilyId || "system-default",
+          defaultLocaleCode: identity.declarationPreference?.defaultLocaleCode || "en-US",
+          defaultPrintMode: identity.declarationPreference?.defaultPrintMode || "employee-only",
+        });
+      }
+      Object.assign(emp, identity);
+      emp.__declarationPresentationKey = "";
+      emp.__declarationPresentationPending = "";
+      if (emp.declarationPresentation?.status !== "frozen") emp.declarationPresentation = null;
+      // Only move the identity baseline. Attendance/amount drafts remain unconfirmed.
+      if (state.workspaceEntrySnapshot) {
+        const baseline = JSON.parse(state.workspaceEntrySnapshot);
+        Object.assign(baseline, identity);
+        state.workspaceEntrySnapshot = JSON.stringify(baseline);
+      }
+      updateUnifiedRosterFromEmployee(emp);
+      saveState();
+      employeeEditModalState.saving = false;
+      hideEmployeeEditModal({ accept: true, restoreFocus: true });
+      renderManageForm();
+      if (typeof showNotification === "function") showNotification("员工信息已保存", "success");
+    } catch (error) {
+      if (typeof showNotification === "function") showNotification(error?.message || "员工信息保存失败，请重试", "error");
+    } finally {
+      employeeEditModalState.saving = false;
+      if (button) { button.disabled = false; button.textContent = previousLabel; }
+    }
   }
 
   function setAdpExportMenuOpen(open) {
@@ -3679,6 +3743,7 @@
   }
 
   function buildDetailExportPayload(emp, period) {
+    ensureSystemDefaultDeclaration(emp, period);
     if (!emp || !period) return null;
     const sums = sumSegments(emp);
     const payAmounts = sumSegmentPayAmounts(emp);
@@ -3847,7 +3912,7 @@
 
   function buildCompactDeclarationHtml(payload) {
     const presentation = payload.declarationPresentation;
-    const partHtml = (part) => `<div lang="${escapeHtml(part.localeCode)}" dir="${/^(ar|fa|he|ur)(-|$)/i.test(part.localeCode) ? "rtl" : "auto"}">${escapeHtml(part.renderedText || "").replace(/\n/g, "<br>")}</div>`;
+    const partHtml = (part) => `<div lang="${escapeHtml(part.localeCode)}" dir="${/^(ar|fa|he|ur)(-|$)/i.test(part.localeCode) ? "rtl" : "auto"}">${declarationPartHtml(part)}</div>`;
     if (!presentation || !presentation.primary) return escapeHtml(payload.declarationText || "");
     return partHtml(presentation.primary) + (presentation.english ? `<div class="payroll-declaration-english">${partHtml(presentation.english)}</div>` : "");
   }
@@ -3955,6 +4020,72 @@ html,body{height:auto!important;overflow:visible!important}
     }
   }
 
+  let employeeDeclarationLanguageRequest = 0;
+
+  function selectEmployeeDeclarationPreference(preference) {
+    const input = $("#field-declaration-locale");
+    if (!input) return;
+    const locale = preference?.defaultLocaleCode || "";
+    const familyId = preference?.defaultFamilyId || "";
+    let option = Array.from(input.options).find((item) => familyId
+      ? item.dataset.familyId === familyId : item.value === locale);
+    if (!option && locale) {
+      option = document.createElement("option");
+      option.value = locale;
+      option.dataset.familyId = familyId;
+      option.textContent = `${locale}（原选择，模板待核验）`;
+      option.disabled = true;
+      input.appendChild(option);
+    }
+    input.selectedIndex = option ? Array.from(input.options).indexOf(option) : 0;
+  }
+
+  async function refreshEmployeeDeclarationLanguages() {
+    const input = $("#field-declaration-locale");
+    const hint = $("#declaration-language-hint");
+    if (!input || typeof PayrollDeclarationBridge === "undefined" || !PayrollDeclarationBridge.listPublishedTemplates) return;
+    const request = ++employeeDeclarationLanguageRequest;
+    let preference = {
+      defaultLocaleCode: input.value,
+      defaultFamilyId: input.selectedOptions?.[0]?.dataset?.familyId || "",
+    };
+    input.disabled = true;
+    if (hint) hint.textContent = "正在加载已发布模板…";
+    try {
+      const families = await PayrollDeclarationBridge.listPublishedTemplates();
+      const employeeId = state.employeeId;
+      const savedPreference = PayrollDeclarationBridge.loadEmployeePreference
+        ? await PayrollDeclarationBridge.loadEmployeePreference(employeeId) : null;
+      if (request !== employeeDeclarationLanguageRequest) return;
+      if (savedPreference) {
+        preference = savedPreference.defaultFamilyId === 'system-default'
+          ? { defaultFamilyId: '', defaultLocaleCode: '' } : savedPreference;
+        const employee = getEmployee(state.periodId, employeeId);
+        if (employee) employee.declarationPreference = savedPreference.defaultFamilyId === 'system-default' ? null : cloneData(savedPreference);
+        if (state.workspaceDraft) state.workspaceDraft.declarationPreference = employee?.declarationPreference || null;
+      }
+      input.replaceChildren();
+      const placeholder = document.createElement("option");
+      placeholder.value = "";
+      placeholder.textContent = "系统默认语言";
+      input.appendChild(placeholder);
+      families.forEach((family) => {
+        const option = document.createElement("option");
+        option.value = family.localeCode;
+        option.dataset.familyId = family.familyId;
+        option.textContent = `${family.languageDisplayName}（${family.localeCode} · ${family.scope.storeId ? "门店模板" : "企业模板"}）`;
+        input.appendChild(option);
+      });
+      selectEmployeeDeclarationPreference(preference);
+      if (hint) hint.textContent = families.length ? "" : "暂无已发布模板，可使用系统默认语言（English）。";
+    } catch (error) {
+      if (request !== employeeDeclarationLanguageRequest) return;
+      if (hint) hint.textContent = "语言模板加载失败，请关闭后重试。原选择未更改。";
+    } finally {
+      if (request === employeeDeclarationLanguageRequest) input.disabled = false;
+    }
+  }
+
   function renderManageForm() {
     applyTipOutBridgeForCurrentPeriod();
     const emp = getEmployee(state.periodId, state.employeeId);
@@ -3978,7 +4109,11 @@ html,body{height:auto!important;overflow:visible!important}
     if (hireInput) hireInput.value = mdyToIsoDateInput(resolveEmployeeHireDate(editEmp));
     const declarationLocaleInput = $("#field-declaration-locale");
     const declarationPrintModeInput = $("#field-declaration-print-mode");
-    if (declarationLocaleInput) declarationLocaleInput.value = editEmp.declarationPreference?.defaultLocaleCode || "";
+    if (declarationLocaleInput) {
+      employeeDeclarationLanguageRequest += 1;
+      declarationLocaleInput.disabled = false;
+      selectEmployeeDeclarationPreference(editEmp.declarationPreference);
+    }
     if (declarationPrintModeInput) declarationPrintModeInput.value = editEmp.declarationPreference?.defaultPrintMode || "employee-only";
 
     editEmp.segments = editEmp.segments.map((seg) => {
@@ -4035,7 +4170,7 @@ html,body{height:auto!important;overflow:visible!important}
     draft.declarationPreference = declarationLocale ? {
       defaultFamilyId: declarationOption?.dataset?.familyId || draft.declarationPreference?.defaultFamilyId || "legacy-english",
       defaultLocaleCode: declarationLocale,
-      defaultPrintMode: ($("#field-declaration-print-mode") && $("#field-declaration-print-mode").value) || "employee-only",
+      defaultPrintMode: draft.declarationPreference?.defaultPrintMode || "employee-only",
     } : null;
 
     const dayIdxList = [
@@ -4162,7 +4297,7 @@ html,body{height:auto!important;overflow:visible!important}
     const initialEnglish = emp.declarationPresentation && emp.declarationPresentation.english;
     if (initialEnglishWrap && initialEnglishBody) {
       initialEnglishWrap.hidden = !initialEnglish;
-      initialEnglishBody.textContent = initialEnglish ? initialEnglish.renderedText : "";
+      initialEnglishBody.innerHTML = initialEnglish ? declarationPartHtml(initialEnglish) : "";
     }
     refreshDeclarationPresentation(emp, period, { reg: sums.reg, ot: sums.ot, total: totalHours });
 
@@ -4250,7 +4385,7 @@ html,body{height:auto!important;overflow:visible!important}
     else alert(T("confirm.success"));
   }
 
-  function applyConfirmEmployeeSave(changeCount) {
+  async function applyConfirmEmployeeSave(changeCount) {
     const emp = getEmployee(state.periodId, state.employeeId);
     if (!emp) return;
     commitDraftToEmployee();
@@ -4259,36 +4394,44 @@ html,body{height:auto!important;overflow:visible!important}
       return;
     }
     const period = getPeriod(state.periodId);
-    const presentation = emp.declarationPresentation;
-    if (!period || !presentation || presentation.status === "blocked" || !presentation.primary) {
-      if (typeof showNotification === "function") showNotification("请先完成员工声明语言与模板配置", "warning");
-      return;
-    }
+    if (!period) return;
     const exportPayload = buildDetailExportPayload(emp, period);
     const variables = buildDeclarationVariables(emp, period, {
       reg: exportPayload.summary.regH,
       ot: exportPayload.summary.otH,
       total: exportPayload.summary.totalH,
     });
-    PayrollDeclarationBridge.saveEmployeePreference({
-      employeeId: emp.id,
-      defaultFamilyId: emp.declarationPreference.defaultFamilyId,
-      defaultLocaleCode: emp.declarationPreference.defaultLocaleCode,
-      defaultPrintMode: emp.declarationPreference.defaultPrintMode,
-    }).then(() => PayrollDeclarationBridge.confirm({
-      employeeId: emp.id,
-      periodId: period.id,
-      primaryVersionId: presentation.primary.versionId,
-      englishVersionId: presentation.english && presentation.english.versionId,
-      printMode: presentation.printMode,
-      variables,
-    })).then((snapshot) => {
+    try {
+      const presentation = await PayrollDeclarationBridge.resolve(emp, period, variables);
+      emp.declarationPresentation = presentation;
+      if (presentation.status === "frozen") {
+        finalizeConfirmEmployeeSave(emp, changeCount);
+        return;
+      }
+      if (presentation.status === "blocked" || !presentation.primary) {
+        if (typeof showNotification === "function") showNotification("请先完成员工声明语言与模板配置", "warning");
+        return;
+      }
+      await PayrollDeclarationBridge.saveEmployeePreference({
+        employeeId: emp.id,
+        defaultFamilyId: emp.declarationPreference.defaultFamilyId,
+        defaultLocaleCode: emp.declarationPreference.defaultLocaleCode,
+        defaultPrintMode: emp.declarationPreference.defaultPrintMode,
+      });
+      const snapshot = await PayrollDeclarationBridge.confirm({
+        employeeId: emp.id,
+        periodId: period.id,
+        primaryVersionId: presentation.primary.versionId,
+        englishVersionId: presentation.english && presentation.english.versionId,
+        printMode: presentation.printMode,
+        variables,
+      });
       emp.declarationSnapshot = snapshot;
       emp.__declarationPresentationKey = "";
       finalizeConfirmEmployeeSave(emp, changeCount);
-    }).catch((error) => {
+    } catch (error) {
       if (typeof showNotification === "function") showNotification(error && error.message ? error.message : "员工声明确认失败", "error");
-    });
+    }
   }
 
   function confirmEmployee() {

@@ -82,7 +82,7 @@ export function mountPayrollPage(
     pageRoot,
     runtime.getBatchBridge(),
   );
-  let declarationSettings: PayrollDeclarationSettingsHandle | null = createPayrollDeclarationSettingsController({ shadowRoot, pageRoot, context, repository: declarationRepository });
+  let declarationSettings: PayrollDeclarationSettingsHandle | null = createPayrollDeclarationSettingsController({ shadowRoot, pageRoot, context, runtime });
   const handle: PayrollPageHandle = {
     destroy() {
       schedule.destroy();
