@@ -10,6 +10,7 @@ async function main() {
   const version = await repo.saveDraft({ familyId: family.familyId, source: '{{employee_name}}', variableSchemaVersion: 'v1' });
   await repo.publishVersion({ versionId: version.versionId, expectedFamilyRevision: 0 });
   const employees: AssignmentEmployee[] = ['1','2','3'].map(employeeId => ({ key: employeeId, employeeId, storeId: 'A', name: employeeId, employeeNumber: employeeId, preference: null }));
+  employees[0].employeeNumber = ''; // An employee number is not required for assignment.
   await repo.saveEmployeePreference({ employeeId: '3', defaultFamilyId: family.familyId, defaultLocaleCode: 'zh-CN', defaultPrintMode: 'employee-only' });
   let fail = true;
   let generation = '1';
@@ -19,6 +20,7 @@ async function main() {
   assert.equal(preview.replacements, 0);
   const result = await batch.executeAssignment(preview);
   assert.deepEqual(result.succeeded, ['1']);
+  assert.equal((await repo.loadEmployeePreference('1'))?.defaultFamilyId, family.familyId);
   assert.deepEqual(result.skipped, ['3']);
   assert.equal(result.failed.length, 1);
   fail = false;

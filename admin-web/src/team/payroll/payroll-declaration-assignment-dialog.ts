@@ -32,7 +32,7 @@ export function createDeclarationAssignmentDialog(parent: HTMLElement, manager: 
       const key = JSON.stringify([scope.brandId,storeId,e.id || `unavailable:${e.__rosterId}`]);
       if (unique.has(key)) continue;
       rawStores.set(key, String(e.store || ''));
-      unique.set(key, { key, employeeId:e.id,storeId,name:e.name,employeeNumber:String(e.adpFile || ''), unavailableReason: e.id ? undefined : '员工数据不完整，缺少薪资员工标识', preference: e.id ? await manager.repositoryFor(storeId).loadEmployeePreference(e.id) ?? (e.declarationPreference ? { ...e.declarationPreference,employeeId:e.id,updatedAt:'',updatedBy:'' } : null) : null });
+      unique.set(key, { key, employeeId:e.id,storeId,name:e.name,employeeNumber:String(e.adpFile || ''), unavailableReason: e.id ? undefined : '无法识别员工，请刷新后重试', preference: e.id ? await manager.repositoryFor(storeId).loadEmployeePreference(e.id) ?? (e.declarationPreference ? { ...e.declarationPreference,employeeId:e.id,updatedAt:'',updatedBy:'' } : null) : null });
     }
     return [...unique.values()];
   };
@@ -46,10 +46,15 @@ export function createDeclarationAssignmentDialog(parent: HTMLElement, manager: 
     <p aria-live="polite">${esc(message)}</p><p>已选择 ${selected.size} 名员工</p><button data-submit ${busy || !selected.size?'disabled':''}>${busy?'保存中…':preview?'确认分配':'下一步'}</button>`;
     dialog.querySelectorAll<HTMLInputElement>('[data-key]').forEach(checkbox => {
       const row = rows.find(e => e.key === checkbox.dataset.key);
-      if (!row?.unavailableReason) return;
-      checkbox.disabled = true;
       const cell = checkbox.closest('tr')?.lastElementChild;
-      if (cell) cell.textContent = row.unavailableReason;
+      if (!row || !cell) return;
+      if (row.preference?.defaultFamilyId === family.familyId) {
+        cell.textContent = `${names.get(family.familyId) || family.languageDisplayName} · 已应用`;
+      }
+      if (row.unavailableReason) {
+        checkbox.disabled = true;
+        checkbox.title = row.unavailableReason;
+      }
     });
   };
   const close = () => { if (busy) return; token++; dialog.close(); returnFocus?.focus(); };

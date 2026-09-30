@@ -130,8 +130,14 @@ function createScopeAdapter(context: PayrollPageContext, cleanups: Set<() => voi
 const batchBridgeSource = `window.__teamPayrollBatchBridge = {
   getDeclarationEmployees: () => {
     const employees = Object.values(state.data.employees).flat();
-    const missing = getUnifiedRoster().filter(r => !employees.some(e => String(e.store || '') === String(r.store || '') && String(e.adpFile || '') === String(r.adpFile || '') && e.adpFile));
-    return structuredClone([...employees, ...missing.map(r => ({ ...r, id: '', segments: [], adjustments: {}, __rosterId: r.id }))]);
+    const missing = getUnifiedRoster().filter(r => !employees.some(e =>
+      String(e.store || '') === String(r.store || '') && (
+        e.id === 'emp-' + String(r.id || '').replace(/^roster-seed-/, 'seed-') ||
+        (e.__rosterId && e.__rosterId === r.id) ||
+        (e.adpFile && String(e.adpFile) === String(r.adpFile || ''))
+      )));
+    // Roster identity does not depend on payroll records, attendance, or an employee number.
+    return structuredClone([...employees, ...missing.map(r => ({ ...r, id: r.id ? 'emp-' + String(r.id).replace(/^roster-seed-/, 'seed-') : '', segments: [], adjustments: {}, __rosterId: r.id }))]);
   },
   applyDeclarationPreference: (employeeId, store, preference) => {
     Object.values(state.data.employees).flat().forEach(emp => {
