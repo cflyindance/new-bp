@@ -14,6 +14,9 @@ import {
 import { EMENU_LOCAL_DEFAULT_PATH } from "./emenu-local-routes";
 import { KIOSK_LOCAL_DEFAULT_PATH } from "./kiosk-local-routes";
 import { PIT_DEFAULT_PATH } from "../pit/pit-routes";
+import { isMenuDesignPage, openMenuDesign } from "./menu-design-entry";
+import { getAuthenticatedEmail } from "../auth/login";
+import { createMenuSessionLink } from "../auth/menu-session-bridge";
 
 function escapeHtml(value: string): string {
   return value
@@ -27,7 +30,7 @@ const CHEVRON_ICON = `<svg class="size-3.5 shrink-0 opacity-70" xmlns="http://ww
 const CHECK_ICON = `<svg class="size-4 shrink-0 text-primary" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>`;
 
 function renderFlatProductCard(
-  product: "emenu-local" | "kiosk-local" | "pit",
+  product: "emenu-local" | "kiosk-local" | "pit" | "menu-design",
   active: boolean,
   restricted: boolean,
   reasonId: string,
@@ -36,12 +39,12 @@ function renderFlatProductCard(
     ? t("shell.emenuLocal")
     : product === "kiosk-local"
       ? t("shell.kioskLocal")
-      : t("shell.pit");
+      : product === "menu-design" ? t("shell.menuDesign") : t("shell.pit");
   const hint = product === "emenu-local"
     ? t("shell.emenuLocalHint")
     : product === "kiosk-local"
       ? t("shell.kioskLocalHint")
-      : t("shell.pitHint");
+      : product === "menu-design" ? t("shell.menuDesignHint") : t("shell.pitHint");
   return `
     <button
       type="button"
@@ -65,26 +68,27 @@ export function renderFlatPeripheralProductsGroup(): string {
       <h2 id="${labelId}" class="px-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">${escapeHtml(t("shell.peripheralProducts"))}</h2>
       ${restricted ? `<p id="${reasonId}" class="mt-1.5 rounded-lg border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-xs leading-5 text-amber-950 dark:text-amber-100">${escapeHtml(t("shell.impersonationViewLocked"))}</p>` : ""}
       <div class="mt-2 grid grid-cols-2 gap-2">
-        ${renderFlatProductCard("emenu-local", isEmenuLocalShellMode(), restricted, reasonId)}
-        ${renderFlatProductCard("kiosk-local", isKioskLocalShellMode(), restricted, reasonId)}
-        ${renderFlatProductCard("pit", isPitShellMode(), restricted, reasonId)}
+        ${renderFlatProductCard("emenu-local", !isMenuDesignPage() && isEmenuLocalShellMode(), restricted, reasonId)}
+        ${renderFlatProductCard("kiosk-local", !isMenuDesignPage() && isKioskLocalShellMode(), restricted, reasonId)}
+        ${renderFlatProductCard("pit", !isMenuDesignPage() && isPitShellMode(), restricted, reasonId)}
+        ${renderFlatProductCard("menu-design", isMenuDesignPage(), restricted, reasonId)}
       </div>
     </div>`;
 }
 
 export function renderPeripheralProductsControl(): string {
   const restricted = isViewSwitchRestricted();
-  const emenuActive = isEmenuLocalShellMode();
-  const kioskActive = isKioskLocalShellMode();
-  const pitActive = isPitShellMode();
-  const currentLabel = emenuActive
+  const emenuActive = !isMenuDesignPage() && isEmenuLocalShellMode();
+  const kioskActive = !isMenuDesignPage() && isKioskLocalShellMode();
+  const pitActive = !isMenuDesignPage() && isPitShellMode();
+  const currentLabel = isMenuDesignPage() ? t("shell.menuDesign") : emenuActive
     ? t("shell.emenuLocal")
     : kioskActive
       ? t("shell.kioskLocal")
       : pitActive
         ? t("shell.pit")
         : t("shell.peripheralProductsCount");
-  const currentBadge = emenuActive || kioskActive || pitActive
+  const currentBadge = isMenuDesignPage() || emenuActive || kioskActive || pitActive
     ? "bg-primary text-primary-foreground shadow-sm"
     : "bg-muted text-muted-foreground";
 
@@ -122,6 +126,7 @@ export function renderPeripheralProductsControl(): string {
         aria-label="${escapeHtml(t("shell.peripheralProductsMenuAria"))}"
       >
         <div class="px-1.5">
+          ${renderFlatProductCard("menu-design", isMenuDesignPage(), restricted, "demo-switch-products-locked-reason")}
           <button
             type="button"
             role="menuitem"
@@ -179,10 +184,17 @@ function closeViewAndVersionMenus(): void {
   });
 }
 
-export function bindPeripheralProductsControl(): void {
+export function bindPeripheralProductsControl(onNavigate?: (product: string) => void): void {
   document.querySelectorAll<HTMLElement>("[data-peripheral-products-root]").forEach((root) => {
     if (root.dataset.peripheralProductsBound === "1") return;
     root.dataset.peripheralProductsBound = "1";
+    root.querySelector<HTMLButtonElement>('[data-peripheral-product-option="menu-design"]')?.addEventListener("click", () => {
+      if (isViewSwitchRestricted()) return;
+      setPeripheralProductsOpen(root, false);
+      if (onNavigate) onNavigate("menu-design");
+      else openMenuDesign(url => createMenuSessionLink(url, () =>
+        isViewSwitchRestricted() ? null : getAuthenticatedEmail()));
+    });
 
     const toggle = root.querySelector<HTMLButtonElement>("[data-peripheral-products-toggle]");
     toggle?.addEventListener("click", (event) => {
@@ -196,6 +208,7 @@ export function bindPeripheralProductsControl(): void {
     root.querySelector<HTMLButtonElement>('[data-peripheral-product-option="emenu-local"]')?.addEventListener("click", () => {
       if (isViewSwitchRestricted()) return;
       setPeripheralProductsOpen(root, false);
+      if (onNavigate) { onNavigate("emenu-local"); return; }
       if (isEmenuLocalShellMode()) return;
       enterEmenuLocalShell();
       location.hash = `#${EMENU_LOCAL_DEFAULT_PATH}`;
@@ -204,6 +217,7 @@ export function bindPeripheralProductsControl(): void {
     root.querySelector<HTMLButtonElement>('[data-peripheral-product-option="kiosk-local"]')?.addEventListener("click", () => {
       if (isViewSwitchRestricted()) return;
       setPeripheralProductsOpen(root, false);
+      if (onNavigate) { onNavigate("kiosk-local"); return; }
       if (isKioskLocalShellMode()) return;
       enterKioskLocalShell();
       location.hash = `#${KIOSK_LOCAL_DEFAULT_PATH}`;
@@ -212,6 +226,7 @@ export function bindPeripheralProductsControl(): void {
     root.querySelector<HTMLButtonElement>('[data-peripheral-product-option="pit"]')?.addEventListener("click", () => {
       if (isViewSwitchRestricted()) return;
       setPeripheralProductsOpen(root, false);
+      if (onNavigate) { onNavigate("pit"); return; }
       if (isPitShellMode()) return;
       enterPitShell();
       location.hash = `#${PIT_DEFAULT_PATH}`;

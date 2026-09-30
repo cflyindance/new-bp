@@ -4,6 +4,10 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
+    "dev:menu-design": "npm --prefix apps/menu-design run dev",
+    "build:menu-design": "node scripts/build-menu-design.mjs",
+    "ai:menu-design": "npm --prefix apps/menu-design run ai",
+    "test:menu-design": "npm --prefix apps/menu-design test",
     "generate:emenu-local-seasoning-browser-handler": "node scripts/generate-emenu-local-seasoning-browser-handler.mjs",
     "predev": "node scripts/generate-emenu-local-seasoning-browser-handler.mjs",
     "dev": "vite",

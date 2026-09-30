@@ -1,0 +1,8 @@
+.simple-summary{display:flex;align-items:center;gap:22px;flex-wrap:wrap;padding:16px 0;border-top:1px solid var(--line,#e5e9e7)}
+.simple-upload{width:160px;max-height:210px;object-fit:contain;border-radius:8px;background:#f3f4f4}
+.simple-settings>summary{cursor:pointer;font-weight:600;font-size:16px;line-height:1.8}
+.simple-settings-body{padding-top:22px}
+.simple-settings-body>.section{padding:12px 0;border:0;box-shadow:none}
+.simple-result-actions{margin-bottom:22px}
+.simple-problems{margin-top:12px}
+.reference-tile[aria-pressed=true]{outline:2px solid var(--primary,#4161d8);outline-offset:2px}

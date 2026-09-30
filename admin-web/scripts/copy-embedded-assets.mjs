@@ -8,6 +8,12 @@ const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, "..");
 const distDir = path.resolve(projectRoot, "dist");
 
+// Independent menu designer has its own build, preserved across host builds.
+const menuDesignBuild = path.join(projectRoot, "apps", "menu-design", "build");
+if (fs.existsSync(path.join(menuDesignBuild, "index.html"))) {
+  fs.cpSync(menuDesignBuild, path.join(distDir, "menu-design"), { recursive: true });
+}
+
 function copyRecursive(src, dest) {
   const stat = fs.statSync(src);
   if (stat.isDirectory()) {

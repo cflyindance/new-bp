@@ -1,0 +1,19 @@
+@import "tailwindcss" source(none);
+/* Only the shared shell controls belong to the independent shell's stylesheet. */
+@source "../../../src/shell";
+@source "../../../src/config/cloud-product-route-notice-ui.ts";
+@theme {
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --color-background: oklch(99% 0.004 250);
+  --color-foreground: oklch(22% 0.04 250);
+  --color-primary: oklch(42% 0.14 195);
+  --color-primary-foreground: oklch(99% 0.01 195);
+  --color-muted: oklch(96% 0.01 250);
+  --color-muted-foreground: oklch(48% 0.03 250);
+  --color-accent: oklch(94% 0.03 195);
+  --color-accent-foreground: oklch(28% 0.06 195);
+  --color-border: oklch(90% 0.02 250);
+  --color-ring: oklch(42% 0.14 195);
+  --color-card: oklch(100% 0 0);
+  --color-card-foreground: oklch(22% 0.04 250);
+}

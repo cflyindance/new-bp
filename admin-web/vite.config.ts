@@ -7,9 +7,11 @@ import { defineConfig, type Plugin, type ViteDevServer } from "vite";
 import { attachPayrollMockApi } from "./scripts/lib/payroll-mock-api-handler.mjs";
 import { attachEmenuSeasoningApi } from "./scripts/lib/emenu-local-seasoning-api-handler.mjs";
 import { attachEmenuMenuCatalogApi } from "./scripts/lib/emenu-local-menu-catalog-api-handler.mjs";
+import { menuDesignDownloads } from "./apps/menu-design/server/export-downloads.mjs";
 
 /** 开发态提供 dist 内嵌静态资源（TipOut / Configuration center / emenu-pro / emenu-new / kiosklite） */
 const EMBEDDED_STATIC_ROUTES = [
+  { route: "menu-design", dir: path.join("dist", "menu-design") },
   { route: "TipOut", dir: path.join("dist", "TipOut") },
   { route: "Configuration center", dir: path.join("dist", "Configuration center") },
   { route: "emenu-pro", dir: path.join("dist", "emenu-pro") },
@@ -64,6 +66,7 @@ function attachEmbeddedStaticMiddleware(
   middlewares: { use: (fn: (req: import("http").IncomingMessage, res: import("http").ServerResponse, next: () => void) => void) => void },
 ): void {
   const root = process.cwd();
+  middlewares.use(menuDesignDownloads);
   middlewares.use((req, res, next) => {
     try {
       const raw = (req.url ?? "/").split("?")[0];
@@ -111,6 +114,11 @@ function attachEmbeddedStaticMiddleware(
       }
       for (const { route, dir } of EMBEDDED_STATIC_ROUTES) {
         const prefix = `/${route}`;
+        if (route === "menu-design" && pathname === prefix) {
+          res.writeHead(302, { Location: `${prefix}/` });
+          res.end();
+          return;
+        }
         if (
           pathname === prefix ||
           pathname === `${prefix}/` ||
@@ -282,6 +290,8 @@ export default defineConfig({
   /** 构建产物使用相对路径，便于子目录部署或本地直接打开 dist/index.html（仍建议用静态服务器） */
   base: "./",
   plugins: [tailwindcss(), serveEmbeddedStaticDirs()],
+  // Only the host entry participates in dependency discovery, not archived apps.
+  optimizeDeps: { entries: ["index.html"] },
   server: {
     port: 5173,
     /** 避免仅监听 127.0.0.1 时局域网/部分预览工具无法访问 */
@@ -296,6 +306,12 @@ export default defineConfig({
         "**/dist/**",
         "**/.cache/**",
         "**/node_modules/**",
+        "**/.worktrees/**",
+        "**/.codex-npm-cache/**",
+        "**/.superpowers/**",
+        "**/.tmp*/**",
+        "**/dist*/**",
+        path.resolve(process.cwd(), "admin-web").replace(/\\/g, "/") + "/**",
       ],
     },
     proxy: {
