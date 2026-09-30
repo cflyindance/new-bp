@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const source = fs.readFileSync(new URL('../src/team/payroll/payroll-declaration-settings.ts', import.meta.url), 'utf8');
+const page = fs.readFileSync(new URL('../src/team/payroll-page.ts', import.meta.url), 'utf8');
+assert.match(source, /data-declaration-store/);
+assert.match(source, /指定门店/);
+assert.doesNotMatch(source.match(/createFamily\([^;]+/)?.[0] ?? '', /input\.context\.getScope/);
+assert.doesNotMatch(page, /createPayrollDeclarationSettingsController\(\{[^\n]*repository: declarationRepository/);
+assert.match(source, /subscribeScopeChange/);
+console.log('Declaration store selection UI contracts passed');
