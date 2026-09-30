@@ -4160,7 +4160,7 @@ html,body{height:auto!important;overflow:visible!important}
     draft.declarationPreference = declarationLocale ? {
       defaultFamilyId: declarationOption?.dataset?.familyId || draft.declarationPreference?.defaultFamilyId || "legacy-english",
       defaultLocaleCode: declarationLocale,
-      defaultPrintMode: ($("#field-declaration-print-mode") && $("#field-declaration-print-mode").value) || "employee-only",
+      defaultPrintMode: draft.declarationPreference?.defaultPrintMode || "employee-only",
     } : null;
 
     const dayIdxList = [
