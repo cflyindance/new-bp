@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "admin-web/src/**"
+      - "admin-web/apps/menu-design/**"
       - "admin-web/dist/TipOut/**"
       - "admin-web/dist/Configuration center/**"
       - "admin-web/dist/emenu-pro/**"
@@ -42,6 +43,10 @@ jobs:
       - name: Build Kiosk embed
         working-directory: admin-web
         run: npm run build:kiosklite-embed -- --skip-install
+
+      - name: Build standalone menu designer
+        working-directory: admin-web
+        run: npm run build:menu-design
 
       - name: Build admin-web dist
         working-directory: admin-web
