@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import { resolveEmployeeDeclarationPresentation } from "../src/team/payroll/payroll-declaration-presentation";
 import type { DeclarationSnapshot, DeclarationTemplateFamily, DeclarationTemplateVersion } from "../src/team/payroll/payroll-declaration-types";
 
@@ -26,5 +27,18 @@ const noEnglish = resolveEmployeeDeclarationPresentation({ ...base, versions: ve
 assert.deepEqual(noEnglish.blockers, ["missing_english_template"]);
 const snapshot: DeclarationSnapshot = { snapshotId: "snap", employeeId: "emp", periodId: "p1", primaryVersionId: "old", englishVersionId: null, localeCode: "vi-VN", printMode: "employee-only", source: "Cũ", englishSource: null, variables: {}, renderedText: "Bản đã xác nhận", renderedEnglishText: null, confirmedAt: "2026-09-29", lockedAt: null, hashAlgorithm: "SHA-256(canonical-json-v1)", contentHash: "abc" };
 assert.equal(resolveEmployeeDeclarationPresentation({ ...base, snapshot }).primary?.renderedText, "Bản đã xác nhận");
+
+const defaults = { ...base, preference: null, families: [], versions: [], variables: { tips_amount: "$144.00", gratuity_amount: "$12.50" } };
+const systemDefault = resolveEmployeeDeclarationPresentation(defaults);
+assert.equal(systemDefault.status, "ready", "Unconfigured employee uses system default, not a blocker");
+assert.equal(systemDefault.primary?.localeCode, "en-US");
+assert.equal(systemDefault.primary?.familyId, "system-default");
+assert.equal(systemDefault.english, null);
+assert.match(systemDefault.primary?.renderedText ?? "", /gratuity \$12\.50 and tips \$144\.00/);
+const mapping = fs.readFileSync("src/team/payroll/legacy/payroll-adp-mapping.js.txt", "utf8");
+const currentEnglish = mapping.match(/declarationBodyEn:\s*"([^"]+)"/)![1].replace(/\$\{svc_amount\}/g, "{{gratuity_amount}}").replace(/\$\{tips_amount\}/g, "{{tips_amount}}");
+assert.equal(systemDefault.primary?.source, currentEnglish, "System default keeps the existing English wording");
+assert.equal(resolveEmployeeDeclarationPresentation({ ...defaults, snapshot }).primary?.renderedText, "Bản đã xác nhận", "Historical snapshot wins over system default");
+assert.deepEqual(resolveEmployeeDeclarationPresentation({ ...base, families: [], versions: [] }).blockers, ["missing_primary_template"], "Explicit missing template never silently falls back");
 
 console.log("Payroll declaration preference verification passed.");

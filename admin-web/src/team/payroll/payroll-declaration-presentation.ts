@@ -11,11 +11,14 @@ import type {
 
 export type DeclarationPresentationBlocker = "missing_preference" | "missing_primary_template" | "missing_english_template" | "missing_variables";
 
+// Preserve the existing payroll English wording; independent of administrator UI locale.
+export const SYSTEM_DEFAULT_DECLARATION_SOURCE = "I hereby certify that the above time and gratuity {{gratuity_amount}} and tips {{tips_amount}} are correct. I further certify, under penalty of perjury, that I have been provided rest breaks as required by California law and that any meal period or rest break missed was purely voluntary.";
+
 export interface DeclarationPresentationPart {
   localeCode: string;
   familyId: string;
   versionId: string;
-  sourceScope: "store" | "enterprise";
+  sourceScope: "store" | "enterprise" | "system";
   source: string;
   renderedText: string;
 }
@@ -62,6 +65,21 @@ function toPart(version: DeclarationTemplateVersion, families: DeclarationTempla
 
 export function resolveEmployeeDeclarationPresentation(input: EmployeeDeclarationPresentationInput): EmployeeDeclarationPresentation {
   if (input.snapshot) return snapshotPresentation(input.snapshot);
+  if (!input.preference && !input.override) {
+    try {
+      return {
+        status: "ready", printMode: "employee-only", english: null, blockers: [], snapshot: null,
+        primary: {
+          localeCode: "en-US", familyId: "system-default", versionId: "system-default-en-v1",
+          sourceScope: "system", source: SYSTEM_DEFAULT_DECLARATION_SOURCE,
+          renderedText: renderDeclarationText(SYSTEM_DEFAULT_DECLARATION_SOURCE, input.variables),
+        },
+      };
+    } catch (error) {
+      if (error instanceof DeclarationRenderError) return { status: "blocked", primary: null, english: null, printMode: "employee-only", blockers: ["missing_variables"], snapshot: null };
+      throw error;
+    }
+  }
   const familyId = input.override?.familyId ?? input.preference?.defaultFamilyId;
   const localeCode = input.override?.localeCode ?? input.preference?.defaultLocaleCode;
   const printMode = input.override?.printMode ?? input.preference?.defaultPrintMode ?? "employee-only";

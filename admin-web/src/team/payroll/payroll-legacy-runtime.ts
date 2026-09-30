@@ -14,7 +14,7 @@ import type { PayrollScopeSnapshot } from "./payroll-types";
 import type { PayrollBatchBridge } from "./payroll-batch-export-types";
 import type { PayrollDeclarationRepository } from "./payroll-declaration-api";
 import { resolveEmployeeDeclarationPresentation } from "./payroll-declaration-presentation";
-import type { DeclarationVariables } from "./payroll-declaration-types";
+import type { DeclarationVariables, DeclarationSnapshot } from "./payroll-declaration-types";
 import type { PayrollEmployee, PayrollPeriod } from "./payroll-types";
 
 export interface PayrollRuntimeHandle {
@@ -24,10 +24,27 @@ export interface PayrollRuntimeHandle {
 
 function createDeclarationBridge(context: PayrollPageContext, repository: PayrollDeclarationRepository) {
   return {
+    systemDefault(employee: PayrollEmployee, variables: DeclarationVariables) {
+      return resolveEmployeeDeclarationPresentation({
+        employeeId: employee.id, periodId: "", organizationId: context.getScope().brandId || "demo-organization",
+        families: [], versions: [], variables,
+        snapshot: employee.declarationSnapshot as DeclarationSnapshot | null | undefined,
+      });
+    },
+    async listPublishedTemplates() {
+      const scope = context.getScope();
+      const { families, versions } = await repository.listTemplates();
+      return families.filter((family) =>
+        family.scope.organizationId === (scope.brandId || "demo-organization") &&
+        (!family.scope.storeId || family.scope.storeId === scope.storeId) &&
+        versions.some((version) => version.familyId === family.familyId &&
+          version.versionId === family.activeVersionId && version.status === "published"),
+      );
+    },
     async resolve(employee: PayrollEmployee, period: PayrollPeriod, variables: DeclarationVariables) {
       const scope = context.getScope();
       const [{ families, versions }, snapshot] = await Promise.all([
-        repository.listTemplates(),
+        employee.declarationPreference ? repository.listTemplates() : Promise.resolve({ families: [], versions: [] }),
         repository.loadSnapshot(employee.id, period.id),
       ]);
       return resolveEmployeeDeclarationPresentation({
@@ -162,6 +179,7 @@ function buildRuntimeSource(): string {
     apiClientCode,
     "const PayrollApiClient = window.PayrollApiClient;",
     "const TipOutGlobalScopeFilter = window.TipOutGlobalScopeFilter;",
+    "const PayrollDeclarationBridge = window.PayrollDeclarationBridge;",
     periodCalendarCode,
     injectBatchBridgeIntoPayrollIife(payrollCode),
     "//# sourceURL=team-payroll-native-runtime.js",

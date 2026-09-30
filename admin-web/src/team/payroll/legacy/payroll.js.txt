@@ -79,8 +79,8 @@
   }
 
   function getDeclarationAmounts(emp) {
-    const svc = emp && emp.adjustments ? fmtMoney(emp.adjustments.svcw) : "0.00";
-    const tips = emp && emp.adjustments ? fmtMoney(emp.adjustments.tips) : "0.00";
+    const svc = emp && emp.adjustments ? fmtMoney(emp.adjustments.svcw ?? 0) : "0.00";
+    const tips = emp && emp.adjustments ? fmtMoney(emp.adjustments.tips ?? 0) : "0.00";
     return { svc: "$" + svc, tips: "$" + tips };
   }
 
@@ -127,7 +127,15 @@
     };
   }
 
+  function ensureSystemDefaultDeclaration(emp, period, totals) {
+    if (!emp || emp.declarationPreference || emp.declarationPresentation?.status === "frozen") return;
+    if (typeof PayrollDeclarationBridge !== "undefined" && PayrollDeclarationBridge.systemDefault) {
+      emp.declarationPresentation = PayrollDeclarationBridge.systemDefault(emp, buildDeclarationVariables(emp, period, totals));
+    }
+  }
+
   function refreshDeclarationPresentation(emp, period, totals) {
+    ensureSystemDefaultDeclaration(emp, period, totals);
     if (!emp || !period || typeof PayrollDeclarationBridge === "undefined" || !PayrollDeclarationBridge.resolve) return;
     const preference = emp.declarationPreference || null;
     const key = JSON.stringify({ periodId: period.id, preference, tips: emp.adjustments && emp.adjustments.tips, svcw: emp.adjustments && emp.adjustments.svcw, totals });
@@ -152,7 +160,7 @@
         englishBody.textContent = presentation.english ? presentation.english.renderedText : "";
       }
       const meta = $("#detail-declaration-meta");
-        if (meta) meta.textContent = presentation.status === "blocked" ? "声明尚未配置：" + presentation.blockers.join(", ") : `${presentation.primary.localeCode} · ${presentation.primary.versionId}`;
+        if (meta) meta.textContent = presentation.status === "blocked" ? "声明尚未配置：" + presentation.blockers.join(", ") : presentation.primary.familyId === "system-default" ? "系统默认语言 · English" : `${presentation.primary.localeCode} · ${presentation.primary.versionId}`;
         if ($("#employeesDetailPreviewModal")?.classList.contains("show")) renderEmployeeDetailPreview();
     }).catch((error) => {
       emp.__declarationPresentationPending = "";
@@ -2088,6 +2096,7 @@
       ssn: $("#field-ssn")?.value || "",
       hireDate: $("#field-hire-date")?.value || "",
       declarationLocale: $("#field-declaration-locale")?.value || "",
+      declarationFamilyId: $("#field-declaration-locale")?.selectedOptions?.[0]?.dataset?.familyId || "",
       declarationPrintMode: $("#field-declaration-print-mode")?.value || "employee-only",
     };
   }
@@ -2102,7 +2111,7 @@
     if (adpInput) adpInput.value = snapshot.adpFile;
     if (ssnInput) ssnInput.value = snapshot.ssn;
     if (hireDateInput) hireDateInput.value = snapshot.hireDate;
-    if (declarationLocaleInput) declarationLocaleInput.value = snapshot.declarationLocale || "";
+    if (declarationLocaleInput) selectEmployeeDeclarationPreference({ defaultLocaleCode: snapshot.declarationLocale, defaultFamilyId: snapshot.declarationFamilyId });
     if (declarationPrintModeInput) declarationPrintModeInput.value = snapshot.declarationPrintMode || "employee-only";
   }
 
@@ -2120,6 +2129,7 @@
     modal.removeAttribute("aria-hidden");
     modal.removeAttribute("inert");
     setEmployeeEditBackgroundInert(true);
+    refreshEmployeeDeclarationLanguages();
     window.setTimeout(() => {
       if (modal.classList.contains("show")) $("#field-adp-file")?.focus({ preventScroll: true });
     }, 80);
@@ -2128,6 +2138,7 @@
   function hideEmployeeEditModal({ accept = false, restoreFocus = true } = {}) {
     const modal = $("#payrollEmployeeEditModal");
     if (!modal || !modal.classList.contains("show")) return;
+    employeeDeclarationLanguageRequest += 1;
     if ($("#fieldHelpModal")?.classList.contains("show")) hideFieldHelp(false);
     if (!accept) restoreEmployeeIdentityValues(employeeEditModalState.snapshot);
     readFormIntoDraft();
@@ -3679,6 +3690,7 @@
   }
 
   function buildDetailExportPayload(emp, period) {
+    ensureSystemDefaultDeclaration(emp, period);
     if (!emp || !period) return null;
     const sums = sumSegments(emp);
     const payAmounts = sumSegmentPayAmounts(emp);
@@ -3955,6 +3967,62 @@ html,body{height:auto!important;overflow:visible!important}
     }
   }
 
+  let employeeDeclarationLanguageRequest = 0;
+
+  function selectEmployeeDeclarationPreference(preference) {
+    const input = $("#field-declaration-locale");
+    if (!input) return;
+    const locale = preference?.defaultLocaleCode || "";
+    const familyId = preference?.defaultFamilyId || "";
+    let option = Array.from(input.options).find((item) => familyId
+      ? item.dataset.familyId === familyId : item.value === locale);
+    if (!option && locale) {
+      option = document.createElement("option");
+      option.value = locale;
+      option.dataset.familyId = familyId;
+      option.textContent = `${locale}（原选择，模板待核验）`;
+      option.disabled = true;
+      input.appendChild(option);
+    }
+    input.selectedIndex = option ? Array.from(input.options).indexOf(option) : 0;
+  }
+
+  async function refreshEmployeeDeclarationLanguages() {
+    const input = $("#field-declaration-locale");
+    const hint = $("#declaration-language-hint");
+    if (!input || typeof PayrollDeclarationBridge === "undefined" || !PayrollDeclarationBridge.listPublishedTemplates) return;
+    const request = ++employeeDeclarationLanguageRequest;
+    const preference = {
+      defaultLocaleCode: input.value,
+      defaultFamilyId: input.selectedOptions?.[0]?.dataset?.familyId || "",
+    };
+    input.disabled = true;
+    if (hint) hint.textContent = "正在加载已发布模板…";
+    try {
+      const families = await PayrollDeclarationBridge.listPublishedTemplates();
+      if (request !== employeeDeclarationLanguageRequest) return;
+      input.replaceChildren();
+      const placeholder = document.createElement("option");
+      placeholder.value = "";
+      placeholder.textContent = "系统默认语言";
+      input.appendChild(placeholder);
+      families.forEach((family) => {
+        const option = document.createElement("option");
+        option.value = family.localeCode;
+        option.dataset.familyId = family.familyId;
+        option.textContent = `${family.languageDisplayName}（${family.localeCode} · ${family.scope.storeId ? "门店模板" : "企业模板"}）`;
+        input.appendChild(option);
+      });
+      selectEmployeeDeclarationPreference(preference);
+      if (hint) hint.textContent = families.length ? "" : "暂无已发布模板，可使用系统默认语言（English）。";
+    } catch (error) {
+      if (request !== employeeDeclarationLanguageRequest) return;
+      if (hint) hint.textContent = "语言模板加载失败，请关闭后重试。原选择未更改。";
+    } finally {
+      if (request === employeeDeclarationLanguageRequest) input.disabled = false;
+    }
+  }
+
   function renderManageForm() {
     applyTipOutBridgeForCurrentPeriod();
     const emp = getEmployee(state.periodId, state.employeeId);
@@ -3978,7 +4046,11 @@ html,body{height:auto!important;overflow:visible!important}
     if (hireInput) hireInput.value = mdyToIsoDateInput(resolveEmployeeHireDate(editEmp));
     const declarationLocaleInput = $("#field-declaration-locale");
     const declarationPrintModeInput = $("#field-declaration-print-mode");
-    if (declarationLocaleInput) declarationLocaleInput.value = editEmp.declarationPreference?.defaultLocaleCode || "";
+    if (declarationLocaleInput) {
+      employeeDeclarationLanguageRequest += 1;
+      declarationLocaleInput.disabled = false;
+      selectEmployeeDeclarationPreference(editEmp.declarationPreference);
+    }
     if (declarationPrintModeInput) declarationPrintModeInput.value = editEmp.declarationPreference?.defaultPrintMode || "employee-only";
 
     editEmp.segments = editEmp.segments.map((seg) => {
