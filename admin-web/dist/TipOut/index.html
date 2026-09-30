@@ -966,7 +966,7 @@
       var allocatedDates = getAllocatedDates();
       var hasAllocated = dates.some(function(k) { return allocatedDates.has(k); });
       var btn = document.getElementById('allocateBtn');
-      if (btn) btn.textContent = hasAllocated ? '重新分配小费' : '分配小费';
+      if (btn) btn.textContent = hasAllocated ? '批量分配小费' : '分配小费';
     }
 
     function openSummaryRuleEntry() {
