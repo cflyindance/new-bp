@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { buildBatchExportInput, classifyBatchEmployee, DEFAULT_BATCH_EXPORT_OPTIONS, sanitizePayrollFilePart } from "../src/team/payroll/payroll-batch-export-data";
+import { attachBatchDeclarationPresentations, buildBatchExportInput, classifyBatchEmployee, DEFAULT_BATCH_EXPORT_OPTIONS, sanitizePayrollFilePart } from "../src/team/payroll/payroll-batch-export-data";
 import type { PayrollEmployee, PayrollPeriod, PayrollSnapshot } from "../src/team/payroll/payroll-types";
 import { buildDetailedCsv, buildSummaryCsv, csvCell, DETAILED_CSV_COLUMNS, SUMMARY_CSV_COLUMNS } from "../src/team/payroll/payroll-batch-export-csv";
 import { loadBatchExportPreferences, saveBatchExportPreferences } from "../src/team/payroll/payroll-batch-export-task";
@@ -32,6 +32,9 @@ const tooMany = Array.from({ length: 11 }, (_, index) => employee(`e${index}`));
 assert.throws(() => buildBatchExportInput({ ...snapshot, data: { ...snapshot.data, employees: { [period.id]: tooMany } } }, DEFAULT_BATCH_EXPORT_OPTIONS, []), /10/);
 assert.equal(buildBatchExportInput({ ...snapshot, data: { ...snapshot.data, employees: { [period.id]: tooMany.slice(0, 10) } } }, DEFAULT_BATCH_EXPORT_OPTIONS, []).records.length, 10);
 assert.throws(() => buildBatchExportInput(snapshot, { ...DEFAULT_BATCH_EXPORT_OPTIONS, scope: "selected" }, ["ready", "removed"]), /重新选择/);
+const localized = attachBatchDeclarationPresentations(input, (employeeId) => ({ declarationPresentation: { status: "ready", printMode: "employee-only", blockers: [], snapshot: null, primary: { localeCode: employeeId === "ready" ? "es-US" : "vi-VN", familyId: "family", versionId: "v1", sourceScope: "enterprise", source: "text", renderedText: `Declaration ${employeeId}` }, english: null } }));
+assert.equal(localized.records.find((record) => record.employee.id === "ready")?.declarationPresentation?.primary?.localeCode, "es-US");
+assert.notEqual(localized.records[0], input.records[0]);
 
 assert.equal(SUMMARY_CSV_COLUMNS.length, 23);
 assert.equal(DETAILED_CSV_COLUMNS.length, 39);

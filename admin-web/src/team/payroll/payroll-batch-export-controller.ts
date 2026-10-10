@@ -1,5 +1,5 @@
 import { createBatchArtifact, downloadBatchArtifact } from "./payroll-batch-export-artifacts";
-import { buildBatchExportInput, classifyBatchEmployee } from "./payroll-batch-export-data";
+import { attachBatchDeclarationPresentations, buildBatchExportInput, classifyBatchEmployee } from "./payroll-batch-export-data";
 import { createPayrollBatchExportTask, loadBatchExportPreferences, saveBatchExportPreferences, type BatchTaskSnapshot } from "./payroll-batch-export-task";
 import type { BatchEmployeeRecord, BatchExportInput, BatchExportOptions, PayrollBatchBridge } from "./payroll-batch-export-types";
 import type { PayrollPageContext } from "./payroll-context";
@@ -187,7 +187,7 @@ export function mountPayrollBatchExportController(
     try {
       if (openingContext !== contextKey()) throw new Error("门店或薪资周期已变化，请关闭后重新选择");
       if (["preparing", "generating", "packaging", "cancelling"].includes(task.getSnapshot().status)) throw new Error("已有导出任务正在执行，请完成或取消后再试");
-      currentInput = buildBatchExportInput(scopeBatchSnapshot(bridge.getSnapshot(), context.getScope(), selectedStoreId), options, Array.from(selectedIds));
+      currentInput = attachBatchDeclarationPresentations(buildBatchExportInput(scopeBatchSnapshot(bridge.getSnapshot(), context.getScope(), selectedStoreId), options, Array.from(selectedIds)), bridge.getDetailPayload);
       taskContext = openingContext;
       taskStoreId = selectedStoreId;
       starting = true;
@@ -243,7 +243,7 @@ export function mountPayrollBatchExportController(
       const permitted = scopeBatchSnapshot(bridge.getSnapshot(), context.getScope(), taskStoreId);
       buildBatchExportInput(permitted, currentInput.options, ids);
     } catch (error) { const message = $("#payrollBatchTaskMessage"); if (message) message.textContent = String(error); return; }
-    currentInput = { ...currentInput, records: currentInput.records.filter(record => ids.includes(record.employee.id)) };
+    currentInput = attachBatchDeclarationPresentations({ ...currentInput, records: currentInput.records.filter(record => ids.includes(record.employee.id)) }, bridge.getDetailPayload);
     void task.retry(currentInput).catch(error => { const message = $("#payrollBatchTaskMessage"); if (message) message.textContent = String(error); });
   }, { signal: controller.signal });
   pageRoot.addEventListener("keydown", (event) => {

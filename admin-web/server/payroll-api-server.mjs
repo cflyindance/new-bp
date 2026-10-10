@@ -16,7 +16,7 @@ const HOST = process.env.PAYROLL_API_HOST || "127.0.0.1";
 
 function setCors(res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, PUT, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "GET, PUT, POST, DELETE, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Accept");
 }
 

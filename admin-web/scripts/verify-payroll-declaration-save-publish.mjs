@@ -1,0 +1,31 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+import {createRequire} from 'node:module';
+const ts=createRequire(import.meta.url)('typescript');
+const source=fs.readFileSync(new URL('../src/team/payroll/payroll-declaration-settings.ts',import.meta.url),'utf8');
+assert.ok(source.includes('保存并发布'));
+assert.ok(!source.includes('审核并发布'));
+const closure=source.slice(source.indexOf('  const saveDraft ='),source.indexOf('  const retirePublished ='));
+async function run(mode,fail='',existing=false){
+  const calls=[];
+  const state={busy:false,editorOpen:true,selectedFamilyId:existing?'f':null,families:existing?[{familyId:'f',revision:3,scope:{}}]:[],versions:existing?[{versionId:'v',familyId:'f',status:'draft',version:1}]:[],draft:{source:'new text',languageDisplayName:'Test',localeCode:'en-US',scopeMode:'enterprise'}};
+  const repository={createFamily:async()=>{calls.push('create');return {familyId:'f',revision:0,scope:{}};},saveDraft:async()=>{calls.push('save');if(fail==='save')throw Error('save error');return {versionId:'v',familyId:'f',status:'draft',source:'new text'};},updateDraft:async()=>{calls.push('update');return {versionId:'v',familyId:'f',status:'draft',source:'new text'};},publishVersion:async input=>{calls.push('publish');assert.equal(input.versionId,'v');assert.equal(input.expectedFamilyRevision,existing?4:0);if(fail==='publish')throw Error('publish error');return {family:{familyId:'f',scope:{},revision:5,activeVersionId:'v'},version:{versionId:'v',familyId:'f',status:'published'}};}};
+  const sandbox={state,generation:0,captureEditor(){},selected:()=>state.families.find(f=>f.familyId===state.selectedFamilyId),validateDeclarationSource:()=>[],paint(){},manager:{stores:()=>[],repositoryFor:()=>repository},current:()=>fail!=='stale',applicableVersion:()=>state.versions[0],reloadTemplates:async()=>{calls.push('refresh');if(fail==='refresh')throw Error('refresh error');},surface:{querySelector:()=>({focus(){}})}};
+  vm.createContext(sandbox);
+  if(fail==='busy')state.busy=true;
+  if(fail==='invalid')state.draft.source='';
+  vm.runInContext(ts.transpileModule(closure+'; globalThis.runSave = saveDraft;', {compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText,sandbox);
+  await sandbox.runSave(mode);
+  return {state,calls};
+}
+assert.deepEqual((await run(true)).calls,['create','save','publish','refresh']);
+assert.equal((await run(false)).state.editorOpen,false);
+assert.equal((await run(true,'',true)).state.editorOpen,false);
+assert.ok(!(await run(true,'save')).calls.includes('publish'));
+const failed=await run(true,'publish');assert.equal(failed.state.editorOpen,true);assert.match(failed.state.message,/草稿已保存.*发布失败/);
+const refreshed=await run(true,'refresh');assert.equal(refreshed.state.editorOpen,false);assert.match(refreshed.state.message,/已保存并发布.*刷新失败/);
+assert.deepEqual((await run(true,'stale')).calls,['create']);
+assert.deepEqual((await run(true,'busy')).calls,[]);
+assert.deepEqual((await run(true,'invalid')).calls,[]);
+console.log('Declaration save and publish flow passed');

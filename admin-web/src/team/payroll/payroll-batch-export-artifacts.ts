@@ -30,6 +30,13 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+function declarationBlockerMessage(record: BatchEmployeeRecord): string | null {
+  const presentation = record.declarationPresentation;
+  if (!presentation) return "Employee declaration language or template is not configured";
+  if (presentation.status === "blocked") return `Employee declaration is unavailable: ${presentation.blockers.join(", ")}`;
+  if (!presentation.primary?.renderedText) return "Employee declaration text is unavailable";
+  return null;
+}
 
 function loadScript(src: string, ready: () => boolean): Promise<void> {
   if (ready()) return Promise.resolve();
@@ -118,6 +125,8 @@ export async function createBatchArtifact(
   for (const record of exportable) {
     if (signal.aborted) throw new DOMException("Batch export cancelled", "AbortError");
     try {
+      const blocker = declarationBlockerMessage(record);
+      if (blocker) throw new Error(blocker);
       if (input.options.format === "csv") {
         const csv = buildEmployeeCsv(record, input.options.detailType);
         if (input.options.organization === "zip") individualFiles.push({ name: `${employeeFileBase(record)}.csv`, blob: new Blob([csv], { type: "text/csv;charset=utf-8" }) });

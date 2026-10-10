@@ -52,6 +52,16 @@ function getPayrollDetailExportData() {
 
   }
 
+  if (data.declarationPresentation && data.declarationPresentation.status === "blocked") {
+
+    const blockers = (data.declarationPresentation.blockers || []).join(", ");
+
+    if (typeof showNotification === "function") showNotification(`员工声明尚未完成配置：${blockers}`, "warning");
+
+    return null;
+
+  }
+
   return data;
 
 }
@@ -559,6 +569,20 @@ function getPayrollDetailPrintDocumentHtml(variant, pagination) {
 
 function exportPayrollDetailPDF(data, variant, pagination) {
 
+  const declaration = data.declarationPresentation;
+
+  const declarationLength = declaration && declaration.primary
+
+    ? String(declaration.primary.renderedText || "").length + String(declaration.english && declaration.english.renderedText || "").length
+
+    : 0;
+
+  if (declarationLength > 1800 && typeof showNotification === "function") {
+
+    showNotification("声明内容较长，将按内容分页以保持至少 7pt 的可读字号", "info");
+
+  }
+
   const docHtml = getPayrollDetailPrintDocumentHtml(variant, pagination);
 
   if (!docHtml) {
@@ -818,35 +842,83 @@ function openPayrollDetailPrintWindowAndPrint(docHtml, data) {
 
   if (typeof showNotification === "function") showNotification(T("export.printPreview"), "info");
 
-  const win = window.open("", "_blank");
+  const iframe = document.createElement("iframe");
 
-  if (!win) {
+  iframe.setAttribute("aria-hidden", "true");
 
-    if (typeof showNotification === "function") showNotification(T("export.popupBlocked"), "error");
+  iframe.style.cssText = "position:fixed;left:-10000px;top:0;width:210mm;height:297mm;border:0;pointer-events:none";
 
-    setPayrollDetailExportStatus("error", "浏览器阻止了打印预览，请允许弹窗后重试");
+  document.body.appendChild(iframe);
 
-    return;
+  let printed = false;
 
-  }
+  let released = false;
 
-  win.document.open();
+  function releaseFrame() {
 
-  win.document.write(docHtml);
+    if (released) return;
 
-  win.document.close();
-
-  win.onload = function () {
+    released = true;
 
     setTimeout(function () {
 
-      win.focus();
+      iframe.remove();
 
-      win.print();
+    }, 300);
 
-    }, 400);
+  }
+
+  function triggerPrint() {
+
+    if (printed) return;
+
+    const frameWindow = iframe.contentWindow;
+
+    if (!frameWindow) {
+
+      setPayrollDetailExportStatus("error", "打印预览生成失败，请重试");
+
+      releaseFrame();
+
+      return;
+
+    }
+
+    printed = true;
+
+    frameWindow.addEventListener("afterprint", releaseFrame);
+
+    try {
+
+      frameWindow.focus();
+
+      frameWindow.print();
+
+    } catch (e) {
+
+      setPayrollDetailExportStatus("error", "打印预览生成失败，请重试");
+
+    }
+
+    setTimeout(releaseFrame, 60000);
+
+  }
+
+  const printDoc = iframe.contentDocument;
+
+  printDoc.open();
+
+  printDoc.write(docHtml);
+
+  printDoc.close();
+
+  iframe.onload = function () {
+
+    setTimeout(triggerPrint, 300);
 
   };
+
+  setTimeout(triggerPrint, 1200);
 
   if (typeof showNotification === "function") {
 
