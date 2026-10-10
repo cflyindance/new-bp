@@ -4150,6 +4150,18 @@ select.form-control {
 .payroll-page .is-employee-picker .payroll-employee-picker-role-list { max-height: 340px; }
 .payroll-page .is-employee-picker .payroll-batch-option-section button.payroll-employee-picker-role { display: block; text-align: left; }
 
+.payroll-page .payroll-export-toast { position: fixed; top: 100px; left: 50%; transform: translateX(-50%); z-index: 1200; display: flex; gap: 16px; align-items: center; padding: 18px 22px; border-radius: 14px; background: #e5f4ff; box-shadow: 0 6px 20px #0002; }
+.payroll-page .payroll-export-toast[hidden], .payroll-page .payroll-export-drawer[hidden] { display: none; }
+.payroll-page .payroll-export-toast button { border: 0; background: transparent; color: #1677ff; cursor: pointer; }
+.payroll-page .payroll-export-drawer { position: fixed; right: 12px; top: 12px; bottom: 12px; width: min(390px, calc(100vw - 24px)); z-index: 1300; padding: 18px; background: white; border-radius: 16px; box-shadow: 0 10px 40px #0003; display: flex; flex-direction: column; }
+.payroll-page .payroll-export-drawer header { display: flex; gap: 14px; align-items: center; }
+.payroll-page .payroll-export-jobs { overflow-y: auto; min-height: 0; }
+.payroll-page .payroll-export-jobs article { border: 1px solid #e6e8eb; border-radius: 14px; padding: 16px; margin: 14px 0; }
+.payroll-page .payroll-export-jobs p { font-size: 12px; overflow-wrap: anywhere; }
+.payroll-page .payroll-export-jobs progress { width: 100%; accent-color: #1677ff; }
+.payroll-page .payroll-export-jobs button, .payroll-page .payroll-export-drawer header button { padding: 9px 14px; border: 0; border-radius: 8px; margin: 6px 6px 0 0; color: #1677ff; background: #f3f5f7; cursor: pointer; }
+.payroll-page .payroll-export-jobs button:disabled { opacity: .4; cursor: not-allowed; }
+.payroll-page .payroll-export-jobs .is-error { color: #cf1322; }
 .payroll-page .payroll-employee-picker {
   width: min(560px, 94vw);
   overflow: hidden;

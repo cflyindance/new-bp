@@ -35,7 +35,7 @@ assert.doesNotMatch(html, /payrollBatchExportDropdown|payrollBatchExportToggle|t
 assert.doesNotMatch(html, /name="payrollBatch(?:Scope|Format|Organization|Detail)"/);
 assert.match(controller, /selectedIds.size < 10/);
 assert.match(controller, /openingContext !== contextKey/);
-for (const action of ["open-batch-detail-export", "batch-clear-selection", "beforeunload", "task.retry", "task.cancel"]) {
+for (const action of ["open-batch-detail-export", "batch-clear-selection", "beforeunload", "taskCenter.submit", "taskCenter.destroy"]) {
   assert.match(controller, new RegExp(action.replace(".", "\\.")));
 }
 console.log("Payroll batch export UI verification passed.");

@@ -1,6 +1,6 @@
-import { createBatchArtifact, downloadBatchArtifact } from "./payroll-batch-export-artifacts";
+import { mountPayrollExportTaskCenter } from "./payroll-export-task-center";
 import { attachBatchDeclarationPresentations, buildBatchExportInput, classifyBatchEmployee } from "./payroll-batch-export-data";
-import { createPayrollBatchExportTask, loadBatchExportPreferences, saveBatchExportPreferences, type BatchTaskSnapshot } from "./payroll-batch-export-task";
+import { loadBatchExportPreferences, saveBatchExportPreferences } from "./payroll-batch-export-task";
 import type { BatchEmployeeRecord, BatchExportInput, BatchExportOptions, PayrollBatchBridge } from "./payroll-batch-export-types";
 import type { PayrollPageContext } from "./payroll-context";
 import { getBatchStoreId, scopeBatchSnapshot, filterBatchEmployees } from "./payroll-batch-export-filters";
@@ -23,13 +23,10 @@ export function mountPayrollBatchExportController(
   const selectedRoles = new Set<string>();
   let unifiedPicker = false;
   let focusedEmployeeId = "";
-  let taskStoreId = "";
   let currentInput: BatchExportInput | null = null;
-  let downloadUrl = "";
   let openingContext = "";
   let starting = false;
-  let taskContext = "";
-  const task = createPayrollBatchExportTask({ bridge, createArtifact: createBatchArtifact });
+  const taskCenter = mountPayrollExportTaskCenter(pageRoot, bridge);
   const $ = <T extends HTMLElement>(selector: string): T | null => shadowRoot.querySelector<T>(selector);
   const $$ = <T extends HTMLElement>(selector: string): T[] => Array.from(shadowRoot.querySelectorAll<T>(selector));
   const modal = $("#payrollBatchExportModal");
@@ -38,7 +35,6 @@ export function mountPayrollBatchExportController(
   const selectedCount = $("#payrollBatchSelectedCount");
   const summary = $("#payrollBatchExportSummary");
   const startButton = $("#payrollBatchExportStart") as HTMLButtonElement | null;
-  const taskPanel = $("#payrollBatchExportTaskPanel");
 
   function readOptions(): BatchExportOptions {
     return {
@@ -206,44 +202,18 @@ export function mountPayrollBatchExportController(
 
   function closeModal(): void { modal?.classList.remove("show"); modal?.setAttribute("aria-hidden", "true"); $("#btn-payroll-adp-menu-toggle")?.focus(); }
 
-  function renderTask(value: BatchTaskSnapshot): void {
-    if (!taskPanel) return;
-    taskPanel.hidden = value.status === "idle";
-    const percent = value.total ? Math.round(value.completed / value.total * 100) : 0;
-    const progress = $("#payrollBatchExportTaskProgress");
-    progress?.setAttribute("aria-valuenow", String(percent));
-    const bar = progress?.querySelector<HTMLElement>("span"); if (bar) bar.style.width = `${percent}%`;
-    const statusMap: Record<string, string> = { preparing: "准备数据", generating: "正在生成", packaging: "正在合并或打包", completed: "已完成", partial: "部分成功", failed: "失败", cancelling: "取消中", cancelled: "已取消" };
-    const status = $("#payrollBatchTaskStatus"); if (status) status.textContent = statusMap[value.status] ?? value.status;
-    const message = $("#payrollBatchTaskMessage");
-    if (message) message.textContent = value.errorMessage || (value.status === "completed" || value.status === "partial" ? `${value.result?.succeededIds.length ?? 0} 名员工已生成，${value.result?.skippedIds.length ?? 0} 名无数据。` : `已处理 ${value.completed} / ${value.total} 名员工`);
-    const cancel = $("#payrollBatchTaskCancel") as HTMLButtonElement | null; if (cancel) { cancel.hidden = !["preparing", "generating", "packaging", "cancelling"].includes(value.status); cancel.disabled = !task.canCancel(); cancel.title = value.status === "packaging" ? "正在合并或打包，暂时不能取消" : ""; }
-    const download = $("#payrollBatchTaskDownload") as HTMLButtonElement | null; if (download) download.hidden = !value.result;
-    const retry = $("#payrollBatchTaskRetry") as HTMLButtonElement | null; if (retry) retry.hidden = !(value.status === "partial" && value.result?.failures.length);
-    const close = $("#payrollBatchTaskClose") as HTMLButtonElement | null; if (close) close.hidden = !["completed", "partial", "failed", "cancelled"].includes(value.status);
-    const failures = $("#payrollBatchTaskFailures");
-    if (failures) {
-      const items = value.result?.failures.map(item => `<div>${escapeHtml(item.employeeName)}：${escapeHtml(item.message)}</div>`) ?? [];
-      for (const id of value.result?.skippedIds ?? []) items.push(`<div>${escapeHtml(currentInput?.records.find(record => record.employee.id === id)?.employee.name ?? id)}：无薪资数据，未生成</div>`);
-      failures.hidden = items.length === 0; failures.innerHTML = items.join("");
-    }
-  }
 
   async function start(): Promise<void> {
     if (starting) return;
     options = readOptions();
     try {
       if (openingContext !== contextKey()) throw new Error("门店或薪资周期已变化，请关闭后重新选择");
-      if (["preparing", "generating", "packaging", "cancelling"].includes(task.getSnapshot().status)) throw new Error("已有导出任务正在执行，请完成或取消后再试");
       currentInput = attachBatchDeclarationPresentations(buildBatchExportInput(scopeBatchSnapshot(bridge.getSnapshot(), context.getScope(), selectedStoreId), options, Array.from(selectedIds)), bridge.getDetailPayload);
-      taskContext = openingContext;
-      taskStoreId = selectedStoreId;
       starting = true;
       renderSummary();
       try { saveBatchExportPreferences(localStorage, options); } catch { /* Storage is optional. */ }
-      const running = task.run(currentInput);
+      taskCenter.submit(currentInput);
       closeModal();
-      await running;
     } catch (error) {
       if (summary) { summary.hidden = false; summary.innerHTML = `<span style="color:#cf1322">${escapeHtml(error instanceof Error ? error.message : error)}</span>`; }
     } finally {
@@ -253,8 +223,7 @@ export function mountPayrollBatchExportController(
   }
 
   function beforeUnload(event: BeforeUnloadEvent): void {
-    const status = task.getSnapshot().status;
-    if (["preparing", "generating", "packaging", "cancelling"].includes(status)) { event.preventDefault(); event.returnValue = ""; }
+    if (taskCenter.hasPending()) { event.preventDefault(); event.returnValue = ""; }
   }
 
   pageRoot.addEventListener("click", (event) => {
@@ -289,20 +258,6 @@ export function mountPayrollBatchExportController(
   }, { signal: controller.signal });
   $("#payrollBatchEmployeeSearch")?.addEventListener("input", (event) => { search = (event.target as HTMLInputElement).value; renderEmployeePicker(); }, { signal: controller.signal });
   startButton?.addEventListener("click", () => { void start(); }, { signal: controller.signal });
-  $("#payrollBatchTaskCancel")?.addEventListener("click", () => task.cancel(), { signal: controller.signal });
-  $("#payrollBatchTaskDownload")?.addEventListener("click", () => { const result = task.getSnapshot().result; if (result) { if (downloadUrl) URL.revokeObjectURL(downloadUrl); downloadUrl = downloadBatchArtifact(result); } }, { signal: controller.signal });
-  $("#payrollBatchTaskRetry")?.addEventListener("click", () => {
-    const result = task.getSnapshot().result;
-    if (!currentInput || !result) return;
-    if (taskContext !== contextKey()) { const message = $("#payrollBatchTaskMessage"); if (message) message.textContent = "请返回原门店和薪资周期后重试"; return; }
-    const ids = result.failures.map(item => item.employeeId);
-    try {
-      const permitted = scopeBatchSnapshot(bridge.getSnapshot(), context.getScope(), taskStoreId);
-      buildBatchExportInput(permitted, currentInput.options, ids);
-    } catch (error) { const message = $("#payrollBatchTaskMessage"); if (message) message.textContent = String(error); return; }
-    currentInput = attachBatchDeclarationPresentations({ ...currentInput, records: currentInput.records.filter(record => ids.includes(record.employee.id)) }, bridge.getDetailPayload);
-    void task.retry(currentInput).catch(error => { const message = $("#payrollBatchTaskMessage"); if (message) message.textContent = String(error); });
-  }, { signal: controller.signal });
   pageRoot.addEventListener("keydown", (event) => {
     if (event.key === "Escape") { setMenu(false); if (modal?.classList.contains("show")) closeModal(); }
     if (event.key === "Tab" && modal?.classList.contains("show")) {
@@ -312,10 +267,8 @@ export function mountPayrollBatchExportController(
       else if (!event.shiftKey && shadowRoot.activeElement === last) { event.preventDefault(); first?.focus(); }
     }
   }, { signal: controller.signal });
-  $("#payrollBatchTaskClose")?.addEventListener("click", () => { if (taskPanel) taskPanel.hidden = true; }, { signal: controller.signal });
-  const unsubscribe = task.subscribe(renderTask);
   window.addEventListener("beforeunload", beforeUnload);
 
-  return { destroy() { controller.abort(); unsubscribe(); task.destroy(); window.removeEventListener("beforeunload", beforeUnload); if (downloadUrl) URL.revokeObjectURL(downloadUrl); } };
+  return { destroy() { controller.abort(); taskCenter.destroy(); window.removeEventListener("beforeunload", beforeUnload); } };
 }
 
