@@ -7,6 +7,7 @@ export function mountPayrollExportTaskCenter(root: HTMLElement, bridge: PayrollB
   const abort = new AbortController();
   const urls: string[] = [];
   const downloaded = new Set<string>();
+  const downloadErrors = new Set<string>();
   const escape = (value: unknown) => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]!));
   const surface = document.createElement('div');
   surface.className = 'payroll-export-center';
@@ -23,28 +24,26 @@ export function mountPayrollExportTaskCenter(root: HTMLElement, bridge: PayrollB
   function render() {
     const jobs = queue.getJobs();
     entry.querySelector('[data-export-count]')!.textContent = String(jobs.length);
-    toast.hidden = !jobs.length;
-    surface.querySelector('[data-export-message]')!.textContent = queue.hasPending() ? '正在导出并合并，成功后自动下载' : '导出任务已结束，可查看任务记录';
+    toast.hidden = !queue.hasPending();
+    surface.querySelector('[data-export-message]')!.textContent = '正在导出并合并，成功后自动下载';
+    for (const job of jobs) if (job.snapshot.status === 'completed' && job.snapshot.result && !downloaded.has(job.id)) {
+      downloaded.add(job.id);
+      try { urls.push(downloadBatchArtifact(job.snapshot.result)); }
+      catch { downloadErrors.add(job.id); }
+    }
     surface.querySelector('.payroll-export-jobs')!.innerHTML = [...jobs].reverse().map(job => {
       const state = job.snapshot;
       const phase = job.queued ? 'idle' : state.status;
       const percent = phase === 'completed' ? 100 : phase === 'packaging' ? 90 : phase === 'generating' ? Math.min(85, 10 + Math.round(state.completed / Math.max(1, state.total) * 75)) : 0;
-      const success = phase === 'completed' && !!state.result;
-      return `<article><h4>批量导出薪资明细 · ${escape(labels[phase])}</h4><p>员工：${escape(job.input.records.map(record => record.employee.name).join('、'))}</p><p>信息类型：${job.input.options.detailType === 'summary' ? '精简' : '详细'}</p><p>提交时间：${escape(job.submittedAt.toLocaleString('zh-CN'))}</p><p>${phase === 'generating' ? `已处理 ${state.completed} / ${state.total} 名员工` : escape(labels[phase])}</p><progress max="100" value="${percent}" aria-label="导出任务进度"></progress>${state.errorMessage ? `<p class="is-error">${escape(state.errorMessage)}</p>` : ''}${(state.result?.failures ?? []).map(item => `<p class="is-error">${escape(item.employeeName)}：${escape(item.message)}</p>`).join('')}${state.result?.skippedIds.length ? `<p>无薪资数据，跳过 ${state.result.skippedIds.length} 人</p>` : ''}<button type="button" data-export-download="${job.id}" ${success ? '' : 'disabled'}>下载 PDF</button>${['failed', 'partial', 'cancelled'].includes(phase) ? `<button type="button" data-export-retry="${job.id}">重新导出</button>` : ''}</article>`;
+      return `<article><h4>批量导出薪资明细 · ${escape(labels[phase])}</h4><p>员工：${escape(job.input.records.map(record => record.employee.name).join('、'))}</p><p>信息类型：${job.input.options.detailType === 'summary' ? '精简' : '详细'}</p><p>提交时间：${escape(job.submittedAt.toLocaleString('zh-CN'))}</p><p>${phase === 'generating' ? `已处理 ${state.completed} / ${state.total} 名员工` : escape(labels[phase])}</p>${['idle', 'preparing', 'generating', 'packaging', 'cancelling'].includes(phase) ? `<progress max="100" value="${percent}" aria-label="导出任务进度"></progress>` : ''}${downloadErrors.has(job.id) ? '<p class="is-error">PDF 已生成，但自动下载触发失败，请重新提交导出。</p>' : ''}${state.errorMessage ? `<p class="is-error">${escape(state.errorMessage)}</p>` : ''}${(state.result?.failures ?? []).map(item => `<p class="is-error">${escape(item.employeeName)}：${escape(item.message)}</p>`).join('')}${state.result?.skippedIds.length ? `<p>无薪资数据，跳过 ${state.result.skippedIds.length} 人</p>` : ''}${['failed', 'partial', 'cancelled'].includes(phase) ? `<button type="button" data-export-retry="${job.id}">重新导出</button>` : ''}</article>`;
     }).join('') || '<p>暂无导出任务</p>';
-    for (const job of jobs) if (job.snapshot.status === 'completed' && job.snapshot.result && !downloaded.has(job.id)) {
-      downloaded.add(job.id);
-      try { urls.push(downloadBatchArtifact(job.snapshot.result)); }
-      catch { surface.querySelector('[data-export-message]')!.textContent = '自动下载未启动，请在任务记录中点击下载'; }
-    }
   }
   root.addEventListener('click', event => {
     const target = (event.target as HTMLElement).closest<HTMLElement>('button');
     if (!target) return;
     if (target.hasAttribute('data-export-open')) { returnFocus = target; drawer.hidden = false; drawer.querySelector<HTMLButtonElement>('[data-export-close]')?.focus(); }
     if (target.hasAttribute('data-export-close')) { drawer.hidden = true; returnFocus?.focus(); }
-    if (target.dataset.exportDownload) { const job = queue.getJobs().find(item => item.id === target.dataset.exportDownload); if (job?.snapshot.status === 'completed' && job.snapshot.result) urls.push(downloadBatchArtifact(job.snapshot.result)); }
-    if (target.dataset.exportRetry) { downloaded.delete(target.dataset.exportRetry); queue.retry(target.dataset.exportRetry); }
+    if (target.dataset.exportRetry) { downloaded.delete(target.dataset.exportRetry); downloadErrors.delete(target.dataset.exportRetry); queue.retry(target.dataset.exportRetry); }
   }, { signal: abort.signal });
   root.addEventListener('keydown', event => { if (event.key === 'Escape' && !drawer.hidden) { drawer.hidden = true; returnFocus?.focus(); } }, { signal: abort.signal });
   const unsubscribe = queue.subscribe(render);
