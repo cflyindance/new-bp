@@ -71,6 +71,7 @@ export function mountPayrollPage(
     shadowRoot,
     pageRoot,
     runtime.getBatchBridge(),
+    context,
   );
   const handle: PayrollPageHandle = {
     destroy() {

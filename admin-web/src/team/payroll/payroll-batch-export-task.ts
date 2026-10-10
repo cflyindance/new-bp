@@ -42,13 +42,30 @@ export function createPayrollBatchExportTask(dependencies: {
   const isRunning = () => ["preparing", "generating", "packaging", "cancelling"].includes(snapshot.status);
   const run = async (input: BatchExportInput, retryNumber = 0): Promise<void> => {
     if (isRunning()) throw new Error("A payroll export is already running");
+    if (input.records.length < 1 || input.records.length > 10) throw new Error("一次请选择 1–10 名员工");
     controller = new AbortController();
     publish({ status: "preparing", completed: 0, total: input.records.filter((record) => record.status !== "no_data").length, errorMessage: "", result: null, retryNumber });
     try {
+      // Capture print documents before asynchronous rendering can observe another period.
+      const printDocuments = new Map<string, string | null>();
+      const printErrors = new Map<string, unknown>();
+      if (input.options.format === "pdf") {
+        for (const record of input.records.filter(item => item.status !== "no_data")) {
+          try { printDocuments.set(record.employee.id, dependencies.bridge.getDetailPrintHtml(record.employee.id, input.options.detailType, input.options.summaryPagination)); }
+          catch (error) { printErrors.set(record.employee.id, error); }
+        }
+      }
+      const frozenBridge: PayrollBatchBridge = {
+        ...dependencies.bridge,
+        getDetailPrintHtml(employeeId) {
+          if (printErrors.has(employeeId)) throw printErrors.get(employeeId);
+          return printDocuments.get(employeeId) ?? null;
+        },
+      };
       publish({ status: "generating" });
       const result = await dependencies.createArtifact(
         input,
-        dependencies.bridge,
+        frozenBridge,
         controller.signal,
         (completed, total) => publish({ completed, total }),
         retryNumber,

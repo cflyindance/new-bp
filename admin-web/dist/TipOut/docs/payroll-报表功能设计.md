@@ -1,5 +1,23 @@
 # KOI Palace 报税场景 — 报表功能设计
 
+## 2026-10-08 研发变更：批量 PDF 选择交互
+
+本次范围版本 V1.3；变更编号 PAYROLL-20261008-BATCH-COPY。配对 [产品说明 V1.3](./payroll-需求分析.md)，[个人规范版 V1.3](./薪资管理需求文档（个人规范版）.md)。历史全文并未升级为完整现行权威；本节是已确认变更及实现记录。
+
+菜单 data-detail-type 为 summary/detailed；控制器固定 scope=selected、format=pdf、organization=merged，summaryPagination 仅沿用既有分页偏好。selectedIds 为会话 Set，每次打开清空；门店选项来源 PayrollPageContext.getScope().stores，默认从当前员工门店匹配其授权 ID。scopeBatchSnapshot 按门店 ID 或中英文精确别名过滤当前 period 员工（有 storeId 时优先），不做包含匹配；不在白名单时拒绝，专属其他门店的 period 返回空集合。角色为当前门店员工 role 去重，默认空字符串代表全部；搜索按 name/id/adpFile 包含匹配，三条件 AND，角色及搜索变化不清空集合。切店清空 selectedIds、role 和 search，重建角色列表，不写全局门店。0 人禁用按钮，10 人禁选未选行；输入构建及任务 run 均拒绝超过 10 人。示例：12 人列表选前 10 人后另外 2 人禁选，取消 1 人后可再选；筛选只显示 2 名已选员工时计数仍为 10。 V1.3 仅精简展示：移除弹框副标题、明细/PDF/合并格式说明行、员工人数和分页说明行；保留标题、筛选、已选人数、摘要及导出 PDF 按钮，业务规则不变。
+
+打开记录门店与 period 信息，提交时比较，变化则要求重新选择；被移除的选中 ID 不得静默丢弃。构建克隆员工/周期快照，任务开始在异步 PDF 渲染前捕获对应明细 HTML，避免执行中切换页面污染产物。桥接在 finally 恢复当前员工及草稿。生成/合并沿用原任务管线，成功可下载；无数据与生成失败分开展示，空产物不得下载。取消选择弹框不写薪资数据；持久化偏好失败不阻断导出。无新增薪资计算、权限或后端字段。
+
+变更历史（本节）：V1.3 / PAYROLL-20261008-BATCH-COPY 删除弹框副标题、明细/PDF/合并格式说明及人数分页说明三处文案，规则不变；V1.2 / PAYROLL-20261008-BATCH-FILTERS 增加权限门店与组合筛选；V1.1 / PAYROLL-20261008-BATCH-PDF 定义 10 人 PDF 流程。
+
+验证入口：scripts/verify-payroll-batch-filters.ts（精确门店与角色/员工组合、权限及周期隔离）、scripts/verify-payroll-batch-export.ts（人数及失效 ID）、scripts/verify-payroll-batch-export-ui.mjs（菜单与固定格式）、TypeScript 无输出类型检查。真实 PDF 下载与浏览器交互验收单独记录，不以静态测试代替。
+
+## 2026-10-08 研发变更记录：员工卡片操作区
+
+变更编号 PAYROLL-20261008-01；本节 V1.0。对应 [需求分析](./payroll-需求分析.md) 同编号记录。仅补充本次布局，不将历史设计升级为完整研发权威规格。
+
+两份模板均使用 payroll-employee-hero-actions--rows 列容器，内部两个 payroll-employee-action-row 横向容器靠右排列。第一行 data-action 为 open-employee-identity-edit、open-employee-picker；第二行为 refresh-employee-data、preview-employees-detail。四按钮保留 btn btn-sm payroll-hero-btn 类，复用既有事件委托与前置校验；无新增字段、持久化、权限或计算。移除顶部 workspace-action 的明细按钮，底部既有隐藏入口不变。中文 manage.employeesDetail 为员工明细，英文仍为 Employees Detail。静态校验 scripts/verify-payroll-hero-action-rows.mjs；浏览器需核对两行右边缘、窄屏分组和四个原有操作。
+
 **版本**：1.0  
 **日期**：2026-04-21  
 **依据**：[KOI-palace-payroll-需求分析.md](./KOI-palace-payroll-需求分析.md)

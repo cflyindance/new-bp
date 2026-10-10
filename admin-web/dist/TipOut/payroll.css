@@ -4599,3 +4599,18 @@ body.payroll-employee-edit-open > *:not(#payrollEmployeeEditModal):not(#fieldHel
     display: none !important;
   }
 }
+.payroll-page .payroll-employee-hero-actions.payroll-employee-hero-actions--rows {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+.payroll-page .payroll-employee-hero-actions--rows .payroll-employee-action-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.payroll-page .payroll-employee-hero-actions--rows .payroll-hero-btn {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}

@@ -30,6 +30,19 @@
 }
 
 /* Native batch employee-detail export */
+.payroll-page .payroll-batch-filters{display:grid;grid-template-columns:1.2fr 1fr 1.3fr;gap:12px}
+.payroll-page .payroll-batch-option-section .payroll-batch-filters label{display:flex;flex-direction:column;align-items:stretch;gap:7px;margin:0;min-width:0}
+.payroll-page .payroll-batch-filters .form-input{min-width:0;box-sizing:border-box}
+@media(max-width:600px){.payroll-page .payroll-batch-filters{grid-template-columns:1fr}}
+.payroll-page #payrollBatchExportStart:disabled{opacity:.45;cursor:not-allowed}
+.payroll-page .payroll-batch-export-overlay.show{display:flex;align-items:center;justify-content:center}
+.payroll-page .payroll-batch-export-modal{display:flex;flex-direction:column}
+.payroll-page .payroll-batch-export-modal .modal-footer{flex-shrink:0}
+.payroll-page .payroll-batch-export-body .payroll-batch-employee-row,.payroll-page .payroll-batch-employee-columns{display:grid;grid-template-columns:20px minmax(100px,1.5fr) minmax(80px,1fr) minmax(70px,1fr) minmax(100px,1fr);gap:10px;margin:0;padding:12px;width:100%;box-sizing:border-box}
+.payroll-page .payroll-batch-employee-columns{font-size:12px;font-weight:600;background:#f0f5fb;border-radius:8px 8px 0 0}
+.payroll-page .payroll-batch-employee-row:has(input:disabled){opacity:.55;cursor:not-allowed}
+.payroll-page .payroll-batch-export-body .payroll-batch-employee-list{max-height:340px}
+.payroll-page .payroll-batch-export-body .payroll-batch-option-section{background:#fff}
 .payroll-page .payroll-batch-export-open{white-space:nowrap;color:#1677ff}
 .payroll-page .payroll-batch-export-modal{width:min(760px,calc(100vw - 32px));max-height:min(860px,calc(100vh - 32px));overflow:hidden}
 .payroll-page .payroll-batch-export-modal .modal-header{align-items:flex-start}
@@ -6337,3 +6350,18 @@ select.form-control {
   }
 }
 
+.payroll-page .payroll-employee-hero-actions.payroll-employee-hero-actions--rows {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+.payroll-page .payroll-employee-hero-actions--rows .payroll-employee-action-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.payroll-page .payroll-employee-hero-actions--rows .payroll-hero-btn {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}

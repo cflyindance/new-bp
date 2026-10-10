@@ -81,22 +81,31 @@ const batchBridgeSource = `window.__teamPayrollBatchBridge = {
     const employee = getEmployee(state.periodId, employeeId);
     return employee && period ? structuredClone(buildDetailExportPayload(employee, period)) : null;
   },
-  getDetailPrintHtml: (employeeId) => {
+  getDetailPrintHtml: (employeeId, detailType, pagination) => {
     const period = getPeriod(state.periodId);
     const employee = getEmployee(state.periodId, employeeId);
     if (!employee || !period) return null;
     const previousEmployeeId = state.employeeId;
+    const previousStoreFilter = state.employeeStoreFilter;
     const previousDraft = state.workspaceDraft ? structuredClone(state.workspaceDraft) : null;
-    state.employeeId = employeeId;
-    state.workspaceDraft = null;
-    initWorkspaceDraft();
-    renderManageForm();
-    syncDerived();
-    const html = buildPayrollDetailPrintDocumentHtml();
-    state.employeeId = previousEmployeeId;
-    state.workspaceDraft = previousDraft;
-    if (previousEmployeeId) { renderManageForm(); syncDerived(); }
-    return html;
+    try {
+      state.employeeId = employeeId;
+      state.employeeStoreFilter = employee.store || previousStoreFilter;
+      state.workspaceDraft = null;
+      initWorkspaceDraft();
+      renderManageForm();
+      syncDerived();
+      if (detailType === "summary") {
+        const payload = buildDetailExportPayload(employee, period);
+        return buildPayrollDetailA4DocumentHtml(buildCompactDetailHtml(payload), "compact", pagination);
+      }
+      return buildPayrollDetailA4DocumentHtml(buildPayrollDetailPrintDocumentHtml(), "detail", pagination, true);
+    } finally {
+      state.employeeId = previousEmployeeId;
+      state.employeeStoreFilter = previousStoreFilter;
+      state.workspaceDraft = previousDraft;
+      if (previousEmployeeId) { renderManageForm(); syncDerived(); }
+    }
   },
   appendExportAudit: (format, employeeIds, result) => {
     appendAudit("export_batch_detail", { format, employeeIds, result });

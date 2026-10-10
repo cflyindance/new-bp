@@ -28,8 +28,10 @@ assert.equal(classifyBatchEmployee(employees[3], period).status, "no_data");
 assert.equal(sanitizePayrollFilePart(' A/B:* "C" '), "A_B_C");
 assert.equal(buildBatchExportInput(snapshot, { ...DEFAULT_BATCH_EXPORT_OPTIONS, scope: "selected" }, ["draft"]).records.length, 1);
 assert.throws(() => buildBatchExportInput(snapshot, { ...DEFAULT_BATCH_EXPORT_OPTIONS, scope: "selected" }, []), /Select at least one/);
-const tooMany = Array.from({ length: 201 }, (_, index) => employee(`e${index}`));
-assert.throws(() => buildBatchExportInput({ ...snapshot, data: { ...snapshot.data, employees: { [period.id]: tooMany } } }, DEFAULT_BATCH_EXPORT_OPTIONS, []), /200/);
+const tooMany = Array.from({ length: 11 }, (_, index) => employee(`e${index}`));
+assert.throws(() => buildBatchExportInput({ ...snapshot, data: { ...snapshot.data, employees: { [period.id]: tooMany } } }, DEFAULT_BATCH_EXPORT_OPTIONS, []), /10/);
+assert.equal(buildBatchExportInput({ ...snapshot, data: { ...snapshot.data, employees: { [period.id]: tooMany.slice(0, 10) } } }, DEFAULT_BATCH_EXPORT_OPTIONS, []).records.length, 10);
+assert.throws(() => buildBatchExportInput(snapshot, { ...DEFAULT_BATCH_EXPORT_OPTIONS, scope: "selected" }, ["ready", "removed"]), /重新选择/);
 
 assert.equal(SUMMARY_CSV_COLUMNS.length, 23);
 assert.equal(DETAILED_CSV_COLUMNS.length, 39);
