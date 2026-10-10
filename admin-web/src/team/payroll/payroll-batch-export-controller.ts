@@ -55,7 +55,7 @@ export function mountPayrollBatchExportController(
       const input = attachBatchDeclarationPresentations(buildBatchExportInput(snapshot, singleOptions, [snapshot.employeeId]),
         id => bridge.getCurrentDetailPayload?.() ?? bridge.getDetailPayload(id));
       taskCenter.submit(input, 'single');
-      if (status) { status.hidden = false; status.textContent = '已提交导出任务，成功后自动下载'; }
+      if (status) { status.hidden = true; status.textContent = ''; }
       $('#btn-employees-detail-export-toggle')?.click();
     } catch (error) {
       if (status) { status.hidden = false; status.textContent = error instanceof Error ? error.message : '导出提交失败'; }
