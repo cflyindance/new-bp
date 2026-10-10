@@ -22,6 +22,7 @@ export function mountPayrollBatchExportController(
   let selectedRole = "";
   const selectedRoles = new Set<string>();
   let unifiedPicker = false;
+  let focusedEmployeeId = "";
   let taskStoreId = "";
   let currentInput: BatchExportInput | null = null;
   let downloadUrl = "";
@@ -73,6 +74,24 @@ export function mountPayrollBatchExportController(
     records = employees.map((employee) => classifyBatchEmployee(employee, period!));
   }
 
+  function employeeRoles(employee: BatchEmployeeRecord["employee"]): string[] {
+    const roleRecords = Array.isArray(employee.roleRecords) ? employee.roleRecords as { role?: unknown }[] : [];
+    return Array.from(new Set([...roleRecords.map(record => record.role), ...employee.segments.map(segment => segment.role), employee.role, employee.department].map(value => String(value ?? "").trim()).filter(value => value && value !== "—")));
+  }
+  function availableRoles(): string[] {
+    return Array.from(new Set(records.flatMap(record => employeeRoles(record.employee).length ? employeeRoles(record.employee) : [""]))).sort();
+  }
+  function renderEmployeeRoles(): void {
+    const roleList = $("#payrollBatchRolesList");
+    const employee = records.find(record => record.employee.id === focusedEmployeeId)?.employee;
+    if (roleList) roleList.innerHTML = employee ? `<strong>${escapeHtml(employee.name)}</strong>` + (employeeRoles(employee).map(role => `<p class="payroll-batch-owned-role">${escapeHtml(role)}</p>`).join("") || "<p>未设置角色</p>") : "<p>请点击左侧员工查看角色</p>";
+  }
+
+  function selectAllRoles(): void {
+    selectedRoles.clear();
+    for (const role of availableRoles()) selectedRoles.add(role);
+  }
+
   function renderFilters(): void {
     const storeSelect = $<HTMLSelectElement>("#payrollBatchStoreFilter");
     if (storeSelect) {
@@ -85,16 +104,21 @@ export function mountPayrollBatchExportController(
       roleSelect.innerHTML = '<option value="">全部角色</option>' + roles.map(role => `<option value="${escapeHtml(role)}">${escapeHtml(role)}</option>`).join("");
       roleSelect.value = selectedRole;
     }
-    const roleList = $("#payrollBatchRolesList");
+    const roleList = $("#payrollBatchRoleFilterOptions");
     if (roleList) {
-      const roles = Array.from(new Set(records.map(record => String(record.employee.role ?? "").trim()).filter(Boolean))).sort();
-      roleList.innerHTML = `<button type="button" class="payroll-employee-picker-role${selectedRoles.size ? "" : " is-selected"}" data-action="batch-all-roles">全部角色</button>` + roles.map(role => `<label class="payroll-employee-picker-role${selectedRoles.has(role) ? " is-selected" : ""}"><input type="checkbox" data-batch-role="${escapeHtml(role)}" ${selectedRoles.has(role) ? "checked" : ""}><span>${escapeHtml(role)}</span></label>`).join("");
+      const roles = availableRoles();
+      const allSelected = roles.length > 0 && roles.every(role => selectedRoles.has(role));
+      roleList.innerHTML = `<label class="payroll-employee-picker-role${allSelected ? " is-selected" : ""}"><input type="checkbox" id="payrollBatchAllRoles" ${allSelected ? "checked" : ""} ${roles.length ? "" : "disabled"}><span>全选角色</span></label>` + roles.map(role => `<label class="payroll-employee-picker-role${selectedRoles.has(role) ? " is-selected" : ""}"><input type="checkbox" data-batch-role="${escapeHtml(role)}" ${selectedRoles.has(role) ? "checked" : ""}><span>${escapeHtml(role || "未设置角色")}</span></label>`).join("");
+      const all = $<HTMLInputElement>("#payrollBatchAllRoles");
+      if (all) all.indeterminate = selectedRoles.size > 0 && !allSelected;
+      const heading = $("#payrollBatchRoleMultiFilter summary");
+      if (heading) heading.textContent = `角色筛选：${allSelected ? "全部角色" : selectedRoles.size ? `已选 ${selectedRoles.size} 项` : "未选择"}`;
     }
   }
 
   function visibleRecords(): BatchEmployeeRecord[] {
     const candidates = filterBatchEmployees(records.map(record => record.employee), unifiedPicker ? "" : selectedRole, search);
-    const employees = new Set(candidates.filter(employee => !unifiedPicker || !selectedRoles.size || selectedRoles.has(String(employee.role ?? "").trim())));
+    const employees = new Set(candidates.filter(employee => !unifiedPicker || (employeeRoles(employee).length ? employeeRoles(employee) : [""]).some(role => selectedRoles.has(role))));
     return records.filter(record => employees.has(record.employee));
   }
 
@@ -110,11 +134,13 @@ export function mountPayrollBatchExportController(
     employeeList.innerHTML = visibleRecords().map((record) => {
       const checked = selectedIds.has(record.employee.id);
       const statusClass = record.status === "no_data" ? "is-empty" : record.status === "ready" ? "" : "is-draft";
-      if (unifiedPicker) return `<label class="payroll-employee-picker-item${checked ? " is-selected" : ""}"><input type="checkbox" aria-label="选择 ${escapeHtml(record.employee.name)}" data-batch-employee-id="${escapeHtml(record.employee.id)}" ${checked ? "checked" : ""} ${!checked && selectedIds.size >= 10 ? "disabled" : ""}><span class="payroll-employee-picker-avatar" aria-hidden="true">${escapeHtml(Array.from(record.employee.name || "—")[0])}</span><span class="payroll-employee-picker-copy"><strong>${escapeHtml(record.employee.name)}</strong><small>${escapeHtml(record.employee.role || "—")}</small></span><span class="payroll-employee-picker-arrow" aria-hidden="true">›</span></label>`;
+      if (unifiedPicker) return `<div class="payroll-employee-picker-item${checked ? " is-selected" : ""}"><input type="checkbox" aria-label="选择 ${escapeHtml(record.employee.name)}" data-batch-employee-id="${escapeHtml(record.employee.id)}" ${checked ? "checked" : ""} ${!checked && selectedIds.size >= 10 ? "disabled" : ""}><span class="payroll-employee-picker-avatar" aria-hidden="true">${escapeHtml(Array.from(record.employee.name || "—")[0])}</span><button type="button" class="payroll-batch-view-roles" data-action="batch-view-roles" data-employee-id="${escapeHtml(record.employee.id)}" aria-pressed="${focusedEmployeeId === record.employee.id}"><strong>${escapeHtml(record.employee.name)}</strong><small>${escapeHtml(employeeRoles(record.employee).join("、") || "—")}</small></button><span class="payroll-employee-picker-arrow" aria-hidden="true">›</span></div>`;
       return `<label class="payroll-batch-employee-row"><input type="checkbox" aria-label="选择 ${escapeHtml(record.employee.name)}" data-batch-employee-id="${escapeHtml(record.employee.id)}" ${checked ? "checked" : ""} ${!checked && selectedIds.size >= 10 ? "disabled" : ""}><strong>${escapeHtml(record.employee.name)}</strong><span>${escapeHtml(record.employee.id || "—")}</span><span>${escapeHtml(record.employee.role || "—")}</span><span class="payroll-batch-status ${statusClass}">${statusLabel(record)}</span></label>`;
     }).join("") || `<p style="padding:24px;text-align:center;color:#8c8c8c">${records.length ? "没有符合筛选条件的员工" : selectedStoreId ? "所选门店在当前薪资周期内暂无员工" : "请先选择门店"}</p>`;
     const hidden = Array.from(selectedIds).filter((id) => !visibleRecords().some((record) => record.employee.id === id)).length;
     selectedCount.textContent = `已选 ${selectedIds.size} / 10 人${hidden ? `，其中 ${hidden} 人不在当前筛选结果` : ""}${selectedIds.size === 10 ? "（已达上限）" : ""}`;
+    if (!visibleRecords().some(record => record.employee.id === focusedEmployeeId)) focusedEmployeeId = "";
+    renderEmployeeRoles();
   }
 
   function escapeHtml(value: unknown): string {
@@ -150,6 +176,8 @@ export function mountPayrollBatchExportController(
 
   function openModal(detailType: "summary" | "detailed", unified = false): void {
     unifiedPicker = unified;
+    focusedEmployeeId = "";
+    const roleMulti = $("#payrollBatchRoleMultiFilter"); if (roleMulti) { roleMulti.hidden = !unified; roleMulti.removeAttribute("open"); }
     selectedRoles.clear();
     modal?.classList.toggle("is-employee-picker", unified);
     const types = $("#payrollBatchDetailTypes"); if (types) types.hidden = !unified;
@@ -165,6 +193,7 @@ export function mountPayrollBatchExportController(
     selectedStoreId = getBatchStoreId(bridge.getSnapshot(), context.getScope());
     selectedRole = ""; selectedIds.clear(); search = "";
     try { loadRecords(); } catch { records = []; selectedStoreId = ""; }
+    selectAllRoles();
     renderFilters();
     const searchInput = $("#payrollBatchEmployeeSearch") as HTMLInputElement | null;
     if (searchInput) searchInput.value = "";
@@ -233,20 +262,22 @@ export function mountPayrollBatchExportController(
     const target = (event.target as HTMLElement).closest<HTMLElement>("[data-action]");
     const action = target?.dataset.action;
     if (action === "open-batch-detail-export") openModal(target?.dataset.detailType === "detailed" ? "detailed" : "summary", target?.dataset.pickerLayout === "unified");
-    if (action === "batch-all-roles") { selectedRoles.clear(); renderFilters(); renderEmployeePicker(); }
     if (!(event.target as HTMLElement).closest(".payroll-adp-export-dropdown")) setMenu(false);
     if (action === "close-batch-detail-export") closeModal();
+    if (action === "batch-view-roles") { focusedEmployeeId = target?.dataset.employeeId || ""; renderEmployeePicker(); }
     if (action === "batch-clear-selection") { selectedIds.clear(); renderEmployeePicker(); renderSummary(); }
   }, { signal: controller.signal });
   pageRoot.addEventListener("change", (event) => {
     const input = event.target as HTMLInputElement;
     if (input.name === "batchPickerDetail") { options = { ...options, detailType: input.value === "detailed" ? "detailed" : "summary" }; renderOptions(); return; }
+    if (input.id === "payrollBatchAllRoles") { if (input.checked) selectAllRoles(); else selectedRoles.clear(); renderFilters(); renderEmployeePicker(); return; }
     if (input.dataset.batchRole !== undefined) { if (input.checked) selectedRoles.add(input.dataset.batchRole); else selectedRoles.delete(input.dataset.batchRole); renderFilters(); renderEmployeePicker(); return; }
     if (input.id === "payrollBatchStoreFilter") {
       selectedStoreId = input.value; selectedRole = ""; search = ""; selectedIds.clear();
       selectedRoles.clear();
       const searchInput = $<HTMLInputElement>("#payrollBatchEmployeeSearch"); if (searchInput) searchInput.value = "";
       try { loadRecords(); } catch { records = []; selectedStoreId = ""; }
+      selectAllRoles();
       renderFilters(); renderEmployeePicker(); renderSummary(); return;
     }
     if (input.id === "payrollBatchRoleFilter") { selectedRole = input.value; renderEmployeePicker(); renderSummary(); return; }
