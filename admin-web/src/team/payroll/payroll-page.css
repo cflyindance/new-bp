@@ -4162,6 +4162,19 @@ select.form-control {
 .payroll-page .payroll-export-jobs button, .payroll-page .payroll-export-drawer header button { padding: 9px 14px; border: 0; border-radius: 8px; margin: 6px 6px 0 0; color: #1677ff; background: #f3f5f7; cursor: pointer; }
 .payroll-page .payroll-export-jobs button:disabled { opacity: .4; cursor: not-allowed; }
 .payroll-page .payroll-export-jobs .is-error { color: #cf1322; }
+.payroll-page .payroll-export-card-heading { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+.payroll-page .payroll-export-card-heading h4 { margin: 0; font-size: 15px; font-weight: 600; }
+.payroll-page .payroll-export-status-icon { display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 12px; flex-shrink: 0; color: white; background: #1677ff; font-size: 20px; }
+.payroll-page .payroll-export-status-icon.is-complete { background: #52c41a; }
+.payroll-page .payroll-export-status-icon.is-failed { background: #e85a4f; }
+.payroll-page .payroll-export-status-icon.is-running > span { width: 17px; height: 17px; border: 2px solid white; border-top-color: transparent; border-radius: 50%; animation: payroll-export-spin 1s linear infinite; }
+@keyframes payroll-export-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .payroll-page .payroll-export-status-icon.is-running > span { animation: none; } }
+.payroll-page .payroll-export-card-fields { margin: 0; display: grid; gap: 14px; font-size: 13px; }
+.payroll-page .payroll-export-card-fields > div { display: grid; grid-template-columns: 70px minmax(0, 1fr); align-items: start; gap: 16px; }
+.payroll-page .payroll-export-card-fields dt { color: #8c8c8c; line-height: 24px; }
+.payroll-page .payroll-export-card-fields dd { margin: 0; text-align: right; line-height: 24px; overflow-wrap: anywhere; color: #252525; }
+.payroll-page .payroll-export-type-badge { display: inline-block; padding: 1px 9px; border-radius: 9px; background: #f1f1f1; }
 .payroll-page .payroll-employee-picker {
   width: min(560px, 94vw);
   overflow: hidden;
