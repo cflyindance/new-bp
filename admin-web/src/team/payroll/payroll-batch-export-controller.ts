@@ -112,7 +112,7 @@ export function mountPayrollBatchExportController(
       const all = $<HTMLInputElement>("#payrollBatchAllRoles");
       if (all) all.indeterminate = selectedRoles.size > 0 && !allSelected;
       const heading = $("#payrollBatchRoleMultiFilter summary");
-      if (heading) heading.textContent = `角色筛选：${allSelected ? "全部角色" : selectedRoles.size ? `已选 ${selectedRoles.size} 项` : "未选择"}`;
+      if (heading) heading.textContent = allSelected ? "全部角色" : selectedRoles.size ? `已选 ${selectedRoles.size} 项` : "未选择";
     }
   }
 
@@ -157,9 +157,7 @@ export function mountPayrollBatchExportController(
 
   function renderSummary(): void {
     const chosen = options.scope === "all" ? records : records.filter((record) => selectedIds.has(record.employee.id));
-    const count = (status: BatchEmployeeRecord["status"]) => chosen.filter((record) => record.status === status).length;
-    const draft = count("incomplete") + count("unconfirmed");
-    if (summary) summary.innerHTML = `将处理 <strong>${chosen.length}</strong> 名员工：可正常导出 ${count("ready")} 人，Draft ${draft} 人，无数据 ${count("no_data")} 人。预计生成 <strong>${options.organization === "merged" ? (chosen.length ? 1 : 0) : chosen.filter((record) => record.status !== "no_data").length}</strong> 个文件。`;
+    if (summary) { summary.innerHTML = ""; summary.hidden = true; }
     if (startButton) startButton.disabled = starting || chosen.length === 0 || chosen.length > 10;
   }
 
@@ -178,6 +176,7 @@ export function mountPayrollBatchExportController(
     unifiedPicker = unified;
     focusedEmployeeId = "";
     const roleMulti = $("#payrollBatchRoleMultiFilter"); if (roleMulti) { roleMulti.hidden = !unified; roleMulti.removeAttribute("open"); }
+    const roleField = $(".payroll-batch-role-field"); if (roleField) roleField.hidden = !unified;
     selectedRoles.clear();
     modal?.classList.toggle("is-employee-picker", unified);
     const types = $("#payrollBatchDetailTypes"); if (types) types.hidden = !unified;
@@ -246,7 +245,7 @@ export function mountPayrollBatchExportController(
       closeModal();
       await running;
     } catch (error) {
-      if (summary) summary.innerHTML = `<span style="color:#cf1322">${escapeHtml(error instanceof Error ? error.message : error)}</span>`;
+      if (summary) { summary.hidden = false; summary.innerHTML = `<span style="color:#cf1322">${escapeHtml(error instanceof Error ? error.message : error)}</span>`; }
     } finally {
       starting = false;
       if (startButton) startButton.disabled = selectedIds.size === 0 || selectedIds.size > 10;
@@ -259,6 +258,7 @@ export function mountPayrollBatchExportController(
   }
 
   pageRoot.addEventListener("click", (event) => {
+    if (!(event.target as HTMLElement).closest("#payrollBatchRoleMultiFilter")) $("#payrollBatchRoleMultiFilter")?.removeAttribute("open");
     const target = (event.target as HTMLElement).closest<HTMLElement>("[data-action]");
     const action = target?.dataset.action;
     if (action === "open-batch-detail-export") openModal(target?.dataset.detailType === "detailed" ? "detailed" : "summary", target?.dataset.pickerLayout === "unified");
@@ -266,6 +266,9 @@ export function mountPayrollBatchExportController(
     if (action === "close-batch-detail-export") closeModal();
     if (action === "batch-view-roles") { focusedEmployeeId = target?.dataset.employeeId || ""; renderEmployeePicker(); }
     if (action === "batch-clear-selection") { selectedIds.clear(); renderEmployeePicker(); renderSummary(); }
+  }, { signal: controller.signal });
+  document.addEventListener("click", (event) => {
+    if (!event.composedPath().includes($("#payrollBatchRoleMultiFilter") as EventTarget)) $("#payrollBatchRoleMultiFilter")?.removeAttribute("open");
   }, { signal: controller.signal });
   pageRoot.addEventListener("change", (event) => {
     const input = event.target as HTMLInputElement;

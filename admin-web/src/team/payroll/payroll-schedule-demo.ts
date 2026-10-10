@@ -9,6 +9,13 @@ export function addScheduleDays(value: string, count: number): string {
 const distance = (a: string, b: string) => Math.round((date(b).getTime() - date(a).getTime()) / 86400000);
 const mdy = (s: string) => `${s.slice(5, 7)}/${s.slice(8, 10)}/${s.slice(0, 4)}`;
 export const payrollFrequencyLabels: Record<string, string> = { weekly: '单周', biweekly: '双周', semimonthly: '半月', monthly: '一月', custom: '自定义 10 天' };
+const demoEmployees = [
+  ['示例员工 王', 'Server'], ['示例员工 陈', 'Busser'], ['示例员工 李', 'Runner'],
+  ['示例员工 张', 'Host'], ['示例员工 刘', 'Bartender'], ['示例员工 赵', 'Chef'],
+  ['示例员工 黄', 'Cashier'], ['示例员工 周', 'Manager'], ['示例员工 吴', 'Server'],
+  ['示例员工 徐', 'Busser'], ['示例员工 孙', 'Runner'], ['示例员工 胡', 'Host'],
+  ['示例员工 朱', 'Bartender'], ['示例员工 高', 'Chef'], ['示例员工 林', 'Cashier'],
+];
 
 export function generateDemoPeriods(scenario: PayrollDemoScenario, year: number): PayrollPeriod[] {
   const result: PayrollPeriod[] = [];
@@ -40,6 +47,7 @@ export function generateDemoPeriods(scenario: PayrollDemoScenario, year: number)
 }
 
 function demoEmployee(period: PayrollPeriod, store: string, index: number): PayrollEmployee {
+  const [name, role] = demoEmployees[index];
   const start = period.startDate!, end = period.endDate!, rate = index === 0 ? 20 : 18;
   const segments: PayrollSegment[] = [];
   // Complete-week classification is fixture data, never a replacement for the real payroll engine.
@@ -48,12 +56,13 @@ function demoEmployee(period: PayrollPeriod, store: string, index: number): Payr
     const hours = index === 2 || weekday === 0 ? 0 : index === 1 ? (weekday === 6 ? 0 : 6) : weekday === 6 ? 4 : 8.5;
     const preceding = index === 0 ? Math.max(0, weekday - 1) * 8.5 : Math.max(0, weekday - 1) * 6;
     const reg = Math.min(hours, Math.max(0, 40 - preceding));
-    if (index !== 2) segments.push({ date: mdy(day), reg, ot: hours - reg, ot2: 0, rate, otRate: rate * 1.5, ot2Rate: rate * 2,
+    if (index !== 2) segments.push({ date: mdy(day), role: index === 8 && weekday === 6 ? 'Host' : role, reg, ot: hours - reg, ot2: 0, rate, otRate: rate * 1.5, ot2Rate: rate * 2,
       paidMealBreak: '', unpaidMealBreak: hours > 4 ? '0:30' : '',
       slots: [{ in: hours ? '09:00' : '', out: hours === 8.5 ? '18:00' : hours === 6 ? '15:30' : hours ? '13:00' : '' }],
     });
   }
-  return { id: `demo-employee-${index}`, name: ['示例员工 王', '示例员工 陈', '示例员工 李'][index], role: 'Server', store,
+  return { id: `demo-employee-${index}`, name, role, store,
+    roleRecords: index === 8 ? [{ role: 'Server' }, { role: 'Host' }] : [{ role }],
     adpFile: `DEMO-${index + 1}`, ssn: '', hireDate: '01/01/2025', rate, otRate: rate * 1.5, ot2Rate: rate * 2,
     confirmed: false, segments, adjustments: { tips: index === 2 ? 15 : segments.filter(s => Number(s.reg) + Number(s.ot) > 0).length * 12 },
   };
@@ -62,5 +71,5 @@ function demoEmployee(period: PayrollPeriod, store: string, index: number): Payr
 export function createPayrollScheduleDemo(scenario: PayrollDemoScenario, store: string): PayrollData {
   if (!['weekly', 'biweekly', 'semimonthly', 'monthly', 'custom', 'switch', 'transition'].includes(scenario)) throw new Error('Unknown payroll scenario');
   const periods = [2026, 2027, 2028].flatMap(year => generateDemoPeriods(scenario, year));
-  return { periods, employees: Object.fromEntries(periods.map(p => [p.id, [0, 1, 2].map(i => demoEmployee(p, store, i))])), auditLog: [], demo: true };
+  return { periods, employees: Object.fromEntries(periods.map(p => [p.id, demoEmployees.map((_, i) => demoEmployee(p, store, i))])), auditLog: [], demo: true };
 }

@@ -4118,7 +4118,9 @@ select.form-control {
 .payroll-page .is-employee-picker .payroll-batch-export-body { padding: 12px; background: white; border-radius: 12px; }
 .payroll-page .is-employee-picker .payroll-batch-option-section { padding: 0; border: 0; }
 .payroll-page .is-employee-picker .payroll-batch-filters { grid-template-columns: 1fr 1fr 1fr; }
-.payroll-page #payrollBatchRoleMultiFilter { position: relative; min-width: 0; padding-top: 23px; }
+.payroll-page .payroll-batch-role-field { min-width: 0; font-size: 13px; }
+.payroll-page .payroll-batch-role-field > span { display: block; margin-bottom: 7px; }
+.payroll-page #payrollBatchRoleMultiFilter { position: relative; min-width: 0; }
 .payroll-page #payrollBatchRoleMultiFilter > summary { padding: 11px; border: 1px solid #d8dce1; border-radius: 8px; cursor: pointer; font-size: 12px; }
 .payroll-page #payrollBatchRoleFilterOptions { position: absolute; top: 100%; left: 0; right: 0; z-index: 2; background: white; padding: 8px; border: 1px solid #d8dce1; border-radius: 8px; box-shadow: 0 6px 18px #0002; max-height: 230px; overflow-y: auto; }
 .payroll-page .payroll-batch-view-roles { display: block; border: 0; background: transparent; text-align: left; padding: 4px; cursor: pointer; min-width: 0; }

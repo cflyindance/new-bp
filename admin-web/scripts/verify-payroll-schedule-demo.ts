@@ -6,7 +6,13 @@ for (const scenario of ['weekly','biweekly','semimonthly','monthly','custom','sw
   assert.ok(periods.every(p => p.endDate!.startsWith('2027')));
   const data = createPayrollScheduleDemo(scenario, 'test-store');
   assert.ok(data.demo);
-  assert.ok(Object.values(data.employees).every(list => list.length === 3 && list[2].segments.length === 0 && list[2].adjustments.tips === 15));
+  assert.ok(Object.values(data.employees).every(list => list.length === 15 && list[2].segments.length === 0 && list[2].adjustments.tips === 15));
+  for (const list of Object.values(data.employees)) {
+    assert.equal(new Set(list.map(employee => employee.id)).size, 15);
+    assert.equal(new Set(list.map(employee => employee.role)).size, 8);
+    assert.deepEqual(list[8].roleRecords, [{ role: 'Server' }, { role: 'Host' }]);
+    assert.ok(list.every(employee => employee.store === 'test-store' && employee.name));
+  }
   console.log(scenario, periods.length);
 }
 assert.equal(generateDemoPeriods('biweekly', 2026).find(p=>p.startDate==='2026-01-04')?.periodNumber,2);
