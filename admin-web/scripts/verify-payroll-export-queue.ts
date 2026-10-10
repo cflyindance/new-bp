@@ -28,6 +28,24 @@ async function main() {
   fail = false; queue.retry(second); releases.shift()!(); await new Promise(resolve => setTimeout(resolve, 0));
   assert.equal(queue.getJobs()[1].snapshot.status, 'completed');
   assert.equal(queue.hasPending(), false);
+  let printCalls = 0;
+  const singleQueue = createPayrollExportQueue({
+    ...bridge,
+    getDetailPrintHtml() { printCalls++; return 'batch'; },
+    getCurrentDetailPrintHtml() { printCalls++; return 'current-draft'; },
+  }, { createArtifact: async (jobInput, frozen) => {
+    if (jobInput.options.format === 'pdf') assert.equal(frozen.getDetailPrintHtml('emp', 'summary', 'single-page'), 'current-draft');
+    return { blob: new Blob(['export']), filename: 'test.' + jobInput.options.format, succeededIds: ['emp'], skippedIds: [], failures: [] };
+  } });
+  singleQueue.submit(input, 'single');
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.equal(singleQueue.getJobs()[0].source, 'single');
+  singleQueue.submit({ ...input, options: { ...input.options, format: 'csv' } }, 'single');
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.equal(printCalls, 1, 'CSV must not render print HTML');
+  assert.equal(singleQueue.getJobs()[1].snapshot.status, 'completed');
+  assert.equal(singleQueue.getJobs()[1].snapshot.result?.filename, 'test.csv');
+  singleQueue.destroy();
   queue.destroy(); console.log('Payroll export queue: serial, frozen context, failure and retry passed');
 }
 void main();

@@ -160,6 +160,21 @@ const batchBridgeSource = `window.__teamPayrollBatchBridge = {
     saveState();
   },
   getSnapshot: () => structuredClone(buildSnapshot()),
+  getCurrentDetailSnapshot: () => {
+    readFormIntoDraft();
+    syncDerived();
+    const snapshot = structuredClone(buildSnapshot());
+    const employee = getDraftAsEmployeeShape();
+    if (employee) snapshot.data.employees[state.periodId] = snapshot.data.employees[state.periodId].map(item => item.id === employee.id ? structuredClone(employee) : item);
+    return snapshot;
+  },
+  getCurrentDetailPayload: () => structuredClone(buildDetailExportPayload(getDraftAsEmployeeShape(), getPeriod(state.periodId))),
+  getCurrentDetailPrintHtml: (detailType, pagination) => {
+    const payload = buildDetailExportPayload(getDraftAsEmployeeShape(), getPeriod(state.periodId));
+    return detailType === "summary"
+      ? buildPayrollDetailA4DocumentHtml(buildCompactDetailHtml(payload), "compact", pagination)
+      : buildPayrollDetailA4DocumentHtml(buildPayrollDetailPrintDocumentHtml(), "detail", pagination, true);
+  },
   getDetailPayload: (employeeId) => {
     const period = getPeriod(state.periodId);
     const employee = getEmployee(state.periodId, employeeId);

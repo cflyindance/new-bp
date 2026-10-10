@@ -36,6 +36,32 @@ export function mountPayrollBatchExportController(
   const summary = $("#payrollBatchExportSummary");
   const startButton = $("#payrollBatchExportStart") as HTMLButtonElement | null;
 
+  // Capture before the legacy menu handler so it cannot trigger a second download.
+  pageRoot.addEventListener('click', event => {
+    const item = (event.target as HTMLElement).closest<HTMLElement>('#employeesDetailExportMenu [data-export-type]');
+    const format = item?.dataset.exportType;
+    if (format !== 'pdf' && format !== 'csv') return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    const status = $('#employeesDetailExportStatus');
+    try {
+      const snapshot = bridge.getCurrentDetailSnapshot?.() ?? bridge.getSnapshot();
+      if (!snapshot.employeeId) throw new Error('请先选择员工');
+      const singleOptions: BatchExportOptions = {
+        scope: 'selected', organization: 'merged', format,
+        detailType: $('[data-detail-variant="compact"]')?.getAttribute('aria-selected') === 'true' ? 'summary' : 'detailed',
+        summaryPagination: shadowRoot.querySelector<HTMLInputElement>('input[name="payrollPrintPagination"]:checked')?.value === 'paginate' ? 'auto-pages' : 'single-page',
+      };
+      const input = attachBatchDeclarationPresentations(buildBatchExportInput(snapshot, singleOptions, [snapshot.employeeId]),
+        id => bridge.getCurrentDetailPayload?.() ?? bridge.getDetailPayload(id));
+      taskCenter.submit(input, 'single');
+      if (status) { status.hidden = false; status.textContent = '已提交导出任务，成功后自动下载'; }
+      $('#btn-employees-detail-export-toggle')?.click();
+    } catch (error) {
+      if (status) { status.hidden = false; status.textContent = error instanceof Error ? error.message : '导出提交失败'; }
+    }
+  }, { capture: true, signal: controller.signal });
+
   function readOptions(): BatchExportOptions {
     return {
       scope: "selected",

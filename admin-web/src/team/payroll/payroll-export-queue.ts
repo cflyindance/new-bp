@@ -3,6 +3,7 @@ import { createBatchArtifact } from './payroll-batch-export-artifacts';
 import type { BatchExportInput, PayrollBatchBridge } from './payroll-batch-export-types';
 
 export interface ExportJob {
+  source: 'batch' | 'single';
   id: string;
   input: BatchExportInput;
   submittedAt: Date;
@@ -32,18 +33,18 @@ export function createPayrollExportQueue(bridge: PayrollBatchBridge, dependencie
     getJobs: () => [...jobs],
     hasPending: () => active || jobs.some(job => job.queued),
     subscribe(listener: () => void) { listeners.add(listener); return () => { listeners.delete(listener); }; },
-    submit(input: BatchExportInput) {
+    submit(input: BatchExportInput, source: 'batch' | 'single' = 'batch') {
       if (destroyed) throw new Error('任务中心已关闭');
       if (input.records.length < 1 || input.records.length > 10) throw new Error('一次请选择 1–10 名员工');
       const frozen = structuredClone(input);
       const documents = new Map<string, string | null>();
       const errors = new Map<string, unknown>();
-      for (const record of frozen.records.filter(item => item.status !== 'no_data')) {
-        try { documents.set(record.employee.id, bridge.getDetailPrintHtml(record.employee.id, input.options.detailType, input.options.summaryPagination)); }
+      for (const record of frozen.records.filter(item => item.status !== 'no_data' && input.options.format === 'pdf')) {
+        try { documents.set(record.employee.id, source === 'single' && bridge.getCurrentDetailPrintHtml ? bridge.getCurrentDetailPrintHtml(input.options.detailType, input.options.summaryPagination) : bridge.getDetailPrintHtml(record.employee.id, input.options.detailType, input.options.summaryPagination)); }
         catch (error) { errors.set(record.employee.id, error); }
       }
       const jobBridge: PayrollBatchBridge = { ...bridge, getDetailPrintHtml(id) { if (errors.has(id)) throw errors.get(id); return documents.get(id) ?? null; } };
-      const job: ExportJob = { id: `payroll-export-${++sequence}`, input: frozen, bridge: jobBridge, submittedAt: new Date(), queued: true,
+      const job: ExportJob = { source, id: `payroll-export-${++sequence}`, input: frozen, bridge: jobBridge, submittedAt: new Date(), queued: true,
         snapshot: { status: 'idle', completed: 0, total: frozen.records.filter(item => item.status !== 'no_data').length, errorMessage: '', result: null, retryNumber: 0 } };
       jobs.push(job); publish(); void drain(); return job.id;
     },

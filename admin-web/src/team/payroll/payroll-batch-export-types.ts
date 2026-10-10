@@ -57,6 +57,9 @@ export interface BatchExportInput {
 }
 
 export interface PayrollBatchBridge {
+  getCurrentDetailSnapshot?(): PayrollSnapshot;
+  getCurrentDetailPrintHtml?(detailType: BatchDetailType, pagination: SummaryPagination): string | null;
+  getCurrentDetailPayload?(): Record<string, unknown> | null;
   getSnapshot(): PayrollSnapshot;
   getDetailPayload(employeeId: string): Record<string, unknown> | null;
   getDetailPrintHtml(
