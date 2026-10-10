@@ -8,8 +8,10 @@ const labels:Record<PayrollFrequency,string>={weekly:'单周',biweekly:'双周',
 const escape=(value:unknown)=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
 export function mountPayrollScheduleController(root:ShadowRoot,bridge:PayrollBatchBridge,context:PayrollPageContext){
   const abort=new AbortController();
-  const entry=document.createElement('button');entry.type='button';entry.className='btn no-print';entry.textContent='发薪周期设置';
-  root.querySelector('.payroll-store-bar-inner')?.append(entry);
+  const entry=document.createElement('button');entry.type='button';entry.className='btn payroll-workspace-action-btn no-print';entry.textContent='发薪周期设置';
+  const actions=root.querySelector('.payroll-workspace-actions');
+  const declaration=actions?.querySelector('[data-action="open-declaration-settings"]');
+  if(declaration) declaration.before(entry); else actions?.prepend(entry);
   const panel=document.createElement('dialog');panel.className='payroll-schedule-dialog payroll-schedule-page';panel.setAttribute('aria-label','发薪周期设置');root.append(panel);
   const editor=document.createElement('dialog');editor.className='payroll-schedule-dialog';editor.setAttribute('aria-label','规则配置');root.append(editor);
   const confirmation=document.createElement('dialog');confirmation.className='payroll-schedule-dialog';confirmation.setAttribute('aria-label','确认规则');root.append(confirmation);
