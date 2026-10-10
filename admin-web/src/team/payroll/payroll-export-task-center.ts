@@ -19,18 +19,34 @@ export function mountPayrollExportTaskCenter(root: HTMLElement, bridge: PayrollB
   if (confirm) confirm.before(entry); else actions?.append(entry);
   const drawer = surface.querySelector<HTMLElement>('.payroll-export-drawer')!;
   const toast = surface.querySelector<HTMLElement>('.payroll-export-toast')!;
+  let successVisible = false;
+  let successTimer: ReturnType<typeof setTimeout> | undefined;
+  function dismissSuccess() {
+    successVisible = false;
+    if (successTimer !== undefined) clearTimeout(successTimer);
+    successTimer = undefined;
+  }
+  function renderToast() {
+    toast.hidden = !queue.hasPending() && !successVisible;
+    surface.querySelector('[data-export-message]')!.textContent = queue.hasPending()
+      ? '正在导出并合并，成功后自动下载' : '导出成功';
+  }
   let returnFocus: HTMLElement | null = null;
   const labels: Record<string, string> = { idle: '排队中', preparing: '准备数据', generating: '生成明细', packaging: '合并 PDF', completed: '导出成功', partial: '部分失败，请重试', failed: '导出失败', cancelled: '已取消', cancelling: '取消中' };
   function render() {
     const jobs = queue.getJobs();
     entry.querySelector('[data-export-count]')!.textContent = String(jobs.length);
-    toast.hidden = !queue.hasPending();
-    surface.querySelector('[data-export-message]')!.textContent = '正在导出并合并，成功后自动下载';
     for (const job of jobs) if (job.snapshot.status === 'completed' && job.snapshot.result && !downloaded.has(job.id)) {
       downloaded.add(job.id);
-      try { urls.push(downloadBatchArtifact(job.snapshot.result)); }
+      try {
+        urls.push(downloadBatchArtifact(job.snapshot.result));
+        dismissSuccess();
+        successVisible = true;
+        successTimer = setTimeout(() => { dismissSuccess(); renderToast(); }, 5000);
+      }
       catch { downloadErrors.add(job.id); }
     }
+    renderToast();
     surface.querySelector('.payroll-export-jobs')!.innerHTML = [...jobs].reverse().map(job => {
       const state = job.snapshot;
       const phase = job.queued ? 'idle' : state.status;
@@ -41,7 +57,11 @@ export function mountPayrollExportTaskCenter(root: HTMLElement, bridge: PayrollB
   root.addEventListener('click', event => {
     const target = (event.target as HTMLElement).closest<HTMLElement>('button');
     if (!target) return;
-    if (target.hasAttribute('data-export-open')) { returnFocus = target; drawer.hidden = false; drawer.querySelector<HTMLButtonElement>('[data-export-close]')?.focus(); }
+    if (target.hasAttribute('data-export-open')) {
+      if (toast.contains(target) && successVisible && !queue.hasPending()) { dismissSuccess(); renderToast(); }
+      returnFocus = toast.contains(target) ? entry : target;
+      drawer.hidden = false; drawer.querySelector<HTMLButtonElement>('[data-export-close]')?.focus();
+    }
     if (target.hasAttribute('data-export-close')) { drawer.hidden = true; returnFocus?.focus(); }
     if (target.dataset.exportRetry) { downloaded.delete(target.dataset.exportRetry); downloadErrors.delete(target.dataset.exportRetry); queue.retry(target.dataset.exportRetry); }
   }, { signal: abort.signal });
@@ -54,5 +74,5 @@ export function mountPayrollExportTaskCenter(root: HTMLElement, bridge: PayrollB
   }, { signal: abort.signal });
   const unsubscribe = queue.subscribe(render);
   render();
-  return { submit: queue.submit, hasPending: queue.hasPending, destroy() { abort.abort(); unsubscribe(); queue.destroy(); urls.forEach(url => URL.revokeObjectURL(url)); entry.remove(); surface.remove(); } };
+  return { submit(...args: Parameters<typeof queue.submit>) { dismissSuccess(); return queue.submit(...args); }, hasPending: queue.hasPending, destroy() { dismissSuccess(); abort.abort(); unsubscribe(); queue.destroy(); urls.forEach(url => URL.revokeObjectURL(url)); entry.remove(); surface.remove(); } };
 }

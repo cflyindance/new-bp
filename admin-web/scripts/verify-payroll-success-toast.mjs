@@ -1,0 +1,32 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+const source = fs.readFileSync('src/team/payroll/payroll-export-task-center.ts','utf8');
+const stateFunctions = source.slice(source.indexOf('  function dismissSuccess()'), source.indexOf('  let returnFocus')).replaceAll('!.', '.');
+let time = 0, nextId = 0;
+const timers = new Map();
+const toast = { hidden: true };
+const message = { textContent: '' };
+let pending = false;
+const context = vm.createContext({ toast, surface: { querySelector: () => message }, queue: { hasPending: () => pending },
+  setTimeout(fn, delay) { timers.set(++nextId,{ fn, deadline: time + delay }); return nextId; },
+  clearTimeout(id) { timers.delete(id); } });
+vm.runInContext('let successVisible=false;let successTimer;'+stateFunctions, context);
+const complete = source.match(/dismissSuccess\(\);\s*successVisible = true;\s*successTimer = setTimeout\([^;]+; renderToast\(\); \}, 5000\);/)[0];
+vm.runInContext(complete+'renderToast();', context);
+assert.equal(toast.hidden,false);
+assert.equal(message.textContent,'导出成功');
+time=4999;
+assert.equal([...timers.values()].some(t=>t.deadline<=time),false);
+time=5000;
+for(const t of [...timers.values()]) if(t.deadline<=time)t.fn();
+assert.equal(toast.hidden,true);
+vm.runInContext(complete+'renderToast();dismissSuccess();renderToast();',context);
+assert.equal(toast.hidden,true);
+assert.equal(timers.size,0);
+pending=true;
+vm.runInContext(complete+'renderToast();',context);
+for(const t of [...timers.values()])t.fn();
+assert.equal(toast.hidden,false,'expiry must not hide active queue');
+assert.match(source,/toast.contains\(target\) && successVisible && !queue.hasPending\(\)/);
+console.log('Payroll success toast: 5 seconds, dismiss, running queue passed');
