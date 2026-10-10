@@ -4115,7 +4115,16 @@ select.form-control {
 .payroll-page .is-employee-picker .modal-footer,
 .payroll-page .is-employee-picker .payroll-batch-employee-columns,
 .payroll-page .is-employee-picker .payroll-batch-filters label:has(#payrollBatchRoleFilter) { display: none; }
-.payroll-page .is-employee-picker .payroll-batch-export-body { padding: 12px; background: white; border-radius: 12px; }
+.payroll-page .is-employee-picker .payroll-batch-export-body { padding: 12px; background: white; border-radius: 12px; overflow: hidden; min-height: 0; }
+.payroll-page .is-employee-picker .modal-header { flex-shrink: 0; }
+.payroll-page .is-employee-picker .payroll-batch-detail-types { flex-shrink: 0; }
+.payroll-page .is-employee-picker .payroll-batch-option-section { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+.payroll-page .is-employee-picker .payroll-batch-employee-picker { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+.payroll-page .is-employee-picker .payroll-batch-filters,
+.payroll-page .is-employee-picker .payroll-batch-picker-toolbar { flex-shrink: 0; }
+.payroll-page .is-employee-picker .payroll-batch-picker-columns { min-height: 0; flex: 1; }
+.payroll-page .is-employee-picker .payroll-batch-picker-columns > section { display: flex; flex-direction: column; min-height: 0; }
+.payroll-page .is-employee-picker :is(.payroll-batch-employee-list,.payroll-employee-picker-role-list) { min-height: 0; overflow-y: auto; flex: 1; }
 .payroll-page .is-employee-picker .payroll-batch-option-section { padding: 0; border: 0; }
 .payroll-page .is-employee-picker .payroll-batch-filters { grid-template-columns: 1fr 1fr 1fr; }
 .payroll-page .payroll-batch-role-field { min-width: 0; font-size: 13px; }
