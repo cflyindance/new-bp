@@ -99,7 +99,7 @@
       "manage.refreshEmployeeConfirmCancel": "取消",
       "manage.refreshEmployeeConfirmOk": "确认更新",
       "manage.pageTitle": "Manage Payroll",
-      "manage.employeesDetail": "Employees Detail",
+      "manage.employeesDetail": "员工明细",
       "manage.adpReport": "ADP Report",
       "workspace.title": "薪资管理",
       "workspace.eyebrow": "团队 · 薪资",

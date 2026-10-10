@@ -66,7 +66,7 @@ function storeMatches(employee: PayrollEmployee, filter: string): boolean {
   if (!filter) return true;
   const store = text(employee.store).toLowerCase();
   const normalized = filter.toLowerCase();
-  return store === normalized || store.includes(normalized) || normalized.includes(store);
+  return Boolean(store) && (store === normalized || store.includes(normalized) || normalized.includes(store));
 }
 
 function resolvePeriod(snapshot: PayrollSnapshot): PayrollPeriod | null {
@@ -87,7 +87,8 @@ export function buildBatchExportInput(
     ? scoped
     : scoped.filter((employee) => selectedIds.includes(employee.id));
   if (selected.length === 0) throw new BatchExportValidationError("Select at least one employee");
-  if (selected.length > 200) throw new BatchExportValidationError("A batch can contain at most 200 employees");
+  if (selected.length > 10) throw new BatchExportValidationError("一次最多选择 10 名员工");
+  if (options.scope === "selected" && new Set(selectedIds).size !== selected.length) throw new BatchExportValidationError("员工范围已变化，请重新选择");
   const records = selected.map((employee) => classifyBatchEmployee(employee, period));
   const counts: BatchExportCounts = { ready: 0, incomplete: 0, unconfirmed: 0, noData: 0 };
   records.forEach((record) => {

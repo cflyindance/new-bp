@@ -1,7 +1,6 @@
 import JSZip from "jszip";
-import { renderDeclarationPartHtml, type DeclarationPresentationPart } from "./payroll-declaration-presentation";
 import { buildDetailedCsv, buildEmployeeCsv, buildSummaryCsv } from "./payroll-batch-export-csv";
-import { draftLabel, sanitizePayrollFilePart } from "./payroll-batch-export-data";
+import { sanitizePayrollFilePart } from "./payroll-batch-export-data";
 import type { BatchArtifactResult, BatchEmployeeRecord, BatchExportInput, PayrollBatchBridge } from "./payroll-batch-export-types";
 
 type PayrollWindow = Window & typeof globalThis & {
@@ -37,20 +36,6 @@ function declarationBlockerMessage(record: BatchEmployeeRecord): string | null {
   if (presentation.status === "blocked") return `Employee declaration is unavailable: ${presentation.blockers.join(", ")}`;
   if (!presentation.primary?.renderedText) return "Employee declaration text is unavailable";
   return null;
-}
-
-function declarationHtml(record: BatchEmployeeRecord): string {
-  const presentation = record.declarationPresentation;
-  if (!presentation?.primary) return "";
-  const part = (value: DeclarationPresentationPart) => `<p dir="${/^(ar|fa|he|ur)(-|$)/i.test(value.localeCode) ? "rtl" : "ltr"}">${renderDeclarationPartHtml(value)}</p>`;
-  return `<section class="declaration"><strong>Declaration</strong>${part(presentation.primary)}${presentation.english ? part(presentation.english) : ""}</section>`;
-}
-
-function summaryHtml(record: BatchEmployeeRecord): string {
-  const employee = record.employee;
-  const period = record.period;
-  const rows = (employee.segments ?? []).map((segment) => `<tr><td>${segment.date ?? ""}</td><td>${segment.in ?? ""}</td><td>${segment.out ?? ""}</td><td>${Number(segment.reg ?? segment.regular ?? 0).toFixed(2)}</td><td>${Number(segment.ot ?? 0).toFixed(2)}</td><td>${Number(segment.ot2 ?? 0).toFixed(2)}</td></tr>`).join("");
-  return `<!doctype html><html><head><meta charset="utf-8"><style>body{font:11px Arial;margin:0;color:#111}.sheet{box-sizing:border-box;width:794px;min-height:1123px;padding:42px;background:#fff}.draft{color:#b91c1c;font-weight:700}.meta{display:flex;justify-content:space-between}.title{font-size:20px;font-weight:700}table{width:100%;border-collapse:collapse;margin-top:18px}th,td{border:1px solid #666;padding:5px;text-align:center}.declaration{margin-top:18px;border:1px solid #aaa;padding:10px}.declaration p{white-space:normal;overflow-wrap:anywhere;line-height:1.45}.sign{margin-top:28px;border-top:1px solid #aaa;padding-top:12px}</style></head><body><article class="sheet"><div class="meta"><div><div class="title">${employee.name}</div><div>Role: ${employee.role ?? ""}</div><div>Hire Date: ${employee.hireDate ?? ""}</div><div>Employee ID: ${employee.id}</div></div><div><div class="title">Payroll #${period.periodNumber ?? ""} Report</div><div>Pay Date: ${period.paycheckDate ?? ""}</div><div>Pay Period: ${period.rangeLabel ?? `${period.startDate ?? ""} - ${period.endDate ?? ""}`}</div><div class="draft">${draftLabel(record)}</div></div></div><table><thead><tr><th>Date</th><th>In</th><th>Out</th><th>Regular</th><th>OT</th><th>OT2</th></tr></thead><tbody>${rows || '<tr><td colspan="6">No attendance rows</td></tr>'}</tbody></table>${declarationHtml(record)}<div class="sign">Employee Signature ____________________ &nbsp;&nbsp; Date ____________</div></article></body></html>`;
 }
 
 function loadScript(src: string, ready: () => boolean): Promise<void> {
@@ -115,9 +100,8 @@ async function canvasesToPdf(canvases: HTMLCanvasElement[], signal: AbortSignal,
 }
 
 async function employeeHtml(record: BatchEmployeeRecord, input: BatchExportInput, bridge: PayrollBatchBridge): Promise<string> {
-  if (input.options.detailType === "summary") return summaryHtml(record);
-  const html = bridge.getDetailPrintHtml(record.employee.id, "detailed", input.options.summaryPagination);
-  if (!html) throw new Error("Detailed payroll template is unavailable");
+  const html = bridge.getDetailPrintHtml(record.employee.id, input.options.detailType, input.options.summaryPagination);
+  if (!html) throw new Error("Employee payroll template is unavailable");
   return html;
 }
 

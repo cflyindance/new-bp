@@ -81,6 +81,7 @@ export function mountPayrollPage(
     shadowRoot,
     pageRoot,
     runtime.getBatchBridge(),
+    context,
   );
   let declarationSettings: PayrollDeclarationSettingsHandle | null = createPayrollDeclarationSettingsController({ shadowRoot, pageRoot, context, runtime });
   const handle: PayrollPageHandle = {

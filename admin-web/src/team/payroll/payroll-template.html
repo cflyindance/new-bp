@@ -182,8 +182,13 @@
                   </button>
                 </div>
               </div>
-              <button type="button" class="btn payroll-workspace-action-btn" data-action="preview-employees-detail">Employees Detail</button>
-              <button type="button" class="btn payroll-workspace-action-btn payroll-batch-export-open" data-action="open-batch-detail-export">批量导出详情</button>
+              <div class="payroll-adp-export-dropdown" id="payrollBatchExportDropdown">
+                <button type="button" id="payrollBatchExportToggle" class="btn payroll-workspace-action-btn payroll-batch-export-open" data-action="toggle-batch-detail-export" aria-haspopup="menu" aria-expanded="false">批量导出详情 <span aria-hidden="true">⌄</span></button>
+                <div class="payroll-adp-export-menu" id="payrollBatchExportMenu" role="menu" hidden>
+                  <button type="button" class="payroll-adp-export-item" data-action="open-batch-detail-export" data-detail-type="summary" role="menuitem">精简明细</button>
+                  <button type="button" class="payroll-adp-export-item" data-action="open-batch-detail-export" data-detail-type="detailed" role="menuitem">详细明细</button>
+                </div>
+              </div>
               <button type="button" class="btn btn-primary payroll-workspace-action-btn" id="payroll-header-save" data-action="confirm-employee">确定并保存</button>
             </div>
           </div>
@@ -211,10 +216,15 @@
                   </div>
                 </div>
               </div>
-              <div class="payroll-employee-hero-actions">
-                <button type="button" class="btn btn-sm payroll-hero-btn" data-action="refresh-employee-data">更新员工数据</button>
+              <div class="payroll-employee-hero-actions payroll-employee-hero-actions--rows">
+                <div class="payroll-employee-action-row">
                 <button type="button" class="btn btn-sm payroll-hero-btn" data-action="open-employee-identity-edit">编辑</button>
                 <button type="button" class="btn btn-sm payroll-hero-btn" data-action="open-employee-picker">切换员工</button>
+                </div>
+                <div class="payroll-employee-action-row">
+                <button type="button" class="btn btn-sm payroll-hero-btn" data-action="refresh-employee-data">更新员工数据</button>
+                <button type="button" class="btn btn-sm payroll-hero-btn" data-action="preview-employees-detail">员工明细</button>
+                </div>
               </div>
             </div>
             <div class="payroll-employee-metrics">
@@ -881,31 +891,26 @@
 <div class="modal-overlay payroll-batch-export-overlay" id="payrollBatchExportModal" aria-hidden="true">
   <div class="modal payroll-batch-export-modal" role="dialog" aria-modal="true" aria-labelledby="payrollBatchExportTitle">
     <div class="modal-header">
-      <div><h3 id="payrollBatchExportTitle">批量导出员工详情</h3><p>按当前门店、年份和薪资期生成员工明细。</p></div>
+      <div><h3 id="payrollBatchExportTitle">批量导出员工详情</h3></div>
       <button type="button" class="modal-close" data-action="close-batch-detail-export" aria-label="关闭">×</button>
     </div>
     <div class="modal-body payroll-batch-export-body">
       <section class="payroll-batch-option-section">
         <h4>员工范围</h4>
-        <div class="payroll-batch-segmented" role="radiogroup" aria-label="员工范围">
-          <label><input type="radio" name="payrollBatchScope" value="all" checked> 全部员工</label>
-          <label><input type="radio" name="payrollBatchScope" value="selected"> 选择员工</label>
-        </div>
-        <div class="payroll-batch-employee-picker" id="payrollBatchEmployeePicker" hidden>
-          <input id="payrollBatchEmployeeSearch" class="form-input" type="search" placeholder="搜索员工姓名、编号或岗位" autocomplete="off">
-          <div class="payroll-batch-picker-toolbar"><button type="button" class="btn btn-sm" data-action="batch-select-results">全选当前结果</button><button type="button" class="btn btn-sm" data-action="batch-clear-selection">清空选择</button><span id="payrollBatchSelectedCount">已选 0 人</span></div>
-          <div id="payrollBatchEmployeeList" class="payroll-batch-employee-list" role="listbox" aria-multiselectable="true"></div>
+        <div class="payroll-batch-employee-picker" id="payrollBatchEmployeePicker">
+          <div class="payroll-batch-filters">
+            <label for="payrollBatchStoreFilter">门店<select id="payrollBatchStoreFilter" class="form-input"><option value="">请选择门店</option></select></label>
+            <label for="payrollBatchRoleFilter">角色<select id="payrollBatchRoleFilter" class="form-input"><option value="">全部角色</option></select></label>
+            <label for="payrollBatchEmployeeSearch">员工<input id="payrollBatchEmployeeSearch" class="form-input" type="search" aria-label="搜索员工姓名或工号" placeholder="搜索员工姓名或工号" autocomplete="off"></label>
+          </div>
+          <div class="payroll-batch-picker-toolbar"><button type="button" class="btn btn-sm" data-action="batch-clear-selection">清空选择</button><span id="payrollBatchSelectedCount" aria-live="polite">已选 0 / 10 人</span></div>
+          <div class="payroll-batch-employee-columns" aria-hidden="true"><span></span><span>员工姓名</span><span>工号</span><span>岗位</span><span>数据状态</span></div>
+          <div id="payrollBatchEmployeeList" class="payroll-batch-employee-list" role="group" aria-label="员工多选列表"></div>
         </div>
       </section>
-      <div class="payroll-batch-option-grid">
-        <section class="payroll-batch-option-section"><h4>明细类型</h4><label><input type="radio" name="payrollBatchDetail" value="summary" checked> 精简明细</label><label><input type="radio" name="payrollBatchDetail" value="detailed"> 详细明细</label></section>
-        <section class="payroll-batch-option-section"><h4>文件格式</h4><label><input type="radio" name="payrollBatchFormat" value="pdf" checked> PDF</label><label><input type="radio" name="payrollBatchFormat" value="csv"> CSV</label></section>
-        <section class="payroll-batch-option-section"><h4>文件方式</h4><label><input type="radio" name="payrollBatchOrganization" value="merged" checked> 合并为一个文件</label><label><input type="radio" name="payrollBatchOrganization" value="zip"> 独立文件并打包 ZIP</label></section>
-      </div>
-      <section class="payroll-batch-option-section" id="payrollBatchPaginationSection"><h4>精简 PDF 分页</h4><label><input type="radio" name="payrollBatchPagination" value="single-page" checked> 强制每位员工一页</label><label><input type="radio" name="payrollBatchPagination" value="auto-pages"> 内容超出时自动分页</label></section>
       <div id="payrollBatchExportSummary" class="payroll-batch-export-summary" aria-live="polite"></div>
     </div>
-    <div class="modal-footer"><button type="button" class="btn" data-action="close-batch-detail-export">取消</button><button type="button" class="btn btn-primary" id="payrollBatchExportStart">开始导出</button></div>
+    <div class="modal-footer"><button type="button" class="btn" data-action="close-batch-detail-export">取消</button><button type="button" class="btn btn-primary" id="payrollBatchExportStart" disabled>导出 PDF</button></div>
   </div>
 </div>
 <aside id="payrollBatchExportTaskPanel" class="payroll-batch-task-panel" hidden aria-live="polite">
