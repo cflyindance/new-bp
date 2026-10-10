@@ -13,7 +13,9 @@ export function mountPayrollExportTaskCenter(root: HTMLElement, bridge: PayrollB
   surface.innerHTML = `<div class="payroll-export-toast" hidden role="status"><span data-export-message></span><button type="button" data-export-open>查看任务 ›</button></div><button class="btn payroll-workspace-action-btn" type="button" data-export-open>导出任务 <span data-export-count>0</span></button><aside class="payroll-export-drawer" hidden role="dialog" aria-label="导出任务记录"><header><button type="button" data-export-close aria-label="关闭任务记录">×</button><h3>任务记录</h3></header><div class="payroll-export-jobs"></div></aside>`;
   root.append(surface);
   const entry = surface.querySelector<HTMLButtonElement>('button.btn')!;
-  root.querySelector('.payroll-workspace-actions')?.append(entry);
+  const actions = root.querySelector('.payroll-workspace-actions');
+  const confirm = actions?.querySelector('#payroll-header-save');
+  if (confirm) confirm.before(entry); else actions?.append(entry);
   const drawer = surface.querySelector<HTMLElement>('.payroll-export-drawer')!;
   const toast = surface.querySelector<HTMLElement>('.payroll-export-toast')!;
   let returnFocus: HTMLElement | null = null;
