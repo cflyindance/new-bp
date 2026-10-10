@@ -16,22 +16,22 @@
   }
 
   function buildPayrollDetailA4DocumentHtml(content, variant, pagination) {
-    const mode = pagination === "paginate" ? "paginate" : "fit-one-page";
+    const mode = pagination === "paginate" || pagination === "auto-pages" ? "paginate" : "fit-one-page";
     const kind = variant === "compact" ? "compact" : "detail";
     return `<!doctype html><html><head><meta charset="UTF-8"><title>Payroll Detail</title>${extractHeadAssets(content)}<style>
       *{box-sizing:border-box}html,body{margin:0;background:#fff;color:#111;font-family:Arial,sans-serif}
+      body.team-payroll-page{padding:0!important;background:#fff!important;height:auto!important;overflow:visible!important}
       @page{size:A4 portrait;margin:0}
       .payroll-a4-page{position:relative;width:210mm;min-height:297mm;padding:8mm;background:#fff;break-after:page;overflow:hidden}
       .payroll-a4-page:last-child{break-after:auto}
       .payroll-a4-content{width:194mm;transform-origin:top left}
       body[data-pagination="fit-one-page"] .payroll-a4-page{height:297mm}
-      body[data-pagination="fit-one-page"] .payroll-a4-content{max-height:281mm;overflow:hidden}
+      body[data-variant="detail"] .payroll-a4-content{width:1200px;zoom:.611023622}
       body[data-pagination="paginate"] .payroll-a4-page{height:auto;overflow:visible}
       body[data-pagination="paginate"] .payroll-compact-week{break-inside:avoid-page}
       body[data-pagination="paginate"] thead{display:table-header-group}
-      article{box-shadow:none!important;border:0!important;margin:0!important;max-width:none!important}
-      .payroll-detail-daily-wrap{overflow:visible!important}.payroll-detail-daily-table{width:100%!important;min-width:0!important;font-size:7px!important}
-      .payroll-detail-daily-table th,.payroll-detail-daily-table td{padding:3px!important;white-space:nowrap}
+      article{box-shadow:none!important;margin:0!important;max-width:none!important}
+      .payroll-detail-daily-wrap{overflow:visible!important}.payroll-detail-daily-table{width:100%!important;min-width:0!important}
       .payroll-compact-detail{font-size:8pt}.payroll-compact-detail header{display:flex;justify-content:space-between;gap:8mm;margin-bottom:3mm}
       .payroll-compact-detail header>div{flex:1}.payroll-compact-detail header strong{font-size:13pt}
       .payroll-compact-detail dl{display:grid;grid-template-columns:auto 1fr;gap:1mm 3mm;margin:2mm 0 0}.payroll-compact-detail dt{color:#555}.payroll-compact-detail dd{margin:0}
@@ -40,9 +40,12 @@
       .payroll-compact-summary{margin-bottom:2mm}.payroll-compact-week{margin-top:2mm}.payroll-compact-week h4{display:flex;justify-content:center;margin:0 0 1mm;font-size:8pt;font-weight:500}.payroll-compact-week h4 span{margin-left:auto}
       .payroll-compact-more{margin-right:1mm}.payroll-compact-declaration{font-size:7pt;line-height:1.45;margin:3mm 3mm}
       .payroll-compact-signature>div{display:grid;grid-template-columns:1fr 40mm;gap:4mm;margin-top:8mm}.payroll-compact-signature span{border-top:.25mm solid #555;text-align:center;padding-top:1mm}.payroll-compact-signature p{margin:5mm 0 0;text-align:center;font-size:7pt}
-      @media print{html,body{width:210mm}.payroll-a4-page{margin:0}}
-    </style></head><body data-variant="${kind}" data-pagination="${mode}"><section class="payroll-a4-page"><div class="payroll-a4-content">${extractBody(content)}</div></section><script>
-      (function(){if(document.body.dataset.pagination!=="fit-one-page")return;var page=document.querySelector('.payroll-a4-page');var layer=document.querySelector('.payroll-a4-content');requestAnimationFrame(function(){var sx=page.clientWidth/layer.scrollWidth;var sy=(page.clientHeight-1)/layer.scrollHeight;var scale=Math.min(1,sx,sy)*.995;layer.style.transform='scale('+scale+')';});})();
+      .payroll-page .payroll-detail-print{position:static!important;width:100%;padding:24px;border:1px solid var(--border-light);border-radius:10px}
+      .payroll-page .payroll-detail-daily-table{font-size:12px!important}
+      .payroll-page .payroll-detail-daily-table th,.payroll-page .payroll-detail-daily-table td{padding:8px 10px!important;white-space:nowrap}
+      @media print{html,body{width:210mm}.payroll-a4-page{margin:0}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+    </style></head><body class="team-payroll-page payroll-page payroll-entered payroll-detail-export-doc" data-variant="${kind}" data-pagination="${mode}"><section class="payroll-a4-page"><div class="payroll-a4-content">${extractBody(content)}</div></section><script>
+      (function(){if(document.body.dataset.pagination!=="fit-one-page")return;var page=document.querySelector('.payroll-a4-page');var layer=document.querySelector('.payroll-a4-content');requestAnimationFrame(function(){var style=getComputedStyle(page);var available=page.clientHeight-parseFloat(style.paddingTop)-parseFloat(style.paddingBottom);var height=layer.getBoundingClientRect().height;var scale=Math.min(1,available/height)*.995;layer.style.transform='scale('+scale+')';});})();
     <\/script></body></html>`;
   }
 

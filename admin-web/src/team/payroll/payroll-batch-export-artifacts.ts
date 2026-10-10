@@ -65,8 +65,9 @@ async function htmlToCanvas(html: string, host: PayrollWindow, signal: AbortSign
     const doc = frame.contentDocument;
     if (!doc) throw new Error("Unable to create PDF render frame");
     doc.open(); doc.write(html); doc.close();
-    await new Promise((resolve) => setTimeout(resolve, 60));
-    const target = doc.querySelector<HTMLElement>(".payroll-detail-print,.sheet,article,body");
+    await doc.fonts.ready;
+    await new Promise<void>(resolve => frame.contentWindow!.requestAnimationFrame(() => frame.contentWindow!.requestAnimationFrame(() => resolve())));
+    const target = doc.querySelector<HTMLElement>(".payroll-a4-page") ?? doc.querySelector<HTMLElement>(".sheet,article") ?? doc.body;
     if (!target || !host.html2canvas) throw new Error("Employee print content is unavailable");
     return await host.html2canvas(target, { scale: 1.5, backgroundColor: "#ffffff", useCORS: true });
   } finally {

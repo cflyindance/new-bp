@@ -1,0 +1,14 @@
+{
+  "version":1,
+  "mode":"standalone",
+  "outcome":"needs_attention",
+  "rootCauseStatus":"confirmed",
+  "rootCause":"Runtime print iframe had no payroll-page/team-payroll-page classes, meta block and grid none, table 7px; A4 paging enum and body-first selector also diverged from PDF expectations.",
+  "analysisScopeStatus":"bounded",
+  "planStatus":"approved",
+  "changedFiles":["src/team/payroll/legacy/payroll-detail-pages.js.txt","src/team/payroll/payroll-batch-export-artifacts.ts","scripts/verify-payroll-print-style-parity.mjs","dist/TipOut/docs/payroll-需求分析.md","dist/TipOut/docs/payroll-报表功能设计.md","dist/TipOut/docs/薪资管理需求文档（个人规范版）.md"],
+  "tdd":{"status":"passed","redEvidence":["Node VM test failed: missing payroll-page body class"],"greenEvidence":["verify-payroll-print-style-parity.mjs passed scopes, paging, font and capture priority","TypeScript noEmit passed","batch export UI and queue regression passed"]},
+  "e2e":{"required":true,"status":"passed","reason":"Actual detailed print iframe and batch PDF consumer exercised through 65023","evidence":["Print iframe meta grid; five grid columns; highlight rgb(230,244,255); table 12px","Final PDF renderer target payroll-a4-page width793.6875px with14 rows; task completed"]},
+  "build":{"required":false,"status":"skipped","reason":"No build boundary or eMenu source changed; CI production build evidence unknown"},
+  "unverifiedScopes":["OS print preview dialog","multiple employees across multiple PDF pages","compact print/PDF browser regression","full historical standalone dist/TipOut legacy app (not changed)"]
+}

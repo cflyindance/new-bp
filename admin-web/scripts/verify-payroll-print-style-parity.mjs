@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+const source = fs.readFileSync('src/team/payroll/legacy/payroll-detail-pages.js.txt', 'utf8');
+const context = vm.createContext({});
+vm.runInContext(source, context);
+const html = context.buildPayrollDetailA4DocumentHtml('<html><head><style>.payroll-page .meta{display:grid}</style></head><body class="payroll-page payroll-entered"><article class="payroll-detail-print">Details</article></body></html>', 'detail', 'auto-pages');
+assert.match(html, /<body[^>]*class="[^"]*payroll-page/);
+assert.match(html, /class="team-payroll-page payroll-page/);
+assert.match(html, /data-pagination="paginate"/);
+assert.doesNotMatch(html, /font-size:7px!important/);
+assert.doesNotMatch(html, /max-height:281mm;overflow:hidden/);
+assert.match(html, /\.payroll-page \.meta\{display:grid\}/);
+const artifacts = fs.readFileSync('src/team/payroll/payroll-batch-export-artifacts.ts', 'utf8');
+assert.match(artifacts, /querySelector<HTMLElement>\("\.payroll-a4-page"\) \?\?/);
+console.log('Payroll print scope, pagination and style parity passed');

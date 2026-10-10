@@ -1,0 +1,26 @@
+{
+  "entryPoints": ["src/team/payroll/legacy/payroll.js.txt"],
+  "references": [
+    {"path":"src/team/payroll/legacy/payroll.js.txt","symbol":"buildPayrollDetailPrintDocumentHtml","relation":"producer","status":"affected"},
+    {"path":"src/team/payroll/legacy/payroll-detail-pages.js.txt","symbol":"buildPayrollDetailA4DocumentHtml","relation":"definition","status":"affected"},
+    {"path":"src/team/payroll/payroll-legacy-runtime.ts","symbol":"getDetailPrintHtml/getCurrentDetailPrintHtml","relation":"direct_caller","status":"affected"},
+    {"path":"src/team/payroll/legacy/payroll-detail-export.js.txt","symbol":"printPayrollDetail","relation":"direct_caller","status":"affected"},
+    {"path":"src/team/payroll/payroll-batch-export-artifacts.ts","symbol":"htmlToCanvas","relation":"consumer","status":"affected"},
+    {"path":"src/team/payroll/payroll-page.css","symbol":"payroll-page/team-payroll-page selectors","relation":"data_source","status":"affected"},
+    {"path":"src/team/payroll/payroll-polish.css","symbol":"correction styles","relation":"data_source","status":"affected"},
+    {"path":"scripts/verify-payroll-print-style-parity.mjs","symbol":"regression","relation":"test","status":"affected"}
+  ],
+  "deepReadPaths":["src/team/payroll/legacy/payroll.js.txt","src/team/payroll/legacy/payroll-detail-pages.js.txt","src/team/payroll/payroll-legacy-runtime.ts","src/team/payroll/legacy/payroll-detail-export.js.txt","src/team/payroll/payroll-batch-export-artifacts.ts","src/team/payroll/payroll-page.css","src/team/payroll/payroll-polish.css","scripts/verify-payroll-print-style-parity.mjs"],
+  "dataFlow":[
+    {"from":"src/team/payroll/legacy/payroll.js.txt","to":"src/team/payroll/legacy/payroll-detail-pages.js.txt","evidence":"clone detailed article then wrap A4"},
+    {"from":"src/team/payroll/legacy/payroll-detail-pages.js.txt","to":"src/team/payroll/legacy/payroll-detail-export.js.txt","evidence":"print iframe receives shared A4 document"},
+    {"from":"src/team/payroll/payroll-legacy-runtime.ts","to":"src/team/payroll/payroll-batch-export-artifacts.ts","evidence":"bridge supplies shared A4 document to PDF renderer"}
+  ],
+  "sharedCallers":["detailed print","compact print","single PDF","batch PDF"],
+  "sharedCallersComplete":true,
+  "workspace":{"status":"clean","evidence":"git status empty before task; checkout codex/main-preview-20261010 at cf99a3cc"},
+  "wikiQueries":[{"question":"Shared detailed print and PDF styling path?","mode":"wiki_bypass","reason":"No project wiki configuration found in scoped file inventory; source traced directly"}],
+  "analysisScopeStatus":"bounded",
+  "stopReason":"root_cause_and_impact_bounded",
+  "plan":{"rootCause":"A4 wrapper drops style scopes, forces 7px table, mismatches pagination enums; selector list picks body in document order","changes":["restore scopes and theme variables","preserve desktop detailed layout with proportional A4 scaling","normalize paging and remove premature clipping","capture A4 node after font/layout readiness"],"tdd":"Node VM regression RED missing payroll-page; GREEN scope/pagination/table tests","e2e":"Actual print iframe computed style and batch PDF rendering; OS print dialog not automated","build":"skipped: no dependencies, build configuration or resource-import boundary changed; CI evidence unknown","risk":"shared detailed and compact rendering; no payroll data writes","rollback":"revert task-specific renderer changes only"}
+}
