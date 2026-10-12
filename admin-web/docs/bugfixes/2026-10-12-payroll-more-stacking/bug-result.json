@@ -1,0 +1,11 @@
+{
+  "version":1,"mode":"standalone","outcome":"fixed",
+  "rootCauseStatus":"confirmed",
+  "rootCause":"Later sibling metrics with z-index1 overlays header z-index1 and intercepts pointer events on first menu item. Measured item y383.25–427.25 and metrics y394.8125–443.078125 overlap.",
+  "analysisScopeStatus":"bounded","planStatus":"approved",
+  "changedFiles":["src/team/payroll/payroll-page.css","dist/TipOut/payroll.css","scripts/verify-payroll-more-hit-area.mjs","dist/TipOut/docs/payroll-需求分析.md","dist/TipOut/docs/payroll-报表功能设计.md","dist/TipOut/docs/薪资管理需求文档（个人规范版）.md"],
+  "tdd":{"status":"passed","redEvidence":["Header-above-metrics assertion failed before fix"],"greenEvidence":["verify-payroll-more-hit-area passed","verify-payroll-hero-action-rows passed","tsc --noEmit passed"]},
+  "e2e":{"required":true,"status":"passed","reason":"Actual user tab click comparison before and after layer correction","evidence":["Computed header z2 and metrics z1","Real locator center click opened Employees Payroll Detail","Screenshot-based coordinate1692,404 right blank click opened Employees Payroll Detail; same position previously failed"]},
+  "build":{"required":false,"status":"skipped","reason":"CSS-only runtime correction; no build boundary changed"},
+  "unverifiedScopes":["Standalone legacy page browser check","all responsive viewport breakpoints","every edge point; center and right blank covered"]
+}

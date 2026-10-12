@@ -248,15 +248,16 @@
               </div>
               <div class="payroll-employee-hero-actions payroll-employee-hero-actions--rows">
                 <div class="payroll-employee-action-row">
-                <button type="button" class="btn btn-sm payroll-hero-btn" data-action="open-employee-identity-edit">编辑</button>
-                <button type="button" class="btn btn-sm payroll-hero-btn" data-action="open-employee-picker">切换员工</button>
-                </div>
-                <div class="payroll-employee-action-row">
-                <button type="button" class="btn btn-sm payroll-hero-btn" data-action="preview-employees-detail">薪资明细</button>
-                <button type="button" class="btn btn-sm payroll-hero-btn" data-action="preview-adp-report"><span id="payroll-export-current-label">Export ADP</span></button>
-                </div>
-                <div class="payroll-employee-action-row">
                 <button type="button" class="btn btn-sm payroll-hero-btn" data-action="refresh-employee-data">更新数据</button>
+                <button type="button" class="btn btn-sm payroll-hero-btn" data-action="open-employee-picker">切换员工</button>
+                <div class="payroll-employee-more">
+                  <button type="button" class="btn btn-sm payroll-hero-btn" id="payroll-employee-more-toggle" data-action="toggle-employee-more-menu" aria-haspopup="menu" aria-controls="payroll-employee-more-menu" aria-expanded="false"><span id="payroll-employee-more-label">更多</span> ▾</button>
+                  <div class="payroll-employee-more-menu" id="payroll-employee-more-menu" role="menu" hidden>
+                    <button type="button" class="payroll-employee-more-item" data-action="preview-employees-detail" role="menuitem">薪资明细</button>
+                    <button type="button" class="payroll-employee-more-item" data-action="preview-adp-report" role="menuitem"><span id="payroll-export-current-label">Export ADP</span></button>
+                    <button type="button" class="payroll-employee-more-item" data-action="open-employee-identity-edit" role="menuitem">编辑</button>
+                  </div>
+                </div>
                 </div>
               </div>
             </div>

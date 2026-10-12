@@ -1,0 +1,16 @@
+{
+  "entryPoints":["src/team/payroll/payroll-template.html"],
+  "references":[
+    {"path":"src/team/payroll/payroll-template.html","symbol":"payroll-employee-more-menu","relation":"entry_point","status":"not_affected"},
+    {"path":"src/team/payroll/legacy/payroll.js.txt","symbol":"bind / showEmployeesDetailModal / showAdpReportModal / showEmployeeEditModal","relation":"consumer","status":"not_affected"},
+    {"path":"src/team/payroll/payroll-legacy-runtime.ts","symbol":"scoped event listeners","relation":"direct_caller","status":"not_affected"}
+  ],
+  "deepReadPaths":["src/team/payroll/payroll-template.html","src/team/payroll/legacy/payroll.js.txt","src/team/payroll/payroll-legacy-runtime.ts"],
+  "sharedCallers":["native more menu","standalone more menu","other ADP/detail action buttons"],
+  "sharedCallersComplete":true,
+  "dataFlow":[{"from":"src/team/payroll/payroll-template.html","to":"src/team/payroll/legacy/payroll.js.txt","evidence":"menu data-action resolved by delegated body click"},{"from":"src/team/payroll/payroll-legacy-runtime.ts","to":"src/team/payroll/legacy/payroll.js.txt","evidence":"scoped document binds listeners to native payroll root"}],
+  "workspace":{"status":"unrelated_changes","evidence":"Existing more-menu implementation changes belong to previous task; no runtime edits in this diagnosis"},
+  "wikiQueries":[{"question":"More-menu action dispatch?","mode":"wiki_bypass","reason":"No project wiki configuration observed in preceding scoped inventory"}],
+  "analysisScopeStatus":"bounded","stopReason":"no_code_change_required",
+  "unresolved":"Original failure cannot be reproduced, root cause unconfirmed"
+}

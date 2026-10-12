@@ -6531,3 +6531,11 @@ select.form-control {
   flex: 0 0 auto;
   white-space: nowrap;
 }
+.payroll-page .payroll-employee-more{position:relative}
+.payroll-page .payroll-employee-hero-head{z-index:2}
+.payroll-page .payroll-employee-hero{overflow:visible!important}
+.payroll-page .payroll-employee-more-menu{position:absolute;right:0;top:calc(100% + 8px);z-index:100;width:160px;padding:6px 0;background:#fff;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18)}
+.payroll-page .payroll-employee-more-menu[hidden]{display:none}
+.payroll-page .payroll-employee-more-menu button.payroll-employee-more-item{display:flex;align-items:center;gap:6px;width:100%;min-height:44px;box-sizing:border-box;margin:0;padding:10px 18px;border:0;border-radius:0;background:transparent;color:#172b4d;text-align:left;cursor:pointer;font:inherit;white-space:nowrap;pointer-events:auto}
+.payroll-page .payroll-employee-more-menu button.payroll-employee-more-item>*,.payroll-page .payroll-employee-more-menu button.payroll-employee-more-item::before{pointer-events:none}
+.payroll-page .payroll-employee-more-menu button:hover,.payroll-page .payroll-employee-more-menu button:focus-visible{background:#e6f4ff;color:#1677ff;outline:none}

@@ -2214,6 +2214,12 @@
     }
   }
 
+  function setEmployeeMoreMenuOpen(open) {
+    const menu = $("#payroll-employee-more-menu");
+    if (menu) menu.hidden = !open;
+    $("#payroll-employee-more-toggle")?.setAttribute("aria-expanded", String(open));
+  }
+
   function setAdpExportMenuOpen(open) {
     const menu = $("#payroll-adp-export-menu");
     const toggle = $("#btn-payroll-adp-menu-toggle");
@@ -4725,6 +4731,14 @@ html,body{height:auto!important;overflow:visible!important}
       const btn = e.target.closest("[data-action]");
       if (!btn) return;
       const act = btn.getAttribute("data-action");
+      if (act === "toggle-employee-more-menu") {
+        e.stopPropagation();
+        setAdpExportMenuOpen(false);
+        closeWorkspaceMenus();
+        setEmployeeMoreMenuOpen($("#payroll-employee-more-menu")?.hidden);
+        return;
+      }
+      if (btn.closest("#payroll-employee-more-menu")) setEmployeeMoreMenuOpen(false);
       if (act === "open-period") {
         state.periodId = btn.getAttribute("data-period-id");
         const filtered = getEmployeesForActiveStore(state.periodId);
@@ -4966,6 +4980,7 @@ html,body{height:auto!important;overflow:visible!important}
     });
 
     document.addEventListener("click", (e) => {
+      if (!e.target.closest(".payroll-employee-more")) setEmployeeMoreMenuOpen(false);
       if (!e.target.closest(".payroll-adp-export-dropdown")) setAdpExportMenuOpen(false);
       if (!e.target.closest(".payroll-store-bar-field")) closeWorkspaceMenus();
     });
@@ -4984,6 +4999,12 @@ html,body{height:auto!important;overflow:visible!important}
         }
       }
       if (e.key !== "Escape") return;
+      if ($("#payroll-employee-more-menu")?.hidden === false) {
+        e.preventDefault();
+        setEmployeeMoreMenuOpen(false);
+        $("#payroll-employee-more-toggle")?.focus();
+        return;
+      }
       if (employeeEditModal?.classList.contains("show")) {
         e.preventDefault();
         hideEmployeeEditModal();

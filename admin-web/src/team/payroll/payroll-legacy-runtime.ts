@@ -296,6 +296,15 @@ export function mountLegacyPayrollRuntime(
     },
   });
 
+  // Include clicks outside the Payroll shadow root in menu dismissal.
+  addScopedListener(realDocument, 'click', (event) => {
+    const inside = event.composedPath().some(node => node instanceof HTMLElement && node.classList.contains('payroll-employee-more'));
+    if (inside) return;
+    const menu = shadowRoot.querySelector<HTMLElement>('#payroll-employee-more-menu');
+    if (menu) menu.hidden = true;
+    shadowRoot.querySelector('#payroll-employee-more-toggle')?.setAttribute('aria-expanded', 'false');
+  });
+
   const locationFacade = new Proxy(realWindow.location, {
     // Location 的属性是原生访问器，receiver 必须是真实 location，否则读 href 会抛 Illegal invocation
     get(target, property) {

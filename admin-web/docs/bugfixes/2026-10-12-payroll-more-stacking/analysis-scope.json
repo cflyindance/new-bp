@@ -1,0 +1,19 @@
+{
+  "entryPoints":["src/team/payroll/payroll-template.html"],
+  "references":[
+    {"path":"src/team/payroll/payroll-template.html","symbol":"hero-head / metrics / more-menu","relation":"entry_point","status":"affected"},
+    {"path":"src/team/payroll/payroll-page.css","symbol":"hero-head z-index / metrics z-index","relation":"definition","status":"affected"},
+    {"path":"dist/TipOut/payroll.css","symbol":"mirrored hero-head rule","relation":"shared_caller","status":"affected"},
+    {"path":"src/team/payroll/payroll-polish.css","symbol":"metrics layout","relation":"consumer","status":"not_affected"},
+    {"path":"src/team/payroll/legacy/payroll.js.txt","symbol":"data-action dispatch","relation":"consumer","status":"not_affected"},
+    {"path":"scripts/verify-payroll-more-hit-area.mjs","symbol":"layer regression","relation":"test","status":"affected"}
+  ],
+  "deepReadPaths":["src/team/payroll/payroll-template.html","src/team/payroll/payroll-page.css","src/team/payroll/payroll-polish.css","src/team/payroll/legacy/payroll.js.txt","scripts/verify-payroll-more-hit-area.mjs"],
+  "sharedCallers":["native payroll menu","standalone payroll menu"],
+  "sharedCallersComplete":true,
+  "dataFlow":[{"from":"src/team/payroll/payroll-template.html","to":"src/team/payroll/payroll-page.css","evidence":"header and later metrics siblings both create z-index1 stacking contexts"},{"from":"src/team/payroll/payroll-template.html","to":"src/team/payroll/legacy/payroll.js.txt","evidence":"whole button data-action unchanged"}],
+  "workspace":{"status":"unrelated_changes","evidence":"Prior task owns uncommitted more-menu implementation; task adds scoped CSS layer correction without overwriting it"},
+  "wikiQueries":[{"question":"Menu stacking context?","mode":"wiki_bypass","reason":"Project wiki configuration unavailable in preceding scoped inventory"}],
+  "analysisScopeStatus":"bounded","stopReason":"root_cause_and_impact_bounded",
+  "plan":{"changes":["raise header z-index to2 above metrics1","retain button styles and events"],"tdd":"assert header rule RED then GREEN","e2e":"current user tab text center and right blank actual clicks","build":"skipped; no build boundary changed; CI unknown","rollback":"remove new header z-index rule"}
+}
