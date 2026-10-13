@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { resolveAccess, roleAccess, deniedStores, validateInvite, validateRole, type CenterState, type Store, type Resource } from '../src/permissions/center-domain';
 const resources = new Map<string, Resource>([
   ['page', { key:'page', title:'页面', type:'page' }],
@@ -26,18 +27,45 @@ const {buildCenterCatalog,pageKey} = await import('../src/permissions/center-cat
 const {MODULE_SETTINGS_BY_PATH} = await import('../src/config/module-settings-catalog');
 const {renderPermissionEditor} = await import('../src/permissions/center-editor');
 const catalog=buildCenterCatalog();
+const storeDirectory=catalog.tree.filter(n=>n.title==='门店管理');
+assert.equal(storeDirectory.length,1);
+assert.deepEqual(storeDirectory[0].children.map(n=>n.title),['集团视角','品牌视角']);
+assert.deepEqual(storeDirectory[0].children.map(n=>n.key),['module:group-store-list','module:brand-store-list']);
+assert.equal(catalog.resources.get(pageKey('/group-stores/list'))?.parent,'module:group-store-list');
+assert.equal(catalog.resources.get(pageKey('/brand-stores/list'))?.parent,'module:brand-store-list');
 for(const hub of Object.values(MODULE_SETTINGS_BY_PATH)) {
   assert.ok(catalog.resources.has(pageKey(hub.settingsPath)),`Missing hub: ${hub.settingsPath}`);
   const keys=catalog.groups.get(pageKey(hub.settingsPath))!.flatMap(g=>g.keys);
   assert.equal(new Set(keys).size,hub.items.length,`Missing/duplicate setting: ${hub.settingsPath}`);
 }
-assert.equal([...catalog.resources.values()].filter(r=>r.type==='action').length,11);
+const {additionalPageActions}=await import('../src/permissions/center-actions');
+for(const [path,actions] of Object.entries(additionalPageActions)) {
+  assert.ok(catalog.resources.has(pageKey(path)),`Action menu missing: ${path}`);
+  assert.equal(new Set(actions.map(a=>a.id)).size,actions.length,`Duplicate actions: ${path}`);
+  for(const action of actions)assert.ok(readFileSync(action.source,'utf8').includes(action.control),`Source control missing: ${path} / ${action.control}`);
+}
+const actionCount=[...catalog.resources.values()].filter(r=>r.type==='action').length;
+assert.equal(actionCount,11+Object.values(additionalPageActions).reduce((n,actions)=>n+actions.length,0));
+assert.ok(catalog.resources.has(pageKey('/finance/register-audit/cash-drawer')));
 const foh=pageKey('/operations/queue-call/settings');
 const opts={catalog,page:foh,group:'',preview:false,readonly:false,staff:false,value:()=> 'read' as const,own:()=> 'read' as const,search:''};
 assert.match(renderPermissionEditor(opts),/设置分类/);
 assert.match(renderPermissionEditor({...opts,preview:true}),/只读/);
 assert.doesNotMatch(renderPermissionEditor({...opts,preview:true,value:()=> 'hidden' as const}),/data-page=/);
-console.log(`PASS: ${catalog.tree.length} modules, ${catalog.groups.size} settings pages, all settings and 11 audited actions, preview filtering`);
+const pages=[...catalog.resources.values()].filter(r=>r.type==='page');
+for(const page of pages) {
+  const html=renderPermissionEditor({...opts,page:page.key});
+  assert.doesNotMatch(html,/功能权限暂未接入/,`Unconfigured menu: ${page.path}`);
+  assert.match(html,/data-grant=/,`Missing editable permission: ${page.path}`);
+}
+const brandHtml=renderPermissionEditor({...opts,page:pageKey('/brand/overview')});
+assert.match(brandHtml,/查看页面/);assert.doesNotMatch(brandHtml,/data-demo/);
+const groupHtml=renderPermissionEditor({...opts,page:pageKey('/group-stores/list')});
+assert.match(groupHtml,/<small>门店管理 · 集团视角<\/small><h2>门店列表<\/h2>/);
+assert.match(groupHtml,/class="pc-tree-item active" data-page="page:\/group-stores\/list"/);
+const storeViewHtml=renderPermissionEditor({...opts,page:pageKey('/brand-stores/list')});
+assert.match(storeViewHtml,/<small>门店管理 · 品牌视角<\/small><h2>门店列表<\/h2>/);
+console.log(`PASS: ${[...catalog.resources.values()].filter(r=>r.type==='module').length} modules, ${pages.length} menu pages, ${catalog.groups.size} settings pages, ${actionCount} source-audited actions; store directory deduplicated with separate grants`);
 
 const {persistCenterChange}=await import('../src/permissions/center-persistence');
 let saved=JSON.stringify(state);
