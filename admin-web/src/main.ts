@@ -3498,13 +3498,16 @@ function findTitle(path: string): { title: string; module?: string } {
     return { title: "权限总览", module: "权限管理中心" };
   }
   if (path === "/permissions/roles") {
-    return { title: "角色与权限", module: "权限管理中心" };
+    return { title: "角色与功能权限", module: "权限管理中心" };
   }
   if (path === "/permissions/staff") {
-    return { title: "员工授权", module: "权限管理中心" };
+    return { title: "员工与账号", module: "权限管理中心" };
   }
   if (path === "/permissions/staff-accounts") {
-    return { title: "员工登录账号", module: "权限管理中心" };
+    return { title: "员工与账号", module: "权限管理中心" };
+  }
+  if (path.startsWith("/permissions/staff/")) {
+    return { title: "员工管理", module: "权限管理中心" };
   }
   if (path === "/permissions/change-log") {
     return { title: "变更记录", module: "权限管理中心" };
@@ -11759,7 +11762,7 @@ function renderMain(): string {
                     </div>
                   </div>`
                                                                     : isStaffAccounts
-                                                                      ? renderStaffAccountsPage()
+                                                                      ? renderPermissionsRbacPage("/permissions/staff")
                                                                       : isPermissionsRbac
                                                                         ? renderPermissionsRbacPage(path)
                                                                         : isLoginLogs

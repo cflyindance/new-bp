@@ -1,4 +1,5 @@
 import { refreshSessionIfCurrentEmployee, refreshUserSessionContext, getUserSessionContext } from "../auth/session-permissions";
+import { renderCenterPage, bindCenterPage } from "./center-ui";
 import { resolveChainDataPerspective } from "../auth/merchant-scope-context";
 import {
   getLayoutContextStoreId,
@@ -61,6 +62,7 @@ export function renderPermissionsRbacPage(
   path: string,
   scope: RbacScopeConfig = MERCHANT_RBAC_SCOPE,
 ): string {
+  if (scope.scope === "merchant") return renderCenterPage(path);
   const sub = stripRbacRoutePrefix(path, scope);
   if (sub === "/overview" || sub === "") return renderOverviewPage(scope);
   if (sub === "/roles") return renderRolesListPage(scope);
@@ -496,6 +498,10 @@ function renderChangelogPage(scope: RbacScopeConfig): string {
 }
 
 export function bindPermissionsRbac(scope: RbacScopeConfig = MERCHANT_RBAC_SCOPE): void {
+  if (scope.scope === "merchant" && document.getElementById("permission-center")) {
+    bindCenterPage();
+    return;
+  }
   const routePrefix = scope.routePrefix;
 
   document.querySelectorAll<HTMLButtonElement>("[data-rbac-delete-role]").forEach((btn) => {
