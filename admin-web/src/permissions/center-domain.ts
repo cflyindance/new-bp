@@ -1,0 +1,51 @@
+/** Store-scoped, framework-free permission semantics. No network or implicit grants. */
+export type Access = "hidden" | "read" | "edit";
+export interface Resource { key: string; title: string; type: "module" | "page" | "action" | "setting"; parent?: string; path?: string; seq?: number }
+export interface Store { id: string; title: string; brand: string; region: string }
+export interface Scope { mode: "stores" | "brands" | "regions"; ids: string[] }
+export interface Role { id: string; name: string; description: string; system: boolean; grants: Record<string, Access> }
+export interface Binding { id: string; roleId: string; scope: Scope }
+export interface Employee { id: string; name: string; email: string; status: "unopened" | "pending" | "revoked" | "enabled" | "disabled"; bindings: Binding[]; overrides: Record<string, Record<string, Access>>; migrationReview?: boolean }
+export interface Audit { id: string; at: string; actor: string; objectId: string; action: string; before: string; after: string }
+export interface CenterState { schema: 1; version: number; roles: Role[]; employees: Employee[]; logs: Audit[] }
+export const rank: Record<Access, number> = { hidden: 0, read: 1, edit: 2 };
+export function scopeMatches(scope: Scope, store: Store): boolean {
+  return scope.ids.includes(scope.mode === "stores" ? store.id : scope.mode === "brands" ? store.brand : store.region);
+}
+export function roleAccess(role: Role, key: string, resources: Map<string, Resource>, seen = new Set<string>()): Access {
+  const resource = resources.get(key);
+  if (!resource || seen.has(key)) return "hidden";
+  seen.add(key);
+  if (resource.parent && roleAccess(role, resource.parent, resources, seen) === "hidden") return "hidden";
+  return role.grants[key] ?? "hidden";
+}
+export function resolveAccess(state: CenterState, employeeId: string, storeId: string, key: string, stores: Store[], resources: Map<string, Resource>, seen = new Set<string>()): Access {
+  const employee = state.employees.find(e => e.id === employeeId), store = stores.find(s => s.id === storeId), resource = resources.get(key);
+  if (!employee || !store || !resource || seen.has(key)) return "hidden";
+  seen.add(key);
+  if (resource.parent && resolveAccess(state, employeeId, storeId, resource.parent, stores, resources, seen) === "hidden") return "hidden";
+  const override = employee.overrides[storeId]?.[key];
+  if (override !== undefined) return override;
+  let value: Access = "hidden";
+  for (const binding of employee.bindings) {
+    if (!scopeMatches(binding.scope, store)) continue;
+    const role = state.roles.find(r => r.id === binding.roleId);
+    // Union applicable roles first. Ancestor gates use the same effective union above.
+    const grant = role?.grants[key] ?? "hidden";
+    if (rank[grant] > rank[value]) value = grant;
+  }
+  return value;
+}
+export function deniedStores(state: CenterState, employeeId: string, storeIds: string[], key: string, stores: Store[], resources: Map<string, Resource>): string[] {
+  return [...new Set(storeIds)].filter(id => resolveAccess(state, employeeId, id, key, stores, resources) !== "edit");
+}
+export function validateRole(state: CenterState, role: Role): void {
+  if (!role.name.trim() || role.name.trim().length > 30) throw Error("角色名称必填且不能超过 30 字");
+  if (role.description.length > 160) throw Error("描述不能超过 160 字");
+  if (state.roles.some(r => r.id !== role.id && r.name.trim() === role.name.trim())) throw Error("角色名称已存在");
+}
+export function validateInvite(state: CenterState, name: string, email: string): void {
+  if (!name.trim() || name.trim().length > 30) throw Error("员工姓名必填且不能超过 30 字");
+  if (email.trim().length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) throw Error("请输入有效的员工邮箱");
+  if (state.employees.some(e => e.email.toLowerCase() === email.trim().toLowerCase())) throw Error("邮箱已存在，请管理原员工账号");
+}

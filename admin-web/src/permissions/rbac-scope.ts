@@ -104,6 +104,7 @@ export function isMerchantPermissionsPath(path: string): boolean {
     path === "/permissions/roles" ||
     path.startsWith("/permissions/roles/") ||
     path === "/permissions/staff" ||
+    path.startsWith("/permissions/staff/") ||
     path === "/permissions/staff-accounts" ||
     path === "/permissions/change-log"
   );

@@ -604,19 +604,13 @@ export const NAV_MODULES: NavModule[] = [
       },
       {
         id: "perm-staff",
-        title: "员工授权",
-        titleEn: "Staff assignments",
+        title: "员工与账号",
+        titleEn: "Employees & accounts",
         path: "/permissions/staff",
       },
       {
-        id: "perm-staff-accounts",
-        title: "员工登录账号",
-        titleEn: "Staff login accounts",
-        path: "/permissions/staff-accounts",
-      },
-      {
         id: "perm-changelog",
-        title: "权限变更记录",
+        title: "变更记录",
         titleEn: "Permission change log",
         path: "/permissions/change-log",
       },

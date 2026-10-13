@@ -1,5 +1,7 @@
 # Permission Management Center Redesign Implementation Plan
 
+> **Historical plan — not executable as-is (2026-09-23).** The current authority is [权限管理中心 V2.0](../specs/2026-09-23-permission-management-center-authoritative.md). The tasks below preserve the original plan, not current completion status. Before implementation, revise Tasks 2–4 for store-scoped bindings, overrides and snapshots; Tasks 5–7 for actual navigation/categories, independent page actions, fullscreen editors and merged employee/accounts; Task 8 for real backend enforcement; Task 10 for the four-entry IA, invitations and cross-store tests. Historical personal-ceiling design is pending confirmation and must not be treated as settled. The local companion is a prototype, not a completed production migration.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Replace the current generic four-level RBAC editor with a typed permission resource model, per-binding authorization ceilings, user-specific overrides, explainable effective permissions, and a safer permission-management workflow.
