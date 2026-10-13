@@ -5,10 +5,22 @@ import { FINANCE_SETTINGS_PATH, normalizeFinanceCatalogItemsForGrouping } from "
 import { ORDER_SETTINGS_PATH, normalizeOrderCatalogItemsForGrouping } from "../config/order-settings-group-keys";
 import { t, type MessageKey } from "../i18n";
 import type { Resource } from "./center-domain";
+import { additionalPageActions } from './center-actions';
+import { FINANCE_REGISTER_AUDIT_PAGES } from '../config/finance-register-audit-pages';
 
 export interface MenuNode { id: string; title: string; key?: string; children: MenuNode[] }
 export interface SettingGroup { id: string; title: string; section: string; keys: string[] }
 export interface Catalog { tree: MenuNode[]; resources: Map<string, Resource>; groups: Map<string, SettingGroup[]> }
+/** Shared directory only: retain the distinct original permission keys and routes. */
+export function groupStoreManagementMenus(tree: MenuNode[]): MenuNode[] {
+  const ids = ['group-store-list','brand-store-list'];
+  const entries = ids.flatMap(id => { const node=tree.find(n=>n.id===id);return node?[{...node,title:id==='group-store-list'?'集团视角':'品牌视角'}]:[]; });
+  if(entries.length<2)return tree;
+  const first=tree.findIndex(n=>ids.includes(n.id));
+  const result=tree.filter(n=>!ids.includes(n.id));
+  result.splice(first,0,{id:'store-management-directory',title:'门店管理',children:entries});
+  return result;
+}
 type InputNode = { id?: string; title: string; path: string; children?: InputNode[]; sidebarChildren?: InputNode[] };
 const lists = navigation as unknown as Record<string, InputNode[]>;
 const moduleLists: Record<string,string[]> = { marketing:['MARKETING_SHEET_SUBNAV'],promotions:['PROMOTIONS_MGMT_SUBNAV'],members:['MEMBERS_SHEET_SUBNAV','MEMBERS_SHEET_SETTINGS_SUBNAV'],'gift-cards':['GIFT_CARDS_SHEET_SUBNAV'],'reports-finance':['REPORTS_SHEET_SUBNAV'],'finance-center':['FINANCE_SHEET_SUBNAV','FINANCE_SHEET_SETTINGS_SUBNAV'],'print-templates':['PRINT_SHEET_SUBNAV'],reservations:['RESERVATIONS_SHEET_SUBNAV'] };
@@ -25,7 +37,7 @@ const label = (s: string) => s.length > 2 && s.endsWith('设置') ? s.slice(0,-2
 export function buildCenterCatalog(): Catalog {
   const resources = new Map<string, Resource>(), groups = new Map<string, SettingGroup[]>();
   const convert = (item: InputNode, moduleKey: string): MenuNode => {
-    const children = item.sidebarChildren ?? item.children ?? lists[childLists[item.id ?? '']] ?? [];
+    const children = item.sidebarChildren ?? item.children ?? (item.id==='fin-register-audit' ? FINANCE_REGISTER_AUDIT_PAGES.map(p=>({title:p.title,path:p.path})) : lists[childLists[item.id ?? '']]) ?? [];
     const node: MenuNode = { id:item.id ?? item.path,title:item.title,children:children.map(c => convert(c,moduleKey)) };
     if (!children.length) {
       node.key = pageKey(item.path);
@@ -35,7 +47,8 @@ export function buildCenterCatalog(): Catalog {
   };
   const tree = navigation.NAV_MODULES.map(m => {
     const key = `module:${m.id}`;
-    resources.set(key,{key,title:m.title,type:'module'});
+    const title=m.id==='group-store-list'?`${m.title} · 集团视角`:m.id==='brand-store-list'?`${m.title} · 品牌视角`:m.title;
+    resources.set(key,{key,title,type:'module'});
     const children = moduleLists[m.id]?.flatMap(k => lists[k] ?? []) ?? m.children;
     return {id:m.id,title:m.title,key,children:children.map(c => convert(c,key))};
   });
@@ -43,7 +56,7 @@ export function buildCenterCatalog(): Catalog {
     const key = pageKey(hub.settingsPath);
     if (!resources.has(key)) {
       const owner = navigation.NAV_MODULES.find(m => hub.settingsPath.startsWith(m.path+'/') || m.matchPrefixes?.some(p => hub.settingsPath.startsWith(p+'/')));
-      if (!owner) continue;
+      if (!owner) throw Error(`设置菜单未找到所属模块：${hub.settingsPath}`);
       resources.set(key,{key,title:'设置',type:'page',parent:`module:${owner.id}`,path:hub.settingsPath});
       tree.find(m=>m.id===owner.id)?.children.push({id:key,title:'设置',key,children:[]});
     }
@@ -61,9 +74,12 @@ export function buildCenterCatalog(): Catalog {
     });
     groups.set(key,ordered);
   }
-  for (const [path,actions] of Object.entries(auditedActions)) {
-    if (!resources.has(pageKey(path))) continue;
-    for(const [id,title] of actions) { const key=actionKey(path,id);resources.set(key,{key,title,type:'action',parent:pageKey(path),path}); }
+  const registered = new Map<string, [string,string][]>();
+  for(const [path,actions] of Object.entries(auditedActions))registered.set(path,[...actions]);
+  for(const [path,actions] of Object.entries(additionalPageActions))registered.set(path,[...(registered.get(path)??[]),...actions.map(a=>[a.id,a.title] as [string,string])]);
+  for (const [path,actions] of registered) {
+    if (!resources.has(pageKey(path))) throw Error(`操作权限对应的菜单不存在：${path}`);
+    for(const [id,title] of actions) { const key=actionKey(path,id);if(resources.has(key))throw Error(`重复的操作权限：${key}`);resources.set(key,{key,title,type:'action',parent:pageKey(path),path}); }
   }
-  return {tree,resources,groups};
+  return {tree:groupStoreManagementMenus(tree),resources,groups};
 }
