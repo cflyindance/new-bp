@@ -4,6 +4,7 @@ import { esc, renderPermissionEditor } from './center-editor';
 import { readCenterState, saveCenterState, centerStores } from './center-store';
 import { resolveAccess, roleAccess, scopeMatches, validateInvite, validateRole, type Access, type CenterState, type Employee, type Role, type Scope } from './center-domain';
 import { getUserSessionContext } from '../auth/session-permissions';
+import { authorizationRows, applyAuthorization } from './center-authorization';
 
 const statusLabels: Record<Employee['status'],string> = {unopened:'未开通',pending:'待接受邀请',revoked:'邀请已撤销',enabled:'已启用',disabled:'已停用'};
 let leaveGuard: (()=>boolean)|undefined;
@@ -127,6 +128,7 @@ export function bindCenterPage(): void {
       if(b.dataset.page){ev.preventDefault();page=b.dataset.page;group='';const list=root.querySelector('[data-scroll="settings"]');if(list)list.scrollTop=0;render();return;}
       if(b.dataset.group){group=b.dataset.group;const list=root.querySelector('[data-scroll="settings"]');if(list)list.scrollTop=0;render();return;}
       if(b.dataset.tab){tab=b.dataset.tab;render();return;}
+      if(b.dataset.authorization){ev.preventDefault();const row=authorizationRows(catalog,page).find(r=>r.contentKey===b.dataset.authorization);if(!row)return;const v=b.dataset.value as Access|'inherit';if(employeeId){if(!exception||!employee())return;applyAuthorization(employee()!.overrides[storeId]??={},row,v);}else if(role()&&v!=='inherit')applyAuthorization(role()!.grants,row,v);else return;mark();render();return;}
       if(b.dataset.grant){ev.preventDefault();const key=b.dataset.grant,v=b.dataset.value as Access|'inherit';if(employeeId){if(!exception||!employee())return;const overrides=employee()!.overrides[storeId]??={};if(v==='inherit')delete overrides[key];else overrides[key]=v;}else if(role()&&v!=='inherit')role()!.grants[key]=v;mark();render();return;}
       if(b.dataset.roleInfo){roleDialog(b.dataset.roleInfo);return;}
       if(b.dataset.copy){roleDialog(b.dataset.copy,true);return;}

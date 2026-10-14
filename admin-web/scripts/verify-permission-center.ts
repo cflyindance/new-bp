@@ -23,7 +23,7 @@ assert.throws(()=>validateInvite(state,'','new@example.com')); assert.throws(()=
 assert.throws(()=>validateRole(state,{...state.roles[0],id:'r2'}),/已存在/);
 console.log('PASS: scoped roles, independent actions, parent gate, overrides, dynamic scope, batch denial, validation');
 
-const {buildCenterCatalog,pageKey} = await import('../src/permissions/center-catalog');
+const {buildCenterCatalog,pageKey,auditedActions} = await import('../src/permissions/center-catalog');
 const {MODULE_SETTINGS_BY_PATH} = await import('../src/config/module-settings-catalog');
 const {renderPermissionEditor} = await import('../src/permissions/center-editor');
 const catalog=buildCenterCatalog();
@@ -42,10 +42,10 @@ const {additionalPageActions}=await import('../src/permissions/center-actions');
 for(const [path,actions] of Object.entries(additionalPageActions)) {
   assert.ok(catalog.resources.has(pageKey(path)),`Action menu missing: ${path}`);
   assert.equal(new Set(actions.map(a=>a.id)).size,actions.length,`Duplicate actions: ${path}`);
-  for(const action of actions)assert.ok(readFileSync(action.source,'utf8').includes(action.control),`Source control missing: ${path} / ${action.control}`);
+  for(const action of actions)for(const point of [{source:action.source,control:action.control},...(action.relatedControls??[]).map(control=>({source:action.source,control})),...action.relatedSources??[]])assert.ok(readFileSync(point.source,'utf8').includes(point.control),`Source control missing: ${path} / ${point.control}`);
 }
 const actionCount=[...catalog.resources.values()].filter(r=>r.type==='action').length;
-assert.equal(actionCount,11+Object.values(additionalPageActions).reduce((n,actions)=>n+actions.length,0));
+assert.equal(actionCount,Object.values(auditedActions).reduce((n,actions)=>n+actions.length,0)+Object.values(additionalPageActions).reduce((n,actions)=>n+actions.length,0));
 assert.ok(catalog.resources.has(pageKey('/finance/register-audit/cash-drawer')));
 const foh=pageKey('/operations/queue-call/settings');
 const opts={catalog,page:foh,group:'',preview:false,readonly:false,staff:false,value:()=> 'read' as const,own:()=> 'read' as const,search:''};

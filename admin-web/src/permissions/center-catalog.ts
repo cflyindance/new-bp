@@ -7,6 +7,7 @@ import { t, type MessageKey } from "../i18n";
 import type { Resource } from "./center-domain";
 import { additionalPageActions } from './center-actions';
 import { FINANCE_REGISTER_AUDIT_PAGES } from '../config/finance-register-audit-pages';
+import { visibilityEntries,contentKey,fieldKey,actionVisibilityDependencies } from './center-visibility';
 
 export interface MenuNode { id: string; title: string; key?: string; children: MenuNode[] }
 export interface SettingGroup { id: string; title: string; section: string; keys: string[] }
@@ -30,8 +31,6 @@ export const navigationKey = (moduleId: string, id: string) => `navigation:${mod
 export const actionKey = (path: string, id: string) => `action:${path}:${id}`;
 export const settingKey = (path: string, seq: number) => `setting:${path}:${seq}`;
 export const auditedActions: Record<string, [string,string][]> = {
-  '/brand-products/seasoning-mgmt/seasoning':[['create-option','新增 Option'],['edit-option','编辑 Option'],['toggle-option','启用 / 停用 Option'],['manage-category','分类管理'],['batch-config','批量配置'],['edit-product','编辑商品调味'],['delete-product','删除商品调味']],
-  '/permissions/roles':[['create','新增角色'],['edit','编辑权限'],['delete','删除角色']],
   '/permissions/staff':[['save','保存员工授权']],
 };
 const label = (s: string) => s.length > 2 && s.endsWith('设置') ? s.slice(0,-2) : s;
@@ -80,7 +79,21 @@ export function buildCenterCatalog(): Catalog {
   for(const [path,actions] of Object.entries(additionalPageActions))registered.set(path,[...(registered.get(path)??[]),...actions.map(a=>[a.id,a.title] as [string,string])]);
   for (const [path,actions] of registered) {
     if (!resources.has(pageKey(path))) throw Error(`操作权限对应的菜单不存在：${path}`);
-    for(const [id,title] of actions) { const key=actionKey(path,id);if(resources.has(key))throw Error(`重复的操作权限：${key}`);resources.set(key,{key,title,type:'action',parent:pageKey(path),path}); }
+    for(const [id,title] of actions) { const key=actionKey(path,id);if(resources.has(key))throw Error(`重复的操作权限：${key}`);const help=additionalPageActions[path]?.find(a=>a.id===id)?.help;resources.set(key,{key,title,type:'action',parent:pageKey(path),path,...(help?{help}:{})}); }
   }
+  for(const [path,entries] of Object.entries(visibilityEntries)){
+    if(!resources.has(pageKey(path)))throw Error(`内容权限缺少页面：${path}`);
+    for(const entry of entries){
+      const key=(entry.kind==='field'?fieldKey:contentKey)(path,entry.id);
+      if(resources.has(key))throw Error(`重复内容权限：${key}`);
+      resources.set(key,{key,title:entry.title,type:entry.kind,parent:entry.parentId?contentKey(path,entry.parentId):pageKey(path),path,previewValue:entry.previewValue});
+    }
+  }
+  for(const [key,requires] of Object.entries(actionVisibilityDependencies)){
+    const action=resources.get(key);if(!action||action.type!=='action')throw Error(`内容关联缺少操作：${key}`);
+    for(const dependency of requires)if(!['content','field'].includes(resources.get(dependency)?.type??''))throw Error(`操作关联缺少内容：${dependency}`);
+    action.requires=[...new Set(requires)];
+  }
+  for(const r of resources.values())if(r.parent&&!resources.has(r.parent))throw Error(`权限缺少父级：${r.key}`);
   return {tree:groupStoreManagementMenus(tree),resources,groups};
 }

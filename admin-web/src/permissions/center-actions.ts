@@ -1,9 +1,22 @@
 /** Explicit controls audited against the existing screens. Not a generated CRUD template. */
-export interface ActionRegistration { id: string; title: string; source: string; control: string }
+import { applyActionGroups } from './center-action-groups';
+export interface ActionRegistration { id: string; title: string; source: string; control: string; help?: string; relatedControls?: string[]; relatedSources?: {source:string;control:string}[] }
 type Entry = [id:string,title:string,control:string];
 const from = (source:string, entries:Entry[]):ActionRegistration[] => entries.map(([id,title,control])=>({id,title,source,control}));
-export const additionalPageActions:Record<string,ActionRegistration[]> = {
+export const sourcePageActions:Record<string,ActionRegistration[]> = {
+  '/brand-products/seasoning-mgmt/seasoning':[
+    ...from('src/emenu-local/seasoning/seasoning-page.ts',[
+      ['create-option','新增 Option','data-seasoning-add-option'],['manage-category','分类管理','data-seasoning-manage-option-categories'],['batch-config','批量配置','data-seasoning-open-batch'],
+    ]),
+    ...from('src/emenu-local/seasoning/seasoning-option-library-ui.ts',[
+      ['edit-option','编辑 Option','data-seasoning-edit-option'],['toggle-option','启用 / 停用 Option','data-seasoning-toggle-option'],
+    ]),
+    ...from('src/emenu-local/seasoning/seasoning-overview-ui.ts',[
+      ['edit-product','编辑商品调味','data-seasoning-edit-product'],['delete-product','删除商品调味','data-seasoning-delete-product'],
+    ]),
+  ],
   '/permissions/roles':from('src/permissions/center-ui.ts',[
+    ['create','新增角色',"case 'create-role'"],['edit','编辑权限','/permissions/roles/edit/'],['delete','删除角色','data-delete'],
     ['edit-role','编辑角色','data-role-info'],['copy','复制角色','data-copy'],
   ]),
   '/permissions/staff':from('src/permissions/center-ui.ts',[
@@ -27,9 +40,12 @@ export const additionalPageActions:Record<string,ActionRegistration[]> = {
   '/operations/queue-call/category-settings':from('src/config/foh-category-settings-ui.ts',[
     ['create-age','新增年龄分组','data-foh-category-age-add'],['edit-age','修改年龄分组','data-foh-category-age-edit'],['delete-age','删除年龄分组','data-foh-category-age-delete'],['create-category','新增品类','data-foh-category-cat-add'],['edit-category','编辑品类','data-foh-category-cat-edit'],['delete-category','删除品类','data-foh-category-cat-delete'],['edit-menu','编辑菜单配置','data-foh-menu-edit-save'],['copy-menu','复制并覆盖菜单','data-foh-menu-copy-confirm'],
   ]),
-  '/operations/queue-call/classification-settings':from('src/config/foh-classification-settings-ui.ts',[
-    ['create','新增分类','data-cls-create'],['edit','编辑分类','data-cls-edit'],['delete','删除分类','data-cls-delete'],['edit-menu','编辑菜单配置','data-cls-menu-edit-save'],
-  ]),
+  '/operations/queue-call/classification-settings':[
+    {id:'manage-category',title:'编辑分类',source:'src/config/foh-classification-settings-ui.ts',control:'data-cls-edit',relatedControls:['data-cls-create','data-cls-delete'],help:'编辑权限包含新增、删除、修改'},
+    ...from('src/config/foh-classification-settings-ui.ts',[
+      ['edit-menu','编辑菜单配置','data-cls-menu-edit-save'],
+    ]),
+  ],
   '/notifications/templates':from('src/config/notifications-hub-pages.ts',[
     ['create','新增模板','data-template-add'],['edit','编辑模板','data-template-edit'],['toggle','启用 / 禁用模板','data-template-toggle-status'],
   ]),
@@ -131,3 +147,4 @@ export const additionalPageActions:Record<string,ActionRegistration[]> = {
     ['create','新增自助餐规则','createRule'],['edit','编辑自助餐规则','data-edit'],['copy','复制自助餐规则','data-copy'],['toggle','启用 / 禁用自助餐规则','data-toggle'],['delete','删除自助餐规则','data-delete'],
   ]),
 };
+export const additionalPageActions=applyActionGroups(sourcePageActions);

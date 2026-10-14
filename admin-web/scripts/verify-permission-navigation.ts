@@ -12,7 +12,9 @@ const seasoning='navigation:product-center-main:bp-seasoning-mgmt';
 const tags='navigation:product-center-main:bp-tags-mgmt';
 const seasoningPage=pageKey('/brand-products/seasoning-mgmt/seasoning');
 const tagPage=pageKey('/brand-products/tags/description');
-const create=actionKey('/brand-products/seasoning-mgmt/seasoning','create-option');
+// Exercise ancestor gating with the current combined Option action.
+const create=actionKey('/brand-products/seasoning-mgmt/seasoning','manage-option');
+const objectContent=catalog.resources.get(create)!.requires![0];
 assert.ok(catalog.resources.has(products),'商品管理 must have independent permission');
 assert.equal(catalog.resources.get(seasoning)?.parent,products);
 assert.equal(catalog.resources.get(tags)?.parent,products);
@@ -23,7 +25,7 @@ const {migrateNavigationPermissions}=await import('../src/permissions/center-nav
 const {navigationKey}=await import('../src/permissions/center-catalog');
 assert.equal(navigationKey('product-center-main','bp-seasoning-mgmt'),seasoning);
 
-const role:Role={id:'r',name:'导航测试',description:'',system:false,grants:{[moduleKey]:'read',[products]:'read',[seasoning]:'hidden',[tags]:'read',[seasoningPage]:'read',[tagPage]:'read',[create]:'edit'}};
+const role:Role={id:'r',name:'导航测试',description:'',system:false,grants:{[moduleKey]:'read',[products]:'read',[seasoning]:'hidden',[tags]:'read',[seasoningPage]:'read',[tagPage]:'read',[objectContent]:'read',[create]:'edit'}};
 const own=(key:string)=>role.grants[key]??'hidden';
 const value=(key:string)=>roleAccess(role,key,catalog.resources);
 assert.equal(value(seasoningPage),'hidden');
@@ -72,10 +74,10 @@ for(const [key,r] of catalog.resources){
   legacyResources.set(key,{...r,parent});
 }
 const old:CenterState={schema:1,version:7,logs:[],roles:[
-  {id:'r',name:'旧角色',description:'',system:false,grants:{[moduleKey]:'read',[seasoningPage]:'read',[tagPage]:'read',[create]:'edit'}},
+  {id:'r',name:'旧角色',description:'',system:false,grants:{[moduleKey]:'read',[seasoningPage]:'read',[tagPage]:'read',[objectContent]:'read',[create]:'edit'}},
   {id:'empty',name:'旧空白角色',description:'',system:false,grants:{}},
 ],employees:[
-  {id:'e',name:'员工',email:'e@example.com',status:'enabled',bindings:[{id:'b1',roleId:'r',scope:{mode:'stores',ids:['a']}}],overrides:{a:{[seasoningPage]:'hidden'},b:{[moduleKey]:'read',[seasoningPage]:'read',[create]:'edit'}}},
+  {id:'e',name:'员工',email:'e@example.com',status:'enabled',bindings:[{id:'b1',roleId:'r',scope:{mode:'stores',ids:['a']}}],overrides:{a:{[seasoningPage]:'hidden'},b:{[moduleKey]:'read',[seasoningPage]:'read',[objectContent]:'read',[create]:'edit'}}},
   {id:'empty',name:'未授权',email:'',status:'unopened',bindings:[],overrides:{}},
 ]};
 const original=structuredClone(old);
