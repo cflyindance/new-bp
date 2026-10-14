@@ -194,9 +194,12 @@ export const NAV_MODULES: NavModule[] = [
     icon: "team",
     path: "/team",
     subNavPlacement: "sheet",
-    defaultChildPath: "/team/roles-employees",
+    defaultChildPath: "/team/roles-employees/employees",
     children: [
-      { id: "team-roles", title: "角色与员工", path: "/team/roles-employees" },
+      { id: "team-roles", title: "角色与员工", path: "/team/roles-employees", children: [
+        { id: "team-employees", title: "员工管理", titleEn: "Employees", path: "/team/roles-employees/employees" },
+        { id: "team-positions", title: "岗位管理", titleEn: "Positions", path: "/team/roles-employees/roles" },
+      ] },
       { id: "team-breaks", title: "休息与加班", path: "/team/breaks-overtime" },
       { id: "team-clock", title: "员工打卡", path: "/team/clock-in" },
       { id: "team-shifts", title: "排班", titleEn: "Shift scheduling", path: "/team/shift-scheduling" },
@@ -1288,6 +1291,7 @@ export function navModuleChildrenAsSheetSubnav(m: NavModule): ProductCenterSideb
     titleEn: c.titleEn,
     path: c.path,
     chainOnly: c.chainOnly,
+    sidebarChildren: c.children?.map((child) => ({ ...child })),
   }));
 }
 
@@ -1607,7 +1611,10 @@ export function flattenNavPaths(modules: NavModule[] = NAV_MODULES): string[] {
   const out: string[] = [];
   for (const m of modules) {
     out.push(m.path);
-    for (const c of m.children) out.push(c.path);
+    for (const c of m.children) {
+      out.push(c.path);
+      for (const child of c.children ?? []) out.push(child.path);
+    }
   }
   /** 库存变更记录：无侧栏二级入口，仍为占位子路由 */
   out.push("/operations/inventory-ordering/inventory-change-log");

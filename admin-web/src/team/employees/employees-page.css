@@ -2439,3 +2439,6 @@ select.form-control {
   z-index: 1200;
 }
 
+.employees-page .employees-tabs[hidden] { display: none !important; }
+.employees-page #employees-page-heading { margin-bottom: 16px; }
+

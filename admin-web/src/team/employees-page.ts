@@ -19,12 +19,15 @@ function canScroll(element: HTMLElement, deltaY: number): boolean {
 export function mountEmployeesPage(
   container: HTMLElement,
   context: EmployeesPageContext = createEmployeesPageContext(),
+  view: "employees" | "roles" = "employees",
 ): EmployeesPageHandle {
   mountedPages.get(container)?.destroy();
   const shadowRoot = container.shadowRoot ?? container.attachShadow({ mode: "open" });
   shadowRoot.innerHTML = `<style>${pageCss}</style><style>${shellCss}</style>${renderEmployeesPageTemplate()}`;
   const pageRoot = shadowRoot.querySelector<HTMLElement>("[data-team-employees-page]");
   if (!pageRoot) throw new Error("Native employees page root was not rendered.");
+
+  pageRoot.dataset.employeesView = view;
 
   const scrollOwner = container.closest<HTMLElement>("[data-team-employees-scroll]");
   const handleWheel = (event: WheelEvent): void => {

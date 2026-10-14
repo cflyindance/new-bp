@@ -8,6 +8,8 @@
   const ROLES_STORAGE_KEY = "tipout-employee-role-options-v1";
   const HIDDEN_SYSTEM_ROLES_KEY = "tipout-employee-role-hidden-system-v1";
   const ROLE_META_STORAGE_KEY = "tipout-employee-role-meta-v1";
+  const pageView = document.body.dataset.employeesView || new URLSearchParams(window.location.search).get("view");
+  const routedView = pageView === "roles" || pageView === "employees" ? pageView : null;
   const TAB_STORAGE_KEY = "tipout-employees-page-tab";
   const ROLE_DESC_MAX_LEN = 200;
   const ROLE_MULTI_SELECT_ID = "field-role";
@@ -557,6 +559,8 @@
   function setActiveTab(tab, options) {
     const next = tab === "roles" ? "roles" : "employees";
     activeTab = next;
+    const heading = $("#employees-page-heading");
+    if (heading) heading.textContent = next === "roles" ? "岗位管理" : "员工管理";
     if (!options || options.persist !== false) writeStoredTab(next);
 
     document.querySelectorAll("[data-employees-tab]").forEach((btn) => {
@@ -2200,5 +2204,9 @@
     });
     modalObserver.observe(addEmployeeModal, { attributes: true, attributeFilter: ["class"] });
   }
-  setActiveTab(readStoredTab(), { persist: false });
+  if (routedView) {
+    const tabs = $(".employees-tabs");
+    if (tabs) tabs.hidden = true;
+  }
+  setActiveTab(routedView || readStoredTab(), { persist: false });
 })();

@@ -2,7 +2,7 @@
 
 > **依据**：`docs/项目文档/角色与员工-岗位管理双Tab设计方案.md`（v1.1）  
 > **日期**：2026-07-24  
-> **状态**：已实现  
+> **状态**：历史实现记录；外层导航现由 [产品权威需求文档](角色与员工产品权威需求文档.md) TEAM-NAV-20261014-01 定义。
 > **落点**：`dist/TipOut/employees.html` / `employees.js` / `employees.css`  
 > **参考交互**：排班页双 Tab（`team-shift-scheduling-ui.ts` · 排班表 / 班次）
 

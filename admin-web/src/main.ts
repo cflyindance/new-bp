@@ -2587,7 +2587,7 @@ function renderPcSheetDarkSubnav(
       const prefix = item.activePrefix ?? item.path;
       const inGroup = path === prefix || path.startsWith(`${prefix}/`);
       const expanded = getTertiarySidebarGroupExpanded(item.id, path, inGroup);
-      const parentSelected = item.path === activeSub;
+      const parentSelected = item.path === activeSub && item.id !== "team-roles";
       const childrenId = `pcm-sheet-tertiary-children-${item.id}`;
       const activeChild = getCollapsibleChildActivePath(path, item);
       const l3Label = `${pick(item.title, item.titleEn)}${t("nav.tertiarySuffix")}`.replace(/"/g, "&quot;");
@@ -3327,7 +3327,8 @@ function renderNavModuleSecondarySheet(
       : `
         <div class="space-y-4">
           <section class="pt-0">
-            ${renderPcSheetDarkSubnav(hash, subnav, (p) => getActiveNavModuleSheetSubPath(p, m), pcmSheetNavNoChildPath, {
+            ${renderPcSheetDarkSubnav(hash, subnav, (p) => getActiveNavModuleSheetSubPath(p, m), (p, item) =>
+              item.sidebarChildren?.find((child) => p === child.path || p.startsWith(`${child.path}/`))?.path ?? "", {
               brandProductSecondLevel: true,
               sheetGroupedSubnavAriaLabel: nmGroupedAria,
             })}
@@ -3691,6 +3692,8 @@ function findTitle(path: string): { title: string; module?: string } {
     const sortedChildren = [...m.children].sort((a, b) => b.path.length - a.path.length);
     for (const c of sortedChildren) {
       if (path === c.path || path.startsWith(`${c.path}/`)) {
+        const leaf = c.children?.find((child) => path === child.path || path.startsWith(`${child.path}/`));
+        if (leaf) return { title: pick(leaf.title, leaf.titleEn), module: navChildModuleLine(m, c) };
         return { title: pick(c.title, c.titleEn), module: navChildModuleLine(m, c) };
       }
     }
@@ -3801,6 +3804,10 @@ function rememberSidebarNavScroll(scrollTop: number): void {
 /** 将 `#/menu`、`#/reports` 等仅一级路径规范为各自 defaultChildPath（单页模块 path===default 时不跳转） */
 function normalizeTabModuleHashes(): void {
   const raw = location.hash.slice(1);
+  if (raw === "/team/roles-employees" || raw === "/team/roles-employees/") {
+    replaceHashPath("/team/roles-employees/employees");
+    return;
+  }
   if (!raw || raw === "/") {
     replaceHashPath(APP_NAV_HOME_PATH);
     return;
@@ -12323,7 +12330,8 @@ function mount(): void {
 
   const employeesRoot = app.querySelector<HTMLElement>("[data-team-employees-root]");
   if (employeesRoot) {
-    activeEmployeesPage = mountEmployeesPage(employeesRoot, createEmployeesPageContext());
+    activeEmployeesPage = mountEmployeesPage(employeesRoot, createEmployeesPageContext(),
+      /^#\/team\/roles-employees\/roles(?:\/|$)/.test(location.hash) ? "roles" : "employees");
   }
 
   const tipsRoot = app.querySelector<HTMLElement>("[data-team-tips-root]");
@@ -12947,6 +12955,12 @@ function mount(): void {
     if (!el || !(el instanceof HTMLButtonElement)) return;
     const groupId = el.getAttribute("data-tertiary-sidebar-toggle");
     if (!groupId) return;
+    if (groupId === "team-roles") {
+      e.preventDefault();
+      setTertiarySidebarGroupExpanded(groupId, el.getAttribute("aria-expanded") !== "true");
+      mount();
+      return;
+    }
     if (el.closest("[data-hub-sheet-root]")) {
       e.preventDefault();
       activeTertiarySheetTrail.push(groupId);
