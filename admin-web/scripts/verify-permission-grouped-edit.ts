@@ -24,7 +24,7 @@ for(const [path,groups] of Object.entries(actionGroups))for(const group of group
   assert.equal(value(key),'hidden','Old full CRUD must not automatically grant the combined point');grants[key]='edit';
   assert.equal(value(key),'edit');assert.equal(resolveAccess(state,'e','b',key,stores,catalog.resources),'hidden');
   state.employees[0].overrides.a={[key]:'hidden'};assert.equal(resolveAccess(state,'e','a',key,stores,catalog.resources),'hidden');delete state.employees[0].overrides.a[key];
-  const options={catalog,page:pageKey(path),group:'',preview:false,readonly:false,staff:false,value,own:(k:string)=>grants[k]??'hidden',search:''} as const;
+  const options={catalog,page:pageKey(path),group:catalog.sections?.get(pageKey(path))?.find(g=>g.keys.includes(key))?.id??'',preview:false,readonly:false,staff:false,value,own:(k:string)=>grants[k]??'hidden',search:''} as const;
   const unified=authorizationRows(catalog,pageKey(path)).find(r=>r.editKeys.includes(key))!;assert.ok(unified);applyAuthorization(grants,unified,'edit');
   for(const variant of [{},{preview:true},{staff:true,readonly:true}]){const html=renderPermissionEditor({...options,...variant});assert.ok(html.includes(unified.title));assert.ok(html.includes(resource.help!));assert.match(html,/role="tooltip"/);}
   grants[pageKey(path)]='hidden';assert.equal(value(key),'hidden');assert.equal(grants[key],'edit');grants[pageKey(path)]='read';

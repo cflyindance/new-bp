@@ -8,10 +8,11 @@ import type { Resource } from "./center-domain";
 import { additionalPageActions } from './center-actions';
 import { FINANCE_REGISTER_AUDIT_PAGES } from '../config/finance-register-audit-pages';
 import { visibilityEntries,contentKey,fieldKey,actionVisibilityDependencies } from './center-visibility';
+import { registerPageSections } from './center-page-sections';
 
 export interface MenuNode { id: string; title: string; key?: string; children: MenuNode[] }
 export interface SettingGroup { id: string; title: string; section: string; keys: string[] }
-export interface Catalog { tree: MenuNode[]; resources: Map<string, Resource>; groups: Map<string, SettingGroup[]> }
+export interface Catalog { tree: MenuNode[]; resources: Map<string, Resource>; groups: Map<string, SettingGroup[]>; sections?: Map<string,SettingGroup[]> }
 /** Shared directory only: retain the distinct original permission keys and routes. */
 export function groupStoreManagementMenus(tree: MenuNode[]): MenuNode[] {
   const ids = ['group-store-list','brand-store-list'];
@@ -95,5 +96,5 @@ export function buildCenterCatalog(): Catalog {
     action.requires=[...new Set(requires)];
   }
   for(const r of resources.values())if(r.parent&&!resources.has(r.parent))throw Error(`权限缺少父级：${r.key}`);
-  return {tree:groupStoreManagementMenus(tree),resources,groups};
+  return {tree:groupStoreManagementMenus(tree),resources,groups,sections:registerPageSections(resources)};
 }

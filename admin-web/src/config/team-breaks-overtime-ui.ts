@@ -17,6 +17,7 @@ import {
 } from "./page-save-registry";
 import { MODULE_SETTINGS_SUBNAV_SECTION_HEADING_CLASS } from "./module-settings-subnav";
 import { readModuleSettingNumber } from "./module-settings-form-ui";
+import { BREAKS_OVERTIME_NAV_GROUPS } from './team-breaks-overtime-navigation';
 
 export const TEAM_BREAKS_OVERTIME_PATH = "/team/breaks-overtime";
 
@@ -65,9 +66,6 @@ type BreaksOvertimeConfig = {
   overtimeRules: OvertimeRule[];
 };
 
-type NavItem = { key: string; title: string };
-type NavGroup = { label: string; items: NavItem[] };
-
 const OVERTIME_SCOPES: OvertimeScope[] = ["daily", "daily-double", "weekly", "nth-day"];
 const DEFAULT_NTH_DAY = 7;
 const DEFAULT_NTH_DAY_TIER1 = { hours: 8, multiplier: 1.5 };
@@ -112,23 +110,6 @@ const WEEKDAY_OPTIONS = [
   { value: 6, label: "周六" },
   { value: 0, label: "周日" },
 ] as const;
-
-const BREAKS_OVERTIME_NAV_GROUPS: NavGroup[] = [
-  {
-    label: "休息",
-    items: [
-      { key: "custom-breaks", title: "自定义休息" },
-      { key: "break-rules", title: "休息规则" },
-    ],
-  },
-  {
-    label: "加班",
-    items: [
-      { key: "work-week", title: "工作周设置" },
-      { key: "overtime-rules", title: "加班规则" },
-    ],
-  },
-];
 
 /** 与 main.ts 三级侧栏一致：仅侧栏自身过长时可滚，不随右侧四级内容同步滚动 */
 const SUBNAV_SCROLL_CLASSES =
