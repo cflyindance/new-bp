@@ -46,6 +46,11 @@ export function buildCenterCatalog(): Catalog {
     if(resources.has(key))throw Error(`重复的菜单权限：${key}`);
     resources.set(key,{key,title:item.title,type:children.length?'navigation':'page',parent,path:item.path});
     const node: MenuNode = { id,title:item.title,key,children:children.map(c => convert(c,key,moduleId)) };
+    if (children.length && !resources.has(pageKey(item.path)) && (additionalPageActions[item.path]?.length || auditedActions[item.path]?.length)) {
+      const legacyKey=pageKey(item.path);
+      resources.set(legacyKey,{key:legacyKey,title:`${item.title}操作权限`,type:'page',parent:key,path:item.path});
+      node.children.unshift({id:`${node.id}-actions`,title:'操作权限',key:legacyKey,children:[]});
+    }
     return node;
   };
   const tree = navigation.NAV_MODULES.map(m => {

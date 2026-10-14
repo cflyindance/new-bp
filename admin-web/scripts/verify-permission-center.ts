@@ -27,6 +27,23 @@ const {buildCenterCatalog,pageKey,auditedActions} = await import('../src/permiss
 const {MODULE_SETTINGS_BY_PATH} = await import('../src/config/module-settings-catalog');
 const {renderPermissionEditor} = await import('../src/permissions/center-editor');
 const catalog=buildCenterCatalog();
+// Menu parents must retain existing operation grants after gaining child routes.
+const team=catalog.tree.find(n=>n.id==='team')!;
+for(const [id,path,childPaths] of [
+  ['team-shifts','/team/shift-scheduling',['schedule','shifts','rules']],
+] as const) {
+  const parent=team.children.find(n=>n.id===id)!;
+  assert.ok(catalog.resources.has(pageKey(path)),`Lost legacy operation page: ${path}`);
+  assert.ok(parent.children.some(n=>n.key===pageKey(path)&&!n.children.length),`Operation page cannot be selected: ${path}`);
+  for(const child of childPaths)assert.ok(catalog.resources.has(pageKey(`${path}/${child}`)),`Missing child page: ${path}/${child}`);
+  const editor=renderPermissionEditor({catalog,page:pageKey(path),group:'',preview:false,readonly:false,staff:false,value:()=> 'edit',own:()=> 'inherit',search:''});
+  assert.ok(editor.includes(`data-page="${pageKey(path)}"`),`Operation page not selectable: ${path}`);
+  assert.equal(catalog.resources.get(`action:${path}:manage-shift`)?.parent,pageKey(path));
+}
+const {clockViewKey}=await import('../src/permissions/center-clock-pages');
+assert.ok(catalog.resources.has(pageKey('/team/clock-in')));
+for(const view of ['live','records','rules'])assert.ok(catalog.resources.has(clockViewKey(view)));
+assert.equal(catalog.resources.get('action:/team/clock-in:adjust-clock')?.parent,clockViewKey('live'));
 const storeDirectory=catalog.tree.filter(n=>n.title==='门店管理');
 assert.equal(storeDirectory.length,1);
 assert.deepEqual(storeDirectory[0].children.map(n=>n.title),['集团视角','品牌视角']);
