@@ -4,6 +4,7 @@ import { esc, renderPermissionEditor } from './center-editor';
 import { readCenterState, saveCenterState, centerStores } from './center-store';
 import { resolveAccess, roleAccess, scopeMatches, validateInvite, validateRole, type Access, type CenterState, type Employee, type Role, type Scope } from './center-domain';
 import { getUserSessionContext } from '../auth/session-permissions';
+import { authorizationRows, applyAuthorization } from './center-authorization';
 
 const statusLabels: Record<Employee['status'],string> = {unopened:'未开通',pending:'待接受邀请',revoked:'邀请已撤销',enabled:'已启用',disabled:'已停用'};
 let leaveGuard: (()=>boolean)|undefined;
@@ -77,6 +78,8 @@ export function bindCenterPage(): void {
     const dialog=document.createElement('dialog');dialog.className='pc-dialog';
     dialog.innerHTML=`<form class="pc"><header class="pc-heading"><h2>${esc(title)}</h2><button type="button" data-close aria-label="关闭">×</button></header><div class="pc-form">${body}</div><div class="pc-error" role="alert" data-error></div><footer><button type="button" data-close>取消</button><button type="submit" class="primary">${primary}</button></footer></form>`;
     document.body.append(dialog);dialog.showModal();
+    // Keep native Escape-to-close, without triggering the shell's navigation redraw.
+    dialog.addEventListener('keydown',ev=>{if(ev.key==='Escape')ev.stopPropagation();});
     dialog.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>dialog.close()));
     dialog.addEventListener('click',ev=>{if((ev.target as Element).closest('a[href]'))dialog.close();});
     dialog.addEventListener('close',()=>{dialog.remove();trigger?.focus();});
@@ -116,16 +119,20 @@ export function bindCenterPage(): void {
     const previewEditor=()=>editor(true,previewPage,previewGroup,previewSearch);
     const dialog=modal('菜单效果预览',`<p class="pc-preview-note">当前草稿${employeeId?' · '+esc(stores.find(s=>s.id===storeId)?.title):''}；仅展示权限，不执行真实业务操作。</p><div data-preview>${previewEditor()}</div>`,()=>true,'关闭');dialog.classList.add('pc-preview');
     const area=dialog.querySelector<HTMLElement>('[data-preview]')!;
-    area.addEventListener('click',ev=>{const target=(ev.target as Element).closest<HTMLElement>('[data-page],[data-group],[data-demo]');if(!target)return;if(target.hasAttribute('data-demo'))return;if(target.dataset.page){previewPage=target.dataset.page;previewGroup='';}if(target.dataset.group)previewGroup=target.dataset.group;const scroll=new Map([...area.querySelectorAll<HTMLElement>('[data-scroll]')].map(el=>[el.dataset.scroll!,el.scrollTop]));area.innerHTML=previewEditor();for(const el of area.querySelectorAll<HTMLElement>('[data-scroll]'))el.scrollTop=el.dataset.scroll==='settings'?0:scroll.get(el.dataset.scroll!)??0;});
+    area.addEventListener('click',ev=>{const target=(ev.target as Element).closest<HTMLElement>('[data-page],[data-group],[data-demo]');if(!target)return;if(target.hasAttribute('data-demo'))return;ev.preventDefault();if(target.dataset.page){previewPage=target.dataset.page;previewGroup='';}if(target.dataset.group)previewGroup=target.dataset.group;const scroll=new Map([...area.querySelectorAll<HTMLElement>('[data-scroll]')].map(el=>[el.dataset.scroll!,el.scrollTop]));const expanded=new Map([...area.querySelectorAll<HTMLDetailsElement>('[data-menu-node]')].map(el=>[el.dataset.menuNode!,el.open]));area.innerHTML=previewEditor();for(const el of area.querySelectorAll<HTMLElement>('[data-scroll]'))el.scrollTop=el.dataset.scroll==='settings'?0:scroll.get(el.dataset.scroll!)??0;for(const el of area.querySelectorAll<HTMLDetailsElement>('[data-menu-node]'))if(expanded.has(el.dataset.menuNode!))el.open=expanded.get(el.dataset.menuNode!)!;
+      // Replaced buttons lose focus to body: keep Escape inside the preview dialog.
+      [...area.querySelectorAll<HTMLButtonElement>('[data-page],[data-group]')].find(b=>target.dataset.group?b.dataset.group===previewGroup:b.dataset.page===previewPage)?.focus({preventScroll:true});
+    });
     area.addEventListener('input',ev=>{if((ev.target as HTMLElement).hasAttribute('data-menu-search')){previewSearch=(ev.target as HTMLInputElement).value;const pos=(ev.target as HTMLInputElement).selectionStart;area.innerHTML=previewEditor();const input=area.querySelector<HTMLInputElement>('[data-menu-search]')!;input.focus();input.setSelectionRange(pos,pos);}});
   }
   root.addEventListener('click',ev=>{
     const b=(ev.target as Element).closest<HTMLElement>('button');if(!b||b.hasAttribute('disabled'))return;
     try{
-      if(b.dataset.page){page=b.dataset.page;group='';const list=root.querySelector('[data-scroll="settings"]');if(list)list.scrollTop=0;render();return;}
+      if(b.dataset.page){ev.preventDefault();page=b.dataset.page;group='';const list=root.querySelector('[data-scroll="settings"]');if(list)list.scrollTop=0;render();return;}
       if(b.dataset.group){group=b.dataset.group;const list=root.querySelector('[data-scroll="settings"]');if(list)list.scrollTop=0;render();return;}
       if(b.dataset.tab){tab=b.dataset.tab;render();return;}
-      if(b.dataset.grant){const key=b.dataset.grant,v=b.dataset.value as Access|'inherit';if(employeeId){if(!exception||!employee())return;const overrides=employee()!.overrides[storeId]??={};if(v==='inherit')delete overrides[key];else overrides[key]=v;}else if(role()&&v!=='inherit')role()!.grants[key]=v;mark();render();return;}
+      if(b.dataset.authorization){ev.preventDefault();const row=authorizationRows(catalog,page).find(r=>r.contentKey===b.dataset.authorization);if(!row)return;const v=b.dataset.value as Access|'inherit';if(employeeId){if(!exception||!employee())return;applyAuthorization(employee()!.overrides[storeId]??={},row,v);}else if(role()&&v!=='inherit')applyAuthorization(role()!.grants,row,v);else return;mark();render();return;}
+      if(b.dataset.grant){ev.preventDefault();const key=b.dataset.grant,v=b.dataset.value as Access|'inherit';if(employeeId){if(!exception||!employee())return;const overrides=employee()!.overrides[storeId]??={};if(v==='inherit')delete overrides[key];else overrides[key]=v;}else if(role()&&v!=='inherit')role()!.grants[key]=v;mark();render();return;}
       if(b.dataset.roleInfo){roleDialog(b.dataset.roleInfo);return;}
       if(b.dataset.copy){roleDialog(b.dataset.copy,true);return;}
       if(b.dataset.members){modal('角色成员',state.employees.filter(e=>e.bindings.some(x=>x.roleId===b.dataset.members)).map(e=>`<p>${link(esc(e.name),`/permissions/staff/${encodeURIComponent(e.id)}`)}</p>`).join('')||'<p>暂无成员</p>',()=>true,'关闭');return;}

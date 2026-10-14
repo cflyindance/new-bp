@@ -13,6 +13,7 @@
   margin: auto;
   max-height: min(88vh, calc(100dvh - 32px));
 }
+.pc-dialog.pc-preview { width: min(1250px, 96vw); }
 .pc .pc-detail {
   display: flex;
   flex-direction: column;
@@ -36,4 +37,40 @@
 }
 .pc .pc-detail > .pc-setting-items { flex: 1; }
 .pc .pc-tree { overscroll-behavior: contain; }
+.pc .pc-editor:has(.pc-menu-controls) { grid-template-columns: 380px minmax(0, 1fr); }
+.pc .pc-tree .pc-tree-menu-row {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr) max-content;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 0;
+  list-style: none;
+}
+.pc .pc-tree-menu-row::-webkit-details-marker { display: none; }
+.pc .pc-tree-menu-row::marker { content: ''; }
+.pc .pc-tree-menu-row::before { content: '▸'; font-size: 12px; }
+.pc .pc-tree details[open] > .pc-tree-menu-row::before { content: '▾'; }
+.pc .pc-tree .pc-tree-group-label {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  padding: 5px 6px;
+  border: 0;
+  background: transparent;
+  font-weight: 600;
+  text-align: left;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.pc .pc-menu-controls { justify-self: end; }
+.pc .pc-menu-controls .pc-segment { flex-wrap: nowrap; }
+.pc .pc-menu-controls .pc-segment button { padding: 5px 7px; font-weight: 400; white-space: nowrap; }
+.pc .pc-menu-controls .pc-tag { margin: 0; white-space: nowrap; }
+.pc .pc-action-name { display: inline-flex; align-items: center; gap: 8px; }
+.pc .pc-help { position: relative; display: inline-flex; }
+.pc .pc-help-trigger { width: 24px; height: 24px; padding: 0; border-radius: 50%; color: #62778f; font-size: 12px; }
+.pc .pc-help-text { display: none; position: absolute; bottom: calc(100% + 7px); left: 0; z-index: 2; width: max-content; max-width: 240px; padding: 9px 12px; border: 1px solid var(--pc-line); border-radius: 6px; background: #20334b; color: white; font-size: 12px; font-weight: 400; line-height: 1.5; white-space: normal; box-shadow: 0 4px 12px #15294e1a; }
+.pc .pc-help:hover .pc-help-text, .pc .pc-help:focus-within .pc-help-text { display: block; }
+@media(max-width:760px){.pc .pc-editor:has(.pc-menu-controls){grid-template-columns:360px minmax(300px,1fr)}}
 @media(max-width:760px){.pc .pc-full{padding:0 12px}.pc .pc-editor{grid-template-columns:180px minmax(300px,1fr);overflow:auto}.pc .pc-settings{grid-template-columns:132px minmax(0,1fr);gap:12px}.pc .pc-stats{grid-template-columns:repeat(2,1fr)}.pc .pc-nav{overflow:auto;white-space:nowrap}.pc td,.pc th{padding:10px}.pc .pc-full h1{font-size:19px}}

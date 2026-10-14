@@ -1,9 +1,22 @@
 /** Explicit controls audited against the existing screens. Not a generated CRUD template. */
-export interface ActionRegistration { id: string; title: string; source: string; control: string }
+import { applyActionGroups } from './center-action-groups';
+export interface ActionRegistration { id: string; title: string; source: string; control: string; help?: string; relatedControls?: string[]; relatedSources?: {source:string;control:string}[] }
 type Entry = [id:string,title:string,control:string];
 const from = (source:string, entries:Entry[]):ActionRegistration[] => entries.map(([id,title,control])=>({id,title,source,control}));
-export const additionalPageActions:Record<string,ActionRegistration[]> = {
+export const sourcePageActions:Record<string,ActionRegistration[]> = {
+  '/brand-products/seasoning-mgmt/seasoning':[
+    ...from('src/emenu-local/seasoning/seasoning-page.ts',[
+      ['create-option','新增 Option','data-seasoning-add-option'],['manage-category','分类管理','data-seasoning-manage-option-categories'],['batch-config','批量配置','data-seasoning-open-batch'],
+    ]),
+    ...from('src/emenu-local/seasoning/seasoning-option-library-ui.ts',[
+      ['edit-option','编辑 Option','data-seasoning-edit-option'],['toggle-option','启用 / 停用 Option','data-seasoning-toggle-option'],
+    ]),
+    ...from('src/emenu-local/seasoning/seasoning-overview-ui.ts',[
+      ['edit-product','编辑商品调味','data-seasoning-edit-product'],['delete-product','删除商品调味','data-seasoning-delete-product'],
+    ]),
+  ],
   '/permissions/roles':from('src/permissions/center-ui.ts',[
+    ['create','新增角色',"case 'create-role'"],['edit','编辑权限','/permissions/roles/edit/'],['delete','删除角色','data-delete'],
     ['edit-role','编辑角色','data-role-info'],['copy','复制角色','data-copy'],
   ]),
   '/permissions/staff':from('src/permissions/center-ui.ts',[
@@ -27,9 +40,12 @@ export const additionalPageActions:Record<string,ActionRegistration[]> = {
   '/operations/queue-call/category-settings':from('src/config/foh-category-settings-ui.ts',[
     ['create-age','新增年龄分组','data-foh-category-age-add'],['edit-age','修改年龄分组','data-foh-category-age-edit'],['delete-age','删除年龄分组','data-foh-category-age-delete'],['create-category','新增品类','data-foh-category-cat-add'],['edit-category','编辑品类','data-foh-category-cat-edit'],['delete-category','删除品类','data-foh-category-cat-delete'],['edit-menu','编辑菜单配置','data-foh-menu-edit-save'],['copy-menu','复制并覆盖菜单','data-foh-menu-copy-confirm'],
   ]),
-  '/operations/queue-call/classification-settings':from('src/config/foh-classification-settings-ui.ts',[
-    ['create','新增分类','data-cls-create'],['edit','编辑分类','data-cls-edit'],['delete','删除分类','data-cls-delete'],['edit-menu','编辑菜单配置','data-cls-menu-edit-save'],
-  ]),
+  '/operations/queue-call/classification-settings':[
+    {id:'manage-category',title:'编辑分类',source:'src/config/foh-classification-settings-ui.ts',control:'data-cls-edit',relatedControls:['data-cls-create','data-cls-delete'],help:'编辑权限包含新增、删除、修改'},
+    ...from('src/config/foh-classification-settings-ui.ts',[
+      ['edit-menu','编辑菜单配置','data-cls-menu-edit-save'],
+    ]),
+  ],
   '/notifications/templates':from('src/config/notifications-hub-pages.ts',[
     ['create','新增模板','data-template-add'],['edit','编辑模板','data-template-edit'],['toggle','启用 / 禁用模板','data-template-toggle-status'],
   ]),
@@ -69,8 +85,54 @@ export const additionalPageActions:Record<string,ActionRegistration[]> = {
   '/settings/platform-preset':from('src/config/platform-preset-ui.ts',[
     ['publish','发布配置预设','data-pp-publish'],
   ]),
-  '/team/roles-employees':from('dist/TipOut/employees.html',[
+  '/team/payroll-report':[
+    ...from('src/team/payroll/payroll-template.html',[
+      ['edit-employee','编辑员工信息','open-employee-identity-edit'],
+      ['save-payroll','保存员工薪资','confirm-employee'],
+      ['refresh-attendance','更新考勤数据','refresh-employee-data'],
+      ['export-detail-pdf','导出薪资明细 PDF','data-export-type="pdf"'],
+      ['export-detail-csv','导出薪资明细 CSV','data-export-type="csv"'],
+      ['email-detail','发送薪资明细到邮箱','data-export-type="email"'],
+      ['export-adp','导出当前员工 ADP','data-action="export-csv"'],
+      ['export-batch-adp','批量导出 ADP','export-batch-adp'],
+      ['export-batch-detail','批量导出薪资明细','payrollBatchExportStart'],
+      ['print-detail','打印薪资明细','btn-employees-detail-print'],
+    ]),
+    ...from('src/team/payroll/payroll-declaration-settings.ts',[
+      ['create-declaration','薪资声明 · 新增语言模板','data-declaration-new'],
+      ['edit-declaration','薪资声明 · 修改草稿','data-declaration-family'],
+      ['save-declaration','薪资声明 · 保存草稿','data-declaration-save'],
+      ['publish-declaration','薪资声明 · 保存并发布','data-declaration-publish'],
+      ['version-declaration','薪资声明 · 创建新版本','data-declaration-new-version'],
+      ['delete-declaration','薪资声明 · 删除草稿','data-declaration-delete'],
+      ['retire-declaration','薪资声明 · 停用模板','data-declaration-retire'],
+      ['assign-declaration','薪资声明 · 分配员工','data-declaration-assign'],
+    ]),
+    ...from('src/team/payroll/payroll-schedule-controller.ts',[
+      ['create-pay-schedule','发薪周期 · 新增规则（演示）','data-add'],
+      ['edit-pay-schedule','发薪周期 · 编辑规则（演示）','data-edit'],
+      ['delete-pay-schedule','发薪周期 · 删除规则（演示）','data-delete'],
+    ]),
+  ],
+  '/team/roles-employees':[
+    ...from('src/team/employees/employees-template.html',[
     ['create-employee','新增员工','btn-add-employee'],['save-employee','保存员工信息','btn-submit-employee'],['delete-employee','删除员工','btn-employee-delete-confirm'],['create-role','新增岗位','btn-add-role-manage'],
+    ]),
+    ...from('src/team/employees/legacy/employees.js.txt',[
+      ['edit-employee','编辑员工','data-act="edit"'],['edit-role','编辑岗位','data-act="edit-role"'],
+    ]),
+  ],
+  '/team/tips/details':from('src/team/tips/templates/details.html',[
+    ['refresh-tip-data','更新小费数据','confirmTipDataUpdate()'],
+    ['confirm-allocation','确认分配','confirmDetailAllocation()'],
+    ['confirm-payout','确认已发放','submitDetailPayout()'],
+  ]),
+  '/team/tips/distribution':from('src/team/tips/templates/distribution.html',[
+    ['batch-allocate','批量分配小费','openTipAllocationModal()'],
+    ['cancel-allocation','取消分配','doCancelAllocate()'],
+    ['export-pdf','导出结果 PDF',"exportAs('pdf')"],
+    ['export-csv','导出结果 CSV',"exportAs('csv')"],
+    ['email-result','发送结果到邮箱','openEmailModal()'],
   ]),
   '/team/tips/rules':from('dist/TipOut/rules.html',[
     ['create','新建分配规则','openAddRuleModal()'],['edit','编辑分配规则','rule-add.html?mode=edit'],['copy','复制分配规则','copyRule(this)'],['delete','删除分配规则','deleteRule(this)'],
@@ -85,3 +147,4 @@ export const additionalPageActions:Record<string,ActionRegistration[]> = {
     ['create','新增自助餐规则','createRule'],['edit','编辑自助餐规则','data-edit'],['copy','复制自助餐规则','data-copy'],['toggle','启用 / 禁用自助餐规则','data-toggle'],['delete','删除自助餐规则','data-delete'],
   ]),
 };
+export const additionalPageActions=applyActionGroups(sourcePageActions);

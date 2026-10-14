@@ -1,0 +1,51 @@
+import assert from 'node:assert/strict';
+import { buildCenterCatalog, pageKey, actionKey } from '../src/permissions/center-catalog';
+import { renderPermissionEditor } from '../src/permissions/center-editor';
+import { roleAccess, resolveAccess, type Access, type CenterState } from '../src/permissions/center-domain';
+import { persistCenterChange } from '../src/permissions/center-persistence';
+const catalog=buildCenterCatalog(),path='/team/roles-employees',page=pageKey(path),grants:Record<string,Access>={[page]:'read'};
+let parent=catalog.resources.get(page)?.parent;while(parent){grants[parent]='read';parent=catalog.resources.get(parent)?.parent;}
+const role={id:'r',name:'统一授权测试',description:'',system:false,grants};
+const options={catalog,page,group:'',preview:false,readonly:false,staff:false,value:(k:string)=>roleAccess(role,k,catalog.resources),own:(k:string)=>grants[k]??'hidden',search:''} as const;
+let html=renderPermissionEditor(options);
+assert.match(html,/员工管理/,'Same-object content and editing must be represented by a single employee management row');
+assert.doesNotMatch(html,/<h3>页面内容<\/h3>|<h3>页面操作权限<\/h3>/);
+const {authorizationRows,authorizationSelection,applyAuthorization}=await import('../src/permissions/center-authorization');
+const rows=authorizationRows(catalog,page),employee=rows.find(r=>r.title==='员工管理')!,position=rows.find(r=>r.title==='岗位管理')!;
+assert.ok(employee&&position);assert.equal(employee.editKeys.length,2);assert.ok(employee.editKeys.includes(actionKey(path,'save-employee')));
+const own=(k:string)=>grants[k]??'hidden';
+assert.equal(authorizationSelection(employee,own),'hidden');
+applyAuthorization(grants,employee,'read');assert.equal(authorizationSelection(employee,own),'read');
+assert.equal(options.value(employee.contentKey),'read');for(const k of employee.editKeys)assert.equal(options.value(k),'hidden');
+html=renderPermissionEditor({...options,preview:true});assert.match(html,/员工管理|可见不可编辑/);assert.doesNotMatch(html,/data-demo/);
+applyAuthorization(grants,employee,'edit');assert.equal(authorizationSelection(employee,own),'edit');
+for(const k of employee.editKeys)assert.equal(options.value(k),'edit');assert.equal(own(position.contentKey),'hidden');
+html=renderPermissionEditor({...options,preview:true});assert.equal((html.match(/data-demo/g)??[]).length,1);assert.doesNotMatch(html,/保存员工信息/);
+applyAuthorization(grants,employee,'hidden');for(const k of [employee.contentKey,...employee.editKeys])assert.equal(own(k),'hidden');
+html=renderPermissionEditor({...options,preview:true});assert.doesNotMatch(html,/员工管理|员工记录|data-demo/);
+grants[employee.contentKey]='read';grants[employee.editKeys[0]]='edit';assert.equal(authorizationSelection(employee,own),'mixed');
+const before=JSON.stringify(grants);html=renderPermissionEditor(options);assert.match(html,/部分配置，需复核/);assert.equal(JSON.stringify(grants),before);
+applyAuthorization(grants,employee,'edit');grants[page]='hidden';assert.equal(authorizationSelection(employee,own),'edit');for(const k of employee.editKeys)assert.equal(options.value(k),'hidden');
+grants[page]='read';for(const k of employee.editKeys)assert.equal(options.value(k),'edit');
+const stores=[{id:'a',title:'A',brand:'b',region:'e'},{id:'b',title:'B',brand:'b',region:'e'}];
+const state:CenterState={schema:1,navigationVersion:1,version:0,roles:[role],logs:[],employees:[{id:'e',name:'测试',email:'a@example.com',status:'enabled',bindings:[{id:'b',roleId:'r',scope:{mode:'stores',ids:['a','b']}}],overrides:{a:{}}}]};
+const overrides=state.employees[0].overrides.a;
+assert.equal(authorizationSelection(employee,()=> 'inherit'),'inherit');
+applyAuthorization(overrides,employee,'read');for(const k of employee.editKeys){assert.equal(resolveAccess(state,'e','a',k,stores,catalog.resources),'hidden');assert.equal(resolveAccess(state,'e','b',k,stores,catalog.resources),'edit');}
+delete overrides[employee.editKeys[0]];assert.equal(authorizationSelection(employee,k=>overrides[k]??'inherit'),'mixed');
+applyAuthorization(overrides,employee,'inherit');assert.deepEqual(overrides,{});for(const k of employee.editKeys)assert.equal(resolveAccess(state,'e','a',k,stores,catalog.resources),'edit');
+assert.throws(()=>applyAuthorization(grants,employee,'bogus' as Access),/授权状态无效/);assert.equal(authorizationSelection(employee,own),'edit');
+let stored=JSON.stringify(state);const storage={getItem:()=>stored,setItem:(_k:string,v:string)=>{stored=v;}};
+persistCenterChange(storage,'test',state,0,'r','更新角色权限','测试',catalog.resources);assert.equal(JSON.parse(stored).roles[0].grants[employee.contentKey],'read');
+const payroll=pageKey('/team/payroll-report'),payrollRows=authorizationRows(catalog,payroll),basic=payrollRows.find(r=>r.contentKey.endsWith(':employee-info'))!;
+assert.equal(basic.editKeys.length,1);assert.ok(payrollRows.every(r=>!r.editKeys.some(k=>/export|publish|print|email/.test(k))));
+const amount=catalog.resources.get('field:/team/payroll-report:salary-amount')!;
+assert.ok(!payrollRows.some(r=>r.contentKey===amount.key),'Read-only sensitive fields must not gain fake editing');
+const allRows=[...catalog.resources.values()].filter(r=>r.type==='page').flatMap(r=>authorizationRows(catalog,r.key));
+assert.equal(allRows.length,30);assert.equal(allRows.reduce((n,r)=>n+r.editKeys.length,0),33);
+assert.equal(new Set(allRows.flatMap(r=>r.editKeys)).size,33,'One action cannot belong to different object authorizations');
+const pdf=actionKey('/team/payroll-report','export-detail-pdf');grants[pdf]='edit';applyAuthorization(grants,employee,'hidden');assert.equal(grants[pdf],'edit','Independent actions must retain raw grants');
+for(const row of allRows){
+  assert.ok(row.editKeys.length>0);assert.ok(catalog.resources.has(row.contentKey));for(const k of row.editKeys)assert.equal(catalog.resources.get(k)?.type,'action');
+}
+console.log('PASS: unified object three-state rows, atomic content/edit/save updates, pure field visibility, mixed legacy review, no implicit grants, inheritance/store isolation, persistence and hidden previews');
