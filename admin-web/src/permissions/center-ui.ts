@@ -77,6 +77,8 @@ export function bindCenterPage(): void {
     const dialog=document.createElement('dialog');dialog.className='pc-dialog';
     dialog.innerHTML=`<form class="pc"><header class="pc-heading"><h2>${esc(title)}</h2><button type="button" data-close aria-label="关闭">×</button></header><div class="pc-form">${body}</div><div class="pc-error" role="alert" data-error></div><footer><button type="button" data-close>取消</button><button type="submit" class="primary">${primary}</button></footer></form>`;
     document.body.append(dialog);dialog.showModal();
+    // Keep native Escape-to-close, without triggering the shell's navigation redraw.
+    dialog.addEventListener('keydown',ev=>{if(ev.key==='Escape')ev.stopPropagation();});
     dialog.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>dialog.close()));
     dialog.addEventListener('click',ev=>{if((ev.target as Element).closest('a[href]'))dialog.close();});
     dialog.addEventListener('close',()=>{dialog.remove();trigger?.focus();});
@@ -125,7 +127,7 @@ export function bindCenterPage(): void {
       if(b.dataset.page){ev.preventDefault();page=b.dataset.page;group='';const list=root.querySelector('[data-scroll="settings"]');if(list)list.scrollTop=0;render();return;}
       if(b.dataset.group){group=b.dataset.group;const list=root.querySelector('[data-scroll="settings"]');if(list)list.scrollTop=0;render();return;}
       if(b.dataset.tab){tab=b.dataset.tab;render();return;}
-      if(b.dataset.grant){const key=b.dataset.grant,v=b.dataset.value as Access|'inherit';if(employeeId){if(!exception||!employee())return;const overrides=employee()!.overrides[storeId]??={};if(v==='inherit')delete overrides[key];else overrides[key]=v;}else if(role()&&v!=='inherit')role()!.grants[key]=v;mark();render();return;}
+      if(b.dataset.grant){ev.preventDefault();const key=b.dataset.grant,v=b.dataset.value as Access|'inherit';if(employeeId){if(!exception||!employee())return;const overrides=employee()!.overrides[storeId]??={};if(v==='inherit')delete overrides[key];else overrides[key]=v;}else if(role()&&v!=='inherit')role()!.grants[key]=v;mark();render();return;}
       if(b.dataset.roleInfo){roleDialog(b.dataset.roleInfo);return;}
       if(b.dataset.copy){roleDialog(b.dataset.copy,true);return;}
       if(b.dataset.members){modal('角色成员',state.employees.filter(e=>e.bindings.some(x=>x.roleId===b.dataset.members)).map(e=>`<p>${link(esc(e.name),`/permissions/staff/${encodeURIComponent(e.id)}`)}</p>`).join('')||'<p>暂无成员</p>',()=>true,'关闭');return;}

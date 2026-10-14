@@ -18,13 +18,14 @@ export function renderPermissionEditor(o: EditorOptions): string {
   const menuStatus=(key:string):string=>`<span class="pc-tag" data-menu-access="${o.value(key)}">${o.value(key)==='hidden'?'不可查看':'可查看'}</span>`;
   const tree = (nodes:MenuNode[],ancestorMatch=false):string => nodes.filter(n=>visible(n,ancestorMatch)).map(n=> {
     const matches=ancestorMatch||!o.search||n.title.toLowerCase().includes(o.search.toLowerCase());
-    return n.children.length ? `<details data-menu-node="${esc(n.id)}" open><summary>${n.key?`<button type="button" class="pc-tree-group-label ${o.page===n.key?'active':''}" data-page="${esc(n.key)}">${esc(n.title)}</button>`:esc(n.title)}</summary>${n.key&&!o.preview?(o.readonly?menuStatus(n.key):control(catalog.resources.get(n.key)!)):''}<div class="pc-tree-children">${tree(n.children,matches)}</div></details>` : `<button type="button" class="pc-tree-item ${o.page===n.key?'active':''}" data-page="${esc(n.key)}">${esc(n.title)}</button>`;
+    return n.children.length ? `<details data-menu-node="${esc(n.id)}" open><summary class="pc-tree-menu-row">${n.key?`<button type="button" class="pc-tree-group-label ${o.page===n.key?'active':''}" data-page="${esc(n.key)}" title="${esc(n.title)}">${esc(n.title)}</button>`:`<span class="pc-tree-group-label" title="${esc(n.title)}">${esc(n.title)}</span>`}${n.key&&!o.preview?`<span class="pc-menu-controls">${o.readonly?menuStatus(n.key):control(catalog.resources.get(n.key)!,true)}</span>`:''}</summary><div class="pc-tree-children">${tree(n.children,matches)}</div></details>` : `<button type="button" class="pc-tree-item ${o.page===n.key?'active':''}" data-page="${esc(n.key)}">${esc(n.title)}</button>`;
   }).join('');
-  function control(resource:Resource): string {
+  function control(resource:Resource, compact=false): string {
     const vals: [Access|'inherit',string][] = resource.type==='action' ? [['hidden','禁止'],['edit','允许']] : resource.type==='setting' ? [['hidden','隐藏'],['read','可见不可编辑'],['edit','可编辑']] : [['hidden','不可查看'],['read','可查看']];
     if(o.staff) vals.unshift(['inherit','跟随角色']);
     const blocked = !!resource.parent && o.value(resource.parent)==='hidden';
-    return `<div class="pc-segment" role="group" aria-label="${esc(resource.title)}权限">${vals.map(([v,l])=>`<button type="button" data-grant="${esc(resource.key)}" data-value="${v}" aria-pressed="${o.own(resource.key)===v}" ${blocked?'disabled title="上级导航不可查看"':''}>${l}</button>`).join('')}</div>`;
+    const tag=compact?'span':'div';
+    return `<${tag} class="pc-segment" role="group" aria-label="${esc(resource.title)}权限">${vals.map(([v,l])=>`<button type="button" data-grant="${esc(resource.key)}" data-value="${v}" aria-pressed="${o.own(resource.key)===v}" ${blocked?'disabled title="上级导航不可查看"':''}>${l}</button>`).join('')}</${tag}>`;
   }
   const page=catalog.resources.get(o.page), groups=(catalog.groups.get(o.page)??[]).filter(g=>!o.preview || g.keys.some(k=>o.value(k)!=='hidden'));
   const active=groups.find(g=>g.id===o.group)??groups[0];

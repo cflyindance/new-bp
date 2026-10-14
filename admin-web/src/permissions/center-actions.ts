@@ -69,8 +69,54 @@ export const additionalPageActions:Record<string,ActionRegistration[]> = {
   '/settings/platform-preset':from('src/config/platform-preset-ui.ts',[
     ['publish','发布配置预设','data-pp-publish'],
   ]),
-  '/team/roles-employees':from('dist/TipOut/employees.html',[
+  '/team/payroll-report':[
+    ...from('src/team/payroll/payroll-template.html',[
+      ['edit-employee','编辑员工信息','open-employee-identity-edit'],
+      ['save-payroll','保存员工薪资','confirm-employee'],
+      ['refresh-attendance','更新考勤数据','refresh-employee-data'],
+      ['export-detail-pdf','导出薪资明细 PDF','data-export-type="pdf"'],
+      ['export-detail-csv','导出薪资明细 CSV','data-export-type="csv"'],
+      ['email-detail','发送薪资明细到邮箱','data-export-type="email"'],
+      ['export-adp','导出当前员工 ADP','data-action="export-csv"'],
+      ['export-batch-adp','批量导出 ADP','export-batch-adp'],
+      ['export-batch-detail','批量导出薪资明细','payrollBatchExportStart'],
+      ['print-detail','打印薪资明细','btn-employees-detail-print'],
+    ]),
+    ...from('src/team/payroll/payroll-declaration-settings.ts',[
+      ['create-declaration','薪资声明 · 新增语言模板','data-declaration-new'],
+      ['edit-declaration','薪资声明 · 修改草稿','data-declaration-family'],
+      ['save-declaration','薪资声明 · 保存草稿','data-declaration-save'],
+      ['publish-declaration','薪资声明 · 保存并发布','data-declaration-publish'],
+      ['version-declaration','薪资声明 · 创建新版本','data-declaration-new-version'],
+      ['delete-declaration','薪资声明 · 删除草稿','data-declaration-delete'],
+      ['retire-declaration','薪资声明 · 停用模板','data-declaration-retire'],
+      ['assign-declaration','薪资声明 · 分配员工','data-declaration-assign'],
+    ]),
+    ...from('src/team/payroll/payroll-schedule-controller.ts',[
+      ['create-pay-schedule','发薪周期 · 新增规则（演示）','data-add'],
+      ['edit-pay-schedule','发薪周期 · 编辑规则（演示）','data-edit'],
+      ['delete-pay-schedule','发薪周期 · 删除规则（演示）','data-delete'],
+    ]),
+  ],
+  '/team/roles-employees':[
+    ...from('src/team/employees/employees-template.html',[
     ['create-employee','新增员工','btn-add-employee'],['save-employee','保存员工信息','btn-submit-employee'],['delete-employee','删除员工','btn-employee-delete-confirm'],['create-role','新增岗位','btn-add-role-manage'],
+    ]),
+    ...from('src/team/employees/legacy/employees.js.txt',[
+      ['edit-employee','编辑员工','data-act="edit"'],['edit-role','编辑岗位','data-act="edit-role"'],
+    ]),
+  ],
+  '/team/tips/details':from('src/team/tips/templates/details.html',[
+    ['refresh-tip-data','更新小费数据','confirmTipDataUpdate()'],
+    ['confirm-allocation','确认分配','confirmDetailAllocation()'],
+    ['confirm-payout','确认已发放','submitDetailPayout()'],
+  ]),
+  '/team/tips/distribution':from('src/team/tips/templates/distribution.html',[
+    ['batch-allocate','批量分配小费','openTipAllocationModal()'],
+    ['cancel-allocation','取消分配','doCancelAllocate()'],
+    ['export-pdf','导出结果 PDF',"exportAs('pdf')"],
+    ['export-csv','导出结果 CSV',"exportAs('csv')"],
+    ['email-result','发送结果到邮箱','openEmailModal()'],
   ]),
   '/team/tips/rules':from('dist/TipOut/rules.html',[
     ['create','新建分配规则','openAddRuleModal()'],['edit','编辑分配规则','rule-add.html?mode=edit'],['copy','复制分配规则','copyRule(this)'],['delete','删除分配规则','deleteRule(this)'],
