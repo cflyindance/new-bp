@@ -9,6 +9,7 @@ import { additionalPageActions } from './center-actions';
 import { FINANCE_REGISTER_AUDIT_PAGES } from '../config/finance-register-audit-pages';
 import { visibilityEntries,contentKey,fieldKey,actionVisibilityDependencies } from './center-visibility';
 import { registerPageSections } from './center-page-sections';
+import { registerClockPages } from './center-clock-pages';
 
 export interface MenuNode { id: string; title: string; key?: string; children: MenuNode[] }
 export interface SettingGroup { id: string; title: string; section: string; keys: string[] }
@@ -95,6 +96,8 @@ export function buildCenterCatalog(): Catalog {
     for(const dependency of requires)if(!['content','field'].includes(resources.get(dependency)?.type??''))throw Error(`操作关联缺少内容：${dependency}`);
     action.requires=[...new Set(requires)];
   }
+  const sections=registerPageSections(resources);
+  registerClockPages(tree,resources,sections);
   for(const r of resources.values())if(r.parent&&!resources.has(r.parent))throw Error(`权限缺少父级：${r.key}`);
-  return {tree:groupStoreManagementMenus(tree),resources,groups,sections:registerPageSections(resources)};
+  return {tree:groupStoreManagementMenus(tree),resources,groups,sections};
 }

@@ -16,29 +16,7 @@ export const TEAM_BREAKS_OVERTIME_SETTING_SEQS = [
   ...TEAM_BREAKS_OVERTIME_BREAK_RULES_SETTING_SEQS,
 ] as const;
 
-export const TEAM_CLOCK_IN_SETTING_SEQS = [72, 73, 71, 67, 68, 69, 241, 70] as const;
-
-/**
- * 员工打卡 · 规则设置分组（按 seq，不依赖 catalog 的 groupKey）。
- * catalog 中这些项仍挂在「考勤与工时 / 角色与员工权限」下，业务页需自定义分组。
- */
-export const TEAM_CLOCK_IN_SETTING_GROUPS = [
-  {
-    key: "clock-hours",
-    title: "开收工与工时",
-    seqs: [72, 73, 71, 67, 241],
-  },
-  {
-    key: "logout-gates",
-    title: "登出门禁",
-    seqs: [68, 69],
-  },
-  {
-    key: "punch-receipt",
-    title: "打卡凭证",
-    seqs: [70],
-  },
-] as const;
+export { TEAM_CLOCK_IN_SETTING_SEQS, TEAM_CLOCK_IN_SETTING_GROUPS } from './team-clock-in-navigation';
 
 export function getTeamSettingItemsBySeqs(
   seqs: readonly number[],

@@ -12,6 +12,7 @@ import {
   writeScopeFilters,
 } from "../auth/session-scope";
 import { getUiLocale, t } from "../i18n";
+import { TEAM_CLOCK_IN_TABS, type ClockTab } from './team-clock-in-navigation';
 import { parseRosterStoreScopeId } from "./team-employee-roster-scope";
 import {
   moduleSettingToggleStorageKey,
@@ -110,7 +111,6 @@ type AttendancePageState = {
   employeeFilter: string;
 };
 
-type ClockTab = "live" | "records" | "rules";
 
 const DEFAULT_EMPLOYEES: RosterEmployee[] = [
   { id: "emp-boss", name: "Boss", role: "Owner" },
@@ -1284,11 +1284,7 @@ export function renderClockLateGraceSettingRowHtml(): string {
 }
 
 function renderClockTabBar(): string {
-  const tabs: { key: ClockTab; label: string }[] = [
-    { key: "live", label: "打卡管理" },
-    { key: "records", label: "考勤记录" },
-    { key: "rules", label: "规则设置" },
-  ];
+  const tabs = TEAM_CLOCK_IN_TABS;
   return `
     <div class="flex shrink-0 gap-1 border-b border-border" role="tablist" aria-label="员工打卡">
       ${tabs
