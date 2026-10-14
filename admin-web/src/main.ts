@@ -4450,6 +4450,10 @@ function normalizeTabModuleHashes(): void {
     replaceHashPath("/team/reports/tip-summary");
     return;
   }
+  if (raw === "/team/shift-scheduling" || raw === "/team/shift-scheduling/") {
+    replaceHashPath("/team/shift-scheduling/schedule");
+    return;
+  }
   if (raw === "/team/clock-in" || raw === "/team/clock-in/") {
     replaceHashPath("/team/clock-in/live");
     return;

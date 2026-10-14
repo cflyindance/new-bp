@@ -1,7 +1,7 @@
 /**
  * 团队管理 · 排班（员工排班表，seq 437）
  * 路径：/team/shift-scheduling
- * Tab：排班表 | 班次 | 规则设置
+ * 二级导航：排班表 | 班次 | 规则设置
  */
 import {
   getScopedFilterOptions,
@@ -1827,32 +1827,6 @@ function ensureShiftListStoreFilter(): void {
   shiftConfigStoreFilter = resolveDefaultScopedStoreId() || readScopeFilters().store || "";
 }
 
-function renderShiftTabBar(): string {
-  const tabs: { key: ShiftPageTab; label: string }[] = [
-    { key: "schedule", label: "排班表" },
-    { key: "shifts", label: "班次" },
-    { key: "rules", label: "规则设置" },
-  ];
-  return `
-    <div class="flex shrink-0 gap-1 border-b border-border" role="tablist" aria-label="员工排班">
-      ${tabs
-        .map((tab) => {
-          const selected = shiftPageTab === tab.key;
-          return `
-        <button type="button" role="tab"
-          data-shift-tab="${tab.key}"
-          class="min-h-10 border-b-2 px-4 text-sm font-medium transition-colors ${
-            selected
-              ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:border-border hover:text-foreground"
-          }"
-          ${selected ? 'aria-selected="true"' : 'aria-selected="false"'}
-        >${tab.label}</button>`;
-        })
-        .join("")}
-    </div>`;
-}
-
 function renderShiftFormDialog(): string {
   if (!shiftFormEditor) return "";
   const isCreate = shiftFormEditor.mode === "create";
@@ -2680,6 +2654,16 @@ export function isTeamShiftSchedulingPath(path: string): boolean {
 }
 
 export function renderTeamShiftSchedulingPage(rulesPanelHtml = ""): string {
+  const path = window.location.hash.replace(/^#/, "").split("?")[0].replace(/\/$/, "");
+  const nextTab: ShiftPageTab = path.endsWith("/shifts") ? "shifts" : path.endsWith("/rules") ? "rules" : "schedule";
+  if (nextTab !== shiftPageTab) {
+    closeShiftFormEditor();
+    closeShiftDeleteConfirm();
+    clearEmployeeFilterOutsideCloser();
+    employeeFilterDropdownOpen = false;
+    employeeFilterSearchQuery = "";
+  }
+  shiftPageTab = nextTab;
   ensureShiftSchedulingPageSaveRegistry();
   ensureShiftTypesBaseline(readShiftTypes());
   ensureAssignmentsBaseline(readAssignments());
@@ -2699,7 +2683,6 @@ export function renderTeamShiftSchedulingPage(rulesPanelHtml = ""): string {
 
   return `
     <div class="team-shift-scheduling-page flex min-h-0 flex-1 flex-col gap-3" data-shift-scheduling-page>
-      ${renderShiftTabBar()}
       ${panel}
     </div>`;
 }
@@ -3221,22 +3204,6 @@ export function bindTeamShiftSchedulingUi(remount: () => void): void {
     remount();
     return;
   }
-
-  root.querySelectorAll("[data-shift-tab]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const tab = btn.getAttribute("data-shift-tab") as ShiftPageTab | null;
-      if (!tab || tab === shiftPageTab) return;
-      if (shiftPageTab === "shifts") {
-        closeShiftFormEditor();
-        closeShiftDeleteConfirm();
-      }
-      clearEmployeeFilterOutsideCloser();
-      employeeFilterDropdownOpen = false;
-      employeeFilterSearchQuery = "";
-      shiftPageTab = tab;
-      remount();
-    });
-  });
 
   if (shiftPageTab === "shifts") {
     bindShiftsPanel(remount);
