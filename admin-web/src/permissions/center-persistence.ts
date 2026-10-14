@@ -1,5 +1,6 @@
 import { validateRole, type CenterState, type Resource } from './center-domain';
 export function validateCenterState(state:CenterState,resources:Map<string,Resource>):void {
+  if(state.navigationVersion!==undefined&&state.navigationVersion!==1)throw Error('导航权限数据版本无效');
   const unique=(ids:string[])=>new Set(ids).size===ids.length;
   if(!unique(state.roles.map(r=>r.id))||!unique(state.employees.map(e=>e.id)))throw Error('角色或员工编号重复');
   for(const role of state.roles)validateRole(state,role);

@@ -26,6 +26,7 @@ const lists = navigation as unknown as Record<string, InputNode[]>;
 const moduleLists: Record<string,string[]> = { marketing:['MARKETING_SHEET_SUBNAV'],promotions:['PROMOTIONS_MGMT_SUBNAV'],members:['MEMBERS_SHEET_SUBNAV','MEMBERS_SHEET_SETTINGS_SUBNAV'],'gift-cards':['GIFT_CARDS_SHEET_SUBNAV'],'reports-finance':['REPORTS_SHEET_SUBNAV'],'finance-center':['FINANCE_SHEET_SUBNAV','FINANCE_SHEET_SETTINGS_SUBNAV'],'print-templates':['PRINT_SHEET_SUBNAV'],reservations:['RESERVATIONS_SHEET_SUBNAV'] };
 const childLists: Record<string,string> = { 'pcm-brand-products':'BRAND_PRODUCTS_SUBNAV','pcm-brand-menu':'BRAND_MENU_SUBNAV','pcm-store-mgmt':'STORE_MENU_SUBNAV','team-tips':'TIPS_MANAGEMENT_SUBNAV','team-reports':'TEAM_REPORTS_SUBNAV','dm-hardware':'DEVICE_MANAGEMENT_HARDWARE_SUBNAV' };
 export const pageKey = (path: string) => `page:${path}`;
+export const navigationKey = (moduleId: string, id: string) => `navigation:${moduleId}:${id}`;
 export const actionKey = (path: string, id: string) => `action:${path}:${id}`;
 export const settingKey = (path: string, seq: number) => `setting:${path}:${seq}`;
 export const auditedActions: Record<string, [string,string][]> = {
@@ -36,13 +37,13 @@ export const auditedActions: Record<string, [string,string][]> = {
 const label = (s: string) => s.length > 2 && s.endsWith('设置') ? s.slice(0,-2) : s;
 export function buildCenterCatalog(): Catalog {
   const resources = new Map<string, Resource>(), groups = new Map<string, SettingGroup[]>();
-  const convert = (item: InputNode, moduleKey: string): MenuNode => {
+  const convert = (item: InputNode, parent: string, moduleId: string): MenuNode => {
     const children = item.sidebarChildren ?? item.children ?? (item.id==='fin-register-audit' ? FINANCE_REGISTER_AUDIT_PAGES.map(p=>({title:p.title,path:p.path})) : lists[childLists[item.id ?? '']]) ?? [];
-    const node: MenuNode = { id:item.id ?? item.path,title:item.title,children:children.map(c => convert(c,moduleKey)) };
-    if (!children.length) {
-      node.key = pageKey(item.path);
-      resources.set(node.key,{key:node.key,title:item.title,type:'page',parent:moduleKey,path:item.path});
-    }
+    const id=item.id ?? item.path;
+    const key=children.length ? navigationKey(moduleId,id) : pageKey(item.path);
+    if(resources.has(key))throw Error(`重复的菜单权限：${key}`);
+    resources.set(key,{key,title:item.title,type:children.length?'navigation':'page',parent,path:item.path});
+    const node: MenuNode = { id,title:item.title,key,children:children.map(c => convert(c,key,moduleId)) };
     return node;
   };
   const tree = navigation.NAV_MODULES.map(m => {
@@ -50,7 +51,7 @@ export function buildCenterCatalog(): Catalog {
     const title=m.id==='group-store-list'?`${m.title} · 集团视角`:m.id==='brand-store-list'?`${m.title} · 品牌视角`:m.title;
     resources.set(key,{key,title,type:'module'});
     const children = moduleLists[m.id]?.flatMap(k => lists[k] ?? []) ?? m.children;
-    return {id:m.id,title:m.title,key,children:children.map(c => convert(c,key))};
+    return {id:m.id,title:m.title,key,children:children.map(c => convert(c,key,m.id))};
   });
   for (const hub of Object.values(MODULE_SETTINGS_BY_PATH)) {
     const key = pageKey(hub.settingsPath);

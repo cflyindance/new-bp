@@ -1,13 +1,13 @@
 /** Store-scoped, framework-free permission semantics. No network or implicit grants. */
 export type Access = "hidden" | "read" | "edit";
-export interface Resource { key: string; title: string; type: "module" | "page" | "action" | "setting"; parent?: string; path?: string; seq?: number }
+export interface Resource { key: string; title: string; type: "module" | "navigation" | "page" | "action" | "setting"; parent?: string; path?: string; seq?: number }
 export interface Store { id: string; title: string; brand: string; region: string }
 export interface Scope { mode: "stores" | "brands" | "regions"; ids: string[] }
 export interface Role { id: string; name: string; description: string; system: boolean; grants: Record<string, Access> }
 export interface Binding { id: string; roleId: string; scope: Scope }
 export interface Employee { id: string; name: string; email: string; status: "unopened" | "pending" | "revoked" | "enabled" | "disabled"; bindings: Binding[]; overrides: Record<string, Record<string, Access>>; migrationReview?: boolean }
 export interface Audit { id: string; at: string; actor: string; objectId: string; action: string; before: string; after: string }
-export interface CenterState { schema: 1; version: number; roles: Role[]; employees: Employee[]; logs: Audit[] }
+export interface CenterState { schema: 1; navigationVersion?: 1; version: number; roles: Role[]; employees: Employee[]; logs: Audit[] }
 export const rank: Record<Access, number> = { hidden: 0, read: 1, edit: 2 };
 export function scopeMatches(scope: Scope, store: Store): boolean {
   return scope.ids.includes(scope.mode === "stores" ? store.id : scope.mode === "brands" ? store.brand : store.region);
