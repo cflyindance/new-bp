@@ -5,7 +5,7 @@ const {chromium}=createRequire(path.join(process.env.TIPOUT_BROWSER_PACKAGES,'pa
  const browser=await chromium.launch({channel:'chrome',headless:true});
  try {
   const page=await browser.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
-  await page.goto('http://127.0.0.1:65021/');
+  await page.goto(process.env.TIPOUT_PREVIEW_URL || 'http://127.0.0.1:65021/');
   await page.evaluate(async()=>{
    const {mountLegacyTipsRuntime}=await import('/src/team/tips/tips-legacy-runtime.ts');
    const {renderTipsTemplate}=await import('/src/team/tips/tips-templates.ts');
