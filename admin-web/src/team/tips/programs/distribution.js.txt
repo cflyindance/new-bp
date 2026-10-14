@@ -1321,6 +1321,13 @@ var ALLOC_KEY = 'tipout_allocated';
     function handleAllocationHoursDetailOverlay(event) { if (event.target === event.currentTarget) closeAllocationHoursDetail(); }
 
     function renderSummaryViews() {
+      if (window.TipOutScenarioSource && window.TipOutScenarioSource.withReadCache) {
+        return window.TipOutScenarioSource.withReadCache(renderSummaryViewsFromFacts);
+      }
+      return renderSummaryViewsFromFacts();
+    }
+
+    function renderSummaryViewsFromFacts() {
       if (window.TipOutScenarioList) window.TipOutScenarioList.mount();
       var dailyRows = activeSummaryView === 'employee' ? buildEmployeeSummaryDailyDataset() : buildDailyDataset(getFilteredEmployees());
       var allocatedDates = getAllocatedDates();
@@ -1744,7 +1751,7 @@ var ALLOC_KEY = 'tipout_allocated';
       }
       syncSummaryViewUi();
       if (!restoreSummaryUiState()) {
-        updateEmployeeFilter();
+        updateEmployeeFilter(true);
         renderDailySummaryList();
       }
     }

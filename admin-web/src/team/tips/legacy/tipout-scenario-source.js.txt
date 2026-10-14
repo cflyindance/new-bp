@@ -1,25 +1,38 @@
 /** Page adapter for deterministic demo facts. Never writes business records. */
 (function(root) {
+  // Shared only while one synchronous render reads facts; never retained between edits.
+  var readCache = null;
+  function withReadCache(callback) {
+    if (readCache) return callback();
+    readCache = { rosters: new Map(), days: new Map() };
+    try { return callback(); } finally { readCache = null; }
+  }
   function store() { return String((document.getElementById('storeSelect') || {}).value || '').trim(); }
   function roster(storeName) {
     var directory = root.TipOutRosterDirectory;
     if (!directory) return [];
+    var canonical = directory.canonicalRosterStoreName(storeName);
+    if (readCache && readCache.rosters.has(canonical)) return readCache.rosters.get(canonical);
     // Read without normalizeRoster: viewing demo facts must not edit employee IDs.
     var rows = JSON.parse(root.localStorage.getItem('tipout-employees-roster-v1') || '[]');
-    var canonical = directory.canonicalRosterStoreName(storeName);
-    return rows.filter(function(row) {
+    var result = rows.filter(function(row) {
       return row && row.id && row.active !== false && ['inactive','disabled'].indexOf(String(row.status || '').toLowerCase()) < 0 && directory.canonicalRosterStoreName(row.store) === canonical;
     }).map(function(row) { return { id: String(row.id), name: row.name, role: row.role }; });
+    if (readCache) readCache.rosters.set(canonical, result);
+    return result;
   }
   function day(dateKey, storeName) {
     storeName = storeName || store();
     var storeId = root.TipOutRosterDirectory.canonicalRosterStoreName(storeName);
     if (!storeId) return [];
+    var key = JSON.stringify([storeId, dateKey]);
+    if (readCache && readCache.days.has(key)) return readCache.days.get(key);
     var facts = root.TipOutScenarioData.day({ storeId: storeId, employees: roster(storeName), dateKey: dateKey });
     if (root.TipOutBusinessStatus && root.TipOutBusinessStatus.isDemoClosedDate(dateKey)) facts = facts.map(function(f) {
       return Object.assign({}, f, { closed: true, orders: [], reportedTipEvents: [], salesAmount: 0, orderTips: 0, reportedTips: 0, originalTips: 0, surcharge: 0,
         attendance: { hours: 0, originalHours: 0, effectiveHours: 0, clockStatus: '未打卡', punchSessions: [], adjustment: null } });
     });
+    if (readCache) readCache.days.set(key, facts);
     return facts;
   }
   function employee(name, dateKey, identity) {
@@ -34,5 +47,5 @@
     function sum(field) { return facts.reduce(function(n, f) { return n + Math.round(f[field] * 100); }, 0) / 100; }
     return { sales: sum('salesAmount'), tips: sum('orderTips'), manual: sum('reportedTips'), surcharge: sum('surcharge'), originalTips: sum('originalTips') };
   }
-  root.TipOutScenarioSource = { day: day, employee: employee, totals: totals, store: store, roster: roster };
+  root.TipOutScenarioSource = { day: day, employee: employee, totals: totals, store: store, roster: roster, withReadCache: withReadCache };
 })(window);
