@@ -201,7 +201,11 @@ export const NAV_MODULES: NavModule[] = [
         { id: "team-positions", title: "岗位管理", titleEn: "Positions", path: "/team/roles-employees/roles" },
       ] },
       { id: "team-breaks", title: "休息与加班", path: "/team/breaks-overtime" },
-      { id: "team-clock", title: "员工打卡", path: "/team/clock-in" },
+      { id: "team-clock", title: "员工打卡", path: "/team/clock-in", children: [
+        { id: "team-clock-live", title: "打卡管理", titleEn: "Clock management", path: "/team/clock-in/live" },
+        { id: "team-clock-records", title: "考勤记录", titleEn: "Attendance records", path: "/team/clock-in/records" },
+        { id: "team-clock-rules", title: "规则设置", titleEn: "Clock rules", path: "/team/clock-in/rules" },
+      ] },
       { id: "team-shifts", title: "排班", titleEn: "Shift scheduling", path: "/team/shift-scheduling" },
       { id: "team-tips", title: "小费管理", path: "/team/tips" },
       { id: "team-tax-payroll", title: "薪资管理", titleEn: "Manage Payroll", path: "/team/payroll-report" },

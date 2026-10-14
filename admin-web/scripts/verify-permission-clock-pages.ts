@@ -45,6 +45,7 @@ assert.equal(JSON.parse(saved).roles[0].grants[action],'edit');assert.equal(JSON
 const legacy=structuredClone(state);delete legacy.navigationVersion;for(const k of keys)delete legacy.roles[0].grants[k];
 const migrated=migrateNavigationPermissions(legacy,c.resources,stores);
 for(const k of keys)assert.equal(migrated.roles[0].grants[k],undefined);assert.equal(roleAccess(migrated.roles[0],action,c.resources),'hidden');
-assert.match(readFileSync('src/config/team-clock-in-ui.ts','utf8'),/const tabs = TEAM_CLOCK_IN_TABS/);
+assert.doesNotMatch(readFileSync('src/config/team-clock-in-ui.ts','utf8'),/data-clock-tab=/);
+assert.match(readFileSync('src/config/navigation.ts','utf8'),/team-clock-records/);
 assert.match(readFileSync('src/config/team-clock-in-ui.ts','utf8'),/data-clock-late-grace/);
 console.log('PASS: real clock views, parent/sibling gates, nine isolated settings, filtered previews, legacy default denial, cross-store overrides and persistence');

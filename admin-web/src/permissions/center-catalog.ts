@@ -39,7 +39,8 @@ const label = (s: string) => s.length > 2 && s.endsWith('设置') ? s.slice(0,-2
 export function buildCenterCatalog(): Catalog {
   const resources = new Map<string, Resource>(), groups = new Map<string, SettingGroup[]>();
   const convert = (item: InputNode, parent: string, moduleId: string): MenuNode => {
-    const children = item.sidebarChildren ?? item.children ?? (item.id==='fin-register-audit' ? FINANCE_REGISTER_AUDIT_PAGES.map(p=>({title:p.title,path:p.path})) : lists[childLists[item.id ?? '']]) ?? [];
+    // Clock views retain their existing permission keys and are registered by registerClockPages.
+    const children = item.path === '/team/clock-in' ? [] : item.sidebarChildren ?? item.children ?? (item.id==='fin-register-audit' ? FINANCE_REGISTER_AUDIT_PAGES.map(p=>({title:p.title,path:p.path})) : lists[childLists[item.id ?? '']]) ?? [];
     const id=item.id ?? item.path;
     const key=children.length ? navigationKey(moduleId,id) : pageKey(item.path);
     if(resources.has(key))throw Error(`重复的菜单权限：${key}`);

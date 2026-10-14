@@ -2587,7 +2587,7 @@ function renderPcSheetDarkSubnav(
       const prefix = item.activePrefix ?? item.path;
       const inGroup = path === prefix || path.startsWith(`${prefix}/`);
       const expanded = getTertiarySidebarGroupExpanded(item.id, path, inGroup);
-      const parentSelected = item.path === activeSub && item.id !== "team-roles";
+      const parentSelected = item.path === activeSub && !["team-roles", "team-clock"].includes(item.id);
       const childrenId = `pcm-sheet-tertiary-children-${item.id}`;
       const activeChild = getCollapsibleChildActivePath(path, item);
       const l3Label = `${pick(item.title, item.titleEn)}${t("nav.tertiarySuffix")}`.replace(/"/g, "&quot;");
@@ -2609,7 +2609,7 @@ function renderPcSheetDarkSubnav(
               .map((c) => {
                 const selected = c.path === activeChild;
                 return `
-            <li>
+            <li${c.id === "team-clock-live" ? ' data-future-version-diff' : ""}>
               <a href="#${c.path}"
                 class="flex min-h-9 items-center rounded-md px-2 py-1.5 text-xs sm:text-sm transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-active focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar ${
                   selected ? SBR_ACTIVE_FM : SBR_MUTED_ROW
@@ -4450,6 +4450,10 @@ function normalizeTabModuleHashes(): void {
     replaceHashPath("/team/reports/tip-summary");
     return;
   }
+  if (raw === "/team/clock-in" || raw === "/team/clock-in/") {
+    replaceHashPath("/team/clock-in/live");
+    return;
+  }
   if (raw === "/team/scheduling" || raw === "/team/scheduling/") {
     replaceHashPath("/team/clock-in");
     return;
@@ -4460,7 +4464,7 @@ function normalizeTabModuleHashes(): void {
       return;
     }
     requestTeamClockInRecordsTab();
-    replaceHashPath("/team/clock-in");
+    replaceHashPath("/team/clock-in/records");
     return;
   }
   if (raw === "/menu/tax-types" || raw === "/menu/tax-types/") {
@@ -12955,7 +12959,7 @@ function mount(): void {
     if (!el || !(el instanceof HTMLButtonElement)) return;
     const groupId = el.getAttribute("data-tertiary-sidebar-toggle");
     if (!groupId) return;
-    if (groupId === "team-roles") {
+    if (groupId === "team-roles" || groupId === "team-clock") {
       e.preventDefault();
       setTertiarySidebarGroupExpanded(groupId, el.getAttribute("aria-expanded") !== "true");
       mount();

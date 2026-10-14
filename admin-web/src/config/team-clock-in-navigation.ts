@@ -1,4 +1,4 @@
-/** Shared real tab IDs; these are views of /team/clock-in, not new URL routes. */
+/** Shared view IDs for clock subpages; permission resources retain the /team/clock-in configuration domain. */
 export const TEAM_CLOCK_IN_TABS = [
   {key:'live',label:'打卡管理'},
   {key:'records',label:'考勤记录'},

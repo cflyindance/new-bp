@@ -12,7 +12,7 @@ import {
   writeScopeFilters,
 } from "../auth/session-scope";
 import { getUiLocale, t } from "../i18n";
-import { TEAM_CLOCK_IN_TABS, type ClockTab } from './team-clock-in-navigation';
+import { type ClockTab } from './team-clock-in-navigation';
 import { parseRosterStoreScopeId } from "./team-employee-roster-scope";
 import {
   moduleSettingToggleStorageKey,
@@ -171,7 +171,7 @@ export function requestTeamClockInRecordsTab(): void {
   }
 }
 
-/** 仅「规则设置」Tab 需要页脚保存栏；实时打卡 / 考勤记录为操作与查询，不展示 */
+/** 仅「规则设置」子页面需要页脚保存栏；实时打卡 / 考勤记录为操作与查询，不展示 */
 export function shouldShowTeamClockInSaveBar(): boolean {
   return clockTab === "rules";
 }
@@ -1283,29 +1283,6 @@ export function renderClockLateGraceSettingRowHtml(): string {
     </li>`;
 }
 
-function renderClockTabBar(): string {
-  const tabs = TEAM_CLOCK_IN_TABS;
-  return `
-    <div class="flex shrink-0 gap-1 border-b border-border" role="tablist" aria-label="员工打卡">
-      ${tabs
-        .map((tab) => {
-          const selected = clockTab === tab.key;
-          return `
-        <button type="button" role="tab"
-          data-clock-tab="${tab.key}"
-          ${tab.key === "live" ? "data-future-version-diff" : ""}
-          class="min-h-10 border-b-2 px-4 text-sm font-medium transition-colors ${
-            selected
-              ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:border-border hover:text-foreground"
-          }"
-          ${selected ? 'aria-selected="true"' : 'aria-selected="false"'}
-        >${tab.label}</button>`;
-        })
-        .join("")}
-    </div>`;
-}
-
 function renderLiveClockPanel(): string {
   ensureDemoAssignmentsForDate(pageState.date);
   const settings = readSettings();
@@ -1475,6 +1452,15 @@ function renderAttendanceRecordsPanel(): string {
 }
 
 export function renderTeamClockInPage(rulesPanelHtml = ""): string {
+  const section = location.hash.split("?")[0].split("/").pop();
+  const nextTab: ClockTab = section === "records" ? "records" : section === "rules" ? "rules" : "live";
+  if (nextTab !== clockTab) {
+    adjustDialog = null;
+    historyDialog = null;
+    breakDialog = null;
+    recordsNoticeDialog = nextTab === "records";
+  }
+  clockTab = nextTab;
   consumeClockTabFromStorage();
   const livePanel = clockTab === "live" ? renderLiveClockPanel() : "";
   const recordsPanel = clockTab === "records" ? renderAttendanceRecordsPanel() : "";
@@ -1493,7 +1479,7 @@ export function renderTeamClockInPage(rulesPanelHtml = ""): string {
 
   return `
     <div class="team-clock-in-page flex min-h-0 flex-1 flex-col gap-4" data-team-clock-in-page>
-      ${renderClockTabBar()}
+      <h1 class="text-xl font-semibold text-foreground">${clockTab === "live" ? "打卡管理" : clockTab === "records" ? "考勤记录" : "规则设置"}</h1>
       ${livePanel}
       ${recordsPanel}
       ${rulesPanel}
@@ -1579,20 +1565,6 @@ export function bindTeamClockInUi(remount: () => void): void {
   const root = document.querySelector<HTMLElement>("[data-team-clock-in-page]");
   if (!root || root.dataset.clockInBound === "1") return;
   root.dataset.clockInBound = "1";
-
-  root.querySelectorAll("[data-clock-tab]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const tab = btn.getAttribute("data-clock-tab") as ClockTab;
-      if (!tab) return;
-      if (tab === "records") recordsNoticeDialog = true;
-      if (tab === clockTab) {
-        if (tab === "records") remount();
-        return;
-      }
-      clockTab = tab;
-      remount();
-    });
-  });
 
   bindAttendanceRecordsPanel(root, remount);
   bindCompactStoreFilter(root, remount);
