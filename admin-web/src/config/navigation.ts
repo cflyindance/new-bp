@@ -968,7 +968,7 @@ export interface ProductCenterSidebarSubItem {
   activePrefix?: string;
   /** 多个可匹配前缀（如兼容旧路由） */
   activePrefixes?: string[];
-  /** 若存在：一级行点击仅展开/收起，子链进入路由（同侧栏 `subNavPlacement: sidebar`） */
+  /** 若存在：菜单整行点击进入覆盖父层的子导航滑层；返回逐层恢复，叶子进入路由。 */
   sidebarChildren?: ProductCenterSidebarSubchild[];
 }
 

@@ -2516,6 +2516,86 @@ const PCM_SHEET_GROUP_CHEVRON = `<svg xmlns="http://www.w3.org/2000/svg" width="
 /** 当前侧滑层的递归下钻路径。仅保存在内存中，刷新或路由切换不会恢复。 */
 let activeTertiarySheetTrail: string[] = [];
 
+/** Navigation-only state: every submenu replaces the current sheet at the same top edge. */
+let navigationSheetStack: { hubId: string; levels: Array<{ controls: string; title: string }> } | null = null;
+
+function mountNavigationSubmenuSheet(app: HTMLElement): void {
+  const state = navigationSheetStack;
+  if (!state?.levels.length) return;
+  const sheet = Array.from(app.querySelectorAll<HTMLElement>("[data-hub-sheet-root]"))
+    .find((el) => el.dataset.hubSheetRoot === state.hubId && el.getAttribute("aria-hidden") === "false");
+  if (!sheet) {
+    navigationSheetStack = null;
+    return;
+  }
+  const level = state.levels[state.levels.length - 1];
+  const source = Array.from(sheet.querySelectorAll<HTMLElement>("[id]"))
+    .find((el) => el.id === level.controls);
+  if (!source) {
+    navigationSheetStack = null;
+    return;
+  }
+  const contents = source.cloneNode(true) as HTMLElement;
+  contents.removeAttribute("id");
+  contents.removeAttribute("aria-hidden");
+  contents.className = "navigation-submenu-content space-y-1";
+  contents.querySelectorAll<HTMLElement>("[tabindex='-1']").forEach((el) => el.removeAttribute("tabindex"));
+  const frame = document.createElement("div");
+  frame.className = "flex min-h-0 flex-1 flex-col bg-sidebar";
+  frame.dataset.navigationSubmenuSheet = state.hubId;
+  frame.innerHTML = `
+    <div class="flex h-14 shrink-0 items-center gap-1 ${SBR_DIVIDER_B} px-2">
+      <button type="button" data-navigation-sheet-back aria-label="${escapeHtml(state.levels.length > 1 ? `返回${state.levels[state.levels.length - 2].title}` : "返回上一级菜单")}"
+        class="inline-flex size-10 shrink-0 items-center justify-center rounded-lg ${SBR_ICON_BTN} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-active">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+      </button>
+      <span class="min-w-0 truncate text-sm font-semibold ${SBR_TITLE}">${escapeHtml(level.title)}</span>
+    </div>
+    <nav class="sidebar-primary-nav-scroll min-h-0 flex-1 overflow-y-auto px-2 py-3" aria-label="${escapeHtml(level.title)}子导航"></nav>`;
+  frame.querySelector("nav")!.append(contents);
+  sheet.replaceChildren(frame);
+  sheet.setAttribute("aria-label", `${level.title}子导航`);
+}
+
+function bindNavigationSubmenuSheets(app: HTMLElement): void {
+  app.addEventListener("click", (event) => {
+    const target = event.target as HTMLElement;
+    const sheet = target.closest<HTMLElement>("[data-hub-sheet-root]");
+    if (!sheet) return;
+    const back = target.closest("[data-navigation-sheet-back]");
+    if (back) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      navigationSheetStack?.levels.pop();
+      if (!navigationSheetStack?.levels.length) navigationSheetStack = null;
+      mount();
+      return;
+    }
+    const button = target.closest<HTMLButtonElement>("button[aria-controls]");
+    if (button && sheet.contains(button)) {
+      const controls = button.getAttribute("aria-controls");
+      const children = Array.from(sheet.querySelectorAll<HTMLElement>("[id]"))
+        .find((el) => el.id === controls);
+      if (controls && children?.querySelector("a[href], button")) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        const hubId = sheet.dataset.hubSheetRoot!;
+        if (navigationSheetStack?.hubId !== hubId) navigationSheetStack = { hubId, levels: [] };
+        const title = button.querySelector("span")?.textContent?.trim() || button.textContent?.trim() || "";
+        navigationSheetStack!.levels.push({ controls, title });
+        activeTertiarySheetTrail = [];
+        clearAllHubSheetSearch();
+        mount();
+        return;
+      }
+    }
+    if (navigationSheetStack && target.closest("a[href^='#']")) {
+      // Keep the submenu visible while the native hash navigation opens its leaf page.
+      event.stopImmediatePropagation();
+    }
+  }, { capture: true });
+}
+
 type PcSheetDarkSubnavOpts = {
   /** 品牌商品：显式「商品管理 → 二级 / 分组下 → 三级」层级与 aria */
   brandProductSecondLevel?: boolean;
@@ -2586,7 +2666,7 @@ function renderPcSheetDarkSubnav(
     if (children?.length) {
       const prefix = item.activePrefix ?? item.path;
       const inGroup = path === prefix || path.startsWith(`${prefix}/`);
-      const expanded = item.id === "team-shifts" ? false : getTertiarySidebarGroupExpanded(item.id, path, inGroup);
+      const expanded = false;
       const parentSelected = item.path === activeSub && !["team-roles", "team-clock"].includes(item.id);
       const childrenId = `pcm-sheet-tertiary-children-${item.id}`;
       const activeChild = getCollapsibleChildActivePath(path, item);
@@ -2663,9 +2743,9 @@ function renderProductCenterMainSecondarySheet(hash: string, open: boolean): str
     ? "translate-x-0 pointer-events-auto opacity-100"
     : "translate-x-full pointer-events-none opacity-0";
   const chevronBack = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>`;
-  const bpMgmtExpanded = getPcmSheetBrandProductsMgmtExpanded(hash);
-  const brMenuExpanded = getPcmSheetBrandMenuExpanded(hash);
-  const storeMgmtExpanded = getPcmSheetStoreMenuExpanded(hash);
+  const bpMgmtExpanded = false;
+  const brMenuExpanded = false;
+  const storeMgmtExpanded = false;
   /** 与「品牌菜单」「门店管理」同：不设额外水平 padding（由外层 nav `px-2` 统一）；首块无上分隔线 */
   const pcmHubSectionFirst = "pt-0";
   const pcmHubSectionRest = `${SBR_DIVIDER_T} pt-3`;
@@ -3316,35 +3396,6 @@ function renderNavModuleSecondarySheet(
     open && skipEnterAnimation ? "" : SIDEBAR_SECONDARY_SHEET_TRANSITION;
   const chevronBack = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>`;
   let subnav = getFilteredNavModuleSheetSubnav(m);
-  const schedulingChildren = m.id === "team" && activeTertiarySheetTrail[0] === "team-shifts"
-    ? subnav.find((item) => item.id === "team-shifts")?.sidebarChildren
-    : undefined;
-  if (schedulingChildren?.length) {
-    return `
-      <div id="${m.id}-secondary-sheet"
-        class="absolute inset-0 z-[32] flex flex-col ${SBR_DIVIDER_L} bg-sidebar ${SBR_SHEET_SHADOW} ${sheetTransition} ${sheetClass}"
-        ${open ? "" : "inert"} aria-hidden="${open ? "false" : "true"}"
-        role="dialog" aria-modal="${open ? "true" : "false"}" aria-label="排班二级导航"
-        data-hub-sheet-root="${m.id}" data-scheduling-navigation-sheet>
-        <div class="flex h-14 shrink-0 items-center gap-1 ${SBR_DIVIDER_B} px-2">
-          <button type="button" data-tertiary-sheet-back aria-label="返回团队管理"
-            class="inline-flex size-10 shrink-0 items-center justify-center rounded-lg ${SBR_ICON_BTN} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-active">
-            ${chevronBack}
-          </button>
-          <span class="min-w-0 truncate text-sm font-semibold ${SBR_TITLE}">排班</span>
-        </div>
-        <nav class="sidebar-primary-nav-scroll min-h-0 flex-1 overflow-y-auto px-2 py-3" aria-label="排班二级导航">
-          <ul class="space-y-1" role="list">
-            ${schedulingChildren.map((child) => {
-              const selected = hash === child.path || hash.startsWith(`${child.path}/`);
-              return `<li><a href="#${child.path}" data-navigation-sheet-leaf
-                class="flex min-h-11 items-center rounded-lg px-3 py-2 text-sm transition-colors duration-200 ${selected ? SBR_ACTIVE_FM : SBR_MUTED_ROW} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-active"
-                ${selected ? 'aria-current="page"' : ""}>${pick(child.title, child.titleEn)}</a></li>`;
-            }).join("")}
-          </ul>
-        </nav>
-      </div>`;
-  }
   const searchQ = isHubSheetSearchEnabled(m.id) ? getHubSheetSearchQuery(m.id) : "";
   const searchActive = shouldEnterHubSearch(searchQ);
   if (searchActive) {
@@ -12359,6 +12410,9 @@ function mount(): void {
       ${renderCloudProductRouteNoticeDialog()}
     </div>
   `;
+
+  mountNavigationSubmenuSheet(app);
+  bindNavigationSubmenuSheets(app.firstElementChild as HTMLElement);
 
   const payrollRoot = app.querySelector<HTMLElement>("[data-team-payroll-root]");
   if (payrollRoot) {
