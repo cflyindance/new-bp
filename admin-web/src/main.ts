@@ -2586,7 +2586,7 @@ function renderPcSheetDarkSubnav(
     if (children?.length) {
       const prefix = item.activePrefix ?? item.path;
       const inGroup = path === prefix || path.startsWith(`${prefix}/`);
-      const expanded = getTertiarySidebarGroupExpanded(item.id, path, inGroup);
+      const expanded = item.id === "team-shifts" ? false : getTertiarySidebarGroupExpanded(item.id, path, inGroup);
       const parentSelected = item.path === activeSub && !["team-roles", "team-clock"].includes(item.id);
       const childrenId = `pcm-sheet-tertiary-children-${item.id}`;
       const activeChild = getCollapsibleChildActivePath(path, item);
@@ -3316,6 +3316,35 @@ function renderNavModuleSecondarySheet(
     open && skipEnterAnimation ? "" : SIDEBAR_SECONDARY_SHEET_TRANSITION;
   const chevronBack = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>`;
   let subnav = getFilteredNavModuleSheetSubnav(m);
+  const schedulingChildren = m.id === "team" && activeTertiarySheetTrail[0] === "team-shifts"
+    ? subnav.find((item) => item.id === "team-shifts")?.sidebarChildren
+    : undefined;
+  if (schedulingChildren?.length) {
+    return `
+      <div id="${m.id}-secondary-sheet"
+        class="absolute inset-0 z-[32] flex flex-col ${SBR_DIVIDER_L} bg-sidebar ${SBR_SHEET_SHADOW} ${sheetTransition} ${sheetClass}"
+        ${open ? "" : "inert"} aria-hidden="${open ? "false" : "true"}"
+        role="dialog" aria-modal="${open ? "true" : "false"}" aria-label="排班二级导航"
+        data-hub-sheet-root="${m.id}" data-scheduling-navigation-sheet>
+        <div class="flex h-14 shrink-0 items-center gap-1 ${SBR_DIVIDER_B} px-2">
+          <button type="button" data-tertiary-sheet-back aria-label="返回团队管理"
+            class="inline-flex size-10 shrink-0 items-center justify-center rounded-lg ${SBR_ICON_BTN} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-active">
+            ${chevronBack}
+          </button>
+          <span class="min-w-0 truncate text-sm font-semibold ${SBR_TITLE}">排班</span>
+        </div>
+        <nav class="sidebar-primary-nav-scroll min-h-0 flex-1 overflow-y-auto px-2 py-3" aria-label="排班二级导航">
+          <ul class="space-y-1" role="list">
+            ${schedulingChildren.map((child) => {
+              const selected = hash === child.path || hash.startsWith(`${child.path}/`);
+              return `<li><a href="#${child.path}" data-navigation-sheet-leaf
+                class="flex min-h-11 items-center rounded-lg px-3 py-2 text-sm transition-colors duration-200 ${selected ? SBR_ACTIVE_FM : SBR_MUTED_ROW} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-active"
+                ${selected ? 'aria-current="page"' : ""}>${pick(child.title, child.titleEn)}</a></li>`;
+            }).join("")}
+          </ul>
+        </nav>
+      </div>`;
+  }
   const searchQ = isHubSheetSearchEnabled(m.id) ? getHubSheetSearchQuery(m.id) : "";
   const searchActive = shouldEnterHubSearch(searchQ);
   if (searchActive) {
