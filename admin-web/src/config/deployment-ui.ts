@@ -32,6 +32,19 @@ import type {
 let listFilterStatus: DeploymentBatchStatus | "" = "";
 
 export const DEPLOYMENT_LOG_PATH = "/settings/deployment-log";
+export const SEASONING_DISTRIBUTION_LOG_PATH = "/brand-products/seasoning-mgmt/distribution-log";
+
+/** 调味独立记录页：尚无调味下发数据来源，默认空，不读取系统模拟记录。 */
+export function renderSeasoningDistributionLogPage(): string {
+  const en = getUiLocale() === "en";
+  return `<section class="rounded-xl border border-border bg-card p-6" aria-label="${en ? "Seasoning distribution log" : "调味下发记录"}" data-seasoning-distribution-log>
+    <h2 class="text-base font-semibold text-card-foreground">${en ? "Distribution log" : "下发记录"}</h2>
+    <div class="flex min-h-64 flex-col items-center justify-center gap-2 text-sm text-muted-foreground" data-seasoning-distribution-empty>
+      <p>${en ? "No seasoning distribution records" : "暂无调味下发记录"}</p>
+    </div>
+  </section>`;
+}
+
 
 function escapeHtml(s: string): string {
   return s
@@ -134,6 +147,7 @@ export function isDeploymentLogPath(path: string): boolean {
 }
 
 export function resolveLegacyDistributionLogRedirect(path: string): string | null {
+  if (path === SEASONING_DISTRIBUTION_LOG_PATH || path === `${SEASONING_DISTRIBUTION_LOG_PATH}/`) return null;
   if (
     path.endsWith("/distribution-log") &&
     path !== DEPLOYMENT_LOG_PATH &&

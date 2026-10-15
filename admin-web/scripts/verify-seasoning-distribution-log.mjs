@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import vm from 'node:vm';
+const source = readFileSync(new URL('../src/config/deployment-ui.ts', import.meta.url), 'utf8');
+const fn = source.match(/export function resolveLegacyDistributionLogRedirect\(path: string\): string \| null \{([\s\S]*?)\n\}/)[1];
+const redirect = vm.runInNewContext('(path) => {' + fn + '}', { DEPLOYMENT_LOG_PATH: '/settings/deployment-log', SEASONING_DISTRIBUTION_LOG_PATH: '/brand-products/seasoning-mgmt/distribution-log' });
+assert.equal(redirect('/brand-products/seasoning-mgmt/distribution-log'), null, '调味下发记录不得跳到系统设置');
+assert.equal(redirect('/brand-products/seasoning-mgmt/distribution-log/'), null);
+assert.equal(redirect('/brand-menu/distribution-log'), '/settings/deployment-log', '其他旧入口保持原映射');
+assert.equal(redirect('/settings/deployment-log'), null);
+assert.match(source, /export function renderSeasoningDistributionLogPage/);
+console.log('seasoning distribution route and empty page verified');

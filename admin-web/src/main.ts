@@ -263,6 +263,8 @@ import {
   bindDeploymentUi,
   isDeploymentLogPath,
   renderDeploymentLogPage,
+  renderSeasoningDistributionLogPage,
+  SEASONING_DISTRIBUTION_LOG_PATH,
   resolveLegacyDistributionLogRedirect,
 } from "./config/deployment-ui";
 import { bindDeploymentAutoTrigger, notifyConfigSaved } from "./config/deployment-auto-trigger";
@@ -2682,6 +2684,7 @@ function renderPcSheetDarkSubnav(
             aria-controls="${childrenId}"
           >
             <span class="min-w-0 flex-1 truncate">${pick(item.title, item.titleEn)}</span>
+            ${cloudProductBadgeForNavChild(item.id)}
             <span class="shrink-0 text-sidebar-muted transition-transform duration-200 ${expanded ? "" : "-rotate-90"}">${PCM_SHEET_GROUP_CHEVRON}</span>
           </button>
           <ul id="${childrenId}" class="${l3WrapClass} ${expanded ? "" : "hidden"}" role="list" aria-label="${l3Label}" ${expanded ? "" : 'aria-hidden="true"'}>
@@ -11742,7 +11745,9 @@ function renderMain(): string {
                             : isDeploymentLog
                               ? renderDeploymentLogPage(path)
                               : isBrandProductsTertiary
-                                ? renderPlaceholder(path, title, tabModule, { brandProductsSubnav: true })
+                                ? (path.replace(/\/$/, "") === SEASONING_DISTRIBUTION_LOG_PATH
+                                  ? renderSeasoningDistributionLogPage()
+                                  : renderPlaceholder(path, title, tabModule, { brandProductsSubnav: true }))
                                 : isBrandMenuTertiary
                                   ? `<div class="${tertiaryRowClass}">
                     ${renderBrandMenuSidebar(path)}
