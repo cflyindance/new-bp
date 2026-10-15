@@ -7,8 +7,10 @@ import { renderPayrollPageTemplate } from "./payroll/payroll-template";
 import { mountPayrollBatchExportController, type PayrollBatchExportControllerHandle } from "./payroll/payroll-batch-export-controller";
 import { createPayrollDeclarationSettingsController, type PayrollDeclarationSettingsHandle } from "./payroll/payroll-declaration-settings";
 import { createPayrollDeclarationRepository } from "./payroll/payroll-declaration-api";
+import { payrollViewFromPath } from './payroll/payroll-navigation';
 
 export interface PayrollPageHandle {
+  setPath(path: string): void;
   destroy(): void;
 }
 
@@ -36,8 +38,8 @@ export function mountPayrollPage(
   const pageRoot = shadowRoot.querySelector<HTMLElement>("[data-team-payroll-page]");
   if (!pageRoot) throw new Error("Native Payroll page root was not rendered.");
 
-  const scrollOwner = container.closest<HTMLElement>("[data-team-payroll-scroll]");
   const handleWheel = (event: WheelEvent): void => {
+    const scrollOwner = container.closest<HTMLElement>("[data-team-payroll-scroll]");
     if (!scrollOwner || event.deltaY === 0) return;
     const eventPath = event.composedPath();
     if (eventPath.some(node => node instanceof HTMLElement && node.hasAttribute("data-payroll-declaration-settings"))) return;
@@ -83,8 +85,15 @@ export function mountPayrollPage(
     runtime.getBatchBridge(),
     context,
   );
-  let declarationSettings: PayrollDeclarationSettingsHandle | null = createPayrollDeclarationSettingsController({ shadowRoot, pageRoot, context, runtime });
+  const returnToReport = () => { location.hash = '/team/payroll-report'; };
+  let declarationSettings: PayrollDeclarationSettingsHandle | null = createPayrollDeclarationSettingsController({ shadowRoot, pageRoot, context, runtime, routeMode: true, onBack: returnToReport });
   const handle: PayrollPageHandle = {
+    setPath(path) {
+      const view = payrollViewFromPath(path);
+      pageRoot.dataset.payrollView = view;
+      if (view === 'schedule') schedule.open(); else schedule.close();
+      if (view === 'declarations') void declarationSettings?.open(); else declarationSettings?.close();
+    },
     destroy() {
       schedule.destroy();
       declarationSettings?.destroy();
@@ -98,7 +107,8 @@ export function mountPayrollPage(
       mountedPages.delete(container);
     },
   };
-  const schedule = mountPayrollScheduleController(shadowRoot, runtime.getBatchBridge(), context);
+  const schedule = mountPayrollScheduleController(shadowRoot, runtime.getBatchBridge(), context, { pageRoot, onBack: returnToReport });
   mountedPages.set(container, handle);
+  handle.setPath(location.hash);
   return handle;
 }
