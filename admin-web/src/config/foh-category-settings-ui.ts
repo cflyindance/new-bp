@@ -1245,16 +1245,58 @@ function renderSpecialMenuPanel(state: FohCategorySettingsState): string {
 
 function renderSettingsPanel(state: FohCategorySettingsState): string {
   ensureGuestCategoryModeToggleMigrated(GUEST_MENU_CATEGORY_MODE_SEQ);
-  const modeLines = readGuestCategoryModeLines(GUEST_MENU_CATEGORY_MODE_SEQ);
+  const features: CategoryDisplayFeature[] = [
+    {
+      id: "special-menu",
+      title: "展示特殊品类",
+      description: "根据选定产线展示特殊品类；各特殊品类的内容与展示渠道在「特殊品类」中维护。",
+      lines: SPECIAL_MENU_PRODUCT_LINES,
+      selectedLines: state.specialMenuLines,
+      groupAttributes: { "data-foh-special-menu-lines": "" },
+      inputAttribute: "data-foh-special-menu-line",
+    },
+    {
+      id: "category-mode",
+      title: "品类模式",
+      description: "根据选定产线，使用先选品类、再选菜的点单形式（非普通扁平菜单）。",
+      lines: SPECIAL_MENU_PRODUCT_LINES,
+      selectedLines: readGuestCategoryModeLines(GUEST_MENU_CATEGORY_MODE_SEQ),
+      groupAttributes: { "data-guest-category-mode-lines": String(GUEST_MENU_CATEGORY_MODE_SEQ) },
+      inputAttribute: "data-guest-category-mode-line",
+    },
+  ];
   return `
     <div class="space-y-6" data-foh-category-settings-panel="settings">
-      <div class="overflow-x-auto rounded-xl border border-border bg-card" data-foh-special-menu-lines data-guest-category-mode-lines="${GUEST_MENU_CATEGORY_MODE_SEQ}">
-        <table class="w-full text-left text-sm"><thead class="bg-muted/40"><tr><th class="p-4">渠道</th><th class="p-4">品类模式</th><th class="p-4">展示特殊品类</th></tr></thead>
-          <tbody>${SPECIAL_MENU_PRODUCT_LINES.map((line) => `<tr class="border-t border-border"><th class="p-4 font-medium">${line.label}</th><td class="p-4"><label class="inline-flex min-h-10 cursor-pointer items-center gap-3 rounded px-3 hover:bg-muted/50"><input type="checkbox" class="${MODULE_SETTING_CONTROL_CLASS}" data-guest-category-mode-line="${line.id}" ${modeLines.includes(line.id) ? "checked" : ""} aria-label="${line.label} 品类模式" />先选品类，再选菜</label></td><td class="p-4"><label class="inline-flex min-h-10 cursor-pointer items-center gap-3 rounded px-3 hover:bg-muted/50"><input type="checkbox" class="${MODULE_SETTING_CONTROL_CLASS}" data-foh-special-menu-line="${line.id}" ${state.specialMenuLines.includes(line.id) ? "checked" : ""} aria-label="${line.label} 展示特殊品类" />展示特殊品类</label></td></tr>`).join("")}</tbody>
-        </table>
-      </div>
+      ${features.map(renderCategoryDisplayFeature).join("")}
       <p class="text-sm text-muted-foreground">此处维护渠道设置；各年龄分组、用餐类别及特殊品类的展示渠道在对应页面维护，请核对相关对象的渠道选择。<a class="${BTN_LINK}" href="#${FOH_CATEGORY_SETTINGS_BASE}/special-menu">维护特殊品类</a></p>
     </div>`;
+}
+
+type CategoryDisplayFeature = {
+  id: string;
+  title: string;
+  description: string;
+  lines: readonly { id: string; label: string }[];
+  selectedLines: readonly string[];
+  groupAttributes: Record<string, string>;
+  inputAttribute: string;
+};
+
+/** 每个功能独立声明支持产线和原有数据绑定，新功能复用相同卡片结构。 */
+function renderCategoryDisplayFeature(feature: CategoryDisplayFeature): string {
+  const titleId = `foh-category-display-${feature.id}`;
+  const groupAttributes = Object.entries(feature.groupAttributes)
+    .map(([name, value]) => `${name}="${escapeHtml(value)}"`).join(" ");
+  return `<section class="rounded-xl border border-border bg-card p-4" data-category-display-feature="${feature.id}" aria-labelledby="${titleId}">
+    <h3 id="${titleId}" class="m-0 text-sm font-semibold">${escapeHtml(feature.title)}</h3>
+    <p class="m-0 mt-1 text-xs leading-relaxed text-muted-foreground">${escapeHtml(feature.description)}</p>
+    <div class="mt-3 grid w-full max-w-md grid-cols-[repeat(auto-fit,minmax(8rem,1fr))] gap-px overflow-hidden rounded-md border border-border bg-border" role="group" aria-label="${escapeHtml(feature.title)}适用产线" ${groupAttributes}>
+      ${feature.lines.map((line) => `<label class="flex min-h-16 cursor-pointer flex-col items-center justify-center gap-2 bg-muted px-4 py-3 text-sm hover:bg-accent has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-inset has-[:focus-visible]:ring-ring">
+        <input type="checkbox" class="${MODULE_SETTING_CONTROL_CLASS} rounded-sm" value="${escapeHtml(line.id)}" ${feature.inputAttribute}="${escapeHtml(line.id)}" ${feature.selectedLines.includes(line.id) ? "checked" : ""} aria-label="${escapeHtml(line.label)} ${escapeHtml(feature.title)}" />
+        <span>${escapeHtml(line.label)}</span>
+      </label>`).join("")}
+    </div>
+  </section>`;
 }
 
 function renderTabContent(tabId: FohCategorySettingsTabId, state: FohCategorySettingsState): string {
