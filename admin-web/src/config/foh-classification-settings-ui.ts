@@ -1,13 +1,14 @@
 /**
  * 前厅管理中心 · 分类管理
  * 路径：/operations/queue-call/classification-settings
- * 展示/交互对齐店中店「品牌与菜单」（单列表 + 弹窗），保留原菜单能力：
- * 可看可下单、仅可查看（按菜 / 按类别）、展示渠道、营业时间；菜品选用产线 + 组/类/菜结构。
+ * 分类与菜单 / 分类设置使用公共子导航；基本资料抽屉与菜单宽抽屉分离，保留原菜单能力：
+ * 可下单、仅可查看（按菜 / 按分类）、展示渠道、供应时段；菜品选用产线 + 组/类/菜结构。
  */
 
 import {
   bindBrandMenuStructurePicker,
   BRAND_MENU_LINE_OPTIONS,
+  BRAND_MENU_STRUCTURE_BY_LINE,
   coerceBrandMenuStructureByLine,
   countBrandMenuStructureDishesByLine,
   emptyBrandMenuStructureByLine,
@@ -48,7 +49,7 @@ export const FOH_CLASSIFICATION_SETTINGS_TABS = [
     id: "category",
     title: "分类与菜单",
     titleEn: "Classification & menu",
-    path: FOH_CLASSIFICATION_SETTINGS_BASE,
+    path: `${FOH_CLASSIFICATION_SETTINGS_BASE}/categories`,
   },
   {
     id: "settings",
@@ -372,34 +373,6 @@ export function getFohClassificationSettingsTabPath(
   );
 }
 
-function renderClassificationTabBar(activeTabId: FohClassificationSettingsTabId): string {
-  const items = FOH_CLASSIFICATION_SETTINGS_TABS.map((tab) => {
-    const selected = tab.id === activeTabId;
-    return `
-      <a
-        href="#${tab.path}"
-        role="tab"
-        data-foh-classification-settings-tab="${tab.id}"
-        class="min-h-10 border-b-2 px-4 text-sm font-medium transition-colors ${
-          selected
-            ? "border-primary text-primary"
-            : "border-transparent text-muted-foreground hover:border-border hover:text-foreground"
-        }"
-        ${selected ? 'aria-selected="true" aria-current="page"' : 'aria-selected="false"'}
-      >${escapeHtml(tab.title)}</a>`;
-  }).join("");
-
-  return `
-    <div
-      class="flex shrink-0 gap-1 border-b border-border"
-      role="tablist"
-      aria-label="分类管理"
-      data-foh-classification-settings-nav
-    >
-      ${items}
-    </div>`;
-}
-
 function renderClassificationSettingsPanel(): string {
   ensureGuestMenuClassificationModeToggleMigrated();
   writeModuleSettingToggleOn(GUEST_MENU_CLASSIFICATION_MODE_SEQ, true);
@@ -408,9 +381,11 @@ function renderClassificationSettingsPanel(): string {
       <section class="rounded-xl border border-border bg-card px-4 py-4">
         <div class="min-w-0">
           <h3 class="m-0 text-sm font-semibold text-card-foreground">分类模式</h3>
-          <p class="m-0 mt-1 text-xs leading-relaxed text-muted-foreground">根据选择的产线，按菜单分类层级先浏览分类再选菜（非普通扁平菜单）。</p>
+          <p class="m-0 mt-1 text-xs leading-relaxed text-muted-foreground">选择采用分类浏览模式的终端，食客先浏览分类再选菜。此设置作用于整个分类管理模块。</p>
         </div>
+        <p class="mt-3 text-sm font-medium text-foreground">分类模式适用终端</p>
         ${renderGuestMenuClassificationModePanelHtml(true)}
+        <p class="mt-3 text-xs leading-relaxed text-muted-foreground">单个分类的展示渠道与供应时段，请在「分类与菜单」中编辑。此处不修改分类自身的渠道配置。</p>
       </section>
     </div>`;
 }
@@ -509,7 +484,7 @@ function renderMenuConfigSection(
     return `
       <div class="space-y-4" data-cls-menu-config="${escapeHtml(categoryId)}" data-edit-scope="orderable">
         <div>
-          <p class="m-0 mb-2 text-sm font-medium text-foreground">可下单的菜</p>
+          <p class="m-0 mb-2 text-sm font-medium text-foreground">可下单菜单</p>
           <p class="m-0 mb-2 text-xs text-muted-foreground">先选产线，再勾选该产线对应的组 / 类 / 菜</p>
           <div data-cls-orderable-structure>
             ${renderBrandMenuStructurePickerHtml([], undefined, undefined, {
@@ -523,7 +498,7 @@ function renderMenuConfigSection(
   return `
     <div class="space-y-4" data-cls-menu-config="${escapeHtml(categoryId)}" data-edit-scope="viewOnly">
       <div>
-        <p class="m-0 mb-2 text-sm font-medium text-foreground">不可下单的菜</p>
+        <p class="m-0 mb-2 text-sm font-medium text-foreground">仅可查看菜单</p>
         <div class="mb-3 flex flex-wrap items-center gap-4 text-sm">
           <label class="inline-flex cursor-pointer items-center gap-2">
             <input
@@ -558,27 +533,38 @@ function renderMenuConfigSection(
           </div>
         </div>
         <div class="${categoryMode ? "" : "hidden"}" data-cls-view-category-panel>
-          <p class="m-0 mb-2 text-xs text-muted-foreground">勾选其他分类，食客在本分类下仅可查看对应分类菜单（不可下单）。</p>
+          <p class="m-0 mb-2 text-xs text-muted-foreground">勾选其他分类，食客在本分类下仅可查看对应分类菜单，不能在当前分类下单。</p>
           ${renderViewOnlyCategoryPicker(categoryId, allCategories, cfg)}
         </div>
       </div>
     </div>`;
 }
 
-function formatMenuDetailButtonLabel(count: number): string {
-  return `详情（${count}）`;
+function formatMenuDetailButtonLabel(count: number, unit: string): string {
+  return count === 0 ? "未配置 · 去配置" : `${count} ${unit} · 配置`;
+}
+
+/** 保留内置组/类展开计数，同时补计主机菜单中已保存的菜品叶子；同菜跨产线分别累计。 */
+export function countClassificationConfiguredDishes(byLine: BrandMenuStructureByLine): number {
+  const externalLeaves = BRAND_MENU_LINE_OPTIONS.reduce((sum, line) => {
+    const builtIn = new Set(BRAND_MENU_STRUCTURE_BY_LINE[line.id].flatMap(group =>
+      group.categories.flatMap(category => category.dishes.map(dish => `d:${group.id}:${category.id}:${dish.id}`)),
+    ));
+    return sum + new Set((byLine[line.id] ?? []).filter(key => key.startsWith("d:") && !builtIn.has(key))).size;
+  }, 0);
+  return countBrandMenuStructureDishesByLine(byLine) + externalLeaves;
 }
 
 function countViewOnlyConfigured(cfg: CategoryMenuConfig): number {
   if (cfg.viewOnlyMode === "category") return cfg.viewOnlyCategoryIds.length;
-  return countBrandMenuStructureDishesByLine(cfg.viewOnlyStructureByLine);
+  return countClassificationConfiguredDishes(cfg.viewOnlyStructureByLine);
 }
 
 function renderCategoryImageCell(category: ClassificationCategoryRecord): string {
   if (category.imageDataUrl) {
     return `<img src="${escapeHtml(category.imageDataUrl)}" alt="" class="size-12 rounded border border-border object-cover" />`;
   }
-  return `<div class="flex size-12 items-center justify-center rounded border border-dashed border-border bg-muted/40 text-[10px] text-muted-foreground">NO IMAGE</div>`;
+  return `<div class="flex size-12 items-center justify-center rounded border border-dashed border-border bg-muted/40 text-[10px] text-muted-foreground" aria-label="未设置分类图片">暂无图片</div>`;
 }
 
 function renderCategoryTable(
@@ -591,23 +577,22 @@ function renderCategoryTable(
   const rows = categories
     .map((cat) => {
       const cfg = menuByCategory[cat.id] ?? defaultMenuConfig(cat);
-      const orderableCount = countBrandMenuStructureDishesByLine(cfg.orderableStructureByLine);
+      const orderableCount = countClassificationConfiguredDishes(cfg.orderableStructureByLine);
       const viewOnlyCount = countViewOnlyConfigured(cfg);
       return `
       <tr class="border-t border-border" data-cls-row data-cls-id="${escapeHtml(cat.id)}">
-        <td class="py-3 pr-3 text-sm text-foreground">${escapeHtml(cat.name)}</td>
-        <td class="py-3 pr-3">${renderCategoryImageCell(cat)}</td>
+        <td class="px-3 py-3"><div class="flex items-center gap-3">${renderCategoryImageCell(cat)}<span class="font-medium text-foreground">${escapeHtml(cat.name)}</span></div></td>
         <td class="py-3 pr-3 text-sm text-muted-foreground">${escapeHtml(formatDisplayChannelsSummary(cat.displayChannels))}</td>
         <td class="py-3 pr-3 text-sm text-muted-foreground">${escapeHtml(formatCategoryHoursSummary(cat))}</td>
         <td class="py-3 pr-3 text-sm">
-          <button type="button" class="${BTN_LINK}" data-cls-menu-detail="orderable" data-cls-id="${escapeHtml(cat.id)}">${formatMenuDetailButtonLabel(orderableCount)}</button>
+          <button type="button" class="${BTN_LINK} min-h-9 px-2 text-left" data-cls-menu-detail="orderable" data-cls-id="${escapeHtml(cat.id)}">${formatMenuDetailButtonLabel(orderableCount, "道菜")}</button>
         </td>
         <td class="py-3 pr-3 text-sm">
-          <button type="button" class="${BTN_LINK}" data-cls-menu-detail="viewOnly" data-cls-id="${escapeHtml(cat.id)}">${formatMenuDetailButtonLabel(viewOnlyCount)}</button>
+          <button type="button" class="${BTN_LINK} min-h-9 px-2 text-left" data-cls-menu-detail="viewOnly" data-cls-id="${escapeHtml(cat.id)}">${cfg.viewOnlyMode === "category" ? "按分类" : "按菜"} · ${formatMenuDetailButtonLabel(viewOnlyCount, cfg.viewOnlyMode === "category" ? "个分类" : "道菜")}</button>
         </td>
         <td class="py-3 text-right text-sm whitespace-nowrap">
           <button type="button" class="${BTN_LINK} mr-3" data-cls-edit data-cls-id="${escapeHtml(cat.id)}">编辑</button>
-          <button type="button" class="text-sm font-medium text-destructive hover:underline" data-cls-delete data-cls-id="${escapeHtml(cat.id)}">删除</button>
+          <details class="relative inline-block text-left" data-cls-more><summary class="inline-flex min-h-9 cursor-pointer list-none items-center rounded-md border border-border px-3 hover:bg-muted" aria-label="${escapeHtml(cat.name)}的更多操作">更多</summary><div class="mt-1 min-w-28 rounded-md border border-border bg-card p-1 shadow-md"><button type="button" class="min-h-9 w-full rounded px-3 text-left text-sm text-destructive hover:bg-muted" data-cls-delete data-cls-id="${escapeHtml(cat.id)}">删除分类</button></div></details>
         </td>
       </tr>`;
     })
@@ -617,12 +602,11 @@ function renderCategoryTable(
       <table class="w-full min-w-[40rem] border-collapse text-left text-sm">
         <thead class="bg-muted/40 text-xs text-muted-foreground">
           <tr>
-            <th class="px-3 py-2 font-medium">分类名称</th>
-            <th class="px-3 py-2 font-medium">分类图片</th>
+            <th class="px-3 py-2 font-medium">分类</th>
             <th class="px-3 py-2 font-medium">展示渠道</th>
-            <th class="px-3 py-2 font-medium">营业时间</th>
-            <th class="px-3 py-2 font-medium">可下单</th>
-            <th class="px-3 py-2 font-medium">不可下单</th>
+            <th class="px-3 py-2 font-medium">供应时段</th>
+            <th class="px-3 py-2 font-medium">可下单菜单</th>
+            <th class="px-3 py-2 font-medium">仅可查看菜单</th>
             <th class="px-3 py-2 text-right font-medium">操作</th>
           </tr>
         </thead>
@@ -642,22 +626,13 @@ function renderCategoryDialog(
   const name = editing?.name ?? "";
   const imagePreview = editing?.imageDataUrl
     ? `<img src="${escapeHtml(editing.imageDataUrl)}" alt="" class="mx-auto max-h-24 rounded border border-border object-contain" data-cls-image-preview />`
-    : `<div class="mx-auto flex h-24 w-24 items-center justify-center rounded border border-dashed border-border bg-muted/30 text-xs text-muted-foreground" data-cls-image-preview>NO IMAGES</div>`;
+    : `<div class="mx-auto flex h-24 w-24 items-center justify-center rounded border border-dashed border-border bg-muted/30 text-xs text-muted-foreground" data-cls-image-preview>暂无图片</div>`;
   const selectedScheduleIds = editing?.scheduleIds ?? defaultAllDayScheduleIds(readBusinessHourSchedules());
   const selectedChannels = editing?.displayChannels ?? [...ALL_DISPLAY_CHANNELS];
-  const state = readFohClassificationSettingsState();
-  const menuCfg =
-    (!isCreate && editingId ? state.menuByCategory[editingId] : undefined) ??
-    defaultMenuConfig({
-      id: categoryId,
-      name: name || "新分类",
-      scheduleIds: selectedScheduleIds,
-      displayChannels: selectedChannels,
-    });
 
   return `
     <div
-      class="fixed inset-0 z-[100] hidden items-center justify-center p-4"
+      class="fixed inset-0 z-[100] hidden items-stretch justify-end"
       data-cls-dialog
       data-editing-id="${escapeHtml(isCreate ? "" : categoryId)}"
       data-category-id="${escapeHtml(categoryId)}"
@@ -666,12 +641,13 @@ function renderCategoryDialog(
       aria-labelledby="cls-dialog-title"
     >
       <button type="button" class="absolute inset-0 bg-black/40" data-cls-dialog-backdrop aria-label="关闭"></button>
-      <div class="relative z-10 flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-lg border border-border bg-card shadow-lg">
+      <div class="relative z-10 flex h-full w-full max-w-xl flex-col overflow-hidden border-l border-border bg-card shadow-xl">
         <div class="flex shrink-0 items-start justify-between gap-3 border-b border-border px-5 py-4">
           <h3 id="cls-dialog-title" class="text-base font-semibold text-card-foreground">${title}</h3>
           <button type="button" class="text-muted-foreground hover:text-foreground" data-cls-dialog-close aria-label="关闭">×</button>
         </div>
         <div class="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4">
+          <h4 class="text-sm font-semibold text-foreground">基本信息</h4>
           <div class="space-y-1.5">
             <label class="block text-sm font-medium text-foreground" for="cls-create-name">分类名称</label>
             <input id="cls-create-name" type="text" maxlength="50" class="${INPUT_CLASS}" data-cls-name value="${escapeHtml(name)}" />
@@ -684,25 +660,23 @@ function renderCategoryDialog(
               <button type="button" class="${BTN_GHOST}" data-cls-image-pick>选择图片</button>
             </div>
           </div>
+          <h4 class="border-t border-border pt-4 text-sm font-semibold text-foreground">展示与供应</h4>
           <div class="space-y-2">
             <p class="text-sm font-medium text-foreground">展示渠道</p>
             <p class="text-xs text-muted-foreground">勾选后，该分类仅在对应渠道展示</p>
             ${renderDisplayChannelPicker(selectedChannels)}
           </div>
           <div class="space-y-2">
-            <p class="text-sm font-medium text-foreground">营业时间</p>
+            <p class="text-sm font-medium text-foreground">供应时段</p>
+            <p class="text-xs text-muted-foreground">引用「营业与运营 → 营业时段」中的规则。</p>
             ${renderSchedulePicker(selectedScheduleIds)}
           </div>
-          <div class="space-y-2 border-t border-border pt-4">
-            ${renderMenuConfigSection(categoryId, categories, menuCfg, "orderable")}
-          </div>
-          <div class="space-y-2 border-t border-border pt-4">
-            ${renderMenuConfigSection(categoryId, categories, menuCfg, "viewOnly")}
-          </div>
+          <p class="rounded-md bg-muted/40 p-3 text-xs text-muted-foreground">分类保存到页面草稿后，可从列表配置可下单与仅可查看菜单。</p>
+          <p class="hidden text-sm text-destructive" role="alert" data-cls-name-error>请输入分类名称。</p>
         </div>
         <div class="flex shrink-0 justify-end gap-2 border-t border-border bg-card px-5 py-4">
           <button type="button" class="${BTN_GHOST}" data-cls-dialog-cancel>取消</button>
-          <button type="button" class="${BTN_PRIMARY}" data-cls-dialog-save>确定</button>
+          <button type="button" class="${BTN_PRIMARY}" data-cls-dialog-save>保存到页面草稿</button>
         </div>
       </div>
     </div>`;
@@ -711,7 +685,7 @@ function renderCategoryDialog(
 function renderMenuEditDialogShell(): string {
   return `
     <div
-      class="fixed inset-0 z-[100] hidden items-center justify-center p-4"
+      class="fixed inset-0 z-[100] hidden items-stretch justify-end"
       data-cls-menu-edit-dialog
       data-category-id=""
       data-edit-scope=""
@@ -720,7 +694,7 @@ function renderMenuEditDialogShell(): string {
       aria-labelledby="cls-menu-edit-dialog-title"
     >
       <button type="button" class="absolute inset-0 bg-black/40" data-cls-menu-edit-backdrop aria-label="关闭"></button>
-      <div class="relative z-10 flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-lg border border-border bg-card shadow-lg">
+      <div class="relative z-10 flex h-full w-full max-w-6xl flex-col overflow-hidden border-l border-border bg-card shadow-xl">
         <div class="flex shrink-0 items-start justify-between gap-3 border-b border-border px-5 py-4">
           <h3 id="cls-menu-edit-dialog-title" class="text-base font-semibold text-card-foreground" data-cls-menu-edit-title>编辑菜单</h3>
           <button type="button" class="text-muted-foreground hover:text-foreground" data-cls-menu-edit-close aria-label="关闭">×</button>
@@ -728,7 +702,7 @@ function renderMenuEditDialogShell(): string {
         <div class="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4" data-cls-menu-edit-body></div>
         <div class="flex shrink-0 justify-end gap-2 border-t border-border bg-card px-5 py-4">
           <button type="button" class="${BTN_GHOST}" data-cls-menu-edit-cancel>取消</button>
-          <button type="button" class="${BTN_PRIMARY}" data-cls-menu-edit-save>确定</button>
+          <button type="button" class="${BTN_PRIMARY}" data-cls-menu-edit-save>保存到页面草稿</button>
         </div>
       </div>
     </div>`;
@@ -785,6 +759,7 @@ function refreshClassificationPanel(
   const state = readFohClassificationSettingsState();
   const tableWrap = panel.querySelector<HTMLElement>("[data-cls-table-wrap]");
   if (tableWrap) tableWrap.innerHTML = renderCategoryTable(state.categories, state.menuByCategory);
+  filterClassificationRows(panel);
   panel.querySelector("[data-cls-dialog]")?.remove();
   panel.insertAdjacentHTML(
     "beforeend",
@@ -898,13 +873,14 @@ function openMenuEditDialog(panel: HTMLElement, categoryId: string, scope: MenuE
   dialog.setAttribute("data-edit-scope", scope);
   if (titleEl) {
     titleEl.textContent =
-      scope === "orderable" ? `可下单 · ${category.name}` : `不可下单 · ${category.name}`;
+      `配置菜单 · ${category.name}`;
   }
-  body.innerHTML = renderMenuConfigSection(categoryId, state.categories, cfg, scope);
+  body.innerHTML = `<div class="flex gap-2 border-b border-border pb-3" role="tablist" aria-label="菜单类型">${(["orderable", "viewOnly"] as const).map(key => `<button type="button" role="tab" aria-selected="${key === scope}" class="min-h-9 rounded-md px-4 aria-selected:bg-primary aria-selected:text-primary-foreground" data-cls-menu-tab="${key}">${key === "orderable" ? "可下单菜单" : "仅可查看菜单"}</button>`).join("")}</div>${(["orderable", "viewOnly"] as const).map(key => `<section role="tabpanel" aria-label="${key === "orderable" ? "可下单菜单" : "仅可查看菜单"}" data-cls-menu-pane="${key}" class="${key === scope ? "" : "hidden"}">${renderMenuConfigSection(categoryId, state.categories, cfg, key)}</section>`).join("")}`;
   body.querySelectorAll<HTMLElement>("[data-brand-menu-structure-picker]").forEach((picker) => {
     bindBrandMenuStructurePicker(picker);
   });
   showMenuEditDialog(panel);
+  dialog.querySelector<HTMLButtonElement>(`[data-cls-menu-tab="${scope}"]`)?.focus();
 }
 
 function saveMenuEditDialog(panel: HTMLElement): void {
@@ -912,17 +888,12 @@ function saveMenuEditDialog(panel: HTMLElement): void {
   if (!dialog) return;
   const categoryId = dialog.getAttribute("data-category-id") || "";
   if (!categoryId) return;
-  const scope = parseMenuEditScope(dialog.getAttribute("data-edit-scope"));
   const state = readFohClassificationSettingsState();
   const category = state.categories.find((c) => c.id === categoryId);
   if (!category) return;
   const prev = state.menuByCategory[categoryId] ?? defaultMenuConfig(category);
-  state.menuByCategory[categoryId] = collectMenuConfigFromMenuDialog(
-    dialog,
-    categoryId,
-    prev,
-    scope,
-  );
+  const orderable = collectMenuConfigFromMenuDialog(dialog, categoryId, prev, "orderable");
+  state.menuByCategory[categoryId] = collectMenuConfigFromMenuDialog(dialog, categoryId, orderable, "viewOnly");
   writeClassificationState(state.categories, state.menuByCategory);
   hideMenuEditDialog(panel);
   refreshClassificationPanel(panel, null, false);
@@ -935,20 +906,12 @@ function collectDisplayChannelsFromDialog(dialog: HTMLElement): BrandMenuLineId[
   return ALL_DISPLAY_CHANNELS.filter((id) => checked.includes(id));
 }
 
-function collectFullMenuConfigFromCategoryDialog(
-  dialog: HTMLElement,
-  categoryId: string,
-  prev: CategoryMenuConfig,
-): CategoryMenuConfig {
-  const withOrderable = collectMenuConfigFromMenuDialog(dialog, categoryId, prev, "orderable");
-  return collectMenuConfigFromMenuDialog(dialog, categoryId, withOrderable, "viewOnly");
-}
-
 function saveCategoryFromDialog(panel: HTMLElement): void {
   const dialog = panel.querySelector<HTMLElement>("[data-cls-dialog]");
   if (!dialog) return;
   const name = dialog.querySelector<HTMLInputElement>("[data-cls-name]")?.value.trim() ?? "";
   if (!name) {
+    dialog.querySelector("[data-cls-name-error]")?.classList.remove("hidden");
     dialog.querySelector<HTMLInputElement>("[data-cls-name]")?.focus();
     return;
   }
@@ -970,7 +933,7 @@ function saveCategoryFromDialog(panel: HTMLElement): void {
     (editingId ? state.menuByCategory[editingId] : state.menuByCategory[categoryId]) ??
     defaultMenuConfig(nextRecord);
   const nextMenu: CategoryMenuConfig = {
-    ...collectFullMenuConfigFromCategoryDialog(dialog, categoryId, prevMenu),
+    ...prevMenu,
     displayName: name,
   };
   if (editingId) {
@@ -1012,7 +975,7 @@ function openDeleteCategoryDialog(panel: HTMLElement, categoryId: string, catego
   if (!dialog || !idInput || !messageEl) return;
   idInput.value = categoryId;
   const label = categoryName ? `「${categoryName}」` : "该分类";
-  messageEl.textContent = `确定删除${label}？相关菜单配置将一并移除。`;
+  messageEl.textContent = `确定删除${label}？该分类的菜单配置及其他分类对它的仅查看引用将一并移除，商品资料不受影响。`;
   showDialog(dialog);
 }
 
@@ -1060,6 +1023,22 @@ function clearCategoryImagePickError(panel: HTMLElement): void {
   panel.querySelector("[data-cls-image-error]")?.remove();
 }
 
+function filterClassificationRows(panel: HTMLElement): void {
+  const query = panel.querySelector<HTMLInputElement>("[data-cls-search]")?.value.trim().toLocaleLowerCase() ?? "";
+  const channel = panel.querySelector<HTMLSelectElement>("[data-cls-channel-filter]")?.value ?? "";
+  const state = readFohClassificationSettingsState();
+  let count = 0;
+  panel.querySelectorAll<HTMLElement>("[data-cls-row]").forEach(row => {
+    const category = state.categories.find(c => c.id === row.dataset.clsId);
+    const visible = !!category && category.name.toLocaleLowerCase().includes(query) && (!channel || category.displayChannels.some(id => id === channel));
+    row.hidden = !visible;
+    if (visible) count++;
+  });
+  const summary = panel.querySelector<HTMLElement>("[data-cls-count]");
+  if (summary) summary.textContent = `显示 ${count} / ${state.categories.length} 个分类`;
+  panel.querySelector<HTMLElement>("[data-cls-filter-empty]")?.classList.toggle("hidden", count > 0 || state.categories.length === 0);
+}
+
 export function renderFohClassificationSettingsPage(path: string): string {
   const tabId = resolveFohClassificationSettingsTab(path);
   const state = readFohClassificationSettingsState();
@@ -1069,11 +1048,14 @@ export function renderFohClassificationSettingsPage(path: string): string {
       ? renderClassificationSettingsPanel()
       : `
       <div class="min-h-0 flex-1 overflow-auto" data-foh-classification-management>
-        <div class="mt-1 space-y-3">
-          <div class="flex flex-wrap items-center justify-end gap-2">
-            <button type="button" class="${BTN_PRIMARY}" data-cls-create>新增分类</button>
+        <div class="space-y-4">
+          <div class="flex flex-wrap items-center gap-3 rounded-md border border-border bg-card p-3">
+            <label class="flex items-center gap-2 whitespace-nowrap text-sm">分类名称<input type="search" class="${INPUT_CLASS}" placeholder="搜索分类名称" data-cls-search /></label>
+            <label class="flex items-center gap-2 whitespace-nowrap text-sm">展示渠道<select class="${INPUT_CLASS}" data-cls-channel-filter><option value="">全部渠道</option>${BRAND_MENU_LINE_OPTIONS.map(line => `<option value="${line.id}">${line.label}</option>`).join("")}</select></label>
+            <span class="text-xs text-muted-foreground" data-cls-count>显示 ${state.categories.length} / ${state.categories.length} 个分类</span>
           </div>
           <div data-cls-table-wrap>${renderCategoryTable(state.categories, state.menuByCategory)}</div>
+          <p class="hidden py-6 text-center text-sm text-muted-foreground" role="status" data-cls-filter-empty>没有符合条件的分类，请调整名称或渠道筛选。</p>
         </div>
         ${renderCategoryDialog(state.categories, null, true)}
         ${renderMenuEditDialogShell()}
@@ -1083,12 +1065,14 @@ export function renderFohClassificationSettingsPage(path: string): string {
 
   return `
     <div class="flex min-h-0 flex-1 flex-col gap-4" data-foh-classification-settings-root>
-      ${renderClassificationTabBar(tabId)}
+      <header class="flex shrink-0 flex-wrap items-start justify-between gap-3">
+        <div><h2 class="text-lg font-semibold text-foreground">${tabId === "settings" ? "分类设置" : "分类与菜单"}</h2><p class="mt-1 text-sm text-muted-foreground">${tabId === "settings" ? "配置分类浏览模式的适用终端。" : "配置食客端展示的菜单分类，以及各分类可下单和仅供浏览的菜单内容。"}</p></div>
+        ${tabId === "category" ? `<button type="button" class="${BTN_PRIMARY}" data-cls-create-header>新增分类</button>` : ""}
+      </header>
       <div
         class="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain"
         data-foh-classification-settings-main
         data-active-tab="${tabId}"
-        role="tabpanel"
       >
         ${mainHtml}
       </div>
@@ -1108,10 +1092,22 @@ export function bindFohClassificationSettingsUi(_remount: () => void): void {
       onError: (message) => setCategoryImagePickError(panel, message),
     });
 
+    panel.closest("[data-foh-classification-settings-root]")?.querySelector("[data-cls-create-header]")?.addEventListener("click", () => showCategoryDialog(panel, null));
+    panel.addEventListener("input", e => { if ((e.target as HTMLElement).matches("[data-cls-search]")) filterClassificationRows(panel); });
+    panel.addEventListener("change", e => { if ((e.target as HTMLElement).matches("[data-cls-channel-filter]")) filterClassificationRows(panel); });
     panel.addEventListener("click", (e) => {
       const target = e.target as HTMLElement;
       if (target.closest("[data-cls-create]")) {
         showCategoryDialog(panel, null);
+        return;
+      }
+      const menuTab = target.closest<HTMLElement>("[data-cls-menu-tab]");
+      if (menuTab) {
+        const scope = menuTab.dataset.clsMenuTab;
+        const dialog = menuTab.closest<HTMLElement>("[data-cls-menu-edit-dialog]")!;
+        dialog.dataset.editScope = scope;
+        dialog.querySelectorAll<HTMLElement>("[data-cls-menu-tab]").forEach(tab => tab.setAttribute("aria-selected", String(tab.dataset.clsMenuTab === scope)));
+        dialog.querySelectorAll<HTMLElement>("[data-cls-menu-pane]").forEach(pane => pane.classList.toggle("hidden", pane.dataset.clsMenuPane !== scope));
         return;
       }
       const menuDetailBtn = target.closest<HTMLElement>("[data-cls-menu-detail]");
@@ -1131,6 +1127,7 @@ export function bindFohClassificationSettingsUi(_remount: () => void): void {
         const id = deleteBtn.getAttribute("data-cls-id");
         if (!id) return;
         const cat = readClassificationCategories().find((c) => c.id === id);
+        deleteBtn.closest("details")?.removeAttribute("open");
         openDeleteCategoryDialog(panel, id, cat?.name ?? "");
         return;
       }
@@ -1188,6 +1185,15 @@ export function bindFohClassificationSettingsUi(_remount: () => void): void {
     });
 
     panel.addEventListener("keydown", (e) => {
+      if (e.key === "Tab") {
+        const dialog = (e.target as HTMLElement).closest<HTMLElement>('[role="dialog"]');
+        if (dialog) {
+          const controls = [...dialog.querySelectorAll<HTMLElement>('button, input, select, summary, [tabindex="0"]')].filter(el => el.getClientRects().length && !el.hasAttribute("disabled") && !el.matches('[data-cls-dialog-backdrop], [data-cls-menu-edit-backdrop], [data-cls-delete-backdrop]'));
+          const first = controls[0], last = controls[controls.length - 1];
+          if (e.shiftKey && e.target === first && last) { e.preventDefault(); last.focus(); }
+          else if (!e.shiftKey && e.target === last && first) { e.preventDefault(); first.focus(); }
+        }
+      }
       if (e.key !== "Escape") return;
       const uploadModal = panel.querySelector<HTMLElement>("[data-image-source-upload-modal]");
       const libraryModal = panel.querySelector<HTMLElement>("[data-image-source-library-modal]");

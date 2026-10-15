@@ -424,6 +424,10 @@ export const NAV_MODULES: NavModule[] = [
         title: "分类管理",
         titleEn: "Classification management",
         path: "/operations/queue-call/classification-settings",
+        children: [
+          { id: "qc-classification-menu", title: "分类与菜单", titleEn: "Classification & menu", path: "/operations/queue-call/classification-settings/categories" },
+          { id: "qc-classification-options", title: "分类设置", titleEn: "Classification settings", path: "/operations/queue-call/classification-settings/settings" },
+        ],
       },
       {
         id: "qc-emenu-pro",

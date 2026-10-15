@@ -4346,6 +4346,8 @@ function normalizeTabModuleHashes(): void {
     return;
   }
   if (
+    raw === FOH_CLASSIFICATION_SETTINGS_BASE ||
+    raw === `${FOH_CLASSIFICATION_SETTINGS_BASE}/` ||
     raw === `${FOH_CLASSIFICATION_SETTINGS_BASE}/category` ||
     raw === `${FOH_CLASSIFICATION_SETTINGS_BASE}/menu` ||
     raw === `${FOH_CLASSIFICATION_SETTINGS_BASE}/hours` ||

@@ -61,6 +61,7 @@ export function renderPageSaveBar(path: string): string {
   const count = getPageSavePendingCount(pageKey);
   const dirty = count > 0;
   const deployedHint = formatDeployedHint(pageKey);
+  const classification = pageKey === "/operations/queue-call/classification-settings";
 
   return `
     <div
@@ -83,6 +84,7 @@ export function renderPageSaveBar(path: string): string {
             </span>
           </button>
           <span data-page-save-count-sep ${dirty ? "" : 'class="hidden"'}> · </span>
+          ${classification ? `<span data-classification-save-state>${dirty ? "修改尚未保存并下发" : "暂无待保存修改"}</span><span> · </span>` : ""}
           <span data-page-save-deployed-hint>${escapeHtml(deployedHint)}</span>
         </div>
         <div class="flex shrink-0 items-center gap-2">
@@ -97,6 +99,7 @@ export function renderPageSaveBar(path: string): string {
           <button
             type="button"
             data-page-save-commit
+            ${classification && !dirty ? 'title="暂无待保存修改"' : ""}
             class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
             ${dirty ? "" : "disabled"}
           >
@@ -139,7 +142,12 @@ function syncPageSaveBarDom(pageKey: string): void {
   }
   sep?.classList.toggle("hidden", !dirty);
   if (discardBtn) discardBtn.disabled = !dirty;
-  if (commitBtn) commitBtn.disabled = !dirty;
+  if (commitBtn) {
+    commitBtn.disabled = !dirty;
+    if (bar.querySelector("[data-classification-save-state]")) commitBtn.title = dirty ? "保存当前分类管理的变更并下发" : "暂无待保存修改";
+  }
+  const classificationState = bar.querySelector("[data-classification-save-state]");
+  if (classificationState) classificationState.textContent = dirty ? "修改尚未保存并下发" : "暂无待保存修改";
 }
 
 export function refreshPageSaveBar(pageKey?: string): void {
