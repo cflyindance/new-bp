@@ -705,7 +705,7 @@ export const SETTINGS_OVERVIEW_DEVICE_LINKS: { id: string; title: string; titleE
     path: item.path,
   }));
 
-/** 团队管理 →「小费管理」：主内容区右侧细项导航（路由 `/team/tips/...`） */
+/** 小费页面路由及权限目录；分配明细保留为业务子页面，不直接展示在导航滑层。 */
 export interface TipsManagementSubItem {
   id: string;
   title: string;
@@ -1299,7 +1299,9 @@ export function navModuleChildrenAsSheetSubnav(m: NavModule): ProductCenterSideb
     titleEn: c.titleEn,
     path: c.path,
     chainOnly: c.chainOnly,
-    sidebarChildren: c.children?.map((child) => ({ ...child })),
+    sidebarChildren: (c.id === "team-tips"
+      ? TIPS_MANAGEMENT_SUBNAV.filter((item) => item.id !== "tips-details")
+      : c.children)?.map((child) => ({ ...child })),
   }));
 }
 

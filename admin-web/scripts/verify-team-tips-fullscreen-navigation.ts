@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { isTipsFullscreenRoute, isTipsSummaryReturnTransition, isTrustedTipsHistoryState, parseTipsRoute } from "../src/team/tips/tips-navigation.ts";
 
-assert.equal(isTipsFullscreenRoute(parseTipsRoute("#/team/tips/rules")), true);
-assert.equal(isTipsFullscreenRoute(parseTipsRoute("#/team/tips/rules/?store=1")), true);
+assert.equal(isTipsFullscreenRoute(parseTipsRoute("#/team/tips/rules")), false);
+assert.equal(isTipsFullscreenRoute(parseTipsRoute("#/team/tips/rules/?store=1")), false);
 assert.equal(isTipsFullscreenRoute(parseTipsRoute("#/team/tips/rules/editor?id=2")), true);
 assert.equal(isTipsFullscreenRoute(parseTipsRoute("#/team/tips/details?date=2026-01-03")), true);
 assert.equal(isTipsFullscreenRoute(parseTipsRoute("#/team/tips/employee-reconciliation?employeeId=e1")), true);

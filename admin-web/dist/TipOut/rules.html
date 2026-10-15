@@ -99,7 +99,7 @@
               <h1 id="rulesTitle">分配规则</h1>
             </div>
             <div class="tipout-heading-actions">
-              <button type="button" class="btn btn-primary" onclick="openAddRuleModal()">新建规则</button>
+              <button type="button" class="btn btn-primary" onclick="openAddRuleModal()">新增规则</button>
             </div>
           </div>
 
@@ -214,7 +214,7 @@
       var tableBody = document.getElementById('rulesTableBody');
       tableBody.innerHTML = '';
       if (rules.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="4"><div class="tipout-rule-empty" role="status">暂无规则，请点击「新建规则」创建</div></td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="4"><div class="tipout-rule-empty" role="status">暂无规则，请点击「新增规则」创建</div></td></tr>';
         return;
       }
       rules.forEach(function(rule) {

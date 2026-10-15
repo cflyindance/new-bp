@@ -125,7 +125,7 @@ for (const file of ["dist/TipOut/index.html", "src/team/tips/templates/distribut
     if (content.includes(token)) failures.push(`${file}: removed pending summary region returned ${token}`);
   }
   const cancelIndex = content.indexOf(">取消分配</button>");
-  const ruleIndex = content.indexOf(">新建/查看规则</button>");
+  const ruleIndex = content.indexOf(">规则管理</button>");
   if (cancelIndex < 0 || ruleIndex < 0) failures.push(`${file}: summary action entry missing`);
   if (!content.includes("doCancelAllocate()")) failures.push(`${file}: cancel allocation button handler missing`);
   const headingIndex = content.indexOf(file.startsWith("src/") ? "tipout-store-scope-row" : "tipout-page-heading");

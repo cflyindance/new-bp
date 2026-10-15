@@ -481,7 +481,7 @@ const messages = {
     "placeholder.bullet.deviceHw":
       "<strong class=\"text-card-foreground\">硬件管理中心 · 硬件</strong>：在左侧主导航点击「硬件管理中心」打开<strong class=\"text-card-foreground\">右滑二级导航</strong>后选择 <strong class=\"text-card-foreground\">硬件</strong>；本区域左侧为硬件细项（支付设备、钱箱、路由器、POS、POS GO、KDS、叫号屏、打印机、电子秤、Kiosk、eMenu），交互同本后台其它三级侧栏。",
     "placeholder.bullet.tips":
-      "<strong class=\"text-card-foreground\">团队管理 · 小费管理</strong>：在左侧主导航点击「团队管理」打开<strong class=\"text-card-foreground\">右滑二级导航</strong>后选择 <strong class=\"text-card-foreground\">小费管理</strong>；本区域左侧为细项（小费分配、分配明细、分配规则），交互同本后台其它三级侧栏。",
+      "<strong class=\"text-card-foreground\">团队管理 · 小费管理</strong>：点击「团队管理」，再点击「小费管理」进入覆盖子导航，可选择「小费分配」或「分配规则」。日期／员工汇总保留在分配页面内，分配明细从业务列表进入。",
     "placeholder.bullet.teamReports":
       "<strong class=\"text-card-foreground\">团队管理 · 员工报表</strong>：在左侧主导航点击「团队管理」打开<strong class=\"text-card-foreground\">右滑二级导航</strong>后选择 <strong class=\"text-card-foreground\">员工报表</strong>；本区域左侧为细项（汇总、小费汇总表、小费明细表、绩效、薪资），交互同小费管理。",
     "placeholder.bullet.teamScheduling":
@@ -984,7 +984,7 @@ const messages = {
     "placeholder.bullet.deviceHw":
       "<strong class=\"text-card-foreground\">Hardware · Devices</strong>: open <strong class=\"text-card-foreground\">Hardware management</strong> from the sidebar, then the <strong class=\"text-card-foreground\">slide-in sheet</strong> and choose <strong class=\"text-card-foreground\">Devices</strong>. The left column lists terminals (payments, cash drawer, router, POS, POS GO, KDS, queue display, printers, scales, Kiosk, eMenu)—same tertiary pattern as elsewhere.",
     "placeholder.bullet.tips":
-      "<strong class=\"text-card-foreground\">Team · Tips</strong>: open Team from the sidebar, use the sheet, pick <strong class=\"text-card-foreground\">Tips</strong>. Left column covers allocation, details, and rules.",
+      "<strong class=\"text-card-foreground\">Team · Tips</strong>: open Team, then Tips to see Tip allocation and Distribution rules in the submenu sheet. Date and employee summaries remain page tabs; open details from the allocation list.",
     "placeholder.bullet.teamReports":
       "<strong class=\"text-card-foreground\">Team · Staff reports</strong>: open Team → <strong class=\"text-card-foreground\">Staff reports</strong> from the sheet. Left column: summary, tip summary, tip details, performance, payroll.",
     "placeholder.bullet.teamScheduling":

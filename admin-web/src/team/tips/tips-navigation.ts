@@ -35,7 +35,7 @@ export function parseTipsRoute(hash: string): TipsRoute {
 
 export function isTipsFullscreenRoute(route: TipsRoute): boolean {
   const path = normalizePath(route.href.split("?")[0]);
-  return path === "/team/tips/details" || path === "/team/tips/employee-reconciliation" || path === "/team/tips/rules" || path === "/team/tips/rules/editor";
+  return path === "/team/tips/details" || path === "/team/tips/employee-reconciliation" || path === "/team/tips/rules/editor";
 }
 
 export function isTipsSummaryReturnTransition(current: TipsRoute, target: TipsRoute): boolean {

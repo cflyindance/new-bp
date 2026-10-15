@@ -1387,14 +1387,8 @@ var ALLOC_KEY = 'tipout_allocated';
     }
 
     function openSummaryRuleEntry() {
-      var rules = [];
-      try {
-        rules = window.ruleData && ruleData.getRules ? ruleData.getRules() : [];
-      } catch (e) {
-        rules = [];
-      }
-      var hasRules = Array.isArray(rules) && rules.length > 0;
-      window.location.href = hasRules ? 'rules.html' : 'rule-add.html?poolKind=tip';
+      captureSummaryUiState('', '');
+      window.location.href = 'rules.html';
     }
 
     function hasTipRules() {
