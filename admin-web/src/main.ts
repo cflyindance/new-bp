@@ -174,10 +174,8 @@ import {
   shouldShowTeamClockInSaveBar,
 } from "./config/team-clock-in-ui";
 import {
-  bindCloudProductRouteNoticeUi,
   cloudProductBadgeForNavChild,
   cloudProductBadgeForNavModule,
-  renderCloudProductRouteNoticeDialog,
 } from "./config/cloud-product-route-notice-ui";
 import {
   bindTeamReportsCloudNoticeUi,
@@ -12394,7 +12392,6 @@ function mount(): void {
         ${renderMain()}
       </div>
       ${renderAiAssistantFloatingPanel()}
-      ${renderCloudProductRouteNoticeDialog()}
     </div>
   `;
 
@@ -13264,7 +13261,6 @@ function mount(): void {
   bindTeamBreaksOvertimeUi(mount);
   bindTeamClockInUi(mount);
   bindTeamReportsCloudNoticeUi(mount);
-  bindCloudProductRouteNoticeUi(mount);
   bindTeamTrainingPerformanceUi(mount);
   refreshCashDrawerVarianceAlertThresholdLabels();
   bindGuestNamePageUi();
