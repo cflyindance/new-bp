@@ -2623,7 +2623,7 @@ function renderPcSheetDarkSubnav(
     drilledParent = next;
     drilledNodes = next.sidebarChildren;
   }
-  if (drilledParent && activeTertiarySheetTrail.length > 0) {
+  if (drilledParent && activeTertiarySheetTrail.length > 0 && !navigationSheetStack) {
     return `
       <div class="space-y-3" data-tertiary-sheet-frame="${escapeHtml(activeTertiarySheetTrail.join("/"))}">
         <button type="button" data-tertiary-sheet-back

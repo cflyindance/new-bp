@@ -26,7 +26,7 @@ import { readModuleSettingJson, writeModuleSettingJson } from "./module-settings
 import {
   ensureGuestCategoryModeToggleMigrated,
   GUEST_MENU_CATEGORY_MODE_SEQ,
-  renderGuestCategoryModePanelHtml,
+  readGuestCategoryModeLines,
 } from "./module-settings-guest-category-mode-ui";
 import { writeModuleSettingToggleOn } from "./module-settings-toggle-ui";
 import {
@@ -45,14 +45,14 @@ export const FOH_CATEGORY_SETTINGS_BASE = "/operations/queue-call/category-setti
 export const FOH_CATEGORY_SETTINGS_TABS = [
   {
     id: "age-category",
-    title: "品类类别",
-    titleEn: "Category types",
+    title: "基础配置",
+    titleEn: "Basic configuration",
     path: `${FOH_CATEGORY_SETTINGS_BASE}/age-category`,
   },
   {
     id: "menu",
-    title: "品类菜单",
-    titleEn: "Category menus",
+    title: "菜单配置",
+    titleEn: "Menu configuration",
     path: `${FOH_CATEGORY_SETTINGS_BASE}/menu`,
   },
   {
@@ -63,8 +63,8 @@ export const FOH_CATEGORY_SETTINGS_TABS = [
   },
   {
     id: "settings",
-    title: "品类设置",
-    titleEn: "Category settings",
+    title: "渠道与展示",
+    titleEn: "Channels and display",
     path: `${FOH_CATEGORY_SETTINGS_BASE}/settings`,
   },
 ] as const;
@@ -97,6 +97,8 @@ const ALL_DISPLAY_CHANNELS: BrandMenuLineId[] = BRAND_MENU_LINE_OPTIONS.map((l) 
 export type MenuComboKey = string;
 
 export type MenuComboConfig = {
+  /** 已确认过配置，允许明确保存空菜单，不表示完整性检查通过。 */
+  configured?: boolean;
   displayName: string;
   viewOnlyMode: "dish" | "category";
   /** 其他年龄×类别组合的 key（仅 viewOnlyMode=category 时） */
@@ -356,7 +358,7 @@ const BTN_GHOST =
 const BTN_DESTRUCTIVE =
   "inline-flex h-9 shrink-0 items-center justify-center rounded-md bg-destructive px-4 text-sm font-medium text-destructive-foreground shadow-sm hover:bg-destructive/90";
 
-const BTN_LINK = "text-sm font-medium text-primary hover:underline";
+const BTN_LINK = "inline-flex min-h-9 items-center rounded px-2 text-sm font-medium text-primary hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 const INPUT_CLASS =
   "h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
@@ -380,7 +382,7 @@ function filterViewOnlyCategoryKeys(
   return uniqueStrings(keys.filter((k) => k !== targetKey && validKeys.has(k)));
 }
 
-/** 将源菜单组合的可下单 + 不可下单配置覆盖到目标（不改 displayName） */
+/** 将源菜单组合的可下单 + 仅可查看配置覆盖到目标（不改 displayName） */
 function applyMenuComboCopy(
   source: MenuComboConfig,
   target: MenuComboConfig,
@@ -403,10 +405,10 @@ function applyMenuComboCopy(
 function formatMenuComboConfigSummary(cfg: MenuComboConfig): string {
   const orderableCount = countBrandMenuStructureDishesByLine(cfg.orderableStructureByLine);
   const viewOnlyCount = countViewOnlyConfigured(cfg);
-  if (orderableCount === 0 && viewOnlyCount === 0) return "未配置";
+  if (orderableCount === 0 && viewOnlyCount === 0) return cfg.configured ? "已配置 · 内容为空" : "未配置 · 内容为空";
   const parts: string[] = [];
   if (orderableCount > 0) parts.push(`可下单 ${orderableCount}`);
-  if (viewOnlyCount > 0) parts.push(`不可下单 ${viewOnlyCount}`);
+  if (viewOnlyCount > 0) parts.push(`仅可查看 ${viewOnlyCount}`);
   return parts.join(" · ");
 }
 
@@ -443,6 +445,7 @@ function normalizeMenuByCombo(
       : [];
     const validKeys = new Set(combos.map((c) => c.key));
     out[combo.key] = {
+      configured: prev?.configured === true || (!!prev && (countBrandMenuStructureDishesByLine(coerceBrandMenuStructureByLine(prev.orderableStructureByLine, prev.orderableStructureKeys)) > 0 || keys.some((key) => key !== combo.key && validKeys.has(key)) || countBrandMenuStructureDishesByLine(coerceBrandMenuStructureByLine(prev.viewOnlyStructureByLine, prev.viewOnlyStructureKeys)) > 0)),
       displayName:
         typeof prev?.displayName === "string" && prev.displayName.trim()
           ? prev.displayName.trim()
@@ -532,32 +535,23 @@ export function getFohCategorySettingsTabPath(tabId: FohCategorySettingsTabId): 
   return FOH_CATEGORY_SETTINGS_TABS.find((t) => t.id === tabId)?.path ?? FOH_CATEGORY_SETTINGS_TABS[0].path;
 }
 
-function renderTabBar(activePath: string): string {
-  const items = FOH_CATEGORY_SETTINGS_TABS.map((tab) => {
-    const selected = activePath === tab.path || activePath.startsWith(`${tab.path}/`);
-    return `
-      <a
-        href="#${tab.path}"
-        role="tab"
-        data-foh-category-settings-tab="${tab.id}"
-        class="min-h-10 border-b-2 px-4 text-sm font-medium transition-colors ${
-          selected
-            ? "border-primary text-primary"
-            : "border-transparent text-muted-foreground hover:border-border hover:text-foreground"
-        }"
-        ${selected ? 'aria-selected="true" aria-current="page"' : 'aria-selected="false"'}
-      >${escapeHtml(tab.title)}</a>`;
-  }).join("");
+function renderPageHeading(activePath: string): string {
+  const tab = FOH_CATEGORY_SETTINGS_TABS.find((item) => item.path === activePath)!;
+  const descriptions: Record<FohCategorySettingsTabId, string> = {
+    "age-category": "先定义年龄分组和用餐类别，再配置各组合的菜单。",
+    menu: "菜单由年龄分组 × 用餐类别生成；分别配置可下单和仅可查看的内容。",
+    "special-menu": "维护特殊品类及其菜单内容；展示渠道还需核对渠道与展示中的配置。",
+    settings: "配置品类模式与特殊品类的适用渠道。",
+  };
+  return `<header class="shrink-0"><h2 class="m-0 text-lg font-semibold">${tab.title}</h2><p class="mt-1 text-sm text-muted-foreground">${descriptions[tab.id]}</p></header>`;
+}
 
-  return `
-    <div
-      class="flex shrink-0 gap-1 border-b border-border"
-      role="tablist"
-      aria-label="品类管理"
-      data-foh-category-settings-nav
-    >
-      ${items}
-    </div>`;
+function renderMoreDelete(attribute: string, id: string): string {
+  return `<details class="relative inline-block text-left"><summary class="inline-flex min-h-9 cursor-pointer list-none items-center rounded px-3 text-sm hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring">更多</summary><div class="absolute right-full top-0 z-20 mr-2 min-w-24 rounded border border-border bg-card p-1 shadow-md"><button type="button" class="min-h-9 w-full rounded px-3 text-left text-sm text-destructive hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring" ${attribute}="${escapeHtml(id)}">删除</button></div></details>`;
+}
+
+function renderFilterSelect(attribute: string, label: string, options: { id: string; name: string }[]): string {
+  return `<label class="flex items-center gap-2 text-sm">${label}<select class="h-9 rounded border border-input bg-background px-3" ${attribute} aria-label="${label}"><option value="">全部</option>${options.map((option) => `<option value="${escapeHtml(option.id)}">${escapeHtml(option.name)}</option>`).join("")}</select></label>`;
 }
 
 function renderAgeCategoryDeleteDialog(): string {
@@ -624,7 +618,8 @@ function openAgeCategoryDeleteConfirm(
   idInput.value = targetId;
   if (titleEl) titleEl.textContent = "确认删除";
   const label = name ? `「${name}」` : kind === "age" ? "该年龄阶段" : "该类别";
-  messageEl.textContent = `确定删除${label}？相关菜单组合将一并移除。`;
+  const affected = listMenuCombinations(readFohCategorySettingsState()).filter((combo) => kind === "age" ? combo.age.id === targetId : combo.category.id === targetId);
+  messageEl.textContent = `确定删除${label}？将移除 ${affected.length} 个相关菜单组合：${affected.map((combo) => combo.title).join("、") || "无"}。取消不会修改配置。`;
   cancelBtn?.classList.remove("hidden");
   confirmBtn.textContent = "删除";
   confirmBtn.className = BTN_DESTRUCTIVE;
@@ -698,15 +693,12 @@ function renderAgeCategoryPanel(state: FohCategorySettingsState): string {
         <tr class="border-b border-border last:border-0" data-foh-category-age-row="${escapeHtml(age.id)}">
           <td class="px-3 py-2.5 text-sm">${escapeHtml(age.name)}</td>
           <td class="px-3 py-2.5 text-xs text-muted-foreground">${escapeHtml(formatDisplayChannelsSummary(age.displayChannels))}</td>
+          <td class="px-3 py-2.5">
+            <select class="h-9 rounded border border-input bg-background px-2 text-sm" data-foh-category-age-tag="${escapeHtml(age.id)}" aria-label="${escapeHtml(age.name)} 年龄标记">${tagOptions}</select>
+          </td>
           <td class="px-3 py-2.5 text-right whitespace-nowrap">
-            <button type="button" class="text-xs text-primary hover:underline" data-foh-category-age-edit="${escapeHtml(age.id)}">修改</button>
-            <span class="mx-1 text-muted-foreground">|</span>
-            <button type="button" class="text-xs text-destructive hover:underline" data-foh-category-age-delete="${escapeHtml(age.id)}">删除</button>
-            <select
-              class="ml-2 h-8 rounded-md border border-input bg-background px-2 text-xs"
-              data-foh-category-age-tag="${escapeHtml(age.id)}"
-              aria-label="${escapeHtml(age.name)} 标记"
-            >${tagOptions}</select>
+            <button type="button" class="${BTN_LINK}" data-foh-category-age-edit="${escapeHtml(age.id)}">编辑</button>
+            ${renderMoreDelete("data-foh-category-age-delete", age.id)}
           </td>
         </tr>`;
     })
@@ -718,17 +710,16 @@ function renderAgeCategoryPanel(state: FohCategorySettingsState): string {
       const hoursLabel = formatCategoryHoursLabel(cat.scheduleIds, schedules);
       const imageCell = cat.imageDataUrl
         ? `<img src="${escapeHtml(cat.imageDataUrl)}" alt="" class="size-10 rounded border border-border object-cover" />`
-        : `<div class="flex size-10 items-center justify-center rounded border border-dashed border-border bg-muted/40 text-[10px] text-muted-foreground">NO IMAGE</div>`;
+        : `<div class="flex size-10 items-center justify-center rounded border border-dashed border-border bg-muted/40 text-[10px] text-muted-foreground">无图</div>`;
       return `
-        <tr class="border-b border-border last:border-0" data-foh-category-cat-row="${escapeHtml(cat.id)}">
-          <td class="px-3 py-2.5 text-sm">${escapeHtml(cat.name)}</td>
-          <td class="px-3 py-2.5">${imageCell}</td>
+        <tr class="border-b border-border last:border-0" data-foh-category-cat-row="${escapeHtml(cat.id)}" data-name="${escapeHtml(cat.name)}" data-channels="${escapeHtml(cat.displayChannels.join(","))}" data-schedules="${escapeHtml(cat.scheduleIds.join(","))}">
+          <td class="px-3 py-2.5"><div class="flex items-center gap-3">${imageCell}<span class="text-sm font-medium">${escapeHtml(cat.name)}</span></div></td>
           <td class="px-3 py-2.5 text-xs text-muted-foreground">${escapeHtml(formatDisplayChannelsSummary(cat.displayChannels))}</td>
           <td class="px-3 py-2.5 text-xs text-muted-foreground">${escapeHtml(hoursLabel)}</td>
           <td class="px-3 py-2.5 text-right whitespace-nowrap">
-            <button type="button" class="text-xs text-primary hover:underline" data-foh-category-cat-edit="${escapeHtml(cat.id)}">编辑</button>
-            <span class="mx-1 text-muted-foreground">|</span>
-            <button type="button" class="text-xs text-destructive hover:underline" data-foh-category-cat-delete="${escapeHtml(cat.id)}">删除</button>
+            <button type="button" class="${BTN_LINK}" data-foh-category-cat-edit="${escapeHtml(cat.id)}">编辑</button>
+            <a class="${BTN_LINK}" href="#${FOH_CATEGORY_SETTINGS_BASE}/menu/category/${encodeURIComponent(cat.id)}">配置菜单</a>
+            ${renderMoreDelete("data-foh-category-cat-delete", cat.id)}
           </td>
         </tr>`;
     })
@@ -736,10 +727,10 @@ function renderAgeCategoryPanel(state: FohCategorySettingsState): string {
 
   return `
     <div class="flex flex-col gap-4" data-foh-category-settings-panel="age-category">
-      <section class="flex flex-col overflow-hidden rounded-xl border border-border bg-card">
+      <section class="flex flex-col rounded-xl border border-border bg-card">
         <header class="flex items-center justify-between gap-3 border-b border-border bg-muted/40 px-4 py-2.5">
-          <span class="text-sm font-medium text-foreground">年龄</span>
-          <button type="button" class="${BTN_PRIMARY}" data-foh-category-age-add>增加</button>
+          <span class="text-sm font-medium text-foreground">年龄分组</span>
+          <button type="button" class="${BTN_PRIMARY}" data-foh-category-age-add>新增年龄分组</button>
         </header>
         <div class="min-h-0 flex-1 overflow-auto">
           <table class="w-full">
@@ -747,6 +738,7 @@ function renderAgeCategoryPanel(state: FohCategorySettingsState): string {
               <tr class="border-b border-border text-left text-xs text-muted-foreground">
                 <th class="px-3 py-2 font-medium">名称</th>
                 <th class="px-3 py-2 font-medium">展示渠道</th>
+                <th class="px-3 py-2 font-medium">年龄标记</th>
                 <th class="px-3 py-2 text-right font-medium">操作</th>
               </tr>
             </thead>
@@ -754,23 +746,30 @@ function renderAgeCategoryPanel(state: FohCategorySettingsState): string {
           </table>
         </div>
       </section>
-      <section class="flex flex-col overflow-hidden rounded-xl border border-border bg-card">
+      <section class="flex flex-col rounded-xl border border-border bg-card">
         <header class="flex items-center justify-between gap-3 border-b border-border bg-muted/40 px-4 py-2.5">
-          <span class="text-sm font-medium text-foreground">类别</span>
-          <button type="button" class="${BTN_PRIMARY}" data-foh-category-cat-add>增加</button>
+          <span class="text-sm font-medium text-foreground">用餐类别</span>
+          <button type="button" class="${BTN_PRIMARY}" data-foh-category-cat-add>新增用餐类别</button>
         </header>
+        <div class="flex flex-wrap items-center gap-3 border-b border-border p-3" data-category-filters>
+          <input type="search" class="h-9 rounded border border-input bg-background px-3 text-sm" placeholder="搜索用餐类别" aria-label="搜索用餐类别" data-category-search />
+          ${renderFilterSelect("data-category-channel", "展示渠道", BRAND_MENU_LINE_OPTIONS.map((line) => ({ id: line.id, name: line.label })))}
+          ${renderFilterSelect("data-category-schedule", "营业时段", schedules)}
+          <button type="button" class="${BTN_LINK}" data-category-reset>重置</button>
+          <span class="text-xs text-muted-foreground" data-category-result-count aria-live="polite"></span>
+        </div>
         <div class="min-h-0 flex-1 overflow-auto">
           <table class="w-full">
             <thead>
               <tr class="border-b border-border text-left text-xs text-muted-foreground">
                 <th class="px-3 py-2 font-medium">名称</th>
-                <th class="px-3 py-2 font-medium">图片</th>
+
                 <th class="px-3 py-2 font-medium">展示渠道</th>
                 <th class="px-3 py-2 font-medium">营业时间</th>
                 <th class="px-3 py-2 text-right font-medium">操作</th>
               </tr>
             </thead>
-            <tbody>${categoryRows || `<tr><td colspan="5" class="px-3 py-8 text-center text-sm text-muted-foreground">暂无类别</td></tr>`}</tbody>
+            <tbody>${categoryRows}<tr hidden data-category-no-results><td colspan="4" class="px-3 py-8 text-center text-sm text-muted-foreground">无匹配类别，请调整筛选条件</td></tr>${categoryRows ? "" : `<tr><td colspan="4" class="px-3 py-8 text-center text-sm text-muted-foreground">暂无类别</td></tr>`}</tbody>
           </table>
         </div>
       </section>
@@ -839,7 +838,7 @@ function renderCategoryFormDialogShell(): string {
               <div
                 class="mx-auto flex h-24 w-24 items-center justify-center rounded border border-dashed border-border bg-muted/30 text-xs text-muted-foreground"
                 data-foh-cat-image-preview
-              >NO IMAGES</div>
+              >无图</div>
               <button type="button" class="${BTN_GHOST}" data-foh-cat-image-pick>选择图片</button>
             </div>
           </div>
@@ -874,7 +873,7 @@ function renderViewOnlyCategoryPicker(
 ): string {
   const others = allCombos.filter((c) => c.key !== combo.key);
   if (others.length === 0) {
-    return `<p class="m-0 text-xs text-muted-foreground">暂无其他组合可选；请先在品类类别中增加年龄或类别。</p>`;
+    return `<p class="m-0 text-xs text-muted-foreground">暂无其他组合可选；请先在基础配置中新增年龄分组或用餐类别。</p>`;
   }
   const selected = new Set(cfg.viewOnlyCategoryKeys);
   const chips = others
@@ -927,7 +926,7 @@ function renderMenuEditDialogBody(
   return `
     <div class="space-y-4" data-foh-menu-edit-config="${escapeHtml(combo.key)}" data-edit-scope="viewOnly">
       <div>
-        <p class="m-0 mb-2 text-sm font-medium text-foreground">不可下单的菜</p>
+        <p class="m-0 mb-2 text-sm font-medium text-foreground">仅可查看的菜</p>
         <div class="mb-3 flex flex-wrap items-center gap-4 text-sm">
           <label class="inline-flex cursor-pointer items-center gap-2">
             <input
@@ -962,7 +961,7 @@ function renderMenuEditDialogBody(
           </div>
         </div>
         <div class="${categoryMode ? "" : "hidden"}" data-foh-menu-view-category-panel>
-          <p class="m-0 mb-2 text-xs text-muted-foreground">勾选其他「年龄-类别」组合，食客在本套餐下仅可查看对应类别菜单（不可下单）。</p>
+          <p class="m-0 mb-2 text-xs text-muted-foreground">勾选其他「年龄-类别」组合，食客在本套餐下仅可查看对应类别菜单（仅可查看）。</p>
           ${renderViewOnlyCategoryPicker(combo, allCombos, cfg)}
         </div>
       </div>
@@ -1037,8 +1036,8 @@ function renderMenuComboRow(
   const orderableCount = countBrandMenuStructureDishesByLine(cfg.orderableStructureByLine);
   const viewOnlyCount = countViewOnlyConfigured(cfg);
   return `
-    <tr class="border-t border-border" data-foh-menu-combo-row="${escapeHtml(combo.key)}">
-      <td class="py-3 pr-3 text-sm font-medium text-foreground">${escapeHtml(combo.title)}</td>
+    <tr class="border-t border-border" data-foh-menu-combo-row="${escapeHtml(combo.key)}" data-age="${escapeHtml(combo.age.id)}" data-category="${escapeHtml(combo.category.id)}">
+      <td class="py-3 pr-3 text-sm font-medium text-foreground">${escapeHtml(combo.title)}<span class="ml-2 rounded bg-muted px-2 py-1 text-xs text-muted-foreground">${cfg.configured ? "已配置" : "未配置"}</span></td>
       <td class="py-3 pr-3 text-xs text-muted-foreground">${escapeHtml(hoursLabel)}</td>
       <td class="py-3 pr-3 text-sm">
         <button type="button" class="${BTN_LINK}" data-foh-menu-detail="orderable" data-foh-menu-combo-key="${escapeHtml(combo.key)}">${formatMenuDetailButtonLabel(orderableCount)}</button>
@@ -1057,23 +1056,21 @@ function renderMenuPanel(state: FohCategorySettingsState): string {
   if (combos.length === 0) {
     return `
       <div class="rounded-xl border border-dashed border-border bg-muted/20 p-8 text-center text-sm text-muted-foreground" data-foh-category-settings-panel="menu">
-        请先在「品类类别」中配置至少一个年龄与一个类别，系统将自动生成菜单配置。
+        请先在「基础配置」中配置至少一个年龄分组与一个用餐类别。<a class="${BTN_LINK}" href="#${FOH_CATEGORY_SETTINGS_BASE}/age-category">去配置</a>
       </div>`;
   }
 
   const schedules = readBusinessHourSchedules();
-  const rows = combos
-    .map((combo) =>
-      renderMenuComboRow(
-        combo,
-        schedules,
-        state.menuByCombo[combo.key] ?? defaultMenuConfig(combo.age, combo.category),
-      ),
-    )
-    .join("");
+  const rows = state.categories.map((category) => `<tr data-menu-group="${escapeHtml(category.id)}" class="bg-muted/30"><th colspan="5" class="px-3 py-2 text-sm">${escapeHtml(category.name)}</th></tr>${combos.filter((combo) => combo.category.id === category.id).map((combo) => renderMenuComboRow(combo, schedules, state.menuByCombo[combo.key] ?? defaultMenuConfig(combo.age, combo.category))).join("")}`).join("");
 
   return `
     <div class="space-y-3" data-foh-category-settings-panel="menu">
+      <div class="flex flex-wrap items-center gap-3" data-menu-filters>
+        ${renderFilterSelect("data-menu-age", "年龄分组", state.ages)}
+        ${renderFilterSelect("data-menu-category", "用餐类别", state.categories)}
+        <button type="button" class="${BTN_LINK}" data-menu-reset>重置</button>
+        <span class="text-xs text-muted-foreground" data-menu-result-count aria-live="polite"></span>
+      </div>
       <div class="overflow-x-auto rounded-md border border-border">
         <table class="w-full min-w-[32rem] border-collapse text-left text-sm">
           <thead class="bg-muted/40 text-xs text-muted-foreground">
@@ -1081,45 +1078,13 @@ function renderMenuPanel(state: FohCategorySettingsState): string {
               <th class="px-3 py-2 font-medium">菜单组合</th>
               <th class="px-3 py-2 font-medium">营业时间</th>
               <th class="px-3 py-2 font-medium">可下单</th>
-              <th class="px-3 py-2 font-medium">不可下单</th>
+              <th class="px-3 py-2 font-medium">仅可查看</th>
               <th class="px-3 py-2 font-medium">操作</th>
             </tr>
           </thead>
-          <tbody>${rows}</tbody>
+          <tbody>${rows}<tr hidden data-menu-no-results><td colspan="5" class="px-3 py-8 text-center text-muted-foreground">无匹配菜单组合</td></tr></tbody>
         </table>
       </div>
-    </div>`;
-}
-
-function renderSpecialMenuLinesHtml(selectedLines: SpecialMenuLineId[]): string {
-  const selected = new Set(selectedLines);
-  const cells = SPECIAL_MENU_PRODUCT_LINES.map((line, index) => {
-    const checked = selected.has(line.id);
-    const divider = index > 0 ? "border-l border-border" : "";
-    return `
-      <label
-        class="flex flex-1 flex-col items-center justify-center gap-2 px-2 py-3 text-sm text-foreground cursor-pointer sm:px-4 ${divider}"
-      >
-        <input
-          type="checkbox"
-          class="${MODULE_SETTING_CONTROL_CLASS} rounded-sm"
-          value="${escapeHtml(line.id)}"
-          data-foh-special-menu-line="${escapeHtml(line.id)}"
-          ${checked ? "checked" : ""}
-          aria-label="${escapeHtml(line.label)}"
-        />
-        <span class="text-center leading-tight">${escapeHtml(line.label)}</span>
-      </label>`;
-  }).join("");
-
-  return `
-    <div
-      class="mt-3 flex w-full max-w-md overflow-hidden rounded-md border border-border bg-muted/40"
-      data-foh-special-menu-lines
-      role="group"
-      aria-label="特殊品类适用产线"
-    >
-      ${cells}
     </div>`;
 }
 
@@ -1127,7 +1092,7 @@ function renderSpecialMenuImageCell(entry: FohSpecialMenuEntry): string {
   if (entry.imageDataUrl) {
     return `<img src="${escapeHtml(entry.imageDataUrl)}" alt="" class="size-12 rounded border border-border object-cover" />`;
   }
-  return `<div class="flex size-12 items-center justify-center rounded border border-dashed border-border bg-muted/40 text-[10px] text-muted-foreground">NO IMAGE</div>`;
+  return `<div class="flex size-12 items-center justify-center rounded border border-dashed border-border bg-muted/40 text-[10px] text-muted-foreground">无图</div>`;
 }
 
 function renderSpecialMenuTable(entries: FohSpecialMenuEntry[]): string {
@@ -1147,7 +1112,7 @@ function renderSpecialMenuTable(entries: FohSpecialMenuEntry[]): string {
         </td>
         <td class="py-3 text-right text-sm whitespace-nowrap">
           <button type="button" class="${BTN_LINK} mr-3" data-foh-special-menu-edit="${escapeHtml(entry.id)}">编辑</button>
-          <button type="button" class="text-sm font-medium text-destructive hover:underline" data-foh-special-menu-delete="${escapeHtml(entry.id)}">删除</button>
+          ${renderMoreDelete("data-foh-special-menu-delete", entry.id)}
         </td>
       </tr>`;
     })
@@ -1227,7 +1192,7 @@ function renderSpecialMenuDialogBody(
 ): string {
   const imagePreview = imageDataUrl
     ? `<img src="${escapeHtml(imageDataUrl)}" alt="" class="mx-auto max-h-24 rounded border border-border object-contain" data-foh-special-menu-image-preview />`
-    : `<div class="mx-auto flex h-24 w-24 items-center justify-center rounded border border-dashed border-border bg-muted/30 text-xs text-muted-foreground" data-foh-special-menu-image-preview>NO IMAGES</div>`;
+    : `<div class="mx-auto flex h-24 w-24 items-center justify-center rounded border border-dashed border-border bg-muted/30 text-xs text-muted-foreground" data-foh-special-menu-image-preview>无图</div>`;
   return `
     <div class="space-y-4" data-foh-special-menu-entry="${escapeHtml(entryId)}">
       <div class="space-y-1.5">
@@ -1270,6 +1235,7 @@ function renderSpecialMenuDialogBody(
 function renderSpecialMenuPanel(state: FohCategorySettingsState): string {
   return `
     <div class="mt-1 space-y-3" data-foh-category-settings-panel="special-menu">
+      <p class="rounded border border-border bg-muted/30 p-3 text-sm text-muted-foreground">特殊品类适用渠道：${escapeHtml(state.specialMenuLines.length ? state.specialMenuLines.map((id) => id === "emenu" ? "eMenu" : "SDI").join("、") : "尚未选择")}。对象展示渠道与品类模式请分别核对。<a class="${BTN_LINK}" href="#${FOH_CATEGORY_SETTINGS_BASE}/settings">查看渠道与展示</a></p>
       <div class="flex flex-wrap items-center justify-end gap-2">
         <button type="button" class="${BTN_PRIMARY}" data-foh-special-menu-add>新增特殊品类</button>
       </div>
@@ -1279,23 +1245,15 @@ function renderSpecialMenuPanel(state: FohCategorySettingsState): string {
 
 function renderSettingsPanel(state: FohCategorySettingsState): string {
   ensureGuestCategoryModeToggleMigrated(GUEST_MENU_CATEGORY_MODE_SEQ);
-  writeModuleSettingToggleOn(GUEST_MENU_CATEGORY_MODE_SEQ, true);
+  const modeLines = readGuestCategoryModeLines(GUEST_MENU_CATEGORY_MODE_SEQ);
   return `
     <div class="space-y-6" data-foh-category-settings-panel="settings">
-      <section class="rounded-xl border border-border bg-card px-4 py-4">
-        <div class="min-w-0">
-          <h3 class="m-0 text-sm font-semibold text-card-foreground">展示特殊品类</h3>
-          <p class="m-0 mt-1 text-xs leading-relaxed text-muted-foreground">根据选定产线展示特殊品类，可在「特殊品类」中配置，并在对应产线的品类模式中选择。</p>
-        </div>
-        ${renderSpecialMenuLinesHtml(state.specialMenuLines)}
-      </section>
-      <section class="rounded-xl border border-border bg-card px-4 py-4">
-        <div class="min-w-0">
-          <h3 class="m-0 text-sm font-semibold text-card-foreground">品类模式</h3>
-          <p class="m-0 mt-1 text-xs leading-relaxed text-muted-foreground">根据选定产线，使用品类先分类再选菜的点单形式（非普通扁平菜单）。</p>
-        </div>
-        ${renderGuestCategoryModePanelHtml(GUEST_MENU_CATEGORY_MODE_SEQ, true)}
-      </section>
+      <div class="overflow-x-auto rounded-xl border border-border bg-card" data-foh-special-menu-lines data-guest-category-mode-lines="${GUEST_MENU_CATEGORY_MODE_SEQ}">
+        <table class="w-full text-left text-sm"><thead class="bg-muted/40"><tr><th class="p-4">渠道</th><th class="p-4">品类模式</th><th class="p-4">展示特殊品类</th></tr></thead>
+          <tbody>${SPECIAL_MENU_PRODUCT_LINES.map((line) => `<tr class="border-t border-border"><th class="p-4 font-medium">${line.label}</th><td class="p-4"><label class="inline-flex min-h-10 cursor-pointer items-center gap-3 rounded px-3 hover:bg-muted/50"><input type="checkbox" class="${MODULE_SETTING_CONTROL_CLASS}" data-guest-category-mode-line="${line.id}" ${modeLines.includes(line.id) ? "checked" : ""} aria-label="${line.label} 品类模式" />先选品类，再选菜</label></td><td class="p-4"><label class="inline-flex min-h-10 cursor-pointer items-center gap-3 rounded px-3 hover:bg-muted/50"><input type="checkbox" class="${MODULE_SETTING_CONTROL_CLASS}" data-foh-special-menu-line="${line.id}" ${state.specialMenuLines.includes(line.id) ? "checked" : ""} aria-label="${line.label} 展示特殊品类" />展示特殊品类</label></td></tr>`).join("")}</tbody>
+        </table>
+      </div>
+      <p class="text-sm text-muted-foreground">此处维护渠道设置；各年龄分组、用餐类别及特殊品类的展示渠道在对应页面维护，请核对相关对象的渠道选择。<a class="${BTN_LINK}" href="#${FOH_CATEGORY_SETTINGS_BASE}/special-menu">维护特殊品类</a></p>
     </div>`;
 }
 
@@ -1319,15 +1277,15 @@ export function renderFohCategorySettingsPage(path: string): string {
 
   return `
     <div
-      class="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden"
+      class="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden pr-20"
       data-foh-category-settings-root
     >
-      ${renderTabBar(tabPath)}
+      ${renderPageHeading(tabPath)}
       <div
         class="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain"
         data-foh-category-settings-main
         data-active-tab="${tabId}"
-        role="tabpanel"
+        role="region" aria-label="品类配置内容"
       >
         ${renderTabContent(tabId, state)}
       </div>
@@ -1374,7 +1332,7 @@ function setCategoryFormImagePreview(dialog: HTMLElement, imageDataUrl?: string)
     placeholder.className =
       "mx-auto flex h-24 w-24 items-center justify-center rounded border border-dashed border-border bg-muted/30 text-xs text-muted-foreground";
     placeholder.dataset.fohCatImagePreview = "";
-    placeholder.textContent = "NO IMAGES";
+    placeholder.textContent = "无图";
     previewHost.replaceWith(placeholder);
   }
 }
@@ -1420,7 +1378,7 @@ function setSpecialMenuImagePreview(dialog: HTMLElement, imageDataUrl?: string):
     placeholder.className =
       "mx-auto flex h-24 w-24 items-center justify-center rounded border border-dashed border-border bg-muted/30 text-xs text-muted-foreground";
     placeholder.dataset.fohSpecialMenuImagePreview = "";
-    placeholder.textContent = "NO IMAGES";
+    placeholder.textContent = "无图";
     previewHost.replaceWith(placeholder);
   }
 }
@@ -1677,6 +1635,8 @@ function syncMenuCopyConfirmEnabled(dialog: HTMLElement): void {
   ).length > 0;
   const hasTargetsList = dialog.querySelector("[data-foh-menu-copy-targets]") != null;
   confirmBtn.disabled = !hasTargetsList || !hasTarget;
+  const count = dialog.querySelectorAll("[data-foh-menu-copy-target]:checked").length;
+  confirmBtn.textContent = count ? `复制并覆盖 ${count} 个组合` : "复制并覆盖";
   confirmBtn.classList.toggle("opacity-50", confirmBtn.disabled);
   confirmBtn.classList.toggle("pointer-events-none", confirmBtn.disabled);
 }
@@ -1708,7 +1668,7 @@ function renderMenuCopyDialogBody(
     .join("");
 
   return `
-    <p class="m-0 text-sm text-muted-foreground">将「可下单 + 不可下单」复制并覆盖到所选菜单组合</p>
+    <p class="m-0 text-sm text-muted-foreground">将「可下单 + 仅可查看」复制并覆盖到所选菜单组合</p>
     <div>
       <p class="m-0 mb-2 text-xs font-medium text-muted-foreground">目标菜单组合</p>
       <div class="grid max-h-56 gap-2 overflow-y-auto" data-foh-menu-copy-targets>${list}</div>
@@ -1728,6 +1688,8 @@ function openMenuCopyDialog(root: HTMLElement, sourceKey: MenuComboKey): void {
   if (titleEl) titleEl.textContent = `复制菜单配置 · 源：${source.title}`;
   const targets = combos.filter((c) => c.key !== sourceKey);
   body.innerHTML = renderMenuCopyDialogBody(targets, state);
+  const sourceCfg = state.menuByCombo[sourceKey] ?? defaultMenuConfig(source.age, source.category);
+  body.insertAdjacentHTML("afterbegin", `<p class="rounded border border-border bg-muted/30 p-3 text-sm">来源：${escapeHtml(source.title)} · ${escapeHtml(formatMenuComboConfigSummary(sourceCfg))}<br />下方展示目标原配置摘要；确认后覆盖两侧菜单内容，保留目标名称。${countBrandMenuStructureDishesByLine(sourceCfg.orderableStructureByLine) === 0 && countViewOnlyConfigured(sourceCfg) === 0 ? "来源内容为空，覆盖会清空目标菜单内容。" : ""}取消不会修改配置。</p>`);
   syncMenuCopyConfirmEnabled(dialog);
   showMenuCopyDialog(root);
 }
@@ -1764,6 +1726,7 @@ function confirmMenuCopyDialog(root: HTMLElement): void {
       targetKey,
       validKeys,
     );
+    state.menuByCombo[targetKey]!.configured = true;
   }
 
   writeFohCategorySettingsState(state);
@@ -1784,7 +1747,7 @@ function openMenuEditDialog(root: HTMLElement, comboKeyValue: MenuComboKey, scop
   dialog.setAttribute("data-edit-scope", scope);
   if (titleEl) {
     titleEl.textContent =
-      scope === "orderable" ? `可下单 · ${combo.title}` : `不可下单 · ${combo.title}`;
+      scope === "orderable" ? `可下单 · ${combo.title}` : `仅可查看 · ${combo.title}`;
   }
   body.innerHTML = renderMenuEditDialogBody(combo, combos, cfg, scope);
   body.querySelectorAll<HTMLElement>("[data-brand-menu-structure-picker]").forEach((picker) => {
@@ -1845,6 +1808,7 @@ function saveMenuEditDialog(root: HTMLElement): void {
     prev,
     scope,
   );
+  state.menuByCombo[comboKeyValue]!.configured = true;
   writeFohCategorySettingsState(state);
   hideMenuEditDialog(root);
 }
@@ -1936,12 +1900,59 @@ export function bindFohCategorySettingsUi(remount: () => void): void {
   bindFohSettingsNameDialog(root);
   bindFohCategoryMenuEditDialog(root, remount);
   bindFohCategoryFormDialog(root, remount);
+  root.addEventListener("change", (event) => {
+    if ((event.target as HTMLElement).matches("[data-guest-category-mode-line]")) {
+      const hasSelectedLine = root.querySelector("[data-guest-category-mode-line]:checked") !== null;
+      writeModuleSettingToggleOn(GUEST_MENU_CATEGORY_MODE_SEQ, hasSelectedLine);
+    }
+  });
+  const categorySearch = root.querySelector<HTMLInputElement>("[data-category-search]");
+  const categoryChannel = root.querySelector<HTMLSelectElement>("[data-category-channel]");
+  const categorySchedule = root.querySelector<HTMLSelectElement>("[data-category-schedule]");
+  const menuAge = root.querySelector<HTMLSelectElement>("[data-menu-age]");
+  const menuCategory = root.querySelector<HTMLSelectElement>("[data-menu-category]");
+  const updateFilters = () => {
+    let categoriesVisible = 0;
+    root.querySelectorAll<HTMLElement>("[data-foh-category-cat-row]").forEach((row) => {
+      row.hidden = !(row.dataset.name?.toLocaleLowerCase().includes((categorySearch?.value || "").trim().toLocaleLowerCase()) && (!categoryChannel?.value || row.dataset.channels?.split(",").includes(categoryChannel.value)) && (!categorySchedule?.value || row.dataset.schedules?.split(",").includes(categorySchedule.value)));
+      if (!row.hidden) categoriesVisible++;
+    });
+    const categoryCount = root.querySelector<HTMLElement>("[data-category-result-count]");
+    if (categoryCount) categoryCount.textContent = `显示 ${categoriesVisible} 个用餐类别`;
+    const categoryEmpty = root.querySelector<HTMLElement>("[data-category-no-results]");
+    if (categoryEmpty) categoryEmpty.hidden = categoriesVisible > 0 || readFohCategorySettingsState().categories.length === 0;
+    let menusVisible = 0;
+    const visibleGroups = new Set<string>();
+    root.querySelectorAll<HTMLElement>("[data-foh-menu-combo-row]").forEach((row) => {
+      row.hidden = !!((menuAge?.value && row.dataset.age !== menuAge.value) || (menuCategory?.value && row.dataset.category !== menuCategory.value));
+      if (!row.hidden) { menusVisible++; visibleGroups.add(row.dataset.category!); }
+    });
+    root.querySelectorAll<HTMLElement>("[data-menu-group]").forEach((row) => { row.hidden = !visibleGroups.has(row.dataset.menuGroup!); });
+    const menuCount = root.querySelector<HTMLElement>("[data-menu-result-count]");
+    if (menuCount) menuCount.textContent = `显示 ${menusVisible} 个菜单组合`;
+    const menuEmpty = root.querySelector<HTMLElement>("[data-menu-no-results]");
+    if (menuEmpty) menuEmpty.hidden = menusVisible > 0;
+  };
+  const contextMatch = location.hash.match(/\/menu\/category\/([^/?#]+)/);
+  let contextCategory: string | null = null;
+  try {
+    contextCategory = contextMatch ? decodeURIComponent(contextMatch[1]!) : null;
+  } catch {
+    // 无效链接参数仅忽略筛选，不阻断页面操作绑定。
+  }
+  if (menuCategory && contextCategory && Array.from(menuCategory.options).some((option) => option.value === contextCategory)) menuCategory.value = contextCategory;
+  [categorySearch, categoryChannel, categorySchedule, menuAge, menuCategory].forEach((control) => control?.addEventListener(control === categorySearch ? "input" : "change", updateFilters));
+  root.querySelector("[data-category-reset]")?.addEventListener("click", () => { [categorySearch, categoryChannel, categorySchedule].forEach((control) => { if (control) control.value = ""; }); updateFilters(); });
+  root.querySelector("[data-menu-reset]")?.addEventListener("click", () => { [menuAge, menuCategory].forEach((control) => { if (control) control.value = ""; }); updateFilters(); });
+  root.addEventListener("click", (event) => { const target = event.target as HTMLElement; root.querySelectorAll<HTMLDetailsElement>("details[open]").forEach((details) => { if (!details.contains(target)) details.open = false; }); });
+  updateFilters();
+
 
   root.querySelector("[data-foh-category-age-add]")?.addEventListener("click", () => {
     openFohSettingsNameDialog(root, {
-      title: "增加年龄",
-      label: "年龄阶段名称",
-      placeholder: "请输入年龄阶段名称",
+      title: "新增年龄分组",
+      label: "年龄分组名称",
+      placeholder: "请输入年龄分组名称",
       enableDisplayChannels: true,
       onConfirm: (name, extras) => {
         const state = readFohCategorySettingsState();
@@ -1965,8 +1976,8 @@ export function bindFohCategorySettingsUi(remount: () => void): void {
       const row = state.ages.find((a) => a.id === id);
       if (!row) return;
       openFohSettingsNameDialog(root, {
-        title: "修改年龄",
-        label: "年龄阶段名称",
+        title: "编辑年龄分组",
+        label: "年龄分组名称",
         initialValue: row.name,
         confirmLabel: "保存",
         enableDisplayChannels: true,

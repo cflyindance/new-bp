@@ -117,12 +117,12 @@ export function readGuestCategoryModeLines(seq: number): GuestCategoryModeProduc
   ensureGuestCategoryModeToggleMigrated(seq);
   const stored = readModuleSettingJson<unknown>(linesStorageId(seq), null);
   const normalized = normalizeLineIds(seq, stored);
-  if (normalized.length > 0) return normalized;
+  // 显式空数组也可能来自当前页草稿；只有缺失配置才套用旧开关默认值。
+  if (Array.isArray(stored)) return normalized;
 
   if (readLegacyToggleOn(seq)) {
     const defaults: GuestCategoryModeProductLineId[] =
       seq === GUEST_MENU_CATEGORY_MODE_SEQ ? ["emenu", "sdi"] : ["emenu"];
-    writeGuestCategoryModeLines(seq, defaults);
     return defaults;
   }
   return [];

@@ -412,6 +412,12 @@ export const NAV_MODULES: NavModule[] = [
         title: "品类管理",
         titleEn: "Category management",
         path: "/operations/queue-call/category-settings",
+        children: [
+          { id: "qc-category-basic", title: "基础配置", titleEn: "Basic configuration", path: "/operations/queue-call/category-settings/age-category" },
+          { id: "qc-category-menu", title: "菜单配置", titleEn: "Menu configuration", path: "/operations/queue-call/category-settings/menu" },
+          { id: "qc-category-special", title: "特殊品类", titleEn: "Special categories", path: "/operations/queue-call/category-settings/special-menu" },
+          { id: "qc-category-display", title: "渠道与展示", titleEn: "Channels and display", path: "/operations/queue-call/category-settings/settings" },
+        ],
       },
       {
         id: "qc-classification-settings",
