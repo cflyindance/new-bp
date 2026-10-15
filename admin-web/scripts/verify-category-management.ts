@@ -5,7 +5,8 @@ import { readGuestCategoryModeLines, writeGuestCategoryModeLines, GUEST_MENU_CAT
 import { writeModuleSettingToggleOn } from "../src/config/module-settings-toggle-ui.ts";
 
 const records = new Map<string, string>();
-Object.assign(globalThis, { location: { hash: "#/test" } });
+const testLocation = { hash: "#/operations/queue-call/category-settings/age-category" };
+Object.assign(globalThis, { location: testLocation, window: Object.assign(new EventTarget(), { location: testLocation }) });
 Object.assign(globalThis, { localStorage: { getItem: (key: string) => records.get(key) ?? null, setItem: (key: string, value: string) => records.set(key, value), removeItem: (key: string) => records.delete(key) } });
 const base = "/operations/queue-call/category-settings";
 assert.equal(resolveFohCategorySettingsTab(`${base}/menu/category/cat-lunch-bbq`), "menu");
