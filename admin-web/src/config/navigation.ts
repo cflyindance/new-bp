@@ -212,7 +212,11 @@ export const NAV_MODULES: NavModule[] = [
         { id: "team-shifts-rules", title: "规则设置", titleEn: "Scheduling rules", path: "/team/shift-scheduling/rules" },
       ] },
       { id: "team-tips", title: "小费管理", path: "/team/tips" },
-      { id: "team-tax-payroll", title: "薪资管理", titleEn: "Manage Payroll", path: "/team/payroll-report" },
+      { id: "team-tax-payroll", title: "薪资管理", titleEn: "Manage Payroll", path: "/team/payroll-report", children: [
+        { id: "team-payroll-report", title: "薪资报表", titleEn: "Payroll report", path: "/team/payroll-report" },
+        { id: "team-payroll-schedule", title: "发薪周期设置", titleEn: "Pay schedule settings", path: "/team/payroll-report/schedule-settings" },
+        { id: "team-payroll-declarations", title: "员工声明设置", titleEn: "Employee declaration settings", path: "/team/payroll-report/declaration-settings" },
+      ] },
       { id: "team-reports", title: "员工报表", path: "/team/reports" },
       { id: "team-training", title: "绩效与培训", path: "/team/training-performance" },
       { id: "team-settings", title: "设置", path: "/team/settings" },

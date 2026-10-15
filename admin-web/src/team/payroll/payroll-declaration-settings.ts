@@ -141,6 +141,8 @@ export function createPayrollDeclarationSettingsController(input: {
   runtime?: PayrollRuntimeHandle;
   repository?: PayrollDeclarationRepository;
   repositoryFactory?: (organizationId: string, storeId?: string) => PayrollDeclarationRepository;
+  routeMode?: boolean;
+  onBack?: () => void;
 }): PayrollDeclarationSettingsHandle {
   const blankDraft = (): SettingsState['draft'] => ({ languageDisplayName: '', localeCode: '', source: '', scopeMode: 'enterprise', storeId: input.context.getScope().storeId || '' });
   const state: SettingsState = { families: [], versions: [], selectedFamilyId: null, message: "", busy: false, editorOpen: false, stores: [], draft: blankDraft(), newVersion: false, loadWarning: '' };
@@ -157,7 +159,9 @@ export function createPayrollDeclarationSettingsController(input: {
   openButton.className = "btn payroll-workspace-action-btn no-print";
   openButton.dataset.action = "open-declaration-settings";
   openButton.textContent = "员工声明设置";
-  actionHost.prepend(openButton);
+  if (!input.routeMode) actionHost.prepend(openButton);
+  if (input.routeMode) surface.classList.add('payroll-settings-route');
+  let routeInitialized = false;
 
   let returnFocus: HTMLElement | null = null;
   let destroyed = false;
@@ -233,17 +237,28 @@ export function createPayrollDeclarationSettingsController(input: {
     finally { if (current(token)) { state.busy = false; paint(); } }
   };
   const open = async () => {
-    state.filters = { storeId: '', scope: '', status: '' };
+    if (surface.open) return;
+    if (input.routeMode && routeInitialized) {
+      surface.hidden = false; surface.show();
+      if (!state.editorOpen) await refresh();
+      return;
+    }
+    routeInitialized = true;
+    const scope = input.context.getScope();
+    const filter = input.runtime?.getBatchBridge().getSnapshot().employeeStoreFilter;
+    const storeId = scope.stores.find(s => s.id === filter || s.labelZh === filter || s.labelEn === filter)?.id || scope.storeId || '';
+    state.filters = { storeId, scope: '', status: '' };
     manager.invalidate();
     state.editorOpen = false; state.selectedFamilyId = null;
     returnFocus = input.shadowRoot.activeElement instanceof HTMLElement ? input.shadowRoot.activeElement : openButton;
     input.pageRoot.classList.add("payroll-declaration-settings-open"); surface.hidden = false; openButton.setAttribute("aria-expanded", "true");
-    if (!surface.open) surface.showModal();
+    if (!surface.open) { if(input.routeMode) surface.show(); else surface.showModal(); }
     await refresh(); surface.querySelector<HTMLElement>("[data-declaration-close]")?.focus();
   };
   const close = () => {
+    if (!surface.open) return;
     generation++; manager.invalidate(); state.busy = false;
-    surface.close();
+    if(surface.open) surface.close();
     input.pageRoot.classList.remove("payroll-declaration-settings-open"); surface.hidden = true; openButton.setAttribute("aria-expanded", "false"); returnFocus?.focus();
   };
   const saveDraft = async (publish = false) => {
@@ -338,7 +353,7 @@ export function createPayrollDeclarationSettingsController(input: {
       return;
     }
     if (target.closest('[data-declaration-filter-reset]')) { state.filters = { storeId: '', scope: '', status: '' }; paint(); surface.querySelector<HTMLElement>('[data-declaration-filter-reset]')?.focus(); return; }
-    if (target.closest("[data-declaration-close]")) { close(); return; }
+    if (target.closest("[data-declaration-close]")) { if(input.onBack)input.onBack();else close(); return; }
     if (target.closest("[data-declaration-new]")) { state.selectedFamilyId = null; loadEditor(); state.editorOpen = true; state.message = ""; paint(); surface.querySelector<HTMLElement>("[data-declaration-language]")?.focus(); return; }
     const familyButton = target.closest<HTMLElement>("[data-declaration-family]");
     if (familyButton) { state.selectedFamilyId = familyButton.dataset.declarationFamily ?? null; loadEditor(); state.editorOpen = true; state.message = ""; paint(); surface.querySelector<HTMLElement>("[data-declaration-editor-close]")?.focus(); return; }

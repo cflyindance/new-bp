@@ -6,13 +6,14 @@ import {generatePeriods,validateNewScheduleRule} from './payroll-schedule-engine
 
 const labels:Record<PayrollFrequency,string>={weekly:'单周',biweekly:'双周',semimonthly:'半月',monthly:'一月',custom:'自定义'};
 const escape=(value:unknown)=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
-export function mountPayrollScheduleController(root:ShadowRoot,bridge:PayrollBatchBridge,context:PayrollPageContext){
+export function mountPayrollScheduleController(root:ShadowRoot,bridge:PayrollBatchBridge,context:PayrollPageContext, route?:{pageRoot:HTMLElement;onBack:()=>void}){
   const abort=new AbortController();
   const entry=document.createElement('button');entry.type='button';entry.className='btn payroll-workspace-action-btn no-print';entry.textContent='发薪周期设置';
   const actions=root.querySelector('.payroll-workspace-actions');
   const declaration=actions?.querySelector('[data-action="open-declaration-settings"]');
-  if(declaration) declaration.before(entry); else actions?.prepend(entry);
-  const panel=document.createElement('dialog');panel.className='payroll-schedule-dialog payroll-schedule-page';panel.setAttribute('aria-label','发薪周期设置');root.append(panel);
+  if(!route){if(declaration) declaration.before(entry); else actions?.prepend(entry);}
+  const panel=document.createElement('dialog');panel.className='payroll-schedule-dialog payroll-schedule-page';panel.setAttribute('aria-label','发薪周期设置');(route?.pageRoot||root).append(panel);
+  if(route) panel.classList.add('payroll-settings-route');
   const editor=document.createElement('dialog');editor.className='payroll-schedule-dialog';editor.setAttribute('aria-label','规则配置');root.append(editor);
   const confirmation=document.createElement('dialog');confirmation.className='payroll-schedule-dialog';confirmation.setAttribute('aria-label','确认规则');root.append(confirmation);
   let demoRules:PayrollScheduleRule[]=[];
@@ -97,12 +98,22 @@ export function mountPayrollScheduleController(root:ShadowRoot,bridge:PayrollBat
   panel.addEventListener('change',event=>{const target=event.target as HTMLSelectElement;if(target.matches('[data-store]')){selected=target.value;render();}},{signal:abort.signal});
   panel.addEventListener('click',event=>{
     const button=(event.target as HTMLElement).closest('button');if(!button)return;
-    if(button.hasAttribute('data-close'))panel.close();
+    if(button.hasAttribute('data-close')){if(route)route.onBack();else panel.close();}
     else if(button.hasAttribute('data-add'))openEditor();
     else{const id=button.dataset.view||button.dataset.edit||button.dataset.delete;const rule=rules().find(r=>r.id===id);if(!rule)return;
       if(button.dataset.delete)confirmAction(`删除待生效规则 V${rule.version}？`,()=>{demoRules=withdrawPendingRule(demoRules,rule.id,today(),[]);render();});
       else openEditor(rule,Boolean(button.dataset.view));}
   },{signal:abort.signal});
   editor.addEventListener('click',event=>{if((event.target as HTMLElement).closest('[data-editor-close]'))editor.close();},{signal:abort.signal});
-  return {destroy(){abort.abort();entry.remove();panel.remove();editor.remove();confirmation.remove();}};
+  return {
+    open(){
+      if(panel.open)return;
+      const scope=context.getScope();
+      const filter=bridge.getSnapshot().employeeStoreFilter;
+      selected=scope.stores.find(s=>s.id===filter||s.labelZh===filter||s.labelEn===filter)?.id||scope.storeId||selected;
+      render();if(route)panel.show();else panel.showModal();
+    },
+    close(){if(panel.open)panel.close();},
+    destroy(){abort.abort();entry.remove();panel.remove();editor.remove();confirmation.remove();}
+  };
 }

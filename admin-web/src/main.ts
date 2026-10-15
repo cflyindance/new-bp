@@ -3408,7 +3408,7 @@ function renderNavModuleSecondarySheet(
         <div class="space-y-4">
           <section class="pt-0">
             ${renderPcSheetDarkSubnav(hash, subnav, (p) => getActiveNavModuleSheetSubPath(p, m), (p, item) =>
-              item.sidebarChildren?.find((child) => p === child.path || p.startsWith(`${child.path}/`))?.path ?? "", {
+              item.sidebarChildren && [...item.sidebarChildren].sort((a,b) => b.path.length-a.path.length).find((child) => p === child.path || p.startsWith(`${child.path}/`))?.path || "", {
               brandProductSecondLevel: true,
               sheetGroupedSubnavAriaLabel: nmGroupedAria,
             })}
@@ -3572,6 +3572,11 @@ function renderInventorySecondarySheet(hash: string, open: boolean): string {
 }
 
 function findTitle(path: string): { title: string; module?: string } {
+  if (isTeamPayrollReportPath(path)) {
+    const payroll = NAV_MODULES.find(m => m.id === 'team')?.children.find(c => c.id === 'team-tax-payroll');
+    const leaf = payroll?.children && [...payroll.children].sort((a,b) => b.path.length-a.path.length).find(c => path === c.path || path.startsWith(`${c.path}/`));
+    if (leaf) return { title: pick(leaf.title,leaf.titleEn), module: pick(payroll!.title,payroll!.titleEn) };
+  }
   if (isNavHomePath(path)) {
     return { title: t("shell.navHomeTitle"), module: t("shell.appName") };
   }
@@ -3772,7 +3777,7 @@ function findTitle(path: string): { title: string; module?: string } {
     const sortedChildren = [...m.children].sort((a, b) => b.path.length - a.path.length);
     for (const c of sortedChildren) {
       if (path === c.path || path.startsWith(`${c.path}/`)) {
-        const leaf = c.children?.find((child) => path === child.path || path.startsWith(`${child.path}/`));
+        const leaf = c.children && [...c.children].sort((a,b) => b.path.length - a.path.length).find((child) => path === child.path || path.startsWith(`${child.path}/`));
         if (leaf) return { title: pick(leaf.title, leaf.titleEn), module: navChildModuleLine(m, c) };
         return { title: pick(c.title, c.titleEn), module: navChildModuleLine(m, c) };
       }
@@ -12102,8 +12107,13 @@ function destroyTeamTipsPage(): void {
 }
 
 function mount(): void {
-  activePayrollPage?.destroy();
-  activePayrollPage = null;
+  // Keep the payroll runtime (drafts, employee selection and export jobs) across sibling views.
+  const retainedPayrollRoot = activePayrollPage && isAuthenticated() && isTeamPayrollReportPath(location.hash.slice(1))
+    ? document.querySelector<HTMLElement>('[data-team-payroll-root]') : null;
+  if (!retainedPayrollRoot) {
+    activePayrollPage?.destroy();
+    activePayrollPage = null;
+  }
   destroyTeamEmployeesPage();
   destroyTeamTipsPage();
   releaseFohMenuOrderLimitsFullscreen();
@@ -12416,7 +12426,13 @@ function mount(): void {
 
   const payrollRoot = app.querySelector<HTMLElement>("[data-team-payroll-root]");
   if (payrollRoot) {
-    activePayrollPage = mountPayrollPage(payrollRoot, createPayrollPageContext());
+    if (retainedPayrollRoot && activePayrollPage) {
+      payrollRoot.replaceWith(retainedPayrollRoot);
+      activePayrollPage.setPath(location.hash);
+    } else activePayrollPage = mountPayrollPage(payrollRoot, createPayrollPageContext());
+  } else if (retainedPayrollRoot) {
+    activePayrollPage?.destroy();
+    activePayrollPage = null;
   }
 
   const employeesRoot = app.querySelector<HTMLElement>("[data-team-employees-root]");
