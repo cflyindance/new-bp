@@ -1,9 +1,15 @@
 import assert from 'node:assert/strict';
-import {scheduleHistory,editPendingRule,withdrawPendingRule} from '../src/team/payroll/payroll-schedule-history';
+import {scheduleHistory,activeScheduleHistoryFirst,editPendingRule,withdrawPendingRule} from '../src/team/payroll/payroll-schedule-history';
 import type {PayrollScheduleRule} from '../src/team/payroll/payroll-schedule-types';
 const rule:PayrollScheduleRule={id:'old',storeId:'s',version:1,effectiveFrom:'2025-01-01',frequency:'biweekly',timezone:'America/Chicago',status:'active',plannedPayDatePolicy:{kind:'daysAfterEnd',days:6}};
 const pending:PayrollScheduleRule={...rule,id:'next',version:2,effectiveFrom:'2027-07-01',status:'pending'};
 const rules=[rule,pending];
+const history=scheduleHistory([...rules,{...pending,id:'future',version:3,effectiveFrom:'2028-01-01'}],'s','2027-07-02');
+assert.deepEqual(activeScheduleHistoryFirst(history).map(row=>row.rule.id),['next','old','future']);
+assert.deepEqual(history.map(row=>row.rule.id),['old','next','future'],'display sorting must not mutate lifecycle order');
+assert.deepEqual(activeScheduleHistoryFirst(history).map(row=>[row.rule.id,row.endDate]),[['next','2027-12-31'],['old','2027-06-30'],['future',undefined]]);
+assert.deepEqual(activeScheduleHistoryFirst([]),[]);
+assert.deepEqual(activeScheduleHistoryFirst(history.filter(row=>row.status!=='active')).map(row=>row.rule.id),['old','future']);
 assert.deepEqual(scheduleHistory(rules,'s','2027-07-02').map(r=>[r.status,r.endDate]),[['expired','2027-06-30'],['active',undefined]]);
 assert.equal(scheduleHistory(rules,'another','2026-01-01').length,0);
 assert.throws(()=>editPendingRule(rules,rule,'2026-01-01',[]));

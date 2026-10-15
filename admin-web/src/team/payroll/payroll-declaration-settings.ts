@@ -71,13 +71,11 @@ function renderSettings(surface: HTMLElement, state: SettingsState): void {
     </tr>`;
   }).join("");
   surface.innerHTML = `
-    <header class="payroll-declaration-settings-header">
-      <div><p>薪资管理</p><h2 tabindex="-1">员工声明设置</h2></div>
+    <header class="payroll-declaration-settings-header payroll-settings-heading">
+      <div><h2 tabindex="-1">员工声明设置</h2></div>
+      <div class="payroll-workspace-actions"><button type="button" class="btn btn-primary payroll-workspace-action-btn" data-declaration-new ${state.busy ? 'disabled' : ''}>新增语言模板</button></div>
     </header>
-    <div class="payroll-declaration-settings-toolbar">
-      <div><strong>企业声明模板库</strong><p>${isDeclarationBrowserDemo() ? '演示模式：仅保存在当前浏览器，清除站点数据后会丢失，不同设备不共享。' : '维护员工确认时使用的已审核语言版本'}</p></div>
-      <button type="button" class="btn btn-primary" data-declaration-new ${state.busy ? 'disabled' : ''}>新增语言模板</button>
-    </div>
+    ${isDeclarationBrowserDemo() ? '<p class="payroll-declaration-demo-notice">演示模式：仅保存在当前浏览器，清除站点数据后会丢失，不同设备不共享。</p>' : ''}
     ${state.loadWarning ? `<p role="status" class="payroll-declaration-settings-message">${escapeHtml(state.loadWarning)}</p>` : ''}
     <div class="payroll-declaration-settings-layout payroll-declaration-library">
       <div class="payroll-declaration-filters" role="group" aria-label="模板筛选">
