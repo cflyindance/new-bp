@@ -386,6 +386,12 @@ export const NAV_MODULES: NavModule[] = [
     defaultChildPath: "/operations/queue-call/floor-plan",
     children: [
       {
+        id: "qc-tables",
+        title: "餐位管理",
+        titleEn: "Table management",
+        path: "/operations/queue-call/tables",
+      },
+      {
         id: "qc-floor-plan",
         title: "餐位平面图",
         titleEn: "Table layout",

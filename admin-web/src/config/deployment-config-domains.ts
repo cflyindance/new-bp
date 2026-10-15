@@ -119,7 +119,7 @@ export const DEMO_CONFIG_DOMAINS: DeploymentConfigDomain[] = [
     navRefs: [{ l1Key: "foh-mgmt", l2Key: "foh-floor-plan" }],
     productLines: ["POS", "Kiosk", "eMenu"],
     granularity: "store",
-    pagePaths: ["/operations/queue-call/floor-plan"],
+    pagePaths: ["/operations/queue-call/floor-plan", "/operations/queue-call/tables"],
   },
   {
     domainKey: "payment.card-pricing",
@@ -172,10 +172,10 @@ export const DEMO_CONFIG_DOMAINS: DeploymentConfigDomain[] = [
   {
     domainKey: "foh.floor-plan",
     displayName: "餐位平面图",
-    navRefs: [{ l1Key: "queue-call", l2Key: "qc-floor-plan" }],
+    navRefs: [{ l1Key: "queue-call", l2Key: "qc-floor-plan" }, { l1Key: "queue-call", l2Key: "qc-tables" }],
     productLines: ["POS"],
     granularity: "store",
-    pagePaths: ["/operations/queue-call/floor-plan"],
+    pagePaths: ["/operations/queue-call/floor-plan", "/operations/queue-call/tables"],
   },
   {
     domainKey: "foh.brand-menu",

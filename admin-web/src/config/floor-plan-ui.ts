@@ -10,6 +10,7 @@ import { resolveChangeGroupPath } from "./module-settings-deployment-change";
 import { replacePageOrImmediateConfigChange } from "./page-config-change";
 import {
   registerPageSaveDirtyProbe,
+  registerPageSaveCommit,
   registerPageSavePreCommit,
 } from "./page-save-registry";
 import {
@@ -40,6 +41,8 @@ import {
   validateNewTable,
 } from "./floor-plan-table-placement";
 import { listPendingKposFloorPlanOperations, putKposFloorPlanOperation, type KposFloorPlanOperation } from "./kpos-floor-plan-operation-ledger";
+
+import { TABLE_MANAGEMENT_PATH, FloorPlanHistory, renderFloorPlanManagement, snapFloorPlanPosition } from "./floor-plan-workbench";
 
 export const FLOOR_PLAN_PATH = "/operations/queue-call/floor-plan";
 
@@ -180,7 +183,7 @@ function getDialogTable(state: FloorPlanState): FloorPlanTable | null {
   if (!dialog) return null;
   if (dialog.mode === "create") return state.dialogDraft ?? null;
   const area = getActiveArea(state);
-  return area?.tables.find((t) => t.id === dialog.tableId) ?? null;
+  return state.dialogDraft ?? area?.tables.find((t) => t.id === dialog.tableId) ?? null;
 }
 
 function parseFloorPlanState(raw: string | null): FloorPlanState {
@@ -242,14 +245,14 @@ const CATEGORY_LABEL: Record<FloorPlanTableCategory, string> = {
 
 const FLOOR_PLAN_AREA_ADAPTER: CollectionAdapter<FloorPlanArea> = {
   collectionKey: "foh.floor-plan-areas",
-  collectionLabel: "平面图区域",
+  collectionLabel: "就餐区域",
   idOf: (item) => item.id,
   labelOf: (item) => item.name || item.id,
   fields: [
     { key: "name", label: "区域名称", get: (i) => i.name },
     {
       key: "tableCount",
-      label: "桌位数",
+      label: "餐位数",
       get: (i) => i.tables.length,
     },
   ],
@@ -257,13 +260,13 @@ const FLOOR_PLAN_AREA_ADAPTER: CollectionAdapter<FloorPlanArea> = {
 
 const FLOOR_PLAN_TABLE_ADAPTER: CollectionAdapter<FlatFloorPlanTable> = {
   collectionKey: "foh.floor-plan-tables",
-  collectionLabel: "平面图桌位",
+  collectionLabel: "餐位",
   idOf: (item) => item.id,
   labelOf: (item) => `${item.areaName} · ${item.name || item.id}`,
   fields: [
     { key: "areaName", label: "所属区域", get: (i) => i.areaName },
-    { key: "name", label: "桌位名称", get: (i) => i.name },
-    { key: "seats", label: "座位数", get: (i) => i.seats },
+    { key: "name", label: "餐位名称", get: (i) => i.name },
+    { key: "seats", label: "容纳人数", get: (i) => i.seats },
     {
       key: "shape",
       label: "形状",
@@ -279,11 +282,11 @@ const FLOOR_PLAN_TABLE_ADAPTER: CollectionAdapter<FlatFloorPlanTable> = {
     { key: "width", label: "宽度", get: (i) => i.width },
     { key: "height", label: "高度", get: (i) => i.height },
     { key: "rotation", label: "旋转角", get: (i) => i.rotation },
-    { key: "kposShape", label: "KPOS 桌型", get: (i) => i.kposShape },
-    { key: "tableCategoryId", label: "KPOS 桌子类别", get: (i) => i.tableCategoryId ?? "" },
-    { key: "hibachiTableShape", label: "铁板桌类型", get: (i) => i.hibachiTableShape ?? "" },
-    { key: "seatingOrientation", label: "座位排布", get: (i) => i.seatingOrientation ?? "" },
-    { key: "defaultSaleItemId", label: "KTV 默认商品", get: (i) => i.defaultSaleItemId ?? "" },
+    { key: "kposShape", label: "餐位类型", get: (i) => i.kposShape },
+    { key: "tableCategoryId", label: "餐位类别", get: (i) => i.tableCategoryId ?? "", format: (v) => resolveKposTableCategoryOptions(resolveFloorPlanStoreId()).find((option) => option.id === v)?.name ?? String(v || "未设置") },
+    { key: "hibachiTableShape", label: "铁板桌类型", get: (i) => i.hibachiTableShape ?? "", format: (v) => ({ "0": "Default (3-4-3)", "1": "2-4-2", "2": "4-4-4" }[String(v)] ?? String(v || "未设置")) },
+    { key: "seatingOrientation", label: "座位排布", get: (i) => i.seatingOrientation ?? "", format: (v) => ({ "0": "Left", "1": "Right" }[String(v)] ?? String(v || "未设置")) },
+    { key: "defaultSaleItemId", label: "卡拉 OK 房间", get: (i) => i.defaultSaleItemId ?? "", format: (v) => (kposKtvItemsByStore.get(resolveFloorPlanStoreId()) ?? []).find((option) => option.id === v)?.name ?? String(v || "未设置") },
     { key: "x", label: "X 坐标", get: (i) => i.x },
     { key: "y", label: "Y 坐标", get: (i) => i.y },
     {
@@ -333,7 +336,7 @@ function ensureFloorPlanBaseline(storeId: string, areas: FloorPlanArea[]): Floor
 }
 
 function ensureLiveFloorPlanLoaded(storeId: string): void {
-  if (!isKposLiveMode() || liveStateByStore.has(storeId) || liveLoadByStore.has(storeId)) return;
+  if (!isKposLiveMode() || liveStateByStore.has(storeId) || liveLoadByStore.has(storeId) || liveErrorByStore.has(storeId)) return;
   const load = loadKposFloorPlan()
     .then((areas) => {
       const state = mapKposAreas(areas);
@@ -443,8 +446,8 @@ function rerecordFloorPlanCollectionChanges(storeId: string, areas: FloorPlanAre
     replacePageOrImmediateConfigChange(FLOOR_PLAN_PATH, {
       fieldKey: FLOOR_PLAN_AREA_ADAPTER.collectionKey,
       label: `${FLOOR_PLAN_AREA_ADAPTER.collectionLabel} · ${storeLabel}`,
-      before: "原 0 项",
-      after: "现 0 项",
+      before: "无变更",
+      after: "无变更",
       entities: [],
       changeKind: "collection",
       settingsPath: FLOOR_PLAN_PATH,
@@ -467,8 +470,8 @@ function rerecordFloorPlanCollectionChanges(storeId: string, areas: FloorPlanAre
     replacePageOrImmediateConfigChange(FLOOR_PLAN_PATH, {
       fieldKey: FLOOR_PLAN_TABLE_ADAPTER.collectionKey,
       label: `${FLOOR_PLAN_TABLE_ADAPTER.collectionLabel} · ${storeLabel}`,
-      before: "原 0 项",
-      after: "现 0 项",
+      before: "无变更",
+      after: "无变更",
       entities: [],
       changeKind: "collection",
       settingsPath: FLOOR_PLAN_PATH,
@@ -477,30 +480,87 @@ function rerecordFloorPlanCollectionChanges(storeId: string, areas: FloorPlanAre
   }
 }
 
-function writeState(state: FloorPlanState): void {
+function projectedFloorPlanAreas(state: FloorPlanState): FloorPlanArea[] {
+  if (!state.tableDialog || !state.dialogDraft) return state.areas;
+  const draft = state.dialogDraft;
+  if (state.tableDialog.mode === "create") {
+    const areaId = state.tableDialog.areaId;
+    return state.areas.map((area) => area.id === areaId ? { ...area, tables: [...area.tables, draft] } : area);
+  }
+  return state.areas.map((area) => ({ ...area, tables: area.tables.map((table) => table.id === draft.id ? draft : table) }));
+}
+
+const historyByStore = new Map<string, FloorPlanHistory>();
+const zoomByStore = new Map<string, number>();
+const managementFilterByStore = new Map<string, { area: string; search: string }>();
+let flushFloorPlanForm: (() => boolean) | null = null;
+function historyForStore(storeId: string): FloorPlanHistory {
+  let history = historyByStore.get(storeId);
+  if (!history) { history = new FloorPlanHistory(); historyByStore.set(storeId, history); }
+  return history;
+}
+function currentFloorPlanPath(): string { return window.location.hash.replace(/^#/, "").split("?")[0] ?? FLOOR_PLAN_PATH; }
+function isManagementView(): boolean { return currentFloorPlanPath() === TABLE_MANAGEMENT_PATH; }
+
+function writeState(state: FloorPlanState, recordHistory = true): void {
   const storeId = resolveFloorPlanStoreId();
   const before = readState();
-  const beforePayload = JSON.stringify(before.areas);
-  const afterPayload = JSON.stringify(state.areas);
-  // 始终持久化完整状态（含弹窗/选中），否则「新增区域」等仅改 UI 态的操作会在 remount 后丢失
+  if (recordHistory) historyForStore(storeId).record(before.areas, state.areas);
   if (isKposLiveMode()) liveStateByStore.set(storeId, state);
   else localStorage.setItem(storageKeyForStore(storeId), JSON.stringify(state));
-  if (beforePayload === afterPayload) return;
+  if (JSON.stringify(projectedFloorPlanAreas(before)) === JSON.stringify(projectedFloorPlanAreas(state))) return;
   ensureFloorPlanBaseline(storeId, before.areas);
-  rerecordFloorPlanCollectionChanges(storeId, state.areas);
+  rerecordFloorPlanCollectionChanges(storeId, projectedFloorPlanAreas(state));
 }
 
 let floorPlanRegistryBound = false;
+let floorPlanCommitBusy = false;
+
+async function withFloorPlanCommitLock(action: () => Promise<boolean>): Promise<boolean> {
+  if (floorPlanCommitBusy) return false;
+  floorPlanCommitBusy = true;
+  const backgrounds = Array.from(document.body.children)
+    .filter((element): element is HTMLElement => element instanceof HTMLElement)
+    .map((element) => ({ element, wasInert: element.inert }));
+  const previousFocus = document.activeElement as HTMLElement | null;
+  const overlay = document.createElement("div");
+  overlay.dataset.floorPlanSaving = "true";
+  overlay.className = "fixed inset-0 z-[10100] flex items-center justify-center bg-black/40 p-6";
+  overlay.setAttribute("role", "dialog");
+  overlay.setAttribute("aria-modal", "true");
+  overlay.setAttribute("aria-label", "正在保存餐位配置");
+  overlay.tabIndex = -1;
+  overlay.innerHTML = `<div class="rounded-xl border border-border bg-card px-8 py-6 shadow-xl"><p class="font-semibold" role="status">正在保存餐位配置…</p><p class="mt-2 text-sm text-muted-foreground">请稍候，完成后可继续编辑。</p></div>`;
+  backgrounds.forEach(({ element }) => { element.inert = true; });
+  document.body.appendChild(overlay);
+  overlay.focus();
+  try {
+    return await action();
+  } finally {
+    overlay.remove();
+    backgrounds.forEach(({ element, wasInert }) => { element.inert = wasInert; });
+    floorPlanCommitBusy = false;
+    if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
+  }
+}
 
 function ensureFloorPlanPageSaveRegistry(): void {
   if (floorPlanRegistryBound) return;
   floorPlanRegistryBound = true;
 
   registerPageSavePreCommit(FLOOR_PLAN_PATH, async () => {
+    if (flushFloorPlanForm && !flushFloorPlanForm()) return false;
+    const storeId = resolveFloorPlanStoreId();
+    const state = readState();
+    ensureFloorPlanBaseline(storeId, state.areas);
+    rerecordFloorPlanCollectionChanges(storeId, state.areas);
+    return true;
+  });
+
+  registerPageSaveCommit(FLOOR_PLAN_PATH, () => withFloorPlanCommitLock(async () => {
     const storeId = resolveFloorPlanStoreId();
     const state = readState();
     const baseline = ensureFloorPlanBaseline(storeId, state.areas);
-    rerecordFloorPlanCollectionChanges(storeId, state.areas);
     if (isKposLiveMode()) {
       const baselineById = new Map(baseline.map((area) => [area.id, area]));
       if (baseline.some((area) => !state.areas.some((next) => next.id === area.id))) {
@@ -518,7 +578,6 @@ function ensureFloorPlanPageSaveRegistry(): void {
         }
         const refreshed = mapKposAreas(await loadKposFloorPlan(), state);
         liveStateByStore.set(storeId, refreshed);
-        floorPlanBaselineByStore.set(storeId, cloneAreas(refreshed.areas));
         liveErrorByStore.delete(storeId);
       } catch (error) {
         liveErrorByStore.set(storeId, error instanceof Error ? error.message : "保存 KPOS 桌台失败");
@@ -527,14 +586,14 @@ function ensureFloorPlanPageSaveRegistry(): void {
       }
     }
     return true;
-  });
+  }));
 
   registerPageSaveDirtyProbe(FLOOR_PLAN_PATH, () => {
     const storeId = resolveFloorPlanStoreId();
     const baseline = floorPlanBaselineByStore.get(storeId);
     if (!baseline) return false;
     try {
-      return JSON.stringify(baseline) !== JSON.stringify(readState().areas);
+      return JSON.stringify(baseline) !== JSON.stringify(projectedFloorPlanAreas(readState()));
     } catch {
       return false;
     }
@@ -558,6 +617,7 @@ function ensureFloorPlanPageSaveRegistry(): void {
     };
     if (isKposLiveMode()) liveStateByStore.set(storeId, restored);
     else localStorage.setItem(storageKeyForStore(storeId), JSON.stringify(restored));
+    historyByStore.delete(storeId);
     clearPageConfigChanges(FLOOR_PLAN_PATH);
     remountFloorPlan();
   });
@@ -567,21 +627,26 @@ function ensureFloorPlanPageSaveRegistry(): void {
     if (pageKey !== FLOOR_PLAN_PATH) return;
     const storeId = resolveFloorPlanStoreId();
     floorPlanBaselineByStore.set(storeId, cloneAreas(readState().areas));
+    historyByStore.delete(storeId);
+    remountFloorPlan();
   });
 
   window.addEventListener("menusifu:kpos-floor-plan-connection-change", () => {
+    historyByStore.clear();
+    zoomByStore.clear();
     liveStateByStore.clear();
     liveLoadByStore.clear();
     liveErrorByStore.clear();
     floorPlanBaselineByStore.clear();
     selectedTableIdsByStore.clear();
     multiSelectByStore.clear();
-    if (isFloorPlanPath(window.location.pathname)) remountFloorPlan();
+    if (isFloorPlanPath(currentFloorPlanPath())) remountFloorPlan();
   });
 }
 
 export function isFloorPlanPath(path: string): boolean {
-  return path === FLOOR_PLAN_PATH || path.startsWith(`${FLOOR_PLAN_PATH}/`);
+  const base = path.split("?")[0] ?? path;
+  return base === TABLE_MANAGEMENT_PATH || base === FLOOR_PLAN_PATH || base.startsWith(`${FLOOR_PLAN_PATH}/`);
 }
 
 function getActiveArea(state: FloorPlanState): FloorPlanArea | null {
@@ -973,7 +1038,7 @@ function renderTableOnCanvas(table: FloorPlanTable, selected: boolean, base: boo
     : "";
   return `<button
     type="button"
-    class="floor-plan-table absolute relative flex items-center justify-center border text-xs font-medium shadow-sm transition-[box-shadow,background-color,border-color] ${selectedCls}${durationCls} ${radius}"
+    class="floor-plan-table absolute flex items-center justify-center border text-xs font-medium shadow-sm transition-[box-shadow,background-color,border-color] ${selectedCls}${durationCls} ${radius}"
     data-floor-plan-table-id="${escapeHtml(table.id)}"
     data-floor-plan-selected="${selected ? "true" : "false"}"
     aria-pressed="${selected ? "true" : "false"}"
@@ -1006,16 +1071,17 @@ function renderFloorPlanBulkToolbar(storeId: string, state: FloorPlanState): str
     `<button type="button" data-floor-plan-geometry-action="${action}" class="rounded-md px-2 py-1.5 text-xs hover:bg-muted disabled:opacity-40" ${selected.length < requiredFloorPlanSelectionCount(action) ? "disabled" : ""}>${label}</button>`;
   const group = (label: string, content: string) =>
     `<details class="relative"><summary class="cursor-pointer list-none rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium hover:bg-muted">${label} ▾</summary><div class="absolute left-0 top-full z-40 mt-1 flex min-w-max gap-1 rounded-lg border border-border bg-popover p-1.5 text-popover-foreground shadow-lg">${content}</div></details>`;
+  if (!getActiveArea(state)?.tables.length) return "";
   return `<div class="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card/95 p-2 shadow-sm" data-floor-plan-bulk-toolbar>
     <button type="button" data-floor-plan-multi-toggle class="rounded-lg border px-3 py-2 text-xs font-semibold ${multi ? "border-primary bg-primary/10 text-primary" : "border-border bg-background"}">${multi ? "退出多选" : "多选"}</button>
     <button type="button" data-floor-plan-select-all class="rounded-lg border border-border bg-background px-3 py-2 text-xs hover:bg-muted disabled:opacity-40" ${multi ? "" : "disabled"}>全选</button>
     <button type="button" data-floor-plan-select-none class="rounded-lg border border-border bg-background px-3 py-2 text-xs hover:bg-muted disabled:opacity-40" ${selected.length ? "" : "disabled"}>取消选择</button>
-    ${group("对齐", button("align-left", "左") + button("align-center-x", "水平居中") + button("align-right", "右") + button("align-top", "上") + button("align-center-y", "垂直居中") + button("align-bottom", "下"))}
-    ${group("分布", button("distribute-x", "水平等距") + button("distribute-y", "垂直等距"))}
-    ${group("统一尺寸", button("equal-width", "统一宽度") + button("equal-height", "统一高度"))}
-    ${group("缩放", button("wider", "增宽") + button("narrower", "减宽") + button("taller", "增高") + button("shorter", "减高"))}
-    ${group("微调", button("move-left", "←") + button("move-right", "→") + button("move-up", "↑") + button("move-down", "↓"))}
-    <span class="ml-auto px-2 text-xs text-muted-foreground">已选 ${selected.length} 张${selected.length ? " · 1 为基准" : ""}</span>
+    ${selected.length >= 2 ? group("对齐", button("align-left", "左") + button("align-center-x", "水平居中") + button("align-right", "右") + button("align-top", "上") + button("align-center-y", "垂直居中") + button("align-bottom", "下")) : ""}
+    ${selected.length >= 3 ? group("分布", button("distribute-x", "水平等距") + button("distribute-y", "垂直等距")) : ""}
+    ${selected.length >= 2 ? group("统一尺寸", button("equal-width", "统一宽度") + button("equal-height", "统一高度")) : ""}
+    ${selected.length ? group("调整尺寸", button("wider", "增宽") + button("narrower", "减宽") + button("taller", "增高") + button("shorter", "减高")) : ""}
+    ${selected.length ? group("微调", button("move-left", "向左") + button("move-right", "向右") + button("move-up", "向上") + button("move-down", "向下")) : ""}
+    <span class="ml-auto px-2 text-xs text-muted-foreground">已选 ${selected.length} 张${selected.length > 1 ? ` · 基准：${escapeHtml(getActiveArea(state)?.tables.find((table) => table.id === selected[0])?.name ?? "")}` : ""}</span>
   </div>`;
 }
 
@@ -1043,19 +1109,19 @@ function renderFormFields(table: FloorPlanTable, state: FloorPlanState): string 
   return `
     <fieldset class="${state.tableDialog?.mode === "create" ? "space-y-2" : "space-y-3"}" data-floor-plan-form>
       ${createAreaId ? `<label class="block space-y-1"><span class="text-xs text-muted-foreground">目标区域</span><select data-floor-plan-create-area class="${FIELD_SELECT_CLASS} w-full">${state.areas.map((area) => `<option value="${escapeHtml(area.id)}"${area.id === createAreaId ? " selected" : ""}>${escapeHtml(area.name)}</option>`).join("")}</select></label>` : ""}
-      <p class="text-xs font-medium text-muted-foreground">KPOS 桌台信息</p>
+      <p class="text-xs font-medium text-muted-foreground">餐位基本信息</p>
       <label class="block space-y-1"><span class="text-xs text-muted-foreground">名称</span><input data-floor-plan-field="name" type="text" class="${FIELD_INPUT_CLASS} w-full" value="${escapeHtml(name)}" placeholder="如 A1、包间1" autocomplete="off" /></label>
-      <label class="block space-y-1"><span class="text-xs text-muted-foreground">人数</span><input data-floor-plan-field="seats" type="number" min="1" step="1" class="${FIELD_INPUT_CLASS} w-full" value="${seats}" /></label>
+      <label class="block space-y-1"><span class="text-xs text-muted-foreground">容纳人数</span><input data-floor-plan-field="seats" type="number" min="1" step="1" class="${FIELD_INPUT_CLASS} w-full" value="${seats}" /></label>
       <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <label class="block space-y-1"><span class="text-xs text-muted-foreground">宽（%）</span><input data-floor-plan-field="widthPercent" type="number" min="0.00001" max="100" step="0.00001" class="${FIELD_INPUT_CLASS} w-full" value="${Math.round(width / KPOS_CANVAS_WIDTH * 10_000_000) / 100_000}" /></label>
         <label class="block space-y-1"><span class="text-xs text-muted-foreground">高（%）</span><input data-floor-plan-field="heightPercent" type="number" min="0.00001" max="100" step="0.00001" class="${FIELD_INPUT_CLASS} w-full" value="${Math.round(height / KPOS_CANVAS_HEIGHT * 10_000_000) / 100_000}" /></label>
       </div>
       <label class="block space-y-1"><span class="text-xs text-muted-foreground">类型</span><select data-floor-plan-field="shape" class="${FIELD_INPUT_CLASS} w-full">${SHAPE_OPTIONS.map((option) => `<option value="${option.value}"${option.value === shape ? " selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}</select></label>
-      ${optionSelect("桌子类别", "tableCategoryId", table.tableCategoryId ?? "1", resolveKposTableCategoryOptions(storeId))}
+      ${optionSelect("餐位类别", "tableCategoryId", table.tableCategoryId ?? "1", resolveKposTableCategoryOptions(storeId))}
       <div data-kpos-condition="HIBACHI" class="grid grid-cols-2 gap-3${table.kposShape === "HIBACHI" ? "" : " hidden"}">${simpleSelect("铁板桌类型", "hibachiTableShape", table.hibachiTableShape, [["0", "Default (3-4-3)"], ["1", "2-4-2"], ["2", "4-4-4"]])}${simpleSelect("座位排布", "seatingOrientation", table.seatingOrientation, [["0", "Left"], ["1", "Right"]])}</div>
-      <div data-kpos-condition="KTV" class="${table.kposShape === "KTV" ? "" : "hidden"}">${optionSelect("【KTV/卡拉OK】房间", "defaultSaleItemId", table.defaultSaleItemId, kposKtvItemsByStore.get(storeId) ?? [])}</div>
+      <div data-kpos-condition="KTV" class="${table.kposShape === "KTV" ? "" : "hidden"}">${optionSelect("卡拉 OK 房间", "defaultSaleItemId", table.defaultSaleItemId, kposKtvItemsByStore.get(storeId) ?? [])}</div>
       <details class="rounded-lg border border-border p-3">
-        <summary class="cursor-pointer text-sm font-medium">商家扩展（不写入 KPOS）</summary>
+        <summary class="cursor-pointer text-sm font-medium">布局扩展</summary>
         <div class="mt-3 space-y-3">
           ${renderComboNumberField("旋转(度)", "rotation", rotation, ROTATION_PRESETS, false, 'step="1"')}
           ${renderEnumComboField("桌位分类", "category", categoryLabel(category), "floor-plan-category-datalist", CATEGORY_OPTIONS.map((o) => `<option value="${escapeHtml(o.label)}"></option>`).join(""))}
@@ -1174,95 +1240,28 @@ function readAreaNameFromDialog(): string {
 
 function renderStoreOwnershipHint(): string {
   const storeLabel = resolveFloorPlanStoreLabel(resolveFloorPlanStoreId());
-  return `<p class="text-xs text-muted-foreground" title="新增区域与桌子将归属此门店">归属门店：<span class="font-medium text-foreground">${escapeHtml(storeLabel)}</span></p>`;
+  return `<p class="text-xs text-muted-foreground" title="新增区域与餐位将归属此门店">归属门店：<span class="font-medium text-foreground">${escapeHtml(storeLabel)}</span></p>`;
+}
+
+function renderAreaContext(state: FloorPlanState): string {
+  const active = getActiveArea(state);
+  const history = historyForStore(resolveFloorPlanStoreId());
+  const unavailable = liveLoadByStore.has(resolveFloorPlanStoreId()) || (liveErrorByStore.has(resolveFloorPlanStoreId()) && !liveStateByStore.has(resolveFloorPlanStoreId()));
+  return `<div class="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card p-3" data-floor-plan-area-context>
+    <label class="flex items-center gap-2 text-sm">当前区域<select aria-label="当前区域" data-floor-plan-active-area class="rounded-md border border-input bg-background px-3 py-2">${state.areas.map((area) => `<option value="${escapeHtml(area.id)}"${area.id === state.activeAreaId ? " selected" : ""}>${escapeHtml(area.name)}</option>`).join("")}${state.areas.length ? "" : '<option value="">尚无区域</option>'}</select></label>
+    <button type="button" class="rounded-md border border-border px-3 py-2 text-sm hover:bg-muted" data-floor-plan-area-add ${unavailable ? "disabled" : ""}>新增区域</button>
+    ${active ? `<button type="button" class="rounded-md px-3 py-2 text-sm hover:bg-muted" data-floor-plan-area-edit>管理当前区域</button><button type="button" class="rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground" data-floor-plan-table-add ${unavailable ? "disabled" : ""}>新增餐位</button>` : ""}
+    <span class="ml-auto text-xs text-muted-foreground">${escapeHtml(resolveFloorPlanStoreLabel(resolveFloorPlanStoreId()))}${active ? ` · ${active.tables.length} 个餐位` : ""}</span>
+    <button type="button" aria-label="撤销" data-floor-plan-undo class="rounded-md border border-border px-3 py-2 text-sm disabled:opacity-40" ${history.canUndo ? "" : "disabled"}>撤销</button>
+    <button type="button" aria-label="重做" data-floor-plan-redo class="rounded-md border border-border px-3 py-2 text-sm disabled:opacity-40" ${history.canRedo ? "" : "disabled"}>重做</button>
+  </div>`;
 }
 
 function renderSidebarPanel(state: FloorPlanState, active: FloorPlanArea | null): string {
-  if (!state.areas.length) {
-    return `
-      <div class="space-y-3">
-        ${renderStoreOwnershipHint()}
-        <div class="rounded-xl border border-dashed border-border bg-muted/30 p-4 text-center">
-          <p class="text-sm text-muted-foreground">请先创建就餐区域，再布置桌位（将归属当前所选门店）</p>
-          <button
-            type="button"
-            class="mt-3 w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90"
-            data-floor-plan-area-add
-          >新增区域</button>
-        </div>
-      </div>`;
-  }
-
-  const selected = getSelectedTable(state);
-  const tableList =
-    !active || active.tables.length === 0
-      ? `<p class="text-sm text-muted-foreground">当前区域暂无桌位</p>`
-      : `<ul class="max-h-48 space-y-1 overflow-y-auto" role="list">
-          ${active.tables
-            .map((t) => {
-              const on = t.id === state.selectedTableId;
-              const ruleLabel = resolveTableDurationBillingRuleLabel(t);
-              const timingTag = ruleLabel
-                ? `<span class="ml-1 rounded bg-primary/15 px-1.5 py-0.5 text-[10px] font-medium text-primary" title="计时：${escapeHtml(ruleLabel)}">计时</span>`
-                : "";
-              return `<li>
-                <button
-                  type="button"
-                  class="flex w-full items-center justify-between rounded-md border px-3 py-2 text-left text-sm transition-colors ${
-                    on
-                      ? "border-primary bg-primary/10 font-medium text-foreground"
-                      : "border-border hover:bg-muted"
-                  }"
-                  data-floor-plan-table-pick="${escapeHtml(t.id)}"
-                >
-                  <span class="flex min-w-0 items-center gap-1"><span class="truncate">${escapeHtml(t.name)}</span>${timingTag}</span>
-                  <span class="shrink-0 text-xs text-muted-foreground">${t.seats}人</span>
-                </button>
-              </li>`;
-            })
-            .join("")}
-        </ul>`;
-
-  const areaTabs = state.areas
-    .map((area) => {
-      const activeCls =
-        area.id === state.activeAreaId
-          ? "bg-primary text-primary-foreground"
-          : "bg-muted text-foreground hover:bg-muted/80";
-      return `<button type="button" class="rounded-md px-3 py-1.5 text-sm font-medium ${activeCls}" data-floor-plan-area-id="${escapeHtml(area.id)}">${escapeHtml(area.name)}</button>`;
-    })
-    .join("");
-
-  return `
-    <div class="space-y-4">
-      ${renderStoreOwnershipHint()}
-      <div class="space-y-2">
-        <h3 class="text-xs font-medium uppercase tracking-wide text-muted-foreground">当前区域</h3>
-        <div class="flex flex-wrap gap-2" role="tablist" aria-label="区域">${areaTabs}</div>
-        <div class="flex flex-wrap gap-2">
-          <button type="button" class="rounded-md border border-border px-3 py-1.5 text-sm hover:bg-muted" data-floor-plan-area-edit>编辑区域</button>
-          <button type="button" class="rounded-md border border-destructive/40 px-3 py-1.5 text-sm text-destructive hover:bg-destructive/10" data-floor-plan-area-delete>删除区域</button>
-          <button type="button" class="rounded-md border border-border px-3 py-1.5 text-sm hover:bg-muted" data-floor-plan-area-add>新增区域</button>
-        </div>
-      </div>
-      <div class="rounded-xl border border-dashed border-border bg-muted/30 p-4 text-center">
-        <p class="text-sm text-muted-foreground">在画布点击桌位可编辑；为「${escapeHtml(active?.name ?? "")}」新增桌位</p>
-        <button
-          type="button"
-          class="mt-3 w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90"
-          data-floor-plan-table-add
-        >新增桌子</button>
-      </div>
-      ${
-        selected
-          ? `<p class="text-xs text-muted-foreground">已选中：<span class="font-medium text-foreground">${escapeHtml(selected.name)}</span>（点击画布或列表可编辑）</p>`
-          : ""
-      }
-      <div class="space-y-2">
-        <h3 class="text-xs font-medium uppercase tracking-wide text-muted-foreground">本区域桌位 (${active?.tables.length ?? 0})</h3>
-        ${tableList}
-      </div>
-    </div>`;
+  const ids = getSelectedTableIds(resolveFloorPlanStoreId(), state);
+  if (state.tableDialog?.mode === "edit") return renderTableEditorDialog(state);
+  if (ids.length > 1) return `<h2 class="text-base font-semibold">已选 ${ids.length} 个餐位</h2><p class="text-sm text-muted-foreground">使用画布上方工具对齐、分布或统一尺寸。首个选中的餐位是对齐基准。</p><button type="button" data-floor-plan-select-none class="w-full rounded-md border border-border px-3 py-2 text-sm">取消选择</button>`;
+  return `<div class="space-y-4"><h2 class="text-base font-semibold">${isManagementView() ? "区域与餐位" : "区域概况"}</h2>${renderStoreOwnershipHint()}<p class="text-sm text-muted-foreground">${active ? `${escapeHtml(active.name)} · ${active.tables.length} 个餐位 · 容纳 ${active.tables.reduce((sum, table) => sum + table.seats, 0)} 人` : "请先新增区域，再创建餐位。"}</p><p class="text-sm text-muted-foreground">${isManagementView() ? "搜索或筛选餐位，点击编辑维护资料，点击平面图定位调整布局。" : "单击餐位查看属性，拖动调整位置；多选后可批量排版。"}</p><p class="text-xs text-muted-foreground">修改先保留在本模块草稿中，统一通过底部「保存并下发」生效。</p></div>`;
 }
 
 function renderTableEditorDialog(state: FloorPlanState): string {
@@ -1271,8 +1270,15 @@ function renderTableEditorDialog(state: FloorPlanState): string {
   if (!table) return "";
 
   const isCreate = state.tableDialog.mode === "create";
-  const title = isCreate ? "新增桌子" : `编辑桌子 · ${table.name}`;
+  const title = isCreate ? "新增餐位" : `编辑餐位 · ${table.name}`;
 
+  if (!isCreate) return `<section class="space-y-4" data-floor-plan-dialog aria-label="餐位属性">
+    <div class="flex items-center justify-between"><h2 class="text-base font-semibold">餐位属性 · ${escapeHtml(table.name)}</h2><button type="button" data-floor-plan-dialog-close class="rounded-md px-3 py-2 text-sm hover:bg-muted" aria-label="关闭餐位属性">关闭</button></div>
+    <p class="text-xs text-muted-foreground">修改将加入草稿；底部保存并下发后生效。</p>
+    <p class="rounded-md bg-destructive/10 p-3 text-sm text-destructive" data-floor-plan-form-error role="alert" hidden></p>
+    ${renderFormFields(table, state)}
+    <div class="flex flex-wrap gap-2 border-t border-border pt-3"><button type="button" data-floor-plan-dialog-save class="rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground">应用属性</button><button type="button" data-floor-plan-dialog-cancel class="rounded-md border border-border px-3 py-2 text-sm">取消编辑</button><button type="button" data-floor-plan-dialog-delete class="ml-auto rounded-md px-3 py-2 text-sm text-destructive">删除餐位</button></div>
+  </section>`;
   const drawer = isCreate;
   const warning = isCreate && state.tableDialog?.mode === "create" && state.tableDialog.vacancyWarning
     ? `<div class="mx-5 mt-4 rounded-lg border border-amber-400/50 bg-amber-50 px-3 py-2 text-xs text-amber-800">当前区域空间不足，预览桌台可能与其他桌台重叠；创建时需要再次确认。</div>`
@@ -1291,7 +1297,7 @@ function renderTableEditorDialog(state: FloorPlanState): string {
       ></button>`}
       <div
         role="dialog"
-        aria-modal="true"
+        aria-modal="false"
         aria-labelledby="floor-plan-dialog-title"
         class="relative z-10 flex w-full flex-col ${drawer ? "pointer-events-auto h-dvh max-h-dvh max-w-[420px] overflow-hidden border-l" : "my-auto max-w-xl overflow-visible rounded-xl border"} border-border bg-card shadow-xl"
         data-floor-plan-dialog
@@ -1306,7 +1312,8 @@ function renderTableEditorDialog(state: FloorPlanState): string {
           >×</button>
         </header>
         ${warning}
-        <div class="${drawer ? "min-h-0 flex-1 overflow-hidden px-5 py-3" : "overflow-visible px-5 py-4"}">
+        <div class="${drawer ? "min-h-0 flex-1 overflow-y-auto px-5 py-3" : "overflow-visible px-5 py-4"}">
+          <p class="mb-3 rounded-md bg-destructive/10 p-3 text-sm text-destructive" data-floor-plan-form-error role="alert" hidden></p>
           ${renderFormFields(table, state)}
         </div>
         <footer class="flex shrink-0 items-center justify-between gap-3 border-t border-border px-5 py-4">
@@ -1331,7 +1338,7 @@ function renderTableEditorDialog(state: FloorPlanState): string {
               type="button"
               class="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
               data-floor-plan-dialog-save
-            >${isCreate ? "创建桌子" : "保存"}</button>
+            >${isCreate ? "创建餐位" : "保存"}</button>
           </div>
         </footer>
       </div>
@@ -1355,7 +1362,7 @@ function openEditTableDialog(state: FloorPlanState, tableId: string): FloorPlanS
     ...state,
     selectedTableId: tableId,
     tableDialog: { mode: "edit", tableId },
-    dialogDraft: undefined,
+    dialogDraft: structuredClone(getActiveArea(state)?.tables.find((table) => table.id === tableId)),
   };
 }
 
@@ -1363,60 +1370,52 @@ export function renderFloorPlanPage(): string {
   ensureFloorPlanPageSaveRegistry();
   const storeId = resolveFloorPlanStoreId();
   ensureLiveFloorPlanLoaded(storeId);
-  const state = readState();
+  let state = readState();
   ensureFloorPlanBaseline(storeId, state.areas);
-  const active = getActiveArea(state);
-  const hasAreas = state.areas.length > 0;
-  const selectedIds = getSelectedTableIds(storeId, state);
-
-  let tablesHtml =
-    active?.tables
-      .map((t) => renderTableOnCanvas(t, selectedIds.includes(t.id), selectedIds[0] === t.id))
-      .join("") ?? "";
-  if (state.tableDialog?.mode === "create" && state.tableDialog.areaId === active?.id && state.dialogDraft) {
-    tablesHtml += renderDraftTablePreview(state.dialogDraft);
+  const params = new URLSearchParams(window.location.hash.split("?")[1] ?? "");
+  const target = params.get("table");
+  const area = state.areas.find((item) => item.id === params.get("area"));
+  const locationKey = `${storeId}:${window.location.hash}`;
+  if (target && area?.tables.some((table) => table.id === target) && lastFloorPlanLocation !== locationKey) {
+    state = openEditTableDialog({ ...closeAllFloorPlanDialogs(state), activeAreaId: area.id }, target);
+    selectedTableIdsByStore.set(storeId, [target]);
+    multiSelectByStore.set(storeId, false);
+    writeState(state);
+    lastFloorPlanLocation = locationKey;
   }
-
-  const storeLabel = resolveFloorPlanStoreLabel(resolveFloorPlanStoreId());
-  const canvasEmpty = !hasAreas
-    ? `<p class="absolute inset-0 flex items-center justify-center px-6 text-center text-sm text-muted-foreground">${isKposLiveMode() && liveLoadByStore.has(storeId) ? "正在从 KPOS 读取真实桌台…" : `请先点击右侧「新增区域」创建楼层或分区（归属「${escapeHtml(storeLabel)}」）`}</p>`
-    : !tablesHtml
-      ? `<p class="absolute inset-0 flex items-center justify-center px-6 text-center text-sm text-muted-foreground">当前区域暂无桌位，请点击右侧「新增桌子」</p>`
-      : "";
-
-  const liveNotice = isKposLiveMode()
-    ? `<div class="mb-4 rounded-lg border px-4 py-3 text-sm ${liveErrorByStore.has(storeId) ? "border-destructive/40 bg-destructive/10 text-destructive" : "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"}">${liveErrorByStore.has(storeId) ? `KPOS 同步失败：${escapeHtml(liveErrorByStore.get(storeId) ?? "未知错误")}` : `已连接真实 KPOS · ${escapeHtml(readKposFloorPlanConnection()?.licenseName ?? "PC")}`}</div>`
-    : "";
-
-  return `${liveNotice}
-    <div class="floor-plan-editor flex min-h-[min(72vh,640px)] flex-col gap-4 lg:flex-row" data-floor-plan-root>
-      <div class="flex min-w-0 flex-1 flex-col gap-3">
+  const active = getActiveArea(state);
+  const ids = getSelectedTableIds(storeId, state);
+  const manager = isManagementView();
+  const filter = managementFilterByStore.get(storeId) ?? { area: "", search: "" };
+  const zoom = zoomByStore.get(storeId) ?? 1;
+  const hasError = liveErrorByStore.has(storeId);
+  const loading = liveLoadByStore.has(storeId);
+  const tables = active?.tables.map((table) => renderTableOnCanvas(table, ids.includes(table.id), ids.length > 1 && ids[0] === table.id)).join("") ?? "";
+  const preview = state.tableDialog?.mode === "create" && state.tableDialog.areaId === active?.id && state.dialogDraft ? renderDraftTablePreview(state.dialogDraft) : "";
+  const empty = !tables && !preview && !loading && !hasError ? `<div class="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center text-sm text-muted-foreground"><p>${active ? "当前区域暂无餐位" : "创建第一个就餐区域，开始布置餐位"}</p><button type="button" class="rounded-lg bg-primary px-4 py-2.5 text-primary-foreground" ${active ? "data-floor-plan-table-add" : "data-floor-plan-area-add"}>${active ? "新增餐位" : "新增区域"}</button></div>` : "";
+  const notice = isKposLiveMode() ? `<div role="status" class="rounded-lg border px-4 py-3 text-sm ${hasError ? "border-destructive/40 bg-destructive/10 text-destructive" : "border-border bg-muted/30 text-muted-foreground"}">${hasError ? `餐位数据同步失败：${escapeHtml(liveErrorByStore.get(storeId) ?? "未知错误")}${!liveStateByStore.has(storeId) ? ' <button type="button" data-floor-plan-retry class="underline">重新读取</button>' : ""}` : loading ? "正在读取餐位数据…" : "已连接门店餐位数据"}</div>` : "";
+  return `<div class="space-y-4" data-floor-plan-root data-floor-plan-view="${manager ? "management" : "layout"}">
+    ${notice}${renderAreaContext(state)}
+    <div class="floor-plan-editor flex min-h-[640px] flex-col gap-4 xl:flex-row">
+      ${manager ? renderFloorPlanManagement(state.areas, filter.area, filter.search) : `<div class="flex min-w-0 flex-1 flex-col gap-3">
         ${renderFloorPlanBulkToolbar(storeId, state)}
-        <div
-          class="floor-plan-canvas relative min-h-[420px] flex-1 overflow-hidden rounded-xl border border-border bg-sky-100/70 dark:bg-sky-950/40"
-          data-floor-plan-canvas
-          role="application"
-          aria-label="餐位平面图画布"
-          data-floor-plan-has-areas="${hasAreas ? "true" : "false"}"
-        >
-          ${tablesHtml}
-          ${canvasEmpty}
+        <div class="flex flex-wrap items-center gap-2 text-xs text-muted-foreground"><span>布局视图</span><div class="ml-auto flex items-center gap-1"><button type="button" data-floor-plan-zoom-out aria-label="缩小画布" class="rounded border border-border px-3 py-2">−</button><output data-floor-plan-zoom-label>${Math.round(zoom * 100)}%</output><button type="button" data-floor-plan-zoom-in aria-label="放大画布" class="rounded border border-border px-3 py-2">＋</button><button type="button" data-floor-plan-fit class="rounded border border-border px-3 py-2">适应窗口</button></div></div>
+        <div class="min-h-[440px] overflow-auto rounded-xl border border-border bg-muted/20" data-floor-plan-viewport style="height:540px">
+          <div data-floor-plan-stage style="position:relative;width:${1000 * zoom}px;height:${650 * zoom}px">
+            <div class="floor-plan-canvas relative overflow-hidden bg-sky-100/50 dark:bg-sky-950/30" style="width:1000px;height:650px;transform:scale(${zoom});transform-origin:top left" data-floor-plan-canvas role="group" aria-label="餐位平面图画布">
+              ${tables}${preview}${empty}
+              <div data-floor-plan-guide-x class="pointer-events-none absolute inset-y-0 z-30 border-l border-primary" hidden></div><div data-floor-plan-guide-y class="pointer-events-none absolute inset-x-0 z-30 border-t border-primary" hidden></div>
+            </div>
+          </div>
         </div>
-        <button
-          type="button"
-          class="w-full rounded-lg border border-border bg-muted/50 px-4 py-3 text-sm font-medium hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
-          data-floor-plan-save-area
-          ${hasAreas ? "" : "disabled"}
-        >保存区域图</button>
-      </div>
-      <aside class="w-full shrink-0 space-y-4 rounded-xl border border-border bg-card p-4 lg:w-80">
-        ${renderSidebarPanel(state, active)}
-        <p class="text-xs text-muted-foreground">拖拽画布上的桌子可调整位置 · seq 428</p>
-      </aside>
-      ${renderAreaEditorDialog(state)}
-      ${renderTableEditorDialog(state)}
-    </div>`;
+        <p class="text-xs text-muted-foreground" role="status" data-floor-plan-drag-hint>${loading ? "正在读取餐位数据…" : "单击选中 · 拖动调整位置 · 拖动时自动吸附边缘与中心线"}</p>
+      </div>`}
+      <aside class="w-full shrink-0 space-y-4 rounded-xl border border-border bg-card p-4 xl:w-80" aria-label="餐位属性与概况">${renderSidebarPanel(state, active)}</aside>
+    </div>
+    ${renderAreaEditorDialog(state)}${state.tableDialog?.mode === "create" ? renderTableEditorDialog(state) : ""}
+  </div>`;
 }
+let lastFloorPlanLocation = "";
 
 function remountFloorPlan(): void {
   closeFloorPlanPresetMenu();
@@ -1445,18 +1444,23 @@ function readFormTable(base: FloorPlanTable): FloorPlanTable {
   const shape = shapeFromLabel(getInput("shape")) ?? base.shape;
   const kposShape: KposTableShape = shape === "circle" ? "ROUND" : shape === "oval" ? "HIBACHI" : shape === "bar" ? "BAR" : shape === "ktv" ? "KTV" : "RECTANGLE";
   const category = categoryFromLabel(getInput("category")) ?? base.category;
-  const durationBillingRuleId: string | null = null;
-  const numericField = (field: string, fallback: number) => {
+  const durationBillingRuleId = base.durationBillingRuleId;
+  const numericField = (field: string, _fallback: number) => {
     const value = Number(getInput(field));
-    return Number.isFinite(value) ? value : fallback;
+    return getInput(field).trim() && Number.isFinite(value) ? value : NaN;
   };
 
+  const measure = (field: string, current: number, size: number) => {
+    const percent = numericField(field, current / size * 100);
+    const displayed = Math.round(current / size * 10_000_000) / 100_000;
+    return percent === displayed ? current : percent / 100 * size;
+  };
   return {
     ...base,
     name: getInput("name").trim().toUpperCase(),
     seats: numericField("seats", base.seats),
-    width: numericField("widthPercent", base.width / KPOS_CANVAS_WIDTH * 100) / 100 * KPOS_CANVAS_WIDTH,
-    height: numericField("heightPercent", base.height / KPOS_CANVAS_HEIGHT * 100) / 100 * KPOS_CANVAS_HEIGHT,
+    width: measure("widthPercent", base.width, KPOS_CANVAS_WIDTH),
+    height: measure("heightPercent", base.height, KPOS_CANVAS_HEIGHT),
     rotation: numericField("rotation", 0),
     shape,
     kposShape,
@@ -1612,6 +1616,7 @@ function bindFloorPlanFormPresets(scope: Element): void {
       const input = scope.querySelector<HTMLInputElement>(`[data-floor-plan-field="${field}"]`);
       if (!input) return;
       input.value = sel.value;
+      input.dispatchEvent(new Event("input", { bubbles: true }));
     });
   });
 
@@ -1642,10 +1647,23 @@ function bindFloorPlanFormPresets(scope: Element): void {
   });
 }
 
+let releaseFloorPlanBinding: (() => void) | null = null;
+let lastBoundFloorPlanView = "";
+
 export function bindFloorPlanEditor(onRemount: () => void): void {
+  releaseFloorPlanBinding?.();
+  releaseFloorPlanBinding = null;
+  flushFloorPlanForm = null;
   ensureFloorPlanPageSaveRegistry();
   const root = document.querySelector("[data-floor-plan-root]");
   if (!root) return;
+  const view = isManagementView() ? "management" : "layout";
+  if (lastBoundFloorPlanView !== view) {
+    for (let parent = root.parentElement; parent; parent = parent.parentElement) {
+      if (parent.scrollHeight > parent.clientHeight) parent.scrollTop = 0;
+    }
+    lastBoundFloorPlanView = view;
+  }
 
   window.addEventListener("menusifu:floor-plan-remount", onRemount, { once: true });
 
@@ -1658,24 +1676,31 @@ export function bindFloorPlanEditor(onRemount: () => void): void {
   };
 
   const storeId = resolveFloorPlanStoreId();
+  root.querySelector("[data-floor-plan-retry]")?.addEventListener("click", () => { liveErrorByStore.delete(storeId); remountFloorPlan(); });
   root.querySelector("[data-floor-plan-multi-toggle]")?.addEventListener("click", () => {
+    if (!settleForm()) return;
     const next = multiSelectByStore.get(storeId) !== true;
     multiSelectByStore.set(storeId, next);
     if (!next) selectedTableIdsByStore.set(storeId, readState().selectedTableId ? [readState().selectedTableId!] : []);
+    const state = closeTableDialog(readState());
+    writeState(!next && state.selectedTableId ? openEditTableDialog(state, state.selectedTableId) : state);
     remountFloorPlan();
   });
   root.querySelector("[data-floor-plan-select-all]")?.addEventListener("click", () => {
+    if (!settleForm()) return;
     const state = readState();
     const ids = getActiveArea(state)?.tables.map((table) => table.id) ?? [];
     selectedTableIdsByStore.set(storeId, ids);
     persist({ ...state, selectedTableId: ids[0] ?? null, tableDialog: null });
   });
-  root.querySelector("[data-floor-plan-select-none]")?.addEventListener("click", () => {
+  root.querySelectorAll("[data-floor-plan-select-none]").forEach((button) => button.addEventListener("click", () => {
+    if (!settleForm()) return;
     selectedTableIdsByStore.set(storeId, []);
-    persist({ ...readState(), selectedTableId: null, tableDialog: null });
-  });
+    persist(closeTableDialog({ ...readState(), selectedTableId: null }));
+  }));
   root.querySelectorAll<HTMLElement>("[data-floor-plan-geometry-action]").forEach((button) => {
     button.addEventListener("click", () => {
+      if (!settleForm()) return;
       const action = button.dataset.floorPlanGeometryAction as FloorPlanGeometryAction | undefined;
       if (!action) return;
       const state = readState();
@@ -1703,58 +1728,63 @@ export function bindFloorPlanEditor(onRemount: () => void): void {
   const closeDialog = () => {
     closeFloorPlanPresetMenu();
     const state = readState();
+    selectedTableIdsByStore.set(storeId, []);
     persist(closeTableDialog({ ...state, selectedTableId: null }));
   };
 
-  const saveTableDialog = () => {
+  const invalidField = (message: string, field: string): false => {
+    const error = dialogEl?.querySelector<HTMLElement>("[data-floor-plan-form-error]");
+    if (error) { error.hidden = false; error.textContent = message; }
+    dialogEl?.querySelector<HTMLElement>(`[data-floor-plan-field="${field}"]`)?.focus();
+    return false;
+  };
+  const saveTableDialog = (remount = true): boolean => {
     const state = readState();
     const base = getDialogTable(state);
-    if (!base || !state.tableDialog) return;
+    if (!base || !state.tableDialog) return false;
     const updated = readFormTable(base);
     const targetAreaId = state.tableDialog.mode === "create" ? state.tableDialog.areaId : state.activeAreaId;
     const area = state.areas.find((item) => item.id === targetAreaId);
-    if (!area) return;
+    if (!area) return false;
 
     if (!updated.name.trim()) {
-      alert("请输入桌台名称");
-      return;
+      return invalidField("请输入餐位名称", "name");
     }
     const normalizedName = updated.name.trim().toUpperCase();
     const duplicate = state.areas.some((candidateArea) => candidateArea.tables.some((candidate) =>
       candidate.id !== updated.id && candidate.name.trim().toUpperCase() === normalizedName,
     ));
     if (duplicate) {
-      alert(`KPOS 已存在桌台“${normalizedName}”，名称必须全局唯一`);
-      return;
+      return invalidField(`已存在餐位“${normalizedName}”，名称在当前门店内必须唯一`, "name");
     }
     if (updated.width <= 0 || updated.width > KPOS_CANVAS_WIDTH || updated.height <= 0 || updated.height > KPOS_CANVAS_HEIGHT) {
-      alert("桌台宽、高百分比必须大于 0 且不超过 100");
-      return;
+      return invalidField("餐位宽、高百分比必须大于 0 且不超过 100", updated.width <= 0 || updated.width > 1000 ? "widthPercent" : "heightPercent");
     }
     if (updated.kposShape === "HIBACHI" && (!updated.hibachiTableShape || !updated.seatingOrientation)) {
-      alert("铁板桌必须选择铁板桌类型和座位排布");
-      return;
+      return invalidField("铁板桌必须选择铁板桌类型和座位排布", "hibachiTableShape");
     }
     if (updated.kposShape === "KTV" && !updated.defaultSaleItemId) {
-      alert("KTV 桌必须选择默认销售商品");
-      return;
+      return invalidField("卡拉 OK 餐位必须选择关联房间", "defaultSaleItemId");
     }
 
     if (state.tableDialog.mode === "create") {
       if (isKposLiveMode() && !readKposFloorPlanConnection()) {
         alert("请先连接并验证 KPOS，再创建真实桌台草稿。");
-        return;
+        return false;
       }
       const errors = validateNewTable(updated, area.tables.map((table) => table.name), KPOS_CANVAS_WIDTH, KPOS_CANVAS_HEIGHT);
       const firstError = Object.values(errors)[0];
       if (firstError) {
-        alert(firstError);
-        return;
+        return invalidField(firstError, "name");
       }
       const overlaps = area.tables.some((table) => rectanglesOverlap(updated, table, 0));
-      if (overlaps && !window.confirm("该桌台与现有桌台重叠，仍要加入草稿吗？")) return;
+      if (overlaps && !window.confirm("该桌台与现有桌台重叠，仍要加入草稿吗？")) return false;
     }
 
+    if (!Number.isInteger(updated.seats) || updated.seats < 1) return invalidField("容纳人数必须为正整数", "seats");
+    if (![updated.width, updated.height, updated.rotation].every(Number.isFinite)) return invalidField("请输入有效的宽、高和旋转角度", !Number.isFinite(updated.width) ? "widthPercent" : !Number.isFinite(updated.height) ? "heightPercent" : "rotation");
+    updated.x = Math.max(0, Math.min(updated.x, KPOS_CANVAS_WIDTH - updated.width));
+    updated.y = Math.max(0, Math.min(updated.y, KPOS_CANVAS_HEIGHT - updated.height));
     const withTables =
       state.tableDialog.mode === "create"
         ? { ...area, tables: [...area.tables, updated] }
@@ -1763,15 +1793,42 @@ export function bindFloorPlanEditor(onRemount: () => void): void {
             tables: area.tables.map((t) => (t.id === updated.id ? updated : t)),
           };
 
-    persist(
-      closeTableDialog({
+    const nextState = closeTableDialog({
         ...state,
         areas: state.areas.map((a) => (a.id === area.id ? withTables : a)),
         activeAreaId: area.id,
         selectedTableId: updated.id,
-      }),
-    );
+      });
+    writeState(openEditTableDialog(nextState, updated.id));
+    if (remount) remountFloorPlan();
+    return true;
   };
+
+  const settleForm = (): boolean => {
+    if (liveLoadByStore.has(storeId) || (liveErrorByStore.has(storeId) && !liveStateByStore.has(storeId))) { alert("请先成功读取餐位数据，再进行编辑。"); return false; }
+    const state = readState();
+    if (!state.tableDialog) return true;
+    if (state.tableDialog.mode === "create") {
+      return invalidField("请先创建餐位，或取消新增后再操作。", "name");
+    }
+    const original = getActiveArea(state)?.tables.find((table) => table.id === state.selectedTableId);
+    if (JSON.stringify(original) === JSON.stringify(state.dialogDraft)) return true;
+    return saveTableDialog(false);
+  };
+  flushFloorPlanForm = () => document.contains(root) ? settleForm() : true;
+  dialogEl?.querySelectorAll<HTMLInputElement | HTMLSelectElement>("[data-floor-plan-field]").forEach((field) => {
+    const capture = () => {
+      const state = readState();
+      if (state.tableDialog?.mode !== "edit") return;
+      const base = getDialogTable(state);
+      if (!base) return;
+      const error = dialogEl?.querySelector<HTMLElement>("[data-floor-plan-form-error]");
+      if (error) error.hidden = true;
+      writeState({ ...state, dialogDraft: readFormTable(base) });
+    };
+    field.addEventListener("input", capture);
+    field.addEventListener("change", capture);
+  });
 
   const DRAG_THRESHOLD_PX = 5;
 
@@ -1832,39 +1889,13 @@ export function bindFloorPlanEditor(onRemount: () => void): void {
     );
   };
 
-  root.querySelector("[data-floor-plan-save-area]")?.addEventListener("click", async () => {
-    const area = getActiveArea(readState());
-    if (!area) {
-      alert("请先新增区域");
-      return;
-    }
-    if (!isKposLiveMode()) {
-      alert(`已保存「${area.name}」区域图（${area.tables.length} 张桌）`);
-      return;
-    }
-    const storeId = resolveFloorPlanStoreId();
-    try {
-      const baseline = floorPlanBaselineByStore.get(storeId)?.find((item) => item.id === area.id);
-      await syncKposArea(area, baseline);
-      const refreshed = mapKposAreas(await loadKposFloorPlan(), readState());
-      liveStateByStore.set(storeId, refreshed);
-      floorPlanBaselineByStore.set(storeId, cloneAreas(refreshed.areas));
-      liveErrorByStore.delete(storeId);
-      clearPageConfigChanges(FLOOR_PLAN_PATH);
-      alert(`已同步「${area.name}」到真实 KPOS（${area.tables.length} 张桌）`);
-      remountFloorPlan();
-    } catch (error) {
-      liveErrorByStore.set(storeId, error instanceof Error ? error.message : "保存 KPOS 桌台失败");
-      remountFloorPlan();
-    }
-  });
-
   root.querySelectorAll("[data-floor-plan-area-add]").forEach((btn) => {
-    btn.addEventListener("click", () => persist(openCreateAreaDialog(readState())));
+    btn.addEventListener("click", () => { if (settleForm()) persist(openCreateAreaDialog(readState())); });
   });
 
   root.querySelectorAll("[data-floor-plan-area-id]").forEach((btn) => {
     btn.addEventListener("click", () => {
+      if (!settleForm()) return;
       const id = (btn as HTMLElement).getAttribute("data-floor-plan-area-id");
       if (!id) return;
       const state = readState();
@@ -1874,6 +1905,7 @@ export function bindFloorPlanEditor(onRemount: () => void): void {
   });
 
   root.querySelector("[data-floor-plan-area-edit]")?.addEventListener("click", () => {
+    if (!settleForm()) return;
     const state = readState();
     const area = getActiveArea(state);
     if (!area) return;
@@ -1898,9 +1930,9 @@ export function bindFloorPlanEditor(onRemount: () => void): void {
   });
   areaDialogEl?.querySelector<HTMLInputElement>("[data-floor-plan-area-name]")?.focus();
 
-  root.querySelector("[data-floor-plan-table-add]")?.addEventListener("click", () => {
-    persist(openCreateTableDialog(readState()));
-  });
+  root.querySelectorAll("[data-floor-plan-table-add]").forEach((button) => button.addEventListener("click", () => {
+    if (settleForm()) persist(openCreateTableDialog(readState()));
+  }));
 
   dialogEl?.querySelector<HTMLSelectElement>("[data-floor-plan-create-area]")?.addEventListener("change", (event) => {
     const state = readState();
@@ -1920,7 +1952,7 @@ export function bindFloorPlanEditor(onRemount: () => void): void {
 
   if (dialogEl && readState().tableDialog?.mode === "create") {
     dialogEl.querySelectorAll<HTMLInputElement | HTMLSelectElement>("[data-floor-plan-field]").forEach((field) => {
-      field.addEventListener("input", () => {
+      const captureCreate = () => {
         const state = readState();
         if (state.tableDialog?.mode !== "create" || !state.dialogDraft) return;
         const createDialog = state.tableDialog;
@@ -1941,12 +1973,15 @@ export function bindFloorPlanEditor(onRemount: () => void): void {
           preview.classList.toggle("rounded-[999px]", next.shape === "oval");
           preview.classList.toggle("rounded-md", next.shape === "rectangle");
         }
-      });
+      };
+      field.addEventListener("input", captureCreate);
+      field.addEventListener("change", captureCreate);
     });
   }
 
   root.querySelectorAll("[data-floor-plan-table-pick]").forEach((btn) => {
     btn.addEventListener("click", () => {
+      if (!settleForm()) return;
       const id = (btn as HTMLElement).getAttribute("data-floor-plan-table-pick");
       if (!id) return;
       selectedTableIdsByStore.set(storeId, [id]);
@@ -1954,7 +1989,7 @@ export function bindFloorPlanEditor(onRemount: () => void): void {
     });
   });
 
-  dialogEl?.querySelector("[data-floor-plan-dialog-save]")?.addEventListener("click", saveTableDialog);
+  dialogEl?.querySelector("[data-floor-plan-dialog-save]")?.addEventListener("click", () => saveTableDialog());
   dialogEl?.querySelector("[data-floor-plan-dialog-cancel]")?.addEventListener("click", closeDialog);
   dialogEl?.querySelectorAll("[data-floor-plan-dialog-close]").forEach((btn) => {
     btn.addEventListener("click", closeDialog);
@@ -1970,7 +2005,7 @@ export function bindFloorPlanEditor(onRemount: () => void): void {
       alert("该桌台正在使用或仍有就餐人数，请先在 POS 清台后再删除。");
       return;
     }
-    if (!table || !window.confirm(`删除桌子「${table.name}」？`)) return;
+    if (!table || !window.confirm(`删除餐位「${table.name}」？`)) return;
     persist(
       closeTableDialog({
         ...state,
@@ -1983,7 +2018,7 @@ export function bindFloorPlanEditor(onRemount: () => void): void {
   });
 
   const onDialogKeydown = (e: KeyboardEvent) => {
-    if (e.key !== "Escape") return;
+    if (e.key !== "Escape" || document.getElementById("page-save-change-confirm-dialog")) return;
     const state = readState();
     if (state.tableDialog) {
       e.preventDefault();
@@ -1996,14 +2031,87 @@ export function bindFloorPlanEditor(onRemount: () => void): void {
     }
   };
   document.addEventListener("keydown", onDialogKeydown);
+  releaseFloorPlanBinding = () => { window.removeEventListener("menusifu:floor-plan-remount", onRemount); document.removeEventListener("keydown", onDialogKeydown); };
   window.addEventListener(
     "menusifu:floor-plan-remount",
     () => document.removeEventListener("keydown", onDialogKeydown),
     { once: true },
   );
 
+  root.querySelector<HTMLSelectElement>("[data-floor-plan-active-area]")?.addEventListener("change", (event) => {
+    const select = event.currentTarget as HTMLSelectElement;
+    if (!settleForm()) { select.value = readState().activeAreaId; return; }
+    selectedTableIdsByStore.set(storeId, []);
+    persist(closeAllFloorPlanDialogs({ ...readState(), activeAreaId: select.value, selectedTableId: null }));
+  });
+  for (const action of ["undo", "redo"] as const) root.querySelector(`[data-floor-plan-${action}]`)?.addEventListener("click", () => {
+    if (!settleForm()) return;
+    const state = readState();
+    const areas = historyForStore(storeId)[action](state.areas);
+    if (!areas) return;
+    selectedTableIdsByStore.set(storeId, []);
+    writeState(closeAllFloorPlanDialogs({ ...state, areas, activeAreaId: areas.some((area) => area.id === state.activeAreaId) ? state.activeAreaId : areas[0]?.id ?? "", selectedTableId: null }), false);
+    remountFloorPlan();
+  });
+  const updateFilter = () => {
+    const search = root.querySelector<HTMLInputElement>("[data-floor-plan-search]");
+    const area = root.querySelector<HTMLSelectElement>("[data-floor-plan-filter-area]");
+    managementFilterByStore.set(storeId, { search: search?.value ?? "", area: area?.value ?? "" });
+    const state = readState();
+    const template = document.createElement("template");
+    template.innerHTML = renderFloorPlanManagement(state.areas, area?.value ?? "", search?.value ?? "");
+    root.querySelector("[data-floor-plan-table-rows]")?.replaceChildren(...Array.from(template.content.querySelector("[data-floor-plan-table-rows]")!.childNodes));
+    const count = root.querySelector("[data-floor-plan-result-count]");
+    if (count) count.textContent = template.content.querySelector("[data-floor-plan-result-count]")?.textContent ?? "";
+  };
+  root.querySelector("[data-floor-plan-search]")?.addEventListener("input", updateFilter);
+  root.querySelector("[data-floor-plan-filter-area]")?.addEventListener("change", updateFilter);
+  root.querySelector("[data-floor-plan-filter-reset]")?.addEventListener("click", () => {
+    const search = root.querySelector<HTMLInputElement>("[data-floor-plan-search]");
+    const area = root.querySelector<HTMLSelectElement>("[data-floor-plan-filter-area]");
+    if (search) search.value = "";
+    if (area) area.value = "";
+    updateFilter();
+  });
+  root.addEventListener("click", (event) => {
+    const target = (event.target as HTMLElement).closest<HTMLElement>("[data-floor-plan-manage-edit], [data-floor-plan-locate]");
+    if (!target) return;
+    if (!settleForm()) { event.preventDefault(); return; }
+    if (target.hasAttribute("data-floor-plan-locate")) return;
+    const id = target.dataset.floorPlanManageEdit!;
+    const areaId = target.dataset.areaId!;
+    selectedTableIdsByStore.set(storeId, [id]);
+    multiSelectByStore.set(storeId, false);
+    persist(openEditTableDialog({ ...readState(), activeAreaId: areaId }, id));
+  });
+
   const canvas = root.querySelector("[data-floor-plan-canvas]") as HTMLElement | null;
   if (!canvas) return;
+
+  const viewport = root.querySelector<HTMLElement>("[data-floor-plan-viewport]");
+  const setZoom = (value: number) => {
+    const zoom = Math.max(0.5, Math.min(1.5, value));
+    zoomByStore.set(storeId, zoom);
+    canvas.style.transform = `scale(${zoom})`;
+    const stage = root.querySelector<HTMLElement>("[data-floor-plan-stage]");
+    if (stage) { stage.style.width = `${1000 * zoom}px`; stage.style.height = `${650 * zoom}px`; }
+    const label = root.querySelector("[data-floor-plan-zoom-label]");
+    if (label) label.textContent = `${Math.round(zoom * 100)}%`;
+  };
+  if (!zoomByStore.has(storeId) && viewport) setZoom(Math.min(viewport.clientWidth / 1000, viewport.clientHeight / 650));
+  root.querySelector("[data-floor-plan-zoom-in]")?.addEventListener("click", () => setZoom((zoomByStore.get(storeId) ?? 1) + .1));
+  root.querySelector("[data-floor-plan-zoom-out]")?.addEventListener("click", () => setZoom((zoomByStore.get(storeId) ?? 1) - .1));
+  root.querySelector("[data-floor-plan-fit]")?.addEventListener("click", () => { if (viewport) setZoom(Math.min(viewport.clientWidth / 1000, viewport.clientHeight / 650)); });
+  const scale = () => canvas.getBoundingClientRect().width / KPOS_CANVAS_WIDTH || 1;
+  const hideGuides = () => root.querySelectorAll<HTMLElement>("[data-floor-plan-guide-x], [data-floor-plan-guide-y]").forEach((guide) => { guide.hidden = true; });
+  const located = Array.from(canvas.querySelectorAll<HTMLElement>("[data-floor-plan-table-id]")).find((element) => element.dataset.floorPlanTableId === readState().selectedTableId);
+  if (located && viewport) {
+    const zoom = zoomByStore.get(storeId) ?? 1;
+    const x = parseFloat(located.style.left) * zoom;
+    const y = parseFloat(located.style.top) * zoom;
+    if (x < viewport.scrollLeft || x + located.offsetWidth * zoom > viewport.scrollLeft + viewport.clientWidth) viewport.scrollLeft = Math.max(0, x - viewport.clientWidth / 2);
+    if (y < viewport.scrollTop || y + located.offsetHeight * zoom > viewport.scrollTop + viewport.clientHeight) viewport.scrollTop = Math.max(0, y - viewport.clientHeight / 2);
+  }
 
   let interaction: {
     tableId: string;
@@ -2017,20 +2125,21 @@ export function bindFloorPlanEditor(onRemount: () => void): void {
 
   const onMove = (e: PointerEvent) => {
     if (!interaction || e.pointerId !== interaction.pointerId) return;
-    const dx = e.clientX - interaction.startClientX;
-    const dy = e.clientY - interaction.startClientY;
+    const dx = (e.clientX - interaction.startClientX) / scale();
+    const dy = (e.clientY - interaction.startClientY) / scale();
     if (!interaction.dragged && Math.hypot(dx, dy) < DRAG_THRESHOLD_PX) return;
 
     interaction.dragged = true;
     const moving = getActiveArea(readState())?.tables.find((table) => table.id === interaction?.tableId);
-    const nextX = Math.min(
-      KPOS_CANVAS_WIDTH - (moving?.width ?? 0),
-      Math.max(0, interaction.originX + dx),
-    );
-    const nextY = Math.min(
-      KPOS_CANVAS_HEIGHT - (moving?.height ?? 0),
-      Math.max(0, interaction.originY + dy),
-    );
+    if (!moving) return;
+    const snapped = snapFloorPlanPosition(moving, interaction.originX + dx, interaction.originY + dy, getActiveArea(readState())?.tables ?? [], 6 / scale());
+    const nextX = snapped.x, nextY = snapped.y;
+    const guideX = root.querySelector<HTMLElement>("[data-floor-plan-guide-x]");
+    const guideY = root.querySelector<HTMLElement>("[data-floor-plan-guide-y]");
+    if (guideX) { guideX.hidden = snapped.guideX === null; guideX.style.left = `${snapped.guideX ?? 0}px`; }
+    if (guideY) { guideY.hidden = snapped.guideY === null; guideY.style.top = `${snapped.guideY ?? 0}px`; }
+    const hint = root.querySelector("[data-floor-plan-drag-hint]");
+    if (hint) hint.textContent = snapped.clipped ? "已到达画布边界" : `位置：${nextX}, ${nextY}${snapped.guideX !== null || snapped.guideY !== null ? " · 已吸附参考线" : ""}`;
     const el = canvas.querySelector(
       `[data-floor-plan-table-id="${interaction.tableId}"]`,
     ) as HTMLElement | null;
@@ -2042,6 +2151,7 @@ export function bindFloorPlanEditor(onRemount: () => void): void {
 
   const finishInteraction = () => {
     if (!interaction) return;
+    hideGuides();
     const { tableId, dragged } = interaction;
     let state = readState();
 
@@ -2062,11 +2172,11 @@ export function bindFloorPlanEditor(onRemount: () => void): void {
             : a,
         ),
       };
-      writeState(closeTableDialog({ ...state, selectedTableId: tableId }));
+      writeState(openEditTableDialog(closeTableDialog({ ...state, selectedTableId: tableId }), tableId));
       interaction = null;
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
-      window.removeEventListener("pointercancel", onUp);
+      window.removeEventListener("pointercancel", onCancel);
       remountFloorPlan();
       return;
     }
@@ -2074,16 +2184,39 @@ export function bindFloorPlanEditor(onRemount: () => void): void {
     interaction = null;
     window.removeEventListener("pointermove", onMove);
     window.removeEventListener("pointerup", onUp);
-    window.removeEventListener("pointercancel", onUp);
+    window.removeEventListener("pointercancel", onCancel);
     persist(openEditTableDialog(state, tableId));
   };
 
   const onUp = () => finishInteraction();
+  const onCancel = () => {
+    interaction = null;
+    hideGuides();
+    window.removeEventListener("pointermove", onMove);
+    window.removeEventListener("pointerup", onUp);
+    window.removeEventListener("pointercancel", onCancel);
+    remountFloorPlan();
+  };
 
   canvas.querySelectorAll("[data-floor-plan-table-id]").forEach((btn) => {
+    btn.addEventListener("click", (event) => {
+      if ((event as MouseEvent).detail !== 0 || !settleForm()) return;
+      const id = (btn as HTMLElement).dataset.floorPlanTableId;
+      if (!id) return;
+      if (multiSelectByStore.get(storeId)) {
+        const ids = getSelectedTableIds(storeId, readState());
+        const next = ids.includes(id) ? ids.filter((item) => item !== id) : [...ids, id];
+        selectedTableIdsByStore.set(storeId, next);
+        persist(closeTableDialog({ ...readState(), selectedTableId: next[0] ?? null }));
+      } else {
+        selectedTableIdsByStore.set(storeId, [id]);
+        persist(openEditTableDialog(readState(), id));
+      }
+    });
     btn.addEventListener("pointerdown", (e) => {
       const ev = e as PointerEvent;
       if (ev.button !== 0) return;
+      if (!settleForm()) return;
       const id = (btn as HTMLElement).getAttribute("data-floor-plan-table-id");
       if (!id) return;
       const state = readState();
@@ -2117,7 +2250,7 @@ export function bindFloorPlanEditor(onRemount: () => void): void {
 
       window.addEventListener("pointermove", onMove);
       window.addEventListener("pointerup", onUp);
-      window.addEventListener("pointercancel", onUp);
+      window.addEventListener("pointercancel", onCancel);
     });
   });
 
@@ -2138,8 +2271,8 @@ export function bindFloorPlanEditor(onRemount: () => void): void {
     const height = state.dialogDraft.height;
     const onDraftMove = (moveEvent: PointerEvent) => {
       if (moveEvent.pointerId !== ev.pointerId) return;
-      const x = Math.min(KPOS_CANVAS_WIDTH - width, Math.max(0, originX + moveEvent.clientX - startX));
-      const y = Math.min(KPOS_CANVAS_HEIGHT - height, Math.max(0, originY + moveEvent.clientY - startY));
+      const x = Math.min(KPOS_CANVAS_WIDTH - width, Math.max(0, originX + (moveEvent.clientX - startX) / scale()));
+      const y = Math.min(KPOS_CANVAS_HEIGHT - height, Math.max(0, originY + (moveEvent.clientY - startY) / scale()));
       draftPreview.style.left = `${Math.round(x)}px`;
       draftPreview.style.top = `${Math.round(y)}px`;
     };
@@ -2168,6 +2301,7 @@ export function bindFloorPlanEditor(onRemount: () => void): void {
   canvas.addEventListener("pointerdown", (e) => {
     const hit = (e.target as HTMLElement).closest("[data-floor-plan-table-id], [data-floor-plan-draft-preview]");
     if (hit) return;
+    if (!settleForm()) return;
     const state = readState();
     if (!state.selectedTableId && !state.tableDialog && !state.areaDialog) return;
     selectedTableIdsByStore.set(storeId, []);

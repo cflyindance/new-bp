@@ -7,7 +7,7 @@ import {
   openPageSaveChangePreviewDialog,
   openPageSaveConfirmDialog,
 } from "./page-save-confirm-dialog";
-import { runPageSavePreCommit } from "./page-save-registry";
+import { runPageSaveCommit, runPageSavePreCommit } from "./page-save-registry";
 import { showPageSaveSuccessToast } from "./page-save-toast";
 import {
   commitPageDraft,
@@ -16,44 +16,53 @@ import {
 import { getPageChangeCount } from "./deployment-change-buffer";
 import type { DeploymentBatch } from "./deployment-types";
 
+const pendingPageSaves = new Set<string>();
+
 /** 保存并下发：先弹出「确认变更」，确认后再下发 */
 export async function confirmAndTriggerPageSaveAndDeploy(
   pageKey: string,
 ): Promise<DeploymentBatch | null> {
   const key = resolvePageSaveKey(pageKey);
+  if (pendingPageSaves.has(key)) return null;
+  pendingPageSaves.add(key);
+  try {
+    if (!(await runPageSavePreCommit(key))) return null;
+    if (getPageChangeCount(key) === 0) return null;
 
-  if (!(await runPageSavePreCommit(key))) return null;
-  if (getPageChangeCount(key) === 0) return null;
+    const scope = await openPageSaveConfirmDialog(key);
+    if (!scope) return null;
 
-  const scope = await openPageSaveConfirmDialog(key);
-  if (!scope) return null;
+    if (!(await runPageSaveCommit(key))) return null;
 
-  const changes = commitPageDraft(key);
-  if (changes.length === 0) return null;
+    const changes = commitPageDraft(key);
+    if (changes.length === 0) return null;
 
-  const path = changes[0]?.settingsPath ?? key;
-  const originNav = resolveOriginNavFromPath(path);
+    const path = changes[0]?.settingsPath ?? key;
+    const originNav = resolveOriginNavFromPath(path);
 
-  const batch = createDeploymentFromPath(
-    path,
-    scope.storeIds,
-    scope.scopeLevel,
-    scope.brandId,
-    scope.brandName,
-    originNav,
-    "manual",
-    changes,
-  );
+    const batch = createDeploymentFromPath(
+      path,
+      scope.storeIds,
+      scope.scopeLevel,
+      scope.brandId,
+      scope.brandName,
+      originNav,
+      "manual",
+      changes,
+    );
 
-  showPageSaveSuccessToast(batch.id, changes.length);
+    showPageSaveSuccessToast(batch.id, changes.length);
 
-  window.dispatchEvent(
-    new CustomEvent("menusifu:page-settings-saved", {
-      detail: { pageKey: key, batchId: batch.id },
-    }),
-  );
+    window.dispatchEvent(
+      new CustomEvent("menusifu:page-settings-saved", {
+        detail: { pageKey: key, batchId: batch.id },
+      }),
+    );
 
-  return batch;
+    return batch;
+  } finally {
+    pendingPageSaves.delete(key);
+  }
 }
 
 /** 仅预览待保存变更（「N 项待保存」入口） */

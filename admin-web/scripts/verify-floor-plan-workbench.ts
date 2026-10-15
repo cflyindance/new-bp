@@ -1,0 +1,71 @@
+import assert from 'node:assert/strict';
+import { FloorPlanHistory, filterFloorPlanTables, renderFloorPlanManagement, snapFloorPlanPosition } from '../src/config/floor-plan-workbench';
+import { validateNewTable } from '../src/config/floor-plan-table-placement';
+import { applyFloorPlanGeometryAction } from '../src/config/floor-plan-geometry';
+import type { FloorPlanArea } from '../src/config/floor-plan-ui';
+const a={id:'a',name:'A1',seats:4,x:100,y:100,width:80,height:60,rotation:0,shape:'rectangle' as const,kposShape:'RECTANGLE' as const,category:'standard' as const};
+const areas:FloorPlanArea[]=[{id:'hall',name:'大厅',tables:[a,{...a,id:'b',name:'B1',x:300}]},{id:'room',name:'包间',tables:[{...a,id:'c',name:'C1'}]}];
+assert.equal(filterFloorPlanTables(areas,'',' a1 ').length,1);
+assert.equal(filterFloorPlanTables(areas,'room','a').length,0);
+assert.equal(filterFloorPlanTables(areas,'room','').length,1);
+const escaped=renderFloorPlanManagement([{...areas[0]!,tables:[{...a,name:'<img onerror=x>'}]}],'','');
+assert(!escaped.includes('<img onerror'));
+assert(escaped.includes('/floor-plan/locate?area=hall'));
+for(const shape of ['rectangle','circle','oval','bar','ktv']) assert.deepEqual(validateNewTable({...a,shape},[]),{},`selectable ${shape} can be created`);
+const h=new FloorPlanHistory();
+const changed=structuredClone(areas);changed[0]!.tables[0]!.x=150;
+h.record(areas,areas);assert(!h.canUndo);
+h.record(areas,changed);assert(h.canUndo);
+assert.deepEqual(h.undo(changed),areas);assert(h.canRedo);
+assert.deepEqual(h.redo(areas),changed);
+h.undo(changed);h.record(areas,[areas[0]!]);assert(!h.canRedo);
+const isolated=new FloorPlanHistory();assert(!isolated.canUndo);
+const deleted=areas.slice(1);const deletes=new FloorPlanHistory();deletes.record(areas,deleted);
+assert.deepEqual(deletes.undo(deleted),areas,'undo deletion restores area and its tables');
+const capped=new FloorPlanHistory();for(let i=0;i<40;i++)capped.record(areas,[{...areas[0]!,name:String(i)}]);
+let count=0;while(capped.undo(areas))count++;assert.equal(count,30);
+const snapped=snapFloorPlanPosition({...a,id:'move'},98,97,[a],6);
+assert.equal(snapped.x,100);assert.equal(snapped.y,100);assert.equal(snapped.guideX,100);
+const clipped=snapFloorPlanPosition(a,990,-20,[],6);assert.equal(clipped.x,920);assert.equal(clipped.y,0);assert(clipped.clipped);
+const self=snapFloorPlanPosition(a,103,103,[a],6);assert.equal(self.guideX,null);
+const align=applyFloorPlanGeometryAction([a,{...a,id:'b',x:300}], 'align-left',1000,650);
+assert(align.ok);if(align.ok)assert.equal(align.tables[1]!.x,100);
+console.log('PASS search/intersection, XSS escaping, locate context, history snapshots/cap/isolation/deletion/branching, snap/bounds, geometry');
+
+class MemoryStorage {
+ data=new Map<string,string>();getItem(k:string){return this.data.get(k)??null;}setItem(k:string,v:string){this.data.set(k,String(v));}removeItem(k:string){this.data.delete(k);}clear(){this.data.clear();}key(i:number){return [...this.data.keys()][i]??null;}get length(){return this.data.size;}
+}
+const local=new MemoryStorage(),session=new MemoryStorage();
+const location={hash:'#/operations/queue-call/tables'};
+const mockWindow=Object.assign(new EventTarget(),{location,localStorage:local,sessionStorage:session});
+Object.assign(globalThis,{window:mockWindow,location,localStorage:local,sessionStorage:session,CustomEvent:class<T> extends Event{detail:T|undefined;constructor(type:string,init?:{detail?:T}){super(type);this.detail=init?.detail;}}});
+const {resolvePageSaveKey,isPageBatchSavePath}=await import('../src/config/page-settings-draft');
+assert.equal(resolvePageSaveKey('/operations/queue-call/tables'),resolvePageSaveKey('/operations/queue-call/floor-plan/locate?area=a&table=b'));
+assert(isPageBatchSavePath('/operations/queue-call/tables'));
+const registry=await import('../src/config/page-save-registry');
+let checks=0,writes=0;
+registry.registerPageSavePreCommit('/operations/queue-call/floor-plan',()=>{checks++;return true});
+registry.registerPageSaveCommit('/operations/queue-call/floor-plan',()=>{writes++;return false});
+await registry.runPageSavePreCommit('/operations/queue-call/tables');assert.equal(checks,1);assert.equal(writes,0,'preview must not write');
+assert.equal(await registry.runPageSaveCommit('/operations/queue-call/tables'),false);assert.equal(writes,1);
+const {writeModuleSettingJson}=await import('../src/config/module-settings-form-ui');
+const {initPageSaveSession}=await import('../src/config/page-settings-draft');
+const {getPageChangeCount}=await import('../src/config/deployment-change-buffer');
+initPageSaveSession('/operations/queue-call/floor-plan');writeModuleSettingJson('qa-unrelated-setting',{enabled:true});
+assert.equal(getPageChangeCount('/operations/queue-call/floor-plan'),0,'unrelated setting defaults cannot dirty table workbench');
+const {l2PresetKey}=await import('../src/config/platform-preset-nav-filter');
+assert.equal(l2PresetKey('queue-call','qc-tables'),l2PresetKey('queue-call','qc-floor-plan'));
+console.log('PASS shared save key, preview/commit separation, failed commit, unrelated defaults isolation, existing capability alias');
+
+// Reproduce mount-before-guard listener order with a dirty source page.
+const {trackPageConfigChange}=await import('../src/config/page-settings-draft');
+trackPageConfigChange('/operations/queue-call/floor-plan','/operations/queue-call/floor-plan',{fieldKey:'qa-guard',label:'QA',before:'4',after:'5'});
+const guard=await import('../src/config/page-save-guard');
+location.hash='#/operations/queue-call/tables';
+guard.bindPageSaveGuard();
+location.hash='#/operations/queue-call/brand-menu';
+guard.syncPageSaveGuardPath('/operations/queue-call/brand-menu');
+mockWindow.dispatchEvent(new Event('hashchange'));
+await new Promise(resolve=>setTimeout(resolve,0));
+assert.equal(location.hash,'#/operations/queue-call/tables','cancel leave must restore dirty source despite mount-first listener');
+console.log('PASS dirty source survives mount-first hash listener and cancel restores address');

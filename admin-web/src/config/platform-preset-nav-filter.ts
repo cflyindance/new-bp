@@ -20,7 +20,7 @@ import { getRuntimePresetSelection } from "./platform-preset-runtime-cache";
 import { filterNavModulesBySubscription, isPathAllowedBySubscription } from "./subscription-service-runtime";
 
 export function l2PresetKey(moduleId: string, featureId: string): string {
-  return `${moduleId}:${featureId}`;
+  return `${moduleId}:${moduleId === "queue-call" && featureId === "qc-tables" ? "qc-floor-plan" : featureId}`;
 }
 
 function getActiveSelection(): Record<string, { enabled: boolean; display?: boolean }> | null {
@@ -144,6 +144,7 @@ function findMatchingL2Child(m: NavModule, path: string): NavItem | undefined {
 
 /** 当前路由是否被平台预设允许（L1 + 可识别 L2） */
 export function isPathAllowedByPlatformPreset(path: string): boolean {
+  path = path.split("?")[0] ?? path;
   if (!isPathAllowedBySubscription(path)) return false;
   if (!isPlatformPresetNavFilterActive()) return true;
   if (isNavHomePath(path)) return true;

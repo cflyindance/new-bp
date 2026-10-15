@@ -73,6 +73,7 @@ const buckets = new Map<string, PageDraftBucket>();
 
 export function resolvePageSaveKey(path: string): string {
   const normalized = (path.split("?")[0] ?? path).replace(/\/$/, "") || "/";
+  if (normalized === "/operations/queue-call/tables") return "/operations/queue-call/floor-plan";
   const catalogBase = getModuleSettingsBasePath(normalized);
   if (catalogBase) return catalogBase;
   for (const featurePath of PAGE_BATCH_SAVE_FEATURE_PATHS) {

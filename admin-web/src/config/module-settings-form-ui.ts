@@ -217,6 +217,10 @@ function deferFieldWrite(
   before: unknown,
   after: unknown,
 ): boolean {
+  if (resolvePageSaveKey(readAppHashPath()) === "/operations/queue-call/floor-plan") {
+    localStorage.setItem(moduleSettingStorageKey(fieldId), storageValue);
+    return true;
+  }
   const pageKey = resolveDeferPageKey(fieldId);
   if (!pageKey) return false;
   setPageDraftField(pageKey, fieldId, storageValue);
@@ -472,6 +476,11 @@ export function writeModuleSettingDerivedJson(fieldId: string, value: unknown): 
   const storedStr = storedRaw === undefined ? null : JSON.stringify(storedRaw);
   if (storedStr === afterStr) return;
 
+  if (resolvePageSaveKey(readAppHashPath()) === "/operations/queue-call/floor-plan") {
+    localStorage.setItem(moduleSettingStorageKey(fieldId), afterStr);
+    syncFohLinesMirrorToggle(fieldId, value);
+    return;
+  }
   const pageKey = resolveDeferPageKey(fieldId);
   if (pageKey) {
     setPageDraftField(pageKey, fieldId, afterStr);

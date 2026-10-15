@@ -74,5 +74,9 @@ export function bindPageSaveGuard(): void {
 
 export function syncPageSaveGuardPath(path: string): void {
   if (leaveConfirmOpen) return;
-  lastPath = path;
+  const previousKey = resolvePageSaveKey(lastPath);
+  // Mount can precede the hashchange guard; retain the dirty source until decided.
+  if (!lastPath || !isPageSavePending(previousKey) || resolvePageSaveKey(path) === previousKey) {
+    lastPath = path;
+  }
 }

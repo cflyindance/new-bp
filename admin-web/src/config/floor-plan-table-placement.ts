@@ -8,7 +8,7 @@ export type NewTableValidationInput = PlacementRect & {
 
 export type NewTableValidationErrors = Partial<Record<"name" | "seats" | "width" | "height" | "shape" | "position", string>>;
 
-const VALID_SHAPES = new Set(["rectangle", "circle", "oval"]);
+const VALID_SHAPES = new Set(["rectangle", "circle", "oval", "bar", "ktv"]);
 
 export function normalizeTableName(name: string): string {
   return name.trim().toLocaleLowerCase();

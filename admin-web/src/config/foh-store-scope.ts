@@ -15,6 +15,7 @@ export const FOH_EMENU_PRO_PATH = "/operations/queue-call/emenu-pro";
 /** 品牌多门店视角下须在页内选择门店后再操作的前厅管理入口 */
 export const FOH_STORE_SCOPED_PATH_PREFIXES = [
   FLOOR_PLAN_PATH,
+  "/operations/queue-call/tables",
   FOH_BRAND_MENU_PATH,
   MENU_ORDER_LIMITS_BASE,
   FOH_CATEGORY_SETTINGS_BASE,

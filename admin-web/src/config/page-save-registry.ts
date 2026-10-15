@@ -8,10 +8,21 @@ type PageSaveHandler = () => boolean | Promise<boolean>;
 type PageDirtyProbe = () => boolean;
 
 const preCommitHandlers = new Map<string, PageSaveHandler>();
+const commitHandlers = new Map<string, PageSaveHandler>();
 const dirtyProbes = new Map<string, PageDirtyProbe>();
 
 export function registerPageSavePreCommit(pageKey: string, handler: PageSaveHandler): void {
   preCommitHandlers.set(resolvePageSaveKey(pageKey), handler);
+}
+
+/** Side effects run only after the user confirms the save scope, never during preview. */
+export function registerPageSaveCommit(pageKey: string, handler: PageSaveHandler): void {
+  commitHandlers.set(resolvePageSaveKey(pageKey), handler);
+}
+
+export async function runPageSaveCommit(pageKey: string): Promise<boolean> {
+  const handler = commitHandlers.get(resolvePageSaveKey(pageKey));
+  return handler ? (await handler()) !== false : true;
 }
 
 export function registerPageSaveDirtyProbe(pageKey: string, probe: PageDirtyProbe): void {

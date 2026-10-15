@@ -131,6 +131,7 @@ function syncPageSaveBarDom(pageKey: string): void {
 
   if (countNum) countNum.textContent = String(count);
   if (countWrap) {
+    countWrap.hidden = !dirty;
     countWrap.classList.toggle("hidden", !dirty);
     countWrap.disabled = !dirty;
     if (dirty) countWrap.removeAttribute("aria-hidden");

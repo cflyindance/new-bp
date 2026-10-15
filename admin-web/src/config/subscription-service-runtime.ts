@@ -45,7 +45,7 @@ export function filterNavModulesBySubscription(modules: NavModule[]): NavModule[
   if (!routeIds) return modules;
   return modules
     .map((module) => {
-      const children = module.children.filter((child) => routeIds.has(child.id));
+      const children = module.children.filter((child) => routeIds.has(child.id === "qc-tables" ? "qc-floor-plan" : child.id));
       if (!children.length) return null;
       return { ...module, children };
     })
@@ -53,6 +53,7 @@ export function filterNavModulesBySubscription(modules: NavModule[]): NavModule[
 }
 
 export function isPathAllowedBySubscription(path: string): boolean {
+  path = path.split("?")[0] ?? path;
   if (path === "/nav-home" || path === "/login" || path.startsWith("/login/") || path === "/onboarding" || path.startsWith("/onboarding/")) return true;
   const routeIds = currentRouteIds();
   if (!routeIds) return true;
@@ -60,5 +61,6 @@ export function isPathAllowedBySubscription(path: string): boolean {
     .filter((node) => path === node.path || path.startsWith(`${node.path}/`))
     .sort((a, b) => b.path.length - a.path.length);
   if (!candidates.length) return true;
-  return routeIds.has(candidates[0]!.id);
+  const id = candidates[0]!.id;
+  return routeIds.has(id === "qc-tables" ? "qc-floor-plan" : id);
 }
