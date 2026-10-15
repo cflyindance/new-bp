@@ -18,4 +18,7 @@ assert.match(mount,/activePayrollPage\.setPath\(location.hash\)/);
 const page = fs.readFileSync('src/team/payroll-page.ts','utf8');
 assert.match(page,/routeMode: true/);
 assert.match(page,/container.closest<HTMLElement>\("\[data-team-payroll-scroll\]"\)/);
+for (const file of ['payroll-declaration-settings.ts','payroll-schedule-controller.ts']) {
+  assert.doesNotMatch(fs.readFileSync(`src/team/payroll/${file}`,'utf8'), /返回薪资管理/);
+}
 console.log('Payroll child navigation, routes, permission parent and runtime retention passed');

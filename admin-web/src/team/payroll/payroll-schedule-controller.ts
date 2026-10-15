@@ -33,7 +33,7 @@ export function mountPayrollScheduleController(root:ShadowRoot,bridge:PayrollBat
     }
     const rows=scheduleHistory(rules(),selected,today());
     const current=rows.find(row=>row.status==='active');
-    panel.innerHTML=`<header><button type="button" data-close>返回薪资管理</button><h2>发薪周期设置</h2></header>
+    panel.innerHTML=`<header><h2>发薪周期设置</h2></header>
       <div class="payroll-schedule-tools"><label>门店 <select data-store>${options(selected)}</select></label><button type="button" data-add ${!demo()||!selected?'disabled':''}>新增规则</button></div>
       <p role="status">${demo()?'示例规则 · 仅保留在本次页面，不改变实际薪资记录':'实际规则只读；正式发布尚未接入，不能在此保存真实规则。'}</p>
       <section class="payroll-schedule-current"><strong>当前规则</strong><span>${current?labels[current.rule.frequency]:'暂无已生效规则'}</span><span>${current?`自 ${current.rule.effectiveFrom} 起`:''}</span></section>

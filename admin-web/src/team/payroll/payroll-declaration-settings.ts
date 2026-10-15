@@ -72,8 +72,7 @@ function renderSettings(surface: HTMLElement, state: SettingsState): void {
   }).join("");
   surface.innerHTML = `
     <header class="payroll-declaration-settings-header">
-      <div><p>薪资管理</p><h2>员工声明设置</h2></div>
-      <button type="button" class="btn" data-declaration-close>返回薪资管理</button>
+      <div><p>薪资管理</p><h2 tabindex="-1">员工声明设置</h2></div>
     </header>
     <div class="payroll-declaration-settings-toolbar">
       <div><strong>企业声明模板库</strong><p>${isDeclarationBrowserDemo() ? '演示模式：仅保存在当前浏览器，清除站点数据后会丢失，不同设备不共享。' : '维护员工确认时使用的已审核语言版本'}</p></div>
@@ -253,7 +252,7 @@ export function createPayrollDeclarationSettingsController(input: {
     returnFocus = input.shadowRoot.activeElement instanceof HTMLElement ? input.shadowRoot.activeElement : openButton;
     input.pageRoot.classList.add("payroll-declaration-settings-open"); surface.hidden = false; openButton.setAttribute("aria-expanded", "true");
     if (!surface.open) { if(input.routeMode) surface.show(); else surface.showModal(); }
-    await refresh(); surface.querySelector<HTMLElement>("[data-declaration-close]")?.focus();
+    await refresh(); surface.querySelector<HTMLElement>("h2")?.focus();
   };
   const close = () => {
     if (!surface.open) return;
