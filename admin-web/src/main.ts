@@ -117,7 +117,6 @@ import {
   getActiveReservationsSheetSubPath,
   findReservationsNavTitle,
   getActiveNavModuleSheetSubPath,
-  navModuleChildrenAsSheetSubnav,
   FINANCE_SHEET_SUBNAV,
   FINANCE_SHEET_SETTINGS_SUBNAV,
   getActiveFinanceSheetSubPath,
@@ -13088,7 +13087,7 @@ function mount(): void {
       ProductCenterSidebarSubItem | undefined
     >((acc, mod) => {
       if (acc) return acc;
-      return navModuleChildrenAsSheetSubnav(mod).find((x) => x.id === groupId);
+      return getFilteredNavModuleSheetSubnav(mod).find((x) => x.id === groupId);
     }, undefined);
     const item =
       BRAND_PRODUCTS_SUBNAV.find((x) => x.id === groupId) ??
@@ -13161,10 +13160,7 @@ function mount(): void {
   bindFohEmenuProIframeBridge();
   bindTipOutScopeStoreBridge();
   bindIframeSaveDeployBridge();
-  bindFohMenuOrderLimitsUi((tab) => {
-    replaceHashPath(getMenuOrderLimitTabHref(tab));
-    mount();
-  });
+  bindFohMenuOrderLimitsUi();
   bindFohBuffetRulesUi();
   bindDeviceManagementPaymentHardware();
   bindDeviceManagementFiscalHardware();

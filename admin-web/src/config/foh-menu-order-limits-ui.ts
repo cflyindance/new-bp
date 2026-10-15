@@ -1,5 +1,5 @@
 /**
- * 前厅 · 菜单下单限制业务页：hash 子路由 Tab，集中维护下单限制与命中后授权。
+ * 前厅 · 菜单下单限制业务页：独立 hash 子路由，集中维护下单限制与命中后授权。
  */
 
 import {
@@ -81,20 +81,6 @@ export const MENU_ORDER_LIMIT_MIGRATED_SETTING_SEQS = [
   MEMBER_POINTS_ONLY_ORDER_SEQ,
 ] as const;
 
-const TAB_ITEMS: { id: MenuOrderLimitTabId; label: string }[] = [
-  {
-    id: "quantity",
-    label: "数量与频次限制",
-  },
-  {
-    id: "dish-round",
-    label: "每轮菜品互斥/组合",
-  },
-  {
-    id: "other",
-    label: "其他设置",
-  },
-];
 
 type SettingMeta = { seq: number; title: string; sceneDesc: string };
 
@@ -284,45 +270,13 @@ function renderSettingListRow(meta: SettingMeta): string {
     </li>`;
 }
 
-function renderTabBar(activeTab: MenuOrderLimitTabId): string {
-  const tabs = TAB_ITEMS.map((tab) => {
-    const isActive = tab.id === activeTab;
-    const href = getMenuOrderLimitTabHref(tab.id);
-    return `
-      <a
-        href="#${href}"
-        role="tab"
-        id="menu-order-limit-tab-${escapeHtml(tab.id)}"
-        class="min-h-10 border-b-2 px-4 text-sm font-medium transition-colors ${
-          isActive
-            ? "border-primary text-primary"
-            : "border-transparent text-muted-foreground hover:border-border hover:text-foreground"
-        }"
-        data-menu-order-limit-tab="${escapeHtml(tab.id)}"
-        aria-selected="${isActive ? "true" : "false"}"
-        aria-controls="menu-order-limit-panel-${escapeHtml(tab.id)}"
-        ${isActive ? 'aria-current="page"' : ""}
-      >${escapeHtml(tab.label)}</a>`;
-  }).join("");
-
-  return `
-    <div
-      class="flex shrink-0 gap-1 border-b border-border"
-      role="tablist"
-      aria-label="菜单下单限制类型"
-      data-menu-order-limit-tablist
-    >
-      ${tabs}
-    </div>`;
-}
-
 function renderQuantityPanel(iframeSrc: string, activeTab: MenuOrderLimitTabId): string {
   if (activeTab !== "quantity") return "";
   return `
     <section
       id="menu-order-limit-panel-quantity"
-      role="tabpanel"
-      aria-labelledby="menu-order-limit-tab-quantity"
+      role="region"
+      aria-label="数量与频次限制"
       class="flex min-h-0 flex-1 flex-col overflow-hidden"
       data-menu-order-limit-panel="quantity"
     >
@@ -342,8 +296,8 @@ function renderDishRoundTabPanel(activeTab: MenuOrderLimitTabId): string {
   return `
     <section
       id="menu-order-limit-panel-dish-round"
-      role="tabpanel"
-      aria-labelledby="menu-order-limit-tab-dish-round"
+      role="region"
+      aria-label="每轮菜品互斥/组合"
       class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm"
       data-menu-order-limit-panel="dish-round"
     >
@@ -393,8 +347,8 @@ function renderOtherSettingsTabPanel(activeTab: MenuOrderLimitTabId): string {
   return `
     <section
       id="menu-order-limit-panel-other"
-      role="tabpanel"
-      aria-labelledby="menu-order-limit-tab-other"
+      role="region"
+      aria-label="其他设置"
       class="flex min-h-0 flex-1 flex-col overflow-hidden"
       data-menu-order-limit-panel="other"
     >
@@ -419,46 +373,14 @@ export function refreshMenuOrderLimitTabBadges(): void {
   /* Tab 对齐分类管理样式后仅展示名称，不再渲染状态徽标 */
 }
 
-const MENU_ORDER_LIMIT_TAB_ORDER: MenuOrderLimitTabId[] = ["quantity", "dish-round", "other"];
-
-/** 绑定 Tab 点击与键盘切换；由 main 传入路由跳转（replaceHashPath + mount）。 */
-export function bindFohMenuOrderLimitsUi(remountToTab: (tab: MenuOrderLimitTabId) => void): void {
+/** Bind the existing business controls; navigation lives in the shared sidebar. */
+export function bindFohMenuOrderLimitsUi(): void {
   const root = document.querySelector<HTMLElement>("[data-foh-menu-order-limits-root]");
   if (!root || root.getAttribute("data-foh-menu-limits-bound") === "1") return;
   root.setAttribute("data-foh-menu-limits-bound", "1");
   bindModuleSettingSceneDescHelp(root);
   bindDishRoundUnifiedWorkspace(root);
   bindOrderLimitFullscreenFlow(root);
-
-  const navigate = (tab: MenuOrderLimitTabId): void => {
-    const path = location.hash.slice(1) || "/dashboard/overview";
-    if (resolveMenuOrderLimitTabFromPath(path) === tab) return;
-    remountToTab(tab);
-  };
-
-  root.addEventListener("click", (e) => {
-    const link = (e.target as HTMLElement).closest<HTMLAnchorElement>("[data-menu-order-limit-tab]");
-    if (!link || !root.contains(link)) return;
-    const tab = link.getAttribute("data-menu-order-limit-tab") as MenuOrderLimitTabId | null;
-    if (!tab) return;
-    e.preventDefault();
-    navigate(tab);
-  });
-
-  root.addEventListener("keydown", (e) => {
-    if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
-    const tablist = root.querySelector<HTMLElement>("[data-menu-order-limit-tablist]");
-    if (!tablist?.contains(e.target as Node)) return;
-    const path = location.hash.slice(1) || "/dashboard/overview";
-    const current = resolveMenuOrderLimitTabFromPath(path);
-    const idx = MENU_ORDER_LIMIT_TAB_ORDER.indexOf(current);
-    if (idx < 0) return;
-    const nextIdx = e.key === "ArrowRight" ? idx + 1 : idx - 1;
-    const nextTab = MENU_ORDER_LIMIT_TAB_ORDER[nextIdx];
-    if (!nextTab) return;
-    e.preventDefault();
-    navigate(nextTab);
-  });
 }
 
 export function renderFohMenuOrderLimitsPanel(iframeSrc: string, path: string): string {
@@ -466,7 +388,7 @@ export function renderFohMenuOrderLimitsPanel(iframeSrc: string, path: string): 
 
   return `
     <div class="flex min-h-0 flex-1 flex-col gap-4" data-foh-menu-order-limits-root>
-      ${renderTabBar(activeTab)}
+
 
       <div class="flex min-h-[min(72vh,720px)] flex-1 flex-col" data-menu-order-limit-panels>
         ${renderQuantityPanel(iframeSrc, activeTab)}

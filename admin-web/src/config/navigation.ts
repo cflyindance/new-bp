@@ -440,6 +440,10 @@ export const NAV_MODULES: NavModule[] = [
         title: "菜单下单限制",
         titleEn: "Menu order limits",
         path: "/operations/queue-call/menu-order-limits",
+        children: [
+          { id: "qc-dish-round", title: "每轮菜品互斥/组合", titleEn: "Dish exclusion / combination per round", path: "/operations/queue-call/menu-order-limits/dish-round" },
+          { id: "qc-order-other", title: "其他设置", titleEn: "Other settings", path: "/operations/queue-call/menu-order-limits/other" },
+        ],
       },
       {
         id: "foh-buffet-rules",
@@ -1320,12 +1324,39 @@ export function navModuleChildrenAsSheetSubnav(m: NavModule): ProductCenterSideb
   }));
 }
 
-/** 当前路由在该模块「站内域」内时，返回侧滑层中高亮的子项 path（最长前缀） */
+/** 仅组织已过滤的显示节点；保留原 L2 能力标识及授权边界。 */
+export function groupRuleRestrictionsSubnav(items: ProductCenterSidebarSubItem[]): ProductCenterSidebarSubItem[] {
+  const limits = items.find((item) => item.id === "qc-menu-order-limits");
+  const buffet = items.find((item) => item.id === "foh-buffet-rules");
+  const children = [
+    ...(limits?.sidebarChildren ?? []),
+    ...(buffet ? [{ id: buffet.id, title: buffet.title, titleEn: buffet.titleEn, path: buffet.path }] : []),
+  ];
+  const group: ProductCenterSidebarSubItem = {
+    id: "qc-rule-restrictions",
+    title: "规则限制",
+    titleEn: "Rule restrictions",
+    path: "/operations/queue-call/rule-restrictions",
+    activePrefixes: children.map((child) => child.path),
+    sidebarChildren: children,
+  };
+  return items.flatMap((item) => {
+    if (item.id === "foh-buffet-rules") return children.length ? [group] : [];
+    if (item.id === "qc-menu-order-limits") {
+      const { sidebarChildren: _children, ...leaf } = item;
+      return !buffet && children.length ? [leaf, group] : [leaf];
+    }
+    return [item];
+  });
+}
+
+/** 当前路由在该模块「站内域」内时，返回显示树中高亮的子项 path（最长前缀）。 */
 export function getActiveNavModuleSheetSubPath(path: string, m: NavModule): string {
   const prefixes = m.matchPrefixes?.length ? m.matchPrefixes : [m.path];
   const inHub = prefixes.some((p) => path === p || path.startsWith(`${p}/`));
   if (!inHub) return "";
-  return getActiveProductCenterSidebarSubPath(path, navModuleChildrenAsSheetSubnav(m));
+  const items = navModuleChildrenAsSheetSubnav(m);
+  return getActiveProductCenterSidebarSubPath(path, m.id === "queue-call" ? groupRuleRestrictionsSubnav(items) : items);
 }
 
 export function getActiveBrandProductsSubPath(path: string): string {
