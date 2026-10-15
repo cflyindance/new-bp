@@ -126,7 +126,8 @@ for (const file of ["dist/TipOut/index.html", "src/team/tips/templates/distribut
   }
   const cancelIndex = content.indexOf(">取消分配</button>");
   const ruleIndex = content.indexOf(">规则管理</button>");
-  if (cancelIndex < 0 || ruleIndex < 0) failures.push(`${file}: summary action entry missing`);
+  if (cancelIndex < 0) failures.push(`${file}: summary cancel action missing`);
+  if (ruleIndex >= 0) failures.push(`${file}: removed rule shortcut returned`);
   if (!content.includes("doCancelAllocate()")) failures.push(`${file}: cancel allocation button handler missing`);
   const headingIndex = content.indexOf(file.startsWith("src/") ? "tipout-store-scope-row" : "tipout-page-heading");
   const filterIndex = content.indexOf("filter-surface tipout-compact-toolbar");
@@ -278,10 +279,10 @@ const viewFilterRowIndex = distributionTemplate.indexOf('class="tipout-view-filt
 const metricStripIndex = distributionTemplate.indexOf('class="tipout-metric-strip"');
 if (storeScopeRowIndex < 0 || viewFilterRowIndex <= storeScopeRowIndex || metricStripIndex <= viewFilterRowIndex) failures.push("distribution: store scope and view/filter rows must precede metrics");
 const storeScopeRow = distributionTemplate.slice(storeScopeRowIndex, viewFilterRowIndex);
-for (const token of ['id="storeFilterField"', 'id="dateRangeFilterField"', 'id="summaryRuleEntryBtn"']) {
+for (const token of ['id="storeFilterField"', 'id="dateRangeFilterField"']) {
   if (!storeScopeRow.includes(token)) failures.push(`distribution: store scope row missing ${token}`);
 }
-const storeScopeOrder = ['storeFilterField', 'dateRangeFilterField', 'summaryRuleEntryBtn'];
+const storeScopeOrder = ['storeFilterField', 'dateRangeFilterField'];
 let previousStoreScopeIndex = -1;
 for (const id of storeScopeOrder) {
   const index = storeScopeRow.indexOf(`id="${id}"`);
@@ -378,7 +379,7 @@ for (const token of [
   if (!pageCss.includes(token)) failures.push(`distribution: store-first toolbar CSS missing ${token}`);
 }
 const headingActions = distributionTemplate.match(/<div class="tipout-heading-actions">[\s\S]*?<\/div>\s*<\/div>\s*<\/div>/)?.[0] || "";
-if (!headingActions.includes("summaryRuleEntryBtn")) failures.push("distribution: rule entry must remain in heading actions");
+if (distributionTemplate.includes("summaryRuleEntryBtn")) failures.push("distribution: removed rule shortcut returned");
 for (const token of [">取消分配</button>", "id=\"exportMenu\"", "id=\"allocateBtn\""]) {
   if (headingActions.includes(token)) failures.push(`distribution: ${token} must move out of heading actions`);
 }

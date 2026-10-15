@@ -61,32 +61,7 @@ assert.equal(historyState.tipoutSummaryUiState.returnDate, '2026-08-02');
 assert.equal(ui.readSummaryHistoryState(historyState).scrollY, 420);
 
 const indexHtml = fs.readFileSync(path.join(root, 'dist/TipOut/index.html'), 'utf8');
-assert.match(
-  indexHtml,
-  /id="summaryRuleEntryBtn"[^>]*onclick="openSummaryRuleEntry\(\)"[^>]*>规则管理<\/button>/,
-);
-assert.match(
-  indexHtml,
-  /id="summaryRuleEntryBtn"[\s\S]*?toggleExportMenu\(\)[\s\S]*?id="allocateBtn"/,
-);
-assert.match(indexHtml, /function openSummaryRuleEntry\(\)/);
-assert.match(indexHtml, /ruleData\.getRules\(\)/);
-assert.match(indexHtml, /window\.location\.href = 'rules\.html'/);
-const ruleEntryStart = indexHtml.indexOf('function openSummaryRuleEntry()');
-const ruleEntryEnd = indexHtml.indexOf('function hasTipRules()', ruleEntryStart);
-assert.ok(ruleEntryStart >= 0 && ruleEntryEnd > ruleEntryStart);
-const ruleEntrySource = indexHtml.slice(ruleEntryStart, ruleEntryEnd);
-function runSummaryRuleEntry(getRules) {
-  const location = { href: '' };
-  const data = { getRules };
-  const ruleEntryContext = { window: { ruleData: data, location }, ruleData: data, captureSummaryUiState() {} };
-  vm.runInNewContext(ruleEntrySource, ruleEntryContext);
-  ruleEntryContext.openSummaryRuleEntry();
-  return location.href;
-}
-assert.equal(runSummaryRuleEntry(() => []), 'rules.html');
-assert.equal(runSummaryRuleEntry(() => [{ id: 1 }]), 'rules.html');
-assert.equal(runSummaryRuleEntry(() => { throw new Error('unavailable'); }), 'rules.html');
+assert.doesNotMatch(indexHtml, /summaryRuleEntryBtn|openSummaryRuleEntry/);
 for (const id of ['summaryBefore', 'summaryDeducted', 'summaryReceived', 'summaryAfter', 'pendingDateCount']) {
   assert.match(indexHtml, new RegExp('id="' + id + '"'));
 }
@@ -130,7 +105,7 @@ assert.doesNotMatch(detailHtml, /allocatedDates\.has\(dateKey\)/);
 assert.doesNotMatch(detailHtml, /该日期尚未完成小费分配/);
 
 const rulesHtml = fs.readFileSync(path.join(root, 'dist/TipOut/rules.html'), 'utf8');
-assert.match(rulesHtml, /href="index\.html"[^>]*>返回小费分配<\/a>/);
+assert.doesNotMatch(rulesHtml, /返回小费分配/);
 for (const id of ['ruleCount', 'tipPoolCount', 'surchargePoolCount', 'rulesTableBody']) {
   assert.match(rulesHtml, new RegExp('id="' + id + '"'));
 }

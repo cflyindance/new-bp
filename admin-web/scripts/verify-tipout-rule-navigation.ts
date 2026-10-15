@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import vm from 'node:vm';
 import {NAV_MODULES, navModuleChildrenAsSheetSubnav} from '../src/config/navigation';
 import {buildCenterCatalog, pageKey, navigationKey} from '../src/permissions/center-catalog';
 const team = NAV_MODULES.find(m=>m.id==='team')!;
@@ -13,13 +12,11 @@ for(const path of ['/team/tips/distribution','/team/tips/rules','/team/tips/deta
   assert.equal(catalog.resources.get(pageKey(path))?.parent,navigationKey('team','team-tips'),'retain existing permission parent');
 }
 const program=fs.readFileSync('src/team/tips/programs/distribution.js.txt','utf8');
-const handler=program.match(/    function openSummaryRuleEntry\(\) \{[\s\S]*?\n    \}/)![0];
-for(const rules of [[],[{id:'r1'}]]) {
-  let saved=false;
-  const window={location:{href:''},ruleData:{getRules:()=>rules}};
-  vm.runInNewContext(handler+';openSummaryRuleEntry();',{window,captureSummaryUiState:()=>{saved=true;}});
-  assert.equal(window.location.href,'rules.html');
-  assert.equal(saved,true);
+assert.doesNotMatch(program,/openSummaryRuleEntry/);
+for (const file of ['src/team/tips/templates/distribution.html','dist/TipOut/index.html']) {
+  assert.doesNotMatch(fs.readFileSync(file,'utf8'),/summaryRuleEntryBtn|openSummaryRuleEntry/);
 }
-assert.match(fs.readFileSync('src/team/tips/templates/distribution.html','utf8'),/id="summaryRuleEntryBtn"[^>]*>规则管理</);
-console.log('Tip rules navigation, existing permission keys and empty/nonempty shortcut passed');
+for (const file of ['src/team/tips/templates/rules.html','dist/TipOut/rules.html']) {
+  assert.doesNotMatch(fs.readFileSync(file,'utf8'),/返回小费分配/);
+}
+console.log('Tip sidebar navigation, permission keys and removed page shortcuts passed');

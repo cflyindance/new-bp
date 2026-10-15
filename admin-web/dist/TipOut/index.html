@@ -174,7 +174,6 @@
             </div>
             <div class="tipout-heading-actions">
               <button type="button" class="btn btn-lg" onclick="doCancelAllocate()">取消分配</button>
-              <button id="summaryRuleEntryBtn" type="button" class="btn btn-lg" onclick="openSummaryRuleEntry()">规则管理</button>
               <div class="export-dropdown">
                 <button type="button" class="btn btn-lg" onclick="toggleExportMenu()" aria-haspopup="menu">导出结果</button>
                 <div class="export-menu" id="exportMenu" role="menu">
@@ -967,11 +966,6 @@
       var hasAllocated = dates.some(function(k) { return allocatedDates.has(k); });
       var btn = document.getElementById('allocateBtn');
       if (btn) btn.textContent = hasAllocated ? '批量分配小费' : '分配小费';
-    }
-
-    function openSummaryRuleEntry() {
-      captureSummaryUiState('', '');
-      window.location.href = 'rules.html';
     }
 
     function hasTipRules() {

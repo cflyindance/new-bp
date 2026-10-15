@@ -1386,11 +1386,6 @@ var ALLOC_KEY = 'tipout_allocated';
       if (btn) btn.textContent = hasAllocated ? '重新分配小费' : '批量分配小费';
     }
 
-    function openSummaryRuleEntry() {
-      captureSummaryUiState('', '');
-      window.location.href = 'rules.html';
-    }
-
     function hasTipRules() {
       return window.ruleData && ruleData.getRules && ruleData.getRules().length > 0;
     }
